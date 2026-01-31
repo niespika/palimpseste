@@ -6,7 +6,6 @@ import { useParams } from "next/navigation";
 import RoleGuard from "@/app/components/RoleGuard";
 import type { ChapterStatus, Parcours } from "@/lib/parcours";
 import { persistParcours, readParcours } from "@/lib/parcours";
-import type { Passage } from "@/lib/passages";
 import { generatePassagesFromText } from "@/lib/passages";
 
 export default function TeacherTrackDetailPage() {
@@ -17,7 +16,6 @@ export default function TeacherTrackDetailPage() {
   const [isDocumentUploading, setIsDocumentUploading] = useState(false);
   const documentInputRef = useRef<HTMLInputElement | null>(null);
   const [passagePage, setPassagePage] = useState(1);
-  const [selectedPassage, setSelectedPassage] = useState<Passage | null>(null);
   const passagesPerPage = 20;
 
   useEffect(() => {
@@ -33,7 +31,6 @@ export default function TeacherTrackDetailPage() {
 
   useEffect(() => {
     setPassagePage(1);
-    setSelectedPassage(null);
   }, [selectedParcours?.id]);
 
   useEffect(() => {
@@ -97,26 +94,36 @@ export default function TeacherTrackDetailPage() {
   };
 
   const extractPdfText = async (file: File) => {
-    const buffer = await file.arrayBuffer();
-    const raw = new TextDecoder("latin1").decode(new Uint8Array(buffer));
-    const matches = raw.matchAll(/\(([^()]*)\)/g);
-    const extracted: string[] = [];
-    for (const match of matches) {
-      const chunk = match[1];
-      if (!chunk) continue;
-      extracted.push(
-        chunk
-          .replace(/\\n/g, "\n")
-          .replace(/\\r/g, "\r")
-          .replace(/\\t/g, "\t")
-          .replace(/\\b/g, "\b")
-          .replace(/\\f/g, "\f")
-          .replace(/\\\(/g, "(")
-          .replace(/\\\)/g, ")")
-          .replace(/\\\\/g, "\\")
-      );
+    const formData = new FormData();
+    formData.append("file", file);
+    const response = await fetch("/api/document/extract", {
+      method: "POST",
+      body: formData,
+    });
+    if (!response.ok) {
+      throw new Error("Extraction PDF échouée");
     }
-    return extracted.join(" ").replace(/\s+/g, " ").trim();
+    const data = (await response.json()) as { text?: string };
+    if (!data?.text || typeof data.text !== "string") {
+      throw new Error("Extraction PDF échouée");
+    }
+    return data.text;
+  };
+
+  const hasTooManyNonPrintableChars = (text: string) => {
+    if (!text) return true;
+    let nonPrintable = 0;
+    let total = 0;
+    for (const char of text) {
+      total += 1;
+      if (char === "\n" || char === "\r" || char === "\t") continue;
+      const code = char.charCodeAt(0);
+      if (code < 32 || code === 127) {
+        nonPrintable += 1;
+      }
+    }
+    if (total === 0) return true;
+    return nonPrintable / total > 0.2;
   };
 
   const handleDocumentUpload = async (
@@ -154,7 +161,7 @@ export default function TeacherTrackDetailPage() {
           fileName,
           uploadedAt: new Date().toISOString(),
           status: "failed",
-          content: "",
+          rawText: "",
           error: "Format non pris en charge. Utilisez un PDF ou un fichier texte.",
         },
       }));
@@ -170,7 +177,7 @@ export default function TeacherTrackDetailPage() {
         fileName,
         uploadedAt,
         status: "pending",
-        content: "",
+        rawText: "",
       },
     }));
 
@@ -178,6 +185,9 @@ export default function TeacherTrackDetailPage() {
       let content = "";
       if (isPdf) {
         content = await extractPdfText(file);
+        if (hasTooManyNonPrintableChars(content)) {
+          throw new Error("Extraction PDF échouée");
+        }
       } else {
         content = await file.text();
       }
@@ -195,7 +205,7 @@ export default function TeacherTrackDetailPage() {
           fileName,
           uploadedAt,
           status: "processed",
-          content: trimmedContent,
+          rawText: trimmedContent,
         },
       }));
     } catch (error) {
@@ -209,7 +219,7 @@ export default function TeacherTrackDetailPage() {
           fileName,
           uploadedAt,
           status: "failed",
-          content: "",
+          rawText: "",
           error: message,
         },
       }));
@@ -255,7 +265,7 @@ export default function TeacherTrackDetailPage() {
   );
 
   const handleGeneratePassages = () => {
-    if (!selectedParcours?.document?.content) return;
+    if (!selectedParcours?.document?.rawText) return;
     if (
       passages.length > 0 &&
       !window.confirm(
@@ -265,7 +275,7 @@ export default function TeacherTrackDetailPage() {
       return;
     }
     const generated = generatePassagesFromText(
-      selectedParcours.document.content,
+      selectedParcours.document.rawText,
       selectedParcours.id
     );
     updateParcours(selectedParcours.id, (parcours) => ({
@@ -273,7 +283,6 @@ export default function TeacherTrackDetailPage() {
       passages: generated,
     }));
     setPassagePage(1);
-    setSelectedPassage(null);
   };
 
   const formatPassageSnippet = (text: string) => {
@@ -364,7 +373,7 @@ export default function TeacherTrackDetailPage() {
             <input
               ref={documentInputRef}
               type="file"
-              accept=".pdf,.txt,.md,text/plain,application/pdf"
+              accept=".pdf,.txt,.md,text/plain,text/markdown,application/pdf"
               onChange={handleDocumentUpload}
               style={{ display: "none" }}
             />
@@ -461,13 +470,12 @@ export default function TeacherTrackDetailPage() {
                         {formatPassageSnippet(passage.text)}
                       </p>
                       <div className="actions">
-                        <button
-                          type="button"
+                        <Link
                           className="secondary"
-                          onClick={() => setSelectedPassage(passage)}
+                          href={`/dashboard/teacher/tracks/${selectedParcours.id}/passages/${passage.id}`}
                         >
                           Voir le passage
-                        </button>
+                        </Link>
                       </div>
                     </div>
                   ))}
@@ -578,54 +586,6 @@ export default function TeacherTrackDetailPage() {
           </div>
         </section>
       )}
-      {selectedPassage ? (
-        <div
-          style={{
-            position: "fixed",
-            inset: 0,
-            background: "rgba(0, 0, 0, 0.5)",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            padding: "1.5rem",
-            zIndex: 50,
-          }}
-        >
-          <div
-            className="card"
-            style={{
-              width: "min(720px, 100%)",
-              maxHeight: "80vh",
-              overflow: "auto",
-              display: "grid",
-              gap: "1rem",
-            }}
-          >
-            <div
-              style={{
-                display: "flex",
-                justifyContent: "space-between",
-                alignItems: "center",
-                gap: "1rem",
-              }}
-            >
-              <h3 style={{ margin: 0 }}>Passage {selectedPassage.index}</h3>
-              <button
-                type="button"
-                className="secondary"
-                onClick={() => setSelectedPassage(null)}
-              >
-                Fermer
-              </button>
-            </div>
-            <p style={{ whiteSpace: "pre-wrap" }}>{selectedPassage.text}</p>
-            <div>
-              <strong>Position :</strong>{" "}
-              {selectedPassage.charStart}–{selectedPassage.charEnd}
-            </div>
-          </div>
-        </div>
-      ) : null}
     </RoleGuard>
   );
 }

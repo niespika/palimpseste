@@ -17,7 +17,7 @@ export type CourseDocument = {
   fileName: string;
   uploadedAt: string;
   status: DocumentStatus;
-  content: string;
+  rawText: string;
   error?: string;
 };
 
@@ -158,7 +158,12 @@ function normalizeDocument(entry: unknown): CourseDocument | undefined {
     fileName: record.fileName,
     uploadedAt,
     status,
-    content: typeof record.content === "string" ? record.content : "",
+    rawText:
+      typeof record.rawText === "string"
+        ? record.rawText
+        : typeof record.content === "string"
+          ? record.content
+          : "",
     error:
       typeof record.error === "string" && record.error.trim()
         ? record.error
