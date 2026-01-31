@@ -6,6 +6,8 @@ import { useParams } from "next/navigation";
 import RoleGuard from "@/app/components/RoleGuard";
 import type { ChapterStatus, Parcours } from "@/lib/parcours";
 import { persistParcours, readParcours } from "@/lib/parcours";
+import type { Passage } from "@/lib/passages";
+import { generatePassagesFromText } from "@/lib/passages";
 
 export default function TeacherTrackDetailPage() {
   const params = useParams<{ trackId: string }>();
@@ -14,6 +16,9 @@ export default function TeacherTrackDetailPage() {
   const [isReady, setIsReady] = useState(false);
   const [isDocumentUploading, setIsDocumentUploading] = useState(false);
   const documentInputRef = useRef<HTMLInputElement | null>(null);
+  const [passagePage, setPassagePage] = useState(1);
+  const [selectedPassage, setSelectedPassage] = useState<Passage | null>(null);
+  const passagesPerPage = 20;
 
   useEffect(() => {
     const stored = readParcours();
@@ -21,15 +26,20 @@ export default function TeacherTrackDetailPage() {
     setIsReady(true);
   }, []);
 
-  useEffect(() => {
-    if (!isReady) return;
-    persistParcours(parcoursList);
-  }, [isReady, parcoursList]);
-
   const selectedParcours = useMemo(
     () => parcoursList.find((entry) => entry.id === trackId) || null,
     [parcoursList, trackId]
   );
+
+  useEffect(() => {
+    setPassagePage(1);
+    setSelectedPassage(null);
+  }, [selectedParcours?.id]);
+
+  useEffect(() => {
+    if (!isReady) return;
+    persistParcours(parcoursList);
+  }, [isReady, parcoursList]);
 
   const updateParcours = (
     parcoursId: string,
@@ -226,6 +236,52 @@ export default function TeacherTrackDetailPage() {
     }
   };
 
+  const passages = useMemo(
+    () =>
+      selectedParcours?.passages
+        ? [...selectedParcours.passages].sort((a, b) => a.index - b.index)
+        : [],
+    [selectedParcours?.passages]
+  );
+
+  const passageTotalPages = Math.max(
+    1,
+    Math.ceil(passages.length / passagesPerPage)
+  );
+  const passageStartIndex = (passagePage - 1) * passagesPerPage;
+  const passagePageItems = passages.slice(
+    passageStartIndex,
+    passageStartIndex + passagesPerPage
+  );
+
+  const handleGeneratePassages = () => {
+    if (!selectedParcours?.document?.content) return;
+    if (
+      passages.length > 0 &&
+      !window.confirm(
+        "Des passages existent déjà. Voulez-vous les regénérer ?"
+      )
+    ) {
+      return;
+    }
+    const generated = generatePassagesFromText(
+      selectedParcours.document.content,
+      selectedParcours.id
+    );
+    updateParcours(selectedParcours.id, (parcours) => ({
+      ...parcours,
+      passages: generated,
+    }));
+    setPassagePage(1);
+    setSelectedPassage(null);
+  };
+
+  const formatPassageSnippet = (text: string) => {
+    const cleaned = text.replace(/\s+/g, " ").trim();
+    if (cleaned.length <= 120) return cleaned;
+    return `${cleaned.slice(0, 120)}…`;
+  };
+
   return (
     <RoleGuard role="teacher">
       <div className="card">
@@ -312,6 +368,112 @@ export default function TeacherTrackDetailPage() {
               onChange={handleDocumentUpload}
               style={{ display: "none" }}
             />
+          </div>
+
+          <div
+            style={{
+              border: "1px solid #e3e3e3",
+              borderRadius: "0.75rem",
+              padding: "1rem",
+              display: "grid",
+              gap: "0.75rem",
+              marginTop: "1.5rem",
+            }}
+          >
+            <h3>Passages</h3>
+            {selectedParcours.document?.status === "processed" ? (
+              <p>
+                {passages.length > 0
+                  ? `${passages.length} passages générés.`
+                  : "Aucun passage généré pour le moment."}
+              </p>
+            ) : (
+              <p>
+                {selectedParcours.document
+                  ? "Le document doit être traité avant de générer les passages."
+                  : "Aucun document disponible pour générer des passages."}
+              </p>
+            )}
+            <div className="actions">
+              <button
+                type="button"
+                className="secondary"
+                onClick={handleGeneratePassages}
+                disabled={selectedParcours.document?.status !== "processed"}
+              >
+                {passages.length > 0
+                  ? "Regénérer les passages"
+                  : "Générer les passages"}
+              </button>
+            </div>
+
+            {passages.length > 0 ? (
+              <div style={{ display: "grid", gap: "0.75rem" }}>
+                <div
+                  style={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "center",
+                  }}
+                >
+                  <span>
+                    Page {passagePage} / {passageTotalPages}
+                  </span>
+                  <div style={{ display: "flex", gap: "0.5rem" }}>
+                    <button
+                      type="button"
+                      className="secondary"
+                      onClick={() =>
+                        setPassagePage((prev) => Math.max(1, prev - 1))
+                      }
+                      disabled={passagePage === 1}
+                    >
+                      ←
+                    </button>
+                    <button
+                      type="button"
+                      className="secondary"
+                      onClick={() =>
+                        setPassagePage((prev) =>
+                          Math.min(passageTotalPages, prev + 1)
+                        )
+                      }
+                      disabled={passagePage === passageTotalPages}
+                    >
+                      →
+                    </button>
+                  </div>
+                </div>
+                <div style={{ display: "grid", gap: "0.75rem" }}>
+                  {passagePageItems.map((passage) => (
+                    <div
+                      key={passage.id}
+                      style={{
+                        border: "1px solid #e3e3e3",
+                        borderRadius: "0.75rem",
+                        padding: "0.75rem",
+                        display: "grid",
+                        gap: "0.5rem",
+                      }}
+                    >
+                      <strong>Passage {passage.index}</strong>
+                      <p style={{ margin: 0 }}>
+                        {formatPassageSnippet(passage.text)}
+                      </p>
+                      <div className="actions">
+                        <button
+                          type="button"
+                          className="secondary"
+                          onClick={() => setSelectedPassage(passage)}
+                        >
+                          Voir le passage
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ) : null}
           </div>
 
           <div style={{ marginTop: "1.5rem", display: "grid", gap: "1rem" }}>
@@ -416,6 +578,54 @@ export default function TeacherTrackDetailPage() {
           </div>
         </section>
       )}
+      {selectedPassage ? (
+        <div
+          style={{
+            position: "fixed",
+            inset: 0,
+            background: "rgba(0, 0, 0, 0.5)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            padding: "1.5rem",
+            zIndex: 50,
+          }}
+        >
+          <div
+            className="card"
+            style={{
+              width: "min(720px, 100%)",
+              maxHeight: "80vh",
+              overflow: "auto",
+              display: "grid",
+              gap: "1rem",
+            }}
+          >
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+                gap: "1rem",
+              }}
+            >
+              <h3 style={{ margin: 0 }}>Passage {selectedPassage.index}</h3>
+              <button
+                type="button"
+                className="secondary"
+                onClick={() => setSelectedPassage(null)}
+              >
+                Fermer
+              </button>
+            </div>
+            <p style={{ whiteSpace: "pre-wrap" }}>{selectedPassage.text}</p>
+            <div>
+              <strong>Position :</strong>{" "}
+              {selectedPassage.charStart}–{selectedPassage.charEnd}
+            </div>
+          </div>
+        </div>
+      ) : null}
     </RoleGuard>
   );
 }
