@@ -83,3 +83,16 @@ Ouvrez ensuite [http://localhost:3000](http://localhost:3000).
 6. Testez les filtres par type et par tag.
 7. Cliquez sur “Voir détail” pour consulter une ressource, puis supprimez-la en confirmant.
 8. Rafraîchissez la page : les ressources restantes doivent toujours être visibles.
+
+## Ticket 2.3
+
+### Test manuel
+
+1. Lancez l'app en local : `npm run dev`.
+2. Connectez-vous avec le compte professeur (teacher@palimpseste.fr / teacher123).
+3. Dans `/dashboard/teacher`, ouvrez un parcours avec un document de cours traité.
+4. Dans le bloc “Passages”, cliquez sur “Générer les passages”.
+5. Vérifiez que le nombre total de passages s'affiche et que la pagination permet de naviguer.
+6. Cliquez sur “Voir le passage” pour ouvrir le texte complet.
+7. Rafraîchissez la page : la liste des passages doit persister.
+8. Cliquez sur “Regénérer les passages” et confirmez : la liste est recréée.
