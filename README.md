@@ -36,3 +36,13 @@ Ouvrez ensuite [http://localhost:3000](http://localhost:3000).
 3. Dans `/dashboard/teacher`, créez une classe puis ajoutez un ou plusieurs élèves.
 4. Rafraîchissez la page : la classe et les élèves doivent être toujours visibles.
 5. Vérifiez qu'un compte élève est redirigé vers `/login` s'il tente d'accéder à `/dashboard/teacher`.
+
+## Ticket 1.1
+
+### Test manuel
+
+1. Lancez l'app en local : `npm run dev`.
+2. Connectez-vous avec le compte professeur (teacher@palimpseste.fr / teacher123).
+3. Dans `/dashboard/teacher`, utilisez la section “Parcours” pour créer un nouveau parcours (titre, niveau, nombre de chapitres).
+4. Vérifiez que le parcours apparaît dans la liste et que le clic affiche ses détails.
+5. Rafraîchissez la page : le parcours doit toujours être visible.

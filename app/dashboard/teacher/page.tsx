@@ -11,6 +11,12 @@ import {
   persistClassrooms,
   readClassrooms,
 } from "@/lib/classrooms";
+import type { Parcours } from "@/lib/parcours";
+import {
+  createParcours,
+  persistParcours,
+  readParcours,
+} from "@/lib/parcours";
 
 export default function TeacherDashboard() {
   const router = useRouter();
@@ -21,6 +27,15 @@ export default function TeacherDashboard() {
   const [studentFirstName, setStudentFirstName] = useState("");
   const [studentLastName, setStudentLastName] = useState("");
   const [isReady, setIsReady] = useState(false);
+  const [parcoursList, setParcoursList] = useState<Parcours[]>([]);
+  const [selectedParcoursId, setSelectedParcoursId] = useState<string | null>(
+    null
+  );
+  const [parcoursTitle, setParcoursTitle] = useState("");
+  const [parcoursDescription, setParcoursDescription] = useState("");
+  const [parcoursLevel, setParcoursLevel] = useState<"A" | "B">("A");
+  const [parcoursChaptersCount, setParcoursChaptersCount] = useState("1");
+  const [isParcoursReady, setIsParcoursReady] = useState(false);
 
   useEffect(() => {
     const stored = readClassrooms();
@@ -36,9 +51,28 @@ export default function TeacherDashboard() {
     persistClassrooms(classrooms);
   }, [classrooms, isReady]);
 
+  useEffect(() => {
+    const stored = readParcours();
+    setParcoursList(stored);
+    if (stored.length > 0) {
+      setSelectedParcoursId(stored[0].id);
+    }
+    setIsParcoursReady(true);
+  }, []);
+
+  useEffect(() => {
+    if (!isParcoursReady) return;
+    persistParcours(parcoursList);
+  }, [isParcoursReady, parcoursList]);
+
   const selectedClassroom = useMemo(
     () => classrooms.find((entry) => entry.id === selectedClassId) || null,
     [classrooms, selectedClassId]
+  );
+
+  const selectedParcours = useMemo(
+    () => parcoursList.find((entry) => entry.id === selectedParcoursId) || null,
+    [parcoursList, selectedParcoursId]
   );
 
   const handleLogout = () => {
@@ -75,6 +109,25 @@ export default function TeacherDashboard() {
     setStudentPseudo("");
     setStudentFirstName("");
     setStudentLastName("");
+  };
+
+  const handleCreateParcours = (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    const trimmedTitle = parcoursTitle.trim();
+    const parsedCount = Number.parseInt(parcoursChaptersCount, 10);
+    if (!trimmedTitle || Number.isNaN(parsedCount) || parsedCount <= 0) return;
+    const parcours = createParcours({
+      title: trimmedTitle,
+      description: parcoursDescription,
+      level: parcoursLevel,
+      chaptersCount: parsedCount,
+    });
+    setParcoursList((prev) => [...prev, parcours]);
+    setSelectedParcoursId(parcours.id);
+    setParcoursTitle("");
+    setParcoursDescription("");
+    setParcoursLevel("A");
+    setParcoursChaptersCount("1");
   };
 
   return (
@@ -168,6 +221,90 @@ export default function TeacherDashboard() {
                     ))}
                   </ul>
                 )}
+              </div>
+            ) : null}
+          </div>
+        )}
+      </section>
+
+      <section className="card" style={{ marginTop: "2rem" }}>
+        <h2>Parcours</h2>
+        <p>Créez et consultez vos parcours pédagogiques.</p>
+        <form className="actions" onSubmit={handleCreateParcours}>
+          <input
+            type="text"
+            placeholder="Titre du parcours"
+            value={parcoursTitle}
+            onChange={(event) => setParcoursTitle(event.target.value)}
+            required
+          />
+          <input
+            type="text"
+            placeholder="Description courte (optionnelle)"
+            value={parcoursDescription}
+            onChange={(event) => setParcoursDescription(event.target.value)}
+          />
+          <select
+            value={parcoursLevel}
+            onChange={(event) =>
+              setParcoursLevel(event.target.value === "B" ? "B" : "A")
+            }
+          >
+            <option value="A">Niveau A</option>
+            <option value="B">Niveau B</option>
+          </select>
+          <input
+            type="number"
+            min={1}
+            step={1}
+            placeholder="Nombre de chapitres"
+            value={parcoursChaptersCount}
+            onChange={(event) => setParcoursChaptersCount(event.target.value)}
+            required
+          />
+          <button type="submit">Créer le parcours</button>
+        </form>
+
+        {parcoursList.length === 0 ? (
+          <p>Aucun parcours créé pour le moment.</p>
+        ) : (
+          <div style={{ display: "grid", gap: "1rem" }}>
+            <div>
+              <h3>Liste des parcours</h3>
+              <div style={{ display: "flex", flexWrap: "wrap", gap: "0.5rem" }}>
+                {parcoursList.map((entry) => (
+                  <button
+                    key={entry.id}
+                    type="button"
+                    className={
+                      entry.id === selectedParcoursId ? "primary" : "secondary"
+                    }
+                    onClick={() => setSelectedParcoursId(entry.id)}
+                  >
+                    {entry.title}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {selectedParcours ? (
+              <div>
+                <h3>Détails du parcours</h3>
+                <p>
+                  <strong>Titre :</strong> {selectedParcours.title}
+                </p>
+                <p>
+                  <strong>Description :</strong>{" "}
+                  {selectedParcours.description ||
+                    "Aucune description renseignée."}
+                </p>
+                <p>
+                  <strong>Niveau :</strong> {selectedParcours.level}
+                </p>
+                <p>
+                  <strong>Chapitres :</strong>{" "}
+                  {selectedParcours.chaptersCount}
+                </p>
               </div>
             ) : null}
           </div>
