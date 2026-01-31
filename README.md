@@ -44,7 +44,7 @@ Ouvrez ensuite [http://localhost:3000](http://localhost:3000).
 1. Lancez l'app en local : `npm run dev`.
 2. Connectez-vous avec le compte professeur (teacher@palimpseste.fr / teacher123).
 3. Dans `/dashboard/teacher`, utilisez la section “Parcours” pour créer un nouveau parcours (titre, niveau, nombre de chapitres).
-4. Vérifiez que le parcours apparaît dans la liste et que le clic affiche ses détails.
+4. Vérifiez que le parcours apparaît dans la liste et que le lien “Ouvrir” fonctionne.
 5. Rafraîchissez la page : le parcours doit toujours être visible.
 
 ## Ticket 1.2
@@ -53,7 +53,7 @@ Ouvrez ensuite [http://localhost:3000](http://localhost:3000).
 
 1. Lancez l'app en local : `npm run dev`.
 2. Connectez-vous avec le compte professeur (teacher@palimpseste.fr / teacher123).
-3. Dans `/dashboard/teacher`, sélectionnez un parcours existant (ou créez-en un).
+3. Dans `/dashboard/teacher`, sélectionnez un parcours existant (ou créez-en un) puis cliquez sur “Ouvrir”.
 4. Vérifiez que la liste des chapitres s'affiche avec les titres par défaut.
 5. Renommez un chapitre, ajoutez des objectifs, et passez son statut à “Validé”.
 6. Réordonnez deux chapitres avec les boutons “↑ / ↓”.
@@ -65,8 +65,8 @@ Ouvrez ensuite [http://localhost:3000](http://localhost:3000).
 
 1. Lancez l'app en local : `npm run dev`.
 2. Connectez-vous avec le compte professeur (teacher@palimpseste.fr / teacher123).
-3. Dans `/dashboard/teacher`, sélectionnez un parcours existant (ou créez-en un).
-4. Dans le bloc “Document de cours”, uploadez un fichier `.txt`, `.md` ou `.pdf`.
+3. Dans `/dashboard/teacher`, créez un parcours si besoin puis cliquez sur “Ouvrir”.
+4. Sur la page détail du parcours, uploadez un fichier `.txt`, `.md` ou `.pdf` dans le bloc “Document de cours”.
 5. Vérifiez que le nom du fichier, la date d'upload et le statut d'ingestion apparaissent (pending puis processed).
 6. Rafraîchissez la page : le document doit rester associé au parcours.
 7. Uploadez un nouveau document et confirmez le remplacement : le fichier affiché doit être mis à jour.
