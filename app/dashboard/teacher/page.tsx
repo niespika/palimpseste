@@ -11,7 +11,7 @@ import {
   persistClassrooms,
   readClassrooms,
 } from "@/lib/classrooms";
-import type { Parcours } from "@/lib/parcours";
+import type { ChapterStatus, Parcours } from "@/lib/parcours";
 import {
   createParcours,
   persistParcours,
@@ -128,6 +128,61 @@ export default function TeacherDashboard() {
     setParcoursDescription("");
     setParcoursLevel("A");
     setParcoursChaptersCount("1");
+  };
+
+  const updateParcours = (
+    parcoursId: string,
+    updater: (parcours: Parcours) => Parcours
+  ) => {
+    setParcoursList((prev) =>
+      prev.map((entry) =>
+        entry.id === parcoursId ? updater(entry) : entry
+      )
+    );
+  };
+
+  const handleUpdateChapter = (
+    parcoursId: string,
+    chapterId: string,
+    updates: Partial<{ title: string; objectives: string; status: ChapterStatus }>
+  ) => {
+    updateParcours(parcoursId, (parcours) => ({
+      ...parcours,
+      chapters: parcours.chapters.map((chapter) =>
+        chapter.id === chapterId ? { ...chapter, ...updates } : chapter
+      ),
+    }));
+  };
+
+  const handleMoveChapter = (
+    parcoursId: string,
+    chapterId: string,
+    direction: "up" | "down"
+  ) => {
+    updateParcours(parcoursId, (parcours) => {
+      const ordered = [...parcours.chapters].sort(
+        (a, b) => a.index - b.index
+      );
+      const currentIndex = ordered.findIndex(
+        (chapter) => chapter.id === chapterId
+      );
+      if (currentIndex === -1) return parcours;
+      const targetIndex = direction === "up" ? currentIndex - 1 : currentIndex + 1;
+      if (targetIndex < 0 || targetIndex >= ordered.length) return parcours;
+      const swapped = [...ordered];
+      [swapped[currentIndex], swapped[targetIndex]] = [
+        swapped[targetIndex],
+        swapped[currentIndex],
+      ];
+      const reindexed = swapped.map((chapter, index) => ({
+        ...chapter,
+        index: index + 1,
+      }));
+      return {
+        ...parcours,
+        chapters: reindexed,
+      };
+    });
   };
 
   return (
@@ -305,6 +360,119 @@ export default function TeacherDashboard() {
                   <strong>Chapitres :</strong>{" "}
                   {selectedParcours.chaptersCount}
                 </p>
+                <div style={{ marginTop: "1.5rem", display: "grid", gap: "1rem" }}>
+                  <h4>Chapitres</h4>
+                  {selectedParcours.chapters
+                    .slice()
+                    .sort((a, b) => a.index - b.index)
+                    .map((chapter, chapterIndex, chapters) => (
+                      <div
+                        key={chapter.id}
+                        style={{
+                          border: "1px solid #e3e3e3",
+                          borderRadius: "0.75rem",
+                          padding: "1rem",
+                          display: "grid",
+                          gap: "0.75rem",
+                        }}
+                      >
+                        <div
+                          style={{
+                            display: "flex",
+                            justifyContent: "space-between",
+                            alignItems: "center",
+                            gap: "1rem",
+                          }}
+                        >
+                          <strong>Chapitre {chapter.index}</strong>
+                          <div
+                            style={{
+                              display: "flex",
+                              gap: "0.5rem",
+                            }}
+                          >
+                            <button
+                              type="button"
+                              className="secondary"
+                              onClick={() =>
+                                handleMoveChapter(
+                                  selectedParcours.id,
+                                  chapter.id,
+                                  "up"
+                                )
+                              }
+                              disabled={chapterIndex === 0}
+                            >
+                              ↑
+                            </button>
+                            <button
+                              type="button"
+                              className="secondary"
+                              onClick={() =>
+                                handleMoveChapter(
+                                  selectedParcours.id,
+                                  chapter.id,
+                                  "down"
+                                )
+                              }
+                              disabled={chapterIndex === chapters.length - 1}
+                            >
+                              ↓
+                            </button>
+                          </div>
+                        </div>
+                        <label style={{ display: "grid", gap: "0.5rem" }}>
+                          <span>Titre</span>
+                          <input
+                            type="text"
+                            value={chapter.title}
+                            onChange={(event) =>
+                              handleUpdateChapter(
+                                selectedParcours.id,
+                                chapter.id,
+                                { title: event.target.value }
+                              )
+                            }
+                          />
+                        </label>
+                        <label style={{ display: "grid", gap: "0.5rem" }}>
+                          <span>Objectifs</span>
+                          <textarea
+                            rows={3}
+                            value={chapter.objectives}
+                            onChange={(event) =>
+                              handleUpdateChapter(
+                                selectedParcours.id,
+                                chapter.id,
+                                { objectives: event.target.value }
+                              )
+                            }
+                          />
+                        </label>
+                        <label style={{ display: "grid", gap: "0.5rem" }}>
+                          <span>Statut</span>
+                          <select
+                            value={chapter.status}
+                            onChange={(event) =>
+                              handleUpdateChapter(
+                                selectedParcours.id,
+                                chapter.id,
+                                {
+                                  status:
+                                    event.target.value === "validated"
+                                      ? "validated"
+                                      : "draft",
+                                }
+                              )
+                            }
+                          >
+                            <option value="draft">Brouillon</option>
+                            <option value="validated">Validé</option>
+                          </select>
+                        </label>
+                      </div>
+                    ))}
+                </div>
               </div>
             ) : null}
           </div>
