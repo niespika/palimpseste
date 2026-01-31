@@ -1,3 +1,6 @@
+import type { Passage } from "./passages";
+import { hashText } from "./passages";
+
 export type ParcoursLevel = "A" | "B";
 export type ChapterStatus = "draft" | "validated";
 export type DocumentStatus = "pending" | "processed" | "failed";
@@ -26,6 +29,7 @@ export type Parcours = {
   chaptersCount: number;
   chapters: Chapter[];
   document?: CourseDocument;
+  passages?: Passage[];
 };
 
 const STORAGE_KEY = "palimpseste-parcours";
@@ -132,6 +136,7 @@ function normalizeParcours(entry: unknown): Parcours | null {
     description: record.description?.trim() || undefined,
     chapters: normalizeChapters(record.chapters, record.chaptersCount),
     document: normalizeDocument(record.document),
+    passages: normalizePassages(record.passages, record.id),
   };
 }
 
@@ -159,6 +164,59 @@ function normalizeDocument(entry: unknown): CourseDocument | undefined {
         ? record.error
         : undefined,
   };
+}
+
+function normalizePassages(
+  entry: unknown,
+  trackId: string
+): Passage[] | undefined {
+  if (!Array.isArray(entry)) return undefined;
+  const sanitized = entry
+    .map((item, position) => {
+      if (!item || typeof item !== "object") return null;
+      const record = item as Partial<Passage>;
+      const text = typeof record.text === "string" ? record.text.trim() : "";
+      if (!text) return null;
+      const index =
+        typeof record.index === "number" && record.index > 0
+          ? record.index
+          : position + 1;
+      const charStart =
+        typeof record.charStart === "number" ? record.charStart : 0;
+      const charEnd =
+        typeof record.charEnd === "number"
+          ? record.charEnd
+          : charStart + text.length;
+      const hash =
+        typeof record.hash === "string" && record.hash.trim()
+          ? record.hash
+          : hashText(text);
+      const createdAt =
+        typeof record.createdAt === "string" && record.createdAt.trim()
+          ? record.createdAt
+          : new Date().toISOString();
+      return {
+        id:
+          typeof record.id === "string" && record.id.trim()
+            ? record.id
+            : `passage-${trackId}-${index}`,
+        trackId,
+        index,
+        text,
+        charStart,
+        charEnd,
+        hash,
+        createdAt,
+      };
+    })
+    .filter((item): item is Passage => Boolean(item));
+
+  return sanitized
+    .sort((a, b) => a.index - b.index)
+    .map((passage, index) => ({
+      ...passage,
+      index: index + 1,
+    }));
 }
 
 export function readParcours(): Parcours[] {
