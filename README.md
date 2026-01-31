@@ -46,3 +46,15 @@ Ouvrez ensuite [http://localhost:3000](http://localhost:3000).
 3. Dans `/dashboard/teacher`, utilisez la section “Parcours” pour créer un nouveau parcours (titre, niveau, nombre de chapitres).
 4. Vérifiez que le parcours apparaît dans la liste et que le clic affiche ses détails.
 5. Rafraîchissez la page : le parcours doit toujours être visible.
+
+## Ticket 1.2
+
+### Test manuel
+
+1. Lancez l'app en local : `npm run dev`.
+2. Connectez-vous avec le compte professeur (teacher@palimpseste.fr / teacher123).
+3. Dans `/dashboard/teacher`, sélectionnez un parcours existant (ou créez-en un).
+4. Vérifiez que la liste des chapitres s'affiche avec les titres par défaut.
+5. Renommez un chapitre, ajoutez des objectifs, et passez son statut à “Validé”.
+6. Réordonnez deux chapitres avec les boutons “↑ / ↓”.
+7. Rafraîchissez la page : les modifications et l'ordre des chapitres doivent être conservés.
