@@ -58,3 +58,15 @@ Ouvrez ensuite [http://localhost:3000](http://localhost:3000).
 5. Renommez un chapitre, ajoutez des objectifs, et passez son statut à “Validé”.
 6. Réordonnez deux chapitres avec les boutons “↑ / ↓”.
 7. Rafraîchissez la page : les modifications et l'ordre des chapitres doivent être conservés.
+
+## Ticket 2.1
+
+### Test manuel
+
+1. Lancez l'app en local : `npm run dev`.
+2. Connectez-vous avec le compte professeur (teacher@palimpseste.fr / teacher123).
+3. Dans `/dashboard/teacher`, sélectionnez un parcours existant (ou créez-en un).
+4. Dans le bloc “Document de cours”, uploadez un fichier `.txt`, `.md` ou `.pdf`.
+5. Vérifiez que le nom du fichier, la date d'upload et le statut d'ingestion apparaissent (pending puis processed).
+6. Rafraîchissez la page : le document doit rester associé au parcours.
+7. Uploadez un nouveau document et confirmez le remplacement : le fichier affiché doit être mis à jour.

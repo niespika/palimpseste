@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import RoleGuard from "@/app/components/RoleGuard";
 import { clearRole } from "@/lib/auth";
@@ -36,6 +36,8 @@ export default function TeacherDashboard() {
   const [parcoursLevel, setParcoursLevel] = useState<"A" | "B">("A");
   const [parcoursChaptersCount, setParcoursChaptersCount] = useState("1");
   const [isParcoursReady, setIsParcoursReady] = useState(false);
+  const [isDocumentUploading, setIsDocumentUploading] = useState(false);
+  const documentInputRef = useRef<HTMLInputElement | null>(null);
 
   useEffect(() => {
     const stored = readClassrooms();
@@ -183,6 +185,147 @@ export default function TeacherDashboard() {
         chapters: reindexed,
       };
     });
+  };
+
+  const extractPdfText = async (file: File) => {
+    const buffer = await file.arrayBuffer();
+    const raw = new TextDecoder("latin1").decode(new Uint8Array(buffer));
+    const matches = raw.matchAll(/\(([^()]*)\)/g);
+    const extracted: string[] = [];
+    for (const match of matches) {
+      const chunk = match[1];
+      if (!chunk) continue;
+      extracted.push(
+        chunk
+          .replace(/\\n/g, "\n")
+          .replace(/\\r/g, "\r")
+          .replace(/\\t/g, "\t")
+          .replace(/\\b/g, "\b")
+          .replace(/\\f/g, "\f")
+          .replace(/\\\(/g, "(")
+          .replace(/\\\)/g, ")")
+          .replace(/\\\\/g, "\\")
+      );
+    }
+    return extracted.join(" ").replace(/\s+/g, " ").trim();
+  };
+
+  const handleDocumentUpload = async (
+    event: React.ChangeEvent<HTMLInputElement>
+  ) => {
+    const file = event.target.files?.[0];
+    const currentParcours = selectedParcours;
+    if (!file || !currentParcours) {
+      event.target.value = "";
+      return;
+    }
+
+    if (
+      currentParcours.document &&
+      !window.confirm(
+        "Un document est déjà associé à ce parcours. Voulez-vous le remplacer ?"
+      )
+    ) {
+      event.target.value = "";
+      return;
+    }
+
+    const fileName = file.name;
+    const fileExtension = fileName.toLowerCase();
+    const isPdf =
+      file.type === "application/pdf" || fileExtension.endsWith(".pdf");
+    const isText =
+      file.type.startsWith("text/") ||
+      fileExtension.endsWith(".txt") ||
+      fileExtension.endsWith(".md");
+
+    if (!isPdf && !isText) {
+      updateParcours(currentParcours.id, (parcours) => ({
+        ...parcours,
+        document: {
+          fileName,
+          uploadedAt: new Date().toISOString(),
+          status: "failed",
+          content: "",
+          error: "Format non pris en charge. Utilisez un PDF ou un fichier texte.",
+        },
+      }));
+      event.target.value = "";
+      return;
+    }
+
+    setIsDocumentUploading(true);
+    const uploadedAt = new Date().toISOString();
+    updateParcours(currentParcours.id, (parcours) => ({
+      ...parcours,
+      document: {
+        fileName,
+        uploadedAt,
+        status: "pending",
+        content: "",
+      },
+    }));
+
+    try {
+      let content = "";
+      if (isPdf) {
+        content = await extractPdfText(file);
+      } else {
+        content = await file.text();
+      }
+
+      const trimmedContent = content.trim();
+      if (!trimmedContent) {
+        throw new Error(
+          "Le document ne contient pas de texte exploitable après extraction."
+        );
+      }
+
+      updateParcours(currentParcours.id, (parcours) => ({
+        ...parcours,
+        document: {
+          fileName,
+          uploadedAt,
+          status: "processed",
+          content: trimmedContent,
+        },
+      }));
+    } catch (error) {
+      const message =
+        error instanceof Error
+          ? error.message
+          : "Une erreur inconnue est survenue lors de l'extraction.";
+      updateParcours(currentParcours.id, (parcours) => ({
+        ...parcours,
+        document: {
+          fileName,
+          uploadedAt,
+          status: "failed",
+          content: "",
+          error: message,
+        },
+      }));
+    } finally {
+      setIsDocumentUploading(false);
+      event.target.value = "";
+    }
+  };
+
+  const formatUploadDate = (value: string) => {
+    const parsed = new Date(value);
+    if (Number.isNaN(parsed.getTime())) return value;
+    return parsed.toLocaleString("fr-FR");
+  };
+
+  const documentStatusLabel = (status: "pending" | "processed" | "failed") => {
+    switch (status) {
+      case "processed":
+        return "Traitement terminé";
+      case "failed":
+        return "Erreur d'ingestion";
+      default:
+        return "En attente de traitement";
+    }
   };
 
   return (
@@ -360,6 +503,62 @@ export default function TeacherDashboard() {
                   <strong>Chapitres :</strong>{" "}
                   {selectedParcours.chaptersCount}
                 </p>
+                <div
+                  style={{
+                    border: "1px solid #e3e3e3",
+                    borderRadius: "0.75rem",
+                    padding: "1rem",
+                    display: "grid",
+                    gap: "0.75rem",
+                    marginTop: "1rem",
+                  }}
+                >
+                  <h4>Document de cours</h4>
+                  {selectedParcours.document ? (
+                    <div style={{ display: "grid", gap: "0.5rem" }}>
+                      <p>
+                        <strong>Nom :</strong> {selectedParcours.document.fileName}
+                      </p>
+                      <p>
+                        <strong>Date d'upload :</strong>{" "}
+                        {formatUploadDate(selectedParcours.document.uploadedAt)}
+                      </p>
+                      <p>
+                        <strong>Statut :</strong>{" "}
+                        {documentStatusLabel(selectedParcours.document.status)}
+                      </p>
+                      {selectedParcours.document.status === "failed" &&
+                      selectedParcours.document.error ? (
+                        <p style={{ color: "#c0392b" }}>
+                          <strong>Erreur :</strong>{" "}
+                          {selectedParcours.document.error}
+                        </p>
+                      ) : null}
+                    </div>
+                  ) : (
+                    <p>Aucun document importé pour ce parcours.</p>
+                  )}
+                  <div className="actions">
+                    <button
+                      type="button"
+                      className="secondary"
+                      onClick={() => documentInputRef.current?.click()}
+                      disabled={isDocumentUploading}
+                    >
+                      {selectedParcours.document ? "Remplacer le document" : "Uploader un document"}
+                    </button>
+                    {isDocumentUploading ? (
+                      <span>Import en cours…</span>
+                    ) : null}
+                  </div>
+                  <input
+                    ref={documentInputRef}
+                    type="file"
+                    accept=".pdf,.txt,.md,text/plain,application/pdf"
+                    onChange={handleDocumentUpload}
+                    style={{ display: "none" }}
+                  />
+                </div>
                 <div style={{ marginTop: "1.5rem", display: "grid", gap: "1rem" }}>
                   <h4>Chapitres</h4>
                   {selectedParcours.chapters
