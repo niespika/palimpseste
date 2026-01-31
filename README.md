@@ -70,3 +70,16 @@ Ouvrez ensuite [http://localhost:3000](http://localhost:3000).
 5. Vérifiez que le nom du fichier, la date d'upload et le statut d'ingestion apparaissent (pending puis processed).
 6. Rafraîchissez la page : le document doit rester associé au parcours.
 7. Uploadez un nouveau document et confirmez le remplacement : le fichier affiché doit être mis à jour.
+
+## Ticket 2.2
+
+### Test manuel
+
+1. Lancez l'app en local : `npm run dev`.
+2. Connectez-vous avec le compte professeur (teacher@palimpseste.fr / teacher123).
+3. Dans `/dashboard/teacher`, ouvrez la section “Ressources”.
+4. Créez une ressource texte (titre, contenu, tags) puis vérifiez qu'elle apparaît dans la liste.
+5. Créez une ressource image en important un fichier, puis vérifiez l'aperçu et l'entrée dans la liste.
+6. Testez les filtres par type et par tag.
+7. Cliquez sur “Voir détail” pour consulter une ressource, puis supprimez-la en confirmant.
+8. Rafraîchissez la page : les ressources restantes doivent toujours être visibles.
