@@ -26,3 +26,13 @@ Ouvrez ensuite [http://localhost:3000](http://localhost:3000).
 - `app/` : routes et layouts via l'App Router.
 - `components/` : composants réutilisables.
 - `lib/` : helpers, configuration et logique partagée.
+
+## Ticket 0.3
+
+### Test manuel
+
+1. Lancez l'app en local : `npm run dev`.
+2. Connectez-vous avec le compte professeur (teacher@palimpseste.fr / teacher123).
+3. Dans `/dashboard/teacher`, créez une classe puis ajoutez un ou plusieurs élèves.
+4. Rafraîchissez la page : la classe et les élèves doivent être toujours visibles.
+5. Vérifiez qu'un compte élève est redirigé vers `/login` s'il tente d'accéder à `/dashboard/teacher`.
