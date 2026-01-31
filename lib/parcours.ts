@@ -1,5 +1,6 @@
 export type ParcoursLevel = "A" | "B";
 export type ChapterStatus = "draft" | "validated";
+export type DocumentStatus = "pending" | "processed" | "failed";
 
 export type Chapter = {
   id: string;
@@ -9,6 +10,14 @@ export type Chapter = {
   status: ChapterStatus;
 };
 
+export type CourseDocument = {
+  fileName: string;
+  uploadedAt: string;
+  status: DocumentStatus;
+  content: string;
+  error?: string;
+};
+
 export type Parcours = {
   id: string;
   title: string;
@@ -16,6 +25,7 @@ export type Parcours = {
   level: ParcoursLevel;
   chaptersCount: number;
   chapters: Chapter[];
+  document?: CourseDocument;
 };
 
 const STORAGE_KEY = "palimpseste-parcours";
@@ -121,6 +131,33 @@ function normalizeParcours(entry: unknown): Parcours | null {
     ...record,
     description: record.description?.trim() || undefined,
     chapters: normalizeChapters(record.chapters, record.chaptersCount),
+    document: normalizeDocument(record.document),
+  };
+}
+
+function normalizeDocument(entry: unknown): CourseDocument | undefined {
+  if (!entry || typeof entry !== "object") return undefined;
+  const record = entry as Partial<CourseDocument>;
+  if (typeof record.fileName !== "string" || !record.fileName.trim()) {
+    return undefined;
+  }
+  const status =
+    record.status === "processed" || record.status === "failed"
+      ? record.status
+      : "pending";
+  const uploadedAt =
+    typeof record.uploadedAt === "string" && record.uploadedAt.trim()
+      ? record.uploadedAt
+      : new Date().toISOString();
+  return {
+    fileName: record.fileName,
+    uploadedAt,
+    status,
+    content: typeof record.content === "string" ? record.content : "",
+    error:
+      typeof record.error === "string" && record.error.trim()
+        ? record.error
+        : undefined,
   };
 }
 
