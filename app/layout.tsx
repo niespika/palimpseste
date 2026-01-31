@@ -1,17 +1,20 @@
 import "./globals.css";
-import type { ReactNode } from "react";
+import type { Metadata } from "next";
+import { siteConfig } from "@/lib/site";
 
-export const metadata = {
-  title: "Palimpseste",
-  description: "Authentification simple pour Palimpseste"
+export const metadata: Metadata = {
+  title: siteConfig.name,
+  description: siteConfig.description,
 };
 
-export default function RootLayout({ children }: { children: ReactNode }) {
+export default function RootLayout({
+  children,
+}: Readonly<{
+  children: React.ReactNode;
+}>) {
   return (
     <html lang="fr">
-      <body>
-        <main>{children}</main>
-      </body>
+      <body>{children}</body>
     </html>
   );
 }

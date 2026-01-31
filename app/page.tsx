@@ -1,5 +1,9 @@
-import { redirect } from "next/navigation";
+import { IntroSection } from "@/components/IntroSection";
 
-export default function Home() {
-  redirect("/login");
+export default function HomePage() {
+  return (
+    <main>
+      <IntroSection />
+    </main>
+  );
 }
