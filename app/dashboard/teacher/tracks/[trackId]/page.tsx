@@ -6,7 +6,8 @@ import { useParams } from "next/navigation";
 import RoleGuard from "@/app/components/RoleGuard";
 import type { ChapterStatus, Parcours } from "@/lib/parcours";
 import { persistParcours, readParcours } from "@/lib/parcours";
-import { generatePassagesFromText } from "@/lib/passages";
+import type { Passage } from "@/lib/passages";
+import { generatePassagesFromText, hashText } from "@/lib/passages";
 
 export default function TeacherTrackDetailPage() {
   const params = useParams<{ trackId: string }>();
@@ -264,15 +265,22 @@ export default function TeacherTrackDetailPage() {
     passageStartIndex + passagesPerPage
   );
 
+  useEffect(() => {
+    setPassagePage((prev) =>
+      Math.min(Math.max(1, prev), passageTotalPages)
+    );
+  }, [passageTotalPages]);
+
   const handleGeneratePassages = () => {
     if (!selectedParcours?.document?.rawText) return;
-    if (
-      passages.length > 0 &&
-      !window.confirm(
-        "Des passages existent déjà. Voulez-vous les regénérer ?"
-      )
-    ) {
-      return;
+    if (passages.length > 0) {
+      const hasManual = passages.some((passage) => passage.isManual);
+      const message = hasManual
+        ? "Des passages ont été modifiés manuellement. Regénérer les passages écrasera ces modifications. Voulez-vous continuer ?"
+        : "Des passages existent déjà. Voulez-vous les regénérer ?";
+      if (!window.confirm(message)) {
+        return;
+      }
     }
     const generated = generatePassagesFromText(
       selectedParcours.document.rawText,
@@ -289,6 +297,102 @@ export default function TeacherTrackDetailPage() {
     const cleaned = text.replace(/\s+/g, " ").trim();
     if (cleaned.length <= 120) return cleaned;
     return `${cleaned.slice(0, 120)}…`;
+  };
+
+  const reindexPassages = (items: Passage[], updatedAt: string) =>
+    items.map((passage, index) => {
+      const nextIndex = index + 1;
+      if (passage.index === nextIndex) {
+        return passage;
+      }
+      return {
+        ...passage,
+        index: nextIndex,
+        updatedAt,
+      };
+    });
+
+  const handleMergePassage = (passageId: string) => {
+    if (!selectedParcours) return;
+    updateParcours(selectedParcours.id, (parcours) => {
+      const ordered = (parcours.passages ?? [])
+        .slice()
+        .sort((a, b) => a.index - b.index);
+      const currentIndex = ordered.findIndex(
+        (passage) => passage.id === passageId
+      );
+      if (currentIndex === -1 || currentIndex === ordered.length - 1) {
+        return parcours;
+      }
+      const current = ordered[currentIndex];
+      const next = ordered[currentIndex + 1];
+      const mergedText = `${current.text}\n\n${next.text}`.trim();
+      const updatedAt = new Date().toISOString();
+      const merged: Passage = {
+        ...current,
+        text: mergedText,
+        hash: hashText(mergedText),
+        isManual: true,
+        charStart: null,
+        charEnd: null,
+        updatedAt,
+      };
+      const updated = [
+        ...ordered.slice(0, currentIndex),
+        merged,
+        ...ordered.slice(currentIndex + 2),
+      ];
+      return {
+        ...parcours,
+        passages: reindexPassages(updated, updatedAt),
+      };
+    });
+  };
+
+  const handleMovePassage = (passageId: string, direction: "up" | "down") => {
+    if (!selectedParcours) return;
+    updateParcours(selectedParcours.id, (parcours) => {
+      const ordered = (parcours.passages ?? [])
+        .slice()
+        .sort((a, b) => a.index - b.index);
+      const currentIndex = ordered.findIndex(
+        (passage) => passage.id === passageId
+      );
+      if (currentIndex === -1) return parcours;
+      const targetIndex = direction === "up" ? currentIndex - 1 : currentIndex + 1;
+      if (targetIndex < 0 || targetIndex >= ordered.length) return parcours;
+      const swapped = [...ordered];
+      [swapped[currentIndex], swapped[targetIndex]] = [
+        swapped[targetIndex],
+        swapped[currentIndex],
+      ];
+      const updatedAt = new Date().toISOString();
+      return {
+        ...parcours,
+        passages: reindexPassages(swapped, updatedAt).map((passage) =>
+          passage.id === passageId ||
+          passage.id === ordered[targetIndex]?.id
+            ? { ...passage, updatedAt }
+            : passage
+        ),
+      };
+    });
+  };
+
+  const handleDeletePassage = (passageId: string) => {
+    if (!selectedParcours) return;
+    if (!window.confirm("Supprimer ce passage ?")) return;
+    updateParcours(selectedParcours.id, (parcours) => {
+      const ordered = (parcours.passages ?? [])
+        .slice()
+        .sort((a, b) => a.index - b.index);
+      const updated = ordered.filter((passage) => passage.id !== passageId);
+      const updatedAt = new Date().toISOString();
+      return {
+        ...parcours,
+        passages: reindexPassages(updated, updatedAt),
+      };
+    });
   };
 
   return (
@@ -454,31 +558,74 @@ export default function TeacherTrackDetailPage() {
                   </div>
                 </div>
                 <div style={{ display: "grid", gap: "0.75rem" }}>
-                  {passagePageItems.map((passage) => (
-                    <div
-                      key={passage.id}
-                      style={{
-                        border: "1px solid #e3e3e3",
-                        borderRadius: "0.75rem",
-                        padding: "0.75rem",
-                        display: "grid",
-                        gap: "0.5rem",
-                      }}
-                    >
-                      <strong>Passage {passage.index}</strong>
-                      <p style={{ margin: 0 }}>
-                        {formatPassageSnippet(passage.text)}
-                      </p>
-                      <div className="actions">
-                        <Link
-                          className="secondary"
-                          href={`/dashboard/teacher/tracks/${selectedParcours.id}/passages/${passage.id}`}
+                  {passagePageItems.map((passage, pageIndex) => {
+                    const absoluteIndex = passageStartIndex + pageIndex;
+                    const hasPrevious = absoluteIndex > 0;
+                    const hasNext = absoluteIndex < passages.length - 1;
+                    return (
+                      <div
+                        key={passage.id}
+                        style={{
+                          border: "1px solid #e3e3e3",
+                          borderRadius: "0.75rem",
+                          padding: "0.75rem",
+                          display: "grid",
+                          gap: "0.5rem",
+                        }}
+                      >
+                        <strong>Passage {passage.index}</strong>
+                        <p style={{ margin: 0 }}>
+                          {formatPassageSnippet(passage.text)}
+                        </p>
+                        <div
+                          className="actions"
+                          style={{ flexWrap: "wrap" }}
                         >
-                          Voir le passage
-                        </Link>
+                          <Link
+                            className="secondary"
+                            href={`/dashboard/teacher/tracks/${selectedParcours.id}/passages/${passage.id}`}
+                          >
+                            Voir / Éditer
+                          </Link>
+                          <button
+                            type="button"
+                            className="secondary"
+                            onClick={() => handleMergePassage(passage.id)}
+                            disabled={!hasNext}
+                          >
+                            Fusionner avec le suivant
+                          </button>
+                          <button
+                            type="button"
+                            className="secondary"
+                            onClick={() =>
+                              handleMovePassage(passage.id, "up")
+                            }
+                            disabled={!hasPrevious}
+                          >
+                            ↑
+                          </button>
+                          <button
+                            type="button"
+                            className="secondary"
+                            onClick={() =>
+                              handleMovePassage(passage.id, "down")
+                            }
+                            disabled={!hasNext}
+                          >
+                            ↓
+                          </button>
+                          <button
+                            type="button"
+                            className="secondary"
+                            onClick={() => handleDeletePassage(passage.id)}
+                          >
+                            Supprimer
+                          </button>
+                        </div>
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </div>
             ) : null}

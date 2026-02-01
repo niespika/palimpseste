@@ -3,10 +3,13 @@ export type Passage = {
   trackId: string;
   index: number;
   text: string;
-  charStart: number;
-  charEnd: number;
+  charStart: number | null;
+  charEnd: number | null;
   hash: string;
   createdAt: string;
+  updatedAt: string;
+  isManual: boolean;
+  notes?: string;
 };
 
 const MIN_PASSAGE_LENGTH = 300;
@@ -37,6 +40,8 @@ export function generatePassagesFromText(
       charEnd: range.end,
       hash,
       createdAt,
+      updatedAt: createdAt,
+      isManual: false,
     };
   });
 }
@@ -48,6 +53,15 @@ export function hashText(value: string): string {
     hash = Math.imul(hash, 16777619);
   }
   return (hash >>> 0).toString(16).padStart(8, "0");
+}
+
+export function createPassageId(trackId: string): string {
+  if (typeof crypto !== "undefined" && "randomUUID" in crypto) {
+    return `passage-${trackId}-${crypto.randomUUID()}`;
+  }
+  return `passage-${trackId}-${Date.now()}-${Math.random()
+    .toString(16)
+    .slice(2)}`;
 }
 
 function buildPassageRanges(text: string): TextRange[] {

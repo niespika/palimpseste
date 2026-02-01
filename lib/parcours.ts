@@ -186,12 +186,19 @@ function normalizePassages(
         typeof record.index === "number" && record.index > 0
           ? record.index
           : position + 1;
+      const isManual = record.isManual === true;
       const charStart =
-        typeof record.charStart === "number" ? record.charStart : 0;
+        typeof record.charStart === "number"
+          ? record.charStart
+          : isManual
+            ? null
+            : 0;
       const charEnd =
         typeof record.charEnd === "number"
           ? record.charEnd
-          : charStart + text.length;
+          : isManual
+            ? null
+            : (typeof charStart === "number" ? charStart : 0) + text.length;
       const hash =
         typeof record.hash === "string" && record.hash.trim()
           ? record.hash
@@ -200,6 +207,14 @@ function normalizePassages(
         typeof record.createdAt === "string" && record.createdAt.trim()
           ? record.createdAt
           : new Date().toISOString();
+      const updatedAt =
+        typeof record.updatedAt === "string" && record.updatedAt.trim()
+          ? record.updatedAt
+          : createdAt;
+      const notes =
+        typeof record.notes === "string" && record.notes.trim()
+          ? record.notes
+          : undefined;
       return {
         id:
           typeof record.id === "string" && record.id.trim()
@@ -212,6 +227,9 @@ function normalizePassages(
         charEnd,
         hash,
         createdAt,
+        updatedAt,
+        isManual,
+        notes,
       };
     })
     .filter((item): item is Passage => Boolean(item));
