@@ -4,6 +4,8 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import RoleGuard from "@/app/components/RoleGuard";
+import type { Concept, ConceptStatus } from "@/lib/concepts";
+import { extractConceptsFromPassages } from "@/lib/concepts";
 import type { ChapterStatus, Parcours } from "@/lib/parcours";
 import { persistParcours, readParcours } from "@/lib/parcours";
 import type { Passage } from "@/lib/passages";
@@ -18,6 +20,13 @@ export default function TeacherTrackDetailPage() {
   const documentInputRef = useRef<HTMLInputElement | null>(null);
   const [passagePage, setPassagePage] = useState(1);
   const passagesPerPage = 20;
+  const [conceptFilter, setConceptFilter] = useState<ConceptStatus | "all">(
+    "all"
+  );
+  const [selectedConceptId, setSelectedConceptId] = useState<string | null>(
+    null
+  );
+  const [passageToAdd, setPassageToAdd] = useState<string>("");
 
   useEffect(() => {
     const stored = readParcours();
@@ -35,6 +44,10 @@ export default function TeacherTrackDetailPage() {
   }, [selectedParcours?.id]);
 
   useEffect(() => {
+    setPassageToAdd("");
+  }, [selectedConceptId]);
+
+  useEffect(() => {
     if (!isReady) return;
     persistParcours(parcoursList);
   }, [isReady, parcoursList]);
@@ -49,6 +62,32 @@ export default function TeacherTrackDetailPage() {
       )
     );
   };
+
+  const updateConcept = (
+    parcoursId: string,
+    conceptId: string,
+    updater: (concept: Concept) => Concept
+  ) => {
+    updateParcours(parcoursId, (parcours) => ({
+      ...parcours,
+      concepts: (parcours.concepts ?? []).map((concept) =>
+        concept.id === conceptId ? updater(concept) : concept
+      ),
+    }));
+  };
+
+  const removePassagesFromConcepts = (
+    concepts: Concept[],
+    removedPassageIds: string[]
+  ) =>
+    concepts
+      .map((concept) => ({
+        ...concept,
+        passageIds: concept.passageIds.filter(
+          (id) => !removedPassageIds.includes(id)
+        ),
+      }))
+      .filter((concept) => concept.passageIds.length > 0);
 
   const handleUpdateChapter = (
     parcoursId: string,
@@ -255,6 +294,30 @@ export default function TeacherTrackDetailPage() {
     [selectedParcours?.passages]
   );
 
+  const concepts = useMemo(
+    () => selectedParcours?.concepts ?? [],
+    [selectedParcours?.concepts]
+  );
+
+  const filteredConcepts = useMemo(() => {
+    if (conceptFilter === "all") return concepts;
+    return concepts.filter((concept) => concept.status === conceptFilter);
+  }, [concepts, conceptFilter]);
+
+  const selectedConcept = useMemo(
+    () => concepts.find((concept) => concept.id === selectedConceptId) || null,
+    [concepts, selectedConceptId]
+  );
+
+  useEffect(() => {
+    if (!selectedConcept && concepts.length > 0) {
+      setSelectedConceptId(concepts[0]?.id ?? null);
+    }
+    if (!selectedConcept && concepts.length === 0) {
+      setSelectedConceptId(null);
+    }
+  }, [concepts, selectedConcept]);
+
   const passageTotalPages = Math.max(
     1,
     Math.ceil(passages.length / passagesPerPage)
@@ -276,8 +339,8 @@ export default function TeacherTrackDetailPage() {
     if (passages.length > 0) {
       const hasManual = passages.some((passage) => passage.isManual);
       const message = hasManual
-        ? "Des passages ont été modifiés manuellement. Regénérer les passages écrasera ces modifications. Voulez-vous continuer ?"
-        : "Des passages existent déjà. Voulez-vous les regénérer ?";
+        ? "Des passages ont été modifiés manuellement. Regénérer les passages écrasera ces modifications et réinitialisera les concepts. Voulez-vous continuer ?"
+        : "Des passages existent déjà. Les regénérer réinitialisera les concepts. Voulez-vous continuer ?";
       if (!window.confirm(message)) {
         return;
       }
@@ -289,8 +352,59 @@ export default function TeacherTrackDetailPage() {
     updateParcours(selectedParcours.id, (parcours) => ({
       ...parcours,
       passages: generated,
+      concepts: [],
     }));
     setPassagePage(1);
+  };
+
+  const handleProposeConcepts = () => {
+    if (!selectedParcours) return;
+    if (passages.length === 0) {
+      window.alert("Aucun passage disponible pour proposer des concepts.");
+      return;
+    }
+    const extracted = extractConceptsFromPassages(
+      passages,
+      selectedParcours.id
+    );
+    if (extracted.length === 0) {
+      window.alert("Aucun concept détecté à partir des passages.");
+      return;
+    }
+    updateParcours(selectedParcours.id, (parcours) => {
+      const existing = parcours.concepts ?? [];
+      const indexed = new Map(
+        existing.map((concept) => [concept.name.toLowerCase(), concept])
+      );
+      const merged = [...existing];
+      extracted.forEach((concept) => {
+        const match = indexed.get(concept.name.toLowerCase());
+        if (match) {
+          const combined = Array.from(
+            new Set([...match.passageIds, ...concept.passageIds])
+          );
+          match.passageIds = combined;
+          return;
+        }
+        merged.push(concept);
+        indexed.set(concept.name.toLowerCase(), concept);
+      });
+      return {
+        ...parcours,
+        concepts: merged,
+      };
+    });
+  };
+
+  const formatStatusLabel = (status: ConceptStatus) => {
+    switch (status) {
+      case "validated":
+        return "Validé";
+      case "rejected":
+        return "Rejeté";
+      default:
+        return "Proposé";
+    }
   };
 
   const formatPassageSnippet = (text: string) => {
@@ -345,6 +459,10 @@ export default function TeacherTrackDetailPage() {
       return {
         ...parcours,
         passages: reindexPassages(updated, updatedAt),
+        concepts: removePassagesFromConcepts(
+          parcours.concepts ?? [],
+          [next.id]
+        ),
       };
     });
   };
@@ -391,6 +509,10 @@ export default function TeacherTrackDetailPage() {
       return {
         ...parcours,
         passages: reindexPassages(updated, updatedAt),
+        concepts: removePassagesFromConcepts(
+          parcours.concepts ?? [],
+          [passageId]
+        ),
       };
     });
   };
@@ -481,6 +603,309 @@ export default function TeacherTrackDetailPage() {
               onChange={handleDocumentUpload}
               style={{ display: "none" }}
             />
+          </div>
+
+          <div
+            style={{
+              border: "1px solid #e3e3e3",
+              borderRadius: "0.75rem",
+              padding: "1rem",
+              display: "grid",
+              gap: "0.75rem",
+              marginTop: "1.5rem",
+            }}
+          >
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+                gap: "1rem",
+              }}
+            >
+              <div>
+                <h3>Concepts</h3>
+                <p style={{ margin: 0 }}>
+                  {concepts.length > 0
+                    ? `${concepts.length} concept(s) détecté(s).`
+                    : "Aucun concept enregistré pour ce parcours."}
+                </p>
+              </div>
+              <button
+                type="button"
+                className="secondary"
+                onClick={handleProposeConcepts}
+                disabled={passages.length === 0}
+              >
+                Proposer des concepts
+              </button>
+            </div>
+
+            <div
+              style={{
+                display: "flex",
+                gap: "1rem",
+                alignItems: "center",
+                flexWrap: "wrap",
+              }}
+            >
+              <label style={{ display: "flex", gap: "0.5rem", alignItems: "center" }}>
+                <span>Filtrer</span>
+                <select
+                  value={conceptFilter}
+                  onChange={(event) =>
+                    setConceptFilter(
+                      event.target.value === "validated" ||
+                        event.target.value === "rejected" ||
+                        event.target.value === "proposed"
+                        ? event.target.value
+                        : "all"
+                    )
+                  }
+                >
+                  <option value="all">Tous</option>
+                  <option value="proposed">Proposés</option>
+                  <option value="validated">Validés</option>
+                  <option value="rejected">Rejetés</option>
+                </select>
+              </label>
+            </div>
+
+            {filteredConcepts.length > 0 ? (
+              <div
+                style={{
+                  display: "grid",
+                  gap: "0.75rem",
+                }}
+              >
+                {filteredConcepts.map((concept) => (
+                  <div
+                    key={concept.id}
+                    style={{
+                      border: "1px solid #e3e3e3",
+                      borderRadius: "0.75rem",
+                      padding: "0.75rem",
+                      display: "grid",
+                      gap: "0.5rem",
+                    }}
+                  >
+                    <div
+                      style={{
+                        display: "flex",
+                        justifyContent: "space-between",
+                        alignItems: "center",
+                        gap: "1rem",
+                      }}
+                    >
+                      <strong>{concept.name}</strong>
+                      <span>{formatStatusLabel(concept.status)}</span>
+                    </div>
+                    <p style={{ margin: 0 }}>{concept.definition}</p>
+                    <div className="actions">
+                      <button
+                        type="button"
+                        className="secondary"
+                        onClick={() => setSelectedConceptId(concept.id)}
+                      >
+                        Voir détail
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p style={{ margin: 0 }}>
+                Aucun concept ne correspond au filtre sélectionné.
+              </p>
+            )}
+
+            {selectedConcept ? (
+              <div
+                style={{
+                  borderTop: "1px solid #e3e3e3",
+                  paddingTop: "1rem",
+                  display: "grid",
+                  gap: "0.75rem",
+                }}
+              >
+                <h4>Détail du concept</h4>
+                <label style={{ display: "grid", gap: "0.5rem" }}>
+                  <span>Nom</span>
+                  <input
+                    type="text"
+                    value={selectedConcept.name}
+                    onChange={(event) =>
+                      updateConcept(
+                        selectedParcours.id,
+                        selectedConcept.id,
+                        (concept) => ({
+                          ...concept,
+                          name: event.target.value,
+                        })
+                      )
+                    }
+                  />
+                </label>
+                <label style={{ display: "grid", gap: "0.5rem" }}>
+                  <span>Définition</span>
+                  <textarea
+                    rows={4}
+                    value={selectedConcept.definition}
+                    onChange={(event) =>
+                      updateConcept(
+                        selectedParcours.id,
+                        selectedConcept.id,
+                        (concept) => ({
+                          ...concept,
+                          definition: event.target.value,
+                        })
+                      )
+                    }
+                  />
+                </label>
+                <div style={{ display: "grid", gap: "0.5rem" }}>
+                  <span>Passages sources</span>
+                  <div style={{ display: "grid", gap: "0.5rem" }}>
+                    {selectedConcept.passageIds.map((passageId) => {
+                      const passage = passages.find(
+                        (item) => item.id === passageId
+                      );
+                      if (!passage) return null;
+                      const canRemove = selectedConcept.passageIds.length > 1;
+                      return (
+                        <div
+                          key={passage.id}
+                          style={{
+                            display: "flex",
+                            justifyContent: "space-between",
+                            alignItems: "center",
+                            gap: "1rem",
+                            border: "1px solid #e3e3e3",
+                            borderRadius: "0.5rem",
+                            padding: "0.5rem",
+                          }}
+                        >
+                          <Link
+                            className="secondary"
+                            href={`/dashboard/teacher/tracks/${selectedParcours.id}/passages/${passage.id}`}
+                          >
+                            Passage {passage.index}
+                          </Link>
+                          <button
+                            type="button"
+                            className="secondary"
+                            onClick={() =>
+                              updateConcept(
+                                selectedParcours.id,
+                                selectedConcept.id,
+                                (concept) => ({
+                                  ...concept,
+                                  passageIds: concept.passageIds.filter(
+                                    (id) => id !== passage.id
+                                  ),
+                                })
+                              )
+                            }
+                            disabled={!canRemove}
+                          >
+                            Retirer
+                          </button>
+                        </div>
+                      );
+                    })}
+                  </div>
+                  <div
+                    style={{
+                      display: "flex",
+                      gap: "0.5rem",
+                      alignItems: "center",
+                      flexWrap: "wrap",
+                    }}
+                  >
+                    <select
+                      value={passageToAdd}
+                      onChange={(event) => setPassageToAdd(event.target.value)}
+                    >
+                      <option value="">Ajouter un passage…</option>
+                      {passages
+                        .filter(
+                          (passage) =>
+                            !selectedConcept.passageIds.includes(passage.id)
+                        )
+                        .map((passage) => (
+                          <option key={passage.id} value={passage.id}>
+                            Passage {passage.index}
+                          </option>
+                        ))}
+                    </select>
+                    <button
+                      type="button"
+                      className="secondary"
+                      onClick={() => {
+                        if (!passageToAdd) return;
+                        updateConcept(
+                          selectedParcours.id,
+                          selectedConcept.id,
+                          (concept) => ({
+                            ...concept,
+                            passageIds: [
+                              ...concept.passageIds,
+                              passageToAdd,
+                            ],
+                          })
+                        );
+                        setPassageToAdd("");
+                      }}
+                      disabled={!passageToAdd}
+                    >
+                      Ajouter
+                    </button>
+                  </div>
+                </div>
+                <div className="actions" style={{ flexWrap: "wrap" }}>
+                  <button
+                    type="button"
+                    className="secondary"
+                    onClick={() =>
+                      updateConcept(
+                        selectedParcours.id,
+                        selectedConcept.id,
+                        (concept) => ({ ...concept, status: "validated" })
+                      )
+                    }
+                    disabled={selectedConcept.passageIds.length === 0}
+                  >
+                    Valider
+                  </button>
+                  <button
+                    type="button"
+                    className="secondary"
+                    onClick={() =>
+                      updateConcept(
+                        selectedParcours.id,
+                        selectedConcept.id,
+                        (concept) => ({ ...concept, status: "rejected" })
+                      )
+                    }
+                  >
+                    Rejeter
+                  </button>
+                  <button
+                    type="button"
+                    className="secondary"
+                    onClick={() =>
+                      updateConcept(
+                        selectedParcours.id,
+                        selectedConcept.id,
+                        (concept) => ({ ...concept, status: "proposed" })
+                      )
+                    }
+                  >
+                    Remettre en proposé
+                  </button>
+                </div>
+              </div>
+            ) : null}
           </div>
 
           <div
