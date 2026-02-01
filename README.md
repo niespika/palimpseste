@@ -112,3 +112,17 @@ Ouvrez ensuite [http://localhost:3000](http://localhost:3000).
 9. Testez la scission en entrant un index ou en utilisant le curseur, puis cliquez sur “Scinder”.
 10. Revenez à la liste et rafraîchissez la page : toutes les modifications doivent persister.
 11. Cliquez sur “Regénérer les passages” et confirmez l'alerte indiquant l'écrasement des modifications manuelles.
+
+## Ticket 3.1
+
+### Test manuel
+
+1. Lancez l'app en local : `npm run dev`.
+2. Connectez-vous avec le compte professeur (teacher@palimpseste.fr / teacher123).
+3. Ouvrez un parcours qui possède des passages générés.
+4. Dans la section “Concepts”, cliquez sur “Proposer des concepts”.
+5. Vérifiez que des concepts proposés apparaissent avec leur définition et les passages sources.
+6. Ouvrez le détail d'un concept, modifiez le nom et la définition, puis ajoutez un passage source.
+7. Retirez un passage source (en gardant au moins un passage) et validez le concept.
+8. Appliquez le filtre “Validés” puis “Rejetés” pour vérifier l'affichage.
+9. Supprimez un passage source depuis la section “Passages” et vérifiez que les concepts liés sont mis à jour.

@@ -1,3 +1,5 @@
+import type { Concept } from "./concepts";
+import { ensureConceptPassageIds } from "./concepts";
 import type { Passage } from "./passages";
 import { hashText } from "./passages";
 
@@ -30,6 +32,7 @@ export type Parcours = {
   chapters: Chapter[];
   document?: CourseDocument;
   passages?: Passage[];
+  concepts?: Concept[];
 };
 
 const STORAGE_KEY = "palimpseste-parcours";
@@ -131,12 +134,14 @@ function normalizeParcours(entry: unknown): Parcours | null {
     return null;
   }
   const record = entry as Parcours;
+  const normalizedPassages = normalizePassages(record.passages, record.id);
   return {
     ...record,
     description: record.description?.trim() || undefined,
     chapters: normalizeChapters(record.chapters, record.chaptersCount),
     document: normalizeDocument(record.document),
-    passages: normalizePassages(record.passages, record.id),
+    passages: normalizedPassages,
+    concepts: normalizeConcepts(record.concepts, record.id, normalizedPassages),
   };
 }
 
@@ -240,6 +245,53 @@ function normalizePassages(
       ...passage,
       index: index + 1,
     }));
+}
+
+function normalizeConcepts(
+  entry: unknown,
+  trackId: string,
+  passages: Passage[] | undefined
+): Concept[] | undefined {
+  if (!Array.isArray(entry)) return undefined;
+  const availablePassageIds = new Set(
+    (passages ?? []).map((passage) => passage.id)
+  );
+  const sanitized = entry
+    .map((item) => {
+      if (!item || typeof item !== "object") return null;
+      const record = item as Partial<Concept>;
+      const name = typeof record.name === "string" ? record.name.trim() : "";
+      const definition =
+        typeof record.definition === "string" ? record.definition.trim() : "";
+      if (!name || !definition) return null;
+      const passageIds = ensureConceptPassageIds(
+        Array.isArray(record.passageIds)
+          ? record.passageIds.filter((id): id is string => typeof id === "string")
+          : [],
+        availablePassageIds
+      );
+      if (passageIds.length === 0) return null;
+      const status =
+        record.status === "validated" || record.status === "rejected"
+          ? record.status
+          : "proposed";
+      const createdAt =
+        typeof record.createdAt === "string" && record.createdAt.trim()
+          ? record.createdAt
+          : new Date().toISOString();
+      return {
+        id: typeof record.id === "string" ? record.id : createId(),
+        trackId,
+        name,
+        definition,
+        status,
+        createdAt,
+        passageIds,
+      } as Concept;
+    })
+    .filter((item): item is Concept => Boolean(item));
+
+  return sanitized;
 }
 
 export function readParcours(): Parcours[] {
