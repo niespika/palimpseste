@@ -96,3 +96,19 @@ Ouvrez ensuite [http://localhost:3000](http://localhost:3000).
 6. Cliquez sur “Voir le passage” pour ouvrir le texte complet.
 7. Rafraîchissez la page : la liste des passages doit persister.
 8. Cliquez sur “Regénérer les passages” et confirmez : la liste est recréée.
+
+## Ticket 2.4
+
+### Test manuel
+
+1. Lancez l'app en local : `npm run dev`.
+2. Connectez-vous avec le compte professeur (teacher@palimpseste.fr / teacher123).
+3. Ouvrez un parcours avec un document traité et des passages générés.
+4. Dans la liste des passages, utilisez “↑ / ↓” pour réordonner deux passages.
+5. Cliquez sur “Fusionner avec le suivant” puis vérifiez que le passage fusionné apparaît.
+6. Cliquez sur “Supprimer” et confirmez : le passage doit disparaître et la liste rester ordonnée.
+7. Cliquez sur “Voir / Éditer” pour ouvrir un passage.
+8. Modifiez le texte dans le textarea puis cliquez sur “Enregistrer”.
+9. Testez la scission en entrant un index ou en utilisant le curseur, puis cliquez sur “Scinder”.
+10. Revenez à la liste et rafraîchissez la page : toutes les modifications doivent persister.
+11. Cliquez sur “Regénérer les passages” et confirmez l'alerte indiquant l'écrasement des modifications manuelles.
