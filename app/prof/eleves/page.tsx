@@ -27,7 +27,7 @@ export default async function PageEleves() {
   const eleves: EleveAvecEmail[] = (profiles ?? []).map(profile => ({
     ...profile,
     email: authUsers.find(u => u.id === profile.id)?.email ?? '—',
-    modules_assignes: (profile.modules_assignes ?? []) as EleveAvecEmail['modules_assignes'],
+    modules_assignes: (profile.modules_assignes ?? []) as unknown as EleveAvecEmail['modules_assignes'],
   }))
 
   return (

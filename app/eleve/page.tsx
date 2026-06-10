@@ -1,6 +1,14 @@
 import Link from 'next/link'
 import { createClient } from '@/utils/supabase/server'
 
+type ModuleInfo = {
+  id: string
+  slug: string
+  nom: string
+  description: string | null
+  actif: boolean
+}
+
 export default async function TableauDeBordEleve() {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
@@ -20,9 +28,10 @@ export default async function TableauDeBordEleve() {
     `)
     .eq('eleve_id', user!.id)
 
-  const modulesActifs = (assignments ?? [])
-    .map(a => a.modules)
-    .filter(m => m && (m as { actif: boolean }).actif)
+  const modulesActifs: ModuleInfo[] = (assignments ?? [])
+    .map(a => a.modules as unknown as ModuleInfo | ModuleInfo[] | null)
+    .map(m => Array.isArray(m) ? m[0] : m)
+    .filter((m): m is ModuleInfo => m !== null && m !== undefined && m.actif === true)
 
   return (
     <div>
@@ -40,24 +49,20 @@ export default async function TableauDeBordEleve() {
         </div>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          {modulesActifs.map(module => {
-            if (!module) return null
-            const m = module as { id: string; slug: string; nom: string; description: string | null }
-            return (
-              <Link
-                key={m.id}
-                href={`/eleve/modules/${m.slug}`}
-                className="bg-white border border-stone-200 rounded-xl p-6 hover:border-stone-400 hover:shadow-sm transition-all group"
-              >
-                <h3 className="font-medium text-stone-900 mb-1 group-hover:text-stone-700">
-                  {m.nom}
-                </h3>
-                {m.description && (
-                  <p className="text-sm text-stone-500 leading-relaxed">{m.description}</p>
-                )}
-              </Link>
-            )
-          })}
+          {modulesActifs.map(m => (
+            <Link
+              key={m.id}
+              href={`/eleve/modules/${m.slug}`}
+              className="bg-white border border-stone-200 rounded-xl p-6 hover:border-stone-400 hover:shadow-sm transition-all group"
+            >
+              <h3 className="font-medium text-stone-900 mb-1 group-hover:text-stone-700">
+                {m.nom}
+              </h3>
+              {m.description && (
+                <p className="text-sm text-stone-500 leading-relaxed">{m.description}</p>
+              )}
+            </Link>
+          ))}
         </div>
       )}
     </div>

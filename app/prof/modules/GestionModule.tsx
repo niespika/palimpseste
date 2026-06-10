@@ -32,9 +32,8 @@ export default function GestionModule({ module, eleves, elevesAssignes }: Props)
     const formData = new FormData()
     formData.append('moduleId', module.id)
     selectionnes.forEach(id => formData.append('eleveIds', id))
-    const resultat = await sauvegarderAssignments(formData)
-    if (resultat?.error) setMessageAssign(`Erreur : ${resultat.error}`)
-    else setMessageAssign('Accès mis à jour.')
+    await sauvegarderAssignments(formData)
+    setMessageAssign('Accès mis à jour.')
     setChargementAssign(false)
   }
 
