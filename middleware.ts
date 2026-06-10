@@ -1,7 +1,7 @@
 import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 
-export async function proxy(request: NextRequest) {
+export async function middleware(request: NextRequest) {
   let supabaseResponse = NextResponse.next({ request })
 
   const supabase = createServerClient(
@@ -23,16 +23,13 @@ export async function proxy(request: NextRequest) {
     }
   )
 
-  // Rafraîchir la session si elle a expiré
   const { data: { user } } = await supabase.auth.getUser()
   const pathname = request.nextUrl.pathname
 
-  // Non connecté → rediriger vers /login (sauf si déjà sur /login)
   if (!user && pathname !== '/login') {
     return NextResponse.redirect(new URL('/login', request.url))
   }
 
-  // Déjà connecté sur /login → rediriger vers /
   if (user && pathname === '/login') {
     return NextResponse.redirect(new URL('/', request.url))
   }
