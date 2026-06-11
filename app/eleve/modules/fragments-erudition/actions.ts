@@ -87,10 +87,14 @@ export async function deposerCompteRendu(formData: FormData) {
 
   // Créer immédiatement l'enregistrement d'analyse (synchrone, garanti)
   const admin = createAdminClient()
-  await admin.from('fragments_analyses').insert({
+  const { error: erreurAnalyse } = await admin.from('fragments_analyses').insert({
     depot_id: nouveauDepot.id,
     statut: 'en_cours',
   })
+  if (erreurAnalyse) {
+    console.error('[ANALYSE INSERT] code:', erreurAnalyse.code, '| message:', erreurAnalyse.message)
+    return { error: `[DEBUG] Erreur analyse INSERT: ${erreurAnalyse.message} (code: ${erreurAnalyse.code})` }
+  }
 
   revalidatePath('/eleve/modules/fragments-erudition')
 
