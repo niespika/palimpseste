@@ -76,8 +76,6 @@ export async function lancerAnalyse(
     .eq('depot_id', depotId)
     .maybeSingle()
 
-  if (existante?.statut === 'en_cours') return
-
   // Ne pas écraser une analyse publiée sauf si force=true
   if (existante?.statut === 'publiee' && !options.force) return
 
