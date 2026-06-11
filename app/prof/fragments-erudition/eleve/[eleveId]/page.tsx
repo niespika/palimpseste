@@ -1,0 +1,279 @@
+import { notFound } from 'next/navigation'
+import Link from 'next/link'
+import { createAdminClient } from '@/utils/supabase/admin'
+import { createClient } from '@/utils/supabase/server'
+import GraphiqueProgression from '@/components/fragments/GraphiqueProgression'
+import type { PointSemaine } from '@/components/fragments/GraphiqueProgression'
+
+export default async function PageEleveDetail({ params }: { params: Promise<{ eleveId: string }> }) {
+  const { eleveId } = await params
+
+  // Vérifier que l'utilisateur est prof
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) notFound()
+  const { data: profile } = await supabase.from('profiles').select('role').eq('id', user.id).single()
+  if (profile?.role !== 'prof') notFound()
+
+  const admin = createAdminClient()
+
+  // Profil de l'élève
+  const { data: eleve } = await admin
+    .from('profiles')
+    .select('id, display_name, classe')
+    .eq('id', eleveId)
+    .single()
+
+  if (!eleve) notFound()
+
+  // Thème
+  const { data: theme } = await admin
+    .from('fragments_themes')
+    .select('theme, description')
+    .eq('eleve_id', eleveId)
+    .maybeSingle()
+
+  // Toutes les semaines
+  const { data: semaines } = await admin
+    .from('fragments_semaines')
+    .select('id, numero, titre, date_debut, date_limite')
+    .order('numero')
+
+  // Tous les dépôts de cet élève
+  const { data: depots } = await admin
+    .from('fragments_depots')
+    .select('id, semaine_id, statut, created_at')
+    .eq('eleve_id', eleveId)
+    .order('created_at')
+
+  const depotParSemaine = Object.fromEntries(
+    (depots ?? []).map(d => [d.semaine_id, d])
+  )
+
+  // Analyses publiées pour ces dépôts
+  const depotIds = (depots ?? []).map(d => d.id)
+  const { data: analyses } = depotIds.length > 0
+    ? await admin
+        .from('fragments_analyses')
+        .select('id, depot_id, statut, note_decouvertes, note_sources, note_reflexions, publiee_at')
+        .eq('statut', 'publiee')
+        .in('depot_id', depotIds)
+    : { data: [] }
+
+  const analyseParDepot = Object.fromEntries(
+    (analyses ?? []).map(a => [a.depot_id, a])
+  )
+
+  // Pistes en attente (proposee ou partiellement_suivie)
+  const analyseIds = (analyses ?? []).map(a => a.id)
+  const { data: pistesEnAttente } = analyseIds.length > 0
+    ? await admin
+        .from('fragments_pistes')
+        .select('id, contenu, statut, created_at')
+        .in('analyse_id', analyseIds)
+        .in('statut', ['proposee', 'partiellement_suivie'])
+        .order('created_at', { ascending: false })
+    : { data: [] }
+
+  // Historique des présentations
+  const { data: presentationsEleve } = await admin
+    .from('fragments_presentations')
+    .select('id, semaine_id, statut, created_at')
+    .eq('eleve_id', eleveId)
+    .order('created_at')
+
+  const nbPresentations = (presentationsEleve ?? []).filter(p => p.statut === 'presente').length
+
+  // Construire les points du graphique
+  const points: PointSemaine[] = (semaines ?? []).map(s => {
+    const depot = depotParSemaine[s.id]
+    const analyse = depot ? analyseParDepot[depot.id] : null
+    if (!analyse) {
+      return {
+        semaine: s.numero,
+        decouvertes: null,
+        sources: null,
+        reflexions: null,
+        moyenne: null,
+        depotId: null,
+      }
+    }
+    const d = analyse.note_decouvertes ?? null
+    const so = analyse.note_sources ?? null
+    const r = analyse.note_reflexions ?? null
+    const moy = d !== null && so !== null && r !== null
+      ? Math.round(((d + so + r) / 3) * 100) / 100
+      : null
+    return {
+      semaine: s.numero,
+      decouvertes: d,
+      sources: so,
+      reflexions: r,
+      moyenne: moy,
+      depotId: depot?.id ?? null,
+    }
+  })
+
+  // Statistiques
+  const analysesPubliees = (analyses ?? [])
+  const nbSemaines = (semaines ?? []).length
+  const nbDeposes = (depots ?? []).length
+  const tauxDepot = nbSemaines > 0 ? Math.round((nbDeposes / nbSemaines) * 100) : 0
+  const nbEnRetard = (depots ?? []).filter(d => d.statut === 'en_retard').length
+
+  const moyD = analysesPubliees.length > 0
+    ? analysesPubliees.reduce((s, a) => s + (a.note_decouvertes ?? 0), 0) / analysesPubliees.length
+    : null
+  const moyS = analysesPubliees.length > 0
+    ? analysesPubliees.reduce((s, a) => s + (a.note_sources ?? 0), 0) / analysesPubliees.length
+    : null
+  const moyR = analysesPubliees.length > 0
+    ? analysesPubliees.reduce((s, a) => s + (a.note_reflexions ?? 0), 0) / analysesPubliees.length
+    : null
+
+  const semainePourDepot = Object.fromEntries(
+    (semaines ?? []).map(s => [s.id, s.numero])
+  )
+
+  return (
+    <div className="space-y-6 pb-8">
+      <div className="flex items-center gap-2">
+        <Link
+          href="/prof/fragments-erudition"
+          className="text-sm text-stone-500 hover:text-stone-700"
+        >
+          ← Vue par semaine
+        </Link>
+      </div>
+
+      {/* En-tête élève */}
+      <div className="bg-white border border-stone-200 rounded-xl px-5 py-4">
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <h2 className="text-lg font-serif text-stone-900">{eleve.display_name}</h2>
+            {eleve.classe && <p className="text-sm text-stone-500 mt-0.5">{eleve.classe}</p>}
+            {theme && (
+              <p className="text-sm text-stone-600 mt-2 italic">{theme.theme}</p>
+            )}
+          </div>
+          <div className="text-right">
+            <p className="text-xs text-stone-400">Présentations</p>
+            <p className="text-2xl font-serif text-stone-800">{nbPresentations}</p>
+          </div>
+        </div>
+      </div>
+
+      {/* Graphique de progression */}
+      {points.length > 0 ? (
+        <div className="bg-white border border-stone-200 rounded-xl p-5">
+          <h3 className="text-sm font-medium text-stone-700 mb-4">Progression</h3>
+          <GraphiqueProgression
+            data={points}
+            lienBase="/prof/fragments-erudition/analyse/"
+          />
+        </div>
+      ) : (
+        <div className="bg-white border border-stone-200 rounded-xl p-8 text-center text-stone-400 text-sm">
+          Aucune semaine créée.
+        </div>
+      )}
+
+      {/* Statistiques */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        <div className="bg-white border border-stone-200 rounded-xl p-4 text-center">
+          <p className="text-xl font-serif text-stone-800">{tauxDepot}%</p>
+          <p className="text-xs text-stone-500 mt-0.5">Taux de dépôt</p>
+          <p className="text-xs text-stone-400">{nbDeposes}/{nbSemaines} semaines</p>
+        </div>
+        <div className="bg-white border border-stone-200 rounded-xl p-4 text-center">
+          <p className="text-xl font-serif text-orange-700">{nbEnRetard}</p>
+          <p className="text-xs text-stone-500 mt-0.5">En retard</p>
+        </div>
+        <div className="bg-white border border-stone-200 rounded-xl p-4 text-center">
+          <p className="text-xl font-serif text-blue-700">
+            {moyD !== null ? moyD.toFixed(1) : '—'}
+          </p>
+          <p className="text-xs text-stone-500 mt-0.5">Moy. Découvertes</p>
+        </div>
+        <div className="bg-white border border-stone-200 rounded-xl p-4 text-center">
+          <p className="text-xl font-serif text-emerald-700">
+            {moyS !== null ? moyS.toFixed(1) : '—'}
+          </p>
+          <p className="text-xs text-stone-500 mt-0.5">Moy. Sources</p>
+        </div>
+      </div>
+
+      {/* Pistes en attente */}
+      {(pistesEnAttente ?? []).length > 0 && (
+        <div className="bg-white border border-stone-200 rounded-xl p-5">
+          <h3 className="text-sm font-medium text-stone-700 mb-3">
+            Pistes en attente ({pistesEnAttente!.length})
+          </h3>
+          <ul className="space-y-2">
+            {pistesEnAttente!.map(piste => (
+              <li key={piste.id} className="flex items-start gap-2 text-sm">
+                <span className={`mt-0.5 text-xs px-1.5 py-0.5 rounded flex-shrink-0 ${
+                  piste.statut === 'partiellement_suivie'
+                    ? 'bg-amber-100 text-amber-700'
+                    : 'bg-stone-100 text-stone-500'
+                }`}>
+                  {piste.statut === 'partiellement_suivie' ? 'partielle' : 'proposée'}
+                </span>
+                <span className="text-stone-700">{piste.contenu}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
+      {/* Historique des présentations */}
+      {(presentationsEleve ?? []).length > 0 && (
+        <div className="bg-white border border-stone-200 rounded-xl p-5">
+          <h3 className="text-sm font-medium text-stone-700 mb-3">Historique des présentations</h3>
+          <div className="space-y-1.5">
+            {(presentationsEleve ?? []).map(p => (
+              <div key={p.id} className="flex items-center justify-between text-sm">
+                <span className="text-stone-600">
+                  Semaine {semainePourDepot[p.semaine_id] ?? '?'}
+                </span>
+                <span className={`text-xs px-2 py-0.5 rounded-full ${
+                  p.statut === 'presente' ? 'bg-green-100 text-green-700' :
+                  p.statut === 'reporte' ? 'bg-amber-100 text-amber-700' :
+                  'bg-blue-100 text-blue-700'
+                }`}>
+                  {p.statut === 'presente' ? 'Présenté ✓' :
+                   p.statut === 'reporte' ? 'Reporté' : 'Tiré'}
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Liens vers les analyses */}
+      {analysesPubliees.length > 0 && (
+        <div className="bg-white border border-stone-200 rounded-xl p-5">
+          <h3 className="text-sm font-medium text-stone-700 mb-3">Analyses publiées</h3>
+          <div className="space-y-1.5">
+            {analysesPubliees.map(a => {
+              const depot = (depots ?? []).find(d => d.id === a.depot_id)
+              const numSemaine = depot ? semainePourDepot[depot.semaine_id] : null
+              return (
+                <Link
+                  key={a.id}
+                  href={`/prof/fragments-erudition/analyse/${a.depot_id}`}
+                  className="flex items-center justify-between text-sm hover:bg-stone-50 rounded-lg px-2 py-1.5 -mx-2 transition-colors"
+                >
+                  <span className="text-stone-700">Semaine {numSemaine ?? '?'}</span>
+                  <span className="text-stone-400 text-xs">
+                    {a.note_decouvertes ?? '?'} / {a.note_sources ?? '?'} / {a.note_reflexions ?? '?'} →
+                  </span>
+                </Link>
+              )
+            })}
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}

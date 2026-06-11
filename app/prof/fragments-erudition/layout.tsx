@@ -13,6 +13,7 @@ export default function FragmentsLayout({ children }: { children: React.ReactNod
       <nav className="flex gap-1 mb-6 border-b border-stone-200 pb-0">
         {[
           { href: '/prof/fragments-erudition', label: 'Vue par semaine' },
+          { href: '/prof/fragments-erudition/vue-ensemble', label: "Vue d'ensemble" },
           { href: '/prof/fragments-erudition/semaines', label: 'Semaines' },
           { href: '/prof/fragments-erudition/themes', label: 'Thèmes' },
           { href: '/prof/fragments-erudition/parametres', label: 'Paramètres' },

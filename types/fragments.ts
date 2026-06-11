@@ -91,6 +91,16 @@ export interface AnalyseResumee {
   note_reflexions: number | null
 }
 
+export type StatutPresentation = 'tire' | 'presente' | 'reporte'
+
+export interface FragmentPresentation {
+  id: string
+  eleve_id: string
+  semaine_id: string
+  statut: StatutPresentation
+  created_at: string
+}
+
 export interface EleveAvecDepot {
   id: string
   display_name: string

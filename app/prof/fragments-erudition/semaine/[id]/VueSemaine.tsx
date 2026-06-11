@@ -126,7 +126,12 @@ export default function VueSemaine({ eleves, semaineId }: Props) {
                 className={`border-t border-stone-100 ${!eleve.depot ? 'bg-red-50/30' : 'hover:bg-stone-50'}`}
               >
                 <td className="px-4 py-3 text-sm font-medium text-stone-900">
-                  {eleve.display_name}
+                  <Link
+                    href={`/prof/fragments-erudition/eleve/${eleve.id}`}
+                    className="hover:text-blue-700 hover:underline"
+                  >
+                    {eleve.display_name}
+                  </Link>
                   {eleve.classe && <span className="text-xs text-stone-400 ml-1">{eleve.classe}</span>}
                 </td>
                 <td className="px-4 py-3">{badgeStatutDepot(eleve.depot)}</td>

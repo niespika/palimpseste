@@ -5,7 +5,9 @@ import { createAdminClient } from '@/utils/supabase/admin'
 import FormulaireDepot from './FormulaireDepot'
 import HistoriqueDepots from './HistoriqueDepots'
 import AnalysePubliee from './AnalysePubliee'
+import GraphiqueProgression from '@/components/fragments/GraphiqueProgression'
 import type { FragmentAnalyse, FragmentPiste } from '@/types/fragments'
+import type { PointSemaine } from '@/components/fragments/GraphiqueProgression'
 
 function formatDateLimite(dateStr: string) {
   return new Date(dateStr).toLocaleDateString('fr-FR', {
@@ -115,6 +117,98 @@ export default async function PageFragments() {
 
   const depotEnRetard = semaine && depotActuel?.statut === 'en_retard'
 
+  // ---- Données pour "Ton parcours" ----
+  // Toutes les semaines
+  const { data: toutesLessemaines } = await admin
+    .from('fragments_semaines')
+    .select('id, numero')
+    .order('numero')
+
+  // Tous les dépôts de cet élève
+  const { data: tousDepots } = await admin
+    .from('fragments_depots')
+    .select('id, semaine_id, statut')
+    .eq('eleve_id', user.id)
+
+  const tousDepotParSemaine = Object.fromEntries(
+    (tousDepots ?? []).map(d => [d.semaine_id, d])
+  )
+
+  // Analyses publiées pour tous les dépôts
+  const tousDepotIds = (tousDepots ?? []).map(d => d.id)
+  const { data: toutesAnalyses } = tousDepotIds.length > 0
+    ? await admin
+        .from('fragments_analyses')
+        .select('id, depot_id, note_decouvertes, note_sources, note_reflexions')
+        .eq('statut', 'publiee')
+        .in('depot_id', tousDepotIds)
+    : { data: [] }
+
+  const toutesAnalyseParDepot = Object.fromEntries(
+    (toutesAnalyses ?? []).map(a => [a.depot_id, a])
+  )
+
+  // Pistes en attente (toutes analyses)
+  const toutesAnalyseIds = (toutesAnalyses ?? []).map(a => a.id)
+  const { data: pistesEnAttente } = toutesAnalyseIds.length > 0
+    ? await admin
+        .from('fragments_pistes')
+        .select('id, contenu, statut')
+        .in('analyse_id', toutesAnalyseIds)
+        .in('statut', ['proposee', 'partiellement_suivie'])
+        .order('created_at', { ascending: false })
+    : { data: [] }
+
+  // Construire les points du graphique élève
+  const pointsParcours: PointSemaine[] = (toutesLessemaines ?? []).map(s => {
+    const depot = tousDepotParSemaine[s.id]
+    const analyse = depot ? toutesAnalyseParDepot[depot.id] : null
+    if (!analyse) {
+      return { semaine: s.numero, decouvertes: null, sources: null, reflexions: null, moyenne: null, depotId: null }
+    }
+    const d = analyse.note_decouvertes
+    const so = analyse.note_sources
+    const r = analyse.note_reflexions
+    const moy = d !== null && so !== null && r !== null
+      ? Math.round(((d + so + r) / 3) * 100) / 100
+      : null
+    return { semaine: s.numero, decouvertes: d, sources: so, reflexions: r, moyenne: moy, depotId: depot?.id ?? null }
+  })
+
+  // Stats parcours
+  const nbSemainesTotal = (toutesLessemaines ?? []).length
+  const nbDeposesTotal = (tousDepots ?? []).length
+  const analysesAvecNotes = (toutesAnalyses ?? []).filter(a =>
+    a.note_decouvertes !== null && a.note_sources !== null && a.note_reflexions !== null
+  )
+
+  const meilleurSection = analysesAvecNotes.length > 0 ? (() => {
+    const moyD = analysesAvecNotes.reduce((s, a) => s + (a.note_decouvertes ?? 0), 0) / analysesAvecNotes.length
+    const moyS = analysesAvecNotes.reduce((s, a) => s + (a.note_sources ?? 0), 0) / analysesAvecNotes.length
+    const moyR = analysesAvecNotes.reduce((s, a) => s + (a.note_reflexions ?? 0), 0) / analysesAvecNotes.length
+    const max = Math.max(moyD, moyS, moyR)
+    if (max === moyD) return 'Découvertes'
+    if (max === moyS) return 'Sources'
+    return 'Réflexions'
+  })() : null
+
+  const sectionATravaillerKey = analysesAvecNotes.length > 0 ? (() => {
+    const moyD = analysesAvecNotes.reduce((s, a) => s + (a.note_decouvertes ?? 0), 0) / analysesAvecNotes.length
+    const moyS = analysesAvecNotes.reduce((s, a) => s + (a.note_sources ?? 0), 0) / analysesAvecNotes.length
+    const moyR = analysesAvecNotes.reduce((s, a) => s + (a.note_reflexions ?? 0), 0) / analysesAvecNotes.length
+    const min = Math.min(moyD, moyS, moyR)
+    if (min === moyD) return 'Découvertes'
+    if (min === moyS) return 'Sources'
+    return 'Réflexions'
+  })() : null
+
+  // Présentations de cet élève
+  const { data: mesPresen } = await admin
+    .from('fragments_presentations')
+    .select('id, semaine_id, statut')
+    .eq('eleve_id', user.id)
+    .eq('statut', 'presente')
+
   return (
     <div className="space-y-6 pb-8">
       <div className="flex items-center gap-2">
@@ -212,6 +306,57 @@ export default async function PageFragments() {
             Aucune semaine n'est ouverte pour l'instant.<br />
             Ton professeur en créera une bientôt.
           </p>
+        </div>
+      )}
+
+      {/* Ton parcours */}
+      {pointsParcours.some(p => p.decouvertes !== null) && (
+        <div className="space-y-4">
+          <h3 className="text-sm font-medium text-stone-500 uppercase tracking-wide">Ton parcours</h3>
+          <div className="bg-white border border-stone-200 rounded-xl p-5">
+            <GraphiqueProgression data={pointsParcours} />
+          </div>
+          <div className="grid grid-cols-3 gap-3">
+            <div className="bg-white border border-stone-200 rounded-xl p-3 text-center">
+              <p className="text-lg font-serif text-stone-800">
+                {nbSemainesTotal > 0 ? Math.round((nbDeposesTotal / nbSemainesTotal) * 100) : 0}%
+              </p>
+              <p className="text-xs text-stone-500 mt-0.5">Taux de dépôt</p>
+            </div>
+            {meilleurSection && (
+              <div className="bg-white border border-stone-200 rounded-xl p-3 text-center">
+                <p className="text-lg font-serif text-green-700">{meilleurSection}</p>
+                <p className="text-xs text-stone-500 mt-0.5">Meilleure section</p>
+              </div>
+            )}
+            {sectionATravaillerKey && meilleurSection !== sectionATravaillerKey && (
+              <div className="bg-white border border-stone-200 rounded-xl p-3 text-center">
+                <p className="text-lg font-serif text-amber-700">{sectionATravaillerKey}</p>
+                <p className="text-xs text-stone-500 mt-0.5">À travailler</p>
+              </div>
+            )}
+          </div>
+          {(mesPresen ?? []).length > 0 && (
+            <p className="text-sm text-stone-500 text-center">
+              Tu as présenté {(mesPresen ?? []).length} fois cette année.
+            </p>
+          )}
+          {/* Pistes en attente */}
+          {(pistesEnAttente ?? []).length > 0 && (
+            <div className="bg-white border border-stone-200 rounded-xl p-4">
+              <p className="text-xs font-medium text-stone-500 uppercase tracking-wide mb-3">
+                Tes pistes en attente
+              </p>
+              <ul className="space-y-2">
+                {(pistesEnAttente ?? []).map(piste => (
+                  <li key={piste.id} className="flex items-start gap-2 text-sm text-stone-700">
+                    <span className="text-stone-400 mt-0.5 flex-shrink-0">💡</span>
+                    {piste.contenu}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
         </div>
       )}
 

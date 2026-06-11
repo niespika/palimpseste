@@ -244,6 +244,102 @@ export async function sauvegarderConfig(promptEvaluation: string, bareme: string
   return { success: true }
 }
 
+// ============================================================
+// Tirage au sort
+// ============================================================
+
+export async function tirerOrateur(semaineId: string, excluIds: string[]) {
+  await verifierProf()
+  const admin = createAdminClient()
+
+  // Élèves ayant déposé pour cette semaine
+  const { data: depots } = await admin
+    .from('fragments_depots')
+    .select('eleve_id')
+    .eq('semaine_id', semaineId)
+
+  const eligibles = (depots ?? [])
+    .map(d => d.eleve_id as string)
+    .filter(id => !excluIds.includes(id))
+
+  if (eligibles.length === 0) return { error: 'Aucun élève éligible', data: null }
+
+  // Nombre de présentations déjà faites (statut = 'presente')
+  const { data: presentationsPassees } = await admin
+    .from('fragments_presentations')
+    .select('eleve_id')
+    .eq('statut', 'presente')
+    .in('eleve_id', eligibles)
+
+  const comptes: Record<string, number> = {}
+  for (const p of presentationsPassees ?? []) {
+    comptes[p.eleve_id] = (comptes[p.eleve_id] ?? 0) + 1
+  }
+
+  // Tirage pondéré : poids = 1 / (1 + nb_presentations)
+  const poids = eligibles.map(id => 1 / (1 + (comptes[id] ?? 0)))
+  const total = poids.reduce((a, b) => a + b, 0)
+  let r = Math.random() * total
+  let gagnantId = eligibles[eligibles.length - 1]
+  for (let i = 0; i < eligibles.length; i++) {
+    r -= poids[i]
+    if (r <= 0) { gagnantId = eligibles[i]; break }
+  }
+
+  // Enregistrer le tirage
+  const { data: presentation, error } = await admin
+    .from('fragments_presentations')
+    .insert({ eleve_id: gagnantId, semaine_id: semaineId, statut: 'tire' })
+    .select('id')
+    .single()
+
+  if (error) return { error: error.message, data: null }
+
+  // Profil du gagnant
+  const { data: profil } = await admin
+    .from('profiles')
+    .select('id, display_name, classe')
+    .eq('id', gagnantId)
+    .single()
+
+  revalidatePath(`/prof/fragments-erudition/semaine/${semaineId}`)
+  return { data: { presentationId: presentation.id, eleve: profil }, error: null }
+}
+
+export async function mettreAJourPresentation(presentationId: string, statut: 'presente' | 'reporte') {
+  await verifierProf()
+  const admin = createAdminClient()
+  const { data: pres } = await admin
+    .from('fragments_presentations')
+    .select('semaine_id')
+    .eq('id', presentationId)
+    .single()
+  const { error } = await admin
+    .from('fragments_presentations')
+    .update({ statut })
+    .eq('id', presentationId)
+  if (error) return { error: error.message }
+  if (pres?.semaine_id) revalidatePath(`/prof/fragments-erudition/semaine/${pres.semaine_id}`)
+  return { success: true }
+}
+
+export async function annulerPresentation(presentationId: string) {
+  await verifierProf()
+  const admin = createAdminClient()
+  const { data: pres } = await admin
+    .from('fragments_presentations')
+    .select('semaine_id')
+    .eq('id', presentationId)
+    .single()
+  const { error } = await admin
+    .from('fragments_presentations')
+    .delete()
+    .eq('id', presentationId)
+  if (error) return { error: error.message }
+  if (pres?.semaine_id) revalidatePath(`/prof/fragments-erudition/semaine/${pres.semaine_id}`)
+  return { success: true }
+}
+
 export async function supprimerDepot(formData: FormData) {
   const supabase = await verifierProf()
   const depotId = formData.get('depotId') as string

@@ -1,7 +1,9 @@
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/utils/supabase/server'
+import { createAdminClient } from '@/utils/supabase/admin'
 import VueSemaine from './VueSemaine'
+import TirageAuSort from './TirageAuSort'
 import type { EleveAvecDepot } from '@/types/fragments'
 
 export default async function PageVueSemaine({ params }: { params: Promise<{ id: string }> }) {
@@ -78,6 +80,56 @@ export default async function PageVueSemaine({ params }: { params: Promise<{ id:
     }
   })
 
+  // Présentations pour cette semaine
+  const admin = createAdminClient()
+  const { data: presentations } = await admin
+    .from('fragments_presentations')
+    .select('id, eleve_id, semaine_id, statut, created_at')
+    .eq('semaine_id', id)
+    .order('created_at')
+
+  // Profils des élèves présentateurs
+  const presentateurIds = [...new Set((presentations ?? []).map(p => p.eleve_id))]
+  const { data: presentateurProfils } = presentateurIds.length > 0
+    ? await admin
+        .from('profiles')
+        .select('id, display_name, classe')
+        .in('id', presentateurIds)
+    : { data: [] }
+
+  const profilParId = Object.fromEntries(
+    (presentateurProfils ?? []).map(p => [p.id, p])
+  )
+
+  const presentationsAvecEleve = (presentations ?? []).map(p => ({
+    ...p,
+    eleve: profilParId[p.eleve_id] ?? null,
+  }))
+
+  // Nombre de présentations passées (statut='presente') par élève éligible
+  const eligiblesIds = elevesAvecDepot.filter(e => e.depot).map(e => e.id)
+  const { data: comptesPresentation } = eligiblesIds.length > 0
+    ? await admin
+        .from('fragments_presentations')
+        .select('eleve_id')
+        .eq('statut', 'presente')
+        .in('eleve_id', eligiblesIds)
+    : { data: [] }
+
+  const nbParEleve: Record<string, number> = {}
+  for (const p of comptesPresentation ?? []) {
+    nbParEleve[p.eleve_id] = (nbParEleve[p.eleve_id] ?? 0) + 1
+  }
+
+  const eligibles = elevesAvecDepot
+    .filter(e => e.depot)
+    .map(e => ({
+      id: e.id,
+      display_name: e.display_name,
+      classe: e.classe,
+      nbPresentations: nbParEleve[e.id] ?? 0,
+    }))
+
   const formatDate = (d: string) => new Date(d).toLocaleDateString('fr-FR', {
     day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit',
   })
@@ -108,7 +160,14 @@ export default async function PageVueSemaine({ params }: { params: Promise<{ id:
           Aucun élève n'a accès au module pour l'instant.
         </div>
       ) : (
-        <VueSemaine eleves={elevesAvecDepot} semaineId={id} />
+        <div className="space-y-6">
+          <VueSemaine eleves={elevesAvecDepot} semaineId={id} />
+          <TirageAuSort
+            semaineId={id}
+            eligibles={eligibles}
+            presentations={presentationsAvecEleve}
+          />
+        </div>
       )}
     </div>
   )
