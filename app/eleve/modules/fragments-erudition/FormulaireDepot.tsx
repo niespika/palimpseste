@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useRef } from 'react'
+import { useRouter } from 'next/navigation'
 import { createClient } from '@/utils/supabase/client'
 import { traiterImage, libererPreview, type ImageTraitee } from '@/utils/imageProcessing'
 import { deposerCompteRendu } from './actions'
@@ -9,10 +10,10 @@ interface Props {
   semaineId: string
   eleveId: string
   depotExistant: boolean
-  onSuccess: () => void
 }
 
-export default function FormulaireDepot({ semaineId, eleveId, depotExistant, onSuccess }: Props) {
+export default function FormulaireDepot({ semaineId, eleveId, depotExistant }: Props) {
+  const router = useRouter()
   const [images, setImages] = useState<ImageTraitee[]>([])
   const [traitement, setTraitement] = useState(false)
   const [upload, setUpload] = useState(false)
@@ -112,7 +113,9 @@ export default function FormulaireDepot({ semaineId, eleveId, depotExistant, onS
         setErreur(resultat.error)
       } else {
         images.forEach(img => libererPreview(img.previewUrl))
-        onSuccess()
+        router.refresh()
+        setImages([])
+        setCommentaire('')
       }
     } catch (e: unknown) {
       setErreur(`Erreur lors de l'envoi : ${e instanceof Error ? e.message : 'inconnue'}`)

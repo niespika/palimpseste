@@ -129,9 +129,6 @@ export default async function PageFragments() {
               semaineId={semaine.id}
               eleveId={user.id}
               depotExistant={!!depotActuel}
-              onSuccess={() => {
-                // La page se rechargera via revalidatePath
-              }}
             />
           </div>
         </div>
