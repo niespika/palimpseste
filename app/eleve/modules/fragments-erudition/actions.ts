@@ -85,9 +85,16 @@ export async function deposerCompteRendu(formData: FormData) {
     return { error: `Photos enregistrées mais erreur metadata : ${erreurPhotos.message}` }
   }
 
+  // Créer immédiatement l'enregistrement d'analyse (synchrone, garanti)
+  const admin = createAdminClient()
+  await admin.from('fragments_analyses').insert({
+    depot_id: nouveauDepot.id,
+    statut: 'en_cours',
+  })
+
   revalidatePath('/eleve/modules/fragments-erudition')
 
-  // Déclencher l'analyse IA en arrière-plan (sans bloquer la réponse)
+  // Déclencher l'analyse IA en arrière-plan
   const depotIdPourAnalyse = nouveauDepot.id
   const eleveIdPourAnalyse = userId
   after(async () => {
