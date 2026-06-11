@@ -118,21 +118,24 @@ export async function lancerAnalyse(
       .order('ordre')
 
     if (!photos || photos.length === 0) {
-      await admin.from('fragments_analyses').update({ statut: 'erreur' }).eq('id', analyseId)
+      await admin.from('fragments_analyses').update({ statut: 'erreur', transcription: 'DEBUG: aucune photo trouvée' }).eq('id', analyseId)
       return
     }
 
     // Télécharger les photos en base64
     const imagesBase64: string[] = []
     for (const photo of photos) {
-      const { data: blob } = await admin.storage.from('fragments').download(photo.storage_path)
-      if (!blob) continue
+      const { data: blob, error: errBlob } = await admin.storage.from('fragments').download(photo.storage_path)
+      if (!blob) {
+        await admin.from('fragments_analyses').update({ statut: 'erreur', transcription: `DEBUG: téléchargement photo échoué — ${errBlob?.message ?? 'inconnu'} — chemin: ${photo.storage_path}` }).eq('id', analyseId)
+        return
+      }
       const buffer = Buffer.from(await blob.arrayBuffer())
       imagesBase64.push(buffer.toString('base64'))
     }
 
     if (imagesBase64.length === 0) {
-      await admin.from('fragments_analyses').update({ statut: 'erreur' }).eq('id', analyseId)
+      await admin.from('fragments_analyses').update({ statut: 'erreur', transcription: 'DEBUG: imagesBase64 vide après téléchargement' }).eq('id', analyseId)
       return
     }
 
@@ -288,7 +291,11 @@ export async function lancerAnalyse(
         .update({ statut: bilan.statut })
         .eq('id', bilan.piste_id)
     }
-  } catch {
-    await admin.from('fragments_analyses').update({ statut: 'erreur' }).eq('id', analyseId)
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err)
+    await admin.from('fragments_analyses').update({
+      statut: 'erreur',
+      transcription: `DEBUG erreur: ${message}`,
+    }).eq('id', analyseId)
   }
 }
