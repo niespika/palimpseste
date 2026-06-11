@@ -54,15 +54,29 @@ export default async function PageVueSemaine({ params }: { params: Promise<{ id:
     (depots ?? []).map(d => [d.eleve_id, d])
   )
 
-  const elevesAvecDepot: EleveAvecDepot[] = (eleves ?? []).map(eleve => ({
-    ...eleve,
-    depot: depotParEleve[eleve.id]
-      ? {
-          ...depotParEleve[eleve.id],
-          photos: depotParEleve[eleve.id].photos ?? [],
-        }
-      : null,
-  }))
+  // Analyses pour ces dépôts
+  const depotIds = (depots ?? []).map(d => d.id)
+  const { data: analyses } = depotIds.length > 0
+    ? await supabase
+        .from('fragments_analyses')
+        .select('id, depot_id, statut, note_decouvertes, note_sources, note_reflexions')
+        .in('depot_id', depotIds)
+    : { data: [] }
+
+  const analyseParDepot = Object.fromEntries(
+    (analyses ?? []).map(a => [a.depot_id, a])
+  )
+
+  const elevesAvecDepot: EleveAvecDepot[] = (eleves ?? []).map(eleve => {
+    const depot = depotParEleve[eleve.id]
+    return {
+      ...eleve,
+      depot: depot
+        ? { ...depot, photos: depot.photos ?? [] }
+        : null,
+      analyse: depot ? (analyseParDepot[depot.id] ?? null) : null,
+    }
+  })
 
   const formatDate = (d: string) => new Date(d).toLocaleDateString('fr-FR', {
     day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit',
@@ -94,7 +108,7 @@ export default async function PageVueSemaine({ params }: { params: Promise<{ id:
           Aucun élève n'a accès au module pour l'instant.
         </div>
       ) : (
-        <VueSemaine eleves={elevesAvecDepot} />
+        <VueSemaine eleves={elevesAvecDepot} semaineId={id} />
       )}
     </div>
   )

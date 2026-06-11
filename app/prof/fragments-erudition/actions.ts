@@ -1,8 +1,11 @@
 'use server'
 
+import { after } from 'next/server'
 import { revalidatePath } from 'next/cache'
 import { createClient } from '@/utils/supabase/server'
 import { createAdminClient } from '@/utils/supabase/admin'
+import { lancerAnalyse } from '@/utils/analyse'
+import type { StatutPiste } from '@/types/fragments'
 
 async function verifierProf() {
   const supabase = await createClient()
@@ -101,6 +104,144 @@ export async function getSignedUrlsProf(chemins: string[]): Promise<Record<strin
   )
 
   return urls
+}
+
+// ============================================================
+// Actions liées à l'analyse IA
+// ============================================================
+
+export async function relancerAnalyse(depotId: string, eleveId: string) {
+  await verifierProf()
+  const admin = createAdminClient()
+
+  // Passer immédiatement en "en_cours" pour que l'UI le reflète
+  const { data: existante } = await admin
+    .from('fragments_analyses')
+    .select('id')
+    .eq('depot_id', depotId)
+    .maybeSingle()
+
+  if (existante) {
+    await admin.from('fragments_analyses')
+      .update({ statut: 'en_cours' })
+      .eq('id', existante.id)
+  }
+
+  after(async () => {
+    await lancerAnalyse(depotId, eleveId, { force: true })
+  })
+
+  revalidatePath(`/prof/fragments-erudition/analyse/${depotId}`)
+  return { success: true, error: null }
+}
+
+export async function sauvegarderAnalyse(analyseId: string, data: {
+  note_decouvertes: number
+  note_sources: number
+  note_reflexions: number
+  transcription: string
+  retour_progres: string
+  retour_langue: string
+  retour_style: string
+  retour_contenu: string
+  commentaire_general: string
+  notes_prof: string
+}) {
+  await verifierProf()
+  const admin = createAdminClient()
+
+  const { error } = await admin.from('fragments_analyses').update({
+    ...data,
+    notes_prof: data.notes_prof || null,
+    retour_progres: data.retour_progres || null,
+    modifie_par_prof: true,
+  }).eq('id', analyseId)
+
+  if (error) return { error: error.message }
+
+  revalidatePath('/prof/fragments-erudition')
+  return { success: true }
+}
+
+export async function publierAnalyse(analyseId: string) {
+  await verifierProf()
+  const admin = createAdminClient()
+
+  const { error } = await admin.from('fragments_analyses').update({
+    statut: 'publiee',
+    publiee_at: new Date().toISOString(),
+    modifie_par_prof: true,
+  }).eq('id', analyseId)
+
+  if (error) return { error: error.message }
+
+  revalidatePath('/prof/fragments-erudition')
+  return { success: true }
+}
+
+export async function depublierAnalyse(analyseId: string) {
+  await verifierProf()
+  const admin = createAdminClient()
+
+  const { error } = await admin.from('fragments_analyses').update({
+    statut: 'generee',
+    publiee_at: null,
+  }).eq('id', analyseId)
+
+  if (error) return { error: error.message }
+
+  revalidatePath('/prof/fragments-erudition')
+  return { success: true }
+}
+
+export async function mettreAJourPiste(pisteId: string, statut: StatutPiste) {
+  await verifierProf()
+  const admin = createAdminClient()
+
+  const { error } = await admin.from('fragments_pistes')
+    .update({ statut })
+    .eq('id', pisteId)
+
+  if (error) return { error: error.message }
+  return { success: true }
+}
+
+export async function supprimerPiste(pisteId: string) {
+  await verifierProf()
+  const admin = createAdminClient()
+
+  const { error } = await admin.from('fragments_pistes').delete().eq('id', pisteId)
+  if (error) return { error: error.message }
+  return { success: true }
+}
+
+export async function ajouterPiste(analyseId: string, eleveId: string, contenu: string) {
+  await verifierProf()
+  const admin = createAdminClient()
+
+  const { error } = await admin.from('fragments_pistes').insert({
+    analyse_id: analyseId,
+    eleve_id: eleveId,
+    contenu,
+    est_rappel: false,
+    statut: 'proposee',
+  })
+
+  if (error) return { error: error.message }
+  return { success: true }
+}
+
+export async function sauvegarderConfig(promptEvaluation: string, bareme: string) {
+  await verifierProf()
+  const admin = createAdminClient()
+
+  const { error } = await admin.from('fragments_config').update({
+    prompt_evaluation: promptEvaluation,
+    bareme,
+  }).eq('id', 1)
+
+  if (error) return { error: error.message }
+  return { success: true }
 }
 
 export async function supprimerDepot(formData: FormData) {

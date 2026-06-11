@@ -1,8 +1,10 @@
 'use server'
 
+import { after } from 'next/server'
 import { revalidatePath } from 'next/cache'
 import { createClient } from '@/utils/supabase/server'
 import { createAdminClient } from '@/utils/supabase/admin'
+import { lancerAnalyse } from '@/utils/analyse'
 
 // Vérifier que l'appelant est bien un élève
 async function verifierEleve() {
@@ -84,6 +86,14 @@ export async function deposerCompteRendu(formData: FormData) {
   }
 
   revalidatePath('/eleve/modules/fragments-erudition')
+
+  // Déclencher l'analyse IA en arrière-plan (sans bloquer la réponse)
+  const depotIdPourAnalyse = nouveauDepot.id
+  const eleveIdPourAnalyse = userId
+  after(async () => {
+    await lancerAnalyse(depotIdPourAnalyse, eleveIdPourAnalyse)
+  })
+
   return { success: true, statut }
 }
 

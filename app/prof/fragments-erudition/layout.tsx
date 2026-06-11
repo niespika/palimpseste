@@ -15,6 +15,7 @@ export default function FragmentsLayout({ children }: { children: React.ReactNod
           { href: '/prof/fragments-erudition', label: 'Vue par semaine' },
           { href: '/prof/fragments-erudition/semaines', label: 'Semaines' },
           { href: '/prof/fragments-erudition/themes', label: 'Thèmes' },
+          { href: '/prof/fragments-erudition/parametres', label: 'Paramètres' },
         ].map(({ href, label }) => (
           <Link
             key={href}
