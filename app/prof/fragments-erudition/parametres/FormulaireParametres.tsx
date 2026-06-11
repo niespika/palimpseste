@@ -63,7 +63,7 @@ export default function FormulaireParametres({
           value={bareme}
           onChange={e => setBareme(e.target.value)}
           rows={6}
-          className="w-full px-3 py-2 border border-stone-200 rounded-xl text-sm font-mono focus:outline-none focus:ring-2 focus:ring-stone-400 resize-y"
+          className="w-full px-3 py-2 border border-stone-200 rounded-xl text-sm font-mono focus:outline-none focus:ring-2 focus:ring-blue-400 resize-y text-stone-900"
         />
       </div>
 
@@ -82,7 +82,7 @@ export default function FormulaireParametres({
           value={prompt}
           onChange={e => setPrompt(e.target.value)}
           rows={30}
-          className="w-full px-3 py-2 border border-stone-200 rounded-xl text-sm font-mono focus:outline-none focus:ring-2 focus:ring-stone-400 resize-y"
+          className="w-full px-3 py-2 border border-stone-200 rounded-xl text-sm font-mono focus:outline-none focus:ring-2 focus:ring-blue-400 resize-y text-stone-900"
         />
       </div>
 

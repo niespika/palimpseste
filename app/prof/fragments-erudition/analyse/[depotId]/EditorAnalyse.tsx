@@ -86,7 +86,7 @@ function ChampTexte({
         value={value}
         onChange={e => onChange(e.target.value)}
         rows={rows}
-        className="w-full px-3 py-2 border border-stone-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-stone-400 resize-y"
+        className="w-full px-3 py-2 border border-stone-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 resize-y text-stone-900"
       />
     </div>
   )
@@ -420,7 +420,7 @@ export default function EditorAnalyse({
                     value={transcription}
                     onChange={e => setTranscription(e.target.value)}
                     rows={12}
-                    className="w-full px-3 py-2 border border-stone-200 rounded-xl text-sm font-mono focus:outline-none focus:ring-2 focus:ring-stone-400 resize-y"
+                    className="w-full px-3 py-2 border border-stone-200 rounded-xl text-sm font-mono focus:outline-none focus:ring-2 focus:ring-blue-400 resize-y text-stone-900"
                   />
                 </div>
               )}
@@ -495,7 +495,7 @@ export default function EditorAnalyse({
                   value={nouvellePiste}
                   onChange={e => setNouvellePiste(e.target.value)}
                   placeholder="Ajouter une piste…"
-                  className="flex-1 px-3 py-2 border border-stone-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-stone-400"
+                  className="flex-1 px-3 py-2 border border-stone-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 text-stone-900"
                   onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); handleAjouterPiste() } }}
                 />
                 <button
