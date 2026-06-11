@@ -42,7 +42,7 @@ export default function LigneTheme({ eleve, theme }: Props) {
               name="theme"
               required
               defaultValue={theme?.theme ?? ''}
-              className="w-full px-2 py-1.5 border border-stone-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-stone-400"
+              className="w-full px-2 py-1.5 border border-stone-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 text-stone-900"
               placeholder="Ex. : La piraterie dans l'océan Indien"
             />
             <textarea

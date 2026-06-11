@@ -57,7 +57,7 @@ export default function LigneEleve({ eleve }: { eleve: EleveAvecEmail }) {
                 name="displayName"
                 defaultValue={eleve.display_name}
                 required
-                className="px-2 py-1.5 border border-stone-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-stone-400"
+                className="px-2 py-1.5 border border-stone-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 text-stone-900"
               />
             </div>
             <div>
@@ -65,7 +65,7 @@ export default function LigneEleve({ eleve }: { eleve: EleveAvecEmail }) {
               <input
                 name="classe"
                 defaultValue={eleve.classe ?? ''}
-                className="px-2 py-1.5 border border-stone-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-stone-400"
+                className="px-2 py-1.5 border border-stone-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 text-stone-900"
                 placeholder="Ex. : Terminale HLP"
               />
             </div>
@@ -104,7 +104,7 @@ export default function LigneEleve({ eleve }: { eleve: EleveAvecEmail }) {
                 type="text"
                 required
                 minLength={8}
-                className="px-2 py-1.5 border border-stone-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-stone-400"
+                className="px-2 py-1.5 border border-stone-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 text-stone-900"
                 placeholder="Au moins 8 caractères"
               />
             </div>

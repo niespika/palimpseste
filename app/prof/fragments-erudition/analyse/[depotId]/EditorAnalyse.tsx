@@ -468,7 +468,7 @@ export default function EditorAnalyse({
                       <select
                         value={piste.statut}
                         onChange={e => handleChangerStatutPiste(piste.id, e.target.value as StatutPiste)}
-                        className="text-xs border border-stone-200 rounded-lg px-2 py-0.5 bg-white focus:outline-none focus:ring-1 focus:ring-stone-400"
+                        className="text-xs border border-stone-200 rounded-lg px-2 py-0.5 bg-white focus:outline-none focus:ring-1 focus:ring-blue-400 text-stone-900"
                       >
                         <option value="proposee">Proposée</option>
                         <option value="suivie">Suivie ✓</option>
