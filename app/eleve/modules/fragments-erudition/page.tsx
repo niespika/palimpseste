@@ -19,13 +19,6 @@ export default async function PageFragments() {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) notFound()
 
-  // Vérifier l'accès au module
-  const { data: assignment } = await supabase
-    .from('module_assignments')
-    .select('module_id, modules(slug)')
-    .eq('eleve_id', user.id)
-    .single()
-
   // Récupérer le thème
   const { data: theme } = await supabase
     .from('fragments_themes')

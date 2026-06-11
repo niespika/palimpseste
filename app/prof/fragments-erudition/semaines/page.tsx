@@ -3,6 +3,11 @@ import FormulaireSemaine from './FormulaireSemaine'
 import { toggleSemaineOuverte } from '../actions'
 import type { FragmentSemaine } from '@/types/fragments'
 
+async function toggleAction(formData: FormData): Promise<void> {
+  'use server'
+  await toggleSemaineOuverte(formData)
+}
+
 function formatDate(dateStr: string) {
   return new Date(dateStr).toLocaleDateString('fr-FR', {
     day: 'numeric',
@@ -52,7 +57,7 @@ export default async function PageSemaines() {
                     )}
                   </td>
                   <td className="px-4 py-3">
-                    <form action={async (formData: FormData) => { await toggleSemaineOuverte(formData) }}>
+                    <form action={toggleAction}>
                       <input type="hidden" name="id" value={semaine.id} />
                       <input type="hidden" name="ouverte" value={String(semaine.ouverte)} />
                       <button
