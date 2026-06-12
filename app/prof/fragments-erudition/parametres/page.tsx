@@ -1,5 +1,6 @@
 import { createClient } from '@/utils/supabase/server'
 import FormulaireParametres from './FormulaireParametres'
+import { PROMPT_ORAL_DEFAUT } from '@/utils/analyse-orale'
 
 // Prompt et barème par défaut (pour le bouton "Restaurer")
 const PROMPT_DEFAUT = `Tu es l'assistant pédagogique d'un professeur de philosophie et d'humanités dans un lycée français. Tu analyses le « fragment d'érudition » hebdomadaire d'un élève : un compte-rendu manuscrit recto-verso de ses recherches personnelles sur son thème annuel.
@@ -92,7 +93,7 @@ export default async function PageParametres() {
   // Config actuelle
   const { data: config } = await supabase
     .from('fragments_config')
-    .select('prompt_evaluation, bareme')
+    .select('prompt_evaluation, bareme, prompt_evaluation_orale, supprimer_audio_publication')
     .eq('id', 1)
     .single()
 
@@ -110,6 +111,9 @@ export default async function PageParametres() {
         baremeInitial={config?.bareme ?? BAREME_DEFAUT}
         promptDefaut={PROMPT_DEFAUT}
         baremeDefaut={BAREME_DEFAUT}
+        promptOralInitial={config?.prompt_evaluation_orale ?? ''}
+        promptOralDefaut={PROMPT_ORAL_DEFAUT}
+        supprimerAudioInitial={config?.supprimer_audio_publication ?? true}
       />
     </div>
   )

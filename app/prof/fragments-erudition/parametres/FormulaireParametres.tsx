@@ -2,13 +2,16 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { sauvegarderConfig } from '../actions'
+import { sauvegarderConfig, sauvegarderConfigOrale } from '../actions'
 
 interface Props {
   promptInitial: string
   baremeInitial: string
   promptDefaut: string
   baremeDefaut: string
+  promptOralInitial: string
+  promptOralDefaut: string
+  supprimerAudioInitial: boolean
 }
 
 export default function FormulaireParametres({
@@ -16,20 +19,28 @@ export default function FormulaireParametres({
   baremeInitial,
   promptDefaut,
   baremeDefaut,
+  promptOralInitial,
+  promptOralDefaut,
+  supprimerAudioInitial,
 }: Props) {
   const router = useRouter()
   const [prompt, setPrompt] = useState(promptInitial)
   const [bareme, setBareme] = useState(baremeInitial)
+  const [promptOral, setPromptOral] = useState(promptOralInitial)
+  const [supprimerAudio, setSupprimerAudio] = useState(supprimerAudioInitial)
   const [enregistrement, setEnregistrement] = useState(false)
   const [message, setMessage] = useState<{ type: 'ok' | 'err'; texte: string } | null>(null)
 
   async function handleSauvegarder() {
     setEnregistrement(true)
     setMessage(null)
-    const res = await sauvegarderConfig(prompt, bareme)
+    const [r1, r2] = await Promise.all([
+      sauvegarderConfig(prompt, bareme),
+      sauvegarderConfigOrale(promptOral, supprimerAudio),
+    ])
     setEnregistrement(false)
-    if (res.error) {
-      setMessage({ type: 'err', texte: res.error })
+    if (r1.error || r2.error) {
+      setMessage({ type: 'err', texte: r1.error ?? r2.error ?? 'Erreur' })
     } else {
       setMessage({ type: 'ok', texte: 'Paramètres enregistrés.' })
       setTimeout(() => setMessage(null), 3000)
@@ -95,6 +106,50 @@ export default function FormulaireParametres({
           {message.texte}
         </div>
       )}
+
+      {/* Section oral */}
+      <hr className="border-stone-200" />
+      <h3 className="text-sm font-medium text-stone-700">Évaluation orale</h3>
+
+      <div className="bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 text-sm text-amber-800">
+        Variables disponibles :{' '}
+        {['{{theme}}', '{{description_theme}}', '{{numero_semaine}}', '{{duree}}', '{{nb_mots}}', '{{debit}}', '{{transcription_orale}}', '{{dossier}}', '{{bareme}}'].map(v => (
+          <code key={v} className="font-mono mr-1">{v}</code>
+        ))}
+      </div>
+
+      <div>
+        <div className="flex items-center justify-between mb-2">
+          <label className="text-sm font-medium text-stone-700">Prompt d'évaluation orale</label>
+          <button
+            type="button"
+            onClick={() => setPromptOral(promptOralDefaut)}
+            className="text-xs text-stone-500 hover:text-stone-700 underline"
+          >
+            Restaurer la version par défaut
+          </button>
+        </div>
+        <textarea
+          value={promptOral || promptOralDefaut}
+          onChange={e => setPromptOral(e.target.value)}
+          rows={20}
+          className="w-full px-3 py-2 border border-stone-200 rounded-xl text-sm font-mono focus:outline-none focus:ring-2 focus:ring-blue-400 resize-y text-stone-900"
+        />
+      </div>
+
+      <div>
+        <label className="flex items-center gap-2 cursor-pointer">
+          <input
+            type="checkbox"
+            checked={supprimerAudio}
+            onChange={e => setSupprimerAudio(e.target.checked)}
+            className="rounded"
+          />
+          <span className="text-sm text-stone-700">
+            Supprimer automatiquement l'audio à la publication (case pré-cochée par défaut)
+          </span>
+        </label>
+      </div>
 
       <button
         onClick={handleSauvegarder}

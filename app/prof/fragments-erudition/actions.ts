@@ -245,6 +245,197 @@ export async function sauvegarderConfig(promptEvaluation: string, bareme: string
 }
 
 // ============================================================
+// Oral : enregistrement, transcription, analyse, publication
+// ============================================================
+
+export async function creerUrlUploadAudio(
+  presentationId: string,
+  eleveId: string,
+  ext: string
+) {
+  await verifierProf()
+  const admin = createAdminClient()
+
+  const storagePath = `${eleveId}/${presentationId}.${ext}`
+
+  // Créer (ou récupérer) le record fragments_oraux
+  const { data: existant } = await admin
+    .from('fragments_oraux')
+    .select('id')
+    .eq('presentation_id', presentationId)
+    .maybeSingle()
+
+  let oralId: string
+  if (existant) {
+    await admin.from('fragments_oraux').update({
+      storage_path: storagePath,
+      statut: 'enregistre',
+      transcription: null,
+      duree_secondes: null,
+      nb_mots: null,
+      debit_mots_minute: null,
+      audio_supprime: false,
+    }).eq('id', existant.id)
+    oralId = existant.id
+    // Supprimer l'ancienne analyse si elle existe
+    await admin.from('fragments_analyses_orales').delete().eq('oral_id', existant.id)
+  } else {
+    const { data, error } = await admin
+      .from('fragments_oraux')
+      .insert({ presentation_id: presentationId, eleve_id: eleveId, storage_path: storagePath, statut: 'enregistre' })
+      .select('id')
+      .single()
+    if (error || !data) return { error: error?.message ?? 'Erreur création oral', data: null }
+    oralId = data.id
+  }
+
+  // URL signée d'upload
+  const { data: urlData, error: urlErr } = await admin.storage
+    .from('oraux')
+    .createSignedUploadUrl(storagePath)
+
+  if (urlErr || !urlData) return { error: urlErr?.message ?? 'Erreur URL', data: null }
+
+  return { data: { oralId, path: urlData.path, token: urlData.token }, error: null }
+}
+
+export async function confirmerUploadAudio(oralId: string) {
+  await verifierProf()
+  after(async () => {
+    const { transcrireEtAnalyserOral } = await import('@/utils/transcription')
+    await transcrireEtAnalyserOral(oralId)
+  })
+  revalidatePath('/prof/fragments-erudition')
+  return { success: true }
+}
+
+export async function relancerTranscription(oralId: string) {
+  await verifierProf()
+  const admin = createAdminClient()
+  await admin.from('fragments_oraux').update({
+    statut: 'enregistre',
+    transcription: null,
+    duree_secondes: null,
+    nb_mots: null,
+    debit_mots_minute: null,
+  }).eq('id', oralId)
+  await admin.from('fragments_analyses_orales').delete().eq('oral_id', oralId)
+  after(async () => {
+    const { transcrireEtAnalyserOral } = await import('@/utils/transcription')
+    await transcrireEtAnalyserOral(oralId)
+  })
+  return { success: true }
+}
+
+export async function relancerAnalyseOrale(oralId: string) {
+  await verifierProf()
+  const admin = createAdminClient()
+  await admin.from('fragments_oraux').update({ statut: 'transcrit' }).eq('id', oralId)
+  await admin.from('fragments_analyses_orales').delete().eq('oral_id', oralId)
+  after(async () => {
+    const { analyserOral } = await import('@/utils/analyse-orale')
+    await analyserOral(oralId)
+  })
+  return { success: true }
+}
+
+export async function sauvegarderAnalyseOrale(analyseOraleId: string, data: {
+  retour_integration: string
+  retour_pistes: string
+  retour_completude: string
+  retour_oral: string
+  commentaire_general: string
+  note_contenu: number
+  note_structure: number
+  note_expression: number
+  notes_prof: string
+}) {
+  await verifierProf()
+  const admin = createAdminClient()
+  const { error } = await admin.from('fragments_analyses_orales').update({
+    ...data,
+    notes_prof: data.notes_prof || null,
+    modifie_par_prof: true,
+  }).eq('id', analyseOraleId)
+  if (error) return { error: error.message }
+  return { success: true }
+}
+
+export async function publierAnalyseOrale(
+  analyseOraleId: string,
+  oralId: string,
+  presentationId: string,
+  supprimerAudio: boolean
+) {
+  await verifierProf()
+  const admin = createAdminClient()
+
+  await admin.from('fragments_analyses_orales').update({
+    publiee_at: new Date().toISOString(),
+    modifie_par_prof: true,
+  }).eq('id', analyseOraleId)
+
+  await admin.from('fragments_oraux').update({ statut: 'publie' }).eq('id', oralId)
+
+  // Passer la présentation à 'presente' si pas déjà fait
+  await admin.from('fragments_presentations').update({ statut: 'presente' })
+    .eq('id', presentationId)
+    .eq('statut', 'tire')
+
+  // Suppression audio optionnelle
+  if (supprimerAudio) {
+    const { data: oral } = await admin
+      .from('fragments_oraux')
+      .select('storage_path')
+      .eq('id', oralId)
+      .single()
+    if (oral?.storage_path) {
+      await admin.storage.from('oraux').remove([oral.storage_path])
+      await admin.from('fragments_oraux').update({ audio_supprime: true }).eq('id', oralId)
+    }
+  }
+
+  revalidatePath('/prof/fragments-erudition')
+  return { success: true }
+}
+
+export async function depublierAnalyseOrale(analyseOraleId: string, oralId: string) {
+  await verifierProf()
+  const admin = createAdminClient()
+  await admin.from('fragments_analyses_orales').update({ publiee_at: null }).eq('id', analyseOraleId)
+  await admin.from('fragments_oraux').update({ statut: 'analyse' }).eq('id', oralId)
+  revalidatePath('/prof/fragments-erudition')
+  return { success: true }
+}
+
+export async function getSignedUrlAudio(storagePath: string): Promise<string | null> {
+  await verifierProf()
+  const admin = createAdminClient()
+  const { data } = await admin.storage.from('oraux').createSignedUrl(storagePath, 3600)
+  return data?.signedUrl ?? null
+}
+
+export async function getSignedUrlAudioEleve(storagePath: string, eleveId: string): Promise<string | null> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user || user.id !== eleveId) return null
+  const admin = createAdminClient()
+  const { data } = await admin.storage.from('oraux').createSignedUrl(storagePath, 3600)
+  return data?.signedUrl ?? null
+}
+
+export async function sauvegarderConfigOrale(promptOral: string, supprimerAudioPublication: boolean) {
+  await verifierProf()
+  const admin = createAdminClient()
+  const { error } = await admin.from('fragments_config').update({
+    prompt_evaluation_orale: promptOral,
+    supprimer_audio_publication: supprimerAudioPublication,
+  }).eq('id', 1)
+  if (error) return { error: error.message }
+  return { success: true }
+}
+
+// ============================================================
 // Tirage au sort
 // ============================================================
 

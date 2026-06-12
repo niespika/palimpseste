@@ -92,6 +92,40 @@ export interface AnalyseResumee {
 }
 
 export type StatutPresentation = 'tire' | 'presente' | 'reporte'
+export type StatutOral = 'enregistre' | 'transcrit' | 'analyse' | 'erreur' | 'publie'
+
+export interface FragmentOral {
+  id: string
+  presentation_id: string
+  eleve_id: string
+  storage_path: string | null
+  transcription: string | null
+  duree_secondes: number | null
+  nb_mots: number | null
+  debit_mots_minute: number | null
+  statut: StatutOral
+  audio_supprime: boolean
+  created_at: string
+  updated_at: string
+}
+
+export interface FragmentAnalyseOrale {
+  id: string
+  oral_id: string
+  retour_integration: string | null
+  retour_pistes: string | null
+  retour_completude: string | null
+  retour_oral: string | null
+  commentaire_general: string | null
+  note_contenu: number | null
+  note_structure: number | null
+  note_expression: number | null
+  notes_prof: string | null
+  modifie_par_prof: boolean
+  created_at: string
+  updated_at: string
+  publiee_at: string | null
+}
 
 export interface FragmentPresentation {
   id: string

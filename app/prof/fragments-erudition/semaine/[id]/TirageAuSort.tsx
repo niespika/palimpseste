@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
+import Link from 'next/link'
 import { tirerOrateur, mettreAJourPresentation, annulerPresentation } from '../../actions'
 import type { FragmentPresentation } from '@/types/fragments'
 
@@ -119,9 +120,15 @@ export default function TirageAuSort({ semaineId, eligibles, presentations }: Pr
           <div className="space-y-1.5">
             {presentations.map(p => (
               <div key={p.id} className="flex items-center justify-between gap-3 text-sm">
-                <span className="text-stone-800 font-medium">
-                  {p.eleve?.display_name ?? '—'}
-                </span>
+                <div className="flex items-center gap-2">
+                  <span className="text-stone-800 font-medium">{p.eleve?.display_name ?? '—'}</span>
+                  <Link
+                    href={`/prof/fragments-erudition/presentation/${p.id}`}
+                    className="text-xs text-stone-400 hover:text-stone-700 underline"
+                  >
+                    Fiche
+                  </Link>
+                </div>
                 <div className="flex items-center gap-2">
                   <span className={`text-xs px-2 py-0.5 rounded-full ${
                     p.statut === 'presente' ? 'bg-green-100 text-green-700' :

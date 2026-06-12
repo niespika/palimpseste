@@ -49,7 +49,7 @@ function couleurNote(note: number | null, enRetard: boolean): string {
 }
 
 function telechargerCSV(semaines: Props['semaines'], lignes: LigneEleve[]) {
-  const entete = ['Élève', 'Classe', ...semaines.map(s => `S${s.numero}_note`), ...semaines.map(s => `S${s.numero}_statut`), 'Moyenne', 'Taux_depot_%']
+  const entete = ['Élève', 'Classe', ...semaines.map(s => `S${s.numero}_note`), ...semaines.map(s => `S${s.numero}_statut`), 'Moyenne', 'Taux_depot_%', 'Oral_contenu', 'Oral_structure', 'Oral_expression']
   const lignesCSV = lignes.map(l => {
     const notes = semaines.map((_, i) => {
       const c = l.cellules[i]
@@ -68,6 +68,7 @@ function telechargerCSV(semaines: Props['semaines'], lignes: LigneEleve[]) {
       ...statuts,
       l.moyenne !== null ? l.moyenne.toFixed(2) : '',
       l.tauxDepot.toString(),
+      '', '', '', // oral columns placeholder (not yet in lignes data)
     ]
   })
 

@@ -10,6 +10,7 @@ import {
   Tooltip,
   ResponsiveContainer,
   Legend,
+  ReferenceDot,
   type MouseHandlerDataParam,
 } from 'recharts'
 
@@ -20,6 +21,10 @@ export interface PointSemaine {
   reflexions: number | null
   moyenne: number | null
   depotId: string | null
+  // Notes orales (points distincts, pas de courbe)
+  oral_contenu?: number | null
+  oral_structure?: number | null
+  oral_expression?: number | null
 }
 
 function TooltipCustom({ active, payload, label }: {
@@ -130,8 +135,20 @@ export default function GraphiqueProgression({ data, lienBase }: Props) {
             activeDot={false}
             connectNulls={false}
           />
+          {/* Points oraux : losanges distincts */}
+          {data.flatMap((pt, i) => {
+            if (pt.oral_contenu == null) return []
+            return [
+              <ReferenceDot key={`oc-${i}`} x={pt.semaine} y={pt.oral_contenu} r={7} fill="#bfdbfe" stroke="#3b82f6" strokeWidth={2} />,
+              pt.oral_structure != null && <ReferenceDot key={`os-${i}`} x={pt.semaine} y={pt.oral_structure} r={7} fill="#a7f3d0" stroke="#10b981" strokeWidth={2} />,
+              pt.oral_expression != null && <ReferenceDot key={`oe-${i}`} x={pt.semaine} y={pt.oral_expression} r={7} fill="#ddd6fe" stroke="#8b5cf6" strokeWidth={2} />,
+            ].filter(Boolean)
+          })}
         </LineChart>
       </ResponsiveContainer>
+      {data.some(p => p.oral_contenu != null) && (
+        <p className="text-xs text-center text-stone-400 mt-0.5">◉ Points distincts = présentation orale</p>
+      )}
       {lienBase && (
         <p className="text-xs text-center text-stone-400 mt-1">
           Cliquer sur un point pour voir l'analyse

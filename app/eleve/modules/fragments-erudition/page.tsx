@@ -6,7 +6,8 @@ import FormulaireDepot from './FormulaireDepot'
 import HistoriqueDepots from './HistoriqueDepots'
 import AnalysePubliee from './AnalysePubliee'
 import GraphiqueProgression from '@/components/fragments/GraphiqueProgression'
-import type { FragmentAnalyse, FragmentPiste } from '@/types/fragments'
+import AnalyseOralePubliee from './AnalyseOralePubliee'
+import type { FragmentAnalyse, FragmentPiste, FragmentOral, FragmentAnalyseOrale } from '@/types/fragments'
 import type { PointSemaine } from '@/components/fragments/GraphiqueProgression'
 
 function formatDateLimite(dateStr: string) {
@@ -117,6 +118,50 @@ export default async function PageFragments() {
 
   const depotEnRetard = semaine && depotActuel?.statut === 'en_retard'
 
+  // Présentations de cet élève avec oral publié
+  const { data: presentationsAvecOral } = await admin
+    .from('fragments_presentations')
+    .select('id, semaine_id, statut')
+    .eq('eleve_id', user.id)
+
+  const presentationIds = (presentationsAvecOral ?? []).map(p => p.id)
+  const { data: oraux } = presentationIds.length > 0
+    ? await admin
+        .from('fragments_oraux')
+        .select('*')
+        .in('presentation_id', presentationIds)
+    : { data: [] }
+
+  const oralParPresentation = Object.fromEntries(
+    (oraux ?? []).map(o => [o.presentation_id, o])
+  )
+
+  const oralIds = (oraux ?? []).map(o => o.id)
+  const { data: analysesOrales } = oralIds.length > 0
+    ? await admin
+        .from('fragments_analyses_orales')
+        .select('*')
+        .not('publiee_at', 'is', null)
+        .in('oral_id', oralIds)
+    : { data: [] }
+
+  const analyseOraleParOral = Object.fromEntries(
+    (analysesOrales ?? []).map(a => [a.oral_id, a])
+  )
+
+  // Indexer par semaine_id pour afficher dans l'historique
+  const oralParSemaine: Record<string, { oral: FragmentOral; analyseOrale: FragmentAnalyseOrale }> = {}
+  for (const pres of presentationsAvecOral ?? []) {
+    const oral = oralParPresentation[pres.id]
+    if (!oral) continue
+    const analyseOrale = analyseOraleParOral[oral.id]
+    if (!analyseOrale) continue
+    oralParSemaine[pres.semaine_id] = {
+      oral: oral as FragmentOral,
+      analyseOrale: analyseOrale as FragmentAnalyseOrale,
+    }
+  }
+
   // ---- Données pour "Ton parcours" ----
   // Toutes les semaines
   const { data: toutesLessemaines } = await admin
@@ -163,16 +208,26 @@ export default async function PageFragments() {
   const pointsParcours: PointSemaine[] = (toutesLessemaines ?? []).map(s => {
     const depot = tousDepotParSemaine[s.id]
     const analyse = depot ? toutesAnalyseParDepot[depot.id] : null
-    if (!analyse) {
-      return { semaine: s.numero, decouvertes: null, sources: null, reflexions: null, moyenne: null, depotId: null }
-    }
-    const d = analyse.note_decouvertes
-    const so = analyse.note_sources
-    const r = analyse.note_reflexions
+    const oralData = oralParSemaine[s.id]
+
+    const d = analyse?.note_decouvertes ?? null
+    const so = analyse?.note_sources ?? null
+    const r = analyse?.note_reflexions ?? null
     const moy = d !== null && so !== null && r !== null
       ? Math.round(((d + so + r) / 3) * 100) / 100
       : null
-    return { semaine: s.numero, decouvertes: d, sources: so, reflexions: r, moyenne: moy, depotId: depot?.id ?? null }
+
+    return {
+      semaine: s.numero,
+      decouvertes: d,
+      sources: so,
+      reflexions: r,
+      moyenne: moy,
+      depotId: depot?.id ?? null,
+      oral_contenu: oralData?.analyseOrale.note_contenu ?? null,
+      oral_structure: oralData?.analyseOrale.note_structure ?? null,
+      oral_expression: oralData?.analyseOrale.note_expression ?? null,
+    }
   })
 
   // Stats parcours
@@ -393,6 +448,22 @@ export default async function PageFragments() {
                     />
                   </div>
                 )}
+                {(() => {
+                  const semaineTitreObj = (depot.semaine as unknown as { id: string } | null)
+                  const oralData = semaineTitreObj ? oralParSemaine[semaineTitreObj.id] : null
+                  if (!oralData) return null
+                  return (
+                    <div className="px-4 py-4 border-t border-stone-100">
+                      <p className="text-xs font-medium text-stone-500 uppercase tracking-wide mb-3">
+                        Ta présentation orale
+                      </p>
+                      <AnalyseOralePubliee
+                        oral={oralData.oral}
+                        analyseOrale={oralData.analyseOrale}
+                      />
+                    </div>
+                  )
+                })()}
               </div>
             )
           })}

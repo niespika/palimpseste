@@ -64,6 +64,43 @@ export default async function PageEleveDetail({ params }: { params: Promise<{ el
     (analyses ?? []).map(a => [a.depot_id, a])
   )
 
+  // Présentations orales publiées
+  const { data: presentationsEleve2 } = await admin
+    .from('fragments_presentations')
+    .select('id, semaine_id, statut')
+    .eq('eleve_id', eleveId)
+
+  const presIds = (presentationsEleve2 ?? []).map(p => p.id)
+  const { data: oraux } = presIds.length > 0
+    ? await admin.from('fragments_oraux').select('id, presentation_id').in('presentation_id', presIds)
+    : { data: [] }
+
+  const oralParPresId = Object.fromEntries((oraux ?? []).map(o => [o.presentation_id, o]))
+
+  // Pour les points du graphique avec données orales
+  const oralIds2 = (oraux ?? []).map(o => o.id)
+  const { data: analysesOrales2 } = oralIds2.length > 0
+    ? await admin
+        .from('fragments_analyses_orales')
+        .select('oral_id, note_contenu, note_structure, note_expression')
+        .not('publiee_at', 'is', null)
+        .in('oral_id', oralIds2)
+    : { data: [] }
+
+  const analyseOraleParOralId = Object.fromEntries((analysesOrales2 ?? []).map(a => [a.oral_id, a]))
+
+  const semainePourPresentation = Object.fromEntries(
+    (presentationsEleve2 ?? []).map(p => [p.id, p.semaine_id])
+  )
+  const oralParSemaine: Record<string, { note_contenu: number | null; note_structure: number | null; note_expression: number | null }> = {}
+  for (const pres of presentationsEleve2 ?? []) {
+    const oral = oralParPresId[pres.id]
+    if (!oral) continue
+    const analyseOrale = analyseOraleParOralId[oral.id]
+    if (!analyseOrale) continue
+    oralParSemaine[pres.semaine_id] = analyseOrale
+  }
+
   // Pistes en attente (proposee ou partiellement_suivie)
   const analyseIds = (analyses ?? []).map(a => a.id)
   const { data: pistesEnAttente } = analyseIds.length > 0
@@ -88,19 +125,11 @@ export default async function PageEleveDetail({ params }: { params: Promise<{ el
   const points: PointSemaine[] = (semaines ?? []).map(s => {
     const depot = depotParSemaine[s.id]
     const analyse = depot ? analyseParDepot[depot.id] : null
-    if (!analyse) {
-      return {
-        semaine: s.numero,
-        decouvertes: null,
-        sources: null,
-        reflexions: null,
-        moyenne: null,
-        depotId: null,
-      }
-    }
-    const d = analyse.note_decouvertes ?? null
-    const so = analyse.note_sources ?? null
-    const r = analyse.note_reflexions ?? null
+    const oralData = oralParSemaine[s.id]
+
+    const d = analyse?.note_decouvertes ?? null
+    const so = analyse?.note_sources ?? null
+    const r = analyse?.note_reflexions ?? null
     const moy = d !== null && so !== null && r !== null
       ? Math.round(((d + so + r) / 3) * 100) / 100
       : null
@@ -111,6 +140,9 @@ export default async function PageEleveDetail({ params }: { params: Promise<{ el
       reflexions: r,
       moyenne: moy,
       depotId: depot?.id ?? null,
+      oral_contenu: oralData?.note_contenu ?? null,
+      oral_structure: oralData?.note_structure ?? null,
+      oral_expression: oralData?.note_expression ?? null,
     }
   })
 
