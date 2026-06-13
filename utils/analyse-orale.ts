@@ -228,7 +228,7 @@ export async function analyserOral(oralId: string): Promise<void> {
     // Supprimer l'ancienne analyse si elle existe (cas relancer)
     await admin.from('fragments_analyses_orales').delete().eq('oral_id', oralId)
 
-    await admin.from('fragments_analyses_orales').insert({
+    const { error: insertError } = await admin.from('fragments_analyses_orales').insert({
       oral_id: oralId,
       retour_integration: parsed.retour_integration ?? null,
       retour_pistes: parsed.retour_pistes ?? null,
@@ -239,6 +239,11 @@ export async function analyserOral(oralId: string): Promise<void> {
       note_structure: parsed.notes?.structure ?? null,
       note_expression: parsed.notes?.expression ?? null,
     })
+
+    if (insertError) {
+      await admin.from('fragments_oraux').update({ statut: 'erreur' }).eq('id', oralId)
+      return
+    }
 
     await admin.from('fragments_oraux').update({ statut: 'analyse' }).eq('id', oralId)
 

@@ -60,14 +60,6 @@ export default function AnalyseOralePubliee({ oral, analyseOrale }: Props) {
         ) : null
       )}
 
-      {/* Note prof */}
-      {analyseOrale.notes_prof && (
-        <div className="bg-stone-50 rounded-lg px-3 py-2">
-          <p className="text-xs text-stone-400 mb-0.5">Note de ton professeur</p>
-          <p className="text-sm text-stone-700">{analyseOrale.notes_prof}</p>
-        </div>
-      )}
-
       {/* Lecteur audio */}
       {!oral.audio_supprime && audioUrl && (
         <div>

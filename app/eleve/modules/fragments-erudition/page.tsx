@@ -353,6 +353,19 @@ export default async function PageFragments() {
                 />
               </div>
             )}
+
+            {/* Retour oral de la semaine en cours */}
+            {semaine && oralParSemaine[semaine.id] && (
+              <div className="border-t border-stone-100 pt-4">
+                <p className="text-xs font-medium text-stone-500 uppercase tracking-wide mb-3">
+                  Ta présentation orale
+                </p>
+                <AnalyseOralePubliee
+                  oral={oralParSemaine[semaine.id].oral}
+                  analyseOrale={oralParSemaine[semaine.id].analyseOrale}
+                />
+              </div>
+            )}
           </div>
         </div>
       ) : (
