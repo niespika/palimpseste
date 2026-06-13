@@ -1,5 +1,6 @@
 import { createClient } from '@/utils/supabase/server'
 import LigneTheme from './LigneTheme'
+import BoutonActiverClasse from './BoutonActiverClasse'
 import type { Profile } from '@/types'
 import type { FragmentTheme } from '@/types/fragments'
 
@@ -40,8 +41,20 @@ export default async function PageThemes() {
     (themes ?? []).map(t => [t.eleve_id, t])
   )
 
+  // Classes disponibles pour activation en lot
+  const classes = [...new Set((eleves ?? []).map(e => (e as Profile).classe).filter(Boolean) as string[])].sort()
+
   return (
-    <div>
+    <div className="space-y-4">
+      {classes.length > 0 && (
+        <div className="bg-white border border-stone-200 rounded-xl px-4 py-3 flex flex-wrap items-center gap-3">
+          <span className="text-xs font-medium text-stone-500 uppercase tracking-wide">Activer l'essai par classe</span>
+          {classes.map(c => (
+            <BoutonActiverClasse key={c} classe={c} />
+          ))}
+        </div>
+      )}
+
       {!eleves || eleves.length === 0 ? (
         <div className="bg-white border border-stone-200 rounded-xl p-8 text-center text-stone-500 text-sm">
           Aucun élève n'a accès à ce module pour l'instant.<br />
@@ -52,8 +65,10 @@ export default async function PageThemes() {
           <table className="w-full text-left">
             <thead className="bg-stone-50 border-b border-stone-200">
               <tr>
-                <th className="px-4 py-3 text-xs font-medium text-stone-500 uppercase tracking-wide w-1/3">Élève</th>
+                <th className="px-4 py-3 text-xs font-medium text-stone-500 uppercase tracking-wide w-1/4">Élève</th>
                 <th className="px-4 py-3 text-xs font-medium text-stone-500 uppercase tracking-wide">Thème</th>
+                <th className="px-4 py-3 text-xs font-medium text-stone-500 uppercase tracking-wide text-center w-24">Essai actif</th>
+                <th className="px-4 py-3 text-xs font-medium text-stone-500 uppercase tracking-wide">Question d'essai</th>
               </tr>
             </thead>
             <tbody>

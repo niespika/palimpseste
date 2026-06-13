@@ -135,6 +135,99 @@ export interface FragmentPresentation {
   created_at: string
 }
 
+// ── Étape 6 : Essai final ──────────────────────────────────────────────────
+
+export type StatutEssaiAnalyse = 'en_cours' | 'generee' | 'erreur' | 'publiee'
+export type StatutSynthese = 'en_cours' | 'generee' | 'erreur' | 'publiee'
+export type LettreLettres = 'A' | 'B' | 'C' | 'D' | 'E'
+
+export interface EssaiEpreuve {
+  id: string
+  titre: string
+  date_epreuve: string
+  duree_minutes: number
+  consignes: string | null
+  depots_ouverts: boolean
+  created_at: string
+}
+
+export interface Essai {
+  id: string
+  epreuve_id: string
+  eleve_id: string
+  depose_par: 'eleve' | 'prof'
+  created_at: string
+  updated_at: string
+}
+
+export interface EssaiPhoto {
+  id: string
+  essai_id: string
+  storage_path: string
+  ordre: number
+  created_at: string
+}
+
+export interface EssaiAnalyse {
+  id: string
+  essai_id: string
+  eleve_id: string
+  statut: StatutEssaiAnalyse
+  transcription: string | null
+  lettre_structure: LettreLettres | null
+  lettre_expression: LettreLettres | null
+  lettre_argumentation: LettreLettres | null
+  lettre_connaissances: LettreLettres | null
+  retour_structure: string | null
+  retour_expression: string | null
+  retour_argumentation: string | null
+  retour_connaissances: string | null
+  retour_parcours: string | null
+  synthese: string | null
+  notes_prof: string | null
+  modifie_par_prof: boolean
+  cout_api: number | null
+  note20_suggeree: number | null
+  note20_min: number | null
+  note20_max: number | null
+  note20_justification: string | null
+  note20_validee: number | null
+  note_visible_eleve: boolean
+  created_at: string
+  updated_at: string
+  publiee_at: string | null
+}
+
+export interface FragmentSemestre {
+  id: string
+  label: string
+  date_debut: string
+  date_fin: string
+  created_at: string
+}
+
+export interface FragmentSynthese {
+  id: string
+  eleve_id: string
+  semestre_id: string
+  statut: StatutSynthese
+  synthese: string | null
+  points_forts: string | null
+  axes_progres: string | null
+  note20_suggeree: number | null
+  note20_min: number | null
+  note20_max: number | null
+  note20_justification: string | null
+  note20_validee: number | null
+  notes_prof: string | null
+  note_visible_eleve: boolean
+  perimetre: unknown | null
+  cout_api: number | null
+  created_at: string
+  updated_at: string
+  publiee_at: string | null
+}
+
 export interface EleveAvecDepot {
   id: string
   display_name: string

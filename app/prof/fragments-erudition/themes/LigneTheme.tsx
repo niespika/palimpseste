@@ -1,7 +1,9 @@
 'use client'
 
 import { useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { sauvegarderTheme } from '../actions'
+import { toggleEssaiActif, sauvegarderQuestion } from '../essai-actions'
 import type { Profile } from '@/types'
 import type { FragmentTheme } from '@/types/fragments'
 
@@ -11,9 +13,15 @@ interface Props {
 }
 
 export default function LigneTheme({ eleve, theme }: Props) {
+  const router = useRouter()
   const [edition, setEdition] = useState(false)
   const [chargement, setChargement] = useState(false)
   const [message, setMessage] = useState<string | null>(null)
+
+  const [essaiActif, setEssaiActif] = useState<boolean>(!!(theme as unknown as { essai_actif?: boolean })?.essai_actif)
+  const [question, setQuestion] = useState<string>((theme as unknown as { question?: string | null })?.question ?? '')
+  const [editionQuestion, setEditionQuestion] = useState(false)
+  const [chargementEssai, setChargementEssai] = useState(false)
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()
@@ -27,6 +35,22 @@ export default function LigneTheme({ eleve, theme }: Props) {
       setTimeout(() => setMessage(null), 2000)
     }
     setChargement(false)
+  }
+
+  async function handleToggleEssai() {
+    setChargementEssai(true)
+    const nouvelEtat = !essaiActif
+    await toggleEssaiActif(eleve.id, nouvelEtat)
+    setEssaiActif(nouvelEtat)
+    setChargementEssai(false)
+  }
+
+  async function handleSauvegarderQuestion() {
+    setChargementEssai(true)
+    await sauvegarderQuestion(eleve.id, question)
+    setEditionQuestion(false)
+    setChargementEssai(false)
+    router.refresh()
   }
 
   return (
@@ -72,7 +96,7 @@ export default function LigneTheme({ eleve, theme }: Props) {
         ) : (
           <div className="flex items-center gap-2">
             <div className="flex-1">
-              {theme ? (
+              {theme?.theme ? (
                 <>
                   <p className="text-sm text-stone-800">{theme.theme}</p>
                   {theme.description && (
@@ -88,7 +112,62 @@ export default function LigneTheme({ eleve, theme }: Props) {
               onClick={() => setEdition(true)}
               className="text-xs text-stone-500 hover:text-stone-800 px-2 py-1 rounded hover:bg-stone-200 flex-shrink-0"
             >
-              {theme ? 'Modifier' : 'Définir'}
+              {theme?.theme ? 'Modifier' : 'Définir'}
+            </button>
+          </div>
+        )}
+      </td>
+
+      {/* Essai actif */}
+      <td className="px-4 py-3 text-center">
+        <button
+          onClick={handleToggleEssai}
+          disabled={chargementEssai}
+          className={`text-xs px-2 py-1 rounded-full font-medium transition-colors ${
+            essaiActif
+              ? 'bg-green-100 text-green-700 hover:bg-green-200'
+              : 'bg-stone-100 text-stone-500 hover:bg-stone-200'
+          }`}
+        >
+          {chargementEssai ? '…' : essaiActif ? 'Actif' : 'Non'}
+        </button>
+      </td>
+
+      {/* Question d'essai */}
+      <td className="px-4 py-3">
+        {editionQuestion ? (
+          <div className="flex gap-2 items-start">
+            <textarea
+              value={question}
+              onChange={e => setQuestion(e.target.value)}
+              rows={2}
+              className="flex-1 px-2 py-1.5 border border-stone-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 resize-none text-stone-900"
+              placeholder="Question posée à cet élève"
+            />
+            <div className="flex flex-col gap-1">
+              <button
+                onClick={handleSauvegarderQuestion}
+                disabled={chargementEssai}
+                className="bg-stone-800 text-white px-2 py-1 rounded text-xs hover:bg-stone-700 disabled:opacity-50"
+              >
+                {chargementEssai ? '…' : 'OK'}
+              </button>
+              <button
+                onClick={() => setEditionQuestion(false)}
+                className="text-xs text-stone-500 hover:text-stone-700"
+              >
+                Annuler
+              </button>
+            </div>
+          </div>
+        ) : (
+          <div className="flex items-center gap-2">
+            <p className="flex-1 text-sm text-stone-600 italic">{question || '—'}</p>
+            <button
+              onClick={() => setEditionQuestion(true)}
+              className="text-xs text-stone-400 hover:text-stone-700 flex-shrink-0"
+            >
+              {question ? 'Modifier' : 'Ajouter'}
             </button>
           </div>
         )}

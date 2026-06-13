@@ -1,6 +1,8 @@
 import { createClient } from '@/utils/supabase/server'
 import FormulaireParametres from './FormulaireParametres'
 import { PROMPT_ORAL_DEFAUT } from '@/utils/analyse-orale'
+import { ECHELLE_LETTRES_DEFAUT, PROMPT_ESSAI_DEFAUT } from '@/utils/analyse-essai'
+import { PROMPT_SYNTHESE_DEFAUT } from '@/utils/synthese-semestre'
 
 // Prompt et barème par défaut (pour le bouton "Restaurer")
 const PROMPT_DEFAUT = `Tu es l'assistant pédagogique d'un professeur de philosophie et d'humanités dans un lycée français. Tu analyses le « fragment d'érudition » hebdomadaire d'un élève : un compte-rendu manuscrit recto-verso de ses recherches personnelles sur son thème annuel.
@@ -93,7 +95,7 @@ export default async function PageParametres() {
   // Config actuelle
   const { data: config } = await supabase
     .from('fragments_config')
-    .select('prompt_evaluation, bareme, prompt_evaluation_orale, supprimer_audio_publication')
+    .select('prompt_evaluation, bareme, prompt_evaluation_orale, supprimer_audio_publication, echelle_lettres, fourchette_points, prompt_evaluation_essai, prompt_synthese_semestre')
     .eq('id', 1)
     .single()
 
@@ -114,6 +116,13 @@ export default async function PageParametres() {
         promptOralInitial={config?.prompt_evaluation_orale ?? ''}
         promptOralDefaut={PROMPT_ORAL_DEFAUT}
         supprimerAudioInitial={config?.supprimer_audio_publication ?? true}
+        echelleInitiale={config?.echelle_lettres ?? ''}
+        echelleDefaut={ECHELLE_LETTRES_DEFAUT}
+        fourchetteInitiale={config?.fourchette_points ?? 2}
+        promptEssaiInitial={config?.prompt_evaluation_essai ?? ''}
+        promptEssaiDefaut={PROMPT_ESSAI_DEFAUT}
+        promptSyntheseInitial={config?.prompt_synthese_semestre ?? ''}
+        promptSyntheseDefaut={PROMPT_SYNTHESE_DEFAUT}
       />
     </div>
   )

@@ -7,7 +7,10 @@ import HistoriqueDepots from './HistoriqueDepots'
 import AnalysePubliee from './AnalysePubliee'
 import GraphiqueProgression from '@/components/fragments/GraphiqueProgression'
 import AnalyseOralePubliee from './AnalyseOralePubliee'
-import type { FragmentAnalyse, FragmentPiste, FragmentOral, FragmentAnalyseOrale } from '@/types/fragments'
+import EssaiDepot from './EssaiDepot'
+import EssaiPublie from './EssaiPublie'
+import BilanSemestre from './BilanSemestre'
+import type { FragmentAnalyse, FragmentPiste, FragmentOral, FragmentAnalyseOrale, EssaiAnalyse, FragmentSynthese } from '@/types/fragments'
 import type { PointSemaine } from '@/components/fragments/GraphiqueProgression'
 
 function formatDateLimite(dateStr: string) {
@@ -26,10 +29,10 @@ export default async function PageFragments() {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) notFound()
 
-  // Thème
+  // Thème (inclut essai_actif et question pour l'essai)
   const { data: theme } = await supabase
     .from('fragments_themes')
-    .select('theme, description')
+    .select('theme, description, essai_actif, question')
     .eq('eleve_id', user.id)
     .maybeSingle()
 
@@ -161,6 +164,63 @@ export default async function PageFragments() {
       analyseOrale: analyseOrale as FragmentAnalyseOrale,
     }
   }
+
+  // ── Essai final ──────────────────────────────────────────────────────────
+  const essaiActif = !!(theme as unknown as { essai_actif?: boolean })?.essai_actif
+
+  // Épreuve ouverte aux dépôts (la plus récente avec depots_ouverts=true)
+  const { data: epreuveOuverte } = essaiActif
+    ? await admin
+        .from('fragments_essais_epreuves')
+        .select('id, titre, date_epreuve, duree_minutes, consignes')
+        .eq('depots_ouverts', true)
+        .order('date_epreuve', { ascending: false })
+        .limit(1)
+        .maybeSingle()
+    : { data: null }
+
+  // Essai de l'élève pour cette épreuve
+  const { data: essaiEleve } = epreuveOuverte
+    ? await admin
+        .from('fragments_essais')
+        .select('id')
+        .eq('epreuve_id', epreuveOuverte.id)
+        .eq('eleve_id', user.id)
+        .maybeSingle()
+    : { data: null }
+
+  // Analyse publiée de l'essai (toutes épreuves, la plus récente publiée)
+  const { data: analyseEssaiPubliee } = essaiActif
+    ? await admin
+        .from('essais_analyses')
+        .select('*')
+        .eq('eleve_id', user.id)
+        .eq('statut', 'publiee')
+        .order('publiee_at', { ascending: false })
+        .limit(1)
+        .maybeSingle()
+    : { data: null }
+
+  // Analyse en cours (statut en_cours pour l'essai actuel)
+  const { data: analyseEssaiEnCours } = essaiEleve
+    ? await admin
+        .from('essais_analyses')
+        .select('statut')
+        .eq('eleve_id', user.id)
+        .in('statut', ['en_cours'])
+        .maybeSingle()
+    : { data: null }
+
+  // ── Synthèse de semestre ─────────────────────────────────────────────────
+  // La plus récente synthèse publiée pour cet élève
+  const { data: synthesePubliee } = await admin
+    .from('fragments_syntheses')
+    .select('*')
+    .eq('eleve_id', user.id)
+    .eq('statut', 'publiee')
+    .order('publiee_at', { ascending: false })
+    .limit(1)
+    .maybeSingle()
 
   // ---- Données pour "Ton parcours" ----
   // Toutes les semaines
@@ -425,6 +485,72 @@ export default async function PageFragments() {
               </ul>
             </div>
           )}
+        </div>
+      )}
+
+      {/* Essai final */}
+      {essaiActif && (
+        <div className="space-y-4">
+          <h3 className="text-sm font-medium text-stone-500 uppercase tracking-wide">Essai final</h3>
+
+          {/* Question de l'élève */}
+          {(theme as unknown as { question?: string | null })?.question && (
+            <div className="bg-stone-100 rounded-xl px-4 py-3">
+              <p className="text-xs text-stone-500 mb-0.5">Ta question</p>
+              <p className="font-medium text-stone-800">{(theme as unknown as { question: string }).question}</p>
+            </div>
+          )}
+
+          {/* Résultat publié */}
+          {analyseEssaiPubliee && (
+            <div className="bg-white border border-stone-200 rounded-xl p-5">
+              <p className="text-xs font-medium text-stone-500 uppercase tracking-wide mb-4">Retour de ton professeur</p>
+              <EssaiPublie analyse={analyseEssaiPubliee as EssaiAnalyse} />
+            </div>
+          )}
+
+          {/* Dépôt ouvert */}
+          {epreuveOuverte && (
+            <div className="bg-white border border-stone-200 rounded-xl overflow-hidden">
+              <div className="px-4 py-4 border-b border-stone-100">
+                <p className="font-medium text-stone-900">{epreuveOuverte.titre}</p>
+                <p className="text-xs text-stone-500 mt-0.5">
+                  {new Date(epreuveOuverte.date_epreuve).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })}
+                  {' · '}{epreuveOuverte.duree_minutes} min
+                </p>
+                {epreuveOuverte.consignes && (
+                  <p className="text-sm text-stone-600 mt-2">{epreuveOuverte.consignes}</p>
+                )}
+              </div>
+              <div className="px-4 py-4">
+                {essaiEleve && !analyseEssaiEnCours ? (
+                  <div className="space-y-3">
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full">Photos déposées</span>
+                      <span className="text-xs text-stone-500">Ton professeur analysera ton essai bientôt.</span>
+                    </div>
+                    <EssaiDepot epreuveId={epreuveOuverte.id} essaiExistantId={essaiEleve.id} analyseEnCours={false} />
+                  </div>
+                ) : (
+                  <EssaiDepot
+                    epreuveId={epreuveOuverte.id}
+                    essaiExistantId={essaiEleve?.id ?? null}
+                    analyseEnCours={!!analyseEssaiEnCours}
+                  />
+                )}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Bilan de semestre */}
+      {synthesePubliee && (
+        <div className="space-y-4">
+          <h3 className="text-sm font-medium text-stone-500 uppercase tracking-wide">Bilan du semestre</h3>
+          <div className="bg-white border border-stone-200 rounded-xl p-5">
+            <BilanSemestre synthese={synthesePubliee as FragmentSynthese} />
+          </div>
         </div>
       )}
 
