@@ -37,18 +37,16 @@ export async function chargerFileRevision(): Promise<CarteRevision[]> {
 
   // Unités publiées — admin pour contourner RLS sur quazian_publications
   const admin = createAdminClient()
-  const { data: publis, error: errPublis } = await admin
+  const { data: publis } = await admin
     .from('quazian_publications')
     .select('scriptorium_unite_id')
     .eq('flashcards_visibles', true)
-
-  console.log('[quazian] publis:', JSON.stringify(publis), 'err:', errPublis?.message)
 
   const unitesVisibles = (publis ?? []).map((p) => p.scriptorium_unite_id)
   if (unitesVisibles.length === 0) return []
 
   // Cartes validées de ces unités — admin pour éviter RLS
-  const { data: flashcards, error: errFlash } = await admin
+  const { data: flashcards } = await admin
     .from('quazian_flashcards')
     .select(`
       id, recto, verso, type, concept_tag,
@@ -57,8 +55,6 @@ export async function chargerFileRevision(): Promise<CarteRevision[]> {
     `)
     .eq('statut', 'valide')
     .in('scriptorium_unite_id', unitesVisibles)
-
-  console.log('[quazian] flashcards:', flashcards?.length, 'err:', errFlash?.message)
 
   if (!flashcards || flashcards.length === 0) return []
 
@@ -224,14 +220,22 @@ export async function soumettreNote(
 export async function chargerStatsRevision() {
   const { supabase, userId } = await verifierEleve()
   const maintenant = new Date().toISOString()
+  const admin = createAdminClient()
+
+  // Unités publiées
+  const { data: publis } = await admin
+    .from('quazian_publications')
+    .select('scriptorium_unite_id')
+    .eq('flashcards_visibles', true)
+
+  const unitesVisibles = (publis ?? []).map((p) => p.scriptorium_unite_id)
 
   // Toutes les cartes accessibles
-  const { data: flashcards } = await supabase
+  const { data: flashcards } = await admin
     .from('quazian_flashcards')
-    .select('id, quazian_publications!inner(flashcards_visibles)')
+    .select('id')
     .eq('statut', 'valide')
-    .is('eleve_id', null)
-    .eq('quazian_publications.flashcards_visibles', true)
+    .in('scriptorium_unite_id', unitesVisibles.length > 0 ? unitesVisibles : [''])
 
   const totalCartes = flashcards?.length ?? 0
   const ids = flashcards?.map((f) => f.id) ?? []
