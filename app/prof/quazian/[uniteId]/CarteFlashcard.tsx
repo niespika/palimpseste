@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { validerCarte, archiverCarte, modifierCarte } from '../actions'
+import { validerCarte, archiverCarte, modifierCarte, supprimerCarte } from '../actions'
 
 const TYPE_OPTIONS = ['philosophe', 'concept', 'mouvement', 'these'] as const
 const TYPE_LABELS: Record<string, string> = {
@@ -58,6 +58,15 @@ export function CarteFlashcard({ carte, uniteId }: { carte: Carte; uniteId: stri
     fd.append('id', carte.id)
     fd.append('uniteId', uniteId)
     await archiverCarte(fd)
+    setPending(false)
+  }
+
+  async function handleSupprimer() {
+    setPending(true)
+    const fd = new FormData()
+    fd.append('id', carte.id)
+    fd.append('uniteId', uniteId)
+    await supprimerCarte(fd)
     setPending(false)
   }
 
@@ -176,8 +185,15 @@ export function CarteFlashcard({ carte, uniteId }: { carte: Carte; uniteId: stri
             Archiver
           </button>
         )}
+        <button
+          onClick={handleSupprimer}
+          disabled={pending}
+          className="px-3 py-1 text-xs text-red-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors ml-auto disabled:opacity-50"
+        >
+          Supprimer
+        </button>
         {carte.source === 'ia' && (
-          <span className="ml-auto text-xs text-stone-300">IA</span>
+          <span className="text-xs text-stone-300">IA</span>
         )}
       </div>
     </div>

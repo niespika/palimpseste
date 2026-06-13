@@ -112,6 +112,18 @@ export async function validerCarte(formData: FormData) {
   return { success: true }
 }
 
+// Supprimer définitivement une carte
+export async function supprimerCarte(formData: FormData) {
+  const { supabase } = await verifierProf()
+  const id = formData.get('id') as string
+  const uniteId = formData.get('uniteId') as string
+
+  const { error } = await supabase.from('quazian_flashcards').delete().eq('id', id)
+  if (error) return { error: error.message }
+  revalidatePath(`/prof/quazian/${uniteId}`)
+  return { success: true }
+}
+
 // Archiver une carte
 export async function archiverCarte(formData: FormData) {
   const { supabase } = await verifierProf()
