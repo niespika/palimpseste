@@ -37,25 +37,29 @@ export async function chargerFileRevision(): Promise<CarteRevision[]> {
 
   // Unités publiées — admin pour contourner RLS sur quazian_publications
   const admin = createAdminClient()
-  const { data: publis } = await admin
+  const { data: publis, error: errPublis } = await admin
     .from('quazian_publications')
     .select('scriptorium_unite_id')
     .eq('flashcards_visibles', true)
 
+  console.log('[quazian] publis:', JSON.stringify(publis), 'err:', errPublis?.message)
+
   const unitesVisibles = (publis ?? []).map((p) => p.scriptorium_unite_id)
   if (unitesVisibles.length === 0) return []
 
-  // Cartes validées de ces unités
-  const { data: flashcards } = await supabase
+  // Cartes validées de ces unités — admin pour éviter RLS
+  const { data: flashcards, error: errFlash } = await admin
     .from('quazian_flashcards')
     .select(`
       id, recto, verso, type, concept_tag,
       scriptorium_unite_id,
-      scriptorium_unites!inner(label)
+      scriptorium_unites(label)
     `)
     .eq('statut', 'valide')
     .is('eleve_id', null)
     .in('scriptorium_unite_id', unitesVisibles)
+
+  console.log('[quazian] flashcards:', flashcards?.length, 'err:', errFlash?.message)
 
   if (!flashcards || flashcards.length === 0) return []
 
