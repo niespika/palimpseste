@@ -43,12 +43,13 @@ export async function lireTexteUnite(uniteId: string) {
   return docs ?? []
 }
 
-// Lancer l'extraction IA de flashcards pour une unité
+// Lancer l'extraction IA de flashcards pour une unité (ou un document spécifique)
 export async function lancerExtractionIA(formData: FormData) {
   const { supabase, userId } = await verifierProf()
   const uniteId = formData.get('uniteId') as string
+  const documentId = (formData.get('documentId') as string) || null
 
-  // Récupérer le label de l'unité et son texte
+  // Récupérer le label de l'unité
   const { data: unite } = await supabase
     .from('scriptorium_unites')
     .select('label')
@@ -57,11 +58,15 @@ export async function lancerExtractionIA(formData: FormData) {
 
   if (!unite) return { error: 'Unité introuvable' }
 
-  const { data: docs } = await supabase
+  let docsQuery = supabase
     .from('scriptorium_documents')
     .select('titre, auteur, texte_extrait')
     .eq('unite_id', uniteId)
     .not('texte_extrait', 'is', null)
+
+  if (documentId) docsQuery = docsQuery.eq('id', documentId)
+
+  const { data: docs } = await docsQuery
 
   if (!docs || docs.length === 0) return { error: "Aucun texte extrait dans cette unité. Dépose d'abord des documents dans le Scriptorium." }
 

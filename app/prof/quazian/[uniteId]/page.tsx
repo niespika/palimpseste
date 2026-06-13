@@ -34,12 +34,13 @@ export default async function UniteCartesPage({
 
   if (!unite) notFound()
 
-  // Vérifier si des textes existent dans le Scriptorium
-  const { count: nbTextes } = await supabase
+  // Documents du Scriptorium avec texte extrait
+  const { data: docsTexte } = await supabase
     .from('scriptorium_documents')
-    .select('id', { count: 'exact', head: true })
+    .select('id, titre, auteur')
     .eq('unite_id', uniteId)
     .not('texte_extrait', 'is', null)
+    .order('created_at', { ascending: true })
 
   // Cartes (hors archivées, sauf si on veut les voir)
   const { data: toutes } = await supabase
@@ -97,7 +98,7 @@ export default async function UniteCartesPage({
 
       {/* Extraction IA */}
       <div className="bg-white border border-stone-200 rounded-xl p-4 mb-6">
-        <ExtractionIA uniteId={uniteId} aDesTextes={(nbTextes ?? 0) > 0} />
+        <ExtractionIA uniteId={uniteId} docs={docsTexte ?? []} />
       </div>
 
       {/* Cartes à valider */}

@@ -3,10 +3,21 @@
 import { useState } from 'react'
 import { lancerExtractionIA } from '../actions'
 
-export function ExtractionIA({ uniteId, aDesTextes }: { uniteId: string; aDesTextes: boolean }) {
+type Doc = { id: string; titre: string; auteur: string | null }
+
+export function ExtractionIA({
+  uniteId,
+  docs,
+}: {
+  uniteId: string
+  docs: Doc[]
+}) {
   const [loading, setLoading] = useState(false)
   const [message, setMessage] = useState<string | null>(null)
   const [erreur, setErreur] = useState<string | null>(null)
+  const [documentId, setDocumentId] = useState<string>('tous')
+
+  const aDesTextes = docs.length > 0
 
   async function handleExtraction() {
     if (!aDesTextes) return
@@ -16,6 +27,7 @@ export function ExtractionIA({ uniteId, aDesTextes }: { uniteId: string; aDesTex
 
     const fd = new FormData()
     fd.append('uniteId', uniteId)
+    if (documentId !== 'tous') fd.append('documentId', documentId)
     const res = await lancerExtractionIA(fd)
 
     if (res.error) {
@@ -28,12 +40,26 @@ export function ExtractionIA({ uniteId, aDesTextes }: { uniteId: string; aDesTex
 
   return (
     <div className="flex items-center gap-3 flex-wrap">
+      {docs.length > 1 && (
+        <select
+          value={documentId}
+          onChange={(e) => setDocumentId(e.target.value)}
+          className="px-3 py-2 text-sm border border-stone-300 rounded-lg text-stone-700 bg-white focus:outline-none focus:ring-2 focus:ring-stone-400"
+        >
+          <option value="tous">Tous les documents</option>
+          {docs.map((d) => (
+            <option key={d.id} value={d.id}>
+              {d.titre}{d.auteur ? ` — ${d.auteur}` : ''}
+            </option>
+          ))}
+        </select>
+      )}
       <button
         onClick={handleExtraction}
         disabled={loading || !aDesTextes}
         className="px-4 py-2 bg-violet-600 text-white text-sm rounded-lg hover:bg-violet-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
       >
-        {loading ? 'Extraction en cours…' : '✦ Générer des cartes avec l’IA'}
+        {loading ? 'Extraction en cours…' : '✦ Générer des cartes avec l'IA'}
       </button>
       {!aDesTextes && (
         <p className="text-xs text-stone-400">
