@@ -10,10 +10,13 @@ export default function QuazianLayout({ children }: { children: React.ReactNode 
         <h2 className="text-xl font-serif text-stone-900 mt-2">Quazian</h2>
       </div>
 
-      <nav className="flex gap-1 mb-6 border-b border-stone-200 pb-0">
+      <nav className="flex gap-1 mb-6 border-b border-stone-200 pb-0 overflow-x-auto">
         {[
           { href: '/prof/quazian', label: 'Flashcards' },
           { href: '/prof/quazian/quizz', label: 'Quizz' },
+          { href: '/prof/quazian/diagnostic', label: 'Diagnostic' },
+          { href: '/prof/quazian/semestre', label: 'Semestre' },
+          { href: '/prof/quazian/parametres', label: 'Paramètres' },
         ].map(({ href, label }) => (
           <Link
             key={href}
