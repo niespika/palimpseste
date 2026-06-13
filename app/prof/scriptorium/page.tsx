@@ -142,9 +142,6 @@ export default async function ScriptoriumPage() {
                 <button
                   type="submit"
                   className="px-3 py-1 text-xs text-red-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                  onClick={(e) => {
-                    if (!confirm('Supprimer cette unité et tous ses documents ?')) e.preventDefault()
-                  }}
                 >
                   Supprimer
                 </button>
