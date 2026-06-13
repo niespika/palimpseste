@@ -1,6 +1,7 @@
 'use server'
 
 import { createClient } from '@/utils/supabase/server'
+import { createAdminClient } from '@/utils/supabase/admin'
 import { fsrs, createEmptyCard, type Card, type Grade } from 'ts-fsrs'
 
 async function verifierEleve() {
@@ -34,8 +35,9 @@ export async function chargerFileRevision(): Promise<CarteRevision[]> {
   const { supabase, userId } = await verifierEleve()
   const maintenant = new Date().toISOString()
 
-  // Unités publiées (flashcards_visibles = true)
-  const { data: publis } = await supabase
+  // Unités publiées — admin pour contourner RLS sur quazian_publications
+  const admin = createAdminClient()
+  const { data: publis } = await admin
     .from('quazian_publications')
     .select('scriptorium_unite_id')
     .eq('flashcards_visibles', true)
