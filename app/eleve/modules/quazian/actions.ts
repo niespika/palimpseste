@@ -34,18 +34,26 @@ export async function chargerFileRevision(): Promise<CarteRevision[]> {
   const { supabase, userId } = await verifierEleve()
   const maintenant = new Date().toISOString()
 
-  // Cartes publiées et validées accessibles à cet élève
+  // Unités publiées (flashcards_visibles = true)
+  const { data: publis } = await supabase
+    .from('quazian_publications')
+    .select('scriptorium_unite_id')
+    .eq('flashcards_visibles', true)
+
+  const unitesVisibles = (publis ?? []).map((p) => p.scriptorium_unite_id)
+  if (unitesVisibles.length === 0) return []
+
+  // Cartes validées de ces unités
   const { data: flashcards } = await supabase
     .from('quazian_flashcards')
     .select(`
       id, recto, verso, type, concept_tag,
       scriptorium_unite_id,
-      scriptorium_unites!inner(label),
-      quazian_publications!inner(flashcards_visibles)
+      scriptorium_unites!inner(label)
     `)
     .eq('statut', 'valide')
     .is('eleve_id', null)
-    .eq('quazian_publications.flashcards_visibles', true)
+    .in('scriptorium_unite_id', unitesVisibles)
 
   if (!flashcards || flashcards.length === 0) return []
 
