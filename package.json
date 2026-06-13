@@ -24,7 +24,8 @@
     "react-dom": "19.2.4",
     "react-zoom-pan-pinch": "^4.0.3",
     "recharts": "^3.8.1",
-    "ts-fsrs": "^5.4.1"
+    "ts-fsrs": "^5.4.1",
+    "unpdf": "^1.6.2"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",

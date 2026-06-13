@@ -162,9 +162,8 @@ export default async function UniteDocumentsPage({
                       <summary className="text-xs text-stone-400 cursor-pointer hover:text-stone-600">
                         Voir le texte extrait ({doc.texte_extrait.length} car.)
                       </summary>
-                      <pre className="mt-2 text-xs text-stone-600 bg-stone-50 p-3 rounded-lg whitespace-pre-wrap overflow-auto max-h-48 font-sans">
-                        {doc.texte_extrait.slice(0, 2000)}
-                        {doc.texte_extrait.length > 2000 && '…'}
+                      <pre className="mt-2 text-xs text-stone-600 bg-stone-50 p-3 rounded-lg whitespace-pre-wrap overflow-auto max-h-96 font-sans">
+                        {doc.texte_extrait}
                       </pre>
                     </details>
                   ) : (
