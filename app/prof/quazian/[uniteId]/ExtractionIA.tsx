@@ -59,7 +59,7 @@ export function ExtractionIA({
         disabled={loading || !aDesTextes}
         className="px-4 py-2 bg-violet-600 text-white text-sm rounded-lg hover:bg-violet-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
       >
-        {loading ? 'Extraction en cours…' : '✦ Générer des cartes avec l'IA'}
+        {loading ? 'Extraction en cours…' : '✦ Générer des cartes avec l’IA'}
       </button>
       {!aDesTextes && (
         <p className="text-xs text-stone-400">
