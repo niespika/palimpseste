@@ -124,8 +124,9 @@ async function extraireTexte(buffer: Buffer, mimeType: string, nomFichier: strin
 
   if (mimeType === 'application/pdf' || ext === 'pdf') {
     try {
+      // Importer depuis lib/ pour éviter le chargement du fichier de test (crash Vercel)
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const pdfParseModule = await import('pdf-parse') as any
+      const pdfParseModule = await import('pdf-parse/lib/pdf-parse.js') as any
       const pdfParse = pdfParseModule.default ?? pdfParseModule
       const data = await pdfParse(buffer)
       return data.text.trim() || null
@@ -145,6 +146,10 @@ async function extraireTexte(buffer: Buffer, mimeType: string, nomFichier: strin
     } catch {
       return null
     }
+  }
+
+  if (mimeType === 'text/plain' || ext === 'txt') {
+    return buffer.toString('utf-8').trim() || null
   }
 
   return null
