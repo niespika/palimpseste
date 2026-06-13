@@ -124,12 +124,12 @@ async function extraireTexte(buffer: Buffer, mimeType: string, nomFichier: strin
 
   if (mimeType === 'application/pdf' || ext === 'pdf') {
     try {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const pdfParseModule = await import('pdf-parse') as any
-      const pdfParse = pdfParseModule.default ?? pdfParseModule
-      const data = await pdfParse(buffer)
-      return data.text.trim() || null
-    } catch {
+      const { PDFParse } = await import('pdf-parse')
+      const parser = new PDFParse({ data: new Uint8Array(buffer) })
+      const result = await parser.getText()
+      return result.text.trim() || null
+    } catch (err) {
+      console.error('[scriptorium] PDF extraction error:', err)
       return null
     }
   }
