@@ -138,32 +138,34 @@ export default async function UniteCartesPage({
         </section>
       )}
 
-      {/* Cartes validées */}
+      {/* Cartes validées — repliées par défaut */}
       {validees.length > 0 && (
-        <section className="mb-8">
-          <h4 className="text-sm font-medium text-stone-600 mb-3">
+        <details className="mb-6 group">
+          <summary className="cursor-pointer list-none flex items-center gap-2 text-sm font-medium text-stone-600 hover:text-stone-800 select-none mb-1">
+            <span className="text-stone-400 group-open:rotate-90 transition-transform inline-block">▶</span>
             Validées ({validees.length})
-          </h4>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          </summary>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-3">
             {validees.map((c) => (
               <CarteFlashcard key={c.id} carte={{ ...c, unite_id: uniteId }} uniteId={uniteId} />
             ))}
           </div>
-        </section>
+        </details>
       )}
 
-      {/* Cartes archivées */}
+      {/* Cartes archivées — repliées par défaut */}
       {archivees.length > 0 && (
-        <section className="mb-8">
-          <h4 className="text-sm font-medium text-stone-400 mb-3">
+        <details className="mb-6 group">
+          <summary className="cursor-pointer list-none flex items-center gap-2 text-sm font-medium text-stone-400 hover:text-stone-600 select-none mb-1">
+            <span className="text-stone-300 group-open:rotate-90 transition-transform inline-block">▶</span>
             Archivées ({archivees.length})
-          </h4>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          </summary>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-3">
             {archivees.map((c) => (
               <CarteFlashcard key={c.id} carte={{ ...c, unite_id: uniteId }} uniteId={uniteId} />
             ))}
           </div>
-        </section>
+        </details>
       )}
 
       {(toutes ?? []).length === 0 && (
