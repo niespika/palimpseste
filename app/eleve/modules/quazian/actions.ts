@@ -56,7 +56,6 @@ export async function chargerFileRevision(): Promise<CarteRevision[]> {
       scriptorium_unites(label)
     `)
     .eq('statut', 'valide')
-    .is('eleve_id', null)
     .in('scriptorium_unite_id', unitesVisibles)
 
   console.log('[quazian] flashcards:', flashcards?.length, 'err:', errFlash?.message)
