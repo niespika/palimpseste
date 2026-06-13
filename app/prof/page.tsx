@@ -29,13 +29,6 @@ export default async function ProfAccueil() {
         </div>
       </div>
 
-      <div className="bg-amber-50 border border-amber-200 rounded-xl p-5 text-sm text-amber-800">
-        <p className="font-medium mb-1">Rappel — étape 1</p>
-        <p>
-          Cette version du site pose le socle. Les modules pédagogiques (Fragments d'érudition, etc.)
-          seront développés lors des prochaines étapes.
-        </p>
-      </div>
     </div>
   )
 }

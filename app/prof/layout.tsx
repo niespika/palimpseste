@@ -48,6 +48,12 @@ export default async function ProfLayout({ children }: { children: React.ReactNo
               >
                 Fragments
               </Link>
+              <Link
+                href="/prof/scriptorium"
+                className="px-3 py-1.5 text-sm text-stone-600 hover:text-stone-900 hover:bg-stone-100 rounded-md transition-colors"
+              >
+                Scriptorium
+              </Link>
             </nav>
           </div>
           <form action={deconnexion}>
@@ -72,6 +78,9 @@ export default async function ProfLayout({ children }: { children: React.ReactNo
           </Link>
           <Link href="/prof/fragments-erudition" className="flex-1 text-center px-2 py-1.5 text-sm text-stone-600 hover:bg-stone-100 rounded-md">
             Fragments
+          </Link>
+          <Link href="/prof/scriptorium" className="flex-1 text-center px-2 py-1.5 text-sm text-stone-600 hover:bg-stone-100 rounded-md">
+            Scriptorium
           </Link>
         </div>
       </header>

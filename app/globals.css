@@ -12,15 +12,20 @@
   --font-mono: var(--font-geist-mono);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
-}
+/* Le site est toujours en mode clair, quelle que soit la préférence système */
 
 body {
   background: var(--background);
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
+}
+
+/* Forcer fond blanc et texte foncé sur tous les champs de saisie,
+   pour éviter l'effet gris-clair du mode sombre système */
+input,
+textarea,
+select {
+  background-color: #ffffff;
+  color: #1c1917; /* stone-900 */
+  color-scheme: light;
 }
