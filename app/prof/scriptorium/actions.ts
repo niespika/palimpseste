@@ -126,7 +126,7 @@ async function extraireTexte(buffer: Buffer, mimeType: string, nomFichier: strin
     try {
       const { extractText } = await import('unpdf')
       const { text } = await extractText(new Uint8Array(buffer))
-      return text.trim() || null
+      return (Array.isArray(text) ? text.join('\n') : text).trim() || null
     } catch (err) {
       console.error('[scriptorium] PDF extraction error:', err)
       return null
