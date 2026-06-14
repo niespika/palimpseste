@@ -231,6 +231,7 @@ export async function supprimerDocument(formData: FormData) {
 }
 
 export async function getUrlSignee(storagePath: string): Promise<string | null> {
+  await verifierProf()
   const admin = createAdminClient()
   const { data } = await admin.storage
     .from('scriptorium')

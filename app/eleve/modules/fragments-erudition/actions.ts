@@ -105,11 +105,14 @@ export async function deposerCompteRendu(formData: FormData) {
 }
 
 export async function getSignedUrls(chemins: string[]): Promise<Record<string, string>> {
+  const { userId } = await verifierEleve()
   const admin = createAdminClient()
   const urls: Record<string, string> = {}
 
   await Promise.all(
     chemins.map(async (chemin) => {
+      // L'élève ne peut signer que ses propres fichiers (dossier = son uid)
+      if (!chemin.startsWith(`${userId}/`)) return
       const { data } = await admin.storage
         .from('fragments')
         .createSignedUrl(chemin, 3600)

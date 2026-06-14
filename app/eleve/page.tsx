@@ -62,9 +62,9 @@ export default async function TableauDeBordEleve() {
 
   // Statuts spécifiques par module
   const statuts: Record<string, string | null> = {}
-  for (const module of modulesActifs) {
-    if (module.slug === 'fragments-erudition') {
-      statuts[module.id] = await getStatutFragments(supabase, user!.id)
+  for (const mod of modulesActifs) {
+    if (mod.slug === 'fragments-erudition') {
+      statuts[mod.id] = await getStatutFragments(supabase, user!.id)
     }
   }
 

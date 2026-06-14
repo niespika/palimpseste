@@ -175,7 +175,13 @@ export async function creerUploadsPhotos(sessionId: string, phase: Phase, nb: nu
 export async function confirmerEnvoiPhotos(sessionId: string, phase: Phase, paths: string[]) {
   const ctx = await getTravail(sessionId, phase)
   if ('error' in ctx) return { error: ctx.error }
-  const { travailId, admin } = ctx
+  const { travailId, userId, admin } = ctx
+
+  // Les chemins doivent appartenir à cet élève / cette séance / cette phase
+  const prefix = `${userId}/${sessionId}/${phase}/`
+  if (paths.length === 0 || paths.some((p) => !p.startsWith(prefix))) {
+    return { error: 'Chemins de photos invalides.' }
+  }
 
   const colPhotos = phase === 'v1' ? 'photos_v1' : 'photos_vf'
   const colStatut = phase === 'v1' ? 'analyse_v1_statut' : 'analyse_vf_statut'

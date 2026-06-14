@@ -51,22 +51,7 @@ export function SessionRevision({ cartes: cartesInitiales, onTermine }: Props) {
     if (pending) return
     setPending(true)
 
-    await soumettreNote(
-      carte.flashcard_id,
-      carte.card_state_id,
-      rating,
-      carte.card_state_id
-        ? {
-            difficulty: 0,    // sera ignoré si card_state_id est null
-            stability: 0,
-            state: carte.state,
-            due: carte.due,
-            reps: 0,
-            lapses: 0,
-            last_review: null,
-          }
-        : undefined
-    )
+    await soumettreNote(carte.flashcard_id, carte.card_state_id, rating)
 
     // Si raté (1) et nouvelle carte ou état "learning", on remet la carte en fin de file
     if (rating === 1 && carte.state <= 1) {

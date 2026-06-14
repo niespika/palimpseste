@@ -278,6 +278,8 @@ export async function getSignedUrlEssaiPhotoEleve(storagePath: string, eleveId: 
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user || user.id !== eleveId) return null
+  // Contrôle sur le chemin lui-même (le dossier = uid de l'élève), pas seulement sur le paramètre
+  if (!storagePath.startsWith(`${user.id}/`)) return null
   const admin = createAdminClient()
   const { data } = await admin.storage.from('essais').createSignedUrl(storagePath, 3600)
   return data?.signedUrl ?? null

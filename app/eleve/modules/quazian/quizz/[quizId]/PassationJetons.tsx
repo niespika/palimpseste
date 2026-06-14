@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { sauvegarderReponse, soumettreQuizz, type QuestionPassation } from './actions'
 
 const LETTRES = ['A', 'B', 'C', 'D']
@@ -25,18 +25,21 @@ export function PassationJetons({ sessionId, quizId, questions, reponsesInitiale
   const restants = 100 - jetonsActuels.reduce((a, b) => a + b, 0)
   const peutSoumettre = restants === 0
 
+  // Ref vers la dernière version de handleSoumettre, pour l'auto-soumission au
+  // temps écoulé (évite une closure périmée dans le timer).
+  const handleSoumettreRef = useRef<() => void>(() => {})
+
   // Timer
   useEffect(() => {
     if (!fermeAt) return
     const tick = () => {
       const diff = Math.max(0, Math.floor((new Date(fermeAt).getTime() - Date.now()) / 1000))
       setSecondesRestantes(diff)
-      if (diff === 0 && !soumis) handleSoumettre()
+      if (diff === 0 && !soumis) handleSoumettreRef.current()
     }
     tick()
     const interval = setInterval(tick, 1000)
     return () => clearInterval(interval)
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [fermeAt, soumis])
 
   function modifierJeton(index: number, delta: number) {
@@ -78,6 +81,11 @@ export function PassationJetons({ sessionId, quizId, questions, reponsesInitiale
     setSoumis(true)
     setPending(false)
   }, [soumis, pending, peutSoumettre, sessionId, question, jetonsActuels, quizId])
+
+  // Garder la ref à jour (toujours la dernière closure)
+  useEffect(() => {
+    handleSoumettreRef.current = handleSoumettre
+  }, [handleSoumettre])
 
   function formatTemps(s: number) {
     const m = Math.floor(s / 60)

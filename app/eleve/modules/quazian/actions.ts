@@ -133,38 +133,42 @@ export async function chargerFileRevision(): Promise<CarteRevision[]> {
 export async function soumettreNote(
   flashcardId: string,
   cardStateId: string | null,
-  rating: 1 | 2 | 3 | 4,
-  etatActuel?: {
-    difficulty: number
-    stability: number
-    state: number
-    due: string
-    reps: number
-    lapses: number
-    last_review: string | null
-  }
+  rating: 1 | 2 | 3 | 4
 ): Promise<{ due: string; state: number }> {
   const { supabase, userId } = await verifierEleve()
 
   const scheduler = fsrs()
   const maintenant = new Date()
 
-  // Reconstruire la carte FSRS
+  // Reconstruire la carte FSRS à partir de l'état RÉEL en base
+  // (ne jamais faire confiance à un état envoyé par le client : il ne contient
+  // pas difficulty/stability et corromprait la planification).
   let card: Card
-  if (!cardStateId || !etatActuel) {
+  if (!cardStateId) {
     card = createEmptyCard(maintenant)
   } else {
-    card = {
-      due: new Date(etatActuel.due),
-      stability: etatActuel.stability,
-      difficulty: etatActuel.difficulty,
-      elapsed_days: 0,
-      scheduled_days: 0,
-      reps: etatActuel.reps,
-      lapses: etatActuel.lapses,
-      learning_steps: 0,
-      state: etatActuel.state as 0 | 1 | 2 | 3,
-      last_review: etatActuel.last_review ? new Date(etatActuel.last_review) : undefined,
+    const { data: etat } = await supabase
+      .from('quazian_card_states')
+      .select('difficulty, stability, state, due, reps, lapses, last_review')
+      .eq('id', cardStateId)
+      .eq('eleve_id', userId)
+      .single()
+
+    if (!etat) {
+      card = createEmptyCard(maintenant)
+    } else {
+      card = {
+        due: new Date(etat.due),
+        stability: etat.stability,
+        difficulty: etat.difficulty,
+        elapsed_days: 0,
+        scheduled_days: 0,
+        reps: etat.reps,
+        lapses: etat.lapses,
+        learning_steps: 0,
+        state: etat.state as 0 | 1 | 2 | 3,
+        last_review: etat.last_review ? new Date(etat.last_review) : undefined,
+      }
     }
   }
 
