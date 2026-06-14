@@ -1,0 +1,178 @@
+import Anthropic from '@anthropic-ai/sdk'
+import { createAdminClient } from '@/utils/supabase/admin'
+
+// ── Prompt par défaut — suggestions V1 ──────────────────────────────────────
+export const PROMPT_V1_DEFAUT = `Tu assistes un professeur de philosophie. Un élève vient d'écrire DE MÉMOIRE, livre fermé et à la main, une synthèse récapitulative d'une unité de cours. Tu disposes des photos de sa V1 et du contenu exact du cours (le Scriptorium). Codex est un outil de CONSOLIDATION, pas de notation : aucune note, aucun chiffre. Le but est d'aider l'élève à voir ses trous et à oser les exposer.
+
+## Contenu de l'unité (référence — l'élève, lui, a écrit de mémoire)
+{{cours}}
+
+## Tes tâches
+1. TRANSCRIPTION fidèle du manuscrit (transcription), en conservant les erreurs de langue. Mets [illisible] pour les mots indéchiffrables.
+2. CONFIANCE OCR (ocr_confiance) : un nombre entre 0 et 1 estimant la lisibilité du manuscrit. Les fautes d'OCR ne doivent JAMAIS être comptées comme des fautes de l'élève.
+3. OUBLIS (oublis) : jusqu'à {{plafond_oublis}} éléments IMPORTANTS du cours que l'élève n'a pas mentionnés. Formulation : « tu n'as pas parlé de X ni de Y, ni de [tel penseur] ». Hiérarchise du plus important au moins important.
+4. ERREURS et AMBIGUÏTÉS (erreurs) : jusqu'à {{plafond_erreurs}} éléments, hiérarchisés. Deux types :
+   - type "factuelle" : une erreur de fait. Correction ferme : « tu confonds X et Y ».
+   - type "ambiguite" : une lecture interprétative discutable. Ancre dans le cours, pas dans une vérité absolue : « ce passage peut se lire comme X, mais ton cours soutient plutôt Y ».
+5. ORTHOGRAPHE / GRAMMAIRE (ortho) : une indication GÉNÉRIQUE et brève (1-2 phrases), SANS marquer de fautes précises (on ne corrige pas le manuscrit ici). Vise les tendances récurrentes. Si la confiance OCR est faible, renvoie null.
+
+## Contraintes
+- Reste adossé au COURS ci-dessus : tu signales un oubli/erreur par rapport à ce que dit le cours, pas par rapport à une encyclopédie.
+- Sois concis : chaque "titre" tient en une ligne, chaque "detail" en 1-2 phrases. Tutoie l'élève.
+- Le total oublis + erreurs ne doit pas dépasser ~8.
+
+## Format de réponse — UNIQUEMENT un objet JSON valide, sans texte autour :
+{
+  "transcription": "...",
+  "ocr_confiance": 0.0,
+  "oublis": [ { "titre": "...", "detail": "..." } ],
+  "erreurs": [ { "type": "factuelle" | "ambiguite", "titre": "...", "detail": "..." } ],
+  "ortho": "..." | null
+}`
+
+interface V1JSON {
+  transcription: string
+  ocr_confiance: number
+  oublis: { titre: string; detail: string }[]
+  erreurs: { type: 'factuelle' | 'ambiguite'; titre: string; detail: string }[]
+  ortho: string | null
+}
+
+async function chargerCoursUnite(admin: ReturnType<typeof createAdminClient>, uniteId: string): Promise<string> {
+  const { data: docs } = await admin
+    .from('scriptorium_documents')
+    .select('titre, auteur, type, texte_extrait')
+    .eq('unite_id', uniteId)
+    .not('texte_extrait', 'is', null)
+    .order('created_at', { ascending: true })
+
+  if (!docs || docs.length === 0) return '(Aucun contenu textuel dans cette unité.)'
+
+  return docs
+    .map((d) => `## ${d.titre}${d.auteur ? ` (${d.auteur})` : ''} [${d.type}]\n\n${d.texte_extrait}`)
+    .join('\n\n---\n\n')
+}
+
+async function telechargerPhotos(admin: ReturnType<typeof createAdminClient>, paths: string[]): Promise<string[]> {
+  const images: string[] = []
+  for (const p of paths) {
+    const { data: blob } = await admin.storage.from('codex').download(p)
+    if (!blob) continue
+    const buffer = Buffer.from(await blob.arrayBuffer())
+    images.push(buffer.toString('base64'))
+  }
+  return images
+}
+
+function extraireJSON(texte: string): string {
+  return texte.replace(/^```(?:json)?\s*\n?/, '').replace(/\n?```\s*$/, '').trim()
+}
+
+export async function analyserV1(travailId: string): Promise<void> {
+  const admin = createAdminClient()
+
+  const { data: travail } = await admin
+    .from('codex_travaux')
+    .select('id, session_id, eleve_id, photos_v1')
+    .eq('id', travailId)
+    .single()
+
+  if (!travail) return
+
+  try {
+    const photos = (travail.photos_v1 as string[]) ?? []
+    if (photos.length === 0) {
+      await admin.from('codex_travaux').update({ analyse_v1_statut: 'erreur' }).eq('id', travailId)
+      return
+    }
+
+    const { data: session } = await admin
+      .from('codex_sessions')
+      .select('scriptorium_unite_id')
+      .eq('id', travail.session_id)
+      .single()
+
+    if (!session) {
+      await admin.from('codex_travaux').update({ analyse_v1_statut: 'erreur' }).eq('id', travailId)
+      return
+    }
+
+    const { data: params } = await admin
+      .from('codex_params')
+      .select('prompt_suggestions_v1, plafond_oublis, plafond_erreurs, seuil_ocr_ortho')
+      .eq('id', 1)
+      .single()
+
+    const plafondOublis = params?.plafond_oublis ?? 3
+    const plafondErreurs = params?.plafond_erreurs ?? 5
+    const seuilOcr = params?.seuil_ocr_ortho ?? 0.6
+
+    const cours = await chargerCoursUnite(admin, session.scriptorium_unite_id)
+    const imagesBase64 = await telechargerPhotos(admin, photos)
+
+    if (imagesBase64.length === 0) {
+      await admin.from('codex_travaux').update({ analyse_v1_statut: 'erreur' }).eq('id', travailId)
+      return
+    }
+
+    const prompt = (params?.prompt_suggestions_v1?.trim() || PROMPT_V1_DEFAUT)
+      .replace('{{cours}}', cours)
+      .replace(/\{\{plafond_oublis\}\}/g, String(plafondOublis))
+      .replace(/\{\{plafond_erreurs\}\}/g, String(plafondErreurs))
+
+    const client = new Anthropic()
+    const response = await client.messages.create({
+      model: 'claude-sonnet-4-6',
+      max_tokens: 4096,
+      messages: [{
+        role: 'user',
+        content: [
+          ...imagesBase64.map((b64) => ({
+            type: 'image' as const,
+            source: { type: 'base64' as const, media_type: 'image/jpeg' as const, data: b64 },
+          })),
+          { type: 'text' as const, text: prompt },
+        ],
+      }],
+    })
+
+    const texte = response.content[0].type === 'text' ? response.content[0].text : ''
+
+    let parsed: V1JSON
+    try {
+      parsed = JSON.parse(extraireJSON(texte))
+    } catch {
+      await admin.from('codex_travaux').update({ analyse_v1_statut: 'erreur' }).eq('id', travailId)
+      return
+    }
+
+    const confiance = typeof parsed.ocr_confiance === 'number' ? parsed.ocr_confiance : null
+    const orthoOk = confiance === null || confiance >= seuilOcr
+
+    const suggestions = {
+      oublis: (parsed.oublis ?? []).slice(0, plafondOublis),
+      erreurs: (parsed.erreurs ?? []).slice(0, plafondErreurs),
+      ortho: orthoOk ? (parsed.ortho ?? null) : null,
+    }
+
+    const cout = response.usage.input_tokens * 3 / 1_000_000
+      + response.usage.output_tokens * 15 / 1_000_000
+
+    await admin.from('codex_travaux').update({
+      texte_v1_ocr: parsed.transcription ?? null,
+      ocr_confiance_v1: confiance,
+      suggestions_v1: suggestions,
+      analyse_v1_statut: 'prete',
+      cout_api: cout,
+    }).eq('id', travailId)
+  } catch {
+    await admin.from('codex_travaux').update({ analyse_v1_statut: 'erreur' }).eq('id', travailId)
+  }
+}
+
+// ── V-finale : retour critique (implémenté à l'étape 4) ─────────────────────
+export async function analyserVF(travailId: string): Promise<void> {
+  const admin = createAdminClient()
+  // Implémentation complète à l'étape 4 (retour critique + synthèse complétée).
+  await admin.from('codex_travaux').update({ analyse_vf_statut: 'prete' }).eq('id', travailId)
+}

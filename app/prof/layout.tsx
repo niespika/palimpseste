@@ -60,6 +60,12 @@ export default async function ProfLayout({ children }: { children: React.ReactNo
               >
                 Quazian
               </Link>
+              <Link
+                href="/prof/codex"
+                className="px-3 py-1.5 text-sm text-stone-600 hover:text-stone-900 hover:bg-stone-100 rounded-md transition-colors"
+              >
+                Codex
+              </Link>
             </nav>
           </div>
           <form action={deconnexion}>
@@ -90,6 +96,9 @@ export default async function ProfLayout({ children }: { children: React.ReactNo
           </Link>
           <Link href="/prof/quazian" className="flex-1 text-center px-2 py-1.5 text-sm text-stone-600 hover:bg-stone-100 rounded-md">
             Quazian
+          </Link>
+          <Link href="/prof/codex" className="flex-1 text-center px-2 py-1.5 text-sm text-stone-600 hover:bg-stone-100 rounded-md">
+            Codex
           </Link>
         </div>
       </header>
