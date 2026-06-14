@@ -66,6 +66,45 @@ export async function chargerSeanceActive(): Promise<SeanceActive | null> {
   }
 }
 
+export interface SeancePassee {
+  id: string
+  unite_label: string
+  validee: boolean
+}
+
+// Historique des séances fermées visibles par l'élève (trace durable)
+export async function chargerHistorique(): Promise<SeancePassee[]> {
+  const { userId, classe } = await verifierEleve()
+  const admin = createAdminClient()
+
+  const { data: sessions } = await admin
+    .from('codex_sessions')
+    .select('id, classe_id, lance_at, scriptorium_unites(label)')
+    .eq('statut', 'fermee')
+    .order('lance_at', { ascending: false })
+
+  const visibles = (sessions ?? []).filter((s) => !s.classe_id || s.classe_id === classe)
+  if (visibles.length === 0) return []
+
+  const { data: travaux } = await admin
+    .from('codex_travaux')
+    .select('session_id, statut_validation')
+    .eq('eleve_id', userId)
+    .in('session_id', visibles.map((s) => s.id))
+
+  const validMap: Record<string, boolean> = {}
+  for (const t of travaux ?? []) validMap[t.session_id] = t.statut_validation === 'valide'
+
+  return visibles.map((s) => {
+    const u = s.scriptorium_unites as { label: string } | { label: string }[] | null
+    return {
+      id: s.id,
+      unite_label: Array.isArray(u) ? u[0]?.label ?? '' : u?.label ?? '',
+      validee: validMap[s.id] ?? false,
+    }
+  })
+}
+
 // ── Écriture / photos ────────────────────────────────────────────────────────
 
 type Phase = 'v1' | 'vf'
@@ -212,5 +251,31 @@ export async function chargerEtatTravail(sessionId: string): Promise<EtatTravail
     analyse_v1_statut: t?.analyse_v1_statut ?? 'vide',
     analyse_vf_statut: t?.analyse_vf_statut ?? 'vide',
     suggestions_v1: (t?.suggestions_v1 as SuggestionsV1 | null) ?? null,
+  }
+}
+
+export interface TraceCodex {
+  erreurs_corrections: { concept_tag: string; description: string; correction: string }[]
+  synthese_completee: string | null
+}
+
+// Trace validée (consultable par l'élève après validation prof)
+export async function chargerTrace(sessionId: string): Promise<TraceCodex | null> {
+  const { userId } = await verifierEleve()
+  const admin = createAdminClient()
+
+  const { data: t } = await admin
+    .from('codex_travaux')
+    .select('statut_validation, retour_critique, synthese_completee')
+    .eq('session_id', sessionId)
+    .eq('eleve_id', userId)
+    .maybeSingle()
+
+  if (!t || t.statut_validation !== 'valide') return null
+
+  const retour = (t.retour_critique as { erreurs_corrections?: TraceCodex['erreurs_corrections'] } | null) ?? null
+  return {
+    erreurs_corrections: retour?.erreurs_corrections ?? [],
+    synthese_completee: t.synthese_completee ?? null,
   }
 }

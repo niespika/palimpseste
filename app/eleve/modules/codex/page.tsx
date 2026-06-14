@@ -1,7 +1,7 @@
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import { createClient } from '@/utils/supabase/server'
-import { chargerSeanceActive } from './actions'
+import { chargerSeanceActive, chargerHistorique } from './actions'
 
 export default async function CodexElevePage() {
   const supabase = await createClient()
@@ -33,7 +33,8 @@ export default async function CodexElevePage() {
     )
   }
 
-  const seance = await chargerSeanceActive()
+  const [seance, historique] = await Promise.all([chargerSeanceActive(), chargerHistorique()])
+  const live = seance && (seance.statut === 'phase_1' || seance.statut === 'phase_2') ? seance : null
 
   return (
     <div>
@@ -44,25 +45,17 @@ export default async function CodexElevePage() {
       <h2 className="text-xl font-serif text-stone-900 mb-2 mt-2">Codex</h2>
       <p className="text-sm text-stone-500 mb-6">Écrire de mémoire le récapitulatif d&apos;une unité, puis l&apos;améliorer.</p>
 
-      {!seance && (
-        <div className="bg-white border border-stone-200 rounded-xl p-8 text-center">
-          <p className="text-stone-500 text-sm">Aucune séance de synthèse en cours pour le moment.</p>
-        </div>
-      )}
-
-      {seance && (seance.statut === 'phase_1' || seance.statut === 'phase_2') && (
+      {live && (
         <Link
-          href={`/eleve/modules/codex/seance/${seance.id}`}
-          className="block bg-green-50 border border-green-300 rounded-xl p-5 hover:bg-green-100 transition-colors"
+          href={`/eleve/modules/codex/seance/${live.id}`}
+          className="block bg-green-50 border border-green-300 rounded-xl p-5 hover:bg-green-100 transition-colors mb-6"
         >
           <div className="flex items-center gap-3">
             <span className="w-2.5 h-2.5 rounded-full bg-green-500 animate-pulse shrink-0" />
             <div>
-              <p className="font-medium text-green-800 text-sm">
-                Séance en cours — {seance.unite_label}
-              </p>
+              <p className="font-medium text-green-800 text-sm">Séance en cours — {live.unite_label}</p>
               <p className="text-xs text-green-600">
-                {seance.statut === 'phase_1'
+                {live.statut === 'phase_1'
                   ? 'Phase 1 : écris ta V1, livre fermé → appuie pour commencer'
                   : 'Phase 2 : réécris ta V-finale avec les suggestions → appuie pour continuer'}
               </p>
@@ -71,18 +64,32 @@ export default async function CodexElevePage() {
         </Link>
       )}
 
-      {seance && seance.statut === 'fermee' && (
-        <Link
-          href={`/eleve/modules/codex/seance/${seance.id}`}
-          className="block bg-blue-50 border border-blue-200 rounded-xl p-5 hover:bg-blue-100 transition-colors"
-        >
-          <p className="text-sm font-medium text-blue-800">{seance.unite_label}</p>
-          <p className="text-xs text-blue-600 mt-0.5">
-            {seance.statut_validation === 'valide'
-              ? 'Ton retour est prêt — appuie pour le consulter →'
-              : 'Séance terminée — ton retour sera disponible une fois validé par le professeur.'}
-          </p>
-        </Link>
+      {historique.length > 0 && (
+        <section>
+          <h3 className="text-sm font-medium text-stone-500 mb-3">Mes synthèses</h3>
+          <div className="space-y-2">
+            {historique.map((s) => (
+              <Link
+                key={s.id}
+                href={`/eleve/modules/codex/seance/${s.id}`}
+                className="flex items-center justify-between gap-3 bg-white border border-stone-200 rounded-xl px-4 py-3 hover:border-stone-300 transition-colors"
+              >
+                <p className="text-sm font-medium text-stone-800 truncate">{s.unite_label}</p>
+                {s.validee ? (
+                  <span className="text-xs px-2 py-0.5 bg-blue-100 text-blue-700 rounded-full shrink-0">retour prêt</span>
+                ) : (
+                  <span className="text-xs text-stone-400 shrink-0">en attente</span>
+                )}
+              </Link>
+            ))}
+          </div>
+        </section>
+      )}
+
+      {!live && historique.length === 0 && (
+        <div className="bg-white border border-stone-200 rounded-xl p-8 text-center">
+          <p className="text-stone-500 text-sm">Aucune séance de synthèse pour le moment.</p>
+        </div>
       )}
     </div>
   )

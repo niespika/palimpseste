@@ -170,9 +170,171 @@ export async function analyserV1(travailId: string): Promise<void> {
   }
 }
 
-// ── V-finale : retour critique (implémenté à l'étape 4) ─────────────────────
+// ── Prompt par défaut — retour critique de la V-finale ──────────────────────
+export const PROMPT_VF_DEFAUT = `Tu assistes un professeur de philosophie. Un élève vient de réécrire EN ENTIER, à la main et en classe, la V-finale de sa synthèse d'unité, après avoir reçu des suggestions sur sa V1. Tu disposes des photos de la V-finale, du contenu exact du cours (le Scriptorium) et des suggestions qu'il a reçues sur sa V1. Codex est un outil de CONSOLIDATION : aucune note, aucun chiffre. Le retour doit aider l'élève à voir précisément ce qu'il n'a pas su dire, avec la bonne version.
+
+## Contenu de l'unité (référence — l'élève écrit de mémoire)
+{{cours}}
+
+## Suggestions reçues sur la V1
+{{suggestions_v1}}
+
+## Tes tâches
+1. TRANSCRIPTION fidèle de la V-finale (transcription), erreurs de langue conservées, [illisible] si besoin.
+2. CONFIANCE OCR (ocr_confiance) : nombre entre 0 et 1. Les fautes d'OCR ne comptent jamais.
+3. ERREURS + CORRECTIONS (erreurs_corrections) : les erreurs factuelles qui RESTENT dans la V-finale, avec correction ferme adossée au cours. Pour chacune : concept_tag (mot-clé), description (l'erreur, en tutoyant : « tu confonds X et Y »), correction (la bonne version), importance (1 = mineure, 2 = notable, 3 = grave/centrale).
+4. SUIVI DES SUGGESTIONS (suivi_suggestions) : pour chaque suggestion V1 marquante, l'élève l'a-t-il suivie ? statut = "suivie" | "partiellement" | "non_suivie", avec un commentaire bref.
+5. POUVAIT ALLER PLUS LOIN (pouvait_aller_plus_loin) : 1 à 3 points que l'élève traite mais qu'il aurait pu approfondir.
+6. NON AMÉLIORÉ (non_ameliore) : ce qui était signalé en V1 et qui n'a pas été corrigé (liste, peut être vide).
+7. SYNTHÈSE COMPLÉTÉE (synthese_completee) : reprends la synthèse de l'élève et COMPLÈTE-la pour les oublis, de sorte qu'il reparte avec une synthèse complète. Chaque ajout que TU produis doit être CLAIREMENT encadré par les balises [AJOUT] … [/AJOUT] et rester strictement adossé au cours. Ne réécris pas tout : garde le texte de l'élève, insère les ajouts là où ils manquent.
+8. AJOUTS (ajouts) : la liste structurée de tes ajouts, chacun { titre, contenu }.
+
+## Contraintes
+- Tout est adossé au COURS : tu corriges/complètes par rapport au cours, pas à une encyclopédie. Pour les ambiguïtés interprétatives, ancre dans le cours (« ton cours soutient plutôt Y »).
+- Tutoie l'élève, ton exigeant et bienveillant. Concis.
+
+## Format de réponse — UNIQUEMENT un objet JSON valide, sans texte autour :
+{
+  "transcription": "...",
+  "ocr_confiance": 0.0,
+  "erreurs_corrections": [ { "concept_tag": "...", "description": "...", "correction": "...", "importance": 1 } ],
+  "suivi_suggestions": [ { "suggestion": "...", "statut": "suivie" | "partiellement" | "non_suivie", "commentaire": "..." } ],
+  "pouvait_aller_plus_loin": [ "..." ],
+  "non_ameliore": [ "..." ],
+  "synthese_completee": "... [AJOUT] ... [/AJOUT] ...",
+  "ajouts": [ { "titre": "...", "contenu": "..." } ]
+}`
+
+interface VFJSON {
+  transcription: string
+  ocr_confiance: number
+  erreurs_corrections: { concept_tag: string; description: string; correction: string; importance: number }[]
+  suivi_suggestions: { suggestion: string; statut: string; commentaire: string }[]
+  pouvait_aller_plus_loin: string[]
+  non_ameliore: string[]
+  synthese_completee: string
+  ajouts: { titre: string; contenu: string }[]
+}
+
+function formaterSuggestionsV1(suggestions: unknown): string {
+  const s = suggestions as {
+    oublis?: { titre: string; detail: string }[]
+    erreurs?: { type: string; titre: string; detail: string }[]
+    ortho?: string | null
+  } | null
+  if (!s) return '(Aucune suggestion V1 enregistrée.)'
+
+  let texte = ''
+  if (s.oublis?.length) {
+    texte += 'OUBLIS signalés :\n'
+    for (const o of s.oublis) texte += `- ${o.titre} : ${o.detail}\n`
+  }
+  if (s.erreurs?.length) {
+    texte += 'ERREURS / AMBIGUÏTÉS signalées :\n'
+    for (const e of s.erreurs) texte += `- [${e.type}] ${e.titre} : ${e.detail}\n`
+  }
+  if (s.ortho) texte += `LANGUE : ${s.ortho}\n`
+  return texte || '(Aucune suggestion V1 enregistrée.)'
+}
+
 export async function analyserVF(travailId: string): Promise<void> {
   const admin = createAdminClient()
-  // Implémentation complète à l'étape 4 (retour critique + synthèse complétée).
-  await admin.from('codex_travaux').update({ analyse_vf_statut: 'prete' }).eq('id', travailId)
+
+  const { data: travail } = await admin
+    .from('codex_travaux')
+    .select('id, session_id, eleve_id, photos_vf, suggestions_v1')
+    .eq('id', travailId)
+    .single()
+
+  if (!travail) return
+
+  try {
+    const photos = (travail.photos_vf as string[]) ?? []
+    if (photos.length === 0) {
+      await admin.from('codex_travaux').update({ analyse_vf_statut: 'erreur' }).eq('id', travailId)
+      return
+    }
+
+    const { data: session } = await admin
+      .from('codex_sessions')
+      .select('scriptorium_unite_id')
+      .eq('id', travail.session_id)
+      .single()
+
+    if (!session) {
+      await admin.from('codex_travaux').update({ analyse_vf_statut: 'erreur' }).eq('id', travailId)
+      return
+    }
+
+    const { data: params } = await admin
+      .from('codex_params')
+      .select('prompt_retour_vf')
+      .eq('id', 1)
+      .single()
+
+    const cours = await chargerCoursUnite(admin, session.scriptorium_unite_id)
+    const imagesBase64 = await telechargerPhotos(admin, photos)
+
+    if (imagesBase64.length === 0) {
+      await admin.from('codex_travaux').update({ analyse_vf_statut: 'erreur' }).eq('id', travailId)
+      return
+    }
+
+    const prompt = (params?.prompt_retour_vf?.trim() || PROMPT_VF_DEFAUT)
+      .replace('{{cours}}', cours)
+      .replace('{{suggestions_v1}}', formaterSuggestionsV1(travail.suggestions_v1))
+
+    const client = new Anthropic()
+    const response = await client.messages.create({
+      model: 'claude-sonnet-4-6',
+      max_tokens: 8000,
+      messages: [{
+        role: 'user',
+        content: [
+          ...imagesBase64.map((b64) => ({
+            type: 'image' as const,
+            source: { type: 'base64' as const, media_type: 'image/jpeg' as const, data: b64 },
+          })),
+          { type: 'text' as const, text: prompt },
+        ],
+      }],
+    })
+
+    const texte = response.content[0].type === 'text' ? response.content[0].text : ''
+
+    let parsed: VFJSON
+    try {
+      parsed = JSON.parse(extraireJSON(texte))
+    } catch {
+      await admin.from('codex_travaux').update({ analyse_vf_statut: 'erreur' }).eq('id', travailId)
+      return
+    }
+
+    const retourCritique = {
+      erreurs_corrections: (parsed.erreurs_corrections ?? []).map((e) => ({
+        concept_tag: e.concept_tag ?? '',
+        description: e.description ?? '',
+        correction: e.correction ?? '',
+        importance: typeof e.importance === 'number' ? Math.max(1, Math.min(3, e.importance)) : 1,
+      })),
+      suivi_suggestions: parsed.suivi_suggestions ?? [],
+      pouvait_aller_plus_loin: parsed.pouvait_aller_plus_loin ?? [],
+      non_ameliore: parsed.non_ameliore ?? [],
+      ajouts: parsed.ajouts ?? [],
+    }
+
+    const cout = response.usage.input_tokens * 3 / 1_000_000
+      + response.usage.output_tokens * 15 / 1_000_000
+
+    await admin.from('codex_travaux').update({
+      texte_vf_ocr: parsed.transcription ?? null,
+      ocr_confiance_vf: typeof parsed.ocr_confiance === 'number' ? parsed.ocr_confiance : null,
+      retour_critique: retourCritique,
+      synthese_completee: parsed.synthese_completee ?? null,
+      analyse_vf_statut: 'prete',
+      cout_api: cout,
+    }).eq('id', travailId)
+  } catch {
+    await admin.from('codex_travaux').update({ analyse_vf_statut: 'erreur' }).eq('id', travailId)
+  }
 }

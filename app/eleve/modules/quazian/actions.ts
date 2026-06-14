@@ -43,20 +43,32 @@ export async function chargerFileRevision(): Promise<CarteRevision[]> {
     .eq('flashcards_visibles', true)
 
   const unitesVisibles = (publis ?? []).map((p) => p.scriptorium_unite_id)
-  if (unitesVisibles.length === 0) return []
 
-  // Cartes validées de ces unités — admin pour éviter RLS
-  const { data: flashcards } = await admin
-    .from('quazian_flashcards')
-    .select(`
+  const selectCarte = `
       id, recto, verso, type, concept_tag,
       scriptorium_unite_id,
       scriptorium_unites(label)
-    `)
-    .eq('statut', 'valide')
-    .in('scriptorium_unite_id', unitesVisibles)
+    `
 
-  if (!flashcards || flashcards.length === 0) return []
+  // Cartes partagées validées des unités publiées (eleve_id null)
+  const { data: partagees } = unitesVisibles.length > 0
+    ? await admin
+        .from('quazian_flashcards')
+        .select(selectCarte)
+        .eq('statut', 'valide')
+        .is('eleve_id', null)
+        .in('scriptorium_unite_id', unitesVisibles)
+    : { data: [] }
+
+  // Cartes personnelles de l'élève (ex. Codex) — toujours révisables par lui
+  const { data: perso } = await admin
+    .from('quazian_flashcards')
+    .select(selectCarte)
+    .eq('statut', 'valide')
+    .eq('eleve_id', userId)
+
+  const flashcards = [...(partagees ?? []), ...(perso ?? [])]
+  if (flashcards.length === 0) return []
 
   const flashcardIds = flashcards.map((f) => f.id)
 
@@ -230,21 +242,33 @@ export async function chargerStatsRevision() {
 
   const unitesVisibles = (publis ?? []).map((p) => p.scriptorium_unite_id)
 
-  // Toutes les cartes accessibles
-  const { data: flashcards } = await admin
+  // Cartes partagées des unités publiées + cartes personnelles de l'élève
+  const { data: partagees } = unitesVisibles.length > 0
+    ? await admin
+        .from('quazian_flashcards')
+        .select('id')
+        .eq('statut', 'valide')
+        .is('eleve_id', null)
+        .in('scriptorium_unite_id', unitesVisibles)
+    : { data: [] }
+
+  const { data: perso } = await admin
     .from('quazian_flashcards')
     .select('id')
     .eq('statut', 'valide')
-    .in('scriptorium_unite_id', unitesVisibles.length > 0 ? unitesVisibles : [''])
-
-  const totalCartes = flashcards?.length ?? 0
-  const ids = flashcards?.map((f) => f.id) ?? []
-
-  const { data: etats } = await supabase
-    .from('quazian_card_states')
-    .select('state, due')
     .eq('eleve_id', userId)
-    .in('flashcard_id', ids)
+
+  const flashcards = [...(partagees ?? []), ...(perso ?? [])]
+  const totalCartes = flashcards.length
+  const ids = flashcards.map((f) => f.id)
+
+  const { data: etats } = ids.length > 0
+    ? await supabase
+        .from('quazian_card_states')
+        .select('state, due')
+        .eq('eleve_id', userId)
+        .in('flashcard_id', ids)
+    : { data: [] }
 
   const connues = etats?.length ?? 0
   const dues = etats?.filter((e) => e.due <= maintenant).length ?? 0

@@ -171,6 +171,27 @@ create policy codex_params_prof_all on codex_params
   using (exists (select 1 from profiles p where p.id = auth.uid() and p.role = 'prof'))
   with check (exists (select 1 from profiles p where p.id = auth.uid() and p.role = 'prof'));
 
+-- ── 5. Autoriser les cartes Codex dans le pool Quazian (source = 'codex') ───
+-- Les cartes auto issues des erreurs corrigées sont des flashcards personnelles
+-- (eleve_id renseigné, source = 'codex', exclues du périmètre des quizz).
+-- On élargit la contrainte CHECK sur quazian_flashcards.source.
+do $$
+declare c text;
+begin
+  for c in
+    select conname from pg_constraint
+    where conrelid = 'quazian_flashcards'::regclass
+      and contype = 'c'
+      and pg_get_constraintdef(oid) ilike '%source%'
+  loop
+    execute format('alter table quazian_flashcards drop constraint %I', c);
+  end loop;
+end $$;
+
+alter table quazian_flashcards
+  add constraint quazian_flashcards_source_check
+  check (source in ('ia', 'prof', 'fragment', 'codex'));
+
 -- ============================================================================
 -- Fin du schéma Codex.
 -- Les écritures IA (suggestions V1, retour critique, synthèse, cartes) se font

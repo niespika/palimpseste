@@ -1,8 +1,10 @@
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import { createClient } from '@/utils/supabase/server'
-import { chargerEtatTravail } from '../../actions'
+import { chargerEtatTravail, chargerTrace } from '../../actions'
 import { EcranV1 } from './EcranV1'
+import { EcranVF } from './EcranVF'
+import { TraceAffichage } from './TraceAffichage'
 
 export default async function SeanceElevePage({
   params,
@@ -28,6 +30,7 @@ export default async function SeanceElevePage({
   const uniteLabel = Array.isArray(u) ? u[0]?.label ?? '' : u?.label ?? ''
 
   const etat = await chargerEtatTravail(sessionId)
+  const trace = seance.statut === 'fermee' ? await chargerTrace(sessionId) : null
 
   return (
     <div className="max-w-xl mx-auto">
@@ -44,16 +47,16 @@ export default async function SeanceElevePage({
 
       {seance.statut === 'phase_1' && <EcranV1 sessionId={sessionId} initial={etat} />}
 
-      {seance.statut === 'phase_2' && (
-        <div className="bg-white border border-stone-200 rounded-xl p-8 text-center text-stone-400 text-sm">
-          L&apos;écran de V-finale s&apos;ouvrira ici.
-        </div>
-      )}
+      {seance.statut === 'phase_2' && <EcranVF sessionId={sessionId} initial={etat} />}
 
       {seance.statut === 'fermee' && (
-        <div className="bg-white border border-stone-200 rounded-xl p-8 text-center text-stone-400 text-sm">
-          Ton retour sera disponible une fois validé par le professeur.
-        </div>
+        trace ? (
+          <TraceAffichage trace={trace} />
+        ) : (
+          <div className="bg-white border border-stone-200 rounded-xl p-8 text-center text-stone-400 text-sm">
+            Ton retour sera disponible une fois validé par le professeur.
+          </div>
+        )
       )}
 
       {seance.statut === 'brouillon' && (
