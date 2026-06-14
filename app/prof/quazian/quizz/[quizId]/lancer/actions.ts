@@ -2,7 +2,7 @@
 
 import { revalidatePath } from 'next/cache'
 import { createClient } from '@/utils/supabase/server'
-import { calculerScoreBrier, JETONS_NEUTRE, SCORE_NON_REPONDU } from '@/utils/brier'
+import { calculerScoreBrier, JETONS_NEUTRE } from '@/utils/brier'
 
 async function verifierProf() {
   const supabase = await createClient()
@@ -133,11 +133,9 @@ async function _soumettrSession(
   for (const q of questions) {
     const rep = repMap[q.id]
     let jetons: [number, number, number, number] = JETONS_NEUTRE
-    let repondu = false
 
     if (rep) {
       jetons = [rep.p_a * 100, rep.p_b * 100, rep.p_c * 100, rep.p_d * 100]
-      repondu = rep.repondu
     }
 
     const scoreBrut = calculerScoreBrier(jetons, q.index_correct)

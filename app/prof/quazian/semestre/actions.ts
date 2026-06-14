@@ -3,7 +3,6 @@
 import { revalidatePath } from 'next/cache'
 import { createClient } from '@/utils/supabase/server'
 import { lireParametres } from '../parametres/actions'
-import type { Parametres } from '@/utils/quazian-params'
 
 async function verifierProf() {
   const supabase = await createClient()

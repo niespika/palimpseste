@@ -89,9 +89,6 @@ export default async function PageEleveDetail({ params }: { params: Promise<{ el
 
   const analyseOraleParOralId = Object.fromEntries((analysesOrales2 ?? []).map(a => [a.oral_id, a]))
 
-  const semainePourPresentation = Object.fromEntries(
-    (presentationsEleve2 ?? []).map(p => [p.id, p.semaine_id])
-  )
   const oralParSemaine: Record<string, { note_contenu: number | null; note_structure: number | null; note_expression: number | null }> = {}
   for (const pres of presentationsEleve2 ?? []) {
     const oral = oralParPresId[pres.id]
@@ -158,9 +155,6 @@ export default async function PageEleveDetail({ params }: { params: Promise<{ el
     : null
   const moyS = analysesPubliees.length > 0
     ? analysesPubliees.reduce((s, a) => s + (a.note_sources ?? 0), 0) / analysesPubliees.length
-    : null
-  const moyR = analysesPubliees.length > 0
-    ? analysesPubliees.reduce((s, a) => s + (a.note_reflexions ?? 0), 0) / analysesPubliees.length
     : null
 
   const semainePourDepot = Object.fromEntries(

@@ -21,7 +21,7 @@ interface Props {
   ecartTypeCohorte: number | null
 }
 
-export function TableauLive({ quizId, statut, fermeAt, eleves: elevesInit, moyenneCohorte, ecartTypeCohorte }: Props) {
+export function TableauLive({ quizId, statut, fermeAt, eleves: elevesInit, moyenneCohorte }: Props) {
   const [eleves, setEleves] = useState(elevesInit)
   const [pending, setPending] = useState(false)
   const [secondesRestantes, setSecondesRestantes] = useState<number | null>(null)

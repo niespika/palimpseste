@@ -1,7 +1,6 @@
 import Link from 'next/link'
 import { createClient } from '@/utils/supabase/server'
 import { chargerDiagnosticEleve } from '../actions'
-import { PROFIL_LABELS, type ProfilConcept } from '@/utils/diagnostic'
 
 export default async function DiagnosticElevePage({
   params,

@@ -34,7 +34,7 @@ const STATUT_LABELS: Record<string, { label: string; classe: string }> = {
   publiee: { label: 'Publiée ✓', classe: 'bg-green-100 text-green-700' },
 }
 
-function EditorSyntheseRow({ synthese, eleve, semestreId, onDone }: { synthese: SyntheseRow; eleve: Eleve; semestreId: string; onDone: () => void }) {
+function EditorSyntheseRow({ synthese, onDone }: { synthese: SyntheseRow; eleve: Eleve; semestreId: string; onDone: () => void }) {
   const router = useRouter()
   const [syntheseTexte, setSyntheseTexte] = useState(synthese.synthese ?? '')
   const [pointsForts, setPointsForts] = useState(synthese.points_forts ?? '')

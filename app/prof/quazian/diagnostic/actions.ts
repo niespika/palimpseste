@@ -122,10 +122,10 @@ export async function chargerDiagnosticEleve(eleveId: string) {
 }
 
 // Rapport de fragilités IA
-export async function genererRapportFragilites(formData: FormData): Promise<{ rapport: string } | { error: string }> {
+export async function genererRapportFragilites(): Promise<{ rapport: string } | { error: string }> {
   await verifierProf()
 
-  const { diagnostics, profilesMap, conceptsClasse } = await chargerDiagnosticClasse()
+  const { conceptsClasse } = await chargerDiagnosticClasse()
 
   // Construire le contexte pour l'IA
   const ideesFausses = Object.entries(conceptsClasse)

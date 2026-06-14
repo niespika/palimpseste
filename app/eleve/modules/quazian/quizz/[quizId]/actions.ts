@@ -191,11 +191,9 @@ export async function soumettreQuizz(sessionId: string, quizId: string): Promise
   for (const q of questions) {
     const rep = repMap[q.id]
     let jetons: [number, number, number, number] = JETONS_NEUTRE
-    let repondu = false
 
     if (rep) {
       jetons = [rep.p_a * 100, rep.p_b * 100, rep.p_c * 100, rep.p_d * 100]
-      repondu = rep.repondu
     }
 
     const score = calculerScoreBrier(jetons, q.index_correct)

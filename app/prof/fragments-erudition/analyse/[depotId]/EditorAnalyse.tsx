@@ -31,13 +31,6 @@ const LABELS_STATUT: Record<string, { label: string; classes: string }> = {
   publiee:   { label: 'Publiée ✓', classes: 'bg-green-100 text-green-700' },
 }
 
-const LABELS_STATUT_PISTE: Record<StatutPiste, string> = {
-  proposee: 'Proposée',
-  suivie: 'Suivie ✓',
-  partiellement_suivie: 'Part. suivie',
-  abandonnee: 'Abandonnée',
-}
-
 function NoteInput({ label, value, onChange }: { label: string; value: number; onChange: (v: number) => void }) {
   return (
     <div className="flex items-center gap-3">
@@ -143,7 +136,9 @@ export default function EditorAnalyse({
     charger()
   }, [photos])
 
-  // Synchroniser si l'analyse change côté serveur (après refresh)
+  // Resynchroniser les champs quand l'analyse change côté serveur (après refresh).
+  // Motif assumé de synchro props→state ; un remount par `key` serait plus invasif.
+  /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
     setAnalyse(analyseInitiale)
     setPistes(pistesInitiales)
@@ -160,6 +155,7 @@ export default function EditorAnalyse({
       setNotesProf(analyseInitiale.notes_prof ?? '')
     }
   }, [analyseInitiale, pistesInitiales])
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   const photoActuelle = photos[indexPhoto]
   const urlActuelle = photoActuelle ? urls[photoActuelle.storage_path] : null

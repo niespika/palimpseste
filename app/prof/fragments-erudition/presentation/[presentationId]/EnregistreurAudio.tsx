@@ -23,7 +23,7 @@ const MAX_SECONDES = 600 // 10 minutes
 export default function EnregistreurAudio({ presentationId, eleveId }: Props) {
   const router = useRouter()
   const [mode, setMode] = useState<Mode>('choix')
-  const [enregistrement, setEnregistrement] = useState(false)
+  const [, setEnregistrement] = useState(false)
   const [enPause, setEnPause] = useState(false)
   const [duree, setDuree] = useState(0)
   const [audioBlob, setAudioBlob] = useState<Blob | null>(null)

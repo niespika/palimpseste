@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { TransformWrapper, TransformComponent } from 'react-zoom-pan-pinch'
 import { getSignedUrlsProf } from '../../actions'
 import type { FragmentPhoto } from '@/types/fragments'
@@ -17,7 +17,10 @@ export default function VisionneusModal({ nomEleve, photos, onFermer }: Props) {
   const [rotation, setRotation] = useState(0)
   const [chargement, setChargement] = useState(true)
 
-  const photosSorted = [...photos].sort((a, b) => a.ordre - b.ordre)
+  const photosSorted = useMemo(
+    () => [...photos].sort((a, b) => a.ordre - b.ordre),
+    [photos]
+  )
 
   useEffect(() => {
     async function charger() {
@@ -27,7 +30,7 @@ export default function VisionneusModal({ nomEleve, photos, onFermer }: Props) {
       setChargement(false)
     }
     charger()
-  }, [photos])
+  }, [photosSorted])
 
   useEffect(() => {
     function handleKeyDown(e: KeyboardEvent) {

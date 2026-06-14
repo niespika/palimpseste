@@ -11,7 +11,7 @@ export function RapportIA() {
   async function handleGenerer() {
     setLoading(true)
     setErreur(null)
-    const res = await genererRapportFragilites(new FormData())
+    const res = await genererRapportFragilites()
     if ('error' in res) setErreur(res.error)
     else setRapport(res.rapport)
     setLoading(false)

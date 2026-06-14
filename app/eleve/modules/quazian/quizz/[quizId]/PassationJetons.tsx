@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback, useRef } from 'react'
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react'
 import { sauvegarderReponse, soumettreQuizz, type QuestionPassation } from './actions'
 
 const LETTRES = ['A', 'B', 'C', 'D']
@@ -21,7 +21,10 @@ export function PassationJetons({ sessionId, quizId, questions, reponsesInitiale
   const [secondesRestantes, setSecondesRestantes] = useState<number | null>(null)
 
   const question = questions[indexQuestion]
-  const jetonsActuels: [number, number, number, number] = reponses[question?.id] ?? [25, 25, 25, 25]
+  const jetonsActuels = useMemo<[number, number, number, number]>(
+    () => reponses[question?.id] ?? [25, 25, 25, 25],
+    [reponses, question?.id]
+  )
   const restants = 100 - jetonsActuels.reduce((a, b) => a + b, 0)
   const peutSoumettre = restants === 0
 

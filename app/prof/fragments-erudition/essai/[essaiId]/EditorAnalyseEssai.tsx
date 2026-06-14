@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import {
   sauvegarderAnalyseEssai,
@@ -57,7 +57,7 @@ function LettreButtons({ valeur, onChange }: { valeur: Lettre | ''; onChange: (l
   )
 }
 
-export default function EditorAnalyseEssai({ essaiId, photos, analyse, fourchettePoints }: Props) {
+export default function EditorAnalyseEssai({ essaiId, photos, analyse }: Props) {
   const router = useRouter()
   const estEnCours = analyse?.statut === 'en_cours'
   const peutEditer = analyse?.statut === 'generee' || analyse?.statut === 'publiee'
@@ -88,14 +88,15 @@ export default function EditorAnalyseEssai({ essaiId, photos, analyse, fourchett
     return () => clearInterval(id)
   }, [estEnCours, router])
 
-  const chargerPhotos = useCallback(async () => {
+  useEffect(() => {
     if (!photos.length) return
+    let annule = false
     const paths = photos.map(p => p.storage_path)
-    const urls = await getSignedUrlsEssaiPhotos(paths)
-    setPhotoUrls(urls)
+    getSignedUrlsEssaiPhotos(paths).then((urls) => {
+      if (!annule) setPhotoUrls(urls)
+    })
+    return () => { annule = true }
   }, [photos])
-
-  useEffect(() => { chargerPhotos() }, [chargerPhotos])
 
   async function handleSauvegarder() {
     if (!analyse) return

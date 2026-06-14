@@ -137,7 +137,6 @@ export function CaptureManuscrit({ sessionId, phase, ctaLabel, onEnvoye }: Props
           {images.map((img, index) => (
             <div key={img.previewUrl} className="flex items-center gap-3 bg-stone-50 rounded-xl p-2">
               <span className="text-xs text-stone-400 w-5 text-center font-medium">{index + 1}</span>
-              {/* eslint-disable-next-line @next/next/no-img-element */}
               <img src={img.previewUrl} alt={`Photo ${index + 1}`} className="w-16 h-16 object-cover rounded-lg shrink-0" />
               <span className="text-xs text-stone-500 flex-1 truncate">{img.nom}</span>
               <div className="flex gap-1 shrink-0">

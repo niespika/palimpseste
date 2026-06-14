@@ -43,7 +43,7 @@ export default function FormulaireDepot({ semaineId, eleveId, depotExistant }: P
         nouvelles.push(traitee)
       }
       setImages(prev => [...prev, ...nouvelles])
-    } catch (e) {
+    } catch {
       setErreur('Erreur lors du traitement des photos. Réessaie.')
     } finally {
       setTraitement(false)

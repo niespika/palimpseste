@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import {
   sauvegarderAnalyseOrale,
@@ -75,13 +75,14 @@ export default function EditorAnalyseOrale({ oral, analyseOrale, presentationId,
   }, [estEnCours, router])
 
   // Charger l'URL audio signée
-  const chargerAudio = useCallback(async () => {
+  useEffect(() => {
     if (!oral.storage_path || oral.audio_supprime) return
-    const url = await getSignedUrlAudio(oral.storage_path)
-    setAudioUrl(url)
+    let annule = false
+    getSignedUrlAudio(oral.storage_path).then((url) => {
+      if (!annule) setAudioUrl(url)
+    })
+    return () => { annule = true }
   }, [oral.storage_path, oral.audio_supprime])
-
-  useEffect(() => { chargerAudio() }, [chargerAudio])
 
   async function handleSauvegarder() {
     if (!analyseOrale) return
