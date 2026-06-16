@@ -22,6 +22,7 @@ export interface CarteRevision {
   card_state_id: string | null  // null = première révision
   recto: string
   verso: string
+  format: string                // 'recto_verso' | 'cloze' — pilote le masquage au recto
   type: string
   concept_tag: string
   label_unite: string
@@ -45,7 +46,7 @@ export async function chargerFileRevision(): Promise<CarteRevision[]> {
   const unitesVisibles = (publis ?? []).map((p) => p.scriptorium_unite_id)
 
   const selectCarte = `
-      id, recto, verso, type, concept_tag,
+      id, recto, verso, format, type, concept_tag,
       scriptorium_unite_id,
       scriptorium_unites(label)
     `
@@ -99,6 +100,7 @@ export async function chargerFileRevision(): Promise<CarteRevision[]> {
         card_state_id: null,
         recto: f.recto,
         verso: f.verso,
+        format: f.format,
         type: f.type,
         concept_tag: f.concept_tag,
         label_unite: labelUnite,
@@ -112,6 +114,7 @@ export async function chargerFileRevision(): Promise<CarteRevision[]> {
         card_state_id: etat.id,
         recto: f.recto,
         verso: f.verso,
+        format: f.format,
         type: f.type,
         concept_tag: f.concept_tag,
         label_unite: labelUnite,

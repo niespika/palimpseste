@@ -9,6 +9,11 @@ type ModuleInfo = {
   actif: boolean
 }
 
+// Modules masqués côté élève (interrupteur simple).
+// Pour réafficher la tuile — ex. si du contenu Scriptorium est partagé aux élèves —
+// retirer le slug de cette liste.
+const MODULES_MASQUES_ELEVE = ['scriptorium']
+
 async function getStatutFragments(supabase: Awaited<ReturnType<typeof createClient>>, eleveId: string) {
   // Semaine ouverte la plus récente
   const { data: semaine } = await supabase
@@ -58,7 +63,8 @@ export default async function TableauDeBordEleve() {
   const modulesActifs: ModuleInfo[] = (assignments ?? [])
     .map(a => a.modules as unknown as ModuleInfo | ModuleInfo[] | null)
     .map(m => Array.isArray(m) ? m[0] : m)
-    .filter((m): m is ModuleInfo => m !== null && m !== undefined && m.actif === true)
+    .filter((m): m is ModuleInfo =>
+      m !== null && m !== undefined && m.actif === true && !MODULES_MASQUES_ELEVE.includes(m.slug))
 
   // Statuts spécifiques par module
   const statuts: Record<string, string | null> = {}
