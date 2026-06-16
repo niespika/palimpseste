@@ -12,7 +12,7 @@ import {
   confirmerUploadEssaiPhotos,
 } from '../../essai-actions'
 
-interface Eleve { id: string; display_name: string; classe: string | null }
+interface Eleve { id: string; display_name: string; classe: string | null; inscription_id: string }
 interface EssaiRow { id: string; eleve_id: string; depose_par: string; created_at: string }
 interface AnalyseRow {
   id: string; essai_id: string; statut: string
@@ -71,7 +71,7 @@ function telechargerCSV(eleves: Eleve[], essaiParEleve: Props['essaiParEleve'], 
   URL.revokeObjectURL(url)
 }
 
-function DepotProfForm({ epreuveId, eleveId, onDone }: { epreuveId: string; eleveId: string; onDone: () => void }) {
+function DepotProfForm({ epreuveId, inscriptionId, onDone }: { epreuveId: string; inscriptionId: string; onDone: () => void }) {
   const [images, setImages] = useState<ImageTraitee[]>([])
   const [traitement, setTraitement] = useState(false)
   const [upload, setUpload] = useState(false)
@@ -111,7 +111,7 @@ function DepotProfForm({ epreuveId, eleveId, onDone }: { epreuveId: string; elev
     const supabase = createClient()
     try {
       setProgression('Création du dossier…')
-      const essaiRes = await creerEssaiProf(epreuveId, eleveId)
+      const essaiRes = await creerEssaiProf(epreuveId, inscriptionId)
       if (essaiRes.error || !essaiRes.data) { setErreur(essaiRes.error ?? 'Erreur'); return }
       const { essaiId } = essaiRes.data
 
@@ -137,8 +137,8 @@ function DepotProfForm({ epreuveId, eleveId, onDone }: { epreuveId: string; elev
 
   return (
     <div className="mt-3 p-3 bg-stone-50 rounded-lg space-y-3">
-      <input type="file" accept="image/*,.heic,.heif" multiple onChange={handleFichiers} className="hidden" id={`upload-${eleveId}`} />
-      <label htmlFor={`upload-${eleveId}`} className="block w-full py-2 border border-dashed border-stone-300 rounded text-center text-sm text-stone-600 cursor-pointer hover:bg-stone-100">
+      <input type="file" accept="image/*,.heic,.heif" multiple onChange={handleFichiers} className="hidden" id={`upload-${inscriptionId}`} />
+      <label htmlFor={`upload-${inscriptionId}`} className="block w-full py-2 border border-dashed border-stone-300 rounded text-center text-sm text-stone-600 cursor-pointer hover:bg-stone-100">
         {traitement ? progression : `Ajouter des photos (${images.length}/12)`}
       </label>
 
@@ -322,7 +322,7 @@ export default function TableauEpreuve({ epreuve, eleves, essaiParEleve, analyse
                         <td colSpan={9} className="px-4 py-3">
                           <DepotProfForm
                             epreuveId={epreuve.id}
-                            eleveId={eleve.id}
+                            inscriptionId={eleve.inscription_id}
                             onDone={() => { setDepotPourEleve(null); router.refresh() }}
                           />
                         </td>

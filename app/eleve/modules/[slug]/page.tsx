@@ -1,6 +1,7 @@
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/utils/supabase/server'
+import { aAccesModule } from '@/utils/acces'
 
 export default async function PageModule({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params
@@ -17,15 +18,8 @@ export default async function PageModule({ params }: { params: Promise<{ slug: s
 
   if (!module) notFound()
 
-  // Vérifier que l'élève a accès à ce module
-  const { data: assignment } = await supabase
-    .from('module_assignments')
-    .select('id')
-    .eq('eleve_id', user!.id)
-    .eq('module_id', module.id)
-    .single()
-
-  if (!assignment) notFound()
+  // Vérifier que l'élève a accès à ce module (dérivé de ses classes)
+  if (!(await aAccesModule(supabase, user!.id, module.id))) notFound()
 
   return (
     <div>

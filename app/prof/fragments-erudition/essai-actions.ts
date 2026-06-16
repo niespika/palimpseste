@@ -77,16 +77,23 @@ export async function toggleDepots(epreuveId: string, ouvert: boolean) {
 
 // ── Upload photos essai (prof dépose pour un élève) ───────────────────────────
 
-export async function creerEssaiProf(epreuveId: string, eleveId: string) {
+export async function creerEssaiProf(epreuveId: string, inscriptionId: string) {
   await verifierProf()
   const admin = createAdminClient()
 
-  // Essai existant ?
+  const { data: insc } = await admin
+    .from('inscriptions')
+    .select('eleve_id')
+    .eq('id', inscriptionId)
+    .single()
+  if (!insc) return { error: 'Inscription introuvable', data: null }
+
+  // Essai existant ? (scopé par inscription)
   const { data: existant } = await admin
     .from('fragments_essais')
     .select('id')
     .eq('epreuve_id', epreuveId)
-    .eq('eleve_id', eleveId)
+    .eq('inscription_id', inscriptionId)
     .maybeSingle()
 
   let essaiId: string
@@ -106,7 +113,7 @@ export async function creerEssaiProf(epreuveId: string, eleveId: string) {
   } else {
     const { data, error } = await admin
       .from('fragments_essais')
-      .insert({ epreuve_id: epreuveId, eleve_id: eleveId, depose_par: 'prof' })
+      .insert({ epreuve_id: epreuveId, eleve_id: insc.eleve_id, inscription_id: inscriptionId, depose_par: 'prof' })
       .select('id')
       .single()
     if (error || !data) return { error: error?.message ?? 'Erreur création essai', data: null }
@@ -287,63 +294,72 @@ export async function getSignedUrlEssaiPhotoEleve(storagePath: string, eleveId: 
 
 // ── Thèmes : essai_actif et question ─────────────────────────────────────────
 
-export async function toggleEssaiActif(eleveId: string, actif: boolean) {
+// eleve_id reste renseigné (RLS) mais le thème est scopé par inscription : on
+// dérive eleve_id de l'inscription pour les créations.
+async function eleveDeInscription(admin: ReturnType<typeof createAdminClient>, inscriptionId: string) {
+  const { data } = await admin.from('inscriptions').select('eleve_id').eq('id', inscriptionId).single()
+  return data?.eleve_id as string | undefined
+}
+
+export async function toggleEssaiActif(inscriptionId: string, actif: boolean) {
   await verifierProf()
   const admin = createAdminClient()
   const { data: existant } = await admin
     .from('fragments_themes')
     .select('id')
-    .eq('eleve_id', eleveId)
+    .eq('inscription_id', inscriptionId)
     .maybeSingle()
 
   if (existant) {
-    await admin.from('fragments_themes').update({ essai_actif: actif }).eq('eleve_id', eleveId)
+    await admin.from('fragments_themes').update({ essai_actif: actif }).eq('inscription_id', inscriptionId)
   } else {
-    await admin.from('fragments_themes').insert({ eleve_id: eleveId, essai_actif: actif, theme: '' })
+    const eleveId = await eleveDeInscription(admin, inscriptionId)
+    await admin.from('fragments_themes').insert({ inscription_id: inscriptionId, eleve_id: eleveId, essai_actif: actif, theme: '' })
   }
   revalidatePath('/prof/fragments-erudition/themes')
   return { success: true }
 }
 
-export async function sauvegarderQuestion(eleveId: string, question: string) {
+export async function sauvegarderQuestion(inscriptionId: string, question: string) {
   await verifierProf()
   const admin = createAdminClient()
   const { data: existant } = await admin
     .from('fragments_themes')
     .select('id')
-    .eq('eleve_id', eleveId)
+    .eq('inscription_id', inscriptionId)
     .maybeSingle()
 
   if (existant) {
-    await admin.from('fragments_themes').update({ question: question || null }).eq('eleve_id', eleveId)
+    await admin.from('fragments_themes').update({ question: question || null }).eq('inscription_id', inscriptionId)
   } else {
-    await admin.from('fragments_themes').insert({ eleve_id: eleveId, question: question || null, theme: '' })
+    const eleveId = await eleveDeInscription(admin, inscriptionId)
+    await admin.from('fragments_themes').insert({ inscription_id: inscriptionId, eleve_id: eleveId, question: question || null, theme: '' })
   }
   revalidatePath('/prof/fragments-erudition/themes')
   return { success: true }
 }
 
-export async function activerEssaiPourClasse(classe: string, actif: boolean) {
+export async function activerEssaiPourClasse(classeId: string, actif: boolean) {
   await verifierProf()
   const admin = createAdminClient()
 
-  const { data: eleves } = await admin
-    .from('profiles')
-    .select('id')
-    .eq('classe', classe)
-    .eq('role', 'eleve')
+  const { data: inscrits } = await admin
+    .from('inscriptions')
+    .select('id, eleve_id')
+    .eq('classe_id', classeId)
+    .eq('statut', 'active')
 
-  if (!eleves || eleves.length === 0) return { success: true, count: 0 }
+  if (!inscrits || inscrits.length === 0) return { success: true, count: 0 }
 
   await Promise.all(
-    eleves.map(e => admin.from('fragments_themes').upsert(
-      { eleve_id: e.id, essai_actif: actif, theme: '' },
-      { onConflict: 'eleve_id', ignoreDuplicates: false }
+    inscrits.map(i => admin.from('fragments_themes').upsert(
+      { inscription_id: i.id, eleve_id: i.eleve_id, essai_actif: actif, theme: '' },
+      { onConflict: 'inscription_id', ignoreDuplicates: false }
     ))
   )
 
   revalidatePath('/prof/fragments-erudition/themes')
-  return { success: true, count: eleves.length }
+  return { success: true, count: inscrits.length }
 }
 
 // ── Semestres ────────────────────────────────────────────────────────────────
@@ -365,22 +381,24 @@ export async function creerSemestre(data: {
   return { data: { semestreId: semestre.id }, error: null }
 }
 
-export async function genererSynthese(eleveId: string, semestreId: string) {
+export async function genererSynthese(inscriptionId: string, semestreId: string) {
   await verifierProf()
   // Mettre en cours immédiatement
   const admin = createAdminClient()
   const { data: existante } = await admin
     .from('fragments_syntheses')
     .select('id, statut')
-    .eq('eleve_id', eleveId)
+    .eq('inscription_id', inscriptionId)
     .eq('semestre_id', semestreId)
     .maybeSingle()
 
   if (existante?.statut === 'publiee') return { success: true }
 
   if (!existante) {
+    const { data: insc } = await admin.from('inscriptions').select('eleve_id').eq('id', inscriptionId).single()
     await admin.from('fragments_syntheses').insert({
-      eleve_id: eleveId,
+      inscription_id: inscriptionId,
+      eleve_id: insc?.eleve_id,
       semestre_id: semestreId,
       statut: 'en_cours',
     })
@@ -390,31 +408,32 @@ export async function genererSynthese(eleveId: string, semestreId: string) {
 
   after(async () => {
     const { genererSynthesePourEleve } = await import('@/utils/synthese-semestre')
-    await genererSynthesePourEleve(eleveId, semestreId)
+    await genererSynthesePourEleve(inscriptionId, semestreId)
   })
 
   revalidatePath(`/prof/fragments-erudition/semestres/${semestreId}`)
   return { success: true }
 }
 
-export async function genererSynthesesLot(eleveIds: string[], semestreId: string) {
+export async function genererSynthesesLot(inscriptionIds: string[], semestreId: string) {
   await verifierProf()
   const admin = createAdminClient()
 
   // Créer/mettre à jour toutes en 'en_cours'
   await Promise.all(
-    eleveIds.map(async (eleveId) => {
+    inscriptionIds.map(async (inscriptionId) => {
       const { data: existante } = await admin
         .from('fragments_syntheses')
         .select('id, statut')
-        .eq('eleve_id', eleveId)
+        .eq('inscription_id', inscriptionId)
         .eq('semestre_id', semestreId)
         .maybeSingle()
 
       if (existante?.statut === 'publiee') return
 
       if (!existante) {
-        await admin.from('fragments_syntheses').insert({ eleve_id: eleveId, semestre_id: semestreId, statut: 'en_cours' })
+        const { data: insc } = await admin.from('inscriptions').select('eleve_id').eq('id', inscriptionId).single()
+        await admin.from('fragments_syntheses').insert({ inscription_id: inscriptionId, eleve_id: insc?.eleve_id, semestre_id: semestreId, statut: 'en_cours' })
       } else {
         await admin.from('fragments_syntheses').update({ statut: 'en_cours' }).eq('id', existante.id)
       }
@@ -424,13 +443,13 @@ export async function genererSynthesesLot(eleveIds: string[], semestreId: string
   // Déclencher en arrière-plan (les analyses se font séquentiellement pour éviter de surcharger l'API)
   after(async () => {
     const { genererSynthesePourEleve } = await import('@/utils/synthese-semestre')
-    for (const eleveId of eleveIds) {
-      await genererSynthesePourEleve(eleveId, semestreId)
+    for (const inscriptionId of inscriptionIds) {
+      await genererSynthesePourEleve(inscriptionId, semestreId)
     }
   })
 
   revalidatePath(`/prof/fragments-erudition/semestres/${semestreId}`)
-  return { success: true, count: eleveIds.length }
+  return { success: true, count: inscriptionIds.length }
 }
 
 export async function sauvegarderSynthese(syntheseId: string, data: {
@@ -506,13 +525,24 @@ export async function sauvegarderConfigEssai(data: {
 
 // ── Dépôt élève (upload via signed URL) ─────────────────────────────────────
 
-export async function creerUrlUploadEssaiPhotoEleve(epreuveId: string, ordre: number, ext: string) {
+export async function creerUrlUploadEssaiPhotoEleve(epreuveId: string, inscriptionId: string, ordre: number, ext: string) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { error: 'Non authentifié', data: null }
 
-  // Vérifier que l'épreuve est ouverte
   const admin = createAdminClient()
+
+  // Valider que l'inscription appartient bien à l'élève (et est active)
+  const { data: insc } = await admin
+    .from('inscriptions')
+    .select('id')
+    .eq('id', inscriptionId)
+    .eq('eleve_id', user.id)
+    .eq('statut', 'active')
+    .maybeSingle()
+  if (!insc) return { error: 'Accès refusé', data: null }
+
+  // Vérifier que l'épreuve est ouverte
   const { data: epreuve } = await admin
     .from('fragments_essais_epreuves')
     .select('depots_ouverts')
@@ -520,13 +550,13 @@ export async function creerUrlUploadEssaiPhotoEleve(epreuveId: string, ordre: nu
     .single()
   if (!epreuve?.depots_ouverts) return { error: 'Les dépôts sont fermés.', data: null }
 
-  // Trouver ou créer l'essai
+  // Trouver ou créer l'essai (scopé par inscription)
   let essaiId: string
   const { data: existant } = await admin
     .from('fragments_essais')
     .select('id')
     .eq('epreuve_id', epreuveId)
-    .eq('eleve_id', user.id)
+    .eq('inscription_id', inscriptionId)
     .maybeSingle()
 
   if (existant) {
@@ -534,7 +564,7 @@ export async function creerUrlUploadEssaiPhotoEleve(epreuveId: string, ordre: nu
   } else {
     const { data, error } = await admin
       .from('fragments_essais')
-      .insert({ epreuve_id: epreuveId, eleve_id: user.id, depose_par: 'eleve' })
+      .insert({ epreuve_id: epreuveId, eleve_id: user.id, inscription_id: inscriptionId, depose_par: 'eleve' })
       .select('id')
       .single()
     if (error || !data) return { error: error?.message ?? 'Erreur', data: null }

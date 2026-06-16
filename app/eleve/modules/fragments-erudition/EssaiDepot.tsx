@@ -8,11 +8,12 @@ import { creerUrlUploadEssaiPhotoEleve, confirmerDepotEssaiEleve, reinitialiserP
 
 interface Props {
   epreuveId: string
+  inscriptionId: string
   essaiExistantId: string | null
   analyseEnCours: boolean
 }
 
-export default function EssaiDepot({ epreuveId, essaiExistantId, analyseEnCours }: Props) {
+export default function EssaiDepot({ epreuveId, inscriptionId, essaiExistantId, analyseEnCours }: Props) {
   const router = useRouter()
   const [images, setImages] = useState<ImageTraitee[]>([])
   const [traitement, setTraitement] = useState(false)
@@ -95,7 +96,7 @@ export default function EssaiDepot({ epreuveId, essaiExistantId, analyseEnCours 
       for (let i = 0; i < images.length; i++) {
         setProgression(`Envoi de la photo ${i + 1}/${images.length}…`)
         const ext = 'jpg'
-        const res = await creerUrlUploadEssaiPhotoEleve(epreuveId, i + 1, ext)
+        const res = await creerUrlUploadEssaiPhotoEleve(epreuveId, inscriptionId, i + 1, ext)
         if (res.error || !res.data) { setErreur(res.error ?? 'Erreur'); return }
         if (!idEssai) { idEssai = res.data.essaiId; setEssaiId(idEssai) }
 

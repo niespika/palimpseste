@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/utils/supabase/server'
+import { eleveIdsAvecAccesModule } from '@/utils/acces'
 
 export async function GET(
   _req: Request,
@@ -25,8 +26,9 @@ export async function GET(
     .eq('quiz_id', quizId)
 
   const { data: moduleData } = await supabase.from('modules').select('id').eq('slug', 'quazian').single()
-  const { data: assignments } = moduleData
-    ? await supabase.from('module_assignments').select('eleve_id, profiles!inner(display_name)').eq('module_id', moduleData.id)
+  const eleveIds = moduleData ? await eleveIdsAvecAccesModule(supabase, moduleData.id) : []
+  const { data: rosterProfiles } = eleveIds.length > 0
+    ? await supabase.from('profiles').select('id, display_name').in('id', eleveIds)
     : { data: [] }
 
   const sessionsMap: Record<string, { submitted_at: string | null; auto_submitted: boolean }> = {}
@@ -35,15 +37,14 @@ export async function GET(
   const scoresMap: Record<string, number> = {}
   for (const s of scores ?? []) scoresMap[s.eleve_id] = s.score_moyen
 
-  const eleves = (assignments ?? []).map((a) => {
-    const profiles = a.profiles as unknown as { display_name: string }
-    const session = sessionsMap[a.eleve_id]
+  const eleves = (rosterProfiles ?? []).map((p) => {
+    const session = sessionsMap[p.id]
     return {
-      id: a.eleve_id,
-      display_name: profiles.display_name,
+      id: p.id,
+      display_name: p.display_name as string,
       soumis: !!session?.submitted_at,
       submitted_at: session?.submitted_at ?? null,
-      score_moyen: scoresMap[a.eleve_id] ?? null,
+      score_moyen: scoresMap[p.id] ?? null,
       auto: session?.auto_submitted ?? false,
     }
   })

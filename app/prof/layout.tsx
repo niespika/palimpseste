@@ -37,6 +37,12 @@ export default async function ProfLayout({ children }: { children: React.ReactNo
                 Élèves
               </Link>
               <Link
+                href="/prof/classes"
+                className="px-3 py-1.5 text-sm text-stone-600 hover:text-stone-900 hover:bg-stone-100 rounded-md transition-colors"
+              >
+                Classes
+              </Link>
+              <Link
                 href="/prof/modules"
                 className="px-3 py-1.5 text-sm text-stone-600 hover:text-stone-900 hover:bg-stone-100 rounded-md transition-colors"
               >
@@ -84,6 +90,9 @@ export default async function ProfLayout({ children }: { children: React.ReactNo
           </Link>
           <Link href="/prof/eleves" className="flex-1 text-center px-2 py-1.5 text-sm text-stone-600 hover:bg-stone-100 rounded-md">
             Élèves
+          </Link>
+          <Link href="/prof/classes" className="flex-1 text-center px-2 py-1.5 text-sm text-stone-600 hover:bg-stone-100 rounded-md">
+            Classes
           </Link>
           <Link href="/prof/modules" className="flex-1 text-center px-2 py-1.5 text-sm text-stone-600 hover:bg-stone-100 rounded-md">
             Modules

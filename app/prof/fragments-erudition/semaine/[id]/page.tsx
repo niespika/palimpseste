@@ -1,6 +1,8 @@
 import { notFound } from 'next/navigation'
 import { createClient } from '@/utils/supabase/server'
 import { createAdminClient } from '@/utils/supabase/admin'
+import { inscriptionsClasse } from '@/utils/acces'
+import { classeFragmentsActive } from '../../contexte-classe'
 import VueSemaine from './VueSemaine'
 import TirageAuSort from './TirageAuSort'
 import type { EleveAvecDepot } from '@/types/fragments'
@@ -17,21 +19,18 @@ export default async function PageVueSemaine({ params }: { params: Promise<{ id:
 
   if (!semaine) notFound()
 
-  // Élèves ayant accès au module
-  const { data: moduleData } = await supabase
-    .from('modules')
-    .select('id')
-    .eq('slug', 'fragments-erudition')
-    .single()
-
-  const { data: assignments } = moduleData
-    ? await supabase
-        .from('module_assignments')
-        .select('eleve_id')
-        .eq('module_id', moduleData.id)
-    : { data: [] }
-
-  const eleveIds = (assignments ?? []).map(a => a.eleve_id)
+  // Classe active → inscriptions (1 inscription par élève dans la classe)
+  const { classe } = await classeFragmentsActive(supabase)
+  if (!classe) {
+    return (
+      <div className="bg-white border border-stone-200 rounded-xl p-8 text-center text-stone-500 text-sm">
+        Aucune classe n'a accès à ce module.
+      </div>
+    )
+  }
+  const inscrits = await inscriptionsClasse(supabase, classe.id)
+  const eleveIds = inscrits.map(i => i.eleve_id)
+  const inscriptionIds = inscrits.map(i => i.id)
 
   const { data: eleves } = eleveIds.length > 0
     ? await supabase
@@ -42,14 +41,17 @@ export default async function PageVueSemaine({ params }: { params: Promise<{ id:
         .order('display_name')
     : { data: [] }
 
-  // Dépôts pour cette semaine
-  const { data: depots } = await supabase
-    .from('fragments_depots')
-    .select(`
-      id, eleve_id, semaine_id, statut, commentaire_eleve, created_at, updated_at,
-      photos:fragments_photos(id, depot_id, storage_path, ordre, created_at)
-    `)
-    .eq('semaine_id', id)
+  // Dépôts pour cette semaine (de cette classe)
+  const { data: depots } = inscriptionIds.length > 0
+    ? await supabase
+        .from('fragments_depots')
+        .select(`
+          id, eleve_id, semaine_id, statut, commentaire_eleve, created_at, updated_at,
+          photos:fragments_photos(id, depot_id, storage_path, ordre, created_at)
+        `)
+        .eq('semaine_id', id)
+        .in('inscription_id', inscriptionIds)
+    : { data: [] }
 
   const depotParEleve = Object.fromEntries(
     (depots ?? []).map(d => [d.eleve_id, d])
@@ -79,13 +81,16 @@ export default async function PageVueSemaine({ params }: { params: Promise<{ id:
     }
   })
 
-  // Présentations pour cette semaine
+  // Présentations pour cette semaine (de cette classe)
   const admin = createAdminClient()
-  const { data: presentations } = await admin
-    .from('fragments_presentations')
-    .select('id, eleve_id, semaine_id, statut, created_at')
-    .eq('semaine_id', id)
-    .order('created_at')
+  const { data: presentations } = inscriptionIds.length > 0
+    ? await admin
+        .from('fragments_presentations')
+        .select('id, eleve_id, inscription_id, semaine_id, statut, created_at')
+        .eq('semaine_id', id)
+        .in('inscription_id', inscriptionIds)
+        .order('created_at')
+    : { data: [] }
 
   // Profils des élèves présentateurs
   const presentateurIds = [...new Set((presentations ?? []).map(p => p.eleve_id))]
@@ -107,12 +112,12 @@ export default async function PageVueSemaine({ params }: { params: Promise<{ id:
 
   // Nombre de présentations passées (statut='presente') par élève éligible
   const eligiblesIds = elevesAvecDepot.filter(e => e.depot).map(e => e.id)
-  const { data: comptesPresentation } = eligiblesIds.length > 0
+  const { data: comptesPresentation } = eligiblesIds.length > 0 && inscriptionIds.length > 0
     ? await admin
         .from('fragments_presentations')
         .select('eleve_id')
         .eq('statut', 'presente')
-        .in('eleve_id', eligiblesIds)
+        .in('inscription_id', inscriptionIds)
     : { data: [] }
 
   const nbParEleve: Record<string, number> = {}
@@ -163,6 +168,7 @@ export default async function PageVueSemaine({ params }: { params: Promise<{ id:
           <VueSemaine eleves={elevesAvecDepot} semaineId={id} />
           <TirageAuSort
             semaineId={id}
+            classeId={classe.id}
             eligibles={eligibles}
             presentations={presentationsAvecEleve}
           />

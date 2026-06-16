@@ -17,15 +17,16 @@ const STATUT_LABELS: Record<string, { label: string; couleur: string }> = {
 export default async function QuizzListePage() {
   const supabase = await createClient()
 
-  const [{ data: quizzes }, { data: unites }] = await Promise.all([
+  const [{ data: quizzes }, { data: unites }, { data: classes }] = await Promise.all([
     supabase
       .from('quazian_quizzes')
-      .select('id, statut, classe_id, scope_unites, lance_at, ferme_at, nb_questions, created_at')
+      .select('id, statut, classe_id, classes(nom), scope_unites, lance_at, ferme_at, nb_questions, created_at')
       .order('created_at', { ascending: false }),
     supabase
       .from('scriptorium_unites')
       .select('id, label, classe, ordre')
       .order('ordre', { ascending: true }),
+    supabase.from('classes').select('id, nom').order('nom'),
   ])
 
   // Compter les questions par quizz
@@ -53,7 +54,7 @@ export default async function QuizzListePage() {
         <h3 className="text-lg font-serif text-stone-900 mt-2">Quizz</h3>
       </div>
 
-      <CreerQuizz unites={unites ?? []} />
+      <CreerQuizz unites={unites ?? []} classes={classes ?? []} />
 
       <div className="mt-6 space-y-3">
         {(!quizzes || quizzes.length === 0) && (
@@ -71,9 +72,10 @@ export default async function QuizzListePage() {
                   <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${statut.couleur}`}>
                     {statut.label}
                   </span>
-                  {qz.classe_id && (
-                    <span className="text-sm text-stone-700">{qz.classe_id}</span>
-                  )}
+                  {(() => {
+                    const c = Array.isArray(qz.classes) ? qz.classes[0] : qz.classes
+                    return c ? <span className="text-sm text-stone-700">{(c as { nom: string }).nom}</span> : null
+                  })()}
                   <span className="text-xs text-stone-400">{stats.total} questions</span>
                   {qz.statut === 'brouillon' && stats.total > 0 && (
                     <span className="text-xs text-amber-600">

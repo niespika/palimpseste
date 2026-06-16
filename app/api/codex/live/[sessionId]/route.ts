@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/utils/supabase/server'
+import { eleveIdsInscritsClasse, eleveIdsAvecAccesModule } from '@/utils/acces'
 
 export async function GET(
   _req: Request,
@@ -23,11 +24,14 @@ export async function GET(
   if (!seance) return NextResponse.json({ error: 'Séance introuvable' }, { status: 404 })
 
   const { data: moduleData } = await supabase.from('modules').select('id').eq('slug', 'codex').single()
-  const { data: assignments } = moduleData
-    ? await supabase
-        .from('module_assignments')
-        .select('eleve_id, profiles!inner(display_name, classe)')
-        .eq('module_id', moduleData.id)
+  // Roster = élèves inscrits dans la classe de la séance (ou tous ceux ayant
+  // accès au module si la séance n'est rattachée à aucune classe).
+  const eleveIds = seance.classe_id
+    ? await eleveIdsInscritsClasse(supabase, seance.classe_id as string)
+    : (moduleData ? await eleveIdsAvecAccesModule(supabase, moduleData.id) : [])
+
+  const { data: roster } = eleveIds.length > 0
+    ? await supabase.from('profiles').select('id, display_name').in('id', eleveIds)
     : { data: [] }
 
   const { data: travaux } = await supabase
@@ -38,17 +42,12 @@ export async function GET(
   const travauxMap: Record<string, NonNullable<typeof travaux>[number]> = {}
   for (const t of travaux ?? []) travauxMap[t.eleve_id] = t
 
-  const eleves = (assignments ?? [])
-    .map((a) => {
-      const p = a.profiles as unknown as { display_name: string; classe: string | null }
-      return { eleve_id: a.eleve_id, display_name: p.display_name, classe: p.classe }
-    })
-    .filter((e) => !seance.classe_id || e.classe === seance.classe_id)
-    .map((e) => {
-      const t = travauxMap[e.eleve_id]
+  const eleves = (roster ?? [])
+    .map((p) => {
+      const t = travauxMap[p.id]
       return {
-        id: e.eleve_id,
-        display_name: e.display_name,
+        id: p.id,
+        display_name: p.display_name as string,
         v1_envoyee: (t?.photos_v1?.length ?? 0) > 0,
         vf_envoyee: (t?.photos_vf?.length ?? 0) > 0,
         analyse_v1_statut: t?.analyse_v1_statut ?? 'vide',

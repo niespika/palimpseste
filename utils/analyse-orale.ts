@@ -121,18 +121,18 @@ export async function analyserOral(oralId: string): Promise<void> {
 
   const { data: oral } = await admin
     .from('fragments_oraux')
-    .select('id, eleve_id, presentation_id, transcription, duree_secondes, nb_mots, debit_mots_minute, statut')
+    .select('id, eleve_id, inscription_id, presentation_id, transcription, duree_secondes, nb_mots, debit_mots_minute, statut')
     .eq('id', oralId)
     .single()
 
   if (!oral || oral.statut !== 'transcrit' || !oral.transcription) return
 
   try {
-    // Thème
+    // Thème de l'inscription
     const { data: theme } = await admin
       .from('fragments_themes')
       .select('theme, description')
-      .eq('eleve_id', oral.eleve_id)
+      .eq('inscription_id', oral.inscription_id)
       .maybeSingle()
 
     // Numéro de semaine
@@ -143,11 +143,11 @@ export async function analyserOral(oralId: string): Promise<void> {
       .single()
     const numeroSemaine = (presentation?.fragments_semaines as unknown as { numero: number } | null)?.numero ?? 1
 
-    // Dépôts de l'élève
+    // Dépôts de CETTE inscription
     const { data: tousDepots } = await admin
       .from('fragments_depots')
       .select('id, fragments_semaines(numero)')
-      .eq('eleve_id', oral.eleve_id)
+      .eq('inscription_id', oral.inscription_id)
 
     const depotIds = (tousDepots ?? []).map(d => d.id)
     const semainePourDepot: Record<string, number> = {}

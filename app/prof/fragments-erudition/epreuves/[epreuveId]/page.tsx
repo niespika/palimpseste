@@ -2,6 +2,8 @@ import { notFound } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/utils/supabase/server'
 import { createAdminClient } from '@/utils/supabase/admin'
+import { inscriptionsClasse } from '@/utils/acces'
+import { classeFragmentsActive } from '../../contexte-classe'
 import TableauEpreuve from './TableauEpreuve'
 
 export default async function PageEpreuve({ params }: { params: Promise<{ epreuveId: string }> }) {
@@ -23,15 +25,24 @@ export default async function PageEpreuve({ params }: { params: Promise<{ epreuv
 
   if (!epreuve) notFound()
 
-  // Élèves avec essai_actif=true
-  const { data: themes } = await admin
-    .from('fragments_themes')
-    .select('eleve_id, essai_actif, question')
-    .eq('essai_actif', true)
+  // Classe active → inscriptions de la classe (1 inscription par élève)
+  const { classe } = await classeFragmentsActive(supabase)
+  const inscrits = classe ? await inscriptionsClasse(admin, classe.id) : []
+  const inscriptionIds = inscrits.map(i => i.id)
+  const inscriptionParEleve = Object.fromEntries(inscrits.map(i => [i.eleve_id, i.id]))
+
+  // Inscriptions de la classe avec essai_actif=true
+  const { data: themes } = inscriptionIds.length > 0
+    ? await admin
+        .from('fragments_themes')
+        .select('eleve_id, essai_actif, question')
+        .eq('essai_actif', true)
+        .in('inscription_id', inscriptionIds)
+    : { data: [] }
 
   const eleveIds = (themes ?? []).map(t => t.eleve_id)
 
-  const { data: eleves } = eleveIds.length > 0
+  const { data: elevesBruts } = eleveIds.length > 0
     ? await admin
         .from('profiles')
         .select('id, display_name, classe')
@@ -40,11 +51,16 @@ export default async function PageEpreuve({ params }: { params: Promise<{ epreuv
         .order('display_name')
     : { data: [] }
 
-  // Essais pour cette épreuve
-  const { data: essais } = await admin
-    .from('fragments_essais')
-    .select('id, eleve_id, depose_par, created_at')
-    .eq('epreuve_id', epreuveId)
+  const eleves = (elevesBruts ?? []).map(e => ({ ...e, inscription_id: inscriptionParEleve[e.id] }))
+
+  // Essais pour cette épreuve (de cette classe)
+  const { data: essais } = inscriptionIds.length > 0
+    ? await admin
+        .from('fragments_essais')
+        .select('id, eleve_id, depose_par, created_at')
+        .eq('epreuve_id', epreuveId)
+        .in('inscription_id', inscriptionIds)
+    : { data: [] }
 
   type EssaiRow = { id: string; eleve_id: string; depose_par: string; created_at: string }
   const essaiParEleve: Record<string, EssaiRow> = {}
@@ -111,7 +127,7 @@ export default async function PageEpreuve({ params }: { params: Promise<{ epreuv
 
       <TableauEpreuve
         epreuve={epreuve}
-        eleves={(eleves ?? []) as { id: string; display_name: string; classe: string | null }[]}
+        eleves={eleves as { id: string; display_name: string; classe: string | null; inscription_id: string }[]}
         essaiParEleve={essaiParEleve as Record<string, { id: string; eleve_id: string; depose_par: string; created_at: string } | undefined>}
         analyseParEssai={analyseParEssai as Record<string, { id: string; essai_id: string; statut: string; lettre_structure: string | null; lettre_expression: string | null; lettre_argumentation: string | null; lettre_connaissances: string | null; note20_validee: number | null; publiee_at: string | null } | undefined>}
         distribution={distribution}

@@ -2,6 +2,8 @@ import { notFound } from 'next/navigation'
 import Link from 'next/link'
 import { createAdminClient } from '@/utils/supabase/admin'
 import { createClient } from '@/utils/supabase/server'
+import { inscriptionEleveClasse } from '@/utils/acces'
+import { classeFragmentsActive } from '../../contexte-classe'
 import GraphiqueProgression from '@/components/fragments/GraphiqueProgression'
 import type { PointSemaine } from '@/components/fragments/GraphiqueProgression'
 
@@ -26,11 +28,22 @@ export default async function PageEleveDetail({ params }: { params: Promise<{ el
 
   if (!eleve) notFound()
 
+  // Inscription de l'élève dans la classe active (scoping élève × classe)
+  const { classe } = await classeFragmentsActive(supabase)
+  const inscriptionId = classe ? await inscriptionEleveClasse(admin, eleveId, classe.id) : null
+  if (!inscriptionId) {
+    return (
+      <div className="bg-white border border-stone-200 rounded-xl p-8 text-center text-stone-500 text-sm">
+        Cet élève n'est pas inscrit dans la classe sélectionnée ({classe?.nom ?? '—'}).
+      </div>
+    )
+  }
+
   // Thème
   const { data: theme } = await admin
     .from('fragments_themes')
     .select('theme, description')
-    .eq('eleve_id', eleveId)
+    .eq('inscription_id', inscriptionId)
     .maybeSingle()
 
   // Toutes les semaines
@@ -39,11 +52,11 @@ export default async function PageEleveDetail({ params }: { params: Promise<{ el
     .select('id, numero, titre, date_debut, date_limite')
     .order('numero')
 
-  // Tous les dépôts de cet élève
+  // Tous les dépôts de cette inscription
   const { data: depots } = await admin
     .from('fragments_depots')
     .select('id, semaine_id, statut, created_at')
-    .eq('eleve_id', eleveId)
+    .eq('inscription_id', inscriptionId)
     .order('created_at')
 
   const depotParSemaine = Object.fromEntries(
@@ -68,7 +81,7 @@ export default async function PageEleveDetail({ params }: { params: Promise<{ el
   const { data: presentationsEleve2 } = await admin
     .from('fragments_presentations')
     .select('id, semaine_id, statut')
-    .eq('eleve_id', eleveId)
+    .eq('inscription_id', inscriptionId)
 
   const presIds = (presentationsEleve2 ?? []).map(p => p.id)
   const { data: oraux } = presIds.length > 0
@@ -113,7 +126,7 @@ export default async function PageEleveDetail({ params }: { params: Promise<{ el
   const { data: presentationsEleve } = await admin
     .from('fragments_presentations')
     .select('id, semaine_id, statut, created_at')
-    .eq('eleve_id', eleveId)
+    .eq('inscription_id', inscriptionId)
     .order('created_at')
 
   const nbPresentations = (presentationsEleve ?? []).filter(p => p.statut === 'presente').length

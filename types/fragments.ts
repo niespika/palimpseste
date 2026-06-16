@@ -5,6 +5,7 @@ export type StatutPiste = 'proposee' | 'suivie' | 'partiellement_suivie' | 'aban
 export interface FragmentTheme {
   id: string
   eleve_id: string
+  inscription_id: string | null
   theme: string
   description: string | null
   created_at: string
@@ -24,6 +25,7 @@ export interface FragmentSemaine {
 export interface FragmentDepot {
   id: string
   eleve_id: string
+  inscription_id: string | null
   semaine_id: string
   statut: StatutDepot
   commentaire_eleve: string | null
@@ -98,6 +100,7 @@ export interface FragmentOral {
   id: string
   presentation_id: string
   eleve_id: string
+  inscription_id: string | null
   storage_path: string | null
   transcription: string | null
   duree_secondes: number | null
@@ -130,6 +133,7 @@ export interface FragmentAnalyseOrale {
 export interface FragmentPresentation {
   id: string
   eleve_id: string
+  inscription_id: string | null
   semaine_id: string
   statut: StatutPresentation
   created_at: string
@@ -155,6 +159,7 @@ export interface Essai {
   id: string
   epreuve_id: string
   eleve_id: string
+  inscription_id: string | null
   depose_par: 'eleve' | 'prof'
   created_at: string
   updated_at: string
@@ -209,6 +214,7 @@ export interface FragmentSemestre {
 export interface FragmentSynthese {
   id: string
   eleve_id: string
+  inscription_id: string | null
   semestre_id: string
   statut: StatutSynthese
   synthese: string | null
@@ -234,4 +240,11 @@ export interface EleveAvecDepot {
   classe: string | null
   depot: DepotAvecPhotos | null
   analyse: AnalyseResumee | null
+}
+
+/** Item du sélecteur de contexte classe côté élève (une inscription active). */
+export interface InscriptionContexte {
+  id: string
+  classe_id: string
+  classe_nom: string
 }

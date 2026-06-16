@@ -11,7 +11,12 @@ interface Unite {
   ordre: number
 }
 
-export function CreerQuizz({ unites }: { unites: Unite[] }) {
+interface ClasseOption {
+  id: string
+  nom: string
+}
+
+export function CreerQuizz({ unites, classes }: { unites: Unite[]; classes: ClasseOption[] }) {
   const router = useRouter()
   const [loading, setLoading] = useState(false)
   const [erreur, setErreur] = useState<string | null>(null)
@@ -87,12 +92,17 @@ export function CreerQuizz({ unites }: { unites: Unite[] }) {
       <div className="grid grid-cols-2 gap-3 mb-4">
         <div>
           <label className="text-xs text-stone-500 mb-1 block">Classe</label>
-          <input
-            type="text"
-            name="classe"
-            placeholder="Ex. Terminale HLP"
-            className="w-full px-3 py-2 text-sm border border-stone-300 rounded-lg"
-          />
+          <select
+            name="classe_id"
+            defaultValue=""
+            required
+            className="w-full px-3 py-2 text-sm border border-stone-300 rounded-lg bg-white"
+          >
+            <option value="" disabled>Choisir une classe…</option>
+            {classes.map((c) => (
+              <option key={c.id} value={c.id}>{c.nom}</option>
+            ))}
+          </select>
         </div>
         <div>
           <label className="text-xs text-stone-500 mb-1 block">Durée (min)</label>

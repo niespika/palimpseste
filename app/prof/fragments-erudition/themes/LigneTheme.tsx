@@ -9,10 +9,11 @@ import type { FragmentTheme } from '@/types/fragments'
 
 interface Props {
   eleve: Profile
+  inscriptionId: string
   theme: FragmentTheme | null
 }
 
-export default function LigneTheme({ eleve, theme }: Props) {
+export default function LigneTheme({ eleve, inscriptionId, theme }: Props) {
   const router = useRouter()
   const [edition, setEdition] = useState(false)
   const [chargement, setChargement] = useState(false)
@@ -27,7 +28,7 @@ export default function LigneTheme({ eleve, theme }: Props) {
     e.preventDefault()
     setChargement(true)
     const formData = new FormData(e.currentTarget)
-    formData.append('eleveId', eleve.id)
+    formData.append('inscriptionId', inscriptionId)
     const resultat = await sauvegarderTheme(formData)
     if (resultat.success) {
       setEdition(false)
@@ -40,14 +41,14 @@ export default function LigneTheme({ eleve, theme }: Props) {
   async function handleToggleEssai() {
     setChargementEssai(true)
     const nouvelEtat = !essaiActif
-    await toggleEssaiActif(eleve.id, nouvelEtat)
+    await toggleEssaiActif(inscriptionId, nouvelEtat)
     setEssaiActif(nouvelEtat)
     setChargementEssai(false)
   }
 
   async function handleSauvegarderQuestion() {
     setChargementEssai(true)
-    await sauvegarderQuestion(eleve.id, question)
+    await sauvegarderQuestion(inscriptionId, question)
     setEditionQuestion(false)
     setChargementEssai(false)
     router.refresh()

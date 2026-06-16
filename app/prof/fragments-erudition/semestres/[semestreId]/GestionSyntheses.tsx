@@ -11,7 +11,7 @@ import {
   depublierSynthese,
 } from '../../essai-actions'
 
-interface Eleve { id: string; display_name: string; classe: string | null }
+interface Eleve { id: string; display_name: string; classe: string | null; inscription_id: string }
 interface SyntheseRow {
   id: string; eleve_id: string; statut: string
   synthese: string | null; points_forts: string | null; axes_progres: string | null
@@ -24,7 +24,6 @@ interface Props {
   semestreId: string
   eleves: Eleve[]
   syntheseParEleve: Record<string, SyntheseRow | undefined>
-  classes: string[]
 }
 
 const STATUT_LABELS: Record<string, { label: string; classe: string }> = {
@@ -166,26 +165,22 @@ function EditorSyntheseRow({ synthese, onDone }: { synthese: SyntheseRow; eleve:
   )
 }
 
-export default function GestionSyntheses({ semestreId, eleves, syntheseParEleve, classes }: Props) {
+export default function GestionSyntheses({ semestreId, eleves, syntheseParEleve }: Props) {
   const router = useRouter()
   const [enCours, setEnCours] = useState(false)
   const [message, setMessage] = useState<string | null>(null)
-  const [classeSelectionnee, setClasseSelectionnee] = useState<string>('')
   const [ouvertPourEleve, setOuvertPourEleve] = useState<string | null>(null)
 
-  async function handleGenererUn(eleveId: string) {
+  async function handleGenererUn(inscriptionId: string) {
     setEnCours(true)
-    await genererSynthese(eleveId, semestreId)
+    await genererSynthese(inscriptionId, semestreId)
     setEnCours(false)
     setMessage('Génération en cours…')
     setTimeout(() => { setMessage(null); router.refresh() }, 2000)
   }
 
   async function handleGenererLot() {
-    const elevesFiltres = classeSelectionnee
-      ? eleves.filter(e => e.classe === classeSelectionnee)
-      : eleves
-    const ids = elevesFiltres.map(e => e.id)
+    const ids = eleves.map(e => e.inscription_id)
     if (!ids.length) return
     setEnCours(true)
     const res = await genererSynthesesLot(ids, semestreId)
@@ -205,22 +200,12 @@ export default function GestionSyntheses({ semestreId, eleves, syntheseParEleve,
       {/* Génération en lot */}
       <div className="bg-white border border-stone-200 rounded-xl p-4 flex flex-wrap items-center gap-3">
         <span className="text-sm text-stone-600">{nbGeneres}/{eleves.length} générées · {nbPublies} publiées</span>
-        {classes.length > 0 && (
-          <select
-            value={classeSelectionnee}
-            onChange={e => setClasseSelectionnee(e.target.value)}
-            className="px-2 py-1.5 border border-stone-200 rounded text-sm"
-          >
-            <option value="">Toute la classe</option>
-            {classes.map(c => <option key={c} value={c}>{c}</option>)}
-          </select>
-        )}
         <button
           onClick={handleGenererLot}
           disabled={enCours}
           className="bg-stone-800 text-white px-4 py-2 rounded-lg text-sm hover:bg-stone-700 disabled:opacity-50"
         >
-          {enCours ? 'Génération…' : `Générer ${classeSelectionnee ? `(${classeSelectionnee})` : 'tout'}`}
+          {enCours ? 'Génération…' : 'Générer tout'}
         </button>
         {message && <span className="text-sm text-blue-600">{message}</span>}
       </div>
@@ -255,7 +240,7 @@ export default function GestionSyntheses({ semestreId, eleves, syntheseParEleve,
                     </button>
                   ) : (
                     <button
-                      onClick={() => handleGenererUn(eleve.id)}
+                      onClick={() => handleGenererUn(eleve.inscription_id)}
                       disabled={enCours || synthese?.statut === 'en_cours'}
                       className="text-xs text-stone-500 hover:text-stone-800 underline disabled:opacity-40"
                     >

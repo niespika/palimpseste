@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import { createClient } from '@/utils/supabase/server'
+import { aAccesModule } from '@/utils/acces'
 import { chargerSeanceActive, chargerHistorique } from './actions'
 
 export default async function CodexElevePage() {
@@ -20,14 +21,7 @@ export default async function CodexElevePage() {
     )
   }
 
-  const { data: assignment } = await supabase
-    .from('module_assignments')
-    .select('id')
-    .eq('eleve_id', user.id)
-    .eq('module_id', module.id)
-    .single()
-
-  if (!assignment) {
+  if (!(await aAccesModule(supabase, user.id, module.id))) {
     return (
       <div className="text-center py-16 text-stone-400 text-sm">Tu n&apos;as pas encore accès à ce module.</div>
     )

@@ -26,7 +26,6 @@ export async function creerEleve(formData: FormData) {
   const email = formData.get('email') as string
   const motDePasse = formData.get('motDePasse') as string
   const displayName = formData.get('displayName') as string
-  const classe = formData.get('classe') as string
 
   const { data: { user: nouvelUtilisateur }, error } = await admin.auth.admin.createUser({
     email,
@@ -37,12 +36,12 @@ export async function creerEleve(formData: FormData) {
   if (error) return { error: `Impossible de créer le compte : ${error.message}` }
   if (!nouvelUtilisateur) return { error: 'Utilisateur créé mais introuvable.' }
 
-  // Créer le profil manuellement (plus fiable que le trigger)
+  // Créer le profil manuellement (plus fiable que le trigger).
+  // L'inscription en classe se fait ensuite via /prof/classes.
   const { error: profilError } = await admin.from('profiles').insert({
     id: nouvelUtilisateur.id,
     role: 'eleve',
     display_name: displayName,
-    classe: classe || null,
   })
 
   if (profilError) return { error: `Compte créé mais profil impossible : ${profilError.message}` }
@@ -57,11 +56,10 @@ export async function modifierEleve(formData: FormData) {
   const supabase = await createClient()
   const id = formData.get('id') as string
   const displayName = formData.get('displayName') as string
-  const classe = formData.get('classe') as string
 
   const { error } = await supabase
     .from('profiles')
-    .update({ display_name: displayName, classe: classe || null })
+    .update({ display_name: displayName })
     .eq('id', id)
 
   if (error) return { error: `Impossible de modifier : ${error.message}` }

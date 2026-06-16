@@ -1,6 +1,8 @@
 import { notFound } from 'next/navigation'
 import { createClient } from '@/utils/supabase/server'
 import { createAdminClient } from '@/utils/supabase/admin'
+import { inscriptionsClasse } from '@/utils/acces'
+import { classeFragmentsActive } from '../contexte-classe'
 import TableauClasse from './TableauClasse'
 
 export default async function PageVueEnsemble() {
@@ -18,21 +20,11 @@ export default async function PageVueEnsemble() {
     .select('id, numero, titre')
     .order('numero')
 
-  // Élèves ayant accès au module
-  const { data: moduleData } = await admin
-    .from('modules')
-    .select('id')
-    .eq('slug', 'fragments-erudition')
-    .single()
-
-  const { data: assignments } = moduleData
-    ? await admin
-        .from('module_assignments')
-        .select('eleve_id')
-        .eq('module_id', moduleData.id)
-    : { data: [] }
-
-  const eleveIds = (assignments ?? []).map(a => a.eleve_id)
+  // Classe active → inscriptions (1 inscription par élève dans la classe)
+  const { classe } = await classeFragmentsActive(supabase)
+  const inscrits = classe ? await inscriptionsClasse(admin, classe.id) : []
+  const eleveIds = inscrits.map(i => i.eleve_id)
+  const inscriptionIds = inscrits.map(i => i.id)
   const { data: eleves } = eleveIds.length > 0
     ? await admin
         .from('profiles')
@@ -50,11 +42,13 @@ export default async function PageVueEnsemble() {
     )
   }
 
-  // Tous les dépôts
-  const { data: tousDepots } = await admin
-    .from('fragments_depots')
-    .select('id, eleve_id, semaine_id, statut')
-    .in('eleve_id', eleveIds)
+  // Tous les dépôts de cette classe
+  const { data: tousDepots } = inscriptionIds.length > 0
+    ? await admin
+        .from('fragments_depots')
+        .select('id, eleve_id, semaine_id, statut')
+        .in('inscription_id', inscriptionIds)
+    : { data: [] }
 
   const depotIds = (tousDepots ?? []).map(d => d.id)
 

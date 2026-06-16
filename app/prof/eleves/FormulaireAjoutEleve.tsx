@@ -73,17 +73,9 @@ export default function FormulaireAjoutEleve() {
                 placeholder="Ex. : Camille"
               />
             </div>
-            <div>
-              <label className="block text-sm font-medium text-stone-700 mb-1">
-                Classe
-              </label>
-              <input
-                name="classe"
-                type="text"
-                className="w-full px-3 py-2 border border-stone-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 text-stone-900"
-                placeholder="Ex. : Terminale HLP"
-              />
-            </div>
+            <p className="sm:col-span-2 text-xs text-stone-400 -mt-1">
+              Tu inscriras l&apos;élève dans une ou plusieurs classes depuis l&apos;onglet Classes.
+            </p>
 
             {message && (
               <div className={`sm:col-span-2 rounded-lg px-3 py-2 text-sm ${

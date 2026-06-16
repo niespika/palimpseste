@@ -26,7 +26,7 @@ export default async function ValidationPage() {
 
     const [{ data: profils }, { data: sessions }] = await Promise.all([
       admin.from('profiles').select('id, display_name').in('id', eleveIds),
-      admin.from('codex_sessions').select('id, classe_id, scriptorium_unites(label)').in('id', sessionIds),
+      admin.from('codex_sessions').select('id, classe_id, scriptorium_unites(label), classes(nom)').in('id', sessionIds),
     ])
 
     const nomMap: Record<string, string> = {}
@@ -35,9 +35,10 @@ export default async function ValidationPage() {
     const seanceMap: Record<string, { label: string; classe: string | null }> = {}
     for (const s of sessions ?? []) {
       const u = s.scriptorium_unites as { label: string } | { label: string }[] | null
+      const c = s.classes as { nom: string } | { nom: string }[] | null
       seanceMap[s.id] = {
         label: Array.isArray(u) ? u[0]?.label ?? '' : u?.label ?? '',
-        classe: s.classe_id,
+        classe: Array.isArray(c) ? c[0]?.nom ?? null : c?.nom ?? null,
       }
     }
 

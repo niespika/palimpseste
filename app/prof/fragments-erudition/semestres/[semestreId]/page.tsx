@@ -2,6 +2,8 @@ import { notFound } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/utils/supabase/server'
 import { createAdminClient } from '@/utils/supabase/admin'
+import { inscriptionsClasse } from '@/utils/acces'
+import { classeFragmentsActive } from '../../contexte-classe'
 import GestionSyntheses from './GestionSyntheses'
 
 export default async function PageSemestre({ params }: { params: Promise<{ semestreId: string }> }) {
@@ -23,23 +25,25 @@ export default async function PageSemestre({ params }: { params: Promise<{ semes
 
   if (!semestre) notFound()
 
-  // Élèves du module
-  const { data: moduleData } = await supabase.from('modules').select('id').eq('slug', 'fragments-erudition').single()
-  const { data: assignments } = moduleData
-    ? await supabase.from('module_assignments').select('eleve_id').eq('module_id', moduleData.id)
-    : { data: [] }
-  const eleveIds = (assignments ?? []).map(a => a.eleve_id as string)
+  // Classe active → inscriptions (1 inscription par élève dans la classe)
+  const { classe } = await classeFragmentsActive(supabase)
+  const inscrits = classe ? await inscriptionsClasse(admin, classe.id) : []
+  const eleveIds = inscrits.map(i => i.eleve_id)
+  const inscriptionIds = inscrits.map(i => i.id)
+  const inscriptionParEleve = Object.fromEntries(inscrits.map(i => [i.eleve_id, i.id]))
 
-  const { data: eleves } = eleveIds.length > 0
+  const { data: elevesBruts } = eleveIds.length > 0
     ? await admin.from('profiles').select('id, display_name, classe').in('id', eleveIds).eq('role', 'eleve').order('display_name')
     : { data: [] }
 
-  // Synthèses existantes
-  const { data: syntheses } = eleveIds.length > 0
+  const eleves = (elevesBruts ?? []).map(e => ({ ...e, inscription_id: inscriptionParEleve[e.id] }))
+
+  // Synthèses existantes (scopées par inscription)
+  const { data: syntheses } = inscriptionIds.length > 0
     ? await admin.from('fragments_syntheses')
         .select('id, eleve_id, statut, synthese, points_forts, axes_progres, note20_suggeree, note20_min, note20_max, note20_justification, note20_validee, note_visible_eleve, notes_prof, created_at, updated_at, publiee_at')
         .eq('semestre_id', semestreId)
-        .in('eleve_id', eleveIds)
+        .in('inscription_id', inscriptionIds)
     : { data: [] }
 
   type SyntheseRow = { id: string; eleve_id: string; statut: string; synthese: string | null; points_forts: string | null; axes_progres: string | null; note20_suggeree: number | null; note20_min: number | null; note20_max: number | null; note20_justification: string | null; note20_validee: number | null; note_visible_eleve: boolean; notes_prof: string | null; publiee_at: string | null }
@@ -47,9 +51,6 @@ export default async function PageSemestre({ params }: { params: Promise<{ semes
   for (const s of (syntheses ?? []) as SyntheseRow[]) {
     syntheseParEleve[s.eleve_id] = s
   }
-
-  // Classes disponibles pour génération en lot
-  const classes = [...new Set((eleves ?? []).map(e => e.classe).filter(Boolean) as string[])].sort()
 
   return (
     <div className="space-y-6">
@@ -68,9 +69,8 @@ export default async function PageSemestre({ params }: { params: Promise<{ semes
 
       <GestionSyntheses
         semestreId={semestreId}
-        eleves={(eleves ?? []) as { id: string; display_name: string; classe: string | null }[]}
+        eleves={eleves as { id: string; display_name: string; classe: string | null; inscription_id: string }[]}
         syntheseParEleve={syntheseParEleve as Record<string, SyntheseRow | undefined>}
-        classes={classes}
       />
     </div>
   )

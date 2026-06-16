@@ -8,15 +8,12 @@ export default async function PageEleves() {
   const supabase = await createClient()
   const admin = createAdminClient()
 
-  // Récupérer tous les profils élèves avec leurs modules
+  // Récupérer tous les profils élèves avec leurs classes (via inscriptions)
   const { data: profiles } = await supabase
     .from('profiles')
     .select(`
       id, role, display_name, classe, created_at,
-      modules_assignes:module_assignments(
-        module_id,
-        modules(nom)
-      )
+      inscriptions(statut, classes(id, nom))
     `)
     .eq('role', 'eleve')
     .order('display_name')
@@ -24,11 +21,18 @@ export default async function PageEleves() {
   // Récupérer les emails via le client admin
   const { data: { users: authUsers } } = await admin.auth.admin.listUsers({ perPage: 1000 })
 
-  const eleves: EleveAvecEmail[] = (profiles ?? []).map(profile => ({
-    ...profile,
-    email: authUsers.find(u => u.id === profile.id)?.email ?? '—',
-    modules_assignes: (profile.modules_assignes ?? []) as unknown as EleveAvecEmail['modules_assignes'],
-  }))
+  const eleves: EleveAvecEmail[] = (profiles ?? []).map(profile => {
+    const inscriptions = (profile.inscriptions ?? []) as { statut: string; classes: { id: string; nom: string } | { id: string; nom: string }[] | null }[]
+    const classes = inscriptions
+      .filter(i => i.statut === 'active')
+      .map(i => (Array.isArray(i.classes) ? i.classes[0] : i.classes))
+      .filter((c): c is { id: string; nom: string } => !!c)
+    return {
+      ...profile,
+      email: authUsers.find(u => u.id === profile.id)?.email ?? '—',
+      classes,
+    }
+  })
 
   return (
     <div>
@@ -47,9 +51,8 @@ export default async function PageEleves() {
               <thead className="bg-stone-50 border-b border-stone-200">
                 <tr>
                   <th className="px-4 py-3 text-xs font-medium text-stone-500 uppercase tracking-wide">Nom affiché</th>
-                  <th className="px-4 py-3 text-xs font-medium text-stone-500 uppercase tracking-wide">Classe</th>
+                  <th className="px-4 py-3 text-xs font-medium text-stone-500 uppercase tracking-wide">Classes</th>
                   <th className="px-4 py-3 text-xs font-medium text-stone-500 uppercase tracking-wide">Courriel</th>
-                  <th className="px-4 py-3 text-xs font-medium text-stone-500 uppercase tracking-wide">Modules</th>
                   <th className="px-4 py-3 text-xs font-medium text-stone-500 uppercase tracking-wide">Actions</th>
                 </tr>
               </thead>

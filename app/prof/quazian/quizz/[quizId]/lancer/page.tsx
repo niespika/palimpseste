@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import { notFound, redirect } from 'next/navigation'
 import { createClient } from '@/utils/supabase/server'
+import { eleveIdsAvecAccesModule } from '@/utils/acces'
 import { lancerQuizz } from './actions'
 import { TableauLive } from './TableauLive'
 
@@ -22,11 +23,16 @@ export default async function LancerPage({
 
   const { data: quizz } = await supabase
     .from('quazian_quizzes')
-    .select('id, statut, classe_id, scope_unites, duree_min, nb_questions, lance_at, ferme_at, moyenne_cohorte, ecart_type_cohorte')
+    .select('id, statut, classe_id, classes(nom), scope_unites, duree_min, nb_questions, lance_at, ferme_at, moyenne_cohorte, ecart_type_cohorte')
     .eq('id', quizId)
     .single()
 
   if (!quizz) notFound()
+
+  const classeNom = (() => {
+    const c = Array.isArray(quizz.classes) ? quizz.classes[0] : quizz.classes
+    return c ? (c as { nom: string }).nom : null
+  })()
 
   // Vérifier que toutes les questions sont validées (pour un brouillon)
   if (quizz.statut === 'brouillon') {
@@ -62,25 +68,22 @@ export default async function LancerPage({
     .eq('slug', 'quazian')
     .single()
 
-  const { data: assignments } = moduleData
-    ? await supabase
-        .from('module_assignments')
-        .select('eleve_id, profiles!inner(display_name)')
-        .eq('module_id', moduleData.id)
+  const eleveIds = moduleData ? await eleveIdsAvecAccesModule(supabase, moduleData.id) : []
+  const { data: rosterProfiles } = eleveIds.length > 0
+    ? await supabase.from('profiles').select('id, display_name').in('id', eleveIds)
     : { data: [] }
 
   const sessionsMap: Record<string, typeof sessions extends (infer T)[] | null ? T : never> = {}
   for (const s of sessions ?? []) sessionsMap[s.eleve_id] = s
 
-  const eleves = (assignments ?? []).map((a) => {
-    const profiles = a.profiles as unknown as { display_name: string }
-    const session = sessionsMap[a.eleve_id]
+  const eleves = (rosterProfiles ?? []).map((p) => {
+    const session = sessionsMap[p.id]
     return {
-      id: a.eleve_id,
-      display_name: profiles.display_name,
+      id: p.id,
+      display_name: p.display_name as string,
       soumis: !!session?.submitted_at,
       submitted_at: session?.submitted_at ?? null,
-      score_moyen: scoresMap[a.eleve_id] ?? null,
+      score_moyen: scoresMap[p.id] ?? null,
       auto: session?.auto_submitted ?? false,
     }
   }).sort((a, b) => a.display_name.localeCompare(b.display_name))
@@ -100,7 +103,7 @@ export default async function LancerPage({
           ← Quizz
         </Link>
         <h3 className="text-lg font-serif text-stone-900 mt-2">
-          {quizz.classe_id ?? 'Passation'} — {quizz.nb_questions} questions
+          {classeNom ?? 'Passation'} — {quizz.nb_questions} questions
         </h3>
         <p className="text-sm text-stone-400">
           {(quizz.scope_unites as string[]).map((id) => labelsMap[id] ?? id).join(' · ')}

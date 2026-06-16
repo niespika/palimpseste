@@ -3,6 +3,7 @@
 import { after } from 'next/server'
 import { createClient } from '@/utils/supabase/server'
 import { createAdminClient } from '@/utils/supabase/admin'
+import { classeIdsActives } from '@/utils/acces'
 
 async function verifierEleve() {
   const supabase = await createClient()
@@ -10,11 +11,11 @@ async function verifierEleve() {
   if (!user) throw new Error('Non authentifié')
   const { data: profile } = await supabase
     .from('profiles')
-    .select('role, classe')
+    .select('role')
     .eq('id', user.id)
     .single()
   if (profile?.role !== 'eleve') throw new Error('Accès refusé')
-  return { supabase, userId: user.id, classe: profile.classe as string | null }
+  return { supabase, userId: user.id }
 }
 
 export interface SeanceActive {
@@ -28,10 +29,11 @@ export interface SeanceActive {
 
 // Trouver la séance la plus pertinente pour cet élève (live d'abord, puis dernière fermée)
 export async function chargerSeanceActive(): Promise<SeanceActive | null> {
-  const { userId, classe } = await verifierEleve()
+  const { supabase, userId } = await verifierEleve()
   const admin = createAdminClient()
+  const classeIds = await classeIdsActives(supabase, userId)
 
-  // Sessions non-brouillon visibles pour cet élève (sa classe ou sans classe)
+  // Sessions non-brouillon visibles pour cet élève (une de ses classes, ou sans classe)
   const { data: sessions } = await admin
     .from('codex_sessions')
     .select('id, statut, classe_id, lance_at, scriptorium_unites(label)')
@@ -39,7 +41,7 @@ export async function chargerSeanceActive(): Promise<SeanceActive | null> {
     .order('lance_at', { ascending: false })
   if (!sessions || sessions.length === 0) return null
 
-  const visibles = sessions.filter((s) => !s.classe_id || s.classe_id === classe)
+  const visibles = sessions.filter((s) => !s.classe_id || classeIds.includes(s.classe_id as string))
   if (visibles.length === 0) return null
 
   // Priorité : une séance en cours, sinon la plus récente fermée
@@ -74,8 +76,9 @@ export interface SeancePassee {
 
 // Historique des séances fermées visibles par l'élève (trace durable)
 export async function chargerHistorique(): Promise<SeancePassee[]> {
-  const { userId, classe } = await verifierEleve()
+  const { supabase, userId } = await verifierEleve()
   const admin = createAdminClient()
+  const classeIds = await classeIdsActives(supabase, userId)
 
   const { data: sessions } = await admin
     .from('codex_sessions')
@@ -83,7 +86,7 @@ export async function chargerHistorique(): Promise<SeancePassee[]> {
     .eq('statut', 'fermee')
     .order('lance_at', { ascending: false })
 
-  const visibles = (sessions ?? []).filter((s) => !s.classe_id || s.classe_id === classe)
+  const visibles = (sessions ?? []).filter((s) => !s.classe_id || classeIds.includes(s.classe_id as string))
   if (visibles.length === 0) return []
 
   const { data: travaux } = await admin

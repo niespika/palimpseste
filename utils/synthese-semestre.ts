@@ -40,8 +40,17 @@ interface SyntheseJSON {
   note20_justification: string
 }
 
-export async function genererSynthesePourEleve(eleveId: string, semestreId: string): Promise<void> {
+export async function genererSynthesePourEleve(inscriptionId: string, semestreId: string): Promise<void> {
   const admin = createAdminClient()
+
+  // eleve_id dérivé de l'inscription (le travail est scopé par inscription).
+  const { data: insc } = await admin
+    .from('inscriptions')
+    .select('eleve_id')
+    .eq('id', inscriptionId)
+    .single()
+  if (!insc) return
+  const eleveId = insc.eleve_id as string
 
   const { data: semestre } = await admin
     .from('fragments_semestres')
@@ -55,7 +64,7 @@ export async function genererSynthesePourEleve(eleveId: string, semestreId: stri
   const { data: existante } = await admin
     .from('fragments_syntheses')
     .select('id, statut')
-    .eq('eleve_id', eleveId)
+    .eq('inscription_id', inscriptionId)
     .eq('semestre_id', semestreId)
     .maybeSingle()
 
@@ -77,6 +86,7 @@ export async function genererSynthesePourEleve(eleveId: string, semestreId: stri
     syntheseId = existante.id
   } else {
     const { data, error } = await admin.from('fragments_syntheses').insert({
+      inscription_id: inscriptionId,
       eleve_id: eleveId,
       semestre_id: semestreId,
       statut: 'en_cours',
@@ -93,14 +103,14 @@ export async function genererSynthesePourEleve(eleveId: string, semestreId: stri
     const { data: theme } = await admin
       .from('fragments_themes')
       .select('theme, description, question')
-      .eq('eleve_id', eleveId)
+      .eq('inscription_id', inscriptionId)
       .maybeSingle()
 
-    // Dépôts dans l'intervalle
+    // Dépôts dans l'intervalle (de cette inscription)
     const { data: depots } = await admin
       .from('fragments_depots')
       .select('id, statut, created_at, fragments_semaines(numero, date_debut, date_limite)')
-      .eq('eleve_id', eleveId)
+      .eq('inscription_id', inscriptionId)
 
     const depotsInterval = (depots ?? []).filter(d => {
       const sem = d.fragments_semaines as unknown as { date_debut: string; date_limite: string } | null
@@ -156,11 +166,11 @@ export async function genererSynthesePourEleve(eleveId: string, semestreId: stri
           .order('created_at')
       : { data: [] }
 
-    // Analyse orale du semestre
+    // Analyse orale du semestre (même inscription)
     const { data: presentations } = await admin
       .from('fragments_presentations')
       .select('id, semaine_id, fragments_semaines(date_limite)')
-      .eq('eleve_id', eleveId)
+      .eq('inscription_id', inscriptionId)
 
     const presInterval = (presentations ?? []).filter(p => {
       const sem = p.fragments_semaines as unknown as { date_limite: string } | null

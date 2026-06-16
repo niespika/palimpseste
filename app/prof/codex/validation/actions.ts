@@ -84,6 +84,18 @@ export async function validerTravail(travailId: string) {
     .eq('id', travail.session_id)
     .single()
 
+  // Inscription (élève × classe) pour rattacher la carte personnelle au bon flux.
+  let inscriptionId: string | null = null
+  if (session?.classe_id) {
+    const { data: insc } = await admin
+      .from('inscriptions')
+      .select('id')
+      .eq('eleve_id', travail.eleve_id)
+      .eq('classe_id', session.classe_id)
+      .maybeSingle()
+    inscriptionId = insc?.id ?? null
+  }
+
   const { data: params } = await admin
     .from('codex_params')
     .select('cap_cartes')
@@ -123,7 +135,7 @@ export async function validerTravail(travailId: string) {
         const { data: carte } = await admin
           .from('quazian_flashcards')
           .insert({
-            classe_id: session.classe_id,
+            inscription_id: inscriptionId,
             eleve_id: travail.eleve_id,
             scriptorium_unite_id: session.scriptorium_unite_id,
             type: 'concept',

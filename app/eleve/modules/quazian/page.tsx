@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import { createClient } from '@/utils/supabase/server'
+import { aAccesModule, classeIdsActives } from '@/utils/acces'
 import { chargerFileRevision, chargerStatsRevision } from './actions'
 import { QuazianDashboard } from './QuazianDashboard'
 
@@ -24,14 +25,7 @@ export default async function QuazianElevePage() {
     )
   }
 
-  const { data: assignment } = await supabase
-    .from('module_assignments')
-    .select('id')
-    .eq('eleve_id', user.id)
-    .eq('module_id', module.id)
-    .single()
-
-  if (!assignment) {
+  if (!(await aAccesModule(supabase, user.id, module.id))) {
     return (
       <div className="text-center py-16 text-stone-400 text-sm">
         Tu n'as pas encore accès à ce module.
@@ -39,14 +33,19 @@ export default async function QuazianElevePage() {
     )
   }
 
-  // Quizz actif ou récent (lancé ou fermé sans retour vu)
-  const { data: quizzActif } = await supabase
-    .from('quazian_quizzes')
-    .select('id, statut, ferme_at, nb_questions')
-    .in('statut', ['lance', 'ferme'])
-    .order('lance_at', { ascending: false })
-    .limit(1)
-    .maybeSingle()
+  // Quizz actif ou récent (lancé ou fermé) — uniquement pour une classe où
+  // l'élève est inscrit (corrige le bug 0.3 : scoping par classe).
+  const classeIds = await classeIdsActives(supabase, user.id)
+  const { data: quizzActif } = classeIds.length > 0
+    ? await supabase
+        .from('quazian_quizzes')
+        .select('id, statut, ferme_at, nb_questions')
+        .in('classe_id', classeIds)
+        .in('statut', ['lance', 'ferme'])
+        .order('lance_at', { ascending: false })
+        .limit(1)
+        .maybeSingle()
+    : { data: null }
 
   // Vérifier si l'élève a déjà soumis ce quizz
   let quizzInfo: { id: string; statut: string; soumis: boolean } | null = null

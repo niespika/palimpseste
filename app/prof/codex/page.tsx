@@ -13,17 +13,23 @@ const STATUT_BADGE: Record<string, { label: string; classe: string }> = {
 export default async function CodexProfPage() {
   const supabase = await createClient()
 
-  const [unites, { data: seances }] = await Promise.all([
+  const [unites, { data: seances }, { data: classes }] = await Promise.all([
     lireUnitesScriptorium(),
     supabase
       .from('codex_sessions')
-      .select('id, statut, classe_id, scriptorium_unite_id, created_at, scriptorium_unites(label)')
+      .select('id, statut, classe_id, scriptorium_unite_id, created_at, scriptorium_unites(label), classes(nom)')
       .order('created_at', { ascending: false }),
+    supabase.from('classes').select('id, nom').order('nom'),
   ])
 
   const labelUnite = (s: { scriptorium_unites: unknown }) => {
     const u = s.scriptorium_unites as { label: string } | { label: string }[] | null
     return Array.isArray(u) ? u[0]?.label ?? '' : u?.label ?? ''
+  }
+
+  const nomClasse = (s: { classes: unknown }) => {
+    const c = s.classes as { nom: string } | { nom: string }[] | null
+    return Array.isArray(c) ? c[0]?.nom ?? null : c?.nom ?? null
   }
 
   const enCours = (seances ?? []).filter((s) => s.statut === 'phase_1' || s.statut === 'phase_2')
@@ -40,7 +46,7 @@ export default async function CodexProfPage() {
       >
         <div className="min-w-0">
           <p className="text-sm font-medium text-stone-800 truncate">{labelUnite(s)}</p>
-          {s.classe_id && <p className="text-xs text-stone-400">{s.classe_id}</p>}
+          {nomClasse(s) && <p className="text-xs text-stone-400">{nomClasse(s)}</p>}
         </div>
         <span className={`text-xs px-2 py-0.5 rounded-full shrink-0 ${badge.classe}`}>
           {badge.label}
@@ -51,7 +57,7 @@ export default async function CodexProfPage() {
 
   return (
     <div className="space-y-8">
-      <FormulaireSeance unites={unites} />
+      <FormulaireSeance unites={unites} classes={classes ?? []} />
 
       {enCours.length > 0 && (
         <section>

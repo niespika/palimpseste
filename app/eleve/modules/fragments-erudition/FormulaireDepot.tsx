@@ -9,10 +9,11 @@ import { deposerCompteRendu } from './actions'
 interface Props {
   semaineId: string
   eleveId: string
+  inscriptionId: string
   depotExistant: boolean
 }
 
-export default function FormulaireDepot({ semaineId, eleveId, depotExistant }: Props) {
+export default function FormulaireDepot({ semaineId, eleveId, inscriptionId, depotExistant }: Props) {
   const router = useRouter()
   const [images, setImages] = useState<ImageTraitee[]>([])
   const [traitement, setTraitement] = useState(false)
@@ -92,7 +93,7 @@ export default function FormulaireDepot({ semaineId, eleveId, depotExistant }: P
       for (let i = 0; i < images.length; i++) {
         setProgression(`Envoi de la photo ${i + 1}/${images.length}…`)
         const nomFichier = `${Date.now()}_${i + 1}.jpg`
-        const chemin = `${eleveId}/${semaineId}/${nomFichier}`
+        const chemin = `${eleveId}/${inscriptionId}/${semaineId}/${nomFichier}`
 
         const { error } = await supabase.storage
           .from('fragments')
@@ -105,6 +106,7 @@ export default function FormulaireDepot({ semaineId, eleveId, depotExistant }: P
       setProgression('Enregistrement…')
       const formData = new FormData()
       formData.append('semaineId', semaineId)
+      formData.append('inscriptionId', inscriptionId)
       if (commentaire) formData.append('commentaire', commentaire)
       chemins.forEach(c => formData.append('chemins', c))
 

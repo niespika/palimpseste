@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { createClient } from '@/utils/supabase/server'
+import { eleveIdsInscritsClasse, eleveIdsAvecAccesModule } from '@/utils/acces'
 import { lancerSeance, supprimerSeance } from '../../actions'
 import { TableauSeance } from './TableauSeance'
 
@@ -26,7 +27,7 @@ export default async function SeancePage({
 
   const { data: seance } = await supabase
     .from('codex_sessions')
-    .select('id, statut, classe_id, duree_phase_min, lance_at, phase_2_at, ferme_at, phase_courante_fin_at, scriptorium_unite_id, scriptorium_unites(label)')
+    .select('id, statut, classe_id, duree_phase_min, lance_at, phase_2_at, ferme_at, phase_courante_fin_at, scriptorium_unite_id, scriptorium_unites(label), classes(nom)')
     .eq('id', sessionId)
     .single()
 
@@ -37,14 +38,20 @@ export default async function SeancePage({
     return Array.isArray(u) ? u[0]?.label ?? '' : u?.label ?? ''
   })()
 
-  // Élèves assignés au module Codex (filtrés par classe si renseignée)
-  const { data: moduleData } = await supabase.from('modules').select('id').eq('slug', 'codex').single()
+  const classeNom = (() => {
+    const c = seance.classes as { nom: string } | { nom: string }[] | null
+    return Array.isArray(c) ? c[0]?.nom ?? null : c?.nom ?? null
+  })()
 
-  const { data: assignments } = moduleData
-    ? await supabase
-        .from('module_assignments')
-        .select('eleve_id, profiles!inner(display_name, classe)')
-        .eq('module_id', moduleData.id)
+  // Roster = élèves inscrits dans la classe de la séance (ou tous ceux ayant
+  // accès au module Codex si la séance n'est rattachée à aucune classe).
+  const { data: moduleData } = await supabase.from('modules').select('id').eq('slug', 'codex').single()
+  const eleveIds = seance.classe_id
+    ? await eleveIdsInscritsClasse(supabase, seance.classe_id as string)
+    : (moduleData ? await eleveIdsAvecAccesModule(supabase, moduleData.id) : [])
+
+  const { data: roster } = eleveIds.length > 0
+    ? await supabase.from('profiles').select('id, display_name').in('id', eleveIds)
     : { data: [] }
 
   // Travaux existants
@@ -56,17 +63,12 @@ export default async function SeancePage({
   const travauxMap: Record<string, NonNullable<typeof travaux>[number]> = {}
   for (const t of travaux ?? []) travauxMap[t.eleve_id] = t
 
-  const eleves = (assignments ?? [])
-    .map((a) => {
-      const p = a.profiles as unknown as { display_name: string; classe: string | null }
-      return { eleve_id: a.eleve_id, display_name: p.display_name, classe: p.classe }
-    })
-    .filter((e) => !seance.classe_id || e.classe === seance.classe_id)
-    .map((e) => {
-      const t = travauxMap[e.eleve_id]
+  const eleves = (roster ?? [])
+    .map((p) => {
+      const t = travauxMap[p.id]
       return {
-        id: e.eleve_id,
-        display_name: e.display_name,
+        id: p.id,
+        display_name: p.display_name as string,
         v1_envoyee: (t?.photos_v1?.length ?? 0) > 0,
         vf_envoyee: (t?.photos_vf?.length ?? 0) > 0,
         analyse_v1_statut: t?.analyse_v1_statut ?? 'vide',
@@ -84,7 +86,7 @@ export default async function SeancePage({
         </Link>
         <h3 className="text-lg font-serif text-stone-900 mt-2">{uniteLabel}</h3>
         <p className="text-sm text-stone-400">
-          {seance.classe_id ? `${seance.classe_id} · ` : ''}{seance.duree_phase_min} min par phase
+          {classeNom ? `${classeNom} · ` : ''}{seance.duree_phase_min} min par phase
         </p>
       </div>
 

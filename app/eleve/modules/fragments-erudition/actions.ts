@@ -18,10 +18,21 @@ export async function deposerCompteRendu(formData: FormData) {
   const { supabase, userId } = await verifierEleve()
 
   const semaineId = formData.get('semaineId') as string
+  const inscriptionId = formData.get('inscriptionId') as string
   const commentaire = formData.get('commentaire') as string | null
   const chemins = formData.getAll('chemins') as string[]
 
   if (chemins.length === 0) return { error: 'Aucune photo reçue.' }
+
+  // Valider que l'inscription appartient bien à l'élève (et est active)
+  const { data: inscription } = await supabase
+    .from('inscriptions')
+    .select('id')
+    .eq('id', inscriptionId)
+    .eq('eleve_id', userId)
+    .eq('statut', 'active')
+    .maybeSingle()
+  if (!inscription) return { error: 'Contexte de classe invalide.' }
 
   // Vérifier que la semaine est ouverte
   const { data: semaine } = await supabase
@@ -35,13 +46,13 @@ export async function deposerCompteRendu(formData: FormData) {
   const maintenant = new Date()
   const statut = maintenant > new Date(semaine.date_limite) ? 'en_retard' : 'depose'
 
-  // Supprimer l'ancien dépôt s'il existe (photos incluses via CASCADE)
+  // Supprimer l'ancien dépôt de CETTE inscription s'il existe (photos via CASCADE)
   const { data: depotExistant } = await supabase
     .from('fragments_depots')
     .select('id, fragments_photos(storage_path)')
-    .eq('eleve_id', userId)
+    .eq('inscription_id', inscriptionId)
     .eq('semaine_id', semaineId)
-    .single()
+    .maybeSingle()
 
   if (depotExistant) {
     // Supprimer les anciennes photos du stockage
@@ -59,6 +70,7 @@ export async function deposerCompteRendu(formData: FormData) {
     .from('fragments_depots')
     .insert({
       eleve_id: userId,
+      inscription_id: inscriptionId,
       semaine_id: semaineId,
       statut,
       commentaire_eleve: commentaire || null,

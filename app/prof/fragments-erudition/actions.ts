@@ -1,10 +1,13 @@
 'use server'
 
 import { after } from 'next/server'
+import { cookies } from 'next/headers'
 import { revalidatePath } from 'next/cache'
 import { createClient } from '@/utils/supabase/server'
 import { createAdminClient } from '@/utils/supabase/admin'
 import { lancerAnalyse } from '@/utils/analyse'
+import { inscriptionsClasse } from '@/utils/acces'
+import { COOKIE_CLASSE_FRAGMENTS } from './contexte-classe'
 import type { StatutPiste } from '@/types/fragments'
 
 async function verifierProf() {
@@ -18,6 +21,20 @@ async function verifierProf() {
     .single()
   if (profile?.role !== 'prof') throw new Error('Accès refusé')
   return supabase
+}
+
+// Classe active du module Fragments (mémorisée en cookie). Toutes les vues prof
+// scopent leur contenu dessus.
+export async function definirClasseFragments(classeId: string) {
+  await verifierProf()
+  const cookieStore = await cookies()
+  cookieStore.set(COOKIE_CLASSE_FRAGMENTS, classeId, {
+    path: '/',
+    maxAge: 60 * 60 * 24 * 365,
+    sameSite: 'lax',
+  })
+  revalidatePath('/prof/fragments-erudition', 'layout')
+  return { success: true }
 }
 
 export async function creerSemaine(formData: FormData) {
@@ -64,25 +81,33 @@ export async function toggleSemaineOuverte(formData: FormData) {
 
 export async function sauvegarderTheme(formData: FormData) {
   const supabase = await verifierProf()
-  const eleveId = formData.get('eleveId') as string
+  const inscriptionId = formData.get('inscriptionId') as string
   const theme = formData.get('theme') as string
   const description = (formData.get('description') as string) || null
+
+  // eleve_id reste renseigné (RLS simple) ; on le dérive de l'inscription.
+  const { data: insc } = await supabase
+    .from('inscriptions')
+    .select('eleve_id')
+    .eq('id', inscriptionId)
+    .single()
+  if (!insc) return { error: 'Inscription introuvable' }
 
   const { data: existant } = await supabase
     .from('fragments_themes')
     .select('id')
-    .eq('eleve_id', eleveId)
+    .eq('inscription_id', inscriptionId)
     .maybeSingle()
 
   if (existant) {
     await supabase
       .from('fragments_themes')
       .update({ theme, description })
-      .eq('eleve_id', eleveId)
+      .eq('inscription_id', inscriptionId)
   } else {
     await supabase
       .from('fragments_themes')
-      .insert({ eleve_id: eleveId, theme, description })
+      .insert({ inscription_id: inscriptionId, eleve_id: insc.eleve_id, theme, description })
   }
 
   revalidatePath('/prof/fragments-erudition/themes')
@@ -258,6 +283,14 @@ export async function creerUrlUploadAudio(
 
   const storagePath = `${eleveId}/${presentationId}.${ext}`
 
+  // Inscription de la présentation (pour scoper l'oral sur élève × classe)
+  const { data: pres } = await admin
+    .from('fragments_presentations')
+    .select('inscription_id')
+    .eq('id', presentationId)
+    .maybeSingle()
+  const inscriptionId = pres?.inscription_id ?? null
+
   // Créer (ou récupérer) le record fragments_oraux
   const { data: existant } = await admin
     .from('fragments_oraux')
@@ -282,7 +315,7 @@ export async function creerUrlUploadAudio(
   } else {
     const { data, error } = await admin
       .from('fragments_oraux')
-      .insert({ presentation_id: presentationId, eleve_id: eleveId, storage_path: storagePath, statut: 'enregistre' })
+      .insert({ presentation_id: presentationId, eleve_id: eleveId, inscription_id: inscriptionId, storage_path: storagePath, statut: 'enregistre' })
       .select('id')
       .single()
     if (error || !data) return { error: error?.message ?? 'Erreur création oral', data: null }
@@ -441,15 +474,22 @@ export async function sauvegarderConfigOrale(promptOral: string, supprimerAudioP
 // Tirage au sort
 // ============================================================
 
-export async function tirerOrateur(semaineId: string, excluIds: string[]) {
+export async function tirerOrateur(semaineId: string, classeId: string, excluIds: string[]) {
   await verifierProf()
   const admin = createAdminClient()
 
-  // Élèves ayant déposé pour cette semaine
+  // Inscriptions de la classe active (élève ↔ inscription 1:1 dans une classe)
+  const inscrits = await inscriptionsClasse(admin, classeId)
+  const inscriptionIds = inscrits.map(i => i.id)
+  if (inscriptionIds.length === 0) return { error: 'Aucun élève éligible', data: null }
+  const inscriptionParEleve = Object.fromEntries(inscrits.map(i => [i.eleve_id, i.id]))
+
+  // Élèves de cette classe ayant déposé pour cette semaine
   const { data: depots } = await admin
     .from('fragments_depots')
     .select('eleve_id')
     .eq('semaine_id', semaineId)
+    .in('inscription_id', inscriptionIds)
 
   const eligibles = (depots ?? [])
     .map(d => d.eleve_id as string)
@@ -457,12 +497,12 @@ export async function tirerOrateur(semaineId: string, excluIds: string[]) {
 
   if (eligibles.length === 0) return { error: 'Aucun élève éligible', data: null }
 
-  // Nombre de présentations déjà faites (statut = 'presente')
+  // Nombre de présentations déjà faites dans cette classe (statut = 'presente')
   const { data: presentationsPassees } = await admin
     .from('fragments_presentations')
     .select('eleve_id')
     .eq('statut', 'presente')
-    .in('eleve_id', eligibles)
+    .in('inscription_id', inscriptionIds)
 
   const comptes: Record<string, number> = {}
   for (const p of presentationsPassees ?? []) {
@@ -479,10 +519,10 @@ export async function tirerOrateur(semaineId: string, excluIds: string[]) {
     if (r <= 0) { gagnantId = eligibles[i]; break }
   }
 
-  // Enregistrer le tirage
+  // Enregistrer le tirage (scopé par inscription)
   const { data: presentation, error } = await admin
     .from('fragments_presentations')
-    .insert({ eleve_id: gagnantId, semaine_id: semaineId, statut: 'tire' })
+    .insert({ eleve_id: gagnantId, inscription_id: inscriptionParEleve[gagnantId], semaine_id: semaineId, statut: 'tire' })
     .select('id')
     .single()
 

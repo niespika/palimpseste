@@ -41,15 +41,12 @@ export default function LigneEleve({ eleve }: { eleve: EleveAvecEmail }) {
     if (resultat?.error) { setMessage(resultat.error); setChargement(false) }
   }
 
-  const modulesNoms = eleve.modules_assignes
-    .map(a => a.modules?.nom)
-    .filter(Boolean)
-    .join(', ')
+  const classesNoms = eleve.classes.map(c => c.nom).join(', ')
 
   if (modeEdition) {
     return (
       <tr className="bg-stone-50">
-        <td colSpan={5} className="px-4 py-3">
+        <td colSpan={4} className="px-4 py-3">
           <form onSubmit={handleModifier} className="flex flex-wrap gap-3 items-end">
             <div>
               <label className="block text-xs text-stone-500 mb-1">Prénom / pseudonyme</label>
@@ -60,15 +57,7 @@ export default function LigneEleve({ eleve }: { eleve: EleveAvecEmail }) {
                 className="px-2 py-1.5 border border-stone-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 text-stone-900"
               />
             </div>
-            <div>
-              <label className="block text-xs text-stone-500 mb-1">Classe</label>
-              <input
-                name="classe"
-                defaultValue={eleve.classe ?? ''}
-                className="px-2 py-1.5 border border-stone-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 text-stone-900"
-                placeholder="Ex. : Terminale HLP"
-              />
-            </div>
+            <p className="text-xs text-stone-400 self-end mb-2">L&apos;inscription en classe se gère dans l&apos;onglet Classes.</p>
             {message && <p className="text-red-600 text-sm">{message}</p>}
             <button
               type="submit"
@@ -93,7 +82,7 @@ export default function LigneEleve({ eleve }: { eleve: EleveAvecEmail }) {
   if (modeReset) {
     return (
       <tr className="bg-stone-50">
-        <td colSpan={5} className="px-4 py-3">
+        <td colSpan={4} className="px-4 py-3">
           <form onSubmit={handleReset} className="flex flex-wrap gap-3 items-end">
             <div>
               <label className="block text-xs text-stone-500 mb-1">
@@ -132,9 +121,8 @@ export default function LigneEleve({ eleve }: { eleve: EleveAvecEmail }) {
   return (
     <tr className="border-t border-stone-100 hover:bg-stone-50">
       <td className="px-4 py-3 text-sm text-stone-900 font-medium">{eleve.display_name}</td>
-      <td className="px-4 py-3 text-sm text-stone-600">{eleve.classe ?? '—'}</td>
+      <td className="px-4 py-3 text-sm text-stone-600">{classesNoms || '—'}</td>
       <td className="px-4 py-3 text-sm text-stone-600">{eleve.email}</td>
-      <td className="px-4 py-3 text-sm text-stone-500">{modulesNoms || '—'}</td>
       <td className="px-4 py-3 text-sm">
         <div className="flex gap-2">
           <button

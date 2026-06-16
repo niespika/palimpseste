@@ -17,14 +17,26 @@ export interface Module {
   created_at: string
 }
 
-export interface ModuleAssignment {
+export interface Classe {
+  id: string
+  nom: string
+  niveau: string | null
+  filiere: string | null
+  annee_scolaire: string
+  statut: 'active' | 'fermee'
+  created_at: string
+}
+
+export interface Inscription {
   id: string
   eleve_id: string
-  module_id: string
+  classe_id: string
+  statut: 'active' | 'retiree'
   created_at: string
 }
 
 export interface EleveAvecEmail extends Profile {
   email: string
-  modules_assignes: { module_id: string; modules: { nom: string } }[]
+  // Classes (via inscriptions actives) auxquelles l'élève appartient.
+  classes: { id: string; nom: string }[]
 }

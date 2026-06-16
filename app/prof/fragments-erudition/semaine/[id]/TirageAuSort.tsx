@@ -19,11 +19,12 @@ interface PresentationAvecEleve extends FragmentPresentation {
 
 interface Props {
   semaineId: string
+  classeId: string
   eligibles: EleveEligible[]
   presentations: PresentationAvecEleve[]
 }
 
-export default function TirageAuSort({ semaineId, eligibles, presentations }: Props) {
+export default function TirageAuSort({ semaineId, classeId, eligibles, presentations }: Props) {
   const router = useRouter()
   const [excluIds, setExcluIds] = useState<Set<string>>(new Set())
   const [animation, setAnimation] = useState(false)
@@ -51,7 +52,7 @@ export default function TirageAuSort({ semaineId, eligibles, presentations }: Pr
     setErreur(null)
     setChargement(true)
 
-    const res = await tirerOrateur(semaineId, Array.from(excluIds))
+    const res = await tirerOrateur(semaineId, classeId, Array.from(excluIds))
     if (res.error || !res.data) {
       setErreur(res.error ?? 'Erreur inconnue')
       setChargement(false)

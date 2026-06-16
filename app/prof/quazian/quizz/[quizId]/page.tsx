@@ -19,11 +19,16 @@ export default async function QuizzDetailPage({
 
   const { data: quizz } = await supabase
     .from('quazian_quizzes')
-    .select('id, statut, classe_id, scope_unites, duree_min, nb_questions, lance_at, ferme_at, moyenne_cohorte, ecart_type_cohorte')
+    .select('id, statut, classe_id, classes(nom), scope_unites, duree_min, nb_questions, lance_at, ferme_at, moyenne_cohorte, ecart_type_cohorte')
     .eq('id', quizId)
     .single()
 
   if (!quizz) notFound()
+
+  const classeNom = (() => {
+    const c = Array.isArray(quizz.classes) ? quizz.classes[0] : quizz.classes
+    return c ? (c as { nom: string }).nom : null
+  })()
 
   const { data: questions } = await supabase
     .from('quazian_questions')
@@ -52,7 +57,7 @@ export default async function QuizzDetailPage({
             ← Quizz
           </Link>
           <h3 className="text-lg font-serif text-stone-900 mt-2">
-            {quizz.classe_id ?? 'Quizz'} — {total} questions
+            {classeNom ?? 'Quizz'} — {total} questions
           </h3>
           <p className="text-sm text-stone-400 mt-0.5">
             {(quizz.scope_unites as string[]).map((id) => labelsMap[id] ?? id).join(' · ')}

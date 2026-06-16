@@ -1,5 +1,6 @@
 import Link from 'next/link'
 import { createClient } from '@/utils/supabase/server'
+import { moduleIdsAccessibles } from '@/utils/acces'
 
 type ModuleInfo = {
   id: string
@@ -55,14 +56,17 @@ export default async function TableauDeBordEleve() {
     .eq('id', user!.id)
     .single()
 
-  const { data: assignments } = await supabase
-    .from('module_assignments')
-    .select(`module_id, modules(id, slug, nom, description, actif)`)
-    .eq('eleve_id', user!.id)
+  // Accès dérivé : modules des classes où l'élève est inscrit (union).
+  const idsAccessibles = await moduleIdsAccessibles(supabase, user!.id)
 
-  const modulesActifs: ModuleInfo[] = (assignments ?? [])
-    .map(a => a.modules as unknown as ModuleInfo | ModuleInfo[] | null)
-    .map(m => Array.isArray(m) ? m[0] : m)
+  const { data: mods } = idsAccessibles.size > 0
+    ? await supabase
+        .from('modules')
+        .select('id, slug, nom, description, actif')
+        .in('id', [...idsAccessibles])
+    : { data: [] as ModuleInfo[] }
+
+  const modulesActifs: ModuleInfo[] = (mods ?? [])
     .filter((m): m is ModuleInfo =>
       m !== null && m !== undefined && m.actif === true && !MODULES_MASQUES_ELEVE.includes(m.slug))
 

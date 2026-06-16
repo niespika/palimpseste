@@ -31,38 +31,4 @@ export async function toggleModuleActif(formData: FormData) {
   return { success: true }
 }
 
-export async function sauvegarderAssignments(formData: FormData) {
-  const supabase = await verifierProf()
-  const moduleId = formData.get('moduleId') as string
-  const eleveIdsCoches = formData.getAll('eleveIds') as string[]
-
-  // Récupérer les assignments existants pour ce module
-  const { data: existants } = await supabase
-    .from('module_assignments')
-    .select('id, eleve_id')
-    .eq('module_id', moduleId)
-
-  const existantsIds = existants?.map(a => a.eleve_id) ?? []
-
-  // Ajouter les nouveaux
-  const aAjouter = eleveIdsCoches.filter(id => !existantsIds.includes(id))
-  if (aAjouter.length > 0) {
-    await supabase.from('module_assignments').insert(
-      aAjouter.map(eleveId => ({ eleve_id: eleveId, module_id: moduleId }))
-    )
-  }
-
-  // Supprimer ceux décochés
-  const aSupprimer = existantsIds.filter(id => !eleveIdsCoches.includes(id))
-  if (aSupprimer.length > 0) {
-    await supabase
-      .from('module_assignments')
-      .delete()
-      .eq('module_id', moduleId)
-      .in('eleve_id', aSupprimer)
-  }
-
-  revalidatePath('/prof/modules')
-  revalidatePath('/prof/eleves')
-  return { success: true }
-}
+// L'accès aux modules se gère désormais par classe (voir app/prof/classes).

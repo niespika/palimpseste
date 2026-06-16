@@ -21,12 +21,13 @@ async function verifierProf() {
 export async function creerQuizz(formData: FormData) {
   const { supabase } = await verifierProf()
 
-  const classe = (formData.get('classe') as string) || null
+  const classeId = (formData.get('classe_id') as string) || null
   const dureeMin = parseInt(formData.get('duree_min') as string) || 25
   const nbQuestions = parseInt(formData.get('nb_questions') as string) || 20
   const scopeRaw = formData.getAll('scope_unites') as string[]
 
   if (scopeRaw.length === 0) return { error: 'Sélectionne au moins une unité.' }
+  if (!classeId) return { error: 'Sélectionne une classe.' }
 
   // Récupérer les cartes validées des unités choisies (partagées uniquement)
   const { data: cartes } = await supabase
@@ -47,7 +48,7 @@ export async function creerQuizz(formData: FormData) {
   const { data: quizz, error: errQuizz } = await supabase
     .from('quazian_quizzes')
     .insert({
-      classe_id: classe,
+      classe_id: classeId,
       statut: 'brouillon',
       scope_unites: scopeRaw,
       duree_min: dureeMin,

@@ -29,11 +29,13 @@ export default async function ValidationDetailPage({
 
   const [{ data: eleve }, { data: session }] = await Promise.all([
     admin.from('profiles').select('display_name').eq('id', travail.eleve_id).single(),
-    admin.from('codex_sessions').select('classe_id, scriptorium_unites(label)').eq('id', travail.session_id).single(),
+    admin.from('codex_sessions').select('classe_id, scriptorium_unites(label), classes(nom)').eq('id', travail.session_id).single(),
   ])
 
   const u = session?.scriptorium_unites as { label: string } | { label: string }[] | null
   const uniteLabel = Array.isArray(u) ? u[0]?.label ?? '' : u?.label ?? ''
+  const c = session?.classes as { nom: string } | { nom: string }[] | null
+  const classeNom = Array.isArray(c) ? c[0]?.nom ?? null : c?.nom ?? null
 
   const retour = (travail.retour_critique as RetourCritique | null) ?? {
     erreurs_corrections: [],
@@ -51,7 +53,7 @@ export default async function ValidationDetailPage({
         </Link>
         <h3 className="text-lg font-serif text-stone-900 mt-2">{eleve?.display_name ?? '—'}</h3>
         <p className="text-sm text-stone-400">
-          {uniteLabel}{session?.classe_id ? ` · ${session.classe_id}` : ''}
+          {uniteLabel}{classeNom ? ` · ${classeNom}` : ''}
           {travail.statut_validation === 'valide' && <span className="ml-2 text-green-600">· validé</span>}
         </p>
       </div>

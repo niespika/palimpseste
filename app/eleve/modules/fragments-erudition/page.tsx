@@ -2,6 +2,8 @@ import { notFound } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/utils/supabase/server'
 import { createAdminClient } from '@/utils/supabase/admin'
+import { inscriptionsModuleEleve } from '@/utils/acces'
+import SelecteurContexteClasse from './SelecteurContexteClasse'
 import FormulaireDepot from './FormulaireDepot'
 import AnalysePubliee from './AnalysePubliee'
 import GraphiqueProgression from '@/components/fragments/GraphiqueProgression'
@@ -22,17 +24,46 @@ function formatDateLimite(dateStr: string) {
   })
 }
 
-export default async function PageFragments() {
+export default async function PageFragments({ searchParams }: { searchParams: Promise<{ ctx?: string }> }) {
   const supabase = await createClient()
   const admin = createAdminClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) notFound()
 
+  // Module + inscriptions de l'élève sur les classes ayant ce module.
+  // Un élève bi-classe a plusieurs inscriptions → un flux de fragments par classe.
+  const { data: moduleData } = await supabase
+    .from('modules')
+    .select('id')
+    .eq('slug', 'fragments-erudition')
+    .maybeSingle()
+  const inscriptions = moduleData
+    ? await inscriptionsModuleEleve(supabase, user.id, moduleData.id)
+    : []
+
+  if (inscriptions.length === 0) {
+    return (
+      <div className="space-y-6 pb-8">
+        <div className="flex items-center gap-2">
+          <Link href="/eleve" className="text-sm text-stone-500 hover:text-stone-700">← Retour</Link>
+        </div>
+        <div className="bg-white border border-stone-200 rounded-xl p-6 text-center text-stone-500 text-sm">
+          Ce module n'est pas disponible pour ton compte.
+        </div>
+      </div>
+    )
+  }
+
+  // Contexte de classe actif (sélecteur affiché si plusieurs inscriptions)
+  const { ctx } = await searchParams
+  const inscriptionActive = inscriptions.find(i => i.id === ctx) ?? inscriptions[0]
+  const inscriptionId = inscriptionActive.id
+
   // Thème (inclut essai_actif et question pour l'essai)
   const { data: theme } = await supabase
     .from('fragments_themes')
     .select('theme, description, essai_actif, question')
-    .eq('eleve_id', user.id)
+    .eq('inscription_id', inscriptionId)
     .maybeSingle()
 
   // Semaine ouverte
@@ -49,7 +80,7 @@ export default async function PageFragments() {
     ? await supabase
         .from('fragments_depots')
         .select('id, statut, commentaire_eleve, created_at, fragments_photos(id, storage_path, ordre)')
-        .eq('eleve_id', user.id)
+        .eq('inscription_id', inscriptionId)
         .eq('semaine_id', semaine.id)
         .maybeSingle()
     : { data: null }
@@ -81,7 +112,7 @@ export default async function PageFragments() {
       semaine:fragments_semaines(id, numero, titre, date_debut, date_limite, ouverte, created_at),
       photos:fragments_photos(id, depot_id, storage_path, ordre, created_at)
     `)
-    .eq('eleve_id', user.id)
+    .eq('inscription_id', inscriptionId)
     .order('created_at', { ascending: false })
 
   const depotsPasses = (historique ?? []).filter(d =>
@@ -124,7 +155,7 @@ export default async function PageFragments() {
   const { data: presentationsAvecOral } = await admin
     .from('fragments_presentations')
     .select('id, semaine_id, statut')
-    .eq('eleve_id', user.id)
+    .eq('inscription_id', inscriptionId)
 
   const presentationIds = (presentationsAvecOral ?? []).map(p => p.id)
   const { data: oraux } = presentationIds.length > 0
@@ -184,28 +215,34 @@ export default async function PageFragments() {
         .from('fragments_essais')
         .select('id')
         .eq('epreuve_id', epreuveOuverte.id)
-        .eq('eleve_id', user.id)
+        .eq('inscription_id', inscriptionId)
         .maybeSingle()
     : { data: null }
 
-  // Analyse publiée de l'essai (toutes épreuves, la plus récente publiée)
-  const { data: analyseEssaiPubliee } = essaiActif
+  // Essais de cette inscription (pour scoper les analyses d'essai par parent)
+  const { data: essaisInscription } = essaiActif
+    ? await admin.from('fragments_essais').select('id').eq('inscription_id', inscriptionId)
+    : { data: [] }
+  const essaiIdsInscription = (essaisInscription ?? []).map(e => e.id)
+
+  // Analyse publiée de l'essai (la plus récente publiée de cette inscription)
+  const { data: analyseEssaiPubliee } = essaiActif && essaiIdsInscription.length > 0
     ? await admin
         .from('essais_analyses')
         .select('*')
-        .eq('eleve_id', user.id)
+        .in('essai_id', essaiIdsInscription)
         .eq('statut', 'publiee')
         .order('publiee_at', { ascending: false })
         .limit(1)
         .maybeSingle()
     : { data: null }
 
-  // Analyse en cours (statut en_cours pour l'essai actuel)
+  // Analyse en cours pour l'essai actuel
   const { data: analyseEssaiEnCours } = essaiEleve
     ? await admin
         .from('essais_analyses')
         .select('statut')
-        .eq('eleve_id', user.id)
+        .eq('essai_id', essaiEleve.id)
         .in('statut', ['en_cours'])
         .maybeSingle()
     : { data: null }
@@ -215,7 +252,7 @@ export default async function PageFragments() {
   const { data: synthesePubliee } = await admin
     .from('fragments_syntheses')
     .select('*')
-    .eq('eleve_id', user.id)
+    .eq('inscription_id', inscriptionId)
     .eq('statut', 'publiee')
     .order('publiee_at', { ascending: false })
     .limit(1)
@@ -232,7 +269,7 @@ export default async function PageFragments() {
   const { data: tousDepots } = await admin
     .from('fragments_depots')
     .select('id, semaine_id, statut')
-    .eq('eleve_id', user.id)
+    .eq('inscription_id', inscriptionId)
 
   const tousDepotParSemaine = Object.fromEntries(
     (tousDepots ?? []).map(d => [d.semaine_id, d])
@@ -320,7 +357,7 @@ export default async function PageFragments() {
   const { data: mesPresen } = await admin
     .from('fragments_presentations')
     .select('id, semaine_id, statut')
-    .eq('eleve_id', user.id)
+    .eq('inscription_id', inscriptionId)
     .eq('statut', 'presente')
 
   return (
@@ -328,6 +365,8 @@ export default async function PageFragments() {
       <div className="flex items-center gap-2">
         <Link href="/eleve" className="text-sm text-stone-500 hover:text-stone-700">← Retour</Link>
       </div>
+
+      <SelecteurContexteClasse inscriptions={inscriptions} inscriptionActiveId={inscriptionId} />
 
       <div>
         <h2 className="text-xl font-serif text-stone-900 mb-1">Fragments d'érudition</h2>
@@ -388,6 +427,7 @@ export default async function PageFragments() {
             <FormulaireDepot
               semaineId={semaine.id}
               eleveId={user.id}
+              inscriptionId={inscriptionId}
               depotExistant={!!depotActuel}
             />
 
@@ -528,11 +568,12 @@ export default async function PageFragments() {
                       <span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full">Photos déposées</span>
                       <span className="text-xs text-stone-500">Ton professeur analysera ton essai bientôt.</span>
                     </div>
-                    <EssaiDepot epreuveId={epreuveOuverte.id} essaiExistantId={essaiEleve.id} analyseEnCours={false} />
+                    <EssaiDepot epreuveId={epreuveOuverte.id} inscriptionId={inscriptionId} essaiExistantId={essaiEleve.id} analyseEnCours={false} />
                   </div>
                 ) : (
                   <EssaiDepot
                     epreuveId={epreuveOuverte.id}
+                    inscriptionId={inscriptionId}
                     essaiExistantId={essaiEleve?.id ?? null}
                     analyseEnCours={!!analyseEssaiEnCours}
                   />

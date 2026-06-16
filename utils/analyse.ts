@@ -136,26 +136,27 @@ export async function lancerAnalyse(
       return
     }
 
-    // Thème de l'élève
+    // Dépôt courant : inscription (scoping élève × classe) + numéro de semaine
+    const { data: depot } = await admin
+      .from('fragments_depots')
+      .select('inscription_id, semaine_id, fragments_semaines(numero)')
+      .eq('id', depotId)
+      .single()
+    const inscriptionId = depot?.inscription_id as string | null
+    const numeroSemaine = (depot?.fragments_semaines as unknown as { numero: number } | null)?.numero ?? 1
+
+    // Thème de l'inscription
     const { data: theme } = await admin
       .from('fragments_themes')
       .select('theme, description')
-      .eq('eleve_id', eleveId)
+      .eq('inscription_id', inscriptionId)
       .maybeSingle()
 
-    // Numéro de semaine
-    const { data: depot } = await admin
-      .from('fragments_depots')
-      .select('semaine_id, fragments_semaines(numero)')
-      .eq('id', depotId)
-      .single()
-    const numeroSemaine = (depot?.fragments_semaines as unknown as { numero: number } | null)?.numero ?? 1
-
-    // Historique : récupérer tous les dépôts de l'élève
+    // Historique : tous les dépôts de CETTE inscription (pas des autres classes)
     const { data: tousDepots } = await admin
       .from('fragments_depots')
       .select('id, fragments_semaines(numero)')
-      .eq('eleve_id', eleveId)
+      .eq('inscription_id', inscriptionId)
 
     const depotIds = (tousDepots ?? []).map(d => d.id)
     const semaineNumeroParDepot: Record<string, number> = {}

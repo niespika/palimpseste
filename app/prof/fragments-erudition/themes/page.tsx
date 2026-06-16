@@ -1,4 +1,6 @@
 import { createClient } from '@/utils/supabase/server'
+import { inscriptionsClasse } from '@/utils/acces'
+import { classeFragmentsActive } from '../contexte-classe'
 import LigneTheme from './LigneTheme'
 import BoutonActiverClasse from './BoutonActiverClasse'
 import type { Profile } from '@/types'
@@ -6,22 +8,22 @@ import type { FragmentTheme } from '@/types/fragments'
 
 export default async function PageThemes() {
   const supabase = await createClient()
+  const { classe } = await classeFragmentsActive(supabase)
 
-  // Élèves qui ont accès au module fragments-erudition
-  const { data: moduleData } = await supabase
-    .from('modules')
-    .select('id')
-    .eq('slug', 'fragments-erudition')
-    .single()
+  if (!classe) {
+    return (
+      <div className="bg-white border border-stone-200 rounded-xl p-8 text-center text-stone-500 text-sm">
+        Aucune classe n'a accès à ce module.<br />
+        Crée une classe et donne-lui le module depuis <strong>Classes</strong> / <strong>Modules</strong>.
+      </div>
+    )
+  }
 
-  const { data: assignments } = moduleData
-    ? await supabase
-        .from('module_assignments')
-        .select('eleve_id')
-        .eq('module_id', moduleData.id)
-    : { data: [] }
-
-  const eleveIds = (assignments ?? []).map(a => a.eleve_id)
+  // Inscriptions de la classe active (1 inscription par élève dans cette classe)
+  const inscrits = await inscriptionsClasse(supabase, classe.id)
+  const eleveIds = inscrits.map((i) => i.eleve_id)
+  const inscriptionParEleve = Object.fromEntries(inscrits.map((i) => [i.eleve_id, i.id]))
+  const inscriptionIds = inscrits.map((i) => i.id)
 
   const { data: eleves } = eleveIds.length > 0
     ? await supabase
@@ -32,33 +34,30 @@ export default async function PageThemes() {
         .order('display_name')
     : { data: [] }
 
-  const { data: themes } = await supabase
-    .from('fragments_themes')
-    .select('*')
-    .in('eleve_id', eleveIds.length > 0 ? eleveIds : ['none'])
+  const { data: themes } = inscriptionIds.length > 0
+    ? await supabase
+        .from('fragments_themes')
+        .select('*')
+        .in('inscription_id', inscriptionIds)
+    : { data: [] }
 
-  const themeParEleve = Object.fromEntries(
-    (themes ?? []).map(t => [t.eleve_id, t])
+  const themeParInscription = Object.fromEntries(
+    (themes ?? []).map((t) => [t.inscription_id, t])
   )
-
-  // Classes disponibles pour activation en lot
-  const classes = [...new Set((eleves ?? []).map(e => (e as Profile).classe).filter(Boolean) as string[])].sort()
 
   return (
     <div className="space-y-4">
-      {classes.length > 0 && (
-        <div className="bg-white border border-stone-200 rounded-xl px-4 py-3 flex flex-wrap items-center gap-3">
-          <span className="text-xs font-medium text-stone-500 uppercase tracking-wide">Activer l'essai par classe</span>
-          {classes.map(c => (
-            <BoutonActiverClasse key={c} classe={c} />
-          ))}
-        </div>
-      )}
+      <div className="bg-white border border-stone-200 rounded-xl px-4 py-3 flex flex-wrap items-center gap-3">
+        <span className="text-xs font-medium text-stone-500 uppercase tracking-wide">
+          Essai final — {classe.nom}
+        </span>
+        <BoutonActiverClasse classeId={classe.id} classeNom={classe.nom} />
+      </div>
 
       {!eleves || eleves.length === 0 ? (
         <div className="bg-white border border-stone-200 rounded-xl p-8 text-center text-stone-500 text-sm">
-          Aucun élève n'a accès à ce module pour l'instant.<br />
-          Assigne-leur le module depuis la section <strong>Modules</strong>.
+          Aucun élève inscrit dans cette classe.<br />
+          Inscris des élèves depuis <strong>Classes</strong>.
         </div>
       ) : (
         <div className="bg-white border border-stone-200 rounded-xl overflow-hidden">
@@ -72,11 +71,12 @@ export default async function PageThemes() {
               </tr>
             </thead>
             <tbody>
-              {(eleves as Profile[]).map(eleve => (
+              {(eleves as Profile[]).map((eleve) => (
                 <LigneTheme
                   key={eleve.id}
                   eleve={eleve}
-                  theme={(themeParEleve[eleve.id] as FragmentTheme) ?? null}
+                  inscriptionId={inscriptionParEleve[eleve.id]}
+                  theme={(themeParInscription[inscriptionParEleve[eleve.id]] as FragmentTheme) ?? null}
                 />
               ))}
             </tbody>

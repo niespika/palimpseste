@@ -158,7 +158,7 @@ export async function analyserEssai(essaiId: string): Promise<void> {
 
   const { data: essai } = await admin
     .from('fragments_essais')
-    .select('id, eleve_id, epreuve_id')
+    .select('id, eleve_id, inscription_id, epreuve_id')
     .eq('id', essaiId)
     .single()
 
@@ -240,18 +240,18 @@ export async function analyserEssai(essaiId: string): Promise<void> {
       .eq('id', essai.epreuve_id)
       .single()
 
-    // Thème / question
+    // Thème / question de l'inscription
     const { data: theme } = await admin
       .from('fragments_themes')
       .select('theme, description, question')
-      .eq('eleve_id', essai.eleve_id)
+      .eq('inscription_id', essai.inscription_id)
       .maybeSingle()
 
-    // Dépôts de l'élève
+    // Dépôts de CETTE inscription
     const { data: depots } = await admin
       .from('fragments_depots')
       .select('id, fragments_semaines(numero)')
-      .eq('eleve_id', essai.eleve_id)
+      .eq('inscription_id', essai.inscription_id)
 
     const depotIds = (depots ?? []).map(d => d.id)
     const semaineParDepot: Record<string, number> = {}
@@ -283,11 +283,11 @@ export async function analyserEssai(essaiId: string): Promise<void> {
           .order('created_at')
       : { data: [] }
 
-    // Analyse orale publiée
+    // Analyse orale publiée (même inscription)
     const { data: presentations } = await admin
       .from('fragments_presentations')
       .select('id')
-      .eq('eleve_id', essai.eleve_id)
+      .eq('inscription_id', essai.inscription_id)
 
     const presIds = (presentations ?? []).map(p => p.id)
     let analyseOrale = null
