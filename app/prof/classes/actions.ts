@@ -2,6 +2,8 @@
 
 import { revalidatePath } from 'next/cache'
 import { createClient } from '@/utils/supabase/server'
+import { createAdminClient } from '@/utils/supabase/admin'
+import { collecterCheminsInscriptions, retirerFichiers } from '@/utils/effacement'
 
 async function verifierProf() {
   const supabase = await createClient()
@@ -34,14 +36,46 @@ export async function creerClasse(formData: FormData) {
   return { success: true }
 }
 
-export async function supprimerClasse(formData: FormData) {
-  // NB : le Lot 2 durcira l'effacement (confirmations multiples, purge propre du
-  // travail + nettoyage Scriptorium). Ici, suppression simple de l'entité.
+// Effacement DÉFINITIF d'une classe (Lot 2). Friction côté UI (3 étapes) + ici
+// défense en profondeur : le nom retapé doit correspondre. Purge complète :
+// travail élève scopé SUPPRIMÉ, contenu prof DÉTACHÉ, comptes intacts.
+export async function effacerClasse(formData: FormData) {
+  await verifierProf()
+  const admin = createAdminClient()
+  const id = formData.get('id') as string
+  const confirmation = ((formData.get('confirmation') as string) ?? '').trim()
+
+  const { data: classe } = await admin.from('classes').select('id, nom').eq('id', id).single()
+  if (!classe) return { error: 'Classe introuvable.' }
+  if (confirmation !== classe.nom) return { error: 'Le nom saisi ne correspond pas à la classe.' }
+
+  // Inscriptions de la classe (tous statuts)
+  const { data: inscriptions } = await admin
+    .from('inscriptions').select('id').eq('classe_id', id)
+  const inscriptionIds = (inscriptions ?? []).map((i) => i.id as string)
+
+  // 1. Collecter les chemins de stockage AVANT la suppression des lignes
+  const chemins = await collecterCheminsInscriptions(admin, inscriptionIds)
+
+  // 2. Effacement DB atomique (transaction Postgres)
+  const { error } = await admin.rpc('effacer_classe', { p_classe_id: id })
+  if (error) return { error: error.message }
+
+  // 3. Purge du stockage (après succès DB)
+  await retirerFichiers(admin, chemins)
+
+  revalidatePath('/prof/classes')
+  revalidatePath('/prof')
+  return { success: true }
+}
+
+// Écartement persistant d'un rappel de fin d'année (« cette classe continue »).
+export async function ecarterRappelClasse(formData: FormData) {
   const supabase = await verifierProf()
   const id = formData.get('id') as string
-  const { error } = await supabase.from('classes').delete().eq('id', id)
+  const { error } = await supabase.from('classes').update({ rappel_ecarte: true }).eq('id', id)
   if (error) return { error: error.message }
-  revalidatePath('/prof/classes')
+  revalidatePath('/prof')
   return { success: true }
 }
 
@@ -64,20 +98,36 @@ export async function inscrireEleve(formData: FormData) {
   return { success: true }
 }
 
+// Retrait DUR d'un élève (décision Lot 2) : supprime son inscription + tout son
+// travail scopé sur CETTE classe (+ notes de semestre, journal, fichiers), sans
+// toucher au compte ni à ses autres classes.
 export async function retirerEleve(formData: FormData) {
-  // NB : le Lot 2 tranchera « retrait du roster » vs « purge du travail ».
-  // Ici on supprime l'inscription (le travail rattaché part en cascade côté SQL).
-  const supabase = await verifierProf()
+  await verifierProf()
+  const admin = createAdminClient()
   const classeId = formData.get('classeId') as string
   const eleveId = formData.get('eleveId') as string
 
-  const { error } = await supabase
+  const { data: insc } = await admin
     .from('inscriptions')
-    .delete()
+    .select('id')
     .eq('classe_id', classeId)
     .eq('eleve_id', eleveId)
+    .maybeSingle()
+  if (!insc) {
+    revalidatePath('/prof/classes')
+    return { success: true }
+  }
 
+  // 1. Collecter les chemins de stockage avant la suppression
+  const chemins = await collecterCheminsInscriptions(admin, [insc.id as string])
+
+  // 2. Retrait DB atomique (cascade le travail scopé sur cette inscription)
+  const { error } = await admin.rpc('retirer_inscription', { p_inscription_id: insc.id })
   if (error) return { error: error.message }
+
+  // 3. Purge du stockage
+  await retirerFichiers(admin, chemins)
+
   revalidatePath('/prof/classes')
   revalidatePath('/prof/eleves')
   return { success: true }

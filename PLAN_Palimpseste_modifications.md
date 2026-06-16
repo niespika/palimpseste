@@ -10,8 +10,9 @@ Triage de la liste brute en lots cohérents et séquencés. Chaque lot décrit l
 - **La classe est une entité, sélectionnée par menu déroulant.** Jamais en tapant un nom. Les classes sont créées en début d'année (fin août) ; tout rattachement (quizz, contenu, épreuve…) passe par un déroulant alimenté par ces classes.
 - **Portée par (élève × classe).** Un élève peut appartenir à 2 classes (ex. HLP + Philo tronc commun) et y produit un travail **distinct** (fragments différents en HLP et en philo). Les fragments / essais / stats sont rattachés au couple élève-classe, pas à l'élève seul.
 - **Accès au niveau classe.** On donne accès à un module à une **classe** ; tous ses élèves héritent du même accès. Un élève en 2 classes cumule les accès des deux.
-- **Notation en lettres.** Partout où une note / évaluation s'affiche (barème, graphes d'épreuve, parcours élève) : des **lettres**, pas des chiffres.
+- **Notation à deux niveaux.** L'**évaluation des sections / compétences** (Expression, Structure, etc.) se fait en **lettres** (échelle E-A, valeur 0-4 sous-jacente) — pour éviter que l'élève les additionne et parce que c'est moins brutal. La **note finale sur 20** reste **chiffrée** et n'existe que pour l'**oral, l'essai et la synthèse** de fin de semestre. Le barème (Lot 5.6) ne régit que l'échelle des sections.
 - **Prompt IA visible en Paramètres.** Chaque module qui appelle l'IA expose, dans son onglet Paramètres, le(s) prompt(s) utilisé(s). Même motif réutilisable.
+- **Semaine = calendrier unique.** Une seule notion de « semaine N » à travers la plateforme : Scriptorium, Fragments et Quazian référencent les **mêmes** semaines, jamais des systèmes parallèles.
 
 ---
 
@@ -103,7 +104,7 @@ Auditer le modèle actuel, puis garantir que :
 - **5.3 — Onglet « thèmes ».** Tuiles de classe, liste d'élèves déroulante avec leurs thèmes. **Supprimer** la distinction thème / question d'essai.
 - **5.4 — Onglet « épreuve ».** Assigner une épreuve à une ou plusieurs classes, choisir les dates (même épreuve, dates différentes si plusieurs classes). Tuiles de classe → liste des épreuves (nom, date, ouverte / fermée). Click → détail (existant) + « fermer le dépôt » (existant) + **graphes** : répartition des lettres et répartition des notes. *Le reste de l'onglet est bon.*
 - **5.5 — Onglet « semestre ».** **DIFFÉRÉ** (tests en cours de ton côté).
-- **5.6 — Onglet « paramètre ».** Tuiles (ou déroulant), pas le détail en permanence. Tuiles : **Barème** (chiffres → lettres), Prompt Évaluation Fragment, Prompt Évaluation Oral, Prompt Essai, Prompt Synthèse.
+- **5.6 — Onglet « paramètre ».** Tuiles (ou déroulant), pas le détail en permanence. Tuiles : **Barème** (échelle des sections en lettres E-A ; le /20 final reste chiffré), Prompt Évaluation Fragment, Prompt Évaluation Oral, Prompt Essai, Prompt Synthèse (synthèse de fin de semestre des fragments écrit + oral — **distincte de Codex**).
 
 **Fait quand :** la navigation fragments est cohérente (semestre → semaine → classe → élève), les graphes d'épreuve s'affichent en lettres, et les paramètres exposent barème + prompts sans tout dérouler.
 

@@ -2,7 +2,8 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { inscrireEleve, retirerEleve, definirModulesClasse, supprimerClasse } from './actions'
+import { inscrireEleve, retirerEleve, definirModulesClasse } from './actions'
+import ConfirmationEffacement from './ConfirmationEffacement'
 
 interface Props {
   classe: {
@@ -54,13 +55,6 @@ export function GestionClasse({ classe, inscrits, tousEleves, modules, moduleIds
     await action(retirerEleve, fd)
   }
 
-  async function handleSupprimer() {
-    if (!confirm(`Supprimer la classe « ${classe.nom} » ? (le travail rattaché sera effacé)`)) return
-    const fd = new FormData()
-    fd.append('id', classe.id)
-    await action(supprimerClasse, fd)
-  }
-
   async function handleSauverModules() {
     setPending(true)
     setMessageModules(null)
@@ -98,13 +92,7 @@ export function GestionClasse({ classe, inscrits, tousEleves, modules, moduleIds
           </div>
           {sousTitre && <p className="text-xs text-stone-400 mt-0.5">{sousTitre}</p>}
         </div>
-        <button
-          onClick={handleSupprimer}
-          disabled={pending}
-          className="text-xs text-red-400 hover:text-red-600 hover:bg-red-50 px-2 py-1 rounded-lg transition-colors disabled:opacity-50"
-        >
-          Supprimer
-        </button>
+        <ConfirmationEffacement classeId={classe.id} classeNom={classe.nom} nbEleves={inscrits.length} />
       </div>
 
       {/* Élèves inscrits */}

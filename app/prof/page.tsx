@@ -1,11 +1,14 @@
 import { createClient } from '@/utils/supabase/server'
+import { classesAvecRappel } from '@/utils/rappels'
+import RappelsClasses from './RappelsClasses'
 
 export default async function ProfAccueil() {
   const supabase = await createClient()
 
-  const [{ count: nbEleves }, { data: modules }] = await Promise.all([
+  const [{ count: nbEleves }, { data: modules }, rappels] = await Promise.all([
     supabase.from('profiles').select('*', { count: 'exact', head: true }).eq('role', 'eleve'),
     supabase.from('modules').select('actif'),
+    classesAvecRappel(supabase),
   ])
 
   const nbModulesActifs = modules?.filter(m => m.actif).length ?? 0
@@ -14,6 +17,8 @@ export default async function ProfAccueil() {
   return (
     <div>
       <h2 className="text-xl font-serif text-stone-900 mb-6">Tableau de bord</h2>
+
+      <RappelsClasses classes={rappels} />
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-8">
         <div className="bg-white rounded-xl border border-stone-200 p-6">
