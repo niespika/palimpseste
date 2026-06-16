@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { Fragment, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/utils/supabase/client'
@@ -267,8 +267,8 @@ export default function TableauEpreuve({ epreuve, eleves, essaiParEleve, analyse
                 const statutInfo = analyse ? STATUT_LABELS[analyse.statut] : null
 
                 return (
-                  <>
-                    <tr key={eleve.id} className="border-t border-stone-100 hover:bg-stone-50">
+                  <Fragment key={eleve.inscription_id}>
+                    <tr className="border-t border-stone-100 hover:bg-stone-50">
                       <td className="px-4 py-2.5 font-medium text-stone-900 whitespace-nowrap">
                         <Link href={`/prof/fragments-erudition/eleve/${eleve.id}`} className="hover:text-blue-700 hover:underline">
                           {eleve.display_name}
@@ -318,7 +318,7 @@ export default function TableauEpreuve({ epreuve, eleves, essaiParEleve, analyse
                       </td>
                     </tr>
                     {depotPourEleve === eleve.id && (
-                      <tr key={`form-${eleve.id}`} className="border-t border-stone-100 bg-stone-50">
+                      <tr className="border-t border-stone-100 bg-stone-50">
                         <td colSpan={9} className="px-4 py-3">
                           <DepotProfForm
                             epreuveId={epreuve.id}
@@ -328,7 +328,7 @@ export default function TableauEpreuve({ epreuve, eleves, essaiParEleve, analyse
                         </td>
                       </tr>
                     )}
-                  </>
+                  </Fragment>
                 )
               })}
             </tbody>

@@ -73,7 +73,7 @@ export default async function PageThemes() {
             <tbody>
               {(eleves as Profile[]).map((eleve) => (
                 <LigneTheme
-                  key={eleve.id}
+                  key={inscriptionParEleve[eleve.id]}
                   eleve={eleve}
                   inscriptionId={inscriptionParEleve[eleve.id]}
                   theme={(themeParInscription[inscriptionParEleve[eleve.id]] as FragmentTheme) ?? null}

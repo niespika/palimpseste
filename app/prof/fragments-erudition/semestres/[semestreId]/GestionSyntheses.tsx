@@ -218,7 +218,7 @@ export default function GestionSyntheses({ semestreId, eleves, syntheseParEleve 
           const estOuvert = ouvertPourEleve === eleve.id
 
           return (
-            <div key={eleve.id} className="bg-white border border-stone-200 rounded-xl overflow-hidden">
+            <div key={eleve.inscription_id} className="bg-white border border-stone-200 rounded-xl overflow-hidden">
               <div className="px-4 py-3 flex items-center justify-between gap-3">
                 <div>
                   <span className="font-medium text-stone-900 text-sm">{eleve.display_name}</span>
