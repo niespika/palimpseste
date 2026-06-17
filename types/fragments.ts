@@ -19,6 +19,7 @@ export interface FragmentSemaine {
   date_debut: string
   date_limite: string
   ouverte: boolean
+  semestre_id: string | null
   created_at: string
 }
 
@@ -208,6 +209,7 @@ export interface FragmentSemestre {
   label: string
   date_debut: string
   date_fin: string
+  courant: boolean
   created_at: string
 }
 

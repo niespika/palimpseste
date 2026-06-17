@@ -3,6 +3,7 @@ import Link from 'next/link'
 import { createClient } from '@/utils/supabase/server'
 import { createAdminClient } from '@/utils/supabase/admin'
 import FormulaireNouveauSemestre from './FormulaireNouveauSemestre'
+import BoutonCourant from './BoutonCourant'
 
 export default async function PageSemestres() {
   const supabase = await createClient()
@@ -14,7 +15,7 @@ export default async function PageSemestres() {
   const admin = createAdminClient()
   const { data: semestres } = await admin
     .from('fragments_semestres')
-    .select('id, label, date_debut, date_fin, created_at')
+    .select('id, label, date_debut, date_fin, courant, created_at')
     .order('date_debut', { ascending: false })
 
   // Compter les synthèses par semestre
@@ -51,27 +52,25 @@ export default async function PageSemestres() {
           {(semestres ?? []).map(s => {
             const stats = statsParSemestre[s.id] ?? { total: 0, publiees: 0 }
             return (
-              <Link
+              <div
                 key={s.id}
-                href={`/prof/fragments-erudition/semestres/${s.id}`}
-                className="block bg-white border border-stone-200 rounded-xl px-5 py-4 hover:bg-stone-50 transition-colors"
+                className="bg-white border border-stone-200 rounded-xl px-5 py-4 flex items-start justify-between gap-3"
               >
-                <div className="flex items-start justify-between gap-3">
-                  <div>
-                    <p className="font-medium text-stone-900">{s.label}</p>
-                    <p className="text-sm text-stone-500 mt-0.5">
-                      {new Date(s.date_debut).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })}
-                      {' → '}
-                      {new Date(s.date_fin).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' })}
-                    </p>
-                  </div>
+                <Link href={`/prof/fragments-erudition/semestres/${s.id}`} className="min-w-0 hover:opacity-80 transition-opacity">
+                  <p className="font-medium text-stone-900">{s.label}</p>
+                  <p className="text-sm text-stone-500 mt-0.5">
+                    {new Date(s.date_debut).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })}
+                    {' → '}
+                    {new Date(s.date_fin).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' })}
+                  </p>
+                </Link>
+                <div className="flex items-center gap-3 flex-shrink-0">
                   {stats.total > 0 && (
-                    <div className="text-right flex-shrink-0">
-                      <p className="text-xs text-stone-400">{stats.publiees}/{stats.total} publiées</p>
-                    </div>
+                    <p className="text-xs text-stone-400">{stats.publiees}/{stats.total} publiées</p>
                   )}
+                  <BoutonCourant semestreId={s.id} courant={!!s.courant} />
                 </div>
-              </Link>
+              </div>
             )
           })}
         </div>

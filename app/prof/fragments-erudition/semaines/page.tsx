@@ -1,6 +1,7 @@
 import { createClient } from '@/utils/supabase/server'
 import FormulaireSemaine from './FormulaireSemaine'
 import { toggleSemaineOuverte } from '../actions'
+import { semestreFragmentsActif } from '../contexte-semestre'
 import type { FragmentSemaine } from '@/types/fragments'
 
 async function toggleAction(formData: FormData): Promise<void> {
@@ -20,13 +21,23 @@ function formatDate(dateStr: string) {
 
 export default async function PageSemaines() {
   const supabase = await createClient()
-  const { data: semaines } = await supabase
-    .from('fragments_semaines')
-    .select('*')
-    .order('numero', { ascending: false })
+  const { semestre } = await semestreFragmentsActif(supabase)
+
+  const { data: semaines } = semestre
+    ? await supabase
+        .from('fragments_semaines')
+        .select('*')
+        .eq('semestre_id', semestre.id)
+        .order('numero', { ascending: false })
+    : { data: [] }
 
   return (
     <div className="space-y-6">
+      {semestre && (
+        <p className="text-sm text-stone-500">
+          Semestre courant du module : <span className="font-medium text-stone-700">{semestre.label}</span>
+        </p>
+      )}
       <FormulaireSemaine />
 
       {!semaines || semaines.length === 0 ? (

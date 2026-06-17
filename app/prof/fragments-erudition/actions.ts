@@ -8,6 +8,7 @@ import { createAdminClient } from '@/utils/supabase/admin'
 import { lancerAnalyse } from '@/utils/analyse'
 import { inscriptionsClasse } from '@/utils/acces'
 import { COOKIE_CLASSE_FRAGMENTS } from './contexte-classe'
+import { COOKIE_SEMESTRE_FRAGMENTS, semestreFragmentsActif } from './contexte-semestre'
 import type { StatutPiste } from '@/types/fragments'
 
 async function verifierProf() {
@@ -37,12 +38,41 @@ export async function definirClasseFragments(classeId: string) {
   return { success: true }
 }
 
+// Semestre consulté (cookie de contexte du module).
+export async function definirSemestreFragments(semestreId: string) {
+  await verifierProf()
+  const cookieStore = await cookies()
+  cookieStore.set(COOKIE_SEMESTRE_FRAGMENTS, semestreId, {
+    path: '/',
+    maxAge: 60 * 60 * 24 * 365,
+    sameSite: 'lax',
+  })
+  revalidatePath('/prof/fragments-erudition', 'layout')
+  return { success: true }
+}
+
+// Bascule du semestre « courant » (un seul à la fois).
+export async function definirSemestreCourant(semestreId: string) {
+  const supabase = await verifierProf()
+  await supabase.from('fragments_semestres').update({ courant: false }).eq('courant', true)
+  const { error } = await supabase.from('fragments_semestres').update({ courant: true }).eq('id', semestreId)
+  if (error) return { error: error.message }
+  revalidatePath('/prof/fragments-erudition', 'layout')
+  revalidatePath('/prof/fragments-erudition/semestres')
+  return { success: true }
+}
+
 export async function creerSemaine(formData: FormData) {
   const supabase = await verifierProf()
+
+  // Semaine créée dans le semestre courant (contexte), numérotée par semestre.
+  const { semestre } = await semestreFragmentsActif(supabase)
+  if (!semestre) return { error: 'Crée d\'abord un semestre.' }
 
   const { data: derniere } = await supabase
     .from('fragments_semaines')
     .select('numero')
+    .eq('semestre_id', semestre.id)
     .order('numero', { ascending: false })
     .limit(1)
     .maybeSingle()
@@ -51,6 +81,7 @@ export async function creerSemaine(formData: FormData) {
 
   const { error } = await supabase.from('fragments_semaines').insert({
     numero,
+    semestre_id: semestre.id,
     titre: (formData.get('titre') as string) || null,
     date_debut: formData.get('dateDebut') as string,
     date_limite: formData.get('dateLimite') as string,

@@ -1,5 +1,6 @@
 import Link from 'next/link'
 import { createClient } from '@/utils/supabase/server'
+import { semestreFragmentsActif } from './contexte-semestre'
 import type { FragmentSemaine } from '@/types/fragments'
 
 function formatDate(dateStr: string) {
@@ -13,11 +14,15 @@ function formatDate(dateStr: string) {
 
 export default async function PageFragmentsPof() {
   const supabase = await createClient()
+  const { semestre } = await semestreFragmentsActif(supabase)
 
-  const { data: semaines } = await supabase
-    .from('fragments_semaines')
-    .select('*')
-    .order('numero', { ascending: false })
+  const { data: semaines } = semestre
+    ? await supabase
+        .from('fragments_semaines')
+        .select('*')
+        .eq('semestre_id', semestre.id)
+        .order('numero', { ascending: false })
+    : { data: [] }
 
   return (
     <div>

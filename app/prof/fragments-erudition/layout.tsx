@@ -1,11 +1,16 @@
 import Link from 'next/link'
 import { createClient } from '@/utils/supabase/server'
 import { classeFragmentsActive } from './contexte-classe'
+import { semestreFragmentsActif } from './contexte-semestre'
 import SelecteurClasseFragments from './SelecteurClasseFragments'
+import SelecteurSemestre from './SelecteurSemestre'
 
 export default async function FragmentsLayout({ children }: { children: React.ReactNode }) {
   const supabase = await createClient()
-  const { classe, classes } = await classeFragmentsActive(supabase)
+  const [{ classe, classes }, { semestre, semestres }] = await Promise.all([
+    classeFragmentsActive(supabase),
+    semestreFragmentsActif(supabase),
+  ])
 
   return (
     <div>
@@ -16,7 +21,10 @@ export default async function FragmentsLayout({ children }: { children: React.Re
           </Link>
           <h2 className="text-xl font-serif text-stone-900 mt-2">Fragments d'érudition</h2>
         </div>
-        <SelecteurClasseFragments classes={classes} classeActiveId={classe?.id ?? null} />
+        <div className="flex items-center gap-4">
+          <SelecteurSemestre semestres={semestres} semestreActifId={semestre?.id ?? null} />
+          <SelecteurClasseFragments classes={classes} classeActiveId={classe?.id ?? null} />
+        </div>
       </div>
 
       <nav className="flex gap-1 mb-6 border-b border-stone-200 pb-0">

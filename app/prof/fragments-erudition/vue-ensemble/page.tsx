@@ -3,6 +3,7 @@ import { createClient } from '@/utils/supabase/server'
 import { createAdminClient } from '@/utils/supabase/admin'
 import { inscriptionsClasse } from '@/utils/acces'
 import { classeFragmentsActive } from '../contexte-classe'
+import { semestreFragmentsActif } from '../contexte-semestre'
 import TableauClasse from './TableauClasse'
 
 export default async function PageVueEnsemble() {
@@ -14,11 +15,15 @@ export default async function PageVueEnsemble() {
 
   const admin = createAdminClient()
 
-  // Toutes les semaines
-  const { data: semaines } = await admin
-    .from('fragments_semaines')
-    .select('id, numero, titre')
-    .order('numero')
+  // Semaines du semestre consulté
+  const { semestre } = await semestreFragmentsActif(supabase)
+  const { data: semaines } = semestre
+    ? await admin
+        .from('fragments_semaines')
+        .select('id, numero, titre')
+        .eq('semestre_id', semestre.id)
+        .order('numero')
+    : { data: [] }
 
   // Classe active → inscriptions (1 inscription par élève dans la classe)
   const { classe } = await classeFragmentsActive(supabase)
