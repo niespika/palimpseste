@@ -205,16 +205,23 @@ export default async function PageFragments({ searchParams }: { searchParams: Pr
   // ── Essai final ──────────────────────────────────────────────────────────
   const essaiActif = !!(theme as unknown as { essai_actif?: boolean })?.essai_actif
 
-  // Épreuve ouverte aux dépôts (la plus récente avec depots_ouverts=true)
-  const { data: epreuveOuverte } = essaiActif
+  // Épreuve ouverte aux dépôts pour LA CLASSE de l'élève (date + état propres à
+  // la classe, portés par la liaison épreuve × classe). La plus récente ouverte.
+  const { data: lienOuvert } = essaiActif
     ? await admin
-        .from('fragments_essais_epreuves')
-        .select('id, titre, date_epreuve, duree_minutes, consignes')
+        .from('fragments_epreuves_classes')
+        .select('date_epreuve, fragments_essais_epreuves(id, titre, duree_minutes, consignes)')
+        .eq('classe_id', inscriptionActive.classe_id)
         .eq('depots_ouverts', true)
         .order('date_epreuve', { ascending: false })
         .limit(1)
         .maybeSingle()
     : { data: null }
+  const epreuveLiee = lienOuvert?.fragments_essais_epreuves as unknown as
+    { id: string; titre: string; duree_minutes: number; consignes: string | null } | null
+  const epreuveOuverte = epreuveLiee
+    ? { ...epreuveLiee, date_epreuve: lienOuvert!.date_epreuve as string }
+    : null
 
   // Essai de l'élève pour cette épreuve
   const { data: essaiEleve } = epreuveOuverte

@@ -9,10 +9,11 @@ export default async function PageEssai({
   searchParams,
 }: {
   params: Promise<{ essaiId: string }>
-  searchParams: Promise<{ epreuve?: string }>
+  searchParams: Promise<{ epreuve?: string; classe?: string }>
 }) {
   const { essaiId } = await params
-  const { epreuve: epreuveId } = await searchParams
+  const { epreuve: epreuveId, classe: classeParam } = await searchParams
+  const qsClasse = classeParam ? `&classe=${classeParam}` : ''
 
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
@@ -61,7 +62,7 @@ export default async function PageEssai({
         <div>
           {epreuveId ? (
             <Link
-              href={`/prof/fragments-erudition/epreuves/${epreuveId}`}
+              href={`/prof/fragments-erudition/epreuves/${epreuveId}${classeParam ? `?classe=${classeParam}` : ''}`}
               className="text-sm text-stone-500 hover:text-stone-700"
             >
               ← {epreuve?.titre ?? 'Épreuve'}
@@ -88,13 +89,13 @@ export default async function PageEssai({
         {epreuveId && essaiIds.length > 1 && (
           <div className="flex gap-2">
             {essaiPrecedent ? (
-              <Link href={`/prof/fragments-erudition/essai/${essaiPrecedent}?epreuve=${epreuveId}`}
+              <Link href={`/prof/fragments-erudition/essai/${essaiPrecedent}?epreuve=${epreuveId}${qsClasse}`}
                 className="text-sm px-3 py-1.5 border border-stone-200 rounded-lg hover:bg-stone-50">
                 ← Élève précédent
               </Link>
             ) : <span className="text-sm px-3 py-1.5 text-stone-300">← Élève précédent</span>}
             {essaiSuivant ? (
-              <Link href={`/prof/fragments-erudition/essai/${essaiSuivant}?epreuve=${epreuveId}`}
+              <Link href={`/prof/fragments-erudition/essai/${essaiSuivant}?epreuve=${epreuveId}${qsClasse}`}
                 className="text-sm px-3 py-1.5 border border-stone-200 rounded-lg hover:bg-stone-50">
                 Élève suivant →
               </Link>

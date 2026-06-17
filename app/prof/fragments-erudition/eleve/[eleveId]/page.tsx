@@ -2,14 +2,20 @@ import { notFound } from 'next/navigation'
 import Link from 'next/link'
 import { createAdminClient } from '@/utils/supabase/admin'
 import { createClient } from '@/utils/supabase/server'
-import { inscriptionEleveClasse } from '@/utils/acces'
-import { classeFragmentsActive } from '../../contexte-classe'
+import { inscriptionEleveClasse, classesAvecModule } from '@/utils/acces'
 import { semestreFragmentsActif } from '../../contexte-semestre'
 import GraphiqueProgression from '@/components/fragments/GraphiqueProgression'
 import type { PointSemaine } from '@/components/fragments/GraphiqueProgression'
 
-export default async function PageEleveDetail({ params }: { params: Promise<{ eleveId: string }> }) {
+export default async function PageEleveDetail({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ eleveId: string }>
+  searchParams: Promise<{ classe?: string }>
+}) {
   const { eleveId } = await params
+  const { classe: classeParam } = await searchParams
 
   // Vérifier que l'utilisateur est prof
   const supabase = await createClient()
@@ -29,13 +35,21 @@ export default async function PageEleveDetail({ params }: { params: Promise<{ el
 
   if (!eleve) notFound()
 
-  // Inscription de l'élève dans la classe active (scoping élève × classe)
-  const { classe } = await classeFragmentsActive(supabase)
-  const inscriptionId = classe ? await inscriptionEleveClasse(admin, eleveId, classe.id) : null
+  // Classe portée par l'URL (?classe=) ; à défaut, 1ʳᵉ inscription de l'élève
+  // dans une classe du module (cas mono-classe, le plus courant).
+  let classeId: string | null = classeParam ?? null
+  if (!classeId) {
+    const { data: mod } = await admin.from('modules').select('id').eq('slug', 'fragments-erudition').maybeSingle()
+    const classesMod = mod ? await classesAvecModule(admin, mod.id) : []
+    const classeIds = new Set(classesMod.map(c => c.id))
+    const { data: inscs } = await admin.from('inscriptions').select('classe_id').eq('eleve_id', eleveId).eq('statut', 'active')
+    classeId = (inscs ?? []).map(i => i.classe_id as string).find(cid => classeIds.has(cid)) ?? null
+  }
+  const inscriptionId = classeId ? await inscriptionEleveClasse(admin, eleveId, classeId) : null
   if (!inscriptionId) {
     return (
       <div className="bg-white border border-stone-200 rounded-xl p-8 text-center text-stone-500 text-sm">
-        Cet élève n'est pas inscrit dans la classe sélectionnée ({classe?.nom ?? '—'}).
+        Cet élève n&apos;est inscrit dans aucune classe du module.
       </div>
     )
   }

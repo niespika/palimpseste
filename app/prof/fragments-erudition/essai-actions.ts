@@ -18,31 +18,51 @@ async function verifierProf() {
 
 export async function creerEpreuve(data: {
   titre: string
-  date_epreuve: string
   duree_minutes: number
   consignes?: string
+  semestreId: string
+  // Assignation à une ou plusieurs classes, avec une date propre à chacune.
+  classes: { classe_id: string; date_epreuve: string }[]
 }) {
   await verifierProf()
   const admin = createAdminClient()
+
+  if (!data.semestreId) return { error: 'Semestre manquant', data: null }
+  if (!data.classes.length) return { error: 'Choisis au moins une classe.', data: null }
+
+  // date_epreuve de l'épreuve = 1ʳᵉ date assignée (legacy / défaut d'affichage).
+  const datesTriees = data.classes.map(c => c.date_epreuve).sort()
+
   const { data: epreuve, error } = await admin
     .from('fragments_essais_epreuves')
     .insert({
       titre: data.titre,
-      date_epreuve: data.date_epreuve,
+      date_epreuve: datesTriees[0],
       duree_minutes: data.duree_minutes,
       consignes: data.consignes || null,
       depots_ouverts: false,
+      semestre_id: data.semestreId,
     })
     .select('id')
     .single()
   if (error) return { error: error.message, data: null }
+
+  const { error: errLiens } = await admin
+    .from('fragments_epreuves_classes')
+    .insert(data.classes.map(c => ({
+      epreuve_id: epreuve.id,
+      classe_id: c.classe_id,
+      date_epreuve: c.date_epreuve,
+      depots_ouverts: false,
+    })))
+  if (errLiens) return { error: errLiens.message, data: null }
+
   revalidatePath('/prof/fragments-erudition/epreuves')
   return { data: { epreuveId: epreuve.id }, error: null }
 }
 
 export async function modifierEpreuve(epreuveId: string, data: {
   titre: string
-  date_epreuve: string
   duree_minutes: number
   consignes?: string
 }) {
@@ -52,7 +72,6 @@ export async function modifierEpreuve(epreuveId: string, data: {
     .from('fragments_essais_epreuves')
     .update({
       titre: data.titre,
-      date_epreuve: data.date_epreuve,
       duree_minutes: data.duree_minutes,
       consignes: data.consignes || null,
     })
@@ -63,13 +82,43 @@ export async function modifierEpreuve(epreuveId: string, data: {
   return { success: true }
 }
 
-export async function toggleDepots(epreuveId: string, ouvert: boolean) {
+// Assigne (ou met à jour la date d') une épreuve pour une classe.
+export async function assignerEpreuveClasse(epreuveId: string, classeId: string, dateEpreuve: string) {
   await verifierProf()
   const admin = createAdminClient()
   const { error } = await admin
-    .from('fragments_essais_epreuves')
+    .from('fragments_epreuves_classes')
+    .upsert(
+      { epreuve_id: epreuveId, classe_id: classeId, date_epreuve: dateEpreuve },
+      { onConflict: 'epreuve_id,classe_id', ignoreDuplicates: false }
+    )
+  if (error) return { error: error.message }
+  revalidatePath('/prof/fragments-erudition/epreuves')
+  return { success: true }
+}
+
+export async function retirerEpreuveClasse(epreuveId: string, classeId: string) {
+  await verifierProf()
+  const admin = createAdminClient()
+  const { error } = await admin
+    .from('fragments_epreuves_classes')
+    .delete()
+    .eq('epreuve_id', epreuveId)
+    .eq('classe_id', classeId)
+  if (error) return { error: error.message }
+  revalidatePath('/prof/fragments-erudition/epreuves')
+  return { success: true }
+}
+
+// Ouverture / fermeture des dépôts pour un couple (épreuve, classe).
+export async function toggleDepotsClasse(epreuveId: string, classeId: string, ouvert: boolean) {
+  await verifierProf()
+  const admin = createAdminClient()
+  const { error } = await admin
+    .from('fragments_epreuves_classes')
     .update({ depots_ouverts: ouvert })
-    .eq('id', epreuveId)
+    .eq('epreuve_id', epreuveId)
+    .eq('classe_id', classeId)
   if (error) return { error: error.message }
   revalidatePath(`/prof/fragments-erudition/epreuves/${epreuveId}`)
   return { success: true }

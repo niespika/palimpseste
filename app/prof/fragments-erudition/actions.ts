@@ -7,7 +7,6 @@ import { createClient } from '@/utils/supabase/server'
 import { createAdminClient } from '@/utils/supabase/admin'
 import { lancerAnalyse } from '@/utils/analyse'
 import { inscriptionsClasse } from '@/utils/acces'
-import { COOKIE_CLASSE_FRAGMENTS } from './contexte-classe'
 import { COOKIE_SEMESTRE_FRAGMENTS, semestreFragmentsActif } from './contexte-semestre'
 import type { StatutPiste } from '@/types/fragments'
 
@@ -24,19 +23,6 @@ async function verifierProf() {
   return supabase
 }
 
-// Classe active du module Fragments (mémorisée en cookie). Toutes les vues prof
-// scopent leur contenu dessus.
-export async function definirClasseFragments(classeId: string) {
-  await verifierProf()
-  const cookieStore = await cookies()
-  cookieStore.set(COOKIE_CLASSE_FRAGMENTS, classeId, {
-    path: '/',
-    maxAge: 60 * 60 * 24 * 365,
-    sameSite: 'lax',
-  })
-  revalidatePath('/prof/fragments-erudition', 'layout')
-  return { success: true }
-}
 
 // Semestre consulté (cookie de contexte du module).
 export async function definirSemestreFragments(semestreId: string) {

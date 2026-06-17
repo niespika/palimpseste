@@ -166,7 +166,7 @@ export default async function PageVueEnsemble({ searchParams }: { searchParams: 
               </div>
             ),
             actions: (
-              <Link href={`/prof/fragments-erudition/eleve/${e.id}`} className="text-xs text-stone-500 hover:text-stone-800 underline">
+              <Link href={`/prof/fragments-erudition/eleve/${e.id}?classe=${classeChoisie.id}`} className="text-xs text-stone-500 hover:text-stone-800 underline">
                 Détail →
               </Link>
             ),
