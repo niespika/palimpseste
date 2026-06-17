@@ -3,7 +3,7 @@ import { createClient } from '@/utils/supabase/server'
 import { createAdminClient } from '@/utils/supabase/admin'
 import { classesAvecRappel } from '@/utils/rappels'
 import { calculerSante, type SanteInscription } from '@/utils/sante'
-import TuileClasse, { type CouleurSante } from '@/components/classes/TuileClasse'
+import Tuile, { type CouleurTuile } from '@/components/Tuile'
 import DetailClasse, { type LigneEleve } from '@/components/classes/DetailClasse'
 import RappelsClasses from './RappelsClasses'
 import BoutonRetirerEleve from './BoutonRetirerEleve'
@@ -237,9 +237,9 @@ export default async function ProfAccueil({ searchParams }: { searchParams: Prom
               const aDesFragments = santeClasse.length > 0
               const nbDiff = santeClasse.filter((s) => s.enDifficulte).length
               const nbValider = aValiderParClasse.get(c.id) ?? 0
-              const couleur: CouleurSante = !aDesFragments ? 'neutre' : nbDiff > 0 ? 'rouge' : 'vert'
+              const couleur: CouleurTuile = !aDesFragments ? 'neutre' : nbDiff > 0 ? 'rouge' : 'vert'
               return (
-                <TuileClasse
+                <Tuile
                   key={c.id}
                   nom={c.nom}
                   sousTitre={sousTitreClasse(c)}

@@ -31,4 +31,37 @@ export async function toggleModuleActif(formData: FormData) {
   return { success: true }
 }
 
-// L'accès aux modules se gère désormais par classe (voir app/prof/classes).
+// Accès au niveau CLASSE (Lot 4). Granularité classe uniquement — aucun réglage
+// par élève (l'accès bi-classe = union, dérivé du Lot 1).
+export async function accorderAccesClasse(formData: FormData) {
+  const supabase = await verifierProf()
+  const moduleId = formData.get('moduleId') as string
+  const classeId = formData.get('classeId') as string
+  if (!classeId) return { error: 'Sélectionne une classe.' }
+
+  const { error } = await supabase
+    .from('classe_modules')
+    .upsert({ module_id: moduleId, classe_id: classeId }, { onConflict: 'classe_id,module_id' })
+
+  if (error) return { error: error.message }
+  revalidatePath('/prof/modules')
+  revalidatePath('/prof/classes')
+  return { success: true }
+}
+
+export async function retirerAccesClasse(formData: FormData) {
+  const supabase = await verifierProf()
+  const moduleId = formData.get('moduleId') as string
+  const classeId = formData.get('classeId') as string
+
+  const { error } = await supabase
+    .from('classe_modules')
+    .delete()
+    .eq('module_id', moduleId)
+    .eq('classe_id', classeId)
+
+  if (error) return { error: error.message }
+  revalidatePath('/prof/modules')
+  revalidatePath('/prof/classes')
+  return { success: true }
+}
