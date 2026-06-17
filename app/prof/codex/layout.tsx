@@ -15,6 +15,7 @@ export default function CodexLayout({ children }: { children: React.ReactNode })
         {[
           { href: '/prof/codex', label: 'Séances' },
           { href: '/prof/codex/validation', label: 'Validation' },
+          { href: '/prof/codex/parametres', label: 'Paramètres' },
         ].map(({ href, label }) => (
           <Link
             key={href}

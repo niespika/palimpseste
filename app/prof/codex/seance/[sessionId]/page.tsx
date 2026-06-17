@@ -57,7 +57,7 @@ export default async function SeancePage({
   // Travaux existants
   const { data: travaux } = await supabase
     .from('codex_travaux')
-    .select('eleve_id, photos_v1, photos_vf, analyse_v1_statut, analyse_vf_statut, statut_validation')
+    .select('id, eleve_id, photos_v1, photos_vf, analyse_v1_statut, analyse_vf_statut, statut_validation')
     .eq('session_id', sessionId)
 
   const travauxMap: Record<string, NonNullable<typeof travaux>[number]> = {}
@@ -69,6 +69,7 @@ export default async function SeancePage({
       return {
         id: p.id,
         display_name: p.display_name as string,
+        travail_id: t?.id ?? null,
         v1_envoyee: (t?.photos_v1?.length ?? 0) > 0,
         vf_envoyee: (t?.photos_vf?.length ?? 0) > 0,
         analyse_v1_statut: t?.analyse_v1_statut ?? 'vide',

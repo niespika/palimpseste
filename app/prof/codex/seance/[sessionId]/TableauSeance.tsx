@@ -8,6 +8,7 @@ import { passerPhase2, fermerSeance } from '../../actions'
 interface EleveStatut {
   id: string
   display_name: string
+  travail_id: string | null
   v1_envoyee: boolean
   vf_envoyee: boolean
   analyse_v1_statut: string
@@ -190,12 +191,14 @@ export function TableauSeance({ sessionId, statut, phaseFinAt, eleves: elevesIni
                   <StatutCellule
                     envoyee={e.v1_envoyee}
                     analyse={e.analyse_v1_statut}
+                    href={e.travail_id ? `/prof/codex/travail/${e.travail_id}/v1` : null}
                   />
                 </td>
                 <td className="px-4 py-3 text-center">
                   <StatutCellule
                     envoyee={e.vf_envoyee}
                     analyse={e.analyse_vf_statut}
+                    href={e.travail_id ? `/prof/codex/validation/${e.travail_id}` : null}
                   />
                 </td>
                 <td className="px-4 py-3 text-center">
@@ -216,9 +219,17 @@ export function TableauSeance({ sessionId, statut, phaseFinAt, eleves: elevesIni
   )
 }
 
-function StatutCellule({ envoyee, analyse }: { envoyee: boolean; analyse: string }) {
+function StatutCellule({ envoyee, analyse, href }: { envoyee: boolean; analyse: string; href?: string | null }) {
   if (!envoyee) return <span className="text-xs text-stone-300">en cours…</span>
   if (analyse === 'en_cours') return <span className="text-xs text-stone-400">{ANALYSE_LABEL.en_cours}</span>
   if (analyse === 'erreur') return <span className="text-xs text-red-500">erreur</span>
+  // Analyse prête → cliquable vers les retours IA (V1 ou VF).
+  if (href) {
+    return (
+      <Link href={href} className="text-xs px-2 py-0.5 bg-green-100 text-green-700 rounded-full hover:bg-green-200 transition-colors">
+        Voir →
+      </Link>
+    )
+  }
   return <span className="text-xs px-2 py-0.5 bg-green-100 text-green-700 rounded-full">✓</span>
 }
