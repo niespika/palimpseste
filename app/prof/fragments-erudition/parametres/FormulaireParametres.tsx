@@ -24,34 +24,50 @@ interface Props {
   promptSyntheseDefaut: string
 }
 
-export default function FormulaireParametres({
-  promptInitial,
-  baremeInitial,
-  promptDefaut,
-  baremeDefaut,
-  rubriqueInitial,
-  rubriqueDefaut,
-  promptOralInitial,
-  promptOralDefaut,
-  supprimerAudioInitial,
-  echelleInitiale,
-  echelleDefaut,
-  fourchetteInitiale,
-  promptEssaiInitial,
-  promptEssaiDefaut,
-  promptSyntheseInitial,
-  promptSyntheseDefaut,
-}: Props) {
+type SectionKey = 'bareme' | 'fragment' | 'oral' | 'essai' | 'synthese'
+
+const SECTIONS: { key: SectionKey; titre: string; sousTitre: string }[] = [
+  { key: 'bareme', titre: 'Barème', sousTitre: 'Échelle des sections E–A' },
+  { key: 'fragment', titre: 'Prompt Évaluation Fragment', sousTitre: 'Fragment hebdomadaire' },
+  { key: 'oral', titre: 'Prompt Évaluation Oral', sousTitre: 'Présentation orale' },
+  { key: 'essai', titre: 'Prompt Essai', sousTitre: 'Essai final + /20' },
+  { key: 'synthese', titre: 'Prompt Synthèse', sousTitre: 'Bilan de fin de semestre' },
+]
+
+function HintVariables({ vars }: { vars: string[] }) {
+  return (
+    <div className="bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 text-sm text-amber-800">
+      Variables disponibles :{' '}
+      {vars.map(v => <code key={v} className="font-mono mr-1">{v}</code>)}
+    </div>
+  )
+}
+
+function EnTete({ label, onRestaurer }: { label: string; onRestaurer: () => void }) {
+  return (
+    <div className="flex items-center justify-between mb-2">
+      <label className="text-sm font-medium text-stone-700">{label}</label>
+      <button type="button" onClick={onRestaurer} className="text-xs text-stone-500 hover:text-stone-700 underline">
+        Restaurer la version par défaut
+      </button>
+    </div>
+  )
+}
+
+const TEXTAREA = 'w-full px-3 py-2 border border-stone-200 rounded-xl text-sm font-mono focus:outline-none focus:ring-2 focus:ring-blue-400 resize-y text-stone-900'
+
+export default function FormulaireParametres(props: Props) {
   const router = useRouter()
-  const [prompt, setPrompt] = useState(promptInitial)
-  const [bareme, setBareme] = useState(baremeInitial)
-  const [rubrique, setRubrique] = useState(rubriqueInitial)
-  const [promptOral, setPromptOral] = useState(promptOralInitial)
-  const [supprimerAudio, setSupprimerAudio] = useState(supprimerAudioInitial)
-  const [echelle, setEchelle] = useState(echelleInitiale)
-  const [fourchette, setFourchette] = useState(fourchetteInitiale)
-  const [promptEssai, setPromptEssai] = useState(promptEssaiInitial)
-  const [promptSynthese, setPromptSynthese] = useState(promptSyntheseInitial)
+  const [prompt, setPrompt] = useState(props.promptInitial)
+  const [bareme, setBareme] = useState(props.baremeInitial)
+  const [rubrique, setRubrique] = useState(props.rubriqueInitial)
+  const [promptOral, setPromptOral] = useState(props.promptOralInitial)
+  const [supprimerAudio, setSupprimerAudio] = useState(props.supprimerAudioInitial)
+  const [echelle, setEchelle] = useState(props.echelleInitiale)
+  const [fourchette, setFourchette] = useState(props.fourchetteInitiale)
+  const [promptEssai, setPromptEssai] = useState(props.promptEssaiInitial)
+  const [promptSynthese, setPromptSynthese] = useState(props.promptSyntheseInitial)
+  const [section, setSection] = useState<SectionKey | null>(null)
   const [enregistrement, setEnregistrement] = useState(false)
   const [message, setMessage] = useState<{ type: 'ok' | 'err'; texte: string } | null>(null)
 
@@ -79,79 +95,103 @@ export default function FormulaireParametres({
   }
 
   return (
-    <div className="space-y-6">
-      {/* ── Fragments hebdomadaires ───────────────────────────────────── */}
-      <div className="bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 text-sm text-amber-800">
-        Les variables disponibles dans le prompt sont :{' '}
-        <code className="font-mono">{'{{theme}}'}</code>,{' '}
-        <code className="font-mono">{'{{description_theme}}'}</code>,{' '}
-        <code className="font-mono">{'{{numero_semaine}}'}</code>,{' '}
-        <code className="font-mono">{'{{historique}}'}</code>,{' '}
-        <code className="font-mono">{'{{bareme}}'}</code>,{' '}
-        <code className="font-mono">{'{{rubrique}}'}</code>.
+    <div className="space-y-5">
+      {/* Tuiles : une seule section ouverte à la fois */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+        {SECTIONS.map(s => {
+          const active = section === s.key
+          return (
+            <button
+              key={s.key}
+              type="button"
+              onClick={() => setSection(active ? null : s.key)}
+              className={`text-left bg-white border border-stone-200 border-l-4 rounded-xl px-4 py-3 transition-colors hover:border-stone-400 hover:shadow-sm ${
+                active ? 'border-l-stone-700 ring-2 ring-stone-400' : 'border-l-stone-300'
+              }`}
+            >
+              <p className="font-medium text-stone-900">{s.titre}</p>
+              <p className="text-xs text-stone-400 mt-0.5">{s.sousTitre}</p>
+            </button>
+          )
+        })}
       </div>
 
-      {/* Rubrique partagée : importée par les 4 prompts via {{rubrique}}. */}
-      <div>
-        <div className="flex items-center justify-between mb-2">
-          <label className="text-sm font-medium text-stone-700">Rubrique partagée (échelle des sections E → A)</label>
-          <button
-            type="button"
-            onClick={() => setRubrique(rubriqueDefaut)}
-            className="text-xs text-stone-500 hover:text-stone-700 underline"
-          >
-            Restaurer la version par défaut
-          </button>
+      {/* Détail de la section choisie */}
+      {section === 'bareme' && (
+        <div className="bg-white border border-stone-200 rounded-xl p-5 space-y-5">
+          <div>
+            <EnTete label="Rubrique partagée (échelle des sections E → A)" onRestaurer={() => setRubrique(props.rubriqueDefaut)} />
+            <p className="text-xs text-stone-400 mb-2">
+              Source unique de l&apos;échelle des sections, importée par les 4 prompts via{' '}
+              <code className="font-mono">{'{{rubrique}}'}</code>. Le /20 final (essai, synthèse) n&apos;y touche pas.
+            </p>
+            <textarea value={rubrique} onChange={e => setRubrique(e.target.value)} rows={8} className={TEXTAREA} />
+          </div>
+          <div>
+            <EnTete label="Barème (0–4, legacy)" onRestaurer={() => setBareme(props.baremeDefaut)} />
+            <textarea value={bareme} onChange={e => setBareme(e.target.value)} rows={6} className={TEXTAREA} />
+          </div>
         </div>
-        <p className="text-xs text-stone-400 mb-2">
-          Source unique de l&apos;échelle des sections, importée par les 4 prompts via{' '}
-          <code className="font-mono">{'{{rubrique}}'}</code>. Le /20 final (essai, synthèse) n&apos;y touche pas.
-        </p>
-        <textarea
-          value={rubrique}
-          onChange={e => setRubrique(e.target.value)}
-          rows={8}
-          className="w-full px-3 py-2 border border-stone-200 rounded-xl text-sm font-mono focus:outline-none focus:ring-2 focus:ring-blue-400 resize-y text-stone-900"
-        />
-      </div>
+      )}
 
-      <div>
-        <div className="flex items-center justify-between mb-2">
-          <label className="text-sm font-medium text-stone-700">Barème (0–4, legacy)</label>
-          <button
-            type="button"
-            onClick={() => setBareme(baremeDefaut)}
-            className="text-xs text-stone-500 hover:text-stone-700 underline"
-          >
-            Restaurer la version par défaut
-          </button>
+      {section === 'fragment' && (
+        <div className="bg-white border border-stone-200 rounded-xl p-5 space-y-4">
+          <HintVariables vars={['{{theme}}', '{{description_theme}}', '{{numero_semaine}}', '{{historique}}', '{{bareme}}', '{{rubrique}}']} />
+          <div>
+            <EnTete label="Prompt d'évaluation du fragment" onRestaurer={() => setPrompt(props.promptDefaut)} />
+            <textarea value={prompt} onChange={e => setPrompt(e.target.value)} rows={30} className={TEXTAREA} />
+          </div>
         </div>
-        <textarea
-          value={bareme}
-          onChange={e => setBareme(e.target.value)}
-          rows={6}
-          className="w-full px-3 py-2 border border-stone-200 rounded-xl text-sm font-mono focus:outline-none focus:ring-2 focus:ring-blue-400 resize-y text-stone-900"
-        />
-      </div>
+      )}
 
-      <div>
-        <div className="flex items-center justify-between mb-2">
-          <label className="text-sm font-medium text-stone-700">Prompt d'évaluation</label>
-          <button
-            type="button"
-            onClick={() => setPrompt(promptDefaut)}
-            className="text-xs text-stone-500 hover:text-stone-700 underline"
-          >
-            Restaurer la version par défaut
-          </button>
+      {section === 'oral' && (
+        <div className="bg-white border border-stone-200 rounded-xl p-5 space-y-4">
+          <HintVariables vars={['{{theme}}', '{{description_theme}}', '{{numero_semaine}}', '{{duree}}', '{{nb_mots}}', '{{debit}}', '{{transcription_orale}}', '{{dossier}}', '{{bareme}}']} />
+          <div>
+            <EnTete label="Prompt d'évaluation orale" onRestaurer={() => setPromptOral(props.promptOralDefaut)} />
+            <textarea value={promptOral || props.promptOralDefaut} onChange={e => setPromptOral(e.target.value)} rows={20} className={TEXTAREA} />
+          </div>
+          <label className="flex items-center gap-2 cursor-pointer">
+            <input type="checkbox" checked={supprimerAudio} onChange={e => setSupprimerAudio(e.target.checked)} className="rounded" />
+            <span className="text-sm text-stone-700">Supprimer automatiquement l&apos;audio à la publication (case pré-cochée par défaut)</span>
+          </label>
         </div>
-        <textarea
-          value={prompt}
-          onChange={e => setPrompt(e.target.value)}
-          rows={30}
-          className="w-full px-3 py-2 border border-stone-200 rounded-xl text-sm font-mono focus:outline-none focus:ring-2 focus:ring-blue-400 resize-y text-stone-900"
-        />
-      </div>
+      )}
+
+      {section === 'essai' && (
+        <div className="bg-white border border-stone-200 rounded-xl p-5 space-y-4">
+          <HintVariables vars={['{{question}}', '{{titre_epreuve}}', '{{duree}}', '{{consignes}}', '{{dossier}}', '{{echelle_lettres}}']} />
+          <div>
+            <EnTete label="Échelle de lettres (A–E)" onRestaurer={() => setEchelle(props.echelleDefaut)} />
+            <textarea value={echelle || props.echelleDefaut} onChange={e => setEchelle(e.target.value)} rows={5} className={TEXTAREA} />
+          </div>
+          <div className="flex items-center gap-3">
+            <label className="text-sm font-medium text-stone-700 whitespace-nowrap">Fourchette note /20 (± points)</label>
+            <input
+              type="number"
+              value={fourchette}
+              onChange={e => setFourchette(Number(e.target.value))}
+              min={0} max={5} step={0.5}
+              className="w-20 px-3 py-1.5 border border-stone-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
+            />
+            <span className="text-xs text-stone-500">Ex : 2 → fourchette de ±2 points autour de la note suggérée</span>
+          </div>
+          <div>
+            <EnTete label="Prompt d'évaluation de l'essai" onRestaurer={() => setPromptEssai(props.promptEssaiDefaut)} />
+            <textarea value={promptEssai || props.promptEssaiDefaut} onChange={e => setPromptEssai(e.target.value)} rows={25} className={TEXTAREA} />
+          </div>
+        </div>
+      )}
+
+      {section === 'synthese' && (
+        <div className="bg-white border border-stone-200 rounded-xl p-5 space-y-4">
+          <HintVariables vars={['{{theme}}', '{{label_semestre}}', '{{date_debut}}', '{{date_fin}}', '{{taux_depot}}', '{{nb_retards}}', '{{dossier}}']} />
+          <div>
+            <EnTete label="Prompt de synthèse de semestre" onRestaurer={() => setPromptSynthese(props.promptSyntheseDefaut)} />
+            <textarea value={promptSynthese || props.promptSyntheseDefaut} onChange={e => setPromptSynthese(e.target.value)} rows={20} className={TEXTAREA} />
+          </div>
+        </div>
+      )}
 
       {message && (
         <div className={`rounded-xl px-4 py-3 text-sm ${
@@ -162,145 +202,6 @@ export default function FormulaireParametres({
           {message.texte}
         </div>
       )}
-
-      {/* ── Oral ─────────────────────────────────────────────────────── */}
-      <hr className="border-stone-200" />
-      <h3 className="text-sm font-medium text-stone-700">Évaluation orale</h3>
-
-      <div className="bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 text-sm text-amber-800">
-        Variables disponibles :{' '}
-        {['{{theme}}', '{{description_theme}}', '{{numero_semaine}}', '{{duree}}', '{{nb_mots}}', '{{debit}}', '{{transcription_orale}}', '{{dossier}}', '{{bareme}}'].map(v => (
-          <code key={v} className="font-mono mr-1">{v}</code>
-        ))}
-      </div>
-
-      <div>
-        <div className="flex items-center justify-between mb-2">
-          <label className="text-sm font-medium text-stone-700">Prompt d'évaluation orale</label>
-          <button
-            type="button"
-            onClick={() => setPromptOral(promptOralDefaut)}
-            className="text-xs text-stone-500 hover:text-stone-700 underline"
-          >
-            Restaurer la version par défaut
-          </button>
-        </div>
-        <textarea
-          value={promptOral || promptOralDefaut}
-          onChange={e => setPromptOral(e.target.value)}
-          rows={20}
-          className="w-full px-3 py-2 border border-stone-200 rounded-xl text-sm font-mono focus:outline-none focus:ring-2 focus:ring-blue-400 resize-y text-stone-900"
-        />
-      </div>
-
-      <div>
-        <label className="flex items-center gap-2 cursor-pointer">
-          <input
-            type="checkbox"
-            checked={supprimerAudio}
-            onChange={e => setSupprimerAudio(e.target.checked)}
-            className="rounded"
-          />
-          <span className="text-sm text-stone-700">
-            Supprimer automatiquement l'audio à la publication (case pré-cochée par défaut)
-          </span>
-        </label>
-      </div>
-
-      {/* ── Essai final ──────────────────────────────────────────────── */}
-      <hr className="border-stone-200" />
-      <h3 className="text-sm font-medium text-stone-700">Essai final</h3>
-
-      <div className="bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 text-sm text-amber-800">
-        Variables disponibles :{' '}
-        {['{{question}}', '{{titre_epreuve}}', '{{duree}}', '{{consignes}}', '{{dossier}}', '{{echelle_lettres}}'].map(v => (
-          <code key={v} className="font-mono mr-1">{v}</code>
-        ))}
-      </div>
-
-      <div>
-        <div className="flex items-center justify-between mb-2">
-          <label className="text-sm font-medium text-stone-700">Échelle de lettres (A–E)</label>
-          <button
-            type="button"
-            onClick={() => setEchelle(echelleDefaut)}
-            className="text-xs text-stone-500 hover:text-stone-700 underline"
-          >
-            Restaurer la version par défaut
-          </button>
-        </div>
-        <textarea
-          value={echelle || echelleDefaut}
-          onChange={e => setEchelle(e.target.value)}
-          rows={5}
-          className="w-full px-3 py-2 border border-stone-200 rounded-xl text-sm font-mono focus:outline-none focus:ring-2 focus:ring-blue-400 resize-y text-stone-900"
-        />
-      </div>
-
-      <div className="flex items-center gap-3">
-        <label className="text-sm font-medium text-stone-700 whitespace-nowrap">
-          Fourchette note /20 (± points)
-        </label>
-        <input
-          type="number"
-          value={fourchette}
-          onChange={e => setFourchette(Number(e.target.value))}
-          min={0}
-          max={5}
-          step={0.5}
-          className="w-20 px-3 py-1.5 border border-stone-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
-        />
-        <span className="text-xs text-stone-500">Ex : 2 → fourchette de ±2 points autour de la note suggérée</span>
-      </div>
-
-      <div>
-        <div className="flex items-center justify-between mb-2">
-          <label className="text-sm font-medium text-stone-700">Prompt d'évaluation de l'essai</label>
-          <button
-            type="button"
-            onClick={() => setPromptEssai(promptEssaiDefaut)}
-            className="text-xs text-stone-500 hover:text-stone-700 underline"
-          >
-            Restaurer la version par défaut
-          </button>
-        </div>
-        <textarea
-          value={promptEssai || promptEssaiDefaut}
-          onChange={e => setPromptEssai(e.target.value)}
-          rows={25}
-          className="w-full px-3 py-2 border border-stone-200 rounded-xl text-sm font-mono focus:outline-none focus:ring-2 focus:ring-blue-400 resize-y text-stone-900"
-        />
-      </div>
-
-      {/* ── Synthèse de semestre ─────────────────────────────────────── */}
-      <hr className="border-stone-200" />
-      <h3 className="text-sm font-medium text-stone-700">Synthèse de semestre</h3>
-
-      <div className="bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 text-sm text-amber-800">
-        Variables disponibles :{' '}
-        {['{{theme}}', '{{label_semestre}}', '{{date_debut}}', '{{date_fin}}', '{{taux_depot}}', '{{nb_retards}}', '{{dossier}}'].map(v => (
-          <code key={v} className="font-mono mr-1">{v}</code>
-        ))}
-      </div>
-
-      <div>
-        <div className="flex items-center justify-between mb-2">
-          <label className="text-sm font-medium text-stone-700">Prompt de synthèse de semestre</label>
-          <button
-            type="button"
-            onClick={() => setPromptSynthese(promptSyntheseDefaut)}
-            className="text-xs text-stone-500 hover:text-stone-700 underline"
-          >
-            Restaurer la version par défaut
-          </button>
-        </div>
-        <textarea
-          value={promptSynthese || promptSyntheseDefaut}
-          onChange={e => setPromptSynthese(e.target.value)}
-          rows={20}
-          className="w-full px-3 py-2 border border-stone-200 rounded-xl text-sm font-mono focus:outline-none focus:ring-2 focus:ring-blue-400 resize-y text-stone-900"
-        />
-      </div>
 
       <button
         onClick={handleSauvegarder}
