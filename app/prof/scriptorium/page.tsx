@@ -1,154 +1,229 @@
+import { notFound } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/utils/supabase/server'
-import { creerUnite, renommerUnite, supprimerUnite, monterUnite, descendreUnite } from './actions'
+import { getUrlSignee } from './actions'
+import Tuile from '@/components/Tuile'
+import FormulaireContenu from './FormulaireContenu'
+import LigneContenu, { type ContenuItem, type ImageItem } from './LigneContenu'
 
-async function actionCreerUnite(formData: FormData): Promise<void> {
-  'use server'
-  await creerUnite(formData)
-}
-async function actionRenommerUnite(formData: FormData): Promise<void> {
-  'use server'
-  await renommerUnite(formData)
-}
-async function actionSupprimerUnite(formData: FormData): Promise<void> {
-  'use server'
-  await supprimerUnite(formData)
-}
-async function actionMonterUnite(formData: FormData): Promise<void> {
-  'use server'
-  await monterUnite(formData)
-}
-async function actionDescendreUnite(formData: FormData): Promise<void> {
-  'use server'
-  await descendreUnite(formData)
+interface DocRow {
+  id: string
+  unite_id: string
+  titre: string
+  semaine: number | null
+  texte_extrait: string | null
+  fichier_ref: string | null
 }
 
-export default async function ScriptoriumPage() {
+// Regroupe des contenus par semaine (clé null = « non précisée »), trié.
+function parSemaine(docs: DocRow[]): [number | null, DocRow[]][] {
+  const m = new Map<number | null, DocRow[]>()
+  for (const d of docs) {
+    const arr = m.get(d.semaine) ?? []
+    arr.push(d)
+    m.set(d.semaine, arr)
+  }
+  return [...m.entries()].sort((a, b) => {
+    if (a[0] == null) return 1
+    if (b[0] == null) return -1
+    return a[0] - b[0]
+  })
+}
+
+export default async function ScriptoriumPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ vue?: string; classe?: string; unite?: string }>
+}) {
   const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) notFound()
+  const { data: profile } = await supabase.from('profiles').select('role').eq('id', user.id).single()
+  if (profile?.role !== 'prof') notFound()
 
-  const { data: unites } = await supabase
-    .from('scriptorium_unites')
-    .select('id, label, classe, ordre, created_at')
-    .order('ordre', { ascending: true })
+  const { vue = 'classes', classe: classeSel, unite: uniteSel } = await searchParams
 
-  // Compter les documents par unité
-  const { data: comptes } = await supabase
-    .from('scriptorium_documents')
-    .select('unite_id')
+  const [{ data: classes }, { data: unites }, { data: docsBruts }, { data: liens }, { data: imagesBrutes }] = await Promise.all([
+    supabase.from('classes').select('id, nom').order('nom'),
+    supabase.from('scriptorium_unites').select('id, label, ordre').order('ordre'),
+    supabase.from('scriptorium_documents').select('id, unite_id, titre, semaine, texte_extrait, fichier_ref'),
+    supabase.from('scriptorium_document_classes').select('document_id, classe_id'),
+    supabase.from('scriptorium_contenu_images').select('id, document_id, fichier_ref, legende, ordre').order('ordre'),
+  ])
 
-  const comptesMap: Record<string, number> = {}
-  for (const doc of comptes ?? []) {
-    comptesMap[doc.unite_id] = (comptesMap[doc.unite_id] ?? 0) + 1
+  const classesList = (classes ?? []) as { id: string; nom: string }[]
+  const unitesList = (unites ?? []) as { id: string; label: string }[]
+  const docs = (docsBruts ?? []) as DocRow[]
+  const classeNom = new Map(classesList.map(c => [c.id, c.nom]))
+
+  // doc → classeIds
+  const classesParDoc = new Map<string, string[]>()
+  for (const l of liens ?? []) {
+    const arr = classesParDoc.get(l.document_id as string) ?? []
+    arr.push(l.classe_id as string)
+    classesParDoc.set(l.document_id as string, arr)
   }
 
+  // Quels contenus seront rendus (drill) → on ne signe les fichiers que pour ceux-là.
+  const docsAffiches = vue === 'unites'
+    ? (uniteSel ? docs.filter(d => d.unite_id === uniteSel) : [])
+    : (classeSel ? docs.filter(d => (classesParDoc.get(d.id) ?? []).includes(classeSel)) : [])
+  const idsAffiches = new Set(docsAffiches.map(d => d.id))
+
+  // Images (signées) par doc affiché
+  const imagesAffichees = (imagesBrutes ?? []).filter(i => idsAffiches.has(i.document_id as string))
+  const imagesSignees = await Promise.all(imagesAffichees.map(async i => ({
+    document_id: i.document_id as string,
+    item: { id: i.id as string, url: await getUrlSignee(i.fichier_ref as string), legende: i.legende as string | null } as ImageItem,
+  })))
+  const imagesParDoc = new Map<string, ImageItem[]>()
+  for (const { document_id, item } of imagesSignees) {
+    const arr = imagesParDoc.get(document_id) ?? []
+    arr.push(item)
+    imagesParDoc.set(document_id, arr)
+  }
+
+  // Fichier legacy (signé) par doc affiché
+  const legacyParDoc = new Map<string, string | null>()
+  await Promise.all(docsAffiches.filter(d => d.fichier_ref).map(async d => {
+    legacyParDoc.set(d.id, await getUrlSignee(d.fichier_ref as string))
+  }))
+
+  function toItem(d: DocRow): ContenuItem {
+    return { id: d.id, nom: d.titre, semaine: d.semaine, texte: d.texte_extrait, uniteId: d.unite_id, fichierLegacyUrl: legacyParDoc.get(d.id) ?? null }
+  }
+
+  const ligne = (d: DocRow) => (
+    <LigneContenu
+      key={d.id}
+      item={toItem(d)}
+      unites={unitesList}
+      classes={classesList}
+      assignedClasseIds={classesParDoc.get(d.id) ?? []}
+      images={imagesParDoc.get(d.id) ?? []}
+    />
+  )
+
+  const ongletClasse = (v: string) =>
+    `px-4 py-2 text-sm rounded-t-lg border-b-2 transition-colors ${
+      vue === v ? 'border-stone-700 text-stone-900 font-medium' : 'border-transparent text-stone-500 hover:text-stone-800'
+    }`
+
   return (
-    <div>
-      {/* Formulaire de création */}
-      <form action={actionCreerUnite} className="mb-8 bg-white border border-stone-200 rounded-xl p-5">
-        <h3 className="text-sm font-medium text-stone-700 mb-4">Nouvelle unité</h3>
-        <div className="flex flex-col sm:flex-row gap-3">
-          <input
-            type="text"
-            name="label"
-            placeholder="Semaine 1 (laisse vide pour auto)"
-            className="flex-1 px-3 py-2 text-sm border border-stone-300 rounded-lg text-stone-900 focus:outline-none focus:ring-2 focus:ring-stone-400"
-          />
-          <input
-            type="text"
-            name="classe"
-            placeholder="Classe (ex. Terminale HLP)"
-            className="flex-1 px-3 py-2 text-sm border border-stone-300 rounded-lg text-stone-900 focus:outline-none focus:ring-2 focus:ring-stone-400"
-          />
-          <button
-            type="submit"
-            className="px-4 py-2 bg-stone-800 text-white text-sm rounded-lg hover:bg-stone-900 transition-colors"
-          >
-            Créer
-          </button>
-        </div>
-      </form>
+    <div className="space-y-6 pb-8">
+      <FormulaireContenu unites={unitesList} classes={classesList} />
 
-      {/* Liste des unités */}
-      {!unites || unites.length === 0 ? (
-        <p className="text-stone-500 text-sm text-center py-12">
-          Aucune unité pour l'instant. Crée une première unité ci-dessus.
-        </p>
-      ) : (
-        <div className="space-y-2">
-          {unites.map((unite, idx) => (
-            <div
-              key={unite.id}
-              className="bg-white border border-stone-200 rounded-xl p-4 flex items-center gap-3"
-            >
-              {/* Boutons de réordonnancement */}
-              <div className="flex flex-col gap-0.5">
-                <form action={actionMonterUnite}>
-                  <input type="hidden" name="id" value={unite.id} />
-                  <input type="hidden" name="ordre" value={unite.ordre} />
-                  <button
-                    type="submit"
-                    disabled={idx === 0}
-                    className="px-2 py-0.5 text-xs text-stone-400 hover:text-stone-700 disabled:opacity-20"
-                    title="Monter"
-                  >
-                    ▲
-                  </button>
-                </form>
-                <form action={actionDescendreUnite}>
-                  <input type="hidden" name="id" value={unite.id} />
-                  <input type="hidden" name="ordre" value={unite.ordre} />
-                  <button
-                    type="submit"
-                    disabled={idx === unites.length - 1}
-                    className="px-2 py-0.5 text-xs text-stone-400 hover:text-stone-700 disabled:opacity-20"
-                    title="Descendre"
-                  >
-                    ▼
-                  </button>
-                </form>
-              </div>
+      <nav className="flex gap-1 border-b border-stone-200">
+        <Link href="/prof/scriptorium?vue=classes" className={ongletClasse('classes')}>Par classe</Link>
+        <Link href="/prof/scriptorium?vue=unites" className={ongletClasse('unites')}>Par unité</Link>
+      </nav>
 
-              {/* Infos + lien */}
-              <Link href={`/prof/scriptorium/${unite.id}`} className="flex-1 min-w-0">
-                <div className="font-medium text-stone-900 hover:text-stone-600 transition-colors">
-                  {unite.label}
-                </div>
-                <div className="text-xs text-stone-400 mt-0.5 flex gap-3">
-                  {unite.classe && <span>{unite.classe}</span>}
-                  <span>{comptesMap[unite.id] ?? 0} document{(comptesMap[unite.id] ?? 0) > 1 ? 's' : ''}</span>
-                </div>
-              </Link>
-
-              {/* Renommer */}
-              <form action={actionRenommerUnite} className="flex gap-2 items-center">
-                <input type="hidden" name="id" value={unite.id} />
-                <input
-                  type="text"
-                  name="label"
-                  defaultValue={unite.label}
-                  className="w-40 px-2 py-1 text-xs border border-stone-200 rounded-lg text-stone-900 focus:outline-none focus:ring-1 focus:ring-stone-400"
+      {/* ── Perspective « classes » ─────────────────────────────────────── */}
+      {vue === 'classes' && (
+        <>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+            {classesList.map(c => {
+              const n = docs.filter(d => (classesParDoc.get(d.id) ?? []).includes(c.id)).length
+              return (
+                <Tuile
+                  key={c.id}
+                  nom={c.nom}
+                  sousTitre={`${n} contenu${n > 1 ? 's' : ''}`}
+                  href={`/prof/scriptorium?vue=classes&classe=${c.id}`}
+                  selectionnee={classeSel === c.id}
+                  couleur={n > 0 ? 'vert' : 'neutre'}
                 />
-                <button
-                  type="submit"
-                  className="px-3 py-1 text-xs bg-stone-100 hover:bg-stone-200 rounded-lg text-stone-700 transition-colors"
-                >
-                  Renommer
-                </button>
-              </form>
+              )
+            })}
+          </div>
 
-              {/* Supprimer */}
-              <form action={actionSupprimerUnite}>
-                <input type="hidden" name="id" value={unite.id} />
-                <button
-                  type="submit"
-                  className="px-3 py-1 text-xs text-red-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                >
-                  Supprimer
-                </button>
-              </form>
+          {classeSel && (
+            <div className="bg-white border border-stone-200 rounded-xl p-4 space-y-3">
+              <h3 className="font-medium text-stone-900">{classeNom.get(classeSel) ?? 'Classe'}</h3>
+              {docsAffiches.length === 0 ? (
+                <p className="text-sm text-stone-400">Aucun contenu assigné à cette classe.</p>
+              ) : (
+                unitesList
+                  .filter(u => docsAffiches.some(d => d.unite_id === u.id))
+                  .map(u => (
+                    <details key={u.id} open className="border border-stone-100 rounded-lg">
+                      <summary className="px-3 py-2 text-sm font-medium text-stone-700 cursor-pointer">{u.label}</summary>
+                      <div className="px-3 pb-3 space-y-3">
+                        {parSemaine(docsAffiches.filter(d => d.unite_id === u.id)).map(([sem, ds]) => (
+                          <div key={sem ?? 'na'} className="space-y-1.5">
+                            <p className="text-xs text-stone-400 uppercase tracking-wide">{sem != null ? `Semaine ${sem}` : 'Semaine non précisée'}</p>
+                            {ds.map(ligne)}
+                          </div>
+                        ))}
+                      </div>
+                    </details>
+                  ))
+              )}
             </div>
-          ))}
-        </div>
+          )}
+        </>
+      )}
+
+      {/* ── Perspective « unités » ──────────────────────────────────────── */}
+      {vue === 'unites' && (
+        <>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+            {unitesList.map(u => {
+              const n = docs.filter(d => d.unite_id === u.id).length
+              return (
+                <Tuile
+                  key={u.id}
+                  nom={u.label}
+                  sousTitre={`${n} contenu${n > 1 ? 's' : ''}`}
+                  href={`/prof/scriptorium?vue=unites&unite=${u.id}`}
+                  selectionnee={uniteSel === u.id}
+                  couleur={n > 0 ? 'vert' : 'neutre'}
+                />
+              )
+            })}
+          </div>
+
+          {uniteSel && (
+            <div className="bg-white border border-stone-200 rounded-xl p-4 space-y-3">
+              <h3 className="font-medium text-stone-900">{unitesList.find(u => u.id === uniteSel)?.label ?? 'Unité'}</h3>
+              {docsAffiches.length === 0 ? (
+                <p className="text-sm text-stone-400">Aucun contenu dans cette unité.</p>
+              ) : (
+                <>
+                  {classesList
+                    .filter(c => docsAffiches.some(d => (classesParDoc.get(d.id) ?? []).includes(c.id)))
+                    .map(c => (
+                      <details key={c.id} open className="border border-stone-100 rounded-lg">
+                        <summary className="px-3 py-2 text-sm font-medium text-stone-700 cursor-pointer">{c.nom}</summary>
+                        <div className="px-3 pb-3 space-y-3">
+                          {parSemaine(docsAffiches.filter(d => (classesParDoc.get(d.id) ?? []).includes(c.id))).map(([sem, ds]) => (
+                            <div key={sem ?? 'na'} className="space-y-1.5">
+                              <p className="text-xs text-stone-400 uppercase tracking-wide">{sem != null ? `Semaine ${sem}` : 'Semaine non précisée'}</p>
+                              {ds.map(ligne)}
+                            </div>
+                          ))}
+                        </div>
+                      </details>
+                    ))}
+                  {/* Contenu sans classe assignée (legacy non résolu) → à réassigner */}
+                  {docsAffiches.some(d => (classesParDoc.get(d.id) ?? []).length === 0) && (
+                    <details open className="border border-amber-200 bg-amber-50/40 rounded-lg">
+                      <summary className="px-3 py-2 text-sm font-medium text-amber-700 cursor-pointer">Sans classe — à réassigner</summary>
+                      <div className="px-3 pb-3 space-y-3">
+                        {parSemaine(docsAffiches.filter(d => (classesParDoc.get(d.id) ?? []).length === 0)).map(([sem, ds]) => (
+                          <div key={sem ?? 'na'} className="space-y-1.5">
+                            <p className="text-xs text-stone-400 uppercase tracking-wide">{sem != null ? `Semaine ${sem}` : 'Semaine non précisée'}</p>
+                            {ds.map(ligne)}
+                          </div>
+                        ))}
+                      </div>
+                    </details>
+                  )}
+                </>
+              )}
+            </div>
+          )}
+        </>
       )}
     </div>
   )

@@ -17,42 +17,33 @@ async function verifierProf() {
   return { supabase, userId: user.id }
 }
 
-export async function creerUnite(formData: FormData) {
-  const { supabase } = await verifierProf()
-  const label = formData.get('label') as string
-  const classe = (formData.get('classe') as string) || null
+// ── Unités (conteneurs, créées à la volée) ──────────────────────────────────
 
-  // Trouver l'ordre max existant
+export async function creerUnite(label: string): Promise<{ id?: string; error?: string }> {
+  const { supabase } = await verifierProf()
   const { data: derniere } = await supabase
     .from('scriptorium_unites')
     .select('ordre')
     .order('ordre', { ascending: false })
     .limit(1)
     .maybeSingle()
-
   const ordre = (derniere?.ordre ?? 0) + 1
 
-  const { error } = await supabase.from('scriptorium_unites').insert({
-    label: label || `Semaine ${ordre}`,
-    classe,
-    ordre,
-  })
-
+  const { data, error } = await supabase
+    .from('scriptorium_unites')
+    .insert({ label: label || `Unité ${ordre}`, ordre })
+    .select('id')
+    .single()
   if (error) return { error: error.message }
   revalidatePath('/prof/scriptorium')
-  return { success: true }
+  return { id: data.id }
 }
 
 export async function renommerUnite(formData: FormData) {
   const { supabase } = await verifierProf()
   const id = formData.get('id') as string
   const label = formData.get('label') as string
-
-  const { error } = await supabase
-    .from('scriptorium_unites')
-    .update({ label })
-    .eq('id', id)
-
+  const { error } = await supabase.from('scriptorium_unites').update({ label }).eq('id', id)
   if (error) return { error: error.message }
   revalidatePath('/prof/scriptorium')
   return { success: true }
@@ -61,63 +52,13 @@ export async function renommerUnite(formData: FormData) {
 export async function supprimerUnite(formData: FormData) {
   const { supabase } = await verifierProf()
   const id = formData.get('id') as string
-
-  // Supprimer les documents associés d'abord (cascade côté SQL normalement, mais par sécurité)
-  const { error } = await supabase
-    .from('scriptorium_unites')
-    .delete()
-    .eq('id', id)
-
+  const { error } = await supabase.from('scriptorium_unites').delete().eq('id', id)
   if (error) return { error: error.message }
   revalidatePath('/prof/scriptorium')
   return { success: true }
 }
 
-export async function monterUnite(formData: FormData) {
-  const { supabase } = await verifierProf()
-  const id = formData.get('id') as string
-  const ordre = parseInt(formData.get('ordre') as string)
-
-  // Trouver l'unité qui précède
-  const { data: precedente } = await supabase
-    .from('scriptorium_unites')
-    .select('id, ordre')
-    .lt('ordre', ordre)
-    .order('ordre', { ascending: false })
-    .limit(1)
-    .maybeSingle()
-
-  if (!precedente) return { success: true }
-
-  // Échanger les ordres
-  await supabase.from('scriptorium_unites').update({ ordre: precedente.ordre }).eq('id', id)
-  await supabase.from('scriptorium_unites').update({ ordre }).eq('id', precedente.id)
-
-  revalidatePath('/prof/scriptorium')
-  return { success: true }
-}
-
-export async function descendreUnite(formData: FormData) {
-  const { supabase } = await verifierProf()
-  const id = formData.get('id') as string
-  const ordre = parseInt(formData.get('ordre') as string)
-
-  const { data: suivante } = await supabase
-    .from('scriptorium_unites')
-    .select('id, ordre')
-    .gt('ordre', ordre)
-    .order('ordre', { ascending: true })
-    .limit(1)
-    .maybeSingle()
-
-  if (!suivante) return { success: true }
-
-  await supabase.from('scriptorium_unites').update({ ordre: suivante.ordre }).eq('id', id)
-  await supabase.from('scriptorium_unites').update({ ordre }).eq('id', suivante.id)
-
-  revalidatePath('/prof/scriptorium')
-  return { success: true }
-}
+// ── Extraction de texte (PDF / DOCX / TXT) ──────────────────────────────────
 
 async function extraireTexte(buffer: Buffer, mimeType: string, nomFichier: string): Promise<string | null> {
   const ext = nomFichier.split('.').pop()?.toLowerCase()
@@ -153,79 +94,194 @@ async function extraireTexte(buffer: Buffer, mimeType: string, nomFichier: strin
   return null
 }
 
-export async function ajouterDocument(formData: FormData) {
-  const { supabase, userId } = await verifierProf()
-  const admin = createAdminClient()
+function estImage(mimeType: string, nom: string): boolean {
+  const ext = nom.split('.').pop()?.toLowerCase()
+  return mimeType.startsWith('image/') || ['jpg', 'jpeg', 'png', 'webp', 'gif', 'heic', 'heif'].includes(ext ?? '')
+}
 
-  const uniteId = formData.get('uniteId') as string
-  const type = formData.get('type') as string
-  const titre = formData.get('titre') as string
-  const auteur = (formData.get('auteur') as string) || null
+async function uploaderFichier(userId: string, documentId: string, fichier: File): Promise<{ path?: string; error?: string }> {
+  const admin = createAdminClient()
+  const ext = fichier.name.split('.').pop()?.toLowerCase() || 'bin'
+  const storagePath = `${userId}/${documentId}/${Date.now()}.${ext}`
+  const buffer = Buffer.from(await fichier.arrayBuffer())
+  const { error } = await admin.storage.from('scriptorium').upload(storagePath, buffer, {
+    contentType: fichier.type || 'application/octet-stream',
+    upsert: false,
+  })
+  if (error) return { error: error.message }
+  return { path: storagePath }
+}
+
+// ── Contenu (item multi-classes : unité + semaine + corps) ──────────────────
+
+export async function ajouterContenu(formData: FormData) {
+  const { supabase, userId } = await verifierProf()
+
+  let uniteId = (formData.get('uniteId') as string) || ''
+  const nouvelleUnite = (formData.get('nouvelleUnite') as string)?.trim() || ''
+  const semaineRaw = formData.get('semaine') as string
+  const semaine = semaineRaw ? Number(semaineRaw) : null
+  const nom = (formData.get('nom') as string)?.trim()
+  let texte = (formData.get('texte') as string)?.trim() || null
+  const legende = (formData.get('legende') as string)?.trim() || null
+  const classeIds = formData.getAll('classeIds').map(c => c as string).filter(Boolean)
   const fichier = formData.get('fichier') as File | null
 
-  if (!fichier || fichier.size === 0) return { error: 'Aucun fichier fourni' }
+  if (!nom) return { error: 'Donne un nom au contenu.' }
+  if (classeIds.length === 0) return { error: 'Assigne au moins une classe.' }
 
-  const ext = fichier.name.split('.').pop()?.toLowerCase() || 'bin'
-  const storagePath = `${userId}/${uniteId}/${Date.now()}.${ext}`
+  // Unité : existante ou créée à la volée.
+  if (!uniteId && nouvelleUnite) {
+    const res = await creerUnite(nouvelleUnite)
+    if (res.error || !res.id) return { error: res.error ?? 'Création d\'unité impossible' }
+    uniteId = res.id
+  }
+  if (!uniteId) return { error: 'Choisis ou crée une unité.' }
 
-  const arrayBuffer = await fichier.arrayBuffer()
-  const buffer = Buffer.from(arrayBuffer)
-
-  // Upload dans le bucket scriptorium
-  const { error: uploadErr } = await admin.storage
-    .from('scriptorium')
-    .upload(storagePath, buffer, {
-      contentType: fichier.type || 'application/octet-stream',
-      upsert: false,
-    })
-
-  if (uploadErr) return { error: uploadErr.message }
-
-  // Extraction de texte pour PDF et docx
-  const texteExtrait = await extraireTexte(buffer, fichier.type, fichier.name)
-
-  const { error } = await supabase.from('scriptorium_documents').insert({
-    unite_id: uniteId,
-    type,
-    titre: titre || fichier.name,
-    auteur,
-    fichier_ref: storagePath,
-    texte_extrait: texteExtrait,
-    created_by: userId,
-  })
-
-  if (error) {
-    // Nettoyer le fichier si l'insert échoue
-    await admin.storage.from('scriptorium').remove([storagePath])
-    return { error: error.message }
+  // Fichier optionnel : image → pièce jointe ; document texte → extraction.
+  let fichierImage: File | null = null
+  if (fichier && fichier.size > 0) {
+    if (estImage(fichier.type, fichier.name)) {
+      fichierImage = fichier
+    } else {
+      const buffer = Buffer.from(await fichier.arrayBuffer())
+      const extrait = await extraireTexte(buffer, fichier.type, fichier.name)
+      if (extrait) texte = [texte, extrait].filter(Boolean).join('\n\n')
+    }
   }
 
-  revalidatePath(`/prof/scriptorium/${uniteId}`)
+  const { data: doc, error } = await supabase
+    .from('scriptorium_documents')
+    .insert({
+      unite_id: uniteId,
+      type: 'cours',
+      titre: nom,
+      texte_extrait: texte,
+      legende,
+      semaine,
+      created_by: userId,
+    })
+    .select('id')
+    .single()
+  if (error || !doc) return { error: error?.message ?? 'Erreur' }
+
+  // Assignation multi-classes.
+  const { error: errClasses } = await supabase
+    .from('scriptorium_document_classes')
+    .insert(classeIds.map(classe_id => ({ document_id: doc.id, classe_id })))
+  if (errClasses) return { error: errClasses.message }
+
+  // Image jointe le cas échéant.
+  if (fichierImage) {
+    const up = await uploaderFichier(userId, doc.id, fichierImage)
+    if (up.path) {
+      await supabase.from('scriptorium_contenu_images').insert({ document_id: doc.id, fichier_ref: up.path, legende })
+    }
+  }
+
+  revalidatePath('/prof/scriptorium')
   return { success: true }
 }
 
-export async function supprimerDocument(formData: FormData) {
+export async function modifierContenu(formData: FormData) {
+  const { supabase } = await verifierProf()
+  const id = formData.get('id') as string
+  const nom = (formData.get('nom') as string)?.trim()
+  const semaineRaw = formData.get('semaine') as string
+  const semaine = semaineRaw ? Number(semaineRaw) : null
+  const texte = (formData.get('texte') as string)?.trim() || null
+  const uniteId = (formData.get('uniteId') as string) || undefined
+
+  if (!nom) return { error: 'Le nom est requis.' }
+
+  const maj: Record<string, unknown> = { titre: nom, semaine, texte_extrait: texte }
+  if (uniteId) maj.unite_id = uniteId
+
+  const { error } = await supabase.from('scriptorium_documents').update(maj).eq('id', id)
+  if (error) return { error: error.message }
+  revalidatePath('/prof/scriptorium')
+  return { success: true }
+}
+
+export async function reassignerClasses(documentId: string, classeIds: string[]) {
+  const { supabase } = await verifierProf()
+  await supabase.from('scriptorium_document_classes').delete().eq('document_id', documentId)
+  if (classeIds.length > 0) {
+    const { error } = await supabase
+      .from('scriptorium_document_classes')
+      .insert(classeIds.map(classe_id => ({ document_id: documentId, classe_id })))
+    if (error) return { error: error.message }
+  }
+  revalidatePath('/prof/scriptorium')
+  return { success: true }
+}
+
+export async function supprimerContenu(id: string) {
   const { supabase } = await verifierProf()
   const admin = createAdminClient()
-  const id = formData.get('id') as string
 
-  const { data: doc } = await supabase
-    .from('scriptorium_documents')
-    .select('fichier_ref')
-    .eq('id', id)
-    .single()
+  // Collecter les fichiers (image legacy + images enfants) avant suppression.
+  const [{ data: doc }, { data: images }] = await Promise.all([
+    supabase.from('scriptorium_documents').select('fichier_ref').eq('id', id).maybeSingle(),
+    supabase.from('scriptorium_contenu_images').select('fichier_ref').eq('document_id', id),
+  ])
 
-  const { error } = await supabase
-    .from('scriptorium_documents')
-    .delete()
-    .eq('id', id)
-
+  const { error } = await supabase.from('scriptorium_documents').delete().eq('id', id)
   if (error) return { error: error.message }
 
-  if (doc?.fichier_ref) {
-    await admin.storage.from('scriptorium').remove([doc.fichier_ref])
-  }
+  const chemins = [
+    ...(doc?.fichier_ref ? [doc.fichier_ref] : []),
+    ...((images ?? []).map(i => i.fichier_ref as string)),
+  ]
+  if (chemins.length > 0) await admin.storage.from('scriptorium').remove(chemins)
 
+  revalidatePath('/prof/scriptorium')
+  return { success: true }
+}
+
+export async function ajouterImage(formData: FormData) {
+  const { supabase, userId } = await verifierProf()
+  const documentId = formData.get('documentId') as string
+  const legende = (formData.get('legende') as string)?.trim() || null
+  const fichier = formData.get('fichier') as File | null
+
+  if (!fichier || fichier.size === 0) return { error: 'Aucune image fournie.' }
+  if (!estImage(fichier.type, fichier.name)) return { error: 'Le fichier doit être une image.' }
+
+  const up = await uploaderFichier(userId, documentId, fichier)
+  if (up.error || !up.path) return { error: up.error ?? 'Upload impossible' }
+
+  const { data: dernier } = await supabase
+    .from('scriptorium_contenu_images')
+    .select('ordre')
+    .eq('document_id', documentId)
+    .order('ordre', { ascending: false })
+    .limit(1)
+    .maybeSingle()
+
+  const { error } = await supabase.from('scriptorium_contenu_images').insert({
+    document_id: documentId,
+    fichier_ref: up.path,
+    legende,
+    ordre: (dernier?.ordre ?? 0) + 1,
+  })
+  if (error) return { error: error.message }
+  revalidatePath('/prof/scriptorium')
+  return { success: true }
+}
+
+export async function supprimerImage(imageId: string) {
+  const { supabase } = await verifierProf()
+  const admin = createAdminClient()
+  const { data: img } = await supabase
+    .from('scriptorium_contenu_images')
+    .select('fichier_ref')
+    .eq('id', imageId)
+    .maybeSingle()
+
+  const { error } = await supabase.from('scriptorium_contenu_images').delete().eq('id', imageId)
+  if (error) return { error: error.message }
+  if (img?.fichier_ref) await admin.storage.from('scriptorium').remove([img.fichier_ref])
   revalidatePath('/prof/scriptorium')
   return { success: true }
 }
@@ -233,8 +289,6 @@ export async function supprimerDocument(formData: FormData) {
 export async function getUrlSignee(storagePath: string): Promise<string | null> {
   await verifierProf()
   const admin = createAdminClient()
-  const { data } = await admin.storage
-    .from('scriptorium')
-    .createSignedUrl(storagePath, 3600)
+  const { data } = await admin.storage.from('scriptorium').createSignedUrl(storagePath, 3600)
   return data?.signedUrl ?? null
 }
