@@ -29,9 +29,8 @@ export default async function FragmentsLayout({ children }: { children: React.Re
 
       <nav className="flex gap-1 mb-6 border-b border-stone-200 pb-0">
         {[
-          { href: '/prof/fragments-erudition', label: 'Vue par semaine' },
+          { href: '/prof/fragments-erudition', label: 'Semaine' },
           { href: '/prof/fragments-erudition/vue-ensemble', label: "Vue d'ensemble" },
-          { href: '/prof/fragments-erudition/semaines', label: 'Semaines' },
           { href: '/prof/fragments-erudition/themes', label: 'Thèmes' },
           { href: '/prof/fragments-erudition/epreuves', label: 'Épreuves' },
           { href: '/prof/fragments-erudition/semestres', label: 'Semestres' },

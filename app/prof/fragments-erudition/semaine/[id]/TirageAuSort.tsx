@@ -27,12 +27,10 @@ interface Props {
 export default function TirageAuSort({ semaineId, classeId, eligibles, presentations }: Props) {
   const router = useRouter()
   const [excluIds, setExcluIds] = useState<Set<string>>(new Set())
+  const [nombre, setNombre] = useState(1)
   const [animation, setAnimation] = useState(false)
   const [affichage, setAffichage] = useState<string | null>(null)
-  const [resultat, setResultat] = useState<{
-    presentationId: string
-    eleve: { id: string; display_name: string; classe: string | null } | null
-  } | null>(null)
+  const [tireFait, setTireFait] = useState(false)
   const [erreur, setErreur] = useState<string | null>(null)
   const [chargement, setChargement] = useState(false)
 
@@ -48,52 +46,42 @@ export default function TirageAuSort({ semaineId, classeId, eligibles, presentat
     })
   }
 
+  // Fixer le nombre puis DÉSIGNER ce nombre d'élèves : on tire N orateurs
+  // distincts (pondéré), chacun excluant les précédents.
   async function handleTirer() {
     setErreur(null)
     setChargement(true)
 
-    const res = await tirerOrateur(semaineId, classeId, Array.from(excluIds))
-    if (res.error || !res.data) {
-      setErreur(res.error ?? 'Erreur inconnue')
-      setChargement(false)
-      return
+    const candidats = eligibles.filter(e => !excluIds.has(e.id)).map(e => e.display_name)
+    const cible = Math.min(nombre, candidats.length)
+    if (cible < 1) { setErreur('Aucun élève éligible.'); setChargement(false); return }
+
+    // Petite animation de suspense
+    setAnimation(true)
+    let i = 0
+    const interval = setInterval(() => { setAffichage(candidats[i % candidats.length]); i++ }, 80)
+
+    const exclus = new Set(excluIds)
+    const gagnants: string[] = []
+    for (let k = 0; k < cible; k++) {
+      const res = await tirerOrateur(semaineId, classeId, Array.from(exclus))
+      if (res.error || !res.data) { if (k === 0) setErreur(res.error ?? 'Erreur inconnue'); break }
+      if (res.data.eleve?.display_name) gagnants.push(res.data.eleve.display_name)
+      if (res.data.eleve?.id) exclus.add(res.data.eleve.id)
     }
 
-    const gagnant = res.data
-
-    // Animation : cycling rapide sur les noms éligibles non exclus
-    const candidats = eligibles
-      .filter(e => !excluIds.has(e.id))
-      .map(e => e.display_name)
-
-    if (candidats.length > 1) {
-      setAnimation(true)
-      let i = 0
-      const interval = setInterval(() => {
-        setAffichage(candidats[i % candidats.length])
-        i++
-      }, 80)
-
-      setTimeout(() => {
-        clearInterval(interval)
-        setAnimation(false)
-        setAffichage(gagnant.eleve?.display_name ?? '?')
-        setResultat(gagnant)
-        setChargement(false)
-        router.refresh()
-      }, 1500)
-    } else {
-      setAffichage(gagnant.eleve?.display_name ?? '?')
-      setResultat(gagnant)
-      setChargement(false)
-      router.refresh()
-    }
+    clearInterval(interval)
+    setAnimation(false)
+    setAffichage(gagnants.length > 0 ? gagnants.join(', ') : null)
+    setTireFait(gagnants.length > 0)
+    setChargement(false)
+    router.refresh()
   }
 
   async function handleStatut(presentationId: string, statut: 'presente' | 'reporte') {
     setChargement(true)
     await mettreAJourPresentation(presentationId, statut)
-    setResultat(null)
+    setTireFait(false)
     setAffichage(null)
     setChargement(false)
     router.refresh()
@@ -102,7 +90,7 @@ export default function TirageAuSort({ semaineId, classeId, eligibles, presentat
   async function handleAnnuler(presentationId: string) {
     setChargement(true)
     await annulerPresentation(presentationId)
-    setResultat(null)
+    setTireFait(false)
     setAffichage(null)
     setChargement(false)
     router.refresh()
@@ -178,20 +166,29 @@ export default function TirageAuSort({ semaineId, classeId, eligibles, presentat
             ? 'border-stone-300 bg-stone-50'
             : 'border-green-300 bg-green-50'
         }`}>
-          <p className={`text-3xl font-serif font-medium transition-all ${
+          <p className={`text-2xl font-serif font-medium transition-all ${
             animation ? 'text-stone-400 blur-[1px]' : 'text-green-800'
           }`}>
             {affichage}
           </p>
-          {!animation && resultat?.eleve?.classe && (
-            <p className="text-sm text-green-600 mt-1">{resultat.eleve.classe}</p>
-          )}
         </div>
       )}
 
       {/* Bouton principal (si pas de tirage actif) */}
-      {!presentationActive && !resultat && eligibles.length > 0 && (
+      {!presentationActive && !tireFait && eligibles.length > 0 && (
         <div className="space-y-4">
+          {/* Nombre d'orateurs à désigner */}
+          <div className="flex items-center gap-2">
+            <label className="text-xs text-stone-500">Nombre d&apos;orateurs</label>
+            <input
+              type="number"
+              min={1}
+              max={eligiblesNonExclus.length || 1}
+              value={nombre}
+              onChange={e => setNombre(Math.max(1, Number(e.target.value)))}
+              className="w-16 px-2 py-1 border border-stone-300 rounded text-sm"
+            />
+          </div>
           {/* Exclusions manuelles */}
           <div>
             <p className="text-xs text-stone-500 mb-2">
@@ -224,7 +221,7 @@ export default function TirageAuSort({ semaineId, classeId, eligibles, presentat
             disabled={chargement || animation || eligiblesNonExclus.length === 0}
             className="bg-stone-800 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-stone-700 disabled:opacity-50 transition-colors"
           >
-            {animation ? '…' : chargement ? 'Tirage…' : "Tirer l'orateur de la semaine"}
+            {animation || chargement ? 'Tirage…' : `Désigner ${nombre} orateur${nombre > 1 ? 's' : ''}`}
           </button>
         </div>
       )}
