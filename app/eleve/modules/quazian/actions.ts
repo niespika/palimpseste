@@ -45,14 +45,42 @@ export async function chargerFileRevision(): Promise<CarteRevision[]> {
 
   const unitesVisibles = (publis ?? []).map((p) => p.scriptorium_unite_id)
 
+  // Visibilité par semaine DÉRIVÉE du contenu Scriptorium (Lot 6/7) : l'élève ne
+  // voit les cartes d'une (unité, semaine) que si au moins un contenu de cette
+  // semaine est assigné à une de ses classes. Les cartes « legacy » (semaine
+  // nulle) restent visibles via la seule publication d'unité.
+  const { data: inscrits } = await admin
+    .from('inscriptions')
+    .select('classe_id')
+    .eq('eleve_id', userId)
+    .eq('statut', 'active')
+  const classeIds = (inscrits ?? []).map((i) => i.classe_id as string)
+
+  const tuplesVisibles = new Set<string>()
+  if (classeIds.length > 0) {
+    const { data: liens } = await admin
+      .from('scriptorium_document_classes')
+      .select('document_id')
+      .in('classe_id', classeIds)
+    const docIds = [...new Set((liens ?? []).map((l) => l.document_id as string))]
+    if (docIds.length > 0) {
+      const { data: contenus } = await admin
+        .from('scriptorium_documents')
+        .select('unite_id, semaine')
+        .in('id', docIds)
+        .not('semaine', 'is', null)
+      for (const c of contenus ?? []) tuplesVisibles.add(`${c.unite_id}:${c.semaine}`)
+    }
+  }
+
   const selectCarte = `
-      id, recto, verso, format, type, concept_tag,
+      id, recto, verso, format, type, concept_tag, semaine,
       scriptorium_unite_id,
       scriptorium_unites(label)
     `
 
   // Cartes partagées validées des unités publiées (eleve_id null)
-  const { data: partagees } = unitesVisibles.length > 0
+  const { data: partageesBrutes } = unitesVisibles.length > 0
     ? await admin
         .from('quazian_flashcards')
         .select(selectCarte)
@@ -60,6 +88,12 @@ export async function chargerFileRevision(): Promise<CarteRevision[]> {
         .is('eleve_id', null)
         .in('scriptorium_unite_id', unitesVisibles)
     : { data: [] }
+
+  // Filtre dérivé : semaine nulle (legacy) OU (unité, semaine) assignée à l'élève.
+  const partagees = (partageesBrutes ?? []).filter((c) => {
+    const sem = (c as { semaine: number | null }).semaine
+    return sem == null || tuplesVisibles.has(`${c.scriptorium_unite_id}:${sem}`)
+  })
 
   // Cartes personnelles de l'élève (ex. Codex) — toujours révisables par lui
   const { data: perso } = await admin

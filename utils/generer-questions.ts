@@ -14,7 +14,7 @@ interface CarteSource {
   concept_tag: string
 }
 
-const PROMPT_SYSTEME = `Tu es un assistant spécialisé dans la création de QCM pour des cours de philosophie au lycée.
+export const PROMPT_SYSTEME = `Tu es un assistant spécialisé dans la création de QCM pour des cours de philosophie au lycée.
 
 Pour chaque question :
 - L'ÉNONCÉ est une vraie question (pas "Qu'est-ce que..." répété à l'infini — varie les formulations).

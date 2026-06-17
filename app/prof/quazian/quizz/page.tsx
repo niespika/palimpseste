@@ -2,6 +2,7 @@ import Link from 'next/link'
 import { createClient } from '@/utils/supabase/server'
 import { supprimerQuizz } from './actions'
 import { CreerQuizz } from './CreerQuizz'
+import Tuile from '@/components/Tuile'
 
 async function actionSupprimer(formData: FormData): Promise<void> {
   'use server'
@@ -14,8 +15,9 @@ const STATUT_LABELS: Record<string, { label: string; couleur: string }> = {
   ferme: { label: 'Terminé', couleur: 'bg-blue-50 text-blue-600' },
 }
 
-export default async function QuizzListePage() {
+export default async function QuizzListePage({ searchParams }: { searchParams: Promise<{ classe?: string }> }) {
   const supabase = await createClient()
+  const { classe: classeSel } = await searchParams
 
   const [{ data: quizzes }, { data: unites }, { data: classes }] = await Promise.all([
     supabase
@@ -56,11 +58,36 @@ export default async function QuizzListePage() {
 
       <CreerQuizz unites={unites ?? []} classes={classes ?? []} />
 
+      {/* Tuiles de classe : nombre de quizz lancés, clic → filtre la liste */}
+      {(classes ?? []).length > 0 && (
+        <div className="mt-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+          {(classes ?? []).map((c) => {
+            const faits = (quizzes ?? []).filter((q) => q.classe_id === c.id && q.statut !== 'brouillon').length
+            return (
+              <Tuile
+                key={c.id}
+                nom={c.nom}
+                sousTitre={`${faits} quizz fait${faits > 1 ? 's' : ''}`}
+                href={classeSel === c.id ? '/prof/quazian/quizz' : `/prof/quazian/quizz?classe=${c.id}`}
+                selectionnee={classeSel === c.id}
+                couleur={faits > 0 ? 'vert' : 'neutre'}
+              />
+            )
+          })}
+        </div>
+      )}
+
       <div className="mt-6 space-y-3">
-        {(!quizzes || quizzes.length === 0) && (
-          <p className="text-stone-400 text-sm text-center py-8">Aucun quizz pour l'instant.</p>
+        {classeSel && (
+          <p className="text-xs text-stone-400">
+            Filtré sur {(classes ?? []).find((c) => c.id === classeSel)?.nom ?? 'une classe'} ·{' '}
+            <Link href="/prof/quazian/quizz" className="underline">tout afficher</Link>
+          </p>
         )}
-        {(quizzes ?? []).map((qz) => {
+        {(quizzes ?? []).filter((q) => !classeSel || q.classe_id === classeSel).length === 0 && (
+          <p className="text-stone-400 text-sm text-center py-8">Aucun quizz{classeSel ? ' pour cette classe' : ''}.</p>
+        )}
+        {(quizzes ?? []).filter((q) => !classeSel || q.classe_id === classeSel).map((qz) => {
           const stats = qMap[qz.id] ?? { total: 0, validees: 0 }
           const statut = STATUT_LABELS[qz.statut] ?? STATUT_LABELS.brouillon
           const scope = (qz.scope_unites as string[]).map((id) => labelsUnites[id] ?? id)

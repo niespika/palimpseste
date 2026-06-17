@@ -89,7 +89,7 @@ export function CreerQuizz({ unites, classes }: { unites: Unite[]; classes: Clas
         )}
       </div>
 
-      <div className="grid grid-cols-2 gap-3 mb-4">
+      <div className="grid grid-cols-3 gap-3 mb-4">
         <div>
           <label className="text-xs text-stone-500 mb-1 block">Classe</label>
           <select
@@ -103,6 +103,17 @@ export function CreerQuizz({ unites, classes }: { unites: Unite[]; classes: Clas
               <option key={c.id} value={c.id}>{c.nom}</option>
             ))}
           </select>
+        </div>
+        <div>
+          <label className="text-xs text-stone-500 mb-1 block">Nombre de questions</label>
+          <input
+            type="number"
+            name="nb_questions"
+            defaultValue={20}
+            min={3}
+            max={60}
+            className="w-full px-3 py-2 text-sm border border-stone-300 rounded-lg"
+          />
         </div>
         <div>
           <label className="text-xs text-stone-500 mb-1 block">Durée (min)</label>

@@ -1,5 +1,7 @@
 import { lireParametres, sauvegarderParametres } from './actions'
 import { PARAMS_DEFAUT } from '@/utils/quazian-params'
+import { PROMPT_SYSTEME as PROMPT_FLASHCARDS } from '@/utils/extraire-flashcards'
+import { PROMPT_SYSTEME as PROMPT_QUIZZ } from '@/utils/generer-questions'
 
 async function actionSauvegarder(formData: FormData): Promise<void> {
   'use server'
@@ -88,6 +90,24 @@ export default async function ParametresPage() {
           Enregistrer les paramètres
         </button>
       </form>
+
+      {/* Prompts de génération de contenu (distincts des prompts d'évaluation des Fragments) */}
+      <section className="mt-8">
+        <h3 className="text-base font-medium text-stone-700 mb-1">Prompts de génération</h3>
+        <p className="text-xs text-stone-400 mb-4">
+          Prompts système qui guident l&apos;IA pour produire le contenu. Visibles ici à titre de référence.
+        </p>
+        <div className="space-y-3">
+          <details className="bg-white border border-stone-200 rounded-xl p-4">
+            <summary className="text-sm font-medium text-stone-600 cursor-pointer">Génération des flashcards</summary>
+            <pre className="mt-3 text-xs text-stone-600 bg-stone-50 p-3 rounded-lg whitespace-pre-wrap font-sans overflow-auto max-h-96">{PROMPT_FLASHCARDS}</pre>
+          </details>
+          <details className="bg-white border border-stone-200 rounded-xl p-4">
+            <summary className="text-sm font-medium text-stone-600 cursor-pointer">Génération des quizz (QCM)</summary>
+            <pre className="mt-3 text-xs text-stone-600 bg-stone-50 p-3 rounded-lg whitespace-pre-wrap font-sans overflow-auto max-h-96">{PROMPT_QUIZZ}</pre>
+          </details>
+        </div>
+      </section>
     </div>
   )
 }

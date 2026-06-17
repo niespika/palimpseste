@@ -96,6 +96,57 @@ export async function lancerExtractionIA(formData: FormData) {
   return { success: true, nb: cartes.length }
 }
 
+// Générer les cartes d'UNE semaine d'une unité (modèle Scriptorium, Lot 7).
+// Le texte de tous les contenus de cette (unité, semaine) alimente la génération ;
+// les cartes portent la semaine → visibilité élève dérivée du contenu (Lot 6).
+export async function genererCartesSemaine(uniteId: string, semaine: number) {
+  const { supabase, userId } = await verifierProf()
+
+  const { data: unite } = await supabase
+    .from('scriptorium_unites')
+    .select('label')
+    .eq('id', uniteId)
+    .single()
+  if (!unite) return { error: 'Unité introuvable' }
+
+  const { data: docs } = await supabase
+    .from('scriptorium_documents')
+    .select('titre, texte_extrait, legende')
+    .eq('unite_id', uniteId)
+    .eq('semaine', semaine)
+
+  const texteComplet = (docs ?? [])
+    .map(d => [`## ${d.titre}`, d.texte_extrait, d.legende ? `(Légende : ${d.legende})` : null].filter(Boolean).join('\n\n'))
+    .filter(s => s.trim().length > 0)
+    .join('\n\n---\n\n')
+
+  if (!texteComplet.trim()) {
+    return { error: "Aucun texte dans cette semaine. Ajoute du contenu (texte ou légende) dans le Scriptorium." }
+  }
+
+  const suggestions = await extraireFlashcards(texteComplet, `${unite.label} — Semaine ${semaine}`)
+
+  const cartes = suggestions.map(s => ({
+    scriptorium_unite_id: uniteId,
+    semaine,
+    type: s.type,
+    format: s.format,
+    recto: s.recto,
+    verso: s.verso,
+    concept_tag: s.concept_tag,
+    statut: 'suggere',
+    source: 'ia',
+    created_by: userId,
+  }))
+
+  const { error } = await supabase.from('quazian_flashcards').insert(cartes)
+  if (error) return { error: error.message }
+
+  revalidatePath('/prof/quazian')
+  revalidatePath(`/prof/quazian/${uniteId}`)
+  return { success: true, nb: cartes.length }
+}
+
 // Valider une carte
 export async function validerCarte(formData: FormData) {
   const { supabase } = await verifierProf()

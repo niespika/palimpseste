@@ -8,7 +8,7 @@ export interface FlashcardSuggestion {
   concept_tag: string
 }
 
-const PROMPT_SYSTEME = `Tu es un assistant spécialisé dans la création de flashcards pour des cours de philosophie au lycée (terminale et première).
+export const PROMPT_SYSTEME = `Tu es un assistant spécialisé dans la création de flashcards pour des cours de philosophie au lycée (terminale et première).
 
 RÈGLE ABSOLUE : une carte = une seule chose à récupérer. Principe d'information minimale.
 - Décompose toujours une entité en plusieurs cartes atomiques (ex. « Nietzsche » → dates, courant, œuvre majeure, thèse cardinale = 4 cartes distinctes).
