@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { noteVersLettre } from '@/utils/notation'
 import type { FragmentAnalyse, FragmentPiste } from '@/types/fragments'
 
 interface Props {
@@ -22,7 +23,7 @@ function BadgeNote({ label, note }: { label: string; note: number | null }) {
   return (
     <div className={`rounded-xl px-4 py-3 ${couleurs[note] ?? 'bg-stone-50 text-stone-600'}`}>
       <p className="text-xs font-medium mb-0.5">{label}</p>
-      <p className="text-lg font-serif">{note}/4 — <span className="text-sm font-normal">{LABELS_NOTE[note]}</span></p>
+      <p className="text-lg font-serif">{noteVersLettre(note)} <span className="text-sm font-normal">— {LABELS_NOTE[note]}</span></p>
     </div>
   )
 }

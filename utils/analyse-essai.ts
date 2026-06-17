@@ -1,5 +1,6 @@
 import Anthropic from '@anthropic-ai/sdk'
 import { createAdminClient } from '@/utils/supabase/admin'
+import { RUBRIQUE_DEFAUT } from '@/utils/rubrique'
 
 export const ECHELLE_LETTRES_DEFAUT = `A — Excellent : maîtrise remarquable, dépasse ce qu'on attend d'un lycéen.
 B — Bien : travail solide, les attentes sont clairement remplies.
@@ -22,8 +23,9 @@ export const PROMPT_ESSAI_DEFAUT = `Tu es l'assistant pédagogique d'un professe
 ### 1. Transcription
 Transcris intégralement et fidèlement l'essai, pages dans l'ordre. Conserve les erreurs de langue. [illisible] pour les mots indéchiffrables.
 
-### 2. Évaluation par lettres — échelle : {{echelle_lettres}}
-Attribue une lettre par dimension, en justifiant chacune dans le retour correspondant. Tu t'adresses à l'élève en le tutoyant ; ton bienveillant, exigeant, précis. Chaque retour fait 1 à 2 paragraphes et cite des passages précis de la copie.
+### 2. Évaluation par lettres des sections
+{{rubrique}}
+Attribue une lettre (A-E) par dimension, en justifiant chacune dans le retour correspondant. Tu t'adresses à l'élève en le tutoyant ; ton bienveillant, exigeant, précis. Chaque retour fait 1 à 2 paragraphes et cite des passages précis de la copie.
 
 a) STRUCTURE (lettre_structure, retour_structure) : y a-t-il une introduction qui pose le problème, un développement organisé en moments distincts qui progressent, une conclusion qui répond ? Le plan sert-il la question ou est-il une juxtaposition ? Les transitions existent-elles ?
 
@@ -314,7 +316,7 @@ export async function analyserEssai(essaiId: string): Promise<void> {
     // Config
     const { data: config } = await admin
       .from('fragments_config')
-      .select('prompt_evaluation_essai, echelle_lettres, fourchette_points')
+      .select('prompt_evaluation_essai, echelle_lettres, fourchette_points, rubrique')
       .eq('id', 1)
       .single()
 
@@ -331,6 +333,7 @@ export async function analyserEssai(essaiId: string): Promise<void> {
       .replace('{{consignes}}', epreuve?.consignes ?? 'Aucune consigne particulière.')
       .replace('{{dossier}}', dossier)
       .replace('{{echelle_lettres}}', echelle)
+      .replace('{{rubrique}}', config?.rubrique ?? RUBRIQUE_DEFAUT)
 
     const client = new Anthropic()
     const response = await client.messages.create({

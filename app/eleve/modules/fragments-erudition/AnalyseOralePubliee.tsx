@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { getSignedUrlAudioEleve } from '@/app/prof/fragments-erudition/actions'
+import { noteVersLettre } from '@/utils/notation'
 import type { FragmentOral, FragmentAnalyseOrale } from '@/types/fragments'
 
 interface Props {
@@ -36,7 +37,7 @@ export default function AnalyseOralePubliee({ oral, analyseOrale }: Props) {
           { label: 'Expression', note: analyseOrale.note_expression },
         ].map(({ label, note }) => (
           <div key={label} className="bg-stone-50 rounded-lg p-2.5 text-center">
-            <p className="text-xl font-serif text-stone-800">{note ?? '—'}<span className="text-xs text-stone-400">/4</span></p>
+            <p className="text-xl font-serif text-stone-800">{noteVersLettre(note) ?? '—'}</p>
             <p className="text-xs text-stone-500 mt-0.5">{label}</p>
           </div>
         ))}

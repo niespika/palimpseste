@@ -10,6 +10,8 @@ interface Props {
   baremeInitial: string
   promptDefaut: string
   baremeDefaut: string
+  rubriqueInitial: string
+  rubriqueDefaut: string
   promptOralInitial: string
   promptOralDefaut: string
   supprimerAudioInitial: boolean
@@ -27,6 +29,8 @@ export default function FormulaireParametres({
   baremeInitial,
   promptDefaut,
   baremeDefaut,
+  rubriqueInitial,
+  rubriqueDefaut,
   promptOralInitial,
   promptOralDefaut,
   supprimerAudioInitial,
@@ -41,6 +45,7 @@ export default function FormulaireParametres({
   const router = useRouter()
   const [prompt, setPrompt] = useState(promptInitial)
   const [bareme, setBareme] = useState(baremeInitial)
+  const [rubrique, setRubrique] = useState(rubriqueInitial)
   const [promptOral, setPromptOral] = useState(promptOralInitial)
   const [supprimerAudio, setSupprimerAudio] = useState(supprimerAudioInitial)
   const [echelle, setEchelle] = useState(echelleInitiale)
@@ -54,7 +59,7 @@ export default function FormulaireParametres({
     setEnregistrement(true)
     setMessage(null)
     const [r1, r2, r3] = await Promise.all([
-      sauvegarderConfig(prompt, bareme),
+      sauvegarderConfig(prompt, bareme, rubrique),
       sauvegarderConfigOrale(promptOral, supprimerAudio),
       sauvegarderConfigEssai({
         echelle_lettres: echelle,
@@ -82,12 +87,37 @@ export default function FormulaireParametres({
         <code className="font-mono">{'{{description_theme}}'}</code>,{' '}
         <code className="font-mono">{'{{numero_semaine}}'}</code>,{' '}
         <code className="font-mono">{'{{historique}}'}</code>,{' '}
-        <code className="font-mono">{'{{bareme}}'}</code>.
+        <code className="font-mono">{'{{bareme}}'}</code>,{' '}
+        <code className="font-mono">{'{{rubrique}}'}</code>.
+      </div>
+
+      {/* Rubrique partagée : importée par les 4 prompts via {{rubrique}}. */}
+      <div>
+        <div className="flex items-center justify-between mb-2">
+          <label className="text-sm font-medium text-stone-700">Rubrique partagée (échelle des sections E → A)</label>
+          <button
+            type="button"
+            onClick={() => setRubrique(rubriqueDefaut)}
+            className="text-xs text-stone-500 hover:text-stone-700 underline"
+          >
+            Restaurer la version par défaut
+          </button>
+        </div>
+        <p className="text-xs text-stone-400 mb-2">
+          Source unique de l&apos;échelle des sections, importée par les 4 prompts via{' '}
+          <code className="font-mono">{'{{rubrique}}'}</code>. Le /20 final (essai, synthèse) n&apos;y touche pas.
+        </p>
+        <textarea
+          value={rubrique}
+          onChange={e => setRubrique(e.target.value)}
+          rows={8}
+          className="w-full px-3 py-2 border border-stone-200 rounded-xl text-sm font-mono focus:outline-none focus:ring-2 focus:ring-blue-400 resize-y text-stone-900"
+        />
       </div>
 
       <div>
         <div className="flex items-center justify-between mb-2">
-          <label className="text-sm font-medium text-stone-700">Barème (0–4)</label>
+          <label className="text-sm font-medium text-stone-700">Barème (0–4, legacy)</label>
           <button
             type="button"
             onClick={() => setBareme(baremeDefaut)}

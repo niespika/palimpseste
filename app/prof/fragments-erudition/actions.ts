@@ -287,13 +287,14 @@ export async function ajouterPiste(analyseId: string, eleveId: string, contenu: 
   return { success: true }
 }
 
-export async function sauvegarderConfig(promptEvaluation: string, bareme: string) {
+export async function sauvegarderConfig(promptEvaluation: string, bareme: string, rubrique?: string) {
   await verifierProf()
   const admin = createAdminClient()
 
   const { error } = await admin.from('fragments_config').update({
     prompt_evaluation: promptEvaluation,
     bareme,
+    ...(rubrique !== undefined ? { rubrique } : {}),
   }).eq('id', 1)
 
   if (error) return { error: error.message }

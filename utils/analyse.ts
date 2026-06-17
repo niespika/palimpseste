@@ -1,5 +1,6 @@
 import Anthropic from '@anthropic-ai/sdk'
 import { createAdminClient } from '@/utils/supabase/admin'
+import { RUBRIQUE_DEFAUT } from '@/utils/rubrique'
 
 // Structure de la réponse JSON attendue de Claude
 interface AnalyseJSON {
@@ -191,7 +192,7 @@ export async function lancerAnalyse(
     // Configuration (prompt + barème)
     const { data: config } = await admin
       .from('fragments_config')
-      .select('prompt_evaluation, bareme')
+      .select('prompt_evaluation, bareme, rubrique')
       .eq('id', 1)
       .single()
 
@@ -208,6 +209,7 @@ export async function lancerAnalyse(
       .replace('{{numero_semaine}}', String(numeroSemaine))
       .replace('{{historique}}', historiqueTexte)
       .replace('{{bareme}}', config.bareme)
+      .replace('{{rubrique}}', config.rubrique ?? RUBRIQUE_DEFAUT)
 
     // Appel Claude
     const client = new Anthropic()

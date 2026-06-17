@@ -10,6 +10,7 @@ import {
   relancerAnalyseOrale,
   getSignedUrlAudio,
 } from '../../actions'
+import { LETTRES_SECTIONS } from '@/utils/notation'
 import type { FragmentOral, FragmentAnalyseOrale } from '@/types/fragments'
 
 interface Props {
@@ -40,7 +41,7 @@ function NoteButtons({ valeur, onChange }: { valeur: number; onChange: (n: numbe
               : 'bg-stone-100 text-stone-600 hover:bg-stone-200'
           }`}
         >
-          {n}
+          {LETTRES_SECTIONS[n]}
         </button>
       ))}
     </div>

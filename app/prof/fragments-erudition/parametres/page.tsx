@@ -3,6 +3,7 @@ import FormulaireParametres from './FormulaireParametres'
 import { PROMPT_ORAL_DEFAUT } from '@/utils/analyse-orale'
 import { ECHELLE_LETTRES_DEFAUT, PROMPT_ESSAI_DEFAUT } from '@/utils/analyse-essai'
 import { PROMPT_SYNTHESE_DEFAUT } from '@/utils/synthese-semestre'
+import { RUBRIQUE_DEFAUT } from '@/utils/rubrique'
 
 // Prompt et barème par défaut (pour le bouton "Restaurer")
 const PROMPT_DEFAUT = `Tu es l'assistant pédagogique d'un professeur de philosophie et d'humanités dans un lycée français. Tu analyses le « fragment d'érudition » hebdomadaire d'un élève : un compte-rendu manuscrit recto-verso de ses recherches personnelles sur son thème annuel.
@@ -26,8 +27,8 @@ Chaque semaine, l'élève fait des recherches libres sur son thème et rédige �
 ### 1. Transcription
 Transcris intégralement et fidèlement le manuscrit, photos dans l'ordre fourni. Conserve les erreurs d'orthographe et de grammaire telles quelles (elles servent à l'évaluation). Si un mot est illisible, note [illisible]. Si la copie ne suit pas les trois sections, transcris ce qui est là et signale-le.
 
-### 2. Évaluation : une note de 0 à 4 par section
-Barème : {{bareme}}
+### 2. Évaluation des sections (échelle E → A, valeur 0-4 sous-jacente)
+{{rubrique}}
 - DÉCOUVERTES : richesse et précision de ce qui a été appris ; le contenu est-il substantiel, exact, en lien avec le thème ?
 - SOURCES : les sources sont-elles identifiées clairement (auteur, titre, nature) ? Y a-t-il un effort de diversité et de qualité (au-delà du premier résultat de recherche) ?
 - RÉFLEXIONS : l'élève pense-t-il à partir de ce qu'il a trouvé ? Y a-t-il un mouvement personnel (question, rapprochement, objection, hypothèse) ou une simple paraphrase des découvertes ?
@@ -95,7 +96,7 @@ export default async function PageParametres() {
   // Config actuelle
   const { data: config } = await supabase
     .from('fragments_config')
-    .select('prompt_evaluation, bareme, prompt_evaluation_orale, supprimer_audio_publication, echelle_lettres, fourchette_points, prompt_evaluation_essai, prompt_synthese_semestre')
+    .select('prompt_evaluation, bareme, rubrique, prompt_evaluation_orale, supprimer_audio_publication, echelle_lettres, fourchette_points, prompt_evaluation_essai, prompt_synthese_semestre')
     .eq('id', 1)
     .single()
 
@@ -113,6 +114,8 @@ export default async function PageParametres() {
         baremeInitial={config?.bareme ?? BAREME_DEFAUT}
         promptDefaut={PROMPT_DEFAUT}
         baremeDefaut={BAREME_DEFAUT}
+        rubriqueInitial={config?.rubrique ?? RUBRIQUE_DEFAUT}
+        rubriqueDefaut={RUBRIQUE_DEFAUT}
         promptOralInitial={config?.prompt_evaluation_orale ?? ''}
         promptOralDefaut={PROMPT_ORAL_DEFAUT}
         supprimerAudioInitial={config?.supprimer_audio_publication ?? true}

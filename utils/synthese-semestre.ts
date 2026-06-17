@@ -1,5 +1,6 @@
 import Anthropic from '@anthropic-ai/sdk'
 import { createAdminClient } from '@/utils/supabase/admin'
+import { RUBRIQUE_DEFAUT } from '@/utils/rubrique'
 
 export const PROMPT_SYNTHESE_DEFAUT = `Tu es l'assistant pédagogique d'un professeur de philosophie et d'humanités dans un lycée français. Tu rédiges le bilan de fin de semestre du travail de « fragments d'érudition » d'un élève : son travail écrit hebdomadaire ET, le cas échéant, sa présentation orale. Tu disposes de toutes les analyses du semestre.
 
@@ -7,6 +8,9 @@ export const PROMPT_SYNTHESE_DEFAUT = `Tu es l'assistant pédagogique d'un profe
 - Thème / question : {{theme}}
 - Semestre : {{label_semestre}} ({{date_debut}} – {{date_fin}})
 - Taux de dépôt : {{taux_depot}} ; retards : {{nb_retards}}
+
+## Échelle des sections (pour lire le dossier)
+{{rubrique}}
 
 ## Dossier du semestre
 {{dossier}}
@@ -204,7 +208,7 @@ export async function genererSynthesePourEleve(inscriptionId: string, semestreId
     // Config
     const { data: config } = await admin
       .from('fragments_config')
-      .select('prompt_synthese_semestre, fourchette_points')
+      .select('prompt_synthese_semestre, fourchette_points, rubrique')
       .eq('id', 1)
       .single()
 
@@ -255,6 +259,7 @@ export async function genererSynthesePourEleve(inscriptionId: string, semestreId
       .replace('{{date_fin}}', formatDate(semestre.date_fin))
       .replace('{{taux_depot}}', tauxDepot)
       .replace('{{nb_retards}}', String(nbRetards))
+      .replace('{{rubrique}}', config?.rubrique ?? RUBRIQUE_DEFAUT)
       .replace('{{dossier}}', dossier)
 
     const client = new Anthropic()

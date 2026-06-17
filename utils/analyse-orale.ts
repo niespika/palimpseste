@@ -1,5 +1,6 @@
 import Anthropic from '@anthropic-ai/sdk'
 import { createAdminClient } from '@/utils/supabase/admin'
+import { RUBRIQUE_DEFAUT } from '@/utils/rubrique'
 
 export const PROMPT_ORAL_DEFAUT = `Tu es l'assistant pédagogique d'un professeur de philosophie et d'humanités dans un lycée français. Un élève vient de faire une présentation orale de 3-4 minutes devant sa classe, sur le thème annuel qu'il travaille chaque semaine dans ses « fragments d'érudition » écrits. Tu disposes de la transcription de sa présentation ET de son dossier écrit complet. Ta valeur ajoutée est précisément ce recoupement : tu as tout le dossier sous les yeux.
 
@@ -30,7 +31,8 @@ Au vu de tout ce qu'il a écrit dans ses fragments : la présentation restitue-t
 ### 4. QUALITÉS ORALES (retour_oral)
 Uniquement ce qui se juge sur transcription : la structure (y a-t-il une annonce, un fil, une conclusion, ou est-ce une juxtaposition ?), la clarté des phrases, la durée et le débit par rapport aux repères, les tics de langage récurrents (compte-les : « du coup » × 9). Ne dis RIEN de la voix, de la gestuelle ou de l'aisance : tu ne les connais pas.
 
-### 5. NOTES (0-4, barème : {{bareme}})
+### 5. NOTES par section (reporte la VALEUR 0-4 de chaque section dans le JSON)
+{{rubrique}}
 - note_contenu : richesse et justesse de ce qui est présenté, au regard du dossier ;
 - note_structure : organisation du propos ;
 - note_expression : clarté de la langue orale (phrases, vocabulaire, débit), en tenant compte de ce qu'est l'oral.
@@ -182,7 +184,7 @@ export async function analyserOral(oralId: string): Promise<void> {
     // Config
     const { data: config } = await admin
       .from('fragments_config')
-      .select('prompt_evaluation_orale, bareme')
+      .select('prompt_evaluation_orale, bareme, rubrique')
       .eq('id', 1)
       .single()
 
@@ -206,6 +208,7 @@ export async function analyserOral(oralId: string): Promise<void> {
       .replace('{{transcription_orale}}', oral.transcription)
       .replace('{{dossier}}', dossier)
       .replace('{{bareme}}', config?.bareme ?? '')
+      .replace('{{rubrique}}', config?.rubrique ?? RUBRIQUE_DEFAUT)
 
     const client = new Anthropic()
     const response = await client.messages.create({

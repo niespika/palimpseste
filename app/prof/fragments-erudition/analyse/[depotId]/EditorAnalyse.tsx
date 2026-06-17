@@ -13,6 +13,7 @@ import {
   supprimerPiste,
   ajouterPiste,
 } from '../../actions'
+import { LETTRES_SECTIONS } from '@/utils/notation'
 import type { FragmentAnalyse, FragmentPiste, FragmentPhoto, StatutPiste } from '@/types/fragments'
 
 interface Props {
@@ -32,6 +33,7 @@ const LABELS_STATUT: Record<string, { label: string; classes: string }> = {
 }
 
 function NoteInput({ label, value, onChange }: { label: string; value: number; onChange: (v: number) => void }) {
+  // Évaluation par lettre E → A ; la valeur 0-4 sous-jacente reste stockée.
   return (
     <div className="flex items-center gap-3">
       <span className="text-sm text-stone-700 w-28 flex-shrink-0">{label}</span>
@@ -47,11 +49,10 @@ function NoteInput({ label, value, onChange }: { label: string; value: number; o
                 : 'bg-stone-100 text-stone-600 hover:bg-stone-200'
             }`}
           >
-            {n}
+            {LETTRES_SECTIONS[n]}
           </button>
         ))}
       </div>
-      <span className="text-xs text-stone-400">/4</span>
     </div>
   )
 }
@@ -424,7 +425,7 @@ export default function EditorAnalyse({
 
             {/* Notes */}
             <div className="bg-white border border-stone-200 rounded-xl p-4 space-y-3">
-              <p className="text-sm font-medium text-stone-700 mb-2">Notes (0–4)</p>
+              <p className="text-sm font-medium text-stone-700 mb-2">Évaluation des sections (E → A)</p>
               <NoteInput label="Découvertes" value={noteDecouvertes} onChange={setNoteDecouvertes} />
               <NoteInput label="Sources" value={noteSources} onChange={setNoteSources} />
               <NoteInput label="Réflexions" value={noteReflexions} onChange={setNoteReflexions} />
