@@ -113,8 +113,11 @@ export async function toggleSemaineOuverte(formData: FormData) {
 export async function sauvegarderTheme(formData: FormData) {
   const supabase = await verifierProf()
   const inscriptionId = formData.get('inscriptionId') as string
+  const semestreId = formData.get('semestreId') as string
   const theme = formData.get('theme') as string
   const description = (formData.get('description') as string) || null
+
+  if (!semestreId) return { error: 'Semestre manquant' }
 
   // eleve_id reste renseigné (RLS simple) ; on le dérive de l'inscription.
   const { data: insc } = await supabase
@@ -124,21 +127,23 @@ export async function sauvegarderTheme(formData: FormData) {
     .single()
   if (!insc) return { error: 'Inscription introuvable' }
 
+  // Un thème par (inscription, semestre).
   const { data: existant } = await supabase
     .from('fragments_themes')
     .select('id')
     .eq('inscription_id', inscriptionId)
+    .eq('semestre_id', semestreId)
     .maybeSingle()
 
   if (existant) {
     await supabase
       .from('fragments_themes')
       .update({ theme, description })
-      .eq('inscription_id', inscriptionId)
+      .eq('id', existant.id)
   } else {
     await supabase
       .from('fragments_themes')
-      .insert({ inscription_id: inscriptionId, eleve_id: insc.eleve_id, theme, description })
+      .insert({ inscription_id: inscriptionId, semestre_id: semestreId, eleve_id: insc.eleve_id, theme, description })
   }
 
   revalidatePath('/prof/fragments-erudition/themes')

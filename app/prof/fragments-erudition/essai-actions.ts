@@ -301,45 +301,27 @@ async function eleveDeInscription(admin: ReturnType<typeof createAdminClient>, i
   return data?.eleve_id as string | undefined
 }
 
-export async function toggleEssaiActif(inscriptionId: string, actif: boolean) {
+export async function toggleEssaiActif(inscriptionId: string, semestreId: string, actif: boolean) {
   await verifierProf()
   const admin = createAdminClient()
   const { data: existant } = await admin
     .from('fragments_themes')
     .select('id')
     .eq('inscription_id', inscriptionId)
+    .eq('semestre_id', semestreId)
     .maybeSingle()
 
   if (existant) {
-    await admin.from('fragments_themes').update({ essai_actif: actif }).eq('inscription_id', inscriptionId)
+    await admin.from('fragments_themes').update({ essai_actif: actif }).eq('id', existant.id)
   } else {
     const eleveId = await eleveDeInscription(admin, inscriptionId)
-    await admin.from('fragments_themes').insert({ inscription_id: inscriptionId, eleve_id: eleveId, essai_actif: actif, theme: '' })
+    await admin.from('fragments_themes').insert({ inscription_id: inscriptionId, semestre_id: semestreId, eleve_id: eleveId, essai_actif: actif, theme: '' })
   }
   revalidatePath('/prof/fragments-erudition/themes')
   return { success: true }
 }
 
-export async function sauvegarderQuestion(inscriptionId: string, question: string) {
-  await verifierProf()
-  const admin = createAdminClient()
-  const { data: existant } = await admin
-    .from('fragments_themes')
-    .select('id')
-    .eq('inscription_id', inscriptionId)
-    .maybeSingle()
-
-  if (existant) {
-    await admin.from('fragments_themes').update({ question: question || null }).eq('inscription_id', inscriptionId)
-  } else {
-    const eleveId = await eleveDeInscription(admin, inscriptionId)
-    await admin.from('fragments_themes').insert({ inscription_id: inscriptionId, eleve_id: eleveId, question: question || null, theme: '' })
-  }
-  revalidatePath('/prof/fragments-erudition/themes')
-  return { success: true }
-}
-
-export async function activerEssaiPourClasse(classeId: string, actif: boolean) {
+export async function activerEssaiPourClasse(classeId: string, semestreId: string, actif: boolean) {
   await verifierProf()
   const admin = createAdminClient()
 
@@ -353,8 +335,8 @@ export async function activerEssaiPourClasse(classeId: string, actif: boolean) {
 
   await Promise.all(
     inscrits.map(i => admin.from('fragments_themes').upsert(
-      { inscription_id: i.id, eleve_id: i.eleve_id, essai_actif: actif, theme: '' },
-      { onConflict: 'inscription_id', ignoreDuplicates: false }
+      { inscription_id: i.id, semestre_id: semestreId, eleve_id: i.eleve_id, essai_actif: actif, theme: '' },
+      { onConflict: 'inscription_id,semestre_id', ignoreDuplicates: false }
     ))
   )
 

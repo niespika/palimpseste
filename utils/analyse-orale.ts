@@ -130,20 +130,23 @@ export async function analyserOral(oralId: string): Promise<void> {
   if (!oral || oral.statut !== 'transcrit' || !oral.transcription) return
 
   try {
-    // Thème de l'inscription
-    const { data: theme } = await admin
+    // Numéro de semaine + semestre (porté par la semaine de la présentation)
+    const { data: presentation } = await admin
+      .from('fragments_presentations')
+      .select('semaine_id, fragments_semaines(numero, semestre_id)')
+      .eq('id', oral.presentation_id)
+      .single()
+    const semainePres = presentation?.fragments_semaines as unknown as { numero: number; semestre_id: string | null } | null
+    const numeroSemaine = semainePres?.numero ?? 1
+    const semestreId = semainePres?.semestre_id ?? null
+
+    // Thème de l'inscription pour CE semestre
+    let themeQuery = admin
       .from('fragments_themes')
       .select('theme, description')
       .eq('inscription_id', oral.inscription_id)
-      .maybeSingle()
-
-    // Numéro de semaine
-    const { data: presentation } = await admin
-      .from('fragments_presentations')
-      .select('semaine_id, fragments_semaines(numero)')
-      .eq('id', oral.presentation_id)
-      .single()
-    const numeroSemaine = (presentation?.fragments_semaines as unknown as { numero: number } | null)?.numero ?? 1
+    if (semestreId) themeQuery = themeQuery.eq('semestre_id', semestreId)
+    const { data: theme } = await themeQuery.maybeSingle()
 
     // Dépôts de CETTE inscription
     const { data: tousDepots } = await admin

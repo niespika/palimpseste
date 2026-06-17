@@ -6,8 +6,10 @@ export interface FragmentTheme {
   id: string
   eleve_id: string
   inscription_id: string | null
+  semestre_id: string
   theme: string
   description: string | null
+  essai_actif: boolean
   created_at: string
   updated_at: string
 }

@@ -103,11 +103,12 @@ export async function genererSynthesePourEleve(inscriptionId: string, semestreId
     const dateDebut = new Date(semestre.date_debut)
     const dateFin = new Date(semestre.date_fin)
 
-    // Thème
+    // Thème de l'inscription pour CE semestre
     const { data: theme } = await admin
       .from('fragments_themes')
-      .select('theme, description, question')
+      .select('theme, description')
       .eq('inscription_id', inscriptionId)
+      .eq('semestre_id', semestreId)
       .maybeSingle()
 
     // Dépôts dans l'intervalle (de cette inscription)
@@ -253,7 +254,7 @@ export async function genererSynthesePourEleve(inscriptionId: string, semestreId
     const formatDate = (d: string) => new Date(d).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })
 
     const prompt = promptBase
-      .replace('{{theme}}', theme?.question ?? theme?.theme ?? 'Non défini')
+      .replace('{{theme}}', theme?.theme ?? 'Non défini')
       .replace('{{label_semestre}}', semestre.label)
       .replace('{{date_debut}}', formatDate(semestre.date_debut))
       .replace('{{date_fin}}', formatDate(semestre.date_fin))

@@ -242,12 +242,19 @@ export async function analyserEssai(essaiId: string): Promise<void> {
       .eq('id', essai.epreuve_id)
       .single()
 
-    // Thème / question de l'inscription
-    const { data: theme } = await admin
-      .from('fragments_themes')
-      .select('theme, description, question')
-      .eq('inscription_id', essai.inscription_id)
+    // Thème de l'inscription (= sa question travaillée). L'épreuve ne porte pas
+    // encore de semestre (arrive en 5.4) → on retombe sur le semestre courant.
+    const { data: semCourant } = await admin
+      .from('fragments_semestres')
+      .select('id')
+      .eq('courant', true)
       .maybeSingle()
+    let themeQuery = admin
+      .from('fragments_themes')
+      .select('theme, description')
+      .eq('inscription_id', essai.inscription_id)
+    if (semCourant?.id) themeQuery = themeQuery.eq('semestre_id', semCourant.id)
+    const { data: theme } = await themeQuery.maybeSingle()
 
     // Dépôts de CETTE inscription
     const { data: depots } = await admin
@@ -327,7 +334,7 @@ export async function analyserEssai(essaiId: string): Promise<void> {
     const dossier = construireDossierEssai(analysesTriees, pistes ?? [], analyseOrale)
 
     const prompt = promptBase
-      .replace('{{question}}', theme?.question ?? theme?.theme ?? 'Non définie')
+      .replace('{{question}}', theme?.theme ?? 'Non définie')
       .replace('{{titre_epreuve}}', epreuve?.titre ?? 'Épreuve')
       .replace(/\{\{duree\}\}/g, String(epreuve?.duree_minutes ?? 60))
       .replace('{{consignes}}', epreuve?.consignes ?? 'Aucune consigne particulière.')

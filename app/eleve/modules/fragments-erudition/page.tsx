@@ -59,12 +59,19 @@ export default async function PageFragments({ searchParams }: { searchParams: Pr
   const inscriptionActive = inscriptions.find(i => i.id === ctx) ?? inscriptions[0]
   const inscriptionId = inscriptionActive.id
 
-  // Thème (inclut essai_actif et question pour l'essai)
-  const { data: theme } = await supabase
-    .from('fragments_themes')
-    .select('theme, description, essai_actif, question')
-    .eq('inscription_id', inscriptionId)
+  // Thème du semestre courant (un thème par inscription × semestre). L'élève
+  // n'a pas de sélecteur : il voit toujours le semestre marqué « courant ».
+  const { data: semCourant } = await admin
+    .from('fragments_semestres')
+    .select('id')
+    .eq('courant', true)
     .maybeSingle()
+  let themeQuery = supabase
+    .from('fragments_themes')
+    .select('theme, description, essai_actif')
+    .eq('inscription_id', inscriptionId)
+  if (semCourant?.id) themeQuery = themeQuery.eq('semestre_id', semCourant.id)
+  const { data: theme } = await themeQuery.maybeSingle()
 
   // Semaine ouverte
   const { data: semaine } = await supabase
@@ -531,14 +538,7 @@ export default async function PageFragments({ searchParams }: { searchParams: Pr
       {essaiActif && (
         <div className="space-y-4">
           <h3 className="text-sm font-medium text-stone-500 uppercase tracking-wide">Essai final</h3>
-
-          {/* Question de l'élève */}
-          {(theme as unknown as { question?: string | null })?.question && (
-            <div className="bg-stone-100 rounded-xl px-4 py-3">
-              <p className="text-xs text-stone-500 mb-0.5">Ta question</p>
-              <p className="font-medium text-stone-800">{(theme as unknown as { question: string }).question}</p>
-            </div>
-          )}
+          {/* Le sujet de l'essai = le thème de l'élève (champ unifié), déjà affiché ci-dessus. */}
 
           {/* Résultat publié */}
           {analyseEssaiPubliee && (

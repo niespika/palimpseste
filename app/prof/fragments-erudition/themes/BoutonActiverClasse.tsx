@@ -4,14 +4,15 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { activerEssaiPourClasse } from '../essai-actions'
 
-export default function BoutonActiverClasse({ classeId, classeNom }: { classeId: string; classeNom: string }) {
+// Active / désactive l'essai final pour toute la classe, sur le semestre consulté.
+export default function BoutonActiverClasse({ classeId, semestreId }: { classeId: string; semestreId: string }) {
   const router = useRouter()
   const [chargement, setChargement] = useState(false)
   const [message, setMessage] = useState<string | null>(null)
 
   async function handleActiver(actif: boolean) {
     setChargement(true)
-    const res = await activerEssaiPourClasse(classeId, actif)
+    const res = await activerEssaiPourClasse(classeId, semestreId, actif)
     setChargement(false)
     setMessage(actif ? `Essai activé (${res.count})` : `Essai désactivé (${res.count})`)
     router.refresh()
@@ -20,7 +21,7 @@ export default function BoutonActiverClasse({ classeId, classeNom }: { classeId:
 
   return (
     <div className="flex items-center gap-1.5">
-      <span className="text-sm font-medium text-stone-700">{classeNom}</span>
+      <span className="text-xs text-stone-400">Essai :</span>
       <button
         onClick={() => handleActiver(true)}
         disabled={chargement}

@@ -4,6 +4,7 @@ import { createAdminClient } from '@/utils/supabase/admin'
 import { createClient } from '@/utils/supabase/server'
 import { inscriptionEleveClasse } from '@/utils/acces'
 import { classeFragmentsActive } from '../../contexte-classe'
+import { semestreFragmentsActif } from '../../contexte-semestre'
 import GraphiqueProgression from '@/components/fragments/GraphiqueProgression'
 import type { PointSemaine } from '@/components/fragments/GraphiqueProgression'
 
@@ -39,12 +40,14 @@ export default async function PageEleveDetail({ params }: { params: Promise<{ el
     )
   }
 
-  // Thème
-  const { data: theme } = await admin
+  // Thème de l'inscription pour le semestre consulté
+  const { semestre } = await semestreFragmentsActif(supabase)
+  let themeQuery = admin
     .from('fragments_themes')
     .select('theme, description')
     .eq('inscription_id', inscriptionId)
-    .maybeSingle()
+  if (semestre) themeQuery = themeQuery.eq('semestre_id', semestre.id)
+  const { data: theme } = await themeQuery.maybeSingle()
 
   // Toutes les semaines
   const { data: semaines } = await admin

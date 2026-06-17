@@ -4,6 +4,7 @@ import { createClient } from '@/utils/supabase/server'
 import { createAdminClient } from '@/utils/supabase/admin'
 import { inscriptionsClasse } from '@/utils/acces'
 import { classeFragmentsActive } from '../../contexte-classe'
+import { semestreFragmentsActif } from '../../contexte-semestre'
 import TableauEpreuve from './TableauEpreuve'
 
 export default async function PageEpreuve({ params }: { params: Promise<{ epreuveId: string }> }) {
@@ -27,17 +28,22 @@ export default async function PageEpreuve({ params }: { params: Promise<{ epreuv
 
   // Classe active → inscriptions de la classe (1 inscription par élève)
   const { classe } = await classeFragmentsActive(supabase)
+  const { semestre } = await semestreFragmentsActif(supabase)
   const inscrits = classe ? await inscriptionsClasse(admin, classe.id) : []
   const inscriptionIds = inscrits.map(i => i.id)
   const inscriptionParEleve = Object.fromEntries(inscrits.map(i => [i.eleve_id, i.id]))
 
-  // Inscriptions de la classe avec essai_actif=true
+  // Inscriptions de la classe avec essai_actif=true (sur le semestre consulté)
   const { data: themes } = inscriptionIds.length > 0
-    ? await admin
-        .from('fragments_themes')
-        .select('eleve_id, essai_actif, question')
-        .eq('essai_actif', true)
-        .in('inscription_id', inscriptionIds)
+    ? await (() => {
+        let q = admin
+          .from('fragments_themes')
+          .select('eleve_id, essai_actif')
+          .eq('essai_actif', true)
+          .in('inscription_id', inscriptionIds)
+        if (semestre) q = q.eq('semestre_id', semestre.id)
+        return q
+      })()
     : { data: [] }
 
   const eleveIds = (themes ?? []).map(t => t.eleve_id)

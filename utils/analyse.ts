@@ -137,21 +137,24 @@ export async function lancerAnalyse(
       return
     }
 
-    // Dépôt courant : inscription (scoping élève × classe) + numéro de semaine
+    // Dépôt courant : inscription (scoping élève × classe) + semaine + semestre
     const { data: depot } = await admin
       .from('fragments_depots')
-      .select('inscription_id, semaine_id, fragments_semaines(numero)')
+      .select('inscription_id, semaine_id, fragments_semaines(numero, semestre_id)')
       .eq('id', depotId)
       .single()
     const inscriptionId = depot?.inscription_id as string | null
-    const numeroSemaine = (depot?.fragments_semaines as unknown as { numero: number } | null)?.numero ?? 1
+    const semaineDepot = depot?.fragments_semaines as unknown as { numero: number; semestre_id: string | null } | null
+    const numeroSemaine = semaineDepot?.numero ?? 1
+    const semestreId = semaineDepot?.semestre_id ?? null
 
-    // Thème de l'inscription
-    const { data: theme } = await admin
+    // Thème de l'inscription pour CE semestre (un thème par inscription × semestre)
+    let themeQuery = admin
       .from('fragments_themes')
       .select('theme, description')
       .eq('inscription_id', inscriptionId)
-      .maybeSingle()
+    if (semestreId) themeQuery = themeQuery.eq('semestre_id', semestreId)
+    const { data: theme } = await themeQuery.maybeSingle()
 
     // Historique : tous les dépôts de CETTE inscription (pas des autres classes)
     const { data: tousDepots } = await admin
