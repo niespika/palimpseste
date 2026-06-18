@@ -4,6 +4,25 @@ export interface ImageTraitee {
   file: File
   previewUrl: string
   nom: string
+  // Anti-triche (couche 2) : l'EXIF DateTimeOriginal de l'original est très
+  // ancien par rapport à l'horloge → photo probablement recyclée (galerie).
+  // EXIF absent (capture d'écran, image « nettoyée ») → non suspect (cf. spec).
+  priseSuspecte: boolean
+}
+
+// Seuil : une photo de fragment est prise dans la semaine ; au-delà de ~2 jours
+// d'écart on signale (sans bloquer).
+const ECART_SUSPECT_MS = 2 * 24 * 60 * 60 * 1000
+
+async function lireDateExif(file: File): Promise<Date | null> {
+  try {
+    const exifr = (await import('exifr')).default
+    const data = await exifr.parse(file, ['DateTimeOriginal', 'CreateDate'])
+    const d = (data?.DateTimeOriginal ?? data?.CreateDate) as Date | undefined
+    return d instanceof Date && !isNaN(d.getTime()) ? d : null
+  } catch {
+    return null
+  }
 }
 
 async function convertirHEIC(file: File): Promise<File> {
@@ -19,6 +38,10 @@ async function convertirHEIC(file: File): Promise<File> {
 
 export async function traiterImage(file: File): Promise<ImageTraitee> {
   let fileATraiter = file
+
+  // Lire l'EXIF sur l'ORIGINAL (la compression le supprime ensuite).
+  const dateExif = await lireDateExif(file)
+  const priseSuspecte = dateExif != null && Date.now() - dateExif.getTime() > ECART_SUSPECT_MS
 
   // Convertir HEIC → JPEG si nécessaire
   const estHEIC =
@@ -53,6 +76,7 @@ export async function traiterImage(file: File): Promise<ImageTraitee> {
     file: fichierFinal,
     previewUrl,
     nom: fichierFinal.name,
+    priseSuspecte,
   }
 }
 

@@ -108,6 +108,7 @@ export default function FormulaireDepot({ semaineId, eleveId, inscriptionId, dep
       formData.append('semaineId', semaineId)
       formData.append('inscriptionId', inscriptionId)
       if (commentaire) formData.append('commentaire', commentaire)
+      if (images.some(img => img.priseSuspecte)) formData.append('photos_suspectes', 'true')
       chemins.forEach(c => formData.append('chemins', c))
 
       const resultat = await deposerCompteRendu(formData)
@@ -164,6 +165,16 @@ export default function FormulaireDepot({ semaineId, eleveId, inscriptionId, dep
           JPEG, PNG ou HEIC · Max 4 photos · Compressées automatiquement
         </p>
       </div>
+
+      {/* Anti-triche : photo(s) probablement issues de la galerie (EXIF ancien) */}
+      {images.some(img => img.priseSuspecte) && (
+        <div className="bg-amber-50 border border-amber-200 rounded-xl px-3 py-2">
+          <p className="text-amber-800 text-sm">
+            ⚠ Une photo semble ancienne (prise il y a plus de 2 jours d&apos;après ses métadonnées).
+            Utilise une photo prise au moment du dépôt. Ce dépôt sera signalé à ton professeur.
+          </p>
+        </div>
+      )}
 
       {/* Aperçu des photos */}
       {images.length > 0 && (

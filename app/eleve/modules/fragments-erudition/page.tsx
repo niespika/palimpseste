@@ -3,8 +3,11 @@ import Link from 'next/link'
 import { createClient } from '@/utils/supabase/server'
 import { createAdminClient } from '@/utils/supabase/admin'
 import { inscriptionsModuleEleve } from '@/utils/acces'
-import SelecteurContexteClasse from './SelecteurContexteClasse'
+import { contexteClasseEleve } from '../../contexte-classe'
+import SelecteurClasseEleve from '../../SelecteurClasseEleve'
+import Tuile from '@/components/Tuile'
 import FormulaireDepot from './FormulaireDepot'
+import BoutonLectureRetour from './BoutonLectureRetour'
 import AnalysePubliee from './AnalysePubliee'
 import GraphiqueProgression from '@/components/fragments/GraphiqueProgression'
 import AnalyseOralePubliee from './AnalyseOralePubliee'
@@ -24,7 +27,7 @@ function formatDateLimite(dateStr: string) {
   })
 }
 
-export default async function PageFragments({ searchParams }: { searchParams: Promise<{ ctx?: string }> }) {
+export default async function PageFragments({ searchParams }: { searchParams: Promise<{ vue?: string }> }) {
   const supabase = await createClient()
   const admin = createAdminClient()
   const { data: { user } } = await supabase.auth.getUser()
@@ -54,10 +57,14 @@ export default async function PageFragments({ searchParams }: { searchParams: Pr
     )
   }
 
-  // Contexte de classe actif (sélecteur affiché si plusieurs inscriptions)
-  const { ctx } = await searchParams
-  const inscriptionActive = inscriptions.find(i => i.id === ctx) ?? inscriptions[0]
+  // Contexte de classe courant (commutateur global du Lot 9, cookie partagé).
+  // On retient l'inscription du cookie si elle a le module, sinon la 1ʳᵉ.
+  const { active } = await contexteClasseEleve(supabase, user.id)
+  const inscriptionActive = inscriptions.find(i => i.id === active?.id) ?? inscriptions[0]
   const inscriptionId = inscriptionActive.id
+
+  const { vue: vueParam } = await searchParams
+  const vue = vueParam === 'oral' || vueParam === 'essai' ? vueParam : 'ecrit'
 
   // Thème du semestre courant (un thème par inscription × semestre). L'élève
   // n'a pas de sélecteur : il voit toujours le semestre marqué « courant ».
@@ -374,123 +381,47 @@ export default async function PageFragments({ searchParams }: { searchParams: Pr
     .eq('inscription_id', inscriptionId)
     .eq('statut', 'presente')
 
+  // ── Lot 10 : dernier retour écrit, gate de lecture, couleurs des tuiles ────
+  const derniereAnalyseEcrite = (analyseActuelle as FragmentAnalyse | null)
+    ?? ((depotsPasses.map(d => analyseParDepot[d.id]).find(Boolean) as FragmentAnalyse | undefined) ?? null)
+  const pistesDerniere = (analyseActuelle
+    ? (pistesActuelles ?? [])
+    : (derniereAnalyseEcrite ? (pistesParAnalyse[derniereAnalyseEcrite.id] ?? []) : [])) as FragmentPiste[]
+  const gateActif = !!derniereAnalyseEcrite && !(derniereAnalyseEcrite as unknown as { retour_lu_at?: string | null }).retour_lu_at
+  const rappelPistes = pistesDerniere.slice(0, 3)
+
+  const aOral = Object.keys(oralParSemaine).length > 0
+  const couleurEcrit: 'vert' | 'rouge' | 'neutre' = !semaine ? 'neutre' : (!depotActuel || gateActif) ? 'rouge' : 'vert'
+  const couleurOral: 'vert' | 'neutre' = aOral ? 'vert' : 'neutre'
+  const couleurEssai: 'vert' | 'rouge' | 'neutre' =
+    !epreuveOuverte && !essaiEleve && !analyseEssaiPubliee ? 'neutre' : (epreuveOuverte && !essaiEleve) ? 'rouge' : 'vert'
+  const lien = (v: string) => `/eleve/modules/fragments-erudition?vue=${v}`
+
   return (
     <div className="space-y-6 pb-8">
       <div className="flex items-center gap-2">
         <Link href="/eleve" className="text-sm text-stone-500 hover:text-stone-700">← Retour</Link>
       </div>
 
-      <SelecteurContexteClasse inscriptions={inscriptions} inscriptionActiveId={inscriptionId} />
-
-      <div>
-        <h2 className="text-xl font-serif text-stone-900 mb-1">Fragments d'érudition</h2>
-        {theme ? (
-          <div className="bg-stone-100 rounded-xl px-4 py-3">
-            <p className="text-xs text-stone-500 mb-0.5">Ton thème</p>
-            <p className="font-medium text-stone-800">{theme.theme}</p>
-            {theme.description && (
-              <p className="text-sm text-stone-500 mt-1">{theme.description}</p>
-            )}
-          </div>
-        ) : (
-          <div className="bg-stone-50 rounded-xl px-4 py-3 border border-stone-200">
-            <p className="text-sm text-stone-500 italic">
-              Ton thème sera défini avec ton professeur.
-            </p>
-          </div>
-        )}
+      <div className="flex items-start justify-between gap-3 flex-wrap">
+        <div>
+          <h2 className="text-xl font-serif text-stone-900 mb-1">Fragments d&apos;érudition</h2>
+          {theme ? (
+            <div className="bg-stone-100 rounded-xl px-4 py-3">
+              <p className="text-xs text-stone-500 mb-0.5">Ton thème</p>
+              <p className="font-medium text-stone-800">{theme.theme}</p>
+              {theme.description && <p className="text-sm text-stone-500 mt-1">{theme.description}</p>}
+            </div>
+          ) : (
+            <div className="bg-stone-50 rounded-xl px-4 py-3 border border-stone-200">
+              <p className="text-sm text-stone-500 italic">Ton thème sera défini avec ton professeur.</p>
+            </div>
+          )}
+        </div>
+        <SelecteurClasseEleve inscriptions={inscriptions} activeId={inscriptionId} />
       </div>
 
-      {/* Semaine en cours */}
-      {semaine ? (
-        <div className="bg-white border border-stone-200 rounded-xl overflow-hidden">
-          <div className="px-4 py-4 border-b border-stone-100">
-            <div className="flex items-start justify-between gap-2">
-              <div>
-                <p className="text-xs text-stone-500 mb-0.5">Semaine en cours</p>
-                <p className="font-medium text-stone-900">
-                  Semaine {semaine.numero}
-                  {semaine.titre ? ` — ${semaine.titre}` : ''}
-                </p>
-                <p className="text-xs text-stone-500 mt-0.5">
-                  À rendre avant le {formatDateLimite(semaine.date_limite)}
-                </p>
-              </div>
-
-              {depotActuel ? (
-                <div className="flex-shrink-0">
-                  {depotEnRetard ? (
-                    <span className="text-xs bg-orange-100 text-orange-700 px-2 py-1 rounded-full">
-                      ⚠ En retard
-                    </span>
-                  ) : (
-                    <span className="text-xs bg-green-100 text-green-700 px-2 py-1 rounded-full">
-                      ✓ Déposé
-                    </span>
-                  )}
-                </div>
-              ) : (
-                <span className="flex-shrink-0 text-xs bg-amber-100 text-amber-700 px-2 py-1 rounded-full">
-                  À déposer
-                </span>
-              )}
-            </div>
-          </div>
-
-          <div className="px-4 py-4 space-y-4">
-            <FormulaireDepot
-              semaineId={semaine.id}
-              eleveId={user.id}
-              inscriptionId={inscriptionId}
-              depotExistant={!!depotActuel}
-            />
-
-            {/* Statut retour */}
-            {depotActuel && !analyseActuelle && (
-              <div className="bg-stone-50 border border-stone-200 rounded-xl px-4 py-3">
-                <p className="text-sm text-stone-500">
-                  Retour en préparation — ton professeur l'examinera bientôt.
-                </p>
-              </div>
-            )}
-
-            {/* Analyse publiée de la semaine en cours */}
-            {analyseActuelle && (
-              <div className="border-t border-stone-100 pt-4">
-                <p className="text-xs font-medium text-stone-500 uppercase tracking-wide mb-3">
-                  Retour de ton professeur
-                </p>
-                <AnalysePubliee
-                  analyse={analyseActuelle as FragmentAnalyse}
-                  pistes={(pistesActuelles ?? []) as FragmentPiste[]}
-                />
-              </div>
-            )}
-
-            {/* Retour oral de la semaine en cours */}
-            {semaine && oralParSemaine[semaine.id] && (
-              <div className="border-t border-stone-100 pt-4">
-                <p className="text-xs font-medium text-stone-500 uppercase tracking-wide mb-3">
-                  Ta présentation orale
-                </p>
-                <AnalyseOralePubliee
-                  oral={oralParSemaine[semaine.id].oral}
-                  analyseOrale={oralParSemaine[semaine.id].analyseOrale}
-                />
-              </div>
-            )}
-          </div>
-        </div>
-      ) : (
-        <div className="bg-white border border-stone-200 rounded-xl p-6 text-center">
-          <p className="text-stone-500 text-sm">
-            Aucune semaine n'est ouverte pour l'instant.<br />
-            Ton professeur en créera une bientôt.
-          </p>
-        </div>
-      )}
-
-      {/* Ton parcours */}
+      {/* Ton parcours (sections en lettres) + stats + rappel des pistes */}
       {pointsParcours.some(p => p.decouvertes !== null) && (
         <div className="space-y-4">
           <h3 className="text-sm font-medium text-stone-500 uppercase tracking-wide">Ton parcours</h3>
@@ -499,9 +430,7 @@ export default async function PageFragments({ searchParams }: { searchParams: Pr
           </div>
           <div className="grid grid-cols-3 gap-3">
             <div className="bg-white border border-stone-200 rounded-xl p-3 text-center">
-              <p className="text-lg font-serif text-stone-800">
-                {nbSemainesTotal > 0 ? Math.round((nbDeposesTotal / nbSemainesTotal) * 100) : 0}%
-              </p>
+              <p className="text-lg font-serif text-stone-800">{nbSemainesTotal > 0 ? Math.round((nbDeposesTotal / nbSemainesTotal) * 100) : 0}%</p>
               <p className="text-xs text-stone-500 mt-0.5">Taux de dépôt</p>
             </div>
             {meilleurSection && (
@@ -517,22 +446,13 @@ export default async function PageFragments({ searchParams }: { searchParams: Pr
               </div>
             )}
           </div>
-          {(mesPresen ?? []).length > 0 && (
-            <p className="text-sm text-stone-500 text-center">
-              Tu as présenté {(mesPresen ?? []).length} fois cette année.
-            </p>
-          )}
-          {/* Pistes en attente */}
-          {(pistesEnAttente ?? []).length > 0 && (
+          {rappelPistes.length > 0 && (
             <div className="bg-white border border-stone-200 rounded-xl p-4">
-              <p className="text-xs font-medium text-stone-500 uppercase tracking-wide mb-3">
-                Tes pistes en attente
-              </p>
+              <p className="text-xs font-medium text-stone-500 uppercase tracking-wide mb-3">Pistes à suivre (dernier retour)</p>
               <ul className="space-y-2">
-                {(pistesEnAttente ?? []).map(piste => (
+                {rappelPistes.map(piste => (
                   <li key={piste.id} className="flex items-start gap-2 text-sm text-stone-700">
-                    <span className="text-stone-400 mt-0.5 flex-shrink-0">💡</span>
-                    {piste.contenu}
+                    <span className="text-stone-400 mt-0.5 flex-shrink-0">💡</span>{piste.contenu}
                   </li>
                 ))}
               </ul>
@@ -541,21 +461,148 @@ export default async function PageFragments({ searchParams }: { searchParams: Pr
         </div>
       )}
 
-      {/* Essai final */}
-      {essaiActif && (
-        <div className="space-y-4">
-          <h3 className="text-sm font-medium text-stone-500 uppercase tracking-wide">Essai final</h3>
-          {/* Le sujet de l'essai = le thème de l'élève (champ unifié), déjà affiché ci-dessus. */}
+      {/* 3 tuiles d'état cliquables (vert / rouge / neutre) */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+        <Tuile
+          nom="Fragments écrits"
+          sousTitre={!semaine ? 'Rien de neuf' : !depotActuel ? 'À déposer' : gateActif ? 'Retour à lire' : 'À jour'}
+          couleur={couleurEcrit}
+          href={lien('ecrit')}
+          selectionnee={vue === 'ecrit'}
+        />
+        <Tuile
+          nom="Fragment oral"
+          sousTitre={aOral ? 'Retour disponible' : 'Rien de neuf'}
+          couleur={couleurOral}
+          href={lien('oral')}
+          selectionnee={vue === 'oral'}
+        />
+        {essaiActif && (
+          <Tuile
+            nom="Essai"
+            sousTitre={analyseEssaiPubliee ? 'Retour disponible' : essaiEleve ? 'Déposé' : epreuveOuverte ? 'À déposer' : 'Rien de neuf'}
+            couleur={couleurEssai}
+            href={lien('essai')}
+            selectionnee={vue === 'essai'}
+          />
+        )}
+      </div>
 
-          {/* Résultat publié */}
+      {/* Retour du dernier fragment + gate de lecture */}
+      {derniereAnalyseEcrite && (
+        <div className="bg-white border border-stone-200 rounded-xl p-4 space-y-4">
+          <p className="text-xs font-medium text-stone-500 uppercase tracking-wide">Ton dernier retour</p>
+          <AnalysePubliee analyse={derniereAnalyseEcrite} pistes={pistesDerniere} />
+          {gateActif && (
+            <div className="border-t border-amber-100 pt-4 space-y-2">
+              <p className="text-sm text-amber-700">Valide que tu as lu ce retour pour pouvoir déposer ton prochain fragment.</p>
+              <BoutonLectureRetour analyseId={derniereAnalyseEcrite.id} />
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ── Détail : Fragments écrits ── */}
+      {vue === 'ecrit' && (
+        semaine ? (
+          <div className="bg-white border border-stone-200 rounded-xl overflow-hidden">
+            <div className="px-4 py-4 border-b border-stone-100">
+              <div className="flex items-start justify-between gap-2">
+                <div>
+                  <p className="text-xs text-stone-500 mb-0.5">Semaine en cours</p>
+                  <p className="font-medium text-stone-900">Semaine {semaine.numero}{semaine.titre ? ` — ${semaine.titre}` : ''}</p>
+                  <p className="text-xs text-stone-500 mt-0.5">À rendre avant le {formatDateLimite(semaine.date_limite)}</p>
+                </div>
+                {depotActuel ? (
+                  <span className={`flex-shrink-0 text-xs px-2 py-1 rounded-full ${depotEnRetard ? 'bg-orange-100 text-orange-700' : 'bg-green-100 text-green-700'}`}>
+                    {depotEnRetard ? '⚠ En retard' : '✓ Déposé'}
+                  </span>
+                ) : (
+                  <span className="flex-shrink-0 text-xs bg-amber-100 text-amber-700 px-2 py-1 rounded-full">À déposer</span>
+                )}
+              </div>
+            </div>
+            <div className="px-4 py-4 space-y-4">
+              {gateActif ? (
+                <div className="bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 text-sm text-amber-800">
+                  Lis et valide ton dernier retour (ci-dessus) pour débloquer le dépôt.
+                </div>
+              ) : (
+                <FormulaireDepot semaineId={semaine.id} eleveId={user.id} inscriptionId={inscriptionId} depotExistant={!!depotActuel} />
+              )}
+              {depotActuel && !analyseActuelle && (
+                <div className="bg-stone-50 border border-stone-200 rounded-xl px-4 py-3">
+                  <p className="text-sm text-stone-500">Retour en préparation — ton professeur l&apos;examinera bientôt.</p>
+                </div>
+              )}
+            </div>
+          </div>
+        ) : (
+          <div className="bg-white border border-stone-200 rounded-xl p-6 text-center">
+            <p className="text-stone-500 text-sm">Aucune semaine n&apos;est ouverte pour l&apos;instant.<br />Ton professeur en créera une bientôt.</p>
+          </div>
+        )
+      )}
+
+      {/* Historique écrit */}
+      {vue === 'ecrit' && depotsPasses.length > 0 && (
+        <div className="space-y-4">
+          <h3 className="text-sm font-medium text-stone-500 uppercase tracking-wide">Semaines précédentes</h3>
+          {depotsPasses.map(depot => {
+            const analyse = analyseParDepot[depot.id]
+            const pistes = analyse ? (pistesParAnalyse[analyse.id] ?? []) : []
+            const semaineTitre = (depot.semaine as unknown as { numero: number; titre: string | null } | null)
+            return (
+              <div key={depot.id} className="bg-white border border-stone-200 rounded-xl overflow-hidden">
+                <div className="px-4 py-3 border-b border-stone-100 flex items-center justify-between">
+                  <p className="font-medium text-stone-800 text-sm">Semaine {semaineTitre?.numero ?? '?'}{semaineTitre?.titre ? ` — ${semaineTitre.titre}` : ''}</p>
+                  {analyse ? (
+                    <span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full">Retour disponible</span>
+                  ) : (
+                    <span className="text-xs bg-stone-100 text-stone-500 px-2 py-0.5 rounded-full">Déposé ✓</span>
+                  )}
+                </div>
+                {analyse && (
+                  <div className="px-4 py-4">
+                    <AnalysePubliee analyse={analyse} pistes={pistes as FragmentPiste[]} />
+                  </div>
+                )}
+              </div>
+            )
+          })}
+        </div>
+      )}
+
+      {/* ── Détail : Fragment oral (lecture ; l'oral se fait en classe) ── */}
+      {vue === 'oral' && (
+        aOral ? (
+          <div className="space-y-4">
+            {Object.entries(oralParSemaine).map(([semId, data]) => {
+              const num = (toutesLessemaines ?? []).find(s => s.id === semId)?.numero
+              return (
+                <div key={semId} className="bg-white border border-stone-200 rounded-xl p-4">
+                  <p className="text-xs font-medium text-stone-500 uppercase tracking-wide mb-3">{num ? `Semaine ${num} — ` : ''}ta présentation orale</p>
+                  <AnalyseOralePubliee oral={data.oral} analyseOrale={data.analyseOrale} />
+                </div>
+              )
+            })}
+          </div>
+        ) : (
+          <div className="bg-white border border-stone-200 rounded-xl p-6 text-center text-sm text-stone-500">
+            Aucun retour d&apos;oral pour l&apos;instant. L&apos;oral se fait en classe.
+          </div>
+        )
+      )}
+
+      {/* ── Détail : Essai (dépôt si pas encore soumis + retour ; un seul essai) ── */}
+      {vue === 'essai' && essaiActif && (
+        <div className="space-y-4">
           {analyseEssaiPubliee && (
             <div className="bg-white border border-stone-200 rounded-xl p-5">
               <p className="text-xs font-medium text-stone-500 uppercase tracking-wide mb-4">Retour de ton professeur</p>
               <EssaiPublie analyse={analyseEssaiPubliee as EssaiAnalyse} />
             </div>
           )}
-
-          {/* Dépôt ouvert */}
           {epreuveOuverte && (
             <div className="bg-white border border-stone-200 rounded-xl overflow-hidden">
               <div className="px-4 py-4 border-b border-stone-100">
@@ -564,9 +611,7 @@ export default async function PageFragments({ searchParams }: { searchParams: Pr
                   {new Date(epreuveOuverte.date_epreuve).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })}
                   {' · '}{epreuveOuverte.duree_minutes} min
                 </p>
-                {epreuveOuverte.consignes && (
-                  <p className="text-sm text-stone-600 mt-2">{epreuveOuverte.consignes}</p>
-                )}
+                {epreuveOuverte.consignes && <p className="text-sm text-stone-600 mt-2">{epreuveOuverte.consignes}</p>}
               </div>
               <div className="px-4 py-4">
                 {essaiEleve && !analyseEssaiEnCours ? (
@@ -578,15 +623,13 @@ export default async function PageFragments({ searchParams }: { searchParams: Pr
                     <EssaiDepot epreuveId={epreuveOuverte.id} inscriptionId={inscriptionId} essaiExistantId={essaiEleve.id} analyseEnCours={false} />
                   </div>
                 ) : (
-                  <EssaiDepot
-                    epreuveId={epreuveOuverte.id}
-                    inscriptionId={inscriptionId}
-                    essaiExistantId={essaiEleve?.id ?? null}
-                    analyseEnCours={!!analyseEssaiEnCours}
-                  />
+                  <EssaiDepot epreuveId={epreuveOuverte.id} inscriptionId={inscriptionId} essaiExistantId={essaiEleve?.id ?? null} analyseEnCours={!!analyseEssaiEnCours} />
                 )}
               </div>
             </div>
+          )}
+          {!epreuveOuverte && !analyseEssaiPubliee && (
+            <div className="bg-white border border-stone-200 rounded-xl p-6 text-center text-sm text-stone-500">Aucune épreuve d&apos;essai ouverte pour l&apos;instant.</div>
           )}
         </div>
       )}
@@ -598,61 +641,6 @@ export default async function PageFragments({ searchParams }: { searchParams: Pr
           <div className="bg-white border border-stone-200 rounded-xl p-5">
             <BilanSemestre synthese={synthesePubliee as FragmentSynthese} />
           </div>
-        </div>
-      )}
-
-      {/* Historique des semaines passées */}
-      {depotsPasses.length > 0 && (
-        <div className="space-y-4">
-          <h3 className="text-sm font-medium text-stone-500 uppercase tracking-wide">Semaines précédentes</h3>
-          {depotsPasses.map(depot => {
-            const analyse = analyseParDepot[depot.id]
-            const pistes = analyse ? (pistesParAnalyse[analyse.id] ?? []) : []
-            const semaineTitre = (depot.semaine as unknown as { numero: number; titre: string | null } | null)
-            return (
-              <div key={depot.id} className="bg-white border border-stone-200 rounded-xl overflow-hidden">
-                <div className="px-4 py-3 border-b border-stone-100 flex items-center justify-between">
-                  <p className="font-medium text-stone-800 text-sm">
-                    Semaine {semaineTitre?.numero ?? '?'}
-                    {semaineTitre?.titre ? ` — ${semaineTitre.titre}` : ''}
-                  </p>
-                  {analyse ? (
-                    <span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full">
-                      Retour disponible
-                    </span>
-                  ) : (
-                    <span className="text-xs bg-stone-100 text-stone-500 px-2 py-0.5 rounded-full">
-                      Déposé ✓
-                    </span>
-                  )}
-                </div>
-                {analyse && (
-                  <div className="px-4 py-4">
-                    <AnalysePubliee
-                      analyse={analyse}
-                      pistes={pistes as FragmentPiste[]}
-                    />
-                  </div>
-                )}
-                {(() => {
-                  const semaineTitreObj = (depot.semaine as unknown as { id: string } | null)
-                  const oralData = semaineTitreObj ? oralParSemaine[semaineTitreObj.id] : null
-                  if (!oralData) return null
-                  return (
-                    <div className="px-4 py-4 border-t border-stone-100">
-                      <p className="text-xs font-medium text-stone-500 uppercase tracking-wide mb-3">
-                        Ta présentation orale
-                      </p>
-                      <AnalyseOralePubliee
-                        oral={oralData.oral}
-                        analyseOrale={oralData.analyseOrale}
-                      />
-                    </div>
-                  )
-                })()}
-              </div>
-            )
-          })}
         </div>
       )}
     </div>

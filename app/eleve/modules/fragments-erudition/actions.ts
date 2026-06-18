@@ -34,6 +34,28 @@ export async function deposerCompteRendu(formData: FormData) {
     .maybeSingle()
   if (!inscription) return { error: 'Contexte de classe invalide.' }
 
+  // Gate de lecture (Lot 10) : interdire un nouveau dépôt tant que le dernier
+  // retour publié de cette inscription n'a pas été marqué « lu ».
+  const adminGate = createAdminClient()
+  const { data: depotsInsc } = await adminGate
+    .from('fragments_depots')
+    .select('id')
+    .eq('inscription_id', inscriptionId)
+  const depotIdsInsc = (depotsInsc ?? []).map((d) => d.id)
+  if (depotIdsInsc.length > 0) {
+    const { data: derniere } = await adminGate
+      .from('fragments_analyses')
+      .select('id, retour_lu_at')
+      .eq('statut', 'publiee')
+      .in('depot_id', depotIdsInsc)
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle()
+    if (derniere && !derniere.retour_lu_at) {
+      return { error: 'Lis et valide d’abord ton dernier retour avant de déposer un nouveau fragment.' }
+    }
+  }
+
   // Vérifier que la semaine est ouverte
   const { data: semaine } = await supabase
     .from('fragments_semaines')
@@ -74,6 +96,7 @@ export async function deposerCompteRendu(formData: FormData) {
       semaine_id: semaineId,
       statut,
       commentaire_eleve: commentaire || null,
+      photos_suspectes: formData.get('photos_suspectes') === 'true',
     })
     .select('id')
     .single()
@@ -114,6 +137,30 @@ export async function deposerCompteRendu(formData: FormData) {
   })
 
   return { success: true, statut }
+}
+
+// Gate de lecture (Lot 10) : l'élève valide qu'il a lu le retour d'une analyse.
+export async function validerLectureRetour(analyseId: string) {
+  const { userId } = await verifierEleve()
+  const admin = createAdminClient()
+
+  const { data: analyse } = await admin
+    .from('fragments_analyses')
+    .select('id, depot_id')
+    .eq('id', analyseId)
+    .maybeSingle()
+  if (!analyse) return { error: 'Retour introuvable.' }
+
+  const { data: depot } = await admin
+    .from('fragments_depots')
+    .select('eleve_id')
+    .eq('id', analyse.depot_id)
+    .maybeSingle()
+  if (depot?.eleve_id !== userId) return { error: 'Accès refusé.' }
+
+  await admin.from('fragments_analyses').update({ retour_lu_at: new Date().toISOString() }).eq('id', analyseId)
+  revalidatePath('/eleve/modules/fragments-erudition')
+  return { success: true }
 }
 
 export async function getSignedUrls(chemins: string[]): Promise<Record<string, string>> {
