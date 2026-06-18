@@ -2,7 +2,7 @@ import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import { createClient } from '@/utils/supabase/server'
 import { aAccesModule, classeIdsActives } from '@/utils/acces'
-import { chargerFileRevision, chargerStatsRevision } from './actions'
+import { chargerFileRevision, chargerStatsRevision, chargerToutesLesCartes } from './actions'
 import { QuazianDashboard } from './QuazianDashboard'
 
 export default async function QuazianElevePage() {
@@ -64,9 +64,10 @@ export default async function QuazianElevePage() {
     }
   }
 
-  const [file, stats] = await Promise.all([
+  const [file, stats, toutesCartes] = await Promise.all([
     chargerFileRevision(),
     chargerStatsRevision(),
+    chargerToutesLesCartes(),
   ])
 
   return (
@@ -106,7 +107,7 @@ export default async function QuazianElevePage() {
 
       <h2 className="text-xl font-serif text-stone-900 mb-6 mt-2">Flashcards</h2>
 
-      <QuazianDashboard stats={stats} file={file} />
+      <QuazianDashboard stats={stats} file={file} toutesCartes={toutesCartes} />
     </div>
   )
 }

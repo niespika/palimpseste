@@ -2,7 +2,8 @@
 
 import { useState } from 'react'
 import { SessionRevision } from './SessionRevision'
-import type { CarteRevision } from './actions'
+import { ConsultationCartes } from './ConsultationCartes'
+import type { CarteRevision, CarteConsultation } from './actions'
 
 interface Stats {
   totalCartes: number
@@ -15,15 +16,21 @@ interface Stats {
 interface Props {
   stats: Stats
   file: CarteRevision[]
+  toutesCartes: CarteConsultation[]
 }
 
-export function QuazianDashboard({ stats, file }: Props) {
-  const [mode, setMode] = useState<'accueil' | 'revision'>('accueil')
+export function QuazianDashboard({ stats, file, toutesCartes }: Props) {
+  const [mode, setMode] = useState<'accueil' | 'revision' | 'consultation'>('accueil')
   const [nbRevues, setNbRevues] = useState<number | null>(null)
+  const nbNouvelles = toutesCartes.filter((c) => c.nouvelle).length
 
   function handleTermine(nb: number) {
     setNbRevues(nb)
     setMode('accueil')
+  }
+
+  if (mode === 'consultation') {
+    return <ConsultationCartes cartes={toutesCartes} onRetour={() => setMode('accueil')} />
   }
 
   if (mode === 'revision') {
@@ -79,6 +86,19 @@ export function QuazianDashboard({ stats, file }: Props) {
         <div className="w-full py-4 bg-green-50 border border-green-200 text-green-700 rounded-xl text-center text-sm">
           ✓ Toutes les cartes sont à jour — reviens demain !
         </div>
+      )}
+
+      {/* Mode consultation (Lot 11) : parcourir toutes ses cartes, sans réviser */}
+      {toutesCartes.length > 0 && (
+        <button
+          onClick={() => setMode('consultation')}
+          className="w-full mt-3 py-3 bg-white border border-stone-200 text-stone-700 rounded-xl hover:border-stone-400 transition-colors text-sm font-medium flex items-center justify-center gap-2"
+        >
+          Consulter toutes mes cartes
+          {nbNouvelles > 0 && (
+            <span className="text-xs bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full">{nbNouvelles} nouvelle{nbNouvelles > 1 ? 's' : ''}</span>
+          )}
+        </button>
       )}
 
       {stats.totalCartes === 0 && (

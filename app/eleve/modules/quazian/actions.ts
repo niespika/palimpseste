@@ -166,6 +166,109 @@ export async function chargerFileRevision(): Promise<CarteRevision[]> {
   return [...nouvelles, ...dues].slice(0, 30)
 }
 
+export interface CarteConsultation {
+  flashcard_id: string
+  recto: string
+  verso: string
+  format: string
+  type: string
+  concept_tag: string
+  label_unite: string
+  nouvelle: boolean // pas encore d'état FSRS pour cet élève (= récemment ajoutée)
+  created_at: string
+}
+
+// Mode « consultation » (Lot 11) : TOUTES les cartes visibles avec leur réponse,
+// sans impact sur la répétition espacée. Même visibilité que la file de révision.
+export async function chargerToutesLesCartes(): Promise<CarteConsultation[]> {
+  const { supabase, userId } = await verifierEleve()
+  const admin = createAdminClient()
+
+  // Unités publiées
+  const { data: publis } = await admin
+    .from('quazian_publications')
+    .select('scriptorium_unite_id')
+    .eq('flashcards_visibles', true)
+  const unitesVisibles = (publis ?? []).map((p) => p.scriptorium_unite_id)
+
+  // Visibilité par (unité, semaine) dérivée du contenu Scriptorium assigné aux
+  // classes de l'élève (Lot 6/7).
+  const { data: inscrits } = await admin
+    .from('inscriptions')
+    .select('classe_id')
+    .eq('eleve_id', userId)
+    .eq('statut', 'active')
+  const classeIds = (inscrits ?? []).map((i) => i.classe_id as string)
+  const tuplesVisibles = new Set<string>()
+  if (classeIds.length > 0) {
+    const { data: liens } = await admin
+      .from('scriptorium_document_classes')
+      .select('document_id')
+      .in('classe_id', classeIds)
+    const docIds = [...new Set((liens ?? []).map((l) => l.document_id as string))]
+    if (docIds.length > 0) {
+      const { data: contenus } = await admin
+        .from('scriptorium_documents')
+        .select('unite_id, semaine')
+        .in('id', docIds)
+        .not('semaine', 'is', null)
+      for (const c of contenus ?? []) tuplesVisibles.add(`${c.unite_id}:${c.semaine}`)
+    }
+  }
+
+  const selectCarte = `
+      id, recto, verso, format, type, concept_tag, semaine, created_at,
+      scriptorium_unite_id, scriptorium_unites(label)
+    `
+
+  const { data: partageesBrutes } = unitesVisibles.length > 0
+    ? await admin
+        .from('quazian_flashcards')
+        .select(selectCarte)
+        .eq('statut', 'valide')
+        .is('eleve_id', null)
+        .in('scriptorium_unite_id', unitesVisibles)
+    : { data: [] }
+  const partagees = (partageesBrutes ?? []).filter((c) => {
+    const sem = (c as { semaine: number | null }).semaine
+    return sem == null || tuplesVisibles.has(`${c.scriptorium_unite_id}:${sem}`)
+  })
+
+  const { data: perso } = await admin
+    .from('quazian_flashcards')
+    .select(selectCarte)
+    .eq('statut', 'valide')
+    .eq('eleve_id', userId)
+
+  const flashcards = [...partagees, ...(perso ?? [])]
+  if (flashcards.length === 0) return []
+
+  const { data: etats } = await supabase
+    .from('quazian_card_states')
+    .select('flashcard_id')
+    .eq('eleve_id', userId)
+    .in('flashcard_id', flashcards.map((f) => f.id))
+  const vues = new Set((etats ?? []).map((e) => e.flashcard_id as string))
+
+  return flashcards
+    .map((f) => {
+      const u = f.scriptorium_unites as unknown as { label: string } | { label: string }[] | null
+      const labelUnite = (Array.isArray(u) ? u[0]?.label : u?.label) ?? 'Cartes personnelles'
+      return {
+        flashcard_id: f.id as string,
+        recto: f.recto as string,
+        verso: f.verso as string,
+        format: f.format as string,
+        type: f.type as string,
+        concept_tag: f.concept_tag as string,
+        label_unite: labelUnite,
+        nouvelle: !vues.has(f.id as string),
+        created_at: f.created_at as string,
+      }
+    })
+    .sort((a, b) => b.created_at.localeCompare(a.created_at))
+}
+
 // Soumettre une note et mettre à jour l'état FSRS
 export async function soumettreNote(
   flashcardId: string,
