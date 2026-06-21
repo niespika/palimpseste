@@ -1,10 +1,11 @@
 'use server'
 
+import { after } from 'next/server'
 import { revalidatePath } from 'next/cache'
 import { createClient } from '@/utils/supabase/server'
 import { createAdminClient } from '@/utils/supabase/admin'
 import { contexteAletheia, livreAccessible, semaineLivre } from './data'
-import type { Retour1, Retour2, StatutAletheia } from './types'
+import type { Retour2, StatutAletheia } from './types'
 
 async function verifierEleve() {
   const supabase = await createClient()
@@ -23,19 +24,6 @@ function revalider(livreId: string, semaine: number) {
 // ── Stubs IA (Lot 2) — placeholders conformes aux schémas §5.1/§5.2. ─────────
 // Les vrais prompts (ancrage PDF, retour socratique, dévoilement) arrivent aux
 // Lots 3-4 ; ici on exerce toute la machine à états et l'UI.
-function stubRetour1(questions: string[]): Retour1 {
-  return {
-    questions_pour_avancer: [
-      "(Démo) Une relance qui t'amènerait à repérer toi-même un point à préciser dans ton résumé apparaîtra ici.",
-      "(Démo) Une seconde relance, vers la marche suivante.",
-    ],
-    reponses_a_tes_questions: questions.length
-      ? questions.map(q => `(Démo) Réponse ancrée dans le texte à ta question : « ${q} »`)
-      : ['(Démo) Les réponses à tes questions apparaîtront ici.'],
-    remarque_questions: '(Démo) Retour 1 stubbé — le vrai retour socratique arrive au Lot 3.',
-  }
-}
-
 function stubRetour2(): Retour2 {
   return {
     synthese_modele: '(Démo) Synthèse modèle des chapitres de la semaine (≤ ~200 mots) — branchée au Lot 4.',
@@ -76,18 +64,27 @@ export async function soumettreV1(livreId: string, semaine: number, resume: stri
     semaine_index: semaine,
     resume_initial: r,
     questions: qs,
-    retour_1: stubRetour1(qs),
-    statut: 'FEEDBACK1_READY' as StatutAletheia,
+    retour_1: null,
+    retour_1_erreur_at: null,
+    statut: 'V1_SUBMITTED' as StatutAletheia,
     updated_at: new Date().toISOString(),
   }
-  const { error } = existing
-    ? await admin.from('aletheia_travaux').update(payload).eq('id', existing.id)
-    : await admin.from('aletheia_travaux').insert(payload)
-  if (error) {
+  const { data: saved, error } = existing
+    ? await admin.from('aletheia_travaux').update(payload).eq('id', existing.id).select('id').single()
+    : await admin.from('aletheia_travaux').insert(payload).select('id').single()
+  if (error || !saved) {
     // Course (double-clic / 2 onglets) : la contrainte d'unicité gagne → message clair.
-    if ((error as { code?: string }).code === '23505') return { error: 'Le résumé a déjà été soumis pour cette semaine.' }
-    return { error: error.message }
+    if ((error as { code?: string } | null)?.code === '23505') return { error: 'Le résumé a déjà été soumis pour cette semaine.' }
+    return { error: error?.message ?? 'Erreur' }
   }
+
+  // Retour 1 généré en arrière-plan : l'élève voit « en cours », le polling récupère le résultat.
+  const travailId = saved.id as string
+  after(async () => {
+    const mod = await import('@/utils/aletheia-retours')
+    await mod.genererRetour1(travailId)
+  })
+
   revalider(livreId, semaine)
   return { success: true }
 }

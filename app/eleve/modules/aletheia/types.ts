@@ -12,7 +12,7 @@ export type StatutAletheia =
 export interface Retour1 {
   questions_pour_avancer: string[]
   reponses_a_tes_questions: string[]
-  remarque_questions?: string
+  remarque_questions?: string | null
 }
 
 // Sortie du retour 2 (reconstruction + architecture) — cf. aletheia-spec §5.2.
@@ -40,6 +40,7 @@ export interface TravailAletheia {
   questions: string[]
   retour_1: Retour1 | null
   resume_vf: string | null
+  retour_1_erreur_at: string | null
   retour_2: Retour2 | null
   retour_2_lu_at: string | null
   devoilement: Devoilement | null

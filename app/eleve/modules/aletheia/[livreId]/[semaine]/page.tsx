@@ -6,6 +6,7 @@ import { contexteAletheia, livreAccessible, semaineLivre, travauxParSemaine } fr
 import FormulaireResumeQuestions from '../../FormulaireResumeQuestions'
 import FormulaireVf from '../../FormulaireVf'
 import BoutonLectureRetour2 from '../../BoutonLectureRetour2'
+import PollStatut from '../../PollStatut'
 import type { Retour1, Retour2, TravailAletheia } from '../../types'
 
 function Bloc({ titre, children }: { titre: string; children: React.ReactNode }) {
@@ -98,9 +99,11 @@ export default async function PageSemaineAletheia({ params }: { params: Promise<
   const resumeSoumis = statut !== 'DRAFT'
   const enAttenteRetour1 = statut === 'V1_SUBMITTED'
   const enAttenteRetour2 = statut === 'VF_SUBMITTED'
+  const echecRetour1 = statut === 'DRAFT' && !!t?.retour_1_erreur_at
 
   return (
     <div className="space-y-5 pb-8">
+      <PollStatut actif={enAttenteRetour1 || enAttenteRetour2} />
       <Link href="/eleve/modules/aletheia" className="text-sm text-stone-500 hover:text-stone-700">← Planning</Link>
 
       <div>
@@ -114,10 +117,21 @@ export default async function PageSemaineAletheia({ params }: { params: Promise<
         <p className="text-xs text-stone-400 mt-2">Lis ces chapitres dans ton propre exemplaire, puis rédige ci-dessous.</p>
       </div>
 
+      {echecRetour1 && (
+        <div className="bg-red-50 border border-red-200 rounded-xl px-4 py-3 text-sm text-red-700">
+          La préparation de ton retour n&apos;a pas abouti. Renvoie ton résumé ci-dessous ; si le problème persiste, préviens ton professeur.
+        </div>
+      )}
+
       {/* Étape 1 — résumé + questions */}
       {!resumeSoumis ? (
         <Bloc titre="1. Ton résumé et tes questions">
-          <FormulaireResumeQuestions livreId={livreId} semaine={semaine} />
+          <FormulaireResumeQuestions
+            livreId={livreId}
+            semaine={semaine}
+            resumeInitial={t?.resume_initial ?? ''}
+            questionsInitiales={(t?.questions ?? []).join('\n')}
+          />
         </Bloc>
       ) : (
         <Bloc titre="1. Ton résumé et tes questions">

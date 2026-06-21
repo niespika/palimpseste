@@ -7,13 +7,15 @@ import { soumettreV1 } from './actions'
 interface Props {
   livreId: string
   semaine: number
+  resumeInitial?: string
+  questionsInitiales?: string
 }
 
 // Résumé (1-2 §) + questions (2-3, une par ligne) → soumission (V1).
-export default function FormulaireResumeQuestions({ livreId, semaine }: Props) {
+export default function FormulaireResumeQuestions({ livreId, semaine, resumeInitial = '', questionsInitiales = '' }: Props) {
   const router = useRouter()
-  const [resume, setResume] = useState('')
-  const [questions, setQuestions] = useState('')
+  const [resume, setResume] = useState(resumeInitial)
+  const [questions, setQuestions] = useState(questionsInitiales)
   const [chargement, setChargement] = useState(false)
   const [erreur, setErreur] = useState<string | null>(null)
 
