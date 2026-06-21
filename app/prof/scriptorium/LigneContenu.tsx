@@ -8,6 +8,7 @@ export interface ContenuItem {
   id: string
   nom: string
   semaine: number | null
+  chapitres: string | null
   texte: string | null
   uniteId: string
   fichierLegacyUrl: string | null
@@ -96,6 +97,8 @@ export default function LigneContenu({ item, unites, classes, assignedClasseIds,
             {unites.map(u => <option key={u.id} value={u.id}>{u.label}</option>)}
           </select>
         </div>
+        <input name="chapitres" defaultValue={item.chapitres ?? ''} placeholder="Chapitres (ex. : Chap. 1-4) — optionnel"
+          className="w-full px-2 py-1.5 border border-stone-300 rounded text-sm text-stone-900 focus:outline-none focus:ring-2 focus:ring-stone-400" />
         <textarea name="texte" defaultValue={item.texte ?? ''} rows={4} placeholder="Texte du contenu"
           className="w-full px-2 py-1.5 border border-stone-300 rounded text-sm text-stone-900 focus:outline-none focus:ring-2 focus:ring-stone-400 resize-y" />
         <div className="flex flex-wrap gap-1.5">
@@ -154,6 +157,7 @@ export default function LigneContenu({ item, unites, classes, assignedClasseIds,
           <div className="flex items-center gap-2 flex-wrap">
             <span className="text-sm font-medium text-stone-800">{item.nom}</span>
             {item.semaine != null && <span className="text-xs bg-stone-100 text-stone-500 px-1.5 py-0.5 rounded">S{item.semaine}</span>}
+            {item.chapitres && <span className="text-xs bg-violet-50 text-violet-700 px-1.5 py-0.5 rounded">{item.chapitres}</span>}
             {nomsClasses.map(n => <span key={n} className="text-xs bg-blue-50 text-blue-700 px-1.5 py-0.5 rounded">{n}</span>)}
           </div>
           {item.texte && <p className="text-xs text-stone-500 mt-1 line-clamp-2 whitespace-pre-wrap">{item.texte}</p>}

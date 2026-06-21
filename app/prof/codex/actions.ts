@@ -22,6 +22,7 @@ export async function lireUnitesScriptorium() {
   const { data: unites } = await supabase
     .from('scriptorium_unites')
     .select('id, label, classe, ordre')
+    .eq('type', 'unite')   // exclut les « livres » Aletheia des unités de cours
     .order('ordre', { ascending: true })
   return unites ?? []
 }

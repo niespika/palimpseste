@@ -24,6 +24,7 @@ export async function lireUnitesScriptorium() {
   const { data: unites } = await supabase
     .from('scriptorium_unites')
     .select('id, label, classe, ordre')
+    .eq('type', 'unite')   // exclut les « livres » Aletheia des unités de cours
     .order('ordre', { ascending: true })
 
   return unites ?? []
@@ -247,6 +248,11 @@ export async function togglePublicationUnite(formData: FormData) {
   const { supabase, userId } = await verifierProf()
   const uniteId = formData.get('uniteId') as string
   const actuel = formData.get('actuel') === 'true'
+
+  // Garde-fou : un « livre » Aletheia ne se publie jamais via Quazian — son texte
+  // extrait est un ancrage IA qui ne doit pas atteindre l'élève (defense-in-depth).
+  const { data: u } = await supabase.from('scriptorium_unites').select('type').eq('id', uniteId).maybeSingle()
+  if (u?.type === 'livre') return { error: 'Un livre ne se publie pas via Quazian.' }
 
   const { data: existing } = await supabase
     .from('quazian_publications')

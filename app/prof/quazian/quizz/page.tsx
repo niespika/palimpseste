@@ -27,6 +27,7 @@ export default async function QuizzListePage({ searchParams }: { searchParams: P
     supabase
       .from('scriptorium_unites')
       .select('id, label, classe, ordre')
+      .eq('type', 'unite')   // exclut les « livres » Aletheia du périmètre de quizz
       .order('ordre', { ascending: true }),
     supabase.from('classes').select('id, nom').order('nom'),
   ])

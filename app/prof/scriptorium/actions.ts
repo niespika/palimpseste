@@ -99,17 +99,23 @@ function estImage(mimeType: string, nom: string): boolean {
   return mimeType.startsWith('image/') || ['jpg', 'jpeg', 'png', 'webp', 'gif', 'heic', 'heif'].includes(ext ?? '')
 }
 
-async function uploaderFichier(userId: string, documentId: string, fichier: File): Promise<{ path?: string; error?: string }> {
+async function uploaderBuffer(
+  userId: string, documentId: string, buffer: Buffer, ext: string, contentType: string,
+): Promise<{ path?: string; error?: string }> {
   const admin = createAdminClient()
-  const ext = fichier.name.split('.').pop()?.toLowerCase() || 'bin'
   const storagePath = `${userId}/${documentId}/${Date.now()}.${ext}`
-  const buffer = Buffer.from(await fichier.arrayBuffer())
   const { error } = await admin.storage.from('scriptorium').upload(storagePath, buffer, {
-    contentType: fichier.type || 'application/octet-stream',
+    contentType: contentType || 'application/octet-stream',
     upsert: false,
   })
   if (error) return { error: error.message }
   return { path: storagePath }
+}
+
+async function uploaderFichier(userId: string, documentId: string, fichier: File): Promise<{ path?: string; error?: string }> {
+  const ext = fichier.name.split('.').pop()?.toLowerCase() || 'bin'
+  const buffer = Buffer.from(await fichier.arrayBuffer())
+  return uploaderBuffer(userId, documentId, buffer, ext, fichier.type)
 }
 
 // ── Contenu (item multi-classes : unité + semaine + corps) ──────────────────
@@ -183,6 +189,115 @@ export async function ajouterContenu(formData: FormData) {
   return { success: true }
 }
 
+// ── Livre (Aletheia Lot 1) ──────────────────────────────────────────────────
+// Un livre = une unité `type='livre'` (label = titre, + date_debut, nb_semaines).
+// Chaque semaine = un document de cette unité : PDF d'ancrage (extrait en texte),
+// titre, chapitres, index `semaine`. Classes assignées par semaine (liaison Lot 6).
+// Les PDF sont stockés dans le bucket Scriptorium : ancrage IA, jamais exposés
+// à l'élève (aucune route élève ne les sert).
+export async function ajouterLivre(formData: FormData) {
+  const { supabase, userId } = await verifierProf()
+
+  const titre = (formData.get('titre') as string)?.trim()
+  const nbSemaines = Number(formData.get('nbSemaines') as string)
+  const dateDebut = (formData.get('dateDebut') as string) || null
+  const classeIds = formData.getAll('classeIds').map(c => c as string).filter(Boolean)
+
+  if (!titre) return { error: 'Donne un titre au livre.' }
+  if (!Number.isInteger(nbSemaines) || nbSemaines < 1 || nbSemaines > 52)
+    return { error: 'Indique un nombre de semaines valide (1–52).' }
+  if (!dateDebut) return { error: 'Indique une date de début.' }
+  if (classeIds.length === 0) return { error: 'Assigne au moins une classe.' }
+
+  // Le livre est une unité, placée après les unités existantes.
+  const { data: derniere } = await supabase
+    .from('scriptorium_unites')
+    .select('ordre')
+    .order('ordre', { ascending: false })
+    .limit(1)
+    .maybeSingle()
+  const ordre = (derniere?.ordre ?? 0) + 1
+
+  const { data: livre, error: errLivre } = await supabase
+    .from('scriptorium_unites')
+    .insert({ label: titre, ordre, type: 'livre', date_debut: dateDebut, nb_semaines: nbSemaines })
+    .select('id')
+    .single()
+  if (errLivre || !livre) return { error: errLivre?.message ?? 'Création du livre impossible.' }
+
+  // Création quasi-atomique : pas de transaction multi-tables côté Supabase REST,
+  // donc on nettoie nous-mêmes si une étape échoue → pas de livre orphelin. On
+  // supprime les documents AVANT l'unité (sans dépendre d'un cascade unite_id non
+  // garanti) ; supprimer un document cascade vers ses classes et images (Lot 6).
+  const cheminsUploades: string[] = []
+  const admin = createAdminClient()
+  const annuler = async (msg: string) => {
+    if (cheminsUploades.length > 0) await admin.storage.from('scriptorium').remove(cheminsUploades)
+    await supabase.from('scriptorium_documents').delete().eq('unite_id', livre.id)
+    await supabase.from('scriptorium_unites').delete().eq('id', livre.id)
+    return { error: msg }
+  }
+
+  // Une semaine = un document de cette unité (PDF extrait + titre + chapitres).
+  const docIds: string[] = []
+  for (let n = 1; n <= nbSemaines; n++) {
+    const titreSem = (formData.get(`semaine_${n}_titre`) as string)?.trim() || `Semaine ${n}`
+    const chapitres = (formData.get(`semaine_${n}_chapitres`) as string)?.trim() || null
+    const pdf = formData.get(`semaine_${n}_pdf`) as File | null
+
+    // Le buffer du PDF est lu UNE fois (extraction + upload).
+    let buffer: Buffer | null = null
+    let texteExtrait: string | null = null
+    if (pdf && pdf.size > 0) {
+      buffer = Buffer.from(await pdf.arrayBuffer())
+      // Extraction de texte (ancrage IA) — non bloquante si le PDF est illisible/scanné.
+      try {
+        texteExtrait = await extraireTexte(buffer, pdf.type, pdf.name)
+      } catch (err) {
+        console.error(`[scriptorium] extraction PDF semaine ${n} :`, err)
+      }
+    }
+
+    const { data: doc, error: errDoc } = await supabase
+      .from('scriptorium_documents')
+      .insert({
+        unite_id: livre.id,
+        type: 'texte_source',
+        titre: titreSem,
+        semaine: n,
+        chapitres,
+        texte_extrait: texteExtrait,
+        created_by: userId,
+      })
+      .select('id')
+      .single()
+    if (errDoc || !doc) return annuler(errDoc?.message ?? `Erreur sur la semaine ${n}.`)
+
+    // Upload du PDF (réservé serveur) puis enregistrement de la référence. Le PDF
+    // est la raison d'être de la semaine (ancrage IA) → un échec est bloquant.
+    if (buffer) {
+      const ext = pdf!.name.split('.').pop()?.toLowerCase() || 'pdf'
+      const up = await uploaderBuffer(userId, doc.id, buffer, ext, pdf!.type)
+      if (up.error || !up.path) return annuler(`Téléversement du PDF de la semaine ${n} impossible : ${up.error ?? 'inconnu'}`)
+      cheminsUploades.push(up.path)
+      const { error: errRef } = await supabase.from('scriptorium_documents').update({ fichier_ref: up.path }).eq('id', doc.id)
+      if (errRef) return annuler(errRef.message)
+    }
+
+    docIds.push(doc.id)
+  }
+
+  // Assignation multi-classes : chaque semaine est rattachée aux classes du livre.
+  const liens = docIds.flatMap(document_id => classeIds.map(classe_id => ({ document_id, classe_id })))
+  if (liens.length > 0) {
+    const { error: errClasses } = await supabase.from('scriptorium_document_classes').insert(liens)
+    if (errClasses) return annuler(errClasses.message)
+  }
+
+  revalidatePath('/prof/scriptorium')
+  return { success: true }
+}
+
 export async function modifierContenu(formData: FormData) {
   const { supabase } = await verifierProf()
   const id = formData.get('id') as string
@@ -190,11 +305,12 @@ export async function modifierContenu(formData: FormData) {
   const semaineRaw = formData.get('semaine') as string
   const semaine = semaineRaw ? Number(semaineRaw) : null
   const texte = (formData.get('texte') as string)?.trim() || null
+  const chapitres = (formData.get('chapitres') as string)?.trim() || null
   const uniteId = (formData.get('uniteId') as string) || undefined
 
   if (!nom) return { error: 'Le nom est requis.' }
 
-  const maj: Record<string, unknown> = { titre: nom, semaine, texte_extrait: texte }
+  const maj: Record<string, unknown> = { titre: nom, semaine, texte_extrait: texte, chapitres }
   if (uniteId) maj.unite_id = uniteId
 
   const { error } = await supabase.from('scriptorium_documents').update(maj).eq('id', id)

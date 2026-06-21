@@ -4,6 +4,7 @@ import { createClient } from '@/utils/supabase/server'
 import { getUrlSignee } from './actions'
 import Tuile from '@/components/Tuile'
 import FormulaireContenu from './FormulaireContenu'
+import FormulaireLivre from './FormulaireLivre'
 import LigneContenu, { type ContenuItem, type ImageItem } from './LigneContenu'
 
 interface DocRow {
@@ -11,8 +12,24 @@ interface DocRow {
   unite_id: string
   titre: string
   semaine: number | null
+  chapitres: string | null
   texte_extrait: string | null
   fichier_ref: string | null
+}
+
+interface UniteRow {
+  id: string
+  label: string
+  type: string | null
+  date_debut: string | null
+  nb_semaines: number | null
+}
+
+// Formate une date Postgres (« YYYY-MM-DD ») sans passer par `new Date`, qui
+// la parse en UTC puis la reformate dans le fuseau du serveur (dérive d'un jour).
+function formatDateFr(d: string): string {
+  const [a, m, j] = d.split('-')
+  return a && m && j ? `${j}/${m}/${a}` : d
 }
 
 // Regroupe des contenus par semaine (clé null = « non précisée »), trié.
@@ -45,14 +62,14 @@ export default async function ScriptoriumPage({
 
   const [{ data: classes }, { data: unites }, { data: docsBruts }, { data: liens }, { data: imagesBrutes }] = await Promise.all([
     supabase.from('classes').select('id, nom').order('nom'),
-    supabase.from('scriptorium_unites').select('id, label, ordre').order('ordre'),
-    supabase.from('scriptorium_documents').select('id, unite_id, titre, semaine, texte_extrait, fichier_ref'),
+    supabase.from('scriptorium_unites').select('id, label, ordre, type, date_debut, nb_semaines').order('ordre'),
+    supabase.from('scriptorium_documents').select('id, unite_id, titre, semaine, chapitres, texte_extrait, fichier_ref'),
     supabase.from('scriptorium_document_classes').select('document_id, classe_id'),
     supabase.from('scriptorium_contenu_images').select('id, document_id, fichier_ref, legende, ordre').order('ordre'),
   ])
 
   const classesList = (classes ?? []) as { id: string; nom: string }[]
-  const unitesList = (unites ?? []) as { id: string; label: string }[]
+  const unitesList = (unites ?? []) as UniteRow[]
   const docs = (docsBruts ?? []) as DocRow[]
   const classeNom = new Map(classesList.map(c => [c.id, c.nom]))
 
@@ -90,7 +107,7 @@ export default async function ScriptoriumPage({
   }))
 
   function toItem(d: DocRow): ContenuItem {
-    return { id: d.id, nom: d.titre, semaine: d.semaine, texte: d.texte_extrait, uniteId: d.unite_id, fichierLegacyUrl: legacyParDoc.get(d.id) ?? null }
+    return { id: d.id, nom: d.titre, semaine: d.semaine, chapitres: d.chapitres, texte: d.texte_extrait, uniteId: d.unite_id, fichierLegacyUrl: legacyParDoc.get(d.id) ?? null }
   }
 
   const ligne = (d: DocRow) => (
@@ -111,7 +128,10 @@ export default async function ScriptoriumPage({
 
   return (
     <div className="space-y-6 pb-8">
-      <FormulaireContenu unites={unitesList} classes={classesList} />
+      <div className="space-y-2">
+        <FormulaireContenu unites={unitesList} classes={classesList} />
+        <FormulaireLivre classes={classesList} />
+      </div>
 
       <nav className="flex gap-1 border-b border-stone-200">
         <Link href="/prof/scriptorium?vue=classes" className={ongletClasse('classes')}>Par classe</Link>
@@ -170,11 +190,15 @@ export default async function ScriptoriumPage({
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
             {unitesList.map(u => {
               const n = docs.filter(d => d.unite_id === u.id).length
+              const estLivre = u.type === 'livre'
+              const sousTitre = estLivre
+                ? `📖 Livre · ${u.nb_semaines ?? n} semaine${(u.nb_semaines ?? n) > 1 ? 's' : ''}`
+                : `${n} contenu${n > 1 ? 's' : ''}`
               return (
                 <Tuile
                   key={u.id}
                   nom={u.label}
-                  sousTitre={`${n} contenu${n > 1 ? 's' : ''}`}
+                  sousTitre={sousTitre}
                   href={`/prof/scriptorium?vue=unites&unite=${u.id}`}
                   selectionnee={uniteSel === u.id}
                   couleur={n > 0 ? 'vert' : 'neutre'}
@@ -183,9 +207,20 @@ export default async function ScriptoriumPage({
             })}
           </div>
 
-          {uniteSel && (
+          {uniteSel && (() => {
+            const uniteCourante = unitesList.find(u => u.id === uniteSel)
+            return (
             <div className="bg-white border border-stone-200 rounded-xl p-4 space-y-3">
-              <h3 className="font-medium text-stone-900">{unitesList.find(u => u.id === uniteSel)?.label ?? 'Unité'}</h3>
+              <div>
+                <h3 className="font-medium text-stone-900">{uniteCourante?.label ?? 'Unité'}</h3>
+                {uniteCourante?.type === 'livre' && (
+                  <p className="text-xs text-stone-400 mt-0.5">
+                    📖 Livre · {uniteCourante.nb_semaines ?? '?'} semaines
+                    {uniteCourante.date_debut && ` · début le ${formatDateFr(uniteCourante.date_debut)}`}
+                    <span className="ml-1">— PDF = ancrage IA, non visibles par l&apos;élève</span>
+                  </p>
+                )}
+              </div>
               {docsAffiches.length === 0 ? (
                 <p className="text-sm text-stone-400">Aucun contenu dans cette unité.</p>
               ) : (
@@ -222,7 +257,8 @@ export default async function ScriptoriumPage({
                 </>
               )}
             </div>
-          )}
+            )
+          })()}
         </>
       )}
     </div>

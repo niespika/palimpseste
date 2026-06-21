@@ -47,7 +47,7 @@ export default function FormulaireContenu({ unites, classes }: Props) {
         onClick={() => setOuvert(true)}
         className="w-full bg-stone-800 text-white py-2.5 rounded-xl text-sm font-medium hover:bg-stone-700 transition-colors"
       >
-        + Ajouter du contenu
+        + Ajouter des unités
       </button>
     )
   }
