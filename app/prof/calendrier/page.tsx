@@ -2,8 +2,10 @@ import Link from 'next/link'
 import { createClient } from '@/utils/supabase/server'
 import { calculerGrilleSemaines, lundiOnOrBefore, addDaysUTC, toISODate } from '@/utils/calendrier-grille'
 import { assemblerEvenements, type CalendarEvent } from '@/utils/calendrier-evenements'
+import { coursParJour } from '@/utils/calendrier-cours'
 import { couleursParClasse } from '@/utils/calendrier-couleurs'
 import FiltreClasses from './FiltreClasses'
+import EditeurDate from './EditeurDate'
 
 type Vue = 'mois' | 'semaine' | 'jour'
 const JOURS = ['lun', 'mar', 'mer', 'jeu', 'ven', 'sam', 'dim']
@@ -84,6 +86,11 @@ export default async function CalendrierVue({
     arr.push(e)
     parJour.set(e.date, arr)
   }
+
+  // Jours de cours (informatif), filtrés par la sélection de classes.
+  const coursTous = await coursParJour({ debut, fin })
+  const coursJour = (jour: string) =>
+    (coursTous.get(jour) ?? []).filter((c) => selSet === null || selSet.has(c.id))
 
   // Navigation prev / next / aujourd'hui.
   const lien = (v: Vue, d: string) => `/prof/calendrier?vue=${v}${sp.classes ? `&classes=${sp.classes}` : ''}&date=${d}`
@@ -207,6 +214,9 @@ export default async function CalendrierVue({
                   </Link>
                   {vac && <span className="text-xs text-stone-400">vacances</span>}
                 </div>
+                {coursJour(jour).length > 0 && (
+                  <p className="text-xs text-stone-400 mt-1">Cours : {coursJour(jour).map((c) => c.nom).join(', ')}</p>
+                )}
                 {evs.length > 0 && (
                   <div className="mt-2 space-y-1">
                     {evs.map((e, i) => (
@@ -224,18 +234,29 @@ export default async function CalendrierVue({
       {vue === 'jour' && (
         <div className="bg-white border border-stone-200 rounded-xl p-5">
           {estVacance(anchor) && <p className="text-sm text-stone-400 mb-3">Période de vacances.</p>}
+          {coursJour(anchor).length > 0 && (
+            <p className="text-sm text-stone-500 mb-3">Cours : {coursJour(anchor).map((c) => c.nom).join(', ')}</p>
+          )}
           {(parJour.get(anchor) ?? []).length === 0 ? (
             <p className="text-sm text-stone-400">Aucune échéance ce jour.</p>
           ) : (
             <ul className="space-y-2">
               {(parJour.get(anchor) ?? []).map((e, i) => (
-                <li key={i} className="flex items-center gap-2">
+                <li key={i} className="flex flex-wrap items-center gap-2">
                   <span
                     className="w-2.5 h-2.5 rounded-full flex-shrink-0"
                     style={{ backgroundColor: e.classe_id ? couleurs.get(e.classe_id) ?? '#a8a29e' : '#a8a29e' }}
                   />
                   <span className="text-sm text-stone-700">{e.label}</span>
                   {e.classe_nom && <span className="text-xs text-stone-400">· {e.classe_nom}</span>}
+                  {e.is_editable && (
+                    <EditeurDate
+                      sourceModule={e.source_module}
+                      sourceId={e.source_id}
+                      classeId={e.classe_id}
+                      dateActuelle={e.date}
+                    />
+                  )}
                 </li>
               ))}
             </ul>

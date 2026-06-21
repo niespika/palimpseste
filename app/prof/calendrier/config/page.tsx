@@ -3,6 +3,7 @@ import type { Semestre, Holiday } from '@/types/calendrier'
 import GestionSemestres from './GestionSemestres'
 import GestionHolidays from './GestionHolidays'
 import CouleursClasses from './CouleursClasses'
+import GestionJoursCours from './GestionJoursCours'
 
 export default async function CalendrierConfigPage({
   searchParams,
@@ -40,6 +41,20 @@ export default async function CalendrierConfigPage({
     .order('nom')
   const classes = (classesData ?? []) as { id: string; nom: string; couleur: string | null }[]
 
+  // Motifs hebdomadaires (jours de cours) par classe.
+  const { data: patternsData } = await supabase.from('teaching_patterns').select('classe_id, weekday')
+  const weekdaysParClasse = new Map<string, number[]>()
+  for (const p of patternsData ?? []) {
+    const arr = weekdaysParClasse.get(p.classe_id) ?? []
+    arr.push(p.weekday)
+    weekdaysParClasse.set(p.classe_id, arr)
+  }
+  const classesCours = classes.map((c) => ({
+    id: c.id,
+    nom: c.nom,
+    weekdays: (weekdaysParClasse.get(c.id) ?? []).sort((a, b) => a - b),
+  }))
+
   return (
     <div className="space-y-10 max-w-3xl">
       <section>
@@ -67,6 +82,15 @@ export default async function CalendrierConfigPage({
           pastilles d&apos;échéances).
         </p>
         <CouleursClasses classes={classes} />
+      </section>
+
+      <section>
+        <h3 className="text-base font-medium text-stone-900">Jours de cours</h3>
+        <p className="text-sm text-stone-500 mt-0.5 mb-4">
+          Motif hebdomadaire par classe (informatif, sans contrainte). Les jours
+          sélectionnés s&apos;affichent sur le calendrier (hors vacances).
+        </p>
+        <GestionJoursCours classes={classesCours} />
       </section>
     </div>
   )

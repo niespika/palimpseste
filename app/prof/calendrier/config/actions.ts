@@ -261,3 +261,24 @@ export async function definirCouleurClasse(
   revalidatePath('/prof/calendrier/config')
   return {}
 }
+
+// ── Jours de cours (motif hebdomadaire par classe) ──────────────────────────
+
+export async function definirJoursCours(
+  classeId: string,
+  weekdays: number[]
+): Promise<{ error?: string }> {
+  const { supabase } = await verifierProf()
+  // Remplace le motif de la classe par l'ensemble fourni (0 = lundi … 6 = dimanche).
+  await supabase.from('teaching_patterns').delete().eq('classe_id', classeId)
+  const valides = [...new Set(weekdays)].filter((w) => Number.isInteger(w) && w >= 0 && w <= 6)
+  if (valides.length > 0) {
+    const { error } = await supabase
+      .from('teaching_patterns')
+      .insert(valides.map((w) => ({ classe_id: classeId, weekday: w })))
+    if (error) return { error: error.message }
+  }
+  revalidatePath('/prof/calendrier/config')
+  revalidatePath('/prof/calendrier')
+  return {}
+}

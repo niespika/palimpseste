@@ -3,6 +3,7 @@ import { createClient } from '@/utils/supabase/server'
 import { createAdminClient } from '@/utils/supabase/admin'
 import { classesAvecRappel } from '@/utils/rappels'
 import { calculerSante, type SanteInscription } from '@/utils/sante'
+import { tachesDeriveesDuCalendrier } from '@/utils/calendrier-a-faire'
 import Tuile, { type CouleurTuile } from '@/components/Tuile'
 import DetailClasse, { type LigneEleve } from '@/components/classes/DetailClasse'
 import RappelsClasses from './RappelsClasses'
@@ -37,11 +38,12 @@ export default async function ProfAccueil({ searchParams }: { searchParams: Prom
   const admin = createAdminClient()
   const { classe: classeSel } = await searchParams
 
-  const [{ data: classes }, { data: inscriptionsActives }, rappels, sante] = await Promise.all([
+  const [{ data: classes }, { data: inscriptionsActives }, rappels, sante, tachesCal] = await Promise.all([
     admin.from('classes').select('id, nom, niveau, filiere, annee_scolaire').order('nom'),
     admin.from('inscriptions').select('id, eleve_id, classe_id').eq('statut', 'active'),
     classesAvecRappel(supabase),
     calculerSante(admin),
+    tachesDeriveesDuCalendrier(),
   ])
 
   const toutesClasses = classes ?? []
@@ -172,6 +174,25 @@ export default async function ProfAccueil({ searchParams }: { searchParams: Prom
       <section className="space-y-3">
         <h3 className="text-sm font-medium text-stone-500 uppercase tracking-wide">À faire</h3>
         <RappelsClasses classes={rappels} />
+        {tachesCal.length > 0 && (
+          <div className="bg-white border border-stone-200 rounded-xl px-5 py-4">
+            <p className="text-sm font-medium text-stone-800 mb-2">À préparer (échéances proches)</p>
+            <ul className="space-y-1.5">
+              {tachesCal.map((t) => (
+                <li key={t.id} className="flex items-center justify-between gap-3 text-sm">
+                  <span className="text-stone-600">
+                    {t.label}
+                    {t.classeNom && <span className="text-stone-400"> · {t.classeNom}</span>}
+                    <span className="text-stone-400"> · {new Date(t.echeance + 'T00:00:00Z').toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', timeZone: 'UTC' })}</span>
+                  </span>
+                  <Link href={t.href} className="text-xs text-stone-500 hover:text-stone-800 underline flex-shrink-0">
+                    Ouvrir →
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
         <div className="bg-white border border-stone-200 rounded-xl px-5 py-4">
           {aValider.length === 0 ? (
             <p className="text-sm text-stone-400">Rien à valider pour le moment.</p>
