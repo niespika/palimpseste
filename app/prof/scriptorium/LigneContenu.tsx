@@ -21,9 +21,11 @@ interface Props {
   classes: { id: string; nom: string }[]
   assignedClasseIds: string[]
   images: ImageItem[]
+  /** Semaine de livre : classes gérées au niveau du livre → on masque l'édition par-doc. */
+  masquerClasses?: boolean
 }
 
-export default function LigneContenu({ item, unites, classes, assignedClasseIds, images }: Props) {
+export default function LigneContenu({ item, unites, classes, assignedClasseIds, images, masquerClasses = false }: Props) {
   const router = useRouter()
   const [edition, setEdition] = useState(false)
   const [chargement, setChargement] = useState(false)
@@ -45,7 +47,7 @@ export default function LigneContenu({ item, unites, classes, assignedClasseIds,
     fd.append('id', item.id)
     const [r1] = await Promise.all([
       modifierContenu(fd),
-      reassignerClasses(item.id, [...classeSet]),
+      ...(masquerClasses ? [] : [reassignerClasses(item.id, [...classeSet])]),
     ])
     setChargement(false)
     if (r1.error) return
@@ -101,17 +103,19 @@ export default function LigneContenu({ item, unites, classes, assignedClasseIds,
           className="w-full px-2 py-1.5 border border-stone-300 rounded text-sm text-stone-900 focus:outline-none focus:ring-2 focus:ring-stone-400" />
         <textarea name="texte" defaultValue={item.texte ?? ''} rows={4} placeholder="Texte du contenu"
           className="w-full px-2 py-1.5 border border-stone-300 rounded text-sm text-stone-900 focus:outline-none focus:ring-2 focus:ring-stone-400 resize-y" />
-        <div className="flex flex-wrap gap-1.5">
-          {classes.map(c => {
-            const on = classeSet.has(c.id)
-            return (
-              <button key={c.id} type="button" onClick={() => toggleClasse(c.id)}
-                className={`text-xs px-2 py-1 rounded-full border transition-colors ${on ? 'bg-stone-800 text-white border-stone-800' : 'bg-white text-stone-600 border-stone-300 hover:border-stone-400'}`}>
-                {c.nom}
-              </button>
-            )
-          })}
-        </div>
+        {!masquerClasses && (
+          <div className="flex flex-wrap gap-1.5">
+            {classes.map(c => {
+              const on = classeSet.has(c.id)
+              return (
+                <button key={c.id} type="button" onClick={() => toggleClasse(c.id)}
+                  className={`text-xs px-2 py-1 rounded-full border transition-colors ${on ? 'bg-stone-800 text-white border-stone-800' : 'bg-white text-stone-600 border-stone-300 hover:border-stone-400'}`}>
+                  {c.nom}
+                </button>
+              )
+            })}
+          </div>
+        )}
 
         {/* Images existantes */}
         {images.length > 0 && (
@@ -158,7 +162,7 @@ export default function LigneContenu({ item, unites, classes, assignedClasseIds,
             <span className="text-sm font-medium text-stone-800">{item.nom}</span>
             {item.semaine != null && <span className="text-xs bg-stone-100 text-stone-500 px-1.5 py-0.5 rounded">S{item.semaine}</span>}
             {item.chapitres && <span className="text-xs bg-violet-50 text-violet-700 px-1.5 py-0.5 rounded">{item.chapitres}</span>}
-            {nomsClasses.map(n => <span key={n} className="text-xs bg-blue-50 text-blue-700 px-1.5 py-0.5 rounded">{n}</span>)}
+            {!masquerClasses && nomsClasses.map(n => <span key={n} className="text-xs bg-blue-50 text-blue-700 px-1.5 py-0.5 rounded">{n}</span>)}
           </div>
           {item.texte && <p className="text-xs text-stone-500 mt-1 line-clamp-2 whitespace-pre-wrap">{item.texte}</p>}
           {(images.length > 0 || item.fichierLegacyUrl) && (

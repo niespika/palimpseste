@@ -239,7 +239,6 @@ export async function ajouterLivre(formData: FormData) {
   }
 
   // Une semaine = un document de cette unité (PDF extrait + titre + chapitres).
-  const docIds: string[] = []
   for (let n = 1; n <= nbSemaines; n++) {
     const titreSem = (formData.get(`semaine_${n}_titre`) as string)?.trim() || `Semaine ${n}`
     const chapitres = (formData.get(`semaine_${n}_chapitres`) as string)?.trim() || null
@@ -283,17 +282,29 @@ export async function ajouterLivre(formData: FormData) {
       const { error: errRef } = await supabase.from('scriptorium_documents').update({ fichier_ref: up.path }).eq('id', doc.id)
       if (errRef) return annuler(errRef.message)
     }
-
-    docIds.push(doc.id)
   }
 
-  // Assignation multi-classes : chaque semaine est rattachée aux classes du livre.
-  const liens = docIds.flatMap(document_id => classeIds.map(classe_id => ({ document_id, classe_id })))
-  if (liens.length > 0) {
-    const { error: errClasses } = await supabase.from('scriptorium_document_classes').insert(liens)
-    if (errClasses) return annuler(errClasses.message)
-  }
+  // Assignation AU NIVEAU DU LIVRE : un seul jeu de classes pour tout le livre
+  // (source de vérité du planning élève — cf. scriptorium_unite_classes, Lot 2).
+  const { error: errClasses } = await supabase
+    .from('scriptorium_unite_classes')
+    .insert(classeIds.map(classe_id => ({ unite_id: livre.id, classe_id })))
+  if (errClasses) return annuler(errClasses.message)
 
+  revalidatePath('/prof/scriptorium')
+  return { success: true }
+}
+
+// Réassigner les classes d'un livre (au niveau du livre). Remplace tout le jeu.
+export async function reassignerClassesLivre(uniteId: string, classeIds: string[]) {
+  const { supabase } = await verifierProf()
+  await supabase.from('scriptorium_unite_classes').delete().eq('unite_id', uniteId)
+  if (classeIds.length > 0) {
+    const { error } = await supabase
+      .from('scriptorium_unite_classes')
+      .insert(classeIds.map(classe_id => ({ unite_id: uniteId, classe_id })))
+    if (error) return { error: error.message }
+  }
   revalidatePath('/prof/scriptorium')
   return { success: true }
 }

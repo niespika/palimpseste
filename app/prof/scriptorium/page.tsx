@@ -5,6 +5,7 @@ import { getUrlSignee } from './actions'
 import Tuile from '@/components/Tuile'
 import FormulaireContenu from './FormulaireContenu'
 import FormulaireLivre from './FormulaireLivre'
+import EditeurClassesLivre from './EditeurClassesLivre'
 import LigneContenu, { type ContenuItem, type ImageItem } from './LigneContenu'
 
 interface DocRow {
@@ -60,25 +61,39 @@ export default async function ScriptoriumPage({
 
   const { vue = 'classes', classe: classeSel, unite: uniteSel } = await searchParams
 
-  const [{ data: classes }, { data: unites }, { data: docsBruts }, { data: liens }, { data: imagesBrutes }] = await Promise.all([
+  const [{ data: classes }, { data: unites }, { data: docsBruts }, { data: liens }, { data: imagesBrutes }, { data: liensUnite }] = await Promise.all([
     supabase.from('classes').select('id, nom').order('nom'),
     supabase.from('scriptorium_unites').select('id, label, ordre, type, date_debut, nb_semaines').order('ordre'),
     supabase.from('scriptorium_documents').select('id, unite_id, titre, semaine, chapitres, texte_extrait, fichier_ref'),
     supabase.from('scriptorium_document_classes').select('document_id, classe_id'),
     supabase.from('scriptorium_contenu_images').select('id, document_id, fichier_ref, legende, ordre').order('ordre'),
+    supabase.from('scriptorium_unite_classes').select('unite_id, classe_id'),
   ])
 
   const classesList = (classes ?? []) as { id: string; nom: string }[]
   const unitesList = (unites ?? []) as UniteRow[]
   const docs = (docsBruts ?? []) as DocRow[]
   const classeNom = new Map(classesList.map(c => [c.id, c.nom]))
+  const estLivre = new Map(unitesList.map(u => [u.id, u.type === 'livre']))
 
-  // doc → classeIds
+  // unité (livre) → classeIds (assignation au niveau du livre, Lot 2)
+  const classesParUnite = new Map<string, string[]>()
+  for (const l of liensUnite ?? []) {
+    const arr = classesParUnite.get(l.unite_id as string) ?? []
+    arr.push(l.classe_id as string)
+    classesParUnite.set(l.unite_id as string, arr)
+  }
+
+  // doc → classeIds. Pour un livre, les classes viennent du NIVEAU LIVRE ; pour
+  // le reste (contenu de cours), elles restent par document (liaison Lot 6).
   const classesParDoc = new Map<string, string[]>()
   for (const l of liens ?? []) {
     const arr = classesParDoc.get(l.document_id as string) ?? []
     arr.push(l.classe_id as string)
     classesParDoc.set(l.document_id as string, arr)
+  }
+  for (const d of docs) {
+    if (estLivre.get(d.unite_id)) classesParDoc.set(d.id, classesParUnite.get(d.unite_id) ?? [])
   }
 
   // Quels contenus seront rendus (drill) → on ne signe les fichiers que pour ceux-là.
@@ -118,6 +133,7 @@ export default async function ScriptoriumPage({
       classes={classesList}
       assignedClasseIds={classesParDoc.get(d.id) ?? []}
       images={imagesParDoc.get(d.id) ?? []}
+      masquerClasses={estLivre.get(d.unite_id) ?? false}
     />
   )
 
@@ -214,11 +230,16 @@ export default async function ScriptoriumPage({
               <div>
                 <h3 className="font-medium text-stone-900">{uniteCourante?.label ?? 'Unité'}</h3>
                 {uniteCourante?.type === 'livre' && (
-                  <p className="text-xs text-stone-400 mt-0.5">
-                    📖 Livre · {uniteCourante.nb_semaines ?? '?'} semaines
-                    {uniteCourante.date_debut && ` · début le ${formatDateFr(uniteCourante.date_debut)}`}
-                    <span className="ml-1">— PDF = ancrage IA, non visibles par l&apos;élève</span>
-                  </p>
+                  <>
+                    <p className="text-xs text-stone-400 mt-0.5">
+                      📖 Livre · {uniteCourante.nb_semaines ?? '?'} semaines
+                      {uniteCourante.date_debut && ` · début le ${formatDateFr(uniteCourante.date_debut)}`}
+                      <span className="ml-1">— PDF = ancrage IA, non visibles par l&apos;élève</span>
+                    </p>
+                    <div className="mt-2">
+                      <EditeurClassesLivre uniteId={uniteCourante.id} classes={classesList} assignedClasseIds={classesParUnite.get(uniteCourante.id) ?? []} />
+                    </div>
+                  </>
                 )}
               </div>
               {docsAffiches.length === 0 ? (
