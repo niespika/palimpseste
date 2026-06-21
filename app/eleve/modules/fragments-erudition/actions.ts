@@ -11,6 +11,8 @@ async function verifierEleve() {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) throw new Error('Non authentifié')
+  const { data: profile } = await supabase.from('profiles').select('role').eq('id', user.id).single()
+  if (profile?.role !== 'eleve') throw new Error('Accès refusé')
   return { supabase, userId: user.id }
 }
 
@@ -23,6 +25,9 @@ export async function deposerCompteRendu(formData: FormData) {
   const chemins = formData.getAll('chemins') as string[]
 
   if (chemins.length === 0) return { error: 'Aucune photo reçue.' }
+  // Les chemins doivent appartenir à l'élève (dossier de stockage = son uid), comme
+  // getSignedUrls et le dépôt Codex — sinon un élève pourrait référencer le fichier d'un autre.
+  if (chemins.some((c) => !c.startsWith(`${userId}/`))) return { error: 'Chemins de photos invalides.' }
 
   // Valider que l'inscription appartient bien à l'élève (et est active)
   const { data: inscription } = await supabase

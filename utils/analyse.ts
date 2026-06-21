@@ -233,7 +233,7 @@ export async function lancerAnalyse(
       ],
     })
 
-    const texte = response.content[0].type === 'text' ? response.content[0].text : ''
+    const texte = response.content[0]?.type === 'text' ? response.content[0].text : ''
 
     // Parser le JSON (Claude peut ajouter des balises ```)
     let parsed: AnalyseJSON

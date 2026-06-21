@@ -58,14 +58,18 @@ export async function validerTravail(travailId: string) {
 
   if (!travail) return { error: 'Travail introuvable' }
 
-  // Marquer validé
-  await admin
+  // Transition atomique « → validé » via compare-and-set : ne crée trace + cartes QUE si
+  // CET appel a réellement effectué la bascule, pour éviter les doublons en cas de
+  // double-clic / validations concurrentes (la garde précédente lisait une valeur périmée).
+  const { data: bascule } = await admin
     .from('codex_travaux')
     .update({ statut_validation: 'valide', valide_par: userId, valide_at: new Date().toISOString() })
     .eq('id', travailId)
+    .neq('statut_validation', 'valide')
+    .select('id')
 
-  // La création de trace + cartes ne se fait qu'au premier passage en "valide"
-  if (travail.statut_validation === 'valide') {
+  if (!bascule || bascule.length === 0) {
+    // Déjà validé (ou course concurrente perdue) → ne pas recréer trace/cartes.
     revalidatePath('/prof/codex/validation')
     return { success: true }
   }

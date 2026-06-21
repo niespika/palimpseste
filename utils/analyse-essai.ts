@@ -358,7 +358,7 @@ export async function analyserEssai(essaiId: string): Promise<void> {
       }],
     })
 
-    const texte = response.content[0].type === 'text' ? response.content[0].text : ''
+    const texte = response.content[0]?.type === 'text' ? response.content[0].text : ''
     const nettoye = texte.replace(/^```(?:json)?\s*\n?/, '').replace(/\n?```\s*$/, '').trim()
 
     let parsed: EssaiAnalyseJSON
@@ -372,7 +372,9 @@ export async function analyserEssai(essaiId: string): Promise<void> {
     const cout = response.usage.input_tokens * 3 / 1_000_000
       + response.usage.output_tokens * 15 / 1_000_000
 
-    const noteSuggeree = parsed.note20_suggeree ?? null
+    // Coercition + clamp [0,20] : le modèle peut renvoyer une string, un hors-borne ou NaN.
+    const noteSuggeree = typeof parsed.note20_suggeree === 'number' && Number.isFinite(parsed.note20_suggeree)
+      ? Math.max(0, Math.min(20, parsed.note20_suggeree)) : null
     const noteMin = noteSuggeree !== null ? Math.max(0, noteSuggeree - fourchette) : null
     const noteMax = noteSuggeree !== null ? Math.min(20, noteSuggeree + fourchette) : null
 

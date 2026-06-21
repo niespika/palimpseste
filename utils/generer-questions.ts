@@ -7,6 +7,16 @@ export interface QuestionGeneree {
   concept_tag: string
 }
 
+// Garde de schéma : une question malformée (options ≠ 4, index hors 0..3, énoncé vide) ne
+// doit jamais être insérée (sinon mauvais scoring / LETTRES[index] hors borne à l'affichage).
+function estQuestionValide(q: unknown): q is QuestionGeneree {
+  if (!q || typeof q !== 'object') return false
+  const o = q as Record<string, unknown>
+  return typeof o.enonce === 'string' && o.enonce.trim().length > 0
+    && Array.isArray(o.options) && o.options.length === 4 && o.options.every((x) => typeof x === 'string' && x.trim().length > 0)
+    && typeof o.index_correct === 'number' && Number.isInteger(o.index_correct) && o.index_correct >= 0 && o.index_correct <= 3
+}
+
 interface CarteSource {
   recto: string
   verso: string
@@ -66,7 +76,9 @@ export async function genererQuestions(
   const match = texte.match(/\[[\s\S]*\]/)
   if (!match) throw new Error('Réponse IA non parseable')
 
-  const questions: QuestionGeneree[] = JSON.parse(match[0])
+  const brut = JSON.parse(match[0]) as unknown
+  const questions = (Array.isArray(brut) ? brut : []).filter(estQuestionValide)
+  if (questions.length === 0) throw new Error('Aucune question valide générée.')
   return questions.slice(0, nbQuestions)
 }
 
@@ -97,6 +109,8 @@ export async function regenererQuestion(
   const match = texte.match(/\[[\s\S]*\]/)
   if (!match) throw new Error('Réponse IA non parseable')
 
-  const questions: QuestionGeneree[] = JSON.parse(match[0])
+  const brut = JSON.parse(match[0]) as unknown
+  const questions = (Array.isArray(brut) ? brut : []).filter(estQuestionValide)
+  if (questions.length === 0) throw new Error('Question régénérée invalide.')
   return questions[0]
 }

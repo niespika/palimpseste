@@ -44,9 +44,28 @@ export async function collecterCheminsInscriptions(
   const { data: oraux } = await admin
     .from('fragments_oraux').select('storage_path').in('inscription_id', inscriptionIds)
 
-  // codex (manuscrits V1 + V-finale, tableaux de chemins)
-  const { data: travaux } = await admin
-    .from('codex_travaux').select('photos_v1, photos_vf').in('inscription_id', inscriptionIds)
+  // codex (manuscrits V1 + V-finale) — codex_travaux.inscription_id n'est jamais peuplé :
+  // on relie via la séance (codex_sessions.classe_id) + l'élève de l'inscription.
+  const { data: inscRows } = await admin
+    .from('inscriptions').select('eleve_id, classe_id').in('id', inscriptionIds)
+  const paires = new Set((inscRows ?? []).map((i) => `${i.eleve_id}:${i.classe_id}`))
+  const classeIdsCodex = [...new Set((inscRows ?? []).map((i) => i.classe_id as string))]
+  const eleveIdsCodex = [...new Set((inscRows ?? []).map((i) => i.eleve_id as string))]
+  let codexPaths: string[] = []
+  if (classeIdsCodex.length > 0 && eleveIdsCodex.length > 0) {
+    const { data: sessions } = await admin
+      .from('codex_sessions').select('id, classe_id').in('classe_id', classeIdsCodex)
+    const sessionClasse = new Map((sessions ?? []).map((s) => [s.id as string, s.classe_id as string]))
+    const sessionIds = [...sessionClasse.keys()]
+    const { data: travaux } = sessionIds.length > 0
+      ? await admin.from('codex_travaux').select('session_id, eleve_id, photos_v1, photos_vf')
+          .in('session_id', sessionIds).in('eleve_id', eleveIdsCodex)
+      : { data: [] }
+    codexPaths = (travaux ?? [])
+      .filter((t) => paires.has(`${t.eleve_id as string}:${sessionClasse.get(t.session_id as string)}`))
+      .flatMap((t) => [...((t.photos_v1 as string[] | null) ?? []), ...((t.photos_vf as string[] | null) ?? [])])
+      .filter((x): x is string => !!x)
+  }
 
   const garder = (xs: (string | null)[]) => xs.filter((x): x is string => !!x)
 
@@ -54,10 +73,7 @@ export async function collecterCheminsInscriptions(
     fragments: garder((photos ?? []).map((p) => p.storage_path as string | null)),
     essais: garder((essaiPhotos ?? []).map((p) => p.storage_path as string | null)),
     oraux: garder((oraux ?? []).map((o) => o.storage_path as string | null)),
-    codex: garder((travaux ?? []).flatMap((t) => [
-      ...((t.photos_v1 as string[] | null) ?? []),
-      ...((t.photos_vf as string[] | null) ?? []),
-    ])),
+    codex: codexPaths,
   }
 }
 

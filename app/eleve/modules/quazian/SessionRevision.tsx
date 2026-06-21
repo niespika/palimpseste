@@ -90,14 +90,16 @@ export function SessionRevision({ cartes: cartesInitiales, onTermine }: Props) {
     if (pending) return
     setPending(true)
 
-    await soumettreNote(carte.flashcard_id, carte.card_state_id, rating)
+    const res = await soumettreNote(carte.flashcard_id, carte.card_state_id, rating)
 
-    // Si raté (1) et nouvelle carte ou état "learning", on remet la carte en fin de
-    // file : elle n'est pas encore acquise, donc elle ne compte pas comme « faite ».
+    // Si raté (1) et nouvelle carte ou état "learning", on remet la carte en fin de file :
+    // elle n'est pas encore acquise, donc elle ne compte pas comme « faite ». On rattache le
+    // vrai card_state_id renvoyé par le serveur (créé au 1er passage) pour que la 2ᵉ révision
+    // mette à jour le bon état FSRS au lieu d'un id factice.
     if (rating === 1 && carte.state <= 1) {
       setCartes((prev) => {
         const reste = prev.filter((_, i) => i !== index)
-        return [...reste, { ...carte, card_state_id: carte.card_state_id ?? 'pending' }]
+        return [...reste, { ...carte, card_state_id: carte.card_state_id ?? res.cardStateId }]
       })
     } else {
       // Carte acquise : retirée de la file et comptée dans la progression.

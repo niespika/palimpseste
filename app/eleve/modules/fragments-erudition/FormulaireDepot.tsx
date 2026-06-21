@@ -38,14 +38,17 @@ export default function FormulaireDepot({ semaineId, eleveId, inscriptionId, dep
 
     try {
       const nouvelles: ImageTraitee[] = []
+      let echecs = 0
       for (let i = 0; i < fichiers.length; i++) {
         setProgression(`Traitement de la photo ${i + 1}/${fichiers.length}…`)
-        const traitee = await traiterImage(fichiers[i])
-        nouvelles.push(traitee)
+        try {
+          nouvelles.push(await traiterImage(fichiers[i]))
+        } catch {
+          echecs++ // une photo qui échoue (HEIC illisible…) ne doit plus faire perdre tout le lot
+        }
       }
-      setImages(prev => [...prev, ...nouvelles])
-    } catch {
-      setErreur('Erreur lors du traitement des photos. Réessaie.')
+      if (nouvelles.length > 0) setImages(prev => [...prev, ...nouvelles])
+      if (echecs > 0) setErreur(`${echecs} photo(s) n'ont pas pu être traitées (format non supporté ?). Les autres ont bien été ajoutées.`)
     } finally {
       setTraitement(false)
       setProgression('')

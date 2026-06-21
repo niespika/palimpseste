@@ -36,6 +36,7 @@ export default async function DiagnosticPage({ searchParams }: { searchParams: P
         eleveIds.length > 0 ? admin.from('profiles').select('id, display_name').in('id', eleveIds).order('display_name') : Promise.resolve({ data: [] }),
         eleveIds.length > 0 ? admin.from('quazian_card_states').select('eleve_id, reps, last_review, due').in('eleve_id', eleveIds) : Promise.resolve({ data: [] }),
       ])
+      // eslint-disable-next-line react-hooks/purity -- Server Component : rendu une fois par requête, Date.now() est sûr ici
       const maintenant = Date.now()
       const parEleve = new Map<string, { revisees: number; backlog: number; derniere: number | null }>()
       for (const e of etats ?? []) {

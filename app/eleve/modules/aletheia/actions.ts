@@ -7,6 +7,14 @@ import { createAdminClient } from '@/utils/supabase/admin'
 import { contexteAletheia, livreAccessible, semaineLivre, peutAccederSemaine } from './data'
 import type { StatutAletheia } from './types'
 
+// Bornes serveur sur le texte élève (anti-coût : tout est injecté dans le prompt IA ;
+// retour 2 = + le livre entier). Un résumé/VF de chapitres tient très largement dedans.
+const MAX_TEXTE = 8000
+const MAX_QUESTION = 1000
+const MAX_QUESTIONS = 10
+// Délai avant d'autoriser une relance d'un retour bloqué (> durée normale de génération).
+const DELAI_RELANCE_MS = 90 * 1000
+
 async function verifierEleve() {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
@@ -30,6 +38,9 @@ export async function soumettreV1(livreId: string, semaine: number, resume: stri
   const qs = (questions ?? []).map(q => q.trim()).filter(Boolean)
   if (!r) return { error: 'Écris un résumé avant de soumettre.' }
   if (qs.length === 0) return { error: 'Pose au moins une question.' }
+  if (r.length > MAX_TEXTE) return { error: 'Ton résumé est trop long (limite ~8000 caractères).' }
+  if (qs.length > MAX_QUESTIONS) return { error: `Pas plus de ${MAX_QUESTIONS} questions.` }
+  if (qs.some(q => q.length > MAX_QUESTION)) return { error: 'Une de tes questions est trop longue.' }
 
   const admin = createAdminClient()
   // Accès : module actif + livre assigné à la classe ACTIVE (inscrite au module) + semaine valide.
@@ -83,6 +94,7 @@ export async function soumettreVf(livreId: string, semaine: number, vf: string) 
   const { supabase, userId } = await verifierEleve()
   const v = (vf ?? '').trim()
   if (!v) return { error: 'Écris ta version finale avant de soumettre.' }
+  if (v.length > MAX_TEXTE) return { error: 'Ta version finale est trop longue (limite ~8000 caractères).' }
 
   const admin = createAdminClient()
   const { active } = await contexteAletheia(supabase, userId)
@@ -187,5 +199,42 @@ export async function revelerCapstone(livreId: string) {
   })
 
   revalidatePath('/eleve/modules/aletheia')
+  return { success: true }
+}
+
+// Relance d'un retour bloqué : si le job after() est mort (process interrompu, redeploy),
+// le travail reste en *_SUBMITTED indéfiniment et le polling tourne sans fin. On autorise
+// une relance après un délai de sécurité (> durée normale d'une génération). genererRetour1/2
+// sont gardés par compare-and-set, donc relancer est sûr.
+export async function relancerRetour(livreId: string, semaine: number) {
+  const { supabase, userId } = await verifierEleve()
+  const admin = createAdminClient()
+  const { active } = await contexteAletheia(supabase, userId)
+  if (!active || !(await livreAccessible(admin, [active.classe_id], livreId))) return { error: 'Ce livre ne t\'est pas accessible.' }
+
+  const { data: row } = await supabase
+    .from('aletheia_travaux')
+    .select('id, statut, updated_at')
+    .eq('eleve_id', userId).eq('scriptorium_livre_id', livreId).eq('semaine_index', semaine)
+    .maybeSingle()
+  if (!row) return { error: 'Aucun travail pour cette semaine.' }
+  // Déjà avancé entre-temps (le retour est finalement arrivé) → rien à relancer.
+  if (row.statut !== 'V1_SUBMITTED' && row.statut !== 'VF_SUBMITTED') {
+    revalider(livreId, semaine)
+    return { success: true }
+  }
+  // Anti-doublon : ne relancer que si l'attente dépasse le délai de sécurité.
+  const age = Date.now() - new Date(row.updated_at as string).getTime()
+  if (age < DELAI_RELANCE_MS) return { error: 'Le retour est encore en cours de préparation, patiente un instant.' }
+
+  const travailId = row.id as string
+  const phase = row.statut
+  after(async () => {
+    const mod = await import('@/utils/aletheia-retours')
+    if (phase === 'V1_SUBMITTED') await mod.genererRetour1(travailId)
+    else await mod.genererRetour2(travailId)
+  })
+
+  revalider(livreId, semaine)
   return { success: true }
 }

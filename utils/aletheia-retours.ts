@@ -43,13 +43,11 @@ QUESTIONS>>>
   "remarque_questions": "remarque optionnelle et brève sur la qualité des questions, ou null"
 }`
 
-// Remplace {var} dans un template, en évitant l'interprétation des « $ » du contenu.
+// Remplace {var} en UNE seule passe : un {placeholder} présent dans le texte de l'élève
+// n'est donc jamais ré-interprété comme une autre variable injectée ensuite (et les « $ »
+// du contenu restent littéraux). Un {token} inconnu est laissé tel quel.
 function injecter(template: string, vars: Record<string, string>): string {
-  let out = template
-  for (const [cle, val] of Object.entries(vars)) {
-    out = out.replace(new RegExp('\\{' + cle + '\\}', 'g'), () => val)
-  }
-  return out
+  return template.replace(/\{(\w+)\}/g, (match, cle: string) => (cle in vars ? vars[cle] : match))
 }
 
 function extraireJSON(texte: string): string {
@@ -143,8 +141,8 @@ export async function genererRetour1(travailId: string): Promise<void> {
     const parsed = JSON.parse(extraireJSON(texte)) as Partial<Retour1>
 
     const retour1: Retour1 = {
-      questions_pour_avancer: Array.isArray(parsed.questions_pour_avancer) ? parsed.questions_pour_avancer : [],
-      reponses_a_tes_questions: Array.isArray(parsed.reponses_a_tes_questions) ? parsed.reponses_a_tes_questions : [],
+      questions_pour_avancer: enListe(parsed.questions_pour_avancer),
+      reponses_a_tes_questions: enListe(parsed.reponses_a_tes_questions),
       remarque_questions: typeof parsed.remarque_questions === 'string' ? parsed.remarque_questions : null,
     }
     // Un retour sans aucune relance ni réponse n'est pas exploitable → échec.

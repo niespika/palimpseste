@@ -230,6 +230,7 @@ export async function ajouterLivre(formData: FormData) {
   // supprime les documents AVANT l'unité (sans dépendre d'un cascade unite_id non
   // garanti) ; supprimer un document cascade vers ses classes et images (Lot 6).
   const cheminsUploades: string[] = []
+  const semainesSansTexte: number[] = []
   const admin = createAdminClient()
   const annuler = async (msg: string) => {
     if (cheminsUploades.length > 0) await admin.storage.from('scriptorium').remove(cheminsUploades)
@@ -255,6 +256,9 @@ export async function ajouterLivre(formData: FormData) {
       } catch (err) {
         console.error(`[scriptorium] extraction PDF semaine ${n} :`, err)
       }
+      // PDF fourni mais aucun texte exploitable (scanné/illisible) → l'ancrage IA Aletheia
+      // sera impossible pour cette semaine : on le signalera au prof.
+      if (!texteExtrait || !texteExtrait.trim()) semainesSansTexte.push(n)
     }
 
     const { data: doc, error: errDoc } = await supabase
@@ -292,6 +296,12 @@ export async function ajouterLivre(formData: FormData) {
   if (errClasses) return annuler(errClasses.message)
 
   revalidatePath('/prof/scriptorium')
+  if (semainesSansTexte.length > 0) {
+    return {
+      success: true,
+      warning: `Texte non extrait pour la/les semaine(s) ${semainesSansTexte.join(', ')} (PDF scanné ou illisible ?). Le retour IA d'Aletheia ne fonctionnera pas pour ces semaines tant que le PDF n'est pas remplacé par un PDF au texte sélectionnable.`,
+    }
+  }
   return { success: true }
 }
 

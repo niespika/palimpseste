@@ -111,28 +111,21 @@ export async function genererSynthesePourEleve(inscriptionId: string, semestreId
       .eq('semestre_id', semestreId)
       .maybeSingle()
 
-    // Dépôts dans l'intervalle (de cette inscription)
-    const { data: depots } = await admin
-      .from('fragments_depots')
-      .select('id, statut, created_at, fragments_semaines(numero, date_debut, date_limite)')
-      .eq('inscription_id', inscriptionId)
-
-    const depotsInterval = (depots ?? []).filter(d => {
-      const sem = d.fragments_semaines as unknown as { date_debut: string; date_limite: string } | null
-      if (!sem) return false
-      const dl = new Date(sem.date_limite)
-      return dl >= dateDebut && dl <= dateFin
-    })
-
-    // Compter semaines attendues (semaines dont la date_limite est dans l'intervalle)
-    const { data: toutesLessemaines } = await admin
+    // Semaines du semestre (par semestre_id, et non par fenêtre de dates : une semaine peut
+    // avoir une date_limite hors de l'intervalle configuré tout en appartenant au semestre).
+    const { data: semainesSemestre } = await admin
       .from('fragments_semaines')
       .select('id, numero, date_limite')
+      .eq('semestre_id', semestreId)
+    const semaineIdsSemestre = new Set((semainesSemestre ?? []).map(s => s.id as string))
+    const semainesInterval = semainesSemestre ?? []
 
-    const semainesInterval = (toutesLessemaines ?? []).filter(s => {
-      const dl = new Date(s.date_limite)
-      return dl >= dateDebut && dl <= dateFin
-    })
+    // Dépôts de cette inscription restreints aux semaines du semestre.
+    const { data: depotsTous } = await admin
+      .from('fragments_depots')
+      .select('id, semaine_id, statut, created_at, fragments_semaines(numero, date_debut, date_limite)')
+      .eq('inscription_id', inscriptionId)
+    const depotsInterval = (depotsTous ?? []).filter(d => semaineIdsSemestre.has(d.semaine_id as string))
 
     const nbSemainesAttendues = semainesInterval.length
     const nbDeposes = depotsInterval.length
@@ -177,12 +170,7 @@ export async function genererSynthesePourEleve(inscriptionId: string, semestreId
       .select('id, semaine_id, fragments_semaines(date_limite)')
       .eq('inscription_id', inscriptionId)
 
-    const presInterval = (presentations ?? []).filter(p => {
-      const sem = p.fragments_semaines as unknown as { date_limite: string } | null
-      if (!sem) return false
-      const dl = new Date(sem.date_limite)
-      return dl >= dateDebut && dl <= dateFin
-    })
+    const presInterval = (presentations ?? []).filter(p => semaineIdsSemestre.has(p.semaine_id as string))
 
     let analyseOrale = null
     if (presInterval.length > 0) {
@@ -270,7 +258,7 @@ export async function genererSynthesePourEleve(inscriptionId: string, semestreId
       messages: [{ role: 'user', content: [{ type: 'text', text: prompt }] }],
     })
 
-    const texte = response.content[0].type === 'text' ? response.content[0].text : ''
+    const texte = response.content[0]?.type === 'text' ? response.content[0].text : ''
     const nettoye = texte.replace(/^```(?:json)?\s*\n?/, '').replace(/\n?```\s*$/, '').trim()
 
     let parsed: SyntheseJSON
@@ -284,7 +272,9 @@ export async function genererSynthesePourEleve(inscriptionId: string, semestreId
     const cout = response.usage.input_tokens * 3 / 1_000_000
       + response.usage.output_tokens * 15 / 1_000_000
 
-    const noteSuggeree = parsed.note20_suggeree ?? null
+    // Coercition + clamp [0,20] : le modèle peut renvoyer une string, un hors-borne ou NaN.
+    const noteSuggeree = typeof parsed.note20_suggeree === 'number' && Number.isFinite(parsed.note20_suggeree)
+      ? Math.max(0, Math.min(20, parsed.note20_suggeree)) : null
     const noteMin = noteSuggeree !== null ? Math.max(0, noteSuggeree - fourchette) : null
     const noteMax = noteSuggeree !== null ? Math.min(20, noteSuggeree + fourchette) : null
 

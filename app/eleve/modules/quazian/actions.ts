@@ -17,6 +17,37 @@ async function verifierEleve() {
   return { supabase, userId: user.id }
 }
 
+// ── Visibilité des cartes partagées (Lot 6/7) ────────────────────────────────
+// Une carte partagée d'une (unité, semaine) n'est visible que si un contenu Scriptorium de
+// cette semaine est assigné à une classe de l'élève ; les cartes legacy (semaine null)
+// restent visibles via la seule publication d'unité. Centralisé pour que la file, la
+// consultation ET les stats appliquent EXACTEMENT le même périmètre.
+async function contexteVisibiliteCartes(
+  admin: ReturnType<typeof createAdminClient>,
+  userId: string,
+): Promise<{ unitesVisibles: string[]; tuplesVisibles: Set<string> }> {
+  const { data: publis } = await admin
+    .from('quazian_publications').select('scriptorium_unite_id').eq('flashcards_visibles', true)
+  const unitesVisibles = (publis ?? []).map((p) => p.scriptorium_unite_id as string)
+
+  const { data: inscrits } = await admin
+    .from('inscriptions').select('classe_id').eq('eleve_id', userId).eq('statut', 'active')
+  const classeIds = (inscrits ?? []).map((i) => i.classe_id as string)
+
+  const tuplesVisibles = new Set<string>()
+  if (classeIds.length > 0) {
+    const { data: liens } = await admin
+      .from('scriptorium_document_classes').select('document_id').in('classe_id', classeIds)
+    const docIds = [...new Set((liens ?? []).map((l) => l.document_id as string))]
+    if (docIds.length > 0) {
+      const { data: contenus } = await admin
+        .from('scriptorium_documents').select('unite_id, semaine').in('id', docIds).not('semaine', 'is', null)
+      for (const c of contenus ?? []) tuplesVisibles.add(`${c.unite_id}:${c.semaine}`)
+    }
+  }
+  return { unitesVisibles, tuplesVisibles }
+}
+
 export interface CarteRevision {
   flashcard_id: string
   card_state_id: string | null  // null = première révision
@@ -36,42 +67,9 @@ export async function chargerFileRevision(): Promise<CarteRevision[]> {
   const { supabase, userId } = await verifierEleve()
   const maintenant = new Date().toISOString()
 
-  // Unités publiées — admin pour contourner RLS sur quazian_publications
+  // Unités publiées + visibilité par (unité, semaine) — admin pour contourner RLS.
   const admin = createAdminClient()
-  const { data: publis } = await admin
-    .from('quazian_publications')
-    .select('scriptorium_unite_id')
-    .eq('flashcards_visibles', true)
-
-  const unitesVisibles = (publis ?? []).map((p) => p.scriptorium_unite_id)
-
-  // Visibilité par semaine DÉRIVÉE du contenu Scriptorium (Lot 6/7) : l'élève ne
-  // voit les cartes d'une (unité, semaine) que si au moins un contenu de cette
-  // semaine est assigné à une de ses classes. Les cartes « legacy » (semaine
-  // nulle) restent visibles via la seule publication d'unité.
-  const { data: inscrits } = await admin
-    .from('inscriptions')
-    .select('classe_id')
-    .eq('eleve_id', userId)
-    .eq('statut', 'active')
-  const classeIds = (inscrits ?? []).map((i) => i.classe_id as string)
-
-  const tuplesVisibles = new Set<string>()
-  if (classeIds.length > 0) {
-    const { data: liens } = await admin
-      .from('scriptorium_document_classes')
-      .select('document_id')
-      .in('classe_id', classeIds)
-    const docIds = [...new Set((liens ?? []).map((l) => l.document_id as string))]
-    if (docIds.length > 0) {
-      const { data: contenus } = await admin
-        .from('scriptorium_documents')
-        .select('unite_id, semaine')
-        .in('id', docIds)
-        .not('semaine', 'is', null)
-      for (const c of contenus ?? []) tuplesVisibles.add(`${c.unite_id}:${c.semaine}`)
-    }
-  }
+  const { unitesVisibles, tuplesVisibles } = await contexteVisibiliteCartes(admin, userId)
 
   const selectCarte = `
       id, recto, verso, format, type, concept_tag, semaine,
@@ -184,37 +182,8 @@ export async function chargerToutesLesCartes(): Promise<CarteConsultation[]> {
   const { supabase, userId } = await verifierEleve()
   const admin = createAdminClient()
 
-  // Unités publiées
-  const { data: publis } = await admin
-    .from('quazian_publications')
-    .select('scriptorium_unite_id')
-    .eq('flashcards_visibles', true)
-  const unitesVisibles = (publis ?? []).map((p) => p.scriptorium_unite_id)
-
-  // Visibilité par (unité, semaine) dérivée du contenu Scriptorium assigné aux
-  // classes de l'élève (Lot 6/7).
-  const { data: inscrits } = await admin
-    .from('inscriptions')
-    .select('classe_id')
-    .eq('eleve_id', userId)
-    .eq('statut', 'active')
-  const classeIds = (inscrits ?? []).map((i) => i.classe_id as string)
-  const tuplesVisibles = new Set<string>()
-  if (classeIds.length > 0) {
-    const { data: liens } = await admin
-      .from('scriptorium_document_classes')
-      .select('document_id')
-      .in('classe_id', classeIds)
-    const docIds = [...new Set((liens ?? []).map((l) => l.document_id as string))]
-    if (docIds.length > 0) {
-      const { data: contenus } = await admin
-        .from('scriptorium_documents')
-        .select('unite_id, semaine')
-        .in('id', docIds)
-        .not('semaine', 'is', null)
-      for (const c of contenus ?? []) tuplesVisibles.add(`${c.unite_id}:${c.semaine}`)
-    }
-  }
+  // Unités publiées + visibilité par (unité, semaine) — même périmètre que la file.
+  const { unitesVisibles, tuplesVisibles } = await contexteVisibiliteCartes(admin, userId)
 
   const selectCarte = `
       id, recto, verso, format, type, concept_tag, semaine, created_at,
@@ -274,30 +243,46 @@ export async function soumettreNote(
   flashcardId: string,
   cardStateId: string | null,
   rating: 1 | 2 | 3 | 4
-): Promise<{ due: string; state: number }> {
+): Promise<{ due: string; state: number; cardStateId: string | null }> {
   const { supabase, userId } = await verifierEleve()
 
   const scheduler = fsrs()
   const maintenant = new Date()
 
-  // Reconstruire la carte FSRS à partir de l'état RÉEL en base
-  // (ne jamais faire confiance à un état envoyé par le client : il ne contient
-  // pas difficulty/stability et corromprait la planification).
-  let card: Card
-  if (!cardStateId) {
-    card = createEmptyCard(maintenant)
-  } else {
-    const { data: etat } = await supabase
+  // Reconstruire la carte FSRS depuis l'état RÉEL en base (jamais l'état du client).
+  // Résolution tolérante : par id si fourni ET valide, sinon par (élève, flashcard) — le
+  // client peut renvoyer un id factice « pending » pour une carte neuve re-enfilée (raté).
+  const idValide = cardStateId && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(cardStateId)
+    ? cardStateId : null
+  type EtatCarte = { id: string; difficulty: number; stability: number; state: number; due: string; reps: number; lapses: number; last_review: string | null }
+  let etat: EtatCarte | null = null
+  if (idValide) {
+    const { data } = await supabase
       .from('quazian_card_states')
-      .select('difficulty, stability, state, due, reps, lapses, last_review')
-      .eq('id', cardStateId)
-      .eq('eleve_id', userId)
-      .single()
+      .select('id, difficulty, stability, state, due, reps, lapses, last_review')
+      .eq('id', idValide).eq('eleve_id', userId).maybeSingle()
+    etat = (data as EtatCarte | null) ?? null
+  }
+  if (!etat) {
+    const { data } = await supabase
+      .from('quazian_card_states')
+      .select('id, difficulty, stability, state, due, reps, lapses, last_review')
+      .eq('eleve_id', userId).eq('flashcard_id', flashcardId).maybeSingle()
+    etat = (data as EtatCarte | null) ?? null
+  }
 
-    if (!etat) {
-      card = createEmptyCard(maintenant)
-    } else {
-      card = {
+  // Garde de visibilité (création d'un nouvel état uniquement) : carte partagée valide, ou
+  // carte personnelle de l'élève. Empêche de semer un état FSRS pour une carte arbitraire.
+  if (!etat) {
+    const { data: fc } = await supabase
+      .from('quazian_flashcards').select('eleve_id, statut').eq('id', flashcardId).maybeSingle()
+    if (!fc || (fc.eleve_id === null ? fc.statut !== 'valide' : fc.eleve_id !== userId)) {
+      return { due: maintenant.toISOString(), state: 0, cardStateId: null }
+    }
+  }
+
+  const card: Card = etat
+    ? {
         due: new Date(etat.due),
         stability: etat.stability,
         difficulty: etat.difficulty,
@@ -309,8 +294,7 @@ export async function soumettreNote(
         state: etat.state as 0 | 1 | 2 | 3,
         last_review: etat.last_review ? new Date(etat.last_review) : undefined,
       }
-    }
-  }
+    : createEmptyCard(maintenant)
 
   const result = scheduler.next(card, maintenant, rating as Grade)
   const nouvelleCarteEtat = result.card
@@ -318,7 +302,8 @@ export async function soumettreNote(
 
   const nouveauDue = nouvelleCarteEtat.due.toISOString()
 
-  if (!cardStateId) {
+  let etatId = etat?.id ?? null
+  if (!etat) {
     // Créer l'état
     const { data: nouvelEtat, error } = await supabase
       .from('quazian_card_states')
@@ -337,6 +322,7 @@ export async function soumettreNote(
       .single()
 
     if (!error && nouvelEtat) {
+      etatId = nouvelEtat.id
       await supabase.from('quazian_review_log').insert({
         card_state_id: nouvelEtat.id,
         rating,
@@ -358,10 +344,11 @@ export async function soumettreNote(
         reps: nouvelleCarteEtat.reps,
         lapses: nouvelleCarteEtat.lapses,
       })
-      .eq('id', cardStateId)
+      .eq('id', etat.id)
+      .eq('eleve_id', userId)
 
     await supabase.from('quazian_review_log').insert({
-      card_state_id: cardStateId,
+      card_state_id: etat.id,
       rating,
       reviewed_at: maintenant.toISOString(),
       elapsed_days: log.elapsed_days,
@@ -369,7 +356,7 @@ export async function soumettreNote(
     })
   }
 
-  return { due: nouveauDue, state: nouvelleCarteEtat.state }
+  return { due: nouveauDue, state: nouvelleCarteEtat.state, cardStateId: etatId }
 }
 
 // Stats pour la page d'accueil
@@ -378,23 +365,23 @@ export async function chargerStatsRevision() {
   const maintenant = new Date().toISOString()
   const admin = createAdminClient()
 
-  // Unités publiées
-  const { data: publis } = await admin
-    .from('quazian_publications')
-    .select('scriptorium_unite_id')
-    .eq('flashcards_visibles', true)
+  // Unités publiées + visibilité par (unité, semaine) — MÊME périmètre que la file de
+  // révision, sinon les compteurs annoncent des cartes que l'élève ne verra jamais.
+  const { unitesVisibles, tuplesVisibles } = await contexteVisibiliteCartes(admin, userId)
 
-  const unitesVisibles = (publis ?? []).map((p) => p.scriptorium_unite_id)
-
-  // Cartes partagées des unités publiées + cartes personnelles de l'élève
-  const { data: partagees } = unitesVisibles.length > 0
+  // Cartes partagées des unités publiées, filtrées par (unité, semaine) visibles.
+  const { data: partageesBrutes } = unitesVisibles.length > 0
     ? await admin
         .from('quazian_flashcards')
-        .select('id')
+        .select('id, scriptorium_unite_id, semaine')
         .eq('statut', 'valide')
         .is('eleve_id', null)
         .in('scriptorium_unite_id', unitesVisibles)
     : { data: [] }
+  const partagees = (partageesBrutes ?? []).filter((c) => {
+    const sem = (c as { semaine: number | null }).semaine
+    return sem == null || tuplesVisibles.has(`${c.scriptorium_unite_id}:${sem}`)
+  })
 
   const { data: perso } = await admin
     .from('quazian_flashcards')

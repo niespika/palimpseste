@@ -85,6 +85,23 @@ export default function EditorAnalyseOrale({ oral, analyseOrale, presentationId,
     return () => { annule = true }
   }, [oral.storage_path, oral.audio_supprime])
 
+  // Resynchroniser les champs quand l'analyse arrive/évolue côté serveur (même motif que
+  // l'éditeur écrit : sans ça l'éditeur garde son état initial vide/zéro et écraserait
+  // l'analyse IA à la publication).
+  /* eslint-disable react-hooks/set-state-in-effect */
+  useEffect(() => {
+    if (!analyseOrale) return
+    setIntegration(analyseOrale.retour_integration ?? '')
+    setPistes(analyseOrale.retour_pistes ?? '')
+    setCompletude(analyseOrale.retour_completude ?? '')
+    setOralRetour(analyseOrale.retour_oral ?? '')
+    setCommentaire(analyseOrale.commentaire_general ?? '')
+    setNoteContenu(analyseOrale.note_contenu ?? 0)
+    setNoteStructure(analyseOrale.note_structure ?? 0)
+    setNoteExpression(analyseOrale.note_expression ?? 0)
+    setNotesProf(analyseOrale.notes_prof ?? '')
+  }, [analyseOrale])
+
   async function handleSauvegarder() {
     if (!analyseOrale) return
     setChargement(true)

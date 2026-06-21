@@ -75,7 +75,9 @@ function formatDate(dateStr: string) {
 export default function VueSemaine({ eleves, semaineId }: Props) {
   const [eleveVisu, setEleveVisu] = useState<EleveAvecDepot | null>(null)
 
-  const nbDeposes = eleves.filter(e => e.depot && e.depot.statut === 'depose').length
+  // « Déposés » est cumulatif (les retards sont aussi des dépôts) — cohérent avec la tuile
+  // de classe et la spec (en retard ⊆ déposés). « En retard » reste un sous-compteur.
+  const nbDeposes = eleves.filter(e => e.depot).length
   const nbRetard = eleves.filter(e => e.depot && e.depot.statut === 'en_retard').length
   const nbManquants = eleves.filter(e => !e.depot).length
   const nbAValider = eleves.filter(e => e.analyse?.statut === 'generee').length

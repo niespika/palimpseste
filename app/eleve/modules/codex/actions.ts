@@ -116,16 +116,27 @@ const PHASE_REQUISE: Record<Phase, string> = { v1: 'phase_1', vf: 'phase_2' }
 
 // S'assurer que le travail existe et que la séance est dans la bonne phase
 async function getTravail(sessionId: string, phase: Phase) {
-  const { userId } = await verifierEleve()
+  const { supabase, userId } = await verifierEleve()
   const admin = createAdminClient()
 
   const { data: seance } = await admin
     .from('codex_sessions')
-    .select('statut')
+    .select('statut, classe_id')
     .eq('id', sessionId)
     .single()
 
   if (!seance) return { error: 'Séance introuvable' as const }
+
+  // L'élève doit appartenir à la classe de la séance (ou séance sans classe). Le client
+  // admin contourne RLS : sans ce contrôle, n'importe quel élève connaissant un sessionId
+  // pourrait écrire dans la séance d'une autre classe et déclencher une analyse IA payante.
+  if (seance.classe_id) {
+    const classeIds = await classeIdsActives(supabase, userId)
+    if (!classeIds.includes(seance.classe_id as string)) {
+      return { error: 'Séance introuvable' as const }
+    }
+  }
+
   if (seance.statut !== PHASE_REQUISE[phase]) {
     return { error: 'Cette phase n\'est pas ouverte.' as const }
   }
@@ -217,12 +228,15 @@ export async function reinitialiserPhotos(sessionId: string, phase: Phase) {
     await admin.storage.from('codex').remove(existants.map((f) => `${prefix}/${f.name}`))
   }
 
-  const colPhotos = phase === 'v1' ? 'photos_v1' : 'photos_vf'
-  const colStatut = phase === 'v1' ? 'analyse_v1_statut' : 'analyse_vf_statut'
+  // Réinitialiser aussi les sous-produits d'analyse de la phase, sinon des suggestions/OCR
+  // périmés d'une tentative abandonnée ressortent (et sont réinjectés dans le prompt VF).
+  const reset: Record<string, unknown> = phase === 'v1'
+    ? { photos_v1: [], analyse_v1_statut: 'vide', suggestions_v1: null, texte_v1_ocr: null, ocr_confiance_v1: null }
+    : { photos_vf: [], analyse_vf_statut: 'vide', retour_critique: null, synthese_completee: null, texte_vf_ocr: null }
 
   await admin
     .from('codex_travaux')
-    .update({ [colPhotos]: [], [colStatut]: 'vide' })
+    .update(reset)
     .eq('id', travailId)
 
   return { success: true }

@@ -136,7 +136,7 @@ export async function analyserV1(travailId: string): Promise<void> {
       }],
     })
 
-    const texte = response.content[0].type === 'text' ? response.content[0].text : ''
+    const texte = response.content[0]?.type === 'text' ? response.content[0].text : ''
 
     let parsed: V1JSON
     try {
@@ -146,7 +146,7 @@ export async function analyserV1(travailId: string): Promise<void> {
       return
     }
 
-    const confiance = typeof parsed.ocr_confiance === 'number' ? parsed.ocr_confiance : null
+    const confiance = typeof parsed.ocr_confiance === 'number' ? Math.max(0, Math.min(1, parsed.ocr_confiance)) : null
     const orthoOk = confiance === null || confiance >= seuilOcr
 
     const suggestions = {
@@ -300,7 +300,7 @@ export async function analyserVF(travailId: string): Promise<void> {
       }],
     })
 
-    const texte = response.content[0].type === 'text' ? response.content[0].text : ''
+    const texte = response.content[0]?.type === 'text' ? response.content[0].text : ''
 
     let parsed: VFJSON
     try {
@@ -328,7 +328,7 @@ export async function analyserVF(travailId: string): Promise<void> {
 
     await admin.from('codex_travaux').update({
       texte_vf_ocr: parsed.transcription ?? null,
-      ocr_confiance_vf: typeof parsed.ocr_confiance === 'number' ? parsed.ocr_confiance : null,
+      ocr_confiance_vf: typeof parsed.ocr_confiance === 'number' ? Math.max(0, Math.min(1, parsed.ocr_confiance)) : null,
       retour_critique: retourCritique,
       synthese_completee: parsed.synthese_completee ?? null,
       analyse_vf_statut: 'prete',

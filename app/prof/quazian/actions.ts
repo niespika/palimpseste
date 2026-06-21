@@ -75,7 +75,13 @@ export async function lancerExtractionIA(formData: FormData) {
     .map((d) => `## ${d.titre}${d.auteur ? ` (${d.auteur})` : ''}\n\n${d.texte_extrait}`)
     .join('\n\n---\n\n')
 
-  const suggestions = await extraireFlashcards(texteComplet, unite.label)
+  let suggestions
+  try {
+    suggestions = await extraireFlashcards(texteComplet, unite.label)
+  } catch (e) {
+    console.error('[quazian] extraction flashcards :', e)
+    return { error: "La génération IA a échoué (réponse inattendue du modèle). Réessaie." }
+  }
 
   // Insérer les cartes avec statut "suggere"
   const cartes = suggestions.map((s) => ({
@@ -125,7 +131,13 @@ export async function genererCartesSemaine(uniteId: string, semaine: number) {
     return { error: "Aucun texte dans cette semaine. Ajoute du contenu (texte ou légende) dans le Scriptorium." }
   }
 
-  const suggestions = await extraireFlashcards(texteComplet, `${unite.label} — Semaine ${semaine}`)
+  let suggestions
+  try {
+    suggestions = await extraireFlashcards(texteComplet, `${unite.label} — Semaine ${semaine}`)
+  } catch (e) {
+    console.error('[quazian] génération cartes semaine :', e)
+    return { error: "La génération IA a échoué (réponse inattendue du modèle). Réessaie." }
+  }
 
   const cartes = suggestions.map(s => ({
     scriptorium_unite_id: uniteId,

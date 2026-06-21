@@ -59,10 +59,16 @@ export default async function ProfAccueil({ searchParams }: { searchParams: Prom
     : { data: [] }
   const inscMap = new Map((inscAValider ?? []).map((i) => [i.id as string, i]))
   const eleveIdsAValider = [...new Set((inscAValider ?? []).map((i) => i.eleve_id as string))]
-  const { data: profilsAValider } = eleveIdsAValider.length > 0
-    ? await admin.from('profiles').select('id, display_name').in('id', eleveIdsAValider)
+  // Noms pour TOUTES les lignes affichées : à valider + inscriptions actives (couvre les
+  // « élèves à risque », sinon ils s'affichaient « ? » dès qu'il n'y avait rien à valider).
+  const eleveIdsAffichage = [...new Set([
+    ...inscrits.map((i) => i.eleve_id as string),
+    ...eleveIdsAValider,
+  ])]
+  const { data: profilsAffichage } = eleveIdsAffichage.length > 0
+    ? await admin.from('profiles').select('id, display_name').in('id', eleveIdsAffichage)
     : { data: [] }
-  const nomEleve = new Map((profilsAValider ?? []).map((p) => [p.id as string, p.display_name as string]))
+  const nomEleve = new Map((profilsAffichage ?? []).map((p) => [p.id as string, p.display_name as string]))
   const { data: semainesV } = await admin.from('fragments_semaines').select('id, numero')
   const numSemaine = new Map((semainesV ?? []).map((s) => [s.id as string, s.numero as number]))
   const nomClasse = new Map(toutesClasses.map((c) => [c.id, c.nom]))

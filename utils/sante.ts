@@ -55,9 +55,14 @@ export async function calculerSante(admin: SupabaseClient): Promise<Map<string, 
   if (inscFragments.length === 0) return resultat
   const inscIds = inscFragments.map((i) => i.id as string)
 
-  // Semaines passées (date limite dépassée)
+  // Semaines passées (date limite dépassée) — scopées au semestre courant, sinon les
+  // semaines des semestres précédents comptent à tort comme « dépôts manquants ».
   const maintenant = new Date()
-  const { data: semaines } = await admin.from('fragments_semaines').select('id, date_limite')
+  const { data: semestreCourant } = await admin
+    .from('fragments_semestres').select('id').eq('courant', true).maybeSingle()
+  let reqSemaines = admin.from('fragments_semaines').select('id, date_limite')
+  if (semestreCourant) reqSemaines = reqSemaines.eq('semestre_id', semestreCourant.id)
+  const { data: semaines } = await reqSemaines
   const idsSemainesPassees = new Set(
     (semaines ?? []).filter((s) => new Date(s.date_limite) < maintenant).map((s) => s.id)
   )
@@ -86,15 +91,19 @@ export async function calculerSante(admin: SupabaseClient): Promise<Map<string, 
     if (d != null && s != null && r != null) noteParDepot.set(a.depot_id as string, (d + s + r) / 3)
   }
 
-  // Backlog révision (cartes dues dépassées) — classes Quazian uniquement
-  const inscQuazianIds = inscFragments.filter((i) => classesQuazian.has(i.classe_id)).map((i) => i.id as string)
-  const backlogParInsc = new Map<string, number>()
-  if (moduleQuazian && inscQuazianIds.length > 0) {
+  // Backlog révision (cartes dues dépassées) — classes Quazian uniquement.
+  // quazian_card_states est scopé par eleve_id (inscription_id jamais peuplé), donc on
+  // compte par élève puis on rattache à l'inscription.
+  const eleveIdsQuazian = [...new Set(
+    inscFragments.filter((i) => classesQuazian.has(i.classe_id)).map((i) => i.eleve_id as string)
+  )]
+  const backlogParEleve = new Map<string, number>()
+  if (moduleQuazian && eleveIdsQuazian.length > 0) {
     const { data: cs } = await admin
-      .from('quazian_card_states').select('inscription_id, due').in('inscription_id', inscQuazianIds)
+      .from('quazian_card_states').select('eleve_id, due').in('eleve_id', eleveIdsQuazian)
     for (const c of cs ?? []) {
       if (c.due && new Date(c.due as string) < maintenant) {
-        backlogParInsc.set(c.inscription_id as string, (backlogParInsc.get(c.inscription_id as string) ?? 0) + 1)
+        backlogParEleve.set(c.eleve_id as string, (backlogParEleve.get(c.eleve_id as string) ?? 0) + 1)
       }
     }
   }
@@ -106,7 +115,7 @@ export async function calculerSante(admin: SupabaseClient): Promise<Map<string, 
     const nbEnRetard = ds.filter((d) => d.statut === 'en_retard').length
     const notes = ds.map((d) => noteParDepot.get(d.id)).filter((n): n is number => n != null)
     const moyenne = notes.length > 0 ? notes.reduce((a, b) => a + b, 0) / notes.length : null
-    const backlogRevision = backlogParInsc.get(i.id as string) ?? 0
+    const backlogRevision = backlogParEleve.get(i.eleve_id as string) ?? 0
 
     const raisons: string[] = []
     if (nbManquants >= SEUILS_SANTE.depotsManquants) raisons.push(`${nbManquants} dépôts manquants`)
@@ -118,7 +127,7 @@ export async function calculerSante(admin: SupabaseClient): Promise<Map<string, 
       eleveId: i.eleve_id as string,
       classeId: i.classe_id as string,
       nbSemainesPassees,
-      nbDeposes: ds.length,
+      nbDeposes: semainesDeposees.size, // dépôts parmi les semaines échues (ratio ≤ 1)
       nbManquants,
       nbEnRetard,
       moyenne,

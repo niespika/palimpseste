@@ -282,9 +282,10 @@ export async function sauvegarderAnalyseEssai(analyseId: string, data: {
 
 export async function validerNoteEssai(analyseId: string, note20validee: number | null, noteVisibleEleve: boolean) {
   await verifierProf()
+  const note = note20validee == null || Number.isNaN(note20validee) ? null : Math.max(0, Math.min(20, note20validee))
   const admin = createAdminClient()
   const { error } = await admin.from('essais_analyses').update({
-    note20_validee: note20validee,
+    note20_validee: note,
     note_visible_eleve: noteVisibleEleve,
     modifie_par_prof: true,
   }).eq('id', analyseId)
@@ -503,9 +504,10 @@ export async function sauvegarderSynthese(syntheseId: string, data: {
 
 export async function validerNoteSynthese(syntheseId: string, note20validee: number | null, noteVisibleEleve: boolean) {
   await verifierProf()
+  const note = note20validee == null || Number.isNaN(note20validee) ? null : Math.max(0, Math.min(20, note20validee))
   const admin = createAdminClient()
   const { error } = await admin.from('fragments_syntheses').update({
-    note20_validee: note20validee,
+    note20_validee: note,
     note_visible_eleve: noteVisibleEleve,
   }).eq('id', syntheseId)
   if (error) return { error: error.message }
@@ -566,20 +568,23 @@ export async function creerUrlUploadEssaiPhotoEleve(epreuveId: string, inscripti
   // Valider que l'inscription appartient bien à l'élève (et est active)
   const { data: insc } = await admin
     .from('inscriptions')
-    .select('id')
+    .select('id, classe_id')
     .eq('id', inscriptionId)
     .eq('eleve_id', user.id)
     .eq('statut', 'active')
     .maybeSingle()
   if (!insc) return { error: 'Accès refusé', data: null }
 
-  // Vérifier que l'épreuve est ouverte
-  const { data: epreuve } = await admin
-    .from('fragments_essais_epreuves')
+  // Vérifier que les dépôts sont ouverts POUR LA CLASSE de l'élève (flag par classe que
+  // le prof bascule et que la page élève lit). L'ancien flag global
+  // fragments_essais_epreuves.depots_ouverts n'est jamais réactivé → ne pas s'y fier.
+  const { data: lienClasse } = await admin
+    .from('fragments_epreuves_classes')
     .select('depots_ouverts')
-    .eq('id', epreuveId)
-    .single()
-  if (!epreuve?.depots_ouverts) return { error: 'Les dépôts sont fermés.', data: null }
+    .eq('epreuve_id', epreuveId)
+    .eq('classe_id', insc.classe_id)
+    .maybeSingle()
+  if (!lienClasse?.depots_ouverts) return { error: 'Les dépôts sont fermés.', data: null }
 
   // Trouver ou créer l'essai (scopé par inscription)
   let essaiId: string

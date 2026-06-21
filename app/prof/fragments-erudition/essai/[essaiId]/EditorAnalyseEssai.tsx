@@ -98,6 +98,28 @@ export default function EditorAnalyseEssai({ essaiId, photos, analyse }: Props) 
     return () => { annule = true }
   }, [photos])
 
+  // Resynchroniser les champs quand l'analyse arrive/évolue côté serveur (l'instance cliente
+  // persiste à travers router.refresh() ; sans ça l'éditeur garde son état initial vide et
+  // écraserait l'analyse IA à la publication).
+  /* eslint-disable react-hooks/set-state-in-effect */
+  useEffect(() => {
+    if (!analyse) return
+    setTranscription(analyse.transcription ?? '')
+    setLettreStructure((analyse.lettre_structure as Lettre) ?? '')
+    setLettreExpression((analyse.lettre_expression as Lettre) ?? '')
+    setLettreArgumentation((analyse.lettre_argumentation as Lettre) ?? '')
+    setLettreConnaissances((analyse.lettre_connaissances as Lettre) ?? '')
+    setRetourStructure(analyse.retour_structure ?? '')
+    setRetourExpression(analyse.retour_expression ?? '')
+    setRetourArgumentation(analyse.retour_argumentation ?? '')
+    setRetourConnaissances(analyse.retour_connaissances ?? '')
+    setRetourParcours(analyse.retour_parcours ?? '')
+    setSynthese(analyse.synthese ?? '')
+    setNotesProf(analyse.notes_prof ?? '')
+    setNote20(analyse.note20_validee ?? '')
+    setNoteVisible(analyse.note_visible_eleve ?? false)
+  }, [analyse])
+
   async function handleSauvegarder() {
     if (!analyse) return
     setChargement(true)

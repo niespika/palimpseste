@@ -38,7 +38,7 @@ export default async function PageSemestre({
   // Classe choisie (?classe=) → ses élèves + leurs synthèses de ce semestre.
   const classeChoisie = classes.find(c => c.id === classeSel)
   let eleves: { id: string; display_name: string; classe: string | null; inscription_id: string }[] = []
-  let syntheseParEleve: Record<string, unknown> = {}
+  const syntheseParEleve: Record<string, unknown> = {}
 
   if (classeChoisie) {
     const inscrits = await inscriptionsClasse(admin, classeChoisie.id)

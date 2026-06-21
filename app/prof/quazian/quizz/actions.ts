@@ -42,7 +42,13 @@ export async function creerQuizz(formData: FormData) {
   }
 
   // Générer les questions via IA
-  const questions = await genererQuestions(cartes, Math.min(nbQuestions, cartes.length * 2))
+  let questions
+  try {
+    questions = await genererQuestions(cartes, Math.min(nbQuestions, cartes.length * 2))
+  } catch (e) {
+    console.error('[quazian] génération questions :', e)
+    return { error: "La génération IA a échoué (réponse inattendue du modèle). Réessaie." }
+  }
 
   // Créer le quizz en brouillon
   const { data: quizz, error: errQuizz } = await supabase
@@ -101,7 +107,10 @@ export async function modifierQuestion(formData: FormData) {
   const opt1 = formData.get('opt1') as string
   const opt2 = formData.get('opt2') as string
   const opt3 = formData.get('opt3') as string
-  const indexCorrect = parseInt(formData.get('index_correct') as string)
+  const indexCorrect = parseInt(formData.get('index_correct') as string, 10)
+  if (!Number.isInteger(indexCorrect) || indexCorrect < 0 || indexCorrect > 3) {
+    return { error: 'Réponse correcte invalide (attendu : 0 à 3).' }
+  }
   const conceptTag = formData.get('concept_tag') as string
 
   await supabase

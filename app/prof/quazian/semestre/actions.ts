@@ -39,19 +39,26 @@ export async function calculerNotesSemestre(formData: FormData) {
 
   if (!scores || scores.length === 0) return { error: 'Aucun score trouvé.' }
 
-  // Grouper par élève
-  const parEleve: Record<string, { scoreMoyens: number[]; zQuizzes: number[] }> = {}
+  // Carte quizz → classe (un quizz appartient à une classe).
+  const quizClasse: Record<string, string> = {}
+  for (const q of quizzes) quizClasse[q.id] = q.classe_id as string
+
+  // Grouper par (classe, élève) : un élève bi-classe obtient une note PAR classe, et on
+  // n'écrit jamais classe_id = null (qui, en « toutes les classes », mélangeait les scores
+  // et cassait l'upsert onConflict car NULL est distinct en Postgres).
+  const parCle: Record<string, { classeId: string; eleveId: string; scoreMoyens: number[]; zQuizzes: number[] }> = {}
   for (const s of scores) {
-    if (!parEleve[s.eleve_id]) parEleve[s.eleve_id] = { scoreMoyens: [], zQuizzes: [] }
-    parEleve[s.eleve_id].scoreMoyens.push(s.score_moyen)
-    if (s.z_quiz != null) parEleve[s.eleve_id].zQuizzes.push(s.z_quiz)
+    const classeId = quizClasse[s.quiz_id]
+    if (!classeId) continue
+    const cle = `${classeId}:${s.eleve_id}`
+    if (!parCle[cle]) parCle[cle] = { classeId, eleveId: s.eleve_id, scoreMoyens: [], zQuizzes: [] }
+    parCle[cle].scoreMoyens.push(s.score_moyen)
+    if (s.z_quiz != null) parCle[cle].zQuizzes.push(s.z_quiz)
   }
 
-  // Calculer la note finale pour chaque élève
+  // Calculer la note finale pour chaque (classe, élève)
   const rows = []
-  for (const [eleveId, data] of Object.entries(parEleve)) {
-    const { scoreMoyens, zQuizzes } = data
-
+  for (const { classeId, eleveId, scoreMoyens, zQuizzes } of Object.values(parCle)) {
     const zMoyen = zQuizzes.length > 0
       ? zQuizzes.reduce((a, b) => a + b, 0) / zQuizzes.length
       : 0
@@ -63,7 +70,7 @@ export async function calculerNotesSemestre(formData: FormData) {
     const noteFinale = params.w * noteRelative + (1 - params.w) * noteAbsolue
 
     rows.push({
-      classe_id: classe,
+      classe_id: classeId,
       eleve_id: eleveId,
       z_moyen: zMoyen,
       note_relative_20: noteRelative,

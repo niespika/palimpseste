@@ -63,18 +63,23 @@ export default async function PageEleveDetail({
   if (semestre) themeQuery = themeQuery.eq('semestre_id', semestre.id)
   const { data: theme } = await themeQuery.maybeSingle()
 
-  // Toutes les semaines
-  const { data: semaines } = await admin
+  // Semaines du semestre consulté (sinon le détail mélange tous les semestres, en désaccord
+  // avec la vue d'ensemble qui est, elle, scopée au semestre).
+  let semainesQuery = admin
     .from('fragments_semaines')
     .select('id, numero, titre, date_debut, date_limite')
     .order('numero')
+  if (semestre) semainesQuery = semainesQuery.eq('semestre_id', semestre.id)
+  const { data: semaines } = await semainesQuery
+  const semaineIdsSemestre = new Set((semaines ?? []).map(s => s.id as string))
 
-  // Tous les dépôts de cette inscription
-  const { data: depots } = await admin
+  // Dépôts de cette inscription, restreints aux semaines du semestre consulté.
+  const { data: depotsTous } = await admin
     .from('fragments_depots')
     .select('id, semaine_id, statut, created_at')
     .eq('inscription_id', inscriptionId)
     .order('created_at')
+  const depots = (depotsTous ?? []).filter(d => semaineIdsSemestre.has(d.semaine_id as string))
 
   const depotParSemaine = Object.fromEntries(
     (depots ?? []).map(d => [d.semaine_id, d])

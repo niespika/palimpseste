@@ -140,7 +140,25 @@ export async function sauvegarderReponse(
   jetonsRandomises: [number, number, number, number],
   optionMapping: number[]
 ): Promise<void> {
-  const { supabase } = await verifierEleve()
+  const { supabase, userId } = await verifierEleve()
+
+  // Garde serveur : aucune écriture après soumission, fermeture du quizz ou échéance.
+  // Le timer / l'auto-submit côté client ne protègent rien (l'action est appelable
+  // directement) → sans ça, un élève peut éditer ses réponses après l'expiration.
+  const { data: session } = await supabase
+    .from('quazian_sessions')
+    .select('quiz_id, submitted_at')
+    .eq('id', sessionId)
+    .eq('eleve_id', userId)
+    .maybeSingle()
+  if (!session || session.submitted_at) return
+  const { data: quizzGarde } = await supabase
+    .from('quazian_quizzes')
+    .select('statut, ferme_at')
+    .eq('id', session.quiz_id)
+    .single()
+  if (!quizzGarde || quizzGarde.statut !== 'lance') return
+  if (quizzGarde.ferme_at && new Date(quizzGarde.ferme_at as string) < new Date()) return
 
   // Remettre dans l'ordre original
   const jetonsOriginaux: [number, number, number, number] = [0, 0, 0, 0]
@@ -166,6 +184,26 @@ export async function soumettreQuizz(sessionId: string, quizId: string): Promise
   const { supabase, userId } = await verifierEleve()
 
   const maintenant = new Date().toISOString()
+
+  // Stats cohorte (figées si quizz déjà fermé), chargées une fois et réutilisées plus bas.
+  const { data: quizz } = await supabase
+    .from('quazian_quizzes')
+    .select('statut, moyenne_cohorte, ecart_type_cohorte')
+    .eq('id', quizId)
+    .single()
+  if (!quizz) return { error: 'Quizz introuvable' }
+
+  // Verrou one-shot : marquer la session soumise SEULEMENT si elle appartient à l'élève et
+  // n'est pas déjà soumise (compare-and-set sur submitted_at IS NULL). Empêche un re-scoring
+  // après coup (re-soumission pour améliorer son score) et la double soumission.
+  const { data: verrou } = await supabase
+    .from('quazian_sessions')
+    .update({ submitted_at: maintenant, auto_submitted: false })
+    .eq('id', sessionId)
+    .eq('eleve_id', userId)
+    .is('submitted_at', null)
+    .select('id')
+  if (!verrou || verrou.length === 0) return {} // déjà soumise (ou pas la sienne)
 
   // Récupérer les questions et leurs bonnes réponses
   const { data: questions } = await supabase
@@ -225,20 +263,10 @@ export async function soumettreQuizz(sessionId: string, quizId: string): Promise
       .eq('question_id', a.question_id)
   }
 
-  await supabase.from('quazian_sessions').update({
-    submitted_at: maintenant,
-    auto_submitted: false,
-  }).eq('id', sessionId)
-
-  // Récupérer les stats cohorte figées si quizz déjà fermé
-  const { data: quizz } = await supabase
-    .from('quazian_quizzes')
-    .select('statut, moyenne_cohorte, ecart_type_cohorte')
-    .eq('id', quizId)
-    .single()
+  // submitted_at est déjà posé par le verrou one-shot en début de fonction.
 
   let zQuiz = 0
-  if (quizz?.statut === 'ferme' && quizz.ecart_type_cohorte && quizz.ecart_type_cohorte > 0) {
+  if (quizz.statut === 'ferme' && quizz.ecart_type_cohorte && quizz.ecart_type_cohorte > 0) {
     zQuiz = (scoreMoyen - quizz.moyenne_cohorte!) / quizz.ecart_type_cohorte
   }
 

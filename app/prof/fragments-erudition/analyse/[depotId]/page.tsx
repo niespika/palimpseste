@@ -21,7 +21,7 @@ export default async function PageAnalyse({
   const { data: depot } = await supabase
     .from('fragments_depots')
     .select(`
-      id, eleve_id, semaine_id, statut, commentaire_eleve, created_at,
+      id, eleve_id, semaine_id, statut, commentaire_eleve, photos_suspectes, created_at,
       photos:fragments_photos(id, depot_id, storage_path, ordre, created_at),
       eleve:profiles(display_name, classe),
       semaine:fragments_semaines(numero, titre)
@@ -120,6 +120,11 @@ export default async function PageAnalyse({
         )}
       </div>
 
+      {(depot as { photos_suspectes?: boolean }).photos_suspectes && (
+        <div className="mb-3 text-sm bg-amber-50 border border-amber-200 text-amber-800 rounded-lg px-3 py-2">
+          ⚠ Signal anti-triche : au moins une photo semble issue de la galerie (EXIF ancien), pas prise sur le moment. À vérifier — signal indicatif, non probant.
+        </div>
+      )}
       <EditorAnalyse
         depotId={depotId}
         eleveId={depot.eleve_id}

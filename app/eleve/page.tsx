@@ -5,6 +5,7 @@ import { moduleIdsAccessibles } from '@/utils/acces'
 import { contexteClasseEleve } from './contexte-classe'
 import SelecteurClasseEleve from './SelecteurClasseEleve'
 import { noteVersLettre, COULEUR_LETTRE, type LettreSection } from '@/utils/notation'
+import { chargerStatsRevision } from './modules/quazian/actions'
 
 type ModuleInfo = { id: string; slug: string; nom: string; description: string | null; actif: boolean }
 const MODULES_MASQUES_ELEVE = ['scriptorium']
@@ -74,13 +75,9 @@ export default async function TableauDeBordEleve() {
       fragmentTache.pistes = (ps ?? []).map((p) => p.contenu as string)
     }
 
-    // Flashcards dues
-    const { count } = await admin
-      .from('quazian_card_states')
-      .select('id', { count: 'exact', head: true })
-      .eq('eleve_id', user!.id)
-      .lte('due', new Date().toISOString())
-    cartesDues = count ?? 0
+    // Flashcards dues — via la même dérivation de visibilité que la file de révision
+    // (sinon on comptait des cartes d'unités non publiées / non assignées à l'élève).
+    cartesDues = (await chargerStatsRevision()).dues
 
     const { data: codex } = await admin.from('codex_sessions').select('id').eq('classe_id', active.classe_id).in('statut', ['phase_1', 'phase_2']).limit(1).maybeSingle()
     codexEnCoursId = (codex?.id as string) ?? null

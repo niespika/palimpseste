@@ -118,7 +118,7 @@ export default async function PageSemaineAletheia({ params }: { params: Promise<
 
   return (
     <div className="space-y-5 pb-8">
-      <PollStatut actif={enAttenteRetour1 || enAttenteRetour2} />
+      <PollStatut actif={enAttenteRetour1 || enAttenteRetour2} livreId={livreId} semaine={semaine} />
       <Link href="/eleve/modules/aletheia" className="text-sm text-stone-500 hover:text-stone-700">← Planning</Link>
 
       <div>

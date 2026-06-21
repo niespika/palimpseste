@@ -56,6 +56,7 @@ export default function FormulaireLivre({ classes }: Props) {
     try {
       const res = await ajouterLivre(fd)
       if (res?.error) { setErreur(res.error); return }
+      if (res && 'warning' in res && res.warning) alert(res.warning)
       reset()
       router.refresh()
     } catch {

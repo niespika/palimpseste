@@ -25,7 +25,7 @@ export default async function PageEssai({
 
   const { data: essai } = await admin
     .from('fragments_essais')
-    .select('id, eleve_id, epreuve_id, depose_par')
+    .select('id, eleve_id, epreuve_id, depose_par, inscription_id')
     .eq('id', essaiId)
     .single()
 
@@ -38,14 +38,29 @@ export default async function PageEssai({
     admin.from('essais_analyses').select('*').eq('essai_id', essaiId).maybeSingle(),
   ])
 
-  // Navigation entre essais de la même épreuve
+  // Navigation entre essais de la même épreuve — scopée à la classe consultée (?classe=,
+  // sinon la classe de l'essai courant) pour ne pas traverser les classes sur une épreuve
+  // assignée à plusieurs classes (Lot 5d).
   let essaiIds: string[] = []
   if (epreuveId) {
+    let classeScope = classeParam ?? null
+    if (!classeScope && essai.inscription_id) {
+      const { data: inscRow } = await admin
+        .from('inscriptions').select('classe_id').eq('id', essai.inscription_id).single()
+      classeScope = (inscRow?.classe_id as string | undefined) ?? null
+    }
     const { data: tousEssais } = await admin
       .from('fragments_essais')
-      .select('id')
+      .select('id, inscription_id')
       .eq('epreuve_id', epreuveId)
-    essaiIds = (tousEssais ?? []).map(e => e.id)
+    let essais = tousEssais ?? []
+    if (classeScope) {
+      const { data: inscClasse } = await admin
+        .from('inscriptions').select('id').eq('classe_id', classeScope)
+      const idsClasse = new Set((inscClasse ?? []).map(i => i.id as string))
+      essais = essais.filter(e => e.inscription_id && idsClasse.has(e.inscription_id as string))
+    }
+    essaiIds = essais.map(e => e.id)
   }
 
   const indexActuel = essaiIds.indexOf(essaiId)
