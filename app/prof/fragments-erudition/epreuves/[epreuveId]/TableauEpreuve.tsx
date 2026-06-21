@@ -47,13 +47,16 @@ const COULEUR_LETTRE: Record<string, string> = {
 }
 
 function telechargerCSV(eleves: Eleve[], essaiParEleve: Props['essaiParEleve'], analyseParEssai: Props['analyseParEssai'], titre: string) {
+  // Neutralise l'injection de formule tableur (cellule commençant par = + - @) et échappe
+  // les guillemets internes (CSV correct).
+  const csvSafe = (v: string) => (/^[=+\-@\t\r]/.test(v) ? `'${v}` : v).replace(/"/g, '""')
   const entete = ['Élève', 'Classe', 'Déposé', 'Structure', 'Expression', 'Argumentation', 'Connaissances', 'Note/20', 'Statut']
   const lignes = eleves.map(e => {
     const essai = essaiParEleve[e.id]
     const analyse = essai ? analyseParEssai[essai.id] : null
     return [
-      `"${e.display_name}"`,
-      `"${e.classe ?? ''}"`,
+      `"${csvSafe(e.display_name)}"`,
+      `"${csvSafe(e.classe ?? '')}"`,
       essai ? 'Oui' : 'Non',
       analyse?.lettre_structure ?? '',
       analyse?.lettre_expression ?? '',

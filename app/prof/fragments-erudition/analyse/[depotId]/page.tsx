@@ -17,6 +17,14 @@ export default async function PageAnalyse({
   const supabase = await createClient()
   const admin = createAdminClient()
 
+  // Garde de rôle propre (defense-in-depth, en plus de la redirection du layout /prof) :
+  // cette page lit l'analyse via le client admin (bypass RLS), elle ne doit donc pas
+  // dépendre uniquement du layout pour vérifier le rôle.
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) notFound()
+  const { data: profilRole } = await supabase.from('profiles').select('role').eq('id', user.id).single()
+  if (profilRole?.role !== 'prof') notFound()
+
   // Dépôt + photos + infos élève
   const { data: depot } = await supabase
     .from('fragments_depots')
