@@ -11,7 +11,10 @@ export default function CalendrierLayout({ children }: { children: React.ReactNo
       </div>
 
       <nav className="flex gap-1 mb-6 border-b border-stone-200 pb-0">
-        {[{ href: '/prof/calendrier/config', label: 'Configuration' }].map(({ href, label }) => (
+        {[
+          { href: '/prof/calendrier', label: 'Vue' },
+          { href: '/prof/calendrier/config', label: 'Configuration' },
+        ].map(({ href, label }) => (
           <Link
             key={href}
             href={href}

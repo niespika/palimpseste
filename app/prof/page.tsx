@@ -8,6 +8,7 @@ import DetailClasse, { type LigneEleve } from '@/components/classes/DetailClasse
 import RappelsClasses from './RappelsClasses'
 import BoutonRetirerEleve from './BoutonRetirerEleve'
 import ConfirmationEffacement from './classes/ConfirmationEffacement'
+import BandeCalendrier from './calendrier/BandeCalendrier'
 
 const NIVEAU_LABEL: Record<string, string> = { '1ere': 'Première', terminale: 'Terminale' }
 
@@ -163,6 +164,9 @@ export default async function ProfAccueil({ searchParams }: { searchParams: Prom
   return (
     <div className="space-y-10 pb-10">
       <h2 className="text-xl font-serif text-stone-900">Tableau de bord</h2>
+
+      {/* ── Bande calendrier (semaines à venir) ────────────────────────────── */}
+      <BandeCalendrier />
 
       {/* ── Zone 1 : À faire ───────────────────────────────────────────────── */}
       <section className="space-y-3">

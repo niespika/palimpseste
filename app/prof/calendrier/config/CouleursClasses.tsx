@@ -18,7 +18,9 @@ function LigneClasse({
   const initiale = classe.couleur ?? defaut
   const [valeur, setValeur] = useState(initiale)
   const [busy, setBusy] = useState(false)
-  const modifiee = valeur.toLowerCase() !== (classe.couleur ?? '').toLowerCase()
+  // « Enregistrer » n'apparaît que si le prof change la valeur affichée
+  // (une couleur null s'affiche déjà via la palette par défaut — rien à persister).
+  const modifiee = valeur.toLowerCase() !== initiale.toLowerCase()
 
   async function enregistrer() {
     setBusy(true)

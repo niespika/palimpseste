@@ -2,6 +2,7 @@
 
 import { revalidatePath } from 'next/cache'
 import { createClient } from '@/utils/supabase/server'
+import { lundiOnOrBefore, addDaysUTC, toISODate } from '@/utils/calendrier-grille'
 
 async function verifierProf() {
   const supabase = await createClient()
@@ -153,24 +154,6 @@ export async function supprimerHoliday(id: string): Promise<{ error?: string }> 
 }
 
 // ── Génération des semaines (ancrage calendaire) ────────────────────────────
-
-// Helpers de date en espace « date pure » (UTC) pour éviter tout décalage de
-// fuseau / DST sur les bornes de semaine.
-function lundiOnOrBefore(dateStr: string): Date {
-  const d = new Date(dateStr + 'T00:00:00Z')
-  const jour = d.getUTCDay() // 0 = dimanche … 6 = samedi
-  const delta = jour === 0 ? -6 : 1 - jour
-  d.setUTCDate(d.getUTCDate() + delta)
-  return d
-}
-function addDaysUTC(d: Date, n: number): Date {
-  const c = new Date(d)
-  c.setUTCDate(c.getUTCDate() + n)
-  return c
-}
-function toISODate(d: Date): string {
-  return d.toISOString().slice(0, 10)
-}
 
 /**
  * (Re)génère les semaines de TRAVAIL d'un semestre, alignées sur le calendrier
