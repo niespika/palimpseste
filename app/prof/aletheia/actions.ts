@@ -13,14 +13,21 @@ async function verifierProf() {
   if (profile?.role !== 'prof') throw new Error('Accès refusé')
 }
 
-export async function lirePromptsAletheia(): Promise<{ prompt_feedback_1: string | null; prompt_feedback_2: string | null; prompt_capstone: string | null }> {
+export async function lirePromptsAletheia(): Promise<{
+  prompt_feedback_1: string | null; prompt_feedback_2: string | null; prompt_capstone: string | null
+  eval_questions_actif: boolean; deblocage_sequentiel: boolean
+}> {
   await verifierProf()
   const admin = createAdminClient()
-  const { data } = await admin.from('aletheia_params').select('prompt_feedback_1, prompt_feedback_2, prompt_capstone').eq('id', 1).maybeSingle()
+  const { data } = await admin.from('aletheia_params')
+    .select('prompt_feedback_1, prompt_feedback_2, prompt_capstone, eval_questions_actif, deblocage_sequentiel')
+    .eq('id', 1).maybeSingle()
   return {
     prompt_feedback_1: data?.prompt_feedback_1 ?? null,
     prompt_feedback_2: data?.prompt_feedback_2 ?? null,
     prompt_capstone: data?.prompt_capstone ?? null,
+    eval_questions_actif: !!data?.eval_questions_actif,
+    deblocage_sequentiel: !!data?.deblocage_sequentiel,
   }
 }
 
@@ -29,7 +36,10 @@ export async function lirePromptsAletheia(): Promise<{ prompt_feedback_1: string
 const nullSiDefaut = (valeur: string, defaut: string): string | null =>
   valeur.trim() && valeur.trim() !== defaut.trim() ? valeur : null
 
-export async function sauvegarderPromptsAletheia(promptFeedback1: string, promptFeedback2: string, promptCapstone: string) {
+export async function sauvegarderPromptsAletheia(
+  promptFeedback1: string, promptFeedback2: string, promptCapstone: string,
+  evalQuestions: boolean, deblocageSequentiel: boolean,
+) {
   await verifierProf()
   const p2 = nullSiDefaut(promptFeedback2, PROMPT_FEEDBACK_2_DEFAUT)
   // Le retour 2 reçoit le livre ENTIER : la variable {semaine_courante_N} est la
@@ -45,6 +55,8 @@ export async function sauvegarderPromptsAletheia(promptFeedback1: string, prompt
       prompt_feedback_1: nullSiDefaut(promptFeedback1, PROMPT_FEEDBACK_1_DEFAUT),
       prompt_feedback_2: p2,
       prompt_capstone: nullSiDefaut(promptCapstone, PROMPT_CAPSTONE_DEFAUT),
+      eval_questions_actif: evalQuestions,
+      deblocage_sequentiel: deblocageSequentiel,
       updated_at: new Date().toISOString(),
     }, { onConflict: 'id' })
   if (error) return { error: error.message }

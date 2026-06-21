@@ -115,6 +115,39 @@ export async function semaineLivre(admin: SupabaseClient, livreId: string, semai
   }
 }
 
+// Réglages globaux Aletheia (Lot 6). aletheia_params est en RLS prof → lecture
+// côté élève via le client admin (comme les lectures Scriptorium).
+export async function lireReglages(admin: SupabaseClient): Promise<{ evalQuestions: boolean; deblocageSequentiel: boolean }> {
+  const { data } = await admin.from('aletheia_params').select('eval_questions_actif, deblocage_sequentiel').eq('id', 1).maybeSingle()
+  return {
+    evalQuestions: !!data?.eval_questions_actif,
+    deblocageSequentiel: !!data?.deblocage_sequentiel,
+  }
+}
+
+// Déblocage séquentiel (Lot 6 D) : une semaine est ouverte si le déblocage est
+// off, OU si c'est la 1re semaine, OU si la semaine précédente (dans l'ordre) est DONE.
+export function estSemaineDebloquee(semaines: number[], doneSet: Set<number>, semaine: number, sequentiel: boolean): boolean {
+  if (!sequentiel) return true
+  const ordre = [...semaines].sort((a, b) => a - b)
+  const idx = ordre.indexOf(semaine)
+  if (idx <= 0) return true
+  return doneSet.has(ordre[idx - 1])
+}
+
+// Accès serveur à une semaine (page semaine + actions) : applique le déblocage séquentiel.
+export async function peutAccederSemaine(admin: SupabaseClient, eleveId: string, livreId: string, semaine: number): Promise<boolean> {
+  const { deblocageSequentiel } = await lireReglages(admin)
+  if (!deblocageSequentiel) return true
+  const [{ data: docs }, { data: faits }] = await Promise.all([
+    admin.from('scriptorium_documents').select('semaine').eq('unite_id', livreId).not('semaine', 'is', null),
+    admin.from('aletheia_travaux').select('semaine_index').eq('eleve_id', eleveId).eq('scriptorium_livre_id', livreId).eq('statut', 'DONE'),
+  ])
+  const semaines = [...new Set((docs ?? []).map(d => d.semaine as number))]
+  const doneSet = new Set((faits ?? []).map(t => t.semaine_index as number))
+  return estSemaineDebloquee(semaines, doneSet, semaine, true)
+}
+
 // L'état du capstone de l'élève pour un livre (RLS eleve_own), ou null si jamais lancé.
 export async function chargerCapstone(supabase: SupabaseClient, eleveId: string, livreId: string): Promise<CapstoneRow | null> {
   const { data } = await supabase

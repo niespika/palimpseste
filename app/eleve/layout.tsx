@@ -18,7 +18,7 @@ export default async function EleveLayout({ children }: { children: React.ReactN
 
   return (
     <div className="min-h-screen bg-stone-50">
-      <header className="bg-white border-b border-stone-200">
+      <header className="bg-white border-b border-stone-200 print:hidden">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 py-4 flex items-center justify-between">
           <span className="text-base font-serif text-stone-900 font-medium">Palimpseste</span>
           <form action={deconnexion}>

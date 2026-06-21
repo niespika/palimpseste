@@ -3,7 +3,7 @@ import Link from 'next/link'
 import { createClient } from '@/utils/supabase/server'
 import { createAdminClient } from '@/utils/supabase/admin'
 import SelecteurClasseEleve from '../../SelecteurClasseEleve'
-import { chargerCapstone, contexteAletheia, livresPourClasse, travauxParSemaine } from './data'
+import { chargerCapstone, contexteAletheia, estSemaineDebloquee, lireReglages, livresPourClasse, travauxParSemaine } from './data'
 import BoutonRevelerCapstone from './BoutonRevelerCapstone'
 import PollStatut from './PollStatut'
 import type { StatutAletheia } from './types'
@@ -43,6 +43,7 @@ export default async function PageAletheia() {
   const capstoneParLivre = new Map(
     await Promise.all(livres.map(async l => [l.id, await chargerCapstone(supabase, user.id, l.id)] as const)),
   )
+  const { deblocageSequentiel } = await lireReglages(admin)
 
   return (
     <div className="space-y-6 pb-8">
@@ -63,6 +64,8 @@ export default async function PageAletheia() {
           const travaux = travauxParLivre.get(livre.id)
           const cap = capstoneParLivre.get(livre.id)
           const toutesDone = livre.semaines.length > 0 && livre.semaines.every(s => travaux?.get(s.semaine)?.statut === 'DONE')
+          const numerosSemaines = livre.semaines.map(s => s.semaine)
+          const doneSet = new Set(livre.semaines.filter(s => travaux?.get(s.semaine)?.statut === 'DONE').map(s => s.semaine))
           return (
             <div key={livre.id} className="bg-white border border-stone-200 rounded-xl p-5 space-y-3">
               <div>
@@ -73,24 +76,38 @@ export default async function PageAletheia() {
                 {livre.semaines.map(s => {
                   const statut = travaux?.get(s.semaine)?.statut ?? 'DRAFT'
                   const b = BADGE[statut]
+                  const debloquee = estSemaineDebloquee(numerosSemaines, doneSet, s.semaine, deblocageSequentiel)
+                  const corps = (
+                    <>
+                      <div className="min-w-0">
+                        <p className="text-sm font-medium text-stone-800">
+                          Semaine {s.semaine} — {s.titre}
+                        </p>
+                        <p className="text-xs text-stone-400 mt-0.5">
+                          {s.chapitres && <span className="text-violet-600">{s.chapitres}</span>}
+                          {s.chapitres && s.dateIndicative && ' · '}
+                          {s.dateIndicative && <span>à partir du {s.dateIndicative}</span>}
+                        </p>
+                      </div>
+                      <span className={`text-xs px-2 py-0.5 rounded flex-shrink-0 ${debloquee ? b.classe : 'bg-stone-100 text-stone-400'}`}>
+                        {debloquee ? b.texte : '🔒 Verrouillée'}
+                      </span>
+                    </>
+                  )
                   return (
                     <li key={s.semaine}>
-                      <Link
-                        href={`/eleve/modules/aletheia/${livre.id}/${s.semaine}`}
-                        className="flex items-center justify-between gap-3 py-3 hover:bg-stone-50 -mx-2 px-2 rounded-lg transition-colors"
-                      >
-                        <div className="min-w-0">
-                          <p className="text-sm font-medium text-stone-800">
-                            Semaine {s.semaine} — {s.titre}
-                          </p>
-                          <p className="text-xs text-stone-400 mt-0.5">
-                            {s.chapitres && <span className="text-violet-600">{s.chapitres}</span>}
-                            {s.chapitres && s.dateIndicative && ' · '}
-                            {s.dateIndicative && <span>à partir du {s.dateIndicative}</span>}
-                          </p>
+                      {debloquee ? (
+                        <Link
+                          href={`/eleve/modules/aletheia/${livre.id}/${s.semaine}`}
+                          className="flex items-center justify-between gap-3 py-3 hover:bg-stone-50 -mx-2 px-2 rounded-lg transition-colors"
+                        >
+                          {corps}
+                        </Link>
+                      ) : (
+                        <div className="flex items-center justify-between gap-3 py-3 -mx-2 px-2 opacity-60 cursor-not-allowed" title="Termine la semaine précédente pour débloquer celle-ci.">
+                          {corps}
                         </div>
-                        <span className={`text-xs px-2 py-0.5 rounded flex-shrink-0 ${b.classe}`}>{b.texte}</span>
-                      </Link>
+                      )}
                     </li>
                   )
                 })}

@@ -2,7 +2,7 @@ import { notFound } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/utils/supabase/server'
 import { createAdminClient } from '@/utils/supabase/admin'
-import { contexteAletheia, livreAccessible, semaineLivre, travauxParSemaine } from '../../data'
+import { contexteAletheia, livreAccessible, semaineLivre, travauxParSemaine, peutAccederSemaine, lireReglages } from '../../data'
 import FormulaireResumeQuestions from '../../FormulaireResumeQuestions'
 import FormulaireVf from '../../FormulaireVf'
 import BoutonLectureRetour2 from '../../BoutonLectureRetour2'
@@ -27,7 +27,7 @@ function Liste({ items }: { items: string[] }) {
   )
 }
 
-function VueRetour1({ retour }: { retour: Retour1 }) {
+function VueRetour1({ retour, montrerRemarque }: { retour: Retour1; montrerRemarque: boolean }) {
   return (
     <div className="space-y-3 text-sm">
       {retour.reponses_a_tes_questions?.length > 0 && (
@@ -42,7 +42,7 @@ function VueRetour1({ retour }: { retour: Retour1 }) {
           <Liste items={retour.questions_pour_avancer} />
         </div>
       )}
-      {retour.remarque_questions && <p className="text-xs text-stone-400 italic">{retour.remarque_questions}</p>}
+      {montrerRemarque && retour.remarque_questions && <p className="text-xs text-stone-400 italic">{retour.remarque_questions}</p>}
     </div>
   )
 }
@@ -89,6 +89,20 @@ export default async function PageSemaineAletheia({ params }: { params: Promise<
   if (!sem) notFound()
 
   const { data: livre } = await admin.from('scriptorium_unites').select('label').eq('id', livreId).maybeSingle()
+
+  // Déblocage séquentiel (Lot 6 D) : semaine verrouillée tant que la précédente n'est pas DONE.
+  if (!(await peutAccederSemaine(admin, user.id, livreId, semaine))) {
+    return (
+      <div className="space-y-5 pb-8">
+        <Link href="/eleve/modules/aletheia" className="text-sm text-stone-500 hover:text-stone-700">← Planning</Link>
+        <div className="bg-white border border-stone-200 rounded-xl p-6 text-center text-stone-500 text-sm">
+          🔒 Cette semaine n&apos;est pas encore débloquée. Termine d&apos;abord la semaine précédente.
+        </div>
+      </div>
+    )
+  }
+
+  const { evalQuestions } = await lireReglages(admin)
   const travaux = await travauxParSemaine(supabase, user.id, livreId)
   const t: TravailAletheia | null = travaux.get(semaine) ?? null
   const statut = t?.statut ?? 'DRAFT'
@@ -150,7 +164,7 @@ export default async function PageSemaineAletheia({ params }: { params: Promise<
       {/* Retour 1 */}
       {t?.retour_1 && (
         <Bloc titre="2. Retour 1 — pour creuser">
-          <VueRetour1 retour={t.retour_1} />
+          <VueRetour1 retour={t.retour_1} montrerRemarque={evalQuestions} />
         </Bloc>
       )}
 

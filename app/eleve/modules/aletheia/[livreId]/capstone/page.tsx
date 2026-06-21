@@ -4,6 +4,7 @@ import { createClient } from '@/utils/supabase/server'
 import { createAdminClient } from '@/utils/supabase/admin'
 import { contexteAletheia, livreAccessible, chargerCapstone } from '../../data'
 import PollStatut from '../../PollStatut'
+import BoutonImprimerCapstone from '../../BoutonImprimerCapstone'
 
 export default async function PageCapstone({ params }: { params: Promise<{ livreId: string }> }) {
   const { livreId } = await params
@@ -37,7 +38,10 @@ export default async function PageCapstone({ params }: { params: Promise<{ livre
 
   return (
     <div className="space-y-5 pb-8">
-      <Link href="/eleve/modules/aletheia" className="text-sm text-stone-500 hover:text-stone-700">← Planning</Link>
+      <div className="flex items-center justify-between gap-3 flex-wrap print:hidden">
+        <Link href="/eleve/modules/aletheia" className="text-sm text-stone-500 hover:text-stone-700">← Planning</Link>
+        <BoutonImprimerCapstone />
+      </div>
 
       <div>
         {livre?.label && <p className="text-xs text-stone-400">{livre.label as string}</p>}

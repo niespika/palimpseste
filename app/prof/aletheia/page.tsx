@@ -15,6 +15,8 @@ export default async function ParametresAletheiaPage() {
         promptFeedback2Defaut={PROMPT_FEEDBACK_2_DEFAUT}
         promptCapstoneInitial={prompts.prompt_capstone ?? ''}
         promptCapstoneDefaut={PROMPT_CAPSTONE_DEFAUT}
+        evalQuestionsInitial={prompts.eval_questions_actif}
+        deblocageSequentielInitial={prompts.deblocage_sequentiel}
       />
     </div>
   )

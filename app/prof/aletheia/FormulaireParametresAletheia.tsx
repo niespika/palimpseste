@@ -11,24 +11,29 @@ interface Props {
   promptFeedback2Defaut: string
   promptCapstoneInitial: string
   promptCapstoneDefaut: string
+  evalQuestionsInitial: boolean
+  deblocageSequentielInitial: boolean
 }
 
 const TEXTAREA = 'w-full px-3 py-2 border border-stone-200 rounded-xl text-sm font-mono focus:outline-none focus:ring-2 focus:ring-blue-400 resize-y text-stone-900'
 
 export default function FormulaireParametresAletheia({
   promptFeedback1Initial, promptFeedback1Defaut, promptFeedback2Initial, promptFeedback2Defaut, promptCapstoneInitial, promptCapstoneDefaut,
+  evalQuestionsInitial, deblocageSequentielInitial,
 }: Props) {
   const router = useRouter()
   const [p1, setP1] = useState(promptFeedback1Initial || promptFeedback1Defaut)
   const [p2, setP2] = useState(promptFeedback2Initial || promptFeedback2Defaut)
   const [pC, setPC] = useState(promptCapstoneInitial || promptCapstoneDefaut)
+  const [evalQuestions, setEvalQuestions] = useState(evalQuestionsInitial)
+  const [deblocageSequentiel, setDeblocageSequentiel] = useState(deblocageSequentielInitial)
   const [enregistrement, setEnregistrement] = useState(false)
   const [message, setMessage] = useState<{ type: 'ok' | 'err'; texte: string } | null>(null)
 
   async function handleSauvegarder() {
     setEnregistrement(true)
     setMessage(null)
-    const res = await sauvegarderPromptsAletheia(p1, p2, pC)
+    const res = await sauvegarderPromptsAletheia(p1, p2, pC, evalQuestions, deblocageSequentiel)
     setEnregistrement(false)
     if (res.error) setMessage({ type: 'err', texte: res.error })
     else {
@@ -87,6 +92,22 @@ export default function FormulaireParametresAletheia({
           Sortie JSON <code>{'{ fil_conducteur, noeuds:[{chapitre,idee}], liens:[{de,vers,relation}] }'}</code>. L&apos;élève a tout lu : tous les liens aval peuvent être révélés.
         </p>
         <textarea value={pC} onChange={e => setPC(e.target.value)} rows={20} className={TEXTAREA} />
+      </div>
+
+      <div className="border-t border-stone-200 pt-6 space-y-3">
+        <h4 className="text-sm font-medium text-stone-700">Réglages</h4>
+        <label className="flex items-start gap-2 text-sm text-stone-700">
+          <input type="checkbox" checked={evalQuestions} onChange={e => setEvalQuestions(e.target.checked)} className="mt-0.5" />
+          <span>
+            <span className="font-medium">Évaluer la qualité des questions</span> — affiche au retour 1 une remarque sur la profondeur des questions de l&apos;élève (champ <code>remarque_questions</code>). <span className="text-stone-400">Désactivé par défaut.</span>
+          </span>
+        </label>
+        <label className="flex items-start gap-2 text-sm text-stone-700">
+          <input type="checkbox" checked={deblocageSequentiel} onChange={e => setDeblocageSequentiel(e.target.checked)} className="mt-0.5" />
+          <span>
+            <span className="font-medium">Déblocage séquentiel des semaines</span> — la semaine N+1 ne s&apos;ouvre qu&apos;à la clôture (terminée) de la semaine N. <span className="text-stone-400">Désactivé par défaut (accès libre).</span>
+          </span>
+        </label>
       </div>
 
       {message && (

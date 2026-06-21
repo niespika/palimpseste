@@ -4,7 +4,7 @@ import { after } from 'next/server'
 import { revalidatePath } from 'next/cache'
 import { createClient } from '@/utils/supabase/server'
 import { createAdminClient } from '@/utils/supabase/admin'
-import { contexteAletheia, livreAccessible, semaineLivre } from './data'
+import { contexteAletheia, livreAccessible, semaineLivre, peutAccederSemaine } from './data'
 import type { StatutAletheia } from './types'
 
 async function verifierEleve() {
@@ -37,6 +37,7 @@ export async function soumettreV1(livreId: string, semaine: number, resume: stri
   if (!active) return { error: 'Ce module ne t\'est pas accessible.' }
   if (!(await livreAccessible(admin, [active.classe_id], livreId))) return { error: 'Ce livre ne t\'est pas accessible.' }
   if (!(await semaineLivre(admin, livreId, semaine))) return { error: 'Semaine introuvable.' }
+  if (!(await peutAccederSemaine(admin, userId, livreId, semaine))) return { error: 'Cette semaine n\'est pas encore débloquée.' }
 
   const { data: existing } = await supabase
     .from('aletheia_travaux')
