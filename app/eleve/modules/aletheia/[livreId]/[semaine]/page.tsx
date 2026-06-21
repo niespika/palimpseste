@@ -94,12 +94,13 @@ export default async function PageSemaineAletheia({ params }: { params: Promise<
   const statut = t?.statut ?? 'DRAFT'
 
   // Pilotage par statut. Les états transitoires *_SUBMITTED (l'IA prépare le
-  // retour) ne persistent pas avec les stubs du Lot 2, mais on les gère pour les
-  // Lots 3-4 (génération asynchrone) : on montre l'étape précédente + une attente.
+  // retour en arrière-plan via after()) sont réels : on montre l'étape précédente
+  // + un message d'attente, et la page se rafraîchit via PollStatut.
   const resumeSoumis = statut !== 'DRAFT'
   const enAttenteRetour1 = statut === 'V1_SUBMITTED'
   const enAttenteRetour2 = statut === 'VF_SUBMITTED'
   const echecRetour1 = statut === 'DRAFT' && !!t?.retour_1_erreur_at
+  const echecRetour2 = statut === 'FEEDBACK1_READY' && !!t?.retour_2_erreur_at
 
   return (
     <div className="space-y-5 pb-8">
@@ -154,16 +155,20 @@ export default async function PageSemaineAletheia({ params }: { params: Promise<
       )}
 
       {/* Étape 2 — version finale */}
-      {statut === 'FEEDBACK1_READY' && (
-        <Bloc titre="3. Ta version finale">
-          <FormulaireVf livreId={livreId} semaine={semaine} valeurInitiale={t?.resume_initial ?? ''} />
-        </Bloc>
+      {echecRetour2 && (
+        <div className="bg-red-50 border border-red-200 rounded-xl px-4 py-3 text-sm text-red-700">
+          La préparation de ton retour n&apos;a pas abouti. Renvoie ta version finale ci-dessous ; si le problème persiste, préviens ton professeur.
+        </div>
       )}
-      {t?.resume_vf && (
+      {statut === 'FEEDBACK1_READY' ? (
+        <Bloc titre="3. Ta version finale">
+          <FormulaireVf livreId={livreId} semaine={semaine} valeurInitiale={t?.resume_vf ?? t?.resume_initial ?? ''} />
+        </Bloc>
+      ) : t?.resume_vf ? (
         <Bloc titre="3. Ta version finale">
           <p className="text-sm text-stone-700 whitespace-pre-wrap">{t.resume_vf}</p>
         </Bloc>
-      )}
+      ) : null}
 
       {enAttenteRetour2 && (
         <p className="text-sm text-stone-500">Ton retour 2 est en cours de préparation…</p>

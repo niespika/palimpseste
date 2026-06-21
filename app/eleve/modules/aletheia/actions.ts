@@ -5,7 +5,7 @@ import { revalidatePath } from 'next/cache'
 import { createClient } from '@/utils/supabase/server'
 import { createAdminClient } from '@/utils/supabase/admin'
 import { contexteAletheia, livreAccessible, semaineLivre } from './data'
-import type { Retour2, StatutAletheia } from './types'
+import type { StatutAletheia } from './types'
 
 async function verifierEleve() {
   const supabase = await createClient()
@@ -21,22 +21,9 @@ function revalider(livreId: string, semaine: number) {
   revalidatePath(`/eleve/modules/aletheia/${livreId}/${semaine}`)
 }
 
-// ── Stubs IA (Lot 2) — placeholders conformes aux schémas §5.1/§5.2. ─────────
-// Les vrais prompts (ancrage PDF, retour socratique, dévoilement) arrivent aux
-// Lots 3-4 ; ici on exerce toute la machine à états et l'UI.
-function stubRetour2(): Retour2 {
-  return {
-    synthese_modele: '(Démo) Synthèse modèle des chapitres de la semaine (≤ ~200 mots) — branchée au Lot 4.',
-    nuances_et_erreurs: ['(Démo) Une nuance ou une erreur subsistant dans ta version finale serait pointée ici, sans te corriger frontalement.'],
-    ajouts_a_verifier: [],
-    architecture_amont: ['(Démo) Lien explicite avec un point déjà vu les semaines précédentes.'],
-    architecture_aval_jalons: ['(Démo) Jalon vers un argument à venir — sans en dévoiler le contenu.'],
-  }
-}
-
 // ── Transitions ─────────────────────────────────────────────────────────────
 
-// DRAFT → (V1_SUBMITTED) → FEEDBACK1_READY. Le stub enchaîne synchroniquement.
+// DRAFT → V1_SUBMITTED → FEEDBACK1_READY. Retour 1 généré en arrière-plan (after()).
 export async function soumettreV1(livreId: string, semaine: number, resume: string, questions: string[]) {
   const { supabase, userId } = await verifierEleve()
   const r = (resume ?? '').trim()
@@ -90,7 +77,7 @@ export async function soumettreV1(livreId: string, semaine: number, resume: stri
 }
 
 // FEEDBACK1_READY → (VF_SUBMITTED) → FEEDBACK2_READY. Gate souple : pas de vf
-// avant le retour 1.
+// avant le retour 1. Retour 2 généré en arrière-plan (ancré sur le livre entier).
 export async function soumettreVf(livreId: string, semaine: number, vf: string) {
   const { supabase, userId } = await verifierEleve()
   const v = (vf ?? '').trim()
@@ -108,15 +95,20 @@ export async function soumettreVf(livreId: string, semaine: number, vf: string) 
   if (!row) return { error: 'Commence par soumettre ton résumé.' }
   if (row.statut !== 'FEEDBACK1_READY') return { error: "La version finale n'est pas disponible à cette étape." }
 
-  const retour2 = stubRetour2()
   const { error } = await admin.from('aletheia_travaux').update({
     resume_vf: v,
-    retour_2: retour2,
-    devoilement: { architecture_amont: retour2.architecture_amont, architecture_aval_jalons: retour2.architecture_aval_jalons },
-    statut: 'FEEDBACK2_READY' as StatutAletheia,
+    retour_2: null,
+    retour_2_erreur_at: null,
+    statut: 'VF_SUBMITTED' as StatutAletheia,
     updated_at: new Date().toISOString(),
-  }).eq('id', row.id)
+  }).eq('id', row.id).eq('statut', 'FEEDBACK1_READY')
   if (error) return { error: error.message }
+
+  after(async () => {
+    const mod = await import('@/utils/aletheia-retours')
+    await mod.genererRetour2(row.id as string)
+  })
+
   revalider(livreId, semaine)
   return { success: true }
 }

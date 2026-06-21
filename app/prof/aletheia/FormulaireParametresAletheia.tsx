@@ -7,38 +7,38 @@ import { sauvegarderPromptsAletheia } from './actions'
 interface Props {
   promptFeedback1Initial: string
   promptFeedback1Defaut: string
+  promptFeedback2Initial: string
+  promptFeedback2Defaut: string
 }
 
 const TEXTAREA = 'w-full px-3 py-2 border border-stone-200 rounded-xl text-sm font-mono focus:outline-none focus:ring-2 focus:ring-blue-400 resize-y text-stone-900'
 
-export default function FormulaireParametresAletheia({ promptFeedback1Initial, promptFeedback1Defaut }: Props) {
+export default function FormulaireParametresAletheia({
+  promptFeedback1Initial, promptFeedback1Defaut, promptFeedback2Initial, promptFeedback2Defaut,
+}: Props) {
   const router = useRouter()
   const [p1, setP1] = useState(promptFeedback1Initial || promptFeedback1Defaut)
+  const [p2, setP2] = useState(promptFeedback2Initial || promptFeedback2Defaut)
   const [enregistrement, setEnregistrement] = useState(false)
   const [message, setMessage] = useState<{ type: 'ok' | 'err'; texte: string } | null>(null)
 
   async function handleSauvegarder() {
     setEnregistrement(true)
     setMessage(null)
-    const res = await sauvegarderPromptsAletheia(p1)
+    const res = await sauvegarderPromptsAletheia(p1, p2)
     setEnregistrement(false)
     if (res.error) setMessage({ type: 'err', texte: res.error })
     else {
-      setMessage({ type: 'ok', texte: 'Prompt enregistré.' })
+      setMessage({ type: 'ok', texte: 'Prompts enregistrés.' })
       setTimeout(() => setMessage(null), 3000)
       router.refresh()
     }
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
       <div className="bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 text-sm text-amber-800">
-        Prompt du <strong>retour 1 (socratique)</strong> d&apos;Aletheia. Variables disponibles :
-        <code className="mx-1">{'{texte_unite}'}</code>,
-        <code className="mx-1">{'{resume_eleve}'}</code>,
-        <code className="mx-1">{'{questions_eleve}'}</code>,
-        <code className="mx-1">{'{syntheses_precedentes}'}</code>. La sortie doit rester un JSON
-        <code className="mx-1">{'{ questions_pour_avancer, reponses_a_tes_questions, remarque_questions }'}</code>.
+        Prompts des retours IA d&apos;Aletheia. Enregistrer un prompt identique au défaut revient à utiliser le défaut (et ses évolutions futures).
       </div>
 
       <div>
@@ -48,7 +48,28 @@ export default function FormulaireParametresAletheia({ promptFeedback1Initial, p
             Restaurer la version par défaut
           </button>
         </div>
-        <textarea value={p1} onChange={e => setP1(e.target.value)} rows={22} className={TEXTAREA} />
+        <p className="text-xs text-stone-400 mb-2">
+          Variables : <code>{'{texte_unite}'}</code>, <code>{'{resume_eleve}'}</code>, <code>{'{questions_eleve}'}</code>, <code>{'{syntheses_precedentes}'}</code>.
+          Sortie JSON <code>{'{ questions_pour_avancer, reponses_a_tes_questions, remarque_questions }'}</code>.
+        </p>
+        <textarea value={p1} onChange={e => setP1(e.target.value)} rows={20} className={TEXTAREA} />
+      </div>
+
+      <div>
+        <div className="flex items-center justify-between mb-2">
+          <label className="text-sm font-medium text-stone-700">Retour 2 — reconstruction + architecture (livre entier)</label>
+          <button type="button" onClick={() => setP2(promptFeedback2Defaut)} className="text-xs text-stone-500 hover:text-stone-700 underline">
+            Restaurer la version par défaut
+          </button>
+        </div>
+        <p className="text-xs text-stone-400 mb-2">
+          Variables : <code>{'{livre_entier}'}</code>, <code>{'{resume_initial_eleve}'}</code>, <code>{'{resume_vf_eleve}'}</code>, <code>{'{syntheses_precedentes}'}</code>, <code>{'{architectures_precedentes}'}</code>, <code>{'{semaine_courante_N}'}</code>, <code>{'{total_semaines}'}</code>.
+          Sortie JSON <code>{'{ synthese_modele, nuances_et_erreurs, ajouts_a_verifier, architecture_amont, architecture_aval_jalons }'}</code>.
+        </p>
+        <p className="text-xs text-red-600 mb-2">
+          ⚠️ Le <strong>livre entier</strong> est envoyé au modèle. Ton prompt DOIT garder la consigne de non-divulgation de l&apos;aval et la variable <code>{'{semaine_courante_N}'}</code>, sinon la suite du livre risque d&apos;être divulguée à l&apos;élève.
+        </p>
+        <textarea value={p2} onChange={e => setP2(e.target.value)} rows={22} className={TEXTAREA} />
       </div>
 
       {message && (
@@ -59,7 +80,7 @@ export default function FormulaireParametresAletheia({ promptFeedback1Initial, p
 
       <button onClick={handleSauvegarder} disabled={enregistrement}
         className="bg-stone-800 text-white px-6 py-2.5 rounded-xl text-sm font-medium hover:bg-stone-700 disabled:opacity-50 transition-colors">
-        {enregistrement ? 'Enregistrement…' : 'Enregistrer le prompt'}
+        {enregistrement ? 'Enregistrement…' : 'Enregistrer les prompts'}
       </button>
     </div>
   )

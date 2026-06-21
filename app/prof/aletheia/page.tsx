@@ -1,5 +1,5 @@
 import { lirePromptsAletheia } from './actions'
-import { PROMPT_FEEDBACK_1_DEFAUT } from '@/utils/aletheia-retours'
+import { PROMPT_FEEDBACK_1_DEFAUT, PROMPT_FEEDBACK_2_DEFAUT } from '@/utils/aletheia-retours'
 import FormulaireParametresAletheia from './FormulaireParametresAletheia'
 
 export default async function ParametresAletheiaPage() {
@@ -11,6 +11,8 @@ export default async function ParametresAletheiaPage() {
       <FormulaireParametresAletheia
         promptFeedback1Initial={prompts.prompt_feedback_1 ?? ''}
         promptFeedback1Defaut={PROMPT_FEEDBACK_1_DEFAUT}
+        promptFeedback2Initial={prompts.prompt_feedback_2 ?? ''}
+        promptFeedback2Defaut={PROMPT_FEEDBACK_2_DEFAUT}
       />
     </div>
   )

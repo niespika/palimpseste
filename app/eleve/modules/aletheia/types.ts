@@ -42,6 +42,7 @@ export interface TravailAletheia {
   resume_vf: string | null
   retour_1_erreur_at: string | null
   retour_2: Retour2 | null
+  retour_2_erreur_at: string | null
   retour_2_lu_at: string | null
   devoilement: Devoilement | null
   created_at: string
