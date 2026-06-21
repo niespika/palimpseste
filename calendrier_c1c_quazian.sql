@@ -54,7 +54,7 @@ begin
       from pg_constraint con
      where con.conrelid = 'quazian_semester'::regclass
        and con.contype = 'u'
-       and (select array_agg(a.attname order by a.attname)
+       and (select array_agg(a.attname::text order by a.attname::text)
               from pg_attribute a
              where a.attrelid = con.conrelid and a.attnum = any(con.conkey)
            ) = array['classe_id', 'eleve_id']
@@ -70,7 +70,7 @@ begin
       join pg_class t on t.oid = x.indrelid
      where t.relname = 'quazian_semester'
        and x.indisunique and not x.indisprimary
-       and (select array_agg(a.attname order by a.attname)
+       and (select array_agg(a.attname::text order by a.attname::text)
               from pg_attribute a
              where a.attrelid = x.indrelid and a.attnum = any(x.indkey)
            ) = array['classe_id', 'eleve_id']

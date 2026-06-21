@@ -30,33 +30,36 @@ begin
       from fragments_semestres
     on conflict (id) do nothing;
 
-    -- 2. Retarguer les FK semestre_id → semesters. Les noms de contraintes en
-    --    base sont inconnus (tables live-DB) → on les retrouve via pg_constraint.
+    -- 2. Retarguer TOUTES les FK qui référencent fragments_semestres (quelle que
+    --    soit la table : fragments_semaines/themes/syntheses/essais_epreuves…),
+    --    en conservant nom, colonne et action ON DELETE d'origine.
     for r in
-      select con.conname, rel.relname as tbl
+      select con.conname,
+             rel.relname  as tbl,
+             att.attname  as col,
+             con.confdeltype as deltype
         from pg_constraint con
         join pg_class rel  on rel.oid  = con.conrelid
         join pg_class fref on fref.oid = con.confrelid
+        join pg_attribute att on att.attrelid = con.conrelid and att.attnum = con.conkey[1]
        where con.contype = 'f'
          and fref.relname = 'fragments_semestres'
-         and rel.relname in ('fragments_semaines', 'fragments_themes', 'fragments_syntheses')
     loop
       execute format('alter table %I drop constraint %I', r.tbl, r.conname);
+      execute format(
+        'alter table %I add constraint %I foreign key (%I) references semesters(id) on delete %s',
+        r.tbl, r.conname, r.col,
+        case r.deltype
+          when 'c' then 'cascade'
+          when 'n' then 'set null'
+          when 'd' then 'set default'
+          when 'r' then 'restrict'
+          else 'no action'
+        end
+      );
     end loop;
 
-    alter table fragments_semaines
-      add constraint fragments_semaines_semestre_id_fkey
-      foreign key (semestre_id) references semesters(id) on delete set null;
-
-    alter table fragments_themes
-      add constraint fragments_themes_semestre_id_fkey
-      foreign key (semestre_id) references semesters(id) on delete cascade;
-
-    alter table fragments_syntheses
-      add constraint fragments_syntheses_semestre_id_fkey
-      foreign key (semestre_id) references semesters(id) on delete cascade;
-
-    -- 3. Dropper l'ancienne table.
+    -- 3. Dropper l'ancienne table (plus aucune dépendance après le retarguage).
     drop table fragments_semestres;
   end if;
 end $$;
