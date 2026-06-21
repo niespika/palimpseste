@@ -37,16 +37,8 @@ export async function definirSemestreFragments(semestreId: string) {
   return { success: true }
 }
 
-// Bascule du semestre « courant » (un seul à la fois).
-export async function definirSemestreCourant(semestreId: string) {
-  const supabase = await verifierProf()
-  await supabase.from('fragments_semestres').update({ courant: false }).eq('courant', true)
-  const { error } = await supabase.from('fragments_semestres').update({ courant: true }).eq('id', semestreId)
-  if (error) return { error: error.message }
-  revalidatePath('/prof/fragments-erudition', 'layout')
-  revalidatePath('/prof/fragments-erudition/semestres')
-  return { success: true }
-}
+// La bascule du semestre actif se fait depuis la configuration du Calendrier
+// (/prof/calendrier/config) — le semestre est global, plus propre à Fragments.
 
 export async function creerSemaine(formData: FormData) {
   const supabase = await verifierProf()

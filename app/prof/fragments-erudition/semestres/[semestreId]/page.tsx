@@ -25,8 +25,8 @@ export default async function PageSemestre({
   const admin = createAdminClient()
 
   const { data: semestre } = await admin
-    .from('fragments_semestres')
-    .select('*')
+    .from('semesters')
+    .select('label:name, date_debut:start_date, date_fin:end_date')
     .eq('id', semestreId)
     .single()
 

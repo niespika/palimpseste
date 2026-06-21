@@ -394,24 +394,9 @@ export async function activerEssaiPourClasse(classeId: string, semestreId: strin
   return { success: true, count: inscrits.length }
 }
 
-// ── Semestres ────────────────────────────────────────────────────────────────
-
-export async function creerSemestre(data: {
-  label: string
-  date_debut: string
-  date_fin: string
-}) {
-  await verifierProf()
-  const admin = createAdminClient()
-  const { data: semestre, error } = await admin
-    .from('fragments_semestres')
-    .insert(data)
-    .select('id')
-    .single()
-  if (error) return { error: error.message, data: null }
-  revalidatePath('/prof/fragments-erudition/semestres')
-  return { data: { semestreId: semestre.id }, error: null }
-}
+// ── Synthèses de semestre ──────────────────────────────────────────────────
+// (La création/édition des semestres est déléguée au Calendrier ; ici on ne
+// gère plus que la génération des synthèses, ancrées au semestre global.)
 
 export async function genererSynthese(inscriptionId: string, semestreId: string) {
   await verifierProf()

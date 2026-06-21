@@ -24,6 +24,7 @@ export interface Classe {
   filiere: string | null
   annee_scolaire: string
   statut: 'active' | 'fermee'
+  couleur: string | null
   created_at: string
 }
 

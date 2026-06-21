@@ -59,7 +59,7 @@ export async function calculerSante(admin: SupabaseClient): Promise<Map<string, 
   // semaines des semestres précédents comptent à tort comme « dépôts manquants ».
   const maintenant = new Date()
   const { data: semestreCourant } = await admin
-    .from('fragments_semestres').select('id').eq('courant', true).maybeSingle()
+    .from('semesters').select('id').eq('is_active', true).maybeSingle()
   let reqSemaines = admin.from('fragments_semaines').select('id, date_limite')
   if (semestreCourant) reqSemaines = reqSemaines.eq('semestre_id', semestreCourant.id)
   const { data: semaines } = await reqSemaines

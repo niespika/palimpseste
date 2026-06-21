@@ -18,16 +18,29 @@ export async function calculerNotesSemestre(formData: FormData) {
   const classe = (formData.get('classe') as string) || null
   const params = await lireParametres()
 
-  // Récupérer tous les quizz fermés (optionnellement filtrés par classe)
+  // Semestre cible : explicite (formData) sinon le semestre actif.
+  let semestreId = (formData.get('semester_id') as string) || null
+  if (!semestreId) {
+    const { data: semActif } = await supabase
+      .from('semesters')
+      .select('id')
+      .eq('is_active', true)
+      .maybeSingle()
+    semestreId = semActif?.id ?? null
+  }
+  if (!semestreId) return { error: 'Aucun semestre actif. Définis-en un dans le Calendrier.' }
+
+  // Récupérer les quizz fermés DU SEMESTRE (optionnellement filtrés par classe)
   let quizzQuery = supabase
     .from('quazian_quizzes')
     .select('id, classe_id, moyenne_cohorte, ecart_type_cohorte')
     .eq('statut', 'ferme')
+    .eq('semester_id', semestreId)
 
   if (classe) quizzQuery = quizzQuery.eq('classe_id', classe)
   const { data: quizzes } = await quizzQuery
 
-  if (!quizzes || quizzes.length === 0) return { error: 'Aucun quizz terminé.' }
+  if (!quizzes || quizzes.length === 0) return { error: 'Aucun quizz terminé pour ce semestre.' }
 
   const quizIds = quizzes.map((q) => q.id)
 
@@ -70,6 +83,7 @@ export async function calculerNotesSemestre(formData: FormData) {
     const noteFinale = params.w * noteRelative + (1 - params.w) * noteAbsolue
 
     rows.push({
+      semester_id: semestreId,
       classe_id: classeId,
       eleve_id: eleveId,
       z_moyen: zMoyen,
@@ -79,7 +93,7 @@ export async function calculerNotesSemestre(formData: FormData) {
     })
   }
 
-  await supabase.from('quazian_semester').upsert(rows, { onConflict: 'classe_id,eleve_id' })
+  await supabase.from('quazian_semester').upsert(rows, { onConflict: 'semester_id,classe_id,eleve_id' })
 
   revalidatePath('/prof/quazian/semestre')
   return { success: true, nb: rows.length }

@@ -106,12 +106,20 @@ export async function chargerDiagnosticEleve(eleveId: string) {
     .eq('eleve_id', eleveId)
     .order('quiz_id')
 
-  // Note de semestre
-  const { data: semestre } = await supabase
-    .from('quazian_semester')
-    .select('note_finale_20, note_relative_20, note_absolue_20')
-    .eq('eleve_id', eleveId)
+  // Note du semestre actif (une note de semestre par semestre désormais).
+  const { data: semActif } = await supabase
+    .from('semesters')
+    .select('id')
+    .eq('is_active', true)
     .maybeSingle()
+  const { data: semestre } = semActif
+    ? await supabase
+        .from('quazian_semester')
+        .select('note_finale_20, note_relative_20, note_absolue_20')
+        .eq('eleve_id', eleveId)
+        .eq('semester_id', semActif.id)
+        .maybeSingle()
+    : { data: null }
 
   const nbCartesVues = etats?.length ?? 0
   const stabiliteMoyenne = etats && etats.length > 0

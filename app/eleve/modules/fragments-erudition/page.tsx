@@ -69,9 +69,9 @@ export default async function PageFragments({ searchParams }: { searchParams: Pr
   // Thème du semestre courant (un thème par inscription × semestre). L'élève
   // n'a pas de sélecteur : il voit toujours le semestre marqué « courant ».
   const { data: semCourant } = await admin
-    .from('fragments_semestres')
+    .from('semesters')
     .select('id')
-    .eq('courant', true)
+    .eq('is_active', true)
     .maybeSingle()
   let themeQuery = supabase
     .from('fragments_themes')

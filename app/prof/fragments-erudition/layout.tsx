@@ -27,7 +27,7 @@ export default async function FragmentsLayout({ children }: { children: React.Re
           { href: '/prof/fragments-erudition/vue-ensemble', label: "Vue d'ensemble" },
           { href: '/prof/fragments-erudition/themes', label: 'Thèmes' },
           { href: '/prof/fragments-erudition/epreuves', label: 'Épreuves' },
-          { href: '/prof/fragments-erudition/semestres', label: 'Semestres' },
+          { href: '/prof/fragments-erudition/semestres', label: 'Synthèses' },
           { href: '/prof/fragments-erudition/parametres', label: 'Paramètres' },
         ].map(({ href, label }) => (
           <Link

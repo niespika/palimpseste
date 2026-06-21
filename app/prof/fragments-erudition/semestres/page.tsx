@@ -2,8 +2,6 @@ import { notFound } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/utils/supabase/server'
 import { createAdminClient } from '@/utils/supabase/admin'
-import FormulaireNouveauSemestre from './FormulaireNouveauSemestre'
-import BoutonCourant from './BoutonCourant'
 
 export default async function PageSemestres() {
   const supabase = await createClient()
@@ -14,9 +12,9 @@ export default async function PageSemestres() {
 
   const admin = createAdminClient()
   const { data: semestres } = await admin
-    .from('fragments_semestres')
-    .select('id, label, date_debut, date_fin, courant, created_at')
-    .order('date_debut', { ascending: false })
+    .from('semesters')
+    .select('id, label:name, date_debut:start_date, date_fin:end_date, courant:is_active')
+    .order('start_date', { ascending: false })
 
   // Compter les synthèses par semestre
   const semestreIds = (semestres ?? []).map(s => s.id)
@@ -38,14 +36,18 @@ export default async function PageSemestres() {
     <div className="space-y-6">
       <div>
         <h3 className="text-base font-medium text-stone-900">Synthèses de semestre</h3>
-        <p className="text-sm text-stone-500 mt-0.5">Bilan de fin de semestre : fragments écrits + oral, avec note suggérée.</p>
+        <p className="text-sm text-stone-500 mt-0.5">
+          Bilan de fin de semestre : fragments écrits + oral, avec note suggérée. Les
+          semestres se créent et se gèrent depuis la{' '}
+          <Link href="/prof/calendrier/config" className="underline hover:text-stone-700">
+            configuration du Calendrier
+          </Link>.
+        </p>
       </div>
-
-      <FormulaireNouveauSemestre />
 
       {(semestres ?? []).length === 0 ? (
         <div className="bg-white border border-stone-200 rounded-xl p-8 text-center text-stone-400 text-sm">
-          Aucun semestre créé.
+          Aucun semestre. Crée-en un depuis la configuration du Calendrier.
         </div>
       ) : (
         <div className="space-y-2">
@@ -57,19 +59,21 @@ export default async function PageSemestres() {
                 className="bg-white border border-stone-200 rounded-xl px-5 py-4 flex items-start justify-between gap-3"
               >
                 <Link href={`/prof/fragments-erudition/semestres/${s.id}`} className="min-w-0 hover:opacity-80 transition-opacity">
-                  <p className="font-medium text-stone-900">{s.label}</p>
+                  <div className="flex items-center gap-2">
+                    <p className="font-medium text-stone-900">{s.label}</p>
+                    {s.courant && (
+                      <span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full">Actif</span>
+                    )}
+                  </div>
                   <p className="text-sm text-stone-500 mt-0.5">
                     {new Date(s.date_debut).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })}
                     {' → '}
                     {new Date(s.date_fin).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' })}
                   </p>
                 </Link>
-                <div className="flex items-center gap-3 flex-shrink-0">
-                  {stats.total > 0 && (
-                    <p className="text-xs text-stone-400">{stats.publiees}/{stats.total} publiées</p>
-                  )}
-                  <BoutonCourant semestreId={s.id} courant={!!s.courant} />
-                </div>
+                {stats.total > 0 && (
+                  <p className="text-xs text-stone-400 flex-shrink-0">{stats.publiees}/{stats.total} publiées</p>
+                )}
               </div>
             )
           })}

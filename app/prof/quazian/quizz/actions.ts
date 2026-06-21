@@ -50,11 +50,19 @@ export async function creerQuizz(formData: FormData) {
     return { error: "La génération IA a échoué (réponse inattendue du modèle). Réessaie." }
   }
 
+  // Semestre actif (le quizz est ancré au semestre courant pour les notes de semestre).
+  const { data: semActif } = await supabase
+    .from('semesters')
+    .select('id')
+    .eq('is_active', true)
+    .maybeSingle()
+
   // Créer le quizz en brouillon
   const { data: quizz, error: errQuizz } = await supabase
     .from('quazian_quizzes')
     .insert({
       classe_id: classeId,
+      semester_id: semActif?.id ?? null,
       statut: 'brouillon',
       scope_unites: scopeRaw,
       duree_min: dureeMin,

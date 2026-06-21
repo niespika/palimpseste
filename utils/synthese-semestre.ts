@@ -57,8 +57,8 @@ export async function genererSynthesePourEleve(inscriptionId: string, semestreId
   const eleveId = insc.eleve_id as string
 
   const { data: semestre } = await admin
-    .from('fragments_semestres')
-    .select('id, label, date_debut, date_fin')
+    .from('semesters')
+    .select('id, label:name, date_debut:start_date, date_fin:end_date')
     .eq('id', semestreId)
     .single()
 

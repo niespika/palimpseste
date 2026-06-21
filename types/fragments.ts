@@ -206,14 +206,7 @@ export interface EssaiAnalyse {
   publiee_at: string | null
 }
 
-export interface FragmentSemestre {
-  id: string
-  label: string
-  date_debut: string
-  date_fin: string
-  courant: boolean
-  created_at: string
-}
+// Le semestre est désormais global (voir `Semestre` dans types/calendrier.ts).
 
 export interface FragmentSynthese {
   id: string

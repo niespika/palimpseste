@@ -245,9 +245,9 @@ export async function analyserEssai(essaiId: string): Promise<void> {
     // Thème de l'inscription (= sa question travaillée). L'épreuve ne porte pas
     // encore de semestre (arrive en 5.4) → on retombe sur le semestre courant.
     const { data: semCourant } = await admin
-      .from('fragments_semestres')
+      .from('semesters')
       .select('id')
-      .eq('courant', true)
+      .eq('is_active', true)
       .maybeSingle()
     let themeQuery = admin
       .from('fragments_themes')
