@@ -393,8 +393,12 @@ export default async function PageFragments({ searchParams }: { searchParams: Pr
   const aOral = Object.keys(oralParSemaine).length > 0
   const couleurEcrit: 'vert' | 'rouge' | 'neutre' = !semaine ? 'neutre' : (!depotActuel || gateActif) ? 'rouge' : 'vert'
   const couleurOral: 'vert' | 'neutre' = aOral ? 'vert' : 'neutre'
+  // Un essai déposé reste signalé même après la fermeture des dépôts et avant la publication
+  // du retour : essaiEleve n'est chargé que si l'épreuve est ouverte, alors que
+  // essaiIdsInscription suit les dépôts quel que soit l'état d'ouverture.
+  const aDeposeEssai = essaiIdsInscription.length > 0
   const couleurEssai: 'vert' | 'rouge' | 'neutre' =
-    !epreuveOuverte && !essaiEleve && !analyseEssaiPubliee ? 'neutre' : (epreuveOuverte && !essaiEleve) ? 'rouge' : 'vert'
+    !epreuveOuverte && !essaiEleve && !analyseEssaiPubliee && !aDeposeEssai ? 'neutre' : (epreuveOuverte && !essaiEleve) ? 'rouge' : 'vert'
   const lien = (v: string) => `/eleve/modules/fragments-erudition?vue=${v}`
 
   return (
@@ -480,7 +484,7 @@ export default async function PageFragments({ searchParams }: { searchParams: Pr
         {essaiActif && (
           <Tuile
             nom="Essai"
-            sousTitre={analyseEssaiPubliee ? 'Retour disponible' : essaiEleve ? 'Déposé' : epreuveOuverte ? 'À déposer' : 'Rien de neuf'}
+            sousTitre={analyseEssaiPubliee ? 'Retour disponible' : (essaiEleve || (!epreuveOuverte && aDeposeEssai)) ? 'Déposé' : epreuveOuverte ? 'À déposer' : 'Rien de neuf'}
             couleur={couleurEssai}
             href={lien('essai')}
             selectionnee={vue === 'essai'}
