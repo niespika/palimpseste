@@ -3,7 +3,9 @@ import Link from 'next/link'
 import { createClient } from '@/utils/supabase/server'
 import { createAdminClient } from '@/utils/supabase/admin'
 import SelecteurClasseEleve from '../../SelecteurClasseEleve'
-import { contexteAletheia, livresPourClasse, travauxParSemaine } from './data'
+import { chargerCapstone, contexteAletheia, livresPourClasse, travauxParSemaine } from './data'
+import BoutonRevelerCapstone from './BoutonRevelerCapstone'
+import PollStatut from './PollStatut'
 import type { StatutAletheia } from './types'
 
 const BADGE: Record<StatutAletheia, { texte: string; classe: string }> = {
@@ -38,6 +40,9 @@ export default async function PageAletheia() {
   const travauxParLivre = new Map(
     await Promise.all(livres.map(async l => [l.id, await travauxParSemaine(supabase, user.id, l.id)] as const)),
   )
+  const capstoneParLivre = new Map(
+    await Promise.all(livres.map(async l => [l.id, await chargerCapstone(supabase, user.id, l.id)] as const)),
+  )
 
   return (
     <div className="space-y-6 pb-8">
@@ -56,6 +61,8 @@ export default async function PageAletheia() {
       ) : (
         livres.map(livre => {
           const travaux = travauxParLivre.get(livre.id)
+          const cap = capstoneParLivre.get(livre.id)
+          const toutesDone = livre.semaines.length > 0 && livre.semaines.every(s => travaux?.get(s.semaine)?.statut === 'DONE')
           return (
             <div key={livre.id} className="bg-white border border-stone-200 rounded-xl p-5 space-y-3">
               <div>
@@ -88,6 +95,29 @@ export default async function PageAletheia() {
                   )
                 })}
               </ul>
+
+              {toutesDone && (
+                <div className="border-t border-stone-100 pt-3">
+                  {cap?.statut === 'READY' ? (
+                    <Link href={`/eleve/modules/aletheia/${livre.id}/capstone`}
+                      className="block w-full text-center bg-stone-800 text-white py-2.5 rounded-xl text-sm font-medium hover:bg-stone-700 transition-colors">
+                      ✦ Voir la carte d&apos;architecture du livre →
+                    </Link>
+                  ) : cap?.statut === 'PENDING' ? (
+                    <div className="space-y-1">
+                      <p className="text-sm text-stone-500">Ta carte d&apos;architecture est en préparation…</p>
+                      <PollStatut actif={true} />
+                      <BoutonRevelerCapstone livreId={livre.id} label="La préparation est trop longue ? Relancer" discret />
+                    </div>
+                  ) : (
+                    <>
+                      <p className="text-xs text-stone-400 mb-2">Tu as terminé toutes les semaines. Révèle la vue d&apos;ensemble du livre.</p>
+                      {cap?.statut === 'ERROR' && <p className="text-sm text-red-600 mb-2">La génération a échoué. Réessaie.</p>}
+                      <BoutonRevelerCapstone livreId={livre.id} />
+                    </>
+                  )}
+                </div>
+              )}
             </div>
           )
         })

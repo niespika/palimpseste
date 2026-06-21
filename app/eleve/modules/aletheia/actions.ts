@@ -138,3 +138,53 @@ export async function validerLectureRetour2(livreId: string, semaine: number) {
   revalider(livreId, semaine)
   return { success: true }
 }
+
+// Capstone : carte d'architecture finale. Disponible UNIQUEMENT quand toutes les
+// semaines du livre sont DONE. Génération en arrière-plan (after()).
+export async function revelerCapstone(livreId: string) {
+  const { supabase, userId } = await verifierEleve()
+  const admin = createAdminClient()
+  const { active } = await contexteAletheia(supabase, userId)
+  if (!active || !(await livreAccessible(admin, [active.classe_id], livreId))) return { error: 'Ce livre ne t\'est pas accessible.' }
+
+  // Toutes les semaines du livre doivent être DONE.
+  const { data: docs } = await admin
+    .from('scriptorium_documents')
+    .select('semaine')
+    .eq('unite_id', livreId)
+    .not('semaine', 'is', null)
+  const semaines = [...new Set((docs ?? []).map(d => d.semaine as number))]
+  if (semaines.length === 0) return { error: 'Ce livre n\'a pas de semaine.' }
+
+  const { data: faits } = await supabase
+    .from('aletheia_travaux')
+    .select('semaine_index')
+    .eq('eleve_id', userId).eq('scriptorium_livre_id', livreId).eq('statut', 'DONE')
+  const doneSet = new Set((faits ?? []).map(t => t.semaine_index as number))
+  if (!semaines.every(s => doneSet.has(s))) return { error: 'Termine toutes les semaines avant de révéler la carte.' }
+
+  // Déjà prête → on ne régénère pas. PENDING : on autorise une relance (cas d'une
+  // génération morte — process after() interrompu — sinon la carte reste bloquée).
+  const { data: existing } = await supabase
+    .from('aletheia_capstone')
+    .select('statut')
+    .eq('eleve_id', userId).eq('scriptorium_livre_id', livreId)
+    .maybeSingle()
+  if (existing?.statut === 'READY') {
+    revalidatePath('/eleve/modules/aletheia')
+    return { success: true }
+  }
+
+  const { error } = await admin
+    .from('aletheia_capstone')
+    .upsert({ eleve_id: userId, scriptorium_livre_id: livreId, statut: 'PENDING', contenu: null, erreur_at: null }, { onConflict: 'eleve_id,scriptorium_livre_id' })
+  if (error) return { error: error.message }
+
+  after(async () => {
+    const mod = await import('@/utils/aletheia-retours')
+    await mod.genererCapstone(userId, livreId)
+  })
+
+  revalidatePath('/eleve/modules/aletheia')
+  return { success: true }
+}

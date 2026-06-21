@@ -9,23 +9,26 @@ interface Props {
   promptFeedback1Defaut: string
   promptFeedback2Initial: string
   promptFeedback2Defaut: string
+  promptCapstoneInitial: string
+  promptCapstoneDefaut: string
 }
 
 const TEXTAREA = 'w-full px-3 py-2 border border-stone-200 rounded-xl text-sm font-mono focus:outline-none focus:ring-2 focus:ring-blue-400 resize-y text-stone-900'
 
 export default function FormulaireParametresAletheia({
-  promptFeedback1Initial, promptFeedback1Defaut, promptFeedback2Initial, promptFeedback2Defaut,
+  promptFeedback1Initial, promptFeedback1Defaut, promptFeedback2Initial, promptFeedback2Defaut, promptCapstoneInitial, promptCapstoneDefaut,
 }: Props) {
   const router = useRouter()
   const [p1, setP1] = useState(promptFeedback1Initial || promptFeedback1Defaut)
   const [p2, setP2] = useState(promptFeedback2Initial || promptFeedback2Defaut)
+  const [pC, setPC] = useState(promptCapstoneInitial || promptCapstoneDefaut)
   const [enregistrement, setEnregistrement] = useState(false)
   const [message, setMessage] = useState<{ type: 'ok' | 'err'; texte: string } | null>(null)
 
   async function handleSauvegarder() {
     setEnregistrement(true)
     setMessage(null)
-    const res = await sauvegarderPromptsAletheia(p1, p2)
+    const res = await sauvegarderPromptsAletheia(p1, p2, pC)
     setEnregistrement(false)
     if (res.error) setMessage({ type: 'err', texte: res.error })
     else {
@@ -70,6 +73,20 @@ export default function FormulaireParametresAletheia({
           ⚠️ Le <strong>livre entier</strong> est envoyé au modèle. Ton prompt DOIT garder la consigne de non-divulgation de l&apos;aval et la variable <code>{'{semaine_courante_N}'}</code>, sinon la suite du livre risque d&apos;être divulguée à l&apos;élève.
         </p>
         <textarea value={p2} onChange={e => setP2(e.target.value)} rows={22} className={TEXTAREA} />
+      </div>
+
+      <div>
+        <div className="flex items-center justify-between mb-2">
+          <label className="text-sm font-medium text-stone-700">Capstone — carte d&apos;architecture finale</label>
+          <button type="button" onClick={() => setPC(promptCapstoneDefaut)} className="text-xs text-stone-500 hover:text-stone-700 underline">
+            Restaurer la version par défaut
+          </button>
+        </div>
+        <p className="text-xs text-stone-400 mb-2">
+          Variables : <code>{'{livre_entier}'}</code>, <code>{'{tous_les_devoilements}'}</code>, <code>{'{toutes_syntheses_eleve}'}</code>.
+          Sortie JSON <code>{'{ fil_conducteur, noeuds:[{chapitre,idee}], liens:[{de,vers,relation}] }'}</code>. L&apos;élève a tout lu : tous les liens aval peuvent être révélés.
+        </p>
+        <textarea value={pC} onChange={e => setPC(e.target.value)} rows={20} className={TEXTAREA} />
       </div>
 
       {message && (

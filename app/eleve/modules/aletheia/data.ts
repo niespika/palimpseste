@@ -2,7 +2,7 @@ import 'server-only'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { inscriptionsModuleEleve } from '@/utils/acces'
 import { contexteClasseEleve } from '../../contexte-classe'
-import type { LivreAletheia, SemaineLivre, TravailAletheia } from './types'
+import type { CapstoneRow, LivreAletheia, SemaineLivre, TravailAletheia } from './types'
 
 export interface InscriptionAletheia { id: string; classe_id: string; classe_nom: string }
 
@@ -113,6 +113,17 @@ export async function semaineLivre(admin: SupabaseClient, livreId: string, semai
     chapitres: (doc.chapitres as string | null) ?? null,
     dateIndicative: dateIndicative((unite?.date_debut as string | null) ?? null, semaine),
   }
+}
+
+// L'état du capstone de l'élève pour un livre (RLS eleve_own), ou null si jamais lancé.
+export async function chargerCapstone(supabase: SupabaseClient, eleveId: string, livreId: string): Promise<CapstoneRow | null> {
+  const { data } = await supabase
+    .from('aletheia_capstone')
+    .select('statut, contenu')
+    .eq('eleve_id', eleveId)
+    .eq('scriptorium_livre_id', livreId)
+    .maybeSingle()
+  return (data as CapstoneRow | null) ?? null
 }
 
 // Les travaux de l'élève pour un livre, indexés par numéro de semaine (RLS eleve_own).

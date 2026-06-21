@@ -49,6 +49,22 @@ export interface TravailAletheia {
   updated_at: string
 }
 
+// Capstone : carte d'architecture finale (chapitres = nœuds, liens = arêtes).
+export type CapstoneStatut = 'PENDING' | 'READY' | 'ERROR'
+
+export interface CapstoneNoeud { chapitre: string; idee: string }
+export interface CapstoneLien { de: string; vers: string; relation: string }
+export interface Capstone {
+  fil_conducteur: string
+  noeuds: CapstoneNoeud[]
+  liens: CapstoneLien[]
+}
+
+export interface CapstoneRow {
+  statut: CapstoneStatut
+  contenu: Capstone | null
+}
+
 // Une semaine de planning (lecture seule, SANS PDF).
 export interface SemaineLivre {
   semaine: number

@@ -1,6 +1,6 @@
 import Anthropic from '@anthropic-ai/sdk'
 import { createAdminClient } from '@/utils/supabase/admin'
-import type { Retour1, Retour2, Devoilement } from '@/app/eleve/modules/aletheia/types'
+import type { Retour1, Retour2, Devoilement, Capstone } from '@/app/eleve/modules/aletheia/types'
 
 const MODELE = 'claude-sonnet-4-6'
 
@@ -324,6 +324,145 @@ export async function genererRetour2(travailId: string): Promise<void> {
       .eq('id', travailId).eq('statut', 'VF_SUBMITTED')
   } catch (err) {
     console.error('[aletheia] génération retour 2 :', err)
+    await echec()
+  }
+}
+
+// ── Prompt par défaut — Capstone (carte d'architecture finale, §5.3) ──────────
+// Override éditable par le prof dans aletheia_params.prompt_capstone.
+export const PROMPT_CAPSTONE_DEFAUT = `Tu es un tuteur de lecture. L'élève a terminé la lecture du livre entier, semaine après semaine. Tu produis sa CARTE D'ARCHITECTURE finale : une vue d'ensemble COURTE et LISIBLE qui révèle enfin toute la structure argumentative du texte. L'élève a tout lu : tu peux désormais expliciter PLEINEMENT tous les liens, y compris ceux qui n'étaient esquissés que comme « jalons » au fil des semaines.
+
+## Livre entier (ta source UNIQUE)
+{livre_entier}
+
+## Ce que l'élève a écrit semaine après semaine (réutilise SON vocabulaire)
+{toutes_syntheses_eleve}
+
+## Architecture dévoilée au fil des semaines
+{tous_les_devoilements}
+
+## Ta tâche
+Produis la carte d'architecture du livre :
+- fil_conducteur : un COURT texte (quelques phrases) qui dit le mouvement d'ensemble et le fil directeur du livre.
+- noeuds : les chapitres/sections comme nœuds, chacun avec son idée maîtresse en UNE phrase.
+- liens : les liens argumentatifs entre chapitres (arêtes) : de quel nœud, vers quel nœud, et la nature du lien (« prépare », « répond à », « renverse », « approfondit »…).
+
+## Contraintes
+- ⛔ ≤ ~300 mots AU TOTAL : ça doit tenir sur un écran et être facile à lire. La lisibilité PRIME sur l'exhaustivité.
+- Ancrage STRICT au livre ci-dessus ; aucune source externe (autres œuvres, biographie, littérature critique). Citations (chapitre/section), sans recopier de longs extraits.
+- Réutilise le vocabulaire que l'élève s'est approprié. Tutoie l'élève ; clair et aéré.
+
+## Format de réponse — UNIQUEMENT un objet JSON valide, sans texte autour :
+{
+  "fil_conducteur": "...",
+  "noeuds": [ { "chapitre": "...", "idee": "..." } ],
+  "liens": [ { "de": "...", "vers": "...", "relation": "..." } ]
+}`
+
+// Tous les devoilements / toutes les vf de l'élève sur ce livre (capstone).
+async function assemblerTousDevoilements(admin: Admin, eleveId: string, livreId: string): Promise<string> {
+  const { data } = await admin
+    .from('aletheia_travaux')
+    .select('semaine_index, devoilement')
+    .eq('eleve_id', eleveId).eq('scriptorium_livre_id', livreId)
+    .not('devoilement', 'is', null)
+    .order('semaine_index', { ascending: true })
+  if (!data || data.length === 0) return '(Aucune architecture dévoilée.)'
+  return data.map(p => {
+    const d = (p.devoilement as Devoilement | null) ?? { architecture_amont: [], architecture_aval_jalons: [] }
+    const amont = (d.architecture_amont ?? []).join(' ; ') || '—'
+    const aval = (d.architecture_aval_jalons ?? []).join(' ; ') || '—'
+    return `Semaine ${p.semaine_index} — amont : ${amont} | jalons aval : ${aval}`
+  }).join('\n')
+}
+
+async function assemblerToutesSyntheses(admin: Admin, eleveId: string, livreId: string): Promise<string> {
+  const { data } = await admin
+    .from('aletheia_travaux')
+    .select('semaine_index, resume_vf')
+    .eq('eleve_id', eleveId).eq('scriptorium_livre_id', livreId)
+    .not('resume_vf', 'is', null)
+    .order('semaine_index', { ascending: true })
+  if (!data || data.length === 0) return '(Aucune synthèse.)'
+  return data.map(p => `Semaine ${p.semaine_index} : ${p.resume_vf}`).join('\n\n')
+}
+
+// ── Génération du capstone (après que toutes les semaines sont DONE) ──────────
+export async function genererCapstone(eleveId: string, livreId: string): Promise<void> {
+  const admin = createAdminClient()
+
+  const echec = async () => {
+    try {
+      await admin.from('aletheia_capstone')
+        .update({ statut: 'ERROR', erreur_at: new Date().toISOString() })
+        .eq('eleve_id', eleveId).eq('scriptorium_livre_id', livreId).eq('statut', 'PENDING')
+    } catch (e) {
+      console.error('[aletheia] revert capstone impossible :', e)
+    }
+  }
+
+  try {
+    // Re-vérification serveur : toutes les semaines du livre doivent être DONE.
+    const { data: docs } = await admin
+      .from('scriptorium_documents')
+      .select('semaine')
+      .eq('unite_id', livreId)
+      .not('semaine', 'is', null)
+    const semaines = [...new Set((docs ?? []).map(d => d.semaine as number))]
+    const { data: faits } = await admin
+      .from('aletheia_travaux')
+      .select('semaine_index')
+      .eq('eleve_id', eleveId).eq('scriptorium_livre_id', livreId).eq('statut', 'DONE')
+    const doneSet = new Set((faits ?? []).map(t => t.semaine_index as number))
+    if (semaines.length === 0 || !semaines.every(s => doneSet.has(s))) { await echec(); return }
+
+    const livreEntier = await assemblerAncrageLivre(admin, livreId)
+    if (!livreEntier.trim()) { await echec(); return }
+
+    const devoilements = await assemblerTousDevoilements(admin, eleveId, livreId)
+    const syntheses = await assemblerToutesSyntheses(admin, eleveId, livreId)
+    const { data: params } = await admin.from('aletheia_params').select('prompt_capstone').eq('id', 1).maybeSingle()
+
+    const prompt = injecter(params?.prompt_capstone?.trim() || PROMPT_CAPSTONE_DEFAUT, {
+      livre_entier: livreEntier,
+      tous_les_devoilements: devoilements,
+      toutes_syntheses_eleve: syntheses,
+    })
+
+    const client = new Anthropic()
+    const response = await client.messages.create({
+      model: MODELE,
+      max_tokens: 4096,
+      messages: [{ role: 'user', content: prompt }],
+    })
+    if (response.stop_reason === 'max_tokens') throw new Error('Réponse tronquée (max_tokens).')
+
+    const texte = response.content[0]?.type === 'text' ? response.content[0].text : ''
+    const parsed = JSON.parse(extraireJSON(texte)) as Partial<Capstone> & { noeuds?: unknown; liens?: unknown }
+
+    const noeuds = Array.isArray(parsed.noeuds)
+      ? parsed.noeuds.filter((n): n is { chapitre: string; idee: string } => !!n && typeof n.chapitre === 'string' && typeof n.idee === 'string')
+      : []
+    const liens = Array.isArray(parsed.liens)
+      ? parsed.liens.filter((l): l is { de: string; vers: string; relation: string } => !!l && typeof l.de === 'string' && typeof l.vers === 'string' && typeof l.relation === 'string')
+      : []
+    const capstone: Capstone = {
+      fil_conducteur: typeof parsed.fil_conducteur === 'string' ? parsed.fil_conducteur : '',
+      noeuds,
+      liens,
+    }
+    if (!capstone.fil_conducteur.trim() && noeuds.length === 0) throw new Error('Capstone vide.')
+
+    // Garde-fou lisibilité (~300 mots AU TOTAL) : on signale, on ne tronque pas.
+    const nbMots = [capstone.fil_conducteur, ...noeuds.map(n => `${n.chapitre} ${n.idee}`), ...liens.map(l => l.relation)]
+      .join(' ').trim().split(/\s+/).filter(Boolean).length
+    if (nbMots > 350) console.warn(`[aletheia] capstone long (${nbMots} mots, ~300 visés), élève ${eleveId} livre ${livreId}`)
+
+    await admin.from('aletheia_capstone')
+      .update({ contenu: capstone, statut: 'READY', erreur_at: null })
+      .eq('eleve_id', eleveId).eq('scriptorium_livre_id', livreId).eq('statut', 'PENDING')
+  } catch (err) {
+    console.error('[aletheia] génération capstone :', err)
     await echec()
   }
 }

@@ -3,7 +3,7 @@
 import { revalidatePath } from 'next/cache'
 import { createClient } from '@/utils/supabase/server'
 import { createAdminClient } from '@/utils/supabase/admin'
-import { PROMPT_FEEDBACK_1_DEFAUT, PROMPT_FEEDBACK_2_DEFAUT } from '@/utils/aletheia-retours'
+import { PROMPT_FEEDBACK_1_DEFAUT, PROMPT_FEEDBACK_2_DEFAUT, PROMPT_CAPSTONE_DEFAUT } from '@/utils/aletheia-retours'
 
 async function verifierProf() {
   const supabase = await createClient()
@@ -13,13 +13,14 @@ async function verifierProf() {
   if (profile?.role !== 'prof') throw new Error('Accès refusé')
 }
 
-export async function lirePromptsAletheia(): Promise<{ prompt_feedback_1: string | null; prompt_feedback_2: string | null }> {
+export async function lirePromptsAletheia(): Promise<{ prompt_feedback_1: string | null; prompt_feedback_2: string | null; prompt_capstone: string | null }> {
   await verifierProf()
   const admin = createAdminClient()
-  const { data } = await admin.from('aletheia_params').select('prompt_feedback_1, prompt_feedback_2').eq('id', 1).maybeSingle()
+  const { data } = await admin.from('aletheia_params').select('prompt_feedback_1, prompt_feedback_2, prompt_capstone').eq('id', 1).maybeSingle()
   return {
     prompt_feedback_1: data?.prompt_feedback_1 ?? null,
     prompt_feedback_2: data?.prompt_feedback_2 ?? null,
+    prompt_capstone: data?.prompt_capstone ?? null,
   }
 }
 
@@ -28,7 +29,7 @@ export async function lirePromptsAletheia(): Promise<{ prompt_feedback_1: string
 const nullSiDefaut = (valeur: string, defaut: string): string | null =>
   valeur.trim() && valeur.trim() !== defaut.trim() ? valeur : null
 
-export async function sauvegarderPromptsAletheia(promptFeedback1: string, promptFeedback2: string) {
+export async function sauvegarderPromptsAletheia(promptFeedback1: string, promptFeedback2: string, promptCapstone: string) {
   await verifierProf()
   const p2 = nullSiDefaut(promptFeedback2, PROMPT_FEEDBACK_2_DEFAUT)
   // Le retour 2 reçoit le livre ENTIER : la variable {semaine_courante_N} est la
@@ -43,6 +44,7 @@ export async function sauvegarderPromptsAletheia(promptFeedback1: string, prompt
       id: 1,
       prompt_feedback_1: nullSiDefaut(promptFeedback1, PROMPT_FEEDBACK_1_DEFAUT),
       prompt_feedback_2: p2,
+      prompt_capstone: nullSiDefaut(promptCapstone, PROMPT_CAPSTONE_DEFAUT),
       updated_at: new Date().toISOString(),
     }, { onConflict: 'id' })
   if (error) return { error: error.message }
