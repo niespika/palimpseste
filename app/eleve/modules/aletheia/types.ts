@@ -8,23 +8,48 @@ export type StatutAletheia =
   | 'FEEDBACK2_READY'
   | 'DONE'
 
-// Sortie du retour 1 (socratique) — cf. aletheia-spec §5.1.
-export interface Retour1 {
-  questions_pour_avancer: string[]
-  reponses_a_tes_questions: string[]
-  remarque_questions?: string | null
+// Une définition de vocabulaire produite par le retour V1 (affichée + routée vers
+// Quazian comme carte personnelle).
+export interface DefinitionVocabulaire {
+  terme: string
+  definition: string
 }
 
-// Sortie du retour 2 (reconstruction + architecture) — cf. aletheia-spec §5.2.
-export interface Retour2 {
-  synthese_modele: string
+// Sortie du retour V1 — socratique, par section (SPEC §2.1). Un seul appel IA,
+// traitement spécifique par champ.
+export interface RetourV1 {
+  // Thèse + Arguments : relances socratiques (questions renvoyant à un passage),
+  // priorisées et plafonnées (ergonomie ado). On ne corrige pas, on questionne.
+  relances: string[]
+  // Accord : révélateur de compréhension — vérifie la lecture puis pousse à
+  // nuancer/justifier. Pas de recherche d'objection. Court.
+  accord: string | null
+  // Questions de l'élève : réponses claires, ancrées dans le texte.
+  reponses_questions: string[]
+  // Vocabulaire : définitions ancrées et accessibles (affichées + cartes Quazian).
+  vocabulaire: DefinitionVocabulaire[]
+  // Remarque optionnelle sur la qualité des questions (masquée sauf toggle Lot 6 B).
+  remarque_questions: string | null
+}
+
+// Un ajout repéré dans la VF (au-delà de corriger) vérifié contre le livre.
+// `ancre` = l'ajout est étayé par le texte ; sinon affirmation non ancrée/fausse.
+export interface AjoutVerifie {
+  extrait: string
+  ancre: boolean
+  note: string
+}
+
+// Sortie du retour VF — reconstruction + architecture (SPEC §2.2).
+export interface RetourVF {
+  synthese_modele: string          // ≤ ~200 mots, lisible d'un trait
+  ajouts_verifies: AjoutVerifie[]  // ajouts de la VF surlignés (façon Codex)
   nuances_et_erreurs: string[]
-  ajouts_a_verifier: string[]
   architecture_amont: string[]
   architecture_aval_jalons: string[]
 }
 
-// Extrait persisté du retour 2 (mémoire + matière du capstone).
+// Extrait persisté du retour VF (mémoire + continuité des retours suivants).
 export interface Devoilement {
   architecture_amont: string[]
   architecture_aval_jalons: string[]
@@ -36,20 +61,28 @@ export interface TravailAletheia {
   semaine_index: number
   eleve_id: string
   statut: StatutAletheia
-  resume_initial: string | null
+  // Saisie V1 — 5 champs.
+  these: string | null
+  arguments: string | null
+  accord: string | null
   questions: string[]
-  retour_1: Retour1 | null
-  resume_vf: string | null
-  retour_1_erreur_at: string | null
-  retour_2: Retour2 | null
-  retour_2_erreur_at: string | null
-  retour_2_lu_at: string | null
+  vocabulaire: string[]
+  // Saisie VF — 3 champs retravaillés.
+  these_vf: string | null
+  arguments_vf: string | null
+  accord_vf: string | null
+  // Retours IA.
+  retour_v1: RetourV1 | null
+  retour_vf: RetourVF | null
+  retour_v1_erreur_at: string | null
+  retour_vf_erreur_at: string | null
+  retour_vf_lu_at: string | null
   devoilement: Devoilement | null
   created_at: string
   updated_at: string
 }
 
-// Capstone : carte d'architecture finale (chapitres = nœuds, liens = arêtes).
+// Capstone : carte d'architecture finale du LIVRE (partagée, canonique).
 export type CapstoneStatut = 'PENDING' | 'READY' | 'ERROR'
 
 export interface CapstoneNoeud { chapitre: string; idee: string }

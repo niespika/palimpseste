@@ -2,7 +2,7 @@ import { notFound } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/utils/supabase/server'
 import { createAdminClient } from '@/utils/supabase/admin'
-import { contexteAletheia, livreAccessible, chargerCapstone } from '../../data'
+import { contexteAletheia, livreAccessible, chargerCapstoneLivre, toutesSemainesDone } from '../../data'
 import PollStatut from '../../PollStatut'
 import BoutonImprimerCapstone from '../../BoutonImprimerCapstone'
 
@@ -17,8 +17,12 @@ export default async function PageCapstone({ params }: { params: Promise<{ livre
   if (!moduleActif || !active) notFound()
   if (!(await livreAccessible(admin, [active.classe_id], livreId))) notFound()
 
+  // Anti-spoiler : la carte du livre révèle toute l'architecture aval. L'élève ne
+  // peut y accéder qu'après avoir lui-même terminé toutes ses semaines.
+  if (!(await toutesSemainesDone(admin, user.id, livreId))) notFound()
+
   const { data: livre } = await admin.from('scriptorium_unites').select('label').eq('id', livreId).maybeSingle()
-  const cap = await chargerCapstone(supabase, user.id, livreId)
+  const cap = await chargerCapstoneLivre(admin, livreId)
 
   if (!cap || cap.statut !== 'READY' || !cap.contenu) {
     return (

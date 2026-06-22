@@ -51,28 +51,28 @@ export default function FormulaireParametresAletheia({
 
       <div>
         <div className="flex items-center justify-between mb-2">
-          <label className="text-sm font-medium text-stone-700">Retour 1 — socratique (par semaine)</label>
+          <label className="text-sm font-medium text-stone-700">Retour V1 — socratique, par section (5 champs)</label>
           <button type="button" onClick={() => setP1(promptFeedback1Defaut)} className="text-xs text-stone-500 hover:text-stone-700 underline">
             Restaurer la version par défaut
           </button>
         </div>
         <p className="text-xs text-stone-400 mb-2">
-          Variables : <code>{'{texte_unite}'}</code>, <code>{'{resume_eleve}'}</code>, <code>{'{questions_eleve}'}</code>, <code>{'{syntheses_precedentes}'}</code>.
-          Sortie JSON <code>{'{ questions_pour_avancer, reponses_a_tes_questions, remarque_questions }'}</code>.
+          Variables : <code>{'{texte_unite}'}</code>, <code>{'{these_eleve}'}</code>, <code>{'{arguments_eleve}'}</code>, <code>{'{accord_eleve}'}</code>, <code>{'{questions_eleve}'}</code>, <code>{'{vocabulaire_eleve}'}</code>, <code>{'{syntheses_precedentes}'}</code>.
+          Sortie JSON <code>{'{ relances, accord, reponses_questions, vocabulaire:[{terme,definition}], remarque_questions }'}</code>.
         </p>
         <textarea value={p1} onChange={e => setP1(e.target.value)} rows={20} className={TEXTAREA} />
       </div>
 
       <div>
         <div className="flex items-center justify-between mb-2">
-          <label className="text-sm font-medium text-stone-700">Retour 2 — reconstruction + architecture (livre entier)</label>
+          <label className="text-sm font-medium text-stone-700">Retour final (VF) — reconstruction + architecture (livre entier)</label>
           <button type="button" onClick={() => setP2(promptFeedback2Defaut)} className="text-xs text-stone-500 hover:text-stone-700 underline">
             Restaurer la version par défaut
           </button>
         </div>
         <p className="text-xs text-stone-400 mb-2">
-          Variables : <code>{'{livre_entier}'}</code>, <code>{'{resume_initial_eleve}'}</code>, <code>{'{resume_vf_eleve}'}</code>, <code>{'{syntheses_precedentes}'}</code>, <code>{'{architectures_precedentes}'}</code>, <code>{'{semaine_courante_N}'}</code>, <code>{'{total_semaines}'}</code>.
-          Sortie JSON <code>{'{ synthese_modele, nuances_et_erreurs, ajouts_a_verifier, architecture_amont, architecture_aval_jalons }'}</code>.
+          Variables : <code>{'{livre_entier}'}</code>, <code>{'{these_initiale}'}</code>, <code>{'{arguments_initiale}'}</code>, <code>{'{accord_initial}'}</code>, <code>{'{these_vf}'}</code>, <code>{'{arguments_vf}'}</code>, <code>{'{accord_vf}'}</code>, <code>{'{syntheses_precedentes}'}</code>, <code>{'{architectures_precedentes}'}</code>, <code>{'{semaine_courante_N}'}</code>, <code>{'{total_semaines}'}</code>.
+          Sortie JSON <code>{'{ synthese_modele, ajouts_verifies:[{extrait,ancre,note}], nuances_et_erreurs, architecture_amont, architecture_aval_jalons }'}</code>.
         </p>
         <p className="text-xs text-red-600 mb-2">
           ⚠️ Le <strong>livre entier</strong> est envoyé au modèle. Ton prompt DOIT garder la consigne de non-divulgation de l&apos;aval et la variable <code>{'{semaine_courante_N}'}</code>, sinon la suite du livre risque d&apos;être divulguée à l&apos;élève.
@@ -88,8 +88,8 @@ export default function FormulaireParametresAletheia({
           </button>
         </div>
         <p className="text-xs text-stone-400 mb-2">
-          Variables : <code>{'{livre_entier}'}</code>, <code>{'{tous_les_devoilements}'}</code>, <code>{'{toutes_syntheses_eleve}'}</code>.
-          Sortie JSON <code>{'{ fil_conducteur, noeuds:[{chapitre,idee}], liens:[{de,vers,relation}] }'}</code>. L&apos;élève a tout lu : tous les liens aval peuvent être révélés.
+          Variables : <code>{'{livre_entier}'}</code>, <code>{'{structure_semaines}'}</code>.
+          Sortie JSON <code>{'{ fil_conducteur, noeuds:[{chapitre,idee}], liens:[{de,vers,relation}] }'}</code>. Carte <strong>canonique</strong> (par livre, partagée) : elle ne dépend plus d&apos;un parcours élève ; tous les liens aval sont révélés.
         </p>
         <textarea value={pC} onChange={e => setPC(e.target.value)} rows={20} className={TEXTAREA} />
       </div>
@@ -99,7 +99,7 @@ export default function FormulaireParametresAletheia({
         <label className="flex items-start gap-2 text-sm text-stone-700">
           <input type="checkbox" checked={evalQuestions} onChange={e => setEvalQuestions(e.target.checked)} className="mt-0.5" />
           <span>
-            <span className="font-medium">Évaluer la qualité des questions</span> — affiche au retour 1 une remarque sur la profondeur des questions de l&apos;élève (champ <code>remarque_questions</code>). <span className="text-stone-400">Désactivé par défaut.</span>
+            <span className="font-medium">Évaluer la qualité des questions</span> — affiche au retour V1 une remarque sur la profondeur des questions de l&apos;élève (champ <code>remarque_questions</code>). <span className="text-stone-400">Désactivé par défaut.</span>
           </span>
         </label>
         <label className="flex items-start gap-2 text-sm text-stone-700">

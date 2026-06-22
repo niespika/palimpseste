@@ -148,15 +148,29 @@ export async function peutAccederSemaine(admin: SupabaseClient, eleveId: string,
   return estSemaineDebloquee(semaines, doneSet, semaine, true)
 }
 
-// L'état du capstone de l'élève pour un livre (RLS eleve_own), ou null si jamais lancé.
-export async function chargerCapstone(supabase: SupabaseClient, eleveId: string, livreId: string): Promise<CapstoneRow | null> {
-  const { data } = await supabase
+// L'état du capstone du LIVRE (carte partagée, canonique), ou null si jamais lancé.
+// La table est en RLS prof-only → lecture côté élève via le client admin, la garde
+// d'accès (livre assigné + toutes semaines DONE) étant appliquée par l'appelant.
+export async function chargerCapstoneLivre(admin: SupabaseClient, livreId: string): Promise<CapstoneRow | null> {
+  const { data } = await admin
     .from('aletheia_capstone')
     .select('statut, contenu')
-    .eq('eleve_id', eleveId)
     .eq('scriptorium_livre_id', livreId)
     .maybeSingle()
   return (data as CapstoneRow | null) ?? null
+}
+
+// Toutes les semaines du livre sont-elles DONE pour cet élève ? (gate du capstone :
+// l'élève ne voit la carte partagée qu'après avoir lui-même tout terminé — anti-spoiler.)
+export async function toutesSemainesDone(admin: SupabaseClient, eleveId: string, livreId: string): Promise<boolean> {
+  const [{ data: docs }, { data: faits }] = await Promise.all([
+    admin.from('scriptorium_documents').select('semaine').eq('unite_id', livreId).not('semaine', 'is', null),
+    admin.from('aletheia_travaux').select('semaine_index').eq('eleve_id', eleveId).eq('scriptorium_livre_id', livreId).eq('statut', 'DONE'),
+  ])
+  const semaines = [...new Set((docs ?? []).map(d => d.semaine as number))]
+  if (semaines.length === 0) return false
+  const doneSet = new Set((faits ?? []).map(t => t.semaine_index as number))
+  return semaines.every(s => doneSet.has(s))
 }
 
 // Les travaux de l'élève pour un livre, indexés par numéro de semaine (RLS eleve_own).

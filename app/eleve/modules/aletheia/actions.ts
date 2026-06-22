@@ -4,16 +4,32 @@ import { after } from 'next/server'
 import { revalidatePath } from 'next/cache'
 import { createClient } from '@/utils/supabase/server'
 import { createAdminClient } from '@/utils/supabase/admin'
-import { contexteAletheia, livreAccessible, semaineLivre, peutAccederSemaine } from './data'
+import { contexteAletheia, livreAccessible, semaineLivre, peutAccederSemaine, toutesSemainesDone } from './data'
 import type { StatutAletheia } from './types'
 
 // Bornes serveur sur le texte élève (anti-coût : tout est injecté dans le prompt IA ;
-// retour 2 = + le livre entier). Un résumé/VF de chapitres tient très largement dedans.
+// retour VF = + le livre entier). Idée/arguments/accord de chapitres tiennent dedans.
 const MAX_TEXTE = 8000
 const MAX_QUESTION = 1000
 const MAX_QUESTIONS = 10
+const MAX_TERME = 200
+const MAX_VOCAB = 30
 // Délai avant d'autoriser une relance d'un retour bloqué (> durée normale de génération).
 const DELAI_RELANCE_MS = 90 * 1000
+
+export interface SaisieV1 {
+  these: string
+  arguments: string
+  accord: string
+  questions: string[]
+  vocabulaire: string[]
+}
+
+export interface SaisieVf {
+  these_vf: string
+  arguments_vf: string
+  accord_vf: string
+}
 
 async function verifierEleve() {
   const supabase = await createClient()
@@ -31,16 +47,24 @@ function revalider(livreId: string, semaine: number) {
 
 // ── Transitions ─────────────────────────────────────────────────────────────
 
-// DRAFT → V1_SUBMITTED → FEEDBACK1_READY. Retour 1 généré en arrière-plan (after()).
-export async function soumettreV1(livreId: string, semaine: number, resume: string, questions: string[]) {
+// DRAFT → V1_SUBMITTED → FEEDBACK1_READY. Retour V1 généré en arrière-plan (after()).
+export async function soumettreV1(livreId: string, semaine: number, saisie: SaisieV1) {
   const { supabase, userId } = await verifierEleve()
-  const r = (resume ?? '').trim()
-  const qs = (questions ?? []).map(q => q.trim()).filter(Boolean)
-  if (!r) return { error: 'Écris un résumé avant de soumettre.' }
-  if (qs.length === 0) return { error: 'Pose au moins une question.' }
-  if (r.length > MAX_TEXTE) return { error: 'Ton résumé est trop long (limite ~8000 caractères).' }
-  if (qs.length > MAX_QUESTIONS) return { error: `Pas plus de ${MAX_QUESTIONS} questions.` }
-  if (qs.some(q => q.length > MAX_QUESTION)) return { error: 'Une de tes questions est trop longue.' }
+  const these = (saisie?.these ?? '').trim()
+  const args = (saisie?.arguments ?? '').trim()
+  const accord = (saisie?.accord ?? '').trim()
+  const questions = (saisie?.questions ?? []).map(q => q.trim()).filter(Boolean)
+  const vocabulaire = (saisie?.vocabulaire ?? []).map(v => v.trim()).filter(Boolean)
+
+  if (!these) return { error: 'Écris l’idée principale du chapitre.' }
+  if (!args) return { error: 'Indique les arguments avancés par l’auteur.' }
+  if (!accord) return { error: 'Dis si tu es d’accord ou non, et pourquoi.' }
+  if (questions.length === 0) return { error: 'Pose au moins une question.' }
+  if ([these, args, accord].some(t => t.length > MAX_TEXTE)) return { error: 'Un de tes champs est trop long (limite ~8000 caractères).' }
+  if (questions.length > MAX_QUESTIONS) return { error: `Pas plus de ${MAX_QUESTIONS} questions.` }
+  if (questions.some(q => q.length > MAX_QUESTION)) return { error: 'Une de tes questions est trop longue.' }
+  if (vocabulaire.length > MAX_VOCAB) return { error: `Pas plus de ${MAX_VOCAB} mots de vocabulaire.` }
+  if (vocabulaire.some(v => v.length > MAX_TERME)) return { error: 'Un de tes mots de vocabulaire est trop long.' }
 
   const admin = createAdminClient()
   // Accès : module actif + livre assigné à la classe ACTIVE (inscrite au module) + semaine valide.
@@ -55,16 +79,19 @@ export async function soumettreV1(livreId: string, semaine: number, resume: stri
     .select('id, statut')
     .eq('eleve_id', userId).eq('scriptorium_livre_id', livreId).eq('semaine_index', semaine)
     .maybeSingle()
-  if (existing && existing.statut !== 'DRAFT') return { error: 'Le résumé a déjà été soumis pour cette semaine.' }
+  if (existing && existing.statut !== 'DRAFT') return { error: 'Le travail a déjà été soumis pour cette semaine.' }
 
   const payload = {
     eleve_id: userId,
     scriptorium_livre_id: livreId,
     semaine_index: semaine,
-    resume_initial: r,
-    questions: qs,
-    retour_1: null,
-    retour_1_erreur_at: null,
+    these,
+    arguments: args,
+    accord,
+    questions,
+    vocabulaire,
+    retour_v1: null,
+    retour_v1_erreur_at: null,
     statut: 'V1_SUBMITTED' as StatutAletheia,
     updated_at: new Date().toISOString(),
   }
@@ -73,28 +100,32 @@ export async function soumettreV1(livreId: string, semaine: number, resume: stri
     : await admin.from('aletheia_travaux').insert(payload).select('id').single()
   if (error || !saved) {
     // Course (double-clic / 2 onglets) : la contrainte d'unicité gagne → message clair.
-    if ((error as { code?: string } | null)?.code === '23505') return { error: 'Le résumé a déjà été soumis pour cette semaine.' }
+    if ((error as { code?: string } | null)?.code === '23505') return { error: 'Le travail a déjà été soumis pour cette semaine.' }
     return { error: error?.message ?? 'Erreur' }
   }
 
-  // Retour 1 généré en arrière-plan : l'élève voit « en cours », le polling récupère le résultat.
+  // Retour V1 généré en arrière-plan : l'élève voit « en cours », le polling récupère le résultat.
   const travailId = saved.id as string
   after(async () => {
     const mod = await import('@/utils/aletheia-retours')
-    await mod.genererRetour1(travailId)
+    await mod.genererRetourV1(travailId)
   })
 
   revalider(livreId, semaine)
   return { success: true }
 }
 
-// FEEDBACK1_READY → (VF_SUBMITTED) → FEEDBACK2_READY. Gate souple : pas de vf
-// avant le retour 1. Retour 2 généré en arrière-plan (ancré sur le livre entier).
-export async function soumettreVf(livreId: string, semaine: number, vf: string) {
+// FEEDBACK1_READY → (VF_SUBMITTED) → FEEDBACK2_READY. Gate souple : pas de VF
+// avant le retour V1. Retour VF généré en arrière-plan (ancré sur le livre entier).
+export async function soumettreVf(livreId: string, semaine: number, vf: SaisieVf) {
   const { supabase, userId } = await verifierEleve()
-  const v = (vf ?? '').trim()
-  if (!v) return { error: 'Écris ta version finale avant de soumettre.' }
-  if (v.length > MAX_TEXTE) return { error: 'Ta version finale est trop longue (limite ~8000 caractères).' }
+  const these = (vf?.these_vf ?? '').trim()
+  const args = (vf?.arguments_vf ?? '').trim()
+  const accord = (vf?.accord_vf ?? '').trim()
+  if (!these) return { error: 'Réécris l’idée principale.' }
+  if (!args) return { error: 'Réécris les arguments.' }
+  if (!accord) return { error: 'Réécris ton accord.' }
+  if ([these, args, accord].some(t => t.length > MAX_TEXTE)) return { error: 'Un de tes champs est trop long (limite ~8000 caractères).' }
 
   const admin = createAdminClient()
   const { active } = await contexteAletheia(supabase, userId)
@@ -105,13 +136,15 @@ export async function soumettreVf(livreId: string, semaine: number, vf: string) 
     .select('id, statut')
     .eq('eleve_id', userId).eq('scriptorium_livre_id', livreId).eq('semaine_index', semaine)
     .maybeSingle()
-  if (!row) return { error: 'Commence par soumettre ton résumé.' }
+  if (!row) return { error: 'Commence par soumettre ton travail.' }
   if (row.statut !== 'FEEDBACK1_READY') return { error: "La version finale n'est pas disponible à cette étape." }
 
   const { error } = await admin.from('aletheia_travaux').update({
-    resume_vf: v,
-    retour_2: null,
-    retour_2_erreur_at: null,
+    these_vf: these,
+    arguments_vf: args,
+    accord_vf: accord,
+    retour_vf: null,
+    retour_vf_erreur_at: null,
     statut: 'VF_SUBMITTED' as StatutAletheia,
     updated_at: new Date().toISOString(),
   }).eq('id', row.id).eq('statut', 'FEEDBACK1_READY')
@@ -119,7 +152,7 @@ export async function soumettreVf(livreId: string, semaine: number, vf: string) 
 
   after(async () => {
     const mod = await import('@/utils/aletheia-retours')
-    await mod.genererRetour2(row.id as string)
+    await mod.genererRetourVf(row.id as string)
   })
 
   revalider(livreId, semaine)
@@ -127,8 +160,9 @@ export async function soumettreVf(livreId: string, semaine: number, vf: string) 
 }
 
 // FEEDBACK2_READY → DONE. Gate de validation de lecture (façon Fragments) : la
-// semaine ne se clôt pas tant que l'élève n'a pas validé avoir lu le retour 2.
-export async function validerLectureRetour2(livreId: string, semaine: number) {
+// semaine ne se clôt pas tant que l'élève n'a pas validé avoir lu le retour VF.
+// Si c'était la dernière semaine, on déclenche paresseusement le capstone du livre.
+export async function validerLectureRetourVf(livreId: string, semaine: number) {
   const { supabase, userId } = await verifierEleve()
   const admin = createAdminClient()
   const { active } = await contexteAletheia(supabase, userId)
@@ -143,46 +177,53 @@ export async function validerLectureRetour2(livreId: string, semaine: number) {
   if (row.statut !== 'FEEDBACK2_READY') return { error: "La validation de lecture n'est pas disponible à cette étape." }
 
   const { error } = await admin.from('aletheia_travaux').update({
-    retour_2_lu_at: new Date().toISOString(),
+    retour_vf_lu_at: new Date().toISOString(),
     statut: 'DONE' as StatutAletheia,
     updated_at: new Date().toISOString(),
-  }).eq('id', row.id)
+  }).eq('id', row.id).eq('statut', 'FEEDBACK2_READY')
   if (error) return { error: error.message }
+
+  // Capstone partagé : déclenché paresseusement quand un élève termine TOUTES ses
+  // semaines (le premier crée la carte du livre, mise en cache pour tous + le prof).
+  if (await toutesSemainesDone(admin, userId, livreId)) {
+    await declencherCapstone(admin, livreId)
+  }
+
   revalider(livreId, semaine)
   return { success: true }
 }
 
-// Capstone : carte d'architecture finale. Disponible UNIQUEMENT quand toutes les
-// semaines du livre sont DONE. Génération en arrière-plan (after()).
+// Crée (si besoin) la ligne capstone du livre en PENDING et lance la génération en
+// arrière-plan. No-op si déjà READY ou PENDING (génération en cours / déjà faite).
+async function declencherCapstone(admin: ReturnType<typeof createAdminClient>, livreId: string): Promise<void> {
+  const { data: existing } = await admin
+    .from('aletheia_capstone').select('statut').eq('scriptorium_livre_id', livreId).maybeSingle()
+  if (existing?.statut === 'READY' || existing?.statut === 'PENDING') return
+  const { error } = await admin
+    .from('aletheia_capstone')
+    .upsert({ scriptorium_livre_id: livreId, statut: 'PENDING', contenu: null, erreur_at: null }, { onConflict: 'scriptorium_livre_id' })
+  if (error) { console.error('[aletheia] upsert capstone PENDING :', error); return }
+  after(async () => {
+    const mod = await import('@/utils/aletheia-retours')
+    await mod.genererCapstone(livreId)
+  })
+}
+
+// Carte d'architecture du livre (partagée). L'élève ne peut la (re)déclencher que
+// s'il a lui-même tout terminé. READY → no-op ; sinon (re)lance la génération
+// (relance utile si le job after() est mort ou si le statut est ERROR).
 export async function revelerCapstone(livreId: string) {
   const { supabase, userId } = await verifierEleve()
   const admin = createAdminClient()
   const { active } = await contexteAletheia(supabase, userId)
   if (!active || !(await livreAccessible(admin, [active.classe_id], livreId))) return { error: 'Ce livre ne t\'est pas accessible.' }
 
-  // Toutes les semaines du livre doivent être DONE.
-  const { data: docs } = await admin
-    .from('scriptorium_documents')
-    .select('semaine')
-    .eq('unite_id', livreId)
-    .not('semaine', 'is', null)
-  const semaines = [...new Set((docs ?? []).map(d => d.semaine as number))]
-  if (semaines.length === 0) return { error: 'Ce livre n\'a pas de semaine.' }
+  if (!(await toutesSemainesDone(admin, userId, livreId))) {
+    return { error: 'Termine toutes les semaines avant de révéler la carte.' }
+  }
 
-  const { data: faits } = await supabase
-    .from('aletheia_travaux')
-    .select('semaine_index')
-    .eq('eleve_id', userId).eq('scriptorium_livre_id', livreId).eq('statut', 'DONE')
-  const doneSet = new Set((faits ?? []).map(t => t.semaine_index as number))
-  if (!semaines.every(s => doneSet.has(s))) return { error: 'Termine toutes les semaines avant de révéler la carte.' }
-
-  // Déjà prête → on ne régénère pas. PENDING : on autorise une relance (cas d'une
-  // génération morte — process after() interrompu — sinon la carte reste bloquée).
-  const { data: existing } = await supabase
-    .from('aletheia_capstone')
-    .select('statut')
-    .eq('eleve_id', userId).eq('scriptorium_livre_id', livreId)
-    .maybeSingle()
+  const { data: existing } = await admin
+    .from('aletheia_capstone').select('statut').eq('scriptorium_livre_id', livreId).maybeSingle()
   if (existing?.statut === 'READY') {
     revalidatePath('/eleve/modules/aletheia')
     return { success: true }
@@ -190,12 +231,12 @@ export async function revelerCapstone(livreId: string) {
 
   const { error } = await admin
     .from('aletheia_capstone')
-    .upsert({ eleve_id: userId, scriptorium_livre_id: livreId, statut: 'PENDING', contenu: null, erreur_at: null }, { onConflict: 'eleve_id,scriptorium_livre_id' })
+    .upsert({ scriptorium_livre_id: livreId, statut: 'PENDING', contenu: null, erreur_at: null }, { onConflict: 'scriptorium_livre_id' })
   if (error) return { error: error.message }
 
   after(async () => {
     const mod = await import('@/utils/aletheia-retours')
-    await mod.genererCapstone(userId, livreId)
+    await mod.genererCapstone(livreId)
   })
 
   revalidatePath('/eleve/modules/aletheia')
@@ -204,7 +245,7 @@ export async function revelerCapstone(livreId: string) {
 
 // Relance d'un retour bloqué : si le job after() est mort (process interrompu, redeploy),
 // le travail reste en *_SUBMITTED indéfiniment et le polling tourne sans fin. On autorise
-// une relance après un délai de sécurité (> durée normale d'une génération). genererRetour1/2
+// une relance après un délai de sécurité (> durée normale d'une génération). genererRetourV1/Vf
 // sont gardés par compare-and-set, donc relancer est sûr.
 export async function relancerRetour(livreId: string, semaine: number) {
   const { supabase, userId } = await verifierEleve()
@@ -231,8 +272,8 @@ export async function relancerRetour(livreId: string, semaine: number) {
   const phase = row.statut
   after(async () => {
     const mod = await import('@/utils/aletheia-retours')
-    if (phase === 'V1_SUBMITTED') await mod.genererRetour1(travailId)
-    else await mod.genererRetour2(travailId)
+    if (phase === 'V1_SUBMITTED') await mod.genererRetourV1(travailId)
+    else await mod.genererRetourVf(travailId)
   })
 
   revalider(livreId, semaine)

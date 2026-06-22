@@ -7,23 +7,33 @@ import { soumettreVf } from './actions'
 interface Props {
   livreId: string
   semaine: number
-  valeurInitiale?: string
+  theseInitial?: string
+  argumentsInitial?: string
+  accordInitial?: string
 }
 
-// Réécriture : version finale du résumé, après le retour 1 → soumission (VF).
-export default function FormulaireVf({ livreId, semaine, valeurInitiale = '' }: Props) {
+const champClasse =
+  'w-full px-3 py-2 border border-stone-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-stone-400 resize-y text-stone-900'
+
+// Réécriture (VF) — 3 champs retravaillés (SPEC §1) : idée principale, arguments,
+// accord. Les questions et le vocabulaire ne se réécrivent pas. Pré-rempli avec la V1.
+export default function FormulaireVf({ livreId, semaine, theseInitial = '', argumentsInitial = '', accordInitial = '' }: Props) {
   const router = useRouter()
-  const [vf, setVf] = useState(valeurInitiale)
+  const [these, setThese] = useState(theseInitial)
+  const [args, setArgs] = useState(argumentsInitial)
+  const [accord, setAccord] = useState(accordInitial)
   const [chargement, setChargement] = useState(false)
   const [erreur, setErreur] = useState<string | null>(null)
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     setErreur(null)
-    if (!vf.trim()) { setErreur('Écris ta version finale.'); return }
+    if (!these.trim()) { setErreur('Réécris l’idée principale.'); return }
+    if (!args.trim()) { setErreur('Réécris les arguments.'); return }
+    if (!accord.trim()) { setErreur('Réécris ton accord.'); return }
     setChargement(true)
     try {
-      const res = await soumettreVf(livreId, semaine, vf)
+      const res = await soumettreVf(livreId, semaine, { these_vf: these, arguments_vf: args, accord_vf: accord })
       if (res?.error) { setErreur(res.error); return }
       router.refresh()
     } finally {
@@ -32,19 +42,23 @@ export default function FormulaireVf({ livreId, semaine, valeurInitiale = '' }: 
   }
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-3">
+    <form onSubmit={handleSubmit} className="space-y-4">
+      <p className="text-xs text-stone-400">Reprends tes trois champs en tenant compte du retour : corrige, précise, approfondis.</p>
       <div>
-        <label className="block text-xs font-medium text-stone-500 mb-1">Ta version finale <span className="font-normal">(réécris ton résumé en tenant compte du retour 1)</span></label>
-        <textarea
-          value={vf}
-          onChange={e => setVf(e.target.value)}
-          rows={7}
-          placeholder="Réécris ton résumé : corrige, précise, approfondis."
-          className="w-full px-3 py-2 border border-stone-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-stone-400 resize-y text-stone-900"
-        />
+        <label className="block text-xs font-medium text-stone-500 mb-1">Idée principale</label>
+        <textarea value={these} onChange={e => setThese(e.target.value)} rows={3} className={champClasse} />
+      </div>
+      <div>
+        <label className="block text-xs font-medium text-stone-500 mb-1">Arguments</label>
+        <textarea value={args} onChange={e => setArgs(e.target.value)} rows={4} className={champClasse} />
+      </div>
+      <div>
+        <label className="block text-xs font-medium text-stone-500 mb-1">Ton accord</label>
+        <textarea value={accord} onChange={e => setAccord(e.target.value)} rows={3} className={champClasse} />
       </div>
       {erreur && <p className="text-red-600 text-sm">{erreur}</p>}
-      <button type="submit" disabled={chargement} className="w-full bg-stone-800 text-white py-2.5 rounded-xl text-sm font-medium hover:bg-stone-700 disabled:opacity-50">
+      <button type="submit" disabled={chargement}
+        className="w-full bg-stone-800 text-white py-2.5 rounded-xl text-sm font-medium hover:bg-stone-700 disabled:opacity-50">
         {chargement ? 'Envoi…' : 'Soumettre ma version finale'}
       </button>
     </form>

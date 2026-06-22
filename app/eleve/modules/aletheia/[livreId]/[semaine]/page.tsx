@@ -3,11 +3,12 @@ import Link from 'next/link'
 import { createClient } from '@/utils/supabase/server'
 import { createAdminClient } from '@/utils/supabase/admin'
 import { contexteAletheia, livreAccessible, semaineLivre, travauxParSemaine, peutAccederSemaine, lireReglages } from '../../data'
-import FormulaireResumeQuestions from '../../FormulaireResumeQuestions'
+import FormulaireV1 from '../../FormulaireV1'
 import FormulaireVf from '../../FormulaireVf'
-import BoutonLectureRetour2 from '../../BoutonLectureRetour2'
+import BoutonLectureRetourVf from '../../BoutonLectureRetourVf'
 import PollStatut from '../../PollStatut'
-import type { Retour1, Retour2, TravailAletheia } from '../../types'
+import { VueRetourV1, VueRetourVF } from '@/components/aletheia/VueRetours'
+import type { TravailAletheia } from '../../types'
 
 function Bloc({ titre, children }: { titre: string; children: React.ReactNode }) {
   return (
@@ -18,54 +19,24 @@ function Bloc({ titre, children }: { titre: string; children: React.ReactNode })
   )
 }
 
-function Liste({ items }: { items: string[] }) {
-  if (!items?.length) return null
+function Champ({ label, valeur }: { label: string; valeur: string | null }) {
+  if (!valeur) return null
   return (
-    <ul className="list-disc list-inside space-y-1 text-sm text-stone-700">
-      {items.map((t, i) => <li key={i}>{t}</li>)}
-    </ul>
-  )
-}
-
-function VueRetour1({ retour, montrerRemarque }: { retour: Retour1; montrerRemarque: boolean }) {
-  return (
-    <div className="space-y-3 text-sm">
-      {retour.reponses_a_tes_questions?.length > 0 && (
-        <div>
-          <p className="text-xs font-medium text-stone-500 mb-1">Réponses à tes questions</p>
-          <Liste items={retour.reponses_a_tes_questions} />
-        </div>
-      )}
-      {retour.questions_pour_avancer?.length > 0 && (
-        <div>
-          <p className="text-xs font-medium text-stone-500 mb-1">Pour avancer</p>
-          <Liste items={retour.questions_pour_avancer} />
-        </div>
-      )}
-      {montrerRemarque && retour.remarque_questions && <p className="text-xs text-stone-400 italic">{retour.remarque_questions}</p>}
+    <div>
+      <p className="text-xs font-medium text-stone-500 mb-0.5">{label}</p>
+      <p className="text-sm text-stone-700 whitespace-pre-wrap">{valeur}</p>
     </div>
   )
 }
 
-function VueRetour2({ retour }: { retour: Retour2 }) {
+function ListeChamp({ label, items }: { label: string; items: string[] }) {
+  if (!items?.length) return null
   return (
-    <div className="space-y-3 text-sm">
-      <div>
-        <p className="text-xs font-medium text-stone-500 mb-1">Synthèse modèle</p>
-        <p className="text-stone-700 whitespace-pre-wrap">{retour.synthese_modele}</p>
-      </div>
-      {retour.nuances_et_erreurs?.length > 0 && (
-        <div><p className="text-xs font-medium text-stone-500 mb-1">Nuances et points à revoir</p><Liste items={retour.nuances_et_erreurs} /></div>
-      )}
-      {retour.ajouts_a_verifier?.length > 0 && (
-        <div><p className="text-xs font-medium text-stone-500 mb-1">Ajouts à vérifier</p><Liste items={retour.ajouts_a_verifier} /></div>
-      )}
-      {retour.architecture_amont?.length > 0 && (
-        <div><p className="text-xs font-medium text-stone-500 mb-1">Architecture — ce que tu as déjà vu</p><Liste items={retour.architecture_amont} /></div>
-      )}
-      {retour.architecture_aval_jalons?.length > 0 && (
-        <div><p className="text-xs font-medium text-stone-500 mb-1">Architecture — jalons à venir</p><Liste items={retour.architecture_aval_jalons} /></div>
-      )}
+    <div>
+      <p className="text-xs font-medium text-stone-500 mb-0.5">{label}</p>
+      <ul className="list-disc list-inside space-y-0.5 text-sm text-stone-700">
+        {items.map((t, i) => <li key={i}>{t}</li>)}
+      </ul>
     </div>
   )
 }
@@ -107,14 +78,14 @@ export default async function PageSemaineAletheia({ params }: { params: Promise<
   const t: TravailAletheia | null = travaux.get(semaine) ?? null
   const statut = t?.statut ?? 'DRAFT'
 
-  // Pilotage par statut. Les états transitoires *_SUBMITTED (l'IA prépare le
-  // retour en arrière-plan via after()) sont réels : on montre l'étape précédente
-  // + un message d'attente, et la page se rafraîchit via PollStatut.
-  const resumeSoumis = statut !== 'DRAFT'
+  // Pilotage par statut. Les états transitoires *_SUBMITTED (l'IA prépare le retour
+  // en arrière-plan via after()) sont réels : on montre l'étape précédente + un
+  // message d'attente, et la page se rafraîchit via PollStatut.
+  const v1Soumis = statut !== 'DRAFT'
   const enAttenteRetour1 = statut === 'V1_SUBMITTED'
   const enAttenteRetour2 = statut === 'VF_SUBMITTED'
-  const echecRetour1 = statut === 'DRAFT' && !!t?.retour_1_erreur_at
-  const echecRetour2 = statut === 'FEEDBACK1_READY' && !!t?.retour_2_erreur_at
+  const echecRetour1 = statut === 'DRAFT' && !!t?.retour_v1_erreur_at
+  const echecRetour2 = statut === 'FEEDBACK1_READY' && !!t?.retour_vf_erreur_at
 
   return (
     <div className="space-y-5 pb-8">
@@ -134,41 +105,43 @@ export default async function PageSemaineAletheia({ params }: { params: Promise<
 
       {echecRetour1 && (
         <div className="bg-red-50 border border-red-200 rounded-xl px-4 py-3 text-sm text-red-700">
-          La préparation de ton retour n&apos;a pas abouti. Renvoie ton résumé ci-dessous ; si le problème persiste, préviens ton professeur.
+          La préparation de ton retour n&apos;a pas abouti. Renvoie ton travail ci-dessous ; si le problème persiste, préviens ton professeur.
         </div>
       )}
 
-      {/* Étape 1 — résumé + questions */}
-      {!resumeSoumis ? (
-        <Bloc titre="1. Ton résumé et tes questions">
-          <FormulaireResumeQuestions
+      {/* Étape 1 — saisie 5 champs */}
+      {!v1Soumis ? (
+        <Bloc titre="1. Ta lecture de la semaine">
+          <FormulaireV1
             livreId={livreId}
             semaine={semaine}
-            resumeInitial={t?.resume_initial ?? ''}
-            questionsInitiales={(t?.questions ?? []).join('\n')}
+            theseInitial={t?.these ?? ''}
+            argumentsInitial={t?.arguments ?? ''}
+            accordInitial={t?.accord ?? ''}
+            questionsInitial={(t?.questions ?? []).join('\n')}
+            vocabulaireInitial={(t?.vocabulaire ?? []).join('\n')}
           />
         </Bloc>
       ) : (
-        <Bloc titre="1. Ton résumé et tes questions">
-          <p className="text-sm text-stone-700 whitespace-pre-wrap">{t?.resume_initial}</p>
-          {t?.questions && t.questions.length > 0 && (
-            <div className="pt-1"><p className="text-xs font-medium text-stone-500 mb-1">Tes questions</p><Liste items={t.questions} /></div>
-          )}
+        <Bloc titre="1. Ta lecture de la semaine">
+          <Champ label="Idée principale" valeur={t?.these ?? null} />
+          <Champ label="Arguments" valeur={t?.arguments ?? null} />
+          <Champ label="Ton accord" valeur={t?.accord ?? null} />
+          <ListeChamp label="Tes questions" items={t?.questions ?? []} />
+          <ListeChamp label="Vocabulaire" items={t?.vocabulaire ?? []} />
         </Bloc>
       )}
 
-      {enAttenteRetour1 && (
-        <p className="text-sm text-stone-500">Ton retour 1 est en cours de préparation…</p>
-      )}
+      {enAttenteRetour1 && <p className="text-sm text-stone-500">Ton retour est en cours de préparation…</p>}
 
-      {/* Retour 1 */}
-      {t?.retour_1 && (
-        <Bloc titre="2. Retour 1 — pour creuser">
-          <VueRetour1 retour={t.retour_1} montrerRemarque={evalQuestions} />
+      {/* Retour V1 */}
+      {t?.retour_v1 && (
+        <Bloc titre="2. Retour — pour creuser">
+          <VueRetourV1 retour={t.retour_v1} montrerRemarque={evalQuestions} />
         </Bloc>
       )}
 
-      {/* Étape 2 — version finale */}
+      {/* Étape 2 — version finale (3 champs) */}
       {echecRetour2 && (
         <div className="bg-red-50 border border-red-200 rounded-xl px-4 py-3 text-sm text-red-700">
           La préparation de ton retour n&apos;a pas abouti. Renvoie ta version finale ci-dessous ; si le problème persiste, préviens ton professeur.
@@ -176,26 +149,32 @@ export default async function PageSemaineAletheia({ params }: { params: Promise<
       )}
       {statut === 'FEEDBACK1_READY' ? (
         <Bloc titre="3. Ta version finale">
-          <FormulaireVf livreId={livreId} semaine={semaine} valeurInitiale={t?.resume_vf ?? t?.resume_initial ?? ''} />
+          <FormulaireVf
+            livreId={livreId}
+            semaine={semaine}
+            theseInitial={t?.these_vf ?? t?.these ?? ''}
+            argumentsInitial={t?.arguments_vf ?? t?.arguments ?? ''}
+            accordInitial={t?.accord_vf ?? t?.accord ?? ''}
+          />
         </Bloc>
-      ) : t?.resume_vf ? (
+      ) : t?.these_vf ? (
         <Bloc titre="3. Ta version finale">
-          <p className="text-sm text-stone-700 whitespace-pre-wrap">{t.resume_vf}</p>
+          <Champ label="Idée principale" valeur={t?.these_vf ?? null} />
+          <Champ label="Arguments" valeur={t?.arguments_vf ?? null} />
+          <Champ label="Ton accord" valeur={t?.accord_vf ?? null} />
         </Bloc>
       ) : null}
 
-      {enAttenteRetour2 && (
-        <p className="text-sm text-stone-500">Ton retour 2 est en cours de préparation…</p>
-      )}
+      {enAttenteRetour2 && <p className="text-sm text-stone-500">Ton retour final est en cours de préparation…</p>}
 
-      {/* Retour 2 + validation de lecture */}
-      {t?.retour_2 && (
-        <Bloc titre="4. Retour 2 — synthèse et architecture">
-          <VueRetour2 retour={t.retour_2} />
+      {/* Retour VF + validation de lecture */}
+      {t?.retour_vf && (
+        <Bloc titre="4. Retour final — synthèse et architecture">
+          <VueRetourVF retour={t.retour_vf} />
           {statut === 'FEEDBACK2_READY' ? (
             <div className="pt-2">
               <p className="text-xs text-stone-400 mb-2">Pour clore la semaine, confirme que tu as lu ce retour.</p>
-              <BoutonLectureRetour2 livreId={livreId} semaine={semaine} />
+              <BoutonLectureRetourVf livreId={livreId} semaine={semaine} />
             </div>
           ) : (
             <p className="text-sm text-green-700 pt-2">✓ Semaine terminée.</p>

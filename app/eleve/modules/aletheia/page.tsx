@@ -3,17 +3,17 @@ import Link from 'next/link'
 import { createClient } from '@/utils/supabase/server'
 import { createAdminClient } from '@/utils/supabase/admin'
 import SelecteurClasseEleve from '../../SelecteurClasseEleve'
-import { chargerCapstone, contexteAletheia, estSemaineDebloquee, lireReglages, livresPourClasse, travauxParSemaine } from './data'
+import { chargerCapstoneLivre, contexteAletheia, estSemaineDebloquee, lireReglages, livresPourClasse, travauxParSemaine } from './data'
 import BoutonRevelerCapstone from './BoutonRevelerCapstone'
 import PollStatut from './PollStatut'
 import type { StatutAletheia } from './types'
 
 const BADGE: Record<StatutAletheia, { texte: string; classe: string }> = {
   DRAFT: { texte: 'À commencer', classe: 'bg-stone-100 text-stone-500' },
-  V1_SUBMITTED: { texte: 'Résumé soumis', classe: 'bg-amber-50 text-amber-700' },
-  FEEDBACK1_READY: { texte: 'Retour 1 à lire', classe: 'bg-amber-50 text-amber-700' },
+  V1_SUBMITTED: { texte: 'Travail soumis', classe: 'bg-amber-50 text-amber-700' },
+  FEEDBACK1_READY: { texte: 'Retour à lire', classe: 'bg-amber-50 text-amber-700' },
   VF_SUBMITTED: { texte: 'Version finale soumise', classe: 'bg-amber-50 text-amber-700' },
-  FEEDBACK2_READY: { texte: 'Retour 2 à valider', classe: 'bg-amber-50 text-amber-700' },
+  FEEDBACK2_READY: { texte: 'Retour final à valider', classe: 'bg-amber-50 text-amber-700' },
   DONE: { texte: 'Terminée', classe: 'bg-green-50 text-green-700' },
 }
 
@@ -40,8 +40,10 @@ export default async function PageAletheia() {
   const travauxParLivre = new Map(
     await Promise.all(livres.map(async l => [l.id, await travauxParSemaine(supabase, user.id, l.id)] as const)),
   )
+  // Capstone = carte du LIVRE, partagée. L'élève ne la voit qu'après avoir lui-même
+  // tout terminé (bloc rendu sous `toutesDone`) → pas de spoiler de l'aval.
   const capstoneParLivre = new Map(
-    await Promise.all(livres.map(async l => [l.id, await chargerCapstone(supabase, user.id, l.id)] as const)),
+    await Promise.all(livres.map(async l => [l.id, await chargerCapstoneLivre(admin, l.id)] as const)),
   )
   const { deblocageSequentiel } = await lireReglages(admin)
 
@@ -54,7 +56,7 @@ export default async function PageAletheia() {
 
       <div>
         <h2 className="text-xl font-serif text-stone-900">Aletheia</h2>
-        <p className="text-sm text-stone-500 mt-1">Lis le livre dans ton exemplaire, semaine après semaine. Pour chaque semaine : résume, pose tes questions, réécris, puis lis ton retour.</p>
+        <p className="text-sm text-stone-500 mt-1">Lis le livre dans ton exemplaire, semaine après semaine. Pour chaque semaine : note l’idée principale, les arguments et ton accord, pose tes questions et ton vocabulaire, puis réécris et lis ton retour.</p>
       </div>
 
       {livres.length === 0 ? (

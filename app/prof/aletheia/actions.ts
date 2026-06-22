@@ -3,7 +3,7 @@
 import { revalidatePath } from 'next/cache'
 import { createClient } from '@/utils/supabase/server'
 import { createAdminClient } from '@/utils/supabase/admin'
-import { PROMPT_FEEDBACK_1_DEFAUT, PROMPT_FEEDBACK_2_DEFAUT, PROMPT_CAPSTONE_DEFAUT } from '@/utils/aletheia-retours'
+import { PROMPT_FEEDBACK_V1_DEFAUT, PROMPT_FEEDBACK_VF_DEFAUT, PROMPT_CAPSTONE_DEFAUT } from '@/utils/aletheia-retours'
 
 async function verifierProf() {
   const supabase = await createClient()
@@ -41,18 +41,22 @@ export async function sauvegarderPromptsAletheia(
   evalQuestions: boolean, deblocageSequentiel: boolean,
 ) {
   await verifierProf()
-  const p2 = nullSiDefaut(promptFeedback2, PROMPT_FEEDBACK_2_DEFAUT)
-  // Le retour 2 reçoit le livre ENTIER : la variable {semaine_courante_N} est la
-  // limite de divulgation. Un prompt personnalisé qui la perd ferait fuiter l'aval.
+  const p2 = nullSiDefaut(promptFeedback2, PROMPT_FEEDBACK_VF_DEFAUT)
+  // Le retour VF reçoit le livre ENTIER : {semaine_courante_N} = limite de
+  // divulgation (sans elle, l'aval fuite) ; {livre_entier} = l'ancrage (sans lui,
+  // le retour n'a plus le texte). Un prompt personnalisé doit garder les deux.
   if (p2 !== null && !p2.includes('{semaine_courante_N}')) {
-    return { error: 'Le prompt du retour 2 doit garder la variable {semaine_courante_N} (limite de divulgation : le livre entier est envoyé au modèle). Ajoute-la avant d\'enregistrer.' }
+    return { error: 'Le prompt du retour final doit garder la variable {semaine_courante_N} (limite de divulgation : le livre entier est envoyé au modèle). Ajoute-la avant d\'enregistrer.' }
+  }
+  if (p2 !== null && !p2.includes('{livre_entier}')) {
+    return { error: 'Le prompt du retour final doit garder la variable {livre_entier} (le texte d\'ancrage). Ajoute-la avant d\'enregistrer.' }
   }
   const admin = createAdminClient()
   const { error } = await admin
     .from('aletheia_params')
     .upsert({
       id: 1,
-      prompt_feedback_1: nullSiDefaut(promptFeedback1, PROMPT_FEEDBACK_1_DEFAUT),
+      prompt_feedback_1: nullSiDefaut(promptFeedback1, PROMPT_FEEDBACK_V1_DEFAUT),
       prompt_feedback_2: p2,
       prompt_capstone: nullSiDefaut(promptCapstone, PROMPT_CAPSTONE_DEFAUT),
       eval_questions_actif: evalQuestions,

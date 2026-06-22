@@ -2,15 +2,15 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { validerLectureRetour2 } from './actions'
+import { validerLectureRetourVf } from './actions'
 
 interface Props {
   livreId: string
   semaine: number
 }
 
-// Validation de lecture du retour 2 (gate de clôture de la semaine, façon Fragments).
-export default function BoutonLectureRetour2({ livreId, semaine }: Props) {
+// Validation de lecture du retour VF (gate de clôture de la semaine, façon Fragments).
+export default function BoutonLectureRetourVf({ livreId, semaine }: Props) {
   const router = useRouter()
   const [chargement, setChargement] = useState(false)
   const [erreur, setErreur] = useState<string | null>(null)
@@ -19,7 +19,7 @@ export default function BoutonLectureRetour2({ livreId, semaine }: Props) {
     setErreur(null)
     setChargement(true)
     try {
-      const res = await validerLectureRetour2(livreId, semaine)
+      const res = await validerLectureRetourVf(livreId, semaine)
       if (res?.error) { setErreur(res.error); return }
       router.refresh()
     } finally {
