@@ -4,7 +4,7 @@ import { after } from 'next/server'
 import { revalidatePath } from 'next/cache'
 import { createClient } from '@/utils/supabase/server'
 import { createAdminClient } from '@/utils/supabase/admin'
-import { contexteAletheia, livreAccessible, semaineLivre, peutAccederSemaine, toutesSemainesDone } from './data'
+import { contexteAletheia, livreAccessible, semaineLivre, peutAccederSemaine } from './data'
 import type { StatutAletheia } from './types'
 
 // Bornes serveur sur le texte élève (anti-coût : tout est injecté dans le prompt IA ;
@@ -109,6 +109,9 @@ export async function soumettreV1(livreId: string, semaine: number, saisie: Sais
   after(async () => {
     const mod = await import('@/utils/aletheia-retours')
     await mod.genererRetourV1(travailId)
+    // Diagnostic AUTOMATIQUE de la SEMAINE 1 uniquement (les suivantes = batch prof).
+    // Froid, indépendant du retour ; alimente la calibration des chapitres suivants.
+    if (semaine === 1) await mod.diagnostiquerTravail(travailId)
   })
 
   revalider(livreId, semaine)
@@ -150,9 +153,12 @@ export async function soumettreVf(livreId: string, semaine: number, vf: SaisieVf
   }).eq('id', row.id).eq('statut', 'FEEDBACK1_READY')
   if (error) return { error: error.message }
 
+  const travailId = row.id as string
   after(async () => {
     const mod = await import('@/utils/aletheia-retours')
-    await mod.genererRetourVf(row.id as string)
+    await mod.genererRetourVf(travailId)
+    // Diagnostic AUTOMATIQUE de la SEMAINE 1 (phase VF → delta V1→VF).
+    if (semaine === 1) await mod.diagnostiquerTravail(travailId)
   })
 
   revalider(livreId, semaine)
@@ -161,7 +167,8 @@ export async function soumettreVf(livreId: string, semaine: number, vf: SaisieVf
 
 // FEEDBACK2_READY → DONE. Gate de validation de lecture (façon Fragments) : la
 // semaine ne se clôt pas tant que l'élève n'a pas validé avoir lu le retour VF.
-// Si c'était la dernière semaine, on déclenche paresseusement le capstone du livre.
+// (La carte d'architecture est désormais générée par le PROF à la préparation —
+// plus aucun déclenchement côté élève ; voir app/prof/scriptorium.)
 export async function validerLectureRetourVf(livreId: string, semaine: number) {
   const { supabase, userId } = await verifierEleve()
   const admin = createAdminClient()
@@ -183,63 +190,7 @@ export async function validerLectureRetourVf(livreId: string, semaine: number) {
   }).eq('id', row.id).eq('statut', 'FEEDBACK2_READY')
   if (error) return { error: error.message }
 
-  // Capstone partagé : déclenché paresseusement quand un élève termine TOUTES ses
-  // semaines (le premier crée la carte du livre, mise en cache pour tous + le prof).
-  if (await toutesSemainesDone(admin, userId, livreId)) {
-    await declencherCapstone(admin, livreId)
-  }
-
   revalider(livreId, semaine)
-  return { success: true }
-}
-
-// Crée (si besoin) la ligne capstone du livre en PENDING et lance la génération en
-// arrière-plan. No-op si déjà READY ou PENDING (génération en cours / déjà faite).
-async function declencherCapstone(admin: ReturnType<typeof createAdminClient>, livreId: string): Promise<void> {
-  const { data: existing } = await admin
-    .from('aletheia_capstone').select('statut').eq('scriptorium_livre_id', livreId).maybeSingle()
-  if (existing?.statut === 'READY' || existing?.statut === 'PENDING') return
-  const { error } = await admin
-    .from('aletheia_capstone')
-    .upsert({ scriptorium_livre_id: livreId, statut: 'PENDING', contenu: null, erreur_at: null }, { onConflict: 'scriptorium_livre_id' })
-  if (error) { console.error('[aletheia] upsert capstone PENDING :', error); return }
-  after(async () => {
-    const mod = await import('@/utils/aletheia-retours')
-    await mod.genererCapstone(livreId)
-  })
-}
-
-// Carte d'architecture du livre (partagée). L'élève ne peut la (re)déclencher que
-// s'il a lui-même tout terminé. READY → no-op ; sinon (re)lance la génération
-// (relance utile si le job after() est mort ou si le statut est ERROR).
-export async function revelerCapstone(livreId: string) {
-  const { supabase, userId } = await verifierEleve()
-  const admin = createAdminClient()
-  const { active } = await contexteAletheia(supabase, userId)
-  if (!active || !(await livreAccessible(admin, [active.classe_id], livreId))) return { error: 'Ce livre ne t\'est pas accessible.' }
-
-  if (!(await toutesSemainesDone(admin, userId, livreId))) {
-    return { error: 'Termine toutes les semaines avant de révéler la carte.' }
-  }
-
-  const { data: existing } = await admin
-    .from('aletheia_capstone').select('statut').eq('scriptorium_livre_id', livreId).maybeSingle()
-  if (existing?.statut === 'READY') {
-    revalidatePath('/eleve/modules/aletheia')
-    return { success: true }
-  }
-
-  const { error } = await admin
-    .from('aletheia_capstone')
-    .upsert({ scriptorium_livre_id: livreId, statut: 'PENDING', contenu: null, erreur_at: null }, { onConflict: 'scriptorium_livre_id' })
-  if (error) return { error: error.message }
-
-  after(async () => {
-    const mod = await import('@/utils/aletheia-retours')
-    await mod.genererCapstone(livreId)
-  })
-
-  revalidatePath('/eleve/modules/aletheia')
   return { success: true }
 }
 

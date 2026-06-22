@@ -4,8 +4,6 @@ import { createClient } from '@/utils/supabase/server'
 import { createAdminClient } from '@/utils/supabase/admin'
 import SelecteurClasseEleve from '../../SelecteurClasseEleve'
 import { chargerCapstoneLivre, contexteAletheia, estSemaineDebloquee, lireReglages, livresPourClasse, travauxParSemaine } from './data'
-import BoutonRevelerCapstone from './BoutonRevelerCapstone'
-import PollStatut from './PollStatut'
 import type { StatutAletheia } from './types'
 
 const BADGE: Record<StatutAletheia, { texte: string; classe: string }> = {
@@ -115,6 +113,8 @@ export default async function PageAletheia() {
                 })}
               </ul>
 
+              {/* Carte d'architecture (générée par le prof) : l'élève la voit une fois
+                  qu'il a lui-même tout terminé — anti-spoiler de l'aval. */}
               {toutesDone && (
                 <div className="border-t border-stone-100 pt-3">
                   {cap?.statut === 'READY' ? (
@@ -122,18 +122,8 @@ export default async function PageAletheia() {
                       className="block w-full text-center bg-stone-800 text-white py-2.5 rounded-xl text-sm font-medium hover:bg-stone-700 transition-colors">
                       ✦ Voir la carte d&apos;architecture du livre →
                     </Link>
-                  ) : cap?.statut === 'PENDING' ? (
-                    <div className="space-y-1">
-                      <p className="text-sm text-stone-500">Ta carte d&apos;architecture est en préparation…</p>
-                      <PollStatut actif={true} />
-                      <BoutonRevelerCapstone livreId={livre.id} label="La préparation est trop longue ? Relancer" discret />
-                    </div>
                   ) : (
-                    <>
-                      <p className="text-xs text-stone-400 mb-2">Tu as terminé toutes les semaines. Révèle la vue d&apos;ensemble du livre.</p>
-                      {cap?.statut === 'ERROR' && <p className="text-sm text-red-600 mb-2">La génération a échoué. Réessaie.</p>}
-                      <BoutonRevelerCapstone livreId={livre.id} />
-                    </>
+                    <p className="text-sm text-stone-500">Tu as terminé le livre ! La carte d&apos;architecture sera bientôt disponible.</p>
                   )}
                 </div>
               )}

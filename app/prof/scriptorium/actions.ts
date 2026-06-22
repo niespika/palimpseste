@@ -1,8 +1,10 @@
 'use server'
 
+import { after } from 'next/server'
 import { revalidatePath } from 'next/cache'
 import { createClient } from '@/utils/supabase/server'
 import { createAdminClient } from '@/utils/supabase/admin'
+import type { Capstone } from '@/app/eleve/modules/aletheia/types'
 
 async function verifierProf() {
   const supabase = await createClient()
@@ -295,6 +297,10 @@ export async function ajouterLivre(formData: FormData) {
     .insert(classeIds.map(classe_id => ({ unite_id: livre.id, classe_id })))
   if (errClasses) return annuler(errClasses.message)
 
+  // Carte d'architecture + référence par chapitre : générées DÈS la préparation
+  // (SPEC §1), en arrière-plan. Le prof n'est pas bloqué ; il vérifiera/éditera.
+  await lancerGenerationArtefactsLivre(admin, livre.id as string)
+
   revalidatePath('/prof/scriptorium')
   if (semainesSansTexte.length > 0) {
     return {
@@ -428,4 +434,57 @@ export async function getUrlSignee(storagePath: string): Promise<string | null> 
   const admin = createAdminClient()
   const { data } = await admin.storage.from('scriptorium').createSignedUrl(storagePath, 3600)
   return data?.signedUrl ?? null
+}
+
+// ── Aletheia : carte d'architecture + référence (générées à la préparation) ──
+type Admin = ReturnType<typeof createAdminClient>
+
+// Pose carte + référence en PENDING (réinitialise le flag d'amendement de la carte)
+// puis lance les deux générations IA en arrière-plan. Appelé à la création du livre
+// et à la régénération prof.
+async function lancerGenerationArtefactsLivre(admin: Admin, livreId: string): Promise<void> {
+  await admin.from('aletheia_capstone').upsert(
+    { scriptorium_livre_id: livreId, statut: 'PENDING', contenu: null, erreur_at: null, amende_par_prof: false, updated_at: new Date().toISOString() },
+    { onConflict: 'scriptorium_livre_id' })
+  await admin.from('aletheia_livre_reference').upsert(
+    { scriptorium_livre_id: livreId, statut: 'PENDING', contenu: null, erreur_at: null, updated_at: new Date().toISOString() },
+    { onConflict: 'scriptorium_livre_id' })
+  after(async () => {
+    const mod = await import('@/utils/aletheia-retours')
+    await mod.genererCapstone(livreId)
+    await mod.genererReferenceLivre(livreId)
+  })
+}
+
+// Régénération IA de la carte (+ référence). Si la carte a été amendée à la main,
+// on exige une confirmation (force) pour ne pas l'écraser silencieusement (SPEC §1).
+export async function regenererCarteLivre(livreId: string, force = false): Promise<{ success?: boolean; needsConfirm?: boolean; error?: string }> {
+  await verifierProf()
+  const admin = createAdminClient()
+  const { data: cap } = await admin.from('aletheia_capstone').select('amende_par_prof').eq('scriptorium_livre_id', livreId).maybeSingle()
+  if (cap?.amende_par_prof && !force) return { needsConfirm: true }
+  await lancerGenerationArtefactsLivre(admin, livreId)
+  revalidatePath('/prof/scriptorium')
+  return { success: true }
+}
+
+// Édition manuelle de la carte par le prof : marque amende_par_prof (anti-écrasement).
+export async function enregistrerCarteLivre(livreId: string, contenu: Capstone): Promise<{ success?: boolean; error?: string }> {
+  await verifierProf()
+  const fil = (contenu?.fil_conducteur ?? '').trim()
+  const noeuds = Array.isArray(contenu?.noeuds)
+    ? contenu.noeuds.filter(n => n && typeof n.chapitre === 'string' && typeof n.idee === 'string').map(n => ({ chapitre: n.chapitre, idee: n.idee }))
+    : []
+  const liens = Array.isArray(contenu?.liens)
+    ? contenu.liens.filter(l => l && typeof l.de === 'string' && typeof l.vers === 'string' && typeof l.relation === 'string').map(l => ({ de: l.de, vers: l.vers, relation: l.relation }))
+    : []
+  if (!fil && noeuds.length === 0) return { error: 'La carte ne peut pas être vide.' }
+
+  const admin = createAdminClient()
+  const { error } = await admin.from('aletheia_capstone').upsert(
+    { scriptorium_livre_id: livreId, contenu: { fil_conducteur: fil, noeuds, liens }, statut: 'READY', erreur_at: null, amende_par_prof: true, updated_at: new Date().toISOString() },
+    { onConflict: 'scriptorium_livre_id' })
+  if (error) return { error: error.message }
+  revalidatePath('/prof/scriptorium')
+  return { success: true }
 }

@@ -3,9 +3,10 @@ import { notFound, redirect } from 'next/navigation'
 import { createClient } from '@/utils/supabase/server'
 import { createAdminClient } from '@/utils/supabase/admin'
 import { VueRetourV1, VueRetourVF } from '@/components/aletheia/VueRetours'
-import { livresDeClasse, travauxEleve, progression, STATUT_LABEL, type LivreProf } from '../../donnees'
+import { DetailDiagChapitre } from '@/components/aletheia/Diagnostic'
+import { livresDeClasse, travauxEleve, progression, chargerDiagnostics, STATUT_LABEL, type LivreProf } from '../../donnees'
 import { chargerCapstoneLivre } from '@/app/eleve/modules/aletheia/data'
-import type { TravailAletheia } from '@/app/eleve/modules/aletheia/types'
+import type { TravailAletheia, DiagnosticTravail } from '@/app/eleve/modules/aletheia/types'
 
 function Champ({ label, valeur }: { label: string; valeur: string | null | undefined }) {
   if (!valeur) return null
@@ -29,7 +30,7 @@ function ListeChamp({ label, items }: { label: string; items: string[] }) {
   )
 }
 
-function SemaineDrill({ livre, travaux }: { livre: LivreProf; travaux: Map<number, TravailAletheia> }) {
+function SemaineDrill({ livre, travaux, diag }: { livre: LivreProf; travaux: Map<number, TravailAletheia>; diag: Map<number, DiagnosticTravail> }) {
   return (
     <div className="space-y-4">
       {livre.semaines.map(s => {
@@ -80,6 +81,11 @@ function SemaineDrill({ livre, travaux }: { livre: LivreProf; travaux: Map<numbe
                       <VueRetourVF retour={t.retour_vf} />
                     </section>
                   )}
+
+                  <section className="space-y-1 border-t border-stone-100 pt-3">
+                    <h5 className="text-xs font-semibold uppercase tracking-wide text-stone-400">Diagnostic (prof — non montré à l&apos;élève)</h5>
+                    <DetailDiagChapitre d={diag.get(s.semaine)} />
+                  </section>
                 </>
               )}
             </div>
@@ -117,6 +123,10 @@ export default async function DrillDownEleveAletheia({ params }: { params: Promi
   const capstoneParLivre = new Map(
     await Promise.all(livres.map(async l => [l.id, await chargerCapstoneLivre(admin, l.id)] as const)),
   )
+  // Diagnostic (prof-only) de l'élève, par livre → semaine.
+  const diagParLivre = new Map(
+    await Promise.all(livres.map(async l => [l.id, (await chargerDiagnostics(admin, [eleveId], l.id)).get(eleveId) ?? new Map<number, DiagnosticTravail>()] as const)),
+  )
 
   return (
     <div className="space-y-6">
@@ -140,7 +150,7 @@ export default async function DrillDownEleveAletheia({ params }: { params: Promi
                 <span className="text-xs text-stone-400">{p.done}/{p.total} semaines terminées</span>
               </div>
 
-              <SemaineDrill livre={livre} travaux={travaux} />
+              <SemaineDrill livre={livre} travaux={travaux} diag={diagParLivre.get(livre.id) ?? new Map()} />
 
               <section className="bg-white border border-stone-200 border-l-4 border-l-stone-800 rounded-xl p-4">
                 <h5 className="text-sm font-medium text-stone-800 mb-2">✦ Carte d&apos;architecture du livre (partagée)</h5>
@@ -164,7 +174,7 @@ export default async function DrillDownEleveAletheia({ params }: { params: Promi
                   </div>
                 ) : (
                   <p className="text-sm text-stone-400">
-                    {cap?.statut === 'PENDING' ? 'En cours de génération…' : cap?.statut === 'ERROR' ? 'La génération a échoué.' : 'Pas encore générée (aucun élève n’a terminé le livre).'}
+                    {cap?.statut === 'PENDING' ? 'En cours de génération…' : cap?.statut === 'ERROR' ? 'La génération a échoué (régénère depuis Scriptorium).' : 'Pas encore générée — génère-la depuis Scriptorium (menu du livre).'}
                   </p>
                 )}
               </section>

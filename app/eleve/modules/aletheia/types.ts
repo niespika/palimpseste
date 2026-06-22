@@ -98,6 +98,57 @@ export interface CapstoneRow {
   contenu: Capstone | null
 }
 
+// Vue prof de la carte : éditable + marquée si amendée à la main (anti-écrasement).
+export interface CapstoneProf extends CapstoneRow {
+  amende_par_prof: boolean
+  updated_at: string | null
+}
+
+// ── Référence par chapitre (socle du diagnostic, généré au niveau livre) ──────
+export interface ReferenceChapitre {
+  semaine: number
+  titre: string
+  these_canonique: string
+  arguments_cles: string[]
+}
+export type ReferenceStatut = 'PENDING' | 'READY' | 'ERROR'
+export interface LivreReference {
+  statut: ReferenceStatut
+  contenu: ReferenceChapitre[] | null
+}
+
+// ── Diagnostic de compréhension (PROF-ONLY, jamais montré à l'élève) ──────────
+// Phase 1 (anti-halo) : inventaire ancré au texte, sans juger.
+export interface InventaireDiagnostic {
+  these_eleve: string
+  arguments_captes: string[]
+  arguments_rates: string[]
+  arguments_deformes: string[]
+  these_mal_definie: boolean
+  note: string
+}
+// Phase 2 : niveaux E→A (0-4, cf. utils/notation.ts) depuis l'inventaire seul.
+export interface NiveauxDiagnostic {
+  niveau_these: number | null
+  niveau_arguments: number | null
+  these_mal_definie: boolean
+}
+// Une ligne de diagnostic (V1 + VF → delta), telle que stockée/lue côté prof.
+export interface DiagnosticTravail {
+  travail_id: string
+  eleve_id: string
+  semaine_index: number
+  inventaire_v1: InventaireDiagnostic | null
+  niveau_these_v1: number | null
+  niveau_arguments_v1: number | null
+  these_mal_definie_v1: boolean | null
+  inventaire_vf: InventaireDiagnostic | null
+  niveau_these_vf: number | null
+  niveau_arguments_vf: number | null
+  these_mal_definie_vf: boolean | null
+  erreur_at: string | null
+}
+
 // Une semaine de planning (lecture seule, SANS PDF).
 export interface SemaineLivre {
   semaine: number

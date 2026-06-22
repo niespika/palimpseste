@@ -7,6 +7,8 @@ import FormulaireContenu from './FormulaireContenu'
 import FormulaireLivre from './FormulaireLivre'
 import EditeurClassesLivre from './EditeurClassesLivre'
 import LigneContenu, { type ContenuItem, type ImageItem } from './LigneContenu'
+import CarteArchitectureLivre from './CarteArchitectureLivre'
+import type { CapstoneProf, LivreReference } from '@/app/eleve/modules/aletheia/types'
 
 interface DocRow {
   id: string
@@ -120,6 +122,19 @@ export default async function ScriptoriumPage({
   await Promise.all(docsAffiches.filter(d => d.fichier_ref).map(async d => {
     legacyParDoc.set(d.id, await getUrlSignee(d.fichier_ref as string))
   }))
+
+  // Carte d'architecture + référence du livre sélectionné (perspective « unités »).
+  const uniteSelLivre = vue === 'unites' && uniteSel ? unitesList.find(u => u.id === uniteSel && u.type === 'livre') : undefined
+  let capstoneLivre: CapstoneProf | null = null
+  let referenceLivre: LivreReference | null = null
+  if (uniteSelLivre) {
+    const [{ data: cap }, { data: ref }] = await Promise.all([
+      supabase.from('aletheia_capstone').select('statut, contenu, amende_par_prof, updated_at').eq('scriptorium_livre_id', uniteSelLivre.id).maybeSingle(),
+      supabase.from('aletheia_livre_reference').select('statut, contenu').eq('scriptorium_livre_id', uniteSelLivre.id).maybeSingle(),
+    ])
+    capstoneLivre = (cap as CapstoneProf | null) ?? null
+    referenceLivre = (ref as LivreReference | null) ?? null
+  }
 
   function toItem(d: DocRow): ContenuItem {
     return { id: d.id, nom: d.titre, semaine: d.semaine, chapitres: d.chapitres, texte: d.texte_extrait, uniteId: d.unite_id, fichierLegacyUrl: legacyParDoc.get(d.id) ?? null }
@@ -276,6 +291,11 @@ export default async function ScriptoriumPage({
                     </details>
                   )}
                 </>
+              )}
+
+              {/* Carte d'architecture (générée à la prép) — sous les semaines, pour un livre */}
+              {uniteCourante?.type === 'livre' && (
+                <CarteArchitectureLivre livreId={uniteCourante.id} capstone={capstoneLivre} reference={referenceLivre} />
               )}
             </div>
             )
