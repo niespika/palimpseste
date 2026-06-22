@@ -1,6 +1,6 @@
 import 'server-only'
 import { createClient } from '@/utils/supabase/server'
-import { addDaysUTC, toISODate } from '@/utils/calendrier-grille'
+import { addDaysUTC, toISODate, jourParis } from '@/utils/calendrier-grille'
 
 // Agrégation LECTURE SEULE des échéances datées des modules. Le calendrier ne
 // stocke aucune échéance : il projette ce que les modules déclarent. L'édition
@@ -73,7 +73,7 @@ export async function assemblerEvenements(opts: {
     .select('id, classe_id, lance_at')
     .not('lance_at', 'is', null)
   for (const q of quizzes ?? []) {
-    const d = (q.lance_at as string).slice(0, 10)
+    const d = jourParis(q.lance_at as string) // jour local (fuseau école), pas l'UTC
     if (d < debut || d > fin) continue
     events.push({
       source_module: 'quazian',
@@ -93,7 +93,7 @@ export async function assemblerEvenements(opts: {
     .select('id, classe_id, lance_at, scriptorium_unites(label)')
     .not('lance_at', 'is', null)
   for (const s of sessions ?? []) {
-    const d = (s.lance_at as string).slice(0, 10)
+    const d = jourParis(s.lance_at as string) // jour local (fuseau école)
     if (d < debut || d > fin) continue
     const nom = (s.classe_id as string | null) ?? null
     const cid = nom ? idParNom.get(nom.toLowerCase().trim()) ?? null : null
@@ -114,7 +114,7 @@ export async function assemblerEvenements(opts: {
   //    (scriptorium_unites type='livre' : date_debut + (i)·7 → fin de semaine).
   const { data: livres } = await supabase
     .from('scriptorium_unites')
-    .select('id, label, date_debut, nb_semaines')
+    .select('id, label, date_debut')
     .eq('type', 'livre')
     .not('date_debut', 'is', null)
   const livreIds = (livres ?? []).map((l) => l.id)
@@ -127,12 +127,28 @@ export async function assemblerEvenements(opts: {
     arr.push(lc.classe_id)
     classesParLivre.set(lc.unite_id, arr)
   }
+  // Les semaines réelles du livre = ses documents (scriptorium_documents.semaine),
+  // comme la planification élève — et NON un compteur nb_semaines qui peut diverger.
+  const { data: docsLivre } = livreIds.length > 0
+    ? await supabase
+        .from('scriptorium_documents')
+        .select('unite_id, semaine')
+        .in('unite_id', livreIds)
+        .not('semaine', 'is', null)
+    : { data: [] }
+  const semainesParLivre = new Map<string, number[]>()
+  for (const d of docsLivre ?? []) {
+    const arr = semainesParLivre.get(d.unite_id as string) ?? []
+    arr.push(d.semaine as number)
+    semainesParLivre.set(d.unite_id as string, arr)
+  }
   for (const livre of livres ?? []) {
-    const n = (livre.nb_semaines as number | null) ?? 0
     const base = new Date((livre.date_debut as string) + 'T00:00:00Z')
     const cls = classesParLivre.get(livre.id) ?? []
-    for (let i = 0; i < n; i++) {
-      const d = toISODate(addDaysUTC(base, i * 7 + 6)) // fin de la semaine i de lecture
+    for (const s of semainesParLivre.get(livre.id) ?? []) {
+      // Échéance = fin de la semaine de lecture s (1-based, comme l'élève :
+      // date_debut + (s-1)·7, +6 pour le dimanche).
+      const d = toISODate(addDaysUTC(base, (s - 1) * 7 + 6))
       if (d < debut || d > fin) continue
       const cibles = cls.length > 0 ? cls : [null]
       for (const cid of cibles) {
@@ -143,7 +159,7 @@ export async function assemblerEvenements(opts: {
           classe_nom: cid ? nomParId.get(cid) ?? null : null,
           kind: 'fermeture',
           date: d,
-          label: `Aletheia — ${livre.label} (sem. ${i + 1})`,
+          label: `Aletheia — ${livre.label} (sem. ${s})`,
           is_editable: false,
         })
       }

@@ -22,6 +22,19 @@ export function toISODate(d: Date): string {
   return d.toISOString().slice(0, 10)
 }
 
+// Jour calendaire (YYYY-MM-DD) d'un instant DANS le fuseau de l'école
+// (Europe/Paris). À utiliser pour les timestamptz (lance_at…) et « aujourd'hui »,
+// où slice(0,10) sur l'UTC décalerait d'un jour en soirée / début de nuit.
+export function jourParis(d: Date | string): string {
+  const date = typeof d === 'string' ? new Date(d) : d
+  return new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'Europe/Paris',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).format(date)
+}
+
 export interface SemaineGrille {
   start: string // lundi (YYYY-MM-DD)
   end: string // dimanche

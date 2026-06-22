@@ -36,10 +36,15 @@ export default async function TableauDeBordEleve() {
   let quizzEnCoursId: string | null = null
 
   if (active) {
-    const { data: semaine } = await supabase
+    // Semaine ouverte scopée au semestre actif (évite une semaine restée ouverte
+    // d'un semestre précédent).
+    const { data: semActif } = await supabase.from('semesters').select('id').eq('is_active', true).maybeSingle()
+    let reqSemaine = supabase
       .from('fragments_semaines')
       .select('id, numero, date_limite')
       .eq('ouverte', true)
+    if (semActif?.id) reqSemaine = reqSemaine.eq('semestre_id', semActif.id)
+    const { data: semaine } = await reqSemaine
       .order('numero', { ascending: false })
       .limit(1)
       .maybeSingle()

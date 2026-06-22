@@ -79,16 +79,27 @@ export async function definirSemestreActif(id: string): Promise<{ error?: string
 export async function supprimerSemestre(id: string): Promise<{ error?: string }> {
   const { supabase } = await verifierProf()
 
-  // Refuser si des entités pédagogiques y sont rattachées (évite l'orphelinage
-  // des semaines et le cascade-delete des thèmes / synthèses). Ces FK pointent
-  // vers `semesters` après la bascule C1b ; avant, le compte sera simplement 0.
-  for (const table of ['fragments_semaines', 'fragments_themes', 'fragments_syntheses'] as const) {
+  // Refuser si des entités pédagogiques y sont rattachées : sinon la suppression
+  // CASCADE détruirait silencieusement thèmes, synthèses, épreuves d'essai (et
+  // les copies déposées par les élèves), ainsi que les notes de semestre Quazian.
+  // Tables Fragments (FK `semestre_id`).
+  for (const table of ['fragments_semaines', 'fragments_themes', 'fragments_syntheses', 'fragments_essais_epreuves'] as const) {
     const { count } = await supabase
       .from(table)
       .select('id', { count: 'exact', head: true })
       .eq('semestre_id', id)
     if ((count ?? 0) > 0) {
-      return { error: 'Ce semestre est utilisé (semaines, thèmes ou synthèses). Détache-les d\'abord.' }
+      return { error: 'Ce semestre est utilisé par Fragments (semaines, thèmes, synthèses ou épreuves). Détache-les d\'abord.' }
+    }
+  }
+  // Tables Quazian (FK `semester_id`).
+  for (const table of ['quazian_quizzes', 'quazian_semester'] as const) {
+    const { count } = await supabase
+      .from(table)
+      .select('id', { count: 'exact', head: true })
+      .eq('semester_id', id)
+    if ((count ?? 0) > 0) {
+      return { error: 'Ce semestre est utilisé par Quazian (quizz ou notes de semestre). Détache-les d\'abord.' }
     }
   }
 
@@ -114,6 +125,18 @@ export async function creerHoliday(data: {
   if (!data.start_date || !data.end_date) return { error: 'Renseigne les deux dates.' }
   if (data.end_date < data.start_date) return { error: 'La date de fin doit suivre la date de début.' }
 
+  // Borner la période aux dates du semestre (sinon des jours hors semestre sont
+  // grisés « vacances » à l'affichage).
+  const { data: sem } = await supabase
+    .from('semesters')
+    .select('start_date, end_date')
+    .eq('id', data.semester_id)
+    .maybeSingle()
+  if (!sem) return { error: 'Semestre introuvable.' }
+  if (data.start_date < sem.start_date || data.end_date > sem.end_date) {
+    return { error: 'La période doit être comprise dans les dates du semestre.' }
+  }
+
   const { error } = await supabase.from('holidays').insert({
     semester_id: data.semester_id,
     label,
@@ -135,6 +158,18 @@ export async function modifierHoliday(
   if (!label) return { error: 'Donne un libellé à la période.' }
   if (!data.start_date || !data.end_date) return { error: 'Renseigne les deux dates.' }
   if (data.end_date < data.start_date) return { error: 'La date de fin doit suivre la date de début.' }
+
+  // Borner la période aux dates du semestre auquel appartient la vacance.
+  const { data: hol } = await supabase.from('holidays').select('semester_id').eq('id', id).maybeSingle()
+  if (!hol) return { error: 'Période introuvable.' }
+  const { data: sem } = await supabase
+    .from('semesters')
+    .select('start_date, end_date')
+    .eq('id', hol.semester_id)
+    .maybeSingle()
+  if (sem && (data.start_date < sem.start_date || data.end_date > sem.end_date)) {
+    return { error: 'La période doit être comprise dans les dates du semestre.' }
+  }
 
   const { error } = await supabase
     .from('holidays')
@@ -213,8 +248,21 @@ export async function regenererSemaines(
   let ajoutees = 0
   let revues = 0
   for (const span of spans) {
-    if (span.isVac) continue // les semaines de vacances ne sont pas stockées
     const id = parDebut.get(span.start)
+    if (span.isVac) {
+      // Une semaine de travail déjà stockée qui passe en vacances (ajout/extension
+      // d'une période) : la marquer vacance + retirer son numéro pédagogique, sans
+      // la supprimer (d'éventuels dépôts restent rattachés). Pas de création.
+      if (id) {
+        const { error } = await supabase
+          .from('fragments_semaines')
+          .update({ is_vacation: true, pedagogical_number: null })
+          .eq('id', id)
+        if (error) return { error: error.message }
+        revues++
+      }
+      continue
+    }
     if (id) {
       const { error } = await supabase
         .from('fragments_semaines')

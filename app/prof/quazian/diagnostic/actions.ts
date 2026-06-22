@@ -112,14 +112,19 @@ export async function chargerDiagnosticEleve(eleveId: string) {
     .select('id')
     .eq('is_active', true)
     .maybeSingle()
-  const { data: semestre } = semActif
+  // Un élève bi-classe a UNE note de semestre par classe (unicité
+  // semester_id,classe_id,eleve_id) → on prend la meilleure note finale plutôt
+  // que maybeSingle() (qui échouerait sur 2 lignes).
+  const { data: semestreRows } = semActif
     ? await supabase
         .from('quazian_semester')
         .select('note_finale_20, note_relative_20, note_absolue_20')
         .eq('eleve_id', eleveId)
         .eq('semester_id', semActif.id)
-        .maybeSingle()
+        .order('note_finale_20', { ascending: false })
+        .limit(1)
     : { data: null }
+  const semestre = semestreRows?.[0] ?? null
 
   const nbCartesVues = etats?.length ?? 0
   const stabiliteMoyenne = etats && etats.length > 0

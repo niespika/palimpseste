@@ -38,6 +38,11 @@ export default async function SemestrePage({
 
   const classes = [...new Set((quizzes ?? []).map((q) => q.classe_id).filter(Boolean))] as string[]
 
+  // Noms des classes (les classe_id sont des uuid → résoudre pour l'affichage).
+  const { data: classesNoms } = await supabase.from('classes').select('id, nom')
+  const nomClasse = new Map((classesNoms ?? []).map((c) => [c.id as string, c.nom as string]))
+  const libelleClasse = (id: string) => nomClasse.get(id) ?? id
+
   // Notes du semestre sélectionné
   const { data: notes } = selId
     ? await supabase
@@ -116,7 +121,7 @@ export default async function SemestrePage({
                 <select name="classe" className="px-3 py-2 text-sm border border-stone-300 rounded-lg">
                   <option value="">Toutes les classes</option>
                   {classes.map((c) => (
-                    <option key={c} value={c}>{c}</option>
+                    <option key={c} value={c}>{libelleClasse(c)}</option>
                   ))}
                 </select>
               </div>
@@ -135,7 +140,7 @@ export default async function SemestrePage({
 
           {Object.entries(parClasse).map(([classe, lignes]) => (
             <section key={classe} className="mb-10">
-              <h3 className="text-sm font-medium text-stone-600 mb-3">{classe}</h3>
+              <h3 className="text-sm font-medium text-stone-600 mb-3">{libelleClasse(classe)}</h3>
               <div className="bg-white border border-stone-200 rounded-xl overflow-hidden">
                 <table className="w-full text-sm">
                   <thead>

@@ -64,11 +64,17 @@ export async function deposerCompteRendu(formData: FormData) {
   // Vérifier que la semaine est ouverte
   const { data: semaine } = await supabase
     .from('fragments_semaines')
-    .select('id, ouverte, date_limite')
+    .select('id, ouverte, date_limite, semestre_id')
     .eq('id', semaineId)
     .single()
 
   if (!semaine?.ouverte) return { error: 'Cette semaine est fermée.' }
+  // Refuser le dépôt sur une semaine hors semestre actif (semaine restée ouverte
+  // d'un semestre précédent).
+  const { data: semActifDepot } = await supabase.from('semesters').select('id').eq('is_active', true).maybeSingle()
+  if (semActifDepot && semaine.semestre_id && semaine.semestre_id !== semActifDepot.id) {
+    return { error: 'Cette semaine n’appartient pas au semestre en cours.' }
+  }
 
   const maintenant = new Date()
   const statut = maintenant > new Date(semaine.date_limite) ? 'en_retard' : 'depose'

@@ -1,6 +1,6 @@
 import 'server-only'
 import { createClient } from '@/utils/supabase/server'
-import { addDaysUTC, toISODate } from '@/utils/calendrier-grille'
+import { addDaysUTC, toISODate, jourParis } from '@/utils/calendrier-grille'
 
 // Dérivation calendrier → « à faire » (famille 2 de la spec §7) : une échéance
 // proche ENGENDRE une tâche. On n'affiche jamais l'événement nu ici (il est sur
@@ -27,7 +27,7 @@ function un<T>(x: T | T[] | null | undefined): T | null {
  */
 export async function tachesDeriveesDuCalendrier(joursAvant = 10): Promise<TacheCalendrier[]> {
   const supabase = await createClient()
-  const today = new Date().toISOString().slice(0, 10)
+  const today = jourParis(new Date())
   const fin = toISODate(addDaysUTC(new Date(today + 'T00:00:00Z'), joursAvant))
   const taches: TacheCalendrier[] = []
 

@@ -1,6 +1,6 @@
 import Link from 'next/link'
 import { createClient } from '@/utils/supabase/server'
-import { calculerGrilleSemaines } from '@/utils/calendrier-grille'
+import { calculerGrilleSemaines, jourParis } from '@/utils/calendrier-grille'
 import { assemblerEvenements } from '@/utils/calendrier-evenements'
 import { couleursParClasse } from '@/utils/calendrier-couleurs'
 
@@ -43,7 +43,7 @@ export default async function BandeCalendrier() {
   const grille = calculerGrilleSemaines(sem, hols ?? [])
 
   // Fenêtre : à partir de la semaine en cours (sinon les dernières du semestre).
-  const today = new Date().toISOString().slice(0, 10)
+  const today = jourParis(new Date())
   let startIdx = grille.findIndex((w) => w.end >= today)
   if (startIdx < 0) startIdx = Math.max(0, grille.length - NB_SEMAINES_BANDE)
   const bande = grille.slice(startIdx, startIdx + NB_SEMAINES_BANDE)

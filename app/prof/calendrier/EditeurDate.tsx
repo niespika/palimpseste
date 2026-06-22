@@ -42,7 +42,9 @@ export default function EditeurDate({
     setBusy(false)
     if (res.error) return setErreur(res.error)
     setOuvert(false)
-    router.refresh()
+    // Suivre l'événement déplacé : aller au jour cible (sinon il disparaîtrait
+    // silencieusement de la vue du jour d'origine).
+    router.push(`/prof/calendrier?vue=jour&date=${valeur}`)
   }
 
   return (

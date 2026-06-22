@@ -1,6 +1,6 @@
 import Link from 'next/link'
 import { createClient } from '@/utils/supabase/server'
-import { calculerGrilleSemaines, lundiOnOrBefore, addDaysUTC, toISODate } from '@/utils/calendrier-grille'
+import { calculerGrilleSemaines, lundiOnOrBefore, addDaysUTC, toISODate, jourParis } from '@/utils/calendrier-grille'
 import { assemblerEvenements, type CalendarEvent } from '@/utils/calendrier-evenements'
 import { coursParJour } from '@/utils/calendrier-cours'
 import { couleursParClasse } from '@/utils/calendrier-couleurs'
@@ -32,9 +32,10 @@ export default async function CalendrierVue({
 }) {
   const sp = await searchParams
   const vue: Vue = sp.vue === 'semaine' || sp.vue === 'jour' ? sp.vue : 'mois'
-  const today = new Date().toISOString().slice(0, 10)
+  const today = jourParis(new Date())
   const anchor = sp.date && /^\d{4}-\d{2}-\d{2}$/.test(sp.date) ? sp.date : today
-  const selSet = sp.classes ? new Set(sp.classes.split(',').filter(Boolean)) : null
+  // Filtre classes : absent = toutes (null) ; 'aucune' = ensemble vide ; sinon liste.
+  const selSet = sp.classes === 'aucune' ? new Set<string>() : sp.classes ? new Set(sp.classes.split(',').filter(Boolean)) : null
 
   const supabase = await createClient()
 
@@ -105,7 +106,8 @@ export default async function CalendrierVue({
     prev = toISODate(addDaysUTC(parse(debut), -7))
     next = toISODate(addDaysUTC(parse(debut), 7))
     const w = infoSemaine.get(debut)
-    titre = `Semaine ${w?.pedagogicalNumber ? `S${w.pedagogicalNumber}` : w?.isVacation ? '(vacances)' : ''} · ${fmt(debut, { day: 'numeric', month: 'short' })} – ${fmt(fin, { day: 'numeric', month: 'short' })}`
+    const prefixe = w?.pedagogicalNumber ? `S${w.pedagogicalNumber} · ` : w?.isVacation ? '(vacances) · ' : ''
+    titre = `Semaine ${prefixe}${fmt(debut, { day: 'numeric', month: 'short' })} – ${fmt(fin, { day: 'numeric', month: 'short' })}`
   } else {
     prev = toISODate(addDaysUTC(parse(anchor), -1))
     next = toISODate(addDaysUTC(parse(anchor), 1))
@@ -127,9 +129,9 @@ export default async function CalendrierVue({
       {/* Barre de contrôle */}
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-2">
-          <Link href={lien(vue, prev)} className="px-2 py-1 text-sm text-stone-500 hover:text-stone-900 border border-stone-200 rounded-lg">←</Link>
+          <Link href={lien(vue, prev)} aria-label="Période précédente" className="px-2 py-1 text-sm text-stone-500 hover:text-stone-900 border border-stone-200 rounded-lg">←</Link>
           <Link href={lien(vue, today)} className="px-3 py-1 text-sm text-stone-600 hover:text-stone-900 border border-stone-200 rounded-lg">Aujourd&apos;hui</Link>
-          <Link href={lien(vue, next)} className="px-2 py-1 text-sm text-stone-500 hover:text-stone-900 border border-stone-200 rounded-lg">→</Link>
+          <Link href={lien(vue, next)} aria-label="Période suivante" className="px-2 py-1 text-sm text-stone-500 hover:text-stone-900 border border-stone-200 rounded-lg">→</Link>
           <h3 className="text-base font-medium text-stone-900 ml-2 capitalize">{titre}</h3>
         </div>
         <div className="flex gap-1 text-sm">

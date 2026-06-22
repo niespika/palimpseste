@@ -17,12 +17,14 @@ export default function FiltreClasses({
   const pathname = usePathname()
 
   const param = sp.get('classes')
-  const selection = param ? param.split(',').filter(Boolean) : null // null = toutes
+  // null = toutes ; 'aucune' = ensemble vide ; sinon liste explicite.
+  const selection = param === 'aucune' ? [] : param ? param.split(',').filter(Boolean) : null
   const estSel = (id: string) => selection === null || selection.includes(id)
 
   function pousser(next: string[] | null) {
     const params = new URLSearchParams(sp.toString())
     if (next === null || next.length === classes.length) params.delete('classes')
+    else if (next.length === 0) params.set('classes', 'aucune') // sentinelle « rien »
     else params.set('classes', next.join(','))
     router.push(`${pathname}?${params.toString()}`)
   }
@@ -30,7 +32,7 @@ export default function FiltreClasses({
   function basculer(id: string) {
     const base = selection === null ? classes.map((c) => c.id) : [...selection]
     const next = base.includes(id) ? base.filter((x) => x !== id) : [...base, id]
-    pousser(next.length === 0 ? [] : next)
+    pousser(next)
   }
 
   if (classes.length === 0) return null

@@ -80,11 +80,14 @@ export default async function PageFragments({ searchParams }: { searchParams: Pr
   if (semCourant?.id) themeQuery = themeQuery.eq('semestre_id', semCourant.id)
   const { data: theme } = await themeQuery.maybeSingle()
 
-  // Semaine ouverte
-  const { data: semaine } = await supabase
+  // Semaine ouverte (scopée au semestre actif : sinon une semaine restée ouverte
+  // d'un semestre précédent pourrait s'afficher / être déposable).
+  let reqSemaine = supabase
     .from('fragments_semaines')
     .select('*')
     .eq('ouverte', true)
+  if (semCourant?.id) reqSemaine = reqSemaine.eq('semestre_id', semCourant.id)
+  const { data: semaine } = await reqSemaine
     .order('numero', { ascending: false })
     .limit(1)
     .maybeSingle()
