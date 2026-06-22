@@ -5,7 +5,10 @@ import { revalidatePath } from 'next/cache'
 import { createClient } from '@/utils/supabase/server'
 import { createAdminClient } from '@/utils/supabase/admin'
 import { inscriptionsClasse } from '@/utils/acces'
-import { PROMPT_FEEDBACK_V1_DEFAUT, PROMPT_FEEDBACK_VF_DEFAUT, PROMPT_CAPSTONE_DEFAUT } from '@/utils/aletheia-retours'
+import {
+  PROMPT_FEEDBACK_V1_DEFAUT, PROMPT_FEEDBACK_VF_DEFAUT, PROMPT_CAPSTONE_DEFAUT,
+  PROMPT_REFERENCE_DEFAUT, PROMPT_DIAG_INVENTAIRE_DEFAUT, PROMPT_DIAG_NIVEAU_DEFAUT,
+} from '@/utils/aletheia-retours'
 import { diagnosticEnAttente } from './donnees'
 import type { TravailAletheia, DiagnosticTravail } from '@/app/eleve/modules/aletheia/types'
 
@@ -19,17 +22,21 @@ async function verifierProf() {
 
 export async function lirePromptsAletheia(): Promise<{
   prompt_feedback_1: string | null; prompt_feedback_2: string | null; prompt_capstone: string | null
+  prompt_reference: string | null; prompt_diag_inventaire: string | null; prompt_diag_niveau: string | null
   eval_questions_actif: boolean; deblocage_sequentiel: boolean
 }> {
   await verifierProf()
   const admin = createAdminClient()
   const { data } = await admin.from('aletheia_params')
-    .select('prompt_feedback_1, prompt_feedback_2, prompt_capstone, eval_questions_actif, deblocage_sequentiel')
+    .select('prompt_feedback_1, prompt_feedback_2, prompt_capstone, prompt_reference, prompt_diag_inventaire, prompt_diag_niveau, eval_questions_actif, deblocage_sequentiel')
     .eq('id', 1).maybeSingle()
   return {
     prompt_feedback_1: data?.prompt_feedback_1 ?? null,
     prompt_feedback_2: data?.prompt_feedback_2 ?? null,
     prompt_capstone: data?.prompt_capstone ?? null,
+    prompt_reference: data?.prompt_reference ?? null,
+    prompt_diag_inventaire: data?.prompt_diag_inventaire ?? null,
+    prompt_diag_niveau: data?.prompt_diag_niveau ?? null,
     eval_questions_actif: !!data?.eval_questions_actif,
     deblocage_sequentiel: !!data?.deblocage_sequentiel,
   }
@@ -40,12 +47,15 @@ export async function lirePromptsAletheia(): Promise<{
 const nullSiDefaut = (valeur: string, defaut: string): string | null =>
   valeur.trim() && valeur.trim() !== defaut.trim() ? valeur : null
 
-export async function sauvegarderPromptsAletheia(
-  promptFeedback1: string, promptFeedback2: string, promptCapstone: string,
-  evalQuestions: boolean, deblocageSequentiel: boolean,
-) {
+export interface PromptsAletheia {
+  promptFeedback1: string; promptFeedback2: string; promptCapstone: string
+  promptReference: string; promptDiagInventaire: string; promptDiagNiveau: string
+  evalQuestions: boolean; deblocageSequentiel: boolean
+}
+
+export async function sauvegarderPromptsAletheia(p: PromptsAletheia) {
   await verifierProf()
-  const p2 = nullSiDefaut(promptFeedback2, PROMPT_FEEDBACK_VF_DEFAUT)
+  const p2 = nullSiDefaut(p.promptFeedback2, PROMPT_FEEDBACK_VF_DEFAUT)
   // Le retour VF reçoit le livre ENTIER : {semaine_courante_N} = limite de
   // divulgation (sans elle, l'aval fuite) ; {livre_entier} = l'ancrage (sans lui,
   // le retour n'a plus le texte). Un prompt personnalisé doit garder les deux.
@@ -55,16 +65,34 @@ export async function sauvegarderPromptsAletheia(
   if (p2 !== null && !p2.includes('{livre_entier}')) {
     return { error: 'Le prompt du retour final doit garder la variable {livre_entier} (le texte d\'ancrage). Ajoute-la avant d\'enregistrer.' }
   }
+  // Variables critiques des prompts référence / diagnostic (sans elles, l'artefact n'a plus sa source).
+  const pRef = nullSiDefaut(p.promptReference, PROMPT_REFERENCE_DEFAUT)
+  if (pRef !== null && !pRef.includes('{livre_entier}')) {
+    return { error: 'Le prompt de la référence doit garder la variable {livre_entier} (le texte du livre).' }
+  }
+  const pInv = nullSiDefaut(p.promptDiagInventaire, PROMPT_DIAG_INVENTAIRE_DEFAUT)
+  if (pInv !== null && !pInv.includes('{texte_semaine}')) {
+    return { error: 'Le prompt d\'inventaire du diagnostic doit garder la variable {texte_semaine} (le texte du chapitre).' }
+  }
+  const pNiv = nullSiDefaut(p.promptDiagNiveau, PROMPT_DIAG_NIVEAU_DEFAUT)
+  // Anti-halo : la phase 2 doit recevoir l'inventaire (et JAMAIS la prose).
+  if (pNiv !== null && !pNiv.includes('{inventaire}')) {
+    return { error: 'Le prompt de niveau du diagnostic doit garder la variable {inventaire} (anti-halo : il juge depuis l\'inventaire, pas la prose).' }
+  }
+
   const admin = createAdminClient()
   const { error } = await admin
     .from('aletheia_params')
     .upsert({
       id: 1,
-      prompt_feedback_1: nullSiDefaut(promptFeedback1, PROMPT_FEEDBACK_V1_DEFAUT),
+      prompt_feedback_1: nullSiDefaut(p.promptFeedback1, PROMPT_FEEDBACK_V1_DEFAUT),
       prompt_feedback_2: p2,
-      prompt_capstone: nullSiDefaut(promptCapstone, PROMPT_CAPSTONE_DEFAUT),
-      eval_questions_actif: evalQuestions,
-      deblocage_sequentiel: deblocageSequentiel,
+      prompt_capstone: nullSiDefaut(p.promptCapstone, PROMPT_CAPSTONE_DEFAUT),
+      prompt_reference: pRef,
+      prompt_diag_inventaire: pInv,
+      prompt_diag_niveau: pNiv,
+      eval_questions_actif: p.evalQuestions,
+      deblocage_sequentiel: p.deblocageSequentiel,
       updated_at: new Date().toISOString(),
     }, { onConflict: 'id' })
   if (error) return { error: error.message }

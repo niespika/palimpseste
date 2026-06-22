@@ -8,7 +8,7 @@ import FormulaireLivre from './FormulaireLivre'
 import EditeurClassesLivre from './EditeurClassesLivre'
 import LigneContenu, { type ContenuItem, type ImageItem } from './LigneContenu'
 import CarteArchitectureLivre from './CarteArchitectureLivre'
-import type { CapstoneProf, LivreReference } from '@/app/eleve/modules/aletheia/types'
+import type { CapstoneProf, LivreReferenceProf } from '@/app/eleve/modules/aletheia/types'
 
 interface DocRow {
   id: string
@@ -126,14 +126,20 @@ export default async function ScriptoriumPage({
   // Carte d'architecture + référence du livre sélectionné (perspective « unités »).
   const uniteSelLivre = vue === 'unites' && uniteSel ? unitesList.find(u => u.id === uniteSel && u.type === 'livre') : undefined
   let capstoneLivre: CapstoneProf | null = null
-  let referenceLivre: LivreReference | null = null
+  let referenceLivre: LivreReferenceProf | null = null
+  // Squelette des semaines (semaine + titre) pour amender une référence absente.
+  const semainesLivre = uniteSelLivre
+    ? docs.filter(d => d.unite_id === uniteSelLivre.id && d.semaine != null)
+        .map(d => ({ semaine: d.semaine as number, titre: d.titre }))
+        .sort((a, b) => a.semaine - b.semaine)
+    : []
   if (uniteSelLivre) {
     const [{ data: cap }, { data: ref }] = await Promise.all([
       supabase.from('aletheia_capstone').select('statut, contenu, amende_par_prof, updated_at').eq('scriptorium_livre_id', uniteSelLivre.id).maybeSingle(),
-      supabase.from('aletheia_livre_reference').select('statut, contenu').eq('scriptorium_livre_id', uniteSelLivre.id).maybeSingle(),
+      supabase.from('aletheia_livre_reference').select('statut, contenu, amende_par_prof, updated_at').eq('scriptorium_livre_id', uniteSelLivre.id).maybeSingle(),
     ])
     capstoneLivre = (cap as CapstoneProf | null) ?? null
-    referenceLivre = (ref as LivreReference | null) ?? null
+    referenceLivre = (ref as LivreReferenceProf | null) ?? null
   }
 
   function toItem(d: DocRow): ContenuItem {
@@ -295,7 +301,7 @@ export default async function ScriptoriumPage({
 
               {/* Carte d'architecture (générée à la prép) — sous les semaines, pour un livre */}
               {uniteCourante?.type === 'livre' && (
-                <CarteArchitectureLivre livreId={uniteCourante.id} capstone={capstoneLivre} reference={referenceLivre} />
+                <CarteArchitectureLivre livreId={uniteCourante.id} capstone={capstoneLivre} reference={referenceLivre} semaines={semainesLivre} />
               )}
             </div>
             )

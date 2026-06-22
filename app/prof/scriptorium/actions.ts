@@ -4,7 +4,7 @@ import { after } from 'next/server'
 import { revalidatePath } from 'next/cache'
 import { createClient } from '@/utils/supabase/server'
 import { createAdminClient } from '@/utils/supabase/admin'
-import type { Capstone } from '@/app/eleve/modules/aletheia/types'
+import type { Capstone, ReferenceChapitre } from '@/app/eleve/modules/aletheia/types'
 
 async function verifierProf() {
   const supabase = await createClient()
@@ -439,31 +439,46 @@ export async function getUrlSignee(storagePath: string): Promise<string | null> 
 // ── Aletheia : carte d'architecture + référence (générées à la préparation) ──
 type Admin = ReturnType<typeof createAdminClient>
 
-// Pose carte + référence en PENDING (réinitialise le flag d'amendement de la carte)
-// puis lance les deux générations IA en arrière-plan. Appelé à la création du livre
-// et à la régénération prof.
-async function lancerGenerationArtefactsLivre(admin: Admin, livreId: string): Promise<void> {
+// Pose la carte en PENDING (réinitialise son flag d'amendement) + lance la génération IA.
+async function lancerGenerationCapstone(admin: Admin, livreId: string): Promise<void> {
   await admin.from('aletheia_capstone').upsert(
     { scriptorium_livre_id: livreId, statut: 'PENDING', contenu: null, erreur_at: null, amende_par_prof: false, updated_at: new Date().toISOString() },
     { onConflict: 'scriptorium_livre_id' })
-  await admin.from('aletheia_livre_reference').upsert(
-    { scriptorium_livre_id: livreId, statut: 'PENDING', contenu: null, erreur_at: null, updated_at: new Date().toISOString() },
-    { onConflict: 'scriptorium_livre_id' })
-  after(async () => {
-    const mod = await import('@/utils/aletheia-retours')
-    await mod.genererCapstone(livreId)
-    await mod.genererReferenceLivre(livreId)
-  })
+  after(async () => { const mod = await import('@/utils/aletheia-retours'); await mod.genererCapstone(livreId) })
 }
 
-// Régénération IA de la carte (+ référence). Si la carte a été amendée à la main,
-// on exige une confirmation (force) pour ne pas l'écraser silencieusement (SPEC §1).
+// Pose la référence en PENDING (réinitialise son flag d'amendement) + lance la génération IA.
+async function lancerGenerationReference(admin: Admin, livreId: string): Promise<void> {
+  await admin.from('aletheia_livre_reference').upsert(
+    { scriptorium_livre_id: livreId, statut: 'PENDING', contenu: null, erreur_at: null, amende_par_prof: false, updated_at: new Date().toISOString() },
+    { onConflict: 'scriptorium_livre_id' })
+  after(async () => { const mod = await import('@/utils/aletheia-retours'); await mod.genererReferenceLivre(livreId) })
+}
+
+// Création du livre : génère carte ET référence (en arrière-plan).
+async function lancerGenerationArtefactsLivre(admin: Admin, livreId: string): Promise<void> {
+  await lancerGenerationCapstone(admin, livreId)
+  await lancerGenerationReference(admin, livreId)
+}
+
+// Régénération IA de la CARTE seule. Confirmation si elle a été amendée à la main.
 export async function regenererCarteLivre(livreId: string, force = false): Promise<{ success?: boolean; needsConfirm?: boolean; error?: string }> {
   await verifierProf()
   const admin = createAdminClient()
   const { data: cap } = await admin.from('aletheia_capstone').select('amende_par_prof').eq('scriptorium_livre_id', livreId).maybeSingle()
   if (cap?.amende_par_prof && !force) return { needsConfirm: true }
-  await lancerGenerationArtefactsLivre(admin, livreId)
+  await lancerGenerationCapstone(admin, livreId)
+  revalidatePath('/prof/scriptorium')
+  return { success: true }
+}
+
+// Régénération IA de la RÉFÉRENCE seule. Confirmation si elle a été amendée à la main.
+export async function regenererReferenceLivre(livreId: string, force = false): Promise<{ success?: boolean; needsConfirm?: boolean; error?: string }> {
+  await verifierProf()
+  const admin = createAdminClient()
+  const { data: ref } = await admin.from('aletheia_livre_reference').select('amende_par_prof').eq('scriptorium_livre_id', livreId).maybeSingle()
+  if (ref?.amende_par_prof && !force) return { needsConfirm: true }
+  await lancerGenerationReference(admin, livreId)
   revalidatePath('/prof/scriptorium')
   return { success: true }
 }
@@ -483,6 +498,31 @@ export async function enregistrerCarteLivre(livreId: string, contenu: Capstone):
   const admin = createAdminClient()
   const { error } = await admin.from('aletheia_capstone').upsert(
     { scriptorium_livre_id: livreId, contenu: { fil_conducteur: fil, noeuds, liens }, statut: 'READY', erreur_at: null, amende_par_prof: true, updated_at: new Date().toISOString() },
+    { onConflict: 'scriptorium_livre_id' })
+  if (error) return { error: error.message }
+  revalidatePath('/prof/scriptorium')
+  return { success: true }
+}
+
+// Édition manuelle de la RÉFÉRENCE par chapitre (socle du diagnostic). Marque
+// amende_par_prof (anti-écrasement IA). Le prof corrige thèse canonique / arguments.
+export async function enregistrerReferenceLivre(livreId: string, contenu: ReferenceChapitre[]): Promise<{ success?: boolean; error?: string }> {
+  await verifierProf()
+  const chapitres = Array.isArray(contenu)
+    ? contenu
+        .filter(c => c && Number.isInteger(c.semaine))
+        .map(c => ({
+          semaine: c.semaine,
+          titre: (c.titre ?? '').trim(),
+          these_canonique: (c.these_canonique ?? '').trim(),
+          arguments_cles: Array.isArray(c.arguments_cles) ? c.arguments_cles.map(a => (a ?? '').trim()).filter(Boolean) : [],
+        }))
+    : []
+  if (chapitres.length === 0) return { error: 'La référence ne peut pas être vide.' }
+
+  const admin = createAdminClient()
+  const { error } = await admin.from('aletheia_livre_reference').upsert(
+    { scriptorium_livre_id: livreId, contenu: chapitres, statut: 'READY', erreur_at: null, amende_par_prof: true, updated_at: new Date().toISOString() },
     { onConflict: 'scriptorium_livre_id' })
   if (error) return { error: error.message }
   revalidatePath('/prof/scriptorium')

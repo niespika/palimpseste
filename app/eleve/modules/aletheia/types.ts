@@ -116,6 +116,11 @@ export interface LivreReference {
   statut: ReferenceStatut
   contenu: ReferenceChapitre[] | null
 }
+// Vue prof de la référence : éditable + marquée si amendée à la main.
+export interface LivreReferenceProf extends LivreReference {
+  amende_par_prof: boolean
+  updated_at: string | null
+}
 
 // ── Diagnostic de compréhension (PROF-ONLY, jamais montré à l'élève) ──────────
 // Phase 1 (anti-halo) : inventaire ancré au texte, sans juger.

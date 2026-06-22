@@ -30,11 +30,14 @@ create table if not exists aletheia_livre_reference (
   scriptorium_livre_id uuid not null references scriptorium_unites(id) on delete cascade,
   statut               text not null default 'PENDING' check (statut in ('PENDING','READY','ERROR')),
   contenu              jsonb,
+  amende_par_prof      boolean not null default false,  -- éditée à la main → pas d'écrasement IA silencieux
   erreur_at            timestamptz,
   created_at           timestamptz not null default now(),
   updated_at           timestamptz not null default now(),
   unique (scriptorium_livre_id)
 );
+-- Idempotent si la table préexistait sans la colonne.
+alter table aletheia_livre_reference add column if not exists amende_par_prof boolean not null default false;
 create index if not exists idx_aletheia_livre_reference_livre on aletheia_livre_reference(scriptorium_livre_id);
 
 alter table aletheia_livre_reference enable row level security;
@@ -84,5 +87,14 @@ create policy aletheia_diagnostic_prof_all on aletheia_diagnostic
   for all
   using (exists (select 1 from profiles p where p.id = auth.uid() and p.role = 'prof'))
   with check (exists (select 1 from profiles p where p.id = auth.uid() and p.role = 'prof'));
+
+-- ── 4. Prompts éditables (référence + 2 phases du diagnostic) ────────────────
+-- aletheia_params existe déjà (lot3). On y ajoute l'override des prompts de la
+-- référence et du diagnostic, comme pour les 3 prompts de retours. null = défaut
+-- du code (utils/aletheia-retours.ts).
+alter table aletheia_params
+  add column if not exists prompt_reference       text,
+  add column if not exists prompt_diag_inventaire text,
+  add column if not exists prompt_diag_niveau     text;
 
 commit;

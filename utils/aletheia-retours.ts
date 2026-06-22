@@ -641,8 +641,9 @@ export async function genererReferenceLivre(livreId: string): Promise<void> {
     const livreEntier = await assemblerAncrageLivre(admin, livreId)
     if (!livreEntier.trim()) { await echec(); return }
     const structure = await assemblerStructureSemaines(admin, livreId)
+    const { data: params } = await admin.from('aletheia_params').select('prompt_reference').eq('id', 1).maybeSingle()
 
-    const prompt = injecter(PROMPT_REFERENCE_DEFAUT, { livre_entier: livreEntier, structure_semaines: structure })
+    const prompt = injecter(params?.prompt_reference?.trim() || PROMPT_REFERENCE_DEFAUT, { livre_entier: livreEntier, structure_semaines: structure })
     const client = new Anthropic()
     const response = await client.messages.create({ model: MODELE, max_tokens: 4096, messages: [{ role: 'user', content: prompt }] })
     if (response.stop_reason === 'max_tokens') throw new Error('Réponse tronquée (max_tokens).')
@@ -652,8 +653,9 @@ export async function genererReferenceLivre(livreId: string): Promise<void> {
     const chapitres = parseReference(parsed.chapitres)
     if (chapitres.length === 0) throw new Error('Référence vide.')
 
+    // Régénération IA → reprend la main (annule un amendement manuel précédent).
     await admin.from('aletheia_livre_reference')
-      .update({ contenu: chapitres, statut: 'READY', erreur_at: null, updated_at: new Date().toISOString() })
+      .update({ contenu: chapitres, statut: 'READY', erreur_at: null, amende_par_prof: false, updated_at: new Date().toISOString() })
       .eq('scriptorium_livre_id', livreId).eq('statut', 'PENDING')
   } catch (err) {
     console.error('[aletheia] génération référence :', err)
@@ -749,9 +751,10 @@ const parseInventaire = (x: Partial<InventaireDiagnostic> | null | undefined): I
 // (V1 ou VF) d'un travail. La référence du chapitre sert UNIQUEMENT la phase 2.
 async function diagnostiquerPhase(
   client: Anthropic, texteSemaine: string, ref: ReferenceChapitre | null, these: string, args: string,
+  prompts: { inventaire: string; niveau: string },
 ): Promise<{ inventaire: InventaireDiagnostic; niveaux: NiveauxDiagnostic }> {
   // Phase 1 — inventaire (lit le texte + la prose élève).
-  const pInv = injecter(PROMPT_DIAG_INVENTAIRE_DEFAUT, {
+  const pInv = injecter(prompts.inventaire, {
     texte_semaine: texteSemaine,
     these: sansDelims(these) || '(rien)',
     arguments: sansDelims(args) || '(rien)',
@@ -761,7 +764,7 @@ async function diagnostiquerPhase(
   const inventaire = parseInventaire(JSON.parse(extraireJSON(rInv.content[0]?.type === 'text' ? rInv.content[0].text : '')) as Partial<InventaireDiagnostic>)
 
   // Phase 2 — niveau (depuis l'inventaire SEUL + la référence ; PAS la prose).
-  const pNiv = injecter(PROMPT_DIAG_NIVEAU_DEFAUT, {
+  const pNiv = injecter(prompts.niveau, {
     ref_these: ref?.these_canonique || '(référence indisponible — juge depuis l\'inventaire seul)',
     ref_arguments: ref && ref.arguments_cles.length > 0 ? ref.arguments_cles.map(a => `- ${a}`).join('\n') : '(référence indisponible)',
     inventaire: JSON.stringify({
@@ -811,18 +814,23 @@ export async function diagnostiquerTravail(travailId: string): Promise<void> {
     const texteSemaine = await assemblerAncrageSemaine(admin, livreId, semaine)
     if (!texteSemaine.trim()) throw new Error('Texte de la semaine indisponible (diagnostic impossible).')
     const ref = await chargerReferenceChapitre(admin, livreId, semaine)
+    const { data: params } = await admin.from('aletheia_params').select('prompt_diag_inventaire, prompt_diag_niveau').eq('id', 1).maybeSingle()
+    const prompts = {
+      inventaire: params?.prompt_diag_inventaire?.trim() || PROMPT_DIAG_INVENTAIRE_DEFAUT,
+      niveau: params?.prompt_diag_niveau?.trim() || PROMPT_DIAG_NIVEAU_DEFAUT,
+    }
     const client = new Anthropic()
 
     const patch: Record<string, unknown> = { ...base, erreur_at: null, updated_at: new Date().toISOString() }
     if (faireV1) {
-      const r = await diagnostiquerPhase(client, texteSemaine, ref, txt(t.these), txt(t.arguments))
+      const r = await diagnostiquerPhase(client, texteSemaine, ref, txt(t.these), txt(t.arguments), prompts)
       patch.inventaire_v1 = r.inventaire
       patch.niveau_these_v1 = r.niveaux.niveau_these
       patch.niveau_arguments_v1 = r.niveaux.niveau_arguments
       patch.these_mal_definie_v1 = r.niveaux.these_mal_definie
     }
     if (faireVf) {
-      const r = await diagnostiquerPhase(client, texteSemaine, ref, txt(t.these_vf), txt(t.arguments_vf))
+      const r = await diagnostiquerPhase(client, texteSemaine, ref, txt(t.these_vf), txt(t.arguments_vf), prompts)
       patch.inventaire_vf = r.inventaire
       patch.niveau_these_vf = r.niveaux.niveau_these
       patch.niveau_arguments_vf = r.niveaux.niveau_arguments

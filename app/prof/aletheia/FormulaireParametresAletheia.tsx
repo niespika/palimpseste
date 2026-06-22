@@ -4,36 +4,55 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { sauvegarderPromptsAletheia } from './actions'
 
-interface Props {
-  promptFeedback1Initial: string
-  promptFeedback1Defaut: string
-  promptFeedback2Initial: string
-  promptFeedback2Defaut: string
-  promptCapstoneInitial: string
-  promptCapstoneDefaut: string
-  evalQuestionsInitial: boolean
-  deblocageSequentielInitial: boolean
+interface Initial {
+  prompt_feedback_1: string | null; prompt_feedback_2: string | null; prompt_capstone: string | null
+  prompt_reference: string | null; prompt_diag_inventaire: string | null; prompt_diag_niveau: string | null
+  eval_questions_actif: boolean; deblocage_sequentiel: boolean
+}
+interface Defauts {
+  feedback1: string; feedback2: string; capstone: string
+  reference: string; diagInventaire: string; diagNiveau: string
 }
 
 const TEXTAREA = 'w-full px-3 py-2 border border-stone-200 rounded-xl text-sm font-mono focus:outline-none focus:ring-2 focus:ring-blue-400 resize-y text-stone-900'
 
-export default function FormulaireParametresAletheia({
-  promptFeedback1Initial, promptFeedback1Defaut, promptFeedback2Initial, promptFeedback2Defaut, promptCapstoneInitial, promptCapstoneDefaut,
-  evalQuestionsInitial, deblocageSequentielInitial,
-}: Props) {
+function BlocPrompt({ label, value, onChange, defaut, hint, rows = 18, warn }: {
+  label: string; value: string; onChange: (v: string) => void; defaut: string; hint: React.ReactNode; rows?: number; warn?: React.ReactNode
+}) {
+  return (
+    <div>
+      <div className="flex items-center justify-between mb-2">
+        <label className="text-sm font-medium text-stone-700">{label}</label>
+        <button type="button" onClick={() => onChange(defaut)} className="text-xs text-stone-500 hover:text-stone-700 underline">Restaurer la version par défaut</button>
+      </div>
+      <p className="text-xs text-stone-400 mb-2">{hint}</p>
+      {warn && <p className="text-xs text-red-600 mb-2">{warn}</p>}
+      <textarea value={value} onChange={e => onChange(e.target.value)} rows={rows} className={TEXTAREA} />
+    </div>
+  )
+}
+
+export default function FormulaireParametresAletheia({ initial, defauts }: { initial: Initial; defauts: Defauts }) {
   const router = useRouter()
-  const [p1, setP1] = useState(promptFeedback1Initial || promptFeedback1Defaut)
-  const [p2, setP2] = useState(promptFeedback2Initial || promptFeedback2Defaut)
-  const [pC, setPC] = useState(promptCapstoneInitial || promptCapstoneDefaut)
-  const [evalQuestions, setEvalQuestions] = useState(evalQuestionsInitial)
-  const [deblocageSequentiel, setDeblocageSequentiel] = useState(deblocageSequentielInitial)
+  const [p1, setP1] = useState(initial.prompt_feedback_1 || defauts.feedback1)
+  const [p2, setP2] = useState(initial.prompt_feedback_2 || defauts.feedback2)
+  const [pC, setPC] = useState(initial.prompt_capstone || defauts.capstone)
+  const [pRef, setPRef] = useState(initial.prompt_reference || defauts.reference)
+  const [pInv, setPInv] = useState(initial.prompt_diag_inventaire || defauts.diagInventaire)
+  const [pNiv, setPNiv] = useState(initial.prompt_diag_niveau || defauts.diagNiveau)
+  const [evalQuestions, setEvalQuestions] = useState(initial.eval_questions_actif)
+  const [deblocageSequentiel, setDeblocageSequentiel] = useState(initial.deblocage_sequentiel)
   const [enregistrement, setEnregistrement] = useState(false)
   const [message, setMessage] = useState<{ type: 'ok' | 'err'; texte: string } | null>(null)
 
   async function handleSauvegarder() {
     setEnregistrement(true)
     setMessage(null)
-    const res = await sauvegarderPromptsAletheia(p1, p2, pC, evalQuestions, deblocageSequentiel)
+    const res = await sauvegarderPromptsAletheia({
+      promptFeedback1: p1, promptFeedback2: p2, promptCapstone: pC,
+      promptReference: pRef, promptDiagInventaire: pInv, promptDiagNiveau: pNiv,
+      evalQuestions, deblocageSequentiel,
+    })
     setEnregistrement(false)
     if (res.error) setMessage({ type: 'err', texte: res.error })
     else {
@@ -46,53 +65,44 @@ export default function FormulaireParametresAletheia({
   return (
     <div className="space-y-8">
       <div className="bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 text-sm text-amber-800">
-        Prompts des retours IA d&apos;Aletheia. Enregistrer un prompt identique au défaut revient à utiliser le défaut (et ses évolutions futures).
+        Prompts IA d&apos;Aletheia. Enregistrer un prompt identique au défaut revient à utiliser le défaut (et ses évolutions futures).
       </div>
 
-      <div>
-        <div className="flex items-center justify-between mb-2">
-          <label className="text-sm font-medium text-stone-700">Retour V1 — socratique, par section (5 champs)</label>
-          <button type="button" onClick={() => setP1(promptFeedback1Defaut)} className="text-xs text-stone-500 hover:text-stone-700 underline">
-            Restaurer la version par défaut
-          </button>
-        </div>
-        <p className="text-xs text-stone-400 mb-2">
-          Variables : <code>{'{texte_unite}'}</code>, <code>{'{these_eleve}'}</code>, <code>{'{arguments_eleve}'}</code>, <code>{'{accord_eleve}'}</code>, <code>{'{questions_eleve}'}</code>, <code>{'{vocabulaire_eleve}'}</code>, <code>{'{syntheses_precedentes}'}</code>.
-          Sortie JSON <code>{'{ relances, accord, reponses_questions, vocabulaire:[{terme,definition}], remarque_questions }'}</code>.
-        </p>
-        <textarea value={p1} onChange={e => setP1(e.target.value)} rows={20} className={TEXTAREA} />
-      </div>
+      <h4 className="text-sm font-semibold text-stone-600 border-b border-stone-200 pb-1">Retours élève &amp; carte</h4>
 
-      <div>
-        <div className="flex items-center justify-between mb-2">
-          <label className="text-sm font-medium text-stone-700">Retour final (VF) — reconstruction + architecture (livre entier)</label>
-          <button type="button" onClick={() => setP2(promptFeedback2Defaut)} className="text-xs text-stone-500 hover:text-stone-700 underline">
-            Restaurer la version par défaut
-          </button>
-        </div>
-        <p className="text-xs text-stone-400 mb-2">
-          Variables : <code>{'{livre_entier}'}</code>, <code>{'{these_initiale}'}</code>, <code>{'{arguments_initiale}'}</code>, <code>{'{accord_initial}'}</code>, <code>{'{these_vf}'}</code>, <code>{'{arguments_vf}'}</code>, <code>{'{accord_vf}'}</code>, <code>{'{syntheses_precedentes}'}</code>, <code>{'{architectures_precedentes}'}</code>, <code>{'{semaine_courante_N}'}</code>, <code>{'{total_semaines}'}</code>.
-          Sortie JSON <code>{'{ synthese_modele, ajouts_verifies:[{extrait,ancre,note}], nuances_et_erreurs, architecture_amont, architecture_aval_jalons }'}</code>.
-        </p>
-        <p className="text-xs text-red-600 mb-2">
-          ⚠️ Le <strong>livre entier</strong> est envoyé au modèle. Ton prompt DOIT garder la consigne de non-divulgation de l&apos;aval et la variable <code>{'{semaine_courante_N}'}</code>, sinon la suite du livre risque d&apos;être divulguée à l&apos;élève.
-        </p>
-        <textarea value={p2} onChange={e => setP2(e.target.value)} rows={22} className={TEXTAREA} />
-      </div>
+      <BlocPrompt
+        label="Retour V1 — socratique, par section (5 champs)" value={p1} onChange={setP1} defaut={defauts.feedback1} rows={20}
+        hint={<>Variables : <code>{'{texte_unite}'}</code>, <code>{'{these_eleve}'}</code>, <code>{'{arguments_eleve}'}</code>, <code>{'{accord_eleve}'}</code>, <code>{'{questions_eleve}'}</code>, <code>{'{vocabulaire_eleve}'}</code>, <code>{'{syntheses_precedentes}'}</code>, <code>{'{trajectoire_diagnostic}'}</code> (calibration). Sortie JSON <code>{'{ relances, accord, reponses_questions, vocabulaire:[{terme,definition}], remarque_questions }'}</code>.</>}
+      />
 
-      <div>
-        <div className="flex items-center justify-between mb-2">
-          <label className="text-sm font-medium text-stone-700">Capstone — carte d&apos;architecture finale</label>
-          <button type="button" onClick={() => setPC(promptCapstoneDefaut)} className="text-xs text-stone-500 hover:text-stone-700 underline">
-            Restaurer la version par défaut
-          </button>
-        </div>
-        <p className="text-xs text-stone-400 mb-2">
-          Variables : <code>{'{livre_entier}'}</code>, <code>{'{structure_semaines}'}</code>.
-          Sortie JSON <code>{'{ fil_conducteur, noeuds:[{chapitre,idee}], liens:[{de,vers,relation}] }'}</code>. Carte <strong>canonique</strong> (par livre, partagée) : elle ne dépend plus d&apos;un parcours élève ; tous les liens aval sont révélés.
-        </p>
-        <textarea value={pC} onChange={e => setPC(e.target.value)} rows={20} className={TEXTAREA} />
-      </div>
+      <BlocPrompt
+        label="Retour final (VF) — reconstruction + architecture (livre entier)" value={p2} onChange={setP2} defaut={defauts.feedback2} rows={22}
+        warn={<>⚠️ Le <strong>livre entier</strong> est envoyé au modèle. Garde la consigne de non-divulgation de l&apos;aval et les variables <code>{'{semaine_courante_N}'}</code> et <code>{'{livre_entier}'}</code>.</>}
+        hint={<>Variables : <code>{'{livre_entier}'}</code>, <code>{'{these_initiale}'}</code>, <code>{'{arguments_initiale}'}</code>, <code>{'{accord_initial}'}</code>, <code>{'{these_vf}'}</code>, <code>{'{arguments_vf}'}</code>, <code>{'{accord_vf}'}</code>, <code>{'{syntheses_precedentes}'}</code>, <code>{'{architectures_precedentes}'}</code>, <code>{'{trajectoire_diagnostic}'}</code>, <code>{'{semaine_courante_N}'}</code>, <code>{'{total_semaines}'}</code>. Sortie JSON <code>{'{ synthese_modele, ajouts_verifies, nuances_et_erreurs, architecture_amont, architecture_aval_jalons }'}</code>.</>}
+      />
+
+      <BlocPrompt
+        label="Carte d'architecture (capstone) — canonique, par livre" value={pC} onChange={setPC} defaut={defauts.capstone} rows={18}
+        hint={<>Variables : <code>{'{livre_entier}'}</code>, <code>{'{structure_semaines}'}</code>. Sortie JSON <code>{'{ fil_conducteur, noeuds:[{chapitre,idee}], liens:[{de,vers,relation}] }'}</code>. Carte partagée, tous les liens aval révélés.</>}
+      />
+
+      <h4 className="text-sm font-semibold text-stone-600 border-b border-stone-200 pb-1 pt-4">Diagnostic (usage prof, jamais montré à l&apos;élève)</h4>
+
+      <BlocPrompt
+        label="Référence par chapitre — socle du diagnostic" value={pRef} onChange={setPRef} defaut={defauts.reference} rows={16}
+        hint={<>Variables : <code>{'{livre_entier}'}</code>, <code>{'{structure_semaines}'}</code>. Sortie JSON <code>{'{ chapitres:[{semaine,titre,these_canonique,arguments_cles[]}] }'}</code>. Une entrée par semaine.</>}
+      />
+
+      <BlocPrompt
+        label="Diagnostic — phase 1 : inventaire (ancré au texte)" value={pInv} onChange={setPInv} defaut={defauts.diagInventaire} rows={16}
+        hint={<>Variables : <code>{'{texte_semaine}'}</code>, <code>{'{these}'}</code>, <code>{'{arguments}'}</code>. Sortie JSON <code>{'{ these_eleve, these_mal_definie, arguments_captes, arguments_rates, arguments_deformes, note }'}</code>. Aucun niveau ici (anti-halo).</>}
+      />
+
+      <BlocPrompt
+        label="Diagnostic — phase 2 : niveau E→A (sans la prose)" value={pNiv} onChange={setPNiv} defaut={defauts.diagNiveau} rows={14}
+        warn={<>⚠️ Anti-halo : cette phase ne reçoit PAS la prose de l&apos;élève, seulement <code>{'{inventaire}'}</code> + la référence. Garde la variable <code>{'{inventaire}'}</code>.</>}
+        hint={<>Variables : <code>{'{ref_these}'}</code>, <code>{'{ref_arguments}'}</code>, <code>{'{inventaire}'}</code>. Sortie JSON <code>{'{ niveau_these, niveau_arguments, these_mal_definie }'}</code> (lettres E,D,C,B,A ou null).</>}
+      />
 
       <div className="border-t border-stone-200 pt-6 space-y-3">
         <h4 className="text-sm font-medium text-stone-700">Réglages</h4>
