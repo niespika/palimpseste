@@ -1,25 +1,31 @@
 import { createClient } from '@/utils/supabase/server'
 import { createAdminClient } from '@/utils/supabase/admin'
+import Tuile from '@/components/Tuile'
 import FormulaireAjoutEleve from './FormulaireAjoutEleve'
 import LigneEleve from './LigneEleve'
 import type { EleveAvecEmail } from '@/types'
 
-export default async function PageEleves() {
+const SANS_CLASSE = 'aucune'
+
+export default async function PageEleves({
+  searchParams,
+}: {
+  searchParams: Promise<{ classe?: string }>
+}) {
   const supabase = await createClient()
   const admin = createAdminClient()
+  const { classe: classeSel } = await searchParams
 
-  // Récupérer tous les profils élèves avec leurs classes (via inscriptions)
-  const { data: profiles } = await supabase
-    .from('profiles')
-    .select(`
-      id, role, display_name, classe, created_at,
-      inscriptions(statut, classes(id, nom))
-    `)
-    .eq('role', 'eleve')
-    .order('display_name')
-
-  // Récupérer les emails via le client admin
-  const { data: { users: authUsers } } = await admin.auth.admin.listUsers({ perPage: 1000 })
+  // Profils élèves + leurs classes (via inscriptions actives).
+  const [{ data: profiles }, { data: { users: authUsers } }, { data: classesBrutes }] = await Promise.all([
+    supabase
+      .from('profiles')
+      .select('id, role, display_name, classe, created_at, inscriptions(statut, classes(id, nom))')
+      .eq('role', 'eleve')
+      .order('display_name'),
+    admin.auth.admin.listUsers({ perPage: 1000 }),
+    supabase.from('classes').select('id, nom').order('nom'),
+  ])
 
   const eleves: EleveAvecEmail[] = (profiles ?? []).map(profile => {
     const inscriptions = (profile.inscriptions ?? []) as { statut: string; classes: { id: string; nom: string } | { id: string; nom: string }[] | null }[]
@@ -34,36 +40,95 @@ export default async function PageEleves() {
     }
   })
 
+  const classesList = (classesBrutes ?? []) as { id: string; nom: string }[]
+
+  // Regroupement par classe (un élève bi-classe apparaît sous chacune) + sans classe.
+  const elevesParClasse = new Map<string, EleveAvecEmail[]>()
+  for (const e of eleves) {
+    if (e.classes.length === 0) {
+      const arr = elevesParClasse.get(SANS_CLASSE) ?? []
+      arr.push(e)
+      elevesParClasse.set(SANS_CLASSE, arr)
+    } else {
+      for (const c of e.classes) {
+        const arr = elevesParClasse.get(c.id) ?? []
+        arr.push(e)
+        elevesParClasse.set(c.id, arr)
+      }
+    }
+  }
+  const aSansClasse = (elevesParClasse.get(SANS_CLASSE)?.length ?? 0) > 0
+  const elevesSelection = classeSel ? (elevesParClasse.get(classeSel) ?? []) : []
+  const nomClasseSel = classeSel === SANS_CLASSE ? 'Sans classe' : classesList.find(c => c.id === classeSel)?.nom
+
   return (
-    <div>
-      <h2 className="text-xl font-serif text-stone-900 mb-6">Élèves</h2>
+    <div className="space-y-6">
+      <h2 className="text-xl font-serif text-stone-900">Élèves</h2>
 
       <FormulaireAjoutEleve />
 
       {eleves.length === 0 ? (
         <div className="bg-white border border-stone-200 rounded-xl p-8 text-center text-stone-500 text-sm">
-          Aucun élève pour l'instant. Commence par en ajouter un.
+          Aucun élève pour l&apos;instant. Commence par en ajouter un.
         </div>
       ) : (
-        <div className="bg-white border border-stone-200 rounded-xl overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="w-full text-left">
-              <thead className="bg-stone-50 border-b border-stone-200">
-                <tr>
-                  <th className="px-4 py-3 text-xs font-medium text-stone-500 uppercase tracking-wide">Nom affiché</th>
-                  <th className="px-4 py-3 text-xs font-medium text-stone-500 uppercase tracking-wide">Classes</th>
-                  <th className="px-4 py-3 text-xs font-medium text-stone-500 uppercase tracking-wide">Courriel</th>
-                  <th className="px-4 py-3 text-xs font-medium text-stone-500 uppercase tracking-wide">Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {eleves.map(eleve => (
-                  <LigneEleve key={eleve.id} eleve={eleve} />
-                ))}
-              </tbody>
-            </table>
+        <>
+          {/* Tuiles par classe → liste */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+            {classesList.map(c => {
+              const n = elevesParClasse.get(c.id)?.length ?? 0
+              return (
+                <Tuile
+                  key={c.id}
+                  nom={c.nom}
+                  sousTitre={`${n} élève${n > 1 ? 's' : ''}`}
+                  href={`/prof/eleves?classe=${c.id}`}
+                  selectionnee={classeSel === c.id}
+                  couleur={n > 0 ? 'vert' : 'neutre'}
+                />
+              )
+            })}
+            {aSansClasse && (
+              <Tuile
+                nom="Sans classe"
+                sousTitre={`${elevesParClasse.get(SANS_CLASSE)?.length} élève${(elevesParClasse.get(SANS_CLASSE)?.length ?? 0) > 1 ? 's' : ''}`}
+                href={`/prof/eleves?classe=${SANS_CLASSE}`}
+                selectionnee={classeSel === SANS_CLASSE}
+                couleur="rouge"
+              />
+            )}
           </div>
-        </div>
+
+          {/* Liste de la classe sélectionnée */}
+          {classeSel && (
+            <div className="bg-white border border-stone-200 rounded-xl overflow-hidden">
+              <div className="px-4 py-3 border-b border-stone-200">
+                <h3 className="text-sm font-medium text-stone-900">{nomClasseSel ?? 'Classe'}</h3>
+              </div>
+              {elevesSelection.length === 0 ? (
+                <p className="px-4 py-6 text-sm text-stone-400">Aucun élève dans cette classe.</p>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left">
+                    <thead className="bg-stone-50 border-b border-stone-200">
+                      <tr>
+                        <th className="px-4 py-3 text-xs font-medium text-stone-500 uppercase tracking-wide">Nom affiché</th>
+                        <th className="px-4 py-3 text-xs font-medium text-stone-500 uppercase tracking-wide">Classes</th>
+                        <th className="px-4 py-3 text-xs font-medium text-stone-500 uppercase tracking-wide">Courriel</th>
+                        <th className="px-4 py-3 text-xs font-medium text-stone-500 uppercase tracking-wide">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {elevesSelection.map(eleve => (
+                        <LigneEleve key={eleve.id} eleve={eleve} />
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+          )}
+        </>
       )}
     </div>
   )

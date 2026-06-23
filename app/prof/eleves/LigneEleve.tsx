@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import Link from 'next/link'
 import { modifierEleve, reinitialiserMotDePasse, supprimerEleve } from './actions'
 import type { EleveAvecEmail } from '@/types'
 
@@ -120,7 +121,11 @@ export default function LigneEleve({ eleve }: { eleve: EleveAvecEmail }) {
 
   return (
     <tr className="border-t border-stone-100 hover:bg-stone-50">
-      <td className="px-4 py-3 text-sm text-stone-900 font-medium">{eleve.display_name}</td>
+      <td className="px-4 py-3 text-sm font-medium">
+        <Link href={`/prof/eleves/${eleve.id}`} className="text-stone-900 hover:text-blue-700 hover:underline">
+          {eleve.display_name}
+        </Link>
+      </td>
       <td className="px-4 py-3 text-sm text-stone-600">{classesNoms || '—'}</td>
       <td className="px-4 py-3 text-sm text-stone-600">{eleve.email}</td>
       <td className="px-4 py-3 text-sm">

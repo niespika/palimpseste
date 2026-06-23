@@ -1,4 +1,5 @@
 import { createClient } from '@/utils/supabase/server'
+import Tuile from '@/components/Tuile'
 import { CreerClasse } from './CreerClasse'
 import { GestionClasse } from './GestionClasse'
 
@@ -19,8 +20,13 @@ interface ClasseRow {
   classe_modules: { module_id: string }[] | null
 }
 
-export default async function PageClasses() {
+export default async function PageClasses({
+  searchParams,
+}: {
+  searchParams: Promise<{ classe?: string }>
+}) {
   const supabase = await createClient()
+  const { classe: classeSel } = await searchParams
 
   const [{ data: classes }, { data: eleves }, { data: modules }] = await Promise.all([
     supabase
@@ -38,57 +44,80 @@ export default async function PageClasses() {
 
   const tousEleves = (eleves ?? []) as { id: string; display_name: string }[]
   const tousModules = (modules ?? []) as { id: string; nom: string; actif: boolean }[]
+  const classesList = (classes ?? []) as ClasseRow[]
+
+  function inscritsActifs(c: ClasseRow) {
+    return (c.inscriptions ?? [])
+      .filter((i) => i.statut === 'active')
+      .map((i) => {
+        const p = Array.isArray(i.profiles) ? i.profiles[0] : i.profiles
+        return { id: i.eleve_id, display_name: p?.display_name ?? '—' }
+      })
+      .sort((a, b) => a.display_name.localeCompare(b.display_name))
+  }
+
+  const classeChoisie = classesList.find((c) => c.id === classeSel)
 
   return (
-    <div>
-      <div className="flex items-center justify-between mb-6">
-        <h2 className="text-xl font-serif text-stone-900">Classes</h2>
-      </div>
+    <div className="space-y-6">
+      <h2 className="text-xl font-serif text-stone-900">Classes</h2>
 
-      <p className="text-sm text-stone-500 mb-6">
+      <p className="text-sm text-stone-500">
         Les classes sont l&apos;unité de base : on y inscrit des élèves et on leur donne accès aux
         modules. Un élève peut appartenir à plusieurs classes (il cumule alors les accès).
       </p>
 
       <CreerClasse />
 
-      <div className="mt-6 space-y-4">
-        {(!classes || classes.length === 0) && (
-          <p className="text-stone-400 text-sm text-center py-8">
-            Aucune classe pour l&apos;instant. Crée-en une pour commencer.
-          </p>
-        )}
+      {classesList.length === 0 ? (
+        <p className="text-stone-400 text-sm text-center py-8">
+          Aucune classe pour l&apos;instant. Crée-en une pour commencer.
+        </p>
+      ) : (
+        <>
+          {/* Tuiles cliquables */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+            {classesList.map((c) => {
+              const n = inscritsActifs(c).length
+              const nMod = (c.classe_modules ?? []).length
+              const sousTitre = [c.niveau, c.filiere].filter(Boolean).join(' · ') || c.annee_scolaire
+              return (
+                <Tuile
+                  key={c.id}
+                  nom={c.nom}
+                  sousTitre={sousTitre}
+                  href={`/prof/classes?classe=${c.id}`}
+                  selectionnee={classeSel === c.id}
+                  couleur={n > 0 ? 'vert' : 'neutre'}
+                  resume={
+                    <span className="text-xs text-stone-500">
+                      {n} élève{n > 1 ? 's' : ''} · {nMod} module{nMod > 1 ? 's' : ''}
+                    </span>
+                  }
+                />
+              )
+            })}
+          </div>
 
-        {((classes ?? []) as ClasseRow[]).map((c) => {
-          const inscrits = (c.inscriptions ?? [])
-            .filter((i) => i.statut === 'active')
-            .map((i) => {
-              const p = Array.isArray(i.profiles) ? i.profiles[0] : i.profiles
-              return { id: i.eleve_id, display_name: p?.display_name ?? '—' }
-            })
-            .sort((a, b) => a.display_name.localeCompare(b.display_name))
-
-          const moduleIdsAssignes = (c.classe_modules ?? []).map((m) => m.module_id)
-
-          return (
+          {/* Détail de la classe sélectionnée */}
+          {classeChoisie && (
             <GestionClasse
-              key={c.id}
               classe={{
-                id: c.id,
-                nom: c.nom,
-                niveau: c.niveau,
-                filiere: c.filiere,
-                annee_scolaire: c.annee_scolaire,
-                statut: c.statut,
+                id: classeChoisie.id,
+                nom: classeChoisie.nom,
+                niveau: classeChoisie.niveau,
+                filiere: classeChoisie.filiere,
+                annee_scolaire: classeChoisie.annee_scolaire,
+                statut: classeChoisie.statut,
               }}
-              inscrits={inscrits}
+              inscrits={inscritsActifs(classeChoisie)}
               tousEleves={tousEleves}
               modules={tousModules}
-              moduleIdsAssignes={moduleIdsAssignes}
+              moduleIdsAssignes={(classeChoisie.classe_modules ?? []).map((m) => m.module_id)}
             />
-          )
-        })}
-      </div>
+          )}
+        </>
+      )}
     </div>
   )
 }
