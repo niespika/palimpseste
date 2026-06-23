@@ -8,11 +8,14 @@ export interface ImageTraitee {
   // ancien par rapport à l'horloge → photo probablement recyclée (galerie).
   // EXIF absent (capture d'écran, image « nettoyée ») → non suspect (cf. spec).
   priseSuspecte: boolean
+  // Timestamp EXIF (DateTimeOriginal) en ms, ou null si illisible/absent.
+  priseAtMs: number | null
 }
 
-// Seuil : une photo de fragment est prise dans la semaine ; au-delà de ~2 jours
-// d'écart on signale (sans bloquer).
-const ECART_SUSPECT_MS = 2 * 24 * 60 * 60 * 1000
+// Seuil par défaut : une photo de fragment est prise dans la semaine ; au-delà
+// de ~2 jours d'écart on signale (sans bloquer). Désormais éditable par le prof
+// (fragments_config.seuil_photo_heures) et passé en paramètre.
+export const ECART_SUSPECT_MS = 2 * 24 * 60 * 60 * 1000
 
 async function lireDateExif(file: File): Promise<Date | null> {
   try {
@@ -36,12 +39,13 @@ async function convertirHEIC(file: File): Promise<File> {
   return new File([blob], `${nomSansExtension}.jpg`, { type: 'image/jpeg' })
 }
 
-export async function traiterImage(file: File): Promise<ImageTraitee> {
+export async function traiterImage(file: File, seuilMs: number = ECART_SUSPECT_MS): Promise<ImageTraitee> {
   let fileATraiter = file
 
   // Lire l'EXIF sur l'ORIGINAL (la compression le supprime ensuite).
   const dateExif = await lireDateExif(file)
-  const priseSuspecte = dateExif != null && Date.now() - dateExif.getTime() > ECART_SUSPECT_MS
+  const priseAtMs = dateExif?.getTime() ?? null
+  const priseSuspecte = priseAtMs != null && Date.now() - priseAtMs > seuilMs
 
   // Convertir HEIC → JPEG si nécessaire
   const estHEIC =
@@ -77,6 +81,7 @@ export async function traiterImage(file: File): Promise<ImageTraitee> {
     previewUrl,
     nom: fichierFinal.name,
     priseSuspecte,
+    priseAtMs,
   }
 }
 

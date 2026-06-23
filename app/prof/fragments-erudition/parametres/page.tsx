@@ -96,7 +96,7 @@ export default async function PageParametres() {
   // Config actuelle
   const { data: config } = await supabase
     .from('fragments_config')
-    .select('prompt_evaluation, bareme, rubrique, prompt_evaluation_orale, supprimer_audio_publication, echelle_lettres, fourchette_points, prompt_evaluation_essai, prompt_synthese_semestre')
+    .select('prompt_evaluation, bareme, rubrique, prompt_evaluation_orale, supprimer_audio_publication, echelle_lettres, fourchette_points, prompt_evaluation_essai, prompt_synthese_semestre, seuil_photo_heures')
     .eq('id', 1)
     .single()
 
@@ -126,6 +126,7 @@ export default async function PageParametres() {
         promptEssaiDefaut={PROMPT_ESSAI_DEFAUT}
         promptSyntheseInitial={config?.prompt_synthese_semestre ?? ''}
         promptSyntheseDefaut={PROMPT_SYNTHESE_DEFAUT}
+        seuilPhotoInitial={config?.seuil_photo_heures ?? 48}
       />
     </div>
   )

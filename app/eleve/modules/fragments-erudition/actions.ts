@@ -108,6 +108,7 @@ export async function deposerCompteRendu(formData: FormData) {
       statut,
       commentaire_eleve: commentaire || null,
       photos_suspectes: formData.get('photos_suspectes') === 'true',
+      photo_prise_at: (formData.get('photo_prise_at') as string) || null,
     })
     .select('id')
     .single()

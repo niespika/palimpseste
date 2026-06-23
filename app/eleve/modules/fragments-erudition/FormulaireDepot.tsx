@@ -11,9 +11,12 @@ interface Props {
   eleveId: string
   inscriptionId: string
   depotExistant: boolean
+  /** Seuil anti-triche en heures (éditable par le prof). */
+  seuilHeures: number
 }
 
-export default function FormulaireDepot({ semaineId, eleveId, inscriptionId, depotExistant }: Props) {
+export default function FormulaireDepot({ semaineId, eleveId, inscriptionId, depotExistant, seuilHeures }: Props) {
+  const seuilMs = seuilHeures * 60 * 60 * 1000
   const router = useRouter()
   const [images, setImages] = useState<ImageTraitee[]>([])
   const [traitement, setTraitement] = useState(false)
@@ -42,7 +45,7 @@ export default function FormulaireDepot({ semaineId, eleveId, inscriptionId, dep
       for (let i = 0; i < fichiers.length; i++) {
         setProgression(`Traitement de la photo ${i + 1}/${fichiers.length}…`)
         try {
-          nouvelles.push(await traiterImage(fichiers[i]))
+          nouvelles.push(await traiterImage(fichiers[i], seuilMs))
         } catch {
           echecs++ // une photo qui échoue (HEIC illisible…) ne doit plus faire perdre tout le lot
         }
@@ -112,6 +115,9 @@ export default function FormulaireDepot({ semaineId, eleveId, inscriptionId, dep
       formData.append('inscriptionId', inscriptionId)
       if (commentaire) formData.append('commentaire', commentaire)
       if (images.some(img => img.priseSuspecte)) formData.append('photos_suspectes', 'true')
+      // Date EXIF de la photo la plus ancienne (pour le délai prise → dépôt côté prof).
+      const prisesAt = images.map(img => img.priseAtMs).filter((x): x is number => x != null)
+      if (prisesAt.length > 0) formData.append('photo_prise_at', new Date(Math.min(...prisesAt)).toISOString())
       chemins.forEach(c => formData.append('chemins', c))
 
       const resultat = await deposerCompteRendu(formData)
@@ -173,7 +179,7 @@ export default function FormulaireDepot({ semaineId, eleveId, inscriptionId, dep
       {images.some(img => img.priseSuspecte) && (
         <div className="bg-amber-50 border border-amber-200 rounded-xl px-3 py-2">
           <p className="text-amber-800 text-sm">
-            ⚠ Une photo semble ancienne (prise il y a plus de 2 jours d&apos;après ses métadonnées).
+            ⚠ Une photo semble ancienne (prise il y a plus de {seuilHeures >= 48 ? `${Math.round(seuilHeures / 24)} jours` : `${seuilHeures} h`} d&apos;après ses métadonnées).
             Utilise une photo prise au moment du dépôt. Ce dépôt sera signalé à ton professeur.
           </p>
         </div>

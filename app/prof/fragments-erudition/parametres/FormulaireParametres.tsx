@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { sauvegarderConfig, sauvegarderConfigOrale } from '../actions'
-import { sauvegarderConfigEssai } from '../essai-actions'
+import { sauvegarderConfigEssai, sauvegarderSeuilPhoto } from '../essai-actions'
 
 interface Props {
   promptInitial: string
@@ -22,9 +22,10 @@ interface Props {
   promptEssaiDefaut: string
   promptSyntheseInitial: string
   promptSyntheseDefaut: string
+  seuilPhotoInitial: number
 }
 
-type SectionKey = 'bareme' | 'fragment' | 'oral' | 'essai' | 'synthese'
+type SectionKey = 'bareme' | 'fragment' | 'oral' | 'essai' | 'synthese' | 'integrite'
 
 const SECTIONS: { key: SectionKey; titre: string; sousTitre: string }[] = [
   { key: 'bareme', titre: 'Barème', sousTitre: 'Échelle des sections E–A' },
@@ -32,6 +33,7 @@ const SECTIONS: { key: SectionKey; titre: string; sousTitre: string }[] = [
   { key: 'oral', titre: 'Prompt Évaluation Oral', sousTitre: 'Présentation orale' },
   { key: 'essai', titre: 'Prompt Essai', sousTitre: 'Essai final + /20' },
   { key: 'synthese', titre: 'Prompt Synthèse', sousTitre: 'Bilan de fin de semestre' },
+  { key: 'integrite', titre: 'Intégrité', sousTitre: 'Seuil anti-triche photo' },
 ]
 
 function HintVariables({ vars }: { vars: string[] }) {
@@ -67,6 +69,7 @@ export default function FormulaireParametres(props: Props) {
   const [fourchette, setFourchette] = useState(props.fourchetteInitiale)
   const [promptEssai, setPromptEssai] = useState(props.promptEssaiInitial)
   const [promptSynthese, setPromptSynthese] = useState(props.promptSyntheseInitial)
+  const [seuilPhoto, setSeuilPhoto] = useState(props.seuilPhotoInitial)
   const [section, setSection] = useState<SectionKey | null>(null)
   const [enregistrement, setEnregistrement] = useState(false)
   const [message, setMessage] = useState<{ type: 'ok' | 'err'; texte: string } | null>(null)
@@ -74,7 +77,7 @@ export default function FormulaireParametres(props: Props) {
   async function handleSauvegarder() {
     setEnregistrement(true)
     setMessage(null)
-    const [r1, r2, r3] = await Promise.all([
+    const [r1, r2, r3, r4] = await Promise.all([
       sauvegarderConfig(prompt, bareme, rubrique),
       sauvegarderConfigOrale(promptOral, supprimerAudio),
       sauvegarderConfigEssai({
@@ -83,10 +86,11 @@ export default function FormulaireParametres(props: Props) {
         prompt_evaluation_essai: promptEssai,
         prompt_synthese_semestre: promptSynthese,
       }),
+      sauvegarderSeuilPhoto(seuilPhoto),
     ])
     setEnregistrement(false)
-    if (r1.error || r2.error || r3.error) {
-      setMessage({ type: 'err', texte: r1.error ?? r2.error ?? r3.error ?? 'Erreur' })
+    if (r1.error || r2.error || r3.error || r4.error) {
+      setMessage({ type: 'err', texte: r1.error ?? r2.error ?? r3.error ?? r4.error ?? 'Erreur' })
     } else {
       setMessage({ type: 'ok', texte: 'Paramètres enregistrés.' })
       setTimeout(() => setMessage(null), 3000)
@@ -189,6 +193,29 @@ export default function FormulaireParametres(props: Props) {
           <div>
             <EnTete label="Prompt de synthèse de semestre" onRestaurer={() => setPromptSynthese(props.promptSyntheseDefaut)} />
             <textarea value={promptSynthese || props.promptSyntheseDefaut} onChange={e => setPromptSynthese(e.target.value)} rows={20} className={TEXTAREA} />
+          </div>
+        </div>
+      )}
+
+      {section === 'integrite' && (
+        <div className="bg-white border border-stone-200 rounded-xl p-5 space-y-3">
+          <div>
+            <label className="text-sm font-medium text-stone-700">Seuil « photo suspecte » (heures)</label>
+            <p className="text-xs text-stone-400 mt-1 mb-2">
+              Une photo dont les métadonnées EXIF indiquent une prise de vue plus ancienne que ce seuil est
+              signalée au professeur (sans bloquer le dépôt). Côté prof, le délai écoulé entre la prise et le
+              dépôt s&apos;affiche sur l&apos;analyse. Défaut : 48 h (2 jours).
+            </p>
+            <div className="flex items-center gap-3">
+              <input
+                type="number"
+                value={seuilPhoto}
+                onChange={e => setSeuilPhoto(Number(e.target.value))}
+                min={1} max={720} step={1}
+                className="w-24 px-3 py-1.5 border border-stone-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
+              />
+              <span className="text-xs text-stone-500">heures {seuilPhoto >= 48 ? `(≈ ${Math.round(seuilPhoto / 24)} jours)` : ''}</span>
+            </div>
           </div>
         </div>
       )}

@@ -541,6 +541,17 @@ export async function sauvegarderConfigEssai(data: {
   return { success: true }
 }
 
+// Seuil anti-triche « photo suspecte » (T2) : nombre d'heures au-delà duquel une
+// photo dont l'EXIF est ancien est signalée. Clampé à [1, 720] (1 h – 30 j).
+export async function sauvegarderSeuilPhoto(seuilHeures: number) {
+  await verifierProf()
+  const admin = createAdminClient()
+  const seuil = Math.max(1, Math.min(720, Math.round(seuilHeures)))
+  const { error } = await admin.from('fragments_config').update({ seuil_photo_heures: seuil }).eq('id', 1)
+  if (error) return { error: error.message }
+  return { success: true }
+}
+
 // ── Dépôt élève (upload via signed URL) ─────────────────────────────────────
 
 export async function creerUrlUploadEssaiPhotoEleve(epreuveId: string, inscriptionId: string, ordre: number, ext: string) {

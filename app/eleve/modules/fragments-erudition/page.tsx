@@ -43,6 +43,10 @@ export default async function PageFragments({ searchParams }: { searchParams: Pr
     ? await inscriptionsModuleEleve(supabase, user.id, moduleData.id)
     : []
 
+  // Seuil anti-triche photo (heures), éditable par le prof.
+  const { data: cfg } = await supabase.from('fragments_config').select('seuil_photo_heures').eq('id', 1).maybeSingle()
+  const seuilPhotoHeures = cfg?.seuil_photo_heures ?? 48
+
   if (inscriptions.length === 0) {
     return (
       <div className="space-y-6 pb-8">
@@ -540,7 +544,7 @@ export default async function PageFragments({ searchParams }: { searchParams: Pr
                   Lis et valide ton dernier retour (ci-dessus) pour débloquer le dépôt.
                 </div>
               ) : (
-                <FormulaireDepot semaineId={semaine.id} eleveId={user.id} inscriptionId={inscriptionId} depotExistant={!!depotActuel} />
+                <FormulaireDepot semaineId={semaine.id} eleveId={user.id} inscriptionId={inscriptionId} depotExistant={!!depotActuel} seuilHeures={seuilPhotoHeures} />
               )}
               {depotActuel && !analyseActuelle && (
                 <div className="bg-stone-50 border border-stone-200 rounded-xl px-4 py-3">

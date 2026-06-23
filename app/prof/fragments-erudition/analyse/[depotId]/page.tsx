@@ -29,7 +29,7 @@ export default async function PageAnalyse({
   const { data: depot } = await supabase
     .from('fragments_depots')
     .select(`
-      id, eleve_id, semaine_id, statut, commentaire_eleve, photos_suspectes, created_at,
+      id, eleve_id, semaine_id, statut, commentaire_eleve, photos_suspectes, photo_prise_at, created_at,
       photos:fragments_photos(id, depot_id, storage_path, ordre, created_at),
       eleve:profiles(display_name, classe),
       semaine:fragments_semaines(numero, titre)
@@ -42,6 +42,14 @@ export default async function PageAnalyse({
   const eleve = depot.eleve as unknown as { display_name: string; classe: string | null } | null
   const semaine = depot.semaine as unknown as { numero: number; titre: string | null } | null
   const photos = (depot.photos as FragmentPhoto[]).sort((a, b) => a.ordre - b.ordre)
+
+  // Anti-triche : délai écoulé entre la prise de vue (EXIF) et le dépôt.
+  const photoPriseAt = (depot as { photo_prise_at?: string | null }).photo_prise_at ?? null
+  const delaiPhotoMs = photoPriseAt ? new Date(depot.created_at as string).getTime() - new Date(photoPriseAt).getTime() : null
+  const fmtDelai = (ms: number) => {
+    const h = Math.round(ms / 3_600_000)
+    return h < 48 ? `${h} h` : `${Math.round(h / 24)} jours`
+  }
 
   // Analyse
   const { data: analyse } = await admin
@@ -130,7 +138,12 @@ export default async function PageAnalyse({
 
       {(depot as { photos_suspectes?: boolean }).photos_suspectes && (
         <div className="mb-3 text-sm bg-amber-50 border border-amber-200 text-amber-800 rounded-lg px-3 py-2">
-          ⚠ Signal anti-triche : au moins une photo semble issue de la galerie (EXIF ancien), pas prise sur le moment. À vérifier — signal indicatif, non probant.
+          ⚠ Signal anti-triche : au moins une photo semble issue de la galerie (EXIF ancien), pas prise sur le moment.
+          {delaiPhotoMs != null && delaiPhotoMs > 0 && (
+            <> Photo la plus ancienne prise <strong>{fmtDelai(delaiPhotoMs)}</strong> avant le dépôt
+              {photoPriseAt && <> (le {new Date(photoPriseAt).toLocaleString('fr-FR')})</>}.</>
+          )}
+          {' '}À vérifier — signal indicatif, non probant.
         </div>
       )}
       <EditorAnalyse
