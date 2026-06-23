@@ -10,7 +10,7 @@ export default async function ParametresAletheiaPage() {
 
   return (
     <div className="max-w-3xl">
-      <h3 className="text-base font-medium text-stone-700 mb-6">Paramètres — prompts IA</h3>
+      <h3 className="text-base font-medium text-stone-700 mb-6">Paramètres</h3>
       <FormulaireParametresAletheia
         initial={prompts}
         defauts={{
