@@ -6,6 +6,7 @@ import { classesAvecModule, inscriptionsClasse } from '@/utils/acces'
 import { semestreFragmentsActif } from '../contexte-semestre'
 import Tuile from '@/components/Tuile'
 import DetailClasse, { type LigneEleve } from '@/components/classes/DetailClasse'
+import CourbeEvolution, { type PointCourbe } from '@/components/CourbeEvolution'
 import { noteVersLettre, COULEUR_LETTRE } from '@/utils/notation'
 
 // Moyenne d'une section (0-4) → badge lettre.
@@ -45,10 +46,11 @@ export default async function PageVueEnsemble({ searchParams }: { searchParams: 
   const classes = (moduleData && semestre) ? await classesAvecModule(admin, moduleData.id) : []
 
   const { data: semaines } = semestre
-    ? await admin.from('fragments_semaines').select('id').eq('semestre_id', semestre.id)
+    ? await admin.from('fragments_semaines').select('id, numero').eq('semestre_id', semestre.id).eq('is_vacation', false)
     : { data: [] }
   const nbSemaines = (semaines ?? []).length
   const semaineIds = new Set((semaines ?? []).map(s => s.id as string))
+  const numeroParSemaine = new Map((semaines ?? []).map(s => [s.id as string, s.numero as number]))
 
   if (!semestre || classes.length === 0) {
     return (
@@ -60,7 +62,7 @@ export default async function PageVueEnsemble({ searchParams }: { searchParams: 
 
   // Pour chaque classe : moyennes de sections par élève + de la classe.
   type EleveStats = { id: string; display_name: string; moy: MoySections; tauxDepot: number }
-  const statsParClasse = new Map<string, { eleves: EleveStats[]; classeMoy: MoySections }>()
+  const statsParClasse = new Map<string, { eleves: EleveStats[]; classeMoy: MoySections; points: PointCourbe[] }>()
 
   for (const c of classes) {
     const inscrits = await inscriptionsClasse(admin, c.id)
@@ -112,9 +114,33 @@ export default async function PageVueEnsemble({ searchParams }: { searchParams: 
       }
     })
 
+    // Courbe d'évolution : moyenne de la classe par semaine pédagogique.
+    const parSemaine = new Map<number, { d: number[]; s: number[]; r: number[] }>()
+    for (const dep of depotsSemestre) {
+      const a = analyseParDepot.get(dep.id as string)
+      if (!a) continue
+      const num = numeroParSemaine.get(dep.semaine_id as string)
+      if (num == null) continue
+      const e = parSemaine.get(num) ?? { d: [], s: [], r: [] }
+      if (a.note_decouvertes != null) e.d.push(a.note_decouvertes)
+      if (a.note_sources != null) e.s.push(a.note_sources)
+      if (a.note_reflexions != null) e.r.push(a.note_reflexions)
+      parSemaine.set(num, e)
+    }
+    const points: PointCourbe[] = [...parSemaine.entries()]
+      .sort((a, b) => a[0] - b[0])
+      .map(([num, e]) => ({
+        semaine: num,
+        decouvertes: moyenne(e.d),
+        sources: moyenne(e.s),
+        reflexions: moyenne(e.r),
+        moyenne: moyenne([...e.d, ...e.s, ...e.r]),
+      }))
+
     statsParClasse.set(c.id, {
       eleves,
       classeMoy: { decouvertes: moyenne(allD), sources: moyenne(allS), reflexions: moyenne(allR) },
+      points,
     })
   }
 
@@ -140,15 +166,35 @@ export default async function PageVueEnsemble({ searchParams }: { searchParams: 
               selectionnee={classeSel === c.id}
               resume={
                 <div className="flex flex-wrap gap-x-3 gap-y-1">
-                  <BadgeMoyenne label="Déc." moyenne={m?.decouvertes ?? null} />
-                  <BadgeMoyenne label="Src." moyenne={m?.sources ?? null} />
-                  <BadgeMoyenne label="Réf." moyenne={m?.reflexions ?? null} />
+                  <BadgeMoyenne label="Découvertes" moyenne={m?.decouvertes ?? null} />
+                  <BadgeMoyenne label="Sources" moyenne={m?.sources ?? null} />
+                  <BadgeMoyenne label="Réflexions" moyenne={m?.reflexions ?? null} />
                 </div>
               }
             />
           )
         })}
       </div>
+
+      {detail && classeChoisie && detail.points.length > 0 && (
+        <div className="bg-white border border-stone-200 rounded-xl p-5">
+          <p className="text-xs font-medium text-stone-500 uppercase tracking-wide mb-3">
+            Évolution de la moyenne — {classeChoisie.nom}
+          </p>
+          <CourbeEvolution
+            data={detail.points}
+            cleX="semaine"
+            prefixeX="S"
+            axeY="lettres"
+            series={[
+              { cle: 'decouvertes', label: 'Découvertes', couleur: '#3b82f6' },
+              { cle: 'sources', label: 'Sources', couleur: '#10b981' },
+              { cle: 'reflexions', label: 'Réflexions', couleur: '#8b5cf6' },
+              { cle: 'moyenne', label: 'Moyenne', couleur: '#78716c', tiret: true },
+            ]}
+          />
+        </div>
+      )}
 
       {detail && classeChoisie && (
         <DetailClasse
@@ -159,9 +205,9 @@ export default async function PageVueEnsemble({ searchParams }: { searchParams: 
             display_name: e.display_name,
             statut: (
               <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
-                <BadgeMoyenne label="Déc." moyenne={e.moy.decouvertes} />
-                <BadgeMoyenne label="Src." moyenne={e.moy.sources} />
-                <BadgeMoyenne label="Réf." moyenne={e.moy.reflexions} />
+                <BadgeMoyenne label="Découvertes" moyenne={e.moy.decouvertes} />
+                <BadgeMoyenne label="Sources" moyenne={e.moy.sources} />
+                <BadgeMoyenne label="Réflexions" moyenne={e.moy.reflexions} />
                 <span className="text-xs text-stone-500">dépôt {e.tauxDepot}%</span>
               </div>
             ),
