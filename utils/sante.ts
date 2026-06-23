@@ -1,4 +1,5 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
+import { noteVersLettre } from './notation'
 
 // ----------------------------------------------------------------------------
 // Santé des élèves pour le tableau de bord (Lot 3). Calcul PAR INSCRIPTION
@@ -119,7 +120,7 @@ export async function calculerSante(admin: SupabaseClient): Promise<Map<string, 
 
     const raisons: string[] = []
     if (nbManquants >= SEUILS_SANTE.depotsManquants) raisons.push(`${nbManquants} dépôts manquants`)
-    if (moyenne != null && moyenne < SEUILS_SANTE.moyenneSous) raisons.push(`moyenne ${moyenne.toFixed(1)}/4`)
+    if (moyenne != null && moyenne < SEUILS_SANTE.moyenneSous) raisons.push(`moyenne ${noteVersLettre(moyenne)}`)
     if (backlogRevision > SEUILS_SANTE.revisionEnRetard) raisons.push(`${backlogRevision} cartes en retard`)
 
     resultat.set(i.id as string, {

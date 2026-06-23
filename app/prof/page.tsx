@@ -229,25 +229,30 @@ export default async function ProfAccueil({ searchParams }: { searchParams: Prom
             <p className="text-3xl font-serif text-stone-900">{pctAJour != null ? `${pctAJour}%` : '—'}</p>
             <p className="text-sm text-stone-500 mt-0.5">à jour ({nbAJour}/{totalSuivi} inscriptions)</p>
           </div>
-          <div className="bg-white border border-stone-200 rounded-xl p-5">
+          <Link href="/prof/a-risque" className="bg-white border border-stone-200 rounded-xl p-5 block hover:border-stone-300 hover:shadow-sm transition-all">
             <p className="text-3xl font-serif text-red-700">{enDifficulte.length}</p>
-            <p className="text-sm text-stone-500 mt-0.5">en difficulté</p>
-          </div>
+            <p className="text-sm text-stone-500 mt-0.5">en difficulté <span className="text-stone-400">· voir le détail →</span></p>
+          </Link>
           <div className="bg-white border border-stone-200 rounded-xl p-5 sm:col-span-1">
             <p className="text-sm text-stone-500 mb-1">Élèves à risque</p>
             {enDifficulte.length === 0 ? (
               <p className="text-sm text-green-700">Aucun 🎉</p>
             ) : (
-              <ul className="space-y-1 max-h-28 overflow-auto">
-                {enDifficulte.slice(0, 6).map((s) => (
-                  <li key={s.inscriptionId} className="text-sm">
-                    <Link href={`/prof?classe=${s.classeId}`} className="text-stone-700 hover:text-red-700 hover:underline">
-                      {nomEleve.get(s.eleveId) ?? '?'}
-                    </Link>
-                    <span className="text-xs text-stone-400"> · {nomClasse.get(s.classeId)}</span>
-                  </li>
-                ))}
-              </ul>
+              <>
+                <ul className="space-y-1">
+                  {enDifficulte.slice(0, 4).map((s) => (
+                    <li key={s.inscriptionId} className="text-sm">
+                      <Link href={`/prof/eleves/${s.eleveId}`} className="text-stone-700 hover:text-red-700 hover:underline">
+                        {nomEleve.get(s.eleveId) ?? '?'}
+                      </Link>
+                      <span className="text-xs text-stone-400"> · {nomClasse.get(s.classeId)}</span>
+                    </li>
+                  ))}
+                </ul>
+                <Link href="/prof/a-risque" className="text-xs text-stone-500 hover:text-red-700 underline mt-2 inline-block">
+                  Voir les {enDifficulte.length} à risque et pourquoi →
+                </Link>
+              </>
             )}
           </div>
         </div>
