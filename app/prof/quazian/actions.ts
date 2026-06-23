@@ -2,7 +2,7 @@
 
 import { revalidatePath } from 'next/cache'
 import { createClient } from '@/utils/supabase/server'
-import { extraireFlashcards, genererVerso } from '@/utils/extraire-flashcards'
+import { extraireFlashcards, extraireFlashcardsTexte, genererVerso, type FlashcardSuggestion } from '@/utils/extraire-flashcards'
 
 async function verifierProf() {
   const supabase = await createClient()
@@ -118,25 +118,43 @@ export async function genererCartesSemaine(uniteId: string, semaine: number) {
 
   const { data: docs } = await supabase
     .from('scriptorium_documents')
-    .select('titre, texte_extrait, legende')
+    .select('titre, texte_extrait, legende, type')
     .eq('unite_id', uniteId)
     .eq('semaine', semaine)
 
-  const texteComplet = (docs ?? [])
-    .map(d => [`## ${d.titre}`, d.texte_extrait, d.legende ? `(Légende : ${d.legende})` : null].filter(Boolean).join('\n\n'))
-    .filter(s => s.trim().length > 0)
-    .join('\n\n---\n\n')
+  const contenuDoc = (d: { titre: string; texte_extrait: string | null; legende: string | null }) =>
+    [`## ${d.titre}`, d.texte_extrait, d.legende ? `(Légende : ${d.legende})` : null].filter(Boolean).join('\n\n').trim()
 
-  if (!texteComplet.trim()) {
+  // Distinction cours / texte (F2) : les cours sont décortiqués en cartes atomiques ;
+  // chaque texte source ne donne qu'1-2 cartes (génération distincte, plafonnée).
+  const coursDocs = (docs ?? []).filter(d => (d.type ?? 'cours') !== 'texte')
+  const texteDocs = (docs ?? []).filter(d => d.type === 'texte')
+
+  const corpusCours = coursDocs.map(contenuDoc).filter(s => s.length > 0).join('\n\n---\n\n')
+  const textesAvecContenu = texteDocs.map(d => ({ titre: d.titre, contenu: contenuDoc(d) })).filter(t => t.contenu.length > 0)
+
+  if (!corpusCours.trim() && textesAvecContenu.length === 0) {
     return { error: "Aucun texte dans cette semaine. Ajoute du contenu (texte ou légende) dans le Scriptorium." }
   }
 
-  let suggestions
+  let suggestions: FlashcardSuggestion[]
   try {
-    suggestions = await extraireFlashcards(texteComplet, `${unite.label} — Semaine ${semaine}`)
+    const lots: FlashcardSuggestion[][] = []
+    if (corpusCours.trim()) {
+      lots.push(await extraireFlashcards(corpusCours, `${unite.label} — Semaine ${semaine}`))
+    }
+    // Un appel par texte → plafond 1-2 cartes garanti par texte.
+    for (const t of textesAvecContenu) {
+      lots.push(await extraireFlashcardsTexte(t.contenu, `${t.titre} (${unite.label} — Semaine ${semaine})`, 2))
+    }
+    suggestions = lots.flat()
   } catch (e) {
     console.error('[quazian] génération cartes semaine :', e)
     return { error: "La génération IA a échoué (réponse inattendue du modèle). Réessaie." }
+  }
+
+  if (suggestions.length === 0) {
+    return { error: "L'IA n'a généré aucune carte exploitable. Réessaie." }
   }
 
   const cartes = suggestions.map(s => ({
