@@ -23,6 +23,15 @@ export default async function DiagnosticElevePage({
   const lacunes = diagnostic.filter((d) => d.profil === 'lacune')
   const maitrise = diagnostic.filter((d) => d.profil === 'maitrise')
 
+  // Lecture qualitative de la stabilité FSRS (intervalle de rétention en jours).
+  const bandeStabilite = nbCartesVues === 0
+    ? { label: '—', classe: 'text-stone-400', aide: 'Aucune carte révisée pour l’instant.' }
+    : stabiliteMoyenne < 7
+    ? { label: 'mémoire fragile', classe: 'text-red-600', aide: 'À consolider : les cartes retombent vite sous le seuil de rappel.' }
+    : stabiliteMoyenne < 30
+    ? { label: 'en consolidation', classe: 'text-amber-600', aide: 'La mémoire se solidifie ; les intervalles s’allongent.' }
+    : { label: 'mémoire durable', classe: 'text-green-600', aide: 'Les cartes tiennent plusieurs semaines avant rappel.' }
+
   return (
     <div>
       <Link href="/prof/quazian/diagnostic" className="text-sm text-stone-500 hover:text-stone-700">
@@ -43,19 +52,29 @@ export default async function DiagnosticElevePage({
       </div>
 
       {/* Stats FSRS */}
-      <div className="grid grid-cols-3 gap-3 mb-6">
+      <div className="grid grid-cols-3 gap-3 mb-3">
         <div className="bg-white border border-stone-200 rounded-xl p-4 text-center">
           <p className="text-2xl font-serif text-stone-900">{nbCartesVues}</p>
-          <p className="text-xs text-stone-400 mt-1">cartes révisées</p>
+          <p className="text-xs text-stone-400 mt-1">cartes en révision</p>
         </div>
         <div className="bg-white border border-stone-200 rounded-xl p-4 text-center">
-          <p className="text-2xl font-serif text-stone-900">{stabiliteMoyenne.toFixed(1)}j</p>
-          <p className="text-xs text-stone-400 mt-1">stabilité FSRS moy.</p>
+          <p className="text-2xl font-serif text-stone-900">{stabiliteMoyenne.toFixed(1)}<span className="text-base text-stone-400">j</span></p>
+          <p className={`text-xs mt-1 font-medium ${bandeStabilite.classe}`}>{bandeStabilite.label}</p>
         </div>
         <div className="bg-white border border-stone-200 rounded-xl p-4 text-center">
           <p className="text-2xl font-serif text-stone-900">{scores.length}</p>
           <p className="text-xs text-stone-400 mt-1">quizz passés</p>
         </div>
+      </div>
+
+      {/* Explication de la stabilité FSRS */}
+      <div className="bg-stone-50 border border-stone-200 rounded-xl px-4 py-3 mb-6">
+        <p className="text-xs text-stone-500 leading-relaxed">
+          <span className="font-medium text-stone-700">Stabilité (FSRS)</span> = nombre de jours pendant lesquels l&apos;élève
+          retient une carte avant que sa probabilité de rappel ne retombe sous la cible (90&nbsp;%). C&apos;est la
+          <em> durabilité</em> de la mémoire, indépendante de la difficulté de la carte : plus elle est élevée, plus les
+          intervalles de révision s&apos;allongent. {bandeStabilite.aide}
+        </p>
       </div>
 
       {/* Historique des notes */}
