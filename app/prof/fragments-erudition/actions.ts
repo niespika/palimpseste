@@ -7,7 +7,7 @@ import { createClient } from '@/utils/supabase/server'
 import { createAdminClient } from '@/utils/supabase/admin'
 import { lancerAnalyse } from '@/utils/analyse'
 import { inscriptionsClasse } from '@/utils/acces'
-import { COOKIE_SEMESTRE_FRAGMENTS, semestreFragmentsActif } from './contexte-semestre'
+import { COOKIE_SEMESTRE_FRAGMENTS } from './contexte-semestre'
 import type { StatutPiste } from '@/types/fragments'
 
 async function verifierProf() {
@@ -40,37 +40,9 @@ export async function definirSemestreFragments(semestreId: string) {
 // La bascule du semestre actif se fait depuis la configuration du Calendrier
 // (/prof/calendrier/config) — le semestre est global, plus propre à Fragments.
 
-export async function creerSemaine(formData: FormData) {
-  const supabase = await verifierProf()
-
-  // Semaine créée dans le semestre courant (contexte), numérotée par semestre.
-  const { semestre } = await semestreFragmentsActif(supabase)
-  if (!semestre) return { error: 'Crée d\'abord un semestre.' }
-
-  const { data: derniere } = await supabase
-    .from('fragments_semaines')
-    .select('numero')
-    .eq('semestre_id', semestre.id)
-    .order('numero', { ascending: false })
-    .limit(1)
-    .maybeSingle()
-
-  const numero = (derniere?.numero ?? 0) + 1
-
-  const { error } = await supabase.from('fragments_semaines').insert({
-    numero,
-    semestre_id: semestre.id,
-    titre: (formData.get('titre') as string) || null,
-    date_debut: formData.get('dateDebut') as string,
-    date_limite: formData.get('dateLimite') as string,
-    ouverte: true,
-  })
-
-  if (error) return { error: error.message }
-  revalidatePath('/prof/fragments-erudition')
-  revalidatePath('/prof/fragments-erudition/semaines')
-  return { success: true }
-}
+// La création de semaines se fait désormais dans le Calendrier
+// (regenererSemaines, depuis le semestre + vacances) — plus de création manuelle
+// côté Fragments. Ici, on ne gère plus que l'ouverture/fermeture.
 
 export async function toggleSemaineOuverte(formData: FormData) {
   const supabase = await verifierProf()
@@ -83,7 +55,6 @@ export async function toggleSemaineOuverte(formData: FormData) {
     .eq('id', id)
 
   if (error) return { error: error.message }
-  revalidatePath('/prof/fragments-erudition/semaines')
   revalidatePath('/prof/fragments-erudition')
   return { success: true }
 }

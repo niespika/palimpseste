@@ -2,7 +2,6 @@ import Link from 'next/link'
 import { createClient } from '@/utils/supabase/server'
 import { semestreFragmentsActif } from './contexte-semestre'
 import { toggleSemaineOuverte } from './actions'
-import FormulaireSemaine from './semaines/FormulaireSemaine'
 import type { FragmentSemaine } from '@/types/fragments'
 
 async function toggleAction(formData: FormData): Promise<void> {
@@ -20,11 +19,14 @@ export default async function PageFragmentsPof() {
   const supabase = await createClient()
   const { semestre } = await semestreFragmentsActif(supabase)
 
+  // Les semaines sont dérivées du semestre (+ vacances) dans le Calendrier
+  // (regenererSemaines). On n'affiche que les semaines de travail (hors vacances).
   const { data: semaines } = semestre
     ? await supabase
         .from('fragments_semaines')
         .select('*')
         .eq('semestre_id', semestre.id)
+        .eq('is_vacation', false)
         .order('numero', { ascending: false })
     : { data: [] }
 
@@ -34,12 +36,18 @@ export default async function PageFragmentsPof() {
         <p className="text-sm text-stone-500">
           Semaines du semestre <span className="font-medium text-stone-700">{semestre?.label ?? '—'}</span>
         </p>
-        <FormulaireSemaine />
+        <Link
+          href="/prof/calendrier/config"
+          className="text-xs text-stone-500 hover:text-stone-900 px-2 py-1 rounded hover:bg-stone-100 transition-colors"
+        >
+          Gérer le calendrier →
+        </Link>
       </div>
 
       {!semaines || semaines.length === 0 ? (
         <div className="bg-white border border-stone-200 rounded-xl p-8 text-center text-stone-500 text-sm">
-          Aucune semaine dans ce semestre. Crée la première avec « + Nouvelle semaine ».
+          Aucune semaine dans ce semestre. Les semaines sont générées automatiquement à partir du semestre et des vacances définis dans le{' '}
+          <Link href="/prof/calendrier/config" className="text-stone-700 underline">Calendrier</Link>.
         </div>
       ) : (
         <div className="space-y-3">
