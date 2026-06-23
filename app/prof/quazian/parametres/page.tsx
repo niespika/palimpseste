@@ -1,18 +1,58 @@
 import { lireParametres, sauvegarderParametres } from './actions'
 import { PARAMS_DEFAUT } from '@/utils/quazian-params'
-import { PROMPT_SYSTEME as PROMPT_FLASHCARDS } from '@/utils/extraire-flashcards'
+import { PROMPT_SYSTEME as PROMPT_FLASHCARDS, PROMPT_SYSTEME_TEXTE as PROMPT_TEXTE } from '@/utils/extraire-flashcards'
 import { PROMPT_SYSTEME as PROMPT_QUIZZ } from '@/utils/generer-questions'
+import Tuile from '@/components/Tuile'
 
 async function actionSauvegarder(formData: FormData): Promise<void> {
   'use server'
   await sauvegarderParametres(formData)
 }
 
-export default async function ParametresPage() {
+function Entrees({ vue }: { vue: string }) {
+  return (
+    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-6 max-w-lg">
+      <Tuile nom="Notation" sousTitre="Notes formative & de semestre, FSRS" href="/prof/quazian/parametres?vue=notation" selectionnee={vue === 'notation'} />
+      <Tuile nom="Prompts" sousTitre="Prompts de génération IA" href="/prof/quazian/parametres?vue=prompts" selectionnee={vue === 'prompts'} />
+    </div>
+  )
+}
+
+export default async function ParametresPage({ searchParams }: { searchParams: Promise<{ vue?: string }> }) {
+  const { vue = 'notation' } = await searchParams
+
+  if (vue === 'prompts') {
+    return (
+      <div className="max-w-lg">
+        <Entrees vue={vue} />
+        <h3 className="text-base font-medium text-stone-700 mb-1">Prompts de génération</h3>
+        <p className="text-xs text-stone-400 mb-4">
+          Prompts système qui guident l&apos;IA pour produire le contenu. Visibles ici à titre de référence.
+        </p>
+        <div className="space-y-3">
+          <details className="bg-white border border-stone-200 rounded-xl p-4">
+            <summary className="text-sm font-medium text-stone-600 cursor-pointer">Flashcards depuis un cours</summary>
+            <pre className="mt-3 text-xs text-stone-600 bg-stone-50 p-3 rounded-lg whitespace-pre-wrap font-sans overflow-auto max-h-96">{PROMPT_FLASHCARDS}</pre>
+          </details>
+          <details className="bg-white border border-stone-200 rounded-xl p-4">
+            <summary className="text-sm font-medium text-stone-600 cursor-pointer">Flashcards depuis un texte source (1-2 cartes)</summary>
+            <pre className="mt-3 text-xs text-stone-600 bg-stone-50 p-3 rounded-lg whitespace-pre-wrap font-sans overflow-auto max-h-96">{PROMPT_TEXTE}</pre>
+          </details>
+          <details className="bg-white border border-stone-200 rounded-xl p-4">
+            <summary className="text-sm font-medium text-stone-600 cursor-pointer">Quizz (QCM)</summary>
+            <pre className="mt-3 text-xs text-stone-600 bg-stone-50 p-3 rounded-lg whitespace-pre-wrap font-sans overflow-auto max-h-96">{PROMPT_QUIZZ}</pre>
+          </details>
+        </div>
+      </div>
+    )
+  }
+
+  // vue === 'notation'
   const params = await lireParametres()
 
   return (
     <div className="max-w-lg">
+      <Entrees vue={vue} />
       <h3 className="text-base font-medium text-stone-700 mb-6">Paramètres de notation</h3>
 
       <form action={actionSauvegarder} className="space-y-6">
@@ -90,24 +130,6 @@ export default async function ParametresPage() {
           Enregistrer les paramètres
         </button>
       </form>
-
-      {/* Prompts de génération de contenu (distincts des prompts d'évaluation des Fragments) */}
-      <section className="mt-8">
-        <h3 className="text-base font-medium text-stone-700 mb-1">Prompts de génération</h3>
-        <p className="text-xs text-stone-400 mb-4">
-          Prompts système qui guident l&apos;IA pour produire le contenu. Visibles ici à titre de référence.
-        </p>
-        <div className="space-y-3">
-          <details className="bg-white border border-stone-200 rounded-xl p-4">
-            <summary className="text-sm font-medium text-stone-600 cursor-pointer">Génération des flashcards</summary>
-            <pre className="mt-3 text-xs text-stone-600 bg-stone-50 p-3 rounded-lg whitespace-pre-wrap font-sans overflow-auto max-h-96">{PROMPT_FLASHCARDS}</pre>
-          </details>
-          <details className="bg-white border border-stone-200 rounded-xl p-4">
-            <summary className="text-sm font-medium text-stone-600 cursor-pointer">Génération des quizz (QCM)</summary>
-            <pre className="mt-3 text-xs text-stone-600 bg-stone-50 p-3 rounded-lg whitespace-pre-wrap font-sans overflow-auto max-h-96">{PROMPT_QUIZZ}</pre>
-          </details>
-        </div>
-      </section>
     </div>
   )
 }
