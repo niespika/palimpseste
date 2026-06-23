@@ -11,6 +11,8 @@ export interface ContenuItem {
   chapitres: string | null
   texte: string | null
   uniteId: string
+  /** Discriminant du document : 'cours' | 'texte' (| 'texte_source' pour un livre). */
+  type: string
   fichierLegacyUrl: string | null
 }
 export interface ImageItem { id: string; url: string | null; legende: string | null }
@@ -99,6 +101,13 @@ export default function LigneContenu({ item, unites, classes, assignedClasseIds,
             {unites.map(u => <option key={u.id} value={u.id}>{u.label}</option>)}
           </select>
         </div>
+        {!masquerClasses && (
+          <select name="objetType" defaultValue={item.type === 'texte' ? 'texte' : 'cours'}
+            className="px-2 py-1.5 border border-stone-300 rounded text-sm text-stone-900 focus:outline-none focus:ring-2 focus:ring-stone-400">
+            <option value="cours">Cours (leçon)</option>
+            <option value="texte">Texte d&apos;étude (source Quazian)</option>
+          </select>
+        )}
         <input name="chapitres" defaultValue={item.chapitres ?? ''} placeholder="Chapitres (ex. : Chap. 1-4) — optionnel"
           className="w-full px-2 py-1.5 border border-stone-300 rounded text-sm text-stone-900 focus:outline-none focus:ring-2 focus:ring-stone-400" />
         <textarea name="texte" defaultValue={item.texte ?? ''} rows={4} placeholder="Texte du contenu"
@@ -160,6 +169,8 @@ export default function LigneContenu({ item, unites, classes, assignedClasseIds,
         <div className="min-w-0">
           <div className="flex items-center gap-2 flex-wrap">
             <span className="text-sm font-medium text-stone-800">{item.nom}</span>
+            {item.type === 'texte' && <span className="text-xs bg-emerald-50 text-emerald-700 px-1.5 py-0.5 rounded">Texte</span>}
+            {item.type === 'cours' && <span className="text-xs bg-stone-100 text-stone-500 px-1.5 py-0.5 rounded">Cours</span>}
             {item.semaine != null && <span className="text-xs bg-stone-100 text-stone-500 px-1.5 py-0.5 rounded">S{item.semaine}</span>}
             {item.chapitres && <span className="text-xs bg-violet-50 text-violet-700 px-1.5 py-0.5 rounded">{item.chapitres}</span>}
             {!masquerClasses && nomsClasses.map(n => <span key={n} className="text-xs bg-blue-50 text-blue-700 px-1.5 py-0.5 rounded">{n}</span>)}

@@ -99,6 +99,18 @@ export default function FormulaireContenu({ unites, classes }: Props) {
       </div>
 
       <div>
+        <label className="block text-xs font-medium text-stone-500 mb-1">Type de contenu</label>
+        <select
+          name="objetType"
+          defaultValue="cours"
+          className="w-full sm:w-72 px-3 py-2 border border-stone-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-stone-400 text-stone-900"
+        >
+          <option value="cours">Cours (leçon)</option>
+          <option value="texte">Texte d&apos;étude (source pour Quazian)</option>
+        </select>
+      </div>
+
+      <div>
         <label className="block text-xs font-medium text-stone-500 mb-1">Classes concernées</label>
         {classes.length === 0 ? (
           <p className="text-sm text-stone-400">Aucune classe.</p>

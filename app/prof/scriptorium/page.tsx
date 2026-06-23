@@ -14,6 +14,7 @@ interface DocRow {
   id: string
   unite_id: string
   titre: string
+  type: string | null
   semaine: number | null
   chapitres: string | null
   texte_extrait: string | null
@@ -66,7 +67,7 @@ export default async function ScriptoriumPage({
   const [{ data: classes }, { data: unites }, { data: docsBruts }, { data: liens }, { data: imagesBrutes }, { data: liensUnite }] = await Promise.all([
     supabase.from('classes').select('id, nom').order('nom'),
     supabase.from('scriptorium_unites').select('id, label, ordre, type, date_debut, nb_semaines').order('ordre'),
-    supabase.from('scriptorium_documents').select('id, unite_id, titre, semaine, chapitres, texte_extrait, fichier_ref'),
+    supabase.from('scriptorium_documents').select('id, unite_id, titre, type, semaine, chapitres, texte_extrait, fichier_ref'),
     supabase.from('scriptorium_document_classes').select('document_id, classe_id'),
     supabase.from('scriptorium_contenu_images').select('id, document_id, fichier_ref, legende, ordre').order('ordre'),
     supabase.from('scriptorium_unite_classes').select('unite_id, classe_id'),
@@ -143,7 +144,7 @@ export default async function ScriptoriumPage({
   }
 
   function toItem(d: DocRow): ContenuItem {
-    return { id: d.id, nom: d.titre, semaine: d.semaine, chapitres: d.chapitres, texte: d.texte_extrait, uniteId: d.unite_id, fichierLegacyUrl: legacyParDoc.get(d.id) ?? null }
+    return { id: d.id, nom: d.titre, semaine: d.semaine, chapitres: d.chapitres, texte: d.texte_extrait, uniteId: d.unite_id, type: d.type ?? 'cours', fichierLegacyUrl: legacyParDoc.get(d.id) ?? null }
   }
 
   const ligne = (d: DocRow) => (

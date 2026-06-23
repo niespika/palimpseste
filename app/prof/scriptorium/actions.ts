@@ -132,6 +132,8 @@ export async function ajouterContenu(formData: FormData) {
   const nom = (formData.get('nom') as string)?.trim()
   let texte = (formData.get('texte') as string)?.trim() || null
   const legende = (formData.get('legende') as string)?.trim() || null
+  // cours (leçon) ou texte (texte d'étude — source pour Quazian), au sein d'une unité.
+  const objetType = (formData.get('objetType') as string) === 'texte' ? 'texte' : 'cours'
   const classeIds = formData.getAll('classeIds').map(c => c as string).filter(Boolean)
   const fichier = formData.get('fichier') as File | null
 
@@ -162,7 +164,7 @@ export async function ajouterContenu(formData: FormData) {
     .from('scriptorium_documents')
     .insert({
       unite_id: uniteId,
-      type: 'cours',
+      type: objetType,
       titre: nom,
       texte_extrait: texte,
       legende,
@@ -334,11 +336,15 @@ export async function modifierContenu(formData: FormData) {
   const texte = (formData.get('texte') as string)?.trim() || null
   const chapitres = (formData.get('chapitres') as string)?.trim() || null
   const uniteId = (formData.get('uniteId') as string) || undefined
+  // cours/texte : présent seulement pour le contenu d'unité (masqué pour les
+  // documents de livre, type='texte_source' qu'on ne doit pas écraser).
+  const objetType = formData.get('objetType') as string | null
 
   if (!nom) return { error: 'Le nom est requis.' }
 
   const maj: Record<string, unknown> = { titre: nom, semaine, texte_extrait: texte, chapitres }
   if (uniteId) maj.unite_id = uniteId
+  if (objetType === 'cours' || objetType === 'texte') maj.type = objetType
 
   const { error } = await supabase.from('scriptorium_documents').update(maj).eq('id', id)
   if (error) return { error: error.message }
