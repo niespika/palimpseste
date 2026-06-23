@@ -2,7 +2,6 @@ import { notFound } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/utils/supabase/server'
 import { createAdminClient } from '@/utils/supabase/admin'
-import SelecteurClasseEleve from '../../SelecteurClasseEleve'
 import { chargerCapstoneLivre, contexteAletheia, estSemaineDebloquee, lireReglages, livresPourClasse, travauxParSemaine } from './data'
 import type { StatutAletheia } from './types'
 
@@ -47,9 +46,8 @@ export default async function PageAletheia() {
 
   return (
     <div className="space-y-6 pb-8">
-      <div className="flex items-center justify-between gap-3 flex-wrap">
+      <div>
         <Link href="/eleve" className="text-sm text-stone-500 hover:text-stone-700">← Retour</Link>
-        <SelecteurClasseEleve inscriptions={inscriptions} activeId={active.id} />
       </div>
 
       <div>

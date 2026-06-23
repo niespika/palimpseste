@@ -3,7 +3,6 @@ import { createClient } from '@/utils/supabase/server'
 import { createAdminClient } from '@/utils/supabase/admin'
 import { moduleIdsAccessibles } from '@/utils/acces'
 import { contexteClasseEleve } from './contexte-classe'
-import SelecteurClasseEleve from './SelecteurClasseEleve'
 import { noteVersLettre, COULEUR_LETTRE, type LettreSection } from '@/utils/notation'
 import { chargerStatsRevision } from './modules/quazian/actions'
 
@@ -27,7 +26,7 @@ export default async function TableauDeBordEleve() {
   const { data: { user } } = await supabase.auth.getUser()
   const { data: profile } = await supabase.from('profiles').select('display_name').eq('id', user!.id).single()
 
-  const { inscriptions, active } = await contexteClasseEleve(supabase, user!.id)
+  const { active } = await contexteClasseEleve(supabase, user!.id)
 
   // ── Zone « À faire » (scopée sur l'inscription active) ─────────────────────
   let fragmentTache: { texte: string; depose: boolean; pistes: string[] } | null = null
@@ -143,12 +142,9 @@ export default async function TableauDeBordEleve() {
 
   return (
     <div className="space-y-8">
-      <div className="flex items-start justify-between gap-4 flex-wrap">
-        <div>
-          <h2 className="text-xl font-serif text-stone-900 mb-1">Bonjour, {profile?.display_name} !</h2>
-          {active && <p className="text-stone-500 text-sm">{active.classe_nom}</p>}
-        </div>
-        {active && <SelecteurClasseEleve inscriptions={inscriptions} activeId={active.id} />}
+      <div>
+        <h2 className="text-xl font-serif text-stone-900 mb-1">Bonjour, {profile?.display_name} !</h2>
+        {active && <p className="text-stone-500 text-sm">{active.classe_nom}</p>}
       </div>
 
       {!active ? (

@@ -4,7 +4,6 @@ import { createClient } from '@/utils/supabase/server'
 import { createAdminClient } from '@/utils/supabase/admin'
 import { inscriptionsModuleEleve } from '@/utils/acces'
 import { contexteClasseEleve } from '../../contexte-classe'
-import SelecteurClasseEleve from '../../SelecteurClasseEleve'
 import Tuile from '@/components/Tuile'
 import FormulaireDepot from './FormulaireDepot'
 import BoutonLectureRetour from './BoutonLectureRetour'
@@ -410,22 +409,19 @@ export default async function PageFragments({ searchParams }: { searchParams: Pr
         <Link href="/eleve" className="text-sm text-stone-500 hover:text-stone-700">← Retour</Link>
       </div>
 
-      <div className="flex items-start justify-between gap-3 flex-wrap">
-        <div>
-          <h2 className="text-xl font-serif text-stone-900 mb-1">Fragments d&apos;érudition</h2>
-          {theme ? (
-            <div className="bg-stone-100 rounded-xl px-4 py-3">
-              <p className="text-xs text-stone-500 mb-0.5">Ton thème</p>
-              <p className="font-medium text-stone-800">{theme.theme}</p>
-              {theme.description && <p className="text-sm text-stone-500 mt-1">{theme.description}</p>}
-            </div>
-          ) : (
-            <div className="bg-stone-50 rounded-xl px-4 py-3 border border-stone-200">
-              <p className="text-sm text-stone-500 italic">Ton thème sera défini avec ton professeur.</p>
-            </div>
-          )}
-        </div>
-        <SelecteurClasseEleve inscriptions={inscriptions} activeId={inscriptionId} />
+      <div>
+        <h2 className="text-xl font-serif text-stone-900 mb-1">Fragments d&apos;érudition</h2>
+        {theme ? (
+          <div className="bg-stone-100 rounded-xl px-4 py-3">
+            <p className="text-xs text-stone-500 mb-0.5">Ton thème</p>
+            <p className="font-medium text-stone-800">{theme.theme}</p>
+            {theme.description && <p className="text-sm text-stone-500 mt-1">{theme.description}</p>}
+          </div>
+        ) : (
+          <div className="bg-stone-50 rounded-xl px-4 py-3 border border-stone-200">
+            <p className="text-sm text-stone-500 italic">Ton thème sera défini avec ton professeur.</p>
+          </div>
+        )}
       </div>
 
       {/* Ton parcours (sections en lettres) + stats + rappel des pistes */}
