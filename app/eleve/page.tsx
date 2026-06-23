@@ -4,7 +4,13 @@ import { createAdminClient } from '@/utils/supabase/admin'
 import { moduleIdsAccessibles } from '@/utils/acces'
 import { contexteClasseEleve } from './contexte-classe'
 import { noteVersLettre, COULEUR_LETTRE, type LettreSection } from '@/utils/notation'
+import { calculerGrilleSemaines, jourParis } from '@/utils/calendrier-grille'
 import { chargerStatsRevision } from './modules/quazian/actions'
+import { livresPourClasse, toutesSemainesDone } from './modules/aletheia/data'
+
+function fmtJourCourt(d: string) {
+  return new Date(d + 'T00:00:00Z').toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', timeZone: 'UTC' })
+}
 
 type ModuleInfo = { id: string; slug: string; nom: string; description: string | null; actif: boolean }
 const MODULES_MASQUES_ELEVE = ['scriptorium']
@@ -33,6 +39,8 @@ export default async function TableauDeBordEleve() {
   let cartesDues = 0
   let codexEnCoursId: string | null = null
   let quizzEnCoursId: string | null = null
+  let aletheiaAFaire = false
+  let semaineCourante: { label: string; debut: string; fin: string; vacances: boolean } | null = null
 
   if (active) {
     // Semaine ouverte scopée au semestre actif (évite une semaine restée ouverte
@@ -87,6 +95,27 @@ export default async function TableauDeBordEleve() {
     codexEnCoursId = (codex?.id as string) ?? null
     const { data: quizz } = await admin.from('quazian_quizzes').select('id').eq('classe_id', active.classe_id).eq('statut', 'lance').limit(1).maybeSingle()
     quizzEnCoursId = (quizz?.id as string) ?? null
+
+    // Aletheia : au moins un livre dont toutes les semaines ne sont pas terminées.
+    const livres = (await livresPourClasse(admin, active.classe_id)).filter((l) => l.semaines.length > 0)
+    const done = await Promise.all(livres.map((l) => toutesSemainesDone(admin, user!.id, l.id)))
+    aletheiaAFaire = done.some((d) => !d)
+
+    // Semaine calendaire en cours (depuis le semestre actif + vacances).
+    const { data: semCal } = await admin.from('semesters').select('id, start_date, end_date').eq('is_active', true).maybeSingle()
+    if (semCal) {
+      const { data: hols } = await admin.from('holidays').select('label, start_date, end_date').eq('semester_id', semCal.id)
+      const today = jourParis(new Date())
+      const wk = calculerGrilleSemaines(semCal, hols ?? []).find((w) => w.start <= today && today <= w.end)
+      if (wk) {
+        semaineCourante = {
+          label: wk.isVacation ? `Vacances${wk.vacanceLabel ? ` — ${wk.vacanceLabel}` : ''}` : `Semaine ${wk.pedagogicalNumber}`,
+          debut: wk.start,
+          fin: wk.end,
+          vacances: wk.isVacation,
+        }
+      }
+    }
   }
 
   // ── Zone « Progression » (tendances des sections, inscription active) ──────
@@ -138,7 +167,7 @@ export default async function TableauDeBordEleve() {
     : { data: [] as ModuleInfo[] }
   const modulesActifs = (mods ?? []).filter((m): m is ModuleInfo => !!m && m.actif === true && !MODULES_MASQUES_ELEVE.includes(m.slug))
 
-  const rienAFaire = active && !codexEnCoursId && !quizzEnCoursId && cartesDues === 0 && (!fragmentTache || fragmentTache.depose)
+  const rienAFaire = active && !codexEnCoursId && !quizzEnCoursId && cartesDues === 0 && !aletheiaAFaire && (!fragmentTache || fragmentTache.depose)
 
   return (
     <div className="space-y-8">
@@ -155,7 +184,14 @@ export default async function TableauDeBordEleve() {
         <>
           {/* À FAIRE */}
           <section>
-            <h3 className="text-sm font-medium text-stone-500 uppercase tracking-wide mb-3">À faire</h3>
+            <div className="flex items-baseline justify-between gap-3 mb-3">
+              <h3 className="text-sm font-medium text-stone-500 uppercase tracking-wide">À faire</h3>
+              {semaineCourante && (
+                <span className={`text-xs ${semaineCourante.vacances ? 'text-stone-400' : 'text-stone-500'}`}>
+                  {semaineCourante.label} · {fmtJourCourt(semaineCourante.debut)}–{fmtJourCourt(semaineCourante.fin)}
+                </span>
+              )}
+            </div>
             <div className="space-y-3">
               {fragmentTache && (
                 <div className={`bg-white border rounded-xl p-4 ${fragmentTache.depose ? 'border-stone-200' : 'border-amber-200'}`}>
@@ -195,6 +231,15 @@ export default async function TableauDeBordEleve() {
               {quizzEnCoursId && (
                 <Link href={`/eleve/modules/quazian/quizz/${quizzEnCoursId}`} className="block bg-white border border-violet-200 rounded-xl p-4 hover:border-violet-300 transition-colors">
                   <p className="text-sm font-medium text-stone-800">Quizz en cours</p>
+                </Link>
+              )}
+
+              {aletheiaAFaire && (
+                <Link href="/eleve/modules/aletheia" className="block bg-white border border-amber-200 rounded-xl p-4 hover:border-amber-300 transition-colors">
+                  <div className="flex items-center justify-between gap-3">
+                    <p className="text-sm font-medium text-stone-800">Lecture à poursuivre</p>
+                    <span className="text-xs text-stone-500">Aletheia →</span>
+                  </div>
                 </Link>
               )}
 

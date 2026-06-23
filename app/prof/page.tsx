@@ -10,6 +10,7 @@ import RappelsClasses from './RappelsClasses'
 import BoutonRetirerEleve from './BoutonRetirerEleve'
 import ConfirmationEffacement from './classes/ConfirmationEffacement'
 import BandeCalendrier from './calendrier/BandeCalendrier'
+import TuilesJourSemaine from './calendrier/TuilesJourSemaine'
 
 const NIVEAU_LABEL: Record<string, string> = { '1ere': 'Première', terminale: 'Terminale' }
 
@@ -167,7 +168,8 @@ export default async function ProfAccueil({ searchParams }: { searchParams: Prom
     <div className="space-y-10 pb-10">
       <h2 className="text-xl font-serif text-stone-900">Tableau de bord</h2>
 
-      {/* ── Bande calendrier (semaines à venir) ────────────────────────────── */}
+      {/* ── Calendrier : aujourd'hui / cette semaine + bande des semaines ───── */}
+      <TuilesJourSemaine />
       <BandeCalendrier />
 
       {/* ── Zone 1 : À faire ───────────────────────────────────────────────── */}
