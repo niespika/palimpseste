@@ -14,22 +14,37 @@ async function verifierProf() {
   return { supabase }
 }
 
-// Données brutes pour le diagnostic classe
-export async function chargerDiagnosticClasse() {
+// Données brutes pour le diagnostic classe.
+// `classeId` optionnel : scope les fragilités aux quizz de cette classe
+// (drill-down par classe → élève). Sans, agrège toutes classes confondues.
+export async function chargerDiagnosticClasse(classeId?: string) {
   const { supabase } = await verifierProf()
+
+  // Quizz de la classe ciblée (pour scoper les réponses).
+  let quizIds: Set<string> | null = null
+  if (classeId) {
+    const { data: qz } = await supabase.from('quazian_quizzes').select('id').eq('classe_id', classeId)
+    quizIds = new Set((qz ?? []).map((q) => q.id as string))
+  }
 
   // Toutes les réponses avec concept_tag depuis les quizz fermés
   const { data: reponses } = await supabase
     .from('quazian_answers')
     .select(`
       score, repondu,
-      quazian_sessions!inner(eleve_id),
+      quazian_sessions!inner(eleve_id, quiz_id),
       quazian_questions!inner(concept_tag)
     `)
     .not('score', 'is', null)
 
+  const reponsesScope = (reponses ?? []).filter((r) => {
+    if (!quizIds) return true
+    const s = r.quazian_sessions as unknown as { quiz_id: string }
+    return quizIds.has(s.quiz_id)
+  })
+
   // Profils
-  const eleveIds = [...new Set((reponses ?? []).map((r) => {
+  const eleveIds = [...new Set(reponsesScope.map((r) => {
     const s = r.quazian_sessions as unknown as { eleve_id: string }
     return s.eleve_id
   }))]
@@ -43,7 +58,7 @@ export async function chargerDiagnosticClasse() {
 
   // Grouper les réponses par élève
   const parEleve: Record<string, Array<{ concept_tag: string; score: number }>> = {}
-  for (const r of reponses ?? []) {
+  for (const r of reponsesScope) {
     const session = r.quazian_sessions as unknown as { eleve_id: string }
     const question = r.quazian_questions as unknown as { concept_tag: string }
     const eleveId = session.eleve_id
@@ -69,6 +84,61 @@ export async function chargerDiagnosticClasse() {
   }
 
   return { diagnostics, profilesMap, conceptsClasse, eleveIds }
+}
+
+// Fragilités agrégées PAR UNITÉ (cours + texte). Un quizz couvre des unités
+// (scope_unites) ; on rattache chaque réponse aux unités de son quizz, puis on
+// diagnostique chaque (unité × élève) pour compter idées fausses / lacunes.
+export async function chargerDiagnosticParUnite() {
+  const { supabase } = await verifierProf()
+
+  const [{ data: unites }, { data: quizzes }, { data: reponses }] = await Promise.all([
+    supabase.from('scriptorium_unites').select('id, label').eq('type', 'unite').order('ordre', { ascending: true }),
+    supabase.from('quazian_quizzes').select('id, scope_unites'),
+    supabase
+      .from('quazian_answers')
+      .select(`
+        score,
+        quazian_sessions!inner(eleve_id, quiz_id),
+        quazian_questions!inner(concept_tag)
+      `)
+      .not('score', 'is', null),
+  ])
+
+  const scopeByQuiz = new Map<string, string[]>()
+  for (const q of quizzes ?? []) scopeByQuiz.set(q.id as string, (q.scope_unites ?? []) as string[])
+
+  // (unité → élève → [{concept, score}])
+  const parUniteEleve = new Map<string, Map<string, Array<{ concept_tag: string; score: number }>>>()
+  for (const r of reponses ?? []) {
+    const s = r.quazian_sessions as unknown as { eleve_id: string; quiz_id: string }
+    const qst = r.quazian_questions as unknown as { concept_tag: string }
+    for (const u of scopeByQuiz.get(s.quiz_id) ?? []) {
+      let parEleve = parUniteEleve.get(u)
+      if (!parEleve) { parEleve = new Map(); parUniteEleve.set(u, parEleve) }
+      const arr = parEleve.get(s.eleve_id) ?? []
+      arr.push({ concept_tag: qst.concept_tag, score: r.score })
+      parEleve.set(s.eleve_id, arr)
+    }
+  }
+
+  type ConceptStat = { idee_fausse: number; lacune: number; maitrise: number }
+  type AggUnite = { concepts: Record<string, ConceptStat>; nbEleves: number }
+  const parUnite: Record<string, AggUnite> = {}
+  for (const [uniteId, parEleve] of parUniteEleve) {
+    const concepts: Record<string, ConceptStat> = {}
+    for (const reps of parEleve.values()) {
+      for (const d of diagnostiquerEleve(reps)) {
+        if (!concepts[d.concept_tag]) concepts[d.concept_tag] = { idee_fausse: 0, lacune: 0, maitrise: 0 }
+        if (d.profil === 'idee_fausse') concepts[d.concept_tag].idee_fausse++
+        else if (d.profil === 'lacune') concepts[d.concept_tag].lacune++
+        else if (d.profil === 'maitrise') concepts[d.concept_tag].maitrise++
+      }
+    }
+    parUnite[uniteId] = { concepts, nbEleves: parEleve.size }
+  }
+
+  return { unites: (unites ?? []) as { id: string; label: string }[], parUnite }
 }
 
 // Diagnostic d'un élève spécifique + retrievability FSRS
