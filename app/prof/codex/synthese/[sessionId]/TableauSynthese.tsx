@@ -14,6 +14,8 @@ interface EleveStatut {
   analyse_v1_statut: string
   analyse_vf_statut: string
   statut_validation: string | null
+  /** Signal T4 : l'élève a-t-il lu son retour validé ? (optionnel : absent du refresh live) */
+  retour_lu?: boolean
 }
 
 interface Props {
@@ -203,7 +205,14 @@ export function TableauSynthese({ sessionId, statut, phaseFinAt, eleves: elevesI
                 </td>
                 <td className="px-4 py-3 text-center">
                   {e.statut_validation === 'valide' ? (
-                    <span className="text-xs px-2 py-0.5 bg-green-100 text-green-700 rounded-full">Validé</span>
+                    <div className="flex items-center justify-center gap-1.5">
+                      <span className="text-xs px-2 py-0.5 bg-green-100 text-green-700 rounded-full">Validé</span>
+                      {e.retour_lu ? (
+                        <span className="text-xs text-stone-400" title="L'élève a lu son retour">lu</span>
+                      ) : (
+                        <span className="text-xs text-amber-600" title="L'élève n'a pas encore lu son retour">non lu</span>
+                      )}
+                    </div>
                   ) : e.vf_envoyee ? (
                     <span className="text-xs px-2 py-0.5 bg-amber-100 text-amber-700 rounded-full">À valider</span>
                   ) : (

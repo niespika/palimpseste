@@ -1,6 +1,7 @@
 'use server'
 
 import { after } from 'next/server'
+import { revalidatePath } from 'next/cache'
 import { createClient } from '@/utils/supabase/server'
 import { createAdminClient } from '@/utils/supabase/admin'
 import { classeIdsActives } from '@/utils/acces'
@@ -25,6 +26,8 @@ export interface SyntheseActive {
   v1_envoyee: boolean
   vf_envoyee: boolean
   statut_validation: string | null
+  /** Retour validé par le prof mais pas encore marqué « lu » par l'élève (T4). */
+  retour_a_lire: boolean
 }
 
 // Trouver la synthèse la plus pertinente pour cet élève (live d'abord, puis dernière fermée)
@@ -50,7 +53,7 @@ export async function chargerSyntheseActive(): Promise<SyntheseActive | null> {
 
   const { data: travail } = await admin
     .from('codex_travaux')
-    .select('photos_v1, photos_vf, statut_validation')
+    .select('photos_v1, photos_vf, statut_validation, synthese_lu_at')
     .eq('session_id', choisie.id)
     .eq('eleve_id', userId)
     .maybeSingle()
@@ -65,6 +68,7 @@ export async function chargerSyntheseActive(): Promise<SyntheseActive | null> {
     v1_envoyee: (travail?.photos_v1?.length ?? 0) > 0,
     vf_envoyee: (travail?.photos_vf?.length ?? 0) > 0,
     statut_validation: travail?.statut_validation ?? null,
+    retour_a_lire: choisie.statut === 'fermee' && travail?.statut_validation === 'valide' && !travail?.synthese_lu_at,
   }
 }
 
@@ -72,6 +76,7 @@ export interface SynthesePassee {
   id: string
   unite_label: string
   validee: boolean
+  lu: boolean
 }
 
 // Historique des synthèses fermées visibles par l'élève (trace durable)
@@ -91,12 +96,16 @@ export async function chargerHistorique(): Promise<SynthesePassee[]> {
 
   const { data: travaux } = await admin
     .from('codex_travaux')
-    .select('session_id, statut_validation')
+    .select('session_id, statut_validation, synthese_lu_at')
     .eq('eleve_id', userId)
     .in('session_id', visibles.map((s) => s.id))
 
   const validMap: Record<string, boolean> = {}
-  for (const t of travaux ?? []) validMap[t.session_id] = t.statut_validation === 'valide'
+  const luMap: Record<string, boolean> = {}
+  for (const t of travaux ?? []) {
+    validMap[t.session_id] = t.statut_validation === 'valide'
+    luMap[t.session_id] = !!t.synthese_lu_at
+  }
 
   return visibles.map((s) => {
     const u = s.scriptorium_unites as { label: string } | { label: string }[] | null
@@ -104,6 +113,7 @@ export async function chargerHistorique(): Promise<SynthesePassee[]> {
       id: s.id,
       unite_label: Array.isArray(u) ? u[0]?.label ?? '' : u?.label ?? '',
       validee: validMap[s.id] ?? false,
+      lu: luMap[s.id] ?? false,
     }
   })
 }
@@ -280,6 +290,7 @@ export async function chargerEtatTravail(sessionId: string): Promise<EtatTravail
 export interface TraceCodex {
   erreurs_corrections: { concept_tag: string; description: string; correction: string }[]
   synthese_completee: string | null
+  lu: boolean
 }
 
 // Trace validée (consultable par l'élève après validation prof)
@@ -289,7 +300,7 @@ export async function chargerTrace(sessionId: string): Promise<TraceCodex | null
 
   const { data: t } = await admin
     .from('codex_travaux')
-    .select('statut_validation, retour_critique, synthese_completee')
+    .select('statut_validation, retour_critique, synthese_completee, synthese_lu_at')
     .eq('session_id', sessionId)
     .eq('eleve_id', userId)
     .maybeSingle()
@@ -300,5 +311,31 @@ export async function chargerTrace(sessionId: string): Promise<TraceCodex | null
   return {
     erreurs_corrections: retour?.erreurs_corrections ?? [],
     synthese_completee: t.synthese_completee ?? null,
+    lu: !!t.synthese_lu_at,
   }
+}
+
+// Marquer le retour de synthèse comme lu (T4). Possible seulement si le retour
+// est validé par le prof. Idempotent.
+export async function marquerSyntheseLue(sessionId: string): Promise<{ success: true } | { error: string }> {
+  const { userId } = await verifierEleve()
+  const admin = createAdminClient()
+
+  const { data: t } = await admin
+    .from('codex_travaux')
+    .select('id, statut_validation, synthese_lu_at')
+    .eq('session_id', sessionId)
+    .eq('eleve_id', userId)
+    .maybeSingle()
+
+  if (!t) return { error: 'Travail introuvable.' }
+  if (t.statut_validation !== 'valide') return { error: "Le retour n'est pas encore validé." }
+
+  if (!t.synthese_lu_at) {
+    await admin.from('codex_travaux').update({ synthese_lu_at: new Date().toISOString() }).eq('id', t.id)
+  }
+
+  revalidatePath(`/eleve/modules/codex/synthese/${sessionId}`)
+  revalidatePath('/eleve/modules/codex')
+  return { success: true }
 }

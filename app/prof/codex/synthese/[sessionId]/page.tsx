@@ -57,7 +57,7 @@ export default async function SynthesePage({
   // Travaux existants
   const { data: travaux } = await supabase
     .from('codex_travaux')
-    .select('id, eleve_id, photos_v1, photos_vf, analyse_v1_statut, analyse_vf_statut, statut_validation')
+    .select('id, eleve_id, photos_v1, photos_vf, analyse_v1_statut, analyse_vf_statut, statut_validation, synthese_lu_at')
     .eq('session_id', sessionId)
 
   const travauxMap: Record<string, NonNullable<typeof travaux>[number]> = {}
@@ -75,6 +75,7 @@ export default async function SynthesePage({
         analyse_v1_statut: t?.analyse_v1_statut ?? 'vide',
         analyse_vf_statut: t?.analyse_vf_statut ?? 'vide',
         statut_validation: t?.statut_validation ?? null,
+        retour_lu: !!t?.synthese_lu_at,
       }
     })
     .sort((a, b) => a.display_name.localeCompare(b.display_name))

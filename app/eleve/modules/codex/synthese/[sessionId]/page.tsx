@@ -5,6 +5,7 @@ import { chargerEtatTravail, chargerTrace } from '../../actions'
 import { EcranV1 } from './EcranV1'
 import { EcranVF } from './EcranVF'
 import { TraceAffichage } from './TraceAffichage'
+import { BoutonLu } from './BoutonLu'
 
 export default async function SyntheseElevePage({
   params,
@@ -51,7 +52,15 @@ export default async function SyntheseElevePage({
 
       {session.statut === 'fermee' && (
         trace ? (
-          <TraceAffichage trace={trace} />
+          <div className="space-y-6">
+            {!trace.lu && (
+              <div className="bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 text-sm text-amber-800">
+                À faire : lis ton retour, puis marque-le comme lu en bas de page.
+              </div>
+            )}
+            <TraceAffichage trace={trace} />
+            <BoutonLu sessionId={sessionId} luInitial={trace.lu} />
+          </div>
         ) : (
           <div className="bg-white border border-stone-200 rounded-xl p-8 text-center text-stone-400 text-sm">
             Ton retour sera disponible une fois validé par le professeur.

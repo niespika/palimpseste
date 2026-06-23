@@ -30,6 +30,9 @@ export default async function CodexElevePage() {
   const [synthese, historique] = await Promise.all([chargerSyntheseActive(), chargerHistorique()])
   const live = synthese && (synthese.statut === 'phase_1' || synthese.statut === 'phase_2') ? synthese : null
 
+  // À faire (T4) : retours validés par le prof mais pas encore lus par l'élève.
+  const aLire = historique.filter((s) => s.validee && !s.lu)
+
   return (
     <div>
       <Link href="/eleve" className="text-sm text-stone-500 hover:text-stone-700 mb-6 inline-flex items-center gap-1">
@@ -58,6 +61,21 @@ export default async function CodexElevePage() {
         </Link>
       )}
 
+      {/* À faire : retour(s) à lire */}
+      {aLire.length > 0 && (
+        <Link
+          href={`/eleve/modules/codex/synthese/${aLire[0].id}`}
+          className="block bg-amber-50 border border-amber-300 rounded-xl p-4 hover:bg-amber-100 transition-colors mb-6"
+        >
+          <p className="font-medium text-amber-800 text-sm">
+            À faire : {aLire.length} retour{aLire.length > 1 ? 's' : ''} à lire
+          </p>
+          <p className="text-xs text-amber-600">
+            {aLire.length === 1 ? aLire[0].unite_label : `dont ${aLire[0].unite_label}`} → appuie pour le consulter
+          </p>
+        </Link>
+      )}
+
       {historique.length > 0 && (
         <section>
           <h3 className="text-sm font-medium text-stone-500 mb-3">Mes synthèses</h3>
@@ -69,8 +87,10 @@ export default async function CodexElevePage() {
                 className="flex items-center justify-between gap-3 bg-white border border-stone-200 rounded-xl px-4 py-3 hover:border-stone-300 transition-colors"
               >
                 <p className="text-sm font-medium text-stone-800 truncate">{s.unite_label}</p>
-                {s.validee ? (
-                  <span className="text-xs px-2 py-0.5 bg-blue-100 text-blue-700 rounded-full shrink-0">retour prêt</span>
+                {s.validee && !s.lu ? (
+                  <span className="text-xs px-2 py-0.5 bg-amber-100 text-amber-700 rounded-full shrink-0">à lire</span>
+                ) : s.validee && s.lu ? (
+                  <span className="text-xs px-2 py-0.5 bg-stone-100 text-stone-500 rounded-full shrink-0">lu</span>
                 ) : (
                   <span className="text-xs text-stone-400 shrink-0">en attente</span>
                 )}
