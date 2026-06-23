@@ -63,7 +63,7 @@ export default async function PageFragments({ searchParams }: { searchParams: Pr
   const inscriptionId = inscriptionActive.id
 
   const { vue: vueParam } = await searchParams
-  const vue = vueParam === 'oral' || vueParam === 'essai' ? vueParam : 'ecrit'
+  const vue = vueParam === 'oral' || vueParam === 'essai' || vueParam === 'synthese' ? vueParam : 'ecrit'
 
   // Thème du semestre courant (un thème par inscription × semestre). L'élève
   // n'a pas de sélecteur : il voit toujours le semestre marqué « courant ».
@@ -489,6 +489,15 @@ export default async function PageFragments({ searchParams }: { searchParams: Pr
             selectionnee={vue === 'essai'}
           />
         )}
+        {synthesePubliee && (
+          <Tuile
+            nom="Synthèse"
+            sousTitre="Bilan du semestre"
+            couleur="vert"
+            href={lien('synthese')}
+            selectionnee={vue === 'synthese'}
+          />
+        )}
       </div>
 
       {/* Retour du dernier fragment + gate de lecture (vue écrite uniquement) */}
@@ -637,8 +646,8 @@ export default async function PageFragments({ searchParams }: { searchParams: Pr
         </div>
       )}
 
-      {/* Bilan de semestre */}
-      {synthesePubliee && (
+      {/* Bilan de semestre (vue dédiée) */}
+      {vue === 'synthese' && synthesePubliee && (
         <div className="space-y-4">
           <h3 className="text-sm font-medium text-stone-500 uppercase tracking-wide">Bilan du semestre</h3>
           <div className="bg-white border border-stone-200 rounded-xl p-5">

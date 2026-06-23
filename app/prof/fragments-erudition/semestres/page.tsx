@@ -2,6 +2,7 @@ import { notFound } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/utils/supabase/server'
 import { createAdminClient } from '@/utils/supabase/admin'
+import Tuile from '@/components/Tuile'
 
 export default async function PageSemestres() {
   const supabase = await createClient()
@@ -50,31 +51,24 @@ export default async function PageSemestres() {
           Aucun semestre. Crée-en un depuis la configuration du Calendrier.
         </div>
       ) : (
-        <div className="space-y-2">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
           {(semestres ?? []).map(s => {
             const stats = statsParSemestre[s.id] ?? { total: 0, publiees: 0 }
+            const debut = new Date(s.date_debut).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })
+            const fin = new Date(s.date_fin).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' })
             return (
-              <div
+              <Tuile
                 key={s.id}
-                className="bg-white border border-stone-200 rounded-xl px-5 py-4 flex items-start justify-between gap-3"
-              >
-                <Link href={`/prof/fragments-erudition/semestres/${s.id}`} className="min-w-0 hover:opacity-80 transition-opacity">
-                  <div className="flex items-center gap-2">
-                    <p className="font-medium text-stone-900">{s.label}</p>
-                    {s.courant && (
-                      <span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full">Actif</span>
-                    )}
-                  </div>
-                  <p className="text-sm text-stone-500 mt-0.5">
-                    {new Date(s.date_debut).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })}
-                    {' → '}
-                    {new Date(s.date_fin).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' })}
-                  </p>
-                </Link>
-                {stats.total > 0 && (
-                  <p className="text-xs text-stone-400 flex-shrink-0">{stats.publiees}/{stats.total} publiées</p>
-                )}
-              </div>
+                nom={s.courant ? `${s.label} · actif` : s.label}
+                sousTitre={`${debut} → ${fin}`}
+                href={`/prof/fragments-erudition/semestres/${s.id}`}
+                couleur={s.courant ? 'vert' : 'neutre'}
+                resume={
+                  stats.total > 0
+                    ? <span className="text-xs text-stone-500">{stats.publiees}/{stats.total} synthèse{stats.total > 1 ? 's' : ''} publiée{stats.publiees > 1 ? 's' : ''}</span>
+                    : <span className="text-xs text-stone-400">Aucune synthèse générée</span>
+                }
+              />
             )
           })}
         </div>
