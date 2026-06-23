@@ -1,4 +1,5 @@
 import Anthropic from '@anthropic-ai/sdk'
+import { coutMessage, enregistrerCoutApi } from '@/utils/cout-api'
 
 export interface FlashcardSuggestion {
   type: 'philosophe' | 'concept' | 'mouvement' | 'these'
@@ -47,6 +48,7 @@ export async function extraireFlashcards(
       },
     ],
   })
+  await enregistrerCoutApi('quazian', coutMessage(message.usage))
 
   const texteReponse = message.content
     .filter((b) => b.type === 'text')
@@ -73,6 +75,7 @@ export async function genererVerso(recto: string): Promise<string> {
       },
     ],
   })
+  await enregistrerCoutApi('quazian', coutMessage(message.usage))
   return message.content
     .filter((b) => b.type === 'text')
     .map((b) => (b as { type: 'text'; text: string }).text)

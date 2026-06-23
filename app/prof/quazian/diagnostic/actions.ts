@@ -3,6 +3,7 @@
 import { createClient } from '@/utils/supabase/server'
 import Anthropic from '@anthropic-ai/sdk'
 import { diagnostiquerEleve, type DiagnosticConcept } from '@/utils/diagnostic'
+import { coutMessage, enregistrerCoutApi } from '@/utils/cout-api'
 
 async function verifierProf() {
   const supabase = await createClient()
@@ -166,6 +167,7 @@ export async function genererRapportFragilites(): Promise<{ rapport: string } | 
       content: `Tu es un assistant pédagogique pour un professeur de philosophie au lycée. Analyse ces données de diagnostic de la classe et produis un rapport de fragilités concis (8-10 lignes max). Distingue clairement les idées fausses (à corriger en priorité) des lacunes (à exposer davantage). Formule des suggestions d'action concrètes.\n\n${contexte}`,
     }],
   })
+  await enregistrerCoutApi('quazian', coutMessage(message.usage))
 
   const rapport = message.content
     .filter((b) => b.type === 'text')

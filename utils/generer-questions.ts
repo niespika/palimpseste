@@ -1,4 +1,5 @@
 import Anthropic from '@anthropic-ai/sdk'
+import { coutMessage, enregistrerCoutApi } from '@/utils/cout-api'
 
 export interface QuestionGeneree {
   enonce: string
@@ -67,6 +68,7 @@ export async function genererQuestions(
       },
     ],
   })
+  await enregistrerCoutApi('quazian', coutMessage(message.usage))
 
   const texte = message.content
     .filter((b) => b.type === 'text')
@@ -100,6 +102,7 @@ export async function regenererQuestion(
       },
     ],
   })
+  await enregistrerCoutApi('quazian', coutMessage(message.usage))
 
   const texte = message.content
     .filter((b) => b.type === 'text')

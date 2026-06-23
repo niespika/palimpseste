@@ -1,6 +1,7 @@
 import Anthropic from '@anthropic-ai/sdk'
 import { createAdminClient } from '@/utils/supabase/admin'
 import { noteVersLettre, lettreVersNote } from '@/utils/notation'
+import { coutMessage, enregistrerCoutApi } from '@/utils/cout-api'
 import type {
   RetourV1, RetourVF, AjoutVerifie, DefinitionVocabulaire, Devoilement, Capstone,
   ReferenceChapitre, InventaireDiagnostic, NiveauxDiagnostic,
@@ -243,6 +244,7 @@ export async function genererRetourV1(travailId: string): Promise<void> {
       max_tokens: 4096,
       messages: [{ role: 'user', content: prompt }],
     })
+    await enregistrerCoutApi('aletheia', coutMessage(response.usage))
     if (response.stop_reason === 'max_tokens') throw new Error('Réponse tronquée (max_tokens).')
 
     const texte = response.content[0]?.type === 'text' ? response.content[0].text : ''
@@ -457,6 +459,7 @@ export async function genererRetourVf(travailId: string): Promise<void> {
       max_tokens: 4096,
       messages: [{ role: 'user', content: prompt }],
     })
+    await enregistrerCoutApi('aletheia', coutMessage(response.usage))
     if (response.stop_reason === 'max_tokens') throw new Error('Réponse tronquée (max_tokens).')
 
     const texte = response.content[0]?.type === 'text' ? response.content[0].text : ''
@@ -556,6 +559,7 @@ export async function genererCapstone(livreId: string): Promise<void> {
       max_tokens: 4096,
       messages: [{ role: 'user', content: prompt }],
     })
+    await enregistrerCoutApi('aletheia', coutMessage(response.usage))
     if (response.stop_reason === 'max_tokens') throw new Error('Réponse tronquée (max_tokens).')
 
     const texte = response.content[0]?.type === 'text' ? response.content[0].text : ''
@@ -646,6 +650,7 @@ export async function genererReferenceLivre(livreId: string): Promise<void> {
     const prompt = injecter(params?.prompt_reference?.trim() || PROMPT_REFERENCE_DEFAUT, { livre_entier: livreEntier, structure_semaines: structure })
     const client = new Anthropic()
     const response = await client.messages.create({ model: MODELE, max_tokens: 4096, messages: [{ role: 'user', content: prompt }] })
+    await enregistrerCoutApi('aletheia', coutMessage(response.usage))
     if (response.stop_reason === 'max_tokens') throw new Error('Réponse tronquée (max_tokens).')
 
     const texte = response.content[0]?.type === 'text' ? response.content[0].text : ''
@@ -760,6 +765,7 @@ async function diagnostiquerPhase(
     arguments: sansDelims(args) || '(rien)',
   })
   const rInv = await client.messages.create({ model: MODELE, max_tokens: 2048, messages: [{ role: 'user', content: pInv }] })
+  await enregistrerCoutApi('aletheia', coutMessage(rInv.usage))
   if (rInv.stop_reason === 'max_tokens') throw new Error('Inventaire tronqué.')
   const inventaire = parseInventaire(JSON.parse(extraireJSON(rInv.content[0]?.type === 'text' ? rInv.content[0].text : '')) as Partial<InventaireDiagnostic>)
 
@@ -776,6 +782,7 @@ async function diagnostiquerPhase(
     }, null, 2),
   })
   const rNiv = await client.messages.create({ model: MODELE, max_tokens: 512, messages: [{ role: 'user', content: pNiv }] })
+  await enregistrerCoutApi('aletheia', coutMessage(rNiv.usage))
   if (rNiv.stop_reason === 'max_tokens') throw new Error('Niveau tronqué.')
   const niv = JSON.parse(extraireJSON(rNiv.content[0]?.type === 'text' ? rNiv.content[0].text : '')) as { niveau_these?: unknown; niveau_arguments?: unknown; these_mal_definie?: unknown }
 

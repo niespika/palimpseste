@@ -11,6 +11,7 @@ import BoutonRetirerEleve from './BoutonRetirerEleve'
 import ConfirmationEffacement from './classes/ConfirmationEffacement'
 import BandeCalendrier from './calendrier/BandeCalendrier'
 import TuilesJourSemaine from './calendrier/TuilesJourSemaine'
+import CoutApi from './CoutApi'
 
 const NIVEAU_LABEL: Record<string, string> = { '1ere': 'Première', terminale: 'Terminale' }
 
@@ -259,6 +260,9 @@ export default async function ProfAccueil({ searchParams }: { searchParams: Prom
           </div>
         </div>
       </section>
+
+      {/* ── Coût API (synthèse du mois) ────────────────────────────────────── */}
+      <CoutApi />
 
       {/* ── Zone 3 : Tuiles de classe ──────────────────────────────────────── */}
       <section className="space-y-3">
