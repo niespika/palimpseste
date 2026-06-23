@@ -32,6 +32,30 @@ export function PassationJetons({ sessionId, quizId, questions, reponsesInitiale
   // temps écoulé (évite une closure périmée dans le timer).
   const handleSoumettreRef = useRef<() => void>(() => {})
 
+  // Verrou de page (T2) : tant que le quiz n'est pas soumis, on empêche la sortie
+  // (avertissement natif sur fermeture/rechargement) et on piège le bouton retour
+  // (tout popstate ré-empile l'état courant). Soft-lock : dissuasif, non infaillible.
+  useEffect(() => {
+    if (soumis) return
+
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      e.preventDefault()
+      e.returnValue = ''
+    }
+    window.addEventListener('beforeunload', handleBeforeUnload)
+
+    window.history.pushState(null, '', window.location.href)
+    const handlePopState = () => {
+      window.history.pushState(null, '', window.location.href)
+    }
+    window.addEventListener('popstate', handlePopState)
+
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload)
+      window.removeEventListener('popstate', handlePopState)
+    }
+  }, [soumis])
+
   // Timer
   useEffect(() => {
     if (!fermeAt) return
@@ -129,11 +153,19 @@ export function PassationJetons({ sessionId, quizId, questions, reponsesInitiale
             </button>
           ))}
         </div>
-        {secondesRestantes !== null && (
-          <span className={`text-sm font-mono font-bold ${secondesRestantes < 120 ? 'text-red-600' : 'text-stone-500'}`}>
-            {formatTemps(secondesRestantes)}
+        <div className="flex items-center gap-2">
+          <span className="text-xs text-stone-400 inline-flex items-center gap-1" title="Ne quitte pas la page pendant le quiz">
+            <svg className="w-3.5 h-3.5" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+              <path fillRule="evenodd" d="M10 1a4 4 0 0 0-4 4v2H5a2 2 0 0 0-2 2v7a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-1V5a4 4 0 0 0-4-4Zm2 6V5a2 2 0 1 0-4 0v2h4Z" clipRule="evenodd" />
+            </svg>
+            Page verrouillée
           </span>
-        )}
+          {secondesRestantes !== null && (
+            <span className={`text-sm font-mono font-bold ${secondesRestantes < 120 ? 'text-red-600' : 'text-stone-500'}`}>
+              {formatTemps(secondesRestantes)}
+            </span>
+          )}
+        </div>
       </div>
 
       {/* Question */}
