@@ -203,31 +203,24 @@ export default async function DrillDownEleveAletheia({ params }: { params: Promi
 
               <SemaineDrill livre={livre} travaux={travaux} diag={diagParLivre.get(livre.id) ?? new Map()} />
 
+              {/* Pas de carte du livre ici (elle est dans le Scriptorium) — juste
+                  l'indication de l'accès de l'élève + l'état de génération. */}
               <section className="bg-white border border-stone-200 border-l-4 border-l-stone-800 rounded-xl p-4">
-                <h5 className="text-sm font-medium text-stone-800 mb-2">✦ Carte d&apos;architecture du livre (partagée)</h5>
-                {cap?.statut === 'READY' && cap.contenu ? (
-                  <div className="space-y-3 text-sm">
-                    {cap.contenu.fil_conducteur && <p className="text-stone-700 whitespace-pre-wrap">{cap.contenu.fil_conducteur}</p>}
-                    {cap.contenu.noeuds.length > 0 && (
-                      <ul className="space-y-1">
-                        {cap.contenu.noeuds.map((n, i) => (
-                          <li key={i}><span className="font-medium text-stone-800">{n.chapitre}</span><span className="text-stone-600"> — {n.idee}</span></li>
-                        ))}
-                      </ul>
-                    )}
-                    {cap.contenu.liens.length > 0 && (
-                      <ul className="space-y-1 pt-2 border-t border-stone-100">
-                        {cap.contenu.liens.map((l, i) => (
-                          <li key={i} className="text-stone-700"><span className="font-medium">{l.de}</span> → <span className="font-medium">{l.vers}</span> : {l.relation}</li>
-                        ))}
-                      </ul>
-                    )}
+                <div className="flex items-start justify-between gap-3 flex-wrap">
+                  <div>
+                    <h5 className="text-sm font-medium text-stone-800">✦ Carte d&apos;architecture du livre</h5>
+                    <p className="text-sm text-stone-500 mt-1">
+                      {cap?.statut !== 'READY'
+                        ? (cap?.statut === 'PENDING' ? 'Pas encore générée (génération en cours).' : cap?.statut === 'ERROR' ? 'Génération échouée — régénère-la depuis le Scriptorium.' : 'Pas encore générée — à générer depuis le Scriptorium.')
+                        : p.done === p.total && p.total > 0
+                          ? 'L’élève a terminé le livre : la carte lui est accessible.'
+                          : `L’élève y accèdera à la fin du livre (${p.done}/${p.total} semaines).`}
+                    </p>
                   </div>
-                ) : (
-                  <p className="text-sm text-stone-400">
-                    {cap?.statut === 'PENDING' ? 'En cours de génération…' : cap?.statut === 'ERROR' ? 'La génération a échoué (régénère depuis Scriptorium).' : 'Pas encore générée — génère-la depuis Scriptorium (menu du livre).'}
-                  </p>
-                )}
+                  <Link href="/prof/scriptorium" className="text-xs text-stone-500 hover:text-stone-800 underline whitespace-nowrap shrink-0">
+                    Voir la carte dans le Scriptorium →
+                  </Link>
+                </div>
               </section>
             </div>
           )
