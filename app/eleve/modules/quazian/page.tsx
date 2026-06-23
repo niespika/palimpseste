@@ -4,8 +4,10 @@ import { createClient } from '@/utils/supabase/server'
 import { aAccesModule, classeIdsActives } from '@/utils/acces'
 import { chargerFileRevision, chargerStatsRevision, chargerToutesLesCartes } from './actions'
 import { QuazianDashboard } from './QuazianDashboard'
+import Tuile from '@/components/Tuile'
 
-export default async function QuazianElevePage() {
+export default async function QuazianElevePage({ searchParams }: { searchParams: Promise<{ onglet?: string }> }) {
+  const { onglet = 'flashcards' } = await searchParams
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
@@ -33,42 +35,28 @@ export default async function QuazianElevePage() {
     )
   }
 
-  // Quizz actif ou récent (lancé ou fermé) — uniquement pour une classe où
-  // l'élève est inscrit (corrige le bug 0.3 : scoping par classe).
+  // Quizz des classes de l'élève (corrige le bug 0.3 : scoping par classe).
   const classeIds = await classeIdsActives(supabase, user.id)
-  const { data: quizzActif } = classeIds.length > 0
+  const { data: quizzes } = classeIds.length > 0
     ? await supabase
         .from('quazian_quizzes')
-        .select('id, statut, ferme_at, nb_questions')
+        .select('id, statut, lance_at, ferme_at, nb_questions')
         .in('classe_id', classeIds)
         .in('statut', ['lance', 'ferme'])
         .order('lance_at', { ascending: false })
-        .limit(1)
-        .maybeSingle()
-    : { data: null }
+    : { data: [] }
+  const quizList = (quizzes ?? []) as { id: string; statut: string; lance_at: string | null; nb_questions: number }[]
 
-  // Vérifier si l'élève a déjà soumis ce quizz
-  let quizzInfo: { id: string; statut: string; soumis: boolean } | null = null
-  if (quizzActif) {
-    const { data: session } = await supabase
-      .from('quazian_sessions')
-      .select('submitted_at')
-      .eq('quiz_id', quizzActif.id)
-      .eq('eleve_id', user.id)
-      .maybeSingle()
+  // État de soumission de l'élève par quizz
+  const quizIds = quizList.map(q => q.id)
+  const { data: sessions } = quizIds.length > 0
+    ? await supabase.from('quazian_sessions').select('quiz_id, submitted_at').eq('eleve_id', user.id).in('quiz_id', quizIds)
+    : { data: [] }
+  const soumisMap = new Map<string, boolean>()
+  for (const s of sessions ?? []) soumisMap.set(s.quiz_id as string, !!s.submitted_at)
 
-    quizzInfo = {
-      id: quizzActif.id,
-      statut: quizzActif.statut,
-      soumis: !!session?.submitted_at,
-    }
-  }
-
-  const [file, stats, toutesCartes] = await Promise.all([
-    chargerFileRevision(),
-    chargerStatsRevision(),
-    chargerToutesLesCartes(),
-  ])
+  // Quizz en cours non encore soumis → bannière d'appel (à faire)
+  const quizzActif = quizList.find(q => q.statut === 'lance' && !soumisMap.get(q.id))
 
   return (
     <div>
@@ -79,10 +67,10 @@ export default async function QuazianElevePage() {
         ← Retour
       </Link>
 
-      {/* Bannière quizz actif */}
-      {quizzInfo && quizzInfo.statut === 'lance' && !quizzInfo.soumis && (
+      {/* Bannière quizz actif (à faire) — visible quel que soit l'onglet */}
+      {quizzActif && (
         <Link
-          href={`/eleve/modules/quazian/quizz/${quizzInfo.id}`}
+          href={`/eleve/modules/quazian/quizz/${quizzActif.id}`}
           className="block bg-green-50 border border-green-300 rounded-xl p-4 mb-6 hover:bg-green-100 transition-colors"
         >
           <div className="flex items-center gap-3">
@@ -95,19 +83,93 @@ export default async function QuazianElevePage() {
         </Link>
       )}
 
-      {/* Résultats disponibles */}
-      {quizzInfo && quizzInfo.statut === 'ferme' && quizzInfo.soumis && (
-        <Link
-          href={`/eleve/modules/quazian/quizz/${quizzInfo.id}`}
-          className="block bg-blue-50 border border-blue-200 rounded-xl p-4 mb-6 hover:bg-blue-100 transition-colors"
-        >
-          <p className="text-sm font-medium text-blue-800">Résultats disponibles — voir le corrigé →</p>
-        </Link>
+      <h2 className="text-xl font-serif text-stone-900 mb-4 mt-2">Quazian</h2>
+
+      {/* Onglets Flashcards / Quizz */}
+      <nav className="flex gap-1 mb-6 border-b border-stone-200">
+        {[
+          { key: 'flashcards', label: 'Flashcards' },
+          { key: 'quizz', label: 'Quizz' },
+        ].map(({ key, label }) => (
+          <Link
+            key={key}
+            href={`/eleve/modules/quazian?onglet=${key}`}
+            className={`px-4 py-2 text-sm rounded-t-lg border-b-2 transition-colors ${
+              onglet === key
+                ? 'border-stone-800 text-stone-900 font-medium'
+                : 'border-transparent text-stone-500 hover:text-stone-800'
+            }`}
+          >
+            {label}
+          </Link>
+        ))}
+      </nav>
+
+      {onglet === 'quizz' ? (
+        <OngletQuizz quizList={quizList} soumisMap={soumisMap} />
+      ) : (
+        <OngletFlashcards />
       )}
+    </div>
+  )
+}
 
-      <h2 className="text-xl font-serif text-stone-900 mb-6 mt-2">Flashcards</h2>
+// ── Onglet Flashcards : révision FSRS + consultation (inchangé) ──────────────
+async function OngletFlashcards() {
+  const [file, stats, toutesCartes] = await Promise.all([
+    chargerFileRevision(),
+    chargerStatsRevision(),
+    chargerToutesLesCartes(),
+  ])
+  return <QuazianDashboard stats={stats} file={file} toutesCartes={toutesCartes} />
+}
 
-      <QuazianDashboard stats={stats} file={file} toutesCartes={toutesCartes} />
+// ── Onglet Quizz : une tuile par quiz (revoir quiz + retour) ─────────────────
+function OngletQuizz({
+  quizList, soumisMap,
+}: {
+  quizList: { id: string; statut: string; lance_at: string | null; nb_questions: number }[]
+  soumisMap: Map<string, boolean>
+}) {
+  if (quizList.length === 0) {
+    return (
+      <p className="text-center py-12 text-stone-400 text-sm">
+        Aucun quizz pour l&apos;instant. Ton professeur n&apos;en a pas encore lancé.
+      </p>
+    )
+  }
+
+  return (
+    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+      {quizList.map(q => {
+        const soumis = soumisMap.get(q.id)
+        const date = q.lance_at ? new Date(q.lance_at).toLocaleDateString('fr-FR') : ''
+        let etat: { texte: string; classe: string }
+        let couleur: 'vert' | 'neutre'
+        if (q.statut === 'lance' && !soumis) {
+          etat = { texte: 'En cours — participer', classe: 'text-green-700' }
+          couleur = 'vert'
+        } else if (q.statut === 'lance' && soumis) {
+          etat = { texte: 'Soumis — en attente du corrigé', classe: 'text-stone-400' }
+          couleur = 'neutre'
+        } else if (q.statut === 'ferme' && soumis) {
+          etat = { texte: 'Revoir le quiz + le retour →', classe: 'text-blue-600' }
+          couleur = 'neutre'
+        } else {
+          etat = { texte: 'Terminé (non passé)', classe: 'text-stone-400' }
+          couleur = 'neutre'
+        }
+        return (
+          <Tuile
+            key={q.id}
+            nom={date ? `Quizz du ${date}` : 'Quizz'}
+            sousTitre={`${q.nb_questions} question${q.nb_questions > 1 ? 's' : ''}`}
+            href={`/eleve/modules/quazian/quizz/${q.id}`}
+            couleur={couleur}
+            resume={<span className={`text-xs ${etat.classe}`}>{etat.texte}</span>}
+          />
+        )
+      })}
     </div>
   )
 }
