@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { soumettreV1 } from './actions'
+import { AIDES_V1_DEFAUT, type AidesV1 } from './aides-v1'
 
 interface Props {
   livreId: string
@@ -12,6 +13,8 @@ interface Props {
   accordInitial?: string
   questionsInitial?: string
   vocabulaireInitial?: string
+  /** Bulles d'aide « comment remplir » (éditables par le prof, T6). */
+  aides?: AidesV1
 }
 
 const champClasse =
@@ -21,6 +24,7 @@ const champClasse =
 export default function FormulaireV1({
   livreId, semaine,
   theseInitial = '', argumentsInitial = '', accordInitial = '', questionsInitial = '', vocabulaireInitial = '',
+  aides = AIDES_V1_DEFAUT,
 }: Props) {
   const router = useRouter()
   const [these, setThese] = useState(theseInitial)
@@ -59,7 +63,7 @@ export default function FormulaireV1({
           Idée principale <span className="font-normal">— ce que dit le chapitre, selon toi</span>
         </label>
         <textarea value={these} onChange={e => setThese(e.target.value)} rows={3}
-          placeholder="L’idée centrale des chapitres lus cette semaine, avec tes mots."
+          placeholder={aides.these}
           className={champClasse} />
       </div>
       <div>
@@ -67,7 +71,7 @@ export default function FormulaireV1({
           Arguments <span className="font-normal">— les raisons que l’auteur avance pour la soutenir</span>
         </label>
         <textarea value={args} onChange={e => setArgs(e.target.value)} rows={4}
-          placeholder="Comment l’auteur défend cette idée : ses arguments, ses exemples."
+          placeholder={aides.arguments}
           className={champClasse} />
       </div>
       <div>
@@ -75,7 +79,7 @@ export default function FormulaireV1({
           Ton accord <span className="font-normal">— es-tu d’accord ou non, et pourquoi ?</span>
         </label>
         <textarea value={accord} onChange={e => setAccord(e.target.value)} rows={3}
-          placeholder="Une fois l’idée comprise : qu’en penses-tu, et pour quelles raisons ?"
+          placeholder={aides.accord}
           className={champClasse} />
       </div>
       <div>
@@ -83,7 +87,7 @@ export default function FormulaireV1({
           Tes questions <span className="font-normal">(2-3, une par ligne)</span>
         </label>
         <textarea value={questions} onChange={e => setQuestions(e.target.value)} rows={3}
-          placeholder={'Une question par ligne…\nEx. : Pourquoi Nietzsche oppose-t-il Apollon et Dionysos ?'}
+          placeholder={aides.questions}
           className={champClasse} />
       </div>
       <div>
@@ -91,7 +95,7 @@ export default function FormulaireV1({
           Vocabulaire <span className="font-normal">— les mots que tu ne comprends pas (un par ligne, facultatif)</span>
         </label>
         <textarea value={vocabulaire} onChange={e => setVocabulaire(e.target.value)} rows={2}
-          placeholder={'Un mot par ligne…\nIls deviendront des cartes à réviser dans Quazian.'}
+          placeholder={aides.vocabulaire}
           className={champClasse} />
       </div>
       {erreur && <p className="text-red-600 text-sm">{erreur}</p>}

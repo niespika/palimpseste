@@ -11,6 +11,7 @@ import {
 } from '@/utils/aletheia-retours'
 import { diagnosticEnAttente } from './donnees'
 import type { TravailAletheia, DiagnosticTravail } from '@/app/eleve/modules/aletheia/types'
+import { AIDES_V1_DEFAUT, type AidesV1 } from '@/app/eleve/modules/aletheia/aides-v1'
 
 async function verifierProf() {
   const supabase = await createClient()
@@ -24,11 +25,12 @@ export async function lirePromptsAletheia(): Promise<{
   prompt_feedback_1: string | null; prompt_feedback_2: string | null; prompt_capstone: string | null
   prompt_reference: string | null; prompt_diag_inventaire: string | null; prompt_diag_niveau: string | null
   eval_questions_actif: boolean; deblocage_sequentiel: boolean
+  aides: AidesV1
 }> {
   await verifierProf()
   const admin = createAdminClient()
   const { data } = await admin.from('aletheia_params')
-    .select('prompt_feedback_1, prompt_feedback_2, prompt_capstone, prompt_reference, prompt_diag_inventaire, prompt_diag_niveau, eval_questions_actif, deblocage_sequentiel')
+    .select('prompt_feedback_1, prompt_feedback_2, prompt_capstone, prompt_reference, prompt_diag_inventaire, prompt_diag_niveau, eval_questions_actif, deblocage_sequentiel, aide_these, aide_arguments, aide_accord, aide_questions, aide_vocabulaire')
     .eq('id', 1).maybeSingle()
   return {
     prompt_feedback_1: data?.prompt_feedback_1 ?? null,
@@ -39,6 +41,13 @@ export async function lirePromptsAletheia(): Promise<{
     prompt_diag_niveau: data?.prompt_diag_niveau ?? null,
     eval_questions_actif: !!data?.eval_questions_actif,
     deblocage_sequentiel: !!data?.deblocage_sequentiel,
+    aides: {
+      these: data?.aide_these || AIDES_V1_DEFAUT.these,
+      arguments: data?.aide_arguments || AIDES_V1_DEFAUT.arguments,
+      accord: data?.aide_accord || AIDES_V1_DEFAUT.accord,
+      questions: data?.aide_questions || AIDES_V1_DEFAUT.questions,
+      vocabulaire: data?.aide_vocabulaire || AIDES_V1_DEFAUT.vocabulaire,
+    },
   }
 }
 
@@ -51,7 +60,12 @@ export interface PromptsAletheia {
   promptFeedback1: string; promptFeedback2: string; promptCapstone: string
   promptReference: string; promptDiagInventaire: string; promptDiagNiveau: string
   evalQuestions: boolean; deblocageSequentiel: boolean
+  aides: AidesV1
 }
+
+// Bulle vide ou identique au défaut → null (on retombe sur le défaut du code).
+const aideOuNull = (valeur: string, defaut: string): string | null =>
+  valeur.trim() && valeur.trim() !== defaut.trim() ? valeur : null
 
 export async function sauvegarderPromptsAletheia(p: PromptsAletheia) {
   await verifierProf()
@@ -93,6 +107,11 @@ export async function sauvegarderPromptsAletheia(p: PromptsAletheia) {
       prompt_diag_niveau: pNiv,
       eval_questions_actif: p.evalQuestions,
       deblocage_sequentiel: p.deblocageSequentiel,
+      aide_these: aideOuNull(p.aides.these, AIDES_V1_DEFAUT.these),
+      aide_arguments: aideOuNull(p.aides.arguments, AIDES_V1_DEFAUT.arguments),
+      aide_accord: aideOuNull(p.aides.accord, AIDES_V1_DEFAUT.accord),
+      aide_questions: aideOuNull(p.aides.questions, AIDES_V1_DEFAUT.questions),
+      aide_vocabulaire: aideOuNull(p.aides.vocabulaire, AIDES_V1_DEFAUT.vocabulaire),
       updated_at: new Date().toISOString(),
     }, { onConflict: 'id' })
   if (error) return { error: error.message }

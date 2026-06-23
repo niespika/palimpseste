@@ -3,6 +3,7 @@ import type { SupabaseClient } from '@supabase/supabase-js'
 import { inscriptionsModuleEleve } from '@/utils/acces'
 import { contexteClasseEleve } from '../../contexte-classe'
 import type { CapstoneRow, LivreAletheia, SemaineLivre, TravailAletheia } from './types'
+import { AIDES_V1_DEFAUT, type AidesV1 } from './aides-v1'
 
 export interface InscriptionAletheia { id: string; classe_id: string; classe_nom: string }
 
@@ -117,11 +118,20 @@ export async function semaineLivre(admin: SupabaseClient, livreId: string, semai
 
 // Réglages globaux Aletheia (Lot 6). aletheia_params est en RLS prof → lecture
 // côté élève via le client admin (comme les lectures Scriptorium).
-export async function lireReglages(admin: SupabaseClient): Promise<{ evalQuestions: boolean; deblocageSequentiel: boolean }> {
-  const { data } = await admin.from('aletheia_params').select('eval_questions_actif, deblocage_sequentiel').eq('id', 1).maybeSingle()
+export async function lireReglages(admin: SupabaseClient): Promise<{ evalQuestions: boolean; deblocageSequentiel: boolean; aides: AidesV1 }> {
+  const { data } = await admin.from('aletheia_params')
+    .select('eval_questions_actif, deblocage_sequentiel, aide_these, aide_arguments, aide_accord, aide_questions, aide_vocabulaire')
+    .eq('id', 1).maybeSingle()
   return {
     evalQuestions: !!data?.eval_questions_actif,
     deblocageSequentiel: !!data?.deblocage_sequentiel,
+    aides: {
+      these: data?.aide_these || AIDES_V1_DEFAUT.these,
+      arguments: data?.aide_arguments || AIDES_V1_DEFAUT.arguments,
+      accord: data?.aide_accord || AIDES_V1_DEFAUT.accord,
+      questions: data?.aide_questions || AIDES_V1_DEFAUT.questions,
+      vocabulaire: data?.aide_vocabulaire || AIDES_V1_DEFAUT.vocabulaire,
+    },
   }
 }
 

@@ -3,11 +3,13 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { sauvegarderPromptsAletheia } from './actions'
+import { AIDES_V1_DEFAUT, type AidesV1 } from '@/app/eleve/modules/aletheia/aides-v1'
 
 interface Initial {
   prompt_feedback_1: string | null; prompt_feedback_2: string | null; prompt_capstone: string | null
   prompt_reference: string | null; prompt_diag_inventaire: string | null; prompt_diag_niveau: string | null
   eval_questions_actif: boolean; deblocage_sequentiel: boolean
+  aides: AidesV1
 }
 interface Defauts {
   feedback1: string; feedback2: string; capstone: string
@@ -42,6 +44,8 @@ export default function FormulaireParametresAletheia({ initial, defauts }: { ini
   const [pNiv, setPNiv] = useState(initial.prompt_diag_niveau || defauts.diagNiveau)
   const [evalQuestions, setEvalQuestions] = useState(initial.eval_questions_actif)
   const [deblocageSequentiel, setDeblocageSequentiel] = useState(initial.deblocage_sequentiel)
+  const [aides, setAides] = useState<AidesV1>(initial.aides)
+  const setAide = (cle: keyof AidesV1, v: string) => setAides(a => ({ ...a, [cle]: v }))
   const [enregistrement, setEnregistrement] = useState(false)
   const [message, setMessage] = useState<{ type: 'ok' | 'err'; texte: string } | null>(null)
 
@@ -51,7 +55,7 @@ export default function FormulaireParametresAletheia({ initial, defauts }: { ini
     const res = await sauvegarderPromptsAletheia({
       promptFeedback1: p1, promptFeedback2: p2, promptCapstone: pC,
       promptReference: pRef, promptDiagInventaire: pInv, promptDiagNiveau: pNiv,
-      evalQuestions, deblocageSequentiel,
+      evalQuestions, deblocageSequentiel, aides,
     })
     setEnregistrement(false)
     if (res.error) setMessage({ type: 'err', texte: res.error })
@@ -62,11 +66,12 @@ export default function FormulaireParametresAletheia({ initial, defauts }: { ini
     }
   }
 
-  const [groupe, setGroupe] = useState<'retours' | 'diagnostic' | 'reglages'>('retours')
+  const [groupe, setGroupe] = useState<'retours' | 'diagnostic' | 'reglages' | 'aides'>('retours')
 
   const TUILES = [
     { cle: 'retours' as const, nom: 'Retours & carte', desc: 'Retour V1, retour final, carte d’architecture' },
     { cle: 'diagnostic' as const, nom: 'Diagnostic', desc: 'Référence, inventaire, niveau E→A' },
+    { cle: 'aides' as const, nom: 'Bulles d’aide (V1)', desc: 'Exemples « comment remplir » des 5 champs' },
     { cle: 'reglages' as const, nom: 'Réglages', desc: 'Questions, déblocage séquentiel' },
   ]
 
@@ -77,7 +82,7 @@ export default function FormulaireParametresAletheia({ initial, defauts }: { ini
       </div>
 
       {/* Navigation par tuiles (les modifications non enregistrées sont conservées en changeant de tuile) */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
         {TUILES.map(t => (
           <button
             key={t.cle}
@@ -134,6 +139,30 @@ export default function FormulaireParametresAletheia({ initial, defauts }: { ini
             warn={<>⚠️ Anti-halo : cette phase ne reçoit PAS la prose de l&apos;élève, seulement <code>{'{inventaire}'}</code> + la référence. Garde la variable <code>{'{inventaire}'}</code>.</>}
             hint={<>Variables : <code>{'{ref_these}'}</code>, <code>{'{ref_arguments}'}</code>, <code>{'{inventaire}'}</code>. Sortie JSON <code>{'{ niveau_these, niveau_arguments, these_mal_definie }'}</code> (lettres E,D,C,B,A ou null).</>}
           />
+        </div>
+      )}
+
+      {groupe === 'aides' && (
+        <div className="space-y-5">
+          <h4 className="text-sm font-semibold text-stone-600 border-b border-stone-200 pb-1">Bulles d&apos;aide de la saisie V1</h4>
+          <p className="text-xs text-stone-400">
+            Texte d&apos;exemple (placeholder) affiché à l&apos;élève dans chacun des 5 champs — pour lui montrer comment remplir la section. Vide ou identique au défaut = on garde le défaut.
+          </p>
+          {([
+            { cle: 'these' as const, label: 'Idée principale' },
+            { cle: 'arguments' as const, label: 'Arguments' },
+            { cle: 'accord' as const, label: 'Ton accord' },
+            { cle: 'questions' as const, label: 'Tes questions' },
+            { cle: 'vocabulaire' as const, label: 'Vocabulaire' },
+          ]).map(({ cle, label }) => (
+            <div key={cle}>
+              <div className="flex items-center justify-between mb-2">
+                <label className="text-sm font-medium text-stone-700">{label}</label>
+                <button type="button" onClick={() => setAide(cle, AIDES_V1_DEFAUT[cle])} className="text-xs text-stone-500 hover:text-stone-700 underline">Restaurer la version par défaut</button>
+              </div>
+              <textarea value={aides[cle]} onChange={e => setAide(cle, e.target.value)} rows={2} className={TEXTAREA} />
+            </div>
+          ))}
         </div>
       )}
 

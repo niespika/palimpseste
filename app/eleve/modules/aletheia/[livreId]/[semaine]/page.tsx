@@ -73,7 +73,7 @@ export default async function PageSemaineAletheia({ params }: { params: Promise<
     )
   }
 
-  const { evalQuestions } = await lireReglages(admin)
+  const { evalQuestions, aides } = await lireReglages(admin)
   const travaux = await travauxParSemaine(supabase, user.id, livreId)
   const t: TravailAletheia | null = travaux.get(semaine) ?? null
   const statut = t?.statut ?? 'DRAFT'
@@ -120,6 +120,7 @@ export default async function PageSemaineAletheia({ params }: { params: Promise<
             accordInitial={t?.accord ?? ''}
             questionsInitial={(t?.questions ?? []).join('\n')}
             vocabulaireInitial={(t?.vocabulaire ?? []).join('\n')}
+            aides={aides}
           />
         </Bloc>
       ) : (
