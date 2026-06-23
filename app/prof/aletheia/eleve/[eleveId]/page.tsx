@@ -3,7 +3,8 @@ import { notFound, redirect } from 'next/navigation'
 import { createClient } from '@/utils/supabase/server'
 import { createAdminClient } from '@/utils/supabase/admin'
 import { VueRetourV1, VueRetourVF } from '@/components/aletheia/VueRetours'
-import { DetailDiagChapitre } from '@/components/aletheia/Diagnostic'
+import { DetailDiagChapitre, TrajectoireDiag } from '@/components/aletheia/Diagnostic'
+import CourbeEvolution, { type SerieCourbe } from '@/components/CourbeEvolution'
 import { livresDeClasse, travauxEleve, progression, chargerDiagnostics, STATUT_LABEL, type LivreProf } from '../../donnees'
 import { chargerCapstoneLivre } from '@/app/eleve/modules/aletheia/data'
 import type { TravailAletheia, DiagnosticTravail } from '@/app/eleve/modules/aletheia/types'
@@ -96,6 +97,54 @@ function SemaineDrill({ livre, travaux, diag }: { livre: LivreProf; travaux: Map
   )
 }
 
+// Niveau retenu par axe : VF si présent (réponse au feedback), sinon V1.
+// « mal définie » → pas de niveau (gap dans la courbe).
+function niveauThese(d: DiagnosticTravail | undefined): number | null {
+  if (!d) return null
+  if (d.niveau_these_vf != null) return d.these_mal_definie_vf ? null : d.niveau_these_vf
+  if (d.niveau_these_v1 != null) return d.these_mal_definie_v1 ? null : d.niveau_these_v1
+  return null
+}
+function niveauArgs(d: DiagnosticTravail | undefined): number | null {
+  if (!d) return null
+  return d.niveau_arguments_vf ?? d.niveau_arguments_v1
+}
+
+const SERIES_DIAG: SerieCourbe[] = [
+  { cle: 'arguments', label: 'Arguments', couleur: '#0ea5e9' },
+  { cle: 'these', label: 'Thèse', couleur: '#8b5cf6' },
+]
+
+// Tuile haute du diagnostic (courbe E→A + trajectoire compacte), visible d'emblée.
+function TuileDiagnostic({ livre, diag }: { livre: LivreProf; diag: Map<number, DiagnosticTravail> }) {
+  const points = livre.semaines.map(s => ({
+    x: `S${s.semaine}`,
+    these: niveauThese(diag.get(s.semaine)),
+    arguments: niveauArgs(diag.get(s.semaine)),
+  }))
+  const aDiag = points.some(p => p.these != null || p.arguments != null)
+
+  return (
+    <section className="bg-white border border-stone-200 border-l-4 border-l-violet-400 rounded-xl p-4">
+      <h5 className="text-sm font-medium text-stone-800">
+        Diagnostic de compréhension <span className="font-normal text-stone-400">— prof, jamais montré à l&apos;élève</span>
+      </h5>
+      <p className="text-xs text-stone-400 mb-3">Thèse / arguments en E→A (V1→VF) · la tendance prime sur le point isolé.</p>
+      {aDiag ? (
+        <>
+          <CourbeEvolution data={points} cleX="x" series={SERIES_DIAG} axeY="lettres" domaine={[0, 4]} hauteur={200} />
+          <div className="mt-3 pt-3 border-t border-stone-100">
+            <p className="text-xs text-stone-400 mb-1">Trajectoire (axe arguments)</p>
+            <TrajectoireDiag semaines={livre.semaines.map(s => s.semaine)} diag={diag} />
+          </div>
+        </>
+      ) : (
+        <p className="text-sm text-stone-400">Pas encore diagnostiqué — lance le diagnostic depuis la vue classe.</p>
+      )}
+    </section>
+  )
+}
+
 export default async function DrillDownEleveAletheia({ params }: { params: Promise<{ eleveId: string }> }) {
   const { eleveId } = await params
   const supabase = await createClient()
@@ -149,6 +198,8 @@ export default async function DrillDownEleveAletheia({ params }: { params: Promi
                 <h4 className="font-medium text-stone-900">{livre.titre}</h4>
                 <span className="text-xs text-stone-400">{p.done}/{p.total} semaines terminées</span>
               </div>
+
+              <TuileDiagnostic livre={livre} diag={diagParLivre.get(livre.id) ?? new Map()} />
 
               <SemaineDrill livre={livre} travaux={travaux} diag={diagParLivre.get(livre.id) ?? new Map()} />
 
