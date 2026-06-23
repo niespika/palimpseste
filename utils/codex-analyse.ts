@@ -2,9 +2,9 @@ import Anthropic from '@anthropic-ai/sdk'
 import { createAdminClient } from '@/utils/supabase/admin'
 
 // ── Prompt par défaut — suggestions V1 ──────────────────────────────────────
-export const PROMPT_V1_DEFAUT = `Tu assistes un professeur de philosophie. Un élève vient d'écrire DE MÉMOIRE, livre fermé et à la main, une synthèse récapitulative d'une unité de cours. Tu disposes des photos de sa V1 et du contenu exact du cours (le Scriptorium). Codex est un outil de CONSOLIDATION, pas de notation : aucune note, aucun chiffre. Le but est d'aider l'élève à voir ses trous et à oser les exposer.
+export const PROMPT_V1_DEFAUT = `Tu assistes un professeur de philosophie. Un élève vient d'écrire DE MÉMOIRE, livre fermé et à la main, une synthèse récapitulative d'une unité de cours. Tu disposes des photos de sa V1 et du contenu exact de l'unité — cours ET textes (le Scriptorium). Codex est un outil de CONSOLIDATION, pas de notation : aucune note, aucun chiffre. Le but est d'aider l'élève à voir ses trous et à oser les exposer.
 
-## Contenu de l'unité (référence — l'élève, lui, a écrit de mémoire)
+## Contenu de l'unité : cours et textes (référence — l'élève, lui, a écrit de mémoire)
 {{cours}}
 
 ## Tes tâches
@@ -17,7 +17,7 @@ export const PROMPT_V1_DEFAUT = `Tu assistes un professeur de philosophie. Un é
 5. ORTHOGRAPHE / GRAMMAIRE (ortho) : une indication GÉNÉRIQUE et brève (1-2 phrases), SANS marquer de fautes précises (on ne corrige pas le manuscrit ici). Vise les tendances récurrentes. Si la confiance OCR est faible, renvoie null.
 
 ## Contraintes
-- Reste adossé au COURS ci-dessus : tu signales un oubli/erreur par rapport à ce que dit le cours, pas par rapport à une encyclopédie.
+- Reste adossé au CONTENU de l'unité ci-dessus (cours et textes) : tu signales un oubli/erreur par rapport à ce que dit l'unité, pas par rapport à une encyclopédie.
 - Sois concis : chaque "titre" tient en une ligne, chaque "detail" en 1-2 phrases. Tutoie l'élève.
 - Le total oublis + erreurs ne doit pas dépasser ~8.
 
@@ -171,9 +171,9 @@ export async function analyserV1(travailId: string): Promise<void> {
 }
 
 // ── Prompt par défaut — retour critique de la V-finale ──────────────────────
-export const PROMPT_VF_DEFAUT = `Tu assistes un professeur de philosophie. Un élève vient de réécrire EN ENTIER, à la main et en classe, la V-finale de sa synthèse d'unité, après avoir reçu des suggestions sur sa V1. Tu disposes des photos de la V-finale, du contenu exact du cours (le Scriptorium) et des suggestions qu'il a reçues sur sa V1. Codex est un outil de CONSOLIDATION : aucune note, aucun chiffre. Le retour doit aider l'élève à voir précisément ce qu'il n'a pas su dire, avec la bonne version.
+export const PROMPT_VF_DEFAUT = `Tu assistes un professeur de philosophie. Un élève vient de réécrire EN ENTIER, à la main et en classe, la V-finale de sa synthèse d'unité, après avoir reçu des suggestions sur sa V1. Tu disposes des photos de la V-finale, du contenu exact de l'unité — cours ET textes (le Scriptorium) et des suggestions qu'il a reçues sur sa V1. Codex est un outil de CONSOLIDATION : aucune note, aucun chiffre. Le retour doit aider l'élève à voir précisément ce qu'il n'a pas su dire, avec la bonne version.
 
-## Contenu de l'unité (référence — l'élève écrit de mémoire)
+## Contenu de l'unité : cours et textes (référence — l'élève écrit de mémoire)
 {{cours}}
 
 ## Suggestions reçues sur la V1
@@ -190,7 +190,7 @@ export const PROMPT_VF_DEFAUT = `Tu assistes un professeur de philosophie. Un é
 8. AJOUTS (ajouts) : la liste structurée de tes ajouts, chacun { titre, contenu }.
 
 ## Contraintes
-- Tout est adossé au COURS : tu corriges/complètes par rapport au cours, pas à une encyclopédie. Pour les ambiguïtés interprétatives, ancre dans le cours (« ton cours soutient plutôt Y »).
+- Tout est adossé au CONTENU de l'unité (cours et textes) : tu corriges/complètes par rapport à l'unité, pas à une encyclopédie. Pour les ambiguïtés interprétatives, ancre dans l'unité (« ton cours soutient plutôt Y »).
 - Tutoie l'élève, ton exigeant et bienveillant. Concis.
 
 ## Format de réponse — UNIQUEMENT un objet JSON valide, sans texte autour :
