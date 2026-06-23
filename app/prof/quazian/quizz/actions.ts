@@ -29,6 +29,17 @@ export async function creerQuizz(formData: FormData) {
   if (scopeRaw.length === 0) return { error: 'Sélectionne au moins une unité.' }
   if (!classeId) return { error: 'Sélectionne une classe.' }
 
+  // Garde-fou : un quizz ne porte JAMAIS sur un « livre » Aletheia — seules les
+  // unités de cours (cours + textes) alimentent les questions. L'UI filtre déjà
+  // type='unite', ceci est une défense en profondeur côté serveur.
+  const { data: unitesScope } = await supabase
+    .from('scriptorium_unites')
+    .select('id, type')
+    .in('id', scopeRaw)
+  if ((unitesScope ?? []).some(u => u.type === 'livre')) {
+    return { error: 'Un quizz ne peut pas porter sur un livre (lecture Aletheia). Choisis des unités de cours.' }
+  }
+
   // Récupérer les cartes validées des unités choisies (partagées uniquement)
   const { data: cartes } = await supabase
     .from('quazian_flashcards')
