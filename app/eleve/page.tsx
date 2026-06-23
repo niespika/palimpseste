@@ -191,8 +191,8 @@ export default async function TableauDeBordEleve() {
               )}
 
               {codexEnCoursId && (
-                <Link href={`/eleve/modules/codex/seance/${codexEnCoursId}`} className="block bg-white border border-green-200 rounded-xl p-4 hover:border-green-300 transition-colors">
-                  <p className="text-sm font-medium text-stone-800">Séance Codex en cours <span className="text-xs text-green-600 ml-1">· en direct</span></p>
+                <Link href={`/eleve/modules/codex/synthese/${codexEnCoursId}`} className="block bg-white border border-green-200 rounded-xl p-4 hover:border-green-300 transition-colors">
+                  <p className="text-sm font-medium text-stone-800">Synthèse Codex en cours <span className="text-xs text-green-600 ml-1">· en direct</span></p>
                 </Link>
               )}
 

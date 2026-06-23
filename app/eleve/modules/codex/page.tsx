@@ -2,7 +2,7 @@ import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import { createClient } from '@/utils/supabase/server'
 import { aAccesModule } from '@/utils/acces'
-import { chargerSeanceActive, chargerHistorique } from './actions'
+import { chargerSyntheseActive, chargerHistorique } from './actions'
 
 export default async function CodexElevePage() {
   const supabase = await createClient()
@@ -27,8 +27,8 @@ export default async function CodexElevePage() {
     )
   }
 
-  const [seance, historique] = await Promise.all([chargerSeanceActive(), chargerHistorique()])
-  const live = seance && (seance.statut === 'phase_1' || seance.statut === 'phase_2') ? seance : null
+  const [synthese, historique] = await Promise.all([chargerSyntheseActive(), chargerHistorique()])
+  const live = synthese && (synthese.statut === 'phase_1' || synthese.statut === 'phase_2') ? synthese : null
 
   return (
     <div>
@@ -41,13 +41,13 @@ export default async function CodexElevePage() {
 
       {live && (
         <Link
-          href={`/eleve/modules/codex/seance/${live.id}`}
+          href={`/eleve/modules/codex/synthese/${live.id}`}
           className="block bg-green-50 border border-green-300 rounded-xl p-5 hover:bg-green-100 transition-colors mb-6"
         >
           <div className="flex items-center gap-3">
             <span className="w-2.5 h-2.5 rounded-full bg-green-500 animate-pulse shrink-0" />
             <div>
-              <p className="font-medium text-green-800 text-sm">Séance en cours — {live.unite_label}</p>
+              <p className="font-medium text-green-800 text-sm">Synthèse en cours — {live.unite_label}</p>
               <p className="text-xs text-green-600">
                 {live.statut === 'phase_1'
                   ? 'Phase 1 : écris ta V1, livre fermé → appuie pour commencer'
@@ -65,7 +65,7 @@ export default async function CodexElevePage() {
             {historique.map((s) => (
               <Link
                 key={s.id}
-                href={`/eleve/modules/codex/seance/${s.id}`}
+                href={`/eleve/modules/codex/synthese/${s.id}`}
                 className="flex items-center justify-between gap-3 bg-white border border-stone-200 rounded-xl px-4 py-3 hover:border-stone-300 transition-colors"
               >
                 <p className="text-sm font-medium text-stone-800 truncate">{s.unite_label}</p>
@@ -82,7 +82,7 @@ export default async function CodexElevePage() {
 
       {!live && historique.length === 0 && (
         <div className="bg-white border border-stone-200 rounded-xl p-8 text-center">
-          <p className="text-stone-500 text-sm">Aucune séance de synthèse pour le moment.</p>
+          <p className="text-stone-500 text-sm">Aucune synthèse pour le moment.</p>
         </div>
       )}
     </div>

@@ -27,8 +27,8 @@ export async function lireUnitesScriptorium() {
   return unites ?? []
 }
 
-// Créer une séance (classe × unité) en brouillon
-export async function creerSeance(formData: FormData) {
+// Créer une synthèse (classe × unité) en brouillon
+export async function creerSynthese(formData: FormData) {
   const { supabase, userId } = await verifierProf()
   const uniteId = formData.get('scriptorium_unite_id') as string
   const classeId = (formData.get('classe_id') as string) || null
@@ -49,7 +49,7 @@ export async function creerSeance(formData: FormData) {
   return { success: true }
 }
 
-export async function supprimerSeance(formData: FormData) {
+export async function supprimerSynthese(formData: FormData) {
   const { supabase } = await verifierProf()
   const id = formData.get('id') as string
 
@@ -64,8 +64,8 @@ export async function supprimerSeance(formData: FormData) {
   return { success: true }
 }
 
-// Lancer la séance : brouillon → phase_1 (V1)
-export async function lancerSeance(formData: FormData) {
+// Lancer la synthèse : brouillon → phase_1 (V1)
+export async function lancerSynthese(formData: FormData) {
   const { supabase } = await verifierProf()
   const sessionId = formData.get('sessionId') as string
 
@@ -75,8 +75,8 @@ export async function lancerSeance(formData: FormData) {
     .eq('id', sessionId)
     .single()
 
-  if (!session) return { error: 'Séance introuvable' }
-  if (session.statut !== 'brouillon') return { error: 'La séance est déjà lancée.' }
+  if (!session) return { error: 'Synthèse introuvable' }
+  if (session.statut !== 'brouillon') return { error: 'La synthèse est déjà lancée.' }
 
   const maintenant = new Date()
   const finPhase = new Date(maintenant.getTime() + session.duree_phase_min * 60 * 1000)
@@ -92,7 +92,7 @@ export async function lancerSeance(formData: FormData) {
     .eq('statut', 'brouillon')
 
   if (error) return { error: error.message }
-  revalidatePath(`/prof/codex/seance/${sessionId}`)
+  revalidatePath(`/prof/codex/synthese/${sessionId}`)
   return { success: true }
 }
 
@@ -107,8 +107,8 @@ export async function passerPhase2(formData: FormData) {
     .eq('id', sessionId)
     .single()
 
-  if (!session) return { error: 'Séance introuvable' }
-  if (session.statut !== 'phase_1') return { error: 'La séance n\'est pas en phase 1.' }
+  if (!session) return { error: 'Synthèse introuvable' }
+  if (session.statut !== 'phase_1') return { error: 'La synthèse n\'est pas en phase 1.' }
 
   const maintenant = new Date()
   const finPhase = new Date(maintenant.getTime() + session.duree_phase_min * 60 * 1000)
@@ -124,12 +124,12 @@ export async function passerPhase2(formData: FormData) {
     .eq('statut', 'phase_1')
 
   if (error) return { error: error.message }
-  revalidatePath(`/prof/codex/seance/${sessionId}`)
+  revalidatePath(`/prof/codex/synthese/${sessionId}`)
   return { success: true }
 }
 
-// Fermer la séance
-export async function fermerSeance(formData: FormData) {
+// Fermer la synthèse
+export async function fermerSynthese(formData: FormData) {
   const { supabase } = await verifierProf()
   const sessionId = formData.get('sessionId') as string
 
@@ -144,7 +144,7 @@ export async function fermerSeance(formData: FormData) {
     .in('statut', ['phase_1', 'phase_2'])
 
   if (error) return { error: error.message }
-  revalidatePath(`/prof/codex/seance/${sessionId}`)
+  revalidatePath(`/prof/codex/synthese/${sessionId}`)
   revalidatePath('/prof/codex')
   return { success: true }
 }

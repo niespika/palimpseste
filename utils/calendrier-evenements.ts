@@ -87,7 +87,7 @@ export async function assemblerEvenements(opts: {
     })
   }
 
-  // 3. Séances Codex (classe_id TEXTUEL → résolu par nom ; date = lancement).
+  // 3. Synthèses Codex (classe_id TEXTUEL → résolu par nom ; date = lancement).
   const { data: sessions } = await supabase
     .from('codex_sessions')
     .select('id, classe_id, lance_at, scriptorium_unites(label)')
@@ -105,7 +105,7 @@ export async function assemblerEvenements(opts: {
       classe_nom: nom,
       kind: 'jalon',
       date: d,
-      label: unite ? `Codex — ${unite}` : 'Codex (séance)',
+      label: unite ? `Codex — ${unite}` : 'Codex (synthèse)',
       is_editable: false,
     })
   }

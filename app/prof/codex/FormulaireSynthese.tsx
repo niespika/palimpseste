@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { creerSeance } from './actions'
+import { creerSynthese } from './actions'
 
 interface Unite {
   id: string
@@ -16,7 +16,7 @@ interface ClasseOption {
   nom: string
 }
 
-export function FormulaireSeance({ unites, classes }: { unites: Unite[]; classes: ClasseOption[] }) {
+export function FormulaireSynthese({ unites, classes }: { unites: Unite[]; classes: ClasseOption[] }) {
   const router = useRouter()
   const [loading, setLoading] = useState(false)
   const [erreur, setErreur] = useState<string | null>(null)
@@ -28,7 +28,7 @@ export function FormulaireSeance({ unites, classes }: { unites: Unite[]; classes
     setErreur(null)
 
     const fd = new FormData(e.currentTarget)
-    const res = await creerSeance(fd)
+    const res = await creerSynthese(fd)
     if (res.error) {
       setErreur(res.error)
       setLoading(false)
@@ -53,7 +53,7 @@ export function FormulaireSeance({ unites, classes }: { unites: Unite[]; classes
         onClick={() => setOpen(true)}
         className="w-full py-3 bg-stone-800 text-white text-sm rounded-xl hover:bg-stone-900 transition-colors"
       >
-        + Nouvelle séance de synthèse
+        + Nouvelle synthèse
       </button>
     )
   }
@@ -61,7 +61,7 @@ export function FormulaireSeance({ unites, classes }: { unites: Unite[]; classes
   return (
     <form onSubmit={handleSubmit} className="bg-white border border-stone-200 rounded-xl p-5 mb-6">
       <div className="flex items-center justify-between mb-4">
-        <h3 className="text-sm font-medium text-stone-700">Nouvelle séance</h3>
+        <h3 className="text-sm font-medium text-stone-700">Nouvelle synthèse</h3>
         <button type="button" onClick={() => setOpen(false)} className="text-stone-400 hover:text-stone-600 text-xs">
           Annuler
         </button>
@@ -119,7 +119,7 @@ export function FormulaireSeance({ unites, classes }: { unites: Unite[]; classes
         disabled={loading}
         className="w-full py-2.5 bg-stone-800 text-white text-sm rounded-lg hover:bg-stone-900 disabled:opacity-50 transition-colors"
       >
-        {loading ? 'Création…' : 'Créer la séance (brouillon)'}
+        {loading ? 'Création…' : 'Créer la synthèse (brouillon)'}
       </button>
     </form>
   )

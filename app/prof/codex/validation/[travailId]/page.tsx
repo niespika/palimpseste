@@ -48,8 +48,8 @@ export default async function ValidationDetailPage({
   return (
     <div>
       <div className="mb-6">
-        <Link href="/prof/codex/validation" className="text-sm text-stone-500 hover:text-stone-700">
-          ← File de validation
+        <Link href={`/prof/codex/synthese/${travail.session_id}`} className="text-sm text-stone-500 hover:text-stone-700">
+          ← Synthèse
         </Link>
         <h3 className="text-lg font-serif text-stone-900 mt-2">{eleve?.display_name ?? '—'}</h3>
         <p className="text-sm text-stone-400">

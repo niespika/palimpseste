@@ -69,7 +69,7 @@ export default function ConfirmationEffacement({ classeId, classeNom, nbEleves, 
                     Tout le travail
                     {typeof nbEleves === 'number' ? ` des ${nbEleves} élève${nbEleves > 1 ? 's' : ''}` : ' des élèves'}
                     {' '}de cette classe sera <strong>supprimé</strong> : fragments, essais, résultats
-                    de quizz, révisions de flashcards, séances Codex.
+                    de quizz, révisions de flashcards, synthèses Codex.
                   </p>
                   <p className="text-stone-500">
                     Les <strong>comptes élèves</strong> et leur travail dans <strong>d'autres classes</strong> ne

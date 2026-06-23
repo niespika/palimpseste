@@ -1,6 +1,7 @@
 'use client'
 
 import { useRouter } from 'next/navigation'
+import { noteVersLettre, LETTRES_SECTIONS } from '@/utils/notation'
 import {
   LineChart,
   Line,
@@ -39,11 +40,11 @@ function TooltipCustom({ active, payload, label }: {
       <p className="font-medium text-stone-900 mb-1.5">Semaine {label}</p>
       {pt.decouvertes !== null ? (
         <>
-          <p style={{ color: '#3b82f6' }}>Découvertes : {pt.decouvertes}/4</p>
-          <p style={{ color: '#10b981' }}>Sources : {pt.sources}/4</p>
-          <p style={{ color: '#8b5cf6' }}>Réflexions : {pt.reflexions}/4</p>
+          <p style={{ color: '#3b82f6' }}>Découvertes : {noteVersLettre(pt.decouvertes)}</p>
+          <p style={{ color: '#10b981' }}>Sources : {noteVersLettre(pt.sources)}</p>
+          <p style={{ color: '#8b5cf6' }}>Réflexions : {noteVersLettre(pt.reflexions)}</p>
           {pt.moyenne !== null && (
-            <p className="text-stone-700 font-medium mt-1">Moy. : {pt.moyenne.toFixed(2)}/4</p>
+            <p className="text-stone-700 font-medium mt-1">Moy. : {noteVersLettre(pt.moyenne)}</p>
           )}
         </>
       ) : (
@@ -94,6 +95,7 @@ export default function GraphiqueProgression({ data, lienBase }: Props) {
           <YAxis
             domain={[0, 4]}
             ticks={[0, 1, 2, 3, 4]}
+            tickFormatter={(v: number) => LETTRES_SECTIONS[v] ?? ''}
             tick={{ fontSize: 11, fill: '#a8a29e' }}
           />
           <Tooltip content={<TooltipCustom />} />

@@ -495,8 +495,8 @@ export default async function PageFragments({ searchParams }: { searchParams: Pr
         )}
       </div>
 
-      {/* Retour du dernier fragment + gate de lecture */}
-      {derniereAnalyseEcrite && (
+      {/* Retour du dernier fragment + gate de lecture (vue écrite uniquement) */}
+      {vue === 'ecrit' && derniereAnalyseEcrite && (
         <div className="bg-white border border-stone-200 rounded-xl p-4 space-y-4">
           <p className="text-xs font-medium text-stone-500 uppercase tracking-wide">Ton dernier retour</p>
           <AnalysePubliee analyse={derniereAnalyseEcrite} pistes={pistesDerniere} />

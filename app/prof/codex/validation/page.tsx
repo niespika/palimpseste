@@ -32,11 +32,11 @@ export default async function ValidationPage() {
     const nomMap: Record<string, string> = {}
     for (const p of profils ?? []) nomMap[p.id] = p.display_name
 
-    const seanceMap: Record<string, { label: string; classe: string | null }> = {}
+    const syntheseMap: Record<string, { label: string; classe: string | null }> = {}
     for (const s of sessions ?? []) {
       const u = s.scriptorium_unites as { label: string } | { label: string }[] | null
       const c = s.classes as { nom: string } | { nom: string }[] | null
-      seanceMap[s.id] = {
+      syntheseMap[s.id] = {
         label: Array.isArray(u) ? u[0]?.label ?? '' : u?.label ?? '',
         classe: Array.isArray(c) ? c[0]?.nom ?? null : c?.nom ?? null,
       }
@@ -53,8 +53,8 @@ export default async function ValidationPage() {
       lignes.push({
         id: t.id,
         eleve: nomMap[t.eleve_id] ?? '—',
-        unite: seanceMap[t.session_id]?.label ?? '',
-        classe: seanceMap[t.session_id]?.classe ?? null,
+        unite: syntheseMap[t.session_id]?.label ?? '',
+        classe: syntheseMap[t.session_id]?.classe ?? null,
         nbErreurs,
         nbAjouts,
         confiance,

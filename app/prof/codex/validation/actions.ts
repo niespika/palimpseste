@@ -81,7 +81,7 @@ export async function validerTravail(travailId: string) {
     return { success: true }
   }
 
-  // Contexte séance (unité + classe) pour les cartes
+  // Contexte synthèse (unité + classe) pour les cartes
   const { data: session } = await admin
     .from('codex_sessions')
     .select('scriptorium_unite_id, classe_id')
@@ -117,7 +117,7 @@ export async function validerTravail(travailId: string) {
     let recurrente = false
 
     if (aPromouvoir.has(e)) {
-      // Déduplication : une même erreur sur une autre séance renforce la carte existante
+      // Déduplication : une même erreur sur une autre synthèse renforce la carte existante
       const { data: anterieure } = tag
         ? await admin
             .from('codex_erreurs')

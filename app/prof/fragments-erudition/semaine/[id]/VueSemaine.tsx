@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import Link from 'next/link'
 import VisionneusModal from './VisionneusModal'
+import { noteVersLettre } from '@/utils/notation'
 import type { EleveAvecDepot, AnalyseResumee } from '@/types/fragments'
 
 interface Props {
@@ -53,7 +54,7 @@ function badgeAnalyse(analyse: AnalyseResumee | null, depotId: string, semaineId
         {badge}
         {(analyse.statut === 'generee' || analyse.statut === 'publiee') && (
           <span className="text-xs text-stone-400">
-            {analyse.note_decouvertes ?? '?'} / {analyse.note_sources ?? '?'} / {analyse.note_reflexions ?? '?'}
+            {noteVersLettre(analyse.note_decouvertes) ?? '?'} / {noteVersLettre(analyse.note_sources) ?? '?'} / {noteVersLettre(analyse.note_reflexions) ?? '?'}
           </span>
         )}
       </Link>

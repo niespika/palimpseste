@@ -4,6 +4,7 @@ import { createAdminClient } from '@/utils/supabase/admin'
 import { createClient } from '@/utils/supabase/server'
 import { inscriptionEleveClasse, classesAvecModule } from '@/utils/acces'
 import { semestreFragmentsActif } from '../../contexte-semestre'
+import { noteVersLettre } from '@/utils/notation'
 import GraphiqueProgression from '@/components/fragments/GraphiqueProgression'
 import type { PointSemaine } from '@/components/fragments/GraphiqueProgression'
 
@@ -327,7 +328,7 @@ export default async function PageEleveDetail({
                 >
                   <span className="text-stone-700">Semaine {numSemaine ?? '?'}</span>
                   <span className="text-stone-400 text-xs">
-                    {a.note_decouvertes ?? '?'} / {a.note_sources ?? '?'} / {a.note_reflexions ?? '?'} →
+                    {noteVersLettre(a.note_decouvertes) ?? '?'} / {noteVersLettre(a.note_sources) ?? '?'} / {noteVersLettre(a.note_reflexions) ?? '?'} →
                   </span>
                 </Link>
               )

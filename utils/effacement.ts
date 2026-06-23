@@ -45,7 +45,7 @@ export async function collecterCheminsInscriptions(
     .from('fragments_oraux').select('storage_path').in('inscription_id', inscriptionIds)
 
   // codex (manuscrits V1 + V-finale) — codex_travaux.inscription_id n'est jamais peuplé :
-  // on relie via la séance (codex_sessions.classe_id) + l'élève de l'inscription.
+  // on relie via la synthèse (codex_sessions.classe_id) + l'élève de l'inscription.
   const { data: inscRows } = await admin
     .from('inscriptions').select('eleve_id, classe_id').in('id', inscriptionIds)
   const paires = new Set((inscRows ?? []).map((i) => `${i.eleve_id}:${i.classe_id}`))

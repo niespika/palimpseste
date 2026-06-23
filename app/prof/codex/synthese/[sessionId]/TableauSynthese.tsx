@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { passerPhase2, fermerSeance } from '../../actions'
+import { passerPhase2, fermerSynthese } from '../../actions'
 
 interface EleveStatut {
   id: string
@@ -30,7 +30,7 @@ const ANALYSE_LABEL: Record<string, string> = {
   erreur: 'erreur',
 }
 
-export function TableauSeance({ sessionId, statut, phaseFinAt, eleves: elevesInit }: Props) {
+export function TableauSynthese({ sessionId, statut, phaseFinAt, eleves: elevesInit }: Props) {
   const router = useRouter()
   const [eleves, setEleves] = useState(elevesInit)
   const [pending, setPending] = useState(false)
@@ -79,11 +79,11 @@ export function TableauSeance({ sessionId, statut, phaseFinAt, eleves: elevesIni
   }
 
   async function handleFermer() {
-    if (!confirm('Fermer la séance maintenant ?')) return
+    if (!confirm('Fermer la synthèse maintenant ?')) return
     setPending(true)
     const fd = new FormData()
     fd.append('sessionId', sessionId)
-    await fermerSeance(fd)
+    await fermerSynthese(fd)
     setPending(false)
     router.refresh()
   }
@@ -99,7 +99,7 @@ export function TableauSeance({ sessionId, statut, phaseFinAt, eleves: elevesIni
   }
 
   const titrePhase =
-    statut === 'phase_1' ? 'Phase 1 — V1' : statut === 'phase_2' ? 'Phase 2 — V-finale' : 'Séance fermée'
+    statut === 'phase_1' ? 'Phase 1 — V1' : statut === 'phase_2' ? 'Phase 2 — V-finale' : 'Synthèse fermée'
 
   return (
     <div>
@@ -160,7 +160,7 @@ export function TableauSeance({ sessionId, statut, phaseFinAt, eleves: elevesIni
 
       {statut === 'fermee' && (
         <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 mb-6 text-sm text-blue-800">
-          La séance est fermée. Le retour critique de la V-finale est à valider dans l&apos;onglet{' '}
+          La synthèse est fermée. Le retour critique de la V-finale est à valider dans l&apos;onglet{' '}
           <Link href="/prof/codex/validation" className="underline font-medium">Validation</Link>.
         </div>
       )}

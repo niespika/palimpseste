@@ -40,8 +40,8 @@ export default async function RetoursV1Page({ params }: { params: Promise<{ trav
   return (
     <div>
       <div className="mb-6">
-        <Link href={`/prof/codex/seance/${travail.session_id}`} className="text-sm text-stone-500 hover:text-stone-700">
-          ← Séance
+        <Link href={`/prof/codex/synthese/${travail.session_id}`} className="text-sm text-stone-500 hover:text-stone-700">
+          ← Synthèse
         </Link>
         <h3 className="text-lg font-serif text-stone-900 mt-2">{eleve?.display_name ?? '—'} · retours V1</h3>
         <p className="text-sm text-stone-400">{uniteLabel}{classeNom ? ` · ${classeNom}` : ''}</p>

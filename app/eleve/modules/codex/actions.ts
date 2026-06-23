@@ -18,7 +18,7 @@ async function verifierEleve() {
   return { supabase, userId: user.id }
 }
 
-export interface SeanceActive {
+export interface SyntheseActive {
   id: string
   statut: 'phase_1' | 'phase_2' | 'fermee'
   unite_label: string
@@ -27,8 +27,8 @@ export interface SeanceActive {
   statut_validation: string | null
 }
 
-// Trouver la séance la plus pertinente pour cet élève (live d'abord, puis dernière fermée)
-export async function chargerSeanceActive(): Promise<SeanceActive | null> {
+// Trouver la synthèse la plus pertinente pour cet élève (live d'abord, puis dernière fermée)
+export async function chargerSyntheseActive(): Promise<SyntheseActive | null> {
   const { supabase, userId } = await verifierEleve()
   const admin = createAdminClient()
   const classeIds = await classeIdsActives(supabase, userId)
@@ -44,7 +44,7 @@ export async function chargerSeanceActive(): Promise<SeanceActive | null> {
   const visibles = sessions.filter((s) => !s.classe_id || classeIds.includes(s.classe_id as string))
   if (visibles.length === 0) return null
 
-  // Priorité : une séance en cours, sinon la plus récente fermée
+  // Priorité : une synthèse en cours, sinon la plus récente fermée
   const live = visibles.find((s) => s.statut === 'phase_1' || s.statut === 'phase_2')
   const choisie = live ?? visibles[0]
 
@@ -68,14 +68,14 @@ export async function chargerSeanceActive(): Promise<SeanceActive | null> {
   }
 }
 
-export interface SeancePassee {
+export interface SynthesePassee {
   id: string
   unite_label: string
   validee: boolean
 }
 
-// Historique des séances fermées visibles par l'élève (trace durable)
-export async function chargerHistorique(): Promise<SeancePassee[]> {
+// Historique des synthèses fermées visibles par l'élève (trace durable)
+export async function chargerHistorique(): Promise<SynthesePassee[]> {
   const { supabase, userId } = await verifierEleve()
   const admin = createAdminClient()
   const classeIds = await classeIdsActives(supabase, userId)
@@ -114,30 +114,30 @@ type Phase = 'v1' | 'vf'
 
 const PHASE_REQUISE: Record<Phase, string> = { v1: 'phase_1', vf: 'phase_2' }
 
-// S'assurer que le travail existe et que la séance est dans la bonne phase
+// S'assurer que le travail existe et que la synthèse est dans la bonne phase
 async function getTravail(sessionId: string, phase: Phase) {
   const { supabase, userId } = await verifierEleve()
   const admin = createAdminClient()
 
-  const { data: seance } = await admin
+  const { data: session } = await admin
     .from('codex_sessions')
     .select('statut, classe_id')
     .eq('id', sessionId)
     .single()
 
-  if (!seance) return { error: 'Séance introuvable' as const }
+  if (!session) return { error: 'Synthèse introuvable' as const }
 
-  // L'élève doit appartenir à la classe de la séance (ou séance sans classe). Le client
+  // L'élève doit appartenir à la classe de la synthèse (ou synthèse sans classe). Le client
   // admin contourne RLS : sans ce contrôle, n'importe quel élève connaissant un sessionId
-  // pourrait écrire dans la séance d'une autre classe et déclencher une analyse IA payante.
-  if (seance.classe_id) {
+  // pourrait écrire dans la synthèse d'une autre classe et déclencher une analyse IA payante.
+  if (session.classe_id) {
     const classeIds = await classeIdsActives(supabase, userId)
-    if (!classeIds.includes(seance.classe_id as string)) {
-      return { error: 'Séance introuvable' as const }
+    if (!classeIds.includes(session.classe_id as string)) {
+      return { error: 'Synthèse introuvable' as const }
     }
   }
 
-  if (seance.statut !== PHASE_REQUISE[phase]) {
+  if (session.statut !== PHASE_REQUISE[phase]) {
     return { error: 'Cette phase n\'est pas ouverte.' as const }
   }
 
@@ -191,7 +191,7 @@ export async function confirmerEnvoiPhotos(sessionId: string, phase: Phase, path
   if ('error' in ctx) return { error: ctx.error }
   const { travailId, userId, admin } = ctx
 
-  // Les chemins doivent appartenir à cet élève / cette séance / cette phase
+  // Les chemins doivent appartenir à cet élève / cette synthèse / cette phase
   const prefix = `${userId}/${sessionId}/${phase}/`
   if (paths.length === 0 || paths.some((p) => !p.startsWith(prefix))) {
     return { error: 'Chemins de photos invalides.' }

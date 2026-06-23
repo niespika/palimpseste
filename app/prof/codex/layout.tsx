@@ -13,7 +13,7 @@ export default function CodexLayout({ children }: { children: React.ReactNode })
 
       <nav className="flex gap-1 mb-6 border-b border-stone-200 pb-0 overflow-x-auto">
         {[
-          { href: '/prof/codex', label: 'Séances' },
+          { href: '/prof/codex', label: 'Synthèses' },
           { href: '/prof/codex/validation', label: 'Validation' },
           { href: '/prof/codex/parametres', label: 'Paramètres' },
         ].map(({ href, label }) => (
