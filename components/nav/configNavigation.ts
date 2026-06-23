@@ -45,6 +45,7 @@ export const NAV_PROF: NavTab[] = [
 
 export const NAV_ELEVE: NavTab[] = [
   { label: 'Tableau de bord', href: '/eleve', exact: true },
+  { label: 'Calendrier', href: '/eleve/calendrier' },
   {
     label: 'Modules',
     items: [
