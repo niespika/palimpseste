@@ -10,12 +10,12 @@ import {
   relancerAnalyseEssai,
   getSignedUrlsEssaiPhotos,
 } from '../../essai-actions'
-import type { EssaiAnalyse } from '@/types/fragments'
+import type { EssaiDepotAnalyse } from '@/types/fragments'
 
 interface Props {
-  essaiId: string
+  depotId: string
   photos: { id: string; storage_path: string; ordre: number }[]
-  analyse: EssaiAnalyse | null
+  analyse: EssaiDepotAnalyse | null
   fourchettePoints: number
 }
 
@@ -57,7 +57,7 @@ function LettreButtons({ valeur, onChange }: { valeur: Lettre | ''; onChange: (l
   )
 }
 
-export default function EditorAnalyseEssai({ essaiId, photos, analyse }: Props) {
+export default function EditorAnalyseDepot({ depotId, photos, analyse }: Props) {
   const router = useRouter()
   const estEnCours = analyse?.statut === 'en_cours'
   const peutEditer = analyse?.statut === 'generee' || analyse?.statut === 'publiee'
@@ -184,7 +184,7 @@ export default function EditorAnalyseEssai({ essaiId, photos, analyse }: Props) 
 
   async function handleRelancer() {
     setChargement(true)
-    await relancerAnalyseEssai(essaiId)
+    await relancerAnalyseEssai(depotId)
     setChargement(false)
     router.refresh()
   }

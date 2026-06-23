@@ -2,17 +2,17 @@ import { notFound } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/utils/supabase/server'
 import { createAdminClient } from '@/utils/supabase/admin'
-import EditorAnalyseEssai from './EditorAnalyseEssai'
+import EditorAnalyseDepot from './EditorAnalyseDepot'
 
-export default async function PageEssai({
+export default async function PageDepot({
   params,
   searchParams,
 }: {
-  params: Promise<{ essaiId: string }>
-  searchParams: Promise<{ epreuve?: string; classe?: string }>
+  params: Promise<{ depotId: string }>
+  searchParams: Promise<{ essai?: string; classe?: string }>
 }) {
-  const { essaiId } = await params
-  const { epreuve: epreuveId, classe: classeParam } = await searchParams
+  const { depotId } = await params
+  const { essai: essaiId, classe: classeParam } = await searchParams
   const qsClasse = classeParam ? `&classe=${classeParam}` : ''
 
   const supabase = await createClient()
@@ -23,49 +23,49 @@ export default async function PageEssai({
 
   const admin = createAdminClient()
 
-  const { data: essai } = await admin
-    .from('fragments_essais')
-    .select('id, eleve_id, epreuve_id, depose_par, inscription_id')
-    .eq('id', essaiId)
+  const { data: depot } = await admin
+    .from('fragments_essai_depots')
+    .select('id, eleve_id, essai_id, depose_par, inscription_id')
+    .eq('id', depotId)
     .single()
 
-  if (!essai) notFound()
+  if (!depot) notFound()
 
   const [{ data: eleve }, { data: epreuve }, { data: photos }, { data: analyse }] = await Promise.all([
-    admin.from('profiles').select('display_name, classe').eq('id', essai.eleve_id).single(),
-    admin.from('fragments_essais_epreuves').select('id, titre, date_epreuve, duree_minutes').eq('id', essai.epreuve_id).single(),
-    admin.from('fragments_essais_photos').select('id, storage_path, ordre').eq('essai_id', essaiId).order('ordre'),
-    admin.from('essais_analyses').select('*').eq('essai_id', essaiId).maybeSingle(),
+    admin.from('profiles').select('display_name, classe').eq('id', depot.eleve_id).single(),
+    admin.from('fragments_essais_epreuves').select('id, titre, date_essai, duree_minutes').eq('id', depot.essai_id).single(),
+    admin.from('fragments_essai_depot_photos').select('id, storage_path, ordre').eq('depot_id', depotId).order('ordre'),
+    admin.from('fragments_essai_depot_analyses').select('*').eq('depot_id', depotId).maybeSingle(),
   ])
 
-  // Navigation entre essais de la même épreuve — scopée à la classe consultée (?classe=,
-  // sinon la classe de l'essai courant) pour ne pas traverser les classes sur une épreuve
-  // assignée à plusieurs classes (Lot 5d).
-  let essaiIds: string[] = []
-  if (epreuveId) {
+  // Navigation entre dépôts du même essai — scopée à la classe consultée (?classe=,
+  // sinon la classe du dépôt courant) pour ne pas traverser les classes sur un essai
+  // assigné à plusieurs classes (Lot 5d).
+  let depotIds: string[] = []
+  if (essaiId) {
     let classeScope = classeParam ?? null
-    if (!classeScope && essai.inscription_id) {
+    if (!classeScope && depot.inscription_id) {
       const { data: inscRow } = await admin
-        .from('inscriptions').select('classe_id').eq('id', essai.inscription_id).single()
+        .from('inscriptions').select('classe_id').eq('id', depot.inscription_id).single()
       classeScope = (inscRow?.classe_id as string | undefined) ?? null
     }
-    const { data: tousEssais } = await admin
-      .from('fragments_essais')
+    const { data: tousDepots } = await admin
+      .from('fragments_essai_depots')
       .select('id, inscription_id')
-      .eq('epreuve_id', epreuveId)
-    let essais = tousEssais ?? []
+      .eq('essai_id', essaiId)
+    let depots = tousDepots ?? []
     if (classeScope) {
       const { data: inscClasse } = await admin
         .from('inscriptions').select('id').eq('classe_id', classeScope)
       const idsClasse = new Set((inscClasse ?? []).map(i => i.id as string))
-      essais = essais.filter(e => e.inscription_id && idsClasse.has(e.inscription_id as string))
+      depots = depots.filter(d => d.inscription_id && idsClasse.has(d.inscription_id as string))
     }
-    essaiIds = essais.map(e => e.id)
+    depotIds = depots.map(d => d.id)
   }
 
-  const indexActuel = essaiIds.indexOf(essaiId)
-  const essaiPrecedent = indexActuel > 0 ? essaiIds[indexActuel - 1] : null
-  const essaiSuivant = indexActuel < essaiIds.length - 1 ? essaiIds[indexActuel + 1] : null
+  const indexActuel = depotIds.indexOf(depotId)
+  const depotPrecedent = indexActuel > 0 ? depotIds[indexActuel - 1] : null
+  const depotSuivant = indexActuel < depotIds.length - 1 ? depotIds[indexActuel + 1] : null
 
   // Config pour la fourchette
   const { data: config } = await admin.from('fragments_config').select('fourchette_points').eq('id', 1).single()
@@ -75,16 +75,16 @@ export default async function PageEssai({
     <div>
       <div className="flex items-center justify-between mb-4 gap-2 flex-wrap">
         <div>
-          {epreuveId ? (
+          {essaiId ? (
             <Link
-              href={`/prof/fragments-erudition/epreuves/${epreuveId}${classeParam ? `?classe=${classeParam}` : ''}`}
+              href={`/prof/fragments-erudition/essais/${essaiId}${classeParam ? `?classe=${classeParam}` : ''}`}
               className="text-sm text-stone-500 hover:text-stone-700"
             >
-              ← {epreuve?.titre ?? 'Épreuve'}
+              ← {epreuve?.titre ?? 'Essai'}
             </Link>
           ) : (
-            <Link href="/prof/fragments-erudition/epreuves" className="text-sm text-stone-500 hover:text-stone-700">
-              ← Épreuves
+            <Link href="/prof/fragments-erudition/essais" className="text-sm text-stone-500 hover:text-stone-700">
+              ← Essais
             </Link>
           )}
           <h3 className="text-lg font-medium text-stone-900 mt-0.5">
@@ -97,20 +97,20 @@ export default async function PageEssai({
           </h3>
           <p className="text-xs text-stone-400 mt-0.5">
             {epreuve?.titre} · {epreuve?.duree_minutes} min
-            {essai.depose_par === 'prof' && ' · déposé par le prof'}
+            {depot.depose_par === 'prof' && ' · déposé par le prof'}
           </p>
         </div>
 
-        {epreuveId && essaiIds.length > 1 && (
+        {essaiId && depotIds.length > 1 && (
           <div className="flex gap-2">
-            {essaiPrecedent ? (
-              <Link href={`/prof/fragments-erudition/essai/${essaiPrecedent}?epreuve=${epreuveId}${qsClasse}`}
+            {depotPrecedent ? (
+              <Link href={`/prof/fragments-erudition/depots/${depotPrecedent}?essai=${essaiId}${qsClasse}`}
                 className="text-sm px-3 py-1.5 border border-stone-200 rounded-lg hover:bg-stone-50">
                 ← Élève précédent
               </Link>
             ) : <span className="text-sm px-3 py-1.5 text-stone-300">← Élève précédent</span>}
-            {essaiSuivant ? (
-              <Link href={`/prof/fragments-erudition/essai/${essaiSuivant}?epreuve=${epreuveId}${qsClasse}`}
+            {depotSuivant ? (
+              <Link href={`/prof/fragments-erudition/depots/${depotSuivant}?essai=${essaiId}${qsClasse}`}
                 className="text-sm px-3 py-1.5 border border-stone-200 rounded-lg hover:bg-stone-50">
                 Élève suivant →
               </Link>
@@ -119,10 +119,10 @@ export default async function PageEssai({
         )}
       </div>
 
-      <EditorAnalyseEssai
-        essaiId={essaiId}
+      <EditorAnalyseDepot
+        depotId={depotId}
         photos={(photos ?? []) as { id: string; storage_path: string; ordre: number }[]}
-        analyse={analyse as import('@/types/fragments').EssaiAnalyse | null}
+        analyse={analyse as import('@/types/fragments').EssaiDepotAnalyse | null}
         fourchettePoints={fourchettePoints}
       />
     </div>

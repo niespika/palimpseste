@@ -47,22 +47,22 @@ export async function assemblerEvenements(opts: {
     nomParId.set(c.id, c.nom)
   }
 
-  // 1. Épreuves Fragments (date par classe, éditable).
+  // 1. Essais Fragments (date par classe, éditable).
   const { data: epClasses } = await supabase
-    .from('fragments_epreuves_classes')
-    .select('epreuve_id, classe_id, date_epreuve, fragments_epreuves(titre)')
-    .gte('date_epreuve', debut)
-    .lte('date_epreuve', fin)
+    .from('fragments_essais_classes')
+    .select('essai_id, classe_id, date_essai, fragments_essais_epreuves(titre)')
+    .gte('date_essai', debut)
+    .lte('date_essai', fin)
   for (const e of epClasses ?? []) {
-    const titre = un<{ titre: string }>(e.fragments_epreuves)?.titre ?? 'Épreuve'
+    const titre = un<{ titre: string }>(e.fragments_essais_epreuves)?.titre ?? 'Essai'
     events.push({
       source_module: 'fragments',
-      source_id: e.epreuve_id,
+      source_id: e.essai_id,
       classe_id: e.classe_id,
       classe_nom: nomParId.get(e.classe_id) ?? null,
       kind: 'epreuve',
-      date: e.date_epreuve,
-      label: `Épreuve — ${titre}`,
+      date: e.date_essai,
+      label: `Essai — ${titre}`,
       is_editable: true,
     })
   }

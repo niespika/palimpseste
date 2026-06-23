@@ -80,8 +80,8 @@ export async function supprimerSemestre(id: string): Promise<{ error?: string }>
   const { supabase } = await verifierProf()
 
   // Refuser si des entités pédagogiques y sont rattachées : sinon la suppression
-  // CASCADE détruirait silencieusement thèmes, synthèses, épreuves d'essai (et
-  // les copies déposées par les élèves), ainsi que les notes de semestre Quazian.
+  // CASCADE détruirait silencieusement thèmes, synthèses, essais (et
+  // les dépôts déposés par les élèves), ainsi que les notes de semestre Quazian.
   // Tables Fragments (FK `semestre_id`).
   for (const table of ['fragments_semaines', 'fragments_themes', 'fragments_syntheses', 'fragments_essais_epreuves'] as const) {
     const { count } = await supabase
@@ -89,7 +89,7 @@ export async function supprimerSemestre(id: string): Promise<{ error?: string }>
       .select('id', { count: 'exact', head: true })
       .eq('semestre_id', id)
     if ((count ?? 0) > 0) {
-      return { error: 'Ce semestre est utilisé par Fragments (semaines, thèmes, synthèses ou épreuves). Détache-les d\'abord.' }
+      return { error: 'Ce semestre est utilisé par Fragments (semaines, thèmes, synthèses ou essais). Détache-les d\'abord.' }
     }
   }
   // Tables Quazian (FK `semester_id`).

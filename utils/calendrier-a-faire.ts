@@ -31,22 +31,22 @@ export async function tachesDeriveesDuCalendrier(joursAvant = 10): Promise<Tache
   const fin = toISODate(addDaysUTC(new Date(today + 'T00:00:00Z'), joursAvant))
   const taches: TacheCalendrier[] = []
 
-  // Épreuves Fragments proches, dépôts non ouverts → action « ouvrir les dépôts ».
+  // Essais Fragments proches, dépôts non ouverts → action « ouvrir les dépôts ».
   const { data: eps } = await supabase
-    .from('fragments_epreuves_classes')
-    .select('epreuve_id, classe_id, date_epreuve, depots_ouverts, fragments_epreuves(titre), classes(nom)')
-    .gte('date_epreuve', today)
-    .lte('date_epreuve', fin)
+    .from('fragments_essais_classes')
+    .select('essai_id, classe_id, date_essai, depots_ouverts, fragments_essais_epreuves(titre), classes(nom)')
+    .gte('date_essai', today)
+    .lte('date_essai', fin)
   for (const e of eps ?? []) {
     if (e.depots_ouverts) continue
-    const titre = un<{ titre: string }>(e.fragments_epreuves)?.titre ?? 'Épreuve'
+    const titre = un<{ titre: string }>(e.fragments_essais_epreuves)?.titre ?? 'Essai'
     const nom = un<{ nom: string }>(e.classes)?.nom ?? null
     taches.push({
-      id: `epreuve-${e.epreuve_id}-${e.classe_id}`,
+      id: `essai-${e.essai_id}-${e.classe_id}`,
       label: `Ouvrir les dépôts — ${titre}`,
-      echeance: e.date_epreuve,
+      echeance: e.date_essai,
       classeNom: nom,
-      href: `/prof/fragments-erudition/epreuves/${e.epreuve_id}`,
+      href: `/prof/fragments-erudition/essais/${e.essai_id}`,
     })
   }
 

@@ -1,4 +1,4 @@
-import type { EssaiAnalyse } from '@/types/fragments'
+import type { EssaiDepotAnalyse } from '@/types/fragments'
 
 const COULEUR_LETTRE: Record<string, string> = {
   A: 'bg-emerald-100 text-emerald-800',
@@ -9,7 +9,7 @@ const COULEUR_LETTRE: Record<string, string> = {
 }
 
 interface Props {
-  analyse: EssaiAnalyse
+  analyse: EssaiDepotAnalyse
 }
 
 function BadgeLettre({ lettre }: { lettre: string | null }) {
@@ -34,7 +34,7 @@ export default function EssaiPublie({ analyse }: Props) {
       {/* Vue d'ensemble des lettres */}
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
         {DIMENSIONS.map(({ key, label }) => {
-          const lettre = analyse[`lettre_${key}` as keyof EssaiAnalyse] as string | null
+          const lettre = analyse[`lettre_${key}` as keyof EssaiDepotAnalyse] as string | null
           return (
             <div key={key} className="bg-stone-50 rounded-xl p-3 text-center">
               <p className="text-xs text-stone-500 mb-2">{label}</p>
@@ -46,8 +46,8 @@ export default function EssaiPublie({ analyse }: Props) {
 
       {/* Retours par dimension */}
       {DIMENSIONS.map(({ key, label }) => {
-        const retour = analyse[`retour_${key}` as keyof EssaiAnalyse] as string | null
-        const lettre = analyse[`lettre_${key}` as keyof EssaiAnalyse] as string | null
+        const retour = analyse[`retour_${key}` as keyof EssaiDepotAnalyse] as string | null
+        const lettre = analyse[`lettre_${key}` as keyof EssaiDepotAnalyse] as string | null
         if (!retour) return null
         return (
           <div key={key}>

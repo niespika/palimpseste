@@ -3,16 +3,16 @@ import Link from 'next/link'
 import { createClient } from '@/utils/supabase/server'
 import { createAdminClient } from '@/utils/supabase/admin'
 import { inscriptionsClasse } from '@/utils/acces'
-import TableauEpreuve from './TableauEpreuve'
+import TableauEssai from './TableauEssai'
 
-export default async function PageEpreuve({
+export default async function PageEssai({
   params,
   searchParams,
 }: {
-  params: Promise<{ epreuveId: string }>
+  params: Promise<{ essaiId: string }>
   searchParams: Promise<{ classe?: string }>
 }) {
-  const { epreuveId } = await params
+  const { essaiId } = await params
   const { classe: classeId } = await searchParams
 
   const supabase = await createClient()
@@ -26,7 +26,7 @@ export default async function PageEpreuve({
   const { data: epreuve } = await admin
     .from('fragments_essais_epreuves')
     .select('id, titre, duree_minutes, consignes, semestre_id')
-    .eq('id', epreuveId)
+    .eq('id', essaiId)
     .single()
   if (!epreuve) notFound()
 
@@ -35,12 +35,12 @@ export default async function PageEpreuve({
     ? await admin.from('classes').select('id, nom').eq('id', classeId).maybeSingle()
     : { data: null }
 
-  // Liaison (épreuve × classe) : date + état propres à cette classe.
+  // Liaison (essai × classe) : date + état propres à cette classe.
   const { data: lien } = classeId
     ? await admin
-        .from('fragments_epreuves_classes')
-        .select('date_epreuve, depots_ouverts')
-        .eq('epreuve_id', epreuveId)
+        .from('fragments_essais_classes')
+        .select('date_essai, depots_ouverts')
+        .eq('essai_id', essaiId)
         .eq('classe_id', classeId)
         .maybeSingle()
     : { data: null }
@@ -48,10 +48,10 @@ export default async function PageEpreuve({
   if (!classe || !lien) {
     return (
       <div className="space-y-4">
-        <Link href="/prof/fragments-erudition/epreuves" className="text-sm text-stone-500 hover:text-stone-700">← Épreuves</Link>
+        <Link href="/prof/fragments-erudition/essais" className="text-sm text-stone-500 hover:text-stone-700">← Essais</Link>
         <div className="bg-white border border-stone-200 rounded-xl p-8 text-center text-stone-500 text-sm">
-          Cette épreuve n&apos;est pas assignée à cette classe (ou la classe est introuvable).<br />
-          Reviens à <Link href="/prof/fragments-erudition/epreuves" className="underline">Épreuves</Link> et choisis une classe.
+          Cet essai n&apos;est pas assigné à cette classe (ou la classe est introuvable).<br />
+          Reviens à <Link href="/prof/fragments-erudition/essais" className="underline">Essais</Link> et choisis une classe.
         </div>
       </div>
     )
@@ -62,7 +62,7 @@ export default async function PageEpreuve({
   const inscriptionIds = inscrits.map(i => i.id)
   const inscriptionParEleve = Object.fromEntries(inscrits.map(i => [i.eleve_id, i.id]))
 
-  // Inscriptions avec essai_actif=true sur le semestre de l'épreuve
+  // Inscriptions avec essai_actif=true sur le semestre de l'essai
   const { data: themes } = inscriptionIds.length > 0
     ? await admin
         .from('fragments_themes')
@@ -85,12 +85,12 @@ export default async function PageEpreuve({
 
   const eleves = (elevesBruts ?? []).map(e => ({ ...e, inscription_id: inscriptionParEleve[e.id] }))
 
-  // Essais pour cette épreuve (de cette classe)
+  // Dépôts pour cet essai (de cette classe)
   const { data: essais } = inscriptionIds.length > 0
     ? await admin
-        .from('fragments_essais')
+        .from('fragments_essai_depots')
         .select('id, eleve_id, depose_par, created_at')
-        .eq('epreuve_id', epreuveId)
+        .eq('essai_id', essaiId)
         .in('inscription_id', inscriptionIds)
     : { data: [] }
 
@@ -104,15 +104,15 @@ export default async function PageEpreuve({
   const essaiIds = (essais ?? []).map(e => e.id)
   const { data: analyses } = essaiIds.length > 0
     ? await admin
-        .from('essais_analyses')
-        .select('id, essai_id, statut, lettre_structure, lettre_expression, lettre_argumentation, lettre_connaissances, note20_validee, publiee_at')
-        .in('essai_id', essaiIds)
+        .from('fragments_essai_depot_analyses')
+        .select('id, depot_id, statut, lettre_structure, lettre_expression, lettre_argumentation, lettre_connaissances, note20_validee, publiee_at')
+        .in('depot_id', essaiIds)
     : { data: [] }
 
-  type AnalyseRow = { id: string; essai_id: string; statut: string; lettre_structure: string | null; lettre_expression: string | null; lettre_argumentation: string | null; lettre_connaissances: string | null; note20_validee: number | null; publiee_at: string | null }
+  type AnalyseRow = { id: string; depot_id: string; statut: string; lettre_structure: string | null; lettre_expression: string | null; lettre_argumentation: string | null; lettre_connaissances: string | null; note20_validee: number | null; publiee_at: string | null }
   const analyseParEssai: Record<string, AnalyseRow> = {}
   for (const a of (analyses ?? []) as AnalyseRow[]) {
-    analyseParEssai[a.essai_id] = a
+    analyseParEssai[a.depot_id] = a
   }
 
   // Distribution des lettres par dimension
@@ -144,8 +144,8 @@ export default async function PageEpreuve({
   return (
     <div className="space-y-6">
       <div className="flex items-center gap-2">
-        <Link href={`/prof/fragments-erudition/epreuves?classe=${classe.id}`} className="text-sm text-stone-500 hover:text-stone-700">
-          ← Épreuves
+        <Link href={`/prof/fragments-erudition/essais?classe=${classe.id}`} className="text-sm text-stone-500 hover:text-stone-700">
+          ← Essais
         </Link>
       </div>
 
@@ -154,7 +154,7 @@ export default async function PageEpreuve({
           <div>
             <h3 className="text-lg font-serif text-stone-900">{epreuve.titre} <span className="text-stone-400 font-sans text-sm">· {classe.nom}</span></h3>
             <p className="text-sm text-stone-500 mt-0.5">
-              {new Date(lien.date_epreuve).toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
+              {new Date(lien.date_essai).toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
               {' · '}{epreuve.duree_minutes} min
             </p>
             {epreuve.consignes && (
@@ -169,12 +169,12 @@ export default async function PageEpreuve({
         </div>
       </div>
 
-      <TableauEpreuve
+      <TableauEssai
         epreuve={epreuveDetail}
         classeId={classe.id}
         eleves={eleves as { id: string; display_name: string; classe: string | null; inscription_id: string }[]}
         essaiParEleve={essaiParEleve as Record<string, { id: string; eleve_id: string; depose_par: string; created_at: string } | undefined>}
-        analyseParEssai={analyseParEssai as Record<string, { id: string; essai_id: string; statut: string; lettre_structure: string | null; lettre_expression: string | null; lettre_argumentation: string | null; lettre_connaissances: string | null; note20_validee: number | null; publiee_at: string | null } | undefined>}
+        analyseParEssai={analyseParEssai as Record<string, { id: string; depot_id: string; statut: string; lettre_structure: string | null; lettre_expression: string | null; lettre_argumentation: string | null; lettre_connaissances: string | null; note20_validee: number | null; publiee_at: string | null } | undefined>}
         distribution={distribution}
         notes20={notes20}
       />

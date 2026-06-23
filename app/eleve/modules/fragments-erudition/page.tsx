@@ -14,7 +14,7 @@ import AnalyseOralePubliee from './AnalyseOralePubliee'
 import EssaiDepot from './EssaiDepot'
 import EssaiPublie from './EssaiPublie'
 import BilanSemestre from './BilanSemestre'
-import type { FragmentAnalyse, FragmentPiste, FragmentOral, FragmentAnalyseOrale, EssaiAnalyse, FragmentSynthese } from '@/types/fragments'
+import type { FragmentAnalyse, FragmentPiste, FragmentOral, FragmentAnalyseOrale, EssaiDepotAnalyse, FragmentSynthese } from '@/types/fragments'
 import type { PointSemaine } from '@/components/fragments/GraphiqueProgression'
 
 function formatDateLimite(dateStr: string) {
@@ -215,58 +215,58 @@ export default async function PageFragments({ searchParams }: { searchParams: Pr
   // ── Essai final ──────────────────────────────────────────────────────────
   const essaiActif = !!(theme as unknown as { essai_actif?: boolean })?.essai_actif
 
-  // Épreuve ouverte aux dépôts pour LA CLASSE de l'élève (date + état propres à
-  // la classe, portés par la liaison épreuve × classe). La plus récente ouverte.
+  // Essai ouvert aux dépôts pour LA CLASSE de l'élève (date + état propres à
+  // la classe, portés par la liaison essai × classe). Le plus récent ouvert.
   const { data: lienOuvert } = essaiActif
     ? await admin
-        .from('fragments_epreuves_classes')
-        .select('date_epreuve, fragments_essais_epreuves(id, titre, duree_minutes, consignes)')
+        .from('fragments_essais_classes')
+        .select('date_essai, fragments_essais_epreuves(id, titre, duree_minutes, consignes)')
         .eq('classe_id', inscriptionActive.classe_id)
         .eq('depots_ouverts', true)
-        .order('date_epreuve', { ascending: false })
+        .order('date_essai', { ascending: false })
         .limit(1)
         .maybeSingle()
     : { data: null }
   const epreuveLiee = lienOuvert?.fragments_essais_epreuves as unknown as
     { id: string; titre: string; duree_minutes: number; consignes: string | null } | null
   const epreuveOuverte = epreuveLiee
-    ? { ...epreuveLiee, date_epreuve: lienOuvert!.date_epreuve as string }
+    ? { ...epreuveLiee, date_essai: lienOuvert!.date_essai as string }
     : null
 
-  // Essai de l'élève pour cette épreuve
+  // Dépôt de l'élève pour cet essai
   const { data: essaiEleve } = epreuveOuverte
     ? await admin
-        .from('fragments_essais')
+        .from('fragments_essai_depots')
         .select('id')
-        .eq('epreuve_id', epreuveOuverte.id)
+        .eq('essai_id', epreuveOuverte.id)
         .eq('inscription_id', inscriptionId)
         .maybeSingle()
     : { data: null }
 
-  // Essais de cette inscription (pour scoper les analyses d'essai par parent)
+  // Dépôts de cette inscription (pour scoper les analyses par parent)
   const { data: essaisInscription } = essaiActif
-    ? await admin.from('fragments_essais').select('id').eq('inscription_id', inscriptionId)
+    ? await admin.from('fragments_essai_depots').select('id').eq('inscription_id', inscriptionId)
     : { data: [] }
   const essaiIdsInscription = (essaisInscription ?? []).map(e => e.id)
 
   // Analyse publiée de l'essai (la plus récente publiée de cette inscription)
   const { data: analyseEssaiPubliee } = essaiActif && essaiIdsInscription.length > 0
     ? await admin
-        .from('essais_analyses')
+        .from('fragments_essai_depot_analyses')
         .select('*')
-        .in('essai_id', essaiIdsInscription)
+        .in('depot_id', essaiIdsInscription)
         .eq('statut', 'publiee')
         .order('publiee_at', { ascending: false })
         .limit(1)
         .maybeSingle()
     : { data: null }
 
-  // Analyse en cours pour l'essai actuel
+  // Analyse en cours pour le dépôt actuel
   const { data: analyseEssaiEnCours } = essaiEleve
     ? await admin
-        .from('essais_analyses')
+        .from('fragments_essai_depot_analyses')
         .select('statut')
-        .eq('essai_id', essaiEleve.id)
+        .eq('depot_id', essaiEleve.id)
         .in('statut', ['en_cours'])
         .maybeSingle()
     : { data: null }
@@ -397,7 +397,7 @@ export default async function PageFragments({ searchParams }: { searchParams: Pr
   const couleurEcrit: 'vert' | 'rouge' | 'neutre' = !semaine ? 'neutre' : (!depotActuel || gateActif) ? 'rouge' : 'vert'
   const couleurOral: 'vert' | 'neutre' = aOral ? 'vert' : 'neutre'
   // Un essai déposé reste signalé même après la fermeture des dépôts et avant la publication
-  // du retour : essaiEleve n'est chargé que si l'épreuve est ouverte, alors que
+  // du retour : essaiEleve n'est chargé que si l'essai est ouvert, alors que
   // essaiIdsInscription suit les dépôts quel que soit l'état d'ouverture.
   const aDeposeEssai = essaiIdsInscription.length > 0
   const couleurEssai: 'vert' | 'rouge' | 'neutre' =
@@ -607,7 +607,7 @@ export default async function PageFragments({ searchParams }: { searchParams: Pr
           {analyseEssaiPubliee && (
             <div className="bg-white border border-stone-200 rounded-xl p-5">
               <p className="text-xs font-medium text-stone-500 uppercase tracking-wide mb-4">Retour de ton professeur</p>
-              <EssaiPublie analyse={analyseEssaiPubliee as EssaiAnalyse} />
+              <EssaiPublie analyse={analyseEssaiPubliee as EssaiDepotAnalyse} />
             </div>
           )}
           {epreuveOuverte && (
@@ -615,7 +615,7 @@ export default async function PageFragments({ searchParams }: { searchParams: Pr
               <div className="px-4 py-4 border-b border-stone-100">
                 <p className="font-medium text-stone-900">{epreuveOuverte.titre}</p>
                 <p className="text-xs text-stone-500 mt-0.5">
-                  {new Date(epreuveOuverte.date_epreuve).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })}
+                  {new Date(epreuveOuverte.date_essai).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })}
                   {' · '}{epreuveOuverte.duree_minutes} min
                 </p>
                 {epreuveOuverte.consignes && <p className="text-sm text-stone-600 mt-2">{epreuveOuverte.consignes}</p>}
@@ -636,7 +636,7 @@ export default async function PageFragments({ searchParams }: { searchParams: Pr
             </div>
           )}
           {!epreuveOuverte && !analyseEssaiPubliee && (
-            <div className="bg-white border border-stone-200 rounded-xl p-6 text-center text-sm text-stone-500">Aucune épreuve d&apos;essai ouverte pour l&apos;instant.</div>
+            <div className="bg-white border border-stone-200 rounded-xl p-6 text-center text-sm text-stone-500">Aucun essai ouvert pour l&apos;instant.</div>
           )}
         </div>
       )}

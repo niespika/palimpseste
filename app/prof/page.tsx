@@ -124,13 +124,13 @@ export default async function ProfAccueil({ searchParams }: { searchParams: Prom
 
     // Indicateurs légers essai + Codex (scopés à la classe)
     const { data: essais } = inscIds.length > 0
-      ? await admin.from('fragments_essais').select('id, inscription_id').in('inscription_id', inscIds)
+      ? await admin.from('fragments_essai_depots').select('id, inscription_id').in('inscription_id', inscIds)
       : { data: [] }
     const essaiIds = (essais ?? []).map((e) => e.id as string)
     const { data: essaiAnalyses } = essaiIds.length > 0
-      ? await admin.from('essais_analyses').select('essai_id, statut').in('essai_id', essaiIds)
+      ? await admin.from('fragments_essai_depot_analyses').select('depot_id, statut').in('depot_id', essaiIds)
       : { data: [] }
-    const statutEssaiParEssai = new Map((essaiAnalyses ?? []).map((a) => [a.essai_id as string, a.statut as string]))
+    const statutEssaiParEssai = new Map((essaiAnalyses ?? []).map((a) => [a.depot_id as string, a.statut as string]))
     const essaiParInsc = new Map<string, string>() // inscription → statut affiché
     for (const e of essais ?? []) {
       const st = statutEssaiParEssai.get(e.id as string)

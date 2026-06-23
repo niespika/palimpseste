@@ -2,11 +2,11 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { creerEpreuve } from '../essai-actions'
+import { creerEssai } from '../essai-actions'
 
 interface ClasseRef { id: string; nom: string }
 
-export default function FormulaireNouvelleEpreuve({ classes, semestreId }: { classes: ClasseRef[]; semestreId: string }) {
+export default function FormulaireNouvelEssai({ classes, semestreId }: { classes: ClasseRef[]; semestreId: string }) {
   const router = useRouter()
   const [ouvert, setOuvert] = useState(false)
   const [chargement, setChargement] = useState(false)
@@ -27,12 +27,12 @@ export default function FormulaireNouvelleEpreuve({ classes, semestreId }: { cla
     e.preventDefault()
     setErreur(null)
     const f = new FormData(e.currentTarget)
-    const classesChoisies = Object.entries(dates).map(([classe_id, date_epreuve]) => ({ classe_id, date_epreuve }))
+    const classesChoisies = Object.entries(dates).map(([classe_id, date_essai]) => ({ classe_id, date_essai }))
     if (classesChoisies.length === 0) { setErreur('Choisis au moins une classe.'); return }
-    if (classesChoisies.some(c => !c.date_epreuve)) { setErreur('Renseigne une date pour chaque classe choisie.'); return }
+    if (classesChoisies.some(c => !c.date_essai)) { setErreur('Renseigne une date pour chaque classe choisie.'); return }
 
     setChargement(true)
-    const res = await creerEpreuve({
+    const res = await creerEssai({
       titre: f.get('titre') as string,
       duree_minutes: Number(f.get('duree_minutes')),
       consignes: (f.get('consignes') as string) || undefined,
@@ -52,14 +52,14 @@ export default function FormulaireNouvelleEpreuve({ classes, semestreId }: { cla
         onClick={() => setOuvert(true)}
         className="w-full bg-stone-800 text-white py-2.5 rounded-xl text-sm font-medium hover:bg-stone-700 transition-colors"
       >
-        + Nouvelle épreuve
+        + Nouvel essai
       </button>
     )
   }
 
   return (
     <form onSubmit={handleSubmit} className="bg-white border border-stone-200 rounded-xl p-5 space-y-4">
-      <h4 className="text-sm font-medium text-stone-900">Nouvelle épreuve</h4>
+      <h4 className="text-sm font-medium text-stone-900">Nouvel essai</h4>
 
       <div>
         <label className="block text-xs font-medium text-stone-500 mb-1">Titre</label>

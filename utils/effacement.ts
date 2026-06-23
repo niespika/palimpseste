@@ -32,12 +32,12 @@ export async function collecterCheminsInscriptions(
     ? await admin.from('fragments_photos').select('storage_path').in('depot_id', depotIds)
     : { data: [] }
 
-  // essais (photos)
+  // dépôts d'essai (photos)
   const { data: essais } = await admin
-    .from('fragments_essais').select('id').in('inscription_id', inscriptionIds)
+    .from('fragments_essai_depots').select('id').in('inscription_id', inscriptionIds)
   const essaiIds = (essais ?? []).map((e) => e.id as string)
   const { data: essaiPhotos } = essaiIds.length > 0
-    ? await admin.from('fragments_essais_photos').select('storage_path').in('essai_id', essaiIds)
+    ? await admin.from('fragments_essai_depot_photos').select('storage_path').in('depot_id', essaiIds)
     : { data: [] }
 
   // oraux (audio)

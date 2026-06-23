@@ -15,7 +15,7 @@ import {
 interface Eleve { id: string; display_name: string; classe: string | null; inscription_id: string }
 interface EssaiRow { id: string; eleve_id: string; depose_par: string; created_at: string }
 interface AnalyseRow {
-  id: string; essai_id: string; statut: string
+  id: string; depot_id: string; statut: string
   lettre_structure: string | null; lettre_expression: string | null
   lettre_argumentation: string | null; lettre_connaissances: string | null
   note20_validee: number | null; publiee_at: string | null
@@ -176,7 +176,7 @@ function DepotProfForm({ epreuveId, inscriptionId, onDone }: { epreuveId: string
   )
 }
 
-export default function TableauEpreuve({ epreuve, classeId, eleves, essaiParEleve, analyseParEssai, distribution, notes20 }: Props) {
+export default function TableauEssai({ epreuve, classeId, eleves, essaiParEleve, analyseParEssai, distribution, notes20 }: Props) {
   const router = useRouter()
   const [depotPourEleve, setDepotPourEleve] = useState<string | null>(null)
   const [chargement, setChargement] = useState(false)
@@ -340,7 +340,7 @@ export default function TableauEpreuve({ epreuve, classeId, eleves, essaiParElev
                       <td className="px-2 py-2.5 text-right">
                         {essai && analyse ? (
                           <Link
-                            href={`/prof/fragments-erudition/essai/${essai.id}?epreuve=${epreuve.id}&classe=${classeId}`}
+                            href={`/prof/fragments-erudition/depots/${essai.id}?essai=${epreuve.id}&classe=${classeId}`}
                             className="text-xs text-stone-500 hover:text-stone-800 underline"
                           >
                             Voir →

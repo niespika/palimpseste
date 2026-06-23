@@ -29,12 +29,12 @@ export async function modifierDateEvenement(input: {
 
   switch (input.source_module) {
     case 'fragments': {
-      // Épreuve : la date est portée par classe (fragments_epreuves_classes).
+      // Essai : la date est portée par classe (fragments_essais_classes).
       if (!input.classe_id) return { error: 'Classe manquante.' }
       const { error } = await supabase
-        .from('fragments_epreuves_classes')
-        .update({ date_epreuve: input.date })
-        .eq('epreuve_id', input.source_id)
+        .from('fragments_essais_classes')
+        .update({ date_essai: input.date })
+        .eq('essai_id', input.source_id)
         .eq('classe_id', input.classe_id)
       if (error) return { error: error.message }
       break

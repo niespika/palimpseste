@@ -14,15 +14,15 @@ async function verifierProf() {
   return supabase
 }
 
-// ── Épreuves ──────────────────────────────────────────────────────────────────
+// ── Essais (l'évaluation programmée) ────────────────────────────────────────
 
-export async function creerEpreuve(data: {
+export async function creerEssai(data: {
   titre: string
   duree_minutes: number
   consignes?: string
   semestreId: string
   // Assignation à une ou plusieurs classes, avec une date propre à chacune.
-  classes: { classe_id: string; date_epreuve: string }[]
+  classes: { classe_id: string; date_essai: string }[]
 }) {
   await verifierProf()
   const admin = createAdminClient()
@@ -30,14 +30,14 @@ export async function creerEpreuve(data: {
   if (!data.semestreId) return { error: 'Semestre manquant', data: null }
   if (!data.classes.length) return { error: 'Choisis au moins une classe.', data: null }
 
-  // date_epreuve de l'épreuve = 1ʳᵉ date assignée (legacy / défaut d'affichage).
-  const datesTriees = data.classes.map(c => c.date_epreuve).sort()
+  // date_essai de l'essai = 1ʳᵉ date assignée (legacy / défaut d'affichage).
+  const datesTriees = data.classes.map(c => c.date_essai).sort()
 
   const { data: epreuve, error } = await admin
     .from('fragments_essais_epreuves')
     .insert({
       titre: data.titre,
-      date_epreuve: datesTriees[0],
+      date_essai: datesTriees[0],
       duree_minutes: data.duree_minutes,
       consignes: data.consignes || null,
       depots_ouverts: false,
@@ -48,20 +48,20 @@ export async function creerEpreuve(data: {
   if (error) return { error: error.message, data: null }
 
   const { error: errLiens } = await admin
-    .from('fragments_epreuves_classes')
+    .from('fragments_essais_classes')
     .insert(data.classes.map(c => ({
-      epreuve_id: epreuve.id,
+      essai_id: epreuve.id,
       classe_id: c.classe_id,
-      date_epreuve: c.date_epreuve,
+      date_essai: c.date_essai,
       depots_ouverts: false,
     })))
   if (errLiens) return { error: errLiens.message, data: null }
 
-  revalidatePath('/prof/fragments-erudition/epreuves')
+  revalidatePath('/prof/fragments-erudition/essais')
   return { data: { epreuveId: epreuve.id }, error: null }
 }
 
-export async function modifierEpreuve(epreuveId: string, data: {
+export async function modifierEssai(epreuveId: string, data: {
   titre: string
   duree_minutes: number
   consignes?: string
@@ -77,50 +77,50 @@ export async function modifierEpreuve(epreuveId: string, data: {
     })
     .eq('id', epreuveId)
   if (error) return { error: error.message }
-  revalidatePath('/prof/fragments-erudition/epreuves')
-  revalidatePath(`/prof/fragments-erudition/epreuves/${epreuveId}`)
+  revalidatePath('/prof/fragments-erudition/essais')
+  revalidatePath(`/prof/fragments-erudition/essais/${epreuveId}`)
   return { success: true }
 }
 
-// Assigne (ou met à jour la date d') une épreuve pour une classe.
-export async function assignerEpreuveClasse(epreuveId: string, classeId: string, dateEpreuve: string) {
+// Assigne (ou met à jour la date d') un essai pour une classe.
+export async function assignerEssaiClasse(epreuveId: string, classeId: string, dateEpreuve: string) {
   await verifierProf()
   const admin = createAdminClient()
   const { error } = await admin
-    .from('fragments_epreuves_classes')
+    .from('fragments_essais_classes')
     .upsert(
-      { epreuve_id: epreuveId, classe_id: classeId, date_epreuve: dateEpreuve },
-      { onConflict: 'epreuve_id,classe_id', ignoreDuplicates: false }
+      { essai_id: epreuveId, classe_id: classeId, date_essai: dateEpreuve },
+      { onConflict: 'essai_id,classe_id', ignoreDuplicates: false }
     )
   if (error) return { error: error.message }
-  revalidatePath('/prof/fragments-erudition/epreuves')
+  revalidatePath('/prof/fragments-erudition/essais')
   return { success: true }
 }
 
-export async function retirerEpreuveClasse(epreuveId: string, classeId: string) {
+export async function retirerEssaiClasse(epreuveId: string, classeId: string) {
   await verifierProf()
   const admin = createAdminClient()
   const { error } = await admin
-    .from('fragments_epreuves_classes')
+    .from('fragments_essais_classes')
     .delete()
-    .eq('epreuve_id', epreuveId)
+    .eq('essai_id', epreuveId)
     .eq('classe_id', classeId)
   if (error) return { error: error.message }
-  revalidatePath('/prof/fragments-erudition/epreuves')
+  revalidatePath('/prof/fragments-erudition/essais')
   return { success: true }
 }
 
-// Ouverture / fermeture des dépôts pour un couple (épreuve, classe).
+// Ouverture / fermeture des dépôts pour un couple (essai, classe).
 export async function toggleDepotsClasse(epreuveId: string, classeId: string, ouvert: boolean) {
   await verifierProf()
   const admin = createAdminClient()
   const { error } = await admin
-    .from('fragments_epreuves_classes')
+    .from('fragments_essais_classes')
     .update({ depots_ouverts: ouvert })
-    .eq('epreuve_id', epreuveId)
+    .eq('essai_id', epreuveId)
     .eq('classe_id', classeId)
   if (error) return { error: error.message }
-  revalidatePath(`/prof/fragments-erudition/epreuves/${epreuveId}`)
+  revalidatePath(`/prof/fragments-erudition/essais/${epreuveId}`)
   return { success: true }
 }
 
@@ -139,9 +139,9 @@ export async function creerEssaiProf(epreuveId: string, inscriptionId: string) {
 
   // Essai existant ? (scopé par inscription)
   const { data: existant } = await admin
-    .from('fragments_essais')
+    .from('fragments_essai_depots')
     .select('id')
-    .eq('epreuve_id', epreuveId)
+    .eq('essai_id', epreuveId)
     .eq('inscription_id', inscriptionId)
     .maybeSingle()
 
@@ -149,23 +149,23 @@ export async function creerEssaiProf(epreuveId: string, inscriptionId: string) {
   if (existant) {
     // Supprimer les anciennes photos et l'analyse
     const { data: photos } = await admin
-      .from('fragments_essais_photos')
+      .from('fragments_essai_depot_photos')
       .select('storage_path')
-      .eq('essai_id', existant.id)
+      .eq('depot_id', existant.id)
     if (photos && photos.length > 0) {
       await admin.storage.from('essais').remove(photos.map(p => p.storage_path))
     }
-    await admin.from('fragments_essais_photos').delete().eq('essai_id', existant.id)
-    await admin.from('essais_analyses').delete().eq('essai_id', existant.id)
-    await admin.from('fragments_essais').update({ depose_par: 'prof' }).eq('id', existant.id)
+    await admin.from('fragments_essai_depot_photos').delete().eq('depot_id', existant.id)
+    await admin.from('fragments_essai_depot_analyses').delete().eq('depot_id', existant.id)
+    await admin.from('fragments_essai_depots').update({ depose_par: 'prof' }).eq('id', existant.id)
     essaiId = existant.id
   } else {
     const { data, error } = await admin
-      .from('fragments_essais')
-      .insert({ epreuve_id: epreuveId, eleve_id: insc.eleve_id, inscription_id: inscriptionId, depose_par: 'prof' })
+      .from('fragments_essai_depots')
+      .insert({ essai_id: epreuveId, eleve_id: insc.eleve_id, inscription_id: inscriptionId, depose_par: 'prof' })
       .select('id')
       .single()
-    if (error || !data) return { error: error?.message ?? 'Erreur création essai', data: null }
+    if (error || !data) return { error: error?.message ?? 'Erreur création dépôt', data: null }
     essaiId = data.id
   }
 
@@ -177,11 +177,11 @@ export async function creerUrlUploadEssaiPhoto(essaiId: string, ordre: number, e
   const admin = createAdminClient()
 
   const { data: essai } = await admin
-    .from('fragments_essais')
-    .select('eleve_id, epreuve_id')
+    .from('fragments_essai_depots')
+    .select('eleve_id, essai_id')
     .eq('id', essaiId)
     .single()
-  if (!essai) return { error: 'Essai introuvable', data: null }
+  if (!essai) return { error: 'Dépôt introuvable', data: null }
 
   const storagePath = `${essai.eleve_id}/${essaiId}/${ordre}.${ext}`
 
@@ -193,8 +193,8 @@ export async function creerUrlUploadEssaiPhoto(essaiId: string, ordre: number, e
 
   // Créer la ligne photo
   const { data: photo, error: photoErr } = await admin
-    .from('fragments_essais_photos')
-    .insert({ essai_id: essaiId, storage_path: storagePath, ordre })
+    .from('fragments_essai_depot_photos')
+    .insert({ depot_id: essaiId, storage_path: storagePath, ordre })
     .select('id')
     .single()
 
@@ -207,7 +207,7 @@ export async function supprimerEssaiPhoto(photoId: string, storagePath: string) 
   await verifierProf()
   const admin = createAdminClient()
   await admin.storage.from('essais').remove([storagePath])
-  await admin.from('fragments_essais_photos').delete().eq('id', photoId)
+  await admin.from('fragments_essai_depot_photos').delete().eq('id', photoId)
   return { success: true }
 }
 
@@ -215,7 +215,7 @@ export async function reordonnerPhotosEssai(photos: { id: string; ordre: number 
   await verifierProf()
   const admin = createAdminClient()
   await Promise.all(
-    photos.map(p => admin.from('fragments_essais_photos').update({ ordre: p.ordre }).eq('id', p.id))
+    photos.map(p => admin.from('fragments_essai_depot_photos').update({ ordre: p.ordre }).eq('id', p.id))
   )
   return { success: true }
 }
@@ -226,7 +226,7 @@ export async function confirmerUploadEssaiPhotos(essaiId: string) {
     const { analyserEssai } = await import('@/utils/analyse-essai')
     await analyserEssai(essaiId)
   })
-  revalidatePath('/prof/fragments-erudition/epreuves')
+  revalidatePath('/prof/fragments-erudition/essais')
   return { success: true }
 }
 
@@ -234,7 +234,7 @@ export async function relancerAnalyseEssai(essaiId: string) {
   await verifierProf()
   const admin = createAdminClient()
   // Remettre l'analyse en cours
-  await admin.from('essais_analyses').update({ statut: 'en_cours' }).eq('essai_id', essaiId)
+  await admin.from('fragments_essai_depot_analyses').update({ statut: 'en_cours' }).eq('depot_id', essaiId)
   after(async () => {
     const { analyserEssai } = await import('@/utils/analyse-essai')
     await analyserEssai(essaiId)
@@ -261,7 +261,7 @@ export async function sauvegarderAnalyseEssai(analyseId: string, data: {
   await verifierProf()
   const admin = createAdminClient()
   const validLettres = ['A', 'B', 'C', 'D', 'E']
-  const { error } = await admin.from('essais_analyses').update({
+  const { error } = await admin.from('fragments_essai_depot_analyses').update({
     transcription: data.transcription || null,
     lettre_structure: validLettres.includes(data.lettre_structure) ? data.lettre_structure : null,
     lettre_expression: validLettres.includes(data.lettre_expression) ? data.lettre_expression : null,
@@ -284,7 +284,7 @@ export async function validerNoteEssai(analyseId: string, note20validee: number 
   await verifierProf()
   const note = note20validee == null || Number.isNaN(note20validee) ? null : Math.max(0, Math.min(20, note20validee))
   const admin = createAdminClient()
-  const { error } = await admin.from('essais_analyses').update({
+  const { error } = await admin.from('fragments_essai_depot_analyses').update({
     note20_validee: note,
     note_visible_eleve: noteVisibleEleve,
     modifie_par_prof: true,
@@ -296,25 +296,25 @@ export async function validerNoteEssai(analyseId: string, note20validee: number 
 export async function publierAnalyseEssai(analyseId: string) {
   await verifierProf()
   const admin = createAdminClient()
-  const { error } = await admin.from('essais_analyses').update({
+  const { error } = await admin.from('fragments_essai_depot_analyses').update({
     statut: 'publiee',
     publiee_at: new Date().toISOString(),
     modifie_par_prof: true,
   }).eq('id', analyseId)
   if (error) return { error: error.message }
-  revalidatePath('/prof/fragments-erudition/epreuves')
+  revalidatePath('/prof/fragments-erudition/essais')
   return { success: true }
 }
 
 export async function depublierAnalyseEssai(analyseId: string) {
   await verifierProf()
   const admin = createAdminClient()
-  const { error } = await admin.from('essais_analyses').update({
+  const { error } = await admin.from('fragments_essai_depot_analyses').update({
     statut: 'generee',
     publiee_at: null,
   }).eq('id', analyseId)
   if (error) return { error: error.message }
-  revalidatePath('/prof/fragments-erudition/epreuves')
+  revalidatePath('/prof/fragments-erudition/essais')
   return { success: true }
 }
 
@@ -564,9 +564,9 @@ export async function creerUrlUploadEssaiPhotoEleve(epreuveId: string, inscripti
   // le prof bascule et que la page élève lit). L'ancien flag global
   // fragments_essais_epreuves.depots_ouverts n'est jamais réactivé → ne pas s'y fier.
   const { data: lienClasse } = await admin
-    .from('fragments_epreuves_classes')
+    .from('fragments_essais_classes')
     .select('depots_ouverts')
-    .eq('epreuve_id', epreuveId)
+    .eq('essai_id', epreuveId)
     .eq('classe_id', insc.classe_id)
     .maybeSingle()
   if (!lienClasse?.depots_ouverts) return { error: 'Les dépôts sont fermés.', data: null }
@@ -574,9 +574,9 @@ export async function creerUrlUploadEssaiPhotoEleve(epreuveId: string, inscripti
   // Trouver ou créer l'essai (scopé par inscription)
   let essaiId: string
   const { data: existant } = await admin
-    .from('fragments_essais')
+    .from('fragments_essai_depots')
     .select('id')
-    .eq('epreuve_id', epreuveId)
+    .eq('essai_id', epreuveId)
     .eq('inscription_id', inscriptionId)
     .maybeSingle()
 
@@ -584,8 +584,8 @@ export async function creerUrlUploadEssaiPhotoEleve(epreuveId: string, inscripti
     essaiId = existant.id
   } else {
     const { data, error } = await admin
-      .from('fragments_essais')
-      .insert({ epreuve_id: epreuveId, eleve_id: user.id, inscription_id: inscriptionId, depose_par: 'eleve' })
+      .from('fragments_essai_depots')
+      .insert({ essai_id: epreuveId, eleve_id: user.id, inscription_id: inscriptionId, depose_par: 'eleve' })
       .select('id')
       .single()
     if (error || !data) return { error: error?.message ?? 'Erreur', data: null }
@@ -601,8 +601,8 @@ export async function creerUrlUploadEssaiPhotoEleve(epreuveId: string, inscripti
   if (urlErr || !urlData) return { error: urlErr?.message ?? 'Erreur URL', data: null }
 
   const { data: photo, error: photoErr } = await admin
-    .from('fragments_essais_photos')
-    .insert({ essai_id: essaiId, storage_path: storagePath, ordre })
+    .from('fragments_essai_depot_photos')
+    .insert({ depot_id: essaiId, storage_path: storagePath, ordre })
     .select('id')
     .single()
 
@@ -619,7 +619,7 @@ export async function confirmerDepotEssaiEleve(essaiId: string) {
   // Vérifier que l'essai appartient à l'élève
   const admin = createAdminClient()
   const { data: essai } = await admin
-    .from('fragments_essais')
+    .from('fragments_essai_depots')
     .select('eleve_id')
     .eq('id', essaiId)
     .single()
@@ -641,22 +641,22 @@ export async function reinitialiserPhotosEssaiEleve(essaiId: string) {
 
   const admin = createAdminClient()
   const { data: essai } = await admin
-    .from('fragments_essais')
+    .from('fragments_essai_depots')
     .select('eleve_id')
     .eq('id', essaiId)
     .single()
   if (!essai || essai.eleve_id !== user.id) return { error: 'Accès refusé' }
 
   const { data: photos } = await admin
-    .from('fragments_essais_photos')
+    .from('fragments_essai_depot_photos')
     .select('storage_path')
-    .eq('essai_id', essaiId)
+    .eq('depot_id', essaiId)
 
   if (photos && photos.length > 0) {
     await admin.storage.from('essais').remove(photos.map(p => p.storage_path))
-    await admin.from('fragments_essais_photos').delete().eq('essai_id', essaiId)
+    await admin.from('fragments_essai_depot_photos').delete().eq('depot_id', essaiId)
   }
 
-  await admin.from('essais_analyses').delete().eq('essai_id', essaiId)
+  await admin.from('fragments_essai_depot_analyses').delete().eq('depot_id', essaiId)
   return { success: true }
 }

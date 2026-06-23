@@ -148,19 +148,21 @@ export type StatutEssaiAnalyse = 'en_cours' | 'generee' | 'erreur' | 'publiee'
 export type StatutSynthese = 'en_cours' | 'generee' | 'erreur' | 'publiee'
 export type LettreLettres = 'A' | 'B' | 'C' | 'D' | 'E'
 
-export interface EssaiEpreuve {
+// « Essai » = l'évaluation programmée par le prof (table fragments_essais_epreuves,
+// nom physique conservé). « Dépôt » = la copie individuelle d'un élève.
+export interface Essai {
   id: string
   titre: string
-  date_epreuve: string
+  date_essai: string
   duree_minutes: number
   consignes: string | null
   depots_ouverts: boolean
   created_at: string
 }
 
-export interface Essai {
+export interface EssaiDepot {
   id: string
-  epreuve_id: string
+  essai_id: string
   eleve_id: string
   inscription_id: string | null
   depose_par: 'eleve' | 'prof'
@@ -168,17 +170,17 @@ export interface Essai {
   updated_at: string
 }
 
-export interface EssaiPhoto {
+export interface EssaiDepotPhoto {
   id: string
-  essai_id: string
+  depot_id: string
   storage_path: string
   ordre: number
   created_at: string
 }
 
-export interface EssaiAnalyse {
+export interface EssaiDepotAnalyse {
   id: string
-  essai_id: string
+  depot_id: string
   eleve_id: string
   statut: StatutEssaiAnalyse
   transcription: string | null
