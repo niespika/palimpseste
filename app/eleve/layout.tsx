@@ -2,6 +2,7 @@ import { redirect } from 'next/navigation'
 import { createClient } from '@/utils/supabase/server'
 import { deconnexion } from './actions'
 import BarreNavigation from '@/components/nav/BarreNavigation'
+import BarreOngletsMobile from '@/components/nav/BarreOngletsMobile'
 import { NAV_ELEVE } from '@/components/nav/configNavigation'
 import SelecteurClasseEleve from './SelecteurClasseEleve'
 import { contexteClasseEleve } from './contexte-classe'
@@ -30,7 +31,8 @@ export default async function EleveLayout({ children }: { children: React.ReactN
           <span className="font-marque text-base font-semibold tracking-[0.1em] text-encre">PALIMPSESTE</span>
           <div className="flex items-center gap-3">
             {active && <SelecteurClasseEleve inscriptions={inscriptions} activeId={active.id} />}
-            <form action={deconnexion}>
+            {/* Déconnexion : dans l'en-tête ≥ sm ; sur mobile, via l'onglet « Moi ». */}
+            <form action={deconnexion} className="hidden sm:block">
               <button
                 type="submit"
                 className="font-ui text-sm text-muet hover:text-encre transition-colors whitespace-nowrap"
@@ -40,13 +42,16 @@ export default async function EleveLayout({ children }: { children: React.ReactN
             </form>
           </div>
         </div>
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 pb-2">
+        {/* Barre à déroulants : desktop seulement. Sur mobile, c'est la barre d'onglets du bas. */}
+        <div className="hidden sm:block max-w-4xl mx-auto px-4 sm:px-6 pb-2">
           <BarreNavigation tabs={NAV_ELEVE} />
         </div>
       </header>
-      <main className="max-w-4xl mx-auto px-4 sm:px-6 py-8">
+      <main className="max-w-4xl mx-auto px-4 sm:px-6 pt-8 pb-24 sm:pb-8">
         {children}
       </main>
+      {/* Barre d'onglets fixe (mobile) — compensée par le pb-24 du <main>. */}
+      <BarreOngletsMobile />
     </div>
   )
 }

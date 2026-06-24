@@ -3,10 +3,11 @@ import { createClient } from '@/utils/supabase/server'
 import { createAdminClient } from '@/utils/supabase/admin'
 import { moduleIdsAccessibles } from '@/utils/acces'
 import { contexteClasseEleve } from './contexte-classe'
-import { noteVersLettre, COULEUR_LETTRE, type LettreSection } from '@/utils/notation'
+import { noteVersLettre, type LettreSection } from '@/utils/notation'
 import { calculerGrilleSemaines, jourParis } from '@/utils/calendrier-grille'
 import { chargerStatsRevision } from './modules/quazian/actions'
 import { livresPourClasse, toutesSemainesDone } from './modules/aletheia/data'
+import Pastille, { type ModuleSceau } from '@/components/Pastille'
 
 function fmtJourCourt(d: string) {
   return new Date(d + 'T00:00:00Z').toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', timeZone: 'UTC' })
@@ -15,13 +16,46 @@ function fmtJourCourt(d: string) {
 type ModuleInfo = { id: string; slug: string; nom: string; description: string | null; actif: boolean }
 const MODULES_MASQUES_ELEVE = ['scriptorium']
 
-interface SectionProg { label: string; lettre: LettreSection }
+// slug en base → clé de monde (les vars charte / sceaux utilisent « fragments »).
+const SCEAU: Record<string, ModuleSceau> = {
+  'fragments-erudition': 'fragments',
+  quazian: 'quazian',
+  codex: 'codex',
+  aletheia: 'aletheia',
+}
 
-function BadgeLettre({ label, lettre }: SectionProg) {
+// ── Tâches « à faire » (héros + ensuite) ─────────────────────────────────────
+type Monde = 'fragments' | 'quazian' | 'codex' | 'aletheia'
+type Ton = 'retard' | 'attention' | 'info' | 'ok' | 'muet'
+interface Tache {
+  cle: string
+  module: Monde          // sceau + data-module (pigment)
+  titre: string
+  detail: string
+  href: string
+  cta: string
+  urgence: number        // plus haut = plus urgent
+  badge?: { texte: string; ton: Ton; pulse?: boolean }
+  pistes?: string[]
+}
+
+const TON_BADGE: Record<Ton, string> = {
+  retard: 'bg-retard-teinte text-retard',
+  attention: 'bg-attention-teinte text-attention',
+  info: 'bg-info-teinte text-info',
+  ok: 'bg-ok-teinte text-ok',
+  muet: 'bg-parchemin-fonce text-muet',
+}
+
+const TEXTE_LETTRE: Record<LettreSection, string> = {
+  A: 'text-ok', B: 'text-info', C: 'text-attention', D: 'text-attention', E: 'text-retard',
+}
+
+function Badge({ texte, ton, pulse }: { texte: string; ton: Ton; pulse?: boolean }) {
   return (
-    <span className="inline-flex items-center gap-1.5 text-sm">
-      <span className="text-encre-douce">{label}</span>
-      <span className={`px-1.5 py-0.5 rounded text-xs font-medium ${COULEUR_LETTRE[lettre]}`}>{lettre}</span>
+    <span className={`inline-flex items-center gap-1.5 text-xs px-2 py-0.5 rounded-full whitespace-nowrap ${TON_BADGE[ton]}`}>
+      {pulse && <span className="w-1.5 h-1.5 rounded-full bg-ok animate-pulse" />}
+      {texte}
     </span>
   )
 }
@@ -34,8 +68,8 @@ export default async function TableauDeBordEleve() {
 
   const { active } = await contexteClasseEleve(supabase, user!.id)
 
-  // ── Zone « À faire » (scopée sur l'inscription active) ─────────────────────
-  let fragmentTache: { texte: string; depose: boolean; pistes: string[] } | null = null
+  // ── Collecte (scopée sur l'inscription active) ─────────────────────────────
+  let fragmentTache: { texte: string; depose: boolean; enRetard: boolean; pistes: string[] } | null = null
   let cartesDues = 0
   let codexEnCoursId: string | null = null
   let quizzEnCoursId: string | null = null
@@ -64,10 +98,11 @@ export default async function TableauDeBordEleve() {
         .eq('semaine_id', semaine.id)
         .maybeSingle()
       const limite = new Date(semaine.date_limite).toLocaleDateString('fr-FR', { weekday: 'long', hour: '2-digit', minute: '2-digit' })
+      const enRetard = !depot && new Date(semaine.date_limite) < new Date()
       const texte = depot
         ? depot.statut === 'en_retard' ? `Semaine ${semaine.numero} — déposé en retard` : `Semaine ${semaine.numero} — déposé ✓`
         : `Semaine ${semaine.numero} — à déposer avant ${limite}`
-      fragmentTache = { texte, depose: !!depot, pistes: [] }
+      fragmentTache = { texte, depose: !!depot, enRetard, pistes: [] }
     }
 
     // Pistes du dernier retour (analyse publiée la plus récente de cette inscription)
@@ -118,8 +153,8 @@ export default async function TableauDeBordEleve() {
     }
   }
 
-  // ── Zone « Progression » (tendances des sections, inscription active) ──────
-  let progression: { forts: SectionProg[]; amelioration: SectionProg[]; aTravailler: SectionProg[] } | null = null
+  // ── Progression : moyenne par section (Fragments) → lettre, en une bande ────
+  const sectionsProg: { label: string; lettre: LettreSection }[] = []
   if (active) {
     const { data: depots } = await admin
       .from('fragments_depots')
@@ -140,40 +175,77 @@ export default async function TableauDeBordEleve() {
         { key: 'note_sources', label: 'Sources' },
         { key: 'note_reflexions', label: 'Réflexions' },
       ] as const
-      const forts: SectionProg[] = [], amelioration: SectionProg[] = [], aTravailler: SectionProg[] = []
       for (const s of sections) {
         const vals = triees.map((a) => a[s.key] as number | null).filter((v): v is number => v != null)
         if (vals.length === 0) continue
         const avg = vals.reduce((x, y) => x + y, 0) / vals.length
         const lettre = noteVersLettre(Math.round(avg)) ?? 'C'
-        const mid = Math.floor(vals.length / 2)
-        const earlier = vals.slice(0, Math.max(1, mid))
-        const recent = vals.slice(mid)
-        const trend = recent.reduce((x, y) => x + y, 0) / recent.length - earlier.reduce((x, y) => x + y, 0) / earlier.length
-        const entry: SectionProg = { label: s.label, lettre }
-        if (avg >= 3) forts.push(entry)
-        else if (trend >= 0.5 && vals.length >= 2) amelioration.push(entry)
-        else if (avg < 2) aTravailler.push(entry)
-        else amelioration.push(entry)
+        sectionsProg.push({ label: s.label, lettre })
       }
-      progression = { forts, amelioration, aTravailler }
     }
   }
 
-  // ── Modules ────────────────────────────────────────────────────────────────
+  // ── Modules accessibles (pour « Mes mondes ») ───────────────────────────────
   const idsAccessibles = await moduleIdsAccessibles(supabase, user!.id)
   const { data: mods } = idsAccessibles.size > 0
     ? await supabase.from('modules').select('id, slug, nom, description, actif').in('id', [...idsAccessibles])
     : { data: [] as ModuleInfo[] }
   const modulesActifs = (mods ?? []).filter((m): m is ModuleInfo => !!m && m.actif === true && !MODULES_MASQUES_ELEVE.includes(m.slug))
 
-  const rienAFaire = active && !codexEnCoursId && !quizzEnCoursId && cartesDues === 0 && !aletheiaAFaire && (!fragmentTache || fragmentTache.depose)
+  // ── Construction des tâches priorisées ──────────────────────────────────────
+  const taches: Tache[] = []
+  if (quizzEnCoursId) taches.push({
+    cle: 'quizz', module: 'quazian', titre: 'Quizz en cours', detail: 'Un quizz est ouvert en ce moment.',
+    href: `/eleve/modules/quazian/quizz/${quizzEnCoursId}`, cta: 'Participer au quizz', urgence: 100,
+    badge: { texte: 'en direct', ton: 'ok', pulse: true },
+  })
+  if (codexEnCoursId) taches.push({
+    cle: 'codex', module: 'codex', titre: 'Synthèse Codex', detail: 'Une séance de synthèse est en cours.',
+    href: `/eleve/modules/codex/synthese/${codexEnCoursId}`, cta: 'Rejoindre la séance', urgence: 95,
+    badge: { texte: 'en direct', ton: 'ok', pulse: true },
+  })
+  if (fragmentTache && !fragmentTache.depose) taches.push({
+    cle: 'fragment', module: 'fragments', titre: "Fragments d'érudition", detail: fragmentTache.texte,
+    href: '/eleve/modules/fragments-erudition',
+    cta: fragmentTache.enRetard ? 'Déposer (en retard)' : 'Déposer mon fragment',
+    urgence: fragmentTache.enRetard ? 90 : 70,
+    badge: fragmentTache.enRetard ? { texte: 'en retard', ton: 'retard' } : { texte: 'à rendre', ton: 'attention' },
+    pistes: fragmentTache.pistes,
+  })
+  if (cartesDues > 0) taches.push({
+    cle: 'cartes', module: 'quazian', titre: 'Flashcards à réviser',
+    detail: `${cartesDues} carte${cartesDues > 1 ? 's' : ''} à revoir aujourd'hui.`,
+    href: '/eleve/modules/quazian', cta: `Réviser mes ${cartesDues} carte${cartesDues > 1 ? 's' : ''}`, urgence: 50,
+    badge: { texte: `${cartesDues} due${cartesDues > 1 ? 's' : ''}`, ton: 'attention' },
+  })
+  if (aletheiaAFaire) taches.push({
+    cle: 'aletheia', module: 'aletheia', titre: 'Lecture à poursuivre', detail: 'Reprends ta lecture là où tu en étais.',
+    href: '/eleve/modules/aletheia', cta: 'Continuer ma lecture', urgence: 40,
+    badge: { texte: 'Aletheia', ton: 'muet' },
+  })
+  taches.sort((a, b) => b.urgence - a.urgence)
+  const hero = taches[0] ?? null
+  const ensuite = taches.slice(1)
+
+  // « Mes mondes » : état dérivé (a-t-il une tâche en cours ?).
+  const modulesAvecTache = new Set(taches.map((t) => t.module))
+  const mondes = modulesActifs.map((m) => ({
+    slug: m.slug,
+    nom: m.nom,
+    sceau: SCEAU[m.slug] as ModuleSceau | undefined,
+    aFaire: SCEAU[m.slug] ? modulesAvecTache.has(SCEAU[m.slug] as Monde) : false,
+  }))
 
   return (
     <div className="space-y-8">
       <div>
-        <h2 className="text-xl font-serif text-encre mb-1">Bonjour, {profile?.display_name} !</h2>
-        {active && <p className="text-muet text-sm">{active.classe_nom}</p>}
+        <h2 className="font-titre text-2xl text-encre">Bonjour, {profile?.display_name} !</h2>
+        {active && (
+          <p className="text-muet text-sm mt-0.5">
+            {active.classe_nom}
+            {semaineCourante && <span> · {semaineCourante.label} · {fmtJourCourt(semaineCourante.debut)}–{fmtJourCourt(semaineCourante.fin)}</span>}
+          </p>
+        )}
       </div>
 
       {!active ? (
@@ -181,116 +253,111 @@ export default async function TableauDeBordEleve() {
           Tu n&apos;es inscrit dans aucune classe pour l&apos;instant.<br />Ton professeur t&apos;y ajoutera bientôt.
         </div>
       ) : (
-        <>
-          {/* À FAIRE */}
-          <section>
-            <div className="flex items-baseline justify-between gap-3 mb-3">
-              <h3 className="text-sm font-medium text-muet uppercase tracking-wide">À faire</h3>
-              {semaineCourante && (
-                <span className={`text-xs ${semaineCourante.vacances ? 'text-muet' : 'text-muet'}`}>
-                  {semaineCourante.label} · {fmtJourCourt(semaineCourante.debut)}–{fmtJourCourt(semaineCourante.fin)}
-                </span>
-              )}
-            </div>
-            <div className="space-y-3">
-              {fragmentTache && (
-                <div data-module="fragments" className="bg-surface border border-bordure border-l-4 border-l-liseret rounded-xl p-4">
-                  <div className="flex items-center justify-between gap-3">
-                    <p className="text-sm font-medium text-encre">Fragments d&apos;érudition</p>
-                    <Link href="/eleve/modules/fragments-erudition" className="text-xs text-muet hover:text-encre underline">Ouvrir →</Link>
-                  </div>
-                  <p className={`text-sm mt-1 ${fragmentTache.depose ? 'text-muet' : 'text-attention'}`}>{fragmentTache.texte}</p>
-                  {fragmentTache.pistes.length > 0 && (
-                    <div className="mt-3 border-t border-bordure pt-3">
-                      <p className="text-xs text-muet mb-1.5">Pistes à suivre (dernier retour)</p>
-                      <ul className="space-y-1">
-                        {fragmentTache.pistes.map((p, i) => (
-                          <li key={i} className="text-sm text-encre-douce flex gap-2"><span className="text-bordure">→</span><span>{p}</span></li>
-                        ))}
-                      </ul>
-                    </div>
-                  )}
-                </div>
-              )}
-
-              {cartesDues > 0 && (
-                <Link href="/eleve/modules/quazian" data-module="quazian" className="block bg-surface border border-bordure border-l-4 border-l-liseret rounded-xl p-4 hover:shadow-sm transition-colors">
-                  <div className="flex items-center justify-between gap-3">
-                    <p className="text-sm font-medium text-encre">Flashcards à réviser</p>
-                    <span className="text-xs bg-attention-teinte text-attention px-2 py-0.5 rounded-full">{cartesDues} carte{cartesDues > 1 ? 's' : ''} due{cartesDues > 1 ? 's' : ''}</span>
-                  </div>
-                </Link>
-              )}
-
-              {codexEnCoursId && (
-                <Link href={`/eleve/modules/codex/synthese/${codexEnCoursId}`} data-module="codex" className="block bg-surface border border-bordure border-l-4 border-l-liseret rounded-xl p-4 hover:shadow-sm transition-colors">
-                  <p className="text-sm font-medium text-encre">Synthèse Codex en cours <span className="text-xs text-ok ml-1">· en direct</span></p>
-                </Link>
-              )}
-
-              {quizzEnCoursId && (
-                <Link href={`/eleve/modules/quazian/quizz/${quizzEnCoursId}`} data-module="quazian" className="block bg-surface border border-bordure border-l-4 border-l-liseret rounded-xl p-4 hover:shadow-sm transition-colors">
-                  <p className="text-sm font-medium text-encre">Quizz en cours</p>
-                </Link>
-              )}
-
-              {aletheiaAFaire && (
-                <Link href="/eleve/modules/aletheia" data-module="aletheia" className="block bg-surface border border-bordure border-l-4 border-l-liseret rounded-xl p-4 hover:shadow-sm transition-colors">
-                  <div className="flex items-center justify-between gap-3">
-                    <p className="text-sm font-medium text-encre">Lecture à poursuivre</p>
-                    <span className="text-xs text-muet">Aletheia →</span>
-                  </div>
-                </Link>
-              )}
-
-              {rienAFaire && (
-                <div className="bg-surface border border-bordure rounded-xl p-4 text-sm text-muet">Rien d&apos;urgent pour l&apos;instant. Tu peux réviser ou explorer tes modules.</div>
-              )}
-            </div>
-          </section>
-
-          {/* PROGRESSION */}
-          {progression && (progression.forts.length + progression.amelioration.length + progression.aTravailler.length > 0) && (
+        <div className="grid gap-6 lg:grid-cols-[1.5fr_1fr] items-start">
+          {/* ── Colonne principale : héros + ensuite ──────────────────────── */}
+          <div className="space-y-6 min-w-0">
             <section>
-              <h3 className="text-sm font-medium text-muet uppercase tracking-wide mb-3">Ta progression</h3>
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                <div className="bg-surface border border-bordure rounded-xl p-4">
-                  <p className="text-xs font-medium text-ok mb-2">Tes points forts</p>
-                  {progression.forts.length > 0 ? (
-                    <div className="space-y-1.5">{progression.forts.map((s) => <div key={s.label}><BadgeLettre {...s} /></div>)}</div>
-                  ) : <p className="text-sm text-bordure">—</p>}
-                </div>
-                <div className="bg-surface border border-bordure rounded-xl p-4">
-                  <p className="text-xs font-medium text-info mb-2">Où tu progresses</p>
-                  {progression.amelioration.length > 0 ? (
-                    <div className="space-y-1.5">{progression.amelioration.map((s) => <div key={s.label}><BadgeLettre {...s} /></div>)}</div>
-                  ) : <p className="text-sm text-bordure">—</p>}
-                </div>
-                <div className="bg-surface border border-bordure rounded-xl p-4">
-                  <p className="text-xs font-medium text-attention mb-2">À travailler</p>
-                  {progression.aTravailler.length > 0 ? (
-                    <div className="space-y-1.5">{progression.aTravailler.map((s) => <div key={s.label}><BadgeLettre {...s} /></div>)}</div>
-                  ) : <p className="text-sm text-bordure">—</p>}
-                </div>
-              </div>
-            </section>
-          )}
-        </>
-      )}
+              {hero ? (
+                <article data-module={hero.module} className="bg-surface border border-bordure rounded-xl overflow-hidden">
+                  <div className="h-1.5 bg-pigment" />
+                  <div className="p-5 sm:p-6">
+                    <div className="flex items-start justify-between gap-3">
+                      <p className="font-ui text-xs tracking-[0.1em] text-pigment uppercase">À faire maintenant</p>
+                      {hero.badge && <Badge {...hero.badge} />}
+                    </div>
+                    <h4 className="font-titre text-2xl text-encre leading-tight mt-2">{hero.titre}</h4>
+                    <p className="text-sm text-encre-douce mt-1">{hero.detail}</p>
 
-      {/* MODULES */}
-      {modulesActifs.length > 0 && (
-        <section>
-          <h3 className="text-sm font-medium text-muet uppercase tracking-wide mb-3">Tes modules</h3>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            {modulesActifs.map((m) => (
-              <Link key={m.id} href={`/eleve/modules/${m.slug}`} className="bg-surface border border-bordure rounded-xl p-6 hover:border-encre-douce hover:shadow-sm transition-all group">
-                <h3 className="font-medium text-encre mb-1 group-hover:text-encre-douce">{m.nom}</h3>
-                {m.description && <p className="text-sm text-muet leading-relaxed">{m.description}</p>}
-              </Link>
-            ))}
+                    {hero.pistes && hero.pistes.length > 0 && (
+                      <div className="mt-3 border-t border-bordure pt-3">
+                        <p className="text-xs text-muet mb-1.5">Pistes à suivre (dernier retour)</p>
+                        <ul className="space-y-1">
+                          {hero.pistes.map((p, i) => (
+                            <li key={i} className="text-sm text-encre-douce flex gap-2"><span className="text-bordure">→</span><span>{p}</span></li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+
+                    <Link
+                      href={hero.href}
+                      className="inline-flex items-center gap-1.5 mt-4 bg-bouton text-surface font-ui text-sm font-medium px-4 py-2.5 rounded-xl hover:opacity-90 transition-opacity"
+                    >
+                      {hero.cta} <span aria-hidden>→</span>
+                    </Link>
+                  </div>
+                </article>
+              ) : (
+                <div className="bg-surface border border-bordure rounded-xl p-6 text-sm text-muet">
+                  Rien d&apos;urgent pour l&apos;instant. Tu peux réviser tes cartes ou explorer tes modules.
+                </div>
+              )}
+            </section>
+
+            {ensuite.length > 0 && (
+              <section>
+                <h3 className="font-ui text-xs tracking-[0.1em] text-muet uppercase mb-2">Ensuite cette semaine</h3>
+                <ul className="bg-surface border border-bordure rounded-xl divide-y divide-bordure">
+                  {ensuite.map((t) => (
+                    <li key={t.cle}>
+                      <Link
+                        href={t.href}
+                        data-module={t.module}
+                        className="flex items-center gap-3 px-4 py-3 hover:bg-parchemin-fonce transition-colors"
+                      >
+                        <span className="w-2.5 h-2.5 rounded-full bg-pigment shrink-0" aria-hidden />
+                        <span className="text-sm text-encre flex-1 min-w-0 truncate">{t.titre}</span>
+                        {t.badge && <Badge {...t.badge} />}
+                        <span className="text-bordure shrink-0" aria-hidden>→</span>
+                      </Link>
+                    </li>
+                  ))}
+                </ul>
+              </section>
+            )}
           </div>
-        </section>
+
+          {/* ── Colonne droite : mes mondes + progression ─────────────────── */}
+          <aside className="space-y-6 min-w-0">
+            {mondes.length > 0 && (
+              <section>
+                <h3 className="font-ui text-xs tracking-[0.1em] text-muet uppercase mb-2">Mes mondes</h3>
+                <div className="bg-surface border border-bordure rounded-xl divide-y divide-bordure">
+                  {mondes.map((m) => (
+                    <Link
+                      key={m.slug}
+                      href={`/eleve/modules/${m.slug}`}
+                      data-module={m.sceau}
+                      className="flex items-center gap-3 px-4 py-3 hover:bg-parchemin-fonce transition-colors"
+                    >
+                      {m.sceau ? <Pastille module={m.sceau} size={34} /> : <span className="w-[34px] h-[34px] rounded-full bg-parchemin-fonce shrink-0" />}
+                      <span className={`flex-1 truncate ${m.sceau ? 'font-marque text-sm font-semibold tracking-wide text-pigment' : 'font-ui text-sm text-encre'}`}>
+                        {m.sceau ? m.nom.toUpperCase() : m.nom}
+                      </span>
+                      {m.aFaire
+                        ? <Badge texte="À faire" ton="attention" />
+                        : <span className="text-xs text-muet whitespace-nowrap">à jour</span>}
+                    </Link>
+                  ))}
+                </div>
+              </section>
+            )}
+
+            {sectionsProg.length > 0 && (
+              <section>
+                <h3 className="font-ui text-xs tracking-[0.1em] text-muet uppercase mb-2">Ta progression</h3>
+                <div className="bg-surface border border-bordure rounded-xl p-4 grid grid-cols-3 gap-2 text-center">
+                  {sectionsProg.map((s) => (
+                    <div key={s.label}>
+                      <p className={`font-titre text-2xl leading-none ${TEXTE_LETTRE[s.lettre]}`}>{s.lettre}</p>
+                      <p className="text-xs text-muet mt-1.5">{s.label}</p>
+                    </div>
+                  ))}
+                </div>
+              </section>
+            )}
+          </aside>
+        </div>
       )}
     </div>
   )

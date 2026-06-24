@@ -6,8 +6,9 @@ import { chargerFileRevision, chargerStatsRevision, chargerToutesLesCartes } fro
 import { QuazianDashboard } from './QuazianDashboard'
 import Tuile from '@/components/Tuile'
 
-export default async function QuazianElevePage({ searchParams }: { searchParams: Promise<{ onglet?: string }> }) {
-  const { onglet = 'flashcards' } = await searchParams
+type QuizListItem = { id: string; statut: string; lance_at: string | null; nb_questions: number }
+
+export default async function QuazianElevePage() {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
@@ -45,7 +46,7 @@ export default async function QuazianElevePage({ searchParams }: { searchParams:
         .in('statut', ['lance', 'ferme'])
         .order('lance_at', { ascending: false })
     : { data: [] }
-  const quizList = (quizzes ?? []) as { id: string; statut: string; lance_at: string | null; nb_questions: number }[]
+  const quizList = (quizzes ?? []) as QuizListItem[]
 
   // État de soumission de l'élève par quizz
   const quizIds = quizList.map(q => q.id)
@@ -55,8 +56,23 @@ export default async function QuazianElevePage({ searchParams }: { searchParams:
   const soumisMap = new Map<string, boolean>()
   for (const s of sessions ?? []) soumisMap.set(s.quiz_id as string, !!s.submitted_at)
 
+  // Notes des quizz corrigés (affichées dans la liste) — une seule requête.
+  const fermeIds = quizList.filter(q => q.statut === 'ferme').map(q => q.id)
+  const { data: scores } = fermeIds.length > 0
+    ? await supabase.from('quazian_quiz_scores').select('quiz_id, score_moyen').eq('eleve_id', user.id).in('quiz_id', fermeIds)
+    : { data: [] }
+  const scoreMap = new Map<string, number>()
+  for (const s of scores ?? []) scoreMap.set(s.quiz_id as string, s.score_moyen as number)
+
   // Quizz en cours non encore soumis → bannière d'appel (à faire)
   const quizzActif = quizList.find(q => q.statut === 'lance' && !soumisMap.get(q.id))
+
+  // Données de révision (FSRS + consultation)
+  const [file, stats, toutesCartes] = await Promise.all([
+    chargerFileRevision(),
+    chargerStatsRevision(),
+    chargerToutesLesCartes(),
+  ])
 
   return (
     <div>
@@ -67,7 +83,7 @@ export default async function QuazianElevePage({ searchParams }: { searchParams:
         ← Retour
       </Link>
 
-      {/* Bannière quizz actif (à faire) — visible quel que soit l'onglet */}
+      {/* Bannière quizz actif (à faire) */}
       {quizzActif && (
         <Link
           href={`/eleve/modules/quazian/quizz/${quizzActif.id}`}
@@ -83,57 +99,30 @@ export default async function QuazianElevePage({ searchParams }: { searchParams:
         </Link>
       )}
 
-      <h2 className="text-xl font-serif text-pigment mb-4 mt-2">Quazian</h2>
+      <h2 className="text-xl font-serif text-pigment mb-6 mt-2">Quazian</h2>
 
-      {/* Onglets Flashcards / Quizz */}
-      <nav className="flex gap-1 mb-6 border-b border-bordure">
-        {[
-          { key: 'flashcards', label: 'Flashcards' },
-          { key: 'quizz', label: 'Quizz' },
-        ].map(({ key, label }) => (
-          <Link
-            key={key}
-            href={`/eleve/modules/quazian?onglet=${key}`}
-            className={`px-4 py-2 text-sm rounded-t-lg border-b-2 transition-colors ${
-              onglet === key
-                ? 'border-liseret text-pigment font-medium'
-                : 'border-transparent text-encre-douce hover:text-encre'
-            }`}
-          >
-            {label}
-          </Link>
-        ))}
-      </nav>
-
-      {onglet === 'quizz' ? (
-        <OngletQuizz quizList={quizList} soumisMap={soumisMap} />
-      ) : (
-        <OngletFlashcards />
-      )}
+      {/* Deux zones nettes : Réviser (haut) puis Quizz (bas). */}
+      <QuazianDashboard
+        stats={stats}
+        file={file}
+        toutesCartes={toutesCartes}
+        quizz={<QuizzSection quizList={quizList} soumisMap={soumisMap} scoreMap={scoreMap} />}
+      />
     </div>
   )
 }
 
-// ── Onglet Flashcards : révision FSRS + consultation (inchangé) ──────────────
-async function OngletFlashcards() {
-  const [file, stats, toutesCartes] = await Promise.all([
-    chargerFileRevision(),
-    chargerStatsRevision(),
-    chargerToutesLesCartes(),
-  ])
-  return <QuazianDashboard stats={stats} file={file} toutesCartes={toutesCartes} />
-}
-
-// ── Onglet Quizz : une tuile par quiz (revoir quiz + retour) ─────────────────
-function OngletQuizz({
-  quizList, soumisMap,
+// ── Section QUIZZ : une tuile par quiz, statut charté (+ note /10 si corrigé) ──
+function QuizzSection({
+  quizList, soumisMap, scoreMap,
 }: {
-  quizList: { id: string; statut: string; lance_at: string | null; nb_questions: number }[]
+  quizList: QuizListItem[]
   soumisMap: Map<string, boolean>
+  scoreMap: Map<string, number>
 }) {
   if (quizList.length === 0) {
     return (
-      <p className="text-center py-12 text-muet text-sm">
+      <p className="text-muet text-sm">
         Aucun quizz pour l&apos;instant. Ton professeur n&apos;en a pas encore lancé.
       </p>
     )
@@ -144,20 +133,22 @@ function OngletQuizz({
       {quizList.map(q => {
         const soumis = soumisMap.get(q.id)
         const date = q.lance_at ? new Date(q.lance_at).toLocaleDateString('fr-FR') : ''
-        let etat: { texte: string; classe: string }
-        let couleur: 'vert' | 'neutre'
+        let resume: React.ReactNode
         if (q.statut === 'lance' && !soumis) {
-          etat = { texte: 'En cours — participer', classe: 'text-ok' }
-          couleur = 'vert'
+          resume = <span className="text-xs px-2 py-0.5 rounded-full bg-pigment-teinte text-pigment">ouvert — participer →</span>
         } else if (q.statut === 'lance' && soumis) {
-          etat = { texte: 'Soumis — en attente du corrigé', classe: 'text-muet' }
-          couleur = 'neutre'
+          resume = <span className="text-xs text-muet">soumis — en attente du corrigé</span>
         } else if (q.statut === 'ferme' && soumis) {
-          etat = { texte: 'Revoir le quiz + le retour →', classe: 'text-info' }
-          couleur = 'neutre'
+          const score = scoreMap.get(q.id)
+          resume = (
+            <span className="inline-flex items-center gap-2 text-xs">
+              <span className="px-2 py-0.5 rounded-full bg-parchemin-fonce text-muet">corrigé</span>
+              {score != null && <span className="font-medium text-encre">{score.toFixed(1)}/10</span>}
+              <span className="text-info">revoir →</span>
+            </span>
+          )
         } else {
-          etat = { texte: 'Terminé (non passé)', classe: 'text-muet' }
-          couleur = 'neutre'
+          resume = <span className="text-xs text-muet">terminé (non passé)</span>
         }
         return (
           <Tuile
@@ -165,8 +156,8 @@ function OngletQuizz({
             nom={date ? `Quizz du ${date}` : 'Quizz'}
             sousTitre={`${q.nb_questions} question${q.nb_questions > 1 ? 's' : ''}`}
             href={`/eleve/modules/quazian/quizz/${q.id}`}
-            couleur={couleur}
-            resume={<span className={`text-xs ${etat.classe}`}>{etat.texte}</span>}
+            couleur="neutre"
+            resume={resume}
           />
         )
       })}

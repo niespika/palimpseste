@@ -47,7 +47,7 @@ export default function BarreNavigation({ tabs }: { tabs: NavTab[] }) {
 
         if (!tab.items?.length) {
           return (
-            <Link key={tab.label} href={tab.href ?? '#'} className={classeOnglet(actif)}>
+            <Link key={tab.label} href={tab.href ?? '#'} aria-current={actif ? 'page' : undefined} className={classeOnglet(actif)}>
               {tab.label}
             </Link>
           )
@@ -60,6 +60,7 @@ export default function BarreNavigation({ tabs }: { tabs: NavTab[] }) {
               type="button"
               onClick={() => setOuvert(estOuvert ? null : tab.label)}
               aria-expanded={estOuvert}
+              aria-haspopup="menu"
               className={`${classeOnglet(actif)} inline-flex items-center gap-1`}
             >
               {tab.label}
@@ -73,6 +74,7 @@ export default function BarreNavigation({ tabs }: { tabs: NavTab[] }) {
                     <Link
                       key={it.href}
                       href={it.href}
+                      aria-current={itemActif ? 'page' : undefined}
                       className={`font-ui block px-4 py-2 text-sm transition-colors ${
                         itemActif
                           ? 'bg-parchemin-fonce text-encre font-medium'

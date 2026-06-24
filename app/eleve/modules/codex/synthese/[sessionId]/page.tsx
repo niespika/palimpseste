@@ -6,6 +6,7 @@ import { EcranV1 } from './EcranV1'
 import { EcranVF } from './EcranVF'
 import { TraceAffichage } from './TraceAffichage'
 import { BoutonLu } from './BoutonLu'
+import Pastille from '@/components/Pastille'
 import { CONSIGNE_V1_DEFAUT, CONSIGNE_VF_DEFAUT } from '../../consignes'
 
 export default async function SyntheseElevePage({
@@ -39,12 +40,22 @@ export default async function SyntheseElevePage({
   const consigneV1 = paramsCodex?.consigne_v1 || CONSIGNE_V1_DEFAUT
   const consigneVf = paramsCodex?.consigne_vf || CONSIGNE_VF_DEFAUT
 
+  // En phase 2, l'écran VF passe en atelier 2 colonnes → conteneur élargi pour
+  // laisser de la place ; les autres états restent en colonne étroite (lecture).
+  const large = session.statut === 'phase_2'
+
   return (
-    <div className="max-w-xl mx-auto">
+    <div className={large ? 'max-w-4xl mx-auto' : 'max-w-xl mx-auto'}>
       <Link href="/eleve/modules/codex" className="text-sm text-muet hover:text-encre-douce mb-6 inline-block">
         ← Retour
       </Link>
-      <h2 className="text-xl font-serif text-pigment mb-1 mt-2">{uniteLabel}</h2>
+      <div className="flex items-center gap-4 mt-2 mb-1">
+        <Pastille module="codex" size={56} />
+        <div className="min-w-0">
+          <p className="font-marque text-sm font-semibold tracking-[0.18em] text-pigment">CODEX</p>
+          <h2 className="font-titre text-2xl text-encre leading-tight">{uniteLabel}</h2>
+        </div>
+      </div>
       <p className="text-sm text-muet mb-6">
         {session.statut === 'phase_1' && 'Phase 1 — ta V1, de mémoire et livre fermé.'}
         {session.statut === 'phase_2' && 'Phase 2 — ta V-finale.'}

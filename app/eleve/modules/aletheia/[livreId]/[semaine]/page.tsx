@@ -8,7 +8,9 @@ import FormulaireVf from '../../FormulaireVf'
 import BoutonLectureRetourVf from '../../BoutonLectureRetourVf'
 import PollStatut from '../../PollStatut'
 import { VueRetourV1, VueRetourVF } from '@/components/aletheia/VueRetours'
-import type { TravailAletheia } from '../../types'
+import AtelierDeuxColonnes from '@/components/AtelierDeuxColonnes'
+import Pastille from '@/components/Pastille'
+import type { TravailAletheia, StatutAletheia } from '../../types'
 
 function Bloc({ titre, children }: { titre: string; children: React.ReactNode }) {
   return (
@@ -16,6 +18,41 @@ function Bloc({ titre, children }: { titre: string; children: React.ReactNode })
       <h3 className="font-medium text-encre">{titre}</h3>
       {children}
     </section>
+  )
+}
+
+// Stepper de progression — situe l'élève dans le parcours de la semaine.
+const ETAPES_SEMAINE = ['Lecture', 'Retour', 'Réécriture', 'Retour final'] as const
+function indexEtape(statut: StatutAletheia): number {
+  switch (statut) {
+    case 'DRAFT': return 0
+    case 'V1_SUBMITTED': return 1
+    case 'FEEDBACK1_READY': return 2
+    case 'VF_SUBMITTED': return 3
+    case 'FEEDBACK2_READY': return 3
+    case 'DONE': return 4
+  }
+}
+function Stepper({ statut }: { statut: StatutAletheia }) {
+  const courant = indexEtape(statut)
+  return (
+    <ol className="flex items-center gap-1.5 overflow-x-auto -mx-1 px-1 text-xs">
+      {ETAPES_SEMAINE.map((label, i) => {
+        const fait = i < courant
+        const actif = i === courant
+        return (
+          <li key={label} className="flex items-center gap-1.5 shrink-0">
+            <span className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-medium ${
+              fait ? 'bg-ok text-surface' : actif ? 'bg-pigment text-surface' : 'bg-parchemin-fonce text-muet'
+            }`}>
+              {fait ? '✓' : i + 1}
+            </span>
+            <span className={`font-ui whitespace-nowrap ${actif ? 'text-pigment font-medium' : fait ? 'text-encre-douce' : 'text-muet'}`}>{label}</span>
+            {i < ETAPES_SEMAINE.length - 1 && <span className="text-bordure" aria-hidden>·</span>}
+          </li>
+        )
+      })}
+    </ol>
   )
 }
 
@@ -93,8 +130,14 @@ export default async function PageSemaineAletheia({ params }: { params: Promise<
       <Link href="/eleve/modules/aletheia" className="text-sm text-muet hover:text-encre-douce">← Planning</Link>
 
       <div>
-        {livre?.label && <p className="text-xs text-muet">{livre.label as string}</p>}
-        <h2 className="text-xl font-serif text-encre">Semaine {semaine} — {sem.titre}</h2>
+        <div className="flex items-center gap-4">
+          <Pastille module="aletheia" size={56} />
+          <div className="min-w-0">
+            <p className="font-marque text-sm font-semibold tracking-[0.18em] text-pigment">ALETHEIA</p>
+            <h2 className="font-titre text-2xl text-encre leading-tight">Semaine {semaine} — {sem.titre}</h2>
+          </div>
+        </div>
+        {livre?.label && <p className="text-xs text-muet mt-3">{livre.label as string}</p>}
         <p className="text-sm text-muet mt-1">
           {sem.chapitres && <span className="text-pigment">{sem.chapitres}</span>}
           {sem.chapitres && sem.dateIndicative && ' · '}
@@ -102,6 +145,8 @@ export default async function PageSemaineAletheia({ params }: { params: Promise<
         </p>
         <p className="text-xs text-muet mt-2">Lis ces chapitres dans ton propre exemplaire, puis rédige ci-dessous.</p>
       </div>
+
+      <Stepper statut={statut} />
 
       {echecRetour1 && (
         <div className="bg-retard-teinte border border-retard rounded-xl px-4 py-3 text-sm text-retard">
@@ -135,36 +180,49 @@ export default async function PageSemaineAletheia({ params }: { params: Promise<
 
       {enAttenteRetour1 && <p className="text-sm text-muet">Ton retour est en cours de préparation…</p>}
 
-      {/* Retour V1 */}
-      {t?.retour_v1 && (
-        <Bloc titre="2. Retour — pour creuser">
-          <VueRetourV1 retour={t.retour_v1} montrerRemarque={evalQuestions} />
-        </Bloc>
-      )}
-
-      {/* Étape 2 — version finale (3 champs) */}
-      {echecRetour2 && (
-        <div className="bg-retard-teinte border border-retard rounded-xl px-4 py-3 text-sm text-retard">
-          La préparation de ton retour n&apos;a pas abouti. Renvoie ta version finale ci-dessous ; si le problème persiste, préviens ton professeur.
-        </div>
-      )}
-      {statut === 'FEEDBACK1_READY' ? (
-        <Bloc titre="3. Ta version finale">
-          <FormulaireVf
-            livreId={livreId}
-            semaine={semaine}
-            theseInitial={t?.these_vf ?? t?.these ?? ''}
-            argumentsInitial={t?.arguments_vf ?? t?.arguments ?? ''}
-            accordInitial={t?.accord_vf ?? t?.accord ?? ''}
+      {/* Étape de réécriture — atelier 2 colonnes : le retour reste sous les yeux. */}
+      {statut === 'FEEDBACK1_READY' && t?.retour_v1 ? (
+        <>
+          {echecRetour2 && (
+            <div className="bg-retard-teinte border border-retard rounded-xl px-4 py-3 text-sm text-retard">
+              La préparation de ton retour n&apos;a pas abouti. Renvoie ta version finale ci-dessous ; si le problème persiste, préviens ton professeur.
+            </div>
+          )}
+          <AtelierDeuxColonnes
+            labelRetour="Ton retour"
+            labelFormulaire="Ta version finale"
+            retour={<VueRetourV1 retour={t.retour_v1} montrerRemarque={evalQuestions} />}
+            formulaire={
+              <div className="bg-surface border border-bordure rounded-xl p-4 sm:p-5">
+                <FormulaireVf
+                  livreId={livreId}
+                  semaine={semaine}
+                  theseInitial={t?.these_vf ?? t?.these ?? ''}
+                  argumentsInitial={t?.arguments_vf ?? t?.arguments ?? ''}
+                  accordInitial={t?.accord_vf ?? t?.accord ?? ''}
+                />
+              </div>
+            }
           />
-        </Bloc>
-      ) : t?.these_vf ? (
-        <Bloc titre="3. Ta version finale">
-          <Champ label="Idée principale" valeur={t?.these_vf ?? null} />
-          <Champ label="Arguments" valeur={t?.arguments_vf ?? null} />
-          <Champ label="Ton accord" valeur={t?.accord_vf ?? null} />
-        </Bloc>
-      ) : null}
+        </>
+      ) : (
+        <>
+          {/* Retour V1 (états non-réécriture : reste en pile) */}
+          {t?.retour_v1 && (
+            <Bloc titre="2. Retour — pour creuser">
+              <VueRetourV1 retour={t.retour_v1} montrerRemarque={evalQuestions} />
+            </Bloc>
+          )}
+          {/* Version finale, en lecture seule */}
+          {t?.these_vf && (
+            <Bloc titre="3. Ta version finale">
+              <Champ label="Idée principale" valeur={t?.these_vf ?? null} />
+              <Champ label="Arguments" valeur={t?.arguments_vf ?? null} />
+              <Champ label="Ton accord" valeur={t?.accord_vf ?? null} />
+            </Bloc>
+          )}
+        </>
+      )}
 
       {enAttenteRetour2 && <p className="text-sm text-muet">Ton retour final est en cours de préparation…</p>}
 

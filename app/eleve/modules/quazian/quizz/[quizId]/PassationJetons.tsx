@@ -179,8 +179,8 @@ export function PassationJetons({ sessionId, quizId, questions, reponsesInitiale
         <div className="flex items-center justify-between mb-4">
           <p className="text-xs text-encre-douce">Répartis 100 points entre les réponses</p>
           <div className="flex items-center gap-2">
-            <span className={`text-sm font-bold ${restants > 0 ? 'text-attention' : 'text-ok'}`}>
-              {restants} restant{restants > 1 ? 's' : ''}
+            <span className={`text-sm font-bold tabular-nums ${restants > 0 ? 'text-attention' : 'text-ok'}`}>
+              {100 - restants} / 100 placés{restants === 0 ? ' ✓' : ''}
             </span>
             <button
               onClick={resetNeutral}
@@ -200,7 +200,8 @@ export function PassationJetons({ sessionId, quizId, questions, reponsesInitiale
                 <button
                   onClick={() => modifierJeton(i, -5)}
                   disabled={jetonsActuels[i] <= 0}
-                  className="w-8 h-8 rounded-lg bg-parchemin-fonce text-encre-douce hover:bg-bordure disabled:opacity-30 text-lg font-bold leading-none"
+                  aria-label={`Retirer 5 points à la réponse ${LETTRES[i]}`}
+                  className="w-11 h-11 sm:w-8 sm:h-8 rounded-lg bg-parchemin-fonce text-encre-douce hover:bg-bordure disabled:opacity-30 text-lg font-bold leading-none"
                 >
                   −
                 </button>
@@ -210,7 +211,8 @@ export function PassationJetons({ sessionId, quizId, questions, reponsesInitiale
                 <button
                   onClick={() => modifierJeton(i, 5)}
                   disabled={restants <= 0}
-                  className="w-8 h-8 rounded-lg bg-parchemin-fonce text-encre-douce hover:bg-bordure disabled:opacity-30 text-lg font-bold leading-none"
+                  aria-label={`Ajouter 5 points à la réponse ${LETTRES[i]}`}
+                  className="w-11 h-11 sm:w-8 sm:h-8 rounded-lg bg-parchemin-fonce text-encre-douce hover:bg-bordure disabled:opacity-30 text-lg font-bold leading-none"
                 >
                   +
                 </button>
