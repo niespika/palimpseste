@@ -1,5 +1,7 @@
 import Link from 'next/link'
 import Pastille from '@/components/Pastille'
+import { TuileAccentModule } from '@/components/TuileAccent'
+import SousNavModule from '@/components/SousNavModule'
 
 export default function CodexLayout({ children }: { children: React.ReactNode }) {
   return (
@@ -15,23 +17,13 @@ export default function CodexLayout({ children }: { children: React.ReactNode })
         </div>
       </div>
 
-      <nav className="flex gap-1 mb-6 border-b border-bordure pb-0 overflow-x-auto">
-        {[
-          { href: '/prof/codex', label: 'Synthèses' },
-          { href: '/prof/codex/validation', label: 'Validation' },
-          { href: '/prof/codex/parametres', label: 'Paramètres' },
-        ].map(({ href, label }) => (
-          <Link
-            key={href}
-            href={href}
-            className="font-ui px-4 py-2 text-sm text-encre-douce hover:text-encre hover:bg-pigment-teinte rounded-t-lg border-b-2 border-transparent transition-colors"
-          >
-            {label}
-          </Link>
-        ))}
-      </nav>
+      <SousNavModule onglets={[
+        { href: '/prof/codex', label: 'Synthèses' },
+        { href: '/prof/codex/validation', label: 'Validation' },
+        { href: '/prof/codex/parametres', label: 'Paramètres' },
+      ]} />
 
-      {children}
+      <TuileAccentModule>{children}</TuileAccentModule>
     </div>
   )
 }

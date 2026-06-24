@@ -6,7 +6,7 @@ export default function BoutonImprimerCapstone() {
   return (
     <button
       onClick={() => window.print()}
-      className="print:hidden text-sm text-stone-600 hover:text-stone-900 border border-stone-300 rounded-lg px-3 py-1.5 hover:bg-stone-50 transition-colors"
+      className="print:hidden text-sm text-encre-douce hover:text-encre border border-bordure rounded-lg px-3 py-1.5 hover:bg-parchemin-fonce transition-colors"
     >
       Imprimer / Télécharger en PDF
     </button>

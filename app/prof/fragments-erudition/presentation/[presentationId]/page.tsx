@@ -65,24 +65,24 @@ export default async function PagePresentation({
       <div className="flex items-center gap-2">
         <Link
           href={`/prof/fragments-erudition/semaine/${presentation.semaine_id}`}
-          className="text-sm text-stone-500 hover:text-stone-700"
+          className="text-sm text-muet hover:text-encre-douce"
         >
           ← {titrePresentation}
         </Link>
       </div>
 
-      <div className="bg-white border border-stone-200 rounded-xl px-5 py-4 flex items-center justify-between">
+      <div className="bg-surface border border-bordure rounded-xl px-5 py-4 flex items-center justify-between">
         <div>
-          <p className="text-xs text-stone-400 mb-0.5">Présentation orale</p>
-          <p className="font-medium text-stone-900">
+          <p className="text-xs text-muet mb-0.5">Présentation orale</p>
+          <p className="font-medium text-encre">
             {eleve?.display_name ?? '?'}
-            {eleve?.classe && <span className="text-stone-400 font-normal ml-2 text-sm">{eleve.classe}</span>}
+            {eleve?.classe && <span className="text-muet font-normal ml-2 text-sm">{eleve.classe}</span>}
           </p>
-          <p className="text-sm text-stone-500 mt-0.5">{titrePresentation}</p>
+          <p className="text-sm text-muet mt-0.5">{titrePresentation}</p>
         </div>
         <Link
           href={`/prof/fragments-erudition/eleve/${presentation.eleve_id}`}
-          className="text-xs text-stone-500 hover:text-stone-700 underline"
+          className="text-xs text-muet hover:text-encre-douce underline"
         >
           Fiche élève
         </Link>

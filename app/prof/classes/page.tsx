@@ -60,9 +60,9 @@ export default async function PageClasses({
 
   return (
     <div className="space-y-6">
-      <h2 className="text-xl font-serif text-stone-900">Classes</h2>
+      <h2 className="text-xl font-serif text-encre">Classes</h2>
 
-      <p className="text-sm text-stone-500">
+      <p className="text-sm text-muet">
         Les classes sont l&apos;unité de base : on y inscrit des élèves et on leur donne accès aux
         modules. Un élève peut appartenir à plusieurs classes (il cumule alors les accès).
       </p>
@@ -70,7 +70,7 @@ export default async function PageClasses({
       <CreerClasse />
 
       {classesList.length === 0 ? (
-        <p className="text-stone-400 text-sm text-center py-8">
+        <p className="text-muet text-sm text-center py-8">
           Aucune classe pour l&apos;instant. Crée-en une pour commencer.
         </p>
       ) : (
@@ -90,7 +90,7 @@ export default async function PageClasses({
                   selectionnee={classeSel === c.id}
                   couleur={n > 0 ? 'vert' : 'neutre'}
                   resume={
-                    <span className="text-xs text-stone-500">
+                    <span className="text-xs text-muet">
                       {n} élève{n > 1 ? 's' : ''} · {nMod} module{nMod > 1 ? 's' : ''}
                     </span>
                   }

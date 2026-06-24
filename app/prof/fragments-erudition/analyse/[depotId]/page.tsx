@@ -102,18 +102,18 @@ export default async function PageAnalyse({
           {semaineId ? (
             <Link
               href={`/prof/fragments-erudition/semaine/${semaineId}`}
-              className="text-sm text-stone-500 hover:text-stone-700"
+              className="text-sm text-muet hover:text-encre-douce"
             >
               ← {titreSemaine}
             </Link>
           ) : (
-            <Link href="/prof/fragments-erudition" className="text-sm text-stone-500 hover:text-stone-700">
+            <Link href="/prof/fragments-erudition" className="text-sm text-muet hover:text-encre-douce">
               ← Vue par semaine
             </Link>
           )}
-          <h3 className="text-lg font-medium text-stone-900 mt-0.5">
+          <h3 className="text-lg font-medium text-encre mt-0.5">
             {eleve?.display_name ?? 'Élève'}
-            {eleve?.classe && <span className="text-sm text-stone-400 ml-2">{eleve.classe}</span>}
+            {eleve?.classe && <span className="text-sm text-muet ml-2">{eleve.classe}</span>}
           </h3>
         </div>
 
@@ -123,35 +123,35 @@ export default async function PageAnalyse({
             {depotPrecedent ? (
               <Link
                 href={`/prof/fragments-erudition/analyse/${depotPrecedent}?semaine=${semaineId}`}
-                className="text-sm px-3 py-1.5 border border-stone-200 rounded-lg hover:bg-stone-50 transition-colors"
+                className="text-sm px-3 py-1.5 border border-bordure rounded-lg hover:bg-parchemin-fonce transition-colors"
               >
                 ← Élève précédent
               </Link>
             ) : (
-              <span className="text-sm px-3 py-1.5 text-stone-300">← Élève précédent</span>
+              <span className="text-sm px-3 py-1.5 text-muet">← Élève précédent</span>
             )}
             {depotSuivant ? (
               <Link
                 href={`/prof/fragments-erudition/analyse/${depotSuivant}?semaine=${semaineId}`}
-                className="text-sm px-3 py-1.5 border border-stone-200 rounded-lg hover:bg-stone-50 transition-colors"
+                className="text-sm px-3 py-1.5 border border-bordure rounded-lg hover:bg-parchemin-fonce transition-colors"
               >
                 Élève suivant →
               </Link>
             ) : (
-              <span className="text-sm px-3 py-1.5 text-stone-300">Élève suivant →</span>
+              <span className="text-sm px-3 py-1.5 text-muet">Élève suivant →</span>
             )}
           </div>
         )}
       </div>
 
       {signauxIntegrite.length > 0 && (
-        <div className="mb-3 text-sm bg-orange-50 border border-orange-200 text-orange-800 rounded-lg px-3 py-2">
+        <div className="mb-3 text-sm bg-attention-teinte border border-attention text-attention rounded-lg px-3 py-2">
           <p className="font-medium">⚑ Signal d&apos;intégrité — à vérifier avant d&apos;évaluer (indicatif, non probant)</p>
           <ul className="mt-1 space-y-0.5">
             {signauxIntegrite.map((s, i) => (
               <li key={i}>
                 <strong>{LABEL_SIGNAL[s.type]}</strong>
-                <span className="text-orange-600"> · {s.source === 'heuristique' ? 'détecté au dépôt' : 'détecté par l’IA'}</span>
+                <span className="text-attention"> · {s.source === 'heuristique' ? 'détecté au dépôt' : 'détecté par l’IA'}</span>
                 {s.motif && <span> — {s.motif}</span>}
               </li>
             ))}
@@ -160,7 +160,7 @@ export default async function PageAnalyse({
       )}
 
       {(depot as { photos_suspectes?: boolean }).photos_suspectes && (
-        <div className="mb-3 text-sm bg-amber-50 border border-amber-200 text-amber-800 rounded-lg px-3 py-2">
+        <div className="mb-3 text-sm bg-attention-teinte border border-attention text-attention rounded-lg px-3 py-2">
           ⚠ Signal anti-triche : au moins une photo semble issue de la galerie (EXIF ancien), pas prise sur le moment.
           {delaiPhotoMs != null && delaiPhotoMs > 0 && (
             <> Photo la plus ancienne prise <strong>{fmtDelai(delaiPhotoMs)}</strong> avant le dépôt

@@ -10,10 +10,10 @@ export function EcranVF({ sessionId, initial, consigne }: { sessionId: string; i
 
   if (envoyee) {
     return (
-      <div className="bg-white border border-stone-200 rounded-xl p-8 text-center">
+      <div className="bg-surface border border-bordure rounded-xl p-8 text-center">
         <div className="text-3xl mb-3">✓</div>
-        <h3 className="text-base font-medium text-stone-800 mb-1">V-finale envoyée</h3>
-        <p className="text-sm text-stone-500">
+        <h3 className="text-base font-medium text-encre mb-1">V-finale envoyée</h3>
+        <p className="text-sm text-muet">
           Ton retour sera disponible une fois que ton professeur l&apos;aura validé.
         </p>
       </div>
@@ -24,16 +24,16 @@ export function EcranVF({ sessionId, initial, consigne }: { sessionId: string; i
     <div className="space-y-6">
       {/* Rappel des suggestions V1, sous les yeux */}
       <div>
-        <h3 className="text-sm font-medium text-stone-700 mb-2">Tes suggestions de la V1 — à corriger</h3>
+        <h3 className="text-sm font-medium text-encre-douce mb-2">Tes suggestions de la V1 — à corriger</h3>
         {initial.suggestions_v1 ? (
           <SuggestionsAffichage suggestions={initial.suggestions_v1} />
         ) : (
-          <p className="text-sm text-stone-400">Aucune suggestion enregistrée pour la V1.</p>
+          <p className="text-sm text-muet">Aucune suggestion enregistrée pour la V1.</p>
         )}
       </div>
 
-      <div className="border-t border-stone-200 pt-6">
-        <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 mb-4 text-sm text-amber-800 whitespace-pre-wrap">
+      <div className="border-t border-bordure pt-6">
+        <div className="bg-attention-teinte border border-attention rounded-xl p-4 mb-4 text-sm text-attention whitespace-pre-wrap">
           {consigne}
         </div>
         <CaptureManuscrit

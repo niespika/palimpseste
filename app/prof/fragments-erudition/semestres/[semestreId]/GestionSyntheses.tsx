@@ -27,10 +27,10 @@ interface Props {
 }
 
 const STATUT_LABELS: Record<string, { label: string; classe: string }> = {
-  en_cours: { label: 'Génération…', classe: 'bg-blue-100 text-blue-700' },
-  generee: { label: 'À valider', classe: 'bg-amber-100 text-amber-700' },
-  erreur: { label: 'Erreur', classe: 'bg-red-100 text-red-700' },
-  publiee: { label: 'Publiée ✓', classe: 'bg-green-100 text-green-700' },
+  en_cours: { label: 'Génération…', classe: 'bg-info-teinte text-info' },
+  generee: { label: 'À valider', classe: 'bg-attention-teinte text-attention' },
+  erreur: { label: 'Erreur', classe: 'bg-retard-teinte text-retard' },
+  publiee: { label: 'Publiée ✓', classe: 'bg-ok-teinte text-ok' },
 }
 
 function EditorSyntheseRow({ synthese, onDone }: { synthese: SyntheseRow; eleve: Eleve; semestreId: string; onDone: () => void }) {
@@ -97,14 +97,14 @@ function EditorSyntheseRow({ synthese, onDone }: { synthese: SyntheseRow; eleve:
     <div className="space-y-4 py-3">
       {/* Note suggérée */}
       {synthese.note20_suggeree !== null && (
-        <div className="bg-stone-50 rounded-lg p-3">
-          <p className="text-xs font-medium text-stone-500 mb-1">Note suggérée par l'IA</p>
-          <p className="text-xl font-serif text-stone-800">
+        <div className="bg-parchemin-fonce rounded-lg p-3">
+          <p className="text-xs font-medium text-muet mb-1">Note suggérée par l'IA</p>
+          <p className="text-xl font-serif text-encre">
             {synthese.note20_suggeree}/20
-            <span className="text-sm text-stone-400 ml-2">fourchette {synthese.note20_min}–{synthese.note20_max}</span>
+            <span className="text-sm text-muet ml-2">fourchette {synthese.note20_min}–{synthese.note20_max}</span>
           </p>
           {synthese.note20_justification && (
-            <p className="text-xs text-stone-500 mt-1">{synthese.note20_justification}</p>
+            <p className="text-xs text-muet mt-1">{synthese.note20_justification}</p>
           )}
           <div className="mt-2 flex flex-wrap items-end gap-2">
             <input
@@ -112,14 +112,14 @@ function EditorSyntheseRow({ synthese, onDone }: { synthese: SyntheseRow; eleve:
               value={note20}
               onChange={e => { setNote20(e.target.value === '' ? '' : Number(e.target.value)); setHors(false) }}
               min={0} max={20} step={0.5}
-              className="w-20 px-2 py-1 border border-stone-200 rounded text-sm"
+              className="w-20 px-2 py-1 border border-bordure rounded text-sm"
               placeholder="/20"
             />
-            <label className="flex items-center gap-1 text-xs text-stone-600 cursor-pointer">
+            <label className="flex items-center gap-1 text-xs text-encre-douce cursor-pointer">
               <input type="checkbox" checked={noteVisible} onChange={e => setNoteVisible(e.target.checked)} className="rounded" />
               Visible par l'élève
             </label>
-            <button onClick={handleNote} disabled={chargement} className="text-xs bg-stone-200 text-stone-800 px-2 py-1 rounded hover:bg-stone-300">Valider</button>
+            <button onClick={handleNote} disabled={chargement} className="text-xs bg-parchemin-fonce text-encre px-2 py-1 rounded hover:opacity-90">Valider</button>
           </div>
         </div>
       )}
@@ -131,35 +131,35 @@ function EditorSyntheseRow({ synthese, onDone }: { synthese: SyntheseRow; eleve:
         { label: 'Notes prof (privées)', val: notesProf, set: setNotesProf, rows: 2 },
       ].map(({ label, val, set, rows }) => (
         <div key={label}>
-          <label className="block text-xs font-medium text-stone-500 mb-1">{label}</label>
+          <label className="block text-xs font-medium text-muet mb-1">{label}</label>
           <textarea
             value={val}
             onChange={e => set(e.target.value)}
             rows={rows}
-            className="w-full px-3 py-2 border border-stone-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 resize-y text-stone-900"
+            className="w-full px-3 py-2 border border-bordure rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-pigment resize-y text-encre"
           />
         </div>
       ))}
 
       {message && (
-        <div className={`rounded-lg px-3 py-2 text-sm ${message.type === 'ok' ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'}`}>
+        <div className={`rounded-lg px-3 py-2 text-sm ${message.type === 'ok' ? 'bg-ok-teinte text-ok' : 'bg-retard-teinte text-retard'}`}>
           {message.texte}
         </div>
       )}
 
       <div className="flex flex-wrap items-center gap-2">
-        <button onClick={handleSauvegarder} disabled={chargement} className="bg-stone-200 text-stone-800 px-3 py-1.5 rounded text-sm hover:bg-stone-300 disabled:opacity-50">
+        <button onClick={handleSauvegarder} disabled={chargement} className="bg-parchemin-fonce text-encre px-3 py-1.5 rounded text-sm hover:opacity-90 disabled:opacity-50">
           {chargement ? '…' : 'Enregistrer'}
         </button>
         {synthese.statut === 'generee' && (
-          <button onClick={handlePublier} disabled={chargement} className="bg-stone-800 text-white px-3 py-1.5 rounded text-sm hover:bg-stone-700 disabled:opacity-50">
+          <button onClick={handlePublier} disabled={chargement} className="bg-bouton text-surface px-3 py-1.5 rounded text-sm hover:opacity-90 disabled:opacity-50">
             Publier
           </button>
         )}
         {synthese.statut === 'publiee' && (
-          <button onClick={handleDepublier} disabled={chargement} className="text-sm text-stone-500 hover:text-stone-700 underline">Dépublier</button>
+          <button onClick={handleDepublier} disabled={chargement} className="text-sm text-muet hover:text-encre-douce underline">Dépublier</button>
         )}
-        <button onClick={onDone} className="text-xs text-stone-400 hover:text-stone-600 underline">Fermer</button>
+        <button onClick={onDone} className="text-xs text-muet hover:text-encre-douce underline">Fermer</button>
       </div>
     </div>
   )
@@ -198,16 +198,16 @@ export default function GestionSyntheses({ semestreId, eleves, syntheseParEleve 
   return (
     <div className="space-y-6">
       {/* Génération en lot */}
-      <div className="bg-white border border-stone-200 rounded-xl p-4 flex flex-wrap items-center gap-3">
-        <span className="text-sm text-stone-600">{nbGeneres}/{eleves.length} générées · {nbPublies} publiées</span>
+      <div className="bg-surface border border-bordure rounded-xl p-4 flex flex-wrap items-center gap-3">
+        <span className="text-sm text-encre-douce">{nbGeneres}/{eleves.length} générées · {nbPublies} publiées</span>
         <button
           onClick={handleGenererLot}
           disabled={enCours}
-          className="bg-stone-800 text-white px-4 py-2 rounded-lg text-sm hover:bg-stone-700 disabled:opacity-50"
+          className="bg-bouton text-surface px-4 py-2 rounded-lg text-sm hover:opacity-90 disabled:opacity-50"
         >
           {enCours ? 'Génération…' : 'Générer tout'}
         </button>
-        {message && <span className="text-sm text-blue-600">{message}</span>}
+        {message && <span className="text-sm text-info">{message}</span>}
       </div>
 
       {/* Liste par élève */}
@@ -218,13 +218,13 @@ export default function GestionSyntheses({ semestreId, eleves, syntheseParEleve 
           const estOuvert = ouvertPourEleve === eleve.id
 
           return (
-            <div key={eleve.inscription_id} className="bg-white border border-stone-200 rounded-xl overflow-hidden">
+            <div key={eleve.inscription_id} className="bg-surface border border-bordure rounded-xl overflow-hidden">
               <div className="px-4 py-3 flex items-center justify-between gap-3">
                 <div>
-                  <span className="font-medium text-stone-900 text-sm">{eleve.display_name}</span>
-                  {eleve.classe && <span className="text-xs text-stone-400 ml-1">{eleve.classe}</span>}
+                  <span className="font-medium text-encre text-sm">{eleve.display_name}</span>
+                  {eleve.classe && <span className="text-xs text-muet ml-1">{eleve.classe}</span>}
                   {synthese?.note20_validee !== null && synthese?.note20_validee !== undefined && (
-                    <span className="ml-2 text-xs text-stone-600">{synthese.note20_validee}/20{synthese.note_visible_eleve ? ' (visible)' : ''}</span>
+                    <span className="ml-2 text-xs text-encre-douce">{synthese.note20_validee}/20{synthese.note_visible_eleve ? ' (visible)' : ''}</span>
                   )}
                 </div>
                 <div className="flex items-center gap-2 flex-shrink-0">
@@ -234,7 +234,7 @@ export default function GestionSyntheses({ semestreId, eleves, syntheseParEleve 
                   {(synthese?.statut === 'generee' || synthese?.statut === 'publiee') ? (
                     <button
                       onClick={() => setOuvertPourEleve(estOuvert ? null : eleve.id)}
-                      className="text-xs text-stone-500 hover:text-stone-800 underline"
+                      className="text-xs text-muet hover:text-encre underline"
                     >
                       {estOuvert ? 'Fermer' : 'Valider'}
                     </button>
@@ -242,7 +242,7 @@ export default function GestionSyntheses({ semestreId, eleves, syntheseParEleve 
                     <button
                       onClick={() => handleGenererUn(eleve.inscription_id)}
                       disabled={enCours || synthese?.statut === 'en_cours'}
-                      className="text-xs text-stone-500 hover:text-stone-800 underline disabled:opacity-40"
+                      className="text-xs text-muet hover:text-encre underline disabled:opacity-40"
                     >
                       {synthese?.statut === 'en_cours' ? 'En cours…' : synthese ? 'Relancer' : 'Générer'}
                     </button>
@@ -251,7 +251,7 @@ export default function GestionSyntheses({ semestreId, eleves, syntheseParEleve 
               </div>
 
               {estOuvert && synthese && (synthese.statut === 'generee' || synthese.statut === 'publiee') && (
-                <div className="px-4 border-t border-stone-100">
+                <div className="px-4 border-t border-bordure">
                   <EditorSyntheseRow
                     synthese={synthese}
                     eleve={eleve}

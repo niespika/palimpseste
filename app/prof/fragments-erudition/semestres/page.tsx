@@ -36,18 +36,18 @@ export default async function PageSemestres() {
   return (
     <div className="space-y-6">
       <div>
-        <h3 className="text-base font-medium text-stone-900">Synthèses de semestre</h3>
-        <p className="text-sm text-stone-500 mt-0.5">
+        <h3 className="text-base font-medium text-encre">Synthèses de semestre</h3>
+        <p className="text-sm text-muet mt-0.5">
           Bilan de fin de semestre : fragments écrits + oral, avec note suggérée. Les
           semestres se créent et se gèrent depuis la{' '}
-          <Link href="/prof/calendrier/config" className="underline hover:text-stone-700">
+          <Link href="/prof/calendrier/config" className="underline hover:text-encre-douce">
             configuration du Calendrier
           </Link>.
         </p>
       </div>
 
       {(semestres ?? []).length === 0 ? (
-        <div className="bg-white border border-stone-200 rounded-xl p-8 text-center text-stone-400 text-sm">
+        <div className="bg-surface border border-bordure rounded-xl p-8 text-center text-muet text-sm">
           Aucun semestre. Crée-en un depuis la configuration du Calendrier.
         </div>
       ) : (
@@ -65,8 +65,8 @@ export default async function PageSemestres() {
                 couleur={s.courant ? 'vert' : 'neutre'}
                 resume={
                   stats.total > 0
-                    ? <span className="text-xs text-stone-500">{stats.publiees}/{stats.total} synthèse{stats.total > 1 ? 's' : ''} publiée{stats.publiees > 1 ? 's' : ''}</span>
-                    : <span className="text-xs text-stone-400">Aucune synthèse générée</span>
+                    ? <span className="text-xs text-muet">{stats.publiees}/{stats.total} synthèse{stats.total > 1 ? 's' : ''} publiée{stats.publiees > 1 ? 's' : ''}</span>
+                    : <span className="text-xs text-muet">Aucune synthèse générée</span>
                 }
               />
             )

@@ -12,8 +12,8 @@ import type { TravailAletheia } from '../../types'
 
 function Bloc({ titre, children }: { titre: string; children: React.ReactNode }) {
   return (
-    <section className="bg-white border border-stone-200 rounded-xl p-5 space-y-3">
-      <h3 className="font-medium text-stone-900">{titre}</h3>
+    <section className="bg-surface border border-bordure rounded-xl p-5 space-y-3">
+      <h3 className="font-medium text-encre">{titre}</h3>
       {children}
     </section>
   )
@@ -23,8 +23,8 @@ function Champ({ label, valeur }: { label: string; valeur: string | null }) {
   if (!valeur) return null
   return (
     <div>
-      <p className="text-xs font-medium text-stone-500 mb-0.5">{label}</p>
-      <p className="text-sm text-stone-700 whitespace-pre-wrap">{valeur}</p>
+      <p className="text-xs font-medium text-muet mb-0.5">{label}</p>
+      <p className="text-sm text-encre-douce whitespace-pre-wrap">{valeur}</p>
     </div>
   )
 }
@@ -33,8 +33,8 @@ function ListeChamp({ label, items }: { label: string; items: string[] }) {
   if (!items?.length) return null
   return (
     <div>
-      <p className="text-xs font-medium text-stone-500 mb-0.5">{label}</p>
-      <ul className="list-disc list-inside space-y-0.5 text-sm text-stone-700">
+      <p className="text-xs font-medium text-muet mb-0.5">{label}</p>
+      <ul className="list-disc list-inside space-y-0.5 text-sm text-encre-douce">
         {items.map((t, i) => <li key={i}>{t}</li>)}
       </ul>
     </div>
@@ -65,8 +65,8 @@ export default async function PageSemaineAletheia({ params }: { params: Promise<
   if (!(await peutAccederSemaine(admin, user.id, livreId, semaine))) {
     return (
       <div className="space-y-5 pb-8">
-        <Link href="/eleve/modules/aletheia" className="text-sm text-stone-500 hover:text-stone-700">← Planning</Link>
-        <div className="bg-white border border-stone-200 rounded-xl p-6 text-center text-stone-500 text-sm">
+        <Link href="/eleve/modules/aletheia" className="text-sm text-muet hover:text-encre-douce">← Planning</Link>
+        <div className="bg-surface border border-bordure rounded-xl p-6 text-center text-muet text-sm">
           🔒 Cette semaine n&apos;est pas encore débloquée. Termine d&apos;abord la semaine précédente.
         </div>
       </div>
@@ -90,21 +90,21 @@ export default async function PageSemaineAletheia({ params }: { params: Promise<
   return (
     <div className="space-y-5 pb-8">
       <PollStatut actif={enAttenteRetour1 || enAttenteRetour2} livreId={livreId} semaine={semaine} />
-      <Link href="/eleve/modules/aletheia" className="text-sm text-stone-500 hover:text-stone-700">← Planning</Link>
+      <Link href="/eleve/modules/aletheia" className="text-sm text-muet hover:text-encre-douce">← Planning</Link>
 
       <div>
-        {livre?.label && <p className="text-xs text-stone-400">{livre.label as string}</p>}
-        <h2 className="text-xl font-serif text-stone-900">Semaine {semaine} — {sem.titre}</h2>
-        <p className="text-sm text-stone-500 mt-1">
-          {sem.chapitres && <span className="text-violet-600">{sem.chapitres}</span>}
+        {livre?.label && <p className="text-xs text-muet">{livre.label as string}</p>}
+        <h2 className="text-xl font-serif text-encre">Semaine {semaine} — {sem.titre}</h2>
+        <p className="text-sm text-muet mt-1">
+          {sem.chapitres && <span className="text-pigment">{sem.chapitres}</span>}
           {sem.chapitres && sem.dateIndicative && ' · '}
           {sem.dateIndicative && <span>à partir du {sem.dateIndicative}</span>}
         </p>
-        <p className="text-xs text-stone-400 mt-2">Lis ces chapitres dans ton propre exemplaire, puis rédige ci-dessous.</p>
+        <p className="text-xs text-muet mt-2">Lis ces chapitres dans ton propre exemplaire, puis rédige ci-dessous.</p>
       </div>
 
       {echecRetour1 && (
-        <div className="bg-red-50 border border-red-200 rounded-xl px-4 py-3 text-sm text-red-700">
+        <div className="bg-retard-teinte border border-retard rounded-xl px-4 py-3 text-sm text-retard">
           La préparation de ton retour n&apos;a pas abouti. Renvoie ton travail ci-dessous ; si le problème persiste, préviens ton professeur.
         </div>
       )}
@@ -133,7 +133,7 @@ export default async function PageSemaineAletheia({ params }: { params: Promise<
         </Bloc>
       )}
 
-      {enAttenteRetour1 && <p className="text-sm text-stone-500">Ton retour est en cours de préparation…</p>}
+      {enAttenteRetour1 && <p className="text-sm text-muet">Ton retour est en cours de préparation…</p>}
 
       {/* Retour V1 */}
       {t?.retour_v1 && (
@@ -144,7 +144,7 @@ export default async function PageSemaineAletheia({ params }: { params: Promise<
 
       {/* Étape 2 — version finale (3 champs) */}
       {echecRetour2 && (
-        <div className="bg-red-50 border border-red-200 rounded-xl px-4 py-3 text-sm text-red-700">
+        <div className="bg-retard-teinte border border-retard rounded-xl px-4 py-3 text-sm text-retard">
           La préparation de ton retour n&apos;a pas abouti. Renvoie ta version finale ci-dessous ; si le problème persiste, préviens ton professeur.
         </div>
       )}
@@ -166,7 +166,7 @@ export default async function PageSemaineAletheia({ params }: { params: Promise<
         </Bloc>
       ) : null}
 
-      {enAttenteRetour2 && <p className="text-sm text-stone-500">Ton retour final est en cours de préparation…</p>}
+      {enAttenteRetour2 && <p className="text-sm text-muet">Ton retour final est en cours de préparation…</p>}
 
       {/* Retour VF + validation de lecture */}
       {t?.retour_vf && (
@@ -174,11 +174,11 @@ export default async function PageSemaineAletheia({ params }: { params: Promise<
           <VueRetourVF retour={t.retour_vf} />
           {statut === 'FEEDBACK2_READY' ? (
             <div className="pt-2">
-              <p className="text-xs text-stone-400 mb-2">Pour clore la semaine, confirme que tu as lu ce retour.</p>
+              <p className="text-xs text-muet mb-2">Pour clore la semaine, confirme que tu as lu ce retour.</p>
               <BoutonLectureRetourVf livreId={livreId} semaine={semaine} />
             </div>
           ) : (
-            <p className="text-sm text-green-700 pt-2">✓ Semaine terminée.</p>
+            <p className="text-sm text-ok pt-2">✓ Semaine terminée.</p>
           )}
         </Bloc>
       )}

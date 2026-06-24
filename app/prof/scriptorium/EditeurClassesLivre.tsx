@@ -35,11 +35,11 @@ export default function EditeurClassesLivre({ uniteId, classes, assignedClasseId
   if (!edition) {
     return (
       <div className="flex items-center gap-2 flex-wrap">
-        <span className="text-xs text-stone-400">Classes :</span>
+        <span className="text-xs text-muet">Classes :</span>
         {noms.length === 0
-          ? <span className="text-xs text-amber-600">aucune</span>
-          : noms.map(n => <span key={n} className="text-xs bg-blue-50 text-blue-700 px-1.5 py-0.5 rounded">{n}</span>)}
-        <button onClick={() => { setSet(new Set(assignedClasseIds)); setEdition(true) }} className="text-xs text-stone-500 hover:text-stone-800 underline">Modifier</button>
+          ? <span className="text-xs text-attention">aucune</span>
+          : noms.map(n => <span key={n} className="text-xs bg-info-teinte text-info px-1.5 py-0.5 rounded">{n}</span>)}
+        <button onClick={() => { setSet(new Set(assignedClasseIds)); setEdition(true) }} className="text-xs text-muet hover:text-encre underline">Modifier</button>
       </div>
     )
   }
@@ -50,13 +50,13 @@ export default function EditeurClassesLivre({ uniteId, classes, assignedClasseId
         const on = set.has(c.id)
         return (
           <button key={c.id} type="button" onClick={() => toggle(c.id)}
-            className={`text-xs px-2 py-1 rounded-full border transition-colors ${on ? 'bg-stone-800 text-white border-stone-800' : 'bg-white text-stone-600 border-stone-300 hover:border-stone-400'}`}>
+            className={`text-xs px-2 py-1 rounded-full border transition-colors ${on ? 'bg-bouton text-surface border-bouton' : 'bg-surface text-encre-douce border-bordure hover:border-pigment'}`}>
             {c.nom}
           </button>
         )
       })}
-      <button onClick={save} disabled={chargement} className="text-xs bg-stone-800 text-white px-2 py-1 rounded disabled:opacity-50">{chargement ? '…' : 'Enregistrer'}</button>
-      <button onClick={() => setEdition(false)} className="text-xs text-stone-500">Annuler</button>
+      <button onClick={save} disabled={chargement} className="text-xs bg-bouton text-surface px-2 py-1 rounded disabled:opacity-50">{chargement ? '…' : 'Enregistrer'}</button>
+      <button onClick={() => setEdition(false)} className="text-xs text-muet">Annuler</button>
     </div>
   )
 }

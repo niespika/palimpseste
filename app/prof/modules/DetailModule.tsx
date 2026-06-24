@@ -49,19 +49,19 @@ export default function DetailModule({ module, classesAvecAcces, classesDisponib
   }
 
   return (
-    <div className="bg-white border border-stone-200 rounded-xl overflow-hidden">
-      <div className="px-5 py-4 border-b border-stone-100 flex items-start justify-between gap-3">
+    <div className="bg-surface border border-bordure rounded-xl overflow-hidden">
+      <div className="px-5 py-4 border-b border-bordure flex items-start justify-between gap-3">
         <div>
-          <h3 className="font-medium text-stone-900">{module.nom}</h3>
-          {module.description && <p className="text-sm text-stone-500 mt-0.5">{module.description}</p>}
+          <h3 className="font-medium text-encre">{module.nom}</h3>
+          {module.description && <p className="text-sm text-muet mt-0.5">{module.description}</p>}
         </div>
         <button
           onClick={handleToggle}
           disabled={pending}
           className={`flex-shrink-0 px-3 py-1.5 rounded-full text-xs font-medium transition-colors disabled:opacity-50 ${
             module.actif
-              ? 'bg-green-100 text-green-700 hover:bg-green-200'
-              : 'bg-stone-100 text-stone-600 hover:bg-stone-200'
+              ? 'bg-ok-teinte text-ok hover:opacity-90'
+              : 'bg-parchemin-fonce text-muet hover:bg-bordure'
           }`}
         >
           {pending ? '…' : module.actif ? 'Actif' : 'Fermé'}
@@ -69,18 +69,18 @@ export default function DetailModule({ module, classesAvecAcces, classesDisponib
       </div>
 
       <div className="px-5 py-4 space-y-3">
-        <p className="text-xs font-medium text-stone-500 uppercase tracking-wide">Classes ayant accès</p>
+        <p className="text-xs font-medium text-muet uppercase tracking-wide">Classes ayant accès</p>
 
         {classesAvecAcces.length > 0 ? (
           <div className="flex flex-wrap gap-2">
             {classesAvecAcces.map((c) => (
-              <span key={c.id} className="inline-flex items-center gap-1.5 text-sm bg-stone-100 text-stone-700 rounded-full pl-3 pr-1.5 py-1">
+              <span key={c.id} className="inline-flex items-center gap-1.5 text-sm bg-parchemin-fonce text-encre-douce rounded-full pl-3 pr-1.5 py-1">
                 {c.nom}
                 <button
                   onClick={() => handleRetirer(c.id)}
                   disabled={pending}
                   title="Retirer l'accès"
-                  className="text-stone-400 hover:text-red-600 disabled:opacity-50 w-4 h-4 leading-none"
+                  className="text-muet hover:text-retard disabled:opacity-50 w-4 h-4 leading-none"
                 >
                   ×
                 </button>
@@ -88,7 +88,7 @@ export default function DetailModule({ module, classesAvecAcces, classesDisponib
             ))}
           </div>
         ) : (
-          <p className="text-sm text-stone-400">Aucune classe n'a accès à ce module.</p>
+          <p className="text-sm text-muet">Aucune classe n'a accès à ce module.</p>
         )}
 
         {classesDisponibles.length > 0 && (
@@ -96,7 +96,7 @@ export default function DetailModule({ module, classesAvecAcces, classesDisponib
             <select
               value={sel}
               onChange={(e) => setSel(e.target.value)}
-              className="text-sm border border-stone-300 rounded-lg px-2 py-1.5 bg-white"
+              className="text-sm border border-bordure rounded-lg px-2 py-1.5 bg-surface"
             >
               <option value="">Accorder l'accès à une classe…</option>
               {classesDisponibles.map((c) => (
@@ -106,7 +106,7 @@ export default function DetailModule({ module, classesAvecAcces, classesDisponib
             <button
               onClick={handleAccorder}
               disabled={pending || !sel}
-              className="text-sm px-3 py-1.5 bg-stone-800 text-white rounded-lg hover:bg-stone-900 disabled:opacity-50"
+              className="text-sm px-3 py-1.5 bg-bouton text-surface rounded-lg hover:opacity-90 disabled:opacity-50"
             >
               Accorder
             </button>
@@ -114,7 +114,7 @@ export default function DetailModule({ module, classesAvecAcces, classesDisponib
         )}
 
         {!module.actif && (
-          <p className="text-xs text-stone-400 pt-1">
+          <p className="text-xs text-muet pt-1">
             Module fermé : même avec un accès de classe, les élèves ne le voient pas tant qu'il n'est pas actif.
           </p>
         )}

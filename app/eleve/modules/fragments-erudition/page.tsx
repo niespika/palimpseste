@@ -51,9 +51,9 @@ export default async function PageFragments({ searchParams }: { searchParams: Pr
     return (
       <div className="space-y-6 pb-8">
         <div className="flex items-center gap-2">
-          <Link href="/eleve" className="text-sm text-stone-500 hover:text-stone-700">← Retour</Link>
+          <Link href="/eleve" className="text-sm text-muet hover:text-encre-douce">← Retour</Link>
         </div>
-        <div className="bg-white border border-stone-200 rounded-xl p-6 text-center text-stone-500 text-sm">
+        <div className="bg-surface border border-bordure rounded-xl p-6 text-center text-muet text-sm">
           Ce module n'est pas disponible pour ton compte.
         </div>
       </div>
@@ -410,20 +410,20 @@ export default async function PageFragments({ searchParams }: { searchParams: Pr
   return (
     <div className="space-y-6 pb-8">
       <div className="flex items-center gap-2">
-        <Link href="/eleve" className="text-sm text-stone-500 hover:text-stone-700">← Retour</Link>
+        <Link href="/eleve" className="text-sm text-muet hover:text-encre-douce">← Retour</Link>
       </div>
 
       <div>
-        <h2 className="text-xl font-serif text-stone-900 mb-1">Fragments d&apos;érudition</h2>
+        <h2 className="text-xl font-serif text-pigment mb-1">Fragments d&apos;érudition</h2>
         {theme ? (
-          <div className="bg-stone-100 rounded-xl px-4 py-3">
-            <p className="text-xs text-stone-500 mb-0.5">Ton thème</p>
-            <p className="font-medium text-stone-800">{theme.theme}</p>
-            {theme.description && <p className="text-sm text-stone-500 mt-1">{theme.description}</p>}
+          <div className="bg-parchemin-fonce rounded-xl px-4 py-3">
+            <p className="text-xs text-muet mb-0.5">Ton thème</p>
+            <p className="font-medium text-encre">{theme.theme}</p>
+            {theme.description && <p className="text-sm text-muet mt-1">{theme.description}</p>}
           </div>
         ) : (
-          <div className="bg-stone-50 rounded-xl px-4 py-3 border border-stone-200">
-            <p className="text-sm text-stone-500 italic">Ton thème sera défini avec ton professeur.</p>
+          <div className="bg-parchemin-fonce rounded-xl px-4 py-3 border border-bordure">
+            <p className="text-sm text-muet italic">Ton thème sera défini avec ton professeur.</p>
           </div>
         )}
       </div>
@@ -431,35 +431,35 @@ export default async function PageFragments({ searchParams }: { searchParams: Pr
       {/* Ton parcours (sections en lettres) + stats + rappel des pistes */}
       {pointsParcours.some(p => p.decouvertes !== null) && (
         <div className="space-y-4">
-          <h3 className="text-sm font-medium text-stone-500 uppercase tracking-wide">Ton parcours</h3>
-          <div className="bg-white border border-stone-200 rounded-xl p-5">
+          <h3 className="text-sm font-medium text-muet uppercase tracking-wide">Ton parcours</h3>
+          <div className="bg-surface border border-bordure rounded-xl p-5">
             <GraphiqueProgression data={pointsParcours} />
           </div>
           <div className="grid grid-cols-3 gap-3">
-            <div className="bg-white border border-stone-200 rounded-xl p-3 text-center">
-              <p className="text-lg font-serif text-stone-800">{nbSemainesTotal > 0 ? Math.round((nbDeposesTotal / nbSemainesTotal) * 100) : 0}%</p>
-              <p className="text-xs text-stone-500 mt-0.5">Taux de dépôt</p>
+            <div className="bg-surface border border-bordure rounded-xl p-3 text-center">
+              <p className="text-lg font-serif text-encre">{nbSemainesTotal > 0 ? Math.round((nbDeposesTotal / nbSemainesTotal) * 100) : 0}%</p>
+              <p className="text-xs text-muet mt-0.5">Taux de dépôt</p>
             </div>
             {meilleurSection && (
-              <div className="bg-white border border-stone-200 rounded-xl p-3 text-center">
-                <p className="text-lg font-serif text-green-700">{meilleurSection}</p>
-                <p className="text-xs text-stone-500 mt-0.5">Meilleure section</p>
+              <div className="bg-surface border border-bordure rounded-xl p-3 text-center">
+                <p className="text-lg font-serif text-ok">{meilleurSection}</p>
+                <p className="text-xs text-muet mt-0.5">Meilleure section</p>
               </div>
             )}
             {sectionATravaillerKey && meilleurSection !== sectionATravaillerKey && (
-              <div className="bg-white border border-stone-200 rounded-xl p-3 text-center">
-                <p className="text-lg font-serif text-amber-700">{sectionATravaillerKey}</p>
-                <p className="text-xs text-stone-500 mt-0.5">À travailler</p>
+              <div className="bg-surface border border-bordure rounded-xl p-3 text-center">
+                <p className="text-lg font-serif text-attention">{sectionATravaillerKey}</p>
+                <p className="text-xs text-muet mt-0.5">À travailler</p>
               </div>
             )}
           </div>
           {rappelPistes.length > 0 && (
-            <div className="bg-white border border-stone-200 rounded-xl p-4">
-              <p className="text-xs font-medium text-stone-500 uppercase tracking-wide mb-3">Pistes à suivre (dernier retour)</p>
+            <div className="bg-surface border border-bordure rounded-xl p-4">
+              <p className="text-xs font-medium text-muet uppercase tracking-wide mb-3">Pistes à suivre (dernier retour)</p>
               <ul className="space-y-2">
                 {rappelPistes.map(piste => (
-                  <li key={piste.id} className="flex items-start gap-2 text-sm text-stone-700">
-                    <span className="text-stone-400 mt-0.5 flex-shrink-0">💡</span>{piste.contenu}
+                  <li key={piste.id} className="flex items-start gap-2 text-sm text-encre-douce">
+                    <span className="text-muet mt-0.5 flex-shrink-0">💡</span>{piste.contenu}
                   </li>
                 ))}
               </ul>
@@ -506,12 +506,12 @@ export default async function PageFragments({ searchParams }: { searchParams: Pr
 
       {/* Retour du dernier fragment + gate de lecture (vue écrite uniquement) */}
       {vue === 'ecrit' && derniereAnalyseEcrite && (
-        <div className="bg-white border border-stone-200 rounded-xl p-4 space-y-4">
-          <p className="text-xs font-medium text-stone-500 uppercase tracking-wide">Ton dernier retour</p>
+        <div className="bg-surface border border-bordure rounded-xl p-4 space-y-4">
+          <p className="text-xs font-medium text-muet uppercase tracking-wide">Ton dernier retour</p>
           <AnalysePubliee analyse={derniereAnalyseEcrite} pistes={pistesDerniere} />
           {gateActif && (
-            <div className="border-t border-amber-100 pt-4 space-y-2">
-              <p className="text-sm text-amber-700">Valide que tu as lu ce retour pour pouvoir déposer ton prochain fragment.</p>
+            <div className="border-t border-attention pt-4 space-y-2">
+              <p className="text-sm text-attention">Valide que tu as lu ce retour pour pouvoir déposer ton prochain fragment.</p>
               <BoutonLectureRetour analyseId={derniereAnalyseEcrite.id} />
             </div>
           )}
@@ -521,41 +521,41 @@ export default async function PageFragments({ searchParams }: { searchParams: Pr
       {/* ── Détail : Fragments écrits ── */}
       {vue === 'ecrit' && (
         semaine ? (
-          <div className="bg-white border border-stone-200 rounded-xl overflow-hidden">
-            <div className="px-4 py-4 border-b border-stone-100">
+          <div className="bg-surface border border-bordure rounded-xl overflow-hidden">
+            <div className="px-4 py-4 border-b border-bordure">
               <div className="flex items-start justify-between gap-2">
                 <div>
-                  <p className="text-xs text-stone-500 mb-0.5">Semaine en cours</p>
-                  <p className="font-medium text-stone-900">Semaine {semaine.numero}{semaine.titre ? ` — ${semaine.titre}` : ''}</p>
-                  <p className="text-xs text-stone-500 mt-0.5">À rendre avant le {formatDateLimite(semaine.date_limite)}</p>
+                  <p className="text-xs text-muet mb-0.5">Semaine en cours</p>
+                  <p className="font-medium text-encre">Semaine {semaine.numero}{semaine.titre ? ` — ${semaine.titre}` : ''}</p>
+                  <p className="text-xs text-muet mt-0.5">À rendre avant le {formatDateLimite(semaine.date_limite)}</p>
                 </div>
                 {depotActuel ? (
-                  <span className={`flex-shrink-0 text-xs px-2 py-1 rounded-full ${depotEnRetard ? 'bg-orange-100 text-orange-700' : 'bg-green-100 text-green-700'}`}>
+                  <span className={`flex-shrink-0 text-xs px-2 py-1 rounded-full ${depotEnRetard ? 'bg-retard-teinte text-retard' : 'bg-ok-teinte text-ok'}`}>
                     {depotEnRetard ? '⚠ En retard' : '✓ Déposé'}
                   </span>
                 ) : (
-                  <span className="flex-shrink-0 text-xs bg-amber-100 text-amber-700 px-2 py-1 rounded-full">À déposer</span>
+                  <span className="flex-shrink-0 text-xs bg-attention-teinte text-attention px-2 py-1 rounded-full">À déposer</span>
                 )}
               </div>
             </div>
             <div className="px-4 py-4 space-y-4">
               {gateActif ? (
-                <div className="bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 text-sm text-amber-800">
+                <div className="bg-attention-teinte border border-attention rounded-xl px-4 py-3 text-sm text-attention">
                   Lis et valide ton dernier retour (ci-dessus) pour débloquer le dépôt.
                 </div>
               ) : (
                 <FormulaireDepot semaineId={semaine.id} eleveId={user.id} inscriptionId={inscriptionId} depotExistant={!!depotActuel} seuilHeures={seuilPhotoHeures} />
               )}
               {depotActuel && !analyseActuelle && (
-                <div className="bg-stone-50 border border-stone-200 rounded-xl px-4 py-3">
-                  <p className="text-sm text-stone-500">Retour en préparation — ton professeur l&apos;examinera bientôt.</p>
+                <div className="bg-parchemin-fonce border border-bordure rounded-xl px-4 py-3">
+                  <p className="text-sm text-muet">Retour en préparation — ton professeur l&apos;examinera bientôt.</p>
                 </div>
               )}
             </div>
           </div>
         ) : (
-          <div className="bg-white border border-stone-200 rounded-xl p-6 text-center">
-            <p className="text-stone-500 text-sm">Aucune semaine n&apos;est ouverte pour l&apos;instant.<br />Ton professeur en créera une bientôt.</p>
+          <div className="bg-surface border border-bordure rounded-xl p-6 text-center">
+            <p className="text-muet text-sm">Aucune semaine n&apos;est ouverte pour l&apos;instant.<br />Ton professeur en créera une bientôt.</p>
           </div>
         )
       )}
@@ -563,19 +563,19 @@ export default async function PageFragments({ searchParams }: { searchParams: Pr
       {/* Historique écrit */}
       {vue === 'ecrit' && depotsPasses.length > 0 && (
         <div className="space-y-4">
-          <h3 className="text-sm font-medium text-stone-500 uppercase tracking-wide">Semaines précédentes</h3>
+          <h3 className="text-sm font-medium text-muet uppercase tracking-wide">Semaines précédentes</h3>
           {depotsPasses.map(depot => {
             const analyse = analyseParDepot[depot.id]
             const pistes = analyse ? (pistesParAnalyse[analyse.id] ?? []) : []
             const semaineTitre = (depot.semaine as unknown as { numero: number; titre: string | null } | null)
             return (
-              <div key={depot.id} className="bg-white border border-stone-200 rounded-xl overflow-hidden">
-                <div className="px-4 py-3 border-b border-stone-100 flex items-center justify-between">
-                  <p className="font-medium text-stone-800 text-sm">Semaine {semaineTitre?.numero ?? '?'}{semaineTitre?.titre ? ` — ${semaineTitre.titre}` : ''}</p>
+              <div key={depot.id} className="bg-surface border border-bordure rounded-xl overflow-hidden">
+                <div className="px-4 py-3 border-b border-bordure flex items-center justify-between">
+                  <p className="font-medium text-encre text-sm">Semaine {semaineTitre?.numero ?? '?'}{semaineTitre?.titre ? ` — ${semaineTitre.titre}` : ''}</p>
                   {analyse ? (
-                    <span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full">Retour disponible</span>
+                    <span className="text-xs bg-ok-teinte text-ok px-2 py-0.5 rounded-full">Retour disponible</span>
                   ) : (
-                    <span className="text-xs bg-stone-100 text-stone-500 px-2 py-0.5 rounded-full">Déposé ✓</span>
+                    <span className="text-xs bg-parchemin-fonce text-muet px-2 py-0.5 rounded-full">Déposé ✓</span>
                   )}
                 </div>
                 {analyse && (
@@ -596,15 +596,15 @@ export default async function PageFragments({ searchParams }: { searchParams: Pr
             {Object.entries(oralParSemaine).map(([semId, data]) => {
               const num = (toutesLessemaines ?? []).find(s => s.id === semId)?.numero
               return (
-                <div key={semId} className="bg-white border border-stone-200 rounded-xl p-4">
-                  <p className="text-xs font-medium text-stone-500 uppercase tracking-wide mb-3">{num ? `Semaine ${num} — ` : ''}ta présentation orale</p>
+                <div key={semId} className="bg-surface border border-bordure rounded-xl p-4">
+                  <p className="text-xs font-medium text-muet uppercase tracking-wide mb-3">{num ? `Semaine ${num} — ` : ''}ta présentation orale</p>
                   <AnalyseOralePubliee oral={data.oral} analyseOrale={data.analyseOrale} />
                 </div>
               )
             })}
           </div>
         ) : (
-          <div className="bg-white border border-stone-200 rounded-xl p-6 text-center text-sm text-stone-500">
+          <div className="bg-surface border border-bordure rounded-xl p-6 text-center text-sm text-muet">
             Aucun retour d&apos;oral pour l&apos;instant. L&apos;oral se fait en classe.
           </div>
         )
@@ -614,27 +614,27 @@ export default async function PageFragments({ searchParams }: { searchParams: Pr
       {vue === 'essai' && essaiActif && (
         <div className="space-y-4">
           {analyseEssaiPubliee && (
-            <div className="bg-white border border-stone-200 rounded-xl p-5">
-              <p className="text-xs font-medium text-stone-500 uppercase tracking-wide mb-4">Retour de ton professeur</p>
+            <div className="bg-surface border border-bordure rounded-xl p-5">
+              <p className="text-xs font-medium text-muet uppercase tracking-wide mb-4">Retour de ton professeur</p>
               <EssaiPublie analyse={analyseEssaiPubliee as EssaiDepotAnalyse} />
             </div>
           )}
           {epreuveOuverte && (
-            <div className="bg-white border border-stone-200 rounded-xl overflow-hidden">
-              <div className="px-4 py-4 border-b border-stone-100">
-                <p className="font-medium text-stone-900">{epreuveOuverte.titre}</p>
-                <p className="text-xs text-stone-500 mt-0.5">
+            <div className="bg-surface border border-bordure rounded-xl overflow-hidden">
+              <div className="px-4 py-4 border-b border-bordure">
+                <p className="font-medium text-encre">{epreuveOuverte.titre}</p>
+                <p className="text-xs text-muet mt-0.5">
                   {new Date(epreuveOuverte.date_essai).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })}
                   {' · '}{epreuveOuverte.duree_minutes} min
                 </p>
-                {epreuveOuverte.consignes && <p className="text-sm text-stone-600 mt-2">{epreuveOuverte.consignes}</p>}
+                {epreuveOuverte.consignes && <p className="text-sm text-encre-douce mt-2">{epreuveOuverte.consignes}</p>}
               </div>
               <div className="px-4 py-4">
                 {essaiEleve && !analyseEssaiEnCours ? (
                   <div className="space-y-3">
                     <div className="flex items-center gap-2">
-                      <span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full">Photos déposées</span>
-                      <span className="text-xs text-stone-500">Ton professeur analysera ton essai bientôt.</span>
+                      <span className="text-xs bg-ok-teinte text-ok px-2 py-0.5 rounded-full">Photos déposées</span>
+                      <span className="text-xs text-muet">Ton professeur analysera ton essai bientôt.</span>
                     </div>
                     <EssaiDepot epreuveId={epreuveOuverte.id} inscriptionId={inscriptionId} essaiExistantId={essaiEleve.id} analyseEnCours={false} />
                   </div>
@@ -645,7 +645,7 @@ export default async function PageFragments({ searchParams }: { searchParams: Pr
             </div>
           )}
           {!epreuveOuverte && !analyseEssaiPubliee && (
-            <div className="bg-white border border-stone-200 rounded-xl p-6 text-center text-sm text-stone-500">Aucun essai ouvert pour l&apos;instant.</div>
+            <div className="bg-surface border border-bordure rounded-xl p-6 text-center text-sm text-muet">Aucun essai ouvert pour l&apos;instant.</div>
           )}
         </div>
       )}
@@ -653,8 +653,8 @@ export default async function PageFragments({ searchParams }: { searchParams: Pr
       {/* Bilan de semestre (vue dédiée) */}
       {vue === 'synthese' && synthesePubliee && (
         <div className="space-y-4">
-          <h3 className="text-sm font-medium text-stone-500 uppercase tracking-wide">Bilan du semestre</h3>
-          <div className="bg-white border border-stone-200 rounded-xl p-5">
+          <h3 className="text-sm font-medium text-muet uppercase tracking-wide">Bilan du semestre</h3>
+          <div className="bg-surface border border-bordure rounded-xl p-5">
             <BilanSemestre synthese={synthesePubliee as FragmentSynthese} />
           </div>
         </div>

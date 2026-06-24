@@ -32,11 +32,11 @@ export default function BoutonLectureRetourVf({ livreId, semaine }: Props) {
       <button
         onClick={handleValider}
         disabled={chargement}
-        className="w-full bg-stone-800 text-white py-2.5 rounded-xl text-sm font-medium hover:bg-stone-700 disabled:opacity-50"
+        className="w-full bg-bouton text-surface py-2.5 rounded-xl text-sm font-medium hover:opacity-90 disabled:opacity-50"
       >
         {chargement ? '…' : 'J’ai lu mon retour — clore la semaine'}
       </button>
-      {erreur && <p className="text-red-600 text-sm">{erreur}</p>}
+      {erreur && <p className="text-retard text-sm">{erreur}</p>}
     </div>
   )
 }

@@ -46,31 +46,31 @@ export default function LigneEleve({ eleve }: { eleve: EleveAvecEmail }) {
 
   if (modeEdition) {
     return (
-      <tr className="bg-stone-50">
+      <tr className="bg-parchemin-fonce">
         <td colSpan={4} className="px-4 py-3">
           <form onSubmit={handleModifier} className="flex flex-wrap gap-3 items-end">
             <div>
-              <label className="block text-xs text-stone-500 mb-1">Prénom / pseudonyme</label>
+              <label className="block text-xs text-muet mb-1">Prénom / pseudonyme</label>
               <input
                 name="displayName"
                 defaultValue={eleve.display_name}
                 required
-                className="px-2 py-1.5 border border-stone-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 text-stone-900"
+                className="px-2 py-1.5 border border-bordure rounded text-sm focus:outline-none focus:ring-2 focus:ring-pigment text-encre"
               />
             </div>
-            <p className="text-xs text-stone-400 self-end mb-2">L&apos;inscription en classe se gère dans l&apos;onglet Classes.</p>
-            {message && <p className="text-red-600 text-sm">{message}</p>}
+            <p className="text-xs text-muet self-end mb-2">L&apos;inscription en classe se gère dans l&apos;onglet Classes.</p>
+            {message && <p className="text-retard text-sm">{message}</p>}
             <button
               type="submit"
               disabled={chargement}
-              className="bg-stone-800 text-white px-3 py-1.5 rounded text-sm hover:bg-stone-700 disabled:opacity-50"
+              className="bg-bouton text-surface px-3 py-1.5 rounded text-sm hover:opacity-90 disabled:opacity-50"
             >
               {chargement ? '…' : 'Enregistrer'}
             </button>
             <button
               type="button"
               onClick={() => setModeEdition(false)}
-              className="px-3 py-1.5 rounded text-sm text-stone-600 hover:bg-stone-200"
+              className="px-3 py-1.5 rounded text-sm text-encre-douce hover:bg-parchemin-fonce"
             >
               Annuler
             </button>
@@ -82,11 +82,11 @@ export default function LigneEleve({ eleve }: { eleve: EleveAvecEmail }) {
 
   if (modeReset) {
     return (
-      <tr className="bg-stone-50">
+      <tr className="bg-parchemin-fonce">
         <td colSpan={4} className="px-4 py-3">
           <form onSubmit={handleReset} className="flex flex-wrap gap-3 items-end">
             <div>
-              <label className="block text-xs text-stone-500 mb-1">
+              <label className="block text-xs text-muet mb-1">
                 Nouveau mot de passe pour {eleve.display_name}
               </label>
               <input
@@ -94,22 +94,22 @@ export default function LigneEleve({ eleve }: { eleve: EleveAvecEmail }) {
                 type="text"
                 required
                 minLength={8}
-                className="px-2 py-1.5 border border-stone-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 text-stone-900"
+                className="px-2 py-1.5 border border-bordure rounded text-sm focus:outline-none focus:ring-2 focus:ring-pigment text-encre"
                 placeholder="Au moins 8 caractères"
               />
             </div>
-            {message && <p className="text-red-600 text-sm">{message}</p>}
+            {message && <p className="text-retard text-sm">{message}</p>}
             <button
               type="submit"
               disabled={chargement}
-              className="bg-stone-800 text-white px-3 py-1.5 rounded text-sm hover:bg-stone-700 disabled:opacity-50"
+              className="bg-bouton text-surface px-3 py-1.5 rounded text-sm hover:opacity-90 disabled:opacity-50"
             >
               {chargement ? '…' : 'Réinitialiser'}
             </button>
             <button
               type="button"
               onClick={() => setModeReset(false)}
-              className="px-3 py-1.5 rounded text-sm text-stone-600 hover:bg-stone-200"
+              className="px-3 py-1.5 rounded text-sm text-encre-douce hover:bg-parchemin-fonce"
             >
               Annuler
             </button>
@@ -120,37 +120,37 @@ export default function LigneEleve({ eleve }: { eleve: EleveAvecEmail }) {
   }
 
   return (
-    <tr className="border-t border-stone-100 hover:bg-stone-50">
+    <tr className="border-t border-bordure hover:bg-parchemin-fonce">
       <td className="px-4 py-3 text-sm font-medium">
-        <Link href={`/prof/eleves/${eleve.id}`} className="text-stone-900 hover:text-blue-700 hover:underline">
+        <Link href={`/prof/eleves/${eleve.id}`} className="text-encre hover:text-pigment hover:underline">
           {eleve.display_name}
         </Link>
       </td>
-      <td className="px-4 py-3 text-sm text-stone-600">{classesNoms || '—'}</td>
-      <td className="px-4 py-3 text-sm text-stone-600">{eleve.email}</td>
+      <td className="px-4 py-3 text-sm text-encre-douce">{classesNoms || '—'}</td>
+      <td className="px-4 py-3 text-sm text-encre-douce">{eleve.email}</td>
       <td className="px-4 py-3 text-sm">
         <div className="flex gap-2">
           <button
             onClick={() => setModeEdition(true)}
-            className="text-stone-600 hover:text-stone-900 text-xs px-2 py-1 rounded hover:bg-stone-200"
+            className="text-encre-douce hover:text-encre text-xs px-2 py-1 rounded hover:bg-parchemin-fonce"
           >
             Modifier
           </button>
           <button
             onClick={() => setModeReset(true)}
-            className="text-stone-600 hover:text-stone-900 text-xs px-2 py-1 rounded hover:bg-stone-200"
+            className="text-encre-douce hover:text-encre text-xs px-2 py-1 rounded hover:bg-parchemin-fonce"
           >
             Mot de passe
           </button>
           <button
             onClick={handleSupprimer}
             disabled={chargement}
-            className="text-red-500 hover:text-red-700 text-xs px-2 py-1 rounded hover:bg-red-50 disabled:opacity-50"
+            className="text-retard hover:opacity-80 text-xs px-2 py-1 rounded hover:bg-retard-teinte disabled:opacity-50"
           >
             Supprimer
           </button>
         </div>
-        {message && <p className="text-green-600 text-xs mt-1">{message}</p>}
+        {message && <p className="text-ok text-xs mt-1">{message}</p>}
       </td>
     </tr>
   )

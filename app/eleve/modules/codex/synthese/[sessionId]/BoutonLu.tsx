@@ -11,7 +11,7 @@ export function BoutonLu({ sessionId, luInitial }: { sessionId: string; luInitia
 
   if (lu) {
     return (
-      <div className="bg-green-50 border border-green-200 rounded-xl px-4 py-3 text-sm text-green-700 text-center">
+      <div className="bg-ok-teinte border border-ok rounded-xl px-4 py-3 text-sm text-ok text-center">
         ✓ Retour marqué comme lu
       </div>
     )
@@ -31,7 +31,7 @@ export function BoutonLu({ sessionId, luInitial }: { sessionId: string; luInitia
     <button
       onClick={handleLu}
       disabled={pending}
-      className="w-full py-3 bg-stone-800 text-white rounded-xl hover:bg-stone-900 disabled:opacity-50 transition-colors text-sm font-medium"
+      className="w-full py-3 bg-bouton text-surface rounded-xl hover:opacity-90 disabled:opacity-50 transition-colors text-sm font-medium"
     >
       {pending ? '…' : "J'ai lu mon retour"}
     </button>

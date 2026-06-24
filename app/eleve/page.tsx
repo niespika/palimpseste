@@ -20,7 +20,7 @@ interface SectionProg { label: string; lettre: LettreSection }
 function BadgeLettre({ label, lettre }: SectionProg) {
   return (
     <span className="inline-flex items-center gap-1.5 text-sm">
-      <span className="text-stone-600">{label}</span>
+      <span className="text-encre-douce">{label}</span>
       <span className={`px-1.5 py-0.5 rounded text-xs font-medium ${COULEUR_LETTRE[lettre]}`}>{lettre}</span>
     </span>
   )
@@ -172,12 +172,12 @@ export default async function TableauDeBordEleve() {
   return (
     <div className="space-y-8">
       <div>
-        <h2 className="text-xl font-serif text-stone-900 mb-1">Bonjour, {profile?.display_name} !</h2>
-        {active && <p className="text-stone-500 text-sm">{active.classe_nom}</p>}
+        <h2 className="text-xl font-serif text-encre mb-1">Bonjour, {profile?.display_name} !</h2>
+        {active && <p className="text-muet text-sm">{active.classe_nom}</p>}
       </div>
 
       {!active ? (
-        <div className="bg-white border border-stone-200 rounded-xl p-8 text-center text-stone-600 text-sm">
+        <div className="bg-surface border border-bordure rounded-xl p-8 text-center text-encre-douce text-sm">
           Tu n&apos;es inscrit dans aucune classe pour l&apos;instant.<br />Ton professeur t&apos;y ajoutera bientôt.
         </div>
       ) : (
@@ -185,27 +185,27 @@ export default async function TableauDeBordEleve() {
           {/* À FAIRE */}
           <section>
             <div className="flex items-baseline justify-between gap-3 mb-3">
-              <h3 className="text-sm font-medium text-stone-500 uppercase tracking-wide">À faire</h3>
+              <h3 className="text-sm font-medium text-muet uppercase tracking-wide">À faire</h3>
               {semaineCourante && (
-                <span className={`text-xs ${semaineCourante.vacances ? 'text-stone-400' : 'text-stone-500'}`}>
+                <span className={`text-xs ${semaineCourante.vacances ? 'text-muet' : 'text-muet'}`}>
                   {semaineCourante.label} · {fmtJourCourt(semaineCourante.debut)}–{fmtJourCourt(semaineCourante.fin)}
                 </span>
               )}
             </div>
             <div className="space-y-3">
               {fragmentTache && (
-                <div className={`bg-white border rounded-xl p-4 ${fragmentTache.depose ? 'border-stone-200' : 'border-amber-200'}`}>
+                <div data-module="fragments" className="bg-surface border border-bordure border-l-4 border-l-liseret rounded-xl p-4">
                   <div className="flex items-center justify-between gap-3">
-                    <p className="text-sm font-medium text-stone-800">Fragments d&apos;érudition</p>
-                    <Link href="/eleve/modules/fragments-erudition" className="text-xs text-stone-500 hover:text-stone-800 underline">Ouvrir →</Link>
+                    <p className="text-sm font-medium text-encre">Fragments d&apos;érudition</p>
+                    <Link href="/eleve/modules/fragments-erudition" className="text-xs text-muet hover:text-encre underline">Ouvrir →</Link>
                   </div>
-                  <p className={`text-sm mt-1 ${fragmentTache.depose ? 'text-stone-500' : 'text-amber-700'}`}>{fragmentTache.texte}</p>
+                  <p className={`text-sm mt-1 ${fragmentTache.depose ? 'text-muet' : 'text-attention'}`}>{fragmentTache.texte}</p>
                   {fragmentTache.pistes.length > 0 && (
-                    <div className="mt-3 border-t border-stone-100 pt-3">
-                      <p className="text-xs text-stone-400 mb-1.5">Pistes à suivre (dernier retour)</p>
+                    <div className="mt-3 border-t border-bordure pt-3">
+                      <p className="text-xs text-muet mb-1.5">Pistes à suivre (dernier retour)</p>
                       <ul className="space-y-1">
                         {fragmentTache.pistes.map((p, i) => (
-                          <li key={i} className="text-sm text-stone-600 flex gap-2"><span className="text-stone-300">→</span><span>{p}</span></li>
+                          <li key={i} className="text-sm text-encre-douce flex gap-2"><span className="text-bordure">→</span><span>{p}</span></li>
                         ))}
                       </ul>
                     </div>
@@ -214,37 +214,37 @@ export default async function TableauDeBordEleve() {
               )}
 
               {cartesDues > 0 && (
-                <Link href="/eleve/modules/quazian" className="block bg-white border border-amber-200 rounded-xl p-4 hover:border-amber-300 transition-colors">
+                <Link href="/eleve/modules/quazian" data-module="quazian" className="block bg-surface border border-bordure border-l-4 border-l-liseret rounded-xl p-4 hover:shadow-sm transition-colors">
                   <div className="flex items-center justify-between gap-3">
-                    <p className="text-sm font-medium text-stone-800">Flashcards à réviser</p>
-                    <span className="text-xs bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full">{cartesDues} carte{cartesDues > 1 ? 's' : ''} due{cartesDues > 1 ? 's' : ''}</span>
+                    <p className="text-sm font-medium text-encre">Flashcards à réviser</p>
+                    <span className="text-xs bg-attention-teinte text-attention px-2 py-0.5 rounded-full">{cartesDues} carte{cartesDues > 1 ? 's' : ''} due{cartesDues > 1 ? 's' : ''}</span>
                   </div>
                 </Link>
               )}
 
               {codexEnCoursId && (
-                <Link href={`/eleve/modules/codex/synthese/${codexEnCoursId}`} className="block bg-white border border-green-200 rounded-xl p-4 hover:border-green-300 transition-colors">
-                  <p className="text-sm font-medium text-stone-800">Synthèse Codex en cours <span className="text-xs text-green-600 ml-1">· en direct</span></p>
+                <Link href={`/eleve/modules/codex/synthese/${codexEnCoursId}`} data-module="codex" className="block bg-surface border border-bordure border-l-4 border-l-liseret rounded-xl p-4 hover:shadow-sm transition-colors">
+                  <p className="text-sm font-medium text-encre">Synthèse Codex en cours <span className="text-xs text-ok ml-1">· en direct</span></p>
                 </Link>
               )}
 
               {quizzEnCoursId && (
-                <Link href={`/eleve/modules/quazian/quizz/${quizzEnCoursId}`} className="block bg-white border border-violet-200 rounded-xl p-4 hover:border-violet-300 transition-colors">
-                  <p className="text-sm font-medium text-stone-800">Quizz en cours</p>
+                <Link href={`/eleve/modules/quazian/quizz/${quizzEnCoursId}`} data-module="quazian" className="block bg-surface border border-bordure border-l-4 border-l-liseret rounded-xl p-4 hover:shadow-sm transition-colors">
+                  <p className="text-sm font-medium text-encre">Quizz en cours</p>
                 </Link>
               )}
 
               {aletheiaAFaire && (
-                <Link href="/eleve/modules/aletheia" className="block bg-white border border-amber-200 rounded-xl p-4 hover:border-amber-300 transition-colors">
+                <Link href="/eleve/modules/aletheia" data-module="aletheia" className="block bg-surface border border-bordure border-l-4 border-l-liseret rounded-xl p-4 hover:shadow-sm transition-colors">
                   <div className="flex items-center justify-between gap-3">
-                    <p className="text-sm font-medium text-stone-800">Lecture à poursuivre</p>
-                    <span className="text-xs text-stone-500">Aletheia →</span>
+                    <p className="text-sm font-medium text-encre">Lecture à poursuivre</p>
+                    <span className="text-xs text-muet">Aletheia →</span>
                   </div>
                 </Link>
               )}
 
               {rienAFaire && (
-                <div className="bg-white border border-stone-200 rounded-xl p-4 text-sm text-stone-500">Rien d&apos;urgent pour l&apos;instant. Tu peux réviser ou explorer tes modules.</div>
+                <div className="bg-surface border border-bordure rounded-xl p-4 text-sm text-muet">Rien d&apos;urgent pour l&apos;instant. Tu peux réviser ou explorer tes modules.</div>
               )}
             </div>
           </section>
@@ -252,25 +252,25 @@ export default async function TableauDeBordEleve() {
           {/* PROGRESSION */}
           {progression && (progression.forts.length + progression.amelioration.length + progression.aTravailler.length > 0) && (
             <section>
-              <h3 className="text-sm font-medium text-stone-500 uppercase tracking-wide mb-3">Ta progression</h3>
+              <h3 className="text-sm font-medium text-muet uppercase tracking-wide mb-3">Ta progression</h3>
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                <div className="bg-white border border-stone-200 rounded-xl p-4">
-                  <p className="text-xs font-medium text-green-700 mb-2">Tes points forts</p>
+                <div className="bg-surface border border-bordure rounded-xl p-4">
+                  <p className="text-xs font-medium text-ok mb-2">Tes points forts</p>
                   {progression.forts.length > 0 ? (
                     <div className="space-y-1.5">{progression.forts.map((s) => <div key={s.label}><BadgeLettre {...s} /></div>)}</div>
-                  ) : <p className="text-sm text-stone-300">—</p>}
+                  ) : <p className="text-sm text-bordure">—</p>}
                 </div>
-                <div className="bg-white border border-stone-200 rounded-xl p-4">
-                  <p className="text-xs font-medium text-blue-700 mb-2">Où tu progresses</p>
+                <div className="bg-surface border border-bordure rounded-xl p-4">
+                  <p className="text-xs font-medium text-info mb-2">Où tu progresses</p>
                   {progression.amelioration.length > 0 ? (
                     <div className="space-y-1.5">{progression.amelioration.map((s) => <div key={s.label}><BadgeLettre {...s} /></div>)}</div>
-                  ) : <p className="text-sm text-stone-300">—</p>}
+                  ) : <p className="text-sm text-bordure">—</p>}
                 </div>
-                <div className="bg-white border border-stone-200 rounded-xl p-4">
-                  <p className="text-xs font-medium text-amber-700 mb-2">À travailler</p>
+                <div className="bg-surface border border-bordure rounded-xl p-4">
+                  <p className="text-xs font-medium text-attention mb-2">À travailler</p>
                   {progression.aTravailler.length > 0 ? (
                     <div className="space-y-1.5">{progression.aTravailler.map((s) => <div key={s.label}><BadgeLettre {...s} /></div>)}</div>
-                  ) : <p className="text-sm text-stone-300">—</p>}
+                  ) : <p className="text-sm text-bordure">—</p>}
                 </div>
               </div>
             </section>
@@ -281,12 +281,12 @@ export default async function TableauDeBordEleve() {
       {/* MODULES */}
       {modulesActifs.length > 0 && (
         <section>
-          <h3 className="text-sm font-medium text-stone-500 uppercase tracking-wide mb-3">Tes modules</h3>
+          <h3 className="text-sm font-medium text-muet uppercase tracking-wide mb-3">Tes modules</h3>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             {modulesActifs.map((m) => (
-              <Link key={m.id} href={`/eleve/modules/${m.slug}`} className="bg-white border border-stone-200 rounded-xl p-6 hover:border-stone-400 hover:shadow-sm transition-all group">
-                <h3 className="font-medium text-stone-900 mb-1 group-hover:text-stone-700">{m.nom}</h3>
-                {m.description && <p className="text-sm text-stone-500 leading-relaxed">{m.description}</p>}
+              <Link key={m.id} href={`/eleve/modules/${m.slug}`} className="bg-surface border border-bordure rounded-xl p-6 hover:border-encre-douce hover:shadow-sm transition-all group">
+                <h3 className="font-medium text-encre mb-1 group-hover:text-encre-douce">{m.nom}</h3>
+                {m.description && <p className="text-sm text-muet leading-relaxed">{m.description}</p>}
               </Link>
             ))}
           </div>

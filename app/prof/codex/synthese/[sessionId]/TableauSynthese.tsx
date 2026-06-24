@@ -106,25 +106,25 @@ export function TableauSynthese({ sessionId, statut, phaseFinAt, eleves: elevesI
   return (
     <div>
       {/* En-tête statut */}
-      <div className="bg-white border border-stone-200 rounded-xl p-5 mb-6">
+      <div className="bg-surface border border-bordure rounded-xl p-5 mb-6">
         <div className="flex items-center justify-between flex-wrap gap-4">
           <div>
             <div className="flex items-center gap-3">
-              {enLive && <span className="w-2 h-2 rounded-full bg-green-400 animate-pulse" />}
-              <span className="font-medium text-stone-900">{titrePhase}</span>
+              {enLive && <span className="w-2 h-2 rounded-full bg-ok animate-pulse" />}
+              <span className="font-medium text-encre">{titrePhase}</span>
             </div>
             {enLive && (
-              <p className="text-sm text-stone-500 mt-1">
+              <p className="text-sm text-muet mt-1">
                 {nbEnvoyes}/{total} {statut === 'phase_1' ? 'V1 envoyée' : 'V-finale envoyée'}{nbEnvoyes > 1 ? 's' : ''}
               </p>
             )}
             {enLive && secondesRestantes !== null && secondesRestantes > 0 && (
-              <p className={`text-2xl font-mono font-bold mt-2 ${secondesRestantes < 60 ? 'text-red-600' : 'text-stone-700'}`}>
+              <p className={`text-2xl font-mono font-bold mt-2 ${secondesRestantes < 60 ? 'text-retard' : 'text-encre-douce'}`}>
                 {formatTemps(secondesRestantes)}
               </p>
             )}
             {enLive && secondesRestantes === 0 && (
-              <p className="text-sm text-red-600 mt-1">Temps écoulé</p>
+              <p className="text-sm text-retard mt-1">Temps écoulé</p>
             )}
           </div>
 
@@ -133,7 +133,7 @@ export function TableauSynthese({ sessionId, statut, phaseFinAt, eleves: elevesI
               <button
                 onClick={handlePasserPhase2}
                 disabled={pending}
-                className="px-5 py-2.5 bg-blue-600 text-white text-sm rounded-xl hover:bg-blue-700 disabled:opacity-50 transition-colors"
+                className="px-5 py-2.5 bg-bouton text-surface text-sm rounded-xl hover:opacity-90 disabled:opacity-50 transition-colors"
               >
                 {pending ? '…' : 'Passer en phase 2'}
               </button>
@@ -142,7 +142,7 @@ export function TableauSynthese({ sessionId, statut, phaseFinAt, eleves: elevesI
               <button
                 onClick={handleFermer}
                 disabled={pending}
-                className="px-5 py-2.5 bg-red-600 text-white text-sm rounded-xl hover:bg-red-700 disabled:opacity-50 transition-colors"
+                className="px-5 py-2.5 bg-retard text-surface text-sm rounded-xl hover:opacity-90 disabled:opacity-50 transition-colors"
               >
                 {pending ? '…' : 'Fermer'}
               </button>
@@ -151,9 +151,9 @@ export function TableauSynthese({ sessionId, statut, phaseFinAt, eleves: elevesI
         </div>
 
         {enLive && total > 0 && (
-          <div className="mt-4 h-2 bg-stone-100 rounded-full overflow-hidden">
+          <div className="mt-4 h-2 bg-parchemin-fonce rounded-full overflow-hidden">
             <div
-              className="h-full bg-green-500 transition-all duration-500"
+              className="h-full bg-pigment transition-all duration-500"
               style={{ width: `${(nbEnvoyes / total) * 100}%` }}
             />
           </div>
@@ -161,17 +161,17 @@ export function TableauSynthese({ sessionId, statut, phaseFinAt, eleves: elevesI
       </div>
 
       {statut === 'fermee' && (
-        <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 mb-6 text-sm text-blue-800">
+        <div className="bg-info-teinte border border-info rounded-xl p-4 mb-6 text-sm text-info">
           La synthèse est fermée. Le retour critique de la V-finale est à valider dans l&apos;onglet{' '}
           <Link href="/prof/codex/validation" className="underline font-medium">Validation</Link>.
         </div>
       )}
 
       {/* Tableau élèves */}
-      <div className="bg-white border border-stone-200 rounded-xl overflow-hidden">
+      <div className="bg-surface border border-bordure rounded-xl overflow-hidden">
         <table className="w-full text-sm">
           <thead>
-            <tr className="border-b border-stone-100 text-xs text-stone-400">
+            <tr className="border-b border-bordure text-xs text-muet">
               <th className="text-left px-4 py-3">Élève</th>
               <th className="text-center px-4 py-3">V1</th>
               <th className="text-center px-4 py-3">V-finale</th>
@@ -181,14 +181,14 @@ export function TableauSynthese({ sessionId, statut, phaseFinAt, eleves: elevesI
           <tbody>
             {eleves.length === 0 && (
               <tr>
-                <td colSpan={4} className="text-center text-stone-400 py-8">
+                <td colSpan={4} className="text-center text-muet py-8">
                   Aucun élève assigné au module Codex pour cette classe.
                 </td>
               </tr>
             )}
             {eleves.map((e) => (
-              <tr key={e.id} className="border-b border-stone-50 last:border-0">
-                <td className="px-4 py-3 text-stone-800">{e.display_name}</td>
+              <tr key={e.id} className="border-b border-bordure last:border-0">
+                <td className="px-4 py-3 text-encre">{e.display_name}</td>
                 <td className="px-4 py-3 text-center">
                   <StatutCellule
                     envoyee={e.v1_envoyee}
@@ -206,17 +206,17 @@ export function TableauSynthese({ sessionId, statut, phaseFinAt, eleves: elevesI
                 <td className="px-4 py-3 text-center">
                   {e.statut_validation === 'valide' ? (
                     <div className="flex items-center justify-center gap-1.5">
-                      <span className="text-xs px-2 py-0.5 bg-green-100 text-green-700 rounded-full">Validé</span>
+                      <span className="text-xs px-2 py-0.5 bg-ok-teinte text-ok rounded-full">Validé</span>
                       {e.retour_lu ? (
-                        <span className="text-xs text-stone-400" title="L'élève a lu son retour">lu</span>
+                        <span className="text-xs text-muet" title="L'élève a lu son retour">lu</span>
                       ) : (
-                        <span className="text-xs text-amber-600" title="L'élève n'a pas encore lu son retour">non lu</span>
+                        <span className="text-xs text-attention" title="L'élève n'a pas encore lu son retour">non lu</span>
                       )}
                     </div>
                   ) : e.vf_envoyee ? (
-                    <span className="text-xs px-2 py-0.5 bg-amber-100 text-amber-700 rounded-full">À valider</span>
+                    <span className="text-xs px-2 py-0.5 bg-attention-teinte text-attention rounded-full">À valider</span>
                   ) : (
-                    <span className="text-xs text-stone-300">—</span>
+                    <span className="text-xs text-bordure">—</span>
                   )}
                 </td>
               </tr>
@@ -229,16 +229,16 @@ export function TableauSynthese({ sessionId, statut, phaseFinAt, eleves: elevesI
 }
 
 function StatutCellule({ envoyee, analyse, href }: { envoyee: boolean; analyse: string; href?: string | null }) {
-  if (!envoyee) return <span className="text-xs text-stone-300">en cours…</span>
-  if (analyse === 'en_cours') return <span className="text-xs text-stone-400">{ANALYSE_LABEL.en_cours}</span>
-  if (analyse === 'erreur') return <span className="text-xs text-red-500">erreur</span>
+  if (!envoyee) return <span className="text-xs text-muet">en cours…</span>
+  if (analyse === 'en_cours') return <span className="text-xs text-muet">{ANALYSE_LABEL.en_cours}</span>
+  if (analyse === 'erreur') return <span className="text-xs text-retard">erreur</span>
   // Analyse prête → cliquable vers les retours IA (V1 ou VF).
   if (href) {
     return (
-      <Link href={href} className="text-xs px-2 py-0.5 bg-green-100 text-green-700 rounded-full hover:bg-green-200 transition-colors">
+      <Link href={href} className="text-xs px-2 py-0.5 bg-ok-teinte text-ok rounded-full hover:opacity-90 transition-colors">
         Voir →
       </Link>
     )
   }
-  return <span className="text-xs px-2 py-0.5 bg-green-100 text-green-700 rounded-full">✓</span>
+  return <span className="text-xs px-2 py-0.5 bg-ok-teinte text-ok rounded-full">✓</span>
 }

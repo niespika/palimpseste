@@ -25,10 +25,10 @@ export default async function BandeCalendrier() {
   if (!sem) {
     return (
       <section className="space-y-3">
-        <h3 className="text-sm font-medium text-stone-500 uppercase tracking-wide">Calendrier</h3>
-        <div className="bg-white border border-stone-200 rounded-xl px-5 py-4 text-sm text-stone-500">
+        <h3 className="text-sm font-medium text-muet uppercase tracking-wide">Calendrier</h3>
+        <div className="bg-surface border border-bordure rounded-xl px-5 py-4 text-sm text-muet">
           Aucun semestre actif.{' '}
-          <Link href="/prof/calendrier/config" className="underline hover:text-stone-800">
+          <Link href="/prof/calendrier/config" className="underline hover:text-encre">
             Configurer le calendrier →
           </Link>
         </div>
@@ -62,16 +62,16 @@ export default async function BandeCalendrier() {
   return (
     <section className="space-y-3">
       <div className="flex items-center justify-between">
-        <h3 className="text-sm font-medium text-stone-500 uppercase tracking-wide">
+        <h3 className="text-sm font-medium text-muet uppercase tracking-wide">
           Calendrier · {sem.name}
         </h3>
-        <Link href="/prof/calendrier" className="text-xs text-stone-500 hover:text-stone-800 underline">
+        <Link href="/prof/calendrier" className="text-xs text-muet hover:text-encre underline">
           Vue détaillée →
         </Link>
       </div>
 
       {bande.length === 0 ? (
-        <div className="bg-white border border-stone-200 rounded-xl px-5 py-4 text-sm text-stone-400">
+        <div className="bg-surface border border-bordure rounded-xl px-5 py-4 text-sm text-muet">
           Le semestre est terminé.
         </div>
       ) : (
@@ -84,18 +84,18 @@ export default async function BandeCalendrier() {
                 href={`/prof/calendrier?vue=semaine&date=${w.start}`}
                 className={`block rounded-xl border p-3 min-h-[7rem] transition-colors ${
                   w.isVacation
-                    ? 'bg-stone-50 border-stone-200 hover:bg-stone-100'
-                    : 'bg-white border-stone-200 hover:border-stone-300'
+                    ? 'bg-parchemin-fonce border-bordure hover:bg-bordure'
+                    : 'bg-surface border-bordure hover:border-muet'
                 }`}
               >
                 <div className="flex items-baseline justify-between gap-1">
-                  <span className={`text-sm font-medium ${w.isVacation ? 'text-stone-400' : 'text-stone-900'}`}>
+                  <span className={`text-sm font-medium ${w.isVacation ? 'text-muet' : 'text-encre'}`}>
                     {w.isVacation ? 'Vacances' : `S${w.pedagogicalNumber}`}
                   </span>
-                  <span className="text-[10px] text-stone-400">{fmtJour(w.start)}</span>
+                  <span className="text-[10px] text-muet">{fmtJour(w.start)}</span>
                 </div>
                 {w.isVacation && w.vacanceLabel && (
-                  <p className="text-[10px] text-stone-400 mt-0.5 truncate">{w.vacanceLabel}</p>
+                  <p className="text-[10px] text-muet mt-0.5 truncate">{w.vacanceLabel}</p>
                 )}
                 <div className="mt-2 space-y-1">
                   {evs.slice(0, 3).map((e, i) => (
@@ -104,11 +104,11 @@ export default async function BandeCalendrier() {
                         className="w-2 h-2 rounded-full flex-shrink-0"
                         style={{ backgroundColor: e.classe_id ? couleurs.get(e.classe_id) ?? '#a8a29e' : '#a8a29e' }}
                       />
-                      <span className="text-[11px] text-stone-600 truncate">{e.label}</span>
+                      <span className="text-[11px] text-encre-douce truncate">{e.label}</span>
                     </div>
                   ))}
                   {evs.length > 3 && (
-                    <p className="text-[10px] text-stone-400">+ {evs.length - 3} autre{evs.length - 3 > 1 ? 's' : ''}</p>
+                    <p className="text-[10px] text-muet">+ {evs.length - 3} autre{evs.length - 3 > 1 ? 's' : ''}</p>
                   )}
                 </div>
               </Link>

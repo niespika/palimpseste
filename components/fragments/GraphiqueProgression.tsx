@@ -36,19 +36,19 @@ function TooltipCustom({ active, payload, label }: {
   if (!active || !payload?.length) return null
   const pt = payload[0].payload
   return (
-    <div className="bg-white border border-stone-200 rounded-lg shadow-sm p-3 text-sm">
-      <p className="font-medium text-stone-900 mb-1.5">Semaine {label}</p>
+    <div className="bg-surface border border-bordure rounded-lg shadow-sm p-3 text-sm">
+      <p className="font-medium text-encre mb-1.5">Semaine {label}</p>
       {pt.decouvertes !== null ? (
         <>
           <p style={{ color: '#3b82f6' }}>Découvertes : {noteVersLettre(pt.decouvertes)}</p>
           <p style={{ color: '#10b981' }}>Sources : {noteVersLettre(pt.sources)}</p>
           <p style={{ color: '#8b5cf6' }}>Réflexions : {noteVersLettre(pt.reflexions)}</p>
           {pt.moyenne !== null && (
-            <p className="text-stone-700 font-medium mt-1">Moy. : {noteVersLettre(pt.moyenne)}</p>
+            <p className="text-encre-douce font-medium mt-1">Moy. : {noteVersLettre(pt.moyenne)}</p>
           )}
         </>
       ) : (
-        <p className="text-stone-400 italic text-xs">Semaine non déposée</p>
+        <p className="text-muet italic text-xs">Semaine non déposée</p>
       )}
     </div>
   )
@@ -149,10 +149,10 @@ export default function GraphiqueProgression({ data, lienBase }: Props) {
         </LineChart>
       </ResponsiveContainer>
       {data.some(p => p.oral_contenu != null) && (
-        <p className="text-xs text-center text-stone-400 mt-0.5">◉ Points distincts = présentation orale</p>
+        <p className="text-xs text-center text-muet mt-0.5">◉ Points distincts = présentation orale</p>
       )}
       {lienBase && (
-        <p className="text-xs text-center text-stone-400 mt-1">
+        <p className="text-xs text-center text-muet mt-1">
           Cliquer sur un point pour voir l'analyse
         </p>
       )}

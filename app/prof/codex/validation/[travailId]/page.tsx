@@ -48,13 +48,13 @@ export default async function ValidationDetailPage({
   return (
     <div>
       <div className="mb-6">
-        <Link href={`/prof/codex/synthese/${travail.session_id}`} className="text-sm text-stone-500 hover:text-stone-700">
+        <Link href={`/prof/codex/synthese/${travail.session_id}`} className="text-sm text-muet hover:text-encre-douce">
           ← Synthèse
         </Link>
-        <h3 className="text-lg font-serif text-stone-900 mt-2">{eleve?.display_name ?? '—'}</h3>
-        <p className="text-sm text-stone-400">
+        <h3 className="text-lg font-serif text-encre mt-2">{eleve?.display_name ?? '—'}</h3>
+        <p className="text-sm text-muet">
           {uniteLabel}{classeNom ? ` · ${classeNom}` : ''}
-          {travail.statut_validation === 'valide' && <span className="ml-2 text-green-600">· validé</span>}
+          {travail.statut_validation === 'valide' && <span className="ml-2 text-ok">· validé</span>}
         </p>
       </div>
 

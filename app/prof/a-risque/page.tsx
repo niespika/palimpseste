@@ -53,15 +53,15 @@ export default async function PageARisque({
 
   const chip = (actif: boolean) =>
     `text-sm px-3 py-1.5 rounded-full border transition-colors ${
-      actif ? 'bg-stone-800 text-white border-stone-800' : 'bg-white text-stone-600 border-stone-300 hover:border-stone-400'
+      actif ? 'bg-bouton text-surface border-bouton' : 'bg-surface text-encre-douce border-bordure hover:border-muet'
     }`
 
   return (
     <div className="space-y-6">
       <div>
-        <Link href="/prof" className="text-sm text-stone-500 hover:text-stone-700">← Tableau de bord</Link>
-        <h2 className="text-xl font-serif text-stone-900 mt-2">Élèves à risque</h2>
-        <p className="text-sm text-stone-500 mt-0.5">
+        <Link href="/prof" className="text-sm text-muet hover:text-encre-douce">← Tableau de bord</Link>
+        <h2 className="text-xl font-serif text-encre mt-2">Élèves à risque</h2>
+        <p className="text-sm text-muet mt-0.5">
           Un élève est signalé « à risque » dès qu&apos;un seuil est franchi : au moins {SEUILS_SANTE.depotsManquants} dépôts
           manquants, une moyenne sous {noteVersLettre(SEUILS_SANTE.moyenneSous)}, ou plus de {SEUILS_SANTE.revisionEnRetard} cartes en retard.
         </p>
@@ -83,37 +83,37 @@ export default async function PageARisque({
       )}
 
       {lignes.length === 0 ? (
-        <div className="bg-white border border-stone-200 rounded-xl p-8 text-center text-sm text-green-700">
+        <div className="bg-surface border border-bordure rounded-xl p-8 text-center text-sm text-ok">
           Aucun élève à risque {classeSel ? 'dans cette classe' : ''} 🎉
         </div>
       ) : (
-        <div className="bg-white border border-stone-200 rounded-xl overflow-hidden">
+        <div className="bg-surface border border-bordure rounded-xl overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full text-left text-sm">
-              <thead className="bg-stone-50 border-b border-stone-200">
+              <thead className="bg-parchemin-fonce border-b border-bordure">
                 <tr>
-                  <th className="px-4 py-3 text-xs font-medium text-stone-500 uppercase tracking-wide">Élève</th>
-                  <th className="px-4 py-3 text-xs font-medium text-stone-500 uppercase tracking-wide">Classe</th>
-                  <th className="px-4 py-3 text-xs font-medium text-stone-500 uppercase tracking-wide">Dépôts</th>
-                  <th className="px-4 py-3 text-xs font-medium text-stone-500 uppercase tracking-wide">Moyenne</th>
-                  <th className="px-4 py-3 text-xs font-medium text-stone-500 uppercase tracking-wide">Pourquoi</th>
+                  <th className="px-4 py-3 text-xs font-medium text-muet uppercase tracking-wide">Élève</th>
+                  <th className="px-4 py-3 text-xs font-medium text-muet uppercase tracking-wide">Classe</th>
+                  <th className="px-4 py-3 text-xs font-medium text-muet uppercase tracking-wide">Dépôts</th>
+                  <th className="px-4 py-3 text-xs font-medium text-muet uppercase tracking-wide">Moyenne</th>
+                  <th className="px-4 py-3 text-xs font-medium text-muet uppercase tracking-wide">Pourquoi</th>
                 </tr>
               </thead>
               <tbody>
                 {lignes.map(s => (
-                  <tr key={s.inscriptionId} className="border-t border-stone-100 hover:bg-stone-50">
+                  <tr key={s.inscriptionId} className="border-t border-bordure hover:bg-parchemin-fonce">
                     <td className="px-4 py-3 font-medium">
-                      <Link href={`/prof/eleves/${s.eleveId}`} className="text-stone-900 hover:text-red-700 hover:underline">
+                      <Link href={`/prof/eleves/${s.eleveId}`} className="text-encre hover:text-retard hover:underline">
                         {nomEleve.get(s.eleveId) ?? '?'}
                       </Link>
                     </td>
-                    <td className="px-4 py-3 text-stone-600">{nomClasse.get(s.classeId) ?? '—'}</td>
-                    <td className="px-4 py-3 text-stone-600 tabular-nums">{s.nbDeposes}/{s.nbSemainesPassees}</td>
-                    <td className="px-4 py-3 text-stone-600">{s.moyenne != null ? noteVersLettre(s.moyenne) : '—'}</td>
+                    <td className="px-4 py-3 text-encre-douce">{nomClasse.get(s.classeId) ?? '—'}</td>
+                    <td className="px-4 py-3 text-encre-douce tabular-nums">{s.nbDeposes}/{s.nbSemainesPassees}</td>
+                    <td className="px-4 py-3 text-encre-douce">{s.moyenne != null ? noteVersLettre(s.moyenne) : '—'}</td>
                     <td className="px-4 py-3">
                       <div className="flex flex-wrap gap-1.5">
                         {motifs(s).map((m, i) => (
-                          <span key={i} className="text-xs bg-red-50 text-red-700 px-2 py-0.5 rounded-full">{m}</span>
+                          <span key={i} className="text-xs bg-retard-teinte text-retard px-2 py-0.5 rounded-full">{m}</span>
                         ))}
                       </div>
                     </td>

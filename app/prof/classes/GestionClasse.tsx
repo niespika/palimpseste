@@ -81,35 +81,35 @@ export function GestionClasse({ classe, inscrits, tousEleves, modules, moduleIds
     .join(' · ')
 
   return (
-    <div className="bg-white border border-stone-200 rounded-xl p-5">
+    <div className="bg-surface border border-bordure rounded-xl p-5">
       <div className="flex items-start justify-between mb-4">
         <div>
           <div className="flex items-center gap-2">
-            <h3 className="font-medium text-stone-900">{classe.nom}</h3>
+            <h3 className="font-medium text-encre">{classe.nom}</h3>
             {classe.statut === 'fermee' && (
-              <span className="text-xs px-2 py-0.5 rounded-full bg-stone-100 text-stone-500">fermée</span>
+              <span className="text-xs px-2 py-0.5 rounded-full bg-parchemin-fonce text-muet">fermée</span>
             )}
           </div>
-          {sousTitre && <p className="text-xs text-stone-400 mt-0.5">{sousTitre}</p>}
+          {sousTitre && <p className="text-xs text-muet mt-0.5">{sousTitre}</p>}
         </div>
         <ConfirmationEffacement classeId={classe.id} classeNom={classe.nom} nbEleves={inscrits.length} />
       </div>
 
       {/* Élèves inscrits */}
       <div className="mb-4">
-        <p className="text-xs font-medium text-stone-500 uppercase tracking-wide mb-2">
+        <p className="text-xs font-medium text-muet uppercase tracking-wide mb-2">
           Élèves ({inscrits.length})
         </p>
         {inscrits.length > 0 ? (
           <div className="flex flex-wrap gap-2 mb-2">
             {inscrits.map((e) => (
-              <span key={e.id} className="inline-flex items-center gap-1.5 text-sm bg-stone-100 text-stone-700 rounded-full pl-3 pr-1.5 py-1">
+              <span key={e.id} className="inline-flex items-center gap-1.5 text-sm bg-parchemin-fonce text-encre-douce rounded-full pl-3 pr-1.5 py-1">
                 {e.display_name}
                 <button
                   onClick={() => handleRetirer(e.id)}
                   disabled={pending}
                   title="Retirer de la classe"
-                  className="text-stone-400 hover:text-red-600 disabled:opacity-50 w-4 h-4 leading-none"
+                  className="text-muet hover:text-retard disabled:opacity-50 w-4 h-4 leading-none"
                 >
                   ×
                 </button>
@@ -117,7 +117,7 @@ export function GestionClasse({ classe, inscrits, tousEleves, modules, moduleIds
             ))}
           </div>
         ) : (
-          <p className="text-sm text-stone-400 mb-2">Aucun élève inscrit.</p>
+          <p className="text-sm text-muet mb-2">Aucun élève inscrit.</p>
         )}
 
         {disponibles.length > 0 && (
@@ -125,7 +125,7 @@ export function GestionClasse({ classe, inscrits, tousEleves, modules, moduleIds
             <select
               value={selEleve}
               onChange={(e) => setSelEleve(e.target.value)}
-              className="text-sm border border-stone-300 rounded-lg px-2 py-1.5 bg-white"
+              className="text-sm border border-bordure rounded-lg px-2 py-1.5 bg-surface"
             >
               <option value="">Ajouter un élève…</option>
               {disponibles.map((e) => (
@@ -135,7 +135,7 @@ export function GestionClasse({ classe, inscrits, tousEleves, modules, moduleIds
             <button
               onClick={handleInscrire}
               disabled={pending || !selEleve}
-              className="text-sm px-3 py-1.5 bg-stone-800 text-white rounded-lg hover:bg-stone-900 disabled:opacity-50"
+              className="text-sm px-3 py-1.5 bg-bouton text-surface rounded-lg hover:opacity-90 disabled:opacity-50"
             >
               Inscrire
             </button>
@@ -144,21 +144,21 @@ export function GestionClasse({ classe, inscrits, tousEleves, modules, moduleIds
       </div>
 
       {/* Accès modules */}
-      <div className="border-t border-stone-100 pt-4">
-        <p className="text-xs font-medium text-stone-500 uppercase tracking-wide mb-2">
+      <div className="border-t border-bordure pt-4">
+        <p className="text-xs font-medium text-muet uppercase tracking-wide mb-2">
           Accès aux modules
         </p>
         <div className="flex flex-wrap gap-2 mb-3">
           {modules.map((m) => (
-            <label key={m.id} className="flex items-center gap-1.5 text-sm cursor-pointer bg-stone-50 hover:bg-stone-100 rounded-lg px-2.5 py-1">
+            <label key={m.id} className="flex items-center gap-1.5 text-sm cursor-pointer bg-parchemin-fonce hover:bg-bordure rounded-lg px-2.5 py-1">
               <input
                 type="checkbox"
                 checked={selModules.has(m.id)}
                 onChange={() => toggleModule(m.id)}
-                className="accent-stone-700"
+                className="accent-pigment"
               />
-              <span className="text-stone-700">{m.nom}</span>
-              {!m.actif && <span className="text-xs text-stone-400">(inactif)</span>}
+              <span className="text-encre-douce">{m.nom}</span>
+              {!m.actif && <span className="text-xs text-muet">(inactif)</span>}
             </label>
           ))}
         </div>
@@ -166,11 +166,11 @@ export function GestionClasse({ classe, inscrits, tousEleves, modules, moduleIds
           <button
             onClick={handleSauverModules}
             disabled={pending}
-            className="text-sm px-3 py-1.5 bg-stone-800 text-white rounded-lg hover:bg-stone-900 disabled:opacity-50"
+            className="text-sm px-3 py-1.5 bg-bouton text-surface rounded-lg hover:opacity-90 disabled:opacity-50"
           >
             Sauvegarder les accès
           </button>
-          {messageModules && <span className="text-sm text-green-600">{messageModules}</span>}
+          {messageModules && <span className="text-sm text-ok">{messageModules}</span>}
         </div>
       </div>
     </div>

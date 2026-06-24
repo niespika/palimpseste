@@ -21,7 +21,7 @@ export default function SelecteurClasseEleve({ inscriptions, activeId }: { inscr
   }
 
   return (
-    <div className="flex flex-wrap items-center gap-1 bg-stone-100 rounded-xl p-1">
+    <div className="flex flex-wrap items-center gap-1 bg-parchemin-fonce rounded-xl p-1">
       {inscriptions.map((i) => {
         const actif = i.id === activeId
         return (
@@ -30,7 +30,7 @@ export default function SelecteurClasseEleve({ inscriptions, activeId }: { inscr
             onClick={() => choisir(i.id)}
             disabled={chargement !== null}
             className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors disabled:opacity-60 ${
-              actif ? 'bg-white text-stone-900 shadow-sm' : 'text-stone-500 hover:text-stone-800'
+              actif ? 'bg-bouton text-surface shadow-sm' : 'text-muet hover:text-encre'
             }`}
           >
             {chargement === i.id ? '…' : i.classe_nom}

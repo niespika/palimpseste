@@ -1,5 +1,6 @@
 import Link from 'next/link'
 import Pastille from '@/components/Pastille'
+import { TuileAccentModule } from '@/components/TuileAccent'
 
 export default function ScriptoriumLayout({ children }: { children: React.ReactNode }) {
   return (
@@ -14,7 +15,7 @@ export default function ScriptoriumLayout({ children }: { children: React.ReactN
           <p className="font-corps text-sm text-muet">Contenu partagé entre les modules</p>
         </div>
       </div>
-      {children}
+      <TuileAccentModule>{children}</TuileAccentModule>
     </div>
   )
 }

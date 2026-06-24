@@ -20,29 +20,29 @@ export function TraceAffichage({ trace }: { trace: TraceCodex }) {
   const nbErreurs = trace.erreurs_corrections.length
 
   if (nbErreurs === 0 && !trace.synthese_completee) {
-    return <p className="text-center text-stone-400 text-sm py-8">Retour validé, sans correction à signaler.</p>
+    return <p className="text-center text-muet text-sm py-8">Retour validé, sans correction à signaler.</p>
   }
 
   return (
     <div className="space-y-4">
       {/* Tuile — ce que l'élève n'a pas su dire */}
       {nbErreurs > 0 && (
-        <div className="bg-white border border-stone-200 rounded-xl overflow-hidden">
-          <div className="px-5 py-3 border-b border-stone-100 bg-stone-50 flex items-center justify-between gap-3">
-            <h3 className="text-sm font-medium text-stone-700">Ce que tu n&apos;as pas su dire</h3>
-            <span className="text-xs px-2 py-0.5 bg-stone-200 text-stone-600 rounded-full shrink-0">
+        <div className="bg-surface border border-bordure rounded-xl overflow-hidden">
+          <div className="px-5 py-3 border-b border-bordure bg-parchemin-fonce flex items-center justify-between gap-3">
+            <h3 className="text-sm font-medium text-encre-douce">Ce que tu n&apos;as pas su dire</h3>
+            <span className="text-xs px-2 py-0.5 bg-parchemin-fonce text-encre-douce rounded-full shrink-0">
               {nbErreurs} point{nbErreurs > 1 ? 's' : ''}
             </span>
           </div>
           <div className="p-4 space-y-2">
             {trace.erreurs_corrections.map((e, i) => (
-              <div key={i} className="bg-stone-50 border border-stone-100 rounded-lg p-4">
+              <div key={i} className="bg-parchemin-fonce border border-bordure rounded-lg p-4">
                 {e.concept_tag && (
-                  <span className="text-xs px-1.5 py-0.5 bg-stone-100 text-stone-500 rounded">{e.concept_tag}</span>
+                  <span className="text-xs px-1.5 py-0.5 bg-parchemin-fonce text-muet rounded">{e.concept_tag}</span>
                 )}
-                <p className="text-sm text-stone-600 mt-2">{e.description}</p>
-                <div className="mt-2 pl-3 border-l-2 border-green-300">
-                  <p className="text-sm text-stone-800">{e.correction}</p>
+                <p className="text-sm text-encre-douce mt-2">{e.description}</p>
+                <div className="mt-2 pl-3 border-l-2 border-ok">
+                  <p className="text-sm text-encre">{e.correction}</p>
                 </div>
               </div>
             ))}
@@ -52,22 +52,22 @@ export function TraceAffichage({ trace }: { trace: TraceCodex }) {
 
       {/* Tuile — synthèse complétée */}
       {trace.synthese_completee && (
-        <div className="bg-white border border-stone-200 rounded-xl overflow-hidden">
-          <div className="px-5 py-3 border-b border-stone-100 bg-stone-50">
-            <h3 className="text-sm font-medium text-stone-700">Ta synthèse, complétée</h3>
+        <div className="bg-surface border border-bordure rounded-xl overflow-hidden">
+          <div className="px-5 py-3 border-b border-bordure bg-parchemin-fonce">
+            <h3 className="text-sm font-medium text-encre-douce">Ta synthèse, complétée</h3>
           </div>
           <div className="p-5">
-            <p className="whitespace-pre-wrap text-sm text-stone-700 leading-relaxed">
+            <p className="whitespace-pre-wrap text-sm text-encre-douce leading-relaxed">
               {segments.map((s, i) =>
                 s.ajout ? (
-                  <mark key={i} className="bg-amber-100 text-amber-900 rounded px-0.5">{s.texte}</mark>
+                  <mark key={i} className="bg-attention-teinte text-attention rounded px-0.5">{s.texte}</mark>
                 ) : (
                   <span key={i}>{s.texte}</span>
                 )
               )}
             </p>
-            <p className="text-xs text-stone-400 mt-3 pt-3 border-t border-stone-100">
-              <span className="bg-amber-100 px-1 rounded">surligné</span> = complété par l&apos;IA, d&apos;après ton cours.
+            <p className="text-xs text-muet mt-3 pt-3 border-t border-bordure">
+              <span className="bg-attention-teinte px-1 rounded">surligné</span> = complété par l&apos;IA, d&apos;après ton cours.
             </p>
           </div>
         </div>

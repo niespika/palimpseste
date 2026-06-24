@@ -20,14 +20,14 @@ function rendreRecto(texte: string, format: string, revele: boolean): ReactNode 
     if (idx > curseur) segments.push(texte.slice(curseur, idx))
     segments.push(
       revele ? (
-        <mark key={i} className="bg-amber-100 text-stone-900 font-semibold rounded px-1">
+        <mark key={i} className="bg-pigment-teinte text-encre font-semibold rounded px-1">
           {m[1]}
         </mark>
       ) : (
         <span
           key={i}
           aria-label="à deviner"
-          className="inline-block align-middle bg-stone-200 text-stone-300 rounded px-3 mx-0.5 select-none"
+          className="inline-block align-middle bg-parchemin-fonce text-bordure rounded px-3 mx-0.5 select-none"
         >
           ·····
         </span>
@@ -43,17 +43,17 @@ function rendreRecto(texte: string, format: string, revele: boolean): ReactNode 
 }
 
 const LABELS_RATING: Record<number, { label: string; desc: string; couleur: string }> = {
-  1: { label: 'Raté', desc: 'Je ne savais pas', couleur: 'bg-red-100 text-red-700 hover:bg-red-200 border-red-200' },
-  2: { label: 'Difficile', desc: 'Je me souviens à peine', couleur: 'bg-orange-100 text-orange-700 hover:bg-orange-200 border-orange-200' },
-  3: { label: 'Bien', desc: 'Après hésitation', couleur: 'bg-blue-100 text-blue-700 hover:bg-blue-200 border-blue-200' },
-  4: { label: 'Facile', desc: 'Immédiatement', couleur: 'bg-green-100 text-green-700 hover:bg-green-200 border-green-200' },
+  1: { label: 'Raté', desc: 'Je ne savais pas', couleur: 'bg-retard-teinte text-retard hover:opacity-90 border-retard' },
+  2: { label: 'Difficile', desc: 'Je me souviens à peine', couleur: 'bg-attention-teinte text-attention hover:opacity-90 border-attention' },
+  3: { label: 'Bien', desc: 'Après hésitation', couleur: 'bg-info-teinte text-info hover:opacity-90 border-info' },
+  4: { label: 'Facile', desc: 'Immédiatement', couleur: 'bg-ok-teinte text-ok hover:opacity-90 border-ok' },
 }
 
 const TYPE_COULEURS: Record<string, string> = {
-  philosophe: 'bg-blue-50 text-blue-600',
-  concept: 'bg-violet-50 text-violet-600',
-  mouvement: 'bg-teal-50 text-teal-600',
-  these: 'bg-amber-50 text-amber-600',
+  philosophe: 'bg-info-teinte text-info',
+  concept: 'bg-pigment-teinte text-pigment',
+  mouvement: 'bg-pigment-teinte text-pigment',
+  these: 'bg-attention-teinte text-attention',
 }
 
 interface Props {
@@ -74,11 +74,11 @@ export function SessionRevision({ cartes: cartesInitiales, onTermine }: Props) {
     return (
       <div className="text-center py-16">
         <div className="text-4xl mb-4">✓</div>
-        <h3 className="text-lg font-serif text-stone-900 mb-2">Session terminée !</h3>
-        <p className="text-sm text-stone-500 mb-6">{nbRevues} carte{nbRevues > 1 ? 's' : ''} révisée{nbRevues > 1 ? 's' : ''}</p>
+        <h3 className="text-lg font-serif text-encre mb-2">Session terminée !</h3>
+        <p className="text-sm text-encre-douce mb-6">{nbRevues} carte{nbRevues > 1 ? 's' : ''} révisée{nbRevues > 1 ? 's' : ''}</p>
         <button
           onClick={() => onTermine(nbRevues)}
-          className="px-6 py-2 bg-stone-800 text-white text-sm rounded-lg hover:bg-stone-900"
+          className="px-6 py-2 bg-bouton text-surface text-sm rounded-lg hover:opacity-90"
         >
           Retour au tableau de bord
         </button>
@@ -120,44 +120,44 @@ export function SessionRevision({ cartes: cartesInitiales, onTermine }: Props) {
     <div className="max-w-xl mx-auto">
       {/* Barre de progression */}
       <div className="flex items-center gap-3 mb-6">
-        <div className="flex-1 h-1.5 bg-stone-200 rounded-full overflow-hidden">
+        <div className="flex-1 h-1.5 bg-parchemin-fonce rounded-full overflow-hidden">
           <div
-            className="h-full bg-stone-700 transition-all duration-300"
+            className="h-full bg-pigment transition-all duration-300"
             style={{ width: `${progress}%` }}
           />
         </div>
-        <span className="text-xs text-stone-400 shrink-0">{nbRevues} / {total}</span>
+        <span className="text-xs text-muet shrink-0">{nbRevues} / {total}</span>
       </div>
 
       {/* Carte */}
       <div
-        className="bg-white border border-stone-200 rounded-2xl p-8 min-h-64 flex flex-col cursor-pointer select-none shadow-sm"
+        className="bg-surface border border-bordure rounded-2xl p-8 min-h-64 flex flex-col cursor-pointer select-none shadow-sm"
         onClick={() => !retournee && setRetournee(true)}
       >
         {/* En-tête */}
         <div className="flex items-center gap-2 mb-6">
-          <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${TYPE_COULEURS[carte.type] ?? 'bg-stone-100 text-stone-500'}`}>
+          <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${TYPE_COULEURS[carte.type] ?? 'bg-parchemin-fonce text-muet'}`}>
             {carte.type}
           </span>
           {carte.concept_tag && (
-            <span className="text-xs text-stone-400">{carte.concept_tag}</span>
+            <span className="text-xs text-muet">{carte.concept_tag}</span>
           )}
-          <span className="ml-auto text-xs text-stone-300">{carte.label_unite}</span>
+          <span className="ml-auto text-xs text-muet">{carte.label_unite}</span>
         </div>
 
         {/* Recto (le cloze se remplit ici à la révélation) */}
-        <p className="text-lg text-stone-900 font-medium flex-1 leading-relaxed">
+        <p className="text-lg text-encre font-medium flex-1 leading-relaxed">
           {rendreRecto(carte.recto, carte.format, retournee)}
         </p>
 
         {/* Verso : pour un cloze, la réponse apparaît déjà en surbrillance dans le recto */}
         {!retournee ? (
-          <p className="mt-6 text-sm text-stone-300 text-center">
+          <p className="mt-6 text-sm text-muet text-center">
             Appuie pour révéler la réponse
           </p>
         ) : carte.format !== 'cloze' ? (
-          <div className="mt-6 pt-6 border-t border-stone-100">
-            <p className="text-stone-600 leading-relaxed">{carte.verso}</p>
+          <div className="mt-6 pt-6 border-t border-bordure">
+            <p className="text-encre-douce leading-relaxed">{carte.verso}</p>
           </div>
         ) : null}
       </div>
@@ -184,7 +184,7 @@ export function SessionRevision({ cartes: cartesInitiales, onTermine }: Props) {
         <div className="mt-4 flex justify-center">
           <button
             onClick={() => setRetournee(true)}
-            className="px-6 py-2.5 bg-stone-800 text-white text-sm rounded-xl hover:bg-stone-900 transition-colors"
+            className="px-6 py-2.5 bg-bouton text-surface text-sm rounded-xl hover:opacity-90 transition-colors"
           >
             Révéler la réponse
           </button>

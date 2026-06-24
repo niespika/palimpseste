@@ -40,63 +40,63 @@ export default async function RetoursV1Page({ params }: { params: Promise<{ trav
   return (
     <div>
       <div className="mb-6">
-        <Link href={`/prof/codex/synthese/${travail.session_id}`} className="text-sm text-stone-500 hover:text-stone-700">
+        <Link href={`/prof/codex/synthese/${travail.session_id}`} className="text-sm text-muet hover:text-encre-douce">
           ← Synthèse
         </Link>
-        <h3 className="text-lg font-serif text-stone-900 mt-2">{eleve?.display_name ?? '—'} · retours V1</h3>
-        <p className="text-sm text-stone-400">{uniteLabel}{classeNom ? ` · ${classeNom}` : ''}</p>
+        <h3 className="text-lg font-serif text-encre mt-2">{eleve?.display_name ?? '—'} · retours V1</h3>
+        <p className="text-sm text-muet">{uniteLabel}{classeNom ? ` · ${classeNom}` : ''}</p>
       </div>
 
       {travail.analyse_v1_statut !== 'prete' ? (
-        <div className="bg-white border border-stone-200 rounded-xl p-6 text-center text-stone-500 text-sm">
+        <div className="bg-surface border border-bordure rounded-xl p-6 text-center text-encre-douce text-sm">
           Les suggestions V1 ne sont pas encore prêtes (statut : {travail.analyse_v1_statut}).
         </div>
       ) : (
         <div className="space-y-4">
           {/* Oublis */}
-          <section className="bg-white border border-stone-200 rounded-xl p-5">
-            <h4 className="text-sm font-medium text-stone-700 mb-3">Oublis signalés</h4>
+          <section className="bg-surface border border-bordure rounded-xl p-5">
+            <h4 className="text-sm font-medium text-encre-douce mb-3">Oublis signalés</h4>
             {s.oublis?.length ? (
               <ul className="space-y-2">
                 {s.oublis.map((o, i) => (
                   <li key={i} className="text-sm">
-                    <span className="font-medium text-stone-800">{o.titre}</span>
-                    <span className="text-stone-500"> — {o.detail}</span>
+                    <span className="font-medium text-encre">{o.titre}</span>
+                    <span className="text-muet"> — {o.detail}</span>
                   </li>
                 ))}
               </ul>
-            ) : <p className="text-sm text-stone-400">Aucun oubli signalé.</p>}
+            ) : <p className="text-sm text-muet">Aucun oubli signalé.</p>}
           </section>
 
           {/* Erreurs / ambiguïtés */}
-          <section className="bg-white border border-stone-200 rounded-xl p-5">
-            <h4 className="text-sm font-medium text-stone-700 mb-3">Erreurs / ambiguïtés</h4>
+          <section className="bg-surface border border-bordure rounded-xl p-5">
+            <h4 className="text-sm font-medium text-encre-douce mb-3">Erreurs / ambiguïtés</h4>
             {s.erreurs?.length ? (
               <ul className="space-y-2">
                 {s.erreurs.map((e, i) => (
                   <li key={i} className="text-sm">
-                    <span className="text-xs px-1.5 py-0.5 rounded bg-amber-50 text-amber-700 mr-1">{e.type}</span>
-                    <span className="font-medium text-stone-800">{e.titre}</span>
-                    <span className="text-stone-500"> — {e.detail}</span>
+                    <span className="text-xs px-1.5 py-0.5 rounded bg-attention-teinte text-attention mr-1">{e.type}</span>
+                    <span className="font-medium text-encre">{e.titre}</span>
+                    <span className="text-muet"> — {e.detail}</span>
                   </li>
                 ))}
               </ul>
-            ) : <p className="text-sm text-stone-400">Aucune erreur signalée.</p>}
+            ) : <p className="text-sm text-muet">Aucune erreur signalée.</p>}
           </section>
 
           {/* Langue */}
           {s.ortho && (
-            <section className="bg-white border border-stone-200 rounded-xl p-5">
-              <h4 className="text-sm font-medium text-stone-700 mb-2">Langue</h4>
-              <p className="text-sm text-stone-600">{s.ortho}</p>
+            <section className="bg-surface border border-bordure rounded-xl p-5">
+              <h4 className="text-sm font-medium text-encre-douce mb-2">Langue</h4>
+              <p className="text-sm text-encre-douce">{s.ortho}</p>
             </section>
           )}
 
           {/* Transcription V1 */}
           {travail.texte_v1_ocr && (
-            <details className="bg-white border border-stone-200 rounded-xl p-5">
-              <summary className="text-sm font-medium text-stone-700 cursor-pointer">Transcription de la V1</summary>
-              <pre className="mt-3 text-sm text-stone-600 whitespace-pre-wrap font-sans">{travail.texte_v1_ocr}</pre>
+            <details className="bg-surface border border-bordure rounded-xl p-5">
+              <summary className="text-sm font-medium text-encre-douce cursor-pointer">Transcription de la V1</summary>
+              <pre className="mt-3 text-sm text-encre-douce whitespace-pre-wrap font-sans">{travail.texte_v1_ocr}</pre>
             </details>
           )}
         </div>

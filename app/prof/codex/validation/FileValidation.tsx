@@ -51,7 +51,7 @@ export function FileValidation({ lignes }: { lignes: LigneValidation[] }) {
 
   if (lignes.length === 0) {
     return (
-      <p className="text-center text-stone-400 text-sm py-12">
+      <p className="text-center text-muet text-sm py-12">
         Aucun retour de V-finale à valider pour le moment.
       </p>
     )
@@ -62,15 +62,15 @@ export function FileValidation({ lignes }: { lignes: LigneValidation[] }) {
       {enAttente.length > 0 && (
         <section>
           <div className="flex items-center justify-between mb-3">
-            <h3 className="text-sm font-medium text-stone-700">À valider ({enAttente.length})</h3>
+            <h3 className="text-sm font-medium text-encre-douce">À valider ({enAttente.length})</h3>
             <div className="flex items-center gap-3">
-              <button onClick={toutSelectionner} className="text-xs text-stone-500 hover:text-stone-800">
+              <button onClick={toutSelectionner} className="text-xs text-muet hover:text-encre">
                 {selection.size === enAttente.length ? 'Tout désélectionner' : 'Tout sélectionner'}
               </button>
               <button
                 onClick={validerSelection}
                 disabled={pending || selection.size === 0}
-                className="px-4 py-1.5 bg-green-600 text-white text-xs rounded-lg hover:bg-green-700 disabled:opacity-40 transition-colors"
+                className="px-4 py-1.5 bg-ok text-surface text-xs rounded-lg hover:opacity-90 disabled:opacity-40 transition-colors"
               >
                 {pending ? '…' : `Valider la sélection (${selection.size})`}
               </button>
@@ -81,29 +81,29 @@ export function FileValidation({ lignes }: { lignes: LigneValidation[] }) {
             {enAttente.map((l) => (
               <div
                 key={l.id}
-                className="flex items-center gap-3 bg-white border border-stone-200 rounded-xl px-4 py-3"
+                className="flex items-center gap-3 bg-surface border border-bordure rounded-xl px-4 py-3"
               >
                 <input
                   type="checkbox"
                   checked={selection.has(l.id)}
                   onChange={() => toggle(l.id)}
-                  className="accent-green-600 w-4 h-4 shrink-0"
+                  className="accent-ok w-4 h-4 shrink-0"
                 />
                 <Link href={`/prof/codex/validation/${l.id}`} className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-stone-800 truncate">{l.eleve}</p>
-                  <p className="text-xs text-stone-400 truncate">
+                  <p className="text-sm font-medium text-encre truncate">{l.eleve}</p>
+                  <p className="text-xs text-muet truncate">
                     {l.unite}{l.classe ? ` · ${l.classe}` : ''}
                   </p>
                 </Link>
                 <div className="flex items-center gap-2 shrink-0">
                   {l.confiance != null && l.confiance < 0.6 && (
-                    <span className="text-xs px-1.5 py-0.5 bg-amber-100 text-amber-700 rounded" title="Confiance OCR faible">
+                    <span className="text-xs px-1.5 py-0.5 bg-attention-teinte text-attention rounded" title="Confiance OCR faible">
                       OCR {Math.round(l.confiance * 100)}%
                     </span>
                   )}
-                  <span className="text-xs px-1.5 py-0.5 bg-red-50 text-red-600 rounded">{l.nbErreurs} err.</span>
-                  <span className="text-xs px-1.5 py-0.5 bg-blue-50 text-blue-600 rounded">{l.nbAjouts} ajout{l.nbAjouts > 1 ? 's' : ''}</span>
-                  <Link href={`/prof/codex/validation/${l.id}`} className="text-xs text-stone-500 hover:text-stone-800 underline">
+                  <span className="text-xs px-1.5 py-0.5 bg-retard-teinte text-retard rounded">{l.nbErreurs} err.</span>
+                  <span className="text-xs px-1.5 py-0.5 bg-info-teinte text-info rounded">{l.nbAjouts} ajout{l.nbAjouts > 1 ? 's' : ''}</span>
+                  <Link href={`/prof/codex/validation/${l.id}`} className="text-xs text-muet hover:text-encre underline">
                     ouvrir
                   </Link>
                 </div>
@@ -115,19 +115,19 @@ export function FileValidation({ lignes }: { lignes: LigneValidation[] }) {
 
       {valides.length > 0 && (
         <section>
-          <h3 className="text-sm font-medium text-stone-500 mb-3">Validés ({valides.length})</h3>
+          <h3 className="text-sm font-medium text-muet mb-3">Validés ({valides.length})</h3>
           <div className="space-y-2">
             {valides.map((l) => (
               <Link
                 key={l.id}
                 href={`/prof/codex/validation/${l.id}`}
-                className="flex items-center justify-between gap-3 bg-stone-50 border border-stone-200 rounded-xl px-4 py-3 hover:border-stone-300 transition-colors"
+                className="flex items-center justify-between gap-3 bg-parchemin-fonce border border-bordure rounded-xl px-4 py-3 hover:border-pigment transition-colors"
               >
                 <div className="min-w-0">
-                  <p className="text-sm font-medium text-stone-700 truncate">{l.eleve}</p>
-                  <p className="text-xs text-stone-400 truncate">{l.unite}</p>
+                  <p className="text-sm font-medium text-encre-douce truncate">{l.eleve}</p>
+                  <p className="text-xs text-muet truncate">{l.unite}</p>
                 </div>
-                <span className="text-xs px-2 py-0.5 bg-green-100 text-green-700 rounded-full shrink-0">Validé</span>
+                <span className="text-xs px-2 py-0.5 bg-ok-teinte text-ok rounded-full shrink-0">Validé</span>
               </Link>
             ))}
           </div>

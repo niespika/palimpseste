@@ -21,7 +21,7 @@ export default async function QuazianElevePage({ searchParams }: { searchParams:
 
   if (!module?.actif) {
     return (
-      <div className="text-center py-16 text-stone-400 text-sm">
+      <div className="text-center py-16 text-muet text-sm">
         Ce module n'est pas encore activé.
       </div>
     )
@@ -29,7 +29,7 @@ export default async function QuazianElevePage({ searchParams }: { searchParams:
 
   if (!(await aAccesModule(supabase, user.id, module.id))) {
     return (
-      <div className="text-center py-16 text-stone-400 text-sm">
+      <div className="text-center py-16 text-muet text-sm">
         Tu n'as pas encore accès à ce module.
       </div>
     )
@@ -62,7 +62,7 @@ export default async function QuazianElevePage({ searchParams }: { searchParams:
     <div>
       <Link
         href="/eleve"
-        className="text-sm text-stone-500 hover:text-stone-700 mb-6 inline-flex items-center gap-1"
+        className="text-sm text-encre-douce hover:text-encre mb-6 inline-flex items-center gap-1"
       >
         ← Retour
       </Link>
@@ -71,22 +71,22 @@ export default async function QuazianElevePage({ searchParams }: { searchParams:
       {quizzActif && (
         <Link
           href={`/eleve/modules/quazian/quizz/${quizzActif.id}`}
-          className="block bg-green-50 border border-green-300 rounded-xl p-4 mb-6 hover:bg-green-100 transition-colors"
+          className="block bg-ok-teinte border border-ok rounded-xl p-4 mb-6 hover:opacity-90 transition-colors"
         >
           <div className="flex items-center gap-3">
-            <span className="w-2.5 h-2.5 rounded-full bg-green-500 animate-pulse shrink-0" />
+            <span className="w-2.5 h-2.5 rounded-full bg-ok animate-pulse shrink-0" />
             <div>
-              <p className="font-medium text-green-800 text-sm">Quizz en cours !</p>
-              <p className="text-xs text-green-600">Appuie pour participer →</p>
+              <p className="font-medium text-ok text-sm">Quizz en cours !</p>
+              <p className="text-xs text-ok">Appuie pour participer →</p>
             </div>
           </div>
         </Link>
       )}
 
-      <h2 className="text-xl font-serif text-stone-900 mb-4 mt-2">Quazian</h2>
+      <h2 className="text-xl font-serif text-pigment mb-4 mt-2">Quazian</h2>
 
       {/* Onglets Flashcards / Quizz */}
-      <nav className="flex gap-1 mb-6 border-b border-stone-200">
+      <nav className="flex gap-1 mb-6 border-b border-bordure">
         {[
           { key: 'flashcards', label: 'Flashcards' },
           { key: 'quizz', label: 'Quizz' },
@@ -96,8 +96,8 @@ export default async function QuazianElevePage({ searchParams }: { searchParams:
             href={`/eleve/modules/quazian?onglet=${key}`}
             className={`px-4 py-2 text-sm rounded-t-lg border-b-2 transition-colors ${
               onglet === key
-                ? 'border-stone-800 text-stone-900 font-medium'
-                : 'border-transparent text-stone-500 hover:text-stone-800'
+                ? 'border-liseret text-pigment font-medium'
+                : 'border-transparent text-encre-douce hover:text-encre'
             }`}
           >
             {label}
@@ -133,7 +133,7 @@ function OngletQuizz({
 }) {
   if (quizList.length === 0) {
     return (
-      <p className="text-center py-12 text-stone-400 text-sm">
+      <p className="text-center py-12 text-muet text-sm">
         Aucun quizz pour l&apos;instant. Ton professeur n&apos;en a pas encore lancé.
       </p>
     )
@@ -147,16 +147,16 @@ function OngletQuizz({
         let etat: { texte: string; classe: string }
         let couleur: 'vert' | 'neutre'
         if (q.statut === 'lance' && !soumis) {
-          etat = { texte: 'En cours — participer', classe: 'text-green-700' }
+          etat = { texte: 'En cours — participer', classe: 'text-ok' }
           couleur = 'vert'
         } else if (q.statut === 'lance' && soumis) {
-          etat = { texte: 'Soumis — en attente du corrigé', classe: 'text-stone-400' }
+          etat = { texte: 'Soumis — en attente du corrigé', classe: 'text-muet' }
           couleur = 'neutre'
         } else if (q.statut === 'ferme' && soumis) {
-          etat = { texte: 'Revoir le quiz + le retour →', classe: 'text-blue-600' }
+          etat = { texte: 'Revoir le quiz + le retour →', classe: 'text-info' }
           couleur = 'neutre'
         } else {
-          etat = { texte: 'Terminé (non passé)', classe: 'text-stone-400' }
+          etat = { texte: 'Terminé (non passé)', classe: 'text-muet' }
           couleur = 'neutre'
         }
         return (

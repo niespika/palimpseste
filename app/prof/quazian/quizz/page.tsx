@@ -10,9 +10,9 @@ async function actionSupprimer(formData: FormData): Promise<void> {
 }
 
 const STATUT_LABELS: Record<string, { label: string; couleur: string }> = {
-  brouillon: { label: 'Brouillon', couleur: 'bg-stone-100 text-stone-600' },
-  lance: { label: 'En cours', couleur: 'bg-green-100 text-green-700' },
-  ferme: { label: 'Terminé', couleur: 'bg-blue-50 text-blue-600' },
+  brouillon: { label: 'Brouillon', couleur: 'bg-parchemin-fonce text-muet' },
+  lance: { label: 'En cours', couleur: 'bg-ok-teinte text-ok' },
+  ferme: { label: 'Terminé', couleur: 'bg-info-teinte text-info' },
 }
 
 export default async function QuizzListePage({ searchParams }: { searchParams: Promise<{ classe?: string }> }) {
@@ -51,10 +51,10 @@ export default async function QuizzListePage({ searchParams }: { searchParams: P
   return (
     <div>
       <div className="mb-6">
-        <Link href="/prof/quazian" className="text-sm text-stone-500 hover:text-stone-700">
+        <Link href="/prof/quazian" className="text-sm text-muet hover:text-encre-douce">
           ← Flashcards
         </Link>
-        <h3 className="text-lg font-serif text-stone-900 mt-2">Quizz</h3>
+        <h3 className="text-lg font-serif text-encre mt-2">Quizz</h3>
       </div>
 
       <CreerQuizz unites={unites ?? []} classes={classes ?? []} />
@@ -80,13 +80,13 @@ export default async function QuizzListePage({ searchParams }: { searchParams: P
 
       <div className="mt-6 space-y-3">
         {classeSel && (
-          <p className="text-xs text-stone-400">
+          <p className="text-xs text-muet">
             Filtré sur {(classes ?? []).find((c) => c.id === classeSel)?.nom ?? 'une classe'} ·{' '}
             <Link href="/prof/quazian/quizz" className="underline">tout afficher</Link>
           </p>
         )}
         {(quizzes ?? []).filter((q) => !classeSel || q.classe_id === classeSel).length === 0 && (
-          <p className="text-stone-400 text-sm text-center py-8">Aucun quizz{classeSel ? ' pour cette classe' : ''}.</p>
+          <p className="text-muet text-sm text-center py-8">Aucun quizz{classeSel ? ' pour cette classe' : ''}.</p>
         )}
         {(quizzes ?? []).filter((q) => !classeSel || q.classe_id === classeSel).map((qz) => {
           const stats = qMap[qz.id] ?? { total: 0, validees: 0 }
@@ -94,7 +94,7 @@ export default async function QuizzListePage({ searchParams }: { searchParams: P
           const scope = (qz.scope_unites as string[]).map((id) => labelsUnites[id] ?? id)
 
           return (
-            <div key={qz.id} className="bg-white border border-stone-200 rounded-xl p-4 flex items-center gap-4">
+            <div key={qz.id} className="bg-surface border border-bordure rounded-xl p-4 flex items-center gap-4">
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2 flex-wrap">
                   <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${statut.couleur}`}>
@@ -102,20 +102,20 @@ export default async function QuizzListePage({ searchParams }: { searchParams: P
                   </span>
                   {(() => {
                     const c = Array.isArray(qz.classes) ? qz.classes[0] : qz.classes
-                    return c ? <span className="text-sm text-stone-700">{(c as { nom: string }).nom}</span> : null
+                    return c ? <span className="text-sm text-encre-douce">{(c as { nom: string }).nom}</span> : null
                   })()}
-                  <span className="text-xs text-stone-400">{stats.total} questions</span>
+                  <span className="text-xs text-muet">{stats.total} questions</span>
                   {qz.statut === 'brouillon' && stats.total > 0 && (
-                    <span className="text-xs text-amber-600">
+                    <span className="text-xs text-attention">
                       {stats.validees}/{stats.total} validées
                     </span>
                   )}
                 </div>
-                <p className="text-xs text-stone-400 mt-1 truncate">
+                <p className="text-xs text-muet mt-1 truncate">
                   {scope.join(' · ')}
                 </p>
                 {qz.lance_at && (
-                  <p className="text-xs text-stone-400">
+                  <p className="text-xs text-muet">
                     Lancé le {new Date(qz.lance_at).toLocaleDateString('fr-FR')}
                     {qz.ferme_at && ` · Fermé le ${new Date(qz.ferme_at).toLocaleDateString('fr-FR')}`}
                   </p>
@@ -125,7 +125,7 @@ export default async function QuizzListePage({ searchParams }: { searchParams: P
               <div className="flex gap-2 shrink-0">
                 <Link
                   href={`/prof/quazian/quizz/${qz.id}`}
-                  className="px-3 py-1 text-xs bg-stone-800 text-white rounded-lg hover:bg-stone-900 transition-colors"
+                  className="px-3 py-1 text-xs bg-bouton text-surface rounded-lg hover:opacity-90 transition-colors"
                 >
                   {qz.statut === 'brouillon' ? 'Valider →' : 'Voir →'}
                 </Link>
@@ -134,7 +134,7 @@ export default async function QuizzListePage({ searchParams }: { searchParams: P
                     <input type="hidden" name="id" value={qz.id} />
                     <button
                       type="submit"
-                      className="px-3 py-1 text-xs text-red-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                      className="px-3 py-1 text-xs text-retard hover:opacity-80 hover:bg-retard-teinte rounded-lg transition-colors"
                     >
                       Supprimer
                     </button>

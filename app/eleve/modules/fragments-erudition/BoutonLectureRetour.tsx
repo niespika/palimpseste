@@ -21,7 +21,7 @@ export default function BoutonLectureRetour({ analyseId }: { analyseId: string }
     <button
       onClick={handleValider}
       disabled={chargement}
-      className="w-full bg-stone-800 text-white py-2.5 rounded-xl text-sm font-medium hover:bg-stone-700 disabled:opacity-50 transition-colors"
+      className="w-full bg-bouton text-surface py-2.5 rounded-xl text-sm font-medium hover:opacity-90 disabled:opacity-50 transition-colors"
     >
       {chargement ? '…' : 'J’ai lu mon retour — je peux déposer'}
     </button>

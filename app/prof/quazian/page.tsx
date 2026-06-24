@@ -50,10 +50,10 @@ export default async function QuazianPage({ searchParams }: { searchParams: Prom
 
   if (unitesList.length === 0) {
     return (
-      <div className="text-center py-16 text-stone-400">
+      <div className="text-center py-16 text-muet">
         <p className="text-sm">Aucune unité dans le Scriptorium.</p>
         <p className="text-sm mt-1">
-          <Link href="/prof/scriptorium" className="underline hover:text-stone-600">Crée d&apos;abord du contenu dans le Scriptorium.</Link>
+          <Link href="/prof/scriptorium" className="underline hover:text-encre-douce">Crée d&apos;abord du contenu dans le Scriptorium.</Link>
         </p>
       </div>
     )
@@ -76,18 +76,18 @@ export default async function QuazianPage({ searchParams }: { searchParams: Prom
               href={`/prof/quazian?unite=${u.id}`}
               selectionnee={uniteSel === u.id}
               couleur={pubVisible.get(u.id) ? 'vert' : 'neutre'}
-              resume={st.suggere > 0 ? <span className="text-xs text-amber-600">{st.suggere} à valider</span> : undefined}
+              resume={st.suggere > 0 ? <span className="text-xs text-attention">{st.suggere} à valider</span> : undefined}
             />
           )
         })}
       </div>
 
       {uniteChoisie && (
-        <div className="bg-white border border-stone-200 rounded-xl overflow-hidden">
-          <div className="px-5 py-4 border-b border-stone-100 flex items-center justify-between gap-3 flex-wrap">
+        <div className="bg-surface border border-bordure rounded-xl overflow-hidden">
+          <div className="px-5 py-4 border-b border-bordure flex items-center justify-between gap-3 flex-wrap">
             <div>
-              <h3 className="font-medium text-stone-900">{uniteChoisie.label}</h3>
-              <p className="text-xs text-stone-400 mt-0.5">Génère les cartes semaine par semaine, depuis le contenu Scriptorium.</p>
+              <h3 className="font-medium text-encre">{uniteChoisie.label}</h3>
+              <p className="text-xs text-muet mt-0.5">Génère les cartes semaine par semaine, depuis le contenu Scriptorium.</p>
             </div>
             <div className="flex items-center gap-2">
               <form action={actionToggle}>
@@ -97,35 +97,35 @@ export default async function QuazianPage({ searchParams }: { searchParams: Prom
                   type="submit"
                   disabled={(cartesParUnite.get(uniteChoisie.id)?.valide ?? 0) === 0 && !pubVisible.get(uniteChoisie.id)}
                   className={`px-3 py-1.5 text-xs rounded-lg transition-colors disabled:opacity-50 ${
-                    pubVisible.get(uniteChoisie.id) ? 'bg-green-100 text-green-700 hover:bg-green-200' : 'bg-stone-100 text-stone-600 hover:bg-stone-200'
+                    pubVisible.get(uniteChoisie.id) ? 'bg-ok-teinte text-ok hover:opacity-90' : 'bg-parchemin-fonce text-muet hover:opacity-90'
                   }`}
                 >
                   {pubVisible.get(uniteChoisie.id) ? 'Masquer aux élèves' : 'Publier aux élèves'}
                 </button>
               </form>
-              <Link href={`/prof/quazian/${uniteChoisie.id}`} className="px-3 py-1.5 text-xs bg-stone-800 text-white rounded-lg hover:bg-stone-900 transition-colors">
+              <Link href={`/prof/quazian/${uniteChoisie.id}`} className="px-3 py-1.5 text-xs bg-bouton text-surface rounded-lg hover:opacity-90 transition-colors">
                 Revoir / éditer →
               </Link>
             </div>
           </div>
 
           {semaines.length === 0 ? (
-            <div className="px-5 py-6 text-sm text-stone-400">
+            <div className="px-5 py-6 text-sm text-muet">
               Aucune semaine renseignée pour cette unité. Indique une <strong>semaine</strong> sur les contenus du <Link href="/prof/scriptorium" className="underline">Scriptorium</Link>.
             </div>
           ) : (
-            <ul className="divide-y divide-stone-100">
+            <ul className="divide-y divide-bordure">
               {semaines.map(sem => {
                 const st = cartesParCle.get(`${uniteChoisie.id}:${sem}`) ?? { total: 0, valide: 0, suggere: 0 }
                 return (
                   <li key={sem} className="px-5 py-3 flex items-center justify-between gap-3">
                     <div className="min-w-0">
-                      <p className="text-sm font-medium text-stone-800">Semaine {sem}</p>
-                      <p className="text-xs text-stone-400 mt-0.5">
+                      <p className="text-sm font-medium text-encre">Semaine {sem}</p>
+                      <p className="text-xs text-muet mt-0.5">
                         {st.total === 0 ? 'À générer' : (
                           <>
-                            <span className="text-green-700">{st.valide} validée{st.valide > 1 ? 's' : ''}</span>
-                            {st.suggere > 0 && <span className="text-amber-600"> · {st.suggere} à valider</span>}
+                            <span className="text-ok">{st.valide} validée{st.valide > 1 ? 's' : ''}</span>
+                            {st.suggere > 0 && <span className="text-attention"> · {st.suggere} à valider</span>}
                           </>
                         )}
                       </p>

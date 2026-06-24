@@ -16,7 +16,7 @@ interface Defauts {
   reference: string; diagInventaire: string; diagNiveau: string
 }
 
-const TEXTAREA = 'w-full px-3 py-2 border border-stone-200 rounded-xl text-sm font-mono focus:outline-none focus:ring-2 focus:ring-blue-400 resize-y text-stone-900'
+const TEXTAREA = 'w-full px-3 py-2 border border-bordure rounded-xl text-sm font-mono focus:outline-none focus:ring-2 focus:ring-pigment resize-y text-encre'
 
 function BlocPrompt({ label, value, onChange, defaut, hint, rows = 18, warn }: {
   label: string; value: string; onChange: (v: string) => void; defaut: string; hint: React.ReactNode; rows?: number; warn?: React.ReactNode
@@ -24,11 +24,11 @@ function BlocPrompt({ label, value, onChange, defaut, hint, rows = 18, warn }: {
   return (
     <div>
       <div className="flex items-center justify-between mb-2">
-        <label className="text-sm font-medium text-stone-700">{label}</label>
-        <button type="button" onClick={() => onChange(defaut)} className="text-xs text-stone-500 hover:text-stone-700 underline">Restaurer la version par défaut</button>
+        <label className="text-sm font-medium text-encre-douce">{label}</label>
+        <button type="button" onClick={() => onChange(defaut)} className="text-xs text-muet hover:text-encre-douce underline">Restaurer la version par défaut</button>
       </div>
-      <p className="text-xs text-stone-400 mb-2">{hint}</p>
-      {warn && <p className="text-xs text-red-600 mb-2">{warn}</p>}
+      <p className="text-xs text-muet mb-2">{hint}</p>
+      {warn && <p className="text-xs text-retard mb-2">{warn}</p>}
       <textarea value={value} onChange={e => onChange(e.target.value)} rows={rows} className={TEXTAREA} />
     </div>
   )
@@ -77,30 +77,35 @@ export default function FormulaireParametresAletheia({ initial, defauts }: { ini
 
   return (
     <div className="space-y-8">
-      <div className="bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 text-sm text-amber-800">
+      <div className="bg-attention-teinte border border-attention rounded-xl px-4 py-3 text-sm text-attention">
         Prompts IA d&apos;Aletheia. Enregistrer un prompt identique au défaut revient à utiliser le défaut (et ses évolutions futures).
       </div>
 
       {/* Navigation par tuiles (les modifications non enregistrées sont conservées en changeant de tuile) */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-        {TUILES.map(t => (
-          <button
-            key={t.cle}
-            type="button"
-            onClick={() => setGroupe(t.cle)}
-            className={`text-left bg-white border border-stone-200 border-l-4 rounded-xl px-4 py-3 transition-colors hover:border-stone-400 ${
-              groupe === t.cle ? 'border-l-stone-800 ring-2 ring-stone-300' : 'border-l-stone-300'
-            }`}
-          >
-            <p className="font-medium text-stone-900">{t.nom}</p>
-            <p className="text-xs text-stone-400 mt-0.5">{t.desc}</p>
-          </button>
-        ))}
+        {TUILES.map(t => {
+          const actif = groupe === t.cle
+          return (
+            <button
+              key={t.cle}
+              type="button"
+              onClick={() => setGroupe(t.cle)}
+              className={`text-left rounded-xl px-4 py-3 transition-colors ${
+                actif
+                  ? 'bg-pigment border border-pigment'
+                  : 'bg-surface border border-bordure border-l-4 border-l-liseret hover:border-pigment hover:shadow-sm'
+              }`}
+            >
+              <p className={`font-medium ${actif ? 'text-surface' : 'text-encre'}`}>{t.nom}</p>
+              <p className={`text-xs mt-0.5 ${actif ? 'text-surface/75' : 'text-muet'}`}>{t.desc}</p>
+            </button>
+          )
+        })}
       </div>
 
       {groupe === 'retours' && (
         <div className="space-y-8">
-          <h4 className="text-sm font-semibold text-stone-600 border-b border-stone-200 pb-1">Retours élève &amp; carte</h4>
+          <h4 className="text-sm font-semibold text-encre-douce border-b border-bordure pb-1">Retours élève &amp; carte</h4>
 
           <BlocPrompt
             label="Retour V1 — socratique, par section (5 champs)" value={p1} onChange={setP1} defaut={defauts.feedback1} rows={20}
@@ -122,7 +127,7 @@ export default function FormulaireParametresAletheia({ initial, defauts }: { ini
 
       {groupe === 'diagnostic' && (
         <div className="space-y-8">
-          <h4 className="text-sm font-semibold text-stone-600 border-b border-stone-200 pb-1">Diagnostic (usage prof, jamais montré à l&apos;élève)</h4>
+          <h4 className="text-sm font-semibold text-encre-douce border-b border-bordure pb-1">Diagnostic (usage prof, jamais montré à l&apos;élève)</h4>
 
           <BlocPrompt
             label="Référence par chapitre — socle du diagnostic" value={pRef} onChange={setPRef} defaut={defauts.reference} rows={16}
@@ -144,8 +149,8 @@ export default function FormulaireParametresAletheia({ initial, defauts }: { ini
 
       {groupe === 'aides' && (
         <div className="space-y-5">
-          <h4 className="text-sm font-semibold text-stone-600 border-b border-stone-200 pb-1">Bulles d&apos;aide de la saisie V1</h4>
-          <p className="text-xs text-stone-400">
+          <h4 className="text-sm font-semibold text-encre-douce border-b border-bordure pb-1">Bulles d&apos;aide de la saisie V1</h4>
+          <p className="text-xs text-muet">
             Texte d&apos;exemple (placeholder) affiché à l&apos;élève dans chacun des 5 champs — pour lui montrer comment remplir la section. Vide ou identique au défaut = on garde le défaut.
           </p>
           {([
@@ -157,8 +162,8 @@ export default function FormulaireParametresAletheia({ initial, defauts }: { ini
           ]).map(({ cle, label }) => (
             <div key={cle}>
               <div className="flex items-center justify-between mb-2">
-                <label className="text-sm font-medium text-stone-700">{label}</label>
-                <button type="button" onClick={() => setAide(cle, AIDES_V1_DEFAUT[cle])} className="text-xs text-stone-500 hover:text-stone-700 underline">Restaurer la version par défaut</button>
+                <label className="text-sm font-medium text-encre-douce">{label}</label>
+                <button type="button" onClick={() => setAide(cle, AIDES_V1_DEFAUT[cle])} className="text-xs text-muet hover:text-encre-douce underline">Restaurer la version par défaut</button>
               </div>
               <textarea value={aides[cle]} onChange={e => setAide(cle, e.target.value)} rows={2} className={TEXTAREA} />
             </div>
@@ -168,30 +173,30 @@ export default function FormulaireParametresAletheia({ initial, defauts }: { ini
 
       {groupe === 'reglages' && (
         <div className="space-y-3">
-          <h4 className="text-sm font-medium text-stone-700">Réglages</h4>
-          <label className="flex items-start gap-2 text-sm text-stone-700">
+          <h4 className="text-sm font-medium text-encre-douce">Réglages</h4>
+          <label className="flex items-start gap-2 text-sm text-encre-douce">
             <input type="checkbox" checked={evalQuestions} onChange={e => setEvalQuestions(e.target.checked)} className="mt-0.5" />
             <span>
-              <span className="font-medium">Évaluer la qualité des questions</span> — affiche au retour V1 une remarque sur la profondeur des questions de l&apos;élève (champ <code>remarque_questions</code>). <span className="text-stone-400">Désactivé par défaut.</span>
+              <span className="font-medium">Évaluer la qualité des questions</span> — affiche au retour V1 une remarque sur la profondeur des questions de l&apos;élève (champ <code>remarque_questions</code>). <span className="text-muet">Désactivé par défaut.</span>
             </span>
           </label>
-          <label className="flex items-start gap-2 text-sm text-stone-700">
+          <label className="flex items-start gap-2 text-sm text-encre-douce">
             <input type="checkbox" checked={deblocageSequentiel} onChange={e => setDeblocageSequentiel(e.target.checked)} className="mt-0.5" />
             <span>
-              <span className="font-medium">Déblocage séquentiel des semaines</span> — la semaine N+1 ne s&apos;ouvre qu&apos;à la clôture (terminée) de la semaine N. <span className="text-stone-400">Désactivé par défaut (accès libre).</span>
+              <span className="font-medium">Déblocage séquentiel des semaines</span> — la semaine N+1 ne s&apos;ouvre qu&apos;à la clôture (terminée) de la semaine N. <span className="text-muet">Désactivé par défaut (accès libre).</span>
             </span>
           </label>
         </div>
       )}
 
       {message && (
-        <div className={`rounded-xl px-4 py-3 text-sm ${message.type === 'ok' ? 'bg-green-50 border border-green-200 text-green-700' : 'bg-red-50 border border-red-200 text-red-700'}`}>
+        <div className={`rounded-xl px-4 py-3 text-sm ${message.type === 'ok' ? 'bg-ok-teinte border border-ok text-ok' : 'bg-retard-teinte border border-retard text-retard'}`}>
           {message.texte}
         </div>
       )}
 
       <button onClick={handleSauvegarder} disabled={enregistrement}
-        className="bg-stone-800 text-white px-6 py-2.5 rounded-xl text-sm font-medium hover:bg-stone-700 disabled:opacity-50 transition-colors">
+        className="bg-bouton text-surface px-6 py-2.5 rounded-xl text-sm font-medium hover:opacity-90 disabled:opacity-50 transition-colors">
         {enregistrement ? 'Enregistrement…' : 'Enregistrer les paramètres'}
       </button>
     </div>

@@ -24,7 +24,7 @@ export default function EditeurDate({
 
   if (!ouvert) {
     return (
-      <button onClick={() => setOuvert(true)} className="text-xs text-stone-400 hover:text-stone-700 underline">
+      <button onClick={() => setOuvert(true)} className="text-xs text-muet hover:text-encre-douce underline">
         modifier la date
       </button>
     )
@@ -53,15 +53,15 @@ export default function EditeurDate({
         type="date"
         value={valeur}
         onChange={(e) => setValeur(e.target.value)}
-        className="px-2 py-0.5 text-xs border border-stone-300 rounded"
+        className="px-2 py-0.5 text-xs border border-bordure rounded"
       />
-      <button onClick={enregistrer} disabled={busy} className="text-xs bg-stone-800 text-white px-2 py-0.5 rounded hover:bg-stone-700 disabled:opacity-50">
+      <button onClick={enregistrer} disabled={busy} className="text-xs bg-bouton text-surface px-2 py-0.5 rounded hover:opacity-90 disabled:opacity-50">
         {busy ? '…' : 'OK'}
       </button>
-      <button onClick={() => { setOuvert(false); setValeur(dateActuelle) }} className="text-xs text-stone-400 hover:text-stone-600">
+      <button onClick={() => { setOuvert(false); setValeur(dateActuelle) }} className="text-xs text-muet hover:text-encre-douce">
         annuler
       </button>
-      {erreur && <span className="text-xs text-red-600">{erreur}</span>}
+      {erreur && <span className="text-xs text-retard">{erreur}</span>}
     </span>
   )
 }

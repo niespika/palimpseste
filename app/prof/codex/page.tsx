@@ -5,10 +5,10 @@ import { FormulaireSynthese } from './FormulaireSynthese'
 import Tuile from '@/components/Tuile'
 
 const STATUT_BADGE: Record<string, { label: string; classe: string }> = {
-  brouillon: { label: 'Brouillon', classe: 'bg-stone-100 text-stone-500' },
-  phase_1: { label: 'Phase 1 — V1', classe: 'bg-green-100 text-green-700' },
-  phase_2: { label: 'Phase 2 — V-finale', classe: 'bg-blue-100 text-blue-700' },
-  fermee: { label: 'Fermée', classe: 'bg-stone-100 text-stone-500' },
+  brouillon: { label: 'Brouillon', classe: 'bg-parchemin-fonce text-muet' },
+  phase_1: { label: 'Phase 1 — V1', classe: 'bg-info-teinte text-info' },
+  phase_2: { label: 'Phase 2 — V-finale', classe: 'bg-info-teinte text-info' },
+  fermee: { label: 'Fermée', classe: 'bg-parchemin-fonce text-muet' },
 }
 
 const SANS_CLASSE = 'aucune'
@@ -48,9 +48,9 @@ export default async function CodexProfPage({ searchParams }: { searchParams: Pr
       <Link
         key={s.id}
         href={`/prof/codex/synthese/${s.id}`}
-        className="flex items-center justify-between gap-3 bg-white border border-stone-200 rounded-xl px-4 py-3 hover:border-stone-300 transition-colors"
+        className="flex items-center justify-between gap-3 bg-surface border border-bordure rounded-xl px-4 py-3 hover:border-pigment transition-colors"
       >
-        <p className="text-sm font-medium text-stone-800 truncate min-w-0">{labelUnite(s)}</p>
+        <p className="text-sm font-medium text-encre truncate min-w-0">{labelUnite(s)}</p>
         <span className={`text-xs px-2 py-0.5 rounded-full shrink-0 ${badge.classe}`}>{badge.label}</span>
       </Link>
     )
@@ -70,7 +70,7 @@ export default async function CodexProfPage({ searchParams }: { searchParams: Pr
       <FormulaireSynthese unites={unites} classes={classesList} />
 
       {toutes.length === 0 ? (
-        <p className="text-center text-stone-400 text-sm py-8">
+        <p className="text-center text-muet text-sm py-8">
           Aucune synthèse pour le moment. Crée-en une à partir d&apos;une unité du Scriptorium.
         </p>
       ) : (
@@ -101,25 +101,25 @@ export default async function CodexProfPage({ searchParams }: { searchParams: Pr
 
       {classeSel && (
         <div className="space-y-6">
-          <h3 className="text-base font-medium text-stone-900">{nomClasseSel ?? 'Classe'} — synthèses</h3>
-          {synthesesClasse.length === 0 && <p className="text-sm text-stone-400">Aucune synthèse pour cette classe.</p>}
+          <h3 className="text-base font-medium text-encre">{nomClasseSel ?? 'Classe'} — synthèses</h3>
+          {synthesesClasse.length === 0 && <p className="text-sm text-muet">Aucune synthèse pour cette classe.</p>}
           {enCours.length > 0 && (
             <section>
-              <h4 className="text-sm font-medium text-stone-500 mb-2 flex items-center gap-2">
-                <span className="w-2 h-2 rounded-full bg-green-400 animate-pulse" /> En cours
+              <h4 className="text-sm font-medium text-muet mb-2 flex items-center gap-2">
+                <span className="w-2 h-2 rounded-full bg-ok animate-pulse" /> En cours
               </h4>
               <div className="space-y-2">{enCours.map(ligneSynthese)}</div>
             </section>
           )}
           {brouillons.length > 0 && (
             <section>
-              <h4 className="text-sm font-medium text-stone-500 mb-2">Brouillons</h4>
+              <h4 className="text-sm font-medium text-muet mb-2">Brouillons</h4>
               <div className="space-y-2">{brouillons.map(ligneSynthese)}</div>
             </section>
           )}
           {fermees.length > 0 && (
             <section>
-              <h4 className="text-sm font-medium text-stone-500 mb-2">Synthèses passées</h4>
+              <h4 className="text-sm font-medium text-muet mb-2">Synthèses passées</h4>
               <div className="space-y-2">{fermees.map(ligneSynthese)}</div>
             </section>
           )}

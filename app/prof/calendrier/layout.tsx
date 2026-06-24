@@ -1,29 +1,20 @@
 import Link from 'next/link'
+import SousNavModule from '@/components/SousNavModule'
 
 export default function CalendrierLayout({ children }: { children: React.ReactNode }) {
   return (
     <div>
       <div className="mb-6">
-        <Link href="/prof" className="text-sm text-stone-500 hover:text-stone-700">
+        <Link href="/prof" className="text-sm text-muet hover:text-encre-douce">
           ← Tableau de bord
         </Link>
-        <h2 className="text-xl font-serif text-stone-900 mt-2">Calendrier</h2>
+        <h2 className="text-xl font-serif text-encre mt-2">Calendrier</h2>
       </div>
 
-      <nav className="flex gap-1 mb-6 border-b border-stone-200 pb-0">
-        {[
-          { href: '/prof/calendrier', label: 'Vue' },
-          { href: '/prof/calendrier/config', label: 'Configuration' },
-        ].map(({ href, label }) => (
-          <Link
-            key={href}
-            href={href}
-            className="px-4 py-2 text-sm text-stone-600 hover:text-stone-900 hover:bg-stone-50 rounded-t-lg border-b-2 border-transparent hover:border-stone-300 transition-colors"
-          >
-            {label}
-          </Link>
-        ))}
-      </nav>
+      <SousNavModule onglets={[
+        { href: '/prof/calendrier', label: 'Vue' },
+        { href: '/prof/calendrier/config', label: 'Configuration' },
+      ]} />
 
       {children}
     </div>

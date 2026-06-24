@@ -99,7 +99,7 @@ export default function CourbeEvolution({
           ))}
         </LineChart>
       </ResponsiveContainer>
-      {aLiens && <p className="text-xs text-center text-stone-400 mt-1">Cliquer sur un point pour le détail</p>}
+      {aLiens && <p className="text-xs text-center text-muet mt-1">Cliquer sur un point pour le détail</p>}
     </div>
   )
 }

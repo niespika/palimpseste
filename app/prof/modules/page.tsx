@@ -29,15 +29,15 @@ export default async function PageModules({ searchParams }: { searchParams: Prom
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-xl font-serif text-stone-900 mb-1">Modules</h2>
-        <p className="text-stone-500 text-sm">
+        <h2 className="text-xl font-serif text-encre mb-1">Modules</h2>
+        <p className="text-muet text-sm">
           Activez un module et accordez-y l&apos;accès <strong>par classe</strong>. Un élève voit un module
           s&apos;il est <strong>actif</strong> et qu&apos;une de ses classes y a accès (union pour les bi-classes).
         </p>
       </div>
 
       {!modules || modules.length === 0 ? (
-        <p className="text-stone-500 text-sm">Aucun module dans le catalogue.</p>
+        <p className="text-muet text-sm">Aucun module dans le catalogue.</p>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
           {(modules as Module[]).map((m) => {
@@ -52,10 +52,10 @@ export default async function PageModules({ searchParams }: { searchParams: Prom
                 selectionnee={moduleSel === m.id}
                 resume={
                   <div className="flex flex-wrap items-center gap-1.5 text-xs">
-                    <span className={`px-1.5 py-0.5 rounded-full ${m.actif ? 'bg-green-100 text-green-700' : 'bg-stone-100 text-stone-600'}`}>
+                    <span className={`px-1.5 py-0.5 rounded-full ${m.actif ? 'bg-ok-teinte text-ok' : 'bg-parchemin-fonce text-muet'}`}>
                       {m.actif ? 'Actif' : 'Fermé'}
                     </span>
-                    <span className="text-stone-500">{nbClasses} classe{nbClasses > 1 ? 's' : ''}</span>
+                    <span className="text-muet">{nbClasses} classe{nbClasses > 1 ? 's' : ''}</span>
                   </div>
                 }
               />

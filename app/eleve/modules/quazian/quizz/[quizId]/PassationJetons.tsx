@@ -124,8 +124,8 @@ export function PassationJetons({ sessionId, quizId, questions, reponsesInitiale
     return (
       <div className="text-center py-16">
         <div className="text-4xl mb-4">✓</div>
-        <h3 className="text-lg font-serif text-stone-900 mb-2">Quizz soumis !</h3>
-        <p className="text-sm text-stone-500">
+        <h3 className="text-lg font-serif text-encre mb-2">Quizz soumis !</h3>
+        <p className="text-sm text-encre-douce">
           Le retour sera disponible une fois que ton professeur aura fermé le quizz.
         </p>
       </div>
@@ -143,10 +143,10 @@ export function PassationJetons({ sessionId, quizId, questions, reponsesInitiale
               onClick={() => setIndexQuestion(i)}
               className={`w-7 h-7 text-xs rounded-md transition-colors ${
                 i === indexQuestion
-                  ? 'bg-stone-800 text-white'
+                  ? 'bg-bouton text-surface'
                   : reponses[questions[i].id]
-                  ? 'bg-green-100 text-green-700'
-                  : 'bg-stone-100 text-stone-400'
+                  ? 'bg-ok-teinte text-ok'
+                  : 'bg-parchemin-fonce text-muet'
               }`}
             >
               {i + 1}
@@ -154,14 +154,14 @@ export function PassationJetons({ sessionId, quizId, questions, reponsesInitiale
           ))}
         </div>
         <div className="flex items-center gap-2">
-          <span className="text-xs text-stone-400 inline-flex items-center gap-1" title="Ne quitte pas la page pendant le quiz">
+          <span className="text-xs text-muet inline-flex items-center gap-1" title="Ne quitte pas la page pendant le quiz">
             <svg className="w-3.5 h-3.5" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
               <path fillRule="evenodd" d="M10 1a4 4 0 0 0-4 4v2H5a2 2 0 0 0-2 2v7a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-1V5a4 4 0 0 0-4-4Zm2 6V5a2 2 0 1 0-4 0v2h4Z" clipRule="evenodd" />
             </svg>
             Page verrouillée
           </span>
           {secondesRestantes !== null && (
-            <span className={`text-sm font-mono font-bold ${secondesRestantes < 120 ? 'text-red-600' : 'text-stone-500'}`}>
+            <span className={`text-sm font-mono font-bold ${secondesRestantes < 120 ? 'text-retard' : 'text-encre-douce'}`}>
               {formatTemps(secondesRestantes)}
             </span>
           )}
@@ -169,22 +169,22 @@ export function PassationJetons({ sessionId, quizId, questions, reponsesInitiale
       </div>
 
       {/* Question */}
-      <div className="bg-white border border-stone-200 rounded-2xl p-6 mb-5 shadow-sm">
-        <p className="text-xs text-stone-400 mb-3">Question {indexQuestion + 1}/{questions.length}</p>
-        <p className="text-base font-medium text-stone-900 leading-relaxed">{question.enonce}</p>
+      <div className="bg-surface border border-bordure rounded-2xl p-6 mb-5 shadow-sm">
+        <p className="text-xs text-muet mb-3">Question {indexQuestion + 1}/{questions.length}</p>
+        <p className="text-base font-medium text-encre leading-relaxed">{question.enonce}</p>
       </div>
 
       {/* Jetons */}
-      <div className="bg-white border border-stone-200 rounded-2xl p-5 mb-4 shadow-sm">
+      <div className="bg-surface border border-bordure rounded-2xl p-5 mb-4 shadow-sm">
         <div className="flex items-center justify-between mb-4">
-          <p className="text-xs text-stone-500">Répartis 100 points entre les réponses</p>
+          <p className="text-xs text-encre-douce">Répartis 100 points entre les réponses</p>
           <div className="flex items-center gap-2">
-            <span className={`text-sm font-bold ${restants > 0 ? 'text-amber-600' : 'text-green-600'}`}>
+            <span className={`text-sm font-bold ${restants > 0 ? 'text-attention' : 'text-ok'}`}>
               {restants} restant{restants > 1 ? 's' : ''}
             </span>
             <button
               onClick={resetNeutral}
-              className="text-xs text-stone-400 hover:text-stone-600 underline"
+              className="text-xs text-muet hover:text-encre-douce underline"
             >
               Je ne sais pas
             </button>
@@ -194,23 +194,23 @@ export function PassationJetons({ sessionId, quizId, questions, reponsesInitiale
         <div className="space-y-3">
           {question.options.map((opt, i) => (
             <div key={i} className="flex items-center gap-3">
-              <span className="w-6 text-xs font-bold text-stone-400 shrink-0">{LETTRES[i]}</span>
-              <p className="flex-1 text-sm text-stone-800 leading-snug">{opt}</p>
+              <span className="w-6 text-xs font-bold text-muet shrink-0">{LETTRES[i]}</span>
+              <p className="flex-1 text-sm text-encre leading-snug">{opt}</p>
               <div className="flex items-center gap-1 shrink-0">
                 <button
                   onClick={() => modifierJeton(i, -5)}
                   disabled={jetonsActuels[i] <= 0}
-                  className="w-8 h-8 rounded-lg bg-stone-100 text-stone-600 hover:bg-stone-200 disabled:opacity-30 text-lg font-bold leading-none"
+                  className="w-8 h-8 rounded-lg bg-parchemin-fonce text-encre-douce hover:bg-bordure disabled:opacity-30 text-lg font-bold leading-none"
                 >
                   −
                 </button>
-                <span className={`w-10 text-center text-sm font-bold tabular-nums ${jetonsActuels[i] > 50 ? 'text-violet-600' : 'text-stone-700'}`}>
+                <span className={`w-10 text-center text-sm font-bold tabular-nums ${jetonsActuels[i] > 50 ? 'text-pigment' : 'text-encre-douce'}`}>
                   {jetonsActuels[i]}
                 </span>
                 <button
                   onClick={() => modifierJeton(i, 5)}
                   disabled={restants <= 0}
-                  className="w-8 h-8 rounded-lg bg-stone-100 text-stone-600 hover:bg-stone-200 disabled:opacity-30 text-lg font-bold leading-none"
+                  className="w-8 h-8 rounded-lg bg-parchemin-fonce text-encre-douce hover:bg-bordure disabled:opacity-30 text-lg font-bold leading-none"
                 >
                   +
                 </button>
@@ -225,7 +225,7 @@ export function PassationJetons({ sessionId, quizId, questions, reponsesInitiale
         {indexQuestion > 0 && (
           <button
             onClick={() => setIndexQuestion(indexQuestion - 1)}
-            className="px-4 py-2.5 text-sm bg-stone-100 text-stone-600 rounded-xl hover:bg-stone-200"
+            className="px-4 py-2.5 text-sm bg-parchemin-fonce text-encre-douce rounded-xl hover:bg-bordure"
           >
             ← Précédent
           </button>
@@ -235,7 +235,7 @@ export function PassationJetons({ sessionId, quizId, questions, reponsesInitiale
           <button
             onClick={validerEtSuivant}
             disabled={!peutSoumettre || pending}
-            className="flex-1 py-2.5 text-sm bg-stone-800 text-white rounded-xl hover:bg-stone-900 disabled:opacity-40 transition-colors"
+            className="flex-1 py-2.5 text-sm bg-bouton text-surface rounded-xl hover:opacity-90 disabled:opacity-40 transition-colors"
           >
             {pending ? 'Sauvegarde…' : 'Suivant →'}
           </button>
@@ -243,7 +243,7 @@ export function PassationJetons({ sessionId, quizId, questions, reponsesInitiale
           <button
             onClick={handleSoumettre}
             disabled={pending}
-            className="flex-1 py-2.5 text-sm bg-green-600 text-white rounded-xl hover:bg-green-700 disabled:opacity-40 transition-colors font-medium"
+            className="flex-1 py-2.5 text-sm bg-ok text-surface rounded-xl hover:opacity-90 disabled:opacity-40 transition-colors font-medium"
           >
             {pending ? 'Envoi…' : 'Soumettre le quizz'}
           </button>

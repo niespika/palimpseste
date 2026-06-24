@@ -183,10 +183,10 @@ export default function EnregistreurAudio({ presentationId, eleveId }: Props) {
 
   if (mode === 'upload') {
     return (
-      <div className="bg-white border border-stone-200 rounded-xl p-8 text-center space-y-3">
-        <div className="w-8 h-8 border-2 border-stone-300 border-t-stone-700 rounded-full animate-spin mx-auto" />
-        <p className="text-stone-600 text-sm">{progression}</p>
-        <p className="text-stone-400 text-xs">La transcription et l'analyse démarrent en arrière-plan.</p>
+      <div className="bg-surface border border-bordure rounded-xl p-8 text-center space-y-3">
+        <div className="w-8 h-8 border-2 border-bordure border-t-encre-douce rounded-full animate-spin mx-auto" />
+        <p className="text-encre-douce text-sm">{progression}</p>
+        <p className="text-muet text-xs">La transcription et l'analyse démarrent en arrière-plan.</p>
       </div>
     )
   }
@@ -194,28 +194,28 @@ export default function EnregistreurAudio({ presentationId, eleveId }: Props) {
   if (mode === 'apercu') {
     const tailleMo = audioBlob ? (audioBlob.size / 1024 / 1024).toFixed(1) : '?'
     return (
-      <div className="bg-white border border-stone-200 rounded-xl p-5 space-y-4">
-        <h3 className="font-medium text-stone-900">Écouter avant d'envoyer</h3>
+      <div className="bg-surface border border-bordure rounded-xl p-5 space-y-4">
+        <h3 className="font-medium text-encre">Écouter avant d'envoyer</h3>
         {audioUrl && (
           <audio controls src={audioUrl} className="w-full" />
         )}
-        <div className="text-sm text-stone-500 flex gap-4">
+        <div className="text-sm text-muet flex gap-4">
           {duree > 0 && <span>Durée : {formaterDuree(duree)}</span>}
           <span>Taille : {tailleMo} Mo</span>
         </div>
-        {erreur && <p className="text-red-600 text-sm">{erreur}</p>}
+        {erreur && <p className="text-retard text-sm">{erreur}</p>}
         <div className="flex gap-3">
           <button
             onClick={handleEnvoyer}
             disabled={chargement}
-            className="bg-stone-800 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-stone-700 disabled:opacity-50 transition-colors"
+            className="bg-bouton text-surface px-4 py-2 rounded-lg text-sm font-medium hover:opacity-90 disabled:opacity-50 transition-colors"
           >
             Envoyer pour transcription
           </button>
           <button
             onClick={recommencer}
             disabled={chargement}
-            className="px-4 py-2 rounded-lg text-sm text-stone-600 hover:bg-stone-100 transition-colors"
+            className="px-4 py-2 rounded-lg text-sm text-encre-douce hover:bg-parchemin-fonce transition-colors"
           >
             Recommencer
           </button>
@@ -227,51 +227,51 @@ export default function EnregistreurAudio({ presentationId, eleveId }: Props) {
   if (mode === 'enregistrement') {
     const depasse = duree >= MAX_SECONDES - 60
     return (
-      <div className="bg-white border border-stone-200 rounded-xl p-6 space-y-5 text-center">
-        <div className={`text-5xl font-mono font-light ${depasse ? 'text-orange-600' : 'text-stone-900'}`}>
+      <div className="bg-surface border border-bordure rounded-xl p-6 space-y-5 text-center">
+        <div className={`text-5xl font-mono font-light ${depasse ? 'text-attention' : 'text-encre'}`}>
           {formaterDuree(duree)}
         </div>
         {depasse && (
-          <p className="text-orange-600 text-sm">Moins d'une minute restante (limite 10 min)</p>
+          <p className="text-attention text-sm">Moins d'une minute restante (limite 10 min)</p>
         )}
         <div className="flex justify-center gap-3">
           <button
             onClick={pauseReprendre}
-            className="px-4 py-2 rounded-lg text-sm border border-stone-300 hover:bg-stone-50 transition-colors"
+            className="px-4 py-2 rounded-lg text-sm border border-bordure hover:bg-parchemin-fonce transition-colors"
           >
             {enPause ? 'Reprendre' : 'Pause'}
           </button>
           <button
             onClick={arreterEnregistrement}
-            className="bg-red-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-red-700 transition-colors"
+            className="bg-retard text-surface px-4 py-2 rounded-lg text-sm font-medium hover:opacity-90 transition-colors"
           >
             Arrêter
           </button>
         </div>
-        <div className="flex items-center justify-center gap-2 text-sm text-stone-500">
-          <span className={`w-2 h-2 rounded-full ${enPause ? 'bg-stone-400' : 'bg-red-500 animate-pulse'}`} />
+        <div className="flex items-center justify-center gap-2 text-sm text-muet">
+          <span className={`w-2 h-2 rounded-full ${enPause ? 'bg-muet' : 'bg-retard animate-pulse'}`} />
           {enPause ? 'En pause' : 'Enregistrement en cours'}
         </div>
-        {erreur && <p className="text-red-600 text-sm">{erreur}</p>}
+        {erreur && <p className="text-retard text-sm">{erreur}</p>}
       </div>
     )
   }
 
   // mode === 'choix' ou 'import'
   return (
-    <div className="bg-white border border-stone-200 rounded-xl p-5 space-y-5">
-      <h3 className="font-medium text-stone-900">Enregistrement de la présentation</h3>
+    <div className="bg-surface border border-bordure rounded-xl p-5 space-y-5">
+      <h3 className="font-medium text-encre">Enregistrement de la présentation</h3>
 
       <div className="flex gap-2">
         <button
           onClick={() => setMode('choix')}
-          className={`px-3 py-1.5 rounded text-sm transition-colors ${mode === 'choix' ? 'bg-stone-800 text-white' : 'text-stone-600 hover:bg-stone-100'}`}
+          className={`px-3 py-1.5 rounded text-sm transition-colors ${mode === 'choix' ? 'bg-bouton text-surface' : 'text-encre-douce hover:bg-parchemin-fonce'}`}
         >
           Enregistrer
         </button>
         <button
           onClick={() => setMode('import')}
-          className={`px-3 py-1.5 rounded text-sm transition-colors ${mode === 'import' ? 'bg-stone-800 text-white' : 'text-stone-600 hover:bg-stone-100'}`}
+          className={`px-3 py-1.5 rounded text-sm transition-colors ${mode === 'import' ? 'bg-bouton text-surface' : 'text-encre-douce hover:bg-parchemin-fonce'}`}
         >
           Importer un fichier
         </button>
@@ -279,32 +279,32 @@ export default function EnregistreurAudio({ presentationId, eleveId }: Props) {
 
       {mode === 'choix' && (
         <div className="space-y-3">
-          <p className="text-sm text-stone-500">
+          <p className="text-sm text-muet">
             L'enregistrement utilisera le microphone de cet appareil. Limite : 10 minutes / 25 Mo.
           </p>
           <button
             onClick={demarrerEnregistrement}
-            className="flex items-center gap-2 bg-red-600 text-white px-5 py-2.5 rounded-lg text-sm font-medium hover:bg-red-700 transition-colors"
+            className="flex items-center gap-2 bg-retard text-surface px-5 py-2.5 rounded-lg text-sm font-medium hover:opacity-90 transition-colors"
           >
-            <span className="w-2 h-2 bg-white rounded-full" />
+            <span className="w-2 h-2 bg-surface rounded-full" />
             Commencer l'enregistrement
           </button>
-          {erreur && <p className="text-red-600 text-sm">{erreur}</p>}
+          {erreur && <p className="text-retard text-sm">{erreur}</p>}
         </div>
       )}
 
       {mode === 'import' && (
         <div className="space-y-3">
-          <p className="text-sm text-stone-500">
+          <p className="text-sm text-muet">
             Formats acceptés : m4a, mp3, webm, wav, ogg. Taille max : 25 Mo.
           </p>
           <input
             type="file"
             accept="audio/mp4,audio/m4a,audio/mpeg,audio/mp3,audio/webm,audio/wav,audio/ogg,.m4a,.mp3,.webm,.wav,.ogg"
             onChange={handleFichierChange}
-            className="block text-sm text-stone-700 file:mr-3 file:py-1.5 file:px-3 file:rounded file:border file:border-stone-300 file:text-sm file:bg-white file:text-stone-700 hover:file:bg-stone-50"
+            className="block text-sm text-encre-douce file:mr-3 file:py-1.5 file:px-3 file:rounded file:border file:border-bordure file:text-sm file:bg-surface file:text-encre-douce hover:file:bg-parchemin-fonce"
           />
-          {erreur && <p className="text-red-600 text-sm">{erreur}</p>}
+          {erreur && <p className="text-retard text-sm">{erreur}</p>}
         </div>
       )}
     </div>

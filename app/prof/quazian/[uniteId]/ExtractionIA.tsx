@@ -44,7 +44,7 @@ export function ExtractionIA({
         <select
           value={documentId}
           onChange={(e) => setDocumentId(e.target.value)}
-          className="px-3 py-2 text-sm border border-stone-300 rounded-lg text-stone-700 bg-white focus:outline-none focus:ring-2 focus:ring-stone-400"
+          className="px-3 py-2 text-sm border border-bordure rounded-lg text-encre-douce bg-surface focus:outline-none focus:ring-2 focus:ring-pigment"
         >
           <option value="tous">Tous les documents</option>
           {docs.map((d) => (
@@ -57,17 +57,17 @@ export function ExtractionIA({
       <button
         onClick={handleExtraction}
         disabled={loading || !aDesTextes}
-        className="px-4 py-2 bg-violet-600 text-white text-sm rounded-lg hover:bg-violet-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+        className="px-4 py-2 bg-bouton text-surface text-sm rounded-lg hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
       >
         {loading ? 'Extraction en cours…' : '✦ Générer des cartes avec l’IA'}
       </button>
       {!aDesTextes && (
-        <p className="text-xs text-stone-400">
+        <p className="text-xs text-muet">
           Aucun texte extrait dans le Scriptorium pour cette unité.
         </p>
       )}
-      {message && <p className="text-xs text-green-700">{message}</p>}
-      {erreur && <p className="text-xs text-red-600">{erreur}</p>}
+      {message && <p className="text-xs text-ok">{message}</p>}
+      {erreur && <p className="text-xs text-retard">{erreur}</p>}
     </div>
   )
 }

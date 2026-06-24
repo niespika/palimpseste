@@ -43,8 +43,8 @@ export default function FiltreClasses({
         onClick={() => pousser(null)}
         className={`text-xs px-2.5 py-1 rounded-full border transition-colors ${
           selection === null
-            ? 'bg-stone-800 text-white border-stone-800'
-            : 'bg-white text-stone-600 border-stone-200 hover:bg-stone-50'
+            ? 'bg-bouton text-surface border-bouton'
+            : 'bg-surface text-encre-douce border-bordure hover:bg-parchemin-fonce'
         }`}
       >
         Toutes
@@ -56,7 +56,7 @@ export default function FiltreClasses({
             key={c.id}
             onClick={() => basculer(c.id)}
             className={`text-xs px-2.5 py-1 rounded-full border transition-colors flex items-center gap-1.5 ${
-              actif ? 'border-stone-400 bg-white text-stone-800' : 'border-stone-200 bg-stone-50 text-stone-400'
+              actif ? 'border-bordure bg-surface text-encre' : 'border-bordure bg-parchemin-fonce text-muet'
             }`}
           >
             <span

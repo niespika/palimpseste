@@ -24,11 +24,11 @@ export default function BoutonGenererSemaine({ uniteId, semaine, dejaDesCartes }
       <button
         onClick={handleGenerer}
         disabled={chargement}
-        className="text-xs px-3 py-1.5 bg-violet-600 text-white rounded-lg hover:bg-violet-700 disabled:opacity-50 transition-colors"
+        className="text-xs px-3 py-1.5 bg-bouton text-surface rounded-lg hover:opacity-90 disabled:opacity-50 transition-colors"
       >
         {chargement ? 'Génération…' : dejaDesCartes ? '✦ Régénérer' : '✦ Générer'}
       </button>
-      {message && <span className="text-xs text-stone-500">{message}</span>}
+      {message && <span className="text-xs text-muet">{message}</span>}
     </div>
   )
 }

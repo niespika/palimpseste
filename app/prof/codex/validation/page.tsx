@@ -66,7 +66,7 @@ export default async function ValidationPage() {
 
   return (
     <div>
-      <p className="text-sm text-stone-500 mb-5">
+      <p className="text-sm text-encre-douce mb-5">
         Tu valides <strong>uniquement le retour critique de la V-finale</strong>. Les passages incertains
         (faible confiance OCR, gros volume) sont remontés en haut ; le reste est validable en lot.
       </p>

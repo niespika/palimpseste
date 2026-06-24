@@ -6,19 +6,19 @@ import { chargerCapstoneLivre, contexteAletheia, estSemaineDebloquee, lireReglag
 import type { StatutAletheia } from './types'
 
 const BADGE: Record<StatutAletheia, { texte: string; classe: string }> = {
-  DRAFT: { texte: 'À commencer', classe: 'bg-stone-100 text-stone-500' },
-  V1_SUBMITTED: { texte: 'Travail soumis', classe: 'bg-amber-50 text-amber-700' },
-  FEEDBACK1_READY: { texte: 'Retour à lire', classe: 'bg-amber-50 text-amber-700' },
-  VF_SUBMITTED: { texte: 'Version finale soumise', classe: 'bg-amber-50 text-amber-700' },
-  FEEDBACK2_READY: { texte: 'Retour final à valider', classe: 'bg-amber-50 text-amber-700' },
-  DONE: { texte: 'Terminée', classe: 'bg-green-50 text-green-700' },
+  DRAFT: { texte: 'À commencer', classe: 'bg-parchemin-fonce text-muet' },
+  V1_SUBMITTED: { texte: 'Travail soumis', classe: 'bg-attention-teinte text-attention' },
+  FEEDBACK1_READY: { texte: 'Retour à lire', classe: 'bg-attention-teinte text-attention' },
+  VF_SUBMITTED: { texte: 'Version finale soumise', classe: 'bg-attention-teinte text-attention' },
+  FEEDBACK2_READY: { texte: 'Retour final à valider', classe: 'bg-attention-teinte text-attention' },
+  DONE: { texte: 'Terminée', classe: 'bg-ok-teinte text-ok' },
 }
 
 function CarteMessage({ children }: { children: React.ReactNode }) {
   return (
     <div className="space-y-6 pb-8">
-      <Link href="/eleve" className="text-sm text-stone-500 hover:text-stone-700">← Retour</Link>
-      <div className="bg-white border border-stone-200 rounded-xl p-6 text-center text-stone-500 text-sm">{children}</div>
+      <Link href="/eleve" className="text-sm text-muet hover:text-encre-douce">← Retour</Link>
+      <div className="bg-surface border border-bordure rounded-xl p-6 text-center text-muet text-sm">{children}</div>
     </div>
   )
 }
@@ -47,12 +47,12 @@ export default async function PageAletheia() {
   return (
     <div className="space-y-6 pb-8">
       <div>
-        <Link href="/eleve" className="text-sm text-stone-500 hover:text-stone-700">← Retour</Link>
+        <Link href="/eleve" className="text-sm text-muet hover:text-encre-douce">← Retour</Link>
       </div>
 
       <div>
-        <h2 className="text-xl font-serif text-stone-900">Aletheia</h2>
-        <p className="text-sm text-stone-500 mt-1">Lis le livre dans ton exemplaire, semaine après semaine. Pour chaque semaine : note l’idée principale, les arguments et ton accord, pose tes questions et ton vocabulaire, puis réécris et lis ton retour.</p>
+        <h2 className="text-xl font-serif text-encre">Aletheia</h2>
+        <p className="text-sm text-muet mt-1">Lis le livre dans ton exemplaire, semaine après semaine. Pour chaque semaine : note l’idée principale, les arguments et ton accord, pose tes questions et ton vocabulaire, puis réécris et lis ton retour.</p>
       </div>
 
       {livres.length === 0 ? (
@@ -65,12 +65,12 @@ export default async function PageAletheia() {
           const numerosSemaines = livre.semaines.map(s => s.semaine)
           const doneSet = new Set(livre.semaines.filter(s => travaux?.get(s.semaine)?.statut === 'DONE').map(s => s.semaine))
           return (
-            <div key={livre.id} className="bg-white border border-stone-200 rounded-xl p-5 space-y-3">
+            <div key={livre.id} className="bg-surface border border-bordure rounded-xl p-5 space-y-3">
               <div>
-                <h3 className="font-medium text-stone-900">{livre.titre}</h3>
-                <p className="text-xs text-stone-400 mt-0.5">{livre.nb_semaines ?? livre.semaines.length} semaines de lecture</p>
+                <h3 className="font-medium text-encre">{livre.titre}</h3>
+                <p className="text-xs text-muet mt-0.5">{livre.nb_semaines ?? livre.semaines.length} semaines de lecture</p>
               </div>
-              <ul className="divide-y divide-stone-100">
+              <ul className="divide-y divide-bordure">
                 {livre.semaines.map(s => {
                   const statut = travaux?.get(s.semaine)?.statut ?? 'DRAFT'
                   const b = BADGE[statut]
@@ -78,16 +78,16 @@ export default async function PageAletheia() {
                   const corps = (
                     <>
                       <div className="min-w-0">
-                        <p className="text-sm font-medium text-stone-800">
+                        <p className="text-sm font-medium text-encre">
                           Semaine {s.semaine} — {s.titre}
                         </p>
-                        <p className="text-xs text-stone-400 mt-0.5">
-                          {s.chapitres && <span className="text-violet-600">{s.chapitres}</span>}
+                        <p className="text-xs text-muet mt-0.5">
+                          {s.chapitres && <span className="text-pigment">{s.chapitres}</span>}
                           {s.chapitres && s.dateIndicative && ' · '}
                           {s.dateIndicative && <span>à partir du {s.dateIndicative}</span>}
                         </p>
                       </div>
-                      <span className={`text-xs px-2 py-0.5 rounded flex-shrink-0 ${debloquee ? b.classe : 'bg-stone-100 text-stone-400'}`}>
+                      <span className={`text-xs px-2 py-0.5 rounded flex-shrink-0 ${debloquee ? b.classe : 'bg-parchemin-fonce text-muet'}`}>
                         {debloquee ? b.texte : '🔒 Verrouillée'}
                       </span>
                     </>
@@ -97,7 +97,7 @@ export default async function PageAletheia() {
                       {debloquee ? (
                         <Link
                           href={`/eleve/modules/aletheia/${livre.id}/${s.semaine}`}
-                          className="flex items-center justify-between gap-3 py-3 hover:bg-stone-50 -mx-2 px-2 rounded-lg transition-colors"
+                          className="flex items-center justify-between gap-3 py-3 hover:bg-parchemin-fonce -mx-2 px-2 rounded-lg transition-colors"
                         >
                           {corps}
                         </Link>
@@ -114,14 +114,14 @@ export default async function PageAletheia() {
               {/* Carte d'architecture (générée par le prof) : l'élève la voit une fois
                   qu'il a lui-même tout terminé — anti-spoiler de l'aval. */}
               {toutesDone && (
-                <div className="border-t border-stone-100 pt-3">
+                <div className="border-t border-bordure pt-3">
                   {cap?.statut === 'READY' ? (
                     <Link href={`/eleve/modules/aletheia/${livre.id}/capstone`}
-                      className="block w-full text-center bg-stone-800 text-white py-2.5 rounded-xl text-sm font-medium hover:bg-stone-700 transition-colors">
+                      className="block w-full text-center bg-bouton text-surface py-2.5 rounded-xl text-sm font-medium hover:opacity-90 transition-colors">
                       ✦ Voir la carte d&apos;architecture du livre →
                     </Link>
                   ) : (
-                    <p className="text-sm text-stone-500">Tu as terminé le livre ! La carte d&apos;architecture sera bientôt disponible.</p>
+                    <p className="text-sm text-muet">Tu as terminé le livre ! La carte d&apos;architecture sera bientôt disponible.</p>
                   )}
                 </div>
               )}

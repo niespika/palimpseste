@@ -67,12 +67,12 @@ export default async function UniteCartesPage({
     <div>
       <div className="mb-6 flex items-start justify-between gap-4 flex-wrap">
         <div>
-          <Link href="/prof/quazian" className="text-sm text-stone-500 hover:text-stone-700">
+          <Link href="/prof/quazian" className="text-sm text-muet hover:text-encre-douce">
             ← Toutes les unités
           </Link>
-          <h3 className="text-lg font-serif text-stone-900 mt-2">{unite.label}</h3>
-          {unite.classe && <p className="text-sm text-stone-400">{unite.classe}</p>}
-          <p className="text-sm text-stone-400 mt-1">
+          <h3 className="text-lg font-serif text-encre mt-2">{unite.label}</h3>
+          {unite.classe && <p className="text-sm text-muet">{unite.classe}</p>}
+          <p className="text-sm text-muet mt-1">
             {validees.length} validée{validees.length > 1 ? 's' : ''}
             {suggerees.length > 0 && ` · ${suggerees.length} à valider`}
             {archivees.length > 0 && ` · ${archivees.length} archivée${archivees.length > 1 ? 's' : ''}`}
@@ -87,8 +87,8 @@ export default async function UniteCartesPage({
             disabled={validees.length === 0 && !visible}
             className={`px-4 py-2 text-sm rounded-lg transition-colors ${
               visible
-                ? 'bg-green-100 text-green-700 hover:bg-green-200'
-                : 'bg-stone-100 text-stone-600 hover:bg-stone-200'
+                ? 'bg-ok-teinte text-ok hover:opacity-90'
+                : 'bg-parchemin-fonce text-muet hover:opacity-90'
             } disabled:opacity-40`}
           >
             {visible ? '● Visible aux élèves — Masquer' : '○ Masqué — Publier aux élèves'}
@@ -97,7 +97,7 @@ export default async function UniteCartesPage({
       </div>
 
       {/* Extraction IA */}
-      <div className="bg-white border border-stone-200 rounded-xl p-4 mb-6">
+      <div className="bg-surface border border-bordure rounded-xl p-4 mb-6">
         <ExtractionIA uniteId={uniteId} docs={docsTexte ?? []} />
       </div>
 
@@ -105,14 +105,14 @@ export default async function UniteCartesPage({
       {suggerees.length > 0 && (
         <section className="mb-8">
           <div className="flex items-center justify-between mb-3">
-            <h4 className="text-sm font-medium text-amber-700">
+            <h4 className="text-sm font-medium text-attention">
               À valider ({suggerees.length})
             </h4>
             <form action={actionValiderToutes}>
               <input type="hidden" name="uniteId" value={uniteId} />
               <button
                 type="submit"
-                className="px-3 py-1 text-xs bg-green-600 text-white rounded-lg hover:bg-green-700"
+                className="px-3 py-1 text-xs bg-ok text-surface rounded-lg hover:opacity-90"
               >
                 ✓ Tout valider
               </button>
@@ -129,7 +129,7 @@ export default async function UniteCartesPage({
       {/* Cartes à vérifier */}
       {aVerifier.length > 0 && (
         <section className="mb-8">
-          <h4 className="text-sm font-medium text-red-700 mb-3">À vérifier ({aVerifier.length})</h4>
+          <h4 className="text-sm font-medium text-retard mb-3">À vérifier ({aVerifier.length})</h4>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             {aVerifier.map((c) => (
               <CarteFlashcard key={c.id} carte={{ ...c, unite_id: uniteId }} uniteId={uniteId} />
@@ -141,8 +141,8 @@ export default async function UniteCartesPage({
       {/* Cartes validées — repliées par défaut */}
       {validees.length > 0 && (
         <details className="mb-6 group">
-          <summary className="cursor-pointer list-none flex items-center gap-2 text-sm font-medium text-stone-600 hover:text-stone-800 select-none mb-1">
-            <span className="text-stone-400 group-open:rotate-90 transition-transform inline-block">▶</span>
+          <summary className="cursor-pointer list-none flex items-center gap-2 text-sm font-medium text-encre-douce hover:text-encre select-none mb-1">
+            <span className="text-muet group-open:rotate-90 transition-transform inline-block">▶</span>
             Validées ({validees.length})
           </summary>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-3">
@@ -156,8 +156,8 @@ export default async function UniteCartesPage({
       {/* Cartes archivées — repliées par défaut */}
       {archivees.length > 0 && (
         <details className="mb-6 group">
-          <summary className="cursor-pointer list-none flex items-center gap-2 text-sm font-medium text-stone-400 hover:text-stone-600 select-none mb-1">
-            <span className="text-stone-300 group-open:rotate-90 transition-transform inline-block">▶</span>
+          <summary className="cursor-pointer list-none flex items-center gap-2 text-sm font-medium text-muet hover:text-encre-douce select-none mb-1">
+            <span className="text-bordure group-open:rotate-90 transition-transform inline-block">▶</span>
             Archivées ({archivees.length})
           </summary>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-3">
@@ -169,14 +169,14 @@ export default async function UniteCartesPage({
       )}
 
       {(toutes ?? []).length === 0 && (
-        <p className="text-stone-400 text-sm text-center py-8">
+        <p className="text-muet text-sm text-center py-8">
           Aucune carte pour l'instant. Lance l'extraction IA ou ajoute une carte manuellement.
         </p>
       )}
 
       {/* Ajout manuel */}
-      <section className="mt-8 bg-white border border-stone-200 rounded-xl p-5">
-        <h4 className="text-sm font-medium text-stone-700 mb-4">Ajouter une carte manuellement</h4>
+      <section className="mt-8 bg-surface border border-bordure rounded-xl p-5">
+        <h4 className="text-sm font-medium text-encre-douce mb-4">Ajouter une carte manuellement</h4>
         <form action={actionAjouter} className="space-y-3">
           <input type="hidden" name="uniteId" value={uniteId} />
 
@@ -204,25 +204,25 @@ export default async function UniteCartesPage({
             type="text"
             name="concept_tag"
             placeholder="Concept-clé (ex. volonté de puissance)"
-            className="w-full px-3 py-2 text-sm border border-stone-300 rounded-lg"
+            className="w-full px-3 py-2 text-sm border border-bordure rounded-lg"
           />
           <textarea
             name="recto"
             placeholder="Recto — question ou texte à trous avec {{…}}"
             rows={2}
             required
-            className="w-full px-3 py-2 text-sm border border-stone-300 rounded-lg resize-none"
+            className="w-full px-3 py-2 text-sm border border-bordure rounded-lg resize-none"
           />
           <textarea
             name="verso"
             placeholder="Verso — réponse"
             rows={2}
             required
-            className="w-full px-3 py-2 text-sm border border-stone-300 rounded-lg resize-none"
+            className="w-full px-3 py-2 text-sm border border-bordure rounded-lg resize-none"
           />
           <button
             type="submit"
-            className="px-4 py-2 bg-stone-800 text-white text-sm rounded-lg hover:bg-stone-900 transition-colors"
+            className="px-4 py-2 bg-bouton text-surface text-sm rounded-lg hover:opacity-90 transition-colors"
           >
             Ajouter
           </button>

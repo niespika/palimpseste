@@ -83,35 +83,35 @@ export default async function SynthesePage({
   return (
     <div>
       <div className="mb-6">
-        <Link href="/prof/codex" className="text-sm text-stone-500 hover:text-stone-700">
+        <Link href="/prof/codex" className="text-sm text-muet hover:text-encre-douce">
           ← Synthèses
         </Link>
-        <h3 className="text-lg font-serif text-stone-900 mt-2">{uniteLabel}</h3>
-        <p className="text-sm text-stone-400">
+        <h3 className="text-lg font-serif text-encre mt-2">{uniteLabel}</h3>
+        <p className="text-sm text-muet">
           {classeNom ? `${classeNom} · ` : ''}{session.duree_phase_min} min par phase
         </p>
       </div>
 
       {session.statut === 'brouillon' ? (
-        <div className="bg-white border border-stone-200 rounded-xl p-6 text-center">
-          <p className="text-stone-600 text-sm mb-1">
+        <div className="bg-surface border border-bordure rounded-xl p-6 text-center">
+          <p className="text-encre-douce text-sm mb-1">
             La discussion de synthèse orale se fait hors logiciel.
           </p>
-          <p className="text-stone-400 text-xs mb-5">
+          <p className="text-muet text-xs mb-5">
             Lance la synthèse quand les élèves sont prêts à écrire la V1 (livre fermé, manuscrit).
           </p>
           <form action={actionLancer}>
             <input type="hidden" name="sessionId" value={sessionId} />
             <button
               type="submit"
-              className="px-8 py-3 bg-green-600 text-white rounded-xl hover:bg-green-700 transition-colors font-medium"
+              className="px-8 py-3 bg-ok text-surface rounded-xl hover:opacity-90 transition-colors font-medium"
             >
               Lancer la phase 1 (V1)
             </button>
           </form>
           <form action={actionSupprimer} className="mt-4">
             <input type="hidden" name="id" value={sessionId} />
-            <button type="submit" className="text-xs text-stone-400 hover:text-red-600">
+            <button type="submit" className="text-xs text-muet hover:text-retard">
               Supprimer ce brouillon
             </button>
           </form>

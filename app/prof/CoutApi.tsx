@@ -40,19 +40,19 @@ export default async function CoutApi() {
 
   return (
     <section className="space-y-3">
-      <h3 className="text-sm font-medium text-stone-500 uppercase tracking-wide">Coût API</h3>
-      <div className="bg-white border border-stone-200 rounded-xl p-5">
+      <h3 className="text-sm font-medium text-muet uppercase tracking-wide">Coût API</h3>
+      <div className="bg-surface border border-bordure rounded-xl p-5">
         <div className="flex items-baseline justify-between gap-3">
-          <p className="text-2xl font-serif text-stone-900">{fmt(total)}</p>
-          <p className="text-xs text-stone-400 capitalize">{moisLabel}</p>
+          <p className="text-2xl font-serif text-encre">{fmt(total)}</p>
+          <p className="text-xs text-muet capitalize">{moisLabel}</p>
         </div>
         {lignes.length === 0 ? (
-          <p className="text-sm text-stone-400 mt-2">Aucun coût ce mois-ci.</p>
+          <p className="text-sm text-muet mt-2">Aucun coût ce mois-ci.</p>
         ) : (
           <div className="flex flex-wrap gap-x-4 gap-y-1 mt-3">
             {lignes.map(([nom, v]) => (
-              <span key={nom} className="text-sm text-stone-600">
-                {nom} <span className="text-stone-400">{fmt(v)}</span>
+              <span key={nom} className="text-sm text-encre-douce">
+                {nom} <span className="text-muet">{fmt(v)}</span>
               </span>
             ))}
           </div>

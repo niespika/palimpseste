@@ -27,8 +27,8 @@ export default async function PageCapstone({ params }: { params: Promise<{ livre
   if (!cap || cap.statut !== 'READY' || !cap.contenu) {
     return (
       <div className="space-y-5 pb-8">
-        <Link href="/eleve/modules/aletheia" className="text-sm text-stone-500 hover:text-stone-700">← Planning</Link>
-        <div className="bg-white border border-stone-200 rounded-xl p-6 text-center text-stone-500 text-sm">
+        <Link href="/eleve/modules/aletheia" className="text-sm text-muet hover:text-encre-douce">← Planning</Link>
+        <div className="bg-surface border border-bordure rounded-xl p-6 text-center text-muet text-sm">
           {cap?.statut === 'PENDING'
             ? 'Ta carte d’architecture est en cours de préparation. Cette page se mettra à jour automatiquement.'
             : 'La carte d’architecture n’est pas encore disponible.'}
@@ -43,31 +43,31 @@ export default async function PageCapstone({ params }: { params: Promise<{ livre
   return (
     <div className="space-y-5 pb-8">
       <div className="flex items-center justify-between gap-3 flex-wrap print:hidden">
-        <Link href="/eleve/modules/aletheia" className="text-sm text-stone-500 hover:text-stone-700">← Planning</Link>
+        <Link href="/eleve/modules/aletheia" className="text-sm text-muet hover:text-encre-douce">← Planning</Link>
         <BoutonImprimerCapstone />
       </div>
 
       <div>
-        {livre?.label && <p className="text-xs text-stone-400">{livre.label as string}</p>}
-        <h2 className="text-xl font-serif text-stone-900">✦ Carte d&apos;architecture du livre</h2>
-        <p className="text-sm text-stone-500 mt-1">La vue d&apos;ensemble du mouvement argumentatif, maintenant que tu as tout lu.</p>
+        {livre?.label && <p className="text-xs text-muet">{livre.label as string}</p>}
+        <h2 className="text-xl font-serif text-encre">✦ Carte d&apos;architecture du livre</h2>
+        <p className="text-sm text-muet mt-1">La vue d&apos;ensemble du mouvement argumentatif, maintenant que tu as tout lu.</p>
       </div>
 
       {fil_conducteur && (
-        <section className="bg-white border border-stone-200 rounded-xl p-5">
-          <h3 className="font-medium text-stone-900 mb-2">Fil conducteur</h3>
-          <p className="text-sm text-stone-700 whitespace-pre-wrap leading-relaxed">{fil_conducteur}</p>
+        <section className="bg-surface border border-bordure rounded-xl p-5">
+          <h3 className="font-medium text-encre mb-2">Fil conducteur</h3>
+          <p className="text-sm text-encre-douce whitespace-pre-wrap leading-relaxed">{fil_conducteur}</p>
         </section>
       )}
 
       {noeuds.length > 0 && (
-        <section className="bg-white border border-stone-200 rounded-xl p-5">
-          <h3 className="font-medium text-stone-900 mb-3">Les chapitres</h3>
+        <section className="bg-surface border border-bordure rounded-xl p-5">
+          <h3 className="font-medium text-encre mb-3">Les chapitres</h3>
           <ul className="space-y-2">
             {noeuds.map((n, i) => (
               <li key={i} className="text-sm">
-                <span className="font-medium text-stone-800">{n.chapitre}</span>
-                <span className="text-stone-600"> — {n.idee}</span>
+                <span className="font-medium text-encre">{n.chapitre}</span>
+                <span className="text-encre-douce"> — {n.idee}</span>
               </li>
             ))}
           </ul>
@@ -75,15 +75,15 @@ export default async function PageCapstone({ params }: { params: Promise<{ livre
       )}
 
       {liens.length > 0 && (
-        <section className="bg-white border border-stone-200 rounded-xl p-5">
-          <h3 className="font-medium text-stone-900 mb-3">Comment les chapitres s&apos;enchaînent</h3>
+        <section className="bg-surface border border-bordure rounded-xl p-5">
+          <h3 className="font-medium text-encre mb-3">Comment les chapitres s&apos;enchaînent</h3>
           <ul className="space-y-2">
             {liens.map((l, i) => (
-              <li key={i} className="text-sm text-stone-700">
-                <span className="font-medium text-stone-800">{l.de}</span>
-                <span className="text-stone-400"> → </span>
-                <span className="font-medium text-stone-800">{l.vers}</span>
-                <span className="text-stone-600"> : {l.relation}</span>
+              <li key={i} className="text-sm text-encre-douce">
+                <span className="font-medium text-encre">{l.de}</span>
+                <span className="text-muet"> → </span>
+                <span className="font-medium text-encre">{l.vers}</span>
+                <span className="text-encre-douce"> : {l.relation}</span>
               </li>
             ))}
           </ul>

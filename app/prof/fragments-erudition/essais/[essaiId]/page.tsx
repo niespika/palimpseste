@@ -48,8 +48,8 @@ export default async function PageEssai({
   if (!classe || !lien) {
     return (
       <div className="space-y-4">
-        <Link href="/prof/fragments-erudition/essais" className="text-sm text-stone-500 hover:text-stone-700">← Essais</Link>
-        <div className="bg-white border border-stone-200 rounded-xl p-8 text-center text-stone-500 text-sm">
+        <Link href="/prof/fragments-erudition/essais" className="text-sm text-muet hover:text-encre-douce">← Essais</Link>
+        <div className="bg-surface border border-bordure rounded-xl p-8 text-center text-muet text-sm">
           Cet essai n&apos;est pas assigné à cette classe (ou la classe est introuvable).<br />
           Reviens à <Link href="/prof/fragments-erudition/essais" className="underline">Essais</Link> et choisis une classe.
         </div>
@@ -144,25 +144,25 @@ export default async function PageEssai({
   return (
     <div className="space-y-6">
       <div className="flex items-center gap-2">
-        <Link href={`/prof/fragments-erudition/essais?classe=${classe.id}`} className="text-sm text-stone-500 hover:text-stone-700">
+        <Link href={`/prof/fragments-erudition/essais?classe=${classe.id}`} className="text-sm text-muet hover:text-encre-douce">
           ← Essais
         </Link>
       </div>
 
-      <div className="bg-white border border-stone-200 rounded-xl px-5 py-4">
+      <div className="bg-surface border border-bordure rounded-xl px-5 py-4">
         <div className="flex items-start justify-between gap-3">
           <div>
-            <h3 className="text-lg font-serif text-stone-900">{epreuve.titre} <span className="text-stone-400 font-sans text-sm">· {classe.nom}</span></h3>
-            <p className="text-sm text-stone-500 mt-0.5">
+            <h3 className="text-lg font-serif text-encre">{epreuve.titre} <span className="text-muet font-sans text-sm">· {classe.nom}</span></h3>
+            <p className="text-sm text-muet mt-0.5">
               {new Date(lien.date_essai).toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
               {' · '}{epreuve.duree_minutes} min
             </p>
             {epreuve.consignes && (
-              <p className="text-sm text-stone-600 mt-2 italic">{epreuve.consignes}</p>
+              <p className="text-sm text-encre-douce mt-2 italic">{epreuve.consignes}</p>
             )}
           </div>
           <span className={`text-xs px-2 py-1 rounded-full flex-shrink-0 ${
-            lien.depots_ouverts ? 'bg-green-100 text-green-700' : 'bg-stone-100 text-stone-500'
+            lien.depots_ouverts ? 'bg-ok-teinte text-ok' : 'bg-parchemin-fonce text-muet'
           }`}>
             {lien.depots_ouverts ? 'Dépôts ouverts' : 'Dépôts fermés'}
           </span>

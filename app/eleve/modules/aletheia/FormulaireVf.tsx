@@ -13,7 +13,7 @@ interface Props {
 }
 
 const champClasse =
-  'w-full px-3 py-2 border border-stone-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-stone-400 resize-y text-stone-900'
+  'w-full px-3 py-2 border border-bordure rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-pigment resize-y text-encre'
 
 // Réécriture (VF) — 3 champs retravaillés (SPEC §1) : idée principale, arguments,
 // accord. Les questions et le vocabulaire ne se réécrivent pas. Pré-rempli avec la V1.
@@ -43,22 +43,22 @@ export default function FormulaireVf({ livreId, semaine, theseInitial = '', argu
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
-      <p className="text-xs text-stone-400">Reprends tes trois champs en tenant compte du retour : corrige, précise, approfondis.</p>
+      <p className="text-xs text-muet">Reprends tes trois champs en tenant compte du retour : corrige, précise, approfondis.</p>
       <div>
-        <label className="block text-xs font-medium text-stone-500 mb-1">Idée principale</label>
+        <label className="block text-xs font-medium text-muet mb-1">Idée principale</label>
         <textarea value={these} onChange={e => setThese(e.target.value)} rows={3} className={champClasse} />
       </div>
       <div>
-        <label className="block text-xs font-medium text-stone-500 mb-1">Arguments</label>
+        <label className="block text-xs font-medium text-muet mb-1">Arguments</label>
         <textarea value={args} onChange={e => setArgs(e.target.value)} rows={4} className={champClasse} />
       </div>
       <div>
-        <label className="block text-xs font-medium text-stone-500 mb-1">Ton accord</label>
+        <label className="block text-xs font-medium text-muet mb-1">Ton accord</label>
         <textarea value={accord} onChange={e => setAccord(e.target.value)} rows={3} className={champClasse} />
       </div>
-      {erreur && <p className="text-red-600 text-sm">{erreur}</p>}
+      {erreur && <p className="text-retard text-sm">{erreur}</p>}
       <button type="submit" disabled={chargement}
-        className="w-full bg-stone-800 text-white py-2.5 rounded-xl text-sm font-medium hover:bg-stone-700 disabled:opacity-50">
+        className="w-full bg-bouton text-surface py-2.5 rounded-xl text-sm font-medium hover:opacity-90 disabled:opacity-50">
         {chargement ? 'Envoi…' : 'Soumettre ma version finale'}
       </button>
     </form>

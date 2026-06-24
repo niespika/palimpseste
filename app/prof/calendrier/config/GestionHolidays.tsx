@@ -6,7 +6,7 @@ import type { Semestre, Holiday } from '@/types/calendrier'
 import { creerHoliday, modifierHoliday, supprimerHoliday, regenererSemaines } from './actions'
 
 const INPUT =
-  'w-full px-3 py-2 border border-stone-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-400'
+  'w-full px-3 py-2 border border-bordure rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-pigment'
 
 function fmt(d: string) {
   return new Date(d).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })
@@ -28,7 +28,7 @@ export default function GestionHolidays({
   const [genMsg, setGenMsg] = useState<string | null>(null)
 
   if (semestres.length === 0) {
-    return <p className="text-sm text-stone-400">Crée d&apos;abord un semestre.</p>
+    return <p className="text-sm text-muet">Crée d&apos;abord un semestre.</p>
   }
 
   async function handleRegenerer() {
@@ -97,7 +97,7 @@ export default function GestionHolidays({
         <select
           value={selectedId ?? ''}
           onChange={(e) => router.push(`/prof/calendrier/config?sem=${e.target.value}`)}
-          className="px-3 py-2 border border-stone-200 rounded-lg text-sm bg-white"
+          className="px-3 py-2 border border-bordure rounded-lg text-sm bg-surface"
         >
           {semestres.map((s) => (
             <option key={s.id} value={s.id}>
@@ -108,18 +108,18 @@ export default function GestionHolidays({
         </select>
       )}
 
-      {erreur && <p className="text-red-600 text-sm">{erreur}</p>}
+      {erreur && <p className="text-retard text-sm">{erreur}</p>}
 
       <div className="space-y-2">
         {holidays.length === 0 && (
-          <p className="text-sm text-stone-400">Aucune période de vacances pour ce semestre.</p>
+          <p className="text-sm text-muet">Aucune période de vacances pour ce semestre.</p>
         )}
         {holidays.map((h) =>
           editId === h.id ? (
             <form
               key={h.id}
               onSubmit={(e) => handleModifier(e, h.id)}
-              className="bg-white border border-stone-200 rounded-xl p-4 space-y-3"
+              className="bg-surface border border-bordure rounded-xl p-4 space-y-3"
             >
               <input name="label" defaultValue={h.label} required placeholder="Libellé" className={INPUT} />
               <div className="grid grid-cols-2 gap-3">
@@ -127,10 +127,10 @@ export default function GestionHolidays({
                 <input name="end_date" type="date" defaultValue={h.end_date} required className={INPUT} />
               </div>
               <div className="flex gap-2">
-                <button type="submit" disabled={busy} className="bg-stone-800 text-white px-4 py-2 rounded-lg text-sm hover:bg-stone-700 disabled:opacity-50">
+                <button type="submit" disabled={busy} className="bg-bouton text-surface px-4 py-2 rounded-lg text-sm hover:opacity-90 disabled:opacity-50">
                   Enregistrer
                 </button>
-                <button type="button" onClick={() => setEditId(null)} className="px-4 py-2 text-sm text-stone-600 hover:bg-stone-100 rounded-lg">
+                <button type="button" onClick={() => setEditId(null)} className="px-4 py-2 text-sm text-encre-douce hover:bg-parchemin-fonce rounded-lg">
                   Annuler
                 </button>
               </div>
@@ -138,19 +138,19 @@ export default function GestionHolidays({
           ) : (
             <div
               key={h.id}
-              className="bg-white border border-stone-200 rounded-xl px-5 py-3 flex items-center justify-between gap-3"
+              className="bg-surface border border-bordure rounded-xl px-5 py-3 flex items-center justify-between gap-3"
             >
               <div className="min-w-0">
-                <p className="font-medium text-stone-900 truncate">{h.label}</p>
-                <p className="text-sm text-stone-500 mt-0.5">
+                <p className="font-medium text-encre truncate">{h.label}</p>
+                <p className="text-sm text-muet mt-0.5">
                   {fmt(h.start_date)} → {fmt(h.end_date)}
                 </p>
               </div>
               <div className="flex items-center gap-3 flex-shrink-0 text-xs">
-                <button onClick={() => setEditId(h.id)} className="text-stone-500 hover:text-stone-800 underline">
+                <button onClick={() => setEditId(h.id)} className="text-muet hover:text-encre underline">
                   Éditer
                 </button>
-                <button onClick={() => handleSupprimer(h.id, h.label)} disabled={busy} className="text-red-400 hover:text-red-600 underline disabled:opacity-50">
+                <button onClick={() => handleSupprimer(h.id, h.label)} disabled={busy} className="text-retard hover:opacity-80 underline disabled:opacity-50">
                   Supprimer
                 </button>
               </div>
@@ -159,28 +159,28 @@ export default function GestionHolidays({
         )}
       </div>
 
-      <form onSubmit={handleCreer} className="bg-white border border-stone-200 rounded-xl p-4 space-y-3">
-        <h4 className="text-sm font-medium text-stone-900">Ajouter une période</h4>
+      <form onSubmit={handleCreer} className="bg-surface border border-bordure rounded-xl p-4 space-y-3">
+        <h4 className="text-sm font-medium text-encre">Ajouter une période</h4>
         <input name="label" required placeholder="Ex. : Vacances de Noël" className={INPUT} />
         <div className="grid grid-cols-2 gap-3">
           <div>
-            <label className="block text-xs font-medium text-stone-500 mb-1">Début</label>
+            <label className="block text-xs font-medium text-muet mb-1">Début</label>
             <input name="start_date" type="date" required className={INPUT} />
           </div>
           <div>
-            <label className="block text-xs font-medium text-stone-500 mb-1">Fin</label>
+            <label className="block text-xs font-medium text-muet mb-1">Fin</label>
             <input name="end_date" type="date" required className={INPUT} />
           </div>
         </div>
-        <button type="submit" disabled={busy} className="bg-stone-800 text-white px-4 py-2 rounded-lg text-sm hover:bg-stone-700 disabled:opacity-50">
+        <button type="submit" disabled={busy} className="bg-bouton text-surface px-4 py-2 rounded-lg text-sm hover:opacity-90 disabled:opacity-50">
           {busy ? '…' : 'Ajouter'}
         </button>
       </form>
 
       {/* (Re)génération des semaines de travail à partir du semestre + vacances. */}
-      <div className="bg-stone-50 border border-stone-200 rounded-xl p-4">
-        <h4 className="text-sm font-medium text-stone-900">Semaines du semestre</h4>
-        <p className="text-xs text-stone-500 mt-1 mb-3">
+      <div className="bg-parchemin-fonce border border-bordure rounded-xl p-4">
+        <h4 className="text-sm font-medium text-encre">Semaines du semestre</h4>
+        <p className="text-xs text-muet mt-1 mb-3">
           Génère / met à jour les semaines de travail (lundi → dimanche), numérotées
           en continu en sautant les vacances. Sans suppression : les semaines existantes
           non alignées sont conservées et signalées.
@@ -188,11 +188,11 @@ export default function GestionHolidays({
         <button
           onClick={handleRegenerer}
           disabled={busy}
-          className="bg-stone-800 text-white px-4 py-2 rounded-lg text-sm hover:bg-stone-700 disabled:opacity-50"
+          className="bg-bouton text-surface px-4 py-2 rounded-lg text-sm hover:opacity-90 disabled:opacity-50"
         >
           {busy ? '…' : 'Régénérer les semaines'}
         </button>
-        {genMsg && <p className="text-green-700 text-sm mt-2">{genMsg}</p>}
+        {genMsg && <p className="text-ok text-sm mt-2">{genMsg}</p>}
       </div>
     </div>
   )

@@ -18,23 +18,23 @@ export function RapportIA() {
   }
 
   return (
-    <div className="bg-white border border-stone-200 rounded-xl p-5 mb-6">
+    <div className="bg-surface border border-bordure rounded-xl p-5 mb-6">
       <div className="flex items-center justify-between mb-3">
-        <h4 className="text-sm font-medium text-stone-700">Rapport de fragilités</h4>
+        <h4 className="text-sm font-medium text-encre-douce">Rapport de fragilités</h4>
         <button
           onClick={handleGenerer}
           disabled={loading}
-          className="px-3 py-1.5 text-xs bg-violet-600 text-white rounded-lg hover:bg-violet-700 disabled:opacity-50 transition-colors"
+          className="px-3 py-1.5 text-xs bg-bouton text-surface rounded-lg hover:opacity-90 disabled:opacity-50 transition-colors"
         >
           {loading ? 'Analyse en cours…' : '✦ Générer avec l’IA'}
         </button>
       </div>
-      {erreur && <p className="text-xs text-red-600">{erreur}</p>}
+      {erreur && <p className="text-xs text-retard">{erreur}</p>}
       {rapport && (
-        <p className="text-sm text-stone-700 leading-relaxed whitespace-pre-wrap">{rapport}</p>
+        <p className="text-sm text-encre-douce leading-relaxed whitespace-pre-wrap">{rapport}</p>
       )}
       {!rapport && !loading && (
-        <p className="text-xs text-stone-400">
+        <p className="text-xs text-muet">
           Analyse les idées fausses et lacunes de la classe pour proposer des priorités pédagogiques.
         </p>
       )}

@@ -21,22 +21,22 @@ export default function BoutonActiverClasse({ classeId, semestreId }: { classeId
 
   return (
     <div className="flex items-center gap-1.5">
-      <span className="text-xs text-stone-400">Essai :</span>
+      <span className="text-xs text-muet">Essai :</span>
       <button
         onClick={() => handleActiver(true)}
         disabled={chargement}
-        className="text-xs bg-green-100 text-green-700 px-2 py-1 rounded hover:bg-green-200 disabled:opacity-50"
+        className="text-xs bg-ok-teinte text-ok px-2 py-1 rounded hover:opacity-90 disabled:opacity-50"
       >
         Activer
       </button>
       <button
         onClick={() => handleActiver(false)}
         disabled={chargement}
-        className="text-xs bg-stone-100 text-stone-600 px-2 py-1 rounded hover:bg-stone-200 disabled:opacity-50"
+        className="text-xs bg-parchemin-fonce text-muet px-2 py-1 rounded hover:opacity-90 disabled:opacity-50"
       >
         Désactiver
       </button>
-      {message && <span className="text-xs text-stone-500">{chargement ? '…' : message}</span>}
+      {message && <span className="text-xs text-muet">{chargement ? '…' : message}</span>}
     </div>
   )
 }

@@ -25,7 +25,7 @@ export default async function SyntheseElevePage({
     .single()
 
   if (!session) {
-    return <div className="text-center py-16 text-stone-400 text-sm">Synthèse introuvable.</div>
+    return <div className="text-center py-16 text-muet text-sm">Synthèse introuvable.</div>
   }
 
   const u = session.scriptorium_unites as { label: string } | { label: string }[] | null
@@ -41,11 +41,11 @@ export default async function SyntheseElevePage({
 
   return (
     <div className="max-w-xl mx-auto">
-      <Link href="/eleve/modules/codex" className="text-sm text-stone-500 hover:text-stone-700 mb-6 inline-block">
+      <Link href="/eleve/modules/codex" className="text-sm text-muet hover:text-encre-douce mb-6 inline-block">
         ← Retour
       </Link>
-      <h2 className="text-xl font-serif text-stone-900 mb-1 mt-2">{uniteLabel}</h2>
-      <p className="text-sm text-stone-500 mb-6">
+      <h2 className="text-xl font-serif text-pigment mb-1 mt-2">{uniteLabel}</h2>
+      <p className="text-sm text-muet mb-6">
         {session.statut === 'phase_1' && 'Phase 1 — ta V1, de mémoire et livre fermé.'}
         {session.statut === 'phase_2' && 'Phase 2 — ta V-finale.'}
         {session.statut === 'fermee' && 'Synthèse terminée.'}
@@ -60,7 +60,7 @@ export default async function SyntheseElevePage({
         trace ? (
           <div className="space-y-6">
             {!trace.lu && (
-              <div className="bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 text-sm text-amber-800">
+              <div className="bg-attention-teinte border border-attention rounded-xl px-4 py-3 text-sm text-attention">
                 À faire : lis ton retour, puis marque-le comme lu en bas de page.
               </div>
             )}
@@ -68,14 +68,14 @@ export default async function SyntheseElevePage({
             <BoutonLu sessionId={sessionId} luInitial={trace.lu} />
           </div>
         ) : (
-          <div className="bg-white border border-stone-200 rounded-xl p-8 text-center text-stone-400 text-sm">
+          <div className="bg-surface border border-bordure rounded-xl p-8 text-center text-muet text-sm">
             Ton retour sera disponible une fois validé par le professeur.
           </div>
         )
       )}
 
       {session.statut === 'brouillon' && (
-        <div className="bg-white border border-stone-200 rounded-xl p-8 text-center text-stone-400 text-sm">
+        <div className="bg-surface border border-bordure rounded-xl p-8 text-center text-muet text-sm">
           Patiente — le professeur va lancer la synthèse.
         </div>
       )}

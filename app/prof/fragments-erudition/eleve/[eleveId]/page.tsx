@@ -49,7 +49,7 @@ export default async function PageEleveDetail({
   const inscriptionId = classeId ? await inscriptionEleveClasse(admin, eleveId, classeId) : null
   if (!inscriptionId) {
     return (
-      <div className="bg-white border border-stone-200 rounded-xl p-8 text-center text-stone-500 text-sm">
+      <div className="bg-surface border border-bordure rounded-xl p-8 text-center text-muet text-sm">
         Cet élève n&apos;est inscrit dans aucune classe du module.
       </div>
     )
@@ -202,73 +202,73 @@ export default async function PageEleveDetail({
       <div className="flex items-center gap-2">
         <Link
           href="/prof/fragments-erudition"
-          className="text-sm text-stone-500 hover:text-stone-700"
+          className="text-sm text-muet hover:text-encre-douce"
         >
           ← Vue par semaine
         </Link>
       </div>
 
       {/* En-tête élève */}
-      <div className="bg-white border border-stone-200 rounded-xl px-5 py-4">
+      <div className="bg-surface border border-bordure rounded-xl px-5 py-4">
         <div className="flex items-start justify-between gap-3">
           <div>
-            <h2 className="text-lg font-serif text-stone-900">{eleve.display_name}</h2>
-            {eleve.classe && <p className="text-sm text-stone-500 mt-0.5">{eleve.classe}</p>}
+            <h2 className="text-lg font-serif text-encre">{eleve.display_name}</h2>
+            {eleve.classe && <p className="text-sm text-muet mt-0.5">{eleve.classe}</p>}
             {theme && (
-              <p className="text-sm text-stone-600 mt-2 italic">{theme.theme}</p>
+              <p className="text-sm text-encre-douce mt-2 italic">{theme.theme}</p>
             )}
           </div>
           <div className="text-right">
-            <p className="text-xs text-stone-400">Présentations</p>
-            <p className="text-2xl font-serif text-stone-800">{nbPresentations}</p>
+            <p className="text-xs text-muet">Présentations</p>
+            <p className="text-2xl font-serif text-encre">{nbPresentations}</p>
           </div>
         </div>
       </div>
 
       {/* Graphique de progression */}
       {points.length > 0 ? (
-        <div className="bg-white border border-stone-200 rounded-xl p-5">
-          <h3 className="text-sm font-medium text-stone-700 mb-4">Progression</h3>
+        <div className="bg-surface border border-bordure rounded-xl p-5">
+          <h3 className="text-sm font-medium text-encre-douce mb-4">Progression</h3>
           <GraphiqueProgression
             data={points}
             lienBase="/prof/fragments-erudition/analyse/"
           />
         </div>
       ) : (
-        <div className="bg-white border border-stone-200 rounded-xl p-8 text-center text-stone-400 text-sm">
+        <div className="bg-surface border border-bordure rounded-xl p-8 text-center text-muet text-sm">
           Aucune semaine créée.
         </div>
       )}
 
       {/* Statistiques */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-        <div className="bg-white border border-stone-200 rounded-xl p-4 text-center">
-          <p className="text-xl font-serif text-stone-800">{tauxDepot}%</p>
-          <p className="text-xs text-stone-500 mt-0.5">Taux de dépôt</p>
-          <p className="text-xs text-stone-400">{nbDeposes}/{nbSemaines} semaines</p>
+        <div className="bg-surface border border-bordure rounded-xl p-4 text-center">
+          <p className="text-xl font-serif text-encre">{tauxDepot}%</p>
+          <p className="text-xs text-muet mt-0.5">Taux de dépôt</p>
+          <p className="text-xs text-muet">{nbDeposes}/{nbSemaines} semaines</p>
         </div>
-        <div className="bg-white border border-stone-200 rounded-xl p-4 text-center">
-          <p className="text-xl font-serif text-orange-700">{nbEnRetard}</p>
-          <p className="text-xs text-stone-500 mt-0.5">En retard</p>
+        <div className="bg-surface border border-bordure rounded-xl p-4 text-center">
+          <p className="text-xl font-serif text-attention">{nbEnRetard}</p>
+          <p className="text-xs text-muet mt-0.5">En retard</p>
         </div>
-        <div className="bg-white border border-stone-200 rounded-xl p-4 text-center">
-          <p className="text-xl font-serif text-blue-700">
+        <div className="bg-surface border border-bordure rounded-xl p-4 text-center">
+          <p className="text-xl font-serif text-info">
             {moyD !== null ? moyD.toFixed(1) : '—'}
           </p>
-          <p className="text-xs text-stone-500 mt-0.5">Moy. Découvertes</p>
+          <p className="text-xs text-muet mt-0.5">Moy. Découvertes</p>
         </div>
-        <div className="bg-white border border-stone-200 rounded-xl p-4 text-center">
-          <p className="text-xl font-serif text-emerald-700">
+        <div className="bg-surface border border-bordure rounded-xl p-4 text-center">
+          <p className="text-xl font-serif text-ok">
             {moyS !== null ? moyS.toFixed(1) : '—'}
           </p>
-          <p className="text-xs text-stone-500 mt-0.5">Moy. Sources</p>
+          <p className="text-xs text-muet mt-0.5">Moy. Sources</p>
         </div>
       </div>
 
       {/* Pistes en attente */}
       {(pistesEnAttente ?? []).length > 0 && (
-        <div className="bg-white border border-stone-200 rounded-xl p-5">
-          <h3 className="text-sm font-medium text-stone-700 mb-3">
+        <div className="bg-surface border border-bordure rounded-xl p-5">
+          <h3 className="text-sm font-medium text-encre-douce mb-3">
             Pistes en attente ({pistesEnAttente!.length})
           </h3>
           <ul className="space-y-2">
@@ -276,12 +276,12 @@ export default async function PageEleveDetail({
               <li key={piste.id} className="flex items-start gap-2 text-sm">
                 <span className={`mt-0.5 text-xs px-1.5 py-0.5 rounded flex-shrink-0 ${
                   piste.statut === 'partiellement_suivie'
-                    ? 'bg-amber-100 text-amber-700'
-                    : 'bg-stone-100 text-stone-500'
+                    ? 'bg-attention-teinte text-attention'
+                    : 'bg-parchemin-fonce text-muet'
                 }`}>
                   {piste.statut === 'partiellement_suivie' ? 'partielle' : 'proposée'}
                 </span>
-                <span className="text-stone-700">{piste.contenu}</span>
+                <span className="text-encre-douce">{piste.contenu}</span>
               </li>
             ))}
           </ul>
@@ -290,18 +290,18 @@ export default async function PageEleveDetail({
 
       {/* Historique des présentations */}
       {(presentationsEleve ?? []).length > 0 && (
-        <div className="bg-white border border-stone-200 rounded-xl p-5">
-          <h3 className="text-sm font-medium text-stone-700 mb-3">Historique des présentations</h3>
+        <div className="bg-surface border border-bordure rounded-xl p-5">
+          <h3 className="text-sm font-medium text-encre-douce mb-3">Historique des présentations</h3>
           <div className="space-y-1.5">
             {(presentationsEleve ?? []).map(p => (
               <div key={p.id} className="flex items-center justify-between text-sm">
-                <span className="text-stone-600">
+                <span className="text-encre-douce">
                   Semaine {semainePourDepot[p.semaine_id] ?? '?'}
                 </span>
                 <span className={`text-xs px-2 py-0.5 rounded-full ${
-                  p.statut === 'presente' ? 'bg-green-100 text-green-700' :
-                  p.statut === 'reporte' ? 'bg-amber-100 text-amber-700' :
-                  'bg-blue-100 text-blue-700'
+                  p.statut === 'presente' ? 'bg-ok-teinte text-ok' :
+                  p.statut === 'reporte' ? 'bg-attention-teinte text-attention' :
+                  'bg-info-teinte text-info'
                 }`}>
                   {p.statut === 'presente' ? 'Présenté ✓' :
                    p.statut === 'reporte' ? 'Reporté' : 'Tiré'}
@@ -314,8 +314,8 @@ export default async function PageEleveDetail({
 
       {/* Liens vers les analyses */}
       {analysesPubliees.length > 0 && (
-        <div className="bg-white border border-stone-200 rounded-xl p-5">
-          <h3 className="text-sm font-medium text-stone-700 mb-3">Analyses publiées</h3>
+        <div className="bg-surface border border-bordure rounded-xl p-5">
+          <h3 className="text-sm font-medium text-encre-douce mb-3">Analyses publiées</h3>
           <div className="space-y-1.5">
             {analysesPubliees.map(a => {
               const depot = (depots ?? []).find(d => d.id === a.depot_id)
@@ -324,10 +324,10 @@ export default async function PageEleveDetail({
                 <Link
                   key={a.id}
                   href={`/prof/fragments-erudition/analyse/${a.depot_id}`}
-                  className="flex items-center justify-between text-sm hover:bg-stone-50 rounded-lg px-2 py-1.5 -mx-2 transition-colors"
+                  className="flex items-center justify-between text-sm hover:bg-parchemin-fonce rounded-lg px-2 py-1.5 -mx-2 transition-colors"
                 >
-                  <span className="text-stone-700">Semaine {numSemaine ?? '?'}</span>
-                  <span className="text-stone-400 text-xs">
+                  <span className="text-encre-douce">Semaine {numSemaine ?? '?'}</span>
+                  <span className="text-muet text-xs">
                     {noteVersLettre(a.note_decouvertes) ?? '?'} / {noteVersLettre(a.note_sources) ?? '?'} / {noteVersLettre(a.note_reflexions) ?? '?'} →
                   </span>
                 </Link>

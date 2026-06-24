@@ -26,17 +26,17 @@ interface Props {
 }
 
 const LABELS_STATUT: Record<string, { label: string; classes: string }> = {
-  en_cours:  { label: 'Analyse en cours…', classes: 'bg-blue-100 text-blue-700' },
-  generee:   { label: 'À valider', classes: 'bg-amber-100 text-amber-700' },
-  erreur:    { label: 'Erreur', classes: 'bg-red-100 text-red-700' },
-  publiee:   { label: 'Publiée ✓', classes: 'bg-green-100 text-green-700' },
+  en_cours:  { label: 'Analyse en cours…', classes: 'bg-info-teinte text-info' },
+  generee:   { label: 'À valider', classes: 'bg-attention-teinte text-attention' },
+  erreur:    { label: 'Erreur', classes: 'bg-retard-teinte text-retard' },
+  publiee:   { label: 'Publiée ✓', classes: 'bg-ok-teinte text-ok' },
 }
 
 function NoteInput({ label, value, onChange }: { label: string; value: number; onChange: (v: number) => void }) {
   // Évaluation par lettre E → A ; la valeur 0-4 sous-jacente reste stockée.
   return (
     <div className="flex items-center gap-3">
-      <span className="text-sm text-stone-700 w-28 flex-shrink-0">{label}</span>
+      <span className="text-sm text-encre-douce w-28 flex-shrink-0">{label}</span>
       <div className="flex gap-1">
         {[0, 1, 2, 3, 4].map(n => (
           <button
@@ -45,8 +45,8 @@ function NoteInput({ label, value, onChange }: { label: string; value: number; o
             onClick={() => onChange(n)}
             className={`w-8 h-8 rounded-lg text-sm font-medium transition-colors ${
               value === n
-                ? 'bg-stone-800 text-white'
-                : 'bg-stone-100 text-stone-600 hover:bg-stone-200'
+                ? 'bg-bouton text-surface'
+                : 'bg-parchemin-fonce text-muet hover:bg-bordure'
             }`}
           >
             {LETTRES_SECTIONS[n]}
@@ -72,15 +72,15 @@ function ChampTexte({
 }) {
   return (
     <div>
-      <label className="block text-sm font-medium text-stone-700 mb-1">
+      <label className="block text-sm font-medium text-encre-douce mb-1">
         {label}
-        {optional && <span className="text-stone-400 font-normal ml-1">(optionnel)</span>}
+        {optional && <span className="text-muet font-normal ml-1">(optionnel)</span>}
       </label>
       <textarea
         value={value}
         onChange={e => onChange(e.target.value)}
         rows={rows}
-        className="w-full px-3 py-2 border border-stone-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 resize-y text-stone-900"
+        className="w-full px-3 py-2 border border-bordure rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-pigment resize-y text-encre"
       />
     </div>
   )
@@ -259,7 +259,7 @@ export default function EditorAnalyse({
     <div className="flex flex-col lg:flex-row gap-6">
       {/* ===== Colonne gauche : photos ===== */}
       <div className="lg:w-[45%] flex-shrink-0">
-        <div className="bg-white border border-stone-200 rounded-xl overflow-hidden sticky top-4">
+        <div className="bg-surface border border-bordure rounded-xl overflow-hidden sticky top-4">
           {/* Visionneuse photo */}
           <div className="bg-stone-900 relative" style={{ minHeight: 300 }}>
             {chargementPhotos ? (
@@ -288,21 +288,21 @@ export default function EditorAnalyse({
 
           {/* Navigation photos */}
           {photos.length > 1 && (
-            <div className="flex items-center justify-between px-4 py-2 border-b border-stone-100 bg-stone-50">
+            <div className="flex items-center justify-between px-4 py-2 border-b border-bordure bg-parchemin-fonce">
               <button
                 onClick={() => setIndexPhoto(i => Math.max(0, i - 1))}
                 disabled={indexPhoto === 0}
-                className="text-sm text-stone-500 hover:text-stone-800 disabled:opacity-30 px-2 py-1"
+                className="text-sm text-muet hover:text-encre disabled:opacity-30 px-2 py-1"
               >
                 ← Précédente
               </button>
-              <span className="text-xs text-stone-500">
+              <span className="text-xs text-muet">
                 {indexPhoto + 1} / {photos.length}
               </span>
               <button
                 onClick={() => setIndexPhoto(i => Math.min(photos.length - 1, i + 1))}
                 disabled={indexPhoto === photos.length - 1}
-                className="text-sm text-stone-500 hover:text-stone-800 disabled:opacity-30 px-2 py-1"
+                className="text-sm text-muet hover:text-encre disabled:opacity-30 px-2 py-1"
               >
                 Suivante →
               </button>
@@ -317,7 +317,7 @@ export default function EditorAnalyse({
                   key={photo.id}
                   onClick={() => setIndexPhoto(i)}
                   className={`flex-shrink-0 w-14 h-14 rounded-lg overflow-hidden border-2 transition-colors ${
-                    i === indexPhoto ? 'border-stone-800' : 'border-transparent hover:border-stone-400'
+                    i === indexPhoto ? 'border-pigment' : 'border-transparent hover:border-bordure'
                   }`}
                 >
                   {urls[photo.storage_path] && (
@@ -334,9 +334,9 @@ export default function EditorAnalyse({
 
           {/* Commentaire élève */}
           {commentaireEleve && (
-            <div className="px-4 py-3 border-t border-stone-100">
-              <p className="text-xs text-stone-500 mb-0.5">Commentaire de l'élève</p>
-              <p className="text-sm text-stone-700 italic">"{commentaireEleve}"</p>
+            <div className="px-4 py-3 border-t border-bordure">
+              <p className="text-xs text-muet mb-0.5">Commentaire de l'élève</p>
+              <p className="text-sm text-encre-douce italic">"{commentaireEleve}"</p>
             </div>
           )}
         </div>
@@ -352,7 +352,7 @@ export default function EditorAnalyse({
             </span>
           )}
           {analyse?.cout_api && (
-            <span className="text-xs text-stone-400">
+            <span className="text-xs text-muet">
               Coût : ~${analyse.cout_api.toFixed(4)}
             </span>
           )}
@@ -360,14 +360,14 @@ export default function EditorAnalyse({
 
         {/* Pas encore d'analyse */}
         {!analyse && (
-          <div className="bg-stone-50 border border-stone-200 rounded-xl p-6 text-center">
-            <p className="text-stone-500 text-sm mb-4">
+          <div className="bg-parchemin-fonce border border-bordure rounded-xl p-6 text-center">
+            <p className="text-muet text-sm mb-4">
               Aucune analyse pour ce dépôt.
             </p>
             <button
               onClick={handleRelancer}
               disabled={enregistrement}
-              className="text-sm bg-stone-800 text-white px-4 py-2 rounded-lg hover:bg-stone-700 disabled:opacity-50"
+              className="text-sm bg-bouton text-surface px-4 py-2 rounded-lg hover:opacity-90 disabled:opacity-50"
             >
               Lancer l'analyse
             </button>
@@ -376,8 +376,8 @@ export default function EditorAnalyse({
 
         {/* Analyse en cours */}
         {analyse?.statut === 'en_cours' && (
-          <div className="bg-blue-50 border border-blue-200 rounded-xl p-6 text-center">
-            <p className="text-blue-700 text-sm">
+          <div className="bg-info-teinte border border-info rounded-xl p-6 text-center">
+            <p className="text-info text-sm">
               L'analyse est en cours… Cette page se rafraîchit automatiquement.
             </p>
           </div>
@@ -385,14 +385,14 @@ export default function EditorAnalyse({
 
         {/* Erreur */}
         {analyse?.statut === 'erreur' && (
-          <div className="bg-red-50 border border-red-200 rounded-xl p-4">
-            <p className="text-red-700 text-sm mb-3">
+          <div className="bg-retard-teinte border border-retard rounded-xl p-4">
+            <p className="text-retard text-sm mb-3">
               L'analyse a échoué. Tu peux la relancer ci-dessous.
             </p>
             <button
               onClick={handleRelancer}
               disabled={enregistrement}
-              className="text-sm bg-red-700 text-white px-4 py-2 rounded-lg hover:bg-red-600 disabled:opacity-50"
+              className="text-sm bg-retard text-surface px-4 py-2 rounded-lg hover:opacity-90 disabled:opacity-50"
             >
               Relancer l'analyse
             </button>
@@ -403,13 +403,13 @@ export default function EditorAnalyse({
         {analyse && (analyse.statut === 'generee' || analyse.statut === 'publiee') && (
           <>
             {/* Transcription (repliée par défaut) */}
-            <div className="bg-stone-50 border border-stone-200 rounded-xl overflow-hidden">
+            <div className="bg-parchemin-fonce border border-bordure rounded-xl overflow-hidden">
               <button
                 onClick={() => setTranscriptionOuverte(o => !o)}
-                className="w-full flex items-center justify-between px-4 py-3 text-sm font-medium text-stone-700 hover:bg-stone-100 transition-colors"
+                className="w-full flex items-center justify-between px-4 py-3 text-sm font-medium text-encre-douce hover:bg-parchemin-fonce transition-colors"
               >
                 <span>Transcription du manuscrit</span>
-                <span className="text-stone-400">{transcriptionOuverte ? '▲' : '▼'}</span>
+                <span className="text-muet">{transcriptionOuverte ? '▲' : '▼'}</span>
               </button>
               {transcriptionOuverte && (
                 <div className="px-4 pb-4">
@@ -417,23 +417,23 @@ export default function EditorAnalyse({
                     value={transcription}
                     onChange={e => setTranscription(e.target.value)}
                     rows={12}
-                    className="w-full px-3 py-2 border border-stone-200 rounded-xl text-sm font-mono focus:outline-none focus:ring-2 focus:ring-blue-400 resize-y text-stone-900"
+                    className="w-full px-3 py-2 border border-bordure rounded-xl text-sm font-mono focus:outline-none focus:ring-2 focus:ring-pigment resize-y text-encre"
                   />
                 </div>
               )}
             </div>
 
             {/* Notes */}
-            <div className="bg-white border border-stone-200 rounded-xl p-4 space-y-3">
-              <p className="text-sm font-medium text-stone-700 mb-2">Évaluation des sections (E → A)</p>
+            <div className="bg-surface border border-bordure rounded-xl p-4 space-y-3">
+              <p className="text-sm font-medium text-encre-douce mb-2">Évaluation des sections (E → A)</p>
               <NoteInput label="Découvertes" value={noteDecouvertes} onChange={setNoteDecouvertes} />
               <NoteInput label="Sources" value={noteSources} onChange={setNoteSources} />
               <NoteInput label="Réflexions" value={noteReflexions} onChange={setNoteReflexions} />
             </div>
 
             {/* Retours */}
-            <div className="bg-white border border-stone-200 rounded-xl p-4 space-y-4">
-              <p className="text-sm font-medium text-stone-700">Retour pédagogique</p>
+            <div className="bg-surface border border-bordure rounded-xl p-4 space-y-4">
+              <p className="text-sm font-medium text-encre-douce">Retour pédagogique</p>
               <ChampTexte label="Progrès" value={retourProgres} onChange={setRetourProgres} optional />
               <ChampTexte label="Langue" value={retourLangue} onChange={setRetourLangue} rows={4} />
               <ChampTexte label="Style" value={retourStyle} onChange={setRetourStyle} rows={4} />
@@ -443,29 +443,29 @@ export default function EditorAnalyse({
             </div>
 
             {/* Pistes */}
-            <div className="bg-white border border-stone-200 rounded-xl p-4 space-y-3">
-              <p className="text-sm font-medium text-stone-700">Pistes proposées</p>
+            <div className="bg-surface border border-bordure rounded-xl p-4 space-y-3">
+              <p className="text-sm font-medium text-encre-douce">Pistes proposées</p>
 
               {pistes.length === 0 && (
-                <p className="text-sm text-stone-400 italic">Aucune piste pour cette analyse.</p>
+                <p className="text-sm text-muet italic">Aucune piste pour cette analyse.</p>
               )}
 
               {pistes.map(piste => (
                 <div
                   key={piste.id}
-                  className="flex items-start gap-3 bg-stone-50 rounded-xl p-3"
+                  className="flex items-start gap-3 bg-parchemin-fonce rounded-xl p-3"
                 >
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 mb-1">
                       {piste.est_rappel && (
-                        <span className="text-xs bg-violet-100 text-violet-700 px-1.5 py-0.5 rounded-full">
+                        <span className="text-xs bg-info-teinte text-info px-1.5 py-0.5 rounded-full">
                           Rappel
                         </span>
                       )}
                       <select
                         value={piste.statut}
                         onChange={e => handleChangerStatutPiste(piste.id, e.target.value as StatutPiste)}
-                        className="text-xs border border-stone-200 rounded-lg px-2 py-0.5 bg-white focus:outline-none focus:ring-1 focus:ring-blue-400 text-stone-900"
+                        className="text-xs border border-bordure rounded-lg px-2 py-0.5 bg-surface focus:outline-none focus:ring-1 focus:ring-pigment text-encre"
                       >
                         <option value="proposee">Proposée</option>
                         <option value="suivie">Suivie ✓</option>
@@ -473,11 +473,11 @@ export default function EditorAnalyse({
                         <option value="abandonnee">Abandonnée</option>
                       </select>
                     </div>
-                    <p className="text-sm text-stone-700">{piste.contenu}</p>
+                    <p className="text-sm text-encre-douce">{piste.contenu}</p>
                   </div>
                   <button
                     onClick={() => handleSupprimerPiste(piste.id)}
-                    className="text-stone-300 hover:text-red-500 transition-colors flex-shrink-0 mt-0.5"
+                    className="text-bordure hover:text-retard transition-colors flex-shrink-0 mt-0.5"
                     title="Supprimer cette piste"
                   >
                     ✕
@@ -492,13 +492,13 @@ export default function EditorAnalyse({
                   value={nouvellePiste}
                   onChange={e => setNouvellePiste(e.target.value)}
                   placeholder="Ajouter une piste…"
-                  className="flex-1 px-3 py-2 border border-stone-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 text-stone-900"
+                  className="flex-1 px-3 py-2 border border-bordure rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-pigment text-encre"
                   onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); handleAjouterPiste() } }}
                 />
                 <button
                   onClick={handleAjouterPiste}
                   disabled={!nouvellePiste.trim()}
-                  className="text-sm px-3 py-2 bg-stone-800 text-white rounded-xl hover:bg-stone-700 disabled:opacity-40"
+                  className="text-sm px-3 py-2 bg-bouton text-surface rounded-xl hover:opacity-90 disabled:opacity-40"
                 >
                   Ajouter
                 </button>
@@ -509,8 +509,8 @@ export default function EditorAnalyse({
             {message && (
               <div className={`rounded-xl px-4 py-3 text-sm ${
                 message.type === 'ok'
-                  ? 'bg-green-50 border border-green-200 text-green-700'
-                  : 'bg-red-50 border border-red-200 text-red-700'
+                  ? 'bg-ok-teinte border border-ok text-ok'
+                  : 'bg-retard-teinte border border-retard text-retard'
               }`}>
                 {message.texte}
               </div>
@@ -521,7 +521,7 @@ export default function EditorAnalyse({
               <button
                 onClick={handleSauvegarder}
                 disabled={enregistrement}
-                className="px-4 py-2.5 border border-stone-300 rounded-xl text-sm font-medium text-stone-700 hover:bg-stone-50 disabled:opacity-50 transition-colors"
+                className="px-4 py-2.5 border border-bordure rounded-xl text-sm font-medium text-encre-douce hover:bg-parchemin-fonce disabled:opacity-50 transition-colors"
               >
                 {enregistrement ? 'Enregistrement…' : 'Enregistrer les modifications'}
               </button>
@@ -530,7 +530,7 @@ export default function EditorAnalyse({
                 <button
                   onClick={handleDepublier}
                   disabled={enregistrement}
-                  className="px-4 py-2.5 border border-orange-300 rounded-xl text-sm font-medium text-orange-700 hover:bg-orange-50 disabled:opacity-50 transition-colors"
+                  className="px-4 py-2.5 border border-attention rounded-xl text-sm font-medium text-attention hover:bg-attention-teinte disabled:opacity-50 transition-colors"
                 >
                   Dépublier
                 </button>
@@ -538,7 +538,7 @@ export default function EditorAnalyse({
                 <button
                   onClick={handlePublier}
                   disabled={enregistrement}
-                  className="px-4 py-2.5 bg-stone-800 text-white rounded-xl text-sm font-medium hover:bg-stone-700 disabled:opacity-50 transition-colors"
+                  className="px-4 py-2.5 bg-bouton text-surface rounded-xl text-sm font-medium hover:opacity-90 disabled:opacity-50 transition-colors"
                 >
                   {enregistrement ? 'Publication…' : 'Publier le retour →'}
                 </button>
@@ -547,7 +547,7 @@ export default function EditorAnalyse({
               <button
                 onClick={handleRelancer}
                 disabled={enregistrement}
-                className="px-4 py-2.5 border border-stone-200 rounded-xl text-sm text-stone-500 hover:text-stone-700 hover:bg-stone-50 disabled:opacity-50 transition-colors"
+                className="px-4 py-2.5 border border-bordure rounded-xl text-sm text-muet hover:text-encre-douce hover:bg-parchemin-fonce disabled:opacity-50 transition-colors"
               >
                 Relancer l'analyse
               </button>

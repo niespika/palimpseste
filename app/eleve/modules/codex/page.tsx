@@ -17,13 +17,13 @@ export default async function CodexElevePage() {
 
   if (!module?.actif) {
     return (
-      <div className="text-center py-16 text-stone-400 text-sm">Ce module n&apos;est pas encore activé.</div>
+      <div className="text-center py-16 text-muet text-sm">Ce module n&apos;est pas encore activé.</div>
     )
   }
 
   if (!(await aAccesModule(supabase, user.id, module.id))) {
     return (
-      <div className="text-center py-16 text-stone-400 text-sm">Tu n&apos;as pas encore accès à ce module.</div>
+      <div className="text-center py-16 text-muet text-sm">Tu n&apos;as pas encore accès à ce module.</div>
     )
   }
 
@@ -35,23 +35,23 @@ export default async function CodexElevePage() {
 
   return (
     <div>
-      <Link href="/eleve" className="text-sm text-stone-500 hover:text-stone-700 mb-6 inline-flex items-center gap-1">
+      <Link href="/eleve" className="text-sm text-muet hover:text-encre-douce mb-6 inline-flex items-center gap-1">
         ← Retour
       </Link>
 
-      <h2 className="text-xl font-serif text-stone-900 mb-2 mt-2">Codex</h2>
-      <p className="text-sm text-stone-500 mb-6">Écrire de mémoire le récapitulatif d&apos;une unité, puis l&apos;améliorer.</p>
+      <h2 className="text-xl font-serif text-pigment mb-2 mt-2">Codex</h2>
+      <p className="text-sm text-muet mb-6">Écrire de mémoire le récapitulatif d&apos;une unité, puis l&apos;améliorer.</p>
 
       {live && (
         <Link
           href={`/eleve/modules/codex/synthese/${live.id}`}
-          className="block bg-green-50 border border-green-300 rounded-xl p-5 hover:bg-green-100 transition-colors mb-6"
+          className="block bg-ok-teinte border border-ok rounded-xl p-5 hover:opacity-90 transition-colors mb-6"
         >
           <div className="flex items-center gap-3">
-            <span className="w-2.5 h-2.5 rounded-full bg-green-500 animate-pulse shrink-0" />
+            <span className="w-2.5 h-2.5 rounded-full bg-ok animate-pulse shrink-0" />
             <div>
-              <p className="font-medium text-green-800 text-sm">Synthèse en cours — {live.unite_label}</p>
-              <p className="text-xs text-green-600">
+              <p className="font-medium text-ok text-sm">Synthèse en cours — {live.unite_label}</p>
+              <p className="text-xs text-ok">
                 {live.statut === 'phase_1'
                   ? 'Phase 1 : écris ta V1, livre fermé → appuie pour commencer'
                   : 'Phase 2 : réécris ta V-finale avec les suggestions → appuie pour continuer'}
@@ -65,12 +65,12 @@ export default async function CodexElevePage() {
       {aLire.length > 0 && (
         <Link
           href={`/eleve/modules/codex/synthese/${aLire[0].id}`}
-          className="block bg-amber-50 border border-amber-300 rounded-xl p-4 hover:bg-amber-100 transition-colors mb-6"
+          className="block bg-attention-teinte border border-attention rounded-xl p-4 hover:opacity-90 transition-colors mb-6"
         >
-          <p className="font-medium text-amber-800 text-sm">
+          <p className="font-medium text-attention text-sm">
             À faire : {aLire.length} retour{aLire.length > 1 ? 's' : ''} à lire
           </p>
-          <p className="text-xs text-amber-600">
+          <p className="text-xs text-attention">
             {aLire.length === 1 ? aLire[0].unite_label : `dont ${aLire[0].unite_label}`} → appuie pour le consulter
           </p>
         </Link>
@@ -78,21 +78,21 @@ export default async function CodexElevePage() {
 
       {historique.length > 0 && (
         <section>
-          <h3 className="text-sm font-medium text-stone-500 mb-3">Mes synthèses</h3>
+          <h3 className="text-sm font-medium text-muet mb-3">Mes synthèses</h3>
           <div className="space-y-2">
             {historique.map((s) => (
               <Link
                 key={s.id}
                 href={`/eleve/modules/codex/synthese/${s.id}`}
-                className="flex items-center justify-between gap-3 bg-white border border-stone-200 rounded-xl px-4 py-3 hover:border-stone-300 transition-colors"
+                className="flex items-center justify-between gap-3 bg-surface border border-bordure rounded-xl px-4 py-3 hover:border-pigment transition-colors"
               >
-                <p className="text-sm font-medium text-stone-800 truncate">{s.unite_label}</p>
+                <p className="text-sm font-medium text-encre truncate">{s.unite_label}</p>
                 {s.validee && !s.lu ? (
-                  <span className="text-xs px-2 py-0.5 bg-amber-100 text-amber-700 rounded-full shrink-0">à lire</span>
+                  <span className="text-xs px-2 py-0.5 bg-attention-teinte text-attention rounded-full shrink-0">à lire</span>
                 ) : s.validee && s.lu ? (
-                  <span className="text-xs px-2 py-0.5 bg-stone-100 text-stone-500 rounded-full shrink-0">lu</span>
+                  <span className="text-xs px-2 py-0.5 bg-parchemin-fonce text-muet rounded-full shrink-0">lu</span>
                 ) : (
-                  <span className="text-xs text-stone-400 shrink-0">en attente</span>
+                  <span className="text-xs text-muet shrink-0">en attente</span>
                 )}
               </Link>
             ))}
@@ -101,8 +101,8 @@ export default async function CodexElevePage() {
       )}
 
       {!live && historique.length === 0 && (
-        <div className="bg-white border border-stone-200 rounded-xl p-8 text-center">
-          <p className="text-stone-500 text-sm">Aucune synthèse pour le moment.</p>
+        <div className="bg-surface border border-bordure rounded-xl p-8 text-center">
+          <p className="text-muet text-sm">Aucune synthèse pour le moment.</p>
         </div>
       )}
     </div>

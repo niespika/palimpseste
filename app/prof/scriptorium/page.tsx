@@ -160,8 +160,10 @@ export default async function ScriptoriumPage({
   )
 
   const ongletClasse = (v: string) =>
-    `px-4 py-2 text-sm rounded-t-lg border-b-2 transition-colors ${
-      vue === v ? 'border-stone-700 text-stone-900 font-medium' : 'border-transparent text-stone-500 hover:text-stone-800'
+    `font-ui px-4 py-2 text-sm rounded-t-lg border-b-2 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pigment ${
+      vue === v
+        ? 'bg-pigment-teinte text-encre border-liseret font-medium'
+        : 'text-encre-douce hover:text-encre hover:bg-pigment-teinte border-transparent'
     }`
 
   return (
@@ -171,7 +173,7 @@ export default async function ScriptoriumPage({
         <FormulaireLivre classes={classesList} />
       </div>
 
-      <nav className="flex gap-1 border-b border-stone-200">
+      <nav className="flex gap-1 border-b border-bordure">
         <Link href="/prof/scriptorium?vue=classes" className={ongletClasse('classes')}>Par classe</Link>
         <Link href="/prof/scriptorium?vue=unites" className={ongletClasse('unites')}>Par unité</Link>
       </nav>
@@ -196,20 +198,20 @@ export default async function ScriptoriumPage({
           </div>
 
           {classeSel && (
-            <div className="bg-white border border-stone-200 rounded-xl p-4 space-y-3">
-              <h3 className="font-medium text-stone-900">{classeNom.get(classeSel) ?? 'Classe'}</h3>
+            <div className="bg-surface border border-bordure rounded-xl p-4 space-y-3">
+              <h3 className="font-medium text-encre">{classeNom.get(classeSel) ?? 'Classe'}</h3>
               {docsAffiches.length === 0 ? (
-                <p className="text-sm text-stone-400">Aucun contenu assigné à cette classe.</p>
+                <p className="text-sm text-muet">Aucun contenu assigné à cette classe.</p>
               ) : (
                 unitesList
                   .filter(u => docsAffiches.some(d => d.unite_id === u.id))
                   .map(u => (
-                    <details key={u.id} open className="border border-stone-100 rounded-lg">
-                      <summary className="px-3 py-2 text-sm font-medium text-stone-700 cursor-pointer">{u.label}</summary>
+                    <details key={u.id} open className="border border-bordure rounded-lg">
+                      <summary className="px-3 py-2 text-sm font-medium text-encre-douce cursor-pointer">{u.label}</summary>
                       <div className="px-3 pb-3 space-y-3">
                         {parSemaine(docsAffiches.filter(d => d.unite_id === u.id)).map(([sem, ds]) => (
                           <div key={sem ?? 'na'} className="space-y-1.5">
-                            <p className="text-xs text-stone-400 uppercase tracking-wide">{sem != null ? `Semaine ${sem}` : 'Semaine non précisée'}</p>
+                            <p className="text-xs text-muet uppercase tracking-wide">{sem != null ? `Semaine ${sem}` : 'Semaine non précisée'}</p>
                             {ds.map(ligne)}
                           </div>
                         ))}
@@ -248,12 +250,12 @@ export default async function ScriptoriumPage({
           {uniteSel && (() => {
             const uniteCourante = unitesList.find(u => u.id === uniteSel)
             return (
-            <div className="bg-white border border-stone-200 rounded-xl p-4 space-y-3">
+            <div className="bg-surface border border-bordure rounded-xl p-4 space-y-3">
               <div>
-                <h3 className="font-medium text-stone-900">{uniteCourante?.label ?? 'Unité'}</h3>
+                <h3 className="font-medium text-encre">{uniteCourante?.label ?? 'Unité'}</h3>
                 {uniteCourante?.type === 'livre' && (
                   <>
-                    <p className="text-xs text-stone-400 mt-0.5">
+                    <p className="text-xs text-muet mt-0.5">
                       📖 Livre · {uniteCourante.nb_semaines ?? '?'} semaines
                       {uniteCourante.date_debut && ` · début le ${formatDateFr(uniteCourante.date_debut)}`}
                       <span className="ml-1">— PDF = ancrage IA, non visibles par l&apos;élève</span>
@@ -265,18 +267,18 @@ export default async function ScriptoriumPage({
                 )}
               </div>
               {docsAffiches.length === 0 ? (
-                <p className="text-sm text-stone-400">Aucun contenu dans cette unité.</p>
+                <p className="text-sm text-muet">Aucun contenu dans cette unité.</p>
               ) : (
                 <>
                   {classesList
                     .filter(c => docsAffiches.some(d => (classesParDoc.get(d.id) ?? []).includes(c.id)))
                     .map(c => (
-                      <details key={c.id} open className="border border-stone-100 rounded-lg">
-                        <summary className="px-3 py-2 text-sm font-medium text-stone-700 cursor-pointer">{c.nom}</summary>
+                      <details key={c.id} open className="border border-bordure rounded-lg">
+                        <summary className="px-3 py-2 text-sm font-medium text-encre-douce cursor-pointer">{c.nom}</summary>
                         <div className="px-3 pb-3 space-y-3">
                           {parSemaine(docsAffiches.filter(d => (classesParDoc.get(d.id) ?? []).includes(c.id))).map(([sem, ds]) => (
                             <div key={sem ?? 'na'} className="space-y-1.5">
-                              <p className="text-xs text-stone-400 uppercase tracking-wide">{sem != null ? `Semaine ${sem}` : 'Semaine non précisée'}</p>
+                              <p className="text-xs text-muet uppercase tracking-wide">{sem != null ? `Semaine ${sem}` : 'Semaine non précisée'}</p>
                               {ds.map(ligne)}
                             </div>
                           ))}
@@ -285,12 +287,12 @@ export default async function ScriptoriumPage({
                     ))}
                   {/* Contenu sans classe assignée (legacy non résolu) → à réassigner */}
                   {docsAffiches.some(d => (classesParDoc.get(d.id) ?? []).length === 0) && (
-                    <details open className="border border-amber-200 bg-amber-50/40 rounded-lg">
-                      <summary className="px-3 py-2 text-sm font-medium text-amber-700 cursor-pointer">Sans classe — à réassigner</summary>
+                    <details open className="border border-attention bg-attention-teinte/40 rounded-lg">
+                      <summary className="px-3 py-2 text-sm font-medium text-attention cursor-pointer">Sans classe — à réassigner</summary>
                       <div className="px-3 pb-3 space-y-3">
                         {parSemaine(docsAffiches.filter(d => (classesParDoc.get(d.id) ?? []).length === 0)).map(([sem, ds]) => (
                           <div key={sem ?? 'na'} className="space-y-1.5">
-                            <p className="text-xs text-stone-400 uppercase tracking-wide">{sem != null ? `Semaine ${sem}` : 'Semaine non précisée'}</p>
+                            <p className="text-xs text-muet uppercase tracking-wide">{sem != null ? `Semaine ${sem}` : 'Semaine non précisée'}</p>
                             {ds.map(ligne)}
                           </div>
                         ))}

@@ -14,8 +14,8 @@ import type { TravailAletheia, DiagnosticTravail } from '@/app/eleve/modules/ale
 function Barre({ done, total }: { done: number; total: number }) {
   const pct = total > 0 ? Math.round((done / total) * 100) : 0
   return (
-    <div className="w-28 h-1.5 bg-stone-100 rounded-full overflow-hidden" title={`${done}/${total} semaines`}>
-      <div className="h-full bg-green-400 rounded-full" style={{ width: `${pct}%` }} />
+    <div className="w-28 h-1.5 bg-parchemin-fonce rounded-full overflow-hidden" title={`${done}/${total} semaines`}>
+      <div className="h-full bg-pigment rounded-full" style={{ width: `${pct}%` }} />
     </div>
   )
 }
@@ -27,7 +27,7 @@ function StatutEleve({
   travaux: Map<string, Map<number, TravailAletheia>>
   diag: Map<string, Map<number, DiagnosticTravail>>
 }) {
-  if (livres.length === 0) return <span className="text-xs text-stone-400">Aucun livre assigné à cette classe.</span>
+  if (livres.length === 0) return <span className="text-xs text-muet">Aucun livre assigné à cette classe.</span>
   return (
     <div className="space-y-2">
       {livres.map(livre => {
@@ -35,9 +35,9 @@ function StatutEleve({
         return (
           <div key={livre.id} className="space-y-1">
             <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs">
-              <span className="text-stone-600 truncate max-w-[12rem]">{livre.titre}</span>
+              <span className="text-encre-douce truncate max-w-[12rem]">{livre.titre}</span>
               <Barre done={p.done} total={p.total} />
-              <span className="text-stone-400">
+              <span className="text-muet">
                 {p.done}/{p.total}
                 {p.semaineCourante != null && p.statutCourant != null && (
                   <> · sem. {p.semaineCourante} — {STATUT_LABEL[p.statutCourant]}</>
@@ -123,7 +123,7 @@ export default async function ClasseAletheiaPage({ searchParams }: { searchParam
         display_name: p.display_name as string,
         statut: <StatutEleve livres={livres} travaux={parEleve.get(id) ?? new Map()} diag={diagEleve} />,
         actions: (
-          <Link href={`/prof/aletheia/eleve/${id}`} className="text-xs text-stone-500 hover:text-stone-800 underline whitespace-nowrap">
+          <Link href={`/prof/aletheia/eleve/${id}`} className="text-xs text-muet hover:text-encre underline whitespace-nowrap">
             Voir le détail →
           </Link>
         ),
@@ -134,7 +134,7 @@ export default async function ClasseAletheiaPage({ searchParams }: { searchParam
   return (
     <div className="space-y-6">
       {classesList.length === 0 ? (
-        <p className="text-center text-stone-400 text-sm py-8">Aucune classe pour le moment.</p>
+        <p className="text-center text-muet text-sm py-8">Aucune classe pour le moment.</p>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
           {classesList.map(c => {
@@ -156,7 +156,7 @@ export default async function ClasseAletheiaPage({ searchParams }: { searchParam
       {classeSel && (
         <>
           <div className="flex flex-wrap items-center justify-between gap-3">
-            <p className="text-xs text-stone-400 max-w-xl">
+            <p className="text-xs text-muet max-w-xl">
               Diagnostic de compréhension (E→A, thèse / arguments) — usage prof, jamais montré à l&apos;élève. La <strong>tendance</strong> prime sur le point isolé.
             </p>
             <BoutonLancerDiagnostic classeId={classeSel} enAttente={totalEnAttente} aFaire={aFaireGlobal} />

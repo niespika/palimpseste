@@ -24,7 +24,7 @@ export default function BoutonRetirerEleve({ classeId, eleveId, nom }: { classeI
     <button
       onClick={retirer}
       disabled={pending}
-      className="text-xs text-stone-400 hover:text-red-600 hover:bg-red-50 px-2 py-1 rounded transition-colors disabled:opacity-50"
+      className="text-xs text-muet hover:text-retard hover:bg-retard-teinte px-2 py-1 rounded transition-colors disabled:opacity-50"
     >
       {pending ? '…' : 'Retirer'}
     </button>

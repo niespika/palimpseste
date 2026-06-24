@@ -112,9 +112,9 @@ export default async function PageParametres() {
   return (
     <div className="space-y-6">
       {coutMois > 0 && (
-        <div className="bg-stone-50 border border-stone-200 rounded-xl px-4 py-3 flex items-center gap-3">
-          <span className="text-sm text-stone-600">Coût API estimé ce mois-ci :</span>
-          <span className="font-medium text-stone-900">${coutMois.toFixed(4)}</span>
+        <div className="bg-parchemin-fonce border border-bordure rounded-xl px-4 py-3 flex items-center gap-3">
+          <span className="text-sm text-encre-douce">Coût API estimé ce mois-ci :</span>
+          <span className="font-medium text-encre">${coutMois.toFixed(4)}</span>
         </div>
       )}
 

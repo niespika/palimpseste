@@ -78,24 +78,24 @@ export default async function PageDepot({
           {essaiId ? (
             <Link
               href={`/prof/fragments-erudition/essais/${essaiId}${classeParam ? `?classe=${classeParam}` : ''}`}
-              className="text-sm text-stone-500 hover:text-stone-700"
+              className="text-sm text-muet hover:text-encre-douce"
             >
               ← {epreuve?.titre ?? 'Essai'}
             </Link>
           ) : (
-            <Link href="/prof/fragments-erudition/essais" className="text-sm text-stone-500 hover:text-stone-700">
+            <Link href="/prof/fragments-erudition/essais" className="text-sm text-muet hover:text-encre-douce">
               ← Essais
             </Link>
           )}
-          <h3 className="text-lg font-medium text-stone-900 mt-0.5">
+          <h3 className="text-lg font-medium text-encre mt-0.5">
             {(eleve as { display_name: string; classe: string | null } | null)?.display_name ?? 'Élève'}
             {(eleve as { display_name: string; classe: string | null } | null)?.classe && (
-              <span className="text-sm text-stone-400 ml-2">
+              <span className="text-sm text-muet ml-2">
                 {(eleve as { display_name: string; classe: string | null }).classe}
               </span>
             )}
           </h3>
-          <p className="text-xs text-stone-400 mt-0.5">
+          <p className="text-xs text-muet mt-0.5">
             {epreuve?.titre} · {epreuve?.duree_minutes} min
             {depot.depose_par === 'prof' && ' · déposé par le prof'}
           </p>
@@ -105,16 +105,16 @@ export default async function PageDepot({
           <div className="flex gap-2">
             {depotPrecedent ? (
               <Link href={`/prof/fragments-erudition/depots/${depotPrecedent}?essai=${essaiId}${qsClasse}`}
-                className="text-sm px-3 py-1.5 border border-stone-200 rounded-lg hover:bg-stone-50">
+                className="text-sm px-3 py-1.5 border border-bordure rounded-lg hover:bg-parchemin-fonce">
                 ← Élève précédent
               </Link>
-            ) : <span className="text-sm px-3 py-1.5 text-stone-300">← Élève précédent</span>}
+            ) : <span className="text-sm px-3 py-1.5 text-muet">← Élève précédent</span>}
             {depotSuivant ? (
               <Link href={`/prof/fragments-erudition/depots/${depotSuivant}?essai=${essaiId}${qsClasse}`}
-                className="text-sm px-3 py-1.5 border border-stone-200 rounded-lg hover:bg-stone-50">
+                className="text-sm px-3 py-1.5 border border-bordure rounded-lg hover:bg-parchemin-fonce">
                 Élève suivant →
               </Link>
-            ) : <span className="text-sm px-3 py-1.5 text-stone-300">Élève suivant →</span>}
+            ) : <span className="text-sm px-3 py-1.5 text-muet">Élève suivant →</span>}
           </div>
         )}
       </div>

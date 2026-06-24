@@ -26,7 +26,7 @@ export default function EssaiDepot({ epreuveId, inscriptionId, essaiExistantId, 
 
   if (analyseEnCours) {
     return (
-      <div className="bg-blue-50 border border-blue-200 rounded-xl px-4 py-3 text-sm text-blue-700">
+      <div className="bg-info-teinte border border-info rounded-xl px-4 py-3 text-sm text-info">
         Analyse en cours… ton professeur recevra les résultats dès qu'elle sera terminée.
       </div>
     )
@@ -146,8 +146,8 @@ export default function EssaiDepot({ epreuveId, inscriptionId, essaiExistantId, 
         htmlFor="input-essai-photos"
         className={`flex items-center justify-center gap-2 w-full py-4 border-2 border-dashed rounded-xl cursor-pointer transition-colors ${
           traitement
-            ? 'border-stone-200 text-stone-400 cursor-wait'
-            : 'border-stone-300 text-stone-600 hover:border-stone-400 hover:bg-stone-50'
+            ? 'border-bordure text-muet cursor-wait'
+            : 'border-bordure text-encre-douce hover:border-pigment hover:bg-parchemin-fonce'
         }`}
       >
         {traitement ? (
@@ -161,22 +161,22 @@ export default function EssaiDepot({ epreuveId, inscriptionId, essaiExistantId, 
           </>
         )}
       </label>
-      <p className="text-xs text-stone-400 text-center">
+      <p className="text-xs text-muet text-center">
         Max 12 photos · Compressées automatiquement · Recto d'abord, puis verso
       </p>
 
       {images.length > 0 && (
         <div className="space-y-2">
-          <p className="text-sm font-medium text-stone-700">Photos ({images.length}/12) — dans cet ordre :</p>
+          <p className="text-sm font-medium text-encre-douce">Photos ({images.length}/12) — dans cet ordre :</p>
           {images.map((img, index) => (
-            <div key={img.previewUrl} className="flex items-center gap-3 bg-stone-50 rounded-xl p-2">
-              <span className="text-xs text-stone-400 w-5 text-center font-medium">{index + 1}</span>
+            <div key={img.previewUrl} className="flex items-center gap-3 bg-parchemin-fonce rounded-xl p-2">
+              <span className="text-xs text-muet w-5 text-center font-medium">{index + 1}</span>
               <img src={img.previewUrl} alt={`Photo ${index + 1}`} className="w-16 h-16 object-cover rounded-lg flex-shrink-0" />
-              <span className="text-xs text-stone-500 flex-1 truncate">{img.nom}</span>
+              <span className="text-xs text-muet flex-1 truncate">{img.nom}</span>
               <div className="flex gap-1 flex-shrink-0">
-                <button onClick={() => monterImage(index)} disabled={index === 0} className="w-7 h-7 flex items-center justify-center text-stone-400 hover:text-stone-700 disabled:opacity-20 text-sm" title="Monter">▲</button>
-                <button onClick={() => descendreImage(index)} disabled={index === images.length - 1} className="w-7 h-7 flex items-center justify-center text-stone-400 hover:text-stone-700 disabled:opacity-20 text-sm" title="Descendre">▼</button>
-                <button onClick={() => supprimerImage(index)} className="w-7 h-7 flex items-center justify-center text-red-400 hover:text-red-600 text-sm" title="Supprimer">✕</button>
+                <button onClick={() => monterImage(index)} disabled={index === 0} className="w-7 h-7 flex items-center justify-center text-muet hover:text-encre-douce disabled:opacity-20 text-sm" title="Monter">▲</button>
+                <button onClick={() => descendreImage(index)} disabled={index === images.length - 1} className="w-7 h-7 flex items-center justify-center text-muet hover:text-encre-douce disabled:opacity-20 text-sm" title="Descendre">▼</button>
+                <button onClick={() => supprimerImage(index)} className="w-7 h-7 flex items-center justify-center text-retard hover:opacity-80 text-sm" title="Supprimer">✕</button>
               </div>
             </div>
           ))}
@@ -184,21 +184,21 @@ export default function EssaiDepot({ epreuveId, inscriptionId, essaiExistantId, 
       )}
 
       {erreur && (
-        <div className="bg-red-50 border border-red-200 rounded-xl px-3 py-2">
-          <p className="text-red-700 text-sm">{erreur}</p>
+        <div className="bg-retard-teinte border border-retard rounded-xl px-3 py-2">
+          <p className="text-retard text-sm">{erreur}</p>
         </div>
       )}
 
       {upload && (
-        <div className="bg-blue-50 border border-blue-200 rounded-xl px-3 py-2">
-          <p className="text-blue-700 text-sm">{progression}</p>
+        <div className="bg-info-teinte border border-info rounded-xl px-3 py-2">
+          <p className="text-info text-sm">{progression}</p>
         </div>
       )}
 
       <button
         onClick={handleSoumettre}
         disabled={upload || traitement || images.length === 0}
-        className="w-full bg-stone-800 text-white py-3 rounded-xl text-sm font-medium hover:bg-stone-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+        className="w-full bg-bouton text-surface py-3 rounded-xl text-sm font-medium hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
       >
         {upload ? 'Envoi en cours…' : essaiId ? 'Remplacer mon dépôt' : 'Déposer mon essai'}
       </button>
@@ -207,7 +207,7 @@ export default function EssaiDepot({ epreuveId, inscriptionId, essaiExistantId, 
         <button
           onClick={handleReinitialiser}
           disabled={reinitialisation}
-          className="w-full text-xs text-stone-400 hover:text-red-600 py-1"
+          className="w-full text-xs text-muet hover:text-retard py-1"
         >
           {reinitialisation ? '…' : 'Supprimer mon dépôt et recommencer'}
         </button>

@@ -99,30 +99,30 @@ export default function TirageAuSort({ semaineId, classeId, eligibles, presentat
   const eligiblesNonExclus = eligibles.filter(e => !excluIds.has(e.id))
 
   return (
-    <div className="bg-white border border-stone-200 rounded-xl p-5 space-y-5">
-      <h3 className="font-medium text-stone-900">Tirage au sort</h3>
+    <div className="bg-surface border border-bordure rounded-xl p-5 space-y-5">
+      <h3 className="font-medium text-encre">Tirage au sort</h3>
 
       {/* Historique des présentations de cette semaine */}
       {presentations.length > 0 && (
         <div className="space-y-2">
-          <p className="text-xs font-medium text-stone-500 uppercase tracking-wide">Présentations</p>
+          <p className="text-xs font-medium text-muet uppercase tracking-wide">Présentations</p>
           <div className="space-y-1.5">
             {presentations.map(p => (
               <div key={p.id} className="flex items-center justify-between gap-3 text-sm">
                 <div className="flex items-center gap-2">
-                  <span className="text-stone-800 font-medium">{p.eleve?.display_name ?? '—'}</span>
+                  <span className="text-encre font-medium">{p.eleve?.display_name ?? '—'}</span>
                   <Link
                     href={`/prof/fragments-erudition/presentation/${p.id}`}
-                    className="text-xs text-stone-400 hover:text-stone-700 underline"
+                    className="text-xs text-muet hover:text-encre-douce underline"
                   >
                     Fiche
                   </Link>
                 </div>
                 <div className="flex items-center gap-2">
                   <span className={`text-xs px-2 py-0.5 rounded-full ${
-                    p.statut === 'presente' ? 'bg-green-100 text-green-700' :
-                    p.statut === 'reporte' ? 'bg-amber-100 text-amber-700' :
-                    'bg-blue-100 text-blue-700'
+                    p.statut === 'presente' ? 'bg-ok-teinte text-ok' :
+                    p.statut === 'reporte' ? 'bg-attention-teinte text-attention' :
+                    'bg-info-teinte text-info'
                   }`}>
                     {p.statut === 'presente' ? 'A présenté ✓' :
                      p.statut === 'reporte' ? 'Reporté' : 'Tiré'}
@@ -132,21 +132,21 @@ export default function TirageAuSort({ semaineId, classeId, eligibles, presentat
                       <button
                         onClick={() => handleStatut(p.id, 'presente')}
                         disabled={chargement}
-                        className="text-xs text-green-700 hover:bg-green-50 px-2 py-0.5 rounded border border-green-200"
+                        className="text-xs text-ok hover:bg-ok-teinte px-2 py-0.5 rounded border border-ok"
                       >
                         A présenté
                       </button>
                       <button
                         onClick={() => handleStatut(p.id, 'reporte')}
                         disabled={chargement}
-                        className="text-xs text-amber-700 hover:bg-amber-50 px-2 py-0.5 rounded border border-amber-200"
+                        className="text-xs text-attention hover:bg-attention-teinte px-2 py-0.5 rounded border border-attention"
                       >
                         Reporter
                       </button>
                       <button
                         onClick={() => handleAnnuler(p.id)}
                         disabled={chargement}
-                        className="text-xs text-stone-400 hover:text-stone-700 px-2 py-0.5 rounded hover:bg-stone-100"
+                        className="text-xs text-muet hover:text-encre-douce px-2 py-0.5 rounded hover:bg-parchemin-fonce"
                       >
                         Retirer
                       </button>
@@ -163,11 +163,11 @@ export default function TirageAuSort({ semaineId, classeId, eligibles, presentat
       {(animation || affichage) && (
         <div className={`rounded-xl border-2 py-8 text-center transition-all ${
           animation
-            ? 'border-stone-300 bg-stone-50'
-            : 'border-green-300 bg-green-50'
+            ? 'border-bordure bg-parchemin-fonce'
+            : 'border-ok bg-ok-teinte'
         }`}>
           <p className={`text-2xl font-serif font-medium transition-all ${
-            animation ? 'text-stone-400 blur-[1px]' : 'text-green-800'
+            animation ? 'text-muet blur-[1px]' : 'text-ok'
           }`}>
             {affichage}
           </p>
@@ -179,27 +179,27 @@ export default function TirageAuSort({ semaineId, classeId, eligibles, presentat
         <div className="space-y-4">
           {/* Nombre d'orateurs à désigner */}
           <div className="flex items-center gap-2">
-            <label className="text-xs text-stone-500">Nombre d&apos;orateurs</label>
+            <label className="text-xs text-muet">Nombre d&apos;orateurs</label>
             <input
               type="number"
               min={1}
               max={eligiblesNonExclus.length || 1}
               value={nombre}
               onChange={e => setNombre(Math.max(1, Number(e.target.value)))}
-              className="w-16 px-2 py-1 border border-stone-300 rounded text-sm"
+              className="w-16 px-2 py-1 border border-bordure rounded text-sm"
             />
           </div>
           {/* Exclusions manuelles */}
           <div>
-            <p className="text-xs text-stone-500 mb-2">
+            <p className="text-xs text-muet mb-2">
               Élèves éligibles ({eligiblesNonExclus.length}/{eligibles.length}) — décocher pour exclure :
             </p>
             <div className="flex flex-wrap gap-2">
               {eligibles.map(e => (
                 <label key={e.id} className={`inline-flex items-center gap-1.5 text-xs px-2.5 py-1.5 rounded-lg border cursor-pointer transition-colors ${
                   excluIds.has(e.id)
-                    ? 'bg-stone-100 border-stone-300 text-stone-400 line-through'
-                    : 'bg-white border-stone-300 text-stone-700 hover:border-stone-400'
+                    ? 'bg-parchemin-fonce border-bordure text-muet line-through'
+                    : 'bg-surface border-bordure text-encre-douce hover:border-pigment'
                 }`}>
                   <input
                     type="checkbox"
@@ -209,7 +209,7 @@ export default function TirageAuSort({ semaineId, classeId, eligibles, presentat
                   />
                   {e.display_name}
                   {e.nbPresentations > 0 && (
-                    <span className="text-stone-400">({e.nbPresentations}×)</span>
+                    <span className="text-muet">({e.nbPresentations}×)</span>
                   )}
                 </label>
               ))}
@@ -219,7 +219,7 @@ export default function TirageAuSort({ semaineId, classeId, eligibles, presentat
           <button
             onClick={handleTirer}
             disabled={chargement || animation || eligiblesNonExclus.length === 0}
-            className="bg-stone-800 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-stone-700 disabled:opacity-50 transition-colors"
+            className="bg-bouton text-surface px-4 py-2 rounded-lg text-sm font-medium hover:opacity-90 disabled:opacity-50 transition-colors"
           >
             {animation || chargement ? 'Tirage…' : `Désigner ${nombre} orateur${nombre > 1 ? 's' : ''}`}
           </button>
@@ -227,12 +227,12 @@ export default function TirageAuSort({ semaineId, classeId, eligibles, presentat
       )}
 
       {eligibles.length === 0 && (
-        <p className="text-sm text-stone-400 italic">
+        <p className="text-sm text-muet italic">
           Aucun élève n'a déposé pour cette semaine — le tirage n'est pas disponible.
         </p>
       )}
 
-      {erreur && <p className="text-sm text-red-600">{erreur}</p>}
+      {erreur && <p className="text-sm text-retard">{erreur}</p>}
     </div>
   )
 }

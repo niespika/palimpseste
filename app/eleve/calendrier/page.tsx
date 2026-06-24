@@ -109,30 +109,30 @@ export default async function CalendrierEleve({
   const Pastille = ({ e }: { e: Evt }) => (
     <div className="flex items-center gap-1.5" title={e.sousTitre ? `${e.label} · ${e.sousTitre}` : e.label}>
       <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: e.couleur }} />
-      <span className="text-[11px] text-stone-600 truncate">{e.label}</span>
+      <span className="text-[11px] text-encre-douce truncate">{e.label}</span>
     </div>
   )
 
   return (
     <div className="space-y-4">
-      <h2 className="text-xl font-serif text-stone-900">Calendrier</h2>
+      <h2 className="text-xl font-serif text-encre">Calendrier</h2>
 
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-2">
-          <Link href={lien(vue, prev)} aria-label="Précédent" className="px-2 py-1 text-sm text-stone-500 hover:text-stone-900 border border-stone-200 rounded-lg">←</Link>
-          <Link href={lien(vue, today)} className="px-3 py-1 text-sm text-stone-600 hover:text-stone-900 border border-stone-200 rounded-lg">Aujourd&apos;hui</Link>
-          <Link href={lien(vue, next)} aria-label="Suivant" className="px-2 py-1 text-sm text-stone-500 hover:text-stone-900 border border-stone-200 rounded-lg">→</Link>
-          <h3 className="text-base font-medium text-stone-900 ml-2 capitalize">{titre}</h3>
+          <Link href={lien(vue, prev)} aria-label="Précédent" className="px-2 py-1 text-sm text-muet hover:text-encre border border-bordure rounded-lg">←</Link>
+          <Link href={lien(vue, today)} className="px-3 py-1 text-sm text-encre-douce hover:text-encre border border-bordure rounded-lg">Aujourd&apos;hui</Link>
+          <Link href={lien(vue, next)} aria-label="Suivant" className="px-2 py-1 text-sm text-muet hover:text-encre border border-bordure rounded-lg">→</Link>
+          <h3 className="text-base font-medium text-encre ml-2 capitalize">{titre}</h3>
         </div>
         <div className="flex gap-1 text-sm">
           {(['mois', 'semaine', 'jour'] as Vue[]).map((v) => (
-            <Link key={v} href={lien(v, anchor)} className={`px-3 py-1 rounded-lg capitalize ${vue === v ? 'bg-stone-800 text-white' : 'text-stone-600 hover:bg-stone-100'}`}>{v}</Link>
+            <Link key={v} href={lien(v, anchor)} className={`px-3 py-1 rounded-lg capitalize ${vue === v ? 'bg-bouton text-surface' : 'text-encre-douce hover:bg-parchemin-fonce'}`}>{v}</Link>
           ))}
         </div>
       </div>
 
       {/* Légende couleurs */}
-      <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-stone-500">
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muet">
         {multiClasse && cls.map((c) => (
           <span key={c.id} className="inline-flex items-center gap-1.5">
             <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: couleurs.get(c.id) ?? COULEUR_NEUTRE }} />
@@ -146,13 +146,13 @@ export default async function CalendrierEleve({
       </div>
 
       {!sem && (
-        <div className="bg-white border border-stone-200 rounded-xl p-6 text-sm text-stone-500">Aucun semestre actif pour le moment.</div>
+        <div className="bg-surface border border-bordure rounded-xl p-6 text-sm text-muet">Aucun semestre actif pour le moment.</div>
       )}
 
       {/* ── Vue MOIS ── */}
       {vue === 'mois' && (
-        <div className="bg-white border border-stone-200 rounded-xl overflow-hidden">
-          <div className="grid grid-cols-7 border-b border-stone-100 text-[11px] text-stone-400 uppercase">
+        <div className="bg-surface border border-bordure rounded-xl overflow-hidden">
+          <div className="grid grid-cols-7 border-b border-bordure text-[11px] text-muet uppercase">
             {JOURS.map((j) => <div key={j} className="px-2 py-1.5 text-center">{j}</div>)}
           </div>
           {(() => {
@@ -160,18 +160,18 @@ export default async function CalendrierEleve({
             let c = debut
             while (c <= fin) { rows.push(c); c = toISODate(addDaysUTC(parse(c), 7)) }
             return rows.map((ws) => (
-              <div key={ws} className="grid grid-cols-7 border-b border-stone-50 last:border-0">
+              <div key={ws} className="grid grid-cols-7 border-b border-bordure last:border-0">
                 {Array.from({ length: 7 }).map((_, j) => {
                   const jour = toISODate(addDaysUTC(parse(ws), j))
                   const evs = parJour.get(jour) ?? []
                   const horsMois = jour.slice(0, 7) !== anchor.slice(0, 7)
                   const vac = estVacance(jour)
                   return (
-                    <Link key={jour} href={lien('jour', jour)} className={`min-h-[5.5rem] border-r border-stone-50 last:border-0 p-1.5 align-top transition-colors hover:bg-stone-50 ${vac ? 'bg-stone-50' : ''} ${horsMois ? 'opacity-40' : ''}`}>
-                      <div className={`text-[11px] ${jour === today ? 'font-bold text-stone-900' : 'text-stone-400'}`}>{parse(jour).getUTCDate()}</div>
+                    <Link key={jour} href={lien('jour', jour)} className={`min-h-[5.5rem] border-r border-bordure last:border-0 p-1.5 align-top transition-colors hover:bg-parchemin-fonce ${vac ? 'bg-parchemin-fonce' : ''} ${horsMois ? 'opacity-40' : ''}`}>
+                      <div className={`text-[11px] ${jour === today ? 'font-bold text-encre' : 'text-muet'}`}>{parse(jour).getUTCDate()}</div>
                       <div className="mt-1 space-y-0.5">
                         {evs.slice(0, 3).map((e, i) => <Pastille key={i} e={e} />)}
-                        {evs.length > 3 && <p className="text-[10px] text-stone-400">+ {evs.length - 3}</p>}
+                        {evs.length > 3 && <p className="text-[10px] text-muet">+ {evs.length - 3}</p>}
                       </div>
                     </Link>
                   )
@@ -190,10 +190,10 @@ export default async function CalendrierEleve({
             const evs = parJour.get(jour) ?? []
             const vac = estVacance(jour)
             return (
-              <div key={jour} className={`bg-white border border-stone-200 rounded-xl px-4 py-3 ${vac ? 'bg-stone-50' : ''}`}>
+              <div key={jour} className={`bg-surface border border-bordure rounded-xl px-4 py-3 ${vac ? 'bg-parchemin-fonce' : ''}`}>
                 <div className="flex items-center justify-between">
-                  <Link href={lien('jour', jour)} className="text-sm font-medium text-stone-700 hover:underline capitalize">{fmt(jour, { weekday: 'long', day: 'numeric', month: 'short' })}</Link>
-                  {vac && <span className="text-xs text-stone-400">vacances</span>}
+                  <Link href={lien('jour', jour)} className="text-sm font-medium text-encre-douce hover:underline capitalize">{fmt(jour, { weekday: 'long', day: 'numeric', month: 'short' })}</Link>
+                  {vac && <span className="text-xs text-muet">vacances</span>}
                 </div>
                 {evs.length > 0 && <div className="mt-2 space-y-1">{evs.map((e, i) => <Pastille key={i} e={e} />)}</div>}
               </div>
@@ -204,17 +204,17 @@ export default async function CalendrierEleve({
 
       {/* ── Vue JOUR ── */}
       {vue === 'jour' && (
-        <div className="bg-white border border-stone-200 rounded-xl p-5">
-          {estVacance(anchor) && <p className="text-sm text-stone-400 mb-3">Période de vacances.</p>}
+        <div className="bg-surface border border-bordure rounded-xl p-5">
+          {estVacance(anchor) && <p className="text-sm text-muet mb-3">Période de vacances.</p>}
           {(parJour.get(anchor) ?? []).length === 0 ? (
-            <p className="text-sm text-stone-400">Rien à faire ni à rendre ce jour.</p>
+            <p className="text-sm text-muet">Rien à faire ni à rendre ce jour.</p>
           ) : (
             <ul className="space-y-2">
               {(parJour.get(anchor) ?? []).map((e, i) => (
                 <li key={i} className="flex flex-wrap items-center gap-2">
                   <span className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: e.couleur }} />
-                  <span className="text-sm text-stone-700">{e.label}</span>
-                  {e.sousTitre && <span className="text-xs text-stone-400">· {e.sousTitre}</span>}
+                  <span className="text-sm text-encre-douce">{e.label}</span>
+                  {e.sousTitre && <span className="text-xs text-muet">· {e.sousTitre}</span>}
                 </li>
               ))}
             </ul>

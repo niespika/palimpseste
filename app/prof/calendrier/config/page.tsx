@@ -58,8 +58,8 @@ export default async function CalendrierConfigPage({
   return (
     <div className="space-y-10 max-w-3xl">
       <section>
-        <h3 className="text-base font-medium text-stone-900">Semestres</h3>
-        <p className="text-sm text-stone-500 mt-0.5 mb-4">
+        <h3 className="text-base font-medium text-encre">Semestres</h3>
+        <p className="text-sm text-muet mt-0.5 mb-4">
           Le semestre est commun à toutes les classes. Il ancre la numérotation des
           semaines et sert de période de référence à Fragments et Quazian.
         </p>
@@ -67,8 +67,8 @@ export default async function CalendrierConfigPage({
       </section>
 
       <section>
-        <h3 className="text-base font-medium text-stone-900">Vacances</h3>
-        <p className="text-sm text-stone-500 mt-0.5 mb-4">
+        <h3 className="text-base font-medium text-encre">Vacances</h3>
+        <p className="text-sm text-muet mt-0.5 mb-4">
           Les périodes de vacances sont saisies par semestre. Une semaine qui en
           chevauche une ne reçoit pas de numéro pédagogique (lot suivant).
         </p>
@@ -76,8 +76,8 @@ export default async function CalendrierConfigPage({
       </section>
 
       <section>
-        <h3 className="text-base font-medium text-stone-900">Couleurs des classes</h3>
-        <p className="text-sm text-stone-500 mt-0.5 mb-4">
+        <h3 className="text-base font-medium text-encre">Couleurs des classes</h3>
+        <p className="text-sm text-muet mt-0.5 mb-4">
           La couleur distingue les classes sur le calendrier (vue d&apos;ensemble,
           pastilles d&apos;échéances).
         </p>
@@ -85,8 +85,8 @@ export default async function CalendrierConfigPage({
       </section>
 
       <section>
-        <h3 className="text-base font-medium text-stone-900">Jours de cours</h3>
-        <p className="text-sm text-stone-500 mt-0.5 mb-4">
+        <h3 className="text-base font-medium text-encre">Jours de cours</h3>
+        <p className="text-sm text-muet mt-0.5 mb-4">
           Motif hebdomadaire par classe (informatif, sans contrainte). Les jours
           sélectionnés s&apos;affichent sur le calendrier (hors vacances).
         </p>

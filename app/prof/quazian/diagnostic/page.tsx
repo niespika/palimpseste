@@ -32,7 +32,7 @@ function MatriceClasse({
 
   if (eleveIds.length === 0) {
     return (
-      <div className="text-center py-12 text-stone-400 text-sm">
+      <div className="text-center py-12 text-muet text-sm">
         Aucune donnée de quizz pour cette sélection. Lance et ferme au moins un quizz.
       </div>
     )
@@ -41,7 +41,7 @@ function MatriceClasse({
   return (
     <>
       <div className="mb-8">
-        <h3 className="text-sm font-medium text-stone-600 mb-3">
+        <h3 className="text-sm font-medium text-encre-douce mb-3">
           Fragilités par concept — {eleveIds.length} élève{eleveIds.length > 1 ? 's' : ''}
         </h3>
 
@@ -58,10 +58,10 @@ function MatriceClasse({
           <table className="text-xs">
             <thead>
               <tr>
-                <th className="text-left pr-4 py-1 text-stone-400 font-normal min-w-32">Concept</th>
+                <th className="text-left pr-4 py-1 text-muet font-normal min-w-32">Concept</th>
                 {eleveIds.map((id) => (
-                  <th key={id} className="px-1 py-1 text-stone-400 font-normal">
-                    <Link href={`/prof/quazian/diagnostic/${id}`} className="hover:text-stone-700">
+                  <th key={id} className="px-1 py-1 text-muet font-normal">
+                    <Link href={`/prof/quazian/diagnostic/${id}`} className="hover:text-encre-douce">
                       {profilesMap[id]?.display_name?.split(' ')[0] ?? '?'}
                     </Link>
                   </th>
@@ -70,12 +70,12 @@ function MatriceClasse({
             </thead>
             <tbody>
               {conceptsTries.slice(0, 20).map(([concept]) => (
-                <tr key={concept} className="border-t border-stone-50">
-                  <td className="pr-4 py-1 text-stone-700 font-medium truncate max-w-40">{concept}</td>
+                <tr key={concept} className="border-t border-bordure">
+                  <td className="pr-4 py-1 text-encre-douce font-medium truncate max-w-40">{concept}</td>
                   {eleveIds.map((eleveId) => {
                     const diag = diagnostics[eleveId]?.find((d) => d.concept_tag === concept)
                     const profil = diag?.profil ?? null
-                    const { bg } = profil ? PROFIL_LABELS[profil] : { bg: 'bg-stone-50' }
+                    const { bg } = profil ? PROFIL_LABELS[profil] : { bg: 'bg-parchemin-fonce' }
                     return (
                       <td key={eleveId} className="px-1 py-1 text-center">
                         <div className={`w-6 h-6 rounded ${bg} border mx-auto`} title={profil ? `${PROFIL_LABELS[profil].label} (${diag?.scoreMoyen.toFixed(1)})` : 'Pas de données'} />
@@ -90,7 +90,7 @@ function MatriceClasse({
       </div>
 
       <div>
-        <h3 className="text-sm font-medium text-stone-600 mb-3">Vue par élève</h3>
+        <h3 className="text-sm font-medium text-encre-douce mb-3">Vue par élève</h3>
         <div className="space-y-2">
           {eleveIds.map((id) => {
             const diag = diagnostics[id] ?? []
@@ -98,14 +98,14 @@ function MatriceClasse({
             const nLacunes = diag.filter((d) => d.profil === 'lacune').length
             const nMaitrise = diag.filter((d) => d.profil === 'maitrise').length
             return (
-              <Link key={id} href={`/prof/quazian/diagnostic/${id}`} className="flex items-center gap-4 bg-white border border-stone-200 rounded-xl px-4 py-3 hover:bg-stone-50 transition-colors">
-                <span className="font-medium text-stone-900 flex-1">{profilesMap[id]?.display_name ?? id}</span>
+              <Link key={id} href={`/prof/quazian/diagnostic/${id}`} className="flex items-center gap-4 bg-surface border border-bordure rounded-xl px-4 py-3 hover:bg-parchemin-fonce transition-colors">
+                <span className="font-medium text-encre flex-1">{profilesMap[id]?.display_name ?? id}</span>
                 <div className="flex gap-2 text-xs">
-                  {nIdeesFausses > 0 && <span className="px-2 py-0.5 bg-red-50 border border-red-200 text-red-700 rounded-full">{nIdeesFausses} idée{nIdeesFausses > 1 ? 's' : ''} fausse{nIdeesFausses > 1 ? 's' : ''}</span>}
-                  {nLacunes > 0 && <span className="px-2 py-0.5 bg-amber-50 border border-amber-200 text-amber-700 rounded-full">{nLacunes} lacune{nLacunes > 1 ? 's' : ''}</span>}
-                  {nMaitrise > 0 && <span className="px-2 py-0.5 bg-green-50 border border-green-200 text-green-700 rounded-full">{nMaitrise} maîtrisé{nMaitrise > 1 ? 's' : ''}</span>}
+                  {nIdeesFausses > 0 && <span className="px-2 py-0.5 bg-retard-teinte border border-retard text-retard rounded-full">{nIdeesFausses} idée{nIdeesFausses > 1 ? 's' : ''} fausse{nIdeesFausses > 1 ? 's' : ''}</span>}
+                  {nLacunes > 0 && <span className="px-2 py-0.5 bg-attention-teinte border border-attention text-attention rounded-full">{nLacunes} lacune{nLacunes > 1 ? 's' : ''}</span>}
+                  {nMaitrise > 0 && <span className="px-2 py-0.5 bg-ok-teinte border border-ok text-ok rounded-full">{nMaitrise} maîtrisé{nMaitrise > 1 ? 's' : ''}</span>}
                 </div>
-                <span className="text-stone-400 text-xs">→</span>
+                <span className="text-muet text-xs">→</span>
               </Link>
             )
           })}
@@ -155,9 +155,9 @@ export default async function DiagnosticPage({ searchParams }: { searchParams: P
           display_name: p.display_name as string,
           statut: (
             <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs">
-              <span className={a.revisees > 0 ? 'text-green-700' : 'text-stone-400'}>{a.revisees} carte{a.revisees > 1 ? 's' : ''} révisée{a.revisees > 1 ? 's' : ''}</span>
-              <span className={a.backlog > 0 ? 'text-amber-600' : 'text-stone-400'}>backlog {a.backlog}</span>
-              <span className="text-stone-400">{a.derniere ? `vu le ${new Date(a.derniere).toLocaleDateString('fr-FR')}` : 'jamais révisé'}</span>
+              <span className={a.revisees > 0 ? 'text-ok' : 'text-muet'}>{a.revisees} carte{a.revisees > 1 ? 's' : ''} révisée{a.revisees > 1 ? 's' : ''}</span>
+              <span className={a.backlog > 0 ? 'text-attention' : 'text-muet'}>backlog {a.backlog}</span>
+              <span className="text-muet">{a.derniere ? `vu le ${new Date(a.derniere).toLocaleDateString('fr-FR')}` : 'jamais révisé'}</span>
             </div>
           ),
         }
@@ -194,7 +194,7 @@ export default async function DiagnosticPage({ searchParams }: { searchParams: P
       <div>
         <Entrees vue={vue} />
         {unites.length === 0 ? (
-          <div className="text-center py-12 text-stone-400 text-sm">Aucune unité de cours dans le Scriptorium.</div>
+          <div className="text-center py-12 text-muet text-sm">Aucune unité de cours dans le Scriptorium.</div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 mb-6">
             {unites.map(u => {
@@ -210,7 +210,7 @@ export default async function DiagnosticPage({ searchParams }: { searchParams: P
                   selectionnee={uniteSel === u.id}
                   couleur={nIdees > 0 ? 'rouge' : nLac > 0 ? 'neutre' : 'vert'}
                   resume={(nIdees > 0 || nLac > 0)
-                    ? <span className="text-xs">{nIdees > 0 && <span className="text-red-600">{nIdees} idée{nIdees > 1 ? 's' : ''} fausse{nIdees > 1 ? 's' : ''}</span>}{nIdees > 0 && nLac > 0 && ' · '}{nLac > 0 && <span className="text-amber-600">{nLac} lacune{nLac > 1 ? 's' : ''}</span>}</span>
+                    ? <span className="text-xs">{nIdees > 0 && <span className="text-retard">{nIdees} idée{nIdees > 1 ? 's' : ''} fausse{nIdees > 1 ? 's' : ''}</span>}{nIdees > 0 && nLac > 0 && ' · '}{nLac > 0 && <span className="text-attention">{nLac} lacune{nLac > 1 ? 's' : ''}</span>}</span>
                     : undefined}
                 />
               )
@@ -219,19 +219,19 @@ export default async function DiagnosticPage({ searchParams }: { searchParams: P
         )}
 
         {uniteChoisie && (
-          <div className="bg-white border border-stone-200 rounded-xl p-5">
-            <h3 className="text-sm font-medium text-stone-700 mb-1">{uniteChoisie.label}</h3>
-            <p className="text-xs text-stone-400 mb-4">Concepts les plus fragiles sur cette unité (cours + texte), tous quizz confondus.</p>
+          <div className="bg-surface border border-bordure rounded-xl p-5">
+            <h3 className="text-sm font-medium text-encre-douce mb-1">{uniteChoisie.label}</h3>
+            <p className="text-xs text-muet mb-4">Concepts les plus fragiles sur cette unité (cours + texte), tous quizz confondus.</p>
             {conceptsTries.length === 0 ? (
-              <p className="text-sm text-stone-400">Aucun quizz n&apos;a encore couvert cette unité.</p>
+              <p className="text-sm text-muet">Aucun quizz n&apos;a encore couvert cette unité.</p>
             ) : (
               <ul className="space-y-1.5">
                 {conceptsTries.slice(0, 20).map(([concept, c]) => (
-                  <li key={concept} className="flex items-center gap-3 px-3 py-2 rounded-lg bg-stone-50">
-                    <span className="text-sm text-stone-800 font-medium flex-1 truncate">{concept}</span>
-                    {c.idee_fausse > 0 && <span className="text-xs px-2 py-0.5 bg-red-50 border border-red-200 text-red-700 rounded-full">{c.idee_fausse} idée{c.idee_fausse > 1 ? 's' : ''} fausse{c.idee_fausse > 1 ? 's' : ''}</span>}
-                    {c.lacune > 0 && <span className="text-xs px-2 py-0.5 bg-amber-50 border border-amber-200 text-amber-700 rounded-full">{c.lacune} lacune{c.lacune > 1 ? 's' : ''}</span>}
-                    {c.maitrise > 0 && <span className="text-xs px-2 py-0.5 bg-green-50 border border-green-200 text-green-700 rounded-full">{c.maitrise} maîtrisé{c.maitrise > 1 ? 's' : ''}</span>}
+                  <li key={concept} className="flex items-center gap-3 px-3 py-2 rounded-lg bg-parchemin-fonce">
+                    <span className="text-sm text-encre font-medium flex-1 truncate">{concept}</span>
+                    {c.idee_fausse > 0 && <span className="text-xs px-2 py-0.5 bg-retard-teinte border border-retard text-retard rounded-full">{c.idee_fausse} idée{c.idee_fausse > 1 ? 's' : ''} fausse{c.idee_fausse > 1 ? 's' : ''}</span>}
+                    {c.lacune > 0 && <span className="text-xs px-2 py-0.5 bg-attention-teinte border border-attention text-attention rounded-full">{c.lacune} lacune{c.lacune > 1 ? 's' : ''}</span>}
+                    {c.maitrise > 0 && <span className="text-xs px-2 py-0.5 bg-ok-teinte border border-ok text-ok rounded-full">{c.maitrise} maîtrisé{c.maitrise > 1 ? 's' : ''}</span>}
                   </li>
                 ))}
               </ul>
@@ -268,7 +268,7 @@ export default async function DiagnosticPage({ searchParams }: { searchParams: P
       {classeChoisie ? (
         <MatriceClasse diagnostics={diagnostics} profilesMap={profilesMap} conceptsClasse={conceptsClasse} />
       ) : (
-        <p className="text-center py-8 text-stone-400 text-sm">Choisis une classe pour voir le détail des fragilités par concept et par élève.</p>
+        <p className="text-center py-8 text-muet text-sm">Choisis une classe pour voir le détail des fragilités par concept et par élève.</p>
       )}
     </div>
   )

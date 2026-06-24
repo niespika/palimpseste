@@ -84,7 +84,7 @@ export default async function SemestrePage({
     <div>
       {/* Sélecteur de semestre */}
       {semestres.length === 0 ? (
-        <p className="text-stone-400 text-sm text-center py-12">
+        <p className="text-muet text-sm text-center py-12">
           Aucun semestre. Crée-en un dans la{' '}
           <Link href="/prof/calendrier/config" className="underline">configuration du Calendrier</Link>.
         </p>
@@ -98,8 +98,8 @@ export default async function SemestrePage({
                   href={`/prof/quazian/semestre?sem=${s.id}`}
                   className={`text-sm px-3 py-1.5 rounded-full border transition-colors ${
                     s.id === selId
-                      ? 'bg-stone-800 text-white border-stone-800'
-                      : 'bg-white text-stone-600 border-stone-200 hover:bg-stone-50'
+                      ? 'bg-bouton text-surface border-bouton'
+                      : 'bg-surface text-encre-douce border-bordure hover:bg-parchemin-fonce'
                   }`}
                 >
                   {s.name}
@@ -110,15 +110,15 @@ export default async function SemestrePage({
           )}
 
           {/* Recalcul */}
-          <div className="bg-white border border-stone-200 rounded-xl p-5 mb-8">
-            <h3 className="text-sm font-medium text-stone-700 mb-3">
+          <div className="bg-surface border border-bordure rounded-xl p-5 mb-8">
+            <h3 className="text-sm font-medium text-encre-douce mb-3">
               Calculer / recalculer les notes — {semSel?.name ?? '—'}
             </h3>
             <form action={actionCalculer} className="flex gap-3 items-end flex-wrap">
               <input type="hidden" name="semester_id" value={selId ?? ''} />
               <div>
-                <label className="text-xs text-stone-500 mb-1 block">Classe (optionnel)</label>
-                <select name="classe" className="px-3 py-2 text-sm border border-stone-300 rounded-lg">
+                <label className="text-xs text-muet mb-1 block">Classe (optionnel)</label>
+                <select name="classe" className="px-3 py-2 text-sm border border-bordure rounded-lg">
                   <option value="">Toutes les classes</option>
                   {classes.map((c) => (
                     <option key={c} value={c}>{libelleClasse(c)}</option>
@@ -126,30 +126,30 @@ export default async function SemestrePage({
                 </select>
               </div>
               <button type="submit"
-                className="px-4 py-2 bg-stone-800 text-white text-sm rounded-lg hover:bg-stone-900 transition-colors">
+                className="px-4 py-2 bg-bouton text-surface text-sm rounded-lg hover:opacity-90 transition-colors">
                 Calculer les notes de semestre
               </button>
             </form>
           </div>
 
           {Object.keys(parClasse).length === 0 && (
-            <p className="text-stone-400 text-sm text-center py-12">
+            <p className="text-muet text-sm text-center py-12">
               Aucune note calculée pour ce semestre. Lance d&apos;abord le calcul ci-dessus.
             </p>
           )}
 
           {Object.entries(parClasse).map(([classe, lignes]) => (
             <section key={classe} className="mb-10">
-              <h3 className="text-sm font-medium text-stone-600 mb-3">{libelleClasse(classe)}</h3>
-              <div className="bg-white border border-stone-200 rounded-xl overflow-hidden">
+              <h3 className="text-sm font-medium text-encre-douce mb-3">{libelleClasse(classe)}</h3>
+              <div className="bg-surface border border-bordure rounded-xl overflow-hidden">
                 <table className="w-full text-sm">
                   <thead>
-                    <tr className="border-b border-stone-100 text-xs text-stone-400">
+                    <tr className="border-b border-bordure text-xs text-muet">
                       <th className="text-left px-4 py-3">Élève</th>
                       <th className="text-right px-4 py-3">z moyen</th>
                       <th className="text-right px-4 py-3">Relative /20</th>
                       <th className="text-right px-4 py-3">Absolue /20</th>
-                      <th className="text-right px-4 py-3 font-bold text-stone-600">Finale /20</th>
+                      <th className="text-right px-4 py-3 font-bold text-encre-douce">Finale /20</th>
                       <th className="text-right px-4 py-3">Quizz</th>
                     </tr>
                   </thead>
@@ -158,21 +158,21 @@ export default async function SemestrePage({
                       const profil = profilesMap[n.eleve_id]
                       const scores = scoresParEleve[n.eleve_id] ?? []
                       return (
-                        <tr key={n.eleve_id} className="border-b border-stone-50 last:border-0 hover:bg-stone-50">
-                          <td className="px-4 py-3 text-stone-800">{profil?.display_name ?? n.eleve_id}</td>
-                          <td className="px-4 py-3 text-right font-mono text-stone-500 text-xs">
+                        <tr key={n.eleve_id} className="border-b border-bordure last:border-0 hover:bg-parchemin-fonce">
+                          <td className="px-4 py-3 text-encre">{profil?.display_name ?? n.eleve_id}</td>
+                          <td className="px-4 py-3 text-right font-mono text-muet text-xs">
                             {n.z_moyen?.toFixed(2) ?? '—'}
                           </td>
-                          <td className="px-4 py-3 text-right text-stone-600">
+                          <td className="px-4 py-3 text-right text-encre-douce">
                             {n.note_relative_20?.toFixed(1) ?? '—'}
                           </td>
-                          <td className="px-4 py-3 text-right text-stone-600">
+                          <td className="px-4 py-3 text-right text-encre-douce">
                             {n.note_absolue_20?.toFixed(1) ?? '—'}
                           </td>
-                          <td className="px-4 py-3 text-right font-bold text-stone-900">
+                          <td className="px-4 py-3 text-right font-bold text-encre">
                             {n.note_finale_20?.toFixed(1) ?? '—'}/20
                           </td>
-                          <td className="px-4 py-3 text-right text-stone-400 text-xs">
+                          <td className="px-4 py-3 text-right text-muet text-xs">
                             {scores.length > 0 ? (
                               <span title={scores.map((s) => `${s.note_formative_20?.toFixed(1)}/20`).join(' · ')}>
                                 {scores.length} quizz

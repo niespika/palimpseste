@@ -68,7 +68,7 @@ export default function LoginPage() {
           <button
             type="submit"
             disabled={chargement}
-            className="w-full bg-pigment text-surface py-2.5 px-4 rounded-lg hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed transition-opacity font-ui text-sm font-semibold"
+            className="w-full bg-bouton text-surface py-2.5 px-4 rounded-lg hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed transition-opacity font-ui text-sm font-semibold"
           >
             {chargement ? 'Connexion en cours…' : 'Se connecter'}
           </button>

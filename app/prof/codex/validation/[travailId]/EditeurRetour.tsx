@@ -13,9 +13,9 @@ interface Props {
 }
 
 const STATUT_SUIVI: Record<string, { label: string; classe: string }> = {
-  suivie: { label: 'suivie', classe: 'bg-green-100 text-green-700' },
-  partiellement: { label: 'en partie', classe: 'bg-amber-100 text-amber-700' },
-  non_suivie: { label: 'non suivie', classe: 'bg-red-100 text-red-700' },
+  suivie: { label: 'suivie', classe: 'bg-ok-teinte text-ok' },
+  partiellement: { label: 'en partie', classe: 'bg-attention-teinte text-attention' },
+  non_suivie: { label: 'non suivie', classe: 'bg-retard-teinte text-retard' },
 }
 
 export function EditeurRetour({ travailId, retourInitial, syntheseInitiale, transcriptionVf, dejaValide }: Props) {
@@ -61,16 +61,16 @@ export function EditeurRetour({ travailId, retourInitial, syntheseInitiale, tran
   return (
     <div>
       {/* Onglets écrans */}
-      <div className="flex gap-1 mb-5 bg-stone-100 rounded-lg p-1 w-fit">
+      <div className="flex gap-1 mb-5 bg-parchemin-fonce rounded-lg p-1 w-fit">
         <button
           onClick={() => setEcran('erreurs')}
-          className={`px-4 py-1.5 text-sm rounded-md transition-colors ${ecran === 'erreurs' ? 'bg-white text-stone-900 shadow-sm' : 'text-stone-500'}`}
+          className={`px-4 py-1.5 text-sm rounded-md transition-colors ${ecran === 'erreurs' ? 'bg-surface text-encre shadow-sm' : 'text-muet'}`}
         >
           Erreurs & corrections
         </button>
         <button
           onClick={() => setEcran('synthese')}
-          className={`px-4 py-1.5 text-sm rounded-md transition-colors ${ecran === 'synthese' ? 'bg-white text-stone-900 shadow-sm' : 'text-stone-500'}`}
+          className={`px-4 py-1.5 text-sm rounded-md transition-colors ${ecran === 'synthese' ? 'bg-surface text-encre shadow-sm' : 'text-muet'}`}
         >
           Synthèse complétée
         </button>
@@ -80,39 +80,39 @@ export function EditeurRetour({ travailId, retourInitial, syntheseInitiale, tran
         <div className="space-y-6">
           {/* Erreurs + corrections (éditables) */}
           <section>
-            <h4 className="text-sm font-medium text-stone-700 mb-2">Erreurs restantes & corrections</h4>
-            {erreurs.length === 0 && <p className="text-sm text-stone-400">Aucune erreur factuelle relevée.</p>}
+            <h4 className="text-sm font-medium text-encre-douce mb-2">Erreurs restantes & corrections</h4>
+            {erreurs.length === 0 && <p className="text-sm text-muet">Aucune erreur factuelle relevée.</p>}
             <div className="space-y-3">
               {erreurs.map((e, i) => (
-                <div key={i} className="bg-white border border-stone-200 rounded-xl p-4">
+                <div key={i} className="bg-surface border border-bordure rounded-xl p-4">
                   <div className="flex items-center justify-between mb-2">
-                    <span className="text-xs px-1.5 py-0.5 bg-stone-100 text-stone-500 rounded">{e.concept_tag || 'sans tag'}</span>
+                    <span className="text-xs px-1.5 py-0.5 bg-parchemin-fonce text-muet rounded">{e.concept_tag || 'sans tag'}</span>
                     <div className="flex items-center gap-2">
-                      <label className="text-xs text-stone-400">Importance</label>
+                      <label className="text-xs text-muet">Importance</label>
                       <select
                         value={e.importance}
                         onChange={(ev) => majErreur(i, 'importance', parseInt(ev.target.value))}
-                        className="text-xs border border-stone-300 rounded px-1.5 py-0.5"
+                        className="text-xs border border-bordure rounded px-1.5 py-0.5"
                       >
                         <option value={1}>1 — mineure</option>
                         <option value={2}>2 — notable</option>
                         <option value={3}>3 — grave</option>
                       </select>
-                      <button onClick={() => supprimerErreur(i)} className="text-red-400 hover:text-red-600 text-sm" title="Retirer">✕</button>
+                      <button onClick={() => supprimerErreur(i)} className="text-retard hover:opacity-80 text-sm" title="Retirer">✕</button>
                     </div>
                   </div>
-                  <p className="text-sm text-stone-600 mb-2">{e.description}</p>
-                  <label className="text-xs text-stone-400 block mb-1">Correction (validée, adossée au cours)</label>
+                  <p className="text-sm text-encre-douce mb-2">{e.description}</p>
+                  <label className="text-xs text-muet block mb-1">Correction (validée, adossée au cours)</label>
                   <textarea
                     value={e.correction}
                     onChange={(ev) => majErreur(i, 'correction', ev.target.value)}
                     rows={2}
-                    className="w-full text-sm border border-stone-300 rounded-lg px-3 py-2"
+                    className="w-full text-sm border border-bordure rounded-lg px-3 py-2"
                   />
                 </div>
               ))}
             </div>
-            <p className="text-xs text-stone-400 mt-2">
+            <p className="text-xs text-muet mt-2">
               Les {erreurs.length > 0 ? 'plus importantes' : ''} (importance la plus haute) deviendront des cartes de révision de l&apos;élève à la validation.
             </p>
           </section>
@@ -120,17 +120,17 @@ export function EditeurRetour({ travailId, retourInitial, syntheseInitiale, tran
           {/* Suivi des suggestions (lecture) */}
           {retourInitial.suivi_suggestions?.length > 0 && (
             <section>
-              <h4 className="text-sm font-medium text-stone-700 mb-2">Suivi des suggestions de la V1</h4>
+              <h4 className="text-sm font-medium text-encre-douce mb-2">Suivi des suggestions de la V1</h4>
               <div className="space-y-2">
                 {retourInitial.suivi_suggestions.map((s, i) => {
-                  const badge = STATUT_SUIVI[s.statut] ?? { label: s.statut, classe: 'bg-stone-100 text-stone-500' }
+                  const badge = STATUT_SUIVI[s.statut] ?? { label: s.statut, classe: 'bg-parchemin-fonce text-muet' }
                   return (
-                    <div key={i} className="bg-white border border-stone-200 rounded-xl p-3">
+                    <div key={i} className="bg-surface border border-bordure rounded-xl p-3">
                       <div className="flex items-center gap-2 mb-1">
                         <span className={`text-xs px-1.5 py-0.5 rounded ${badge.classe}`}>{badge.label}</span>
-                        <p className="text-sm text-stone-700">{s.suggestion}</p>
+                        <p className="text-sm text-encre-douce">{s.suggestion}</p>
                       </div>
-                      {s.commentaire && <p className="text-sm text-stone-500">{s.commentaire}</p>}
+                      {s.commentaire && <p className="text-sm text-muet">{s.commentaire}</p>}
                     </div>
                   )
                 })}
@@ -141,20 +141,20 @@ export function EditeurRetour({ travailId, retourInitial, syntheseInitiale, tran
           {/* Pouvait aller plus loin / non amélioré (lecture) */}
           {retourInitial.pouvait_aller_plus_loin?.length > 0 && (
             <section>
-              <h4 className="text-sm font-medium text-stone-700 mb-2">Pouvait aller plus loin</h4>
+              <h4 className="text-sm font-medium text-encre-douce mb-2">Pouvait aller plus loin</h4>
               <ul className="list-disc list-inside space-y-1">
                 {retourInitial.pouvait_aller_plus_loin.map((p, i) => (
-                  <li key={i} className="text-sm text-stone-600">{p}</li>
+                  <li key={i} className="text-sm text-encre-douce">{p}</li>
                 ))}
               </ul>
             </section>
           )}
           {retourInitial.non_ameliore?.length > 0 && (
             <section>
-              <h4 className="text-sm font-medium text-stone-700 mb-2">Signalé en V1, non corrigé</h4>
+              <h4 className="text-sm font-medium text-encre-douce mb-2">Signalé en V1, non corrigé</h4>
               <ul className="list-disc list-inside space-y-1">
                 {retourInitial.non_ameliore.map((p, i) => (
-                  <li key={i} className="text-sm text-stone-600">{p}</li>
+                  <li key={i} className="text-sm text-encre-douce">{p}</li>
                 ))}
               </ul>
             </section>
@@ -164,8 +164,8 @@ export function EditeurRetour({ travailId, retourInitial, syntheseInitiale, tran
 
       {ecran === 'synthese' && (
         <div className="space-y-5">
-          <div className="bg-blue-50 border border-blue-200 rounded-xl p-3 text-sm text-blue-800">
-            Les ajouts de l&apos;IA sont encadrés par <code className="bg-white px-1 rounded">[AJOUT] … [/AJOUT]</code>.
+          <div className="bg-info-teinte border border-info rounded-xl p-3 text-sm text-info">
+            Les ajouts de l&apos;IA sont encadrés par <code className="bg-surface px-1 rounded">[AJOUT] … [/AJOUT]</code>.
             Vérifie-les : ajouter un point omis, c&apos;est du contenu généré — la sélection et la formulation sont sous ta responsabilité.
           </div>
 
@@ -173,12 +173,12 @@ export function EditeurRetour({ travailId, retourInitial, syntheseInitiale, tran
             <div>
               <button
                 onClick={() => setTranscriptionOuverte((o) => !o)}
-                className="text-xs text-stone-500 hover:text-stone-800 underline"
+                className="text-xs text-muet hover:text-encre underline"
               >
                 {transcriptionOuverte ? 'Masquer' : 'Voir'} la transcription de la V-finale
               </button>
               {transcriptionOuverte && (
-                <pre className="mt-2 whitespace-pre-wrap text-sm text-stone-600 bg-stone-50 border border-stone-200 rounded-xl p-3 font-sans">
+                <pre className="mt-2 whitespace-pre-wrap text-sm text-encre-douce bg-parchemin-fonce border border-bordure rounded-xl p-3 font-sans">
                   {transcriptionVf}
                 </pre>
               )}
@@ -186,23 +186,23 @@ export function EditeurRetour({ travailId, retourInitial, syntheseInitiale, tran
           )}
 
           <div>
-            <label className="text-sm font-medium text-stone-700 block mb-1">Synthèse complétée (ce que l&apos;élève recevra)</label>
+            <label className="text-sm font-medium text-encre-douce block mb-1">Synthèse complétée (ce que l&apos;élève recevra)</label>
             <textarea
               value={synthese}
               onChange={(e) => setSynthese(e.target.value)}
               rows={18}
-              className="w-full text-sm border border-stone-300 rounded-lg px-3 py-2 leading-relaxed font-sans"
+              className="w-full text-sm border border-bordure rounded-lg px-3 py-2 leading-relaxed font-sans"
             />
           </div>
 
           {retourInitial.ajouts?.length > 0 && (
             <section>
-              <h4 className="text-sm font-medium text-stone-700 mb-2">Ajouts générés ({retourInitial.ajouts.length}) — à vérifier</h4>
+              <h4 className="text-sm font-medium text-encre-douce mb-2">Ajouts générés ({retourInitial.ajouts.length}) — à vérifier</h4>
               <div className="space-y-2">
                 {retourInitial.ajouts.map((a, i) => (
-                  <div key={i} className="bg-amber-50 border border-amber-200 rounded-xl p-3">
-                    <p className="text-sm font-medium text-amber-900">{a.titre}</p>
-                    <p className="text-sm text-amber-800 mt-0.5">{a.contenu}</p>
+                  <div key={i} className="bg-attention-teinte border border-attention rounded-xl p-3">
+                    <p className="text-sm font-medium text-attention">{a.titre}</p>
+                    <p className="text-sm text-attention mt-0.5">{a.contenu}</p>
                   </div>
                 ))}
               </div>
@@ -212,20 +212,20 @@ export function EditeurRetour({ travailId, retourInitial, syntheseInitiale, tran
       )}
 
       {/* Barre d'action */}
-      <div className="sticky bottom-0 mt-8 -mx-4 sm:-mx-6 px-4 sm:px-6 py-3 bg-white/90 backdrop-blur border-t border-stone-200 flex items-center justify-between gap-3">
-        <span className="text-xs text-stone-500">{message}</span>
+      <div className="sticky bottom-0 mt-8 -mx-4 sm:-mx-6 px-4 sm:px-6 py-3 bg-surface/90 backdrop-blur border-t border-bordure flex items-center justify-between gap-3">
+        <span className="text-xs text-muet">{message}</span>
         <div className="flex gap-2">
           <button
             onClick={enregistrer}
             disabled={pending !== null}
-            className="px-4 py-2 text-sm border border-stone-300 rounded-lg hover:bg-stone-50 disabled:opacity-50"
+            className="px-4 py-2 text-sm border border-bordure rounded-lg hover:bg-parchemin-fonce disabled:opacity-50"
           >
             {pending === 'save' ? '…' : 'Enregistrer'}
           </button>
           <button
             onClick={valider}
             disabled={pending !== null}
-            className="px-5 py-2 text-sm bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50"
+            className="px-5 py-2 text-sm bg-ok text-surface rounded-lg hover:opacity-90 disabled:opacity-50"
           >
             {pending === 'valider' ? '…' : dejaValide ? 'Revalider' : 'Valider le retour'}
           </button>

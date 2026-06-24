@@ -23,15 +23,15 @@ export function ConsultationCartes({ cartes, onRetour }: { cartes: CarteConsulta
   return (
     <div className="max-w-lg mx-auto space-y-4">
       <div className="flex items-center justify-between gap-3">
-        <button onClick={onRetour} className="text-sm text-stone-500 hover:text-stone-700">← Retour</button>
-        <span className="text-xs text-stone-400">{cartes.length} carte{cartes.length > 1 ? 's' : ''}</span>
+        <button onClick={onRetour} className="text-sm text-encre-douce hover:text-encre">← Retour</button>
+        <span className="text-xs text-muet">{cartes.length} carte{cartes.length > 1 ? 's' : ''}</span>
       </div>
 
       {nbNouvelles > 0 && (
         <button
           onClick={() => setFiltreNouvelles((v) => !v)}
           className={`w-full rounded-xl px-4 py-3 text-sm border transition-colors ${
-            filtreNouvelles ? 'bg-amber-100 border-amber-300 text-amber-800' : 'bg-amber-50 border-amber-200 text-amber-700 hover:bg-amber-100'
+            filtreNouvelles ? 'bg-attention-teinte border-attention text-attention' : 'bg-attention-teinte border-attention text-attention hover:opacity-90'
           }`}
         >
           ✦ {nbNouvelles} carte{nbNouvelles > 1 ? 's' : ''} ajoutée{nbNouvelles > 1 ? 's' : ''} récemment
@@ -40,19 +40,19 @@ export function ConsultationCartes({ cartes, onRetour }: { cartes: CarteConsulta
       )}
 
       {cartes.length === 0 ? (
-        <p className="text-center text-stone-400 text-sm py-10">Aucune carte pour l&apos;instant.</p>
+        <p className="text-center text-muet text-sm py-10">Aucune carte pour l&apos;instant.</p>
       ) : (
         groupes.map(([unite, cs]) => (
           <div key={unite} className="space-y-2">
-            <h3 className="text-xs font-medium text-stone-500 uppercase tracking-wide">{unite}</h3>
+            <h3 className="text-xs font-medium text-encre-douce uppercase tracking-wide">{unite}</h3>
             {cs.map((c) => (
-              <div key={c.flashcard_id} className="bg-white border border-stone-200 rounded-xl p-4">
+              <div key={c.flashcard_id} className="bg-surface border border-bordure rounded-xl p-4">
                 <div className="flex items-start justify-between gap-2">
-                  <p className="text-sm font-medium text-stone-900">{c.recto}</p>
-                  {c.nouvelle && <span className="text-xs bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded-full flex-shrink-0">Nouvelle</span>}
+                  <p className="text-sm font-medium text-encre">{c.recto}</p>
+                  {c.nouvelle && <span className="text-xs bg-attention-teinte text-attention px-1.5 py-0.5 rounded-full flex-shrink-0">Nouvelle</span>}
                 </div>
-                <p className="text-sm text-stone-600 mt-2 border-t border-stone-100 pt-2 whitespace-pre-wrap">{c.verso}</p>
-                {c.concept_tag && <p className="text-xs text-stone-300 mt-2">{c.concept_tag}</p>}
+                <p className="text-sm text-encre-douce mt-2 border-t border-bordure pt-2 whitespace-pre-wrap">{c.verso}</p>
+                {c.concept_tag && <p className="text-xs text-muet mt-2">{c.concept_tag}</p>}
               </div>
             ))}
           </div>

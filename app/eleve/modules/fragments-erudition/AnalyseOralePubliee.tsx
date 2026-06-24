@@ -36,16 +36,16 @@ export default function AnalyseOralePubliee({ oral, analyseOrale }: Props) {
           { label: 'Structure', note: analyseOrale.note_structure },
           { label: 'Expression', note: analyseOrale.note_expression },
         ].map(({ label, note }) => (
-          <div key={label} className="bg-stone-50 rounded-lg p-2.5 text-center">
-            <p className="text-xl font-serif text-stone-800">{noteVersLettre(note) ?? '—'}</p>
-            <p className="text-xs text-stone-500 mt-0.5">{label}</p>
+          <div key={label} className="bg-parchemin-fonce rounded-lg p-2.5 text-center">
+            <p className="text-xl font-serif text-encre">{noteVersLettre(note) ?? '—'}</p>
+            <p className="text-xs text-muet mt-0.5">{label}</p>
           </div>
         ))}
       </div>
 
       {/* Stats */}
       {oral.nb_mots && (
-        <p className="text-xs text-stone-400">
+        <p className="text-xs text-muet">
           {oral.duree_secondes ? `${Math.floor(oral.duree_secondes / 60)}min${oral.duree_secondes % 60}s` : ''}{' '}
           · {oral.nb_mots} mots · {oral.debit_mots_minute} mots/min
         </p>
@@ -55,8 +55,8 @@ export default function AnalyseOralePubliee({ oral, analyseOrale }: Props) {
       {sections.map(({ label, contenu }) =>
         contenu ? (
           <div key={label}>
-            <p className="text-xs font-medium text-stone-500 uppercase tracking-wide mb-1">{label}</p>
-            <p className="text-sm text-stone-700 leading-relaxed whitespace-pre-wrap">{contenu}</p>
+            <p className="text-xs font-medium text-muet uppercase tracking-wide mb-1">{label}</p>
+            <p className="text-sm text-encre-douce leading-relaxed whitespace-pre-wrap">{contenu}</p>
           </div>
         ) : null
       )}
@@ -64,7 +64,7 @@ export default function AnalyseOralePubliee({ oral, analyseOrale }: Props) {
       {/* Lecteur audio */}
       {!oral.audio_supprime && audioUrl && (
         <div>
-          <p className="text-xs text-stone-400 mb-1">Réecouter ta présentation</p>
+          <p className="text-xs text-muet mb-1">Réecouter ta présentation</p>
           <audio controls src={audioUrl} className="w-full" />
         </div>
       )}
@@ -74,12 +74,12 @@ export default function AnalyseOralePubliee({ oral, analyseOrale }: Props) {
         <div>
           <button
             onClick={() => setTranscriptionOuverte(o => !o)}
-            className="text-xs text-stone-400 hover:text-stone-600 underline"
+            className="text-xs text-muet hover:text-encre-douce underline"
           >
             {transcriptionOuverte ? 'Masquer la transcription' : 'Voir la transcription'}
           </button>
           {transcriptionOuverte && (
-            <p className="text-xs text-stone-500 mt-2 leading-relaxed whitespace-pre-wrap">
+            <p className="text-xs text-muet mt-2 leading-relaxed whitespace-pre-wrap">
               {oral.transcription}
             </p>
           )}

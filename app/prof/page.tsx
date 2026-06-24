@@ -21,15 +21,15 @@ function sousTitreClasse(c: { niveau: string | null; filiere: string | null; ann
 
 // Badges « où en est l'élève » dérivés de la santé (fragments + révision).
 function StatutEleve({ s }: { s: SanteInscription | undefined }) {
-  if (!s) return <span className="text-xs text-stone-400">—</span>
+  if (!s) return <span className="text-xs text-muet">—</span>
   return (
     <div className="flex flex-wrap items-center gap-1.5 text-xs">
-      <span className="text-stone-500">{s.nbDeposes}/{s.nbSemainesPassees} dépôts</span>
-      {s.nbManquants > 0 && <span className="text-amber-700">{s.nbManquants} manquant{s.nbManquants > 1 ? 's' : ''}</span>}
-      {s.moyenne != null && <span className="text-stone-500">moy. {s.moyenne.toFixed(1)}/4</span>}
-      {s.backlogRevision > 0 && <span className="text-stone-500">{s.backlogRevision} à réviser</span>}
+      <span className="text-muet">{s.nbDeposes}/{s.nbSemainesPassees} dépôts</span>
+      {s.nbManquants > 0 && <span className="text-attention">{s.nbManquants} manquant{s.nbManquants > 1 ? 's' : ''}</span>}
+      {s.moyenne != null && <span className="text-muet">moy. {s.moyenne.toFixed(1)}/4</span>}
+      {s.backlogRevision > 0 && <span className="text-muet">{s.backlogRevision} à réviser</span>}
       {s.enDifficulte && (
-        <span className="bg-red-100 text-red-700 px-1.5 py-0.5 rounded-full">à risque</span>
+        <span className="bg-retard-teinte text-retard px-1.5 py-0.5 rounded-full">à risque</span>
       )}
     </div>
   )
@@ -155,8 +155,8 @@ export default async function ProfAccueil({ searchParams }: { searchParams: Prom
         statut: (
           <div className="flex flex-wrap items-center gap-1.5">
             <StatutEleve s={santeParEleve.get(p.id as string)} />
-            {essai && <span className="text-xs text-stone-500">essai {essai}</span>}
-            {nbCodex > 0 && <span className="text-xs text-stone-500">Codex ×{nbCodex}</span>}
+            {essai && <span className="text-xs text-muet">essai {essai}</span>}
+            {nbCodex > 0 && <span className="text-xs text-muet">Codex ×{nbCodex}</span>}
           </div>
         ),
         actions: <BoutonRetirerEleve classeId={classeChoisie.id} eleveId={p.id as string} nom={p.display_name as string} />,
@@ -167,7 +167,7 @@ export default async function ProfAccueil({ searchParams }: { searchParams: Prom
 
   return (
     <div className="space-y-10 pb-10">
-      <h2 className="text-xl font-serif text-stone-900">Tableau de bord</h2>
+      <h2 className="text-xl font-serif text-encre">Tableau de bord</h2>
 
       {/* ── Calendrier : aujourd'hui / cette semaine + bande des semaines ───── */}
       <TuilesJourSemaine />
@@ -175,20 +175,20 @@ export default async function ProfAccueil({ searchParams }: { searchParams: Prom
 
       {/* ── Zone 1 : À faire ───────────────────────────────────────────────── */}
       <section className="space-y-3">
-        <h3 className="text-sm font-medium text-stone-500 uppercase tracking-wide">À faire</h3>
+        <h3 className="text-sm font-medium text-muet uppercase tracking-wide">À faire</h3>
         <RappelsClasses classes={rappels} />
         {tachesCal.length > 0 && (
-          <div className="bg-white border border-stone-200 rounded-xl px-5 py-4">
-            <p className="text-sm font-medium text-stone-800 mb-2">À préparer (échéances proches)</p>
+          <div className="bg-surface border border-bordure rounded-xl px-5 py-4">
+            <p className="text-sm font-medium text-encre mb-2">À préparer (échéances proches)</p>
             <ul className="space-y-1.5">
               {tachesCal.map((t) => (
                 <li key={t.id} className="flex items-center justify-between gap-3 text-sm">
-                  <span className="text-stone-600">
+                  <span className="text-encre-douce">
                     {t.label}
-                    {t.classeNom && <span className="text-stone-400"> · {t.classeNom}</span>}
-                    <span className="text-stone-400"> · {new Date(t.echeance + 'T00:00:00Z').toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', timeZone: 'UTC' })}</span>
+                    {t.classeNom && <span className="text-muet"> · {t.classeNom}</span>}
+                    <span className="text-muet"> · {new Date(t.echeance + 'T00:00:00Z').toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', timeZone: 'UTC' })}</span>
                   </span>
-                  <Link href={t.href} className="text-xs text-stone-500 hover:text-stone-800 underline flex-shrink-0">
+                  <Link href={t.href} className="text-xs text-muet hover:text-encre underline flex-shrink-0">
                     Ouvrir →
                   </Link>
                 </li>
@@ -196,29 +196,29 @@ export default async function ProfAccueil({ searchParams }: { searchParams: Prom
             </ul>
           </div>
         )}
-        <div className="bg-white border border-stone-200 rounded-xl px-5 py-4">
+        <div className="bg-surface border border-bordure rounded-xl px-5 py-4">
           {aValider.length === 0 ? (
-            <p className="text-sm text-stone-400">Rien à valider pour le moment.</p>
+            <p className="text-sm text-muet">Rien à valider pour le moment.</p>
           ) : (
             <>
-              <p className="text-sm font-medium text-stone-800 mb-2">
+              <p className="text-sm font-medium text-encre mb-2">
                 {aValider.length} fragment{aValider.length > 1 ? 's' : ''} à valider
               </p>
               <ul className="space-y-1.5">
                 {aValider.slice(0, 8).map((v) => (
                   <li key={v.depotId} className="flex items-center justify-between gap-3 text-sm">
-                    <span className="text-stone-600">
+                    <span className="text-encre-douce">
                       {v.eleveNom}
-                      {v.classeNom && <span className="text-stone-400"> · {v.classeNom}</span>}
-                      <span className="text-stone-400"> · semaine {v.semaineNum}</span>
+                      {v.classeNom && <span className="text-muet"> · {v.classeNom}</span>}
+                      <span className="text-muet"> · semaine {v.semaineNum}</span>
                     </span>
-                    <Link href={`/prof/fragments-erudition/analyse/${v.depotId}`} className="text-xs text-stone-500 hover:text-stone-800 underline flex-shrink-0">
+                    <Link href={`/prof/fragments-erudition/analyse/${v.depotId}`} className="text-xs text-muet hover:text-encre underline flex-shrink-0">
                       Valider →
                     </Link>
                   </li>
                 ))}
               </ul>
-              {aValider.length > 8 && <p className="text-xs text-stone-400 mt-2">+ {aValider.length - 8} autres…</p>}
+              {aValider.length > 8 && <p className="text-xs text-muet mt-2">+ {aValider.length - 8} autres…</p>}
             </>
           )}
         </div>
@@ -226,33 +226,33 @@ export default async function ProfAccueil({ searchParams }: { searchParams: Prom
 
       {/* ── Zone 2 : Santé de la cohorte ───────────────────────────────────── */}
       <section className="space-y-3">
-        <h3 className="text-sm font-medium text-stone-500 uppercase tracking-wide">Santé de la cohorte</h3>
+        <h3 className="text-sm font-medium text-muet uppercase tracking-wide">Santé de la cohorte</h3>
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-          <div className="bg-white border border-stone-200 rounded-xl p-5">
-            <p className="text-3xl font-serif text-stone-900">{pctAJour != null ? `${pctAJour}%` : '—'}</p>
-            <p className="text-sm text-stone-500 mt-0.5">à jour ({nbAJour}/{totalSuivi} inscriptions)</p>
+          <div className="bg-surface border border-bordure rounded-xl p-5">
+            <p className="text-3xl font-serif text-encre">{pctAJour != null ? `${pctAJour}%` : '—'}</p>
+            <p className="text-sm text-muet mt-0.5">à jour ({nbAJour}/{totalSuivi} inscriptions)</p>
           </div>
-          <Link href="/prof/a-risque" className="bg-white border border-stone-200 rounded-xl p-5 block hover:border-stone-300 hover:shadow-sm transition-all">
-            <p className="text-3xl font-serif text-red-700">{enDifficulte.length}</p>
-            <p className="text-sm text-stone-500 mt-0.5">en difficulté <span className="text-stone-400">· voir le détail →</span></p>
+          <Link href="/prof/a-risque" className="bg-surface border border-bordure rounded-xl p-5 block hover:border-muet hover:shadow-sm transition-all">
+            <p className="text-3xl font-serif text-retard">{enDifficulte.length}</p>
+            <p className="text-sm text-muet mt-0.5">en difficulté <span className="text-muet">· voir le détail →</span></p>
           </Link>
-          <div className="bg-white border border-stone-200 rounded-xl p-5 sm:col-span-1">
-            <p className="text-sm text-stone-500 mb-1">Élèves à risque</p>
+          <div className="bg-surface border border-bordure rounded-xl p-5 sm:col-span-1">
+            <p className="text-sm text-muet mb-1">Élèves à risque</p>
             {enDifficulte.length === 0 ? (
-              <p className="text-sm text-green-700">Aucun 🎉</p>
+              <p className="text-sm text-ok">Aucun 🎉</p>
             ) : (
               <>
                 <ul className="space-y-1">
                   {enDifficulte.slice(0, 4).map((s) => (
                     <li key={s.inscriptionId} className="text-sm">
-                      <Link href={`/prof/eleves/${s.eleveId}`} className="text-stone-700 hover:text-red-700 hover:underline">
+                      <Link href={`/prof/eleves/${s.eleveId}`} className="text-encre-douce hover:text-retard hover:underline">
                         {nomEleve.get(s.eleveId) ?? '?'}
                       </Link>
-                      <span className="text-xs text-stone-400"> · {nomClasse.get(s.classeId)}</span>
+                      <span className="text-xs text-muet"> · {nomClasse.get(s.classeId)}</span>
                     </li>
                   ))}
                 </ul>
-                <Link href="/prof/a-risque" className="text-xs text-stone-500 hover:text-red-700 underline mt-2 inline-block">
+                <Link href="/prof/a-risque" className="text-xs text-muet hover:text-retard underline mt-2 inline-block">
                   Voir les {enDifficulte.length} à risque et pourquoi →
                 </Link>
               </>
@@ -266,9 +266,9 @@ export default async function ProfAccueil({ searchParams }: { searchParams: Prom
 
       {/* ── Zone 3 : Tuiles de classe ──────────────────────────────────────── */}
       <section className="space-y-3">
-        <h3 className="text-sm font-medium text-stone-500 uppercase tracking-wide">Classes</h3>
+        <h3 className="text-sm font-medium text-muet uppercase tracking-wide">Classes</h3>
         {toutesClasses.length === 0 ? (
-          <div className="bg-white border border-stone-200 rounded-xl p-8 text-center text-stone-500 text-sm">
+          <div className="bg-surface border border-bordure rounded-xl p-8 text-center text-muet text-sm">
             Aucune classe. <Link href="/prof/classes" className="underline">Créer une classe →</Link>
           </div>
         ) : (
@@ -290,10 +290,10 @@ export default async function ProfAccueil({ searchParams }: { searchParams: Prom
                   selectionnee={classeSel === c.id}
                   resume={
                     <div className="flex flex-wrap items-center gap-1.5 text-xs">
-                      <span className="text-stone-500">{nbInscrits} élève{nbInscrits > 1 ? 's' : ''}</span>
-                      {nbDiff > 0 && <span className="bg-red-100 text-red-700 px-1.5 py-0.5 rounded-full">{nbDiff} à risque</span>}
-                      {nbValider > 0 && <span className="bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded-full">{nbValider} à valider</span>}
-                      {aDesFragments && nbDiff === 0 && <span className="text-green-700">à jour</span>}
+                      <span className="text-muet">{nbInscrits} élève{nbInscrits > 1 ? 's' : ''}</span>
+                      {nbDiff > 0 && <span className="bg-retard-teinte text-retard px-1.5 py-0.5 rounded-full">{nbDiff} à risque</span>}
+                      {nbValider > 0 && <span className="bg-attention-teinte text-attention px-1.5 py-0.5 rounded-full">{nbValider} à valider</span>}
+                      {aDesFragments && nbDiff === 0 && <span className="text-ok">à jour</span>}
                     </div>
                   }
                 />

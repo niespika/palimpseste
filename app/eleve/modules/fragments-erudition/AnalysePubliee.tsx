@@ -19,9 +19,9 @@ const LABELS_NOTE: Record<number, string> = {
 
 function BadgeNote({ label, note }: { label: string; note: number | null }) {
   if (note === null) return null
-  const couleurs = ['bg-red-50 text-red-700', 'bg-orange-50 text-orange-700', 'bg-stone-50 text-stone-600', 'bg-green-50 text-green-700', 'bg-emerald-50 text-emerald-700']
+  const couleurs = ['bg-retard-teinte text-retard', 'bg-attention-teinte text-attention', 'bg-parchemin-fonce text-muet', 'bg-ok-teinte text-ok', 'bg-ok-teinte text-ok']
   return (
-    <div className={`rounded-xl px-4 py-3 ${couleurs[note] ?? 'bg-stone-50 text-stone-600'}`}>
+    <div className={`rounded-xl px-4 py-3 ${couleurs[note] ?? 'bg-parchemin-fonce text-muet'}`}>
       <p className="text-xs font-medium mb-0.5">{label}</p>
       <p className="text-lg font-serif">{noteVersLettre(note)} <span className="text-sm font-normal">— {LABELS_NOTE[note]}</span></p>
     </div>
@@ -32,8 +32,8 @@ function Section({ titre, contenu }: { titre: string; contenu: string | null }) 
   if (!contenu) return null
   return (
     <div>
-      <p className="text-xs font-medium text-stone-500 uppercase tracking-wide mb-1.5">{titre}</p>
-      <p className="text-sm text-stone-700 whitespace-pre-wrap leading-relaxed">{contenu}</p>
+      <p className="text-xs font-medium text-muet uppercase tracking-wide mb-1.5">{titre}</p>
+      <p className="text-sm text-encre-douce whitespace-pre-wrap leading-relaxed">{contenu}</p>
     </div>
   )
 }
@@ -51,7 +51,7 @@ export default function AnalysePubliee({ analyse, pistes }: Props) {
       </div>
 
       {/* Corps du retour */}
-      <div className="bg-white border border-stone-200 rounded-xl px-4 py-4 space-y-5">
+      <div className="bg-surface border border-bordure rounded-xl px-4 py-4 space-y-5">
         <Section titre="Commentaire général" contenu={analyse.commentaire_general} />
         {analyse.retour_progres && <Section titre="Progrès" contenu={analyse.retour_progres} />}
         <Section titre="Langue" contenu={analyse.retour_langue} />
@@ -62,18 +62,18 @@ export default function AnalysePubliee({ analyse, pistes }: Props) {
       {/* Pistes */}
       {pistes.length > 0 && (
         <div>
-          <p className="text-xs font-medium text-stone-500 uppercase tracking-wide mb-2">Pistes pour la suite</p>
+          <p className="text-xs font-medium text-muet uppercase tracking-wide mb-2">Pistes pour la suite</p>
           <div className="space-y-2">
             {pistes.map(piste => (
-              <div key={piste.id} className="bg-stone-50 rounded-xl px-4 py-3 flex items-start gap-2">
+              <div key={piste.id} className="bg-parchemin-fonce rounded-xl px-4 py-3 flex items-start gap-2">
                 <span className="text-sm flex-shrink-0 mt-0.5">
                   {piste.est_rappel ? '🔁' : '💡'}
                 </span>
                 <div>
                   {piste.est_rappel && (
-                    <p className="text-xs text-violet-600 font-medium mb-0.5">On en avait parlé</p>
+                    <p className="text-xs text-pigment font-medium mb-0.5">On en avait parlé</p>
                   )}
-                  <p className="text-sm text-stone-700">{piste.contenu}</p>
+                  <p className="text-sm text-encre-douce">{piste.contenu}</p>
                 </div>
               </div>
             ))}
@@ -83,25 +83,25 @@ export default function AnalysePubliee({ analyse, pistes }: Props) {
 
       {/* Note du prof */}
       {analyse.notes_prof && (
-        <div className="bg-amber-50 border border-amber-200 rounded-xl px-4 py-3">
-          <p className="text-xs text-amber-700 font-medium mb-1">Ton professeur ajoute :</p>
-          <p className="text-sm text-amber-900 italic">"{analyse.notes_prof}"</p>
+        <div className="bg-attention-teinte border border-attention rounded-xl px-4 py-3">
+          <p className="text-xs text-attention font-medium mb-1">Ton professeur ajoute :</p>
+          <p className="text-sm text-attention italic">"{analyse.notes_prof}"</p>
         </div>
       )}
 
       {/* Transcription (repliée) */}
       {analyse.transcription && (
-        <div className="border border-stone-200 rounded-xl overflow-hidden">
+        <div className="border border-bordure rounded-xl overflow-hidden">
           <button
             onClick={() => setTranscriptionOuverte(o => !o)}
-            className="w-full flex items-center justify-between px-4 py-3 text-sm text-stone-600 hover:bg-stone-50 transition-colors"
+            className="w-full flex items-center justify-between px-4 py-3 text-sm text-encre-douce hover:bg-parchemin-fonce transition-colors"
           >
             <span>Consulter la transcription de mon manuscrit</span>
-            <span className="text-stone-400">{transcriptionOuverte ? '▲' : '▼'}</span>
+            <span className="text-muet">{transcriptionOuverte ? '▲' : '▼'}</span>
           </button>
           {transcriptionOuverte && (
             <div className="px-4 pb-4">
-              <p className="text-sm text-stone-600 whitespace-pre-wrap font-mono leading-relaxed">
+              <p className="text-sm text-encre-douce whitespace-pre-wrap font-mono leading-relaxed">
                 {analyse.transcription}
               </p>
             </div>

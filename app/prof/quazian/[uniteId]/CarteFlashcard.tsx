@@ -11,16 +11,16 @@ const TYPE_LABELS: Record<string, string> = {
   these: 'Thèse',
 }
 const TYPE_COULEURS: Record<string, string> = {
-  philosophe: 'bg-blue-50 text-blue-700 border-blue-200',
-  concept: 'bg-violet-50 text-violet-700 border-violet-200',
-  mouvement: 'bg-teal-50 text-teal-700 border-teal-200',
-  these: 'bg-amber-50 text-amber-700 border-amber-200',
+  philosophe: 'bg-info-teinte text-info border-info',
+  concept: 'bg-pigment-teinte text-pigment border-pigment',
+  mouvement: 'bg-ok-teinte text-ok border-ok',
+  these: 'bg-attention-teinte text-attention border-attention',
 }
 const STATUT_COULEURS: Record<string, string> = {
-  suggere: 'border-amber-300 bg-amber-50/30',
-  valide: 'border-stone-200 bg-white',
-  archive: 'border-stone-100 bg-stone-50 opacity-60',
-  a_verifier: 'border-red-300 bg-red-50/30',
+  suggere: 'border-attention bg-attention-teinte/30',
+  valide: 'border-bordure bg-surface',
+  archive: 'border-bordure bg-parchemin-fonce opacity-60',
+  a_verifier: 'border-retard bg-retard-teinte/30',
 }
 
 interface Carte {
@@ -96,7 +96,7 @@ export function CarteFlashcard({ carte, uniteId }: { carte: Carte; uniteId: stri
               type="button"
               onClick={() => setType(t)}
               className={`px-2 py-0.5 text-xs rounded-full border transition-colors ${
-                type === t ? TYPE_COULEURS[t] : 'bg-stone-50 text-stone-400 border-stone-200'
+                type === t ? TYPE_COULEURS[t] : 'bg-parchemin-fonce text-muet border-bordure'
               }`}
             >
               {TYPE_LABELS[t]}
@@ -107,34 +107,34 @@ export function CarteFlashcard({ carte, uniteId }: { carte: Carte; uniteId: stri
             value={tag}
             onChange={(e) => setTag(e.target.value)}
             placeholder="concept_tag"
-            className="ml-auto px-2 py-0.5 text-xs border border-stone-200 rounded-lg w-32"
+            className="ml-auto px-2 py-0.5 text-xs border border-bordure rounded-lg w-32"
           />
         </div>
         <textarea
           value={recto}
           onChange={(e) => setRecto(e.target.value)}
           rows={2}
-          className="w-full px-3 py-2 text-sm border border-stone-300 rounded-lg mb-2 resize-none"
+          className="w-full px-3 py-2 text-sm border border-bordure rounded-lg mb-2 resize-none"
           placeholder="Recto (question ou texte à trous)"
         />
         <textarea
           value={verso}
           onChange={(e) => setVerso(e.target.value)}
           rows={2}
-          className="w-full px-3 py-2 text-sm border border-stone-300 rounded-lg mb-3 resize-none"
+          className="w-full px-3 py-2 text-sm border border-bordure rounded-lg mb-3 resize-none"
           placeholder="Verso (réponse)"
         />
         <div className="flex gap-2">
           <button
             onClick={handleSauvegarder}
             disabled={pending}
-            className="px-3 py-1 text-xs bg-stone-800 text-white rounded-lg hover:bg-stone-900 disabled:opacity-50"
+            className="px-3 py-1 text-xs bg-bouton text-surface rounded-lg hover:opacity-90 disabled:opacity-50"
           >
             Sauvegarder
           </button>
           <button
             onClick={() => setMode('vue')}
-            className="px-3 py-1 text-xs bg-stone-100 text-stone-600 rounded-lg hover:bg-stone-200"
+            className="px-3 py-1 text-xs bg-parchemin-fonce text-encre-douce rounded-lg hover:opacity-90"
           >
             Annuler
           </button>
@@ -146,33 +146,33 @@ export function CarteFlashcard({ carte, uniteId }: { carte: Carte; uniteId: stri
   return (
     <div className={`border rounded-xl p-4 ${couleurBordure}`}>
       <div className="flex items-start gap-2 mb-2">
-        <span className={`text-xs px-2 py-0.5 rounded-full border font-medium shrink-0 ${TYPE_COULEURS[carte.type] ?? 'bg-stone-100 text-stone-500 border-stone-200'}`}>
+        <span className={`text-xs px-2 py-0.5 rounded-full border font-medium shrink-0 ${TYPE_COULEURS[carte.type] ?? 'bg-parchemin-fonce text-muet border-bordure'}`}>
           {TYPE_LABELS[carte.type] ?? carte.type}
         </span>
         {carte.concept_tag && (
-          <span className="text-xs text-stone-400 truncate">{carte.concept_tag}</span>
+          <span className="text-xs text-muet truncate">{carte.concept_tag}</span>
         )}
-        <span className="ml-auto text-xs text-stone-300 shrink-0">
+        <span className="ml-auto text-xs text-muet shrink-0">
           {carte.format === 'cloze' ? 'cloze' : 'Q→R'}
         </span>
       </div>
 
-      <p className="text-sm text-stone-900 font-medium mb-1">{carte.recto}</p>
-      <p className="text-sm text-stone-500">{carte.verso}</p>
+      <p className="text-sm text-encre font-medium mb-1">{carte.recto}</p>
+      <p className="text-sm text-muet">{carte.verso}</p>
 
       <div className="flex gap-2 mt-3">
         {carte.statut === 'suggere' && (
           <button
             onClick={handleValider}
             disabled={pending}
-            className="px-3 py-1 text-xs bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50"
+            className="px-3 py-1 text-xs bg-ok text-surface rounded-lg hover:opacity-90 disabled:opacity-50"
           >
             ✓ Valider
           </button>
         )}
         <button
           onClick={() => setMode('edit')}
-          className="px-3 py-1 text-xs bg-stone-100 text-stone-600 rounded-lg hover:bg-stone-200"
+          className="px-3 py-1 text-xs bg-parchemin-fonce text-encre-douce rounded-lg hover:opacity-90"
         >
           Modifier
         </button>
@@ -180,7 +180,7 @@ export function CarteFlashcard({ carte, uniteId }: { carte: Carte; uniteId: stri
           <button
             onClick={handleArchiver}
             disabled={pending}
-            className="px-3 py-1 text-xs text-stone-400 hover:text-stone-600 hover:bg-stone-50 rounded-lg transition-colors"
+            className="px-3 py-1 text-xs text-muet hover:text-encre-douce hover:bg-parchemin-fonce rounded-lg transition-colors"
           >
             Archiver
           </button>
@@ -188,12 +188,12 @@ export function CarteFlashcard({ carte, uniteId }: { carte: Carte; uniteId: stri
         <button
           onClick={handleSupprimer}
           disabled={pending}
-          className="px-3 py-1 text-xs text-red-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors ml-auto disabled:opacity-50"
+          className="px-3 py-1 text-xs text-retard hover:opacity-80 hover:bg-retard-teinte rounded-lg transition-colors ml-auto disabled:opacity-50"
         >
           Supprimer
         </button>
         {carte.source === 'ia' && (
-          <span className="text-xs text-stone-300">IA</span>
+          <span className="text-xs text-muet">IA</span>
         )}
       </div>
     </div>

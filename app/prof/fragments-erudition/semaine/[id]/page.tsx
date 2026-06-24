@@ -105,14 +105,14 @@ export default async function PageVueSemaine({
 
   return (
     <div className="space-y-6 pb-8">
-      <div className="bg-white border border-stone-200 rounded-xl px-5 py-4 flex items-center justify-between">
+      <div className="bg-surface border border-bordure rounded-xl px-5 py-4 flex items-center justify-between">
         <div>
-          <p className="font-medium text-stone-900">
+          <p className="font-medium text-encre">
             Semaine {semaine.numero}{semaine.titre ? ` — ${semaine.titre}` : ''}
           </p>
-          <p className="text-sm text-stone-500 mt-0.5">Date limite : {formatDate(semaine.date_limite)}</p>
+          <p className="text-sm text-muet mt-0.5">Date limite : {formatDate(semaine.date_limite)}</p>
         </div>
-        <span className={`text-xs px-2 py-1 rounded-full ${semaine.ouverte ? 'bg-green-100 text-green-700' : 'bg-stone-100 text-stone-600'}`}>
+        <span className={`text-xs px-2 py-1 rounded-full ${semaine.ouverte ? 'bg-ok-teinte text-ok' : 'bg-parchemin-fonce text-muet'}`}>
           {semaine.ouverte ? 'Ouverte' : 'Fermée'}
         </span>
       </div>
@@ -132,18 +132,18 @@ export default async function PageVueSemaine({
               selectionnee={classeSel === c.id}
               resume={
                 <div className="flex flex-wrap gap-1.5 text-xs">
-                  <span className="bg-green-100 text-green-700 px-1.5 py-0.5 rounded-full">{k?.deposes ?? 0} déposés</span>
-                  {(k?.retard ?? 0) > 0 && <span className="bg-orange-100 text-orange-700 px-1.5 py-0.5 rounded-full">{k!.retard} retard</span>}
-                  {(k?.manquant ?? 0) > 0 && <span className="bg-red-100 text-red-700 px-1.5 py-0.5 rounded-full">{k!.manquant} manquant</span>}
-                  {(k?.aValider ?? 0) > 0 && <span className="bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded-full">{k!.aValider} à valider</span>}
-                  {(k?.publie ?? 0) > 0 && <span className="bg-stone-100 text-stone-600 px-1.5 py-0.5 rounded-full">{k!.publie} publié</span>}
+                  <span className="bg-ok-teinte text-ok px-1.5 py-0.5 rounded-full">{k?.deposes ?? 0} déposés</span>
+                  {(k?.retard ?? 0) > 0 && <span className="bg-attention-teinte text-attention px-1.5 py-0.5 rounded-full">{k!.retard} retard</span>}
+                  {(k?.manquant ?? 0) > 0 && <span className="bg-retard-teinte text-retard px-1.5 py-0.5 rounded-full">{k!.manquant} manquant</span>}
+                  {(k?.aValider ?? 0) > 0 && <span className="bg-attention-teinte text-attention px-1.5 py-0.5 rounded-full">{k!.aValider} à valider</span>}
+                  {(k?.publie ?? 0) > 0 && <span className="bg-parchemin-fonce text-muet px-1.5 py-0.5 rounded-full">{k!.publie} publié</span>}
                 </div>
               }
             />
           )
         })}
         {classes.length === 0 && (
-          <p className="text-sm text-stone-400">Aucune classe avec le module Fragments.</p>
+          <p className="text-sm text-muet">Aucune classe avec le module Fragments.</p>
         )}
       </div>
 
@@ -151,12 +151,12 @@ export default async function PageVueSemaine({
       {detail && classeChoisie && (
         <div className="space-y-6">
           <div className="flex items-center gap-2">
-            <Link href={`/prof/fragments-erudition/semaine/${id}`} className="text-sm text-stone-500 hover:text-stone-700">← Toutes les classes</Link>
-            <span className="text-sm text-stone-400">·</span>
-            <span className="text-sm font-medium text-stone-700">{classeChoisie.nom}</span>
+            <Link href={`/prof/fragments-erudition/semaine/${id}`} className="text-sm text-muet hover:text-encre-douce">← Toutes les classes</Link>
+            <span className="text-sm text-muet">·</span>
+            <span className="text-sm font-medium text-encre-douce">{classeChoisie.nom}</span>
           </div>
           {detail.elevesAvecDepot.length === 0 ? (
-            <div className="bg-white border border-stone-200 rounded-xl p-8 text-center text-stone-500 text-sm">Aucun élève inscrit dans cette classe.</div>
+            <div className="bg-surface border border-bordure rounded-xl p-8 text-center text-muet text-sm">Aucun élève inscrit dans cette classe.</div>
           ) : (
             <>
               <VueSemaine eleves={detail.elevesAvecDepot} semaineId={id} />

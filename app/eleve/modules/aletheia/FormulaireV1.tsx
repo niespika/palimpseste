@@ -18,7 +18,7 @@ interface Props {
 }
 
 const champClasse =
-  'w-full px-3 py-2 border border-stone-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-stone-400 resize-y text-stone-900'
+  'w-full px-3 py-2 border border-bordure rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-pigment resize-y text-encre'
 
 // Saisie V1 — 5 champs (SPEC §1) : idée principale, arguments, accord, questions, vocabulaire.
 export default function FormulaireV1({
@@ -59,7 +59,7 @@ export default function FormulaireV1({
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
       <div>
-        <label className="block text-xs font-medium text-stone-500 mb-1">
+        <label className="block text-xs font-medium text-muet mb-1">
           Idée principale <span className="font-normal">— ce que dit le chapitre, selon toi</span>
         </label>
         <textarea value={these} onChange={e => setThese(e.target.value)} rows={3}
@@ -67,7 +67,7 @@ export default function FormulaireV1({
           className={champClasse} />
       </div>
       <div>
-        <label className="block text-xs font-medium text-stone-500 mb-1">
+        <label className="block text-xs font-medium text-muet mb-1">
           Arguments <span className="font-normal">— les raisons que l’auteur avance pour la soutenir</span>
         </label>
         <textarea value={args} onChange={e => setArgs(e.target.value)} rows={4}
@@ -75,7 +75,7 @@ export default function FormulaireV1({
           className={champClasse} />
       </div>
       <div>
-        <label className="block text-xs font-medium text-stone-500 mb-1">
+        <label className="block text-xs font-medium text-muet mb-1">
           Ton accord <span className="font-normal">— es-tu d’accord ou non, et pourquoi ?</span>
         </label>
         <textarea value={accord} onChange={e => setAccord(e.target.value)} rows={3}
@@ -83,7 +83,7 @@ export default function FormulaireV1({
           className={champClasse} />
       </div>
       <div>
-        <label className="block text-xs font-medium text-stone-500 mb-1">
+        <label className="block text-xs font-medium text-muet mb-1">
           Tes questions <span className="font-normal">(2-3, une par ligne)</span>
         </label>
         <textarea value={questions} onChange={e => setQuestions(e.target.value)} rows={3}
@@ -91,16 +91,16 @@ export default function FormulaireV1({
           className={champClasse} />
       </div>
       <div>
-        <label className="block text-xs font-medium text-stone-500 mb-1">
+        <label className="block text-xs font-medium text-muet mb-1">
           Vocabulaire <span className="font-normal">— les mots que tu ne comprends pas (un par ligne, facultatif)</span>
         </label>
         <textarea value={vocabulaire} onChange={e => setVocabulaire(e.target.value)} rows={2}
           placeholder={aides.vocabulaire}
           className={champClasse} />
       </div>
-      {erreur && <p className="text-red-600 text-sm">{erreur}</p>}
+      {erreur && <p className="text-retard text-sm">{erreur}</p>}
       <button type="submit" disabled={chargement}
-        className="w-full bg-stone-800 text-white py-2.5 rounded-xl text-sm font-medium hover:bg-stone-700 disabled:opacity-50">
+        className="w-full bg-bouton text-surface py-2.5 rounded-xl text-sm font-medium hover:opacity-90 disabled:opacity-50">
         {chargement ? 'Envoi…' : 'Soumettre mon travail'}
       </button>
     </form>

@@ -67,20 +67,20 @@ export default async function PageEleveHub({
   return (
     <div className="space-y-6">
       <div>
-        <Link href="/prof/eleves" className="text-sm text-stone-500 hover:text-stone-700">← Élèves</Link>
-        <h2 className="text-xl font-serif text-stone-900 mt-2">{profil.display_name}</h2>
-        <p className="text-sm text-stone-500">{email}</p>
+        <Link href="/prof/eleves" className="text-sm text-muet hover:text-encre-douce">← Élèves</Link>
+        <h2 className="text-xl font-serif text-encre mt-2">{profil.display_name}</h2>
+        <p className="text-sm text-muet">{email}</p>
         <div className="flex flex-wrap gap-1.5 mt-2">
           {classes.length > 0 ? classes.map(c => (
-            <span key={c.id} className="text-xs bg-blue-50 text-blue-700 px-2 py-0.5 rounded-full">{c.nom}</span>
+            <span key={c.id} className="text-xs bg-info-teinte text-info px-2 py-0.5 rounded-full">{c.nom}</span>
           )) : (
-            <span className="text-xs bg-stone-100 text-stone-500 px-2 py-0.5 rounded-full">Aucune classe active</span>
+            <span className="text-xs bg-parchemin-fonce text-muet px-2 py-0.5 rounded-full">Aucune classe active</span>
           )}
         </div>
       </div>
 
       <div>
-        <h3 className="text-sm font-medium text-stone-500 uppercase tracking-wide mb-3">Par module</h3>
+        <h3 className="text-sm font-medium text-muet uppercase tracking-wide mb-3">Par module</h3>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           {cartes.map(c => (
             <Tuile
@@ -89,7 +89,7 @@ export default async function PageEleveHub({
               sousTitre={c.note}
               href={c.href}
               couleur={aAcces(c.slug) ? 'vert' : 'neutre'}
-              resume={!aAcces(c.slug) ? <span className="text-xs text-stone-400">Module non assigné à sa classe</span> : undefined}
+              resume={!aAcces(c.slug) ? <span className="text-xs text-muet">Module non assigné à sa classe</span> : undefined}
             />
           ))}
         </div>

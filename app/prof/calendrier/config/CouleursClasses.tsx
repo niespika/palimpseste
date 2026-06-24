@@ -34,25 +34,25 @@ function LigneClasse({
   }
 
   return (
-    <div className="bg-white border border-stone-200 rounded-xl px-5 py-3 flex items-center justify-between gap-3">
+    <div className="bg-surface border border-bordure rounded-xl px-5 py-3 flex items-center justify-between gap-3">
       <div className="flex items-center gap-3 min-w-0">
         <input
           type="color"
           value={valeur}
           onChange={(e) => setValeur(e.target.value)}
-          className="h-8 w-10 rounded border border-stone-200 cursor-pointer bg-white"
+          className="h-8 w-10 rounded border border-bordure cursor-pointer bg-surface"
           aria-label={`Couleur de ${classe.nom}`}
         />
-        <span className="font-medium text-stone-900 truncate">{classe.nom}</span>
+        <span className="font-medium text-encre truncate">{classe.nom}</span>
         {!classe.couleur && (
-          <span className="text-xs text-stone-400">(défaut)</span>
+          <span className="text-xs text-muet">(défaut)</span>
         )}
       </div>
       {modifiee && (
         <button
           onClick={enregistrer}
           disabled={busy}
-          className="text-xs bg-stone-800 text-white px-3 py-1.5 rounded-lg hover:bg-stone-700 disabled:opacity-50 flex-shrink-0"
+          className="text-xs bg-bouton text-surface px-3 py-1.5 rounded-lg hover:opacity-90 disabled:opacity-50 flex-shrink-0"
         >
           {busy ? '…' : 'Enregistrer'}
         </button>
@@ -67,7 +67,7 @@ export default function CouleursClasses({
   classes: { id: string; nom: string; couleur: string | null }[]
 }) {
   if (classes.length === 0) {
-    return <p className="text-sm text-stone-400">Aucune classe active.</p>
+    return <p className="text-sm text-muet">Aucune classe active.</p>
   }
   return (
     <div className="space-y-2">

@@ -75,27 +75,27 @@ export function TableauLive({ quizId, statut, fermeAt, eleves: elevesInit, moyen
   return (
     <div>
       {/* En-tête statut */}
-      <div className="bg-white border border-stone-200 rounded-xl p-5 mb-6">
+      <div className="bg-surface border border-bordure rounded-xl p-5 mb-6">
         <div className="flex items-center justify-between flex-wrap gap-4">
           <div>
             <div className="flex items-center gap-3">
               {statut === 'lance' && (
-                <span className="w-2 h-2 rounded-full bg-green-400 animate-pulse" />
+                <span className="w-2 h-2 rounded-full bg-ok animate-pulse" />
               )}
-              <span className="font-medium text-stone-900">
+              <span className="font-medium text-encre">
                 {statut === 'lance' ? 'Quizz en cours' : 'Quizz terminé'}
               </span>
             </div>
-            <p className="text-sm text-stone-500 mt-1">
+            <p className="text-sm text-muet mt-1">
               {nbSoumis}/{total} élève{total > 1 ? 's' : ''} {statut === 'lance' ? 'ont soumis' : 'ont participé'}
             </p>
             {secondesRestantes !== null && secondesRestantes > 0 && (
-              <p className={`text-2xl font-mono font-bold mt-2 ${secondesRestantes < 60 ? 'text-red-600' : 'text-stone-700'}`}>
+              <p className={`text-2xl font-mono font-bold mt-2 ${secondesRestantes < 60 ? 'text-retard' : 'text-encre-douce'}`}>
                 {formatTemps(secondesRestantes)}
               </p>
             )}
             {secondesRestantes === 0 && statut === 'lance' && (
-              <p className="text-sm text-red-600 mt-1">Temps écoulé — ferme le quizz</p>
+              <p className="text-sm text-retard mt-1">Temps écoulé — ferme le quizz</p>
             )}
           </div>
 
@@ -103,7 +103,7 @@ export function TableauLive({ quizId, statut, fermeAt, eleves: elevesInit, moyen
             <button
               onClick={handleFermer}
               disabled={pending}
-              className="px-5 py-2.5 bg-red-600 text-white text-sm rounded-xl hover:bg-red-700 disabled:opacity-50 transition-colors"
+              className="px-5 py-2.5 bg-retard text-surface text-sm rounded-xl hover:opacity-90 disabled:opacity-50 transition-colors"
             >
               {pending ? 'Fermeture…' : 'Fermer le quizz'}
             </button>
@@ -112,9 +112,9 @@ export function TableauLive({ quizId, statut, fermeAt, eleves: elevesInit, moyen
 
         {/* Barre de progression */}
         {total > 0 && (
-          <div className="mt-4 h-2 bg-stone-100 rounded-full overflow-hidden">
+          <div className="mt-4 h-2 bg-parchemin-fonce rounded-full overflow-hidden">
             <div
-              className="h-full bg-green-500 transition-all duration-500"
+              className="h-full bg-pigment transition-all duration-500"
               style={{ width: `${(nbSoumis / total) * 100}%` }}
             />
           </div>
@@ -124,24 +124,24 @@ export function TableauLive({ quizId, statut, fermeAt, eleves: elevesInit, moyen
       {/* Stats cohorte (quizz fermé) */}
       {statut === 'ferme' && moyenneCohorte !== null && (
         <div className="grid grid-cols-2 gap-3 mb-6">
-          <div className="bg-white border border-stone-200 rounded-xl p-4 text-center">
-            <p className="text-2xl font-serif text-stone-900">{moyenneCohorte.toFixed(2)}</p>
-            <p className="text-xs text-stone-400 mt-1">score moyen cohorte</p>
+          <div className="bg-surface border border-bordure rounded-xl p-4 text-center">
+            <p className="text-2xl font-serif text-encre">{moyenneCohorte.toFixed(2)}</p>
+            <p className="text-xs text-muet mt-1">score moyen cohorte</p>
           </div>
-          <div className="bg-white border border-stone-200 rounded-xl p-4 text-center">
-            <p className="text-2xl font-serif text-stone-900">
+          <div className="bg-surface border border-bordure rounded-xl p-4 text-center">
+            <p className="text-2xl font-serif text-encre">
               {Math.min(Math.max(10 + moyenneCohorte, 0), 20).toFixed(1)}/20
             </p>
-            <p className="text-xs text-stone-400 mt-1">note formative moyenne</p>
+            <p className="text-xs text-muet mt-1">note formative moyenne</p>
           </div>
         </div>
       )}
 
       {/* Tableau élèves */}
-      <div className="bg-white border border-stone-200 rounded-xl overflow-hidden">
+      <div className="bg-surface border border-bordure rounded-xl overflow-hidden">
         <table className="w-full text-sm">
           <thead>
-            <tr className="border-b border-stone-100 text-xs text-stone-400">
+            <tr className="border-b border-bordure text-xs text-muet">
               <th className="text-left px-4 py-3">Élève</th>
               <th className="text-center px-4 py-3">Statut</th>
               {statut === 'ferme' && <th className="text-right px-4 py-3">Score</th>}
@@ -151,32 +151,32 @@ export function TableauLive({ quizId, statut, fermeAt, eleves: elevesInit, moyen
           <tbody>
             {eleves.length === 0 && (
               <tr>
-                <td colSpan={4} className="text-center text-stone-400 py-8">
+                <td colSpan={4} className="text-center text-muet py-8">
                   Aucun élève n'a encore démarré le quizz.
                 </td>
               </tr>
             )}
             {eleves.map((e) => (
-              <tr key={e.id} className="border-b border-stone-50 last:border-0">
-                <td className="px-4 py-3 text-stone-800">{e.display_name}</td>
+              <tr key={e.id} className="border-b border-bordure last:border-0">
+                <td className="px-4 py-3 text-encre">{e.display_name}</td>
                 <td className="px-4 py-3 text-center">
                   {e.soumis ? (
-                    <span className="text-xs px-2 py-0.5 bg-green-100 text-green-700 rounded-full">
+                    <span className="text-xs px-2 py-0.5 bg-ok-teinte text-ok rounded-full">
                       {e.auto ? 'Auto-soumis' : 'Soumis'}
                     </span>
                   ) : (
-                    <span className="text-xs px-2 py-0.5 bg-stone-100 text-stone-500 rounded-full">
+                    <span className="text-xs px-2 py-0.5 bg-parchemin-fonce text-muet rounded-full">
                       En cours…
                     </span>
                   )}
                 </td>
                 {statut === 'ferme' && (
-                  <td className="px-4 py-3 text-right font-mono text-stone-700">
+                  <td className="px-4 py-3 text-right font-mono text-encre-douce">
                     {e.score_moyen != null ? e.score_moyen.toFixed(2) : '—'}
                   </td>
                 )}
                 {statut === 'ferme' && (
-                  <td className="px-4 py-3 text-right font-medium text-stone-900">
+                  <td className="px-4 py-3 text-right font-medium text-encre">
                     {e.score_moyen != null
                       ? `${Math.min(Math.max(10 + e.score_moyen, 0), 20).toFixed(1)}/20`
                       : '—'}

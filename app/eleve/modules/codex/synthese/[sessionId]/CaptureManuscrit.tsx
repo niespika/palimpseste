@@ -116,7 +116,7 @@ export function CaptureManuscrit({ sessionId, phase, ctaLabel, onEnvoye }: Props
       <label
         htmlFor={`input-codex-${phase}`}
         className={`flex items-center justify-center gap-2 w-full py-4 border-2 border-dashed rounded-xl cursor-pointer transition-colors ${
-          traitement ? 'border-stone-200 text-stone-400 cursor-wait' : 'border-stone-300 text-stone-600 hover:border-stone-400 hover:bg-stone-50'
+          traitement ? 'border-bordure text-muet cursor-wait' : 'border-bordure text-encre-douce hover:border-pigment hover:bg-parchemin-fonce'
         }`}
       >
         {traitement ? (
@@ -130,19 +130,19 @@ export function CaptureManuscrit({ sessionId, phase, ctaLabel, onEnvoye }: Props
           </>
         )}
       </label>
-      <p className="text-xs text-stone-400 text-center">Max 12 photos · pages dans l&apos;ordre</p>
+      <p className="text-xs text-muet text-center">Max 12 photos · pages dans l&apos;ordre</p>
 
       {images.length > 0 && (
         <div className="space-y-2">
           {images.map((img, index) => (
-            <div key={img.previewUrl} className="flex items-center gap-3 bg-stone-50 rounded-xl p-2">
-              <span className="text-xs text-stone-400 w-5 text-center font-medium">{index + 1}</span>
+            <div key={img.previewUrl} className="flex items-center gap-3 bg-parchemin-fonce rounded-xl p-2">
+              <span className="text-xs text-muet w-5 text-center font-medium">{index + 1}</span>
               <img src={img.previewUrl} alt={`Photo ${index + 1}`} className="w-16 h-16 object-cover rounded-lg shrink-0" />
-              <span className="text-xs text-stone-500 flex-1 truncate">{img.nom}</span>
+              <span className="text-xs text-muet flex-1 truncate">{img.nom}</span>
               <div className="flex gap-1 shrink-0">
-                <button onClick={() => monter(index)} disabled={index === 0} className="w-7 h-7 flex items-center justify-center text-stone-400 hover:text-stone-700 disabled:opacity-20 text-sm">▲</button>
-                <button onClick={() => descendre(index)} disabled={index === images.length - 1} className="w-7 h-7 flex items-center justify-center text-stone-400 hover:text-stone-700 disabled:opacity-20 text-sm">▼</button>
-                <button onClick={() => supprimer(index)} className="w-7 h-7 flex items-center justify-center text-red-400 hover:text-red-600 text-sm">✕</button>
+                <button onClick={() => monter(index)} disabled={index === 0} className="w-7 h-7 flex items-center justify-center text-muet hover:text-encre-douce disabled:opacity-20 text-sm">▲</button>
+                <button onClick={() => descendre(index)} disabled={index === images.length - 1} className="w-7 h-7 flex items-center justify-center text-muet hover:text-encre-douce disabled:opacity-20 text-sm">▼</button>
+                <button onClick={() => supprimer(index)} className="w-7 h-7 flex items-center justify-center text-retard hover:opacity-80 text-sm">✕</button>
               </div>
             </div>
           ))}
@@ -150,21 +150,21 @@ export function CaptureManuscrit({ sessionId, phase, ctaLabel, onEnvoye }: Props
       )}
 
       {erreur && (
-        <div className="bg-red-50 border border-red-200 rounded-xl px-3 py-2">
-          <p className="text-red-700 text-sm">{erreur}</p>
+        <div className="bg-retard-teinte border border-retard rounded-xl px-3 py-2">
+          <p className="text-retard text-sm">{erreur}</p>
         </div>
       )}
 
       {upload && (
-        <div className="bg-blue-50 border border-blue-200 rounded-xl px-3 py-2">
-          <p className="text-blue-700 text-sm">{progression}</p>
+        <div className="bg-info-teinte border border-info rounded-xl px-3 py-2">
+          <p className="text-info text-sm">{progression}</p>
         </div>
       )}
 
       <button
         onClick={handleEnvoyer}
         disabled={upload || traitement || images.length === 0}
-        className="w-full bg-stone-800 text-white py-3 rounded-xl text-sm font-medium hover:bg-stone-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+        className="w-full bg-bouton text-surface py-3 rounded-xl text-sm font-medium hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
       >
         {upload ? 'Envoi…' : ctaLabel}
       </button>

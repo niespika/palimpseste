@@ -38,7 +38,7 @@ const SECTIONS: { key: SectionKey; titre: string; sousTitre: string }[] = [
 
 function HintVariables({ vars }: { vars: string[] }) {
   return (
-    <div className="bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 text-sm text-amber-800">
+    <div className="bg-attention-teinte border border-attention rounded-xl px-4 py-3 text-sm text-attention">
       Variables disponibles :{' '}
       {vars.map(v => <code key={v} className="font-mono mr-1">{v}</code>)}
     </div>
@@ -48,15 +48,15 @@ function HintVariables({ vars }: { vars: string[] }) {
 function EnTete({ label, onRestaurer }: { label: string; onRestaurer: () => void }) {
   return (
     <div className="flex items-center justify-between mb-2">
-      <label className="text-sm font-medium text-stone-700">{label}</label>
-      <button type="button" onClick={onRestaurer} className="text-xs text-stone-500 hover:text-stone-700 underline">
+      <label className="text-sm font-medium text-encre-douce">{label}</label>
+      <button type="button" onClick={onRestaurer} className="text-xs text-muet hover:text-encre-douce underline">
         Restaurer la version par défaut
       </button>
     </div>
   )
 }
 
-const TEXTAREA = 'w-full px-3 py-2 border border-stone-200 rounded-xl text-sm font-mono focus:outline-none focus:ring-2 focus:ring-blue-400 resize-y text-stone-900'
+const TEXTAREA = 'w-full px-3 py-2 border border-bordure rounded-xl text-sm font-mono focus:outline-none focus:ring-2 focus:ring-pigment resize-y text-encre'
 
 export default function FormulaireParametres(props: Props) {
   const router = useRouter()
@@ -109,12 +109,14 @@ export default function FormulaireParametres(props: Props) {
               key={s.key}
               type="button"
               onClick={() => setSection(active ? null : s.key)}
-              className={`text-left bg-white border border-stone-200 border-l-4 rounded-xl px-4 py-3 transition-colors hover:border-stone-400 hover:shadow-sm ${
-                active ? 'border-l-stone-700 ring-2 ring-stone-400' : 'border-l-stone-300'
+              className={`text-left rounded-xl px-4 py-3 transition-colors ${
+                active
+                  ? 'bg-pigment border border-pigment'
+                  : 'bg-surface border border-bordure border-l-4 border-l-liseret hover:border-pigment hover:shadow-sm'
               }`}
             >
-              <p className="font-medium text-stone-900">{s.titre}</p>
-              <p className="text-xs text-stone-400 mt-0.5">{s.sousTitre}</p>
+              <p className={`font-medium ${active ? 'text-surface' : 'text-encre'}`}>{s.titre}</p>
+              <p className={`text-xs mt-0.5 ${active ? 'text-surface/75' : 'text-muet'}`}>{s.sousTitre}</p>
             </button>
           )
         })}
@@ -122,10 +124,10 @@ export default function FormulaireParametres(props: Props) {
 
       {/* Détail de la section choisie */}
       {section === 'bareme' && (
-        <div className="bg-white border border-stone-200 rounded-xl p-5 space-y-5">
+        <div className="bg-surface border border-bordure rounded-xl p-5 space-y-5">
           <div>
             <EnTete label="Rubrique partagée (échelle des sections E → A)" onRestaurer={() => setRubrique(props.rubriqueDefaut)} />
-            <p className="text-xs text-stone-400 mb-2">
+            <p className="text-xs text-muet mb-2">
               Source unique de l&apos;échelle des sections, importée par les 4 prompts via{' '}
               <code className="font-mono">{'{{rubrique}}'}</code>. Le /20 final (essai, synthèse) n&apos;y touche pas.
             </p>
@@ -139,7 +141,7 @@ export default function FormulaireParametres(props: Props) {
       )}
 
       {section === 'fragment' && (
-        <div className="bg-white border border-stone-200 rounded-xl p-5 space-y-4">
+        <div className="bg-surface border border-bordure rounded-xl p-5 space-y-4">
           <HintVariables vars={['{{theme}}', '{{description_theme}}', '{{numero_semaine}}', '{{historique}}', '{{bareme}}', '{{rubrique}}']} />
           <div>
             <EnTete label="Prompt d'évaluation du fragment" onRestaurer={() => setPrompt(props.promptDefaut)} />
@@ -149,7 +151,7 @@ export default function FormulaireParametres(props: Props) {
       )}
 
       {section === 'oral' && (
-        <div className="bg-white border border-stone-200 rounded-xl p-5 space-y-4">
+        <div className="bg-surface border border-bordure rounded-xl p-5 space-y-4">
           <HintVariables vars={['{{theme}}', '{{description_theme}}', '{{numero_semaine}}', '{{duree}}', '{{nb_mots}}', '{{debit}}', '{{transcription_orale}}', '{{dossier}}', '{{bareme}}']} />
           <div>
             <EnTete label="Prompt d'évaluation orale" onRestaurer={() => setPromptOral(props.promptOralDefaut)} />
@@ -157,28 +159,28 @@ export default function FormulaireParametres(props: Props) {
           </div>
           <label className="flex items-center gap-2 cursor-pointer">
             <input type="checkbox" checked={supprimerAudio} onChange={e => setSupprimerAudio(e.target.checked)} className="rounded" />
-            <span className="text-sm text-stone-700">Supprimer automatiquement l&apos;audio à la publication (case pré-cochée par défaut)</span>
+            <span className="text-sm text-encre-douce">Supprimer automatiquement l&apos;audio à la publication (case pré-cochée par défaut)</span>
           </label>
         </div>
       )}
 
       {section === 'essai' && (
-        <div className="bg-white border border-stone-200 rounded-xl p-5 space-y-4">
+        <div className="bg-surface border border-bordure rounded-xl p-5 space-y-4">
           <HintVariables vars={['{{question}}', '{{titre_epreuve}}', '{{duree}}', '{{consignes}}', '{{dossier}}', '{{echelle_lettres}}']} />
           <div>
             <EnTete label="Échelle de lettres (A–E)" onRestaurer={() => setEchelle(props.echelleDefaut)} />
             <textarea value={echelle || props.echelleDefaut} onChange={e => setEchelle(e.target.value)} rows={5} className={TEXTAREA} />
           </div>
           <div className="flex items-center gap-3">
-            <label className="text-sm font-medium text-stone-700 whitespace-nowrap">Fourchette note /20 (± points)</label>
+            <label className="text-sm font-medium text-encre-douce whitespace-nowrap">Fourchette note /20 (± points)</label>
             <input
               type="number"
               value={fourchette}
               onChange={e => setFourchette(Number(e.target.value))}
               min={0} max={5} step={0.5}
-              className="w-20 px-3 py-1.5 border border-stone-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
+              className="w-20 px-3 py-1.5 border border-bordure rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-pigment"
             />
-            <span className="text-xs text-stone-500">Ex : 2 → fourchette de ±2 points autour de la note suggérée</span>
+            <span className="text-xs text-muet">Ex : 2 → fourchette de ±2 points autour de la note suggérée</span>
           </div>
           <div>
             <EnTete label="Prompt d'évaluation de l'essai" onRestaurer={() => setPromptEssai(props.promptEssaiDefaut)} />
@@ -188,7 +190,7 @@ export default function FormulaireParametres(props: Props) {
       )}
 
       {section === 'synthese' && (
-        <div className="bg-white border border-stone-200 rounded-xl p-5 space-y-4">
+        <div className="bg-surface border border-bordure rounded-xl p-5 space-y-4">
           <HintVariables vars={['{{theme}}', '{{label_semestre}}', '{{date_debut}}', '{{date_fin}}', '{{taux_depot}}', '{{nb_retards}}', '{{dossier}}']} />
           <div>
             <EnTete label="Prompt de synthèse de semestre" onRestaurer={() => setPromptSynthese(props.promptSyntheseDefaut)} />
@@ -198,10 +200,10 @@ export default function FormulaireParametres(props: Props) {
       )}
 
       {section === 'integrite' && (
-        <div className="bg-white border border-stone-200 rounded-xl p-5 space-y-3">
+        <div className="bg-surface border border-bordure rounded-xl p-5 space-y-3">
           <div>
-            <label className="text-sm font-medium text-stone-700">Seuil « photo suspecte » (heures)</label>
-            <p className="text-xs text-stone-400 mt-1 mb-2">
+            <label className="text-sm font-medium text-encre-douce">Seuil « photo suspecte » (heures)</label>
+            <p className="text-xs text-muet mt-1 mb-2">
               Une photo dont les métadonnées EXIF indiquent une prise de vue plus ancienne que ce seuil est
               signalée au professeur (sans bloquer le dépôt). Côté prof, le délai écoulé entre la prise et le
               dépôt s&apos;affiche sur l&apos;analyse. Défaut : 48 h (2 jours).
@@ -212,9 +214,9 @@ export default function FormulaireParametres(props: Props) {
                 value={seuilPhoto}
                 onChange={e => setSeuilPhoto(Number(e.target.value))}
                 min={1} max={720} step={1}
-                className="w-24 px-3 py-1.5 border border-stone-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
+                className="w-24 px-3 py-1.5 border border-bordure rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-pigment"
               />
-              <span className="text-xs text-stone-500">heures {seuilPhoto >= 48 ? `(≈ ${Math.round(seuilPhoto / 24)} jours)` : ''}</span>
+              <span className="text-xs text-muet">heures {seuilPhoto >= 48 ? `(≈ ${Math.round(seuilPhoto / 24)} jours)` : ''}</span>
             </div>
           </div>
         </div>
@@ -223,8 +225,8 @@ export default function FormulaireParametres(props: Props) {
       {message && (
         <div className={`rounded-xl px-4 py-3 text-sm ${
           message.type === 'ok'
-            ? 'bg-green-50 border border-green-200 text-green-700'
-            : 'bg-red-50 border border-red-200 text-red-700'
+            ? 'bg-ok-teinte border border-ok text-ok'
+            : 'bg-retard-teinte border border-retard text-retard'
         }`}>
           {message.texte}
         </div>
@@ -233,7 +235,7 @@ export default function FormulaireParametres(props: Props) {
       <button
         onClick={handleSauvegarder}
         disabled={enregistrement}
-        className="bg-stone-800 text-white px-6 py-2.5 rounded-xl text-sm font-medium hover:bg-stone-700 disabled:opacity-50 transition-colors"
+        className="bg-bouton text-surface px-6 py-2.5 rounded-xl text-sm font-medium hover:opacity-90 disabled:opacity-50 transition-colors"
       >
         {enregistrement ? 'Enregistrement…' : 'Enregistrer les paramètres'}
       </button>

@@ -27,11 +27,11 @@ export default function BoutonLancerDiagnostic({ classeId, enAttente, aFaire }: 
     <div className="flex flex-wrap items-center gap-2">
       <button onClick={lancer} disabled={busy || enAttente === 0}
         className={`text-sm px-3 py-1.5 rounded-lg border transition-colors disabled:opacity-50 ${
-          aFaire ? 'bg-amber-500 text-white border-amber-500 hover:bg-amber-600' : 'bg-white text-stone-700 border-stone-300 hover:bg-stone-50'
+          aFaire ? 'bg-attention text-surface border-attention hover:opacity-90' : 'bg-surface text-encre-douce border-bordure hover:bg-parchemin-fonce'
         }`}>
         {busy ? 'Lancement…' : aFaire ? `⚠ Diagnostic à faire (${enAttente})` : enAttente > 0 ? `Lancer le diagnostic (${enAttente})` : 'Diagnostic à jour'}
       </button>
-      {msg && <span className="text-xs text-stone-500">{msg}</span>}
+      {msg && <span className="text-xs text-muet">{msg}</span>}
     </div>
   )
 }

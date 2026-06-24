@@ -26,7 +26,7 @@ export default async function PageEssais({ searchParams }: { searchParams: Promi
 
   if (!semestre || classes.length === 0) {
     return (
-      <div className="bg-white border border-stone-200 rounded-xl p-8 text-center text-stone-500 text-sm">
+      <div className="bg-surface border border-bordure rounded-xl p-8 text-center text-muet text-sm">
         Aucune classe avec le module Fragments{semestre ? '' : ' (ou aucun semestre)'}.
       </div>
     )
@@ -78,8 +78,8 @@ export default async function PageEssais({ searchParams }: { searchParams: Promi
   return (
     <div className="space-y-6 pb-8">
       <div>
-        <h3 className="text-base font-medium text-stone-900">Essais — {semestre.label}</h3>
-        <p className="text-sm text-stone-500 mt-0.5">Un essai = une session d&apos;écriture, assignable à plusieurs classes (date propre à chacune).</p>
+        <h3 className="text-base font-medium text-encre">Essais — {semestre.label}</h3>
+        <p className="text-sm text-muet mt-0.5">Un essai = une session d&apos;écriture, assignable à plusieurs classes (date propre à chacune).</p>
       </div>
 
       <FormulaireNouvelEssai

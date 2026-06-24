@@ -39,16 +39,16 @@ export default function PollStatut({ actif, livreId, semaine }: { actif: boolean
   }
 
   return (
-    <div className="mt-2 text-sm text-stone-500">
+    <div className="mt-2 text-sm text-muet">
       <p className="mb-1">La préparation prend plus de temps que prévu.</p>
       <button
         onClick={relancer}
         disabled={enRelance}
-        className="text-stone-700 underline hover:text-stone-900 disabled:opacity-50"
+        className="text-encre-douce underline hover:text-encre disabled:opacity-50"
       >
         {enRelance ? 'Relance…' : 'Relancer le retour'}
       </button>
-      {message && <span className="ml-2 text-red-600">{message}</span>}
+      {message && <span className="ml-2 text-retard">{message}</span>}
     </div>
   )
 }

@@ -13,8 +13,8 @@ function Champ({ label, valeur }: { label: string; valeur: string | null | undef
   if (!valeur) return null
   return (
     <div>
-      <p className="text-xs font-medium text-stone-500 mb-0.5">{label}</p>
-      <p className="text-sm text-stone-700 whitespace-pre-wrap">{valeur}</p>
+      <p className="text-xs font-medium text-muet mb-0.5">{label}</p>
+      <p className="text-sm text-encre-douce whitespace-pre-wrap">{valeur}</p>
     </div>
   )
 }
@@ -23,8 +23,8 @@ function ListeChamp({ label, items }: { label: string; items: string[] }) {
   if (!items?.length) return null
   return (
     <div>
-      <p className="text-xs font-medium text-stone-500 mb-0.5">{label}</p>
-      <ul className="list-disc list-inside space-y-0.5 text-sm text-stone-700">
+      <p className="text-xs font-medium text-muet mb-0.5">{label}</p>
+      <ul className="list-disc list-inside space-y-0.5 text-sm text-encre-douce">
         {items.map((t, i) => <li key={i}>{t}</li>)}
       </ul>
     </div>
@@ -38,21 +38,21 @@ function SemaineDrill({ livre, travaux, diag }: { livre: LivreProf; travaux: Map
         const t = travaux.get(s.semaine) ?? null
         const statut = t?.statut ?? 'DRAFT'
         return (
-          <details key={s.semaine} className="bg-white border border-stone-200 rounded-xl">
+          <details key={s.semaine} className="bg-surface border border-bordure rounded-xl">
             <summary className="px-4 py-3 cursor-pointer flex items-center justify-between gap-3">
-              <span className="text-sm font-medium text-stone-800">
+              <span className="text-sm font-medium text-encre">
                 Semaine {s.semaine} — {s.titre}
-                {s.chapitres && <span className="text-violet-600 font-normal"> · {s.chapitres}</span>}
+                {s.chapitres && <span className="text-pigment font-normal"> · {s.chapitres}</span>}
               </span>
-              <span className="text-xs text-stone-400 whitespace-nowrap">{STATUT_LABEL[statut]}</span>
+              <span className="text-xs text-muet whitespace-nowrap">{STATUT_LABEL[statut]}</span>
             </summary>
-            <div className="px-4 pb-4 space-y-4 border-t border-stone-100 pt-4">
+            <div className="px-4 pb-4 space-y-4 border-t border-bordure pt-4">
               {!t ? (
-                <p className="text-sm text-stone-400">Rien soumis pour cette semaine.</p>
+                <p className="text-sm text-muet">Rien soumis pour cette semaine.</p>
               ) : (
                 <>
                   <section className="space-y-2">
-                    <h5 className="text-xs font-semibold uppercase tracking-wide text-stone-400">Version initiale (V1)</h5>
+                    <h5 className="text-xs font-semibold uppercase tracking-wide text-muet">Version initiale (V1)</h5>
                     <Champ label="Idée principale" valeur={t.these} />
                     <Champ label="Arguments" valeur={t.arguments} />
                     <Champ label="Ton accord" valeur={t.accord} />
@@ -62,14 +62,14 @@ function SemaineDrill({ livre, travaux, diag }: { livre: LivreProf; travaux: Map
 
                   {t.retour_v1 && (
                     <section className="space-y-2">
-                      <h5 className="text-xs font-semibold uppercase tracking-wide text-stone-400">Retour V1</h5>
+                      <h5 className="text-xs font-semibold uppercase tracking-wide text-muet">Retour V1</h5>
                       <VueRetourV1 retour={t.retour_v1} montrerRemarque />
                     </section>
                   )}
 
                   {(t.these_vf || t.arguments_vf || t.accord_vf) && (
                     <section className="space-y-2">
-                      <h5 className="text-xs font-semibold uppercase tracking-wide text-stone-400">Version finale (VF)</h5>
+                      <h5 className="text-xs font-semibold uppercase tracking-wide text-muet">Version finale (VF)</h5>
                       <Champ label="Idée principale" valeur={t.these_vf} />
                       <Champ label="Arguments" valeur={t.arguments_vf} />
                       <Champ label="Ton accord" valeur={t.accord_vf} />
@@ -78,13 +78,13 @@ function SemaineDrill({ livre, travaux, diag }: { livre: LivreProf; travaux: Map
 
                   {t.retour_vf && (
                     <section className="space-y-2">
-                      <h5 className="text-xs font-semibold uppercase tracking-wide text-stone-400">Retour final (VF)</h5>
+                      <h5 className="text-xs font-semibold uppercase tracking-wide text-muet">Retour final (VF)</h5>
                       <VueRetourVF retour={t.retour_vf} />
                     </section>
                   )}
 
-                  <section className="space-y-1 border-t border-stone-100 pt-3">
-                    <h5 className="text-xs font-semibold uppercase tracking-wide text-stone-400">Diagnostic (prof — non montré à l&apos;élève)</h5>
+                  <section className="space-y-1 border-t border-bordure pt-3">
+                    <h5 className="text-xs font-semibold uppercase tracking-wide text-muet">Diagnostic (prof — non montré à l&apos;élève)</h5>
                     <DetailDiagChapitre d={diag.get(s.semaine)} />
                   </section>
                 </>
@@ -125,21 +125,21 @@ function TuileDiagnostic({ livre, diag }: { livre: LivreProf; diag: Map<number, 
   const aDiag = points.some(p => p.these != null || p.arguments != null)
 
   return (
-    <section className="bg-white border border-stone-200 border-l-4 border-l-violet-400 rounded-xl p-4">
-      <h5 className="text-sm font-medium text-stone-800">
-        Diagnostic de compréhension <span className="font-normal text-stone-400">— prof, jamais montré à l&apos;élève</span>
+    <section className="bg-surface border border-bordure border-l-4 border-l-liseret rounded-xl p-4">
+      <h5 className="text-sm font-medium text-encre">
+        Diagnostic de compréhension <span className="font-normal text-muet">— prof, jamais montré à l&apos;élève</span>
       </h5>
-      <p className="text-xs text-stone-400 mb-3">Thèse / arguments en E→A (V1→VF) · la tendance prime sur le point isolé.</p>
+      <p className="text-xs text-muet mb-3">Thèse / arguments en E→A (V1→VF) · la tendance prime sur le point isolé.</p>
       {aDiag ? (
         <>
           <CourbeEvolution data={points} cleX="x" series={SERIES_DIAG} axeY="lettres" domaine={[0, 4]} hauteur={200} />
-          <div className="mt-3 pt-3 border-t border-stone-100">
-            <p className="text-xs text-stone-400 mb-1">Trajectoire (axe arguments)</p>
+          <div className="mt-3 pt-3 border-t border-bordure">
+            <p className="text-xs text-muet mb-1">Trajectoire (axe arguments)</p>
             <TrajectoireDiag semaines={livre.semaines.map(s => s.semaine)} diag={diag} />
           </div>
         </>
       ) : (
-        <p className="text-sm text-stone-400">Pas encore diagnostiqué — lance le diagnostic depuis la vue classe.</p>
+        <p className="text-sm text-muet">Pas encore diagnostiqué — lance le diagnostic depuis la vue classe.</p>
       )}
     </section>
   )
@@ -180,13 +180,13 @@ export default async function DrillDownEleveAletheia({ params }: { params: Promi
   return (
     <div className="space-y-6">
       <div>
-        <Link href="/prof/aletheia" className="text-sm text-stone-500 hover:text-stone-700">← Classe</Link>
-        <h3 className="text-lg font-serif text-stone-900 mt-2">{eleve.display_name as string}</h3>
-        <p className="text-sm text-stone-400">Détail par livre et par semaine</p>
+        <Link href="/prof/aletheia" className="text-sm text-muet hover:text-encre-douce">← Classe</Link>
+        <h3 className="text-lg font-serif text-encre mt-2">{eleve.display_name as string}</h3>
+        <p className="text-sm text-muet">Détail par livre et par semaine</p>
       </div>
 
       {livres.length === 0 ? (
-        <p className="text-sm text-stone-400">Aucun livre assigné à cet élève.</p>
+        <p className="text-sm text-muet">Aucun livre assigné à cet élève.</p>
       ) : (
         livres.map(livre => {
           const travaux = travauxParLivre.get(livre.id) ?? new Map<number, TravailAletheia>()
@@ -195,8 +195,8 @@ export default async function DrillDownEleveAletheia({ params }: { params: Promi
           return (
             <div key={livre.id} className="space-y-4">
               <div className="flex items-baseline justify-between gap-3 flex-wrap">
-                <h4 className="font-medium text-stone-900">{livre.titre}</h4>
-                <span className="text-xs text-stone-400">{p.done}/{p.total} semaines terminées</span>
+                <h4 className="font-medium text-encre">{livre.titre}</h4>
+                <span className="text-xs text-muet">{p.done}/{p.total} semaines terminées</span>
               </div>
 
               <TuileDiagnostic livre={livre} diag={diagParLivre.get(livre.id) ?? new Map()} />
@@ -205,11 +205,11 @@ export default async function DrillDownEleveAletheia({ params }: { params: Promi
 
               {/* Pas de carte du livre ici (elle est dans le Scriptorium) — juste
                   l'indication de l'accès de l'élève + l'état de génération. */}
-              <section className="bg-white border border-stone-200 border-l-4 border-l-stone-800 rounded-xl p-4">
+              <section className="bg-surface border border-bordure border-l-4 border-l-liseret rounded-xl p-4">
                 <div className="flex items-start justify-between gap-3 flex-wrap">
                   <div>
-                    <h5 className="text-sm font-medium text-stone-800">✦ Carte d&apos;architecture du livre</h5>
-                    <p className="text-sm text-stone-500 mt-1">
+                    <h5 className="text-sm font-medium text-encre">✦ Carte d&apos;architecture du livre</h5>
+                    <p className="text-sm text-muet mt-1">
                       {cap?.statut !== 'READY'
                         ? (cap?.statut === 'PENDING' ? 'Pas encore générée (génération en cours).' : cap?.statut === 'ERROR' ? 'Génération échouée — régénère-la depuis le Scriptorium.' : 'Pas encore générée — à générer depuis le Scriptorium.')
                         : p.done === p.total && p.total > 0
@@ -217,7 +217,7 @@ export default async function DrillDownEleveAletheia({ params }: { params: Promi
                           : `L’élève y accèdera à la fin du livre (${p.done}/${p.total} semaines).`}
                     </p>
                   </div>
-                  <Link href="/prof/scriptorium" className="text-xs text-stone-500 hover:text-stone-800 underline whitespace-nowrap shrink-0">
+                  <Link href="/prof/scriptorium" className="text-xs text-muet hover:text-encre underline whitespace-nowrap shrink-0">
                     Voir la carte dans le Scriptorium →
                   </Link>
                 </div>

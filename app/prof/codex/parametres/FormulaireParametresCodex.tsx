@@ -15,7 +15,7 @@ interface Props {
   consigneVfDefaut: string
 }
 
-const TEXTAREA = 'w-full px-3 py-2 border border-stone-200 rounded-xl text-sm font-mono focus:outline-none focus:ring-2 focus:ring-blue-400 resize-y text-stone-900'
+const TEXTAREA = 'w-full px-3 py-2 border border-bordure rounded-xl text-sm font-mono focus:outline-none focus:ring-2 focus:ring-pigment resize-y text-encre'
 
 export default function FormulaireParametresCodex({
   promptV1Initial, promptVfInitial, promptV1Defaut, promptVfDefaut,
@@ -44,27 +44,27 @@ export default function FormulaireParametresCodex({
 
   return (
     <div className="space-y-6">
-      <div className="bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 text-sm text-amber-800">
+      <div className="bg-attention-teinte border border-attention rounded-xl px-4 py-3 text-sm text-attention">
         Prompts de génération des retours IA de Codex (consolidation). Distincts des prompts d&apos;évaluation des Fragments — pas de rubrique d&apos;axes ici.
       </div>
 
       {/* Consignes affichées à l'élève (bulles « comment faire », T6) */}
-      <div className="bg-white border border-stone-200 rounded-xl p-5 space-y-4">
+      <div className="bg-surface border border-bordure rounded-xl p-5 space-y-4">
         <div>
-          <h4 className="text-sm font-medium text-stone-700">Consignes élève</h4>
-          <p className="text-xs text-stone-400 mt-0.5">Bulles d&apos;aide affichées à l&apos;élève au moment d&apos;écrire (V1) et de réécrire (V-finale).</p>
+          <h4 className="text-sm font-medium text-encre-douce">Consignes élève</h4>
+          <p className="text-xs text-muet mt-0.5">Bulles d&apos;aide affichées à l&apos;élève au moment d&apos;écrire (V1) et de réécrire (V-finale).</p>
         </div>
         <div>
           <div className="flex items-center justify-between mb-2">
-            <label className="text-sm font-medium text-stone-700">Consigne V1 (avant d&apos;écrire)</label>
-            <button type="button" onClick={() => setConsigneV1(consigneV1Defaut)} className="text-xs text-stone-500 hover:text-stone-700 underline">Restaurer la version par défaut</button>
+            <label className="text-sm font-medium text-encre-douce">Consigne V1 (avant d&apos;écrire)</label>
+            <button type="button" onClick={() => setConsigneV1(consigneV1Defaut)} className="text-xs text-muet hover:text-encre-douce underline">Restaurer la version par défaut</button>
           </div>
           <textarea value={consigneV1} onChange={e => setConsigneV1(e.target.value)} rows={2} className={TEXTAREA} />
         </div>
         <div>
           <div className="flex items-center justify-between mb-2">
-            <label className="text-sm font-medium text-stone-700">Consigne V-finale (avant de réécrire)</label>
-            <button type="button" onClick={() => setConsigneVf(consigneVfDefaut)} className="text-xs text-stone-500 hover:text-stone-700 underline">Restaurer la version par défaut</button>
+            <label className="text-sm font-medium text-encre-douce">Consigne V-finale (avant de réécrire)</label>
+            <button type="button" onClick={() => setConsigneVf(consigneVfDefaut)} className="text-xs text-muet hover:text-encre-douce underline">Restaurer la version par défaut</button>
           </div>
           <textarea value={consigneVf} onChange={e => setConsigneVf(e.target.value)} rows={2} className={TEXTAREA} />
         </div>
@@ -72,8 +72,8 @@ export default function FormulaireParametresCodex({
 
       <div>
         <div className="flex items-center justify-between mb-2">
-          <label className="text-sm font-medium text-stone-700">Prompt du retour IA en V1 (suggestions)</label>
-          <button type="button" onClick={() => setV1(promptV1Defaut)} className="text-xs text-stone-500 hover:text-stone-700 underline">
+          <label className="text-sm font-medium text-encre-douce">Prompt du retour IA en V1 (suggestions)</label>
+          <button type="button" onClick={() => setV1(promptV1Defaut)} className="text-xs text-muet hover:text-encre-douce underline">
             Restaurer la version par défaut
           </button>
         </div>
@@ -82,8 +82,8 @@ export default function FormulaireParametresCodex({
 
       <div>
         <div className="flex items-center justify-between mb-2">
-          <label className="text-sm font-medium text-stone-700">Prompt du retour IA en V-Finale</label>
-          <button type="button" onClick={() => setVf(promptVfDefaut)} className="text-xs text-stone-500 hover:text-stone-700 underline">
+          <label className="text-sm font-medium text-encre-douce">Prompt du retour IA en V-Finale</label>
+          <button type="button" onClick={() => setVf(promptVfDefaut)} className="text-xs text-muet hover:text-encre-douce underline">
             Restaurer la version par défaut
           </button>
         </div>
@@ -91,13 +91,13 @@ export default function FormulaireParametresCodex({
       </div>
 
       {message && (
-        <div className={`rounded-xl px-4 py-3 text-sm ${message.type === 'ok' ? 'bg-green-50 border border-green-200 text-green-700' : 'bg-red-50 border border-red-200 text-red-700'}`}>
+        <div className={`rounded-xl px-4 py-3 text-sm ${message.type === 'ok' ? 'bg-ok-teinte border border-ok text-ok' : 'bg-retard-teinte border border-retard text-retard'}`}>
           {message.texte}
         </div>
       )}
 
       <button onClick={handleSauvegarder} disabled={enregistrement}
-        className="bg-stone-800 text-white px-6 py-2.5 rounded-xl text-sm font-medium hover:bg-stone-700 disabled:opacity-50 transition-colors">
+        className="bg-bouton text-surface px-6 py-2.5 rounded-xl text-sm font-medium hover:opacity-90 disabled:opacity-50 transition-colors">
         {enregistrement ? 'Enregistrement…' : 'Enregistrer les prompts'}
       </button>
     </div>

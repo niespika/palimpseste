@@ -50,7 +50,7 @@ export default function FormulaireNouvelEssai({ classes, semestreId }: { classes
     return (
       <button
         onClick={() => setOuvert(true)}
-        className="w-full bg-stone-800 text-white py-2.5 rounded-xl text-sm font-medium hover:bg-stone-700 transition-colors"
+        className="w-full bg-bouton text-surface py-2.5 rounded-xl text-sm font-medium hover:opacity-90 transition-colors"
       >
         + Nouvel essai
       </button>
@@ -58,21 +58,21 @@ export default function FormulaireNouvelEssai({ classes, semestreId }: { classes
   }
 
   return (
-    <form onSubmit={handleSubmit} className="bg-white border border-stone-200 rounded-xl p-5 space-y-4">
-      <h4 className="text-sm font-medium text-stone-900">Nouvel essai</h4>
+    <form onSubmit={handleSubmit} className="bg-surface border border-bordure rounded-xl p-5 space-y-4">
+      <h4 className="text-sm font-medium text-encre">Nouvel essai</h4>
 
       <div>
-        <label className="block text-xs font-medium text-stone-500 mb-1">Titre</label>
+        <label className="block text-xs font-medium text-muet mb-1">Titre</label>
         <input
           name="titre"
           required
           placeholder="Ex. : Essai final — juin"
-          className="w-full px-3 py-2 border border-stone-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
+          className="w-full px-3 py-2 border border-bordure rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-pigment"
         />
       </div>
 
       <div>
-        <label className="block text-xs font-medium text-stone-500 mb-1">Durée (min)</label>
+        <label className="block text-xs font-medium text-muet mb-1">Durée (min)</label>
         <input
           name="duree_minutes"
           type="number"
@@ -80,26 +80,26 @@ export default function FormulaireNouvelEssai({ classes, semestreId }: { classes
           defaultValue={60}
           min={15}
           max={240}
-          className="w-40 px-3 py-2 border border-stone-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
+          className="w-40 px-3 py-2 border border-bordure rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-pigment"
         />
       </div>
 
       <div>
-        <label className="block text-xs font-medium text-stone-500 mb-1">Consignes <span className="font-normal">(optionnel — affiché à l&apos;élève)</span></label>
+        <label className="block text-xs font-medium text-muet mb-1">Consignes <span className="font-normal">(optionnel — affiché à l&apos;élève)</span></label>
         <textarea
           name="consignes"
           rows={3}
           placeholder="Ex. : Réponds à ta question en mobilisant les connaissances acquises dans tes fragments…"
-          className="w-full px-3 py-2 border border-stone-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 resize-y"
+          className="w-full px-3 py-2 border border-bordure rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-pigment resize-y"
         />
       </div>
 
       <div>
-        <label className="block text-xs font-medium text-stone-500 mb-2">
+        <label className="block text-xs font-medium text-muet mb-2">
           Classes concernées <span className="font-normal">(une date par classe)</span>
         </label>
         {classes.length === 0 ? (
-          <p className="text-sm text-stone-400">Aucune classe avec le module sur ce semestre.</p>
+          <p className="text-sm text-muet">Aucune classe avec le module sur ce semestre.</p>
         ) : (
           <div className="space-y-2">
             {classes.map(c => {
@@ -108,14 +108,14 @@ export default function FormulaireNouvelEssai({ classes, semestreId }: { classes
                 <div key={c.id} className="flex items-center gap-3">
                   <label className="flex items-center gap-2 cursor-pointer w-40">
                     <input type="checkbox" checked={choisie} onChange={() => toggleClasse(c.id)} className="rounded" />
-                    <span className="text-sm text-stone-700">{c.nom}</span>
+                    <span className="text-sm text-encre-douce">{c.nom}</span>
                   </label>
                   <input
                     type="date"
                     value={dates[c.id] ?? ''}
                     onChange={e => setDates(prev => ({ ...prev, [c.id]: e.target.value }))}
                     disabled={!choisie}
-                    className="px-3 py-1.5 border border-stone-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 disabled:bg-stone-50 disabled:text-stone-300"
+                    className="px-3 py-1.5 border border-bordure rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-pigment disabled:bg-parchemin-fonce disabled:text-bordure"
                   />
                 </div>
               )
@@ -124,17 +124,17 @@ export default function FormulaireNouvelEssai({ classes, semestreId }: { classes
         )}
       </div>
 
-      {erreur && <p className="text-red-600 text-sm">{erreur}</p>}
+      {erreur && <p className="text-retard text-sm">{erreur}</p>}
 
       <div className="flex gap-2">
         <button
           type="submit"
           disabled={chargement}
-          className="bg-stone-800 text-white px-4 py-2 rounded-lg text-sm hover:bg-stone-700 disabled:opacity-50"
+          className="bg-bouton text-surface px-4 py-2 rounded-lg text-sm hover:opacity-90 disabled:opacity-50"
         >
           {chargement ? '…' : 'Créer'}
         </button>
-        <button type="button" onClick={() => setOuvert(false)} className="px-4 py-2 text-sm text-stone-600 hover:bg-stone-100 rounded-lg">
+        <button type="button" onClick={() => setOuvert(false)} className="px-4 py-2 text-sm text-encre-douce hover:bg-parchemin-fonce rounded-lg">
           Annuler
         </button>
       </div>

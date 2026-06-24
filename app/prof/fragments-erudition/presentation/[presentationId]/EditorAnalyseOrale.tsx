@@ -21,11 +21,11 @@ interface Props {
 }
 
 const STATUT_LABELS: Record<string, { label: string; classe: string }> = {
-  enregistre: { label: 'En cours de transcription…', classe: 'bg-blue-100 text-blue-700' },
-  transcrit:  { label: 'Analyse en cours…',           classe: 'bg-blue-100 text-blue-700' },
-  analyse:    { label: 'À valider',                    classe: 'bg-amber-100 text-amber-700' },
-  erreur:     { label: 'Erreur',                       classe: 'bg-red-100 text-red-700' },
-  publie:     { label: 'Publiée ✓',                    classe: 'bg-green-100 text-green-700' },
+  enregistre: { label: 'En cours de transcription…', classe: 'bg-info-teinte text-info' },
+  transcrit:  { label: 'Analyse en cours…',           classe: 'bg-info-teinte text-info' },
+  analyse:    { label: 'À valider',                    classe: 'bg-attention-teinte text-attention' },
+  erreur:     { label: 'Erreur',                       classe: 'bg-retard-teinte text-retard' },
+  publie:     { label: 'Publiée ✓',                    classe: 'bg-ok-teinte text-ok' },
 }
 
 function NoteButtons({ valeur, onChange }: { valeur: number; onChange: (n: number) => void }) {
@@ -37,8 +37,8 @@ function NoteButtons({ valeur, onChange }: { valeur: number; onChange: (n: numbe
           onClick={() => onChange(n)}
           className={`w-8 h-8 rounded text-sm font-medium transition-colors ${
             valeur === n
-              ? 'bg-stone-800 text-white'
-              : 'bg-stone-100 text-stone-600 hover:bg-stone-200'
+              ? 'bg-bouton text-surface'
+              : 'bg-parchemin-fonce text-muet hover:bg-bordure'
           }`}
         >
           {LETTRES_SECTIONS[n]}
@@ -154,7 +154,7 @@ export default function EditorAnalyseOrale({ oral, analyseOrale, presentationId,
     router.refresh()
   }
 
-  const { label: statutLabel, classe: statutClasse } = STATUT_LABELS[oral.statut] ?? { label: oral.statut, classe: 'bg-stone-100 text-stone-600' }
+  const { label: statutLabel, classe: statutClasse } = STATUT_LABELS[oral.statut] ?? { label: oral.statut, classe: 'bg-parchemin-fonce text-muet' }
 
   return (
     <div className="space-y-4">
@@ -165,11 +165,11 @@ export default function EditorAnalyseOrale({ oral, analyseOrale, presentationId,
         </span>
         {oral.statut === 'erreur' && (
           <div className="flex gap-2">
-            <button onClick={handleRelancerTranscription} disabled={chargement} className="text-xs text-stone-600 hover:text-stone-900 underline">
+            <button onClick={handleRelancerTranscription} disabled={chargement} className="text-xs text-encre-douce hover:text-encre underline">
               Relancer la transcription
             </button>
             {oral.transcription && !oral.transcription.startsWith('ERREUR transcription') && (
-              <button onClick={handleRelancerAnalyse} disabled={chargement} className="text-xs text-stone-600 hover:text-stone-900 underline">
+              <button onClick={handleRelancerAnalyse} disabled={chargement} className="text-xs text-encre-douce hover:text-encre underline">
                 Relancer l'analyse
               </button>
             )}
@@ -179,66 +179,66 @@ export default function EditorAnalyseOrale({ oral, analyseOrale, presentationId,
 
       {/* En cours : spinner */}
       {estEnCours && (
-        <div className="bg-white border border-stone-200 rounded-xl p-6 text-center space-y-3">
-          <div className="w-6 h-6 border-2 border-stone-200 border-t-stone-600 rounded-full animate-spin mx-auto" />
-          <p className="text-sm text-stone-500">
+        <div className="bg-surface border border-bordure rounded-xl p-6 text-center space-y-3">
+          <div className="w-6 h-6 border-2 border-bordure border-t-encre-douce rounded-full animate-spin mx-auto" />
+          <p className="text-sm text-muet">
             {oral.statut === 'enregistre' ? 'Transcription en cours via Groq Whisper…' : 'Analyse IA en cours via Claude…'}
           </p>
-          <p className="text-xs text-stone-400">La page se rafraîchit automatiquement.</p>
+          <p className="text-xs text-muet">La page se rafraîchit automatiquement.</p>
         </div>
       )}
 
       {/* Statistiques de l'oral */}
       {oral.nb_mots && (
         <div className="grid grid-cols-3 gap-3">
-          <div className="bg-white border border-stone-200 rounded-xl p-3 text-center">
-            <p className="text-lg font-serif text-stone-800">
+          <div className="bg-surface border border-bordure rounded-xl p-3 text-center">
+            <p className="text-lg font-serif text-encre">
               {oral.duree_secondes ? `${Math.floor(oral.duree_secondes / 60)}:${String(oral.duree_secondes % 60).padStart(2, '0')}` : '—'}
             </p>
-            <p className="text-xs text-stone-500 mt-0.5">Durée</p>
+            <p className="text-xs text-muet mt-0.5">Durée</p>
           </div>
-          <div className="bg-white border border-stone-200 rounded-xl p-3 text-center">
-            <p className="text-lg font-serif text-stone-800">{oral.nb_mots ?? '—'}</p>
-            <p className="text-xs text-stone-500 mt-0.5">Mots</p>
+          <div className="bg-surface border border-bordure rounded-xl p-3 text-center">
+            <p className="text-lg font-serif text-encre">{oral.nb_mots ?? '—'}</p>
+            <p className="text-xs text-muet mt-0.5">Mots</p>
           </div>
-          <div className="bg-white border border-stone-200 rounded-xl p-3 text-center">
+          <div className="bg-surface border border-bordure rounded-xl p-3 text-center">
             <p className={`text-lg font-serif ${
-              (oral.debit_mots_minute ?? 0) < 120 ? 'text-orange-600' :
-              (oral.debit_mots_minute ?? 0) > 160 ? 'text-orange-600' : 'text-green-700'
+              (oral.debit_mots_minute ?? 0) < 120 ? 'text-attention' :
+              (oral.debit_mots_minute ?? 0) > 160 ? 'text-attention' : 'text-ok'
             }`}>
               {oral.debit_mots_minute ?? '—'}
             </p>
-            <p className="text-xs text-stone-500 mt-0.5">mots/min</p>
-            <p className="text-xs text-stone-400">repère : 120–160</p>
+            <p className="text-xs text-muet mt-0.5">mots/min</p>
+            <p className="text-xs text-muet">repère : 120–160</p>
           </div>
         </div>
       )}
 
       {/* Audio player */}
       {!oral.audio_supprime && audioUrl && (
-        <div className="bg-white border border-stone-200 rounded-xl p-4">
-          <p className="text-xs text-stone-500 mb-2">Écouter l'enregistrement</p>
+        <div className="bg-surface border border-bordure rounded-xl p-4">
+          <p className="text-xs text-muet mb-2">Écouter l'enregistrement</p>
           <audio controls src={audioUrl} className="w-full" />
         </div>
       )}
       {oral.audio_supprime && (
-        <p className="text-xs text-stone-400 italic px-1">Audio supprimé après publication.</p>
+        <p className="text-xs text-muet italic px-1">Audio supprimé après publication.</p>
       )}
 
       {/* Transcription */}
       {oral.transcription && (
-        <div className="bg-white border border-stone-200 rounded-xl overflow-hidden">
+        <div className="bg-surface border border-bordure rounded-xl overflow-hidden">
           <button
             onClick={() => setTranscriptionOuverte(o => !o)}
-            className="w-full px-4 py-3 text-left text-sm font-medium text-stone-700 flex items-center justify-between hover:bg-stone-50"
+            className="w-full px-4 py-3 text-left text-sm font-medium text-encre-douce flex items-center justify-between hover:bg-parchemin-fonce"
           >
             <span>Transcription</span>
-            <span className="text-stone-400">{transcriptionOuverte ? '▲' : '▼'}</span>
+            <span className="text-muet">{transcriptionOuverte ? '▲' : '▼'}</span>
           </button>
           {transcriptionOuverte && (
-            <div className="px-4 pb-4 text-sm text-stone-700 leading-relaxed whitespace-pre-wrap border-t border-stone-100 pt-3">
+            <div className="px-4 pb-4 text-sm text-encre-douce leading-relaxed whitespace-pre-wrap border-t border-bordure pt-3">
               {oral.transcription.startsWith('ERREUR') ? (
-                <p className="text-red-600">{oral.transcription}</p>
+                <p className="text-retard">{oral.transcription}</p>
               ) : oral.transcription}
             </div>
           )}
@@ -247,7 +247,7 @@ export default function EditorAnalyseOrale({ oral, analyseOrale, presentationId,
 
       {/* Analyse éditable */}
       {peutEditer && analyseOrale && (
-        <div className="bg-white border border-stone-200 rounded-xl p-5 space-y-5">
+        <div className="bg-surface border border-bordure rounded-xl p-5 space-y-5">
           {/* Notes */}
           <div className="grid grid-cols-3 gap-4">
             {[
@@ -256,7 +256,7 @@ export default function EditorAnalyseOrale({ oral, analyseOrale, presentationId,
               { label: 'Expression', val: noteExpression, set: setNoteExpression },
             ].map(({ label, val, set }) => (
               <div key={label}>
-                <p className="text-xs text-stone-500 mb-1.5">{label}</p>
+                <p className="text-xs text-muet mb-1.5">{label}</p>
                 <NoteButtons valeur={val} onChange={set} />
               </div>
             ))}
@@ -271,30 +271,30 @@ export default function EditorAnalyseOrale({ oral, analyseOrale, presentationId,
             { label: 'Qualités orales', val: oralRetour, set: setOralRetour },
           ].map(({ label, val, set }) => (
             <div key={label}>
-              <label className="block text-xs font-medium text-stone-500 mb-1">{label}</label>
+              <label className="block text-xs font-medium text-muet mb-1">{label}</label>
               <textarea
                 value={val}
                 onChange={e => set(e.target.value)}
                 rows={4}
-                className="w-full px-3 py-2 border border-stone-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 resize-y text-stone-900"
+                className="w-full px-3 py-2 border border-bordure rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-pigment resize-y text-encre"
               />
             </div>
           ))}
 
           <div>
-            <label className="block text-xs font-medium text-stone-500 mb-1">Note personnelle (non visible par l'élève)</label>
+            <label className="block text-xs font-medium text-muet mb-1">Note personnelle (non visible par l'élève)</label>
             <textarea
               value={notesProf}
               onChange={e => setNotesProf(e.target.value)}
               rows={2}
-              className="w-full px-3 py-2 border border-stone-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 resize-y text-stone-900"
+              className="w-full px-3 py-2 border border-bordure rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-pigment resize-y text-encre"
               placeholder="Usage privé"
             />
           </div>
 
           {message && (
             <div className={`rounded-lg px-3 py-2 text-sm ${
-              message.type === 'ok' ? 'bg-green-50 text-green-700 border border-green-200' : 'bg-red-50 text-red-700 border border-red-200'
+              message.type === 'ok' ? 'bg-ok-teinte text-ok border border-ok' : 'bg-retard-teinte text-retard border border-retard'
             }`}>
               {message.texte}
             </div>
@@ -305,7 +305,7 @@ export default function EditorAnalyseOrale({ oral, analyseOrale, presentationId,
             <button
               onClick={handleSauvegarder}
               disabled={chargement}
-              className="bg-stone-200 text-stone-800 px-4 py-2 rounded-lg text-sm hover:bg-stone-300 disabled:opacity-50 transition-colors"
+              className="bg-parchemin-fonce text-encre px-4 py-2 rounded-lg text-sm hover:bg-bordure disabled:opacity-50 transition-colors"
             >
               {chargement ? '…' : 'Enregistrer'}
             </button>
@@ -313,7 +313,7 @@ export default function EditorAnalyseOrale({ oral, analyseOrale, presentationId,
             {oral.statut === 'analyse' && (
               <div className="flex items-center gap-3">
                 {!oral.audio_supprime && (
-                  <label className="flex items-center gap-1.5 text-xs text-stone-600 cursor-pointer">
+                  <label className="flex items-center gap-1.5 text-xs text-encre-douce cursor-pointer">
                     <input
                       type="checkbox"
                       checked={supprimerAudio}
@@ -326,7 +326,7 @@ export default function EditorAnalyseOrale({ oral, analyseOrale, presentationId,
                 <button
                   onClick={handlePublier}
                   disabled={chargement}
-                  className="bg-stone-800 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-stone-700 disabled:opacity-50 transition-colors"
+                  className="bg-bouton text-surface px-4 py-2 rounded-lg text-sm font-medium hover:opacity-90 disabled:opacity-50 transition-colors"
                 >
                   Publier
                 </button>
@@ -337,7 +337,7 @@ export default function EditorAnalyseOrale({ oral, analyseOrale, presentationId,
               <button
                 onClick={handleDepublier}
                 disabled={chargement}
-                className="text-sm text-stone-500 hover:text-stone-700 underline"
+                className="text-sm text-muet hover:text-encre-douce underline"
               >
                 Dépublier
               </button>
@@ -346,7 +346,7 @@ export default function EditorAnalyseOrale({ oral, analyseOrale, presentationId,
             <button
               onClick={handleRelancerAnalyse}
               disabled={chargement}
-              className="text-xs text-stone-400 hover:text-stone-600 underline"
+              className="text-xs text-muet hover:text-encre-douce underline"
             >
               Relancer l'analyse
             </button>

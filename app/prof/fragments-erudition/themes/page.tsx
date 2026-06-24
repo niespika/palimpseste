@@ -32,7 +32,7 @@ export default async function PageThemes({ searchParams }: { searchParams: Promi
 
   if (!semestre || classes.length === 0) {
     return (
-      <div className="bg-white border border-stone-200 rounded-xl p-8 text-center text-stone-500 text-sm">
+      <div className="bg-surface border border-bordure rounded-xl p-8 text-center text-muet text-sm">
         Aucune classe avec le module Fragments{semestre ? '' : ' (ou aucun semestre)'}.
       </div>
     )
@@ -78,8 +78,8 @@ export default async function PageThemes({ searchParams }: { searchParams: Promi
 
   return (
     <div className="space-y-6 pb-8">
-      <p className="text-sm text-stone-500">
-        Thèmes — semestre <span className="font-medium text-stone-700">{semestre.label}</span>. Le thème
+      <p className="text-sm text-muet">
+        Thèmes — semestre <span className="font-medium text-encre-douce">{semestre.label}</span>. Le thème
         d&apos;un élève est sa question travaillée tout le semestre (champ unique).
       </p>
 
@@ -97,7 +97,7 @@ export default async function PageThemes({ searchParams }: { searchParams: Promi
               selectionnee={classeSel === c.id}
               couleur={total > 0 && definis === total ? 'vert' : 'neutre'}
               resume={
-                <span className="text-xs text-stone-500">
+                <span className="text-xs text-muet">
                   {definis}/{total} thème{total > 1 ? 's' : ''} défini{definis > 1 ? 's' : ''}
                 </span>
               }

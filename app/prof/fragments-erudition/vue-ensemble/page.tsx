@@ -14,11 +14,11 @@ function BadgeMoyenne({ label, moyenne }: { label: string; moyenne: number | nul
   const l = noteVersLettre(moyenne)
   return (
     <span className="inline-flex items-center gap-1 text-xs">
-      <span className="text-stone-500">{label}</span>
+      <span className="text-muet">{label}</span>
       {l ? (
         <span className={`px-1.5 py-0.5 rounded font-medium ${COULEUR_LETTRE[l]}`}>{l}</span>
       ) : (
-        <span className="text-stone-300">—</span>
+        <span className="text-bordure">—</span>
       )}
     </span>
   )
@@ -54,7 +54,7 @@ export default async function PageVueEnsemble({ searchParams }: { searchParams: 
 
   if (!semestre || classes.length === 0) {
     return (
-      <div className="bg-white border border-stone-200 rounded-xl p-8 text-center text-stone-500 text-sm">
+      <div className="bg-surface border border-bordure rounded-xl p-8 text-center text-muet text-sm">
         Aucune classe avec le module Fragments{semestre ? '' : ' (ou aucun semestre)'}.
       </div>
     )
@@ -149,8 +149,8 @@ export default async function PageVueEnsemble({ searchParams }: { searchParams: 
 
   return (
     <div className="space-y-6 pb-8">
-      <p className="text-sm text-stone-500">
-        Vue d&apos;ensemble — semestre <span className="font-medium text-stone-700">{semestre.label}</span> · moyennes des sections en lettres.
+      <p className="text-sm text-muet">
+        Vue d&apos;ensemble — semestre <span className="font-medium text-encre-douce">{semestre.label}</span> · moyennes des sections en lettres.
       </p>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
@@ -177,8 +177,8 @@ export default async function PageVueEnsemble({ searchParams }: { searchParams: 
       </div>
 
       {detail && classeChoisie && detail.points.length > 0 && (
-        <div className="bg-white border border-stone-200 rounded-xl p-5">
-          <p className="text-xs font-medium text-stone-500 uppercase tracking-wide mb-3">
+        <div className="bg-surface border border-bordure rounded-xl p-5">
+          <p className="text-xs font-medium text-muet uppercase tracking-wide mb-3">
             Évolution de la moyenne — {classeChoisie.nom}
           </p>
           <CourbeEvolution
@@ -208,11 +208,11 @@ export default async function PageVueEnsemble({ searchParams }: { searchParams: 
                 <BadgeMoyenne label="Découvertes" moyenne={e.moy.decouvertes} />
                 <BadgeMoyenne label="Sources" moyenne={e.moy.sources} />
                 <BadgeMoyenne label="Réflexions" moyenne={e.moy.reflexions} />
-                <span className="text-xs text-stone-500">dépôt {e.tauxDepot}%</span>
+                <span className="text-xs text-muet">dépôt {e.tauxDepot}%</span>
               </div>
             ),
             actions: (
-              <Link href={`/prof/fragments-erudition/eleve/${e.id}?classe=${classeChoisie.id}`} className="text-xs text-stone-500 hover:text-stone-800 underline">
+              <Link href={`/prof/fragments-erudition/eleve/${e.id}?classe=${classeChoisie.id}`} className="text-xs text-muet hover:text-encre underline">
                 Détail →
               </Link>
             ),

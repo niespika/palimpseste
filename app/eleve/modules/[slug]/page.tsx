@@ -25,14 +25,14 @@ export default async function PageModule({ params }: { params: Promise<{ slug: s
     <div>
       <Link
         href="/eleve"
-        className="text-sm text-stone-500 hover:text-stone-700 mb-6 inline-flex items-center gap-1"
+        className="text-sm text-muet hover:text-encre-douce mb-6 inline-flex items-center gap-1"
       >
         ← Retour
       </Link>
 
-      <div className="bg-white border border-stone-200 rounded-xl p-8 text-center mt-4">
-        <h2 className="text-xl font-serif text-stone-900 mb-3">{module.nom}</h2>
-        <p className="text-stone-500 text-sm leading-relaxed">
+      <div className="bg-surface border border-bordure rounded-xl p-8 text-center mt-4">
+        <h2 className="text-xl font-serif text-encre mb-3">{module.nom}</h2>
+        <p className="text-muet text-sm leading-relaxed">
           Ce module arrive bientôt.<br />
           Ton professeur est en train de préparer le contenu.
         </p>

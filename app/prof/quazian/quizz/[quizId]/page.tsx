@@ -53,26 +53,26 @@ export default async function QuizzDetailPage({
     <div>
       <div className="mb-6 flex items-start justify-between gap-4 flex-wrap">
         <div>
-          <Link href="/prof/quazian/quizz" className="text-sm text-stone-500 hover:text-stone-700">
+          <Link href="/prof/quazian/quizz" className="text-sm text-muet hover:text-encre-douce">
             ← Quizz
           </Link>
-          <h3 className="text-lg font-serif text-stone-900 mt-2">
+          <h3 className="text-lg font-serif text-encre mt-2">
             {classeNom ?? 'Quizz'} — {total} questions
           </h3>
-          <p className="text-sm text-stone-400 mt-0.5">
+          <p className="text-sm text-muet mt-0.5">
             {(quizz.scope_unites as string[]).map((id) => labelsMap[id] ?? id).join(' · ')}
           </p>
           <div className="flex items-center gap-3 mt-1 flex-wrap">
             <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
-              quizz.statut === 'brouillon' ? 'bg-stone-100 text-stone-600' :
-              quizz.statut === 'lance' ? 'bg-green-100 text-green-700' :
-              'bg-blue-50 text-blue-600'
+              quizz.statut === 'brouillon' ? 'bg-parchemin-fonce text-muet' :
+              quizz.statut === 'lance' ? 'bg-ok-teinte text-ok' :
+              'bg-info-teinte text-info'
             }`}>
               {quizz.statut === 'brouillon' ? 'Brouillon' : quizz.statut === 'lance' ? 'En cours' : 'Terminé'}
             </span>
-            <span className="text-xs text-stone-400">{quizz.duree_min} min</span>
+            <span className="text-xs text-muet">{quizz.duree_min} min</span>
             {!readOnly && (
-              <span className="text-xs text-stone-400">{nbValidees}/{total} validées</span>
+              <span className="text-xs text-muet">{nbValidees}/{total} validées</span>
             )}
           </div>
         </div>
@@ -84,7 +84,7 @@ export default async function QuizzDetailPage({
               <input type="hidden" name="quizId" value={quizId} />
               <button
                 type="submit"
-                className="px-4 py-2 text-sm bg-stone-100 text-stone-700 rounded-lg hover:bg-stone-200 transition-colors"
+                className="px-4 py-2 text-sm bg-parchemin-fonce text-encre-douce rounded-lg hover:bg-bordure transition-colors"
               >
                 ✓ Tout valider
               </button>
@@ -93,7 +93,7 @@ export default async function QuizzDetailPage({
           {toutValide && quizz.statut === 'brouillon' && (
             <Link
               href={`/prof/quazian/quizz/${quizId}/lancer`}
-              className="px-4 py-2 text-sm bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+              className="px-4 py-2 text-sm bg-ok text-surface rounded-lg hover:opacity-90 transition-colors"
             >
               Lancer le quizz →
             </Link>
@@ -101,7 +101,7 @@ export default async function QuizzDetailPage({
           {quizz.statut === 'lance' && (
             <Link
               href={`/prof/quazian/quizz/${quizId}/lancer`}
-              className="px-4 py-2 text-sm bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+              className="px-4 py-2 text-sm bg-ok text-surface rounded-lg hover:opacity-90 transition-colors"
             >
               Tableau de bord live →
             </Link>
@@ -110,7 +110,7 @@ export default async function QuizzDetailPage({
       </div>
 
       {!toutValide && !readOnly && (
-        <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 mb-6 text-sm text-amber-700">
+        <div className="bg-attention-teinte border border-attention rounded-xl p-3 mb-6 text-sm text-attention">
           {total - nbValidees} question{total - nbValidees > 1 ? 's' : ''} encore à valider avant de pouvoir lancer le quizz.
         </div>
       )}

@@ -65,12 +65,12 @@ export default async function PageSemestre({
   return (
     <div className="space-y-6">
       <div className="flex items-center gap-2">
-        <Link href="/prof/fragments-erudition/semestres" className="text-sm text-stone-500 hover:text-stone-700">← Semestres</Link>
+        <Link href="/prof/fragments-erudition/semestres" className="text-sm text-muet hover:text-encre-douce">← Semestres</Link>
       </div>
 
-      <div className="bg-white border border-stone-200 rounded-xl px-5 py-4">
-        <h3 className="text-lg font-serif text-stone-900">{semestre.label}</h3>
-        <p className="text-sm text-stone-500 mt-0.5">
+      <div className="bg-surface border border-bordure rounded-xl px-5 py-4">
+        <h3 className="text-lg font-serif text-encre">{semestre.label}</h3>
+        <p className="text-sm text-muet mt-0.5">
           {new Date(semestre.date_debut).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })}
           {' → '}
           {new Date(semestre.date_fin).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })}
@@ -78,7 +78,7 @@ export default async function PageSemestre({
       </div>
 
       {classes.length === 0 ? (
-        <div className="bg-white border border-stone-200 rounded-xl p-8 text-center text-stone-400 text-sm">
+        <div className="bg-surface border border-bordure rounded-xl p-8 text-center text-muet text-sm">
           Aucune classe avec le module Fragments.
         </div>
       ) : (

@@ -99,13 +99,13 @@ export default async function LancerPage({
   return (
     <div>
       <div className="mb-6">
-        <Link href={`/prof/quazian/quizz/${quizId}`} className="text-sm text-stone-500 hover:text-stone-700">
+        <Link href={`/prof/quazian/quizz/${quizId}`} className="text-sm text-muet hover:text-encre-douce">
           ← Quizz
         </Link>
-        <h3 className="text-lg font-serif text-stone-900 mt-2">
+        <h3 className="text-lg font-serif text-encre mt-2">
           {classeNom ?? 'Passation'} — {quizz.nb_questions} questions
         </h3>
-        <p className="text-sm text-stone-400">
+        <p className="text-sm text-muet">
           {(quizz.scope_unites as string[]).map((id) => labelsMap[id] ?? id).join(' · ')}
           {' · '}{quizz.duree_min} min
         </p>
@@ -113,8 +113,8 @@ export default async function LancerPage({
 
       {/* Lancement si encore brouillon */}
       {quizz.statut === 'brouillon' && (
-        <div className="bg-white border border-stone-200 rounded-xl p-6 mb-6 text-center">
-          <p className="text-stone-600 text-sm mb-4">
+        <div className="bg-surface border border-bordure rounded-xl p-6 mb-6 text-center">
+          <p className="text-encre-douce text-sm mb-4">
             Toutes les questions sont validées. Le quizz est prêt à être lancé.
           </p>
           <form action={actionLancer}>
@@ -122,7 +122,7 @@ export default async function LancerPage({
             <input type="hidden" name="duree_min" value={quizz.duree_min} />
             <button
               type="submit"
-              className="px-8 py-3 bg-green-600 text-white rounded-xl hover:bg-green-700 transition-colors font-medium"
+              className="px-8 py-3 bg-ok text-surface rounded-xl hover:opacity-90 transition-colors font-medium"
             >
               Lancer le quizz maintenant
             </button>

@@ -63,12 +63,12 @@ export default async function PageEleves({
 
   return (
     <div className="space-y-6">
-      <h2 className="text-xl font-serif text-stone-900">Élèves</h2>
+      <h2 className="text-xl font-serif text-encre">Élèves</h2>
 
       <FormulaireAjoutEleve />
 
       {eleves.length === 0 ? (
-        <div className="bg-white border border-stone-200 rounded-xl p-8 text-center text-stone-500 text-sm">
+        <div className="bg-surface border border-bordure rounded-xl p-8 text-center text-muet text-sm">
           Aucun élève pour l&apos;instant. Commence par en ajouter un.
         </div>
       ) : (
@@ -101,21 +101,21 @@ export default async function PageEleves({
 
           {/* Liste de la classe sélectionnée */}
           {classeSel && (
-            <div className="bg-white border border-stone-200 rounded-xl overflow-hidden">
-              <div className="px-4 py-3 border-b border-stone-200">
-                <h3 className="text-sm font-medium text-stone-900">{nomClasseSel ?? 'Classe'}</h3>
+            <div className="bg-surface border border-bordure rounded-xl overflow-hidden">
+              <div className="px-4 py-3 border-b border-bordure">
+                <h3 className="text-sm font-medium text-encre">{nomClasseSel ?? 'Classe'}</h3>
               </div>
               {elevesSelection.length === 0 ? (
-                <p className="px-4 py-6 text-sm text-stone-400">Aucun élève dans cette classe.</p>
+                <p className="px-4 py-6 text-sm text-muet">Aucun élève dans cette classe.</p>
               ) : (
                 <div className="overflow-x-auto">
                   <table className="w-full text-left">
-                    <thead className="bg-stone-50 border-b border-stone-200">
+                    <thead className="bg-parchemin-fonce border-b border-bordure">
                       <tr>
-                        <th className="px-4 py-3 text-xs font-medium text-stone-500 uppercase tracking-wide">Nom affiché</th>
-                        <th className="px-4 py-3 text-xs font-medium text-stone-500 uppercase tracking-wide">Classes</th>
-                        <th className="px-4 py-3 text-xs font-medium text-stone-500 uppercase tracking-wide">Courriel</th>
-                        <th className="px-4 py-3 text-xs font-medium text-stone-500 uppercase tracking-wide">Actions</th>
+                        <th className="px-4 py-3 text-xs font-medium text-muet uppercase tracking-wide">Nom affiché</th>
+                        <th className="px-4 py-3 text-xs font-medium text-muet uppercase tracking-wide">Classes</th>
+                        <th className="px-4 py-3 text-xs font-medium text-muet uppercase tracking-wide">Courriel</th>
+                        <th className="px-4 py-3 text-xs font-medium text-muet uppercase tracking-wide">Actions</th>
                       </tr>
                     </thead>
                     <tbody>

@@ -60,28 +60,28 @@ export default function LigneThemeEleve({ inscriptionId, semestreId, theme }: Pr
           name="theme"
           required
           defaultValue={theme?.theme ?? ''}
-          className="w-full px-2 py-1.5 border border-stone-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 text-stone-900"
+          className="w-full px-2 py-1.5 border border-bordure rounded text-sm focus:outline-none focus:ring-2 focus:ring-pigment text-encre"
           placeholder="Thème / question travaillée — ex. : La piraterie dans l'océan Indien"
         />
         <textarea
           name="description"
           defaultValue={theme?.description ?? ''}
           rows={2}
-          className="w-full px-2 py-1.5 border border-stone-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-stone-400 resize-none text-stone-900"
+          className="w-full px-2 py-1.5 border border-bordure rounded text-sm focus:outline-none focus:ring-2 focus:ring-pigment resize-none text-encre"
           placeholder="Cadrage du thème (optionnel)"
         />
         <div className="flex gap-2">
           <button
             type="submit"
             disabled={chargement}
-            className="bg-stone-800 text-white px-3 py-1 rounded text-sm hover:bg-stone-700 disabled:opacity-50"
+            className="bg-bouton text-surface px-3 py-1 rounded text-sm hover:opacity-90 disabled:opacity-50"
           >
             {chargement ? '…' : 'Enregistrer'}
           </button>
           <button
             type="button"
             onClick={() => setEdition(false)}
-            className="px-3 py-1 rounded text-sm text-stone-600 hover:bg-stone-200"
+            className="px-3 py-1 rounded text-sm text-encre-douce hover:bg-parchemin-fonce"
           >
             Annuler
           </button>
@@ -95,13 +95,13 @@ export default function LigneThemeEleve({ inscriptionId, semestreId, theme }: Pr
       <div className="flex-1 min-w-0">
         {theme?.theme ? (
           <>
-            <p className="text-sm text-stone-800">{theme.theme}</p>
-            {theme.description && <p className="text-xs text-stone-400 mt-0.5">{theme.description}</p>}
+            <p className="text-sm text-encre">{theme.theme}</p>
+            {theme.description && <p className="text-xs text-muet mt-0.5">{theme.description}</p>}
           </>
         ) : (
-          <p className="text-sm text-stone-400 italic">Thème non défini</p>
+          <p className="text-sm text-muet italic">Thème non défini</p>
         )}
-        {message && <p className="text-xs text-green-600 mt-0.5">{message}</p>}
+        {message && <p className="text-xs text-ok mt-0.5">{message}</p>}
       </div>
       <button
         onClick={handleToggleEssai}
@@ -109,15 +109,15 @@ export default function LigneThemeEleve({ inscriptionId, semestreId, theme }: Pr
         title="Activer l'essai final pour cet élève"
         className={`text-xs px-2 py-1 rounded-full font-medium transition-colors flex-shrink-0 ${
           essaiActif
-            ? 'bg-green-100 text-green-700 hover:bg-green-200'
-            : 'bg-stone-100 text-stone-500 hover:bg-stone-200'
+            ? 'bg-ok-teinte text-ok hover:opacity-90'
+            : 'bg-parchemin-fonce text-muet hover:opacity-90'
         }`}
       >
         {chargementEssai ? '…' : essaiActif ? 'Essai actif' : 'Essai'}
       </button>
       <button
         onClick={() => setEdition(true)}
-        className="text-xs text-stone-500 hover:text-stone-800 px-2 py-1 rounded hover:bg-stone-200 flex-shrink-0"
+        className="text-xs text-muet hover:text-encre px-2 py-1 rounded hover:bg-parchemin-fonce flex-shrink-0"
       >
         {theme?.theme ? 'Modifier' : 'Définir'}
       </button>

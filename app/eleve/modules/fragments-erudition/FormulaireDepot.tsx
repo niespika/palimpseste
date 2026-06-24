@@ -155,8 +155,8 @@ export default function FormulaireDepot({ semaineId, eleveId, inscriptionId, dep
           htmlFor="input-photos"
           className={`flex items-center justify-center gap-2 w-full py-4 border-2 border-dashed rounded-xl cursor-pointer transition-colors ${
             traitement
-              ? 'border-stone-200 text-stone-400 cursor-wait'
-              : 'border-stone-300 text-stone-600 hover:border-stone-400 hover:bg-stone-50'
+              ? 'border-bordure text-muet cursor-wait'
+              : 'border-bordure text-encre-douce hover:border-pigment hover:bg-parchemin-fonce'
           }`}
         >
           {traitement ? (
@@ -170,15 +170,15 @@ export default function FormulaireDepot({ semaineId, eleveId, inscriptionId, dep
             </>
           )}
         </label>
-        <p className="text-xs text-stone-400 mt-1 text-center">
+        <p className="text-xs text-muet mt-1 text-center">
           JPEG, PNG ou HEIC · Max 4 photos · Compressées automatiquement
         </p>
       </div>
 
       {/* Anti-triche : photo(s) probablement issues de la galerie (EXIF ancien) */}
       {images.some(img => img.priseSuspecte) && (
-        <div className="bg-amber-50 border border-amber-200 rounded-xl px-3 py-2">
-          <p className="text-amber-800 text-sm">
+        <div className="bg-attention-teinte border border-attention rounded-xl px-3 py-2">
+          <p className="text-attention text-sm">
             ⚠ Une photo semble ancienne (prise il y a plus de {seuilHeures >= 48 ? `${Math.round(seuilHeures / 24)} jours` : `${seuilHeures} h`} d&apos;après ses métadonnées).
             Utilise une photo prise au moment du dépôt. Ce dépôt sera signalé à ton professeur.
           </p>
@@ -188,15 +188,15 @@ export default function FormulaireDepot({ semaineId, eleveId, inscriptionId, dep
       {/* Aperçu des photos */}
       {images.length > 0 && (
         <div className="space-y-2">
-          <p className="text-sm font-medium text-stone-700">
+          <p className="text-sm font-medium text-encre-douce">
             Photos ({images.length}/4) — dans cet ordre :
           </p>
           {images.map((img, index) => (
             <div
               key={img.previewUrl}
-              className="flex items-center gap-3 bg-stone-50 rounded-xl p-2"
+              className="flex items-center gap-3 bg-parchemin-fonce rounded-xl p-2"
             >
-              <span className="text-xs text-stone-400 w-4 text-center font-medium">
+              <span className="text-xs text-muet w-4 text-center font-medium">
                 {index + 1}
               </span>
               <img
@@ -204,23 +204,23 @@ export default function FormulaireDepot({ semaineId, eleveId, inscriptionId, dep
                 alt={`Photo ${index + 1}`}
                 className="w-16 h-16 object-cover rounded-lg flex-shrink-0"
               />
-              <span className="text-xs text-stone-500 flex-1 truncate">{img.nom}</span>
+              <span className="text-xs text-muet flex-1 truncate">{img.nom}</span>
               <div className="flex gap-1 flex-shrink-0">
                 <button
                   onClick={() => monterImage(index)}
                   disabled={index === 0}
-                  className="w-7 h-7 flex items-center justify-center text-stone-400 hover:text-stone-700 disabled:opacity-20 text-sm"
+                  className="w-7 h-7 flex items-center justify-center text-muet hover:text-encre-douce disabled:opacity-20 text-sm"
                   title="Monter"
                 >▲</button>
                 <button
                   onClick={() => descendreImage(index)}
                   disabled={index === images.length - 1}
-                  className="w-7 h-7 flex items-center justify-center text-stone-400 hover:text-stone-700 disabled:opacity-20 text-sm"
+                  className="w-7 h-7 flex items-center justify-center text-muet hover:text-encre-douce disabled:opacity-20 text-sm"
                   title="Descendre"
                 >▼</button>
                 <button
                   onClick={() => supprimerImage(index)}
-                  className="w-7 h-7 flex items-center justify-center text-red-400 hover:text-red-600 text-sm"
+                  className="w-7 h-7 flex items-center justify-center text-retard hover:opacity-80 text-sm"
                   title="Supprimer"
                 >✕</button>
               </div>
@@ -231,34 +231,34 @@ export default function FormulaireDepot({ semaineId, eleveId, inscriptionId, dep
 
       {/* Commentaire */}
       <div>
-        <label className="block text-sm font-medium text-stone-700 mb-1">
-          Commentaire <span className="text-stone-400 font-normal">(optionnel)</span>
+        <label className="block text-sm font-medium text-encre-douce mb-1">
+          Commentaire <span className="text-muet font-normal">(optionnel)</span>
         </label>
         <textarea
           value={commentaire}
           onChange={e => setCommentaire(e.target.value)}
           rows={2}
-          className="w-full px-3 py-2 border border-stone-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-stone-400 resize-none"
+          className="w-full px-3 py-2 border border-bordure rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-pigment resize-none"
           placeholder="Ex. : la photo 2 est un peu floue, désolé"
         />
       </div>
 
       {erreur && (
-        <div className="bg-red-50 border border-red-200 rounded-xl px-3 py-2">
-          <p className="text-red-700 text-sm">{erreur}</p>
+        <div className="bg-retard-teinte border border-retard rounded-xl px-3 py-2">
+          <p className="text-retard text-sm">{erreur}</p>
         </div>
       )}
 
       {upload && (
-        <div className="bg-blue-50 border border-blue-200 rounded-xl px-3 py-2">
-          <p className="text-blue-700 text-sm">{progression}</p>
+        <div className="bg-info-teinte border border-info rounded-xl px-3 py-2">
+          <p className="text-info text-sm">{progression}</p>
         </div>
       )}
 
       <button
         onClick={handleSoumettre}
         disabled={upload || traitement || images.length === 0}
-        className="w-full bg-stone-800 text-white py-3 rounded-xl text-sm font-medium hover:bg-stone-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+        className="w-full bg-bouton text-surface py-3 rounded-xl text-sm font-medium hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
       >
         {upload ? 'Envoi en cours…' : depotExistant ? 'Remplacer mon dépôt' : 'Déposer mon compte-rendu'}
       </button>

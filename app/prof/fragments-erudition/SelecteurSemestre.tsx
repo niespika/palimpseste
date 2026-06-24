@@ -25,12 +25,12 @@ export default function SelecteurSemestre({ semestres, semestreActifId }: Props)
 
   return (
     <label className="flex items-center gap-2 text-sm">
-      <span className="text-stone-500">Semestre</span>
+      <span className="text-muet">Semestre</span>
       <select
         value={semestreActifId ?? ''}
         onChange={changer}
         disabled={enCours}
-        className="border border-stone-300 rounded-lg px-2 py-1 text-sm text-stone-800 focus:outline-none focus:ring-2 focus:ring-stone-400 disabled:opacity-50"
+        className="border border-bordure rounded-lg px-2 py-1 text-sm text-encre focus:outline-none focus:ring-2 focus:ring-pigment disabled:opacity-50"
       >
         {semestres.map((s) => (
           <option key={s.id} value={s.id}>

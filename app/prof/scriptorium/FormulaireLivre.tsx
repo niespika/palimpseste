@@ -70,7 +70,7 @@ export default function FormulaireLivre({ classes }: Props) {
     return (
       <button
         onClick={() => setOuvert(true)}
-        className="w-full bg-white border border-stone-300 text-stone-800 py-2.5 rounded-xl text-sm font-medium hover:bg-stone-50 transition-colors"
+        className="w-full bg-surface border border-bordure text-encre py-2.5 rounded-xl text-sm font-medium hover:bg-parchemin-fonce transition-colors"
       >
         + Ajouter un livre
       </button>
@@ -80,21 +80,21 @@ export default function FormulaireLivre({ classes }: Props) {
   const semaines = Array.from({ length: nb }, (_, i) => i + 1)
 
   return (
-    <form onSubmit={handleSubmit} className="bg-white border border-stone-200 rounded-xl p-5 space-y-4">
-      <h3 className="text-sm font-medium text-stone-900">Nouveau livre <span className="font-normal text-stone-400">(lecture autonome — Aletheia)</span></h3>
+    <form onSubmit={handleSubmit} className="bg-surface border border-bordure rounded-xl p-5 space-y-4">
+      <h3 className="text-sm font-medium text-encre">Nouveau livre <span className="font-normal text-muet">(lecture autonome — Aletheia)</span></h3>
 
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
         <div className="sm:col-span-3">
-          <label className="block text-xs font-medium text-stone-500 mb-1">Titre du livre</label>
+          <label className="block text-xs font-medium text-muet mb-1">Titre du livre</label>
           <input
             name="titre"
             required
             placeholder="Ex. : La Naissance de la tragédie"
-            className="w-full px-3 py-2 border border-stone-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-stone-400 text-stone-900"
+            className="w-full px-3 py-2 border border-bordure rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-pigment text-encre"
           />
         </div>
         <div>
-          <label className="block text-xs font-medium text-stone-500 mb-1">Nombre de semaines</label>
+          <label className="block text-xs font-medium text-muet mb-1">Nombre de semaines</label>
           <input
             name="nbSemaines"
             type="number"
@@ -102,24 +102,24 @@ export default function FormulaireLivre({ classes }: Props) {
             max={52}
             value={nb}
             onChange={e => setNb(Math.max(1, Math.min(52, Number(e.target.value) || 1)))}
-            className="w-full px-3 py-2 border border-stone-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-stone-400 text-stone-900"
+            className="w-full px-3 py-2 border border-bordure rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-pigment text-encre"
           />
         </div>
         <div className="sm:col-span-2">
-          <label className="block text-xs font-medium text-stone-500 mb-1">Date de début de la lecture</label>
+          <label className="block text-xs font-medium text-muet mb-1">Date de début de la lecture</label>
           <input
             name="dateDebut"
             type="date"
             required
-            className="w-full px-3 py-2 border border-stone-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-stone-400 text-stone-900"
+            className="w-full px-3 py-2 border border-bordure rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-pigment text-encre"
           />
         </div>
       </div>
 
       <div>
-        <label className="block text-xs font-medium text-stone-500 mb-1">Classes concernées</label>
+        <label className="block text-xs font-medium text-muet mb-1">Classes concernées</label>
         {classes.length === 0 ? (
-          <p className="text-sm text-stone-400">Aucune classe.</p>
+          <p className="text-sm text-muet">Aucune classe.</p>
         ) : (
           <div className="flex flex-wrap gap-2">
             {classes.map(c => {
@@ -130,7 +130,7 @@ export default function FormulaireLivre({ classes }: Props) {
                   type="button"
                   onClick={() => toggleClasse(c.id)}
                   className={`text-sm px-3 py-1.5 rounded-full border transition-colors ${
-                    on ? 'bg-stone-800 text-white border-stone-800' : 'bg-white text-stone-600 border-stone-300 hover:border-stone-400'
+                    on ? 'bg-bouton text-surface border-bouton' : 'bg-surface text-encre-douce border-bordure hover:border-pigment'
                   }`}
                 >
                   {c.nom}
@@ -143,42 +143,42 @@ export default function FormulaireLivre({ classes }: Props) {
 
       {/* Un bloc par semaine : PDF d'ancrage + titre + chapitres à lire */}
       <div className="space-y-3">
-        <p className="text-xs font-medium text-stone-500">
+        <p className="text-xs font-medium text-muet">
           Programme par semaine
-          <span className="font-normal text-stone-400"> — le PDF sert d&apos;ancrage à l&apos;IA, l&apos;élève lit son propre exemplaire</span>
+          <span className="font-normal text-muet"> — le PDF sert d&apos;ancrage à l&apos;IA, l&apos;élève lit son propre exemplaire</span>
         </p>
         {semaines.map(n => (
-          <div key={n} className="border border-stone-100 rounded-lg p-3 space-y-2">
-            <p className="text-xs font-medium text-stone-600">Semaine {n}</p>
+          <div key={n} className="border border-bordure rounded-lg p-3 space-y-2">
+            <p className="text-xs font-medium text-encre-douce">Semaine {n}</p>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
               <input
                 name={`semaine_${n}_titre`}
                 placeholder={`Titre (ex. : Apollon et Dionysos)`}
-                className="px-2 py-1.5 border border-stone-300 rounded text-sm text-stone-900 focus:outline-none focus:ring-2 focus:ring-stone-400"
+                className="px-2 py-1.5 border border-bordure rounded text-sm text-encre focus:outline-none focus:ring-2 focus:ring-pigment"
               />
               <input
                 name={`semaine_${n}_chapitres`}
                 placeholder="Chapitres (ex. : Chap. 1-4)"
-                className="px-2 py-1.5 border border-stone-300 rounded text-sm text-stone-900 focus:outline-none focus:ring-2 focus:ring-stone-400"
+                className="px-2 py-1.5 border border-bordure rounded text-sm text-encre focus:outline-none focus:ring-2 focus:ring-pigment"
               />
             </div>
             <input
               type="file"
               name={`semaine_${n}_pdf`}
               accept=".pdf,.docx,.txt"
-              className="w-full text-sm text-stone-700 file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:bg-stone-100 file:text-stone-700 hover:file:bg-stone-200"
+              className="w-full text-sm text-encre-douce file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:bg-parchemin-fonce file:text-encre-douce hover:file:bg-bordure"
             />
           </div>
         ))}
       </div>
 
-      {erreur && <p className="text-red-600 text-sm">{erreur}</p>}
+      {erreur && <p className="text-retard text-sm">{erreur}</p>}
 
       <div className="flex gap-2">
-        <button type="submit" disabled={chargement} className="bg-stone-800 text-white px-4 py-2 rounded-lg text-sm hover:bg-stone-700 disabled:opacity-50">
+        <button type="submit" disabled={chargement} className="bg-bouton text-surface px-4 py-2 rounded-lg text-sm hover:opacity-90 disabled:opacity-50">
           {chargement ? 'Ajout en cours…' : 'Ajouter le livre'}
         </button>
-        <button type="button" onClick={reset} className="px-4 py-2 text-sm text-stone-600 hover:bg-stone-100 rounded-lg">
+        <button type="button" onClick={reset} className="px-4 py-2 text-sm text-encre-douce hover:bg-parchemin-fonce rounded-lg">
           Annuler
         </button>
       </div>
