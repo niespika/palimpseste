@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { login } from './actions'
+import Pastille from '@/components/Pastille'
 
 export default function LoginPage() {
   const [erreur, setErreur] = useState<string | null>(null)
@@ -20,16 +21,17 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-stone-50 px-4">
-      <div className="bg-white p-8 rounded-xl shadow-sm border border-stone-200 w-full max-w-md">
-        <div className="mb-8 text-center">
-          <h1 className="text-2xl font-serif text-stone-900 mb-1">Palimpseste</h1>
-          <p className="text-stone-500 text-sm">Plateforme pédagogique</p>
+    <div data-module="palimpseste" className="min-h-screen flex items-center justify-center bg-parchemin px-4">
+      <div className="bg-surface p-8 rounded-xl shadow-sm border border-bordure w-full max-w-md">
+        <div className="mb-8 text-center flex flex-col items-center">
+          <Pastille module="palimpseste" size={84} className="mb-4" />
+          <h1 className="font-marque text-2xl font-semibold tracking-[0.12em] text-encre">PALIMPSESTE</h1>
+          <p className="font-corps text-muet text-sm mt-1">Plateforme pédagogique</p>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-5">
           <div>
-            <label htmlFor="email" className="block text-sm font-medium text-stone-700 mb-1.5">
+            <label htmlFor="email" className="block font-ui text-sm font-medium text-encre-douce mb-1.5">
               Adresse courriel
             </label>
             <input
@@ -38,13 +40,13 @@ export default function LoginPage() {
               type="email"
               required
               autoComplete="email"
-              className="w-full px-3 py-2.5 border border-stone-300 rounded-lg text-stone-900 placeholder-stone-400 focus:outline-none focus:ring-2 focus:ring-stone-400 focus:border-transparent text-sm"
+              className="w-full px-3 py-2.5 border border-bordure rounded-lg text-encre placeholder-muet/60 focus:outline-none focus:ring-2 focus:ring-pigment focus:border-transparent text-sm"
               placeholder="prenom.nom@exemple.fr"
             />
           </div>
 
           <div>
-            <label htmlFor="password" className="block text-sm font-medium text-stone-700 mb-1.5">
+            <label htmlFor="password" className="block font-ui text-sm font-medium text-encre-douce mb-1.5">
               Mot de passe
             </label>
             <input
@@ -53,20 +55,20 @@ export default function LoginPage() {
               type="password"
               required
               autoComplete="current-password"
-              className="w-full px-3 py-2.5 border border-stone-300 rounded-lg text-stone-900 focus:outline-none focus:ring-2 focus:ring-stone-400 focus:border-transparent text-sm"
+              className="w-full px-3 py-2.5 border border-bordure rounded-lg text-encre focus:outline-none focus:ring-2 focus:ring-pigment focus:border-transparent text-sm"
             />
           </div>
 
           {erreur && (
-            <div className="bg-red-50 border border-red-200 rounded-lg px-3 py-2.5">
-              <p className="text-red-700 text-sm">{erreur}</p>
+            <div className="bg-[var(--retard-teinte)] border border-retard/30 rounded-lg px-3 py-2.5">
+              <p className="text-retard text-sm">{erreur}</p>
             </div>
           )}
 
           <button
             type="submit"
             disabled={chargement}
-            className="w-full bg-stone-800 text-white py-2.5 px-4 rounded-lg hover:bg-stone-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-sm font-medium"
+            className="w-full bg-pigment text-surface py-2.5 px-4 rounded-lg hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed transition-opacity font-ui text-sm font-semibold"
           >
             {chargement ? 'Connexion en cours…' : 'Se connecter'}
           </button>
