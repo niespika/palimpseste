@@ -1,16 +1,18 @@
 import Link from 'next/link'
+import Pastille from '@/components/Pastille'
 
 export default function QuazianLayout({ children }: { children: React.ReactNode }) {
   return (
-    <div>
-      <div className="mb-4">
-        <Link href="/prof" className="text-sm text-stone-500 hover:text-stone-700">
-          ← Tableau de bord
-        </Link>
-        <h2 className="text-xl font-serif text-stone-900 mt-2">Quazian</h2>
+    <div data-module="quazian">
+      <Link href="/prof" className="font-ui text-sm text-muet hover:text-encre transition-colors">
+        ← Tableau de bord
+      </Link>
+      <div className="mt-2 mb-6 flex items-center gap-3">
+        <Pastille module="quazian" size={44} />
+        <h2 className="font-marque text-xl font-semibold tracking-wide text-pigment">QUAZIAN</h2>
       </div>
 
-      <nav className="flex gap-1 mb-6 border-b border-stone-200 pb-0 overflow-x-auto">
+      <nav className="flex gap-1 mb-6 border-b border-bordure pb-0 overflow-x-auto">
         {[
           { href: '/prof/quazian', label: 'Flashcards' },
           { href: '/prof/quazian/quizz', label: 'Quizz' },
@@ -21,7 +23,7 @@ export default function QuazianLayout({ children }: { children: React.ReactNode 
           <Link
             key={href}
             href={href}
-            className="px-4 py-2 text-sm text-stone-600 hover:text-stone-900 hover:bg-stone-50 rounded-t-lg border-b-2 border-transparent hover:border-stone-300 transition-colors"
+            className="font-ui px-4 py-2 text-sm text-encre-douce hover:text-encre hover:bg-pigment-teinte rounded-t-lg border-b-2 border-transparent transition-colors"
           >
             {label}
           </Link>
