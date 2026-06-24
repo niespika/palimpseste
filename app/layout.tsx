@@ -1,15 +1,33 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Cinzel, Cormorant_Garamond, EB_Garamond, Alegreya_Sans } from "next/font/google";
 import "./globals.css";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
+// 4 rôles typographiques de la charte (cf. design_handoff_charte_palimpseste).
+const marque = Cinzel({
   subsets: ["latin"],
+  weight: ["500", "600", "700"],
+  variable: "--police-marque",
+  display: "swap",
 });
-
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
+const titre = Cormorant_Garamond({
   subsets: ["latin"],
+  weight: ["500", "600", "700"],
+  style: ["normal", "italic"],
+  variable: "--police-titre",
+  display: "swap",
+});
+const corps = EB_Garamond({
+  subsets: ["latin"],
+  weight: ["400", "500", "600"],
+  style: ["normal", "italic"],
+  variable: "--police-corps",
+  display: "swap",
+});
+const ui = Alegreya_Sans({
+  subsets: ["latin"],
+  weight: ["400", "500", "700"],
+  variable: "--police-ui",
+  display: "swap",
 });
 
 export const metadata: Metadata = {
@@ -25,7 +43,7 @@ export default function RootLayout({
   return (
     <html
       lang="fr"
-      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
+      className={`${marque.variable} ${titre.variable} ${corps.variable} ${ui.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col">{children}</body>
     </html>

@@ -1,31 +1,90 @@
+/* =========================================================================
+   Palimpseste — globals.css (charte graphique)
+   Identité « humanités / Renaissance » : encre sombre sur parchemin chaud,
+   un pigment par module. Compatible Tailwind v4 (@theme). Les neutres « stone »
+   restent valables ; les utilitaires existants font-serif/font-sans sont pontés
+   sur les polices de la charte (Cormorant / Alegreya) pour une application large
+   sans réécrire chaque écran.
+   ========================================================================= */
+
 @import "tailwindcss";
 
+/* --- Base commune : parchemin & encre + états -------------------------- */
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  /* surfaces */
+  --parchemin:        #F4EFE6;
+  --parchemin-fonce:  #ECE4D6;
+  --surface:          #FBF8F1;   /* cartes */
+  /* encre */
+  --encre:            #221C16;   /* texte principal */
+  --encre-douce:      #5A4632;   /* texte secondaire / sépia */
+  --muet:             #8A6F4E;   /* texte tertiaire, légendes */
+  --bordure:          #E4DBC9;
+  /* états (indépendants du module) */
+  --ok:               #5B6E4A;   --ok-teinte:        #E4E8D8;
+  --attention:        #9A6A2E;   --attention-teinte: #EFE4CF;
+  --retard:           #A23E2E;   --retard-teinte:    #EFD9D2;
+
+  /* pigment par défaut (espace général / tableau de bord) */
+  --pigment:          #5A4632;
+  --pigment-teinte:   #E8DFCB;
+  --fond-module:      #F4EFE6;
 }
 
+/* --- Un monde par module --------------------------------------------------
+   Posez data-module="…" sur le conteneur de page du module ; tout l'écran
+   hérite alors de --pigment / --pigment-teinte / --fond-module.            */
+[data-module="palimpseste"] { --pigment:#5A4632; --pigment-teinte:#E8DFCB; --fond-module:#F4EFE6; }
+[data-module="aletheia"]    { --pigment:#2C4A7C; --pigment-teinte:#DDE3EC; --fond-module:#F3ECDD;
+                              --or:#B8893B; --minium:#B4452F; }
+[data-module="fragments"]   { --pigment:#5A6043; --pigment-teinte:#E2E3D2; --fond-module:#EFE9DC;
+                              --terracotta:#B26A4A; }
+[data-module="codex"]       { --pigment:#2E4A3C; --pigment-teinte:#DCE6DF; --fond-module:#F0EADE;
+                              --bordeaux:#6E2A2C; --nuit:#28324A; }
+[data-module="quazian"]     { --pigment:#3E6B8E; --pigment-teinte:#DCE6EC; --fond-module:#F2ECE0;
+                              --ocre:#C8993F; --rose:#BE8276; }
+[data-module="scriptorium"] { --pigment:#4A3A28; --pigment-teinte:#E6DDC9; --fond-module:#F0EADE; }
+
+/* --- Exposition à Tailwind v4 (utilitaires bg-parchemin, text-encre, …) -- */
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --color-parchemin:       var(--parchemin);
+  --color-parchemin-fonce: var(--parchemin-fonce);
+  --color-surface:         var(--surface);
+  --color-encre:           var(--encre);
+  --color-encre-douce:     var(--encre-douce);
+  --color-muet:            var(--muet);
+  --color-bordure:         var(--bordure);
+  --color-ok:              var(--ok);
+  --color-attention:       var(--attention);
+  --color-retard:          var(--retard);
+  /* pigment dynamique : utilisable en bg-pigment / text-pigment / border-pigment */
+  --color-pigment:         var(--pigment);
+  --color-pigment-teinte:  var(--pigment-teinte);
+
+  /* polices (variables fournies par next/font — voir layout.tsx) */
+  --font-marque: var(--police-marque);   /* Cinzel        */
+  --font-titre:  var(--police-titre);    /* Cormorant     */
+  --font-corps:  var(--police-corps);    /* EB Garamond   */
+  --font-ui:     var(--police-ui);       /* Alegreya Sans */
+
+  /* Ponts vers les utilitaires existants : font-serif → titres (Cormorant),
+     font-sans → interface (Alegreya). Applique la charte à l'existant sans
+     réécrire chaque écran ; migration fine possible ensuite (font-titre/font-ui). */
+  --font-serif: var(--police-titre);
+  --font-sans:  var(--police-ui);
 }
 
-/* Le site est toujours en mode clair, quelle que soit la préférence système */
-
+/* --- Réglages de page ----------------------------------------------------- */
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: var(--parchemin);
+  color: var(--encre);
+  font-family: var(--police-corps), Georgia, serif;  /* corps = EB Garamond */
+  -webkit-font-smoothing: antialiased;
 }
 
-/* Forcer fond blanc et texte foncé sur tous les champs de saisie,
-   pour éviter l'effet gris-clair du mode sombre système */
-input,
-textarea,
-select {
+/* Champs de saisie : fond clair, texte foncé (évite le gris du mode sombre) */
+input, textarea, select {
   background-color: #ffffff;
-  color: #1c1917; /* stone-900 */
+  color: var(--encre);
   color-scheme: light;
 }
