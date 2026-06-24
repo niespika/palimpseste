@@ -9,21 +9,30 @@ interface Props {
   promptVfInitial: string
   promptV1Defaut: string
   promptVfDefaut: string
+  consigneV1Initial: string
+  consigneVfInitial: string
+  consigneV1Defaut: string
+  consigneVfDefaut: string
 }
 
 const TEXTAREA = 'w-full px-3 py-2 border border-stone-200 rounded-xl text-sm font-mono focus:outline-none focus:ring-2 focus:ring-blue-400 resize-y text-stone-900'
 
-export default function FormulaireParametresCodex({ promptV1Initial, promptVfInitial, promptV1Defaut, promptVfDefaut }: Props) {
+export default function FormulaireParametresCodex({
+  promptV1Initial, promptVfInitial, promptV1Defaut, promptVfDefaut,
+  consigneV1Initial, consigneVfInitial, consigneV1Defaut, consigneVfDefaut,
+}: Props) {
   const router = useRouter()
   const [v1, setV1] = useState(promptV1Initial || promptV1Defaut)
   const [vf, setVf] = useState(promptVfInitial || promptVfDefaut)
+  const [consigneV1, setConsigneV1] = useState(consigneV1Initial || consigneV1Defaut)
+  const [consigneVf, setConsigneVf] = useState(consigneVfInitial || consigneVfDefaut)
   const [enregistrement, setEnregistrement] = useState(false)
   const [message, setMessage] = useState<{ type: 'ok' | 'err'; texte: string } | null>(null)
 
   async function handleSauvegarder() {
     setEnregistrement(true)
     setMessage(null)
-    const res = await sauvegarderPromptsCodex(v1, vf)
+    const res = await sauvegarderPromptsCodex(v1, vf, consigneV1, consigneVf)
     setEnregistrement(false)
     if (res.error) setMessage({ type: 'err', texte: res.error })
     else {
@@ -37,6 +46,28 @@ export default function FormulaireParametresCodex({ promptV1Initial, promptVfIni
     <div className="space-y-6">
       <div className="bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 text-sm text-amber-800">
         Prompts de génération des retours IA de Codex (consolidation). Distincts des prompts d&apos;évaluation des Fragments — pas de rubrique d&apos;axes ici.
+      </div>
+
+      {/* Consignes affichées à l'élève (bulles « comment faire », T6) */}
+      <div className="bg-white border border-stone-200 rounded-xl p-5 space-y-4">
+        <div>
+          <h4 className="text-sm font-medium text-stone-700">Consignes élève</h4>
+          <p className="text-xs text-stone-400 mt-0.5">Bulles d&apos;aide affichées à l&apos;élève au moment d&apos;écrire (V1) et de réécrire (V-finale).</p>
+        </div>
+        <div>
+          <div className="flex items-center justify-between mb-2">
+            <label className="text-sm font-medium text-stone-700">Consigne V1 (avant d&apos;écrire)</label>
+            <button type="button" onClick={() => setConsigneV1(consigneV1Defaut)} className="text-xs text-stone-500 hover:text-stone-700 underline">Restaurer la version par défaut</button>
+          </div>
+          <textarea value={consigneV1} onChange={e => setConsigneV1(e.target.value)} rows={2} className={TEXTAREA} />
+        </div>
+        <div>
+          <div className="flex items-center justify-between mb-2">
+            <label className="text-sm font-medium text-stone-700">Consigne V-finale (avant de réécrire)</label>
+            <button type="button" onClick={() => setConsigneVf(consigneVfDefaut)} className="text-xs text-stone-500 hover:text-stone-700 underline">Restaurer la version par défaut</button>
+          </div>
+          <textarea value={consigneVf} onChange={e => setConsigneVf(e.target.value)} rows={2} className={TEXTAREA} />
+        </div>
       </div>
 
       <div>

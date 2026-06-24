@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { chargerEtatTravail, reinitialiserPhotos, type EtatTravail, type SuggestionsV1 } from '../../actions'
 import { CaptureManuscrit } from './CaptureManuscrit'
 
-export function EcranV1({ sessionId, initial }: { sessionId: string; initial: EtatTravail }) {
+export function EcranV1({ sessionId, initial, consigne }: { sessionId: string; initial: EtatTravail; consigne: string }) {
   const [etat, setEtat] = useState(initial)
   const [reset, setReset] = useState(false)
 
@@ -34,8 +34,8 @@ export function EcranV1({ sessionId, initial }: { sessionId: string; initial: Et
   if (etat.photos_v1_count === 0 || statut === 'vide') {
     return (
       <div>
-        <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 mb-4 text-sm text-amber-800">
-          Écris ta synthèse <strong>de mémoire</strong>, livre fermé. Quand tu as fini, photographie ta feuille et envoie-la.
+        <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 mb-4 text-sm text-amber-800 whitespace-pre-wrap">
+          {consigne}
         </div>
         <CaptureManuscrit
           sessionId={sessionId}

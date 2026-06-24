@@ -5,7 +5,7 @@ import { type EtatTravail } from '../../actions'
 import { CaptureManuscrit } from './CaptureManuscrit'
 import { SuggestionsAffichage } from './EcranV1'
 
-export function EcranVF({ sessionId, initial }: { sessionId: string; initial: EtatTravail }) {
+export function EcranVF({ sessionId, initial, consigne }: { sessionId: string; initial: EtatTravail; consigne: string }) {
   const [envoyee, setEnvoyee] = useState(initial.photos_vf_count > 0)
 
   if (envoyee) {
@@ -33,8 +33,8 @@ export function EcranVF({ sessionId, initial }: { sessionId: string; initial: Et
       </div>
 
       <div className="border-t border-stone-200 pt-6">
-        <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 mb-4 text-sm text-amber-800">
-          Réécris ta synthèse <strong>en entier</strong> en tenant compte des suggestions ci-dessus, puis photographie-la.
+        <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 mb-4 text-sm text-amber-800 whitespace-pre-wrap">
+          {consigne}
         </div>
         <CaptureManuscrit
           sessionId={sessionId}

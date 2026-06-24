@@ -12,26 +12,37 @@ async function verifierProf() {
   if (profile?.role !== 'prof') throw new Error('Accès refusé')
 }
 
-export async function lirePromptsCodex(): Promise<{ prompt_suggestions_v1: string | null; prompt_retour_vf: string | null }> {
+export async function lirePromptsCodex(): Promise<{
+  prompt_suggestions_v1: string | null; prompt_retour_vf: string | null
+  consigne_v1: string | null; consigne_vf: string | null
+}> {
   await verifierProf()
   const admin = createAdminClient()
   const { data } = await admin
     .from('codex_params')
-    .select('prompt_suggestions_v1, prompt_retour_vf')
+    .select('prompt_suggestions_v1, prompt_retour_vf, consigne_v1, consigne_vf')
     .eq('id', 1)
     .maybeSingle()
   return {
     prompt_suggestions_v1: data?.prompt_suggestions_v1 ?? null,
     prompt_retour_vf: data?.prompt_retour_vf ?? null,
+    consigne_v1: data?.consigne_v1 ?? null,
+    consigne_vf: data?.consigne_vf ?? null,
   }
 }
 
-export async function sauvegarderPromptsCodex(promptV1: string, promptVf: string) {
+export async function sauvegarderPromptsCodex(promptV1: string, promptVf: string, consigneV1: string, consigneVf: string) {
   await verifierProf()
   const admin = createAdminClient()
   const { error } = await admin
     .from('codex_params')
-    .upsert({ id: 1, prompt_suggestions_v1: promptV1 || null, prompt_retour_vf: promptVf || null }, { onConflict: 'id' })
+    .upsert({
+      id: 1,
+      prompt_suggestions_v1: promptV1 || null,
+      prompt_retour_vf: promptVf || null,
+      consigne_v1: consigneV1 || null,
+      consigne_vf: consigneVf || null,
+    }, { onConflict: 'id' })
   if (error) return { error: error.message }
   revalidatePath('/prof/codex/parametres')
   return { success: true }

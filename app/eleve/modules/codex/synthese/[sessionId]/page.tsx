@@ -6,6 +6,7 @@ import { EcranV1 } from './EcranV1'
 import { EcranVF } from './EcranVF'
 import { TraceAffichage } from './TraceAffichage'
 import { BoutonLu } from './BoutonLu'
+import { CONSIGNE_V1_DEFAUT, CONSIGNE_VF_DEFAUT } from '../../consignes'
 
 export default async function SyntheseElevePage({
   params,
@@ -33,6 +34,11 @@ export default async function SyntheseElevePage({
   const etat = await chargerEtatTravail(sessionId)
   const trace = session.statut === 'fermee' ? await chargerTrace(sessionId) : null
 
+  // Consignes « comment faire » éditables par le prof (T6) ; repli sur le défaut.
+  const { data: paramsCodex } = await supabase.from('codex_params').select('consigne_v1, consigne_vf').eq('id', 1).maybeSingle()
+  const consigneV1 = paramsCodex?.consigne_v1 || CONSIGNE_V1_DEFAUT
+  const consigneVf = paramsCodex?.consigne_vf || CONSIGNE_VF_DEFAUT
+
   return (
     <div className="max-w-xl mx-auto">
       <Link href="/eleve/modules/codex" className="text-sm text-stone-500 hover:text-stone-700 mb-6 inline-block">
@@ -46,9 +52,9 @@ export default async function SyntheseElevePage({
         {session.statut === 'brouillon' && 'La synthèse n\'a pas encore démarré.'}
       </p>
 
-      {session.statut === 'phase_1' && <EcranV1 sessionId={sessionId} initial={etat} />}
+      {session.statut === 'phase_1' && <EcranV1 sessionId={sessionId} initial={etat} consigne={consigneV1} />}
 
-      {session.statut === 'phase_2' && <EcranVF sessionId={sessionId} initial={etat} />}
+      {session.statut === 'phase_2' && <EcranVF sessionId={sessionId} initial={etat} consigne={consigneVf} />}
 
       {session.statut === 'fermee' && (
         trace ? (
