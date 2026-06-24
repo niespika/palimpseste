@@ -19,14 +19,14 @@ export default async function ProfLayout({ children }: { children: React.ReactNo
   if (profile?.role !== 'prof') redirect('/eleve')
 
   return (
-    <div className="min-h-screen bg-stone-50">
-      <header className="bg-white border-b border-stone-200 sticky top-0 z-10">
+    <div className="min-h-screen bg-parchemin">
+      <header className="bg-surface border-b border-bordure sticky top-0 z-10">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 pt-4 pb-2 flex items-center justify-between gap-4">
-          <span className="text-base font-serif text-stone-900 font-medium">Palimpseste</span>
+          <span className="font-marque text-base font-semibold tracking-[0.1em] text-encre">PALIMPSESTE</span>
           <form action={deconnexion}>
             <button
               type="submit"
-              className="text-sm text-stone-500 hover:text-stone-800 transition-colors"
+              className="font-ui text-sm text-muet hover:text-encre transition-colors"
             >
               Se déconnecter
             </button>

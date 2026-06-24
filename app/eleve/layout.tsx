@@ -24,16 +24,16 @@ export default async function EleveLayout({ children }: { children: React.ReactN
   const { inscriptions, active } = await contexteClasseEleve(supabase, user.id)
 
   return (
-    <div className="min-h-screen bg-stone-50">
-      <header className="bg-white border-b border-stone-200 print:hidden sticky top-0 z-10">
+    <div className="min-h-screen bg-parchemin">
+      <header className="bg-surface border-b border-bordure print:hidden sticky top-0 z-10">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 pt-4 pb-2 flex items-center justify-between gap-3">
-          <span className="text-base font-serif text-stone-900 font-medium">Palimpseste</span>
+          <span className="font-marque text-base font-semibold tracking-[0.1em] text-encre">PALIMPSESTE</span>
           <div className="flex items-center gap-3">
             {active && <SelecteurClasseEleve inscriptions={inscriptions} activeId={active.id} />}
             <form action={deconnexion}>
               <button
                 type="submit"
-                className="text-sm text-stone-500 hover:text-stone-800 transition-colors whitespace-nowrap"
+                className="font-ui text-sm text-muet hover:text-encre transition-colors whitespace-nowrap"
               >
                 Se déconnecter
               </button>

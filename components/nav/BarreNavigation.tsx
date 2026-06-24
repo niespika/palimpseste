@@ -34,10 +34,10 @@ export default function BarreNavigation({ tabs }: { tabs: NavTab[] }) {
   }, [pathname])
 
   const classeOnglet = (actif: boolean) =>
-    `px-3 py-1.5 text-sm rounded-md transition-colors whitespace-nowrap ${
+    `font-ui px-3 py-1.5 text-sm rounded-md transition-colors whitespace-nowrap ${
       actif
-        ? 'bg-stone-200 text-stone-900 font-medium'
-        : 'text-stone-600 hover:text-stone-900 hover:bg-stone-100'
+        ? 'bg-parchemin-fonce text-encre font-medium'
+        : 'text-encre-douce hover:text-encre hover:bg-parchemin-fonce/60'
     }`
 
   return (
@@ -63,20 +63,20 @@ export default function BarreNavigation({ tabs }: { tabs: NavTab[] }) {
               className={`${classeOnglet(actif)} inline-flex items-center gap-1`}
             >
               {tab.label}
-              <span className="text-stone-400 text-[10px]" aria-hidden>▾</span>
+              <span className="text-muet text-[10px]" aria-hidden>▾</span>
             </button>
             {estOuvert && (
-              <div className="absolute left-0 top-full mt-1 min-w-44 bg-white border border-stone-200 rounded-lg shadow-lg py-1 z-20">
+              <div className="absolute left-0 top-full mt-1 min-w-44 bg-surface border border-bordure rounded-lg shadow-lg py-1 z-20">
                 {tab.items.map((it) => {
                   const itemActif = correspond(it.href, pathname)
                   return (
                     <Link
                       key={it.href}
                       href={it.href}
-                      className={`block px-4 py-2 text-sm transition-colors ${
+                      className={`font-ui block px-4 py-2 text-sm transition-colors ${
                         itemActif
-                          ? 'bg-stone-100 text-stone-900 font-medium'
-                          : 'text-stone-600 hover:bg-stone-50 hover:text-stone-900'
+                          ? 'bg-parchemin-fonce text-encre font-medium'
+                          : 'text-encre-douce hover:bg-parchemin-fonce/50 hover:text-encre'
                       }`}
                     >
                       {it.label}
