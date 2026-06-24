@@ -40,8 +40,8 @@ export function diagnostiquerEleve(
 }
 
 export const PROFIL_LABELS: Record<ProfilConcept, { label: string; couleur: string; bg: string }> = {
-  maitrise:    { label: 'Maîtrise',    couleur: 'text-green-700',  bg: 'bg-green-50 border-green-200' },
-  lacune:      { label: 'Lacune',      couleur: 'text-amber-700',  bg: 'bg-amber-50 border-amber-200' },
-  idee_fausse: { label: 'Idée fausse', couleur: 'text-red-700',    bg: 'bg-red-50 border-red-200' },
-  insuffisant: { label: 'Peu de data', couleur: 'text-stone-400',  bg: 'bg-stone-50 border-stone-200' },
+  maitrise:    { label: 'Maîtrise',    couleur: 'text-ok',         bg: 'bg-ok-teinte border-ok' },
+  lacune:      { label: 'Lacune',      couleur: 'text-attention',  bg: 'bg-attention-teinte border-attention' },
+  idee_fausse: { label: 'Idée fausse', couleur: 'text-retard',     bg: 'bg-retard-teinte border-retard' },
+  insuffisant: { label: 'Peu de data', couleur: 'text-muet',       bg: 'bg-parchemin-fonce border-bordure' },
 }

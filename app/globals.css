@@ -24,26 +24,29 @@
   --ok:               #5B6E4A;   --ok-teinte:        #E4E8D8;
   --attention:        #9A6A2E;   --attention-teinte: #EFE4CF;
   --retard:           #A23E2E;   --retard-teinte:    #EFD9D2;
+  --info:             #3E5C7E;   --info-teinte:      #DCE3EC;
 
   /* pigment par défaut (espace général / tableau de bord) */
   --pigment:          #5A4632;
   --pigment-teinte:   #E8DFCB;
   --fond-module:      #F4EFE6;
+  --bouton:           #5A4632;   /* fond bouton = pigment par défaut */
+  --liseret:          #5A4632;   /* liseré = pigment par défaut */
 }
 
 /* --- Un monde par module --------------------------------------------------
    Posez data-module="…" sur le conteneur de page du module ; tout l'écran
    hérite alors de --pigment / --pigment-teinte / --fond-module.            */
-[data-module="palimpseste"] { --pigment:#5A4632; --pigment-teinte:#E8DFCB; --fond-module:#F4EFE6; }
+[data-module="palimpseste"] { --pigment:#5A4632; --pigment-teinte:#E8DFCB; --fond-module:#F4EFE6; --bouton:#5A4632; --liseret:#5A4632; }
 [data-module="aletheia"]    { --pigment:#2C4A7C; --pigment-teinte:#DDE3EC; --fond-module:#F3ECDD;
-                              --or:#B8893B; --minium:#B4452F; }
-[data-module="fragments"]   { --pigment:#5A6043; --pigment-teinte:#E2E3D2; --fond-module:#EFE9DC;
-                              --terracotta:#B26A4A; }
+                              --or:#B8893B; --minium:#B4452F; --bouton:#B4452F; --liseret:#B8893B; }
+[data-module="fragments"]   { --pigment:#616E30; --pigment-teinte:#E2E3D2; --fond-module:#EFE9DC;
+                              --terracotta:#B26A4A; --bouton:#B26A4A; --liseret:#616E30; }
 [data-module="codex"]       { --pigment:#2E4A3C; --pigment-teinte:#DCE6DF; --fond-module:#F0EADE;
-                              --bordeaux:#6E2A2C; --nuit:#28324A; }
+                              --bordeaux:#6E2A2C; --nuit:#28324A; --bouton:#2E4A3C; --liseret:#6E2A2C; }
 [data-module="quazian"]     { --pigment:#3E6B8E; --pigment-teinte:#DCE6EC; --fond-module:#F2ECE0;
-                              --ocre:#C8993F; --rose:#BE8276; }
-[data-module="scriptorium"] { --pigment:#4A3A28; --pigment-teinte:#E6DDC9; --fond-module:#F0EADE; }
+                              --ocre:#C8993F; --rose:#BE8276; --bouton:#3E6B8E; --liseret:#BE8276; }
+[data-module="scriptorium"] { --pigment:#4A3A28; --pigment-teinte:#E6DDC9; --fond-module:#F0EADE; --bouton:#4A3A28; --liseret:#4A3A28; }
 
 /* --- Exposition à Tailwind v4 (utilitaires bg-parchemin, text-encre, …) -- */
 @theme inline {
@@ -57,9 +60,16 @@
   --color-ok:              var(--ok);
   --color-attention:       var(--attention);
   --color-retard:          var(--retard);
+  --color-ok-teinte:        var(--ok-teinte);
+  --color-attention-teinte: var(--attention-teinte);
+  --color-retard-teinte:    var(--retard-teinte);
+  --color-info:             var(--info);
+  --color-info-teinte:      var(--info-teinte);
   /* pigment dynamique : utilisable en bg-pigment / text-pigment / border-pigment */
   --color-pigment:         var(--pigment);
   --color-pigment-teinte:  var(--pigment-teinte);
+  --color-bouton:          var(--bouton);    /* bg-bouton, text-bouton, border-bouton */
+  --color-liseret:         var(--liseret);   /* border-l-liseret */
 
   /* polices (variables fournies par next/font — voir layout.tsx) */
   --font-marque: var(--police-marque);   /* Cinzel        */
