@@ -28,24 +28,33 @@ interface Props {
   labelRetour: string
   /** Intitulé de la colonne « formulaire » (sans la plume). */
   labelFormulaire: string
+  /** Suffixe du sur-titre desktop (def « reste visible » pour l'atelier ;
+   *  passer null pour la revue d'une semaine terminée). */
+  suffixeRetour?: string | null
+  /** Le bandeau retour est-il ouvert par défaut sur mobile ? (def true ;
+   *  false pour la revue, où la version finale prime). */
+  retourOuvertMobile?: boolean
 }
 
 const SUR_TITRE = 'font-ui text-xs tracking-[0.1em] text-muet uppercase'
 
-export default function AtelierDeuxColonnes({ retour, formulaire, labelRetour, labelFormulaire }: Props) {
+export default function AtelierDeuxColonnes({
+  retour, formulaire, labelRetour, labelFormulaire,
+  suffixeRetour = 'reste visible', retourOuvertMobile = true,
+}: Props) {
   return (
     <div className="lg:grid lg:grid-cols-2 lg:gap-4 lg:items-start">
       {/* Colonne gauche (desktop) — retour épinglé, reste à l'écran. */}
       <aside className="hidden lg:block lg:sticky lg:top-24 space-y-3 min-w-0">
-        <p className={SUR_TITRE}>◆ {labelRetour} — reste visible</p>
+        <p className={SUR_TITRE}>◆ {labelRetour}{suffixeRetour ? ` — ${suffixeRetour}` : ''}</p>
         {retour}
       </aside>
 
       {/* Colonne droite (desktop) / pleine largeur (mobile). */}
       <div className="min-w-0">
-        {/* Mobile : retour en bandeau dépliable épinglé, ouvert par défaut. */}
+        {/* Mobile : retour en bandeau dépliable épinglé. */}
         <details
-          open
+          open={retourOuvertMobile}
           className="lg:hidden mb-4 bg-surface border border-bordure rounded-xl sticky top-14 z-10"
         >
           <summary className="cursor-pointer select-none list-none [&::-webkit-details-marker]:hidden px-4 py-3 min-h-[44px] flex items-center justify-between gap-2">

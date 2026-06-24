@@ -5,6 +5,7 @@ import { createAdminClient } from '@/utils/supabase/admin'
 import { contexteAletheia, livreAccessible, chargerCapstoneLivre, toutesSemainesDone } from '../../data'
 import PollStatut from '../../PollStatut'
 import BoutonImprimerCapstone from '../../BoutonImprimerCapstone'
+import Pastille from '@/components/Pastille'
 
 export default async function PageCapstone({ params }: { params: Promise<{ livreId: string }> }) {
   const { livreId } = await params
@@ -28,10 +29,16 @@ export default async function PageCapstone({ params }: { params: Promise<{ livre
     return (
       <div className="space-y-5 pb-8">
         <Link href="/eleve/modules/aletheia" className="text-sm text-muet hover:text-encre-douce">← Planning</Link>
-        <div className="bg-surface border border-bordure rounded-xl p-6 text-center text-muet text-sm">
-          {cap?.statut === 'PENDING'
-            ? 'Ta carte d’architecture est en cours de préparation. Cette page se mettra à jour automatiquement.'
-            : 'La carte d’architecture n’est pas encore disponible.'}
+        <div className="bg-surface border border-bordure rounded-xl p-8 flex flex-col items-center text-center">
+          <span className="opacity-85"><Pastille module="aletheia" size={76} /></span>
+          <p className="font-titre text-xl text-encre mt-4">
+            {cap?.statut === 'PENDING' ? 'Ta carte d’architecture se prépare' : 'Carte d’architecture indisponible'}
+          </p>
+          <p className="font-corps text-sm text-muet mt-1.5 max-w-sm">
+            {cap?.statut === 'PENDING'
+              ? 'Tu as terminé le livre ! La page se mettra à jour automatiquement.'
+              : 'La carte d’architecture n’est pas encore disponible.'}
+          </p>
         </div>
         <PollStatut actif={cap?.statut === 'PENDING'} />
       </div>
@@ -47,22 +54,26 @@ export default async function PageCapstone({ params }: { params: Promise<{ livre
         <BoutonImprimerCapstone />
       </div>
 
-      <div>
-        {livre?.label && <p className="text-xs text-muet">{livre.label as string}</p>}
-        <h2 className="text-xl font-serif text-encre">✦ Carte d&apos;architecture du livre</h2>
-        <p className="text-sm text-muet mt-1">La vue d&apos;ensemble du mouvement argumentatif, maintenant que tu as tout lu.</p>
+      {/* En-tête héros : le sceau déployé en grand — la carte est une page à garder. */}
+      <div className="flex flex-col items-center text-center">
+        <Pastille module="aletheia" size={112} />
+        <p className="font-marque text-xs sm:text-sm font-semibold tracking-[0.2em] text-pigment mt-3 uppercase">
+          Aletheia{livre?.label ? ` · ${livre.label as string}` : ''}
+        </p>
+        <h2 className="font-titre text-3xl text-encre leading-tight mt-1">✦ La carte d&apos;architecture du livre</h2>
+        <p className="font-corps text-sm text-muet mt-2 max-w-md">La vue d&apos;ensemble du mouvement argumentatif, maintenant que tu as tout lu.</p>
       </div>
 
       {fil_conducteur && (
-        <section className="bg-surface border border-bordure rounded-xl p-5">
-          <h3 className="font-medium text-encre mb-2">Fil conducteur</h3>
-          <p className="text-sm text-encre-douce whitespace-pre-wrap leading-relaxed">{fil_conducteur}</p>
+        <section className="bg-surface border border-bordure border-l-4 border-l-liseret rounded-xl p-5">
+          <p className="font-ui text-xs tracking-[0.1em] text-attention uppercase mb-2">Fil conducteur</p>
+          <p className="font-corps text-base text-encre whitespace-pre-wrap leading-relaxed">{fil_conducteur}</p>
         </section>
       )}
 
       {noeuds.length > 0 && (
         <section className="bg-surface border border-bordure rounded-xl p-5">
-          <h3 className="font-medium text-encre mb-3">Les chapitres</h3>
+          <h3 className="font-titre text-xl text-encre mb-3">Les chapitres</h3>
           <ul className="space-y-2">
             {noeuds.map((n, i) => (
               <li key={i} className="text-sm">
@@ -76,7 +87,7 @@ export default async function PageCapstone({ params }: { params: Promise<{ livre
 
       {liens.length > 0 && (
         <section className="bg-surface border border-bordure rounded-xl p-5">
-          <h3 className="font-medium text-encre mb-3">Comment les chapitres s&apos;enchaînent</h3>
+          <h3 className="font-titre text-xl text-encre mb-3">Comment les chapitres s&apos;enchaînent</h3>
           <ul className="space-y-2">
             {liens.map((l, i) => (
               <li key={i} className="text-sm text-encre-douce">
