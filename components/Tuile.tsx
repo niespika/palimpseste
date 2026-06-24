@@ -1,44 +1,67 @@
 import Link from 'next/link'
+import Pastille, { type ModuleSceau } from './Pastille'
 
 // ----------------------------------------------------------------------------
-// Primitif de tuile partagé (Lot 3, réutilisé par les Lots 4-8). Présentationnel
-// et paramétrable : `nom` constant, `resume` (badges / chiffres) et `couleur`
-// injectés par l'appelant. Même langage visuel pour les tuiles de classe (Lot 3)
-// et de module (Lot 4), sans réécrire le shell.
+// Tuile — version « charte ». Mêmes props que l'original, repeinte avec les
+// jetons de la charte (parchemin / encre / états) + une option `module` qui
+// pose le pigment du module en bord gauche et, si demandé, son sceau.
+//
+// Bord gauche :
+//   • couleur d'état (vert/neutre/rouge)  → fait / neutre / en retard
+//   • OU module (aletheia, codex, …)      → pigment du module (prioritaire)
 // ----------------------------------------------------------------------------
 
 export type CouleurTuile = 'vert' | 'neutre' | 'rouge'
 
-const BORDURE: Record<CouleurTuile, string> = {
-  vert: 'border-l-green-400',
-  neutre: 'border-l-stone-300',
-  rouge: 'border-l-red-400',
+// États mappés sur les jetons (classes Tailwind générées par globals.css @theme)
+const BORDURE_ETAT: Record<CouleurTuile, string> = {
+  vert:   'border-l-ok',
+  neutre: 'border-l-bordure',
+  rouge:  'border-l-retard',
 }
 
 interface Props {
   nom: string
   sousTitre?: string
-  /** Résumé injecté (badges, chiffres…). */
   resume?: React.ReactNode
   couleur?: CouleurTuile
-  /** Si fourni, la tuile devient cliquable (Link). */
+  /** Si fourni : bord gauche = pigment du module (prioritaire sur `couleur`). */
+  module?: ModuleSceau
+  /** Affiche le sceau du module à gauche du titre. Nécessite `module`. */
+  avecSceau?: boolean
   href?: string
   selectionnee?: boolean
 }
 
-export default function Tuile({ nom, sousTitre, resume, couleur = 'neutre', href, selectionnee }: Props) {
+export default function Tuile({
+  nom, sousTitre, resume, couleur = 'neutre',
+  module, avecSceau, href, selectionnee,
+}: Props) {
+  // Le pigment de module l'emporte sur la couleur d'état pour le bord gauche.
+  const bordGauche = module ? 'border-l-pigment' : BORDURE_ETAT[couleur]
+
   const contenu = (
     <div
-      className={`bg-white border border-stone-200 border-l-4 ${BORDURE[couleur]} rounded-xl px-4 py-3 h-full transition-colors ${
-        href ? 'hover:border-stone-400 hover:shadow-sm' : ''
-      } ${selectionnee ? 'ring-2 ring-stone-400' : ''}`}
+      // data-module fait hériter --pigment à la tuile (et donc à border-l-pigment)
+      data-module={module}
+      className={`bg-surface border border-bordure border-l-4 ${bordGauche} rounded-xl px-4 py-3 h-full transition-colors ${
+        href ? 'hover:border-muet hover:shadow-sm' : ''
+      } ${selectionnee ? 'ring-2 ring-muet' : ''}`}
     >
       <div className="flex items-start justify-between gap-2">
-        <div className="min-w-0">
-          <p className="font-medium text-stone-900 truncate">{nom}</p>
-          {sousTitre && <p className="text-xs text-stone-400 mt-0.5 truncate">{sousTitre}</p>}
+        <div className="flex items-center gap-3 min-w-0">
+          {avecSceau && module && <Pastille module={module} size={36} />}
+          <div className="min-w-0">
+            {/* nom de module en capitale lapidaire, sinon titre d'interface */}
+            <p className={module
+              ? 'font-marque font-semibold tracking-wide text-pigment truncate'
+              : 'font-ui font-medium text-encre truncate'}>
+              {module ? nom.toUpperCase() : nom}
+            </p>
+            {sousTitre && <p className="font-corps text-sm text-muet mt-0.5 truncate">{sousTitre}</p>}
+          </div>
         </div>
-        {href && <span className="text-stone-300 flex-shrink-0">→</span>}
+        {href && <span className="text-bordure flex-shrink-0">→</span>}
       </div>
       {resume && <div className="mt-2">{resume}</div>}
     </div>
@@ -46,3 +69,7 @@ export default function Tuile({ nom, sousTitre, resume, couleur = 'neutre', href
 
   return href ? <Link href={href} className="block">{contenu}</Link> : contenu
 }
+
+// Exemples :
+//   <Tuile nom="Terminale HLP" sousTitre="…" couleur="vert" resume={…} href="…" />
+//   <Tuile nom="Aletheia" module="aletheia" avecSceau sousTitre="Retours socratiques" href="…" />
