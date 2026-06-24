@@ -5,6 +5,7 @@ import { revalidatePath } from 'next/cache'
 import { createClient } from '@/utils/supabase/server'
 import { createAdminClient } from '@/utils/supabase/admin'
 import { lancerAnalyse } from '@/utils/analyse'
+import { detecterAveuHeuristique } from '@/utils/detecteur-integrite'
 
 // Vérifier que l'appelant est bien un élève
 async function verifierEleve() {
@@ -109,6 +110,8 @@ export async function deposerCompteRendu(formData: FormData) {
       commentaire_eleve: commentaire || null,
       photos_suspectes: formData.get('photos_suspectes') === 'true',
       photo_prise_at: (formData.get('photo_prise_at') as string) || null,
+      // T3 — passe 1 : heuristique stricte sur le commentaire (aveu / section N/A).
+      signal_integrite: detecterAveuHeuristique(commentaire),
     })
     .select('id')
     .single()

@@ -4,6 +4,7 @@ import { createClient } from '@/utils/supabase/server'
 import { createAdminClient } from '@/utils/supabase/admin'
 import EditorAnalyse from './EditorAnalyse'
 import type { FragmentAnalyse, FragmentPiste, FragmentPhoto } from '@/types/fragments'
+import { LABEL_SIGNAL, type SignalIntegrite } from '@/utils/detecteur-integrite'
 
 export default async function PageAnalyse({
   params,
@@ -29,7 +30,7 @@ export default async function PageAnalyse({
   const { data: depot } = await supabase
     .from('fragments_depots')
     .select(`
-      id, eleve_id, semaine_id, statut, commentaire_eleve, photos_suspectes, photo_prise_at, created_at,
+      id, eleve_id, semaine_id, statut, commentaire_eleve, photos_suspectes, photo_prise_at, signal_integrite, created_at,
       photos:fragments_photos(id, depot_id, storage_path, ordre, created_at),
       eleve:profiles(display_name, classe),
       semaine:fragments_semaines(numero, titre)
@@ -57,6 +58,13 @@ export default async function PageAnalyse({
     .select('*')
     .eq('depot_id', depotId)
     .maybeSingle()
+
+  // T3 — signaux d'intégrité (heuristique au dépôt + IA à l'analyse), dédupliqués par type.
+  const signauxBruts = [
+    (depot as { signal_integrite?: SignalIntegrite | null }).signal_integrite ?? null,
+    (analyse as { signal_integrite?: SignalIntegrite | null } | null)?.signal_integrite ?? null,
+  ].filter((s): s is SignalIntegrite => !!s && s.type in LABEL_SIGNAL)
+  const signauxIntegrite = [...new Map(signauxBruts.map(s => [s.type, s])).values()]
 
   // Pistes
   const { data: pistes } = analyse
@@ -135,6 +143,21 @@ export default async function PageAnalyse({
           </div>
         )}
       </div>
+
+      {signauxIntegrite.length > 0 && (
+        <div className="mb-3 text-sm bg-orange-50 border border-orange-200 text-orange-800 rounded-lg px-3 py-2">
+          <p className="font-medium">⚑ Signal d&apos;intégrité — à vérifier avant d&apos;évaluer (indicatif, non probant)</p>
+          <ul className="mt-1 space-y-0.5">
+            {signauxIntegrite.map((s, i) => (
+              <li key={i}>
+                <strong>{LABEL_SIGNAL[s.type]}</strong>
+                <span className="text-orange-600"> · {s.source === 'heuristique' ? 'détecté au dépôt' : 'détecté par l’IA'}</span>
+                {s.motif && <span> — {s.motif}</span>}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
 
       {(depot as { photos_suspectes?: boolean }).photos_suspectes && (
         <div className="mb-3 text-sm bg-amber-50 border border-amber-200 text-amber-800 rounded-lg px-3 py-2">

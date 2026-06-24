@@ -56,6 +56,14 @@ Pour CHAQUE piste de l'historique au statut « proposee » ou « partiellement_s
 ### 5. Commentaire général
 3 à 5 phrases de synthèse pour l'élève : l'essentiel à retenir, formulé pour donner envie de continuer.
 
+### 6. Signal d'intégrité (usage prof, jamais montré à l'élève)
+Repère, pour épargner au professeur une évaluation inutile, les copies qui ne « jouent pas le jeu » :
+- "hors_sujet" : le contenu n'a aucun rapport avec le thème ni avec les trois sections demandées ;
+- "aveu_non_travail" : l'élève déclare ne pas avoir fait le travail (« je n'ai rien fait cette semaine ») ;
+- "section_na" : l'élève déclare qu'une section ne s'applique pas / est sans objet ;
+- "aucun" : RAS — c'est le cas PAR DÉFAUT, à choisir dès qu'il y a un vrai travail, même imparfait ou faible.
+Sois STRICT : ne signale que les cas FLAGRANTS. Au moindre doute, mets "aucun" (on préfère rater un cas que sur-signaler). Le "motif" est une phrase courte qui justifie.
+
 ## Format de réponse
 Réponds UNIQUEMENT avec un objet JSON valide, sans texte avant ou après, sans balises de code :
 {
@@ -68,7 +76,8 @@ Réponds UNIQUEMENT avec un objet JSON valide, sans texte avant ou après, sans 
   "commentaire_general": "...",
   "pistes_nouvelles": ["...", "..."],
   "rappels_pistes": [ { "piste_id": "uuid", "reformulation": "..." } ],
-  "bilan_pistes": [ { "piste_id": "uuid", "statut": "suivie|partiellement_suivie|proposee", "justification": "..." } ]
+  "bilan_pistes": [ { "piste_id": "uuid", "statut": "suivie|partiellement_suivie|proposee", "justification": "..." } ],
+  "signal_integrite": { "type": "aucun|hors_sujet|aveu_non_travail|section_na", "motif": "..." }
 }`
 
 const BAREME_DEFAUT = `0 — Travail non fait : la section est absente ou vide de contenu réel.

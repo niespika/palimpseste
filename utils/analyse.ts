@@ -1,6 +1,7 @@
 import Anthropic from '@anthropic-ai/sdk'
 import { createAdminClient } from '@/utils/supabase/admin'
 import { RUBRIQUE_DEFAUT } from '@/utils/rubrique'
+import { signalDepuisIA } from '@/utils/detecteur-integrite'
 
 // Structure de la réponse JSON attendue de Claude
 interface AnalyseJSON {
@@ -14,6 +15,8 @@ interface AnalyseJSON {
   pistes_nouvelles: string[]
   rappels_pistes: { piste_id: string; reformulation: string }[]
   bilan_pistes: { piste_id: string; statut: 'suivie' | 'partiellement_suivie' | 'proposee'; justification: string }[]
+  // T3 — passe 2 : signal d'intégrité (optionnel ; absent des prompts personnalisés).
+  signal_integrite?: { type: string; motif?: string }
 }
 
 function construireHistorique(
@@ -262,6 +265,7 @@ export async function lancerAnalyse(
       retour_contenu: parsed.retour_contenu ?? null,
       commentaire_general: parsed.commentaire_general ?? null,
       cout_api: cout,
+      signal_integrite: signalDepuisIA(parsed.signal_integrite),
     }).eq('id', analyseId)
 
     // Supprimer les anciennes pistes de cette analyse et recréer
