@@ -5,6 +5,8 @@ import { revalidatePath } from 'next/cache'
 import { createClient } from '@/utils/supabase/server'
 import { createAdminClient } from '@/utils/supabase/admin'
 import { contexteAletheia, livreAccessible, semaineLivre, peutAccederSemaine } from './data'
+import { messageSiBloque, signalerStrikeAuto } from '@/utils/integrite'
+import { detecterRenduVideTexte, detecterAveuHeuristique } from '@/utils/detecteur-integrite'
 import type { StatutAletheia } from './types'
 
 // Bornes serveur sur le texte élève (anti-coût : tout est injecté dans le prompt IA ;
@@ -50,6 +52,9 @@ function revalider(livreId: string, semaine: number) {
 // DRAFT → V1_SUBMITTED → FEEDBACK1_READY. Retour V1 généré en arrière-plan (after()).
 export async function soumettreV1(livreId: string, semaine: number, saisie: SaisieV1) {
   const { supabase, userId } = await verifierEleve()
+  // Blocage « petit malin » : plus aucun rendu tant que le prof n'a pas débloqué.
+  const blocage = await messageSiBloque(createAdminClient(), userId)
+  if (blocage) return { error: blocage }
   const these = (saisie?.these ?? '').trim()
   const args = (saisie?.arguments ?? '').trim()
   const accord = (saisie?.accord ?? '').trim()
@@ -114,14 +119,23 @@ export async function soumettreV1(livreId: string, semaine: number, saisie: Sais
     if (semaine === 1) await mod.diagnostiquerTravail(travailId)
   })
 
+  // Strike auto (rendu quasi vide / aveu) — passe 1, sans IA. Le rendu reste accepté ;
+  // l'élève reçoit un message « cheeky ». La détection hors-sujet (IA) suivra au retour.
+  const sig = detecterRenduVideTexte([these, args, accord]) ?? detecterAveuHeuristique(`${these}\n${args}\n${accord}`)
+  const { avertissement } = sig
+    ? await signalerStrikeAuto(admin, { eleveId: userId, module: 'aletheia', renduRef: travailId, type: sig.type, motif: sig.motif })
+    : { avertissement: null }
+
   revalider(livreId, semaine)
-  return { success: true }
+  return { success: true, avertissement }
 }
 
 // FEEDBACK1_READY → (VF_SUBMITTED) → FEEDBACK2_READY. Gate souple : pas de VF
 // avant le retour V1. Retour VF généré en arrière-plan (ancré sur le livre entier).
 export async function soumettreVf(livreId: string, semaine: number, vf: SaisieVf) {
   const { supabase, userId } = await verifierEleve()
+  const blocage = await messageSiBloque(createAdminClient(), userId)
+  if (blocage) return { error: blocage }
   const these = (vf?.these_vf ?? '').trim()
   const args = (vf?.arguments_vf ?? '').trim()
   const accord = (vf?.accord_vf ?? '').trim()
@@ -161,8 +175,14 @@ export async function soumettreVf(livreId: string, semaine: number, vf: SaisieVf
     if (semaine === 1) await mod.diagnostiquerTravail(travailId)
   })
 
+  // Strike auto sur la VF (ref distincte de la V1 : c'est un autre rendu).
+  const sig = detecterRenduVideTexte([these, args, accord]) ?? detecterAveuHeuristique(`${these}\n${args}\n${accord}`)
+  const { avertissement } = sig
+    ? await signalerStrikeAuto(admin, { eleveId: userId, module: 'aletheia', renduRef: `${travailId}:vf`, type: sig.type, motif: sig.motif })
+    : { avertissement: null }
+
   revalider(livreId, semaine)
-  return { success: true }
+  return { success: true, avertissement }
 }
 
 // FEEDBACK2_READY → DONE. Gate de validation de lecture (façon Fragments) : la

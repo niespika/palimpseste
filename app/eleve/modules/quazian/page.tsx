@@ -1,9 +1,12 @@
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import { createClient } from '@/utils/supabase/server'
+import { createAdminClient } from '@/utils/supabase/admin'
 import { aAccesModule, classeIdsActives } from '@/utils/acces'
+import { messageSiBloque } from '@/utils/integrite'
 import { chargerFileRevision, chargerStatsRevision, chargerToutesLesCartes } from './actions'
 import { QuazianDashboard } from './QuazianDashboard'
+import BanniereIntegrite from '@/components/BanniereIntegrite'
 import Tuile from '@/components/Tuile'
 
 type QuizListItem = { id: string; statut: string; lance_at: string | null; nb_questions: number }
@@ -67,12 +70,19 @@ export default async function QuazianElevePage() {
   // Quizz en cours non encore soumis → bannière d'appel (à faire)
   const quizzActif = quizList.find(q => q.statut === 'lance' && !soumisMap.get(q.id))
 
-  // Données de révision (FSRS + consultation)
-  const [file, stats, toutesCartes] = await Promise.all([
-    chargerFileRevision(),
-    chargerStatsRevision(),
-    chargerToutesLesCartes(),
-  ])
+  // Blocage « petit malin » : la révision est gelée, mais le quizz reste accessible.
+  const blocage = await messageSiBloque(createAdminClient(), user.id)
+
+  // Données de révision (FSRS + consultation) — inutile de les charger si bloqué.
+  let file: Awaited<ReturnType<typeof chargerFileRevision>> = []
+  let stats: Awaited<ReturnType<typeof chargerStatsRevision>> | null = null
+  let toutesCartes: Awaited<ReturnType<typeof chargerToutesLesCartes>> = []
+  if (!blocage) {
+    const [f, s, t] = await Promise.all([chargerFileRevision(), chargerStatsRevision(), chargerToutesLesCartes()])
+    file = f; stats = s; toutesCartes = t
+  }
+
+  const quizzSection = <QuizzSection quizList={quizList} soumisMap={soumisMap} scoreMap={scoreMap} />
 
   return (
     <div>
@@ -101,13 +111,24 @@ export default async function QuazianElevePage() {
 
       <h2 className="text-xl font-serif text-pigment mb-6 mt-2">Quazian</h2>
 
-      {/* Deux zones nettes : Réviser (haut) puis Quizz (bas). */}
-      <QuazianDashboard
-        stats={stats}
-        file={file}
-        toutesCartes={toutesCartes}
-        quizz={<QuizzSection quizList={quizList} soumisMap={soumisMap} scoreMap={scoreMap} />}
-      />
+      {blocage ? (
+        // Révision gelée : on montre le message « cheeky » + le quizz (toujours ouvert).
+        <div className="space-y-6">
+          <BanniereIntegrite message={blocage} />
+          <section className="space-y-3">
+            <h3 className="text-sm font-medium text-muet uppercase tracking-wide">Quizz</h3>
+            {quizzSection}
+          </section>
+        </div>
+      ) : (
+        // Deux zones nettes : Réviser (haut) puis Quizz (bas).
+        <QuazianDashboard
+          stats={stats!}
+          file={file}
+          toutesCartes={toutesCartes}
+          quizz={quizzSection}
+        />
+      )}
     </div>
   )
 }

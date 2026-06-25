@@ -6,6 +6,7 @@ import { createClient } from '@/utils/supabase/server'
 import { createAdminClient } from '@/utils/supabase/admin'
 import { lancerAnalyse } from '@/utils/analyse'
 import { detecterAveuHeuristique } from '@/utils/detecteur-integrite'
+import { messageSiBloque, signalerStrikeAuto } from '@/utils/integrite'
 
 // Vérifier que l'appelant est bien un élève
 async function verifierEleve() {
@@ -29,6 +30,10 @@ export async function deposerCompteRendu(formData: FormData) {
   // Les chemins doivent appartenir à l'élève (dossier de stockage = son uid), comme
   // getSignedUrls et le dépôt Codex — sinon un élève pourrait référencer le fichier d'un autre.
   if (chemins.some((c) => !c.startsWith(`${userId}/`))) return { error: 'Chemins de photos invalides.' }
+
+  // Blocage « petit malin » : plus aucun dépôt tant que le prof n'a pas débloqué.
+  const blocage = await messageSiBloque(createAdminClient(), userId)
+  if (blocage) return { error: blocage }
 
   // Valider que l'inscription appartient bien à l'élève (et est active)
   const { data: inscription } = await supabase
@@ -99,6 +104,9 @@ export async function deposerCompteRendu(formData: FormData) {
     await supabase.from('fragments_depots').delete().eq('id', depotExistant.id)
   }
 
+  // T3 — passe 1 : heuristique stricte sur le commentaire (aveu / section N/A).
+  const sigHeuristique = detecterAveuHeuristique(commentaire)
+
   // Créer le nouveau dépôt
   const { data: nouveauDepot, error: erreurDepot } = await supabase
     .from('fragments_depots')
@@ -110,8 +118,7 @@ export async function deposerCompteRendu(formData: FormData) {
       commentaire_eleve: commentaire || null,
       photos_suspectes: formData.get('photos_suspectes') === 'true',
       photo_prise_at: (formData.get('photo_prise_at') as string) || null,
-      // T3 — passe 1 : heuristique stricte sur le commentaire (aveu / section N/A).
-      signal_integrite: detecterAveuHeuristique(commentaire),
+      signal_integrite: sigHeuristique,
     })
     .select('id')
     .single()
@@ -151,7 +158,13 @@ export async function deposerCompteRendu(formData: FormData) {
     await lancerAnalyse(depotIdPourAnalyse, eleveIdPourAnalyse)
   })
 
-  return { success: true, statut }
+  // Strike auto si aveu détecté au dépôt (heuristique). Ref stable par semaine :
+  // re-déposer la même semaine ne re-strike pas. Le hors-sujet (IA) suit à l'analyse.
+  const { avertissement } = sigHeuristique
+    ? await signalerStrikeAuto(admin, { eleveId: userId, module: 'fragments', renduRef: `${inscriptionId}:${semaineId}`, type: sigHeuristique.type, motif: sigHeuristique.motif })
+    : { avertissement: null }
+
+  return { success: true, statut, avertissement }
 }
 
 // Gate de lecture (Lot 10) : l'élève valide qu'il a lu le retour d'une analyse.

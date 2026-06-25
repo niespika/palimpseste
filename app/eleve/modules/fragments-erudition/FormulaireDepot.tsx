@@ -23,6 +23,7 @@ export default function FormulaireDepot({ semaineId, eleveId, inscriptionId, dep
   const [upload, setUpload] = useState(false)
   const [commentaire, setCommentaire] = useState('')
   const [erreur, setErreur] = useState<string | null>(null)
+  const [avertissement, setAvertissement] = useState<string | null>(null)
   const [progression, setProgression] = useState('')
   const inputRef = useRef<HTMLInputElement>(null)
 
@@ -125,9 +126,11 @@ export default function FormulaireDepot({ semaineId, eleveId, inscriptionId, dep
         setErreur(resultat.error)
       } else {
         images.forEach(img => libererPreview(img.previewUrl))
-        router.refresh()
         setImages([])
         setCommentaire('')
+        // Dépôt accepté mais signalé « petit malin » : message cheeky (le dépôt est bien pris).
+        setAvertissement(resultat.avertissement ?? null)
+        router.refresh()
       }
     } catch (e: unknown) {
       setErreur(`Erreur lors de l'envoi : ${e instanceof Error ? e.message : 'inconnue'}`)
@@ -246,6 +249,12 @@ export default function FormulaireDepot({ semaineId, eleveId, inscriptionId, dep
       {erreur && (
         <div className="bg-retard-teinte border border-retard rounded-xl px-3 py-2">
           <p className="text-retard text-sm">{erreur}</p>
+        </div>
+      )}
+
+      {avertissement && (
+        <div className="bg-attention-teinte border border-attention rounded-xl px-3 py-2">
+          <p className="text-attention text-sm">{avertissement}</p>
         </div>
       )}
 

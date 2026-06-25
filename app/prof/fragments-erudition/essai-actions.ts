@@ -4,6 +4,7 @@ import { after } from 'next/server'
 import { revalidatePath } from 'next/cache'
 import { createClient } from '@/utils/supabase/server'
 import { createAdminClient } from '@/utils/supabase/admin'
+import { messageSiBloque } from '@/utils/integrite'
 
 async function verifierProf() {
   const supabase = await createClient()
@@ -561,6 +562,10 @@ export async function creerUrlUploadEssaiPhotoEleve(epreuveId: string, inscripti
 
   const admin = createAdminClient()
 
+  // Blocage « petit malin » : un dépôt d'essai reste un rendu → gelé si l'élève est bloqué.
+  const blocage = await messageSiBloque(admin, user.id)
+  if (blocage) return { error: blocage, data: null }
+
   // Valider que l'inscription appartient bien à l'élève (et est active)
   const { data: insc } = await admin
     .from('inscriptions')
@@ -629,6 +634,8 @@ export async function confirmerDepotEssaiEleve(essaiId: string) {
 
   // Vérifier que l'essai appartient à l'élève
   const admin = createAdminClient()
+  const blocage = await messageSiBloque(admin, user.id)
+  if (blocage) return { error: blocage }
   const { data: essai } = await admin
     .from('fragments_essai_depots')
     .select('eleve_id')

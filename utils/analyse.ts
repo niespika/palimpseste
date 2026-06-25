@@ -2,6 +2,7 @@ import Anthropic from '@anthropic-ai/sdk'
 import { createAdminClient } from '@/utils/supabase/admin'
 import { RUBRIQUE_DEFAUT } from '@/utils/rubrique'
 import { signalDepuisIA } from '@/utils/detecteur-integrite'
+import { signalerEnAttenteIA } from '@/utils/integrite'
 
 // Structure de la réponse JSON attendue de Claude
 interface AnalyseJSON {
@@ -267,6 +268,13 @@ export async function lancerAnalyse(
       cout_api: cout,
       signal_integrite: signalDepuisIA(parsed.signal_integrite),
     }).eq('id', analyseId)
+
+    // Signal d'intégrité IA (hors-sujet / aveu) → alerte prof en attente de confirmation.
+    // Même ref que le strike auto au dépôt (`inscription:semaine`) → dédup d'un même rendu.
+    const sigIA = signalDepuisIA(parsed.signal_integrite)
+    if (sigIA && inscriptionId && depot?.semaine_id) {
+      await signalerEnAttenteIA(admin, { eleveId, module: 'fragments', renduRef: `${inscriptionId}:${depot.semaine_id}`, type: sigIA.type, motif: sigIA.motif })
+    }
 
     // Supprimer les anciennes pistes de cette analyse et recréer
     await admin.from('fragments_pistes').delete().eq('analyse_id', analyseId)

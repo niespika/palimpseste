@@ -2,6 +2,7 @@
 
 import { createClient } from '@/utils/supabase/server'
 import { createAdminClient } from '@/utils/supabase/admin'
+import { messageSiBloque } from '@/utils/integrite'
 import { fsrs, createEmptyCard, type Card, type Grade } from 'ts-fsrs'
 
 async function verifierEleve() {
@@ -69,6 +70,8 @@ export async function chargerFileRevision(): Promise<CarteRevision[]> {
 
   // Unités publiées + visibilité par (unité, semaine) — admin pour contourner RLS.
   const admin = createAdminClient()
+  // Blocage « petit malin » : la révision de flashcards est gelée (le quizz reste ouvert).
+  if (await messageSiBloque(admin, userId)) return []
   const { unitesVisibles, tuplesVisibles } = await contexteVisibiliteCartes(admin, userId)
 
   const selectCarte = `
@@ -245,6 +248,11 @@ export async function soumettreNote(
   rating: 1 | 2 | 3 | 4
 ): Promise<{ due: string; state: number; cardStateId: string | null }> {
   const { supabase, userId } = await verifierEleve()
+
+  // Garde-fou : élève bloqué → aucune mise à jour FSRS (la révision est gelée).
+  if (await messageSiBloque(createAdminClient(), userId)) {
+    return { due: new Date().toISOString(), state: 0, cardStateId }
+  }
 
   const scheduler = fsrs()
   const maintenant = new Date()

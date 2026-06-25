@@ -52,6 +52,29 @@ export function detecterAveuHeuristique(texteBrut: string | null | undefined): S
   return null
 }
 
+// Signal d'intégrité détectable SANS IA, comptabilisable en strike. Réutilise les
+// trois types ci-dessus (aveu/section) + un type 'vide' propre à la détection
+// algorithmique. (Le type complet `TypeStrike` vit dans utils/integrite.)
+export interface SignalStrike {
+  type: TypeSignalIntegrite | 'vide'
+  motif: string
+}
+
+// Rendu de texte « vide / bâclé » détectable SANS IA : champs principaux quasi
+// vides (l'élève a saisi « jsp », « . », « azerty »… juste pour valider). On
+// concatène les champs et on exige un minimum de matière. STRICT (seuil bas) :
+// une vraie réponse, même faible, dépasse largement ce seuil → faux négatifs
+// préférés. Renvoie un signal 'vide' ou null.
+const SEUIL_VIDE = 25
+export function detecterRenduVideTexte(champs: Array<string | null | undefined>): SignalStrike | null {
+  const total = champs.map(c => (c ?? '').trim()).join(' ').replace(/\s+/g, ' ').trim()
+  if (total.length === 0) return null  // un rendu réellement vide est déjà refusé en amont
+  if (total.length < SEUIL_VIDE) {
+    return { type: 'vide', motif: `Rendu quasi vide (${total.length} caractères utiles).` }
+  }
+  return null
+}
+
 // Normalise le champ `signal_integrite` renvoyé par l'éval IA (pass 2). `aucun`,
 // inconnu ou absent → null (RAS, cas par défaut).
 export function signalDepuisIA(brut: unknown): SignalIntegrite | null {

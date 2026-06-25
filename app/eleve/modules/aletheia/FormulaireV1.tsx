@@ -34,6 +34,7 @@ export default function FormulaireV1({
   const [vocabulaire, setVocabulaire] = useState(vocabulaireInitial)
   const [chargement, setChargement] = useState(false)
   const [erreur, setErreur] = useState<string | null>(null)
+  const [avertissement, setAvertissement] = useState<string | null>(null)
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -50,10 +51,24 @@ export default function FormulaireV1({
         these, arguments: args, accord, questions: qs, vocabulaire: voc,
       })
       if (res?.error) { setErreur(res.error); return }
+      // Rendu accepté mais signalé « petit malin » : on montre le message avant de continuer.
+      if (res?.avertissement) { setAvertissement(res.avertissement); return }
       router.refresh()
     } finally {
       setChargement(false)
     }
+  }
+
+  if (avertissement) {
+    return (
+      <div className="bg-attention-teinte border border-attention rounded-xl p-5 space-y-3">
+        <p className="text-sm text-attention">{avertissement}</p>
+        <button onClick={() => router.refresh()}
+          className="text-sm font-medium text-attention underline hover:opacity-80">
+          J’ai compris →
+        </button>
+      </div>
+    )
   }
 
   return (

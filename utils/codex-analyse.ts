@@ -1,5 +1,7 @@
 import Anthropic from '@anthropic-ai/sdk'
 import { createAdminClient } from '@/utils/supabase/admin'
+import { signalDepuisIA } from '@/utils/detecteur-integrite'
+import { signalerEnAttenteIA } from '@/utils/integrite'
 
 // ── Prompt par défaut — suggestions V1 ──────────────────────────────────────
 export const PROMPT_V1_DEFAUT = `Tu assistes un professeur de philosophie. Un élève vient d'écrire DE MÉMOIRE, livre fermé et à la main, une synthèse récapitulative d'une unité de cours. Tu disposes des photos de sa V1 et du contenu exact de l'unité — cours ET textes (le Scriptorium). Codex est un outil de CONSOLIDATION, pas de notation : aucune note, aucun chiffre. Le but est d'aider l'élève à voir ses trous et à oser les exposer.
@@ -21,13 +23,17 @@ export const PROMPT_V1_DEFAUT = `Tu assistes un professeur de philosophie. Un é
 - Sois concis : chaque "titre" tient en une ligne, chaque "detail" en 1-2 phrases. Tutoie l'élève.
 - Le total oublis + erreurs ne doit pas dépasser ~8.
 
+## Signal d'intégrité (PROF-ONLY — ne le mentionne JAMAIS à l'élève)
+Repère UNIQUEMENT les cas FLAGRANTS où la copie ne « joue pas le jeu » : "hors_sujet" (page blanche, gribouillage, ou contenu sans aucun rapport avec l'unité), "aveu_non_travail" (l'élève a écrit qu'il n'a rien fait), sinon "aucun". STRICT : au moindre doute → "aucun" (une synthèse de mémoire est forcément lacunaire ; ce n'est PAS un signal). Une faible confiance OCR n'est PAS un signal.
+
 ## Format de réponse — UNIQUEMENT un objet JSON valide, sans texte autour :
 {
   "transcription": "...",
   "ocr_confiance": 0.0,
   "oublis": [ { "titre": "...", "detail": "..." } ],
   "erreurs": [ { "type": "factuelle" | "ambiguite", "titre": "...", "detail": "..." } ],
-  "ortho": "..." | null
+  "ortho": "..." | null,
+  "signal_integrite": { "type": "aucun | hors_sujet | aveu_non_travail", "motif": "phrase courte (ou vide si aucun)" }
 }`
 
 interface V1JSON {
@@ -165,6 +171,10 @@ export async function analyserV1(travailId: string): Promise<void> {
       analyse_v1_statut: 'prete',
       cout_api: cout,
     }).eq('id', travailId)
+
+    // Signal d'intégrité IA (page blanche / hors-sujet) → alerte prof à confirmer.
+    const sigIA = signalDepuisIA((parsed as { signal_integrite?: unknown }).signal_integrite)
+    if (sigIA) await signalerEnAttenteIA(admin, { eleveId: travail.eleve_id as string, module: 'codex', renduRef: travailId, type: sigIA.type, motif: sigIA.motif })
   } catch {
     await admin.from('codex_travaux').update({ analyse_v1_statut: 'erreur' }).eq('id', travailId)
   }
@@ -202,8 +212,12 @@ export const PROMPT_VF_DEFAUT = `Tu assistes un professeur de philosophie. Un é
   "pouvait_aller_plus_loin": [ "..." ],
   "non_ameliore": [ "..." ],
   "synthese_completee": "... [AJOUT] ... [/AJOUT] ...",
-  "ajouts": [ { "titre": "...", "contenu": "..." } ]
-}`
+  "ajouts": [ { "titre": "...", "contenu": "..." } ],
+  "signal_integrite": { "type": "aucun | hors_sujet | aveu_non_travail", "motif": "phrase courte (ou vide si aucun)" }
+}
+
+## Signal d'intégrité (PROF-ONLY — ne le mentionne JAMAIS à l'élève)
+Renseigne "signal_integrite" UNIQUEMENT pour un cas FLAGRANT : "hors_sujet" (page blanche, gribouillage, rien à voir avec l'unité), "aveu_non_travail" (aveu de non-travail), sinon "aucun". STRICT : au moindre doute → "aucun".`
 
 interface VFJSON {
   transcription: string
@@ -334,6 +348,11 @@ export async function analyserVF(travailId: string): Promise<void> {
       analyse_vf_statut: 'prete',
       cout_api: cout,
     }).eq('id', travailId)
+
+    // Signal d'intégrité IA sur la VF — ref distincte de la V1 (cohérent avec Aletheia :
+    // V1 et VF sont deux rendus, donc deux strikes possibles).
+    const sigIA = signalDepuisIA((parsed as { signal_integrite?: unknown }).signal_integrite)
+    if (sigIA) await signalerEnAttenteIA(admin, { eleveId: travail.eleve_id as string, module: 'codex', renduRef: `${travailId}:vf`, type: sigIA.type, motif: sigIA.motif })
   } catch {
     await admin.from('codex_travaux').update({ analyse_vf_statut: 'erreur' }).eq('id', travailId)
   }

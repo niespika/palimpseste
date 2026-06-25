@@ -24,6 +24,7 @@ export default function FormulaireVf({ livreId, semaine, theseInitial = '', argu
   const [accord, setAccord] = useState(accordInitial)
   const [chargement, setChargement] = useState(false)
   const [erreur, setErreur] = useState<string | null>(null)
+  const [avertissement, setAvertissement] = useState<string | null>(null)
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -35,10 +36,23 @@ export default function FormulaireVf({ livreId, semaine, theseInitial = '', argu
     try {
       const res = await soumettreVf(livreId, semaine, { these_vf: these, arguments_vf: args, accord_vf: accord })
       if (res?.error) { setErreur(res.error); return }
+      if (res?.avertissement) { setAvertissement(res.avertissement); return }
       router.refresh()
     } finally {
       setChargement(false)
     }
+  }
+
+  if (avertissement) {
+    return (
+      <div className="bg-attention-teinte border border-attention rounded-xl p-5 space-y-3">
+        <p className="text-sm text-attention">{avertissement}</p>
+        <button onClick={() => router.refresh()}
+          className="text-sm font-medium text-attention underline hover:opacity-80">
+          J’ai compris →
+        </button>
+      </div>
+    )
   }
 
   return (

@@ -91,6 +91,15 @@ export default async function ProfAccueil({ searchParams }: { searchParams: Prom
   const aValiderParClasse = new Map<string, number>()
   for (const v of aValider) if (v.classeId) aValiderParClasse.set(v.classeId, (aValiderParClasse.get(v.classeId) ?? 0) + 1)
 
+  // ── Zone 1 : intégrité (« petits malins ») — signalements à traiter + bloqués ─
+  const [{ count: nbSignalements }, { count: nbBloques }, { data: integriteParams }] = await Promise.all([
+    admin.from('integrite_signalements').select('id', { count: 'exact', head: true }).is('acquitte_at', null),
+    admin.from('profiles').select('id', { count: 'exact', head: true }).eq('integrite_bloque', true),
+    admin.from('integrite_params').select('actif').eq('id', 1).maybeSingle(),
+  ])
+  // Détection désactivée → les élèves ne sont plus bloqués de facto : on n'alerte pas.
+  const integriteActive = integriteParams?.actif ?? true
+
   // ── Zone 2 : santé de la cohorte (par inscription) ──────────────────────────
   const santeValues = [...sante.values()]
   const totalSuivi = santeValues.length
@@ -177,6 +186,17 @@ export default async function ProfAccueil({ searchParams }: { searchParams: Prom
       <section className="space-y-3">
         <h3 className="text-sm font-medium text-muet uppercase tracking-wide">À faire</h3>
         <RappelsClasses classes={rappels} />
+        {integriteActive && ((nbSignalements ?? 0) > 0 || (nbBloques ?? 0) > 0) && (
+          <Link href="/prof/integrite" className="block bg-attention-teinte border border-attention rounded-xl px-5 py-4 hover:opacity-90 transition-opacity">
+            <p className="text-sm font-medium text-attention">Intégrité — petits malins</p>
+            <p className="text-sm text-attention mt-0.5">
+              {(nbBloques ?? 0) > 0 && <>{nbBloques} élève{(nbBloques ?? 0) > 1 ? 's' : ''} bloqué{(nbBloques ?? 0) > 1 ? 's' : ''}</>}
+              {(nbBloques ?? 0) > 0 && (nbSignalements ?? 0) > 0 && ' · '}
+              {(nbSignalements ?? 0) > 0 && <>{nbSignalements} signalement{(nbSignalements ?? 0) > 1 ? 's' : ''} à traiter</>}
+              <span className="text-attention"> · Gérer →</span>
+            </p>
+          </Link>
+        )}
         {tachesCal.length > 0 && (
           <div className="bg-surface border border-bordure rounded-xl px-5 py-4">
             <p className="text-sm font-medium text-encre mb-2">À préparer (échéances proches)</p>

@@ -28,6 +28,7 @@ export const NAV_PROF: NavTab[] = [
       { label: 'Élèves', href: '/prof/eleves' },
       { label: 'Classes', href: '/prof/classes' },
       { label: 'Calendrier', href: '/prof/calendrier' },
+      { label: 'Intégrité', href: '/prof/integrite' },
     ],
   },
   {
