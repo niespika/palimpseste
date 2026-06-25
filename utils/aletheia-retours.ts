@@ -716,7 +716,7 @@ ARGS>>>
 
 ## Ta tâche — inventaire, AUCUN niveau ni note :
 - these_eleve : reformule en UNE phrase neutre l'idée que l'élève a voulu exprimer (à travers sa prose).
-- these_mal_definie : true si CE chapitre ne porte pas de thèse argumentative nette (descriptif/poétique), OU si l'élève n'exprime aucune idée identifiable.
+- these_mal_definie : true UNIQUEMENT si CE chapitre lui-même ne porte pas de thèse argumentative (chapitre purement descriptif/narratif/poétique). ⚠️ NE le mets PAS à true parce que l'élève n'exprime aucune idée : un élève qui n'a rien saisi sur un chapitre argumentatif reste these_mal_definie=false (cela donnera un niveau bas, pas « non applicable »). Au moindre doute → false.
 - arguments_captes / arguments_rates / arguments_deformes : parmi les arguments RÉELS de l'auteur dans CE chapitre, lesquels l'élève capte / rate / déforme.
 - note : remarque factuelle brève.
 
@@ -747,7 +747,7 @@ Arguments clés : {ref_arguments}
 - A = Acquis : complet et juste.
 
 ## Ta tâche (deux axes SÉPARÉS)
-- niveau_these : E→A pour la SAISIE DE LA THÈSE. ⚠️ Si l'inventaire indique these_mal_definie=true → renvoie null pour niveau_these et these_mal_definie=true (n'invente PAS de niveau : l'axe thèse est bruité sur les chapitres non argumentatifs).
+- niveau_these : E→A pour la SAISIE DE LA THÈSE. ⚠️ Détermine these_mal_definie depuis la RÉFÉRENCE ci-dessus, PAS depuis l'inventaire : mets-le à true UNIQUEMENT si la référence elle-même indique que le chapitre n'a pas de thèse argumentative nette (ex. « pas de thèse argumentative nette », chapitre descriptif) → alors niveau_these=null. SINON these_mal_definie=false et tu DOIS donner une lettre E→A : E si l'élève n'a exprimé aucune idée juste ou fait un contresens — JAMAIS null sur un chapitre argumentatif.
 - niveau_arguments : E→A pour la RESTITUTION DES ARGUMENTS (capte vs rate/déforme, par rapport à la référence). C'est l'axe le plus robuste.
 
 ## Format — UNIQUEMENT un objet JSON valide (lettres E,D,C,B,A ou null) :
@@ -793,7 +793,6 @@ async function diagnostiquerPhase(
     ref_arguments: ref && ref.arguments_cles.length > 0 ? ref.arguments_cles.map(a => `- ${a}`).join('\n') : '(référence indisponible)',
     inventaire: JSON.stringify({
       these_eleve: inventaire.these_eleve,
-      these_mal_definie: inventaire.these_mal_definie,
       arguments_captes: inventaire.arguments_captes,
       arguments_rates: inventaire.arguments_rates,
       arguments_deformes: inventaire.arguments_deformes,
@@ -804,7 +803,9 @@ async function diagnostiquerPhase(
   if (rNiv.stop_reason === 'max_tokens') throw new Error('Niveau tronqué.')
   const niv = JSON.parse(extraireJSON(rNiv.content[0]?.type === 'text' ? rNiv.content[0].text : '')) as { niveau_these?: unknown; niveau_arguments?: unknown; these_mal_definie?: unknown }
 
-  const malDef = niv.these_mal_definie === true || inventaire.these_mal_definie
+  // mal_definie décidé par la phase 2 SEULE (depuis la référence), pas par l'inférence
+  // par élève de la phase 1 (qui confondait « chapitre sans thèse » et « élève sans idée »).
+  const malDef = niv.these_mal_definie === true
   return {
     inventaire,
     niveaux: {
