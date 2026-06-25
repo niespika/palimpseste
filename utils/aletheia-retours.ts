@@ -783,7 +783,7 @@ async function diagnostiquerPhase(
     these: sansDelims(these) || '(rien)',
     arguments: sansDelims(args) || '(rien)',
   })
-  const rInv = await client.messages.create({ model: MODELE, max_tokens: 2048, messages: [{ role: 'user', content: pInv }] })
+  const rInv = await client.messages.create({ model: MODELE, max_tokens: 2048, temperature: 0, messages: [{ role: 'user', content: pInv }] })
   await enregistrerCoutApi('aletheia', coutMessage(rInv.usage))
   if (rInv.stop_reason === 'max_tokens') throw new Error('Inventaire tronqué.')
   const inventaire = parseInventaire(JSON.parse(extraireJSON(rInv.content[0]?.type === 'text' ? rInv.content[0].text : '')) as Partial<InventaireDiagnostic>)
@@ -799,7 +799,7 @@ async function diagnostiquerPhase(
       arguments_deformes: inventaire.arguments_deformes,
     }, null, 2),
   })
-  const rNiv = await client.messages.create({ model: MODELE, max_tokens: 512, messages: [{ role: 'user', content: pNiv }] })
+  const rNiv = await client.messages.create({ model: MODELE, max_tokens: 512, temperature: 0, messages: [{ role: 'user', content: pNiv }] })
   await enregistrerCoutApi('aletheia', coutMessage(rNiv.usage))
   if (rNiv.stop_reason === 'max_tokens') throw new Error('Niveau tronqué.')
   const niv = JSON.parse(extraireJSON(rNiv.content[0]?.type === 'text' ? rNiv.content[0].text : '')) as { niveau_these?: unknown; niveau_arguments?: unknown; these_mal_definie?: unknown }
