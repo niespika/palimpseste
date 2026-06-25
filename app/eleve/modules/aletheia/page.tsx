@@ -13,7 +13,7 @@ const BADGE: Record<StatutAletheia, { texte: string; classe: string }> = {
   FEEDBACK1_READY: { texte: 'Retour à lire', classe: 'bg-attention-teinte text-attention' },
   VF_SUBMITTED: { texte: 'Version finale soumise', classe: 'bg-attention-teinte text-attention' },
   FEEDBACK2_READY: { texte: 'Retour final à valider', classe: 'bg-attention-teinte text-attention' },
-  DONE: { texte: 'Terminée', classe: 'bg-ok-teinte text-ok' },
+  DONE: { texte: 'Terminée', classe: 'bg-pigment-teinte text-pigment' },
 }
 
 function fmtJourMois(iso: string | null | undefined): string {
@@ -34,7 +34,7 @@ function MicroStepper({ statut, taille = 'normal' }: { statut: StatutAletheia; t
       {[0, 1, 2, 3].map((i) => {
         const plein = done || i < courant
         const actif = !done && statut !== 'DRAFT' && i === courant
-        return <span key={i} className={`${d} rounded-full ${plein ? 'bg-ok' : actif ? 'bg-pigment' : 'border border-bordure'}`} />
+        return <span key={i} className={`${d} rounded-full ${plein || actif ? 'bg-pigment' : 'border border-bordure'}`} />
       })}
     </div>
   )
@@ -119,7 +119,7 @@ export default async function PageAletheia() {
                   </span>
                   <span className="font-ui text-sm text-encre-douce whitespace-nowrap shrink-0 hidden sm:inline">semaines terminées</span>
                   <div className="flex-1 h-2 bg-bordure rounded-full overflow-hidden">
-                    <div className="h-full bg-ok transition-all" style={{ width: `${Math.round((nbDone / total) * 100)}%` }} />
+                    <div className="h-full bg-pigment transition-all" style={{ width: `${Math.round((nbDone / total) * 100)}%` }} />
                   </div>
                   {couranteNum != null && (
                     <span className="font-ui text-xs text-pigment bg-pigment-teinte px-2.5 py-1 rounded-full whitespace-nowrap shrink-0">Semaine {couranteNum} t&apos;attend</span>

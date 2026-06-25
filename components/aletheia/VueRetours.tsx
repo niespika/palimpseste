@@ -3,7 +3,7 @@ import type { RetourV1, RetourVF } from '@/app/eleve/modules/aletheia/types'
 // Rendu partagé des retours Aletheia (page semaine élève + drill-down prof).
 // Objectif ergonomie ado (SPEC §3) : bulles dédiées, priorisées, pas de pavé.
 
-type Accent = 'violet' | 'amber' | 'green' | 'stone' | 'sky'
+type Accent = 'violet' | 'amber' | 'green' | 'stone' | 'sky' | 'minium' | 'pigment' | 'or'
 
 const ACCENT: Record<Accent, string> = {
   violet: 'border-l-liseret',
@@ -11,6 +11,9 @@ const ACCENT: Record<Accent, string> = {
   green: 'border-l-ok',
   stone: 'border-l-bordure',
   sky: 'border-l-info',
+  minium: 'border-l-minium',   // rouge #B4452F (Aletheia)
+  pigment: 'border-l-pigment', // bleu outremer #2C4A7C
+  or: 'border-l-liseret',      // or #B8893B (= liseret Aletheia)
 }
 
 export function Bulle({ titre, accent = 'stone', children }: { titre: string; accent?: Accent; children: React.ReactNode }) {
@@ -46,7 +49,7 @@ export function VueRetourV1({ retour, montrerRemarque = false }: { retour: Retou
         </Bulle>
       )}
       {retour.reponses_questions?.length > 0 && (
-        <Bulle titre="Réponses à tes questions" accent="green">
+        <Bulle titre="Réponses à tes questions" accent="minium">
           <Liste items={retour.reponses_questions} />
         </Bulle>
       )}
@@ -71,17 +74,19 @@ export function VueRetourV1({ retour, montrerRemarque = false }: { retour: Retou
 }
 
 // ── Retour VF — reconstruction + architecture, en bulles dédiées ──────────────
-export function VueRetourVF({ retour }: { retour: RetourVF }) {
+// `masquerSynthese` : la synthèse est déjà mise en avant en tête de la revue DONE
+// → on l'omet dans le détail replié pour éviter le doublon.
+export function VueRetourVF({ retour, masquerSynthese = false }: { retour: RetourVF; masquerSynthese?: boolean }) {
   return (
     <div className="space-y-3">
-      {retour.synthese_modele && (
+      {!masquerSynthese && retour.synthese_modele && (
         <Bulle titre="Synthèse modèle" accent="violet">
           <p className="text-sm text-encre-douce whitespace-pre-wrap leading-relaxed">{retour.synthese_modele}</p>
         </Bulle>
       )}
 
       {retour.ajouts_verifies?.length > 0 && (
-        <Bulle titre="Ce que tu as ajouté en réécrivant" accent="amber">
+        <Bulle titre="Ce que tu as ajouté en réécrivant" accent="pigment">
           <ul className="space-y-2 text-sm">
             {retour.ajouts_verifies.map((a, i) => (
               <li key={i} className="flex gap-2">
@@ -100,13 +105,13 @@ export function VueRetourVF({ retour }: { retour: RetourVF }) {
       )}
 
       {retour.nuances_et_erreurs?.length > 0 && (
-        <Bulle titre="Nuances et points à revoir" accent="stone">
+        <Bulle titre="Nuances et points à revoir" accent="or">
           <Liste items={retour.nuances_et_erreurs} />
         </Bulle>
       )}
 
       {(retour.architecture_amont?.length > 0 || retour.architecture_aval_jalons?.length > 0) && (
-        <Bulle titre="Architecture de ce que tu as lu" accent="green">
+        <Bulle titre="Architecture de ce que tu as lu" accent="minium">
           {retour.architecture_amont?.length > 0 && (
             <div className="mb-2">
               <p className="text-xs font-medium text-encre-douce mb-1">Ce que tu as déjà vu</p>

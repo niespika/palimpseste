@@ -33,11 +33,11 @@ function Stepper({ statut }: { statut: StatutAletheia }) {
         return (
           <li key={label} className="flex items-center gap-1.5 shrink-0">
             <span className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-medium ${
-              fait ? 'bg-ok text-surface' : actif ? 'bg-pigment text-surface' : 'bg-parchemin-fonce text-muet'
+              fait || actif ? 'bg-pigment text-surface' : 'bg-parchemin-fonce text-muet'
             }`}>
               {fait ? '✓' : i + 1}
             </span>
-            <span className={`font-ui whitespace-nowrap ${actif ? 'text-pigment font-medium' : fait ? 'text-encre-douce' : 'text-muet'}`}>{label}</span>
+            <span className={`font-ui whitespace-nowrap ${actif ? 'text-pigment font-medium' : fait ? 'text-pigment' : 'text-muet'}`}>{label}</span>
             {i < ETAPES_SEMAINE.length - 1 && <span className="text-bordure" aria-hidden>·</span>}
           </li>
         )
@@ -132,8 +132,8 @@ function RevueDone({ t, evalQuestions }: { t: TravailAletheia; evalQuestions: bo
 
       {/* 3. Ce que cette semaine t'a dévoilé — le fil entre les semaines. */}
       {(amont.length > 0 || aval.length > 0) && (
-        <section className="bg-surface border border-bordure border-l-4 border-l-ok rounded-xl p-4 sm:p-5 space-y-3">
-          <p className="font-ui text-xs tracking-[0.1em] text-ok uppercase">Ce que cette semaine t&apos;a dévoilé</p>
+        <section className="bg-surface border border-bordure border-l-4 border-l-liseret rounded-xl p-4 sm:p-5 space-y-3">
+          <p className="font-ui text-xs tracking-[0.1em] text-attention uppercase">Ce que cette semaine t&apos;a dévoilé</p>
           {amont.length > 0 && (
             <div>
               <p className="text-xs text-muet mb-1">Ce que tu as déjà vu</p>
@@ -158,7 +158,7 @@ function RevueDone({ t, evalQuestions }: { t: TravailAletheia; evalQuestions: bo
           </Repli>
         )}
         <Repli titre="Le retour final complet — nuances, ajouts vérifiés">
-          <VueRetourVF retour={rv} />
+          <VueRetourVF retour={rv} masquerSynthese />
         </Repli>
         <Repli titre="Ta saisie initiale — arguments, accord, questions, vocabulaire">
           <Champ label="Arguments" valeur={t.arguments} />
@@ -233,7 +233,7 @@ export default async function PageSemaineAletheia({ params }: { params: Promise<
             <h2 className="font-titre text-2xl text-encre leading-tight">Semaine {semaine} — {sem.titre}</h2>
           </div>
           {statut === 'DONE' && (
-            <span className="font-ui text-xs sm:text-sm text-ok bg-ok-teinte px-3 py-1.5 rounded-full whitespace-nowrap shrink-0">
+            <span className="font-ui text-xs sm:text-sm text-minium bg-minium-teinte px-3 py-1.5 rounded-full whitespace-nowrap shrink-0">
               ✓ Terminée{dateFin ? ` le ${dateFin}` : ''}
             </span>
           )}

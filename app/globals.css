@@ -39,7 +39,7 @@
    hérite alors de --pigment / --pigment-teinte / --fond-module.            */
 [data-module="palimpseste"] { --pigment:#5A4632; --pigment-teinte:#E8DFCB; --fond-module:#F4EFE6; --bouton:#5A4632; --liseret:#5A4632; }
 [data-module="aletheia"]    { --pigment:#2C4A7C; --pigment-teinte:#DDE3EC; --fond-module:#F3ECDD;
-                              --or:#B8893B; --minium:#B4452F; --bouton:#B4452F; --liseret:#B8893B; }
+                              --or:#B8893B; --minium:#B4452F; --minium-teinte:#F0DBD3; --bouton:#B4452F; --liseret:#B8893B; }
 [data-module="fragments"]   { --pigment:#616E30; --pigment-teinte:#E2E3D2; --fond-module:#EFE9DC;
                               --terracotta:#B26A4A; --bouton:#B26A4A; --liseret:#616E30; }
 [data-module="codex"]       { --pigment:#2E4A3C; --pigment-teinte:#DCE6DF; --fond-module:#F0EADE;
@@ -70,6 +70,9 @@
   --color-pigment-teinte:  var(--pigment-teinte);
   --color-bouton:          var(--bouton);    /* bg-bouton, text-bouton, border-bouton */
   --color-liseret:         var(--liseret);   /* border-l-liseret */
+  /* minium (accent rouge du monde, ex. Aletheia) : text-minium / border-l-minium / bg-minium-teinte */
+  --color-minium:          var(--minium);
+  --color-minium-teinte:   var(--minium-teinte);
 
   /* polices (variables fournies par next/font — voir layout.tsx) */
   --font-marque: var(--police-marque);   /* Cinzel        */
