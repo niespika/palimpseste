@@ -1,11 +1,14 @@
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import { createClient } from '@/utils/supabase/server'
-import { chargerEtatTravail, chargerTrace } from '../../actions'
+import { chargerEtatTravail, chargerTrace, marquerSyntheseLue } from '../../actions'
 import { EcranV1 } from './EcranV1'
 import { EcranVF } from './EcranVF'
-import { TraceAffichage } from './TraceAffichage'
-import { BoutonLu } from './BoutonLu'
+import { tuilesTrace } from './TraceAffichage'
+import ValidationLecture from '@/components/retours/ValidationLecture'
+import BanniereRetoursNonLus from '@/components/retours/BanniereRetoursNonLus'
+import { retoursNonLus } from '@/utils/retours-lus'
+import { createAdminClient } from '@/utils/supabase/admin'
 import Pastille from '@/components/Pastille'
 import { CONSIGNE_V1_DEFAUT, CONSIGNE_VF_DEFAUT } from '../../consignes'
 
@@ -35,6 +38,10 @@ export default async function SyntheseElevePage({
   const etat = await chargerEtatTravail(sessionId)
   const trace = session.statut === 'fermee' ? await chargerTrace(sessionId) : null
 
+  // Bannière de blocage transversal sur les phases de rendu (V1 / VF).
+  const enRendu = session.statut === 'phase_1' || session.statut === 'phase_2'
+  const retoursALire = enRendu ? await retoursNonLus(createAdminClient(), user.id) : []
+
   // Consignes « comment faire » éditables par le prof (T6) ; repli sur le défaut.
   const { data: paramsCodex } = await supabase.from('codex_params').select('consigne_v1, consigne_vf').eq('id', 1).maybeSingle()
   const consigneV1 = paramsCodex?.consigne_v1 || CONSIGNE_V1_DEFAUT
@@ -63,6 +70,8 @@ export default async function SyntheseElevePage({
         {session.statut === 'brouillon' && 'La synthèse n\'a pas encore démarré.'}
       </p>
 
+      {enRendu && <BanniereRetoursNonLus retours={retoursALire} />}
+
       {session.statut === 'phase_1' && <EcranV1 sessionId={sessionId} initial={etat} consigne={consigneV1} />}
 
       {session.statut === 'phase_2' && <EcranVF sessionId={sessionId} initial={etat} consigne={consigneVf} />}
@@ -72,11 +81,14 @@ export default async function SyntheseElevePage({
           <div className="space-y-6">
             {!trace.lu && (
               <div className="bg-attention-teinte border border-attention rounded-xl px-4 py-3 text-sm text-attention">
-                À faire : lis ton retour, puis marque-le comme lu en bas de page.
+                À faire : lis ton retour, coche chaque partie, puis valide-le en bas de page.
               </div>
             )}
-            <TraceAffichage trace={trace} />
-            <BoutonLu sessionId={sessionId} luInitial={trace.lu} />
+            <ValidationLecture
+              tuiles={tuilesTrace(trace)}
+              dejaLu={trace.lu}
+              marquerAction={marquerSyntheseLue.bind(null, sessionId)}
+            />
           </div>
         ) : (
           <div className="bg-surface border border-bordure rounded-xl p-8 text-center text-muet text-sm">

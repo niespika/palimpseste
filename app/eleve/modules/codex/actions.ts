@@ -6,6 +6,7 @@ import { createClient } from '@/utils/supabase/server'
 import { createAdminClient } from '@/utils/supabase/admin'
 import { classeIdsActives } from '@/utils/acces'
 import { messageSiBloque } from '@/utils/integrite'
+import { messageSiRetoursNonLus } from '@/utils/retours-lus'
 
 async function verifierEleve() {
   const supabase = await createClient()
@@ -182,6 +183,11 @@ export async function creerUploadsPhotos(sessionId: string, phase: Phase, nb: nu
   const blocage = await messageSiBloque(admin, userId)
   if (blocage) return { error: blocage, data: null }
 
+  // Lecture des retours (transversal) : pas de nouveau rendu tant qu'un retour, dans
+  // n'importe quel module, n'est pas lu et validé.
+  const gateLecture = await messageSiRetoursNonLus(admin, userId)
+  if (gateLecture) return { error: gateLecture, data: null }
+
   // Effacer les anciennes photos de cette phase
   const prefix = `${userId}/${sessionId}/${phase}`
   const { data: existants } = await admin.storage.from('codex').list(prefix)
@@ -209,6 +215,11 @@ export async function confirmerEnvoiPhotos(sessionId: string, phase: Phase, path
   // Blocage « petit malin » : plus aucun envoi tant que le prof n'a pas débloqué.
   const blocage = await messageSiBloque(admin, userId)
   if (blocage) return { error: blocage }
+
+  // Lecture des retours (transversal) : pas de nouveau rendu tant qu'un retour, dans
+  // n'importe quel module, n'est pas lu et validé.
+  const gateLecture = await messageSiRetoursNonLus(admin, userId)
+  if (gateLecture) return { error: gateLecture }
 
   // Les chemins doivent appartenir à cet élève / cette synthèse / cette phase
   const prefix = `${userId}/${sessionId}/${phase}/`

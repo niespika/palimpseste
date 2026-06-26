@@ -1,6 +1,8 @@
 'use server'
 
+import { revalidatePath } from 'next/cache'
 import { createClient } from '@/utils/supabase/server'
+import { createAdminClient } from '@/utils/supabase/admin'
 import { calculerScoreBrier, JETONS_NEUTRE, shuffleArray } from '@/utils/brier'
 
 async function verifierEleve() {
@@ -352,5 +354,47 @@ export async function chargerRetourQuizz(quizId: string): Promise<{
     questions: result,
     scoreMoyen: scoreData?.score_moyen ?? null,
     noteFormative: scoreData?.note_formative_20 ?? null,
+  }
+}
+
+// L'élève a-t-il déjà validé avoir vu sa note de quizz ? (best-effort : false si la
+// colonne note_vue_at n'est pas encore migrée — cf. retours_lus.sql).
+export async function etatNoteVue(quizId: string): Promise<boolean> {
+  try {
+    const { supabase, userId } = await verifierEleve()
+    const { data } = await supabase
+      .from('quazian_quiz_scores')
+      .select('note_vue_at')
+      .eq('quiz_id', quizId)
+      .eq('eleve_id', userId)
+      .maybeSingle()
+    return !!data?.note_vue_at
+  } catch {
+    return false
+  }
+}
+
+// Validation « j'ai vu ma note » (source transversale). Quazian reste TOUJOURS
+// ouvert : ne pas valider ne bloque rien dans Quazian, mais bloque les rendus des
+// AUTRES modules tant que la note n'est pas vue. Idempotent.
+export async function marquerNoteVue(quizId: string): Promise<{ success: true } | { error: string }> {
+  try {
+    const { userId } = await verifierEleve()
+    const admin = createAdminClient()
+    // La note n'est « à valider » que si le quizz est corrigé (fermé) et qu'un score existe.
+    const { data: quizz } = await admin.from('quazian_quizzes').select('statut').eq('id', quizId).single()
+    if (quizz?.statut !== 'ferme') return { error: 'Le quizz n’est pas encore corrigé.' }
+    const { error } = await admin
+      .from('quazian_quiz_scores')
+      .update({ note_vue_at: new Date().toISOString() })
+      .eq('quiz_id', quizId)
+      .eq('eleve_id', userId)
+      .is('note_vue_at', null)
+    if (error) return { error: 'Action indisponible pour le moment, réessaie.' }
+    revalidatePath(`/eleve/modules/quazian/quizz/${quizId}`)
+    revalidatePath('/eleve/modules/quazian')
+    return { success: true }
+  } catch {
+    return { error: 'Action indisponible pour le moment, réessaie.' }
   }
 }

@@ -6,13 +6,15 @@ import { inscriptionsModuleEleve } from '@/utils/acces'
 import { contexteClasseEleve } from '../../contexte-classe'
 import Tuile from '@/components/Tuile'
 import FormulaireDepot from './FormulaireDepot'
-import BoutonLectureRetour from './BoutonLectureRetour'
-import AnalysePubliee from './AnalysePubliee'
+import AnalysePubliee, { tuilesAnalyseEcrite } from './AnalysePubliee'
 import GraphiqueProgression from '@/components/fragments/GraphiqueProgression'
 import AnalyseOralePubliee from './AnalyseOralePubliee'
 import EssaiDepot from './EssaiDepot'
-import EssaiPublie from './EssaiPublie'
+import { tuilesAnalyseEssai } from './EssaiPublie'
 import BilanSemestre from './BilanSemestre'
+import ValidationLecture from '@/components/retours/ValidationLecture'
+import { validerLectureRetour, validerLectureRetourEssai } from './actions'
+import { retoursNonLus } from '@/utils/retours-lus'
 import type { FragmentAnalyse, FragmentPiste, FragmentOral, FragmentAnalyseOrale, EssaiDepotAnalyse, FragmentSynthese } from '@/types/fragments'
 import type { PointSemaine } from '@/components/fragments/GraphiqueProgression'
 
@@ -26,7 +28,7 @@ function formatDateLimite(dateStr: string) {
   })
 }
 
-export default async function PageFragments({ searchParams }: { searchParams: Promise<{ vue?: string }> }) {
+export default async function PageFragments({ searchParams }: { searchParams: Promise<{ vue?: string; inscription?: string }> }) {
   const supabase = await createClient()
   const admin = createAdminClient()
   const { data: { user } } = await supabase.auth.getUser()
@@ -60,14 +62,20 @@ export default async function PageFragments({ searchParams }: { searchParams: Pr
     )
   }
 
-  // Contexte de classe courant (commutateur global du Lot 9, cookie partagé).
-  // On retient l'inscription du cookie si elle a le module, sinon la 1ʳᵉ.
-  const { active } = await contexteClasseEleve(supabase, user.id)
-  const inscriptionActive = inscriptions.find(i => i.id === active?.id) ?? inscriptions[0]
-  const inscriptionId = inscriptionActive.id
-
-  const { vue: vueParam } = await searchParams
+  const { vue: vueParam, inscription: inscriptionParam } = await searchParams
   const vue = vueParam === 'oral' || vueParam === 'essai' || vueParam === 'synthese' ? vueParam : 'ecrit'
+
+  // Contexte de classe courant (commutateur global du Lot 9, cookie partagé).
+  // Un lien de la bannière transversale peut cibler une autre classe via ?inscription=
+  // (cas du retour non lu dans une classe non affichée) : on l'honore s'il correspond
+  // à une inscription valide de l'élève (sinon cookie, sinon 1ʳᵉ). Aucun risque de fuite :
+  // inscriptions ne contient que les inscriptions actives de l'élève pour ce module.
+  const { active } = await contexteClasseEleve(supabase, user.id)
+  const inscriptionActive =
+    (inscriptionParam ? inscriptions.find(i => i.id === inscriptionParam) : undefined)
+    ?? inscriptions.find(i => i.id === active?.id)
+    ?? inscriptions[0]
+  const inscriptionId = inscriptionActive.id
 
   // Thème du semestre courant (un thème par inscription × semestre). L'élève
   // n'a pas de sélecteur : il voit toujours le semestre marqué « courant ».
@@ -396,6 +404,11 @@ export default async function PageFragments({ searchParams }: { searchParams: Pr
   const gateActif = !!derniereAnalyseEcrite && !(derniereAnalyseEcrite as unknown as { retour_lu_at?: string | null }).retour_lu_at
   const rappelPistes = pistesDerniere.slice(0, 3)
 
+  // Gate de lecture TRANSVERSAL : tout retour non lu (n'importe quel module) bloque
+  // le dépôt écrit. Le dépôt d'ESSAI, lui, reste ouvert (travail noté) → non gaté ici.
+  // Calculé uniquement sur la vue écrite (seule consommatrice ; ~10 requêtes évitées ailleurs).
+  const retoursALire = vue === 'ecrit' ? await retoursNonLus(admin, user.id) : []
+
   const aOral = Object.keys(oralParSemaine).length > 0
   const couleurEcrit: 'vert' | 'rouge' | 'neutre' = !semaine ? 'neutre' : (!depotActuel || gateActif) ? 'rouge' : 'vert'
   const couleurOral: 'vert' | 'neutre' = aOral ? 'vert' : 'neutre'
@@ -504,17 +517,18 @@ export default async function PageFragments({ searchParams }: { searchParams: Pr
         )}
       </div>
 
-      {/* Retour du dernier fragment + gate de lecture (vue écrite uniquement) */}
+      {/* Retour du dernier fragment + validation de lecture (vue écrite uniquement) */}
       {vue === 'ecrit' && derniereAnalyseEcrite && (
         <div className="bg-surface border border-bordure rounded-xl p-4 space-y-4">
           <p className="text-xs font-medium text-muet uppercase tracking-wide">Ton dernier retour</p>
-          <AnalysePubliee analyse={derniereAnalyseEcrite} pistes={pistesDerniere} />
           {gateActif && (
-            <div className="border-t border-attention pt-4 space-y-2">
-              <p className="text-sm text-attention">Valide que tu as lu ce retour pour pouvoir déposer ton prochain fragment.</p>
-              <BoutonLectureRetour analyseId={derniereAnalyseEcrite.id} />
-            </div>
+            <p className="text-sm text-attention">Lis ton retour, coche chaque partie, puis valide pour pouvoir déposer ton prochain fragment.</p>
           )}
+          <ValidationLecture
+            tuiles={tuilesAnalyseEcrite(derniereAnalyseEcrite, pistesDerniere)}
+            dejaLu={!gateActif}
+            marquerAction={validerLectureRetour.bind(null, derniereAnalyseEcrite.id)}
+          />
         </div>
       )}
 
@@ -539,9 +553,17 @@ export default async function PageFragments({ searchParams }: { searchParams: Pr
               </div>
             </div>
             <div className="px-4 py-4 space-y-4">
-              {gateActif ? (
-                <div className="bg-attention-teinte border border-attention rounded-xl px-4 py-3 text-sm text-attention">
-                  Lis et valide ton dernier retour (ci-dessus) pour débloquer le dépôt.
+              {retoursALire.length > 0 ? (
+                <div className="bg-attention-teinte border border-attention rounded-xl px-4 py-3 space-y-2">
+                  <p className="text-sm text-attention font-medium">Dépôt bloqué</p>
+                  <p className="text-xs text-attention">Lis et valide {retoursALire.length > 1 ? 'tes retours en attente' : 'ton retour en attente'} pour pouvoir déposer :</p>
+                  <ul className="space-y-1">
+                    {retoursALire.map((r) => (
+                      <li key={r.module}>
+                        <Link href={r.href} className="text-sm text-attention underline underline-offset-2 hover:opacity-80">{r.label} →</Link>
+                      </li>
+                    ))}
+                  </ul>
                 </div>
               ) : (
                 <FormulaireDepot semaineId={semaine.id} eleveId={user.id} inscriptionId={inscriptionId} depotExistant={!!depotActuel} seuilHeures={seuilPhotoHeures} />
@@ -614,9 +636,13 @@ export default async function PageFragments({ searchParams }: { searchParams: Pr
       {vue === 'essai' && essaiActif && (
         <div className="space-y-4">
           {analyseEssaiPubliee && (
-            <div className="bg-surface border border-bordure rounded-xl p-5">
-              <p className="text-xs font-medium text-muet uppercase tracking-wide mb-4">Retour de ton professeur</p>
-              <EssaiPublie analyse={analyseEssaiPubliee as EssaiDepotAnalyse} />
+            <div className="bg-surface border border-bordure rounded-xl p-5 space-y-4">
+              <p className="text-xs font-medium text-muet uppercase tracking-wide">Retour de ton professeur</p>
+              <ValidationLecture
+                tuiles={tuilesAnalyseEssai(analyseEssaiPubliee as EssaiDepotAnalyse)}
+                dejaLu={!!(analyseEssaiPubliee as EssaiDepotAnalyse).retour_lu_at}
+                marquerAction={validerLectureRetourEssai.bind(null, (analyseEssaiPubliee as EssaiDepotAnalyse).id)}
+              />
             </div>
           )}
           {epreuveOuverte && (

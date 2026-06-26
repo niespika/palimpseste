@@ -6,6 +6,7 @@ import { createClient } from '@/utils/supabase/server'
 import { createAdminClient } from '@/utils/supabase/admin'
 import { contexteAletheia, livreAccessible, semaineLivre, peutAccederSemaine } from './data'
 import { messageSiBloque, signalerStrikeAuto } from '@/utils/integrite'
+import { messageSiRetoursNonLus } from '@/utils/retours-lus'
 import { detecterRenduVideTexte, detecterAveuHeuristique } from '@/utils/detecteur-integrite'
 import type { StatutAletheia } from './types'
 
@@ -55,6 +56,10 @@ export async function soumettreV1(livreId: string, semaine: number, saisie: Sais
   // Blocage « petit malin » : plus aucun rendu tant que le prof n'a pas débloqué.
   const blocage = await messageSiBloque(createAdminClient(), userId)
   if (blocage) return { error: blocage }
+  // Lecture des retours (transversal) : pas de rendu tant qu'un retour, dans n'importe
+  // quel module, n'est pas lu et validé.
+  const gateLecture = await messageSiRetoursNonLus(createAdminClient(), userId)
+  if (gateLecture) return { error: gateLecture }
   const these = (saisie?.these ?? '').trim()
   const args = (saisie?.arguments ?? '').trim()
   const accord = (saisie?.accord ?? '').trim()
@@ -136,6 +141,10 @@ export async function soumettreVf(livreId: string, semaine: number, vf: SaisieVf
   const { supabase, userId } = await verifierEleve()
   const blocage = await messageSiBloque(createAdminClient(), userId)
   if (blocage) return { error: blocage }
+  // Lecture des retours (transversal) : pas de rendu tant qu'un retour, dans n'importe
+  // quel module, n'est pas lu et validé.
+  const gateLecture = await messageSiRetoursNonLus(createAdminClient(), userId)
+  if (gateLecture) return { error: gateLecture }
   const these = (vf?.these_vf ?? '').trim()
   const args = (vf?.arguments_vf ?? '').trim()
   const accord = (vf?.accord_vf ?? '').trim()

@@ -1,4 +1,5 @@
 import type { TraceCodex } from '../../actions'
+import type { TuileRetour } from '@/components/retours/ValidationLecture'
 
 // Découpe le texte en segments en mettant en évidence [AJOUT] … [/AJOUT]
 function segmenterSynthese(texte: string): { ajout: boolean; texte: string }[] {
@@ -15,63 +16,69 @@ function segmenterSynthese(texte: string): { ajout: boolean; texte: string }[] {
   return segments
 }
 
-export function TraceAffichage({ trace }: { trace: TraceCodex }) {
-  const segments = trace.synthese_completee ? segmenterSynthese(trace.synthese_completee) : []
-  const nbErreurs = trace.erreurs_corrections.length
-
-  if (nbErreurs === 0 && !trace.synthese_completee) {
-    return <p className="text-center text-muet text-sm py-8">Retour validé, sans correction à signaler.</p>
-  }
-
+// Contenu (sans en-tête) — l'en-tête + case à cocher sont fournis par ValidationLecture.
+function ListeErreurs({ trace }: { trace: TraceCodex }) {
   return (
-    <div className="space-y-4">
-      {/* Tuile — ce que l'élève n'a pas su dire */}
-      {nbErreurs > 0 && (
-        <div className="bg-surface border border-bordure rounded-xl overflow-hidden">
-          <div className="px-5 py-3 border-b border-bordure bg-parchemin-fonce flex items-center justify-between gap-3">
-            <h3 className="text-sm font-medium text-encre-douce">Ce que tu n&apos;as pas su dire</h3>
-            <span className="text-xs px-2 py-0.5 bg-parchemin-fonce text-encre-douce rounded-full shrink-0">
-              {nbErreurs} point{nbErreurs > 1 ? 's' : ''}
-            </span>
-          </div>
-          <div className="p-4 space-y-2">
-            {trace.erreurs_corrections.map((e, i) => (
-              <div key={i} className="bg-parchemin-fonce border border-bordure rounded-lg p-4">
-                {e.concept_tag && (
-                  <span className="text-xs px-1.5 py-0.5 bg-parchemin-fonce text-muet rounded">{e.concept_tag}</span>
-                )}
-                <p className="text-sm text-encre-douce mt-2">{e.description}</p>
-                <div className="mt-2 pl-3 border-l-2 border-ok">
-                  <p className="text-sm text-encre">{e.correction}</p>
-                </div>
-              </div>
-            ))}
+    <div className="space-y-2">
+      {trace.erreurs_corrections.map((e, i) => (
+        <div key={i} className="bg-parchemin-fonce border border-bordure rounded-lg p-4">
+          {e.concept_tag && (
+            <span className="text-xs px-1.5 py-0.5 bg-parchemin-fonce text-muet rounded">{e.concept_tag}</span>
+          )}
+          <p className="text-sm text-encre-douce mt-2">{e.description}</p>
+          <div className="mt-2 pl-3 border-l-2 border-ok">
+            <p className="text-sm text-encre">{e.correction}</p>
           </div>
         </div>
-      )}
-
-      {/* Tuile — synthèse complétée */}
-      {trace.synthese_completee && (
-        <div className="bg-surface border border-bordure rounded-xl overflow-hidden">
-          <div className="px-5 py-3 border-b border-bordure bg-parchemin-fonce">
-            <h3 className="text-sm font-medium text-encre-douce">Ta synthèse, complétée</h3>
-          </div>
-          <div className="p-5">
-            <p className="whitespace-pre-wrap text-sm text-encre-douce leading-relaxed">
-              {segments.map((s, i) =>
-                s.ajout ? (
-                  <mark key={i} className="bg-attention-teinte text-attention rounded px-0.5">{s.texte}</mark>
-                ) : (
-                  <span key={i}>{s.texte}</span>
-                )
-              )}
-            </p>
-            <p className="text-xs text-muet mt-3 pt-3 border-t border-bordure">
-              <span className="bg-attention-teinte px-1 rounded">surligné</span> = complété par l&apos;IA, d&apos;après ton cours.
-            </p>
-          </div>
-        </div>
-      )}
+      ))}
     </div>
   )
+}
+
+function SyntheseCompletee({ texte }: { texte: string }) {
+  const segments = segmenterSynthese(texte)
+  return (
+    <div>
+      <p className="whitespace-pre-wrap text-sm text-encre-douce leading-relaxed">
+        {segments.map((s, i) =>
+          s.ajout ? (
+            <mark key={i} className="bg-attention-teinte text-attention rounded px-0.5">{s.texte}</mark>
+          ) : (
+            <span key={i}>{s.texte}</span>
+          ),
+        )}
+      </p>
+      <p className="text-xs text-muet mt-3 pt-3 border-t border-bordure">
+        <span className="bg-attention-teinte px-1 rounded">surligné</span> = complété par l&apos;IA, d&apos;après ton cours.
+      </p>
+    </div>
+  )
+}
+
+// Tuiles du retour Codex (validation de lecture transversale).
+export function tuilesTrace(trace: TraceCodex): TuileRetour[] {
+  const tuiles: TuileRetour[] = []
+  const nbErreurs = trace.erreurs_corrections.length
+  if (nbErreurs > 0) {
+    tuiles.push({
+      id: 'erreurs',
+      titre: `Ce que tu n’as pas su dire (${nbErreurs} point${nbErreurs > 1 ? 's' : ''})`,
+      node: <ListeErreurs trace={trace} />,
+    })
+  }
+  if (trace.synthese_completee) {
+    tuiles.push({
+      id: 'synthese',
+      titre: 'Ta synthèse, complétée',
+      node: <SyntheseCompletee texte={trace.synthese_completee} />,
+    })
+  }
+  if (tuiles.length === 0) {
+    tuiles.push({
+      id: 'vide',
+      titre: 'Retour',
+      node: <p className="text-center text-muet text-sm py-4">Retour validé, sans correction à signaler.</p>,
+    })
+  }
+  return tuiles
 }

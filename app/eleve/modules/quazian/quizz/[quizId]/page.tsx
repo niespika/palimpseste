@@ -1,8 +1,9 @@
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import { createClient } from '@/utils/supabase/server'
-import { initialiserSession, chargerRetourQuizz } from './actions'
+import { initialiserSession, chargerRetourQuizz, etatNoteVue } from './actions'
 import { PassationJetons } from './PassationJetons'
+import BoutonVuNote from './BoutonVuNote'
 
 const LETTRES = ['A', 'B', 'C', 'D']
 
@@ -29,6 +30,7 @@ export default async function PassationPage({
   // Retour post-quizz si fermé et soumis
   if (quizz.statut === 'ferme') {
     const retour = await chargerRetourQuizz(quizId)
+    const noteVue = await etatNoteVue(quizId)
 
     if ('error' in retour) {
       return (
@@ -110,6 +112,10 @@ export default async function PassationPage({
               </div>
             )
           })}
+        </div>
+
+        <div className="mt-6">
+          <BoutonVuNote quizId={quizId} dejaVu={noteVue} />
         </div>
       </div>
     )

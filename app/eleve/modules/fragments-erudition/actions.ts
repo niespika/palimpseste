@@ -7,6 +7,7 @@ import { createAdminClient } from '@/utils/supabase/admin'
 import { lancerAnalyse } from '@/utils/analyse'
 import { detecterAveuHeuristique } from '@/utils/detecteur-integrite'
 import { messageSiBloque, signalerStrikeAuto } from '@/utils/integrite'
+import { messageSiRetoursNonLus } from '@/utils/retours-lus'
 
 // Vérifier que l'appelant est bien un élève
 async function verifierEleve() {
@@ -45,27 +46,12 @@ export async function deposerCompteRendu(formData: FormData) {
     .maybeSingle()
   if (!inscription) return { error: 'Contexte de classe invalide.' }
 
-  // Gate de lecture (Lot 10) : interdire un nouveau dépôt tant que le dernier
-  // retour publié de cette inscription n'a pas été marqué « lu ».
-  const adminGate = createAdminClient()
-  const { data: depotsInsc } = await adminGate
-    .from('fragments_depots')
-    .select('id')
-    .eq('inscription_id', inscriptionId)
-  const depotIdsInsc = (depotsInsc ?? []).map((d) => d.id)
-  if (depotIdsInsc.length > 0) {
-    const { data: derniere } = await adminGate
-      .from('fragments_analyses')
-      .select('id, retour_lu_at')
-      .eq('statut', 'publiee')
-      .in('depot_id', depotIdsInsc)
-      .order('created_at', { ascending: false })
-      .limit(1)
-      .maybeSingle()
-    if (derniere && !derniere.retour_lu_at) {
-      return { error: 'Lis et valide d’abord ton dernier retour avant de déposer un nouveau fragment.' }
-    }
-  }
+  // Gate de lecture (transversal) : interdire un nouveau dépôt écrit tant qu'un
+  // retour, dans n'importe quel module, n'est pas lu et validé. Remplace l'ancien
+  // gate Lot 10 (limité au dernier retour écrit de l'inscription) — désormais
+  // couvert par la source « Fragments écrit » du helper, et plus largement.
+  const gateLecture = await messageSiRetoursNonLus(createAdminClient(), userId)
+  if (gateLecture) return { error: gateLecture }
 
   // Vérifier que la semaine est ouverte
   const { data: semaine } = await supabase
@@ -186,9 +172,51 @@ export async function validerLectureRetour(analyseId: string) {
     .maybeSingle()
   if (depot?.eleve_id !== userId) return { error: 'Accès refusé.' }
 
-  await admin.from('fragments_analyses').update({ retour_lu_at: new Date().toISOString() }).eq('id', analyseId)
+  // Idempotent (compare-and-set sur retour_lu_at null) + ne marque qu'une analyse publiée.
+  const { error } = await admin
+    .from('fragments_analyses')
+    .update({ retour_lu_at: new Date().toISOString() })
+    .eq('id', analyseId)
+    .eq('statut', 'publiee')
+    .is('retour_lu_at', null)
+  if (error) return { error: 'Action indisponible pour le moment, réessaie.' }
   revalidatePath('/eleve/modules/fragments-erudition')
   return { success: true }
+}
+
+// Validation de lecture du retour d'ESSAI (source transversale). Le dépôt d'essai
+// (travail noté) reste TOUJOURS ouvert, mais ce retour bloque les rendus des autres
+// modules tant qu'il n'est pas lu. Best-effort (dégrade si la colonne n'est pas
+// encore migrée — cf. retours_lus.sql). Idempotent.
+export async function validerLectureRetourEssai(analyseId: string) {
+  const { userId } = await verifierEleve()
+  const admin = createAdminClient()
+  try {
+    const { data: analyse } = await admin
+      .from('fragments_essai_depot_analyses')
+      .select('id, depot_id')
+      .eq('id', analyseId)
+      .maybeSingle()
+    if (!analyse) return { error: 'Retour introuvable.' }
+
+    const { data: depot } = await admin
+      .from('fragments_essai_depots')
+      .select('eleve_id')
+      .eq('id', analyse.depot_id)
+      .maybeSingle()
+    if (depot?.eleve_id !== userId) return { error: 'Accès refusé.' }
+
+    const { error } = await admin
+      .from('fragments_essai_depot_analyses')
+      .update({ retour_lu_at: new Date().toISOString() })
+      .eq('id', analyseId)
+      .is('retour_lu_at', null)
+    if (error) return { error: 'Action indisponible pour le moment, réessaie.' }
+    revalidatePath('/eleve/modules/fragments-erudition')
+    return { success: true }
+  } catch {
+    return { error: 'Action indisponible pour le moment, réessaie.' }
+  }
 }
 
 export async function getSignedUrls(chemins: string[]): Promise<Record<string, string>> {

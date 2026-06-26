@@ -206,6 +206,8 @@ export interface EssaiDepotAnalyse {
   created_at: string
   updated_at: string
   publiee_at: string | null
+  /** Validation de lecture du retour d'essai (source transversale). Cf. retours_lus.sql. */
+  retour_lu_at: string | null
 }
 
 // Le semestre est désormais global (voir `Semestre` dans types/calendrier.ts).

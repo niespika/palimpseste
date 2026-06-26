@@ -76,17 +76,31 @@ export function VueRetourV1({ retour, montrerRemarque = false }: { retour: Retou
 // ── Retour VF — reconstruction + architecture, en bulles dédiées ──────────────
 // `masquerSynthese` : la synthèse est déjà mise en avant en tête de la revue DONE
 // → on l'omet dans le détail replié pour éviter le doublon.
-export function VueRetourVF({ retour, masquerSynthese = false }: { retour: RetourVF; masquerSynthese?: boolean }) {
-  return (
-    <div className="space-y-3">
-      {!masquerSynthese && retour.synthese_modele && (
-        <Bulle titre="Synthèse modèle" accent="violet">
-          <p className="text-sm text-encre-douce whitespace-pre-wrap leading-relaxed">{retour.synthese_modele}</p>
-        </Bulle>
-      )}
 
-      {retour.ajouts_verifies?.length > 0 && (
-        <Bulle titre="Ce que tu as ajouté en réécrivant" accent="pigment">
+export interface BulleVF { id: string; titre: string; accent: Accent; node: React.ReactNode }
+
+// Liste des bulles du retour VF (contenu SANS le cadre Bulle). Partagée entre le
+// rendu prof (VueRetourVF, qui re-emballe dans Bulle) et la validation de lecture
+// élève (ValidationLecture, qui fournit l'en-tête + case à cocher).
+export function bullesVF(retour: RetourVF, masquerSynthese = false): BulleVF[] {
+  const bulles: BulleVF[] = []
+
+  if (!masquerSynthese && retour.synthese_modele) {
+    bulles.push({
+      id: 'synthese',
+      titre: 'Synthèse modèle',
+      accent: 'violet',
+      node: <p className="text-sm text-encre-douce whitespace-pre-wrap leading-relaxed">{retour.synthese_modele}</p>,
+    })
+  }
+
+  if (retour.ajouts_verifies?.length > 0) {
+    bulles.push({
+      id: 'ajouts',
+      titre: 'Ce que tu as ajouté en réécrivant',
+      accent: 'pigment',
+      node: (
+        <>
           <ul className="space-y-2 text-sm">
             {retour.ajouts_verifies.map((a, i) => (
               <li key={i} className="flex gap-2">
@@ -101,17 +115,27 @@ export function VueRetourVF({ retour, masquerSynthese = false }: { retour: Retou
           <p className="text-xs text-muet mt-2 pt-2 border-t border-bordure">
             <span className="bg-attention-teinte px-1 rounded">surligné</span> = ce que tu as ajouté ; ⚠ = à vérifier dans le texte.
           </p>
-        </Bulle>
-      )}
+        </>
+      ),
+    })
+  }
 
-      {retour.nuances_et_erreurs?.length > 0 && (
-        <Bulle titre="Nuances et points à revoir" accent="or">
-          <Liste items={retour.nuances_et_erreurs} />
-        </Bulle>
-      )}
+  if (retour.nuances_et_erreurs?.length > 0) {
+    bulles.push({
+      id: 'nuances',
+      titre: 'Nuances et points à revoir',
+      accent: 'or',
+      node: <Liste items={retour.nuances_et_erreurs} />,
+    })
+  }
 
-      {(retour.architecture_amont?.length > 0 || retour.architecture_aval_jalons?.length > 0) && (
-        <Bulle titre="Architecture de ce que tu as lu" accent="minium">
+  if (retour.architecture_amont?.length > 0 || retour.architecture_aval_jalons?.length > 0) {
+    bulles.push({
+      id: 'architecture',
+      titre: 'Architecture de ce que tu as lu',
+      accent: 'minium',
+      node: (
+        <>
           {retour.architecture_amont?.length > 0 && (
             <div className="mb-2">
               <p className="text-xs font-medium text-encre-douce mb-1">Ce que tu as déjà vu</p>
@@ -124,8 +148,20 @@ export function VueRetourVF({ retour, masquerSynthese = false }: { retour: Retou
               <Liste items={retour.architecture_aval_jalons} />
             </div>
           )}
-        </Bulle>
-      )}
+        </>
+      ),
+    })
+  }
+
+  return bulles
+}
+
+export function VueRetourVF({ retour, masquerSynthese = false }: { retour: RetourVF; masquerSynthese?: boolean }) {
+  return (
+    <div className="space-y-3">
+      {bullesVF(retour, masquerSynthese).map((b) => (
+        <Bulle key={b.id} titre={b.titre} accent={b.accent}>{b.node}</Bulle>
+      ))}
     </div>
   )
 }

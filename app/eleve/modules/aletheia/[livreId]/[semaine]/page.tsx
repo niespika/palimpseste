@@ -3,11 +3,14 @@ import Link from 'next/link'
 import { createClient } from '@/utils/supabase/server'
 import { createAdminClient } from '@/utils/supabase/admin'
 import { contexteAletheia, livreAccessible, semaineLivre, travauxParSemaine, peutAccederSemaine, lireReglages } from '../../data'
+import { validerLectureRetourVf } from '../../actions'
 import FormulaireV1 from '../../FormulaireV1'
 import FormulaireVf from '../../FormulaireVf'
-import BoutonLectureRetourVf from '../../BoutonLectureRetourVf'
 import PollStatut from '../../PollStatut'
-import { VueRetourV1, VueRetourVF } from '@/components/aletheia/VueRetours'
+import { VueRetourV1, VueRetourVF, bullesVF } from '@/components/aletheia/VueRetours'
+import ValidationLecture from '@/components/retours/ValidationLecture'
+import BanniereRetoursNonLus from '@/components/retours/BanniereRetoursNonLus'
+import { retoursNonLus } from '@/utils/retours-lus'
 import AtelierDeuxColonnes from '@/components/AtelierDeuxColonnes'
 import Pastille from '@/components/Pastille'
 import { ETAPES_SEMAINE, indexEtape } from '../../etapes'
@@ -220,6 +223,13 @@ export default async function PageSemaineAletheia({ params }: { params: Promise<
   const echecRetour1 = statut === 'DRAFT' && !!t?.retour_v1_erreur_at
   const echecRetour2 = statut === 'FEEDBACK1_READY' && !!t?.retour_vf_erreur_at
 
+  // Bannière de blocage transversal sur les états de soumission (V1 / VF). Pas
+  // d'exclusion : le bloc local de validation VF n'apparaît qu'en FEEDBACK2_READY,
+  // état où cette bannière n'est pas rendue → aucun doublon, et un retour VF non lu
+  // d'une AUTRE semaine reste visible et cliquable.
+  const enSoumission = statut === 'DRAFT' || statut === 'FEEDBACK1_READY'
+  const retoursALire = enSoumission ? await retoursNonLus(admin, user.id) : []
+
   return (
     <div className="space-y-5 pb-8">
       <PollStatut actif={enAttenteRetour1 || enAttenteRetour2} livreId={livreId} semaine={semaine} />
@@ -252,6 +262,8 @@ export default async function PageSemaineAletheia({ params }: { params: Promise<
       </div>
 
       <Stepper statut={statut} />
+
+      {enSoumission && <BanniereRetoursNonLus retours={retoursALire} />}
 
       {/* Semaine terminée : archive hiérarchisée (Chantier 3). Les autres états
           conservent la pile inchangée. */}
@@ -337,17 +349,24 @@ export default async function PageSemaineAletheia({ params }: { params: Promise<
 
       {enAttenteRetour2 && <p className="text-sm text-muet">Ton retour final est en cours de préparation…</p>}
 
-      {/* Retour VF + validation de lecture */}
+      {/* Retour VF + validation de lecture (une case par tuile, clôt la semaine) */}
       {t?.retour_vf && (
         <Bloc titre="4. Retour final — synthèse et architecture">
-          <VueRetourVF retour={t.retour_vf} />
           {statut === 'FEEDBACK2_READY' ? (
-            <div className="pt-2">
-              <p className="text-xs text-muet mb-2">Pour clore la semaine, confirme que tu as lu ce retour.</p>
-              <BoutonLectureRetourVf livreId={livreId} semaine={semaine} />
-            </div>
+            <>
+              <p className="text-xs text-muet">Pour clore la semaine, coche chaque partie puis valide.</p>
+              <ValidationLecture
+                tuiles={bullesVF(t.retour_vf).map((b) => ({ id: b.id, titre: b.titre, node: b.node }))}
+                dejaLu={false}
+                marquerAction={validerLectureRetourVf.bind(null, livreId, semaine)}
+                labelBouton="J’ai tout lu — clore la semaine"
+              />
+            </>
           ) : (
-            <p className="text-sm text-ok pt-2">✓ Semaine terminée.</p>
+            <>
+              <VueRetourVF retour={t.retour_vf} />
+              <p className="text-sm text-ok pt-2">✓ Semaine terminée.</p>
+            </>
           )}
         </Bloc>
       )}
