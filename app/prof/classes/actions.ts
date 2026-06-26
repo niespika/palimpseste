@@ -94,6 +94,7 @@ export async function inscrireEleve(formData: FormData) {
 
   if (error) return { error: error.message }
   revalidatePath('/prof/classes')
+  revalidatePath('/prof/classes/[classeId]', 'page')
   revalidatePath('/prof/eleves')
   return { success: true }
 }
@@ -129,6 +130,7 @@ export async function retirerEleve(formData: FormData) {
   await retirerFichiers(admin, chemins)
 
   revalidatePath('/prof/classes')
+  revalidatePath('/prof/classes/[classeId]', 'page')
   revalidatePath('/prof/eleves')
   return { success: true }
 }
@@ -161,6 +163,7 @@ export async function definirModulesClasse(formData: FormData) {
   }
 
   revalidatePath('/prof/classes')
+  revalidatePath('/prof/classes/[classeId]', 'page')
   revalidatePath('/prof/modules')
   return { success: true }
 }

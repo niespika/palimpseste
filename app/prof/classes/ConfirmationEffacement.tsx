@@ -10,11 +10,14 @@ interface Props {
   nbEleves?: number
   /** Variante d'affichage du bouton déclencheur. */
   variante?: 'lien' | 'bouton'
+  /** Où aller après effacement. Par défaut on rafraîchit la page courante ; depuis
+   *  une page propre à la classe (Pilotage), on redirige (sinon 404 au refresh). */
+  onSuccessHref?: string
 }
 
 // Flux de confirmation d'effacement (Lot 2) — 3 étapes à friction délibérée,
 // irréversible. Réutilisable (gestion de classe, rappels du dashboard).
-export default function ConfirmationEffacement({ classeId, classeNom, nbEleves, variante = 'lien' }: Props) {
+export default function ConfirmationEffacement({ classeId, classeNom, nbEleves, variante = 'lien', onSuccessHref }: Props) {
   const router = useRouter()
   const [etape, setEtape] = useState(0) // 0 = fermé, 1, 2, 3
   const [saisie, setSaisie] = useState('')
@@ -35,7 +38,8 @@ export default function ConfirmationEffacement({ classeId, classeNom, nbEleves, 
     setPending(false)
     if (res?.error) { setErreur(res.error); return }
     fermer()
-    router.refresh()
+    if (onSuccessHref) router.push(onSuccessHref)
+    else router.refresh()
   }
 
   const declencheur = variante === 'bouton'

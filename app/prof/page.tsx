@@ -3,55 +3,20 @@ import { createClient } from '@/utils/supabase/server'
 import { createAdminClient } from '@/utils/supabase/admin'
 import { classesAvecRappel } from '@/utils/rappels'
 import { calculerSante, type SanteInscription } from '@/utils/sante'
-import { noteVersLettre } from '@/utils/notation'
 import { tachesDeriveesDuCalendrier } from '@/utils/calendrier-a-faire'
 import Tuile, { type CouleurTuile } from '@/components/Tuile'
 import { type ModuleSceau } from '@/components/Pastille'
-import DetailClasse, { type LigneEleve } from '@/components/classes/DetailClasse'
 import EnTeteMobileProf from '@/components/EnTeteMobileProf'
 import RappelsClasses from './RappelsClasses'
-import BoutonRetirerEleve from './BoutonRetirerEleve'
-import ConfirmationEffacement from './classes/ConfirmationEffacement'
 import CoutApi from './CoutApi'
-
-const NIVEAU_LABEL: Record<string, string> = { '1ere': 'Première', terminale: 'Terminale' }
-
-function sousTitreClasse(c: { niveau: string | null; filiere: string | null; annee_scolaire: string }) {
-  return [c.niveau ? NIVEAU_LABEL[c.niveau] ?? c.niveau : null, c.filiere, c.annee_scolaire].filter(Boolean).join(' · ')
-}
 
 function fmtDate(iso: string) {
   return new Date(iso + 'T00:00:00Z').toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', timeZone: 'UTC' })
 }
 
-// Statut « où en est l'élève » sur une ligne de détail classe. Hiérarchie
-// demandée : badge à risque/à jour + dépôts fragments EN TÊTE, le reste en gris.
-function StatutEleve({ s }: { s: SanteInscription | undefined }) {
-  if (!s) return <span className="font-ui text-xs text-muet">—</span>
-  const lettre = noteVersLettre(s.moyenne)
-  return (
-    <div className="flex flex-wrap items-center gap-2 text-xs">
-      {s.enDifficulte
-        ? <span className="font-ui bg-retard-teinte text-retard px-1.5 py-0.5 rounded-full">à risque</span>
-        : <span className="font-ui text-ok">à jour</span>}
-      {s.nbSemainesPassees > 0 ? (
-        <span className={`font-corps ${s.nbManquants > 0 ? 'text-retard font-medium' : 'text-encre-douce'}`}>
-          {s.nbDeposes}/{s.nbSemainesPassees} dépôts
-          {s.nbManquants > 0 && ` · ${s.nbManquants} manquant${s.nbManquants > 1 ? 's' : ''}`}
-        </span>
-      ) : (
-        <span className="font-ui text-muet">aucune échéance passée</span>
-      )}
-      {lettre && <span className="font-ui text-muet">moy. {lettre}</span>}
-      {s.backlogRevision > 0 && <span className="font-ui text-muet">{s.backlogRevision} à réviser</span>}
-    </div>
-  )
-}
-
-export default async function ProfAccueil({ searchParams }: { searchParams: Promise<{ classe?: string }> }) {
+export default async function ProfAccueil() {
   const supabase = await createClient()
   const admin = createAdminClient()
-  const { classe: classeSel } = await searchParams
 
   const [{ data: classes }, { data: inscriptionsActives }, rappels, sante, tachesCal] = await Promise.all([
     admin.from('classes').select('id, nom, niveau, filiere, annee_scolaire').order('nom'),
@@ -164,66 +129,12 @@ export default async function ProfAccueil({ searchParams }: { searchParams: Prom
   const integriteEnPreparer = integriteAlerte && hero?.ctaHref !== '/prof/integrite'
   const tachesEnPreparer = tachesCal.filter((t) => t.id !== heroTacheId)
 
-  // ── Détail de la classe sélectionnée ────────────────────────────────────────
-  let detail: { classe: typeof toutesClasses[number]; lignes: LigneEleve[] } | null = null
-  const classeChoisie = toutesClasses.find((c) => c.id === classeSel)
-  if (classeChoisie) {
-    const insClasse = inscrits.filter((i) => i.classe_id === classeChoisie.id)
-    const eleveIds = insClasse.map((i) => i.eleve_id as string)
-    const inscIds = insClasse.map((i) => i.id as string)
-    const { data: profils } = eleveIds.length > 0
-      ? await admin.from('profiles').select('id, display_name').in('id', eleveIds).order('display_name')
-      : { data: [] }
-    const santeParEleve = new Map(santeValues.filter((s) => s.classeId === classeChoisie.id).map((s) => [s.eleveId, s]))
-
-    // Indicateurs légers essai + Codex (scopés à la classe)
-    const { data: essais } = inscIds.length > 0
-      ? await admin.from('fragments_essai_depots').select('id, inscription_id').in('inscription_id', inscIds)
-      : { data: [] }
-    const essaiIds = (essais ?? []).map((e) => e.id as string)
-    const { data: essaiAnalyses } = essaiIds.length > 0
-      ? await admin.from('fragments_essai_depot_analyses').select('depot_id, statut').in('depot_id', essaiIds)
-      : { data: [] }
-    const statutEssaiParEssai = new Map((essaiAnalyses ?? []).map((a) => [a.depot_id as string, a.statut as string]))
-    const essaiParInsc = new Map<string, string>() // inscription → statut affiché
-    for (const e of essais ?? []) {
-      const st = statutEssaiParEssai.get(e.id as string)
-      essaiParInsc.set(e.inscription_id as string, st === 'publiee' ? 'publié' : st ? 'analysé' : 'déposé')
-    }
-    const { data: codexT } = inscIds.length > 0
-      ? await admin.from('codex_travaux').select('inscription_id').in('inscription_id', inscIds)
-      : { data: [] }
-    const codexParInsc = new Map<string, number>()
-    for (const t of codexT ?? []) codexParInsc.set(t.inscription_id as string, (codexParInsc.get(t.inscription_id as string) ?? 0) + 1)
-    const inscParEleve = new Map(insClasse.map((i) => [i.eleve_id as string, i.id as string]))
-
-    const lignes: LigneEleve[] = (profils ?? []).map((p) => {
-      const inscId = inscParEleve.get(p.id as string)
-      const essai = inscId ? essaiParInsc.get(inscId) : undefined
-      const nbCodex = inscId ? codexParInsc.get(inscId) ?? 0 : 0
-      return {
-        id: p.id as string,
-        display_name: p.display_name as string,
-        statut: (
-          <div className="flex flex-wrap items-center gap-2">
-            <StatutEleve s={santeParEleve.get(p.id as string)} />
-            {essai && <span className="font-ui text-xs text-muet">essai {essai}</span>}
-            {nbCodex > 0 && <span className="font-ui text-xs text-muet">Codex ×{nbCodex}</span>}
-          </div>
-        ),
-        actions: <BoutonRetirerEleve classeId={classeChoisie.id} eleveId={p.id as string} nom={p.display_name as string} />,
-      }
-    })
-    detail = { classe: classeChoisie, lignes }
-  }
-
   const labelClasse = (n: number) => `${n} élève${n > 1 ? 's' : ''}`
 
   return (
     <div className="space-y-8">
-      {/* ── TABLEAU DE BORD — masqué sur mobile quand une classe est ouverte ── */}
-      <div className={detail ? 'hidden sm:block space-y-8' : 'space-y-8'}>
-        {!detail && <EnTeteMobileProf titre="Tableau de bord" />}
+      <div className="space-y-8">
+        <EnTeteMobileProf titre="Tableau de bord" />
         <h2 className="hidden sm:block font-titre text-2xl text-encre">Tableau de bord</h2>
 
         <div className="grid grid-cols-1 lg:grid-cols-[1.5fr_1fr] gap-6">
@@ -346,8 +257,7 @@ export default async function ProfAccueil({ searchParams }: { searchParams: Prom
                         key={c.id}
                         nom={c.nom}
                         couleur={couleur}
-                        href={`/prof?classe=${c.id}`}
-                        selectionnee={classeSel === c.id}
+                        href={`/prof/classes/${c.id}`}
                         resume={
                           <div className="flex flex-wrap items-center gap-1.5 text-xs">
                             <span className="text-muet">{labelClasse(nbInscrits)}</span>
@@ -365,19 +275,6 @@ export default async function ProfAccueil({ searchParams }: { searchParams: Prom
           </div>
         </div>
       </div>
-
-      {/* ── DÉTAIL CLASSE : déplié sous la grille (desktop) / plein écran (mobile) ── */}
-      {detail && (
-        <div className="space-y-4">
-          <EnTeteMobileProf titre={detail.classe.nom} sousTitre={`${labelClasse(detail.lignes.length)} · ${sousTitreClasse(detail.classe)}`} retourHref="/prof" />
-          <DetailClasse
-            nom={detail.classe.nom}
-            sousTitre={`${labelClasse(detail.lignes.length)} · ${sousTitreClasse(detail.classe)}`}
-            eleves={detail.lignes}
-            action={<ConfirmationEffacement classeId={detail.classe.id} classeNom={detail.classe.nom} nbEleves={detail.lignes.length} />}
-          />
-        </div>
-      )}
     </div>
   )
 }
