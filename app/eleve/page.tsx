@@ -1,7 +1,7 @@
 import Link from 'next/link'
 import { createClient } from '@/utils/supabase/server'
 import { createAdminClient } from '@/utils/supabase/admin'
-import { moduleIdsAccessibles } from '@/utils/acces'
+import { moduleIdsAccessibles, slugsModulesAccessibles } from '@/utils/acces'
 import { contexteClasseEleve } from './contexte-classe'
 import { noteVersLettre, type LettreSection } from '@/utils/notation'
 import { calculerGrilleSemaines, jourParis } from '@/utils/calendrier-grille'
@@ -68,6 +68,15 @@ export default async function TableauDeBordEleve() {
 
   const { active } = await contexteClasseEleve(supabase, user!.id)
 
+  // Modules réellement accessibles à l'élève : on ne dérive AUCUNE tâche/échéance
+  // d'un module hors périmètre (ex. pilote Aletheia-only ne voit pas Fragments,
+  // dont la semaine est globale au semestre). Réutilise le modèle d'accès existant.
+  const slugs = await slugsModulesAccessibles(supabase, user!.id)
+  const accFragments = slugs.has('fragments-erudition')
+  const accQuazian = slugs.has('quazian')
+  const accCodex = slugs.has('codex')
+  const accAletheia = slugs.has('aletheia')
+
   // ── Collecte (scopée sur l'inscription active) ─────────────────────────────
   let fragmentTache: { texte: string; depose: boolean; enRetard: boolean; pistes: string[] } | null = null
   let cartesDues = 0
@@ -90,7 +99,7 @@ export default async function TableauDeBordEleve() {
       .limit(1)
       .maybeSingle()
 
-    if (semaine) {
+    if (semaine && accFragments) {
       const { data: depot } = await supabase
         .from('fragments_depots')
         .select('id, statut')
@@ -106,35 +115,43 @@ export default async function TableauDeBordEleve() {
     }
 
     // Pistes du dernier retour (analyse publiée la plus récente de cette inscription)
-    const { data: depots } = await admin.from('fragments_depots').select('id').eq('inscription_id', active.id)
-    const depotIds = (depots ?? []).map((d) => d.id as string)
-    const { data: derniere } = depotIds.length > 0
-      ? await admin.from('fragments_analyses').select('id').eq('statut', 'publiee').in('depot_id', depotIds).order('created_at', { ascending: false }).limit(1).maybeSingle()
-      : { data: null }
-    if (derniere && fragmentTache) {
-      const { data: ps } = await admin
-        .from('fragments_pistes')
-        .select('contenu')
-        .eq('analyse_id', derniere.id)
-        .eq('statut', 'proposee')
-        .order('created_at')
-        .limit(3)
-      fragmentTache.pistes = (ps ?? []).map((p) => p.contenu as string)
+    if (accFragments && fragmentTache) {
+      const { data: depots } = await admin.from('fragments_depots').select('id').eq('inscription_id', active.id)
+      const depotIds = (depots ?? []).map((d) => d.id as string)
+      const { data: derniere } = depotIds.length > 0
+        ? await admin.from('fragments_analyses').select('id').eq('statut', 'publiee').in('depot_id', depotIds).order('created_at', { ascending: false }).limit(1).maybeSingle()
+        : { data: null }
+      if (derniere) {
+        const { data: ps } = await admin
+          .from('fragments_pistes')
+          .select('contenu')
+          .eq('analyse_id', derniere.id)
+          .eq('statut', 'proposee')
+          .order('created_at')
+          .limit(3)
+        fragmentTache.pistes = (ps ?? []).map((p) => p.contenu as string)
+      }
     }
 
     // Flashcards dues — via la même dérivation de visibilité que la file de révision
     // (sinon on comptait des cartes d'unités non publiées / non assignées à l'élève).
-    cartesDues = (await chargerStatsRevision()).dues
+    if (accQuazian) cartesDues = (await chargerStatsRevision()).dues
 
-    const { data: codex } = await admin.from('codex_sessions').select('id').eq('classe_id', active.classe_id).in('statut', ['phase_1', 'phase_2']).limit(1).maybeSingle()
-    codexEnCoursId = (codex?.id as string) ?? null
-    const { data: quizz } = await admin.from('quazian_quizzes').select('id').eq('classe_id', active.classe_id).eq('statut', 'lance').limit(1).maybeSingle()
-    quizzEnCoursId = (quizz?.id as string) ?? null
+    if (accCodex) {
+      const { data: codex } = await admin.from('codex_sessions').select('id').eq('classe_id', active.classe_id).in('statut', ['phase_1', 'phase_2']).limit(1).maybeSingle()
+      codexEnCoursId = (codex?.id as string) ?? null
+    }
+    if (accQuazian) {
+      const { data: quizz } = await admin.from('quazian_quizzes').select('id').eq('classe_id', active.classe_id).eq('statut', 'lance').limit(1).maybeSingle()
+      quizzEnCoursId = (quizz?.id as string) ?? null
+    }
 
     // Aletheia : au moins un livre dont toutes les semaines ne sont pas terminées.
-    const livres = (await livresPourClasse(admin, active.classe_id)).filter((l) => l.semaines.length > 0)
-    const done = await Promise.all(livres.map((l) => toutesSemainesDone(admin, user!.id, l.id)))
-    aletheiaAFaire = done.some((d) => !d)
+    if (accAletheia) {
+      const livres = (await livresPourClasse(admin, active.classe_id)).filter((l) => l.semaines.length > 0)
+      const done = await Promise.all(livres.map((l) => toutesSemainesDone(admin, user!.id, l.id)))
+      aletheiaAFaire = done.some((d) => !d)
+    }
 
     // Semaine calendaire en cours (depuis le semestre actif + vacances).
     const { data: semCal } = await admin.from('semesters').select('id, start_date, end_date').eq('is_active', true).maybeSingle()
@@ -155,7 +172,7 @@ export default async function TableauDeBordEleve() {
 
   // ── Progression : moyenne par section (Fragments) → lettre, en une bande ────
   const sectionsProg: { label: string; lettre: LettreSection }[] = []
-  if (active) {
+  if (active && accFragments) {
     const { data: depots } = await admin
       .from('fragments_depots')
       .select('id, fragments_semaines(numero)')

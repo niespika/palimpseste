@@ -2,9 +2,15 @@ import Link from 'next/link'
 import { createClient } from '@/utils/supabase/server'
 import { createAdminClient } from '@/utils/supabase/admin'
 import { contexteClasseEleve } from '../contexte-classe'
+import { slugsModulesAccessibles } from '@/utils/acces'
 import { calculerGrilleSemaines, lundiOnOrBefore, addDaysUTC, toISODate, jourParis } from '@/utils/calendrier-grille'
 import { assemblerEvenements } from '@/utils/calendrier-evenements'
 import { couleursParClasse } from '@/utils/calendrier-couleurs'
+
+// Échéances d'un module visibles seulement si l'élève y a accès (périmètre par classe).
+const SLUG_PAR_SOURCE: Record<string, string> = {
+  fragments: 'fragments-erudition', quazian: 'quazian', codex: 'codex', aletheia: 'aletheia',
+}
 
 type Vue = 'agenda' | 'mois' | 'semaine' | 'jour'
 const JOURS = ['lun', 'mar', 'mer', 'jeu', 'ven', 'sam', 'dim']
@@ -41,6 +47,7 @@ export default async function CalendrierEleve({
   const { data: { user } } = await supabase.auth.getUser()
   const { inscriptions } = await contexteClasseEleve(supabase, user!.id)
   const classeIds = new Set(inscriptions.map((i) => i.classe_id))
+  const slugs = await slugsModulesAccessibles(supabase, user!.id)
 
   const admin = createAdminClient()
   const { data: sem } = await admin.from('semesters').select('id, name, start_date, end_date').eq('is_active', true).maybeSingle()
@@ -80,7 +87,7 @@ export default async function CalendrierEleve({
   // 1. Événements partagés (essais, quizz, Codex, lectures) → classes de l'élève
   //    (+ événements sans classe, visibles de tous). Color-codés par classe.
   const partages = (await assemblerEvenements({ debut, fin }))
-    .filter((e) => e.classe_id === null || classeIds.has(e.classe_id))
+    .filter((e) => (e.classe_id === null || classeIds.has(e.classe_id)) && slugs.has(SLUG_PAR_SOURCE[e.source_module]))
     .map((e): Evt => ({
       date: e.date,
       label: e.label,
@@ -89,7 +96,8 @@ export default async function CalendrierEleve({
     }))
 
   // 2. Échéances hebdomadaires des Fragments (à rendre) du semestre, dans la fenêtre.
-  const { data: semaines } = sem
+  //    Seulement si l'élève a accès à Fragments (la table est globale au semestre).
+  const { data: semaines } = sem && slugs.has('fragments-erudition')
     ? await admin.from('fragments_semaines').select('numero, date_limite').eq('semestre_id', sem.id).eq('is_vacation', false).not('date_limite', 'is', null)
     : { data: [] }
   const fragments = (semaines ?? [])
@@ -246,10 +254,12 @@ export default async function CalendrierEleve({
             {c.nom}
           </span>
         ))}
-        <span className="inline-flex items-center gap-1.5">
-          <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: COULEUR_FRAGMENTS }} />
-          Fragment à rendre
-        </span>
+        {slugs.has('fragments-erudition') && (
+          <span className="inline-flex items-center gap-1.5">
+            <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: COULEUR_FRAGMENTS }} />
+            Fragment à rendre
+          </span>
+        )}
       </div>
 
       {!sem && (

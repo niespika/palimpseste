@@ -150,8 +150,9 @@ export async function assemblerEvenements(opts: {
       // date_debut + (s-1)·7, +6 pour le dimanche).
       const d = toISODate(addDaysUTC(base, (s - 1) * 7 + 6))
       if (d < debut || d > fin) continue
-      const cibles = cls.length > 0 ? cls : [null]
-      for (const cid of cibles) {
+      // Un livre sans classe assignée ne génère AUCUN événement (sinon un classe_id:null
+      // serait visible de tous les élèves via le filtre de la page calendrier).
+      for (const cid of cls) {
         events.push({
           source_module: 'aletheia',
           source_id: livre.id,

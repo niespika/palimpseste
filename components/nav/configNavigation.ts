@@ -57,3 +57,14 @@ export const NAV_ELEVE: NavTab[] = [
     ],
   },
 ]
+
+// Nav élève filtrée par modules accessibles (slug = dernier segment du href de chaque
+// item de l'onglet « Modules »). L'onglet « Modules » disparaît s'il ne reste aucun
+// module accessible. Les autres onglets (tableau de bord, calendrier) sont conservés.
+export function navEleveFiltree(slugsAccessibles: Set<string>): NavTab[] {
+  return NAV_ELEVE.flatMap((tab) => {
+    if (tab.label !== 'Modules' || !tab.items) return [tab]
+    const items = tab.items.filter((it) => slugsAccessibles.has(it.href.split('/').pop() ?? ''))
+    return items.length > 0 ? [{ ...tab, items }] : []
+  })
+}

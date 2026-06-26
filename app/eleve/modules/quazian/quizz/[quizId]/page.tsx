@@ -1,6 +1,7 @@
 import Link from 'next/link'
-import { redirect } from 'next/navigation'
+import { redirect, notFound } from 'next/navigation'
 import { createClient } from '@/utils/supabase/server'
+import { aAccesModule } from '@/utils/acces'
 import { initialiserSession, chargerRetourQuizz, etatNoteVue } from './actions'
 import { PassationJetons } from './PassationJetons'
 import BoutonVuNote from './BoutonVuNote'
@@ -16,6 +17,10 @@ export default async function PassationPage({
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
+
+  // Garde d'accès module : un élève sans accès Quazian ne doit pas atteindre un quizz par URL.
+  const { data: mod } = await supabase.from('modules').select('id, actif').eq('slug', 'quazian').maybeSingle()
+  if (!mod?.actif || !(await aAccesModule(supabase, user.id, mod.id))) notFound()
 
   const { data: quizz } = await supabase
     .from('quazian_quizzes')

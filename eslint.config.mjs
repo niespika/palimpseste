@@ -12,6 +12,8 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // Artefacts de design (handoffs, références, code d'exemple) — pas du code source.
+    "**/design_handoff_*/**",
   ]),
   {
     rules: {

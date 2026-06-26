@@ -260,10 +260,11 @@ export async function ajouterLivre(formData: FormData) {
       } catch (err) {
         console.error(`[scriptorium] extraction PDF semaine ${n} :`, err)
       }
-      // PDF fourni mais aucun texte exploitable (scanné/illisible) → l'ancrage IA Aletheia
-      // sera impossible pour cette semaine : on le signalera au prof.
-      if (!texteExtrait || !texteExtrait.trim()) semainesSansTexte.push(n)
     }
+    // Ancrage IA Aletheia : CHAQUE semaine doit avoir un texte exploitable. Sans texte
+    // (PDF manquant, scanné ou illisible), le retour IA est impossible → on bloquera
+    // la création après la boucle (rollback complet).
+    if (!texteExtrait || !texteExtrait.trim()) semainesSansTexte.push(n)
 
     const { data: doc, error: errDoc } = await supabase
       .from('scriptorium_documents')
@@ -292,6 +293,16 @@ export async function ajouterLivre(formData: FormData) {
     }
   }
 
+  // Blocage strict : aucun livre Aletheia ne part avec une semaine sans ancrage
+  // texte — sinon le retour IA est cassé pour l'élève sur cette semaine. Rollback complet.
+  if (semainesSansTexte.length > 0) {
+    return annuler(
+      `Impossible de créer le livre : pas de texte exploitable pour la/les semaine(s) ${semainesSansTexte.join(', ')} ` +
+      `(PDF manquant, scanné ou illisible). Le retour IA d'Aletheia en a besoin. Fournis un PDF au texte ` +
+      `sélectionnable (OCR si le PDF est scanné) pour ces semaines, puis réessaie.`,
+    )
+  }
+
   // Assignation AU NIVEAU DU LIVRE : un seul jeu de classes pour tout le livre
   // (source de vérité du planning élève — cf. scriptorium_unite_classes, Lot 2).
   const { error: errClasses } = await supabase
@@ -304,12 +315,6 @@ export async function ajouterLivre(formData: FormData) {
   await lancerGenerationArtefactsLivre(admin, livre.id as string)
 
   revalidatePath('/prof/scriptorium')
-  if (semainesSansTexte.length > 0) {
-    return {
-      success: true,
-      warning: `Texte non extrait pour la/les semaine(s) ${semainesSansTexte.join(', ')} (PDF scanné ou illisible ?). Le retour IA d'Aletheia ne fonctionnera pas pour ces semaines tant que le PDF n'est pas remplacé par un PDF au texte sélectionnable.`,
-    }
-  }
   return { success: true }
 }
 

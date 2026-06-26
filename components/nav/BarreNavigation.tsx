@@ -28,10 +28,13 @@ export default function BarreNavigation({ tabs }: { tabs: NavTab[] }) {
     return () => document.removeEventListener('click', onClick)
   }, [])
 
-  // Fermer le menu après une navigation.
-  useEffect(() => {
+  // Fermer le menu après une navigation : ajustement d'état au changement de route
+  // (pattern « You Might Not Need an Effect » — pas de setState dans un effet).
+  const [prevPath, setPrevPath] = useState(pathname)
+  if (pathname !== prevPath) {
+    setPrevPath(pathname)
     setOuvert(null)
-  }, [pathname])
+  }
 
   const classeOnglet = (actif: boolean) =>
     `font-ui px-3 py-1.5 text-sm rounded-md transition-colors whitespace-nowrap ${

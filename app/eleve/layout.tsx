@@ -3,7 +3,8 @@ import { createClient } from '@/utils/supabase/server'
 import { deconnexion } from './actions'
 import BarreNavigation from '@/components/nav/BarreNavigation'
 import BarreOngletsMobile from '@/components/nav/BarreOngletsMobile'
-import { NAV_ELEVE } from '@/components/nav/configNavigation'
+import { navEleveFiltree } from '@/components/nav/configNavigation'
+import { slugsModulesAccessibles } from '@/utils/acces'
 import SelecteurClasseEleve from './SelecteurClasseEleve'
 import { contexteClasseEleve } from './contexte-classe'
 
@@ -23,6 +24,9 @@ export default async function EleveLayout({ children }: { children: React.ReactN
 
   // Commutateur de classe global (Lot 9) — remonté dans l'en-tête (F3).
   const { inscriptions, active } = await contexteClasseEleve(supabase, user.id)
+
+  // Nav filtrée : on ne propose que les modules réellement accessibles à l'élève.
+  const tabsEleve = navEleveFiltree(await slugsModulesAccessibles(supabase, user.id))
 
   return (
     <div className="min-h-screen bg-parchemin">
@@ -44,7 +48,7 @@ export default async function EleveLayout({ children }: { children: React.ReactN
         </div>
         {/* Barre à déroulants : desktop seulement. Sur mobile, c'est la barre d'onglets du bas. */}
         <div className="hidden sm:block max-w-4xl mx-auto px-4 sm:px-6 pb-2">
-          <BarreNavigation tabs={NAV_ELEVE} />
+          <BarreNavigation tabs={tabsEleve} />
         </div>
       </header>
       <main className="max-w-4xl mx-auto px-4 sm:px-6 pt-8 pb-24 sm:pb-8">

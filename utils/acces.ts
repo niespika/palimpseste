@@ -34,6 +34,17 @@ export async function moduleIdsAccessibles(
   return new Set((data ?? []).map((r) => r.module_id as string))
 }
 
+/** Slugs des modules accessibles à l'élève (union de ses classes actives). */
+export async function slugsModulesAccessibles(
+  supabase: SupabaseClient,
+  eleveId: string
+): Promise<Set<string>> {
+  const ids = await moduleIdsAccessibles(supabase, eleveId)
+  if (ids.size === 0) return new Set()
+  const { data } = await supabase.from('modules').select('slug').in('id', [...ids])
+  return new Set((data ?? []).map((m) => m.slug as string))
+}
+
 /** L'élève a-t-il accès à ce module (par id) ? */
 export async function aAccesModule(
   supabase: SupabaseClient,

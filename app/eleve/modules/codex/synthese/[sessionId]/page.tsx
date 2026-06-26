@@ -1,6 +1,7 @@
 import Link from 'next/link'
-import { redirect } from 'next/navigation'
+import { redirect, notFound } from 'next/navigation'
 import { createClient } from '@/utils/supabase/server'
+import { aAccesModule } from '@/utils/acces'
 import { chargerEtatTravail, chargerTrace, marquerSyntheseLue } from '../../actions'
 import { EcranV1 } from './EcranV1'
 import { EcranVF } from './EcranVF'
@@ -21,6 +22,10 @@ export default async function SyntheseElevePage({
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
+
+  // Garde d'accès module : un élève sans accès Codex ne doit pas atteindre une synthèse par URL.
+  const { data: mod } = await supabase.from('modules').select('id, actif').eq('slug', 'codex').maybeSingle()
+  if (!mod?.actif || !(await aAccesModule(supabase, user.id, mod.id))) notFound()
 
   const { data: session } = await supabase
     .from('codex_sessions')
