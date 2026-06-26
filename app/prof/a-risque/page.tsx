@@ -2,17 +2,15 @@ import { notFound } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/utils/supabase/server'
 import { createAdminClient } from '@/utils/supabase/admin'
-import { calculerSante, SEUILS_SANTE, type SanteInscription } from '@/utils/sante'
+import { calculerSante, SEUILS_SANTE, motifsSante, COULEUR_SIGNAL, type SanteInscription } from '@/utils/sante'
 import { noteVersLettre } from '@/utils/notation'
+import EnTeteMobileProf from '@/components/EnTeteMobileProf'
 
-// Page dédiée « à risque » (Pilotage / tableau de bord). Remplace la petite
-// liste en bas du dashboard : on explique POURQUOI chaque élève est à risque,
-// avec filtre par classe et tri par sévérité.
-export default async function PageARisque({
-  searchParams,
-}: {
-  searchParams: Promise<{ classe?: string }>
-}) {
+// Page dédiée « à risque » (Pilotage / tableau de bord). On explique POURQUOI
+// chaque élève décroche : groupé PAR CLASSE, la raison portée en chips colorées
+// (un signal = une couleur). Calcul par inscription (un élève bi-classe
+// n'apparaît qu'au titre du contexte où il décroche).
+export default async function PageARisque() {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) notFound()
@@ -20,7 +18,6 @@ export default async function PageARisque({
   if (moi?.role !== 'prof') notFound()
 
   const admin = createAdminClient()
-  const { classe: classeSel } = await searchParams
 
   const [sante, { data: profiles }, { data: classes }] = await Promise.all([
     calculerSante(admin),
@@ -32,96 +29,76 @@ export default async function PageARisque({
   const nomClasse = new Map((classes ?? []).map(c => [c.id as string, c.nom as string]))
 
   const enDifficulte = [...sante.values()].filter(s => s.enDifficulte)
-  // Classes représentées parmi les élèves à risque (pour les filtres).
-  const classesARisque = [...new Set(enDifficulte.map(s => s.classeId))]
-    .map(id => ({ id, nom: nomClasse.get(id) ?? '—' }))
-    .sort((a, b) => a.nom.localeCompare(b.nom))
 
-  const lignes = enDifficulte
-    .filter(s => !classeSel || s.classeId === classeSel)
-    .sort((a, b) => b.raisons.length - a.raisons.length
-      || (nomEleve.get(a.eleveId) ?? '').localeCompare(nomEleve.get(b.eleveId) ?? ''))
-
-  // Motifs structurés (lettres, pas de /4) à partir des seuils.
-  function motifs(s: SanteInscription): string[] {
-    const m: string[] = []
-    if (s.nbManquants >= SEUILS_SANTE.depotsManquants) m.push(`${s.nbManquants} dépôt${s.nbManquants > 1 ? 's' : ''} manquant${s.nbManquants > 1 ? 's' : ''}`)
-    if (s.moyenne != null && s.moyenne < SEUILS_SANTE.moyenneSous) m.push(`Moyenne ${noteVersLettre(s.moyenne)}`)
-    if (s.backlogRevision > SEUILS_SANTE.revisionEnRetard) m.push(`${s.backlogRevision} cartes en retard`)
-    return m
+  // Regroupement par classe (ordre alphabétique des classes ; au sein d'une
+  // classe, tri par sévérité — nb de signaux décroissant — puis nom).
+  const parClasse = new Map<string, SanteInscription[]>()
+  for (const s of enDifficulte) {
+    const arr = parClasse.get(s.classeId) ?? []
+    arr.push(s)
+    parClasse.set(s.classeId, arr)
   }
-
-  const chip = (actif: boolean) =>
-    `text-sm px-3 py-1.5 rounded-full border transition-colors ${
-      actif ? 'bg-bouton text-surface border-bouton' : 'bg-surface text-encre-douce border-bordure hover:border-muet'
-    }`
+  const groupes = [...parClasse.entries()]
+    .map(([classeId, eleves]) => ({
+      classeId,
+      nom: nomClasse.get(classeId) ?? '—',
+      eleves: eleves.sort((a, b) =>
+        motifsSante(b).length - motifsSante(a).length
+        || (nomEleve.get(a.eleveId) ?? '').localeCompare(nomEleve.get(b.eleveId) ?? '')),
+    }))
+    .sort((a, b) => a.nom.localeCompare(b.nom))
 
   return (
     <div className="space-y-6">
-      <div>
-        <Link href="/prof" className="text-sm text-muet hover:text-encre-douce">← Tableau de bord</Link>
-        <h2 className="text-xl font-serif text-encre mt-2">Élèves à risque</h2>
-        <p className="text-sm text-muet mt-0.5">
-          Un élève est signalé « à risque » dès qu&apos;un seuil est franchi : au moins {SEUILS_SANTE.depotsManquants} dépôts
-          manquants, une moyenne sous {noteVersLettre(SEUILS_SANTE.moyenneSous)}, ou plus de {SEUILS_SANTE.revisionEnRetard} cartes en retard.
-        </p>
+      <EnTeteMobileProf titre={`${enDifficulte.length} élève${enDifficulte.length > 1 ? 's' : ''} à risque`} retourHref="/prof" />
+
+      <div className="hidden sm:block">
+        <Link href="/prof" className="font-ui text-sm text-muet hover:text-encre-douce">← Tableau de bord</Link>
+        <h2 className="font-titre text-2xl text-encre mt-2">
+          {enDifficulte.length} élève{enDifficulte.length > 1 ? 's' : ''} à risque
+        </h2>
       </div>
+      <p className="font-corps text-sm text-muet -mt-3 sm:mt-0">
+        Au moins un signal : au moins {SEUILS_SANTE.depotsManquants} fragments manquants, une moyenne
+        sous {noteVersLettre(SEUILS_SANTE.moyenneSous)}, ou plus de {SEUILS_SANTE.revisionEnRetard} cartes en retard.
+      </p>
 
-      {/* Filtre par classe */}
-      {classesARisque.length > 1 && (
-        <div className="flex flex-wrap gap-2">
-          <Link href="/prof/a-risque" className={chip(!classeSel)}>Toutes ({enDifficulte.length})</Link>
-          {classesARisque.map(c => {
-            const n = enDifficulte.filter(s => s.classeId === c.id).length
-            return (
-              <Link key={c.id} href={`/prof/a-risque?classe=${c.id}`} className={chip(classeSel === c.id)}>
-                {c.nom} ({n})
-              </Link>
-            )
-          })}
-        </div>
-      )}
-
-      {lignes.length === 0 ? (
+      {enDifficulte.length === 0 ? (
         <div className="bg-surface border border-bordure rounded-xl p-8 text-center text-sm text-ok">
-          Aucun élève à risque {classeSel ? 'dans cette classe' : ''} 🎉
+          Aucun élève à risque 🎉
         </div>
       ) : (
-        <div className="bg-surface border border-bordure rounded-xl overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-sm">
-              <thead className="bg-parchemin-fonce border-b border-bordure">
-                <tr>
-                  <th className="px-4 py-3 text-xs font-medium text-muet uppercase tracking-wide">Élève</th>
-                  <th className="px-4 py-3 text-xs font-medium text-muet uppercase tracking-wide">Classe</th>
-                  <th className="px-4 py-3 text-xs font-medium text-muet uppercase tracking-wide">Dépôts</th>
-                  <th className="px-4 py-3 text-xs font-medium text-muet uppercase tracking-wide">Moyenne</th>
-                  <th className="px-4 py-3 text-xs font-medium text-muet uppercase tracking-wide">Pourquoi</th>
-                </tr>
-              </thead>
-              <tbody>
-                {lignes.map(s => (
-                  <tr key={s.inscriptionId} className="border-t border-bordure hover:bg-parchemin-fonce">
-                    <td className="px-4 py-3 font-medium">
-                      <Link href={`/prof/eleves/${s.eleveId}`} className="text-encre hover:text-retard hover:underline">
+        <div className="space-y-6">
+          {groupes.map(g => (
+            <section key={g.classeId} className="space-y-2">
+              <h3 className="font-ui text-[11px] font-medium text-muet uppercase tracking-[0.12em]">
+                {g.nom} · {g.eleves.length}
+              </h3>
+              <div className="space-y-2">
+                {g.eleves.map(s => (
+                  <Link
+                    key={s.inscriptionId}
+                    href={`/prof/eleves/${s.eleveId}`}
+                    className="block bg-surface border border-bordure border-l-4 border-l-retard rounded-xl px-4 py-3 hover:shadow-sm hover:border-muet transition-all"
+                  >
+                    <div className="flex items-center gap-3 flex-wrap sm:flex-nowrap">
+                      <span className="font-corps text-base text-encre sm:w-44 flex-shrink-0">
                         {nomEleve.get(s.eleveId) ?? '?'}
-                      </Link>
-                    </td>
-                    <td className="px-4 py-3 text-encre-douce">{nomClasse.get(s.classeId) ?? '—'}</td>
-                    <td className="px-4 py-3 text-encre-douce tabular-nums">{s.nbDeposes}/{s.nbSemainesPassees}</td>
-                    <td className="px-4 py-3 text-encre-douce">{s.moyenne != null ? noteVersLettre(s.moyenne) : '—'}</td>
-                    <td className="px-4 py-3">
-                      <div className="flex flex-wrap gap-1.5">
-                        {motifs(s).map((m, i) => (
-                          <span key={i} className="text-xs bg-retard-teinte text-retard px-2 py-0.5 rounded-full">{m}</span>
+                      </span>
+                      <span className="flex flex-wrap gap-1.5 flex-1">
+                        {motifsSante(s).map((m, i) => (
+                          <span key={i} className={`font-ui text-xs px-2 py-0.5 rounded-full ${COULEUR_SIGNAL[m.type]}`}>
+                            {m.label}
+                          </span>
                         ))}
-                      </div>
-                    </td>
-                  </tr>
+                      </span>
+                      <span className="font-ui text-xs text-muet flex-shrink-0">Ouvrir la fiche →</span>
+                    </div>
+                  </Link>
                 ))}
-              </tbody>
-            </table>
-          </div>
+              </div>
+            </section>
+          ))}
         </div>
       )}
     </div>

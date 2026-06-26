@@ -32,6 +32,39 @@ export interface SanteInscription {
   raisons: string[]
 }
 
+// ----------------------------------------------------------------------------
+// Motifs « à risque » TYPÉS — source unique pour colorer la raison partout
+// (page à-risque, encart Signaux de la fiche élève). Chaque signal porte son
+// type → une puce/chip de la couleur d'état correspondante.
+// ----------------------------------------------------------------------------
+export type TypeSignal = 'fragment' | 'moyenne' | 'revision'
+export interface MotifSante {
+  type: TypeSignal
+  label: string
+}
+
+/** Jeton de couleur d'une chip par type de signal (jetons charte). */
+export const COULEUR_SIGNAL: Record<TypeSignal, string> = {
+  fragment: 'bg-retard-teinte text-retard',
+  moyenne: 'bg-attention-teinte text-attention',
+  revision: 'bg-info-teinte text-info',
+}
+
+/** Raisons structurées (lettres, pas de /4) à partir des seuils. */
+export function motifsSante(s: SanteInscription): MotifSante[] {
+  const m: MotifSante[] = []
+  if (s.nbManquants >= SEUILS_SANTE.depotsManquants) {
+    m.push({ type: 'fragment', label: `${s.nbManquants} fragment${s.nbManquants > 1 ? 's' : ''} manquant${s.nbManquants > 1 ? 's' : ''}` })
+  }
+  if (s.moyenne != null && s.moyenne < SEUILS_SANTE.moyenneSous) {
+    m.push({ type: 'moyenne', label: `moyenne ${noteVersLettre(s.moyenne)} (sous seuil)` })
+  }
+  if (s.backlogRevision > SEUILS_SANTE.revisionEnRetard) {
+    m.push({ type: 'revision', label: `${s.backlogRevision} cartes en retard` })
+  }
+  return m
+}
+
 /**
  * Santé par inscription, pour les inscriptions actives sur des classes ayant le
  * module fragments (signal pédagogique principal). Le backlog de révision n'est
@@ -116,7 +149,11 @@ export async function calculerSante(admin: SupabaseClient): Promise<Map<string, 
     const nbEnRetard = ds.filter((d) => d.statut === 'en_retard').length
     const notes = ds.map((d) => noteParDepot.get(d.id)).filter((n): n is number => n != null)
     const moyenne = notes.length > 0 ? notes.reduce((a, b) => a + b, 0) / notes.length : null
-    const backlogRevision = backlogParEleve.get(i.eleve_id as string) ?? 0
+    // Le backlog de révision est scopé par élève (quazian_card_states n'a pas
+    // d'inscription_id) : on ne le crédite qu'aux inscriptions dont la classe a
+    // Quazian, sinon un élève bi-classe verrait le même backlog (donc le même
+    // signal « à risque ») reporté à tort sur sa classe sans Quazian.
+    const backlogRevision = classesQuazian.has(i.classe_id) ? (backlogParEleve.get(i.eleve_id as string) ?? 0) : 0
 
     const raisons: string[] = []
     if (nbManquants >= SEUILS_SANTE.depotsManquants) raisons.push(`${nbManquants} dépôts manquants`)

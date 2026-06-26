@@ -14,6 +14,8 @@ function fmt(n: number): string {
   return '$' + (n < 1 ? n.toFixed(4) : n.toFixed(2))
 }
 
+// Rendu en UNE ligne du fil « À préparer » du tableau de bord (pastille bleue,
+// montant du mois + détail par module discret) — plus de section isolée.
 export default async function CoutApi() {
   const admin = createAdminClient()
   const now = new Date()
@@ -39,25 +41,19 @@ export default async function CoutApi() {
   const lignes = [...parModule.entries()].filter(([, v]) => v > 0).sort((a, b) => b[1] - a[1])
 
   return (
-    <section className="space-y-3">
-      <h3 className="text-sm font-medium text-muet uppercase tracking-wide">Coût API</h3>
-      <div className="bg-surface border border-bordure rounded-xl p-5">
-        <div className="flex items-baseline justify-between gap-3">
-          <p className="text-2xl font-serif text-encre">{fmt(total)}</p>
-          <p className="text-xs text-muet capitalize">{moisLabel}</p>
-        </div>
-        {lignes.length === 0 ? (
-          <p className="text-sm text-muet mt-2">Aucun coût ce mois-ci.</p>
-        ) : (
-          <div className="flex flex-wrap gap-x-4 gap-y-1 mt-3">
-            {lignes.map(([nom, v]) => (
-              <span key={nom} className="text-sm text-encre-douce">
-                {nom} <span className="text-muet">{fmt(v)}</span>
-              </span>
-            ))}
-          </div>
-        )}
+    <div className="bg-surface border border-bordure rounded-xl px-4 py-3">
+      <div className="flex items-center gap-3">
+        <span className="w-2.5 h-2.5 rounded-full bg-info flex-shrink-0" aria-hidden />
+        <span className="font-corps text-base text-encre flex-1">Coût API · <span className="capitalize">{moisLabel}</span></span>
+        <span className="font-titre text-lg text-encre">{fmt(total)}</span>
       </div>
-    </section>
+      {lignes.length > 0 && (
+        <div className="flex flex-wrap gap-x-3 gap-y-0.5 mt-1.5 pl-[22px]">
+          {lignes.map(([nom, v]) => (
+            <span key={nom} className="font-ui text-xs text-muet">{nom} {fmt(v)}</span>
+          ))}
+        </div>
+      )}
+    </div>
   )
 }
