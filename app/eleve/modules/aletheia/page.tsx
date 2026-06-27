@@ -47,7 +47,7 @@ function CarteMessage({ children }: { children: React.ReactNode }) {
       <div className="bg-surface border border-bordure rounded-xl p-8 flex flex-col items-center text-center">
         <span className="opacity-70"><Pastille module="aletheia" size={56} /></span>
         <p className="font-marque text-sm font-semibold tracking-[0.2em] text-pigment mt-3">ALETHEIA</p>
-        <p className="font-corps text-sm text-muet mt-2 max-w-sm">{children}</p>
+        <p className="font-corps text-sm text-encre-douce mt-2 max-w-sm">{children}</p>
       </div>
     </div>
   )

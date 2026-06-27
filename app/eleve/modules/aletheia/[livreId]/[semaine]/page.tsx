@@ -25,6 +25,21 @@ function Bloc({ titre, children }: { titre: string; children: React.ReactNode })
   )
 }
 
+// Écran d'attente épuré pendant qu'un retour IA se prépare en arrière-plan
+// (états transitoires V1_SUBMITTED / VF_SUBMITTED). Même langage que l'écran
+// capstone « se prépare ». Le polling/relance est porté par PollStatut.
+function TuileAttente({ titre, sousTitre }: { titre: string; sousTitre: string }) {
+  return (
+    // role=status + aria-live : l'attente et la bascule auto (PollStatut) sont
+    // annoncées au lecteur d'écran. Sous-titre en encre-douce (contraste AA).
+    <div role="status" aria-live="polite" className="bg-surface border border-bordure rounded-xl p-8 flex flex-col items-center text-center">
+      <span className="opacity-85"><Pastille module="aletheia" size={76} /></span>
+      <p className="font-titre text-xl text-encre mt-4">{titre}</p>
+      <p className="font-corps text-sm text-encre-douce mt-1.5 max-w-sm">{sousTitre}</p>
+    </div>
+  )
+}
+
 // Stepper de progression — situe l'élève dans le parcours de la semaine.
 function Stepper({ statut }: { statut: StatutAletheia }) {
   const courant = indexEtape(statut)
@@ -217,7 +232,6 @@ export default async function PageSemaineAletheia({ params }: { params: Promise<
   // Pilotage par statut. Les états transitoires *_SUBMITTED (l'IA prépare le retour
   // en arrière-plan via after()) sont réels : on montre l'étape précédente + un
   // message d'attente, et la page se rafraîchit via PollStatut.
-  const v1Soumis = statut !== 'DRAFT'
   const enAttenteRetour1 = statut === 'V1_SUBMITTED'
   const enAttenteRetour2 = statut === 'VF_SUBMITTED'
   const echecRetour1 = statut === 'DRAFT' && !!t?.retour_v1_erreur_at
@@ -248,7 +262,7 @@ export default async function PageSemaineAletheia({ params }: { params: Promise<
             </span>
           )}
         </div>
-        {statut !== 'DONE' && (
+        {(statut === 'DRAFT' || statut === 'FEEDBACK1_READY') && (
           <>
             {livre?.label && <p className="text-xs text-muet mt-3">{livre.label as string}</p>}
             <p className="text-sm text-muet mt-1">
@@ -265,46 +279,56 @@ export default async function PageSemaineAletheia({ params }: { params: Promise<
 
       {enSoumission && <BanniereRetoursNonLus retours={retoursALire} />}
 
-      {/* Semaine terminée : archive hiérarchisée (Chantier 3). Les autres états
-          conservent la pile inchangée. */}
+      {/* Rendu piloté PAR STATUT : chaque phase n'affiche que ce qui la concerne.
+          Les états transitoires (attente IA) et la validation finale sont épurés —
+          on ne réempile plus les blocs antérieurs (saisie, retour V1, version finale). */}
       {statut === 'DONE' && t?.retour_vf ? (
+        // Semaine terminée : archive hiérarchisée (tout reste accessible en dépli).
         <RevueDone t={t} evalQuestions={evalQuestions} />
-      ) : (
-       <>
-      {echecRetour1 && (
-        <div className="bg-retard-teinte border border-retard rounded-xl px-4 py-3 text-sm text-retard">
-          La préparation de ton retour n&apos;a pas abouti. Renvoie ton travail ci-dessous ; si le problème persiste, préviens ton professeur.
-        </div>
-      )}
-
-      {/* Étape 1 — saisie 5 champs */}
-      {!v1Soumis ? (
-        <Bloc titre="1. Ta lecture de la semaine">
-          <FormulaireV1
-            livreId={livreId}
-            semaine={semaine}
-            theseInitial={t?.these ?? ''}
-            argumentsInitial={t?.arguments ?? ''}
-            accordInitial={t?.accord ?? ''}
-            questionsInitial={(t?.questions ?? []).join('\n')}
-            vocabulaireInitial={(t?.vocabulaire ?? []).join('\n')}
-            aides={aides}
-          />
+      ) : statut === 'V1_SUBMITTED' ? (
+        // Attente du retour socratique (IA en arrière-plan, polling via PollStatut).
+        <TuileAttente
+          titre="Ton retour se prépare"
+          sousTitre="L’IA relit ta lecture et prépare ses relances. La page se met à jour toute seule."
+        />
+      ) : statut === 'VF_SUBMITTED' ? (
+        // Attente du retour final (reconstruction + architecture).
+        <TuileAttente
+          titre="Ton retour final se prépare"
+          sousTitre="Synthèse modèle et dévoilement de l’architecture. La page se met à jour toute seule."
+        />
+      ) : statut === 'FEEDBACK2_READY' && t?.retour_vf ? (
+        // Validation de lecture — SEULES les tuiles à valider (divulgation progressive).
+        <Bloc titre="4. Retour final — synthèse et architecture">
+          {(() => {
+            // Ordre imposé pour CET écran + accents propres. On trie/fixe AU POINT
+            // D'APPEL — `bullesVF` (vue prof + revue DONE) reste inchangé. `bullesVF`
+            // omet déjà les parties vides → pas de carte vide, « Partie N » indexé réel.
+            const ORDRE = ['ajouts', 'nuances', 'architecture', 'synthese'] as const
+            const ACCENT_PARTIE: Record<string, Accent> = {
+              ajouts: 'pigment',      // border-l-pigment (bleu)
+              nuances: 'or',          // border-l-liseret (or)
+              architecture: 'green',  // border-l-ok (vert)
+              synthese: 'minium',     // border-l-minium (rouge) + bouton
+            }
+            const tuiles = bullesVF(t.retour_vf!)
+              .slice()
+              .sort((a, b) => ORDRE.indexOf(a.id as typeof ORDRE[number]) - ORDRE.indexOf(b.id as typeof ORDRE[number]))
+              .map((b) => ({ id: b.id, titre: b.titre, node: b.node, accent: ACCENT_PARTIE[b.id] }))
+            return (
+              <ValidationLecture
+                sequentiel
+                tuiles={tuiles}
+                dejaLu={false}
+                marquerAction={validerLectureRetourVf.bind(null, livreId, semaine)}
+                labelBouton="✓ J’ai lu mon retour — clore la semaine"
+                introMessage="Lis chaque partie, puis coche-la pour confirmer. La dernière clôt la semaine."
+              />
+            )
+          })()}
         </Bloc>
-      ) : (
-        <Bloc titre="1. Ta lecture de la semaine">
-          <Champ label="Idée principale" valeur={t?.these ?? null} />
-          <Champ label="Arguments" valeur={t?.arguments ?? null} />
-          <Champ label="Ton accord" valeur={t?.accord ?? null} />
-          <ListeChamp label="Tes questions" items={t?.questions ?? []} />
-          <ListeChamp label="Vocabulaire" items={t?.vocabulaire ?? []} />
-        </Bloc>
-      )}
-
-      {enAttenteRetour1 && <p className="text-sm text-muet">Ton retour est en cours de préparation…</p>}
-
-      {/* Étape de réécriture — atelier 2 colonnes : le retour reste sous les yeux. */}
-      {statut === 'FEEDBACK1_READY' && t?.retour_v1 ? (
+      ) : statut === 'FEEDBACK1_READY' && t?.retour_v1 ? (
+        // Réécriture — atelier 2 colonnes SEUL : le retour reste sous les yeux.
         <>
           {echecRetour2 && (
             <div className="bg-retard-teinte border border-retard rounded-xl px-4 py-3 text-sm text-retard">
@@ -329,67 +353,26 @@ export default async function PageSemaineAletheia({ params }: { params: Promise<
           />
         </>
       ) : (
+        // DRAFT (+ échec retour 1) — saisie initiale 5 champs.
         <>
-          {/* Retour V1 (états non-réécriture : reste en pile) */}
-          {t?.retour_v1 && (
-            <Bloc titre="2. Retour — pour creuser">
-              <VueRetourV1 retour={t.retour_v1} montrerRemarque={evalQuestions} />
-            </Bloc>
+          {echecRetour1 && (
+            <div className="bg-retard-teinte border border-retard rounded-xl px-4 py-3 text-sm text-retard">
+              La préparation de ton retour n&apos;a pas abouti. Renvoie ton travail ci-dessous ; si le problème persiste, préviens ton professeur.
+            </div>
           )}
-          {/* Version finale, en lecture seule */}
-          {t?.these_vf && (
-            <Bloc titre="3. Ta version finale">
-              <Champ label="Idée principale" valeur={t?.these_vf ?? null} />
-              <Champ label="Arguments" valeur={t?.arguments_vf ?? null} />
-              <Champ label="Ton accord" valeur={t?.accord_vf ?? null} />
-            </Bloc>
-          )}
+          <Bloc titre="1. Ta lecture de la semaine">
+            <FormulaireV1
+              livreId={livreId}
+              semaine={semaine}
+              theseInitial={t?.these ?? ''}
+              argumentsInitial={t?.arguments ?? ''}
+              accordInitial={t?.accord ?? ''}
+              questionsInitial={(t?.questions ?? []).join('\n')}
+              vocabulaireInitial={(t?.vocabulaire ?? []).join('\n')}
+              aides={aides}
+            />
+          </Bloc>
         </>
-      )}
-
-      {enAttenteRetour2 && <p className="text-sm text-muet">Ton retour final est en cours de préparation…</p>}
-
-      {/* Retour VF + validation de lecture (une case par tuile, clôt la semaine) */}
-      {t?.retour_vf && (
-        <Bloc titre="4. Retour final — synthèse et architecture">
-          {statut === 'FEEDBACK2_READY' ? (
-            (() => {
-              // Divulgation progressive : ordre imposé pour CET écran (l'élève part de
-              // ce qu'il vient d'écrire, puis on affine, on situe, on synthétise) et
-              // accents propres à cet écran. On trie/fixe AU POINT D'APPEL — `bullesVF`
-              // (vue prof + revue DONE) reste inchangé. `bullesVF` omet déjà les parties
-              // vides → pas de carte vide, « Partie N » indexé sur le réel.
-              const ORDRE = ['ajouts', 'nuances', 'architecture', 'synthese'] as const
-              const ACCENT_PARTIE: Record<string, Accent> = {
-                ajouts: 'pigment',      // border-l-pigment (bleu)
-                nuances: 'or',          // border-l-liseret (or)
-                architecture: 'green',  // border-l-ok (vert)
-                synthese: 'minium',     // border-l-minium (rouge) + bouton
-              }
-              const tuiles = bullesVF(t.retour_vf!)
-                .slice()
-                .sort((a, b) => ORDRE.indexOf(a.id as typeof ORDRE[number]) - ORDRE.indexOf(b.id as typeof ORDRE[number]))
-                .map((b) => ({ id: b.id, titre: b.titre, node: b.node, accent: ACCENT_PARTIE[b.id] }))
-              return (
-                <ValidationLecture
-                  sequentiel
-                  tuiles={tuiles}
-                  dejaLu={false}
-                  marquerAction={validerLectureRetourVf.bind(null, livreId, semaine)}
-                  labelBouton="✓ J’ai lu mon retour — clore la semaine"
-                  introMessage="Lis chaque partie, puis coche-la pour confirmer. La dernière clôt la semaine."
-                />
-              )
-            })()
-          ) : (
-            <>
-              <VueRetourVF retour={t.retour_vf} />
-              <p className="text-sm text-ok pt-2">✓ Semaine terminée.</p>
-            </>
-          )}
-        </Bloc>
-      )}
-       </>
       )}
     </div>
   )

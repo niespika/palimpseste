@@ -34,7 +34,7 @@ export default async function PageCapstone({ params }: { params: Promise<{ livre
           <p className="font-titre text-xl text-encre mt-4">
             {cap?.statut === 'PENDING' ? 'Ta carte d’architecture se prépare' : 'Carte d’architecture indisponible'}
           </p>
-          <p className="font-corps text-sm text-muet mt-1.5 max-w-sm">
+          <p className="font-corps text-sm text-encre-douce mt-1.5 max-w-sm">
             {cap?.statut === 'PENDING'
               ? 'Tu as terminé le livre ! La page se mettra à jour automatiquement.'
               : 'La carte d’architecture n’est pas encore disponible.'}
