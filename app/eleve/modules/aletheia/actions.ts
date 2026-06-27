@@ -91,6 +91,12 @@ export async function soumettreV1(livreId: string, semaine: number, saisie: Sais
     .maybeSingle()
   if (existing && existing.statut !== 'DRAFT') return { error: 'Le travail a déjà été soumis pour cette semaine.' }
 
+  // Détection « petit malin » SANS IA (rendu quasi vide / aveu), AVANT de planifier
+  // quoi que ce soit. Si flagué : on N'APPELLE PAS l'IA (aucun retour généré, aucun
+  // coût) et le rendu RESTE en DRAFT — l'élève doit refaire un vrai travail. Il
+  // reçoit un strike + un message « cheeky ».
+  const sig = detecterRenduVideTexte([these, args, accord]) ?? detecterAveuHeuristique(`${these}\n${args}\n${accord}`)
+
   const payload = {
     eleve_id: userId,
     scriptorium_livre_id: livreId,
@@ -102,7 +108,7 @@ export async function soumettreV1(livreId: string, semaine: number, saisie: Sais
     vocabulaire,
     retour_v1: null,
     retour_v1_erreur_at: null,
-    statut: 'V1_SUBMITTED' as StatutAletheia,
+    statut: (sig ? 'DRAFT' : 'V1_SUBMITTED') as StatutAletheia,
     updated_at: new Date().toISOString(),
   }
   const { data: saved, error } = existing
@@ -113,28 +119,27 @@ export async function soumettreV1(livreId: string, semaine: number, saisie: Sais
     if ((error as { code?: string } | null)?.code === '23505') return { error: 'Le travail a déjà été soumis pour cette semaine.' }
     return { error: error?.message ?? 'Erreur' }
   }
-
-  // Retour V1 généré en arrière-plan : l'élève voit « en cours », le polling récupère le résultat.
   const travailId = saved.id as string
-  after(async () => {
-    const mod = await import('@/utils/aletheia-retours')
-    await mod.genererRetourV1(travailId)
-    // Diagnostic AUTOMATIQUE de la SEMAINE 1 uniquement (les suivantes = batch prof).
-    // Froid, indépendant du retour ; alimente la calibration des chapitres suivants.
-    if (semaine === 1) await mod.diagnostiquerTravail(travailId)
-  })
 
-  // Strike auto (rendu quasi vide / aveu) — passe 1, sans IA. Le rendu reste accepté ;
-  // l'élève reçoit un message « cheeky ». La détection hors-sujet (IA) suivra au retour.
-  const sig = detecterRenduVideTexte([these, args, accord]) ?? detecterAveuHeuristique(`${these}\n${args}\n${accord}`)
+  // Retour V1 (+ diagnostic sem. 1) généré en arrière-plan UNIQUEMENT si le rendu
+  // n'est PAS flagué par le détecteur algo : pas de retour IA pour un rendu bidon.
+  if (!sig) {
+    after(async () => {
+      const mod = await import('@/utils/aletheia-retours')
+      await mod.genererRetourV1(travailId)
+      // Diagnostic AUTOMATIQUE de la SEMAINE 1 uniquement (les suivantes = batch prof).
+      // Froid, indépendant du retour ; alimente la calibration des chapitres suivants.
+      if (semaine === 1) await mod.diagnostiquerTravail(travailId)
+    })
+  }
+
   const { avertissement } = sig
     ? await signalerStrikeAuto(admin, { eleveId: userId, module: 'aletheia', renduRef: travailId, type: sig.type, motif: sig.motif })
     : { avertissement: null }
 
-  // Avec un avertissement « petit malin », on NE revalide PAS : sinon le re-render
-  // serveur (statut = V1_SUBMITTED) remplace aussitôt le message cheeky par la vue
-  // « retour en préparation » (message qui flashe ~¼ s). Le client affiche le
-  // message et c'est le bouton « J'ai compris → » qui déclenche router.refresh().
+  // Avec un avertissement « petit malin », on NE revalide PAS : le composant client
+  // garde la carte cheeky affichée (un re-render serveur la remplacerait aussitôt).
+  // C'est le bouton « J'ai compris → » qui déclenche router.refresh() pour la suite.
   if (!avertissement) revalider(livreId, semaine)
   return { success: true, avertissement }
 }
@@ -169,27 +174,33 @@ export async function soumettreVf(livreId: string, semaine: number, vf: SaisieVf
   if (!row) return { error: 'Commence par soumettre ton travail.' }
   if (row.statut !== 'FEEDBACK1_READY') return { error: "La version finale n'est pas disponible à cette étape." }
 
+  // Détection « petit malin » sur la VF (ref distincte de la V1 : autre rendu), AVANT
+  // de planifier l'IA. Si flagué : pas d'IA (aucun retour final généré) et le rendu
+  // RESTE en FEEDBACK1_READY — l'élève doit réécrire pour de vrai. Strike + message.
+  const sig = detecterRenduVideTexte([these, args, accord]) ?? detecterAveuHeuristique(`${these}\n${args}\n${accord}`)
+
   const { error } = await admin.from('aletheia_travaux').update({
     these_vf: these,
     arguments_vf: args,
     accord_vf: accord,
     retour_vf: null,
     retour_vf_erreur_at: null,
-    statut: 'VF_SUBMITTED' as StatutAletheia,
+    statut: (sig ? 'FEEDBACK1_READY' : 'VF_SUBMITTED') as StatutAletheia,
     updated_at: new Date().toISOString(),
   }).eq('id', row.id).eq('statut', 'FEEDBACK1_READY')
   if (error) return { error: error.message }
 
   const travailId = row.id as string
-  after(async () => {
-    const mod = await import('@/utils/aletheia-retours')
-    await mod.genererRetourVf(travailId)
-    // Diagnostic AUTOMATIQUE de la SEMAINE 1 (phase VF → delta V1→VF).
-    if (semaine === 1) await mod.diagnostiquerTravail(travailId)
-  })
+  // Retour final (+ diagnostic sem. 1) UNIQUEMENT si non flagué par le détecteur algo.
+  if (!sig) {
+    after(async () => {
+      const mod = await import('@/utils/aletheia-retours')
+      await mod.genererRetourVf(travailId)
+      // Diagnostic AUTOMATIQUE de la SEMAINE 1 (phase VF → delta V1→VF).
+      if (semaine === 1) await mod.diagnostiquerTravail(travailId)
+    })
+  }
 
-  // Strike auto sur la VF (ref distincte de la V1 : c'est un autre rendu).
-  const sig = detecterRenduVideTexte([these, args, accord]) ?? detecterAveuHeuristique(`${these}\n${args}\n${accord}`)
   const { avertissement } = sig
     ? await signalerStrikeAuto(admin, { eleveId: userId, module: 'aletheia', renduRef: `${travailId}:vf`, type: sig.type, motif: sig.motif })
     : { avertissement: null }
