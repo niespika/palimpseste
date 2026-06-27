@@ -70,16 +70,20 @@ export default async function ProfAccueil() {
   for (const v of aValider) if (v.classeId) aValiderParClasse.set(v.classeId, (aValiderParClasse.get(v.classeId) ?? 0) + 1)
 
   // ── Zone 1 : intégrité (« petits malins ») — signalements à traiter + bloqués ─
-  const [{ count: nbSignalements }, { count: nbBloques }, { data: integriteParams }] = await Promise.all([
+  const [{ count: nbSignalements }, { count: nbBloques }, { data: integriteParams }, { data: premierSig }] = await Promise.all([
     admin.from('integrite_signalements').select('id', { count: 'exact', head: true }).is('acquitte_at', null),
     admin.from('profiles').select('id', { count: 'exact', head: true }).eq('integrite_bloque', true),
     admin.from('integrite_params').select('actif').eq('id', 1).maybeSingle(),
+    admin.from('integrite_signalements').select('id').is('acquitte_at', null).order('created_at', { ascending: false }).limit(1).maybeSingle(),
   ])
   // Détection désactivée → les élèves ne sont plus bloqués de facto : on n'alerte pas.
   const integriteActive = integriteParams?.actif ?? true
   const bloq = nbBloques ?? 0
   const sig = nbSignalements ?? 0
   const integriteAlerte = integriteActive && (bloq > 0 || sig > 0)
+  // Deep-link : on ouvre directement le 1ᵉʳ cas (sur mobile, la preuve plein écran).
+  const premierSigId = (premierSig?.id as string | undefined) ?? null
+  const hrefIntegrite = premierSigId ? `/prof/integrite?sel=${premierSigId}` : '/prof/integrite'
 
   // ── Zone 2 : santé de la cohorte (par inscription) ──────────────────────────
   const santeValues = [...sante.values()]
@@ -106,6 +110,7 @@ export default async function ProfAccueil() {
   type Hero = { titre: string; sousTitre?: string; ctaLabel: string; ctaHref: string; module?: ModuleSceau; danger?: boolean }
   let hero: Hero | null = null
   let heroTacheId: string | null = null
+  let heroIntegrite = false
   if (aValider.length > 0) {
     const noms = [...new Set(aValider.slice(0, 2).map((v) => v.eleveNom))].filter((n) => n && n !== '?')
     hero = {
@@ -119,14 +124,15 @@ export default async function ProfAccueil() {
     const parts: string[] = []
     if (bloq > 0) parts.push(`${bloq} élève${bloq > 1 ? 's' : ''} bloqué${bloq > 1 ? 's' : ''}`)
     if (sig > 0) parts.push(`${sig} signalement${sig > 1 ? 's' : ''} à traiter`)
-    hero = { titre: 'Intégrité — petits malins', sousTitre: parts.join(' · '), ctaLabel: 'Gérer →', ctaHref: '/prof/integrite', danger: true }
+    hero = { titre: 'Intégrité — petits malins', sousTitre: parts.join(' · '), ctaLabel: 'Gérer →', ctaHref: hrefIntegrite, danger: true }
+    heroIntegrite = true
   } else if (tachesCal.length > 0) {
     const t = tachesCal[0]
     heroTacheId = t.id
     hero = { titre: t.label, sousTitre: [t.classeNom, fmtDate(t.echeance)].filter(Boolean).join(' · '), ctaLabel: 'Ouvrir →', ctaHref: t.href }
   }
   // « À préparer » = les autres items (l'item promu en héros est retiré du fil).
-  const integriteEnPreparer = integriteAlerte && hero?.ctaHref !== '/prof/integrite'
+  const integriteEnPreparer = integriteAlerte && !heroIntegrite
   const tachesEnPreparer = tachesCal.filter((t) => t.id !== heroTacheId)
 
   const labelClasse = (n: number) => `${n} élève${n > 1 ? 's' : ''}`
@@ -170,7 +176,7 @@ export default async function ProfAccueil() {
               <h3 className="font-ui text-[11px] font-medium uppercase tracking-[0.12em] text-muet mb-2">À préparer</h3>
               <div className="space-y-2">
                 {integriteEnPreparer && (
-                  <Link href="/prof/integrite" className="block bg-surface border border-bordure rounded-xl px-4 py-3 hover:shadow-sm transition-shadow">
+                  <Link href={hrefIntegrite} className="block bg-surface border border-bordure rounded-xl px-4 py-3 hover:shadow-sm transition-shadow">
                     <div className="flex items-center gap-3">
                       <span className="w-2.5 h-2.5 rounded-full bg-retard flex-shrink-0" aria-hidden />
                       <span className="font-corps text-base text-encre flex-1">

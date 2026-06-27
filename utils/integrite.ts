@@ -175,6 +175,21 @@ export async function acquitterSignalement(admin: Admin, signalementId: string, 
   await admin.from('integrite_signalements').update(patch).eq('id', signalementId)
 }
 
+// Prof BLOQUE manuellement un élève (action explicite depuis la page Intégrité).
+// N'incrémente PAS le compteur de strikes : le déblocage (debloquerEleve) fait
+// déjà -1 strike et lève le blocage. Le blocage ne prend effet que si la détection
+// est active (cf. messageSiBloque, garde-fou serveur des rendus).
+export async function bloquerEleve(admin: Admin, eleveId: string): Promise<void> {
+  // Garde `.eq('integrite_bloque', false)` : on ne pose integrite_bloque_at que sur
+  // la transition réelle non-bloqué → bloqué (anti double-clic / double-onglet ;
+  // cohérent avec incrementerStrike qui ne réécrit bloque_at que si !dejaBloque).
+  await admin
+    .from('profiles')
+    .update({ integrite_bloque: true, integrite_bloque_at: new Date().toISOString() })
+    .eq('id', eleveId)
+    .eq('integrite_bloque', false)
+}
+
 // Prof DÉBLOQUE un élève : lève le blocage et retire 1 strike (le prochain
 // incident re-bloquera). Les signalements restent dans l'historique.
 export async function debloquerEleve(admin: Admin, eleveId: string): Promise<void> {

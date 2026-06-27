@@ -4,7 +4,7 @@ import { revalidatePath } from 'next/cache'
 import { createClient } from '@/utils/supabase/server'
 import { createAdminClient } from '@/utils/supabase/admin'
 import {
-  confirmerSignalement, acquitterSignalement, debloquerEleve,
+  confirmerSignalement, acquitterSignalement, bloquerEleve, debloquerEleve,
   MESSAGE_STRIKE_DEFAUT, MESSAGE_BLOQUE_DEFAUT,
 } from '@/utils/integrite'
 
@@ -39,6 +39,13 @@ export async function actionEcarterSignalement(id: string) {
 export async function actionAcquitterSignalement(id: string) {
   await verifierProf()
   await acquitterSignalement(createAdminClient(), id, false)
+  revalider()
+}
+
+// Prof bloque manuellement un élève (sans toucher au compteur de strikes).
+export async function actionBloquerEleve(eleveId: string) {
+  await verifierProf()
+  await bloquerEleve(createAdminClient(), eleveId)
   revalider()
 }
 

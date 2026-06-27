@@ -5,9 +5,16 @@ import {
   LABEL_MODULE, LABEL_TYPE_STRIKE, MESSAGE_STRIKE_DEFAUT, MESSAGE_BLOQUE_DEFAUT,
   type ModuleIntegrite, type TypeStrike,
 } from '@/utils/integrite'
-import GestionIntegrite, { type SignalementVue, type BloqueVue } from './GestionIntegrite'
+import { chargerPreuve } from '@/utils/integrite-preuve'
+import GestionIntegrite from './GestionIntegrite'
+import type { SignalementVue, BloqueVue, SelectionVue } from '@/components/integrite/types'
 
-export default async function ProfIntegritePage() {
+export default async function ProfIntegritePage({
+  searchParams,
+}: {
+  searchParams: Promise<{ sel?: string }>
+}) {
+  const { sel } = await searchParams
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
@@ -19,11 +26,13 @@ export default async function ProfIntegritePage() {
   const [{ data: paramsRow }, { data: signalements }, { data: bloquesRows }] = await Promise.all([
     admin.from('integrite_params').select('actif, seuil_strikes, message_strike, message_bloque').eq('id', 1).maybeSingle(),
     admin.from('integrite_signalements')
-      .select('id, eleve_id, module, type, motif, source, statut, created_at')
+      .select('id, eleve_id, module, rendu_ref, type, motif, source, statut, created_at')
       .is('acquitte_at', null)
       .order('created_at', { ascending: false }),
     admin.from('profiles').select('id, display_name, integrite_strikes').eq('integrite_bloque', true).order('display_name'),
   ])
+
+  const seuil = paramsRow?.seuil_strikes ?? 3
 
   // Noms des élèves concernés par les signalements.
   const eleveIds = [...new Set((signalements ?? []).map((s) => s.eleve_id as string))]
@@ -32,18 +41,24 @@ export default async function ProfIntegritePage() {
     : { data: [] }
   const nomEleve = new Map((profils ?? []).map((p) => [p.id as string, p.display_name as string]))
 
-  const fmtDate = (iso: string) =>
+  const fmtLong = (iso: string) =>
     new Date(iso).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })
+  const fmtCourt = (iso: string) =>
+    new Date(iso).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })
 
   const vueSignalements: SignalementVue[] = (signalements ?? []).map((s) => ({
     id: s.id as string,
+    eleveId: s.eleve_id as string,
     eleveNom: nomEleve.get(s.eleve_id as string) ?? '?',
-    module: LABEL_MODULE[s.module as ModuleIntegrite] ?? (s.module as string),
-    type: LABEL_TYPE_STRIKE[s.type as TypeStrike] ?? (s.type as string),
+    moduleSlug: s.module as ModuleIntegrite,
+    moduleLabel: LABEL_MODULE[s.module as ModuleIntegrite] ?? (s.module as string),
+    typeSlug: s.type as string,
+    typeLabel: LABEL_TYPE_STRIKE[s.type as TypeStrike] ?? (s.type as string),
     motif: (s.motif as string | null) ?? null,
     source: s.source as 'algo' | 'ia',
     enAttente: s.statut === 'en_attente',
-    date: fmtDate(s.created_at as string),
+    date: fmtLong(s.created_at as string),
+    dateCourt: fmtCourt(s.created_at as string),
   }))
 
   const vueBloques: BloqueVue[] = (bloquesRows ?? []).map((b) => ({
@@ -52,34 +67,42 @@ export default async function ProfIntegritePage() {
     strikes: (b.integrite_strikes as number) ?? 0,
   }))
 
+  // Sélection : ?sel=<id> s'il pointe un signalement affiché, sinon le 1ᵉʳ à traiter
+  // (défaut pour la colonne droite sur ordi). `selExplicit` pilote la bascule mobile
+  // (liste ↔ preuve plein écran) : on n'ouvre la preuve sur mobile que si demandé.
+  const idsAffiches = new Set(vueSignalements.map((v) => v.id))
+  const selExplicit = !!sel && idsAffiches.has(sel)
+  const selId = selExplicit ? sel! : (vueSignalements[0]?.id ?? null)
+
+  let selection: SelectionVue | null = null
+  if (selId) {
+    const sig = vueSignalements.find((v) => v.id === selId)!
+    const raw = (signalements ?? []).find((r) => r.id === selId)!
+    const [{ data: prof }, preuve] = await Promise.all([
+      admin.from('profiles').select('integrite_strikes, integrite_bloque').eq('id', sig.eleveId).maybeSingle(),
+      chargerPreuve(admin, sig.moduleSlug, raw.rendu_ref as string, { motif: sig.motif, type: sig.typeSlug }),
+    ])
+    selection = {
+      signalement: sig,
+      preuve,
+      strikesEleve: (prof?.integrite_strikes as number | null) ?? 0,
+      seuil,
+      eleveBloque: !!prof?.integrite_bloque,
+    }
+  }
+
   return (
-    <div className="space-y-6 pb-10">
-      <div>
-        <h2 className="text-xl font-serif text-encre">Intégrité — petits malins</h2>
-        <p className="text-sm text-muet mt-1">
-          Rendus vides, aveux et copies hors-sujet repérés dans Aletheia, Codex et Fragments.
-          À {paramsRow?.seuil_strikes ?? 3} strikes, l’élève ne peut plus rien rendre ni réviser ses flashcards
-          (le quizz reste ouvert) jusqu’à ce que tu le débloques.
-        </p>
-      </div>
-
-      {(paramsRow?.actif ?? true) === false && (
-        <div className="bg-attention-teinte border border-attention rounded-xl px-5 py-3 text-sm text-attention">
-          Détection désactivée : aucun élève n’est bloqué pour l’instant, même ceux listés ci-dessous.
-          Réactive-la dans les paramètres pour que les blocages reprennent effet.
-        </div>
-      )}
-
-      <GestionIntegrite
-        bloques={vueBloques}
-        signalements={vueSignalements}
-        params={{
-          actif: paramsRow?.actif ?? true,
-          seuil: paramsRow?.seuil_strikes ?? 3,
-          messageStrike: paramsRow?.message_strike || MESSAGE_STRIKE_DEFAUT,
-          messageBloque: paramsRow?.message_bloque || MESSAGE_BLOQUE_DEFAUT,
-        }}
-      />
-    </div>
+    <GestionIntegrite
+      bloques={vueBloques}
+      signalements={vueSignalements}
+      selection={selection}
+      selExplicit={selExplicit}
+      params={{
+        actif: paramsRow?.actif ?? true,
+        seuil,
+        messageStrike: paramsRow?.message_strike || MESSAGE_STRIKE_DEFAUT,
+        messageBloque: paramsRow?.message_bloque || MESSAGE_BLOQUE_DEFAUT,
+      }}
+    />
   )
 }
