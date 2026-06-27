@@ -7,7 +7,7 @@ import { validerLectureRetourVf } from '../../actions'
 import FormulaireV1 from '../../FormulaireV1'
 import FormulaireVf from '../../FormulaireVf'
 import PollStatut from '../../PollStatut'
-import { VueRetourV1, VueRetourVF, bullesVF } from '@/components/aletheia/VueRetours'
+import { VueRetourV1, VueRetourVF, bullesVF, type Accent } from '@/components/aletheia/VueRetours'
 import ValidationLecture from '@/components/retours/ValidationLecture'
 import BanniereRetoursNonLus from '@/components/retours/BanniereRetoursNonLus'
 import { retoursNonLus } from '@/utils/retours-lus'
@@ -353,15 +353,34 @@ export default async function PageSemaineAletheia({ params }: { params: Promise<
       {t?.retour_vf && (
         <Bloc titre="4. Retour final — synthèse et architecture">
           {statut === 'FEEDBACK2_READY' ? (
-            <>
-              <p className="text-xs text-muet">Pour clore la semaine, coche chaque partie puis valide.</p>
-              <ValidationLecture
-                tuiles={bullesVF(t.retour_vf).map((b) => ({ id: b.id, titre: b.titre, node: b.node }))}
-                dejaLu={false}
-                marquerAction={validerLectureRetourVf.bind(null, livreId, semaine)}
-                labelBouton="J’ai tout lu — clore la semaine"
-              />
-            </>
+            (() => {
+              // Divulgation progressive : ordre imposé pour CET écran (l'élève part de
+              // ce qu'il vient d'écrire, puis on affine, on situe, on synthétise) et
+              // accents propres à cet écran. On trie/fixe AU POINT D'APPEL — `bullesVF`
+              // (vue prof + revue DONE) reste inchangé. `bullesVF` omet déjà les parties
+              // vides → pas de carte vide, « Partie N » indexé sur le réel.
+              const ORDRE = ['ajouts', 'nuances', 'architecture', 'synthese'] as const
+              const ACCENT_PARTIE: Record<string, Accent> = {
+                ajouts: 'pigment',      // border-l-pigment (bleu)
+                nuances: 'or',          // border-l-liseret (or)
+                architecture: 'green',  // border-l-ok (vert)
+                synthese: 'minium',     // border-l-minium (rouge) + bouton
+              }
+              const tuiles = bullesVF(t.retour_vf!)
+                .slice()
+                .sort((a, b) => ORDRE.indexOf(a.id as typeof ORDRE[number]) - ORDRE.indexOf(b.id as typeof ORDRE[number]))
+                .map((b) => ({ id: b.id, titre: b.titre, node: b.node, accent: ACCENT_PARTIE[b.id] }))
+              return (
+                <ValidationLecture
+                  sequentiel
+                  tuiles={tuiles}
+                  dejaLu={false}
+                  marquerAction={validerLectureRetourVf.bind(null, livreId, semaine)}
+                  labelBouton="✓ J’ai lu mon retour — clore la semaine"
+                  introMessage="Lis chaque partie, puis coche-la pour confirmer. La dernière clôt la semaine."
+                />
+              )
+            })()
           ) : (
             <>
               <VueRetourVF retour={t.retour_vf} />

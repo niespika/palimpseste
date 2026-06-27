@@ -3,9 +3,9 @@ import type { RetourV1, RetourVF } from '@/app/eleve/modules/aletheia/types'
 // Rendu partagé des retours Aletheia (page semaine élève + drill-down prof).
 // Objectif ergonomie ado (SPEC §3) : bulles dédiées, priorisées, pas de pavé.
 
-type Accent = 'violet' | 'amber' | 'green' | 'stone' | 'sky' | 'minium' | 'pigment' | 'or'
+export type Accent = 'violet' | 'amber' | 'green' | 'stone' | 'sky' | 'minium' | 'pigment' | 'or'
 
-const ACCENT: Record<Accent, string> = {
+export const ACCENT: Record<Accent, string> = {
   violet: 'border-l-liseret',
   amber: 'border-l-attention',
   green: 'border-l-ok',
