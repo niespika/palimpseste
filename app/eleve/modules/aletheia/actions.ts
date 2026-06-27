@@ -131,7 +131,11 @@ export async function soumettreV1(livreId: string, semaine: number, saisie: Sais
     ? await signalerStrikeAuto(admin, { eleveId: userId, module: 'aletheia', renduRef: travailId, type: sig.type, motif: sig.motif })
     : { avertissement: null }
 
-  revalider(livreId, semaine)
+  // Avec un avertissement « petit malin », on NE revalide PAS : sinon le re-render
+  // serveur (statut = V1_SUBMITTED) remplace aussitôt le message cheeky par la vue
+  // « retour en préparation » (message qui flashe ~¼ s). Le client affiche le
+  // message et c'est le bouton « J'ai compris → » qui déclenche router.refresh().
+  if (!avertissement) revalider(livreId, semaine)
   return { success: true, avertissement }
 }
 
@@ -190,7 +194,9 @@ export async function soumettreVf(livreId: string, semaine: number, vf: SaisieVf
     ? await signalerStrikeAuto(admin, { eleveId: userId, module: 'aletheia', renduRef: `${travailId}:vf`, type: sig.type, motif: sig.motif })
     : { avertissement: null }
 
-  revalider(livreId, semaine)
+  // Cf. soumettreV1 : pas de revalidation tant qu'un avertissement « petit malin »
+  // doit être lu (sinon il flashe et la vue bascule en « retour en préparation »).
+  if (!avertissement) revalider(livreId, semaine)
   return { success: true, avertissement }
 }
 
