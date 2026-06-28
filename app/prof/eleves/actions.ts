@@ -5,6 +5,8 @@ import { createAdminClient } from '@/utils/supabase/admin'
 import { createClient } from '@/utils/supabase/server'
 import { genererMotDePasse } from '@/utils/password'
 
+type Admin = ReturnType<typeof createAdminClient>
+
 // Vérifier que l'appelant est bien le prof
 async function verifierProf() {
   const supabase = await createClient()
@@ -20,7 +22,28 @@ async function verifierProf() {
   if (profile?.role !== 'prof') throw new Error('Accès refusé')
 }
 
-// Traduit en français les erreurs courantes de Supabase Auth (messages anglais).
+// La cible d'une action « élève » doit être un profil role='eleve'. Le client
+// admin ignore la RLS : sans cette garde, un id forgé pointant un autre prof
+// pourrait être modifié / réinitialisé / supprimé.
+async function cibleEstEleve(admin: Admin, id: string): Promise<boolean> {
+  if (!id) return false
+  const { data } = await admin.from('profiles').select('role').eq('id', id).maybeSingle()
+  return data?.role === 'eleve'
+}
+
+// Borne et nettoie un nom affiché (retire les caractères de contrôle, limite la
+// longueur). charCodeAt évite d'écrire des octets de contrôle dans le source.
+function nettoyerNom(s: string): string {
+  return Array.from(s ?? '')
+    .filter((ch) => { const c = ch.charCodeAt(0); return c >= 32 && c !== 127 })
+    .join('')
+    .trim()
+    .slice(0, 120)
+}
+
+// Traduit en français les erreurs courantes de Supabase Auth ; pour le reste,
+// journalise le détail côté serveur et renvoie un libellé générique (pas de
+// fuite de message brut au client).
 function messageErreurAuth(message: string | undefined | null): string {
   const m = (message ?? '').toLowerCase()
   if (m.includes('already been registered') || m.includes('already registered')) {
@@ -32,16 +55,17 @@ function messageErreurAuth(message: string | undefined | null): string {
   if (m.includes('unable to validate email') || (m.includes('invalid') && m.includes('email'))) {
     return 'Adresse courriel invalide.'
   }
-  return message?.trim() || 'Création du compte impossible.'
+  if (message) console.error('[eleves] erreur auth non mappée :', message)
+  return 'Création du compte impossible.'
 }
 
 export async function creerEleve(formData: FormData) {
   await verifierProf()
 
   const admin = createAdminClient()
-  const email = formData.get('email') as string
+  const email = (formData.get('email') as string)?.trim()
   const motDePasse = formData.get('motDePasse') as string
-  const displayName = formData.get('displayName') as string
+  const displayName = nettoyerNom(formData.get('displayName') as string)
 
   const { data: { user: nouvelUtilisateur }, error } = await admin.auth.admin.createUser({
     email,
@@ -53,14 +77,19 @@ export async function creerEleve(formData: FormData) {
   if (!nouvelUtilisateur) return { error: 'Utilisateur créé mais introuvable.' }
 
   // Créer le profil manuellement (plus fiable que le trigger).
-  // L'inscription en classe se fait ensuite via /prof/classes.
+  // L'inscription en classe se fait ensuite via le tableau / l'onglet Classes.
   const { error: profilError } = await admin.from('profiles').insert({
     id: nouvelUtilisateur.id,
     role: 'eleve',
     display_name: displayName,
   })
 
-  if (profilError) return { error: `Compte créé mais profil impossible : ${profilError.message}` }
+  if (profilError) {
+    console.error('[eleves] insert profil échec (creerEleve) :', profilError.message)
+    // Rollback : ne pas laisser un compte Auth orphelin (invisible + email bloqué).
+    await admin.auth.admin.deleteUser(nouvelUtilisateur.id)
+    return { error: 'Compte non créé (profil impossible). Réessaie.' }
+  }
 
   revalidatePath('/prof/eleves')
   return { success: true }
@@ -69,16 +98,23 @@ export async function creerEleve(formData: FormData) {
 export async function modifierEleve(formData: FormData) {
   await verifierProf()
 
-  const supabase = await createClient()
+  const admin = createAdminClient()
   const id = formData.get('id') as string
-  const displayName = formData.get('displayName') as string
+  const displayName = nettoyerNom(formData.get('displayName') as string)
 
+  if (!(await cibleEstEleve(admin, id))) return { error: 'Compte introuvable.' }
+  if (!displayName) return { error: 'Le nom ne peut pas être vide.' }
+
+  const supabase = await createClient()
   const { error } = await supabase
     .from('profiles')
     .update({ display_name: displayName })
     .eq('id', id)
 
-  if (error) return { error: `Impossible de modifier : ${error.message}` }
+  if (error) {
+    console.error('[eleves] modif échec :', error.message)
+    return { error: 'Modification impossible.' }
+  }
 
   revalidatePath('/prof/eleves')
   return { success: true }
@@ -91,11 +127,16 @@ export async function reinitialiserMotDePasse(formData: FormData) {
   const id = formData.get('id') as string
   const nouveauMotDePasse = formData.get('nouveauMotDePasse') as string
 
+  if (!(await cibleEstEleve(admin, id))) return { error: 'Compte introuvable.' }
+
   const { error } = await admin.auth.admin.updateUserById(id, {
     password: nouveauMotDePasse,
   })
 
-  if (error) return { error: `Impossible de réinitialiser : ${error.message}` }
+  if (error) {
+    console.error('[eleves] reset MDP échec :', error.message)
+    return { error: messageErreurAuth(error.message) }
+  }
 
   revalidatePath('/prof/eleves')
   return { success: true }
@@ -108,14 +149,19 @@ export type ResultatImport = {
 }
 
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+const MAX_IMPORT = 500
 
 // Import en masse depuis un CSV (parsé côté client). Chaque ligne → compte +
 // profil. Le mot de passe est interne (jamais affiché) : l'élève sera activé
 // par l'invitation (lien sécurisé) ou par un mot de passe défini à la main.
 export async function importerEleves(lignes: LigneImport[]): Promise<ResultatImport> {
   await verifierProf()
-  const admin = createAdminClient()
+  if (!Array.isArray(lignes)) return { crees: 0, echecs: [] }
+  if (lignes.length > MAX_IMPORT) {
+    return { crees: 0, echecs: [{ ligne: 0, email: '', raison: `Import trop volumineux (max ${MAX_IMPORT} lignes par envoi).` }] }
+  }
 
+  const admin = createAdminClient()
   const echecs: ResultatImport['echecs'] = []
   let crees = 0
   const vus = new Set<string>()
@@ -125,7 +171,7 @@ export async function importerEleves(lignes: LigneImport[]): Promise<ResultatImp
     const email = (lignes[i]?.email ?? '').trim().toLowerCase()
     const prenom = (lignes[i]?.prenom ?? '').trim()
     const nom = (lignes[i]?.nom ?? '').trim()
-    const displayName = [prenom, nom].filter(Boolean).join(' ')
+    const displayName = nettoyerNom([prenom, nom].filter(Boolean).join(' '))
 
     if (!email || !EMAIL_REGEX.test(email)) {
       echecs.push({ ligne: numero, email: email || '(vide)', raison: 'Adresse courriel invalide.' })
@@ -157,7 +203,10 @@ export async function importerEleves(lignes: LigneImport[]): Promise<ResultatImp
       display_name: displayName,
     })
     if (profilError) {
-      echecs.push({ ligne: numero, email, raison: `Compte créé mais profil impossible : ${profilError.message}` })
+      console.error('[eleves] insert profil échec (import) :', profilError.message)
+      // Rollback : éviter un compte Auth orphelin qui bloquerait le réimport.
+      await admin.auth.admin.deleteUser(nouvel.id)
+      echecs.push({ ligne: numero, email, raison: 'Compte non créé (profil impossible).' })
       continue
     }
 
@@ -174,9 +223,14 @@ export async function supprimerEleve(formData: FormData) {
   const admin = createAdminClient()
   const id = formData.get('id') as string
 
+  if (!(await cibleEstEleve(admin, id))) return { error: 'Compte introuvable.' }
+
   const { error } = await admin.auth.admin.deleteUser(id)
 
-  if (error) return { error: `Impossible de supprimer : ${error.message}` }
+  if (error) {
+    console.error('[eleves] suppression échec :', error.message)
+    return { error: 'Suppression impossible.' }
+  }
 
   revalidatePath('/prof/eleves')
   return { success: true }

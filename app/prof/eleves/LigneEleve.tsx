@@ -7,6 +7,8 @@ import { modifierEleve, reinitialiserMotDePasse, supprimerEleve } from './action
 import { inscrireEleve, retirerEleve } from '@/app/prof/classes/actions'
 import type { EleveAvecEmail } from '@/types'
 
+type Msg = { type: 'ok' | 'erreur'; texte: string }
+
 export default function LigneEleve({
   eleve,
   classes,
@@ -18,8 +20,13 @@ export default function LigneEleve({
   const [modeEdition, setModeEdition] = useState(false)
   const [modeReset, setModeReset] = useState(false)
   const [chargement, setChargement] = useState(false)
-  const [message, setMessage] = useState<string | null>(null)
+  const [message, setMessage] = useState<Msg | null>(null)
+  const [messageClasse, setMessageClasse] = useState<Msg | null>(null)
   const [pendingClasse, startClasse] = useTransition()
+
+  // Une seule opération à la fois sur la ligne (évite Supprimer ↔ retrait-classe
+  // en parallèle, qui touchent des données qui se recouvrent).
+  const occupe = pendingClasse || chargement
 
   async function handleModifier(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()
@@ -27,7 +34,7 @@ export default function LigneEleve({
     const formData = new FormData(e.currentTarget)
     formData.append('id', eleve.id)
     const resultat = await modifierEleve(formData)
-    if (resultat?.error) setMessage(resultat.error)
+    if (resultat?.error) setMessage({ type: 'erreur', texte: resultat.error })
     else { setModeEdition(false); setMessage(null) }
     setChargement(false)
   }
@@ -38,47 +45,51 @@ export default function LigneEleve({
     const formData = new FormData(e.currentTarget)
     formData.append('id', eleve.id)
     const resultat = await reinitialiserMotDePasse(formData)
-    if (resultat?.error) setMessage(resultat.error)
-    else { setModeReset(false); setMessage('Mot de passe réinitialisé.') }
+    if (resultat?.error) setMessage({ type: 'erreur', texte: resultat.error })
+    else { setModeReset(false); setMessage({ type: 'ok', texte: 'Mot de passe réinitialisé.' }) }
     setChargement(false)
   }
 
   async function handleSupprimer() {
+    if (occupe) return
     if (!confirm(`Supprimer le compte de ${eleve.display_name} ? Cette action est irréversible.`)) return
     setChargement(true)
     const formData = new FormData()
     formData.append('id', eleve.id)
     const resultat = await supprimerEleve(formData)
-    if (resultat?.error) { setMessage(resultat.error); setChargement(false) }
+    if (resultat?.error) { setMessage({ type: 'erreur', texte: resultat.error }); setChargement(false) }
   }
 
   // Affecter l'élève à une classe (non destructif, idempotent).
   function ajouterClasse(classeId: string) {
     if (!classeId) return
-    setMessage(null)
-    const fd = new FormData()
-    fd.append('classeId', classeId)
-    fd.append('eleveId', eleve.id)
+    const nom = classes.find((c) => c.id === classeId)?.nom ?? 'la classe'
+    setMessageClasse(null)
     startClasse(async () => {
-      const r = await inscrireEleve(fd)
-      if (r?.error) setMessage(r.error)
-      else router.refresh()
+      const r = await inscrireEleve(toFd(classeId, eleve.id))
+      if (r?.error) setMessageClasse({ type: 'erreur', texte: r.error })
+      else { setMessageClasse({ type: 'ok', texte: `Ajouté à ${nom}.` }); router.refresh() }
     })
   }
 
   // Retirer l'élève d'une classe — DESTRUCTIF (supprime son travail dans cette
   // classe). Même garde de confirmation que la gestion côté Classes.
   function retirerClasse(classeId: string, nomClasse: string) {
+    if (occupe) return
     if (!confirm(`Retirer ${eleve.display_name} de ${nomClasse} ? Son travail dans CETTE classe sera supprimé (compte et autres classes intacts).`)) return
-    setMessage(null)
-    const fd = new FormData()
-    fd.append('classeId', classeId)
-    fd.append('eleveId', eleve.id)
+    setMessageClasse(null)
     startClasse(async () => {
-      const r = await retirerEleve(fd)
-      if (r?.error) setMessage(r.error)
+      const r = await retirerEleve(toFd(classeId, eleve.id))
+      if (r?.error) setMessageClasse({ type: 'erreur', texte: r.error })
       else router.refresh()
     })
+  }
+
+  function toFd(classeId: string, eleveId: string) {
+    const fd = new FormData()
+    fd.append('classeId', classeId)
+    fd.append('eleveId', eleveId)
+    return fd
   }
 
   const disponibles = classes.filter((c) => !eleve.classes.some((x) => x.id === c.id))
@@ -98,7 +109,7 @@ export default function LigneEleve({
               />
             </div>
             <p className="text-xs text-muet self-end mb-2">L&apos;inscription en classe se gère dans la colonne Classes.</p>
-            {message && <p className="text-retard text-sm">{message}</p>}
+            {message && <p className={`text-sm ${message.type === 'ok' ? 'text-ok' : 'text-retard'}`}>{message.texte}</p>}
             <button
               type="submit"
               disabled={chargement}
@@ -137,7 +148,7 @@ export default function LigneEleve({
                 placeholder="Au moins 8 caractères"
               />
             </div>
-            {message && <p className="text-retard text-sm">{message}</p>}
+            {message && <p className={`text-sm ${message.type === 'ok' ? 'text-ok' : 'text-retard'}`}>{message.texte}</p>}
             <button
               type="submit"
               disabled={chargement}
@@ -160,12 +171,12 @@ export default function LigneEleve({
 
   return (
     <tr className="border-t border-bordure hover:bg-parchemin-fonce">
-      <td className="px-4 py-3 text-sm font-medium">
+      <td className="px-4 py-3 text-sm font-medium align-top">
         <Link href={`/prof/eleves/${eleve.id}`} className="text-encre hover:text-pigment hover:underline">
           {eleve.display_name}
         </Link>
       </td>
-      <td className="px-4 py-3 text-sm">
+      <td className="px-4 py-3 text-sm align-top">
         <div className="flex flex-wrap items-center gap-1.5">
           {eleve.classes.map((c) => (
             <span
@@ -176,8 +187,8 @@ export default function LigneEleve({
               <button
                 type="button"
                 onClick={() => retirerClasse(c.id, c.nom)}
-                disabled={pendingClasse}
-                aria-label={`Retirer de ${c.nom}`}
+                disabled={occupe}
+                aria-label={`Retirer ${eleve.display_name} de ${c.nom}`}
                 className="text-muet hover:text-retard disabled:opacity-50 leading-none text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pigment rounded-full"
               >
                 ×
@@ -186,8 +197,9 @@ export default function LigneEleve({
           ))}
           <select
             value=""
-            disabled={pendingClasse || disponibles.length === 0}
+            disabled={occupe || disponibles.length === 0}
             onChange={(e) => ajouterClasse(e.target.value)}
+            aria-label={`Ajouter ${eleve.display_name} à une classe`}
             className="font-ui text-xs border border-bordure rounded-lg px-2 py-1 bg-surface text-encre-douce disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pigment"
           >
             <option value="">
@@ -198,31 +210,36 @@ export default function LigneEleve({
             ))}
           </select>
         </div>
+        {messageClasse && (
+          <p className={`text-xs mt-1 ${messageClasse.type === 'ok' ? 'text-ok' : 'text-retard'}`}>{messageClasse.texte}</p>
+        )}
       </td>
-      <td className="px-4 py-3 text-sm text-encre-douce">{eleve.email}</td>
-      <td className="px-4 py-3 text-sm">
+      <td className="px-4 py-3 text-sm text-encre-douce align-top">{eleve.email}</td>
+      <td className="px-4 py-3 text-sm align-top">
         <div className="flex gap-2">
           <button
             onClick={() => setModeEdition(true)}
-            className="text-encre-douce hover:text-encre text-xs px-2 py-1 rounded hover:bg-parchemin-fonce"
+            disabled={occupe}
+            className="text-encre-douce hover:text-encre text-xs px-2 py-1 rounded hover:bg-parchemin-fonce disabled:opacity-50"
           >
             Modifier
           </button>
           <button
             onClick={() => setModeReset(true)}
-            className="text-encre-douce hover:text-encre text-xs px-2 py-1 rounded hover:bg-parchemin-fonce"
+            disabled={occupe}
+            className="text-encre-douce hover:text-encre text-xs px-2 py-1 rounded hover:bg-parchemin-fonce disabled:opacity-50"
           >
             Mot de passe
           </button>
           <button
             onClick={handleSupprimer}
-            disabled={chargement}
+            disabled={occupe}
             className="text-retard hover:opacity-80 text-xs px-2 py-1 rounded hover:bg-retard-teinte disabled:opacity-50"
           >
             Supprimer
           </button>
         </div>
-        {message && <p className="text-ok text-xs mt-1">{message}</p>}
+        {message && <p className={`text-xs mt-1 ${message.type === 'ok' ? 'text-ok' : 'text-retard'}`}>{message.texte}</p>}
       </td>
     </tr>
   )

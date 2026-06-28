@@ -1,9 +1,12 @@
 'use client'
 
 import { useMemo, useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { importerEleves, type LigneImport, type ResultatImport } from './actions'
 
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+// Libellés reconnus dans une ligne d'en-tête (après sansAccents, donc sans accent).
+const MOTS_CLES_ENTETE = new Set(['nom', 'prenom', 'email', 'e-mail', 'mail', 'courriel'])
 
 function sansAccents(s: string): string {
   return s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().trim()
@@ -32,45 +35,77 @@ function decouper(ligne: string, delim: string): string[] {
   return cells.map((c) => c.trim())
 }
 
-type Analyse = { valides: LigneImport[]; nbInvalides: number; total: number }
+type Analyse = {
+  valides: LigneImport[]
+  nbEmailInvalide: number
+  nbNomManquant: number
+  nbDoublons: number
+  total: number
+  erreurColonnes: boolean
+}
+
+// Délimiteur dominant estimé sur un échantillon de lignes (pas la seule 1re,
+// pour éviter qu'un en-tête atypique fausse le découpage des données).
+function detecterDelimiteur(lignes: string[]): string {
+  let pv = 0, vir = 0
+  for (const l of lignes.slice(0, 5)) {
+    pv += l.split(';').length - 1
+    vir += l.split(',').length - 1
+  }
+  return pv > 0 && pv >= vir ? ';' : ','
+}
 
 function analyser(texte: string): Analyse {
+  const vide: Analyse = { valides: [], nbEmailInvalide: 0, nbNomManquant: 0, nbDoublons: 0, total: 0, erreurColonnes: false }
   const sansBom = texte.replace(/^﻿/, '')
   const lignes = sansBom.split(/\r?\n/).filter((l) => l.trim() !== '')
-  if (lignes.length === 0) return { valides: [], nbInvalides: 0, total: 0 }
+  if (lignes.length === 0) return vide
 
-  // Délimiteur : ';' s'il domine la 1re ligne, sinon ','.
-  const premiere = lignes[0]
-  const delim = (premiere.split(';').length > premiere.split(',').length) ? ';' : ','
+  const delim = detecterDelimiteur(lignes)
 
-  // En-tête ? (présence d'un libellé connu en 1re ligne)
-  const tete = decouper(premiere, delim).map(sansAccents)
-  const aEntete = tete.some((c) => c.includes('mail') || c.includes('courriel') || c.includes('prenom') || c === 'nom' || c.includes('nom'))
+  // En-tête = 1re ligne SANS aucune cellule en forme d'email (une donnée a
+  // toujours un email) ET contenant au moins un libellé connu exact.
+  const tete = decouper(lignes[0], delim).map(sansAccents)
+  const aEntete = !tete.some((c) => EMAIL_REGEX.test(c)) && tete.some((c) => MOTS_CLES_ENTETE.has(c))
 
+  // Sans en-tête : positionnel nom;prénom;email. Avec en-tête : index résolus
+  // par libellé, -1 si absent (jamais d'alias sur une position par défaut).
   let idxNom = 0, idxPrenom = 1, idxEmail = 2
   if (aEntete) {
+    idxNom = -1; idxPrenom = -1; idxEmail = -1
     tete.forEach((c, i) => {
-      if (c.includes('mail') || c.includes('courriel')) idxEmail = i
-      else if (c.includes('prenom')) idxPrenom = i
-      else if (c.includes('nom')) idxNom = i
+      if ((c.includes('mail') || c.includes('courriel')) && idxEmail < 0) idxEmail = i
+      else if (c.includes('prenom') && idxPrenom < 0) idxPrenom = i
+      else if (c.includes('nom') && idxNom < 0) idxNom = i
     })
+    // En-tête présent mais colonne email introuvable : on ne devine pas.
+    if (idxEmail < 0) {
+      const corps = lignes.slice(1)
+      return { ...vide, total: corps.length, erreurColonnes: true }
+    }
   }
 
   const corps = aEntete ? lignes.slice(1) : lignes
   const valides: LigneImport[] = []
-  let nbInvalides = 0
+  const vus = new Set<string>()
+  let nbEmailInvalide = 0, nbNomManquant = 0, nbDoublons = 0
   for (const l of corps) {
     const cells = decouper(l, delim)
-    const nom = (cells[idxNom] ?? '').trim()
-    const prenom = (cells[idxPrenom] ?? '').trim()
+    const nom = idxNom >= 0 ? (cells[idxNom] ?? '').trim() : ''
+    const prenom = idxPrenom >= 0 ? (cells[idxPrenom] ?? '').trim() : ''
     const email = (cells[idxEmail] ?? '').trim()
-    if (!EMAIL_REGEX.test(email) || !(nom || prenom)) { nbInvalides++; continue }
+    if (!EMAIL_REGEX.test(email)) { nbEmailInvalide++; continue }
+    if (!(nom || prenom)) { nbNomManquant++; continue }
+    const cle = email.toLowerCase() // même normalisation que le serveur
+    if (vus.has(cle)) { nbDoublons++; continue }
+    vus.add(cle)
     valides.push({ nom, prenom, email })
   }
-  return { valides, nbInvalides, total: corps.length }
+  return { valides, nbEmailInvalide, nbNomManquant, nbDoublons, total: corps.length, erreurColonnes: false }
 }
 
 export default function ImportCsvEleves() {
+  const router = useRouter()
   const [ouvert, setOuvert] = useState(false)
   const [texte, setTexte] = useState('')
   const [chargement, setChargement] = useState(false)
@@ -104,6 +139,7 @@ export default function ImportCsvEleves() {
     setRecap(r)
     if (r.echecs.length === 0) setTexte('')
     setChargement(false)
+    if (r.crees > 0) router.refresh() // rafraîchit tuiles + « Sans classe »
   }
 
   if (!ouvert) {
@@ -116,6 +152,11 @@ export default function ImportCsvEleves() {
       </button>
     )
   }
+
+  const ignore: string[] = []
+  if (analyse.nbEmailInvalide) ignore.push(`${analyse.nbEmailInvalide} email invalide`)
+  if (analyse.nbNomManquant) ignore.push(`${analyse.nbNomManquant} sans nom`)
+  if (analyse.nbDoublons) ignore.push(`${analyse.nbDoublons} doublon${analyse.nbDoublons > 1 ? 's' : ''}`)
 
   return (
     <div className="w-full bg-surface border border-bordure rounded-xl p-6 space-y-4">
@@ -157,20 +198,28 @@ export default function ImportCsvEleves() {
         />
       </div>
 
-      {analyse.total > 0 && (
+      {analyse.erreurColonnes && (
+        <div className="rounded-lg px-3 py-2 text-sm bg-retard-teinte border border-retard text-retard">
+          Colonne « email » introuvable dans l&apos;en-tête. Vérifie les libellés (nom, prénom, email).
+        </div>
+      )}
+
+      {!analyse.erreurColonnes && analyse.total > 0 && (
         <div className="border border-bordure rounded-lg overflow-hidden">
           <div className="px-3 py-2 bg-parchemin-fonce border-b border-bordure text-xs text-muet">
             {analyse.valides.length} élève{analyse.valides.length > 1 ? 's' : ''} prêt{analyse.valides.length > 1 ? 's' : ''} à importer
-            {analyse.nbInvalides > 0 && <span className="text-retard"> · {analyse.nbInvalides} ligne{analyse.nbInvalides > 1 ? 's' : ''} ignorée{analyse.nbInvalides > 1 ? 's' : ''} (email invalide)</span>}
+            {ignore.length > 0 && <span className="text-retard"> · ignorées : {ignore.join(', ')}</span>}
           </div>
-          <ul className="max-h-40 overflow-y-auto divide-y divide-bordure">
-            {analyse.valides.slice(0, 50).map((l, i) => (
-              <li key={i} className="px-3 py-1.5 text-sm flex justify-between gap-3">
-                <span className="text-encre truncate">{[l.prenom, l.nom].filter(Boolean).join(' ')}</span>
-                <span className="text-muet truncate">{l.email}</span>
-              </li>
-            ))}
-          </ul>
+          {analyse.valides.length > 0 && (
+            <ul className="max-h-40 overflow-y-auto divide-y divide-bordure">
+              {analyse.valides.slice(0, 50).map((l, i) => (
+                <li key={i} className="px-3 py-1.5 text-sm flex justify-between gap-3">
+                  <span className="text-encre truncate">{[l.prenom, l.nom].filter(Boolean).join(' ')}</span>
+                  <span className="text-muet truncate">{l.email}</span>
+                </li>
+              ))}
+            </ul>
+          )}
         </div>
       )}
 

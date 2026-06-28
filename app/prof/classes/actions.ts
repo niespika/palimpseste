@@ -85,6 +85,12 @@ export async function inscrireEleve(formData: FormData) {
   const eleveId = formData.get('eleveId') as string
   if (!eleveId) return { error: 'Sélectionne un élève.' }
 
+  // La cible doit être un élève : empêche une inscription parasite d'un profil
+  // prof via un eleveId forgé (la FK seule n'exclut pas les profils prof).
+  const { data: cible } = await supabase
+    .from('profiles').select('role').eq('id', eleveId).maybeSingle()
+  if (cible?.role !== 'eleve') return { error: 'Élève introuvable.' }
+
   const { error } = await supabase
     .from('inscriptions')
     .upsert(

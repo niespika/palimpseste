@@ -8,6 +8,20 @@ import type { EleveAvecEmail } from '@/types'
 
 const SANS_CLASSE = 'aucune'
 
+// Emails des comptes Auth, paginés (listUsers plafonne perPage ~1000) → Map
+// id→email. Borne dure de sécurité à 50 pages pour ne jamais boucler à l'infini.
+async function chargerEmails(admin: ReturnType<typeof createAdminClient>): Promise<Map<string, string>> {
+  const map = new Map<string, string>()
+  const perPage = 1000
+  for (let page = 1; page <= 50; page++) {
+    const { data, error } = await admin.auth.admin.listUsers({ page, perPage })
+    if (error || !data) break
+    for (const u of data.users) if (u.email) map.set(u.id, u.email)
+    if (data.users.length < perPage) break
+  }
+  return map
+}
+
 export default async function PageEleves({
   searchParams,
 }: {
@@ -18,13 +32,13 @@ export default async function PageEleves({
   const { classe: classeSel } = await searchParams
 
   // Profils élèves + leurs classes (via inscriptions actives).
-  const [{ data: profiles }, { data: { users: authUsers } }, { data: classesBrutes }] = await Promise.all([
+  const [{ data: profiles }, emailsParId, { data: classesBrutes }] = await Promise.all([
     supabase
       .from('profiles')
       .select('id, role, display_name, classe, created_at, inscriptions(statut, classes(id, nom))')
       .eq('role', 'eleve')
       .order('display_name'),
-    admin.auth.admin.listUsers({ perPage: 1000 }),
+    chargerEmails(admin),
     supabase.from('classes').select('id, nom').order('nom'),
   ])
 
@@ -36,7 +50,7 @@ export default async function PageEleves({
       .filter((c): c is { id: string; nom: string } => !!c)
     return {
       ...profile,
-      email: authUsers.find(u => u.id === profile.id)?.email ?? '—',
+      email: emailsParId.get(profile.id) ?? '—',
       classes,
     }
   })
