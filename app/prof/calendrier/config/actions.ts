@@ -3,6 +3,7 @@
 import { revalidatePath } from 'next/cache'
 import { createClient } from '@/utils/supabase/server'
 import { lundiOnOrBefore, addDaysUTC, toISODate } from '@/utils/calendrier-grille'
+import { FUSEAUX, estFuseauValide } from '@/utils/fuseau'
 
 async function verifierProf() {
   const supabase = await createClient()
@@ -307,6 +308,23 @@ export async function definirCouleurClasse(
   const { error } = await supabase.from('classes').update({ couleur }).eq('id', classeId)
   if (error) return { error: error.message }
   revalidatePath('/prof/calendrier/config')
+  return {}
+}
+
+// ── Fuseau horaire d'affichage (singleton global) ───────────────────────────
+
+export async function definirFuseau(fuseau: string): Promise<{ error?: string }> {
+  const { supabase } = await verifierProf()
+  // Restreint à la liste curée (et identifiant IANA valide).
+  if (!estFuseauValide(fuseau) || !FUSEAUX.some((f) => f.id === fuseau)) {
+    return { error: 'Fuseau invalide.' }
+  }
+  const { error } = await supabase
+    .from('calendrier_params')
+    .upsert({ id: 1, fuseau, updated_at: new Date().toISOString() })
+  if (error) return { error: error.message }
+  // Le fuseau change l'affichage de TOUTES les pages → invalidation large.
+  revalidatePath('/', 'layout')
   return {}
 }
 

@@ -5,6 +5,8 @@ import {
   type ModuleIntegrite, type TypeStrike,
 } from '@/utils/integrite'
 import { chargerPreuve } from '@/utils/integrite-preuve'
+import { formatInstant } from '@/utils/fuseau'
+import { lireFuseau } from '@/utils/fuseau-serveur'
 import type {
   SelectionVue, SignalementVue, EvenementVue, HistoriqueLigne, DossierVue, AvisEleve,
 } from '@/components/integrite/types'
@@ -20,14 +22,12 @@ import type {
 
 type Admin = ReturnType<typeof createAdminClient>
 
-// Fuseau figé sur l'heure de Montréal (heure de l'Est ; le serveur déployé est
-// souvent en UTC) : sinon l'heure murale affichée à l'élève/prof serait décalée.
-// `America/Toronto` = identifiant IANA canonique de l'Est (= Montréal), garanti
-// présent partout (contrairement à l'alias `America/Montreal`).
-const fmtLong = (iso: string) =>
-  new Date(iso).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit', timeZone: 'America/Toronto' })
-const fmtCourt = (iso: string) =>
-  new Date(iso).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', timeZone: 'America/Toronto' })
+// Les created_at des signalements/événements sont des INSTANTS (timestamptz) :
+// affichés dans le fuseau choisi par le prof (cf. lireFuseau / utils/fuseau).
+const fmtLong = (iso: string, tz: string) =>
+  formatInstant(iso, tz, { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })
+const fmtCourt = (iso: string, tz: string) =>
+  formatInstant(iso, tz, { day: 'numeric', month: 'short' })
 
 const CHAMPS_SIGNALEMENT = 'id, eleve_id, module, rendu_ref, type, motif, source, statut, created_at'
 
@@ -36,7 +36,7 @@ type LigneSignalement = {
   type: string; motif: string | null; source: string; statut: string; created_at: string
 }
 
-function vueSignalement(s: LigneSignalement, eleveNom: string): SignalementVue {
+function vueSignalement(s: LigneSignalement, eleveNom: string, tz: string): SignalementVue {
   return {
     id: s.id,
     eleveId: s.eleve_id,
@@ -49,30 +49,31 @@ function vueSignalement(s: LigneSignalement, eleveNom: string): SignalementVue {
     source: s.source as 'algo' | 'ia',
     enAttente: s.statut === 'en_attente',
     statut: s.statut as 'en_attente' | 'confirme' | 'rejete',
-    date: fmtLong(s.created_at),
-    dateCourt: fmtCourt(s.created_at),
+    date: fmtLong(s.created_at, tz),
+    dateCourt: fmtCourt(s.created_at, tz),
   }
 }
 
 // Construit une SelectionVue (avis + preuve) à partir d'une ligne signalement.
 async function construireSelection(
   admin: Admin, s: LigneSignalement, eleveNom: string,
-  etat: { strikes: number; seuil: number; bloque: boolean },
+  etat: { strikes: number; seuil: number; bloque: boolean }, tz: string,
 ): Promise<SelectionVue> {
   const preuve = await chargerPreuve(admin, s.module as ModuleIntegrite, s.rendu_ref, { motif: s.motif, type: s.type })
   return {
-    signalement: vueSignalement(s, eleveNom),
+    signalement: vueSignalement(s, eleveNom, tz),
     preuve,
     strikesEleve: etat.strikes,
     seuil: etat.seuil,
     eleveBloque: etat.bloque,
+    tz,
   }
 }
 
 function vueEvenement(e: {
   id: string; type: string; source: string | null; module: string | null
   motif: string | null; strikes_apres: number | null; created_at: string
-}): EvenementVue {
+}, tz: string): EvenementVue {
   return {
     id: e.id,
     type: e.type as EvenementVue['type'],
@@ -81,14 +82,15 @@ function vueEvenement(e: {
     moduleLabel: e.module ? (LABEL_MODULE[e.module as ModuleIntegrite] ?? e.module) : null,
     motif: e.motif ?? null,
     strikesApres: e.strikes_apres ?? null,
-    date: fmtLong(e.created_at),
-    dateCourt: fmtCourt(e.created_at),
+    date: fmtLong(e.created_at, tz),
+    dateCourt: fmtCourt(e.created_at, tz),
   }
 }
 
 // ── Tableau récapitulatif prof : une ligne par élève ayant un historique ───────
 export async function chargerHistoriqueProf(admin: Admin): Promise<HistoriqueLigne[]> {
   const { seuil } = await lireParamsIntegrite(admin)
+  const tz = await lireFuseau()
 
   const [{ data: sigs }, { data: deb }] = await Promise.all([
     admin.from('integrite_signalements').select('eleve_id, statut, created_at'),
@@ -145,7 +147,7 @@ export async function chargerHistoriqueProf(admin: Admin): Promise<HistoriqueLig
       seuil,
       bloque: !!p?.integrite_bloque,
       dernier: a.dernier,
-      dernierCourt: a.dernier ? fmtCourt(a.dernier) : null,
+      dernierCourt: a.dernier ? fmtCourt(a.dernier, tz) : null,
     }
   })
 
@@ -164,6 +166,7 @@ export async function chargerHistoriqueProf(admin: Admin): Promise<HistoriqueLig
 // ── Dossier complet d'un élève (détail du tableau prof) ────────────────────────
 export async function chargerDossierIntegrite(admin: Admin, eleveId: string): Promise<DossierVue | null> {
   const { seuil } = await lireParamsIntegrite(admin)
+  const tz = await lireFuseau()
   const { data: profil } = await admin
     .from('profiles').select('display_name, integrite_strikes, integrite_bloque').eq('id', eleveId).maybeSingle()
   if (!profil) return null
@@ -182,8 +185,8 @@ export async function chargerDossierIntegrite(admin: Admin, eleveId: string): Pr
 
   const lignes = (sigs ?? []) as LigneSignalement[]
   // Liste légère : pas de preuve ici (chargée à la demande au clic, cf. chargerSelectionAvis).
-  const avis = lignes.map((s) => vueSignalement(s, nom))
-  const evenements = ((evs ?? []) as Parameters<typeof vueEvenement>[0][]).map(vueEvenement)
+  const avis = lignes.map((s) => vueSignalement(s, nom, tz))
+  const evenements = ((evs ?? []) as Parameters<typeof vueEvenement>[0][]).map((e) => vueEvenement(e, tz))
 
   return {
     eleveId,
@@ -205,15 +208,16 @@ export async function chargerSelectionAvis(admin: Admin, signalementId: string):
     .from('integrite_signalements').select(CHAMPS_SIGNALEMENT).eq('id', signalementId).maybeSingle()
   if (!s) return null
   const ligne = s as LigneSignalement
-  const [{ data: profil }, { seuil }] = await Promise.all([
+  const [{ data: profil }, { seuil }, tz] = await Promise.all([
     admin.from('profiles').select('display_name, integrite_strikes, integrite_bloque').eq('id', ligne.eleve_id).maybeSingle(),
     lireParamsIntegrite(admin),
+    lireFuseau(),
   ])
   return construireSelection(admin, ligne, (profil?.display_name as string) ?? '?', {
     strikes: (profil?.integrite_strikes as number | null) ?? 0,
     seuil,
     bloque: !!profil?.integrite_bloque,
-  })
+  }, tz)
 }
 
 // ── Vue élève : SES avis CONFIRMÉS uniquement + chronologie de SES blocages ────
@@ -228,6 +232,7 @@ export interface HistoriqueEleveVue {
 
 export async function chargerHistoriqueEleve(admin: Admin, eleveId: string): Promise<HistoriqueEleveVue> {
   const params = await lireParamsIntegrite(admin)
+  const tz = await lireFuseau()
   const { data: profil } = await admin
     .from('profiles').select('display_name, integrite_strikes, integrite_bloque').eq('id', eleveId).maybeSingle()
   const strikes = (profil?.integrite_strikes as number | null) ?? 0
@@ -246,11 +251,11 @@ export async function chargerHistoriqueEleve(admin: Admin, eleveId: string): Pro
   // Avis allégés : on ne calcule que le contexte (slim) — pas de preuve ni d'URL signée.
   const avis: AvisEleve[] = await Promise.all(
     lignes.map(async (s) => ({
-      signalement: vueSignalement(s, nom),
+      signalement: vueSignalement(s, nom, tz),
       contexte: (await chargerPreuve(admin, s.module as ModuleIntegrite, s.rendu_ref, { motif: s.motif, type: s.type, slim: true })).contexte,
     })),
   )
-  const evenements = ((evs ?? []) as Parameters<typeof vueEvenement>[0][]).map(vueEvenement)
+  const evenements = ((evs ?? []) as Parameters<typeof vueEvenement>[0][]).map((e) => vueEvenement(e, tz))
 
   return { bloque, strikes, seuil: params.seuil, message: params.messageBloque, avis, evenements }
 }

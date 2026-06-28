@@ -1,9 +1,11 @@
 import { createClient } from '@/utils/supabase/server'
 import type { Semestre, Holiday } from '@/types/calendrier'
+import { lireFuseau } from '@/utils/fuseau-serveur'
 import GestionSemestres from './GestionSemestres'
 import GestionHolidays from './GestionHolidays'
 import CouleursClasses from './CouleursClasses'
 import GestionJoursCours from './GestionJoursCours'
+import GestionFuseau from './GestionFuseau'
 
 export default async function CalendrierConfigPage({
   searchParams,
@@ -12,6 +14,7 @@ export default async function CalendrierConfigPage({
 }) {
   const supabase = await createClient()
   const { sem } = await searchParams
+  const fuseau = await lireFuseau()
 
   const { data: semestresData } = await supabase
     .from('semesters')
@@ -57,6 +60,16 @@ export default async function CalendrierConfigPage({
 
   return (
     <div className="space-y-10 max-w-3xl">
+      <section>
+        <h3 className="text-base font-medium text-encre">Fuseau horaire</h3>
+        <p className="text-sm text-muet mt-0.5 mb-4">
+          Fuseau d&apos;affichage des heures (échéances, quizz, photos, intégrité…) et du
+          jour des événements du calendrier. Les dates de semestre et de vacances n&apos;en
+          dépendent pas.
+        </p>
+        <GestionFuseau fuseau={fuseau} />
+      </section>
+
       <section>
         <h3 className="text-base font-medium text-encre">Semestres</h3>
         <p className="text-sm text-muet mt-0.5 mb-4">

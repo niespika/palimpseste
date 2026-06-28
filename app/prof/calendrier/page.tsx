@@ -1,6 +1,8 @@
 import Link from 'next/link'
 import { createClient } from '@/utils/supabase/server'
-import { calculerGrilleSemaines, lundiOnOrBefore, addDaysUTC, toISODate, jourParis } from '@/utils/calendrier-grille'
+import { calculerGrilleSemaines, lundiOnOrBefore, addDaysUTC, toISODate } from '@/utils/calendrier-grille'
+import { jourDansFuseau, formatJour } from '@/utils/fuseau'
+import { lireFuseau } from '@/utils/fuseau-serveur'
 import { assemblerEvenements, type CalendarEvent } from '@/utils/calendrier-evenements'
 import { coursParJour } from '@/utils/calendrier-cours'
 import { couleursParClasse } from '@/utils/calendrier-couleurs'
@@ -22,8 +24,8 @@ const lastOfMonth = (d: string) => {
   x.setUTCMonth(x.getUTCMonth() + 1, 0)
   return toISODate(x)
 }
-const fmt = (d: string, opts: Intl.DateTimeFormatOptions) =>
-  parse(d).toLocaleDateString('fr-FR', { ...opts, timeZone: 'UTC' })
+// Étiquettes de dates PURES (jours de grille, semestre) → UTC, agnostique au fuseau.
+const fmt = formatJour
 
 export default async function CalendrierVue({
   searchParams,
@@ -32,7 +34,7 @@ export default async function CalendrierVue({
 }) {
   const sp = await searchParams
   const vue: Vue = sp.vue === 'semaine' || sp.vue === 'jour' ? sp.vue : 'mois'
-  const today = jourParis(new Date())
+  const today = jourDansFuseau(new Date(), await lireFuseau())
   const anchor = sp.date && /^\d{4}-\d{2}-\d{2}$/.test(sp.date) ? sp.date : today
   // Filtre classes : absent = toutes (null) ; 'aucune' = ensemble vide ; sinon liste.
   const selSet = sp.classes === 'aucune' ? new Set<string>() : sp.classes ? new Set(sp.classes.split(',').filter(Boolean)) : null

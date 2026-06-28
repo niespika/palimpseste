@@ -1,6 +1,7 @@
 import Anthropic from '@anthropic-ai/sdk'
 import { createAdminClient } from '@/utils/supabase/admin'
 import { RUBRIQUE_DEFAUT } from '@/utils/rubrique'
+import { formatJour } from '@/utils/fuseau'
 
 export const PROMPT_SYNTHESE_DEFAUT = `Tu es l'assistant pédagogique d'un professeur de philosophie et d'humanités dans un lycée français. Tu rédiges le bilan de fin de semestre du travail de « fragments d'érudition » d'un élève : son travail écrit hebdomadaire ET, le cas échéant, sa présentation orale. Tu disposes de toutes les analyses du semestre.
 
@@ -239,7 +240,7 @@ export async function genererSynthesePourEleve(inscriptionId: string, semestreId
       nb_fragments: analysesTriees.length,
     }
 
-    const formatDate = (d: string) => new Date(d).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })
+    const formatDate = (d: string) => formatJour(d, { day: 'numeric', month: 'long', year: 'numeric' })
 
     const prompt = promptBase
       .replace('{{theme}}', theme?.theme ?? 'Non défini')

@@ -4,6 +4,7 @@ import { useState, useTransition, useEffect } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
 import Pastille from '@/components/Pastille'
+import { formatInstant } from '@/utils/fuseau'
 import {
   actionConfirmerSignalement, actionEcarterSignalement, actionAcquitterSignalement,
   actionBloquerEleve, actionDebloquerEleve,
@@ -70,7 +71,7 @@ export default function PanneauPreuve({
   onApresAction?: () => void
   variante?: 'panneau' | 'volet'
 }) {
-  const { signalement: s, preuve, strikesEleve, seuil, eleveBloque } = selection
+  const { signalement: s, preuve, strikesEleve, seuil, eleveBloque, tz } = selection
   const [pending, startTransition] = useTransition()
   const [agrandie, setAgrandie] = useState<string | null>(null)
   const [idxPhoto, setIdxPhoto] = useState(0)
@@ -142,7 +143,7 @@ export default function PanneauPreuve({
                       </button>
                       <p className="font-ui text-[11px] text-muet mt-1.5">
                         {preuve.photos.length} photo{preuve.photos.length > 1 ? 's' : ''}
-                        {preuve.meta.priseAt && <> · prise {new Date(preuve.meta.priseAt).toLocaleString('fr-FR', { hour: '2-digit', minute: '2-digit' })}</>}
+                        {preuve.meta.priseAt && <> · prise {formatInstant(preuve.meta.priseAt, tz, { hour: '2-digit', minute: '2-digit' })}</>}
                         {' · '}
                         <button type="button" onClick={() => setAgrandie(photoPrincipale)} className="underline text-encre hover:text-pigment">agrandir</button>
                       </p>

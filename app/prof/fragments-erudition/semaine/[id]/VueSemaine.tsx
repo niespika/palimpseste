@@ -4,11 +4,13 @@ import { useState } from 'react'
 import Link from 'next/link'
 import VisionneusModal from './VisionneusModal'
 import { noteVersLettre } from '@/utils/notation'
+import { formatInstant } from '@/utils/fuseau'
 import type { EleveAvecDepot, AnalyseResumee } from '@/types/fragments'
 
 interface Props {
   eleves: EleveAvecDepot[]
   semaineId: string
+  tz: string
 }
 
 function badgeStatutDepot(depot: EleveAvecDepot['depot']) {
@@ -64,16 +66,7 @@ function badgeAnalyse(analyse: AnalyseResumee | null, depotId: string, semaineId
   return badge
 }
 
-function formatDate(dateStr: string) {
-  return new Date(dateStr).toLocaleDateString('fr-FR', {
-    day: 'numeric',
-    month: 'short',
-    hour: '2-digit',
-    minute: '2-digit',
-  })
-}
-
-export default function VueSemaine({ eleves, semaineId }: Props) {
+export default function VueSemaine({ eleves, semaineId, tz }: Props) {
   const [eleveVisu, setEleveVisu] = useState<EleveAvecDepot | null>(null)
 
   // « Déposés » est cumulatif (les retards sont aussi des dépôts) — cohérent avec la tuile
@@ -139,7 +132,7 @@ export default function VueSemaine({ eleves, semaineId }: Props) {
                 </td>
                 <td className="px-4 py-3">{badgeStatutDepot(eleve.depot)}</td>
                 <td className="px-4 py-3 text-sm text-muet hidden sm:table-cell">
-                  {eleve.depot ? formatDate(eleve.depot.created_at) : '—'}
+                  {eleve.depot ? formatInstant(eleve.depot.created_at, tz, { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) : '—'}
                 </td>
                 <td className="px-4 py-3">
                   {eleve.depot

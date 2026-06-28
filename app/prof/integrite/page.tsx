@@ -8,6 +8,8 @@ import {
 } from '@/utils/integrite'
 import { chargerPreuve } from '@/utils/integrite-preuve'
 import { chargerHistoriqueProf, chargerDossierIntegrite } from '@/utils/integrite-historique'
+import { formatInstant } from '@/utils/fuseau'
+import { lireFuseau } from '@/utils/fuseau-serveur'
 import GestionIntegrite from './GestionIntegrite'
 import HistoriqueIntegrite from '@/components/integrite/HistoriqueIntegrite'
 import type { SignalementVue, BloqueVue, SelectionVue } from '@/components/integrite/types'
@@ -77,6 +79,7 @@ async function VueAtelier({ admin, sel }: { admin: ReturnType<typeof createAdmin
   ])
 
   const seuil = paramsRow?.seuil_strikes ?? 3
+  const tz = await lireFuseau()
 
   // Noms des élèves concernés par les signalements.
   const eleveIds = [...new Set((signalements ?? []).map((s) => s.eleve_id as string))]
@@ -86,9 +89,9 @@ async function VueAtelier({ admin, sel }: { admin: ReturnType<typeof createAdmin
   const nomEleve = new Map((profils ?? []).map((p) => [p.id as string, p.display_name as string]))
 
   const fmtLong = (iso: string) =>
-    new Date(iso).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit', timeZone: 'America/Toronto' })
+    formatInstant(iso, tz, { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })
   const fmtCourt = (iso: string) =>
-    new Date(iso).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', timeZone: 'America/Toronto' })
+    formatInstant(iso, tz, { day: 'numeric', month: 'short' })
 
   const vueSignalements: SignalementVue[] = (signalements ?? []).map((s) => ({
     id: s.id as string,
@@ -130,6 +133,7 @@ async function VueAtelier({ admin, sel }: { admin: ReturnType<typeof createAdmin
       strikesEleve: (prof?.integrite_strikes as number | null) ?? 0,
       seuil,
       eleveBloque: !!prof?.integrite_bloque,
+      tz,
     }
   }
 

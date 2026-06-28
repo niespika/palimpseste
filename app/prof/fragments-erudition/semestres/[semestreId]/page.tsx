@@ -4,6 +4,7 @@ import { createClient } from '@/utils/supabase/server'
 import { createAdminClient } from '@/utils/supabase/admin'
 import { classesAvecModule, inscriptionsClasse } from '@/utils/acces'
 import Tuile from '@/components/Tuile'
+import { formatJour } from '@/utils/fuseau'
 import GestionSyntheses from './GestionSyntheses'
 
 export default async function PageSemestre({
@@ -71,9 +72,9 @@ export default async function PageSemestre({
       <div className="bg-surface border border-bordure rounded-xl px-5 py-4">
         <h3 className="text-lg font-serif text-encre">{semestre.label}</h3>
         <p className="text-sm text-muet mt-0.5">
-          {new Date(semestre.date_debut).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })}
+          {formatJour(semestre.date_debut, { day: 'numeric', month: 'long', year: 'numeric' })}
           {' → '}
-          {new Date(semestre.date_fin).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })}
+          {formatJour(semestre.date_fin, { day: 'numeric', month: 'long', year: 'numeric' })}
         </p>
       </div>
 

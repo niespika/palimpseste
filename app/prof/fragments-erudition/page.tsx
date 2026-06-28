@@ -1,5 +1,6 @@
 import Link from 'next/link'
 import { createClient } from '@/utils/supabase/server'
+import { formatJour } from '@/utils/fuseau'
 import { semestreFragmentsActif } from './contexte-semestre'
 import { toggleSemaineOuverte } from './actions'
 import type { FragmentSemaine } from '@/types/fragments'
@@ -9,11 +10,7 @@ async function toggleAction(formData: FormData): Promise<void> {
   await toggleSemaineOuverte(formData)
 }
 
-function formatDate(dateStr: string) {
-  return new Date(dateStr).toLocaleDateString('fr-FR', {
-    day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit',
-  })
-}
+const formatDate = (dateStr: string) => formatJour(dateStr, { day: 'numeric', month: 'long' })
 
 export default async function PageFragmentsPof() {
   const supabase = await createClient()

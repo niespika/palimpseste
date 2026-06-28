@@ -3,6 +3,7 @@ import Link from 'next/link'
 import { createClient } from '@/utils/supabase/server'
 import { createAdminClient } from '@/utils/supabase/admin'
 import Tuile from '@/components/Tuile'
+import { formatJour } from '@/utils/fuseau'
 
 export default async function PageSemestres() {
   const supabase = await createClient()
@@ -54,8 +55,8 @@ export default async function PageSemestres() {
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
           {(semestres ?? []).map(s => {
             const stats = statsParSemestre[s.id] ?? { total: 0, publiees: 0 }
-            const debut = new Date(s.date_debut).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })
-            const fin = new Date(s.date_fin).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' })
+            const debut = formatJour(s.date_debut, { day: 'numeric', month: 'short' })
+            const fin = formatJour(s.date_fin, { day: 'numeric', month: 'short', year: 'numeric' })
             return (
               <Tuile
                 key={s.id}

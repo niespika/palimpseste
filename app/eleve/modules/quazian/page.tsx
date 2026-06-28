@@ -5,6 +5,8 @@ import { createAdminClient } from '@/utils/supabase/admin'
 import { aAccesModule, classeIdsActives } from '@/utils/acces'
 import { messageSiBloque } from '@/utils/integrite'
 import { chargerFileRevision, chargerStatsRevision, chargerToutesLesCartes } from './actions'
+import { formatInstant } from '@/utils/fuseau'
+import { lireFuseau } from '@/utils/fuseau-serveur'
 import { QuazianDashboard } from './QuazianDashboard'
 import BanniereIntegrite from '@/components/BanniereIntegrite'
 import Tuile from '@/components/Tuile'
@@ -15,6 +17,7 @@ export default async function QuazianElevePage() {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
+  const tz = await lireFuseau() // lance_at = instant → fuseau choisi
 
   // Vérifier que le module est actif et assigné
   const { data: module } = await supabase
@@ -82,7 +85,7 @@ export default async function QuazianElevePage() {
     file = f; stats = s; toutesCartes = t
   }
 
-  const quizzSection = <QuizzSection quizList={quizList} soumisMap={soumisMap} scoreMap={scoreMap} />
+  const quizzSection = <QuizzSection quizList={quizList} soumisMap={soumisMap} scoreMap={scoreMap} tz={tz} />
 
   return (
     <div>
@@ -135,11 +138,12 @@ export default async function QuazianElevePage() {
 
 // ── Section QUIZZ : une tuile par quiz, statut charté (+ note /10 si corrigé) ──
 function QuizzSection({
-  quizList, soumisMap, scoreMap,
+  quizList, soumisMap, scoreMap, tz,
 }: {
   quizList: QuizListItem[]
   soumisMap: Map<string, boolean>
   scoreMap: Map<string, number>
+  tz: string
 }) {
   if (quizList.length === 0) {
     return (
@@ -153,7 +157,7 @@ function QuizzSection({
     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
       {quizList.map(q => {
         const soumis = soumisMap.get(q.id)
-        const date = q.lance_at ? new Date(q.lance_at).toLocaleDateString('fr-FR') : ''
+        const date = q.lance_at ? formatInstant(q.lance_at, tz, { day: '2-digit', month: '2-digit', year: 'numeric' }) : ''
         let resume: React.ReactNode
         if (q.statut === 'lance' && !soumis) {
           resume = <span className="text-xs px-2 py-0.5 rounded-full bg-pigment-teinte text-pigment">ouvert — participer →</span>

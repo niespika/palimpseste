@@ -4,13 +4,12 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import type { Semestre, Holiday } from '@/types/calendrier'
 import { creerHoliday, modifierHoliday, supprimerHoliday, regenererSemaines } from './actions'
+import { formatJour } from '@/utils/fuseau'
 
 const INPUT =
   'w-full px-3 py-2 border border-bordure rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-pigment'
 
-function fmt(d: string) {
-  return new Date(d).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })
-}
+const fmt = (d: string) => formatJour(d, { day: 'numeric', month: 'short' })
 
 export default function GestionHolidays({
   semestres,

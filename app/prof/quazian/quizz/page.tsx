@@ -3,6 +3,11 @@ import { createClient } from '@/utils/supabase/server'
 import { supprimerQuizz } from './actions'
 import { CreerQuizz } from './CreerQuizz'
 import Tuile from '@/components/Tuile'
+import { formatInstant } from '@/utils/fuseau'
+import { lireFuseau } from '@/utils/fuseau-serveur'
+
+// lance_at / ferme_at = instants (timestamptz) → affichés dans le fuseau choisi.
+const DATE_COURTE: Intl.DateTimeFormatOptions = { day: '2-digit', month: '2-digit', year: 'numeric' }
 
 async function actionSupprimer(formData: FormData): Promise<void> {
   'use server'
@@ -18,6 +23,7 @@ const STATUT_LABELS: Record<string, { label: string; couleur: string }> = {
 export default async function QuizzListePage({ searchParams }: { searchParams: Promise<{ classe?: string }> }) {
   const supabase = await createClient()
   const { classe: classeSel } = await searchParams
+  const tz = await lireFuseau()
 
   const [{ data: quizzes }, { data: unites }, { data: classes }] = await Promise.all([
     supabase
@@ -116,8 +122,8 @@ export default async function QuizzListePage({ searchParams }: { searchParams: P
                 </p>
                 {qz.lance_at && (
                   <p className="text-xs text-muet">
-                    Lancé le {new Date(qz.lance_at).toLocaleDateString('fr-FR')}
-                    {qz.ferme_at && ` · Fermé le ${new Date(qz.ferme_at).toLocaleDateString('fr-FR')}`}
+                    Lancé le {formatInstant(qz.lance_at as string, tz, DATE_COURTE)}
+                    {qz.ferme_at && ` · Fermé le ${formatInstant(qz.ferme_at as string, tz, DATE_COURTE)}`}
                   </p>
                 )}
               </div>

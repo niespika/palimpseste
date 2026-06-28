@@ -4,6 +4,8 @@ import { createAdminClient } from '@/utils/supabase/admin'
 import { inscriptionsClasse } from '@/utils/acces'
 import { chargerDiagnosticClasse, chargerDiagnosticParUnite } from './actions'
 import { PROFIL_LABELS, type ProfilConcept, type DiagnosticConcept } from '@/utils/diagnostic'
+import { formatInstant } from '@/utils/fuseau'
+import { lireFuseau } from '@/utils/fuseau-serveur'
 import { RapportIA } from './RapportIA'
 import Tuile from '@/components/Tuile'
 import DetailClasse, { type LigneEleve } from '@/components/classes/DetailClasse'
@@ -122,6 +124,7 @@ export default async function DiagnosticPage({ searchParams }: { searchParams: P
   if (vue === 'flashcards') {
     const supabase = await createClient()
     const admin = createAdminClient()
+    const tz = await lireFuseau() // « derniere » = instant de révision → fuseau choisi
     const { data: classes } = await supabase.from('classes').select('id, nom').order('nom')
     const classesList = (classes ?? []) as { id: string; nom: string }[]
 
@@ -157,7 +160,7 @@ export default async function DiagnosticPage({ searchParams }: { searchParams: P
             <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs">
               <span className={a.revisees > 0 ? 'text-ok' : 'text-muet'}>{a.revisees} carte{a.revisees > 1 ? 's' : ''} révisée{a.revisees > 1 ? 's' : ''}</span>
               <span className={a.backlog > 0 ? 'text-attention' : 'text-muet'}>backlog {a.backlog}</span>
-              <span className="text-muet">{a.derniere ? `vu le ${new Date(a.derniere).toLocaleDateString('fr-FR')}` : 'jamais révisé'}</span>
+              <span className="text-muet">{a.derniere ? `vu le ${formatInstant(new Date(a.derniere), tz, { day: '2-digit', month: '2-digit', year: 'numeric' })}` : 'jamais révisé'}</span>
             </div>
           ),
         }

@@ -4,6 +4,7 @@ import { useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { assignerEssaiClasse, retirerEssaiClasse } from '../essai-actions'
+import { formatJour } from '@/utils/fuseau'
 
 interface EssaiAssigne { id: string; titre: string; date_essai: string; depots_ouverts: boolean }
 interface EssaiDispo { id: string; titre: string }
@@ -15,9 +16,7 @@ interface Props {
   disponibles: EssaiDispo[]
 }
 
-function formatDate(d: string) {
-  return new Date(d).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })
-}
+const formatDate = (d: string) => formatJour(d, { day: 'numeric', month: 'long', year: 'numeric' })
 
 export default function GestionEssaisClasse({ classeId, classeNom, assignees, disponibles }: Props) {
   const router = useRouter()

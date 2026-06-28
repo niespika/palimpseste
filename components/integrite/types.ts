@@ -99,4 +99,5 @@ export interface SelectionVue {
   strikesEleve: number
   seuil: number
   eleveBloque: boolean
+  tz: string                  // fuseau d'affichage (horodatages de la preuve, ex. photo)
 }

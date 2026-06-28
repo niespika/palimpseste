@@ -15,18 +15,11 @@ import BilanSemestre from './BilanSemestre'
 import ValidationLecture from '@/components/retours/ValidationLecture'
 import { validerLectureRetour, validerLectureRetourEssai } from './actions'
 import { retoursNonLus } from '@/utils/retours-lus'
+import { formatJour } from '@/utils/fuseau'
 import type { FragmentAnalyse, FragmentPiste, FragmentOral, FragmentAnalyseOrale, EssaiDepotAnalyse, FragmentSynthese } from '@/types/fragments'
 import type { PointSemaine } from '@/components/fragments/GraphiqueProgression'
 
-function formatDateLimite(dateStr: string) {
-  return new Date(dateStr).toLocaleDateString('fr-FR', {
-    weekday: 'long',
-    day: 'numeric',
-    month: 'long',
-    hour: '2-digit',
-    minute: '2-digit',
-  })
-}
+const formatDateLimite = (dateStr: string) => formatJour(dateStr, { weekday: 'long', day: 'numeric', month: 'long' })
 
 export default async function PageFragments({ searchParams }: { searchParams: Promise<{ vue?: string; inscription?: string }> }) {
   const supabase = await createClient()
@@ -650,7 +643,7 @@ export default async function PageFragments({ searchParams }: { searchParams: Pr
               <div className="px-4 py-4 border-b border-bordure">
                 <p className="font-medium text-encre">{epreuveOuverte.titre}</p>
                 <p className="text-xs text-muet mt-0.5">
-                  {new Date(epreuveOuverte.date_essai).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })}
+                  {formatJour(epreuveOuverte.date_essai as string, { day: 'numeric', month: 'long', year: 'numeric' })}
                   {' · '}{epreuveOuverte.duree_minutes} min
                 </p>
                 {epreuveOuverte.consignes && <p className="text-sm text-encre-douce mt-2">{epreuveOuverte.consignes}</p>}

@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import type { Semestre } from '@/types/calendrier'
+import { formatJour } from '@/utils/fuseau'
 import {
   creerSemestre,
   modifierSemestre,
@@ -13,9 +14,7 @@ import {
 const INPUT =
   'w-full px-3 py-2 border border-bordure rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-pigment'
 
-function fmt(d: string) {
-  return new Date(d).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' })
-}
+const fmt = (d: string) => formatJour(d, { day: 'numeric', month: 'short', year: 'numeric' })
 
 export default function GestionSemestres({ semestres }: { semestres: Semestre[] }) {
   const router = useRouter()

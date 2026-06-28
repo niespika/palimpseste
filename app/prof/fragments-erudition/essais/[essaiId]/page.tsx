@@ -3,6 +3,7 @@ import Link from 'next/link'
 import { createClient } from '@/utils/supabase/server'
 import { createAdminClient } from '@/utils/supabase/admin'
 import { inscriptionsClasse } from '@/utils/acces'
+import { formatJour } from '@/utils/fuseau'
 import TableauEssai from './TableauEssai'
 
 export default async function PageEssai({
@@ -154,7 +155,7 @@ export default async function PageEssai({
           <div>
             <h3 className="text-lg font-serif text-encre">{epreuve.titre} <span className="text-muet font-sans text-sm">· {classe.nom}</span></h3>
             <p className="text-sm text-muet mt-0.5">
-              {new Date(lien.date_essai).toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
+              {formatJour(lien.date_essai as string, { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
               {' · '}{epreuve.duree_minutes} min
             </p>
             {epreuve.consignes && (

@@ -4,14 +4,15 @@ import { createAdminClient } from '@/utils/supabase/admin'
 import { moduleIdsAccessibles, slugsModulesAccessibles } from '@/utils/acces'
 import { contexteClasseEleve } from './contexte-classe'
 import { noteVersLettre, type LettreSection } from '@/utils/notation'
-import { calculerGrilleSemaines, jourParis } from '@/utils/calendrier-grille'
+import { calculerGrilleSemaines } from '@/utils/calendrier-grille'
+import { jourDansFuseau, formatJour } from '@/utils/fuseau'
+import { lireFuseau } from '@/utils/fuseau-serveur'
 import { chargerStatsRevision } from './modules/quazian/actions'
 import { livresPourClasse, toutesSemainesDone } from './modules/aletheia/data'
 import Pastille, { type ModuleSceau } from '@/components/Pastille'
 
-function fmtJourCourt(d: string) {
-  return new Date(d + 'T00:00:00Z').toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', timeZone: 'UTC' })
-}
+// Dates PURES (bornes de semaine) → UTC, agnostique au fuseau.
+const fmtJourCourt = (d: string) => formatJour(d, { day: 'numeric', month: 'short' })
 
 type ModuleInfo = { id: string; slug: string; nom: string; description: string | null; actif: boolean }
 const MODULES_MASQUES_ELEVE = ['scriptorium']
@@ -106,7 +107,8 @@ export default async function TableauDeBordEleve() {
         .eq('inscription_id', active.id)
         .eq('semaine_id', semaine.id)
         .maybeSingle()
-      const limite = new Date(semaine.date_limite).toLocaleDateString('fr-FR', { weekday: 'long', hour: '2-digit', minute: '2-digit' })
+      // date_limite est une date PURE → libellé jour (UTC), sans heure trompeuse.
+      const limite = formatJour(semaine.date_limite as string, { weekday: 'long', day: 'numeric', month: 'long' })
       const enRetard = !depot && new Date(semaine.date_limite) < new Date()
       const texte = depot
         ? depot.statut === 'en_retard' ? `Semaine ${semaine.numero} — déposé en retard` : `Semaine ${semaine.numero} — déposé ✓`
@@ -157,7 +159,7 @@ export default async function TableauDeBordEleve() {
     const { data: semCal } = await admin.from('semesters').select('id, start_date, end_date').eq('is_active', true).maybeSingle()
     if (semCal) {
       const { data: hols } = await admin.from('holidays').select('label, start_date, end_date').eq('semester_id', semCal.id)
-      const today = jourParis(new Date())
+      const today = jourDansFuseau(new Date(), await lireFuseau())
       const wk = calculerGrilleSemaines(semCal, hols ?? []).find((w) => w.start <= today && today <= w.end)
       if (wk) {
         semaineCourante = {

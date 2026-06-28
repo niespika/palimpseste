@@ -7,12 +7,11 @@ import { tachesDeriveesDuCalendrier } from '@/utils/calendrier-a-faire'
 import Tuile, { type CouleurTuile } from '@/components/Tuile'
 import { type ModuleSceau } from '@/components/Pastille'
 import EnTeteMobileProf from '@/components/EnTeteMobileProf'
+import { formatJour } from '@/utils/fuseau'
 import RappelsClasses from './RappelsClasses'
 import CoutApi from './CoutApi'
 
-function fmtDate(iso: string) {
-  return new Date(iso + 'T00:00:00Z').toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', timeZone: 'UTC' })
-}
+const fmtDate = (iso: string) => formatJour(iso, { day: 'numeric', month: 'short' })
 
 export default async function ProfAccueil() {
   const supabase = await createClient()

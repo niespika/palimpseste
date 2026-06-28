@@ -5,6 +5,8 @@ import { createAdminClient } from '@/utils/supabase/admin'
 import EditorAnalyse from './EditorAnalyse'
 import type { FragmentAnalyse, FragmentPiste, FragmentPhoto } from '@/types/fragments'
 import { LABEL_SIGNAL, type SignalIntegrite } from '@/utils/detecteur-integrite'
+import { formatInstant } from '@/utils/fuseau'
+import { lireFuseau } from '@/utils/fuseau-serveur'
 
 export default async function PageAnalyse({
   params,
@@ -17,6 +19,7 @@ export default async function PageAnalyse({
   const { semaine: semaineId } = await searchParams
   const supabase = await createClient()
   const admin = createAdminClient()
+  const tz = await lireFuseau() // photo_prise_at = instant → fuseau choisi
 
   // Garde de rôle propre (defense-in-depth, en plus de la redirection du layout /prof) :
   // cette page lit l'analyse via le client admin (bypass RLS), elle ne doit donc pas
@@ -164,7 +167,7 @@ export default async function PageAnalyse({
           ⚠ Signal anti-triche : au moins une photo semble issue de la galerie (EXIF ancien), pas prise sur le moment.
           {delaiPhotoMs != null && delaiPhotoMs > 0 && (
             <> Photo la plus ancienne prise <strong>{fmtDelai(delaiPhotoMs)}</strong> avant le dépôt
-              {photoPriseAt && <> (le {new Date(photoPriseAt).toLocaleString('fr-FR')})</>}.</>
+              {photoPriseAt && <> (le {formatInstant(photoPriseAt, tz)})</>}.</>
           )}
           {' '}À vérifier — signal indicatif, non probant.
         </div>

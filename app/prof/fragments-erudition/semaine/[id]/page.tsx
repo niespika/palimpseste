@@ -7,10 +7,10 @@ import Tuile from '@/components/Tuile'
 import VueSemaine from './VueSemaine'
 import TirageAuSort from './TirageAuSort'
 import type { EleveAvecDepot, StatutPresentation } from '@/types/fragments'
+import { formatJour } from '@/utils/fuseau'
+import { lireFuseau } from '@/utils/fuseau-serveur'
 
-const formatDate = (d: string) => new Date(d).toLocaleDateString('fr-FR', {
-  day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit',
-})
+const formatDate = (d: string) => formatJour(d, { day: 'numeric', month: 'long' })
 
 export default async function PageVueSemaine({
   params,
@@ -23,6 +23,7 @@ export default async function PageVueSemaine({
   const { classe: classeSel } = await searchParams
   const supabase = await createClient()
   const admin = createAdminClient()
+  const tz = await lireFuseau()
 
   const { data: semaine } = await supabase.from('fragments_semaines').select('*').eq('id', id).single()
   if (!semaine) notFound()
@@ -159,7 +160,7 @@ export default async function PageVueSemaine({
             <div className="bg-surface border border-bordure rounded-xl p-8 text-center text-muet text-sm">Aucun élève inscrit dans cette classe.</div>
           ) : (
             <>
-              <VueSemaine eleves={detail.elevesAvecDepot} semaineId={id} />
+              <VueSemaine eleves={detail.elevesAvecDepot} semaineId={id} tz={tz} />
               <TirageAuSort
                 semaineId={id}
                 classeId={classeChoisie.id}

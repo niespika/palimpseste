@@ -3,7 +3,9 @@ import { createClient } from '@/utils/supabase/server'
 import { createAdminClient } from '@/utils/supabase/admin'
 import { contexteClasseEleve } from '../contexte-classe'
 import { slugsModulesAccessibles } from '@/utils/acces'
-import { calculerGrilleSemaines, lundiOnOrBefore, addDaysUTC, toISODate, jourParis } from '@/utils/calendrier-grille'
+import { calculerGrilleSemaines, lundiOnOrBefore, addDaysUTC, toISODate } from '@/utils/calendrier-grille'
+import { jourDansFuseau, formatJour } from '@/utils/fuseau'
+import { lireFuseau } from '@/utils/fuseau-serveur'
 import { assemblerEvenements } from '@/utils/calendrier-evenements'
 import { couleursParClasse } from '@/utils/calendrier-couleurs'
 
@@ -21,7 +23,8 @@ const parse = (d: string) => new Date(d + 'T00:00:00Z')
 const addMonths = (d: string, n: number) => { const x = parse(d); x.setUTCMonth(x.getUTCMonth() + n); return toISODate(x) }
 const firstOfMonth = (d: string) => d.slice(0, 7) + '-01'
 const lastOfMonth = (d: string) => { const x = parse(d); x.setUTCMonth(x.getUTCMonth() + 1, 0); return toISODate(x) }
-const fmt = (d: string, opts: Intl.DateTimeFormatOptions) => parse(d).toLocaleDateString('fr-FR', { ...opts, timeZone: 'UTC' })
+// Étiquettes de dates PURES (jours de grille) → UTC, agnostique au fuseau.
+const fmt = formatJour
 const sansPoint = (s: string) => s.replace(/\./g, '')
 
 // Événement affiché (unifié : événements partagés color-codés par classe +
@@ -39,7 +42,7 @@ export default async function CalendrierEleve({
   const vueExplicite: Vue | null =
     sp.vue === 'agenda' || sp.vue === 'mois' || sp.vue === 'semaine' || sp.vue === 'jour' ? sp.vue : null
   const vue: Vue = vueExplicite ?? 'mois'
-  const today = jourParis(new Date())
+  const today = jourDansFuseau(new Date(), await lireFuseau())
   const anchor = sp.date && /^\d{4}-\d{2}-\d{2}$/.test(sp.date) ? sp.date : today
   const jourSel = sp.jour && /^\d{4}-\d{2}-\d{2}$/.test(sp.jour) ? sp.jour : today
 
@@ -101,7 +104,9 @@ export default async function CalendrierEleve({
     ? await admin.from('fragments_semaines').select('numero, date_limite').eq('semestre_id', sem.id).eq('is_vacation', false).not('date_limite', 'is', null)
     : { data: [] }
   const fragments = (semaines ?? [])
-    .map((s): Evt => ({ date: jourParis(s.date_limite as string), label: `Fragment S${s.numero} — à rendre`, couleur: COULEUR_FRAGMENTS, sousTitre: null }))
+    // date_limite est une date PURE (YYYY-MM-DD) → le jour est la date elle-même
+    // (surtout pas via le fuseau, sinon décalage d'un jour selon le fuseau choisi).
+    .map((s): Evt => ({ date: (s.date_limite as string).slice(0, 10), label: `Fragment S${s.numero} — à rendre`, couleur: COULEUR_FRAGMENTS, sousTitre: null }))
     .filter((e) => e.date >= debut && e.date <= fin)
 
   const parJour = new Map<string, Evt[]>()

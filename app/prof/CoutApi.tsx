@@ -1,4 +1,6 @@
 import { createAdminClient } from '@/utils/supabase/admin'
+import { formatInstant, jourDansFuseau } from '@/utils/fuseau'
+import { lireFuseau } from '@/utils/fuseau-serveur'
 
 // Synthèse des coûts API du mois en cours (T5). Additionne les colonnes
 // cout_api existantes (Fragments ×3, Codex) + le journal api_couts
@@ -19,8 +21,11 @@ function fmt(n: number): string {
 export default async function CoutApi() {
   const admin = createAdminClient()
   const now = new Date()
-  const moisDebut = new Date(now.getFullYear(), now.getMonth(), 1).toISOString()
-  const moisLabel = now.toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' })
+  const tz = await lireFuseau()
+  // Borne de début de mois ET libellé dérivés du MÊME fuseau (sinon, aux bascules de
+  // mois, la fenêtre filtrée et le mois annoncé pouvaient diverger).
+  const moisDebut = `${jourDansFuseau(now, tz).slice(0, 7)}-01`
+  const moisLabel = formatInstant(now, tz, { month: 'long', year: 'numeric' })
 
   const [fEcrit, fEssai, fSynth, codex, { data: log }] = await Promise.all([
     sommeColonne(admin, 'fragments_analyses', moisDebut),

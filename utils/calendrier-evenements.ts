@@ -1,6 +1,8 @@
 import 'server-only'
 import { createClient } from '@/utils/supabase/server'
-import { addDaysUTC, toISODate, jourParis } from '@/utils/calendrier-grille'
+import { addDaysUTC, toISODate } from '@/utils/calendrier-grille'
+import { jourDansFuseau } from '@/utils/fuseau'
+import { lireFuseau } from '@/utils/fuseau-serveur'
 
 // Agrégation LECTURE SEULE des échéances datées des modules. Le calendrier ne
 // stocke aucune échéance : il projette ce que les modules déclarent. L'édition
@@ -37,6 +39,7 @@ export async function assemblerEvenements(opts: {
   const supabase = await createClient()
   const { debut, fin } = opts
   const events: CalendarEvent[] = []
+  const tz = await lireFuseau() // jour local des instants (lance_at) dans le fuseau choisi
 
   // Map des classes (pour résoudre les classe_id textuels de Codex + les noms).
   const { data: classes } = await supabase.from('classes').select('id, nom')
@@ -73,7 +76,7 @@ export async function assemblerEvenements(opts: {
     .select('id, classe_id, lance_at')
     .not('lance_at', 'is', null)
   for (const q of quizzes ?? []) {
-    const d = jourParis(q.lance_at as string) // jour local (fuseau école), pas l'UTC
+    const d = jourDansFuseau(q.lance_at as string, tz) // jour local (fuseau choisi), pas l'UTC
     if (d < debut || d > fin) continue
     events.push({
       source_module: 'quazian',
@@ -93,7 +96,7 @@ export async function assemblerEvenements(opts: {
     .select('id, classe_id, lance_at, scriptorium_unites(label)')
     .not('lance_at', 'is', null)
   for (const s of sessions ?? []) {
-    const d = jourParis(s.lance_at as string) // jour local (fuseau école)
+    const d = jourDansFuseau(s.lance_at as string, tz) // jour local (fuseau choisi)
     if (d < debut || d > fin) continue
     const nom = (s.classe_id as string | null) ?? null
     const cid = nom ? idParNom.get(nom.toLowerCase().trim()) ?? null : null
