@@ -41,25 +41,6 @@ export async function creerUnite(label: string): Promise<{ id?: string; error?: 
   return { id: data.id }
 }
 
-export async function renommerUnite(formData: FormData) {
-  const { supabase } = await verifierProf()
-  const id = formData.get('id') as string
-  const label = formData.get('label') as string
-  const { error } = await supabase.from('scriptorium_unites').update({ label }).eq('id', id)
-  if (error) return { error: error.message }
-  revalidatePath('/prof/scriptorium')
-  return { success: true }
-}
-
-export async function supprimerUnite(formData: FormData) {
-  const { supabase } = await verifierProf()
-  const id = formData.get('id') as string
-  const { error } = await supabase.from('scriptorium_unites').delete().eq('id', id)
-  if (error) return { error: error.message }
-  revalidatePath('/prof/scriptorium')
-  return { success: true }
-}
-
 // ── Extraction de texte (PDF / DOCX / TXT) ──────────────────────────────────
 
 async function extraireTexte(buffer: Buffer, mimeType: string, nomFichier: string): Promise<string | null> {

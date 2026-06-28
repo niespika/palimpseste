@@ -2,18 +2,6 @@ export type StatutDepot = 'depose' | 'en_retard'
 export type StatutAnalyse = 'en_cours' | 'generee' | 'erreur' | 'publiee'
 export type StatutPiste = 'proposee' | 'suivie' | 'partiellement_suivie' | 'abandonnee'
 
-export interface FragmentTheme {
-  id: string
-  eleve_id: string
-  inscription_id: string | null
-  semestre_id: string
-  theme: string
-  description: string | null
-  essai_actif: boolean
-  created_at: string
-  updated_at: string
-}
-
 export interface FragmentSemaine {
   id: string
   numero: number
@@ -77,13 +65,6 @@ export interface FragmentPiste {
   statut: StatutPiste
   est_rappel: boolean
   created_at: string
-  updated_at: string
-}
-
-export interface FragmentConfig {
-  id: number
-  prompt_evaluation: string
-  bareme: string
   updated_at: string
 }
 
@@ -241,11 +222,4 @@ export interface EleveAvecDepot {
   classe: string | null
   depot: DepotAvecPhotos | null
   analyse: AnalyseResumee | null
-}
-
-/** Item du sélecteur de contexte classe côté élève (une inscription active). */
-export interface InscriptionContexte {
-  id: string
-  classe_id: string
-  classe_nom: string
 }

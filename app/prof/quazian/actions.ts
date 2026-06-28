@@ -30,20 +30,6 @@ export async function lireUnitesScriptorium() {
   return unites ?? []
 }
 
-// Lire le texte extrait d'une unité (tous les docs textuels)
-export async function lireTexteUnite(uniteId: string) {
-  const { supabase } = await verifierProf()
-
-  const { data: docs } = await supabase
-    .from('scriptorium_documents')
-    .select('titre, auteur, type, texte_extrait')
-    .eq('unite_id', uniteId)
-    .not('texte_extrait', 'is', null)
-    .order('created_at', { ascending: true })
-
-  return docs ?? []
-}
-
 // Lancer l'extraction IA de flashcards pour une unité (ou un document spécifique)
 export async function lancerExtractionIA(formData: FormData) {
   const { supabase, userId } = await verifierProf()
