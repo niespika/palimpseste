@@ -24,24 +24,26 @@ export function MicroStepper({ statut, taille = 'normal' }: { statut: StatutAlet
 
 // Stepper nommé — situe l'avancement avec les libellés des 4 étapes. Fait/courant
 // en pigment, ✓ pour les étapes passées (toutes ✓ si DONE → indexEtape = 4).
-// `wrap` : passe à la ligne au lieu de scroller (évite scrollbar + libellé tronqué
-// sur écran étroit) ; défaut = scroll horizontal (comportement élève d'origine).
-export function StepperNomme({ statut, wrap = false }: { statut: StatutAletheia; wrap?: boolean }) {
+// `compact` : cercles + police + espaces réduits pour faire tenir les 4 étapes sur
+// UNE ligne en écran étroit (sans scrollbar ni libellé tronqué) ; défaut = tailles
+// normales + scroll horizontal (comportement élève d'origine).
+export function StepperNomme({ statut, compact = false }: { statut: StatutAletheia; compact?: boolean }) {
   const courant = indexEtape(statut)
+  const cercle = compact ? 'w-[18px] h-[18px] text-[9px]' : 'w-5 h-5 text-[10px]'
   return (
-    <ol className={`flex items-center text-xs ${wrap ? 'flex-wrap gap-x-1.5 gap-y-1.5' : 'gap-1.5 overflow-x-auto -mx-1 px-1'}`}>
+    <ol className={`flex items-center overflow-x-auto -mx-1 px-1 ${compact ? 'gap-1 text-[11px]' : 'gap-1.5 text-xs'}`}>
       {ETAPES_SEMAINE.map((label, i) => {
         const fait = i < courant
         const actif = i === courant
         return (
-          <li key={label} className="flex items-center gap-1.5 shrink-0">
-            <span className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-medium ${
+          <li key={label} className={`flex items-center shrink-0 ${compact ? 'gap-1' : 'gap-1.5'}`}>
+            <span className={`${cercle} rounded-full flex items-center justify-center font-medium ${
               fait || actif ? 'bg-pigment text-surface' : 'bg-parchemin-fonce text-muet'
             }`}>
               {fait ? '✓' : i + 1}
             </span>
             <span className={`font-ui whitespace-nowrap ${actif ? 'text-pigment font-medium' : fait ? 'text-pigment' : 'text-muet'}`}>{label}</span>
-            {i < ETAPES_SEMAINE.length - 1 && <span className="text-bordure" aria-hidden>·</span>}
+            {i < ETAPES_SEMAINE.length - 1 && <span className="text-bordure mx-0.5" aria-hidden>·</span>}
           </li>
         )
       })}

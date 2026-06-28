@@ -157,7 +157,7 @@ function PanneauDetail({ livre, semaine, travail, diag, basePath }: {
           </div>
           <ChipEtat statut={statut} />
         </div>
-        <StepperNomme statut={statut} wrap />
+        <StepperNomme statut={statut} compact />
       </div>
 
       {!travail ? (
