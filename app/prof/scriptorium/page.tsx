@@ -8,6 +8,7 @@ import FormulaireLivre from './FormulaireLivre'
 import EditeurClassesLivre from './EditeurClassesLivre'
 import LigneContenu, { type ContenuItem, type ImageItem } from './LigneContenu'
 import CarteArchitectureLivre from './CarteArchitectureLivre'
+import SectionParametresScriptorium from './SectionParametresScriptorium'
 import type { CapstoneProf, LivreReferenceProf } from '@/app/eleve/modules/aletheia/types'
 
 interface DocRow {
@@ -176,6 +177,7 @@ export default async function ScriptoriumPage({
       <nav className="flex gap-1 border-b border-bordure">
         <Link href="/prof/scriptorium?vue=classes" className={ongletClasse('classes')}>Par classe</Link>
         <Link href="/prof/scriptorium?vue=unites" className={ongletClasse('unites')}>Par unité</Link>
+        <Link href="/prof/scriptorium?vue=parametres" className={ongletClasse('parametres')}>Paramètres</Link>
       </nav>
 
       {/* ── Perspective « classes » ─────────────────────────────────────── */}
@@ -311,6 +313,9 @@ export default async function ScriptoriumPage({
           })()}
         </>
       )}
+
+      {/* ── Perspective « paramètres » (prompts carte d'architecture + référence) ── */}
+      {vue === 'parametres' && <SectionParametresScriptorium />}
     </div>
   )
 }
