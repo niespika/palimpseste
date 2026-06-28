@@ -26,7 +26,10 @@ const PREUVE_VIDE: Preuve = {
   saisieClavier: false, contexte: null, meta: { priseAt: null, nbCaracteres: 0 },
 }
 
-interface OptsPreuve { motif?: string | null; type?: string | null }
+// `slim` : ne calcule QUE le contexte (« semaine 24 · version finale »), sans signer
+// les photos storage ni produire de deep-link prof — pour la page élève qui n'affiche
+// que l'explication (évite d'exposer des URLs signées / routes prof dans son payload).
+interface OptsPreuve { motif?: string | null; type?: string | null; slim?: boolean }
 
 // Nombre de caractères « utiles » d'un texte (espaces normalisés).
 const nbUtiles = (t: string | null): number => (t ? t.replace(/\s+/g, ' ').trim().length : 0)
@@ -91,6 +94,11 @@ async function preuveFragments(admin: Admin, renduRef: string, opts?: OptsPreuve
     .maybeSingle()
   if (!depot) return PREUVE_VIDE
 
+  const semRel = depot.semaine as unknown as { numero: number } | { numero: number }[] | null
+  const numero = Array.isArray(semRel) ? (semRel[0]?.numero ?? null) : (semRel?.numero ?? null)
+  const contexte = numero != null ? `dépôt · semaine ${numero}` : 'dépôt'
+  if (opts?.slim) return { ...PREUVE_VIDE, contexte }
+
   const photosRows = ((depot.photos as { storage_path: string; ordre: number }[] | null) ?? [])
     .slice().sort((a, b) => a.ordre - b.ordre)
   const photos = await signerChemins(admin, 'fragments', photosRows.map((p) => p.storage_path))
@@ -104,13 +112,11 @@ async function preuveFragments(admin: Admin, renduRef: string, opts?: OptsPreuve
     texte = (analyse?.transcription as string | null)?.trim() || texte
   }
 
-  const semRel = depot.semaine as unknown as { numero: number } | { numero: number }[] | null
-  const numero = Array.isArray(semRel) ? (semRel[0]?.numero ?? null) : (semRel?.numero ?? null)
   return {
     photos, texte, surligner: surlignage(texte, opts),
     lienAnalyse: `/prof/fragments-erudition/analyse/${depot.id}`,
     saisieClavier: false,
-    contexte: numero != null ? `dépôt · semaine ${numero}` : 'dépôt',
+    contexte,
     meta: { priseAt: (depot.photo_prise_at as string | null) ?? null, nbCaracteres: nbUtiles(texte) },
   }
 }
@@ -127,6 +133,10 @@ async function preuveAletheia(admin: Admin, renduRef: string, opts?: OptsPreuve)
     .maybeSingle()
   if (!t) return { ...PREUVE_VIDE, saisieClavier: true }
 
+  const sem = t.semaine_index as number | null
+  const contexte = `${sem != null ? `semaine ${sem}` : 'travail'}${isVF ? ' · version finale' : ''}`
+  if (opts?.slim) return { ...PREUVE_VIDE, saisieClavier: true, contexte }
+
   const champs: Array<[string, string | null | undefined]> = isVF
     ? [['Idée principale', t.these_vf as string], ['Arguments', t.arguments_vf as string], ['Ton accord', t.accord_vf as string]]
     : [
@@ -139,12 +149,11 @@ async function preuveAletheia(admin: Admin, renduRef: string, opts?: OptsPreuve)
     .map(([label, v]) => `${label} : ${v!.trim()}`)
     .join('\n') || null
 
-  const sem = t.semaine_index as number | null
   return {
     photos: [], texte, surligner: surlignage(texte, opts),
     lienAnalyse: `/prof/aletheia/eleve/${t.eleve_id}`,
     saisieClavier: true,
-    contexte: `${sem != null ? `semaine ${sem}` : 'travail'}${isVF ? ' · version finale' : ''}`,
+    contexte,
     meta: { priseAt: null, nbCaracteres: nbUtiles(texte) },
   }
 }
@@ -153,6 +162,9 @@ async function preuveAletheia(admin: Admin, renduRef: string, opts?: OptsPreuve)
 async function preuveCodex(admin: Admin, renduRef: string, opts?: OptsPreuve): Promise<Preuve> {
   const isVF = renduRef.endsWith(':vf')
   const travailId = isVF ? renduRef.slice(0, -3) : renduRef
+  const contexte = isVF ? 'version finale' : 'version 1'
+  // Le contexte Codex se déduit du suffixe : en mode slim, aucune requête nécessaire.
+  if (opts?.slim) return { ...PREUVE_VIDE, contexte }
 
   const { data: t } = await admin
     .from('codex_travaux')
@@ -169,7 +181,7 @@ async function preuveCodex(admin: Admin, renduRef: string, opts?: OptsPreuve): P
     photos, texte, surligner: surlignage(texte, opts),
     lienAnalyse: isVF ? `/prof/codex/validation/${travailId}` : `/prof/codex/travail/${travailId}/v1`,
     saisieClavier: false,
-    contexte: isVF ? 'version finale' : 'version 1',
+    contexte,
     meta: { priseAt: null, nbCaracteres: nbUtiles(texte) },
   }
 }

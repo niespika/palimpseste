@@ -7,7 +7,7 @@ import { usePathname } from 'next/navigation'
 // Barre d'onglets fixe en bas — navigation tactile de l'espace élève (Piste A).
 // Visible uniquement < sm (le header à déroulants reprend la main ≥ sm).
 //
-//   • 4 onglets : Aujourd'hui · Modules · Agenda · Moi.
+//   • 5 onglets : Aujourd'hui · Modules · Agenda · Intégrité · Moi.
 //   • Onglet actif : text-encre + pictogramme plein. Inactif : text-muet, trait.
 //   • Cibles tactiles ≥ 44 px ; safe-area iOS ; print:hidden.
 //   • Icônes : SVG inline (pas de dépendance, pas d'emoji). Le même path sert au
@@ -61,6 +61,15 @@ function IconeAgenda({ actif }: IconeProps) {
   )
 }
 
+function IconeIntegrite({ actif }: IconeProps) {
+  // Bouclier — suivi d'intégrité.
+  return (
+    <svg {...commun(actif)}>
+      <path d="M12 3.5 5 6v5.5c0 4 3 7 7 9 4-2 7-5 7-9V6z" />
+    </svg>
+  )
+}
+
 function IconeMoi({ actif }: IconeProps) {
   return (
     <svg {...commun(actif)}>
@@ -81,6 +90,7 @@ const ONGLETS: Onglet[] = [
   { label: "Aujourd'hui", href: '/eleve', Icone: IconeAujourdhui, actif: (p) => p === '/eleve' },
   { label: 'Modules', href: '/eleve/modules', Icone: IconeModules, actif: (p) => p === '/eleve/modules' || p.startsWith('/eleve/modules/') },
   { label: 'Agenda', href: '/eleve/calendrier', Icone: IconeAgenda, actif: (p) => p === '/eleve/calendrier' || p.startsWith('/eleve/calendrier/') },
+  { label: 'Intégrité', href: '/eleve/integrite', Icone: IconeIntegrite, actif: (p) => p === '/eleve/integrite' || p.startsWith('/eleve/integrite/') },
   { label: 'Moi', href: '/eleve/moi', Icone: IconeMoi, actif: (p) => p === '/eleve/moi' || p.startsWith('/eleve/moi/') },
 ]
 

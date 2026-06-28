@@ -67,19 +67,55 @@ export async function messageSiBloque(admin: Admin, eleveId: string): Promise<st
 
 // Incrément du compteur de strikes (read-modify-write ; volume faible, course
 // improbable et sans gravité). Bloque l'élève dès qu'on atteint le seuil.
-async function incrementerStrike(admin: Admin, eleveId: string, seuil: number): Promise<{ bloque: boolean }> {
+// Renvoie de quoi journaliser (avant/après + transition de blocage).
+async function incrementerStrike(
+  admin: Admin, eleveId: string, seuil: number,
+): Promise<{ bloque: boolean; dejaBloque: boolean; strikesAvant: number; strikesApres: number }> {
   const { data: prof } = await admin
     .from('profiles')
     .select('integrite_strikes, integrite_bloque')
     .eq('id', eleveId)
     .maybeSingle()
   const dejaBloque = !!prof?.integrite_bloque
-  const nouveau = (prof?.integrite_strikes ?? 0) + 1
-  const bloque = dejaBloque || nouveau >= seuil
-  const patch: Record<string, unknown> = { integrite_strikes: nouveau, integrite_bloque: bloque }
+  const strikesAvant = prof?.integrite_strikes ?? 0
+  const strikesApres = strikesAvant + 1
+  const bloque = dejaBloque || strikesApres >= seuil
+  const patch: Record<string, unknown> = { integrite_strikes: strikesApres, integrite_bloque: bloque }
   if (bloque && !dejaBloque) patch.integrite_bloque_at = new Date().toISOString()
   await admin.from('profiles').update(patch).eq('id', eleveId)
-  return { bloque }
+  return { bloque, dejaBloque, strikesAvant, strikesApres }
+}
+
+// Journal d'événements daté (strike / blocage / déblocage). Best-effort : un échec
+// ne doit jamais casser le flux appelant. Cf. integrite_evenements.sql. Alimente
+// le tableau « Historique » prof et la chronologie de la page élève.
+type EvenementIntegrite = {
+  eleveId: string
+  type: 'strike' | 'blocage' | 'deblocage'
+  source?: string | null            // 'algo' | 'ia' | 'manuel' | 'auto'
+  signalementId?: string | null
+  module?: string | null
+  motif?: string | null
+  strikesAvant?: number | null
+  strikesApres?: number | null
+  acteurId?: string | null          // prof qui a agi (null si auto / élève)
+}
+async function journaliser(admin: Admin, ev: EvenementIntegrite): Promise<void> {
+  try {
+    await admin.from('integrite_evenements').insert({
+      eleve_id: ev.eleveId,
+      type: ev.type,
+      source: ev.source ?? null,
+      signalement_id: ev.signalementId ?? null,
+      module: ev.module ?? null,
+      motif: ev.motif ?? null,
+      strikes_avant: ev.strikesAvant ?? null,
+      strikes_apres: ev.strikesApres ?? null,
+      acteur_id: ev.acteurId ?? null,
+    })
+  } catch (e) {
+    console.error('[integrite] journaliser :', e)
+  }
 }
 
 // Strike AUTOMATIQUE (rendu vide / aveu) : haute confiance, comptabilisé direct.
@@ -106,7 +142,18 @@ export async function signalerStrikeAuto(
       .select('id')
     if (!inseres || inseres.length === 0) return { avertissement: null, bloque: false, nouveau: false }
 
-    const { bloque } = await incrementerStrike(admin, opts.eleveId, params.seuil)
+    const signalementId = (inseres[0]?.id as string | undefined) ?? null
+    const { bloque, dejaBloque, strikesAvant, strikesApres } = await incrementerStrike(admin, opts.eleveId, params.seuil)
+    await journaliser(admin, {
+      eleveId: opts.eleveId, type: 'strike', source: 'algo', signalementId,
+      module: opts.module, motif: opts.motif, strikesAvant, strikesApres,
+    })
+    if (bloque && !dejaBloque) {
+      await journaliser(admin, {
+        eleveId: opts.eleveId, type: 'blocage', source: 'auto', signalementId,
+        module: opts.module, strikesAvant, strikesApres,
+      })
+    }
     return { avertissement: bloque ? params.messageBloque : params.messageStrike, bloque, nouveau: true }
   } catch (e) {
     // Best-effort : un échec de signalement ne doit jamais casser le rendu de l'élève.
@@ -141,10 +188,10 @@ export async function signalerEnAttenteIA(
 
 // Prof CONFIRME un signal IA → +1 strike (idempotent : un signal déjà comptabilisé
 // est simplement acquitté). Sort de la file « à faire ».
-export async function confirmerSignalement(admin: Admin, signalementId: string): Promise<void> {
+export async function confirmerSignalement(admin: Admin, signalementId: string, acteurId?: string | null): Promise<void> {
   const { data: sig } = await admin
     .from('integrite_signalements')
-    .select('id, eleve_id')
+    .select('id, eleve_id, module, motif')
     .eq('id', signalementId)
     .maybeSingle()
   if (!sig) return
@@ -159,7 +206,19 @@ export async function confirmerSignalement(admin: Admin, signalementId: string):
     .select('id')
   if (maj && maj.length > 0) {
     const params = await lireParamsIntegrite(admin)
-    await incrementerStrike(admin, sig.eleve_id as string, params.seuil)
+    const eleveId = sig.eleve_id as string
+    const { bloque, dejaBloque, strikesAvant, strikesApres } = await incrementerStrike(admin, eleveId, params.seuil)
+    await journaliser(admin, {
+      eleveId, type: 'strike', source: 'ia', signalementId,
+      module: sig.module as string | null, motif: sig.motif as string | null,
+      strikesAvant, strikesApres, acteurId,
+    })
+    if (bloque && !dejaBloque) {
+      await journaliser(admin, {
+        eleveId, type: 'blocage', source: 'auto', signalementId,
+        module: sig.module as string | null, strikesAvant, strikesApres, acteurId,
+      })
+    }
   } else {
     // Déjà comptabilisé → s'assurer simplement que l'alerte est acquittée.
     await admin.from('integrite_signalements').update({ acquitte_at: maintenant }).eq('id', signalementId)
@@ -179,24 +238,35 @@ export async function acquitterSignalement(admin: Admin, signalementId: string, 
 // N'incrémente PAS le compteur de strikes : le déblocage (debloquerEleve) fait
 // déjà -1 strike et lève le blocage. Le blocage ne prend effet que si la détection
 // est active (cf. messageSiBloque, garde-fou serveur des rendus).
-export async function bloquerEleve(admin: Admin, eleveId: string): Promise<void> {
+export async function bloquerEleve(admin: Admin, eleveId: string, acteurId?: string | null): Promise<void> {
   // Garde `.eq('integrite_bloque', false)` : on ne pose integrite_bloque_at que sur
   // la transition réelle non-bloqué → bloqué (anti double-clic / double-onglet ;
   // cohérent avec incrementerStrike qui ne réécrit bloque_at que si !dejaBloque).
-  await admin
+  const { data: maj } = await admin
     .from('profiles')
     .update({ integrite_bloque: true, integrite_bloque_at: new Date().toISOString() })
     .eq('id', eleveId)
     .eq('integrite_bloque', false)
+    .select('integrite_strikes')
+  // Journaliser uniquement la transition réelle (une ligne mise à jour).
+  if (maj && maj.length > 0) {
+    const strikes = (maj[0].integrite_strikes as number | null) ?? 0
+    await journaliser(admin, { eleveId, type: 'blocage', source: 'manuel', strikesAvant: strikes, strikesApres: strikes, acteurId })
+  }
 }
 
 // Prof DÉBLOQUE un élève : lève le blocage et retire 1 strike (le prochain
 // incident re-bloquera). Les signalements restent dans l'historique.
-export async function debloquerEleve(admin: Admin, eleveId: string): Promise<void> {
-  const { data: prof } = await admin.from('profiles').select('integrite_strikes').eq('id', eleveId).maybeSingle()
-  const restant = Math.max(0, (prof?.integrite_strikes ?? 0) - 1)
+export async function debloquerEleve(admin: Admin, eleveId: string, acteurId?: string | null): Promise<void> {
+  const { data: prof } = await admin.from('profiles').select('integrite_strikes, integrite_bloque').eq('id', eleveId).maybeSingle()
+  const strikesAvant = (prof?.integrite_strikes as number | null) ?? 0
+  const strikesApres = Math.max(0, strikesAvant - 1)
   await admin
     .from('profiles')
-    .update({ integrite_bloque: false, integrite_strikes: restant, integrite_bloque_at: null })
+    .update({ integrite_bloque: false, integrite_strikes: strikesApres, integrite_bloque_at: null })
     .eq('id', eleveId)
+  // Compter le déblocage seulement si l'élève était réellement bloqué.
+  if (prof?.integrite_bloque) {
+    await journaliser(admin, { eleveId, type: 'deblocage', source: 'manuel', strikesAvant, strikesApres, acteurId })
+  }
 }

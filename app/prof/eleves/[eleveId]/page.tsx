@@ -8,10 +8,8 @@ import { noteVersLettre } from '@/utils/notation'
 import Tuile from '@/components/Tuile'
 import Pastille, { type ModuleSceau } from '@/components/Pastille'
 import EnTeteMobileProf from '@/components/EnTeteMobileProf'
-import { LABEL_MODULE, LABEL_TYPE_STRIKE, type ModuleIntegrite, type TypeStrike } from '@/utils/integrite'
-import { chargerPreuve } from '@/utils/integrite-preuve'
-import type { SelectionVue } from '@/components/integrite/types'
-import IntegriteEleveVolet from './IntegriteEleveVolet'
+import { chargerDossierIntegrite } from '@/utils/integrite-historique'
+import DossierIntegriteEleve from '@/components/integrite/DossierIntegriteEleve'
 
 // Hub transverse d'un élève (Pilotage › Élèves › nom). Point d'entrée vers les
 // vues détaillées de chaque module. En arrivant depuis « à risque », l'encart
@@ -82,45 +80,17 @@ export default async function PageEleveHub({
     { slug: 'aletheia', module: 'aletheia', nom: 'Aletheia', href: `/prof/aletheia/eleve/${eleveId}`, note: 'Lectures, retours, diagnostic' },
   ]
 
-  // ── Intégrité (« petits malins ») : strikes + signalements de cet élève + preuves.
-  const strikesInt = (profil.integrite_strikes as number | null) ?? 0
-  const eleveBloqueInt = !!profil.integrite_bloque
-  const [{ data: sigEleve }, { data: integriteParams }] = await Promise.all([
-    admin.from('integrite_signalements')
-      .select('id, module, rendu_ref, type, motif, source, statut, created_at')
-      .eq('eleve_id', eleveId).is('acquitte_at', null)
-      .order('created_at', { ascending: false }),
-    admin.from('integrite_params').select('seuil_strikes, actif').eq('id', 1).maybeSingle(),
-  ])
-  const seuilInt = integriteParams?.seuil_strikes ?? 3
-  const integriteActif = integriteParams?.actif ?? true
-  const fmtIntLong = (iso: string) => new Date(iso).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })
-  const fmtIntCourt = (iso: string) => new Date(iso).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })
+  // ── Intégrité (« petits malins ») : dossier complet (avis + chronologie).
   // Détection coupée → on n'affiche pas l'encart (cohérent avec le dashboard ; le
-  // bouton Débloquer serait sans effet, messageSiBloque renvoyant déjà null).
-  const selectionsIntegrite: SelectionVue[] = !integriteActif ? [] : await Promise.all(
-    (sigEleve ?? []).map(async (s) => ({
-      signalement: {
-        id: s.id as string,
-        eleveId,
-        eleveNom: profil.display_name as string,
-        moduleSlug: s.module as ModuleIntegrite,
-        moduleLabel: LABEL_MODULE[s.module as ModuleIntegrite] ?? (s.module as string),
-        typeSlug: s.type as string,
-        typeLabel: LABEL_TYPE_STRIKE[s.type as TypeStrike] ?? (s.type as string),
-        motif: (s.motif as string | null) ?? null,
-        source: s.source as 'algo' | 'ia',
-        enAttente: s.statut === 'en_attente',
-        date: fmtIntLong(s.created_at as string),
-        dateCourt: fmtIntCourt(s.created_at as string),
-      },
-      preuve: await chargerPreuve(admin, s.module as ModuleIntegrite, s.rendu_ref as string, { motif: s.motif as string | null, type: s.type as string }),
-      strikesEleve: strikesInt,
-      seuil: seuilInt,
-      eleveBloque: eleveBloqueInt,
-    })),
+  // bouton Débloquer serait sans effet, messageSiBloque renvoyant déjà null). La
+  // trace complète reste consultable depuis l'onglet /prof/integrite?vue=historique.
+  const { data: integriteParams } = await admin.from('integrite_params').select('actif').eq('id', 1).maybeSingle()
+  const integriteActif = integriteParams?.actif ?? true
+  const dossierIntegrite = integriteActif ? await chargerDossierIntegrite(admin, eleveId) : null
+  const montrerIntegrite = !!dossierIntegrite && (
+    dossierIntegrite.avis.length > 0 || dossierIntegrite.strikes > 0
+    || dossierIntegrite.bloque || dossierIntegrite.deblocages > 0
   )
-  const montrerIntegrite = integriteActif && (strikesInt > 0 || eleveBloqueInt || selectionsIntegrite.length > 0)
 
   return (
     <div className="space-y-6">
@@ -190,16 +160,8 @@ export default async function PageEleveHub({
         )
       })}
 
-      {/* Intégrité — strikes & signalements de cet élève (preuve en volet) */}
-      {montrerIntegrite && (
-        <IntegriteEleveVolet
-          eleveId={eleveId}
-          strikesEleve={strikesInt}
-          seuil={seuilInt}
-          eleveBloque={eleveBloqueInt}
-          selections={selectionsIntegrite}
-        />
-      )}
+      {/* Intégrité — dossier complet de cet élève (avis + chronologie, preuve en volet) */}
+      {montrerIntegrite && dossierIntegrite && <DossierIntegriteEleve dossier={dossierIntegrite} />}
 
       {/* Accès par module */}
       <div>

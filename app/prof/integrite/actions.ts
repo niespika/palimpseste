@@ -7,13 +7,17 @@ import {
   confirmerSignalement, acquitterSignalement, bloquerEleve, debloquerEleve,
   MESSAGE_STRIKE_DEFAUT, MESSAGE_BLOQUE_DEFAUT,
 } from '@/utils/integrite'
+import { chargerSelectionAvis } from '@/utils/integrite-historique'
+import type { SelectionVue } from '@/components/integrite/types'
 
-async function verifierProf() {
+// Vérifie le rôle prof et renvoie l'id du prof (acteur des actions journalisées).
+async function verifierProf(): Promise<string> {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) throw new Error('Non authentifié')
   const { data: profile } = await supabase.from('profiles').select('role').eq('id', user.id).single()
   if (profile?.role !== 'prof') throw new Error('Accès refusé')
+  return user.id
 }
 
 function revalider() {
@@ -23,8 +27,8 @@ function revalider() {
 
 // Prof confirme un signal IA → +1 strike (peut bloquer l'élève).
 export async function actionConfirmerSignalement(id: string) {
-  await verifierProf()
-  await confirmerSignalement(createAdminClient(), id)
+  const acteurId = await verifierProf()
+  await confirmerSignalement(createAdminClient(), id, acteurId)
   revalider()
 }
 
@@ -44,16 +48,22 @@ export async function actionAcquitterSignalement(id: string) {
 
 // Prof bloque manuellement un élève (sans toucher au compteur de strikes).
 export async function actionBloquerEleve(eleveId: string) {
-  await verifierProf()
-  await bloquerEleve(createAdminClient(), eleveId)
+  const acteurId = await verifierProf()
+  await bloquerEleve(createAdminClient(), eleveId, acteurId)
   revalider()
 }
 
 // Prof débloque un élève (-1 strike).
 export async function actionDebloquerEleve(eleveId: string) {
-  await verifierProf()
-  await debloquerEleve(createAdminClient(), eleveId)
+  const acteurId = await verifierProf()
+  await debloquerEleve(createAdminClient(), eleveId, acteurId)
   revalider()
+}
+
+// Charge la preuve d'un avis à la demande (au clic dans le dossier historique).
+export async function chargerPreuveAvisAction(signalementId: string): Promise<SelectionVue | null> {
+  await verifierProf()
+  return chargerSelectionAvis(createAdminClient(), signalementId)
 }
 
 // Bulle vide ou identique au défaut → null (on retombe sur le défaut du code).

@@ -1,3 +1,4 @@
+import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import { createClient } from '@/utils/supabase/server'
 import { createAdminClient } from '@/utils/supabase/admin'
@@ -6,15 +7,17 @@ import {
   type ModuleIntegrite, type TypeStrike,
 } from '@/utils/integrite'
 import { chargerPreuve } from '@/utils/integrite-preuve'
+import { chargerHistoriqueProf, chargerDossierIntegrite } from '@/utils/integrite-historique'
 import GestionIntegrite from './GestionIntegrite'
+import HistoriqueIntegrite from '@/components/integrite/HistoriqueIntegrite'
 import type { SignalementVue, BloqueVue, SelectionVue } from '@/components/integrite/types'
 
 export default async function ProfIntegritePage({
   searchParams,
 }: {
-  searchParams: Promise<{ sel?: string }>
+  searchParams: Promise<{ sel?: string; vue?: string; eleve?: string }>
 }) {
-  const { sel } = await searchParams
+  const { sel, vue: vueParam, eleve } = await searchParams
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
@@ -22,7 +25,48 @@ export default async function ProfIntegritePage({
   if (moi?.role !== 'prof') redirect('/eleve')
 
   const admin = createAdminClient()
+  const vue = vueParam === 'historique' ? 'historique' : 'atelier'
+  const body = vue === 'historique'
+    ? await VueHistorique({ admin, eleve })
+    : await VueAtelier({ admin, sel })
 
+  return (
+    <div className="space-y-4 pb-10">
+      {/* Sélecteur de vue : atelier (à traiter) ↔ historique (trace complète). */}
+      <div className="inline-flex rounded-lg border border-bordure bg-surface p-0.5 font-ui text-sm">
+        <Link
+          href="/prof/integrite?vue=atelier"
+          aria-current={vue === 'atelier' ? 'true' : undefined}
+          className={`px-3.5 py-1.5 rounded-md transition-colors ${vue === 'atelier' ? 'bg-bouton text-surface' : 'text-encre-douce hover:bg-parchemin-fonce'}`}
+        >
+          Atelier
+        </Link>
+        <Link
+          href="/prof/integrite?vue=historique"
+          aria-current={vue === 'historique' ? 'true' : undefined}
+          className={`px-3.5 py-1.5 rounded-md transition-colors ${vue === 'historique' ? 'bg-bouton text-surface' : 'text-encre-douce hover:bg-parchemin-fonce'}`}
+        >
+          Historique
+        </Link>
+      </div>
+
+      {body}
+    </div>
+  )
+}
+
+// ── Onglet « Historique » : tableau récapitulatif + dossier (master-detail) ────
+async function VueHistorique({ admin, eleve }: { admin: ReturnType<typeof createAdminClient>; eleve?: string }) {
+  const lignes = await chargerHistoriqueProf(admin)
+  const ids = new Set(lignes.map((l) => l.eleveId))
+  const selExplicit = !!eleve && ids.has(eleve)
+  const eleveSelId = selExplicit ? eleve! : null
+  const dossier = eleveSelId ? await chargerDossierIntegrite(admin, eleveSelId) : null
+  return <HistoriqueIntegrite lignes={lignes} dossier={dossier} eleveSelId={eleveSelId} selExplicit={selExplicit && !!dossier} />
+}
+
+// ── Onglet « Atelier » : file des signalements à traiter + preuve (existant) ───
+async function VueAtelier({ admin, sel }: { admin: ReturnType<typeof createAdminClient>; sel?: string }) {
   const [{ data: paramsRow }, { data: signalements }, { data: bloquesRows }] = await Promise.all([
     admin.from('integrite_params').select('actif, seuil_strikes, message_strike, message_bloque').eq('id', 1).maybeSingle(),
     admin.from('integrite_signalements')
@@ -42,9 +86,9 @@ export default async function ProfIntegritePage({
   const nomEleve = new Map((profils ?? []).map((p) => [p.id as string, p.display_name as string]))
 
   const fmtLong = (iso: string) =>
-    new Date(iso).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })
+    new Date(iso).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit', timeZone: 'America/Toronto' })
   const fmtCourt = (iso: string) =>
-    new Date(iso).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })
+    new Date(iso).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', timeZone: 'America/Toronto' })
 
   const vueSignalements: SignalementVue[] = (signalements ?? []).map((s) => ({
     id: s.id as string,
@@ -67,9 +111,7 @@ export default async function ProfIntegritePage({
     strikes: (b.integrite_strikes as number) ?? 0,
   }))
 
-  // Sélection : ?sel=<id> s'il pointe un signalement affiché, sinon le 1ᵉʳ à traiter
-  // (défaut pour la colonne droite sur ordi). `selExplicit` pilote la bascule mobile
-  // (liste ↔ preuve plein écran) : on n'ouvre la preuve sur mobile que si demandé.
+  // Sélection : ?sel=<id> s'il pointe un signalement affiché, sinon le 1ᵉʳ à traiter.
   const idsAffiches = new Set(vueSignalements.map((v) => v.id))
   const selExplicit = !!sel && idsAffiches.has(sel)
   const selId = selExplicit ? sel! : (vueSignalements[0]?.id ?? null)
