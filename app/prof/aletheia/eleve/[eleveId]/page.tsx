@@ -2,13 +2,18 @@ import Link from 'next/link'
 import { notFound, redirect } from 'next/navigation'
 import { createClient } from '@/utils/supabase/server'
 import { createAdminClient } from '@/utils/supabase/admin'
+import Pastille from '@/components/Pastille'
+import { MicroStepper, StepperNomme } from '@/components/aletheia/Steppers'
 import { VueRetourV1, VueRetourVF } from '@/components/aletheia/VueRetours'
-import { DetailDiagChapitre, TrajectoireDiag } from '@/components/aletheia/Diagnostic'
-import CourbeEvolution, { type SerieCourbe } from '@/components/CourbeEvolution'
-import { livresDeClasse, travauxEleve, progression, chargerDiagnostics, STATUT_LABEL, type LivreProf } from '../../donnees'
-import { chargerCapstoneLivre } from '@/app/eleve/modules/aletheia/data'
-import type { TravailAletheia, DiagnosticTravail } from '@/app/eleve/modules/aletheia/types'
+import { DetailDiagChapitre } from '@/components/aletheia/Diagnostic'
+import { livresDeClasse, travauxEleve, progression, chargerDiagnostics, STATUT_LABEL, type LivreProf, type Progression } from '../../donnees'
+import { couleurLivre } from '@/app/prof/aletheia/diagnostic'
+import { chargerCapstoneLivre, dateIndicative } from '@/app/eleve/modules/aletheia/data'
+import type { CapstoneRow, TravailAletheia, DiagnosticTravail, StatutAletheia } from '@/app/eleve/modules/aletheia/types'
+import GrapheProgression, { type LivreGraphe } from './GrapheProgression'
+import AvantApres from './AvantApres'
 
+// ── Petits champs de saisie (réutilisés dans le panneau « saisie complète ») ──
 function Champ({ label, valeur }: { label: string; valeur: string | null | undefined }) {
   if (!valeur) return null
   return (
@@ -31,122 +36,211 @@ function ListeChamp({ label, items }: { label: string; items: string[] }) {
   )
 }
 
-function SemaineDrill({ livre, travaux, diag }: { livre: LivreProf; travaux: Map<number, TravailAletheia>; diag: Map<number, DiagnosticTravail> }) {
+// Chip d'état : pigment si DONE, ocre si « à valider » (FEEDBACK2_READY), muet
+// sinon. Jamais de vert sur la fiche prof.
+function ChipEtat({ statut }: { statut: StatutAletheia }) {
+  const cls = statut === 'DONE' ? 'bg-pigment-teinte text-pigment'
+    : statut === 'FEEDBACK2_READY' ? 'bg-attention-teinte text-attention'
+    : 'bg-parchemin-fonce text-muet'
+  return <span className={`text-[11px] font-medium px-2 py-0.5 rounded-full whitespace-nowrap shrink-0 ${cls}`}>{STATUT_LABEL[statut]}</span>
+}
+
+// État de la carte d'architecture (capstone) du livre, en pied de carte-livre.
+function texteCapstone(cap: CapstoneRow | null | undefined, p: Progression): string {
+  if (cap?.statut !== 'READY') {
+    return cap?.statut === 'PENDING' ? 'Pas encore générée (génération en cours).'
+      : cap?.statut === 'ERROR' ? 'Génération échouée — régénère-la depuis le Scriptorium.'
+      : 'Pas encore générée — à générer depuis le Scriptorium.'
+  }
+  if (p.total === 0) return 'Livre pas encore découpé en semaines.'
+  return p.done === p.total
+    ? 'L’élève a terminé le livre : la carte lui est accessible.'
+    : `L’élève y accèdera à la fin du livre (${p.done}/${p.total} semaines).`
+}
+
+// ── Liste maître : une ligne de semaine (sélecteur fin, pilote l'URL) ─────────
+function LigneSemaine({ livre, semaine, titre, chapitres, statut, actif, basePath }: {
+  livre: string; semaine: number; titre: string; chapitres: string | null; statut: StatutAletheia; actif: boolean; basePath: string
+}) {
   return (
-    <div className="space-y-4">
-      {livre.semaines.map(s => {
-        const t = travaux.get(s.semaine) ?? null
-        const statut = t?.statut ?? 'DRAFT'
-        return (
-          <details key={s.semaine} className="bg-surface border border-bordure rounded-xl">
-            <summary className="px-4 py-3 cursor-pointer flex items-center justify-between gap-3">
-              <span className="text-sm font-medium text-encre">
-                Semaine {s.semaine} — {s.titre}
-                {s.chapitres && <span className="text-pigment font-normal"> · {s.chapitres}</span>}
-              </span>
-              <span className="text-xs text-muet whitespace-nowrap">{STATUT_LABEL[statut]}</span>
-            </summary>
-            <div className="px-4 pb-4 space-y-4 border-t border-bordure pt-4">
-              {!t ? (
-                <p className="text-sm text-muet">Rien soumis pour cette semaine.</p>
-              ) : (
-                <>
+    <Link
+      href={`${basePath}?l=${livre}&s=${semaine}`}
+      scroll={false}
+      aria-current={actif ? 'true' : undefined}
+      className={`flex items-center gap-3 px-4 py-3 min-h-[44px] transition-colors ${actif ? 'bg-pigment-teinte border-l-2 border-l-liseret' : 'border-l-2 border-l-transparent hover:bg-parchemin-fonce/40'}`}
+    >
+      <span className="font-titre text-sm text-muet w-6 shrink-0 text-center">{semaine}</span>
+      <div className="min-w-0 flex-1">
+        <p className="text-sm text-encre truncate">
+          {titre}{chapitres && <span className="text-pigment"> · {chapitres}</span>}
+        </p>
+        <div className="mt-1"><MicroStepper statut={statut} taille="petit" /></div>
+      </div>
+      <span className="text-[11px] text-muet whitespace-nowrap shrink-0 hidden sm:block">{STATUT_LABEL[statut]}</span>
+    </Link>
+  )
+}
+
+// Carte-livre repliée (le livre contenant la sélection s'ouvre via le rendu
+// serveur). Liseré gauche = couleur du livre. Pied = capstone.
+function CarteLivre({ livre, couleur, travaux, capstone, selL, selS, basePath }: {
+  livre: LivreProf; couleur: string; travaux: Map<number, TravailAletheia>; capstone: CapstoneRow | null | undefined
+  selL: string | null; selS: number | null; basePath: string
+}) {
+  const p = progression(livre.semaines, travaux)
+  return (
+    <details open={livre.id === selL} className="group bg-surface border border-bordure rounded-xl overflow-hidden" style={{ borderLeftWidth: 4, borderLeftColor: couleur }}>
+      <summary className="px-4 py-3 cursor-pointer select-none list-none [&::-webkit-details-marker]:hidden flex items-center gap-3 min-h-[44px]">
+        <Pastille module="aletheia" size={36} />
+        <div className="min-w-0 flex-1">
+          <p className="font-marque text-[11px] font-semibold tracking-[0.18em] text-pigment">ALETHEIA</p>
+          <p className="font-titre text-base text-encre truncate leading-tight">{livre.titre}</p>
+          <p className="text-xs text-muet">{p.done}/{p.total} terminées</p>
+        </div>
+        <span className="text-muet text-base shrink-0 transition-transform group-open:rotate-90" aria-hidden>›</span>
+      </summary>
+      <div className="border-t border-bordure divide-y divide-bordure">
+        {livre.semaines.map(s => {
+          const t = travaux.get(s.semaine) ?? null
+          return (
+            <LigneSemaine
+              key={s.semaine}
+              livre={livre.id}
+              semaine={s.semaine}
+              titre={s.titre}
+              chapitres={s.chapitres}
+              statut={t?.statut ?? 'DRAFT'}
+              actif={livre.id === selL && s.semaine === selS}
+              basePath={basePath}
+            />
+          )
+        })}
+      </div>
+      <div className="border-t border-bordure px-4 py-3 bg-parchemin-fonce/20">
+        <div className="flex items-start justify-between gap-3 flex-wrap">
+          <div className="min-w-0">
+            <p className="text-xs font-medium text-encre">✦ Carte d’architecture du livre</p>
+            <p className="text-xs text-muet mt-0.5">{texteCapstone(capstone, p)}</p>
+          </div>
+          <Link href="/prof/scriptorium" className="text-xs text-muet hover:text-encre underline whitespace-nowrap shrink-0">
+            Voir dans le Scriptorium →
+          </Link>
+        </div>
+      </div>
+    </details>
+  )
+}
+
+// ── Panneau de détail (maître-détail) : hiérarchisé, anti-clutter ─────────────
+function PanneauDetail({ livre, semaine, travail, diag, basePath }: {
+  livre: LivreProf; semaine: number; travail: TravailAletheia | null; diag: DiagnosticTravail | undefined; basePath: string
+}) {
+  const sem = livre.semaines.find(x => x.semaine === semaine)
+  const statut = travail?.statut ?? 'DRAFT'
+  const date = dateIndicative(livre.date_debut, semaine)
+  const sousTitre = [sem?.chapitres, date].filter(Boolean).join(' · ')
+
+  return (
+    <div className="space-y-5">
+      <Link href={`${basePath}?l=${livre.id}`} scroll={false} className="lg:hidden inline-flex items-center gap-1 text-sm text-muet hover:text-encre min-h-[44px]">
+        ← Retour à la liste
+      </Link>
+
+      {/* 1. En-tête + stepper nommé */}
+      <div className="bg-surface border border-bordure rounded-xl p-4 sm:p-5 space-y-3">
+        <div className="flex items-start gap-3">
+          <Pastille module="aletheia" size={56} />
+          <div className="min-w-0 flex-1">
+            <p className="font-marque text-[11px] font-semibold tracking-[0.18em] text-pigment truncate">ALETHEIA · {livre.titre}</p>
+            <h4 className="font-titre text-lg text-encre leading-tight">Semaine {semaine} — {sem?.titre}</h4>
+            {sousTitre && <p className="text-xs text-muet mt-0.5">{sousTitre}</p>}
+          </div>
+          <ChipEtat statut={statut} />
+        </div>
+        <StepperNomme statut={statut} compact />
+      </div>
+
+      {!travail ? (
+        <p className="text-sm text-muet bg-surface border border-bordure rounded-xl p-4">Rien soumis pour cette semaine.</p>
+      ) : (
+        <>
+          {/* 2. ★ Diagnostic prof-only — le signal */}
+          <section className="bg-pigment-teinte/40 border border-bordure border-l-4 border-l-liseret rounded-xl p-4 space-y-2">
+            <p className="font-ui text-xs text-pigment">◆ Diagnostic de compréhension <span className="text-muet italic">— prof, jamais montré à l’élève</span></p>
+            <DetailDiagChapitre d={diag} />
+          </section>
+
+          {/* 3. Avant / après (V1 → VF) — la preuve. Desktop = 2 colonnes ;
+              mobile = bascule segmentée (pas d'empilement). */}
+          <AvantApres travail={travail} />
+
+          {/* 4 & 5. Retours de l'IA + saisie — tous repliés, espacement uniforme */}
+          <div className="space-y-2">
+            {travail.retour_v1 && (
+              <details className="bg-surface border border-bordure rounded-xl">
+                <summary className="px-4 py-3 cursor-pointer text-sm font-medium text-encre">Retour socratique (V1)</summary>
+                <div className="px-4 pb-4 border-t border-bordure pt-3"><VueRetourV1 retour={travail.retour_v1} montrerRemarque /></div>
+              </details>
+            )}
+            {travail.retour_vf && (
+              <details className="bg-surface border border-bordure rounded-xl">
+                <summary className="px-4 py-3 cursor-pointer text-sm font-medium text-encre">Retour final (VF)</summary>
+                <div className="px-4 pb-4 border-t border-bordure pt-3"><VueRetourVF retour={travail.retour_vf} /></div>
+              </details>
+            )}
+            <details className="bg-surface border border-bordure rounded-xl">
+              <summary className="px-4 py-3 cursor-pointer text-sm font-medium text-encre">Saisie complète de l’élève</summary>
+              <div className="px-4 pb-4 border-t border-bordure pt-3 space-y-4">
+                <section className="space-y-2">
+                  <h5 className="text-xs font-semibold uppercase tracking-wide text-muet">Version initiale (V1)</h5>
+                  <Champ label="Idée principale" valeur={travail.these} />
+                  <Champ label="Arguments" valeur={travail.arguments} />
+                  <Champ label="Ton accord" valeur={travail.accord} />
+                  <ListeChamp label="Questions" items={travail.questions ?? []} />
+                  <ListeChamp label="Vocabulaire" items={travail.vocabulaire ?? []} />
+                </section>
+                {(travail.these_vf || travail.arguments_vf || travail.accord_vf) && (
                   <section className="space-y-2">
-                    <h5 className="text-xs font-semibold uppercase tracking-wide text-muet">Version initiale (V1)</h5>
-                    <Champ label="Idée principale" valeur={t.these} />
-                    <Champ label="Arguments" valeur={t.arguments} />
-                    <Champ label="Ton accord" valeur={t.accord} />
-                    <ListeChamp label="Questions" items={t.questions ?? []} />
-                    <ListeChamp label="Vocabulaire" items={t.vocabulaire ?? []} />
+                    <h5 className="text-xs font-semibold uppercase tracking-wide text-muet">Version finale (VF)</h5>
+                    <Champ label="Idée principale" valeur={travail.these_vf} />
+                    <Champ label="Arguments" valeur={travail.arguments_vf} />
+                    <Champ label="Ton accord" valeur={travail.accord_vf} />
                   </section>
-
-                  {t.retour_v1 && (
-                    <section className="space-y-2">
-                      <h5 className="text-xs font-semibold uppercase tracking-wide text-muet">Retour V1</h5>
-                      <VueRetourV1 retour={t.retour_v1} montrerRemarque />
-                    </section>
-                  )}
-
-                  {(t.these_vf || t.arguments_vf || t.accord_vf) && (
-                    <section className="space-y-2">
-                      <h5 className="text-xs font-semibold uppercase tracking-wide text-muet">Version finale (VF)</h5>
-                      <Champ label="Idée principale" valeur={t.these_vf} />
-                      <Champ label="Arguments" valeur={t.arguments_vf} />
-                      <Champ label="Ton accord" valeur={t.accord_vf} />
-                    </section>
-                  )}
-
-                  {t.retour_vf && (
-                    <section className="space-y-2">
-                      <h5 className="text-xs font-semibold uppercase tracking-wide text-muet">Retour final (VF)</h5>
-                      <VueRetourVF retour={t.retour_vf} />
-                    </section>
-                  )}
-
-                  <section className="space-y-1 border-t border-bordure pt-3">
-                    <h5 className="text-xs font-semibold uppercase tracking-wide text-muet">Diagnostic (prof — non montré à l&apos;élève)</h5>
-                    <DetailDiagChapitre d={diag.get(s.semaine)} />
-                  </section>
-                </>
-              )}
-            </div>
-          </details>
-        )
-      })}
+                )}
+              </div>
+            </details>
+          </div>
+        </>
+      )}
     </div>
   )
 }
 
-// Niveau retenu par axe : VF si présent (réponse au feedback), sinon V1.
-// « mal définie » → pas de niveau (gap dans la courbe).
-function niveauThese(d: DiagnosticTravail | undefined): number | null {
-  if (!d) return null
-  if (d.niveau_these_vf != null) return d.these_mal_definie_vf ? null : d.niveau_these_vf
-  if (d.niveau_these_v1 != null) return d.these_mal_definie_v1 ? null : d.niveau_these_v1
-  return null
-}
-function niveauArgs(d: DiagnosticTravail | undefined): number | null {
-  if (!d) return null
-  return d.niveau_arguments_vf ?? d.niveau_arguments_v1
-}
-
-const SERIES_DIAG: SerieCourbe[] = [
-  { cle: 'arguments', label: 'Arguments', couleur: '#0ea5e9' },
-  { cle: 'these', label: 'Thèse', couleur: '#8b5cf6' },
-]
-
-// Tuile haute du diagnostic (courbe E→A + trajectoire compacte), visible d'emblée.
-function TuileDiagnostic({ livre, diag }: { livre: LivreProf; diag: Map<number, DiagnosticTravail> }) {
-  const points = livre.semaines.map(s => ({
-    x: `S${s.semaine}`,
-    these: niveauThese(diag.get(s.semaine)),
-    arguments: niveauArgs(diag.get(s.semaine)),
-  }))
-  const aDiag = points.some(p => p.these != null || p.arguments != null)
-
-  return (
-    <section className="bg-surface border border-bordure border-l-4 border-l-liseret rounded-xl p-4">
-      <h5 className="text-sm font-medium text-encre">
-        Diagnostic de compréhension <span className="font-normal text-muet">— prof, jamais montré à l&apos;élève</span>
-      </h5>
-      <p className="text-xs text-muet mb-3">Thèse / arguments en E→A (V1→VF) · la tendance prime sur le point isolé.</p>
-      {aDiag ? (
-        <>
-          <CourbeEvolution data={points} cleX="x" series={SERIES_DIAG} axeY="lettres" domaine={[0, 4]} hauteur={200} />
-          <div className="mt-3 pt-3 border-t border-bordure">
-            <p className="text-xs text-muet mb-1">Trajectoire (axe arguments)</p>
-            <TrajectoireDiag semaines={livre.semaines.map(s => s.semaine)} diag={diag} />
-          </div>
-        </>
-      ) : (
-        <p className="text-sm text-muet">Pas encore diagnostiqué — lance le diagnostic depuis la vue classe.</p>
-      )}
-    </section>
-  )
+// Dernière semaine rendue (≠ DRAFT) au updated_at le plus récent, tous livres.
+function dernierRendu(livres: LivreProf[], travauxParLivre: Map<string, Map<number, TravailAletheia>>): { l: string; s: number } | null {
+  let best: { l: string; s: number; u: string } | null = null
+  for (const l of livres) {
+    const tm = travauxParLivre.get(l.id)
+    if (!tm) continue
+    for (const t of tm.values()) {
+      if (t.statut === 'DRAFT') continue
+      // Ignore un travail orphelin (semaine retirée du Scriptorium après soumission) :
+      // sinon le défaut sélectionnerait une semaine absente de la liste (en-tête tronqué).
+      if (!l.semaines.some(se => se.semaine === t.semaine_index)) continue
+      if (!best || t.updated_at > best.u) best = { l: l.id, s: t.semaine_index, u: t.updated_at }
+    }
+  }
+  return best ? { l: best.l, s: best.s } : null
 }
 
-export default async function DrillDownEleveAletheia({ params }: { params: Promise<{ eleveId: string }> }) {
+export default async function DrillDownEleveAletheia({ params, searchParams }: {
+  params: Promise<{ eleveId: string }>
+  searchParams: Promise<{ l?: string; s?: string }>
+}) {
   const { eleveId } = await params
+  const { l: lParam, s: sParam } = await searchParams
+  const basePath = `/prof/aletheia/eleve/${eleveId}`
+
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
@@ -157,74 +251,121 @@ export default async function DrillDownEleveAletheia({ params }: { params: Promi
   const { data: eleve } = await admin.from('profiles').select('display_name').eq('id', eleveId).maybeSingle()
   if (!eleve) notFound()
 
-  // Livres assignés aux classes (actives) de l'élève — dédupliqués.
+  // Classes actives de l'élève → livres par classe (groupés) + noms de classe.
   const { data: inscriptions } = await admin
     .from('inscriptions').select('classe_id').eq('eleve_id', eleveId).eq('statut', 'active')
   const classeIds = [...new Set((inscriptions ?? []).map(i => i.classe_id as string))]
-  const livresParClasse = await Promise.all(classeIds.map(c => livresDeClasse(admin, c)))
-  const livresMap = new Map<string, LivreProf>()
-  for (const arr of livresParClasse) for (const l of arr) livresMap.set(l.id, l)
-  const livres = [...livresMap.values()]
+  const [livresParClasse, { data: classesRows }] = await Promise.all([
+    Promise.all(classeIds.map(c => livresDeClasse(admin, c))),
+    classeIds.length ? admin.from('classes').select('id, nom').in('id', classeIds) : Promise.resolve({ data: [] as { id: string; nom: string }[] }),
+  ])
+  const nomParClasse = new Map((classesRows ?? []).map(c => [c.id as string, c.nom as string]))
 
-  const travauxParLivre = new Map(
-    await Promise.all(livres.map(async l => [l.id, await travauxEleve(admin, eleveId, l.id)] as const)),
-  )
-  const capstoneParLivre = new Map(
-    await Promise.all(livres.map(async l => [l.id, await chargerCapstoneLivre(admin, l.id)] as const)),
-  )
-  // Diagnostic (prof-only) de l'élève, par livre → semaine.
-  const diagParLivre = new Map(
-    await Promise.all(livres.map(async l => [l.id, (await chargerDiagnostics(admin, [eleveId], l.id)).get(eleveId) ?? new Map<number, DiagnosticTravail>()] as const)),
-  )
+  // Groupes par classe, livres dédupliqués (1er groupe gagnant pour un partage).
+  const vus = new Set<string>()
+  const groupes = classeIds.map((cid, i) => ({
+    classeId: cid,
+    nom: nomParClasse.get(cid) ?? 'Classe',
+    livres: (livresParClasse[i] ?? []).filter(l => (vus.has(l.id) ? false : (vus.add(l.id), true))),
+  })).filter(g => g.livres.length > 0)
+  const livres = groupes.flatMap(g => g.livres)
+
+  // Couleur par livre (ordre global, outremer d'abord) — partagée graphe + liseré.
+  const couleurParLivre = new Map(livres.map((l, i) => [l.id, couleurLivre(i)]))
+
+  // Chargements (inchangés) : travaux, capstones, diagnostics par livre.
+  const [travauxParLivre, capstoneParLivre, diagParLivre] = await Promise.all([
+    Promise.all(livres.map(async l => [l.id, await travauxEleve(admin, eleveId, l.id)] as const)).then(e => new Map(e)),
+    Promise.all(livres.map(async l => [l.id, await chargerCapstoneLivre(admin, l.id)] as const)).then(e => new Map(e)),
+    Promise.all(livres.map(async l => [l.id, (await chargerDiagnostics(admin, [eleveId], l.id)).get(eleveId) ?? new Map<number, DiagnosticTravail>()] as const)).then(e => new Map(e)),
+  ])
+
+  // Sélection (URL). Pas de paramètre → défaut = dernière semaine rendue.
+  // `?l=` seul (retour mobile) → livre ouvert, pas de panneau.
+  let selL: string | null = null
+  let selS: number | null = null
+  if (lParam === undefined && sParam === undefined) {
+    const d = dernierRendu(livres, travauxParLivre)
+    if (d) { selL = d.l; selS = d.s }
+  } else {
+    const livreParam = lParam ? livres.find(x => x.id === lParam) : undefined
+    selL = livreParam?.id ?? null
+    const sNum = sParam != null ? Number(sParam) : NaN
+    if (livreParam && Number.isInteger(sNum) && livreParam.semaines.some(se => se.semaine === sNum)) selS = sNum
+  }
+
+  // Données sérialisées du graphe.
+  const livresGraphe: LivreGraphe[] = livres.map(l => ({
+    id: l.id, titre: l.titre, couleur: couleurParLivre.get(l.id)!, semaines: l.semaines.map(s => s.semaine),
+  }))
+  const diagSerialise: Record<string, Record<number, DiagnosticTravail>> = {}
+  for (const l of livres) {
+    const m = diagParLivre.get(l.id)
+    if (!m) continue
+    const obj: Record<number, DiagnosticTravail> = {}
+    for (const [sem, dd] of m) obj[sem] = dd
+    diagSerialise[l.id] = obj
+  }
+
+  const selLivre = selS != null && selL ? livres.find(l => l.id === selL) ?? null : null
 
   return (
-    <div className="space-y-6">
+    <div data-module="aletheia" className="space-y-6">
       <div>
         <Link href="/prof/aletheia" className="text-sm text-muet hover:text-encre-douce">← Classe</Link>
-        <h3 className="text-lg font-serif text-encre mt-2">{eleve.display_name as string}</h3>
+        <h3 className="font-titre text-2xl text-encre mt-2">{eleve.display_name as string}</h3>
         <p className="text-sm text-muet">Détail par livre et par semaine</p>
       </div>
 
       {livres.length === 0 ? (
         <p className="text-sm text-muet">Aucun livre assigné à cet élève.</p>
       ) : (
-        livres.map(livre => {
-          const travaux = travauxParLivre.get(livre.id) ?? new Map<number, TravailAletheia>()
-          const p = progression(livre.semaines, travaux)
-          const cap = capstoneParLivre.get(livre.id)
-          return (
-            <div key={livre.id} className="space-y-4">
-              <div className="flex items-baseline justify-between gap-3 flex-wrap">
-                <h4 className="font-medium text-encre">{livre.titre}</h4>
-                <span className="text-xs text-muet">{p.done}/{p.total} semaines terminées</span>
-              </div>
+        <>
+          <GrapheProgression livres={livresGraphe} diagParLivre={diagSerialise} basePath={basePath} />
 
-              <TuileDiagnostic livre={livre} diag={diagParLivre.get(livre.id) ?? new Map()} />
-
-              <SemaineDrill livre={livre} travaux={travaux} diag={diagParLivre.get(livre.id) ?? new Map()} />
-
-              {/* Pas de carte du livre ici (elle est dans le Scriptorium) — juste
-                  l'indication de l'accès de l'élève + l'état de génération. */}
-              <section className="bg-surface border border-bordure border-l-4 border-l-liseret rounded-xl p-4">
-                <div className="flex items-start justify-between gap-3 flex-wrap">
-                  <div>
-                    <h5 className="text-sm font-medium text-encre">✦ Carte d&apos;architecture du livre</h5>
-                    <p className="text-sm text-muet mt-1">
-                      {cap?.statut !== 'READY'
-                        ? (cap?.statut === 'PENDING' ? 'Pas encore générée (génération en cours).' : cap?.statut === 'ERROR' ? 'Génération échouée — régénère-la depuis le Scriptorium.' : 'Pas encore générée — à générer depuis le Scriptorium.')
-                        : p.done === p.total && p.total > 0
-                          ? 'L’élève a terminé le livre : la carte lui est accessible.'
-                          : `L’élève y accèdera à la fin du livre (${p.done}/${p.total} semaines).`}
-                    </p>
-                  </div>
-                  <Link href="/prof/scriptorium" className="text-xs text-muet hover:text-encre underline whitespace-nowrap shrink-0">
-                    Voir la carte dans le Scriptorium →
-                  </Link>
-                </div>
-              </section>
+          <div className="lg:grid lg:grid-cols-[340px_1fr] lg:gap-6 lg:items-start">
+            {/* Liste maître — masquée sur mobile quand une semaine est ouverte. */}
+            <div className={`space-y-6 ${selS != null ? 'hidden lg:block' : 'block'}`}>
+              {groupes.map(g => (
+                <section key={g.classeId} className="space-y-3">
+                  <h4 className="font-ui text-xs font-medium uppercase tracking-wide text-muet">{g.nom}</h4>
+                  {g.livres.map(livre => (
+                    // key inclut l'état de sélection : force un remount quand le livre
+                    // (dé)sélectionné change, pour que <details open> ne reste pas figé
+                    // après une navigation client (open n'est pas re-piloté autrement).
+                    <CarteLivre
+                      key={`${livre.id}:${livre.id === selL}`}
+                      livre={livre}
+                      couleur={couleurParLivre.get(livre.id)!}
+                      travaux={travauxParLivre.get(livre.id) ?? new Map()}
+                      capstone={capstoneParLivre.get(livre.id)}
+                      selL={selL}
+                      selS={selS}
+                      basePath={basePath}
+                    />
+                  ))}
+                </section>
+              ))}
             </div>
-          )
-        })
+
+            {/* Panneau de détail — plein écran mobile, colonne droite desktop. */}
+            <div className={selS != null ? 'block mt-6 lg:mt-0' : 'hidden lg:block'}>
+              {selLivre && selS != null ? (
+                <PanneauDetail
+                  livre={selLivre}
+                  semaine={selS}
+                  travail={travauxParLivre.get(selLivre.id)?.get(selS) ?? null}
+                  diag={diagParLivre.get(selLivre.id)?.get(selS)}
+                  basePath={basePath}
+                />
+              ) : (
+                <div className="flex items-center justify-center text-center min-h-[280px] text-sm text-muet bg-surface border border-bordure border-dashed rounded-xl p-6">
+                  Sélectionnez une semaine (liste ou graphe) pour afficher son détail.
+                </div>
+              )}
+            </div>
+          </div>
+        </>
       )}
     </div>
   )

@@ -3,7 +3,7 @@ import Link from 'next/link'
 import { createClient } from '@/utils/supabase/server'
 import { createAdminClient } from '@/utils/supabase/admin'
 import { chargerCapstoneLivre, contexteAletheia, estSemaineDebloquee, lireReglages, livresPourClasse, travauxParSemaine } from './data'
-import { indexEtape } from './etapes'
+import { MicroStepper } from '@/components/aletheia/Steppers'
 import Pastille from '@/components/Pastille'
 import type { StatutAletheia } from './types'
 
@@ -21,23 +21,6 @@ function fmtJourMois(iso: string | null | undefined): string {
   const d = new Date(iso)
   if (Number.isNaN(d.getTime())) return ''
   return `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}`
-}
-
-// Micro-stepper : 4 points = les 4 étapes (Lecture · Retour · Réécriture · Retour
-// final). Plein (ok) = passé · pigment = courant · creux = à venir. DONE = 4 pleins.
-function MicroStepper({ statut, taille = 'normal' }: { statut: StatutAletheia; taille?: 'normal' | 'petit' }) {
-  const courant = indexEtape(statut)
-  const done = statut === 'DONE'
-  const d = taille === 'petit' ? 'w-[7px] h-[7px]' : 'w-2.5 h-2.5'
-  return (
-    <div className={`flex ${taille === 'petit' ? 'gap-1' : 'gap-1.5'}`} aria-hidden>
-      {[0, 1, 2, 3].map((i) => {
-        const plein = done || i < courant
-        const actif = !done && statut !== 'DRAFT' && i === courant
-        return <span key={i} className={`${d} rounded-full ${plein || actif ? 'bg-pigment' : 'border border-bordure'}`} />
-      })}
-    </div>
-  )
 }
 
 function CarteMessage({ children }: { children: React.ReactNode }) {

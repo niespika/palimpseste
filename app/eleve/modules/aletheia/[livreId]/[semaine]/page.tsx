@@ -13,8 +13,8 @@ import BanniereRetoursNonLus from '@/components/retours/BanniereRetoursNonLus'
 import { retoursNonLus } from '@/utils/retours-lus'
 import AtelierDeuxColonnes from '@/components/AtelierDeuxColonnes'
 import Pastille from '@/components/Pastille'
-import { ETAPES_SEMAINE, indexEtape } from '../../etapes'
-import type { TravailAletheia, StatutAletheia } from '../../types'
+import { StepperNomme } from '@/components/aletheia/Steppers'
+import type { TravailAletheia } from '../../types'
 
 function Bloc({ titre, children }: { titre: string; children: React.ReactNode }) {
   return (
@@ -37,30 +37,6 @@ function TuileAttente({ titre, sousTitre }: { titre: string; sousTitre: string }
       <p className="font-titre text-xl text-encre mt-4">{titre}</p>
       <p className="font-corps text-sm text-encre-douce mt-1.5 max-w-sm">{sousTitre}</p>
     </div>
-  )
-}
-
-// Stepper de progression — situe l'élève dans le parcours de la semaine.
-function Stepper({ statut }: { statut: StatutAletheia }) {
-  const courant = indexEtape(statut)
-  return (
-    <ol className="flex items-center gap-1.5 overflow-x-auto -mx-1 px-1 text-xs">
-      {ETAPES_SEMAINE.map((label, i) => {
-        const fait = i < courant
-        const actif = i === courant
-        return (
-          <li key={label} className="flex items-center gap-1.5 shrink-0">
-            <span className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-medium ${
-              fait || actif ? 'bg-pigment text-surface' : 'bg-parchemin-fonce text-muet'
-            }`}>
-              {fait ? '✓' : i + 1}
-            </span>
-            <span className={`font-ui whitespace-nowrap ${actif ? 'text-pigment font-medium' : fait ? 'text-pigment' : 'text-muet'}`}>{label}</span>
-            {i < ETAPES_SEMAINE.length - 1 && <span className="text-bordure" aria-hidden>·</span>}
-          </li>
-        )
-      })}
-    </ol>
   )
 }
 
@@ -275,7 +251,7 @@ export default async function PageSemaineAletheia({ params }: { params: Promise<
         )}
       </div>
 
-      <Stepper statut={statut} />
+      <StepperNomme statut={statut} />
 
       {enSoumission && <BanniereRetoursNonLus retours={retoursALire} />}
 
