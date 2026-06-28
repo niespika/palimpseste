@@ -2,10 +2,12 @@
 
 import { useState } from 'react'
 import { creerEleve } from './actions'
+import { genererMotDePasse } from '@/utils/password'
 
 export default function FormulaireAjoutEleve() {
   const [ouvert, setOuvert] = useState(false)
   const [chargement, setChargement] = useState(false)
+  const [mdp, setMdp] = useState('')
   const [message, setMessage] = useState<{ type: 'ok' | 'erreur'; texte: string } | null>(null)
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
@@ -13,18 +15,28 @@ export default function FormulaireAjoutEleve() {
     setChargement(true)
     setMessage(null)
     const formData = new FormData(e.currentTarget)
+    const prenom = ((formData.get('prenom') as string) ?? '').trim()
+    const nom = ((formData.get('nom') as string) ?? '').trim()
+    const displayName = [prenom, nom].filter(Boolean).join(' ')
+    if (!displayName) {
+      setMessage({ type: 'erreur', texte: 'Indique au moins un prénom ou un nom.' })
+      setChargement(false)
+      return
+    }
+    formData.set('displayName', displayName)
     const resultat = await creerEleve(formData)
     if (resultat?.error) {
       setMessage({ type: 'erreur', texte: resultat.error })
     } else {
-      setMessage({ type: 'ok', texte: 'Compte créé avec succès.' })
+      setMessage({ type: 'ok', texte: `Compte créé pour ${displayName}.` })
       ;(e.target as HTMLFormElement).reset()
+      setMdp('')
     }
     setChargement(false)
   }
 
   return (
-    <div className="mb-6">
+    <div className={ouvert ? 'w-full' : ''}>
       {!ouvert ? (
         <button
           onClick={() => setOuvert(true)}
@@ -36,6 +48,28 @@ export default function FormulaireAjoutEleve() {
         <div className="bg-surface border border-bordure rounded-xl p-6">
           <h3 className="font-medium text-encre mb-4">Nouveau compte élève</h3>
           <form onSubmit={handleSubmit} className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-encre-douce mb-1">
+                Prénom <span className="text-retard">*</span>
+              </label>
+              <input
+                name="prenom"
+                type="text"
+                className="w-full px-3 py-2 border border-bordure rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-pigment text-encre"
+                placeholder="Ex. : Camille"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-encre-douce mb-1">
+                Nom
+              </label>
+              <input
+                name="nom"
+                type="text"
+                className="w-full px-3 py-2 border border-bordure rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-pigment text-encre"
+                placeholder="Ex. : Dupont"
+              />
+            </div>
             <div>
               <label className="block text-sm font-medium text-encre-douce mb-1">
                 Adresse courriel <span className="text-retard">*</span>
@@ -52,29 +86,28 @@ export default function FormulaireAjoutEleve() {
               <label className="block text-sm font-medium text-encre-douce mb-1">
                 Mot de passe provisoire <span className="text-retard">*</span>
               </label>
-              <input
-                name="motDePasse"
-                type="text"
-                required
-                minLength={8}
-                className="w-full px-3 py-2 border border-bordure rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-pigment text-encre"
-                placeholder="Au moins 8 caractères"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-encre-douce mb-1">
-                Prénom / pseudonyme <span className="text-retard">*</span>
-              </label>
-              <input
-                name="displayName"
-                type="text"
-                required
-                className="w-full px-3 py-2 border border-bordure rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-pigment text-encre"
-                placeholder="Ex. : Camille"
-              />
+              <div className="flex gap-2">
+                <input
+                  name="motDePasse"
+                  type="text"
+                  required
+                  minLength={8}
+                  value={mdp}
+                  onChange={(e) => setMdp(e.target.value)}
+                  className="flex-1 min-w-0 px-3 py-2 border border-bordure rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-pigment text-encre"
+                  placeholder="Au moins 8 caractères"
+                />
+                <button
+                  type="button"
+                  onClick={() => setMdp(genererMotDePasse())}
+                  className="shrink-0 font-ui text-sm text-encre border border-bordure rounded-lg px-3 py-2 bg-surface hover:bg-parchemin-fonce transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pigment"
+                >
+                  Générer
+                </button>
+              </div>
             </div>
             <p className="sm:col-span-2 text-xs text-muet -mt-1">
-              Tu inscriras l&apos;élève dans une ou plusieurs classes depuis l&apos;onglet Classes.
+              Tu inscriras l&apos;élève dans une ou plusieurs classes depuis le tableau (colonne Classes) ou l&apos;onglet Classes.
             </p>
 
             {message && (

@@ -2,6 +2,7 @@ import { createClient } from '@/utils/supabase/server'
 import { createAdminClient } from '@/utils/supabase/admin'
 import Tuile from '@/components/Tuile'
 import FormulaireAjoutEleve from './FormulaireAjoutEleve'
+import ImportCsvEleves from './ImportCsvEleves'
 import LigneEleve from './LigneEleve'
 import type { EleveAvecEmail } from '@/types'
 
@@ -65,7 +66,10 @@ export default async function PageEleves({
     <div className="space-y-6">
       <h2 className="text-xl font-serif text-encre">Élèves</h2>
 
-      <FormulaireAjoutEleve />
+      <div className="flex flex-wrap items-start gap-3">
+        <FormulaireAjoutEleve />
+        <ImportCsvEleves />
+      </div>
 
       {eleves.length === 0 ? (
         <div className="bg-surface border border-bordure rounded-xl p-8 text-center text-muet text-sm">
@@ -120,7 +124,7 @@ export default async function PageEleves({
                     </thead>
                     <tbody>
                       {elevesSelection.map(eleve => (
-                        <LigneEleve key={eleve.id} eleve={eleve} />
+                        <LigneEleve key={eleve.id} eleve={eleve} classes={classesList} />
                       ))}
                     </tbody>
                   </table>
