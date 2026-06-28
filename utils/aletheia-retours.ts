@@ -97,6 +97,34 @@ function extraireJSON(texte: string): string {
   return texte.replace(/^```(?:json)?\s*\n?/, '').replace(/\n?```\s*$/, '').trim()
 }
 
+// ── Prompt caching — découpe « 2 blocs » SANS changer ce que voit le modèle ────
+// Un sentinel inséré juste après le gros texte d'ancrage marque la frontière entre
+// le PRÉFIXE invariant (instructions + texte d'ancrage — identique pour tous les
+// élèves d'une même semaine) et le SUFFIXE dynamique (champs élève, calibration).
+// Les deux blocs concaténés reconstituent le prompt à l'octet près → AUCUN impact
+// sur la sortie IA (essentiel : ne perturbe pas la calibration). cache_control sur
+// le préfixe → l'écriture (1er élève d'une semaine) est ensuite relue (~0,1×) par
+// les suivants. TTL 1 h par défaut : les rendus d'une semaine s'étalent dans le temps.
+const CACHE_BREAK = '  ALETHEIA_CACHE_BREAK  '
+
+function messagesAvecCache(prompt: string, ttl: '5m' | '1h' = '1h'): Anthropic.MessageParam[] {
+  const idx = prompt.indexOf(CACHE_BREAK)
+  // Sentinel absent (placeholder de texte retiré d'un override prof) → un seul bloc.
+  if (idx === -1) return [{ role: 'user', content: prompt }]
+  const prefixe = prompt.slice(0, idx)
+  const suffixe = prompt.slice(idx + CACHE_BREAK.length).split(CACHE_BREAK).join('')
+  const cache_control = ttl === '1h'
+    ? ({ type: 'ephemeral', ttl: '1h' } as const)
+    : ({ type: 'ephemeral' } as const)
+  return [{
+    role: 'user',
+    content: [
+      { type: 'text', text: prefixe, cache_control },
+      { type: 'text', text: suffixe },
+    ],
+  }]
+}
+
 type Admin = ReturnType<typeof createAdminClient>
 
 // ── Couture d'ancrage réutilisable ──────────────────────────────────────────
@@ -234,7 +262,7 @@ export async function genererRetourV1(travailId: string): Promise<void> {
     const vocabulaire = (t.vocabulaire as string[] | null) ?? []
 
     const prompt = injecter(params?.prompt_feedback_1?.trim() || PROMPT_FEEDBACK_V1_DEFAUT, {
-      texte_unite: texteUnite,
+      texte_unite: texteUnite + CACHE_BREAK,   // césure cache juste après le texte de semaine
       these_eleve: sansDelims(txt(t.these)),
       arguments_eleve: sansDelims(txt(t.arguments)),
       accord_eleve: sansDelims(txt(t.accord)),
@@ -248,7 +276,7 @@ export async function genererRetourV1(travailId: string): Promise<void> {
     const response = await client.messages.create({
       model: MODELE,
       max_tokens: 4096,
-      messages: [{ role: 'user', content: prompt }],
+      messages: messagesAvecCache(prompt),
     })
     await enregistrerCoutApi('aletheia', coutMessage(response.usage))
     if (response.stop_reason === 'max_tokens') throw new Error('Réponse tronquée (max_tokens).')
@@ -779,11 +807,11 @@ async function diagnostiquerPhase(
 ): Promise<{ inventaire: InventaireDiagnostic; niveaux: NiveauxDiagnostic }> {
   // Phase 1 — inventaire (lit le texte + la prose élève).
   const pInv = injecter(prompts.inventaire, {
-    texte_semaine: texteSemaine,
+    texte_semaine: texteSemaine + CACHE_BREAK,   // césure cache juste après le texte de semaine
     these: sansDelims(these) || '(rien)',
     arguments: sansDelims(args) || '(rien)',
   })
-  const rInv = await client.messages.create({ model: MODELE, max_tokens: 2048, temperature: 0, messages: [{ role: 'user', content: pInv }] })
+  const rInv = await client.messages.create({ model: MODELE, max_tokens: 2048, temperature: 0, messages: messagesAvecCache(pInv) })
   await enregistrerCoutApi('aletheia', coutMessage(rInv.usage))
   if (rInv.stop_reason === 'max_tokens') throw new Error('Inventaire tronqué.')
   const inventaire = parseInventaire(JSON.parse(extraireJSON(rInv.content[0]?.type === 'text' ? rInv.content[0].text : '')) as Partial<InventaireDiagnostic>)

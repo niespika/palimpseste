@@ -172,6 +172,10 @@ export async function lancerDiagnosticClasse(classeId: string): Promise<{ lances
   })
   if (enAttente.length === 0) return { lances: 0, restants: 0 }
 
+  // Regrouper par semaine : la boucle séquentielle enchaîne alors des appels au même
+  // texte de semaine → hits de prompt caching (préfixe identique) sur la phase inventaire.
+  enAttente.sort((a, b) => (a.semaine_index ?? 0) - (b.semaine_index ?? 0))
+
   // Sélection bornée par le budget d'APPELS IA (chaque phase manquante = 2 appels).
   const lot: string[] = []
   let cout = 0
