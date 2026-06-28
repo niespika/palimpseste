@@ -4,8 +4,29 @@ import { revalidatePath } from 'next/cache'
 import { createAdminClient } from '@/utils/supabase/admin'
 import { createClient } from '@/utils/supabase/server'
 import { genererMotDePasse } from '@/utils/password'
+import { envoyerInvitationEleve } from '@/utils/email'
 
 type Admin = ReturnType<typeof createAdminClient>
+
+// Génère un lien sécurisé (recovery) et l'envoie par courriel. Le compte existe
+// déjà (créé avec un MDP interne) : l'élève choisira le sien via /finaliser-inscription.
+async function envoyerInvitation(admin: Admin, email: string, displayName: string): Promise<{ error?: string }> {
+  const { data: lien, error } = await admin.auth.admin.generateLink({ type: 'recovery', email })
+  const tokenHash = lien?.properties?.hashed_token
+  if (error || !tokenHash) {
+    console.error('[eleves] generateLink échec :', error?.message)
+    return { error: "Lien d'invitation impossible à générer." }
+  }
+  const base = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'
+  const url = `${base}/auth/confirm?token_hash=${tokenHash}&type=recovery&next=${encodeURIComponent('/finaliser-inscription')}`
+  try {
+    await envoyerInvitationEleve({ email, displayName, lien: url })
+    return {}
+  } catch (e) {
+    console.error('[eleves] envoi invitation échec :', e instanceof Error ? e.message : e)
+    return { error: "Compte prêt, mais le courriel d'invitation n'a pas pu être envoyé (config Resend ?)." }
+  }
+}
 
 // Vérifier que l'appelant est bien le prof
 async function verifierProf() {
@@ -92,6 +113,59 @@ export async function creerEleve(formData: FormData) {
   }
 
   revalidatePath('/prof/eleves')
+  return { success: true }
+}
+
+// Création « invitation » : compte avec MDP interne (jamais montré) + courriel
+// pour que l'élève choisisse son mot de passe. Renvoie un avertissement non
+// bloquant si le compte est créé mais l'email échoue (renvoi possible ensuite).
+export async function creerEleveEtInviter(formData: FormData) {
+  await verifierProf()
+
+  const admin = createAdminClient()
+  const email = (formData.get('email') as string)?.trim()
+  const displayName = nettoyerNom(formData.get('displayName') as string)
+
+  const { data: { user }, error } = await admin.auth.admin.createUser({
+    email,
+    password: genererMotDePasse(),
+    email_confirm: true,
+  })
+  if (error) return { error: messageErreurAuth(error.message) }
+  if (!user) return { error: 'Utilisateur créé mais introuvable.' }
+
+  const { error: profilError } = await admin.from('profiles').insert({
+    id: user.id,
+    role: 'eleve',
+    display_name: displayName,
+  })
+  if (profilError) {
+    console.error('[eleves] insert profil échec (creerEleveEtInviter) :', profilError.message)
+    await admin.auth.admin.deleteUser(user.id)
+    return { error: 'Compte non créé (profil impossible). Réessaie.' }
+  }
+
+  const envoi = await envoyerInvitation(admin, email!, displayName)
+  revalidatePath('/prof/eleves')
+  if (envoi.error) return { success: true, avertissement: envoi.error }
+  return { success: true }
+}
+
+// (Re)envoie l'invitation à un élève existant (par id).
+export async function renvoyerInvitation(formData: FormData) {
+  await verifierProf()
+
+  const admin = createAdminClient()
+  const id = formData.get('id') as string
+  if (!(await cibleEstEleve(admin, id))) return { error: 'Compte introuvable.' }
+
+  const { data: u } = await admin.auth.admin.getUserById(id)
+  const email = u?.user?.email
+  if (!email) return { error: 'Adresse courriel introuvable.' }
+
+  const { data: profil } = await admin.from('profiles').select('display_name').eq('id', id).maybeSingle()
+  const envoi = await envoyerInvitation(admin, email, (profil?.display_name as string) ?? '')
+  if (envoi.error) return { error: envoi.error }
   return { success: true }
 }
 

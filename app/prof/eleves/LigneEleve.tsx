@@ -3,7 +3,7 @@
 import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { modifierEleve, reinitialiserMotDePasse, supprimerEleve } from './actions'
+import { modifierEleve, reinitialiserMotDePasse, supprimerEleve, renvoyerInvitation } from './actions'
 import { inscrireEleve, retirerEleve } from '@/app/prof/classes/actions'
 import type { EleveAvecEmail } from '@/types'
 
@@ -58,6 +58,19 @@ export default function LigneEleve({
     formData.append('id', eleve.id)
     const resultat = await supprimerEleve(formData)
     if (resultat?.error) { setMessage({ type: 'erreur', texte: resultat.error }); setChargement(false) }
+  }
+
+  async function handleInviter() {
+    if (occupe) return
+    setChargement(true)
+    setMessage(null)
+    const formData = new FormData()
+    formData.append('id', eleve.id)
+    const resultat = await renvoyerInvitation(formData)
+    setMessage(resultat?.error
+      ? { type: 'erreur', texte: resultat.error }
+      : { type: 'ok', texte: `Invitation envoyée à ${eleve.email}.` })
+    setChargement(false)
   }
 
   // Affecter l'élève à une classe (non destructif, idempotent).
@@ -175,6 +188,9 @@ export default function LigneEleve({
         <Link href={`/prof/eleves/${eleve.id}`} className="text-encre hover:text-pigment hover:underline">
           {eleve.display_name}
         </Link>
+        {eleve.jamaisConnecte && (
+          <span className="block font-ui text-[11px] text-muet mt-0.5">Pas encore connecté</span>
+        )}
       </td>
       <td className="px-4 py-3 text-sm align-top">
         <div className="flex flex-wrap items-center gap-1.5">
@@ -216,7 +232,15 @@ export default function LigneEleve({
       </td>
       <td className="px-4 py-3 text-sm text-encre-douce align-top">{eleve.email}</td>
       <td className="px-4 py-3 text-sm align-top">
-        <div className="flex gap-2">
+        <div className="flex gap-2 flex-wrap">
+          <button
+            onClick={handleInviter}
+            disabled={occupe}
+            title="Envoyer un courriel pour que l'élève (re)définisse son mot de passe"
+            className="text-pigment hover:opacity-80 text-xs px-2 py-1 rounded hover:bg-parchemin-fonce disabled:opacity-50"
+          >
+            {eleve.jamaisConnecte ? 'Inviter' : 'Renvoyer l’invit.'}
+          </button>
           <button
             onClick={() => setModeEdition(true)}
             disabled={occupe}

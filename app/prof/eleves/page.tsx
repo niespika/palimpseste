@@ -8,15 +8,18 @@ import type { EleveAvecEmail } from '@/types'
 
 const SANS_CLASSE = 'aucune'
 
-// Emails des comptes Auth, paginés (listUsers plafonne perPage ~1000) → Map
-// id→email. Borne dure de sécurité à 50 pages pour ne jamais boucler à l'infini.
-async function chargerEmails(admin: ReturnType<typeof createAdminClient>): Promise<Map<string, string>> {
-  const map = new Map<string, string>()
+// Comptes Auth, paginés (listUsers plafonne perPage ~1000) → Map id→{email,
+// jamaisConnecte}. Borne dure de sécurité à 50 pages pour ne jamais boucler.
+type InfoAuth = { email: string; jamaisConnecte: boolean }
+async function chargerEmails(admin: ReturnType<typeof createAdminClient>): Promise<Map<string, InfoAuth>> {
+  const map = new Map<string, InfoAuth>()
   const perPage = 1000
   for (let page = 1; page <= 50; page++) {
     const { data, error } = await admin.auth.admin.listUsers({ page, perPage })
     if (error || !data) break
-    for (const u of data.users) if (u.email) map.set(u.id, u.email)
+    for (const u of data.users) {
+      if (u.email) map.set(u.id, { email: u.email, jamaisConnecte: !u.last_sign_in_at })
+    }
     if (data.users.length < perPage) break
   }
   return map
@@ -48,9 +51,11 @@ export default async function PageEleves({
       .filter(i => i.statut === 'active')
       .map(i => (Array.isArray(i.classes) ? i.classes[0] : i.classes))
       .filter((c): c is { id: string; nom: string } => !!c)
+    const info = emailsParId.get(profile.id)
     return {
       ...profile,
-      email: emailsParId.get(profile.id) ?? '—',
+      email: info?.email ?? '—',
+      jamaisConnecte: info?.jamaisConnecte ?? false,
       classes,
     }
   })
