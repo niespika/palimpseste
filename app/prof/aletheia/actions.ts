@@ -6,8 +6,8 @@ import { createClient } from '@/utils/supabase/server'
 import { createAdminClient } from '@/utils/supabase/admin'
 import { inscriptionsClasse } from '@/utils/acces'
 import {
-  PROMPT_FEEDBACK_V1_DEFAUT, PROMPT_FEEDBACK_VF_DEFAUT, PROMPT_CAPSTONE_DEFAUT,
-  PROMPT_REFERENCE_DEFAUT, PROMPT_DIAG_INVENTAIRE_DEFAUT, PROMPT_DIAG_NIVEAU_DEFAUT,
+  PROMPT_FEEDBACK_V1_DEFAUT, PROMPT_FEEDBACK_VF_DEFAUT,
+  PROMPT_DIAG_INVENTAIRE_DEFAUT, PROMPT_DIAG_NIVEAU_DEFAUT,
 } from '@/utils/aletheia-retours'
 import { diagnosticEnAttente } from './donnees'
 import type { TravailAletheia, DiagnosticTravail } from '@/app/eleve/modules/aletheia/types'
@@ -57,8 +57,8 @@ const nullSiDefaut = (valeur: string, defaut: string): string | null =>
   valeur.trim() && valeur.trim() !== defaut.trim() ? valeur : null
 
 export interface PromptsAletheia {
-  promptFeedback1: string; promptFeedback2: string; promptCapstone: string
-  promptReference: string; promptDiagInventaire: string; promptDiagNiveau: string
+  promptFeedback1: string; promptFeedback2: string
+  promptDiagInventaire: string; promptDiagNiveau: string
   evalQuestions: boolean; deblocageSequentiel: boolean
   aides: AidesV1
 }
@@ -79,11 +79,8 @@ export async function sauvegarderPromptsAletheia(p: PromptsAletheia) {
   if (p2 !== null && !p2.includes('{livre_entier}')) {
     return { error: 'Le prompt du retour final doit garder la variable {livre_entier} (le texte d\'ancrage). Ajoute-la avant d\'enregistrer.' }
   }
-  // Variables critiques des prompts référence / diagnostic (sans elles, l'artefact n'a plus sa source).
-  const pRef = nullSiDefaut(p.promptReference, PROMPT_REFERENCE_DEFAUT)
-  if (pRef !== null && !pRef.includes('{livre_entier}')) {
-    return { error: 'Le prompt de la référence doit garder la variable {livre_entier} (le texte du livre).' }
-  }
+  // Variables critiques des prompts de diagnostic (sans elles, l'artefact n'a plus sa source).
+  // (Carte + référence : prompts gérés dans Scriptorium › Paramètres, hors de cette action.)
   const pInv = nullSiDefaut(p.promptDiagInventaire, PROMPT_DIAG_INVENTAIRE_DEFAUT)
   if (pInv !== null && !pInv.includes('{texte_semaine}')) {
     return { error: 'Le prompt d\'inventaire du diagnostic doit garder la variable {texte_semaine} (le texte du chapitre).' }
@@ -101,8 +98,6 @@ export async function sauvegarderPromptsAletheia(p: PromptsAletheia) {
       id: 1,
       prompt_feedback_1: nullSiDefaut(p.promptFeedback1, PROMPT_FEEDBACK_V1_DEFAUT),
       prompt_feedback_2: p2,
-      prompt_capstone: nullSiDefaut(p.promptCapstone, PROMPT_CAPSTONE_DEFAUT),
-      prompt_reference: pRef,
       prompt_diag_inventaire: pInv,
       prompt_diag_niveau: pNiv,
       eval_questions_actif: p.evalQuestions,

@@ -2,44 +2,27 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
+import BlocPrompt from '@/components/BlocPrompt'
 import { sauvegarderPromptsAletheia } from './actions'
 import { AIDES_V1_DEFAUT, type AidesV1 } from '@/app/eleve/modules/aletheia/aides-v1'
 
 interface Initial {
-  prompt_feedback_1: string | null; prompt_feedback_2: string | null; prompt_capstone: string | null
-  prompt_reference: string | null; prompt_diag_inventaire: string | null; prompt_diag_niveau: string | null
+  prompt_feedback_1: string | null; prompt_feedback_2: string | null
+  prompt_diag_inventaire: string | null; prompt_diag_niveau: string | null
   eval_questions_actif: boolean; deblocage_sequentiel: boolean
   aides: AidesV1
 }
 interface Defauts {
-  feedback1: string; feedback2: string; capstone: string
-  reference: string; diagInventaire: string; diagNiveau: string
+  feedback1: string; feedback2: string; diagInventaire: string; diagNiveau: string
 }
 
+// Zone de saisie des bulles d'aide (réutilise le style mono des prompts).
 const TEXTAREA = 'w-full px-3 py-2 border border-bordure rounded-xl text-sm font-mono focus:outline-none focus:ring-2 focus:ring-pigment resize-y text-encre'
-
-function BlocPrompt({ label, value, onChange, defaut, hint, rows = 18, warn }: {
-  label: string; value: string; onChange: (v: string) => void; defaut: string; hint: React.ReactNode; rows?: number; warn?: React.ReactNode
-}) {
-  return (
-    <div>
-      <div className="flex items-center justify-between mb-2">
-        <label className="text-sm font-medium text-encre-douce">{label}</label>
-        <button type="button" onClick={() => onChange(defaut)} className="text-xs text-muet hover:text-encre-douce underline">Restaurer la version par défaut</button>
-      </div>
-      <p className="text-xs text-muet mb-2">{hint}</p>
-      {warn && <p className="text-xs text-retard mb-2">{warn}</p>}
-      <textarea value={value} onChange={e => onChange(e.target.value)} rows={rows} className={TEXTAREA} />
-    </div>
-  )
-}
 
 export default function FormulaireParametresAletheia({ initial, defauts }: { initial: Initial; defauts: Defauts }) {
   const router = useRouter()
   const [p1, setP1] = useState(initial.prompt_feedback_1 || defauts.feedback1)
   const [p2, setP2] = useState(initial.prompt_feedback_2 || defauts.feedback2)
-  const [pC, setPC] = useState(initial.prompt_capstone || defauts.capstone)
-  const [pRef, setPRef] = useState(initial.prompt_reference || defauts.reference)
   const [pInv, setPInv] = useState(initial.prompt_diag_inventaire || defauts.diagInventaire)
   const [pNiv, setPNiv] = useState(initial.prompt_diag_niveau || defauts.diagNiveau)
   const [evalQuestions, setEvalQuestions] = useState(initial.eval_questions_actif)
@@ -53,8 +36,8 @@ export default function FormulaireParametresAletheia({ initial, defauts }: { ini
     setEnregistrement(true)
     setMessage(null)
     const res = await sauvegarderPromptsAletheia({
-      promptFeedback1: p1, promptFeedback2: p2, promptCapstone: pC,
-      promptReference: pRef, promptDiagInventaire: pInv, promptDiagNiveau: pNiv,
+      promptFeedback1: p1, promptFeedback2: p2,
+      promptDiagInventaire: pInv, promptDiagNiveau: pNiv,
       evalQuestions, deblocageSequentiel, aides,
     })
     setEnregistrement(false)
@@ -69,8 +52,8 @@ export default function FormulaireParametresAletheia({ initial, defauts }: { ini
   const [groupe, setGroupe] = useState<'retours' | 'diagnostic' | 'reglages' | 'aides'>('retours')
 
   const TUILES = [
-    { cle: 'retours' as const, nom: 'Retours & carte', desc: 'Retour V1, retour final, carte d’architecture' },
-    { cle: 'diagnostic' as const, nom: 'Diagnostic', desc: 'Référence, inventaire, niveau E→A' },
+    { cle: 'retours' as const, nom: 'Retours', desc: 'Retour V1, retour final' },
+    { cle: 'diagnostic' as const, nom: 'Diagnostic', desc: 'Inventaire, niveau E→A' },
     { cle: 'aides' as const, nom: 'Bulles d’aide (V1)', desc: 'Exemples « comment remplir » des 5 champs' },
     { cle: 'reglages' as const, nom: 'Réglages', desc: 'Questions, déblocage séquentiel' },
   ]
@@ -105,7 +88,7 @@ export default function FormulaireParametresAletheia({ initial, defauts }: { ini
 
       {groupe === 'retours' && (
         <div className="space-y-8">
-          <h4 className="text-sm font-semibold text-encre-douce border-b border-bordure pb-1">Retours élève &amp; carte</h4>
+          <h4 className="text-sm font-semibold text-encre-douce border-b border-bordure pb-1">Retours élève</h4>
 
           <BlocPrompt
             label="Retour V1 — socratique, par section (5 champs)" value={p1} onChange={setP1} defaut={defauts.feedback1} rows={20}
@@ -118,10 +101,7 @@ export default function FormulaireParametresAletheia({ initial, defauts }: { ini
             hint={<>Variables : <code>{'{livre_entier}'}</code>, <code>{'{these_initiale}'}</code>, <code>{'{arguments_initiale}'}</code>, <code>{'{accord_initial}'}</code>, <code>{'{these_vf}'}</code>, <code>{'{arguments_vf}'}</code>, <code>{'{accord_vf}'}</code>, <code>{'{syntheses_precedentes}'}</code>, <code>{'{architectures_precedentes}'}</code>, <code>{'{trajectoire_diagnostic}'}</code>, <code>{'{semaine_courante_N}'}</code>, <code>{'{total_semaines}'}</code>. Sortie JSON <code>{'{ synthese_modele, ajouts_verifies, nuances_et_erreurs, architecture_amont, architecture_aval_jalons }'}</code>.</>}
           />
 
-          <BlocPrompt
-            label="Carte d'architecture (capstone) — canonique, par livre" value={pC} onChange={setPC} defaut={defauts.capstone} rows={18}
-            hint={<>Variables : <code>{'{livre_entier}'}</code>, <code>{'{structure_semaines}'}</code>. Sortie JSON <code>{'{ fil_conducteur, noeuds:[{chapitre,idee}], liens:[{de,vers,relation}] }'}</code>. Carte partagée, tous les liens aval révélés.</>}
-          />
+          <p className="text-xs text-muet">La <strong>carte d&apos;architecture (capstone)</strong> s&apos;édite désormais dans <strong>Scriptorium › Paramètres</strong> (générée à la préparation du livre).</p>
         </div>
       )}
 
@@ -129,10 +109,7 @@ export default function FormulaireParametresAletheia({ initial, defauts }: { ini
         <div className="space-y-8">
           <h4 className="text-sm font-semibold text-encre-douce border-b border-bordure pb-1">Diagnostic (usage prof, jamais montré à l&apos;élève)</h4>
 
-          <BlocPrompt
-            label="Référence par chapitre — socle du diagnostic" value={pRef} onChange={setPRef} defaut={defauts.reference} rows={16}
-            hint={<>Variables : <code>{'{livre_entier}'}</code>, <code>{'{structure_semaines}'}</code>. Sortie JSON <code>{'{ chapitres:[{semaine,titre,these_canonique,arguments_cles[]}] }'}</code>. Une entrée par semaine.</>}
-          />
+          <p className="text-xs text-muet">La <strong>référence par chapitre</strong> (socle du diagnostic) s&apos;édite désormais dans <strong>Scriptorium › Paramètres</strong>.</p>
 
           <BlocPrompt
             label="Diagnostic — phase 1 : inventaire (ancré au texte)" value={pInv} onChange={setPInv} defaut={defauts.diagInventaire} rows={16}

@@ -4,6 +4,7 @@ import { after } from 'next/server'
 import { revalidatePath } from 'next/cache'
 import { createClient } from '@/utils/supabase/server'
 import { createAdminClient } from '@/utils/supabase/admin'
+import { PROMPT_CAPSTONE_DEFAUT, PROMPT_REFERENCE_DEFAUT } from '@/utils/aletheia-retours'
 import type { Capstone, ReferenceChapitre } from '@/app/eleve/modules/aletheia/types'
 
 async function verifierProf() {
@@ -518,5 +519,38 @@ export async function enregistrerReferenceLivre(livreId: string, contenu: Refere
     { onConflict: 'scriptorium_livre_id' })
   if (error) return { error: error.message }
   revalidatePath('/prof/scriptorium')
+  return { success: true }
+}
+
+// ── Prompts de génération des artefacts (carte + référence) — onglet Paramètres ──
+// Édités depuis Scriptorium (les autres prompts Aletheia restent dans /prof/aletheia).
+// Si un prompt est laissé identique au défaut, on stocke null → le code retombe sur
+// le défaut (et ses évolutions futures).
+const nullSiDefaut = (valeur: string, defaut: string): string | null =>
+  valeur.trim() && valeur.trim() !== defaut.trim() ? valeur : null
+
+export async function sauvegarderPromptsScriptorium(
+  p: { promptCapstone: string; promptReference: string },
+): Promise<{ success?: boolean; error?: string }> {
+  await verifierProf()
+  // {livre_entier} = l'ancrage (le texte du livre) : sans lui, l'artefact n'a plus sa source.
+  const pCap = nullSiDefaut(p.promptCapstone, PROMPT_CAPSTONE_DEFAUT)
+  if (pCap !== null && !pCap.includes('{livre_entier}')) {
+    return { error: 'Le prompt de la carte doit garder la variable {livre_entier} (le texte du livre).' }
+  }
+  const pRef = nullSiDefaut(p.promptReference, PROMPT_REFERENCE_DEFAUT)
+  if (pRef !== null && !pRef.includes('{livre_entier}')) {
+    return { error: 'Le prompt de la référence doit garder la variable {livre_entier} (le texte du livre).' }
+  }
+
+  // Upsert CIBLÉ de ces 2 colonnes seulement (aletheia_params id=1) : sur conflit, seules
+  // ces colonnes sont mises à jour → n'écrase pas les prompts gérés par /prof/aletheia.
+  const admin = createAdminClient()
+  const { error } = await admin.from('aletheia_params').upsert(
+    { id: 1, prompt_capstone: pCap, prompt_reference: pRef, updated_at: new Date().toISOString() },
+    { onConflict: 'id' })
+  if (error) return { error: error.message }
+  revalidatePath('/prof/scriptorium')
+  revalidatePath('/prof/aletheia')
   return { success: true }
 }
