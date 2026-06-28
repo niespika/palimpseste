@@ -24,10 +24,12 @@ export function MicroStepper({ statut, taille = 'normal' }: { statut: StatutAlet
 
 // Stepper nommé — situe l'avancement avec les libellés des 4 étapes. Fait/courant
 // en pigment, ✓ pour les étapes passées (toutes ✓ si DONE → indexEtape = 4).
-export function StepperNomme({ statut }: { statut: StatutAletheia }) {
+// `wrap` : passe à la ligne au lieu de scroller (évite scrollbar + libellé tronqué
+// sur écran étroit) ; défaut = scroll horizontal (comportement élève d'origine).
+export function StepperNomme({ statut, wrap = false }: { statut: StatutAletheia; wrap?: boolean }) {
   const courant = indexEtape(statut)
   return (
-    <ol className="flex items-center gap-1.5 overflow-x-auto -mx-1 px-1 text-xs">
+    <ol className={`flex items-center text-xs ${wrap ? 'flex-wrap gap-x-1.5 gap-y-1.5' : 'gap-1.5 overflow-x-auto -mx-1 px-1'}`}>
       {ETAPES_SEMAINE.map((label, i) => {
         const fait = i < courant
         const actif = i === courant

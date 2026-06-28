@@ -157,7 +157,7 @@ function PanneauDetail({ livre, semaine, travail, diag, basePath }: {
           </div>
           <ChipEtat statut={statut} />
         </div>
-        <StepperNomme statut={statut} />
+        <StepperNomme statut={statut} wrap />
       </div>
 
       {!travail ? (
@@ -174,46 +174,42 @@ function PanneauDetail({ livre, semaine, travail, diag, basePath }: {
               mobile = bascule segmentée (pas d'empilement). */}
           <AvantApres travail={travail} />
 
-          {/* 4. Retours de l'IA — repliés */}
-          {(travail.retour_v1 || travail.retour_vf) && (
-            <div className="space-y-2">
-              {travail.retour_v1 && (
-                <details className="bg-surface border border-bordure rounded-xl">
-                  <summary className="px-4 py-3 cursor-pointer text-sm font-medium text-encre">Retour socratique (V1)</summary>
-                  <div className="px-4 pb-4 border-t border-bordure pt-3"><VueRetourV1 retour={travail.retour_v1} montrerRemarque /></div>
-                </details>
-              )}
-              {travail.retour_vf && (
-                <details className="bg-surface border border-bordure rounded-xl">
-                  <summary className="px-4 py-3 cursor-pointer text-sm font-medium text-encre">Retour final (VF)</summary>
-                  <div className="px-4 pb-4 border-t border-bordure pt-3"><VueRetourVF retour={travail.retour_vf} /></div>
-                </details>
-              )}
-            </div>
-          )}
-
-          {/* 5. Saisie complète — repliée */}
-          <details className="bg-surface border border-bordure rounded-xl">
-            <summary className="px-4 py-3 cursor-pointer text-sm font-medium text-encre">Saisie complète de l’élève</summary>
-            <div className="px-4 pb-4 border-t border-bordure pt-3 space-y-4">
-              <section className="space-y-2">
-                <h5 className="text-xs font-semibold uppercase tracking-wide text-muet">Version initiale (V1)</h5>
-                <Champ label="Idée principale" valeur={travail.these} />
-                <Champ label="Arguments" valeur={travail.arguments} />
-                <Champ label="Ton accord" valeur={travail.accord} />
-                <ListeChamp label="Questions" items={travail.questions ?? []} />
-                <ListeChamp label="Vocabulaire" items={travail.vocabulaire ?? []} />
-              </section>
-              {(travail.these_vf || travail.arguments_vf || travail.accord_vf) && (
+          {/* 4 & 5. Retours de l'IA + saisie — tous repliés, espacement uniforme */}
+          <div className="space-y-2">
+            {travail.retour_v1 && (
+              <details className="bg-surface border border-bordure rounded-xl">
+                <summary className="px-4 py-3 cursor-pointer text-sm font-medium text-encre">Retour socratique (V1)</summary>
+                <div className="px-4 pb-4 border-t border-bordure pt-3"><VueRetourV1 retour={travail.retour_v1} montrerRemarque /></div>
+              </details>
+            )}
+            {travail.retour_vf && (
+              <details className="bg-surface border border-bordure rounded-xl">
+                <summary className="px-4 py-3 cursor-pointer text-sm font-medium text-encre">Retour final (VF)</summary>
+                <div className="px-4 pb-4 border-t border-bordure pt-3"><VueRetourVF retour={travail.retour_vf} /></div>
+              </details>
+            )}
+            <details className="bg-surface border border-bordure rounded-xl">
+              <summary className="px-4 py-3 cursor-pointer text-sm font-medium text-encre">Saisie complète de l’élève</summary>
+              <div className="px-4 pb-4 border-t border-bordure pt-3 space-y-4">
                 <section className="space-y-2">
-                  <h5 className="text-xs font-semibold uppercase tracking-wide text-muet">Version finale (VF)</h5>
-                  <Champ label="Idée principale" valeur={travail.these_vf} />
-                  <Champ label="Arguments" valeur={travail.arguments_vf} />
-                  <Champ label="Ton accord" valeur={travail.accord_vf} />
+                  <h5 className="text-xs font-semibold uppercase tracking-wide text-muet">Version initiale (V1)</h5>
+                  <Champ label="Idée principale" valeur={travail.these} />
+                  <Champ label="Arguments" valeur={travail.arguments} />
+                  <Champ label="Ton accord" valeur={travail.accord} />
+                  <ListeChamp label="Questions" items={travail.questions ?? []} />
+                  <ListeChamp label="Vocabulaire" items={travail.vocabulaire ?? []} />
                 </section>
-              )}
-            </div>
-          </details>
+                {(travail.these_vf || travail.arguments_vf || travail.accord_vf) && (
+                  <section className="space-y-2">
+                    <h5 className="text-xs font-semibold uppercase tracking-wide text-muet">Version finale (VF)</h5>
+                    <Champ label="Idée principale" valeur={travail.these_vf} />
+                    <Champ label="Arguments" valeur={travail.arguments_vf} />
+                    <Champ label="Ton accord" valeur={travail.accord_vf} />
+                  </section>
+                )}
+              </div>
+            </details>
+          </div>
         </>
       )}
     </div>
