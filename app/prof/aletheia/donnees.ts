@@ -3,7 +3,7 @@ import type { SupabaseClient } from '@supabase/supabase-js'
 import type { StatutAletheia, TravailAletheia, DiagnosticTravail } from '@/app/eleve/modules/aletheia/types'
 
 export interface SemaineProf { semaine: number; titre: string; chapitres: string | null }
-export interface LivreProf { id: string; titre: string; nb_semaines: number | null; semaines: SemaineProf[] }
+export interface LivreProf { id: string; titre: string; nb_semaines: number | null; date_debut: string | null; semaines: SemaineProf[] }
 
 // Livres (type='livre') assignés à une classe + leurs semaines (titre/chapitres).
 // Côté prof : tout passe par le client admin (Scriptorium est en RLS prof-only,
@@ -16,7 +16,7 @@ export async function livresDeClasse(admin: SupabaseClient, classeId: string): P
 
   const [{ data: unites }, { data: docs }] = await Promise.all([
     admin.from('scriptorium_unites')
-      .select('id, label, nb_semaines').eq('type', 'livre').in('id', bookIds).order('ordre', { ascending: true }),
+      .select('id, label, nb_semaines, date_debut').eq('type', 'livre').in('id', bookIds).order('ordre', { ascending: true }),
     admin.from('scriptorium_documents')
       .select('unite_id, semaine, titre, chapitres').in('unite_id', bookIds)
       .not('semaine', 'is', null).order('semaine', { ascending: true }),
@@ -34,6 +34,7 @@ export async function livresDeClasse(admin: SupabaseClient, classeId: string): P
     id: u.id as string,
     titre: u.label as string,
     nb_semaines: (u.nb_semaines as number | null) ?? null,
+    date_debut: (u.date_debut as string | null) ?? null,
     semaines: semParLivre.get(u.id as string) ?? [],
   }))
 }
