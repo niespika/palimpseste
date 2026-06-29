@@ -7,6 +7,13 @@ import { createAdminClient } from '@/utils/supabase/admin'
 import { PROMPT_CAPSTONE_DEFAUT, PROMPT_REFERENCE_DEFAUT } from '@/utils/aletheia-retours'
 import type { Capstone, ReferenceChapitre } from '@/app/eleve/modules/aletheia/types'
 
+// ── Import PDF « découpé en semaines » : seuils & garde-fous (SPEC) ──────────
+const IMPORT_MAX_PAGES = 600      // refus au-delà (décision produit)
+const IMPORT_SEUIL_SCAN = 0.7     // > 70 % de pages quasi vides ⇒ PDF probablement scanné
+const IMPORT_SEUIL_CHARS = 3      // page « vide » si < 3 caractères utiles
+const IMPORT_TTL_MS = 24 * 60 * 60 * 1000  // purge des imports orphelins (sessions abandonnées)
+const RE_UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+
 async function verifierProf() {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
@@ -175,12 +182,126 @@ export async function ajouterContenu(formData: FormData) {
   return { success: true }
 }
 
+// ── Import PDF « découpé en semaines » (SPEC) ────────────────────────────────
+// L'upload du PDF passe par URL signée DIRECTE → Supabase : une server action ne
+// peut pas recevoir > 4,5 Mo (limite Vercel, tous plans). Le texte est extrait UNE
+// fois (page par page), stocké transitoirement dans scriptorium_imports, puis purgé
+// à la création du livre. Le PDF lui-même n'est jamais conservé (texte seul).
+
+// Extraction PAGE PAR PAGE : index i = texte de la page i+1 (null si illisible).
+// Contrairement à extraireTexte (un seul bloc), on garde la frontière des pages.
+async function extrairePagesPdf(buffer: Buffer): Promise<string[] | null> {
+  try {
+    const { extractText } = await import('unpdf')
+    const { text } = await extractText(new Uint8Array(buffer), { mergePages: false })
+    return Array.isArray(text) ? text : [text]
+  } catch (err) {
+    console.error('[scriptorium] extraction PDF page par page :', err)
+    return null
+  }
+}
+
+// Purge best-effort des imports > 24 h de ce prof (onglet fermé en cours de route).
+async function purgerImportsOrphelins(admin: Admin, userId: string): Promise<void> {
+  try {
+    const seuil = new Date(Date.now() - IMPORT_TTL_MS).toISOString()
+    await admin.from('scriptorium_imports').delete().eq('user_id', userId).lt('created_at', seuil)
+    const { data: objets } = await admin.storage.from('scriptorium').list(`imports/${userId}`, { limit: 1000 })
+    const vieux = (objets ?? [])
+      .filter(o => typeof o.created_at === 'string' && o.created_at < seuil)
+      .map(o => `imports/${userId}/${o.name}`)
+    if (vieux.length > 0) await admin.storage.from('scriptorium').remove(vieux)
+  } catch (err) {
+    console.error('[scriptorium] purge imports orphelins :', err)
+  }
+}
+
+// 1) Préparer l'URL signée pour que le navigateur dépose le PDF directement.
+export async function creerUploadImportPdf(): Promise<{ importId?: string; path?: string; token?: string; error?: string }> {
+  const { userId } = await verifierProf()
+  const admin = createAdminClient()
+  const importId = crypto.randomUUID()
+  const path = `imports/${userId}/${importId}.pdf`
+  const { data, error } = await admin.storage.from('scriptorium').createSignedUploadUrl(path)
+  if (error || !data) return { error: error?.message ?? 'Impossible de préparer le dépôt du PDF.' }
+  return { importId, path: data.path, token: data.token }
+}
+
+// 2) Analyser le PDF déposé : compte de pages, détection scan, extraction UNE fois
+// (persistée). Le chemin est reconstruit côté serveur (jamais fourni par le client).
+export async function analyserPdfImport(importId: string): Promise<{
+  totalPages?: number; scanne?: boolean; pagesVides?: number; pagesVidesPct?: number; tropLong?: boolean; error?: string
+}> {
+  const { userId } = await verifierProf()
+  if (!RE_UUID.test(importId)) return { error: "Identifiant d'import invalide." }
+  const admin = createAdminClient()
+  const path = `imports/${userId}/${importId}.pdf`
+
+  const { data: blob, error: errDl } = await admin.storage.from('scriptorium').download(path)
+  if (errDl || !blob) return { error: 'PDF introuvable (le dépôt a peut-être échoué). Réessaie.' }
+
+  const buffer = Buffer.from(await blob.arrayBuffer())
+  const pages = await extrairePagesPdf(buffer)
+  if (!pages || pages.length === 0) return { error: 'PDF illisible : aucune page exploitable.' }
+
+  const totalPages = pages.length
+  const pagesVides = pages.filter(p => (p ?? '').trim().length < IMPORT_SEUIL_CHARS).length
+  const pagesVidesPct = pagesVides / totalPages
+
+  const { error: errUp } = await admin.from('scriptorium_imports').upsert(
+    { import_id: importId, user_id: userId, total_pages: totalPages, pages, created_at: new Date().toISOString() },
+    { onConflict: 'import_id' },
+  )
+  if (errUp) return { error: errUp.message }
+
+  after(() => purgerImportsOrphelins(admin, userId))
+  return { totalPages, scanne: pagesVidesPct > IMPORT_SEUIL_SCAN, pagesVides, pagesVidesPct, tropLong: totalPages > IMPORT_MAX_PAGES }
+}
+
+// 3) Aperçu du texte aux bornes d'une plage (vérification anti-décalage silencieux).
+export async function apercuPlage(importId: string, debutPdf: number, finPdf: number): Promise<{
+  debut?: string; fin?: string; vide?: boolean; error?: string
+}> {
+  const { userId } = await verifierProf()
+  if (!RE_UUID.test(importId)) return { error: 'Import invalide.' }
+  const admin = createAdminClient()
+  const { data: row } = await admin
+    .from('scriptorium_imports')
+    .select('pages').eq('import_id', importId).eq('user_id', userId).maybeSingle()
+  const pages = (row?.pages as string[] | undefined) ?? null
+  if (!pages || pages.length === 0) return { error: 'Import expiré — re-dépose le PDF.' }
+  const total = pages.length
+  if (!Number.isInteger(debutPdf) || !Number.isInteger(finPdf) || debutPdf < 1 || finPdf > total || debutPdf > finPdf) {
+    return { error: `Pages hors du PDF (1–${total}).` }
+  }
+  const premiere = (pages[debutPdf - 1] ?? '').replace(/\s+/g, ' ').trim()
+  const derniere = (pages[finPdf - 1] ?? '').replace(/\s+/g, ' ').trim()
+  return {
+    debut: premiere.slice(0, 280),
+    fin: derniere.length > 160 ? '…' + derniere.slice(-160) : derniere,
+    vide: pages.slice(debutPdf - 1, finPdf).join('').trim().length < IMPORT_SEUIL_CHARS,
+  }
+}
+
+// 4) Abandonner un import (changement de mode, fermeture, après création).
+export async function supprimerImportPdf(importId: string): Promise<{ success?: boolean }> {
+  const { userId } = await verifierProf()
+  if (!RE_UUID.test(importId)) return { success: true }
+  const admin = createAdminClient()
+  await admin.storage.from('scriptorium').remove([`imports/${userId}/${importId}.pdf`])
+  await admin.from('scriptorium_imports').delete().eq('import_id', importId).eq('user_id', userId)
+  return { success: true }
+}
+
 // ── Livre (Aletheia Lot 1) ──────────────────────────────────────────────────
 // Un livre = une unité `type='livre'` (label = titre, + date_debut, nb_semaines).
-// Chaque semaine = un document de cette unité : PDF d'ancrage (extrait en texte),
-// titre, chapitres, index `semaine`. Classes assignées par semaine (liaison Lot 6).
-// Les PDF sont stockés dans le bucket Scriptorium : ancrage IA, jamais exposés
-// à l'élève (aucune route élève ne les sert).
+// Chaque semaine = un document de cette unité : titre, chapitres, index `semaine`
+// et un texte d'ancrage IA. Deux modes de saisie de ce texte :
+//   • 'par_semaine' (historique) : un fichier PDF/DOCX/TXT par semaine, extrait
+//     puis STOCKÉ dans le bucket Scriptorium (fichier_ref) — jamais exposé élève ;
+//   • 'pdf_decoupe' (SPEC) : un seul PDF déposé en amont (scriptorium_imports), que
+//     l'on découpe en plages de pages → texte seul (fichier_ref reste null).
+// Classes assignées AU NIVEAU DU LIVRE (scriptorium_unite_classes, Lot 2).
 export async function ajouterLivre(formData: FormData) {
   const { supabase, userId } = await verifierProf()
 
@@ -194,6 +315,7 @@ export async function ajouterLivre(formData: FormData) {
     return { error: 'Indique un nombre de semaines valide (1–52).' }
   if (!dateDebut) return { error: 'Indique une date de début.' }
   if (classeIds.length === 0) return { error: 'Assigne au moins une classe.' }
+  const mode = (formData.get('mode') as string) === 'pdf_decoupe' ? 'pdf_decoupe' : 'par_semaine'
 
   // Le livre est une unité, placée après les unités existantes.
   const { data: derniere } = await supabase
@@ -217,35 +339,84 @@ export async function ajouterLivre(formData: FormData) {
   // garanti) ; supprimer un document cascade vers ses classes et images (Lot 6).
   const cheminsUploades: string[] = []
   const semainesSansTexte: number[] = []
+  let importIdAClean: string | null = null
   const admin = createAdminClient()
+  // L'import PDF transitoire est nettoyé dans TOUS les cas (succès comme rollback).
+  const nettoyerImport = async () => {
+    if (!importIdAClean) return
+    await admin.storage.from('scriptorium').remove([`imports/${userId}/${importIdAClean}.pdf`])
+    await admin.from('scriptorium_imports').delete().eq('import_id', importIdAClean).eq('user_id', userId)
+  }
   const annuler = async (msg: string) => {
     if (cheminsUploades.length > 0) await admin.storage.from('scriptorium').remove(cheminsUploades)
     await supabase.from('scriptorium_documents').delete().eq('unite_id', livre.id)
     await supabase.from('scriptorium_unites').delete().eq('id', livre.id)
+    await nettoyerImport()
     return { error: msg }
   }
 
-  // Une semaine = un document de cette unité (PDF extrait + titre + chapitres).
-  for (let n = 1; n <= nbSemaines; n++) {
-    const titreSem = (formData.get(`semaine_${n}_titre`) as string)?.trim() || `Semaine ${n}`
-    const chapitres = (formData.get(`semaine_${n}_chapitres`) as string)?.trim() || null
-    const pdf = formData.get(`semaine_${n}_pdf`) as File | null
+  // Mode 'pdf_decoupe' : on charge le texte (page par page) déposé transitoirement
+  // dans scriptorium_imports, et on découpe par plages. Le PDF n'est pas conservé.
+  let pagesImport: string[] | null = null
+  if (mode === 'pdf_decoupe') {
+    const importId = (formData.get('importId') as string) || ''
+    if (!RE_UUID.test(importId)) return annuler('Import PDF manquant ou invalide — re-dépose le PDF.')
+    importIdAClean = importId
+    const { data: row } = await admin
+      .from('scriptorium_imports')
+      .select('pages').eq('import_id', importId).eq('user_id', userId).maybeSingle()
+    pagesImport = (row?.pages as string[] | undefined) ?? null
+    if (!pagesImport || pagesImport.length === 0) return annuler('Import introuvable ou expiré — re-dépose le PDF.')
+    if (pagesImport.length > IMPORT_MAX_PAGES) return annuler(`PDF trop long (${pagesImport.length} pages, maximum ${IMPORT_MAX_PAGES}).`)
+  }
 
-    // Le buffer du PDF est lu UNE fois (extraction + upload).
-    let buffer: Buffer | null = null
+  const decalageGlobal = Number(formData.get('decalage')) || 0
+  const plagesVues: { d: number; f: number }[] = []  // plages PDF déjà prises (chevauchement, ordre indifférent)
+
+  // Une semaine = un document de cette unité (texte d'ancrage + titre + chapitres).
+  for (let n = 1; n <= nbSemaines; n++) {
+    let titreSem: string
+    let chapitres: string | null
     let texteExtrait: string | null = null
-    if (pdf && pdf.size > 0) {
-      buffer = Buffer.from(await pdf.arrayBuffer())
-      // Extraction de texte (ancrage IA) — non bloquante si le PDF est illisible/scanné.
-      try {
-        texteExtrait = await extraireTexte(buffer, pdf.type, pdf.name)
-      } catch (err) {
-        console.error(`[scriptorium] extraction PDF semaine ${n} :`, err)
+    let buffer: Buffer | null = null   // mode 'par_semaine' seulement
+    let pdf: File | null = null        // mode 'par_semaine' seulement
+
+    if (mode === 'pdf_decoupe') {
+      titreSem = (formData.get(`decoupe_${n}_titre`) as string)?.trim() || `Semaine ${n}`
+      chapitres = (formData.get(`decoupe_${n}_chapitres`) as string)?.trim() || null
+      const debut = Number(formData.get(`decoupe_${n}_debut`))
+      const fin = Number(formData.get(`decoupe_${n}_fin`))
+      const offRaw = formData.get(`decoupe_${n}_decalage`) as string | null
+      const off = offRaw !== null && offRaw.trim() !== '' ? Number(offRaw) : decalageGlobal
+      if (!Number.isInteger(debut) || !Number.isInteger(fin)) return annuler(`Semaine ${n} : indique les pages de début et de fin.`)
+      if (!Number.isFinite(off)) return annuler(`Semaine ${n} : décalage de pages invalide.`)
+      const debutPdf = debut + off
+      const finPdf = fin + off
+      if (debutPdf > finPdf) return annuler(`Semaine ${n} : la page de début est après la page de fin.`)
+      if (debutPdf < 1 || finPdf > pagesImport!.length) {
+        return annuler(`Semaine ${n} : plage hors du PDF (pages ${debutPdf}–${finPdf} pour ${pagesImport!.length} pages). Vérifie le décalage.`)
+      }
+      // Chevauchement testé contre TOUTES les plages déjà prises (ordre de saisie indifférent).
+      if (plagesVues.some(p => debutPdf <= p.f && finPdf >= p.d)) return annuler(`Semaine ${n} : sa plage de pages en chevauche une autre.`)
+      plagesVues.push({ d: debutPdf, f: finPdf })
+      texteExtrait = pagesImport!.slice(debutPdf - 1, finPdf).join('\n').trim() || null
+    } else {
+      titreSem = (formData.get(`semaine_${n}_titre`) as string)?.trim() || `Semaine ${n}`
+      chapitres = (formData.get(`semaine_${n}_chapitres`) as string)?.trim() || null
+      pdf = formData.get(`semaine_${n}_pdf`) as File | null
+      // Le buffer du PDF est lu UNE fois (extraction + upload).
+      if (pdf && pdf.size > 0) {
+        buffer = Buffer.from(await pdf.arrayBuffer())
+        try {
+          texteExtrait = await extraireTexte(buffer, pdf.type, pdf.name)
+        } catch (err) {
+          console.error(`[scriptorium] extraction PDF semaine ${n} :`, err)
+        }
       }
     }
-    // Ancrage IA Aletheia : CHAQUE semaine doit avoir un texte exploitable. Sans texte
-    // (PDF manquant, scanné ou illisible), le retour IA est impossible → on bloquera
-    // la création après la boucle (rollback complet).
+
+    // Ancrage IA Aletheia : CHAQUE semaine doit avoir un texte exploitable. Sans texte,
+    // le retour IA est impossible → on bloquera la création après la boucle (rollback).
     if (!texteExtrait || !texteExtrait.trim()) semainesSansTexte.push(n)
 
     const { data: doc, error: errDoc } = await supabase
@@ -263,11 +434,11 @@ export async function ajouterLivre(formData: FormData) {
       .single()
     if (errDoc || !doc) return annuler(errDoc?.message ?? `Erreur sur la semaine ${n}.`)
 
-    // Upload du PDF (réservé serveur) puis enregistrement de la référence. Le PDF
-    // est la raison d'être de la semaine (ancrage IA) → un échec est bloquant.
-    if (buffer) {
-      const ext = pdf!.name.split('.').pop()?.toLowerCase() || 'pdf'
-      const up = await uploaderBuffer(userId, doc.id, buffer, ext, pdf!.type)
+    // Mode 'par_semaine' uniquement : on stocke le PDF (ancrage IA, réservé serveur).
+    // En mode 'pdf_decoupe', texte seul → fichier_ref reste null (pas d'upload).
+    if (mode !== 'pdf_decoupe' && buffer && pdf) {
+      const ext = pdf.name.split('.').pop()?.toLowerCase() || 'pdf'
+      const up = await uploaderBuffer(userId, doc.id, buffer, ext, pdf.type)
       if (up.error || !up.path) return annuler(`Téléversement du PDF de la semaine ${n} impossible : ${up.error ?? 'inconnu'}`)
       cheminsUploades.push(up.path)
       const { error: errRef } = await supabase.from('scriptorium_documents').update({ fichier_ref: up.path }).eq('id', doc.id)
@@ -279,9 +450,11 @@ export async function ajouterLivre(formData: FormData) {
   // texte — sinon le retour IA est cassé pour l'élève sur cette semaine. Rollback complet.
   if (semainesSansTexte.length > 0) {
     return annuler(
-      `Impossible de créer le livre : pas de texte exploitable pour la/les semaine(s) ${semainesSansTexte.join(', ')} ` +
-      `(PDF manquant, scanné ou illisible). Le retour IA d'Aletheia en a besoin. Fournis un PDF au texte ` +
-      `sélectionnable (OCR si le PDF est scanné) pour ces semaines, puis réessaie.`,
+      `Impossible de créer le livre : pas de texte exploitable pour la/les semaine(s) ${semainesSansTexte.join(', ')}. ` +
+      `Le retour IA d'Aletheia en a besoin. ` +
+      (mode === 'pdf_decoupe'
+        ? `Vérifie les plages de pages et le décalage, ou utilise un PDF dont le texte est sélectionnable (pas un scan).`
+        : `Fournis pour ces semaines un PDF dont le texte est sélectionnable (PDF déjà océrisé s'il s'agit d'un scan), puis réessaie.`),
     )
   }
 
@@ -295,6 +468,9 @@ export async function ajouterLivre(formData: FormData) {
   // Carte d'architecture + référence par chapitre : générées DÈS la préparation
   // (SPEC §1), en arrière-plan. Le prof n'est pas bloqué ; il vérifiera/éditera.
   await lancerGenerationArtefactsLivre(admin, livre.id as string)
+
+  // Succès : l'import PDF transitoire n'a plus de raison d'être.
+  await nettoyerImport()
 
   revalidatePath('/prof/scriptorium')
   return { success: true }

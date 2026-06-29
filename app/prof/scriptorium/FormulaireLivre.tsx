@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { ajouterLivre } from './actions'
+import DecoupePdf from './DecoupePdf'
 
 interface Props {
   classes: { id: string; nom: string }[]
@@ -18,6 +19,9 @@ export default function FormulaireLivre({ classes }: Props) {
   const [erreur, setErreur] = useState<string | null>(null)
   const [nb, setNb] = useState(8)
   const [classesChoisies, setClassesChoisies] = useState<Set<string>>(new Set())
+  // 'par_semaine' = un fichier par semaine (historique) ; 'pdf_decoupe' = un seul PDF découpé.
+  const [mode, setMode] = useState<'par_semaine' | 'pdf_decoupe'>('par_semaine')
+  const [decoupePret, setDecoupePret] = useState(false)
 
   function toggleClasse(id: string) {
     setClassesChoisies(prev => {
@@ -32,6 +36,8 @@ export default function FormulaireLivre({ classes }: Props) {
     setNb(8)
     setClassesChoisies(new Set())
     setErreur(null)
+    setMode('par_semaine')
+    setDecoupePret(false)
   }
 
   // Limite des Server Actions (next.config.ts : 50 Mo) ; on garde une marge.
@@ -41,6 +47,10 @@ export default function FormulaireLivre({ classes }: Props) {
     e.preventDefault()
     setErreur(null)
     if (classesChoisies.size === 0) { setErreur('Assigne au moins une classe.'); return }
+    if (mode === 'pdf_decoupe' && !decoupePret) {
+      setErreur('Dépose un PDF (au texte sélectionnable, ≤ 600 pages) et complète le découpage avant de créer le livre.')
+      return
+    }
     const fd = new FormData(e.currentTarget)
     classesChoisies.forEach(id => fd.append('classeIds', id))
 
@@ -140,41 +150,62 @@ export default function FormulaireLivre({ classes }: Props) {
         )}
       </div>
 
-      {/* Un bloc par semaine : PDF d'ancrage + titre + chapitres à lire */}
-      <div className="space-y-3">
-        <p className="text-xs font-medium text-muet">
-          Programme par semaine
-          <span className="font-normal text-muet"> — le PDF sert d&apos;ancrage à l&apos;IA, l&apos;élève lit son propre exemplaire</span>
-        </p>
-        {semaines.map(n => (
-          <div key={n} className="border border-bordure rounded-lg p-3 space-y-2">
-            <p className="text-xs font-medium text-encre-douce">Semaine {n}</p>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+      <div>
+        <label className="block text-xs font-medium text-muet mb-1">Comment fournir le texte des semaines ?</label>
+        <div className="inline-flex rounded-lg border border-bordure overflow-hidden text-sm">
+          {([['par_semaine', 'Un fichier par semaine'], ['pdf_decoupe', 'Un seul PDF découpé']] as const).map(([v, lib]) => (
+            <button
+              key={v}
+              type="button"
+              onClick={() => { setMode(v); setDecoupePret(false); setErreur(null) }}
+              className={`px-3 py-1.5 transition-colors ${mode === v ? 'bg-bouton text-surface' : 'bg-surface text-encre-douce hover:bg-parchemin-fonce'}`}
+            >
+              {lib}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Mode historique : un fichier (PDF/DOCX/TXT) par semaine, stocké comme ancrage IA. */}
+      {mode === 'par_semaine' && (
+        <div className="space-y-3">
+          <p className="text-xs font-medium text-muet">
+            Programme par semaine
+            <span className="font-normal text-muet"> — le PDF sert d&apos;ancrage à l&apos;IA, l&apos;élève lit son propre exemplaire</span>
+          </p>
+          {semaines.map(n => (
+            <div key={n} className="border border-bordure rounded-lg p-3 space-y-2">
+              <p className="text-xs font-medium text-encre-douce">Semaine {n}</p>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                <input
+                  name={`semaine_${n}_titre`}
+                  placeholder={`Titre (ex. : Apollon et Dionysos)`}
+                  className="px-2 py-1.5 border border-bordure rounded text-sm text-encre focus:outline-none focus:ring-2 focus:ring-pigment"
+                />
+                <input
+                  name={`semaine_${n}_chapitres`}
+                  placeholder="Chapitres (ex. : Chap. 1-4)"
+                  className="px-2 py-1.5 border border-bordure rounded text-sm text-encre focus:outline-none focus:ring-2 focus:ring-pigment"
+                />
+              </div>
               <input
-                name={`semaine_${n}_titre`}
-                placeholder={`Titre (ex. : Apollon et Dionysos)`}
-                className="px-2 py-1.5 border border-bordure rounded text-sm text-encre focus:outline-none focus:ring-2 focus:ring-pigment"
-              />
-              <input
-                name={`semaine_${n}_chapitres`}
-                placeholder="Chapitres (ex. : Chap. 1-4)"
-                className="px-2 py-1.5 border border-bordure rounded text-sm text-encre focus:outline-none focus:ring-2 focus:ring-pigment"
+                type="file"
+                name={`semaine_${n}_pdf`}
+                accept=".pdf,.docx,.txt"
+                className="w-full text-sm text-encre-douce file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:bg-parchemin-fonce file:text-encre-douce hover:file:bg-bordure"
               />
             </div>
-            <input
-              type="file"
-              name={`semaine_${n}_pdf`}
-              accept=".pdf,.docx,.txt"
-              className="w-full text-sm text-encre-douce file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:bg-parchemin-fonce file:text-encre-douce hover:file:bg-bordure"
-            />
-          </div>
-        ))}
-      </div>
+          ))}
+        </div>
+      )}
+
+      {/* Mode « 1 PDF découpé » : upload signé + analyse + plages de pages (texte seul). */}
+      {mode === 'pdf_decoupe' && <DecoupePdf nb={nb} onReady={setDecoupePret} />}
 
       {erreur && <p className="text-retard text-sm">{erreur}</p>}
 
       <div className="flex gap-2">
-        <button type="submit" disabled={chargement} className="bg-bouton text-surface px-4 py-2 rounded-lg text-sm hover:opacity-90 disabled:opacity-50">
+        <button type="submit" disabled={chargement || (mode === 'pdf_decoupe' && !decoupePret)} className="bg-bouton text-surface px-4 py-2 rounded-lg text-sm hover:opacity-90 disabled:opacity-50">
           {chargement ? 'Ajout en cours…' : 'Ajouter le livre'}
         </button>
         <button type="button" onClick={reset} className="px-4 py-2 text-sm text-encre-douce hover:bg-parchemin-fonce rounded-lg">
