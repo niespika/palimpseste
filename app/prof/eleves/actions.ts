@@ -17,7 +17,7 @@ async function envoyerInvitation(admin: Admin, email: string, displayName: strin
     console.error('[eleves] generateLink échec :', error?.message)
     return { error: "Lien d'invitation impossible à générer." }
   }
-  const base = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'
+  const base = (process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000').replace(/\/+$/, '')
   const url = `${base}/auth/confirm?token_hash=${tokenHash}&type=recovery&next=${encodeURIComponent('/finaliser-inscription')}`
   try {
     await envoyerInvitationEleve({ email, displayName, lien: url })
