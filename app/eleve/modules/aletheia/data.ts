@@ -48,7 +48,7 @@ export async function livresPourClasse(admin: SupabaseClient, classeId: string):
 
   const [{ data: unites }, { data: docs }] = await Promise.all([
     admin.from('scriptorium_unites')
-      .select('id, label, date_debut, nb_semaines')
+      .select('id, label, date_debut, nb_semaines, auteur')
       .eq('type', 'livre')
       .in('id', bookIds)
       .order('ordre', { ascending: true }),
@@ -75,6 +75,7 @@ export async function livresPourClasse(admin: SupabaseClient, classeId: string):
   return (unites ?? []).map(u => ({
     id: u.id as string,
     titre: u.label as string,
+    auteur: (u.auteur as string | null) ?? null,
     date_debut: (u.date_debut as string | null) ?? null,
     nb_semaines: (u.nb_semaines as number | null) ?? null,
     semaines: semainesParLivre.get(u.id as string) ?? [],

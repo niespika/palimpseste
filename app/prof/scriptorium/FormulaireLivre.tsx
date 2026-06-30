@@ -93,12 +93,20 @@ export default function FormulaireLivre({ classes }: Props) {
       <h3 className="text-sm font-medium text-encre">Nouveau livre <span className="font-normal text-muet">(lecture autonome — Aletheia)</span></h3>
 
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-        <div className="sm:col-span-3">
+        <div className="sm:col-span-2">
           <label className="block text-xs font-medium text-muet mb-1">Titre du livre</label>
           <input
             name="titre"
             required
             placeholder="Ex. : La Naissance de la tragédie"
+            className="w-full px-3 py-2 border border-bordure rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-pigment text-encre"
+          />
+        </div>
+        <div className="sm:col-span-1">
+          <label className="block text-xs font-medium text-muet mb-1">Auteur</label>
+          <input
+            name="auteur"
+            placeholder="Ex. : Nietzsche"
             className="w-full px-3 py-2 border border-bordure rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-pigment text-encre"
           />
         </div>

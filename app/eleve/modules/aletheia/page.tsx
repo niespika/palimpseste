@@ -89,6 +89,7 @@ export default async function PageAletheia() {
                 <div className="min-w-0">
                   <p className="font-marque text-sm font-semibold tracking-[0.2em] text-pigment">ALETHEIA</p>
                   <h2 className="font-titre text-2xl sm:text-3xl text-encre leading-tight mt-0.5">{livre.titre}</h2>
+                  {livre.auteur && <p className="font-corps text-sm text-muet mt-0.5 italic">{livre.auteur}</p>}
                   <p className="font-corps text-sm text-muet mt-1">{nbSemaines} semaine{nbSemaines > 1 ? 's' : ''} · lis-le dans ton propre exemplaire</p>
                 </div>
               </div>

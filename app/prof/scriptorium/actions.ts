@@ -216,6 +216,38 @@ function texteEntreBornes(pages: string[], dp: number, dl: number, fp: number, f
   return morceaux.filter(m => m.length > 0).join('\n')
 }
 
+// Signets / table des matières du PDF (métadonnée). Renvoie [{titre, page, niveau}]
+// ou null si absent/illisible. Best-effort : toute erreur → null (jamais bloquant).
+interface SignetItem { title?: string; dest?: string | unknown[] | null; items?: SignetItem[] }
+async function extraireSignets(buffer: Buffer): Promise<{ titre: string; page: number; niveau: number }[] | null> {
+  try {
+    const { getDocumentProxy } = await import('unpdf')
+    const pdf = await getDocumentProxy(new Uint8Array(buffer))
+    const outline = (await pdf.getOutline()) as SignetItem[] | null
+    if (!outline || outline.length === 0) return null
+    const out: { titre: string; page: number; niveau: number }[] = []
+    const resoudrePage = async (dest: SignetItem['dest']): Promise<number> => {
+      try {
+        let ref: unknown = Array.isArray(dest) ? dest[0] : null
+        if (typeof dest === 'string') { const d = await pdf.getDestination(dest); ref = Array.isArray(d) ? d[0] : null }
+        if (ref == null) return 0
+        return (await pdf.getPageIndex(ref as Parameters<typeof pdf.getPageIndex>[0])) + 1
+      } catch { return 0 }
+    }
+    const parcourir = async (items: SignetItem[], niveau: number): Promise<void> => {
+      for (const it of items) {
+        if (it.title) out.push({ titre: String(it.title).slice(0, 300), page: await resoudrePage(it.dest), niveau })
+        if (Array.isArray(it.items) && it.items.length) await parcourir(it.items, niveau + 1)
+      }
+    }
+    await parcourir(outline, 0)
+    return out.length ? out : null
+  } catch (err) {
+    console.error('[scriptorium] extraction signets :', err)
+    return null
+  }
+}
+
 // Purge best-effort des imports > 24 h de ce prof (onglet fermé en cours de route).
 async function purgerImportsOrphelins(admin: Admin, userId: string): Promise<void> {
   try {
@@ -258,13 +290,14 @@ export async function analyserPdfImport(importId: string): Promise<{
   const buffer = Buffer.from(await blob.arrayBuffer())
   const pages = await extrairePagesPdf(buffer)
   if (!pages || pages.length === 0) return { error: 'PDF illisible : aucune page exploitable.' }
+  const signets = await extraireSignets(buffer)   // métadonnée parquée (table des matières du PDF)
 
   const totalPages = pages.length
   const pagesVides = pages.filter(p => (p ?? '').trim().length < IMPORT_SEUIL_CHARS).length
   const pagesVidesPct = pagesVides / totalPages
 
   const { error: errUp } = await admin.from('scriptorium_imports').upsert(
-    { import_id: importId, user_id: userId, total_pages: totalPages, pages, created_at: new Date().toISOString() },
+    { import_id: importId, user_id: userId, total_pages: totalPages, pages, signets, created_at: new Date().toISOString() },
     { onConflict: 'import_id' },
   )
   if (errUp) return { error: errUp.message }
@@ -314,6 +347,7 @@ export async function ajouterLivre(formData: FormData) {
   const nbSemaines = Number(formData.get('nbSemaines') as string)
   const dateDebut = (formData.get('dateDebut') as string) || null
   const classeIds = formData.getAll('classeIds').map(c => c as string).filter(Boolean)
+  const auteur = (formData.get('auteur') as string)?.trim() || null
 
   if (!titre) return { error: 'Donne un titre au livre.' }
   if (!Number.isInteger(nbSemaines) || nbSemaines < 1 || nbSemaines > 52)
@@ -333,7 +367,7 @@ export async function ajouterLivre(formData: FormData) {
 
   const { data: livre, error: errLivre } = await supabase
     .from('scriptorium_unites')
-    .insert({ label: titre, ordre, type: 'livre', date_debut: dateDebut, nb_semaines: nbSemaines })
+    .insert({ label: titre, ordre, type: 'livre', date_debut: dateDebut, nb_semaines: nbSemaines, auteur })
     .select('id')
     .single()
   if (errLivre || !livre) return { error: errLivre?.message ?? 'Création du livre impossible.' }
@@ -369,10 +403,12 @@ export async function ajouterLivre(formData: FormData) {
     importIdAClean = importId
     const { data: row } = await admin
       .from('scriptorium_imports')
-      .select('pages').eq('import_id', importId).eq('user_id', userId).maybeSingle()
+      .select('pages, signets').eq('import_id', importId).eq('user_id', userId).maybeSingle()
     pagesImport = (row?.pages as string[] | undefined) ?? null
     if (!pagesImport || pagesImport.length === 0) return annuler('Import introuvable ou expiré — re-dépose le PDF.')
     if (pagesImport.length > IMPORT_MAX_PAGES) return annuler(`PDF trop long (${pagesImport.length} pages, maximum ${IMPORT_MAX_PAGES}).`)
+    // Parque les signets (table des matières) sur le livre — métadonnée pour plus tard.
+    if (row?.signets) await supabase.from('scriptorium_unites').update({ signets: row.signets }).eq('id', livre.id)
   }
 
   const bornesVues: { s: number; e: number }[] = []  // bornes déjà prises (page+ligne encodées) — chevauchement, trous autorisés
@@ -492,6 +528,43 @@ export async function reassignerClassesLivre(uniteId: string, classeIds: string[
       .insert(classeIds.map(classe_id => ({ unite_id: uniteId, classe_id })))
     if (error) return { error: error.message }
   }
+  revalidatePath('/prof/scriptorium')
+  return { success: true }
+}
+
+// Édition complète d'un livre (option 1) : auteur (niveau livre) + titre/chapitres/
+// texte de chaque semaine, en un seul écran. Ne re-découpe PAS le PDF (texte seul) et
+// ne régénère PAS la carte/référence (le prof les régénère à la demande si besoin).
+export async function modifierLivreComplet(
+  livreId: string,
+  auteur: string,
+  semaines: { id: string; titre: string; chapitres: string; texte: string }[],
+): Promise<{ success?: boolean; error?: string }> {
+  const { supabase } = await verifierProf()
+
+  // Pré-validation GLOBALE avant toute écriture : aucune mutation (ni auteur ni
+  // document) si une semaine a un texte vide → cohérent avec le rollback atomique
+  // de la création (pas d'état partiel trompeur).
+  for (const s of semaines) {
+    if (!(s.texte ?? '').trim()) {
+      return { error: `La semaine « ${(s.titre ?? '').trim() || 'Semaine'} » a un texte vide — l'ancrage IA en a besoin.` }
+    }
+  }
+
+  const { error: eU } = await supabase
+    .from('scriptorium_unites')
+    .update({ auteur: auteur.trim() || null })
+    .eq('id', livreId).eq('type', 'livre')
+  if (eU) return { error: eU.message }
+
+  for (const s of semaines) {
+    const { error } = await supabase
+      .from('scriptorium_documents')
+      .update({ titre: (s.titre ?? '').trim() || 'Semaine', chapitres: (s.chapitres ?? '').trim() || null, texte_extrait: (s.texte ?? '').trim() })
+      .eq('id', s.id).eq('unite_id', livreId)   // scoping : le document appartient bien à ce livre
+    if (error) return { error: error.message }
+  }
+
   revalidatePath('/prof/scriptorium')
   return { success: true }
 }
