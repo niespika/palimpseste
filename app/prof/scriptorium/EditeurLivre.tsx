@@ -4,7 +4,7 @@ import { useCallback, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { modifierLivreComplet } from './actions'
 import NavigateurDecoupe, { type Semaine } from './NavigateurDecoupe'
-import { reassemblerLivre } from './decoupe-utils'
+import { reassemblerLivre, paginer, posVersLigneGlobale, ligneGlobaleVersPos, type Signet } from './decoupe-utils'
 
 export interface SemaineEdit { id: string; semaine: number | null; titre: string; chapitres: string; texte: string }
 
@@ -12,7 +12,7 @@ export interface SemaineEdit { id: string; semaine: number | null; titre: string
 // semaines en un bloc, on pré-place les marqueurs aux bornes existantes et on
 // pré-remplit titres/chapitres, puis on laisse re-découper. Pas d'édition du texte
 // lui-même ; avertissement (dans le navigateur) si des lignes sortent des semaines.
-export default function EditeurLivre({ livreId, auteur, semaines }: { livreId: string; auteur: string | null; semaines: SemaineEdit[] }) {
+export default function EditeurLivre({ livreId, titre, auteur, signets, semaines }: { livreId: string; titre: string; auteur: string | null; signets: Signet[] | null; semaines: SemaineEdit[] }) {
   const router = useRouter()
   const [ouvert, setOuvert] = useState(false)
   const [auteurVal, setAuteurVal] = useState(auteur ?? '')
@@ -20,14 +20,20 @@ export default function EditeurLivre({ livreId, auteur, semaines }: { livreId: s
   const [chargement, setChargement] = useState(false)
   const [erreur, setErreur] = useState<string | null>(null)
 
-  // Réassemblage (mémoïsé) : texte continu + bornes de ligne de chaque semaine.
-  const { pages, bornesInitiales } = useMemo(() => {
+  // Réassemblage (mémoïsé) : texte continu, RE-PAGINÉ en pages de lecture (même confort
+  // « page de livre » que la création). Les bornes de ligne globales sont converties en
+  // positions {p,l} pour pré-placer les marqueurs. `totalLignes` = total réassemblé
+  // (invariant préservé par `paginer`) → sert de garde TOCTOU côté serveur.
+  const { pages, bornesInitiales, totalLignes } = useMemo(() => {
     const { texte, bornes } = reassemblerLivre(semaines.map(s => s.texte))
+    const pgs = paginer(texte)
     return {
-      pages: [texte],
+      pages: pgs,
+      totalLignes: texte.split('\n').length,
       bornesInitiales: semaines.map((s, i) => ({
         titre: s.titre, chapitres: s.chapitres,
-        debut: { p: 1, l: bornes[i].debutLigne }, fin: { p: 1, l: bornes[i].finLigne },
+        debut: ligneGlobaleVersPos(pgs, bornes[i].debutLigne),
+        fin: ligneGlobaleVersPos(pgs, bornes[i].finLigne),
       })) as Semaine[],
     }
   }, [semaines])
@@ -38,15 +44,15 @@ export default function EditeurLivre({ livreId, auteur, semaines }: { livreId: s
 
   async function enregistrer() {
     setChargement(true); setErreur(null)
+    // Conversion {p,l} → ligne GLOBALE (le serveur raisonne en lignes du texte réassemblé).
     const payload = etat.sem.map((s, i) => ({
       id: semaines[i].id,
       titre: s.titre,
       chapitres: s.chapitres,
-      debutLigne: s.debut?.l ?? 0,
-      finLigne: s.fin?.l ?? 0,
+      debutLigne: s.debut ? posVersLigneGlobale(pages, s.debut) : 0,
+      finLigne: s.fin ? posVersLigneGlobale(pages, s.fin) : 0,
     }))
-    const nbLignesAttendu = (pages[0] ?? '').split('\n').length
-    const res = await modifierLivreComplet(livreId, auteurVal, payload, nbLignesAttendu)
+    const res = await modifierLivreComplet(livreId, auteurVal, payload, totalLignes)
     setChargement(false)
     if (res.error) { setErreur(res.error); return }
     setOuvert(false)
@@ -98,7 +104,7 @@ export default function EditeurLivre({ livreId, auteur, semaines }: { livreId: s
       {semaines.length === 0 ? (
         <p className="text-sm text-muet">Aucune semaine à modifier.</p>
       ) : (
-        <NavigateurDecoupe pages={pages} nb={semaines.length} bornesInitiales={bornesInitiales} modeModification onEtat={onEtat} />
+        <NavigateurDecoupe pages={pages} nb={semaines.length} bornesInitiales={bornesInitiales} modeModification onEtat={onEtat} meta={{ titre, auteur }} signets={signets} />
       )}
       {erreur && <p className="text-retard text-sm">{erreur}</p>}
       <div className="flex gap-2">

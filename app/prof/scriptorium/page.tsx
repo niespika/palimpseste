@@ -9,6 +9,7 @@ import EditeurClassesLivre from './EditeurClassesLivre'
 import LigneContenu, { type ContenuItem, type ImageItem } from './LigneContenu'
 import CarteArchitectureLivre from './CarteArchitectureLivre'
 import EditeurLivre from './EditeurLivre'
+import type { Signet } from './decoupe-utils'
 import SectionParametresScriptorium from './SectionParametresScriptorium'
 import type { CapstoneProf, LivreReferenceProf } from '@/app/eleve/modules/aletheia/types'
 
@@ -35,6 +36,7 @@ interface UniteRow {
   date_debut: string | null
   nb_semaines: number | null
   auteur: string | null
+  signets: Signet[] | null
 }
 
 // Formate une date Postgres (« YYYY-MM-DD ») sans passer par `new Date`, qui
@@ -74,7 +76,7 @@ export default async function ScriptoriumPage({
 
   const [{ data: classes }, { data: unites }, { data: docsBruts }, { data: liens }, { data: imagesBrutes }, { data: liensUnite }] = await Promise.all([
     supabase.from('classes').select('id, nom').order('nom'),
-    supabase.from('scriptorium_unites').select('id, label, ordre, type, date_debut, nb_semaines, auteur').order('ordre'),
+    supabase.from('scriptorium_unites').select('id, label, ordre, type, date_debut, nb_semaines, auteur, signets').order('ordre'),
     supabase.from('scriptorium_documents').select('id, unite_id, titre, type, semaine, chapitres, texte_extrait, fichier_ref'),
     supabase.from('scriptorium_document_classes').select('document_id, classe_id'),
     supabase.from('scriptorium_contenu_images').select('id, document_id, fichier_ref, legende, ordre').order('ordre'),
@@ -286,7 +288,9 @@ export default async function ScriptoriumPage({
                   )}
                   <EditeurLivre
                     livreId={uniteCourante.id}
+                    titre={uniteCourante.label}
                     auteur={uniteCourante.auteur ?? null}
+                    signets={uniteCourante.signets ?? null}
                     semaines={docsAffiches
                       .filter(d => d.semaine != null)
                       .sort((a, b) => ((a.semaine as number) - (b.semaine as number)) || a.id.localeCompare(b.id))

@@ -6,7 +6,7 @@ import { createClient } from '@/utils/supabase/server'
 import { createAdminClient } from '@/utils/supabase/admin'
 import { PROMPT_CAPSTONE_DEFAUT, PROMPT_REFERENCE_DEFAUT } from '@/utils/aletheia-retours'
 import type { Capstone, ReferenceChapitre } from '@/app/eleve/modules/aletheia/types'
-import { reassemblerLivre } from './decoupe-utils'
+import { reassemblerLivre, type Signet } from './decoupe-utils'
 
 // ── Import PDF « découpé en semaines » : seuils & garde-fous (SPEC) ──────────
 const IMPORT_MAX_PAGES = 600      // refus au-delà (décision produit)
@@ -310,16 +310,18 @@ export async function analyserPdfImport(importId: string): Promise<{
 // 3) Charger le texte du PDF page par page (pour le navigateur de découpe). Envoyé
 // UNE fois au prof ; le repérage des bornes se fait ensuite côté client, sans
 // aller-retour. Les lignes (split '\n') sont identiques côté client et serveur.
-export async function chargerPagesImport(importId: string): Promise<{ pages?: string[]; error?: string }> {
+export async function chargerPagesImport(importId: string): Promise<{ pages?: string[]; signets?: Signet[] | null; error?: string }> {
   const { userId } = await verifierProf()
   if (!RE_UUID.test(importId)) return { error: 'Import invalide.' }
   const admin = createAdminClient()
   const { data: row } = await admin
     .from('scriptorium_imports')
-    .select('pages').eq('import_id', importId).eq('user_id', userId).maybeSingle()
+    .select('pages, signets').eq('import_id', importId).eq('user_id', userId).maybeSingle()
   const pages = (row?.pages as string[] | undefined) ?? null
   if (!pages || pages.length === 0) return { error: 'Import expiré — re-dépose le PDF.' }
-  return { pages }
+  // Signets (table des matières du PDF) : métadonnée utilisée par le navigateur pour
+  // styler les titres. Best-effort — absente sur les PDF sans signets.
+  return { pages, signets: (row?.signets as Signet[] | undefined) ?? null }
 }
 
 // 4) Abandonner un import (changement de mode, fermeture, après création).
