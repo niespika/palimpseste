@@ -30,10 +30,10 @@ export default function PageLivre({
   return (
     <div className={`relative mx-auto ${plein ? 'max-w-3xl' : 'max-w-2xl'}`}>
       {/* Effet de pile de feuillets */}
-      <div aria-hidden className="absolute inset-0 translate-x-[6px] translate-y-[7px] bg-surface border border-bordure rounded-lg opacity-50" />
-      <div aria-hidden className="absolute inset-0 translate-x-[3px] translate-y-[3px] bg-surface border border-bordure rounded-lg opacity-75" />
+      <div aria-hidden className="absolute inset-0 translate-x-[6px] translate-y-[7px] bg-parchemin border border-bordure rounded-lg opacity-50" />
+      <div aria-hidden className="absolute inset-0 translate-x-[3px] translate-y-[3px] bg-parchemin border border-bordure rounded-lg opacity-75" />
 
-      <div className="relative bg-surface border border-bordure rounded-lg shadow-sm px-10 sm:px-12 py-8">
+      <div className="relative bg-parchemin border border-bordure rounded-lg shadow-sm px-8 sm:px-10 py-6">
         {/* En-tête courant */}
         <div className="mb-5 text-center border-b border-bordure pb-2 min-h-[1.25rem]">
           {titreCourant && (
@@ -60,7 +60,7 @@ export default function PageLivre({
                 <span className="w-7 shrink-0 text-right font-ui text-[9px] text-muet/50 pt-1 select-none">{ln}</span>
                 <span className="flex-1 min-w-0">
                   {sig ? <TitreSignet niveau={sig.niveau} titre={sig.titre} /> : (
-                    <span className={`text-[15px] leading-[1.62] ${destruct ? 'line-through decoration-retard/70 text-retard/80' : 'text-encre'}`}>
+                    <span className={`text-[13px] leading-[1.5] ${destruct ? 'line-through decoration-retard/70 text-retard/80' : 'text-encre'}`}>
                       {txt || ' '}
                     </span>
                   )}
@@ -88,21 +88,21 @@ export default function PageLivre({
 function TitreSignet({ niveau, titre }: { niveau: number; titre: string }) {
   if (niveau <= 0) {
     return (
-      <span className="block text-center my-2">
-        <span className="block font-titre text-[26px] font-semibold text-encre leading-tight">{titre}</span>
-        <span className="block w-12 h-px bg-bordure mx-auto mt-2.5" />
+      <span className="block text-center my-1.5">
+        <span className="block font-titre text-[22px] font-semibold text-encre leading-tight">{titre}</span>
+        <span className="block w-10 h-px bg-bordure mx-auto mt-2" />
       </span>
     )
   }
   if (niveau === 1) {
     return (
-      <span className="block text-center mt-4 mb-1">
-        <span className="block font-titre text-xl font-semibold text-encre leading-tight">{titre}</span>
-        <span className="block text-muet/50 text-sm mt-0.5">❧</span>
+      <span className="block text-center mt-3 mb-1">
+        <span className="block font-titre text-lg font-semibold text-encre leading-tight">{titre}</span>
+        <span className="block text-muet/50 text-xs mt-0.5">❧</span>
       </span>
     )
   }
   return (
-    <span className="block font-titre italic text-[17px] text-encre-douce mt-3 mb-1">{titre}</span>
+    <span className="block font-titre italic text-[15px] text-encre-douce mt-2.5 mb-0.5">{titre}</span>
   )
 }

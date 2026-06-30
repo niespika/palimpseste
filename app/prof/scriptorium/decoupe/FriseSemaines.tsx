@@ -57,13 +57,19 @@ export default function FriseSemaines({
           const slot = (champ: Champ, label: string) => {
             const val = s[champ]
             const pose = !!val
+            const debut = champ === 'debut'
+            // Début = vert bouteille, Fin = bordeaux, en teinte translucide (pas un bloc plein).
             // Croix d'effacement = bouton FRÈRE (jamais imbriqué dans le bouton du slot,
             // sinon HTML invalide / warning d'hydratation).
+            const cadre = debut
+              ? (pose ? 'border-vert-bouteille/35 bg-vert-bouteille/10' : 'border-dashed border-vert-bouteille/45 bg-vert-bouteille/5')
+              : (pose ? 'border-rouge-bordeaux/35 bg-rouge-bordeaux/10' : 'border-dashed border-rouge-bordeaux/45 bg-rouge-bordeaux/5')
+            const txtAccent = debut ? 'text-vert-bouteille' : 'text-rouge-bordeaux'
             return (
-              <div className={`flex-1 flex items-stretch rounded-md border ${pose ? 'border-ok/40 bg-ok-teinte' : 'border-dashed border-attention/60 bg-attention-teinte/50'}`}>
+              <div className={`flex-1 flex items-stretch rounded-md border ${cadre}`}>
                 <button type="button" onClick={() => onArme(i, champ)} className="flex-1 min-w-0 text-left px-2 py-1.5">
-                  <span className={`block font-ui text-[8.5px] tracking-[0.06em] uppercase ${pose ? 'text-ok' : 'text-attention'}`}>{label}</span>
-                  <span className={`block font-ui text-[11px] font-bold ${pose ? 'text-encre' : 'text-attention'}`}>{pose ? posTexte(val) : 'à placer…'}</span>
+                  <span className={`block font-ui text-[8.5px] tracking-[0.06em] uppercase ${txtAccent}`}>{label}</span>
+                  <span className={`block font-ui text-[11px] font-bold ${pose ? 'text-encre' : txtAccent}`}>{pose ? posTexte(val) : 'à placer…'}</span>
                 </button>
                 {pose && (
                   <button type="button" aria-label={`Effacer ${label} de la semaine ${i + 1}`}

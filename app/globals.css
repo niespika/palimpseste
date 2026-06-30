@@ -25,6 +25,9 @@
   --attention:        #9A6A2E;   --attention-teinte: #EFE4CF;
   --retard:           #A23E2E;   --retard-teinte:    #EFD9D2;
   --info:             #3E5C7E;   --info-teinte:      #DCE3EC;
+  /* accents éditoriaux (ex. : repères début/fin de la découpe Scriptorium) */
+  --vert-bouteille:   #2E4A3C;
+  --rouge-bordeaux:   #6E2A2C;
 
   /* pigment par défaut (espace général / tableau de bord) */
   --pigment:          #5A4632;
@@ -65,6 +68,8 @@
   --color-retard-teinte:    var(--retard-teinte);
   --color-info:             var(--info);
   --color-info-teinte:      var(--info-teinte);
+  --color-vert-bouteille:   var(--vert-bouteille);
+  --color-rouge-bordeaux:   var(--rouge-bordeaux);
   /* pigment dynamique : utilisable en bg-pigment / text-pigment / border-pigment */
   --color-pigment:         var(--pigment);
   --color-pigment-teinte:  var(--pigment-teinte);

@@ -48,7 +48,7 @@ export default function BarreInfos({
 
       <div className="ml-auto flex items-center gap-2 shrink-0">
         <button type="button" onClick={onToggleFrise} className={btnCls}>
-          ⇆ {friseVisible ? 'Masquer la frise' : 'Afficher la frise'}
+          ⇆ {friseVisible ? 'Afficher la frise' : 'Masquer la frise'}
         </button>
         {mode === 'creation' && onRemplacer && (
           <button type="button" onClick={onRemplacer} className={btnCls}>↻ Remplacer le PDF</button>

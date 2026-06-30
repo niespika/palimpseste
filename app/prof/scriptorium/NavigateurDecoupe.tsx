@@ -213,10 +213,11 @@ export default function NavigateurDecoupe({
             emettreChamps={emettreChamps} posTexte={posTexte}
             onArme={armerEtAller} onEffacer={effacerBorne} onMajTexte={majTexte}
           />
-          <div className="flex-1 min-w-0">{pageLivre}</div>
+          {/* Fond plus sombre derrière la page → la page (parchemin) ressort en plus clair. */}
+          <div className="flex-1 min-w-0 rounded-xl border border-bordure bg-parchemin-fonce p-4">{pageLivre}</div>
         </div>
       ) : (
-        <div className="rounded-xl border border-bordure overflow-hidden bg-parchemin-fonce/30">
+        <div className="rounded-xl border border-bordure overflow-hidden bg-parchemin-fonce">
           <div className="py-5 px-4">{pageLivre}</div>
           <GuidePleinCadre semaines={semaines} nb={nb} cible={cible} posTexte={posTexte} onArme={armerEtAller} />
           {/* En plein cadre, les champs cachés doivent rester montés (la frise est masquée). */}
