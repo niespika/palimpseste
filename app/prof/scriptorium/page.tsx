@@ -8,6 +8,7 @@ import FormulaireLivre from './FormulaireLivre'
 import EditeurClassesLivre from './EditeurClassesLivre'
 import LigneContenu, { type ContenuItem, type ImageItem } from './LigneContenu'
 import CarteArchitectureLivre from './CarteArchitectureLivre'
+import EditeurLivre from './EditeurLivre'
 import SectionParametresScriptorium from './SectionParametresScriptorium'
 import type { CapstoneProf, LivreReferenceProf } from '@/app/eleve/modules/aletheia/types'
 
@@ -33,6 +34,7 @@ interface UniteRow {
   type: string | null
   date_debut: string | null
   nb_semaines: number | null
+  auteur: string | null
 }
 
 // Formate une date Postgres (« YYYY-MM-DD ») sans passer par `new Date`, qui
@@ -72,7 +74,7 @@ export default async function ScriptoriumPage({
 
   const [{ data: classes }, { data: unites }, { data: docsBruts }, { data: liens }, { data: imagesBrutes }, { data: liensUnite }] = await Promise.all([
     supabase.from('classes').select('id, nom').order('nom'),
-    supabase.from('scriptorium_unites').select('id, label, ordre, type, date_debut, nb_semaines').order('ordre'),
+    supabase.from('scriptorium_unites').select('id, label, ordre, type, date_debut, nb_semaines, auteur').order('ordre'),
     supabase.from('scriptorium_documents').select('id, unite_id, titre, type, semaine, chapitres, texte_extrait, fichier_ref'),
     supabase.from('scriptorium_document_classes').select('document_id, classe_id'),
     supabase.from('scriptorium_contenu_images').select('id, document_id, fichier_ref, legende, ordre').order('ordre'),
@@ -162,6 +164,7 @@ export default async function ScriptoriumPage({
       assignedClasseIds={classesParDoc.get(d.id) ?? []}
       images={imagesParDoc.get(d.id) ?? []}
       masquerClasses={estLivre.get(d.unite_id) ?? false}
+      masquerEdition={estLivre.get(d.unite_id) ?? false}
     />
   )
 
@@ -239,7 +242,7 @@ export default async function ScriptoriumPage({
               const n = docs.filter(d => d.unite_id === u.id).length
               const estLivre = u.type === 'livre'
               const sousTitre = estLivre
-                ? `📖 Livre · ${u.nb_semaines ?? n} semaine${(u.nb_semaines ?? n) > 1 ? 's' : ''}`
+                ? `📖 Livre · ${u.nb_semaines ?? n} semaine${(u.nb_semaines ?? n) > 1 ? 's' : ''}${u.auteur ? ` · ${u.auteur}` : ''}`
                 : `${n} contenu${n > 1 ? 's' : ''}`
               return (
                 <Tuile
@@ -264,8 +267,9 @@ export default async function ScriptoriumPage({
                   <>
                     <p className="text-xs text-muet mt-0.5">
                       📖 Livre · {uniteCourante.nb_semaines ?? '?'} semaines
+                      {uniteCourante.auteur && ` · ${uniteCourante.auteur}`}
                       {uniteCourante.date_debut && ` · début le ${formatDateFr(uniteCourante.date_debut)}`}
-                      <span className="ml-1">— PDF = ancrage IA, non visibles par l&apos;élève</span>
+                      <span className="ml-1">— ancrage IA, non visible par l&apos;élève</span>
                     </p>
                     <div className="mt-2">
                       <EditeurClassesLivre uniteId={uniteCourante.id} classes={classesList} assignedClasseIds={classesParUnite.get(uniteCourante.id) ?? []} />
@@ -273,7 +277,23 @@ export default async function ScriptoriumPage({
                   </>
                 )}
               </div>
-              {docsAffiches.length === 0 ? (
+              {uniteCourante?.type === 'livre' ? (
+                <>
+                  {docsAffiches.some(d => d.semaine == null) && (
+                    <div className="border border-attention bg-attention-teinte/40 rounded-lg p-3 text-xs text-attention">
+                      {docsAffiches.filter(d => d.semaine == null).length} document(s) sans numéro de semaine dans ce livre — non éditable(s) ici ; corrige-les via la vue « Par classe ».
+                    </div>
+                  )}
+                  <EditeurLivre
+                    livreId={uniteCourante.id}
+                    auteur={uniteCourante.auteur ?? null}
+                    semaines={docsAffiches
+                      .filter(d => d.semaine != null)
+                      .sort((a, b) => (a.semaine as number) - (b.semaine as number))
+                      .map(d => ({ id: d.id, semaine: d.semaine, titre: d.titre, chapitres: d.chapitres ?? '', texte: d.texte_extrait ?? '' }))}
+                  />
+                </>
+              ) : docsAffiches.length === 0 ? (
                 <p className="text-sm text-muet">Aucun contenu dans cette unité.</p>
               ) : (
                 <>

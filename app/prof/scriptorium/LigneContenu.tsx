@@ -25,9 +25,11 @@ interface Props {
   images: ImageItem[]
   /** Semaine de livre : classes gérées au niveau du livre → on masque l'édition par-doc. */
   masquerClasses?: boolean
+  /** Semaine de livre : l'édition passe par l'éditeur complet → on masque Modifier/Supprimer par-doc. */
+  masquerEdition?: boolean
 }
 
-export default function LigneContenu({ item, unites, classes, assignedClasseIds, images, masquerClasses = false }: Props) {
+export default function LigneContenu({ item, unites, classes, assignedClasseIds, images, masquerClasses = false, masquerEdition = false }: Props) {
   const router = useRouter()
   const [edition, setEdition] = useState(false)
   const [chargement, setChargement] = useState(false)
@@ -88,7 +90,7 @@ export default function LigneContenu({ item, unites, classes, assignedClasseIds,
     router.refresh()
   }
 
-  if (edition) {
+  if (edition && !masquerEdition) {
     return (
       <form onSubmit={handleSave} className="bg-parchemin-fonce border border-bordure rounded-lg p-3 space-y-3">
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
@@ -190,10 +192,12 @@ export default function LigneContenu({ item, unites, classes, assignedClasseIds,
             </div>
           )}
         </div>
-        <div className="flex gap-2 flex-shrink-0">
-          <button onClick={() => setEdition(true)} className="text-xs text-muet hover:text-encre">Modifier</button>
-          <button onClick={handleSupprimer} disabled={chargement} className="text-xs text-muet hover:text-retard disabled:opacity-50">Supprimer</button>
-        </div>
+        {!masquerEdition && (
+          <div className="flex gap-2 flex-shrink-0">
+            <button onClick={() => setEdition(true)} className="text-xs text-muet hover:text-encre">Modifier</button>
+            <button onClick={handleSupprimer} disabled={chargement} className="text-xs text-muet hover:text-retard disabled:opacity-50">Supprimer</button>
+          </div>
+        )}
       </div>
     </div>
   )

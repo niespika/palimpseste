@@ -183,7 +183,7 @@ export default async function PageSemaineAletheia({ params }: { params: Promise<
   const sem = await semaineLivre(admin, livreId, semaine)
   if (!sem) notFound()
 
-  const { data: livre } = await admin.from('scriptorium_unites').select('label').eq('id', livreId).maybeSingle()
+  const { data: livre } = await admin.from('scriptorium_unites').select('label, auteur').eq('id', livreId).maybeSingle()
 
   // Déblocage séquentiel (Lot 6 D) : semaine verrouillée tant que la précédente n'est pas DONE.
   if (!(await peutAccederSemaine(admin, user.id, livreId, semaine))) {
@@ -240,7 +240,7 @@ export default async function PageSemaineAletheia({ params }: { params: Promise<
         </div>
         {(statut === 'DRAFT' || statut === 'FEEDBACK1_READY') && (
           <>
-            {livre?.label && <p className="text-xs text-muet mt-3">{livre.label as string}</p>}
+            {livre?.label && <p className="text-xs text-muet mt-3">{livre.label as string}{livre.auteur ? ` — ${livre.auteur as string}` : ''}</p>}
             <p className="text-sm text-muet mt-1">
               {sem.chapitres && <span className="text-pigment">{sem.chapitres}</span>}
               {sem.chapitres && sem.dateIndicative && ' · '}

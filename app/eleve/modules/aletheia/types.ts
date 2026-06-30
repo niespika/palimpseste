@@ -165,6 +165,7 @@ export interface SemaineLivre {
 export interface LivreAletheia {
   id: string
   titre: string
+  auteur: string | null
   date_debut: string | null
   nb_semaines: number | null
   semaines: SemaineLivre[]

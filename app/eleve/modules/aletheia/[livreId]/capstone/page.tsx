@@ -22,7 +22,7 @@ export default async function PageCapstone({ params }: { params: Promise<{ livre
   // peut y accéder qu'après avoir lui-même terminé toutes ses semaines.
   if (!(await toutesSemainesDone(admin, user.id, livreId))) notFound()
 
-  const { data: livre } = await admin.from('scriptorium_unites').select('label').eq('id', livreId).maybeSingle()
+  const { data: livre } = await admin.from('scriptorium_unites').select('label, auteur').eq('id', livreId).maybeSingle()
   const cap = await chargerCapstoneLivre(admin, livreId)
 
   if (!cap || cap.statut !== 'READY' || !cap.contenu) {
@@ -58,7 +58,7 @@ export default async function PageCapstone({ params }: { params: Promise<{ livre
       <div className="flex flex-col items-center text-center">
         <Pastille module="aletheia" size={112} />
         <p className="font-marque text-xs sm:text-sm font-semibold tracking-[0.2em] text-pigment mt-3 uppercase">
-          Aletheia{livre?.label ? ` · ${livre.label as string}` : ''}
+          Aletheia{livre?.label ? ` · ${livre.label as string}${livre.auteur ? ` — ${livre.auteur as string}` : ''}` : ''}
         </p>
         <h2 className="font-titre text-3xl text-encre leading-tight mt-1">✦ La carte d&apos;architecture du livre</h2>
         <p className="font-corps text-sm text-muet mt-2 max-w-md">La vue d&apos;ensemble du mouvement argumentatif, maintenant que tu as tout lu.</p>
