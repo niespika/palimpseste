@@ -18,6 +18,9 @@ export default function FormulaireLivre({ classes }: Props) {
   const [chargement, setChargement] = useState(false)
   const [erreur, setErreur] = useState<string | null>(null)
   const [nb, setNb] = useState(8)
+  // Titre/auteur contrôlés : alimentent la barre fine du navigateur de découpe (vignette + en-tête).
+  const [titreVal, setTitreVal] = useState('')
+  const [auteurVal, setAuteurVal] = useState('')
   const [classesChoisies, setClassesChoisies] = useState<Set<string>>(new Set())
   // 'par_semaine' = un fichier par semaine (historique) ; 'pdf_decoupe' = un seul PDF découpé.
   const [mode, setMode] = useState<'par_semaine' | 'pdf_decoupe'>('par_semaine')
@@ -34,6 +37,8 @@ export default function FormulaireLivre({ classes }: Props) {
   function reset() {
     setOuvert(false)
     setNb(8)
+    setTitreVal('')
+    setAuteurVal('')
     setClassesChoisies(new Set())
     setErreur(null)
     setMode('par_semaine')
@@ -98,6 +103,8 @@ export default function FormulaireLivre({ classes }: Props) {
           <input
             name="titre"
             required
+            value={titreVal}
+            onChange={e => setTitreVal(e.target.value)}
             placeholder="Ex. : La Naissance de la tragédie"
             className="w-full px-3 py-2 border border-bordure rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-pigment text-encre"
           />
@@ -106,6 +113,8 @@ export default function FormulaireLivre({ classes }: Props) {
           <label className="block text-xs font-medium text-muet mb-1">Auteur</label>
           <input
             name="auteur"
+            value={auteurVal}
+            onChange={e => setAuteurVal(e.target.value)}
             placeholder="Ex. : Nietzsche"
             className="w-full px-3 py-2 border border-bordure rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-pigment text-encre"
           />
@@ -208,7 +217,7 @@ export default function FormulaireLivre({ classes }: Props) {
       )}
 
       {/* Mode « 1 PDF découpé » : upload signé + analyse + plages de pages (texte seul). */}
-      {mode === 'pdf_decoupe' && <DecoupePdf nb={nb} onReady={setDecoupePret} />}
+      {mode === 'pdf_decoupe' && <DecoupePdf nb={nb} titre={titreVal} auteur={auteurVal} onReady={setDecoupePret} />}
 
       {erreur && <p className="text-retard text-sm">{erreur}</p>}
 
