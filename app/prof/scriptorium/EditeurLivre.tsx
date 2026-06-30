@@ -1,34 +1,52 @@
 'use client'
 
-import { useState } from 'react'
+import { useCallback, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { modifierLivreComplet } from './actions'
+import NavigateurDecoupe, { type Semaine } from './NavigateurDecoupe'
+import { reassemblerLivre } from './decoupe-utils'
 
 export interface SemaineEdit { id: string; semaine: number | null; titre: string; chapitres: string; texte: string }
 
-// Éditeur du livre COMPLET (option 1) : auteur (niveau livre) + titre/chapitres/texte
-// de chaque semaine, sur un seul écran. Pas de re-découpe du PDF (texte seul). Toute
-// entrée d'édition (le bouton du haut OU une semaine) ouvre le même éditeur.
+// Mode MODIFICATION : même éditeur que la création. On réassemble le texte des
+// semaines en un bloc, on pré-place les marqueurs aux bornes existantes et on
+// pré-remplit titres/chapitres, puis on laisse re-découper. Pas d'édition du texte
+// lui-même ; avertissement (dans le navigateur) si des lignes sortent des semaines.
 export default function EditeurLivre({ livreId, auteur, semaines }: { livreId: string; auteur: string | null; semaines: SemaineEdit[] }) {
   const router = useRouter()
   const [ouvert, setOuvert] = useState(false)
   const [auteurVal, setAuteurVal] = useState(auteur ?? '')
-  const [rows, setRows] = useState<SemaineEdit[]>(semaines)
+  const [etat, setEtat] = useState<{ sem: Semaine[]; valide: boolean }>({ sem: [], valide: false })
   const [chargement, setChargement] = useState(false)
   const [erreur, setErreur] = useState<string | null>(null)
 
-  function ouvrir() {
-    setAuteurVal(auteur ?? '')
-    setRows(semaines.map(s => ({ ...s })))
-    setErreur(null)
-    setOuvert(true)
-  }
-  function maj(i: number, champ: 'titre' | 'chapitres' | 'texte', val: string) {
-    setRows(prev => prev.map((r, j) => (j === i ? { ...r, [champ]: val } : r)))
-  }
+  // Réassemblage (mémoïsé) : texte continu + bornes de ligne de chaque semaine.
+  const { pages, bornesInitiales } = useMemo(() => {
+    const { texte, bornes } = reassemblerLivre(semaines.map(s => s.texte))
+    return {
+      pages: [texte],
+      bornesInitiales: semaines.map((s, i) => ({
+        titre: s.titre, chapitres: s.chapitres,
+        debut: { p: 1, l: bornes[i].debutLigne }, fin: { p: 1, l: bornes[i].finLigne },
+      })) as Semaine[],
+    }
+  }, [semaines])
+
+  const onEtat = useCallback((sem: Semaine[], valide: boolean) => setEtat({ sem, valide }), [])
+
+  function ouvrir() { setAuteurVal(auteur ?? ''); setErreur(null); setOuvert(true) }
+
   async function enregistrer() {
     setChargement(true); setErreur(null)
-    const res = await modifierLivreComplet(livreId, auteurVal, rows.map(r => ({ id: r.id, titre: r.titre, chapitres: r.chapitres, texte: r.texte })))
+    const payload = etat.sem.map((s, i) => ({
+      id: semaines[i].id,
+      titre: s.titre,
+      chapitres: s.chapitres,
+      debutLigne: s.debut?.l ?? 0,
+      finLigne: s.fin?.l ?? 0,
+    }))
+    const nbLignesAttendu = (pages[0] ?? '').split('\n').length
+    const res = await modifierLivreComplet(livreId, auteurVal, payload, nbLignesAttendu)
     setChargement(false)
     if (res.error) { setErreur(res.error); return }
     setOuvert(false)
@@ -62,7 +80,7 @@ export default function EditeurLivre({ livreId, auteur, semaines }: { livreId: s
             ))}
           </div>
         )}
-        <p className="text-xs text-muet">Après avoir modifié un texte, pense à régénérer la carte et la référence ci-dessous si besoin.</p>
+        <p className="text-xs text-muet">Après une re-découpe, pense à régénérer la carte et la référence ci-dessous si besoin.</p>
       </div>
     )
   }
@@ -73,22 +91,19 @@ export default function EditeurLivre({ livreId, auteur, semaines }: { livreId: s
         <label className="block text-xs font-medium text-muet mb-1">Auteur</label>
         <input value={auteurVal} onChange={e => setAuteurVal(e.target.value)} placeholder="Ex. : Nietzsche" className={`${inputCls} sm:max-w-xs`} />
       </div>
-      <p className="text-xs text-muet">Modifier le texte ne régénère pas automatiquement la carte ni la référence — utilise « Régénérer » plus bas si besoin.</p>
-      <div className="space-y-3">
-        {rows.map((r, i) => (
-          <div key={r.id} className="border border-bordure rounded-lg p-3 space-y-2 bg-surface">
-            <div className="flex items-center gap-2">
-              {r.semaine != null && <span className="text-xs font-medium text-muet bg-parchemin-fonce rounded px-1.5 py-0.5">S{r.semaine}</span>}
-              <input value={r.titre} onChange={e => maj(i, 'titre', e.target.value)} placeholder="Titre" className={`${inputCls} flex-1`} />
-            </div>
-            <input value={r.chapitres} onChange={e => maj(i, 'chapitres', e.target.value)} placeholder="Chapitres (ex. : Chap. 1-4)" className={inputCls} />
-            <textarea value={r.texte} onChange={e => maj(i, 'texte', e.target.value)} rows={5} placeholder="Texte de la semaine (ancrage IA)" className={`${inputCls} resize-y`} />
-          </div>
-        ))}
-      </div>
+      <p className="text-xs text-muet">
+        Re-découpe : déplace les marqueurs de début/fin. Le texte lui-même n&apos;est pas modifiable ici, et la carte/référence ne sont pas régénérées
+        automatiquement (utilise « Régénérer » plus bas si besoin).
+      </p>
+      {semaines.length === 0 ? (
+        <p className="text-sm text-muet">Aucune semaine à modifier.</p>
+      ) : (
+        <NavigateurDecoupe pages={pages} nb={semaines.length} bornesInitiales={bornesInitiales} modeModification onEtat={onEtat} />
+      )}
       {erreur && <p className="text-retard text-sm">{erreur}</p>}
       <div className="flex gap-2">
-        <button type="button" onClick={enregistrer} disabled={chargement} className="bg-bouton text-surface px-4 py-2 rounded-lg text-sm hover:opacity-90 disabled:opacity-50">
+        <button type="button" onClick={enregistrer} disabled={chargement || !etat.valide}
+          className="bg-bouton text-surface px-4 py-2 rounded-lg text-sm hover:opacity-90 disabled:opacity-50">
           {chargement ? 'Enregistrement…' : 'Enregistrer'}
         </button>
         <button type="button" onClick={() => setOuvert(false)} className="px-4 py-2 text-sm text-encre-douce hover:bg-parchemin-fonce rounded-lg">Annuler</button>

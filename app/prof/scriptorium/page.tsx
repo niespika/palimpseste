@@ -289,7 +289,7 @@ export default async function ScriptoriumPage({
                     auteur={uniteCourante.auteur ?? null}
                     semaines={docsAffiches
                       .filter(d => d.semaine != null)
-                      .sort((a, b) => (a.semaine as number) - (b.semaine as number))
+                      .sort((a, b) => ((a.semaine as number) - (b.semaine as number)) || a.id.localeCompare(b.id))
                       .map(d => ({ id: d.id, semaine: d.semaine, titre: d.titre, chapitres: d.chapitres ?? '', texte: d.texte_extrait ?? '' }))}
                   />
                 </>

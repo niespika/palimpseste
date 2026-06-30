@@ -6,6 +6,7 @@ import { createClient } from '@/utils/supabase/server'
 import { createAdminClient } from '@/utils/supabase/admin'
 import { PROMPT_CAPSTONE_DEFAUT, PROMPT_REFERENCE_DEFAUT } from '@/utils/aletheia-retours'
 import type { Capstone, ReferenceChapitre } from '@/app/eleve/modules/aletheia/types'
+import { reassemblerLivre } from './decoupe-utils'
 
 // ── Import PDF « découpé en semaines » : seuils & garde-fous (SPEC) ──────────
 const IMPORT_MAX_PAGES = 600      // refus au-delà (décision produit)
@@ -532,22 +533,49 @@ export async function reassignerClassesLivre(uniteId: string, classeIds: string[
   return { success: true }
 }
 
-// Édition complète d'un livre (option 1) : auteur (niveau livre) + titre/chapitres/
-// texte de chaque semaine, en un seul écran. Ne re-découpe PAS le PDF (texte seul) et
-// ne régénère PAS la carte/référence (le prof les régénère à la demande si besoin).
+// Édition d'un livre = MÊME logique que la création, en RE-DÉCOUPE : on réassemble le
+// texte des semaines dans l'ordre (semaine asc), le prof redéplace les bornes de ligne
+// dans le navigateur, et on recoupe. Ne modifie pas le texte lui-même et ne régénère
+// PAS la carte/référence (régénération à la demande). Auteur (niveau livre) au passage.
 export async function modifierLivreComplet(
   livreId: string,
   auteur: string,
-  semaines: { id: string; titre: string; chapitres: string; texte: string }[],
+  semaines: { id: string; titre: string; chapitres: string; debutLigne: number; finLigne: number }[],
+  nbLignesAttendu: number,
 ): Promise<{ success?: boolean; error?: string }> {
   const { supabase } = await verifierProf()
 
-  // Pré-validation GLOBALE avant toute écriture : aucune mutation (ni auteur ni
-  // document) si une semaine a un texte vide → cohérent avec le rollback atomique
-  // de la création (pas d'état partiel trompeur).
+  // Réassemblage côté serveur, IDENTIQUE au client. Départage par `id` (uuid) en plus
+  // de `semaine` → ordre déterministe même si deux documents partagent un numéro.
+  const { data: docs } = await supabase
+    .from('scriptorium_documents')
+    .select('id, semaine, texte_extrait')
+    .eq('unite_id', livreId).not('semaine', 'is', null)
+    .order('semaine', { ascending: true })
+    .order('id', { ascending: true })
+  const { texte } = reassemblerLivre((docs ?? []).map(d => (d.texte_extrait as string | null) ?? ''))
+  const lignes = texte.split('\n')
+
+  // Garde anti-dérive (TOCTOU) : si le texte du livre a changé depuis l'ouverture de
+  // l'éditeur, les index de ligne du prof ne valent plus rien → refus AVANT toute écriture.
+  if (lignes.length !== nbLignesAttendu) {
+    return { error: 'Le livre a changé depuis l\'ouverture de l\'éditeur. Recharge la page et recommence.' }
+  }
+
+  // Pré-validation GLOBALE avant toute écriture (atomicité comme à la création).
   for (const s of semaines) {
-    if (!(s.texte ?? '').trim()) {
-      return { error: `La semaine « ${(s.titre ?? '').trim() || 'Semaine'} » a un texte vide — l'ancrage IA en a besoin.` }
+    if (!Number.isInteger(s.debutLigne) || !Number.isInteger(s.finLigne) || s.debutLigne < 1 || s.finLigne > lignes.length || s.debutLigne > s.finLigne) {
+      return { error: `Semaine « ${(s.titre ?? '').trim() || 'Semaine'} » : bornes invalides.` }
+    }
+    if (!lignes.slice(s.debutLigne - 1, s.finLigne).join('\n').trim()) {
+      return { error: `La semaine « ${(s.titre ?? '').trim() || 'Semaine'} » serait vide — l'ancrage IA en a besoin.` }
+    }
+  }
+  // Ordre du livre + non-chevauchement : dans l'ordre reçu (= ordre des semaines), chaque
+  // semaine doit commencer après la fin de la précédente. Defense-in-depth (+ client).
+  for (let i = 1; i < semaines.length; i++) {
+    if (semaines[i].debutLigne <= semaines[i - 1].finLigne) {
+      return { error: 'Les semaines doivent rester dans l\'ordre du livre, sans se chevaucher.' }
     }
   }
 
@@ -558,9 +586,10 @@ export async function modifierLivreComplet(
   if (eU) return { error: eU.message }
 
   for (const s of semaines) {
+    const texteSem = lignes.slice(s.debutLigne - 1, s.finLigne).join('\n').trim()
     const { error } = await supabase
       .from('scriptorium_documents')
-      .update({ titre: (s.titre ?? '').trim() || 'Semaine', chapitres: (s.chapitres ?? '').trim() || null, texte_extrait: (s.texte ?? '').trim() })
+      .update({ titre: (s.titre ?? '').trim() || 'Semaine', chapitres: (s.chapitres ?? '').trim() || null, texte_extrait: texteSem })
       .eq('id', s.id).eq('unite_id', livreId)   // scoping : le document appartient bien à ce livre
     if (error) return { error: error.message }
   }
