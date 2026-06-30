@@ -31,8 +31,9 @@ export default function GuidePleinCadre({
         const estActive = i === active
         return (
           <div key={i} className="relative flex-1">
-            {estActive && <span className="absolute -top-3.5 left-0 font-ui text-[8px] text-pigment">S{i + 1}</span>}
-            <div className={`rounded-full ${estActive ? 'h-2.5 bg-pigment' : posee ? 'h-1.5 bg-ok' : 'h-1.5 bg-bordure'}`} />
+            {estActive && <span className="absolute -top-3.5 left-0 font-ui text-[8px] text-encre-douce">S{i + 1}</span>}
+            {/* en cours → encre-douce (#5A4632) ; saisi → muet (#8A6F4E) ; à venir → bordure. */}
+            <div className={`rounded-full ${estActive ? 'h-2.5 bg-encre-douce' : posee ? 'h-1.5 bg-muet' : 'h-1.5 bg-bordure'}`} />
           </div>
         )
       })}
@@ -52,10 +53,16 @@ export default function GuidePleinCadre({
   const chip = (champ: Champ, label: string) => {
     const val = s[champ]
     const pose = !!val
+    const debut = champ === 'debut'
+    // Début = vert bouteille, Fin = bordeaux, en teinte translucide (cf. la frise).
+    const cadre = debut
+      ? (pose ? 'border-vert-bouteille/35 bg-vert-bouteille/10 text-encre' : 'border-dashed border-vert-bouteille/45 bg-vert-bouteille/5 text-vert-bouteille')
+      : (pose ? 'border-rouge-bordeaux/35 bg-rouge-bordeaux/10 text-encre' : 'border-dashed border-rouge-bordeaux/45 bg-rouge-bordeaux/5 text-rouge-bordeaux')
+    const puce = debut ? 'text-vert-bouteille' : 'text-rouge-bordeaux'
     return (
       <button type="button" onClick={() => onArme(active, champ)}
-        className={`flex items-center gap-1.5 rounded-md border px-2.5 py-1 font-ui text-[11px] ${pose ? 'border-ok/40 bg-ok-teinte text-encre' : 'border-dashed border-attention/60 bg-attention-teinte/50 text-attention'}`}>
-        <span className={pose ? 'text-ok font-bold' : 'font-bold'}>{pose ? '●' : '○'}</span>
+        className={`flex items-center gap-1.5 rounded-md border px-2.5 py-1 font-ui text-[11px] ${cadre}`}>
+        <span className={`font-bold ${puce}`}>{pose ? '●' : '○'}</span>
         {label} {pose ? posTexte(val) : '— à placer'}
       </button>
     )
