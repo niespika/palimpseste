@@ -11,6 +11,7 @@ import CarteArchitectureLivre from './CarteArchitectureLivre'
 import EditeurLivre from './EditeurLivre'
 import type { Signet } from './decoupe-utils'
 import SectionParametresScriptorium from './SectionParametresScriptorium'
+import { parseReference } from '@/utils/aletheia-retours'
 import type { CapstoneProf, LivreReferenceProf } from '@/app/eleve/modules/aletheia/types'
 
 // Les Server Actions de cette page (analyse/extraction d'un PDF déposé) héritent du
@@ -150,7 +151,12 @@ export default async function ScriptoriumPage({
       supabase.from('aletheia_livre_reference').select('statut, contenu, amende_par_prof, updated_at').eq('scriptorium_livre_id', uniteSelLivre.id).maybeSingle(),
     ])
     capstoneLivre = (cap as CapstoneProf | null) ?? null
-    referenceLivre = (ref as LivreReferenceProf | null) ?? null
+    // Normalise le jsonb brut : une référence générée AVANT l'ajout de
+    // concepts_cles/synthese_modele n'a pas ces clés → parseReference garantit la forme
+    // (champs additifs → [] / '') et évite un crash de l'UI sur les livres existants.
+    referenceLivre = ref
+      ? { ...(ref as LivreReferenceProf), contenu: ref.contenu == null ? null : parseReference(ref.contenu) }
+      : null
   }
 
   function toItem(d: DocRow): ContenuItem {

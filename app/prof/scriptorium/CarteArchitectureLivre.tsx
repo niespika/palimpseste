@@ -158,7 +158,7 @@ function SectionReference({ livreId, reference, enCours, bloque, semaines }: {
   // Édition possible même si la génération a échoué : on sème depuis les semaines du livre.
   const seed: ReferenceChapitre[] = contenu && contenu.length > 0
     ? contenu
-    : semaines.map(s => ({ semaine: s.semaine, titre: s.titre, these_canonique: '', arguments_cles: [] }))
+    : semaines.map(s => ({ semaine: s.semaine, titre: s.titre, these_canonique: '', arguments_cles: [], concepts_cles: [], synthese_modele: '' }))
   const peutEditer = seed.length > 0
 
   async function regenerer(force = false) {
@@ -187,7 +187,7 @@ function SectionReference({ livreId, reference, enCours, bloque, semaines }: {
   return (
     <details className="border-t border-bordure pt-2">
       <summary className="text-xs font-medium text-muet cursor-pointer flex items-center justify-between gap-2">
-        <span>Référence par chapitre <span className="font-normal text-muet">(socle du diagnostic — non vue par l&apos;élève)</span></span>
+        <span>Fiche de lecture par chapitre <span className="font-normal text-muet">(socle du diagnostic ; la synthèse modèle est destinée à l&apos;élève)</span></span>
         <span>
           {bloque ? <span className="text-retard">bloquée — relancer</span>
             : enCours ? <span className="text-attention">en cours…</span>
@@ -232,6 +232,12 @@ function SectionReference({ livreId, reference, enCours, bloque, semaines }: {
                   <ul className="list-disc list-inside text-muet">
                     {c.arguments_cles.map((a, j) => <li key={j}>{a}</li>)}
                   </ul>
+                )}
+                {c.concepts_cles.length > 0 && (
+                  <p className="text-muet">Concepts : {c.concepts_cles.join(' · ')}</p>
+                )}
+                {c.synthese_modele && (
+                  <p className="text-encre-douce mt-0.5"><span className="text-info">Synthèse (élève) :</span> {c.synthese_modele}</p>
                 )}
               </li>
             ))}
@@ -308,6 +314,22 @@ function EditeurReference({ draft, setDraft }: { draft: ReferenceChapitre[]; set
               ))}
               <button type="button" onClick={() => maj(i, { arguments_cles: [...c.arguments_cles, ''] })} className="text-[11px] text-muet hover:text-encre underline">+ Ajouter un argument</button>
             </div>
+          </div>
+          <div>
+            <label className="block text-[10px] text-muet mb-0.5">Concepts clés</label>
+            <div className="space-y-1">
+              {c.concepts_cles.map((a, k) => (
+                <div key={k} className="flex gap-1.5">
+                  <input value={a} onChange={e => maj(i, { concepts_cles: c.concepts_cles.map((x, m) => m === k ? e.target.value : x) })} className={champ} />
+                  <button type="button" onClick={() => maj(i, { concepts_cles: c.concepts_cles.filter((_, m) => m !== k) })} className="text-muet hover:text-retard px-1">✕</button>
+                </div>
+              ))}
+              <button type="button" onClick={() => maj(i, { concepts_cles: [...c.concepts_cles, ''] })} className="text-[11px] text-muet hover:text-encre underline">+ Ajouter un concept</button>
+            </div>
+          </div>
+          <div>
+            <label className="block text-[10px] text-muet mb-0.5">👁 Synthèse modèle <span className="text-info">— vue par l&apos;élève (registre élève, tutoiement)</span></label>
+            <textarea value={c.synthese_modele} onChange={e => maj(i, { synthese_modele: e.target.value })} rows={4} className={`${champ} resize-y`} />
           </div>
         </div>
       ))}
