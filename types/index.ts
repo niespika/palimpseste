@@ -40,4 +40,6 @@ export interface EleveAvecEmail extends Profile {
   email: string
   // Classes (via inscriptions actives) auxquelles l'élève appartient.
   classes: { id: string; nom: string }[]
+  // Vrai si le compte ne s'est jamais connecté (dérivé de auth.last_sign_in_at).
+  jamaisConnecte?: boolean
 }

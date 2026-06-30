@@ -2,10 +2,28 @@ import { createClient } from '@/utils/supabase/server'
 import { createAdminClient } from '@/utils/supabase/admin'
 import Tuile from '@/components/Tuile'
 import FormulaireAjoutEleve from './FormulaireAjoutEleve'
+import ImportCsvEleves from './ImportCsvEleves'
 import LigneEleve from './LigneEleve'
 import type { EleveAvecEmail } from '@/types'
 
 const SANS_CLASSE = 'aucune'
+
+// Comptes Auth, paginés (listUsers plafonne perPage ~1000) → Map id→{email,
+// jamaisConnecte}. Borne dure de sécurité à 50 pages pour ne jamais boucler.
+type InfoAuth = { email: string; jamaisConnecte: boolean }
+async function chargerEmails(admin: ReturnType<typeof createAdminClient>): Promise<Map<string, InfoAuth>> {
+  const map = new Map<string, InfoAuth>()
+  const perPage = 1000
+  for (let page = 1; page <= 50; page++) {
+    const { data, error } = await admin.auth.admin.listUsers({ page, perPage })
+    if (error || !data) break
+    for (const u of data.users) {
+      if (u.email) map.set(u.id, { email: u.email, jamaisConnecte: !u.last_sign_in_at })
+    }
+    if (data.users.length < perPage) break
+  }
+  return map
+}
 
 export default async function PageEleves({
   searchParams,
@@ -17,13 +35,13 @@ export default async function PageEleves({
   const { classe: classeSel } = await searchParams
 
   // Profils élèves + leurs classes (via inscriptions actives).
-  const [{ data: profiles }, { data: { users: authUsers } }, { data: classesBrutes }] = await Promise.all([
+  const [{ data: profiles }, emailsParId, { data: classesBrutes }] = await Promise.all([
     supabase
       .from('profiles')
       .select('id, role, display_name, classe, created_at, inscriptions(statut, classes(id, nom))')
       .eq('role', 'eleve')
       .order('display_name'),
-    admin.auth.admin.listUsers({ perPage: 1000 }),
+    chargerEmails(admin),
     supabase.from('classes').select('id, nom').order('nom'),
   ])
 
@@ -33,9 +51,11 @@ export default async function PageEleves({
       .filter(i => i.statut === 'active')
       .map(i => (Array.isArray(i.classes) ? i.classes[0] : i.classes))
       .filter((c): c is { id: string; nom: string } => !!c)
+    const info = emailsParId.get(profile.id)
     return {
       ...profile,
-      email: authUsers.find(u => u.id === profile.id)?.email ?? '—',
+      email: info?.email ?? '—',
+      jamaisConnecte: info?.jamaisConnecte ?? false,
       classes,
     }
   })
@@ -65,7 +85,10 @@ export default async function PageEleves({
     <div className="space-y-6">
       <h2 className="text-xl font-serif text-encre">Élèves</h2>
 
-      <FormulaireAjoutEleve />
+      <div className="flex flex-wrap items-start gap-3">
+        <FormulaireAjoutEleve />
+        <ImportCsvEleves />
+      </div>
 
       {eleves.length === 0 ? (
         <div className="bg-surface border border-bordure rounded-xl p-8 text-center text-muet text-sm">
@@ -120,7 +143,7 @@ export default async function PageEleves({
                     </thead>
                     <tbody>
                       {elevesSelection.map(eleve => (
-                        <LigneEleve key={eleve.id} eleve={eleve} />
+                        <LigneEleve key={eleve.id} eleve={eleve} classes={classesList} />
                       ))}
                     </tbody>
                   </table>
