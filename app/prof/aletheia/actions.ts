@@ -70,14 +70,24 @@ const aideOuNull = (valeur: string, defaut: string): string | null =>
 export async function sauvegarderPromptsAletheia(p: PromptsAletheia) {
   await verifierProf()
   const p2 = nullSiDefaut(p.promptFeedback2, PROMPT_FEEDBACK_VF_DEFAUT)
-  // Le retour VF reçoit le livre ENTIER : {semaine_courante_N} = limite de
-  // divulgation (sans elle, l'aval fuite) ; {livre_entier} = l'ancrage (sans lui,
-  // le retour n'a plus le texte). Un prompt personnalisé doit garder les deux.
-  if (p2 !== null && !p2.includes('{semaine_courante_N}')) {
-    return { error: 'Le prompt du retour final doit garder la variable {semaine_courante_N} (limite de divulgation : le livre entier est envoyé au modèle). Ajoute-la avant d\'enregistrer.' }
+  // Retour VF (Lot C) : contexte structuré = amont (résumé déjà lu) + texte de la
+  // semaine N + titres seuls de l'aval. {livre_entier} (ancien format) n'existe plus.
+  // {semaine_courante_N} = limite amont/aval ; les 3 zones d'ancrage sont requises
+  // (sans elles → contexte vide injecté). Cohérent avec la garde runtime (genererRetourVf).
+  if (p2 !== null && p2.includes('{livre_entier}')) {
+    return { error: 'Le prompt du retour final n\'utilise plus {livre_entier} (le livre entier n\'est plus envoyé). Repars du défaut et utilise {amont_structure}, {semaine_courante_texte}, {aval_titres}.' }
   }
-  if (p2 !== null && !p2.includes('{livre_entier}')) {
-    return { error: 'Le prompt du retour final doit garder la variable {livre_entier} (le texte d\'ancrage). Ajoute-la avant d\'enregistrer.' }
+  if (p2 !== null && !p2.includes('{semaine_courante_N}')) {
+    return { error: 'Le prompt du retour final doit garder {semaine_courante_N} (limite entre l\'amont déjà lu et l\'aval).' }
+  }
+  if (p2 !== null && !p2.includes('{semaine_courante_texte}')) {
+    return { error: 'Le prompt du retour final doit garder {semaine_courante_texte} (le texte de la semaine évaluée).' }
+  }
+  if (p2 !== null && !p2.includes('{aval_titres}')) {
+    return { error: 'Le prompt du retour final doit garder {aval_titres} (titres seuls de la suite — base anti-spoiler).' }
+  }
+  if (p2 !== null && !p2.includes('{amont_structure}')) {
+    return { error: 'Le prompt du retour final doit garder {amont_structure} (résumé de l\'amont déjà lu).' }
   }
   // Variables critiques des prompts de diagnostic (sans elles, l'artefact n'a plus sa source).
   // (Carte + référence : prompts gérés dans Scriptorium › Paramètres, hors de cette action.)
