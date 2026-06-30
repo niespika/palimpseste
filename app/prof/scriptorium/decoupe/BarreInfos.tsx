@@ -9,7 +9,7 @@ const btnCls = 'font-ui text-xs text-encre-douce border border-bordure rounded-l
 // + bascule de la frise. Variante création (upload réduit) / re-découpe (sans upload).
 export default function BarreInfos({
   mode, titre, auteur, nbPages, nbSignets, texteSelectionnable = false,
-  sousTitre, page, totalPages, onPage, friseVisible, onToggleFrise, onRemplacer,
+  sousTitre, page, totalPages, onPage, friseVisible, onToggleFrise, taille, onTaille, onRemplacer,
 }: {
   mode: 'creation' | 'modification'
   titre: string
@@ -23,6 +23,8 @@ export default function BarreInfos({
   onPage: (p: number) => void
   friseVisible: boolean
   onToggleFrise: () => void
+  taille?: number                    // taille du texte de la page (px)
+  onTaille?: (delta: number) => void
   onRemplacer?: () => void
 }) {
   const initiales = initialesLivre(titre)
@@ -47,6 +49,15 @@ export default function BarreInfos({
       </div>
 
       <div className="ml-auto flex items-center gap-2 shrink-0">
+        {onTaille && (
+          <div className="flex items-center gap-0.5 font-ui text-encre-douce" title="Taille du texte de la page">
+            <button type="button" aria-label="Réduire la taille du texte" onClick={() => onTaille(-1)}
+              className="border border-bordure rounded-md w-7 h-7 bg-surface hover:bg-pigment-teinte/50 text-[11px] leading-none">A−</button>
+            {taille != null && <span className="w-5 text-center text-[11px] tabular-nums text-muet">{taille}</span>}
+            <button type="button" aria-label="Agrandir la taille du texte" onClick={() => onTaille(1)}
+              className="border border-bordure rounded-md w-7 h-7 bg-surface hover:bg-pigment-teinte/50 text-[15px] leading-none">A+</button>
+          </div>
+        )}
         <button type="button" onClick={onToggleFrise} className={btnCls}>
           ⇆ {friseVisible ? 'Afficher la frise' : 'Masquer la frise'}
         </button>

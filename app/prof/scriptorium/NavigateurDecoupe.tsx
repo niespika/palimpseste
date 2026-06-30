@@ -56,6 +56,22 @@ export default function NavigateurDecoupe({
   const [arme, setArme] = useState<Cible | null>(null)
   const [page, setPage] = useState(1)
   const [friseVisible, setFriseVisible] = useState(true)
+  // Taille du texte de la page (px), pilotée par le prof (A− / A+) et mémorisée.
+  // Initialiseur paresseux : ce composant ne se monte qu'après interaction (upload /
+  // ouverture de l'éditeur), donc toujours côté client → pas de souci d'hydratation.
+  const [taille, setTaille] = useState<number>(() => {
+    try {
+      const v = typeof window !== 'undefined' ? window.localStorage.getItem('scriptorium_decoupe_taille') : null
+      const n = v ? Number(v) : NaN
+      if (n >= 9 && n <= 22) return n
+    } catch { /* localStorage indisponible */ }
+    return 13
+  })
+  const changerTaille = (delta: number) => setTaille(t => {
+    const n = Math.min(22, Math.max(9, t + delta))
+    try { window.localStorage.setItem('scriptorium_decoupe_taille', String(n)) } catch { /* noop */ }
+    return n
+  })
 
   // Redimensionne le tableau des semaines quand nb change (préserve la saisie). En rendu.
   const [prevNb, setPrevNb] = useState(nb)
@@ -180,7 +196,7 @@ export default function NavigateurDecoupe({
   const pageLivre = (
     <PageLivre
       lignes={lignesDe(page)} page={page} totalPages={totalPages}
-      titreCourant={meta?.titre ?? ''} plein={!friseVisible} cible={cible}
+      titreCourant={meta?.titre ?? ''} plein={!friseVisible} taille={taille} cible={cible}
       reperes={reperesPage} titres={titresPage} destructives={destructivesPage}
       onPoser={poserLigne}
     />
@@ -195,6 +211,7 @@ export default function NavigateurDecoupe({
         page={page} totalPages={totalPages}
         onPage={p => setPage(Math.max(1, Math.min(totalPages, p)))}
         friseVisible={friseVisible} onToggleFrise={() => setFriseVisible(v => !v)}
+        taille={taille} onTaille={changerTaille}
         onRemplacer={mode === 'creation' ? onRemplacer : undefined}
       />
 
