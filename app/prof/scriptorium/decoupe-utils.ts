@@ -89,13 +89,24 @@ export function apparierSignets(
   const norm = (s: string) => s.replace(/\s+/g, ' ').trim().toLowerCase()
   const utilisees = new Set<string>()   // "p:l" déjà prises
 
+  // Une ligne correspond à un signet si les textes (normalisés) sont égaux, ou si l'un
+  // est un PRÉFIXE de l'autre ET que le plus court couvre l'essentiel du plus long
+  // (≥ 60 %, ≥ 4 caractères). La garde de ratio évite qu'un signet court (« I », « Part »)
+  // « avale » une ligne bien plus longue par simple préfixe (faux titre).
+  const correspond = (a: string, b: string): boolean => {
+    if (!a || !b) return false
+    if (a === b) return true
+    const court = a.length <= b.length ? a : b
+    const long = a.length <= b.length ? b : a
+    return long.startsWith(court) && court.length >= 4 && court.length >= long.length * 0.6
+  }
+
   const chercherDansPage = (p: number, cible: string): number | null => {
     const lignes = lignesParPage[p - 1] ?? []
     for (let i = 0; i < lignes.length; i++) {
       const cle = `${p}:${i + 1}`
       if (utilisees.has(cle)) continue
-      const t = norm(lignes[i])
-      if (t && (t === cible || t.startsWith(cible) || cible.startsWith(t))) return i + 1
+      if (correspond(norm(lignes[i]), cible)) return i + 1
     }
     return null
   }
