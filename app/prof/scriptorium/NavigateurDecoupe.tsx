@@ -201,7 +201,9 @@ export default function NavigateurDecoupe({
       <p className="font-ui text-xs text-muet px-1">
         {cible
           ? <>À placer : <span className="font-medium text-encre-douce">{cible.champ === 'debut' ? 'début' : 'fin'} de la semaine {cible.w + 1}</span> — clique la ligne {cible.champ === 'debut' ? 'où elle commence' : 'où elle finit'}.</>
-          : 'Toutes les bornes sont placées. Tu peux ajuster en cliquant un repère.'}
+          : friseVisible
+            ? 'Toutes les bornes sont placées. Tu peux ajuster en cliquant un repère dans la frise, ou une ligne sur la page.'
+            : 'Toutes les bornes sont placées. Tu peux ajuster en cliquant un repère sur la page.'}
       </p>
 
       {friseVisible ? (

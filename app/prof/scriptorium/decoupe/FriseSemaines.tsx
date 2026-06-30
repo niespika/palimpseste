@@ -57,21 +57,19 @@ export default function FriseSemaines({
           const slot = (champ: Champ, label: string) => {
             const val = s[champ]
             const pose = !!val
+            // Croix d'effacement = bouton FRÈRE (jamais imbriqué dans le bouton du slot,
+            // sinon HTML invalide / warning d'hydratation).
             return (
-              <div className="flex-1">
-                <button type="button" onClick={() => onArme(i, champ)}
-                  className={`w-full text-left rounded-md border px-2 py-1.5 ${pose ? 'border-ok/40 bg-ok-teinte' : 'border-dashed border-attention/60 bg-attention-teinte/50'}`}>
+              <div className={`flex-1 flex items-stretch rounded-md border ${pose ? 'border-ok/40 bg-ok-teinte' : 'border-dashed border-attention/60 bg-attention-teinte/50'}`}>
+                <button type="button" onClick={() => onArme(i, champ)} className="flex-1 min-w-0 text-left px-2 py-1.5">
                   <span className={`block font-ui text-[8.5px] tracking-[0.06em] uppercase ${pose ? 'text-ok' : 'text-attention'}`}>{label}</span>
-                  <span className={`flex items-center gap-1 font-ui text-[11px] font-bold ${pose ? 'text-encre' : 'text-attention'}`}>
-                    {pose ? posTexte(val) : 'à placer…'}
-                    {pose && (
-                      <span role="button" tabIndex={0} aria-label={`Effacer ${label} de la semaine ${i + 1}`}
-                        onClick={e => { e.stopPropagation(); onEffacer(i, champ) }}
-                        onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.stopPropagation(); onEffacer(i, champ) } }}
-                        className="ml-auto text-muet hover:text-retard cursor-pointer">✕</span>
-                    )}
-                  </span>
+                  <span className={`block font-ui text-[11px] font-bold ${pose ? 'text-encre' : 'text-attention'}`}>{pose ? posTexte(val) : 'à placer…'}</span>
                 </button>
+                {pose && (
+                  <button type="button" aria-label={`Effacer ${label} de la semaine ${i + 1}`}
+                    onClick={() => onEffacer(i, champ)}
+                    className="px-1.5 text-muet hover:text-retard">✕</button>
+                )}
               </div>
             )
           }
