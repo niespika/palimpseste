@@ -1,12 +1,26 @@
 'use server'
 
 import { revalidatePath } from 'next/cache'
+import { headers } from 'next/headers'
 import { createAdminClient } from '@/utils/supabase/admin'
 import { createClient } from '@/utils/supabase/server'
 import { genererMotDePasse } from '@/utils/password'
 import { envoyerInvitationEleve } from '@/utils/email'
 
 type Admin = ReturnType<typeof createAdminClient>
+
+// URL de base pour le lien d'invitation : l'origine RÉELLE de la requête (host),
+// pour que le lien pointe toujours vers le déploiement d'où il est envoyé (prod,
+// preview ou localhost). NEXT_PUBLIC_SITE_URL sert de repli si l'en-tête manque.
+async function baseUrlInvitation(): Promise<string> {
+  const h = await headers()
+  const host = h.get('host')
+  if (host) {
+    const proto = h.get('x-forwarded-proto') ?? (host.startsWith('localhost') ? 'http' : 'https')
+    return `${proto}://${host}`
+  }
+  return (process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000').replace(/\/+$/, '')
+}
 
 // Génère un lien sécurisé (recovery) et l'envoie par courriel. Le compte existe
 // déjà (créé avec un MDP interne) : l'élève choisira le sien via /finaliser-inscription.
@@ -17,7 +31,7 @@ async function envoyerInvitation(admin: Admin, email: string, displayName: strin
     console.error('[eleves] generateLink échec :', error?.message)
     return { error: "Lien d'invitation impossible à générer." }
   }
-  const base = (process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000').replace(/\/+$/, '')
+  const base = await baseUrlInvitation()
   const url = `${base}/auth/confirm?token_hash=${tokenHash}&type=recovery&next=${encodeURIComponent('/finaliser-inscription')}`
   try {
     await envoyerInvitationEleve({ email, displayName, lien: url })
