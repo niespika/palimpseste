@@ -201,6 +201,21 @@ async function extrairePagesPdf(buffer: Buffer): Promise<string[] | null> {
   }
 }
 
+// Texte d'une borne à la LIGNE près : de (dp,dl) à (fp,fl), 1-based, ligne de fin
+// INCLUSE. Les lignes suivent les retours du texte extrait (split '\n'), identiques
+// côté client (qui choisit les bornes) et serveur (qui coupe) → mêmes index.
+function texteEntreBornes(pages: string[], dp: number, dl: number, fp: number, fl: number): string {
+  const morceaux: string[] = []
+  for (let p = dp; p <= fp; p++) {
+    const lignes = (pages[p - 1] ?? '').split('\n')
+    const debut = p === dp ? dl - 1 : 0
+    const fin = p === fp ? fl : lignes.length
+    morceaux.push(lignes.slice(debut, fin).join('\n'))
+  }
+  // Filtre les morceaux vides (page intermédiaire blanche) → pas de ligne blanche parasite.
+  return morceaux.filter(m => m.length > 0).join('\n')
+}
+
 // Purge best-effort des imports > 24 h de ce prof (onglet fermé en cours de route).
 async function purgerImportsOrphelins(admin: Admin, userId: string): Promise<void> {
   try {
@@ -258,10 +273,10 @@ export async function analyserPdfImport(importId: string): Promise<{
   return { totalPages, scanne: pagesVidesPct > IMPORT_SEUIL_SCAN, pagesVides, pagesVidesPct, tropLong: totalPages > IMPORT_MAX_PAGES }
 }
 
-// 3) Aperçu du texte aux bornes d'une plage (vérification anti-décalage silencieux).
-export async function apercuPlage(importId: string, debutPdf: number, finPdf: number): Promise<{
-  debut?: string; fin?: string; vide?: boolean; error?: string
-}> {
+// 3) Charger le texte du PDF page par page (pour le navigateur de découpe). Envoyé
+// UNE fois au prof ; le repérage des bornes se fait ensuite côté client, sans
+// aller-retour. Les lignes (split '\n') sont identiques côté client et serveur.
+export async function chargerPagesImport(importId: string): Promise<{ pages?: string[]; error?: string }> {
   const { userId } = await verifierProf()
   if (!RE_UUID.test(importId)) return { error: 'Import invalide.' }
   const admin = createAdminClient()
@@ -270,17 +285,7 @@ export async function apercuPlage(importId: string, debutPdf: number, finPdf: nu
     .select('pages').eq('import_id', importId).eq('user_id', userId).maybeSingle()
   const pages = (row?.pages as string[] | undefined) ?? null
   if (!pages || pages.length === 0) return { error: 'Import expiré — re-dépose le PDF.' }
-  const total = pages.length
-  if (!Number.isInteger(debutPdf) || !Number.isInteger(finPdf) || debutPdf < 1 || finPdf > total || debutPdf > finPdf) {
-    return { error: `Pages hors du PDF (1–${total}).` }
-  }
-  const premiere = (pages[debutPdf - 1] ?? '').replace(/\s+/g, ' ').trim()
-  const derniere = (pages[finPdf - 1] ?? '').replace(/\s+/g, ' ').trim()
-  return {
-    debut: premiere.slice(0, 280),
-    fin: derniere.length > 160 ? '…' + derniere.slice(-160) : derniere,
-    vide: pages.slice(debutPdf - 1, finPdf).join('').trim().length < IMPORT_SEUIL_CHARS,
-  }
+  return { pages }
 }
 
 // 4) Abandonner un import (changement de mode, fermeture, après création).
@@ -300,7 +305,7 @@ export async function supprimerImportPdf(importId: string): Promise<{ success?: 
 //   • 'par_semaine' (historique) : un fichier PDF/DOCX/TXT par semaine, extrait
 //     puis STOCKÉ dans le bucket Scriptorium (fichier_ref) — jamais exposé élève ;
 //   • 'pdf_decoupe' (SPEC) : un seul PDF déposé en amont (scriptorium_imports), que
-//     l'on découpe en plages de pages → texte seul (fichier_ref reste null).
+//     l'on découpe par bornes page+ligne → texte seul (fichier_ref reste null).
 // Classes assignées AU NIVEAU DU LIVRE (scriptorium_unite_classes, Lot 2).
 export async function ajouterLivre(formData: FormData) {
   const { supabase, userId } = await verifierProf()
@@ -370,8 +375,7 @@ export async function ajouterLivre(formData: FormData) {
     if (pagesImport.length > IMPORT_MAX_PAGES) return annuler(`PDF trop long (${pagesImport.length} pages, maximum ${IMPORT_MAX_PAGES}).`)
   }
 
-  const decalageGlobal = Number(formData.get('decalage')) || 0
-  const plagesVues: { d: number; f: number }[] = []  // plages PDF déjà prises (chevauchement, ordre indifférent)
+  const bornesVues: { s: number; e: number }[] = []  // bornes déjà prises (page+ligne encodées) — chevauchement, trous autorisés
 
   // Une semaine = un document de cette unité (texte d'ancrage + titre + chapitres).
   for (let n = 1; n <= nbSemaines; n++) {
@@ -384,22 +388,24 @@ export async function ajouterLivre(formData: FormData) {
     if (mode === 'pdf_decoupe') {
       titreSem = (formData.get(`decoupe_${n}_titre`) as string)?.trim() || `Semaine ${n}`
       chapitres = (formData.get(`decoupe_${n}_chapitres`) as string)?.trim() || null
-      const debut = Number(formData.get(`decoupe_${n}_debut`))
-      const fin = Number(formData.get(`decoupe_${n}_fin`))
-      const offRaw = formData.get(`decoupe_${n}_decalage`) as string | null
-      const off = offRaw !== null && offRaw.trim() !== '' ? Number(offRaw) : decalageGlobal
-      if (!Number.isInteger(debut) || !Number.isInteger(fin)) return annuler(`Semaine ${n} : indique les pages de début et de fin.`)
-      if (!Number.isFinite(off)) return annuler(`Semaine ${n} : décalage de pages invalide.`)
-      const debutPdf = debut + off
-      const finPdf = fin + off
-      if (debutPdf > finPdf) return annuler(`Semaine ${n} : la page de début est après la page de fin.`)
-      if (debutPdf < 1 || finPdf > pagesImport!.length) {
-        return annuler(`Semaine ${n} : plage hors du PDF (pages ${debutPdf}–${finPdf} pour ${pagesImport!.length} pages). Vérifie le décalage.`)
-      }
-      // Chevauchement testé contre TOUTES les plages déjà prises (ordre de saisie indifférent).
-      if (plagesVues.some(p => debutPdf <= p.f && finPdf >= p.d)) return annuler(`Semaine ${n} : sa plage de pages en chevauche une autre.`)
-      plagesVues.push({ d: debutPdf, f: finPdf })
-      texteExtrait = pagesImport!.slice(debutPdf - 1, finPdf).join('\n').trim() || null
+      // Bornes à la ligne près : début (page+ligne) → fin (page+ligne), fin INCLUSE.
+      const dp = Number(formData.get(`decoupe_${n}_debutPage`))
+      const dl = Number(formData.get(`decoupe_${n}_debutLigne`))
+      const fp = Number(formData.get(`decoupe_${n}_finPage`))
+      const fl = Number(formData.get(`decoupe_${n}_finLigne`))
+      const total = pagesImport!.length
+      if (![dp, dl, fp, fl].every(v => Number.isInteger(v))) return annuler(`Semaine ${n} : marque un début et une fin.`)
+      if (dp < 1 || fp > total || dp > fp) return annuler(`Semaine ${n} : bornes hors du PDF (pages 1–${total}).`)
+      const lignesDp = (pagesImport![dp - 1] ?? '').split('\n').length
+      const lignesFp = (pagesImport![fp - 1] ?? '').split('\n').length
+      if (dl < 1 || dl > lignesDp || fl < 1 || fl > lignesFp) return annuler(`Semaine ${n} : ligne hors de la page.`)
+      const debutPos = dp * 100000 + dl
+      const finPos = fp * 100000 + fl
+      if (debutPos > finPos) return annuler(`Semaine ${n} : le début est après la fin.`)
+      // Chevauchement testé contre toutes les bornes déjà prises (ordre indifférent ; trous autorisés).
+      if (bornesVues.some(b => debutPos <= b.e && b.s <= finPos)) return annuler(`Semaine ${n} : ses bornes en chevauchent une autre.`)
+      bornesVues.push({ s: debutPos, e: finPos })
+      texteExtrait = texteEntreBornes(pagesImport!, dp, dl, fp, fl).trim() || null
     } else {
       titreSem = (formData.get(`semaine_${n}_titre`) as string)?.trim() || `Semaine ${n}`
       chapitres = (formData.get(`semaine_${n}_chapitres`) as string)?.trim() || null
@@ -453,7 +459,7 @@ export async function ajouterLivre(formData: FormData) {
       `Impossible de créer le livre : pas de texte exploitable pour la/les semaine(s) ${semainesSansTexte.join(', ')}. ` +
       `Le retour IA d'Aletheia en a besoin. ` +
       (mode === 'pdf_decoupe'
-        ? `Vérifie les plages de pages et le décalage, ou utilise un PDF dont le texte est sélectionnable (pas un scan).`
+        ? `Vérifie les bornes (début et fin) de chaque semaine, ou utilise un PDF dont le texte est sélectionnable (pas un scan).`
         : `Fournis pour ces semaines un PDF dont le texte est sélectionnable (PDF déjà océrisé s'il s'agit d'un scan), puis réessaie.`),
     )
   }
