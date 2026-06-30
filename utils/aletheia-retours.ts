@@ -644,7 +644,7 @@ export async function genererCapstone(livreId: string): Promise<void> {
 // Générée au niveau livre, en même temps que la carte, par le prof à la prép.
 // ════════════════════════════════════════════════════════════════════════════
 
-export const PROMPT_REFERENCE_DEFAUT = `Tu établis la RÉFÉRENCE CANONIQUE d'un livre, chapitre par chapitre : pour chaque semaine de lecture, la THÈSE canonique (l'idée centrale, ou « pas de thèse nette » si le chapitre est descriptif/poétique) et les ARGUMENTS CLÉS réellement avancés par l'auteur. Cette référence servira de socle stable pour diagnostiquer la compréhension des élèves — sois rigoureux, fidèle au texte, sans interprétation extérieure.
+export const PROMPT_REFERENCE_DEFAUT = `Tu établis la FICHE DE LECTURE CANONIQUE d'un livre, chapitre par chapitre. Pour chaque semaine de lecture, tu produis : la THÈSE canonique, les ARGUMENTS CLÉS, les CONCEPTS CLÉS — ce socle sert à diagnostiquer la compréhension des élèves, donc sois rigoureux, fidèle au texte, sans interprétation extérieure — ET une SYNTHÈSE MODÈLE qui, elle, sera lue par l'élève.
 
 ## Livre entier (ta source UNIQUE)
 {livre_entier}
@@ -656,13 +656,17 @@ export const PROMPT_REFERENCE_DEFAUT = `Tu établis la RÉFÉRENCE CANONIQUE d'u
 - Ancrage STRICT au livre ci-dessus ; aucune source externe.
 - these_canonique : l'idée centrale du chapitre en UNE phrase claire. Si le chapitre ne porte pas de thèse argumentative nette, écris « Pas de thèse argumentative nette (chapitre descriptif/narratif) ».
 - arguments_cles : 2 à 5 arguments/mouvements RÉELS de l'auteur dans ce chapitre (les jalons qu'un bon lecteur doit capter).
+- concepts_cles : 3 à 6 notions clés réellement mobilisées dans le chapitre, chacune sous la forme « terme (glose courte) ».
+- synthese_modele : ⛔ SEUL champ destiné à être lu PAR L'ÉLÈVE. Registre élève, TUTOIEMENT. ≤ ~200 mots : la « bonne synthèse » des chapitres de cette semaine, lisible d'un seul trait. Phrases COURTES, mots SIMPLES, tout terme difficile explicité entre parenthèses ; la nuance reste là, mais accessible. Ancrage STRICT à cette semaine, pas de renvoi à la suite du livre.
 
 ## Format de réponse — UNIQUEMENT un objet JSON valide, sans texte autour :
 {
-  "chapitres": [ { "semaine": 1, "titre": "...", "these_canonique": "...", "arguments_cles": ["...", "..."] } ]
+  "chapitres": [ { "semaine": 1, "titre": "...", "these_canonique": "...", "arguments_cles": ["...", "..."], "concepts_cles": ["...", "..."], "synthese_modele": "..." } ]
 }`
 
-const parseReference = (x: unknown): ReferenceChapitre[] =>
+// Exporté : la page Scriptorium normalise le jsonb brut avec, pour que les références
+// générées AVANT l'ajout de concepts_cles/synthese_modele aient toujours la bonne forme.
+export const parseReference = (x: unknown): ReferenceChapitre[] =>
   Array.isArray(x)
     ? x.flatMap(c => {
         const semaine = Number((c as { semaine?: unknown })?.semaine)
@@ -672,6 +676,8 @@ const parseReference = (x: unknown): ReferenceChapitre[] =>
           titre: txt((c as { titre?: unknown })?.titre),
           these_canonique: txt((c as { these_canonique?: unknown })?.these_canonique),
           arguments_cles: enListe((c as { arguments_cles?: unknown })?.arguments_cles),
+          concepts_cles: enListe((c as { concepts_cles?: unknown })?.concepts_cles),
+          synthese_modele: txt((c as { synthese_modele?: unknown })?.synthese_modele),
         }]
       })
     : []
@@ -696,7 +702,9 @@ export async function genererReferenceLivre(livreId: string): Promise<void> {
 
     const prompt = injecter(params?.prompt_reference?.trim() || PROMPT_REFERENCE_DEFAUT, { livre_entier: livreEntier, structure_semaines: structure })
     const client = new Anthropic()
-    const response = await client.messages.create({ model: MODELE, max_tokens: 4096, messages: [{ role: 'user', content: prompt }] })
+    // Fiche enrichie (concepts + synthèse ≤200 mots par chapitre) → la sortie grossit
+    // avec le nombre de semaines ; 16 k garde la marge sans streaming (sous le seuil sûr).
+    const response = await client.messages.create({ model: MODELE, max_tokens: 16000, messages: [{ role: 'user', content: prompt }] })
     await enregistrerCoutApi('aletheia', coutMessage(response.usage))
     if (response.stop_reason === 'max_tokens') throw new Error('Réponse tronquée (max_tokens).')
 

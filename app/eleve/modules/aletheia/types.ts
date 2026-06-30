@@ -110,6 +110,9 @@ export interface ReferenceChapitre {
   titre: string
   these_canonique: string
   arguments_cles: string[]
+  concepts_cles: string[]
+  // SEUL champ de la fiche destiné à l'élève (registre élève, tutoiement).
+  synthese_modele: string
 }
 export type ReferenceStatut = 'PENDING' | 'READY' | 'ERROR'
 export interface LivreReference {

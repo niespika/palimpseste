@@ -795,6 +795,8 @@ export async function enregistrerReferenceLivre(livreId: string, contenu: Refere
           titre: (c.titre ?? '').trim(),
           these_canonique: (c.these_canonique ?? '').trim(),
           arguments_cles: Array.isArray(c.arguments_cles) ? c.arguments_cles.map(a => (a ?? '').trim()).filter(Boolean) : [],
+          concepts_cles: Array.isArray(c.concepts_cles) ? c.concepts_cles.map(a => (a ?? '').trim()).filter(Boolean) : [],
+          synthese_modele: (c.synthese_modele ?? '').trim(),
         }))
     : []
   if (chapitres.length === 0) return { error: 'La référence ne peut pas être vide.' }
