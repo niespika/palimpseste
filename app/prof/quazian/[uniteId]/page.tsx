@@ -30,6 +30,7 @@ export default async function UniteCartesPage({
     .from('scriptorium_unites')
     .select('id, label, classe')
     .eq('id', uniteId)
+    .is('supprime_at', null)   // une unité supprimée n'est plus accessible (accès direct par URL)
     .single()
 
   if (!unite) notFound()

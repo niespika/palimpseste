@@ -14,7 +14,7 @@ export default async function QuazianPage({ searchParams }: { searchParams: Prom
   const { unite: uniteSel } = await searchParams
 
   const [{ data: unites }, { data: docs }, { data: cartes }, { data: publications }] = await Promise.all([
-    supabase.from('scriptorium_unites').select('id, label, ordre').eq('type', 'unite').order('ordre', { ascending: true }),
+    supabase.from('scriptorium_unites').select('id, label, ordre').eq('type', 'unite').is('supprime_at', null).order('ordre', { ascending: true }),
     supabase.from('scriptorium_documents').select('unite_id, semaine').not('semaine', 'is', null),
     supabase.from('quazian_flashcards').select('scriptorium_unite_id, semaine, statut').is('eleve_id', null),
     supabase.from('quazian_publications').select('scriptorium_unite_id, flashcards_visibles'),
