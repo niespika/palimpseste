@@ -11,6 +11,11 @@ import CarteArchitectureLivre from './CarteArchitectureLivre'
 import SectionParametresScriptorium from './SectionParametresScriptorium'
 import type { CapstoneProf, LivreReferenceProf } from '@/app/eleve/modules/aletheia/types'
 
+// Les Server Actions de cette page (analyse/extraction d'un PDF déposé) héritent du
+// timeout de la page. Plafond du plan Vercel Hobby = 60 s ; large pour extraire le
+// texte d'un PDF ≤ ~600 p. (aucun rendu d'image).
+export const maxDuration = 60
+
 interface DocRow {
   id: string
   unite_id: string
