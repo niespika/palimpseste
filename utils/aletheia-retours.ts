@@ -733,7 +733,7 @@ export async function genererCapstone(livreId: string): Promise<void> {
 
 export const PROMPT_REFERENCE_DEFAUT = `Tu établis la FICHE DE LECTURE CANONIQUE d'un livre, chapitre par chapitre. Pour chaque semaine de lecture, tu produis : la THÈSE canonique, les ARGUMENTS CLÉS, les CONCEPTS CLÉS — ce socle sert à diagnostiquer la compréhension des élèves, donc sois rigoureux, fidèle au texte, sans interprétation extérieure — ET une SYNTHÈSE MODÈLE qui, elle, sera lue par l'élève.
 
-## Livre entier (ta source UNIQUE)
+## Texte des chapitres à traiter (ta source UNIQUE)
 {livre_entier}
 
 ## Découpage en semaines/chapitres (produis UNE entrée par semaine, avec le bon numéro)
@@ -769,6 +769,15 @@ export const parseReference = (x: unknown): ReferenceChapitre[] =>
       })
     : []
 
+// Fiche générée PAR LOTS de semaines. Un livre long (ex. 29 semaines) dépassait, en un
+// SEUL appel (~16 k tokens de sortie), le plafond maxDuration=60 de Vercel → le job
+// after() était tué et la référence restait figée en PENDING (« bloquée »). On découpe
+// donc en lots parallèles : chaque appel est petit (sortie ≪ max_tokens → pas de
+// troncature) et le temps total ≈ le lot le plus lent (Promise.all) → tient dans le budget.
+// Lot volontairement petit (~4 sem. ≈ 2 000 tokens de sortie) pour garder une marge
+// confortable sous les 60 s même si un lot est lent ou l'API ralentie.
+const SEMAINES_PAR_LOT = 4
+
 // Génère la référence par chapitre. La ligne aletheia_livre_reference doit être en
 // PENDING (posée par l'orchestrateur) ; compare-and-set sur PENDING.
 export async function genererReferenceLivre(livreId: string): Promise<void> {
@@ -782,23 +791,74 @@ export async function genererReferenceLivre(livreId: string): Promise<void> {
   }
 
   try {
-    const livreEntier = await assemblerAncrageLivre(admin, livreId)
-    if (!livreEntier.trim()) { await echec(); return }
-    const structure = await assemblerStructureSemaines(admin, livreId)
+    // Documents (texte) du livre, ordre stable (semaines multi-docs) → découpables par semaine.
+    const { data: docs } = await admin
+      .from('scriptorium_documents')
+      .select('semaine, titre, chapitres, texte_extrait')
+      .eq('unite_id', livreId)
+      .not('texte_extrait', 'is', null)
+      .not('semaine', 'is', null)
+      .order('semaine', { ascending: true })
+      .order('created_at', { ascending: true })
+    if (!docs || docs.length === 0) { await echec(); return }
+
+    // Un « bloc » de contexte + une ligne de structure par document (mêmes formats que
+    // assemblerAncrageLivre / assemblerStructureSemaines), mais filtrables par semaine.
+    const docsFmt = docs.map(d => {
+      const s = d.semaine as number
+      const chap = d.chapitres ? ` (${d.chapitres})` : ''
+      const titre = txt(d.titre)
+      return {
+        semaine: s,
+        bloc: `## Semaine ${s} — ${titre}${chap}\n\n${d.texte_extrait}`,
+        ligne: `Semaine ${s} — ${titre}${chap}`,
+      }
+    })
+    const semaines = [...new Set(docsFmt.map(d => d.semaine))].sort((a, b) => a - b)
+
+    // Découpe en lots contigus de semaines.
+    const lots: number[][] = []
+    for (let i = 0; i < semaines.length; i += SEMAINES_PAR_LOT) lots.push(semaines.slice(i, i + SEMAINES_PAR_LOT))
+
     const { data: params } = await admin.from('aletheia_params').select('prompt_reference').eq('id', 1).maybeSingle()
-
-    const prompt = injecter(params?.prompt_reference?.trim() || PROMPT_REFERENCE_DEFAUT, { livre_entier: livreEntier, structure_semaines: structure })
+    const template = params?.prompt_reference?.trim() || PROMPT_REFERENCE_DEFAUT
     const client = new Anthropic()
-    // Fiche enrichie (concepts + synthèse ≤200 mots par chapitre) → la sortie grossit
-    // avec le nombre de semaines ; 16 k garde la marge sans streaming (sous le seuil sûr).
-    const response = await client.messages.create({ model: MODELE, max_tokens: 16000, messages: [{ role: 'user', content: prompt }] })
-    await enregistrerCoutApi('aletheia', coutMessage(response.usage))
-    if (response.stop_reason === 'max_tokens') throw new Error('Réponse tronquée (max_tokens).')
 
-    const texte = response.content[0]?.type === 'text' ? response.content[0].text : ''
-    const parsed = JSON.parse(extraireJSON(texte)) as { chapitres?: unknown }
-    const chapitres = parseReference(parsed.chapitres)
+    // Chaque lot ne reçoit QUE le texte de SES semaines (aligné sur « ancrage strict à
+    // cette semaine » du prompt) : sortie petite ET le modèle ne peut pas fabriquer des
+    // fiches hors lot (il n'en a pas le texte). Lots en PARALLÈLE (le nombre d'appels
+    // simultanés croît avec la longueur du livre — OK pour les livres réels ≤ ~30 sem.).
+    const resultatsParLot = await Promise.all(lots.map(async (lot) => {
+      const set = new Set(lot)
+      const inLot = docsFmt.filter(d => set.has(d.semaine))
+      const prompt = injecter(template, {
+        livre_entier: inLot.map(d => d.bloc).join('\n\n---\n\n'),
+        structure_semaines: inLot.map(d => d.ligne).join('\n'),
+      })
+      const response = await client.messages.create({ model: MODELE, max_tokens: 8000, messages: [{ role: 'user', content: prompt }] })
+      await enregistrerCoutApi('aletheia', coutMessage(response.usage))
+      if (response.stop_reason === 'max_tokens') throw new Error('Réponse tronquée (max_tokens).')
+      const texte = response.content[0]?.type === 'text' ? response.content[0].text : ''
+      const parsed = JSON.parse(extraireJSON(texte)) as { chapitres?: unknown }
+      return parseReference(parsed.chapitres)
+    }))
+
+    // Fusion : 1 fiche par semaine (garde la 1re en cas de doublon), triée. On ne retient
+    // que les semaines réellement demandées (garde-fou si le modèle numérote hors périmètre).
+    const attendues = new Set(semaines)
+    const parSemaine = new Map<number, ReferenceChapitre>()
+    for (const chap of resultatsParLot.flat()) {
+      if (attendues.has(chap.semaine) && !parSemaine.has(chap.semaine)) parSemaine.set(chap.semaine, chap)
+    }
+    const chapitres = [...parSemaine.values()].sort((a, b) => a.semaine - b.semaine)
     if (chapitres.length === 0) throw new Error('Référence vide.')
+    // Couverture COMPLÈTE exigée : si un lot a omis une semaine (JSON valide mais entrée
+    // manquante → non détecté par stop_reason), on ÉCHOUE (→ ERROR → régénération) plutôt
+    // que d'écrire une fiche à trous. Sinon la semaine manquante passerait inaperçue
+    // (badge « prête » au vert) : pas de diagnostic, et surtout pas de synthèse pour
+    // l'élève (seul champ affiché, désormais réutilisé par le retour VF — Lot B).
+    const manquantes = semaines.filter(s => !parSemaine.has(s))
+    if (manquantes.length > 0) throw new Error(`Référence incomplète : semaine(s) ${manquantes.join(', ')} absente(s).`)
 
     // Régénération IA → reprend la main (annule un amendement manuel précédent).
     await admin.from('aletheia_livre_reference')
