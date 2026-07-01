@@ -50,6 +50,7 @@ export async function livresPourClasse(admin: SupabaseClient, classeId: string):
     admin.from('scriptorium_unites')
       .select('id, label, date_debut, nb_semaines, auteur')
       .eq('type', 'livre')
+      .is('supprime_at', null)   // un livre supprimé ne s'affiche plus (defense-in-depth : classes déjà détachées)
       .in('id', bookIds)
       .order('ordre', { ascending: true }),
     admin.from('scriptorium_documents')

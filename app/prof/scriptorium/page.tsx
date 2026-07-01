@@ -9,6 +9,7 @@ import EditeurClassesLivre from './EditeurClassesLivre'
 import LigneContenu, { type ContenuItem, type ImageItem } from './LigneContenu'
 import CarteArchitectureLivre from './CarteArchitectureLivre'
 import EditeurLivre from './EditeurLivre'
+import BoutonSupprimerUnite from './BoutonSupprimerUnite'
 import type { Signet } from './decoupe-utils'
 import SectionParametresScriptorium from './SectionParametresScriptorium'
 import { parseReference } from '@/utils/aletheia-retours'
@@ -77,7 +78,7 @@ export default async function ScriptoriumPage({
 
   const [{ data: classes }, { data: unites }, { data: docsBruts }, { data: liens }, { data: imagesBrutes }, { data: liensUnite }] = await Promise.all([
     supabase.from('classes').select('id, nom').order('nom'),
-    supabase.from('scriptorium_unites').select('id, label, ordre, type, date_debut, nb_semaines, auteur, signets').order('ordre'),
+    supabase.from('scriptorium_unites').select('id, label, ordre, type, date_debut, nb_semaines, auteur, signets').is('supprime_at', null).order('ordre'),
     supabase.from('scriptorium_documents').select('id, unite_id, titre, type, semaine, chapitres, texte_extrait, fichier_ref'),
     supabase.from('scriptorium_document_classes').select('document_id, classe_id'),
     supabase.from('scriptorium_contenu_images').select('id, document_id, fichier_ref, legende, ordre').order('ordre'),
@@ -270,7 +271,12 @@ export default async function ScriptoriumPage({
             return (
             <div className="bg-surface border border-bordure rounded-xl p-4 space-y-3">
               <div>
-                <h3 className="font-medium text-encre">{uniteCourante?.label ?? 'Unité'}</h3>
+                <div className="flex items-start justify-between gap-2">
+                  <h3 className="font-medium text-encre">{uniteCourante?.label ?? 'Unité'}</h3>
+                  {uniteCourante && (
+                    <BoutonSupprimerUnite uniteId={uniteCourante.id} label={uniteCourante.label} estLivre={uniteCourante.type === 'livre'} />
+                  )}
+                </div>
                 {uniteCourante?.type === 'livre' && (
                   <>
                     <p className="text-xs text-muet mt-0.5">

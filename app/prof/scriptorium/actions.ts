@@ -661,6 +661,79 @@ export async function supprimerContenu(id: string) {
   return { success: true }
 }
 
+// ── Suppression d'une unité / d'un livre (archive + purge ciblée) ────────────
+// « Supprimer » NE supprime PAS la ligne scriptorium_unites : ses dépendances
+// sont en ON DELETE CASCADE (aletheia_travaux = travail élève + retours IA,
+// codex_sessions = synthèse, quazian_flashcards = cartes) → un vrai DELETE
+// détruirait précisément ce qu'on veut préserver. On garde la coquille (masquée
+// via supprime_at) et on purge UNIQUEMENT le contenu prof + les artefacts IA
+// Scriptorium (carte d'architecture + fiche de lecture). Tout passe par le client
+// admin : aucune policy DELETE prof n'est versionnée → un DELETE via le client RLS
+// échouerait en silence (0 ligne, pas d'erreur).
+export async function supprimerUnite(uniteId: string): Promise<{ success?: boolean; error?: string }> {
+  await verifierProf()
+  if (!RE_UUID.test(uniteId)) return { error: 'Identifiant invalide.' }
+  const admin = createAdminClient()
+
+  const { data: unite } = await admin.from('scriptorium_unites').select('id').eq('id', uniteId).maybeSingle()
+  if (!unite) return { error: 'Unité introuvable.' }
+
+  // 1. Masquer la coquille EN PREMIER (opération critique : la carte disparaît). La ligne
+  //    SURVIT → aucune cascade ne peut atteindre travail élève / Codex / Quazian. Si ce seul
+  //    UPDATE échoue, on s'arrête AVANT toute purge → pas d'état « vidé mais encore visible ».
+  const { error: errMasque } = await admin
+    .from('scriptorium_unites').update({ supprime_at: new Date().toISOString() }).eq('id', uniteId)
+  if (errMasque) return { error: errMasque.message }
+
+  // 2. Détacher les classes → bloque tout nouveau dépôt et retire l'accès élève.
+  await admin.from('scriptorium_unite_classes').delete().eq('unite_id', uniteId)
+
+  // ── Purge ciblée du contenu (best-effort, idempotent : l'unité est déjà masquée). ──
+  // Documents de l'unité + fichiers Storage (images enfants + PDF d'ancrage legacy),
+  // collectés AVANT de vider les fichier_ref (sinon la référence est perdue → orphelins).
+  const { data: docs } = await admin.from('scriptorium_documents').select('id, fichier_ref').eq('unite_id', uniteId)
+  const docIds = (docs ?? []).map(d => d.id as string)
+  if (docIds.length) await admin.from('scriptorium_document_classes').delete().in('document_id', docIds)
+
+  let images: { fichier_ref: string | null }[] = []
+  if (docIds.length) {
+    const { data } = await admin.from('scriptorium_contenu_images').select('fichier_ref').in('document_id', docIds)
+    images = (data ?? []) as { fichier_ref: string | null }[]
+  }
+  const chemins = [
+    ...((docs ?? []).map(d => d.fichier_ref as string | null).filter(Boolean) as string[]),
+    ...(images.map(i => i.fichier_ref).filter(Boolean) as string[]),
+  ]
+
+  // 3. Artefacts IA Scriptorium (niveau livre, AUCUNE donnée élève) : carte + fiche de lecture.
+  await admin.from('aletheia_capstone').delete().eq('scriptorium_livre_id', uniteId)
+  await admin.from('aletheia_livre_reference').delete().eq('scriptorium_livre_id', uniteId)
+
+  // 4. Images de contenu (lignes + fichiers Storage). Un échec Storage n'est pas bloquant
+  //    (au pire des octets orphelins, jamais de donnée à préserver) mais on le journalise.
+  if (docIds.length) await admin.from('scriptorium_contenu_images').delete().in('document_id', docIds)
+  if (chemins.length) {
+    const { error: errRemove } = await admin.storage.from('scriptorium').remove(chemins)
+    if (errRemove) console.error('[scriptorium] supprimerUnite : purge Storage incomplète', errRemove)
+  }
+
+  // 5. Vider le contenu prof des documents — on GARDE les coquilles : préserve les titres
+  //    de semaines (consultation du travail élève) et la liaison Quazian scriptorium_doc_id
+  //    (NO ACTION : supprimer un document échouerait si une carte préservée le pointe encore).
+  //    Le travail élève (aletheia_travaux) référence la semaine par index, pas par FK → intact.
+  if (docIds.length) {
+    await admin.from('scriptorium_documents')
+      .update({ texte_extrait: null, chapitres: null, legende: null, fichier_ref: null })
+      .eq('unite_id', uniteId)
+  }
+
+  revalidatePath('/prof/scriptorium')
+  revalidatePath('/prof/quazian')
+  revalidatePath('/prof/codex')
+  revalidatePath('/prof/aletheia')
+  return { success: true }
+}
+
 export async function ajouterImage(formData: FormData) {
   const { supabase, userId } = await verifierProf()
   const documentId = formData.get('documentId') as string

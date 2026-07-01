@@ -25,6 +25,7 @@ export async function lireUnitesScriptorium() {
     .from('scriptorium_unites')
     .select('id, label, classe, ordre')
     .eq('type', 'unite')   // exclut les « livres » Aletheia des unités de cours
+    .is('supprime_at', null)   // exclut les unités supprimées (plus de nouvelles cartes dessus)
     .order('ordre', { ascending: true })
 
   return unites ?? []

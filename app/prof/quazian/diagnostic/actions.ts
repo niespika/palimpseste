@@ -93,7 +93,7 @@ export async function chargerDiagnosticParUnite() {
   const { supabase } = await verifierProf()
 
   const [{ data: unites }, { data: quizzes }, { data: reponses }] = await Promise.all([
-    supabase.from('scriptorium_unites').select('id, label').eq('type', 'unite').order('ordre', { ascending: true }),
+    supabase.from('scriptorium_unites').select('id, label').eq('type', 'unite').is('supprime_at', null).order('ordre', { ascending: true }),
     supabase.from('quazian_quizzes').select('id, scope_unites'),
     supabase
       .from('quazian_answers')
