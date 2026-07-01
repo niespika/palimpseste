@@ -590,6 +590,20 @@ export async function genererRetourVf(travailId: string): Promise<void> {
     }
     if (!retourVf.synthese_modele.trim()) throw new Error('Retour VF vide.')
 
+    // Lot B — cohérence : la synthèse modèle VUE PAR L'ÉLÈVE provient de la FICHE de
+    // lecture (aletheia_livre_reference), pré-générée 1× par le prof, plutôt que
+    // régénérée par élève (formulations divergentes d'un rendu à l'autre). On garde
+    // celle du modèle en filet : fiche absente OU champ vide → on conserve la version
+    // générée (pas de bulle vide, pas de blocage élève). ⚠️ L'écrasement est APRÈS la
+    // garde ci-dessus, qui continue de juger la SORTIE DU MODÈLE : on ne masque pas un
+    // appel raté. S'applique quel que soit le prompt effectif (défaut ou override prof),
+    // à une réserve près : la garde jugeant la synthèse du modèle, un override qui
+    // SUPPRIMERAIT la tâche « synthèse » ferait échouer le retour (garde → revert) avant
+    // même de charger la fiche. Le prompt par défaut demande toujours la synthèse : ce
+    // cas ne vise qu'un override cassé. Cohérence assurée dès qu'une fiche READY non vide existe.
+    const fiche = await chargerReferenceChapitre(admin, livreId, semaine)
+    if (fiche?.synthese_modele.trim()) retourVf.synthese_modele = fiche.synthese_modele
+
     // Garde-fou de lisibilité : on ne tronque pas, on signale un dépassement franc (~200 mots).
     const nbMots = retourVf.synthese_modele.trim().split(/\s+/).length
     if (nbMots > 300) console.warn(`[aletheia] synthèse modèle longue (${nbMots} mots), travail ${travailId}`)
