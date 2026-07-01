@@ -769,14 +769,16 @@ export const parseReference = (x: unknown): ReferenceChapitre[] =>
       })
     : []
 
-// Fiche générée PAR LOTS de semaines. Un livre long (ex. 29 semaines) dépassait, en un
-// SEUL appel (~16 k tokens de sortie), le plafond maxDuration=60 de Vercel → le job
-// after() était tué et la référence restait figée en PENDING (« bloquée »). On découpe
-// donc en lots parallèles : chaque appel est petit (sortie ≪ max_tokens → pas de
-// troncature) et le temps total ≈ le lot le plus lent (Promise.all) → tient dans le budget.
-// Lot volontairement petit (~4 sem. ≈ 2 000 tokens de sortie) pour garder une marge
-// confortable sous les 60 s même si un lot est lent ou l'API ralentie.
-const SEMAINES_PAR_LOT = 4
+// Fiche générée PAR LOTS de semaines EN PARALLÈLE (Promise.all → temps total ≈ le lot le
+// plus lent). Un livre long (ex. 29 sem.) dépassait, en un SEUL appel (~22 k tokens de
+// sortie), le plafond maxDuration=60 de Vercel → job after() tué, référence figée PENDING
+// (« bloquée »). ⚠️ Le mur n'est PAS le rate limit (org en Scale tier : 2 M tokens/min de
+// sortie, 10 k req/min — hyper large ; l'échec mesuré était un 499 « client disconnected »
+// = Vercel coupe à 60 s, jamais un 429) mais le TEMPS DE GÉNÉRATION par lot. Mesuré : des
+// lots de 4 sem. (~2 800 tokens de sortie) frôlaient/dépassaient 60 s. On vise donc
+// ~2 sem./lot (~1 400 tokens ≈ ~30 s) → marge confortable ; la concurrence qui en résulte
+// (≈ nb_semaines/2 appels simultanés) est absorbée sans souci par les limites Scale tier.
+const SEMAINES_PAR_LOT = 2
 
 // Génère la référence par chapitre. La ligne aletheia_livre_reference doit être en
 // PENDING (posée par l'orchestrateur) ; compare-and-set sur PENDING.
@@ -825,9 +827,9 @@ export async function genererReferenceLivre(livreId: string): Promise<void> {
     const client = new Anthropic()
 
     // Chaque lot ne reçoit QUE le texte de SES semaines (aligné sur « ancrage strict à
-    // cette semaine » du prompt) : sortie petite ET le modèle ne peut pas fabriquer des
-    // fiches hors lot (il n'en a pas le texte). Lots en PARALLÈLE (le nombre d'appels
-    // simultanés croît avec la longueur du livre — OK pour les livres réels ≤ ~30 sem.).
+    // cette semaine » du prompt) : sortie petite (⇒ génère en ~30 s, sous les 60 s) ET le
+    // modèle ne peut pas fabriquer des fiches hors lot (il n'en a pas le texte). Lots EN
+    // PARALLÈLE ; la concurrence (≈ nb_semaines/2) est absorbée par le Scale tier.
     const resultatsParLot = await Promise.all(lots.map(async (lot) => {
       const set = new Set(lot)
       const inLot = docsFmt.filter(d => set.has(d.semaine))
