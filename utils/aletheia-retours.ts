@@ -747,8 +747,9 @@ export const PROMPT_REFERENCE_DEFAUT = `Tu établis la FICHE DE LECTURE CANONIQU
 - synthese_modele : ⛔ SEUL champ destiné à être lu PAR L'ÉLÈVE. Registre élève, TUTOIEMENT. ≤ ~200 mots : la « bonne synthèse » des chapitres de cette semaine, lisible d'un seul trait. Phrases COURTES, mots SIMPLES, tout terme difficile explicité entre parenthèses ; la nuance reste là, mais accessible. Ancrage STRICT à cette semaine, pas de renvoi à la suite du livre.
 
 ## Format de réponse — UNIQUEMENT un objet JSON valide, sans texte autour :
+(le titre de chaque semaine vient du découpage, ne le produis pas)
 {
-  "chapitres": [ { "semaine": 1, "titre": "...", "these_canonique": "...", "arguments_cles": ["...", "..."], "concepts_cles": ["...", "..."], "synthese_modele": "..." } ]
+  "chapitres": [ { "semaine": 1, "these_canonique": "...", "arguments_cles": ["...", "..."], "concepts_cles": ["...", "..."], "synthese_modele": "..." } ]
 }`
 
 // Exporté : la page Scriptorium normalise le jsonb brut avec, pour que les références
@@ -818,11 +819,17 @@ export async function genererReferenceLivre(livreId: string): Promise<void> {
       const titre = txt(d.titre)
       return {
         semaine: s,
+        titre,
         bloc: `## Semaine ${s} — ${titre}${chap}\n\n${d.texte_extrait}`,
         ligne: `Semaine ${s} — ${titre}${chap}`,
       }
     })
     const semaines = [...new Set(docsFmt.map(d => d.semaine))].sort((a, b) => a - b)
+    // Titre AUTORITÉ de chaque semaine = celui du document (édité via « Modifier la
+    // découpe »), pas une invention de l'IA. Première occurrence par semaine (aligné
+    // sur la déduplication de VueLivre / chargerReferenceChapitre).
+    const titreParSemaine = new Map<number, string>()
+    for (const d of docsFmt) if (!titreParSemaine.has(d.semaine)) titreParSemaine.set(d.semaine, d.titre)
 
     // Découpe en lots contigus de semaines.
     const lots: number[][] = []
@@ -871,8 +878,14 @@ export async function genererReferenceLivre(livreId: string): Promise<void> {
     // Régénération IA → reprend la main (annule un amendement manuel précédent).
     // Stamp genere_le PAR SEMAINE (les fiches d'un même run sortent du même lot :
     // même instant) ; amende_le volontairement absent — la régénération l'efface.
+    // titre = celui du document (source unique), jamais celui produit par l'IA.
     const genereLe = new Date().toISOString()
-    const chapitresStampes = chapitres.map(c => ({ ...c, genere_le: genereLe, amende_le: undefined }))
+    const chapitresStampes = chapitres.map(c => ({
+      ...c,
+      titre: titreParSemaine.get(c.semaine)?.trim() || c.titre,
+      genere_le: genereLe,
+      amende_le: undefined,
+    }))
     await admin.from('aletheia_livre_reference')
       .update({ contenu: chapitresStampes, statut: 'READY', erreur_at: null, amende_par_prof: false, updated_at: genereLe })
       .eq('scriptorium_livre_id', livreId).eq('statut', 'PENDING')
