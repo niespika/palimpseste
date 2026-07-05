@@ -41,7 +41,9 @@ export default function PanneauFiche({ livreId, semaine, titreDoc, chapitresDoc,
   const [busy, setBusy] = useState(false)
   const [msg, setMsg] = useState<string | null>(null)
 
-  const titre = chapitre?.titre?.trim() || titreDoc
+  // Titre = celui de la semaine (document), source unique — jamais le champ stocké
+  // dans la fiche, qui peut être vide (legacy) ou décalé après une re-découpe.
+  const titre = titreDoc
   const badge = BADGE_ETAT[etat]
 
   // Une génération qui démarre invalide tout brouillon en cours : sinon il

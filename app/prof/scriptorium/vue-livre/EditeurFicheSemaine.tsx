@@ -12,10 +12,7 @@ export default function EditeurFicheSemaine({ draft, setDraft }: {
   const maj = (patch: Partial<ReferenceChapitre>) => setDraft({ ...draft, ...patch })
   return (
     <div className="flex flex-col gap-[18px]">
-      <div>
-        <label className={`${INTITULE} block mb-1.5`}>Titre de la fiche</label>
-        <input value={draft.titre} onChange={e => maj({ titre: e.target.value })} className={CHAMP} />
-      </div>
+      <p className="font-corps italic text-[13px] text-muet-clair">Le titre de la semaine se modifie via « Modifier la découpe » en tête de page.</p>
       <div>
         <label className={`${INTITULE} block mb-1.5`}>Thèse canonique</label>
         <textarea value={draft.these_canonique} onChange={e => maj({ these_canonique: e.target.value })} rows={3} className={`${CHAMP} resize-y font-corps text-[15px]`} />

@@ -873,15 +873,6 @@ export async function enregistrerFicheSemaine(livreId: string, chapitre: Referen
   await verifierProf()
   if (!chapitre || !Number.isInteger(chapitre.semaine)) return { error: 'Fiche invalide.' }
 
-  const propre: ReferenceChapitre = {
-    semaine: chapitre.semaine,
-    titre: (chapitre.titre ?? '').trim(),
-    these_canonique: (chapitre.these_canonique ?? '').trim(),
-    arguments_cles: Array.isArray(chapitre.arguments_cles) ? chapitre.arguments_cles.map(a => (a ?? '').trim()).filter(Boolean) : [],
-    concepts_cles: Array.isArray(chapitre.concepts_cles) ? chapitre.concepts_cles.map(a => (a ?? '').trim()).filter(Boolean) : [],
-    synthese_modele: (chapitre.synthese_modele ?? '').trim(),
-  }
-
   const admin = createAdminClient()
   const { data: existant } = await admin.from('aletheia_livre_reference')
     .select('contenu, statut, updated_at').eq('scriptorium_livre_id', livreId).maybeSingle()
@@ -892,26 +883,37 @@ export async function enregistrerFicheSemaine(livreId: string, chapitre: Referen
     return { error: 'Les fiches ont changé depuis l’affichage de la page (autre onglet ou génération). Recharge la page puis réessaie.' }
   }
 
+  // Titre AUTORITÉ de chaque semaine : la source unique est la découpe
+  // (scriptorium_documents), jamais le champ titre de la fiche — que ni l'IA ni le
+  // prof n'éditent. Première occurrence par semaine (aligné sur VueLivre).
+  const { data: docs } = await admin.from('scriptorium_documents')
+    .select('semaine, titre').eq('unite_id', livreId).not('semaine', 'is', null)
+    .order('semaine', { ascending: true }).order('created_at', { ascending: true })
+  const titreParSemaine = new Map<number, string>()
+  for (const d of docs ?? []) {
+    const s = d.semaine as number
+    if (!titreParSemaine.has(s)) titreParSemaine.set(s, (d.titre as string | null) ?? '')
+  }
+
+  const propre: ReferenceChapitre = {
+    semaine: chapitre.semaine,
+    titre: titreParSemaine.get(chapitre.semaine)?.trim() || (chapitre.titre ?? '').trim(),
+    these_canonique: (chapitre.these_canonique ?? '').trim(),
+    arguments_cles: Array.isArray(chapitre.arguments_cles) ? chapitre.arguments_cles.map(a => (a ?? '').trim()).filter(Boolean) : [],
+    concepts_cles: Array.isArray(chapitre.concepts_cles) ? chapitre.concepts_cles.map(a => (a ?? '').trim()).filter(Boolean) : [],
+    synthese_modele: (chapitre.synthese_modele ?? '').trim(),
+  }
+
   const { parseReference } = await import('@/utils/aletheia-retours')
   let base = parseReference(existant?.contenu)
   if (base.length === 0) {
-    const { data: docs } = await admin.from('scriptorium_documents')
-      .select('semaine, titre').eq('unite_id', livreId).not('semaine', 'is', null)
-      .order('semaine', { ascending: true }).order('created_at', { ascending: true })
-    const vues = new Set<number>()
-    base = (docs ?? []).flatMap(d => {
-      const s = d.semaine as number
-      if (vues.has(s)) return []
-      vues.add(s)
-      return [{ semaine: s, titre: (d.titre as string | null) ?? '', these_canonique: '', arguments_cles: [], concepts_cles: [], synthese_modele: '' }]
-    })
+    base = [...titreParSemaine.entries()].map(([semaine, titre]) => ({ semaine, titre, these_canonique: '', arguments_cles: [], concepts_cles: [], synthese_modele: '' }))
   }
 
-  // Empreinte des champs éditables, normalisée DES DEUX CÔTÉS (le jsonb legacy
-  // peut porter des espaces / entrées vides) — un enregistrement sans modification
-  // ne doit rien marquer.
+  // Empreinte des champs ÉDITABLES (titre EXCLU : il vient de la découpe, pas du
+  // prof ; sinon une simple re-découpe ferait passer la fiche « amendée »),
+  // normalisée DES DEUX CÔTÉS (le jsonb legacy peut porter espaces / entrées vides).
   const norm = (c: ReferenceChapitre) => JSON.stringify([
-    (c.titre ?? '').trim(),
     (c.these_canonique ?? '').trim(),
     (c.arguments_cles ?? []).map(a => (a ?? '').trim()).filter(Boolean),
     (c.concepts_cles ?? []).map(a => (a ?? '').trim()).filter(Boolean),
