@@ -8,13 +8,17 @@ interface Props {
   uniteId: string
   label: string
   estLivre: boolean
+  // Habillage optionnel du déclencheur (la vue livre le rend au gabarit charte) —
+  // le flux de confirmation à 3 étapes est identique.
+  libelle?: string
+  classNameBouton?: string
 }
 
 // « Supprimer » une unité / un livre — flux à 3 étapes (friction délibérée), avec
 // re-saisie du nom exact. NE supprime PAS la ligne (cf. supprimerUnite : cascades) :
 // purge le contenu prof + les artefacts IA Scriptorium, conserve le travail élève /
 // Codex / Quazian, et masque la carte. La carte disparaît de Scriptorium.
-export default function BoutonSupprimerUnite({ uniteId, label, estLivre }: Props) {
+export default function BoutonSupprimerUnite({ uniteId, label, estLivre, libelle, classNameBouton }: Props) {
   const router = useRouter()
   const [etape, setEtape] = useState(0) // 0 = fermé, 1, 2, 3
   const [saisie, setSaisie] = useState('')
@@ -43,9 +47,9 @@ export default function BoutonSupprimerUnite({ uniteId, label, estLivre }: Props
     <>
       <button
         onClick={() => setEtape(1)}
-        className="flex-shrink-0 text-xs text-retard hover:opacity-80 hover:bg-retard-teinte px-2 py-1 rounded-lg transition-colors"
+        className={classNameBouton ?? 'flex-shrink-0 text-xs text-retard hover:opacity-80 hover:bg-retard-teinte px-2 py-1 rounded-lg transition-colors'}
       >
-        Supprimer
+        {libelle ?? 'Supprimer'}
       </button>
 
       {etape > 0 && (

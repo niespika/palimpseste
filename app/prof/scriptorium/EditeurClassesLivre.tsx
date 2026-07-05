@@ -34,18 +34,17 @@ export default function EditeurClassesLivre({ uniteId, classes, assignedClasseId
 
   if (!edition) {
     return (
-      <div className="flex items-center gap-2 flex-wrap">
-        <span className="text-xs text-muet">Classes :</span>
+      <span className="inline-flex items-center gap-2 flex-wrap">
         {noms.length === 0
-          ? <span className="text-xs text-attention">aucune</span>
-          : noms.map(n => <span key={n} className="text-xs bg-info-teinte text-info px-1.5 py-0.5 rounded">{n}</span>)}
-        <button onClick={() => { setSet(new Set(assignedClasseIds)); setEdition(true) }} className="text-xs text-muet hover:text-encre underline">Modifier</button>
-      </div>
+          ? <span className="font-ui text-xs text-attention">aucune</span>
+          : noms.map(n => <span key={n} className="font-ui font-medium text-[12px] bg-pigment-teinte text-pigment px-2.5 py-[3px] rounded-full">{n}</span>)}
+        <button onClick={() => { setSet(new Set(assignedClasseIds)); setEdition(true) }} className="font-ui text-[13px] text-muet-clair hover:text-pigment transition-colors">✎ modifier</button>
+      </span>
     )
   }
 
   return (
-    <div className="flex items-center gap-2 flex-wrap">
+    <span className="inline-flex items-center gap-2 flex-wrap">
       {classes.map(c => {
         const on = set.has(c.id)
         return (
@@ -57,6 +56,6 @@ export default function EditeurClassesLivre({ uniteId, classes, assignedClasseId
       })}
       <button onClick={save} disabled={chargement} className="text-xs bg-bouton text-surface px-2 py-1 rounded disabled:opacity-50">{chargement ? '…' : 'Enregistrer'}</button>
       <button onClick={() => setEdition(false)} className="text-xs text-muet">Annuler</button>
-    </div>
+    </span>
   )
 }

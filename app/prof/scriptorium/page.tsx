@@ -5,11 +5,9 @@ import { getUrlSignee } from './actions'
 import Tuile from '@/components/Tuile'
 import FormulaireContenu from './FormulaireContenu'
 import FormulaireLivre from './FormulaireLivre'
-import EditeurClassesLivre from './EditeurClassesLivre'
 import LigneContenu, { type ContenuItem, type ImageItem } from './LigneContenu'
-import CarteArchitectureLivre from './CarteArchitectureLivre'
-import EditeurLivre from './EditeurLivre'
 import BoutonSupprimerUnite from './BoutonSupprimerUnite'
+import VueLivre from './vue-livre/VueLivre'
 import type { Signet } from './decoupe-utils'
 import SectionParametresScriptorium from './SectionParametresScriptorium'
 import { parseReference } from '@/utils/aletheia-retours'
@@ -41,13 +39,6 @@ interface UniteRow {
   signets: Signet[] | null
 }
 
-// Formate une date Postgres (« YYYY-MM-DD ») sans passer par `new Date`, qui
-// la parse en UTC puis la reformate dans le fuseau du serveur (dérive d'un jour).
-function formatDateFr(d: string): string {
-  const [a, m, j] = d.split('-')
-  return a && m && j ? `${j}/${m}/${a}` : d
-}
-
 // Regroupe des contenus par semaine (clé null = « non précisée »), trié.
 function parSemaine(docs: DocRow[]): [number | null, DocRow[]][] {
   const m = new Map<number | null, DocRow[]>()
@@ -66,7 +57,7 @@ function parSemaine(docs: DocRow[]): [number | null, DocRow[]][] {
 export default async function ScriptoriumPage({
   searchParams,
 }: {
-  searchParams: Promise<{ vue?: string; classe?: string; unite?: string }>
+  searchParams: Promise<{ vue?: string; classe?: string; unite?: string; semaine?: string; edition?: string }>
 }) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
@@ -74,7 +65,7 @@ export default async function ScriptoriumPage({
   const { data: profile } = await supabase.from('profiles').select('role').eq('id', user.id).single()
   if (profile?.role !== 'prof') notFound()
 
-  const { vue = 'classes', classe: classeSel, unite: uniteSel } = await searchParams
+  const { vue = 'classes', classe: classeSel, unite: uniteSel, semaine, edition } = await searchParams
 
   const [{ data: classes }, { data: unites }, { data: docsBruts }, { data: liens }, { data: imagesBrutes }, { data: liensUnite }] = await Promise.all([
     supabase.from('classes').select('id, nom').order('nom'),
@@ -140,12 +131,6 @@ export default async function ScriptoriumPage({
   const uniteSelLivre = vue === 'unites' && uniteSel ? unitesList.find(u => u.id === uniteSel && u.type === 'livre') : undefined
   let capstoneLivre: CapstoneProf | null = null
   let referenceLivre: LivreReferenceProf | null = null
-  // Squelette des semaines (semaine + titre) pour amender une référence absente.
-  const semainesLivre = uniteSelLivre
-    ? docs.filter(d => d.unite_id === uniteSelLivre.id && d.semaine != null)
-        .map(d => ({ semaine: d.semaine as number, titre: d.titre }))
-        .sort((a, b) => a.semaine - b.semaine)
-    : []
   if (uniteSelLivre) {
     const [{ data: cap }, { data: ref }] = await Promise.all([
       supabase.from('aletheia_capstone').select('statut, contenu, amende_par_prof, updated_at').eq('scriptorium_livre_id', uniteSelLivre.id).maybeSingle(),
@@ -243,8 +228,26 @@ export default async function ScriptoriumPage({
         </>
       )}
 
-      {/* ── Perspective « unités » ──────────────────────────────────────── */}
-      {vue === 'unites' && (
+      {/* ── Perspective « unités » ──────────────────────────────────────────
+          Un LIVRE ouvert devient une page à part entière (vue-livre, 3 colonnes) :
+          la grille de tuiles ne se rend plus, « ← Toutes les unités » y ramène. */}
+      {vue === 'unites' && uniteSelLivre && (
+        <VueLivre
+          livre={uniteSelLivre}
+          classes={classesList}
+          classeIds={classesParUnite.get(uniteSelLivre.id) ?? []}
+          docs={docsAffiches
+            .filter(d => d.semaine != null)
+            .sort((a, b) => ((a.semaine as number) - (b.semaine as number)) || a.id.localeCompare(b.id))
+            .map(d => ({ id: d.id, semaine: d.semaine as number, titre: d.titre, chapitres: d.chapitres, texte: d.texte_extrait }))}
+          nbDocsSansSemaine={docsAffiches.filter(d => d.semaine == null).length}
+          capstone={capstoneLivre}
+          reference={referenceLivre}
+          semaineParam={semaine}
+          modeDecoupe={edition === 'decoupe'}
+        />
+      )}
+      {vue === 'unites' && !uniteSelLivre && (
         <>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
             {unitesList.map(u => {
@@ -274,42 +277,11 @@ export default async function ScriptoriumPage({
                 <div className="flex items-start justify-between gap-2">
                   <h3 className="font-medium text-encre">{uniteCourante?.label ?? 'Unité'}</h3>
                   {uniteCourante && (
-                    <BoutonSupprimerUnite uniteId={uniteCourante.id} label={uniteCourante.label} estLivre={uniteCourante.type === 'livre'} />
+                    <BoutonSupprimerUnite uniteId={uniteCourante.id} label={uniteCourante.label} estLivre={false} />
                   )}
                 </div>
-                {uniteCourante?.type === 'livre' && (
-                  <>
-                    <p className="text-xs text-muet mt-0.5">
-                      📖 Livre · {uniteCourante.nb_semaines ?? '?'} semaines
-                      {uniteCourante.auteur && ` · ${uniteCourante.auteur}`}
-                      {uniteCourante.date_debut && ` · début le ${formatDateFr(uniteCourante.date_debut)}`}
-                      <span className="ml-1">— ancrage IA, non visible par l&apos;élève</span>
-                    </p>
-                    <div className="mt-2">
-                      <EditeurClassesLivre uniteId={uniteCourante.id} classes={classesList} assignedClasseIds={classesParUnite.get(uniteCourante.id) ?? []} />
-                    </div>
-                  </>
-                )}
               </div>
-              {uniteCourante?.type === 'livre' ? (
-                <>
-                  {docsAffiches.some(d => d.semaine == null) && (
-                    <div className="border border-attention bg-attention-teinte/40 rounded-lg p-3 text-xs text-attention">
-                      {docsAffiches.filter(d => d.semaine == null).length} document(s) sans numéro de semaine dans ce livre — non éditable(s) ici ; corrige-les via la vue « Par classe ».
-                    </div>
-                  )}
-                  <EditeurLivre
-                    livreId={uniteCourante.id}
-                    titre={uniteCourante.label}
-                    auteur={uniteCourante.auteur ?? null}
-                    signets={uniteCourante.signets ?? null}
-                    semaines={docsAffiches
-                      .filter(d => d.semaine != null)
-                      .sort((a, b) => ((a.semaine as number) - (b.semaine as number)) || a.id.localeCompare(b.id))
-                      .map(d => ({ id: d.id, semaine: d.semaine, titre: d.titre, chapitres: d.chapitres ?? '', texte: d.texte_extrait ?? '' }))}
-                  />
-                </>
-              ) : docsAffiches.length === 0 ? (
+              {docsAffiches.length === 0 ? (
                 <p className="text-sm text-muet">Aucun contenu dans cette unité.</p>
               ) : (
                 <>
@@ -343,11 +315,6 @@ export default async function ScriptoriumPage({
                     </details>
                   )}
                 </>
-              )}
-
-              {/* Carte d'architecture (générée à la prép) — sous les semaines, pour un livre */}
-              {uniteCourante?.type === 'livre' && (
-                <CarteArchitectureLivre livreId={uniteCourante.id} capstone={capstoneLivre} reference={referenceLivre} semaines={semainesLivre} />
               )}
             </div>
             )
