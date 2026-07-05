@@ -856,53 +856,97 @@ export async function enregistrerCarteLivre(livreId: string, contenu: Capstone):
   return { success: true }
 }
 
-// Édition manuelle de la RÉFÉRENCE par chapitre (socle du diagnostic). Marque
-// amende_par_prof (anti-écrasement IA) + amende_le PAR SEMAINE : le diff est calculé
-// ICI (et pas déclaré par le client) en relisant le contenu en base — une semaine
-// inchangée garde ses stamps, une semaine modifiée/nouvelle est datée amende_le.
-export async function enregistrerReferenceLivre(livreId: string, contenu: ReferenceChapitre[]): Promise<{ success?: boolean; error?: string }> {
+// Amendement d'UNE fiche de semaine (vue livre). La fusion se fait CÔTÉ SERVEUR
+// dans le contenu EN BASE (jamais depuis l'instantané du client) : pas de perte de
+// mise à jour entre deux onglets. Trois gardes :
+//  1. génération PENDING → refus (un upsert repasserait la ligne en READY et le
+//     compare-and-set du job after() jetterait silencieusement la génération) ;
+//  2. verrou optimiste : l'updated_at vu au rendu doit être celui en base ;
+//  3. écriture conditionnelle (.eq updated_at) → une course résiduelle échoue
+//     proprement au lieu d'écraser.
+// Base vide (jamais générée / ERROR) → seed de TOUTES les semaines du livre
+// (parité avec l'ancien SectionReference : une référence READY couvre toujours
+// toutes les semaines — l'amont du retour VF (assemblerAmontVf) en dépend).
+// Marque amende_par_prof (anti-écrasement IA) + amende_le sur la SEULE semaine
+// réellement modifiée (empreinte normalisée : espaces/entrées vides ignorés).
+export async function enregistrerFicheSemaine(livreId: string, chapitre: ReferenceChapitre, updatedAtVu: string | null): Promise<{ success?: boolean; error?: string }> {
   await verifierProf()
-  const chapitres = Array.isArray(contenu)
-    ? contenu
-        .filter(c => c && Number.isInteger(c.semaine))
-        .map(c => ({
-          semaine: c.semaine,
-          titre: (c.titre ?? '').trim(),
-          these_canonique: (c.these_canonique ?? '').trim(),
-          arguments_cles: Array.isArray(c.arguments_cles) ? c.arguments_cles.map(a => (a ?? '').trim()).filter(Boolean) : [],
-          concepts_cles: Array.isArray(c.concepts_cles) ? c.concepts_cles.map(a => (a ?? '').trim()).filter(Boolean) : [],
-          synthese_modele: (c.synthese_modele ?? '').trim(),
-        }))
-    : []
-  if (chapitres.length === 0) return { error: 'La référence ne peut pas être vide.' }
+  if (!chapitre || !Number.isInteger(chapitre.semaine)) return { error: 'Fiche invalide.' }
+
+  const propre: ReferenceChapitre = {
+    semaine: chapitre.semaine,
+    titre: (chapitre.titre ?? '').trim(),
+    these_canonique: (chapitre.these_canonique ?? '').trim(),
+    arguments_cles: Array.isArray(chapitre.arguments_cles) ? chapitre.arguments_cles.map(a => (a ?? '').trim()).filter(Boolean) : [],
+    concepts_cles: Array.isArray(chapitre.concepts_cles) ? chapitre.concepts_cles.map(a => (a ?? '').trim()).filter(Boolean) : [],
+    synthese_modele: (chapitre.synthese_modele ?? '').trim(),
+  }
 
   const admin = createAdminClient()
   const { data: existant } = await admin.from('aletheia_livre_reference')
-    .select('contenu, updated_at').eq('scriptorium_livre_id', livreId).maybeSingle()
-  const { parseReference } = await import('@/utils/aletheia-retours')
-  const avant = new Map(parseReference(existant?.contenu).map(c => [c.semaine, c]))
+    .select('contenu, statut, updated_at').eq('scriptorium_livre_id', livreId).maybeSingle()
+  if (existant?.statut === 'PENDING') {
+    return { error: 'Une génération des fiches est en cours — attends qu’elle se termine (la page se met à jour seule).' }
+  }
+  if ((existant?.updated_at ?? null) !== updatedAtVu) {
+    return { error: 'Les fiches ont changé depuis l’affichage de la page (autre onglet ou génération). Recharge la page puis réessaie.' }
+  }
 
-  // Empreinte des seuls champs éditables (les stamps n'entrent pas dans la comparaison).
-  const empreinte = (c: ReferenceChapitre) => JSON.stringify(
-    [c.titre, c.these_canonique, c.arguments_cles, c.concepts_cles, c.synthese_modele])
+  const { parseReference } = await import('@/utils/aletheia-retours')
+  let base = parseReference(existant?.contenu)
+  if (base.length === 0) {
+    const { data: docs } = await admin.from('scriptorium_documents')
+      .select('semaine, titre').eq('unite_id', livreId).not('semaine', 'is', null)
+      .order('semaine', { ascending: true }).order('created_at', { ascending: true })
+    const vues = new Set<number>()
+    base = (docs ?? []).flatMap(d => {
+      const s = d.semaine as number
+      if (vues.has(s)) return []
+      vues.add(s)
+      return [{ semaine: s, titre: (d.titre as string | null) ?? '', these_canonique: '', arguments_cles: [], concepts_cles: [], synthese_modele: '' }]
+    })
+  }
+
+  // Empreinte des champs éditables, normalisée DES DEUX CÔTÉS (le jsonb legacy
+  // peut porter des espaces / entrées vides) — un enregistrement sans modification
+  // ne doit rien marquer.
+  const norm = (c: ReferenceChapitre) => JSON.stringify([
+    (c.titre ?? '').trim(),
+    (c.these_canonique ?? '').trim(),
+    (c.arguments_cles ?? []).map(a => (a ?? '').trim()).filter(Boolean),
+    (c.concepts_cles ?? []).map(a => (a ?? '').trim()).filter(Boolean),
+    (c.synthese_modele ?? '').trim(),
+  ])
+
+  const idx = base.findIndex(c => c.semaine === propre.semaine)
+  const ancien = idx >= 0 ? base[idx] : undefined
+  if (ancien && norm(ancien) === norm(propre)) return { success: true }
 
   const maintenant = new Date().toISOString()
-  const stampes = chapitres.map(c => {
-    const ancien = avant.get(c.semaine)
-    if (ancien && empreinte(ancien) === empreinte(c)) {
-      // Inchangée : stamps préservés. Entrée legacy sans genere_le → on l'approxime par
-      // l'updated_at du livre (date de génération de fait), sinon le flag global
-      // amende_par_prof posé ci-dessous la ferait passer « amendée » à tort.
-      const genere_le = ancien.genere_le ?? existant?.updated_at ?? undefined
-      return { ...c, ...(genere_le ? { genere_le } : {}), ...(ancien.amende_le ? { amende_le: ancien.amende_le } : {}) }
-    }
-    return { ...c, ...(ancien?.genere_le ? { genere_le: ancien.genere_le } : {}), amende_le: maintenant }
-  })
+  // Entrée éditée : genere_le hérité (ou approximé par l'updated_at du livre pour
+  // une fiche legacy non vide), amende_le = maintenant.
+  const genereLe = ancien?.genere_le ?? (ancien && (ancien.these_canonique ?? '').trim() ? existant?.updated_at ?? undefined : undefined)
+  const editee: ReferenceChapitre = { ...propre, ...(genereLe ? { genere_le: genereLe } : {}), amende_le: maintenant }
+  const fusion = [...base.filter(c => c.semaine !== propre.semaine), editee]
+    // Fiches legacy non touchées sans stamp : approximer genere_le par l'updated_at
+    // du livre, sinon le flag global amende_par_prof posé ci-dessous les ferait
+    // passer « amendées » à tort.
+    .map(c => (c.semaine !== propre.semaine && !c.genere_le && !c.amende_le && (c.these_canonique ?? '').trim() && existant?.updated_at)
+      ? { ...c, genere_le: existant.updated_at }
+      : c)
+    .sort((a, b) => a.semaine - b.semaine)
 
-  const { error } = await admin.from('aletheia_livre_reference').upsert(
-    { scriptorium_livre_id: livreId, contenu: stampes, statut: 'READY', erreur_at: null, amende_par_prof: true, updated_at: maintenant },
-    { onConflict: 'scriptorium_livre_id' })
-  if (error) return { error: error.message }
+  const commun = { contenu: fusion, statut: 'READY', erreur_at: null, amende_par_prof: true, updated_at: maintenant }
+  if (existant) {
+    // Compare-and-set : n'écrase que si la ligne n'a pas bougé depuis la lecture.
+    const { data: maj, error } = await admin.from('aletheia_livre_reference')
+      .update(commun).eq('scriptorium_livre_id', livreId).eq('updated_at', existant.updated_at).select('id')
+    if (error) return { error: error.message }
+    if (!maj || maj.length === 0) return { error: 'Les fiches ont changé pendant l’enregistrement. Recharge la page puis réessaie.' }
+  } else {
+    const { error } = await admin.from('aletheia_livre_reference').insert({ scriptorium_livre_id: livreId, ...commun })
+    if (error) return { error: error.message }
+  }
   revalidatePath('/prof/scriptorium')
   return { success: true }
 }

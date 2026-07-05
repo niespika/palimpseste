@@ -1,5 +1,5 @@
 import Link from 'next/link'
-import type { CapstoneProf, LivreReferenceProf } from '@/app/eleve/modules/aletheia/types'
+import type { CapstoneProf, LivreReferenceProf, ReferenceChapitre } from '@/app/eleve/modules/aletheia/types'
 import type { Signet } from '../decoupe-utils'
 import EditeurLivre from '../EditeurLivre'
 import ArtefactsLivreProvider from './ArtefactsLivreProvider'
@@ -77,7 +77,10 @@ export default function VueLivre({ livre, classes, classeIds, docs, nbDocsSansSe
   // ── États dérivés (fiches, carte, liens) ────────────────────────────────────
   const contenu = reference?.contenu ?? []
   const amendeGlobal = reference?.amende_par_prof ?? false
-  const chapitreDe = new Map(contenu.map(c => [c.semaine, c]))
+  // Doublon de semaine (données legacy) : garder la PREMIÈRE occurrence, comme
+  // chargerReferenceChapitre (.find) côté diagnostic/retour VF.
+  const chapitreDe = new Map<number, ReferenceChapitre>()
+  for (const c of contenu) if (!chapitreDe.has(c.semaine)) chapitreDe.set(c.semaine, c)
   const chapitreSel = chapitreDe.get(semaineSel) ?? null
   const etatSel = etatFiche(chapitreSel ?? undefined, amendeGlobal)
   const docSel = vueDe.get(semaineSel) ?? null
@@ -122,7 +125,7 @@ export default function VueLivre({ livre, classes, classeIds, docs, nbDocsSansSe
             etat={etatSel}
             sousStatut={sousStatutFiche(chapitreSel ?? undefined, etatSel, reference?.updated_at ?? null)}
             statutRef={reference?.statut ?? null}
-            contenuComplet={contenu}
+            updatedAtRef={reference?.updated_at ?? null}
             nbFiches={parSemaine.length}
             contenuVide={contenuVide}
           />

@@ -1,8 +1,8 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { enregistrerReferenceLivre } from '../actions'
+import { enregistrerFicheSemaine } from '../actions'
 import type { ReferenceChapitre } from '@/app/eleve/modules/aletheia/types'
 import type { EtatFiche } from './utils'
 import { useArtefactsLivre } from './ArtefactsLivreProvider'
@@ -19,7 +19,7 @@ const BADGE_ETAT: Record<EtatFiche, { texte: string; cls: string }> = {
 // Panneau central : la fiche de la semaine sélectionnée. Remonté à chaque changement
 // de semaine (key={semaineSel} côté parent) → le texte se replie et le brouillon
 // d'édition est jeté, comme demandé par le handoff.
-export default function PanneauFiche({ livreId, semaine, titreDoc, chapitresDoc, texteDoc, chapitre, etat, sousStatut, statutRef, contenuComplet, nbFiches, contenuVide }: {
+export default function PanneauFiche({ livreId, semaine, titreDoc, chapitresDoc, texteDoc, chapitre, etat, sousStatut, statutRef, updatedAtRef, nbFiches, contenuVide }: {
   livreId: string
   semaine: number
   titreDoc: string
@@ -29,7 +29,7 @@ export default function PanneauFiche({ livreId, semaine, titreDoc, chapitresDoc,
   etat: EtatFiche
   sousStatut: string
   statutRef: 'PENDING' | 'READY' | 'ERROR' | null
-  contenuComplet: ReferenceChapitre[]
+  updatedAtRef: string | null // verrou optimiste : updated_at de la référence au rendu
   nbFiches: number
   contenuVide: boolean
 }) {
@@ -44,6 +44,14 @@ export default function PanneauFiche({ livreId, semaine, titreDoc, chapitresDoc,
   const titre = chapitre?.titre?.trim() || titreDoc
   const badge = BADGE_ETAT[etat]
 
+  // Une génération qui démarre invalide tout brouillon en cours : sinon il
+  // ressusciterait après le squelette et écraserait la fiche fraîchement générée.
+  /* eslint-disable react-hooks/set-state-in-effect */
+  useEffect(() => {
+    if (refEnCours) { setEdition(false); setDraft(null) }
+  }, [refEnCours])
+  /* eslint-enable react-hooks/set-state-in-effect */
+
   function ouvrirEdition() {
     setDraft(chapitre
       ? { ...chapitre, arguments_cles: [...chapitre.arguments_cles], concepts_cles: [...chapitre.concepts_cles] }
@@ -52,14 +60,13 @@ export default function PanneauFiche({ livreId, semaine, titreDoc, chapitresDoc,
     setEdition(true)
   }
 
-  // Fusion du brouillon (cette semaine) dans le tableau complet — le serveur calcule
-  // le diff et ne date amende_le que sur la semaine réellement modifiée.
+  // La fusion se fait CÔTÉ SERVEUR (contenu en base + verrou optimiste) : on
+  // n'envoie que le brouillon de CETTE semaine et l'updated_at vu au rendu.
   async function enregistrer() {
     if (!draft) return
     setBusy(true); setMsg(null)
     try {
-      const fusion = [...contenuComplet.filter(c => c.semaine !== semaine), draft].sort((a, b) => a.semaine - b.semaine)
-      const res = await enregistrerReferenceLivre(livreId, fusion)
+      const res = await enregistrerFicheSemaine(livreId, draft, updatedAtRef)
       if (res.error) { setMsg(res.error); return }
       setEdition(false)
       router.refresh()
