@@ -19,7 +19,10 @@
   --encre:            #221C16;   /* texte principal */
   --encre-douce:      #5A4632;   /* texte secondaire / sépia */
   --muet:             #8A6F4E;   /* texte tertiaire, légendes */
+  --muet-clair:       #A8906A;   /* intitulés de section uppercase, numéros discrets */
   --bordure:          #E4DBC9;
+  --bordure-bouton:   #D8CCB4;   /* bordure des boutons secondaires, traits pointillés */
+  --puce:             #C9BBA0;   /* puces losange, contours de pastilles vides */
   /* états (indépendants du module) */
   --ok:               #5B6E4A;   --ok-teinte:        #E4E8D8;
   --attention:        #9A6A2E;   --attention-teinte: #EFE4CF;
@@ -59,7 +62,10 @@
   --color-encre:           var(--encre);
   --color-encre-douce:     var(--encre-douce);
   --color-muet:            var(--muet);
+  --color-muet-clair:      var(--muet-clair);
   --color-bordure:         var(--bordure);
+  --color-bordure-bouton:  var(--bordure-bouton);
+  --color-puce:            var(--puce);
   --color-ok:              var(--ok);
   --color-attention:       var(--attention);
   --color-retard:          var(--retard);

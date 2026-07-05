@@ -113,6 +113,10 @@ export interface ReferenceChapitre {
   concepts_cles: string[]
   // SEUL champ de la fiche destiné à l'élève (registre élève, tutoiement).
   synthese_modele: string
+  // Marquage PAR SEMAINE (optionnel : rétro-compatible avec le jsonb existant, qui
+  // ne porte que le flag global amende_par_prof). ISO 8601.
+  genere_le?: string
+  amende_le?: string
 }
 export type ReferenceStatut = 'PENDING' | 'READY' | 'ERROR'
 export interface LivreReference {

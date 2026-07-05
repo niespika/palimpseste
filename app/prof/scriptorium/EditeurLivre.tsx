@@ -12,9 +12,11 @@ export interface SemaineEdit { id: string; semaine: number | null; titre: string
 // semaines en un bloc, on pré-place les marqueurs aux bornes existantes et on
 // pré-remplit titres/chapitres, puis on laisse re-découper. Pas d'édition du texte
 // lui-même ; avertissement (dans le navigateur) si des lignes sortent des semaines.
-export default function EditeurLivre({ livreId, titre, auteur, signets, semaines }: { livreId: string; titre: string; auteur: string | null; signets: Signet[] | null; semaines: SemaineEdit[] }) {
+export default function EditeurLivre({ livreId, titre, auteur, signets, semaines, hrefRetour }: { livreId: string; titre: string; auteur: string | null; signets: Signet[] | null; semaines: SemaineEdit[]; hrefRetour?: string }) {
   const router = useRouter()
-  const [ouvert, setOuvert] = useState(false)
+  // Avec hrefRetour (vue livre, mode découpe pleine largeur) : l'éditeur démarre
+  // ouvert et Annuler / Enregistrer renvoient à la fiche au lieu de replier.
+  const [ouvert, setOuvert] = useState(Boolean(hrefRetour))
   const [auteurVal, setAuteurVal] = useState(auteur ?? '')
   const [etat, setEtat] = useState<{ sem: Semaine[]; valide: boolean }>({ sem: [], valide: false })
   const [chargement, setChargement] = useState(false)
@@ -55,6 +57,11 @@ export default function EditeurLivre({ livreId, titre, auteur, signets, semaines
     const res = await modifierLivreComplet(livreId, auteurVal, payload, totalLignes)
     setChargement(false)
     if (res.error) { setErreur(res.error); return }
+    if (hrefRetour) {
+      router.push(hrefRetour)
+      router.refresh()
+      return
+    }
     setOuvert(false)
     router.refresh()
   }
@@ -99,7 +106,7 @@ export default function EditeurLivre({ livreId, titre, auteur, signets, semaines
       </div>
       <p className="text-xs text-muet">
         Re-découpe : déplace les marqueurs de début/fin. Le texte lui-même n&apos;est pas modifiable ici, et la carte/référence ne sont pas régénérées
-        automatiquement (utilise « Régénérer » plus bas si besoin).
+        automatiquement (utilise « Régénérer » depuis la page du livre si besoin).
       </p>
       {semaines.length === 0 ? (
         <p className="text-sm text-muet">Aucune semaine à modifier.</p>
@@ -112,7 +119,7 @@ export default function EditeurLivre({ livreId, titre, auteur, signets, semaines
           className="bg-bouton text-surface px-4 py-2 rounded-lg text-sm hover:opacity-90 disabled:opacity-50">
           {chargement ? 'Enregistrement…' : 'Enregistrer'}
         </button>
-        <button type="button" onClick={() => setOuvert(false)} className="px-4 py-2 text-sm text-encre-douce hover:bg-parchemin-fonce rounded-lg">Annuler</button>
+        <button type="button" onClick={() => (hrefRetour ? router.push(hrefRetour) : setOuvert(false))} className="px-4 py-2 text-sm text-encre-douce hover:bg-parchemin-fonce rounded-lg">Annuler</button>
       </div>
     </div>
   )

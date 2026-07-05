@@ -758,6 +758,10 @@ export const parseReference = (x: unknown): ReferenceChapitre[] =>
     ? x.flatMap(c => {
         const semaine = Number((c as { semaine?: unknown })?.semaine)
         if (!Number.isInteger(semaine)) return []
+        // Stamps par semaine (optionnels) : à REcopier explicitement — parseReference
+        // reconstruit chaque entrée, les omettre les effacerait à la normalisation.
+        const genereLe = txt((c as { genere_le?: unknown })?.genere_le)
+        const amendeLe = txt((c as { amende_le?: unknown })?.amende_le)
         return [{
           semaine,
           titre: txt((c as { titre?: unknown })?.titre),
@@ -765,6 +769,8 @@ export const parseReference = (x: unknown): ReferenceChapitre[] =>
           arguments_cles: enListe((c as { arguments_cles?: unknown })?.arguments_cles),
           concepts_cles: enListe((c as { concepts_cles?: unknown })?.concepts_cles),
           synthese_modele: txt((c as { synthese_modele?: unknown })?.synthese_modele),
+          ...(genereLe ? { genere_le: genereLe } : {}),
+          ...(amendeLe ? { amende_le: amendeLe } : {}),
         }]
       })
     : []
@@ -863,8 +869,12 @@ export async function genererReferenceLivre(livreId: string): Promise<void> {
     if (manquantes.length > 0) throw new Error(`Référence incomplète : semaine(s) ${manquantes.join(', ')} absente(s).`)
 
     // Régénération IA → reprend la main (annule un amendement manuel précédent).
+    // Stamp genere_le PAR SEMAINE (les fiches d'un même run sortent du même lot :
+    // même instant) ; amende_le volontairement absent — la régénération l'efface.
+    const genereLe = new Date().toISOString()
+    const chapitresStampes = chapitres.map(c => ({ ...c, genere_le: genereLe, amende_le: undefined }))
     await admin.from('aletheia_livre_reference')
-      .update({ contenu: chapitres, statut: 'READY', erreur_at: null, amende_par_prof: false, updated_at: new Date().toISOString() })
+      .update({ contenu: chapitresStampes, statut: 'READY', erreur_at: null, amende_par_prof: false, updated_at: genereLe })
       .eq('scriptorium_livre_id', livreId).eq('statut', 'PENDING')
   } catch (err) {
     console.error('[aletheia] génération référence :', err)
