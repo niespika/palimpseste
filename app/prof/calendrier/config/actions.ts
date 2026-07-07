@@ -4,6 +4,7 @@ import { revalidatePath } from 'next/cache'
 import { createClient } from '@/utils/supabase/server'
 import { lundiOnOrBefore, addDaysUTC, toISODate } from '@/utils/calendrier-grille'
 import { FUSEAUX, estFuseauValide } from '@/utils/fuseau'
+import { PALETTE_CLASSES } from '@/utils/calendrier-couleurs'
 
 async function verifierProf() {
   const supabase = await createClient()
@@ -105,6 +106,32 @@ export async function supprimerSemestre(id: string): Promise<{ error?: string }>
   }
 
   const { error } = await supabase.from('semesters').delete().eq('id', id)
+  if (error) return { error: error.message }
+  revalidatePath('/prof/calendrier/config')
+  return {}
+}
+
+export async function archiverSemestre(id: string): Promise<{ error?: string }> {
+  const { supabase } = await verifierProf()
+  // Garde-fou : ne jamais archiver le semestre actif (il pilote la numérotation
+  // des semaines et sert de référence à Fragments/Quazian).
+  const { data: sem } = await supabase.from('semesters').select('is_active').eq('id', id).maybeSingle()
+  if (!sem) return { error: 'Semestre introuvable.' }
+  if (sem.is_active) {
+    return { error: 'Impossible d\'archiver le semestre actif. Définis d\'abord un autre semestre actif.' }
+  }
+  const { error } = await supabase
+    .from('semesters')
+    .update({ archived_at: new Date().toISOString() })
+    .eq('id', id)
+  if (error) return { error: error.message }
+  revalidatePath('/prof/calendrier/config')
+  return {}
+}
+
+export async function restaurerSemestre(id: string): Promise<{ error?: string }> {
+  const { supabase } = await verifierProf()
+  const { error } = await supabase.from('semesters').update({ archived_at: null }).eq('id', id)
   if (error) return { error: error.message }
   revalidatePath('/prof/calendrier/config')
   return {}
@@ -308,6 +335,31 @@ export async function definirCouleurClasse(
   const { error } = await supabase.from('classes').update({ couleur }).eq('id', classeId)
   if (error) return { error: error.message }
   revalidatePath('/prof/calendrier/config')
+  return {}
+}
+
+/**
+ * « Couleurs auto » : réattribue à toutes les classes actives des teintes de
+ * palette ESPACÉES (maximise l'écart de teinte pour N classes). Déterministe :
+ * classes triées par nom, teinte = round(i · 12 / N). Le client rejoue le même
+ * calcul pour un rendu optimiste. Écrase les couleurs existantes.
+ */
+export async function repartirCouleursClasses(): Promise<{ error?: string }> {
+  const { supabase } = await verifierProf()
+  const { data: classes } = await supabase
+    .from('classes')
+    .select('id')
+    .eq('statut', 'active')
+    .order('nom')
+  const liste = classes ?? []
+  const n = Math.max(liste.length, 1)
+  for (let i = 0; i < liste.length; i++) {
+    const couleur = PALETTE_CLASSES[Math.floor((i * PALETTE_CLASSES.length) / n) % PALETTE_CLASSES.length]
+    const { error } = await supabase.from('classes').update({ couleur }).eq('id', liste[i].id)
+    if (error) return { error: error.message }
+  }
+  revalidatePath('/prof/calendrier/config')
+  revalidatePath('/prof/calendrier')
   return {}
 }
 
