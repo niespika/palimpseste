@@ -11,6 +11,9 @@ export interface Semestre {
   end_date: string
   is_active: boolean
   created_at: string
+  // Archivage (migration calendrier_config_archivage.sql). `null` = vivant.
+  // Optionnel tant que la migration n'est pas appliquée (le code dégrade en null).
+  archived_at?: string | null
 }
 
 export interface Holiday {
