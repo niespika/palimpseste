@@ -661,6 +661,161 @@ export async function supprimerContenu(id: string) {
   return { success: true }
 }
 
+// ── Bibliothèque de contenus réutilisables (Textes & Cours) — Parcours L2 ────
+// Items de PREMIÈRE CLASSE (table scriptorium_contenus) : AUCUN lien unité /
+// semaine / classe (ces dimensions vivront sur les créneaux de parcours, L4).
+// Réutilisent les helpers d'extraction/upload/images ci-dessus. Suffixe « Biblio »
+// tant que l'ancien jeu (scriptorium_documents) COEXISTE — avant la migration
+// L7/L8 qui retirera les unités. Après migration, l'ancien jeu ne servira plus
+// que pour les documents de livre (édités via modifierLivreComplet). Cf. SPEC §7.6.
+
+// Crée un texte ou un cours. `type` (caché) ∈ {texte, cours}. Un fichier image est
+// attaché (scriptorium_contenu_images) ; un document PDF/DOCX/TXT est extrait dans texte.
+export async function creerContenu(formData: FormData): Promise<{ id?: string; error?: string }> {
+  const { supabase, userId } = await verifierProf()
+  const type = (formData.get('type') as string) === 'texte' ? 'texte' : 'cours'
+  const titre = (formData.get('titre') as string)?.trim()
+  const auteur = (formData.get('auteur') as string)?.trim() || null
+  let texte = (formData.get('texte') as string)?.trim() || null
+  const chapitres = (formData.get('chapitres') as string)?.trim() || null
+  const legende = (formData.get('legende') as string)?.trim() || null
+  const fichier = formData.get('fichier') as File | null
+
+  if (!titre) return { error: 'Donne un titre au contenu.' }
+
+  // Fichier optionnel : image → pièce jointe ; document texte → extraction (texte seul).
+  let fichierImage: File | null = null
+  if (fichier && fichier.size > 0) {
+    if (estImage(fichier.type, fichier.name)) {
+      fichierImage = fichier
+    } else {
+      const buffer = Buffer.from(await fichier.arrayBuffer())
+      const extrait = await extraireTexte(buffer, fichier.type, fichier.name)
+      if (extrait) texte = [texte, extrait].filter(Boolean).join('\n\n')
+    }
+  }
+
+  const { data: contenu, error } = await supabase
+    .from('scriptorium_contenus')
+    .insert({ type, titre, auteur, texte_extrait: texte, chapitres, created_by: userId })
+    .select('id')
+    .single()
+  if (error || !contenu) return { error: error?.message ?? 'Création impossible.' }
+
+  if (fichierImage) {
+    const up = await uploaderFichier(userId, contenu.id as string, fichierImage)
+    if (up.error || !up.path) {
+      // Le contenu est créé ; seule l'image a échoué → on journalise (parité avec
+      // l'ancien flux : pas de rollback du contenu pour une image ratée).
+      console.error('[scriptorium] creerContenu : upload image échoué', up.error)
+    } else {
+      const { error: eImg } = await supabase
+        .from('scriptorium_contenu_images')
+        .insert({ contenu_id: contenu.id, fichier_ref: up.path, legende })
+      if (eImg) console.error('[scriptorium] creerContenu : insert image échoué', eImg.message)
+    }
+  }
+
+  revalidatePath('/prof/scriptorium')
+  return { id: contenu.id as string }
+}
+
+export async function modifierContenuBiblio(formData: FormData): Promise<{ success?: boolean; error?: string }> {
+  const { supabase } = await verifierProf()
+  const id = formData.get('id') as string
+  const titre = (formData.get('titre') as string)?.trim()
+  const auteur = (formData.get('auteur') as string)?.trim() || null
+  const texte = (formData.get('texte') as string)?.trim() || null
+  const chapitres = (formData.get('chapitres') as string)?.trim() || null
+
+  if (!id) return { error: 'Identifiant manquant.' }
+  if (!titre) return { error: 'Le titre est requis.' }
+
+  const { error } = await supabase
+    .from('scriptorium_contenus')
+    .update({ titre, auteur, texte_extrait: texte, chapitres, updated_at: new Date().toISOString() })
+    .eq('id', id)
+  if (error) return { error: error.message }
+  revalidatePath('/prof/scriptorium')
+  return { success: true }
+}
+
+// SOFT-DELETE SEUL (schema-S7) : on NE purge PAS les créneaux référents (ils sont
+// conservés « contenu retiré », restaurables) et on GARDE les fichiers Storage
+// (restauration possible). Une purge dure éventuelle nettoierait le Storage.
+export async function supprimerContenuBiblio(id: string): Promise<{ success?: boolean; error?: string }> {
+  const { supabase } = await verifierProf()
+  if (!RE_UUID.test(id)) return { error: 'Identifiant invalide.' }
+  const { error } = await supabase
+    .from('scriptorium_contenus')
+    .update({ supprime_at: new Date().toISOString() })
+    .eq('id', id)
+  if (error) return { error: error.message }
+  revalidatePath('/prof/scriptorium')
+  return { success: true }
+}
+
+// Restauration (schema-S7) : réactive le contenu partout (y compris ses créneaux).
+export async function restaurerContenuBiblio(id: string): Promise<{ success?: boolean; error?: string }> {
+  const { supabase } = await verifierProf()
+  if (!RE_UUID.test(id)) return { error: 'Identifiant invalide.' }
+  const { error } = await supabase
+    .from('scriptorium_contenus')
+    .update({ supprime_at: null })
+    .eq('id', id)
+  if (error) return { error: error.message }
+  revalidatePath('/prof/scriptorium')
+  return { success: true }
+}
+
+export async function ajouterImageContenu(formData: FormData): Promise<{ success?: boolean; error?: string }> {
+  const { supabase, userId } = await verifierProf()
+  const contenuId = formData.get('contenuId') as string
+  const legende = (formData.get('legende') as string)?.trim() || null
+  const fichier = formData.get('fichier') as File | null
+
+  if (!RE_UUID.test(contenuId)) return { error: 'Contenu invalide.' }
+  if (!fichier || fichier.size === 0) return { error: 'Aucune image fournie.' }
+  if (!estImage(fichier.type, fichier.name)) return { error: 'Le fichier doit être une image.' }
+
+  const up = await uploaderFichier(userId, contenuId, fichier)
+  if (up.error || !up.path) return { error: up.error ?? 'Upload impossible.' }
+
+  const { data: dernier } = await supabase
+    .from('scriptorium_contenu_images')
+    .select('ordre')
+    .eq('contenu_id', contenuId)
+    .order('ordre', { ascending: false })
+    .limit(1)
+    .maybeSingle()
+
+  const { error } = await supabase.from('scriptorium_contenu_images').insert({
+    contenu_id: contenuId,
+    fichier_ref: up.path,
+    legende,
+    ordre: (dernier?.ordre ?? 0) + 1,
+  })
+  if (error) return { error: error.message }
+  revalidatePath('/prof/scriptorium')
+  return { success: true }
+}
+
+export async function supprimerImageContenu(imageId: string): Promise<{ success?: boolean; error?: string }> {
+  const { supabase } = await verifierProf()
+  const admin = createAdminClient()
+  const { data: img } = await supabase
+    .from('scriptorium_contenu_images')
+    .select('fichier_ref')
+    .eq('id', imageId)
+    .maybeSingle()
+
+  const { error } = await supabase.from('scriptorium_contenu_images').delete().eq('id', imageId)
+  if (error) return { error: error.message }
+  if (img?.fichier_ref) await admin.storage.from('scriptorium').remove([img.fichier_ref as string])
+  revalidatePath('/prof/scriptorium')
+  return { success: true }
+}
+
 // ── Suppression d'une unité / d'un livre (archive + purge ciblée) ────────────
 // « Supprimer » NE supprime PAS la ligne scriptorium_unites : ses dépendances
 // sont en ON DELETE CASCADE (aletheia_travaux = travail élève + retours IA,

@@ -6,6 +6,8 @@ import Tuile from '@/components/Tuile'
 import FormulaireContenu from './FormulaireContenu'
 import FormulaireLivre from './FormulaireLivre'
 import LigneContenu, { type ContenuItem, type ImageItem } from './LigneContenu'
+import BibliothequeContenus from './BibliothequeContenus'
+import type { ContenuBiblio } from './LigneContenuBiblio'
 import BoutonSupprimerUnite from './BoutonSupprimerUnite'
 import VueLivre from './vue-livre/VueLivre'
 import type { Signet } from './decoupe-utils'
@@ -102,6 +104,63 @@ export default async function ScriptoriumPage({
     if (estLivre.get(d.unite_id)) classesParDoc.set(d.id, classesParUnite.get(d.unite_id) ?? [])
   }
 
+  // ── Bibliothèque (onglets Textes / Cours) — Parcours L2 ──────────────────────
+  // Items réutilisables (scriptorium_contenus), sans classe/unité/semaine. On ne
+  // charge/signe que pour l'onglet actif. Si les tables n'existent pas encore
+  // (migration parcours_phase_a.sql non jouée), les requêtes renvoient une erreur
+  // silencieuse (data null) → listes vides, pas de crash de la page.
+  const biblioType: 'texte' | 'cours' | null = vue === 'textes' ? 'texte' : vue === 'cours' ? 'cours' : null
+  let biblioContenus: ContenuBiblio[] = []
+  let biblioCorbeille: { id: string; titre: string }[] = []
+  if (biblioType) {
+    const [{ data: rowsC }, { data: imgsC }, { data: creneauxC }] = await Promise.all([
+      supabase.from('scriptorium_contenus')
+        .select('id, type, titre, auteur, texte_extrait, chapitres, supprime_at')
+        .eq('type', biblioType).order('titre'),
+      supabase.from('scriptorium_contenu_images')
+        .select('id, contenu_id, fichier_ref, legende, ordre').not('contenu_id', 'is', null).order('ordre'),
+      supabase.from('scriptorium_parcours_creneaux').select('parcours_id, contenu_id').not('contenu_id', 'is', null),
+    ])
+    const rows = (rowsC ?? []) as {
+      id: string; type: string; titre: string; auteur: string | null
+      texte_extrait: string | null; chapitres: string | null; supprime_at: string | null
+    }[]
+    const vivants = rows.filter(r => r.supprime_at == null)
+    const idsVivants = new Set(vivants.map(r => r.id))
+
+    // Compteur « utilisé dans N parcours » = nombre de PARCOURS DISTINCTS (un contenu
+    // peut occuper plusieurs semaines/positions d'un même parcours → 1 seul compté).
+    const parcoursParContenu = new Map<string, Set<string>>()
+    for (const c of creneauxC ?? []) {
+      const cid = c.contenu_id as string
+      if (!idsVivants.has(cid)) continue
+      const s = parcoursParContenu.get(cid) ?? new Set<string>()
+      s.add(c.parcours_id as string)
+      parcoursParContenu.set(cid, s)
+    }
+
+    // Images des contenus VIVANTS de cet onglet, signées (URL éphémère). On ne signe
+    // pas celles des contenus en corbeille (jamais rendues).
+    const imgsVivants = (imgsC ?? []).filter(i => idsVivants.has(i.contenu_id as string))
+    const imgsSignees = await Promise.all(imgsVivants.map(async i => ({
+      contenu_id: i.contenu_id as string,
+      item: { id: i.id as string, url: await getUrlSignee(i.fichier_ref as string), legende: i.legende as string | null } as ImageItem,
+    })))
+    const imagesParContenu = new Map<string, ImageItem[]>()
+    for (const { contenu_id, item } of imgsSignees) {
+      const arr = imagesParContenu.get(contenu_id) ?? []
+      arr.push(item)
+      imagesParContenu.set(contenu_id, arr)
+    }
+
+    biblioContenus = vivants.map(r => ({
+      id: r.id, type: r.type as 'texte' | 'cours', titre: r.titre, auteur: r.auteur,
+      texte: r.texte_extrait, chapitres: r.chapitres,
+      images: imagesParContenu.get(r.id) ?? [], nbParcours: parcoursParContenu.get(r.id)?.size ?? 0,
+    }))
+    biblioCorbeille = rows.filter(r => r.supprime_at != null).map(r => ({ id: r.id, titre: r.titre }))
+  }
+
   // Quels contenus seront rendus (drill) → on ne signe les fichiers que pour ceux-là.
   const docsAffiches = vue === 'unites'
     ? (uniteSel ? docs.filter(d => d.unite_id === uniteSel) : [])
@@ -171,16 +230,25 @@ export default async function ScriptoriumPage({
 
   return (
     <div className="space-y-6 pb-8">
-      <div className="space-y-2">
-        <FormulaireContenu unites={unitesList} classes={classesList} />
-        <FormulaireLivre classes={classesList} />
-      </div>
+      {!biblioType && (
+        <div className="space-y-2">
+          <FormulaireContenu unites={unitesList} classes={classesList} />
+          <FormulaireLivre classes={classesList} />
+        </div>
+      )}
 
-      <nav className="flex gap-1 border-b border-bordure">
+      <nav className="flex flex-wrap gap-1 border-b border-bordure">
         <Link href="/prof/scriptorium?vue=classes" className={ongletClasse('classes')}>Par classe</Link>
         <Link href="/prof/scriptorium?vue=unites" className={ongletClasse('unites')}>Par unité</Link>
+        <Link href="/prof/scriptorium?vue=textes" className={ongletClasse('textes')}>Textes</Link>
+        <Link href="/prof/scriptorium?vue=cours" className={ongletClasse('cours')}>Cours</Link>
         <Link href="/prof/scriptorium?vue=parametres" className={ongletClasse('parametres')}>Paramètres</Link>
       </nav>
+
+      {/* ── Bibliothèque : Textes / Cours (Parcours L2) ─────────────────────── */}
+      {biblioType && (
+        <BibliothequeContenus type={biblioType} contenus={biblioContenus} corbeille={biblioCorbeille} />
+      )}
 
       {/* ── Perspective « classes » ─────────────────────────────────────── */}
       {vue === 'classes' && (
