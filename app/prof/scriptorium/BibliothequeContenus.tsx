@@ -4,7 +4,7 @@ import { useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import FormulaireContenuBiblio from './FormulaireContenuBiblio'
 import LigneContenuBiblio, { type ContenuBiblio } from './LigneContenuBiblio'
-import { restaurerContenuBiblio } from './actions'
+import { restaurerContenuBiblio, purgerContenuBiblio } from './actions'
 
 // Onglet bibliothèque (Textes OU Cours). Liste + recherche client + création +
 // corbeille (contenus soft-deletés restaurables — schema-S7).
@@ -40,6 +40,23 @@ export default function BibliothequeContenus({
     router.refresh()
   }
 
+  async function handlePurger(id: string) {
+    if (!confirm('Supprimer DÉFINITIVEMENT ce contenu ? Il sera retiré des parcours où il apparaît comme « contenu retiré ». Irréversible.')) return
+    setChargement(id)
+    const res = await purgerContenuBiblio(id)
+    setChargement(null)
+    if (res.error) { alert(res.error); return }
+    router.refresh()
+  }
+
+  async function handleViderCorbeille() {
+    if (!confirm(`Vider la corbeille : supprimer DÉFINITIVEMENT ${corbeille.length} contenu(s) ? Ils seront retirés des parcours où ils apparaissent comme « contenu retiré ». Irréversible.`)) return
+    setChargement('__all__')
+    for (const c of corbeille) await purgerContenuBiblio(c.id)
+    setChargement(null)
+    router.refresh()
+  }
+
   return (
     <div className="space-y-4">
       <FormulaireContenuBiblio type={type} />
@@ -70,24 +87,44 @@ export default function BibliothequeContenus({
 
       {corbeille.length > 0 && (
         <div className="pt-2">
-          <button
-            onClick={() => setVoirCorbeille(v => !v)}
-            className="text-xs text-muet hover:text-encre"
-          >
-            {voirCorbeille ? '▾' : '▸'} Corbeille ({corbeille.length})
-          </button>
+          <div className="flex items-center justify-between gap-2">
+            <button
+              onClick={() => setVoirCorbeille(v => !v)}
+              className="text-xs text-muet hover:text-encre"
+            >
+              {voirCorbeille ? '▾' : '▸'} Corbeille ({corbeille.length})
+            </button>
+            {voirCorbeille && (
+              <button
+                onClick={handleViderCorbeille}
+                disabled={chargement === '__all__'}
+                className="text-xs text-retard hover:underline disabled:opacity-50"
+              >
+                {chargement === '__all__' ? '…' : 'Vider la corbeille'}
+              </button>
+            )}
+          </div>
           {voirCorbeille && (
             <div className="mt-2 space-y-1.5">
               {corbeille.map(c => (
                 <div key={c.id} className="flex items-center justify-between gap-3 border border-bordure rounded-lg px-3 py-2">
                   <span className="text-sm text-muet line-through truncate">{c.titre}</span>
-                  <button
-                    onClick={() => handleRestaurer(c.id)}
-                    disabled={chargement === c.id}
-                    className="text-xs text-encre-douce hover:text-encre disabled:opacity-50 flex-shrink-0"
-                  >
-                    {chargement === c.id ? '…' : 'Restaurer'}
-                  </button>
+                  <div className="flex items-center gap-3 flex-shrink-0">
+                    <button
+                      onClick={() => handleRestaurer(c.id)}
+                      disabled={chargement === c.id}
+                      className="text-xs text-encre-douce hover:text-encre disabled:opacity-50"
+                    >
+                      {chargement === c.id ? '…' : 'Restaurer'}
+                    </button>
+                    <button
+                      onClick={() => handlePurger(c.id)}
+                      disabled={chargement === c.id}
+                      className="text-xs text-muet hover:text-retard disabled:opacity-50"
+                    >
+                      Supprimer déf.
+                    </button>
+                  </div>
                 </div>
               ))}
             </div>
