@@ -32,7 +32,7 @@ export default function VueLivre({ livre, classes, classeIds, docs, nbDocsSansSe
   semaineParam?: string
   modeDecoupe: boolean
 }) {
-  const hrefBase = `/prof/scriptorium?vue=unites&unite=${livre.id}`
+  const hrefBase = `/prof/scriptorium?vue=livres&unite=${livre.id}`
 
   // Une entrée par semaine (normalement 1 document/semaine — défensif : textes
   // fusionnés si plusieurs, première occurrence pour titre/chapitres).

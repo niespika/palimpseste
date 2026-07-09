@@ -36,8 +36,8 @@ export default function BoutonSupprimerUnite({ uniteId, label, estLivre, libelle
     setPending(false)
     if (res?.error) { setErreur(res.error); return }
     fermer()
-    // La carte est masquée → on quitte le panneau de détail (sinon il pointe une unité absente).
-    router.push('/prof/scriptorium?vue=unites')
+    // La carte est masquée → on quitte le panneau de détail (sinon il pointe un livre absent).
+    router.push('/prof/scriptorium?vue=livres')
     router.refresh()
   }
 

@@ -19,8 +19,8 @@ export default function EnteteLivre({ livre, classes, classeIds, nbSemaines, nbF
   return (
     <div>
       <div className="mb-1.5">
-        <Link href="/prof/scriptorium?vue=unites" className="font-ui font-medium text-[13.5px] text-muet hover:text-pigment transition-colors">
-          ← Toutes les unités
+        <Link href="/prof/scriptorium?vue=livres" className="font-ui font-medium text-[13.5px] text-muet hover:text-pigment transition-colors">
+          ← Tous les livres
         </Link>
       </div>
       <div className="flex items-end gap-[18px] flex-wrap">
