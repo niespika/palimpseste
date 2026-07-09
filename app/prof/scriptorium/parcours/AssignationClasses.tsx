@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import ChampDate from '@/app/prof/calendrier/config/ChampDate'
-import { assignerParcoursClasse, retirerParcoursClasse } from '../actions'
+import { assignerParcoursClasse, retirerParcoursClasse, publierHoraire } from '../actions'
 import type { LigneAssignation, ApercuFrise } from './frise-serveur'
 
 function fmtJour(iso: string): string {
@@ -86,6 +86,14 @@ function LigneRow({ parcoursId, ligne }: { parcoursId: string; ligne: LigneAssig
     await assigner(date)
   }
 
+  async function publier() {
+    setErreur(null); setAvis(null); setChargement(true)
+    const res = await publierHoraire(parcoursId, ligne.classeId)
+    setChargement(false)
+    if (res.error) { setErreur(res.error); return }
+    router.refresh()
+  }
+
   return (
     <div className="border border-bordure rounded-lg p-3">
       <div className="flex items-center justify-between gap-2">
@@ -115,6 +123,33 @@ function LigneRow({ parcoursId, ligne }: { parcoursId: string; ligne: LigneAssig
       {ligne.assigned && ligne.apercu && <ApercuBloc apercu={ligne.apercu} />}
       {ligne.assigned && !ligne.apercu && (
         <p className="text-xs text-muet mt-2">Aucune date — pose une date de début pour voir les échéances réelles.</p>
+      )}
+
+      {/* Publication de l'horaire (fige les dates ; signale les décalages ultérieurs) */}
+      {ligne.assigned && ligne.apercu && (
+        <div className="mt-2 border-t border-bordure pt-2 space-y-1.5">
+          {ligne.snapshot ? (
+            <>
+              <p className="text-xs text-muet">
+                Horaire publié{ligne.snapshot.genereLe ? ` le ${fmtJour(ligne.snapshot.genereLe.slice(0, 10))}` : ''} (v{ligne.snapshot.version}).
+              </p>
+              {ligne.diff && ligne.diff.nbChanges > 0 ? (
+                <p className="text-xs bg-attention-teinte text-attention px-2 py-1 rounded">
+                  ⚠ {ligne.diff.nbChanges} échéance(s) ont changé depuis la publication (le calendrier a été modifié). Re-publie pour figer le nouvel horaire.
+                </p>
+              ) : (
+                <p className="text-xs text-ok">✓ Horaire à jour.</p>
+              )}
+              <button onClick={publier} disabled={chargement} className="text-xs text-encre-douce hover:text-encre disabled:opacity-50">
+                {chargement ? '…' : 'Re-publier l’horaire'}
+              </button>
+            </>
+          ) : (
+            <button onClick={publier} disabled={chargement} className="text-xs bg-bouton text-surface px-2 py-1 rounded disabled:opacity-50">
+              {chargement ? '…' : 'Publier l’horaire'}
+            </button>
+          )}
+        </div>
       )}
     </div>
   )
