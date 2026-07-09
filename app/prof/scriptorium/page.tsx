@@ -8,6 +8,14 @@ import FormulaireLivre from './FormulaireLivre'
 import LigneContenu, { type ContenuItem, type ImageItem } from './LigneContenu'
 import BibliothequeContenus from './BibliothequeContenus'
 import type { ContenuBiblio } from './LigneContenuBiblio'
+import FormulaireParcours from './parcours/FormulaireParcours'
+import GrilleParcours from './parcours/GrilleParcours'
+import {
+  chargerListeParcours, chargerParcoursDetail, chargerCiblesPicker, chargerParcoursDeClasse,
+  type ParcoursListItem, type ParcoursDetail, type CiblesPicker, type ParcoursDeClasse,
+} from './parcours/donnees'
+import AssignationClasses from './parcours/AssignationClasses'
+import { chargerAssignationsAvecApercu, type LigneAssignation } from './parcours/frise-serveur'
 import BoutonSupprimerUnite from './BoutonSupprimerUnite'
 import VueLivre from './vue-livre/VueLivre'
 import type { Signet } from './decoupe-utils'
@@ -59,7 +67,7 @@ function parSemaine(docs: DocRow[]): [number | null, DocRow[]][] {
 export default async function ScriptoriumPage({
   searchParams,
 }: {
-  searchParams: Promise<{ vue?: string; classe?: string; unite?: string; semaine?: string; edition?: string }>
+  searchParams: Promise<{ vue?: string; classe?: string; unite?: string; semaine?: string; edition?: string; parcours?: string }>
 }) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
@@ -67,7 +75,7 @@ export default async function ScriptoriumPage({
   const { data: profile } = await supabase.from('profiles').select('role').eq('id', user.id).single()
   if (profile?.role !== 'prof') notFound()
 
-  const { vue = 'classes', classe: classeSel, unite: uniteSel, semaine, edition } = await searchParams
+  const { vue = 'classes', classe: classeSel, unite: uniteSel, semaine, edition, parcours: parcoursSel } = await searchParams
 
   const [{ data: classes }, { data: unites }, { data: docsBruts }, { data: liens }, { data: imagesBrutes }, { data: liensUnite }] = await Promise.all([
     supabase.from('classes').select('id, nom').order('nom'),
@@ -113,13 +121,14 @@ export default async function ScriptoriumPage({
   let biblioContenus: ContenuBiblio[] = []
   let biblioCorbeille: { id: string; titre: string }[] = []
   if (biblioType) {
-    const [{ data: rowsC }, { data: imgsC }, { data: creneauxC }] = await Promise.all([
+    const [{ data: rowsC }, { data: imgsC }, { data: creneauxC }, { data: parcVivantsC }] = await Promise.all([
       supabase.from('scriptorium_contenus')
         .select('id, type, titre, auteur, texte_extrait, chapitres, supprime_at')
         .eq('type', biblioType).order('titre'),
       supabase.from('scriptorium_contenu_images')
         .select('id, contenu_id, fichier_ref, legende, ordre').not('contenu_id', 'is', null).order('ordre'),
       supabase.from('scriptorium_parcours_creneaux').select('parcours_id, contenu_id').not('contenu_id', 'is', null),
+      supabase.from('scriptorium_parcours').select('id').is('supprime_at', null),
     ])
     const rows = (rowsC ?? []) as {
       id: string; type: string; titre: string; auteur: string | null
@@ -130,12 +139,15 @@ export default async function ScriptoriumPage({
 
     // Compteur « utilisé dans N parcours » = nombre de PARCOURS DISTINCTS (un contenu
     // peut occuper plusieurs semaines/positions d'un même parcours → 1 seul compté).
+    const parcoursVivants = new Set((parcVivantsC ?? []).map(p => p.id as string))
     const parcoursParContenu = new Map<string, Set<string>>()
     for (const c of creneauxC ?? []) {
       const cid = c.contenu_id as string
       if (!idsVivants.has(cid)) continue
+      const pid = c.parcours_id as string
+      if (!parcoursVivants.has(pid)) continue // ignore les créneaux de parcours supprimés
       const s = parcoursParContenu.get(cid) ?? new Set<string>()
-      s.add(c.parcours_id as string)
+      s.add(pid)
       parcoursParContenu.set(cid, s)
     }
 
@@ -159,6 +171,32 @@ export default async function ScriptoriumPage({
       images: imagesParContenu.get(r.id) ?? [], nbParcours: parcoursParContenu.get(r.id)?.size ?? 0,
     }))
     biblioCorbeille = rows.filter(r => r.supprime_at != null).map(r => ({ id: r.id, titre: r.titre }))
+  }
+
+  // ── Parcours (onglet builder) — L4 ───────────────────────────────────────────
+  const estParcours = vue === 'parcours'
+  let listeParcours: ParcoursListItem[] = []
+  let parcoursDetail: ParcoursDetail | null = null
+  let ciblesPicker: CiblesPicker = { textes: [], cours: [], livres: [] }
+  let assignations: LigneAssignation[] = []
+  if (estParcours) {
+    if (parcoursSel) {
+      ;[parcoursDetail, ciblesPicker] = await Promise.all([
+        chargerParcoursDetail(parcoursSel),
+        chargerCiblesPicker(),
+      ])
+      if (parcoursDetail) {
+        assignations = await chargerAssignationsAvecApercu(parcoursDetail.id, parcoursDetail.nbSemaines, classesList)
+      }
+    } else {
+      listeParcours = await chargerListeParcours()
+    }
+  }
+
+  // Parcours (vivants) assignés à la classe sélectionnée — vue « Par classe ».
+  let parcoursDeClasse: ParcoursDeClasse[] = []
+  if (vue === 'classes' && classeSel) {
+    parcoursDeClasse = await chargerParcoursDeClasse(classeSel)
   }
 
   // Quels contenus seront rendus (drill) → on ne signe les fichiers que pour ceux-là.
@@ -230,7 +268,7 @@ export default async function ScriptoriumPage({
 
   return (
     <div className="space-y-6 pb-8">
-      {!biblioType && (
+      {vue === 'unites' && (
         <div className="space-y-2">
           <FormulaireContenu unites={unitesList} classes={classesList} />
           <FormulaireLivre classes={classesList} />
@@ -242,12 +280,44 @@ export default async function ScriptoriumPage({
         <Link href="/prof/scriptorium?vue=unites" className={ongletClasse('unites')}>Par unité</Link>
         <Link href="/prof/scriptorium?vue=textes" className={ongletClasse('textes')}>Textes</Link>
         <Link href="/prof/scriptorium?vue=cours" className={ongletClasse('cours')}>Cours</Link>
+        <Link href="/prof/scriptorium?vue=parcours" className={ongletClasse('parcours')}>Parcours</Link>
         <Link href="/prof/scriptorium?vue=parametres" className={ongletClasse('parametres')}>Paramètres</Link>
       </nav>
 
       {/* ── Bibliothèque : Textes / Cours (Parcours L2) ─────────────────────── */}
       {biblioType && (
         <BibliothequeContenus type={biblioType} contenus={biblioContenus} corbeille={biblioCorbeille} />
+      )}
+
+      {/* ── Parcours : builder (Parcours L4) ─────────────────────────────────── */}
+      {estParcours && (
+        parcoursDetail ? (
+          <div className="space-y-6">
+            <GrilleParcours parcours={parcoursDetail} cibles={ciblesPicker} />
+            <AssignationClasses parcoursId={parcoursDetail.id} lignes={assignations} />
+          </div>
+        ) : parcoursSel ? (
+          <p className="text-sm text-muet">Parcours introuvable. <Link href="/prof/scriptorium?vue=parcours" className="underline">Retour à la liste</Link>.</p>
+        ) : (
+          <div className="space-y-3">
+            <FormulaireParcours />
+            {listeParcours.length === 0 ? (
+              <p className="text-sm text-muet">Aucun parcours pour l’instant. Crée-en un ci-dessus, puis pose des Textes/Cours/Livres semaine par semaine.</p>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                {listeParcours.map(p => (
+                  <Tuile
+                    key={p.id}
+                    nom={p.titre}
+                    sousTitre={`${p.nbSemaines} semaine${p.nbSemaines > 1 ? 's' : ''} · ${p.nbClasses} classe${p.nbClasses > 1 ? 's' : ''}`}
+                    href={`/prof/scriptorium?vue=parcours&parcours=${p.id}`}
+                    couleur={p.nbClasses > 0 ? 'vert' : 'neutre'}
+                  />
+                ))}
+              </div>
+            )}
+          </div>
+        )
       )}
 
       {/* ── Perspective « classes » ─────────────────────────────────────── */}
@@ -272,8 +342,24 @@ export default async function ScriptoriumPage({
           {classeSel && (
             <div className="bg-surface border border-bordure rounded-xl p-4 space-y-3">
               <h3 className="font-medium text-encre">{classeNom.get(classeSel) ?? 'Classe'}</h3>
+              {parcoursDeClasse.length > 0 && (
+                <div className="space-y-2">
+                  <p className="text-xs text-muet uppercase tracking-wide">Parcours assignés</p>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    {parcoursDeClasse.map(p => (
+                      <Tuile
+                        key={p.id}
+                        nom={p.titre}
+                        sousTitre={`${p.nbSemaines} sem.${p.dateDebut ? ` · début ${p.dateDebut.split('-').reverse().join('/')}` : ' · sans date'}`}
+                        href={`/prof/scriptorium?vue=parcours&parcours=${p.id}`}
+                        couleur="vert"
+                      />
+                    ))}
+                  </div>
+                </div>
+              )}
               {docsAffiches.length === 0 ? (
-                <p className="text-sm text-muet">Aucun contenu assigné à cette classe.</p>
+                <p className="text-sm text-muet">Aucune unité (ancien format) assignée à cette classe.</p>
               ) : (
                 unitesList
                   .filter(u => docsAffiches.some(d => d.unite_id === u.id))

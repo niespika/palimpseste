@@ -7,6 +7,7 @@ import { createAdminClient } from '@/utils/supabase/admin'
 import { PROMPT_CAPSTONE_DEFAUT, PROMPT_REFERENCE_DEFAUT } from '@/utils/aletheia-retours'
 import type { Capstone, ReferenceChapitre } from '@/app/eleve/modules/aletheia/types'
 import { reassemblerLivre, type Signet } from './decoupe-utils'
+import { resoudreFrisePourDate } from './parcours/frise-serveur'
 
 // ── Import PDF « découpé en semaines » : seuils & garde-fous (SPEC) ──────────
 const IMPORT_MAX_PAGES = 600      // refus au-delà (décision produit)
@@ -768,6 +769,31 @@ export async function restaurerContenuBiblio(id: string): Promise<{ success?: bo
   return { success: true }
 }
 
+// Suppression DÉFINITIVE d'un contenu de la corbeille (soft-deleté uniquement) :
+// retire ses créneaux référents (les « contenu retiré » disparaissent des parcours),
+// puis la ligne (cascade sur ses images) + les fichiers Storage. IRRÉVERSIBLE.
+export async function purgerContenuBiblio(id: string): Promise<{ success?: boolean; error?: string }> {
+  const { supabase } = await verifierProf()
+  const admin = createAdminClient()
+  if (!RE_UUID.test(id)) return { error: 'Identifiant invalide.' }
+
+  const { data: c } = await supabase.from('scriptorium_contenus').select('supprime_at').eq('id', id).maybeSingle()
+  if (!c) return { error: 'Contenu introuvable.' }
+  if (!c.supprime_at) return { error: 'Ce contenu n’est pas dans la corbeille (mets-le d’abord en corbeille).' }
+
+  // Fichiers Storage à nettoyer (collectés AVANT le delete qui cascade les images).
+  const { data: imgs } = await supabase.from('scriptorium_contenu_images').select('fichier_ref').eq('contenu_id', id)
+  // Créneaux référents d'abord (FK contenu_id ON DELETE RESTRICT).
+  await supabase.from('scriptorium_parcours_creneaux').delete().eq('contenu_id', id)
+  const { error } = await supabase.from('scriptorium_contenus').delete().eq('id', id) // cascade → images
+  if (error) return { error: error.message }
+  const chemins = (imgs ?? []).map(i => i.fichier_ref as string).filter(Boolean)
+  if (chemins.length) await admin.storage.from('scriptorium').remove(chemins)
+
+  revalidatePath('/prof/scriptorium')
+  return { success: true }
+}
+
 export async function ajouterImageContenu(formData: FormData): Promise<{ success?: boolean; error?: string }> {
   const { supabase, userId } = await verifierProf()
   const contenuId = formData.get('contenuId') as string
@@ -1138,5 +1164,301 @@ export async function sauvegarderPromptsScriptorium(
   if (error) return { error: error.message }
   revalidatePath('/prof/scriptorium')
   revalidatePath('/prof/aletheia')
+  return { success: true }
+}
+
+// ── Parcours : conteneur d'orchestration hebdomadaire — Parcours L4 ──────────
+// Un parcours (scriptorium_parcours) numérote ses semaines 1..nb_semaines et pose
+// des CRÉNEAUX (scriptorium_parcours_creneaux) : chaque créneau référence un contenu
+// de bibliothèque (texte/cours) OU un livre (entier/tranche), à une position `ordre`
+// dans une semaine. La traduction semaine→date réelle (par classe) viendra en L5.
+
+export async function creerParcours(formData: FormData): Promise<{ id?: string; error?: string }> {
+  const { supabase, userId } = await verifierProf()
+  const titre = (formData.get('titre') as string)?.trim()
+  const nbSemaines = Number(formData.get('nbSemaines') as string)
+  if (!titre) return { error: 'Donne un titre au parcours.' }
+  if (!Number.isInteger(nbSemaines) || nbSemaines < 1 || nbSemaines > 52)
+    return { error: 'Indique un nombre de semaines valide (1–52).' }
+
+  const { data, error } = await supabase
+    .from('scriptorium_parcours')
+    .insert({ titre, nb_semaines: nbSemaines, created_by: userId })
+    .select('id')
+    .single()
+  if (error || !data) return { error: error?.message ?? 'Création impossible.' }
+  revalidatePath('/prof/scriptorium')
+  return { id: data.id as string }
+}
+
+// Réduction de nb_semaines : les créneaux au-delà de la nouvelle borne seraient
+// orphelins → confirmation (needsConfirm) puis purge ciblée si force=true.
+export async function modifierParcours(
+  id: string,
+  patch: { titre: string; nbSemaines: number; description?: string },
+  force = false,
+): Promise<{ success?: boolean; needsConfirm?: boolean; nbCreneauxAuDela?: number; error?: string }> {
+  const { supabase } = await verifierProf()
+  if (!RE_UUID.test(id)) return { error: 'Identifiant invalide.' }
+  const titre = patch.titre?.trim()
+  const nbSemaines = patch.nbSemaines
+  if (!titre) return { error: 'Le titre est requis.' }
+  if (!Number.isInteger(nbSemaines) || nbSemaines < 1 || nbSemaines > 52)
+    return { error: 'Nombre de semaines invalide (1–52).' }
+
+  const { data: auDela } = await supabase
+    .from('scriptorium_parcours_creneaux')
+    .select('id')
+    .eq('parcours_id', id)
+    .gt('semaine', nbSemaines)
+  const n = (auDela ?? []).length
+  if (n > 0 && !force) return { needsConfirm: true, nbCreneauxAuDela: n }
+
+  // Update d'abord (nb_semaines) : si la purge des créneaux au-delà échoue APRÈS,
+  // ils sont seulement MASQUÉS (la grille ne rend que 1..nb_semaines), jamais
+  // supprimés avant un raccourcissement effectif.
+  const { error } = await supabase
+    .from('scriptorium_parcours')
+    .update({ titre, nb_semaines: nbSemaines, description: patch.description?.trim() || null, updated_at: new Date().toISOString() })
+    .eq('id', id)
+  if (error) return { error: error.message }
+
+  if (n > 0 && force) {
+    const { error: eDel } = await supabase
+      .from('scriptorium_parcours_creneaux').delete().eq('parcours_id', id).gt('semaine', nbSemaines)
+    if (eDel) console.error('[scriptorium] modifierParcours : purge des créneaux au-delà échouée', eDel.message)
+  }
+  revalidatePath('/prof/scriptorium')
+  return { success: true }
+}
+
+// Soft-delete la coquille (masquée des listes) + DÉTACHE son contenu : créneaux et
+// assignations classe sont purgés (pure config, aucune donnée élève). Sans cette
+// purge, les créneaux survivraient et gonfleraient le compteur « utilisé dans N
+// parcours » d'un contenu avec des parcours pourtant supprimés.
+export async function supprimerParcours(id: string): Promise<{ success?: boolean; error?: string }> {
+  const { supabase } = await verifierProf()
+  if (!RE_UUID.test(id)) return { error: 'Identifiant invalide.' }
+  const { error } = await supabase
+    .from('scriptorium_parcours')
+    .update({ supprime_at: new Date().toISOString() })
+    .eq('id', id)
+  if (error) return { error: error.message }
+  await supabase.from('scriptorium_parcours_creneaux').delete().eq('parcours_id', id)
+  await supabase.from('scriptorium_parcours_classes').delete().eq('parcours_id', id)
+  revalidatePath('/prof/scriptorium')
+  return { success: true }
+}
+
+// Cible d'un créneau : un contenu de bibliothèque OU un livre (entier/tranche).
+export type RefCreneau =
+  | { contenuId: string }
+  | { livreId: string; semaineDebut?: number | null; semaineFin?: number | null }
+
+// Ajoute un créneau. `ordre` calculé max+1 avec RETRY sur violation d'unicité
+// (parcours_id, semaine, ordre) — schema-S9. Valide la cible (vivante, type='livre',
+// tranche dans l'étendue réelle du livre) avant insertion.
+export async function ajouterCreneau(
+  parcoursId: string,
+  semaine: number,
+  ref: RefCreneau,
+): Promise<{ id?: string; error?: string }> {
+  const { supabase } = await verifierProf()
+  if (!RE_UUID.test(parcoursId)) return { error: 'Parcours invalide.' }
+  if (!Number.isInteger(semaine) || semaine < 1) return { error: 'Semaine invalide.' }
+
+  const { data: parc } = await supabase
+    .from('scriptorium_parcours').select('nb_semaines, supprime_at').eq('id', parcoursId).maybeSingle()
+  if (!parc || parc.supprime_at) return { error: 'Parcours introuvable.' }
+  if (semaine > (parc.nb_semaines as number)) return { error: `Le parcours n'a que ${parc.nb_semaines} semaines.` }
+
+  let payload: Record<string, unknown>
+  if ('contenuId' in ref) {
+    if (!RE_UUID.test(ref.contenuId)) return { error: 'Contenu invalide.' }
+    const { data: c } = await supabase
+      .from('scriptorium_contenus').select('id, titre, supprime_at').eq('id', ref.contenuId).maybeSingle()
+    if (!c || c.supprime_at) return { error: 'Contenu introuvable ou retiré.' }
+    // Snapshot du titre (titre_affiche) : garde un libellé si le contenu est retiré plus tard.
+    payload = { parcours_id: parcoursId, semaine, ref_type: 'contenu', contenu_id: ref.contenuId, titre_affiche: c.titre }
+  } else {
+    if (!RE_UUID.test(ref.livreId)) return { error: 'Livre invalide.' }
+    const { data: l } = await supabase
+      .from('scriptorium_unites').select('id, type, label, supprime_at').eq('id', ref.livreId).maybeSingle()
+    if (!l || l.type !== 'livre' || l.supprime_at) return { error: 'Livre introuvable ou retiré.' }
+    const debut = ref.semaineDebut ?? null
+    const fin = ref.semaineFin ?? null
+    if ((debut == null) !== (fin == null)) {
+      return { error: 'Tranche incomplète : indique un début ET une fin, ou aucun (livre entier).' }
+    }
+    if (debut != null && fin != null) {
+      if (!Number.isInteger(debut) || !Number.isInteger(fin) || debut < 1 || debut > fin) {
+        return { error: 'Tranche invalide.' }
+      }
+      const { data: docs } = await supabase
+        .from('scriptorium_documents').select('semaine').eq('unite_id', ref.livreId).not('semaine', 'is', null)
+      const maxSem = Math.max(0, ...((docs ?? []).map(d => d.semaine as number)))
+      if (fin > maxSem) return { error: `Le livre a ${maxSem} semaine(s) ; la tranche ${debut}→${fin} sort de l'étendue.` }
+    }
+    payload = { parcours_id: parcoursId, semaine, ref_type: 'livre', livre_id: ref.livreId, livre_semaine_debut: debut, livre_semaine_fin: fin, titre_affiche: l.label }
+  }
+
+  for (let essai = 0; essai < 5; essai++) {
+    const { data: dernier } = await supabase
+      .from('scriptorium_parcours_creneaux').select('ordre')
+      .eq('parcours_id', parcoursId).eq('semaine', semaine)
+      .order('ordre', { ascending: false }).limit(1).maybeSingle()
+    const ordre = (dernier?.ordre ?? 0) + 1
+    const { data, error } = await supabase
+      .from('scriptorium_parcours_creneaux').insert({ ...payload, ordre }).select('id').single()
+    if (!error && data) { revalidatePath('/prof/scriptorium'); return { id: data.id as string } }
+    if (error && error.code !== '23505') return { error: error.message } // 23505 = doublon d'ordre → retry
+  }
+  return { error: 'Conflit d’ordre, réessaie.' }
+}
+
+export async function retirerCreneau(creneauId: string): Promise<{ success?: boolean; error?: string }> {
+  const { supabase } = await verifierProf()
+  if (!RE_UUID.test(creneauId)) return { error: 'Identifiant invalide.' }
+  const { error } = await supabase.from('scriptorium_parcours_creneaux').delete().eq('id', creneauId)
+  if (error) return { error: error.message }
+  revalidatePath('/prof/scriptorium')
+  return { success: true }
+}
+
+// Réordonne les créneaux d'une semaine (ordreIds = tous les créneaux de cette
+// semaine, dans le nouvel ordre). Deux passes pour éviter une collision transitoire
+// avec l'unicité (parcours, semaine, ordre) : d'abord des valeurs NÉGATIVES
+// temporaires (jamais en collision avec des ordres positifs), puis 1..n.
+export async function reordonnerCreneaux(
+  parcoursId: string,
+  semaine: number,
+  ordreIds: string[],
+): Promise<{ success?: boolean; error?: string }> {
+  const { supabase } = await verifierProf()
+  if (!RE_UUID.test(parcoursId)) return { error: 'Parcours invalide.' }
+  if (!Number.isInteger(semaine) || semaine < 1) return { error: 'Semaine invalide.' }
+  if (!Array.isArray(ordreIds) || ordreIds.some(id => !RE_UUID.test(id))) return { error: 'Ordre invalide.' }
+
+  // Garde d'intégrité : ordreIds DOIT être exactement l'ensemble des créneaux de
+  // cette semaine — sinon la passe 2 (rangs positifs) pourrait entrer en collision
+  // avec un créneau non listé. On refuse une liste périmée/partielle plutôt que de
+  // corrompre l'ordre. (Avec l'ensemble complet, négatif→final ne collisionne jamais.)
+  const { data: actuels } = await supabase
+    .from('scriptorium_parcours_creneaux').select('id')
+    .eq('parcours_id', parcoursId).eq('semaine', semaine)
+  const idsBase = new Set((actuels ?? []).map(r => r.id as string))
+  const idsFournis = new Set(ordreIds)
+  if (idsBase.size !== idsFournis.size || [...idsBase].some(id => !idsFournis.has(id))) {
+    return { error: 'La liste des créneaux a changé — recharge la page puis réessaie.' }
+  }
+
+  for (let i = 0; i < ordreIds.length; i++) {
+    const { error } = await supabase.from('scriptorium_parcours_creneaux')
+      .update({ ordre: -(i + 1) }).eq('id', ordreIds[i]).eq('parcours_id', parcoursId).eq('semaine', semaine)
+    if (error) return { error: error.message }
+  }
+  for (let i = 0; i < ordreIds.length; i++) {
+    const { error } = await supabase.from('scriptorium_parcours_creneaux')
+      .update({ ordre: i + 1 }).eq('id', ordreIds[i]).eq('parcours_id', parcoursId).eq('semaine', semaine)
+    if (error) return { error: error.message }
+  }
+  revalidatePath('/prof/scriptorium')
+  return { success: true }
+}
+
+// Déplace un créneau vers une autre semaine (ajouté en fin de la semaine cible :
+// ordre = max+1, même retry anti-collision).
+export async function deplacerCreneau(
+  creneauId: string,
+  nouvelleSemaine: number,
+): Promise<{ success?: boolean; error?: string }> {
+  const { supabase } = await verifierProf()
+  if (!RE_UUID.test(creneauId)) return { error: 'Identifiant invalide.' }
+  if (!Number.isInteger(nouvelleSemaine) || nouvelleSemaine < 1) return { error: 'Semaine invalide.' }
+
+  const { data: cr } = await supabase
+    .from('scriptorium_parcours_creneaux').select('parcours_id, semaine').eq('id', creneauId).maybeSingle()
+  if (!cr) return { error: 'Créneau introuvable.' }
+  if (cr.semaine === nouvelleSemaine) return { success: true }
+
+  const { data: parc } = await supabase
+    .from('scriptorium_parcours').select('nb_semaines').eq('id', cr.parcours_id as string).maybeSingle()
+  if (!parc) return { error: 'Parcours introuvable.' }
+  if (nouvelleSemaine > (parc.nb_semaines as number)) {
+    return { error: `Le parcours n'a que ${parc.nb_semaines} semaines.` }
+  }
+
+  for (let essai = 0; essai < 5; essai++) {
+    const { data: dernier } = await supabase
+      .from('scriptorium_parcours_creneaux').select('ordre')
+      .eq('parcours_id', cr.parcours_id as string).eq('semaine', nouvelleSemaine)
+      .order('ordre', { ascending: false }).limit(1).maybeSingle()
+    const ordre = (dernier?.ordre ?? 0) + 1
+    const { error } = await supabase.from('scriptorium_parcours_creneaux')
+      .update({ semaine: nouvelleSemaine, ordre }).eq('id', creneauId)
+    if (!error) { revalidatePath('/prof/scriptorium'); return { success: true } }
+    if (error.code !== '23505') return { error: error.message }
+  }
+  return { error: 'Conflit d’ordre, réessaie.' }
+}
+
+// ── Assignation d'un parcours à une classe (+ date de début) — Parcours L5 ────
+// La date de début vit sur scriptorium_parcours_classes (PAR CLASSE). À la pose
+// d'une date, on résout la frise (AY dérivée de la date) : un débordement HORS
+// année scolaire (non_planifiable), une frise vide/ancre hors frise, ou une config
+// semestres incohérente (chevauchement) BLOQUENT l'enregistrement (décision 8).
+export async function assignerParcoursClasse(
+  parcoursId: string,
+  classeId: string,
+  dateDebut: string | null,
+): Promise<{ success?: boolean; error?: string; avis?: string; bloque?: boolean }> {
+  const { supabase } = await verifierProf()
+  if (!RE_UUID.test(parcoursId) || !RE_UUID.test(classeId)) return { error: 'Identifiant invalide.' }
+
+  const date = dateDebut && /^\d{4}-\d{2}-\d{2}$/.test(dateDebut) ? dateDebut : null
+
+  // Garde d'existence/soft-delete AVANT tout (y compris pour une assignation sans date).
+  const { data: parc } = await supabase
+    .from('scriptorium_parcours').select('nb_semaines, supprime_at').eq('id', parcoursId).maybeSingle()
+  if (!parc || parc.supprime_at) return { error: 'Parcours introuvable.' }
+
+  let avis: string | undefined
+  if (date) {
+    const ap = await resoudreFrisePourDate(date, parc.nb_semaines as number)
+    if (ap.avisBloquant) {
+      return { bloque: true, error: ap.avis ?? 'Configuration des semestres incohérente — corrige-la dans le Calendrier avant de planifier.' }
+    }
+    if (ap.semaines.every(s => s.statut !== 'definie')) {
+      return { bloque: true, error: ap.avis ?? 'Cette date ne tombe dans aucun semestre défini de l’année scolaire.' }
+    }
+    if (ap.nbNonPlanifiable > 0) {
+      return {
+        bloque: true,
+        error: `Ce parcours prolonge au-delà des semestres définis de l’année scolaire (${ap.nbNonPlanifiable} semaine(s) non planifiable(s)). Définis le semestre suivant ou raccourcis le parcours.`,
+      }
+    }
+    if (ap.nbADefinir > 0) {
+      avis = `${ap.nbADefinir} semaine(s) « à définir » : le parcours déborde sur un semestre non encore créé de l’année scolaire.`
+    }
+  }
+
+  const { error } = await supabase
+    .from('scriptorium_parcours_classes')
+    .upsert(
+      { parcours_id: parcoursId, classe_id: classeId, date_debut: date, updated_at: new Date().toISOString() },
+      { onConflict: 'parcours_id,classe_id' },
+    )
+  if (error) return { error: error.message }
+  revalidatePath('/prof/scriptorium')
+  return { success: true, avis }
+}
+
+export async function retirerParcoursClasse(parcoursId: string, classeId: string): Promise<{ success?: boolean; error?: string }> {
+  const { supabase } = await verifierProf()
+  if (!RE_UUID.test(parcoursId) || !RE_UUID.test(classeId)) return { error: 'Identifiant invalide.' }
+  const { error } = await supabase
+    .from('scriptorium_parcours_classes').delete().eq('parcours_id', parcoursId).eq('classe_id', classeId)
+  if (error) return { error: error.message }
+  revalidatePath('/prof/scriptorium')
   return { success: true }
 }
