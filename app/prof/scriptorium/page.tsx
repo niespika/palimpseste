@@ -199,6 +199,27 @@ export default async function ScriptoriumPage({
     parcoursDeClasse = await chargerParcoursDeClasse(classeSel)
   }
 
+  // Compteur « utilisé dans N parcours » par livre (créneaux ref_type='livre' de
+  // parcours vivants) — affiché sur les tuiles de livres (onglets Livres et Par unité).
+  const usageLivres = new Map<string, number>()
+  if (vue === 'unites' || vue === 'livres') {
+    const [{ data: crLivres }, { data: parcVivantsL }] = await Promise.all([
+      supabase.from('scriptorium_parcours_creneaux').select('parcours_id, livre_id').not('livre_id', 'is', null),
+      supabase.from('scriptorium_parcours').select('id').is('supprime_at', null),
+    ])
+    const vivants = new Set((parcVivantsL ?? []).map(p => p.id as string))
+    const parLivre = new Map<string, Set<string>>()
+    for (const c of crLivres ?? []) {
+      const lid = c.livre_id as string
+      const pid = c.parcours_id as string
+      if (!vivants.has(pid)) continue
+      const s = parLivre.get(lid) ?? new Set<string>()
+      s.add(pid)
+      parLivre.set(lid, s)
+    }
+    for (const [lid, s] of parLivre) usageLivres.set(lid, s.size)
+  }
+
   // Quels contenus seront rendus (drill) → on ne signe les fichiers que pour ceux-là.
   const docsAffiches = vue === 'unites'
     ? (uniteSel ? docs.filter(d => d.unite_id === uniteSel) : [])
@@ -281,6 +302,7 @@ export default async function ScriptoriumPage({
         <Link href="/prof/scriptorium?vue=textes" className={ongletClasse('textes')}>Textes</Link>
         <Link href="/prof/scriptorium?vue=cours" className={ongletClasse('cours')}>Cours</Link>
         <Link href="/prof/scriptorium?vue=parcours" className={ongletClasse('parcours')}>Parcours</Link>
+        <Link href="/prof/scriptorium?vue=livres" className={ongletClasse('livres')}>Livres</Link>
         <Link href="/prof/scriptorium?vue=parametres" className={ongletClasse('parametres')}>Paramètres</Link>
       </nav>
 
@@ -407,8 +429,9 @@ export default async function ScriptoriumPage({
             {unitesList.map(u => {
               const n = docs.filter(d => d.unite_id === u.id).length
               const estLivre = u.type === 'livre'
+              const usage = usageLivres.get(u.id) ?? 0
               const sousTitre = estLivre
-                ? `📖 Livre · ${u.nb_semaines ?? n} semaine${(u.nb_semaines ?? n) > 1 ? 's' : ''}${u.auteur ? ` · ${u.auteur}` : ''}`
+                ? `📖 Livre · ${u.nb_semaines ?? n} semaine${(u.nb_semaines ?? n) > 1 ? 's' : ''}${u.auteur ? ` · ${u.auteur}` : ''}${usage > 0 ? ` · ${usage} parcours` : ''}`
                 : `${n} contenu${n > 1 ? 's' : ''}`
               return (
                 <Tuile
@@ -474,6 +497,31 @@ export default async function ScriptoriumPage({
             )
           })()}
         </>
+      )}
+
+      {/* ── Perspective « Livres » (Aletheia) — Parcours L6 ──────────────────────
+          Home dédié des livres (l'ancien « Par unité » sera retiré au L7/L8). Ouvre
+          le livre dans la vue-livre existante (?vue=unites&unite=…) — inchangée. */}
+      {vue === 'livres' && (
+        unitesList.filter(u => u.type === 'livre').length === 0 ? (
+          <p className="text-sm text-muet">Aucun livre. Crée un livre depuis l’onglet « Par unité » (+ Ajouter un livre).</p>
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+            {unitesList.filter(u => u.type === 'livre').map(u => {
+              const usage = usageLivres.get(u.id) ?? 0
+              const nb = u.nb_semaines ?? docs.filter(d => d.unite_id === u.id).length
+              return (
+                <Tuile
+                  key={u.id}
+                  nom={u.label}
+                  sousTitre={`📖 ${nb} semaine${nb > 1 ? 's' : ''}${u.auteur ? ` · ${u.auteur}` : ''}${usage > 0 ? ` · utilisé dans ${usage} parcours` : ''}`}
+                  href={`/prof/scriptorium?vue=unites&unite=${u.id}`}
+                  couleur={usage > 0 ? 'vert' : 'neutre'}
+                />
+              )
+            })}
+          </div>
+        )
       )}
 
       {/* ── Perspective « paramètres » (prompts carte d'architecture + référence) ── */}
