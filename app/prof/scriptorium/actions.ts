@@ -1462,3 +1462,55 @@ export async function retirerParcoursClasse(parcoursId: string, classeId: string
   revalidatePath('/prof/scriptorium')
   return { success: true }
 }
+
+// Publie (fige) l'horaire résolu d'un parcours pour une classe — décision PO 3.
+// L'aperçu continue de recalculer depuis la frise ; ce snapshot sert de référence
+// pour signaler les décalages ultérieurs (édition du calendrier). Refuse un horaire
+// incomplet (non planifiable) ou une config semestres incohérente.
+// Nécessite la migration parcours_snapshot_horaire.sql (colonnes horaire_snapshot…).
+export async function publierHoraire(
+  parcoursId: string,
+  classeId: string,
+): Promise<{ success?: boolean; error?: string }> {
+  const { supabase } = await verifierProf()
+  if (!RE_UUID.test(parcoursId) || !RE_UUID.test(classeId)) return { error: 'Identifiant invalide.' }
+
+  const { data: parc } = await supabase
+    .from('scriptorium_parcours').select('nb_semaines, supprime_at').eq('id', parcoursId).maybeSingle()
+  if (!parc || parc.supprime_at) return { error: 'Parcours introuvable.' }
+
+  const { data: lien } = await supabase
+    .from('scriptorium_parcours_classes').select('date_debut')
+    .eq('parcours_id', parcoursId).eq('classe_id', classeId).maybeSingle()
+  if (!lien) return { error: 'Assigne d’abord ce parcours à la classe (et pose une date).' }
+  if (!lien.date_debut) return { error: 'Pose d’abord une date de début.' }
+
+  const ap = await resoudreFrisePourDate(lien.date_debut as string, parc.nb_semaines as number)
+  if (ap.avisBloquant) return { error: 'Configuration des semestres incohérente — corrige-la avant de publier.' }
+  if (ap.semaines.every(s => s.statut !== 'definie')) {
+    return { error: 'Cette date ne tombe dans aucun semestre défini — impossible de publier un horaire vide.' }
+  }
+  if (ap.nbNonPlanifiable > 0) {
+    return { error: `Horaire incomplet : ${ap.nbNonPlanifiable} semaine(s) non planifiable(s). Corrige avant de publier.` }
+  }
+
+  // snapshot_version lu À PART (tolérant) : si la migration n'est pas jouée, cette lecture
+  // échoue → version=1, et c'est l'UPDATE ci-dessous qui signalera l'absence de colonnes
+  // (plutôt qu'un faux « pas assigné » si on le lisait avec date_debut).
+  const { data: snapRow } = await supabase
+    .from('scriptorium_parcours_classes').select('snapshot_version')
+    .eq('parcours_id', parcoursId).eq('classe_id', classeId).maybeSingle()
+  const version = ((snapRow?.snapshot_version as number | null) ?? 0) + 1
+  const { error } = await supabase
+    .from('scriptorium_parcours_classes')
+    .update({
+      horaire_snapshot: ap.semaines,
+      snapshot_version: version,
+      snapshot_genere_le: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    })
+    .eq('parcours_id', parcoursId).eq('classe_id', classeId)
+  if (error) return { error: error.message }
+  revalidatePath('/prof/scriptorium')
+  return { success: true }
+}

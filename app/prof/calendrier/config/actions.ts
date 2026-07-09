@@ -19,6 +19,35 @@ async function verifierProf() {
   return { supabase }
 }
 
+type ClientProf = Awaited<ReturnType<typeof verifierProf>>['supabase']
+
+// Deux semestres (vivants) ne doivent pas se recouvrir : la frise d'enseignement
+// (parcours) chaîne les semestres consécutifs et une plage chevauchante corrompt la
+// numérotation continue (cf. SPEC Parcours §5.3(d) / décision PO 4). On refuse donc
+// la saisie à la source. Comparaison lexicale sûre sur YYYY-MM-DD. Renvoie le nom du
+// semestre en conflit, ou null. Ne compare qu'aux semestres NON archivés.
+async function chevauchementSemestre(
+  supabase: ClientProf,
+  start: string,
+  end: string,
+  exclureId?: string,
+): Promise<{ ok: boolean; nom?: string }> {
+  let q = supabase.from('semesters').select('id, name, start_date, end_date').is('archived_at', null)
+  if (exclureId) q = q.neq('id', exclureId)
+  const { data, error } = await q
+  if (error) return { ok: false } // fail-closed : on refuse plutôt que d'autoriser en aveugle
+  const conflit = (data ?? []).find(
+    s => start <= (s.end_date as string) && (s.start_date as string) <= end,
+  )
+  return conflit ? { ok: false, nom: conflit.name as string } : { ok: true }
+}
+
+function messageChevauchement(res: { ok: boolean; nom?: string }): string {
+  return res.nom
+    ? `Ces dates chevauchent le semestre « ${res.nom} ». Deux semestres ne doivent pas se recouvrir.`
+    : 'Vérification des chevauchements impossible — réessaie.'
+}
+
 // ── Semestre ────────────────────────────────────────────────────────────────
 
 export async function creerSemestre(data: {
@@ -32,6 +61,8 @@ export async function creerSemestre(data: {
   if (!name) return { error: 'Donne un nom au semestre.' }
   if (!data.start_date || !data.end_date) return { error: 'Renseigne les deux dates.' }
   if (data.end_date < data.start_date) return { error: 'La date de fin doit suivre la date de début.' }
+  const chevauche = await chevauchementSemestre(supabase, data.start_date, data.end_date)
+  if (!chevauche.ok) return { error: messageChevauchement(chevauche) }
 
   // Le premier semestre créé devient actif par défaut.
   const { count } = await supabase.from('semesters').select('id', { count: 'exact', head: true })
@@ -58,6 +89,8 @@ export async function modifierSemestre(
   if (!name) return { error: 'Donne un nom au semestre.' }
   if (!data.start_date || !data.end_date) return { error: 'Renseigne les deux dates.' }
   if (data.end_date < data.start_date) return { error: 'La date de fin doit suivre la date de début.' }
+  const chevauche = await chevauchementSemestre(supabase, data.start_date, data.end_date, id)
+  if (!chevauche.ok) return { error: messageChevauchement(chevauche) }
 
   const { error } = await supabase
     .from('semesters')
@@ -131,6 +164,17 @@ export async function archiverSemestre(id: string): Promise<{ error?: string }> 
 
 export async function restaurerSemestre(id: string): Promise<{ error?: string }> {
   const { supabase } = await verifierProf()
+  // Dé-archiver ne doit pas recréer un chevauchement : le garde-fou ignore les
+  // archivés, donc un semestre restauré peut entrer en conflit avec un semestre vivant.
+  const { data: sem } = await supabase
+    .from('semesters').select('start_date, end_date').eq('id', id).maybeSingle()
+  if (!sem) return { error: 'Semestre introuvable.' }
+  const chevauche = await chevauchementSemestre(supabase, sem.start_date as string, sem.end_date as string, id)
+  if (!chevauche.ok) {
+    return { error: chevauche.nom
+      ? `Restauration impossible : ces dates chevauchent le semestre « ${chevauche.nom} ». Modifie l'un des deux d'abord.`
+      : 'Vérification des chevauchements impossible — réessaie.' }
+  }
   const { error } = await supabase.from('semesters').update({ archived_at: null }).eq('id', id)
   if (error) return { error: error.message }
   revalidatePath('/prof/calendrier/config')
