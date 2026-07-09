@@ -3,9 +3,8 @@ import Link from 'next/link'
 import { createClient } from '@/utils/supabase/server'
 import { getUrlSignee } from './actions'
 import Tuile from '@/components/Tuile'
-import FormulaireContenu from './FormulaireContenu'
 import FormulaireLivre from './FormulaireLivre'
-import LigneContenu, { type ContenuItem, type ImageItem } from './LigneContenu'
+import { type ImageItem } from './LigneContenu'
 import BibliothequeContenus from './BibliothequeContenus'
 import type { ContenuBiblio } from './LigneContenuBiblio'
 import FormulaireParcours from './parcours/FormulaireParcours'
@@ -16,7 +15,6 @@ import {
 } from './parcours/donnees'
 import AssignationClasses from './parcours/AssignationClasses'
 import { chargerAssignationsAvecApercu, type LigneAssignation } from './parcours/frise-serveur'
-import BoutonSupprimerUnite from './BoutonSupprimerUnite'
 import VueLivre from './vue-livre/VueLivre'
 import type { Signet } from './decoupe-utils'
 import SectionParametresScriptorium from './SectionParametresScriptorium'
@@ -49,21 +47,6 @@ interface UniteRow {
   signets: Signet[] | null
 }
 
-// Regroupe des contenus par semaine (clé null = « non précisée »), trié.
-function parSemaine(docs: DocRow[]): [number | null, DocRow[]][] {
-  const m = new Map<number | null, DocRow[]>()
-  for (const d of docs) {
-    const arr = m.get(d.semaine) ?? []
-    arr.push(d)
-    m.set(d.semaine, arr)
-  }
-  return [...m.entries()].sort((a, b) => {
-    if (a[0] == null) return 1
-    if (b[0] == null) return -1
-    return a[0] - b[0]
-  })
-}
-
 export default async function ScriptoriumPage({
   searchParams,
 }: {
@@ -77,12 +60,10 @@ export default async function ScriptoriumPage({
 
   const { vue = 'classes', classe: classeSel, unite: uniteSel, semaine, edition, parcours: parcoursSel } = await searchParams
 
-  const [{ data: classes }, { data: unites }, { data: docsBruts }, { data: liens }, { data: imagesBrutes }, { data: liensUnite }] = await Promise.all([
+  const [{ data: classes }, { data: unites }, { data: docsBruts }, { data: liensUnite }] = await Promise.all([
     supabase.from('classes').select('id, nom').order('nom'),
     supabase.from('scriptorium_unites').select('id, label, ordre, type, date_debut, nb_semaines, auteur, signets').is('supprime_at', null).order('ordre'),
     supabase.from('scriptorium_documents').select('id, unite_id, titre, type, semaine, chapitres, texte_extrait, fichier_ref'),
-    supabase.from('scriptorium_document_classes').select('document_id, classe_id'),
-    supabase.from('scriptorium_contenu_images').select('id, document_id, fichier_ref, legende, ordre').order('ordre'),
     supabase.from('scriptorium_unite_classes').select('unite_id, classe_id'),
   ])
 
@@ -90,26 +71,24 @@ export default async function ScriptoriumPage({
   const unitesList = (unites ?? []) as UniteRow[]
   const docs = (docsBruts ?? []) as DocRow[]
   const classeNom = new Map(classesList.map(c => [c.id, c.nom]))
-  const estLivre = new Map(unitesList.map(u => [u.id, u.type === 'livre']))
 
   // unité (livre) → classeIds (assignation au niveau du livre, Lot 2)
   const classesParUnite = new Map<string, string[]>()
   for (const l of liensUnite ?? []) {
     const arr = classesParUnite.get(l.unite_id as string) ?? []
-    arr.push(l.classe_id as string)
+    if (!arr.includes(l.classe_id as string)) arr.push(l.classe_id as string)  // dédup défensif
     classesParUnite.set(l.unite_id as string, arr)
   }
 
-  // doc → classeIds. Pour un livre, les classes viennent du NIVEAU LIVRE ; pour
-  // le reste (contenu de cours), elles restent par document (liaison Lot 6).
-  const classesParDoc = new Map<string, string[]>()
-  for (const l of liens ?? []) {
-    const arr = classesParDoc.get(l.document_id as string) ?? []
-    arr.push(l.classe_id as string)
-    classesParDoc.set(l.document_id as string, arr)
-  }
-  for (const d of docs) {
-    if (estLivre.get(d.unite_id)) classesParDoc.set(d.id, classesParUnite.get(d.unite_id) ?? [])
+  // Livres (Aletheia) exposés PAR classe (via scriptorium_unite_classes) — vue « Par classe ».
+  const livresParClasse = new Map<string, UniteRow[]>()
+  for (const u of unitesList) {
+    if (u.type !== 'livre') continue
+    for (const cid of classesParUnite.get(u.id) ?? []) {
+      const arr = livresParClasse.get(cid) ?? []
+      arr.push(u)
+      livresParClasse.set(cid, arr)
+    }
   }
 
   // ── Bibliothèque (onglets Textes / Cours) — Parcours L2 ──────────────────────
@@ -193,16 +172,33 @@ export default async function ScriptoriumPage({
     }
   }
 
-  // Parcours (vivants) assignés à la classe sélectionnée — vue « Par classe ».
+  // Parcours (vivants) assignés à la classe sélectionnée + nb de parcours par classe
+  // (compteur des tuiles) — vue « Par classe ».
   let parcoursDeClasse: ParcoursDeClasse[] = []
-  if (vue === 'classes' && classeSel) {
-    parcoursDeClasse = await chargerParcoursDeClasse(classeSel)
+  const parcoursParClasse = new Map<string, number>()
+  if (vue === 'classes') {
+    if (classeSel) parcoursDeClasse = await chargerParcoursDeClasse(classeSel)
+    const [{ data: pcC }, { data: pvC }] = await Promise.all([
+      supabase.from('scriptorium_parcours_classes').select('parcours_id, classe_id'),
+      supabase.from('scriptorium_parcours').select('id').is('supprime_at', null),
+    ])
+    const vivants = new Set((pvC ?? []).map(p => p.id as string))
+    const parClasse = new Map<string, Set<string>>()
+    for (const r of pcC ?? []) {
+      const pid = r.parcours_id as string
+      if (!vivants.has(pid)) continue
+      const cid = r.classe_id as string
+      const s = parClasse.get(cid) ?? new Set<string>()
+      s.add(pid)
+      parClasse.set(cid, s)
+    }
+    for (const [cid, s] of parClasse) parcoursParClasse.set(cid, s.size)
   }
 
   // Compteur « utilisé dans N parcours » par livre (créneaux ref_type='livre' de
   // parcours vivants) — affiché sur les tuiles de livres (onglets Livres et Par unité).
   const usageLivres = new Map<string, number>()
-  if (vue === 'unites' || vue === 'livres') {
+  if (vue === 'livres') {
     const [{ data: crLivres }, { data: parcVivantsL }] = await Promise.all([
       supabase.from('scriptorium_parcours_creneaux').select('parcours_id, livre_id').not('livre_id', 'is', null),
       supabase.from('scriptorium_parcours').select('id').is('supprime_at', null),
@@ -220,33 +216,11 @@ export default async function ScriptoriumPage({
     for (const [lid, s] of parLivre) usageLivres.set(lid, s.size)
   }
 
-  // Quels contenus seront rendus (drill) → on ne signe les fichiers que pour ceux-là.
-  const docsAffiches = vue === 'unites'
-    ? (uniteSel ? docs.filter(d => d.unite_id === uniteSel) : [])
-    : (classeSel ? docs.filter(d => (classesParDoc.get(d.id) ?? []).includes(classeSel)) : [])
-  const idsAffiches = new Set(docsAffiches.map(d => d.id))
+  // Docs du livre ouvert (?vue=livres&unite=…) — mappés plus bas pour VueLivre uniquement.
+  const docsAffiches = vue === 'livres' && uniteSel ? docs.filter(d => d.unite_id === uniteSel) : []
 
-  // Images (signées) par doc affiché
-  const imagesAffichees = (imagesBrutes ?? []).filter(i => idsAffiches.has(i.document_id as string))
-  const imagesSignees = await Promise.all(imagesAffichees.map(async i => ({
-    document_id: i.document_id as string,
-    item: { id: i.id as string, url: await getUrlSignee(i.fichier_ref as string), legende: i.legende as string | null } as ImageItem,
-  })))
-  const imagesParDoc = new Map<string, ImageItem[]>()
-  for (const { document_id, item } of imagesSignees) {
-    const arr = imagesParDoc.get(document_id) ?? []
-    arr.push(item)
-    imagesParDoc.set(document_id, arr)
-  }
-
-  // Fichier legacy (signé) par doc affiché
-  const legacyParDoc = new Map<string, string | null>()
-  await Promise.all(docsAffiches.filter(d => d.fichier_ref).map(async d => {
-    legacyParDoc.set(d.id, await getUrlSignee(d.fichier_ref as string))
-  }))
-
-  // Carte d'architecture + référence du livre sélectionné (perspective « unités »).
-  const uniteSelLivre = vue === 'unites' && uniteSel ? unitesList.find(u => u.id === uniteSel && u.type === 'livre') : undefined
+  // Carte d'architecture + référence du livre sélectionné (onglet Livres, détail).
+  const uniteSelLivre = vue === 'livres' && uniteSel ? unitesList.find(u => u.id === uniteSel && u.type === 'livre') : undefined
   let capstoneLivre: CapstoneProf | null = null
   let referenceLivre: LivreReferenceProf | null = null
   if (uniteSelLivre) {
@@ -263,47 +237,22 @@ export default async function ScriptoriumPage({
       : null
   }
 
-  function toItem(d: DocRow): ContenuItem {
-    return { id: d.id, nom: d.titre, semaine: d.semaine, chapitres: d.chapitres, texte: d.texte_extrait, uniteId: d.unite_id, type: d.type ?? 'cours', fichierLegacyUrl: legacyParDoc.get(d.id) ?? null }
-  }
-
-  const ligne = (d: DocRow) => (
-    <LigneContenu
-      key={d.id}
-      item={toItem(d)}
-      unites={unitesList}
-      classes={classesList}
-      assignedClasseIds={classesParDoc.get(d.id) ?? []}
-      images={imagesParDoc.get(d.id) ?? []}
-      masquerClasses={estLivre.get(d.unite_id) ?? false}
-      masquerEdition={estLivre.get(d.unite_id) ?? false}
-    />
-  )
-
-  const ongletClasse = (v: string) =>
+  const ongletClasse = (actif: boolean) =>
     `font-ui px-4 py-2 text-sm rounded-t-lg border-b-2 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pigment ${
-      vue === v
+      actif
         ? 'bg-pigment-teinte text-encre border-liseret font-medium'
         : 'text-encre-douce hover:text-encre hover:bg-pigment-teinte border-transparent'
     }`
 
   return (
     <div className="space-y-6 pb-8">
-      {vue === 'unites' && (
-        <div className="space-y-2">
-          <FormulaireContenu unites={unitesList} classes={classesList} />
-          <FormulaireLivre classes={classesList} />
-        </div>
-      )}
-
       <nav className="flex flex-wrap gap-1 border-b border-bordure">
-        <Link href="/prof/scriptorium?vue=classes" className={ongletClasse('classes')}>Par classe</Link>
-        <Link href="/prof/scriptorium?vue=unites" className={ongletClasse('unites')}>Par unité</Link>
-        <Link href="/prof/scriptorium?vue=textes" className={ongletClasse('textes')}>Textes</Link>
-        <Link href="/prof/scriptorium?vue=cours" className={ongletClasse('cours')}>Cours</Link>
-        <Link href="/prof/scriptorium?vue=parcours" className={ongletClasse('parcours')}>Parcours</Link>
-        <Link href="/prof/scriptorium?vue=livres" className={ongletClasse('livres')}>Livres</Link>
-        <Link href="/prof/scriptorium?vue=parametres" className={ongletClasse('parametres')}>Paramètres</Link>
+        <Link href="/prof/scriptorium?vue=classes" className={ongletClasse(vue === 'classes')}>Par classe</Link>
+        <Link href="/prof/scriptorium?vue=textes" className={ongletClasse(vue === 'textes')}>Textes</Link>
+        <Link href="/prof/scriptorium?vue=cours" className={ongletClasse(vue === 'cours')}>Cours</Link>
+        <Link href="/prof/scriptorium?vue=parcours" className={ongletClasse(vue === 'parcours')}>Parcours</Link>
+        <Link href="/prof/scriptorium?vue=livres" className={ongletClasse(vue === 'livres')}>Livres</Link>
+        <Link href="/prof/scriptorium?vue=parametres" className={ongletClasse(vue === 'parametres')}>Paramètres</Link>
       </nav>
 
       {/* ── Bibliothèque : Textes / Cours (Parcours L2) ─────────────────────── */}
@@ -342,28 +291,33 @@ export default async function ScriptoriumPage({
         )
       )}
 
-      {/* ── Perspective « classes » ─────────────────────────────────────── */}
+      {/* ── Perspective « classes » : vue d'ensemble (parcours + livres) d'une classe ─ */}
       {vue === 'classes' && (
         <>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
             {classesList.map(c => {
-              const n = docs.filter(d => (classesParDoc.get(d.id) ?? []).includes(c.id)).length
+              const np = parcoursParClasse.get(c.id) ?? 0
+              const nl = (livresParClasse.get(c.id) ?? []).length
+              const parts: string[] = []
+              if (np > 0) parts.push(`${np} parcours`)
+              if (nl > 0) parts.push(`${nl} livre${nl > 1 ? 's' : ''}`)
               return (
                 <Tuile
                   key={c.id}
                   nom={c.nom}
-                  sousTitre={`${n} contenu${n > 1 ? 's' : ''}`}
+                  sousTitre={parts.length ? parts.join(' · ') : 'Rien d’assigné'}
                   href={`/prof/scriptorium?vue=classes&classe=${c.id}`}
                   selectionnee={classeSel === c.id}
-                  couleur={n > 0 ? 'vert' : 'neutre'}
+                  couleur={np + nl > 0 ? 'vert' : 'neutre'}
                 />
               )
             })}
           </div>
 
           {classeSel && (
-            <div className="bg-surface border border-bordure rounded-xl p-4 space-y-3">
+            <div className="bg-surface border border-bordure rounded-xl p-4 space-y-4">
               <h3 className="font-medium text-encre">{classeNom.get(classeSel) ?? 'Classe'}</h3>
+
               {parcoursDeClasse.length > 0 && (
                 <div className="space-y-2">
                   <p className="text-xs text-muet uppercase tracking-wide">Parcours assignés</p>
@@ -380,146 +334,76 @@ export default async function ScriptoriumPage({
                   </div>
                 </div>
               )}
-              {docsAffiches.length === 0 ? (
-                <p className="text-sm text-muet">Aucune unité (ancien format) assignée à cette classe.</p>
-              ) : (
-                unitesList
-                  .filter(u => docsAffiches.some(d => d.unite_id === u.id))
-                  .map(u => (
-                    <details key={u.id} open className="border border-bordure rounded-lg">
-                      <summary className="px-3 py-2 text-sm font-medium text-encre-douce cursor-pointer">{u.label}</summary>
-                      <div className="px-3 pb-3 space-y-3">
-                        {parSemaine(docsAffiches.filter(d => d.unite_id === u.id)).map(([sem, ds]) => (
-                          <div key={sem ?? 'na'} className="space-y-1.5">
-                            <p className="text-xs text-muet uppercase tracking-wide">{sem != null ? `Semaine ${sem}` : 'Semaine non précisée'}</p>
-                            {ds.map(ligne)}
-                          </div>
-                        ))}
-                      </div>
-                    </details>
-                  ))
+
+              {(livresParClasse.get(classeSel) ?? []).length > 0 && (
+                <div className="space-y-2">
+                  <p className="text-xs text-muet uppercase tracking-wide">Livres (lecture Aletheia)</p>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    {(livresParClasse.get(classeSel) ?? []).map(u => {
+                      const nb = u.nb_semaines ?? docs.filter(d => d.unite_id === u.id).length
+                      return (
+                        <Tuile
+                          key={u.id}
+                          nom={u.label}
+                          sousTitre={`📖 ${nb} semaine${nb > 1 ? 's' : ''}${u.auteur ? ` · ${u.auteur}` : ''}`}
+                          href={`/prof/scriptorium?vue=livres&unite=${u.id}`}
+                          couleur="vert"
+                        />
+                      )
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {parcoursDeClasse.length === 0 && (livresParClasse.get(classeSel) ?? []).length === 0 && (
+                <p className="text-sm text-muet">Cette classe n’a ni parcours ni livre assigné. Assigne un parcours depuis l’onglet « Parcours », ou un livre depuis « Livres ».</p>
               )}
             </div>
           )}
         </>
       )}
 
-      {/* ── Perspective « unités » ──────────────────────────────────────────
-          Un LIVRE ouvert devient une page à part entière (vue-livre, 3 colonnes) :
-          la grille de tuiles ne se rend plus, « ← Toutes les unités » y ramène. */}
-      {vue === 'unites' && uniteSelLivre && (
-        <VueLivre
-          livre={uniteSelLivre}
-          classes={classesList}
-          classeIds={classesParUnite.get(uniteSelLivre.id) ?? []}
-          docs={docsAffiches
-            .filter(d => d.semaine != null)
-            .sort((a, b) => ((a.semaine as number) - (b.semaine as number)) || a.id.localeCompare(b.id))
-            .map(d => ({ id: d.id, semaine: d.semaine as number, titre: d.titre, chapitres: d.chapitres, texte: d.texte_extrait }))}
-          nbDocsSansSemaine={docsAffiches.filter(d => d.semaine == null).length}
-          capstone={capstoneLivre}
-          reference={referenceLivre}
-          semaineParam={semaine}
-          modeDecoupe={edition === 'decoupe'}
-        />
-      )}
-      {vue === 'unites' && !uniteSelLivre && (
-        <>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-            {unitesList.map(u => {
-              const n = docs.filter(d => d.unite_id === u.id).length
-              const estLivre = u.type === 'livre'
-              const usage = usageLivres.get(u.id) ?? 0
-              const sousTitre = estLivre
-                ? `📖 Livre · ${u.nb_semaines ?? n} semaine${(u.nb_semaines ?? n) > 1 ? 's' : ''}${u.auteur ? ` · ${u.auteur}` : ''}${usage > 0 ? ` · ${usage} parcours` : ''}`
-                : `${n} contenu${n > 1 ? 's' : ''}`
-              return (
-                <Tuile
-                  key={u.id}
-                  nom={u.label}
-                  sousTitre={sousTitre}
-                  href={`/prof/scriptorium?vue=unites&unite=${u.id}`}
-                  selectionnee={uniteSel === u.id}
-                  couleur={n > 0 ? 'vert' : 'neutre'}
-                />
-              )
-            })}
-          </div>
-
-          {uniteSel && (() => {
-            const uniteCourante = unitesList.find(u => u.id === uniteSel)
-            return (
-            <div className="bg-surface border border-bordure rounded-xl p-4 space-y-3">
-              <div>
-                <div className="flex items-start justify-between gap-2">
-                  <h3 className="font-medium text-encre">{uniteCourante?.label ?? 'Unité'}</h3>
-                  {uniteCourante && (
-                    <BoutonSupprimerUnite uniteId={uniteCourante.id} label={uniteCourante.label} estLivre={false} />
-                  )}
-                </div>
-              </div>
-              {docsAffiches.length === 0 ? (
-                <p className="text-sm text-muet">Aucun contenu dans cette unité.</p>
-              ) : (
-                <>
-                  {classesList
-                    .filter(c => docsAffiches.some(d => (classesParDoc.get(d.id) ?? []).includes(c.id)))
-                    .map(c => (
-                      <details key={c.id} open className="border border-bordure rounded-lg">
-                        <summary className="px-3 py-2 text-sm font-medium text-encre-douce cursor-pointer">{c.nom}</summary>
-                        <div className="px-3 pb-3 space-y-3">
-                          {parSemaine(docsAffiches.filter(d => (classesParDoc.get(d.id) ?? []).includes(c.id))).map(([sem, ds]) => (
-                            <div key={sem ?? 'na'} className="space-y-1.5">
-                              <p className="text-xs text-muet uppercase tracking-wide">{sem != null ? `Semaine ${sem}` : 'Semaine non précisée'}</p>
-                              {ds.map(ligne)}
-                            </div>
-                          ))}
-                        </div>
-                      </details>
-                    ))}
-                  {/* Contenu sans classe assignée (legacy non résolu) → à réassigner */}
-                  {docsAffiches.some(d => (classesParDoc.get(d.id) ?? []).length === 0) && (
-                    <details open className="border border-attention bg-attention-teinte/40 rounded-lg">
-                      <summary className="px-3 py-2 text-sm font-medium text-attention cursor-pointer">Sans classe — à réassigner</summary>
-                      <div className="px-3 pb-3 space-y-3">
-                        {parSemaine(docsAffiches.filter(d => (classesParDoc.get(d.id) ?? []).length === 0)).map(([sem, ds]) => (
-                          <div key={sem ?? 'na'} className="space-y-1.5">
-                            <p className="text-xs text-muet uppercase tracking-wide">{sem != null ? `Semaine ${sem}` : 'Semaine non précisée'}</p>
-                            {ds.map(ligne)}
-                          </div>
-                        ))}
-                      </div>
-                    </details>
-                  )}
-                </>
-              )}
-            </div>
-            )
-          })()}
-        </>
-      )}
-
-      {/* ── Perspective « Livres » (Aletheia) — Parcours L6 ──────────────────────
-          Home dédié des livres (l'ancien « Par unité » sera retiré au L7/L8). Ouvre
-          le livre dans la vue-livre existante (?vue=unites&unite=…) — inchangée. */}
+      {/* ── Perspective « Livres » (Aletheia) — liste + détail (vue-livre 3 colonnes) ──
+          Un livre ouvert (?vue=livres&unite=…) devient une page à part entière ;
+          « ← Tous les livres » y ramène. VueLivre inchangée (ancrage IA, hors-élève). */}
       {vue === 'livres' && (
-        unitesList.filter(u => u.type === 'livre').length === 0 ? (
-          <p className="text-sm text-muet">Aucun livre. Crée un livre depuis l’onglet « Par unité » (+ Ajouter un livre).</p>
+        uniteSelLivre ? (
+          <VueLivre
+            livre={uniteSelLivre}
+            classes={classesList}
+            classeIds={classesParUnite.get(uniteSelLivre.id) ?? []}
+            docs={docsAffiches
+              .filter(d => d.semaine != null)
+              .sort((a, b) => ((a.semaine as number) - (b.semaine as number)) || a.id.localeCompare(b.id))
+              .map(d => ({ id: d.id, semaine: d.semaine as number, titre: d.titre, chapitres: d.chapitres, texte: d.texte_extrait }))}
+            nbDocsSansSemaine={docsAffiches.filter(d => d.semaine == null).length}
+            capstone={capstoneLivre}
+            reference={referenceLivre}
+            semaineParam={semaine}
+            modeDecoupe={edition === 'decoupe'}
+          />
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-            {unitesList.filter(u => u.type === 'livre').map(u => {
-              const usage = usageLivres.get(u.id) ?? 0
-              const nb = u.nb_semaines ?? docs.filter(d => d.unite_id === u.id).length
-              return (
-                <Tuile
-                  key={u.id}
-                  nom={u.label}
-                  sousTitre={`📖 ${nb} semaine${nb > 1 ? 's' : ''}${u.auteur ? ` · ${u.auteur}` : ''}${usage > 0 ? ` · utilisé dans ${usage} parcours` : ''}`}
-                  href={`/prof/scriptorium?vue=unites&unite=${u.id}`}
-                  couleur={usage > 0 ? 'vert' : 'neutre'}
-                />
-              )
-            })}
+          <div className="space-y-4">
+            <FormulaireLivre classes={classesList} />
+            {unitesList.filter(u => u.type === 'livre').length === 0 ? (
+              <p className="text-sm text-muet">Aucun livre. Crée-en un ci-dessus (+ Ajouter un livre).</p>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                {unitesList.filter(u => u.type === 'livre').map(u => {
+                  const usage = usageLivres.get(u.id) ?? 0
+                  const nb = u.nb_semaines ?? docs.filter(d => d.unite_id === u.id).length
+                  return (
+                    <Tuile
+                      key={u.id}
+                      nom={u.label}
+                      sousTitre={`📖 ${nb} semaine${nb > 1 ? 's' : ''}${u.auteur ? ` · ${u.auteur}` : ''}${usage > 0 ? ` · utilisé dans ${usage} parcours` : ''}`}
+                      href={`/prof/scriptorium?vue=livres&unite=${u.id}`}
+                      couleur={usage > 0 ? 'vert' : 'neutre'}
+                    />
+                  )
+                })}
+              </div>
+            )}
           </div>
         )
       )}
