@@ -36,15 +36,18 @@ export default function BarreNavigation({ tabs }: { tabs: NavTab[] }) {
     setOuvert(null)
   }
 
+  // Onglets de la Barre 1 (en-tête « seuil du module »). Valeurs de la maquette
+  // handoff (blocs 4A–4L) transcrites au pixel : padding 7×14, radius 8, gap 6,
+  // actif #ECE4D6/#221C16, inactif #6E5A3E (hex exacts, ≠ tokens globals).
   const classeOnglet = (actif: boolean) =>
-    `font-ui px-3 py-1.5 text-sm rounded-md transition-colors whitespace-nowrap ${
+    `font-ui text-[14px] rounded-[8px] px-[14px] py-[7px] transition-colors whitespace-nowrap ${
       actif
-        ? 'bg-parchemin-fonce text-encre font-medium'
-        : 'text-encre-douce hover:text-encre hover:bg-parchemin-fonce/60'
+        ? 'bg-[#ECE4D6] text-[#221C16] font-medium'
+        : 'text-[#6E5A3E] hover:bg-[#ECE4D6]/50'
     }`
 
   return (
-    <nav ref={ref} className="flex flex-wrap items-center gap-1">
+    <nav ref={ref} className="flex items-center gap-[6px]">
       {tabs.map((tab) => {
         const actif = ongletActif(tab, pathname)
 
@@ -58,7 +61,17 @@ export default function BarreNavigation({ tabs }: { tabs: NavTab[] }) {
 
         const estOuvert = ouvert === tab.label
         return (
-          <div key={tab.label} className="relative">
+          <div
+            key={tab.label}
+            className="relative"
+            onKeyDown={(e) => {
+              // Échap ferme le menu et rend le focus au déclencheur (a11y clavier).
+              if (e.key === 'Escape' && estOuvert) {
+                setOuvert(null)
+                e.currentTarget.querySelector('button')?.focus()
+              }
+            }}
+          >
             <button
               type="button"
               onClick={() => setOuvert(estOuvert ? null : tab.label)}
@@ -67,7 +80,7 @@ export default function BarreNavigation({ tabs }: { tabs: NavTab[] }) {
               className={`${classeOnglet(actif)} inline-flex items-center gap-1`}
             >
               {tab.label}
-              <span className="text-muet text-[10px]" aria-hidden>▾</span>
+              <span aria-hidden>▾</span>
             </button>
             {estOuvert && (
               <div className="absolute left-0 top-full mt-1 min-w-44 bg-surface border border-bordure rounded-lg shadow-lg py-1 z-20">

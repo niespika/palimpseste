@@ -112,7 +112,7 @@ export default async function QuazianElevePage() {
         </Link>
       )}
 
-      <h2 className="text-xl font-serif text-pigment mb-6 mt-2">Quazian</h2>
+      {/* Identité du module portée par la Barre 2 de l'en-tête. */}
 
       {blocage ? (
         // Révision gelée : on montre le message « cheeky » + le quizz (toujours ouvert).

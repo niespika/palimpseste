@@ -227,9 +227,8 @@ export default async function PageSemaineAletheia({ params }: { params: Promise<
 
       <div>
         <div className="flex items-center gap-4">
-          <Pastille module="aletheia" size={56} />
+          {/* Identité Aletheia portée par la Barre 2 de l'en-tête. */}
           <div className="min-w-0 flex-1">
-            <p className="font-marque text-sm font-semibold tracking-[0.18em] text-pigment">ALETHEIA</p>
             <h2 className="font-titre text-2xl text-encre leading-tight">Semaine {semaine} — {sem.titre}</h2>
           </div>
           {statut === 'DONE' && (

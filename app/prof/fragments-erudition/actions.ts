@@ -7,7 +7,7 @@ import { createClient } from '@/utils/supabase/server'
 import { createAdminClient } from '@/utils/supabase/admin'
 import { lancerAnalyse } from '@/utils/analyse'
 import { inscriptionsClasse } from '@/utils/acces'
-import { COOKIE_SEMESTRE_FRAGMENTS } from './contexte-semestre'
+import { COOKIE_SEMESTRE_FRAGMENTS, semestreFragmentsActif, type ContexteSemestre } from './contexte-semestre'
 import type { StatutPiste } from '@/types/fragments'
 
 async function verifierProf() {
@@ -23,6 +23,14 @@ async function verifierProf() {
   return supabase
 }
 
+
+// Contexte semestre chargé À LA DEMANDE par le sélecteur (client), pour que la
+// requête `semesters` ne s'exécute QUE sur Fragments — pas sur toutes les routes
+// /prof via le shell.
+export async function chargerContexteSemestreFragments(): Promise<ContexteSemestre> {
+  const supabase = await verifierProf()
+  return semestreFragmentsActif(supabase)
+}
 
 // Semestre consulté (cookie de contexte du module).
 export async function definirSemestreFragments(semestreId: string) {

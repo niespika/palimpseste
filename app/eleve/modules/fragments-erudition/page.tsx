@@ -419,8 +419,8 @@ export default async function PageFragments({ searchParams }: { searchParams: Pr
         <Link href="/eleve" className="text-sm text-muet hover:text-encre-douce">← Retour</Link>
       </div>
 
+      {/* Identité du module portée par la Barre 2 ; on garde le thème de l'élève. */}
       <div>
-        <h2 className="text-xl font-serif text-pigment mb-1">Fragments d&apos;érudition</h2>
         {theme ? (
           <div className="bg-parchemin-fonce rounded-xl px-4 py-3">
             <p className="text-xs text-muet mb-0.5">Ton thème</p>
