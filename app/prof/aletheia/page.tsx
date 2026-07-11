@@ -14,7 +14,7 @@ import type { TravailAletheia, DiagnosticTravail } from '@/app/eleve/modules/ale
 function Barre({ done, total }: { done: number; total: number }) {
   const pct = total > 0 ? Math.round((done / total) * 100) : 0
   return (
-    <div className="w-28 h-1.5 bg-parchemin-fonce rounded-full overflow-hidden" title={`${done}/${total} semaines`}>
+    <div className="w-28 h-1.5 bg-parchemin-fonce rounded-full overflow-hidden" title={`${done}/${total} séances`}>
       <div className="h-full bg-pigment rounded-full" style={{ width: `${pct}%` }} />
     </div>
   )
@@ -40,7 +40,7 @@ function StatutEleve({
               <span className="text-muet">
                 {p.done}/{p.total}
                 {p.semaineCourante != null && p.statutCourant != null && (
-                  <> · sem. {p.semaineCourante} — {STATUT_LABEL[p.statutCourant]}</>
+                  <> · séance {p.semaineCourante} — {STATUT_LABEL[p.statutCourant]}</>
                 )}
                 {p.semaineCourante == null && p.total > 0 && <> · livre terminé</>}
               </span>
@@ -163,7 +163,7 @@ export default async function ClasseAletheiaPage({ searchParams }: { searchParam
           </div>
           <DetailClasse
             nom={nomClasse ?? 'Classe'}
-            sousTitre="Avancée + trajectoire diagnostique (survole une semaine pour le détail)"
+            sousTitre="Avancée + trajectoire diagnostique (survole une séance pour le détail)"
             eleves={eleves}
             vide="Aucun élève inscrit dans cette classe."
           />
