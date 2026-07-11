@@ -4,6 +4,7 @@ import { inscriptionsModuleEleve } from '@/utils/acces'
 import { contexteClasseEleve } from '../../contexte-classe'
 import type { CapstoneRow, LivreAletheia, SemaineLivre, TravailAletheia } from './types'
 import { AIDES_V1_DEFAUT, type AidesV1 } from './aides-v1'
+import type { SeanceOrdinal } from '@/utils/aletheia-seance'
 
 export interface InscriptionAletheia { id: string; classe_id: string; classe_nom: string }
 
@@ -100,7 +101,7 @@ export async function livreAccessible(admin: SupabaseClient, classeIds: string[]
 }
 
 // Une semaine précise d'un livre (titre / chapitres / date), ou null si absente.
-export async function semaineLivre(admin: SupabaseClient, livreId: string, semaine: number): Promise<SemaineLivre | null> {
+export async function semaineLivre(admin: SupabaseClient, livreId: string, semaine: SeanceOrdinal): Promise<SemaineLivre | null> {
   const [{ data: unite }, { data: doc }] = await Promise.all([
     admin.from('scriptorium_unites').select('date_debut').eq('id', livreId).maybeSingle(),
     admin.from('scriptorium_documents')
@@ -139,7 +140,7 @@ export async function lireReglages(admin: SupabaseClient): Promise<{ evalQuestio
 
 // Déblocage séquentiel (Lot 6 D) : une semaine est ouverte si le déblocage est
 // off, OU si c'est la 1re semaine, OU si la semaine précédente (dans l'ordre) est DONE.
-export function estSemaineDebloquee(semaines: number[], doneSet: Set<number>, semaine: number, sequentiel: boolean): boolean {
+export function estSemaineDebloquee(semaines: SeanceOrdinal[], doneSet: Set<SeanceOrdinal>, semaine: SeanceOrdinal, sequentiel: boolean): boolean {
   if (!sequentiel) return true
   const ordre = [...semaines].sort((a, b) => a - b)
   const idx = ordre.indexOf(semaine)
@@ -148,7 +149,7 @@ export function estSemaineDebloquee(semaines: number[], doneSet: Set<number>, se
 }
 
 // Accès serveur à une semaine (page semaine + actions) : applique le déblocage séquentiel.
-export async function peutAccederSemaine(admin: SupabaseClient, eleveId: string, livreId: string, semaine: number): Promise<boolean> {
+export async function peutAccederSemaine(admin: SupabaseClient, eleveId: string, livreId: string, semaine: SeanceOrdinal): Promise<boolean> {
   const { deblocageSequentiel } = await lireReglages(admin)
   if (!deblocageSequentiel) return true
   const [{ data: docs }, { data: faits }] = await Promise.all([
@@ -188,7 +189,7 @@ export async function toutesSemainesDone(admin: SupabaseClient, eleveId: string,
 // Les travaux de l'élève pour un livre, indexés par numéro de semaine (RLS eleve_own).
 export async function travauxParSemaine(
   supabase: SupabaseClient, eleveId: string, livreId: string,
-): Promise<Map<number, TravailAletheia>> {
+): Promise<Map<SeanceOrdinal, TravailAletheia>> {
   const { data } = await supabase
     .from('aletheia_travaux')
     .select('*')
