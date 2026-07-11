@@ -5,7 +5,7 @@ import { contexteClasseEleve } from '../../contexte-classe'
 import type { CapstoneRow, LivreAletheia, SemaineLivre, TravailAletheia } from './types'
 import { AIDES_V1_DEFAUT, type AidesV1 } from './aides-v1'
 import type { SeanceOrdinal } from '@/utils/aletheia-seance'
-import { resoudreDatesLivre, formatEcheanceFr } from '@/utils/aletheia-dates'
+import { resoudreDatesLivre, formatEcheanceFr, livresGouvernesPourClasses } from '@/utils/aletheia-dates'
 
 export interface InscriptionAletheia { id: string; classe_id: string; classe_nom: string }
 
@@ -33,11 +33,15 @@ export async function contexteAletheia(
 // IMPORTANT : on n'expose JAMAIS fichier_ref / texte_extrait (ancrage IA, réservé
 // serveur). Le Scriptorium est en RLS prof-only → lecture via le client admin.
 export async function livresPourClasse(admin: SupabaseClient, classeId: string): Promise<LivreAletheia[]> {
-  const { data: liens } = await admin
-    .from('scriptorium_unite_classes')
-    .select('unite_id')
-    .eq('classe_id', classeId)
-  const bookIds = [...new Set((liens ?? []).map(l => l.unite_id as string))]
+  // (L4) Exposition UNION (supersède la décision 9 du SPEC Parcours) : le livre est
+  // exposé s'il est assigné en DIRECT (scriptorium_unite_classes) OU s'il figure dans
+  // un parcours assigné actif à la classe. ⚠️ R-EXPO : avant activation en prod,
+  // AUDITER les créneaux-livre préexistants (RUNBOOK) — cf. SPEC §9 / addendum Q11.
+  const [{ data: liens }, gouvernes] = await Promise.all([
+    admin.from('scriptorium_unite_classes').select('unite_id').eq('classe_id', classeId),
+    livresGouvernesPourClasses(admin, [classeId]),
+  ])
+  const bookIds = [...new Set([...(liens ?? []).map(l => l.unite_id as string), ...gouvernes])]
   if (bookIds.length === 0) return []
 
   const [{ data: unites }, { data: docs }] = await Promise.all([
@@ -95,9 +99,14 @@ export async function livreAccessible(admin: SupabaseClient, classeIds: string[]
     .eq('unite_id', livreId)
     .in('classe_id', classeIds)
     .limit(1)
-  if ((lien ?? []).length === 0) return false
-  const { data: u } = await admin.from('scriptorium_unites').select('type').eq('id', livreId).maybeSingle()
-  return u?.type === 'livre'
+  // (L4) Exposition UNION : direct OU via un parcours assigné actif (supersède décision 9).
+  let expose = (lien ?? []).length > 0
+  if (!expose) expose = (await livresGouvernesPourClasses(admin, classeIds)).includes(livreId)
+  if (!expose) return false
+  // defense-in-depth : c'est bien un livre ET non supprimé (un créneau pointant un
+  // livre soft-deleté ne doit pas le ré-exposer).
+  const { data: u } = await admin.from('scriptorium_unites').select('type, supprime_at').eq('id', livreId).maybeSingle()
+  return u?.type === 'livre' && (u?.supprime_at as string | null) == null
 }
 
 // Une semaine précise d'un livre (titre / chapitres / date), ou null si absente.

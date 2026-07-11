@@ -248,6 +248,27 @@ export async function resoudreDateSeance(
 }
 
 /**
+ * (L4 — exposition union) Ids des livres GOUVERNÉS pour un ensemble de classes : un
+ * créneau-livre d'un parcours vivant assigné ACTIF à l'une de ces classes. Sert à
+ * l'exposition (supersède la décision 9 : un livre planifié via parcours est lisible,
+ * même sans lien scriptorium_unite_classes direct). Ne filtre PAS supprime_at du livre
+ * (l'appelant le fait) ; renvoie des ids distincts.
+ */
+export async function livresGouvernesPourClasses(admin: SupabaseClient, classeIds: string[]): Promise<string[]> {
+  if (classeIds.length === 0) return []
+  const { data: assigns } = await admin.from('scriptorium_parcours_classes')
+    .select('parcours_id').eq('statut', 'active').in('classe_id', classeIds)
+  const parcoursIds = [...new Set((assigns ?? []).map(a => a.parcours_id as string))]
+  if (parcoursIds.length === 0) return []
+  const { data: parcours } = await admin.from('scriptorium_parcours').select('id, supprime_at').in('id', parcoursIds)
+  const vivants = (parcours ?? []).filter(p => (p.supprime_at as string | null) == null).map(p => p.id as string)
+  if (vivants.length === 0) return []
+  const { data: creneaux } = await admin.from('scriptorium_parcours_creneaux')
+    .select('livre_id').eq('ref_type', 'livre').in('parcours_id', vivants)
+  return [...new Set((creneaux ?? []).map(c => c.livre_id as string))]
+}
+
+/**
  * Toutes les paires (livre, classe) GOUVERNÉES : un créneau-livre d'un parcours vivant
  * ASSIGNÉ ACTIF à la classe. Sert au calendrier (mode b) à savoir quelles lectures
  * datées émettre. Ne résout pas les dates — appeler resoudreDatesLivre par paire.
