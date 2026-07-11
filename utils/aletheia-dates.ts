@@ -303,7 +303,7 @@ export async function livresGouvernesPourClasses(admin: SupabaseClient, classeId
  * ASSIGNÉ ACTIF à la classe. Sert au calendrier (mode b) à savoir quelles lectures
  * datées émettre. Ne résout pas les dates — appeler resoudreDatesLivre par paire.
  */
-export async function pairesLivresGouvernes(admin: SupabaseClient): Promise<Array<{ livreId: string; classeId: string }>> {
+export async function pairesLivresGouvernes(admin: SupabaseClient, classeIds?: string[]): Promise<Array<{ livreId: string; classeId: string }>> {
   const { data: creneaux } = await admin.from('scriptorium_parcours_creneaux')
     .select('parcours_id, livre_id').eq('ref_type', 'livre')
   if (!creneaux || creneaux.length === 0) return []
@@ -311,8 +311,10 @@ export async function pairesLivresGouvernes(admin: SupabaseClient): Promise<Arra
   const { data: parcours } = await admin.from('scriptorium_parcours').select('id, supprime_at').in('id', parcoursIds)
   const vivants = new Set((parcours ?? []).filter(p => (p.supprime_at as string | null) == null).map(p => p.id as string))
   if (vivants.size === 0) return []
-  const { data: assigns } = await admin.from('scriptorium_parcours_classes')
+  let qAssigns = admin.from('scriptorium_parcours_classes')
     .select('parcours_id, classe_id').eq('statut', 'active').in('parcours_id', [...vivants])
+  if (classeIds && classeIds.length) qAssigns = qAssigns.in('classe_id', classeIds) // (perf) scope au spectateur
+  const { data: assigns } = await qAssigns
   const classesParParcours = new Map<string, Set<string>>()
   for (const a of assigns ?? []) {
     const pid = a.parcours_id as string

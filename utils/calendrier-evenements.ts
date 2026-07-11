@@ -36,9 +36,10 @@ function un<T>(x: T | T[] | null | undefined): T | null {
 export async function assemblerEvenements(opts: {
   debut: string
   fin: string
+  classeIds?: string[] // (perf) scope les échéances Aletheia aux classes du spectateur (élève) ; absent = toutes (prof)
 }): Promise<CalendarEvent[]> {
   const supabase = await createClient()
-  const { debut, fin } = opts
+  const { debut, fin, classeIds } = opts
   const events: CalendarEvent[] = []
   const tz = await lireFuseau() // jour local des instants (lance_at) dans le fuseau choisi
 
@@ -120,7 +121,7 @@ export async function assemblerEvenements(opts: {
   //    chaque événement porte son classe_id → la page élève filtre par classe (pas de
   //    fuite). L'échéance est déjà le DIMANCHE (résolveur).
   const admin = createAdminClient()
-  const paires = await pairesLivresGouvernes(admin)
+  const paires = await pairesLivresGouvernes(admin, classeIds)
   if (paires.length) {
     const livreIds = [...new Set(paires.map(p => p.livreId))]
     const [{ data: docsLivre }, { data: livresRows }] = await Promise.all([
@@ -136,15 +137,17 @@ export async function assemblerEvenements(opts: {
     const labelParLivre = new Map<string, string>()
     for (const l of livresRows ?? []) labelParLivre.set(l.id as string, l.label as string)
 
-    for (const { livreId, classeId } of paires) {
+    // (perf) Résolution PARALLÈLE par paire (scopée aux classes du spectateur via classeIds).
+    const parPaire = await Promise.all(paires.map(async ({ livreId, classeId }) => {
       const label = labelParLivre.get(livreId)
-      if (!label) continue // livre supprimé/masqué → pas d'événement
+      if (!label) return [] as CalendarEvent[] // livre supprimé/masqué → pas d'événement
       const seances = seancesParLivre.get(livreId) ?? []
       const { dates } = await resoudreDatesLivre(admin, livreId, classeId, seances)
+      const evs: CalendarEvent[] = []
       for (const s of seances) {
         const d = dates.get(s)?.valeur
         if (!d || d < debut || d > fin) continue
-        events.push({
+        evs.push({
           source_module: 'aletheia',
           source_id: livreId,
           classe_id: classeId,
@@ -155,7 +158,9 @@ export async function assemblerEvenements(opts: {
           is_editable: false,
         })
       }
-    }
+      return evs
+    }))
+    for (const evs of parPaire) events.push(...evs)
   }
 
   events.sort((a, b) => a.date.localeCompare(b.date) || a.label.localeCompare(b.label))

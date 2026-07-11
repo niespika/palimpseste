@@ -14,11 +14,6 @@ export interface SemaineVue {
 
 // Formate une date Postgres (« YYYY-MM-DD ») sans passer par `new Date`, qui
 // la parse en UTC puis la reformate dans le fuseau du serveur (dérive d'un jour).
-export function formatDateFr(d: string): string {
-  const [a, m, j] = d.split('-')
-  return a && m && j ? `${j}/${m}/${a}` : d
-}
-
 // Instant ISO → « JJ/MM » (getters UTC : dérive possible d'un jour autour de minuit
 // UTC, négligeable pour un libellé indicatif — lire le fuseau coûterait une requête).
 export function formatJourMois(iso: string): string {

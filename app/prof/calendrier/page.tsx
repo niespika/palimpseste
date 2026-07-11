@@ -9,6 +9,9 @@ import { couleursParClasse } from '@/utils/calendrier-couleurs'
 import FiltreClasses from './FiltreClasses'
 import EditeurDate from './EditeurDate'
 
+// (perf) Le bloc Aletheia du calendrier résout des dates de parcours (requêtes DB) → marge de temps.
+export const maxDuration = 60
+
 type Vue = 'mois' | 'semaine' | 'jour'
 const JOURS = ['lun', 'mar', 'mer', 'jeu', 'ven', 'sam', 'dim']
 

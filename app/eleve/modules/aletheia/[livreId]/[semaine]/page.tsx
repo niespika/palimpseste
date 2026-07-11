@@ -299,8 +299,8 @@ export default async function PageSemaineAletheia({ params }: { params: Promise<
                 tuiles={tuiles}
                 dejaLu={false}
                 marquerAction={validerLectureRetourVf.bind(null, livreId, semaine)}
-                labelBouton="✓ J’ai lu mon retour — clore la semaine"
-                introMessage="Lis chaque partie, puis coche-la pour confirmer. La dernière clôt la semaine."
+                labelBouton="✓ J’ai lu mon retour — clore la séance"
+                introMessage="Lis chaque partie, puis coche-la pour confirmer. La dernière clôt la séance."
               />
             )
           })()}

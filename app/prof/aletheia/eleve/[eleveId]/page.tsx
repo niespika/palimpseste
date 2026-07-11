@@ -52,10 +52,10 @@ function texteCapstone(cap: CapstoneRow | null | undefined, p: Progression): str
       : cap?.statut === 'ERROR' ? 'Génération échouée — régénère-la depuis le Scriptorium.'
       : 'Pas encore générée — à générer depuis le Scriptorium.'
   }
-  if (p.total === 0) return 'Livre pas encore découpé en semaines.'
+  if (p.total === 0) return 'Livre pas encore découpé en séances.'
   return p.done === p.total
     ? 'L’élève a terminé le livre : la carte lui est accessible.'
-    : `L’élève y accèdera à la fin du livre (${p.done}/${p.total} semaines).`
+    : `L’élève y accèdera à la fin du livre (${p.done}/${p.total} séances).`
 }
 
 // ── Liste maître : une ligne de semaine (sélecteur fin, pilote l'URL) ─────────
@@ -160,7 +160,7 @@ function PanneauDetail({ livre, semaine, travail, diag, basePath }: {
       </div>
 
       {!travail ? (
-        <p className="text-sm text-muet bg-surface border border-bordure rounded-xl p-4">Rien soumis pour cette semaine.</p>
+        <p className="text-sm text-muet bg-surface border border-bordure rounded-xl p-4">Rien soumis pour cette séance.</p>
       ) : (
         <>
           {/* 2. ★ Diagnostic prof-only — le signal */}
@@ -313,7 +313,7 @@ export default async function DrillDownEleveAletheia({ params, searchParams }: {
       <div>
         <Link href="/prof/aletheia" className="text-sm text-muet hover:text-encre-douce">← Classe</Link>
         <h3 className="font-titre text-2xl text-encre mt-2">{eleve.display_name as string}</h3>
-        <p className="text-sm text-muet">Détail par livre et par semaine</p>
+        <p className="text-sm text-muet">Détail par livre et par séance</p>
       </div>
 
       {livres.length === 0 ? (

@@ -45,7 +45,7 @@ export default function PageLivre({
 
   const labelCible = (ln: number) =>
     cible
-      ? `Placer ${cible.champ === 'debut' ? 'début' : 'fin'} de la semaine ${cible.w + 1} à la ligne ${ln}`
+      ? `Placer ${cible.champ === 'debut' ? 'début' : 'fin'} de la séance ${cible.w + 1} à la ligne ${ln}`
       : `Ligne ${ln}`
 
   return (
