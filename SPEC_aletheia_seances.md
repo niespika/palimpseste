@@ -17,6 +17,40 @@ Contre-épreuves : **17 findings** (3 bloquants, 8 majeurs, 6 mineurs ; doublons
 
 ---
 
+## Addendum — décisions PO post-cadrage (2026-07-09, verrouille l'implémentation)
+
+Ces décisions ont été prises APRÈS la rédaction du corps du SPEC ; elles **précisent le périmètre et tranchent les 11 questions du §12**. En cas de divergence avec le corps du SPEC, **cet addendum fait foi**.
+
+### A. Modèle à 3 modes (recadre §1, §4, §8 et §12-Q3)
+
+| Mode | Définition | Exposition élève | Logique exercices / retours IA | Périmètre |
+|---|---|---|---|---|
+| **A** | Livre seul, sans parcours | Livre **entier** | Existante (inchangée) | ✅ Ce chantier |
+| **B** | Livre **entier** + ressources, dans un parcours | Livre **entier** | Existante (inchangée) | ✅ Ce chantier |
+| **C** | Parcours n'exposant que des **extraits** du livre (+ ressources) | **Seulement les extraits** | **Différente — à construire** | ⏭️ **Chantier ultérieur, nommé** |
+
+**Règle d'implémentation (modes A/B — ce chantier) :** une **tranche de créneau** (`livre_semaine_debut/fin`) sert **UNIQUEMENT à DATER** quelles séances tombent quelle semaine de parcours. **L'exposition reste TOUJOURS le livre entier** (toutes les séances visibles, déblocage séquentiel, capstone = toutes séances DONE, retours IA existants). Une séance non couverte par un créneau reste **visible sans date**. La tranche ne limite JAMAIS la visibilité en A/B.
+
+**Mode C = DIFFÉRÉ.** Un parcours qui n'expose qu'un sous-ensemble de séances (extraits) AVEC une logique d'exercices/retours IA spécifique est **hors de ce chantier**. Le schéma (bornes de tranche) l'accueille, mais ni le masquage des séances hors-extraits ni la logique IA dédiée ne sont implémentés ici. **Conséquence : ne PAS implémenter « seule la tranche exposée » ; l'exposition du Lot 4 est whole-book.**
+
+### B. Réponses aux 11 questions du §12
+
+| Q | Décision verrouillée |
+|---|---|
+| Q1 | **Garder** le segment de route `[semaine]` (afficher « Séance N »). Pas de renommage de route. |
+| Q2 | **Ordre déterministe + drapeau « ambigu »** prof (pas d'interdiction à l'authoring). |
+| Q3 | **Modes A/B = livre entier exposé, dates sur les séances couvertes.** Extraits-only = **mode C différé** (cf. A). |
+| Q4 | **Échéance = dimanche** (snapshot lundi + 6 j ; frise `dateFinDimanche`). Convention unique. |
+| Q5 | **Jouer** les `COMMENT ON COLUMN` (colonnes héritées + bornes de tranche). Coût nul. |
+| Q6 | En-tête livre prof : **indicateur de mode** (« assigné en direct — sans date » / « planifié via N parcours ») au lieu de « début le … ». |
+| Q7 | **Couper les dates héritées d'abord** (Lot 2), **puis** brancher le résolveur parcours (Lot 3). |
+| Q8 | **Pas** de flag « afficher les dates héritées ». Défaut OFF, conforme LD2. |
+| Q9 | `semaineParDefaut` prof : repli **« première séance »**. |
+| Q10 | Élève, livre sans dates (mode a) : **badge discret « livre sans échéances »**. |
+| Q11 | Lot 4 : **confirmation explicite du prof** des créneaux-livre préexistants avant l'accès rétroactif (RUNBOOK). |
+
+---
+
 ## 1. Contexte & objectif
 
 ### 1.1 Problème
