@@ -86,7 +86,7 @@ export default async function PageAletheia() {
               <div className="min-w-0">
                 <h2 className="font-titre text-2xl sm:text-3xl text-encre leading-tight">{livre.titre}</h2>
                 {livre.auteur && <p className="font-corps text-sm text-muet mt-0.5 italic">{livre.auteur}</p>}
-                <p className="font-corps text-sm text-muet mt-1">{nbSemaines} semaine{nbSemaines > 1 ? 's' : ''} · lis-le dans ton propre exemplaire</p>
+                <p className="font-corps text-sm text-muet mt-1">{nbSemaines} séance{nbSemaines > 1 ? 's' : ''} · lis-le dans ton propre exemplaire</p>
               </div>
 
               {/* ── Barre d'avancement ─────────────────────────────────────── */}
@@ -96,12 +96,12 @@ export default async function PageAletheia() {
                     <span className="text-2xl font-semibold text-pigment">{nbDone}</span>
                     <span className="text-muet text-base"> / {total}</span>
                   </span>
-                  <span className="font-ui text-sm text-encre-douce whitespace-nowrap shrink-0 hidden sm:inline">semaines terminées</span>
+                  <span className="font-ui text-sm text-encre-douce whitespace-nowrap shrink-0 hidden sm:inline">séances terminées</span>
                   <div className="flex-1 h-2 bg-bordure rounded-full overflow-hidden">
                     <div className="h-full bg-pigment transition-all" style={{ width: `${Math.round((nbDone / total) * 100)}%` }} />
                   </div>
                   {couranteNum != null && (
-                    <span className="font-ui text-xs text-pigment bg-pigment-teinte px-2.5 py-1 rounded-full whitespace-nowrap shrink-0">Semaine {couranteNum} t&apos;attend</span>
+                    <span className="font-ui text-xs text-pigment bg-pigment-teinte px-2.5 py-1 rounded-full whitespace-nowrap shrink-0">Séance {couranteNum} t&apos;attend</span>
                   )}
                 </div>
               )}
@@ -118,7 +118,7 @@ export default async function PageAletheia() {
 
                   if (!debloquee) {
                     return (
-                      <div key={s.semaine} className="bg-parchemin border border-bordure rounded-xl px-4 py-3 flex items-center gap-3 sm:gap-4 opacity-60" title="Termine la semaine précédente pour débloquer celle-ci.">
+                      <div key={s.semaine} className="bg-parchemin border border-bordure rounded-xl px-4 py-3 flex items-center gap-3 sm:gap-4 opacity-60" title="Termine la séance précédente pour débloquer celle-ci.">
                         <span className="font-titre text-xl sm:text-2xl text-muet w-5 sm:w-6 text-center shrink-0">{s.semaine}</span>
                         <div className="flex-1 min-w-0">
                           <p className="font-corps text-sm sm:text-base text-encre-douce truncate">{s.titre}</p>
@@ -186,7 +186,7 @@ export default async function PageAletheia() {
               ) : (
                 <div className="border border-dashed border-bordure rounded-xl px-4 py-3 flex items-center gap-3">
                   <span className="text-muet" aria-hidden>✦</span>
-                  <span className="font-corps text-sm text-muet flex-1">La carte d&apos;architecture du livre se révèle quand les {total} semaines sont terminées.</span>
+                  <span className="font-corps text-sm text-muet flex-1">La carte d&apos;architecture du livre se révèle quand les {total} séances sont terminées.</span>
                   <span className="font-ui text-xs text-muet whitespace-nowrap shrink-0">🔒 {nbDone}/{total}</span>
                 </div>
               ))}

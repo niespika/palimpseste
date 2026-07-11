@@ -49,7 +49,7 @@ export default function VueLivre({ livre, classes, classeIds, docs, nbDocsSansSe
     }
   }
 
-  const semaineSel = semaineValide(semaineParam, parSemaine) ?? semaineParDefaut(livre.date_debut, parSemaine)
+  const semaineSel = semaineValide(semaineParam, parSemaine) ?? semaineParDefaut(parSemaine)
   const hrefFiche = `${hrefBase}&semaine=${semaineSel}`
 
   // ── Mode re-découpe : l'éditeur remplace la grille, pleine largeur ──────────

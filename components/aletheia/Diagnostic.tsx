@@ -38,7 +38,7 @@ const axeT = (v1: number | null, vf: number | null, mV1: boolean, mVf: boolean) 
 const titreDiag = (s: number, d: DiagnosticTravail): string => {
   const these = axeT(d.niveau_these_v1, d.niveau_these_vf, d.these_mal_definie_v1 === true, d.these_mal_definie_vf === true)
   const args = axeT(d.niveau_arguments_v1, d.niveau_arguments_vf, false, false)
-  return `Semaine ${s} — arguments ${args} · thèse ${these} (V1→VF, E faible → A fort)`
+  return `Séance ${s} — arguments ${args} · thèse ${these} (V1→VF, E faible → A fort)`
 }
 
 const aSignal = (d: DiagnosticTravail | undefined): boolean => !!d && (

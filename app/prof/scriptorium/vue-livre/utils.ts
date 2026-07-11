@@ -1,5 +1,4 @@
 import type { CapstoneLien, ReferenceChapitre } from '@/app/eleve/modules/aletheia/types'
-import { FUSEAU_DEFAUT, jourDansFuseau } from '@/utils/fuseau'
 
 // ── Utilitaires PURS de la vue livre (importables serveur et client) ──────────
 
@@ -136,27 +135,10 @@ export function semaineValide(param: string | undefined, semaines: { semaine: nu
   return semaines.some(s => s.semaine === n) ? n : undefined
 }
 
-// Semaine « courante » du livre : date_debut + 7 j par semaine. date_debut est une
-// date PURE (convention projet : calcul en UTC) ; « aujourd'hui » est pris comme
-// jour CIVIL dans le fuseau projet par défaut (lire le fuseau configuré coûterait
-// une requête — à quelques heures près sur une simple sélection par défaut, le
-// défaut suffit). Livre pas commencé ou terminé → première semaine (handoff :
-// « semaine courante si le livre est en cours, sinon S1 »). Snap à la semaine
-// existante la plus proche ≤ (les numéros peuvent avoir des trous).
-export function semaineParDefaut(dateDebut: string | null, semaines: { semaine: number }[]): number {
+// Séance sélectionnée par défaut dans la vue-livre : la PREMIÈRE séance (décision Q9,
+// book-level, décorrélée de toute date — mode a sans date). Snap à la plus petite
+// séance existante (les numéros peuvent avoir des trous).
+export function semaineParDefaut(semaines: { semaine: number }[]): number {
   if (semaines.length === 0) return 1
-  const nums = semaines.map(s => s.semaine)
-  const premiere = Math.min(...nums)
-  const derniere = Math.max(...nums)
-  if (!dateDebut) return premiere
-  const [y, m, d] = dateDebut.split('-').map(Number)
-  if (!y || !m || !d) return premiere
-  const debut = Date.UTC(y, m - 1, d)
-  const [ay, am, aj] = jourDansFuseau(new Date(), FUSEAU_DEFAUT).split('-').map(Number)
-  if (!ay || !am || !aj) return premiere
-  const aujUTC = Date.UTC(ay, am - 1, aj)
-  const sem = Math.floor((aujUTC - debut) / (7 * 86_400_000)) + 1
-  if (sem < premiere || sem > derniere) return premiere
-  const passees = nums.filter(n => n <= sem)
-  return passees.length > 0 ? Math.max(...passees) : premiere
+  return Math.min(...semaines.map(s => s.semaine))
 }

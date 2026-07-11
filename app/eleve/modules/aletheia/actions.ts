@@ -81,15 +81,15 @@ export async function soumettreV1(livreId: string, semaine: number, saisie: Sais
   const { active } = await contexteAletheia(supabase, userId)
   if (!active) return { error: 'Ce module ne t\'est pas accessible.' }
   if (!(await livreAccessible(admin, [active.classe_id], livreId))) return { error: 'Ce livre ne t\'est pas accessible.' }
-  if (!(await semaineLivre(admin, livreId, semaine))) return { error: 'Semaine introuvable.' }
-  if (!(await peutAccederSemaine(admin, userId, livreId, semaine))) return { error: 'Cette semaine n\'est pas encore débloquée.' }
+  if (!(await semaineLivre(admin, livreId, semaine))) return { error: 'Séance introuvable.' }
+  if (!(await peutAccederSemaine(admin, userId, livreId, semaine))) return { error: 'Cette séance n\'est pas encore débloquée.' }
 
   const { data: existing } = await supabase
     .from('aletheia_travaux')
     .select('id, statut')
     .eq('eleve_id', userId).eq('scriptorium_livre_id', livreId).eq('semaine_index', semaine)
     .maybeSingle()
-  if (existing && existing.statut !== 'DRAFT') return { error: 'Le travail a déjà été soumis pour cette semaine.' }
+  if (existing && existing.statut !== 'DRAFT') return { error: 'Le travail a déjà été soumis pour cette séance.' }
 
   // Détection « petit malin » SANS IA (rendu quasi vide / aveu), AVANT de planifier
   // quoi que ce soit. Si flagué : on N'APPELLE PAS l'IA (aucun retour généré, aucun
@@ -116,7 +116,7 @@ export async function soumettreV1(livreId: string, semaine: number, saisie: Sais
     : await admin.from('aletheia_travaux').insert(payload).select('id').single()
   if (error || !saved) {
     // Course (double-clic / 2 onglets) : la contrainte d'unicité gagne → message clair.
-    if ((error as { code?: string } | null)?.code === '23505') return { error: 'Le travail a déjà été soumis pour cette semaine.' }
+    if ((error as { code?: string } | null)?.code === '23505') return { error: 'Le travail a déjà été soumis pour cette séance.' }
     return { error: error?.message ?? 'Erreur' }
   }
   const travailId = saved.id as string
@@ -226,7 +226,7 @@ export async function validerLectureRetourVf(livreId: string, semaine: number) {
     .select('id, statut')
     .eq('eleve_id', userId).eq('scriptorium_livre_id', livreId).eq('semaine_index', semaine)
     .maybeSingle()
-  if (!row) return { error: 'Aucun travail pour cette semaine.' }
+  if (!row) return { error: 'Aucun travail pour cette séance.' }
   if (row.statut !== 'FEEDBACK2_READY') return { error: "La validation de lecture n'est pas disponible à cette étape." }
 
   const { error } = await admin.from('aletheia_travaux').update({
@@ -255,7 +255,7 @@ export async function relancerRetour(livreId: string, semaine: number) {
     .select('id, statut, updated_at')
     .eq('eleve_id', userId).eq('scriptorium_livre_id', livreId).eq('semaine_index', semaine)
     .maybeSingle()
-  if (!row) return { error: 'Aucun travail pour cette semaine.' }
+  if (!row) return { error: 'Aucun travail pour cette séance.' }
   // Déjà avancé entre-temps (le retour est finalement arrivé) → rien à relancer.
   if (row.statut !== 'V1_SUBMITTED' && row.statut !== 'VF_SUBMITTED') {
     revalider(livreId, semaine)

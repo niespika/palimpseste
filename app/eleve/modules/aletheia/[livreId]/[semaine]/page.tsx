@@ -127,7 +127,7 @@ function RevueDone({ t, evalQuestions }: { t: TravailAletheia; evalQuestions: bo
       {/* 3. Ce que cette semaine t'a dévoilé — le fil entre les semaines. */}
       {(amont.length > 0 || aval.length > 0) && (
         <section className="bg-surface border border-bordure border-l-4 border-l-liseret rounded-xl p-4 sm:p-5 space-y-3">
-          <p className="font-ui text-xs tracking-[0.1em] text-attention uppercase">Ce que cette semaine t&apos;a dévoilé</p>
+          <p className="font-ui text-xs tracking-[0.1em] text-attention uppercase">Ce que cette séance t&apos;a dévoilé</p>
           {amont.length > 0 && (
             <div>
               <p className="text-xs text-muet mb-1">Ce que tu as déjà vu</p>
@@ -191,7 +191,7 @@ export default async function PageSemaineAletheia({ params }: { params: Promise<
       <div className="space-y-5 pb-8">
         <Link href="/eleve/modules/aletheia" className="text-sm text-muet hover:text-encre-douce">← Planning</Link>
         <div className="bg-surface border border-bordure rounded-xl p-6 text-center text-muet text-sm">
-          🔒 Cette semaine n&apos;est pas encore débloquée. Termine d&apos;abord la semaine précédente.
+          🔒 Cette séance n&apos;est pas encore débloquée. Termine d&apos;abord la séance précédente.
         </div>
       </div>
     )
@@ -229,7 +229,7 @@ export default async function PageSemaineAletheia({ params }: { params: Promise<
         <div className="flex items-center gap-4">
           {/* Identité Aletheia portée par la Barre 2 de l'en-tête. */}
           <div className="min-w-0 flex-1">
-            <h2 className="font-titre text-2xl text-encre leading-tight">Semaine {semaine} — {sem.titre}</h2>
+            <h2 className="font-titre text-2xl text-encre leading-tight">Séance {semaine} — {sem.titre}</h2>
           </div>
           {statut === 'DONE' && (
             <span className="font-ui text-xs sm:text-sm text-minium bg-minium-teinte px-3 py-1.5 rounded-full whitespace-nowrap shrink-0">
@@ -335,7 +335,7 @@ export default async function PageSemaineAletheia({ params }: { params: Promise<
               La préparation de ton retour n&apos;a pas abouti. Renvoie ton travail ci-dessous ; si le problème persiste, préviens ton professeur.
             </div>
           )}
-          <Bloc titre="1. Ta lecture de la semaine">
+          <Bloc titre="1. Ta lecture de la séance">
             <FormulaireV1
               livreId={livreId}
               semaine={semaine}

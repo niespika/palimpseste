@@ -23,18 +23,10 @@ export async function contexteAletheia(
   return { moduleActif: true, inscriptions, active: inscriptionActive }
 }
 
-// Date indicative d'une semaine = date_debut + (semaine-1)×7 jours, formatée
-// « JJ/MM/AAAA ». On passe par Date.UTC (arguments explicites, déterministe) et
-// les getters UTC pour éviter la dérive de fuseau (cf. formatDateFr Scriptorium).
-export function dateIndicative(dateDebut: string | null, semaine: number): string {
-  if (!dateDebut) return ''
-  const [y, m, d] = dateDebut.split('-').map(Number)
-  if (!y || !m || !d) return ''
-  const dt = new Date(Date.UTC(y, m - 1, d + (semaine - 1) * 7))
-  const jj = String(dt.getUTCDate()).padStart(2, '0')
-  const mm = String(dt.getUTCMonth() + 1).padStart(2, '0')
-  return `${jj}/${mm}/${dt.getUTCFullYear()}`
-}
+// (Lot 2) La date indicative héritée « date_debut + (semaine-1)×7 » est SUPPRIMÉE :
+// une séance est décorrélée du calendrier (mode a = sans date). En mode b, la date
+// sera résolue en Lot 3 via resoudreDateSeance (dates issues du parcours). Le champ
+// `dateIndicative` des types demeure, laissé vide tant que le résolveur n'est pas branché.
 
 // Les livres assignés à une classe + leurs semaines (titre, chapitres, date).
 // IMPORTANT : on n'expose JAMAIS fichier_ref / texte_extrait (ancrage IA, réservé
@@ -67,9 +59,9 @@ export async function livresPourClasse(admin: SupabaseClient, classeId: string):
     const arr = semainesParLivre.get(uid) ?? []
     arr.push({
       semaine: d.semaine as number,
-      titre: (d.titre as string) ?? `Semaine ${d.semaine}`,
+      titre: (d.titre as string) ?? `Séance ${d.semaine}`,
       chapitres: (d.chapitres as string | null) ?? null,
-      dateIndicative: dateIndicative((unites ?? []).find(u => u.id === uid)?.date_debut as string | null ?? null, d.semaine as number),
+      dateIndicative: '',
     })
     semainesParLivre.set(uid, arr)
   }
@@ -102,20 +94,17 @@ export async function livreAccessible(admin: SupabaseClient, classeIds: string[]
 
 // Une semaine précise d'un livre (titre / chapitres / date), ou null si absente.
 export async function semaineLivre(admin: SupabaseClient, livreId: string, semaine: SeanceOrdinal): Promise<SemaineLivre | null> {
-  const [{ data: unite }, { data: doc }] = await Promise.all([
-    admin.from('scriptorium_unites').select('date_debut').eq('id', livreId).maybeSingle(),
-    admin.from('scriptorium_documents')
-      .select('titre, chapitres')
-      .eq('unite_id', livreId)
-      .eq('semaine', semaine)
-      .maybeSingle(),
-  ])
+  const { data: doc } = await admin.from('scriptorium_documents')
+    .select('titre, chapitres')
+    .eq('unite_id', livreId)
+    .eq('semaine', semaine)
+    .maybeSingle()
   if (!doc) return null
   return {
     semaine,
-    titre: (doc.titre as string) ?? `Semaine ${semaine}`,
+    titre: (doc.titre as string) ?? `Séance ${semaine}`,
     chapitres: (doc.chapitres as string | null) ?? null,
-    dateIndicative: dateIndicative((unite?.date_debut as string | null) ?? null, semaine),
+    dateIndicative: '',
   }
 }
 
