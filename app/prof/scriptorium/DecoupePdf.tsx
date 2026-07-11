@@ -83,7 +83,7 @@ export default function DecoupePdf({ nb, titre, auteur, onReady }: {
           {analyse?.scanne && (
             <p className="text-sm text-attention">
               ⚠ {analyse.pagesVides} page{analyse.pagesVides > 1 ? 's' : ''} sur {analyse.totalPages} semblent sans texte —
-              le PDF est peut-être scanné. La création échouera pour toute semaine sans texte sélectionnable.
+              le PDF est peut-être scanné. La création échouera pour toute séance sans texte sélectionnable.
             </p>
           )}
           <NavigateurDecoupe

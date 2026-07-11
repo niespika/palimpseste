@@ -76,7 +76,7 @@ export default function EditeurLivre({ livreId, titre, auteur, signets, semaines
           <button type="button" onClick={ouvrir} className="text-xs bg-bouton text-surface px-3 py-1.5 rounded hover:opacity-90">Modifier le livre</button>
         </div>
         {semaines.length === 0 ? (
-          <p className="text-sm text-muet">Aucune semaine pour ce livre.</p>
+          <p className="text-sm text-muet">Aucune séance pour ce livre.</p>
         ) : (
           <div className="space-y-1.5">
             {semaines.map(s => (
@@ -109,7 +109,7 @@ export default function EditeurLivre({ livreId, titre, auteur, signets, semaines
         automatiquement (utilise « Régénérer » depuis la page du livre si besoin).
       </p>
       {semaines.length === 0 ? (
-        <p className="text-sm text-muet">Aucune semaine à modifier.</p>
+        <p className="text-sm text-muet">Aucune séance à modifier.</p>
       ) : (
         <NavigateurDecoupe pages={pages} nb={semaines.length} bornesInitiales={bornesInitiales} modeModification onEtat={onEtat} meta={{ titre, auteur }} signets={signets} />
       )}

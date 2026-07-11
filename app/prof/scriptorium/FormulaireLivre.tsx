@@ -120,7 +120,7 @@ export default function FormulaireLivre({ classes }: Props) {
           />
         </div>
         <div>
-          <label className="block text-xs font-medium text-muet mb-1">Nombre de semaines</label>
+          <label className="block text-xs font-medium text-muet mb-1">Nombre de séances</label>
           <input
             name="nbSemaines"
             type="number"
@@ -168,9 +168,9 @@ export default function FormulaireLivre({ classes }: Props) {
       </div>
 
       <div>
-        <label className="block text-xs font-medium text-muet mb-1">Comment fournir le texte des semaines ?</label>
+        <label className="block text-xs font-medium text-muet mb-1">Comment fournir le texte des séances ?</label>
         <div className="inline-flex rounded-lg border border-bordure overflow-hidden text-sm">
-          {([['par_semaine', 'Un fichier par semaine'], ['pdf_decoupe', 'Un seul PDF découpé']] as const).map(([v, lib]) => (
+          {([['par_semaine', 'Un fichier par séance'], ['pdf_decoupe', 'Un seul PDF découpé']] as const).map(([v, lib]) => (
             <button
               key={v}
               type="button"
@@ -187,12 +187,12 @@ export default function FormulaireLivre({ classes }: Props) {
       {mode === 'par_semaine' && (
         <div className="space-y-3">
           <p className="text-xs font-medium text-muet">
-            Programme par semaine
+            Programme par séance
             <span className="font-normal text-muet"> — le PDF sert d&apos;ancrage à l&apos;IA, l&apos;élève lit son propre exemplaire</span>
           </p>
           {semaines.map(n => (
             <div key={n} className="border border-bordure rounded-lg p-3 space-y-2">
-              <p className="text-xs font-medium text-encre-douce">Semaine {n}</p>
+              <p className="text-xs font-medium text-encre-douce">Séance {n}</p>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                 <input
                   name={`semaine_${n}_titre`}
