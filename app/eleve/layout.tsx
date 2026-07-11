@@ -1,7 +1,7 @@
 import { redirect } from 'next/navigation'
 import { createClient } from '@/utils/supabase/server'
 import { deconnexion } from './actions'
-import BarreNavigation from '@/components/nav/BarreNavigation'
+import EnTeteSite from '@/components/nav/EnTeteSite'
 import BarreOngletsMobile from '@/components/nav/BarreOngletsMobile'
 import { navEleveFiltree } from '@/components/nav/configNavigation'
 import { slugsModulesAccessibles } from '@/utils/acces'
@@ -30,27 +30,21 @@ export default async function EleveLayout({ children }: { children: React.ReactN
 
   return (
     <div className="min-h-screen bg-parchemin">
-      <header className="bg-surface border-b border-bordure print:hidden sticky top-0 z-10">
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 pt-4 pb-2 flex items-center justify-between gap-3">
+      {/* En-tête desktop (2 barres). Le sélecteur de classe est dans la Barre 1. */}
+      <EnTeteSite
+        role="eleve"
+        tabs={tabsEleve}
+        deconnexionAction={deconnexion}
+        classe={{ inscriptions, activeId: active?.id ?? null }}
+      />
+      {/* Bandeau mobile (< sm) : conserve wordmark + sélecteur de classe, sinon
+          l'élève perdrait le commutateur de classe sous 640px. Déconnexion : onglet « Moi ». */}
+      <div className="sm:hidden sticky top-0 z-10 bg-surface border-b border-bordure print:hidden">
+        <div className="max-w-4xl mx-auto px-4 pt-4 pb-2 flex items-center justify-between gap-3">
           <span className="font-marque text-base font-semibold tracking-[0.1em] text-encre">PALIMPSESTE</span>
-          <div className="flex items-center gap-3">
-            {active && <SelecteurClasseEleve inscriptions={inscriptions} activeId={active.id} />}
-            {/* Déconnexion : dans l'en-tête ≥ sm ; sur mobile, via l'onglet « Moi ». */}
-            <form action={deconnexion} className="hidden sm:block">
-              <button
-                type="submit"
-                className="font-ui text-sm text-muet hover:text-encre transition-colors whitespace-nowrap"
-              >
-                Se déconnecter
-              </button>
-            </form>
-          </div>
+          {active && <SelecteurClasseEleve inscriptions={inscriptions} activeId={active.id} />}
         </div>
-        {/* Barre à déroulants : desktop seulement. Sur mobile, c'est la barre d'onglets du bas. */}
-        <div className="hidden sm:block max-w-4xl mx-auto px-4 sm:px-6 pb-2">
-          <BarreNavigation tabs={tabsEleve} />
-        </div>
-      </header>
+      </div>
       <main className="max-w-4xl mx-auto px-4 sm:px-6 pt-8 pb-24 sm:pb-8">
         {children}
       </main>

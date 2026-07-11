@@ -237,24 +237,10 @@ export default async function ScriptoriumPage({
       : null
   }
 
-  const ongletClasse = (actif: boolean) =>
-    `font-ui px-4 py-2 text-sm rounded-t-lg border-b-2 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pigment ${
-      actif
-        ? 'bg-pigment-teinte text-encre border-liseret font-medium'
-        : 'text-encre-douce hover:text-encre hover:bg-pigment-teinte border-transparent'
-    }`
-
+  // Les onglets (Par classe / Textes / Cours / Parcours / Livres / Paramètres)
+  // sont désormais portés par la Barre 2 de l'en-tête (pilotés par `?vue=`).
   return (
     <div className="space-y-6 pb-8">
-      <nav className="flex flex-wrap gap-1 border-b border-bordure">
-        <Link href="/prof/scriptorium?vue=classes" className={ongletClasse(vue === 'classes')}>Par classe</Link>
-        <Link href="/prof/scriptorium?vue=textes" className={ongletClasse(vue === 'textes')}>Textes</Link>
-        <Link href="/prof/scriptorium?vue=cours" className={ongletClasse(vue === 'cours')}>Cours</Link>
-        <Link href="/prof/scriptorium?vue=parcours" className={ongletClasse(vue === 'parcours')}>Parcours</Link>
-        <Link href="/prof/scriptorium?vue=livres" className={ongletClasse(vue === 'livres')}>Livres</Link>
-        <Link href="/prof/scriptorium?vue=parametres" className={ongletClasse(vue === 'parametres')}>Paramètres</Link>
-      </nav>
-
       {/* ── Bibliothèque : Textes / Cours (Parcours L2) ─────────────────────── */}
       {biblioType && (
         <BibliothequeContenus type={biblioType} contenus={biblioContenus} corbeille={biblioCorbeille} />

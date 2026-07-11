@@ -10,7 +10,6 @@ import ValidationLecture from '@/components/retours/ValidationLecture'
 import BanniereRetoursNonLus from '@/components/retours/BanniereRetoursNonLus'
 import { retoursNonLus } from '@/utils/retours-lus'
 import { createAdminClient } from '@/utils/supabase/admin'
-import Pastille from '@/components/Pastille'
 import { CONSIGNE_V1_DEFAUT, CONSIGNE_VF_DEFAUT } from '../../consignes'
 
 export default async function SyntheseElevePage({
@@ -61,12 +60,9 @@ export default async function SyntheseElevePage({
       <Link href="/eleve/modules/codex" className="text-sm text-muet hover:text-encre-douce mb-6 inline-block">
         ← Retour
       </Link>
-      <div className="flex items-center gap-4 mt-2 mb-1">
-        <Pastille module="codex" size={56} />
-        <div className="min-w-0">
-          <p className="font-marque text-sm font-semibold tracking-[0.18em] text-pigment">CODEX</p>
-          <h2 className="font-titre text-2xl text-encre leading-tight">{uniteLabel}</h2>
-        </div>
+      {/* Identité Codex portée par la Barre 2 de l'en-tête. */}
+      <div className="mt-2 mb-1">
+        <h2 className="font-titre text-2xl text-encre leading-tight">{uniteLabel}</h2>
       </div>
       <p className="text-sm text-muet mb-6">
         {session.statut === 'phase_1' && 'Phase 1 — ta V1, de mémoire et livre fermé.'}

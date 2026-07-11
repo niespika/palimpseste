@@ -82,16 +82,11 @@ export default async function PageAletheia() {
 
           return (
             <section key={livre.id} className="space-y-5">
-              {/* ── Héros : le sceau remis en valeur ───────────────────────── */}
-              <div className="flex items-center gap-4 sm:gap-5">
-                <span className="sm:hidden"><Pastille module="aletheia" size={64} /></span>
-                <span className="hidden sm:block"><Pastille module="aletheia" size={92} /></span>
-                <div className="min-w-0">
-                  <p className="font-marque text-sm font-semibold tracking-[0.2em] text-pigment">ALETHEIA</p>
-                  <h2 className="font-titre text-2xl sm:text-3xl text-encre leading-tight mt-0.5">{livre.titre}</h2>
-                  {livre.auteur && <p className="font-corps text-sm text-muet mt-0.5 italic">{livre.auteur}</p>}
-                  <p className="font-corps text-sm text-muet mt-1">{nbSemaines} semaine{nbSemaines > 1 ? 's' : ''} · lis-le dans ton propre exemplaire</p>
-                </div>
+              {/* ── En-tête du livre (l'identité Aletheia est portée par la Barre 2 de l'en-tête) ── */}
+              <div className="min-w-0">
+                <h2 className="font-titre text-2xl sm:text-3xl text-encre leading-tight">{livre.titre}</h2>
+                {livre.auteur && <p className="font-corps text-sm text-muet mt-0.5 italic">{livre.auteur}</p>}
+                <p className="font-corps text-sm text-muet mt-1">{nbSemaines} semaine{nbSemaines > 1 ? 's' : ''} · lis-le dans ton propre exemplaire</p>
               </div>
 
               {/* ── Barre d'avancement ─────────────────────────────────────── */}

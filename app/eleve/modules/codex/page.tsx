@@ -39,8 +39,8 @@ export default async function CodexElevePage() {
         ← Retour
       </Link>
 
-      <h2 className="text-xl font-serif text-pigment mb-2 mt-2">Codex</h2>
-      <p className="text-sm text-muet mb-6">Écrire de mémoire le récapitulatif d&apos;une unité, puis l&apos;améliorer.</p>
+      {/* Identité du module portée par la Barre 2 ; on garde la consigne. */}
+      <p className="text-sm text-muet mb-6 mt-2">Écrire de mémoire le récapitulatif d&apos;une unité, puis l&apos;améliorer.</p>
 
       {live && (
         <Link
