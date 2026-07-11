@@ -246,3 +246,37 @@ export async function resoudreDateSeance(
   const { candidats } = await chargerCandidats(admin, livreId, classeId)
   return resoudreDepuisCandidats(candidats, seance)
 }
+
+/**
+ * Toutes les paires (livre, classe) GOUVERNÉES : un créneau-livre d'un parcours vivant
+ * ASSIGNÉ ACTIF à la classe. Sert au calendrier (mode b) à savoir quelles lectures
+ * datées émettre. Ne résout pas les dates — appeler resoudreDatesLivre par paire.
+ */
+export async function pairesLivresGouvernes(admin: SupabaseClient): Promise<Array<{ livreId: string; classeId: string }>> {
+  const { data: creneaux } = await admin.from('scriptorium_parcours_creneaux')
+    .select('parcours_id, livre_id').eq('ref_type', 'livre')
+  if (!creneaux || creneaux.length === 0) return []
+  const parcoursIds = [...new Set(creneaux.map(c => c.parcours_id as string))]
+  const { data: parcours } = await admin.from('scriptorium_parcours').select('id, supprime_at').in('id', parcoursIds)
+  const vivants = new Set((parcours ?? []).filter(p => (p.supprime_at as string | null) == null).map(p => p.id as string))
+  if (vivants.size === 0) return []
+  const { data: assigns } = await admin.from('scriptorium_parcours_classes')
+    .select('parcours_id, classe_id').eq('statut', 'active').in('parcours_id', [...vivants])
+  const classesParParcours = new Map<string, Set<string>>()
+  for (const a of assigns ?? []) {
+    const pid = a.parcours_id as string
+    const set = classesParParcours.get(pid) ?? new Set<string>()
+    set.add(a.classe_id as string)
+    classesParParcours.set(pid, set)
+  }
+  const paires = new Map<string, { livreId: string; classeId: string }>()
+  for (const c of creneaux) {
+    const pid = c.parcours_id as string
+    if (!vivants.has(pid)) continue
+    const livreId = c.livre_id as string
+    for (const classeId of classesParParcours.get(pid) ?? []) {
+      paires.set(`${livreId}|${classeId}`, { livreId, classeId })
+    }
+  }
+  return [...paires.values()]
+}

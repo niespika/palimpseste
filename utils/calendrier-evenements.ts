@@ -1,7 +1,9 @@
 import 'server-only'
 import { createClient } from '@/utils/supabase/server'
+import { createAdminClient } from '@/utils/supabase/admin'
 import { jourDansFuseau } from '@/utils/fuseau'
 import { lireFuseau } from '@/utils/fuseau-serveur'
+import { resoudreDatesLivre, pairesLivresGouvernes } from './aletheia-dates'
 
 // Agrégation LECTURE SEULE des échéances datées des modules. Le calendrier ne
 // stocke aucune échéance : il projette ce que les modules déclarent. L'édition
@@ -112,11 +114,49 @@ export async function assemblerEvenements(opts: {
     })
   }
 
-  // 4. Aletheia : échéances de lecture — COUPÉES en Lot 2 (décorrélation des dates
-  //    héritées « date_debut + (s-1)·7 », décision LD2 / Q7). À réintroduire en Lot 3
-  //    via le résolveur resoudreDateSeance : dates issues du PARCOURS (mode b) et
-  //    uniquement pour les séances couvertes par un créneau. Un livre non gouverné
-  //    (mode a) ne génère aucune échéance.
+  // 4. Aletheia : échéances de lecture — mode b UNIQUEMENT (dates issues du PARCOURS,
+  //    résolues via snapshot/frise). Un livre non gouverné (mode a) ne génère aucune
+  //    échéance (LD2). scriptorium_parcours* est en RLS prof-only → lecture via `admin` ;
+  //    chaque événement porte son classe_id → la page élève filtre par classe (pas de
+  //    fuite). L'échéance est déjà le DIMANCHE (résolveur).
+  const admin = createAdminClient()
+  const paires = await pairesLivresGouvernes(admin)
+  if (paires.length) {
+    const livreIds = [...new Set(paires.map(p => p.livreId))]
+    const [{ data: docsLivre }, { data: livresRows }] = await Promise.all([
+      admin.from('scriptorium_documents').select('unite_id, semaine').in('unite_id', livreIds).not('semaine', 'is', null),
+      admin.from('scriptorium_unites').select('id, label').eq('type', 'livre').is('supprime_at', null).in('id', livreIds),
+    ])
+    const seancesParLivre = new Map<string, number[]>()
+    for (const d of docsLivre ?? []) {
+      const arr = seancesParLivre.get(d.unite_id as string) ?? []
+      arr.push(d.semaine as number)
+      seancesParLivre.set(d.unite_id as string, arr)
+    }
+    const labelParLivre = new Map<string, string>()
+    for (const l of livresRows ?? []) labelParLivre.set(l.id as string, l.label as string)
+
+    for (const { livreId, classeId } of paires) {
+      const label = labelParLivre.get(livreId)
+      if (!label) continue // livre supprimé/masqué → pas d'événement
+      const seances = seancesParLivre.get(livreId) ?? []
+      const { dates } = await resoudreDatesLivre(admin, livreId, classeId, seances)
+      for (const s of seances) {
+        const d = dates.get(s)?.valeur
+        if (!d || d < debut || d > fin) continue
+        events.push({
+          source_module: 'aletheia',
+          source_id: livreId,
+          classe_id: classeId,
+          classe_nom: nomParId.get(classeId) ?? null,
+          kind: 'fermeture',
+          date: d,
+          label: `Aletheia — ${label} (séance ${s})`,
+          is_editable: false,
+        })
+      }
+    }
+  }
 
   events.sort((a, b) => a.date.localeCompare(b.date) || a.label.localeCompare(b.label))
   return events
