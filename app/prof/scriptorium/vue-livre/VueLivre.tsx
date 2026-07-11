@@ -21,7 +21,7 @@ export interface DocSemaine {
 // 3 colonnes (rail des semaines / fiche de la semaine / carte d'architecture).
 // Orchestrateur SERVEUR : sélection lue dans l'URL (?semaine=N), états dérivés ici,
 // toutes les données viennent de page.tsx (aucune requête).
-export default function VueLivre({ livre, classes, classeIds, docs, nbDocsSansSemaine, capstone, reference, semaineParam, modeDecoupe }: {
+export default function VueLivre({ livre, classes, classeIds, docs, nbDocsSansSemaine, capstone, reference, semaineParam, modeDecoupe, conflitClasses }: {
   livre: { id: string; label: string; auteur: string | null; date_debut: string | null; nb_semaines: number | null; signets: Signet[] | null }
   classes: { id: string; nom: string }[]
   classeIds: string[]
@@ -31,6 +31,7 @@ export default function VueLivre({ livre, classes, classeIds, docs, nbDocsSansSe
   reference: LivreReferenceProf | null
   semaineParam?: string
   modeDecoupe: boolean
+  conflitClasses?: string[] // (L5) classes ayant le livre en direct ET en entier via parcours
 }) {
   const hrefBase = `/prof/scriptorium?vue=livres&unite=${livre.id}`
 
@@ -109,6 +110,12 @@ export default function VueLivre({ livre, classes, classeIds, docs, nbDocsSansSe
         {nbDocsSansSemaine > 0 && (
           <div className="border border-attention bg-attention-teinte/40 rounded-lg p-3 text-xs text-attention">
             {nbDocsSansSemaine} document(s) sans numéro de séance dans ce livre — non éditable(s) ici ; corrige-les via la vue « Par classe ».
+          </div>
+        )}
+
+        {conflitClasses && conflitClasses.length > 0 && (
+          <div className="border border-attention bg-attention-teinte/40 rounded-lg p-3 text-xs text-attention">
+            ⚠ Ce livre est assigné en direct ET en entier via un parcours à : <b>{conflitClasses.join(', ')}</b>. Double planning possible — choisis une seule voie : garde l’assignation directe s’il n’y a rien de plus que le livre, ou passe par le parcours s’il ajoute des ressources (textes/cours).
           </div>
         )}
 

@@ -248,6 +248,36 @@ export async function resoudreDateSeance(
 }
 
 /**
+ * (L5 — garde-fou) Classes pour lesquelles ce livre est assigné EN TOTALITÉ à la fois
+ * en DIRECT (scriptorium_unite_classes) ET via un parcours (créneau-livre ENTIER =
+ * bornes null/null, parcours vivant assigné actif). C'est le seul cas confus (LD5) :
+ * une tranche PARTIELLE est une coexistence légitime → pas de conflit. Renvoie des
+ * classeIds distincts ; l'appelant les libelle et propose le choix (garder direct si
+ * rien à ajouter ; passer par le parcours s'il ajoute des ressources).
+ */
+export async function classesConflitWholeBook(admin: SupabaseClient, livreId: string): Promise<string[]> {
+  const { data: directs } = await admin.from('scriptorium_unite_classes').select('classe_id').eq('unite_id', livreId)
+  const classesDirectes = new Set((directs ?? []).map(d => d.classe_id as string))
+  if (classesDirectes.size === 0) return []
+  // Créneaux LIVRE ENTIER (bornes null/null) de ce livre.
+  const { data: creneaux } = await admin.from('scriptorium_parcours_creneaux')
+    .select('parcours_id').eq('ref_type', 'livre').eq('livre_id', livreId)
+    .is('livre_semaine_debut', null).is('livre_semaine_fin', null)
+  if (!creneaux || creneaux.length === 0) return []
+  const parcoursIds = [...new Set(creneaux.map(c => c.parcours_id as string))]
+  const { data: parcours } = await admin.from('scriptorium_parcours').select('id, supprime_at').in('id', parcoursIds)
+  const vivants = (parcours ?? []).filter(p => (p.supprime_at as string | null) == null).map(p => p.id as string)
+  if (vivants.length === 0) return []
+  const { data: assigns } = await admin.from('scriptorium_parcours_classes')
+    .select('classe_id').eq('statut', 'active').in('parcours_id', vivants)
+  const enConflit = new Set<string>()
+  for (const a of assigns ?? []) {
+    if (classesDirectes.has(a.classe_id as string)) enConflit.add(a.classe_id as string)
+  }
+  return [...enConflit]
+}
+
+/**
  * (L4 — exposition union) Ids des livres GOUVERNÉS pour un ensemble de classes : un
  * créneau-livre d'un parcours vivant assigné ACTIF à l'une de ces classes. Sert à
  * l'exposition (supersède la décision 9 : un livre planifié via parcours est lisible,
