@@ -33,7 +33,7 @@ export default function FriseSemaines({
   return (
     <div className="lg:w-72 shrink-0 space-y-1.5">
       <div className="flex items-baseline justify-between px-1">
-        <p className="font-marque text-[11px] tracking-[0.16em] text-muet uppercase">Semaines · {nb}</p>
+        <p className="font-marque text-[11px] tracking-[0.16em] text-muet uppercase">Séances · {nb}</p>
         <p className="font-ui text-[11px] text-muet/80">{posees} posée{posees > 1 ? 's' : ''}</p>
       </div>
 
@@ -72,7 +72,7 @@ export default function FriseSemaines({
                   <span className={`block font-ui text-[11px] font-bold ${pose ? 'text-encre' : txtAccent}`}>{pose ? posTexte(val) : 'à placer…'}</span>
                 </button>
                 {pose && (
-                  <button type="button" aria-label={`Effacer ${label} de la semaine ${i + 1}`}
+                  <button type="button" aria-label={`Effacer ${label} de la séance ${i + 1}`}
                     onClick={() => onEffacer(i, champ)}
                     className="px-1.5 text-muet hover:text-retard">✕</button>
                 )}
@@ -83,7 +83,7 @@ export default function FriseSemaines({
             <div key={i} className="rounded-lg border border-pigment/50 bg-surface p-2.5 shadow-sm space-y-2">
               <div className="flex items-center gap-2">
                 <span className="inline-block w-2.5 h-2.5 rounded-full bg-pigment" />
-                <span className="font-ui text-[12.5px] font-bold text-encre">Semaine {i + 1}</span>
+                <span className="font-ui text-[12.5px] font-bold text-encre">Séance {i + 1}</span>
                 <span className="ml-auto font-ui text-[9.5px] tracking-[0.06em] text-attention uppercase">en cours</span>
               </div>
               <input value={s.titre} onChange={e => onMajTexte(i, 'titre', e.target.value)} placeholder="Titre…"

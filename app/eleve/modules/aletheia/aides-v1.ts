@@ -10,7 +10,7 @@ export interface AidesV1 {
 }
 
 export const AIDES_V1_DEFAUT: AidesV1 = {
-  these: 'L’idée centrale des chapitres lus cette semaine, avec tes mots.',
+  these: 'L’idée centrale des chapitres lus cette séance, avec tes mots.',
   arguments: 'Comment l’auteur défend cette idée : ses arguments, ses exemples.',
   accord: 'Une fois l’idée comprise : qu’en penses-tu, et pour quelles raisons ?',
   questions: 'Une question par ligne…\nEx. : Pourquoi Nietzsche oppose-t-il Apollon et Dionysos ?',

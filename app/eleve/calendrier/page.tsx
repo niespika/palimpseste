@@ -9,6 +9,9 @@ import { lireFuseau } from '@/utils/fuseau-serveur'
 import { assemblerEvenements } from '@/utils/calendrier-evenements'
 import { couleursParClasse } from '@/utils/calendrier-couleurs'
 
+// (perf) Le bloc Aletheia du calendrier résout des dates de parcours (requêtes DB) → marge de temps.
+export const maxDuration = 60
+
 // Échéances d'un module visibles seulement si l'élève y a accès (périmètre par classe).
 const SLUG_PAR_SOURCE: Record<string, string> = {
   fragments: 'fragments-erudition', quazian: 'quazian', codex: 'codex', aletheia: 'aletheia',
@@ -89,7 +92,7 @@ export default async function CalendrierEleve({
 
   // 1. Événements partagés (essais, quizz, Codex, lectures) → classes de l'élève
   //    (+ événements sans classe, visibles de tous). Color-codés par classe.
-  const partages = (await assemblerEvenements({ debut, fin }))
+  const partages = (await assemblerEvenements({ debut, fin, classeIds: [...classeIds] }))
     .filter((e) => (e.classe_id === null || classeIds.has(e.classe_id)) && slugs.has(SLUG_PAR_SOURCE[e.source_module]))
     .map((e): Evt => ({
       date: e.date,

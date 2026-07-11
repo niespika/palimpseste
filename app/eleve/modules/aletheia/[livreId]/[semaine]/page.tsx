@@ -3,6 +3,7 @@ import Link from 'next/link'
 import { createClient } from '@/utils/supabase/server'
 import { createAdminClient } from '@/utils/supabase/admin'
 import { contexteAletheia, livreAccessible, semaineLivre, travauxParSemaine, peutAccederSemaine, lireReglages } from '../../data'
+import { resoudreDateSeance, formatEcheanceFr } from '@/utils/aletheia-dates'
 import { validerLectureRetourVf } from '../../actions'
 import FormulaireV1 from '../../FormulaireV1'
 import FormulaireVf from '../../FormulaireVf'
@@ -127,7 +128,7 @@ function RevueDone({ t, evalQuestions }: { t: TravailAletheia; evalQuestions: bo
       {/* 3. Ce que cette semaine t'a dévoilé — le fil entre les semaines. */}
       {(amont.length > 0 || aval.length > 0) && (
         <section className="bg-surface border border-bordure border-l-4 border-l-liseret rounded-xl p-4 sm:p-5 space-y-3">
-          <p className="font-ui text-xs tracking-[0.1em] text-attention uppercase">Ce que cette semaine t&apos;a dévoilé</p>
+          <p className="font-ui text-xs tracking-[0.1em] text-attention uppercase">Ce que cette séance t&apos;a dévoilé</p>
           {amont.length > 0 && (
             <div>
               <p className="text-xs text-muet mb-1">Ce que tu as déjà vu</p>
@@ -182,6 +183,8 @@ export default async function PageSemaineAletheia({ params }: { params: Promise<
 
   const sem = await semaineLivre(admin, livreId, semaine)
   if (!sem) notFound()
+  // Date « mode b » de cette séance (échéance dimanche via le parcours), vide en mode a.
+  sem.dateIndicative = formatEcheanceFr((await resoudreDateSeance(admin, livreId, active.classe_id, semaine)).valeur)
 
   const { data: livre } = await admin.from('scriptorium_unites').select('label, auteur').eq('id', livreId).maybeSingle()
 
@@ -191,7 +194,7 @@ export default async function PageSemaineAletheia({ params }: { params: Promise<
       <div className="space-y-5 pb-8">
         <Link href="/eleve/modules/aletheia" className="text-sm text-muet hover:text-encre-douce">← Planning</Link>
         <div className="bg-surface border border-bordure rounded-xl p-6 text-center text-muet text-sm">
-          🔒 Cette semaine n&apos;est pas encore débloquée. Termine d&apos;abord la semaine précédente.
+          🔒 Cette séance n&apos;est pas encore débloquée. Termine d&apos;abord la séance précédente.
         </div>
       </div>
     )
@@ -229,7 +232,7 @@ export default async function PageSemaineAletheia({ params }: { params: Promise<
         <div className="flex items-center gap-4">
           {/* Identité Aletheia portée par la Barre 2 de l'en-tête. */}
           <div className="min-w-0 flex-1">
-            <h2 className="font-titre text-2xl text-encre leading-tight">Semaine {semaine} — {sem.titre}</h2>
+            <h2 className="font-titre text-2xl text-encre leading-tight">Séance {semaine} — {sem.titre}</h2>
           </div>
           {statut === 'DONE' && (
             <span className="font-ui text-xs sm:text-sm text-minium bg-minium-teinte px-3 py-1.5 rounded-full whitespace-nowrap shrink-0">
@@ -243,7 +246,7 @@ export default async function PageSemaineAletheia({ params }: { params: Promise<
             <p className="text-sm text-muet mt-1">
               {sem.chapitres && <span className="text-pigment">{sem.chapitres}</span>}
               {sem.chapitres && sem.dateIndicative && ' · '}
-              {sem.dateIndicative && <span>à partir du {sem.dateIndicative}</span>}
+              {sem.dateIndicative && <span>à rendre le {sem.dateIndicative}</span>}
             </p>
             <p className="text-xs text-muet mt-2">Lis ces chapitres dans ton propre exemplaire, puis rédige ci-dessous.</p>
           </>
@@ -296,8 +299,8 @@ export default async function PageSemaineAletheia({ params }: { params: Promise<
                 tuiles={tuiles}
                 dejaLu={false}
                 marquerAction={validerLectureRetourVf.bind(null, livreId, semaine)}
-                labelBouton="✓ J’ai lu mon retour — clore la semaine"
-                introMessage="Lis chaque partie, puis coche-la pour confirmer. La dernière clôt la semaine."
+                labelBouton="✓ J’ai lu mon retour — clore la séance"
+                introMessage="Lis chaque partie, puis coche-la pour confirmer. La dernière clôt la séance."
               />
             )
           })()}
@@ -335,7 +338,7 @@ export default async function PageSemaineAletheia({ params }: { params: Promise<
               La préparation de ton retour n&apos;a pas abouti. Renvoie ton travail ci-dessous ; si le problème persiste, préviens ton professeur.
             </div>
           )}
-          <Bloc titre="1. Ta lecture de la semaine">
+          <Bloc titre="1. Ta lecture de la séance">
             <FormulaireV1
               livreId={livreId}
               semaine={semaine}

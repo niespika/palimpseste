@@ -8,7 +8,7 @@ import { VueRetourV1, VueRetourVF } from '@/components/aletheia/VueRetours'
 import { DetailDiagChapitre } from '@/components/aletheia/Diagnostic'
 import { livresDeClasse, travauxEleve, progression, chargerDiagnostics, STATUT_LABEL, type LivreProf, type Progression } from '../../donnees'
 import { couleurLivre } from '@/app/prof/aletheia/diagnostic'
-import { chargerCapstoneLivre, dateIndicative } from '@/app/eleve/modules/aletheia/data'
+import { chargerCapstoneLivre } from '@/app/eleve/modules/aletheia/data'
 import type { CapstoneRow, TravailAletheia, DiagnosticTravail, StatutAletheia } from '@/app/eleve/modules/aletheia/types'
 import GrapheProgression, { type LivreGraphe } from './GrapheProgression'
 import AvantApres from './AvantApres'
@@ -52,10 +52,10 @@ function texteCapstone(cap: CapstoneRow | null | undefined, p: Progression): str
       : cap?.statut === 'ERROR' ? 'Génération échouée — régénère-la depuis le Scriptorium.'
       : 'Pas encore générée — à générer depuis le Scriptorium.'
   }
-  if (p.total === 0) return 'Livre pas encore découpé en semaines.'
+  if (p.total === 0) return 'Livre pas encore découpé en séances.'
   return p.done === p.total
     ? 'L’élève a terminé le livre : la carte lui est accessible.'
-    : `L’élève y accèdera à la fin du livre (${p.done}/${p.total} semaines).`
+    : `L’élève y accèdera à la fin du livre (${p.done}/${p.total} séances).`
 }
 
 // ── Liste maître : une ligne de semaine (sélecteur fin, pilote l'URL) ─────────
@@ -137,8 +137,7 @@ function PanneauDetail({ livre, semaine, travail, diag, basePath }: {
 }) {
   const sem = livre.semaines.find(x => x.semaine === semaine)
   const statut = travail?.statut ?? 'DRAFT'
-  const date = dateIndicative(livre.date_debut, semaine)
-  const sousTitre = [sem?.chapitres, date].filter(Boolean).join(' · ')
+  const sousTitre = sem?.chapitres ?? ''
 
   return (
     <div className="space-y-5">
@@ -152,7 +151,7 @@ function PanneauDetail({ livre, semaine, travail, diag, basePath }: {
           <Pastille module="aletheia" size={56} />
           <div className="min-w-0 flex-1">
             <p className="font-marque text-[11px] font-semibold tracking-[0.18em] text-pigment truncate">ALETHEIA · {livre.titre}</p>
-            <h4 className="font-titre text-lg text-encre leading-tight">Semaine {semaine} — {sem?.titre}</h4>
+            <h4 className="font-titre text-lg text-encre leading-tight">Séance {semaine} — {sem?.titre}</h4>
             {sousTitre && <p className="text-xs text-muet mt-0.5">{sousTitre}</p>}
           </div>
           <ChipEtat statut={statut} />
@@ -161,7 +160,7 @@ function PanneauDetail({ livre, semaine, travail, diag, basePath }: {
       </div>
 
       {!travail ? (
-        <p className="text-sm text-muet bg-surface border border-bordure rounded-xl p-4">Rien soumis pour cette semaine.</p>
+        <p className="text-sm text-muet bg-surface border border-bordure rounded-xl p-4">Rien soumis pour cette séance.</p>
       ) : (
         <>
           {/* 2. ★ Diagnostic prof-only — le signal */}
@@ -314,7 +313,7 @@ export default async function DrillDownEleveAletheia({ params, searchParams }: {
       <div>
         <Link href="/prof/aletheia" className="text-sm text-muet hover:text-encre-douce">← Classe</Link>
         <h3 className="font-titre text-2xl text-encre mt-2">{eleve.display_name as string}</h3>
-        <p className="text-sm text-muet">Détail par livre et par semaine</p>
+        <p className="text-sm text-muet">Détail par livre et par séance</p>
       </div>
 
       {livres.length === 0 ? (

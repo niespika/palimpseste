@@ -142,16 +142,16 @@ export default function NavigateurDecoupe({
   const messages: { type: 'erreur' | 'info'; texte: string }[] = []
   for (let i = 0; i < nb; i++) {
     const s = sem(i)
-    if (s.debut && s.fin && enc(s.debut) > enc(s.fin)) messages.push({ type: 'erreur', texte: `Semaine ${i + 1} : la fin est avant le début.` })
+    if (s.debut && s.fin && enc(s.debut) > enc(s.fin)) messages.push({ type: 'erreur', texte: `Séance ${i + 1} : la fin est avant le début.` })
   }
   for (let i = 1; i < nb; i++) {
     const a = sem(i - 1), b = sem(i)
     if (a.debut && a.fin && b.debut && b.fin && enc(b.debut) <= enc(a.fin))
-      messages.push({ type: 'erreur', texte: `Les semaines ${i} et ${i + 1} ne sont pas dans l'ordre du texte (ou se chevauchent).` })
+      messages.push({ type: 'erreur', texte: `Les séances ${i} et ${i + 1} ne sont pas dans l'ordre du texte (ou se chevauchent).` })
   }
   for (let i = 0; i < nb; i++) {
     const s = sem(i)
-    if (!s.debut || !s.fin) messages.push({ type: 'info', texte: `Semaine ${i + 1} : ${!s.debut ? 'début' : 'fin'} à placer.` })
+    if (!s.debut || !s.fin) messages.push({ type: 'info', texte: `Séance ${i + 1} : ${!s.debut ? 'début' : 'fin'} à placer.` })
   }
   // Lignes hors de toute semaine : informatif en création (front-matter sauté volontairement),
   // mais DESTRUCTIF en modification (texte définitivement retiré du livre).
@@ -207,7 +207,7 @@ export default function NavigateurDecoupe({
       <BarreInfos
         mode={mode} titre={meta?.titre ?? ''} auteur={meta?.auteur} nbPages={totalPages}
         nbSignets={signets?.length ?? 0} texteSelectionnable={meta?.texteSelectionnable}
-        sousTitre={modeModification ? `Texte réassemblé des ${nb} semaines · re-paginé en pages de lecture · signets conservés` : undefined}
+        sousTitre={modeModification ? `Texte réassemblé des ${nb} séances · re-paginé en pages de lecture · signets conservés` : undefined}
         page={page} totalPages={totalPages}
         onPage={p => setPage(Math.max(1, Math.min(totalPages, p)))}
         friseVisible={friseVisible} onToggleFrise={() => setFriseVisible(v => !v)}
@@ -217,7 +217,7 @@ export default function NavigateurDecoupe({
 
       <p className="font-ui text-xs text-muet px-1">
         {cible
-          ? <>À placer : <span className="font-medium text-encre-douce">{cible.champ === 'debut' ? 'début' : 'fin'} de la semaine {cible.w + 1}</span> — clique la ligne {cible.champ === 'debut' ? 'où elle commence' : 'où elle finit'}.</>
+          ? <>À placer : <span className="font-medium text-encre-douce">{cible.champ === 'debut' ? 'début' : 'fin'} de la séance {cible.w + 1}</span> — clique la ligne {cible.champ === 'debut' ? 'où elle commence' : 'où elle finit'}.</>
           : friseVisible
             ? 'Toutes les bornes sont placées. Tu peux ajuster en cliquant un repère dans la frise, ou une ligne sur la page.'
             : 'Toutes les bornes sont placées. Tu peux ajuster en cliquant un repère sur la page.'}
@@ -263,11 +263,11 @@ export default function NavigateurDecoupe({
             <div className="flex items-center gap-2 rounded-lg bg-retard-teinte border border-retard/30 px-3 py-2">
               <span className="text-retard">⚠</span>
               <span className="font-corps text-sm text-retard">
-                <b>{horsSemaines} ligne{horsSemaines > 1 ? 's' : ''} hors de toute semaine ser{horsSemaines > 1 ? 'ont' : 'a'} DÉFINITIVEMENT retirée{horsSemaines > 1 ? 's' : ''} du livre</b> (barrée{horsSemaines > 1 ? 's' : ''} sur la page).
+                <b>{horsSemaines} ligne{horsSemaines > 1 ? 's' : ''} hors de toute séance ser{horsSemaines > 1 ? 'ont' : 'a'} DÉFINITIVEMENT retirée{horsSemaines > 1 ? 's' : ''} du livre</b> (barrée{horsSemaines > 1 ? 's' : ''} sur la page).
               </span>
             </div>
           ) : (
-            <p className="font-ui text-xs text-muet">ℹ {horsSemaines} ligne{horsSemaines > 1 ? 's' : ''} ne sont dans aucune semaine (front-matter ignoré).</p>
+            <p className="font-ui text-xs text-muet">ℹ {horsSemaines} ligne{horsSemaines > 1 ? 's' : ''} ne sont dans aucune séance (front-matter ignoré).</p>
           ))}
         </div>
       )}

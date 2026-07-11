@@ -1,6 +1,7 @@
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/utils/supabase/server'
+import { classesConflitWholeBook } from '@/utils/aletheia-dates'
 import { getUrlSignee } from './actions'
 import Tuile from '@/components/Tuile'
 import FormulaireLivre from './FormulaireLivre'
@@ -221,6 +222,10 @@ export default async function ScriptoriumPage({
 
   // Carte d'architecture + référence du livre sélectionné (onglet Livres, détail).
   const uniteSelLivre = vue === 'livres' && uniteSel ? unitesList.find(u => u.id === uniteSel && u.type === 'livre') : undefined
+  // (L5) Garde-fou whole-book : classes ayant ce livre à la fois en direct ET en entier via un parcours.
+  const conflitClasses = uniteSelLivre
+    ? (await classesConflitWholeBook(supabase, uniteSelLivre.id)).map(cid => classeNom.get(cid)).filter((n): n is string => !!n)
+    : []
   let capstoneLivre: CapstoneProf | null = null
   let referenceLivre: LivreReferenceProf | null = null
   if (uniteSelLivre) {
@@ -331,7 +336,7 @@ export default async function ScriptoriumPage({
                         <Tuile
                           key={u.id}
                           nom={u.label}
-                          sousTitre={`📖 ${nb} semaine${nb > 1 ? 's' : ''}${u.auteur ? ` · ${u.auteur}` : ''}`}
+                          sousTitre={`📖 ${nb} séance${nb > 1 ? 's' : ''}${u.auteur ? ` · ${u.auteur}` : ''}`}
                           href={`/prof/scriptorium?vue=livres&unite=${u.id}`}
                           couleur="vert"
                         />
@@ -367,6 +372,7 @@ export default async function ScriptoriumPage({
             reference={referenceLivre}
             semaineParam={semaine}
             modeDecoupe={edition === 'decoupe'}
+            conflitClasses={conflitClasses}
           />
         ) : (
           <div className="space-y-4">
@@ -382,7 +388,7 @@ export default async function ScriptoriumPage({
                     <Tuile
                       key={u.id}
                       nom={u.label}
-                      sousTitre={`📖 ${nb} semaine${nb > 1 ? 's' : ''}${u.auteur ? ` · ${u.auteur}` : ''}${usage > 0 ? ` · utilisé dans ${usage} parcours` : ''}`}
+                      sousTitre={`📖 ${nb} séance${nb > 1 ? 's' : ''}${u.auteur ? ` · ${u.auteur}` : ''}${usage > 0 ? ` · utilisé dans ${usage} parcours` : ''}`}
                       href={`/prof/scriptorium?vue=livres&unite=${u.id}`}
                       couleur={usage > 0 ? 'vert' : 'neutre'}
                     />

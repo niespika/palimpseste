@@ -26,7 +26,7 @@ export async function livresDeClasse(admin: SupabaseClient, classeId: string): P
   for (const d of docs ?? []) {
     const uid = d.unite_id as string
     const arr = semParLivre.get(uid) ?? []
-    arr.push({ semaine: d.semaine as number, titre: (d.titre as string) ?? `Semaine ${d.semaine}`, chapitres: (d.chapitres as string | null) ?? null })
+    arr.push({ semaine: d.semaine as number, titre: (d.titre as string) ?? `Séance ${d.semaine}`, chapitres: (d.chapitres as string | null) ?? null })
     semParLivre.set(uid, arr)
   }
 

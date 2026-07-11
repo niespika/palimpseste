@@ -72,7 +72,7 @@ export default function GuidePleinCadre({
     <div className="bg-surface border-t border-bordure rounded-b-xl px-5 py-3">
       <div className="flex items-center gap-3.5 flex-wrap">
         <div className="font-titre text-[17px] font-bold text-encre whitespace-nowrap leading-none">
-          Semaine {active + 1} <span className="font-ui text-[11px] font-normal text-muet/70">/ {nb}</span>
+          Séance {active + 1} <span className="font-ui text-[11px] font-normal text-muet/70">/ {nb}</span>
         </div>
         <div className="flex flex-col gap-px min-w-0">
           <span className="font-titre text-sm text-encre-douce truncate">{s.titre || '—'}</span>

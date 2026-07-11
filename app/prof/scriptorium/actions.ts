@@ -426,7 +426,7 @@ export async function ajouterLivre(formData: FormData) {
     let pdf: File | null = null        // mode 'par_semaine' seulement
 
     if (mode === 'pdf_decoupe') {
-      titreSem = (formData.get(`decoupe_${n}_titre`) as string)?.trim() || `Semaine ${n}`
+      titreSem = (formData.get(`decoupe_${n}_titre`) as string)?.trim() || `Séance ${n}`
       chapitres = (formData.get(`decoupe_${n}_chapitres`) as string)?.trim() || null
       // Bornes à la ligne près : début (page+ligne) → fin (page+ligne), fin INCLUSE.
       const dp = Number(formData.get(`decoupe_${n}_debutPage`))
@@ -447,7 +447,7 @@ export async function ajouterLivre(formData: FormData) {
       bornesVues.push({ s: debutPos, e: finPos })
       texteExtrait = texteEntreBornes(pagesImport!, dp, dl, fp, fl).trim() || null
     } else {
-      titreSem = (formData.get(`semaine_${n}_titre`) as string)?.trim() || `Semaine ${n}`
+      titreSem = (formData.get(`semaine_${n}_titre`) as string)?.trim() || `Séance ${n}`
       chapitres = (formData.get(`semaine_${n}_chapitres`) as string)?.trim() || null
       pdf = formData.get(`semaine_${n}_pdf`) as File | null
       // Le buffer du PDF est lu UNE fois (extraction + upload).

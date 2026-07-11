@@ -1,8 +1,9 @@
 import 'server-only'
 import { createClient } from '@/utils/supabase/server'
-import { addDaysUTC, toISODate } from '@/utils/calendrier-grille'
+import { createAdminClient } from '@/utils/supabase/admin'
 import { jourDansFuseau } from '@/utils/fuseau'
 import { lireFuseau } from '@/utils/fuseau-serveur'
+import { resoudreDatesLivre, pairesLivresGouvernes } from './aletheia-dates'
 
 // Agrégation LECTURE SEULE des échéances datées des modules. Le calendrier ne
 // stocke aucune échéance : il projette ce que les modules déclarent. L'édition
@@ -35,9 +36,10 @@ function un<T>(x: T | T[] | null | undefined): T | null {
 export async function assemblerEvenements(opts: {
   debut: string
   fin: string
+  classeIds?: string[] // (perf) scope les échéances Aletheia aux classes du spectateur (élève) ; absent = toutes (prof)
 }): Promise<CalendarEvent[]> {
   const supabase = await createClient()
-  const { debut, fin } = opts
+  const { debut, fin, classeIds } = opts
   const events: CalendarEvent[] = []
   const tz = await lireFuseau() // jour local des instants (lance_at) dans le fuseau choisi
 
@@ -113,61 +115,52 @@ export async function assemblerEvenements(opts: {
     })
   }
 
-  // 4. Aletheia : échéances de lecture par semaine, DÉRIVÉES du livre
-  //    (scriptorium_unites type='livre' : date_debut + (i)·7 → fin de semaine).
-  const { data: livres } = await supabase
-    .from('scriptorium_unites')
-    .select('id, label, date_debut')
-    .eq('type', 'livre')
-    .not('date_debut', 'is', null)
-  const livreIds = (livres ?? []).map((l) => l.id)
-  const { data: livreClasses } = livreIds.length > 0
-    ? await supabase.from('scriptorium_unite_classes').select('unite_id, classe_id').in('unite_id', livreIds)
-    : { data: [] }
-  const classesParLivre = new Map<string, string[]>()
-  for (const lc of livreClasses ?? []) {
-    const arr = classesParLivre.get(lc.unite_id) ?? []
-    arr.push(lc.classe_id)
-    classesParLivre.set(lc.unite_id, arr)
-  }
-  // Les semaines réelles du livre = ses documents (scriptorium_documents.semaine),
-  // comme la planification élève — et NON un compteur nb_semaines qui peut diverger.
-  const { data: docsLivre } = livreIds.length > 0
-    ? await supabase
-        .from('scriptorium_documents')
-        .select('unite_id, semaine')
-        .in('unite_id', livreIds)
-        .not('semaine', 'is', null)
-    : { data: [] }
-  const semainesParLivre = new Map<string, number[]>()
-  for (const d of docsLivre ?? []) {
-    const arr = semainesParLivre.get(d.unite_id as string) ?? []
-    arr.push(d.semaine as number)
-    semainesParLivre.set(d.unite_id as string, arr)
-  }
-  for (const livre of livres ?? []) {
-    const base = new Date((livre.date_debut as string) + 'T00:00:00Z')
-    const cls = classesParLivre.get(livre.id) ?? []
-    for (const s of semainesParLivre.get(livre.id) ?? []) {
-      // Échéance = fin de la semaine de lecture s (1-based, comme l'élève :
-      // date_debut + (s-1)·7, +6 pour le dimanche).
-      const d = toISODate(addDaysUTC(base, (s - 1) * 7 + 6))
-      if (d < debut || d > fin) continue
-      // Un livre sans classe assignée ne génère AUCUN événement (sinon un classe_id:null
-      // serait visible de tous les élèves via le filtre de la page calendrier).
-      for (const cid of cls) {
-        events.push({
+  // 4. Aletheia : échéances de lecture — mode b UNIQUEMENT (dates issues du PARCOURS,
+  //    résolues via snapshot/frise). Un livre non gouverné (mode a) ne génère aucune
+  //    échéance (LD2). scriptorium_parcours* est en RLS prof-only → lecture via `admin` ;
+  //    chaque événement porte son classe_id → la page élève filtre par classe (pas de
+  //    fuite). L'échéance est déjà le DIMANCHE (résolveur).
+  const admin = createAdminClient()
+  const paires = await pairesLivresGouvernes(admin, classeIds)
+  if (paires.length) {
+    const livreIds = [...new Set(paires.map(p => p.livreId))]
+    const [{ data: docsLivre }, { data: livresRows }] = await Promise.all([
+      admin.from('scriptorium_documents').select('unite_id, semaine').in('unite_id', livreIds).not('semaine', 'is', null),
+      admin.from('scriptorium_unites').select('id, label').eq('type', 'livre').is('supprime_at', null).in('id', livreIds),
+    ])
+    const seancesParLivre = new Map<string, number[]>()
+    for (const d of docsLivre ?? []) {
+      const arr = seancesParLivre.get(d.unite_id as string) ?? []
+      arr.push(d.semaine as number)
+      seancesParLivre.set(d.unite_id as string, arr)
+    }
+    const labelParLivre = new Map<string, string>()
+    for (const l of livresRows ?? []) labelParLivre.set(l.id as string, l.label as string)
+
+    // (perf) Résolution PARALLÈLE par paire (scopée aux classes du spectateur via classeIds).
+    const parPaire = await Promise.all(paires.map(async ({ livreId, classeId }) => {
+      const label = labelParLivre.get(livreId)
+      if (!label) return [] as CalendarEvent[] // livre supprimé/masqué → pas d'événement
+      const seances = seancesParLivre.get(livreId) ?? []
+      const { dates } = await resoudreDatesLivre(admin, livreId, classeId, seances)
+      const evs: CalendarEvent[] = []
+      for (const s of seances) {
+        const d = dates.get(s)?.valeur
+        if (!d || d < debut || d > fin) continue
+        evs.push({
           source_module: 'aletheia',
-          source_id: livre.id,
-          classe_id: cid,
-          classe_nom: cid ? nomParId.get(cid) ?? null : null,
+          source_id: livreId,
+          classe_id: classeId,
+          classe_nom: nomParId.get(classeId) ?? null,
           kind: 'fermeture',
           date: d,
-          label: `Aletheia — ${livre.label} (sem. ${s})`,
+          label: `Aletheia — ${label} (séance ${s})`,
           is_editable: false,
         })
       }
-    }
+      return evs
+    }))
+    for (const evs of parPaire) events.push(...evs)
   }
 
   events.sort((a, b) => a.date.localeCompare(b.date) || a.label.localeCompare(b.label))
