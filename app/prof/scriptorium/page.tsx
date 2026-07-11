@@ -331,7 +331,7 @@ export default async function ScriptoriumPage({
                         <Tuile
                           key={u.id}
                           nom={u.label}
-                          sousTitre={`📖 ${nb} semaine${nb > 1 ? 's' : ''}${u.auteur ? ` · ${u.auteur}` : ''}`}
+                          sousTitre={`📖 ${nb} séance${nb > 1 ? 's' : ''}${u.auteur ? ` · ${u.auteur}` : ''}`}
                           href={`/prof/scriptorium?vue=livres&unite=${u.id}`}
                           couleur="vert"
                         />
@@ -382,7 +382,7 @@ export default async function ScriptoriumPage({
                     <Tuile
                       key={u.id}
                       nom={u.label}
-                      sousTitre={`📖 ${nb} semaine${nb > 1 ? 's' : ''}${u.auteur ? ` · ${u.auteur}` : ''}${usage > 0 ? ` · utilisé dans ${usage} parcours` : ''}`}
+                      sousTitre={`📖 ${nb} séance${nb > 1 ? 's' : ''}${u.auteur ? ` · ${u.auteur}` : ''}${usage > 0 ? ` · utilisé dans ${usage} parcours` : ''}`}
                       href={`/prof/scriptorium?vue=livres&unite=${u.id}`}
                       couleur={usage > 0 ? 'vert' : 'neutre'}
                     />

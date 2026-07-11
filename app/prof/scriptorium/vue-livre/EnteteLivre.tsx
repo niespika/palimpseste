@@ -2,11 +2,10 @@ import Link from 'next/link'
 import EditeurClassesLivre from '../EditeurClassesLivre'
 import BoutonSupprimerUnite from '../BoutonSupprimerUnite'
 import BoutonRegenererFiches from './BoutonRegenererFiches'
-import { formatDateFr } from './utils'
 import { BTN_DANGER, BTN_SECONDAIRE, INTITULE } from './ui'
 
 // Entête de la page livre : fil de retour, surtitre, titre + auteur, sous-ligne
-// (semaines · début · classes) et les trois actions book-level à droite.
+// (séances · classes) et les trois actions book-level à droite.
 export default function EnteteLivre({ livre, classes, classeIds, nbSemaines, nbFiches, contenuVide, hrefDecoupe }: {
   livre: { id: string; label: string; auteur: string | null; date_debut: string | null }
   classes: { id: string; nom: string }[]
@@ -32,8 +31,7 @@ export default function EnteteLivre({ livre, classes, classeIds, nbSemaines, nbF
           </div>
           <div className="flex items-center gap-2.5 mt-2 flex-wrap">
             <span className="font-ui text-[13.5px] text-muet">
-              {nbSemaines} semaine{nbSemaines > 1 ? 's' : ''}
-              {livre.date_debut && ` · début le ${formatDateFr(livre.date_debut)}`}
+              {nbSemaines} séance{nbSemaines > 1 ? 's' : ''}
               {' · classes'}
             </span>
             <EditeurClassesLivre uniteId={livre.id} classes={classes} assignedClasseIds={classeIds} />

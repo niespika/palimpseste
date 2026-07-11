@@ -135,7 +135,7 @@ export default function ColonneCarte({ livreId, capstone, liens, semaineSel, hre
                     )
                   })}
                 </div>
-                <p className="font-corps italic text-xs text-muet-clair mt-2">cliquer un lien ouvre la semaine visée</p>
+                <p className="font-corps italic text-xs text-muet-clair mt-2">cliquer un lien ouvre la séance visée</p>
               </>
             )}
             <div className="flex gap-[7px] mt-3 flex-wrap">

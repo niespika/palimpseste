@@ -108,7 +108,7 @@ export default function VueLivre({ livre, classes, classeIds, docs, nbDocsSansSe
 
         {nbDocsSansSemaine > 0 && (
           <div className="border border-attention bg-attention-teinte/40 rounded-lg p-3 text-xs text-attention">
-            {nbDocsSansSemaine} document(s) sans numéro de semaine dans ce livre — non éditable(s) ici ; corrige-les via la vue « Par classe ».
+            {nbDocsSansSemaine} document(s) sans numéro de séance dans ce livre — non éditable(s) ici ; corrige-les via la vue « Par classe ».
           </div>
         )}
 
@@ -118,7 +118,7 @@ export default function VueLivre({ livre, classes, classeIds, docs, nbDocsSansSe
             key={semaineSel}
             livreId={livre.id}
             semaine={semaineSel}
-            titreDoc={docSel?.titre ?? `Semaine ${semaineSel}`}
+            titreDoc={docSel?.titre ?? `Séance ${semaineSel}`}
             chapitresDoc={docSel?.chapitres ?? null}
             texteDoc={docSel?.texte ?? null}
             chapitre={chapitreSel}

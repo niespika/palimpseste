@@ -81,7 +81,7 @@ export default function PanneauFiche({ livreId, semaine, titreDoc, chapitresDoc,
       <div className="pt-5 px-[26px] pb-6 flex flex-col gap-[18px]">
         {/* En-tête de la fiche */}
         <div>
-          <div className={`${INTITULE} tracking-[.1em] mb-[3px]`}>Semaine {semaine}{chapitresDoc ? ` · ${chapitresDoc}` : ''}</div>
+          <div className={`${INTITULE} tracking-[.1em] mb-[3px]`}>Séance {semaine}{chapitresDoc ? ` · ${chapitresDoc}` : ''}</div>
           <div className="flex items-start gap-3 flex-wrap">
             <h4 className="font-titre font-semibold text-[27px] leading-[1.1] text-encre">{titre}</h4>
             {!edition && etat !== 'a_generer' && !refEnCours && (
@@ -186,7 +186,7 @@ export default function PanneauFiche({ livreId, semaine, titreDoc, chapitresDoc,
             <button type="button" onClick={() => setTexteOuvert(o => !o)} aria-expanded={texteOuvert}
               className={`w-full flex items-center gap-[9px] px-[13px] py-[9px] border border-bordure ${texteOuvert ? 'rounded-t-lg' : 'rounded-lg'} hover:bg-parchemin transition-colors text-left`}>
               <span className="font-ui text-[13px] text-muet w-2.5 flex-none">{texteOuvert ? '▾' : '▸'}</span>
-              <span className="font-ui font-semibold text-[13px] text-encre-douce flex-none">Texte de la semaine</span>
+              <span className="font-ui font-semibold text-[13px] text-encre-douce flex-none">Texte de la séance</span>
               <span className="font-corps italic text-[13px] text-muet-clair truncate">lecture seule — la découpe se modifie en tête de page</span>
             </button>
             {texteOuvert && (

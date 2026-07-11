@@ -8,7 +8,7 @@ import { VueRetourV1, VueRetourVF } from '@/components/aletheia/VueRetours'
 import { DetailDiagChapitre } from '@/components/aletheia/Diagnostic'
 import { livresDeClasse, travauxEleve, progression, chargerDiagnostics, STATUT_LABEL, type LivreProf, type Progression } from '../../donnees'
 import { couleurLivre } from '@/app/prof/aletheia/diagnostic'
-import { chargerCapstoneLivre, dateIndicative } from '@/app/eleve/modules/aletheia/data'
+import { chargerCapstoneLivre } from '@/app/eleve/modules/aletheia/data'
 import type { CapstoneRow, TravailAletheia, DiagnosticTravail, StatutAletheia } from '@/app/eleve/modules/aletheia/types'
 import GrapheProgression, { type LivreGraphe } from './GrapheProgression'
 import AvantApres from './AvantApres'
@@ -137,8 +137,7 @@ function PanneauDetail({ livre, semaine, travail, diag, basePath }: {
 }) {
   const sem = livre.semaines.find(x => x.semaine === semaine)
   const statut = travail?.statut ?? 'DRAFT'
-  const date = dateIndicative(livre.date_debut, semaine)
-  const sousTitre = [sem?.chapitres, date].filter(Boolean).join(' · ')
+  const sousTitre = sem?.chapitres ?? ''
 
   return (
     <div className="space-y-5">
@@ -152,7 +151,7 @@ function PanneauDetail({ livre, semaine, travail, diag, basePath }: {
           <Pastille module="aletheia" size={56} />
           <div className="min-w-0 flex-1">
             <p className="font-marque text-[11px] font-semibold tracking-[0.18em] text-pigment truncate">ALETHEIA · {livre.titre}</p>
-            <h4 className="font-titre text-lg text-encre leading-tight">Semaine {semaine} — {sem?.titre}</h4>
+            <h4 className="font-titre text-lg text-encre leading-tight">Séance {semaine} — {sem?.titre}</h4>
             {sousTitre && <p className="text-xs text-muet mt-0.5">{sousTitre}</p>}
           </div>
           <ChipEtat statut={statut} />

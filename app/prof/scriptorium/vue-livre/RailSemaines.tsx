@@ -8,7 +8,7 @@ const PASTILLE: Record<EtatFiche, string> = {
   a_generer: 'border-[1.4px] border-puce',
 }
 
-// Rail des semaines (colonne gauche, sticky) : une ligne par semaine, pastille
+// Rail des séances (colonne gauche, sticky) : une ligne par séance, pastille
 // d'état à droite, sélection portée par l'URL (?semaine=N).
 export default function RailSemaines({ semaines, semaineSel, hrefBase }: {
   semaines: { semaine: number; titre: string; etat: EtatFiche }[]
@@ -17,7 +17,7 @@ export default function RailSemaines({ semaines, semaineSel, hrefBase }: {
 }) {
   return (
     <div className="sticky top-24 bg-surface border border-bordure rounded-[10px] pt-3 pb-2.5">
-      <div className={`${INTITULE} px-4 pb-2`}>Fiches par semaine</div>
+      <div className={`${INTITULE} px-4 pb-2`}>Fiches par séance</div>
       <div className="flex flex-col">
         {semaines.map(s => {
           const sel = s.semaine === semaineSel
@@ -38,7 +38,7 @@ export default function RailSemaines({ semaines, semaineSel, hrefBase }: {
           )
         })}
         {semaines.length === 0 && (
-          <p className="font-corps italic text-sm text-muet px-4 py-1">Aucune semaine dans ce livre.</p>
+          <p className="font-corps italic text-sm text-muet px-4 py-1">Aucune séance dans ce livre.</p>
         )}
       </div>
       <div className="mx-4 mt-2.5 pt-[9px] border-t border-dashed border-bordure-bouton flex gap-[11px] flex-wrap font-ui text-[11px] text-muet-clair">
