@@ -3,6 +3,7 @@ import Link from 'next/link'
 import { createClient } from '@/utils/supabase/server'
 import { createAdminClient } from '@/utils/supabase/admin'
 import { contexteAletheia, livreAccessible, semaineLivre, travauxParSemaine, peutAccederSemaine, lireReglages } from '../../data'
+import { resoudreDateSeance, formatEcheanceFr } from '@/utils/aletheia-dates'
 import { validerLectureRetourVf } from '../../actions'
 import FormulaireV1 from '../../FormulaireV1'
 import FormulaireVf from '../../FormulaireVf'
@@ -182,6 +183,8 @@ export default async function PageSemaineAletheia({ params }: { params: Promise<
 
   const sem = await semaineLivre(admin, livreId, semaine)
   if (!sem) notFound()
+  // Date « mode b » de cette séance (échéance dimanche via le parcours), vide en mode a.
+  sem.dateIndicative = formatEcheanceFr((await resoudreDateSeance(admin, livreId, active.classe_id, semaine)).valeur)
 
   const { data: livre } = await admin.from('scriptorium_unites').select('label, auteur').eq('id', livreId).maybeSingle()
 
@@ -243,7 +246,7 @@ export default async function PageSemaineAletheia({ params }: { params: Promise<
             <p className="text-sm text-muet mt-1">
               {sem.chapitres && <span className="text-pigment">{sem.chapitres}</span>}
               {sem.chapitres && sem.dateIndicative && ' · '}
-              {sem.dateIndicative && <span>à partir du {sem.dateIndicative}</span>}
+              {sem.dateIndicative && <span>à rendre le {sem.dateIndicative}</span>}
             </p>
             <p className="text-xs text-muet mt-2">Lis ces chapitres dans ton propre exemplaire, puis rédige ci-dessous.</p>
           </>

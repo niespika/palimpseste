@@ -86,7 +86,7 @@ export default async function PageAletheia() {
               <div className="min-w-0">
                 <h2 className="font-titre text-2xl sm:text-3xl text-encre leading-tight">{livre.titre}</h2>
                 {livre.auteur && <p className="font-corps text-sm text-muet mt-0.5 italic">{livre.auteur}</p>}
-                <p className="font-corps text-sm text-muet mt-1">{nbSemaines} séance{nbSemaines > 1 ? 's' : ''} · lis-le dans ton propre exemplaire</p>
+                <p className="font-corps text-sm text-muet mt-1">{nbSemaines} séance{nbSemaines > 1 ? 's' : ''} · lis-le dans ton propre exemplaire{!livre.gouverne && ' · sans échéances'}</p>
               </div>
 
               {/* ── Barre d'avancement ─────────────────────────────────────── */}
@@ -124,7 +124,7 @@ export default async function PageAletheia() {
                           <p className="font-corps text-sm sm:text-base text-encre-douce truncate">{s.titre}</p>
                           {(s.chapitres || s.dateIndicative) && (
                             <p className="hidden sm:block text-xs text-muet mt-0.5 truncate">
-                              {s.chapitres}{s.chapitres && s.dateIndicative && ' · '}{s.dateIndicative && `à partir du ${s.dateIndicative}`}
+                              {s.chapitres}{s.chapitres && s.dateIndicative && ' · '}{s.dateIndicative && `à rendre le ${s.dateIndicative}`}
                             </p>
                           )}
                         </div>
@@ -155,7 +155,7 @@ export default async function PageAletheia() {
                           {s.chapitres && (statut === 'DONE' ? finLe : s.dateIndicative) && ' · '}
                           {statut === 'DONE'
                             ? (finLe ? <span>terminée le {finLe}</span> : <span>terminée</span>)
-                            : (s.dateIndicative && <span>à partir du {s.dateIndicative}</span>)}
+                            : (s.dateIndicative && <span>à rendre le {s.dateIndicative}</span>)}
                         </p>
                         {/* Mobile : les 4 points sous le titre (le sous-titre est masqué). */}
                         <div className="sm:hidden mt-2"><MicroStepper statut={statut} taille="petit" /></div>

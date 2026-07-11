@@ -5,6 +5,7 @@ import { contexteClasseEleve } from '../../contexte-classe'
 import type { CapstoneRow, LivreAletheia, SemaineLivre, TravailAletheia } from './types'
 import { AIDES_V1_DEFAUT, type AidesV1 } from './aides-v1'
 import type { SeanceOrdinal } from '@/utils/aletheia-seance'
+import { resoudreDatesLivre, formatEcheanceFr } from '@/utils/aletheia-dates'
 
 export interface InscriptionAletheia { id: string; classe_id: string; classe_nom: string }
 
@@ -66,13 +67,20 @@ export async function livresPourClasse(admin: SupabaseClient, classeId: string):
     semainesParLivre.set(uid, arr)
   }
 
-  return (unites ?? []).map(u => ({
-    id: u.id as string,
-    titre: u.label as string,
-    auteur: (u.auteur as string | null) ?? null,
-    date_debut: (u.date_debut as string | null) ?? null,
-    nb_semaines: (u.nb_semaines as number | null) ?? null,
-    semaines: semainesParLivre.get(u.id as string) ?? [],
+  // Dates « mode b » : résolues via le parcours (snapshot/frise). Mode a → vide +
+  // gouverne=false (badge « sans échéances »). Un chargement par (livre, classe).
+  return Promise.all((unites ?? []).map(async u => {
+    const seances = semainesParLivre.get(u.id as string) ?? []
+    const { dates, gouverne } = await resoudreDatesLivre(admin, u.id as string, classeId, seances.map(s => s.semaine))
+    return {
+      id: u.id as string,
+      titre: u.label as string,
+      auteur: (u.auteur as string | null) ?? null,
+      date_debut: (u.date_debut as string | null) ?? null,
+      nb_semaines: (u.nb_semaines as number | null) ?? null,
+      gouverne,
+      semaines: seances.map(s => ({ ...s, dateIndicative: formatEcheanceFr(dates.get(s.semaine)?.valeur ?? null) })),
+    }
   }))
 }
 

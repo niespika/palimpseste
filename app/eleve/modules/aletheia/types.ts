@@ -175,5 +175,6 @@ export interface LivreAletheia {
   auteur: string | null
   date_debut: string | null
   nb_semaines: number | null
+  gouverne: boolean // planifié via un parcours (mode b) ? sinon mode a (sans échéances)
   semaines: SemaineLivre[]
 }
