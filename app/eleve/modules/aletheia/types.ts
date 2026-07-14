@@ -163,7 +163,8 @@ export interface DiagnosticTravail {
 
 // Une semaine de planning (lecture seule, SANS PDF).
 export interface SemaineLivre {
-  semaine: number
+  semaine: number          // ordinal d'ORIGINE (clé DB / URL / travail élève / IA / date)
+  numero: number           // position d'AFFICHAGE 1..K (mode C) ; == semaine en A/B (identité)
   titre: string
   chapitres: string | null
   dateIndicative: string // « JJ/MM/AAAA »
@@ -176,5 +177,6 @@ export interface LivreAletheia {
   date_debut: string | null
   nb_semaines: number | null
   gouverne: boolean // planifié via un parcours (mode b) ? sinon mode a (sans échéances)
+  mode: 'A' | 'B' | 'C' // A = livre seul ; B = livre entier en parcours ; C = extrait (mode C)
   semaines: SemaineLivre[]
 }

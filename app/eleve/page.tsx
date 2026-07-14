@@ -151,7 +151,9 @@ export default async function TableauDeBordEleve() {
     // Aletheia : au moins un livre dont toutes les semaines ne sont pas terminées.
     if (accAletheia) {
       const livres = (await livresPourClasse(admin, active.classe_id)).filter((l) => l.semaines.length > 0)
-      const done = await Promise.all(livres.map((l) => toutesSemainesDone(admin, user!.id, l.id)))
+      // (perf #2) livresPourClasse a déjà les séances exposées → on les passe pour éviter un
+      // modeExposition redondant par livre.
+      const done = await Promise.all(livres.map((l) => toutesSemainesDone(admin, user!.id, l.id, active.classe_id, l.semaines.map((s) => s.semaine))))
       aletheiaAFaire = done.some((d) => !d)
     }
 

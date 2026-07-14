@@ -5,6 +5,8 @@ import { revalidatePath } from 'next/cache'
 import { createClient } from '@/utils/supabase/server'
 import { createAdminClient } from '@/utils/supabase/admin'
 import { contexteAletheia, livreAccessible, semaineLivre, peutAccederSemaine } from './data'
+import { modeExposition } from '@/utils/aletheia-dates'
+import { dansExtrait } from '@/utils/aletheia-extrait'
 import { messageSiBloque, signalerStrikeAuto } from '@/utils/integrite'
 import { messageSiRetoursNonLus } from '@/utils/retours-lus'
 import { detecterRenduVideTexte, detecterAveuHeuristique } from '@/utils/detecteur-integrite'
@@ -82,7 +84,8 @@ export async function soumettreV1(livreId: string, semaine: number, saisie: Sais
   if (!active) return { error: 'Ce module ne t\'est pas accessible.' }
   if (!(await livreAccessible(admin, [active.classe_id], livreId))) return { error: 'Ce livre ne t\'est pas accessible.' }
   if (!(await semaineLivre(admin, livreId, semaine))) return { error: 'Séance introuvable.' }
-  if (!(await peutAccederSemaine(admin, userId, livreId, semaine))) return { error: 'Cette séance n\'est pas encore débloquée.' }
+  // peutAccederSemaine intègre la garde d'appartenance à l'extrait (mode C) + le déblocage séquentiel.
+  if (!(await peutAccederSemaine(admin, userId, livreId, semaine, active.classe_id))) return { error: 'Cette séance n\'est pas encore débloquée.' }
 
   const { data: existing } = await supabase
     .from('aletheia_travaux')
@@ -165,6 +168,11 @@ export async function soumettreVf(livreId: string, semaine: number, vf: SaisieVf
   const admin = createAdminClient()
   const { active } = await contexteAletheia(supabase, userId)
   if (!active || !(await livreAccessible(admin, [active.classe_id], livreId))) return { error: 'Ce livre ne t\'est pas accessible.' }
+  // (mode C, F7) Garde d'APPARTENANCE à l'extrait sur l'ÉCRITURE : sans elle, un travail
+  // orphelin (séance sortie de l'extrait) pourrait avancer VF→DONE et déclencher un retour
+  // IA ancré livre entier = SPOILER. Sous gate OFF, exposees = toutes les séances → jamais bloqué.
+  const { exposees } = await modeExposition(admin, livreId, active.classe_id)
+  if (!dansExtrait(exposees, semaine)) return { error: 'Cette séance ne fait pas partie de ton parcours.' }
 
   const { data: row } = await supabase
     .from('aletheia_travaux')
@@ -220,6 +228,9 @@ export async function validerLectureRetourVf(livreId: string, semaine: number) {
   const admin = createAdminClient()
   const { active } = await contexteAletheia(supabase, userId)
   if (!active || !(await livreAccessible(admin, [active.classe_id], livreId))) return { error: 'Ce livre ne t\'est pas accessible.' }
+  // (mode C, F7) Garde d'appartenance à l'extrait sur la validation de lecture (clôture DONE).
+  const { exposees } = await modeExposition(admin, livreId, active.classe_id)
+  if (!dansExtrait(exposees, semaine)) return { error: 'Cette séance ne fait pas partie de ton parcours.' }
 
   const { data: row } = await supabase
     .from('aletheia_travaux')
@@ -249,6 +260,10 @@ export async function relancerRetour(livreId: string, semaine: number) {
   const admin = createAdminClient()
   const { active } = await contexteAletheia(supabase, userId)
   if (!active || !(await livreAccessible(admin, [active.classe_id], livreId))) return { error: 'Ce livre ne t\'est pas accessible.' }
+  // (mode C, F7) Garde d'appartenance à l'extrait sur la relance IA (évite de relancer
+  // genererRetourVf sur un orphelin → retour ancré livre entier = spoiler).
+  const { exposees } = await modeExposition(admin, livreId, active.classe_id)
+  if (!dansExtrait(exposees, semaine)) return { error: 'Cette séance ne fait pas partie de ton parcours.' }
 
   const { data: row } = await supabase
     .from('aletheia_travaux')

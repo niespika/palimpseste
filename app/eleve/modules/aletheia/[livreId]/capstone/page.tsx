@@ -3,6 +3,7 @@ import Link from 'next/link'
 import { createClient } from '@/utils/supabase/server'
 import { createAdminClient } from '@/utils/supabase/admin'
 import { contexteAletheia, livreAccessible, chargerCapstoneLivre, toutesSemainesDone } from '../../data'
+import { modeExposition } from '@/utils/aletheia-dates'
 import PollStatut from '../../PollStatut'
 import BoutonImprimerCapstone from '../../BoutonImprimerCapstone'
 import Pastille from '@/components/Pastille'
@@ -18,9 +19,15 @@ export default async function PageCapstone({ params }: { params: Promise<{ livre
   if (!moduleActif || !active) notFound()
   if (!(await livreAccessible(admin, [active.classe_id], livreId))) notFound()
 
-  // Anti-spoiler : la carte du livre révèle toute l'architecture aval. L'élève ne
-  // peut y accéder qu'après avoir lui-même terminé toutes ses semaines.
-  if (!(await toutesSemainesDone(admin, user.id, livreId))) notFound()
+  // (mode C) Le book capstone = carte du LIVRE ENTIER → révèle des séances hors extrait =
+  // SPOILER. Interdit en mode C tant que C2 (carte-de-parcours) n'est pas livré ; la garde de
+  // MODE prime sur le gate toutesSemainesDone. Sous gate OFF, mode ≠ C → jamais bloqué.
+  const verdict = await modeExposition(admin, livreId, active.classe_id)
+  if (verdict.mode === 'C') notFound()
+
+  // Anti-spoiler : la carte du livre révèle toute l'architecture aval. L'élève ne peut y accéder
+  // qu'après avoir lui-même terminé toutes ses séances de l'extrait. (perf #4) réutilise exposees.
+  if (!(await toutesSemainesDone(admin, user.id, livreId, active.classe_id, verdict.exposees))) notFound()
 
   const { data: livre } = await admin.from('scriptorium_unites').select('label, auteur').eq('id', livreId).maybeSingle()
   const cap = await chargerCapstoneLivre(admin, livreId)

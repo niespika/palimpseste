@@ -5,7 +5,8 @@ import { contexteClasseEleve } from '../../contexte-classe'
 import type { CapstoneRow, LivreAletheia, SemaineLivre, TravailAletheia } from './types'
 import { AIDES_V1_DEFAUT, type AidesV1 } from './aides-v1'
 import type { SeanceOrdinal } from '@/utils/aletheia-seance'
-import { resoudreDatesLivre, formatEcheanceFr, livresGouvernesPourClasses } from '@/utils/aletheia-dates'
+import { resoudreDatesLivre, formatEcheanceFr, livresGouvernesPourClasses, modeExposition, lireModeCActif } from '@/utils/aletheia-dates'
+import { numeroAffiche, dansExtrait, titreSeanceAffiche } from '@/utils/aletheia-extrait'
 
 export interface InscriptionAletheia { id: string; classe_id: string; classe_nom: string }
 
@@ -64,6 +65,7 @@ export async function livresPourClasse(admin: SupabaseClient, classeId: string):
     const arr = semainesParLivre.get(uid) ?? []
     arr.push({
       semaine: d.semaine as number,
+      numero: d.semaine as number, // placeholder d'origine ; finalisé (position 1..K) plus bas
       titre: (d.titre as string) ?? `Séance ${d.semaine}`,
       chapitres: (d.chapitres as string | null) ?? null,
       dateIndicative: '',
@@ -71,21 +73,60 @@ export async function livresPourClasse(admin: SupabaseClient, classeId: string):
     semainesParLivre.set(uid, arr)
   }
 
+  // (mode C) Kill-switch lu UNE fois pour tout l'appel (hoisté hors de la boucle par livre).
+  const modeCActif = await lireModeCActif(admin)
+  // Liens DIRECTS (scriptorium_unite_classes) → précédence livre-entier (A/B, jamais C).
+  const directIds = new Set((liens ?? []).map(l => l.unite_id as string))
+
   // Dates « mode b » : résolues via le parcours (snapshot/frise). Mode a → vide +
   // gouverne=false (badge « sans échéances »). Un chargement par (livre, classe).
-  return Promise.all((unites ?? []).map(async u => {
-    const seances = semainesParLivre.get(u.id as string) ?? []
-    const { dates, gouverne } = await resoudreDatesLivre(admin, u.id as string, classeId, seances.map(s => s.semaine))
+  const livres = await Promise.all((unites ?? []).map(async u => {
+    const uid = u.id as string
+    const seances = semainesParLivre.get(uid) ?? []
+    const ordinaux = seances.map(s => s.semaine)
+    // resoudreDatesLivre expose les créneaux gouvernants BRUTS → réutilisés par la détection
+    // SANS recharger les parcours/assignations (R5 : un seul chargement par livre).
+    const { dates, gouverne, creneauxGouvernants: creneaux } = await resoudreDatesLivre(admin, uid, classeId, ordinaux)
+    // Détection du mode via la SOURCE UNIQUE (gate incontournable), sans I/O supplémentaire :
+    // S / lien direct / créneaux / flag sont déjà connus.
+    const verdict = await modeExposition(admin, uid, classeId, {
+      seances: new Set(ordinaux),
+      direct: directIds.has(uid),
+      creneaux,
+      modeCActif,
+    })
+    // MALCONFIG (gate ON uniquement) : livre gouverné à couverture vide → exclu + journalisé.
+    // Sous gate OFF, modeExposition ne renvoie jamais MALCONFIG (repli-B) → jamais exclu.
+    if (verdict.mode === 'MALCONFIG') {
+      console.warn(`[aletheia] mode C MALCONFIG — livre ${uid} exclu pour la classe ${classeId} (couverture de créneaux vide).`)
+      return null
+    }
+    const exposeesSet = new Set(verdict.exposees)
     return {
-      id: u.id as string,
+      id: uid,
       titre: u.label as string,
       auteur: (u.auteur as string | null) ?? null,
       date_debut: (u.date_debut as string | null) ?? null,
       nb_semaines: (u.nb_semaines as number | null) ?? null,
       gouverne,
-      semaines: seances.map(s => ({ ...s, dateIndicative: formatEcheanceFr(dates.get(s.semaine)?.valeur ?? null) })),
+      mode: verdict.mode, // 'A' | 'B' | 'C' (MALCONFIG déjà exclu)
+      // Extrait (mode C) : ne garder que les séances exposées, renumérotées 1..K. En A/B,
+      // exposees == toutes les séances et numero == semaine → identité (non-régression).
+      semaines: seances
+        .filter(s => exposeesSet.has(s.semaine))
+        .map(s => {
+          const numero = verdict.mode === 'C' ? numeroAffiche(verdict.exposees, s.semaine) : s.semaine
+          return {
+            ...s,
+            numero,
+            // Anti-fuite (#1) : neutralise le titre par défaut « Séance {origine} » en mode C.
+            titre: titreSeanceAffiche(s.titre, s.semaine, numero, verdict.mode === 'C'),
+            dateIndicative: formatEcheanceFr(dates.get(s.semaine)?.valeur ?? null),
+          }
+        }),
     }
   }))
+  return livres.filter((l): l is LivreAletheia => l !== null)
 }
 
 // Un livre est accessible à l'élève s'il est assigné à l'une des classes fournies
@@ -119,6 +160,7 @@ export async function semaineLivre(admin: SupabaseClient, livreId: string, semai
   if (!doc) return null
   return {
     semaine,
+    numero: semaine, // identité : la page séance calcule la position 1..K via modeExposition (mode C)
     titre: (doc.titre as string) ?? `Séance ${semaine}`,
     chapitres: (doc.chapitres as string | null) ?? null,
     dateIndicative: '',
@@ -154,17 +196,25 @@ export function estSemaineDebloquee(semaines: SeanceOrdinal[], doneSet: Set<Sean
   return doneSet.has(ordre[idx - 1])
 }
 
-// Accès serveur à une semaine (page semaine + actions) : applique le déblocage séquentiel.
-export async function peutAccederSemaine(admin: SupabaseClient, eleveId: string, livreId: string, semaine: SeanceOrdinal): Promise<boolean> {
+// Accès serveur à une séance (page séance + actions) : garde d'APPARTENANCE (mode C) PUIS
+// déblocage séquentiel. En mode C, l'accès est restreint aux séances de l'extrait.
+export async function peutAccederSemaine(admin: SupabaseClient, eleveId: string, livreId: string, semaine: SeanceOrdinal, classeId: string, exposeesPre?: SeanceOrdinal[]): Promise<boolean> {
+  // (mode C, footgun F9) Refus INCONDITIONNEL si la séance n'appartient pas à l'extrait,
+  // AVANT le raccourci `!deblocageSequentiel` — sinon une séance hors extrait fuiterait par
+  // URL/action dans la config par défaut (deblocage off). Sous gate OFF, exposees = toutes
+  // les séances → jamais refusé (non-régression). `exposeesPre` : réutilise un modeExposition
+  // déjà calculé par l'appelant (perf #3), sinon on le calcule.
+  const exposees = exposeesPre ?? (await modeExposition(admin, livreId, classeId)).exposees
+  if (!dansExtrait(exposees, semaine)) return false
+
   const { deblocageSequentiel } = await lireReglages(admin)
   if (!deblocageSequentiel) return true
-  const [{ data: docs }, { data: faits }] = await Promise.all([
-    admin.from('scriptorium_documents').select('semaine').eq('unite_id', livreId).not('semaine', 'is', null),
-    admin.from('aletheia_travaux').select('semaine_index').eq('eleve_id', eleveId).eq('scriptorium_livre_id', livreId).eq('statut', 'DONE'),
-  ])
-  const semaines = [...new Set((docs ?? []).map(d => d.semaine as number))]
+  const { data: faits } = await admin.from('aletheia_travaux')
+    .select('semaine_index').eq('eleve_id', eleveId).eq('scriptorium_livre_id', livreId).eq('statut', 'DONE')
   const doneSet = new Set((faits ?? []).map(t => t.semaine_index as number))
-  return estSemaineDebloquee(semaines, doneSet, semaine, true)
+  // Déblocage séquentiel restreint à l'EXTRAIT (§6.5) : le prédécesseur est celui de l'extrait,
+  // pas une séance non exposée. En A/B, exposees = toutes les séances → comportement inchangé.
+  return estSemaineDebloquee(exposees, doneSet, semaine, true)
 }
 
 // L'état du capstone du LIVRE (carte partagée, canonique), ou null si jamais lancé.
@@ -179,17 +229,19 @@ export async function chargerCapstoneLivre(admin: SupabaseClient, livreId: strin
   return (data as CapstoneRow | null) ?? null
 }
 
-// Toutes les semaines du livre sont-elles DONE pour cet élève ? (gate du capstone :
+// Toutes les séances EXPOSÉES du livre sont-elles DONE pour cet élève ? (gate du capstone :
 // l'élève ne voit la carte partagée qu'après avoir lui-même tout terminé — anti-spoiler.)
-export async function toutesSemainesDone(admin: SupabaseClient, eleveId: string, livreId: string): Promise<boolean> {
-  const [{ data: docs }, { data: faits }] = await Promise.all([
-    admin.from('scriptorium_documents').select('semaine').eq('unite_id', livreId).not('semaine', 'is', null),
+// En mode C, l'ensemble itéré est l'EXTRAIT (K/K), pas le livre entier (§6.6). En A/B,
+// exposees = toutes les séances → comportement inchangé (non-régression).
+export async function toutesSemainesDone(admin: SupabaseClient, eleveId: string, livreId: string, classeId: string, exposeesPre?: SeanceOrdinal[]): Promise<boolean> {
+  // `exposeesPre` : réutilise un modeExposition déjà calculé par l'appelant (perf #2/#4).
+  const [exposees, { data: faits }] = await Promise.all([
+    exposeesPre ?? modeExposition(admin, livreId, classeId).then(v => v.exposees),
     admin.from('aletheia_travaux').select('semaine_index').eq('eleve_id', eleveId).eq('scriptorium_livre_id', livreId).eq('statut', 'DONE'),
   ])
-  const semaines = [...new Set((docs ?? []).map(d => d.semaine as number))]
-  if (semaines.length === 0) return false
+  if (exposees.length === 0) return false
   const doneSet = new Set((faits ?? []).map(t => t.semaine_index as number))
-  return semaines.every(s => doneSet.has(s))
+  return exposees.every(s => doneSet.has(s))
 }
 
 // Les travaux de l'élève pour un livre, indexés par numéro de semaine (RLS eleve_own).
