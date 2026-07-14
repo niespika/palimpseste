@@ -11,6 +11,8 @@ import {
   echeanceDepuisApercu,
   resoudreDepuisCandidats,
   formatEcheanceFr,
+  classifierMode,
+  estFullRangeExplicite,
   type ApercuSemaine,
   type CandidatCreneau,
 } from './aletheia-dates'
@@ -125,4 +127,96 @@ test('formatEcheanceFr : ISO → JJ/MM/AAAA', () => {
   assert.equal(formatEcheanceFr('2026-09-27'), '27/09/2026')
   assert.equal(formatEcheanceFr(''), '')
   assert.equal(formatEcheanceFr(null), '')
+})
+
+// ── classifierMode (mode C) — matrice §9.5 : {direct × parcours × couverture} ──
+// PUR, sans I/O ni gate. Encode l'invariant : un livre entier (A/B) ne devient jamais C.
+
+function cr(debut: number | null, fin: number | null, parcoursId = 'p1') {
+  return { parcoursId, debut, fin }
+}
+const S12 = new Set([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12])
+
+test('classifierMode : S vide (livre non découpé) → A neutre, JAMAIS MALCONFIG', () => {
+  const r = classifierMode(new Set(), false, [cr(3, 5)])
+  assert.equal(r.mode, 'A')
+  assert.deepEqual(r.exposees, [])
+})
+
+test('classifierMode : non gouverné + lien direct → A livre entier', () => {
+  const r = classifierMode(new Set([1, 2, 3]), true, [])
+  assert.equal(r.mode, 'A')
+  assert.deepEqual(r.exposees, [1, 2, 3])
+  assert.equal(r.complet, true)
+})
+
+test('classifierMode : non gouverné sans lien direct → A non exposé', () => {
+  const r = classifierMode(new Set([1, 2, 3]), false, [])
+  assert.equal(r.mode, 'A')
+  assert.deepEqual(r.exposees, [])
+  assert.equal(r.complet, false)
+})
+
+test('classifierMode : précédence directe prime sur un créneau partiel → B (jamais C)', () => {
+  const r = classifierMode(S12, true, [cr(3, 7)])
+  assert.equal(r.mode, 'B')
+  assert.deepEqual(r.exposees, [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12])
+})
+
+test('classifierMode : créneau (null,null) = livre entier → B', () => {
+  assert.equal(classifierMode(S12, false, [cr(null, null)]).mode, 'B')
+})
+
+test('classifierMode : full-range explicite [1-12] → B (garde §9.3)', () => {
+  assert.equal(classifierMode(S12, false, [cr(1, 12)]).mode, 'B')
+})
+
+test('classifierMode : B-distribué [1-6]+[7-12] (union = S) → B, PAS C', () => {
+  const r = classifierMode(S12, false, [cr(1, 6, 'p1'), cr(7, 12, 'p1')])
+  assert.equal(r.mode, 'B')
+  assert.equal(r.complet, true)
+})
+
+test('classifierMode : sous-ensemble contigu [3-7] ⊊ S → C', () => {
+  const r = classifierMode(S12, false, [cr(3, 7)])
+  assert.equal(r.mode, 'C')
+  assert.deepEqual(r.exposees, [3, 4, 5, 6, 7])
+  assert.equal(r.complet, false)
+  assert.equal(r.gouverneParcoursId, 'p1')
+})
+
+test('classifierMode : sous-ensemble non contigu [3]+[5]+[7] (même parcours) → C', () => {
+  const r = classifierMode(S12, false, [cr(3, 3), cr(5, 5), cr(7, 7)])
+  assert.equal(r.mode, 'C')
+  assert.deepEqual(r.exposees, [3, 5, 7])
+})
+
+test('classifierMode : borne ouverte partielle (null,5) → couvre ≤5 → C', () => {
+  const r = classifierMode(S12, false, [cr(null, 5)])
+  assert.equal(r.mode, 'C')
+  assert.deepEqual(r.exposees, [1, 2, 3, 4, 5])
+})
+
+test('classifierMode : bornes hors plage [20-25] → MALCONFIG', () => {
+  const r = classifierMode(S12, false, [cr(20, 25)])
+  assert.equal(r.mode, 'MALCONFIG')
+  assert.deepEqual(r.exposees, [])
+})
+
+test('classifierMode : extrait couvert par 2 parcours distincts → MALCONFIG (§4.6)', () => {
+  const r = classifierMode(S12, false, [cr(1, 3, 'p1'), cr(8, 10, 'p2')])
+  assert.equal(r.mode, 'MALCONFIG')
+})
+
+test('estFullRangeExplicite : [1-N] vrai ; [1-5]/12 faux ; ne démarrant pas à ≤1 faux', () => {
+  assert.equal(estFullRangeExplicite({ debut: 1, fin: 12 }, 12), true)
+  assert.equal(estFullRangeExplicite({ debut: 1, fin: 5 }, 12), false)
+  assert.equal(estFullRangeExplicite({ debut: 2, fin: 12 }, 12), false)
+  assert.equal(estFullRangeExplicite({ debut: null, fin: null }, 12), false) // ouvert = géré séparément
+})
+
+test('INVARIANT §9.3 : aucun créneau full-range (ouvert ou explicite) ne donne mode C', () => {
+  for (const creneaux of [[cr(null, null)], [cr(1, 12)], [cr(1, 20)], [cr(null, 12)]]) {
+    assert.notEqual(classifierMode(S12, false, creneaux).mode, 'C')
+  }
 })

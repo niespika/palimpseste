@@ -108,6 +108,95 @@ export function formatEcheanceFr(iso: string | null): string {
   return `${String(d).padStart(2, '0')}/${String(m).padStart(2, '0')}/${y}`
 }
 
+// ── PUR : détection du mode d'exposition (mode C) ─────────────────────────────
+
+/**
+ * Verdict de classification d'un couple (livre, classe). `exposees` = ordinaux d'ORIGINE
+ * exposés, triés croissant. `complet` ⇔ `exposees` couvre toutes les séances-docs (mode B).
+ * `gouverneParcoursId` = parcours UNIQUE gouvernant l'extrait (mode C, ancrage IA C2) ; null sinon.
+ */
+export interface VerdictMode {
+  mode: 'A' | 'B' | 'C' | 'MALCONFIG'
+  exposees: number[]
+  complet: boolean
+  gouverneParcoursId: string | null
+}
+
+/** Créneau-livre réduit à ce qui décide la COUVERTURE : bornes de tranche (ordinaux) + parcours. */
+export interface CreneauCouvrant {
+  parcoursId: string
+  debut: number | null
+  fin: number | null
+}
+
+/**
+ * Un créneau à bornes EXPLICITES couvrant EXACTEMENT tout le livre courant (debut ≤ 1 ∧
+ * fin ≥ max des séances-docs) vaut « livre entier » → traité comme (null,null) → mode B.
+ * Redondant avec l'égalité ensembliste au moment présent (un tel créneau donne couvertes=S),
+ * mais nomme l'intention et sert de hook à l'audit R-EXPO. La vraie protection contre une
+ * re-découpe qui ALLONGE le livre (un [1-5] figé devenant sous-ensemble strict d'un livre
+ * re-coupé à 10) reste la normalisation authoring en (null,null) + l'audit : un test runtime
+ * ne peut PAS distinguer un [1-N] « livre entier » d'un [1-N] « extrait » une fois N agrandi.
+ */
+export function estFullRangeExplicite(c: { debut: number | null; fin: number | null }, maxSeance: number): boolean {
+  return c.debut != null && c.fin != null && c.debut <= 1 && c.fin >= maxSeance
+}
+
+/**
+ * Classifie le mode d'exposition d'un couple (livre, classe) — PUR, TOTAL, SANS I/O ni gate
+ * (le gate `mode_c_actif` est appliqué par `modeExposition`). Algorithme §4.3 du SPEC mode C :
+ *  • S vide (livre non découpé) → A neutre, JAMAIS MALCONFIG.
+ *  • non gouverné → A (livre entier si lien direct, sinon non exposé).
+ *  • précédence directe (lien scriptorium_unite_classes) → B (livre entier, jamais C).
+ *  • créneau ouvert / pleine plage explicite → B (livre entier).
+ *  • union des tranches == S → B (inclut le B-distribué).
+ *  • couverture vide → MALCONFIG.
+ *  • sous-ensemble strict + UN seul parcours → C (extrait) ; + ≥2 parcours → MALCONFIG (§4.6).
+ */
+export function classifierMode(
+  s: Set<number>,
+  direct: boolean,
+  creneaux: CreneauCouvrant[],
+): VerdictMode {
+  const sSorted = [...s].sort((a, b) => a - b)
+
+  // (0) livre non découpé (0 ligne scriptorium_documents) → neutre, PAS MALCONFIG (§4.7).
+  if (sSorted.length === 0) return { mode: 'A', exposees: [], complet: false, gouverneParcoursId: null }
+
+  const gouverne = creneaux.length > 0
+
+  // (a) non gouverné : A si assigné en direct (livre entier), sinon non exposé.
+  if (!gouverne) {
+    return direct
+      ? { mode: 'A', exposees: sSorted, complet: true, gouverneParcoursId: null }
+      : { mode: 'A', exposees: [], complet: false, gouverneParcoursId: null }
+  }
+
+  // (b) PRÉCÉDENCE DIRECTE (§4.5) : un lien direct octroie le livre ENTIER → jamais C.
+  if (direct) return { mode: 'B', exposees: sSorted, complet: true, gouverneParcoursId: null }
+
+  // (c) Garde full-range (§9.3, Q4) : créneau ouvert (null,null) OU pleine plage explicite → B.
+  const maxSeance = sSorted[sSorted.length - 1]
+  if (creneaux.some(c => (c.debut == null && c.fin == null) || estFullRangeExplicite(c, maxSeance)))
+    return { mode: 'B', exposees: sSorted, complet: true, gouverneParcoursId: null }
+
+  // (d) Couverture par UNION des tranches, comparée à S (couvertes ⊆ S par construction).
+  const couvertes = sSorted.filter(seance => creneaux.some(c => couvre(c, seance)))
+  if (couvertes.length === sSorted.length)                 // union ⊇ S → B (inclut B-distribué)
+    return { mode: 'B', exposees: sSorted, complet: true, gouverneParcoursId: null }
+  if (couvertes.length === 0)                              // bornes hors plage → MALCONFIG (§4.7)
+    return { mode: 'MALCONFIG', exposees: [], complet: false, gouverneParcoursId: null }
+
+  // (e) couvertes ⊊ S, non vide → extrait candidat. Mode C exige UN parcours gouvernant
+  //     unique (§4.6) ; ≥2 parcours distincts couvrant l'extrait → MALCONFIG.
+  const parcoursCouvrants = [...new Set(
+    creneaux.filter(c => couvertes.some(seance => couvre(c, seance))).map(c => c.parcoursId),
+  )]
+  if (parcoursCouvrants.length >= 2)
+    return { mode: 'MALCONFIG', exposees: couvertes, complet: false, gouverneParcoursId: null }
+  return { mode: 'C', exposees: couvertes, complet: false, gouverneParcoursId: parcoursCouvrants[0] }
+}
+
 // ── I/O (client admin en paramètre) ──────────────────────────────────────────
 
 // Aperçu frise (recalcul) pour une date de début — miroir de resoudreFrisePourDate
@@ -147,17 +236,31 @@ interface AssignParcours {
   snapshot: ApercuSemaine[] | null
 }
 
-// Charge les créneaux-livre + parcours vivants + assignations ACTIVES à la classe,
-// et construit l'aperçu (snapshot publié sinon frise) de chaque parcours-classe.
-async function chargerCandidats(
+// Créneau-livre BRUT (bornes de tranche = ordinaux de séance) + son parcours, tel que chargé
+// AVANT toute résolution de date. `id`/`semParcours` alimentent la datation ; `debut`/`fin`
+// alimentent la DÉTECTION de couverture (mode C).
+interface CreneauLivre {
+  id: string
+  parcoursId: string
+  semParcours: number
+  debut: number | null
+  fin: number | null
+}
+
+// Étape COMMUNE à la détection de mode (creneauxGouvernants, niveau `gouverne` — arbitrage
+// A1) et à la datation (chargerCandidats) : charge les créneaux-livre BRUTS + parcours vivants
+// + assignations ACTIVES à la classe (avec snapshot/date_debut). Ne résout AUCUNE date — c'est
+// le socle brut, AVANT le filtrage `if (!apercu) continue` de chargerCandidats.
+async function chargerCreneauxEtAssignations(
   admin: SupabaseClient, livreId: string, classeId: string,
-): Promise<{ candidats: CandidatCreneau[]; gouverne: boolean }> {
-  const { data: creneaux } = await admin.from('scriptorium_parcours_creneaux')
+): Promise<{ creneaux: CreneauLivre[]; assignParParcours: Map<string, AssignParcours> }> {
+  const vide = { creneaux: [] as CreneauLivre[], assignParParcours: new Map<string, AssignParcours>() }
+  const { data: creneauxRaw } = await admin.from('scriptorium_parcours_creneaux')
     .select('id, parcours_id, semaine, livre_semaine_debut, livre_semaine_fin')
     .eq('ref_type', 'livre').eq('livre_id', livreId)
-  if (!creneaux || creneaux.length === 0) return { candidats: [], gouverne: false }
+  if (!creneauxRaw || creneauxRaw.length === 0) return vide
 
-  const parcoursIds = [...new Set(creneaux.map(c => c.parcours_id as string))]
+  const parcoursIds = [...new Set(creneauxRaw.map(c => c.parcours_id as string))]
   const { data: parcours } = await admin.from('scriptorium_parcours')
     .select('id, nb_semaines, supprime_at').in('id', parcoursIds)
   const nbParParcours = new Map<string, number>()
@@ -165,7 +268,7 @@ async function chargerCandidats(
     if ((p.supprime_at as string | null) == null) nbParParcours.set(p.id as string, (p.nb_semaines as number) ?? 0)
   }
   const vivants = [...nbParParcours.keys()]
-  if (vivants.length === 0) return { candidats: [], gouverne: false }
+  if (vivants.length === 0) return vide
 
   // Assignations ACTIVES à cette classe. Tolérant si les colonnes snapshot n'existent
   // pas (migration parcours_snapshot_horaire.sql non jouée) → repli sans snapshot.
@@ -194,10 +297,48 @@ async function chargerCandidats(
     })
   }
 
+  const creneaux: CreneauLivre[] = creneauxRaw.map(c => ({
+    id: c.id as string,
+    parcoursId: c.parcours_id as string,
+    semParcours: c.semaine as number,
+    debut: (c.livre_semaine_debut as number | null) ?? null,
+    fin: (c.livre_semaine_fin as number | null) ?? null,
+  }))
+  return { creneaux, assignParParcours }
+}
+
+/**
+ * (Mode C — détection §4.2) Créneaux-livre GOUVERNANTS BRUTS pour un couple (livre, classe) :
+ * ceux dont le parcours est vivant ET assigné ACTIF à la classe, AVANT toute résolution de date
+ * (arbitrage A1). Un créneau qui gouverne l'exposition mais dont la date n'est pas résoluble
+ * (parcours sans snapshot ni date_debut) DOIT être compté dans la couverture — sinon un livre
+ * entier gouverné sans dates basculerait à tort en mode C. Renvoie `debut/fin` (bornes de tranche
+ * = ordinaux) + `parcoursId` (nécessaire au comptage multi-parcours §4.6).
+ */
+export async function creneauxGouvernants(
+  admin: SupabaseClient, livreId: string, classeId: string,
+): Promise<CreneauCouvrant[]> {
+  const { creneaux, assignParParcours } = await chargerCreneauxEtAssignations(admin, livreId, classeId)
+  return creneaux
+    .filter(c => assignParParcours.has(c.parcoursId))
+    .map(c => ({ parcoursId: c.parcoursId, debut: c.debut, fin: c.fin }))
+}
+
+// Charge les créneaux-livre + parcours vivants + assignations ACTIVES à la classe,
+// et construit l'aperçu (snapshot publié sinon frise) de chaque parcours-classe.
+// Renvoie AUSSI les créneaux gouvernants BRUTS (`gouvernants`) — mutualise la détection
+// de mode (§4.2) avec la datation en un seul chargement parcours/classe (R5).
+async function chargerCandidats(
+  admin: SupabaseClient, livreId: string, classeId: string,
+): Promise<{ candidats: CandidatCreneau[]; gouverne: boolean; gouvernants: CreneauCouvrant[] }> {
+  const { creneaux, assignParParcours } = await chargerCreneauxEtAssignations(admin, livreId, classeId)
+  const gouvernants: CreneauCouvrant[] = creneaux
+    .filter(c => assignParParcours.has(c.parcoursId))
+    .map(c => ({ parcoursId: c.parcoursId, debut: c.debut, fin: c.fin }))
   // gouverne = ≥1 créneau dans un parcours vivant ASSIGNÉ ACTIF à la classe (même si
   // date non résoluble) → distingue le mode b du mode a (badge « sans échéances »).
-  const gouverne = creneaux.some(c => assignParParcours.has(c.parcours_id as string))
-  if (!gouverne) return { candidats: [], gouverne: false }
+  const gouverne = gouvernants.length > 0
+  if (!gouverne) return { candidats: [], gouverne: false, gouvernants }
 
   // Aperçu par parcours-classe (MÉMOÏSÉ : toutes les séances d'un livre le partagent).
   const apercuCache = new Map<string, { apercu: ApercuSemaine[]; source: 'snapshot' | 'frise' } | null>()
@@ -212,31 +353,35 @@ async function chargerCandidats(
 
   const candidats: CandidatCreneau[] = []
   for (const c of creneaux) {
-    const a = assignParParcours.get(c.parcours_id as string)
+    const a = assignParParcours.get(c.parcoursId)
     if (!a) continue
     const ap = await apercuDe(a)
     if (!ap) continue // assigné sans date ni snapshot → date non résoluble
     candidats.push({
-      creneauId: c.id as string,
-      parcoursId: c.parcours_id as string,
-      semParcours: c.semaine as number,
-      debut: (c.livre_semaine_debut as number | null) ?? null,
-      fin: (c.livre_semaine_fin as number | null) ?? null,
+      creneauId: c.id,
+      parcoursId: c.parcoursId,
+      semParcours: c.semParcours,
+      debut: c.debut,
+      fin: c.fin,
       apercu: ap.apercu,
       source: ap.source,
     })
   }
-  return { candidats, gouverne }
+  return { candidats, gouverne, gouvernants }
 }
 
-/** Résout les dates de PLUSIEURS séances d'un livre pour une classe (un seul chargement). */
+/**
+ * Résout les dates de PLUSIEURS séances d'un livre pour une classe (un seul chargement).
+ * Renvoie AUSSI `creneauxGouvernants` (bruts) pour que l'appelant classe le mode SANS
+ * recharger les parcours/assignations (R5, cf. modeExposition(..., prealable)).
+ */
 export async function resoudreDatesLivre(
   admin: SupabaseClient, livreId: string, classeId: string, seances: number[],
-): Promise<{ dates: Map<number, ResolutionDate>; gouverne: boolean }> {
-  const { candidats, gouverne } = await chargerCandidats(admin, livreId, classeId)
+): Promise<{ dates: Map<number, ResolutionDate>; gouverne: boolean; creneauxGouvernants: CreneauCouvrant[] }> {
+  const { candidats, gouverne, gouvernants } = await chargerCandidats(admin, livreId, classeId)
   const dates = new Map<number, ResolutionDate>()
   for (const s of seances) dates.set(s, resoudreDepuisCandidats(candidats, s))
-  return { dates, gouverne }
+  return { dates, gouverne, creneauxGouvernants: gouvernants }
 }
 
 /** Résout la date d'UNE séance d'un livre pour une classe. */
@@ -332,4 +477,58 @@ export async function pairesLivresGouvernes(admin: SupabaseClient, classeIds?: s
     }
   }
   return [...paires.values()]
+}
+
+// ── I/O : source de vérité du mode d'exposition (mode C) ──────────────────────
+
+/** Séances-docs d'un livre : DISTINCT scriptorium_documents.semaine (ordinaux d'origine). */
+export async function seancesDocs(admin: SupabaseClient, livreId: string): Promise<Set<number>> {
+  const { data } = await admin.from('scriptorium_documents')
+    .select('semaine').eq('unite_id', livreId).not('semaine', 'is', null)
+  return new Set((data ?? []).map(d => d.semaine as number))
+}
+
+/** Lien DIRECT livre↔classe (scriptorium_unite_classes) : octroie le livre entier (A/B). */
+async function lienDirect(admin: SupabaseClient, livreId: string, classeId: string): Promise<boolean> {
+  const { data } = await admin.from('scriptorium_unite_classes')
+    .select('unite_id').eq('unite_id', livreId).eq('classe_id', classeId).limit(1)
+  return (data ?? []).length > 0
+}
+
+/**
+ * Kill-switch global du mode C (`aletheia_params.mode_c_actif`, id=1). Défaut false ; colonne
+ * absente tolérée → false (dégrade AVANT la migration aletheia_mode_c.sql).
+ */
+export async function lireModeCActif(admin: SupabaseClient): Promise<boolean> {
+  const { data } = await admin.from('aletheia_params').select('mode_c_actif').eq('id', 1).maybeSingle()
+  return !!(data as { mode_c_actif?: boolean } | null)?.mode_c_actif
+}
+
+/**
+ * SOURCE DE VÉRITÉ UNIQUE du mode d'exposition d'un couple (livre, classe), consommée par TOUTE
+ * l'exposition (C1) ET le choix d'ancrage IA (C2). Charge S / lien direct / créneaux gouvernants
+ * BRUTS (A1), classe via `classifierMode` (PUR), PUIS applique le GATE : sous `mode_c_actif = false`,
+ * TOUT verdict non-A/B (mode C ET MALCONFIG) retombe sur le repli-B whole-book — reproduit à l'octet
+ * le comportement prod actuel (§8.2). Gate INCONTOURNABLE : les appelants passent toujours par ici,
+ * jamais par `classifierMode` brut.
+ */
+export async function modeExposition(
+  admin: SupabaseClient, livreId: string, classeId: string,
+  // (R5) Entrées déjà chargées par l'appelant (ex. livresPourClasse via resoudreDatesLivre) :
+  // chaque champ fourni COURT-CIRCUITE sa requête → 0 rechargement. `?? ` gère correctement
+  // `false` / Set vide (non nullish). Absent → modeExposition charge tout lui-même.
+  prealable?: { seances?: Set<number>; direct?: boolean; creneaux?: CreneauCouvrant[]; modeCActif?: boolean },
+): Promise<VerdictMode> {
+  const [s, direct, creneaux, modeCActif] = await Promise.all([
+    prealable?.seances ?? seancesDocs(admin, livreId),
+    prealable?.direct ?? lienDirect(admin, livreId, classeId),
+    prealable?.creneaux ?? creneauxGouvernants(admin, livreId, classeId),
+    prealable?.modeCActif ?? lireModeCActif(admin),
+  ])
+  const verdict = classifierMode(s, direct, creneaux)
+  if (!modeCActif && (verdict.mode === 'C' || verdict.mode === 'MALCONFIG')) {
+    // Repli-B whole-book : livre entier exposé (dates éventuellement nulles), statu quo prod.
+    return { mode: 'B', exposees: [...s].sort((a, b) => a - b), complet: true, gouverneParcoursId: null }
+  }
+  return verdict
 }

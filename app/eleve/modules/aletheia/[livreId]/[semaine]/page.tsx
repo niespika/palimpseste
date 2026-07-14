@@ -3,7 +3,8 @@ import Link from 'next/link'
 import { createClient } from '@/utils/supabase/server'
 import { createAdminClient } from '@/utils/supabase/admin'
 import { contexteAletheia, livreAccessible, semaineLivre, travauxParSemaine, peutAccederSemaine, lireReglages } from '../../data'
-import { resoudreDateSeance, formatEcheanceFr } from '@/utils/aletheia-dates'
+import { resoudreDateSeance, formatEcheanceFr, modeExposition } from '@/utils/aletheia-dates'
+import { dansExtrait, numeroAffiche, titreSeanceAffiche } from '@/utils/aletheia-extrait'
 import { validerLectureRetourVf } from '../../actions'
 import FormulaireV1 from '../../FormulaireV1'
 import FormulaireVf from '../../FormulaireVf'
@@ -181,15 +182,25 @@ export default async function PageSemaineAletheia({ params }: { params: Promise<
   if (!moduleActif || !active) notFound()
   if (!(await livreAccessible(admin, [active.classe_id], livreId))) notFound()
 
+  // Mode C : la séance doit appartenir à l'extrait exposé (garde d'appartenance en LECTURE,
+  // anti-URL-hack). Sous gate OFF, modeExposition renvoie B whole-book → exposees = toutes les
+  // séances → jamais notFound (non-régression). Le titre s'affiche en position 1..K en mode C.
+  const { mode, exposees } = await modeExposition(admin, livreId, active.classe_id)
+  if (!dansExtrait(exposees, semaine)) notFound()
+  const numeroSeance = mode === 'C' ? numeroAffiche(exposees, semaine) : semaine
+
   const sem = await semaineLivre(admin, livreId, semaine)
   if (!sem) notFound()
   // Date « mode b » de cette séance (échéance dimanche via le parcours), vide en mode a.
   sem.dateIndicative = formatEcheanceFr((await resoudreDateSeance(admin, livreId, active.classe_id, semaine)).valeur)
+  // Anti-fuite (#1) : neutralise le titre par défaut « Séance {origine} » en mode C.
+  const titreAffiche = titreSeanceAffiche(sem.titre, semaine, numeroSeance, mode === 'C')
 
   const { data: livre } = await admin.from('scriptorium_unites').select('label, auteur').eq('id', livreId).maybeSingle()
 
   // Déblocage séquentiel (Lot 6 D) : semaine verrouillée tant que la précédente n'est pas DONE.
-  if (!(await peutAccederSemaine(admin, user.id, livreId, semaine))) {
+  // (perf #3) On réutilise `exposees` déjà calculé ci-dessus au lieu d'un 2ᵉ modeExposition.
+  if (!(await peutAccederSemaine(admin, user.id, livreId, semaine, active.classe_id, exposees))) {
     return (
       <div className="space-y-5 pb-8">
         <Link href="/eleve/modules/aletheia" className="text-sm text-muet hover:text-encre-douce">← Planning</Link>
@@ -232,7 +243,7 @@ export default async function PageSemaineAletheia({ params }: { params: Promise<
         <div className="flex items-center gap-4">
           {/* Identité Aletheia portée par la Barre 2 de l'en-tête. */}
           <div className="min-w-0 flex-1">
-            <h2 className="font-titre text-2xl text-encre leading-tight">Séance {semaine} — {sem.titre}</h2>
+            <h2 className="font-titre text-2xl text-encre leading-tight">Séance {numeroSeance} — {titreAffiche}</h2>
           </div>
           {statut === 'DONE' && (
             <span className="font-ui text-xs sm:text-sm text-minium bg-minium-teinte px-3 py-1.5 rounded-full whitespace-nowrap shrink-0">

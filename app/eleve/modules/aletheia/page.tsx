@@ -73,12 +73,14 @@ export default async function PageAletheia() {
           const doneSet = new Set(ordered.filter(s => travaux?.get(s.semaine)?.statut === 'DONE').map(s => s.semaine))
           const nbDone = doneSet.size
           const toutesDone = total > 0 && nbDone === total
-          // Semaine courante = 1ʳᵉ non terminée et débloquée.
-          const couranteNum = ordered.find(s =>
+          // Séance courante = 1ʳᵉ non terminée et débloquée (comparaison sur l'ordinal d'ORIGINE).
+          const couranteSeance = ordered.find(s =>
             (travaux?.get(s.semaine)?.statut ?? 'DRAFT') !== 'DONE'
             && estSemaineDebloquee(numerosSemaines, doneSet, s.semaine, deblocageSequentiel),
-          )?.semaine
-          const nbSemaines = livre.nb_semaines ?? total
+          )
+          const couranteNum = couranteSeance?.semaine
+          // Compteur affiché : en mode C, la taille de l'EXTRAIT (jamais le total du livre, qui fuiterait).
+          const nbSemaines = livre.mode === 'C' ? total : (livre.nb_semaines ?? total)
 
           return (
             <section key={livre.id} className="space-y-5">
@@ -100,8 +102,8 @@ export default async function PageAletheia() {
                   <div className="flex-1 h-2 bg-bordure rounded-full overflow-hidden">
                     <div className="h-full bg-pigment transition-all" style={{ width: `${Math.round((nbDone / total) * 100)}%` }} />
                   </div>
-                  {couranteNum != null && (
-                    <span className="font-ui text-xs text-pigment bg-pigment-teinte px-2.5 py-1 rounded-full whitespace-nowrap shrink-0">Séance {couranteNum} t&apos;attend</span>
+                  {couranteSeance != null && (
+                    <span className="font-ui text-xs text-pigment bg-pigment-teinte px-2.5 py-1 rounded-full whitespace-nowrap shrink-0">Séance {couranteSeance.numero} t&apos;attend</span>
                   )}
                 </div>
               )}
@@ -119,7 +121,7 @@ export default async function PageAletheia() {
                   if (!debloquee) {
                     return (
                       <div key={s.semaine} className="bg-parchemin border border-bordure rounded-xl px-4 py-3 flex items-center gap-3 sm:gap-4 opacity-60" title="Termine la séance précédente pour débloquer celle-ci.">
-                        <span className="font-titre text-xl sm:text-2xl text-muet w-5 sm:w-6 text-center shrink-0">{s.semaine}</span>
+                        <span className="font-titre text-xl sm:text-2xl text-muet w-5 sm:w-6 text-center shrink-0">{s.numero}</span>
                         <div className="flex-1 min-w-0">
                           <p className="font-corps text-sm sm:text-base text-encre-douce truncate">{s.titre}</p>
                           {(s.chapitres || s.dateIndicative) && (
@@ -147,7 +149,7 @@ export default async function PageAletheia() {
                           : 'bg-surface border border-bordure hover:bg-parchemin-fonce'
                       }`}
                     >
-                      <span className={`font-titre text-xl sm:text-2xl w-5 sm:w-6 text-center shrink-0 ${courante ? 'text-pigment' : 'text-muet'}`}>{s.semaine}</span>
+                      <span className={`font-titre text-xl sm:text-2xl w-5 sm:w-6 text-center shrink-0 ${courante ? 'text-pigment' : 'text-muet'}`}>{s.numero}</span>
                       <div className="flex-1 min-w-0">
                         <p className={`font-corps text-sm sm:text-base text-encre truncate ${courante ? 'font-medium' : ''}`}>{s.titre}</p>
                         <p className="hidden sm:block text-xs text-muet mt-0.5 truncate">
@@ -172,7 +174,16 @@ export default async function PageAletheia() {
               </div>
 
               {/* ── Capstone : carte du livre (uniquement si le livre a des semaines) ── */}
-              {total > 0 && (toutesDone ? (
+              {total > 0 && (livre.mode === 'C' ? (
+                // (mode C) Le capstone visé = carte-de-parcours (C2, futur). Le book capstone
+                // (livre entier) est INTERDIT ici (spoiler aval) : placeholder SANS lien vers
+                // .../capstone tant que C2 n'est pas livré. Dormant sous gate OFF (mode ≠ C).
+                <div className="border border-dashed border-bordure rounded-xl px-4 py-3 flex items-center gap-3">
+                  <span className="text-muet" aria-hidden>✦</span>
+                  <span className="font-corps text-sm text-muet flex-1">La carte du parcours sera bientôt disponible.</span>
+                  {!toutesDone && <span className="font-ui text-xs text-muet whitespace-nowrap shrink-0">🔒 {nbDone}/{total}</span>}
+                </div>
+              ) : toutesDone ? (
                 cap?.statut === 'READY' ? (
                   <Link href={`/eleve/modules/aletheia/${livre.id}/capstone`}
                     className="block w-full text-center bg-bouton text-surface py-2.5 rounded-xl text-sm font-medium hover:opacity-90 transition-colors">
