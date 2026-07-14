@@ -9,17 +9,23 @@ import { envoyerInvitationEleve } from '@/utils/email'
 
 type Admin = ReturnType<typeof createAdminClient>
 
-// URL de base pour le lien d'invitation : l'origine RÉELLE de la requête (host),
-// pour que le lien pointe toujours vers le déploiement d'où il est envoyé (prod,
-// preview ou localhost). NEXT_PUBLIC_SITE_URL sert de repli si l'en-tête manque.
+// URL de base pour le lien d'invitation. Priorité au domaine canonique stable
+// (NEXT_PUBLIC_SITE_URL) : un lien épinglé au déploiement d'envoi MEURT quand ce
+// déploiement disparaît (branche de preview mergée/supprimée) → l'élève tombe sur
+// un 404 Vercel. Défini en env *Production* uniquement : la prod pointe alors
+// toujours sur le domaine stable, tandis que preview/localhost retombent sur
+// l'hôte réel de la requête pour rester testables de bout en bout.
 async function baseUrlInvitation(): Promise<string> {
+  const canonique = process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/+$/, '')
+  if (canonique) return canonique
+
   const h = await headers()
   const host = h.get('host')
   if (host) {
     const proto = h.get('x-forwarded-proto') ?? (host.startsWith('localhost') ? 'http' : 'https')
     return `${proto}://${host}`
   }
-  return (process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000').replace(/\/+$/, '')
+  return 'http://localhost:3000'
 }
 
 // Génère un lien sécurisé (recovery) et l'envoie par courriel. Le compte existe
