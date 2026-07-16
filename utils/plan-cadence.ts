@@ -1,0 +1,200 @@
+// Moteur PUR du plan annuel d'évaluation — aucune I/O, aucun accès DB.
+// Génère la cadence formative (cycle écriture→écriture→lecture), place les
+// exercices diagnostiques (fenêtres septembre/décembre/février) et calcule le
+// budget temps élève. Consomme la frise d'enseignement (dates réelles, vacances
+// sautées) produite par utils/frise-enseignement.ts. Voir
+// SPEC_scriptorium_planification_exercices.md §5.2 (G) et §7.3 (budget).
+//
+// Discipline temporelle : TOUT est en DATE PURE (YYYY-MM-DD), régime UTC. Le
+// `semaine_lundi` produit ici est FIGÉ (jamais recalculé, régime temporel du §5).
+
+import type { SemaineEnseignement } from './frise-enseignement'
+
+export type Gabarit = 'tc' | 'hlp' | 'vierge'
+export type TypeExercice =
+  | 'ecriture' | 'lecture' | 'synthese' | 'quiz' | 'examen_livre' | 'fragment' | 'essai'
+export type ModuleConception = 'quazian' | 'codex' | 'aletheia' | 'fragments'
+export type FenetreDiagnostique = 'septembre' | 'decembre' | 'fevrier'
+
+// Réglages fins portés par scriptorium_plans_evaluation.config (jsonb).
+export interface PlanConfig {
+  cycle?: TypeExercice[]                              // défaut ['ecriture','ecriture','lecture']
+  compterFragments?: 'hebdo' | 'quinzaine' | 'non'   // budget (§7.3), défaut 'hebdo'
+}
+
+// Spécification d'un exercice à insérer (la couche I/O y ajoute plan_id, jour_prevu
+// éventuel des diagnostics, etc.). Les champs correspondent aux colonnes de
+// scriptorium_exercices_planifies contraintes par exercices_typologie_chk.
+export interface ExerciceGenere {
+  type_exercice: TypeExercice
+  diagnostique: boolean
+  nature: 'formatif' | 'evaluatif'
+  lieu: 'classe' | 'maison'
+  module: ModuleConception
+  ancrage: 'semaine'
+  semaine_lundi: string   // YYYY-MM-DD (lundi)
+  origine: 'cadence' | 'diagnostic'
+  fenetre_diagnostique?: FenetreDiagnostique
+}
+
+const CYCLE_DEFAUT: TypeExercice[] = ['ecriture', 'ecriture', 'lecture']
+
+// Module de conception d'un type (cf. tableau §3 du PROMPT). La cadence n'émet
+// que des écritures/lectures formatives maison ; la table couvre tous les types
+// par robustesse (mais le CHECK DB reste l'autorité finale).
+const MODULE_PAR_TYPE: Record<TypeExercice, ModuleConception> = {
+  ecriture: 'codex',
+  lecture: 'aletheia',
+  synthese: 'codex',
+  quiz: 'quazian',
+  examen_livre: 'aletheia',
+  fragment: 'fragments',
+  essai: 'fragments',
+}
+
+// Durées indicatives (min) — §4 du PROMPT.
+export const DUREES_EXERCICES = {
+  ecriture: [30, 40] as [number, number],   // exercice d'écriture (maison)
+  lecture: [30, 40] as [number, number],    // exercice de lecture (maison)
+  flashcards: [15, 20] as [number, number], // révision Quazian ambiante — TOUJOURS comptée
+  fragment: 30,                             // fragment écrit (maison)
+  lectureLivre: 30,                         // par échéance de lecture mode b dans la semaine
+}
+
+// Cibles de travail hebdomadaire par gabarit (min) — §4 du PROMPT. Par gabarit
+// SEUL (D9), jamais modulé par le volume horaire réel.
+export const CIBLES_GABARIT: Record<Gabarit, [number, number] | null> = {
+  tc: [45, 60],
+  hlp: [60, 90],
+  vierge: null,
+}
+
+// Mois civil (1..12) et année UTC d'une date pure YYYY-MM-DD.
+function moisDe(iso: string): number {
+  return new Date(iso + 'T00:00:00Z').getUTCMonth() + 1
+}
+function anneeDe(iso: string): number {
+  return new Date(iso + 'T00:00:00Z').getUTCFullYear()
+}
+
+/**
+ * Cadence formative (G2). Pour chaque semaine d'enseignement COUVERTE (l'appelant
+ * passe la frise DÉJÀ tranchée à partir de l'ancre/aPartirDe — le cycle redémarre
+ * donc au début du tableau, cf. R1), un exercice maison selon le cycle. `vierge`
+ * ne génère rien. L'alternance HLP fragment/lecture-de-livre n'est PAS générée
+ * (PO 7) : elle ne compte qu'au budget.
+ */
+export function genererCadence(
+  semainesCouvertes: SemaineEnseignement[],
+  gabarit: Gabarit,
+  config: PlanConfig,
+): ExerciceGenere[] {
+  if (gabarit === 'vierge') return []
+  const cycle = config.cycle && config.cycle.length > 0 ? config.cycle : CYCLE_DEFAUT
+  return semainesCouvertes.map((s, i) => {
+    const type = cycle[i % cycle.length]
+    return {
+      type_exercice: type,
+      diagnostique: false,
+      nature: 'formatif',
+      lieu: 'maison',
+      module: MODULE_PAR_TYPE[type],
+      ancrage: 'semaine',
+      semaine_lundi: s.dateDebutLundi,
+      origine: 'cadence',
+    }
+  })
+}
+
+// Mois civil cible de chaque fenêtre. Février tombe dans l'AY+1 (janvier..juillet).
+const MOIS_FENETRE: Record<FenetreDiagnostique, number> = { septembre: 9, decembre: 12, fevrier: 2 }
+const FENETRES: FenetreDiagnostique[] = ['septembre', 'decembre', 'fevrier']
+
+/**
+ * Diagnostics (G3) : par fenêtre (septembre AY, décembre AY, février AY+1), 1
+ * écriture + 1 lecture diagnostiques (évaluatif, en classe), pour TC ET HLP
+ * (l'appelant n'invoque pas pour `vierge`). Semaines candidates = semaines de la
+ * frise COUVERTES (lundi ≥ aPartirDe) dont le lundi tombe dans le mois cible :
+ * écriture → 1ʳᵉ candidate, lecture → 2ᵉ (ou la même s'il n'y en a qu'une).
+ * Zéro candidate (fenêtre en vacances / hors semestre / antérieure à l'ancre) →
+ * fenêtre NON générée. Le `jour_prevu` (1ᵉʳ jour de cours de la classe) est posé
+ * par la couche I/O depuis coursParJour, PAS ici (fonction pure, §4.6).
+ */
+export function placerDiagnostics(
+  frise: SemaineEnseignement[],
+  anneeScolaire: number,
+  aPartirDe: string,
+): ExerciceGenere[] {
+  const out: ExerciceGenere[] = []
+  for (const fenetre of FENETRES) {
+    const anneeCible = fenetre === 'fevrier' ? anneeScolaire + 1 : anneeScolaire
+    const moisCible = MOIS_FENETRE[fenetre]
+    const candidates = frise.filter(
+      (s) => s.dateDebutLundi >= aPartirDe
+        && moisDe(s.dateDebutLundi) === moisCible
+        && anneeDe(s.dateDebutLundi) === anneeCible,
+    )
+    if (candidates.length === 0) continue // fenêtre non couverte → non générée (G3)
+    const semaineEcriture = candidates[0]
+    const semaineLecture = candidates[1] ?? candidates[0]
+    out.push({
+      type_exercice: 'ecriture', diagnostique: true, nature: 'evaluatif', lieu: 'classe',
+      module: 'codex', ancrage: 'semaine', semaine_lundi: semaineEcriture.dateDebutLundi,
+      origine: 'diagnostic', fenetre_diagnostique: fenetre,
+    })
+    out.push({
+      type_exercice: 'lecture', diagnostique: true, nature: 'evaluatif', lieu: 'classe',
+      module: 'aletheia', ancrage: 'semaine', semaine_lundi: semaineLecture.dateDebutLundi,
+      origine: 'diagnostic', fenetre_diagnostique: fenetre,
+    })
+  }
+  return out
+}
+
+export interface Budget {
+  min: number
+  max: number
+  cibleMin: number | null
+  cibleMax: number | null
+  depasse: boolean
+}
+
+/**
+ * Budget temps élève d'UNE semaine (§7.3) — indicatif, jamais bloquant. Assiette
+ * MAISON uniquement : exercices maison du plan + flashcards ambiantes (toujours) +
+ * lecture de livre (par échéance mode b résolue dans la semaine) + fragment écrit
+ * (si attendu). Les exercices en classe (diagnostics, fragment oral) ne comptent pas.
+ * Agrégée par semaine CALENDAIRE par l'appelant (jamais par numéro de semaine).
+ */
+export function budgetSemaine(
+  exercicesMaison: TypeExercice[],
+  lecturesLivre: number,
+  fragmentEcritAttendu: boolean,
+  gabarit: Gabarit,
+): Budget {
+  let min = DUREES_EXERCICES.flashcards[0]
+  let max = DUREES_EXERCICES.flashcards[1]
+  for (const t of exercicesMaison) {
+    // écriture/lecture maison = 30–40 ; les autres types ne sont pas maison-formatifs.
+    if (t === 'ecriture' || t === 'lecture') {
+      min += DUREES_EXERCICES.ecriture[0]
+      max += DUREES_EXERCICES.ecriture[1]
+    }
+  }
+  if (lecturesLivre > 0) {
+    min += lecturesLivre * DUREES_EXERCICES.lectureLivre
+    max += lecturesLivre * DUREES_EXERCICES.lectureLivre
+  }
+  if (fragmentEcritAttendu) {
+    min += DUREES_EXERCICES.fragment
+    max += DUREES_EXERCICES.fragment
+  }
+  const cible = CIBLES_GABARIT[gabarit]
+  return {
+    min,
+    max,
+    cibleMin: cible ? cible[0] : null,
+    cibleMax: cible ? cible[1] : null,
+    depasse: cible != null && max > cible[1],
+  }
+}
