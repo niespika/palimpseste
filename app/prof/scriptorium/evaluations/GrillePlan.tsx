@@ -70,7 +70,7 @@ function LigneExercice({ e, semaines }: { e: ExerciceLigne; semaines: Semaine[] 
           <select
             defaultValue=""
             disabled={busy}
-            onChange={(ev) => { if (ev.target.value) act(deplacerExercice, { semaine_lundi: ev.target.value }) }}
+            onChange={(ev) => { const v = ev.target.value; if (v) { ev.target.value = ''; act(deplacerExercice, { semaine_lundi: v }) } }}
             className="text-xs border border-bordure rounded bg-surface px-1 py-0.5 max-w-[8rem]"
             aria-label="Déplacer vers une semaine"
           >

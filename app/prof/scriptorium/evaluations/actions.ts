@@ -7,7 +7,7 @@ import { revalidatePath } from 'next/cache'
 import { createClient } from '@/utils/supabase/server'
 import { addDaysUTC, toISODate } from '@/utils/calendrier-grille'
 import { anneeScolaireDe, type SemaineEnseignement } from '@/utils/frise-enseignement'
-import { genererCadence, placerDiagnostics, type Gabarit, type ExerciceGenere } from '@/utils/plan-cadence'
+import { genererCadence, placerDiagnostics, type Gabarit, type ExerciceGenere, type PlanConfig } from '@/utils/plan-cadence'
 import { coursParJour } from '@/utils/calendrier-cours'
 import { lireGatePlanActif } from '@/utils/plan-exercices'
 import { jourDansFuseau } from '@/utils/fuseau'
@@ -227,15 +227,27 @@ const TYPE_MANUEL: Record<string, { nature: 'formatif' | 'evaluatif'; lieu: 'cla
   examen_livre: { nature: 'evaluatif', lieu: 'classe', module: 'aletheia' },
 }
 
+// Premier jour de cours d'une classe dans UNE semaine (lundi→dimanche), sinon null.
+async function jourDeCours(classeId: string, lundi: string): Promise<string | null> {
+  const jours = await coursParJour({ debut: lundi, fin: toISODate(addDaysUTC(new Date(lundi + 'T00:00:00Z'), 6)) })
+  for (let i = 0; i < 7; i++) {
+    const d = toISODate(addDaysUTC(new Date(lundi + 'T00:00:00Z'), i))
+    if ((jours.get(d) ?? []).some((c) => c.id === classeId)) return d
+  }
+  return null
+}
+
 // Construit les lignes générées (cadence + diagnostics) d'un plan à partir de
 // `aPartirDe` (défaut : ancre). Réutilisé par la propagation (plan frais) et la
-// régénération. Frise résolue en interne. `vierge`/frise vide → aucune ligne.
+// régénération. Frise résolue en interne. `config` honoré (cycle, P5/§7.3).
+// `vierge`/frise vide → aucune ligne.
 async function rowsPourPlan(
   planId: string,
   classeId: string,
   dateDebut: string,
   gabarit: Gabarit,
   aPartirDe?: string,
+  config: PlanConfig = {},
 ): Promise<{ rows: Record<string, unknown>[]; error?: string }> {
   if (gabarit === 'vierge') return { rows: [] }
   const { couvertes, frise, ay, ancreLundi, avisBloquant } = await semainesCouvertes(dateDebut)
@@ -244,11 +256,16 @@ async function rowsPourPlan(
   const couvDepuis = couvertes.filter((w) => w.dateDebutLundi >= depuis)
   let generes: ExerciceGenere[]
   try {
-    generes = [...genererCadence(couvDepuis, gabarit, {}), ...placerDiagnostics(frise, ay, depuis)]
+    generes = [...genererCadence(couvDepuis, gabarit, config), ...placerDiagnostics(frise, ay, depuis)]
   } catch (e) {
     return { rows: [], error: e instanceof Error ? e.message : 'Génération impossible.' }
   }
   return { rows: await construireRows(generes, planId, classeId, couvDepuis) }
+}
+
+// Cast sûr du jsonb config du plan vers PlanConfig (objet ou null).
+function asPlanConfig(v: unknown): PlanConfig {
+  return v && typeof v === 'object' ? (v as PlanConfig) : {}
 }
 
 /**
@@ -277,11 +294,21 @@ export async function propagerPlan(planSourceId: string, classesCiblesIds: strin
   const gabarit = source.gabarit as Gabarit
   const dateDebut = source.date_debut as string
   const ay = source.annee_scolaire as number
+  const config = asPlanConfig(source.config)
+  // Type pédagogique de la classe source (invariant P5 : mêmes-type uniquement).
+  const { data: clsSource } = await supabase
+    .from('classes').select('type_pedagogique').eq('id', source.classe_id as string).maybeSingle()
+  const typeSource = (clsSource?.type_pedagogique as string | null) ?? null
 
   let crees = 0
   let ignores = 0
   for (const classeId of cibles) {
     if (classeId === source.classe_id) { ignores++; continue }
+    // Re-valide la cible côté serveur (le client peut être obsolète/forgé) :
+    // ACTIVE + MÊME type_pedagogique que la source (P5).
+    const { data: cible } = await supabase
+      .from('classes').select('statut, type_pedagogique').eq('id', classeId).maybeSingle()
+    if (!cible || cible.statut !== 'active' || !typeSource || cible.type_pedagogique !== typeSource) { ignores++; continue }
     // Ignore une cible ayant déjà un plan vivant pour cette AY (idempotent).
     const { data: dejaPlan } = await supabase
       .from('scriptorium_plans_evaluation')
@@ -294,7 +321,7 @@ export async function propagerPlan(planSourceId: string, classesCiblesIds: strin
       .select('id').single()
     if (error || !plan) { ignores++; continue } // course/erreur → on n'interrompt pas la propagation
     const planId = plan.id as string
-    const { rows, error: eGen } = await rowsPourPlan(planId, classeId, dateDebut, gabarit)
+    const { rows, error: eGen } = await rowsPourPlan(planId, classeId, dateDebut, gabarit, undefined, config)
     if (eGen) { await supabase.from('scriptorium_plans_evaluation').delete().eq('id', planId); ignores++; continue }
     if (rows.length) {
       const { error: eIns } = await supabase.from('scriptorium_exercices_planifies').insert(rows)
@@ -320,14 +347,22 @@ export async function deplacerExercice(formData: FormData): Promise<{ success?: 
 
   const { data: exo } = await supabase
     .from('scriptorium_exercices_planifies')
-    .select('origine, statut').eq('id', exerciceId).is('supprime_at', null).maybeSingle()
+    .select('origine, statut, lieu, plan_id').eq('id', exerciceId).is('supprime_at', null).maybeSingle()
   if (!exo) return { error: 'Exercice introuvable.' }
   if (exo.statut === 'annule') return { error: 'Exercice annulé — réactive-le avant de le déplacer.' }
   const origine = exo.origine === 'cadence' ? 'manuel' : (exo.origine as string)
 
+  // jour_prevu recalculé sur la semaine CIBLE pour un exercice en classe (repli lundi).
+  let jourPrevu: string | null = null
+  if (exo.lieu === 'classe') {
+    const { data: plan } = await supabase
+      .from('scriptorium_plans_evaluation').select('classe_id').eq('id', exo.plan_id as string).maybeSingle()
+    if (plan) jourPrevu = await jourDeCours(plan.classe_id as string, semaineLundi)
+  }
+
   const { error } = await supabase
     .from('scriptorium_exercices_planifies')
-    .update({ semaine_lundi: semaineLundi, jour_prevu: null, origine, updated_at: new Date().toISOString() })
+    .update({ semaine_lundi: semaineLundi, jour_prevu: jourPrevu, origine, updated_at: new Date().toISOString() })
     .eq('id', exerciceId).is('supprime_at', null)
   if (error) {
     if (error.code === '23505') return { error: 'Un exercice de cadence du même type occupe déjà cette semaine.' }
@@ -351,6 +386,14 @@ export async function ajouterExercice(formData: FormData): Promise<{ success?: b
   const spec = TYPE_MANUEL[type]
   if (!spec) return { error: 'Type d’exercice non ajoutable à la main.' }
 
+  // Exercice en classe : jour_prevu = 1er jour de cours de la classe cette semaine.
+  let jourPrevu: string | null = null
+  if (spec.lieu === 'classe') {
+    const { data: plan } = await supabase
+      .from('scriptorium_plans_evaluation').select('classe_id').eq('id', planId).is('supprime_at', null).maybeSingle()
+    if (plan) jourPrevu = await jourDeCours(plan.classe_id as string, semaineLundi)
+  }
+
   const { error } = await supabase.from('scriptorium_exercices_planifies').insert({
     plan_id: planId,
     type_exercice: type,
@@ -360,7 +403,7 @@ export async function ajouterExercice(formData: FormData): Promise<{ success?: b
     module: spec.module,
     ancrage: 'semaine',
     semaine_lundi: semaineLundi,
-    jour_prevu: null,
+    jour_prevu: jourPrevu,
     origine: 'manuel',
     statut: 'a_concevoir',
   })
@@ -389,10 +432,11 @@ export async function regenererPlan(
 
   const { data: plan } = await supabase
     .from('scriptorium_plans_evaluation')
-    .select('date_debut, classe_id').eq('id', planId).is('supprime_at', null).maybeSingle()
+    .select('date_debut, classe_id, config').eq('id', planId).is('supprime_at', null).maybeSingle()
   if (!plan) return { error: 'Plan introuvable.' }
   const dateDebut = plan.date_debut as string
   const classeId = plan.classe_id as string
+  const config = asPlanConfig(plan.config)
   const aPartirDe = await joursAujourdhui()
 
   // Périmètre à retirer : cadence/diagnostic a_concevoir à partir d'aujourd'hui.
@@ -406,23 +450,28 @@ export async function regenererPlan(
     .gte('semaine_lundi', aPartirDe)
   const idsPerim = (perim ?? []).map((r) => r.id as string)
 
-  // Créneaux VIVANTS bloquants (conçu/annulé) hors périmètre → à ne pas regénérer.
-  const { data: bloquants } = await supabase
+  // Créneaux VIVANTS qui BLOQUENT une clé d'unicité (à ne pas régénérer par-dessus) :
+  // TOUS les cadence/diagnostic vivants HORS périmètre, quel que soit leur statut.
+  // ⚠ Le diagnostic s'indexe par FENÊTRE (plan, fenetre, type), INDÉPENDAMMENT de la
+  // semaine — un diagnostic d'une semaine ANTÉRIEURE à aujourd'hui, hors périmètre,
+  // bloque quand même sa fenêtre : on ne peut donc PAS filtrer les bloquants par
+  // semaine (sinon 23505 à l'insert quand aujourd'hui tombe au milieu d'une fenêtre).
+  const idsPerimSet = new Set(idsPerim)
+  const { data: vivants } = await supabase
     .from('scriptorium_exercices_planifies')
-    .select('semaine_lundi, type_exercice, fenetre_diagnostique, origine, statut')
+    .select('id, semaine_lundi, type_exercice, fenetre_diagnostique, origine')
     .eq('plan_id', planId)
     .in('origine', ['cadence', 'diagnostic'])
-    .in('statut', ['concu', 'annule'])
     .is('supprime_at', null)
-    .gte('semaine_lundi', aPartirDe)
   const clesCadence = new Set<string>()
   const clesDiag = new Set<string>()
-  for (const b of bloquants ?? []) {
+  for (const b of vivants ?? []) {
+    if (idsPerimSet.has(b.id as string)) continue // le périmètre est retiré → ne bloque pas
     if (b.origine === 'cadence') clesCadence.add(`${b.semaine_lundi}:${b.type_exercice}`)
     else clesDiag.add(`${b.fenetre_diagnostique}:${b.type_exercice}`)
   }
 
-  const { rows, error: eGen } = await rowsPourPlan(planId, classeId, dateDebut, nouveauGabarit as Gabarit, aPartirDe)
+  const { rows, error: eGen } = await rowsPourPlan(planId, classeId, dateDebut, nouveauGabarit as Gabarit, aPartirDe, config)
   if (eGen) return { error: eGen }
   const rowsFiltrees = rows.filter((r) =>
     r.origine === 'diagnostic'
@@ -444,7 +493,14 @@ export async function regenererPlan(
   }
   if (rowsFiltrees.length) {
     const { error: eIns } = await supabase.from('scriptorium_exercices_planifies').insert(rowsFiltrees)
-    if (eIns) return { error: `Régénération partielle : ${eIns.message}` }
+    if (eIns) {
+      // Compensation : restaurer le périmètre soft-deleté (jamais de plan mutilé sur
+      // un échec d'insert — pas d'atomicité transactionnelle sans RPC dédiée).
+      if (idsPerim.length) {
+        await supabase.from('scriptorium_exercices_planifies').update({ supprime_at: null }).in('id', idsPerim)
+      }
+      return { error: `Régénération annulée (${eIns.message}).` }
+    }
   }
   const { error: eMaj } = await supabase
     .from('scriptorium_plans_evaluation')
@@ -473,7 +529,7 @@ export async function recalerExercice(formData: FormData): Promise<{ success?: b
 
   const { data: exo } = await supabase
     .from('scriptorium_exercices_planifies')
-    .select('origine, statut, semaine_lundi, plan_id').eq('id', exerciceId).is('supprime_at', null).maybeSingle()
+    .select('origine, statut, semaine_lundi, plan_id, lieu').eq('id', exerciceId).is('supprime_at', null).maybeSingle()
   if (!exo) return { error: 'Exercice introuvable.' }
   if (exo.statut === 'annule') return { success: true }
 
@@ -489,15 +545,16 @@ export async function recalerExercice(formData: FormData): Promise<{ success?: b
 
   // Reporter : 1re semaine d'enseignement de la frise ≥ semaine d'origine.
   const { data: plan } = await supabase
-    .from('scriptorium_plans_evaluation').select('date_debut').eq('id', exo.plan_id as string).maybeSingle()
+    .from('scriptorium_plans_evaluation').select('date_debut, classe_id').eq('id', exo.plan_id as string).maybeSingle()
   if (!plan) return { error: 'Plan introuvable.' }
   const { couvertes } = await semainesCouvertes(plan.date_debut as string)
   const cible = couvertes.find((w) => w.dateDebutLundi >= (exo.semaine_lundi as string))
   if (!cible) return { error: 'Aucune semaine d’enseignement à venir pour reporter cet exercice — annule-le ou définis le semestre.' }
   const origine = exo.origine === 'cadence' ? 'manuel' : (exo.origine as string)
+  const jourPrevu = exo.lieu === 'classe' ? await jourDeCours(plan.classe_id as string, cible.dateDebutLundi) : null
   const { error } = await supabase
     .from('scriptorium_exercices_planifies')
-    .update({ semaine_lundi: cible.dateDebutLundi, jour_prevu: null, origine, updated_at: new Date().toISOString() })
+    .update({ semaine_lundi: cible.dateDebutLundi, jour_prevu: jourPrevu, origine, updated_at: new Date().toISOString() })
     .eq('id', exerciceId).is('supprime_at', null)
   if (error) {
     if (error.code === '23505') return { error: 'La semaine cible porte déjà un exercice de cadence du même type — annule plutôt.' }
