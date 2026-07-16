@@ -153,9 +153,11 @@ export async function validerPlan(formData: FormData): Promise<{ success?: boole
 }
 
 /**
- * Supprimer un plan — RÉSERVÉ aux BROUILLONS (un plan validé reste protégé, esprit
- * P4). DELETE dur : cascade sur les exercices (FK on delete cascade) ; en brouillon
- * rien n'est encore conçu ni lié. Libère le créneau (classe, AY) pour recréer.
+ * Supprimer un plan (brouillon OU validé). DELETE dur : cascade sur les exercices
+ * (FK on delete cascade) ; libère le créneau (classe, AY) pour recréer. Les objets
+ * de module éventuellement liés (quiz/session, lots 4/5) NE sont PAS supprimés — la
+ * FK est `set null`, ils survivent, seul le lien tombe. L'UI confirme plus fortement
+ * pour un plan validé (les exercices conçus/planifiés disparaissent).
  */
 export async function supprimerPlan(formData: FormData): Promise<{ success?: boolean; error?: string }> {
   const gardé = await verifierProfGate()
@@ -164,11 +166,10 @@ export async function supprimerPlan(formData: FormData): Promise<{ success?: boo
   const planId = (formData.get('plan_id') as string) ?? ''
   if (!RE_UUID.test(planId)) return { error: 'Plan invalide.' }
   const { data: plan } = await supabase
-    .from('scriptorium_plans_evaluation').select('statut').eq('id', planId).is('supprime_at', null).maybeSingle()
+    .from('scriptorium_plans_evaluation').select('id').eq('id', planId).is('supprime_at', null).maybeSingle()
   if (!plan) return { error: 'Plan introuvable.' }
-  if (plan.statut !== 'brouillon') return { error: 'Seul un plan en brouillon peut être supprimé.' }
   const { error } = await supabase
-    .from('scriptorium_plans_evaluation').delete().eq('id', planId).eq('statut', 'brouillon')
+    .from('scriptorium_plans_evaluation').delete().eq('id', planId)
   if (error) return { error: error.message }
   revalidatePath('/prof/scriptorium')
   return { success: true }

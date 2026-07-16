@@ -277,22 +277,24 @@ export default function GrillePlan({ plan, candidats }: { plan: PlanDetail; cand
             {plan.typePedagogique ? <span className="text-muet"> · type {plan.typePedagogique.toUpperCase()}</span> : null}
           </p>
         </div>
-        {plan.statut === 'brouillon' && (
-          <div className="flex items-center gap-3">
-            {confirmSuppr ? (
-              <span className="flex items-center gap-2 text-xs">
-                <span className="text-retard">Supprimer ce brouillon ?</span>
-                <button onClick={supprimer} disabled={busy} className="text-retard hover:underline disabled:opacity-50">Oui</button>
-                <button onClick={() => setConfirmSuppr(false)} disabled={busy} className="text-muet hover:text-encre disabled:opacity-50">Non</button>
+        <div className="flex items-center gap-3">
+          {confirmSuppr ? (
+            <span className="flex items-center gap-2 text-xs">
+              <span className="text-retard">
+                {plan.statut === 'valide' ? 'Supprimer ce plan validé et tous ses exercices ?' : 'Supprimer ce brouillon ?'}
               </span>
-            ) : (
-              <button onClick={() => setConfirmSuppr(true)} disabled={busy} className="text-xs text-muet hover:text-retard disabled:opacity-50">Supprimer</button>
-            )}
+              <button onClick={supprimer} disabled={busy} className="text-retard hover:underline disabled:opacity-50">Oui</button>
+              <button onClick={() => setConfirmSuppr(false)} disabled={busy} className="text-muet hover:text-encre disabled:opacity-50">Non</button>
+            </span>
+          ) : (
+            <button onClick={() => setConfirmSuppr(true)} disabled={busy} className="text-xs text-muet hover:text-retard disabled:opacity-50">Supprimer</button>
+          )}
+          {plan.statut === 'brouillon' && (
             <button onClick={valider} disabled={busy} className="px-3 py-2 bg-bouton text-surface text-sm rounded-lg hover:opacity-90 disabled:opacity-50">
               {busy ? '…' : 'Valider le plan'}
             </button>
-          </div>
-        )}
+          )}
+        </div>
       </div>
       {err && <p className="text-xs text-retard">{err}</p>}
 
