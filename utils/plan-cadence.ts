@@ -57,6 +57,24 @@ const MODULE_PAR_TYPE: Record<TypeExercice, ModuleConception> = {
   essai: 'fragments',
 }
 
+// Libellé GÉNÉRIQUE d'un type d'exercice (nom commun, minuscule). Utilisé par les
+// surfaces dérivées (à-faire prof, calendrier prospectif) qui n'exposent JAMAIS le
+// `titre`/`note` d'un exercice (anti-spoiler, §8bis). Un type inconnu dégrade en
+// « exercice » (jamais d'échec). L'appelant capitalise si besoin.
+const LIBELLE_TYPE: Record<TypeExercice, string> = {
+  ecriture: 'écriture',
+  lecture: 'lecture',
+  synthese: 'synthèse',
+  quiz: 'quiz',
+  examen_livre: 'examen',
+  fragment: 'fragment',
+  essai: 'essai',
+}
+export function libelleTypeExercice(type: string, diagnostique = false): string {
+  const base = LIBELLE_TYPE[type as TypeExercice] ?? 'exercice'
+  return diagnostique ? `${base} diagnostique` : base
+}
+
 // Durées indicatives (min) — §4 du PROMPT.
 export const DUREES_EXERCICES = {
   ecriture: [30, 40] as [number, number],   // exercice d'écriture (maison)

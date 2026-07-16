@@ -83,7 +83,8 @@ export default async function CalendrierVue({
   }
 
   // Événements de la fenêtre, filtrés par classe (les généraux sont toujours visibles).
-  const tousEvents = await assemblerEvenements({ debut, fin })
+  // surface='prof' → inclut les créneaux prospectifs du plan d'évaluation (source 5, gatée).
+  const tousEvents = await assemblerEvenements({ debut, fin, surface: 'prof' })
   const visible = (e: CalendarEvent) => e.classe_id === null || selSet === null || selSet.has(e.classe_id)
   const events = tousEvents.filter(visible)
   const parJour = new Map<string, CalendarEvent[]>()

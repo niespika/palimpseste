@@ -128,7 +128,7 @@ export default async function ProfAccueil() {
   } else if (tachesCal.length > 0) {
     const t = tachesCal[0]
     heroTacheId = t.id
-    hero = { titre: t.label, sousTitre: [t.classeNom, fmtDate(t.echeance)].filter(Boolean).join(' · '), ctaLabel: 'Ouvrir →', ctaHref: t.href }
+    hero = { titre: t.label, sousTitre: [t.classeNom, fmtDate(t.echeance)].filter(Boolean).join(' · '), ctaLabel: 'Ouvrir →', ctaHref: t.href, danger: t.urgence === 'retard' }
   }
   // « À préparer » = les autres items (l'item promu en héros est retiré du fil).
   const integriteEnPreparer = integriteAlerte && !heroIntegrite
@@ -191,11 +191,14 @@ export default async function ProfAccueil() {
                 {tachesEnPreparer.map((t) => (
                   <Link key={t.id} href={t.href} className="block bg-surface border border-bordure rounded-xl px-4 py-3 hover:shadow-sm transition-shadow">
                     <div className="flex items-center gap-3">
-                      <span className="w-2.5 h-2.5 rounded-full bg-pigment flex-shrink-0" aria-hidden />
+                      <span className={`w-2.5 h-2.5 rounded-full flex-shrink-0 ${t.urgence === 'retard' ? 'bg-retard' : 'bg-pigment'}`} aria-hidden />
                       <span className="font-corps text-base text-encre flex-1">
                         {t.label}
                         {t.classeNom && <span className="text-muet"> — {t.classeNom}</span>}
                       </span>
+                      {t.urgence === 'retard' && (
+                        <span className="font-ui text-xs text-retard bg-retard-teinte px-2 py-0.5 rounded-full flex-shrink-0">en retard</span>
+                      )}
                       <span className="font-ui text-xs text-muet flex-shrink-0">{fmtDate(t.echeance)}</span>
                     </div>
                   </Link>

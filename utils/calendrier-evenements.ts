@@ -4,13 +4,16 @@ import { createAdminClient } from '@/utils/supabase/admin'
 import { jourDansFuseau } from '@/utils/fuseau'
 import { lireFuseau } from '@/utils/fuseau-serveur'
 import { resoudreDatesLivre, pairesLivresGouvernes } from './aletheia-dates'
+import { lireGatePlanActif } from './plan-exercices'
+import { dateEffectiveSemaine, libelleTypeExercice } from './plan-cadence'
 
 // Agrégation LECTURE SEULE des échéances datées des modules. Le calendrier ne
 // stocke aucune échéance : il projette ce que les modules déclarent. L'édition
 // légère (lot C6) réécrit dans le module propriétaire.
 
 export type SourceModule = 'fragments' | 'quazian' | 'codex' | 'aletheia'
-export type KindEvenement = 'ouverture' | 'fermeture' | 'epreuve' | 'quizz' | 'jalon'
+// 'prevu' = créneau planifié PROSPECTIF (plan d'évaluation), pas encore réalisé.
+export type KindEvenement = 'ouverture' | 'fermeture' | 'epreuve' | 'quizz' | 'jalon' | 'prevu'
 
 export interface CalendarEvent {
   source_module: SourceModule
@@ -37,9 +40,10 @@ export async function assemblerEvenements(opts: {
   debut: string
   fin: string
   classeIds?: string[] // (perf) scope les échéances Aletheia aux classes du spectateur (élève) ; absent = toutes (prof)
+  surface?: 'prof' | 'eleve' // gouverne l'émission prospective (source 5) ; défaut 'eleve' = fail-closed
 }): Promise<CalendarEvent[]> {
   const supabase = await createClient()
-  const { debut, fin, classeIds } = opts
+  const { debut, fin, classeIds, surface = 'eleve' } = opts
   const events: CalendarEvent[] = []
   const tz = await lireFuseau() // jour local des instants (lance_at) dans le fuseau choisi
 
@@ -161,6 +165,60 @@ export async function assemblerEvenements(opts: {
       return evs
     }))
     for (const evs of parPaire) events.push(...evs)
+  }
+
+  // 5. Plan d'évaluation — exercices PROSPECTIFS (créneaux planifiés pas encore
+  //    réalisés). Surface PROF uniquement (l'exposition élève est différée au lot 7,
+  //    invariants §8bis) : `surface` défaut 'eleve' → fail-closed. Gate
+  //    `plan_evaluation_actif` : OFF/absent → bloc inerte. Labels GÉNÉRIQUES par type
+  //    (jamais titre/note — anti-spoiler). Ancrage 'semaine' seulement (la synthèse
+  //    ancrée parcours est résolue au lot 5). Dédup E3 : un exercice lié à un objet
+  //    déjà LANCÉ est émis par sa source réelle (2/3), pas ici. Lecture via `admin`
+  //    (tables du plan en RLS prof-only) ; classe_id du plan toujours non-null.
+  if (surface === 'prof' && (await lireGatePlanActif(admin))) {
+    const { data: plansValides } = await admin
+      .from('scriptorium_plans_evaluation')
+      .select('id, classe_id')
+      .eq('statut', 'valide')
+      .is('supprime_at', null)
+    const planIds = (plansValides ?? []).map((p) => p.id as string)
+    const classeParPlan = new Map<string, string>((plansValides ?? []).map((p) => [p.id as string, p.classe_id as string]))
+    if (planIds.length > 0) {
+      const { data: exos } = await admin
+        .from('scriptorium_exercices_planifies')
+        .select('id, plan_id, type_exercice, diagnostique, lieu, module, statut, semaine_lundi, jour_prevu, quiz_id')
+        .in('plan_id', planIds)
+        .eq('ancrage', 'semaine')
+        .in('statut', ['a_concevoir', 'concu'])
+        .is('supprime_at', null)
+      const exosRows = exos ?? []
+      // Dédup E3 : un quiz déjà lancé apparaît via la source 2 → on n'émet pas son
+      // créneau prospectif. (Une synthèse est ancrée parcours → hors périmètre ici.)
+      const quizIds = [...new Set(exosRows.map((e) => e.quiz_id as string | null).filter((x): x is string => !!x))]
+      const quizLances = new Set<string>()
+      if (quizIds.length > 0) {
+        const { data: qz } = await admin.from('quazian_quizzes').select('id, lance_at').in('id', quizIds).not('lance_at', 'is', null)
+        for (const q of qz ?? []) quizLances.add(q.id as string)
+      }
+      for (const e of exosRows) {
+        if (e.quiz_id && quizLances.has(e.quiz_id as string)) continue
+        const d = dateEffectiveSemaine(e.semaine_lundi as string, (e.jour_prevu as string | null) ?? null, e.lieu as 'classe' | 'maison')
+        if (d < debut || d > fin) continue
+        const cid = classeParPlan.get(e.plan_id as string) ?? null
+        const base = libelleTypeExercice(e.type_exercice as string, e.diagnostique as boolean)
+        const libelle = base.charAt(0).toUpperCase() + base.slice(1)
+        events.push({
+          source_module: e.module as SourceModule,
+          source_id: e.id as string,
+          classe_id: cid,
+          classe_nom: cid ? nomParId.get(cid) ?? null : null,
+          kind: 'prevu',
+          date: d,
+          label: `${libelle} · ${e.statut === 'concu' ? 'conçu' : 'à concevoir'}`,
+          is_editable: false,
+        })
+      }
+    }
   }
 
   events.sort((a, b) => a.date.localeCompare(b.date) || a.label.localeCompare(b.label))
