@@ -5,6 +5,7 @@ import { createClient } from '@/utils/supabase/server'
 import { createAdminClient } from '@/utils/supabase/admin'
 import { genererQuestions, regenererQuestion } from '@/utils/generer-questions'
 import { lireGatePlanActif, plansValidesCourants, synchroniserStatutExerciceQuiz, resoudreSemestrePourSemaine } from '@/utils/plan-exercices'
+import { semainesCouvertes } from '@/app/prof/scriptorium/evaluations/plan-serveur'
 
 // Normalise une relation imbriquée Supabase (objet ou tableau) en un objet.
 function un<T>(x: T | T[] | null | undefined): T | null {
@@ -106,19 +107,37 @@ export async function creerQuizz(formData: FormData): Promise<CreerQuizzResult> 
     semesterId = sid
     exoALier = { id: exo.id as string }
   } else if (gateOn) {
-    // Q3 — chemin direct (invariant PO 5 sans blocage). La classe a-t-elle un plan validé ?
+    // Q3 — chemin direct (invariant PO 5 sans blocage). La classe a-t-elle un plan
+    // EXPLOITABLE ? = plan validé courant ET couverture non vide. Un plan validé dont
+    // la frise est vide (semestres archivés/année révolue, chevauchement bloquant) est
+    // traité comme « pas de plan » → legacy + signal (mêmes prédicats côté serveur que
+    // côté UI, qui masque le sélecteur quand aucune semaine n'est proposable).
     const plans = await plansValidesCourants(admin)
     const planClasse = plans.find((p) => p.classeId === classeId)
+    let lundisCouverts: string[] = []
     if (planClasse) {
+      const { data: planRow } = await admin
+        .from('scriptorium_plans_evaluation').select('date_debut').eq('id', planClasse.id).maybeSingle()
+      if (planRow?.date_debut) {
+        const couv = await semainesCouvertes(planRow.date_debut as string)
+        lundisCouverts = couv.couvertes.map((w) => w.dateDebutLundi)
+      }
+    }
+    if (planClasse && lundisCouverts.length > 0) {
       // Le prof choisit la semaine prévue → auto-création de l'exercice (origine manuel).
       const semainePrevue = (formData.get('semaine_prevue') as string) || null
       if (!semainePrevue) return { error: 'Choisis la semaine prévue de ce quiz.' }
+      // Revalidation serveur : la semaine doit être un LUNDI COUVERT du plan (le
+      // sélecteur ne propose que ceux-là ; ferme une valeur forgée hors dropdown et
+      // garantit un INSERT conforme — isodow=1, dans la couverture).
+      if (!lundisCouverts.includes(semainePrevue)) return { error: 'La semaine choisie ne fait pas partie du plan de cette classe.' }
       const sid = await resoudreSemestrePourSemaine(admin, semainePrevue)
       if (!sid) return { error: "La semaine choisie n'appartient à aucun semestre — choisis-en une autre ou définis le semestre dans le Calendrier." }
       semesterId = sid
       autoCreer = { planId: planClasse.id, semaineLundi: semainePrevue }
     } else {
-      // Classe sans plan validé → quiz créé quand même (legacy is_active) + signal.
+      // Pas de plan exploitable (aucun plan validé, ou couverture vide) → quiz créé
+      // quand même (legacy is_active) + signal.
       const { data: semActif } = await supabase.from('semesters').select('id').eq('is_active', true).maybeSingle()
       if (!semActif) return { error: 'Aucun semestre actif. Définis-en un dans le Calendrier avant de créer un quizz.' }
       semesterId = semActif.id
@@ -170,14 +189,22 @@ export async function creerQuizz(formData: FormData): Promise<CreerQuizzResult> 
   // « deux onglets conçoivent le même exercice ». where quiz_id is null → 0 ligne si
   // un autre a gagné → on supprime le quiz frais (encore brouillon, rien n'en dépend).
   if (exoALier) {
-    const { data: claimed } = await admin
+    const { data: claimed, error: eClaim } = await admin
       .from('scriptorium_exercices_planifies')
       .update({ quiz_id: quizz.id, updated_at: new Date().toISOString() })
       .eq('id', exoALier.id)
       .is('quiz_id', null)
       .is('supprime_at', null)
       .select('id')
+    if (eClaim) {
+      // Erreur DB transitoire (≠ course perdue) : NE PAS supprimer le quiz (travail IA).
+      // Le brouillon reste utilisable ; la liaison au plan pourra être reprise.
+      revalidatePath('/prof/quazian/quizz')
+      return { success: true, quizId: quizz.id, avis: 'Le quiz est créé, mais sa liaison au plan a échoué (erreur passagère). Ouvre-le ; tu pourras relancer sa conception depuis le plan.' }
+    }
     if (!claimed || claimed.length === 0) {
+      // Course perdue (un autre onglet a posé quiz_id) : le quiz frais est un doublon
+      // inutile, on le supprime (encore brouillon, rien n'en dépend).
       await supabase.from('quazian_questions').delete().eq('quiz_id', quizz.id)
       await supabase.from('quazian_quizzes').delete().eq('id', quizz.id)
       return { error: 'Un quiz vient d’être lié à cet exercice depuis un autre onglet. Ouvre le quiz existant.' }
@@ -186,6 +213,9 @@ export async function creerQuizz(formData: FormData): Promise<CreerQuizzResult> 
     await synchroniserStatutExerciceQuiz(admin, quizz.id)
   } else if (autoCreer) {
     // Q3 — auto-création de l'exercice planifié (origine manuel), quiz_id posé d'emblée.
+    // La semaine est déjà validée (lundi couvert) → l'INSERT ne peut échouer que sur
+    // une erreur passagère, jamais sur une collision de créneau (pas d'index unique
+    // applicable à un quiz manuel avec un quiz_id frais).
     const { error: eExo } = await admin.from('scriptorium_exercices_planifies').insert({
       plan_id: autoCreer.planId,
       type_exercice: 'quiz', diagnostique: false, nature: 'evaluatif', lieu: 'classe', module: 'quazian',
@@ -195,7 +225,7 @@ export async function creerQuizz(formData: FormData): Promise<CreerQuizzResult> 
     if (eExo) {
       // Le quiz existe et reste utilisable ; seul son rattachement au plan a échoué.
       revalidatePath('/prof/quazian/quizz')
-      return { success: true, quizId: quizz.id, avis: 'Le quiz est créé, mais son rattachement au plan a échoué (créneau déjà occupé). Tu peux le rattacher depuis la grille du plan.' }
+      return { success: true, quizId: quizz.id, avis: 'Le quiz est créé, mais son rattachement au plan a échoué. Tu peux le rattacher depuis la grille du plan.' }
     }
     await synchroniserStatutExerciceQuiz(admin, quizz.id)
   }
@@ -204,7 +234,7 @@ export async function creerQuizz(formData: FormData): Promise<CreerQuizzResult> 
   return {
     success: true,
     quizId: quizz.id,
-    ...(avisSansPlan ? { avis: 'Cette classe n’a pas de plan annuel validé — le quiz n’apparaîtra pas au calendrier prospectif.' } : {}),
+    ...(avisSansPlan ? { avis: 'Cette classe n’a pas de plan annuel exploitable — le quiz n’apparaîtra pas au calendrier prospectif.' } : {}),
   }
 }
 
@@ -319,6 +349,8 @@ export async function supprimerQuizz(formData: FormData) {
   // Q5 : l'exercice planifié lié retombe `a_concevoir` (gate ON). Fait AVANT le DELETE,
   // tant que quiz_id pointe encore le quiz ; le `on delete set null` de la FK n'est que
   // le filet (il nettoierait quiz_id mais laisserait le statut `concu` obsolète).
+  // `.neq('statut','annule')` : ne JAMAIS ressusciter un tombstone (un exercice annulé
+  // reste annulé ; sa FK quiz_id est nettoyée par le on delete set null au DELETE).
   const admin = createAdminClient()
   if (await lireGatePlanActif(admin)) {
     await admin
@@ -326,6 +358,7 @@ export async function supprimerQuizz(formData: FormData) {
       .update({ statut: 'a_concevoir', concu_at: null, quiz_id: null, updated_at: new Date().toISOString() })
       .eq('quiz_id', id)
       .is('supprime_at', null)
+      .neq('statut', 'annule')
   }
 
   await supabase.from('quazian_quizzes').delete().eq('id', id)

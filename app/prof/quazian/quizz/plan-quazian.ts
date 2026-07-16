@@ -12,10 +12,14 @@ import { semainesCouvertes } from '@/app/prof/scriptorium/evaluations/plan-serve
 
 const RE_UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 
-// Libellé compact d'une semaine couverte pour le sélecteur (Q3) : « S3 · 21/09 ».
-function labelSemaine(pedaNum: number | null, lundi: string): string {
+// Libellé d'une semaine couverte pour le sélecteur (Q3). Le numéro pédagogique est
+// LOCAL au semestre (renumérote 1..K à chaque semestre) → il DOIT être préfixé du nom
+// de semestre pour lever la collision inter-semestres d'un plan année pleine (deux
+// « sem. 3 »), à l'image de la grille (« S1 · sem. 3 »). La date reste en secours.
+function labelSemaine(semestreNom: string | null, pedaNum: number | null, lundi: string): string {
   const jjmm = `${lundi.slice(8, 10)}/${lundi.slice(5, 7)}`
-  return pedaNum ? `S${pedaNum} · ${jjmm}` : `sem. ${jjmm}`
+  const noyau = pedaNum ? `sem. ${pedaNum} · ${jjmm}` : `sem. ${jjmm}`
+  return semestreNom ? `${semestreNom} · ${noyau}` : noyau
 }
 
 export interface QuizAConcevoir {
@@ -109,7 +113,7 @@ export async function chargerContexteQuazianPlan(exerciceParam: string | null): 
     const couv = await semainesCouvertes(p.date_debut as string)
     semainesParClasse[p.classe_id as string] = couv.couvertes.map((w) => ({
       lundi: w.dateDebutLundi,
-      label: labelSemaine(w.pedagogicalNumber, w.dateDebutLundi),
+      label: labelSemaine(w.semestreNom, w.pedagogicalNumber, w.dateDebutLundi),
     }))
   }
 
