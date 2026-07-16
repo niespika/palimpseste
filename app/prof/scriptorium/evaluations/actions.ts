@@ -10,6 +10,8 @@ import { anneeScolaireDe, type SemaineEnseignement } from '@/utils/frise-enseign
 import { genererCadence, placerDiagnostics, type Gabarit, type ExerciceGenere } from '@/utils/plan-cadence'
 import { coursParJour } from '@/utils/calendrier-cours'
 import { lireGatePlanActif } from '@/utils/plan-exercices'
+import { jourDansFuseau } from '@/utils/fuseau'
+import { lireFuseau } from '@/utils/fuseau-serveur'
 import { semainesCouvertes } from './plan-serveur'
 
 const RE_UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
@@ -206,6 +208,313 @@ export async function retirerExercice(formData: FormData): Promise<{ success?: b
         .update({ statut: 'annule', updated_at: new Date().toISOString() })
         .eq('id', exerciceId)
         .is('supprime_at', null)
+  if (error) return { error: error.message }
+  revalidatePath('/prof/scriptorium')
+  return { success: true }
+}
+
+// ── Lot 2b : édition, propagation, régénération, recalage, réglage ──────────────
+
+function estLundi(iso: string): boolean {
+  return (new Date(iso + 'T00:00:00Z').getUTCDay() + 6) % 7 === 0
+}
+
+// Types manuellement ajoutables (ancrage 'semaine') → combinaison canonique du CHECK.
+const TYPE_MANUEL: Record<string, { nature: 'formatif' | 'evaluatif'; lieu: 'classe' | 'maison'; module: string }> = {
+  ecriture: { nature: 'formatif', lieu: 'maison', module: 'codex' },
+  lecture: { nature: 'formatif', lieu: 'maison', module: 'aletheia' },
+  quiz: { nature: 'evaluatif', lieu: 'classe', module: 'quazian' },
+  examen_livre: { nature: 'evaluatif', lieu: 'classe', module: 'aletheia' },
+}
+
+// Construit les lignes générées (cadence + diagnostics) d'un plan à partir de
+// `aPartirDe` (défaut : ancre). Réutilisé par la propagation (plan frais) et la
+// régénération. Frise résolue en interne. `vierge`/frise vide → aucune ligne.
+async function rowsPourPlan(
+  planId: string,
+  classeId: string,
+  dateDebut: string,
+  gabarit: Gabarit,
+  aPartirDe?: string,
+): Promise<{ rows: Record<string, unknown>[]; error?: string }> {
+  if (gabarit === 'vierge') return { rows: [] }
+  const { couvertes, frise, ay, ancreLundi, avisBloquant } = await semainesCouvertes(dateDebut)
+  if (avisBloquant || !ancreLundi) return { rows: [] }
+  const depuis = aPartirDe ?? ancreLundi
+  const couvDepuis = couvertes.filter((w) => w.dateDebutLundi >= depuis)
+  let generes: ExerciceGenere[]
+  try {
+    generes = [...genererCadence(couvDepuis, gabarit, {}), ...placerDiagnostics(frise, ay, depuis)]
+  } catch (e) {
+    return { rows: [], error: e instanceof Error ? e.message : 'Génération impossible.' }
+  }
+  return { rows: await construireRows(generes, planId, classeId, couvDepuis) }
+}
+
+/**
+ * Propagation (P5) : applique le gabarit + date_debut du plan source à d'autres
+ * classes ACTIVES de MÊME type_pedagogique et MÊME AY, SANS plan vivant. Crée pour
+ * chaque cible un plan INDÉPENDANT (le calendrier est global → mêmes semaines ; les
+ * jour_prevu des diagnostics divergent par classe via coursParJour). Aucune ligne
+ * partagée, aucune classe verrouillée. Idempotent (l'unicité classe×AY ignore un
+ * doublon acquis entre-temps). Copie EN BROUILLON (chaque cible se valide à part).
+ */
+export async function propagerPlan(planSourceId: string, classesCiblesIds: string[]): Promise<{ crees?: number; ignores?: number; error?: string }> {
+  const gardé = await verifierProfGate()
+  if ('error' in gardé) return { error: gardé.error }
+  const { supabase, userId } = gardé
+  if (!RE_UUID.test(planSourceId)) return { error: 'Plan invalide.' }
+  const cibles = (classesCiblesIds ?? []).filter((c) => RE_UUID.test(c))
+  if (cibles.length === 0) return { crees: 0, ignores: 0 }
+
+  const { data: source } = await supabase
+    .from('scriptorium_plans_evaluation')
+    .select('gabarit, date_debut, annee_scolaire, config, classe_id')
+    .eq('id', planSourceId)
+    .is('supprime_at', null)
+    .maybeSingle()
+  if (!source) return { error: 'Plan source introuvable.' }
+  const gabarit = source.gabarit as Gabarit
+  const dateDebut = source.date_debut as string
+  const ay = source.annee_scolaire as number
+
+  let crees = 0
+  let ignores = 0
+  for (const classeId of cibles) {
+    if (classeId === source.classe_id) { ignores++; continue }
+    // Ignore une cible ayant déjà un plan vivant pour cette AY (idempotent).
+    const { data: dejaPlan } = await supabase
+      .from('scriptorium_plans_evaluation')
+      .select('id').eq('classe_id', classeId).eq('annee_scolaire', ay).is('supprime_at', null).maybeSingle()
+    if (dejaPlan) { ignores++; continue }
+
+    const { data: plan, error } = await supabase
+      .from('scriptorium_plans_evaluation')
+      .insert({ classe_id: classeId, annee_scolaire: ay, gabarit, date_debut: dateDebut, config: source.config ?? {}, statut: 'brouillon', created_by: userId })
+      .select('id').single()
+    if (error || !plan) { ignores++; continue } // course/erreur → on n'interrompt pas la propagation
+    const planId = plan.id as string
+    const { rows, error: eGen } = await rowsPourPlan(planId, classeId, dateDebut, gabarit)
+    if (eGen) { await supabase.from('scriptorium_plans_evaluation').delete().eq('id', planId); ignores++; continue }
+    if (rows.length) {
+      const { error: eIns } = await supabase.from('scriptorium_exercices_planifies').insert(rows)
+      if (eIns) { await supabase.from('scriptorium_plans_evaluation').delete().eq('id', planId); ignores++; continue }
+    }
+    crees++
+  }
+  revalidatePath('/prof/scriptorium')
+  return { crees, ignores }
+}
+
+/** Déplacer un exercice (V3) : change de semaine. Une ligne 'cadence' bascule
+ *  'manuel' (libère la clé uk_exercices_cadence). jour_prevu remis à null (repli
+ *  lundi ; le prof recalera le jour si besoin). Interdit sur un exercice annulé. */
+export async function deplacerExercice(formData: FormData): Promise<{ success?: boolean; error?: string }> {
+  const gardé = await verifierProfGate()
+  if ('error' in gardé) return { error: gardé.error }
+  const { supabase } = gardé
+  const exerciceId = (formData.get('exercice_id') as string) ?? ''
+  const semaineLundi = (formData.get('semaine_lundi') as string) ?? ''
+  if (!RE_UUID.test(exerciceId)) return { error: 'Exercice invalide.' }
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(semaineLundi) || !estLundi(semaineLundi)) return { error: 'La semaine cible doit être un lundi.' }
+
+  const { data: exo } = await supabase
+    .from('scriptorium_exercices_planifies')
+    .select('origine, statut').eq('id', exerciceId).is('supprime_at', null).maybeSingle()
+  if (!exo) return { error: 'Exercice introuvable.' }
+  if (exo.statut === 'annule') return { error: 'Exercice annulé — réactive-le avant de le déplacer.' }
+  const origine = exo.origine === 'cadence' ? 'manuel' : (exo.origine as string)
+
+  const { error } = await supabase
+    .from('scriptorium_exercices_planifies')
+    .update({ semaine_lundi: semaineLundi, jour_prevu: null, origine, updated_at: new Date().toISOString() })
+    .eq('id', exerciceId).is('supprime_at', null)
+  if (error) {
+    if (error.code === '23505') return { error: 'Un exercice de cadence du même type occupe déjà cette semaine.' }
+    return { error: error.message }
+  }
+  revalidatePath('/prof/scriptorium')
+  return { success: true }
+}
+
+/** Ajouter un exercice manuel (V1/V3) à une semaine. Types semaine-ancrés
+ *  (ecriture/lecture/quiz/examen_livre) → combinaison canonique du CHECK. */
+export async function ajouterExercice(formData: FormData): Promise<{ success?: boolean; error?: string }> {
+  const gardé = await verifierProfGate()
+  if ('error' in gardé) return { error: gardé.error }
+  const { supabase } = gardé
+  const planId = (formData.get('plan_id') as string) ?? ''
+  const semaineLundi = (formData.get('semaine_lundi') as string) ?? ''
+  const type = (formData.get('type_exercice') as string) ?? ''
+  if (!RE_UUID.test(planId)) return { error: 'Plan invalide.' }
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(semaineLundi) || !estLundi(semaineLundi)) return { error: 'Semaine invalide.' }
+  const spec = TYPE_MANUEL[type]
+  if (!spec) return { error: 'Type d’exercice non ajoutable à la main.' }
+
+  const { error } = await supabase.from('scriptorium_exercices_planifies').insert({
+    plan_id: planId,
+    type_exercice: type,
+    diagnostique: false,
+    nature: spec.nature,
+    lieu: spec.lieu,
+    module: spec.module,
+    ancrage: 'semaine',
+    semaine_lundi: semaineLundi,
+    jour_prevu: null,
+    origine: 'manuel',
+    statut: 'a_concevoir',
+  })
+  if (error) return { error: error.message }
+  revalidatePath('/prof/scriptorium')
+  return { success: true }
+}
+
+/**
+ * Régénération (R1) : « changer de gabarit ». Périmètre = cadence/diagnostic
+ * a_concevoir à partir d'aujourd'hui — les conçus, manuels, annulés et le passé ne
+ * bougent JAMAIS. Diff OBLIGATOIRE (confirmer=false → aperçu). À l'application :
+ * soft-delete du périmètre + génération de la queue, en RESPECTANT les créneaux
+ * occupés par un conçu/annulé vivant (idempotence G6).
+ */
+export async function regenererPlan(
+  planId: string,
+  nouveauGabarit: string,
+  confirmer: boolean,
+): Promise<{ needsConfirm?: boolean; nbSupprimes?: number; nbGeneres?: number; success?: boolean; error?: string }> {
+  const gardé = await verifierProfGate()
+  if ('error' in gardé) return { error: gardé.error }
+  const { supabase } = gardé
+  if (!RE_UUID.test(planId)) return { error: 'Plan invalide.' }
+  if (!GABARITS.includes(nouveauGabarit as Gabarit)) return { error: 'Gabarit invalide.' }
+
+  const { data: plan } = await supabase
+    .from('scriptorium_plans_evaluation')
+    .select('date_debut, classe_id').eq('id', planId).is('supprime_at', null).maybeSingle()
+  if (!plan) return { error: 'Plan introuvable.' }
+  const dateDebut = plan.date_debut as string
+  const classeId = plan.classe_id as string
+  const aPartirDe = await joursAujourdhui()
+
+  // Périmètre à retirer : cadence/diagnostic a_concevoir à partir d'aujourd'hui.
+  const { data: perim } = await supabase
+    .from('scriptorium_exercices_planifies')
+    .select('id')
+    .eq('plan_id', planId)
+    .in('origine', ['cadence', 'diagnostic'])
+    .eq('statut', 'a_concevoir')
+    .is('supprime_at', null)
+    .gte('semaine_lundi', aPartirDe)
+  const idsPerim = (perim ?? []).map((r) => r.id as string)
+
+  // Créneaux VIVANTS bloquants (conçu/annulé) hors périmètre → à ne pas regénérer.
+  const { data: bloquants } = await supabase
+    .from('scriptorium_exercices_planifies')
+    .select('semaine_lundi, type_exercice, fenetre_diagnostique, origine, statut')
+    .eq('plan_id', planId)
+    .in('origine', ['cadence', 'diagnostic'])
+    .in('statut', ['concu', 'annule'])
+    .is('supprime_at', null)
+    .gte('semaine_lundi', aPartirDe)
+  const clesCadence = new Set<string>()
+  const clesDiag = new Set<string>()
+  for (const b of bloquants ?? []) {
+    if (b.origine === 'cadence') clesCadence.add(`${b.semaine_lundi}:${b.type_exercice}`)
+    else clesDiag.add(`${b.fenetre_diagnostique}:${b.type_exercice}`)
+  }
+
+  const { rows, error: eGen } = await rowsPourPlan(planId, classeId, dateDebut, nouveauGabarit as Gabarit, aPartirDe)
+  if (eGen) return { error: eGen }
+  const rowsFiltrees = rows.filter((r) =>
+    r.origine === 'diagnostic'
+      ? !clesDiag.has(`${r.fenetre_diagnostique}:${r.type_exercice}`)
+      : !clesCadence.has(`${r.semaine_lundi}:${r.type_exercice}`),
+  )
+
+  if (!confirmer) {
+    return { needsConfirm: true, nbSupprimes: idsPerim.length, nbGeneres: rowsFiltrees.length }
+  }
+
+  // Application : soft-delete du périmètre PUIS insertion de la queue.
+  if (idsPerim.length) {
+    const { error: eDel } = await supabase
+      .from('scriptorium_exercices_planifies')
+      .update({ supprime_at: new Date().toISOString() })
+      .in('id', idsPerim)
+    if (eDel) return { error: eDel.message }
+  }
+  if (rowsFiltrees.length) {
+    const { error: eIns } = await supabase.from('scriptorium_exercices_planifies').insert(rowsFiltrees)
+    if (eIns) return { error: `Régénération partielle : ${eIns.message}` }
+  }
+  const { error: eMaj } = await supabase
+    .from('scriptorium_plans_evaluation')
+    .update({ gabarit: nouveauGabarit, updated_at: new Date().toISOString() })
+    .eq('id', planId)
+  if (eMaj) return { error: eMaj.message }
+  revalidatePath('/prof/scriptorium')
+  return { success: true }
+}
+
+// Aujourd'hui dans le fuseau configuré (date pure).
+async function joursAujourdhui(): Promise<string> {
+  return jourDansFuseau(new Date().toISOString(), await lireFuseau())
+}
+
+/** Recaler un exercice hors frise (J2) : 'reporter' vers la 1re semaine
+ *  d'enseignement à venir de sa semaine d'origine, ou 'annuler'. Le report bascule
+ *  'cadence'→'manuel' (libère la clé). */
+export async function recalerExercice(formData: FormData): Promise<{ success?: boolean; error?: string }> {
+  const gardé = await verifierProfGate()
+  if ('error' in gardé) return { error: gardé.error }
+  const { supabase } = gardé
+  const exerciceId = (formData.get('exercice_id') as string) ?? ''
+  const action = (formData.get('action') as string) ?? ''
+  if (!RE_UUID.test(exerciceId)) return { error: 'Exercice invalide.' }
+
+  const { data: exo } = await supabase
+    .from('scriptorium_exercices_planifies')
+    .select('origine, statut, semaine_lundi, plan_id').eq('id', exerciceId).is('supprime_at', null).maybeSingle()
+  if (!exo) return { error: 'Exercice introuvable.' }
+  if (exo.statut === 'annule') return { success: true }
+
+  if (action === 'annuler') {
+    const { error } = await supabase
+      .from('scriptorium_exercices_planifies')
+      .update({ statut: 'annule', updated_at: new Date().toISOString() }).eq('id', exerciceId).is('supprime_at', null)
+    if (error) return { error: error.message }
+    revalidatePath('/prof/scriptorium')
+    return { success: true }
+  }
+  if (action !== 'reporter') return { error: 'Action inconnue.' }
+
+  // Reporter : 1re semaine d'enseignement de la frise ≥ semaine d'origine.
+  const { data: plan } = await supabase
+    .from('scriptorium_plans_evaluation').select('date_debut').eq('id', exo.plan_id as string).maybeSingle()
+  if (!plan) return { error: 'Plan introuvable.' }
+  const { couvertes } = await semainesCouvertes(plan.date_debut as string)
+  const cible = couvertes.find((w) => w.dateDebutLundi >= (exo.semaine_lundi as string))
+  if (!cible) return { error: 'Aucune semaine d’enseignement à venir pour reporter cet exercice — annule-le ou définis le semestre.' }
+  const origine = exo.origine === 'cadence' ? 'manuel' : (exo.origine as string)
+  const { error } = await supabase
+    .from('scriptorium_exercices_planifies')
+    .update({ semaine_lundi: cible.dateDebutLundi, jour_prevu: null, origine, updated_at: new Date().toISOString() })
+    .eq('id', exerciceId).is('supprime_at', null)
+  if (error) {
+    if (error.code === '23505') return { error: 'La semaine cible porte déjà un exercice de cadence du même type — annule plutôt.' }
+    return { error: error.message }
+  }
+  revalidatePath('/prof/scriptorium')
+  return { success: true }
+}
+
+/** Réglage prof (D5) : quiz annoncé (true) ou surprise (false) au calendrier élève. */
+export async function reglerQuizAnnonce(actif: boolean): Promise<{ success?: boolean; error?: string }> {
+  const gardé = await verifierProfGate()
+  if ('error' in gardé) return { error: gardé.error }
+  const { error } = await gardé.supabase
+    .from('scriptorium_params')
+    .update({ quiz_annonce_defaut: actif, updated_at: new Date().toISOString() })
+    .eq('id', 1)
   if (error) return { error: error.message }
   revalidatePath('/prof/scriptorium')
   return { success: true }

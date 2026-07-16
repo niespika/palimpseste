@@ -46,6 +46,7 @@ export interface PlanDetail {
   id: string
   classeId: string
   classeNom: string
+  typePedagogique: 'tc' | 'hlp' | 'autre' | null
   gabarit: Gabarit
   statut: 'brouillon' | 'valide'
   dateDebut: string
@@ -142,7 +143,7 @@ export async function chargerClassesAvecPlan(): Promise<ClasseAvecPlan[]> {
 export async function chargerPlanDeClasse(classeId: string): Promise<PlanDetail | null> {
   const supabase = await createClient()
   const [{ data: cls }, { data: plan }] = await Promise.all([
-    supabase.from('classes').select('nom').eq('id', classeId).maybeSingle(),
+    supabase.from('classes').select('nom, type_pedagogique').eq('id', classeId).maybeSingle(),
     supabase
       .from('scriptorium_plans_evaluation')
       .select('id, gabarit, statut, date_debut, annee_scolaire')
@@ -214,6 +215,7 @@ export async function chargerPlanDeClasse(classeId: string): Promise<PlanDetail 
     id: plan.id as string,
     classeId,
     classeNom: (cls?.nom as string) ?? 'Classe',
+    typePedagogique: (cls?.type_pedagogique as PlanDetail['typePedagogique']) ?? null,
     gabarit: plan.gabarit as Gabarit,
     statut: plan.statut as 'brouillon' | 'valide',
     dateDebut,
@@ -223,4 +225,43 @@ export async function chargerPlanDeClasse(classeId: string): Promise<PlanDetail 
     semaines,
     aRecaler,
   }
+}
+
+/**
+ * Candidats à la propagation (P5) d'un plan : classes ACTIVES de MÊME
+ * type_pedagogique que la classe du plan, MÊME AY, SANS plan vivant. Vide si la
+ * classe du plan n'a pas de type_pedagogique (pas de dérivation depuis filiere).
+ */
+export async function candidatsPropagation(planId: string): Promise<{ classeId: string; nom: string }[]> {
+  const supabase = await createClient()
+  const { data: plan } = await supabase
+    .from('scriptorium_plans_evaluation')
+    .select('classe_id, annee_scolaire')
+    .eq('id', planId)
+    .is('supprime_at', null)
+    .maybeSingle()
+  if (!plan) return []
+  const { data: cls } = await supabase
+    .from('classes').select('type_pedagogique').eq('id', plan.classe_id as string).maybeSingle()
+  const type = (cls?.type_pedagogique as string | null) ?? null
+  if (!type) return []
+
+  const { data: classes } = await supabase
+    .from('classes')
+    .select('id, nom')
+    .eq('statut', 'active')
+    .eq('type_pedagogique', type)
+    .neq('id', plan.classe_id as string)
+    .order('nom')
+  const liste = (classes ?? []) as { id: string; nom: string }[]
+  if (liste.length === 0) return []
+
+  const { data: plans } = await supabase
+    .from('scriptorium_plans_evaluation')
+    .select('classe_id')
+    .eq('annee_scolaire', plan.annee_scolaire as number)
+    .is('supprime_at', null)
+    .in('classe_id', liste.map((c) => c.id))
+  const avecPlan = new Set((plans ?? []).map((p) => p.classe_id as string))
+  return liste.filter((c) => !avecPlan.has(c.id)).map((c) => ({ classeId: c.id, nom: c.nom }))
 }

@@ -21,13 +21,14 @@ import type { Signet } from './decoupe-utils'
 import SectionParametresScriptorium from './SectionParametresScriptorium'
 import { parseReference } from '@/utils/aletheia-retours'
 import type { CapstoneProf, LivreReferenceProf } from '@/app/eleve/modules/aletheia/types'
-import { lireGatePlanActif } from '@/utils/plan-exercices'
+import { lireGatePlanActif, lireQuizAnnonceDefaut } from '@/utils/plan-exercices'
 import {
-  chargerClassesAvecPlan, chargerPlanDeClasse, defautDateDebut,
+  chargerClassesAvecPlan, chargerPlanDeClasse, defautDateDebut, candidatsPropagation,
   type ClasseAvecPlan, type PlanDetail,
 } from './evaluations/plan-serveur'
 import FormulaireCreerPlan from './evaluations/FormulaireCreerPlan'
 import GrillePlan from './evaluations/GrillePlan'
+import ReglageQuiz from './evaluations/ReglageQuiz'
 
 // Les Server Actions de cette page (analyse/extraction d'un PDF déposé) héritent du
 // timeout de la page. Plafond du plan Vercel Hobby = 60 s ; large pour extraire le
@@ -188,11 +189,16 @@ export default async function ScriptoriumPage({
   let classesAvecPlan: ClasseAvecPlan[] = []
   let planDetail: PlanDetail | null = null
   let defautDatePlan: string | null = null
+  let candidatsPropa: { classeId: string; nom: string }[] = []
+  let quizAnnonce = false
   if (planEvalActif && estEvaluations) {
     classesAvecPlan = await chargerClassesAvecPlan()
     if (classeSel) {
       planDetail = await chargerPlanDeClasse(classeSel)
-      if (!planDetail) defautDatePlan = await defautDateDebut()
+      if (planDetail) candidatsPropa = await candidatsPropagation(planDetail.id)
+      else defautDatePlan = await defautDateDebut()
+    } else {
+      quizAnnonce = await lireQuizAnnonceDefaut(supabase)
     }
   }
 
@@ -444,7 +450,7 @@ export default async function ScriptoriumPage({
           planDetail ? (
             <div className="space-y-3">
               <Link href="/prof/scriptorium?vue=evaluations" className="text-xs text-muet hover:text-encre">← Toutes les classes</Link>
-              <GrillePlan plan={planDetail} />
+              <GrillePlan plan={planDetail} candidats={candidatsPropa} />
             </div>
           ) : (
             <div className="space-y-3">
@@ -458,20 +464,23 @@ export default async function ScriptoriumPage({
             </div>
           )
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-            {classesAvecPlan.length === 0 ? (
-              <p className="text-sm text-muet">Aucune classe active.</p>
-            ) : classesAvecPlan.map(c => (
-              <Tuile
-                key={c.classeId}
-                nom={c.nom}
-                sousTitre={c.plan
-                  ? `Plan ${c.plan.anneeScolaire}–${c.plan.anneeScolaire + 1} · ${c.plan.gabarit.toUpperCase()} · ${c.plan.statut === 'valide' ? 'validé' : 'brouillon'}`
-                  : 'Aucun plan'}
-                href={`/prof/scriptorium?vue=evaluations&classe=${c.classeId}`}
-                couleur={c.plan?.statut === 'valide' ? 'vert' : 'neutre'}
-              />
-            ))}
+          <div className="space-y-3">
+            <ReglageQuiz actif={quizAnnonce} />
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+              {classesAvecPlan.length === 0 ? (
+                <p className="text-sm text-muet">Aucune classe active.</p>
+              ) : classesAvecPlan.map(c => (
+                <Tuile
+                  key={c.classeId}
+                  nom={c.nom}
+                  sousTitre={c.plan
+                    ? `Plan ${c.plan.anneeScolaire}–${c.plan.anneeScolaire + 1} · ${c.plan.gabarit.toUpperCase()} · ${c.plan.statut === 'valide' ? 'validé' : 'brouillon'}`
+                    : 'Aucun plan'}
+                  href={`/prof/scriptorium?vue=evaluations&classe=${c.classeId}`}
+                  couleur={c.plan?.statut === 'valide' ? 'vert' : 'neutre'}
+                />
+              ))}
+            </div>
           </div>
         )
       )}
