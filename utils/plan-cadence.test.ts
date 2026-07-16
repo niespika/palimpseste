@@ -56,6 +56,20 @@ test('cadence : cycle personnalisé de config', () => {
   assert.deepEqual(ex.map((e) => e.type_exercice), ['lecture', 'ecriture', 'lecture', 'ecriture'])
 })
 
+test('cadence : cycle vide → repli sur le cycle par défaut E→E→L', () => {
+  const ex = genererCadence(QUATRE_SEMAINES, 'tc', { cycle: [] })
+  assert.deepEqual(ex.map((e) => e.type_exercice), ['ecriture', 'ecriture', 'lecture', 'ecriture'])
+})
+
+test('cadence : un type de cadence hors {ecriture,lecture} est rejeté (défense jsonb)', () => {
+  // Simule un config.cycle malformé venu du jsonb (cast pour contourner le type TS) :
+  // sans la garde runtime, le tuple {quiz,formatif,maison} violerait exercices_typologie_chk.
+  assert.throws(
+    () => genererCadence(QUATRE_SEMAINES, 'tc', { cycle: ['quiz'] as unknown as ('ecriture' | 'lecture')[] }),
+    /Cycle de cadence invalide/,
+  )
+})
+
 test('cadence : le cycle redémarre au début du tableau (R1, régénération scopée)', () => {
   // L'appelant tranche la frise à aPartirDe → l'index 0 est la 1re semaine générée.
   const queue = mkFrise(['2026-11-02', '2026-11-09', '2026-11-16'])
@@ -110,6 +124,14 @@ test('diagnostics : fenêtre antérieure à l’ancre non générée (classe cr�
 test('diagnostics : aucune candidate dans aucune fenêtre → rien', () => {
   const friseOctobre = mkFrise(['2026-10-05', '2026-10-12']) // hors des 3 fenêtres
   assert.deepEqual(placerDiagnostics(friseOctobre, 2026, '2026-09-01'), [])
+})
+
+test('diagnostics : semaine à cheval nov/déc rattachée au mois du LUNDI (fige la sémantique)', () => {
+  // Lundi 2026-11-30, dimanche 2026-12-06 : le lundi est en novembre → la semaine
+  // n'est PAS candidate pour la fenêtre 'decembre' (mois du lundi, pas du dimanche).
+  const frise = mkFrise(['2026-11-30'])
+  assert.equal(frise[0].dateFinDimanche, '2026-12-06') // sanity : la semaine chevauche bien décembre
+  assert.deepEqual(placerDiagnostics(frise, 2026, '2026-09-01'), []) // aucune fenêtre n'a de candidate
 })
 
 // ── budgetSemaine (§7.3) ─────────────────────────────────────────────────────

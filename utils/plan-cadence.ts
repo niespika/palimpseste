@@ -16,9 +16,13 @@ export type TypeExercice =
 export type ModuleConception = 'quazian' | 'codex' | 'aletheia' | 'fragments'
 export type FenetreDiagnostique = 'septembre' | 'decembre' | 'fevrier'
 
+// La cadence maison ne produit que des écritures/lectures formatives — les seules
+// combinaisons formatif+maison admises par exercices_typologie_chk.
+export type TypeCadence = 'ecriture' | 'lecture'
+
 // Réglages fins portés par scriptorium_plans_evaluation.config (jsonb).
 export interface PlanConfig {
-  cycle?: TypeExercice[]                              // défaut ['ecriture','ecriture','lecture']
+  cycle?: TypeCadence[]                               // défaut ['ecriture','ecriture','lecture']
   compterFragments?: 'hebdo' | 'quinzaine' | 'non'   // budget (§7.3), défaut 'hebdo'
 }
 
@@ -37,7 +41,7 @@ export interface ExerciceGenere {
   fenetre_diagnostique?: FenetreDiagnostique
 }
 
-const CYCLE_DEFAUT: TypeExercice[] = ['ecriture', 'ecriture', 'lecture']
+const CYCLE_DEFAUT: TypeCadence[] = ['ecriture', 'ecriture', 'lecture']
 
 // Module de conception d'un type (cf. tableau §3 du PROMPT). La cadence n'émet
 // que des écritures/lectures formatives maison ; la table couvre tous les types
@@ -91,6 +95,17 @@ export function genererCadence(
 ): ExerciceGenere[] {
   if (gabarit === 'vierge') return []
   const cycle = config.cycle && config.cycle.length > 0 ? config.cycle : CYCLE_DEFAUT
+  // Défense en profondeur : `config` vient d'un jsonb (le type TS ne garantit rien au
+  // runtime). Un type de cadence hors {ecriture,lecture} produirait un tuple
+  // {formatif,maison} qu'AUCUNE branche d'exercices_typologie_chk n'admet → 23514 brut
+  // à l'INSERT. On échoue tôt et clairement (l'appelant traduit en message prof).
+  for (const t of cycle as readonly string[]) {
+    if (t !== 'ecriture' && t !== 'lecture') {
+      throw new Error(
+        `Cycle de cadence invalide : « ${t} » (seuls « ecriture » et « lecture » sont admis en cadence maison).`,
+      )
+    }
+  }
   return semainesCouvertes.map((s, i) => {
     const type = cycle[i % cycle.length]
     return {
