@@ -25,12 +25,10 @@ export default function FormulaireCreerPlan({
   const router = useRouter()
   const [loading, setLoading] = useState(false)
   const [erreur, setErreur] = useState<string | null>(null)
-  const [avis, setAvis] = useState<string | null>(null)
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()
     setErreur(null)
-    setAvis(null)
     setLoading(true)
     const res = await creerPlan(new FormData(e.currentTarget))
     setLoading(false)
@@ -38,7 +36,6 @@ export default function FormulaireCreerPlan({
       setErreur(res.error)
       return
     }
-    if (res.avis) setAvis(res.avis)
     router.refresh()
   }
 
@@ -85,7 +82,6 @@ export default function FormulaireCreerPlan({
       </div>
 
       {erreur && <p className="text-xs text-retard">{erreur}</p>}
-      {avis && <p className="text-xs text-attention">{avis}</p>}
 
       <button
         type="submit"

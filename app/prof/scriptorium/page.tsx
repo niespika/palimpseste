@@ -68,11 +68,12 @@ export default async function ScriptoriumPage({
 
   const { vue = 'classes', classe: classeSel, unite: uniteSel, semaine, edition, parcours: parcoursSel } = await searchParams
 
-  const [{ data: classes }, { data: unites }, { data: docsBruts }, { data: liensUnite }] = await Promise.all([
+  const [{ data: classes }, { data: unites }, { data: docsBruts }, { data: liensUnite }, planEvalActif] = await Promise.all([
     supabase.from('classes').select('id, nom').order('nom'),
     supabase.from('scriptorium_unites').select('id, label, ordre, type, date_debut, nb_semaines, auteur, signets').is('supprime_at', null).order('ordre'),
     supabase.from('scriptorium_documents').select('id, unite_id, titre, type, semaine, chapitres, texte_extrait, fichier_ref'),
     supabase.from('scriptorium_unite_classes').select('unite_id, classe_id'),
+    lireGatePlanActif(supabase), // gate du plan d'évaluation, lu en parallèle (pas de round-trip sériel)
   ])
 
   const classesList = (classes ?? []) as { id: string; nom: string }[]
@@ -181,9 +182,8 @@ export default async function ScriptoriumPage({
   }
 
   // ── Plan d'évaluation (onglet Évaluations, GATÉ) — L2 ─────────────────────────
-  // Le gate est lu à chaque rendu (requête légère, tolérante gate OFF → false).
-  // Gate OFF : aucune entrée, aucune section → page prof byte-identique.
-  const planEvalActif = await lireGatePlanActif(supabase)
+  // Gate lu dans le Promise.all initial (tolérant gate OFF → false). Gate OFF :
+  // aucune entrée, aucune section → page prof byte-identique.
   const estEvaluations = vue === 'evaluations'
   let classesAvecPlan: ClasseAvecPlan[] = []
   let planDetail: PlanDetail | null = null

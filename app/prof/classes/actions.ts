@@ -40,7 +40,19 @@ export async function creerClasse(formData: FormData) {
     .from('classes')
     .insert(payload)
 
-  if (error) return { error: error.message }
+  if (error) {
+    // Fenêtre pré-migration : plan_evaluation_phase_a.sql pas encore joué → la colonne
+    // type_pedagogique n'existe pas. On dégrade en créant la classe SANS le type (il ne
+    // sert qu'à la propagation, gatée) plutôt que de bloquer la création.
+    const colonneAbsente = typePedagogique
+      && (error.code === 'PGRST204' || error.code === '42703' || error.message.includes('type_pedagogique'))
+    if (colonneAbsente) {
+      const { error: e2 } = await supabase.from('classes').insert({ nom, niveau, filiere, annee_scolaire: annee })
+      if (e2) return { error: e2.message }
+    } else {
+      return { error: error.message }
+    }
+  }
   revalidatePath('/prof/classes')
   return { success: true }
 }
