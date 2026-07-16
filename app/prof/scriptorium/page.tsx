@@ -197,7 +197,7 @@ export default async function ScriptoriumPage({
   }
 
   // Compteur « utilisé dans N parcours » par livre (créneaux ref_type='livre' de
-  // parcours vivants) — affiché sur les tuiles de livres (onglets Livres et Par unité).
+  // parcours vivants) — affiché sur les tuiles de livres (onglet Livres).
   const usageLivres = new Map<string, number>()
   if (vue === 'livres') {
     const [{ data: crLivres }, { data: parcVivantsL }] = await Promise.all([

@@ -17,7 +17,7 @@ export interface DocSemaine {
   texte: string | null
 }
 
-// Page livre du Scriptorium (vue « Par unité », unité de type livre) : entête +
+// Page livre du Scriptorium (vue « Livres », unité de type livre) : entête +
 // 3 colonnes (rail des semaines / fiche de la semaine / carte d'architecture).
 // Orchestrateur SERVEUR : sélection lue dans l'URL (?semaine=N), états dérivés ici,
 // toutes les données viennent de page.tsx (aucune requête).

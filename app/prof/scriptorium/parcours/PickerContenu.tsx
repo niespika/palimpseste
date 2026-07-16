@@ -103,7 +103,7 @@ export default function PickerContenu({
 
         {tab === 'livres' && (
           cibles.livres.length === 0 ? (
-            <p className="text-xs text-muet px-1">Aucun livre. Crée un livre dans l'onglet « Par unité ».</p>
+            <p className="text-xs text-muet px-1">Aucun livre. Crée un livre dans l'onglet « Livres ».</p>
           ) : filtresLivres.length === 0 ? (
             <p className="text-xs text-muet px-1">Aucun résultat.</p>
           ) : (
