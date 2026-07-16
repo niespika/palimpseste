@@ -21,6 +21,13 @@ import type { Signet } from './decoupe-utils'
 import SectionParametresScriptorium from './SectionParametresScriptorium'
 import { parseReference } from '@/utils/aletheia-retours'
 import type { CapstoneProf, LivreReferenceProf } from '@/app/eleve/modules/aletheia/types'
+import { lireGatePlanActif } from '@/utils/plan-exercices'
+import {
+  chargerClassesAvecPlan, chargerPlanDeClasse, defautDateDebut,
+  type ClasseAvecPlan, type PlanDetail,
+} from './evaluations/plan-serveur'
+import FormulaireCreerPlan from './evaluations/FormulaireCreerPlan'
+import GrillePlan from './evaluations/GrillePlan'
 
 // Les Server Actions de cette page (analyse/extraction d'un PDF déposé) héritent du
 // timeout de la page. Plafond du plan Vercel Hobby = 60 s ; large pour extraire le
@@ -173,6 +180,22 @@ export default async function ScriptoriumPage({
     }
   }
 
+  // ── Plan d'évaluation (onglet Évaluations, GATÉ) — L2 ─────────────────────────
+  // Le gate est lu à chaque rendu (requête légère, tolérante gate OFF → false).
+  // Gate OFF : aucune entrée, aucune section → page prof byte-identique.
+  const planEvalActif = await lireGatePlanActif(supabase)
+  const estEvaluations = vue === 'evaluations'
+  let classesAvecPlan: ClasseAvecPlan[] = []
+  let planDetail: PlanDetail | null = null
+  let defautDatePlan: string | null = null
+  if (planEvalActif && estEvaluations) {
+    classesAvecPlan = await chargerClassesAvecPlan()
+    if (classeSel) {
+      planDetail = await chargerPlanDeClasse(classeSel)
+      if (!planDetail) defautDatePlan = await defautDateDebut()
+    }
+  }
+
   // Parcours (vivants) assignés à la classe sélectionnée + nb de parcours par classe
   // (compteur des tuiles) — vue « Par classe ».
   let parcoursDeClasse: ParcoursDeClasse[] = []
@@ -246,6 +269,18 @@ export default async function ScriptoriumPage({
   // sont désormais portés par la Barre 2 de l'en-tête (pilotés par `?vue=`).
   return (
     <div className="space-y-6 pb-8">
+      {/* ── Entrée gatée du plan d'évaluation (pas d'onglet de nav gate OFF) ──── */}
+      {planEvalActif && (
+        <div className="flex items-center justify-between gap-2 bg-surface border border-bordure rounded-xl px-4 py-2">
+          <span className="text-sm text-encre-douce">📋 Plans d’évaluation par classe</span>
+          {estEvaluations ? (
+            <Link href="/prof/scriptorium?vue=classes" className="text-xs text-muet hover:text-encre">← Retour au Scriptorium</Link>
+          ) : (
+            <Link href="/prof/scriptorium?vue=evaluations" className="text-xs bg-bouton text-surface px-3 py-1.5 rounded hover:opacity-90">Ouvrir</Link>
+          )}
+        </div>
+      )}
+
       {/* ── Bibliothèque : Textes / Cours (Parcours L2) ─────────────────────── */}
       {biblioType && (
         <BibliothequeContenus type={biblioType} contenus={biblioContenus} corbeille={biblioCorbeille} />
@@ -402,6 +437,44 @@ export default async function ScriptoriumPage({
 
       {/* ── Perspective « paramètres » (prompts carte d'architecture + référence) ── */}
       {vue === 'parametres' && <SectionParametresScriptorium />}
+
+      {/* ── Plan annuel d'évaluation (onglet Évaluations, GATÉ) — L2 ──────────── */}
+      {planEvalActif && estEvaluations && (
+        classeSel ? (
+          planDetail ? (
+            <div className="space-y-3">
+              <Link href="/prof/scriptorium?vue=evaluations" className="text-xs text-muet hover:text-encre">← Toutes les classes</Link>
+              <GrillePlan plan={planDetail} />
+            </div>
+          ) : (
+            <div className="space-y-3">
+              <Link href="/prof/scriptorium?vue=evaluations" className="text-xs text-muet hover:text-encre">← Toutes les classes</Link>
+              <FormulaireCreerPlan
+                classeId={classeSel}
+                classeNom={classeNom.get(classeSel) ?? 'Classe'}
+                typePedagogique={classesAvecPlan.find(c => c.classeId === classeSel)?.typePedagogique ?? null}
+                defautDate={defautDatePlan}
+              />
+            </div>
+          )
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+            {classesAvecPlan.length === 0 ? (
+              <p className="text-sm text-muet">Aucune classe active.</p>
+            ) : classesAvecPlan.map(c => (
+              <Tuile
+                key={c.classeId}
+                nom={c.nom}
+                sousTitre={c.plan
+                  ? `Plan ${c.plan.anneeScolaire}–${c.plan.anneeScolaire + 1} · ${c.plan.gabarit.toUpperCase()} · ${c.plan.statut === 'valide' ? 'validé' : 'brouillon'}`
+                  : 'Aucun plan'}
+                href={`/prof/scriptorium?vue=evaluations&classe=${c.classeId}`}
+                couleur={c.plan?.statut === 'valide' ? 'vert' : 'neutre'}
+              />
+            ))}
+          </div>
+        )
+      )}
     </div>
   )
 }

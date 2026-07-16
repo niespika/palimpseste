@@ -66,6 +66,15 @@ export function CreerClasse() {
           <label className="text-xs text-muet mb-1 block">Filière</label>
           <input name="filiere" placeholder="Ex. HLP, Philo tronc commun" className="w-full px-3 py-2 text-sm border border-bordure rounded-lg" />
         </div>
+        <div>
+          <label className="text-xs text-muet mb-1 block">Type pédagogique</label>
+          <select name="type_pedagogique" defaultValue="" className="w-full px-3 py-2 text-sm border border-bordure rounded-lg bg-surface">
+            <option value="">—</option>
+            <option value="tc">Tronc commun</option>
+            <option value="hlp">HLP</option>
+            <option value="autre">Autre</option>
+          </select>
+        </div>
       </div>
 
       {erreur && <p className="text-xs text-retard mt-3">{erreur}</p>}

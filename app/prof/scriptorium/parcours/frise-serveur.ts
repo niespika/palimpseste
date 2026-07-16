@@ -30,7 +30,8 @@ export interface ApercuFrise {
 }
 
 // Charge les semestres de l'AY de `dateDebut` + leurs vacances, construit la frise.
-async function construireFrise(dateDebut: string) {
+// Exporté : réutilisé par le plan d'évaluation (semaines couvertes de l'ancre à la fin).
+export async function construireFrise(dateDebut: string) {
   const supabase = await createClient()
   const y = anneeScolaireDe(dateDebut)
   const debutAY = `${y}-08-01`

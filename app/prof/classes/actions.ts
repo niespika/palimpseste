@@ -24,12 +24,21 @@ export async function creerClasse(formData: FormData) {
   const niveau = (formData.get('niveau') as string) || null
   const filiere = (formData.get('filiere') as string) || null
   const annee = (formData.get('annee_scolaire') as string)?.trim()
+  const typePedagogique = (formData.get('type_pedagogique') as string) || null
 
   if (!nom || !annee) return { error: 'Nom et année scolaire sont requis.' }
+  if (typePedagogique && !['tc', 'hlp', 'autre'].includes(typePedagogique))
+    return { error: 'Type pédagogique invalide.' }
+
+  // On n'ajoute type_pedagogique au payload QUE s'il est choisi : le chemin sans
+  // type reste byte-identique et n'exige pas la migration plan_evaluation_phase_a.sql
+  // (la colonne peut ne pas encore exister). D1a : jamais dérivé de `filiere`.
+  const payload: Record<string, unknown> = { nom, niveau, filiere, annee_scolaire: annee }
+  if (typePedagogique) payload.type_pedagogique = typePedagogique
 
   const { error } = await supabase
     .from('classes')
-    .insert({ nom, niveau, filiere, annee_scolaire: annee })
+    .insert(payload)
 
   if (error) return { error: error.message }
   revalidatePath('/prof/classes')

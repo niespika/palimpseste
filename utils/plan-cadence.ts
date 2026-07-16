@@ -9,6 +9,7 @@
 // `semaine_lundi` produit ici est FIGÉ (jamais recalculé, régime temporel du §5).
 
 import type { SemaineEnseignement } from './frise-enseignement'
+import { addDaysUTC, toISODate } from './calendrier-grille'
 
 export type Gabarit = 'tc' | 'hlp' | 'vierge'
 export type TypeExercice =
@@ -79,6 +80,23 @@ function moisDe(iso: string): number {
 }
 function anneeDe(iso: string): number {
   return new Date(iso + 'T00:00:00Z').getUTCFullYear()
+}
+
+/**
+ * Date effective d'un exercice ancré à une semaine (§4.6) — LA date unique du
+ * fenêtrage calendrier, du à-faire et du retard. `jour_prevu` prime ; sinon
+ * échéance MAISON = dimanche (semaine_lundi + 6, convention Aletheia mode b) ;
+ * CLASSE = lundi (mention « jour à caler » côté UI). Le bras `parcours` (synthèse)
+ * est résolu ailleurs (I/O, lot 5). Pure : réutilisée par le loader panoptique.
+ */
+export function dateEffectiveSemaine(
+  semaineLundi: string,
+  jourPrevu: string | null,
+  lieu: 'classe' | 'maison',
+): string {
+  if (jourPrevu) return jourPrevu
+  if (lieu === 'maison') return toISODate(addDaysUTC(new Date(semaineLundi + 'T00:00:00Z'), 6))
+  return semaineLundi
 }
 
 /**
