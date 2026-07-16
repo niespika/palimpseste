@@ -86,13 +86,20 @@ export async function tachesDeriveesDuCalendrier(joursAvant = 10): Promise<Tache
         // Fenêtre : en retard (passé) OU à concevoir dans [today, fin]. Au-delà = pas encore.
         if (!enRetard && echeance > fin) continue
         const classeId = classeParPlan.get(e.plan_id as string)
-        const libelle = libelleTypeExercice(e.type_exercice as string, e.diagnostique as boolean)
+        const type = e.type_exercice as string
+        const libelle = libelleTypeExercice(type, e.diagnostique as boolean)
+        // Deep-link PAR MODULE quand le flux de conception existe (Q1) : un quiz mène
+        // à sa conception Quazian pré-remplie ; les autres types, faute d'écran dédié,
+        // renvoient à la grille du plan (relais manuel « Marquer conçu »).
+        const href = type === 'quiz'
+          ? `/prof/quazian/quizz?exercice=${e.id}`
+          : `/prof/scriptorium?vue=evaluations&classe=${classeId}`
         taches.push({
           id: `exo-${e.id}`,
           label: `${enRetard ? 'Exercice en retard' : 'Exercice à concevoir'} — ${libelle}`,
           echeance,
           classeNom: classeId ? nomParClasse.get(classeId) ?? null : null,
-          href: `/prof/scriptorium?vue=evaluations&classe=${classeId}`,
+          href,
           ...(enRetard ? { urgence: 'retard' as const } : {}),
         })
       }

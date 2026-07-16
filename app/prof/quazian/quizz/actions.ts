@@ -2,7 +2,15 @@
 
 import { revalidatePath } from 'next/cache'
 import { createClient } from '@/utils/supabase/server'
+import { createAdminClient } from '@/utils/supabase/admin'
 import { genererQuestions, regenererQuestion } from '@/utils/generer-questions'
+import { lireGatePlanActif, synchroniserStatutExerciceQuiz, resoudreSemestrePourSemaine } from '@/utils/plan-exercices'
+
+// Normalise une relation imbriquée Supabase (objet ou tableau) en un objet.
+function un<T>(x: T | T[] | null | undefined): T | null {
+  if (Array.isArray(x)) return x[0] ?? null
+  return x ?? null
+}
 
 async function verifierProf() {
   const supabase = await createClient()
@@ -20,11 +28,14 @@ async function verifierProf() {
 // Créer un quizz + générer ses questions
 export async function creerQuizz(formData: FormData) {
   const { supabase } = await verifierProf()
+  const admin = createAdminClient()
 
   const classeId = (formData.get('classe_id') as string) || null
   const dureeMin = parseInt(formData.get('duree_min') as string) || 25
   const nbQuestions = parseInt(formData.get('nb_questions') as string) || 20
   const scopeRaw = formData.getAll('scope_unites') as string[]
+  // Conception depuis le plan d'évaluation (Q1) — gate ON uniquement.
+  const exerciceId = (formData.get('exercice_id') as string) || null
 
   if (scopeRaw.length === 0) return { error: 'Sélectionne au moins une unité.' }
   if (!classeId) return { error: 'Sélectionne une classe.' }
@@ -61,21 +72,50 @@ export async function creerQuizz(formData: FormData) {
     return { error: "La génération IA a échoué (réponse inattendue du modèle). Réessaie." }
   }
 
-  // Semestre actif (le quizz est ancré au semestre courant pour les notes de
-  // semestre). Refuser sinon : un quizz sans semestre n'entrerait dans aucune note.
-  const { data: semActif } = await supabase
-    .from('semesters')
-    .select('id')
-    .eq('is_active', true)
-    .maybeSingle()
-  if (!semActif) return { error: 'Aucun semestre actif. Définis-en un dans le Calendrier avant de créer un quizz.' }
+  // ── Résolution du semestre ────────────────────────────────────────────────
+  // Gate ON + conception depuis le plan (exercice_id) → Q7 : le semestre est celui
+  // de la SEMAINE PLANIFIÉE de l'exercice (un quiz de S2 conçu pendant S1 compte en
+  // S2), jamais is_active. Sinon (gate OFF, ou chemin direct) → is_active, LEGACY.
+  const gateOn = await lireGatePlanActif(admin)
+  let semesterId: string
+  // Exercice à lier après création (Q2), résolu et validé ici (pré-lecture de confort).
+  let exoALier: { id: string } | null = null
+
+  if (gateOn && exerciceId) {
+    const { data: exo } = await admin
+      .from('scriptorium_exercices_planifies')
+      .select('id, type_exercice, statut, semaine_lundi, quiz_id, scriptorium_plans_evaluation(classe_id)')
+      .eq('id', exerciceId)
+      .is('supprime_at', null)
+      .maybeSingle()
+    if (!exo) return { error: "L'exercice planifié est introuvable ou a été retiré du plan." }
+    if (exo.type_exercice !== 'quiz') return { error: "Cet exercice planifié n'est pas un quiz." }
+    if (exo.statut === 'annule') return { error: 'Cet exercice planifié a été annulé.' }
+    if (exo.quiz_id) return { error: 'Un quiz est déjà lié à cet exercice.' }
+    const planClasse = un<{ classe_id: string }>(exo.scriptorium_plans_evaluation)?.classe_id ?? null
+    if (planClasse !== classeId) return { error: 'La classe du quiz doit être celle du plan de cet exercice.' }
+    const sid = await resoudreSemestrePourSemaine(admin, exo.semaine_lundi as string)
+    if (!sid) return { error: "La semaine planifiée de cet exercice n'appartient à aucun semestre — recale l'exercice ou définis le semestre dans le Calendrier." }
+    semesterId = sid
+    exoALier = { id: exo.id as string }
+  } else {
+    // Semestre actif (le quizz est ancré au semestre courant pour les notes de
+    // semestre). Refuser sinon : un quizz sans semestre n'entrerait dans aucune note.
+    const { data: semActif } = await supabase
+      .from('semesters')
+      .select('id')
+      .eq('is_active', true)
+      .maybeSingle()
+    if (!semActif) return { error: 'Aucun semestre actif. Définis-en un dans le Calendrier avant de créer un quizz.' }
+    semesterId = semActif.id
+  }
 
   // Créer le quizz en brouillon
   const { data: quizz, error: errQuizz } = await supabase
     .from('quazian_quizzes')
     .insert({
       classe_id: classeId,
-      semester_id: semActif.id,
+      semester_id: semesterId,
       statut: 'brouillon',
       scope_unites: scopeRaw,
       duree_min: dureeMin,
@@ -99,6 +139,27 @@ export async function creerQuizz(formData: FormData) {
   const { error: errQ } = await supabase.from('quazian_questions').insert(rows)
   if (errQ) return { error: errQ.message }
 
+  // ── Liaison au plan (Q2 claim-UPDATE conditionnel) ────────────────────────
+  // La pré-lecture ci-dessus est un confort TOCTOU ; SEUL ce claim ferme la course
+  // « deux onglets conçoivent le même exercice ». where quiz_id is null → 0 ligne si
+  // un autre a gagné → on supprime le quiz frais (encore brouillon, rien n'en dépend).
+  if (exoALier) {
+    const { data: claimed } = await admin
+      .from('scriptorium_exercices_planifies')
+      .update({ quiz_id: quizz.id, updated_at: new Date().toISOString() })
+      .eq('id', exoALier.id)
+      .is('quiz_id', null)
+      .is('supprime_at', null)
+      .select('id')
+    if (!claimed || claimed.length === 0) {
+      await supabase.from('quazian_questions').delete().eq('quiz_id', quizz.id)
+      await supabase.from('quazian_quizzes').delete().eq('id', quizz.id)
+      return { error: 'Un quiz vient d’être lié à cet exercice depuis un autre onglet. Ouvre le quiz existant.' }
+    }
+    // Q4 : statut de conception dérivé (les questions sont encore 'suggere' → a_concevoir).
+    await synchroniserStatutExerciceQuiz(admin, quizz.id)
+  }
+
   revalidatePath('/prof/quazian/quizz')
   return { success: true, quizId: quizz.id }
 }
@@ -114,6 +175,8 @@ export async function validerQuestion(formData: FormData) {
     .update({ statut_validation: 'valide' })
     .eq('id', id)
 
+  // Q4 : re-dérive `concu` de l'exercice lié (no-op gate OFF / quiz hors plan).
+  await synchroniserStatutExerciceQuiz(createAdminClient(), quizId)
   revalidatePath(`/prof/quazian/quizz/${quizId}`)
   return { success: true }
 }
@@ -145,6 +208,7 @@ export async function modifierQuestion(formData: FormData) {
     })
     .eq('id', id)
 
+  await synchroniserStatutExerciceQuiz(createAdminClient(), quizId) // Q4
   revalidatePath(`/prof/quazian/quizz/${quizId}`)
   return { success: true }
 }
@@ -175,6 +239,7 @@ export async function regenererDisctracteurs(formData: FormData) {
     })
     .eq('id', id)
 
+  await synchroniserStatutExerciceQuiz(createAdminClient(), quizId) // Q4
   revalidatePath(`/prof/quazian/quizz/${quizId}`)
   return { success: true }
 }
@@ -189,6 +254,7 @@ export async function validerToutesQuestions(formData: FormData) {
     .update({ statut_validation: 'valide' })
     .eq('quiz_id', quizId)
 
+  await synchroniserStatutExerciceQuiz(createAdminClient(), quizId) // Q4
   revalidatePath(`/prof/quazian/quizz/${quizId}`)
   return { success: true }
 }
@@ -205,6 +271,18 @@ export async function supprimerQuizz(formData: FormData) {
     .single()
 
   if (q?.statut !== 'brouillon') return { error: 'Seuls les brouillons peuvent être supprimés.' }
+
+  // Q5 : l'exercice planifié lié retombe `a_concevoir` (gate ON). Fait AVANT le DELETE,
+  // tant que quiz_id pointe encore le quiz ; le `on delete set null` de la FK n'est que
+  // le filet (il nettoierait quiz_id mais laisserait le statut `concu` obsolète).
+  const admin = createAdminClient()
+  if (await lireGatePlanActif(admin)) {
+    await admin
+      .from('scriptorium_exercices_planifies')
+      .update({ statut: 'a_concevoir', concu_at: null, quiz_id: null, updated_at: new Date().toISOString() })
+      .eq('quiz_id', id)
+      .is('supprime_at', null)
+  }
 
   await supabase.from('quazian_quizzes').delete().eq('id', id)
 

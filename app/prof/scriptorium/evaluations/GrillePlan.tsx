@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import {
   validerPlan, supprimerPlan, marquerConcu, retirerExercice,
@@ -78,7 +79,13 @@ function LigneExercice({ e, semaines }: { e: ExerciceLigne; semaines: Semaine[] 
             {semaines.filter(s => s.lundi !== e.semaineLundi).map(s => <option key={s.lundi} value={s.lundi}>{s.label}</option>)}
           </select>
           {e.statut === 'a_concevoir' && (
-            <button onClick={() => act(marquerConcu)} disabled={busy} className="text-encre-douce hover:text-encre disabled:opacity-50">Conçu</button>
+            // Quiz : `concu` est DÉRIVÉ (Q4) → on conçoit dans Quazian (pré-rempli), pas
+            // de « Conçu » manuel. Autres types (pas d'écran dédié) : relais V4 manuel.
+            e.typeExercice === 'quiz' ? (
+              <Link href={`/prof/quazian/quizz?exercice=${e.id}`} className="text-pigment hover:underline">Concevoir →</Link>
+            ) : (
+              <button onClick={() => act(marquerConcu)} disabled={busy} className="text-encre-douce hover:text-encre disabled:opacity-50">Conçu</button>
+            )
           )}
           <button onClick={() => act(retirerExercice)} disabled={busy} className="text-muet hover:text-retard disabled:opacity-50">Retirer</button>
         </div>

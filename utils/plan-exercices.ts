@@ -5,6 +5,7 @@
 // lots consommateurs (3/4/5). Voir SPEC_scriptorium_planification_exercices.md §4.6/§9.
 
 import type { SupabaseClient } from '@supabase/supabase-js'
+import { addDaysUTC, toISODate } from './calendrier-grille'
 
 /**
  * Gate dark-launch du plan d'évaluation (scriptorium_params.plan_evaluation_actif,
@@ -46,6 +47,60 @@ export async function plansValidesCourants(admin: SupabaseClient): Promise<PlanV
     if (!prev || cur.anneeScolaire > prev.anneeScolaire) parClasse.set(cur.classeId, cur)
   }
   return [...parClasse.values()]
+}
+
+/**
+ * Q4 — recalcule le statut de conception de l'exercice lié à un quiz. Prédicat
+ * `concu` ⇔ quiz_id posé ∧ 100 % des questions `statut_validation='valide'`
+ * (« préparé et sans erreur », PO 5). Recalcul idempotent (COUNT), jamais de
+ * compteur dénormalisé. GATE EN PREMIER → no-op strict gate OFF. No-op si aucun
+ * exercice vivant n'est lié à ce quiz (chemin direct hors plan). Ne ressuscite
+ * jamais un exercice `annule` (tombstone). À appeler en fin des actions qui
+ * touchent le quiz ou ses questions (Q4, §6.1).
+ */
+export async function synchroniserStatutExerciceQuiz(admin: SupabaseClient, quizId: string): Promise<void> {
+  if (!(await lireGatePlanActif(admin))) return
+  const { data: exo } = await admin
+    .from('scriptorium_exercices_planifies')
+    .select('id, statut')
+    .eq('quiz_id', quizId)
+    .is('supprime_at', null)
+    .maybeSingle()
+  if (!exo || (exo as { statut?: string }).statut === 'annule') return
+  const [{ count: total }, { count: valides }] = await Promise.all([
+    admin.from('quazian_questions').select('id', { count: 'exact', head: true }).eq('quiz_id', quizId),
+    admin.from('quazian_questions').select('id', { count: 'exact', head: true }).eq('quiz_id', quizId).eq('statut_validation', 'valide'),
+  ])
+  const concu = (total ?? 0) > 0 && (valides ?? 0) === (total ?? 0)
+  const cible = concu ? 'concu' : 'a_concevoir'
+  if ((exo as { statut?: string }).statut === cible) return // idempotent : évite un UPDATE inutile
+  await admin
+    .from('scriptorium_exercices_planifies')
+    .update({ statut: cible, concu_at: concu ? new Date().toISOString() : null, updated_at: new Date().toISOString() })
+    .eq('id', (exo as { id: string }).id)
+}
+
+/**
+ * Q7 — semestre d'un quiz PLANIFIÉ, résolu par sa SEMAINE (jamais par is_active) :
+ * le semestre non archivé dont l'intervalle chevauche [semaineLundi, +6]. Robuste
+ * au lundi antérieur au start_date (la 1ʳᵉ semaine d'un semestre commençant un
+ * mardi a son lundi la veille — calculerGrilleSemaines démarre à lundiOnOrBefore).
+ * En cas de chevauchement de frontière, le start_date le plus tardif gagne. null si
+ * aucun semestre ne matche → l'appelant refuse la création (jamais de repli
+ * silencieux sur is_active, jamais de semester_id null).
+ */
+export async function resoudreSemestrePourSemaine(admin: SupabaseClient, semaineLundi: string): Promise<string | null> {
+  const finSemaine = toISODate(addDaysUTC(new Date(semaineLundi + 'T00:00:00Z'), 6))
+  const { data } = await admin
+    .from('semesters')
+    .select('id, start_date')
+    .is('archived_at', null)
+    .lte('start_date', finSemaine)   // le semestre commence au plus tard le dimanche de la semaine
+    .gte('end_date', semaineLundi)   // et se termine au plus tôt le lundi de la semaine
+    .order('start_date', { ascending: false })
+    .limit(1)
+    .maybeSingle()
+  return ((data as { id?: string } | null)?.id as string | undefined) ?? null
 }
 
 /**

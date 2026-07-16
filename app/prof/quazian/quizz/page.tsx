@@ -2,8 +2,9 @@ import Link from 'next/link'
 import { createClient } from '@/utils/supabase/server'
 import { supprimerQuizz } from './actions'
 import { CreerQuizz } from './CreerQuizz'
+import { chargerContexteQuazianPlan } from './plan-quazian'
 import Tuile from '@/components/Tuile'
-import { formatInstant } from '@/utils/fuseau'
+import { formatInstant, formatJour } from '@/utils/fuseau'
 import { lireFuseau } from '@/utils/fuseau-serveur'
 
 // lance_at / ferme_at = instants (timestamptz) → affichés dans le fuseau choisi.
@@ -20,10 +21,12 @@ const STATUT_LABELS: Record<string, { label: string; couleur: string }> = {
   ferme: { label: 'Terminé', couleur: 'bg-info-teinte text-info' },
 }
 
-export default async function QuizzListePage({ searchParams }: { searchParams: Promise<{ classe?: string }> }) {
+export default async function QuizzListePage({ searchParams }: { searchParams: Promise<{ classe?: string; exercice?: string }> }) {
   const supabase = await createClient()
-  const { classe: classeSel } = await searchParams
+  const { classe: classeSel, exercice } = await searchParams
   const tz = await lireFuseau()
+  // Contexte plan d'évaluation (lot 4, gate) : encart « à concevoir » + deep-link.
+  const ctxPlan = await chargerContexteQuazianPlan(exercice ?? null)
 
   const [{ data: quizzes }, { data: unites }, { data: classes }] = await Promise.all([
     supabase
@@ -64,7 +67,36 @@ export default async function QuizzListePage({ searchParams }: { searchParams: P
         <h3 className="text-lg font-serif text-encre mt-2">Quizz</h3>
       </div>
 
-      <CreerQuizz unites={unites ?? []} classes={classes ?? []} />
+      <CreerQuizz unites={unites ?? []} classes={classes ?? []} contexte={ctxPlan.contexte} />
+
+      {/* Encart « À concevoir » : quiz planifiés (plans validés) pas encore conçus.
+          Gate OFF → ctxPlan.aConcevoir vide → rien ne s'affiche (page inchangée). */}
+      {ctxPlan.aConcevoir.length > 0 && (
+        <div className="mt-6 bg-surface border border-bordure rounded-xl p-4">
+          <h4 className="font-ui text-[11px] font-medium uppercase tracking-[0.12em] text-muet mb-2">
+            À concevoir · {ctxPlan.aConcevoir.length} quiz planifié{ctxPlan.aConcevoir.length > 1 ? 's' : ''}
+          </h4>
+          <div className="space-y-2">
+            {ctxPlan.aConcevoir.map((q) => (
+              <Link
+                key={q.exerciceId}
+                href={`/prof/quazian/quizz?exercice=${q.exerciceId}`}
+                className="flex items-center gap-3 rounded-lg border border-bordure px-3 py-2 hover:shadow-sm transition-shadow"
+              >
+                <span className={`w-2.5 h-2.5 rounded-full ${q.enRetard ? 'bg-retard' : 'bg-pigment'} flex-shrink-0`} aria-hidden />
+                <span className="font-corps text-sm text-encre flex-1">
+                  Quiz — {q.classeNom}
+                </span>
+                {q.enRetard && (
+                  <span className="font-ui text-xs text-retard bg-retard-teinte px-2 py-0.5 rounded-full flex-shrink-0">en retard</span>
+                )}
+                <span className="font-ui text-xs text-muet flex-shrink-0">{formatJour(q.echeance, { day: 'numeric', month: 'short' })}</span>
+                <span className="font-ui text-xs text-pigment flex-shrink-0">Concevoir →</span>
+              </Link>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Tuiles de classe : nombre de quizz lancés, clic → filtre la liste */}
       {(classes ?? []).length > 0 && (

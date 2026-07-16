@@ -16,12 +16,20 @@ interface ClasseOption {
   nom: string
 }
 
-export function CreerQuizz({ unites, classes }: { unites: Unite[]; classes: ClasseOption[] }) {
+// Q1 — conception depuis le plan d'évaluation : classe figée + exercice_id transmis.
+interface ExerciceContexte {
+  exerciceId: string
+  classeId: string
+  classeNom: string
+  libelle: string
+}
+
+export function CreerQuizz({ unites, classes, contexte }: { unites: Unite[]; classes: ClasseOption[]; contexte?: ExerciceContexte | null }) {
   const router = useRouter()
   const [loading, setLoading] = useState(false)
   const [erreur, setErreur] = useState<string | null>(null)
   const [selected, setSelected] = useState<string[]>([])
-  const [open, setOpen] = useState(false)
+  const [open, setOpen] = useState(!!contexte) // deep-link ?exercice → formulaire ouvert d'emblée
 
   function toggleUnite(id: string) {
     setSelected((prev) =>
@@ -60,12 +68,25 @@ export function CreerQuizz({ unites, classes }: { unites: Unite[]; classes: Clas
 
   return (
     <form onSubmit={handleSubmit} className="bg-surface border border-bordure rounded-xl p-5 mb-6">
+      {contexte && <input type="hidden" name="exercice_id" value={contexte.exerciceId} />}
       <div className="flex items-center justify-between mb-4">
-        <h3 className="text-sm font-medium text-encre-douce">Nouveau quizz</h3>
-        <button type="button" onClick={() => setOpen(false)} className="text-muet hover:text-encre-douce text-xs">
-          Annuler
-        </button>
+        <h3 className="text-sm font-medium text-encre-douce">
+          {contexte ? 'Concevoir le quiz planifié' : 'Nouveau quizz'}
+        </h3>
+        {!contexte && (
+          <button type="button" onClick={() => setOpen(false)} className="text-muet hover:text-encre-douce text-xs">
+            Annuler
+          </button>
+        )}
       </div>
+
+      {contexte && (
+        <div className="mb-4 rounded-lg bg-pigment/10 border border-pigment/30 px-3 py-2">
+          <p className="text-xs text-encre-douce">
+            {contexte.libelle} pour <span className="font-medium text-encre">{contexte.classeNom}</span> — la classe est figée par le plan d’évaluation.
+          </p>
+        </div>
+      )}
 
       {/* Unités */}
       <div className="mb-4">
@@ -92,17 +113,26 @@ export function CreerQuizz({ unites, classes }: { unites: Unite[]; classes: Clas
       <div className="grid grid-cols-3 gap-3 mb-4">
         <div>
           <label className="text-xs text-muet mb-1 block">Classe</label>
-          <select
-            name="classe_id"
-            defaultValue=""
-            required
-            className="w-full px-3 py-2 text-sm border border-bordure rounded-lg bg-surface"
-          >
-            <option value="" disabled>Choisir une classe…</option>
-            {classes.map((c) => (
-              <option key={c.id} value={c.id}>{c.nom}</option>
-            ))}
-          </select>
+          {contexte ? (
+            <>
+              <input type="hidden" name="classe_id" value={contexte.classeId} />
+              <div className="w-full px-3 py-2 text-sm border border-bordure rounded-lg bg-parchemin-fonce text-encre">
+                {contexte.classeNom}
+              </div>
+            </>
+          ) : (
+            <select
+              name="classe_id"
+              defaultValue=""
+              required
+              className="w-full px-3 py-2 text-sm border border-bordure rounded-lg bg-surface"
+            >
+              <option value="" disabled>Choisir une classe…</option>
+              {classes.map((c) => (
+                <option key={c.id} value={c.id}>{c.nom}</option>
+              ))}
+            </select>
+          )}
         </div>
         <div>
           <label className="text-xs text-muet mb-1 block">Nombre de questions</label>
