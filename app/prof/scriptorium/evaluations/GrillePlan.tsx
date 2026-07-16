@@ -184,7 +184,7 @@ function ChangerGabarit({ planId, gabaritActuel }: { planId: string; gabaritActu
         <option value="vierge">Vierge</option>
       </select>
       {!diff ? (
-        <button onClick={apercu} disabled={busy} className="text-encre-douce hover:text-encre disabled:opacity-50">Aperçu</button>
+        <button onClick={apercu} disabled={busy} className="text-encre-douce hover:text-encre disabled:opacity-50">Voir l’impact</button>
       ) : (
         <>
           <span className="text-encre">{diff.nbSupprimes} retiré(s), {diff.nbGeneres} généré(s) à partir d’aujourd’hui (conçus/manuels/passé conservés)</span>
