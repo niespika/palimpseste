@@ -277,9 +277,15 @@ async function rowsPourPlan(
   if (avisBloquant || !ancreLundi) return { rows: [] }
   const depuis = aPartirDe ?? ancreLundi
   const couvDepuis = couvertes.filter((w) => w.dateDebutLundi >= depuis)
+  // Diagnostics planchérés à l'ancre : `placerDiagnostics` filtre la frise entière
+  // et retiendrait des semaines < ancre quand aujourd'hui < ancre (régénération
+  // avant le début réel du semestre), créant des diagnostics « à recaler » fantômes.
+  // La cadence, elle, part déjà de l'ancre (couvDepuis ⊆ couvertes). max() rétablit
+  // la parité avec creerPlan ; no-op à la création (depuis=ancre) et en cours d'année.
+  const depuisDiag = depuis > ancreLundi ? depuis : ancreLundi
   let generes: ExerciceGenere[]
   try {
-    generes = [...genererCadence(couvDepuis, gabarit, config), ...placerDiagnostics(frise, ay, depuis)]
+    generes = [...genererCadence(couvDepuis, gabarit, config), ...placerDiagnostics(frise, ay, depuisDiag)]
   } catch (e) {
     return { rows: [], error: e instanceof Error ? e.message : 'Génération impossible.' }
   }
