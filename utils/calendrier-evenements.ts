@@ -4,7 +4,7 @@ import { createAdminClient } from '@/utils/supabase/admin'
 import { jourDansFuseau } from '@/utils/fuseau'
 import { lireFuseau } from '@/utils/fuseau-serveur'
 import { resoudreDatesLivre, pairesLivresGouvernes } from './aletheia-dates'
-import { lireGatePlanActif } from './plan-exercices'
+import { lireGatePlanActif, plansValidesCourants } from './plan-exercices'
 import { dateEffectiveSemaine, libelleTypeExercice } from './plan-cadence'
 
 // Agrégation LECTURE SEULE des échéances datées des modules. Le calendrier ne
@@ -176,13 +176,10 @@ export async function assemblerEvenements(opts: {
   //    déjà LANCÉ est émis par sa source réelle (2/3), pas ici. Lecture via `admin`
   //    (tables du plan en RLS prof-only) ; classe_id du plan toujours non-null.
   if (surface === 'prof' && (await lireGatePlanActif(admin))) {
-    const { data: plansValides } = await admin
-      .from('scriptorium_plans_evaluation')
-      .select('id, classe_id')
-      .eq('statut', 'valide')
-      .is('supprime_at', null)
-    const planIds = (plansValides ?? []).map((p) => p.id as string)
-    const classeParPlan = new Map<string, string>((plansValides ?? []).map((p) => [p.id as string, p.classe_id as string]))
+    // Plan COURANT par classe (max AY) — même référentiel que la grille panoptique.
+    const plansValides = await plansValidesCourants(admin)
+    const planIds = plansValides.map((p) => p.id)
+    const classeParPlan = new Map<string, string>(plansValides.map((p) => [p.id, p.classeId]))
     if (planIds.length > 0) {
       const { data: exos } = await admin
         .from('scriptorium_exercices_planifies')

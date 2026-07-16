@@ -4,7 +4,7 @@ import { createAdminClient } from '@/utils/supabase/admin'
 import { addDaysUTC, toISODate } from '@/utils/calendrier-grille'
 import { jourDansFuseau } from '@/utils/fuseau'
 import { lireFuseau } from '@/utils/fuseau-serveur'
-import { lireGatePlanActif } from '@/utils/plan-exercices'
+import { lireGatePlanActif, plansValidesCourants } from '@/utils/plan-exercices'
 import { dateEffectiveSemaine, libelleTypeExercice } from '@/utils/plan-cadence'
 
 // Dérivation calendrier → « à faire » (famille 2 de la spec §7) : une échéance
@@ -63,23 +63,19 @@ export async function tachesDeriveesDuCalendrier(joursAvant = 10): Promise<Tache
   // labels GÉNÉRIQUES par type (jamais titre/note — anti-spoiler, §8bis).
   const admin = createAdminClient()
   if (await lireGatePlanActif(admin)) {
-    const { data: plans } = await admin
-      .from('scriptorium_plans_evaluation')
-      .select('id, classe_id, classes(nom)')
-      .eq('statut', 'valide')
-      .is('supprime_at', null)
-    const planRows = plans ?? []
-    if (planRows.length > 0) {
-      const nomParPlan = new Map<string, string | null>()
-      const classeParPlan = new Map<string, string>()
-      for (const p of planRows) {
-        nomParPlan.set(p.id as string, un<{ nom: string }>(p.classes)?.nom ?? null)
-        classeParPlan.set(p.id as string, p.classe_id as string)
-      }
+    // Plan COURANT par classe (max AY) — même référentiel que la grille panoptique
+    // (sinon un vieux plan 'valide' engendrerait des tâches pointant vers un plan
+    // inatteignable depuis ?vue=evaluations&classe=X).
+    const plans = await plansValidesCourants(admin)
+    if (plans.length > 0) {
+      const classeParPlan = new Map(plans.map((p) => [p.id, p.classeId]))
+      const { data: classesRows } = await admin
+        .from('classes').select('id, nom').in('id', plans.map((p) => p.classeId))
+      const nomParClasse = new Map((classesRows ?? []).map((c) => [c.id as string, c.nom as string]))
       const { data: exos } = await admin
         .from('scriptorium_exercices_planifies')
         .select('id, plan_id, type_exercice, diagnostique, lieu, semaine_lundi, jour_prevu')
-        .in('plan_id', planRows.map((p) => p.id as string))
+        .in('plan_id', plans.map((p) => p.id))
         .eq('ancrage', 'semaine')
         .eq('statut', 'a_concevoir')
         .is('supprime_at', null)
@@ -89,14 +85,14 @@ export async function tachesDeriveesDuCalendrier(joursAvant = 10): Promise<Tache
         const enRetard = echeance < today
         // Fenêtre : en retard (passé) OU à concevoir dans [today, fin]. Au-delà = pas encore.
         if (!enRetard && echeance > fin) continue
-        const planId = e.plan_id as string
+        const classeId = classeParPlan.get(e.plan_id as string)
         const libelle = libelleTypeExercice(e.type_exercice as string, e.diagnostique as boolean)
         taches.push({
           id: `exo-${e.id}`,
           label: `${enRetard ? 'Exercice en retard' : 'Exercice à concevoir'} — ${libelle}`,
           echeance,
-          classeNom: nomParPlan.get(planId) ?? null,
-          href: `/prof/scriptorium?vue=evaluations&classe=${classeParPlan.get(planId)}`,
+          classeNom: classeId ? nomParClasse.get(classeId) ?? null : null,
+          href: `/prof/scriptorium?vue=evaluations&classe=${classeId}`,
           ...(enRetard ? { urgence: 'retard' as const } : {}),
         })
       }

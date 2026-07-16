@@ -191,7 +191,7 @@ export default async function ProfAccueil() {
                 {tachesEnPreparer.map((t) => (
                   <Link key={t.id} href={t.href} className="block bg-surface border border-bordure rounded-xl px-4 py-3 hover:shadow-sm transition-shadow">
                     <div className="flex items-center gap-3">
-                      <span className={`w-2.5 h-2.5 rounded-full flex-shrink-0 ${t.urgence === 'retard' ? 'bg-retard' : 'bg-pigment'}`} aria-hidden />
+                      <span className={`w-2.5 h-2.5 rounded-full ${t.urgence === 'retard' ? 'bg-retard' : 'bg-pigment'} flex-shrink-0`} aria-hidden />
                       <span className="font-corps text-base text-encre flex-1">
                         {t.label}
                         {t.classeNom && <span className="text-muet"> — {t.classeNom}</span>}
