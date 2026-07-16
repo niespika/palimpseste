@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import {
-  validerPlan, marquerConcu, retirerExercice,
+  validerPlan, supprimerPlan, marquerConcu, retirerExercice,
   deplacerExercice, ajouterExercice, recalerExercice, regenererPlan, propagerPlan,
 } from './actions'
 import type { PlanDetail, ExerciceLigne } from './plan-serveur'
@@ -241,6 +241,7 @@ export default function GrillePlan({ plan, candidats }: { plan: PlanDetail; cand
   const router = useRouter()
   const [busy, setBusy] = useState(false)
   const [err, setErr] = useState<string | null>(null)
+  const [confirmSuppr, setConfirmSuppr] = useState(false)
 
   const semaines: Semaine[] = plan.semaines.map(s => ({
     lundi: s.lundi,
@@ -256,6 +257,15 @@ export default function GrillePlan({ plan, candidats }: { plan: PlanDetail; cand
     router.refresh()
   }
 
+  async function supprimer() {
+    setErr(null); setBusy(true)
+    const fd = new FormData(); fd.set('plan_id', plan.id)
+    const res = await supprimerPlan(fd)
+    setBusy(false)
+    if (res.error) { setErr(res.error); return }
+    router.push('/prof/scriptorium?vue=evaluations') // le plan n'existe plus → retour à la liste
+  }
+
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between gap-2 flex-wrap">
@@ -268,9 +278,20 @@ export default function GrillePlan({ plan, candidats }: { plan: PlanDetail; cand
           </p>
         </div>
         {plan.statut === 'brouillon' && (
-          <button onClick={valider} disabled={busy} className="px-3 py-2 bg-bouton text-surface text-sm rounded-lg hover:opacity-90 disabled:opacity-50">
-            {busy ? '…' : 'Valider le plan'}
-          </button>
+          <div className="flex items-center gap-3">
+            {confirmSuppr ? (
+              <span className="flex items-center gap-2 text-xs">
+                <span className="text-retard">Supprimer ce brouillon ?</span>
+                <button onClick={supprimer} disabled={busy} className="text-retard hover:underline disabled:opacity-50">Oui</button>
+                <button onClick={() => setConfirmSuppr(false)} disabled={busy} className="text-muet hover:text-encre disabled:opacity-50">Non</button>
+              </span>
+            ) : (
+              <button onClick={() => setConfirmSuppr(true)} disabled={busy} className="text-xs text-muet hover:text-retard disabled:opacity-50">Supprimer</button>
+            )}
+            <button onClick={valider} disabled={busy} className="px-3 py-2 bg-bouton text-surface text-sm rounded-lg hover:opacity-90 disabled:opacity-50">
+              {busy ? '…' : 'Valider le plan'}
+            </button>
+          </div>
         )}
       </div>
       {err && <p className="text-xs text-retard">{err}</p>}
