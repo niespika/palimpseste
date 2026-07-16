@@ -8,8 +8,15 @@ import 'server-only'
 import { createAdminClient } from '@/utils/supabase/admin'
 import { lireGatePlanActif, plansValidesCourants } from '@/utils/plan-exercices'
 import { dateEffectiveSemaine } from '@/utils/plan-cadence'
+import { semainesCouvertes } from '@/app/prof/scriptorium/evaluations/plan-serveur'
 
 const RE_UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+
+// Libellé compact d'une semaine couverte pour le sélecteur (Q3) : « S3 · 21/09 ».
+function labelSemaine(pedaNum: number | null, lundi: string): string {
+  const jjmm = `${lundi.slice(8, 10)}/${lundi.slice(5, 7)}`
+  return pedaNum ? `S${pedaNum} · ${jjmm}` : `sem. ${jjmm}`
+}
 
 export interface QuizAConcevoir {
   exerciceId: string
@@ -24,13 +31,17 @@ export interface ExerciceContexte {
   classeNom: string
   libelle: string
 }
+export interface SemaineOption { lundi: string; label: string }
 export interface ContexteQuazianPlan {
   actif: boolean                       // gate ON
   aConcevoir: QuizAConcevoir[]
   contexte: ExerciceContexte | null    // deep-link ?exercice
+  // Q3 chemin direct : semaines couvertes du plan validé de chaque classe (pour le
+  // sélecteur « semaine prévue »). Classe sans plan validé → absente de la map.
+  semainesParClasse: Record<string, SemaineOption[]>
 }
 
-const VIDE: ContexteQuazianPlan = { actif: false, aConcevoir: [], contexte: null }
+const VIDE: ContexteQuazianPlan = { actif: false, aConcevoir: [], contexte: null, semainesParClasse: {} }
 
 /**
  * Charge le contexte plan de la page Quazian. `exerciceParam` = valeur brute de
@@ -88,5 +99,19 @@ export async function chargerContexteQuazianPlan(exerciceParam: string | null): 
     }
   }
 
-  return { actif: true, aConcevoir, contexte }
+  // (3) Q3 — semaines couvertes du plan validé de chaque classe (sélecteur direct).
+  const { data: plansD } = await admin
+    .from('scriptorium_plans_evaluation')
+    .select('classe_id, date_debut')
+    .in('id', plans.map((p) => p.id))
+  const semainesParClasse: Record<string, SemaineOption[]> = {}
+  for (const p of plansD ?? []) {
+    const couv = await semainesCouvertes(p.date_debut as string)
+    semainesParClasse[p.classe_id as string] = couv.couvertes.map((w) => ({
+      lundi: w.dateDebutLundi,
+      label: labelSemaine(w.pedagogicalNumber, w.dateDebutLundi),
+    }))
+  }
+
+  return { actif: true, aConcevoir, contexte, semainesParClasse }
 }

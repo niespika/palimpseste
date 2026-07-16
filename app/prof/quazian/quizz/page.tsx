@@ -7,6 +7,9 @@ import Tuile from '@/components/Tuile'
 import { formatInstant, formatJour } from '@/utils/fuseau'
 import { lireFuseau } from '@/utils/fuseau-serveur'
 
+// (perf) Le contexte plan (gate ON) résout la frise d'enseignement par classe. Inerte gate OFF.
+export const maxDuration = 60
+
 // lance_at / ferme_at = instants (timestamptz) → affichés dans le fuseau choisi.
 const DATE_COURTE: Intl.DateTimeFormatOptions = { day: '2-digit', month: '2-digit', year: 'numeric' }
 
@@ -67,7 +70,7 @@ export default async function QuizzListePage({ searchParams }: { searchParams: P
         <h3 className="text-lg font-serif text-encre mt-2">Quizz</h3>
       </div>
 
-      <CreerQuizz unites={unites ?? []} classes={classes ?? []} contexte={ctxPlan.contexte} />
+      <CreerQuizz unites={unites ?? []} classes={classes ?? []} contexte={ctxPlan.contexte} semainesParClasse={ctxPlan.semainesParClasse} />
 
       {/* Encart « À concevoir » : quiz planifiés (plans validés) pas encore conçus.
           Gate OFF → ctxPlan.aConcevoir vide → rien ne s'affiche (page inchangée). */}

@@ -4,7 +4,7 @@ import { revalidatePath } from 'next/cache'
 import { createClient } from '@/utils/supabase/server'
 import { createAdminClient } from '@/utils/supabase/admin'
 import { genererQuestions, regenererQuestion } from '@/utils/generer-questions'
-import { lireGatePlanActif, synchroniserStatutExerciceQuiz, resoudreSemestrePourSemaine } from '@/utils/plan-exercices'
+import { lireGatePlanActif, plansValidesCourants, synchroniserStatutExerciceQuiz, resoudreSemestrePourSemaine } from '@/utils/plan-exercices'
 
 // Normalise une relation imbriquée Supabase (objet ou tableau) en un objet.
 function un<T>(x: T | T[] | null | undefined): T | null {
@@ -25,8 +25,11 @@ async function verifierProf() {
   return { supabase, userId: user.id }
 }
 
+// Résultat de création : erreur, ou succès (avec un signal `avis` optionnel — Q3).
+type CreerQuizzResult = { error: string } | { success: true; quizId: string; avis?: string }
+
 // Créer un quizz + générer ses questions
-export async function creerQuizz(formData: FormData) {
+export async function creerQuizz(formData: FormData): Promise<CreerQuizzResult> {
   const { supabase } = await verifierProf()
   const admin = createAdminClient()
 
@@ -80,6 +83,10 @@ export async function creerQuizz(formData: FormData) {
   let semesterId: string
   // Exercice à lier après création (Q2), résolu et validé ici (pré-lecture de confort).
   let exoALier: { id: string } | null = null
+  // Q3 chemin direct : exercice à AUTO-CRÉER après la création du quiz.
+  let autoCreer: { planId: string; semaineLundi: string } | null = null
+  // Signal « pas de plan » (Q3, classe sans plan validé — quiz créé mais non prospectif).
+  let avisSansPlan = false
 
   if (gateOn && exerciceId) {
     const { data: exo } = await admin
@@ -98,8 +105,27 @@ export async function creerQuizz(formData: FormData) {
     if (!sid) return { error: "La semaine planifiée de cet exercice n'appartient à aucun semestre — recale l'exercice ou définis le semestre dans le Calendrier." }
     semesterId = sid
     exoALier = { id: exo.id as string }
+  } else if (gateOn) {
+    // Q3 — chemin direct (invariant PO 5 sans blocage). La classe a-t-elle un plan validé ?
+    const plans = await plansValidesCourants(admin)
+    const planClasse = plans.find((p) => p.classeId === classeId)
+    if (planClasse) {
+      // Le prof choisit la semaine prévue → auto-création de l'exercice (origine manuel).
+      const semainePrevue = (formData.get('semaine_prevue') as string) || null
+      if (!semainePrevue) return { error: 'Choisis la semaine prévue de ce quiz.' }
+      const sid = await resoudreSemestrePourSemaine(admin, semainePrevue)
+      if (!sid) return { error: "La semaine choisie n'appartient à aucun semestre — choisis-en une autre ou définis le semestre dans le Calendrier." }
+      semesterId = sid
+      autoCreer = { planId: planClasse.id, semaineLundi: semainePrevue }
+    } else {
+      // Classe sans plan validé → quiz créé quand même (legacy is_active) + signal.
+      const { data: semActif } = await supabase.from('semesters').select('id').eq('is_active', true).maybeSingle()
+      if (!semActif) return { error: 'Aucun semestre actif. Définis-en un dans le Calendrier avant de créer un quizz.' }
+      semesterId = semActif.id
+      avisSansPlan = true
+    }
   } else {
-    // Semestre actif (le quizz est ancré au semestre courant pour les notes de
+    // Gate OFF → LEGACY strictement inchangé. Semestre actif (ancrage notes de
     // semestre). Refuser sinon : un quizz sans semestre n'entrerait dans aucune note.
     const { data: semActif } = await supabase
       .from('semesters')
@@ -158,10 +184,28 @@ export async function creerQuizz(formData: FormData) {
     }
     // Q4 : statut de conception dérivé (les questions sont encore 'suggere' → a_concevoir).
     await synchroniserStatutExerciceQuiz(admin, quizz.id)
+  } else if (autoCreer) {
+    // Q3 — auto-création de l'exercice planifié (origine manuel), quiz_id posé d'emblée.
+    const { error: eExo } = await admin.from('scriptorium_exercices_planifies').insert({
+      plan_id: autoCreer.planId,
+      type_exercice: 'quiz', diagnostique: false, nature: 'evaluatif', lieu: 'classe', module: 'quazian',
+      ancrage: 'semaine', semaine_lundi: autoCreer.semaineLundi,
+      origine: 'manuel', statut: 'a_concevoir', quiz_id: quizz.id,
+    })
+    if (eExo) {
+      // Le quiz existe et reste utilisable ; seul son rattachement au plan a échoué.
+      revalidatePath('/prof/quazian/quizz')
+      return { success: true, quizId: quizz.id, avis: 'Le quiz est créé, mais son rattachement au plan a échoué (créneau déjà occupé). Tu peux le rattacher depuis la grille du plan.' }
+    }
+    await synchroniserStatutExerciceQuiz(admin, quizz.id)
   }
 
   revalidatePath('/prof/quazian/quizz')
-  return { success: true, quizId: quizz.id }
+  return {
+    success: true,
+    quizId: quizz.id,
+    ...(avisSansPlan ? { avis: 'Cette classe n’a pas de plan annuel validé — le quiz n’apparaîtra pas au calendrier prospectif.' } : {}),
+  }
 }
 
 // Valider une question

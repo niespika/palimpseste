@@ -23,13 +23,25 @@ interface ExerciceContexte {
   classeNom: string
   libelle: string
 }
+interface SemaineOption { lundi: string; label: string }
 
-export function CreerQuizz({ unites, classes, contexte }: { unites: Unite[]; classes: ClasseOption[]; contexte?: ExerciceContexte | null }) {
+export function CreerQuizz({
+  unites, classes, contexte, semainesParClasse,
+}: {
+  unites: Unite[]
+  classes: ClasseOption[]
+  contexte?: ExerciceContexte | null
+  semainesParClasse?: Record<string, SemaineOption[]> // Q3 : semaines du plan validé par classe
+}) {
   const router = useRouter()
   const [loading, setLoading] = useState(false)
   const [erreur, setErreur] = useState<string | null>(null)
+  const [avis, setAvis] = useState<{ texte: string; quizId: string } | null>(null)
   const [selected, setSelected] = useState<string[]>([])
   const [open, setOpen] = useState(!!contexte) // deep-link ?exercice → formulaire ouvert d'emblée
+  const [classeSel, setClasseSel] = useState<string>('') // classe choisie (chemin direct, pour les semaines)
+  // Semaines à proposer (Q3) : uniquement hors deep-link, si la classe choisie a un plan validé.
+  const semaines = !contexte ? (semainesParClasse?.[classeSel] ?? []) : []
 
   function toggleUnite(id: string) {
     setSelected((prev) =>
@@ -47,12 +59,19 @@ export function CreerQuizz({ unites, classes, contexte }: { unites: Unite[]; cla
     selected.forEach((id) => fd.append('scope_unites', id))
 
     const res = await creerQuizz(fd)
-    if (res.error) {
+    if ('error' in res) {
       setErreur(res.error)
       setLoading(false)
-    } else {
-      router.push(`/prof/quazian/quizz/${res.quizId}`)
+      return
     }
+    if (res.avis) {
+      // Quiz créé mais avec un signal (Q3 : pas de plan / rattachement échoué) : on
+      // affiche le message au lieu de naviguer, avec un lien pour ouvrir le quiz.
+      setAvis({ texte: res.avis, quizId: res.quizId })
+      setLoading(false)
+      return
+    }
+    router.push(`/prof/quazian/quizz/${res.quizId}`)
   }
 
   if (!open) {
@@ -123,7 +142,8 @@ export function CreerQuizz({ unites, classes, contexte }: { unites: Unite[]; cla
           ) : (
             <select
               name="classe_id"
-              defaultValue=""
+              value={classeSel}
+              onChange={(e) => setClasseSel(e.target.value)}
               required
               className="w-full px-3 py-2 text-sm border border-bordure rounded-lg bg-surface"
             >
@@ -158,15 +178,47 @@ export function CreerQuizz({ unites, classes, contexte }: { unites: Unite[]; cla
         </div>
       </div>
 
+      {/* Q3 — semaine prévue (chemin direct, classe à plan validé) : auto-crée
+          l'exercice au plan. Absent si la classe n'a pas de plan (quiz legacy). */}
+      {semaines.length > 0 && (
+        <div className="mb-4">
+          <label className="text-xs text-muet mb-1 block">Semaine prévue (plan d’évaluation)</label>
+          <select
+            name="semaine_prevue"
+            defaultValue=""
+            required
+            className="w-full px-3 py-2 text-sm border border-bordure rounded-lg bg-surface"
+          >
+            <option value="" disabled>Choisir la semaine…</option>
+            {semaines.map((s) => (
+              <option key={s.lundi} value={s.lundi}>{s.label}</option>
+            ))}
+          </select>
+        </div>
+      )}
+
       {erreur && <p className="text-xs text-retard mb-3">{erreur}</p>}
 
-      <button
-        type="submit"
-        disabled={loading}
-        className="w-full py-2.5 bg-bouton text-surface text-sm rounded-lg hover:opacity-90 disabled:opacity-50 transition-colors"
-      >
-        {loading ? 'Génération des questions en cours…' : '✦ Générer les questions avec l’IA'}
-      </button>
+      {avis ? (
+        <div className="rounded-lg bg-attention-teinte border border-attention/30 px-3 py-2.5">
+          <p className="text-xs text-encre-douce">{avis.texte}</p>
+          <button
+            type="button"
+            onClick={() => router.push(`/prof/quazian/quizz/${avis.quizId}`)}
+            className="mt-2 text-xs text-pigment hover:underline"
+          >
+            Ouvrir le quiz →
+          </button>
+        </div>
+      ) : (
+        <button
+          type="submit"
+          disabled={loading}
+          className="w-full py-2.5 bg-bouton text-surface text-sm rounded-lg hover:opacity-90 disabled:opacity-50 transition-colors"
+        >
+          {loading ? 'Génération des questions en cours…' : '✦ Générer les questions avec l’IA'}
+        </button>
+      )}
     </form>
   )
 }
