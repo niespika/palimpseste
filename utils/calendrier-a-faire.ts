@@ -18,7 +18,8 @@ export interface TacheCalendrier {
   echeance: string // YYYY-MM-DD
   classeNom: string | null
   href: string
-  urgence?: 'retard' // échéance passée (exercice à concevoir) → priorité, tri en tête
+  urgence?: 'retard'    // échéance passée (exercice à concevoir) → traité à part (dashboard)
+  exerciceId?: string   // exercice planifié sous-jacent (pour l'action « retirer » en retard)
 }
 
 function un<T>(x: T | T[] | null | undefined): T | null {
@@ -100,6 +101,7 @@ export async function tachesDeriveesDuCalendrier(joursAvant = 10): Promise<Tache
           echeance,
           classeNom: classeId ? nomParClasse.get(classeId) ?? null : null,
           href,
+          exerciceId: e.id as string,
           ...(enRetard ? { urgence: 'retard' as const } : {}),
         })
       }

@@ -38,8 +38,13 @@ export function CreerQuizz({
   const [erreur, setErreur] = useState<string | null>(null)
   const [avis, setAvis] = useState<{ texte: string; quizId: string } | null>(null)
   const [selected, setSelected] = useState<string[]>([])
-  const [open, setOpen] = useState(!!contexte) // deep-link ?exercice → formulaire ouvert d'emblée
+  const [manualOpen, setManualOpen] = useState(false)
   const [classeSel, setClasseSel] = useState<string>('') // classe choisie (chemin direct, pour les semaines)
+  // Ouvert si un contexte de plan est présent (deep-link ?exercice) OU si le prof l'a
+  // ouvert manuellement. Dérivé (pas d'état) → réagit à un contexte qui ARRIVE en nav
+  // CLIENT depuis l'encart « À concevoir » (le composant reste monté, un état initialisé
+  // une fois resterait bloqué). Depuis Scriptorium = full load, contexte présent au montage.
+  const open = !!contexte || manualOpen
   // Semaines à proposer (Q3) : uniquement hors deep-link, si la classe choisie a un plan validé.
   const semaines = !contexte ? (semainesParClasse?.[classeSel] ?? []) : []
 
@@ -77,7 +82,7 @@ export function CreerQuizz({
   if (!open) {
     return (
       <button
-        onClick={() => setOpen(true)}
+        onClick={() => setManualOpen(true)}
         className="w-full py-3 bg-bouton text-surface text-sm rounded-xl hover:opacity-90 transition-colors"
       >
         + Créer un nouveau quizz
@@ -93,7 +98,7 @@ export function CreerQuizz({
           {contexte ? 'Concevoir le quiz planifié' : 'Nouveau quizz'}
         </h3>
         {!contexte && (
-          <button type="button" onClick={() => setOpen(false)} className="text-muet hover:text-encre-douce text-xs">
+          <button type="button" onClick={() => setManualOpen(false)} className="text-muet hover:text-encre-douce text-xs">
             Annuler
           </button>
         )}
@@ -110,20 +115,26 @@ export function CreerQuizz({
       {/* Unités */}
       <div className="mb-4">
         <p className="text-xs text-muet mb-2">Unités couvertes (périmètre des questions)</p>
-        <div className="space-y-1 max-h-48 overflow-y-auto pr-1">
-          {unites.map((u) => (
-            <label key={u.id} className="flex items-center gap-2 text-sm cursor-pointer py-1">
-              <input
-                type="checkbox"
-                checked={selected.includes(u.id)}
-                onChange={() => toggleUnite(u.id)}
-                className="accent-pigment"
-              />
-              <span className="text-encre">{u.label}</span>
-              {u.classe && <span className="text-muet text-xs">{u.classe}</span>}
-            </label>
-          ))}
-        </div>
+        {unites.length === 0 ? (
+          <p className="text-xs text-attention bg-attention-teinte rounded-lg px-3 py-2">
+            Aucune unité de cours disponible : l’IA a besoin de cartes Quazian validées, rattachées à une unité de cours (Scriptorium). Prépare le contenu avant de générer un quiz.
+          </p>
+        ) : (
+          <div className="space-y-1 max-h-48 overflow-y-auto pr-1">
+            {unites.map((u) => (
+              <label key={u.id} className="flex items-center gap-2 text-sm cursor-pointer py-1">
+                <input
+                  type="checkbox"
+                  checked={selected.includes(u.id)}
+                  onChange={() => toggleUnite(u.id)}
+                  className="accent-pigment"
+                />
+                <span className="text-encre">{u.label}</span>
+                {u.classe && <span className="text-muet text-xs">{u.classe}</span>}
+              </label>
+            ))}
+          </div>
+        )}
         {selected.length > 0 && (
           <p className="text-xs text-muet mt-1">{selected.length} unité{selected.length > 1 ? 's' : ''} sélectionnée{selected.length > 1 ? 's' : ''}</p>
         )}

@@ -1,9 +1,11 @@
+import { revalidatePath } from 'next/cache'
 import Link from 'next/link'
 import { createClient } from '@/utils/supabase/server'
 import { createAdminClient } from '@/utils/supabase/admin'
 import { classesAvecRappel } from '@/utils/rappels'
 import { calculerSante, type SanteInscription } from '@/utils/sante'
 import { tachesDeriveesDuCalendrier } from '@/utils/calendrier-a-faire'
+import { retirerExercice } from './scriptorium/evaluations/actions'
 import Tuile, { type CouleurTuile } from '@/components/Tuile'
 import { type ModuleSceau } from '@/components/Pastille'
 import EnTeteMobileProf from '@/components/EnTeteMobileProf'
@@ -12,6 +14,14 @@ import RappelsClasses from './RappelsClasses'
 import CoutApi from './CoutApi'
 
 const fmtDate = (iso: string) => formatJour(iso, { day: 'numeric', month: 'short' })
+
+// Retire (annule) un exercice « en retard » depuis le tableau de bord — le prof
+// décide de ne PAS le conserver. Délègue à l'action du plan (garde prof+gate).
+async function actionRetirerEnRetard(formData: FormData): Promise<void> {
+  'use server'
+  await retirerExercice(formData)
+  revalidatePath('/prof')
+}
 
 export default async function ProfAccueil() {
   const supabase = await createClient()
@@ -125,14 +135,20 @@ export default async function ProfAccueil() {
     if (sig > 0) parts.push(`${sig} signalement${sig > 1 ? 's' : ''} à traiter`)
     hero = { titre: 'Intégrité — petits malins', sousTitre: parts.join(' · '), ctaLabel: 'Gérer →', ctaHref: hrefIntegrite, danger: true }
     heroIntegrite = true
-  } else if (tachesCal.length > 0) {
-    const t = tachesCal[0]
-    heroTacheId = t.id
-    hero = { titre: t.label, sousTitre: [t.classeNom, fmtDate(t.echeance)].filter(Boolean).join(' · '), ctaLabel: 'Ouvrir →', ctaHref: t.href, danger: t.urgence === 'retard' }
   }
-  // « À préparer » = les autres items (l'item promu en héros est retiré du fil).
+  // Les priorités sont les choses « à faire » (jamais un « en retard ») : le retard
+  // n'est pas une action à pousser mais un arriéré à trancher (conserver / retirer),
+  // relégué à sa propre section. Le héros ne promeut donc que des tâches à faire.
+  const tachesAFaire = tachesCal.filter((t) => t.urgence !== 'retard')
+  const tachesEnRetard = tachesCal.filter((t) => t.urgence === 'retard')
+  if (!hero && tachesAFaire.length > 0) {
+    const t = tachesAFaire[0]
+    heroTacheId = t.id
+    hero = { titre: t.label, sousTitre: [t.classeNom, fmtDate(t.echeance)].filter(Boolean).join(' · '), ctaLabel: 'Ouvrir →', ctaHref: t.href }
+  }
+  // « À préparer » = les autres tâches À FAIRE (l'item promu en héros est retiré du fil).
   const integriteEnPreparer = integriteAlerte && !heroIntegrite
-  const tachesEnPreparer = tachesCal.filter((t) => t.id !== heroTacheId)
+  const tachesEnPreparer = tachesAFaire.filter((t) => t.id !== heroTacheId)
 
   const labelClasse = (n: number) => `${n} élève${n > 1 ? 's' : ''}`
 
@@ -191,14 +207,11 @@ export default async function ProfAccueil() {
                 {tachesEnPreparer.map((t) => (
                   <Link key={t.id} href={t.href} className="block bg-surface border border-bordure rounded-xl px-4 py-3 hover:shadow-sm transition-shadow">
                     <div className="flex items-center gap-3">
-                      <span className={`w-2.5 h-2.5 rounded-full ${t.urgence === 'retard' ? 'bg-retard' : 'bg-pigment'} flex-shrink-0`} aria-hidden />
+                      <span className="w-2.5 h-2.5 rounded-full bg-pigment flex-shrink-0" aria-hidden />
                       <span className="font-corps text-base text-encre flex-1">
                         {t.label}
                         {t.classeNom && <span className="text-muet"> — {t.classeNom}</span>}
                       </span>
-                      {t.urgence === 'retard' && (
-                        <span className="font-ui text-xs text-retard bg-retard-teinte px-2 py-0.5 rounded-full flex-shrink-0">en retard</span>
-                      )}
                       <span className="font-ui text-xs text-muet flex-shrink-0">{fmtDate(t.echeance)}</span>
                     </div>
                   </Link>
@@ -208,6 +221,39 @@ export default async function ProfAccueil() {
                 <CoutApi />
               </div>
             </div>
+
+            {/* En retard : arriéré à trancher, séparé des priorités. Pour chacun, le
+                prof choisit de le concevoir (le conserver) ou de le retirer du plan. */}
+            {tachesEnRetard.length > 0 && (
+              <div>
+                <h3 className="font-ui text-[11px] font-medium uppercase tracking-[0.12em] text-retard mb-2">
+                  En retard · {tachesEnRetard.length}
+                </h3>
+                <div className="space-y-2">
+                  {tachesEnRetard.map((t) => (
+                    <div key={t.id} className="bg-surface border border-bordure rounded-xl px-4 py-3">
+                      <div className="flex items-center gap-3">
+                        <span className="w-2.5 h-2.5 rounded-full bg-retard flex-shrink-0" aria-hidden />
+                        <span className="font-corps text-base text-encre flex-1">
+                          {t.label}
+                          {t.classeNom && <span className="text-muet"> — {t.classeNom}</span>}
+                        </span>
+                        <span className="font-ui text-xs text-muet flex-shrink-0">{fmtDate(t.echeance)}</span>
+                      </div>
+                      <div className="flex items-center gap-3 mt-2 pl-[22px]">
+                        <Link href={t.href} className="font-ui text-xs text-pigment hover:underline">Concevoir →</Link>
+                        {t.exerciceId && (
+                          <form action={actionRetirerEnRetard}>
+                            <input type="hidden" name="exercice_id" value={t.exerciceId} />
+                            <button type="submit" className="font-ui text-xs text-muet hover:text-retard">Retirer du plan</button>
+                          </form>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Colonne droite : santé + mes classes */}
