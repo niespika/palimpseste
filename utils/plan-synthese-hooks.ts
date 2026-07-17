@@ -145,6 +145,32 @@ export async function hookSyntheseAssignClasse(admin: SupabaseClient, parcoursId
   }
 }
 
+/**
+ * BACK-FILL — à la création/validation d'un plan, crée les synthèses des cours DÉJÀ
+ * présents dans les parcours assignés ACTIVE à la classe. Les hooks S3 (ajout de créneau /
+ * assignation de classe) ne se déclenchent qu'à CES actions : un parcours monté AVANT le
+ * plan n'aurait aucune synthèse. Le SPEC excluait tout back-fill (§9.3) en visant un
+ * démarrage propre à la rentrée, mais un plan bâti APRÈS ses parcours est le cas réel — et
+ * sans ce rattrapage la synthèse n'existe jamais (creerPlan/validerPlan ne touchaient pas
+ * les parcours). Miroir de hookSyntheseAssignClasse, côté PLAN (une classe → ses parcours)
+ * au lieu de côté parcours. Idempotent + tombstone (upsertSynthese s'abstient si une ligne
+ * existe déjà, même annulée). Gate OFF → no-op.
+ */
+export async function hookSyntheseBackfillPlan(admin: SupabaseClient, planId: string, classeId: string): Promise<void> {
+  if (!(await lireGatePlanActif(admin))) return
+  const { data: assigns } = await admin
+    .from('scriptorium_parcours_classes').select('parcours_id').eq('classe_id', classeId).eq('statut', 'active')
+  const parcoursIds = [...new Set((assigns ?? []).map((a) => a.parcours_id as string))]
+  for (const parcoursId of parcoursIds) {
+    const { data: creneaux } = await admin
+      .from('scriptorium_parcours_creneaux').select('contenu_id').eq('parcours_id', parcoursId).eq('ref_type', 'contenu')
+    const contenuIds = [...new Set((creneaux ?? []).map((c) => c.contenu_id as string).filter(Boolean))]
+    for (const contenuId of contenuIds) {
+      if (await estCoursVivant(admin, contenuId)) await upsertSynthese(admin, planId, parcoursId, contenuId)
+    }
+  }
+}
+
 // ── S5 — retraits symétriques ─────────────────────────────────────────────────
 
 /**

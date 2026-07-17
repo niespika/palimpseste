@@ -5,6 +5,8 @@
 // (défense en profondeur — l'onglet est déjà masqué gate OFF). Voir SPEC §5 (P/G/V).
 import { revalidatePath } from 'next/cache'
 import { createClient } from '@/utils/supabase/server'
+import { createAdminClient } from '@/utils/supabase/admin'
+import { hookSyntheseBackfillPlan } from '@/utils/plan-synthese-hooks'
 import { addDaysUTC, toISODate } from '@/utils/calendrier-grille'
 import { anneeScolaireDe, type SemaineEnseignement } from '@/utils/frise-enseignement'
 import { genererCadence, placerDiagnostics, type Gabarit, type ExerciceGenere, type PlanConfig } from '@/utils/plan-cadence'
@@ -132,6 +134,11 @@ export async function creerPlan(formData: FormData): Promise<{ id?: string; erro
       }
     }
   }
+  // Back-fill des synthèses : un parcours monté AVANT le plan n'a pas déclenché les hooks
+  // S3 (qui ne se posent qu'à l'ajout de créneau / assignation). Dès que le plan existe
+  // (brouillon inclus, comme S3), on crée les synthèses des cours déjà en place. Idempotent,
+  // gate-first (no-op gate OFF), best-effort : un échec ne doit pas défaire le plan créé.
+  try { await hookSyntheseBackfillPlan(createAdminClient(), planId, classeId) } catch { /* non bloquant */ }
   revalidatePath('/prof/scriptorium')
   return { id: planId }
 }
@@ -142,12 +149,20 @@ export async function validerPlan(formData: FormData): Promise<{ success?: boole
   if ('error' in gardé) return { error: gardé.error }
   const planId = (formData.get('plan_id') as string) ?? ''
   if (!RE_UUID.test(planId)) return { error: 'Plan invalide.' }
-  const { error } = await gardé.supabase
+  const { data: updated, error } = await gardé.supabase
     .from('scriptorium_plans_evaluation')
     .update({ statut: 'valide', valide_at: new Date().toISOString(), updated_at: new Date().toISOString() })
     .eq('id', planId)
     .eq('statut', 'brouillon')
+    .select('classe_id')
+    .maybeSingle()
   if (error) return { error: error.message }
+  // Filet : back-fill aussi à la validation (un parcours assigné pendant que le plan était
+  // brouillon est déjà couvert par hookSyntheseAssignClasse ; ceci rattrape les cas de bord
+  // et reste idempotent). `updated` null = plan déjà non-brouillon → rien à faire.
+  if (updated?.classe_id) {
+    try { await hookSyntheseBackfillPlan(createAdminClient(), planId, updated.classe_id as string) } catch { /* non bloquant */ }
+  }
   revalidatePath('/prof/scriptorium')
   return { success: true }
 }
