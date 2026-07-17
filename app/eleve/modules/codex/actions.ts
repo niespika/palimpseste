@@ -8,6 +8,7 @@ import { classeIdsActives } from '@/utils/acces'
 import { messageSiBloque } from '@/utils/integrite'
 import { messageSiRetoursNonLus } from '@/utils/retours-lus'
 import { libelleSession } from '@/utils/codex-libelle'
+import { titresCoursParSession } from '@/utils/codex-titre'
 
 async function verifierEleve() {
   const supabase = await createClient()
@@ -42,7 +43,7 @@ export async function chargerSyntheseActive(): Promise<SyntheseActive | null> {
   // Sessions non-brouillon visibles pour cet élève (une de ses classes, ou sans classe)
   const { data: sessions } = await admin
     .from('codex_sessions')
-    .select('id, statut, classe_id, lance_at, scriptorium_unites(label), scriptorium_contenus(titre)')
+    .select('id, statut, classe_id, lance_at, scriptorium_unites(label)')
     .in('statut', ['phase_1', 'phase_2', 'fermee'])
     .order('lance_at', { ascending: false })
   if (!sessions || sessions.length === 0) return null
@@ -61,7 +62,8 @@ export async function chargerSyntheseActive(): Promise<SyntheseActive | null> {
     .eq('eleve_id', userId)
     .maybeSingle()
 
-  const uniteLabel = libelleSession(choisie.scriptorium_unites, choisie.scriptorium_contenus)
+  const uniteLabel = libelleSession(choisie.scriptorium_unites, null)
+    || (await titresCoursParSession(admin, [choisie.id as string])).get(choisie.id as string) || ''
 
   return {
     id: choisie.id,
@@ -89,7 +91,7 @@ export async function chargerHistorique(): Promise<SynthesePassee[]> {
 
   const { data: sessions } = await admin
     .from('codex_sessions')
-    .select('id, classe_id, lance_at, scriptorium_unites(label), scriptorium_contenus(titre)')
+    .select('id, classe_id, lance_at, scriptorium_unites(label)')
     .eq('statut', 'fermee')
     .order('lance_at', { ascending: false })
 
@@ -108,11 +110,12 @@ export async function chargerHistorique(): Promise<SynthesePassee[]> {
     validMap[t.session_id] = t.statut_validation === 'valide'
     luMap[t.session_id] = !!t.synthese_lu_at
   }
+  const titresCours = await titresCoursParSession(admin, visibles.map((s) => s.id as string))
 
   return visibles.map((s) => {
     return {
       id: s.id,
-      unite_label: libelleSession(s.scriptorium_unites, s.scriptorium_contenus),
+      unite_label: libelleSession(s.scriptorium_unites, null) || titresCours.get(s.id as string) || '',
       validee: validMap[s.id] ?? false,
       lu: luMap[s.id] ?? false,
     }

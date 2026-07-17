@@ -644,7 +644,10 @@ export async function preparerSynthese(exerciceId: string): Promise<{ success?: 
   const { data: claimed, error: eClaim } = await supabase
     .from('scriptorium_exercices_planifies')
     .update({ codex_session_id: sess.id, statut: 'concu', concu_at: new Date().toISOString(), updated_at: new Date().toISOString() })
-    .eq('id', exerciceId).is('codex_session_id', null).is('supprime_at', null).select('id')
+    // `eq('statut','a_concevoir')` : garde anti-résurrection TOCTOU — une annulation
+    // concurrente (S5) pose statut='annule' SANS toucher codex_session_id/supprime_at ;
+    // sans ce prédicat, le claim ressusciterait le tombstone en 'concu'. 0 ligne → nettoyage.
+    .eq('id', exerciceId).eq('statut', 'a_concevoir').is('codex_session_id', null).is('supprime_at', null).select('id')
   if (eClaim || !claimed || claimed.length === 0) {
     // Séance brouillon vide, rien n'en dépend → on la retire (course perdue ou erreur DB).
     await supabase.from('codex_sessions').delete().eq('id', sess.id)

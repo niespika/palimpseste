@@ -7,6 +7,8 @@
 // client admin côté serveur (page synthèse élève) — ce helper reste agnostique.
 
 // Accepte les relations Supabase brutes (objet | tableau | null) sans cast à l'appel.
+// Le titre du bras CONTENU (synthèse de parcours) est résolu à part (titresCoursParSession,
+// utils/codex-titre.ts) : `contenu` peut donc être un titre déjà résolu ({titre}) ou null.
 export function libelleSession(unite: unknown, contenu: unknown): string {
   const u = (Array.isArray(unite) ? unite[0] : unite) as { label?: string } | null | undefined
   const c = (Array.isArray(contenu) ? contenu[0] : contenu) as { titre?: string } | null | undefined

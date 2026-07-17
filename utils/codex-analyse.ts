@@ -2,6 +2,19 @@ import Anthropic from '@anthropic-ai/sdk'
 import { createAdminClient } from '@/utils/supabase/admin'
 import { signalDepuisIA } from '@/utils/detecteur-integrite'
 import { signalerEnAttenteIA } from '@/utils/integrite'
+// Charge l'ancrage (unité + contenu) d'une session de façon TOLÉRANTE : la colonne
+// codex_sessions.contenu_id vient de plan_evaluation_phase_a.sql ; si absente (migration
+// non jouée) le select bi-source échoue (42703) → repli sur le bras unité seul
+// (byte-identique). Deux requêtes STATIQUES → inférence de types Supabase préservée.
+async function chargerAncrageDeSession(
+  admin: ReturnType<typeof createAdminClient>, sessionId: string,
+): Promise<{ scriptorium_unite_id: string | null; contenu_id: string | null } | null> {
+  const bi = await admin.from('codex_sessions').select('scriptorium_unite_id, contenu_id').eq('id', sessionId).single()
+  if (!bi.error && bi.data) return bi.data as { scriptorium_unite_id: string | null; contenu_id: string | null }
+  const uni = await admin.from('codex_sessions').select('scriptorium_unite_id').eq('id', sessionId).single()
+  if (uni.error || !uni.data) return null
+  return { scriptorium_unite_id: (uni.data as { scriptorium_unite_id: string | null }).scriptorium_unite_id, contenu_id: null }
+}
 
 // ── Prompt par défaut — suggestions V1 ──────────────────────────────────────
 export const PROMPT_V1_DEFAUT = `Tu assistes un professeur de philosophie. Un élève vient d'écrire DE MÉMOIRE, livre fermé et à la main, une synthèse récapitulative d'une unité de cours. Tu disposes des photos de sa V1 et du contenu exact de l'unité — cours ET textes (le Scriptorium). Codex est un outil de CONSOLIDATION, pas de notation : aucune note, aucun chiffre. Le but est d'aider l'élève à voir ses trous et à oser les exposer.
@@ -109,11 +122,7 @@ export async function analyserV1(travailId: string): Promise<void> {
       return
     }
 
-    const { data: session } = await admin
-      .from('codex_sessions')
-      .select('scriptorium_unite_id, contenu_id')
-      .eq('id', travail.session_id)
-      .single()
+    const session = await chargerAncrageDeSession(admin, travail.session_id)
 
     if (!session) {
       await admin.from('codex_travaux').update({ analyse_v1_statut: 'erreur' }).eq('id', travailId)
@@ -286,11 +295,7 @@ export async function analyserVF(travailId: string): Promise<void> {
       return
     }
 
-    const { data: session } = await admin
-      .from('codex_sessions')
-      .select('scriptorium_unite_id, contenu_id')
-      .eq('id', travail.session_id)
-      .single()
+    const session = await chargerAncrageDeSession(admin, travail.session_id)
 
     if (!session) {
       await admin.from('codex_travaux').update({ analyse_vf_statut: 'erreur' }).eq('id', travailId)

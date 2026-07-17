@@ -6,6 +6,7 @@ import { preparerSynthese } from '../scriptorium/evaluations/actions'
 import { chargerSynthesesAPreparer } from './synthese-a-preparer'
 import { FormulaireSynthese } from './FormulaireSynthese'
 import { libelleSession } from '@/utils/codex-libelle'
+import { titresCoursParSession } from '@/utils/codex-titre'
 import { formatJour } from '@/utils/fuseau'
 import Tuile from '@/components/Tuile'
 
@@ -32,13 +33,15 @@ export default async function CodexProfPage({ searchParams }: { searchParams: Pr
     lireUnitesScriptorium(),
     supabase
       .from('codex_sessions')
-      .select('id, statut, classe_id, scriptorium_unite_id, created_at, scriptorium_unites(label), scriptorium_contenus(titre), classes(nom)')
+      .select('id, statut, classe_id, scriptorium_unite_id, created_at, scriptorium_unites(label), classes(nom)')
       .order('created_at', { ascending: false }),
     supabase.from('classes').select('id, nom').order('nom'),
   ])
+  // Titres des cours (bras contenu bi-source) résolus à part, gaté (vide gate OFF).
+  const titresCours = await titresCoursParSession(supabase, (syntheses ?? []).map((s) => s.id as string))
 
-  const labelUnite = (s: { scriptorium_unites: unknown; scriptorium_contenus: unknown }) =>
-    libelleSession(s.scriptorium_unites, s.scriptorium_contenus)
+  const labelUnite = (s: { id: string; scriptorium_unites: unknown }) =>
+    libelleSession(s.scriptorium_unites, null) || titresCours.get(s.id) || ''
 
   const classesList = (classes ?? []) as { id: string; nom: string }[]
   const toutes = syntheses ?? []

@@ -3,6 +3,7 @@ import { notFound, redirect } from 'next/navigation'
 import { createClient } from '@/utils/supabase/server'
 import { createAdminClient } from '@/utils/supabase/admin'
 import { libelleSession } from '@/utils/codex-libelle'
+import { titresCoursParSession } from '@/utils/codex-titre'
 
 interface SuggestionsV1 {
   oublis?: { titre: string; detail: string }[]
@@ -28,10 +29,11 @@ export default async function RetoursV1Page({ params }: { params: Promise<{ trav
 
   const [{ data: eleve }, { data: session }] = await Promise.all([
     admin.from('profiles').select('display_name').eq('id', travail.eleve_id).single(),
-    admin.from('codex_sessions').select('id, scriptorium_unites(label), scriptorium_contenus(titre), classes(nom)').eq('id', travail.session_id).single(),
+    admin.from('codex_sessions').select('id, scriptorium_unites(label), classes(nom)').eq('id', travail.session_id).single(),
   ])
 
-  const uniteLabel = libelleSession(session?.scriptorium_unites, session?.scriptorium_contenus)
+  const uniteLabel = libelleSession(session?.scriptorium_unites, null)
+    || (await titresCoursParSession(admin, [travail.session_id as string])).get(travail.session_id as string) || ''
   const c = session?.classes as { nom: string } | { nom: string }[] | null
   const classeNom = Array.isArray(c) ? c[0]?.nom ?? null : c?.nom ?? null
 

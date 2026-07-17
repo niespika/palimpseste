@@ -3,6 +3,7 @@ import { createClient } from '@/utils/supabase/server'
 import { redirect } from 'next/navigation'
 import { FileValidation, type LigneValidation } from './FileValidation'
 import { libelleSession } from '@/utils/codex-libelle'
+import { titresCoursParSession } from '@/utils/codex-titre'
 import type { RetourCritique } from './actions'
 
 export default async function ValidationPage() {
@@ -27,8 +28,9 @@ export default async function ValidationPage() {
 
     const [{ data: profils }, { data: sessions }] = await Promise.all([
       admin.from('profiles').select('id, display_name').in('id', eleveIds),
-      admin.from('codex_sessions').select('id, classe_id, scriptorium_unites(label), scriptorium_contenus(titre), classes(nom)').in('id', sessionIds),
+      admin.from('codex_sessions').select('id, classe_id, scriptorium_unites(label), classes(nom)').in('id', sessionIds),
     ])
+    const titresCours = await titresCoursParSession(admin, sessionIds)
 
     const nomMap: Record<string, string> = {}
     for (const p of profils ?? []) nomMap[p.id] = p.display_name
@@ -37,7 +39,7 @@ export default async function ValidationPage() {
     for (const s of sessions ?? []) {
       const c = s.classes as { nom: string } | { nom: string }[] | null
       syntheseMap[s.id] = {
-        label: libelleSession(s.scriptorium_unites, s.scriptorium_contenus),
+        label: libelleSession(s.scriptorium_unites, null) || titresCours.get(s.id) || '',
         classe: Array.isArray(c) ? c[0]?.nom ?? null : c?.nom ?? null,
       }
     }

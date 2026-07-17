@@ -6,7 +6,6 @@ import { lireFuseau } from '@/utils/fuseau-serveur'
 import { resoudreDatesLivre, pairesLivresGouvernes } from './aletheia-dates'
 import { lireGatePlanActif, plansValidesCourants } from './plan-exercices'
 import { dateEffectiveSemaine, libelleTypeExercice } from './plan-cadence'
-import { libelleSession } from './codex-libelle'
 
 // Agrégation LECTURE SEULE des échéances datées des modules. Le calendrier ne
 // stocke aucune échéance : il projette ce que les modules déclarent. L'édition
@@ -97,17 +96,38 @@ export async function assemblerEvenements(opts: {
     })
   }
 
-  // 3. Synthèses Codex (classe_id TEXTUEL → résolu par nom ; date = lancement).
+  // Client admin — mutualisé par les sources 3/4/5 (RLS prof-only sur contenus/parcours).
+  const admin = createAdminClient()
+
+  // 3. Synthèses Codex (date = lancement). Requête user SANS embed contenu (byte-identique
+  //    avant lot 5, tolérante si plan_evaluation_phase_a.sql non jouée). Le titre du bras
+  //    CONTENU (synthèse de parcours) est résolu via ADMIN — scriptorium_contenus est
+  //    RLS prof-only, une jointure user (élève) rendrait null. Tolérant : colonne
+  //    contenu_id absente (migration non jouée) → aucune résolution (aucune session
+  //    bi-source n'existe alors) → libellé générique.
   const { data: sessions } = await supabase
     .from('codex_sessions')
-    .select('id, classe_id, lance_at, scriptorium_unites(label), scriptorium_contenus(titre)')
+    .select('id, classe_id, lance_at, scriptorium_unites(label)')
     .not('lance_at', 'is', null)
-  for (const s of sessions ?? []) {
+  const sessRows = sessions ?? []
+  const titreCoursParSession = new Map<string, string>()
+  if (sessRows.length) {
+    const { data: ancres } = await admin
+      .from('codex_sessions')
+      .select('id, scriptorium_contenus(titre)')
+      .in('id', sessRows.map((s) => s.id))
+      .not('contenu_id', 'is', null)
+    for (const a of ancres ?? []) {
+      const t = un<{ titre: string }>(a.scriptorium_contenus)?.titre
+      if (t) titreCoursParSession.set(a.id as string, t)
+    }
+  }
+  for (const s of sessRows) {
     const d = jourDansFuseau(s.lance_at as string, tz) // jour local (fuseau choisi)
     if (d < debut || d > fin) continue
     const nom = (s.classe_id as string | null) ?? null
     const cid = nom ? idParNom.get(nom.toLowerCase().trim()) ?? null : null
-    const libelle = libelleSession(s.scriptorium_unites, s.scriptorium_contenus) // bi-source (§6.2)
+    const libelle = un<{ label: string }>(s.scriptorium_unites)?.label ?? titreCoursParSession.get(s.id as string) ?? '' // bi-source (§6.2)
     events.push({
       source_module: 'codex',
       source_id: s.id,
@@ -125,7 +145,6 @@ export async function assemblerEvenements(opts: {
   //    échéance (LD2). scriptorium_parcours* est en RLS prof-only → lecture via `admin` ;
   //    chaque événement porte son classe_id → la page élève filtre par classe (pas de
   //    fuite). L'échéance est déjà le DIMANCHE (résolveur).
-  const admin = createAdminClient()
   const paires = await pairesLivresGouvernes(admin, classeIds)
   if (paires.length) {
     const livreIds = [...new Set(paires.map(p => p.livreId))]

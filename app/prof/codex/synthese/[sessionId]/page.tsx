@@ -4,6 +4,7 @@ import { createClient } from '@/utils/supabase/server'
 import { eleveIdsInscritsClasse, eleveIdsAvecAccesModule } from '@/utils/acces'
 import { lancerSynthese, supprimerSynthese } from '../../actions'
 import { libelleSession } from '@/utils/codex-libelle'
+import { titresCoursParSession } from '@/utils/codex-titre'
 import { TableauSynthese } from './TableauSynthese'
 
 async function actionLancer(formData: FormData): Promise<void> {
@@ -28,13 +29,14 @@ export default async function SynthesePage({
 
   const { data: session } = await supabase
     .from('codex_sessions')
-    .select('id, statut, classe_id, duree_phase_min, lance_at, phase_2_at, ferme_at, phase_courante_fin_at, scriptorium_unite_id, scriptorium_unites(label), scriptorium_contenus(titre), classes(nom)')
+    .select('id, statut, classe_id, duree_phase_min, lance_at, phase_2_at, ferme_at, phase_courante_fin_at, scriptorium_unite_id, scriptorium_unites(label), classes(nom)')
     .eq('id', sessionId)
     .single()
 
   if (!session) notFound()
 
-  const uniteLabel = libelleSession(session.scriptorium_unites, session.scriptorium_contenus)
+  const uniteLabel = libelleSession(session.scriptorium_unites, null)
+    || (await titresCoursParSession(supabase, [sessionId])).get(sessionId) || ''
 
   const classeNom = (() => {
     const c = session.classes as { nom: string } | { nom: string }[] | null

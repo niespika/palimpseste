@@ -11,6 +11,7 @@ import BanniereRetoursNonLus from '@/components/retours/BanniereRetoursNonLus'
 import { retoursNonLus } from '@/utils/retours-lus'
 import { createAdminClient } from '@/utils/supabase/admin'
 import { libelleSession } from '@/utils/codex-libelle'
+import { titresCoursParSession } from '@/utils/codex-titre'
 import { CONSIGNE_V1_DEFAUT, CONSIGNE_VF_DEFAUT } from '../../consignes'
 
 export default async function SyntheseElevePage({
@@ -29,7 +30,7 @@ export default async function SyntheseElevePage({
 
   const { data: session } = await supabase
     .from('codex_sessions')
-    .select('id, statut, contenu_id, scriptorium_unites(label)')
+    .select('id, statut, scriptorium_unites(label)')
     .eq('id', sessionId)
     .single()
 
@@ -40,12 +41,8 @@ export default async function SyntheseElevePage({
   // Titre BI-SOURCE : unité (bras historique, lisible élève) OU cours (bras parcours)
   // résolu via ADMIN — scriptorium_contenus est RLS prof-only, une jointure user rendrait
   // null (§6.2). Le client user reste l'autorité d'accès (la session a passé la RLS).
-  let uniteLabel = libelleSession(session.scriptorium_unites, null)
-  if (!uniteLabel && session.contenu_id) {
-    const { data: c } = await createAdminClient()
-      .from('scriptorium_contenus').select('titre').eq('id', session.contenu_id as string).maybeSingle()
-    uniteLabel = (c?.titre as string | undefined) ?? ''
-  }
+  const uniteLabel = libelleSession(session.scriptorium_unites, null)
+    || (await titresCoursParSession(createAdminClient(), [sessionId])).get(sessionId) || ''
 
   const etat = await chargerEtatTravail(sessionId)
   const trace = session.statut === 'fermee' ? await chargerTrace(sessionId) : null
