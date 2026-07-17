@@ -786,6 +786,28 @@ export async function purgerContenuBiblio(id: string): Promise<{ success?: boole
   if (!c) return { error: 'Contenu introuvable.' }
   if (!c.supprime_at) return { error: 'Ce contenu n’est pas dans la corbeille (mets-le d’abord en corbeille).' }
 
+  // Plan d'évaluation (§9.2-7) — indépendant du gate (des lignes créées gate ON survivent
+  // à un rollback et tireraient une 23503 brute ici) ; TOLÉRANT si la table/colonne n'existe
+  // pas encore (migration non jouée = aucune FK à heurter → on ignore l'erreur et on saute).
+  // (c) ≥1 séance Codex ancrée sur ce contenu (directement ou via une synthèse) → REFUS :
+  const { data: sessAncree, error: eSess } = await supabase
+    .from('codex_sessions').select('id').eq('contenu_id', id).limit(1).maybeSingle()
+  if (!eSess && sessAncree) {
+    return { error: 'Ce cours a des séances Codex — purge impossible. Une séance est de l’historique élève et n’est pas détachée.' }
+  }
+  if (!eSess) {
+    // (a) exercices bras `semaine` référant ce contenu (matière facultative) → détacher
+    //     (le CHECK d'ancrage interdit contenu_id null sur une synthèse, d'où le split).
+    await supabase.from('scriptorium_exercices_planifies')
+      .update({ contenu_id: null, updated_at: new Date().toISOString() })
+      .eq('contenu_id', id).eq('ancrage', 'semaine')
+    // (b) lignes synthèse de ce cours (TOUTES : a_concevoir/annule/soft-deletées — l'index
+    //     partiel ne les voit pas mais la FK RESTRICT, si ; sans session, garanti par (c)) →
+    //     DELETE dur (contenu et créneaux disparaissent : anti-résurrection sans objet).
+    await supabase.from('scriptorium_exercices_planifies')
+      .delete().eq('contenu_id', id).eq('type_exercice', 'synthese')
+  }
+
   // Fichiers Storage à nettoyer (collectés AVANT le delete qui cascade les images).
   const { data: imgs } = await supabase.from('scriptorium_contenu_images').select('fichier_ref').eq('contenu_id', id)
   // Créneaux référents d'abord (FK contenu_id ON DELETE RESTRICT).

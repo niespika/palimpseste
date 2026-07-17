@@ -1,9 +1,19 @@
 import Link from 'next/link'
+import { redirect } from 'next/navigation'
 import { createClient } from '@/utils/supabase/server'
 import { lireUnitesScriptorium } from './actions'
+import { preparerSynthese } from '../scriptorium/evaluations/actions'
+import { chargerSynthesesAPreparer } from './synthese-a-preparer'
 import { FormulaireSynthese } from './FormulaireSynthese'
 import { libelleSession } from '@/utils/codex-libelle'
+import { formatJour } from '@/utils/fuseau'
 import Tuile from '@/components/Tuile'
+
+async function actionPreparer(formData: FormData): Promise<void> {
+  'use server'
+  const res = await preparerSynthese(formData.get('exercice_id') as string)
+  if (res.sessionId) redirect(`/prof/codex/synthese/${res.sessionId}`)
+}
 
 const STATUT_BADGE: Record<string, { label: string; classe: string }> = {
   brouillon: { label: 'Brouillon', classe: 'bg-parchemin-fonce text-muet' },
@@ -32,6 +42,8 @@ export default async function CodexProfPage({ searchParams }: { searchParams: Pr
 
   const classesList = (classes ?? []) as { id: string; nom: string }[]
   const toutes = syntheses ?? []
+  // Synthèses de fin de cours planifiées (plan d'évaluation, gate). Vide gate OFF.
+  const aPreparer = await chargerSynthesesAPreparer()
 
   // Nombre de synthèses par classe (clé SANS_CLASSE pour les synthèses non rattachées)
   const nbParClasse = new Map<string, number>()
@@ -67,6 +79,31 @@ export default async function CodexProfPage({ searchParams }: { searchParams: Pr
   return (
     <div className="space-y-8">
       <FormulaireSynthese unites={unites} classes={classesList} />
+
+      {/* Synthèses de fin de cours planifiées (plan d'évaluation). Gate OFF → aPreparer
+          vide → rien ne s'affiche (page Codex inchangée). */}
+      {aPreparer.length > 0 && (
+        <div className="bg-surface border border-bordure rounded-xl p-4">
+          <h3 className="font-ui text-[11px] font-medium uppercase tracking-[0.12em] text-muet mb-2">
+            Synthèses à préparer · {aPreparer.length}
+          </h3>
+          <div className="space-y-2">
+            {aPreparer.map((s) => (
+              <form key={s.exerciceId} action={actionPreparer} className="flex items-center gap-3 rounded-lg border border-bordure px-3 py-2">
+                <input type="hidden" name="exercice_id" value={s.exerciceId} />
+                <span className="font-corps text-sm text-encre flex-1 min-w-0 truncate">
+                  {s.contenuTitre}
+                  {s.classeNom && <span className="text-muet"> — {s.classeNom}</span>}
+                </span>
+                <span className="font-ui text-xs text-muet shrink-0">
+                  {s.echeance ? formatJour(s.echeance, { day: 'numeric', month: 'short' }) : 'date à définir'}
+                </span>
+                <button type="submit" className="font-ui text-xs text-pigment hover:underline shrink-0">Préparer →</button>
+              </form>
+            ))}
+          </div>
+        </div>
+      )}
 
       {toutes.length === 0 ? (
         <p className="text-center text-muet text-sm py-8">

@@ -605,3 +605,53 @@ export async function reglerQuizAnnonce(actif: boolean): Promise<{ success?: boo
   revalidatePath('/prof/scriptorium')
   return { success: true }
 }
+
+/**
+ * S4 — « Préparer la synthèse » : crée une séance Codex BROUILLON ancrée `contenu_id`
+ * (classe = classe du plan) puis pose le lien par CLAIM-UPDATE conditionnel (statut→concu).
+ * 0 ligne (deux « Préparer » concurrents) ou erreur → supprime la séance fraîche + message
+ * (l'index uk_exercices_codex_session ne ferme que la course inverse). Tout via le client
+ * prof (RLS *_prof_all sur exercices + codex_sessions_prof_all). Le déclenchement
+ * (lancerSynthese) reste inchangé.
+ */
+export async function preparerSynthese(exerciceId: string): Promise<{ success?: boolean; sessionId?: string; error?: string }> {
+  const gardé = await verifierProfGate()
+  if ('error' in gardé) return { error: gardé.error }
+  const { supabase, userId } = gardé
+  if (!RE_UUID.test(exerciceId)) return { error: 'Exercice invalide.' }
+
+  const { data: exo } = await supabase
+    .from('scriptorium_exercices_planifies')
+    .select('id, type_exercice, statut, contenu_id, codex_session_id, plan_id')
+    .eq('id', exerciceId).is('supprime_at', null).maybeSingle()
+  if (!exo) return { error: 'Synthèse introuvable ou retirée du plan.' }
+  if (exo.type_exercice !== 'synthese') return { error: 'Cet exercice n’est pas une synthèse.' }
+  if (exo.statut === 'annule') return { error: 'Cette synthèse a été annulée.' }
+  if (exo.codex_session_id) return { error: 'Une séance Codex est déjà liée à cette synthèse.' }
+  if (!exo.contenu_id) return { error: 'Synthèse mal formée (cours manquant).' }
+
+  const { data: plan } = await supabase
+    .from('scriptorium_plans_evaluation').select('classe_id').eq('id', exo.plan_id as string).maybeSingle()
+  const classeId = plan?.classe_id as string | undefined
+  if (!classeId) return { error: 'Classe du plan introuvable.' }
+
+  const { data: sess, error: eSess } = await supabase
+    .from('codex_sessions')
+    .insert({ contenu_id: exo.contenu_id, classe_id: classeId, statut: 'brouillon', created_by: userId })
+    .select('id').single()
+  if (eSess || !sess) return { error: eSess?.message ?? 'Création de la séance Codex impossible.' }
+
+  const { data: claimed, error: eClaim } = await supabase
+    .from('scriptorium_exercices_planifies')
+    .update({ codex_session_id: sess.id, statut: 'concu', concu_at: new Date().toISOString(), updated_at: new Date().toISOString() })
+    .eq('id', exerciceId).is('codex_session_id', null).is('supprime_at', null).select('id')
+  if (eClaim || !claimed || claimed.length === 0) {
+    // Séance brouillon vide, rien n'en dépend → on la retire (course perdue ou erreur DB).
+    await supabase.from('codex_sessions').delete().eq('id', sess.id)
+    return { error: eClaim ? `Échec de la liaison : ${eClaim.message}` : 'Une séance Codex est déjà liée à cette synthèse.' }
+  }
+
+  revalidatePath('/prof/codex')
+  revalidatePath('/prof/scriptorium')
+  return { success: true, sessionId: sess.id }
+}
