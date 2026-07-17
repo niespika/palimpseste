@@ -3,9 +3,9 @@
 // = flux parcours byte-identique, zéro écriture). I/O client `admin` (RLS prof-only).
 //
 // Une synthèse = 1 exercice `type='synthese'`, ancrage='parcours', origine='synthese_auto',
-// (plan_id, parcours_id, contenu_id). Unicité vivante par uk_exercices_synthese ; le
-// TOMBSTONE (ligne annulée/soft-deletée) empêche la résurrection (l'index partiel ne voit
-// que les vivantes) → l'auto-création s'abstient si une ligne existe, quel que soit son état.
+// (plan_id, parcours_id, contenu_id). Unicité vivante par uk_exercices_synthese. Ré-établir
+// la config (réassigner la classe, remettre le cours) RESSUSCITE un tombstone (annulé/
+// soft-deleté) au lieu de le laisser mort — cf. upsertSynthese (décision PO 2026-07-17).
 
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { lireGatePlanActif } from './plan-exercices'
@@ -38,19 +38,40 @@ async function estCoursVivant(admin: SupabaseClient, contenuId: string): Promise
   return !!c && c.type === 'cours' && c.supprime_at == null
 }
 
-// Upsert idempotent + anti-résurrection : abstention si UNE ligne synthèse existe DÉJÀ
-// pour (plan, parcours, contenu) — vivante (idempotence), annulée ou soft-deletée (tombstone).
+// Upsert idempotent AVEC RÉSURRECTION (décision PO 2026-07-17, supersède l'anti-résurrection
+// du SPEC §5.4-S3) : ré-établir la config (même plan+parcours+contenu) refait vivre une
+// synthèse annulée/soft-deletée, au lieu de la laisser morte sans recours. Trois cas pour
+// une ligne existante :
+//  - VIVANTE (ni annulée ni soft-deletée) → abstention (idempotence ; ne perturbe pas une
+//    ligne 'concu' avec sa séance).
+//  - TOMBSTONE avec séance Codex encore liée (annulée-avec-session-non-lancée : la
+//    préparation du prof existe toujours) → ressuscite en 'concu' (préparation préservée).
+//  - TOMBSTONE sans séance → ressuscite en 'a_concevoir'.
+// (Une synthèse dont la séance est LANCÉE n'est jamais tombstonée — retirerSynthese la
+// laisse intacte —, donc jamais ressuscitée à tort.)
 async function upsertSynthese(admin: SupabaseClient, planId: string, parcoursId: string, contenuId: string): Promise<void> {
   const { data: existante } = await admin
     .from('scriptorium_exercices_planifies')
-    .select('id')
+    .select('id, statut, supprime_at, codex_session_id, concu_at')
     .eq('plan_id', planId)
     .eq('parcours_id', parcoursId)
     .eq('contenu_id', contenuId)
     .eq('type_exercice', 'synthese')
     .limit(1)
     .maybeSingle()
-  if (existante) return
+  if (existante) {
+    const e = existante as { id: string; statut: string; supprime_at: string | null; codex_session_id: string | null; concu_at: string | null }
+    if (e.statut !== 'annule' && e.supprime_at == null) return // vivante → idempotence
+    const now = new Date().toISOString()
+    const avecSession = e.codex_session_id != null
+    await admin.from('scriptorium_exercices_planifies').update({
+      statut: avecSession ? 'concu' : 'a_concevoir',
+      concu_at: avecSession ? (e.concu_at ?? now) : null,
+      supprime_at: null,
+      updated_at: now,
+    }).eq('id', e.id)
+    return
+  }
   await admin.from('scriptorium_exercices_planifies').insert({
     plan_id: planId,
     type_exercice: 'synthese',
@@ -153,8 +174,8 @@ export async function hookSyntheseAssignClasse(admin: SupabaseClient, parcoursId
  * démarrage propre à la rentrée, mais un plan bâti APRÈS ses parcours est le cas réel — et
  * sans ce rattrapage la synthèse n'existe jamais (creerPlan/validerPlan ne touchaient pas
  * les parcours). Miroir de hookSyntheseAssignClasse, côté PLAN (une classe → ses parcours)
- * au lieu de côté parcours. Idempotent + tombstone (upsertSynthese s'abstient si une ligne
- * existe déjà, même annulée). Gate OFF → no-op.
+ * au lieu de côté parcours. Idempotent ; ressuscite un tombstone (upsertSynthese). Gate
+ * OFF → no-op.
  */
 export async function hookSyntheseBackfillPlan(admin: SupabaseClient, planId: string, classeId: string): Promise<void> {
   if (!(await lireGatePlanActif(admin))) return
