@@ -8,6 +8,7 @@ import {
   genererCadence,
   placerDiagnostics,
   budgetSemaine,
+  fenetresPourLundis,
 } from './plan-cadence'
 import type { SemaineEnseignement } from './frise-enseignement'
 
@@ -154,4 +155,50 @@ test('budget vierge : aucune cible, jamais de dépassement', () => {
   assert.equal(b.cibleMin, null)
   assert.equal(b.cibleMax, null)
   assert.equal(b.depasse, false)
+})
+
+// ── Fenêtrage des jours de cours (§5.4 S2) ───────────────────────────────────
+// Enjeu : coursParJour tronque SILENCIEUSEMENT au-delà de 400 jours de fenêtre — une
+// fenêtre trop large ne lève pas d'erreur, elle rend une carte incomplète, et les
+// synthèses des semaines perdues replieraient à tort sur vendredi.
+
+const ecartJoursTest = (a: string, b: string) =>
+  (Date.parse(b + 'T00:00:00Z') - Date.parse(a + 'T00:00:00Z')) / 86_400_000
+
+const lundisDepuis = (debut: string, n: number) =>
+  Array.from({ length: n }, (_, i) =>
+    new Date(Date.parse(debut + 'T00:00:00Z') + i * 7 * 86_400_000).toISOString().slice(0, 10))
+
+test('fenêtres : aucun lundi → aucune fenêtre (aucun appel)', () => {
+  assert.deepEqual(fenetresPourLundis([]), [])
+})
+
+test('fenêtres : un seul lundi → une fenêtre de 7 jours (lundi→dimanche)', () => {
+  assert.deepEqual(fenetresPourLundis(['2026-09-07']), [{ debut: '2026-09-07', fin: '2026-09-13' }])
+})
+
+test('fenêtres : une année scolaire entière → UNE seule fenêtre (coût constant)', () => {
+  const f = fenetresPourLundis(lundisDepuis('2026-09-07', 40))
+  assert.equal(f.length, 1) // 280 j — une AY tient largement sous la garde des 400
+  assert.deepEqual(f[0], { debut: '2026-09-07', fin: '2027-06-13' }) // 40e lundi + 6
+})
+
+test('fenêtres : lundis non triés et dupliqués → bornée par le min et le max', () => {
+  const f = fenetresPourLundis(['2026-10-05', '2026-09-07', '2026-10-05', '2026-09-21'])
+  assert.deepEqual(f, [{ debut: '2026-09-07', fin: '2026-10-11' }])
+})
+
+test('fenêtres : étendue au-delà de la garde des 400 j → découpée, jamais tronquée', () => {
+  const f = fenetresPourLundis(['2026-09-07', '2028-06-05'])
+  assert.equal(f.length, 2)
+  assert.deepEqual(f[0], { debut: '2026-09-07', fin: '2026-09-13' })
+  assert.deepEqual(f[1], { debut: '2028-06-05', fin: '2028-06-11' })
+})
+
+test('fenêtres : chaque fenêtre reste sous la garde des 400 j, aucun lundi perdu', () => {
+  const lundis = lundisDepuis('2026-09-07', 260) // 5 ans
+  const f = fenetresPourLundis(lundis)
+  assert.ok(f.length > 1, 'cinq ans doivent être découpés')
+  for (const w of f) assert.ok(ecartJoursTest(w.debut, w.fin) + 1 < 400, `fenêtre trop large : ${w.debut}→${w.fin}`)
+  for (const l of lundis) assert.ok(f.some((w) => w.debut <= l && l <= w.fin), `lundi non couvert : ${l}`)
 })

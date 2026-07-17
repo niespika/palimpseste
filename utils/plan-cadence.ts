@@ -249,3 +249,33 @@ export function budgetSemaine(
     depasse: cible != null && max > cible[1],
   }
 }
+
+// ── Fenêtrage des jours de cours (résolution des synthèses, §5.4 S2) ──────────
+// coursParJour itère jour par jour derrière une garde de 400 tours : au-delà, il
+// TRONQUE SILENCIEUSEMENT (pas d'erreur, juste une carte incomplète — des synthèses
+// replieraient à tort sur vendredi). On borne donc les fenêtres sous ce seuil.
+const TRANCHE_JOURS = 366
+
+const ecartJours = (a: string, b: string) =>
+  (Date.parse(b + 'T00:00:00Z') - Date.parse(a + 'T00:00:00Z')) / 86_400_000
+
+/**
+ * Fenêtres [debut, fin] couvrant les SEMAINES (lundi→dimanche) des lundis donnés, en
+ * aussi peu de fenêtres que possible — UNE seule en pratique (une année scolaire tient
+ * largement sous la garde). C'est ce qui rend constant le coût de la résolution en lot :
+ * un seul appel à coursParJour au lieu d'un par synthèse. Entrée non triée / dupliquée
+ * tolérée. Ne perd jamais un lundi : tout lundi donné appartient à une fenêtre émise.
+ */
+export function fenetresPourLundis(lundis: string[]): { debut: string; fin: string }[] {
+  const tries = [...new Set(lundis)].sort()
+  const out: { debut: string; fin: string }[] = []
+  let i = 0
+  while (i < tries.length) {
+    const debut = tries[i]
+    let j = i
+    while (j + 1 < tries.length && ecartJours(debut, tries[j + 1]) + 6 < TRANCHE_JOURS) j++
+    out.push({ debut, fin: toISODate(addDaysUTC(new Date(tries[j] + 'T00:00:00Z'), 6)) })
+    i = j + 1
+  }
+  return out
+}

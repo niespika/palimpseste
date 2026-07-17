@@ -5,7 +5,7 @@ import 'server-only'
 // Gate OFF/absent → liste vide (page Codex inchangée). Lecture via client admin.
 import { createAdminClient } from '@/utils/supabase/admin'
 import { lireGatePlanActif, plansValidesCourants } from '@/utils/plan-exercices'
-import { resoudreDateSynthese } from '@/utils/plan-synthese'
+import { resoudreDatesSyntheses, type DemandeSynthese } from '@/utils/plan-synthese'
 
 export interface SyntheseAPreparer {
   exerciceId: string
@@ -40,17 +40,25 @@ export async function chargerSynthesesAPreparer(): Promise<SyntheseAPreparer[]> 
   const nomClasse = new Map((classes ?? []).map((c) => [c.id as string, c.nom as string]))
   const titreContenu = new Map((contenus ?? []).map((c) => [c.id as string, c.titre as string]))
 
-  const out: SyntheseAPreparer[] = []
-  for (const e of rows) {
+  // Dates résolues EN LOT (coût constant) : une résolution par synthèse multiplierait
+  // ~10 requêtes sérielles par ligne, sur une page sans maxDuration.
+  const demandes: DemandeSynthese[] = rows.map((e) => ({
+    cle: e.id as string,
+    parcoursId: e.parcours_id as string,
+    contenuId: e.contenu_id as string,
+    classeId: classeParPlan.get(e.plan_id as string) as string,
+  }))
+  const dates = await resoudreDatesSyntheses(admin, demandes)
+
+  const out: SyntheseAPreparer[] = rows.map((e) => {
     const classeId = classeParPlan.get(e.plan_id as string) as string
-    const echeance = await resoudreDateSynthese(admin, e.parcours_id as string, e.contenu_id as string, classeId)
-    out.push({
+    return {
       exerciceId: e.id as string,
       contenuTitre: titreContenu.get(e.contenu_id as string) ?? 'Cours',
       classeNom: nomClasse.get(classeId) ?? '',
-      echeance,
-    })
-  }
+      echeance: dates.get(e.id as string) ?? null,
+    }
+  })
   // Datées d'abord (échéance croissante), non datées en fin.
   out.sort((a, b) => (a.echeance ?? '9999-99-99').localeCompare(b.echeance ?? '9999-99-99'))
   return out
