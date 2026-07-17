@@ -21,21 +21,12 @@
 
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { addDaysUTC, toISODate } from './calendrier-grille'
-import {
-  anneeScolaireDe, friseEnseignementContinue, resoudreAncre, mapperParcours,
-  type SemestreFrise,
-} from './frise-enseignement'
-import type { Holiday } from '../types/calendrier'
+import { construireApercuAssign, type AssignParcours, type ApercuSemaine } from './parcours-apercu'
 
-// Miroir de ApercuSemaine (frise-serveur.ts), redéfini ici pour découpler le PUR du
-// serveur. dateReelle = LUNDI (YYYY-MM-DD), null si non résolue.
-export interface ApercuSemaine {
-  semaine: number
-  dateReelle: string | null
-  statut: 'definie' | 'a_definir' | 'non_planifiable'
-  semestreNom: string | null
-  pedaDansSemestre: number | null
-}
+// ApercuSemaine + l'aperçu (snapshot/frise) vivent désormais dans parcours-apercu.ts
+// (partagés avec la résolution des synthèses, plan d'évaluation). Ré-exporté ici pour
+// les consommateurs historiques (dont aletheia-dates.test.ts).
+export type { ApercuSemaine } from './parcours-apercu'
 
 export interface ResolutionDate {
   valeur: string | null              // ISO YYYY-MM-DD (dimanche/échéance) ou null (pas de date)
@@ -198,43 +189,8 @@ export function classifierMode(
 }
 
 // ── I/O (client admin en paramètre) ──────────────────────────────────────────
-
-// Aperçu frise (recalcul) pour une date de début — miroir de resoudreFrisePourDate
-// mais via `admin` (RLS) et ne renvoyant que l'ApercuSemaine[].
-async function friseApercu(admin: SupabaseClient, dateDebut: string, nbSemaines: number): Promise<ApercuSemaine[]> {
-  const y = anneeScolaireDe(dateDebut)
-  const { data: sems } = await admin.from('semesters')
-    .select('id, name, start_date, end_date, archived_at')
-    .is('archived_at', null)
-    .gte('start_date', `${y}-08-01`).lte('start_date', `${y + 1}-07-31`)
-    .order('start_date', { ascending: true })
-  const semestres = (sems ?? []) as SemestreFrise[]
-  const holidaysParSemestre = new Map<string, Holiday[]>()
-  if (semestres.length) {
-    const { data: hols } = await admin.from('holidays')
-      .select('id, semester_id, label, start_date, end_date, created_at')
-      .in('semester_id', semestres.map(s => s.id))
-    for (const h of (hols ?? []) as Holiday[]) {
-      const arr = holidaysParSemestre.get(h.semester_id) ?? []
-      arr.push(h)
-      holidaysParSemestre.set(h.semester_id, arr)
-    }
-  }
-  const friseResult = friseEnseignementContinue(semestres, holidaysParSemestre)
-  const { ancreIdx } = resoudreAncre(friseResult, dateDebut)
-  return mapperParcours(friseResult, ancreIdx, nbSemaines).map(c =>
-    c.statut === 'resolue'
-      ? { semaine: c.k, dateReelle: c.dateDebutLundi, statut: 'definie' as const, semestreNom: c.semestreNom, pedaDansSemestre: c.pedagogicalNumber }
-      : { semaine: c.k, dateReelle: null, statut: c.statut, semestreNom: null, pedaDansSemestre: null },
-  )
-}
-
-interface AssignParcours {
-  parcoursId: string
-  nbSemaines: number
-  dateDebut: string | null
-  snapshot: ApercuSemaine[] | null
-}
+// L'aperçu frise (friseApercu) + le résolveur snapshot/frise (construireApercuAssign)
+// + le type AssignParcours vivent dans parcours-apercu.ts (partagés avec les synthèses).
 
 // Créneau-livre BRUT (bornes de tranche = ordinaux de séance) + son parcours, tel que chargé
 // AVANT toute résolution de date. `id`/`semParcours` alimentent la datation ; `debut`/`fin`
@@ -341,12 +297,12 @@ async function chargerCandidats(
   if (!gouverne) return { candidats: [], gouverne: false, gouvernants }
 
   // Aperçu par parcours-classe (MÉMOÏSÉ : toutes les séances d'un livre le partagent).
+  // Cœur snapshot-prioritaire/repli-frise déporté dans parcours-apercu.ts (réutilisé
+  // par les synthèses) ; le cache local reste propre à cette résolution multi-séances.
   const apercuCache = new Map<string, { apercu: ApercuSemaine[]; source: 'snapshot' | 'frise' } | null>()
   async function apercuDe(a: AssignParcours) {
     if (apercuCache.has(a.parcoursId)) return apercuCache.get(a.parcoursId) ?? null
-    let res: { apercu: ApercuSemaine[]; source: 'snapshot' | 'frise' } | null = null
-    if (a.snapshot) res = { apercu: a.snapshot, source: 'snapshot' }
-    else if (a.dateDebut) res = { apercu: await friseApercu(admin, a.dateDebut, a.nbSemaines), source: 'frise' }
+    const res = await construireApercuAssign(admin, a)
     apercuCache.set(a.parcoursId, res)
     return res
   }
