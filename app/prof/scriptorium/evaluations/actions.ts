@@ -138,7 +138,7 @@ export async function creerPlan(formData: FormData): Promise<{ id?: string; erro
   // S3 (qui ne se posent qu'à l'ajout de créneau / assignation). Dès que le plan existe
   // (brouillon inclus, comme S3), on crée les synthèses des cours déjà en place. Idempotent,
   // gate-first (no-op gate OFF), best-effort : un échec ne doit pas défaire le plan créé.
-  try { await hookSyntheseBackfillPlan(createAdminClient(), planId, classeId) } catch { /* non bloquant */ }
+  try { await hookSyntheseBackfillPlan(createAdminClient(), planId, classeId) } catch (e) { console.error('[plan] back-fill synthèses (création) échoué', e) }
   revalidatePath('/prof/scriptorium')
   return { id: planId }
 }
@@ -161,7 +161,7 @@ export async function validerPlan(formData: FormData): Promise<{ success?: boole
   // brouillon est déjà couvert par hookSyntheseAssignClasse ; ceci rattrape les cas de bord
   // et reste idempotent). `updated` null = plan déjà non-brouillon → rien à faire.
   if (updated?.classe_id) {
-    try { await hookSyntheseBackfillPlan(createAdminClient(), planId, updated.classe_id as string) } catch { /* non bloquant */ }
+    try { await hookSyntheseBackfillPlan(createAdminClient(), planId, updated.classe_id as string) } catch (e) { console.error('[plan] back-fill synthèses (validation) échoué', e) }
   }
   revalidatePath('/prof/scriptorium')
   return { success: true }
@@ -223,12 +223,24 @@ export async function retirerExercice(formData: FormData): Promise<{ success?: b
 
   const { data: exo } = await supabase
     .from('scriptorium_exercices_planifies')
-    .select('origine, plan_id, statut')
+    .select('origine, plan_id, statut, type_exercice, codex_session_id')
     .eq('id', exerciceId)
     .is('supprime_at', null)
     .maybeSingle()
   if (!exo) return { error: 'Exercice introuvable.' }
   if (exo.statut === 'annule') return { success: true } // idempotent
+  // Garde-fou synthèse : une séance Codex LANCÉE est intangible (retirerSynthese la laisse
+  // intacte ; sinon on tombstonerait une synthèse RÉALISÉE, qui ne serait plus jamais
+  // ressuscitée à tort). Ferme la course « formulaire périmé » (à-faire rendu a_concevoir,
+  // prof prépare+lance, puis clique « Retirer »). Vérifie lance_at (état serveur), pas le
+  // statut snapshotté.
+  if (exo.type_exercice === 'synthese' && exo.codex_session_id) {
+    const { data: sess } = await supabase
+      .from('codex_sessions').select('lance_at').eq('id', exo.codex_session_id as string).maybeSingle()
+    if (sess && (sess as { lance_at?: string | null }).lance_at != null) {
+      return { error: 'Cette synthèse a déjà été lancée en classe — elle ne peut plus être retirée.' }
+    }
+  }
   const { data: plan } = await supabase
     .from('scriptorium_plans_evaluation')
     .select('statut')

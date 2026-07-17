@@ -6,8 +6,12 @@ import 'server-only'
 // s'affiche même SANS plan (bandes + invite « Créer le plan annuel »).
 //
 // Client `admin` : les tables parcours/plan sont en RLS prof-only (surface prof-only,
-// gatée). Gate OFF → null (aucune panoptique, byte-identique). Réutilise le socle mémoïsé
-// de 6a (memoSocleFrise, resoudreDatesSyntheses) → coût borné même à ~40 semaines.
+// gatée). Gate OFF → null (aucune panoptique, byte-identique). Coût borné même à ~40
+// semaines : les synthèses sont résolues EN LOT (resoudreDatesSyntheses, 6a) et la couche
+// enseignements mémoïse son aperçu par parcours (socle de frise par AY). Réserve perf
+// connue, sans effet sur l'exactitude : la couche lectures (resoudreDatesLivre par livre)
+// et la couche synthèses n'ont pas de socle PARTAGÉ — chacune recharge semesters/holidays
+// (tables minuscules). Optimisation différée : threader un unique memoSocleFrise partout.
 
 import { createAdminClient } from '@/utils/supabase/admin'
 import { lundiOnOrBefore, toISODate, addDaysUTC } from '@/utils/calendrier-grille'

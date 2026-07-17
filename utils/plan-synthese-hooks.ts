@@ -64,15 +64,18 @@ async function upsertSynthese(admin: SupabaseClient, planId: string, parcoursId:
     if (e.statut !== 'annule' && e.supprime_at == null) return // vivante → idempotence
     const now = new Date().toISOString()
     const avecSession = e.codex_session_id != null
-    await admin.from('scriptorium_exercices_planifies').update({
+    const { error } = await admin.from('scriptorium_exercices_planifies').update({
       statut: avecSession ? 'concu' : 'a_concevoir',
       concu_at: avecSession ? (e.concu_at ?? now) : null,
       supprime_at: null,
       updated_at: now,
     }).eq('id', e.id)
+    // Le client admin ne throw pas : sans ce test, un échec (typo/dérive de schéma)
+    // resterait muet et la synthèse ne réapparaîtrait jamais, sans trace.
+    if (error) console.error('[plan] résurrection synthèse échouée', { id: e.id, error: error.message })
     return
   }
-  await admin.from('scriptorium_exercices_planifies').insert({
+  const { error } = await admin.from('scriptorium_exercices_planifies').insert({
     plan_id: planId,
     type_exercice: 'synthese',
     diagnostique: false,
@@ -85,6 +88,9 @@ async function upsertSynthese(admin: SupabaseClient, planId: string, parcoursId:
     origine: 'synthese_auto',
     statut: 'a_concevoir',
   })
+  // 23505 = course sur uk_exercices_synthese (deux hooks concurrents) → attendu, ignoré
+  // (l'autre a créé la ligne). Toute autre erreur est logguée plutôt qu'avalée.
+  if (error && error.code !== '23505') console.error('[plan] création synthèse échouée', { planId, parcoursId, contenuId, error: error.message })
 }
 
 // Retrait d'une synthèse (S5) : réalisée (session Codex lancée) → INTACTE (historique).

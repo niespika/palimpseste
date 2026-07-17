@@ -15,6 +15,13 @@ function trancheLabel(t: { debut: number | null; fin: number | null } | null): s
   if (!t || (t.debut == null && t.fin == null)) return 'entier'
   return `S${t.debut ?? '?'}→S${t.fin ?? '?'}`
 }
+// Notation plage « séances X–Y » SEULEMENT si l'ensemble (déjà trié) est contigu ; sinon
+// on liste (« séances 1, 3, 5 »), pour ne pas prétendre couvrir des séances absentes.
+function libelleSeances(seances: number[]): string {
+  if (seances.length === 1) return `séance ${seances[0]}`
+  const first = seances[0], last = seances[seances.length - 1]
+  return last - first + 1 === seances.length ? `séances ${first}–${last}` : `séances ${seances.join(', ')}`
+}
 
 // ── Enseignements : contenu enseigné cette semaine (parcours) ──────────────────
 export function BandeEnseignements({ items }: { items: EnseignementLigne[] }) {
@@ -62,8 +69,7 @@ export function BandeLectures({ items }: { items: LecturePanoptique[] }) {
           <span className="text-muet flex-shrink-0" aria-hidden>📚</span>
           <span className="text-encre">{l.livreTitre}</span>
           <span className="text-muet">
-            {l.seances.length > 1 ? `séances ${l.seances[0]}–${l.seances[l.seances.length - 1]}` : `séance ${l.seances[0]}`}
-            {' '}· à lire pour le {fmtJour(l.echeance)}
+            {libelleSeances(l.seances)}{' '}· à lire pour le {fmtJour(l.echeance)}
           </span>
           {l.ambigu && <span className="text-attention" title="Plusieurs parcours datent cette lecture différemment">⚠ dates divergentes</span>}
         </div>
@@ -118,7 +124,7 @@ export function BandeauHorsFrise({ semaines }: { semaines: SemainePanoptique[] }
   if (semaines.length === 0) return null
   return (
     <div className="bg-attention-teinte rounded-lg p-3 space-y-2">
-      <p className="text-xs text-attention font-medium">Hors frise d’enseignement — {semaines.length} semaine(s) portant du travail (vacances / hors semestre)</p>
+      <p className="text-xs text-attention font-medium">Hors périmètre du plan — {semaines.length} semaine(s) portant du travail (avant l’ancre, vacances ou hors semestre)</p>
       {semaines.map((s) => (
         <div key={s.lundi} className="text-xs text-encre-douce">
           <span className="text-muet">Semaine du {fmtJour(s.lundi)} :</span>{' '}
