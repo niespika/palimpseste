@@ -8,6 +8,11 @@ import { PROMPT_CAPSTONE_DEFAUT, PROMPT_REFERENCE_DEFAUT } from '@/utils/alethei
 import type { Capstone, ReferenceChapitre } from '@/app/eleve/modules/aletheia/types'
 import { reassemblerLivre, type Signet } from './decoupe-utils'
 import { resoudreFrisePourDate } from './parcours/frise-serveur'
+import { lireGatePlanActif } from '@/utils/plan-exercices'
+import {
+  hookSyntheseAjoutCreneau, hookSyntheseAssignClasse, hookSyntheseRetraitCreneau,
+  hookSyntheseRetraitClasse, hookSyntheseSuppressionParcours,
+} from '@/utils/plan-synthese-hooks'
 
 // ── Import PDF « découpé en semaines » : seuils & garde-fous (SPEC) ──────────
 const IMPORT_MAX_PAGES = 600      // refus au-delà (décision produit)
@@ -1244,6 +1249,9 @@ export async function supprimerParcours(id: string): Promise<{ success?: boolean
     .update({ supprime_at: new Date().toISOString() })
     .eq('id', id)
   if (error) return { error: error.message }
+  // S5 — annule les synthèses non réalisées de ce parcours (toutes classes) AVANT le
+  // DELETE en masse qui court-circuite retirerCreneau/retirerParcoursClasse. Gate OFF → no-op.
+  await hookSyntheseSuppressionParcours(createAdminClient(), id)
   await supabase.from('scriptorium_parcours_creneaux').delete().eq('parcours_id', id)
   await supabase.from('scriptorium_parcours_classes').delete().eq('parcours_id', id)
   revalidatePath('/prof/scriptorium')
@@ -1310,7 +1318,12 @@ export async function ajouterCreneau(
     const ordre = (dernier?.ordre ?? 0) + 1
     const { data, error } = await supabase
       .from('scriptorium_parcours_creneaux').insert({ ...payload, ordre }).select('id').single()
-    if (!error && data) { revalidatePath('/prof/scriptorium'); return { id: data.id as string } }
+    if (!error && data) {
+      // S3 — un créneau-cours crée la synthèse pour chaque classe assignée à plan vivant.
+      // Gate OFF → no-op. Les créneaux-livre ne portent pas de synthèse.
+      if ('contenuId' in ref) await hookSyntheseAjoutCreneau(createAdminClient(), parcoursId, ref.contenuId)
+      revalidatePath('/prof/scriptorium'); return { id: data.id as string }
+    }
     if (error && error.code !== '23505') return { error: error.message } // 23505 = doublon d'ordre → retry
   }
   return { error: 'Conflit d’ordre, réessaie.' }
@@ -1319,8 +1332,20 @@ export async function ajouterCreneau(
 export async function retirerCreneau(creneauId: string): Promise<{ success?: boolean; error?: string }> {
   const { supabase } = await verifierProf()
   if (!RE_UUID.test(creneauId)) return { error: 'Identifiant invalide.' }
+  // S5 — pré-lecture (gate ON) : capturer le cours du créneau AVANT le DELETE, pour
+  // décider du retrait de sa synthèse une fois le créneau parti.
+  const admin = createAdminClient()
+  const gateOn = await lireGatePlanActif(admin)
+  let coursDuCreneau: { parcoursId: string; contenuId: string } | null = null
+  if (gateOn) {
+    const { data: cr } = await admin
+      .from('scriptorium_parcours_creneaux').select('parcours_id, ref_type, contenu_id').eq('id', creneauId).maybeSingle()
+    const r = cr as { parcours_id?: string; ref_type?: string; contenu_id?: string | null } | null
+    if (r && r.ref_type === 'contenu' && r.contenu_id) coursDuCreneau = { parcoursId: r.parcours_id as string, contenuId: r.contenu_id }
+  }
   const { error } = await supabase.from('scriptorium_parcours_creneaux').delete().eq('id', creneauId)
   if (error) return { error: error.message }
+  if (coursDuCreneau) await hookSyntheseRetraitCreneau(admin, coursDuCreneau.parcoursId, coursDuCreneau.contenuId)
   revalidatePath('/prof/scriptorium')
   return { success: true }
 }
@@ -1449,6 +1474,9 @@ export async function assignerParcoursClasse(
       { onConflict: 'parcours_id,classe_id' },
     )
   if (error) return { error: error.message }
+  // S3 — la classe fraîchement assignée reçoit la synthèse de chaque cours du parcours
+  // (si elle a un plan vivant). Gate OFF → no-op.
+  await hookSyntheseAssignClasse(createAdminClient(), parcoursId, classeId)
   revalidatePath('/prof/scriptorium')
   return { success: true, avis }
 }
@@ -1459,6 +1487,8 @@ export async function retirerParcoursClasse(parcoursId: string, classeId: string
   const { error } = await supabase
     .from('scriptorium_parcours_classes').delete().eq('parcours_id', parcoursId).eq('classe_id', classeId)
   if (error) return { error: error.message }
+  // S5 — annule les synthèses non réalisées de (parcours, classe). Gate OFF → no-op.
+  await hookSyntheseRetraitClasse(createAdminClient(), parcoursId, classeId)
   revalidatePath('/prof/scriptorium')
   return { success: true }
 }
