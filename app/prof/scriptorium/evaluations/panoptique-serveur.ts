@@ -70,6 +70,7 @@ export interface Panoptique {
   classeId: string
   classeNom: string
   plan: { id: string; gabarit: Gabarit; statut: 'brouillon' | 'valide'; anneeScolaire: number } | null
+  compterFragments: 'hebdo' | 'quinzaine' | 'non' // réglage budget (§7.3), défaut 'hebdo'
   semaines: SemainePanoptique[]
   horsFrise: SemainePanoptique[]
   aRecaler: ExercicePanoptique[] // exercices dont la semaine_lundi ne matche plus la frise (J2)
@@ -226,6 +227,7 @@ export async function chargerPanoptiqueDeClasse(classeId: string): Promise<Panop
     plan: plan
       ? { id: plan.id as string, gabarit: plan.gabarit as Gabarit, statut: plan.statut as 'brouillon' | 'valide', anneeScolaire: plan.annee_scolaire as number }
       : null,
+    compterFragments: config.compterFragments ?? 'hebdo',
     semaines: ordreLundis.map((l) => semaines.get(l)!),
     horsFrise: [...horsFrise.values()].sort((a, b) => a.lundi.localeCompare(b.lundi)),
     aRecaler,

@@ -26,9 +26,11 @@ import {
   chargerClassesAvecPlan, chargerPlanDeClasse, defautDateDebut, candidatsPropagation,
   type ClasseAvecPlan, type PlanDetail,
 } from './evaluations/plan-serveur'
+import { chargerPanoptiqueDeClasse, type Panoptique } from './evaluations/panoptique-serveur'
 import FormulaireCreerPlan from './evaluations/FormulaireCreerPlan'
 import GrillePlan from './evaluations/GrillePlan'
 import ReglageQuiz from './evaluations/ReglageQuiz'
+import { SemainesReadonly } from './evaluations/panoptique-bandes'
 
 // Les Server Actions de cette page (analyse/extraction d'un PDF déposé) héritent du
 // timeout de la page. Plafond du plan Vercel Hobby = 60 s ; large pour extraire le
@@ -188,13 +190,18 @@ export default async function ScriptoriumPage({
   const estEvaluations = vue === 'evaluations'
   let classesAvecPlan: ClasseAvecPlan[] = []
   let planDetail: PlanDetail | null = null
+  let panoptique: Panoptique | null = null
   let defautDatePlan: string | null = null
   let candidatsPropa: { classeId: string; nom: string }[] = []
   let quizAnnonce = false
   if (planEvalActif && estEvaluations) {
     classesAvecPlan = await chargerClassesAvecPlan()
     if (classeSel) {
-      planDetail = await chargerPlanDeClasse(classeSel)
+      // Détail interactif du plan (contrôles) + panoptique (bandes en lecture seule).
+      ;[planDetail, panoptique] = await Promise.all([
+        chargerPlanDeClasse(classeSel),
+        chargerPanoptiqueDeClasse(classeSel),
+      ])
       if (planDetail) candidatsPropa = await candidatsPropagation(planDetail.id)
       else defautDatePlan = await defautDateDebut()
     } else {
@@ -450,11 +457,18 @@ export default async function ScriptoriumPage({
           planDetail ? (
             <div className="space-y-3">
               <Link href="/prof/scriptorium?vue=evaluations" className="text-xs text-muet hover:text-encre">← Toutes les classes</Link>
-              <GrillePlan plan={planDetail} candidats={candidatsPropa} />
+              <GrillePlan plan={planDetail} candidats={candidatsPropa} panoptique={panoptique} />
             </div>
           ) : (
             <div className="space-y-3">
               <Link href="/prof/scriptorium?vue=evaluations" className="text-xs text-muet hover:text-encre">← Toutes les classes</Link>
+              {/* Sans plan : la panoptique s'affiche quand même (enseignements/lectures/
+                  reflets en lecture seule) au-dessus de l'invite de création (§7). */}
+              {panoptique && (panoptique.semaines.length > 0 || panoptique.horsFrise.length > 0) && (
+                <div className="space-y-2">
+                  <SemainesReadonly semaines={[...panoptique.semaines, ...panoptique.horsFrise]} />
+                </div>
+              )}
               <FormulaireCreerPlan
                 classeId={classeSel}
                 classeNom={classeNom.get(classeSel) ?? 'Classe'}

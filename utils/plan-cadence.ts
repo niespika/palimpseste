@@ -34,6 +34,14 @@ export function asPlanConfig(v: unknown): PlanConfig {
   return v && typeof v === 'object' ? (v as PlanConfig) : {}
 }
 
+// Libellé d'affichage d'une semaine d'enseignement : « {semestre} · sem. {n} » (n° LOCAL
+// au semestre, JAMAIS l'indexContinu global — §7.1). '' si la semaine n'a pas de semestre
+// résolu (hors frise). PUR, source unique (dédoublonne les copies inline de la grille et
+// de la panoptique).
+export function libelleSemainePeda(semestreNom: string | null, pedaNum: number | null): string {
+  return semestreNom && pedaNum != null ? `${semestreNom} · sem. ${pedaNum}` : ''
+}
+
 // Spécification d'un exercice à insérer (la couche I/O y ajoute plan_id, jour_prevu
 // éventuel des diagnostics, etc.). Les champs correspondent aux colonnes de
 // scriptorium_exercices_planifies contraintes par exercices_typologie_chk.

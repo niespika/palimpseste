@@ -8,10 +8,23 @@ import {
   deplacerExercice, ajouterExercice, recalerExercice, regenererPlan, propagerPlan,
 } from './actions'
 import type { PlanDetail, ExerciceLigne } from './plan-serveur'
+import type { Panoptique, SemainePanoptique } from './panoptique-serveur'
+import { libelleSemainePeda } from '@/utils/plan-cadence'
+import {
+  BandeEnseignements, BandeLectures, BandeReflets, ChipBudget, LigneSynthese, BandeauHorsFrise,
+} from './panoptique-bandes'
+import ReglageFragments from './ReglageFragments'
 
 function fmtJour(iso: string): string {
   return `${iso.slice(8, 10)}/${iso.slice(5, 7)}` // 2026-09-21 → 21/09
 }
+
+// Semaine panoptique vide (classe/semaine sans bande) — évite les gardes partout.
+const SEM_VIDE = (lundi: string): SemainePanoptique => ({
+  lundi, dimanche: lundi, semestreNom: null, pedaDansSemestre: null,
+  enseignements: [], exercices: [], lectures: [], essais: [],
+  fragmentAttendu: false, budget: { min: 0, max: 0, cibleMin: null, cibleMax: null, depasse: false }, estVacances: false,
+})
 
 const LABELS: Record<string, string> = {
   ecriture: 'Écriture',
@@ -244,16 +257,19 @@ function Propagation({ planId, candidats }: { planId: string; candidats: { class
   )
 }
 
-export default function GrillePlan({ plan, candidats }: { plan: PlanDetail; candidats: { classeId: string; nom: string }[] }) {
+export default function GrillePlan({ plan, candidats, panoptique }: { plan: PlanDetail; candidats: { classeId: string; nom: string }[]; panoptique: Panoptique | null }) {
   const router = useRouter()
   const [busy, setBusy] = useState(false)
   const [err, setErr] = useState<string | null>(null)
   const [confirmSuppr, setConfirmSuppr] = useState(false)
 
-  const semaines: Semaine[] = plan.semaines.map(s => ({
-    lundi: s.lundi,
-    label: `Lundi ${fmtJour(s.lundi)}${s.semestreNom ? ` · ${s.semestreNom} sem.${s.pedaNum}` : ''}`,
-  }))
+  const semaines: Semaine[] = plan.semaines.map(s => {
+    const peda = libelleSemainePeda(s.semestreNom, s.pedaNum)
+    return { lundi: s.lundi, label: `Lundi ${fmtJour(s.lundi)}${peda ? ` · ${peda}` : ''}` }
+  })
+
+  // Bandes panoptique par lundi (enseignements/lectures/reflets/budget/synthèses).
+  const panoParLundi = new Map<string, SemainePanoptique>((panoptique?.semaines ?? []).map(s => [s.lundi, s]))
 
   async function valider() {
     setErr(null); setBusy(true)
@@ -310,28 +326,43 @@ export default function GrillePlan({ plan, candidats }: { plan: PlanDetail; cand
       )}
       {plan.avis && !plan.avisBloquant && <p className="text-xs text-muet">{plan.avis}</p>}
 
-      <ChangerGabarit planId={plan.id} gabaritActuel={plan.gabarit} />
+      <div className="flex items-center gap-4 flex-wrap">
+        <ChangerGabarit planId={plan.id} gabaritActuel={plan.gabarit} />
+        {panoptique?.plan && <ReglageFragments planId={plan.id} valeur={panoptique.compterFragments} />}
+      </div>
 
       {plan.aRecaler.length > 0 && <Recalage exercices={plan.aRecaler} />}
+      {panoptique && panoptique.horsFrise.length > 0 && <BandeauHorsFrise semaines={panoptique.horsFrise} />}
 
       <div className="border border-bordure rounded-lg divide-y divide-bordure">
         {plan.semaines.length === 0 ? (
           <p className="text-sm text-muet p-3">Aucune semaine d’enseignement couverte — définis les semestres dans le Calendrier.</p>
         ) : (
-          plan.semaines.map((s) => (
-            <div key={s.lundi} className="p-2">
-              <div className="flex items-center justify-between text-xs mb-1">
-                <span className="text-encre-douce">Lundi {fmtJour(s.lundi)}</span>
-                <span className="text-muet">{s.semestreNom ? `${s.semestreNom} · sem. ${s.pedaNum}` : ''}</span>
-              </div>
-              {s.exercices.length > 0 && (
-                <div className="border border-bordure rounded mb-1">
-                  {s.exercices.map((e) => <LigneExercice key={e.id} e={e} semaines={semaines} />)}
+          plan.semaines.map((s) => {
+            const pano = panoParLundi.get(s.lundi) ?? SEM_VIDE(s.lundi)
+            const syntheses = pano.exercices.filter((e) => e.source === 'synthese_parcours')
+            return (
+              <div key={s.lundi} className="p-2">
+                <div className="flex items-center justify-between gap-2 text-xs mb-1">
+                  <span className="text-encre-douce">Lundi {fmtJour(s.lundi)}</span>
+                  <span className="flex items-center gap-2">
+                    <span className="text-muet">{libelleSemainePeda(s.semestreNom, s.pedaNum)}</span>
+                    {panoptique && <ChipBudget semaine={pano} />}
+                  </span>
                 </div>
-              )}
-              <AjoutSemaine planId={plan.id} lundi={s.lundi} />
-            </div>
-          ))
+                <BandeEnseignements items={pano.enseignements} />
+                {(s.exercices.length > 0 || syntheses.length > 0) && (
+                  <div className="border border-bordure rounded mb-1">
+                    {s.exercices.map((e) => <LigneExercice key={e.id} e={e} semaines={semaines} />)}
+                    {syntheses.map((e) => <LigneSynthese key={e.id} exo={e} />)}
+                  </div>
+                )}
+                <BandeLectures items={pano.lectures} />
+                <BandeReflets essais={pano.essais} fragmentAttendu={pano.fragmentAttendu} />
+                <AjoutSemaine planId={plan.id} lundi={s.lundi} />
+              </div>
+            )
+          })
         )}
       </div>
 

@@ -617,6 +617,32 @@ export async function reglerQuizAnnonce(actif: boolean): Promise<{ success?: boo
 }
 
 /**
+ * Réglage prof du budget (§7.3) : la part FRAGMENTS entre-t-elle dans le budget temps de
+ * la panoptique, et à quelle cadence ? 'hebdo' (défaut = la réalité du module, chip souvent
+ * saturée en HLP), 'quinzaine' (une échéance sur deux — pour le prof qui alterne réellement),
+ * 'non'. Fusionné dans le jsonb `config` du plan (préserve `cycle`).
+ */
+export async function reglerCompterFragments(
+  planId: string, valeur: 'hebdo' | 'quinzaine' | 'non',
+): Promise<{ success?: boolean; error?: string }> {
+  const gardé = await verifierProfGate()
+  if ('error' in gardé) return { error: gardé.error }
+  if (!RE_UUID.test(planId)) return { error: 'Plan invalide.' }
+  if (valeur !== 'hebdo' && valeur !== 'quinzaine' && valeur !== 'non') return { error: 'Valeur invalide.' }
+  const { data: plan } = await gardé.supabase
+    .from('scriptorium_plans_evaluation').select('config').eq('id', planId).is('supprime_at', null).maybeSingle()
+  if (!plan) return { error: 'Plan introuvable.' }
+  const config = asPlanConfig(plan.config)
+  const { error } = await gardé.supabase
+    .from('scriptorium_plans_evaluation')
+    .update({ config: { ...config, compterFragments: valeur }, updated_at: new Date().toISOString() })
+    .eq('id', planId)
+  if (error) return { error: error.message }
+  revalidatePath('/prof/scriptorium')
+  return { success: true }
+}
+
+/**
  * S4 — « Préparer la synthèse » : crée une séance Codex BROUILLON ancrée `contenu_id`
  * (classe = classe du plan) puis pose le lien par CLAIM-UPDATE conditionnel (statut→concu).
  * 0 ligne (deux « Préparer » concurrents) ou erreur → supprime la séance fraîche + message
