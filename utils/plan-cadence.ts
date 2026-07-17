@@ -27,6 +27,13 @@ export interface PlanConfig {
   compterFragments?: 'hebdo' | 'quinzaine' | 'non'   // budget (§7.3), défaut 'hebdo'
 }
 
+// Cast sûr du jsonb `config` d'un plan vers PlanConfig (objet → tel quel, sinon {}).
+// PUR — partagé par les actions du plan et le loader panoptique (qui n'ont pas le droit
+// de s'importer l'un l'autre : actions.ts est 'use server', tout export y devient action).
+export function asPlanConfig(v: unknown): PlanConfig {
+  return v && typeof v === 'object' ? (v as PlanConfig) : {}
+}
+
 // Spécification d'un exercice à insérer (la couche I/O y ajoute plan_id, jour_prevu
 // éventuel des diagnostics, etc.). Les champs correspondent aux colonnes de
 // scriptorium_exercices_planifies contraintes par exercices_typologie_chk.

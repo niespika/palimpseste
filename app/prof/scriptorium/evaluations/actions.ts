@@ -9,7 +9,7 @@ import { createAdminClient } from '@/utils/supabase/admin'
 import { hookSyntheseBackfillPlan } from '@/utils/plan-synthese-hooks'
 import { addDaysUTC, toISODate } from '@/utils/calendrier-grille'
 import { anneeScolaireDe, type SemaineEnseignement } from '@/utils/frise-enseignement'
-import { genererCadence, placerDiagnostics, type Gabarit, type ExerciceGenere, type PlanConfig } from '@/utils/plan-cadence'
+import { genererCadence, placerDiagnostics, asPlanConfig, type Gabarit, type ExerciceGenere, type PlanConfig } from '@/utils/plan-cadence'
 import { coursParJour } from '@/utils/calendrier-cours'
 import { lireGatePlanActif } from '@/utils/plan-exercices'
 import { jourDansFuseau } from '@/utils/fuseau'
@@ -305,11 +305,6 @@ async function rowsPourPlan(
     return { rows: [], error: e instanceof Error ? e.message : 'Génération impossible.' }
   }
   return { rows: await construireRows(generes, planId, classeId, couvDepuis) }
-}
-
-// Cast sûr du jsonb config du plan vers PlanConfig (objet ou null).
-function asPlanConfig(v: unknown): PlanConfig {
-  return v && typeof v === 'object' ? (v as PlanConfig) : {}
 }
 
 /**
