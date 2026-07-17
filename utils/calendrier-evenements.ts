@@ -6,6 +6,7 @@ import { lireFuseau } from '@/utils/fuseau-serveur'
 import { resoudreDatesLivre, pairesLivresGouvernes } from './aletheia-dates'
 import { lireGatePlanActif, plansValidesCourants } from './plan-exercices'
 import { resoudreDatesSyntheses } from './plan-synthese'
+import { titresCoursParSession } from './codex-titre'
 import { dateEffectiveSemaine, libelleTypeExercice } from './plan-cadence'
 
 // Agrégation LECTURE SEULE des échéances datées des modules. Le calendrier ne
@@ -102,27 +103,17 @@ export async function assemblerEvenements(opts: {
 
   // 3. Synthèses Codex (date = lancement). Requête user SANS embed contenu (byte-identique
   //    avant lot 5, tolérante si plan_evaluation_phase_a.sql non jouée). Le titre du bras
-  //    CONTENU (synthèse de parcours) est résolu via ADMIN — scriptorium_contenus est
-  //    RLS prof-only, une jointure user (élève) rendrait null. Tolérant : colonne
-  //    contenu_id absente (migration non jouée) → aucune résolution (aucune session
-  //    bi-source n'existe alors) → libellé générique.
+  //    CONTENU (synthèse de parcours) est résolu à part par le helper GATÉ PARTAGÉ
+  //    `titresCoursParSession` (comme TOUTES les autres surfaces Codex, prof + élève) :
+  //    gate OFF → map vide, aucune requête (gate-first) → byte-identique pré-lot-5 par
+  //    construction ; via ADMIN car scriptorium_contenus est RLS prof-only. Gate ON, le
+  //    titre est résolu de la même façon que sur le module Codex de l'élève (cohérent).
   const { data: sessions } = await supabase
     .from('codex_sessions')
     .select('id, classe_id, lance_at, scriptorium_unites(label)')
     .not('lance_at', 'is', null)
   const sessRows = sessions ?? []
-  const titreCoursParSession = new Map<string, string>()
-  if (sessRows.length) {
-    const { data: ancres } = await admin
-      .from('codex_sessions')
-      .select('id, scriptorium_contenus(titre)')
-      .in('id', sessRows.map((s) => s.id))
-      .not('contenu_id', 'is', null)
-    for (const a of ancres ?? []) {
-      const t = un<{ titre: string }>(a.scriptorium_contenus)?.titre
-      if (t) titreCoursParSession.set(a.id as string, t)
-    }
-  }
+  const titreCoursParSession = await titresCoursParSession(admin, sessRows.map((s) => s.id as string))
   for (const s of sessRows) {
     const d = jourDansFuseau(s.lance_at as string, tz) // jour local (fuseau choisi)
     if (d < debut || d > fin) continue
