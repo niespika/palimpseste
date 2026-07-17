@@ -5,6 +5,7 @@ import { jourDansFuseau } from '@/utils/fuseau'
 import { lireFuseau } from '@/utils/fuseau-serveur'
 import { resoudreDatesLivre, pairesLivresGouvernes } from './aletheia-dates'
 import { lireGatePlanActif, plansValidesCourants } from './plan-exercices'
+import { resoudreDatesSyntheses } from './plan-synthese'
 import { dateEffectiveSemaine, libelleTypeExercice } from './plan-cadence'
 
 // Agrégation LECTURE SEULE des échéances datées des modules. Le calendrier ne
@@ -234,6 +235,53 @@ export async function assemblerEvenements(opts: {
           label: `${libelle} · ${e.statut === 'concu' ? 'conçu' : 'à concevoir'}`,
           is_editable: false,
         })
+      }
+
+      // Synthèses de fin de cours (ancrage 'parcours', §5.4) : date NON stockée,
+      // résolue EN LOT (coût constant). Reste à l'intérieur de la garde
+      // `surface === 'prof' && gate` : c'est la SEULE barrière anti-fuite (aucune
+      // policy RLS élève sur les tables du plan — tout passe par `admin`).
+      const { data: synths } = await admin
+        .from('scriptorium_exercices_planifies')
+        .select('id, plan_id, module, statut, parcours_id, contenu_id, codex_session_id')
+        .in('plan_id', planIds)
+        .eq('ancrage', 'parcours')
+        .in('statut', ['a_concevoir', 'concu'])
+        .is('supprime_at', null)
+      const synthRows = synths ?? []
+      if (synthRows.length > 0) {
+        // Dédup E3, bras symétrique du quiz : une synthèse déjà LANCÉE est émise par la
+        // source 3 (rétrospective, sur `lance_at`) → ne pas l'émettre ici, sinon elle
+        // paraît DEUX fois, à deux dates différentes (date résolue vs jour de lancement).
+        const sessionIds = [...new Set(synthRows.map((s) => s.codex_session_id as string | null).filter((x): x is string => !!x))]
+        const sessionsLancees = new Set<string>()
+        if (sessionIds.length > 0) {
+          const { data: cs } = await admin.from('codex_sessions').select('id, lance_at').in('id', sessionIds).not('lance_at', 'is', null)
+          for (const c of cs ?? []) sessionsLancees.add(c.id as string)
+        }
+        const restantes = synthRows.filter((s) => !(s.codex_session_id && sessionsLancees.has(s.codex_session_id as string)))
+        const dates = await resoudreDatesSyntheses(admin, restantes.map((s) => ({
+          cle: s.id as string,
+          parcoursId: s.parcours_id as string,
+          contenuId: s.contenu_id as string,
+          classeId: classeParPlan.get(s.plan_id as string) as string,
+        })))
+        for (const s of restantes) {
+          const d = dates.get(s.id as string) ?? null
+          if (d == null) continue // S6 — non datable ⇒ aucun événement
+          if (d < debut || d > fin) continue
+          const cid = classeParPlan.get(s.plan_id as string) ?? null
+          events.push({
+            source_module: s.module as SourceModule,
+            source_id: s.id as string,
+            classe_id: cid,
+            classe_nom: cid ? nomParId.get(cid) ?? null : null,
+            kind: 'prevu',
+            date: d,
+            label: `Synthèse · ${s.statut === 'concu' ? 'préparée' : 'à préparer'}`,
+            is_editable: false,
+          })
+        }
       }
     }
   }

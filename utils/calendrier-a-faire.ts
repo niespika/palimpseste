@@ -5,6 +5,7 @@ import { addDaysUTC, toISODate } from '@/utils/calendrier-grille'
 import { jourDansFuseau } from '@/utils/fuseau'
 import { lireFuseau } from '@/utils/fuseau-serveur'
 import { lireGatePlanActif, plansValidesCourants } from '@/utils/plan-exercices'
+import { resoudreDatesSyntheses } from '@/utils/plan-synthese'
 import { dateEffectiveSemaine, libelleTypeExercice } from '@/utils/plan-cadence'
 
 // Dérivation calendrier → « à faire » (famille 2 de la spec §7) : une échéance
@@ -20,6 +21,8 @@ export interface TacheCalendrier {
   href: string
   urgence?: 'retard'    // échéance passée (exercice à concevoir) → traité à part (dashboard)
   exerciceId?: string   // exercice planifié sous-jacent (pour l'action « retirer » en retard)
+  ctaLabel?: string     // libellé du lien d'action (défaut « Concevoir → ») : une synthèse
+                        // se PRÉPARE (S4), elle ne se conçoit pas
 }
 
 function un<T>(x: T | T[] | null | undefined): T | null {
@@ -104,6 +107,47 @@ export async function tachesDeriveesDuCalendrier(joursAvant = 10): Promise<Tache
           exerciceId: e.id as string,
           ...(enRetard ? { urgence: 'retard' as const } : {}),
         })
+      }
+
+      // Synthèses de fin de cours (ancrage 'parcours', §5.4). Leur date n'est PAS
+      // stockée : elle est résolue EN LOT (coût constant — une résolution par ligne
+      // saturerait cette page, qui n'a pas de maxDuration). L'action est « préparer »
+      // (S4), pas « concevoir » : elle mène à l'entrée dédiée de /prof/codex.
+      const { data: synths } = await admin
+        .from('scriptorium_exercices_planifies')
+        .select('id, plan_id, parcours_id, contenu_id')
+        .in('plan_id', plans.map((p) => p.id))
+        .eq('ancrage', 'parcours')
+        .eq('statut', 'a_concevoir')
+        .is('supprime_at', null)
+      const synthRows = synths ?? []
+      if (synthRows.length > 0) {
+        const dates = await resoudreDatesSyntheses(admin, synthRows.map((s) => ({
+          cle: s.id as string,
+          parcoursId: s.parcours_id as string,
+          contenuId: s.contenu_id as string,
+          classeId: classeParPlan.get(s.plan_id as string) as string,
+        })))
+        for (const s of synthRows) {
+          const echeance = dates.get(s.id as string) ?? null
+          // S6 — non datable ⇒ ni tâche ni événement. Garde INDISPENSABLE avant toute
+          // comparaison : en JS `null < today` ET `null > fin` valent false, donc une
+          // synthèse non résolue franchirait la fenêtre et s'afficherait sans échéance.
+          if (echeance == null) continue
+          const enRetard = echeance < today
+          if (!enRetard && echeance > fin) continue
+          const classeId = classeParPlan.get(s.plan_id as string)
+          taches.push({
+            id: `exo-${s.id}`,
+            label: enRetard ? 'Synthèse en retard' : 'Synthèse à préparer',
+            echeance,
+            classeNom: classeId ? nomParClasse.get(classeId) ?? null : null,
+            href: '/prof/codex',
+            exerciceId: s.id as string,
+            ctaLabel: 'Préparer →',
+            ...(enRetard ? { urgence: 'retard' as const } : {}),
+          })
+        }
       }
     }
   }

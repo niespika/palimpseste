@@ -241,7 +241,7 @@ export default async function ProfAccueil() {
                         <span className="font-ui text-xs text-muet flex-shrink-0">{fmtDate(t.echeance)}</span>
                       </div>
                       <div className="flex items-center gap-3 mt-2 pl-[22px]">
-                        <Link href={t.href} className="font-ui text-xs text-pigment hover:underline">Concevoir →</Link>
+                        <Link href={t.href} className="font-ui text-xs text-pigment hover:underline">{t.ctaLabel ?? 'Concevoir →'}</Link>
                         {t.exerciceId && (
                           <form action={actionRetirerEnRetard}>
                             <input type="hidden" name="exercice_id" value={t.exerciceId} />

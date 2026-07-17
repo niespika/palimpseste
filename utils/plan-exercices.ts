@@ -32,16 +32,21 @@ export interface PlanValideCourant { id: string; classeId: string; anneeScolaire
  * s'aligner dessus : sinon un plan d'une année révolue resté 'valide' (le soft-delete
  * P4 n'impose aucune exclusivité inter-AY) engendrerait des tâches/événements
  * orphelins pointant vers un plan inatteignable depuis ?vue=evaluations&classe=X.
- * Lecture admin (tables du plan en RLS prof-only).
+ *
+ * Classes ARCHIVÉES exclues (`classes.statut='active'`) : le prédicat est écrit ici, une
+ * fois, plutôt qu'hérité implicitement par chaque dérivation (E2/A1/A2, cas #16) — sans
+ * lui, une classe archivée continue d'engendrer des tâches et des « en retard »
+ * perpétuels au rollover d'année. Lecture admin (tables du plan en RLS prof-only).
  */
 export async function plansValidesCourants(admin: SupabaseClient): Promise<PlanValideCourant[]> {
   const { data } = await admin
     .from('scriptorium_plans_evaluation')
-    .select('id, classe_id, annee_scolaire')
+    .select('id, classe_id, annee_scolaire, classes!inner(statut)')
     .eq('statut', 'valide')
+    .eq('classes.statut', 'active')
     .is('supprime_at', null)
   const parClasse = new Map<string, PlanValideCourant>()
-  for (const p of (data ?? []) as { id: string; classe_id: string; annee_scolaire: number }[]) {
+  for (const p of (data ?? []) as unknown as { id: string; classe_id: string; annee_scolaire: number }[]) {
     const cur: PlanValideCourant = { id: p.id, classeId: p.classe_id, anneeScolaire: p.annee_scolaire }
     const prev = parClasse.get(cur.classeId)
     if (!prev || cur.anneeScolaire > prev.anneeScolaire) parClasse.set(cur.classeId, cur)
