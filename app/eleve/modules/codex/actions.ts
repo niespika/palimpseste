@@ -7,6 +7,7 @@ import { createAdminClient } from '@/utils/supabase/admin'
 import { classeIdsActives } from '@/utils/acces'
 import { messageSiBloque } from '@/utils/integrite'
 import { messageSiRetoursNonLus } from '@/utils/retours-lus'
+import { libelleSession } from '@/utils/codex-libelle'
 
 async function verifierEleve() {
   const supabase = await createClient()
@@ -41,7 +42,7 @@ export async function chargerSyntheseActive(): Promise<SyntheseActive | null> {
   // Sessions non-brouillon visibles pour cet élève (une de ses classes, ou sans classe)
   const { data: sessions } = await admin
     .from('codex_sessions')
-    .select('id, statut, classe_id, lance_at, scriptorium_unites(label)')
+    .select('id, statut, classe_id, lance_at, scriptorium_unites(label), scriptorium_contenus(titre)')
     .in('statut', ['phase_1', 'phase_2', 'fermee'])
     .order('lance_at', { ascending: false })
   if (!sessions || sessions.length === 0) return null
@@ -60,8 +61,7 @@ export async function chargerSyntheseActive(): Promise<SyntheseActive | null> {
     .eq('eleve_id', userId)
     .maybeSingle()
 
-  const u = choisie.scriptorium_unites as { label: string } | { label: string }[] | null
-  const uniteLabel = Array.isArray(u) ? u[0]?.label ?? '' : u?.label ?? ''
+  const uniteLabel = libelleSession(choisie.scriptorium_unites, choisie.scriptorium_contenus)
 
   return {
     id: choisie.id,
@@ -89,7 +89,7 @@ export async function chargerHistorique(): Promise<SynthesePassee[]> {
 
   const { data: sessions } = await admin
     .from('codex_sessions')
-    .select('id, classe_id, lance_at, scriptorium_unites(label)')
+    .select('id, classe_id, lance_at, scriptorium_unites(label), scriptorium_contenus(titre)')
     .eq('statut', 'fermee')
     .order('lance_at', { ascending: false })
 
@@ -110,10 +110,9 @@ export async function chargerHistorique(): Promise<SynthesePassee[]> {
   }
 
   return visibles.map((s) => {
-    const u = s.scriptorium_unites as { label: string } | { label: string }[] | null
     return {
       id: s.id,
-      unite_label: Array.isArray(u) ? u[0]?.label ?? '' : u?.label ?? '',
+      unite_label: libelleSession(s.scriptorium_unites, s.scriptorium_contenus),
       validee: validMap[s.id] ?? false,
       lu: luMap[s.id] ?? false,
     }

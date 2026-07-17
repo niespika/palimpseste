@@ -44,11 +44,28 @@ interface V1JSON {
   ortho: string | null
 }
 
-async function chargerCoursUnite(admin: ReturnType<typeof createAdminClient>, uniteId: string): Promise<string> {
+// Ancrage textuel d'une session Codex — BI-SOURCE (§4.4/§6.2). Bras `contenu_id` :
+// une synthèse de parcours ancrée à un cours de bibliothèque (scriptorium_contenus).
+// Bras historique `scriptorium_unite_id` : documents de l'unité. L'arc est exclusif
+// (CHECK codex_sessions_source_chk) → exactement un des deux est non-null.
+async function chargerAncrageSession(
+  admin: ReturnType<typeof createAdminClient>,
+  session: { scriptorium_unite_id: string | null; contenu_id: string | null },
+): Promise<string> {
+  if (session.contenu_id) {
+    const { data: c } = await admin
+      .from('scriptorium_contenus')
+      .select('titre, auteur, type, texte_extrait')
+      .eq('id', session.contenu_id)
+      .maybeSingle()
+    if (!c || !c.texte_extrait) return '(Aucun contenu textuel pour ce cours.)'
+    return `## ${c.titre}${c.auteur ? ` (${c.auteur})` : ''} [${c.type}]\n\n${c.texte_extrait}`
+  }
+
   const { data: docs } = await admin
     .from('scriptorium_documents')
     .select('titre, auteur, type, texte_extrait')
-    .eq('unite_id', uniteId)
+    .eq('unite_id', session.scriptorium_unite_id as string)
     .not('texte_extrait', 'is', null)
     .order('created_at', { ascending: true })
 
@@ -94,7 +111,7 @@ export async function analyserV1(travailId: string): Promise<void> {
 
     const { data: session } = await admin
       .from('codex_sessions')
-      .select('scriptorium_unite_id')
+      .select('scriptorium_unite_id, contenu_id')
       .eq('id', travail.session_id)
       .single()
 
@@ -113,7 +130,7 @@ export async function analyserV1(travailId: string): Promise<void> {
     const plafondErreurs = params?.plafond_erreurs ?? 5
     const seuilOcr = params?.seuil_ocr_ortho ?? 0.6
 
-    const cours = await chargerCoursUnite(admin, session.scriptorium_unite_id)
+    const cours = await chargerAncrageSession(admin, session)
     const imagesBase64 = await telechargerPhotos(admin, photos)
 
     if (imagesBase64.length === 0) {
@@ -271,7 +288,7 @@ export async function analyserVF(travailId: string): Promise<void> {
 
     const { data: session } = await admin
       .from('codex_sessions')
-      .select('scriptorium_unite_id')
+      .select('scriptorium_unite_id, contenu_id')
       .eq('id', travail.session_id)
       .single()
 
@@ -286,7 +303,7 @@ export async function analyserVF(travailId: string): Promise<void> {
       .eq('id', 1)
       .single()
 
-    const cours = await chargerCoursUnite(admin, session.scriptorium_unite_id)
+    const cours = await chargerAncrageSession(admin, session)
     const imagesBase64 = await telechargerPhotos(admin, photos)
 
     if (imagesBase64.length === 0) {

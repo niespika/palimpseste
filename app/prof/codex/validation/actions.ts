@@ -133,8 +133,11 @@ export async function validerTravail(travailId: string) {
       if (anterieure?.flashcard_id) {
         flashcardId = anterieure.flashcard_id
         recurrente = true
-      } else if (session) {
-        // Nouvelle carte personnelle (sûre : correction validée, adossée au cours)
+      } else if (session?.scriptorium_unite_id) {
+        // Nouvelle carte personnelle (sûre : correction validée, adossée au cours).
+        // Garde D13 : une session ancrée `contenu_id` (bras parcours) N'A PAS d'unité →
+        // pas de carte FSRS (sa FK scriptorium_unite_id serait null) ; l'erreur reste
+        // tracée dans codex_erreurs. Recâblage flashcards→contenus = chantier de suivi.
         const recto = tag ? `${tag} — la bonne version ?` : 'Point à retenir'
         const { data: carte } = await admin
           .from('quazian_flashcards')

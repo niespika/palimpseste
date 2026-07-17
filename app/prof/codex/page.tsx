@@ -2,6 +2,7 @@ import Link from 'next/link'
 import { createClient } from '@/utils/supabase/server'
 import { lireUnitesScriptorium } from './actions'
 import { FormulaireSynthese } from './FormulaireSynthese'
+import { libelleSession } from '@/utils/codex-libelle'
 import Tuile from '@/components/Tuile'
 
 const STATUT_BADGE: Record<string, { label: string; classe: string }> = {
@@ -21,15 +22,13 @@ export default async function CodexProfPage({ searchParams }: { searchParams: Pr
     lireUnitesScriptorium(),
     supabase
       .from('codex_sessions')
-      .select('id, statut, classe_id, scriptorium_unite_id, created_at, scriptorium_unites(label), classes(nom)')
+      .select('id, statut, classe_id, scriptorium_unite_id, created_at, scriptorium_unites(label), scriptorium_contenus(titre), classes(nom)')
       .order('created_at', { ascending: false }),
     supabase.from('classes').select('id, nom').order('nom'),
   ])
 
-  const labelUnite = (s: { scriptorium_unites: unknown }) => {
-    const u = s.scriptorium_unites as { label: string } | { label: string }[] | null
-    return Array.isArray(u) ? u[0]?.label ?? '' : u?.label ?? ''
-  }
+  const labelUnite = (s: { scriptorium_unites: unknown; scriptorium_contenus: unknown }) =>
+    libelleSession(s.scriptorium_unites, s.scriptorium_contenus)
 
   const classesList = (classes ?? []) as { id: string; nom: string }[]
   const toutes = syntheses ?? []

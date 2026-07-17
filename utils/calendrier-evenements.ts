@@ -6,6 +6,7 @@ import { lireFuseau } from '@/utils/fuseau-serveur'
 import { resoudreDatesLivre, pairesLivresGouvernes } from './aletheia-dates'
 import { lireGatePlanActif, plansValidesCourants } from './plan-exercices'
 import { dateEffectiveSemaine, libelleTypeExercice } from './plan-cadence'
+import { libelleSession } from './codex-libelle'
 
 // Agrégation LECTURE SEULE des échéances datées des modules. Le calendrier ne
 // stocke aucune échéance : il projette ce que les modules déclarent. L'édition
@@ -99,14 +100,14 @@ export async function assemblerEvenements(opts: {
   // 3. Synthèses Codex (classe_id TEXTUEL → résolu par nom ; date = lancement).
   const { data: sessions } = await supabase
     .from('codex_sessions')
-    .select('id, classe_id, lance_at, scriptorium_unites(label)')
+    .select('id, classe_id, lance_at, scriptorium_unites(label), scriptorium_contenus(titre)')
     .not('lance_at', 'is', null)
   for (const s of sessions ?? []) {
     const d = jourDansFuseau(s.lance_at as string, tz) // jour local (fuseau choisi)
     if (d < debut || d > fin) continue
     const nom = (s.classe_id as string | null) ?? null
     const cid = nom ? idParNom.get(nom.toLowerCase().trim()) ?? null : null
-    const unite = un<{ label: string }>(s.scriptorium_unites)?.label
+    const libelle = libelleSession(s.scriptorium_unites, s.scriptorium_contenus) // bi-source (§6.2)
     events.push({
       source_module: 'codex',
       source_id: s.id,
@@ -114,7 +115,7 @@ export async function assemblerEvenements(opts: {
       classe_nom: nom,
       kind: 'jalon',
       date: d,
-      label: unite ? `Codex — ${unite}` : 'Codex (synthèse)',
+      label: libelle ? `Codex — ${libelle}` : 'Codex (synthèse)',
       is_editable: false,
     })
   }
