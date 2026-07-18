@@ -4,7 +4,7 @@ import { createAdminClient } from '@/utils/supabase/admin'
 import { jourDansFuseau } from '@/utils/fuseau'
 import { lireFuseau } from '@/utils/fuseau-serveur'
 import { resoudreDatesLivre, pairesLivresGouvernes } from './aletheia-dates'
-import { lireGatePlanActif, plansValidesCourants } from './plan-exercices'
+import { lireGatePlanActif, plansValidesCourants, lireQuizAnnonceDefaut } from './plan-exercices'
 import { resoudreDatesSyntheses } from './plan-synthese'
 import { titresCoursParSession } from './codex-titre'
 import { dateEffectiveSemaine, libelleTypeExercice } from './plan-cadence'
@@ -179,26 +179,38 @@ export async function assemblerEvenements(opts: {
     for (const evs of parPaire) events.push(...evs)
   }
 
-  // 5. Plan d'évaluation — exercices PROSPECTIFS (créneaux planifiés pas encore
-  //    réalisés). Surface PROF uniquement (l'exposition élève est différée au lot 7,
-  //    invariants §8bis) : `surface` défaut 'eleve' → fail-closed. Gate
-  //    `plan_evaluation_actif` : OFF/absent → bloc inerte. Labels GÉNÉRIQUES par type
-  //    (jamais titre/note — anti-spoiler). Ancrage 'semaine' seulement (la synthèse
-  //    ancrée parcours est résolue au lot 5). Dédup E3 : un exercice lié à un objet
-  //    déjà LANCÉ est émis par sa source réelle (2/3), pas ici. Lecture via `admin`
-  //    (tables du plan en RLS prof-only) ; classe_id du plan toujours non-null.
-  if (surface === 'prof' && (await lireGatePlanActif(admin))) {
-    // Plan COURANT par classe (max AY) — même référentiel que la grille panoptique.
+  // 5. Plan d'évaluation — exercices PROSPECTIFS (créneaux planifiés pas encore réalisés).
+  //    DEUX surfaces (E1/E2, §8bis) : `surface` défaut 'eleve' → fail-closed. Gate
+  //    `plan_evaluation_actif` : OFF/absent → bloc inerte (les deux surfaces byte-identiques).
+  //    Labels GÉNÉRIQUES par type (jamais titre/note — anti-spoiler §8bis-2). Ancrage
+  //    'semaine' (exercices figés) + 'parcours' (synthèses, PROF only). Dédup E3 : un objet
+  //    déjà LANCÉ est émis par sa source réelle (2/3), pas ici. Lecture via `admin` (tables
+  //    du plan en RLS prof-only — la garde applicative est la SEULE barrière anti-fuite).
+  //    RÉTENTION ÉLÈVE GÉNÉRALISÉE (§8bis-3) : sous 'eleve', un exercice `concu` non lancé
+  //    n'est JAMAIS émis, à l'UNIQUE exception d'un quiz `concu` quand `quiz_annonce_defaut`
+  //    (D5) — synthèses retenues (→ rétrospectif au lancement), `a_concevoir` prof-only,
+  //    exercices sans canal de module (écriture/lecture/examen) jamais exposés.
+  if (await lireGatePlanActif(admin)) {
+    const estEleve = surface === 'eleve'
+    // Plan COURANT par classe (max AY, valide, classe active). Élève : scope aux classes du
+    // spectateur (défense en profondeur — la page filtre déjà, mais on n'émet rien de plus).
     const plansValides = await plansValidesCourants(admin)
-    const planIds = plansValides.map((p) => p.id)
-    const classeParPlan = new Map<string, string>(plansValides.map((p) => [p.id, p.classeId]))
+    const plansScope = estEleve && classeIds
+      ? plansValides.filter((p) => classeIds.includes(p.classeId))
+      : plansValides
+    const planIds = plansScope.map((p) => p.id)
+    const classeParPlan = new Map<string, string>(plansScope.map((p) => [p.id, p.classeId]))
+    // Dérogation « annoncé » (D5) : côté élève seulement, un quiz concu non lancé devient
+    // exposable si le réglage est ON. Côté prof, non pertinent (tout est émis).
+    const quizAnnonce = estEleve ? await lireQuizAnnonceDefaut(admin) : true
     if (planIds.length > 0) {
       const { data: exos } = await admin
         .from('scriptorium_exercices_planifies')
         .select('id, plan_id, type_exercice, diagnostique, lieu, module, statut, semaine_lundi, jour_prevu, quiz_id')
         .in('plan_id', planIds)
         .eq('ancrage', 'semaine')
-        .in('statut', ['a_concevoir', 'concu'])
+        // Élève : `concu` seulement (a_concevoir est prof-only). Prof : les deux.
+        .in('statut', estEleve ? ['concu'] : ['a_concevoir', 'concu'])
         .is('supprime_at', null)
       const exosRows = exos ?? []
       // Dédup E3 : un quiz déjà lancé apparaît via la source 2 → on n'émet pas son
@@ -211,9 +223,15 @@ export async function assemblerEvenements(opts: {
       }
       for (const e of exosRows) {
         if (e.quiz_id && quizLances.has(e.quiz_id as string)) continue
+        const cid = classeParPlan.get(e.plan_id as string) ?? null
+        // Rétention élève (§8bis-3) : SEUL un quiz annoncé survit ; jamais d'événement
+        // sans classe (§8bis-4).
+        if (estEleve) {
+          if (!cid) continue
+          if (e.type_exercice !== 'quiz' || !quizAnnonce) continue
+        }
         const d = dateEffectiveSemaine(e.semaine_lundi as string, (e.jour_prevu as string | null) ?? null, e.lieu as 'classe' | 'maison')
         if (d < debut || d > fin) continue
-        const cid = classeParPlan.get(e.plan_id as string) ?? null
         const base = libelleTypeExercice(e.type_exercice as string, e.diagnostique as boolean)
         const libelle = base.charAt(0).toUpperCase() + base.slice(1)
         events.push({
@@ -223,55 +241,57 @@ export async function assemblerEvenements(opts: {
           classe_nom: cid ? nomParId.get(cid) ?? null : null,
           kind: 'prevu',
           date: d,
-          label: `${libelle} · ${e.statut === 'concu' ? 'conçu' : 'à concevoir'}`,
+          // Élève : libellé générique nu (« Quiz »). Prof : + statut de conception.
+          label: estEleve ? libelle : `${libelle} · ${e.statut === 'concu' ? 'conçu' : 'à concevoir'}`,
           is_editable: false,
         })
       }
 
-      // Synthèses de fin de cours (ancrage 'parcours', §5.4) : date NON stockée,
-      // résolue EN LOT (coût constant). Reste à l'intérieur de la garde
-      // `surface === 'prof' && gate` : c'est la SEULE barrière anti-fuite (aucune
-      // policy RLS élève sur les tables du plan — tout passe par `admin`).
-      const { data: synths } = await admin
-        .from('scriptorium_exercices_planifies')
-        .select('id, plan_id, module, statut, parcours_id, contenu_id, codex_session_id')
-        .in('plan_id', planIds)
-        .eq('ancrage', 'parcours')
-        .in('statut', ['a_concevoir', 'concu'])
-        .is('supprime_at', null)
-      const synthRows = synths ?? []
-      if (synthRows.length > 0) {
-        // Dédup E3, bras symétrique du quiz : une synthèse déjà LANCÉE est émise par la
-        // source 3 (rétrospective, sur `lance_at`) → ne pas l'émettre ici, sinon elle
-        // paraît DEUX fois, à deux dates différentes (date résolue vs jour de lancement).
-        const sessionIds = [...new Set(synthRows.map((s) => s.codex_session_id as string | null).filter((x): x is string => !!x))]
-        const sessionsLancees = new Set<string>()
-        if (sessionIds.length > 0) {
-          const { data: cs } = await admin.from('codex_sessions').select('id, lance_at').in('id', sessionIds).not('lance_at', 'is', null)
-          for (const c of cs ?? []) sessionsLancees.add(c.id as string)
-        }
-        const restantes = synthRows.filter((s) => !(s.codex_session_id && sessionsLancees.has(s.codex_session_id as string)))
-        const dates = await resoudreDatesSyntheses(admin, restantes.map((s) => ({
-          cle: s.id as string,
-          parcoursId: s.parcours_id as string,
-          contenuId: s.contenu_id as string,
-          classeId: classeParPlan.get(s.plan_id as string) as string,
-        })))
-        for (const s of restantes) {
-          const d = dates.get(s.id as string) ?? null
-          if (d == null) continue // S6 — non datable ⇒ aucun événement
-          if (d < debut || d > fin) continue
-          const cid = classeParPlan.get(s.plan_id as string) ?? null
-          events.push({
-            source_module: s.module as SourceModule,
-            source_id: s.id as string,
-            classe_id: cid,
-            classe_nom: cid ? nomParId.get(cid) ?? null : null,
-            kind: 'prevu',
-            date: d,
-            label: `Synthèse · ${s.statut === 'concu' ? 'préparée' : 'à préparer'}`,
-            is_editable: false,
-          })
+      // Synthèses de fin de cours (ancrage 'parcours', §5.4) : PROF UNIQUEMENT. Côté élève,
+      // rétention §8bis-3 (symétrie §8bis-6) : une synthèse `concu` non lancée n'est jamais
+      // émise ; une fois lancée, c'est la source 3 rétrospective qui l'expose (E3). Date NON
+      // stockée → résolue EN LOT (coût constant) ; ce coût ne s'engage donc pas côté élève.
+      if (!estEleve) {
+        const { data: synths } = await admin
+          .from('scriptorium_exercices_planifies')
+          .select('id, plan_id, module, statut, parcours_id, contenu_id, codex_session_id')
+          .in('plan_id', planIds)
+          .eq('ancrage', 'parcours')
+          .in('statut', ['a_concevoir', 'concu'])
+          .is('supprime_at', null)
+        const synthRows = synths ?? []
+        if (synthRows.length > 0) {
+          // Dédup E3, bras symétrique du quiz : une synthèse déjà LANCÉE est émise par la
+          // source 3 (rétrospective, sur `lance_at`) → pas ici (sinon double, deux dates).
+          const sessionIds = [...new Set(synthRows.map((s) => s.codex_session_id as string | null).filter((x): x is string => !!x))]
+          const sessionsLancees = new Set<string>()
+          if (sessionIds.length > 0) {
+            const { data: cs } = await admin.from('codex_sessions').select('id, lance_at').in('id', sessionIds).not('lance_at', 'is', null)
+            for (const c of cs ?? []) sessionsLancees.add(c.id as string)
+          }
+          const restantes = synthRows.filter((s) => !(s.codex_session_id && sessionsLancees.has(s.codex_session_id as string)))
+          const dates = await resoudreDatesSyntheses(admin, restantes.map((s) => ({
+            cle: s.id as string,
+            parcoursId: s.parcours_id as string,
+            contenuId: s.contenu_id as string,
+            classeId: classeParPlan.get(s.plan_id as string) as string,
+          })))
+          for (const s of restantes) {
+            const d = dates.get(s.id as string) ?? null
+            if (d == null) continue // S6 — non datable ⇒ aucun événement
+            if (d < debut || d > fin) continue
+            const cid = classeParPlan.get(s.plan_id as string) ?? null
+            events.push({
+              source_module: s.module as SourceModule,
+              source_id: s.id as string,
+              classe_id: cid,
+              classe_nom: cid ? nomParId.get(cid) ?? null : null,
+              kind: 'prevu',
+              date: d,
+              label: `Synthèse · ${s.statut === 'concu' ? 'préparée' : 'à préparer'}`,
+              is_editable: false,
+            })
+          }
         }
       }
     }
