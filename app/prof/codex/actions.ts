@@ -36,6 +36,9 @@ export async function creerSynthese(formData: FormData) {
   const dureeMin = parseInt(formData.get('duree_phase_min') as string) || 25
 
   if (!uniteId) return { error: 'Choisis une unité du Scriptorium.' }
+  // D2 : une synthèse a TOUJOURS une classe (le formulaire rend déjà le champ requis ;
+  // cette garde tarit la source de sessions sans classe — cf. fix P0 calendrier).
+  if (!classeId) return { error: 'Choisis une classe pour cette synthèse.' }
 
   const { error } = await supabase.from('codex_sessions').insert({
     scriptorium_unite_id: uniteId,

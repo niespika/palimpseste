@@ -34,6 +34,10 @@ function un<T>(x: T | T[] | null | undefined): T | null {
   return x ?? null
 }
 
+// Format uuid (même patron que RE_UUID d'app/prof/scriptorium/actions.ts) — dupliqué
+// ici plutôt qu'importé : ce module `utils` ne doit pas dépendre d'un fichier 'use server'.
+const RE_UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+
 /**
  * Collecte les événements datés de tous les modules dans la fenêtre [debut, fin].
  * Bornes incluses (comparaison lexicale sur YYYY-MM-DD).
@@ -49,7 +53,8 @@ export async function assemblerEvenements(opts: {
   const events: CalendarEvent[] = []
   const tz = await lireFuseau() // jour local des instants (lance_at) dans le fuseau choisi
 
-  // Map des classes (pour résoudre les classe_id textuels de Codex + les noms).
+  // Map des classes. idParNom n'est plus qu'un repli défensif : depuis la migration
+  // lot1, codex_sessions.classe_id (comme quazian_quizzes.classe_id) est un uuid FK.
   const { data: classes } = await supabase.from('classes').select('id, nom')
   const idParNom = new Map<string, string>()
   const nomParId = new Map<string, string>()
@@ -101,13 +106,12 @@ export async function assemblerEvenements(opts: {
   // Client admin — mutualisé par les sources 3/4/5 (RLS prof-only sur contenus/parcours).
   const admin = createAdminClient()
 
-  // 3. Synthèses Codex (date = lancement). Requête user SANS embed contenu (byte-identique
-  //    avant lot 5, tolérante si plan_evaluation_phase_a.sql non jouée). Le titre du bras
-  //    CONTENU (synthèse de parcours) est résolu à part par le helper GATÉ PARTAGÉ
-  //    `titresCoursParSession` (comme TOUTES les autres surfaces Codex, prof + élève) :
-  //    gate OFF → map vide, aucune requête (gate-first) → byte-identique pré-lot-5 par
-  //    construction ; via ADMIN car scriptorium_contenus est RLS prof-only. Gate ON, le
-  //    titre est résolu de la même façon que sur le module Codex de l'élève (cohérent).
+  // 3. Synthèses Codex (date = lancement ; classe_id = uuid FK classes depuis lot1). Deux
+  //    résolutions séparées, gatées, byte-identiques pré-chantier : (a) le TITRE du bras
+  //    CONTENU (synthèse de parcours) via le helper GATÉ PARTAGÉ `titresCoursParSession`
+  //    (comme les autres surfaces Codex ; gate OFF → map vide, aucune requête ; via admin
+  //    car scriptorium_contenus est RLS prof-only) ; (b) la CLASSE par FORMAT uuid (fix
+  //    lot 0), jamais par nom (idParNom renverrait null → fuite historique).
   const { data: sessions } = await supabase
     .from('codex_sessions')
     .select('id, classe_id, lance_at, scriptorium_unites(label)')
@@ -117,14 +121,26 @@ export async function assemblerEvenements(opts: {
   for (const s of sessRows) {
     const d = jourDansFuseau(s.lance_at as string, tz) // jour local (fuseau choisi)
     if (d < debut || d > fin) continue
-    const nom = (s.classe_id as string | null) ?? null
-    const cid = nom ? idParNom.get(nom.toLowerCase().trim()) ?? null : null
-    const libelle = un<{ label: string }>(s.scriptorium_unites)?.label ?? titreCoursParSession.get(s.id as string) ?? '' // bi-source (§6.2)
+    // classe_id est un uuid (FK classes) depuis la migration lot1 : le prendre tel quel
+    // s'il en a le format. Un uuid d'une classe inconnue du spectateur ne passe pas le
+    // filtre classeIds.has() de la page élève → fail-closed par construction. Surtout PAS
+    // un test idParNom (indexé par NOM, jamais un uuid) : il renverrait toujours null →
+    // l'événement passerait le filtre `classe_id === null` de la page élève (fuite historique).
+    const brut = (s.classe_id as string | null) ?? null
+    const cid = brut && RE_UUID.test(brut) ? brut : brut ? idParNom.get(brut.toLowerCase().trim()) ?? null : null
+    // Fail-closed ciblé du résidu sans classe (Q13 : une synthèse a toujours une classe ;
+    // une session à classe_id null est un résidu, pas un événement général légitime) : ne
+    // rien émettre côté élève (classeIds défini). Côté prof (classeIds absent) elle reste
+    // visible/auditable, sans nom d'uuid brut.
+    if (cid === null && classeIds !== undefined) continue
+    // Titre bi-source (§6.2) : label d'unité (legacy) OU titre du cours (bras contenu, via
+    // le helper gaté titresCoursParSession).
+    const libelle = un<{ label: string }>(s.scriptorium_unites)?.label ?? titreCoursParSession.get(s.id as string) ?? ''
     events.push({
       source_module: 'codex',
       source_id: s.id,
       classe_id: cid,
-      classe_nom: nom,
+      classe_nom: cid ? nomParId.get(cid) ?? null : null,
       kind: 'jalon',
       date: d,
       label: libelle ? `Codex — ${libelle}` : 'Codex (synthèse)',
