@@ -31,6 +31,9 @@ import FormulaireCreerPlan from './evaluations/FormulaireCreerPlan'
 import GrillePlan from './evaluations/GrillePlan'
 import ReglageQuiz from './evaluations/ReglageQuiz'
 import { SemainesReadonly } from './evaluations/panoptique-bandes'
+import { chargerListeModeles, chargerModeleDetail, type ModeleListItem, type ModeleDetail } from './evaluations/modele-serveur'
+import FormulaireCreerModele from './evaluations/FormulaireCreerModele'
+import GrilleModele from './evaluations/GrilleModele'
 
 // Les Server Actions de cette page (analyse/extraction d'un PDF déposé) héritent du
 // timeout de la page. Plafond du plan Vercel Hobby = 60 s ; large pour extraire le
@@ -61,7 +64,7 @@ interface UniteRow {
 export default async function ScriptoriumPage({
   searchParams,
 }: {
-  searchParams: Promise<{ vue?: string; classe?: string; unite?: string; semaine?: string; edition?: string; parcours?: string }>
+  searchParams: Promise<{ vue?: string; classe?: string; unite?: string; semaine?: string; edition?: string; parcours?: string; modele?: string }>
 }) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
@@ -69,7 +72,7 @@ export default async function ScriptoriumPage({
   const { data: profile } = await supabase.from('profiles').select('role').eq('id', user.id).single()
   if (profile?.role !== 'prof') notFound()
 
-  const { vue = 'classes', classe: classeSel, unite: uniteSel, semaine, edition, parcours: parcoursSel } = await searchParams
+  const { vue = 'classes', classe: classeSel, unite: uniteSel, semaine, edition, parcours: parcoursSel, modele: modeleSel } = await searchParams
 
   const [{ data: classes }, { data: unites }, { data: docsBruts }, { data: liensUnite }, planEvalActif] = await Promise.all([
     supabase.from('classes').select('id, nom').order('nom'),
@@ -209,6 +212,19 @@ export default async function ScriptoriumPage({
     }
   }
 
+  // ── Modèles de plan (class-agnostiques, GATÉ) — Lot C ─────────────────────────
+  const estModeles = vue === 'modeles'
+  let listeModeles: ModeleListItem[] = []
+  let modeleDetail: ModeleDetail | null = null
+  let defautDateModele: string | null = null
+  if (planEvalActif && estModeles) {
+    if (modeleSel) {
+      modeleDetail = await chargerModeleDetail(modeleSel)
+    } else {
+      ;[listeModeles, defautDateModele] = await Promise.all([chargerListeModeles(), defautDateDebut()])
+    }
+  }
+
   // Parcours (vivants) assignés à la classe sélectionnée + nb de parcours par classe
   // (compteur des tuiles) — vue « Par classe ».
   let parcoursDeClasse: ParcoursDeClasse[] = []
@@ -282,15 +298,20 @@ export default async function ScriptoriumPage({
   // sont désormais portés par la Barre 2 de l'en-tête (pilotés par `?vue=`).
   return (
     <div className="space-y-6 pb-8">
-      {/* ── Entrée gatée du plan d'évaluation (pas d'onglet de nav gate OFF) ──── */}
+      {/* ── Entrée gatée du plan d'évaluation (pas d'onglet de nav gate OFF) ────
+          Deux facettes : « Modèles » (class-agnostiques, authoring — Lot C) et
+          « Par classe » (instances). */}
       {planEvalActif && (
         <div className="flex items-center justify-between gap-2 bg-surface border border-bordure rounded-xl px-4 py-2">
-          <span className="text-sm text-encre-douce">📋 Plans d’évaluation par classe</span>
-          {estEvaluations ? (
-            <Link href="/prof/scriptorium?vue=classes" className="text-xs text-muet hover:text-encre">← Retour au Scriptorium</Link>
-          ) : (
-            <Link href="/prof/scriptorium?vue=evaluations" className="text-xs bg-bouton text-surface px-3 py-1.5 rounded hover:opacity-90">Ouvrir</Link>
-          )}
+          <span className="text-sm text-encre-douce">📋 Plan d’évaluation</span>
+          <div className="flex items-center gap-3 text-xs">
+            <Link href="/prof/scriptorium?vue=modeles" className={estModeles ? 'text-encre font-medium' : 'text-muet hover:text-encre'}>Modèles</Link>
+            <span className="text-bordure">·</span>
+            <Link href="/prof/scriptorium?vue=evaluations" className={estEvaluations ? 'text-encre font-medium' : 'text-muet hover:text-encre'}>Par classe</Link>
+            {(estModeles || estEvaluations) && (
+              <Link href="/prof/scriptorium?vue=classes" className="text-muet hover:text-encre ml-1">← Scriptorium</Link>
+            )}
+          </div>
         </div>
       )}
 
@@ -495,6 +516,39 @@ export default async function ScriptoriumPage({
                 />
               ))}
             </div>
+          </div>
+        )
+      )}
+
+      {/* ── Modèles de plan (class-agnostiques, GATÉ) — Lot C ─────────────────── */}
+      {planEvalActif && estModeles && (
+        modeleSel ? (
+          modeleDetail ? (
+            <div className="space-y-3">
+              <Link href="/prof/scriptorium?vue=modeles" className="text-xs text-muet hover:text-encre">← Tous les modèles</Link>
+              <GrilleModele modele={modeleDetail} />
+            </div>
+          ) : (
+            <p className="text-sm text-muet">Modèle introuvable. <Link href="/prof/scriptorium?vue=modeles" className="underline">Retour à la liste</Link>.</p>
+          )
+        ) : (
+          <div className="space-y-3">
+            <FormulaireCreerModele defautDate={defautDateModele} />
+            {listeModeles.length === 0 ? (
+              <p className="text-sm text-muet">Aucun modèle pour l’instant. Crée-en un ci-dessus (sans choisir de classe) ; l’assignation aux classes viendra ensuite.</p>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                {listeModeles.map(m => (
+                  <Tuile
+                    key={m.id}
+                    nom={m.titre}
+                    sousTitre={`${m.anneeScolaire}–${m.anneeScolaire + 1} · ${m.gabarit.toUpperCase()} · ${m.nbExercices} exo${m.nbExercices > 1 ? 's' : ''} · ${m.statut === 'pret' ? 'prêt' : 'brouillon'}`}
+                    href={`/prof/scriptorium?vue=modeles&modele=${m.id}`}
+                    couleur={m.statut === 'pret' ? 'vert' : 'neutre'}
+                  />
+                ))}
+              </div>
+            )}
           </div>
         )
       )}

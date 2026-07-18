@@ -109,6 +109,54 @@ export async function tachesDeriveesDuCalendrier(joursAvant = 10): Promise<Tache
         })
       }
 
+      // « Caler le jour » (§5.6) : un exercice EN CLASSE CONÇU mais sans jour_prevu
+      // engendre une tâche de PLANIFICATION (deep-link vers la grille du plan, où vit le
+      // sélecteur de jour ; disparaît dès que le jour est posé). Deux restrictions :
+      //  - `statut='concu'` SEULEMENT : tant qu'un exercice est `a_concevoir`, sa tâche
+      //    « à concevoir » est le rappel actionnable (caler le jour d'un exercice non
+      //    encore conçu est prématuré et dédoublerait le « en retard »). Couvre bien le
+      //    cas de la décision ① (un quiz CONÇU mais jamais calé n'a plus de tâche
+      //    « à concevoir » → sinon aucun rappel).
+      //  - quiz DÉJÀ LANCÉ exclu : « réalisé » est DÉRIVÉ de lance_at, jamais un statut
+      //    (SPEC §Statuts) ; sans ça un quiz surprise lancé sans jour posé nourrirait un
+      //    « à caler » perpétuel + un « Retirer » destructif (élèves déjà passés). Même
+      //    exclusion que l'émission calendrier (dédup E3, calendrier-evenements.ts).
+      const { data: aCaler } = await admin
+        .from('scriptorium_exercices_planifies')
+        .select('id, plan_id, type_exercice, diagnostique, semaine_lundi, quiz_id')
+        .in('plan_id', plans.map((p) => p.id))
+        .eq('ancrage', 'semaine')
+        .eq('lieu', 'classe')
+        .eq('statut', 'concu')
+        .is('jour_prevu', null)
+        .is('supprime_at', null)
+      const aCalerRows = aCaler ?? []
+      const quizIds = aCalerRows.map((e) => e.quiz_id as string | null).filter((q): q is string => !!q)
+      const quizLances = new Set<string>()
+      if (quizIds.length > 0) {
+        const { data: qz } = await admin.from('quazian_quizzes').select('id, lance_at').in('id', quizIds)
+        for (const q of qz ?? []) if ((q as { lance_at?: string | null }).lance_at != null) quizLances.add(q.id as string)
+      }
+      for (const e of aCalerRows) {
+        if (e.quiz_id && quizLances.has(e.quiz_id as string)) continue // réalisé (lancé) → jamais
+        // jour_prevu null + classe ⇒ échéance = lundi de la semaine (dateEffectiveSemaine).
+        const echeance = dateEffectiveSemaine(e.semaine_lundi as string, null, 'classe')
+        const enRetard = echeance < today
+        if (!enRetard && echeance > fin) continue
+        const classeId = classeParPlan.get(e.plan_id as string)
+        const libelle = libelleTypeExercice(e.type_exercice as string, e.diagnostique as boolean)
+        taches.push({
+          id: `jour-${e.id}`, // DISTINCT de `exo-${e.id}`
+          label: `${enRetard ? 'Jour à caler (en retard)' : 'Caler le jour'} — ${libelle}`,
+          echeance,
+          classeNom: classeId ? nomParClasse.get(classeId) ?? null : null,
+          href: `/prof/scriptorium?vue=evaluations&classe=${classeId}`,
+          exerciceId: e.id as string,
+          ctaLabel: 'Caler le jour →',
+          ...(enRetard ? { urgence: 'retard' as const } : {}),
+        })
+      }
+
       // Synthèses de fin de cours (ancrage 'parcours', §5.4). Leur date n'est PAS
       // stockée : elle est résolue EN LOT (coût constant — une résolution par ligne
       // saturerait cette page, qui n'a pas de maxDuration). L'action est « préparer »

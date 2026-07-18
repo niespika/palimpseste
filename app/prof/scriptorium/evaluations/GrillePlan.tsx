@@ -5,7 +5,7 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import {
   validerPlan, supprimerPlan, marquerConcu, retirerExercice,
-  deplacerExercice, ajouterExercice, recalerExercice, regenererPlan, propagerPlan,
+  deplacerExercice, ajouterExercice, recalerExercice, regenererPlan, propagerPlan, fixerJourExercice,
 } from './actions'
 import type { PlanDetail, ExerciceLigne } from './plan-serveur'
 import type { Panoptique, SemainePanoptique } from './panoptique-serveur'
@@ -32,6 +32,7 @@ const LABELS: Record<string, string> = {
   synthese: 'Synthèse',
   quiz: 'Quiz',
   examen_livre: 'Examen sur le livre',
+  bac_blanc: 'Bac Blanc',
   fragment: 'Fragment',
   essai: 'Essai',
 }
@@ -40,17 +41,21 @@ function libelleType(e: ExerciceLigne): string {
   return e.diagnostique ? `${base} diagnostique` : base
 }
 
-// Types manuellement ajoutables (semaine-ancrés).
+// Palette d'ajout manuel : clés = ID DE PALETTE (cf. TYPE_MANUEL côté serveur), pas
+// type_exercice (écriture/lecture existent en 2 variantes). Groupées maison / classe.
 const TYPES_AJOUT = [
   { v: 'ecriture', label: 'Écriture (maison)' },
   { v: 'lecture', label: 'Lecture (maison)' },
   { v: 'quiz', label: 'Quiz (classe)' },
   { v: 'examen_livre', label: 'Examen sur le livre (classe)' },
+  { v: 'ecriture_diag', label: 'Écriture diagnostique (classe)' },
+  { v: 'lecture_diag', label: 'Lecture diagnostique (classe)' },
+  { v: 'bac_blanc', label: 'Bac Blanc (classe)' },
 ]
 
 interface Semaine { lundi: string; label: string }
 
-function LigneExercice({ e, semaines }: { e: ExerciceLigne; semaines: Semaine[] }) {
+function LigneExercice({ e, semaines, joursCours }: { e: ExerciceLigne; semaines: Semaine[]; joursCours: { iso: string; label: string }[] }) {
   const router = useRouter()
   const [busy, setBusy] = useState(false)
   const [err, setErr] = useState<string | null>(null)
@@ -79,30 +84,51 @@ function LigneExercice({ e, semaines }: { e: ExerciceLigne; semaines: Semaine[] 
         <span className="text-muet">· à rendre {fmtJour(e.echeance)}{e.lieu === 'classe' && !e.jourPrevu ? ' (jour à caler)' : ''}</span>
         {badge}
       </div>
-      {e.statut !== 'concu' && (
-        <div className="flex items-center gap-2 flex-shrink-0">
+      <div className="flex items-center gap-2 flex-shrink-0">
+        {/* Caler le jour (§5.6) : exercices EN CLASSE, quel que soit le statut de conception
+            (un quiz déjà « conçu » mais non calé le mérite aussi). */}
+        {e.lieu === 'classe' && (joursCours.length > 0 || e.jourPrevu) && (
           <select
-            defaultValue=""
+            value={e.jourPrevu ?? ''}
             disabled={busy}
-            onChange={(ev) => { const v = ev.target.value; if (v) { ev.target.value = ''; act(deplacerExercice, { semaine_lundi: v }) } }}
-            className="text-xs border border-bordure rounded bg-surface px-1 py-0.5 max-w-[8rem]"
-            aria-label="Déplacer vers une semaine"
+            onChange={(ev) => act(fixerJourExercice, { jour: ev.target.value })}
+            className="text-xs border border-bordure rounded bg-surface px-1 py-0.5 max-w-[9rem]"
+            aria-label="Caler le jour de l’exercice en classe"
           >
-            <option value="">Déplacer…</option>
-            {semaines.filter(s => s.lundi !== e.semaineLundi).map(s => <option key={s.lundi} value={s.lundi}>{s.label}</option>)}
+            <option value="">jour à caler</option>
+            {/* Jour calé devenu hors des jours de cours (calendrier modifié après coup) :
+                option fantôme pour garder la valeur visible plutôt qu'un select vide trompeur. */}
+            {e.jourPrevu && !joursCours.some(j => j.iso === e.jourPrevu) && (
+              <option value={e.jourPrevu}>{fmtJour(e.jourPrevu)} (hors cours)</option>
+            )}
+            {joursCours.map(j => <option key={j.iso} value={j.iso}>{j.label} {fmtJour(j.iso)}</option>)}
           </select>
-          {e.statut === 'a_concevoir' && (
-            // Quiz : `concu` est DÉRIVÉ (Q4) → on conçoit dans Quazian (pré-rempli), pas
-            // de « Conçu » manuel. Autres types (pas d'écran dédié) : relais V4 manuel.
-            e.typeExercice === 'quiz' ? (
-              <Link href={`/prof/quazian/quizz?exercice=${e.id}`} className="text-pigment hover:underline">Concevoir →</Link>
-            ) : (
-              <button onClick={() => act(marquerConcu)} disabled={busy} className="text-encre-douce hover:text-encre disabled:opacity-50">Conçu</button>
-            )
-          )}
-          <button onClick={() => act(retirerExercice)} disabled={busy} className="text-muet hover:text-retard disabled:opacity-50">Retirer</button>
-        </div>
-      )}
+        )}
+        {e.statut !== 'concu' && (
+          <>
+            <select
+              defaultValue=""
+              disabled={busy}
+              onChange={(ev) => { const v = ev.target.value; if (v) { ev.target.value = ''; act(deplacerExercice, { semaine_lundi: v }) } }}
+              className="text-xs border border-bordure rounded bg-surface px-1 py-0.5 max-w-[8rem]"
+              aria-label="Déplacer vers une semaine"
+            >
+              <option value="">Déplacer…</option>
+              {semaines.filter(s => s.lundi !== e.semaineLundi).map(s => <option key={s.lundi} value={s.lundi}>{s.label}</option>)}
+            </select>
+            {e.statut === 'a_concevoir' && (
+              // Quiz : `concu` est DÉRIVÉ (Q4) → on conçoit dans Quazian (pré-rempli), pas
+              // de « Conçu » manuel. Autres types (pas d'écran dédié) : relais V4 manuel.
+              e.typeExercice === 'quiz' ? (
+                <Link href={`/prof/quazian/quizz?exercice=${e.id}`} className="text-pigment hover:underline">Concevoir →</Link>
+              ) : (
+                <button onClick={() => act(marquerConcu)} disabled={busy} className="text-encre-douce hover:text-encre disabled:opacity-50">Conçu</button>
+              )
+            )}
+            <button onClick={() => act(retirerExercice)} disabled={busy} className="text-muet hover:text-retard disabled:opacity-50">Retirer</button>
+          </>
+        )}
+      </div>
       {err && <span className="text-retard flex-shrink-0">{err}</span>}
     </div>
   )
@@ -353,7 +379,7 @@ export default function GrillePlan({ plan, candidats, panoptique }: { plan: Plan
                 <BandeEnseignements items={pano.enseignements} />
                 {(s.exercices.length > 0 || syntheses.length > 0) && (
                   <div className="border border-bordure rounded mb-1">
-                    {s.exercices.map((e) => <LigneExercice key={e.id} e={e} semaines={semaines} />)}
+                    {s.exercices.map((e) => <LigneExercice key={e.id} e={e} semaines={semaines} joursCours={s.joursCours} />)}
                     {syntheses.map((e) => <LigneSynthese key={e.id} exo={e} />)}
                   </div>
                 )}

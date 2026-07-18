@@ -7,7 +7,12 @@ import { jourDansFuseau } from '@/utils/fuseau'
 import { lireFuseau } from '@/utils/fuseau-serveur'
 import { anneeScolaireDe, resoudreAncre, type SemaineEnseignement } from '@/utils/frise-enseignement'
 import { construireFrise } from '../parcours/frise-serveur'
+import { coursParJour } from '@/utils/calendrier-cours'
+import { addDaysUTC, toISODate } from '@/utils/calendrier-grille'
 import { dateEffectiveSemaine, type Gabarit } from '@/utils/plan-cadence'
+
+// Jours de la semaine indexés depuis le lundi (0=lundi … 6=dimanche).
+const JOURS_SEMAINE = ['Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi', 'Dimanche']
 
 export interface PlanMeta {
   id: string
@@ -41,6 +46,7 @@ export interface SemainePlan {
   semestreNom: string | null
   pedaNum: number | null
   exercices: ExerciceLigne[]
+  joursCours: { iso: string; label: string }[] // jours de cours de la classe cette semaine (sélecteur « caler le jour », §5.6)
 }
 export interface PlanDetail {
   id: string
@@ -202,6 +208,24 @@ export async function chargerPlanDeClasse(classeId: string): Promise<PlanDetail 
     parLundi.set(l.semaineLundi, arr)
   }
 
+  // Jours de cours de la classe par date (options du sélecteur « caler le jour », §5.6).
+  // Une seule résolution sur toute la fenêtre couverte (bornée à une AY < 400 j).
+  let coursParDate = new Map<string, { id: string; nom: string }[]>()
+  if (couverture.couvertes.length) {
+    coursParDate = await coursParJour({
+      debut: couverture.couvertes[0].dateDebutLundi,
+      fin: couverture.couvertes[couverture.couvertes.length - 1].dateFinDimanche,
+    })
+  }
+  const joursCoursDeSemaine = (lundi: string): { iso: string; label: string }[] => {
+    const out: { iso: string; label: string }[] = []
+    for (let i = 0; i < 7; i++) {
+      const d = toISODate(addDaysUTC(new Date(lundi + 'T00:00:00Z'), i))
+      if ((coursParDate.get(d) ?? []).some((c) => c.id === classeId)) out.push({ iso: d, label: JOURS_SEMAINE[i] })
+    }
+    return out
+  }
+
   const semaines: SemainePlan[] = couverture.couvertes.map((w) => ({
     lundi: w.dateDebutLundi,
     semestreNom: w.semestreNom,
@@ -209,6 +233,7 @@ export async function chargerPlanDeClasse(classeId: string): Promise<PlanDetail 
     exercices: (parLundi.get(w.dateDebutLundi) ?? []).sort(
       (a, b) => a.echeance.localeCompare(b.echeance) || a.typeExercice.localeCompare(b.typeExercice),
     ),
+    joursCours: joursCoursDeSemaine(w.dateDebutLundi),
   }))
 
   return {

@@ -183,8 +183,9 @@ const FENETRES: FenetreDiagnostique[] = ['septembre', 'decembre', 'fevrier']
  * frise COUVERTES (lundi ≥ aPartirDe) dont le lundi tombe dans le mois cible :
  * écriture → 1ʳᵉ candidate, lecture → 2ᵉ (ou la même s'il n'y en a qu'une).
  * Zéro candidate (fenêtre en vacances / hors semestre / antérieure à l'ancre) →
- * fenêtre NON générée. Le `jour_prevu` (1ᵉʳ jour de cours de la classe) est posé
- * par la couche I/O depuis coursParJour, PAS ici (fonction pure, §4.6).
+ * fenêtre NON générée. `jour_prevu` n'est PAS posé ici (fonction pure) : à la
+ * matérialisation, un exercice en classe naît « à caler » (jour_prevu=null, §5.6) ;
+ * le prof cale le jour ensuite (fixerJourExercice).
  */
 export function placerDiagnostics(
   frise: SemaineEnseignement[],
