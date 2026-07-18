@@ -194,6 +194,7 @@ export async function creerQuizz(formData: FormData): Promise<CreerQuizzResult> 
       .update({ quiz_id: quizz.id, updated_at: new Date().toISOString() })
       .eq('id', exoALier.id)
       .is('quiz_id', null)
+      .neq('statut', 'annule') // ne pas revendiquer un exercice annulé (symétrie preparerSynthese)
       .is('supprime_at', null)
       .select('id')
     if (eClaim) {

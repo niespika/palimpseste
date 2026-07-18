@@ -34,7 +34,12 @@ export default async function SyntheseElevePage({
     .eq('id', sessionId)
     .single()
 
-  if (!session) {
+  // Défense EN PROFONDEUR (§8bis-6) : un brouillon (synthèse S4 préparée, parfois des
+  // semaines avant son lancement) ne doit jamais être atteignable par un élève. La RLS
+  // `codex_sessions_eleve_read` (statut <> 'brouillon') le bloque déjà, mais cette garde
+  // code la double — l'anti-fuite ne dépend plus SEULEMENT du SQL. Le titre du cours
+  // (résolu via admin ci-dessous) n'est donc jamais résolu pour un brouillon.
+  if (!session || session.statut === 'brouillon') {
     return <div className="text-center py-16 text-muet text-sm">Synthèse introuvable.</div>
   }
 

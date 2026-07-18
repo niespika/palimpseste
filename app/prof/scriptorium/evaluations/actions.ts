@@ -11,7 +11,7 @@ import { addDaysUTC, toISODate } from '@/utils/calendrier-grille'
 import { anneeScolaireDe, type SemaineEnseignement } from '@/utils/frise-enseignement'
 import { genererCadence, placerDiagnostics, asPlanConfig, type Gabarit, type ExerciceGenere, type PlanConfig } from '@/utils/plan-cadence'
 import { coursParJour } from '@/utils/calendrier-cours'
-import { lireGatePlanActif } from '@/utils/plan-exercices'
+import { lireGatePlanActif, resoudreSemestrePourSemaine } from '@/utils/plan-exercices'
 import { jourDansFuseau } from '@/utils/fuseau'
 import { lireFuseau } from '@/utils/fuseau-serveur'
 import { semainesCouvertes } from './plan-serveur'
@@ -378,10 +378,30 @@ export async function propagerPlan(planSourceId: string, classesCiblesIds: strin
       const { error: eIns } = await supabase.from('scriptorium_exercices_planifies').insert(rows)
       if (eIns) { await supabase.from('scriptorium_plans_evaluation').delete().eq('id', planId); ignores++; continue }
     }
+    // Back-fill des synthèses du plan propagé, comme creerPlan (sinon un plan propagé
+    // n'aurait aucune synthèse en brouillon, incohérent). Best-effort, gate-first.
+    try { await hookSyntheseBackfillPlan(createAdminClient(), planId, classeId) } catch (e) { console.error('[plan] back-fill synthèses (propagation) échoué', e) }
     crees++
   }
   revalidatePath('/prof/scriptorium')
   return { crees, ignores }
+}
+
+/**
+ * Ré-ancre le semestre d'un quiz DÉJÀ LIÉ quand son exercice change de semaine
+ * (déplacer/recaler). `quazian_quizzes.semester_id` est figé à la CRÉATION du quiz sur la
+ * semaine planifiée d'alors (quazian/quizz/actions.ts) et n'est écrit nulle part ailleurs :
+ * sans ce recalage, un quiz déplacé au-delà d'une frontière de semestre agrège ses notes
+ * dans le MAUVAIS semestre (quazian/semestre agrège par semester_id). Renvoie une erreur
+ * (à propager, refus du déplacement) si aucun semestre non archivé ne couvre la cible.
+ */
+async function reancrerSemestreQuiz(quizId: string, semaineLundi: string): Promise<{ error?: string }> {
+  const admin = createAdminClient()
+  const sid = await resoudreSemestrePourSemaine(admin, semaineLundi)
+  if (!sid) return { error: 'La semaine cible n’appartient à aucun semestre — le quiz lié ne peut y être daté. Définis le semestre ou annule.' }
+  const { error } = await admin.from('quazian_quizzes').update({ semester_id: sid }).eq('id', quizId)
+  if (error) return { error: error.message }
+  return {}
 }
 
 /** Déplacer un exercice (V3) : change de semaine. Une ligne 'cadence' bascule
@@ -398,9 +418,17 @@ export async function deplacerExercice(formData: FormData): Promise<{ success?: 
 
   const { data: exo } = await supabase
     .from('scriptorium_exercices_planifies')
-    .select('origine, statut, lieu, plan_id').eq('id', exerciceId).is('supprime_at', null).maybeSingle()
+    .select('origine, statut, lieu, plan_id, ancrage, type_exercice, quiz_id').eq('id', exerciceId).is('supprime_at', null).maybeSingle()
   if (!exo) return { error: 'Exercice introuvable.' }
   if (exo.statut === 'annule') return { error: 'Exercice annulé — réactive-le avant de le déplacer.' }
+  // Seul le bras 'semaine' porte un semaine_lundi (exercices_ancrage_chk) : déplacer une
+  // synthèse (bras 'parcours') violerait le CHECK (23514 brut) — refus métier tôt.
+  if (exo.ancrage !== 'semaine') return { error: 'Une synthèse suit son cours — elle ne se déplace pas à la semaine.' }
+  // Un quiz déjà lié doit re-résoudre son semestre sur la cible AVANT de bouger l'exercice.
+  if (exo.type_exercice === 'quiz' && exo.quiz_id) {
+    const r = await reancrerSemestreQuiz(exo.quiz_id as string, semaineLundi)
+    if (r.error) return r
+  }
   const origine = exo.origine === 'cadence' ? 'manuel' : (exo.origine as string)
 
   // jour_prevu recalculé sur la semaine CIBLE pour un exercice en classe (repli lundi).
@@ -580,7 +608,7 @@ export async function recalerExercice(formData: FormData): Promise<{ success?: b
 
   const { data: exo } = await supabase
     .from('scriptorium_exercices_planifies')
-    .select('origine, statut, semaine_lundi, plan_id, lieu').eq('id', exerciceId).is('supprime_at', null).maybeSingle()
+    .select('origine, statut, semaine_lundi, plan_id, lieu, type_exercice, quiz_id').eq('id', exerciceId).is('supprime_at', null).maybeSingle()
   if (!exo) return { error: 'Exercice introuvable.' }
   if (exo.statut === 'annule') return { success: true }
 
@@ -601,6 +629,12 @@ export async function recalerExercice(formData: FormData): Promise<{ success?: b
   const { couvertes } = await semainesCouvertes(plan.date_debut as string)
   const cible = couvertes.find((w) => w.dateDebutLundi >= (exo.semaine_lundi as string))
   if (!cible) return { error: 'Aucune semaine d’enseignement à venir pour reporter cet exercice — annule-le ou définis le semestre.' }
+  // Quiz déjà lié : re-résoudre son semestre sur la cible AVANT de bouger (mêmes notes,
+  // bon semestre). Refus si la cible n'appartient à aucun semestre.
+  if (exo.type_exercice === 'quiz' && exo.quiz_id) {
+    const r = await reancrerSemestreQuiz(exo.quiz_id as string, cible.dateDebutLundi)
+    if (r.error) return r
+  }
   const origine = exo.origine === 'cadence' ? 'manuel' : (exo.origine as string)
   const jourPrevu = exo.lieu === 'classe' ? await jourDeCours(plan.classe_id as string, cible.dateDebutLundi) : null
   const { error } = await supabase
