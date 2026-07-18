@@ -57,6 +57,7 @@ export interface PlanDetail {
   statut: 'brouillon' | 'valide'
   dateDebut: string
   anneeScolaire: number
+  modeleTitre: string | null // « issu du modèle … » si l'instance provient d'une assignation (§5.4)
   avis?: string
   avisBloquant: boolean
   semaines: SemainePlan[]
@@ -152,7 +153,7 @@ export async function chargerPlanDeClasse(classeId: string): Promise<PlanDetail 
     supabase.from('classes').select('nom, type_pedagogique').eq('id', classeId).maybeSingle(),
     supabase
       .from('scriptorium_plans_evaluation')
-      .select('id, gabarit, statut, date_debut, annee_scolaire')
+      .select('id, gabarit, statut, date_debut, annee_scolaire, modele_id')
       .eq('classe_id', classeId)
       .is('supprime_at', null)
       .order('annee_scolaire', { ascending: false })
@@ -162,7 +163,11 @@ export async function chargerPlanDeClasse(classeId: string): Promise<PlanDetail 
   if (!plan) return null
 
   const dateDebut = plan.date_debut as string
-  const [couverture, { data: exos }, today] = await Promise.all([
+  // Provenance (§5.4) : titre du modèle si l'instance en est issue (lecture seule ;
+  // résolu même si le modèle a été soft-deleté depuis — modele_id ne s'annule qu'au
+  // détachement, pas à la suppression du modèle). Résolu EN PARALLÈLE des chargements.
+  const modeleId = (plan.modele_id as string | null) ?? null
+  const [couverture, { data: exos }, today, { data: modeleRow }] = await Promise.all([
     semainesCouvertes(dateDebut),
     supabase
       .from('scriptorium_exercices_planifies')
@@ -171,7 +176,11 @@ export async function chargerPlanDeClasse(classeId: string): Promise<PlanDetail 
       .eq('ancrage', 'semaine')
       .is('supprime_at', null),
     aujourdhui(),
+    modeleId
+      ? supabase.from('scriptorium_modeles_plan').select('titre').eq('id', modeleId).maybeSingle()
+      : Promise.resolve({ data: null }),
   ])
+  const modeleTitre = ((modeleRow as { titre?: string } | null)?.titre as string | null) ?? null
 
   const toLigne = (e: Record<string, unknown>): ExerciceLigne => {
     const semaineLundi = e.semaine_lundi as string
@@ -245,6 +254,7 @@ export async function chargerPlanDeClasse(classeId: string): Promise<PlanDetail 
     statut: plan.statut as 'brouillon' | 'valide',
     dateDebut,
     anneeScolaire: plan.annee_scolaire as number,
+    modeleTitre,
     avis: couverture.avis,
     avisBloquant: couverture.avisBloquant,
     semaines,
@@ -252,41 +262,5 @@ export async function chargerPlanDeClasse(classeId: string): Promise<PlanDetail 
   }
 }
 
-/**
- * Candidats à la propagation (P5) d'un plan : classes ACTIVES de MÊME
- * type_pedagogique que la classe du plan, MÊME AY, SANS plan vivant. Vide si la
- * classe du plan n'a pas de type_pedagogique (pas de dérivation depuis filiere).
- */
-export async function candidatsPropagation(planId: string): Promise<{ classeId: string; nom: string }[]> {
-  const supabase = await createClient()
-  const { data: plan } = await supabase
-    .from('scriptorium_plans_evaluation')
-    .select('classe_id, annee_scolaire')
-    .eq('id', planId)
-    .is('supprime_at', null)
-    .maybeSingle()
-  if (!plan) return []
-  const { data: cls } = await supabase
-    .from('classes').select('type_pedagogique').eq('id', plan.classe_id as string).maybeSingle()
-  const type = (cls?.type_pedagogique as string | null) ?? null
-  if (!type) return []
-
-  const { data: classes } = await supabase
-    .from('classes')
-    .select('id, nom')
-    .eq('statut', 'active')
-    .eq('type_pedagogique', type)
-    .neq('id', plan.classe_id as string)
-    .order('nom')
-  const liste = (classes ?? []) as { id: string; nom: string }[]
-  if (liste.length === 0) return []
-
-  const { data: plans } = await supabase
-    .from('scriptorium_plans_evaluation')
-    .select('classe_id')
-    .eq('annee_scolaire', plan.annee_scolaire as number)
-    .is('supprime_at', null)
-    .in('classe_id', liste.map((c) => c.id))
-  const avecPlan = new Set((plans ?? []).map((p) => p.classe_id as string))
-  return liste.filter((c) => !avecPlan.has(c.id)).map((c) => ({ classeId: c.id, nom: c.nom }))
-}
+// (Retiré) candidatsPropagation : la propagation class-first est remplacée par
+// l'assignation depuis un modèle (Lot D, §7) — plus aucun consommateur.

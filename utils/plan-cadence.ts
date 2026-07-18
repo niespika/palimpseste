@@ -13,7 +13,7 @@ import { addDaysUTC, toISODate } from './calendrier-grille'
 
 export type Gabarit = 'tc' | 'hlp' | 'vierge'
 export type TypeExercice =
-  | 'ecriture' | 'lecture' | 'synthese' | 'quiz' | 'examen_livre' | 'fragment' | 'essai'
+  | 'ecriture' | 'lecture' | 'synthese' | 'quiz' | 'examen_livre' | 'bac_blanc' | 'fragment' | 'essai'
 export type ModuleConception = 'quazian' | 'codex' | 'aletheia' | 'fragments'
 export type FenetreDiagnostique = 'septembre' | 'decembre' | 'fevrier'
 
@@ -68,6 +68,7 @@ const MODULE_PAR_TYPE: Record<TypeExercice, ModuleConception> = {
   synthese: 'codex',
   quiz: 'quazian',
   examen_livre: 'aletheia',
+  bac_blanc: 'codex',
   fragment: 'fragments',
   essai: 'fragments',
 }
@@ -82,6 +83,7 @@ const LIBELLE_TYPE: Record<TypeExercice, string> = {
   synthese: 'synthèse',
   quiz: 'quiz',
   examen_livre: 'examen',
+  bac_blanc: 'bac blanc',
   fragment: 'fragment',
   essai: 'essai',
 }

@@ -44,6 +44,10 @@ function construireRows(
 }
 
 /**
+ * NOTE (Lot D) : la création class-first est RETIRÉE de l'UI (§4.5 « coupe propre » —
+ * un plan naît désormais par assignation d'un modèle). Cette fonction est CONSERVÉE
+ * comme brique/référence de matérialisation (rollback, garde frise) — cf. §7.
+ *
  * Crée un plan (P1–P3) : gabarit explicite + date_debut → AY dérivée. La frise est
  * résolue AVANT l'INSERT : un plan sans aucune semaine couverte (semestres
  * incohérents / aucune semaine à venir) est REFUSÉ — sinon il resterait un brouillon
@@ -280,6 +284,10 @@ async function rowsPourPlan(
 }
 
 /**
+ * NOTE (Lot D) : RETIRÉE de l'UI (redondante avec assignerModeleClasse, §7). Conservée
+ * comme brique/référence (le patron « copie indépendante par classe » est repris par
+ * l'assignation depuis modèle, et servira à un éventuel « modèle vivant » futur).
+ *
  * Propagation (P5) : applique le gabarit + date_debut du plan source à d'autres
  * classes ACTIVES de MÊME type_pedagogique et MÊME AY, SANS plan vivant. Crée pour
  * chaque cible un plan INDÉPENDANT (le calendrier est global → mêmes semaines ; les
@@ -346,6 +354,127 @@ export async function propagerPlan(planSourceId: string, classesCiblesIds: strin
   }
   revalidatePath('/prof/scriptorium')
   return { crees, ignores }
+}
+
+/**
+ * Assigner un MODÈLE à UNE classe (Lot D — généralise propagerPlan). Matérialise une
+ * INSTANCE indépendante liée au modèle (modele_id), puis diverge librement. Idempotent :
+ * une classe ayant déjà un plan vivant pour l'AY est IGNORÉE (uk_plans_evaluation_classe_ay).
+ * Décision ② : classes ACTIVES sans filtre type_pedagogique (le modèle porte un gabarit).
+ *
+ * Matérialisation = COPIE des exercices du modèle dont la semaine tombe dans les semaines
+ * COUVERTES de cette classe (TOUTE origine — cadence + diagnostics + manuel). Honore
+ * INTÉGRALEMENT les éditions du prof (déplacements/retraits, diagnostics inclus). jour_prevu
+ * = null : les exercices EN CLASSE naissent « à caler » (§5.6). Les lignes du modèle
+ * ANTÉRIEURES à l'ancre de la classe (assignée avec une date plus tardive) ne sont PAS
+ * reprises — comptées (`horsPeriode`) et signalées à l'UI, jamais supprimées en silence.
+ *
+ * (Écart assumé vs §5.2 : on ne re-résout PAS les diagnostics via placerDiagnostics — la
+ * grille modèle les rend éditables, donc la copie filtrée aux semaines couvertes honore les
+ * éditions ET reproduit exactement, pour une classe démarrant plus tard, le placement par
+ * fenêtre — équivalent à la re-résolution quand rien n'a été édité. Évite aussi de
+ * matérialiser des lignes pré-ancre qui fuiraient dans le « à faire » / le calendrier.)
+ */
+export async function assignerModeleClasse(
+  modeleId: string, classeId: string, dateDebut: string | null,
+): Promise<{ success?: boolean; ignore?: boolean; horsPeriode?: number; error?: string }> {
+  const gardé = await verifierProfGate()
+  if ('error' in gardé) return { error: gardé.error }
+  const { supabase, userId } = gardé
+  if (!RE_UUID.test(modeleId) || !RE_UUID.test(classeId)) return { error: 'Identifiant invalide.' }
+
+  const { data: modele } = await supabase
+    .from('scriptorium_modeles_plan')
+    .select('gabarit, annee_scolaire, date_debut, config')
+    .eq('id', modeleId).is('supprime_at', null).maybeSingle()
+  if (!modele) return { error: 'Modèle introuvable.' }
+  const gabarit = modele.gabarit as Gabarit
+  const dateInstance = dateDebut && /^\d{4}-\d{2}-\d{2}$/.test(dateDebut) ? dateDebut : (modele.date_debut as string)
+
+  // Un modèle est « 1 par année scolaire visée » (§4.1) et ses créneaux sont ABSOLUS : une
+  // date d'assignation dans un AUTRE AY produirait une instance dégénérée (créneaux hors
+  // frise) + une incohérence d'affichage (le loader raisonne sur l'AY du modèle) → refus.
+  const ay = anneeScolaireDe(dateInstance)
+  if (ay !== (modele.annee_scolaire as number)) {
+    return { error: `La date d’assignation doit rester dans l’année scolaire du modèle (${modele.annee_scolaire}–${(modele.annee_scolaire as number) + 1}).` }
+  }
+
+  const { data: classe } = await supabase.from('classes').select('statut').eq('id', classeId).maybeSingle()
+  if (!classe || classe.statut !== 'active') return { error: 'Classe introuvable ou inactive.' }
+
+  const { data: dejaPlan } = await supabase
+    .from('scriptorium_plans_evaluation')
+    .select('id').eq('classe_id', classeId).eq('annee_scolaire', ay).is('supprime_at', null).maybeSingle()
+  if (dejaPlan) return { ignore: true }
+
+  // Frise de la classe (peut démarrer plus tard que le modèle → moins de semaines couvertes).
+  const { couvertes, ancreLundi, avisBloquant } = await semainesCouvertes(dateInstance)
+  if (avisBloquant) return { error: 'Configuration des semestres incohérente (chevauchement) — corrige-la dans le Calendrier.' }
+  if (!ancreLundi) return { error: 'Aucune semaine d’enseignement à venir pour cette date — définis les semestres dans le Calendrier.' }
+
+  const { data: plan, error } = await supabase
+    .from('scriptorium_plans_evaluation')
+    .insert({ classe_id: classeId, annee_scolaire: ay, gabarit, date_debut: dateInstance, config: modele.config ?? {}, modele_id: modeleId, statut: 'brouillon', created_by: userId })
+    .select('id').single()
+  if (error || !plan) {
+    if (error?.code === '23505') return { ignore: true } // course TOCTOU sur l'unicité → déjà servie
+    return { error: error?.message ?? 'Assignation impossible.' }
+  }
+  const planId = plan.id as string
+
+  // Copie filtrée aux semaines couvertes (toute origine). Un modèle 'vierge' n'a que des
+  // lignes manuelles → elles sont bien reprises (pas de branche gabarit).
+  const lundisCouverts = new Set(couvertes.map((w) => w.dateDebutLundi))
+  const { data: exosModele } = await supabase
+    .from('scriptorium_modeles_plan_exercices')
+    .select('type_exercice, diagnostique, nature, lieu, module, semaine_lundi, origine, fenetre_diagnostique')
+    .eq('modele_id', modeleId)
+  const toutes = exosModele ?? []
+  const retenues = toutes.filter((e) => lundisCouverts.has(e.semaine_lundi as string))
+  const horsPeriode = toutes.length - retenues.length
+  const rows = retenues.map((e) => ({
+    plan_id: planId,
+    type_exercice: e.type_exercice,
+    diagnostique: e.diagnostique,
+    nature: e.nature,
+    lieu: e.lieu,
+    module: e.module,
+    ancrage: 'semaine',
+    semaine_lundi: e.semaine_lundi,
+    jour_prevu: null,
+    origine: e.origine,
+    fenetre_diagnostique: e.fenetre_diagnostique ?? null,
+    statut: 'a_concevoir',
+  }))
+  if (rows.length) {
+    const { error: eIns } = await supabase.from('scriptorium_exercices_planifies').insert(rows)
+    if (eIns) {
+      await supabase.from('scriptorium_plans_evaluation').delete().eq('id', planId)
+      return { error: `Matérialisation impossible (${eIns.message}). Réessaie.` }
+    }
+  }
+  // Synthèses (comme creerPlan/propagerPlan), best-effort, gate-first.
+  try { await hookSyntheseBackfillPlan(createAdminClient(), planId, classeId) } catch (e) { console.error('[modele] back-fill synthèses (assignation) échoué', e) }
+  revalidatePath('/prof/scriptorium')
+  return horsPeriode > 0 ? { success: true, horsPeriode } : { success: true }
+}
+
+/**
+ * Retirer un modèle d'une classe (Lot D — v1 = DÉTACHER, pas supprimer). L'instance a pu
+ * être ajustée / des synthèses lancées : on la conserve et on retire seulement le lien
+ * modele_id. Pour supprimer l'instance, le prof utilise « Supprimer » sur la grille du plan.
+ */
+export async function retirerModeleClasse(modeleId: string, classeId: string): Promise<{ success?: boolean; error?: string }> {
+  const gardé = await verifierProfGate()
+  if ('error' in gardé) return { error: gardé.error }
+  if (!RE_UUID.test(modeleId) || !RE_UUID.test(classeId)) return { error: 'Identifiant invalide.' }
+  const { error } = await gardé.supabase
+    .from('scriptorium_plans_evaluation')
+    .update({ modele_id: null, updated_at: new Date().toISOString() })
+    .eq('classe_id', classeId).eq('modele_id', modeleId).is('supprime_at', null)
+  if (error) return { error: error.message }
+  revalidatePath('/prof/scriptorium')
+  return { success: true }
 }
 
 /**

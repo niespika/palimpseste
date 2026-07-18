@@ -5,7 +5,7 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import {
   validerPlan, supprimerPlan, marquerConcu, retirerExercice,
-  deplacerExercice, ajouterExercice, recalerExercice, regenererPlan, propagerPlan, fixerJourExercice,
+  deplacerExercice, ajouterExercice, recalerExercice, regenererPlan, fixerJourExercice,
 } from './actions'
 import type { PlanDetail, ExerciceLigne } from './plan-serveur'
 import type { Panoptique, SemainePanoptique } from './panoptique-serveur'
@@ -243,47 +243,7 @@ function ChangerGabarit({ planId, gabaritActuel }: { planId: string; gabaritActu
   )
 }
 
-function Propagation({ planId, candidats }: { planId: string; candidats: { classeId: string; nom: string }[] }) {
-  const router = useRouter()
-  const [sel, setSel] = useState<Set<string>>(new Set(candidats.map(c => c.classeId)))
-  const [busy, setBusy] = useState(false)
-  const [msg, setMsg] = useState<string | null>(null)
-  const [err, setErr] = useState<string | null>(null)
-
-  function toggle(id: string) {
-    setSel(prev => { const n = new Set(prev); if (n.has(id)) n.delete(id); else n.add(id); return n })
-  }
-  async function propager() {
-    setErr(null); setMsg(null); setBusy(true)
-    const res = await propagerPlan(planId, [...sel])
-    setBusy(false)
-    if (res.error) { setErr(res.error); return }
-    setMsg(`${res.crees ?? 0} plan(s) créé(s)${res.ignores ? `, ${res.ignores} ignoré(s)` : ''}.`)
-    router.refresh()
-  }
-
-  return (
-    <div className="border border-bordure rounded-lg p-3 space-y-2">
-      <p className="text-sm font-medium text-encre">Propager ce plan (même type pédagogique)</p>
-      <p className="text-xs text-muet">Crée un plan INDÉPENDANT (copie du gabarit) pour chaque classe cochée — chacune diverge ensuite librement.</p>
-      <div className="space-y-1">
-        {candidats.map(c => (
-          <label key={c.classeId} className="flex items-center gap-2 text-sm text-encre">
-            <input type="checkbox" checked={sel.has(c.classeId)} onChange={() => toggle(c.classeId)} />
-            {c.nom}
-          </label>
-        ))}
-      </div>
-      <button onClick={propager} disabled={busy || sel.size === 0} className="text-xs bg-bouton text-surface px-3 py-1.5 rounded hover:opacity-90 disabled:opacity-50">
-        {busy ? '…' : `Propager à ${sel.size} classe(s)`}
-      </button>
-      {msg && <p className="text-xs text-ok">{msg}</p>}
-      {err && <p className="text-xs text-retard">{err}</p>}
-    </div>
-  )
-}
-
-export default function GrillePlan({ plan, candidats, panoptique }: { plan: PlanDetail; candidats: { classeId: string; nom: string }[]; panoptique: Panoptique | null }) {
+export default function GrillePlan({ plan, panoptique }: { plan: PlanDetail; panoptique: Panoptique | null }) {
   const router = useRouter()
   const [busy, setBusy] = useState(false)
   const [err, setErr] = useState<string | null>(null)
@@ -324,6 +284,7 @@ export default function GrillePlan({ plan, candidats, panoptique }: { plan: Plan
             Gabarit {plan.gabarit.toUpperCase()} · début {fmtJour(plan.dateDebut)} ·{' '}
             {plan.statut === 'valide' ? <span className="text-ok">validé</span> : <span className="text-attention">brouillon</span>}
             {plan.typePedagogique ? <span className="text-muet"> · type {plan.typePedagogique.toUpperCase()}</span> : null}
+            {plan.modeleTitre ? <span className="text-muet"> · issu du modèle « {plan.modeleTitre} »</span> : null}
           </p>
         </div>
         <div className="flex items-center gap-3">
@@ -391,8 +352,6 @@ export default function GrillePlan({ plan, candidats, panoptique }: { plan: Plan
           })
         )}
       </div>
-
-      {candidats.length > 0 && <Propagation planId={plan.id} candidats={candidats} />}
     </div>
   )
 }

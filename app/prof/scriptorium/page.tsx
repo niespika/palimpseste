@@ -23,17 +23,17 @@ import { parseReference } from '@/utils/aletheia-retours'
 import type { CapstoneProf, LivreReferenceProf } from '@/app/eleve/modules/aletheia/types'
 import { lireGatePlanActif, lireQuizAnnonceDefaut } from '@/utils/plan-exercices'
 import {
-  chargerClassesAvecPlan, chargerPlanDeClasse, defautDateDebut, candidatsPropagation,
+  chargerClassesAvecPlan, chargerPlanDeClasse, defautDateDebut,
   type ClasseAvecPlan, type PlanDetail,
 } from './evaluations/plan-serveur'
 import { chargerPanoptiqueDeClasse, type Panoptique } from './evaluations/panoptique-serveur'
-import FormulaireCreerPlan from './evaluations/FormulaireCreerPlan'
 import GrillePlan from './evaluations/GrillePlan'
 import ReglageQuiz from './evaluations/ReglageQuiz'
 import { SemainesReadonly } from './evaluations/panoptique-bandes'
-import { chargerListeModeles, chargerModeleDetail, type ModeleListItem, type ModeleDetail } from './evaluations/modele-serveur'
+import { chargerListeModeles, chargerModeleDetail, chargerAssignationsModele, type ModeleListItem, type ModeleDetail, type LigneAssignationModele } from './evaluations/modele-serveur'
 import FormulaireCreerModele from './evaluations/FormulaireCreerModele'
 import GrilleModele from './evaluations/GrilleModele'
+import AssignationModeleClasses from './evaluations/AssignationModeleClasses'
 
 // Les Server Actions de cette page (analyse/extraction d'un PDF déposé) héritent du
 // timeout de la page. Plafond du plan Vercel Hobby = 60 s ; large pour extraire le
@@ -194,19 +194,17 @@ export default async function ScriptoriumPage({
   let classesAvecPlan: ClasseAvecPlan[] = []
   let planDetail: PlanDetail | null = null
   let panoptique: Panoptique | null = null
-  let defautDatePlan: string | null = null
-  let candidatsPropa: { classeId: string; nom: string }[] = []
   let quizAnnonce = false
   if (planEvalActif && estEvaluations) {
     classesAvecPlan = await chargerClassesAvecPlan()
     if (classeSel) {
       // Détail interactif du plan (contrôles) + panoptique (bandes en lecture seule).
+      // Un plan naît désormais UNIQUEMENT par assignation d'un modèle (onglet Modèles) —
+      // plus de création class-first ici (§4.5 « coupe propre »).
       ;[planDetail, panoptique] = await Promise.all([
         chargerPlanDeClasse(classeSel),
         chargerPanoptiqueDeClasse(classeSel),
       ])
-      if (planDetail) candidatsPropa = await candidatsPropagation(planDetail.id)
-      else defautDatePlan = await defautDateDebut()
     } else {
       quizAnnonce = await lireQuizAnnonceDefaut(supabase)
     }
@@ -217,9 +215,11 @@ export default async function ScriptoriumPage({
   let listeModeles: ModeleListItem[] = []
   let modeleDetail: ModeleDetail | null = null
   let defautDateModele: string | null = null
+  let assignModele: { defautDate: string; lignes: LigneAssignationModele[] } | null = null
   if (planEvalActif && estModeles) {
     if (modeleSel) {
       modeleDetail = await chargerModeleDetail(modeleSel)
+      if (modeleDetail) assignModele = await chargerAssignationsModele(modeleSel)
     } else {
       ;[listeModeles, defautDateModele] = await Promise.all([chargerListeModeles(), defautDateDebut()])
     }
@@ -478,24 +478,23 @@ export default async function ScriptoriumPage({
           planDetail ? (
             <div className="space-y-3">
               <Link href="/prof/scriptorium?vue=evaluations" className="text-xs text-muet hover:text-encre">← Toutes les classes</Link>
-              <GrillePlan plan={planDetail} candidats={candidatsPropa} panoptique={panoptique} />
+              <GrillePlan plan={planDetail} panoptique={panoptique} />
             </div>
           ) : (
             <div className="space-y-3">
               <Link href="/prof/scriptorium?vue=evaluations" className="text-xs text-muet hover:text-encre">← Toutes les classes</Link>
-              {/* Sans plan : la panoptique s'affiche quand même (enseignements/lectures/
-                  reflets en lecture seule) au-dessus de l'invite de création (§7). */}
+              {/* Sans plan : la panoptique s'affiche en lecture seule (§7). Un plan naît
+                  désormais UNIQUEMENT par assignation d'un modèle (§4.5 « coupe propre »). */}
               {panoptique && (panoptique.semaines.length > 0 || panoptique.horsFrise.length > 0) && (
                 <div className="space-y-2">
                   <SemainesReadonly semaines={[...panoptique.semaines, ...panoptique.horsFrise]} />
                 </div>
               )}
-              <FormulaireCreerPlan
-                classeId={classeSel}
-                classeNom={classeNom.get(classeSel) ?? 'Classe'}
-                typePedagogique={classesAvecPlan.find(c => c.classeId === classeSel)?.typePedagogique ?? null}
-                defautDate={defautDatePlan}
-              />
+              <div className="bg-surface border border-bordure rounded-xl p-4 text-sm text-muet">
+                {classeNom.get(classeSel) ?? 'Cette classe'} n’a pas encore de plan d’évaluation.{' '}
+                Crée un <Link href="/prof/scriptorium?vue=modeles" className="text-pigment hover:underline">modèle de plan</Link>{' '}
+                puis assigne-le à cette classe.
+              </div>
             </div>
           )
         ) : (
@@ -527,6 +526,7 @@ export default async function ScriptoriumPage({
             <div className="space-y-3">
               <Link href="/prof/scriptorium?vue=modeles" className="text-xs text-muet hover:text-encre">← Tous les modèles</Link>
               <GrilleModele modele={modeleDetail} />
+              {assignModele && <AssignationModeleClasses modeleId={modeleDetail.id} defautDate={assignModele.defautDate} lignes={assignModele.lignes} />}
             </div>
           ) : (
             <p className="text-sm text-muet">Modèle introuvable. <Link href="/prof/scriptorium?vue=modeles" className="underline">Retour à la liste</Link>.</p>

@@ -140,3 +140,57 @@ export async function chargerModeleDetail(modeleId: string): Promise<ModeleDetai
     aRecaler,
   }
 }
+
+export interface LigneAssignationModele {
+  classeId: string
+  nom: string
+  typePedagogique: 'tc' | 'hlp' | 'autre' | null
+  assignee: boolean          // a une instance issue de CE modèle pour l'AY (modele_id === modeleId)
+  dateDebut: string | null   // date_debut de l'instance si assignée
+  bloquee: string | null     // raison si non-assignable (déjà un AUTRE plan vivant pour l'AY)
+}
+
+/**
+ * Assignations d'un modèle : une entrée par classe active + son état vis-à-vis de ce
+ * modèle pour l'AY du modèle. Décision ② : PAS de filtre type_pedagogique. `defautDate`
+ * = date_debut du modèle (défaut pré-rempli du ChampDate par classe).
+ */
+export async function chargerAssignationsModele(
+  modeleId: string,
+): Promise<{ defautDate: string; lignes: LigneAssignationModele[] } | null> {
+  const supabase = await createClient()
+  const { data: modele } = await supabase
+    .from('scriptorium_modeles_plan')
+    .select('annee_scolaire, date_debut')
+    .eq('id', modeleId).is('supprime_at', null).maybeSingle()
+  if (!modele) return null
+  const ay = modele.annee_scolaire as number
+
+  const [{ data: classes }, { data: plans }] = await Promise.all([
+    supabase.from('classes').select('id, nom, type_pedagogique').eq('statut', 'active').order('nom'),
+    supabase.from('scriptorium_plans_evaluation')
+      .select('classe_id, modele_id, date_debut').eq('annee_scolaire', ay).is('supprime_at', null),
+  ])
+  const planParClasse = new Map<string, { modeleId: string | null; dateDebut: string }>()
+  for (const p of plans ?? []) {
+    planParClasse.set(p.classe_id as string, { modeleId: (p.modele_id as string | null) ?? null, dateDebut: p.date_debut as string })
+  }
+
+  const lignes: LigneAssignationModele[] = (classes ?? []).map((c) => {
+    const p = planParClasse.get(c.id as string)
+    const assignee = !!p && p.modeleId === modeleId
+    return {
+      classeId: c.id as string,
+      nom: c.nom as string,
+      typePedagogique: (c.type_pedagogique as LigneAssignationModele['typePedagogique']) ?? null,
+      assignee,
+      dateDebut: assignee ? p!.dateDebut : null,
+      // Non-assignable si un AUTRE plan vivant occupe l'AY (uk_plans_evaluation_classe_ay) :
+      // soit issu d'un autre modèle, soit sans lien (class-first, ou détaché de CE modèle).
+      bloquee: p && p.modeleId !== modeleId
+        ? (p.modeleId ? 'Déjà un autre plan pour cette année scolaire.' : 'Un plan existe déjà pour cette année (non lié à ce modèle).')
+        : null,
+    }
+  })
+  return { defautDate: modele.date_debut as string, lignes }
+}
