@@ -195,8 +195,12 @@ export async function assemblerEvenements(opts: {
     // Plan COURANT par classe (max AY, valide, classe active). Élève : scope aux classes du
     // spectateur (défense en profondeur — la page filtre déjà, mais on n'émet rien de plus).
     const plansValides = await plansValidesCourants(admin)
-    const plansScope = estEleve && classeIds
-      ? plansValides.filter((p) => classeIds.includes(p.classeId))
+    // Élève : scope STRICT aux classes du spectateur — et FAIL-CLOSED si `classeIds` est
+    // absent (contrat E1 : « un appelant oublieux n'expose jamais rien au-delà du contrat
+    // élève »). Le seul appelant élève passe toujours un tableau ; ce garde ferme le cas
+    // d'un futur appelant qui omettrait classeIds sous la surface par défaut 'eleve'.
+    const plansScope = estEleve
+      ? (classeIds ? plansValides.filter((p) => classeIds.includes(p.classeId)) : [])
       : plansValides
     const planIds = plansScope.map((p) => p.id)
     const classeParPlan = new Map<string, string>(plansScope.map((p) => [p.id, p.classeId]))
