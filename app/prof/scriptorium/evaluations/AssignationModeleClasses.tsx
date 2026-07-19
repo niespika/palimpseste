@@ -42,25 +42,23 @@ function LigneRow({ modeleId, defautDate, ligne }: { modeleId: string; defautDat
   }
 
   return (
-    <div className="border border-bordure rounded-lg p-3">
-      <div className="flex items-center justify-between gap-2 flex-wrap">
-        <span className="text-sm font-medium text-encre">
+    <div className="border border-bordure rounded-xl bg-white p-3">
+      <div className="flex items-center justify-between gap-2.5 flex-wrap">
+        <span className="font-corps text-[16px] font-semibold text-encre">
           {ligne.nom}
-          {ligne.typePedagogique && <span className="text-muet text-xs"> · {ligne.typePedagogique.toUpperCase()}</span>}
+          {ligne.typePedagogique && <span className="font-ui text-[12px] text-muet-clair"> · {ligne.typePedagogique.toUpperCase()}</span>}
         </span>
         {ligne.assignee ? (
-          <span className="flex items-center gap-2 text-xs">
+          <span className="flex items-center gap-2.5 font-ui text-[12px]">
             <span className="text-ok">assignée{ligne.dateDebut ? ` · début ${fmtDate(ligne.dateDebut)}` : ''}</span>
             <button onClick={retirer} disabled={busy} className="text-muet hover:text-retard disabled:opacity-50">Détacher</button>
           </span>
         ) : ligne.bloquee ? (
-          <span className="text-xs text-muet">{ligne.bloquee}</span>
+          <span className="font-ui text-[12px] text-muet">{ligne.bloquee}</span>
         ) : (
           <form onSubmit={onSubmitDate} className="flex items-end gap-2">
-            <div className="w-44">
-              <ChampDate name="dateDebut" defaultValue={defautDate} ariaLabel={`Date de début pour ${ligne.nom}`} />
-            </div>
-            <button type="submit" disabled={busy} className="text-xs bg-bouton text-surface px-3 py-2 rounded disabled:opacity-50">
+            <div className="w-40"><ChampDate name="dateDebut" defaultValue={defautDate} ariaLabel={`Date de début pour ${ligne.nom}`} /></div>
+            <button type="submit" disabled={busy} className="font-ui text-[12px] font-semibold bg-bouton-plan text-bouton-plan-texte px-3 py-2 rounded-lg hover:opacity-90 disabled:opacity-50">
               {busy ? '…' : 'Assigner'}
             </button>
           </form>
@@ -76,19 +74,18 @@ export default function AssignationModeleClasses({
   modeleId, defautDate, lignes,
 }: { modeleId: string; defautDate: string; lignes: LigneAssignationModele[] }) {
   return (
-    <div className="space-y-3 border-t border-bordure pt-4">
-      <h3 className="text-sm font-medium text-encre">Assigner ce modèle à des classes</h3>
-      <p className="text-xs text-muet">
-        Chaque assignation matérialise un plan INDÉPENDANT (copie du modèle) que la classe ajuste ensuite librement.
-        « Détacher » retire le lien mais conserve le plan déjà créé.
-      </p>
+    <div className="flex flex-col gap-3">
+      <span className="font-ui text-[11px] font-bold uppercase tracking-[0.1em] text-encre-douce">Assigner à des classes</span>
       {lignes.length === 0 ? (
         <p className="text-sm text-muet">Aucune classe active.</p>
       ) : (
-        <div className="space-y-2">
+        <div className="flex flex-col gap-2.5">
           {lignes.map(l => <LigneRow key={l.classeId} modeleId={modeleId} defautDate={defautDate} ligne={l} />)}
         </div>
       )}
+      <p className="font-corps text-[13px] leading-relaxed text-attention bg-attention-teinte border border-attention/30 rounded-lg px-3 py-2.5">
+        Chaque assignation crée un plan <strong>indépendant</strong> (copie du modèle) que la classe ajuste ensuite. « Détacher » retire le lien mais conserve le plan déjà créé.
+      </p>
     </div>
   )
 }

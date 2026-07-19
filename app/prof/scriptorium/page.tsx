@@ -32,7 +32,6 @@ import { SemainesReadonly } from './evaluations/panoptique-bandes'
 import { chargerListeModeles, chargerModeleDetail, chargerAssignationsModele, type ModeleListItem, type ModeleDetail, type LigneAssignationModele } from './evaluations/modele-serveur'
 import FormulaireCreerModele from './evaluations/FormulaireCreerModele'
 import GrilleModele from './evaluations/GrilleModele'
-import AssignationModeleClasses from './evaluations/AssignationModeleClasses'
 
 // Les Server Actions de cette page (analyse/extraction d'un PDF déposé) héritent du
 // timeout de la page. Plafond du plan Vercel Hobby = 60 s ; large pour extraire le
@@ -221,8 +220,9 @@ export default async function ScriptoriumPage({
   }
 
   // ── Modèles de plan (class-agnostiques, GATÉ) — Lot C ─────────────────────────
+  // Vue « création » (?vue=modeles) = écran 3d (formulaire + aperçu cadence). La
+  // LISTE des modèles vit dans l'accueil (segment Modèles) → pas de grille ici.
   const estModeles = vue === 'modeles'
-  let listeModeles: ModeleListItem[] = []
   let modeleDetail: ModeleDetail | null = null
   let defautDateModele: string | null = null
   let assignModele: { defautDate: string; lignes: LigneAssignationModele[] } | null = null
@@ -231,7 +231,7 @@ export default async function ScriptoriumPage({
       modeleDetail = await chargerModeleDetail(modeleSel)
       if (modeleDetail) assignModele = await chargerAssignationsModele(modeleSel)
     } else {
-      ;[listeModeles, defautDateModele] = await Promise.all([chargerListeModeles(), defautDateDebut()])
+      defautDateModele = await defautDateDebut()
     }
   }
 
@@ -310,11 +310,10 @@ export default async function ScriptoriumPage({
   return (
     <div className="space-y-6 pb-8">
       {/* ── Entrée gatée du plan d'évaluation (pas d'onglet de nav gate OFF) ────
-          Deux facettes : « Modèles » (class-agnostiques, authoring — Lot C) et
-          « Par classe » (instances). L'accueil « deux mondes » (?vue=parcours)
-          porte désormais son propre segment → barre réservée aux vues eval/modèles
-          (reskinnées aux chantiers 3/4). */}
-      {planEvalActif && (estEvaluations || estModeles) && (
+          L'accueil « deux mondes » (?vue=parcours) et l'écran 3d de création de
+          modèle portent leurs propres retours → barre réservée à la vue « Par
+          classe » (evaluations), reskinnée au chantier 4. */}
+      {planEvalActif && estEvaluations && (
         <div className="flex items-center justify-between gap-2 bg-surface border border-bordure rounded-xl px-4 py-2">
           <span className="text-sm text-encre-douce">📋 Plan d’évaluation</span>
           <div className="flex items-center gap-3 text-xs">
@@ -543,36 +542,21 @@ export default async function ScriptoriumPage({
         )
       )}
 
-      {/* ── Modèles de plan (class-agnostiques, GATÉ) — Lot C ─────────────────── */}
+      {/* ── Modèles de plan — création & authoring 3d (class-agnostiques, GATÉ) ── */}
       {planEvalActif && estModeles && (
         modeleSel ? (
           modeleDetail ? (
             <div className="space-y-3">
-              <Link href="/prof/scriptorium?vue=modeles" className="text-xs text-muet hover:text-encre">← Tous les modèles</Link>
-              <GrilleModele modele={modeleDetail} />
-              {assignModele && <AssignationModeleClasses modeleId={modeleDetail.id} defautDate={assignModele.defautDate} lignes={assignModele.lignes} />}
+              <Link href="/prof/scriptorium?vue=parcours" className="inline-block text-sm text-muet hover:text-encre">← Parcours &amp; plans</Link>
+              <GrilleModele modele={modeleDetail} assignation={assignModele} />
             </div>
           ) : (
-            <p className="text-sm text-muet">Modèle introuvable. <Link href="/prof/scriptorium?vue=modeles" className="underline">Retour à la liste</Link>.</p>
+            <p className="text-sm text-muet">Modèle introuvable. <Link href="/prof/scriptorium?vue=modeles" className="underline">Créer un modèle</Link>.</p>
           )
         ) : (
           <div className="space-y-3">
+            <Link href="/prof/scriptorium?vue=parcours" className="inline-block text-sm text-muet hover:text-encre">← Parcours &amp; plans</Link>
             <FormulaireCreerModele defautDate={defautDateModele} />
-            {listeModeles.length === 0 ? (
-              <p className="text-sm text-muet">Aucun modèle pour l’instant. Crée-en un ci-dessus (sans choisir de classe) ; l’assignation aux classes viendra ensuite.</p>
-            ) : (
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                {listeModeles.map(m => (
-                  <Tuile
-                    key={m.id}
-                    nom={m.titre}
-                    sousTitre={`${m.anneeScolaire}–${m.anneeScolaire + 1} · ${m.gabarit.toUpperCase()} · ${m.nbExercices} exo${m.nbExercices > 1 ? 's' : ''} · ${m.statut === 'pret' ? 'prêt' : 'brouillon'}`}
-                    href={`/prof/scriptorium?vue=modeles&modele=${m.id}`}
-                    couleur={m.statut === 'pret' ? 'vert' : 'neutre'}
-                  />
-                ))}
-              </div>
-            )}
           </div>
         )
       )}
