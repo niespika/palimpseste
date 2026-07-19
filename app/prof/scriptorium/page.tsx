@@ -309,23 +309,9 @@ export default async function ScriptoriumPage({
   // Parcours regroupe parcours/evaluations/modeles (cf. configModules.ts).
   return (
     <div className="space-y-6 pb-8">
-      {/* ── Entrée gatée du plan d'évaluation (pas d'onglet de nav gate OFF) ────
-          L'accueil « deux mondes » (?vue=parcours) et l'écran 3d de création de
-          modèle portent leurs propres retours → barre réservée à la vue « Par
-          classe » (evaluations), reskinnée au chantier 4. */}
-      {planEvalActif && estEvaluations && (
-        <div className="flex items-center justify-between gap-2 bg-surface border border-bordure rounded-xl px-4 py-2">
-          <span className="text-sm text-encre-douce">📋 Plan d’évaluation</span>
-          <div className="flex items-center gap-3 text-xs">
-            <Link href="/prof/scriptorium?vue=modeles" className={estModeles ? 'text-encre font-medium' : 'text-muet hover:text-encre'}>Modèles</Link>
-            <span className="text-bordure">·</span>
-            <Link href="/prof/scriptorium?vue=evaluations" className={estEvaluations ? 'text-encre font-medium' : 'text-muet hover:text-encre'}>Par classe</Link>
-            {(estModeles || estEvaluations) && (
-              <Link href="/prof/scriptorium?vue=parcours" className="text-muet hover:text-encre ml-1">← Parcours</Link>
-            )}
-          </div>
-        </div>
-      )}
+      {/* La navigation entre les 5 portes (parcours / plans par classe / modèles)
+          vit désormais dans l'accueil « deux mondes » (?vue=parcours) ; chaque écran
+          de détail porte son propre retour en tête de contenu (plus de barre gatée). */}
 
       {/* ── Hub Ressources : Textes / Cours / Livres → vues existantes ───────── */}
       {vue === 'ressources' && (
@@ -499,10 +485,8 @@ export default async function ScriptoriumPage({
       {planEvalActif && estEvaluations && (
         classeSel ? (
           planDetail ? (
-            <div className="space-y-3">
-              <Link href="/prof/scriptorium?vue=evaluations" className="text-xs text-muet hover:text-encre">← Toutes les classes</Link>
-              <GrillePlan plan={planDetail} panoptique={panoptique} />
-            </div>
+            /* GrillePlan (option 4e) porte son propre retour « ← Toutes les classes » en tête du contenu. */
+            <GrillePlan plan={planDetail} panoptique={panoptique} />
           ) : (
             <div className="space-y-3">
               <Link href="/prof/scriptorium?vue=evaluations" className="text-xs text-muet hover:text-encre">← Toutes les classes</Link>
@@ -522,6 +506,7 @@ export default async function ScriptoriumPage({
           )
         ) : (
           <div className="space-y-3">
+            <Link href="/prof/scriptorium?vue=parcours" className="inline-block text-sm text-muet hover:text-encre">← Parcours &amp; plans</Link>
             <ReglageQuiz actif={quizAnnonce} />
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
               {classesAvecPlan.length === 0 ? (
