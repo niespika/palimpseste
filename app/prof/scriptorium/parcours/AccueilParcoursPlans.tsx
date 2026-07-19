@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import Link from 'next/link'
 import FormulaireParcours from './FormulaireParcours'
+import ReglageQuiz from '../evaluations/ReglageQuiz'
 import type { ParcoursListItem } from './donnees'
 import type { ClasseAvecPlan } from '../evaluations/plan-serveur'
 import type { ModeleListItem } from '../evaluations/modele-serveur'
@@ -101,7 +102,8 @@ function TableLignes({ enfants, deuxColonnes }: { enfants: React.ReactNode[]; de
   )
 }
 
-/** Rail vertical d'une colonne repliée : clic pour rouvrir. */
+/** Rail vertical d'une colonne repliée : fond = bouton estompé du monde, texte
+ *  vertical (lettres droites empilées), contenu centré. Clic pour rouvrir. */
 function Rail({
   libelle, n, couleur, onClick,
 }: {
@@ -110,18 +112,19 @@ function Rail({
   couleur: 'pigment' | 'famille-eval'
   onClick: () => void
 }) {
-  const teinte = couleur === 'pigment' ? 'text-pigment' : 'text-famille-eval'
-  const chevron = couleur === 'pigment' ? '⟩' : '⟨'
+  const estParcours = couleur === 'pigment'
+  const fond = estParcours ? 'bg-bouton-parcours text-bouton-parcours-texte' : 'bg-bouton-plan text-bouton-plan-texte'
+  const chevron = estParcours ? '⟩' : '⟨'
   return (
     <button
       onClick={onClick}
       title="Déplier la colonne"
-      className="w-11 flex-none border border-bordure rounded-xl bg-parchemin flex flex-col items-center gap-3 pt-3 hover:bg-parchemin-fonce transition-colors"
+      className={`w-14 flex-none self-stretch rounded-xl flex flex-col items-center justify-center gap-4 py-5 hover:opacity-90 transition-opacity ${fond}`}
     >
-      <span className={`text-[13px] ${teinte}`}>{chevron}</span>
+      <span className="text-[15px]">{chevron}</span>
       <span
-        className={`font-ui text-[11px] font-bold uppercase tracking-[0.12em] ${teinte}`}
-        style={{ writingMode: 'vertical-rl' }}
+        className="font-ui text-[12px] font-bold uppercase tracking-[0.16em]"
+        style={{ writingMode: 'vertical-rl', textOrientation: 'upright' }}
       >
         ◆ {libelle} · {n}
       </span>
@@ -133,12 +136,13 @@ type Replie = 'parcours' | 'plans' | null
 type Facette = 'classes' | 'modeles'
 
 export default function AccueilParcoursPlans({
-  parcours, classesPlan, modeles, planEvalActif,
+  parcours, classesPlan, modeles, planEvalActif, quizAnnonce,
 }: {
   parcours: ParcoursListItem[]
   classesPlan: ClasseAvecPlan[]
   modeles: ModeleListItem[]
   planEvalActif: boolean
+  quizAnnonce: boolean
 }) {
   const [replie, setReplie] = useState<Replie>(null)
   const [facette, setFacette] = useState<Facette>('classes')
@@ -310,6 +314,11 @@ export default function AccueilParcoursPlans({
             )}
           </>
         )}
+
+        {/* Réglage global du monde Plans (quiz annoncés / surprise au calendrier élève). */}
+        <div className="border-t border-bordure pt-3 mt-1">
+          <ReglageQuiz actif={quizAnnonce} />
+        </div>
       </div>
     </div>
   )

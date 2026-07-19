@@ -1,4 +1,4 @@
-import { notFound } from 'next/navigation'
+import { notFound, redirect } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/utils/supabase/server'
 import { classesConflitWholeBook } from '@/utils/aletheia-dates'
@@ -27,7 +27,6 @@ import {
 } from './evaluations/plan-serveur'
 import { chargerPanoptiqueDeClasse, type Panoptique } from './evaluations/panoptique-serveur'
 import GrillePlan from './evaluations/GrillePlan'
-import ReglageQuiz from './evaluations/ReglageQuiz'
 import { SemainesReadonly } from './evaluations/panoptique-bandes'
 import { chargerListeModeles, chargerModeleDetail, chargerAssignationsModele, type ModeleListItem, type ModeleDetail, type LigneAssignationModele } from './evaluations/modele-serveur'
 import FormulaireCreerModele from './evaluations/FormulaireCreerModele'
@@ -176,6 +175,7 @@ export default async function ScriptoriumPage({
   // l'accueil n'affiche que Parcours).
   let accueilClassesPlan: ClasseAvecPlan[] = []
   let accueilModeles: ModeleListItem[] = []
+  let accueilQuizAnnonce = false
   if (estParcours) {
     if (parcoursSel) {
       ;[parcoursDetail, ciblesPicker] = await Promise.all([
@@ -186,37 +186,30 @@ export default async function ScriptoriumPage({
         assignations = await chargerAssignationsAvecApercu(parcoursDetail.id, parcoursDetail.nbSemaines, classesList)
       }
     } else if (planEvalActif) {
-      ;[listeParcours, accueilClassesPlan, accueilModeles] = await Promise.all([
+      ;[listeParcours, accueilClassesPlan, accueilModeles, accueilQuizAnnonce] = await Promise.all([
         chargerListeParcours(),
         chargerClassesAvecPlan(),
         chargerListeModeles(),
+        lireQuizAnnonceDefaut(supabase),
       ])
     } else {
       listeParcours = await chargerListeParcours()
     }
   }
 
-  // ── Plan d'évaluation (onglet Évaluations, GATÉ) — L2 ─────────────────────────
-  // Gate lu dans le Promise.all initial (tolérant gate OFF → false). Gate OFF :
-  // aucune entrée, aucune section → page prof byte-identique.
+  // ── Plan d'une classe (onglet Évaluations, GATÉ) — L2 ─────────────────────────
+  // La LISTE « Par classe » vit dans l'accueil (?vue=parcours) → ?vue=evaluations
+  // sans classe est un reliquat, on redirige. Seul le détail (?classe=…) survit ici.
   const estEvaluations = vue === 'evaluations'
-  let classesAvecPlan: ClasseAvecPlan[] = []
+  if (planEvalActif && estEvaluations && !classeSel) redirect('/prof/scriptorium?vue=parcours')
   let planDetail: PlanDetail | null = null
   let panoptique: Panoptique | null = null
-  let quizAnnonce = false
-  if (planEvalActif && estEvaluations) {
-    classesAvecPlan = await chargerClassesAvecPlan()
-    if (classeSel) {
-      // Détail interactif du plan (contrôles) + panoptique (bandes en lecture seule).
-      // Un plan naît désormais UNIQUEMENT par assignation d'un modèle (onglet Modèles) —
-      // plus de création class-first ici (§4.5 « coupe propre »).
-      ;[planDetail, panoptique] = await Promise.all([
-        chargerPlanDeClasse(classeSel),
-        chargerPanoptiqueDeClasse(classeSel),
-      ])
-    } else {
-      quizAnnonce = await lireQuizAnnonceDefaut(supabase)
-    }
+  if (planEvalActif && estEvaluations && classeSel) {
+    // Détail interactif du plan (contrôles) + panoptique (bandes en lecture seule).
+    ;[planDetail, panoptique] = await Promise.all([
+      chargerPlanDeClasse(classeSel),
+      chargerPanoptiqueDeClasse(classeSel),
+    ])
   }
 
   // ── Modèles de plan (class-agnostiques, GATÉ) — Lot C ─────────────────────────
@@ -342,6 +335,7 @@ export default async function ScriptoriumPage({
             classesPlan={accueilClassesPlan}
             modeles={accueilModeles}
             planEvalActif={planEvalActif}
+            quizAnnonce={accueilQuizAnnonce}
           />
         )
       )}
@@ -481,47 +475,26 @@ export default async function ScriptoriumPage({
       {/* ── Perspective « paramètres » (prompts carte d'architecture + référence) ── */}
       {vue === 'parametres' && <SectionParametresScriptorium />}
 
-      {/* ── Plan annuel d'évaluation (onglet Évaluations, GATÉ) — L2 ──────────── */}
-      {planEvalActif && estEvaluations && (
-        classeSel ? (
-          planDetail ? (
-            /* GrillePlan (option 4e) porte son propre retour « ← Toutes les classes » en tête du contenu. */
-            <GrillePlan plan={planDetail} panoptique={panoptique} />
-          ) : (
-            <div className="space-y-3">
-              <Link href="/prof/scriptorium?vue=evaluations" className="text-xs text-muet hover:text-encre">← Toutes les classes</Link>
-              {/* Sans plan : la panoptique s'affiche en lecture seule (§7). Un plan naît
-                  désormais UNIQUEMENT par assignation d'un modèle (§4.5 « coupe propre »). */}
-              {panoptique && (panoptique.semaines.length > 0 || panoptique.horsFrise.length > 0) && (
-                <div className="space-y-2">
-                  <SemainesReadonly semaines={[...panoptique.semaines, ...panoptique.horsFrise]} />
-                </div>
-              )}
-              <div className="bg-surface border border-bordure rounded-xl p-4 text-sm text-muet">
-                {classeNom.get(classeSel) ?? 'Cette classe'} n’a pas encore de plan d’évaluation.{' '}
-                Crée un <Link href="/prof/scriptorium?vue=modeles" className="text-pigment hover:underline">modèle de plan</Link>{' '}
-                puis assigne-le à cette classe.
-              </div>
-            </div>
-          )
+      {/* ── Plan d'une classe (option 4e, GATÉ). ?vue=evaluations SANS classe est
+             redirigé vers l'accueil → ici classeSel est toujours présent. ─────── */}
+      {planEvalActif && estEvaluations && classeSel && (
+        planDetail ? (
+          /* GrillePlan (option 4e) porte son propre retour « ← Toutes les classes » en tête du contenu. */
+          <GrillePlan plan={planDetail} panoptique={panoptique} />
         ) : (
           <div className="space-y-3">
             <Link href="/prof/scriptorium?vue=parcours" className="inline-block text-sm text-muet hover:text-encre">← Parcours &amp; plans</Link>
-            <ReglageQuiz actif={quizAnnonce} />
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-              {classesAvecPlan.length === 0 ? (
-                <p className="text-sm text-muet">Aucune classe active.</p>
-              ) : classesAvecPlan.map(c => (
-                <Tuile
-                  key={c.classeId}
-                  nom={c.nom}
-                  sousTitre={c.plan
-                    ? `Plan ${c.plan.anneeScolaire}–${c.plan.anneeScolaire + 1} · ${c.plan.gabarit.toUpperCase()} · ${c.plan.statut === 'valide' ? 'validé' : 'brouillon'}`
-                    : 'Aucun plan'}
-                  href={`/prof/scriptorium?vue=evaluations&classe=${c.classeId}`}
-                  couleur={c.plan?.statut === 'valide' ? 'vert' : 'neutre'}
-                />
-              ))}
+            {/* Sans plan : la panoptique s'affiche en lecture seule (§7). Un plan naît
+                UNIQUEMENT par assignation d'un modèle (§4.5 « coupe propre »). */}
+            {panoptique && (panoptique.semaines.length > 0 || panoptique.horsFrise.length > 0) && (
+              <div className="space-y-2">
+                <SemainesReadonly semaines={[...panoptique.semaines, ...panoptique.horsFrise]} />
+              </div>
+            )}
+            <div className="bg-surface border border-bordure rounded-xl p-4 text-sm text-muet">
+              {classeNom.get(classeSel) ?? 'Cette classe'} n’a pas encore de plan d’évaluation.{' '}
+              Crée un <Link href="/prof/scriptorium?vue=modeles" className="text-pigment hover:underline">modèle de plan</Link>{' '}
+              puis assigne-le à cette classe.
             </div>
           </div>
         )

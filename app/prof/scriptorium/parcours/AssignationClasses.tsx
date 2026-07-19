@@ -56,13 +56,17 @@ function ApercuBloc({ apercu }: { apercu: ApercuFrise }) {
   )
 }
 
-/** Pastille d'état publication (« publié ✓ ») — jeton ok. */
-function PilulePubliee() {
-  return (
-    <span className="font-ui text-[11px] font-semibold uppercase tracking-[0.05em] bg-ok-teinte text-ok rounded-full px-2.5 py-0.5">
-      publié ✓
-    </span>
-  )
+/** Pastille d'état d'une classe assignée : publié ✓ / planifié en VERT (jeton ok) ;
+ *  sans date en gris. Visible aussi bien repliée que dépliée. */
+function StatutPill({ ligne }: { ligne: LigneAssignation }) {
+  if (ligne.snapshot || ligne.dateDebut) {
+    return (
+      <span className="font-ui text-[11px] font-semibold uppercase tracking-[0.05em] bg-ok-teinte text-ok rounded-full px-2.5 py-0.5 flex-none">
+        {ligne.snapshot ? 'publié ✓' : 'planifié'}
+      </span>
+    )
+  }
+  return <span className="font-corps italic text-[13px] text-muet-clair flex-none">sans date</span>
 }
 
 function LigneRow({
@@ -110,33 +114,33 @@ function LigneRow({
     router.refresh()
   }
 
-  // ── Ligne repliée : une seule ligne (nom + résumé / bouton Assigner) ────────
-  if (!ouvert) {
+  // ── Classe NON assignée : une ligne + bouton Assigner (indépendant du repli,
+  //    ce qui évite un état incohérent juste après « Retirer l'assignation »). ──
+  if (!ligne.assigned) {
     return (
-      <div className="flex items-center gap-2.5 border border-bordure rounded-xl bg-white px-3.5 py-3">
-        {ligne.assigned ? (
-          <button onClick={onToggle} className="flex items-center gap-2.5 flex-1 min-w-0 text-left">
-            <span className="text-muet-clair">▸</span>
-            <span className="font-corps text-[16px] font-semibold text-encre flex-1 min-w-0 truncate">{ligne.nom}</span>
-            {ligne.snapshot ? <PilulePubliee /> : (
-              <span className="font-corps italic text-[13px] text-muet-clair">{ligne.dateDebut ? 'planifié' : 'sans date'}</span>
-            )}
-          </button>
-        ) : (
-          <>
-            <span className="text-muet-clair">▸</span>
-            <span className="font-corps text-[16px] font-semibold text-encre flex-1 min-w-0 truncate">{ligne.nom}</span>
-            <button
-              onClick={() => assigner(null)}
-              disabled={chargement}
-              className="font-ui text-[12px] font-semibold bg-bouton-parcours text-bouton-parcours-texte rounded-lg px-3 py-1.5 hover:opacity-90 disabled:opacity-50"
-            >
-              {chargement ? '…' : 'Assigner'}
-            </button>
-          </>
-        )}
+      <div className="flex items-center gap-2.5 border border-bordure rounded-xl bg-white px-3.5 py-3 flex-wrap">
+        <span className="text-muet-clair">▸</span>
+        <span className="font-corps text-[16px] font-semibold text-encre flex-1 min-w-0 truncate">{ligne.nom}</span>
+        <button
+          onClick={() => assigner(null)}
+          disabled={chargement}
+          className="font-ui text-[12px] font-semibold bg-bouton-parcours text-bouton-parcours-texte rounded-lg px-3 py-1.5 hover:opacity-90 disabled:opacity-50"
+        >
+          {chargement ? '…' : 'Assigner'}
+        </button>
         {erreur && <p className="text-retard text-xs w-full">{erreur}</p>}
       </div>
+    )
+  }
+
+  // ── Classe assignée, repliée : nom + pastille d'état (verte). ─────────────────
+  if (!ouvert) {
+    return (
+      <button onClick={onToggle} className="flex items-center gap-2.5 border border-bordure rounded-xl bg-white px-3.5 py-3 text-left w-full hover:border-puce transition-colors">
+        <span className="text-muet-clair">▸</span>
+        <span className="font-corps text-[16px] font-semibold text-encre flex-1 min-w-0 truncate">{ligne.nom}</span>
+        <StatutPill ligne={ligne} />
+      </button>
     )
   }
 
@@ -146,7 +150,7 @@ function LigneRow({
       <button onClick={onToggle} className="w-full flex items-center gap-2.5 px-3.5 py-3 border-b border-bordure text-left">
         <span className="text-pigment">▾</span>
         <span className="font-corps text-[16px] font-semibold text-encre flex-1 min-w-0 truncate">{ligne.nom}</span>
-        {ligne.snapshot && <PilulePubliee />}
+        <StatutPill ligne={ligne} />
       </button>
 
       <div className="px-3.5 py-3">
@@ -168,35 +172,32 @@ function LigneRow({
           <p className="text-xs text-muet mt-2">Aucune date — pose une date de début pour voir les échéances réelles.</p>
         )}
 
-        {/* Publication de l'horaire (fige les dates ; signale les décalages ultérieurs) */}
-        {ligne.apercu && (
-          <div className="mt-2 border-t border-bordure pt-2 space-y-1.5">
-            {ligne.snapshot ? (
-              <>
-                <p className="text-xs text-muet">
-                  Horaire publié{ligne.snapshot.genereLe ? ` le ${fmtJour(ligne.snapshot.genereLe.slice(0, 10))}` : ''} (v{ligne.snapshot.version}).
-                </p>
-                {ligne.diff && ligne.diff.nbChanges > 0 ? (
-                  <p className="text-xs bg-attention-teinte text-attention px-2 py-1 rounded">
-                    ⚠ {ligne.diff.nbChanges} échéance(s) ont changé depuis la publication (le calendrier a été modifié). Re-publie pour figer le nouvel horaire.
-                  </p>
-                ) : (
-                  <p className="text-xs text-ok">✓ Horaire à jour.</p>
-                )}
-                <button onClick={publier} disabled={chargement} className="text-xs text-encre-douce hover:text-encre disabled:opacity-50">
-                  {chargement ? '…' : 'Re-publier l’horaire'}
-                </button>
-              </>
+        {/* État de publication (texte) : date de publication + à jour / décalage. */}
+        {ligne.apercu && ligne.snapshot && (
+          <div className="mt-2 space-y-1">
+            <p className="text-xs text-muet">
+              Horaire publié{ligne.snapshot.genereLe ? ` le ${fmtJour(ligne.snapshot.genereLe.slice(0, 10))}` : ''} (v{ligne.snapshot.version}).
+            </p>
+            {ligne.diff && ligne.diff.nbChanges > 0 ? (
+              <p className="text-xs bg-attention-teinte text-attention px-2 py-1 rounded">
+                ⚠ {ligne.diff.nbChanges} échéance(s) ont changé depuis la publication (le calendrier a été modifié). Re-publie pour figer le nouvel horaire.
+              </p>
             ) : (
-              <button onClick={publier} disabled={chargement} className="font-ui text-[12px] bg-bouton-parcours text-bouton-parcours-texte px-3 py-1.5 rounded-lg hover:opacity-90 disabled:opacity-50">
-                {chargement ? '…' : 'Publier l’horaire'}
-              </button>
+              <p className="text-xs text-ok">✓ Horaire à jour.</p>
             )}
           </div>
         )}
 
-        <div className="mt-3 text-right">
-          <button onClick={retirer} disabled={chargement} className="font-ui text-[12px] text-muet hover:text-retard disabled:opacity-50">Retirer l’assignation</button>
+        {/* Publier l'horaire (noyer) + Retirer l'assignation (ocre) sur la même ligne. */}
+        <div className="mt-3 border-t border-bordure pt-3 flex items-center gap-2 flex-wrap">
+          {ligne.apercu && (
+            <button onClick={publier} disabled={chargement} className="font-ui text-[12px] font-semibold bg-bouton-parcours text-bouton-parcours-texte px-3 py-1.5 rounded-lg hover:opacity-90 disabled:opacity-50">
+              {chargement ? '…' : ligne.snapshot ? 'Re-publier l’horaire' : 'Publier l’horaire'}
+            </button>
+          )}
+          <button onClick={retirer} disabled={chargement} className="ml-auto font-ui text-[12px] font-semibold bg-bouton-plan text-bouton-plan-texte px-3 py-1.5 rounded-lg hover:opacity-90 disabled:opacity-50">
+            Retirer l’assignation
+          </button>
         </div>
       </div>
     </div>

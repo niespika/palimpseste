@@ -305,35 +305,34 @@ export default function GrillePlan({ plan, panoptique }: { plan: PlanDetail; pan
     const res = await supprimerPlan(fd)
     setBusy(false)
     if (res.error) { setErr(res.error); return }
-    router.push('/prof/scriptorium?vue=evaluations') // le plan n'existe plus → retour à la liste
+    router.push('/prof/scriptorium?vue=parcours') // le plan n'existe plus → retour à l'accueil
   }
 
   return (
     <div>
       {/* Barre de contenu : retour + identité + Valider. */}
       <div className="flex items-center gap-3 flex-wrap mb-3">
-        <Link href="/prof/scriptorium?vue=evaluations" className="font-ui text-[13px] text-muet hover:text-encre">← Toutes les classes</Link>
+        <Link href="/prof/scriptorium?vue=parcours" className="font-ui text-[13px] text-muet hover:text-encre">← Toutes les classes</Link>
         <span className="w-px h-4 bg-bordure-bouton" />
         <span className="font-corps text-[16px] font-semibold text-encre">{plan.classeNom} — Plan {plan.anneeScolaire}–{plan.anneeScolaire + 1}</span>
         <span className="font-ui text-[13px] text-muet">
           {plan.gabarit.toUpperCase()} · {plan.statut === 'valide' ? 'validé' : 'brouillon'}
           {plan.modeleTitre ? ` · issu de « ${plan.modeleTitre} »` : ''}
         </span>
-        <span className="ml-auto flex items-center gap-3">
+        <span className="ml-auto flex items-center gap-2.5">
           {confirmSuppr ? (
             <span className="flex items-center gap-2 font-ui text-[12px]">
               <span className="text-retard">{plan.statut === 'valide' ? 'Supprimer ce plan validé ?' : 'Supprimer ce brouillon ?'}</span>
-              <button onClick={supprimer} disabled={busy} className="text-retard hover:underline disabled:opacity-50">Oui</button>
+              <button onClick={supprimer} disabled={busy} className="text-retard font-semibold hover:underline disabled:opacity-50">Oui</button>
               <button onClick={() => setConfirmSuppr(false)} disabled={busy} className="text-muet hover:text-encre disabled:opacity-50">Non</button>
             </span>
           ) : (
-            <button onClick={() => setConfirmSuppr(true)} disabled={busy} className="font-ui text-[12px] text-muet hover:text-retard disabled:opacity-50">Supprimer</button>
+            <button onClick={() => setConfirmSuppr(true)} disabled={busy} className="font-ui text-[12px] font-semibold bg-retard-teinte text-retard px-3.5 py-2 rounded-lg hover:opacity-90 disabled:opacity-50">Supprimer</button>
           )}
-          {plan.statut === 'brouillon' && (
-            <button onClick={valider} disabled={busy} className="px-4 py-2 bg-bouton-valider text-bouton-valider-texte font-ui text-sm font-semibold rounded-lg hover:opacity-90 disabled:opacity-50">
-              {busy ? '…' : 'Valider le plan'}
-            </button>
-          )}
+          {/* Valider disponible même après validation (re-valider un plan modifié). */}
+          <button onClick={valider} disabled={busy} className="px-4 py-2 bg-bouton-valider text-bouton-valider-texte font-ui text-sm font-semibold rounded-lg hover:opacity-90 disabled:opacity-50">
+            {busy ? '…' : plan.statut === 'valide' ? 'Re-valider' : 'Valider le plan'}
+          </button>
         </span>
       </div>
 
@@ -367,6 +366,11 @@ export default function GrillePlan({ plan, panoptique }: { plan: PlanDetail; pan
           </div>
 
           <div className="p-4 flex flex-col gap-1.5 flex-1">
+            {/* Réglages du plan sur une ligne, au-dessus des semaines. */}
+            <div className="flex items-center gap-x-3 gap-y-1 flex-wrap pb-2.5 mb-1 border-b border-bordure">
+              <ChangerGabarit planId={plan.id} gabaritActuel={plan.gabarit} />
+              {panoptique?.plan && <ReglageFragments planId={plan.id} valeur={panoptique.compterFragments} />}
+            </div>
             <span className="font-ui text-[11px] font-bold uppercase tracking-[0.1em] text-muet-clair px-1 pb-0.5">Les semaines</span>
             {plan.semaines.length === 0 ? (
               <p className="font-corps text-[14px] text-muet px-1">Aucune semaine couverte — définis les semestres dans le Calendrier.</p>
@@ -388,12 +392,6 @@ export default function GrillePlan({ plan, panoptique }: { plan: PlanDetail; pan
                 </button>
               )
             })}
-          </div>
-
-          {/* Réglages du plan (repliés visuellement, mais conservés). */}
-          <div className="p-4 border-t border-bordure flex flex-col gap-2.5">
-            <ChangerGabarit planId={plan.id} gabaritActuel={plan.gabarit} />
-            {panoptique?.plan && <ReglageFragments planId={plan.id} valeur={panoptique.compterFragments} />}
           </div>
         </div>
 

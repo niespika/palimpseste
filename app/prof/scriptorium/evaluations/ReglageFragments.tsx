@@ -22,14 +22,14 @@ export default function ReglageFragments({ planId, valeur }: { planId: string; v
   }
 
   return (
-    <div className="flex items-center gap-2 flex-wrap text-xs">
-      <span className="text-muet">Budget — part Fragments :</span>
+    <div className="flex items-center gap-2 flex-wrap font-ui text-[12px]">
+      <span className="text-muet">Fragments :</span>
       <select
         value={valeur}
         disabled={busy}
         onChange={(e) => changer(e.target.value as 'hebdo' | 'quinzaine' | 'non')}
-        className="border border-bordure rounded bg-surface px-1 py-0.5"
-        aria-label="Cadence de comptage des fragments dans le budget"
+        className="border border-bordure-bouton rounded bg-white px-1.5 py-0.5"
+        aria-label="Cadence de comptage des fragments dans le budget temps"
       >
         <option value="hebdo">chaque semaine</option>
         <option value="quinzaine">une semaine sur deux</option>

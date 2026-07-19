@@ -126,11 +126,13 @@ export async function validerPlan(formData: FormData): Promise<{ success?: boole
   if ('error' in gardé) return { error: gardé.error }
   const planId = (formData.get('plan_id') as string) ?? ''
   if (!RE_UUID.test(planId)) return { error: 'Plan invalide.' }
+  // Autorise la (re)validation d'un plan brouillon OU déjà validé (le prof revalide
+  // après avoir modifié un plan validé) : rafraîchit valide_at, back-fill idempotent.
   const { data: updated, error } = await gardé.supabase
     .from('scriptorium_plans_evaluation')
     .update({ statut: 'valide', valide_at: new Date().toISOString(), updated_at: new Date().toISOString() })
     .eq('id', planId)
-    .eq('statut', 'brouillon')
+    .in('statut', ['brouillon', 'valide'])
     .select('classe_id')
     .maybeSingle()
   if (error) return { error: error.message }
