@@ -38,6 +38,16 @@
   --fond-module:      #F4EFE6;
   --bouton:           #5A4632;   /* fond bouton = pigment par défaut */
   --liseret:          #5A4632;   /* liseré = pigment par défaut */
+
+  /* Scriptorium · onglet « Parcours » — fil des deux familles + boutons estompés.
+     L'ocre de famille encadre le monde « Plans d'évaluation » (têtières, eyebrows,
+     segment actif) : distinct de --attention (même teinte mais rôle de STATUT).
+     Boutons estompés = préférence projet : même teinte, désaturée/éclaircie. */
+  --famille-eval:          #9A6A2E;   /* ocre de famille (cadre, pas statut) */
+  --dore:                  #C8A15A;   /* doré du bilan « à concevoir » (viz, ≠ badge statut) */
+  --bouton-parcours:       #6B5A46;   --bouton-parcours-texte: #F1EADD;  /* noyer estompé  */
+  --bouton-plan:           #AC8552;   --bouton-plan-texte:     #FBF5EA;  /* ocre estompé   */
+  --bouton-valider:        #737F5E;   --bouton-valider-texte:  #F1F3E9;  /* vert estompé   */
 }
 
 /* --- Un monde par module --------------------------------------------------
@@ -84,6 +94,18 @@
   /* minium (accent rouge du monde, ex. Aletheia) : text-minium / border-l-minium / bg-minium-teinte */
   --color-minium:          var(--minium);
   --color-minium-teinte:   var(--minium-teinte);
+
+  /* Scriptorium Parcours : fil de famille ocre + doré du bilan + boutons estompés.
+     Génère text-/bg-/border-/border-t- famille-eval, bg-/text- dore, et les paires
+     bg-bouton-* / text-bouton-*-texte. */
+  --color-famille-eval:          var(--famille-eval);
+  --color-dore:                  var(--dore);
+  --color-bouton-parcours:       var(--bouton-parcours);
+  --color-bouton-parcours-texte: var(--bouton-parcours-texte);
+  --color-bouton-plan:           var(--bouton-plan);
+  --color-bouton-plan-texte:     var(--bouton-plan-texte);
+  --color-bouton-valider:        var(--bouton-valider);
+  --color-bouton-valider-texte:  var(--bouton-valider-texte);
 
   /* polices (variables fournies par next/font — voir layout.tsx) */
   --font-marque: var(--police-marque);   /* Cinzel        */

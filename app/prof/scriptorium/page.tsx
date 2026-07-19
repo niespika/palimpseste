@@ -8,7 +8,7 @@ import FormulaireLivre from './FormulaireLivre'
 import { type ImageItem } from './LigneContenu'
 import BibliothequeContenus from './BibliothequeContenus'
 import type { ContenuBiblio } from './LigneContenuBiblio'
-import FormulaireParcours from './parcours/FormulaireParcours'
+import AccueilParcoursPlans from './parcours/AccueilParcoursPlans'
 import GrilleParcours from './parcours/GrilleParcours'
 import {
   chargerListeParcours, chargerParcoursDetail, chargerCiblesPicker, chargerParcoursDeClasse,
@@ -173,6 +173,11 @@ export default async function ScriptoriumPage({
   let parcoursDetail: ParcoursDetail | null = null
   let ciblesPicker: CiblesPicker = { textes: [], cours: [], livres: [] }
   let assignations: LigneAssignation[] = []
+  // Accueil « deux mondes » (option 1f) : la colonne Plans lit les classes/modèles
+  // via les loaders existants, gatés par planEvalActif (gate OFF → colonnes vides,
+  // l'accueil n'affiche que Parcours).
+  let accueilClassesPlan: ClasseAvecPlan[] = []
+  let accueilModeles: ModeleListItem[] = []
   if (estParcours) {
     if (parcoursSel) {
       ;[parcoursDetail, ciblesPicker] = await Promise.all([
@@ -182,6 +187,12 @@ export default async function ScriptoriumPage({
       if (parcoursDetail) {
         assignations = await chargerAssignationsAvecApercu(parcoursDetail.id, parcoursDetail.nbSemaines, classesList)
       }
+    } else if (planEvalActif) {
+      ;[listeParcours, accueilClassesPlan, accueilModeles] = await Promise.all([
+        chargerListeParcours(),
+        chargerClassesAvecPlan(),
+        chargerListeModeles(),
+      ])
     } else {
       listeParcours = await chargerListeParcours()
     }
@@ -301,8 +312,10 @@ export default async function ScriptoriumPage({
     <div className="space-y-6 pb-8">
       {/* ── Entrée gatée du plan d'évaluation (pas d'onglet de nav gate OFF) ────
           Deux facettes : « Modèles » (class-agnostiques, authoring — Lot C) et
-          « Par classe » (instances). */}
-      {planEvalActif && (estParcours || estEvaluations || estModeles) && (
+          « Par classe » (instances). L'accueil « deux mondes » (?vue=parcours)
+          porte désormais son propre segment → barre réservée aux vues eval/modèles
+          (reskinnées aux chantiers 3/4). */}
+      {planEvalActif && (estEvaluations || estModeles) && (
         <div className="flex items-center justify-between gap-2 bg-surface border border-bordure rounded-xl px-4 py-2">
           <span className="text-sm text-encre-douce">📋 Plan d’évaluation</span>
           <div className="flex items-center gap-3 text-xs">
@@ -343,24 +356,12 @@ export default async function ScriptoriumPage({
         ) : parcoursSel ? (
           <p className="text-sm text-muet">Parcours introuvable. <Link href="/prof/scriptorium?vue=parcours" className="underline">Retour à la liste</Link>.</p>
         ) : (
-          <div className="space-y-3">
-            <FormulaireParcours />
-            {listeParcours.length === 0 ? (
-              <p className="text-sm text-muet">Aucun parcours pour l’instant. Crée-en un ci-dessus, puis pose des Textes/Cours/Livres semaine par semaine.</p>
-            ) : (
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                {listeParcours.map(p => (
-                  <Tuile
-                    key={p.id}
-                    nom={p.titre}
-                    sousTitre={`${p.nbSemaines} semaine${p.nbSemaines > 1 ? 's' : ''} · ${p.nbClasses} classe${p.nbClasses > 1 ? 's' : ''}`}
-                    href={`/prof/scriptorium?vue=parcours&parcours=${p.id}`}
-                    couleur={p.nbClasses > 0 ? 'vert' : 'neutre'}
-                  />
-                ))}
-              </div>
-            )}
-          </div>
+          <AccueilParcoursPlans
+            parcours={listeParcours}
+            classesPlan={accueilClassesPlan}
+            modeles={accueilModeles}
+            planEvalActif={planEvalActif}
+          />
         )
       )}
 

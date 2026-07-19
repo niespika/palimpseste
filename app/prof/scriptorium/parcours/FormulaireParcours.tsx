@@ -5,7 +5,15 @@ import { useRouter } from 'next/navigation'
 import { creerParcours } from '../actions'
 
 // Création d'un parcours (titre + nb de semaines) → ouvre directement son détail.
-export default function FormulaireParcours() {
+// `triggerClassName` / `triggerLabel` permettent à l'accueil charte de poser le
+// bouton estompé noyer ; le comportement (creerParcours → détail) est inchangé.
+export default function FormulaireParcours({
+  triggerClassName = 'w-full bg-bouton text-surface py-2.5 rounded-xl text-sm font-medium hover:opacity-90 transition-colors',
+  triggerLabel = '+ Nouveau parcours',
+}: {
+  triggerClassName?: string
+  triggerLabel?: string
+} = {}) {
   const router = useRouter()
   const [ouvert, setOuvert] = useState(false)
   const [chargement, setChargement] = useState(false)
@@ -25,11 +33,8 @@ export default function FormulaireParcours() {
 
   if (!ouvert) {
     return (
-      <button
-        onClick={() => setOuvert(true)}
-        className="w-full bg-bouton text-surface py-2.5 rounded-xl text-sm font-medium hover:opacity-90 transition-colors"
-      >
-        + Nouveau parcours
+      <button onClick={() => setOuvert(true)} className={triggerClassName}>
+        {triggerLabel}
       </button>
     )
   }
