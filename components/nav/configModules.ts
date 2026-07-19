@@ -46,6 +46,9 @@ export interface SousOnglet {
   /** Pour les modules dont les onglets sont pilotés par un paramètre `?vue=` (Scriptorium)
    *  plutôt que par la route : valeur de `vue` qui rend cet onglet actif. */
   vue?: string
+  /** Vues (au sens `?vue=`) qui allument cet onglet. Défaut = [vue].
+   *  Permet à un onglet parent de rester actif sur ses sous-vues regroupées. */
+  vues?: string[]
 }
 
 export interface ModuleConfig {
@@ -178,13 +181,12 @@ export const MODULES: readonly ModuleConfig[] = [
     },
     devise: { latin: 'Ars Docendi', francais: "D'une main à l'autre" },
     // Onglets pilotés par `?vue=` (pas par la route) — cf. app/prof/scriptorium/page.tsx.
+    // 4 onglets ; `vues` regroupe les sous-vues qui allument l'onglet parent.
     sousOngletsProf: [
-      { href: '/prof/scriptorium?vue=classes', label: 'Par classe', vue: 'classes' },
-      { href: '/prof/scriptorium?vue=textes', label: 'Textes', vue: 'textes' },
-      { href: '/prof/scriptorium?vue=cours', label: 'Cours', vue: 'cours' },
-      { href: '/prof/scriptorium?vue=parcours', label: 'Parcours', vue: 'parcours' },
-      { href: '/prof/scriptorium?vue=livres', label: 'Livres', vue: 'livres' },
-      { href: '/prof/scriptorium?vue=parametres', label: 'Paramètres', vue: 'parametres' },
+      { href: '/prof/scriptorium?vue=classes',    label: 'Classes',    vue: 'classes',    vues: ['classes'] },
+      { href: '/prof/scriptorium?vue=parcours',   label: 'Parcours',   vue: 'parcours',   vues: ['parcours', 'evaluations', 'modeles'] },
+      { href: '/prof/scriptorium?vue=ressources', label: 'Ressources', vue: 'ressources', vues: ['ressources', 'textes', 'cours', 'livres'] },
+      { href: '/prof/scriptorium?vue=parametres', label: 'Paramètres', vue: 'parametres', vues: ['parametres'] },
     ],
   },
 ]

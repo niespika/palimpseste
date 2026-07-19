@@ -45,7 +45,12 @@ function Barre({ mod, actif }: { mod: ModuleConfig; actif: (o: { href: string; v
 // Onglets pilotés par `?vue=` (Scriptorium) — useSearchParams isolé sous Suspense.
 function BarreParam({ mod }: { mod: ModuleConfig }) {
   const vue = useSearchParams().get('vue') ?? mod.sousOngletsProf[0]?.vue
-  return <Barre mod={mod} actif={(o) => o.vue === vue} />
+  // Cf. EnTeteSite : actif = la vue courante appartient au groupe `vues` (repli `[vue]`).
+  const estActif = (o: { vue?: string; vues?: string[] }) => {
+    const groupe = o.vues ?? (o.vue ? [o.vue] : [])
+    return vue != null && groupe.includes(vue)
+  }
+  return <Barre mod={mod} actif={estActif} />
 }
 
 export default function SousNavModuleMobile() {

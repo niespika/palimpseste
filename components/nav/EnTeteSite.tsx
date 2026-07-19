@@ -126,7 +126,13 @@ function SousOngletsRoute({ mod, pathname, compact }: { mod: ModuleConfig; pathn
 function SousOngletsParam({ mod, compact }: { mod: ModuleConfig; compact: boolean }) {
   const vueDefaut = mod.sousOngletsProf[0]?.vue
   const vue = useSearchParams().get('vue') ?? vueDefaut
-  return <SousOngletsListe mod={mod} compact={compact} actif={(o) => o.vue === vue} />
+  // Un onglet est actif si la vue courante appartient à son groupe `vues`
+  // (repli sur `[vue]`). Garde `vue != null` : `vue` est `string | undefined`.
+  const estActif = (o: { vue?: string; vues?: string[] }) => {
+    const groupe = o.vues ?? (o.vue ? [o.vue] : [])
+    return vue != null && groupe.includes(vue)
+  }
+  return <SousOngletsListe mod={mod} compact={compact} actif={estActif} />
 }
 
 export default function EnTeteSite({ role, tabs, deconnexionAction, classe }: EnTeteSiteProps) {

@@ -294,14 +294,15 @@ export default async function ScriptoriumPage({
       : null
   }
 
-  // Les onglets (Par classe / Textes / Cours / Parcours / Livres / Paramètres)
-  // sont désormais portés par la Barre 2 de l'en-tête (pilotés par `?vue=`).
+  // Les onglets (Classes / Parcours / Ressources / Paramètres) sont portés par la
+  // Barre 2 de l'en-tête (pilotés par `?vue=`). Ressources regroupe textes/cours/livres ;
+  // Parcours regroupe parcours/evaluations/modeles (cf. configModules.ts).
   return (
     <div className="space-y-6 pb-8">
       {/* ── Entrée gatée du plan d'évaluation (pas d'onglet de nav gate OFF) ────
           Deux facettes : « Modèles » (class-agnostiques, authoring — Lot C) et
           « Par classe » (instances). */}
-      {planEvalActif && (
+      {planEvalActif && (estParcours || estEvaluations || estModeles) && (
         <div className="flex items-center justify-between gap-2 bg-surface border border-bordure rounded-xl px-4 py-2">
           <span className="text-sm text-encre-douce">📋 Plan d’évaluation</span>
           <div className="flex items-center gap-3 text-xs">
@@ -309,15 +310,27 @@ export default async function ScriptoriumPage({
             <span className="text-bordure">·</span>
             <Link href="/prof/scriptorium?vue=evaluations" className={estEvaluations ? 'text-encre font-medium' : 'text-muet hover:text-encre'}>Par classe</Link>
             {(estModeles || estEvaluations) && (
-              <Link href="/prof/scriptorium?vue=classes" className="text-muet hover:text-encre ml-1">← Scriptorium</Link>
+              <Link href="/prof/scriptorium?vue=parcours" className="text-muet hover:text-encre ml-1">← Parcours</Link>
             )}
           </div>
         </div>
       )}
 
+      {/* ── Hub Ressources : Textes / Cours / Livres → vues existantes ───────── */}
+      {vue === 'ressources' && (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+          <Tuile nom="Textes" sousTitre="Extraits réutilisables"   href="/prof/scriptorium?vue=textes" />
+          <Tuile nom="Cours"  sousTitre="Supports de cours"         href="/prof/scriptorium?vue=cours" />
+          <Tuile nom="Livres" sousTitre="Œuvres (lecture Aletheia)" href="/prof/scriptorium?vue=livres" />
+        </div>
+      )}
+
       {/* ── Bibliothèque : Textes / Cours (Parcours L2) ─────────────────────── */}
       {biblioType && (
-        <BibliothequeContenus type={biblioType} contenus={biblioContenus} corbeille={biblioCorbeille} />
+        <div className="space-y-3">
+          <Link href="/prof/scriptorium?vue=ressources" className="inline-block text-sm text-muet hover:text-encre">← Ressources</Link>
+          <BibliothequeContenus type={biblioType} contenus={biblioContenus} corbeille={biblioCorbeille} />
+        </div>
       )}
 
       {/* ── Parcours : builder (Parcours L4) ─────────────────────────────────── */}
@@ -415,8 +428,21 @@ export default async function ScriptoriumPage({
                 </div>
               )}
 
+              {planEvalActif && (
+                <div className="space-y-2">
+                  <p className="text-xs text-muet uppercase tracking-wide">Plan d’évaluation</p>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    <Tuile
+                      nom="Plan d’évaluation de la classe"
+                      sousTitre="Voir et ajuster"
+                      href={`/prof/scriptorium?vue=evaluations&classe=${classeSel}`}
+                    />
+                  </div>
+                </div>
+              )}
+
               {parcoursDeClasse.length === 0 && (livresParClasse.get(classeSel) ?? []).length === 0 && (
-                <p className="text-sm text-muet">Cette classe n’a ni parcours ni livre assigné. Assigne un parcours depuis l’onglet « Parcours », ou un livre depuis « Livres ».</p>
+                <p className="text-sm text-muet">Cette classe n’a ni parcours ni livre assigné. Assigne un parcours depuis l’onglet « Parcours », ou un livre depuis « Ressources ».</p>
               )}
             </div>
           )}
@@ -445,6 +471,7 @@ export default async function ScriptoriumPage({
           />
         ) : (
           <div className="space-y-4">
+            <Link href="/prof/scriptorium?vue=ressources" className="inline-block text-sm text-muet hover:text-encre">← Ressources</Link>
             <FormulaireLivre classes={classesList} />
             {unitesList.filter(u => u.type === 'livre').length === 0 ? (
               <p className="text-sm text-muet">Aucun livre. Crée-en un ci-dessus (+ Ajouter un livre).</p>

@@ -109,7 +109,7 @@ export default function VueLivre({ livre, classes, classeIds, docs, nbDocsSansSe
 
         {nbDocsSansSemaine > 0 && (
           <div className="border border-attention bg-attention-teinte/40 rounded-lg p-3 text-xs text-attention">
-            {nbDocsSansSemaine} document(s) sans numéro de séance dans ce livre — non éditable(s) ici ; corrige-les via la vue « Par classe ».
+            {nbDocsSansSemaine} document(s) sans numéro de séance dans ce livre — non éditable(s) ici ; corrige-les via la vue « Classes ».
           </div>
         )}
 
