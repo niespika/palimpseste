@@ -201,7 +201,11 @@ export default async function ScriptoriumPage({
   // La LISTE « Par classe » vit dans l'accueil (?vue=parcours) → ?vue=evaluations
   // sans classe est un reliquat, on redirige. Seul le détail (?classe=…) survit ici.
   const estEvaluations = vue === 'evaluations'
-  if (planEvalActif && estEvaluations && !classeSel) redirect('/prof/scriptorium?vue=parcours')
+  // ?vue=evaluations SANS classe = reliquat (la liste vit dans l'accueil) → toujours rediriger.
+  if (estEvaluations && !classeSel) redirect('/prof/scriptorium?vue=parcours')
+  // Gate OFF : les vues plan-éval (evaluations/modeles) n'ont aucun écran → accueil,
+  // plutôt qu'une coquille vide sur une URL tapée à la main / un marque-page.
+  if (!planEvalActif && (estEvaluations || vue === 'modeles')) redirect('/prof/scriptorium?vue=parcours')
   let planDetail: PlanDetail | null = null
   let panoptique: Panoptique | null = null
   if (planEvalActif && estEvaluations && classeSel) {

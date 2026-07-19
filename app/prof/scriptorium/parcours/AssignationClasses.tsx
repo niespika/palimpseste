@@ -70,12 +70,13 @@ function StatutPill({ ligne }: { ligne: LigneAssignation }) {
 }
 
 function LigneRow({
-  parcoursId, ligne, ouvert, onToggle,
+  parcoursId, ligne, ouvert, onToggle, onOuvrir,
 }: {
   parcoursId: string
   ligne: LigneAssignation
   ouvert: boolean
   onToggle: () => void
+  onOuvrir: () => void
 }) {
   const router = useRouter()
   const [chargement, setChargement] = useState(false)
@@ -88,6 +89,7 @@ function LigneRow({
     setChargement(false)
     if (res.bloque || res.error) { setErreur(res.error ?? 'Enregistrement refusé.'); return }
     if (res.avis) setAvis(res.avis)
+    onOuvrir() // déplie la classe juste assignée sur son champ de date (sinon repliée « sans date »)
     router.refresh()
   }
 
@@ -136,8 +138,8 @@ function LigneRow({
   // ── Classe assignée, repliée : nom + pastille d'état (verte). ─────────────────
   if (!ouvert) {
     return (
-      <button onClick={onToggle} className="flex items-center gap-2.5 border border-bordure rounded-xl bg-white px-3.5 py-3 text-left w-full hover:border-puce transition-colors">
-        <span className="text-muet-clair">▸</span>
+      <button onClick={onToggle} aria-expanded={false} className="flex items-center gap-2.5 border border-bordure rounded-xl bg-white px-3.5 py-3 text-left w-full hover:border-puce transition-colors">
+        <span className="text-muet-clair" aria-hidden>▸</span>
         <span className="font-corps text-[16px] font-semibold text-encre flex-1 min-w-0 truncate">{ligne.nom}</span>
         <StatutPill ligne={ligne} />
       </button>
@@ -147,8 +149,8 @@ function LigneRow({
   // ── Ligne dépliée : date + aperçu des échéances + publication ───────────────
   return (
     <div className="border-[1.5px] border-puce rounded-xl bg-white overflow-hidden">
-      <button onClick={onToggle} className="w-full flex items-center gap-2.5 px-3.5 py-3 border-b border-bordure text-left">
-        <span className="text-pigment">▾</span>
+      <button onClick={onToggle} aria-expanded={true} className="w-full flex items-center gap-2.5 px-3.5 py-3 border-b border-bordure text-left">
+        <span className="text-pigment" aria-hidden>▾</span>
         <span className="font-corps text-[16px] font-semibold text-encre flex-1 min-w-0 truncate">{ligne.nom}</span>
         <StatutPill ligne={ligne} />
       </button>
@@ -229,6 +231,7 @@ export default function AssignationClasses({ parcoursId, lignes }: { parcoursId:
               ligne={l}
               ouvert={classeOuverte === l.classeId}
               onToggle={() => setClasseOuverte(prev => (prev === l.classeId ? null : l.classeId))}
+              onOuvrir={() => setClasseOuverte(l.classeId)}
             />
           ))}
         </div>

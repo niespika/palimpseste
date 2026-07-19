@@ -251,12 +251,17 @@ function ContexteParcours({ items }: { items: SemainePanoptique['enseignements']
     <div className="border-l-[3px] border-pigment bg-parchemin rounded-r-lg px-4 py-3 mb-4">
       <div className="font-ui text-[10px] font-bold uppercase tracking-[0.08em] text-muet mb-1">Enseigné cette semaine · via le parcours</div>
       <div className="font-corps text-[15px] text-encre-douce">
-        {items.map((e, i) => (
-          <span key={i}>
-            {e.ref === 'texte' ? 'Texte' : e.ref === 'cours' ? 'Cours' : 'Lecture'} « {e.titre} »
-            {i < items.length - 1 ? ' · ' : ''}
-          </span>
-        ))}
+        {items.map((e, i) => {
+          const tranche = e.ref === 'livre' && e.tranche && (e.tranche.debut != null || e.tranche.fin != null)
+            ? ` (S${e.tranche.debut ?? '?'}→S${e.tranche.fin ?? '?'})` : ''
+          return (
+            <span key={i}>
+              {e.ref === 'texte' ? 'Texte' : e.ref === 'cours' ? 'Cours' : 'Lecture'} « {e.titre} »
+              {tranche && <span className="text-muet-clair">{tranche}</span>}
+              {i < items.length - 1 ? ' · ' : ''}
+            </span>
+          )
+        })}
       </div>
     </div>
   )
@@ -344,7 +349,9 @@ export default function GrillePlan({ plan, panoptique }: { plan: PlanDetail; pan
       {plan.aRecaler.length > 0 && <div className="mb-2"><Recalage exercices={plan.aRecaler} /></div>}
       {panoptique && panoptique.horsFrise.length > 0 && <div className="mb-2"><BandeauHorsFrise semaines={panoptique.horsFrise} /></div>}
 
-      <div className="flex border border-bordure rounded-xl overflow-hidden">
+      {/* Desktop (≥ ~1024px) : sous cette largeur, défilement horizontal (filet mobile). */}
+      <div className="overflow-x-auto">
+      <div className="flex border border-bordure rounded-xl overflow-hidden min-w-[860px]">
         {/* ── Gauche : bilan + liste des semaines (parchemin) ─────────────────── */}
         <div className="w-[344px] flex-none bg-parchemin border-r border-bordure flex flex-col">
           <div className="p-5 border-b border-bordure flex flex-col gap-2.5">
@@ -353,7 +360,7 @@ export default function GrillePlan({ plan, panoptique }: { plan: PlanDetail; pan
               <span className="font-titre text-[34px] font-bold text-encre leading-none">{total}</span>
               <span className="font-corps text-[15px] text-muet">exercice{total > 1 ? 's' : ''}</span>
             </div>
-            <div className="flex h-2.5 rounded-full overflow-hidden bg-white">
+            <div className="flex h-2.5 rounded-full overflow-hidden bg-surface">
               {nbConcu > 0 && <span className="bg-ok" style={{ width: `${pct(nbConcu)}%` }} />}
               {nbConcevoir > 0 && <span className="bg-dore" style={{ width: `${pct(nbConcevoir)}%` }} />}
               {nbRetard > 0 && <span className="bg-retard" style={{ width: `${pct(nbRetard)}%` }} />}
@@ -376,18 +383,28 @@ export default function GrillePlan({ plan, panoptique }: { plan: PlanDetail; pan
               <p className="font-corps text-[14px] text-muet px-1">Aucune semaine couverte — définis les semestres dans le Calendrier.</p>
             ) : plan.semaines.map(s => {
               const exos = s.exercices.filter(e => e.statut !== 'annule')
-              const resume = [...new Set(exos.map(e => LABELS[e.typeExercice] ?? e.typeExercice))].join(' · ') || '—'
+              // Les synthèses de parcours (ancrage='parcours') vivent dans la panoptique,
+              // pas dans s.exercices → les inclure pour que le rail reflète tout le travail.
+              const synth = (panoParLundi.get(s.lundi)?.exercices ?? []).filter(e => e.source === 'synthese_parcours')
+              const labels = [...new Set(exos.map(e => LABELS[e.typeExercice] ?? e.typeExercice))]
+              if (synth.length > 0) labels.push('Synthèse')
+              const resume = labels.join(' · ') || '—'
+              const dots = [
+                ...exos.slice(0, 4).map(e => ({ k: e.id, c: statutInfo(e).dot })),
+                ...synth.map(e => ({ k: e.id, c: e.etat === 'concu' || e.etat === 'realise' ? 'bg-ok' : e.etat === 'en_retard' ? 'bg-retard' : 'bg-dore' })),
+              ].slice(0, 5)
               const sel = semaineSel === s.lundi
               return (
                 <button
                   key={s.lundi}
                   onClick={() => setSemaineSel(s.lundi)}
-                  className={`flex items-center gap-2.5 rounded-lg px-3 py-2.5 text-left transition-colors ${sel ? 'border-[1.5px] border-famille-eval bg-attention-teinte' : 'border border-bordure bg-white hover:border-encre-douce'}`}
+                  aria-pressed={sel}
+                  className={`flex items-center gap-2.5 rounded-lg px-3 py-2.5 text-left transition-colors ${sel ? 'border-[1.5px] border-famille-eval bg-attention-teinte' : 'border border-bordure bg-surface hover:border-encre-douce'}`}
                 >
                   <span className={`font-ui text-[12px] font-semibold w-[46px] flex-none ${sel ? 'text-famille-eval' : 'text-muet-clair'}`}>{fmtJour(s.lundi)}</span>
                   <span className={`font-corps text-[14px] flex-1 min-w-0 truncate ${sel ? 'text-encre font-semibold' : 'text-encre-douce'}`}>{resume}</span>
                   <span className="flex gap-1 flex-none">
-                    {exos.slice(0, 4).map(e => <span key={e.id} className={`w-2 h-2 rounded-full ${statutInfo(e).dot}`} />)}
+                    {dots.map(d => <span key={d.k} className={`w-2 h-2 rounded-full ${d.c}`} />)}
                   </span>
                 </button>
               )
@@ -434,6 +451,7 @@ export default function GrillePlan({ plan, panoptique }: { plan: PlanDetail; pan
             </>
           )}
         </div>
+      </div>
       </div>
     </div>
   )

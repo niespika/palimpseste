@@ -71,26 +71,32 @@ function EnteteGroupe({
     return (
       <button
         onClick={onToggle}
+        aria-expanded={true}
         className={`flex items-center gap-1.5 font-ui text-[11px] font-bold uppercase tracking-[0.1em] ${teinte}`}
       >
-        <span>▾</span> {libelle} <span className="text-muet-clair font-medium normal-case tracking-normal">· {n}</span>
+        <span aria-hidden>▾</span> {libelle} <span className="text-muet-clair font-medium normal-case tracking-normal">· {n}</span>
       </button>
     )
   }
   return (
     <button
       onClick={onToggle}
+      aria-expanded={false}
       className="flex items-center gap-2 px-3.5 py-2.5 bg-parchemin rounded-lg font-ui text-[13px] font-medium text-muet hover:bg-parchemin-fonce transition-colors"
     >
-      <span>▸</span> {libelle} <span className="text-muet-clair">· {n}</span>
+      <span aria-hidden>▸</span> {libelle} <span className="text-muet-clair">· {n}</span>
     </button>
   )
 }
 
-/** Conteneur bordé des lignes. Sur colonne élargie → 2 colonnes (option 1g). */
-function TableLignes({ enfants, deuxColonnes }: { enfants: React.ReactNode[]; deuxColonnes: boolean }) {
-  if (enfants.length === 0) return null
-  if (!deuxColonnes) {
+/** Conteneur bordé des lignes. Sur colonne élargie → 2 colonnes (option 1g), mais
+ *  seulement à partir de 2 items (sinon une seconde boîte bordée vide). Message
+ *  d'état vide `vide` rendu quand le groupe ouvert n'a aucun item. */
+function TableLignes({ enfants, deuxColonnes, vide }: { enfants: React.ReactNode[]; deuxColonnes: boolean; vide?: string }) {
+  if (enfants.length === 0) {
+    return vide ? <p className="font-corps text-[13px] text-muet-clair italic px-1">{vide}</p> : null
+  }
+  if (!deuxColonnes || enfants.length < 2) {
     return <div className="border border-bordure rounded-xl overflow-hidden bg-white">{enfants}</div>
   }
   const moitie = Math.ceil(enfants.length / 2)
@@ -119,9 +125,11 @@ function Rail({
     <button
       onClick={onClick}
       title="Déplier la colonne"
+      aria-label={`Déplier la colonne ${libelle}`}
+      aria-expanded={false}
       className={`w-14 flex-none self-stretch rounded-xl flex flex-col items-center justify-center gap-4 py-5 hover:opacity-90 transition-opacity ${fond}`}
     >
-      <span className="text-[15px]">{chevron}</span>
+      <span className="text-[15px]" aria-hidden>{chevron}</span>
       <span
         className="font-ui text-[12px] font-bold uppercase tracking-[0.16em]"
         style={{ writingMode: 'vertical-rl', textOrientation: 'upright' }}
@@ -175,14 +183,16 @@ export default function AccueilParcoursPlans({
     <div className="bg-surface border border-bordure border-t-[3px] border-t-pigment rounded-xl overflow-hidden flex flex-col">
       <div className="px-4 py-3 flex items-center gap-2.5 border-b border-bordure">
         <span className="font-titre text-[20px] font-bold text-pigment flex-1">
-          ◆ Parcours <span className="font-ui text-[13px] font-medium text-muet-clair">· {parcours.length}</span>
+          ◆ Parcours <span className="font-ui text-[13px] font-medium text-muet-clair">· {assignes.length + sansClasse.length}</span>
         </span>
         <button
           onClick={() => setReplie(replie === 'parcours' ? null : 'parcours')}
-          title="Replier la colonne"
+          title="Replier la colonne Parcours"
+          aria-label="Replier la colonne Parcours"
+          aria-expanded={true}
           className="text-[13px] text-muet-clair border-l border-bordure pl-2.5 hover:text-encre"
         >
-          ⟨
+          <span aria-hidden>⟨</span>
         </button>
       </div>
       <div className="px-4 py-3.5 flex flex-col gap-3">
@@ -195,7 +205,7 @@ export default function AccueilParcoursPlans({
         />
         <EnteteGroupe ouvert={grpAssignes} onToggle={() => setGrpAssignes(v => !v)} libelle="Assignés" n={assignes.length} couleur="pigment" />
         {grpAssignes && (
-          <TableLignes deuxColonnes={large} enfants={assignes.map(p => (
+          <TableLignes deuxColonnes={large} vide={qParcours ? 'Aucun résultat.' : 'Aucun parcours assigné.'} enfants={assignes.map(p => (
             <Ligne
               key={p.id}
               href={`/prof/scriptorium?vue=parcours&parcours=${p.id}`}
@@ -205,12 +215,9 @@ export default function AccueilParcoursPlans({
             />
           ))} />
         )}
-        {grpAssignes && assignes.length === 0 && (
-          <p className="font-corps text-[13px] text-muet-clair italic px-1">Aucun parcours assigné.</p>
-        )}
         <EnteteGroupe ouvert={grpSansClasse} onToggle={() => setGrpSansClasse(v => !v)} libelle="Sans classe" n={sansClasse.length} couleur="pigment" />
         {grpSansClasse && (
-          <TableLignes deuxColonnes={large} enfants={sansClasse.map(p => (
+          <TableLignes deuxColonnes={large} vide={qParcours ? 'Aucun résultat.' : 'Tous les parcours sont assignés.'} enfants={sansClasse.map(p => (
             <Ligne
               key={p.id}
               href={`/prof/scriptorium?vue=parcours&parcours=${p.id}`}
@@ -226,14 +233,18 @@ export default function AccueilParcoursPlans({
 
   // ── Colonne Plans d'évaluation ────────────────────────────────────────────
   const segment = (
-    <span className="inline-flex border border-bordure-bouton rounded-lg overflow-hidden font-ui text-[12px] font-medium">
+    <span role="tablist" aria-label="Facette des plans d'évaluation" className="inline-flex border border-bordure-bouton rounded-lg overflow-hidden font-ui text-[12px] font-medium">
       <button
+        role="tab"
+        aria-selected={facette === 'classes'}
         onClick={() => setFacette('classes')}
         className={`px-2.5 py-1.5 ${facette === 'classes' ? 'bg-bouton-plan text-bouton-plan-texte font-semibold' : 'text-muet hover:text-encre'}`}
       >
         Par classe
       </button>
       <button
+        role="tab"
+        aria-selected={facette === 'modeles'}
         onClick={() => setFacette('modeles')}
         className={`px-2.5 py-1.5 ${facette === 'modeles' ? 'bg-bouton-plan text-bouton-plan-texte font-semibold' : 'text-muet hover:text-encre'}`}
       >
@@ -257,10 +268,12 @@ export default function AccueilParcoursPlans({
         {segment}
         <button
           onClick={() => setReplie(replie === 'plans' ? null : 'plans')}
-          title="Replier la colonne"
+          title="Replier la colonne Plans d'évaluation"
+          aria-label="Replier la colonne Plans d'évaluation"
+          aria-expanded={true}
           className="text-[13px] text-muet-clair border-l border-bordure pl-2.5 hover:text-encre"
         >
-          ⟩
+          <span aria-hidden>⟩</span>
         </button>
       </div>
       <div className="px-4 py-3.5 flex flex-col gap-3">
@@ -281,19 +294,19 @@ export default function AccueilParcoursPlans({
           <>
             <EnteteGroupe ouvert={grpValides} onToggle={() => setGrpValides(v => !v)} libelle="Validés" n={valides.length} couleur="famille-eval" />
             {grpValides && (
-              <TableLignes deuxColonnes={large} enfants={valides.map(c => (
+              <TableLignes deuxColonnes={large} vide={qPlans ? 'Aucun résultat.' : 'Aucun plan validé.'} enfants={valides.map(c => (
                 <Ligne key={c.classeId} href={`/prof/scriptorium?vue=evaluations&classe=${c.classeId}`} nom={c.nom} actif badge={badgeStatut('validé', 'ok')} />
               ))} />
             )}
             <EnteteGroupe ouvert={grpBrouillons} onToggle={() => setGrpBrouillons(v => !v)} libelle="Brouillons" n={brouillons.length} couleur="famille-eval" />
             {grpBrouillons && (
-              <TableLignes deuxColonnes={large} enfants={brouillons.map(c => (
+              <TableLignes deuxColonnes={large} vide={qPlans ? 'Aucun résultat.' : 'Aucun brouillon.'} enfants={brouillons.map(c => (
                 <Ligne key={c.classeId} href={`/prof/scriptorium?vue=evaluations&classe=${c.classeId}`} nom={c.nom} actif={false} badge={badgeStatut('brouillon', 'attention')} />
               ))} />
             )}
             <EnteteGroupe ouvert={grpSansPlan} onToggle={() => setGrpSansPlan(v => !v)} libelle="Sans plan" n={sansPlan.length} couleur="famille-eval" />
             {grpSansPlan && (
-              <TableLignes deuxColonnes={large} enfants={sansPlan.map(c => (
+              <TableLignes deuxColonnes={large} vide={qPlans ? 'Aucun résultat.' : 'Toutes les classes ont un plan.'} enfants={sansPlan.map(c => (
                 <Ligne key={c.classeId} href={`/prof/scriptorium?vue=evaluations&classe=${c.classeId}`} nom={c.nom} actif={false} meta="aucun plan" />
               ))} />
             )}
@@ -302,13 +315,13 @@ export default function AccueilParcoursPlans({
           <>
             <EnteteGroupe ouvert={grpModPrets} onToggle={() => setGrpModPrets(v => !v)} libelle="Prêts" n={modPrets.length} couleur="famille-eval" />
             {grpModPrets && (
-              <TableLignes deuxColonnes={large} enfants={modPrets.map(m => (
+              <TableLignes deuxColonnes={large} vide={qPlans ? 'Aucun résultat.' : 'Aucun modèle prêt.'} enfants={modPrets.map(m => (
                 <Ligne key={m.id} href={`/prof/scriptorium?vue=modeles&modele=${m.id}`} nom={m.titre} actif meta={`${GABARIT_LABEL[m.gabarit] ?? m.gabarit} · ${m.nbExercices} exo`} />
               ))} />
             )}
             <EnteteGroupe ouvert={grpModBrouillons} onToggle={() => setGrpModBrouillons(v => !v)} libelle="Brouillons" n={modBrouillons.length} couleur="famille-eval" />
             {grpModBrouillons && (
-              <TableLignes deuxColonnes={large} enfants={modBrouillons.map(m => (
+              <TableLignes deuxColonnes={large} vide={qPlans ? 'Aucun résultat.' : 'Aucun modèle brouillon.'} enfants={modBrouillons.map(m => (
                 <Ligne key={m.id} href={`/prof/scriptorium?vue=modeles&modele=${m.id}`} nom={m.titre} actif={false} meta={`${GABARIT_LABEL[m.gabarit] ?? m.gabarit} · ${m.nbExercices} exo`} />
               ))} />
             )}
@@ -332,25 +345,29 @@ export default function AccueilParcoursPlans({
         </p>
       </div>
 
-      {/* Gate ON → deux mondes. Gate OFF → Parcours seul (invariant no-op). */}
-      {!planEvalActif ? (
-        colonneParcours
-      ) : replie === null ? (
-        <div className="grid grid-cols-2 gap-[22px] items-start">
-          {colonneParcours}
-          {colonnePlans}
-        </div>
-      ) : replie === 'plans' ? (
-        <div className="flex gap-3.5 items-start">
-          <div className="flex-1 min-w-0">{colonneParcours}</div>
-          <Rail libelle="Plans" n={classesPlan.length} couleur="famille-eval" onClick={() => setReplie(null)} />
-        </div>
-      ) : (
-        <div className="flex gap-3.5 items-start">
-          <Rail libelle="Parcours" n={parcours.length} couleur="pigment" onClick={() => setReplie(null)} />
-          <div className="flex-1 min-w-0">{colonnePlans}</div>
-        </div>
-      )}
+      {/* Écran conçu pour ordinateur (≥ ~1024px) : sous cette largeur, défilement
+          horizontal plutôt qu'un rendu tassé/débordant (filet mobile). */}
+      <div className="overflow-x-auto">
+        {/* Gate ON → deux mondes. Gate OFF → Parcours seul (invariant no-op). */}
+        {!planEvalActif ? (
+          colonneParcours
+        ) : replie === null ? (
+          <div className="grid grid-cols-2 gap-[22px] items-start min-w-[760px]">
+            {colonneParcours}
+            {colonnePlans}
+          </div>
+        ) : replie === 'plans' ? (
+          <div className="flex gap-3.5 items-stretch min-w-[760px]">
+            <div className="flex-1 min-w-0">{colonneParcours}</div>
+            <Rail libelle="Plans" n={classesPlan.length} couleur="famille-eval" onClick={() => setReplie(null)} />
+          </div>
+        ) : (
+          <div className="flex gap-3.5 items-stretch min-w-[760px]">
+            <Rail libelle="Parcours" n={parcours.length} couleur="pigment" onClick={() => setReplie(null)} />
+            <div className="flex-1 min-w-0">{colonnePlans}</div>
+          </div>
+        )}
+      </div>
     </div>
   )
 }

@@ -152,7 +152,9 @@ export default function GrilleParcours({
         ← Tous les parcours
       </Link>
 
-      <div className="flex border border-bordure rounded-xl overflow-hidden">
+      {/* Desktop (≥ ~1024px) : sous cette largeur, défilement horizontal (filet mobile). */}
+      <div className="overflow-x-auto">
+      <div className="flex border border-bordure rounded-xl overflow-hidden min-w-[860px]">
         {/* ── Gauche : builder (parchemin chaud) ─────────────────────────────── */}
         <div className="flex-1 min-w-0 bg-parchemin p-5">
           {editionEntete ? (
@@ -199,9 +201,10 @@ export default function GrilleParcours({
                   <button
                     key={s}
                     onClick={() => ouvrirSemaine(s)}
+                    aria-expanded={false}
                     className="flex items-center gap-3 border border-bordure rounded-xl bg-surface px-4 py-3 text-left hover:border-pigment transition-colors"
                   >
-                    <span className="text-muet-clair">▸</span>
+                    <span className="text-muet-clair" aria-hidden>▸</span>
                     <span className="font-ui text-[12px] font-semibold text-muet-clair w-6 flex-none">S{s}</span>
                     {cs.length > 0 ? (
                       <span className="font-corps text-[15px] text-encre-douce flex-1 min-w-0 truncate">{resume}</span>
@@ -216,7 +219,7 @@ export default function GrilleParcours({
               return (
                 <div key={s} className="border-[1.5px] border-pigment rounded-xl bg-surface overflow-hidden shadow-sm">
                   <div className="flex items-center gap-3 px-4 py-3 border-b border-bordure">
-                    <button onClick={() => setSemaineOuverte(null)} className="text-pigment">▾</button>
+                    <button onClick={() => setSemaineOuverte(null)} aria-expanded={true} aria-label={`Replier la semaine ${s}`} className="text-pigment">▾</button>
                     <span className="font-ui text-[12px] font-semibold text-muet w-6 flex-none">S{s}</span>
                     <span className="font-corps text-[15px] font-semibold text-encre flex-1 min-w-0 truncate">
                       {cs.length > 0 ? resume : `Semaine ${s}`}
@@ -260,6 +263,7 @@ export default function GrilleParcours({
         <div className="w-[330px] flex-none bg-surface border-l border-bordure p-5">
           <AssignationClasses parcoursId={parcours.id} lignes={assignations} />
         </div>
+      </div>
       </div>
     </div>
   )

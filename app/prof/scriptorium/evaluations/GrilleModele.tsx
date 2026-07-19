@@ -239,7 +239,8 @@ export default function GrilleModele({
   }
 
   return (
-    <div className="flex border border-bordure rounded-xl overflow-hidden">
+    <div className="overflow-x-auto">
+    <div className="flex border border-bordure rounded-xl overflow-hidden min-w-[860px]">
       {/* ── Gauche : identité du modèle + gabarit + assignation (parchemin) ───── */}
       <div className="w-[436px] flex-none bg-parchemin border-r border-bordure p-6 flex flex-col gap-4">
         <div className="flex items-start justify-between gap-3">
@@ -308,6 +309,7 @@ export default function GrilleModele({
           </div>
         )}
       </div>
+    </div>
     </div>
   )
 }

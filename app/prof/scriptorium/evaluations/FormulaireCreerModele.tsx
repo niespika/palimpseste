@@ -60,7 +60,8 @@ export default function FormulaireCreerModele({ defautDate }: { defautDate: stri
   const apercu = gSel ? Array.from({ length: 6 }, (_, i) => gSel.cadence[i % (gSel.cadence.length || 1)]).filter(Boolean) : []
 
   return (
-    <div className="flex border border-bordure rounded-xl overflow-hidden">
+    <div className="overflow-x-auto">
+    <div className="flex border border-bordure rounded-xl overflow-hidden min-w-[860px]">
       {/* ── Gauche : formulaire (parchemin chaud) ────────────────────────────── */}
       <form onSubmit={handleSubmit} className="w-[436px] flex-none bg-parchemin border-r border-bordure p-6 flex flex-col gap-4">
         <div className="flex items-end justify-between gap-4">
@@ -88,7 +89,7 @@ export default function FormulaireCreerModele({ defautDate }: { defautDate: stri
             return (
               <label
                 key={g.v}
-                className={`flex items-start gap-2.5 border rounded-lg px-3 py-2.5 cursor-pointer transition-colors ${sel ? 'border-[1.5px] border-famille-eval bg-attention-teinte' : 'border-bordure bg-white hover:border-encre-douce'}`}
+                className={`flex items-start gap-2.5 border rounded-lg px-3 py-2.5 cursor-pointer transition-colors ${sel ? 'border-[1.5px] border-famille-eval bg-attention-teinte' : 'border-bordure bg-surface hover:border-encre-douce'}`}
               >
                 <input type="radio" name="gabarit" value={g.v} required onChange={() => setGabarit(g.v)} className="mt-1 accent-famille-eval" />
                 <span>
@@ -142,6 +143,7 @@ export default function FormulaireCreerModele({ defautDate }: { defautDate: stri
           </div>
         )}
       </div>
+    </div>
     </div>
   )
 }

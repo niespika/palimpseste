@@ -42,7 +42,7 @@ function LigneRow({ modeleId, defautDate, ligne }: { modeleId: string; defautDat
   }
 
   return (
-    <div className="border border-bordure rounded-xl bg-white p-3">
+    <div className="border border-bordure rounded-xl bg-surface p-3">
       <div className="flex items-center justify-between gap-2.5 flex-wrap">
         <span className="font-corps text-[16px] font-semibold text-encre">
           {ligne.nom}
