@@ -38,8 +38,8 @@ function ApercuBloc({ apercu }: { apercu: ApercuFrise }) {
       )}
       <div className="max-h-40 overflow-y-auto border border-bordure rounded divide-y divide-bordure">
         {apercu.semaines.map(s => (
-          <div key={s.semaine} className="flex items-center justify-between px-2 py-1 text-xs">
-            <span className="text-encre-douce">Sem. {s.semaine}</span>
+          <div key={s.semaine} className="flex items-center justify-between px-2.5 py-1.5 font-corps text-[13px]">
+            <span className="text-muet">Sem. {s.semaine}</span>
             {s.statut === 'definie' && s.dateReelle ? (
               <span className="text-encre">
                 {fmtJour(s.dateReelle)} <span className="text-muet">· {s.semestreNom} · sem. {s.pedaDansSemestre}</span>
@@ -56,7 +56,23 @@ function ApercuBloc({ apercu }: { apercu: ApercuFrise }) {
   )
 }
 
-function LigneRow({ parcoursId, ligne }: { parcoursId: string; ligne: LigneAssignation }) {
+/** Pastille d'état publication (« publié ✓ ») — jeton ok. */
+function PilulePubliee() {
+  return (
+    <span className="font-ui text-[11px] font-semibold uppercase tracking-[0.05em] bg-ok-teinte text-ok rounded-full px-2.5 py-0.5">
+      publié ✓
+    </span>
+  )
+}
+
+function LigneRow({
+  parcoursId, ligne, ouvert, onToggle,
+}: {
+  parcoursId: string
+  ligne: LigneAssignation
+  ouvert: boolean
+  onToggle: () => void
+}) {
   const router = useRouter()
   const [chargement, setChargement] = useState(false)
   const [erreur, setErreur] = useState<string | null>(null)
@@ -94,76 +110,126 @@ function LigneRow({ parcoursId, ligne }: { parcoursId: string; ligne: LigneAssig
     router.refresh()
   }
 
-  return (
-    <div className="border border-bordure rounded-lg p-3">
-      <div className="flex items-center justify-between gap-2">
-        <span className="text-sm font-medium text-encre">{ligne.nom}</span>
+  // ── Ligne repliée : une seule ligne (nom + résumé / bouton Assigner) ────────
+  if (!ouvert) {
+    return (
+      <div className="flex items-center gap-2.5 border border-bordure rounded-xl bg-white px-3.5 py-3">
         {ligne.assigned ? (
-          <button onClick={retirer} disabled={chargement} className="text-xs text-muet hover:text-retard disabled:opacity-50">Retirer</button>
-        ) : (
-          <button onClick={() => assigner(null)} disabled={chargement} className="text-xs bg-bouton text-surface px-2 py-1 rounded disabled:opacity-50">Assigner</button>
-        )}
-      </div>
-
-      {ligne.assigned && (
-        <form onSubmit={onSubmitDate} className="mt-2 flex items-end gap-2 flex-wrap">
-          <div className="w-56">
-            <label className="block text-xs text-muet mb-1">Date de début (propre à cette classe)</label>
-            <ChampDate name="dateDebut" defaultValue={ligne.dateDebut ?? ''} ariaLabel="Date de début du parcours pour cette classe" />
-          </div>
-          <button type="submit" disabled={chargement} className="text-xs bg-bouton text-surface px-3 py-2 rounded disabled:opacity-50">
-            {chargement ? '…' : 'Planifier'}
+          <button onClick={onToggle} className="flex items-center gap-2.5 flex-1 min-w-0 text-left">
+            <span className="text-muet-clair">▸</span>
+            <span className="font-corps text-[16px] font-semibold text-encre flex-1 min-w-0 truncate">{ligne.nom}</span>
+            {ligne.snapshot ? <PilulePubliee /> : (
+              <span className="font-corps italic text-[13px] text-muet-clair">{ligne.dateDebut ? 'planifié' : 'sans date'}</span>
+            )}
           </button>
-        </form>
-      )}
-
-      {erreur && <p className="text-retard text-xs mt-2">{erreur}</p>}
-      {avis && <p className="text-attention text-xs mt-2">{avis}</p>}
-
-      {ligne.assigned && ligne.apercu && <ApercuBloc apercu={ligne.apercu} />}
-      {ligne.assigned && !ligne.apercu && (
-        <p className="text-xs text-muet mt-2">Aucune date — pose une date de début pour voir les échéances réelles.</p>
-      )}
-
-      {/* Publication de l'horaire (fige les dates ; signale les décalages ultérieurs) */}
-      {ligne.assigned && ligne.apercu && (
-        <div className="mt-2 border-t border-bordure pt-2 space-y-1.5">
-          {ligne.snapshot ? (
-            <>
-              <p className="text-xs text-muet">
-                Horaire publié{ligne.snapshot.genereLe ? ` le ${fmtJour(ligne.snapshot.genereLe.slice(0, 10))}` : ''} (v{ligne.snapshot.version}).
-              </p>
-              {ligne.diff && ligne.diff.nbChanges > 0 ? (
-                <p className="text-xs bg-attention-teinte text-attention px-2 py-1 rounded">
-                  ⚠ {ligne.diff.nbChanges} échéance(s) ont changé depuis la publication (le calendrier a été modifié). Re-publie pour figer le nouvel horaire.
-                </p>
-              ) : (
-                <p className="text-xs text-ok">✓ Horaire à jour.</p>
-              )}
-              <button onClick={publier} disabled={chargement} className="text-xs text-encre-douce hover:text-encre disabled:opacity-50">
-                {chargement ? '…' : 'Re-publier l’horaire'}
-              </button>
-            </>
-          ) : (
-            <button onClick={publier} disabled={chargement} className="text-xs bg-bouton text-surface px-2 py-1 rounded disabled:opacity-50">
-              {chargement ? '…' : 'Publier l’horaire'}
+        ) : (
+          <>
+            <span className="text-muet-clair">▸</span>
+            <span className="font-corps text-[16px] font-semibold text-encre flex-1 min-w-0 truncate">{ligne.nom}</span>
+            <button
+              onClick={() => assigner(null)}
+              disabled={chargement}
+              className="font-ui text-[12px] font-semibold bg-bouton-parcours text-bouton-parcours-texte rounded-lg px-3 py-1.5 hover:opacity-90 disabled:opacity-50"
+            >
+              {chargement ? '…' : 'Assigner'}
             </button>
-          )}
+          </>
+        )}
+        {erreur && <p className="text-retard text-xs w-full">{erreur}</p>}
+      </div>
+    )
+  }
+
+  // ── Ligne dépliée : date + aperçu des échéances + publication ───────────────
+  return (
+    <div className="border-[1.5px] border-puce rounded-xl bg-white overflow-hidden">
+      <button onClick={onToggle} className="w-full flex items-center gap-2.5 px-3.5 py-3 border-b border-bordure text-left">
+        <span className="text-pigment">▾</span>
+        <span className="font-corps text-[16px] font-semibold text-encre flex-1 min-w-0 truncate">{ligne.nom}</span>
+        {ligne.snapshot && <PilulePubliee />}
+      </button>
+
+      <div className="px-3.5 py-3">
+        <form onSubmit={onSubmitDate} className="space-y-1.5">
+          <label className="block font-ui text-[12px] text-muet">Début pour cette classe</label>
+          <div className="flex items-end gap-2">
+            <div className="flex-1"><ChampDate name="dateDebut" defaultValue={ligne.dateDebut ?? ''} ariaLabel="Date de début du parcours pour cette classe" /></div>
+            <button type="submit" disabled={chargement} className="font-ui text-[12px] bg-bouton-parcours text-bouton-parcours-texte px-3 py-2 rounded-lg hover:opacity-90 disabled:opacity-50">
+              {chargement ? '…' : 'Planifier'}
+            </button>
+          </div>
+        </form>
+
+        {erreur && <p className="text-retard text-xs mt-2">{erreur}</p>}
+        {avis && <p className="text-attention text-xs mt-2">{avis}</p>}
+
+        {ligne.apercu && <ApercuBloc apercu={ligne.apercu} />}
+        {!ligne.apercu && (
+          <p className="text-xs text-muet mt-2">Aucune date — pose une date de début pour voir les échéances réelles.</p>
+        )}
+
+        {/* Publication de l'horaire (fige les dates ; signale les décalages ultérieurs) */}
+        {ligne.apercu && (
+          <div className="mt-2 border-t border-bordure pt-2 space-y-1.5">
+            {ligne.snapshot ? (
+              <>
+                <p className="text-xs text-muet">
+                  Horaire publié{ligne.snapshot.genereLe ? ` le ${fmtJour(ligne.snapshot.genereLe.slice(0, 10))}` : ''} (v{ligne.snapshot.version}).
+                </p>
+                {ligne.diff && ligne.diff.nbChanges > 0 ? (
+                  <p className="text-xs bg-attention-teinte text-attention px-2 py-1 rounded">
+                    ⚠ {ligne.diff.nbChanges} échéance(s) ont changé depuis la publication (le calendrier a été modifié). Re-publie pour figer le nouvel horaire.
+                  </p>
+                ) : (
+                  <p className="text-xs text-ok">✓ Horaire à jour.</p>
+                )}
+                <button onClick={publier} disabled={chargement} className="text-xs text-encre-douce hover:text-encre disabled:opacity-50">
+                  {chargement ? '…' : 'Re-publier l’horaire'}
+                </button>
+              </>
+            ) : (
+              <button onClick={publier} disabled={chargement} className="font-ui text-[12px] bg-bouton-parcours text-bouton-parcours-texte px-3 py-1.5 rounded-lg hover:opacity-90 disabled:opacity-50">
+                {chargement ? '…' : 'Publier l’horaire'}
+              </button>
+            )}
+          </div>
+        )}
+
+        <div className="mt-3 text-right">
+          <button onClick={retirer} disabled={chargement} className="font-ui text-[12px] text-muet hover:text-retard disabled:opacity-50">Retirer l’assignation</button>
         </div>
-      )}
+      </div>
     </div>
   )
 }
 
 export default function AssignationClasses({ parcoursId, lignes }: { parcoursId: string; lignes: LigneAssignation[] }) {
+  // Une seule classe dépliée à la fois : par défaut la classe déjà assignée (celle
+  // qu'on travaille) ; sinon aucune.
+  const premiereAssignee = lignes.find(l => l.assigned)?.classeId ?? null
+  const [classeOuverte, setClasseOuverte] = useState<string | null>(premiereAssignee)
+
   return (
-    <div className="space-y-3 border-t border-bordure pt-4">
-      <h3 className="text-sm font-medium text-encre">Assignation par classe</h3>
+    <div className="flex flex-col gap-3">
+      <div className="flex items-center justify-between">
+        <span className="font-ui text-[11px] font-bold uppercase tracking-[0.1em] text-encre-douce">Assigner à une classe</span>
+        {classeOuverte && (
+          <button onClick={() => setClasseOuverte(null)} className="font-ui text-[12px] text-muet hover:text-encre">Tout replier</button>
+        )}
+      </div>
       {lignes.length === 0 ? (
         <p className="text-sm text-muet">Aucune classe pour l’instant.</p>
       ) : (
-        <div className="space-y-2">
-          {lignes.map(l => <LigneRow key={l.classeId} parcoursId={parcoursId} ligne={l} />)}
+        <div className="flex flex-col gap-2.5">
+          {lignes.map(l => (
+            <LigneRow
+              key={l.classeId}
+              parcoursId={parcoursId}
+              ligne={l}
+              ouvert={classeOuverte === l.classeId}
+              onToggle={() => setClasseOuverte(prev => (prev === l.classeId ? null : l.classeId))}
+            />
+          ))}
         </div>
       )}
     </div>

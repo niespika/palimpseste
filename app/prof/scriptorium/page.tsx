@@ -14,7 +14,6 @@ import {
   chargerListeParcours, chargerParcoursDetail, chargerCiblesPicker, chargerParcoursDeClasse,
   type ParcoursListItem, type ParcoursDetail, type CiblesPicker, type ParcoursDeClasse,
 } from './parcours/donnees'
-import AssignationClasses from './parcours/AssignationClasses'
 import { chargerAssignationsAvecApercu, type LigneAssignation } from './parcours/frise-serveur'
 import VueLivre from './vue-livre/VueLivre'
 import type { Signet } from './decoupe-utils'
@@ -346,13 +345,10 @@ export default async function ScriptoriumPage({
         </div>
       )}
 
-      {/* ── Parcours : builder (Parcours L4) ─────────────────────────────────── */}
+      {/* ── Parcours : builder + assignation, 2 colonnes (option 2d) ─────────── */}
       {estParcours && (
         parcoursDetail ? (
-          <div className="space-y-6">
-            <GrilleParcours parcours={parcoursDetail} cibles={ciblesPicker} />
-            <AssignationClasses parcoursId={parcoursDetail.id} lignes={assignations} />
-          </div>
+          <GrilleParcours parcours={parcoursDetail} cibles={ciblesPicker} assignations={assignations} />
         ) : parcoursSel ? (
           <p className="text-sm text-muet">Parcours introuvable. <Link href="/prof/scriptorium?vue=parcours" className="underline">Retour à la liste</Link>.</p>
         ) : (
