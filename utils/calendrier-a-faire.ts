@@ -277,6 +277,32 @@ export async function tachesDeriveesDuCalendrier(joursAvant = 10): Promise<Tache
     }
   }
 
+  // Synthèses Scriptorium PRÊTES non consultées (RAG L7, §10.3) : le signal du
+  // lundi — s'éteint quand le prof ouvre la synthèse (vue_at posé à l'ouverture).
+  // Tolérant si la table n'existe pas encore (migration L7 non jouée → data null).
+  {
+    const { data: sy } = await admin
+      .from('scriptorium_rag_syntheses')
+      .select('id, classe_id, semaine_lundi')
+      .eq('statut', 'READY').is('vue_at', null)
+    const rows = sy ?? []
+    if (rows.length > 0) {
+      const classeIds = [...new Set(rows.map((r) => r.classe_id as string))]
+      const { data: cls } = await admin.from('classes').select('id, nom').in('id', classeIds)
+      const nomClasse = new Map((cls ?? []).map((c) => [c.id as string, c.nom as string]))
+      for (const r of rows) {
+        taches.push({
+          id: `synthese-rag-${r.id}`,
+          label: 'Synthèse Scriptorium prête',
+          echeance: today,
+          classeNom: nomClasse.get(r.classe_id as string) ?? null,
+          href: `/prof/scriptorium?vue=classes&classe=${r.classe_id}&synthese=${r.id}`,
+          ctaLabel: 'Lire →',
+        })
+      }
+    }
+  }
+
   // En retard d'abord (échéance passée), puis par échéance croissante. Gate OFF →
   // aucune tâche `urgence` → ordre identique à l'ancien tri (byte-compatible).
   taches.sort((a, b) => {

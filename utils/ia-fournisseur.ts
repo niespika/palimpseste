@@ -57,19 +57,20 @@ function usageAnthropic(u?: Anthropic.Usage | null): UsageIA {
   }
 }
 
-function messagesAnthropic(appel: AppelIA): { system: Anthropic.TextBlockParam[]; messages: Anthropic.MessageParam[] } {
+function messagesAnthropic(appel: AppelIA): { system: Anthropic.TextBlockParam[] | undefined; messages: Anthropic.MessageParam[] } {
   // Frontière de cache APRÈS le préfixe (système+corpus partagés par la classe) ;
-  // tout ce qui varie (historique, suffixe, question) vit après — §6.3.
-  const system: Anthropic.TextBlockParam[] = [
-    { type: 'text', text: appel.systeme },
-    { type: 'text', text: appel.prefixe, cache_control: { type: 'ephemeral', ttl: '1h' } },
-  ]
+  // tout ce qui varie (historique, suffixe, question) vit après — §6.3. Les blocs
+  // VIDES sont omis (l'API refuse un bloc de texte vide — cas synthèse L7 : tout
+  // le prompt tient dans `message`, sans préfixe cacheable).
+  const system: Anthropic.TextBlockParam[] = []
+  if (appel.systeme.trim()) system.push({ type: 'text', text: appel.systeme })
+  if (appel.prefixe.trim()) system.push({ type: 'text', text: appel.prefixe, cache_control: { type: 'ephemeral', ttl: '1h' } })
   const messages: Anthropic.MessageParam[] = appel.historique.map(h => ({
     role: h.role === 'eleve' ? ('user' as const) : ('assistant' as const),
     content: h.contenu,
   }))
-  messages.push({ role: 'user', content: `${appel.suffixeDynamique}\n\n${appel.message}` })
-  return { system, messages }
+  messages.push({ role: 'user', content: [appel.suffixeDynamique, appel.message].filter(t => t.trim()).join('\n\n') })
+  return { system: system.length ? system : undefined, messages }
 }
 
 const anthropicAdapter: FournisseurIA = {
@@ -124,20 +125,26 @@ interface ContenuGemini { role: 'user' | 'model'; parts: { text: string }[] }
 
 function contenusGemini(appel: AppelIA): ContenuGemini[] {
   // Préfixe en TÊTE DU PREMIER TOUR, position stable → le cache implicite matche
-  // le plus long préfixe commun. Trois cas selon la fenêtre d'historique.
+  // le plus long préfixe commun. Trois cas selon la fenêtre d'historique ; un
+  // préfixe/suffixe VIDE est simplement omis (cas synthèse L7 : tout dans message).
   const contents: ContenuGemini[] = []
   const hist = appel.historique.map(h => ({
     role: h.role === 'eleve' ? ('user' as const) : ('model' as const),
     parts: [{ text: h.contenu }],
   }))
-  const dernier = `${appel.suffixeDynamique}\n\n${appel.message}`
+  const prefixe = appel.prefixe.trim() ? appel.prefixe : null
+  const dernier = [appel.suffixeDynamique, appel.message].filter(t => t.trim()).join('\n\n')
   if (hist.length === 0) {
-    contents.push({ role: 'user', parts: [{ text: `${appel.prefixe}\n\n${dernier}` }] })
+    contents.push({ role: 'user', parts: [{ text: prefixe ? `${prefixe}\n\n${dernier}` : dernier }] })
   } else if (hist[0].role === 'user') {
-    contents.push({ role: 'user', parts: [{ text: `${appel.prefixe}\n\n${hist[0].parts[0].text}` }] }, ...hist.slice(1))
+    contents.push(
+      { role: 'user', parts: [{ text: prefixe ? `${prefixe}\n\n${hist[0].parts[0].text}` : hist[0].parts[0].text }] },
+      ...hist.slice(1),
+    )
     contents.push({ role: 'user', parts: [{ text: dernier }] })
   } else {
-    contents.push({ role: 'user', parts: [{ text: appel.prefixe }] }, ...hist)
+    if (prefixe) contents.push({ role: 'user', parts: [{ text: prefixe }] })
+    contents.push(...hist)
     contents.push({ role: 'user', parts: [{ text: dernier }] })
   }
   return contents

@@ -12,6 +12,10 @@ import EditeurSections from './EditeurSections'
 import { reconstruirePlages, type PlageSection } from '@/utils/scriptorium-sections'
 import GrilleInstance from './GrilleInstance'
 import { chargerInstanceDeClasse, type InstanceDeClasse } from './instance-serveur'
+import BoutonRegenererSynthese from './BoutonRegenererSynthese'
+import { createAdminClient } from '@/utils/supabase/admin'
+import { lireReglagesRag } from '@/utils/scriptorium-rag'
+import type { ContenuSynthese } from '@/utils/scriptorium-synthese-rag'
 import AccueilParcoursPlans from './parcours/AccueilParcoursPlans'
 import GrilleParcours from './parcours/GrilleParcours'
 import {
@@ -65,7 +69,7 @@ interface UniteRow {
 export default async function ScriptoriumPage({
   searchParams,
 }: {
-  searchParams: Promise<{ vue?: string; classe?: string; unite?: string; semaine?: string; edition?: string; parcours?: string; modele?: string; decouper?: string; instance?: string }>
+  searchParams: Promise<{ vue?: string; classe?: string; unite?: string; semaine?: string; edition?: string; parcours?: string; modele?: string; decouper?: string; instance?: string; synthese?: string }>
 }) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
@@ -73,7 +77,7 @@ export default async function ScriptoriumPage({
   const { data: profile } = await supabase.from('profiles').select('role').eq('id', user.id).single()
   if (profile?.role !== 'prof') notFound()
 
-  const { vue = 'classes', classe: classeSel, unite: uniteSel, semaine, edition, parcours: parcoursSel, modele: modeleSel, decouper: decouperSel, instance: instanceSel } = await searchParams
+  const { vue = 'classes', classe: classeSel, unite: uniteSel, semaine, edition, parcours: parcoursSel, modele: modeleSel, decouper: decouperSel, instance: instanceSel, synthese: syntheseSel } = await searchParams
 
   const [{ data: classes }, { data: unites }, { data: docsBruts }, { data: liensUnite }, planEvalActif] = await Promise.all([
     supabase.from('classes').select('id, nom').order('nom'),
@@ -289,6 +293,46 @@ export default async function ScriptoriumPage({
       chargerCiblesPicker(),
     ])
     if (inst && inst.classeId === classeSel) grilleInstance = { instance: inst, cibles: ciblesInst }
+  }
+
+  // ── Synthèses du Scriptorium élève (RAG L7) — liste + détail + vue_at ────────
+  interface SyntheseResume { id: string; semaineLundi: string; statut: string; vueAt: string | null }
+  let ragActif = false
+  let synthesesRag: SyntheseResume[] = []
+  let syntheseDetail: { id: string; semaineLundi: string; statut: string; contenu: ContenuSynthese | null; cout: number | null } | null = null
+  if (vue === 'classes' && classeSel && !instanceSel) {
+    ragActif = (await lireReglagesRag(createAdminClient())).actif
+    const { data: synths } = await supabase
+      .from('scriptorium_rag_syntheses')
+      .select('id, semaine_lundi, statut, vue_at')
+      .eq('classe_id', classeSel)
+      .order('semaine_lundi', { ascending: false })
+    synthesesRag = (synths ?? []).map(r => ({
+      id: r.id as string,
+      semaineLundi: r.semaine_lundi as string,
+      statut: r.statut as string,
+      vueAt: (r.vue_at as string | null) ?? null,
+    }))
+    if (syntheseSel && synthesesRag.some(r => r.id === syntheseSel)) {
+      const { data: sd } = await supabase
+        .from('scriptorium_rag_syntheses')
+        .select('id, semaine_lundi, statut, contenu, cout, vue_at')
+        .eq('id', syntheseSel).maybeSingle()
+      if (sd) {
+        syntheseDetail = {
+          id: sd.id as string,
+          semaineLundi: sd.semaine_lundi as string,
+          statut: sd.statut as string,
+          contenu: (sd.contenu as ContenuSynthese | null) ?? null,
+          cout: (sd.cout as number | null) ?? null,
+        }
+        // Ouvrir la synthèse pose vue_at (§10.3) → éteint le « à faire » du lundi.
+        if (!sd.vue_at) {
+          await createAdminClient().from('scriptorium_rag_syntheses')
+            .update({ vue_at: new Date().toISOString() }).eq('id', sd.id as string)
+        }
+      }
+    }
   }
 
   // Parcours (vivants) assignés à la classe sélectionnée + nb de parcours par classe
@@ -516,6 +560,83 @@ export default async function ScriptoriumPage({
                       href={`/prof/scriptorium?vue=evaluations&classe=${classeSel}`}
                     />
                   </div>
+                </div>
+              )}
+
+              {/* ── Synthèses du Scriptorium élève (RAG L7, §10.3) ─────────── */}
+              {(ragActif || synthesesRag.length > 0) && (
+                <div className="space-y-2">
+                  <p className="text-xs text-muet uppercase tracking-wide">Synthèses du Scriptorium élève</p>
+                  {synthesesRag.length === 0 ? (
+                    <p className="text-sm text-muet">Aucune synthèse encore — le cron du lundi les génère (ou lance la semaine écoulée ci-dessous).</p>
+                  ) : (
+                    <div className="flex items-center gap-2 flex-wrap">
+                      {synthesesRag.map(sy => (
+                        <Link
+                          key={sy.id}
+                          href={`/prof/scriptorium?vue=classes&classe=${classeSel}&synthese=${sy.id}`}
+                          className={`text-xs px-2 py-1 rounded border ${syntheseDetail?.id === sy.id ? 'border-pigment/60 bg-pigment-teinte/40 text-encre' : 'border-bordure text-encre-douce hover:bg-parchemin-fonce'}`}
+                        >
+                          Semaine du {sy.semaineLundi.split('-').reverse().join('/')}
+                          {' · '}
+                          {sy.statut === 'READY' ? (sy.vueAt ? 'lue' : 'prête') : sy.statut === 'VIDE' ? 'vide' : sy.statut === 'ERROR' ? 'échec' : 'en cours'}
+                        </Link>
+                      ))}
+                    </div>
+                  )}
+                  {syntheseDetail && (
+                    <div className="border border-bordure rounded-lg p-3 space-y-3 bg-parchemin-fonce/40">
+                      <p className="text-sm font-medium text-encre">
+                        Semaine du {syntheseDetail.semaineLundi.split('-').reverse().join('/')}
+                        {syntheseDetail.contenu && (
+                          <span className="font-normal text-muet">
+                            {' — '}{syntheseDetail.contenu.stats.nbUtilisateurs}/{syntheseDetail.contenu.stats.effectif} élèves ·{' '}
+                            {syntheseDetail.contenu.stats.nbMessages} messages · {syntheseDetail.contenu.stats.nbConversations} conversations
+                          </span>
+                        )}
+                      </p>
+                      {syntheseDetail.statut === 'VIDE' && (
+                        <p className="text-sm text-muet">Aucune activité cette semaine-là.</p>
+                      )}
+                      {syntheseDetail.statut === 'ERROR' && (
+                        <p className="text-sm text-retard">La génération a échoué — relance-la ci-dessous.</p>
+                      )}
+                      {syntheseDetail.statut === 'READY' && syntheseDetail.contenu && (
+                        <>
+                          {syntheseDetail.contenu.themes.length > 0 && (
+                            <div className="space-y-1.5">
+                              {syntheseDetail.contenu.themes.map((t, i) => (
+                                <div key={i} className="text-sm">
+                                  <p className="text-encre">
+                                    <b>{t.theme}</b>{' '}
+                                    <span className="text-muet">· {t.nb_eleves} élève{t.nb_eleves > 1 ? 's' : ''}</span>
+                                  </p>
+                                  {t.exemples.length > 0 && (
+                                    <p className="text-xs text-encre-douce italic">« {t.exemples.join(' » · « ')} »</p>
+                                  )}
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                          {syntheseDetail.contenu.petits_malins.length > 0 && (
+                            <div className="rounded-lg bg-attention-teinte border border-attention/30 px-3 py-2 space-y-1">
+                              <p className="text-xs font-medium text-attention uppercase tracking-wide">Petits malins</p>
+                              {syntheseDetail.contenu.petits_malins.map((pm, i) => (
+                                <p key={i} className="text-sm text-encre">
+                                  <b>{pm.eleve}</b> <span className="text-muet">({pm.type})</span>
+                                  {pm.exemple && <span className="text-encre-douce"> — « {pm.exemple} »</span>}
+                                </p>
+                              ))}
+                            </div>
+                          )}
+                          {syntheseDetail.contenu.observation && (
+                            <p className="text-sm text-encre-douce italic">{syntheseDetail.contenu.observation}</p>
+                          )}
+                        </>
+                      )}
+                    </div>
+                  )}
+                  {ragActif && <BoutonRegenererSynthese classeId={classeSel} />}
                 </div>
               )}
 

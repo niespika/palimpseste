@@ -18,6 +18,10 @@ import {
   hookSyntheseAjoutCreneau, hookSyntheseAssignClasse, hookSyntheseRetraitCreneau,
   hookSyntheseRetraitClasse, hookSyntheseSuppressionParcours,
 } from '@/utils/plan-synthese-hooks'
+import { lireReglagesRag } from '@/utils/scriptorium-rag'
+import { genererSyntheseClasse, lundiSemaineEcoulee } from '@/utils/scriptorium-synthese-rag'
+import { jourDansFuseau } from '@/utils/fuseau'
+import { lireFuseau } from '@/utils/fuseau-serveur'
 
 // ── Import PDF « découpé en semaines » : seuils & garde-fous (SPEC) ──────────
 const IMPORT_MAX_PAGES = 600      // refus au-delà (décision produit)
@@ -2067,6 +2071,23 @@ export async function ajouterCreneauInstance(
     if (error && error.code !== '23505') return { error: error.message }
   }
   return { error: 'Conflit d’ordre, réessaie.' }
+}
+
+// ── Synthèse hebdo du Scriptorium élève (L7) — secours « (Re)générer » ───────
+// Régénère la synthèse de la SEMAINE ÉCOULÉE pour une classe (le cron du lundi
+// est la voie normale ; ce bouton couvre les ratés et la recette — §15.8).
+export async function regenererSyntheseRag(classeId: string): Promise<{ statut?: string; error?: string }> {
+  await verifierProf()
+  if (!RE_UUID.test(classeId)) return { error: 'Identifiant invalide.' }
+  const admin = createAdminClient()
+  const reglages = await lireReglagesRag(admin)
+  if (!reglages.actif) return { error: 'Active d’abord l’espace élève (onglet Paramètres).' }
+  const fuseau = await lireFuseau()
+  const aujourdHui = jourDansFuseau(new Date().toISOString(), fuseau)
+  const res = await genererSyntheseClasse(admin, classeId, lundiSemaineEcoulee(aujourdHui), fuseau, reglages)
+  if (res.statut === 'ERROR') return { error: res.error ?? 'Échec de génération.' }
+  revalidatePath('/prof/scriptorium')
+  return { statut: res.statut }
 }
 
 // ── Réglages du RAG élève (L5, SPEC §8.3) — gate, modèles, quota, prompts ────
