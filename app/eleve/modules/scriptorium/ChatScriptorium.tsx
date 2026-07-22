@@ -5,22 +5,41 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { renommerConversation, supprimerConversation } from './actions'
 
-// Chat élève du Scriptorium (RAG L5, §7.1) — MVP sobre charte : rail des
-// conversations (colonne desktop / liste repliable mobile), fil en bulles,
-// composer streaming avec stop et quota. Rendu texte simple (pre-wrap) — le
-// markdown léger et le plan du cours arrivent au L6.
+// Chat élève du Scriptorium (RAG L5+L6, §7.1) — MVP sobre charte : rail des
+// conversations, fil en bulles, composer streaming avec stop et quota, volet
+// « Plan du cours » (titres et statuts — la même donnée que le squelette du
+// corpus, rendue à l'élève), amorces de la semaine courante, bandeau de
+// transparence à la première utilisation. Rendu texte simple (pre-wrap).
 
 interface Message { role: 'eleve' | 'assistant'; contenu: string }
 interface ConvResume { id: string; titre: string; updatedAt: string }
 
+// Plan du cours côté élève (L6) — TITRES ET STATUTS SEULS, aucun texte.
+export interface PlanEleve {
+  parcours: {
+    titre: string
+    semaineCourante: number
+    nbSemaines: number
+    semaines: {
+      k: number
+      lundi: string | null
+      courante: boolean
+      elements: { libelle: string; statut: 'vu' | 'en_cours' | 'a_venir' }[]
+    }[]
+  }[]
+}
+
 export default function ChatScriptorium({
-  classeId, classeNom, conversations, convActive, quotaRestant,
+  classeId, classeNom, conversations, convActive, quotaRestant, plan, suggestions, premierUsage,
 }: {
   classeId: string
   classeNom: string
   conversations: ConvResume[]
   convActive: { id: string; titre: string; messages: Message[] } | null
   quotaRestant: number
+  plan: PlanEleve
+  suggestions: string[]
+  premierUsage: boolean
 }) {
   const router = useRouter()
   const [messages, setMessages] = useState<Message[]>(convActive?.messages ?? [])
@@ -28,6 +47,7 @@ export default function ChatScriptorium({
   const [enCours, setEnCours] = useState(false)
   const [erreur, setErreur] = useState<string | null>(null)
   const [restant, setRestant] = useState(quotaRestant)
+  const [voletPlan, setVoletPlan] = useState(false)
   const abortRef = useRef<AbortController | null>(null)
   const convIdRef = useRef<string | null>(convActive?.id ?? null)
   const filRef = useRef<HTMLDivElement>(null)
@@ -38,8 +58,8 @@ export default function ChatScriptorium({
     })
   }
 
-  async function envoyer() {
-    const message = saisie.trim()
+  async function envoyer(texteAmorce?: string) {
+    const message = (texteAmorce ?? saisie).trim()
     if (!message || enCours || restant <= 0) return
     setErreur(null)
     setSaisie('')
@@ -147,11 +167,75 @@ export default function ChatScriptorium({
 
       {/* ── Fil + composer ─────────────────────────────────────────────────── */}
       <section className="flex-1 min-w-0 w-full flex flex-col rounded-xl border border-bordure bg-surface">
+        <div className="flex items-center justify-between gap-2 border-b border-bordure px-4 py-2">
+          <span className="font-ui text-xs text-muet">Tuteur du cours — il s’appuie sur ce que ton professeur a préparé.</span>
+          {plan.parcours.length > 0 && (
+            <button
+              onClick={() => setVoletPlan(v => !v)}
+              className={`font-ui text-xs px-2 py-1 rounded ${voletPlan ? 'bg-pigment text-surface' : 'text-encre-douce hover:bg-pigment-teinte'}`}
+            >
+              Plan du cours
+            </button>
+          )}
+        </div>
+
+        {voletPlan && (
+          <div className="border-b border-bordure px-4 py-3 max-h-[40vh] overflow-y-auto space-y-3 bg-parchemin-fonce/40">
+            {plan.parcours.map(p => (
+              <div key={p.titre} className="space-y-1">
+                <p className="font-ui text-xs font-medium text-encre">
+                  {p.titre} <span className="text-muet font-normal">— semaine {p.semaineCourante}/{p.nbSemaines}</span>
+                </p>
+                {p.semaines.map(s => (
+                  <div key={s.k} className={`rounded px-2 py-1 ${s.courante ? 'bg-pigment-teinte/50' : ''}`}>
+                    <p className="font-ui text-[11px] text-muet">
+                      Semaine {s.k}{s.lundi ? ` — ${s.lundi}` : ''}{s.courante ? ' · cette semaine' : ''}
+                    </p>
+                    <ul className="mt-0.5 space-y-0.5">
+                      {s.elements.map((e, i) => (
+                        <li key={i} className="font-corps text-xs flex items-baseline gap-1.5">
+                          <span className={`font-ui flex-shrink-0 ${e.statut === 'vu' ? 'text-ok' : e.statut === 'en_cours' ? 'text-attention' : 'text-muet/60'}`}>
+                            {e.statut === 'vu' ? '✓' : e.statut === 'en_cours' ? '●' : '○'}
+                          </span>
+                          <span className={e.statut === 'a_venir' ? 'text-muet' : 'text-encre'}>{e.libelle}</span>
+                          {e.statut === 'en_cours' && <span className="font-ui text-[10px] text-attention flex-shrink-0">en cours</span>}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                ))}
+              </div>
+            ))}
+            <p className="font-ui text-[10px] text-muet">✓ vu en classe · ● en cours · ○ à venir (titres seuls — le tuteur n’en dira pas plus, c’est voulu).</p>
+          </div>
+        )}
+
         <div ref={filRef} className="flex-1 min-h-[40vh] max-h-[62vh] overflow-y-auto p-4 space-y-3">
+          {premierUsage && messages.length === 0 && (
+            <div className="rounded-xl border border-bordure bg-parchemin-fonce/60 px-4 py-3 font-corps text-xs text-encre-douce space-y-1">
+              <p className="font-ui font-medium text-encre">Avant de commencer</p>
+              <p>Ton professeur ne lit pas tes conversations. Une synthèse anonyme hebdomadaire l’aide à ajuster le cours ; les tentatives de triche lui sont signalées.</p>
+              <p>Supprimer une conversation la retire de ta liste, pas du traitement hebdomadaire.</p>
+            </div>
+          )}
           {messages.length === 0 && (
-            <p className="font-corps text-sm text-muet text-center py-10">
-              Pose une question sur ton cours : le tuteur s’appuie sur ce que ton professeur a préparé.
-            </p>
+            <div className="text-center py-6 space-y-2">
+              <p className="font-corps text-sm text-muet">
+                Pose une question sur ton cours — ou pars d’une amorce :
+              </p>
+              <div className="flex flex-col items-center gap-1.5">
+                {suggestions.map((s, i) => (
+                  <button
+                    key={i}
+                    onClick={() => void envoyer(s)}
+                    disabled={enCours || restant <= 0}
+                    className="max-w-full font-corps text-sm text-encre-douce border border-bordure rounded-full px-3 py-1.5 hover:bg-pigment-teinte disabled:opacity-50 truncate"
+                  >
+                    {s}
+                  </button>
+                ))}
+              </div>
+            </div>
           )}
           {messages.map((m, i) => (
             <div key={i} className={`flex ${m.role === 'eleve' ? 'justify-end' : 'justify-start'}`}>

@@ -285,18 +285,18 @@ function lundiCorpus(iso: string): string {
   return m && d ? `lun. ${d} ${MOIS_CORPUS[m - 1] ?? ''}` : iso
 }
 
-/**
- * Corpus tout-en-contexte d'une CLASSE (§6.2) : charge les instances actives
- * DATÉES (union multi-parcours, chacune avec sa semaine courante, présentées
- * dans l'ordre des titres), la matière (contenus/sections/légendes) et les
- * livres (fiches READY + carte), puis délègue au cœur pur assemblerCorpus.
- * null si la classe n'a aucune instance active datée (rien à raconter).
- */
 export interface LivreRefCorpus { cle: string; titre: string; totalSeances: number }
 
-export async function corpusClasse(
+/**
+ * Charge la MATIÈRE STRUCTURÉE d'une classe : instances actives DATÉES (union
+ * multi-parcours, chacune avec sa semaine courante, ordre stable des titres) +
+ * livres (fiches READY + carte). Socle partagé du corpus IA (corpusClasse) et
+ * du PLAN DU COURS élève (L6 — qui n'en rend que les TITRES et statuts, jamais
+ * les textes). null si la classe n'a aucune instance active datée.
+ */
+export async function chargerMatiereClasse(
   admin: SupabaseClient, classeId: string, aujourdHui: string,
-): Promise<{ prefixe: string; stats: StatsCorpus; livres: LivreRefCorpus[] } | null> {
+): Promise<{ instances: InstanceCorpus[]; livres: LivreCorpus[] } | null> {
   // 1. Assignations ACTIVES de la classe (tolérant si colonnes snapshot absentes).
   let assignData: Record<string, unknown>[] = []
   const withSnap = await admin.from('scriptorium_parcours_classes')
@@ -500,7 +500,19 @@ export async function corpusClasse(
         .map(f => ({ seance: f.semaine, texte: formaterFiche(f, chapParSeance.get(`${id}|${f.semaine}`) ?? null) })),
     }))
 
-  const { prefixe, stats } = assemblerCorpus(instances, livresCorpus)
-  // Refs des livres du corpus (progression Aletheia de l'élève, suffixe dynamique L5).
-  return { prefixe, stats, livres: livresCorpus.map(l => ({ cle: l.cle, titre: l.titre, totalSeances: l.totalSeances })) }
+  return { instances, livres: livresCorpus }
+}
+
+/**
+ * Corpus tout-en-contexte d'une CLASSE (§6.2) : matière structurée → cœur pur
+ * assemblerCorpus. `livres` = refs pour la progression Aletheia de l'élève
+ * (suffixe dynamique L5). null si aucune instance active datée.
+ */
+export async function corpusClasse(
+  admin: SupabaseClient, classeId: string, aujourdHui: string,
+): Promise<{ prefixe: string; stats: StatsCorpus; livres: LivreRefCorpus[] } | null> {
+  const matiere = await chargerMatiereClasse(admin, classeId, aujourdHui)
+  if (!matiere) return null
+  const { prefixe, stats } = assemblerCorpus(matiere.instances, matiere.livres)
+  return { prefixe, stats, livres: matiere.livres.map(l => ({ cle: l.cle, titre: l.titre, totalSeances: l.totalSeances })) }
 }

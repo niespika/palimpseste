@@ -4,10 +4,11 @@ import { createAdminClient } from '@/utils/supabase/admin'
 import { slugsModulesAccessibles } from '@/utils/acces'
 import { contexteClasseEleve } from '@/app/eleve/contexte-classe'
 import { lireReglagesRag } from '@/utils/scriptorium-rag'
+import { chargerMatiereClasse } from '@/utils/scriptorium-corpus'
 import { jourDansFuseau } from '@/utils/fuseau'
 import { lireFuseau } from '@/utils/fuseau-serveur'
 import { addDaysUTC, toISODate } from '@/utils/calendrier-grille'
-import ChatScriptorium from './ChatScriptorium'
+import ChatScriptorium, { type PlanEleve } from './ChatScriptorium'
 
 // Face ÉLÈVE de Scriptorium (RAG L5, SPEC §7.1) : espace de dialogue ancré sur
 // le parcours de SA classe (contexte cookie existant). GATÉ rag_actif : OFF →
@@ -90,6 +91,46 @@ export default async function ScriptoriumElevePage({
   }
   const quotaRestant = Math.max(0, reglages.quotaJour - envoyes)
 
+  // ── Plan du cours (L6) : la même donnée que le squelette du corpus, rendue à
+  // l'élève — TITRES ET STATUTS SEULS (aucun texte ne franchit ce DTO, c'est la
+  // règle anti-spoiler ; le contenu des semaines à venir n'existe que côté IA).
+  const matiere = await chargerMatiereClasse(admin, classe.classe_id, aujourdHui)
+  const plan: PlanEleve = {
+    parcours: (matiere?.instances ?? []).map(inst => {
+      const parSemaine = new Map<number, { libelle: string; statut: 'vu' | 'en_cours' | 'a_venir' }[]>()
+      for (const e of inst.elements) {
+        const statut = e.vu ? ('vu' as const) : e.semaine <= inst.semaineCourante ? ('en_cours' as const) : ('a_venir' as const)
+        const arr = parSemaine.get(e.semaine) ?? []
+        arr.push({ libelle: e.libelleMatiere, statut })
+        parSemaine.set(e.semaine, arr)
+      }
+      return {
+        titre: inst.parcoursTitre,
+        semaineCourante: inst.semaineCourante,
+        nbSemaines: inst.nbSemaines,
+        semaines: Array.from({ length: inst.nbSemaines }, (_, i) => i + 1)
+          .filter(k => (parSemaine.get(k) ?? []).length > 0)
+          .map(k => ({
+            k,
+            lundi: inst.lundis[k] ?? null,
+            courante: k === inst.semaineCourante,
+            elements: parSemaine.get(k) ?? [],
+          })),
+      }
+    }),
+  }
+
+  // Amorces de la semaine courante (déterministes, côté serveur — §7.1).
+  const enCours = plan.parcours.flatMap(p => p.semaines.filter(s => s.courante).flatMap(s => s.elements))
+  const premier = enCours.find(e => e.statut !== 'vu') ?? enCours[0]
+  const suggestions = [
+    premier
+      ? `Explique-moi « ${premier.libelle} » qu'on découvre cette semaine.`
+      : 'Par où commencer pour réviser le cours ?',
+    'Qu’est-ce qui est le plus important à retenir cette semaine ?',
+    'Aide-moi à faire le lien entre ce qu’on voit cette semaine et ce qu’on a déjà vu.',
+  ]
+
   return (
     <div className="pb-8" data-module="scriptorium">
       <ChatScriptorium
@@ -99,6 +140,9 @@ export default async function ScriptoriumElevePage({
         conversations={conversations}
         convActive={convActive}
         quotaRestant={quotaRestant}
+        plan={plan}
+        suggestions={suggestions}
+        premierUsage={conversations.length === 0}
       />
     </div>
   )
