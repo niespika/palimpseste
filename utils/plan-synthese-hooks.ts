@@ -38,6 +38,25 @@ async function estCoursVivant(admin: SupabaseClient, contenuId: string): Promise
   return !!c && c.type === 'cours' && c.supprime_at == null
 }
 
+// Id d'instance (scriptorium_parcours_classes) d'un couple (parcours, classe) ACTIF, ou null.
+async function instanceActive(admin: SupabaseClient, parcoursId: string, classeId: string): Promise<string | null> {
+  const { data } = await admin
+    .from('scriptorium_parcours_classes')
+    .select('id').eq('parcours_id', parcoursId).eq('classe_id', classeId).eq('statut', 'active')
+    .maybeSingle()
+  return (data?.id as string | undefined) ?? null
+}
+
+// L'INSTANCE référence-t-elle ce contenu ? (créneaux d'instance — RAG L1 : la synthèse
+// suit l'instance de chaque classe, plus le modèle.)
+async function instanceContientContenu(admin: SupabaseClient, pcId: string, contenuId: string): Promise<boolean> {
+  const { data } = await admin
+    .from('scriptorium_parcours_classe_creneaux')
+    .select('id').eq('parcours_classe_id', pcId).eq('ref_type', 'contenu').eq('contenu_id', contenuId)
+    .limit(1).maybeSingle()
+  return !!data
+}
+
 // Upsert idempotent AVEC RÉSURRECTION (décision PO 2026-07-17, supersède l'anti-résurrection
 // du SPEC §5.4-S3) : ré-établir la config (même plan+parcours+contenu) refait vivre une
 // synthèse annulée/soft-deletée, au lieu de la laisser morte sans recours. Trois cas pour
@@ -143,29 +162,36 @@ async function synthesesVivantes(
 
 /**
  * Après ajout d'un créneau-CONTENU : si c'est un cours vivant, crée la synthèse pour
- * chaque classe assignée ACTIVE à plan vivant. Gate OFF → no-op.
+ * chaque classe assignée ACTIVE à plan vivant DONT L'INSTANCE référence ce cours
+ * (RAG L1 : ajouter un créneau au MODÈLE ne redescend pas dans les instances → le
+ * hook n'y crée rien ; l'ajout d'un créneau à une INSTANCE — geste L3 — passera par
+ * ce même hook et trouvera le cours dans l'instance de sa classe). Gate OFF → no-op.
  */
 export async function hookSyntheseAjoutCreneau(admin: SupabaseClient, parcoursId: string, contenuId: string): Promise<void> {
   if (!(await lireGatePlanActif(admin))) return
   if (!(await estCoursVivant(admin, contenuId))) return
   const { data: assigns } = await admin
-    .from('scriptorium_parcours_classes').select('classe_id').eq('parcours_id', parcoursId).eq('statut', 'active')
+    .from('scriptorium_parcours_classes').select('id, classe_id').eq('parcours_id', parcoursId).eq('statut', 'active')
   for (const a of assigns ?? []) {
+    if (!(await instanceContientContenu(admin, a.id as string, contenuId))) continue
     const planId = await planVivantDeClasse(admin, a.classe_id as string)
     if (planId) await upsertSynthese(admin, planId, parcoursId, contenuId)
   }
 }
 
 /**
- * Après assignation d'une classe : crée la synthèse pour chaque COURS déjà présent dans
- * le parcours (si la classe a un plan vivant). Gate OFF → no-op.
+ * Après assignation d'une classe : crée la synthèse pour chaque COURS présent dans
+ * l'INSTANCE fraîchement matérialisée (copie du modèle à ce moment — RAG L1), si la
+ * classe a un plan vivant. À appeler APRÈS la matérialisation. Gate OFF → no-op.
  */
 export async function hookSyntheseAssignClasse(admin: SupabaseClient, parcoursId: string, classeId: string): Promise<void> {
   if (!(await lireGatePlanActif(admin))) return
   const planId = await planVivantDeClasse(admin, classeId)
   if (!planId) return
+  const pcId = await instanceActive(admin, parcoursId, classeId)
+  if (!pcId) return
   const { data: creneaux } = await admin
-    .from('scriptorium_parcours_creneaux').select('contenu_id').eq('parcours_id', parcoursId).eq('ref_type', 'contenu')
+    .from('scriptorium_parcours_classe_creneaux').select('contenu_id').eq('parcours_classe_id', pcId).eq('ref_type', 'contenu')
   const contenuIds = [...new Set((creneaux ?? []).map((c) => c.contenu_id as string).filter(Boolean))]
   for (const contenuId of contenuIds) {
     if (await estCoursVivant(admin, contenuId)) await upsertSynthese(admin, planId, parcoursId, contenuId)
@@ -186,14 +212,15 @@ export async function hookSyntheseAssignClasse(admin: SupabaseClient, parcoursId
 export async function hookSyntheseBackfillPlan(admin: SupabaseClient, planId: string, classeId: string): Promise<void> {
   if (!(await lireGatePlanActif(admin))) return
   const { data: assigns } = await admin
-    .from('scriptorium_parcours_classes').select('parcours_id').eq('classe_id', classeId).eq('statut', 'active')
-  const parcoursIds = [...new Set((assigns ?? []).map((a) => a.parcours_id as string))]
-  for (const parcoursId of parcoursIds) {
+    .from('scriptorium_parcours_classes').select('id, parcours_id').eq('classe_id', classeId).eq('statut', 'active')
+  for (const a of assigns ?? []) {
+    // RAG L1 : les cours de la classe sont ceux de son INSTANCE (divergence libre).
     const { data: creneaux } = await admin
-      .from('scriptorium_parcours_creneaux').select('contenu_id').eq('parcours_id', parcoursId).eq('ref_type', 'contenu')
+      .from('scriptorium_parcours_classe_creneaux').select('contenu_id')
+      .eq('parcours_classe_id', a.id as string).eq('ref_type', 'contenu')
     const contenuIds = [...new Set((creneaux ?? []).map((c) => c.contenu_id as string).filter(Boolean))]
     for (const contenuId of contenuIds) {
-      if (await estCoursVivant(admin, contenuId)) await upsertSynthese(admin, planId, parcoursId, contenuId)
+      if (await estCoursVivant(admin, contenuId)) await upsertSynthese(admin, planId, a.parcours_id as string, contenuId)
     }
   }
 }
@@ -201,18 +228,26 @@ export async function hookSyntheseBackfillPlan(admin: SupabaseClient, planId: st
 // ── S5 — retraits symétriques ─────────────────────────────────────────────────
 
 /**
- * Après retrait d'un créneau-CONTENU : si le cours n'a PLUS aucun créneau dans le parcours,
- * retirer ses synthèses (sans session → soft-delete ; avec session non lancée → annule ;
- * réalisée → intacte). Gate OFF → no-op. À appeler APRÈS le DELETE du créneau.
+ * Après retrait d'un créneau-CONTENU : pour chaque classe assignée ACTIVE dont
+ * l'INSTANCE ne référence plus ce cours, retirer ses synthèses (sans session →
+ * soft-delete ; avec session non lancée → annule ; réalisée → intacte). RAG L1 :
+ * un retrait dans le MODÈLE ne touche pas les instances → il ne retire plus rien
+ * par lui-même ; le retrait effectif suivra les gestes d'instance (L3), qui
+ * passeront par ce même hook. Gate OFF → no-op. À appeler APRÈS le DELETE.
  */
 export async function hookSyntheseRetraitCreneau(admin: SupabaseClient, parcoursId: string, contenuId: string): Promise<void> {
   if (!(await lireGatePlanActif(admin))) return
-  const { data: restant } = await admin
-    .from('scriptorium_parcours_creneaux')
-    .select('id').eq('parcours_id', parcoursId).eq('ref_type', 'contenu').eq('contenu_id', contenuId).limit(1).maybeSingle()
-  if (restant) return // le cours a encore un créneau → synthèse conservée
-  for (const exo of await synthesesVivantes(admin, { parcoursId, contenuId })) {
-    await retirerSynthese(admin, exo, 'creneau')
+  const { data: assigns } = await admin
+    .from('scriptorium_parcours_classes').select('id, classe_id').eq('parcours_id', parcoursId).eq('statut', 'active')
+  for (const a of assigns ?? []) {
+    if (await instanceContientContenu(admin, a.id as string, contenuId)) continue // le cours vit encore dans cette instance
+    const { data: plans } = await admin
+      .from('scriptorium_plans_evaluation').select('id').eq('classe_id', a.classe_id as string).is('supprime_at', null)
+    const planIds = (plans ?? []).map((p) => p.id as string)
+    if (planIds.length === 0) continue
+    for (const exo of await synthesesVivantes(admin, { parcoursId, contenuId, planIds })) {
+      await retirerSynthese(admin, exo, 'creneau')
+    }
   }
 }
 

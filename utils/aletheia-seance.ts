@@ -8,8 +8,10 @@
  * Historique : les colonnes DB portent le nom hérité « semaine » / « semaine_index »
  * (`scriptorium_documents.semaine`, `aletheia_travaux.semaine_index`,
  * `aletheia_diagnostic.semaine_index`, la clé jsonb `semaine` de
- * `aletheia_livre_reference`, et les bornes de tranche
- * `scriptorium_parcours_creneaux.livre_semaine_debut/fin`). Le renommage
+ * `aletheia_livre_reference`, les bornes de tranche
+ * `scriptorium_parcours_creneaux.livre_semaine_debut/fin` — reprises telles
+ * quelles par les créneaux d'INSTANCE `scriptorium_parcours_classe_creneaux`
+ * et par `scriptorium_parcours_classe_elements.livre_semaine`, RAG L1). Le renommage
  * « semaines → séances » est UI-only : on NE renomme PAS ces colonnes (zéro
  * migration sur du travail élève en prod). Elles SIGNIFIENT désormais « ordinal de
  * séance ».

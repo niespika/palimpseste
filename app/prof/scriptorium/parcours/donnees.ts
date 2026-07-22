@@ -161,20 +161,23 @@ export async function chargerCiblesPicker(): Promise<CiblesPicker> {
   }
 }
 
-export interface ParcoursDeClasse { id: string; titre: string; nbSemaines: number; dateDebut: string | null }
+export interface ParcoursDeClasse { id: string; pcId: string; titre: string; nbSemaines: number; dateDebut: string | null }
 
 // Parcours (vivants) assignés à une classe donnée, avec leur date de début pour cette
-// classe. Sert à afficher les parcours dans la vue « Par classe » du Scriptorium.
+// classe et l'id d'ASSIGNATION (`pcId` — clé de la grille d'instance, RAG L3).
+// Sert à afficher les parcours dans la vue « Par classe » du Scriptorium.
 export async function chargerParcoursDeClasse(classeId: string): Promise<ParcoursDeClasse[]> {
   const supabase = await createClient()
   const { data: liens } = await supabase
     .from('scriptorium_parcours_classes')
-    .select('parcours_id, date_debut')
+    .select('id, parcours_id, date_debut')
     .eq('classe_id', classeId)
   const ids = [...new Set((liens ?? []).map(l => l.parcours_id as string))]
   if (!ids.length) return []
-  const dateParParcours = new Map<string, string | null>()
-  for (const l of liens ?? []) dateParParcours.set(l.parcours_id as string, (l.date_debut as string | null) ?? null)
+  const lienParParcours = new Map<string, { pcId: string; dateDebut: string | null }>()
+  for (const l of liens ?? []) {
+    lienParParcours.set(l.parcours_id as string, { pcId: l.id as string, dateDebut: (l.date_debut as string | null) ?? null })
+  }
 
   const { data: parcs } = await supabase
     .from('scriptorium_parcours')
@@ -184,8 +187,9 @@ export async function chargerParcoursDeClasse(classeId: string): Promise<Parcour
     .order('titre')
   return (parcs ?? []).map(p => ({
     id: p.id as string,
+    pcId: lienParParcours.get(p.id as string)?.pcId ?? '',
     titre: p.titre as string,
     nbSemaines: p.nb_semaines as number,
-    dateDebut: dateParParcours.get(p.id as string) ?? null,
+    dateDebut: lienParParcours.get(p.id as string)?.dateDebut ?? null,
   }))
 }

@@ -28,23 +28,16 @@ export interface DemandeSynthese {
 const paire = (a: string, b: string) => `${a}:${b}`
 
 /**
- * S1 (en lot) — Semaine-cible de chaque (parcours, contenu) : fin de cours = dernier
- * créneau. Un « cours » = un contenu `type='cours'` référencé par ≥1 créneau du parcours.
- * Semaine-cible = max(semaine) des créneaux VIVANTS du parcours référençant ce contenu
- * (un cours étalé se synthétise après son dernier créneau). `semaine` est RELATIVE au
- * parcours (1..nb_semaines). Absent de la Map si le parcours ou le contenu est retiré,
- * ou si aucun créneau ne le référence.
+ * Méta parcours/contenus : parcours vivants (avec nb_semaines) + contenus vivants.
+ * Une cible n'existe que pour un parcours ET un contenu vivants (S1).
  */
-async function semainesCibles(
+async function chargerMeta(
   admin: SupabaseClient, parcoursIds: string[], contenuIds: string[],
-): Promise<{ cibles: Map<string, number>; nbSemaines: Map<string, number> }> {
-  const [{ data: parcs }, { data: conts }, { data: creneaux }] = await Promise.all([
+): Promise<{ parcoursVivants: Set<string>; contenusVivants: Set<string>; nbSemaines: Map<string, number> }> {
+  const [{ data: parcs }, { data: conts }] = await Promise.all([
     admin.from('scriptorium_parcours').select('id, supprime_at, nb_semaines').in('id', parcoursIds),
     admin.from('scriptorium_contenus').select('id, supprime_at').in('id', contenuIds),
-    admin.from('scriptorium_parcours_creneaux').select('parcours_id, contenu_id, semaine')
-      .in('parcours_id', parcoursIds).eq('ref_type', 'contenu').in('contenu_id', contenuIds),
   ])
-
   const nbSemaines = new Map<string, number>()
   const parcoursVivants = new Set<string>()
   for (const p of (parcs ?? []) as { id: string; supprime_at?: string | null; nb_semaines?: number }[]) {
@@ -56,52 +49,71 @@ async function semainesCibles(
     ((conts ?? []) as { id: string; supprime_at?: string | null }[])
       .filter((c) => c.supprime_at == null).map((c) => c.id),
   )
-
-  const cibles = new Map<string, number>()
-  for (const c of (creneaux ?? []) as { parcours_id: string; contenu_id: string; semaine: number }[]) {
-    if (!parcoursVivants.has(c.parcours_id) || !contenusVivants.has(c.contenu_id)) continue
-    const k = paire(c.parcours_id, c.contenu_id)
-    const cur = cibles.get(k)
-    if (cur == null || c.semaine > cur) cibles.set(k, c.semaine)
-  }
-  return { cibles, nbSemaines }
+  return { parcoursVivants, contenusVivants, nbSemaines }
 }
 
 /**
- * Assignations ACTIVES (parcours × classe) : date_debut + snapshot horaire. Tolérant si
- * les colonnes snapshot n'existent pas (migration non jouée → repli sans snapshot).
- * Absent de la Map si la classe n'est pas assignée activement au parcours. `nb_semaines`
- * n'est PAS lu ici (il vient de S1) : cette requête reste ainsi indépendante et part dans
- * la même vague.
+ * Assignations ACTIVES (parcours × classe) : id d'INSTANCE + date_debut + snapshot
+ * horaire. Tolérant si les colonnes snapshot n'existent pas (migration non jouée →
+ * repli sans snapshot). Absent de la Map si la classe n'est pas assignée activement
+ * au parcours. `nb_semaines` n'est PAS lu ici (il vient de chargerMeta) : cette
+ * requête reste ainsi indépendante et part dans la même vague.
  */
 async function chargerAssignations(
   admin: SupabaseClient, parcoursIds: string[], classeIds: string[],
-): Promise<Map<string, Omit<AssignParcours, 'nbSemaines'>>> {
+): Promise<Map<string, { pcId: string } & Omit<AssignParcours, 'nbSemaines'>>> {
   let rows: Record<string, unknown>[] = []
   const withSnap = await admin.from('scriptorium_parcours_classes')
-    .select('parcours_id, classe_id, date_debut, horaire_snapshot')
+    .select('id, parcours_id, classe_id, date_debut, horaire_snapshot')
     .in('parcours_id', parcoursIds).in('classe_id', classeIds).eq('statut', 'active')
   if (withSnap.error) {
     const noSnap = await admin.from('scriptorium_parcours_classes')
-      .select('parcours_id, classe_id, date_debut')
+      .select('id, parcours_id, classe_id, date_debut')
       .in('parcours_id', parcoursIds).in('classe_id', classeIds).eq('statut', 'active')
     rows = (noSnap.data as Record<string, unknown>[] | null) ?? []
   } else {
     rows = (withSnap.data as Record<string, unknown>[] | null) ?? []
   }
 
-  const out = new Map<string, Omit<AssignParcours, 'nbSemaines'>>()
+  const out = new Map<string, { pcId: string } & Omit<AssignParcours, 'nbSemaines'>>()
   for (const row of rows) {
     const parcoursId = row.parcours_id as string
     const classeId = row.classe_id as string
     const snap = row.horaire_snapshot as ApercuSemaine[] | null | undefined
     out.set(paire(parcoursId, classeId), {
+      pcId: row.id as string,
       parcoursId,
       dateDebut: (row.date_debut as string | null) ?? null,
       snapshot: snap && Array.isArray(snap) && snap.length ? snap : null,
     })
   }
   return out
+}
+
+/**
+ * S1 (en lot, RAG L1) — Semaine-cible de chaque (instance, contenu) : fin de cours =
+ * dernier créneau. Les créneaux lus sont ceux de l'INSTANCE de la classe
+ * (scriptorium_parcours_classe_creneaux) : la semaine-cible est PAR CLASSE — déplacer
+ * un créneau dans l'instance d'une classe déplace SA synthèse seulement. Semaine-cible
+ * = max(semaine) des créneaux de l'instance référençant ce contenu (un cours étalé se
+ * synthétise après son dernier créneau). `semaine` est RELATIVE au parcours
+ * (1..nb_semaines). Clé absente si aucun créneau d'instance ne référence le contenu.
+ */
+async function semainesCiblesInstances(
+  admin: SupabaseClient, pcIds: string[], contenuIds: string[], contenusVivants: Set<string>,
+): Promise<Map<string, number>> {
+  const cibles = new Map<string, number>() // clé = paire(pcId, contenuId)
+  if (pcIds.length === 0) return cibles
+  const { data: creneaux } = await admin.from('scriptorium_parcours_classe_creneaux')
+    .select('parcours_classe_id, contenu_id, semaine')
+    .in('parcours_classe_id', pcIds).eq('ref_type', 'contenu').in('contenu_id', contenuIds)
+  for (const c of (creneaux ?? []) as { parcours_classe_id: string; contenu_id: string; semaine: number }[]) {
+    if (!contenusVivants.has(c.contenu_id)) continue
+    const k = paire(c.parcours_classe_id, c.contenu_id)
+    const cur = cibles.get(k)
+    if (cur == null || c.semaine > cur) cibles.set(k, c.semaine)
+  }
+  return cibles
 }
 
 // Jours de cours couvrant les semaines des lundis donnés : 1 appel (4 requêtes) par
@@ -132,14 +144,15 @@ function dernierJourDeCours(
 
 /**
  * S2 (en lot) — Date réelle de chaque synthèse pour LA classe de son plan : semaine-cible
- * (S1) → aperçu de l'assignation (SNAPSHOT publié prioritaire, repli FRISE recalculée ;
- * une semaine ne porte une date que si statut='definie') → LUNDI de la semaine → DERNIER
- * jour de cours de la classe (repli vendredi). `null` si non résoluble (pas d'assignation
- * active, semaine non définie, parcours/contenu retiré) — S6 : ni événement, ni tâche.
- * Recalculée à CHAQUE lecture (régime S1) : déplacer un créneau ou re-dater l'assignation
- * déplace la synthèse sans écriture.
+ * (S1, PAR CLASSE depuis les créneaux d'instance — RAG L1) → aperçu de l'assignation
+ * (SNAPSHOT publié prioritaire, repli FRISE recalculée ; une semaine ne porte une date
+ * que si statut='definie') → LUNDI de la semaine → DERNIER jour de cours de la classe
+ * (repli vendredi). `null` si non résoluble (pas d'assignation active, semaine non
+ * définie, parcours/contenu retiré) — S6 : ni événement, ni tâche. Recalculée à CHAQUE
+ * lecture (régime S1) : déplacer un créneau dans l'INSTANCE ou re-dater l'assignation
+ * déplace la synthèse de cette classe sans écriture.
  *
- * Coût CONSTANT (~10 requêtes, 3 vagues) quel que soit le nombre de demandes : les socles
+ * Coût CONSTANT (~10 requêtes, 4 vagues) quel que soit le nombre de demandes : les socles
  * de frise sont mémoïsés par AY, les jours de cours chargés en un appel sur la fenêtre
  * englobante. Toute clé demandée est présente en sortie (valeur `null` si non résoluble).
  */
@@ -158,11 +171,16 @@ export async function resoudreDatesSyntheses(
   const contenuIds = [...new Set(vivantes.map((d) => d.contenuId))]
   const classeIds = [...new Set(vivantes.map((d) => d.classeId))]
 
-  // Vague 1 — S1 (3 requêtes) + assignations (1) : indépendantes, donc 1 aller-retour.
-  const [{ cibles, nbSemaines }, assignations] = await Promise.all([
-    semainesCibles(admin, parcoursIds, contenuIds),
+  // Vague 1 — méta parcours/contenus (2 requêtes) + assignations (1) : indépendantes.
+  const [{ parcoursVivants, contenusVivants, nbSemaines }, assignations] = await Promise.all([
+    chargerMeta(admin, parcoursIds, contenuIds),
     chargerAssignations(admin, parcoursIds, classeIds),
   ])
+
+  // Vague 1bis — semaines-cibles depuis les créneaux d'INSTANCE (RAG L1) : dépend des
+  // ids d'instance de la vague 1 (coût constant : 1 requête quel que soit N).
+  const pcIds = [...new Set([...assignations.values()].map((a) => a.pcId))]
+  const cibles = await semainesCiblesInstances(admin, pcIds, contenuIds, contenusVivants)
 
   // Vague 2 — aperçus : snapshot (0 requête) ou frise recalculée (socle mémoïsé par AY).
   // Mémoïsé par (parcours, classe) : deux synthèses du même parcours partagent l'aperçu.
@@ -180,10 +198,11 @@ export async function resoudreDatesSyntheses(
 
   const lundis: { cle: string; classeId: string; lundi: string }[] = []
   await Promise.all(vivantes.map(async (d) => {
-    const cible = cibles.get(paire(d.parcoursId, d.contenuId))
-    if (cible == null) return
+    if (!parcoursVivants.has(d.parcoursId)) return // parcours soft-deleté → non résoluble
     const brut = assignations.get(paire(d.parcoursId, d.classeId))
     if (!brut) return
+    const cible = cibles.get(paire(brut.pcId, d.contenuId))
+    if (cible == null) return
     const assign: AssignParcours = { ...brut, nbSemaines: nbSemaines.get(d.parcoursId) ?? 0 }
     const res = await apercuDe(assign, d.classeId)
     if (!res) return

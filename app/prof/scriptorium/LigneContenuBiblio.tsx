@@ -2,6 +2,7 @@
 
 import { useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
+import Link from 'next/link'
 import {
   modifierContenuBiblio,
   supprimerContenuBiblio,
@@ -21,6 +22,8 @@ export interface ContenuBiblio {
   images: ImageItem[]
   /** Nombre de créneaux de parcours qui référencent ce contenu (compteur d'usages). */
   nbParcours: number
+  /** Nombre de sections de la découpe (RAG L2) — toujours 0 pour un texte. */
+  nbSections: number
 }
 
 export default function LigneContenuBiblio({ item }: { item: ContenuBiblio }) {
@@ -38,7 +41,18 @@ export default function LigneContenuBiblio({ item }: { item: ContenuBiblio }) {
     setChargement(true)
     const fd = new FormData(e.currentTarget)
     fd.append('id', item.id)
-    const res = await modifierContenuBiblio(fd)
+    let res = await modifierContenuBiblio(fd)
+    // Garde L2 : changer le texte d'un cours découpé efface sa découpe (les sections
+    // stockent leur part du texte) et re-matérialise les instances en « cours entier ».
+    if (res.needsConfirm) {
+      const ok = confirm(
+        `Le texte de ce cours change : sa découpe en ${res.nbSections} section${(res.nbSections ?? 0) > 1 ? 's' : ''} sera effacée ` +
+        `et il redeviendra un élément entier dans les parcours de classe (« vu » conservé seulement si tout était vu). Continuer ?`,
+      )
+      if (!ok) { setChargement(false); return }
+      fd.append('force', '1')
+      res = await modifierContenuBiblio(fd)
+    }
     setChargement(false)
     if (res.error) { setErreur(res.error); return }
     setEdition(false)
@@ -148,6 +162,11 @@ export default function LigneContenuBiblio({ item }: { item: ContenuBiblio }) {
                 utilisé dans {item.nbParcours} parcours
               </span>
             )}
+            {item.type === 'cours' && item.nbSections > 0 && (
+              <span className="text-xs bg-parchemin-fonce text-encre-douce px-1.5 py-0.5 rounded">
+                § {item.nbSections} section{item.nbSections > 1 ? 's' : ''}
+              </span>
+            )}
           </div>
           {item.texte && <p className="text-xs text-muet mt-1 line-clamp-2 whitespace-pre-wrap">{item.texte}</p>}
           {item.images.length > 0 && (
@@ -162,6 +181,15 @@ export default function LigneContenuBiblio({ item }: { item: ContenuBiblio }) {
           )}
         </div>
         <div className="flex gap-2 flex-shrink-0">
+          {item.type === 'cours' && (
+            <Link
+              href={`/prof/scriptorium?vue=cours&decouper=${item.id}`}
+              className="text-xs text-muet hover:text-encre"
+              title="Découper le cours en sections (chapitres / sous-chapitres)"
+            >
+              {item.nbSections > 0 ? 'Sections' : 'Découper'}
+            </Link>
+          )}
           <button onClick={() => setEdition(true)} className="text-xs text-muet hover:text-encre">Modifier</button>
           <button onClick={handleSupprimer} disabled={chargement} className="text-xs text-muet hover:text-retard disabled:opacity-50">Supprimer</button>
         </div>

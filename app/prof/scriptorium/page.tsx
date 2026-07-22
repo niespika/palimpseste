@@ -8,6 +8,10 @@ import FormulaireLivre from './FormulaireLivre'
 import { type ImageItem } from './LigneContenu'
 import BibliothequeContenus from './BibliothequeContenus'
 import type { ContenuBiblio } from './LigneContenuBiblio'
+import EditeurSections from './EditeurSections'
+import { reconstruirePlages, type PlageSection } from '@/utils/scriptorium-sections'
+import GrilleInstance from './GrilleInstance'
+import { chargerInstanceDeClasse, type InstanceDeClasse } from './instance-serveur'
 import AccueilParcoursPlans from './parcours/AccueilParcoursPlans'
 import GrilleParcours from './parcours/GrilleParcours'
 import {
@@ -61,7 +65,7 @@ interface UniteRow {
 export default async function ScriptoriumPage({
   searchParams,
 }: {
-  searchParams: Promise<{ vue?: string; classe?: string; unite?: string; semaine?: string; edition?: string; parcours?: string; modele?: string }>
+  searchParams: Promise<{ vue?: string; classe?: string; unite?: string; semaine?: string; edition?: string; parcours?: string; modele?: string; decouper?: string; instance?: string }>
 }) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
@@ -69,7 +73,7 @@ export default async function ScriptoriumPage({
   const { data: profile } = await supabase.from('profiles').select('role').eq('id', user.id).single()
   if (profile?.role !== 'prof') notFound()
 
-  const { vue = 'classes', classe: classeSel, unite: uniteSel, semaine, edition, parcours: parcoursSel, modele: modeleSel } = await searchParams
+  const { vue = 'classes', classe: classeSel, unite: uniteSel, semaine, edition, parcours: parcoursSel, modele: modeleSel, decouper: decouperSel, instance: instanceSel } = await searchParams
 
   const [{ data: classes }, { data: unites }, { data: docsBruts }, { data: liensUnite }, planEvalActif] = await Promise.all([
     supabase.from('classes').select('id, nom').order('nom'),
@@ -112,7 +116,7 @@ export default async function ScriptoriumPage({
   let biblioContenus: ContenuBiblio[] = []
   let biblioCorbeille: { id: string; titre: string }[] = []
   if (biblioType) {
-    const [{ data: rowsC }, { data: imgsC }, { data: creneauxC }, { data: parcVivantsC }] = await Promise.all([
+    const [{ data: rowsC }, { data: imgsC }, { data: creneauxC }, { data: parcVivantsC }, { data: secsC }] = await Promise.all([
       supabase.from('scriptorium_contenus')
         .select('id, type, titre, auteur, texte_extrait, chapitres, supprime_at')
         .eq('type', biblioType).order('titre'),
@@ -120,6 +124,10 @@ export default async function ScriptoriumPage({
         .select('id, contenu_id, fichier_ref, legende, ordre').not('contenu_id', 'is', null).order('ordre'),
       supabase.from('scriptorium_parcours_creneaux').select('parcours_id, contenu_id').not('contenu_id', 'is', null),
       supabase.from('scriptorium_parcours').select('id').is('supprime_at', null),
+      // Compteur « N sections » des cours (RAG L2) — seuls les cours se découpent.
+      biblioType === 'cours'
+        ? supabase.from('scriptorium_contenu_sections').select('contenu_id')
+        : Promise.resolve({ data: [] as { contenu_id: string }[] }),
     ])
     const rows = (rowsC ?? []) as {
       id: string; type: string; titre: string; auteur: string | null
@@ -156,12 +164,52 @@ export default async function ScriptoriumPage({
       imagesParContenu.set(contenu_id, arr)
     }
 
+    const sectionsParContenu = new Map<string, number>()
+    for (const s of secsC ?? []) {
+      const cid = s.contenu_id as string
+      sectionsParContenu.set(cid, (sectionsParContenu.get(cid) ?? 0) + 1)
+    }
+
     biblioContenus = vivants.map(r => ({
       id: r.id, type: r.type as 'texte' | 'cours', titre: r.titre, auteur: r.auteur,
       texte: r.texte_extrait, chapitres: r.chapitres,
       images: imagesParContenu.get(r.id) ?? [], nbParcours: parcoursParContenu.get(r.id)?.size ?? 0,
+      nbSections: sectionsParContenu.get(r.id) ?? 0,
     }))
     biblioCorbeille = rows.filter(r => r.supprime_at != null).map(r => ({ id: r.id, titre: r.titre }))
+  }
+
+  // ── Éditeur de sections d'un cours (?vue=cours&decouper=…) — RAG L2 ──────────
+  // Reconstruit les plages depuis les sections stockées (null si le texte a changé
+  // → l'éditeur repart d'une feuille vierge avec un avis) ; compte les parcours de
+  // classe référents pour la confirmation de re-découpe consciente.
+  let editeurSections: {
+    contenu: ContenuBiblio
+    plagesInitiales: PlageSection[] | null
+    texteChange: boolean
+    nbSections: number
+    nbInstances: number
+  } | null = null
+  if (vue === 'cours' && decouperSel) {
+    const contenu = biblioContenus.find(c => c.id === decouperSel) ?? null
+    if (contenu) {
+      const [{ data: secs }, { data: refs }] = await Promise.all([
+        supabase.from('scriptorium_contenu_sections')
+          .select('titre, niveau, texte, ordre').eq('contenu_id', contenu.id)
+          .order('ordre', { ascending: true }),
+        supabase.from('scriptorium_parcours_classe_creneaux')
+          .select('parcours_classe_id').eq('ref_type', 'contenu').eq('contenu_id', contenu.id),
+      ])
+      const sections = (secs ?? []).map(s => ({ titre: s.titre as string, niveau: s.niveau as number, texte: s.texte as string }))
+      const plagesInitiales = reconstruirePlages(contenu.texte ?? '', sections)
+      editeurSections = {
+        contenu,
+        plagesInitiales,
+        texteChange: sections.length > 0 && plagesInitiales === null,
+        nbSections: sections.length,
+        nbInstances: new Set((refs ?? []).map(r => r.parcours_classe_id as string)).size,
+      }
+    }
   }
 
   // ── Parcours (onglet builder) — L4 ───────────────────────────────────────────
@@ -230,6 +278,17 @@ export default async function ScriptoriumPage({
     } else {
       defautDateModele = await defautDateDebut()
     }
+  }
+
+  // ── Grille d'instance (?vue=classes&classe=…&instance=…) — RAG L3 ────────────
+  // Le pilotage « vu » d'un parcours pour UNE classe (créneaux/éléments d'instance).
+  let grilleInstance: { instance: InstanceDeClasse; cibles: CiblesPicker } | null = null
+  if (vue === 'classes' && classeSel && instanceSel) {
+    const [inst, ciblesInst] = await Promise.all([
+      chargerInstanceDeClasse(instanceSel),
+      chargerCiblesPicker(),
+    ])
+    if (inst && inst.classeId === classeSel) grilleInstance = { instance: inst, cibles: ciblesInst }
   }
 
   // Parcours (vivants) assignés à la classe sélectionnée + nb de parcours par classe
@@ -322,8 +381,30 @@ export default async function ScriptoriumPage({
       {/* ── Bibliothèque : Textes / Cours (Parcours L2) ─────────────────────── */}
       {biblioType && (
         <div className="space-y-3">
-          <Link href="/prof/scriptorium?vue=ressources" className="inline-block text-sm text-muet hover:text-encre">← Ressources</Link>
-          <BibliothequeContenus type={biblioType} contenus={biblioContenus} corbeille={biblioCorbeille} />
+          {vue === 'cours' && decouperSel ? (
+            editeurSections ? (
+              <EditeurSections
+                key={editeurSections.contenu.id}
+                contenuId={editeurSections.contenu.id}
+                titre={editeurSections.contenu.titre}
+                auteur={editeurSections.contenu.auteur}
+                texte={editeurSections.contenu.texte ?? ''}
+                plagesInitiales={editeurSections.plagesInitiales}
+                texteChange={editeurSections.texteChange}
+                nbSectionsExistantes={editeurSections.nbSections}
+                nbInstances={editeurSections.nbInstances}
+              />
+            ) : (
+              <p className="text-sm text-muet">
+                Cours introuvable. <Link href="/prof/scriptorium?vue=cours" className="underline">Retour aux cours</Link>.
+              </p>
+            )
+          ) : (
+            <>
+              <Link href="/prof/scriptorium?vue=ressources" className="inline-block text-sm text-muet hover:text-encre">← Ressources</Link>
+              <BibliothequeContenus type={biblioType} contenus={biblioContenus} corbeille={biblioCorbeille} />
+            </>
+          )}
         </div>
       )}
 
@@ -345,7 +426,15 @@ export default async function ScriptoriumPage({
       )}
 
       {/* ── Perspective « classes » : vue d'ensemble (parcours + livres) d'une classe ─ */}
-      {vue === 'classes' && (
+      {vue === 'classes' && grilleInstance && (
+        <GrilleInstance instance={grilleInstance.instance} cibles={grilleInstance.cibles} />
+      )}
+      {vue === 'classes' && instanceSel && !grilleInstance && (
+        <p className="text-sm text-muet">
+          Instance introuvable. <Link href={`/prof/scriptorium?vue=classes${classeSel ? `&classe=${classeSel}` : ''}`} className="underline">Retour à la classe</Link>.
+        </p>
+      )}
+      {vue === 'classes' && !instanceSel && (
         <>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
             {classesList.map(c => {
@@ -375,14 +464,23 @@ export default async function ScriptoriumPage({
                 <div className="space-y-2">
                   <p className="text-xs text-muet uppercase tracking-wide">Parcours assignés</p>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    {/* RAG L3 : la tuile ouvre le PARCOURS DE LA CLASSE (grille d'instance,
+                        pilotage « vu ») — le modèle partagé reste accessible dessous. */}
                     {parcoursDeClasse.map(p => (
-                      <Tuile
-                        key={p.id}
-                        nom={p.titre}
-                        sousTitre={`${p.nbSemaines} sem.${p.dateDebut ? ` · début ${p.dateDebut.split('-').reverse().join('/')}` : ' · sans date'}`}
-                        href={`/prof/scriptorium?vue=parcours&parcours=${p.id}`}
-                        couleur="vert"
-                      />
+                      <div key={p.id} className="space-y-1">
+                        <Tuile
+                          nom={p.titre}
+                          sousTitre={`${p.nbSemaines} sem.${p.dateDebut ? ` · début ${p.dateDebut.split('-').reverse().join('/')}` : ' · sans date'} · pilotage « vu »`}
+                          href={`/prof/scriptorium?vue=classes&classe=${classeSel}&instance=${p.pcId}`}
+                          couleur="vert"
+                        />
+                        <Link
+                          href={`/prof/scriptorium?vue=parcours&parcours=${p.id}`}
+                          className="block px-1 text-xs text-muet hover:text-encre"
+                        >
+                          Modèle (tous groupes) →
+                        </Link>
+                      </div>
                     ))}
                   </div>
                 </div>

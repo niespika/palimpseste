@@ -7,16 +7,20 @@ import type { CiblesPicker } from './donnees'
 
 // Panneau « + Ajouter » d'une semaine : onglets internes Textes / Cours / Livres
 // + recherche. Un livre s'ajoute entier ou en tranche (bornes dans son étendue).
+// `onAjouter` (optionnel) remplace l'action MODÈLE par défaut — la grille
+// d'INSTANCE (RAG L3) le fournit pour viser ajouterCreneauInstance.
 export default function PickerContenu({
   parcoursId,
   semaine,
   cibles,
   onClose,
+  onAjouter,
 }: {
   parcoursId: string
   semaine: number
   cibles: CiblesPicker
   onClose: () => void
+  onAjouter?: (ref: RefCreneau) => Promise<{ error?: string }>
 }) {
   const router = useRouter()
   const [tab, setTab] = useState<'textes' | 'cours' | 'livres'>('textes')
@@ -42,7 +46,7 @@ export default function PickerContenu({
   async function ajouter(ref: RefCreneau) {
     setErreur(null)
     setChargement(true)
-    const res = await ajouterCreneau(parcoursId, semaine, ref)
+    const res = onAjouter ? await onAjouter(ref) : await ajouterCreneau(parcoursId, semaine, ref)
     setChargement(false)
     if (res.error) { setErreur(res.error); return }
     router.refresh()

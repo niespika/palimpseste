@@ -2,11 +2,16 @@
 
 import { after } from 'next/server'
 import { revalidatePath } from 'next/cache'
+import type { SupabaseClient } from '@supabase/supabase-js'
 import { createClient } from '@/utils/supabase/server'
 import { createAdminClient } from '@/utils/supabase/admin'
 import { PROMPT_CAPSTONE_DEFAUT, PROMPT_REFERENCE_DEFAUT } from '@/utils/aletheia-retours'
 import type { Capstone, ReferenceChapitre } from '@/app/eleve/modules/aletheia/types'
 import { reassemblerLivre, type Signet } from './decoupe-utils'
+import {
+  validerPlages, decouperPlages, reporterVus, vuVersContenu,
+  type PlageSection, type AncienElementVu,
+} from '@/utils/scriptorium-sections'
 import { resoudreFrisePourDate } from './parcours/frise-serveur'
 import { lireGatePlanActif } from '@/utils/plan-exercices'
 import {
@@ -677,7 +682,9 @@ export async function supprimerContenu(id: string) {
 
 // Crée un texte ou un cours. `type` (caché) ∈ {texte, cours}. Un fichier image est
 // attaché (scriptorium_contenu_images) ; un document PDF/DOCX/TXT est extrait dans texte.
-export async function creerContenu(formData: FormData): Promise<{ id?: string; error?: string }> {
+// `aTexte` permet au client d'enchaîner sur l'éditeur de sections (RAG L2) quand un
+// cours vient d'être importé avec un corps de texte.
+export async function creerContenu(formData: FormData): Promise<{ id?: string; aTexte?: boolean; error?: string }> {
   const { supabase, userId } = await verifierProf()
   const type = (formData.get('type') as string) === 'texte' ? 'texte' : 'cours'
   const titre = (formData.get('titre') as string)?.trim()
@@ -723,25 +730,48 @@ export async function creerContenu(formData: FormData): Promise<{ id?: string; e
   }
 
   revalidatePath('/prof/scriptorium')
-  return { id: contenu.id as string }
+  return { id: contenu.id as string, aTexte: !!texte }
 }
 
-export async function modifierContenuBiblio(formData: FormData): Promise<{ success?: boolean; error?: string }> {
+export async function modifierContenuBiblio(formData: FormData): Promise<{ success?: boolean; needsConfirm?: boolean; nbSections?: number; error?: string }> {
   const { supabase } = await verifierProf()
   const id = formData.get('id') as string
   const titre = (formData.get('titre') as string)?.trim()
   const auteur = (formData.get('auteur') as string)?.trim() || null
   const texte = (formData.get('texte') as string)?.trim() || null
   const chapitres = (formData.get('chapitres') as string)?.trim() || null
+  const force = formData.get('force') === '1'
 
-  if (!id) return { error: 'Identifiant manquant.' }
+  if (!id || !RE_UUID.test(id)) return { error: 'Identifiant manquant.' }
   if (!titre) return { error: 'Le titre est requis.' }
+
+  // Garde L2 : changer le TEXTE d'un cours découpé invalide ses sections (chacune
+  // stocke sa part du texte — la partition ne correspond plus). Confirmation
+  // explicite → la découpe est EFFACÉE et les instances re-matérialisées en
+  // « cours entier » (vus agrégés) ; le prof redécoupe ensuite s'il veut.
+  const { data: actuel } = await supabase
+    .from('scriptorium_contenus').select('type, texte_extrait').eq('id', id).maybeSingle()
+  if (!actuel) return { error: 'Contenu introuvable.' }
+  let effacerDecoupe = false
+  if (actuel.type === 'cours' && (actuel.texte_extrait as string | null ?? '').trim() !== (texte ?? '')) {
+    const { data: secs } = await supabase
+      .from('scriptorium_contenu_sections').select('id').eq('contenu_id', id)
+    const nbSections = (secs ?? []).length
+    if (nbSections > 0) {
+      if (!force) return { needsConfirm: true, nbSections }
+      effacerDecoupe = true
+    }
+  }
 
   const { error } = await supabase
     .from('scriptorium_contenus')
     .update({ titre, auteur, texte_extrait: texte, chapitres, updated_at: new Date().toISOString() })
     .eq('id', id)
   if (error) return { error: error.message }
+  if (effacerDecoupe) {
+    const res = await remplacerDecoupe(supabase, id, texte ?? '', [])
+    if (res.error) return { error: `Texte modifié, mais découpe non effacée : ${res.error}` }
+  }
   revalidatePath('/prof/scriptorium')
   return { success: true }
 }
@@ -810,13 +840,174 @@ export async function purgerContenuBiblio(id: string): Promise<{ success?: boole
 
   // Fichiers Storage à nettoyer (collectés AVANT le delete qui cascade les images).
   const { data: imgs } = await supabase.from('scriptorium_contenu_images').select('fichier_ref').eq('contenu_id', id)
-  // Créneaux référents d'abord (FK contenu_id ON DELETE RESTRICT).
+  // Créneaux référents d'abord (FK contenu_id ON DELETE RESTRICT) — modèle ET
+  // instances (RAG L1 ; les éléments d'instance cascadent avec leur créneau, ce
+  // qui libère aussi les sections du contenu, référencées en RESTRICT).
   await supabase.from('scriptorium_parcours_creneaux').delete().eq('contenu_id', id)
+  await supabase.from('scriptorium_parcours_classe_creneaux').delete().eq('contenu_id', id)
   const { error } = await supabase.from('scriptorium_contenus').delete().eq('id', id) // cascade → images
   if (error) return { error: error.message }
   const chemins = (imgs ?? []).map(i => i.fichier_ref as string).filter(Boolean)
   if (chemins.length) await admin.storage.from('scriptorium').remove(chemins)
 
+  revalidatePath('/prof/scriptorium')
+  return { success: true }
+}
+
+// ── Sections d'un cours — RAG L2 (SPEC_scriptorium_rag.md, décision 3 amendée) ─
+// Découpe MANUELLE à la ligne (pas de proposition IA — abandonnée sur les livres).
+// Une sauvegarde remplace TOUTES les sections du contenu et RE-MATÉRIALISE les
+// éléments des créneaux d'instance référents (« re-découpe consciente ») : le
+// « vu » est reporté par correspondance exacte de titre, un cours entier vu
+// diffuse à toutes les sections (utils/scriptorium-sections, testé). Pas de
+// transaction multi-tables (REST) : l'ordre des étapes (éléments → sections →
+// insertion → re-matérialisation) évite toute FK bloquante, et un échec en
+// cours de route laisse un état rattrapable en re-sauvant la découpe.
+
+// Charge les créneaux d'instance référençant un contenu + leurs éléments actuels
+// (avec le titre des sections référencées) — socle des re-matérialisations.
+async function chargerReferentsContenu(supabase: SupabaseClient, contenuId: string): Promise<{
+  creneaux: { id: string; semaine: number }[]
+  anciensParCreneau: Map<string, AncienElementVu[]>
+}> {
+  const { data: crens } = await supabase
+    .from('scriptorium_parcours_classe_creneaux')
+    .select('id, semaine')
+    .eq('ref_type', 'contenu').eq('contenu_id', contenuId)
+  const creneaux = (crens ?? []).map(c => ({ id: c.id as string, semaine: c.semaine as number }))
+  const anciensParCreneau = new Map<string, AncienElementVu[]>()
+  if (creneaux.length === 0) return { creneaux, anciensParCreneau }
+
+  const [{ data: els }, { data: secs }] = await Promise.all([
+    supabase.from('scriptorium_parcours_classe_elements')
+      .select('creneau_id, ref_type, section_id, vu_at, vu_par')
+      .in('creneau_id', creneaux.map(c => c.id))
+      .order('semaine', { ascending: true }).order('ordre', { ascending: true }),
+    supabase.from('scriptorium_contenu_sections').select('id, titre').eq('contenu_id', contenuId),
+  ])
+  const titreSection = new Map((secs ?? []).map(s => [s.id as string, s.titre as string]))
+  for (const e of els ?? []) {
+    const cid = e.creneau_id as string
+    const arr = anciensParCreneau.get(cid) ?? []
+    arr.push({
+      refType: e.ref_type === 'section' ? 'section' : 'contenu',
+      titre: e.section_id ? (titreSection.get(e.section_id as string) ?? null) : null,
+      vuAt: (e.vu_at as string | null) ?? null,
+      vuPar: (e.vu_par as string | null) ?? null,
+    })
+    anciensParCreneau.set(cid, arr)
+  }
+  return { creneaux, anciensParCreneau }
+}
+
+// Remplace la découpe d'un cours (delete + insert des sections) et re-matérialise
+// les éléments des instances référentes avec report des « vus ». `plages` vides =
+// effacer la découpe (retour à un élément 'contenu' entier par créneau).
+async function remplacerDecoupe(
+  supabase: SupabaseClient,
+  contenuId: string,
+  texte: string,
+  plages: PlageSection[],
+): Promise<{ error?: string }> {
+  const { creneaux, anciensParCreneau } = await chargerReferentsContenu(supabase, contenuId)
+
+  // 1. Les éléments d'abord (FK section_id RESTRICT), puis les anciennes sections.
+  if (creneaux.length > 0) {
+    const { error: eDelEl } = await supabase
+      .from('scriptorium_parcours_classe_elements')
+      .delete().in('creneau_id', creneaux.map(c => c.id))
+    if (eDelEl) return { error: eDelEl.message }
+  }
+  const { error: eDelSec } = await supabase
+    .from('scriptorium_contenu_sections').delete().eq('contenu_id', contenuId)
+  if (eDelSec) return { error: eDelSec.message }
+
+  // 2. Nouvelles sections — dérivation CANONIQUE côté serveur (le client n'envoie
+  // que les plages ; le texte de chaque section vient du texte_extrait actuel,
+  // l'ordre est celui du texte — tri par début dans decouperPlages).
+  const derivees = decouperPlages(texte, plages)
+  let inserees: { id: string; ordre: number; titre: string }[] = []
+  if (derivees.length > 0) {
+    const { data, error: eIns } = await supabase
+      .from('scriptorium_contenu_sections')
+      .insert(derivees.map(s => ({ contenu_id: contenuId, ordre: s.ordre, niveau: s.niveau, titre: s.titre, texte: s.texte })))
+      .select('id, ordre, titre')
+    if (eIns || !data) return { error: eIns?.message ?? 'Insertion des sections impossible.' }
+    inserees = data
+      .map(s => ({ id: s.id as string, ordre: s.ordre as number, titre: s.titre as string }))
+      .sort((a, b) => a.ordre - b.ordre)
+  }
+
+  // 3. Re-matérialisation des éléments, créneau par créneau, avec report des vus.
+  const elements: Record<string, unknown>[] = []
+  for (const cr of creneaux) {
+    const anciens = anciensParCreneau.get(cr.id) ?? []
+    if (inserees.length > 0) {
+      const vus = reporterVus(anciens, inserees.map(s => s.titre))
+      inserees.forEach((s, i) => elements.push({
+        creneau_id: cr.id, ref_type: 'section', section_id: s.id,
+        semaine: cr.semaine, ordre: s.ordre,
+        vu_at: vus[i]?.vuAt ?? null, vu_par: vus[i]?.vuPar ?? null,
+      }))
+    } else {
+      const v = vuVersContenu(anciens)
+      elements.push({
+        creneau_id: cr.id, ref_type: 'contenu', semaine: cr.semaine, ordre: 1,
+        vu_at: v?.vuAt ?? null, vu_par: v?.vuPar ?? null,
+      })
+    }
+  }
+  if (elements.length > 0) {
+    const { error: eEl } = await supabase.from('scriptorium_parcours_classe_elements').insert(elements)
+    if (eEl) return { error: eEl.message }
+  }
+  return {}
+}
+
+/**
+ * Sauvegarde la découpe d'un cours (RAG L2). `plages` = {début, fin} de lignes
+ * (1-based, incluses) + titre + niveau ; sans chevauchement, trous tolérés
+ * (lignes hors section = écartées de la matière) ; vides = effacer la découpe.
+ * Garde TOCTOU : `nbLignesVues` = nombre de lignes du texte servi à l'éditeur.
+ * Re-découpe consciente : si des instances référencent ce cours, exiger `force`
+ * (le client affiche la confirmation avec `nbInstances`).
+ */
+export async function sauvegarderSections(
+  contenuId: string,
+  plages: PlageSection[],
+  nbLignesVues: number,
+  force = false,
+): Promise<{ success?: boolean; needsConfirm?: boolean; nbInstances?: number; error?: string }> {
+  const { supabase } = await verifierProf()
+  if (!RE_UUID.test(contenuId)) return { error: 'Identifiant invalide.' }
+
+  const { data: c } = await supabase
+    .from('scriptorium_contenus').select('type, texte_extrait, supprime_at').eq('id', contenuId).maybeSingle()
+  if (!c || c.supprime_at) return { error: 'Cours introuvable.' }
+  if (c.type !== 'cours') return { error: 'Seuls les cours se découpent en sections.' }
+  const texte = (c.texte_extrait as string | null) ?? ''
+  if (plages.length > 0 && !texte.trim()) return { error: 'Ce cours n’a pas de texte à découper.' }
+
+  // Garde anti-dérive (TOCTOU, patron découpe livre) : le texte doit être celui
+  // servi à l'éditeur — sinon les numéros de ligne ne signifient plus rien.
+  const nbLignes = texte.split('\n').length
+  if (plages.length > 0 && nbLignesVues !== nbLignes) {
+    return { error: 'Le texte du cours a changé depuis l’ouverture de l’éditeur — recharge la page.' }
+  }
+  const invalide = validerPlages(plages, nbLignes)
+  if (invalide) return { error: invalide }
+
+  // Re-découpe CONSCIENTE (SPEC L2) : des instances vivent sur ce cours →
+  // confirmation explicite avant de re-matérialiser leurs éléments.
+  const { data: refs } = await supabase
+    .from('scriptorium_parcours_classe_creneaux')
+    .select('parcours_classe_id')
+    .eq('ref_type', 'contenu').eq('contenu_id', contenuId)
+  const nbInstances = new Set((refs ?? []).map(r => r.parcours_classe_id as string)).size
+  if (nbInstances > 0 && !force) return { needsConfirm: true, nbInstances }
+
+  const res = await remplacerDecoupe(supabase, contenuId, texte, plages)
+  if (res.error) return { error: res.error }
   revalidatePath('/prof/scriptorium')
   return { success: true }
 }
@@ -1285,6 +1476,42 @@ export type RefCreneau =
   | { contenuId: string }
   | { livreId: string; semaineDebut?: number | null; semaineFin?: number | null }
 
+// Valide la CIBLE d'un créneau (contenu vivant, ou livre vivant + tranche dans
+// l'étendue réelle) et renvoie ses champs à insérer (sans parcours/semaine).
+// Partagé entre le modèle (ajouterCreneau) et l'instance (ajouterCreneauInstance, L3).
+async function validerRefCreneau(
+  supabase: SupabaseClient,
+  ref: RefCreneau,
+): Promise<{ payload?: Record<string, unknown>; error?: string }> {
+  if ('contenuId' in ref) {
+    if (!RE_UUID.test(ref.contenuId)) return { error: 'Contenu invalide.' }
+    const { data: c } = await supabase
+      .from('scriptorium_contenus').select('id, titre, supprime_at').eq('id', ref.contenuId).maybeSingle()
+    if (!c || c.supprime_at) return { error: 'Contenu introuvable ou retiré.' }
+    // Snapshot du titre (titre_affiche) : garde un libellé si le contenu est retiré plus tard.
+    return { payload: { ref_type: 'contenu', contenu_id: ref.contenuId, titre_affiche: c.titre } }
+  }
+  if (!RE_UUID.test(ref.livreId)) return { error: 'Livre invalide.' }
+  const { data: l } = await supabase
+    .from('scriptorium_unites').select('id, type, label, supprime_at').eq('id', ref.livreId).maybeSingle()
+  if (!l || l.type !== 'livre' || l.supprime_at) return { error: 'Livre introuvable ou retiré.' }
+  const debut = ref.semaineDebut ?? null
+  const fin = ref.semaineFin ?? null
+  if ((debut == null) !== (fin == null)) {
+    return { error: 'Tranche incomplète : indique un début ET une fin, ou aucun (livre entier).' }
+  }
+  if (debut != null && fin != null) {
+    if (!Number.isInteger(debut) || !Number.isInteger(fin) || debut < 1 || debut > fin) {
+      return { error: 'Tranche invalide.' }
+    }
+    const { data: docs } = await supabase
+      .from('scriptorium_documents').select('semaine').eq('unite_id', ref.livreId).not('semaine', 'is', null)
+    const maxSem = Math.max(0, ...((docs ?? []).map(d => d.semaine as number)))
+    if (fin > maxSem) return { error: `Le livre a ${maxSem} semaine(s) ; la tranche ${debut}→${fin} sort de l'étendue.` }
+  }
+  return { payload: { ref_type: 'livre', livre_id: ref.livreId, livre_semaine_debut: debut, livre_semaine_fin: fin, titre_affiche: l.label } }
+}
+
 // Ajoute un créneau. `ordre` calculé max+1 avec RETRY sur violation d'unicité
 // (parcours_id, semaine, ordre) — schema-S9. Valide la cible (vivante, type='livre',
 // tranche dans l'étendue réelle du livre) avant insertion.
@@ -1302,35 +1529,9 @@ export async function ajouterCreneau(
   if (!parc || parc.supprime_at) return { error: 'Parcours introuvable.' }
   if (semaine > (parc.nb_semaines as number)) return { error: `Le parcours n'a que ${parc.nb_semaines} semaines.` }
 
-  let payload: Record<string, unknown>
-  if ('contenuId' in ref) {
-    if (!RE_UUID.test(ref.contenuId)) return { error: 'Contenu invalide.' }
-    const { data: c } = await supabase
-      .from('scriptorium_contenus').select('id, titre, supprime_at').eq('id', ref.contenuId).maybeSingle()
-    if (!c || c.supprime_at) return { error: 'Contenu introuvable ou retiré.' }
-    // Snapshot du titre (titre_affiche) : garde un libellé si le contenu est retiré plus tard.
-    payload = { parcours_id: parcoursId, semaine, ref_type: 'contenu', contenu_id: ref.contenuId, titre_affiche: c.titre }
-  } else {
-    if (!RE_UUID.test(ref.livreId)) return { error: 'Livre invalide.' }
-    const { data: l } = await supabase
-      .from('scriptorium_unites').select('id, type, label, supprime_at').eq('id', ref.livreId).maybeSingle()
-    if (!l || l.type !== 'livre' || l.supprime_at) return { error: 'Livre introuvable ou retiré.' }
-    const debut = ref.semaineDebut ?? null
-    const fin = ref.semaineFin ?? null
-    if ((debut == null) !== (fin == null)) {
-      return { error: 'Tranche incomplète : indique un début ET une fin, ou aucun (livre entier).' }
-    }
-    if (debut != null && fin != null) {
-      if (!Number.isInteger(debut) || !Number.isInteger(fin) || debut < 1 || debut > fin) {
-        return { error: 'Tranche invalide.' }
-      }
-      const { data: docs } = await supabase
-        .from('scriptorium_documents').select('semaine').eq('unite_id', ref.livreId).not('semaine', 'is', null)
-      const maxSem = Math.max(0, ...((docs ?? []).map(d => d.semaine as number)))
-      if (fin > maxSem) return { error: `Le livre a ${maxSem} semaine(s) ; la tranche ${debut}→${fin} sort de l'étendue.` }
-    }
-    payload = { parcours_id: parcoursId, semaine, ref_type: 'livre', livre_id: ref.livreId, livre_semaine_debut: debut, livre_semaine_fin: fin, titre_affiche: l.label }
-  }
+  const cible = await validerRefCreneau(supabase, ref)
+  if (cible.error || !cible.payload) return { error: cible.error ?? 'Cible invalide.' }
+  const payload: Record<string, unknown> = { ...cible.payload, parcours_id: parcoursId, semaine }
 
   for (let essai = 0; essai < 5; essai++) {
     const { data: dernier } = await supabase
@@ -1449,6 +1650,144 @@ export async function deplacerCreneau(
   return { error: 'Conflit d’ordre, réessaie.' }
 }
 
+// ── Instance de parcours par classe — RAG L1 (SPEC_scriptorium_rag.md §4) ───
+// L'assignation MATÉRIALISE une instance : copie 1:1 des créneaux du modèle +
+// éclatement en ÉLÉMENTS à grain fin (section de cours / contenu entier / séance
+// de livre) — le « vu » du prof vit sur l'élément. L'instance diverge ensuite
+// librement ; modifier le modèle ne redescend JAMAIS dans les instances
+// existantes (propagation consciente = reinitialiserInstance, destructive).
+
+// Matérialise l'instance d'une assignation depuis le modèle (§4.3). Abstention
+// si l'instance existe déjà (une classe déjà servie n'est jamais re-matérialisée
+// ici). Les créneaux pointant un contenu/livre soft-deleté sont copiés TELS
+// QUELS (badge « retiré » à l'affichage, comportement existant du modèle).
+async function materialiserInstance(
+  supabase: SupabaseClient,
+  parcoursClasseId: string,
+  parcoursId: string,
+  nbSemaines: number,
+): Promise<{ error?: string }> {
+  const { data: deja } = await supabase
+    .from('scriptorium_parcours_classe_creneaux')
+    .select('id').eq('parcours_classe_id', parcoursClasseId).limit(1).maybeSingle()
+  if (deja) return {}
+
+  const { data: modeles, error: eLect } = await supabase
+    .from('scriptorium_parcours_creneaux')
+    .select('id, semaine, ordre, ref_type, contenu_id, livre_id, livre_semaine_debut, livre_semaine_fin, titre_affiche, note')
+    .eq('parcours_id', parcoursId)
+    .order('semaine', { ascending: true }).order('ordre', { ascending: true })
+  if (eLect) return { error: eLect.message }
+  if (!modeles || modeles.length === 0) return {} // modèle vide → instance vide (légitime)
+
+  // 1. Copie 1:1 des créneaux (provenance modele_creneau_id renseignée).
+  const { data: copies, error: eIns } = await supabase
+    .from('scriptorium_parcours_classe_creneaux')
+    .insert(modeles.map(m => ({
+      parcours_classe_id: parcoursClasseId,
+      semaine: m.semaine, ordre: m.ordre, ref_type: m.ref_type,
+      contenu_id: m.contenu_id, livre_id: m.livre_id,
+      livre_semaine_debut: m.livre_semaine_debut, livre_semaine_fin: m.livre_semaine_fin,
+      titre_affiche: m.titre_affiche, note: m.note,
+      modele_creneau_id: m.id,
+    })))
+    .select('id, semaine, ref_type, contenu_id, livre_id, livre_semaine_debut, livre_semaine_fin')
+  if (eIns || !copies) {
+    // 23505 (pcc_ordre_uk) = matérialisation concurrente déjà passée → l'autre a gagné.
+    if (eIns?.code === '23505') return {}
+    return { error: eIns?.message ?? 'Copie des créneaux impossible.' }
+  }
+
+  // 2. Éclatement en éléments (§4.3) : selon la cible de chaque créneau copié.
+  return materialiserElementsPourCreneaux(supabase, copies as CreneauAMaterialiser[], nbSemaines)
+}
+
+// Créneau d'instance dont les ÉLÉMENTS restent à matérialiser (§4.3).
+interface CreneauAMaterialiser {
+  id: string
+  semaine: number
+  ref_type: string
+  contenu_id: string | null
+  livre_id: string | null
+  livre_semaine_debut: number | null
+  livre_semaine_fin: number | null
+}
+
+// Matérialise les éléments de créneaux d'instance (§4.3) : cours découpé → 1
+// élément par section ; texte / cours non découpé → 1 élément 'contenu' ; livre →
+// 1 élément par séance k ∈ [a,b] (entier = [min,max] des séances-docs), étalés
+// semaine = S + (k − a), CLAMPÉS à nb_semaines (excédents empilés). Partagé entre
+// la matérialisation d'une instance entière et l'ajout d'un créneau isolé (L3).
+async function materialiserElementsPourCreneaux(
+  supabase: SupabaseClient,
+  creneaux: CreneauAMaterialiser[],
+  nbSemaines: number,
+): Promise<{ error?: string }> {
+  const contenuIds = [...new Set(creneaux.map(c => c.contenu_id).filter((x): x is string => !!x))]
+  const livreIds = [...new Set(creneaux.map(c => c.livre_id).filter((x): x is string => !!x))]
+  const [{ data: conts }, { data: secs }, { data: docs }] = await Promise.all([
+    contenuIds.length
+      ? supabase.from('scriptorium_contenus').select('id, type').in('id', contenuIds)
+      : Promise.resolve({ data: [] as { id: string; type: string }[] }),
+    contenuIds.length
+      ? supabase.from('scriptorium_contenu_sections').select('id, contenu_id, ordre')
+          .in('contenu_id', contenuIds).order('ordre', { ascending: true })
+      : Promise.resolve({ data: [] as { id: string; contenu_id: string; ordre: number }[] }),
+    livreIds.length
+      ? supabase.from('scriptorium_documents').select('unite_id, semaine')
+          .in('unite_id', livreIds).not('semaine', 'is', null)
+      : Promise.resolve({ data: [] as { unite_id: string; semaine: number }[] }),
+  ])
+  const typeContenu = new Map((conts ?? []).map(c => [c.id as string, c.type as string]))
+  const sectionsParContenu = new Map<string, { id: string; ordre: number }[]>()
+  for (const s of secs ?? []) {
+    const arr = sectionsParContenu.get(s.contenu_id as string) ?? []
+    arr.push({ id: s.id as string, ordre: s.ordre as number })
+    sectionsParContenu.set(s.contenu_id as string, arr)
+  }
+  const bornesLivre = new Map<string, { mn: number; mx: number }>()
+  for (const d of docs ?? []) {
+    const lid = d.unite_id as string
+    const sem = d.semaine as number
+    const b = bornesLivre.get(lid)
+    if (!b) bornesLivre.set(lid, { mn: sem, mx: sem })
+    else { b.mn = Math.min(b.mn, sem); b.mx = Math.max(b.mx, sem) }
+  }
+
+  const elements: Record<string, unknown>[] = []
+  for (const c of creneaux) {
+    if (c.ref_type === 'contenu') {
+      const cid = c.contenu_id as string
+      const sections = typeContenu.get(cid) === 'cours' ? (sectionsParContenu.get(cid) ?? []) : []
+      if (sections.length > 0) {
+        for (const s of sections) {
+          elements.push({ creneau_id: c.id, ref_type: 'section', section_id: s.id, semaine: c.semaine, ordre: s.ordre })
+        }
+      } else {
+        elements.push({ creneau_id: c.id, ref_type: 'contenu', semaine: c.semaine, ordre: 1 })
+      }
+    } else {
+      const lid = c.livre_id as string
+      const b = bornesLivre.get(lid)
+      const deb = c.livre_semaine_debut ?? b?.mn ?? null
+      const fin = c.livre_semaine_fin ?? b?.mx ?? null
+      if (deb == null || fin == null || deb > fin) continue // livre sans découpe et sans bornes → rien à étaler
+      const ordreParSemaine = new Map<number, number>()
+      for (let k = deb; k <= fin; k++) {
+        const sem = Math.min(c.semaine + (k - deb), nbSemaines)
+        const ord = (ordreParSemaine.get(sem) ?? 0) + 1
+        ordreParSemaine.set(sem, ord)
+        elements.push({ creneau_id: c.id, ref_type: 'livre_semaine', livre_semaine: k, semaine: sem, ordre: ord })
+      }
+    }
+  }
+  if (elements.length > 0) {
+    const { error: eEl } = await supabase.from('scriptorium_parcours_classe_elements').insert(elements)
+    if (eEl && eEl.code !== '23505') return { error: eEl.message }
+  }
+  return {}
+}
+
 // ── Assignation d'un parcours à une classe (+ date de début) — Parcours L5 ────
 // La date de début vit sur scriptorium_parcours_classes (PAR CLASSE). À la pose
 // d'une date, on résout la frise (AY dérivée de la date) : un débordement HORS
@@ -1489,15 +1828,33 @@ export async function assignerParcoursClasse(
     }
   }
 
-  const { error } = await supabase
+  // L'upsert sert AUSSI à (re)dater une assignation existante : on détecte ici si
+  // elle est NOUVELLE — seul cas où l'instance est matérialisée (RAG L1 §4.3).
+  // Une classe déjà servie garde son instance telle quelle (divergence libre) ;
+  // la propagation consciente passe par reinitialiserInstance.
+  const { data: existante } = await supabase
+    .from('scriptorium_parcours_classes')
+    .select('id').eq('parcours_id', parcoursId).eq('classe_id', classeId).maybeSingle()
+
+  const { data: ligne, error } = await supabase
     .from('scriptorium_parcours_classes')
     .upsert(
       { parcours_id: parcoursId, classe_id: classeId, date_debut: date, updated_at: new Date().toISOString() },
       { onConflict: 'parcours_id,classe_id' },
     )
-  if (error) return { error: error.message }
+    .select('id')
+    .single()
+  if (error || !ligne) return { error: error?.message ?? 'Assignation impossible.' }
+
+  if (!existante) {
+    const mat = await materialiserInstance(supabase, ligne.id as string, parcoursId, parc.nb_semaines as number)
+    if (mat.error) {
+      return { error: `Classe assignée, mais matérialisation de l'instance échouée : ${mat.error}` }
+    }
+  }
   // S3 — la classe fraîchement assignée reçoit la synthèse de chaque cours du parcours
-  // (si elle a un plan vivant). Gate OFF → no-op.
+  // (si elle a un plan vivant). APRÈS la matérialisation : le hook lit l'instance.
+  // Gate OFF → no-op.
   await hookSyntheseAssignClasse(createAdminClient(), parcoursId, classeId)
   revalidatePath('/prof/scriptorium')
   return { success: true, avis }
@@ -1506,6 +1863,8 @@ export async function assignerParcoursClasse(
 export async function retirerParcoursClasse(parcoursId: string, classeId: string): Promise<{ success?: boolean; error?: string }> {
   const { supabase } = await verifierProf()
   if (!RE_UUID.test(parcoursId) || !RE_UUID.test(classeId)) return { error: 'Identifiant invalide.' }
+  // Le DELETE de l'assignation CASCADE l'instance (créneaux → éléments, RAG L1) :
+  // une ré-assignation ultérieure repart d'une matérialisation fraîche du modèle.
   const { error } = await supabase
     .from('scriptorium_parcours_classes').delete().eq('parcours_id', parcoursId).eq('classe_id', classeId)
   if (error) return { error: error.message }
@@ -1513,6 +1872,226 @@ export async function retirerParcoursClasse(parcoursId: string, classeId: string
   await hookSyntheseRetraitClasse(createAdminClient(), parcoursId, classeId)
   revalidatePath('/prof/scriptorium')
   return { success: true }
+}
+
+// Re-matérialise l'instance d'une classe DEPUIS LE MODÈLE (RAG L1 §4.1) —
+// DESTRUCTIF : divergences et « vu » perdus. Réservé au cas « je veux propager
+// ma refonte du modèle ». La double confirmation vit côté UI (grille d'instance,
+// lot L3) ; l'action est le geste unique de propagation consciente.
+export async function reinitialiserInstance(parcoursClasseId: string): Promise<{ success?: boolean; error?: string }> {
+  const { supabase } = await verifierProf()
+  if (!RE_UUID.test(parcoursClasseId)) return { error: 'Identifiant invalide.' }
+
+  const { data: pc } = await supabase
+    .from('scriptorium_parcours_classes').select('id, parcours_id').eq('id', parcoursClasseId).maybeSingle()
+  if (!pc) return { error: 'Assignation introuvable.' }
+  const { data: parc } = await supabase
+    .from('scriptorium_parcours').select('nb_semaines, supprime_at').eq('id', pc.parcours_id as string).maybeSingle()
+  if (!parc || parc.supprime_at) return { error: 'Parcours introuvable.' }
+
+  const { error: eDel } = await supabase
+    .from('scriptorium_parcours_classe_creneaux').delete().eq('parcours_classe_id', parcoursClasseId) // cascade éléments
+  if (eDel) return { error: eDel.message }
+  const mat = await materialiserInstance(supabase, parcoursClasseId, pc.parcours_id as string, parc.nb_semaines as number)
+  if (mat.error) return { error: mat.error }
+  revalidatePath('/prof/scriptorium')
+  return { success: true }
+}
+
+// ── Pilotage de l'instance — RAG L3 (grille « vu », SPEC §5.3) ────────────────
+// Les gestes d'instance ne touchent NI le modèle NI les autres classes. Le « vu »
+// est un acte de pilotage (par élément, par classe) ; le placement (déplacer /
+// réordonner / ajouter / retirer) un acte de conception de l'instance.
+
+/** Coche / décoche le « vu » d'un élément (le clic prof, §2 décision 4). */
+export async function marquerVu(elementId: string, vu: boolean): Promise<{ error?: string }> {
+  const { supabase, userId } = await verifierProf()
+  if (!RE_UUID.test(elementId)) return { error: 'Identifiant invalide.' }
+  const { error } = await supabase
+    .from('scriptorium_parcours_classe_elements')
+    .update(vu ? { vu_at: new Date().toISOString(), vu_par: userId } : { vu_at: null, vu_par: null })
+    .eq('id', elementId)
+  if (error) return { error: error.message }
+  revalidatePath('/prof/scriptorium')
+  return {}
+}
+
+/**
+ * Marquage groupé « vu jusqu'ici » : tous les éléments non vus de l'instance dont
+ * la semaine ≤ celle choisie — indispensable en adoption de mi-année (§5.3).
+ */
+export async function marquerVuJusquA(parcoursClasseId: string, semaine: number): Promise<{ nb?: number; error?: string }> {
+  const { supabase, userId } = await verifierProf()
+  if (!RE_UUID.test(parcoursClasseId)) return { error: 'Identifiant invalide.' }
+  if (!Number.isInteger(semaine) || semaine < 1) return { error: 'Semaine invalide.' }
+  const { data: crens } = await supabase
+    .from('scriptorium_parcours_classe_creneaux').select('id').eq('parcours_classe_id', parcoursClasseId)
+  const ids = (crens ?? []).map(c => c.id as string)
+  if (ids.length === 0) return { nb: 0 }
+  const { data: maj, error } = await supabase
+    .from('scriptorium_parcours_classe_elements')
+    .update({ vu_at: new Date().toISOString(), vu_par: userId })
+    .in('creneau_id', ids).lte('semaine', semaine).is('vu_at', null)
+    .select('id')
+  if (error) return { error: error.message }
+  revalidatePath('/prof/scriptorium')
+  return { nb: (maj ?? []).length }
+}
+
+/**
+ * Déplace un élément vers une autre semaine de l'instance (report volontaire :
+ * il redevient « à venir » si la semaine est future — §5.1). Ordre max+1 atomique
+ * avec retry (schema-S9) ; garde applicative semaine ≤ nb_semaines (§4.2).
+ */
+export async function deplacerElement(elementId: string, nouvelleSemaine: number): Promise<{ error?: string }> {
+  const { supabase } = await verifierProf()
+  if (!RE_UUID.test(elementId)) return { error: 'Identifiant invalide.' }
+  if (!Number.isInteger(nouvelleSemaine) || nouvelleSemaine < 1) return { error: 'Semaine invalide.' }
+
+  const { data: el } = await supabase
+    .from('scriptorium_parcours_classe_elements')
+    .select('id, creneau_id, semaine').eq('id', elementId).maybeSingle()
+  if (!el) return { error: 'Élément introuvable.' }
+  if ((el.semaine as number) === nouvelleSemaine) return {}
+
+  const { data: cr } = await supabase
+    .from('scriptorium_parcours_classe_creneaux')
+    .select('parcours_classe_id').eq('id', el.creneau_id as string).maybeSingle()
+  const { data: pc } = cr
+    ? await supabase.from('scriptorium_parcours_classes').select('parcours_id').eq('id', cr.parcours_classe_id as string).maybeSingle()
+    : { data: null }
+  const { data: parc } = pc
+    ? await supabase.from('scriptorium_parcours').select('nb_semaines').eq('id', pc.parcours_id as string).maybeSingle()
+    : { data: null }
+  if (!parc) return { error: 'Parcours introuvable.' }
+  if (nouvelleSemaine > (parc.nb_semaines as number)) {
+    return { error: `Le parcours n'a que ${parc.nb_semaines} semaines.` }
+  }
+
+  for (let essai = 0; essai < 5; essai++) {
+    const { data: dernier } = await supabase
+      .from('scriptorium_parcours_classe_elements').select('ordre')
+      .eq('creneau_id', el.creneau_id as string).eq('semaine', nouvelleSemaine)
+      .order('ordre', { ascending: false }).limit(1).maybeSingle()
+    const ordre = (dernier?.ordre ?? 0) + 1
+    const { error } = await supabase.from('scriptorium_parcours_classe_elements')
+      .update({ semaine: nouvelleSemaine, ordre }).eq('id', elementId)
+    if (!error) { revalidatePath('/prof/scriptorium'); return {} }
+    if (error.code !== '23505') return { error: error.message }
+  }
+  return { error: 'Conflit d’ordre, réessaie.' }
+}
+
+/**
+ * Réordonne les éléments d'un créneau dans une semaine (ordreIds = TOUS les
+ * éléments de ce couple, dans le nouvel ordre). Deux passes négatives/positives
+ * contre l'unicité (creneau, semaine, ordre) — patron reordonnerCreneaux.
+ */
+export async function reordonnerElements(
+  creneauId: string,
+  semaine: number,
+  ordreIds: string[],
+): Promise<{ error?: string }> {
+  const { supabase } = await verifierProf()
+  if (!RE_UUID.test(creneauId)) return { error: 'Créneau invalide.' }
+  if (!Number.isInteger(semaine) || semaine < 1) return { error: 'Semaine invalide.' }
+  if (!Array.isArray(ordreIds) || ordreIds.some(id => !RE_UUID.test(id))) return { error: 'Ordre invalide.' }
+
+  const { data: actuels } = await supabase
+    .from('scriptorium_parcours_classe_elements').select('id')
+    .eq('creneau_id', creneauId).eq('semaine', semaine)
+  const idsBase = new Set((actuels ?? []).map(r => r.id as string))
+  const idsFournis = new Set(ordreIds)
+  if (idsBase.size !== idsFournis.size || [...idsBase].some(id => !idsFournis.has(id))) {
+    return { error: 'La liste des éléments a changé — recharge la page puis réessaie.' }
+  }
+
+  for (let i = 0; i < ordreIds.length; i++) {
+    const { error } = await supabase.from('scriptorium_parcours_classe_elements')
+      .update({ ordre: -(i + 1) }).eq('id', ordreIds[i]).eq('creneau_id', creneauId).eq('semaine', semaine)
+    if (error) return { error: error.message }
+  }
+  for (let i = 0; i < ordreIds.length; i++) {
+    const { error } = await supabase.from('scriptorium_parcours_classe_elements')
+      .update({ ordre: i + 1 }).eq('id', ordreIds[i]).eq('creneau_id', creneauId).eq('semaine', semaine)
+    if (error) return { error: error.message }
+  }
+  revalidatePath('/prof/scriptorium')
+  return {}
+}
+
+/**
+ * Ajoute un créneau à l'INSTANCE d'une classe (picker réutilisé) + matérialise
+ * ses éléments (§4.3). Ne touche ni le modèle ni les autres classes.
+ */
+export async function ajouterCreneauInstance(
+  parcoursClasseId: string,
+  semaine: number,
+  ref: RefCreneau,
+): Promise<{ id?: string; error?: string }> {
+  const { supabase } = await verifierProf()
+  if (!RE_UUID.test(parcoursClasseId)) return { error: 'Assignation invalide.' }
+  if (!Number.isInteger(semaine) || semaine < 1) return { error: 'Semaine invalide.' }
+
+  const { data: pc } = await supabase
+    .from('scriptorium_parcours_classes').select('id, parcours_id').eq('id', parcoursClasseId).maybeSingle()
+  if (!pc) return { error: 'Assignation introuvable.' }
+  const { data: parc } = await supabase
+    .from('scriptorium_parcours').select('nb_semaines, supprime_at').eq('id', pc.parcours_id as string).maybeSingle()
+  if (!parc || parc.supprime_at) return { error: 'Parcours introuvable.' }
+  if (semaine > (parc.nb_semaines as number)) return { error: `Le parcours n'a que ${parc.nb_semaines} semaines.` }
+
+  const cible = await validerRefCreneau(supabase, ref)
+  if (cible.error || !cible.payload) return { error: cible.error ?? 'Cible invalide.' }
+  const payload: Record<string, unknown> = { ...cible.payload, parcours_classe_id: parcoursClasseId, semaine }
+
+  for (let essai = 0; essai < 5; essai++) {
+    const { data: dernier } = await supabase
+      .from('scriptorium_parcours_classe_creneaux').select('ordre')
+      .eq('parcours_classe_id', parcoursClasseId).eq('semaine', semaine)
+      .order('ordre', { ascending: false }).limit(1).maybeSingle()
+    const ordre = (dernier?.ordre ?? 0) + 1
+    const { data, error } = await supabase
+      .from('scriptorium_parcours_classe_creneaux').insert({ ...payload, ordre })
+      .select('id, semaine, ref_type, contenu_id, livre_id, livre_semaine_debut, livre_semaine_fin')
+      .single()
+    if (!error && data) {
+      const mat = await materialiserElementsPourCreneaux(supabase, [data as CreneauAMaterialiser], parc.nb_semaines as number)
+      if (mat.error) return { error: `Créneau ajouté, mais éléments non matérialisés : ${mat.error}` }
+      // S3 — la synthèse suit l'instance : le hook trouve ce cours dans l'instance
+      // de CETTE classe (les autres classes ne sont pas concernées). Gate OFF → no-op.
+      if ('contenuId' in ref) await hookSyntheseAjoutCreneau(createAdminClient(), pc.parcours_id as string, ref.contenuId)
+      revalidatePath('/prof/scriptorium')
+      return { id: data.id as string }
+    }
+    if (error && error.code !== '23505') return { error: error.message }
+  }
+  return { error: 'Conflit d’ordre, réessaie.' }
+}
+
+/** Retire un créneau de l'instance (cascade sur ses éléments — « vu » compris). */
+export async function retirerCreneauInstance(creneauId: string): Promise<{ error?: string }> {
+  const { supabase } = await verifierProf()
+  if (!RE_UUID.test(creneauId)) return { error: 'Identifiant invalide.' }
+  // S5 — pré-lecture : capturer le cours et le parcours AVANT le DELETE, pour
+  // décider du retrait de sa synthèse une fois le créneau parti (patron retirerCreneau).
+  const admin = createAdminClient()
+  const gateOn = await lireGatePlanActif(admin)
+  const { data: cr } = await supabase
+    .from('scriptorium_parcours_classe_creneaux')
+    .select('parcours_classe_id, ref_type, contenu_id').eq('id', creneauId).maybeSingle()
+  if (!cr) return { error: 'Créneau introuvable.' }
+  let coursDuCreneau: { parcoursId: string; contenuId: string } | null = null
+  if (gateOn && cr.ref_type === 'contenu' && cr.contenu_id) {
+    const { data: pc } = await admin
+      .from('scriptorium_parcours_classes').select('parcours_id').eq('id', cr.parcours_classe_id as string).maybeSingle()
+    if (pc) coursDuCreneau = { parcoursId: pc.parcours_id as string, contenuId: cr.contenu_id as string }
+  }
+  const { error } = await supabase.from('scriptorium_parcours_classe_creneaux').delete().eq('id', creneauId)
+  if (error) return { error: error.message }
+  if (coursDuCreneau) await hookSyntheseRetraitCreneau(admin, coursDuCreneau.parcoursId, coursDuCreneau.contenuId)
+  revalidatePath('/prof/scriptorium')
+  return {}
 }
 
 // Publie (fige) l'horaire résolu d'un parcours pour une classe — décision PO 3.

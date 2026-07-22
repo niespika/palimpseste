@@ -7,6 +7,8 @@ import { lireFuseau } from '@/utils/fuseau-serveur'
 import { lireGatePlanActif, plansValidesCourants } from '@/utils/plan-exercices'
 import { resoudreDatesSyntheses } from '@/utils/plan-synthese'
 import { dateEffectiveSemaine, libelleTypeExercice } from '@/utils/plan-cadence'
+import { construireApercuAssign, memoSocleFrise, type ApercuSemaine } from '@/utils/parcours-apercu'
+import { semaineCourante } from '@/utils/scriptorium-corpus'
 
 // Dérivation calendrier → « à faire » (famille 2 de la spec §7) : une échéance
 // proche ENGENDRE une tâche. On n'affiche jamais l'événement nu ici (il est sur
@@ -195,6 +197,81 @@ export async function tachesDeriveesDuCalendrier(joursAvant = 10): Promise<Tache
             ctaLabel: 'Préparer →',
             ...(enRetard ? { urgence: 'retard' as const } : {}),
           })
+        }
+      }
+    }
+  }
+
+  // Éléments d'instance NON VUS des semaines passées (RAG L3, §5.3) : de la matière
+  // déjà enseignée dont le prof n'a pas cliqué « vu » — la grille d'instance est le
+  // geste (le signal s'éteint quand tout est vu, déplacé ou retiré). NON gaté
+  // (pilotage prof, pas de surface élève) ; tolérant si les tables d'instance
+  // n'existent pas encore (migration scriptorium_rag_l1.sql non jouée → data null).
+  {
+    const { data: assigns } = await admin.from('scriptorium_parcours_classes')
+      .select('id, parcours_id, classe_id, date_debut, horaire_snapshot').eq('statut', 'active')
+    const rows = (assigns ?? []) as Record<string, unknown>[]
+    if (rows.length > 0) {
+      const parcoursIds = [...new Set(rows.map((a) => a.parcours_id as string))]
+      const { data: parcs } = await admin.from('scriptorium_parcours')
+        .select('id, titre, nb_semaines, supprime_at').in('id', parcoursIds)
+      const metaParcours = new Map((parcs ?? [])
+        .filter((p) => (p.supprime_at as string | null) == null)
+        .map((p) => [p.id as string, { titre: p.titre as string, nb: (p.nb_semaines as number) ?? 0 }]))
+
+      // Semaine courante par assignation (aperçu snapshot/frise, socle mémoïsé par AY).
+      const socleDe = memoSocleFrise(admin)
+      const concernees: { pcId: string; classeId: string; titre: string; courante: number }[] = []
+      for (const a of rows) {
+        const meta = metaParcours.get(a.parcours_id as string)
+        if (!meta) continue
+        const snap = a.horaire_snapshot as ApercuSemaine[] | null | undefined
+        const res = await construireApercuAssign(admin, {
+          parcoursId: a.parcours_id as string,
+          nbSemaines: meta.nb,
+          dateDebut: (a.date_debut as string | null) ?? null,
+          snapshot: snap && Array.isArray(snap) && snap.length ? snap : null,
+        }, socleDe)
+        const courante = semaineCourante(res?.apercu ?? null, today)
+        if (courante == null || courante <= 1) continue // rien de « passé » avant la semaine 2
+        concernees.push({ pcId: a.id as string, classeId: a.classe_id as string, titre: meta.titre, courante })
+      }
+
+      if (concernees.length > 0) {
+        const { data: crens } = await admin.from('scriptorium_parcours_classe_creneaux')
+          .select('id, parcours_classe_id').in('parcours_classe_id', concernees.map((c) => c.pcId))
+        const pcParCreneau = new Map((crens ?? []).map((c) => [c.id as string, c.parcours_classe_id as string]))
+        const idsCreneaux = [...pcParCreneau.keys()]
+        if (idsCreneaux.length > 0) {
+          const { data: els } = await admin.from('scriptorium_parcours_classe_elements')
+            .select('creneau_id, semaine').in('creneau_id', idsCreneaux).is('vu_at', null)
+          const courantePc = new Map(concernees.map((c) => [c.pcId, c.courante]))
+          const nbParPc = new Map<string, number>()
+          for (const e of els ?? []) {
+            const pcId = pcParCreneau.get(e.creneau_id as string)
+            if (!pcId) continue
+            const courante = courantePc.get(pcId)
+            if (courante != null && (e.semaine as number) < courante) {
+              nbParPc.set(pcId, (nbParPc.get(pcId) ?? 0) + 1)
+            }
+          }
+          if (nbParPc.size > 0) {
+            const classeIds = [...new Set(concernees.map((c) => c.classeId))]
+            const { data: cls } = await admin.from('classes').select('id, nom').in('id', classeIds)
+            const nomClasse = new Map((cls ?? []).map((c) => [c.id as string, c.nom as string]))
+            for (const c of concernees) {
+              const nb = nbParPc.get(c.pcId) ?? 0
+              if (nb === 0) continue
+              taches.push({
+                id: `instance-vu-${c.pcId}`,
+                label: `${nb} élément${nb > 1 ? 's' : ''} des semaines passées non marqué${nb > 1 ? 's' : ''} vu${nb > 1 ? 's' : ''} — ${c.titre}`,
+                echeance: today,
+                classeNom: nomClasse.get(c.classeId) ?? null,
+                href: `/prof/scriptorium?vue=classes&classe=${c.classeId}&instance=${c.pcId}`,
+                ctaLabel: 'Pointer →',
+              })
+            }
+          }
         }
       }
     }

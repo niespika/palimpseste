@@ -207,43 +207,54 @@ interface CreneauLivre {
 // A1) et à la datation (chargerCandidats) : charge les créneaux-livre BRUTS + parcours vivants
 // + assignations ACTIVES à la classe (avec snapshot/date_debut). Ne résout AUCUNE date — c'est
 // le socle brut, AVANT le filtrage `if (!apercu) continue` de chargerCandidats.
+// RAG L1 : les créneaux lus sont ceux de l'INSTANCE de la classe
+// (scriptorium_parcours_classe_creneaux) — le couple (livre, classe) est natif, plus de
+// jointure créneaux modèle × assignations. Même précédence, mêmes verdicts (l'instance
+// est une copie conforme du modèle à l'assignation, divergente ensuite PAR CLASSE).
 async function chargerCreneauxEtAssignations(
   admin: SupabaseClient, livreId: string, classeId: string,
 ): Promise<{ creneaux: CreneauLivre[]; assignParParcours: Map<string, AssignParcours> }> {
   const vide = { creneaux: [] as CreneauLivre[], assignParParcours: new Map<string, AssignParcours>() }
-  const { data: creneauxRaw } = await admin.from('scriptorium_parcours_creneaux')
-    .select('id, parcours_id, semaine, livre_semaine_debut, livre_semaine_fin')
-    .eq('ref_type', 'livre').eq('livre_id', livreId)
+
+  // Assignations ACTIVES à cette classe (id d'instance inclus). Tolérant si les colonnes
+  // snapshot n'existent pas (migration parcours_snapshot_horaire.sql non jouée) → repli.
+  let assignData: Record<string, unknown>[] = []
+  const withSnap = await admin.from('scriptorium_parcours_classes')
+    .select('id, parcours_id, date_debut, statut, horaire_snapshot, snapshot_version, snapshot_genere_le')
+    .eq('classe_id', classeId).eq('statut', 'active')
+  if (withSnap.error) {
+    const noSnap = await admin.from('scriptorium_parcours_classes')
+      .select('id, parcours_id, date_debut, statut')
+      .eq('classe_id', classeId).eq('statut', 'active')
+    assignData = (noSnap.data ?? []) as Record<string, unknown>[]
+  } else {
+    assignData = (withSnap.data ?? []) as Record<string, unknown>[]
+  }
+  if (assignData.length === 0) return vide
+
+  // Créneaux-livre de l'INSTANCE de ces assignations pour CE livre.
+  const pcIds = assignData.map(a => a.id as string)
+  const { data: creneauxRaw } = await admin.from('scriptorium_parcours_classe_creneaux')
+    .select('id, parcours_classe_id, semaine, livre_semaine_debut, livre_semaine_fin')
+    .eq('ref_type', 'livre').eq('livre_id', livreId).in('parcours_classe_id', pcIds)
   if (!creneauxRaw || creneauxRaw.length === 0) return vide
 
-  const parcoursIds = [...new Set(creneauxRaw.map(c => c.parcours_id as string))]
+  // Parcours VIVANTS (nb_semaines pour l'aperçu) ; un parcours soft-deleté sort
+  // d'assignParParcours → ses créneaux d'instance sont filtrés en aval (inchangé).
+  const parcoursParPc = new Map(assignData.map(a => [a.id as string, a.parcours_id as string]))
+  const parcoursIds = [...new Set(assignData.map(a => a.parcours_id as string))]
   const { data: parcours } = await admin.from('scriptorium_parcours')
     .select('id, nb_semaines, supprime_at').in('id', parcoursIds)
   const nbParParcours = new Map<string, number>()
   for (const p of parcours ?? []) {
     if ((p.supprime_at as string | null) == null) nbParParcours.set(p.id as string, (p.nb_semaines as number) ?? 0)
   }
-  const vivants = [...nbParParcours.keys()]
-  if (vivants.length === 0) return vide
-
-  // Assignations ACTIVES à cette classe. Tolérant si les colonnes snapshot n'existent
-  // pas (migration parcours_snapshot_horaire.sql non jouée) → repli sans snapshot.
-  let assignData: Record<string, unknown>[] = []
-  const withSnap = await admin.from('scriptorium_parcours_classes')
-    .select('parcours_id, date_debut, statut, horaire_snapshot, snapshot_version, snapshot_genere_le')
-    .eq('classe_id', classeId).eq('statut', 'active').in('parcours_id', vivants)
-  if (withSnap.error) {
-    const noSnap = await admin.from('scriptorium_parcours_classes')
-      .select('parcours_id, date_debut, statut')
-      .eq('classe_id', classeId).eq('statut', 'active').in('parcours_id', vivants)
-    assignData = (noSnap.data ?? []) as Record<string, unknown>[]
-  } else {
-    assignData = (withSnap.data ?? []) as Record<string, unknown>[]
-  }
+  if (nbParParcours.size === 0) return vide
 
   const assignParParcours = new Map<string, AssignParcours>()
   for (const a of assignData) {
     const pid = a.parcours_id as string
+    if (!nbParParcours.has(pid)) continue // parcours soft-deleté
     const snap = a.horaire_snapshot as ApercuSemaine[] | null | undefined
     assignParParcours.set(pid, {
       parcoursId: pid,
@@ -255,7 +266,7 @@ async function chargerCreneauxEtAssignations(
 
   const creneaux: CreneauLivre[] = creneauxRaw.map(c => ({
     id: c.id as string,
-    parcoursId: c.parcours_id as string,
+    parcoursId: parcoursParPc.get(c.parcours_classe_id as string) ?? '',
     semParcours: c.semaine as number,
     debut: (c.livre_semaine_debut as number | null) ?? null,
     fin: (c.livre_semaine_fin as number | null) ?? null,
@@ -360,19 +371,22 @@ export async function classesConflitWholeBook(admin: SupabaseClient, livreId: st
   const { data: directs } = await admin.from('scriptorium_unite_classes').select('classe_id').eq('unite_id', livreId)
   const classesDirectes = new Set((directs ?? []).map(d => d.classe_id as string))
   if (classesDirectes.size === 0) return []
-  // Créneaux LIVRE ENTIER (bornes null/null) de ce livre.
-  const { data: creneaux } = await admin.from('scriptorium_parcours_creneaux')
-    .select('parcours_id').eq('ref_type', 'livre').eq('livre_id', livreId)
+  // Créneaux d'INSTANCE « livre entier » (bornes null/null) de ce livre (RAG L1).
+  const { data: creneaux } = await admin.from('scriptorium_parcours_classe_creneaux')
+    .select('parcours_classe_id').eq('ref_type', 'livre').eq('livre_id', livreId)
     .is('livre_semaine_debut', null).is('livre_semaine_fin', null)
   if (!creneaux || creneaux.length === 0) return []
-  const parcoursIds = [...new Set(creneaux.map(c => c.parcours_id as string))]
-  const { data: parcours } = await admin.from('scriptorium_parcours').select('id, supprime_at').in('id', parcoursIds)
-  const vivants = (parcours ?? []).filter(p => (p.supprime_at as string | null) == null).map(p => p.id as string)
-  if (vivants.length === 0) return []
+  const pcIds = [...new Set(creneaux.map(c => c.parcours_classe_id as string))]
   const { data: assigns } = await admin.from('scriptorium_parcours_classes')
-    .select('classe_id').eq('statut', 'active').in('parcours_id', vivants)
+    .select('parcours_id, classe_id').eq('statut', 'active').in('id', pcIds)
+  const rows = assigns ?? []
+  if (rows.length === 0) return []
+  const parcoursIds = [...new Set(rows.map(a => a.parcours_id as string))]
+  const { data: parcours } = await admin.from('scriptorium_parcours').select('id, supprime_at').in('id', parcoursIds)
+  const vivants = new Set((parcours ?? []).filter(p => (p.supprime_at as string | null) == null).map(p => p.id as string))
   const enConflit = new Set<string>()
-  for (const a of assigns ?? []) {
+  for (const a of rows) {
+    if (!vivants.has(a.parcours_id as string)) continue
     if (classesDirectes.has(a.classe_id as string)) enConflit.add(a.classe_id as string)
   }
   return [...enConflit]
@@ -388,14 +402,17 @@ export async function classesConflitWholeBook(admin: SupabaseClient, livreId: st
 export async function livresGouvernesPourClasses(admin: SupabaseClient, classeIds: string[]): Promise<string[]> {
   if (classeIds.length === 0) return []
   const { data: assigns } = await admin.from('scriptorium_parcours_classes')
-    .select('parcours_id').eq('statut', 'active').in('classe_id', classeIds)
-  const parcoursIds = [...new Set((assigns ?? []).map(a => a.parcours_id as string))]
-  if (parcoursIds.length === 0) return []
+    .select('id, parcours_id').eq('statut', 'active').in('classe_id', classeIds)
+  const rows = assigns ?? []
+  if (rows.length === 0) return []
+  const parcoursIds = [...new Set(rows.map(a => a.parcours_id as string))]
   const { data: parcours } = await admin.from('scriptorium_parcours').select('id, supprime_at').in('id', parcoursIds)
-  const vivants = (parcours ?? []).filter(p => (p.supprime_at as string | null) == null).map(p => p.id as string)
-  if (vivants.length === 0) return []
-  const { data: creneaux } = await admin.from('scriptorium_parcours_creneaux')
-    .select('livre_id').eq('ref_type', 'livre').in('parcours_id', vivants)
+  const vivants = new Set((parcours ?? []).filter(p => (p.supprime_at as string | null) == null).map(p => p.id as string))
+  const pcIds = rows.filter(a => vivants.has(a.parcours_id as string)).map(a => a.id as string)
+  if (pcIds.length === 0) return []
+  // Créneaux-livre d'INSTANCE des assignations vivantes (RAG L1).
+  const { data: creneaux } = await admin.from('scriptorium_parcours_classe_creneaux')
+    .select('livre_id').eq('ref_type', 'livre').in('parcours_classe_id', pcIds)
   return [...new Set((creneaux ?? []).map(c => c.livre_id as string))]
 }
 
@@ -405,32 +422,31 @@ export async function livresGouvernesPourClasses(admin: SupabaseClient, classeId
  * datées émettre. Ne résout pas les dates — appeler resoudreDatesLivre par paire.
  */
 export async function pairesLivresGouvernes(admin: SupabaseClient, classeIds?: string[]): Promise<Array<{ livreId: string; classeId: string }>> {
-  const { data: creneaux } = await admin.from('scriptorium_parcours_creneaux')
-    .select('parcours_id, livre_id').eq('ref_type', 'livre')
-  if (!creneaux || creneaux.length === 0) return []
-  const parcoursIds = [...new Set(creneaux.map(c => c.parcours_id as string))]
-  const { data: parcours } = await admin.from('scriptorium_parcours').select('id, supprime_at').in('id', parcoursIds)
-  const vivants = new Set((parcours ?? []).filter(p => (p.supprime_at as string | null) == null).map(p => p.id as string))
-  if (vivants.size === 0) return []
   let qAssigns = admin.from('scriptorium_parcours_classes')
-    .select('parcours_id, classe_id').eq('statut', 'active').in('parcours_id', [...vivants])
+    .select('id, parcours_id, classe_id').eq('statut', 'active')
   if (classeIds && classeIds.length) qAssigns = qAssigns.in('classe_id', classeIds) // (perf) scope au spectateur
   const { data: assigns } = await qAssigns
-  const classesParParcours = new Map<string, Set<string>>()
-  for (const a of assigns ?? []) {
-    const pid = a.parcours_id as string
-    const set = classesParParcours.get(pid) ?? new Set<string>()
-    set.add(a.classe_id as string)
-    classesParParcours.set(pid, set)
+  const rows = assigns ?? []
+  if (rows.length === 0) return []
+  const parcoursIds = [...new Set(rows.map(a => a.parcours_id as string))]
+  const { data: parcours } = await admin.from('scriptorium_parcours').select('id, supprime_at').in('id', parcoursIds)
+  const vivants = new Set((parcours ?? []).filter(p => (p.supprime_at as string | null) == null).map(p => p.id as string))
+  const classeParPc = new Map<string, string>()
+  for (const a of rows) {
+    if (!vivants.has(a.parcours_id as string)) continue
+    classeParPc.set(a.id as string, a.classe_id as string)
   }
+  if (classeParPc.size === 0) return []
+  // Créneaux-livre d'INSTANCE (RAG L1) : chaque créneau porte nativement sa classe.
+  const { data: creneaux } = await admin.from('scriptorium_parcours_classe_creneaux')
+    .select('parcours_classe_id, livre_id').eq('ref_type', 'livre')
+    .in('parcours_classe_id', [...classeParPc.keys()])
   const paires = new Map<string, { livreId: string; classeId: string }>()
-  for (const c of creneaux) {
-    const pid = c.parcours_id as string
-    if (!vivants.has(pid)) continue
+  for (const c of creneaux ?? []) {
+    const classeId = classeParPc.get(c.parcours_classe_id as string)
+    if (!classeId) continue
     const livreId = c.livre_id as string
-    for (const classeId of classesParParcours.get(pid) ?? []) {
-      paires.set(`${livreId}|${classeId}`, { livreId, classeId })
-    }
+    paires.set(`${livreId}|${classeId}`, { livreId, classeId })
   }
   return [...paires.values()]
 }

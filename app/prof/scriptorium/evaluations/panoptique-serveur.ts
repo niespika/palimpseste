@@ -90,15 +90,16 @@ async function aujourdhui(): Promise<string> {
 
 // Assignations ACTIVES d'une classe (parcours vivant) + snapshot horaire, tolérant si la
 // colonne snapshot n'existe pas (migration non jouée). Renvoie de quoi construire l'aperçu.
+// `pcId` = id d'instance (scriptorium_parcours_classes) — clé des créneaux d'instance (RAG L1).
 async function chargerParcoursActifsDeClasse(
   admin: ReturnType<typeof createAdminClient>, classeId: string,
-): Promise<Array<{ parcoursId: string; titre: string; assign: AssignParcours }>> {
+): Promise<Array<{ pcId: string; parcoursId: string; titre: string; assign: AssignParcours }>> {
   let liens: Record<string, unknown>[] = []
   const withSnap = await admin.from('scriptorium_parcours_classes')
-    .select('parcours_id, date_debut, horaire_snapshot').eq('classe_id', classeId).eq('statut', 'active')
+    .select('id, parcours_id, date_debut, horaire_snapshot').eq('classe_id', classeId).eq('statut', 'active')
   if (withSnap.error) {
     const noSnap = await admin.from('scriptorium_parcours_classes')
-      .select('parcours_id, date_debut').eq('classe_id', classeId).eq('statut', 'active')
+      .select('id, parcours_id, date_debut').eq('classe_id', classeId).eq('statut', 'active')
     liens = (noSnap.data as Record<string, unknown>[] | null) ?? []
   } else {
     liens = (withSnap.data as Record<string, unknown>[] | null) ?? []
@@ -110,14 +111,14 @@ async function chargerParcoursActifsDeClasse(
   const meta = new Map((parcs ?? [])
     .filter((p) => (p.supprime_at as string | null) == null)
     .map((p) => [p.id as string, { titre: p.titre as string, nbSemaines: (p.nb_semaines as number) ?? 0 }]))
-  const out: Array<{ parcoursId: string; titre: string; assign: AssignParcours }> = []
+  const out: Array<{ pcId: string; parcoursId: string; titre: string; assign: AssignParcours }> = []
   for (const l of liens) {
     const pid = l.parcours_id as string
     const m = meta.get(pid)
     if (!m) continue // parcours soft-deleté
     const snap = l.horaire_snapshot as ApercuSemaine[] | null | undefined
     out.push({
-      parcoursId: pid, titre: m.titre,
+      pcId: l.id as string, parcoursId: pid, titre: m.titre,
       assign: {
         parcoursId: pid, nbSemaines: m.nbSemaines,
         dateDebut: (l.date_debut as string | null) ?? null,
@@ -242,18 +243,19 @@ export async function chargerPanoptiqueDeClasse(classeId: string): Promise<Panop
 
 // ── Couches ───────────────────────────────────────────────────────────────────
 
-// (1) Enseignements : chaque créneau (cours/texte/livre) d'un parcours actif est résolu à
-// son lundi via l'aperçu (snapshot prioritaire, repli frise mémoïsée) et bucketé.
+// (1) Enseignements : chaque créneau (cours/texte/livre) de l'INSTANCE de la classe
+// (RAG L1 — divergence libre par classe) est résolu à son lundi via l'aperçu
+// (snapshot prioritaire, repli frise mémoïsée) et bucketé.
 async function ajouterEnseignements(
   admin: ReturnType<typeof createAdminClient>,
-  parcoursActifs: Array<{ parcoursId: string; titre: string; assign: AssignParcours }>,
+  parcoursActifs: Array<{ pcId: string; parcoursId: string; titre: string; assign: AssignParcours }>,
   semainePour: (d: string) => SemainePanoptique,
 ): Promise<void> {
   if (parcoursActifs.length === 0) return
-  const parcoursIds = parcoursActifs.map((p) => p.parcoursId)
-  const { data: crens } = await admin.from('scriptorium_parcours_creneaux')
-    .select('parcours_id, semaine, ref_type, contenu_id, livre_id, livre_semaine_debut, livre_semaine_fin, titre_affiche')
-    .in('parcours_id', parcoursIds).order('semaine', { ascending: true }).order('ordre', { ascending: true })
+  const pcIds = parcoursActifs.map((p) => p.pcId)
+  const { data: crens } = await admin.from('scriptorium_parcours_classe_creneaux')
+    .select('parcours_classe_id, semaine, ref_type, contenu_id, livre_id, livre_semaine_debut, livre_semaine_fin, titre_affiche')
+    .in('parcours_classe_id', pcIds).order('semaine', { ascending: true }).order('ordre', { ascending: true })
   const creneaux = crens ?? []
   if (creneaux.length === 0) return
 
@@ -277,10 +279,10 @@ async function ajouterEnseignements(
     apercuCache.set(a.parcoursId, ap)
     return ap
   }
-  const parcoursParId = new Map(parcoursActifs.map((p) => [p.parcoursId, p]))
+  const parcoursParPcId = new Map(parcoursActifs.map((p) => [p.pcId, p]))
 
   for (const c of creneaux) {
-    const p = parcoursParId.get(c.parcours_id as string)
+    const p = parcoursParPcId.get(c.parcours_classe_id as string)
     if (!p) continue
     const ap = await apercuDe(p.assign)
     if (!ap) continue // parcours assigné sans date/snapshot → non résoluble

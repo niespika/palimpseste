@@ -25,6 +25,13 @@ export default function FormulaireContenuBiblio({ type }: { type: 'texte' | 'cou
     // Fermer démonte le formulaire (inputs non contrôlés → vides à la réouverture).
     // Pas de e.currentTarget.reset() : après un await, currentTarget est null.
     setOuvert(false)
+    // Un COURS importé avec un corps de texte enchaîne sur sa découpe en sections
+    // (RAG L2, décision 3 : le prof déclare chapitres/sous-chapitres à l'import).
+    if (type === 'cours' && res.aTexte && res.id) {
+      router.push(`/prof/scriptorium?vue=cours&decouper=${res.id}`)
+      router.refresh()
+      return
+    }
     router.refresh()
   }
 
