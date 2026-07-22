@@ -35,6 +35,44 @@ export function coutMessage(usage?: {
     + writeReste * PRIX_INPUT * 1.25
 }
 
+// ── Tarifs PAR MODÈLE (RAG L5, SPEC §8.3) — USD / MILLION de tokens ──────────
+// entree / sortie / cacheLecture / cacheEcriture5m / cacheEcriture1h. Valeurs
+// juillet 2026. Gemini : cache implicite, aucune écriture facturée (null).
+// `coutMessage` ci-dessus reste inchangé (rétro-compatibilité Sonnet).
+export interface TarifModele {
+  entree: number
+  sortie: number
+  cacheLecture: number
+  cacheEcriture5m: number | null
+  cacheEcriture1h: number | null
+}
+
+export const TARIFS: Record<string, TarifModele> = {
+  'claude-sonnet-4-6':     { entree: 3,    sortie: 15,   cacheLecture: 0.30, cacheEcriture5m: 3.75, cacheEcriture1h: 6 },
+  'claude-haiku-4-5':      { entree: 1,    sortie: 5,    cacheLecture: 0.10, cacheEcriture5m: 1.25, cacheEcriture1h: 2 },
+  'gemini-3.5-flash-lite': { entree: 0.30, sortie: 2.50, cacheLecture: 0.03, cacheEcriture5m: null, cacheEcriture1h: null },
+}
+
+/**
+ * Coût (USD) d'un appel depuis l'usage NORMALISÉ du fournisseur (UsageIA de
+ * utils/ia-fournisseur). Modèle inconnu → tarif du préfixe le plus proche,
+ * repli Sonnet (on préfère SUR-estimer un coût que le perdre).
+ */
+export function coutSelonModele(
+  modele: string,
+  usage: { entree: number; sortie: number; cacheLecture: number; cacheEcriture5m: number; cacheEcriture1h: number },
+): number {
+  const tarif = TARIFS[modele]
+    ?? Object.entries(TARIFS).find(([id]) => modele.startsWith(id.split('-').slice(0, 2).join('-')))?.[1]
+    ?? TARIFS['claude-sonnet-4-6']
+  const M = 1_000_000
+  return usage.entree * tarif.entree / M
+    + usage.sortie * tarif.sortie / M
+    + usage.cacheLecture * tarif.cacheLecture / M
+    + usage.cacheEcriture5m * (tarif.cacheEcriture5m ?? 0) / M
+    + usage.cacheEcriture1h * (tarif.cacheEcriture1h ?? 0) / M
+}
+
 /**
  * Journalise un coût API pour un module sans ligne « hôte » (Quazian, Aletheia).
  * Best-effort : n'interrompt jamais le flux principal en cas d'erreur.

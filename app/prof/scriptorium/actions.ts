@@ -2069,6 +2069,41 @@ export async function ajouterCreneauInstance(
   return { error: 'Conflit d’ordre, réessaie.' }
 }
 
+// ── Réglages du RAG élève (L5, SPEC §8.3) — gate, modèles, quota, prompts ────
+export async function sauvegarderReglagesRag(reglages: {
+  actif: boolean
+  modele: string
+  modeleSynthese: string
+  quotaJour: number
+  prompt: string | null            // null / vide / identique au défaut → défaut
+  promptSynthese: string | null
+}): Promise<{ error?: string }> {
+  await verifierProf()
+  const modele = reglages.modele?.trim()
+  const modeleSynthese = reglages.modeleSynthese?.trim()
+  if (!modele || !modeleSynthese) return { error: 'Indique les identifiants de modèle.' }
+  if (!modele.startsWith('claude') && !modele.startsWith('gemini')) {
+    return { error: 'Modèle de chat inconnu (préfixes gérés : claude-, gemini-).' }
+  }
+  if (!Number.isInteger(reglages.quotaJour) || reglages.quotaJour < 1 || reglages.quotaJour > 500) {
+    return { error: 'Quota journalier invalide (1–500).' }
+  }
+  const admin = createAdminClient()
+  const { error } = await admin.from('scriptorium_params').upsert({
+    id: 1,
+    rag_actif: !!reglages.actif,
+    rag_modele: modele,
+    rag_modele_synthese: modeleSynthese,
+    rag_quota_jour: reglages.quotaJour,
+    rag_prompt: reglages.prompt?.trim() || null,
+    rag_prompt_synthese: reglages.promptSynthese?.trim() || null,
+  }, { onConflict: 'id' })
+  if (error) return { error: error.message }
+  revalidatePath('/prof/scriptorium')
+  revalidatePath('/eleve/modules/scriptorium')
+  return {}
+}
+
 /** Retire un créneau de l'instance (cascade sur ses éléments — « vu » compris). */
 export async function retirerCreneauInstance(creneauId: string): Promise<{ error?: string }> {
   const { supabase } = await verifierProf()

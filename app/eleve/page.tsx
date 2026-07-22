@@ -2,6 +2,7 @@ import Link from 'next/link'
 import { createClient } from '@/utils/supabase/server'
 import { createAdminClient } from '@/utils/supabase/admin'
 import { moduleIdsAccessibles, slugsModulesAccessibles } from '@/utils/acces'
+import { lireReglagesRag } from '@/utils/scriptorium-rag'
 import { contexteClasseEleve } from './contexte-classe'
 import { noteVersLettre, type LettreSection } from '@/utils/notation'
 import { calculerGrilleSemaines } from '@/utils/calendrier-grille'
@@ -15,10 +16,10 @@ import Pastille, { type ModuleSceau } from '@/components/Pastille'
 const fmtJourCourt = (d: string) => formatJour(d, { day: 'numeric', month: 'short' })
 
 type ModuleInfo = { id: string; slug: string; nom: string; description: string | null; actif: boolean }
-const MODULES_MASQUES_ELEVE = ['scriptorium']
 
 // slug en base → clé de monde (les vars charte / sceaux utilisent « fragments »).
 const SCEAU: Record<string, ModuleSceau> = {
+  scriptorium: 'scriptorium',
   'fragments-erudition': 'fragments',
   quazian: 'quazian',
   codex: 'codex',
@@ -211,7 +212,9 @@ export default async function TableauDeBordEleve() {
   const { data: mods } = idsAccessibles.size > 0
     ? await supabase.from('modules').select('id, slug, nom, description, actif').in('id', [...idsAccessibles])
     : { data: [] as ModuleInfo[] }
-  const modulesActifs = (mods ?? []).filter((m): m is ModuleInfo => !!m && m.actif === true && !MODULES_MASQUES_ELEVE.includes(m.slug))
+  // Scriptorium élève est GATÉ (RAG L5) : dévoilé seulement si rag_actif.
+  const masquesEleve = (await lireReglagesRag(createAdminClient())).actif ? [] : ['scriptorium']
+  const modulesActifs = (mods ?? []).filter((m): m is ModuleInfo => !!m && m.actif === true && !masquesEleve.includes(m.slug))
 
   // ── Construction des tâches priorisées ──────────────────────────────────────
   const taches: Tache[] = []

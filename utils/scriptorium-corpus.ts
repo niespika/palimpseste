@@ -292,9 +292,11 @@ function lundiCorpus(iso: string): string {
  * livres (fiches READY + carte), puis délègue au cœur pur assemblerCorpus.
  * null si la classe n'a aucune instance active datée (rien à raconter).
  */
+export interface LivreRefCorpus { cle: string; titre: string; totalSeances: number }
+
 export async function corpusClasse(
   admin: SupabaseClient, classeId: string, aujourdHui: string,
-): Promise<{ prefixe: string; stats: StatsCorpus } | null> {
+): Promise<{ prefixe: string; stats: StatsCorpus; livres: LivreRefCorpus[] } | null> {
   // 1. Assignations ACTIVES de la classe (tolérant si colonnes snapshot absentes).
   let assignData: Record<string, unknown>[] = []
   const withSnap = await admin.from('scriptorium_parcours_classes')
@@ -498,5 +500,7 @@ export async function corpusClasse(
         .map(f => ({ seance: f.semaine, texte: formaterFiche(f, chapParSeance.get(`${id}|${f.semaine}`) ?? null) })),
     }))
 
-  return assemblerCorpus(instances, livresCorpus)
+  const { prefixe, stats } = assemblerCorpus(instances, livresCorpus)
+  // Refs des livres du corpus (progression Aletheia de l'élève, suffixe dynamique L5).
+  return { prefixe, stats, livres: livresCorpus.map(l => ({ cle: l.cle, titre: l.titre, totalSeances: l.totalSeances })) }
 }

@@ -1,5 +1,7 @@
 import { redirect } from 'next/navigation'
 import { createClient } from '@/utils/supabase/server'
+import { createAdminClient } from '@/utils/supabase/admin'
+import { lireReglagesRag } from '@/utils/scriptorium-rag'
 import { moduleIdsAccessibles } from '@/utils/acces'
 import Tuile from '@/components/Tuile'
 import type { ModuleSceau } from '@/components/Pastille'
@@ -16,23 +18,26 @@ const SCEAU: Record<string, ModuleSceau> = {
   quazian: 'quazian',
   codex: 'codex',
   aletheia: 'aletheia',
+  scriptorium: 'scriptorium',
 }
 // Ordre d'affichage (les autres suivent par nom).
 const ORDRE = ['fragments-erudition', 'aletheia', 'codex', 'quazian']
-const MASQUES = ['scriptorium']
 
 export default async function IndexModulesEleve() {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
 
+  // Scriptorium élève est GATÉ (RAG L5) : tuile dévoilée seulement si rag_actif
+  // (le masquage Lot 0 saute sous gate — SPEC §2 décision 1).
+  const masques = (await lireReglagesRag(createAdminClient())).actif ? [] : ['scriptorium']
   const idsAccessibles = await moduleIdsAccessibles(supabase, user.id)
   const { data: mods } = idsAccessibles.size > 0
     ? await supabase.from('modules').select('id, slug, nom, description, actif').in('id', [...idsAccessibles])
     : { data: [] as ModuleInfo[] }
 
   const modules = (mods ?? [])
-    .filter((m): m is ModuleInfo => !!m && m.actif === true && !MASQUES.includes(m.slug))
+    .filter((m): m is ModuleInfo => !!m && m.actif === true && !masques.includes(m.slug))
     .sort((a, b) => {
       const ia = ORDRE.indexOf(a.slug), ib = ORDRE.indexOf(b.slug)
       return (ia === -1 ? 99 : ia) - (ib === -1 ? 99 : ib) || a.nom.localeCompare(b.nom)
