@@ -1,0 +1,397 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet data-dc-atomics="">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="anonymous">
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600&amp;family=Cormorant+Garamond:ital,wght@0,500;0,600;1,500&amp;family=EB+Garamond:ital,wght@0,400;0,500;0,600;1,400;1,500&amp;family=Alegreya+Sans:ital,wght@0,400;0,500;0,600;0,700;1,400&amp;display=swap" rel="stylesheet">
+<style>
+body { margin:0; background:#F0EADE; font-family:'EB Garamond',Georgia,serif; color:#221C16; -webkit-font-smoothing:antialiased; }
+::selection { background:#D8C8A8; }
+</style>
+</helmet>
+
+<div data-screen-label="Scriptorium — vue livre (2a)" style="min-height:100vh;background:#F0EADE">
+
+  <!-- ── Chrome Palimpseste (espace prof) ─────────────────────────────── -->
+  <div style="background:#FBF8F1;border-bottom:1px solid #E4DBC9">
+    <div style="max-width:1240px;margin:0 auto;padding:14px 24px 6px;display:flex;align-items:center;justify-content:space-between">
+      <span style="font-family:'Cinzel',serif;font-weight:600;font-size:16px;letter-spacing:.06em;color:#221C16">PALIMPSESTE</span>
+      <span style="font:13.5px 'Alegreya Sans',sans-serif;color:#8A6F4E">M. Aubert · Se déconnecter</span>
+    </div>
+    <div style="max-width:1240px;margin:0 auto;padding:0 24px 8px;display:flex;gap:6px">
+      <span style="font:14px 'Alegreya Sans',sans-serif;color:#6E5A3E;padding:5px 12px;border-radius:7px;cursor:pointer" style-hover="background:#F4EFE6">Tableau de bord</span>
+      <span style="font:14px 'Alegreya Sans',sans-serif;color:#6E5A3E;padding:5px 12px;border-radius:7px;cursor:pointer" style-hover="background:#F4EFE6">Pilotage ▾</span>
+      <span style="font:500 14px 'Alegreya Sans',sans-serif;background:#E6DCC7;color:#2A2017;padding:5px 12px;border-radius:7px;cursor:pointer">Modules ▾</span>
+    </div>
+  </div>
+
+  <div style="max-width:1240px;margin:0 auto;padding:16px 24px 56px">
+
+    <!-- ── Onglets Scriptorium ──────────────────────────────────────────── -->
+    <div style="display:flex;gap:4px;border-bottom:1px solid #D8CCB4">
+      <span style="font:14px 'Alegreya Sans',sans-serif;color:#6E5A3E;padding:7px 14px;border-radius:8px 8px 0 0;cursor:pointer" style-hover="background:#ECE4D6">Par classe</span>
+      <span style="font:500 14px 'Alegreya Sans',sans-serif;color:#221C16;padding:7px 14px;background:#E6DDC9;border-radius:8px 8px 0 0;box-shadow:inset 0 -2px 0 #4A3A28">Par unité</span>
+      <span style="font:14px 'Alegreya Sans',sans-serif;color:#6E5A3E;padding:7px 14px;border-radius:8px 8px 0 0;cursor:pointer" style-hover="background:#ECE4D6">Paramètres</span>
+    </div>
+
+    <!-- ── Retour + entête du livre ─────────────────────────────────────── -->
+    <div style="margin:14px 0 4px"><span style="font:500 13.5px 'Alegreya Sans',sans-serif;color:#8A6F4E;cursor:pointer" style-hover="color:#4A3A28">← Toutes les unités</span></div>
+
+    <div style="display:flex;align-items:flex-end;gap:18px;flex-wrap:wrap;margin:6px 0 18px">
+      <div>
+        <div style="font:600 11px 'Alegreya Sans',sans-serif;letter-spacing:.12em;text-transform:uppercase;color:#A8906A;margin-bottom:4px">Livre · ancrage IA — non visible par l'élève</div>
+        <div style="display:flex;align-items:baseline;gap:12px;flex-wrap:wrap">
+          <span style="font-family:'Cormorant Garamond',serif;font-weight:600;font-size:34px;line-height:1.05;color:#221C16">Le Gai Savoir</span>
+          <span style="font:italic 500 19px 'Cormorant Garamond',serif;color:#6E5A3E">Friedrich Nietzsche</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:10px;margin-top:8px;flex-wrap:wrap">
+          <span style="font:13.5px 'Alegreya Sans',sans-serif;color:#8A6F4E">12 semaines · début le 05/01/2026 · classes</span>
+          <span style="font:500 12px 'Alegreya Sans',sans-serif;background:#E6DDC9;color:#4A3A28;padding:3px 10px;border-radius:999px">TG1</span>
+          <span style="font:500 12px 'Alegreya Sans',sans-serif;background:#E6DDC9;color:#4A3A28;padding:3px 10px;border-radius:999px">TG3</span>
+          <span style="font:13px 'Alegreya Sans',sans-serif;color:#A8906A;cursor:pointer" style-hover="color:#4A3A28">✎ modifier</span>
+        </div>
+      </div>
+      <div style="margin-left:auto;display:flex;gap:8px">
+        <span style="font:600 12.5px 'Alegreya Sans',sans-serif;color:#5A4632;background:#FBF8F1;border:1px solid #D8CCB4;padding:7px 14px;border-radius:7px;cursor:pointer" style-hover="background:#ECE4D6">Modifier la découpe</span>
+        <span style="font:600 12.5px 'Alegreya Sans',sans-serif;color:#A23E2E;background:#FBF8F1;border:1px solid #DCC3B4;padding:7px 14px;border-radius:7px;cursor:pointer" style-hover="background:#F3E4DC">Supprimer l'unité…</span>
+      </div>
+    </div>
+
+    <!-- ── Trois colonnes : rail · fiche · carte ────────────────────────── -->
+    <div style="display:grid;grid-template-columns:238px minmax(0,1fr) 300px;gap:16px;align-items:start">
+
+      <!-- Rail des semaines -->
+      <div style="position:sticky;top:16px;background:#FBF8F1;border:1px solid #E4DBC9;border-radius:10px;padding:12px 0 10px">
+        <div style="font:600 11px 'Alegreya Sans',sans-serif;letter-spacing:.1em;text-transform:uppercase;color:#A8906A;padding:0 16px 8px">Fiches par semaine</div>
+        <div style="display:flex;flex-direction:column">
+          <sc-for list="{{ rail }}" as="r" hint-placeholder-count="12">
+            <div style="{{ r.row }}" style-hover="{{ r.hover }}" onClick="{{ r.onClick }}">
+              <span style="{{ r.numStyle }}">{{ r.num }}</span>
+              <span style="{{ r.titreStyle }}">{{ r.titre }}</span>
+              <span style="{{ r.dot }}"></span>
+            </div>
+          </sc-for>
+        </div>
+        <div style="margin:10px 16px 2px;padding-top:9px;border-top:1px dashed #D8CCB4;display:flex;gap:11px;flex-wrap:wrap;font:11px 'Alegreya Sans',sans-serif;color:#A8906A">
+          <span style="display:inline-flex;align-items:center;gap:4px"><span style="width:6px;height:6px;border-radius:50%;background:#5B6E4A"></span>prête</span>
+          <span style="display:inline-flex;align-items:center;gap:4px"><span style="width:6px;height:6px;border-radius:50%;background:#3E5C7E"></span>amendée</span>
+          <span style="display:inline-flex;align-items:center;gap:4px"><span style="width:6px;height:6px;border-radius:50%;border:1.4px solid #C9BBA0"></span>à générer</span>
+        </div>
+      </div>
+
+      <!-- Fiche de la semaine sélectionnée -->
+      <div style="background:#FBF8F1;border:1px solid #E4DBC9;border-radius:10px;overflow:hidden">
+        <div style="height:6px;background:#4A3A28"></div>
+        <div style="padding:20px 26px 24px;display:flex;flex-direction:column;gap:18px">
+          <div>
+            <div style="font:600 11px 'Alegreya Sans',sans-serif;letter-spacing:.1em;text-transform:uppercase;color:#A8906A;margin-bottom:3px">{{ semEtiquette }}</div>
+            <div style="display:flex;align-items:flex-start;gap:12px;flex-wrap:wrap">
+              <span style="font-family:'Cormorant Garamond',serif;font-weight:600;font-size:27px;line-height:1.1;color:#221C16">{{ semTitre }}</span>
+              <sc-if value="{{ ficheContenu }}" hint-placeholder-val="{{ true }}">
+                <span style="margin-left:auto;display:flex;gap:7px">
+                  <span style="font:600 12px 'Alegreya Sans',sans-serif;color:#5A4632;background:#FBF8F1;border:1px solid #D8CCB4;padding:5px 11px;border-radius:7px;cursor:pointer;white-space:nowrap" style-hover="background:#ECE4D6">↻ Régénérer (IA)</span>
+                  <span style="font:600 12px 'Alegreya Sans',sans-serif;color:#5A4632;background:#FBF8F1;border:1px solid #D8CCB4;padding:5px 11px;border-radius:7px;cursor:pointer;white-space:nowrap" style-hover="background:#ECE4D6">✎ Amender</span>
+                </span>
+              </sc-if>
+            </div>
+            <div style="display:flex;align-items:center;gap:9px;margin-top:7px">
+              <span style="{{ badgeStyle }}">{{ badgeText }}</span>
+              <span style="font:italic 13.5px 'EB Garamond',serif;color:#8A6F4E">{{ sousStatut }}</span>
+            </div>
+          </div>
+
+          <sc-if value="{{ ficheContenu }}" hint-placeholder-val="{{ true }}">
+            <div>
+              <div style="font:600 11px 'Alegreya Sans',sans-serif;letter-spacing:.1em;text-transform:uppercase;color:#A8906A;margin-bottom:6px">Thèse canonique</div>
+              <div style="font:17px/1.55 'EB Garamond',serif;color:#2A2017;text-wrap:pretty">{{ these }}</div>
+            </div>
+            <div>
+              <div style="font:600 11px 'Alegreya Sans',sans-serif;letter-spacing:.1em;text-transform:uppercase;color:#A8906A;margin-bottom:7px">Arguments clés</div>
+              <div style="display:flex;flex-direction:column;gap:7px">
+                <sc-for list="{{ args }}" as="a" hint-placeholder-count="3">
+                  <div style="display:flex;gap:10px;align-items:flex-start">
+                    <span style="width:6px;height:6px;background:#C9BBA0;transform:rotate(45deg);flex:none;margin-top:7px"></span>
+                    <span style="font:16px/1.5 'EB Garamond',serif;color:#3A2E22">{{ a }}</span>
+                  </div>
+                </sc-for>
+              </div>
+            </div>
+            <div>
+              <div style="font:600 11px 'Alegreya Sans',sans-serif;letter-spacing:.1em;text-transform:uppercase;color:#A8906A;margin-bottom:7px">Concepts clés</div>
+              <div style="display:flex;gap:6px;flex-wrap:wrap">
+                <sc-for list="{{ concepts }}" as="c" hint-placeholder-count="3">
+                  <span style="font:500 12.5px 'Alegreya Sans',sans-serif;background:#E6DDC9;color:#4A3A28;padding:3px 11px;border-radius:999px">{{ c }}</span>
+                </sc-for>
+              </div>
+            </div>
+            <div style="background:#F4EFE6;border:1px solid #E4DBC9;border-radius:9px;padding:14px 17px">
+              <div style="font:600 10.5px 'Alegreya Sans',sans-serif;letter-spacing:.09em;text-transform:uppercase;color:#3E5C7E;margin-bottom:6px">👁 Synthèse modèle — vue par l'élève</div>
+              <div style="font:16px/1.6 'EB Garamond',serif;color:#2A2017;text-wrap:pretty">{{ synthese }}</div>
+            </div>
+            <div>
+              <div onClick="{{ toggleTexte }}" style="display:flex;align-items:center;gap:9px;padding:9px 13px;border:1px solid #E4DBC9;border-radius:8px;cursor:pointer" style-hover="background:#F4EFE6">
+                <span style="font:13px 'Alegreya Sans',sans-serif;color:#8A6F4E;width:10px">{{ chevron }}</span>
+                <span style="font:600 13px 'Alegreya Sans',sans-serif;color:#5A4632">Texte de la semaine</span>
+                <span style="font:italic 13px 'EB Garamond',serif;color:#A8906A">{{ textePages }} · lecture seule — la découpe se modifie en tête de page</span>
+              </div>
+              <sc-if value="{{ texteOuvert }}" hint-placeholder-val="{{ false }}">
+                <div style="border:1px solid #E4DBC9;border-top:none;border-radius:0 0 8px 8px;padding:16px 20px;background:#FDFBF5;font:16.5px/1.65 'EB Garamond',serif;color:#3A2E22;text-wrap:pretty">{{ extrait }}</div>
+              </sc-if>
+            </div>
+          </sc-if>
+
+          <sc-if value="{{ ficheVide }}" hint-placeholder-val="{{ false }}">
+            <div style="border:1.5px dashed #D8CCB4;border-radius:10px;background:#F7F2E8;padding:30px 26px;display:flex;flex-direction:column;align-items:center;gap:14px;text-align:center">
+              <div style="font:italic 16.5px/1.5 'EB Garamond',serif;color:#8A6F4E;max-width:44ch">Cette fiche n'a pas encore été rédigée. Le diagnostic Aletheia et la synthèse montrée à l'élève s'appuieront dessus.</div>
+              <div style="display:flex;gap:9px">
+                <span style="font:600 13px 'Alegreya Sans',sans-serif;background:#4A3A28;color:#FBF8F1;padding:8px 16px;border-radius:7px;cursor:pointer" style-hover="opacity:.9">↻ Générer la fiche (IA)</span>
+                <span style="font:600 13px 'Alegreya Sans',sans-serif;color:#5A4632;background:#FBF8F1;border:1px solid #D8CCB4;padding:8px 16px;border-radius:7px;cursor:pointer" style-hover="background:#ECE4D6">✎ Rédiger à la main</span>
+              </div>
+            </div>
+            <div onClick="{{ toggleTexte }}" style="display:flex;align-items:center;gap:9px;padding:9px 13px;border:1px solid #E4DBC9;border-radius:8px;cursor:pointer" style-hover="background:#F4EFE6">
+              <span style="font:13px 'Alegreya Sans',sans-serif;color:#8A6F4E;width:10px">{{ chevron }}</span>
+              <span style="font:600 13px 'Alegreya Sans',sans-serif;color:#5A4632">Texte de la semaine</span>
+              <span style="font:italic 13px 'EB Garamond',serif;color:#A8906A">{{ textePages }}</span>
+            </div>
+            <sc-if value="{{ texteOuvert }}" hint-placeholder-val="{{ false }}">
+              <div style="border:1px solid #E4DBC9;border-radius:8px;padding:16px 20px;background:#FDFBF5;font:16.5px/1.65 'EB Garamond',serif;color:#3A2E22;margin-top:-12px">{{ extrait }}</div>
+            </sc-if>
+          </sc-if>
+        </div>
+      </div>
+
+      <!-- Colonne carte (sticky) -->
+      <div style="position:sticky;top:16px;display:flex;flex-direction:column;gap:14px">
+        <div style="background:#FBF8F1;border:1px solid #E4DBC9;border-radius:10px;padding:15px 17px 16px">
+          <div style="display:flex;align-items:center;gap:8px">
+            <span style="font:600 14px 'Alegreya Sans',sans-serif;color:#221C16">✦ Carte d'architecture</span>
+            <span style="{{ chipCarteStyle }}">{{ chipCarteText }}</span>
+          </div>
+          <div style="font:italic 13px 'EB Garamond',serif;color:#8A6F4E;margin:3px 0 12px">partagée aux élèves en fin de lecture</div>
+
+          <sc-if value="{{ cartePrete }}" hint-placeholder-val="{{ true }}">
+            <div style="font:600 10.5px 'Alegreya Sans',sans-serif;letter-spacing:.09em;text-transform:uppercase;color:#A8906A;margin-bottom:5px">Fil conducteur</div>
+            <div style="font:14.5px/1.5 'EB Garamond',serif;color:#3A2E22;text-wrap:pretty">Comment penser joyeusement après l'effondrement des arrière-mondes ? De la convalescence à l'éternel retour, le livre transforme la perte du sens garanti en discipline d'affirmation : le gai savoir.</div>
+            <div style="display:flex;align-items:baseline;gap:8px;margin:14px 0 6px">
+              <span style="font:600 10.5px 'Alegreya Sans',sans-serif;letter-spacing:.09em;text-transform:uppercase;color:#A8906A">Liens entre semaines</span>
+              <span style="font:italic 12px 'EB Garamond',serif;color:#A8906A">{{ lienNote }}</span>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:2px;margin:0 -6px">
+              <sc-for list="{{ liens }}" as="l" hint-placeholder-count="8">
+                <div style="{{ l.style }}" style-hover="{{ l.hover }}" onClick="{{ l.onClick }}">
+                  <span style="{{ l.flecheStyle }}">{{ l.fleche }}</span><span>{{ l.rel }}</span>
+                </div>
+              </sc-for>
+            </div>
+            <div style="font:italic 12px 'EB Garamond',serif;color:#A8906A;margin-top:8px">cliquer un lien ouvre la semaine visée</div>
+            <div style="display:flex;gap:7px;margin-top:12px">
+              <span style="font:600 12px 'Alegreya Sans',sans-serif;color:#5A4632;background:#FBF8F1;border:1px solid #D8CCB4;padding:5px 11px;border-radius:7px;cursor:pointer" style-hover="background:#ECE4D6">↻ Régénérer (IA)</span>
+              <span style="font:600 12px 'Alegreya Sans',sans-serif;color:#5A4632;background:#FBF8F1;border:1px solid #D8CCB4;padding:5px 11px;border-radius:7px;cursor:pointer" style-hover="background:#ECE4D6">✎ Amender</span>
+            </div>
+          </sc-if>
+
+          <sc-if value="{{ carteEnCours }}" hint-placeholder-val="{{ false }}">
+            <div style="font:italic 14.5px/1.5 'EB Garamond',serif;color:#9A6A2E">La carte se prépare — génération en cours…</div>
+            <div style="display:flex;flex-direction:column;gap:6px;margin-top:12px">
+              <div style="height:8px;border-radius:4px;background:#ECE4D6;width:92%"></div>
+              <div style="height:8px;border-radius:4px;background:#ECE4D6;width:78%"></div>
+              <div style="height:8px;border-radius:4px;background:#ECE4D6;width:85%"></div>
+            </div>
+            <div style="font:italic 12px 'EB Garamond',serif;color:#A8906A;margin-top:10px">la page se mettra à jour automatiquement</div>
+          </sc-if>
+
+          <sc-if value="{{ carteNon }}" hint-placeholder-val="{{ false }}">
+            <div style="font:italic 14.5px/1.5 'EB Garamond',serif;color:#8A6F4E">Pas encore de carte pour ce livre — génère-la pour donner aux élèves la vue d'ensemble en fin de lecture.</div>
+            <div style="margin-top:12px">
+              <span style="font:600 13px 'Alegreya Sans',sans-serif;background:#4A3A28;color:#FBF8F1;padding:7px 14px;border-radius:7px;cursor:pointer" style-hover="opacity:.9">↻ Générer la carte (IA)</span>
+            </div>
+          </sc-if>
+        </div>
+
+        
+      </div>
+
+    </div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{
+  &quot;etatCarte&quot;: { &quot;editor&quot;: &quot;enum&quot;, &quot;options&quot;: [&quot;prête&quot;, &quot;en cours&quot;, &quot;non générée&quot;], &quot;default&quot;: &quot;prête&quot;, &quot;tsType&quot;: &quot;string&quot;, &quot;section&quot;: &quot;États&quot; },
+  &quot;fichesManquantes&quot;: { &quot;editor&quot;: &quot;boolean&quot;, &quot;default&quot;: true, &quot;tsType&quot;: &quot;boolean&quot;, &quot;section&quot;: &quot;États&quot; }
+}">
+class Component extends DCLogic {
+  state = { sel: 6, texteOuvert: false };
+
+  semaines = [
+    { n: 1, court: "Préface & prélude", ref: "Préface de 1887 & prélude en rimes", titre: "La philosophie comme convalescence", etatBase: "prete", genLe: "02/06", pages: "~10 pages",
+      these: "Le gai savoir naît d'une guérison : philosopher, c'est transfigurer la maladie traversée en santé nouvelle — la vérité s'éprouve, elle ne se contemple pas.",
+      args: ["La préface relit tout le livre comme le journal d'une convalescence", "Méfiance envers les « arrière-mondes » : la métaphysique comme symptôme", "La gaieté n'est pas légèreté, mais discipline du soupçon"],
+      concepts: ["convalescence", "grande santé", "soupçon"],
+      synthese: "Nietzsche ouvre son livre comme on sort d'une longue maladie : ce qu'il a appris en souffrant devient une façon neuve de penser. Retiens que la philosophie n'est pas ici un système, mais l'histoire d'une guérison." },
+    { n: 2, court: "Livre I · §1–33", ref: "Livre premier, §1–33", titre: "Les erreurs utiles à la vie", etatBase: "prete", genLe: "02/06", pages: "~13 pages",
+      these: "Conscience et morale servent d'abord la conservation de l'espèce : nos fins les plus hautes reposent sur des erreurs devenues nécessaires.",
+      args: ["Les « maîtres du but de l'existence » inventent des fins que la vie ne demande pas", "La conscience, tardive et faible, n'est pas le pilote que l'on croit", "Noble et commun : deux économies de l'instinct, non deux mérites"],
+      concepts: ["conservation de l'espèce", "erreur utile", "instinct"],
+      synthese: "Avant de juger nos idéaux, demande-toi à quoi ils servent : Nietzsche montre que la vie se sert de nos croyances plus que nous ne les choisissons. L'erreur peut être vitale — c'est ce renversement qu'il faut suivre." },
+    { n: 3, court: "Livre I · §34–56", ref: "Livre premier, §34–56", titre: "Vivre dans l'apparence", etatBase: "prete", genLe: "03/06", pages: "~12 pages",
+      these: "Vivre, c'est déjà interpréter : la « réalité » que nous habitons est tissée d'apparences héritées, et le savoir commence quand on s'en avise.",
+      args: ["L'incorporation des erreurs : ce que le corps a appris à tenir pour vrai", "« La vie n'est pas un argument » : le vrai peut être invivable", "Éloge des Grecs, « superficiels par profondeur »"],
+      concepts: ["apparence", "incorporation", "perspective"],
+      synthese: "Ce que tu appelles réalité est déjà une interprétation ancienne, si bien apprise qu'elle semble naturelle. Le gai savoir commence quand on regarde ces évidences comme des habitudes — sans forcément pouvoir s'en défaire." },
+    { n: 4, court: "Livre II · §57–85", ref: "Livre deuxième, §57–85", titre: "Aux artistes : l'éthique du style", etatBase: "prete", genLe: "05/06", pages: "~11 pages",
+      these: "L'apparence n'est pas l'ennemie de la vérité mais sa condition vivable : l'art enseigne à choisir, alléger, encadrer — le style est une éthique.",
+      args: ["Ce que nous devons aux artistes : rendre la vie regardable", "Voile et distance : l'apparence cultivée comme art de vivre", "Contre le naturalisme : l'art n'imite pas, il élit"],
+      concepts: ["style", "distance", "idéalisation"],
+      synthese: "Nietzsche ne demande pas d'embellir la vie pour la fuir, mais d'apprendre des artistes une manière de la tenir à bonne distance. Donner forme, c'est déjà survivre." },
+    { n: 5, court: "Livre II · §86–107", ref: "Livre deuxième, §86–107", titre: "Gratitude envers l'art", etatBase: "prete", genLe: "05/06", pages: "~12 pages",
+      these: "Ultime gratitude envers l'art : sans la « bonne volonté d'apparence », la probité intellectuelle nous rendrait l'existence irrespirable.",
+      args: ["L'art comme contrepoids de la connaissance tragique", "Théâtre et musique : une éducation des affects", "Savoir rire de soi : l'art prépare le gai savoir"],
+      concepts: ["bonne volonté d'apparence", "probité", "comédie"],
+      synthese: "Si nous étions seulement lucides, nous ne supporterions pas ce que nous savons. L'art n'est pas un mensonge décoratif : c'est ce qui permet à la lucidité de rester vivable — et même joyeuse." },
+    { n: 6, court: "La mort de Dieu", ref: "Livre troisième, §108–125", titre: "La mort de Dieu", etatBase: "prete", genLe: "12/06", pages: "~14 pages",
+      these: "« Dieu est mort » nomme un événement culturel dont nous sommes les auteurs sans en mesurer la portée : reste à vaincre ses ombres et à dé-diviniser la nature.",
+      args: ["§108 — de nouvelles luttes : l'ombre de Bouddha sur les parois", "§109 — le monde comme chaos : désanthropomorphiser la connaissance", "§125 — l'insensé : « c'est nous qui l'avons tué » ; l'événement est encore en chemin"],
+      concepts: ["mort de Dieu", "ombres de Dieu", "dé-divinisation"],
+      synthese: "L'insensé n'expose pas une opinion athée : il mesure un séisme. Si Dieu est mort, tout ce qui s'appuyait sur lui — morale, vérité, sens — vacille aussi. Demande-toi ce que nous avons mis à la place, et si ce n'est pas encore une ombre.",
+      extrait: "« N'avez-vous pas entendu parler de cet insensé qui, en plein midi, alluma une lanterne et courut sur la place du marché en criant sans cesse : “Je cherche Dieu ! Je cherche Dieu !” […] Où est allé Dieu ? Je vais vous le dire : c'est nous qui l'avons tué, — vous et moi ! »" },
+    { n: 7, court: "Livre III · §126–175", ref: "Livre troisième, §126–175", titre: "La morale du troupeau", etatBase: "prete", genLe: "14/06", pages: "~13 pages",
+      these: "La morale est l'instinct du troupeau chez l'individu : sous les vertus parlent des besoins de communauté devenus impératifs.",
+      args: ["Les vertus dorment dans les mots : généalogie des évaluations", "Le « bien » varie : ce qui conserve le groupe, non ce qui élève l'individu", "Portraits brefs : dévots, améliorateurs, prêcheurs de morale"],
+      concepts: ["troupeau", "généalogie", "vertu"],
+      synthese: "Quand une règle morale te semble évidente, cherche qui elle protège. Nietzsche n'abolit pas la morale : il la fait parler, et ce qu'elle avoue est souvent un besoin du groupe plutôt qu'une vérité du bien." },
+    { n: 8, court: "Livre III · §176–275", ref: "Livre troisième, §176–275", titre: "Exercices d'indépendance", etatBase: "prete", genLe: "16/06", pages: "~15 pages",
+      these: "Une série d'exercices de liberté : se défaire des « on doit » pour préparer le mot d'ordre du §270 — « tu dois devenir celui que tu es ».",
+      args: ["La brièveté comme épreuve : l'aphorisme oblige le lecteur à penser", "L'indépendance coûte : solitude, masques, malentendus", "§270–275 — « que dit ta conscience ? » : l'auto-création comme tâche"],
+      concepts: ["auto-création", "solitude", "masque"],
+      synthese: "Ces pages courtes sont des haltères : chacune t'entraîne à te passer d'une approbation. Devenir celui que tu es n'est pas un slogan — c'est un travail, et il commence par ce que ta conscience te dit à toi seul." },
+    { n: 9, court: "Amor fati", ref: "Livre quatrième, §276–309 — Sanctus Januarius", titre: "Amor fati", etatBase: "prete", genLe: "18/06", pages: "~12 pages",
+      these: "Vœu de janvier (§276) : vouloir que rien ne soit autrement — l'affirmation comme hygiène de pensée, non comme résignation.",
+      args: ["Voir la nécessité comme beauté : apprendre à dire oui", "« Vivre dangereusement » (§283) : bâtir ses maisons sur le Vésuve", "La science gaie : connaître en aimant ce qui est"],
+      concepts: ["amor fati", "affirmation", "nécessité"],
+      synthese: "Aimer son destin, ce n'est pas tout accepter passivement : c'est refuser de passer sa vie en procès contre elle. L'amor fati est un entraînement du regard — voir dans le nécessaire ce qui peut être rendu beau." },
+    { n: 10, court: "L'éternel retour", ref: "Livre quatrième, §310–342", titre: "Le poids le plus lourd", etatBase: "amendee", genLe: "18/06", majLe: "28/06", pages: "~12 pages",
+      these: "§341 : et si un démon t'annonçait que tu revivras cette vie, innombrablement, à l'identique ? L'éternel retour est une épreuve sélective, non une cosmologie.",
+      args: ["§341 — le démon et la pensée abyssale : bénir ou maudire l'instant", "§340 — la mort de Socrate : le dernier mot du pessimisme", "§342 — incipit tragoedia : le seuil de Zarathoustra"],
+      concepts: ["éternel retour", "épreuve", "tragédie"],
+      synthese: "Ne cherche pas ici une théorie de l'univers : c'est un test. Que faudrait-il changer à ta vie pour que tu puisses désirer la revivre, exactement la même, une infinité de fois ? Ce que la question te fait — voilà l'important." },
+    { n: 11, court: "Livre V · §343–366", ref: "Livre cinquième, §343–366", titre: "Nous, sans crainte", etatBase: "vide", genLe: "01/07", pages: "~13 pages",
+      these: "La mort de Dieu, d'abord vécue comme une aurore : « enfin la mer est de nouveau libre » (§343) — mais le nihilisme approche derrière la joie.",
+      args: ["§343 — la nouvelle aurore : gaieté des esprits libres", "§344 — la croyance à la science reste une foi métaphysique", "L'ombre longue : le nihilisme européen en incubation"],
+      concepts: ["aurore", "nihilisme", "esprit libre"],
+      synthese: "La perte des certitudes peut se vivre comme un naufrage ou comme un départ en mer. Nietzsche choisit le départ — mais il sait que la traversée sera longue, et que la science elle-même repose encore sur une foi." },
+    { n: 12, court: "Livre V · §367–383", ref: "Livre cinquième, §367–383 & chants", titre: "L'horizon infini", etatBase: "vide", genLe: "01/07", pages: "~11 pages",
+      these: "Le perspectivisme assumé : l'horizon redevenu infini oblige à penser sans abri — et le livre se referme en dansant, par des chansons.",
+      args: ["§374 — le monde redevenu « infini » : une infinité d'interprétations possibles", "§377 — « nous autres, sans patrie » : penser sans appartenance", "La danse et le rire, dernier mot du gai savoir"],
+      concepts: ["perspectivisme", "sans-patrie", "danse"],
+      synthese: "Il n'y a plus de point de vue de nulle part : chaque savoir est une perspective. Ce n'est pas une défaite de la pensée — c'est son ouverture. Le livre finit en chansons : comprendre, ici, c'est aussi apprendre à danser." },
+  ];
+
+  liens = [
+    { de: 1, vers: 9, rel: "la convalescence prépare l'amor fati" },
+    { de: 2, vers: 6, rel: "l'erreur utile prépare la mort de Dieu" },
+    { de: 3, vers: 5, rel: "de l'apparence vécue à l'art" },
+    { de: 6, vers: 10, rel: "la mort de Dieu appelle l'éternel retour" },
+    { de: 6, vers: 11, rel: "reprise en aurore au §343" },
+    { de: 9, vers: 10, rel: "de l'amor fati au poids le plus lourd" },
+    { de: 5, vers: 12, rel: "l'art répond au perspectivisme" },
+    { de: 1, vers: 12, rel: "boucle : la grande santé retrouvée" },
+  ];
+
+  renderVals() {
+    const fichesManquantes = this.props.fichesManquantes ?? true;
+    const etatCarteProp = this.props.etatCarte ?? "prête";
+    const sel = this.state.sel;
+    const etatDe = (s) => (s.etatBase === "vide" && !fichesManquantes ? "prete" : s.etatBase);
+
+    const dots = {
+      prete: { width: "7px", height: "7px", borderRadius: "50%", background: "#5B6E4A", flex: "none" },
+      amendee: { width: "7px", height: "7px", borderRadius: "50%", background: "#3E5C7E", flex: "none" },
+      vide: { width: "7px", height: "7px", borderRadius: "50%", border: "1.4px solid #C9BBA0", background: "transparent", flex: "none", boxSizing: "border-box" },
+    };
+
+    const rail = this.semaines.map((s) => {
+      const selected = s.n === sel;
+      return {
+        key: s.n,
+        num: "S" + s.n,
+        titre: s.court,
+        row: { display: "flex", alignItems: "center", gap: "8px", padding: "6.5px 16px 6.5px 13px", cursor: "pointer", borderLeft: selected ? "3px solid #4A3A28" : "3px solid transparent", background: selected ? "#E6DDC9" : "transparent" },
+        hover: selected ? "background:#E6DDC9" : "background:#ECE4D6",
+        numStyle: { font: "600 11px 'Alegreya Sans',sans-serif", color: selected ? "#4A3A28" : "#A8906A", width: "25px", flex: "none" },
+        titreStyle: { font: (selected ? "600 " : "") + "15px 'EB Garamond',serif", color: selected ? "#221C16" : "#5A4632", flex: "1", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" },
+        dot: dots[etatDe(s)],
+        onClick: () => this.setState({ sel: s.n, texteOuvert: false }),
+      };
+    });
+
+    const s = this.semaines[sel - 1];
+    const etat = etatDe(s);
+    const badgeBase = { font: "600 11.5px 'Alegreya Sans',sans-serif", padding: "3px 10px", borderRadius: "999px", letterSpacing: ".02em", whiteSpace: "nowrap" };
+    const badges = {
+      prete: { text: "fiche prête", style: { ...badgeBase, background: "#E4E8D8", color: "#5B6E4A" } },
+      amendee: { text: "amendée à la main", style: { ...badgeBase, background: "#DCE3EC", color: "#3E5C7E" } },
+      vide: { text: "à générer", style: { ...badgeBase, background: "#EFE4CF", color: "#9A6A2E" } },
+    };
+    const sousStatut = etat === "prete" ? "générée le " + s.genLe : etat === "amendee" ? "générée le " + s.genLe + " · amendée le " + s.majLe : "aucun contenu pour l'instant";
+
+    const liens = this.liens.map((l, i) => {
+      const surligne = l.de === sel || l.vers === sel;
+      return {
+        key: i,
+        fleche: "S" + l.de + " → S" + l.vers,
+        rel: " · " + l.rel,
+        style: { padding: "4px 9px", borderRadius: "6px", font: "12.5px/1.4 'Alegreya Sans',sans-serif", cursor: "pointer", background: surligne ? "#E6DDC9" : "transparent", color: surligne ? "#4A3A28" : "#5A4632" },
+        flecheStyle: { fontWeight: surligne ? "700" : "600", letterSpacing: ".02em" },
+        hover: surligne ? "background:#E6DDC9" : "background:#F4EFE6",
+        onClick: () => this.setState({ sel: l.de === sel ? l.vers : l.de, texteOuvert: false }),
+      };
+    });
+
+    const cartePrete = etatCarteProp === "prête";
+    const carteEnCours = etatCarteProp === "en cours";
+    const carteNon = !cartePrete && !carteEnCours;
+    const chips = {
+      "prête": { text: "prête", style: { ...badgeBase, background: "#E4E8D8", color: "#5B6E4A", marginLeft: "auto" } },
+      "en cours": { text: "en cours…", style: { ...badgeBase, background: "#EFE4CF", color: "#9A6A2E", marginLeft: "auto" } },
+      "non générée": { text: "non générée", style: { ...badgeBase, background: "#ECE4D6", color: "#8A6F4E", marginLeft: "auto" } },
+    };
+    const chip = chips[etatCarteProp] ?? chips["prête"];
+
+    return {
+      rail,
+      liens,
+      lienNote: "S" + sel + " en évidence",
+      semEtiquette: "Semaine " + sel + " · " + s.ref,
+      semTitre: s.titre,
+      badgeText: badges[etat].text,
+      badgeStyle: badges[etat].style,
+      sousStatut,
+      these: s.these,
+      args: s.args,
+      concepts: s.concepts,
+      synthese: s.synthese,
+      ficheContenu: etat !== "vide",
+      ficheVide: etat === "vide",
+      texteOuvert: this.state.texteOuvert,
+      chevron: this.state.texteOuvert ? "▾" : "▸",
+      toggleTexte: () => this.setState((st) => ({ texteOuvert: !st.texteOuvert })),
+      textePages: s.ref.split(", ")[1] ? s.ref.split(", ")[1] + " · " + s.pages : s.pages,
+      extrait: s.extrait ?? "— extrait du texte de la semaine (non chargé dans cette maquette) —",
+      cartePrete,
+      carteEnCours,
+      carteNon,
+      chipCarteText: chip.text,
+      chipCarteStyle: chip.style,
+    };
+  }
+}
+</script>
+</body>
+</html>

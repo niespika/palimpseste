@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<meta name="design_doc_mode" content="canvas">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600;700&family=Cormorant+Garamond:wght@500;600;700&family=EB+Garamond:wght@400;500;600&family=Alegreya+Sans:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  body { margin:0; font-family:'EB Garamond', Georgia, serif; color:#221C16; -webkit-font-smoothing:antialiased; }
+</style>
+</helmet>
+
+<!-- ======================= INTRO ======================= -->
+<div style="position:absolute;left:80px;top:40px;width:1000px">
+  <div style="font-family:'Cinzel',serif;font-weight:600;font-size:13px;letter-spacing:.34em;color:#8A6F4E">PALIMPSESTE · ESPACE ÉLÈVE · CALENDRIER</div>
+  <div style="font-family:'Cormorant Garamond',serif;font-weight:600;font-size:50px;line-height:1.04;color:#221C16;margin-top:6px">Calendrier — rendu charte</div>
+  <div style="font-family:'EB Garamond',serif;font-size:18px;color:#5A4632;margin-top:8px;max-width:800px">L'onglet « Agenda » de l'élève. Sur mobile, la vue par défaut devient une <b>liste « à venir »</b> ; la grille « Mois » reste en bascule, repensée en <b>points + jour sélectionné</b>. Sur ordinateur, la vue mois ne change pas. Encre sur parchemin ; <b>une couleur = une classe</b>.</div>
+</div>
+
+<!-- legend -->
+<div style="position:absolute;left:80px;top:196px;width:430px">
+  <div data-drags-parent="1" style="position:absolute;top:-26px;left:2px;font-family:'Alegreya Sans',sans-serif;font-size:13px;letter-spacing:.04em;color:#8A6F4E">CODE COULEUR</div>
+  <div style="background:#FBF8F1;border:1px solid #E4DBC9;border-radius:10px;box-shadow:0 1px 3px rgba(34,28,22,.06);padding:16px 18px;display:flex;flex-wrap:wrap;gap:14px 22px;font-family:'Alegreya Sans',sans-serif;font-size:14px;color:#5A4632">
+    <div style="display:flex;align-items:center;gap:8px"><span style="width:14px;height:14px;border-radius:50%;background:#7C9CBF"></span>Terminale A</div>
+    <div style="display:flex;align-items:center;gap:8px"><span style="width:14px;height:14px;border-radius:50%;background:#C08552"></span>Première B</div>
+    <div style="display:flex;align-items:center;gap:8px"><span style="width:14px;height:14px;border-radius:50%;background:#D98A2B"></span>Mon Fragment à rendre</div>
+  </div>
+</div>
+
+<!-- handoff pointer -->
+<div style="position:absolute;left:560px;top:196px;width:430px">
+  <div style="background:#F3ECDD;border:1px solid #E4DBC9;border-left:3px solid #B8893B;border-radius:8px;padding:14px 16px;font-family:'EB Garamond',serif;font-size:15px;line-height:1.5;color:#5A4632">
+    <span style="font-family:'Alegreya Sans',sans-serif;font-size:11px;letter-spacing:.1em;color:#9A6A2E">POUR CLAUDE CODE</span><br>
+    Fichier concerné : <b>app/eleve/calendrier/page.tsx</b>. Le contenu (agrégation des échéances, couleurs par classe) ne change pas — on ajoute la vue « À venir » et on en fait le défaut sous <b>640px</b>.
+  </div>
+</div>
+
+<!-- ======================= MOBILE ======================= -->
+<div style="position:absolute;left:80px;top:348px;font-family:'Cormorant Garamond',serif;font-weight:600;font-size:30px;color:#221C16">Sur mobile</div>
+<div style="position:absolute;left:80px;top:390px;font-family:'EB Garamond',serif;font-size:16px;color:#8A6F4E">« À venir » par défaut (la réponse directe à « quoi rendre, et quand »). « Mois » en un tap pour voir la cadence.</div>
+
+<!-- Agenda mobile (default) -->
+<div data-screen-label="Calendrier Agenda — mobile (défaut)" style="position:absolute;left:80px;top:460px;width:300px">
+  <div data-drags-parent="1" style="position:absolute;top:-26px;left:2px;font-family:'Alegreya Sans',sans-serif;font-size:13px;color:#8A6F4E">Vue « À venir » — par défaut</div>
+  <div style="border:11px solid #221C16;border-radius:38px;background:#221C16;box-shadow:0 6px 22px rgba(34,28,22,.22)">
+    <div style="background:#F4EFE6;border-radius:27px;height:592px;overflow:hidden;display:flex;flex-direction:column">
+      <!-- app header -->
+      <div style="background:#ECE4D6;padding:13px 16px 11px;display:flex;justify-content:space-between;align-items:center">
+        <span style="font-family:'Cinzel',serif;font-weight:600;font-size:13px;letter-spacing:.16em;color:#221C16">PALIMPSESTE</span>
+        <span style="width:24px;height:24px;border-radius:50%;background:#DDE3EC;display:inline-flex;align-items:center;justify-content:center;font-family:'Alegreya Sans',sans-serif;font-size:11px;color:#2C4A7C">C</span>
+      </div>
+      <div style="padding:14px 16px 0;flex:1;overflow:hidden;display:flex;flex-direction:column">
+        <div style="display:flex;align-items:baseline;justify-content:space-between">
+          <div style="font-family:'Cormorant Garamond',serif;font-weight:600;font-size:26px;color:#221C16;line-height:1.05">Agenda</div>
+          <div style="font-family:'Alegreya Sans',sans-serif;font-size:11.5px;color:#8A6F4E">semaine 3</div>
+        </div>
+        <!-- segmented -->
+        <div style="display:flex;background:#ECE4D6;border-radius:9px;padding:3px;margin-top:11px;font-family:'Alegreya Sans',sans-serif;font-size:12.5px">
+          <div style="flex:1;text-align:center;background:#FBF8F1;border-radius:7px;padding:8px;color:#221C16;font-weight:700;box-shadow:0 1px 2px rgba(34,28,22,.08)">À venir</div>
+          <div style="flex:1;text-align:center;padding:8px;color:#8A6F4E">Mois</div>
+        </div>
+        <!-- list -->
+        <div style="margin-top:14px;display:flex;flex-direction:column;gap:15px;flex:1;overflow:hidden">
+          <!-- today -->
+          <div>
+            <div style="font-family:'Alegreya Sans',sans-serif;font-size:10.5px;letter-spacing:.1em;color:#221C16;font-weight:700">AUJOURD'HUI · JEU 25 SEPT</div>
+            <div style="background:#FBF8F1;border:1px solid #E4DBC9;border-left:4px solid #7C9CBF;border-radius:10px;padding:11px 13px;margin-top:7px;display:flex;align-items:center;gap:10px">
+              <div style="flex:1">
+                <div style="font-family:'EB Garamond',serif;font-size:16px;color:#221C16;line-height:1.2">Aletheia — <span style="color:#5A4632">fermeture</span></div>
+                <div style="font-family:'Alegreya Sans',sans-serif;font-size:11.5px;color:#8A6F4E;margin-top:2px">Terminale A · ferme à 23h59</div>
+              </div>
+              <span style="color:#8A6F4E">→</span>
+            </div>
+          </div>
+          <!-- this week -->
+          <div>
+            <div style="font-family:'Alegreya Sans',sans-serif;font-size:10.5px;letter-spacing:.1em;color:#8A6F4E">CETTE SEMAINE</div>
+            <div style="background:#FBF8F1;border:1px solid #E4DBC9;border-radius:10px;padding:10px 13px;margin-top:7px;display:flex;align-items:center;gap:10px">
+              <span style="width:10px;height:10px;border-radius:50%;background:#D98A2B;flex-shrink:0"></span>
+              <div style="flex:1"><div style="font-family:'EB Garamond',serif;font-size:15.5px;color:#221C16">Fragment à rendre</div><div style="font-family:'Alegreya Sans',sans-serif;font-size:11.5px;color:#8A6F4E;margin-top:1px">dimanche 23h</div></div>
+              <span style="color:#8A6F4E">→</span>
+            </div>
+          </div>
+          <!-- next week -->
+          <div>
+            <div style="font-family:'Alegreya Sans',sans-serif;font-size:10.5px;letter-spacing:.1em;color:#8A6F4E">SEMAINE 4 · 29 SEPT →</div>
+            <div style="display:flex;flex-direction:column;gap:8px;margin-top:7px">
+              <div style="background:#FBF8F1;border:1px solid #E4DBC9;border-radius:10px;padding:10px 13px;display:flex;align-items:center;gap:10px">
+                <span style="width:10px;height:10px;border-radius:50%;background:#C08552;flex-shrink:0"></span>
+                <div style="flex:1"><div style="font-family:'EB Garamond',serif;font-size:15.5px;color:#221C16">Quizz — Le contrat social</div><div style="font-family:'Alegreya Sans',sans-serif;font-size:11.5px;color:#8A6F4E;margin-top:1px">Première B · mardi 30</div></div>
+                <span style="color:#8A6F4E">→</span>
+              </div>
+              <div style="background:#FBF8F1;border:1px solid #E4DBC9;border-radius:10px;padding:10px 13px;display:flex;align-items:center;gap:10px">
+                <span style="width:10px;height:10px;border-radius:50%;background:#C08552;flex-shrink:0"></span>
+                <div style="flex:1"><div style="font-family:'EB Garamond',serif;font-size:15.5px;color:#221C16">Codex — ouverture</div><div style="font-family:'Alegreya Sans',sans-serif;font-size:11.5px;color:#8A6F4E;margin-top:1px">Première B · jeudi 2 oct</div></div>
+                <span style="color:#8A6F4E">→</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <!-- bottom tab bar -->
+      <div style="background:#FBF8F1;border-top:1px solid #E4DBC9;display:flex;justify-content:space-around;padding:8px 4px 9px">
+        <div style="text-align:center;color:#B3A488"><div style="width:19px;height:19px;border:2px solid #CDBFA6;border-radius:5px;margin:0 auto"></div><div style="font-family:'Alegreya Sans',sans-serif;font-size:9px;margin-top:3px">Aujourd'hui</div></div>
+        <div style="text-align:center;color:#B3A488"><div style="width:19px;height:19px;border:2px solid #CDBFA6;border-radius:5px;margin:0 auto"></div><div style="font-family:'Alegreya Sans',sans-serif;font-size:9px;margin-top:3px">Modules</div></div>
+        <div style="text-align:center;color:#5A4632"><div style="width:19px;height:19px;border:2px solid #5A4632;border-radius:5px;margin:0 auto"></div><div style="font-family:'Alegreya Sans',sans-serif;font-size:9px;margin-top:3px;font-weight:700">Agenda</div></div>
+        <div style="text-align:center;color:#B3A488"><div style="width:19px;height:19px;border:2px solid #CDBFA6;border-radius:50%;margin:0 auto"></div><div style="font-family:'Alegreya Sans',sans-serif;font-size:9px;margin-top:3px">Moi</div></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Mois+jour mobile (toggle) -->
+<div data-screen-label="Calendrier Mois — mobile (bascule)" style="position:absolute;left:460px;top:460px;width:300px">
+  <div data-drags-parent="1" style="position:absolute;top:-26px;left:2px;font-family:'Alegreya Sans',sans-serif;font-size:13px;color:#8A6F4E">Vue « Mois » — la bascule</div>
+  <div style="border:11px solid #221C16;border-radius:38px;background:#221C16;box-shadow:0 6px 22px rgba(34,28,22,.22)">
+    <div style="background:#F4EFE6;border-radius:27px;height:592px;overflow:hidden;display:flex;flex-direction:column">
+      <div style="background:#ECE4D6;padding:13px 16px 11px;display:flex;justify-content:space-between;align-items:center">
+        <span style="font-family:'Cinzel',serif;font-weight:600;font-size:13px;letter-spacing:.16em;color:#221C16">PALIMPSESTE</span>
+        <span style="width:24px;height:24px;border-radius:50%;background:#DDE3EC;display:inline-flex;align-items:center;justify-content:center;font-family:'Alegreya Sans',sans-serif;font-size:11px;color:#2C4A7C">C</span>
+      </div>
+      <div style="padding:14px 16px 0;flex:1;overflow:hidden;display:flex;flex-direction:column">
+        <div style="font-family:'Cormorant Garamond',serif;font-weight:600;font-size:26px;color:#221C16;line-height:1.05">Agenda</div>
+        <!-- segmented -->
+        <div style="display:flex;background:#ECE4D6;border-radius:9px;padding:3px;margin-top:11px;font-family:'Alegreya Sans',sans-serif;font-size:12.5px">
+          <div style="flex:1;text-align:center;padding:8px;color:#8A6F4E">À venir</div>
+          <div style="flex:1;text-align:center;background:#FBF8F1;border-radius:7px;padding:8px;color:#221C16;font-weight:700;box-shadow:0 1px 2px rgba(34,28,22,.08)">Mois</div>
+        </div>
+        <!-- month nav -->
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-top:13px">
+          <span style="font-family:'Alegreya Sans',sans-serif;font-size:12px;color:#8A6F4E;border:1px solid #E4DBC9;border-radius:7px;padding:4px 9px">←</span>
+          <span style="font-family:'Cormorant Garamond',serif;font-weight:600;font-size:18px;color:#221C16">septembre 2025</span>
+          <span style="font-family:'Alegreya Sans',sans-serif;font-size:12px;color:#8A6F4E;border:1px solid #E4DBC9;border-radius:7px;padding:4px 9px">→</span>
+        </div>
+        <!-- weekday header -->
+        <div style="display:grid;grid-template-columns:repeat(7,1fr);font-family:'Alegreya Sans',sans-serif;font-size:9px;color:#8A6F4E;margin-top:11px;letter-spacing:.04em">
+          <div style="text-align:center">L</div><div style="text-align:center">M</div><div style="text-align:center">M</div><div style="text-align:center">J</div><div style="text-align:center">V</div><div style="text-align:center">S</div><div style="text-align:center">D</div>
+        </div>
+        <!-- dots grid -->
+        <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:3px;margin-top:5px">
+          <div style="aspect-ratio:1;display:flex;flex-direction:column;align-items:center;justify-content:center"><span style="font-family:'Alegreya Sans',sans-serif;font-size:12px;color:#8A6F4E">15</span></div>
+          <div style="aspect-ratio:1;display:flex;flex-direction:column;align-items:center;justify-content:center"><span style="font-family:'Alegreya Sans',sans-serif;font-size:12px;color:#221C16">16</span><span style="width:5px;height:5px;border-radius:50%;background:#7C9CBF;margin-top:2px"></span></div>
+          <div style="aspect-ratio:1;display:flex;flex-direction:column;align-items:center;justify-content:center"><span style="font-family:'Alegreya Sans',sans-serif;font-size:12px;color:#8A6F4E">17</span></div>
+          <div style="aspect-ratio:1;display:flex;flex-direction:column;align-items:center;justify-content:center"><span style="font-family:'Alegreya Sans',sans-serif;font-size:12px;color:#8A6F4E">18</span></div>
+          <div style="aspect-ratio:1;display:flex;flex-direction:column;align-items:center;justify-content:center"><span style="font-family:'Alegreya Sans',sans-serif;font-size:12px;color:#221C16">19</span><span style="width:5px;height:5px;border-radius:50%;background:#C08552;margin-top:2px"></span></div>
+          <div style="aspect-ratio:1;display:flex;flex-direction:column;align-items:center;justify-content:center"><span style="font-family:'Alegreya Sans',sans-serif;font-size:12px;color:#8A6F4E">20</span></div>
+          <div style="aspect-ratio:1;display:flex;flex-direction:column;align-items:center;justify-content:center"><span style="font-family:'Alegreya Sans',sans-serif;font-size:12px;color:#221C16">21</span><span style="width:5px;height:5px;border-radius:50%;background:#D98A2B;margin-top:2px"></span></div>
+          <div style="aspect-ratio:1;display:flex;flex-direction:column;align-items:center;justify-content:center"><span style="font-family:'Alegreya Sans',sans-serif;font-size:12px;color:#8A6F4E">22</span></div>
+          <div style="aspect-ratio:1;display:flex;flex-direction:column;align-items:center;justify-content:center"><span style="font-family:'Alegreya Sans',sans-serif;font-size:12px;color:#221C16">23</span><span style="width:5px;height:5px;border-radius:50%;background:#7C9CBF;margin-top:2px"></span></div>
+          <div style="aspect-ratio:1;display:flex;flex-direction:column;align-items:center;justify-content:center"><span style="font-family:'Alegreya Sans',sans-serif;font-size:12px;color:#8A6F4E">24</span></div>
+          <!-- selected -->
+          <div style="aspect-ratio:1;display:flex;flex-direction:column;align-items:center;justify-content:center;background:#221C16;border-radius:10px"><span style="font-family:'Alegreya Sans',sans-serif;font-size:12px;color:#F4EFE6;font-weight:700">25</span><span style="display:flex;gap:2px;margin-top:2px"><span style="width:5px;height:5px;border-radius:50%;background:#A9C2D6"></span><span style="width:5px;height:5px;border-radius:50%;background:#A9C2D6"></span></span></div>
+          <div style="aspect-ratio:1;display:flex;flex-direction:column;align-items:center;justify-content:center"><span style="font-family:'Alegreya Sans',sans-serif;font-size:12px;color:#8A6F4E">26</span></div>
+          <div style="aspect-ratio:1;display:flex;flex-direction:column;align-items:center;justify-content:center"><span style="font-family:'Alegreya Sans',sans-serif;font-size:12px;color:#8A6F4E">27</span></div>
+          <div style="aspect-ratio:1;display:flex;flex-direction:column;align-items:center;justify-content:center"><span style="font-family:'Alegreya Sans',sans-serif;font-size:12px;color:#221C16">28</span><span style="width:5px;height:5px;border-radius:50%;background:#D98A2B;margin-top:2px"></span></div>
+        </div>
+        <!-- day detail -->
+        <div style="margin-top:14px;background:#FBF8F1;border:1px solid #E4DBC9;border-radius:11px;padding:13px 15px;flex:1">
+          <div style="font-family:'Alegreya Sans',sans-serif;font-size:10.5px;letter-spacing:.1em;color:#221C16;font-weight:700">JEUDI 25 SEPTEMBRE</div>
+          <div style="display:flex;flex-direction:column;gap:11px;margin-top:10px">
+            <div style="display:flex;align-items:flex-start;gap:10px"><span style="width:10px;height:10px;border-radius:50%;background:#7C9CBF;margin-top:4px;flex-shrink:0"></span><div><div style="font-family:'EB Garamond',serif;font-size:15.5px;color:#221C16;line-height:1.2">Aletheia — fermeture</div><div style="font-family:'Alegreya Sans',sans-serif;font-size:11.5px;color:#8A6F4E;margin-top:1px">Terminale A · 23h59</div></div></div>
+            <div style="display:flex;align-items:flex-start;gap:10px"><span style="width:10px;height:10px;border-radius:50%;background:#7C9CBF;margin-top:4px;flex-shrink:0"></span><div><div style="font-family:'EB Garamond',serif;font-size:15.5px;color:#221C16;line-height:1.2">Lecture — chapitre 4</div><div style="font-family:'Alegreya Sans',sans-serif;font-size:11.5px;color:#8A6F4E;margin-top:1px">Terminale A</div></div></div>
+          </div>
+        </div>
+      </div>
+      <!-- bottom tab bar -->
+      <div style="background:#FBF8F1;border-top:1px solid #E4DBC9;display:flex;justify-content:space-around;padding:8px 4px 9px">
+        <div style="text-align:center;color:#B3A488"><div style="width:19px;height:19px;border:2px solid #CDBFA6;border-radius:5px;margin:0 auto"></div><div style="font-family:'Alegreya Sans',sans-serif;font-size:9px;margin-top:3px">Aujourd'hui</div></div>
+        <div style="text-align:center;color:#B3A488"><div style="width:19px;height:19px;border:2px solid #CDBFA6;border-radius:5px;margin:0 auto"></div><div style="font-family:'Alegreya Sans',sans-serif;font-size:9px;margin-top:3px">Modules</div></div>
+        <div style="text-align:center;color:#5A4632"><div style="width:19px;height:19px;border:2px solid #5A4632;border-radius:5px;margin:0 auto"></div><div style="font-family:'Alegreya Sans',sans-serif;font-size:9px;margin-top:3px;font-weight:700">Agenda</div></div>
+        <div style="text-align:center;color:#B3A488"><div style="width:19px;height:19px;border:2px solid #CDBFA6;border-radius:50%;margin:0 auto"></div><div style="font-family:'Alegreya Sans',sans-serif;font-size:9px;margin-top:3px">Moi</div></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- mobile note -->
+<div style="position:absolute;left:840px;top:520px;width:280px">
+  <div style="background:#F3ECDD;border:1px solid #E4DBC9;border-left:3px solid #5A4632;border-radius:8px;padding:15px 17px;font-family:'EB Garamond',serif;font-size:15px;line-height:1.5;color:#5A4632">
+    <span style="font-family:'Alegreya Sans',sans-serif;font-size:11px;letter-spacing:.1em;color:#8A6F4E">LE CHANGEMENT</span><br>
+    Une seule modification de fond : <b>la vue par défaut</b>. « À venir » répond sans aucun tap (lignes pleine largeur, libellés lisibles) ; « Mois » garde des cases <b>tactiles</b> à points, et le détail du jour s'ouvre dessous. Les deux partagent la barre du bas (onglet Agenda actif).
+  </div>
+  <div style="font-family:'Alegreya Sans',sans-serif;font-size:12px;color:#8A6F4E;margin-top:12px;line-height:1.5">
+    <b style="color:#5A4632">À noter</b> — l'ancienne grille « semaine/jour » reste atteignable ; sur petit écran « jour » = le panneau qui s'ouvre sous le mois.
+  </div>
+</div>
+
+<!-- ======================= ORDI ======================= -->
+<div style="position:absolute;left:80px;top:1190px;font-family:'Cormorant Garamond',serif;font-weight:600;font-size:30px;color:#221C16">Sur ordinateur — inchangé</div>
+<div style="position:absolute;left:80px;top:1232px;font-family:'EB Garamond',serif;font-size:16px;color:#8A6F4E">Les colonnes sont larges : le libellé tient à côté de la pastille. On garde la grille mois telle quelle.</div>
+
+<div data-screen-label="Calendrier mois — ordi (inchangé)" style="position:absolute;left:80px;top:1302px;width:820px">
+  <div data-drags-parent="1" style="position:absolute;top:-26px;left:2px;font-family:'Alegreya Sans',sans-serif;font-size:13px;color:#8A6F4E">Ordinateur — vue mois (déroulant Modules ▾ conservé)</div>
+  <div style="border:1px solid #D8CFBC;border-radius:12px;background:#FBF8F1;box-shadow:0 4px 16px rgba(34,28,22,.1);overflow:hidden">
+    <div style="background:#ECE4D6;padding:9px 14px;display:flex;align-items:center;gap:7px"><span style="width:10px;height:10px;border-radius:50%;background:#C9B89A"></span><span style="width:10px;height:10px;border-radius:50%;background:#C9B89A"></span><span style="width:10px;height:10px;border-radius:50%;background:#C9B89A"></span></div>
+    <!-- app header -->
+    <div style="background:#ECE4D6;padding:0 22px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid #E0D6C2;height:52px">
+      <span style="font-family:'Cinzel',serif;font-weight:600;font-size:15px;letter-spacing:.2em;color:#221C16">PALIMPSESTE</span>
+      <div style="display:flex;align-items:center;gap:4px;font-family:'Alegreya Sans',sans-serif;font-size:14px">
+        <span style="color:#5A4632;padding:6px 13px">Tableau de bord</span>
+        <span style="background:#F4EFE6;color:#221C16;padding:6px 13px;border-radius:7px">Calendrier</span>
+        <span style="color:#221C16;padding:6px 13px;display:inline-flex;align-items:center;gap:4px">Modules <span style="font-size:10px">▾</span></span>
+      </div>
+      <span style="font-family:'Alegreya Sans',sans-serif;font-size:13px;color:#8A6F4E">2nde 4 · Déconnexion</span>
+    </div>
+    <!-- content -->
+    <div style="background:#F4EFE6;padding:20px 26px 24px">
+      <!-- title + nav + view toggle -->
+      <div style="display:flex;justify-content:space-between;align-items:center">
+        <div style="display:flex;align-items:center;gap:9px">
+          <span style="font-family:'Alegreya Sans',sans-serif;font-size:13px;color:#8A6F4E;border:1px solid #E4DBC9;border-radius:7px;padding:5px 10px">←</span>
+          <span style="font-family:'Alegreya Sans',sans-serif;font-size:13px;color:#221C16;border:1px solid #E4DBC9;border-radius:7px;padding:5px 11px">Aujourd'hui</span>
+          <span style="font-family:'Alegreya Sans',sans-serif;font-size:13px;color:#8A6F4E;border:1px solid #E4DBC9;border-radius:7px;padding:5px 10px">→</span>
+          <span style="font-family:'Cormorant Garamond',serif;font-weight:600;font-size:24px;color:#221C16;margin-left:6px">septembre 2025</span>
+        </div>
+        <div style="display:flex;gap:4px;font-family:'Alegreya Sans',sans-serif;font-size:13px">
+          <span style="background:#5A4632;color:#FBF8F1;border-radius:7px;padding:6px 14px">Mois</span>
+          <span style="color:#5A4632;padding:6px 14px">Semaine</span>
+          <span style="color:#5A4632;padding:6px 14px">Jour</span>
+        </div>
+      </div>
+      <!-- legend -->
+      <div style="display:flex;gap:18px;margin-top:13px;font-family:'Alegreya Sans',sans-serif;font-size:12.5px;color:#8A6F4E">
+        <span style="display:flex;align-items:center;gap:6px"><span style="width:10px;height:10px;border-radius:50%;background:#7C9CBF"></span>Terminale A</span>
+        <span style="display:flex;align-items:center;gap:6px"><span style="width:10px;height:10px;border-radius:50%;background:#C08552"></span>Première B</span>
+        <span style="display:flex;align-items:center;gap:6px"><span style="width:10px;height:10px;border-radius:50%;background:#D98A2B"></span>Fragment à rendre</span>
+      </div>
+      <!-- grid -->
+      <div style="border:1px solid #E4DBC9;border-radius:10px;overflow:hidden;margin-top:13px;background:#FBF8F1">
+        <div style="display:grid;grid-template-columns:repeat(7,1fr);background:#F4EFE6;border-bottom:1px solid #E4DBC9;font-family:'Alegreya Sans',sans-serif;font-size:10.5px;color:#8A6F4E;text-transform:uppercase;letter-spacing:.05em">
+          <div style="padding:7px;text-align:center">lun</div><div style="padding:7px;text-align:center">mar</div><div style="padding:7px;text-align:center">mer</div><div style="padding:7px;text-align:center">jeu</div><div style="padding:7px;text-align:center">ven</div><div style="padding:7px;text-align:center">sam</div><div style="padding:7px;text-align:center">dim</div>
+        </div>
+        <!-- row 1 -->
+        <div style="display:grid;grid-template-columns:repeat(7,1fr);border-bottom:1px solid #E4DBC9">
+          <div style="min-height:86px;border-right:1px solid #E4DBC9;padding:6px"><div style="font-family:'Alegreya Sans',sans-serif;font-size:11px;color:#8A6F4E">15</div></div>
+          <div style="min-height:86px;border-right:1px solid #E4DBC9;padding:6px"><div style="font-family:'Alegreya Sans',sans-serif;font-size:11px;color:#8A6F4E">16</div><div style="display:flex;align-items:center;gap:5px;margin-top:6px"><span style="width:8px;height:8px;border-radius:50%;background:#7C9CBF;flex-shrink:0"></span><span style="font-family:'Alegreya Sans',sans-serif;font-size:11px;color:#5A4632">quizz</span></div></div>
+          <div style="min-height:86px;border-right:1px solid #E4DBC9;padding:6px"><div style="font-family:'Alegreya Sans',sans-serif;font-size:11px;color:#8A6F4E">17</div></div>
+          <div style="min-height:86px;border-right:1px solid #E4DBC9;padding:6px"><div style="font-family:'Alegreya Sans',sans-serif;font-size:11px;color:#8A6F4E">18</div></div>
+          <div style="min-height:86px;border-right:1px solid #E4DBC9;padding:6px"><div style="font-family:'Alegreya Sans',sans-serif;font-size:11px;color:#8A6F4E">19</div><div style="display:flex;align-items:center;gap:5px;margin-top:6px"><span style="width:8px;height:8px;border-radius:50%;background:#C08552;flex-shrink:0"></span><span style="font-family:'Alegreya Sans',sans-serif;font-size:11px;color:#5A4632">ouverture</span></div></div>
+          <div style="min-height:86px;border-right:1px solid #E4DBC9;padding:6px"><div style="font-family:'Alegreya Sans',sans-serif;font-size:11px;color:#8A6F4E">20</div></div>
+          <div style="min-height:86px;padding:6px"><div style="font-family:'Alegreya Sans',sans-serif;font-size:11px;color:#8A6F4E">21</div><div style="display:flex;align-items:center;gap:5px;margin-top:6px"><span style="width:8px;height:8px;border-radius:50%;background:#D98A2B;flex-shrink:0"></span><span style="font-family:'Alegreya Sans',sans-serif;font-size:11px;color:#5A4632">Fragment</span></div></div>
+        </div>
+        <!-- row 2 (today) -->
+        <div style="display:grid;grid-template-columns:repeat(7,1fr)">
+          <div style="min-height:86px;border-right:1px solid #E4DBC9;padding:6px"><div style="font-family:'Alegreya Sans',sans-serif;font-size:11px;color:#8A6F4E">22</div></div>
+          <div style="min-height:86px;border-right:1px solid #E4DBC9;padding:6px"><div style="font-family:'Alegreya Sans',sans-serif;font-size:11px;color:#8A6F4E">23</div><div style="display:flex;align-items:center;gap:5px;margin-top:6px"><span style="width:8px;height:8px;border-radius:50%;background:#7C9CBF;flex-shrink:0"></span><span style="font-family:'Alegreya Sans',sans-serif;font-size:11px;color:#5A4632">lecture</span></div></div>
+          <div style="min-height:86px;border-right:1px solid #E4DBC9;padding:6px"><div style="font-family:'Alegreya Sans',sans-serif;font-size:11px;color:#8A6F4E">24</div></div>
+          <div style="min-height:86px;border-right:1px solid #E4DBC9;padding:6px;background:#FBF8F1"><div style="font-family:'Alegreya Sans',sans-serif;font-size:11px;font-weight:700;color:#221C16">25</div><div style="display:flex;align-items:center;gap:5px;margin-top:6px"><span style="width:8px;height:8px;border-radius:50%;background:#7C9CBF;flex-shrink:0"></span><span style="font-family:'Alegreya Sans',sans-serif;font-size:11px;color:#5A4632">fermeture</span></div><div style="display:flex;align-items:center;gap:5px;margin-top:4px"><span style="width:8px;height:8px;border-radius:50%;background:#7C9CBF;flex-shrink:0"></span><span style="font-family:'Alegreya Sans',sans-serif;font-size:11px;color:#5A4632">lecture</span></div></div>
+          <div style="min-height:86px;border-right:1px solid #E4DBC9;padding:6px"><div style="font-family:'Alegreya Sans',sans-serif;font-size:11px;color:#8A6F4E">26</div></div>
+          <div style="min-height:86px;border-right:1px solid #E4DBC9;padding:6px"><div style="font-family:'Alegreya Sans',sans-serif;font-size:11px;color:#8A6F4E">27</div></div>
+          <div style="min-height:86px;padding:6px"><div style="font-family:'Alegreya Sans',sans-serif;font-size:11px;color:#8A6F4E">28</div><div style="display:flex;align-items:center;gap:5px;margin-top:6px"><span style="width:8px;height:8px;border-radius:50%;background:#D98A2B;flex-shrink:0"></span><span style="font-family:'Alegreya Sans',sans-serif;font-size:11px;color:#5A4632">Fragment</span></div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ordi note -->
+<div style="position:absolute;left:940px;top:1362px;width:280px">
+  <div style="background:#F3ECDD;border:1px solid #E4DBC9;border-left:3px solid #5B6E4A;border-radius:8px;padding:15px 17px;font-family:'EB Garamond',serif;font-size:15px;line-height:1.5;color:#5A4632">
+    <span style="font-family:'Alegreya Sans',sans-serif;font-size:11px;letter-spacing:.1em;color:#5B6E4A">CE QUI MARCHE DÉJÀ</span><br>
+    Sur ≥ 640px on conserve mois / semaine / jour à l'identique. La vue « À venir » mobile pourrait aussi y apparaître en option, mais ce n'est pas nécessaire pour répondre au besoin.
+  </div>
+  <div style="background:#F4EFE6;border:1px solid #E4DBC9;border-radius:10px;padding:15px 17px;font-family:'EB Garamond',serif;font-size:15px;line-height:1.55;color:#5A4632;box-shadow:0 1px 3px rgba(34,28,22,.06);margin-top:14px">
+    <div style="font-family:'Cormorant Garamond',serif;font-weight:600;font-size:20px;color:#221C16;margin-bottom:5px">Prochaine étape</div>
+    Si l'écran te convient, je rédige le <b>handoff</b> (composant « À venir », bascule, points de la grille mobile) pour Claude Code, dans la même forme que ceux déjà livrés.
+  </div>
+</div>
+
+</x-dc>
+</body>
+</html>

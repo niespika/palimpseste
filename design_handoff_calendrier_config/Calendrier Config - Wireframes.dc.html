@@ -1,0 +1,544 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet data-dc-atomics>
+<meta name="design_doc_mode" content="canvas">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="anonymous">
+<link href="https://fonts.googleapis.com/css2?family=Caveat:wght@500;600&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#f0eee9;font-family:system-ui,sans-serif}
+.dv-turn{padding:40px 44px 32px;border-bottom:1px solid rgba(0,0,0,.08);scroll-margin-top:16px}
+.dv-thd{display:flex;align-items:baseline;gap:10px;margin:0 0 20px;flex-wrap:wrap}
+.dv-tid{font:600 10px ui-monospace,Menlo,monospace;padding:3px 7px;background:#1a1a1a;color:#fff;border-radius:4px;text-decoration:none}
+.dv-tname{font:600 13px/1.2 system-ui,sans-serif;color:#1a1a1a}
+.dv-opts{display:flex;flex-wrap:wrap;gap:34px;align-items:flex-start}
+.dv-opt{flex:none;display:flex;flex-direction:column;gap:9px;scroll-margin-top:16px}
+.dv-oid{font:600 10.5px ui-monospace,Menlo,monospace;padding:3px 7px;background:rgba(0,0,0,.08);color:#1a1a1a;border-radius:5px;text-decoration:none}
+.dv-olabel{display:flex;align-items:baseline;gap:8px;font:400 11px/1.3 system-ui,sans-serif;color:rgba(0,0,0,.55)}
+.dv-card{max-width:100%;background:#fff;border:1px solid rgba(0,0,0,.1);border-radius:8px;box-shadow:0 1px 3px rgba(0,0,0,.06);overflow:hidden}
+.dv-opt:target .dv-oid{background:#2a78d6;color:#fff}
+.dv-next{margin:26px 0 0;font:12px/1.5 system-ui,sans-serif;color:rgba(0,0,0,.5)}
+</style>
+</helmet>
+
+<section class="dv-turn" id="t2">
+  <div class="dv-thd"><a class="dv-tid" href="#t2">2</a><span class="dv-tname">Zoom — section Semestres</span><span style="font:500 15px 'Caveat',cursive;color:#8a6f4e">l'année scolaire est déduite des dates (sept→août) : seule l'année courante reste en avant, le reste s'archive</span></div>
+  <div class="dv-opts">
+
+    <!-- ══════════ 2a — ANNÉE COURANTE + ARCHIVES REPLIÉES ══════════ -->
+    <div class="dv-opt" id="2a" data-screen-label="2a Semestres archives repliees">
+      <div class="dv-olabel"><a class="dv-oid" href="#2a">2a</a>« Archives repliées » — on archive à la main, les vieilles années se replient</div>
+      <div class="dv-card" style="width:520px">
+        <div style="display:flex;align-items:center;gap:8px;padding:11px 16px;border-bottom:1px solid #e2ddd2">
+          <span style="font-size:12.5px;font-weight:700;color:#2f2a23">Semestres</span>
+          <span style="font-size:9px;color:#8b8478;border:1px solid #d5cfc2;border-radius:99px;padding:1px 8px;background:#faf9f5">Année 2025-2026</span>
+          <span style="margin-left:auto;flex:none;white-space:nowrap;font-size:10px;padding:4px 10px;border:1.2px solid #8f887b;border-radius:6px;color:#3f3a32;background:#fff">＋ Nouveau semestre</span>
+        </div>
+        <div style="padding:12px 16px 14px;display:flex;flex-direction:column;gap:8px">
+          <div style="display:flex;align-items:center;gap:10px;border:1px solid #e2ddd2;border-radius:9px;padding:9px 12px;background:#fff">
+            <div style="flex:1;min-width:0">
+              <div style="display:flex;align-items:center;gap:6px"><span style="font-size:11px;font-weight:700;color:#3f3a32">S1 2025-2026</span><span style="font-size:8.5px;color:#8b8478;border:1px solid #d5cfc2;border-radius:99px;padding:0 6px">terminé le 23 jan.</span></div>
+              <div style="font-size:9px;color:#a49c8e;margin-top:2px">1 sept. 2025 → 23 janv. 2026 · 18 semaines</div>
+            </div>
+            <span style="flex:none;white-space:nowrap;font-size:9.5px;color:#3f3a32;border:1.2px solid #8f887b;border-radius:6px;padding:3px 9px;background:#faf9f5">🗄 Archiver</span>
+            <span style="font-size:9.5px;color:#a49c8e">Éditer</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:10px;border:1.5px solid #3a7d44;border-radius:9px;padding:9px 12px;background:#f6faf6">
+            <div style="flex:1;min-width:0">
+              <div style="display:flex;align-items:center;gap:6px"><span style="font-size:11px;font-weight:700;color:#2f2a23">S2 2025-2026</span><span style="font-size:8.5px;color:#3a7d44;border:1px solid #3a7d44;border-radius:99px;padding:0 6px;font-weight:600">actif</span></div>
+              <div style="font-size:9px;color:#a49c8e;margin-top:2px">26 janv. → 27 juin 2026 · 20 semaines · 5 périodes de vacances</div>
+            </div>
+            <span style="font-size:9.5px;color:#a49c8e">Éditer</span>
+          </div>
+          <div style="border-top:1px dashed #d5cfc2;margin-top:6px;padding-top:9px;display:flex;flex-direction:column;gap:5px">
+            <div style="display:flex;align-items:center;gap:7px;font-size:10px;color:#8b8478">
+              <span style="font-size:8px">▸</span><span style="font-weight:600">Archives</span><span style="font-size:9px;color:#b3aa9a">3 semestres · 2 années</span>
+            </div>
+            <div style="display:flex;align-items:center;gap:7px;padding:5px 10px;border:1px solid #eee9df;border-radius:7px;background:#faf9f5;margin-left:14px">
+              <span style="font-size:8px;color:#a49c8e">▾</span><span style="font-size:9.5px;color:#8b8478;font-weight:600">2024-2025</span><span style="font-size:8.5px;color:#b3aa9a">2 semestres</span>
+            </div>
+            <div style="display:flex;align-items:center;gap:8px;padding:4px 10px;margin-left:28px">
+              <span style="font-size:9.5px;color:#a49c8e">S2 2024-2025 · 27 jan. → 28 juin</span>
+              <span style="margin-left:auto;font-size:8.5px;color:#a49c8e;text-decoration:underline dotted">Restaurer</span>
+            </div>
+            <div style="display:flex;align-items:center;gap:8px;padding:4px 10px;margin-left:28px">
+              <span style="font-size:9.5px;color:#a49c8e">S1 2024-2025 · 2 sept. → 24 jan.</span>
+              <span style="margin-left:auto;font-size:8.5px;color:#a49c8e;text-decoration:underline dotted">Restaurer</span>
+            </div>
+            <div style="display:flex;align-items:center;gap:7px;padding:5px 10px;border:1px solid #eee9df;border-radius:7px;background:#faf9f5;margin-left:14px">
+              <span style="font-size:8px;color:#a49c8e">▸</span><span style="font-size:9.5px;color:#8b8478;font-weight:600">2023-2024</span><span style="font-size:8.5px;color:#b3aa9a">1 semestre</span>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div style="font:500 14px 'Caveat',cursive;color:#8a6f4e;max-width:500px">un semestre terminé propose « Archiver » ; archivé = hors des listes du reste de l'app, mais restaurable ici</div>
+    </div>
+
+    <!-- ══════════ 2b — ARCHIVAGE PROPOSÉ AUTOMATIQUEMENT ══════════ -->
+    <div class="dv-opt" id="2b" data-screen-label="2b Semestres archivage propose">
+      <div class="dv-olabel"><a class="dv-oid" href="#2b">2b</a>« Rangement proposé » — l'app détecte la fin et propose d'archiver</div>
+      <div class="dv-card" style="width:520px">
+        <div style="display:flex;align-items:center;gap:8px;padding:11px 16px;border-bottom:1px solid #e2ddd2">
+          <span style="font-size:12.5px;font-weight:700;color:#2f2a23">Semestres</span>
+          <span style="margin-left:auto;display:flex;gap:2px;border:1px solid #d5cfc2;border-radius:7px;padding:2px;background:#faf9f5">
+            <span style="font-size:9px;padding:3px 9px;border-radius:5px;background:#fff;border:1px solid #d5cfc2;color:#2f2a23;font-weight:600">2025-2026</span>
+            <span style="font-size:9px;padding:3px 9px;color:#a49c8e">Archives · 3</span>
+          </span>
+        </div>
+        <div style="padding:12px 16px 14px;display:flex;flex-direction:column;gap:8px">
+          <div style="display:flex;align-items:center;gap:9px;border:1px solid #c9a35c;border-radius:9px;padding:8px 12px;background:#fdf8ee">
+            <span style="font-size:11px">🗄</span>
+            <span style="font-size:9.5px;color:#6b5b39;flex:1">« S1 2025-2026 » est terminé depuis le 23 janvier.</span>
+            <span style="font-size:9.5px;padding:3px 9px;border:1.2px solid #8f887b;border-radius:6px;color:#3f3a32;background:#fff;font-weight:600">Archiver</span>
+            <span style="font-size:9px;color:#a49c8e">plus tard</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:10px;border:1.5px solid #3a7d44;border-radius:9px;padding:9px 12px;background:#f6faf6">
+            <div style="flex:1;min-width:0">
+              <div style="display:flex;align-items:center;gap:6px"><span style="font-size:11px;font-weight:700;color:#2f2a23">S2 2025-2026</span><span style="font-size:8.5px;color:#3a7d44;border:1px solid #3a7d44;border-radius:99px;padding:0 6px;font-weight:600">actif</span></div>
+              <div style="display:flex;align-items:center;gap:0;margin-top:5px">
+                <span style="height:5px;flex:7;background:#3a7d44;border-radius:99px 0 0 99px"></span>
+                <span style="height:5px;flex:13;background:#e0dbcf;border-radius:0 99px 99px 0"></span>
+              </div>
+              <div style="font-size:8.5px;color:#a49c8e;margin-top:3px">semaine 7 / 20 · fin le 27 juin</div>
+            </div>
+            <span style="font-size:9.5px;color:#a49c8e">Éditer</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:10px;border:1px solid #e2ddd2;border-radius:9px;padding:9px 12px;background:#fff;opacity:.75">
+            <div style="flex:1;min-width:0">
+              <div style="display:flex;align-items:center;gap:6px"><span style="font-size:11px;font-weight:700;color:#3f3a32">S1 2025-2026</span><span style="font-size:8.5px;color:#8b8478;border:1px solid #d5cfc2;border-radius:99px;padding:0 6px">terminé</span></div>
+              <div style="font-size:9px;color:#a49c8e;margin-top:2px">1 sept. 2025 → 23 janv. 2026</div>
+            </div>
+            <span style="font-size:9.5px;color:#a49c8e">Éditer</span>
+          </div>
+          <span style="align-self:stretch;text-align:center;font-size:10px;padding:7px;border:1.2px dashed #b9b1a2;border-radius:8px;color:#8b8478;background:#faf9f5">＋ Nouveau semestre</span>
+        </div>
+      </div>
+      <div style="font:500 14px 'Caveat',cursive;color:#8a6f4e;max-width:500px">rien à surveiller : le bandeau apparaît quand la date de fin est passée ; l'onglet Archives regroupe par année scolaire</div>
+    </div>
+
+    <!-- ══════════ 2c — ÉTAT VIDE / PREMIER SEMESTRE ══════════ -->
+    <div class="dv-opt" id="2c" data-screen-label="2c Semestres etat vide">
+      <div class="dv-olabel"><a class="dv-oid" href="#2c">2c</a>État vide (situation actuelle) — création guidée du premier semestre</div>
+      <div class="dv-card" style="width:430px">
+        <div style="display:flex;align-items:center;gap:8px;padding:11px 16px;border-bottom:1px solid #e2ddd2">
+          <span style="font-size:12.5px;font-weight:700;color:#2f2a23">Semestres</span>
+        </div>
+        <div style="padding:18px 16px 16px;display:flex;flex-direction:column;gap:12px;align-items:center">
+          <span style="width:34px;height:34px;border:1.2px dashed #b9b1a2;border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:14px;color:#b3aa9a">📅</span>
+          <div style="text-align:center">
+            <div style="font-size:11px;font-weight:700;color:#3f3a32">Aucun semestre pour l'instant</div>
+            <div style="font-size:9.5px;color:#8b8478;margin-top:3px;max-width:280px">Le semestre ancre les semaines, les vacances et les échéances de toutes les classes.</div>
+          </div>
+          <div style="align-self:stretch;border:1.2px solid #8f887b;border-radius:9px;padding:11px 13px;background:#faf9f5;display:flex;flex-direction:column;gap:8px">
+            <div style="display:flex;align-items:center;gap:8px">
+              <span style="font-size:9px;color:#8b8478;width:56px">Nom</span>
+              <span style="flex:1;border:1px solid #d5cfc2;border-radius:6px;padding:4px 9px;font-size:10px;color:#3f3a32;background:#fff">S2 2025-2026 <span style="font-size:8px;color:#b3aa9a">(proposé d'après la date du jour)</span></span>
+            </div>
+            <div style="display:flex;align-items:center;gap:8px">
+              <span style="font-size:9px;color:#8b8478;width:56px">Début</span>
+              <span style="flex:1;border:1px solid #d5cfc2;border-radius:6px;padding:4px 9px;font-size:10px;color:#3f3a32;background:#fff">lun. 26 janv. 2026</span>
+              <span style="font-size:9px;color:#8b8478;width:26px;text-align:right">Fin</span>
+              <span style="flex:1;border:1px solid #d5cfc2;border-radius:6px;padding:4px 9px;font-size:10px;color:#3f3a32;background:#fff">ven. 27 juin 2026</span>
+            </div>
+            <div style="font-size:8.5px;color:#a49c8e">Le début doit être le lundi de la semaine 1.</div>
+            <span style="align-self:flex-start;font-size:10px;padding:5px 12px;border-radius:6px;background:#2f2a23;color:#fff;font-weight:600">Créer le semestre</span>
+          </div>
+          <div style="align-self:stretch;display:flex;gap:6px;align-items:center;font-size:8.5px;color:#a49c8e">
+            <span style="width:14px;height:14px;border-radius:50%;background:#2f2a23;color:#fff;display:flex;align-items:center;justify-content:center;font-size:8px">1</span><span>semestre</span>
+            <span style="flex:1;border-top:1px dashed #d5cfc2"></span>
+            <span style="width:14px;height:14px;border-radius:50%;border:1px solid #b9b1a2;display:flex;align-items:center;justify-content:center;font-size:8px">2</span><span>vacances</span>
+            <span style="flex:1;border-top:1px dashed #d5cfc2"></span>
+            <span style="width:14px;height:14px;border-radius:50%;border:1px solid #b9b1a2;display:flex;align-items:center;justify-content:center;font-size:8px">3</span><span>semaines</span>
+            <span style="flex:1;border-top:1px dashed #d5cfc2"></span>
+            <span style="width:14px;height:14px;border-radius:50%;border:1px solid #b9b1a2;display:flex;align-items:center;justify-content:center;font-size:8px">4</span><span>classes</span>
+          </div>
+        </div>
+      </div>
+      <div style="font:500 14px 'Caveat',cursive;color:#8a6f4e;max-width:420px">nom pré-rempli, un clic ; le fil 1→4 rappelle où on en est dans la config</div>
+    </div>
+
+  </div>
+  <p class="dv-next">Ensuite : « garde <a class="dv-oid" href="#2a">2a</a> » ou « garde <a class="dv-oid" href="#2b">2b</a> » (ou un mix), et je passe <a class="dv-oid" href="#1a">1a</a> + Semestres en rendu charte Palimpseste.</p>
+</section>
+
+<section class="dv-turn" id="t1">
+  <div class="dv-thd"><a class="dv-tid" href="#t1">1</a><span class="dv-tname">Config du calendrier à l'échelle — beaucoup de classes, beaucoup de couleurs</span><span style="font:500 15px 'Caveat',cursive;color:#8a6f4e">idée commune : fusionner « Couleurs » + « Jours de cours » en une seule zone Classes, et remplacer la pipette libre par une palette maîtrisée</span></div>
+  <div class="dv-opts">
+
+    <!-- ══════════ 1a — PAGE RESTRUCTURÉE + REGISTRE DES CLASSES ══════════ -->
+    <div class="dv-opt" id="1a" data-screen-label="1a Registre des classes">
+      <div class="dv-olabel"><a class="dv-oid" href="#1a">1a</a>« Registre » — la page repliée + une table unique 1 ligne = 1 classe</div>
+      <div class="dv-card" style="width:880px">
+        <div style="display:flex;align-items:center;gap:8px;padding:8px 16px;background:#f4f2ec;border-bottom:1px solid #ddd8cc;font-size:10.5px;color:#8b8478">
+          <span>Calendrier</span><span>›</span><span style="color:#3f3a32;font-weight:600">Configuration</span>
+          <span style="margin-left:auto;color:#b3aa9a">◀ Retour au calendrier</span>
+        </div>
+        <div style="display:flex;gap:2px;padding:0 16px;border-bottom:1px solid #e2ddd2;background:#faf9f5;align-items:center">
+          <span style="font-size:10.5px;padding:8px 10px;color:#8b8478">Fuseau</span>
+          <span style="font-size:10.5px;padding:8px 10px;color:#8b8478">Semestres</span>
+          <span style="font-size:10.5px;padding:8px 10px;color:#8b8478">Vacances</span>
+          <span style="font-size:10.5px;padding:8px 10px;color:#2a78d6;font-weight:700;border-bottom:2px solid #2a78d6">Classes <span style="background:#2a78d6;color:#fff;border-radius:99px;padding:1px 6px;font-size:8.5px;font-weight:600">9</span></span>
+          <span style="margin-left:auto;font:500 13px 'Caveat',cursive;color:#8a6f4e">ancres collantes — on saute à la section</span>
+        </div>
+        <div style="padding:14px 16px 16px;display:flex;flex-direction:column;gap:12px">
+          <div style="display:flex;flex-direction:column;gap:6px">
+            <div style="display:flex;align-items:center;gap:10px;border:1px solid #e2ddd2;border-radius:8px;padding:7px 12px;background:#faf9f5">
+              <span style="font-size:10.5px;font-weight:600;color:#3f3a32;width:150px">Fuseau horaire</span>
+              <span style="font-size:10px;color:#8b8478;flex:1">Europe/Paris</span>
+              <span style="font-size:10px;color:#a49c8e">modifier ›</span>
+            </div>
+            <div style="display:flex;align-items:center;gap:10px;border:1px solid #e2ddd2;border-radius:8px;padding:7px 12px;background:#faf9f5">
+              <span style="font-size:10.5px;font-weight:600;color:#3f3a32;width:150px">Semestres</span>
+              <span style="font-size:10px;color:#8b8478;flex:1">S2 2025-2026 <span style="color:#3a7d44;border:1px solid #3a7d44;border-radius:99px;padding:0 6px;font-size:8.5px">actif</span> · 2 archivés</span>
+              <span style="font-size:10px;color:#a49c8e">gérer ›</span>
+            </div>
+            <div style="display:flex;align-items:center;gap:10px;border:1px solid #e2ddd2;border-radius:8px;padding:7px 12px;background:#faf9f5">
+              <span style="font-size:10.5px;font-weight:600;color:#3f3a32;width:150px">Vacances &amp; semaines</span>
+              <span style="font-size:10px;color:#8b8478;flex:1">5 périodes · 18 semaines générées ✔</span>
+              <span style="font-size:10px;color:#a49c8e">gérer ›</span>
+            </div>
+            <div style="align-self:flex-end;font:500 13px 'Caveat',cursive;color:#8a6f4e;margin-top:-2px">le rarement-touché se replie en résumé</div>
+          </div>
+
+          <div style="border:1.2px solid #b9b1a2;border-radius:10px;overflow:visible">
+            <div style="display:flex;align-items:center;gap:10px;padding:10px 14px;border-bottom:1px solid #e2ddd2">
+              <span style="font-size:12px;font-weight:700;color:#2f2a23">Classes</span>
+              <span style="font-size:9.5px;color:#a49c8e">9 actives</span>
+              <span style="border:1px solid #d5cfc2;border-radius:6px;padding:4px 10px;font-size:9.5px;color:#b3aa9a;width:150px">🔍 Filtrer…</span>
+              <span style="margin-left:auto;font-size:10px;padding:5px 10px;border:1.2px solid #8f887b;border-radius:6px;color:#3f3a32;background:#fff">🎨 Couleurs auto (teintes espacées)</span>
+            </div>
+            <div style="display:grid;grid-template-columns:110px 66px 190px 1fr;gap:10px;padding:6px 14px;font:600 8.5px system-ui;letter-spacing:.08em;text-transform:uppercase;color:#a49c8e;border-bottom:1px solid #eee9df">
+              <span>Classe</span><span>Couleur</span><span>Jours de cours</span><span>Aperçu calendrier</span>
+            </div>
+            <div style="display:grid;grid-template-columns:110px 66px 190px 1fr;gap:10px;align-items:center;padding:6px 14px;border-bottom:1px solid #f0ece2">
+              <span style="font-size:11px;font-weight:600;color:#3f3a32">TG1</span>
+              <span style="display:flex;align-items:center;gap:3px"><span style="width:24px;height:16px;background:#7C9CBF;border-radius:4px;border:1px solid rgba(0,0,0,.15)"></span><span style="font-size:8px;color:#a49c8e">▾</span></span>
+              <span style="display:flex;gap:4px"><span style="width:20px;height:20px;border-radius:5px;background:#7C9CBF;color:#fff;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:600">L</span><span style="width:20px;height:20px;border-radius:5px;border:1.2px solid #e0dbcf;color:#c4bcae;display:flex;align-items:center;justify-content:center;font-size:9px">M</span><span style="width:20px;height:20px;border-radius:5px;border:1.2px solid #e0dbcf;color:#c4bcae;display:flex;align-items:center;justify-content:center;font-size:9px">M</span><span style="width:20px;height:20px;border-radius:5px;background:#7C9CBF;color:#fff;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:600">J</span><span style="width:20px;height:20px;border-radius:5px;border:1.2px solid #e0dbcf;color:#c4bcae;display:flex;align-items:center;justify-content:center;font-size:9px">V</span><span style="width:20px;height:20px;border-radius:5px;border:1.2px solid #e0dbcf;color:#c4bcae;display:flex;align-items:center;justify-content:center;font-size:9px">S</span><span style="width:20px;height:20px;border-radius:5px;border:1.2px solid #e0dbcf;color:#c4bcae;display:flex;align-items:center;justify-content:center;font-size:9px">D</span></span>
+              <span style="display:inline-flex;align-items:center;gap:5px;background:rgba(124,156,191,.16);border-left:3px solid #7C9CBF;border-radius:4px;padding:2px 8px;font-size:9px;color:#3f3a32;justify-self:start">TG1 · échéance dissert.</span>
+            </div>
+            <div style="display:grid;grid-template-columns:110px 66px 190px 1fr;gap:10px;align-items:center;padding:6px 14px;border-bottom:1px solid #f0ece2">
+              <span style="font-size:11px;font-weight:600;color:#3f3a32">TG2</span>
+              <span style="display:flex;align-items:center;gap:3px"><span style="width:24px;height:16px;background:#C08552;border-radius:4px;border:1px solid rgba(0,0,0,.15)"></span><span style="font-size:8px;color:#a49c8e">▾</span></span>
+              <span style="display:flex;gap:4px"><span style="width:20px;height:20px;border-radius:5px;border:1.2px solid #e0dbcf;color:#c4bcae;display:flex;align-items:center;justify-content:center;font-size:9px">L</span><span style="width:20px;height:20px;border-radius:5px;background:#C08552;color:#fff;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:600">M</span><span style="width:20px;height:20px;border-radius:5px;border:1.2px solid #e0dbcf;color:#c4bcae;display:flex;align-items:center;justify-content:center;font-size:9px">M</span><span style="width:20px;height:20px;border-radius:5px;border:1.2px solid #e0dbcf;color:#c4bcae;display:flex;align-items:center;justify-content:center;font-size:9px">J</span><span style="width:20px;height:20px;border-radius:5px;background:#C08552;color:#fff;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:600">V</span><span style="width:20px;height:20px;border-radius:5px;border:1.2px solid #e0dbcf;color:#c4bcae;display:flex;align-items:center;justify-content:center;font-size:9px">S</span><span style="width:20px;height:20px;border-radius:5px;border:1.2px solid #e0dbcf;color:#c4bcae;display:flex;align-items:center;justify-content:center;font-size:9px">D</span></span>
+              <span style="display:inline-flex;align-items:center;gap:5px;background:rgba(192,133,82,.16);border-left:3px solid #C08552;border-radius:4px;padding:2px 8px;font-size:9px;color:#3f3a32;justify-self:start">TG2 · quizz Quazian</span>
+            </div>
+            <div style="display:grid;grid-template-columns:110px 66px 190px 1fr;gap:10px;align-items:center;padding:6px 14px;border-bottom:1px solid #f0ece2">
+              <span style="font-size:11px;font-weight:600;color:#3f3a32">TG3</span>
+              <span style="display:flex;align-items:center;gap:3px"><span style="width:24px;height:16px;background:#7FA67F;border-radius:4px;border:1px solid rgba(0,0,0,.15)"></span><span style="font-size:8px;color:#a49c8e">▾</span></span>
+              <span style="display:flex;gap:4px"><span style="width:20px;height:20px;border-radius:5px;background:#7FA67F;color:#fff;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:600">L</span><span style="width:20px;height:20px;border-radius:5px;border:1.2px solid #e0dbcf;color:#c4bcae;display:flex;align-items:center;justify-content:center;font-size:9px">M</span><span style="width:20px;height:20px;border-radius:5px;border:1.2px solid #e0dbcf;color:#c4bcae;display:flex;align-items:center;justify-content:center;font-size:9px">M</span><span style="width:20px;height:20px;border-radius:5px;border:1.2px solid #e0dbcf;color:#c4bcae;display:flex;align-items:center;justify-content:center;font-size:9px">J</span><span style="width:20px;height:20px;border-radius:5px;background:#7FA67F;color:#fff;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:600">V</span><span style="width:20px;height:20px;border-radius:5px;border:1.2px solid #e0dbcf;color:#c4bcae;display:flex;align-items:center;justify-content:center;font-size:9px">S</span><span style="width:20px;height:20px;border-radius:5px;border:1.2px solid #e0dbcf;color:#c4bcae;display:flex;align-items:center;justify-content:center;font-size:9px">D</span></span>
+              <span style="display:inline-flex;align-items:center;gap:5px;background:rgba(127,166,127,.16);border-left:3px solid #7FA67F;border-radius:4px;padding:2px 8px;font-size:9px;color:#3f3a32;justify-self:start">TG3 · fragments S7</span>
+            </div>
+            <div style="display:grid;grid-template-columns:110px 66px 190px 1fr;gap:10px;align-items:center;padding:6px 14px;border-bottom:1px solid #f0ece2;position:relative;background:#f7f9fd">
+              <span style="font-size:11px;font-weight:600;color:#3f3a32">TG5</span>
+              <span style="display:flex;align-items:center;gap:3px"><span style="width:24px;height:16px;background:#B07FA6;border-radius:4px;border:2px solid #2a78d6"></span><span style="font-size:8px;color:#2a78d6">▾</span></span>
+              <span style="display:flex;gap:4px"><span style="width:20px;height:20px;border-radius:5px;border:1.2px solid #e0dbcf;color:#c4bcae;display:flex;align-items:center;justify-content:center;font-size:9px">L</span><span style="width:20px;height:20px;border-radius:5px;background:#B07FA6;color:#fff;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:600">M</span><span style="width:20px;height:20px;border-radius:5px;border:1.2px solid #e0dbcf;color:#c4bcae;display:flex;align-items:center;justify-content:center;font-size:9px">M</span><span style="width:20px;height:20px;border-radius:5px;background:#B07FA6;color:#fff;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:600">J</span><span style="width:20px;height:20px;border-radius:5px;border:1.2px solid #e0dbcf;color:#c4bcae;display:flex;align-items:center;justify-content:center;font-size:9px">V</span><span style="width:20px;height:20px;border-radius:5px;border:1.2px solid #e0dbcf;color:#c4bcae;display:flex;align-items:center;justify-content:center;font-size:9px">S</span><span style="width:20px;height:20px;border-radius:5px;border:1.2px solid #e0dbcf;color:#c4bcae;display:flex;align-items:center;justify-content:center;font-size:9px">D</span></span>
+              <span style="display:inline-flex;align-items:center;gap:5px;background:rgba(176,127,166,.16);border-left:3px solid #B07FA6;border-radius:4px;padding:2px 8px;font-size:9px;color:#3f3a32;justify-self:start">TG5 · échéance</span>
+              <div style="position:absolute;top:30px;left:112px;z-index:6;width:252px;background:#fff;border:1.2px solid #8f887b;border-radius:8px;box-shadow:0 6px 18px rgba(0,0,0,.14);padding:10px 12px">
+                <div style="font:600 8.5px system-ui;letter-spacing:.08em;text-transform:uppercase;color:#a49c8e;margin-bottom:7px">Palette — 12 teintes accordées</div>
+                <div style="display:grid;grid-template-columns:repeat(6,1fr);gap:6px">
+                  <span style="height:22px;border-radius:5px;background:#7C9CBF;position:relative;border:1px solid rgba(0,0,0,.12)"><span style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:7.5px;color:#fff;font-weight:700">TG1</span></span>
+                  <span style="height:22px;border-radius:5px;background:#C08552;position:relative;border:1px solid rgba(0,0,0,.12)"><span style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:7.5px;color:#fff;font-weight:700">TG2</span></span>
+                  <span style="height:22px;border-radius:5px;background:#7FA67F;position:relative;border:1px solid rgba(0,0,0,.12)"><span style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:7.5px;color:#fff;font-weight:700">TG3</span></span>
+                  <span style="height:22px;border-radius:5px;background:#B07FA6;border:2px solid #2a78d6"></span>
+                  <span style="height:22px;border-radius:5px;background:#C0A35E;position:relative;border:1px solid rgba(0,0,0,.12)"><span style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:7.5px;color:#fff;font-weight:700">1G1</span></span>
+                  <span style="height:22px;border-radius:5px;background:#6FA8A8;position:relative;border:1px solid rgba(0,0,0,.12)"><span style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:7.5px;color:#fff;font-weight:700">1G2</span></span>
+                  <span style="height:22px;border-radius:5px;background:#B5736B;position:relative;border:1px solid rgba(0,0,0,.12)"><span style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:7.5px;color:#fff;font-weight:700">1G4</span></span>
+                  <span style="height:22px;border-radius:5px;background:#8B9556;border:1px solid rgba(0,0,0,.12)"></span>
+                  <span style="height:22px;border-radius:5px;background:#9C7BB5;border:1px solid rgba(0,0,0,.12)"></span>
+                  <span style="height:22px;border-radius:5px;background:#C77E9E;border:1px solid rgba(0,0,0,.12)"></span>
+                  <span style="height:22px;border-radius:5px;background:#5C8A9E;border:1px solid rgba(0,0,0,.12)"></span>
+                  <span style="height:22px;border-radius:5px;background:#7E7EB8;border:1px solid rgba(0,0,0,.12)"></span>
+                </div>
+                <div style="font-size:8.5px;color:#a49c8e;margin-top:6px">initiales = teinte déjà prise (reste choisissable)</div>
+                <div style="border-top:1px dashed #d5cfc2;margin-top:8px;padding-top:7px;font-size:9.5px;color:#8b8478">◐ Autre couleur… <span style="color:#b3aa9a">(pipette libre)</span></div>
+              </div>
+            </div>
+            <div style="display:grid;grid-template-columns:110px 66px 190px 1fr;gap:10px;align-items:center;padding:6px 14px;border-bottom:1px solid #f0ece2">
+              <span style="font-size:11px;font-weight:600;color:#3f3a32">1G1</span>
+              <span style="display:flex;align-items:center;gap:3px"><span style="width:24px;height:16px;background:#C0A35E;border-radius:4px;border:1px solid rgba(0,0,0,.15)"></span><span style="font-size:8px;color:#a49c8e">▾</span></span>
+              <span style="display:flex;gap:4px"><span style="width:20px;height:20px;border-radius:5px;border:1.2px solid #e0dbcf;color:#c4bcae;display:flex;align-items:center;justify-content:center;font-size:9px">L</span><span style="width:20px;height:20px;border-radius:5px;background:#C0A35E;color:#fff;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:600">M</span><span style="width:20px;height:20px;border-radius:5px;border:1.2px solid #e0dbcf;color:#c4bcae;display:flex;align-items:center;justify-content:center;font-size:9px">M</span><span style="width:20px;height:20px;border-radius:5px;border:1.2px solid #e0dbcf;color:#c4bcae;display:flex;align-items:center;justify-content:center;font-size:9px">J</span><span style="width:20px;height:20px;border-radius:5px;border:1.2px solid #e0dbcf;color:#c4bcae;display:flex;align-items:center;justify-content:center;font-size:9px">V</span><span style="width:20px;height:20px;border-radius:5px;border:1.2px solid #e0dbcf;color:#c4bcae;display:flex;align-items:center;justify-content:center;font-size:9px">S</span><span style="width:20px;height:20px;border-radius:5px;border:1.2px solid #e0dbcf;color:#c4bcae;display:flex;align-items:center;justify-content:center;font-size:9px">D</span></span>
+              <span style="display:inline-flex;align-items:center;gap:5px;background:rgba(192,163,94,.16);border-left:3px solid #C0A35E;border-radius:4px;padding:2px 8px;font-size:9px;color:#3f3a32;justify-self:start">1G1 · photo cours</span>
+            </div>
+            <div style="display:grid;grid-template-columns:110px 66px 190px 1fr;gap:10px;align-items:center;padding:6px 14px;border-bottom:1px solid #f0ece2">
+              <span style="font-size:11px;font-weight:600;color:#3f3a32">HLP Tle</span>
+              <span style="display:flex;align-items:center;gap:3px"><span style="width:24px;height:16px;background:#6FA8A8;border-radius:4px;border:1px solid rgba(0,0,0,.15)"></span><span style="font-size:8px;color:#a49c8e">▾</span></span>
+              <span style="display:flex;gap:4px"><span style="width:20px;height:20px;border-radius:5px;background:#6FA8A8;color:#fff;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:600">L</span><span style="width:20px;height:20px;border-radius:5px;background:#6FA8A8;color:#fff;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:600">M</span><span style="width:20px;height:20px;border-radius:5px;border:1.2px solid #e0dbcf;color:#c4bcae;display:flex;align-items:center;justify-content:center;font-size:9px">M</span><span style="width:20px;height:20px;border-radius:5px;border:1.2px solid #e0dbcf;color:#c4bcae;display:flex;align-items:center;justify-content:center;font-size:9px">J</span><span style="width:20px;height:20px;border-radius:5px;border:1.2px solid #e0dbcf;color:#c4bcae;display:flex;align-items:center;justify-content:center;font-size:9px">V</span><span style="width:20px;height:20px;border-radius:5px;border:1.2px solid #e0dbcf;color:#c4bcae;display:flex;align-items:center;justify-content:center;font-size:9px">S</span><span style="width:20px;height:20px;border-radius:5px;border:1.2px solid #e0dbcf;color:#c4bcae;display:flex;align-items:center;justify-content:center;font-size:9px">D</span></span>
+              <span style="display:inline-flex;align-items:center;gap:5px;background:rgba(111,168,168,.16);border-left:3px solid #6FA8A8;border-radius:4px;padding:2px 8px;font-size:9px;color:#3f3a32;justify-self:start">HLP Tle · essai</span>
+            </div>
+            <div style="display:grid;grid-template-columns:110px 66px 190px 1fr;gap:10px;align-items:center;padding:6px 14px">
+              <span style="font-size:11px;font-weight:600;color:#3f3a32">HLP 1re</span>
+              <span style="display:flex;align-items:center;gap:3px"><span style="width:24px;height:16px;border:1.2px dashed #b9b1a2;border-radius:4px;background:#faf9f5"></span><span style="font-size:8px;color:#a49c8e">▾</span></span>
+              <span style="display:flex;gap:4px"><span style="width:20px;height:20px;border-radius:5px;border:1.2px solid #e0dbcf;color:#c4bcae;display:flex;align-items:center;justify-content:center;font-size:9px">L</span><span style="width:20px;height:20px;border-radius:5px;border:1.2px solid #e0dbcf;color:#c4bcae;display:flex;align-items:center;justify-content:center;font-size:9px">M</span><span style="width:20px;height:20px;border-radius:5px;border:1.2px solid #e0dbcf;color:#c4bcae;display:flex;align-items:center;justify-content:center;font-size:9px">M</span><span style="width:20px;height:20px;border-radius:5px;border:1.2px solid #e0dbcf;color:#c4bcae;display:flex;align-items:center;justify-content:center;font-size:9px">J</span><span style="width:20px;height:20px;border-radius:5px;border:1.2px solid #e0dbcf;color:#c4bcae;display:flex;align-items:center;justify-content:center;font-size:9px">V</span><span style="width:20px;height:20px;border-radius:5px;border:1.2px solid #e0dbcf;color:#c4bcae;display:flex;align-items:center;justify-content:center;font-size:9px">S</span><span style="width:20px;height:20px;border-radius:5px;border:1.2px solid #e0dbcf;color:#c4bcae;display:flex;align-items:center;justify-content:center;font-size:9px">D</span></span>
+              <span style="font-size:9px;color:#c07f2a;justify-self:start">⚠ à configurer — couleur par défaut utilisée</span>
+            </div>
+            <div style="display:flex;align-items:center;gap:8px;padding:8px 14px;border-top:1px solid #eee9df;background:#faf9f5;font-size:9px;color:#a49c8e">
+              <span>… + 2 autres classes</span>
+              <span style="margin-left:auto">✔ enregistré automatiquement à chaque clic — plus de bouton par ligne</span>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div style="font:500 14px 'Caveat',cursive;color:#8a6f4e;max-width:860px">une seule zone « Classes » : la couleur teinte directement les jours actifs, et l'aperçu montre la pastille telle qu'elle sortira sur le calendrier</div>
+    </div>
+
+    <!-- ══════════ 1b — FICHE PAR CLASSE (MASTER-DETAIL) ══════════ -->
+    <div class="dv-opt" id="1b" data-screen-label="1b Fiche par classe">
+      <div class="dv-olabel"><a class="dv-oid" href="#1b">1b</a>« Fiche par classe » — rail à gauche, on enchaîne classe après classe</div>
+      <div class="dv-card" style="width:790px">
+        <div style="display:flex;min-height:470px">
+          <div style="width:205px;flex:none;border-right:1px solid #e2ddd2;background:#faf9f5;display:flex;flex-direction:column">
+            <div style="padding:10px 12px 6px"><span style="display:block;border:1px solid #d5cfc2;border-radius:6px;padding:4px 10px;font-size:9.5px;color:#b3aa9a;background:#fff">🔍 Filtrer les classes…</span></div>
+            <div style="display:flex;align-items:center;gap:7px;padding:6px 14px"><span style="width:9px;height:9px;border-radius:50%;background:#7C9CBF"></span><span style="font-size:10.5px;color:#4a453c;font-weight:600;flex:1">TG1</span><span style="font-size:8.5px;color:#a49c8e">L·J</span></div>
+            <div style="display:flex;align-items:center;gap:7px;padding:6px 14px"><span style="width:9px;height:9px;border-radius:50%;background:#C08552"></span><span style="font-size:10.5px;color:#4a453c;font-weight:600;flex:1">TG2</span><span style="font-size:8.5px;color:#a49c8e">M·V</span></div>
+            <div style="display:flex;align-items:center;gap:7px;padding:7px 14px;background:#eceff7;border-left:3px solid #2a78d6;margin-left:-3px"><span style="width:9px;height:9px;border-radius:50%;background:#7FA67F"></span><span style="font-size:10.5px;color:#1f2a3d;font-weight:700;flex:1">TG3</span><span style="font-size:8.5px;color:#2a78d6">L·V</span></div>
+            <div style="display:flex;align-items:center;gap:7px;padding:6px 14px"><span style="width:9px;height:9px;border-radius:50%;background:#B07FA6"></span><span style="font-size:10.5px;color:#4a453c;font-weight:600;flex:1">TG5</span><span style="font-size:8.5px;color:#a49c8e">M·J</span></div>
+            <div style="display:flex;align-items:center;gap:7px;padding:6px 14px"><span style="width:9px;height:9px;border-radius:50%;background:#C0A35E"></span><span style="font-size:10.5px;color:#4a453c;font-weight:600;flex:1">1G1</span><span style="font-size:8.5px;color:#a49c8e">M</span></div>
+            <div style="display:flex;align-items:center;gap:7px;padding:6px 14px"><span style="width:9px;height:9px;border-radius:50%;background:#6FA8A8"></span><span style="font-size:10.5px;color:#4a453c;font-weight:600;flex:1">1G2</span><span style="font-size:8.5px;color:#a49c8e">J</span></div>
+            <div style="display:flex;align-items:center;gap:7px;padding:6px 14px"><span style="width:9px;height:9px;border-radius:50%;background:#B5736B"></span><span style="font-size:10.5px;color:#4a453c;font-weight:600;flex:1">1G4</span><span style="font-size:8.5px;color:#a49c8e">V</span></div>
+            <div style="display:flex;align-items:center;gap:7px;padding:6px 14px"><span style="width:9px;height:9px;border-radius:50%;background:#5C8A9E"></span><span style="font-size:10.5px;color:#4a453c;font-weight:600;flex:1">HLP Tle</span><span style="font-size:8.5px;color:#a49c8e">L·M</span></div>
+            <div style="display:flex;align-items:center;gap:7px;padding:6px 14px"><span style="width:9px;height:9px;border-radius:50%;border:1.2px dashed #b9b1a2;background:#fff"></span><span style="font-size:10.5px;color:#4a453c;font-weight:600;flex:1">HLP 1re</span><span style="font-size:8px;color:#c07f2a;border:1px solid #c07f2a;border-radius:99px;padding:0 5px">à faire</span></div>
+            <div style="margin-top:auto;padding:10px 14px;border-top:1px dashed #d5cfc2;font-size:8.5px;color:#a49c8e">9 classes · 1 reste à configurer</div>
+          </div>
+          <div style="flex:1;padding:14px 18px 16px;display:flex;flex-direction:column;gap:13px;min-width:0">
+            <div style="display:flex;align-items:center;gap:10px">
+              <span style="width:16px;height:16px;border-radius:50%;background:#7FA67F"></span>
+              <div><div style="font-size:14px;font-weight:700;color:#2f2a23">TG3</div><div style="font-size:9px;color:#a49c8e">31 élèves · modules Fragments + Aletheia</div></div>
+              <div style="margin-left:auto;display:flex;gap:6px;font-size:9.5px;color:#8b8478"><span style="border:1px solid #d5cfc2;border-radius:6px;padding:3px 9px;background:#fff">◀ TG2</span><span style="border:1px solid #d5cfc2;border-radius:6px;padding:3px 9px;background:#fff">TG5 ▶</span></div>
+            </div>
+            <div>
+              <div style="font:600 8.5px system-ui;letter-spacing:.08em;text-transform:uppercase;color:#a49c8e;margin-bottom:7px">Couleur — palette accordée au parchemin</div>
+              <div style="display:grid;grid-template-columns:repeat(6,44px);gap:7px">
+                <span style="height:30px;border-radius:6px;background:#7C9CBF;position:relative;border:1px solid rgba(0,0,0,.12)"><span style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:8px;color:#fff;font-weight:700">TG1</span></span>
+                <span style="height:30px;border-radius:6px;background:#C08552;position:relative;border:1px solid rgba(0,0,0,.12)"><span style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:8px;color:#fff;font-weight:700">TG2</span></span>
+                <span style="height:30px;border-radius:6px;background:#7FA67F;border:2.5px solid #2a78d6;box-shadow:0 0 0 2px #fff inset"></span>
+                <span style="height:30px;border-radius:6px;background:#B07FA6;position:relative;border:1px solid rgba(0,0,0,.12)"><span style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:8px;color:#fff;font-weight:700">TG5</span></span>
+                <span style="height:30px;border-radius:6px;background:#C0A35E;position:relative;border:1px solid rgba(0,0,0,.12)"><span style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:8px;color:#fff;font-weight:700">1G1</span></span>
+                <span style="height:30px;border-radius:6px;background:#6FA8A8;position:relative;border:1px solid rgba(0,0,0,.12)"><span style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:8px;color:#fff;font-weight:700">1G2</span></span>
+                <span style="height:30px;border-radius:6px;background:#B5736B;position:relative;border:1px solid rgba(0,0,0,.12)"><span style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:8px;color:#fff;font-weight:700">1G4</span></span>
+                <span style="height:30px;border-radius:6px;background:#8B9556;border:1px solid rgba(0,0,0,.12)"></span>
+                <span style="height:30px;border-radius:6px;background:#9C7BB5;border:1px solid rgba(0,0,0,.12)"></span>
+                <span style="height:30px;border-radius:6px;background:#C77E9E;border:1px solid rgba(0,0,0,.12)"></span>
+                <span style="height:30px;border-radius:6px;background:#5C8A9E;position:relative;border:1px solid rgba(0,0,0,.12)"><span style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:8px;color:#fff;font-weight:700">HLP</span></span>
+                <span style="height:30px;border-radius:6px;border:1.2px dashed #b9b1a2;display:flex;align-items:center;justify-content:center;font-size:9px;color:#a49c8e">◐ autre</span>
+              </div>
+              <div style="font-size:8.5px;color:#a49c8e;margin-top:5px">une teinte déjà prise reste choisissable — les initiales préviennent, sans interdire</div>
+            </div>
+            <div>
+              <div style="font:600 8.5px system-ui;letter-spacing:.08em;text-transform:uppercase;color:#a49c8e;margin-bottom:7px">Jours de cours</div>
+              <div style="display:flex;gap:6px">
+                <span style="width:32px;height:32px;border-radius:7px;background:#7FA67F;color:#fff;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700">L</span>
+                <span style="width:32px;height:32px;border-radius:7px;border:1.2px solid #d5cfc2;color:#a49c8e;display:flex;align-items:center;justify-content:center;font-size:11px">M</span>
+                <span style="width:32px;height:32px;border-radius:7px;border:1.2px solid #d5cfc2;color:#a49c8e;display:flex;align-items:center;justify-content:center;font-size:11px">M</span>
+                <span style="width:32px;height:32px;border-radius:7px;border:1.2px solid #d5cfc2;color:#a49c8e;display:flex;align-items:center;justify-content:center;font-size:11px">J</span>
+                <span style="width:32px;height:32px;border-radius:7px;background:#7FA67F;color:#fff;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700">V</span>
+                <span style="width:32px;height:32px;border-radius:7px;border:1.2px solid #d5cfc2;color:#a49c8e;display:flex;align-items:center;justify-content:center;font-size:11px">S</span>
+                <span style="width:32px;height:32px;border-radius:7px;border:1.2px solid #d5cfc2;color:#a49c8e;display:flex;align-items:center;justify-content:center;font-size:11px">D</span>
+              </div>
+            </div>
+            <div>
+              <div style="font:600 8.5px system-ui;letter-spacing:.08em;text-transform:uppercase;color:#a49c8e;margin-bottom:7px">Aperçu — semaine type sur le calendrier</div>
+              <div style="display:grid;grid-template-columns:repeat(7,1fr);border:1px solid #e2ddd2;border-radius:8px;overflow:hidden">
+                <div style="border-right:1px solid #eee9df;padding:4px 6px 14px;background:#fff"><div style="font-size:8px;color:#a49c8e;margin-bottom:4px">LUN</div><span style="display:block;background:rgba(127,166,127,.18);border-left:3px solid #7FA67F;border-radius:3px;padding:2px 5px;font-size:8px;color:#3f3a32">TG3 · cours</span></div>
+                <div style="border-right:1px solid #eee9df;padding:4px 6px;background:#faf9f5"><div style="font-size:8px;color:#a49c8e">MAR</div></div>
+                <div style="border-right:1px solid #eee9df;padding:4px 6px;background:#faf9f5"><div style="font-size:8px;color:#a49c8e">MER</div></div>
+                <div style="border-right:1px solid #eee9df;padding:4px 6px;background:#faf9f5"><div style="font-size:8px;color:#a49c8e">JEU</div></div>
+                <div style="border-right:1px solid #eee9df;padding:4px 6px 14px;background:#fff"><div style="font-size:8px;color:#a49c8e;margin-bottom:4px">VEN</div><span style="display:block;background:rgba(127,166,127,.18);border-left:3px solid #7FA67F;border-radius:3px;padding:2px 5px;font-size:8px;color:#3f3a32">TG3 · échéance</span></div>
+                <div style="border-right:1px solid #eee9df;padding:4px 6px;background:#faf9f5"><div style="font-size:8px;color:#a49c8e">SAM</div></div>
+                <div style="padding:4px 6px;background:#faf9f5"><div style="font-size:8px;color:#a49c8e">DIM</div></div>
+              </div>
+            </div>
+            <div style="margin-top:auto;display:flex;align-items:center;gap:10px;border-top:1px dashed #d5cfc2;padding-top:10px">
+              <span style="font-size:10px;padding:5px 11px;border:1.2px solid #8f887b;border-radius:6px;color:#3f3a32;background:#fff">Appliquer ces réglages à… ▾</span>
+              <span style="font:500 13px 'Caveat',cursive;color:#8a6f4e">copier jours / couleur / les deux vers d'autres classes</span>
+              <span style="margin-left:auto;font-size:9px;color:#3a7d44">✔ enregistré</span>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div style="font:500 14px 'Caveat',cursive;color:#8a6f4e;max-width:770px">une classe à la fois, mais vite : flèches ◀ ▶ pour enchaîner, le rail montre où il reste du travail</div>
+    </div>
+
+    <!-- ══════════ 1c — MATRICE TABLEUR + ACTIONS EN MASSE ══════════ -->
+    <div class="dv-opt" id="1c" data-screen-label="1c Matrice edition en masse">
+      <div class="dv-olabel"><a class="dv-oid" href="#1c">1c</a>« Matrice » — tout cocher d'un coup, façon tableur</div>
+      <div class="dv-card" style="width:700px">
+        <div style="display:flex;align-items:center;gap:10px;padding:11px 16px;border-bottom:1px solid #e2ddd2">
+          <span style="font-size:12.5px;font-weight:700;color:#2f2a23">Classes — édition en masse</span>
+          <span style="margin-left:auto;font:500 13px 'Caveat',cursive;color:#8a6f4e">clic sur l'en-tête = toute la colonne</span>
+        </div>
+        <div style="padding:10px 16px 14px">
+          <div style="display:grid;grid-template-columns:26px 96px repeat(7,40px) 1fr;gap:0;align-items:center;border-bottom:1px solid #e0dbcf;padding-bottom:5px">
+            <span style="width:13px;height:13px;border:1.2px solid #b9b1a2;border-radius:3px;background:#fff"></span>
+            <span style="font:600 8.5px system-ui;letter-spacing:.08em;text-transform:uppercase;color:#a49c8e">Classe</span>
+            <span style="text-align:center;font-size:9.5px;font-weight:700;color:#4a453c;text-decoration:underline dotted">L</span>
+            <span style="text-align:center;font-size:9.5px;font-weight:700;color:#4a453c;text-decoration:underline dotted">M</span>
+            <span style="text-align:center;font-size:9.5px;font-weight:700;color:#4a453c;text-decoration:underline dotted">M</span>
+            <span style="text-align:center;font-size:9.5px;font-weight:700;color:#4a453c;text-decoration:underline dotted">J</span>
+            <span style="text-align:center;font-size:9.5px;font-weight:700;color:#4a453c;text-decoration:underline dotted">V</span>
+            <span style="text-align:center;font-size:9.5px;font-weight:700;color:#4a453c;text-decoration:underline dotted">S</span>
+            <span style="text-align:center;font-size:9.5px;font-weight:700;color:#4a453c;text-decoration:underline dotted">D</span>
+            <span style="font:600 8.5px system-ui;letter-spacing:.08em;text-transform:uppercase;color:#a49c8e;padding-left:12px">Couleur</span>
+          </div>
+          <div style="display:grid;grid-template-columns:26px 96px repeat(7,40px) 1fr;align-items:center;padding:5px 0;border-bottom:1px solid #f0ece2;background:#f7f9fd">
+            <span style="width:13px;height:13px;border-radius:3px;background:#2a78d6;display:flex;align-items:center;justify-content:center;color:#fff;font-size:9px">✓</span>
+            <span style="font-size:10.5px;font-weight:600;color:#3f3a32">TG1</span>
+            <span style="display:flex;justify-content:center"><span style="width:17px;height:17px;border-radius:4px;background:#4a453c"></span></span>
+            <span style="display:flex;justify-content:center"><span style="width:17px;height:17px;border-radius:4px;border:1.2px solid #ddd7ca"></span></span>
+            <span style="display:flex;justify-content:center"><span style="width:17px;height:17px;border-radius:4px;border:1.2px solid #ddd7ca"></span></span>
+            <span style="display:flex;justify-content:center"><span style="width:17px;height:17px;border-radius:4px;background:#4a453c"></span></span>
+            <span style="display:flex;justify-content:center"><span style="width:17px;height:17px;border-radius:4px;border:1.2px solid #ddd7ca"></span></span>
+            <span style="display:flex;justify-content:center"><span style="width:17px;height:17px;border-radius:4px;border:1.2px solid #ddd7ca"></span></span>
+            <span style="display:flex;justify-content:center"><span style="width:17px;height:17px;border-radius:4px;border:1.2px solid #ddd7ca"></span></span>
+            <span style="display:flex;gap:4px;align-items:center;padding-left:12px"><span style="width:14px;height:14px;border-radius:50%;background:#7C9CBF;border:2px solid #2a78d6"></span><span style="width:14px;height:14px;border-radius:50%;background:#C08552"></span><span style="width:14px;height:14px;border-radius:50%;background:#7FA67F"></span><span style="width:14px;height:14px;border-radius:50%;background:#B07FA6"></span><span style="width:14px;height:14px;border-radius:50%;background:#C0A35E"></span><span style="width:14px;height:14px;border-radius:50%;background:#6FA8A8"></span><span style="width:14px;height:14px;border-radius:50%;background:#B5736B"></span><span style="font-size:9px;color:#a49c8e">＋</span></span>
+          </div>
+          <div style="display:grid;grid-template-columns:26px 96px repeat(7,40px) 1fr;align-items:center;padding:5px 0;border-bottom:1px solid #f0ece2;background:#f7f9fd">
+            <span style="width:13px;height:13px;border-radius:3px;background:#2a78d6;display:flex;align-items:center;justify-content:center;color:#fff;font-size:9px">✓</span>
+            <span style="font-size:10.5px;font-weight:600;color:#3f3a32">TG2</span>
+            <span style="display:flex;justify-content:center"><span style="width:17px;height:17px;border-radius:4px;border:1.2px solid #ddd7ca"></span></span>
+            <span style="display:flex;justify-content:center"><span style="width:17px;height:17px;border-radius:4px;background:#4a453c"></span></span>
+            <span style="display:flex;justify-content:center"><span style="width:17px;height:17px;border-radius:4px;border:1.2px solid #ddd7ca"></span></span>
+            <span style="display:flex;justify-content:center"><span style="width:17px;height:17px;border-radius:4px;border:1.2px solid #ddd7ca"></span></span>
+            <span style="display:flex;justify-content:center"><span style="width:17px;height:17px;border-radius:4px;background:#4a453c"></span></span>
+            <span style="display:flex;justify-content:center"><span style="width:17px;height:17px;border-radius:4px;border:1.2px solid #ddd7ca"></span></span>
+            <span style="display:flex;justify-content:center"><span style="width:17px;height:17px;border-radius:4px;border:1.2px solid #ddd7ca"></span></span>
+            <span style="display:flex;gap:4px;align-items:center;padding-left:12px"><span style="width:14px;height:14px;border-radius:50%;background:#7C9CBF"></span><span style="width:14px;height:14px;border-radius:50%;background:#C08552;border:2px solid #2a78d6"></span><span style="width:14px;height:14px;border-radius:50%;background:#7FA67F"></span><span style="width:14px;height:14px;border-radius:50%;background:#B07FA6"></span><span style="width:14px;height:14px;border-radius:50%;background:#C0A35E"></span><span style="width:14px;height:14px;border-radius:50%;background:#6FA8A8"></span><span style="width:14px;height:14px;border-radius:50%;background:#B5736B"></span><span style="font-size:9px;color:#a49c8e">＋</span></span>
+          </div>
+          <div style="display:grid;grid-template-columns:26px 96px repeat(7,40px) 1fr;align-items:center;padding:5px 0;border-bottom:1px solid #f0ece2;background:#f7f9fd">
+            <span style="width:13px;height:13px;border-radius:3px;background:#2a78d6;display:flex;align-items:center;justify-content:center;color:#fff;font-size:9px">✓</span>
+            <span style="font-size:10.5px;font-weight:600;color:#3f3a32">TG3</span>
+            <span style="display:flex;justify-content:center"><span style="width:17px;height:17px;border-radius:4px;background:#4a453c"></span></span>
+            <span style="display:flex;justify-content:center"><span style="width:17px;height:17px;border-radius:4px;border:1.2px solid #ddd7ca"></span></span>
+            <span style="display:flex;justify-content:center"><span style="width:17px;height:17px;border-radius:4px;border:1.2px solid #ddd7ca"></span></span>
+            <span style="display:flex;justify-content:center"><span style="width:17px;height:17px;border-radius:4px;border:1.2px solid #ddd7ca"></span></span>
+            <span style="display:flex;justify-content:center"><span style="width:17px;height:17px;border-radius:4px;background:#4a453c"></span></span>
+            <span style="display:flex;justify-content:center"><span style="width:17px;height:17px;border-radius:4px;border:1.2px solid #ddd7ca"></span></span>
+            <span style="display:flex;justify-content:center"><span style="width:17px;height:17px;border-radius:4px;border:1.2px solid #ddd7ca"></span></span>
+            <span style="display:flex;gap:4px;align-items:center;padding-left:12px"><span style="width:14px;height:14px;border-radius:50%;background:#7C9CBF"></span><span style="width:14px;height:14px;border-radius:50%;background:#C08552"></span><span style="width:14px;height:14px;border-radius:50%;background:#7FA67F;border:2px solid #2a78d6"></span><span style="width:14px;height:14px;border-radius:50%;background:#B07FA6"></span><span style="width:14px;height:14px;border-radius:50%;background:#C0A35E"></span><span style="width:14px;height:14px;border-radius:50%;background:#6FA8A8"></span><span style="width:14px;height:14px;border-radius:50%;background:#B5736B"></span><span style="font-size:9px;color:#a49c8e">＋</span></span>
+          </div>
+          <div style="display:grid;grid-template-columns:26px 96px repeat(7,40px) 1fr;align-items:center;padding:5px 0;border-bottom:1px solid #f0ece2">
+            <span style="width:13px;height:13px;border:1.2px solid #b9b1a2;border-radius:3px;background:#fff"></span>
+            <span style="font-size:10.5px;font-weight:600;color:#3f3a32">TG5</span>
+            <span style="display:flex;justify-content:center"><span style="width:17px;height:17px;border-radius:4px;border:1.2px solid #ddd7ca"></span></span>
+            <span style="display:flex;justify-content:center"><span style="width:17px;height:17px;border-radius:4px;background:#4a453c"></span></span>
+            <span style="display:flex;justify-content:center"><span style="width:17px;height:17px;border-radius:4px;border:1.2px solid #ddd7ca"></span></span>
+            <span style="display:flex;justify-content:center"><span style="width:17px;height:17px;border-radius:4px;background:#4a453c"></span></span>
+            <span style="display:flex;justify-content:center"><span style="width:17px;height:17px;border-radius:4px;border:1.2px solid #ddd7ca"></span></span>
+            <span style="display:flex;justify-content:center"><span style="width:17px;height:17px;border-radius:4px;border:1.2px solid #ddd7ca"></span></span>
+            <span style="display:flex;justify-content:center"><span style="width:17px;height:17px;border-radius:4px;border:1.2px solid #ddd7ca"></span></span>
+            <span style="display:flex;gap:4px;align-items:center;padding-left:12px"><span style="width:14px;height:14px;border-radius:50%;background:#7C9CBF"></span><span style="width:14px;height:14px;border-radius:50%;background:#C08552"></span><span style="width:14px;height:14px;border-radius:50%;background:#7FA67F"></span><span style="width:14px;height:14px;border-radius:50%;background:#B07FA6;border:2px solid #2a78d6"></span><span style="width:14px;height:14px;border-radius:50%;background:#C0A35E"></span><span style="width:14px;height:14px;border-radius:50%;background:#6FA8A8"></span><span style="width:14px;height:14px;border-radius:50%;background:#B5736B"></span><span style="font-size:9px;color:#a49c8e">＋</span></span>
+          </div>
+          <div style="display:grid;grid-template-columns:26px 96px repeat(7,40px) 1fr;align-items:center;padding:5px 0;border-bottom:1px solid #f0ece2">
+            <span style="width:13px;height:13px;border:1.2px solid #b9b1a2;border-radius:3px;background:#fff"></span>
+            <span style="font-size:10.5px;font-weight:600;color:#3f3a32">1G1</span>
+            <span style="display:flex;justify-content:center"><span style="width:17px;height:17px;border-radius:4px;border:1.2px solid #ddd7ca"></span></span>
+            <span style="display:flex;justify-content:center"><span style="width:17px;height:17px;border-radius:4px;background:#4a453c"></span></span>
+            <span style="display:flex;justify-content:center"><span style="width:17px;height:17px;border-radius:4px;border:1.2px solid #ddd7ca"></span></span>
+            <span style="display:flex;justify-content:center"><span style="width:17px;height:17px;border-radius:4px;border:1.2px solid #ddd7ca"></span></span>
+            <span style="display:flex;justify-content:center"><span style="width:17px;height:17px;border-radius:4px;border:1.2px solid #ddd7ca"></span></span>
+            <span style="display:flex;justify-content:center"><span style="width:17px;height:17px;border-radius:4px;border:1.2px solid #ddd7ca"></span></span>
+            <span style="display:flex;justify-content:center"><span style="width:17px;height:17px;border-radius:4px;border:1.2px solid #ddd7ca"></span></span>
+            <span style="display:flex;gap:4px;align-items:center;padding-left:12px"><span style="width:14px;height:14px;border-radius:50%;background:#7C9CBF"></span><span style="width:14px;height:14px;border-radius:50%;background:#C08552"></span><span style="width:14px;height:14px;border-radius:50%;background:#7FA67F"></span><span style="width:14px;height:14px;border-radius:50%;background:#B07FA6"></span><span style="width:14px;height:14px;border-radius:50%;background:#C0A35E;border:2px solid #2a78d6"></span><span style="width:14px;height:14px;border-radius:50%;background:#6FA8A8"></span><span style="width:14px;height:14px;border-radius:50%;background:#B5736B"></span><span style="font-size:9px;color:#a49c8e">＋</span></span>
+          </div>
+          <div style="display:grid;grid-template-columns:26px 96px repeat(7,40px) 1fr;align-items:center;padding:5px 0;border-bottom:1px solid #f0ece2">
+            <span style="width:13px;height:13px;border:1.2px solid #b9b1a2;border-radius:3px;background:#fff"></span>
+            <span style="font-size:10.5px;font-weight:600;color:#3f3a32">HLP Tle</span>
+            <span style="display:flex;justify-content:center"><span style="width:17px;height:17px;border-radius:4px;background:#4a453c"></span></span>
+            <span style="display:flex;justify-content:center"><span style="width:17px;height:17px;border-radius:4px;background:#4a453c"></span></span>
+            <span style="display:flex;justify-content:center"><span style="width:17px;height:17px;border-radius:4px;border:1.2px solid #ddd7ca"></span></span>
+            <span style="display:flex;justify-content:center"><span style="width:17px;height:17px;border-radius:4px;border:1.2px solid #ddd7ca"></span></span>
+            <span style="display:flex;justify-content:center"><span style="width:17px;height:17px;border-radius:4px;border:1.2px solid #ddd7ca"></span></span>
+            <span style="display:flex;justify-content:center"><span style="width:17px;height:17px;border-radius:4px;border:1.2px solid #ddd7ca"></span></span>
+            <span style="display:flex;justify-content:center"><span style="width:17px;height:17px;border-radius:4px;border:1.2px solid #ddd7ca"></span></span>
+            <span style="display:flex;gap:4px;align-items:center;padding-left:12px"><span style="width:14px;height:14px;border-radius:50%;background:#7C9CBF"></span><span style="width:14px;height:14px;border-radius:50%;background:#C08552"></span><span style="width:14px;height:14px;border-radius:50%;background:#7FA67F"></span><span style="width:14px;height:14px;border-radius:50%;background:#B07FA6"></span><span style="width:14px;height:14px;border-radius:50%;background:#C0A35E"></span><span style="width:14px;height:14px;border-radius:50%;background:#6FA8A8"></span><span style="width:14px;height:14px;border-radius:50%;background:#5C8A9E;border:2px solid #2a78d6"></span><span style="font-size:9px;color:#a49c8e">＋</span></span>
+          </div>
+          <div style="display:grid;grid-template-columns:26px 96px repeat(7,40px) 1fr;align-items:center;padding:5px 0">
+            <span style="width:13px;height:13px;border:1.2px solid #b9b1a2;border-radius:3px;background:#fff"></span>
+            <span style="font-size:10.5px;font-weight:600;color:#3f3a32">HLP 1re <span style="font-size:8px;color:#c07f2a">⚠</span></span>
+            <span style="display:flex;justify-content:center"><span style="width:17px;height:17px;border-radius:4px;border:1.2px solid #ddd7ca"></span></span>
+            <span style="display:flex;justify-content:center"><span style="width:17px;height:17px;border-radius:4px;border:1.2px solid #ddd7ca"></span></span>
+            <span style="display:flex;justify-content:center"><span style="width:17px;height:17px;border-radius:4px;border:1.2px solid #ddd7ca"></span></span>
+            <span style="display:flex;justify-content:center"><span style="width:17px;height:17px;border-radius:4px;border:1.2px solid #ddd7ca"></span></span>
+            <span style="display:flex;justify-content:center"><span style="width:17px;height:17px;border-radius:4px;border:1.2px solid #ddd7ca"></span></span>
+            <span style="display:flex;justify-content:center"><span style="width:17px;height:17px;border-radius:4px;border:1.2px solid #ddd7ca"></span></span>
+            <span style="display:flex;justify-content:center"><span style="width:17px;height:17px;border-radius:4px;border:1.2px solid #ddd7ca"></span></span>
+            <span style="display:flex;gap:4px;align-items:center;padding-left:12px"><span style="width:14px;height:14px;border-radius:50%;border:1.2px dashed #b9b1a2"></span><span style="font-size:8.5px;color:#a49c8e">aucune — défaut palette</span></span>
+          </div>
+          <div style="margin-top:12px;display:flex;align-items:center;gap:12px;background:#2f2a23;border-radius:9px;padding:8px 14px">
+            <span style="font-size:10px;color:#fff;font-weight:700">3 classes sélectionnées</span>
+            <span style="font-size:9.5px;color:#d8d2c6">Jours : <span style="border:1px solid #6b6459;border-radius:4px;padding:1px 6px">+ L</span> <span style="border:1px solid #6b6459;border-radius:4px;padding:1px 6px">+ J</span> <span style="border:1px solid #6b6459;border-radius:4px;padding:1px 6px">tout effacer</span></span>
+            <span style="font-size:9.5px;color:#d8d2c6">Couleurs : <span style="border:1px solid #6b6459;border-radius:4px;padding:1px 6px">🎨 répartir auto</span></span>
+            <span style="margin-left:auto;font-size:10px;color:#a49c8e">✕</span>
+          </div>
+        </div>
+      </div>
+      <div style="font:500 14px 'Caveat',cursive;color:#8a6f4e;max-width:680px">densité maximale : 15 classes tiennent sans défiler ; on coche 3 classes et on leur applique les mêmes jours ou des couleurs auto</div>
+    </div>
+
+    <!-- ══════════ 1d — NUANCIER D'ABORD ══════════ -->
+    <div class="dv-opt" id="1d" data-screen-label="1d Nuancier palette d abord">
+      <div class="dv-olabel"><a class="dv-oid" href="#1d">1d</a>« Nuancier » — penser couleur d'abord, les classes se posent dessus</div>
+      <div class="dv-card" style="width:860px">
+        <div style="display:flex;align-items:center;gap:10px;padding:11px 16px;border-bottom:1px solid #e2ddd2">
+          <span style="font-size:12.5px;font-weight:700;color:#2f2a23">Nuancier des classes</span>
+          <span style="font-size:9px;color:#a49c8e">glisser une classe sur une teinte</span>
+          <span style="margin-left:auto;display:flex;align-items:center;gap:6px;font-size:9.5px;color:#8b8478"><span style="width:22px;height:12px;border:1.2px solid #b9b1a2;border-radius:99px;position:relative;background:#faf9f5"><span style="position:absolute;left:1px;top:1px;width:8px;height:8px;border-radius:50%;background:#8f887b"></span></span> simuler une vision daltonienne</span>
+        </div>
+        <div style="display:flex">
+          <div style="flex:1;padding:12px 16px 16px;border-right:1px solid #e2ddd2">
+            <div style="border:1.2px dashed #b9b1a2;border-radius:8px;padding:7px 12px;display:flex;align-items:center;gap:8px;background:#faf9f5;margin-bottom:12px">
+              <span style="font-size:9px;color:#8b8478">À placer :</span>
+              <span style="font-size:9.5px;border:1.2px dashed #8f887b;border-radius:99px;padding:2px 9px;color:#3f3a32;background:#fff">⠿ HLP 1re</span>
+              <span style="font-size:9.5px;border:1.2px dashed #8f887b;border-radius:99px;padding:2px 9px;color:#3f3a32;background:#fff">⠿ BTS Culture G</span>
+              <span style="margin-left:auto;font-size:9.5px;padding:4px 10px;border:1.2px solid #8f887b;border-radius:6px;color:#3f3a32;background:#fff">🎨 Répartition auto</span>
+            </div>
+            <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px">
+              <div style="border:2px solid #c07f2a;border-radius:8px;overflow:hidden;background:#fff"><div style="height:30px;background:#7C9CBF"></div><div style="padding:5px 7px;display:flex;flex-direction:column;gap:3px"><span style="font-size:8px;color:#8b8478">Bleu lin</span><span style="align-self:flex-start;font-size:9px;border:1px solid #d5cfc2;border-radius:99px;padding:1px 7px;color:#3f3a32;background:#faf9f5">TG1</span><span style="align-self:flex-start;font-size:9px;border:1px solid #d5cfc2;border-radius:99px;padding:1px 7px;color:#3f3a32;background:#faf9f5">1G2</span><span style="font-size:8px;color:#c07f2a">⚠ 2 classes</span></div></div>
+              <div style="border:1px solid #e2ddd2;border-radius:8px;overflow:hidden;background:#fff"><div style="height:30px;background:#C08552"></div><div style="padding:5px 7px;display:flex;flex-direction:column;gap:3px"><span style="font-size:8px;color:#8b8478">Ocre</span><span style="align-self:flex-start;font-size:9px;border:1px solid #d5cfc2;border-radius:99px;padding:1px 7px;color:#3f3a32;background:#faf9f5">TG2</span></div></div>
+              <div style="border:1px solid #e2ddd2;border-radius:8px;overflow:hidden;background:#fff"><div style="height:30px;background:#7FA67F"></div><div style="padding:5px 7px;display:flex;flex-direction:column;gap:3px"><span style="font-size:8px;color:#8b8478">Sauge</span><span style="align-self:flex-start;font-size:9px;border:1px solid #d5cfc2;border-radius:99px;padding:1px 7px;color:#3f3a32;background:#faf9f5">TG3</span></div></div>
+              <div style="border:1px solid #e2ddd2;border-radius:8px;overflow:hidden;background:#fff"><div style="height:30px;background:#B07FA6"></div><div style="padding:5px 7px;display:flex;flex-direction:column;gap:3px"><span style="font-size:8px;color:#8b8478">Mauve</span><span style="align-self:flex-start;font-size:9px;border:1px solid #d5cfc2;border-radius:99px;padding:1px 7px;color:#3f3a32;background:#faf9f5">TG5</span></div></div>
+              <div style="border:1px solid #e2ddd2;border-radius:8px;overflow:hidden;background:#fff"><div style="height:30px;background:#C0A35E"></div><div style="padding:5px 7px;display:flex;flex-direction:column;gap:3px"><span style="font-size:8px;color:#8b8478">Doré</span><span style="align-self:flex-start;font-size:9px;border:1px solid #d5cfc2;border-radius:99px;padding:1px 7px;color:#3f3a32;background:#faf9f5">1G1</span></div></div>
+              <div style="border:1px solid #e2ddd2;border-radius:8px;overflow:hidden;background:#fff"><div style="height:30px;background:#6FA8A8"></div><div style="padding:5px 7px;display:flex;flex-direction:column;gap:3px"><span style="font-size:8px;color:#8b8478">Sarcelle</span><span style="font-size:8.5px;color:#b3aa9a;font-style:italic">libre</span></div></div>
+              <div style="border:1px solid #e2ddd2;border-radius:8px;overflow:hidden;background:#fff"><div style="height:30px;background:#B5736B"></div><div style="padding:5px 7px;display:flex;flex-direction:column;gap:3px"><span style="font-size:8px;color:#8b8478">Brique</span><span style="align-self:flex-start;font-size:9px;border:1px solid #d5cfc2;border-radius:99px;padding:1px 7px;color:#3f3a32;background:#faf9f5">1G4</span></div></div>
+              <div style="border:1px solid #e2ddd2;border-radius:8px;overflow:hidden;background:#fff"><div style="height:30px;background:#8B9556"></div><div style="padding:5px 7px;display:flex;flex-direction:column;gap:3px"><span style="font-size:8px;color:#8b8478">Olive</span><span style="font-size:8.5px;color:#b3aa9a;font-style:italic">libre</span></div></div>
+              <div style="border:1px solid #e2ddd2;border-radius:8px;overflow:hidden;background:#fff"><div style="height:30px;background:#9C7BB5"></div><div style="padding:5px 7px;display:flex;flex-direction:column;gap:3px"><span style="font-size:8px;color:#8b8478">Violet</span><span style="font-size:8.5px;color:#b3aa9a;font-style:italic">libre</span></div></div>
+              <div style="border:1px solid #e2ddd2;border-radius:8px;overflow:hidden;background:#fff"><div style="height:30px;background:#C77E9E"></div><div style="padding:5px 7px;display:flex;flex-direction:column;gap:3px"><span style="font-size:8px;color:#8b8478">Rose ancien</span><span style="align-self:flex-start;font-size:9px;border:1px solid #d5cfc2;border-radius:99px;padding:1px 7px;color:#3f3a32;background:#faf9f5">HLP Tle</span></div></div>
+              <div style="border:1px solid #e2ddd2;border-radius:8px;overflow:hidden;background:#fff"><div style="height:30px;background:#5C8A9E"></div><div style="padding:5px 7px;display:flex;flex-direction:column;gap:3px"><span style="font-size:8px;color:#8b8478">Pétrole</span><span style="font-size:8.5px;color:#b3aa9a;font-style:italic">libre</span></div></div>
+              <div style="border:1.2px dashed #b9b1a2;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:9px;color:#a49c8e;min-height:72px">◐ teinte<br>personnalisée…</div>
+            </div>
+            <div style="margin-top:10px;font-size:9px;color:#a49c8e">Les jours de cours restent gérés dans la liste des classes (voir <a class="dv-oid" href="#1a">1a</a>).</div>
+          </div>
+          <div style="width:252px;flex:none;padding:12px 14px 16px;background:#faf9f5;display:flex;flex-direction:column;gap:10px">
+            <div style="font:600 8.5px system-ui;letter-spacing:.08em;text-transform:uppercase;color:#a49c8e">Aperçu — jour chargé du calendrier</div>
+            <div style="border:1px solid #e2ddd2;border-radius:8px;background:#fff;padding:6px 8px">
+              <div style="font-size:8.5px;color:#8b8478;margin-bottom:5px">jeudi 12 mars — 6 événements</div>
+              <div style="display:flex;flex-direction:column;gap:3px">
+                <span style="background:rgba(124,156,191,.18);border-left:3px solid #7C9CBF;border-radius:3px;padding:2px 6px;font-size:8.5px;color:#3f3a32">TG1 · dissert. à rendre</span>
+                <span style="background:rgba(124,156,191,.18);border-left:3px solid #7C9CBF;border-radius:3px;padding:2px 6px;font-size:8.5px;color:#3f3a32">1G2 · quizz <span style="color:#c07f2a">← même bleu !</span></span>
+                <span style="background:rgba(176,127,166,.18);border-left:3px solid #B07FA6;border-radius:3px;padding:2px 6px;font-size:8.5px;color:#3f3a32">TG5 · fragments S7</span>
+                <span style="background:rgba(192,163,94,.18);border-left:3px solid #C0A35E;border-radius:3px;padding:2px 6px;font-size:8.5px;color:#3f3a32">1G1 · photo de cours</span>
+                <span style="background:rgba(199,126,158,.18);border-left:3px solid #C77E9E;border-radius:3px;padding:2px 6px;font-size:8.5px;color:#3f3a32">HLP Tle · essai</span>
+                <span style="background:rgba(181,115,107,.18);border-left:3px solid #B5736B;border-radius:3px;padding:2px 6px;font-size:8.5px;color:#3f3a32">1G4 · relance</span>
+              </div>
+            </div>
+            <div style="font:500 13px 'Caveat',cursive;color:#8a6f4e">l'aperçu réagit en direct — le doublon bleu saute aux yeux avant de valider</div>
+            <div style="border-top:1px dashed #d5cfc2;padding-top:8px;font-size:8.5px;color:#a49c8e">9 classes · 11 teintes · 1 conflit</div>
+          </div>
+        </div>
+      </div>
+      <div style="font:500 14px 'Caveat',cursive;color:#8a6f4e;max-width:840px">toutes les couleurs se jugent ensemble, pas une par une : doublons et teintes trop proches deviennent impossibles à rater</div>
+    </div>
+
+  </div>
+  <p class="dv-next">À essayer ensuite : « mixe <a class="dv-oid" href="#1a">1a</a> avec les actions en masse de <a class="dv-oid" href="#1c">1c</a> » · « garde <a class="dv-oid" href="#1a">1a</a> mais ajoute l'aperçu jour chargé de <a class="dv-oid" href="#1d">1d</a> » · « passe la piste choisie en rendu charte Palimpseste »</p>
+</section>
+
+</x-dc>
+</body>
+</html>

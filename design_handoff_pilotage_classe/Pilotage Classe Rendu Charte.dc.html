@@ -1,0 +1,547 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<meta name="design_doc_mode" content="canvas">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600;700&family=Cormorant+Garamond:wght@500;600;700&family=EB+Garamond:wght@400;500;600&family=Alegreya+Sans:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  body { margin:0; font-family:'EB Garamond', Georgia, serif; color:#221C16; -webkit-font-smoothing:antialiased; }
+</style>
+</helmet>
+
+<!-- ======================= INTRO ======================= -->
+<div style="position:absolute;left:80px;top:40px;width:1050px">
+  <div style="font-family:'Cinzel',serif;font-weight:600;font-size:13px;letter-spacing:.34em;color:#8A6F4E">PALIMPSESTE · ESPACE PROF</div>
+  <div style="font-family:'Cormorant Garamond',serif;font-weight:600;font-size:50px;line-height:1.04;color:#221C16;margin-top:6px">Pilotage Classe — rendu charte</div>
+  <div style="font-family:'EB Garamond',serif;font-size:18px;color:#5A4632;margin-top:8px;max-width:860px">La carte-classe ouvre une page dédiée : une matrice <b>élèves × modules</b> (vue Activité), un toggle vers <b>élèves × compétences</b> (en construction), des <b>bulles « à risque »</b> et le réglage des <b>modules accessibles</b>. Encre sur parchemin, sceaux en pastille. Ordi & mobile.</div>
+</div>
+
+<!-- ======================= A — ACTIVITÉ (ORDI) ======================= -->
+<div style="position:absolute;left:80px;top:210px;font-family:'Cormorant Garamond',serif;font-weight:600;font-size:30px;color:#221C16">Vue « Activité » — élèves × modules</div>
+<div style="position:absolute;left:80px;top:252px;font-family:'EB Garamond',serif;font-size:16px;color:#8A6F4E">Une ligne par élève, une colonne par monde. Chaque case dit où il en est et ce qu'il a à faire. Les bulles remontent les élèves à risque.</div>
+
+<!-- entry card -->
+<div data-screen-label="Carte classe — point d'entrée" style="position:absolute;left:80px;top:330px;width:300px">
+  <div data-drags-parent="1" style="position:absolute;top:-26px;left:2px;font-family:'Alegreya Sans',sans-serif;font-size:13px;color:#8A6F4E">La carte (tableau de bord) → ouvre le Pilotage</div>
+  <div style="background:#FBF8F1;border:1.5px solid #221C16;border-left:4px solid #A23E2E;border-radius:11px;padding:13px 15px;box-shadow:0 4px 14px rgba(34,28,22,.1)">
+    <div style="display:flex;justify-content:space-between;align-items:baseline"><span style="font-family:'Cormorant Garamond',serif;font-weight:600;font-size:19px;color:#221C16">Terminale HLP</span><span style="font-family:'Alegreya Sans',sans-serif;font-size:11.5px;color:#8A6F4E">24 élèves</span></div>
+    <div style="font-family:'Alegreya Sans',sans-serif;font-size:11.5px;color:#A23E2E;margin-top:3px">4 à risque · 2 fragments à valider</div>
+    <div style="border-top:1px dashed #E4DBC9;margin:11px 0 9px"></div>
+    <div style="font-family:'Alegreya Sans',sans-serif;font-size:11.5px;color:#5B6E4A">Première HLP · à jour</div>
+    <div style="margin-top:11px;background:#F4EFE6;border:1px dashed #D8CFBC;border-radius:8px;text-align:center;padding:8px;font-family:'Alegreya Sans',sans-serif;font-size:12px;color:#221C16">Ouvrir le Pilotage ↘</div>
+  </div>
+  <div style="font-family:'EB Garamond',serif;font-size:14px;color:#5A4632;line-height:1.5;margin-top:12px">La carte entière est cliquable. Fini la liste dépliée sous la grille : on arrive sur une <b>page plein cadre</b>.</div>
+</div>
+
+<!-- LAPTOP — Activité -->
+<div data-screen-label="Pilotage Classe — Activité (ordi)" style="position:absolute;left:430px;top:330px;width:960px">
+  <div data-drags-parent="1" style="position:absolute;top:-26px;left:2px;font-family:'Alegreya Sans',sans-serif;font-size:13px;color:#8A6F4E">Ordinateur — Pilotage › Classes › Terminale HLP</div>
+  <div style="border:1px solid #D8CFBC;border-radius:12px;background:#FBF8F1;box-shadow:0 4px 18px rgba(34,28,22,.11);overflow:hidden">
+    <div style="background:#ECE4D6;padding:9px 14px;display:flex;align-items:center;gap:7px"><span style="width:10px;height:10px;border-radius:50%;background:#C9B89A"></span><span style="width:10px;height:10px;border-radius:50%;background:#C9B89A"></span><span style="width:10px;height:10px;border-radius:50%;background:#C9B89A"></span></div>
+    <!-- app header -->
+    <div style="background:#ECE4D6;padding:0 22px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid #E0D6C2;height:54px">
+      <div style="display:flex;align-items:center;gap:10px">
+        <span style="width:32px;height:32px;border-radius:50%;background:#F4EFE6;border:1px solid #D8CFBC;display:inline-flex;align-items:center;justify-content:center;overflow:hidden;flex-shrink:0"><img src="sceaux/palimpseste_medaillon.png" style="width:30px;height:30px;object-fit:cover;filter:brightness(1.05) contrast(1.05);mix-blend-mode:multiply" alt="Palimpseste"></span>
+        <span style="font-family:'Cinzel',serif;font-weight:600;font-size:15px;letter-spacing:.2em;color:#221C16">PALIMPSESTE</span>
+      </div>
+      <div style="display:flex;align-items:center;gap:4px;font-family:'Alegreya Sans',sans-serif;font-size:14px">
+        <span style="color:#5A4632;padding:6px 13px">Tableau de bord</span>
+        <span style="background:#F4EFE6;color:#221C16;padding:6px 13px;border-radius:7px;display:inline-flex;align-items:center;gap:4px">Pilotage <span style="font-size:10px">▾</span></span>
+        <span style="color:#5A4632;padding:6px 13px;display:inline-flex;align-items:center;gap:4px">Modules <span style="font-size:10px">▾</span></span>
+      </div>
+      <span style="font-family:'Alegreya Sans',sans-serif;font-size:13px;color:#8A6F4E">Mme Aubry · Déconnexion</span>
+    </div>
+    <!-- content -->
+    <div style="background:#F4EFE6;padding:18px 24px 24px">
+      <div style="font-family:'Alegreya Sans',sans-serif;font-size:12px;color:#8A6F4E">Pilotage · Classes <span style="color:#221C16">› Terminale HLP</span></div>
+      <!-- title row -->
+      <div style="display:flex;justify-content:space-between;align-items:flex-end;margin-top:7px;gap:18px">
+        <div>
+          <div style="font-family:'Cormorant Garamond',serif;font-weight:600;font-size:30px;color:#221C16;line-height:1">Terminale HLP</div>
+          <div style="font-family:'Alegreya Sans',sans-serif;font-size:12.5px;color:#8A6F4E;margin-top:3px">Terminale · 24 élèves · 2025-26 · <span style="color:#A23E2E">4 à risque</span></div>
+        </div>
+        <div style="display:flex;align-items:center;gap:9px">
+          <span style="font-family:'Alegreya Sans',sans-serif;font-size:11px;letter-spacing:.08em;color:#8A6F4E">VUE</span>
+          <div style="display:inline-flex;background:#ECE4D6;border:1px solid #D8CFBC;border-radius:9px;padding:3px">
+            <span style="background:#221C16;color:#F4EFE6;font-family:'Alegreya Sans',sans-serif;font-size:13px;font-weight:700;padding:6px 16px;border-radius:6px">Activité</span>
+            <span style="color:#5A4632;font-family:'Alegreya Sans',sans-serif;font-size:13px;padding:6px 16px;border-radius:6px">Compétences</span>
+          </div>
+        </div>
+      </div>
+      <!-- access bar -->
+      <div style="display:flex;align-items:center;gap:9px;flex-wrap:wrap;margin-top:14px;background:#FBF8F1;border:1px solid #E4DBC9;border-radius:10px;padding:9px 13px">
+        <span style="font-family:'Alegreya Sans',sans-serif;font-size:11px;letter-spacing:.06em;color:#8A6F4E">MODULES ACCESSIBLES</span>
+        <span style="display:inline-flex;align-items:center;gap:6px;background:#EEF1EA;border:1px solid #CDD3C4;border-radius:20px;padding:4px 11px;font-family:'Alegreya Sans',sans-serif;font-size:12.5px;color:#221C16"><span style="width:9px;height:9px;border-radius:50%;background:#3E6B8E"></span>Quazian <span style="color:#5B6E4A;font-weight:700">✓</span></span>
+        <span style="display:inline-flex;align-items:center;gap:6px;background:#EEF1EA;border:1px solid #CDD3C4;border-radius:20px;padding:4px 11px;font-family:'Alegreya Sans',sans-serif;font-size:12.5px;color:#221C16"><span style="width:9px;height:9px;border-radius:50%;background:#2C4A7C"></span>Aletheia <span style="color:#5B6E4A;font-weight:700">✓</span></span>
+        <span style="display:inline-flex;align-items:center;gap:6px;background:#EEF1EA;border:1px solid #CDD3C4;border-radius:20px;padding:4px 11px;font-family:'Alegreya Sans',sans-serif;font-size:12.5px;color:#221C16"><span style="width:9px;height:9px;border-radius:50%;background:#5A6043"></span>Fragments <span style="color:#5B6E4A;font-weight:700">✓</span></span>
+        <span style="display:inline-flex;align-items:center;gap:6px;background:#EEF1EA;border:1px solid #CDD3C4;border-radius:20px;padding:4px 11px;font-family:'Alegreya Sans',sans-serif;font-size:12.5px;color:#221C16"><span style="width:9px;height:9px;border-radius:50%;background:#2E4A3C"></span>Codex <span style="color:#5B6E4A;font-weight:700">✓</span></span>
+        <span style="display:inline-flex;align-items:center;gap:6px;background:#F4EFE6;border:1px dashed #D8CFBC;border-radius:20px;padding:4px 11px;font-family:'Alegreya Sans',sans-serif;font-size:12.5px;color:#A89878"><span style="width:9px;height:9px;border-radius:50%;background:#D8CFBC"></span>Scriptorium <span>☐</span></span>
+        <span style="margin-left:auto;font-family:'Alegreya Sans',sans-serif;font-size:12px;color:#221C16;border:1px solid #D8CFBC;border-radius:8px;padding:5px 12px;background:#FBF8F1">⚙ Gérer les accès</span>
+      </div>
+
+      <!-- MATRIX -->
+      <div style="background:#FBF8F1;border:1px solid #E4DBC9;border-radius:12px;margin-top:13px;overflow:hidden">
+        <!-- header -->
+        <div style="display:flex;background:#F4EFE6;border-bottom:1px solid #E4DBC9">
+          <div style="width:182px;flex-shrink:0;padding:10px 16px;font-family:'Alegreya Sans',sans-serif;font-size:10px;letter-spacing:.06em;color:#A89878">ÉLÈVE</div>
+          <div style="flex:1;display:flex;font-family:'Cinzel',serif;font-weight:600;font-size:10.5px;letter-spacing:.06em">
+            <div style="flex:1;padding:10px 4px;text-align:center;color:#3E6B8E;border-left:1px solid #EBE3D2;display:flex;align-items:center;justify-content:center;gap:5px"><span style="width:8px;height:8px;border-radius:50%;background:#3E6B8E"></span>QUAZIAN</div>
+            <div style="flex:1;padding:10px 4px;text-align:center;color:#2C4A7C;border-left:1px solid #EBE3D2;display:flex;align-items:center;justify-content:center;gap:5px"><span style="width:8px;height:8px;border-radius:50%;background:#2C4A7C"></span>ALETHEIA</div>
+            <div style="flex:1;padding:10px 4px;text-align:center;color:#5A6043;border-left:1px solid #EBE3D2;display:flex;align-items:center;justify-content:center;gap:5px"><span style="width:8px;height:8px;border-radius:50%;background:#5A6043"></span>FRAGMENTS</div>
+            <div style="flex:1;padding:10px 4px;text-align:center;color:#2E4A3C;border-left:1px solid #EBE3D2;display:flex;align-items:center;justify-content:center;gap:5px"><span style="width:8px;height:8px;border-radius:50%;background:#2E4A3C"></span>CODEX</div>
+            <div style="flex:1;padding:8px 4px;text-align:center;color:#A89878;border-left:1px solid #EBE3D2;background:#F1EBDF"><div style="display:flex;align-items:center;justify-content:center;gap:5px"><span style="width:8px;height:8px;border-radius:50%;background:#D8CFBC"></span>SCRIPTORIUM</div><div style="font-family:'Alegreya Sans',sans-serif;font-size:9px;letter-spacing:0;font-weight:400;margin-top:1px">non activé</div></div>
+          </div>
+        </div>
+        <!-- Léa -->
+        <div style="display:flex;align-items:stretch;border-bottom:1px solid #F0ECE2">
+          <div style="width:182px;flex-shrink:0;padding:12px 16px;display:flex;align-items:center;gap:9px"><span style="width:19px;height:19px;border-radius:50%;background:#A23E2E;color:#fff;font-family:'Alegreya Sans',sans-serif;font-weight:700;font-size:12px;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0">!</span><span style="font-family:'EB Garamond',serif;font-size:16px;color:#221C16">Léa Fontaine</span></div>
+          <div style="flex:1;display:flex;text-align:center;font-family:'Alegreya Sans',sans-serif;font-size:12px">
+            <div style="flex:1;padding:12px 4px;border-left:1px solid #F0ECE2;display:flex;align-items:center;justify-content:center"><span style="background:#EFD9D2;color:#A23E2E;padding:3px 9px;border-radius:9px">12 à réviser</span></div>
+            <div style="flex:1;padding:12px 4px;border-left:1px solid #F0ECE2;color:#5A4632;display:flex;align-items:center;justify-content:center">lecture 3/5</div>
+            <div style="flex:1;padding:12px 4px;border-left:1px solid #F0ECE2;display:flex;align-items:center;justify-content:center"><span style="background:#EFD9D2;color:#A23E2E;padding:3px 9px;border-radius:9px">6/8 · 2 à faire</span></div>
+            <div style="flex:1;padding:12px 4px;border-left:1px solid #F0ECE2;color:#5B6E4A;display:flex;align-items:center;justify-content:center">à jour</div>
+            <div style="flex:1;padding:12px 4px;border-left:1px solid #F0ECE2;color:#C9BFA8;background:#F6F1E8;display:flex;align-items:center;justify-content:center">—</div>
+          </div>
+        </div>
+        <!-- Karim -->
+        <div style="display:flex;align-items:stretch;border-bottom:1px solid #F0ECE2">
+          <div style="width:182px;flex-shrink:0;padding:12px 16px;display:flex;align-items:center;gap:9px"><span style="width:19px;height:19px;border-radius:50%;background:#A23E2E;color:#fff;font-family:'Alegreya Sans',sans-serif;font-weight:700;font-size:12px;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0">!</span><span style="font-family:'EB Garamond',serif;font-size:16px;color:#221C16">Karim Benali</span></div>
+          <div style="flex:1;display:flex;text-align:center;font-family:'Alegreya Sans',sans-serif;font-size:12px">
+            <div style="flex:1;padding:12px 4px;border-left:1px solid #F0ECE2;color:#5B6E4A;display:flex;align-items:center;justify-content:center">à jour</div>
+            <div style="flex:1;padding:12px 4px;border-left:1px solid #F0ECE2;display:flex;align-items:center;justify-content:center"><span style="background:#EFD9D2;color:#A23E2E;padding:3px 9px;border-radius:9px">diagnostic à faire</span></div>
+            <div style="flex:1;padding:12px 4px;border-left:1px solid #F0ECE2;color:#5A4632;display:flex;align-items:center;justify-content:center">8/8 · à jour</div>
+            <div style="flex:1;padding:12px 4px;border-left:1px solid #F0ECE2;display:flex;align-items:center;justify-content:center"><span style="background:#EFD9D2;color:#A23E2E;padding:3px 9px;border-radius:9px">1 à rendre</span></div>
+            <div style="flex:1;padding:12px 4px;border-left:1px solid #F0ECE2;color:#C9BFA8;background:#F6F1E8;display:flex;align-items:center;justify-content:center">—</div>
+          </div>
+        </div>
+        <!-- Nina -->
+        <div style="display:flex;align-items:stretch;border-bottom:1px solid #F0ECE2">
+          <div style="width:182px;flex-shrink:0;padding:12px 16px;display:flex;align-items:center;gap:9px"><span style="width:19px;height:19px;border-radius:50%;background:#A23E2E;color:#fff;font-family:'Alegreya Sans',sans-serif;font-weight:700;font-size:12px;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0">!</span><span style="font-family:'EB Garamond',serif;font-size:16px;color:#221C16">Nina Lefèvre</span></div>
+          <div style="flex:1;display:flex;text-align:center;font-family:'Alegreya Sans',sans-serif;font-size:12px">
+            <div style="flex:1;padding:12px 4px;border-left:1px solid #F0ECE2;display:flex;align-items:center;justify-content:center"><span style="background:#EFD9D2;color:#A23E2E;padding:3px 9px;border-radius:9px">14 à réviser</span></div>
+            <div style="flex:1;padding:12px 4px;border-left:1px solid #F0ECE2;color:#5A4632;display:flex;align-items:center;justify-content:center">lecture 5/5</div>
+            <div style="flex:1;padding:12px 4px;border-left:1px solid #F0ECE2;color:#5A4632;display:flex;align-items:center;justify-content:center">8/8 · à jour</div>
+            <div style="flex:1;padding:12px 4px;border-left:1px solid #F0ECE2;color:#5B6E4A;display:flex;align-items:center;justify-content:center">à jour</div>
+            <div style="flex:1;padding:12px 4px;border-left:1px solid #F0ECE2;color:#C9BFA8;background:#F6F1E8;display:flex;align-items:center;justify-content:center">—</div>
+          </div>
+        </div>
+        <!-- Hugo -->
+        <div style="display:flex;align-items:stretch;border-bottom:1px solid #F0ECE2">
+          <div style="width:182px;flex-shrink:0;padding:12px 16px;display:flex;align-items:center;gap:9px"><span style="width:19px;height:19px;flex-shrink:0"></span><span style="font-family:'EB Garamond',serif;font-size:16px;color:#221C16">Hugo Mercier</span></div>
+          <div style="flex:1;display:flex;text-align:center;font-family:'Alegreya Sans',sans-serif;font-size:12px">
+            <div style="flex:1;padding:12px 4px;border-left:1px solid #F0ECE2;color:#5B6E4A;display:flex;align-items:center;justify-content:center">à jour</div>
+            <div style="flex:1;padding:12px 4px;border-left:1px solid #F0ECE2;color:#5A4632;display:flex;align-items:center;justify-content:center">lecture 4/5</div>
+            <div style="flex:1;padding:12px 4px;border-left:1px solid #F0ECE2;color:#5A4632;display:flex;align-items:center;justify-content:center">8/8 · à jour</div>
+            <div style="flex:1;padding:12px 4px;border-left:1px solid #F0ECE2;color:#5A4632;display:flex;align-items:center;justify-content:center">2 en cours</div>
+            <div style="flex:1;padding:12px 4px;border-left:1px solid #F0ECE2;color:#C9BFA8;background:#F6F1E8;display:flex;align-items:center;justify-content:center">—</div>
+          </div>
+        </div>
+        <!-- Tom -->
+        <div style="display:flex;align-items:stretch;border-bottom:1px solid #F0ECE2">
+          <div style="width:182px;flex-shrink:0;padding:12px 16px;display:flex;align-items:center;gap:9px"><span style="width:19px;height:19px;border-radius:50%;background:#A23E2E;color:#fff;font-family:'Alegreya Sans',sans-serif;font-weight:700;font-size:12px;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0">!</span><span style="font-family:'EB Garamond',serif;font-size:16px;color:#221C16">Tom Garnier</span></div>
+          <div style="flex:1;display:flex;text-align:center;font-family:'Alegreya Sans',sans-serif;font-size:12px">
+            <div style="flex:1;padding:12px 4px;border-left:1px solid #F0ECE2;color:#5B6E4A;display:flex;align-items:center;justify-content:center">à jour</div>
+            <div style="flex:1;padding:12px 4px;border-left:1px solid #F0ECE2;color:#5A4632;display:flex;align-items:center;justify-content:center">lecture 2/5</div>
+            <div style="flex:1;padding:12px 4px;border-left:1px solid #F0ECE2;display:flex;align-items:center;justify-content:center"><span style="background:#EFD9D2;color:#A23E2E;padding:3px 9px;border-radius:9px">7/8 · 1 à faire</span></div>
+            <div style="flex:1;padding:12px 4px;border-left:1px solid #F0ECE2;color:#5B6E4A;display:flex;align-items:center;justify-content:center">à jour</div>
+            <div style="flex:1;padding:12px 4px;border-left:1px solid #F0ECE2;color:#C9BFA8;background:#F6F1E8;display:flex;align-items:center;justify-content:center">—</div>
+          </div>
+        </div>
+        <!-- Camille -->
+        <div style="display:flex;align-items:stretch;border-bottom:1px solid #F0ECE2">
+          <div style="width:182px;flex-shrink:0;padding:12px 16px;display:flex;align-items:center;gap:9px"><span style="width:19px;height:19px;flex-shrink:0"></span><span style="font-family:'EB Garamond',serif;font-size:16px;color:#221C16">Camille Roy</span></div>
+          <div style="flex:1;display:flex;text-align:center;font-family:'Alegreya Sans',sans-serif;font-size:12px">
+            <div style="flex:1;padding:12px 4px;border-left:1px solid #F0ECE2;color:#5A4632;display:flex;align-items:center;justify-content:center">3 à réviser</div>
+            <div style="flex:1;padding:12px 4px;border-left:1px solid #F0ECE2;color:#5B6E4A;display:flex;align-items:center;justify-content:center">à jour</div>
+            <div style="flex:1;padding:12px 4px;border-left:1px solid #F0ECE2;color:#5A4632;display:flex;align-items:center;justify-content:center">7/8 · à jour</div>
+            <div style="flex:1;padding:12px 4px;border-left:1px solid #F0ECE2;color:#5B6E4A;display:flex;align-items:center;justify-content:center">à jour</div>
+            <div style="flex:1;padding:12px 4px;border-left:1px solid #F0ECE2;color:#C9BFA8;background:#F6F1E8;display:flex;align-items:center;justify-content:center">—</div>
+          </div>
+        </div>
+        <!-- footer -->
+        <div style="background:#F4EFE6;text-align:center;padding:10px;font-family:'Alegreya Sans',sans-serif;font-size:12px;color:#8A6F4E;border-top:1px dashed #E4DBC9">+ 18 autres élèves… &nbsp;·&nbsp; trier : <span style="color:#221C16">à risque</span> · nom · module</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- notes A -->
+<div style="position:absolute;left:1170px;top:200px;width:250px">
+  <div style="background:#F3ECDD;border:1px solid #E4DBC9;border-left:3px solid #A23E2E;border-radius:8px;padding:14px 16px;font-family:'EB Garamond',serif;font-size:15px;line-height:1.5;color:#5A4632">
+    <span style="font-family:'Alegreya Sans',sans-serif;font-size:11px;letter-spacing:.1em;color:#A23E2E">LA BULLE</span><br>
+    Pastille ronde <b>A23E2E</b> + « ! » en tête de ligne : l'élève à risque saute aux yeux, quelle que soit la vue. Cliquable → sa fiche.
+  </div>
+</div>
+
+<!-- ======================= B — COMPÉTENCES (ORDI) ======================= -->
+<div style="position:absolute;left:80px;top:1160px;font-family:'Cormorant Garamond',serif;font-weight:600;font-size:30px;color:#221C16">Toggle « Compétences » — niveau par élève</div>
+<div style="position:absolute;left:80px;top:1202px;font-family:'EB Garamond',serif;font-size:16px;color:#8A6F4E">Même squelette : les colonnes deviennent des compétences, chaque case porte la lettre de niveau. Architecture posée — données à cadrer.</div>
+
+<div data-screen-label="Pilotage Classe — Compétences (ordi)" style="position:absolute;left:80px;top:1280px;width:960px">
+  <div data-drags-parent="1" style="position:absolute;top:-26px;left:2px;font-family:'Alegreya Sans',sans-serif;font-size:13px;color:#8A6F4E">Ordinateur — vue Compétences (en construction)</div>
+  <div style="border:1px solid #D8CFBC;border-radius:12px;background:#FBF8F1;box-shadow:0 4px 18px rgba(34,28,22,.11);overflow:hidden;position:relative">
+    <div style="position:absolute;top:16px;right:-42px;transform:rotate(34deg);background:#C9A227;color:#3A2E0C;font-family:'Alegreya Sans',sans-serif;font-weight:700;font-size:12px;letter-spacing:.06em;padding:5px 48px;box-shadow:0 1px 5px rgba(0,0,0,.2);z-index:5">EN CONSTRUCTION</div>
+    <div style="background:#ECE4D6;padding:9px 14px;display:flex;align-items:center;gap:7px"><span style="width:10px;height:10px;border-radius:50%;background:#C9B89A"></span><span style="width:10px;height:10px;border-radius:50%;background:#C9B89A"></span><span style="width:10px;height:10px;border-radius:50%;background:#C9B89A"></span></div>
+    <div style="background:#ECE4D6;padding:0 22px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid #E0D6C2;height:54px">
+      <div style="display:flex;align-items:center;gap:10px">
+        <span style="width:32px;height:32px;border-radius:50%;background:#F4EFE6;border:1px solid #D8CFBC;display:inline-flex;align-items:center;justify-content:center;overflow:hidden;flex-shrink:0"><img src="sceaux/palimpseste_medaillon.png" style="width:30px;height:30px;object-fit:cover;filter:brightness(1.05) contrast(1.05);mix-blend-mode:multiply" alt="Palimpseste"></span>
+        <span style="font-family:'Cinzel',serif;font-weight:600;font-size:15px;letter-spacing:.2em;color:#221C16">PALIMPSESTE</span>
+      </div>
+      <div style="display:flex;align-items:center;gap:4px;font-family:'Alegreya Sans',sans-serif;font-size:14px">
+        <span style="color:#5A4632;padding:6px 13px">Tableau de bord</span>
+        <span style="background:#F4EFE6;color:#221C16;padding:6px 13px;border-radius:7px;display:inline-flex;align-items:center;gap:4px">Pilotage <span style="font-size:10px">▾</span></span>
+        <span style="color:#5A4632;padding:6px 13px;display:inline-flex;align-items:center;gap:4px">Modules <span style="font-size:10px">▾</span></span>
+      </div>
+      <span style="font-family:'Alegreya Sans',sans-serif;font-size:13px;color:#8A6F4E">Mme Aubry · Déconnexion</span>
+    </div>
+    <div style="background:#F4EFE6;padding:18px 24px 24px">
+      <div style="font-family:'Alegreya Sans',sans-serif;font-size:12px;color:#8A6F4E">Pilotage · Classes <span style="color:#221C16">› Terminale HLP</span></div>
+      <div style="display:flex;justify-content:space-between;align-items:flex-end;margin-top:7px;gap:18px">
+        <div>
+          <div style="font-family:'Cormorant Garamond',serif;font-weight:600;font-size:30px;color:#221C16;line-height:1">Terminale HLP</div>
+          <div style="font-family:'Alegreya Sans',sans-serif;font-size:12.5px;color:#8A6F4E;margin-top:3px">Terminale · 24 élèves · 2025-26 · <span style="color:#A23E2E">4 à risque</span></div>
+        </div>
+        <div style="display:flex;align-items:center;gap:9px">
+          <span style="font-family:'Alegreya Sans',sans-serif;font-size:11px;letter-spacing:.08em;color:#8A6F4E">VUE</span>
+          <div style="display:inline-flex;background:#ECE4D6;border:1px solid #D8CFBC;border-radius:9px;padding:3px">
+            <span style="color:#5A4632;font-family:'Alegreya Sans',sans-serif;font-size:13px;padding:6px 16px;border-radius:6px">Activité</span>
+            <span style="background:#221C16;color:#F4EFE6;font-family:'Alegreya Sans',sans-serif;font-size:13px;font-weight:700;padding:6px 16px;border-radius:6px">Compétences</span>
+          </div>
+        </div>
+      </div>
+      <div style="margin-top:14px;background:#FBF3DC;border:1px dashed #C9A227;border-radius:10px;padding:10px 14px;font-family:'EB Garamond',serif;font-size:15px;color:#7A5E1E">
+        <b>Zone en construction.</b> La grille de compétences et le calcul des niveaux ne sont pas encore définis — ce rendu pose l'architecture visuelle (mêmes colonnes-modèle, lettre par case) à valider avant implémentation.
+      </div>
+      <!-- legend scale -->
+      <div style="display:flex;align-items:center;gap:14px;margin-top:12px;font-family:'Alegreya Sans',sans-serif;font-size:11.5px;color:#8A6F4E">
+        <span style="letter-spacing:.06em">ÉCHELLE</span>
+        <span style="display:inline-flex;align-items:center;gap:6px"><span style="width:20px;height:20px;border-radius:5px;background:#E6ECDD;color:#5B6E4A;display:inline-flex;align-items:center;justify-content:center;font-family:'Cormorant Garamond',serif;font-weight:600;font-size:13px">A</span> maîtrisé</span>
+        <span style="display:inline-flex;align-items:center;gap:6px"><span style="width:20px;height:20px;border-radius:5px;background:#EFE9DC;color:#8A6F4E;display:inline-flex;align-items:center;justify-content:center;font-family:'Cormorant Garamond',serif;font-weight:600;font-size:13px">B</span> acquis</span>
+        <span style="display:inline-flex;align-items:center;gap:6px"><span style="width:20px;height:20px;border-radius:5px;background:#EFE4CF;color:#9A6A2E;display:inline-flex;align-items:center;justify-content:center;font-family:'Cormorant Garamond',serif;font-weight:600;font-size:13px">C</span> en cours</span>
+        <span style="display:inline-flex;align-items:center;gap:6px"><span style="width:20px;height:20px;border-radius:5px;background:#EFD9D2;color:#A23E2E;display:inline-flex;align-items:center;justify-content:center;font-family:'Cormorant Garamond',serif;font-weight:600;font-size:13px">D</span> fragile</span>
+      </div>
+
+      <div style="background:#FBF8F1;border:1px dashed #C9A227;border-radius:12px;margin-top:13px;overflow:hidden">
+        <div style="display:flex;background:#F4EFE6;border-bottom:1px solid #E4DBC9">
+          <div style="width:182px;flex-shrink:0;padding:10px 16px;font-family:'Alegreya Sans',sans-serif;font-size:10px;letter-spacing:.06em;color:#A89878">ÉLÈVE</div>
+          <div style="flex:1;display:flex;font-family:'Alegreya Sans',sans-serif;font-size:11px;color:#5A4632">
+            <div style="flex:1;padding:10px 4px;text-align:center;border-left:1px solid #EBE3D2">Analyser</div>
+            <div style="flex:1;padding:10px 4px;text-align:center;border-left:1px solid #EBE3D2">Interpréter</div>
+            <div style="flex:1;padding:10px 4px;text-align:center;border-left:1px solid #EBE3D2">Argumenter</div>
+            <div style="flex:1;padding:10px 4px;text-align:center;border-left:1px solid #EBE3D2">Problématiser</div>
+            <div style="flex:1;padding:10px 4px;text-align:center;border-left:1px solid #EBE3D2">Conceptualiser</div>
+          </div>
+        </div>
+        <!-- rows -->
+        <!-- Léa: C B D C - -->
+        <div style="display:flex;align-items:stretch;border-bottom:1px solid #F0ECE2">
+          <div style="width:182px;flex-shrink:0;padding:11px 16px;display:flex;align-items:center;gap:9px"><span style="width:19px;height:19px;border-radius:50%;background:#A23E2E;color:#fff;font-family:'Alegreya Sans',sans-serif;font-weight:700;font-size:12px;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0">!</span><span style="font-family:'EB Garamond',serif;font-size:16px;color:#221C16">Léa Fontaine</span></div>
+          <div style="flex:1;display:flex">
+            <div style="flex:1;padding:8px 4px;border-left:1px solid #F0ECE2;display:flex;align-items:center;justify-content:center"><span style="width:28px;height:28px;border-radius:7px;background:#EFE4CF;color:#9A6A2E;display:inline-flex;align-items:center;justify-content:center;font-family:'Cormorant Garamond',serif;font-weight:600;font-size:17px">C</span></div>
+            <div style="flex:1;padding:8px 4px;border-left:1px solid #F0ECE2;display:flex;align-items:center;justify-content:center"><span style="width:28px;height:28px;border-radius:7px;background:#EFE9DC;color:#8A6F4E;display:inline-flex;align-items:center;justify-content:center;font-family:'Cormorant Garamond',serif;font-weight:600;font-size:17px">B</span></div>
+            <div style="flex:1;padding:8px 4px;border-left:1px solid #F0ECE2;display:flex;align-items:center;justify-content:center"><span style="width:28px;height:28px;border-radius:7px;background:#EFD9D2;color:#A23E2E;display:inline-flex;align-items:center;justify-content:center;font-family:'Cormorant Garamond',serif;font-weight:600;font-size:17px">D</span></div>
+            <div style="flex:1;padding:8px 4px;border-left:1px solid #F0ECE2;display:flex;align-items:center;justify-content:center"><span style="width:28px;height:28px;border-radius:7px;background:#EFE4CF;color:#9A6A2E;display:inline-flex;align-items:center;justify-content:center;font-family:'Cormorant Garamond',serif;font-weight:600;font-size:17px">C</span></div>
+            <div style="flex:1;padding:8px 4px;border-left:1px solid #F0ECE2;display:flex;align-items:center;justify-content:center"><span style="width:28px;height:28px;border-radius:7px;background:#F0ECE2;color:#C9BFA8;display:inline-flex;align-items:center;justify-content:center;font-family:'Cormorant Garamond',serif;font-weight:600;font-size:17px">–</span></div>
+          </div>
+        </div>
+        <!-- Karim: B C C B - -->
+        <div style="display:flex;align-items:stretch;border-bottom:1px solid #F0ECE2">
+          <div style="width:182px;flex-shrink:0;padding:11px 16px;display:flex;align-items:center;gap:9px"><span style="width:19px;height:19px;border-radius:50%;background:#A23E2E;color:#fff;font-family:'Alegreya Sans',sans-serif;font-weight:700;font-size:12px;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0">!</span><span style="font-family:'EB Garamond',serif;font-size:16px;color:#221C16">Karim Benali</span></div>
+          <div style="flex:1;display:flex">
+            <div style="flex:1;padding:8px 4px;border-left:1px solid #F0ECE2;display:flex;align-items:center;justify-content:center"><span style="width:28px;height:28px;border-radius:7px;background:#EFE9DC;color:#8A6F4E;display:inline-flex;align-items:center;justify-content:center;font-family:'Cormorant Garamond',serif;font-weight:600;font-size:17px">B</span></div>
+            <div style="flex:1;padding:8px 4px;border-left:1px solid #F0ECE2;display:flex;align-items:center;justify-content:center"><span style="width:28px;height:28px;border-radius:7px;background:#EFE4CF;color:#9A6A2E;display:inline-flex;align-items:center;justify-content:center;font-family:'Cormorant Garamond',serif;font-weight:600;font-size:17px">C</span></div>
+            <div style="flex:1;padding:8px 4px;border-left:1px solid #F0ECE2;display:flex;align-items:center;justify-content:center"><span style="width:28px;height:28px;border-radius:7px;background:#EFE4CF;color:#9A6A2E;display:inline-flex;align-items:center;justify-content:center;font-family:'Cormorant Garamond',serif;font-weight:600;font-size:17px">C</span></div>
+            <div style="flex:1;padding:8px 4px;border-left:1px solid #F0ECE2;display:flex;align-items:center;justify-content:center"><span style="width:28px;height:28px;border-radius:7px;background:#EFE9DC;color:#8A6F4E;display:inline-flex;align-items:center;justify-content:center;font-family:'Cormorant Garamond',serif;font-weight:600;font-size:17px">B</span></div>
+            <div style="flex:1;padding:8px 4px;border-left:1px solid #F0ECE2;display:flex;align-items:center;justify-content:center"><span style="width:28px;height:28px;border-radius:7px;background:#F0ECE2;color:#C9BFA8;display:inline-flex;align-items:center;justify-content:center;font-family:'Cormorant Garamond',serif;font-weight:600;font-size:17px">–</span></div>
+          </div>
+        </div>
+        <!-- Nina: A A B A - -->
+        <div style="display:flex;align-items:stretch;border-bottom:1px solid #F0ECE2">
+          <div style="width:182px;flex-shrink:0;padding:11px 16px;display:flex;align-items:center;gap:9px"><span style="width:19px;height:19px;border-radius:50%;background:#A23E2E;color:#fff;font-family:'Alegreya Sans',sans-serif;font-weight:700;font-size:12px;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0">!</span><span style="font-family:'EB Garamond',serif;font-size:16px;color:#221C16">Nina Lefèvre</span></div>
+          <div style="flex:1;display:flex">
+            <div style="flex:1;padding:8px 4px;border-left:1px solid #F0ECE2;display:flex;align-items:center;justify-content:center"><span style="width:28px;height:28px;border-radius:7px;background:#E6ECDD;color:#5B6E4A;display:inline-flex;align-items:center;justify-content:center;font-family:'Cormorant Garamond',serif;font-weight:600;font-size:17px">A</span></div>
+            <div style="flex:1;padding:8px 4px;border-left:1px solid #F0ECE2;display:flex;align-items:center;justify-content:center"><span style="width:28px;height:28px;border-radius:7px;background:#E6ECDD;color:#5B6E4A;display:inline-flex;align-items:center;justify-content:center;font-family:'Cormorant Garamond',serif;font-weight:600;font-size:17px">A</span></div>
+            <div style="flex:1;padding:8px 4px;border-left:1px solid #F0ECE2;display:flex;align-items:center;justify-content:center"><span style="width:28px;height:28px;border-radius:7px;background:#EFE9DC;color:#8A6F4E;display:inline-flex;align-items:center;justify-content:center;font-family:'Cormorant Garamond',serif;font-weight:600;font-size:17px">B</span></div>
+            <div style="flex:1;padding:8px 4px;border-left:1px solid #F0ECE2;display:flex;align-items:center;justify-content:center"><span style="width:28px;height:28px;border-radius:7px;background:#E6ECDD;color:#5B6E4A;display:inline-flex;align-items:center;justify-content:center;font-family:'Cormorant Garamond',serif;font-weight:600;font-size:17px">A</span></div>
+            <div style="flex:1;padding:8px 4px;border-left:1px solid #F0ECE2;display:flex;align-items:center;justify-content:center"><span style="width:28px;height:28px;border-radius:7px;background:#F0ECE2;color:#C9BFA8;display:inline-flex;align-items:center;justify-content:center;font-family:'Cormorant Garamond',serif;font-weight:600;font-size:17px">–</span></div>
+          </div>
+        </div>
+        <!-- Hugo: B A B B - -->
+        <div style="display:flex;align-items:stretch;border-bottom:1px solid #F0ECE2">
+          <div style="width:182px;flex-shrink:0;padding:11px 16px;display:flex;align-items:center;gap:9px"><span style="width:19px;height:19px;flex-shrink:0"></span><span style="font-family:'EB Garamond',serif;font-size:16px;color:#221C16">Hugo Mercier</span></div>
+          <div style="flex:1;display:flex">
+            <div style="flex:1;padding:8px 4px;border-left:1px solid #F0ECE2;display:flex;align-items:center;justify-content:center"><span style="width:28px;height:28px;border-radius:7px;background:#EFE9DC;color:#8A6F4E;display:inline-flex;align-items:center;justify-content:center;font-family:'Cormorant Garamond',serif;font-weight:600;font-size:17px">B</span></div>
+            <div style="flex:1;padding:8px 4px;border-left:1px solid #F0ECE2;display:flex;align-items:center;justify-content:center"><span style="width:28px;height:28px;border-radius:7px;background:#E6ECDD;color:#5B6E4A;display:inline-flex;align-items:center;justify-content:center;font-family:'Cormorant Garamond',serif;font-weight:600;font-size:17px">A</span></div>
+            <div style="flex:1;padding:8px 4px;border-left:1px solid #F0ECE2;display:flex;align-items:center;justify-content:center"><span style="width:28px;height:28px;border-radius:7px;background:#EFE9DC;color:#8A6F4E;display:inline-flex;align-items:center;justify-content:center;font-family:'Cormorant Garamond',serif;font-weight:600;font-size:17px">B</span></div>
+            <div style="flex:1;padding:8px 4px;border-left:1px solid #F0ECE2;display:flex;align-items:center;justify-content:center"><span style="width:28px;height:28px;border-radius:7px;background:#EFE9DC;color:#8A6F4E;display:inline-flex;align-items:center;justify-content:center;font-family:'Cormorant Garamond',serif;font-weight:600;font-size:17px">B</span></div>
+            <div style="flex:1;padding:8px 4px;border-left:1px solid #F0ECE2;display:flex;align-items:center;justify-content:center"><span style="width:28px;height:28px;border-radius:7px;background:#F0ECE2;color:#C9BFA8;display:inline-flex;align-items:center;justify-content:center;font-family:'Cormorant Garamond',serif;font-weight:600;font-size:17px">–</span></div>
+          </div>
+        </div>
+        <!-- Tom: C D C B - -->
+        <div style="display:flex;align-items:stretch;border-bottom:1px solid #F0ECE2">
+          <div style="width:182px;flex-shrink:0;padding:11px 16px;display:flex;align-items:center;gap:9px"><span style="width:19px;height:19px;border-radius:50%;background:#A23E2E;color:#fff;font-family:'Alegreya Sans',sans-serif;font-weight:700;font-size:12px;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0">!</span><span style="font-family:'EB Garamond',serif;font-size:16px;color:#221C16">Tom Garnier</span></div>
+          <div style="flex:1;display:flex">
+            <div style="flex:1;padding:8px 4px;border-left:1px solid #F0ECE2;display:flex;align-items:center;justify-content:center"><span style="width:28px;height:28px;border-radius:7px;background:#EFE4CF;color:#9A6A2E;display:inline-flex;align-items:center;justify-content:center;font-family:'Cormorant Garamond',serif;font-weight:600;font-size:17px">C</span></div>
+            <div style="flex:1;padding:8px 4px;border-left:1px solid #F0ECE2;display:flex;align-items:center;justify-content:center"><span style="width:28px;height:28px;border-radius:7px;background:#EFD9D2;color:#A23E2E;display:inline-flex;align-items:center;justify-content:center;font-family:'Cormorant Garamond',serif;font-weight:600;font-size:17px">D</span></div>
+            <div style="flex:1;padding:8px 4px;border-left:1px solid #F0ECE2;display:flex;align-items:center;justify-content:center"><span style="width:28px;height:28px;border-radius:7px;background:#EFE4CF;color:#9A6A2E;display:inline-flex;align-items:center;justify-content:center;font-family:'Cormorant Garamond',serif;font-weight:600;font-size:17px">C</span></div>
+            <div style="flex:1;padding:8px 4px;border-left:1px solid #F0ECE2;display:flex;align-items:center;justify-content:center"><span style="width:28px;height:28px;border-radius:7px;background:#EFE9DC;color:#8A6F4E;display:inline-flex;align-items:center;justify-content:center;font-family:'Cormorant Garamond',serif;font-weight:600;font-size:17px">B</span></div>
+            <div style="flex:1;padding:8px 4px;border-left:1px solid #F0ECE2;display:flex;align-items:center;justify-content:center"><span style="width:28px;height:28px;border-radius:7px;background:#F0ECE2;color:#C9BFA8;display:inline-flex;align-items:center;justify-content:center;font-family:'Cormorant Garamond',serif;font-weight:600;font-size:17px">–</span></div>
+          </div>
+        </div>
+        <div style="background:#F4EFE6;text-align:center;padding:10px;font-family:'Alegreya Sans',sans-serif;font-size:12px;color:#8A6F4E;border-top:1px dashed #E4DBC9">+ 18 autres élèves… &nbsp;·&nbsp; <span style="color:#9A6A2E">compétences & échelle à définir</span></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- notes B -->
+<div style="position:absolute;left:1090px;top:1300px;width:250px">
+  <div style="background:#F3ECDD;border:1px solid #E4DBC9;border-left:3px solid #C9A227;border-radius:8px;padding:14px 16px;font-family:'EB Garamond',serif;font-size:15px;line-height:1.5;color:#5A4632">
+    <span style="font-family:'Alegreya Sans',sans-serif;font-size:11px;letter-spacing:.1em;color:#9A7A1E">À CADRER</span><br>
+    La liste des <b>compétences</b>, l'<b>échelle</b> (A→D) et la <b>source</b> du niveau (auto ou saisie prof) restent à définir. Le ruban « en construction » signale que les données sont fictives.
+  </div>
+</div>
+<div style="position:absolute;left:1090px;top:1500px;width:250px">
+  <div style="background:#F3ECDD;border:1px solid #E4DBC9;border-left:3px solid #221C16;border-radius:8px;padding:14px 16px;font-family:'EB Garamond',serif;font-size:15px;line-height:1.5;color:#5A4632">
+    <span style="font-family:'Alegreya Sans',sans-serif;font-size:11px;letter-spacing:.1em;color:#221C16">CONTINUITÉ</span><br>
+    Le toggle ne touche <b>que les colonnes</b> : colonne élève + bulles inchangées. Un seul modèle mental pour les deux lectures.
+  </div>
+</div>
+
+<!-- ======================= C — ACCÈS MODULES ======================= -->
+<div style="position:absolute;left:80px;top:2110px;font-family:'Cormorant Garamond',serif;font-weight:600;font-size:30px;color:#221C16">Gérer les modules accessibles</div>
+<div style="position:absolute;left:80px;top:2152px;font-family:'EB Garamond',serif;font-size:16px;color:#8A6F4E">« ⚙ Gérer les accès » ouvre un panneau : un interrupteur par monde. Couper un module grise sa colonne (« — ») et le retire du parcours élève.</div>
+
+<div data-screen-label="Accès modules — panneau (ordi)" style="position:absolute;left:80px;top:2230px;width:470px">
+  <div data-drags-parent="1" style="position:absolute;top:-26px;left:2px;font-family:'Alegreya Sans',sans-serif;font-size:13px;color:#8A6F4E">Panneau « gérer les accès »</div>
+  <div style="background:#FBF8F1;border:1px solid #D8CFBC;border-radius:13px;box-shadow:0 8px 28px rgba(34,28,22,.16);overflow:hidden">
+    <div style="background:#ECE4D6;border-bottom:1px solid #E0D6C2;padding:14px 18px;display:flex;justify-content:space-between;align-items:center">
+      <div><div style="font-family:'Cormorant Garamond',serif;font-weight:600;font-size:20px;color:#221C16">Modules de Terminale HLP</div><div style="font-family:'Alegreya Sans',sans-serif;font-size:12px;color:#8A6F4E;margin-top:1px">Les mondes ouverts à cette classe.</div></div>
+      <span style="font-family:'Alegreya Sans',sans-serif;font-size:16px;color:#A89878">✕</span>
+    </div>
+    <div style="padding:8px 10px 10px">
+      <div style="display:flex;align-items:center;gap:13px;padding:12px 12px">
+        <span style="width:40px;height:40px;border-radius:50%;background:#DCE6EC;display:inline-flex;align-items:center;justify-content:center;overflow:hidden;flex-shrink:0"><img src="sceaux/quazian.png" style="width:35px;height:35px;object-fit:cover;object-position:50% 40%;filter:brightness(1.09) contrast(1.04);mix-blend-mode:multiply" alt=""></span>
+        <div style="flex:1"><div style="font-family:'Cinzel',serif;font-weight:600;font-size:13px;letter-spacing:.07em;color:#3E6B8E">QUAZIAN</div><div style="font-family:'EB Garamond',serif;font-size:14px;color:#5A4632;margin-top:1px">Révision FSRS + quizz diagnostic</div></div>
+        <div style="width:44px;height:25px;border-radius:13px;background:#5B6E4A;position:relative;flex-shrink:0"><span style="position:absolute;top:2.5px;right:2.5px;width:20px;height:20px;border-radius:50%;background:#fff"></span></div>
+      </div>
+      <div style="border-top:1px solid #F0ECE2;margin:0 12px"></div>
+      <div style="display:flex;align-items:center;gap:13px;padding:12px 12px">
+        <span style="width:40px;height:40px;border-radius:50%;background:#DDE3EC;display:inline-flex;align-items:center;justify-content:center;overflow:hidden;flex-shrink:0"><img src="sceaux/aletheia.png" style="width:35px;height:35px;object-fit:cover;object-position:50% 40%;filter:brightness(1.09) contrast(1.04);mix-blend-mode:multiply" alt=""></span>
+        <div style="flex:1"><div style="font-family:'Cinzel',serif;font-weight:600;font-size:13px;letter-spacing:.07em;color:#2C4A7C">ALETHEIA</div><div style="font-family:'EB Garamond',serif;font-size:14px;color:#5A4632;margin-top:1px">Lectures, retours, diagnostic</div></div>
+        <div style="width:44px;height:25px;border-radius:13px;background:#5B6E4A;position:relative;flex-shrink:0"><span style="position:absolute;top:2.5px;right:2.5px;width:20px;height:20px;border-radius:50%;background:#fff"></span></div>
+      </div>
+      <div style="border-top:1px solid #F0ECE2;margin:0 12px"></div>
+      <div style="display:flex;align-items:center;gap:13px;padding:12px 12px">
+        <span style="width:40px;height:40px;border-radius:50%;background:#E2E3D2;display:inline-flex;align-items:center;justify-content:center;overflow:hidden;flex-shrink:0"><img src="sceaux/fragments.png" style="width:35px;height:35px;object-fit:cover;object-position:50% 40%;filter:brightness(1.09) contrast(1.04);mix-blend-mode:multiply" alt=""></span>
+        <div style="flex:1"><div style="font-family:'Cinzel',serif;font-weight:600;font-size:13px;letter-spacing:.07em;color:#5A6043">FRAGMENTS</div><div style="font-family:'EB Garamond',serif;font-size:14px;color:#5A4632;margin-top:1px">Parcours, dépôts, analyses</div></div>
+        <div style="width:44px;height:25px;border-radius:13px;background:#5B6E4A;position:relative;flex-shrink:0"><span style="position:absolute;top:2.5px;right:2.5px;width:20px;height:20px;border-radius:50%;background:#fff"></span></div>
+      </div>
+      <div style="border-top:1px solid #F0ECE2;margin:0 12px"></div>
+      <div style="display:flex;align-items:center;gap:13px;padding:12px 12px">
+        <span style="width:40px;height:40px;border-radius:50%;background:#DCE6DF;display:inline-flex;align-items:center;justify-content:center;overflow:hidden;flex-shrink:0"><img src="sceaux/codex.png" style="width:35px;height:35px;object-fit:cover;object-position:50% 40%;filter:brightness(1.09) contrast(1.04);mix-blend-mode:multiply" alt=""></span>
+        <div style="flex:1"><div style="font-family:'Cinzel',serif;font-weight:600;font-size:13px;letter-spacing:.07em;color:#2E4A3C">CODEX</div><div style="font-family:'EB Garamond',serif;font-size:14px;color:#5A4632;margin-top:1px">Carnet, écrits longs</div></div>
+        <div style="width:44px;height:25px;border-radius:13px;background:#5B6E4A;position:relative;flex-shrink:0"><span style="position:absolute;top:2.5px;right:2.5px;width:20px;height:20px;border-radius:50%;background:#fff"></span></div>
+      </div>
+      <div style="border-top:1px solid #F0ECE2;margin:0 12px"></div>
+      <div style="display:flex;align-items:center;gap:13px;padding:12px 12px;opacity:.72">
+        <span style="width:40px;height:40px;border-radius:50%;background:#E7DFE7;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0"><span style="width:13px;height:13px;border-radius:50%;background:#6B4E6E"></span></span>
+        <div style="flex:1"><div style="font-family:'Cinzel',serif;font-weight:600;font-size:13px;letter-spacing:.07em;color:#6B4E6E">SCRIPTORIUM <span style="font-family:'Alegreya Sans',sans-serif;font-size:11px;font-weight:400;letter-spacing:0;color:#A89878">· coupé</span></div><div style="font-family:'EB Garamond',serif;font-size:14px;color:#5A4632;margin-top:1px">Atelier d'écriture collaborative</div></div>
+        <div style="width:44px;height:25px;border-radius:13px;background:#D8CFBC;position:relative;flex-shrink:0"><span style="position:absolute;top:2.5px;left:2.5px;width:20px;height:20px;border-radius:50%;background:#fff"></span></div>
+      </div>
+    </div>
+    <div style="background:#ECE4D6;border-top:1px solid #E0D6C2;padding:12px 18px;display:flex;justify-content:flex-end;gap:10px">
+      <span style="font-family:'Alegreya Sans',sans-serif;font-size:13px;color:#5A4632;padding:7px 15px">Annuler</span>
+      <span style="font-family:'Alegreya Sans',sans-serif;font-size:13px;color:#F4EFE6;background:#221C16;border-radius:8px;padding:7px 18px">Enregistrer</span>
+    </div>
+  </div>
+</div>
+
+<!-- notes C -->
+<div style="position:absolute;left:590px;top:2250px;width:260px">
+  <div style="background:#F3ECDD;border:1px solid #E4DBC9;border-left:3px solid #6B4E6E;border-radius:8px;padding:14px 16px;font-family:'EB Garamond',serif;font-size:15px;line-height:1.5;color:#5A4632">
+    <span style="font-family:'Alegreya Sans',sans-serif;font-size:11px;letter-spacing:.1em;color:#6B4E6E">UN INTERRUPTEUR PAR MONDE</span><br>
+    Couper Scriptorium ici grise sa colonne dans la matrice et le retire du parcours élève — <b>réactivable sans perte</b>. Les chips en haut de matrice sont le même réglage, en accès rapide.
+  </div>
+</div>
+<div style="position:absolute;left:590px;top:2440px;width:260px">
+  <div style="background:#F3ECDD;border:1px solid #E4DBC9;border-left:3px solid #A23E2E;border-radius:8px;padding:14px 16px;font-family:'EB Garamond',serif;font-size:15px;line-height:1.5;color:#5A4632">
+    <span style="font-family:'Alegreya Sans',sans-serif;font-size:11px;letter-spacing:.1em;color:#A23E2E">À TRANCHER</span><br>
+    Accès réglé <b>par classe</b> (ici) — faut-il aussi du <b>par élève</b> ? Et qui peut couper un module : prof ou admin ?
+  </div>
+</div>
+
+<!-- ======================= D — MOBILE ======================= -->
+<div style="position:absolute;left:80px;top:2760px;font-family:'Cormorant Garamond',serif;font-weight:600;font-size:30px;color:#221C16">Sur mobile — la matrice glisse</div>
+<div style="position:absolute;left:80px;top:2802px;font-family:'EB Garamond',serif;font-size:16px;color:#8A6F4E">Colonne élève figée à gauche (nom + bulle), modules qui défilent horizontalement. Toggle et accès en feuille. Logo en pastille (haut-droite).</div>
+
+<!-- mobile Activité -->
+<div data-screen-label="Pilotage Classe — Activité (mobile)" style="position:absolute;left:80px;top:2880px;width:300px">
+  <div data-drags-parent="1" style="position:absolute;top:-26px;left:2px;font-family:'Alegreya Sans',sans-serif;font-size:13px;color:#8A6F4E">Mobile — vue Activité</div>
+  <div style="border:11px solid #221C16;border-radius:38px;background:#221C16;box-shadow:0 6px 22px rgba(34,28,22,.22)">
+    <div style="background:#F4EFE6;border-radius:27px;height:600px;overflow:hidden;display:flex;flex-direction:column">
+      <div style="background:#ECE4D6;padding:11px 15px 12px">
+        <div style="display:flex;justify-content:space-between;align-items:center"><div style="font-family:'Alegreya Sans',sans-serif;font-size:12px;color:#5A4632">← Classes</div><span style="width:28px;height:28px;border-radius:50%;background:#F4EFE6;border:1px solid #D8CFBC;display:inline-flex;align-items:center;justify-content:center;overflow:hidden;flex-shrink:0"><img src="sceaux/palimpseste_medaillon.png" style="width:26px;height:26px;object-fit:cover;filter:brightness(1.05) contrast(1.05);mix-blend-mode:multiply" alt="Palimpseste"></span></div>
+        <div style="font-family:'Cormorant Garamond',serif;font-weight:600;font-size:21px;color:#221C16;margin-top:3px;line-height:1.05">Terminale HLP</div>
+        <div style="font-family:'Alegreya Sans',sans-serif;font-size:11px;color:#8A6F4E">24 élèves · <span style="color:#A23E2E">4 à risque</span></div>
+        <div style="display:flex;background:#F4EFE6;border:1px solid #D8CFBC;border-radius:8px;padding:3px;margin-top:9px">
+          <span style="flex:1;text-align:center;background:#221C16;color:#F4EFE6;font-family:'Alegreya Sans',sans-serif;font-size:12px;font-weight:700;padding:6px;border-radius:5px">Activité</span>
+          <span style="flex:1;text-align:center;color:#5A4632;font-family:'Alegreya Sans',sans-serif;font-size:12px;padding:6px;border-radius:5px">Compétences</span>
+        </div>
+        <div style="display:flex;gap:6px;margin-top:8px;overflow:hidden">
+          <span style="font-family:'Alegreya Sans',sans-serif;font-size:10.5px;background:#EEF1EA;border:1px solid #CDD3C4;border-radius:14px;padding:3px 9px;white-space:nowrap;color:#221C16">Quazian ✓</span>
+          <span style="font-family:'Alegreya Sans',sans-serif;font-size:10.5px;background:#EEF1EA;border:1px solid #CDD3C4;border-radius:14px;padding:3px 9px;white-space:nowrap;color:#221C16">Aletheia ✓</span>
+          <span style="font-family:'Alegreya Sans',sans-serif;font-size:10.5px;background:#EEF1EA;border:1px solid #CDD3C4;border-radius:14px;padding:3px 9px;white-space:nowrap;color:#221C16">Frag… ✓</span>
+          <span style="font-family:'Alegreya Sans',sans-serif;font-size:10.5px;background:#FBF8F1;border:1px solid #D8CFBC;border-radius:14px;padding:3px 9px;white-space:nowrap;color:#221C16">⚙</span>
+        </div>
+      </div>
+      <div style="flex:1;display:flex;position:relative;overflow:hidden;background:#FBF8F1">
+        <!-- frozen col -->
+        <div style="width:104px;flex-shrink:0;background:#F4EFE6;border-right:1.5px solid #E0D6C2;box-shadow:3px 0 8px rgba(34,28,22,.05);z-index:2">
+          <div style="padding:8px 10px;font-family:'Alegreya Sans',sans-serif;font-size:9px;color:#A89878;letter-spacing:.05em;border-bottom:1px solid #E4DBC9;height:30px;box-sizing:border-box">ÉLÈVE</div>
+          <div style="padding:9px 10px;font-family:'EB Garamond',serif;font-size:13px;color:#221C16;border-bottom:1px solid #F0ECE2;display:flex;align-items:center;gap:5px;height:46px;box-sizing:border-box"><span style="width:15px;height:15px;border-radius:50%;background:#A23E2E;color:#fff;font-family:'Alegreya Sans',sans-serif;font-size:9px;font-weight:700;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0">!</span>Léa F.</div>
+          <div style="padding:9px 10px;font-family:'EB Garamond',serif;font-size:13px;color:#221C16;border-bottom:1px solid #F0ECE2;display:flex;align-items:center;gap:5px;height:46px;box-sizing:border-box"><span style="width:15px;height:15px;border-radius:50%;background:#A23E2E;color:#fff;font-family:'Alegreya Sans',sans-serif;font-size:9px;font-weight:700;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0">!</span>Karim B.</div>
+          <div style="padding:9px 10px;font-family:'EB Garamond',serif;font-size:13px;color:#221C16;border-bottom:1px solid #F0ECE2;display:flex;align-items:center;gap:5px;height:46px;box-sizing:border-box"><span style="width:15px;height:15px;border-radius:50%;background:#A23E2E;color:#fff;font-family:'Alegreya Sans',sans-serif;font-size:9px;font-weight:700;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0">!</span>Nina L.</div>
+          <div style="padding:9px 10px;font-family:'EB Garamond',serif;font-size:13px;color:#221C16;border-bottom:1px solid #F0ECE2;display:flex;align-items:center;height:46px;box-sizing:border-box">Hugo M.</div>
+          <div style="padding:9px 10px;font-family:'EB Garamond',serif;font-size:13px;color:#221C16;border-bottom:1px solid #F0ECE2;display:flex;align-items:center;gap:5px;height:46px;box-sizing:border-box"><span style="width:15px;height:15px;border-radius:50%;background:#A23E2E;color:#fff;font-family:'Alegreya Sans',sans-serif;font-size:9px;font-weight:700;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0">!</span>Tom G.</div>
+          <div style="padding:9px 10px;font-family:'EB Garamond',serif;font-size:13px;color:#221C16;border-bottom:1px solid #F0ECE2;display:flex;align-items:center;height:46px;box-sizing:border-box">Camille R.</div>
+        </div>
+        <div style="flex:1;display:flex;position:relative">
+          <!-- Quazian -->
+          <div style="width:96px;flex-shrink:0;text-align:center">
+            <div style="padding:8px 4px;font-family:'Cinzel',serif;font-weight:600;font-size:8.5px;letter-spacing:.05em;color:#3E6B8E;border-bottom:1px solid #E4DBC9;height:30px;box-sizing:border-box;display:flex;align-items:center;justify-content:center;gap:4px"><span style="width:7px;height:7px;border-radius:50%;background:#3E6B8E"></span>QUAZIAN</div>
+            <div style="height:46px;box-sizing:border-box;border-bottom:1px solid #F0ECE2;display:flex;align-items:center;justify-content:center;font-family:'Alegreya Sans',sans-serif;font-size:10px"><span style="background:#EFD9D2;color:#A23E2E;padding:2px 6px;border-radius:8px">12 à rév.</span></div>
+            <div style="height:46px;box-sizing:border-box;border-bottom:1px solid #F0ECE2;display:flex;align-items:center;justify-content:center;font-family:'Alegreya Sans',sans-serif;font-size:11px;color:#5B6E4A">à jour</div>
+            <div style="height:46px;box-sizing:border-box;border-bottom:1px solid #F0ECE2;display:flex;align-items:center;justify-content:center;font-family:'Alegreya Sans',sans-serif;font-size:10px"><span style="background:#EFD9D2;color:#A23E2E;padding:2px 6px;border-radius:8px">14 à rév.</span></div>
+            <div style="height:46px;box-sizing:border-box;border-bottom:1px solid #F0ECE2;display:flex;align-items:center;justify-content:center;font-family:'Alegreya Sans',sans-serif;font-size:11px;color:#5B6E4A">à jour</div>
+            <div style="height:46px;box-sizing:border-box;border-bottom:1px solid #F0ECE2;display:flex;align-items:center;justify-content:center;font-family:'Alegreya Sans',sans-serif;font-size:11px;color:#5B6E4A">à jour</div>
+            <div style="height:46px;box-sizing:border-box;border-bottom:1px solid #F0ECE2;display:flex;align-items:center;justify-content:center;font-family:'Alegreya Sans',sans-serif;font-size:11px;color:#5A4632">3 à rév.</div>
+          </div>
+          <!-- Aletheia -->
+          <div style="width:96px;flex-shrink:0;text-align:center;border-left:1px solid #F0ECE2">
+            <div style="padding:8px 4px;font-family:'Cinzel',serif;font-weight:600;font-size:8.5px;letter-spacing:.05em;color:#2C4A7C;border-bottom:1px solid #E4DBC9;height:30px;box-sizing:border-box;display:flex;align-items:center;justify-content:center;gap:4px"><span style="width:7px;height:7px;border-radius:50%;background:#2C4A7C"></span>ALETHEIA</div>
+            <div style="height:46px;box-sizing:border-box;border-bottom:1px solid #F0ECE2;display:flex;align-items:center;justify-content:center;font-family:'Alegreya Sans',sans-serif;font-size:11px;color:#5A4632">lect. 3/5</div>
+            <div style="height:46px;box-sizing:border-box;border-bottom:1px solid #F0ECE2;display:flex;align-items:center;justify-content:center;font-family:'Alegreya Sans',sans-serif;font-size:10px"><span style="background:#EFD9D2;color:#A23E2E;padding:2px 6px;border-radius:8px">diag.</span></div>
+            <div style="height:46px;box-sizing:border-box;border-bottom:1px solid #F0ECE2;display:flex;align-items:center;justify-content:center;font-family:'Alegreya Sans',sans-serif;font-size:11px;color:#5A4632">lect. 5/5</div>
+            <div style="height:46px;box-sizing:border-box;border-bottom:1px solid #F0ECE2;display:flex;align-items:center;justify-content:center;font-family:'Alegreya Sans',sans-serif;font-size:11px;color:#5A4632">lect. 4/5</div>
+            <div style="height:46px;box-sizing:border-box;border-bottom:1px solid #F0ECE2;display:flex;align-items:center;justify-content:center;font-family:'Alegreya Sans',sans-serif;font-size:11px;color:#5A4632">lect. 2/5</div>
+            <div style="height:46px;box-sizing:border-box;border-bottom:1px solid #F0ECE2;display:flex;align-items:center;justify-content:center;font-family:'Alegreya Sans',sans-serif;font-size:11px;color:#5B6E4A">à jour</div>
+          </div>
+          <div style="position:absolute;top:0;right:0;bottom:0;width:46px;background:linear-gradient(to right,rgba(251,248,241,0),#FBF8F1);pointer-events:none"></div>
+        </div>
+      </div>
+      <div style="border-top:1px solid #E4DBC9;text-align:center;padding:7px;font-family:'Alegreya Sans',sans-serif;font-size:11px;color:#A89878;background:#F4EFE6">glisser pour les autres modules →</div>
+    </div>
+  </div>
+</div>
+
+<!-- mobile Compétences -->
+<div data-screen-label="Pilotage Classe — Compétences (mobile)" style="position:absolute;left:470px;top:2880px;width:300px">
+  <div data-drags-parent="1" style="position:absolute;top:-26px;left:2px;font-family:'Alegreya Sans',sans-serif;font-size:13px;color:#8A6F4E">Mobile — vue Compétences (en construction)</div>
+  <div style="border:11px solid #221C16;border-radius:38px;background:#221C16;box-shadow:0 6px 22px rgba(34,28,22,.22)">
+    <div style="background:#F4EFE6;border-radius:27px;height:600px;overflow:hidden;display:flex;flex-direction:column;position:relative">
+      <div style="position:absolute;top:20px;right:-40px;transform:rotate(34deg);background:#C9A227;color:#3A2E0C;font-family:'Alegreya Sans',sans-serif;font-weight:700;font-size:10px;letter-spacing:.05em;padding:3px 44px;z-index:6">EN CONSTRUCTION</div>
+      <div style="background:#ECE4D6;padding:11px 15px 12px">
+        <div style="display:flex;justify-content:space-between;align-items:center"><div style="font-family:'Alegreya Sans',sans-serif;font-size:12px;color:#5A4632">← Classes</div><span style="width:28px;height:28px;border-radius:50%;background:#F4EFE6;border:1px solid #D8CFBC;display:inline-flex;align-items:center;justify-content:center;overflow:hidden;flex-shrink:0"><img src="sceaux/palimpseste_medaillon.png" style="width:26px;height:26px;object-fit:cover;filter:brightness(1.05) contrast(1.05);mix-blend-mode:multiply" alt="Palimpseste"></span></div>
+        <div style="font-family:'Cormorant Garamond',serif;font-weight:600;font-size:21px;color:#221C16;margin-top:3px;line-height:1.05">Terminale HLP</div>
+        <div style="font-family:'Alegreya Sans',sans-serif;font-size:11px;color:#8A6F4E">24 élèves · niveau par compétence</div>
+        <div style="display:flex;background:#F4EFE6;border:1px solid #D8CFBC;border-radius:8px;padding:3px;margin-top:9px">
+          <span style="flex:1;text-align:center;color:#5A4632;font-family:'Alegreya Sans',sans-serif;font-size:12px;padding:6px;border-radius:5px">Activité</span>
+          <span style="flex:1;text-align:center;background:#221C16;color:#F4EFE6;font-family:'Alegreya Sans',sans-serif;font-size:12px;font-weight:700;padding:6px;border-radius:5px">Compétences</span>
+        </div>
+        <div style="margin-top:8px;background:#FBF3DC;border:1px dashed #C9A227;border-radius:7px;padding:6px 9px;font-family:'EB Garamond',serif;font-size:12px;color:#7A5E1E">Architecture seulement — données fictives.</div>
+      </div>
+      <div style="flex:1;display:flex;position:relative;overflow:hidden;background:#FBF8F1">
+        <div style="width:104px;flex-shrink:0;background:#F4EFE6;border-right:1.5px solid #E0D6C2;box-shadow:3px 0 8px rgba(34,28,22,.05);z-index:2">
+          <div style="padding:8px 10px;font-family:'Alegreya Sans',sans-serif;font-size:9px;color:#A89878;letter-spacing:.05em;border-bottom:1px solid #E4DBC9;height:30px;box-sizing:border-box">ÉLÈVE</div>
+          <div style="padding:9px 10px;font-family:'EB Garamond',serif;font-size:13px;color:#221C16;border-bottom:1px solid #F0ECE2;display:flex;align-items:center;gap:5px;height:44px;box-sizing:border-box"><span style="width:15px;height:15px;border-radius:50%;background:#A23E2E;color:#fff;font-family:'Alegreya Sans',sans-serif;font-size:9px;font-weight:700;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0">!</span>Léa F.</div>
+          <div style="padding:9px 10px;font-family:'EB Garamond',serif;font-size:13px;color:#221C16;border-bottom:1px solid #F0ECE2;display:flex;align-items:center;gap:5px;height:44px;box-sizing:border-box"><span style="width:15px;height:15px;border-radius:50%;background:#A23E2E;color:#fff;font-family:'Alegreya Sans',sans-serif;font-size:9px;font-weight:700;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0">!</span>Karim B.</div>
+          <div style="padding:9px 10px;font-family:'EB Garamond',serif;font-size:13px;color:#221C16;border-bottom:1px solid #F0ECE2;display:flex;align-items:center;gap:5px;height:44px;box-sizing:border-box"><span style="width:15px;height:15px;border-radius:50%;background:#A23E2E;color:#fff;font-family:'Alegreya Sans',sans-serif;font-size:9px;font-weight:700;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0">!</span>Nina L.</div>
+          <div style="padding:9px 10px;font-family:'EB Garamond',serif;font-size:13px;color:#221C16;border-bottom:1px solid #F0ECE2;display:flex;align-items:center;height:44px;box-sizing:border-box">Hugo M.</div>
+          <div style="padding:9px 10px;font-family:'EB Garamond',serif;font-size:13px;color:#221C16;border-bottom:1px solid #F0ECE2;display:flex;align-items:center;gap:5px;height:44px;box-sizing:border-box"><span style="width:15px;height:15px;border-radius:50%;background:#A23E2E;color:#fff;font-family:'Alegreya Sans',sans-serif;font-size:9px;font-weight:700;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0">!</span>Tom G.</div>
+          <div style="padding:9px 10px;font-family:'EB Garamond',serif;font-size:13px;color:#221C16;border-bottom:1px solid #F0ECE2;display:flex;align-items:center;height:44px;box-sizing:border-box">Camille R.</div>
+        </div>
+        <div style="flex:1;display:flex;position:relative">
+          <div style="width:90px;flex-shrink:0;text-align:center">
+            <div style="padding:8px 4px;font-family:'Alegreya Sans',sans-serif;font-size:9.5px;color:#5A4632;border-bottom:1px solid #E4DBC9;height:30px;box-sizing:border-box;display:flex;align-items:center;justify-content:center">Analyser</div>
+            <div style="height:44px;box-sizing:border-box;border-bottom:1px solid #F0ECE2;display:flex;align-items:center;justify-content:center"><span style="width:25px;height:25px;border-radius:6px;background:#EFE4CF;color:#9A6A2E;display:inline-flex;align-items:center;justify-content:center;font-family:'Cormorant Garamond',serif;font-weight:600;font-size:15px">C</span></div>
+            <div style="height:44px;box-sizing:border-box;border-bottom:1px solid #F0ECE2;display:flex;align-items:center;justify-content:center"><span style="width:25px;height:25px;border-radius:6px;background:#EFE9DC;color:#8A6F4E;display:inline-flex;align-items:center;justify-content:center;font-family:'Cormorant Garamond',serif;font-weight:600;font-size:15px">B</span></div>
+            <div style="height:44px;box-sizing:border-box;border-bottom:1px solid #F0ECE2;display:flex;align-items:center;justify-content:center"><span style="width:25px;height:25px;border-radius:6px;background:#E6ECDD;color:#5B6E4A;display:inline-flex;align-items:center;justify-content:center;font-family:'Cormorant Garamond',serif;font-weight:600;font-size:15px">A</span></div>
+            <div style="height:44px;box-sizing:border-box;border-bottom:1px solid #F0ECE2;display:flex;align-items:center;justify-content:center"><span style="width:25px;height:25px;border-radius:6px;background:#EFE9DC;color:#8A6F4E;display:inline-flex;align-items:center;justify-content:center;font-family:'Cormorant Garamond',serif;font-weight:600;font-size:15px">B</span></div>
+            <div style="height:44px;box-sizing:border-box;border-bottom:1px solid #F0ECE2;display:flex;align-items:center;justify-content:center"><span style="width:25px;height:25px;border-radius:6px;background:#EFE4CF;color:#9A6A2E;display:inline-flex;align-items:center;justify-content:center;font-family:'Cormorant Garamond',serif;font-weight:600;font-size:15px">C</span></div>
+            <div style="height:44px;box-sizing:border-box;border-bottom:1px solid #F0ECE2;display:flex;align-items:center;justify-content:center"><span style="width:25px;height:25px;border-radius:6px;background:#EFE9DC;color:#8A6F4E;display:inline-flex;align-items:center;justify-content:center;font-family:'Cormorant Garamond',serif;font-weight:600;font-size:15px">B</span></div>
+          </div>
+          <div style="width:90px;flex-shrink:0;text-align:center;border-left:1px solid #F0ECE2">
+            <div style="padding:8px 4px;font-family:'Alegreya Sans',sans-serif;font-size:9.5px;color:#5A4632;border-bottom:1px solid #E4DBC9;height:30px;box-sizing:border-box;display:flex;align-items:center;justify-content:center">Interpréter</div>
+            <div style="height:44px;box-sizing:border-box;border-bottom:1px solid #F0ECE2;display:flex;align-items:center;justify-content:center"><span style="width:25px;height:25px;border-radius:6px;background:#EFE9DC;color:#8A6F4E;display:inline-flex;align-items:center;justify-content:center;font-family:'Cormorant Garamond',serif;font-weight:600;font-size:15px">B</span></div>
+            <div style="height:44px;box-sizing:border-box;border-bottom:1px solid #F0ECE2;display:flex;align-items:center;justify-content:center"><span style="width:25px;height:25px;border-radius:6px;background:#EFE4CF;color:#9A6A2E;display:inline-flex;align-items:center;justify-content:center;font-family:'Cormorant Garamond',serif;font-weight:600;font-size:15px">C</span></div>
+            <div style="height:44px;box-sizing:border-box;border-bottom:1px solid #F0ECE2;display:flex;align-items:center;justify-content:center"><span style="width:25px;height:25px;border-radius:6px;background:#E6ECDD;color:#5B6E4A;display:inline-flex;align-items:center;justify-content:center;font-family:'Cormorant Garamond',serif;font-weight:600;font-size:15px">A</span></div>
+            <div style="height:44px;box-sizing:border-box;border-bottom:1px solid #F0ECE2;display:flex;align-items:center;justify-content:center"><span style="width:25px;height:25px;border-radius:6px;background:#E6ECDD;color:#5B6E4A;display:inline-flex;align-items:center;justify-content:center;font-family:'Cormorant Garamond',serif;font-weight:600;font-size:15px">A</span></div>
+            <div style="height:44px;box-sizing:border-box;border-bottom:1px solid #F0ECE2;display:flex;align-items:center;justify-content:center"><span style="width:25px;height:25px;border-radius:6px;background:#EFD9D2;color:#A23E2E;display:inline-flex;align-items:center;justify-content:center;font-family:'Cormorant Garamond',serif;font-weight:600;font-size:15px">D</span></div>
+            <div style="height:44px;box-sizing:border-box;border-bottom:1px solid #F0ECE2;display:flex;align-items:center;justify-content:center"><span style="width:25px;height:25px;border-radius:6px;background:#E6ECDD;color:#5B6E4A;display:inline-flex;align-items:center;justify-content:center;font-family:'Cormorant Garamond',serif;font-weight:600;font-size:15px">A</span></div>
+          </div>
+          <div style="position:absolute;top:0;right:0;bottom:0;width:46px;background:linear-gradient(to right,rgba(251,248,241,0),#FBF8F1);pointer-events:none"></div>
+        </div>
+      </div>
+      <div style="border-top:1px solid #E4DBC9;text-align:center;padding:7px;font-family:'Alegreya Sans',sans-serif;font-size:11px;color:#A89878;background:#F4EFE6">glisser pour les autres compétences →</div>
+    </div>
+  </div>
+</div>
+
+<!-- mobile access sheet -->
+<div data-screen-label="Accès modules — feuille (mobile)" style="position:absolute;left:860px;top:2880px;width:300px">
+  <div data-drags-parent="1" style="position:absolute;top:-26px;left:2px;font-family:'Alegreya Sans',sans-serif;font-size:13px;color:#8A6F4E">Mobile — feuille « accès »</div>
+  <div style="border:11px solid #221C16;border-radius:38px;background:#221C16;box-shadow:0 6px 22px rgba(34,28,22,.22)">
+    <div style="background:#F4EFE6;border-radius:27px;height:600px;overflow:hidden;display:flex;flex-direction:column;position:relative">
+      <div style="flex:1;opacity:.4;padding:12px 14px">
+        <div style="font-family:'Cormorant Garamond',serif;font-weight:600;font-size:21px;color:#221C16">Terminale HLP</div>
+        <div style="background:#FBF8F1;border:1px solid #E4DBC9;border-radius:9px;height:42px;margin-top:11px"></div>
+        <div style="background:#FBF8F1;border:1px solid #E4DBC9;border-radius:9px;height:42px;margin-top:7px"></div>
+        <div style="background:#FBF8F1;border:1px solid #E4DBC9;border-radius:9px;height:42px;margin-top:7px"></div>
+      </div>
+      <div style="background:#FBF8F1;border-top:1px solid #E4DBC9;border-radius:20px 20px 27px 27px;box-shadow:0 -8px 22px rgba(34,28,22,.13);padding:13px 16px 18px">
+        <div style="width:38px;height:4px;background:#D8CFBC;border-radius:3px;margin:0 auto 12px"></div>
+        <div style="font-family:'Cormorant Garamond',serif;font-weight:600;font-size:19px;color:#221C16">Modules accessibles</div>
+        <div style="font-family:'Alegreya Sans',sans-serif;font-size:11px;color:#8A6F4E;margin-bottom:9px">Terminale HLP</div>
+        <div style="display:flex;flex-direction:column">
+          <div style="display:flex;align-items:center;gap:11px;padding:9px 2px"><span style="width:11px;height:11px;border-radius:50%;background:#3E6B8E"></span><span style="flex:1;font-family:'Cinzel',serif;font-weight:600;font-size:12px;letter-spacing:.06em;color:#3E6B8E">QUAZIAN</span><div style="width:40px;height:23px;border-radius:12px;background:#5B6E4A;position:relative"><span style="position:absolute;top:2.5px;right:2.5px;width:18px;height:18px;border-radius:50%;background:#fff"></span></div></div>
+          <div style="border-top:1px solid #F0ECE2"></div>
+          <div style="display:flex;align-items:center;gap:11px;padding:9px 2px"><span style="width:11px;height:11px;border-radius:50%;background:#2C4A7C"></span><span style="flex:1;font-family:'Cinzel',serif;font-weight:600;font-size:12px;letter-spacing:.06em;color:#2C4A7C">ALETHEIA</span><div style="width:40px;height:23px;border-radius:12px;background:#5B6E4A;position:relative"><span style="position:absolute;top:2.5px;right:2.5px;width:18px;height:18px;border-radius:50%;background:#fff"></span></div></div>
+          <div style="border-top:1px solid #F0ECE2"></div>
+          <div style="display:flex;align-items:center;gap:11px;padding:9px 2px"><span style="width:11px;height:11px;border-radius:50%;background:#5A6043"></span><span style="flex:1;font-family:'Cinzel',serif;font-weight:600;font-size:12px;letter-spacing:.06em;color:#5A6043">FRAGMENTS</span><div style="width:40px;height:23px;border-radius:12px;background:#5B6E4A;position:relative"><span style="position:absolute;top:2.5px;right:2.5px;width:18px;height:18px;border-radius:50%;background:#fff"></span></div></div>
+          <div style="border-top:1px solid #F0ECE2"></div>
+          <div style="display:flex;align-items:center;gap:11px;padding:9px 2px"><span style="width:11px;height:11px;border-radius:50%;background:#2E4A3C"></span><span style="flex:1;font-family:'Cinzel',serif;font-weight:600;font-size:12px;letter-spacing:.06em;color:#2E4A3C">CODEX</span><div style="width:40px;height:23px;border-radius:12px;background:#5B6E4A;position:relative"><span style="position:absolute;top:2.5px;right:2.5px;width:18px;height:18px;border-radius:50%;background:#fff"></span></div></div>
+          <div style="border-top:1px solid #F0ECE2"></div>
+          <div style="display:flex;align-items:center;gap:11px;padding:9px 2px;opacity:.7"><span style="width:11px;height:11px;border-radius:50%;background:#6B4E6E"></span><span style="flex:1;font-family:'Cinzel',serif;font-weight:600;font-size:12px;letter-spacing:.06em;color:#6B4E6E">SCRIPTORIUM</span><div style="width:40px;height:23px;border-radius:12px;background:#D8CFBC;position:relative"><span style="position:absolute;top:2.5px;left:2.5px;width:18px;height:18px;border-radius:50%;background:#fff"></span></div></div>
+        </div>
+        <div style="background:#221C16;color:#F4EFE6;text-align:center;border-radius:8px;padding:10px;font-family:'Alegreya Sans',sans-serif;font-size:13px;margin-top:13px">Enregistrer</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- closing notes -->
+<div style="position:absolute;left:1240px;top:2900px;width:270px">
+  <div style="background:#F3ECDD;border:1px solid #E4DBC9;border-left:3px solid #221C16;border-radius:8px;padding:14px 16px;font-family:'EB Garamond',serif;font-size:15px;line-height:1.5;color:#5A4632">
+    <span style="font-family:'Alegreya Sans',sans-serif;font-size:11px;letter-spacing:.1em;color:#221C16">COLONNE FIGÉE</span><br>
+    Le nom + la bulle restent visibles pendant qu'on fait glisser les modules. Même geste pour Activité et Compétences ; logo en pastille sur chaque en-tête.
+  </div>
+</div>
+<div style="position:absolute;left:1240px;top:3080px;width:270px">
+  <div style="background:#FEF4A8;padding:15px;box-shadow:0 1px 4px rgba(0,0,0,.12);transform:rotate(-1.2deg);font-family:'EB Garamond',serif;font-size:14.5px;line-height:1.55;color:#5A4A14">
+    <div style="font-family:'Cormorant Garamond',serif;font-weight:600;font-size:19px;color:#4A3C0C;margin-bottom:4px">Prêt à coder</div>
+    Activité, accès modules et nav/charte sont fermes. Compétences reste sous ruban tant que tu n'as pas tranché compétences + échelle. Je peux assembler le <b>dossier de handoff</b> dès validation.
+  </div>
+</div>
+
+</x-dc>
+</body>
+</html>

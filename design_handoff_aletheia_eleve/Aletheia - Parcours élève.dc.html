@@ -1,0 +1,878 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<meta name="design_doc_mode" content="canvas">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600;700&family=Cormorant+Garamond:wght@500;600;700&family=EB+Garamond:wght@400;500;600&family=Alegreya+Sans:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  body { margin:0; font-family:'EB Garamond', Georgia, serif; color:#221C16; -webkit-font-smoothing:antialiased; }
+</style>
+</helmet>
+
+<!-- ======================= INTRO ======================= -->
+<div style="position:absolute;left:80px;top:40px;width:760px">
+  <div style="font-family:'Cinzel',serif;font-weight:600;font-size:13px;letter-spacing:.34em;color:#8A6F4E">PALIMPSESTE · ESPACE ÉLÈVE</div>
+  <div style="font-family:'Cormorant Garamond',serif;font-weight:600;font-size:50px;line-height:1.04;color:#221C16;margin-top:6px">Aletheia — le parcours élève au complet</div>
+  <div style="font-family:'EB Garamond',serif;font-size:18px;color:#5A4632;margin-top:8px;max-width:720px">Tous les écrans possibles d'un élève dans Aletheia, du seuil du livre à la carte finale, dans chacun des six états de la semaine. Rendu fidèle à la charte. Trois points retravaillés : la <b>revue des semaines passées</b>, le <b>sceau remis en valeur</b> (et ajouté là où il manquait), et la lecture d'ensemble du parcours.</div>
+</div>
+
+<!-- seal showcase -->
+<div style="position:absolute;left:880px;top:36px;width:360px">
+  <div data-drags-parent="1" style="position:absolute;top:-26px;left:2px;font-family:'Alegreya Sans',sans-serif;font-size:13px;letter-spacing:.04em;color:#8A6F4E">LE SCEAU, MIS EN VALEUR</div>
+  <div style="background:#FBF8F1;border:1px solid #E4DBC9;border-radius:12px;box-shadow:0 4px 16px rgba(34,28,22,.1);padding:18px;display:flex;gap:16px;align-items:center">
+    <span style="width:132px;height:132px;border-radius:50%;background:#DDE3EC;display:inline-flex;align-items:center;justify-content:center;overflow:hidden;flex-shrink:0;box-shadow:inset 0 0 0 1px rgba(44,74,124,.12)"><img src="sceaux/aletheia.png" style="width:116px;height:116px;object-fit:cover;object-position:50% 40%;filter:brightness(1.09) contrast(1.04);mix-blend-mode:multiply" alt="Sceau Aletheia"></span>
+    <div>
+      <div style="font-family:'Cinzel',serif;font-weight:600;font-size:16px;letter-spacing:.18em;color:#2C4A7C">ALETHEIA</div>
+      <div style="font-family:'EB Garamond',serif;font-size:14.5px;color:#5A4632;line-height:1.5;margin-top:6px">La gravure du dévoilement — le voile soulevé sur le livre. On l'agrandit dans chaque en-tête de monde et on en fait un héros sur le planning. Pastille teintée, image en <i>multiply</i> sur le pigment du monde.</div>
+    </div>
+  </div>
+</div>
+
+<!-- legend -->
+<div style="position:absolute;left:80px;top:256px;width:760px">
+  <div style="background:#FBF8F1;border:1px solid #E4DBC9;border-radius:10px;box-shadow:0 1px 3px rgba(34,28,22,.06);padding:14px 18px;display:flex;flex-wrap:wrap;gap:10px 22px;align-items:center;font-family:'Alegreya Sans',sans-serif;font-size:14px;color:#5A4632">
+    <span style="font-family:'Cinzel',serif;font-size:11px;letter-spacing:.12em;color:#8A6F4E">MONDE</span>
+    <div style="display:flex;align-items:center;gap:8px"><span style="width:14px;height:14px;border-radius:50%;background:#2C4A7C"></span>Pigment outremer</div>
+    <div style="display:flex;align-items:center;gap:8px"><span style="width:14px;height:14px;border-radius:50%;background:#B4452F"></span>Bouton minium</div>
+    <div style="display:flex;align-items:center;gap:8px"><span style="width:14px;height:14px;border-radius:50%;background:#B8893B"></span>Accent or</div>
+    <span style="width:1px;height:18px;background:#E4DBC9"></span>
+    <div style="display:flex;align-items:center;gap:7px"><span style="width:12px;height:12px;border-radius:50%;background:#5B6E4A"></span>fait</div>
+    <div style="display:flex;align-items:center;gap:7px"><span style="width:12px;height:12px;border-radius:50%;background:#9A6A2E"></span>à faire</div>
+    <div style="display:flex;align-items:center;gap:7px"><span style="width:12px;height:12px;border-radius:50%;background:#A23E2E"></span>en retard</div>
+  </div>
+</div>
+
+<!-- ======================= STATE MAP ======================= -->
+<div style="position:absolute;left:80px;top:346px;font-family:'Cormorant Garamond',serif;font-weight:600;font-size:30px;color:#2C4A7C">La semaine, de bout en bout</div>
+<div style="position:absolute;left:80px;top:388px;font-family:'EB Garamond',serif;font-size:16px;color:#8A6F4E">Six états, un écran chacun. La boucle se répète chaque semaine ; à la fin du livre, la carte d'architecture.</div>
+
+<div style="position:absolute;left:80px;top:436px;width:1660px">
+  <div style="background:#FBF8F1;border:1px solid #E4DBC9;border-radius:12px;box-shadow:0 1px 3px rgba(34,28,22,.06);padding:20px 22px">
+    <div style="display:flex;align-items:stretch;gap:0">
+      <!-- node 1 -->
+      <div style="flex:1;min-width:0">
+        <div style="display:flex;align-items:center;gap:8px"><span style="width:24px;height:24px;border-radius:50%;background:#2C4A7C;color:#fff;font-family:'Alegreya Sans',sans-serif;font-size:12px;display:inline-flex;align-items:center;justify-content:center">1</span><span style="font-family:'Alegreya Sans',sans-serif;font-size:10.5px;letter-spacing:.06em;color:#8A6F4E">DRAFT</span></div>
+        <div style="font-family:'Cormorant Garamond',serif;font-weight:600;font-size:19px;color:#221C16;margin-top:7px;line-height:1.1">Lecture &amp; saisie</div>
+        <div style="font-family:'EB Garamond',serif;font-size:13.5px;color:#5A4632;margin-top:3px;line-height:1.35">Idée, arguments, accord, questions, vocabulaire.</div>
+      </div>
+      <div style="display:flex;align-items:center;padding:0 6px;color:#B8893B;font-size:18px">→</div>
+      <!-- node 2 transitoire -->
+      <div style="flex:1;min-width:0;opacity:.78">
+        <div style="display:flex;align-items:center;gap:8px"><span style="width:24px;height:24px;border-radius:50%;background:#EFE4CF;color:#9A6A2E;font-family:'Alegreya Sans',sans-serif;font-size:12px;display:inline-flex;align-items:center;justify-content:center">2</span><span style="font-family:'Alegreya Sans',sans-serif;font-size:10.5px;letter-spacing:.06em;color:#8A6F4E">V1_SUBMITTED</span></div>
+        <div style="font-family:'Cormorant Garamond',serif;font-weight:600;font-size:19px;color:#221C16;margin-top:7px;line-height:1.1">Attente du retour</div>
+        <div style="font-family:'EB Garamond',serif;font-size:13.5px;color:#5A4632;margin-top:3px;line-height:1.35">L'IA prépare le retour socratique. Transitoire.</div>
+      </div>
+      <div style="display:flex;align-items:center;padding:0 6px;color:#B8893B;font-size:18px">→</div>
+      <!-- node 3 hero -->
+      <div style="flex:1.05;min-width:0;background:#DDE3EC;border-radius:10px;padding:11px 13px;margin:-6px 0">
+        <div style="display:flex;align-items:center;gap:8px"><span style="width:24px;height:24px;border-radius:50%;background:#2C4A7C;color:#fff;font-family:'Alegreya Sans',sans-serif;font-size:12px;display:inline-flex;align-items:center;justify-content:center">3</span><span style="font-family:'Alegreya Sans',sans-serif;font-size:10.5px;letter-spacing:.06em;color:#2C4A7C">FEEDBACK1_READY</span></div>
+        <div style="font-family:'Cormorant Garamond',serif;font-weight:600;font-size:19px;color:#221C16;margin-top:7px;line-height:1.1">Atelier de réécriture ★</div>
+        <div style="font-family:'EB Garamond',serif;font-size:13.5px;color:#3A4A63;margin-top:3px;line-height:1.35">Retour épinglé à gauche, version finale à droite.</div>
+      </div>
+      <div style="display:flex;align-items:center;padding:0 6px;color:#B8893B;font-size:18px">→</div>
+      <!-- node 4 transitoire -->
+      <div style="flex:1;min-width:0;opacity:.78">
+        <div style="display:flex;align-items:center;gap:8px"><span style="width:24px;height:24px;border-radius:50%;background:#EFE4CF;color:#9A6A2E;font-family:'Alegreya Sans',sans-serif;font-size:12px;display:inline-flex;align-items:center;justify-content:center">4</span><span style="font-family:'Alegreya Sans',sans-serif;font-size:10.5px;letter-spacing:.06em;color:#8A6F4E">VF_SUBMITTED</span></div>
+        <div style="font-family:'Cormorant Garamond',serif;font-weight:600;font-size:19px;color:#221C16;margin-top:7px;line-height:1.1">Attente du retour final</div>
+        <div style="font-family:'EB Garamond',serif;font-size:13.5px;color:#5A4632;margin-top:3px;line-height:1.35">Reconstruction + architecture en préparation.</div>
+      </div>
+      <div style="display:flex;align-items:center;padding:0 6px;color:#B8893B;font-size:18px">→</div>
+      <!-- node 5 -->
+      <div style="flex:1;min-width:0">
+        <div style="display:flex;align-items:center;gap:8px"><span style="width:24px;height:24px;border-radius:50%;background:#2C4A7C;color:#fff;font-family:'Alegreya Sans',sans-serif;font-size:12px;display:inline-flex;align-items:center;justify-content:center">5</span><span style="font-family:'Alegreya Sans',sans-serif;font-size:10.5px;letter-spacing:.06em;color:#8A6F4E">FEEDBACK2_READY</span></div>
+        <div style="font-family:'Cormorant Garamond',serif;font-weight:600;font-size:19px;color:#221C16;margin-top:7px;line-height:1.1">Retour final à valider</div>
+        <div style="font-family:'EB Garamond',serif;font-size:13.5px;color:#5A4632;margin-top:3px;line-height:1.35">Synthèse modèle ; valider la lecture clôt la semaine.</div>
+      </div>
+      <div style="display:flex;align-items:center;padding:0 6px;color:#B8893B;font-size:18px">→</div>
+      <!-- node 6 -->
+      <div style="flex:1;min-width:0">
+        <div style="display:flex;align-items:center;gap:8px"><span style="width:24px;height:24px;border-radius:50%;background:#5B6E4A;color:#fff;font-family:'Alegreya Sans',sans-serif;font-size:12px;display:inline-flex;align-items:center;justify-content:center">✓</span><span style="font-family:'Alegreya Sans',sans-serif;font-size:10.5px;letter-spacing:.06em;color:#8A6F4E">DONE</span></div>
+        <div style="font-family:'Cormorant Garamond',serif;font-weight:600;font-size:19px;color:#221C16;margin-top:7px;line-height:1.1">Semaine terminée → revue</div>
+        <div style="font-family:'EB Garamond',serif;font-size:13.5px;color:#5A4632;margin-top:3px;line-height:1.35">Relisible en récap. <span style="color:#B4452F">Écran repensé ↓</span></div>
+      </div>
+    </div>
+    <div style="border-top:1px dashed #E4DBC9;margin-top:16px;padding-top:13px;display:flex;align-items:center;gap:11px">
+      <span style="width:30px;height:30px;border-radius:50%;background:#DDE3EC;display:inline-flex;align-items:center;justify-content:center;overflow:hidden;flex-shrink:0"><img src="sceaux/aletheia.png" style="width:26px;height:26px;object-fit:cover;object-position:50% 40%;filter:brightness(1.09) contrast(1.04);mix-blend-mode:multiply" alt=""></span>
+      <span style="font-family:'EB Garamond',serif;font-size:14.5px;color:#5A4632">Quand les six semaines sont en <b style="color:#5B6E4A">DONE</b>, le livre dévoile sa <b>carte d'architecture</b> (capstone) — l'aval enfin révélé.</span>
+    </div>
+  </div>
+</div>
+
+<!-- ======================= A — PLANNING ======================= -->
+<div style="position:absolute;left:80px;top:680px;font-family:'Cormorant Garamond',serif;font-weight:600;font-size:30px;color:#2C4A7C">A · Le seuil du livre — le planning</div>
+<div style="position:absolute;left:80px;top:722px;font-family:'EB Garamond',serif;font-size:16px;color:#8A6F4E">Le sceau y devient un héros (il manquait dans l'en-tête). Chaque semaine montre où tu en es par quatre points — l'état des semaines passées se lit sans rien ouvrir.</div>
+
+<!-- A — desktop -->
+<div data-screen-label="Planning Aletheia — ordi" style="position:absolute;left:80px;top:800px;width:860px">
+  <div data-drags-parent="1" style="position:absolute;top:-26px;left:2px;font-family:'Alegreya Sans',sans-serif;font-size:13px;color:#8A6F4E">Ordinateur — déroulant Modules ▾ conservé</div>
+  <div style="border:1px solid #D8CFBC;border-radius:12px;background:#FBF8F1;box-shadow:0 4px 16px rgba(34,28,22,.1);overflow:hidden">
+    <div style="background:#ECE4D6;padding:9px 14px;display:flex;align-items:center;gap:7px"><span style="width:10px;height:10px;border-radius:50%;background:#C9B89A"></span><span style="width:10px;height:10px;border-radius:50%;background:#C9B89A"></span><span style="width:10px;height:10px;border-radius:50%;background:#C9B89A"></span></div>
+    <div style="background:#ECE4D6;padding:0 22px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid #E0D6C2;height:52px">
+      <span style="font-family:'Cinzel',serif;font-weight:600;font-size:15px;letter-spacing:.2em;color:#221C16">PALIMPSESTE</span>
+      <div style="display:flex;align-items:center;gap:4px;font-family:'Alegreya Sans',sans-serif;font-size:14px">
+        <span style="color:#5A4632;padding:6px 13px">Tableau de bord</span>
+        <span style="color:#5A4632;padding:6px 13px">Calendrier</span>
+        <span style="background:#F4EFE6;color:#221C16;padding:6px 13px;border-radius:7px;display:inline-flex;align-items:center;gap:4px">Modules <span style="font-size:10px">▾</span></span>
+      </div>
+      <span style="font-family:'Alegreya Sans',sans-serif;font-size:13px;color:#8A6F4E">2nde 4 · Déconnexion</span>
+    </div>
+    <div style="background:#F3ECDD;padding:24px 28px 26px">
+      <!-- hero with big seal -->
+      <div style="display:flex;align-items:center;gap:18px">
+        <span style="width:92px;height:92px;border-radius:50%;background:#DDE3EC;display:inline-flex;align-items:center;justify-content:center;overflow:hidden;flex-shrink:0;box-shadow:inset 0 0 0 1px rgba(44,74,124,.12)"><img src="sceaux/aletheia.png" style="width:81px;height:81px;object-fit:cover;object-position:50% 40%;filter:brightness(1.09) contrast(1.04);mix-blend-mode:multiply" alt=""></span>
+        <div style="min-width:0">
+          <div style="font-family:'Cinzel',serif;font-weight:600;font-size:14px;letter-spacing:.2em;color:#2C4A7C">ALETHEIA</div>
+          <div style="font-family:'Cormorant Garamond',serif;font-weight:600;font-size:31px;color:#221C16;line-height:1.05;margin-top:2px">La Naissance de la tragédie</div>
+          <div style="font-family:'EB Garamond',serif;font-size:15px;color:#5A4632;margin-top:3px">Friedrich Nietzsche · 6 semaines · lis-le dans ton propre exemplaire.</div>
+        </div>
+      </div>
+      <!-- progress overview -->
+      <div style="display:flex;align-items:center;gap:14px;margin-top:18px;background:#FBF8F1;border:1px solid #E4DBC9;border-radius:11px;padding:12px 16px">
+        <span style="font-family:'Cormorant Garamond',serif;font-weight:600;font-size:24px;color:#2C4A7C">2<span style="color:#8A6F4E;font-size:17px"> / 6</span></span>
+        <span style="font-family:'Alegreya Sans',sans-serif;font-size:13px;color:#5A4632;white-space:nowrap">semaines terminées</span>
+        <div style="flex:1;height:8px;background:#E4DBC9;border-radius:4px;overflow:hidden"><div style="width:33%;height:100%;background:#5B6E4A"></div></div>
+        <span style="font-family:'Alegreya Sans',sans-serif;font-size:12.5px;color:#9A6A2E;background:#EFE4CF;padding:3px 10px;border-radius:9px;white-space:nowrap">Semaine 3 t'attend</span>
+      </div>
+      <!-- week list -->
+      <div style="margin-top:16px;display:flex;flex-direction:column;gap:8px">
+        <!-- W1 DONE -->
+        <div style="background:#FBF8F1;border:1px solid #E4DBC9;border-radius:11px;padding:13px 16px;display:flex;align-items:center;gap:16px">
+          <span style="font-family:'Cormorant Garamond',serif;font-weight:600;font-size:22px;color:#B3A488;width:26px;text-align:center">1</span>
+          <div style="flex:1;min-width:0">
+            <div style="font-family:'EB Garamond',serif;font-size:16.5px;color:#221C16">L'art tragique grec</div>
+            <div style="font-family:'Alegreya Sans',sans-serif;font-size:12px;color:#8A6F4E;margin-top:1px"><span style="color:#2C4A7C">Chap. 1-3</span> · terminée le 11/05</div>
+          </div>
+          <div style="display:flex;gap:5px"><span style="width:9px;height:9px;border-radius:50%;background:#5B6E4A"></span><span style="width:9px;height:9px;border-radius:50%;background:#5B6E4A"></span><span style="width:9px;height:9px;border-radius:50%;background:#5B6E4A"></span><span style="width:9px;height:9px;border-radius:50%;background:#5B6E4A"></span></div>
+          <span style="font-family:'Alegreya Sans',sans-serif;font-size:12.5px;color:#5B6E4A;background:#E4E8D8;padding:3px 11px;border-radius:9px;width:74px;text-align:center">Terminée</span>
+          <span style="font-family:'Alegreya Sans',sans-serif;font-size:13.5px;color:#2C4A7C;width:62px;text-align:right">Revoir →</span>
+        </div>
+        <!-- W2 DONE -->
+        <div style="background:#FBF8F1;border:1px solid #E4DBC9;border-radius:11px;padding:13px 16px;display:flex;align-items:center;gap:16px">
+          <span style="font-family:'Cormorant Garamond',serif;font-weight:600;font-size:22px;color:#B3A488;width:26px;text-align:center">2</span>
+          <div style="flex:1;min-width:0">
+            <div style="font-family:'EB Garamond',serif;font-size:16.5px;color:#221C16">Apollon &amp; Dionysos</div>
+            <div style="font-family:'Alegreya Sans',sans-serif;font-size:12px;color:#8A6F4E;margin-top:1px"><span style="color:#2C4A7C">Chap. 4-6</span> · terminée le 18/05</div>
+          </div>
+          <div style="display:flex;gap:5px"><span style="width:9px;height:9px;border-radius:50%;background:#5B6E4A"></span><span style="width:9px;height:9px;border-radius:50%;background:#5B6E4A"></span><span style="width:9px;height:9px;border-radius:50%;background:#5B6E4A"></span><span style="width:9px;height:9px;border-radius:50%;background:#5B6E4A"></span></div>
+          <span style="font-family:'Alegreya Sans',sans-serif;font-size:12.5px;color:#5B6E4A;background:#E4E8D8;padding:3px 11px;border-radius:9px;width:74px;text-align:center">Terminée</span>
+          <span style="font-family:'Alegreya Sans',sans-serif;font-size:13.5px;color:#2C4A7C;width:62px;text-align:right">Revoir →</span>
+        </div>
+        <!-- W3 CURRENT -->
+        <div style="background:#DDE3EC;border:1px solid #B9C6DC;border-left:4px solid #2C4A7C;border-radius:11px;padding:13px 16px;display:flex;align-items:center;gap:16px">
+          <span style="font-family:'Cormorant Garamond',serif;font-weight:600;font-size:22px;color:#2C4A7C;width:26px;text-align:center">3</span>
+          <div style="flex:1;min-width:0">
+            <div style="font-family:'EB Garamond',serif;font-size:16.5px;color:#221C16;font-weight:500">Le chœur et la naissance du drame</div>
+            <div style="font-family:'Alegreya Sans',sans-serif;font-size:12px;color:#5A6E8E;margin-top:1px"><span style="color:#2C4A7C;font-weight:500">Chap. 7-9</span> · à partir du 19/05</div>
+          </div>
+          <div style="display:flex;gap:5px"><span style="width:9px;height:9px;border-radius:50%;background:#5B6E4A"></span><span style="width:9px;height:9px;border-radius:50%;background:#5B6E4A"></span><span style="width:9px;height:9px;border-radius:50%;background:#2C4A7C"></span><span style="width:9px;height:9px;border-radius:50%;border:1.5px solid #9FB0CC"></span></div>
+          <span style="font-family:'Alegreya Sans',sans-serif;font-size:12.5px;color:#9A6A2E;background:#EFE4CF;padding:3px 11px;border-radius:9px;width:74px;text-align:center">Retour à lire</span>
+          <span style="font-family:'Alegreya Sans',sans-serif;font-size:13.5px;font-weight:600;color:#B4452F;width:62px;text-align:right">Continuer →</span>
+        </div>
+        <!-- W4 DRAFT -->
+        <div style="background:#FBF8F1;border:1px solid #E4DBC9;border-radius:11px;padding:13px 16px;display:flex;align-items:center;gap:16px">
+          <span style="font-family:'Cormorant Garamond',serif;font-weight:600;font-size:22px;color:#B3A488;width:26px;text-align:center">4</span>
+          <div style="flex:1;min-width:0">
+            <div style="font-family:'EB Garamond',serif;font-size:16.5px;color:#221C16">Socrate &amp; la mort de la tragédie</div>
+            <div style="font-family:'Alegreya Sans',sans-serif;font-size:12px;color:#8A6F4E;margin-top:1px"><span style="color:#2C4A7C">Chap. 10-12</span> · à partir du 26/05</div>
+          </div>
+          <div style="display:flex;gap:5px"><span style="width:9px;height:9px;border-radius:50%;border:1.5px solid #CDBFA6"></span><span style="width:9px;height:9px;border-radius:50%;border:1.5px solid #CDBFA6"></span><span style="width:9px;height:9px;border-radius:50%;border:1.5px solid #CDBFA6"></span><span style="width:9px;height:9px;border-radius:50%;border:1.5px solid #CDBFA6"></span></div>
+          <span style="font-family:'Alegreya Sans',sans-serif;font-size:12.5px;color:#8A6F4E;background:#ECE4D6;padding:3px 11px;border-radius:9px;width:74px;text-align:center">À commencer</span>
+          <span style="font-family:'Alegreya Sans',sans-serif;font-size:13.5px;color:#2C4A7C;width:62px;text-align:right">Ouvrir →</span>
+        </div>
+        <!-- W5 LOCKED -->
+        <div style="background:#F4EFE6;border:1px solid #E4DBC9;border-radius:11px;padding:13px 16px;display:flex;align-items:center;gap:16px;opacity:.58">
+          <span style="font-family:'Cormorant Garamond',serif;font-weight:600;font-size:22px;color:#B3A488;width:26px;text-align:center">5</span>
+          <div style="flex:1;min-width:0">
+            <div style="font-family:'EB Garamond',serif;font-size:16.5px;color:#5A4632">L'optimisme théorique</div>
+            <div style="font-family:'Alegreya Sans',sans-serif;font-size:12px;color:#8A6F4E;margin-top:1px">Chap. 13-15 · à partir du 02/06</div>
+          </div>
+          <span style="font-family:'Alegreya Sans',sans-serif;font-size:12.5px;color:#8A6F4E">🔒 Verrouillée</span>
+        </div>
+        <!-- W6 LOCKED -->
+        <div style="background:#F4EFE6;border:1px solid #E4DBC9;border-radius:11px;padding:13px 16px;display:flex;align-items:center;gap:16px;opacity:.58">
+          <span style="font-family:'Cormorant Garamond',serif;font-weight:600;font-size:22px;color:#B3A488;width:26px;text-align:center">6</span>
+          <div style="flex:1;min-width:0">
+            <div style="font-family:'EB Garamond',serif;font-size:16.5px;color:#5A4632">La renaissance du mythe</div>
+            <div style="font-family:'Alegreya Sans',sans-serif;font-size:12px;color:#8A6F4E;margin-top:1px">Chap. 16-18 · à partir du 09/06</div>
+          </div>
+          <span style="font-family:'Alegreya Sans',sans-serif;font-size:12.5px;color:#8A6F4E">🔒 Verrouillée</span>
+        </div>
+      </div>
+      <!-- capstone locked -->
+      <div style="margin-top:14px;border:1px dashed #CDBFA6;border-radius:11px;padding:13px 16px;display:flex;align-items:center;gap:11px;background:#F4EFE6">
+        <span style="font-size:17px;color:#B8893B">✦</span>
+        <span style="font-family:'EB Garamond',serif;font-size:14.5px;color:#8A6F4E;flex:1">La carte d'architecture du livre se révèle quand les 6 semaines sont terminées.</span>
+        <span style="font-family:'Alegreya Sans',sans-serif;font-size:12px;color:#8A6F4E">🔒 2/6</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- A — mobile -->
+<div data-screen-label="Planning Aletheia — mobile" style="position:absolute;left:984px;top:800px;width:300px">
+  <div data-drags-parent="1" style="position:absolute;top:-26px;left:2px;font-family:'Alegreya Sans',sans-serif;font-size:13px;color:#8A6F4E">Mobile</div>
+  <div style="border:11px solid #221C16;border-radius:38px;background:#221C16;box-shadow:0 6px 22px rgba(34,28,22,.22)">
+    <div style="background:#F3ECDD;border-radius:27px;height:600px;overflow:hidden;display:flex;flex-direction:column">
+      <div style="background:#ECE4D6;padding:11px 15px;display:flex;align-items:center;gap:9px">
+        <span style="color:#5A4632;font-size:15px">←</span>
+        <span style="font-family:'Cinzel',serif;font-weight:600;font-size:12px;letter-spacing:.14em;color:#2C4A7C">ALETHEIA</span>
+      </div>
+      <div style="padding:14px 15px;flex:1;overflow:hidden">
+        <!-- hero -->
+        <div style="display:flex;align-items:center;gap:12px">
+          <span style="width:60px;height:60px;border-radius:50%;background:#DDE3EC;display:inline-flex;align-items:center;justify-content:center;overflow:hidden;flex-shrink:0"><img src="sceaux/aletheia.png" style="width:53px;height:53px;object-fit:cover;object-position:50% 40%;filter:brightness(1.09) contrast(1.04);mix-blend-mode:multiply" alt=""></span>
+          <div style="min-width:0">
+            <div style="font-family:'Cormorant Garamond',serif;font-weight:600;font-size:19px;color:#221C16;line-height:1.05">La Naissance de la tragédie</div>
+            <div style="font-family:'Alegreya Sans',sans-serif;font-size:11px;color:#8A6F4E;margin-top:2px">Nietzsche · 6 semaines</div>
+          </div>
+        </div>
+        <!-- progress -->
+        <div style="display:flex;align-items:center;gap:9px;margin-top:13px;background:#FBF8F1;border:1px solid #E4DBC9;border-radius:10px;padding:9px 12px">
+          <span style="font-family:'Cormorant Garamond',serif;font-weight:600;font-size:18px;color:#2C4A7C">2<span style="color:#8A6F4E;font-size:13px"> / 6</span></span>
+          <div style="flex:1;height:7px;background:#E4DBC9;border-radius:4px;overflow:hidden"><div style="width:33%;height:100%;background:#5B6E4A"></div></div>
+        </div>
+        <!-- weeks condensed -->
+        <div style="display:flex;flex-direction:column;gap:7px;margin-top:12px">
+          <div style="background:#FBF8F1;border:1px solid #E4DBC9;border-radius:9px;padding:9px 11px;display:flex;align-items:center;gap:9px">
+            <span style="font-family:'Cormorant Garamond',serif;font-weight:600;font-size:16px;color:#B3A488;width:16px">1</span>
+            <div style="flex:1;min-width:0"><div style="font-family:'EB Garamond',serif;font-size:13.5px;color:#221C16">L'art tragique grec</div><div style="display:flex;gap:4px;margin-top:3px"><span style="width:7px;height:7px;border-radius:50%;background:#5B6E4A"></span><span style="width:7px;height:7px;border-radius:50%;background:#5B6E4A"></span><span style="width:7px;height:7px;border-radius:50%;background:#5B6E4A"></span><span style="width:7px;height:7px;border-radius:50%;background:#5B6E4A"></span></div></div>
+            <span style="font-family:'Alegreya Sans',sans-serif;font-size:10px;color:#5B6E4A">Revoir</span>
+          </div>
+          <div style="background:#FBF8F1;border:1px solid #E4DBC9;border-radius:9px;padding:9px 11px;display:flex;align-items:center;gap:9px">
+            <span style="font-family:'Cormorant Garamond',serif;font-weight:600;font-size:16px;color:#B3A488;width:16px">2</span>
+            <div style="flex:1;min-width:0"><div style="font-family:'EB Garamond',serif;font-size:13.5px;color:#221C16">Apollon &amp; Dionysos</div><div style="display:flex;gap:4px;margin-top:3px"><span style="width:7px;height:7px;border-radius:50%;background:#5B6E4A"></span><span style="width:7px;height:7px;border-radius:50%;background:#5B6E4A"></span><span style="width:7px;height:7px;border-radius:50%;background:#5B6E4A"></span><span style="width:7px;height:7px;border-radius:50%;background:#5B6E4A"></span></div></div>
+            <span style="font-family:'Alegreya Sans',sans-serif;font-size:10px;color:#5B6E4A">Revoir</span>
+          </div>
+          <div style="background:#DDE3EC;border:1px solid #B9C6DC;border-left:4px solid #2C4A7C;border-radius:9px;padding:9px 11px;display:flex;align-items:center;gap:9px">
+            <span style="font-family:'Cormorant Garamond',serif;font-weight:600;font-size:16px;color:#2C4A7C;width:16px">3</span>
+            <div style="flex:1;min-width:0"><div style="font-family:'EB Garamond',serif;font-size:13.5px;color:#221C16;font-weight:500">Le chœur tragique</div><div style="display:flex;gap:4px;margin-top:3px"><span style="width:7px;height:7px;border-radius:50%;background:#5B6E4A"></span><span style="width:7px;height:7px;border-radius:50%;background:#5B6E4A"></span><span style="width:7px;height:7px;border-radius:50%;background:#2C4A7C"></span><span style="width:7px;height:7px;border-radius:50%;border:1.4px solid #9FB0CC"></span></div></div>
+            <span style="font-family:'Alegreya Sans',sans-serif;font-size:10px;color:#9A6A2E;background:#EFE4CF;padding:2px 6px;border-radius:7px">à lire</span>
+          </div>
+          <div style="background:#FBF8F1;border:1px solid #E4DBC9;border-radius:9px;padding:9px 11px;display:flex;align-items:center;gap:9px">
+            <span style="font-family:'Cormorant Garamond',serif;font-weight:600;font-size:16px;color:#B3A488;width:16px">4</span>
+            <div style="flex:1;min-width:0"><div style="font-family:'EB Garamond',serif;font-size:13.5px;color:#221C16">Socrate &amp; la tragédie</div><div style="display:flex;gap:4px;margin-top:3px"><span style="width:7px;height:7px;border-radius:50%;border:1.4px solid #CDBFA6"></span><span style="width:7px;height:7px;border-radius:50%;border:1.4px solid #CDBFA6"></span><span style="width:7px;height:7px;border-radius:50%;border:1.4px solid #CDBFA6"></span><span style="width:7px;height:7px;border-radius:50%;border:1.4px solid #CDBFA6"></span></div></div>
+            <span style="font-family:'Alegreya Sans',sans-serif;font-size:10px;color:#8A6F4E">ouvrir</span>
+          </div>
+          <div style="background:#F4EFE6;border:1px solid #E4DBC9;border-radius:9px;padding:9px 11px;display:flex;align-items:center;gap:9px;opacity:.58">
+            <span style="font-family:'Cormorant Garamond',serif;font-weight:600;font-size:16px;color:#B3A488;width:16px">5</span>
+            <div style="flex:1;min-width:0"><div style="font-family:'EB Garamond',serif;font-size:13.5px;color:#5A4632">L'optimisme théorique</div></div>
+            <span style="font-family:'Alegreya Sans',sans-serif;font-size:11px;color:#8A6F4E">🔒</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- A note -->
+<div style="position:absolute;left:1324px;top:860px;width:268px">
+  <div style="background:#F3ECDD;border:1px solid #E4DBC9;border-left:3px solid #2C4A7C;border-radius:8px;padding:14px 16px;font-family:'EB Garamond',serif;font-size:15px;line-height:1.5;color:#5A4632">
+    <span style="font-family:'Alegreya Sans',sans-serif;font-size:11px;letter-spacing:.1em;color:#2C4A7C">CE QUI CHANGE</span><br>
+    Avant : une liste plate, un petit badge texte par semaine, <b>pas de sceau</b>. Maintenant : le sceau en grand, une barre d'avancement, et <b>quatre points</b> par semaine — d'un regard tu vois jusqu'où chaque semaine passée est allée, et tu cliques « Revoir » pour la rouvrir.
+  </div>
+</div>
+
+<!-- ======================= B — CYCLE SEMAINE ======================= -->
+<div style="position:absolute;left:80px;top:1700px;font-family:'Cormorant Garamond',serif;font-weight:600;font-size:30px;color:#2C4A7C">B · Le cycle d'une semaine</div>
+<div style="position:absolute;left:80px;top:1742px;font-family:'EB Garamond',serif;font-size:16px;color:#8A6F4E">Un même en-tête (sceau + semaine + stepper), puis l'écran change selon l'état. Le stepper situe l'élève à chaque instant.</div>
+
+<!-- B1 — Lecture / saisie (DRAFT) desktop -->
+<div data-screen-label="Semaine — Lecture (saisie) — ordi" style="position:absolute;left:80px;top:1810px;width:680px">
+  <div data-drags-parent="1" style="position:absolute;top:-26px;left:2px;font-family:'Alegreya Sans',sans-serif;font-size:13px;color:#8A6F4E">① DRAFT — lecture &amp; saisie</div>
+  <div style="border:1px solid #D8CFBC;border-radius:12px;background:#FBF8F1;box-shadow:0 4px 16px rgba(34,28,22,.1);overflow:hidden">
+    <div style="background:#ECE4D6;padding:9px 14px;display:flex;align-items:center;gap:7px"><span style="width:10px;height:10px;border-radius:50%;background:#C9B89A"></span><span style="width:10px;height:10px;border-radius:50%;background:#C9B89A"></span><span style="width:10px;height:10px;border-radius:50%;background:#C9B89A"></span></div>
+    <div style="background:#F3ECDD;padding:22px 26px 24px">
+      <div style="font-family:'Alegreya Sans',sans-serif;font-size:12.5px;color:#8A6F4E;margin-bottom:14px">← Planning</div>
+      <!-- header -->
+      <div style="display:flex;align-items:center;gap:14px">
+        <span style="width:60px;height:60px;border-radius:50%;background:#DDE3EC;display:inline-flex;align-items:center;justify-content:center;overflow:hidden;flex-shrink:0"><img src="sceaux/aletheia.png" style="width:53px;height:53px;object-fit:cover;object-position:50% 40%;filter:brightness(1.09) contrast(1.04);mix-blend-mode:multiply" alt=""></span>
+        <div>
+          <div style="font-family:'Cinzel',serif;font-weight:600;font-size:13px;letter-spacing:.18em;color:#2C4A7C">ALETHEIA</div>
+          <div style="font-family:'Cormorant Garamond',serif;font-weight:600;font-size:24px;color:#221C16;line-height:1.05">Semaine 4 — Socrate &amp; la mort de la tragédie</div>
+          <div style="font-family:'Alegreya Sans',sans-serif;font-size:12.5px;color:#8A6F4E;margin-top:2px"><span style="color:#2C4A7C">Chap. 10-12</span> · à partir du 26/05 · lis-les dans ton exemplaire</div>
+        </div>
+      </div>
+      <!-- stepper (étape 1) -->
+      <div style="display:flex;align-items:center;gap:8px;margin-top:16px;font-family:'Alegreya Sans',sans-serif;font-size:12.5px">
+        <span style="display:flex;align-items:center;gap:6px;color:#2C4A7C;font-weight:700"><span style="width:20px;height:20px;border-radius:50%;background:#2C4A7C;color:#fff;display:inline-flex;align-items:center;justify-content:center;font-size:11px">1</span>Lecture</span>
+        <span style="width:20px;height:1px;background:#CDBFA6"></span>
+        <span style="display:flex;align-items:center;gap:6px;color:#8A6F4E"><span style="width:20px;height:20px;border-radius:50%;background:#E4DBC9;color:#8A6F4E;display:inline-flex;align-items:center;justify-content:center;font-size:11px">2</span>Retour</span>
+        <span style="width:20px;height:1px;background:#CDBFA6"></span>
+        <span style="display:flex;align-items:center;gap:6px;color:#8A6F4E"><span style="width:20px;height:20px;border-radius:50%;background:#E4DBC9;color:#8A6F4E;display:inline-flex;align-items:center;justify-content:center;font-size:11px">3</span>Réécriture</span>
+        <span style="width:20px;height:1px;background:#CDBFA6"></span>
+        <span style="display:flex;align-items:center;gap:6px;color:#8A6F4E"><span style="width:20px;height:20px;border-radius:50%;background:#E4DBC9;color:#8A6F4E;display:inline-flex;align-items:center;justify-content:center;font-size:11px">4</span>Retour final</span>
+      </div>
+      <!-- form card -->
+      <div style="background:#FBF8F1;border:1px solid #E4DBC9;border-radius:13px;padding:18px 20px;margin-top:16px">
+        <div style="font-family:'Cormorant Garamond',serif;font-weight:600;font-size:19px;color:#221C16">1. Ta lecture de la semaine</div>
+        <div style="display:flex;flex-direction:column;gap:13px;margin-top:13px">
+          <div>
+            <div style="font-family:'Alegreya Sans',sans-serif;font-size:12.5px;color:#8A6F4E;margin-bottom:4px"><b style="color:#5A4632">Idée principale</b> — ce que dit le chapitre, selon toi</div>
+            <div style="border:1px solid #D8CFBC;background:#fff;border-radius:8px;padding:9px 12px;font-family:'EB Garamond',serif;font-size:14.5px;color:#221C16;line-height:1.45">Pour Nietzsche, Socrate marque la mort de la tragédie : il y substitue la raison à l'instinct…</div>
+          </div>
+          <div>
+            <div style="font-family:'Alegreya Sans',sans-serif;font-size:12.5px;color:#8A6F4E;margin-bottom:4px"><b style="color:#5A4632">Arguments</b> — les raisons que l'auteur avance</div>
+            <div style="border:1px solid #D8CFBC;background:#fff;border-radius:8px;height:62px"></div>
+          </div>
+          <div>
+            <div style="font-family:'Alegreya Sans',sans-serif;font-size:12.5px;color:#8A6F4E;margin-bottom:4px"><b style="color:#5A4632">Ton accord</b> — es-tu d'accord ou non, et pourquoi ?</div>
+            <div style="border:1px solid #D8CFBC;background:#fff;border-radius:8px;height:46px"></div>
+          </div>
+          <div style="display:flex;gap:13px">
+            <div style="flex:1">
+              <div style="font-family:'Alegreya Sans',sans-serif;font-size:12.5px;color:#8A6F4E;margin-bottom:4px"><b style="color:#5A4632">Tes questions</b> <span>(2-3, une par ligne)</span></div>
+              <div style="border:1px solid #D8CFBC;background:#fff;border-radius:8px;height:54px"></div>
+            </div>
+            <div style="flex:1">
+              <div style="font-family:'Alegreya Sans',sans-serif;font-size:12.5px;color:#8A6F4E;margin-bottom:4px"><b style="color:#5A4632">Vocabulaire</b> <span>(facultatif)</span></div>
+              <div style="border:1px solid #D8CFBC;background:#fff;border-radius:8px;height:54px"></div>
+            </div>
+          </div>
+          <div style="background:#B4452F;color:#FBF8F1;font-family:'Alegreya Sans',sans-serif;font-size:14px;font-weight:600;text-align:center;border-radius:8px;padding:11px;margin-top:2px">Soumettre mon travail</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- B1 — mobile -->
+<div data-screen-label="Semaine — Lecture (saisie) — mobile" style="position:absolute;left:800px;top:1810px;width:300px">
+  <div data-drags-parent="1" style="position:absolute;top:-26px;left:2px;font-family:'Alegreya Sans',sans-serif;font-size:13px;color:#8A6F4E">Mobile</div>
+  <div style="border:11px solid #221C16;border-radius:38px;background:#221C16;box-shadow:0 6px 22px rgba(34,28,22,.22)">
+    <div style="background:#F3ECDD;border-radius:27px;height:600px;overflow:hidden;display:flex;flex-direction:column">
+      <div style="background:#ECE4D6;padding:11px 15px;display:flex;align-items:center;gap:9px"><span style="color:#5A4632;font-size:15px">←</span><span style="font-family:'Cinzel',serif;font-weight:600;font-size:12px;letter-spacing:.14em;color:#2C4A7C">ALETHEIA</span></div>
+      <div style="padding:13px 15px;flex:1;overflow:hidden">
+        <div style="display:flex;align-items:center;gap:11px">
+          <span style="width:46px;height:46px;border-radius:50%;background:#DDE3EC;display:inline-flex;align-items:center;justify-content:center;overflow:hidden;flex-shrink:0"><img src="sceaux/aletheia.png" style="width:40px;height:40px;object-fit:cover;object-position:50% 40%;filter:brightness(1.09) contrast(1.04);mix-blend-mode:multiply" alt=""></span>
+          <div style="font-family:'Cormorant Garamond',serif;font-weight:600;font-size:18px;color:#221C16;line-height:1.05">Semaine 4 — Socrate</div>
+        </div>
+        <div style="font-family:'Alegreya Sans',sans-serif;font-size:11px;color:#8A6F4E;margin-top:6px"><span style="color:#2C4A7C">Chap. 10-12</span> · lis dans ton exemplaire</div>
+        <!-- stepper compact -->
+        <div style="display:flex;align-items:center;gap:5px;margin-top:11px;font-family:'Alegreya Sans',sans-serif;font-size:10px">
+          <span style="display:flex;align-items:center;gap:4px;color:#2C4A7C;font-weight:700"><span style="width:16px;height:16px;border-radius:50%;background:#2C4A7C;color:#fff;display:inline-flex;align-items:center;justify-content:center;font-size:9px">1</span>Lecture</span>
+          <span style="flex:1;height:1px;background:#CDBFA6"></span>
+          <span style="width:16px;height:16px;border-radius:50%;background:#E4DBC9;color:#8A6F4E;display:inline-flex;align-items:center;justify-content:center;font-size:9px">2</span>
+          <span style="width:16px;height:16px;border-radius:50%;background:#E4DBC9;color:#8A6F4E;display:inline-flex;align-items:center;justify-content:center;font-size:9px">3</span>
+          <span style="width:16px;height:16px;border-radius:50%;background:#E4DBC9;color:#8A6F4E;display:inline-flex;align-items:center;justify-content:center;font-size:9px">4</span>
+        </div>
+        <div style="background:#FBF8F1;border:1px solid #E4DBC9;border-radius:11px;padding:12px;margin-top:11px">
+          <div style="font-family:'Cormorant Garamond',serif;font-weight:600;font-size:16px;color:#221C16">1. Ta lecture</div>
+          <div style="display:flex;flex-direction:column;gap:9px;margin-top:9px">
+            <div><div style="font-family:'Alegreya Sans',sans-serif;font-size:11px;color:#8A6F4E;margin-bottom:3px">Idée principale</div><div style="border:1px solid #D8CFBC;background:#fff;border-radius:7px;padding:7px;font-family:'EB Garamond',serif;font-size:12.5px;color:#221C16;line-height:1.4">Socrate substitue la raison à l'instinct…</div></div>
+            <div><div style="font-family:'Alegreya Sans',sans-serif;font-size:11px;color:#8A6F4E;margin-bottom:3px">Arguments</div><div style="border:1px solid #D8CFBC;background:#fff;border-radius:7px;height:44px"></div></div>
+            <div><div style="font-family:'Alegreya Sans',sans-serif;font-size:11px;color:#8A6F4E;margin-bottom:3px">Ton accord</div><div style="border:1px solid #D8CFBC;background:#fff;border-radius:7px;height:36px"></div></div>
+          </div>
+          <div style="background:#B4452F;color:#FBF8F1;font-family:'Alegreya Sans',sans-serif;font-size:12.5px;font-weight:600;text-align:center;border-radius:8px;padding:9px;margin-top:11px">Soumettre mon travail</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- B note -->
+<div style="position:absolute;left:1140px;top:1880px;width:262px">
+  <div style="background:#F3ECDD;border:1px solid #E4DBC9;border-left:3px solid #B8893B;border-radius:8px;padding:14px 16px;font-family:'EB Garamond',serif;font-size:15px;line-height:1.5;color:#5A4632">
+    <span style="font-family:'Alegreya Sans',sans-serif;font-size:11px;letter-spacing:.1em;color:#9A6A2E">SAISIE — 5 CHAMPS</span><br>
+    Idée principale, arguments, accord, questions, vocabulaire. Pas de PDF : l'élève lit son exemplaire, le sceau et le stepper donnent le cap. C'est l'unique écran où l'élève écrit librement avant le premier retour.
+  </div>
+</div>
+
+<!-- transitoires -->
+<div style="position:absolute;left:80px;top:2680px;font-family:'Cormorant Garamond',serif;font-weight:600;font-size:22px;color:#8A6F4E">Les deux temps d'attente (transitoires)</div>
+<div style="position:absolute;left:80px;top:2730px;width:1020px">
+  <div style="display:flex;gap:20px">
+    <div data-screen-label="Attente retour 1" style="flex:1">
+      <div style="border:1px solid #D8CFBC;border-radius:12px;background:#FBF8F1;box-shadow:0 2px 10px rgba(34,28,22,.08);overflow:hidden">
+        <div style="background:#ECE4D6;padding:8px 13px;display:flex;align-items:center;gap:6px"><span style="width:9px;height:9px;border-radius:50%;background:#C9B89A"></span><span style="width:9px;height:9px;border-radius:50%;background:#C9B89A"></span><span style="width:9px;height:9px;border-radius:50%;background:#C9B89A"></span></div>
+        <div style="background:#F3ECDD;padding:18px 20px">
+          <div style="font-family:'Alegreya Sans',sans-serif;font-size:10.5px;letter-spacing:.06em;color:#8A6F4E">② V1_SUBMITTED</div>
+          <div style="display:flex;align-items:center;gap:6px;margin-top:10px;font-family:'Alegreya Sans',sans-serif;font-size:11.5px">
+            <span style="width:18px;height:18px;border-radius:50%;background:#5B6E4A;color:#fff;display:inline-flex;align-items:center;justify-content:center;font-size:10px">✓</span><span style="color:#5A4632">Lecture</span>
+            <span style="width:16px;height:1px;background:#CDBFA6"></span>
+            <span style="width:18px;height:18px;border-radius:50%;background:#2C4A7C;color:#fff;display:inline-flex;align-items:center;justify-content:center;font-size:10px">2</span><span style="color:#2C4A7C;font-weight:700">Retour</span>
+          </div>
+          <div style="background:#FBF8F1;border:1px solid #E4DBC9;border-radius:10px;padding:14px;margin-top:13px;text-align:center">
+            <div style="font-size:20px;color:#B8893B">◷</div>
+            <div style="font-family:'Cormorant Garamond',serif;font-weight:600;font-size:18px;color:#221C16;margin-top:5px">Ton retour est en cours de préparation…</div>
+            <div style="font-family:'EB Garamond',serif;font-size:14px;color:#5A4632;margin-top:4px">L'IA relit ta lecture et prépare ses relances. La page se rafraîchit toute seule.</div>
+          </div>
+          <div style="font-family:'EB Garamond',serif;font-size:13.5px;color:#8A6F4E;margin-top:11px">Ta saisie reste visible au-dessus, en lecture seule.</div>
+        </div>
+      </div>
+    </div>
+    <div data-screen-label="Attente retour final" style="flex:1">
+      <div style="border:1px solid #D8CFBC;border-radius:12px;background:#FBF8F1;box-shadow:0 2px 10px rgba(34,28,22,.08);overflow:hidden">
+        <div style="background:#ECE4D6;padding:8px 13px;display:flex;align-items:center;gap:6px"><span style="width:9px;height:9px;border-radius:50%;background:#C9B89A"></span><span style="width:9px;height:9px;border-radius:50%;background:#C9B89A"></span><span style="width:9px;height:9px;border-radius:50%;background:#C9B89A"></span></div>
+        <div style="background:#F3ECDD;padding:18px 20px">
+          <div style="font-family:'Alegreya Sans',sans-serif;font-size:10.5px;letter-spacing:.06em;color:#8A6F4E">④ VF_SUBMITTED</div>
+          <div style="display:flex;align-items:center;gap:6px;margin-top:10px;font-family:'Alegreya Sans',sans-serif;font-size:11.5px">
+            <span style="width:18px;height:18px;border-radius:50%;background:#5B6E4A;color:#fff;display:inline-flex;align-items:center;justify-content:center;font-size:10px">✓</span><span style="color:#5A4632">Réécriture</span>
+            <span style="width:16px;height:1px;background:#CDBFA6"></span>
+            <span style="width:18px;height:18px;border-radius:50%;background:#2C4A7C;color:#fff;display:inline-flex;align-items:center;justify-content:center;font-size:10px">4</span><span style="color:#2C4A7C;font-weight:700">Retour final</span>
+          </div>
+          <div style="background:#FBF8F1;border:1px solid #E4DBC9;border-radius:10px;padding:14px;margin-top:13px;text-align:center">
+            <div style="font-size:20px;color:#B8893B">◷</div>
+            <div style="font-family:'Cormorant Garamond',serif;font-weight:600;font-size:18px;color:#221C16;margin-top:5px">Ton retour final est en cours de préparation…</div>
+            <div style="font-family:'EB Garamond',serif;font-size:14px;color:#5A4632;margin-top:4px">Synthèse modèle + dévoilement de l'architecture. Quelques instants.</div>
+          </div>
+          <div style="font-family:'EB Garamond',serif;font-size:13.5px;color:#8A6F4E;margin-top:11px">Ta version finale et ton premier retour restent visibles au-dessus.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- B3 — ATELIER (FEEDBACK1_READY) -->
+<div style="position:absolute;left:80px;top:3040px;font-family:'Cormorant Garamond',serif;font-weight:600;font-size:24px;color:#2C4A7C">③ FEEDBACK1_READY — l'atelier de réécriture ★</div>
+<div style="position:absolute;left:80px;top:3082px;font-family:'EB Garamond',serif;font-size:15px;color:#8A6F4E">Le cœur du module, déjà validé : le retour reste épinglé à gauche pendant qu'on réécrit à droite.</div>
+
+<div data-screen-label="Atelier réécriture — ordi" style="position:absolute;left:80px;top:3140px;width:880px">
+  <div data-drags-parent="1" style="position:absolute;top:-26px;left:2px;font-family:'Alegreya Sans',sans-serif;font-size:13px;color:#8A6F4E">Ordinateur / tablette — deux colonnes</div>
+  <div style="border:1px solid #D8CFBC;border-radius:12px;background:#FBF8F1;box-shadow:0 4px 16px rgba(34,28,22,.1);overflow:hidden">
+    <div style="background:#ECE4D6;padding:9px 14px;display:flex;align-items:center;gap:7px"><span style="width:10px;height:10px;border-radius:50%;background:#C9B89A"></span><span style="width:10px;height:10px;border-radius:50%;background:#C9B89A"></span><span style="width:10px;height:10px;border-radius:50%;background:#C9B89A"></span></div>
+    <div style="background:#F3ECDD;padding:22px 28px 26px">
+      <div style="display:flex;align-items:center;gap:14px">
+        <span style="width:56px;height:56px;border-radius:50%;background:#DDE3EC;display:inline-flex;align-items:center;justify-content:center;overflow:hidden;flex-shrink:0"><img src="sceaux/aletheia.png" style="width:50px;height:50px;object-fit:cover;object-position:50% 40%;filter:brightness(1.09) contrast(1.04);mix-blend-mode:multiply" alt=""></span>
+        <div>
+          <div style="font-family:'Cinzel',serif;font-weight:600;font-size:13px;letter-spacing:.18em;color:#2C4A7C">ALETHEIA</div>
+          <div style="font-family:'Cormorant Garamond',serif;font-weight:600;font-size:24px;color:#221C16;line-height:1.1">Semaine 3 — Le chœur et la naissance du drame</div>
+        </div>
+      </div>
+      <div style="display:flex;align-items:center;gap:9px;margin-top:16px;font-family:'Alegreya Sans',sans-serif;font-size:13px;color:#8A6F4E">
+        <span style="display:flex;align-items:center;gap:6px"><span style="width:20px;height:20px;border-radius:50%;background:#5B6E4A;color:#fff;display:inline-flex;align-items:center;justify-content:center;font-size:11px">✓</span>Lecture</span>
+        <span style="width:22px;height:1px;background:#CDBFA6"></span>
+        <span style="display:flex;align-items:center;gap:6px"><span style="width:20px;height:20px;border-radius:50%;background:#5B6E4A;color:#fff;display:inline-flex;align-items:center;justify-content:center;font-size:11px">✓</span>Retour</span>
+        <span style="width:22px;height:1px;background:#CDBFA6"></span>
+        <span style="display:flex;align-items:center;gap:6px;color:#2C4A7C;font-weight:700"><span style="width:20px;height:20px;border-radius:50%;background:#2C4A7C;color:#fff;display:inline-flex;align-items:center;justify-content:center;font-size:11px">3</span>Réécriture</span>
+        <span style="width:22px;height:1px;background:#CDBFA6"></span>
+        <span style="display:flex;align-items:center;gap:6px;opacity:.5"><span style="width:20px;height:20px;border-radius:50%;border:1.5px solid #CDBFA6;display:inline-flex;align-items:center;justify-content:center;font-size:11px">4</span>Retour final</span>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-top:18px">
+        <div>
+          <div style="font-family:'Alegreya Sans',sans-serif;font-size:11px;letter-spacing:.1em;color:#8A6F4E;margin-bottom:9px">◆ TON RETOUR — RESTE VISIBLE</div>
+          <div style="display:flex;flex-direction:column;gap:11px">
+            <div style="background:#FBF8F1;border:1px solid #E4DBC9;border-left:4px solid #2C4A7C;border-radius:10px;padding:13px 15px">
+              <div style="font-family:'Alegreya Sans',sans-serif;font-size:13.5px;font-weight:700;color:#221C16">Pour creuser ton idée et tes arguments</div>
+              <div style="font-family:'EB Garamond',serif;font-size:15px;color:#5A4632;margin-top:5px;line-height:1.5">Tu dis que le chœur « raconte » l'action. Relis le §III : quel rôle Nietzsche lui donne-t-il par rapport au spectateur ?</div>
+            </div>
+            <div style="background:#FBF8F1;border:1px solid #E4DBC9;border-left:4px solid #3E6B8E;border-radius:10px;padding:13px 15px">
+              <div style="font-family:'Alegreya Sans',sans-serif;font-size:13.5px;font-weight:700;color:#221C16">Sur ton accord</div>
+              <div style="font-family:'EB Garamond',serif;font-size:15px;color:#5A4632;margin-top:5px;line-height:1.5">Tu es d'accord « parce que c'est logique » — qu'est-ce qui, dans le texte, rend cette idée convaincante pour toi ?</div>
+            </div>
+            <div style="background:#FBF8F1;border:1px solid #E4DBC9;border-left:4px solid #5B6E4A;border-radius:10px;padding:13px 15px">
+              <div style="font-family:'Alegreya Sans',sans-serif;font-size:13.5px;font-weight:700;color:#221C16">Réponse à ta question</div>
+              <div style="font-family:'EB Garamond',serif;font-size:15px;color:#5A4632;margin-top:5px;line-height:1.5">« Dithyrambe » : le chant choral en l'honneur de Dionysos, d'où naît la tragédie (§II).</div>
+            </div>
+            <div style="background:#FBF8F1;border:1px solid #E4DBC9;border-left:4px solid #B8893B;border-radius:10px;padding:13px 15px">
+              <div style="font-family:'Alegreya Sans',sans-serif;font-size:13.5px;font-weight:700;color:#221C16">Vocabulaire</div>
+              <div style="font-family:'EB Garamond',serif;font-size:14.5px;color:#5A4632;margin-top:5px;line-height:1.45"><b>Chœur</b> — groupe qui chante et danse, voix collective de la cité.</div>
+              <div style="font-family:'Alegreya Sans',sans-serif;font-size:11.5px;color:#8A6F4E;margin-top:7px;padding-top:7px;border-top:1px solid #E4DBC9">Ces mots deviennent des cartes à réviser dans Quazian.</div>
+            </div>
+          </div>
+        </div>
+        <div>
+          <div style="font-family:'Alegreya Sans',sans-serif;font-size:11px;letter-spacing:.1em;color:#8A6F4E;margin-bottom:9px">✎ TA VERSION FINALE</div>
+          <div style="background:#FBF8F1;border:1px solid #E4DBC9;border-radius:11px;padding:15px 16px">
+            <div style="font-family:'EB Garamond',serif;font-size:13.5px;color:#8A6F4E;margin-bottom:10px">Reprends tes trois champs en tenant compte du retour : corrige, précise, approfondis.</div>
+            <div style="display:flex;flex-direction:column;gap:12px">
+              <div>
+                <div style="font-family:'Alegreya Sans',sans-serif;font-size:12.5px;color:#5A4632;margin-bottom:4px">Idée principale</div>
+                <div style="border:1px solid #D8CFBC;background:#fff;border-radius:8px;padding:10px 12px;font-family:'EB Garamond',serif;font-size:15px;color:#221C16;line-height:1.5">Le chœur n'est pas un narrateur : il est le spectateur idéal, par qui le public éprouve le drame…</div>
+              </div>
+              <div>
+                <div style="font-family:'Alegreya Sans',sans-serif;font-size:12.5px;color:#5A4632;margin-bottom:4px">Arguments</div>
+                <div style="border:1px solid #D8CFBC;background:#fff;border-radius:8px;height:84px"></div>
+              </div>
+              <div>
+                <div style="font-family:'Alegreya Sans',sans-serif;font-size:12.5px;color:#5A4632;margin-bottom:4px">Ton accord</div>
+                <div style="border:1px solid #D8CFBC;background:#fff;border-radius:8px;height:50px"></div>
+              </div>
+              <div style="background:#B4452F;color:#FBF8F1;font-family:'Alegreya Sans',sans-serif;font-size:14px;font-weight:600;text-align:center;border-radius:8px;padding:11px">Soumettre ma version finale</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- B3 mobile -->
+<div data-screen-label="Atelier réécriture — mobile" style="position:absolute;left:1000px;top:3140px;width:300px">
+  <div data-drags-parent="1" style="position:absolute;top:-26px;left:2px;font-family:'Alegreya Sans',sans-serif;font-size:13px;color:#8A6F4E">Mobile — bandeau + bascule</div>
+  <div style="border:11px solid #221C16;border-radius:38px;background:#221C16;box-shadow:0 6px 22px rgba(34,28,22,.22)">
+    <div style="background:#F3ECDD;border-radius:27px;height:600px;overflow:hidden;display:flex;flex-direction:column">
+      <div style="background:#ECE4D6;padding:11px 15px;display:flex;align-items:center;gap:9px"><span style="color:#5A4632;font-size:15px">←</span><span style="font-family:'Cinzel',serif;font-weight:600;font-size:12px;letter-spacing:.14em;color:#2C4A7C">ALETHEIA</span></div>
+      <div style="padding:13px 15px 0;flex:1;display:flex;flex-direction:column;overflow:hidden">
+        <div style="font-family:'Cormorant Garamond',serif;font-weight:600;font-size:18px;color:#221C16;line-height:1.1">Semaine 3 — réécriture</div>
+        <div style="background:#FBF8F1;border:1px solid #E4DBC9;border-left:4px solid #2C4A7C;border-radius:10px;padding:10px 12px;margin-top:11px">
+          <div style="display:flex;justify-content:space-between;align-items:center"><span style="font-family:'Alegreya Sans',sans-serif;font-size:12px;font-weight:700;color:#221C16">◆ Ton retour</span><span style="font-family:'Alegreya Sans',sans-serif;font-size:11px;color:#2C4A7C">déplier ⌄</span></div>
+          <div style="font-family:'EB Garamond',serif;font-size:13.5px;color:#5A4632;margin-top:4px;line-height:1.4">Rôle du chœur · justifie ton accord · « dithyrambe »…</div>
+        </div>
+        <div style="display:flex;background:#ECE4D6;border-radius:9px;padding:3px;margin-top:12px;font-family:'Alegreya Sans',sans-serif;font-size:12.5px">
+          <div style="flex:1;text-align:center;background:#FBF8F1;border-radius:7px;padding:7px;color:#221C16;font-weight:700;box-shadow:0 1px 2px rgba(34,28,22,.08)">Réécriture</div>
+          <div style="flex:1;text-align:center;padding:7px;color:#8A6F4E">Retour complet</div>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:10px;margin-top:12px;flex:1">
+          <div><div style="font-family:'Alegreya Sans',sans-serif;font-size:11.5px;color:#5A4632;margin-bottom:3px">Idée principale</div><div style="border:1px solid #D8CFBC;background:#fff;border-radius:7px;padding:8px;font-family:'EB Garamond',serif;font-size:13.5px;color:#221C16;line-height:1.4">Le chœur est le spectateur idéal…</div></div>
+          <div><div style="font-family:'Alegreya Sans',sans-serif;font-size:11.5px;color:#5A4632;margin-bottom:3px">Arguments</div><div style="border:1px solid #D8CFBC;background:#fff;border-radius:7px;height:60px"></div></div>
+        </div>
+        <div style="background:#B4452F;color:#FBF8F1;font-family:'Alegreya Sans',sans-serif;font-size:13px;font-weight:600;text-align:center;border-radius:8px;padding:10px;margin:0 0 14px">Soumettre ma version finale</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- B5 — RETOUR FINAL (FEEDBACK2_READY) -->
+<div style="position:absolute;left:80px;top:3900px;font-family:'Cormorant Garamond',serif;font-weight:600;font-size:24px;color:#2C4A7C">⑤ FEEDBACK2_READY — le retour final &amp; la validation de lecture</div>
+<div style="position:absolute;left:80px;top:3942px;font-family:'EB Garamond',serif;font-size:15px;color:#8A6F4E">Synthèse modèle (≤200 mots), ajouts vérifiés, architecture dévoilée. Valider la lecture clôt la semaine.</div>
+
+<div data-screen-label="Retour final à valider — ordi" style="position:absolute;left:80px;top:4000px;width:720px">
+  <div data-drags-parent="1" style="position:absolute;top:-26px;left:2px;font-family:'Alegreya Sans',sans-serif;font-size:13px;color:#8A6F4E">Ordinateur</div>
+  <div style="border:1px solid #D8CFBC;border-radius:12px;background:#FBF8F1;box-shadow:0 4px 16px rgba(34,28,22,.1);overflow:hidden">
+    <div style="background:#ECE4D6;padding:9px 14px;display:flex;align-items:center;gap:7px"><span style="width:10px;height:10px;border-radius:50%;background:#C9B89A"></span><span style="width:10px;height:10px;border-radius:50%;background:#C9B89A"></span><span style="width:10px;height:10px;border-radius:50%;background:#C9B89A"></span></div>
+    <div style="background:#F3ECDD;padding:22px 28px 26px">
+      <div style="display:flex;align-items:center;gap:14px">
+        <span style="width:56px;height:56px;border-radius:50%;background:#DDE3EC;display:inline-flex;align-items:center;justify-content:center;overflow:hidden;flex-shrink:0"><img src="sceaux/aletheia.png" style="width:50px;height:50px;object-fit:cover;object-position:50% 40%;filter:brightness(1.09) contrast(1.04);mix-blend-mode:multiply" alt=""></span>
+        <div>
+          <div style="font-family:'Cinzel',serif;font-weight:600;font-size:13px;letter-spacing:.18em;color:#2C4A7C">ALETHEIA</div>
+          <div style="font-family:'Cormorant Garamond',serif;font-weight:600;font-size:24px;color:#221C16;line-height:1.1">Semaine 3 — retour final</div>
+        </div>
+      </div>
+      <div style="display:flex;align-items:center;gap:9px;margin-top:16px;font-family:'Alegreya Sans',sans-serif;font-size:13px;color:#8A6F4E">
+        <span style="display:flex;align-items:center;gap:6px"><span style="width:20px;height:20px;border-radius:50%;background:#5B6E4A;color:#fff;display:inline-flex;align-items:center;justify-content:center;font-size:11px">✓</span>Lecture</span>
+        <span style="width:18px;height:1px;background:#CDBFA6"></span>
+        <span style="display:flex;align-items:center;gap:6px"><span style="width:20px;height:20px;border-radius:50%;background:#5B6E4A;color:#fff;display:inline-flex;align-items:center;justify-content:center;font-size:11px">✓</span>Retour</span>
+        <span style="width:18px;height:1px;background:#CDBFA6"></span>
+        <span style="display:flex;align-items:center;gap:6px"><span style="width:20px;height:20px;border-radius:50%;background:#5B6E4A;color:#fff;display:inline-flex;align-items:center;justify-content:center;font-size:11px">✓</span>Réécriture</span>
+        <span style="width:18px;height:1px;background:#CDBFA6"></span>
+        <span style="display:flex;align-items:center;gap:6px;color:#2C4A7C;font-weight:700"><span style="width:20px;height:20px;border-radius:50%;background:#2C4A7C;color:#fff;display:inline-flex;align-items:center;justify-content:center;font-size:11px">4</span>Retour final</span>
+      </div>
+      <div style="font-family:'Cormorant Garamond',serif;font-weight:600;font-size:19px;color:#221C16;margin-top:18px">Synthèse &amp; architecture</div>
+      <div style="display:flex;flex-direction:column;gap:11px;margin-top:11px">
+        <div style="background:#FBF8F1;border:1px solid #E4DBC9;border-left:4px solid #2C4A7C;border-radius:10px;padding:14px 16px">
+          <div style="font-family:'Alegreya Sans',sans-serif;font-size:13px;font-weight:700;color:#221C16;margin-bottom:5px">Synthèse modèle</div>
+          <div style="font-family:'EB Garamond',serif;font-size:15px;color:#5A4632;line-height:1.55">Le chœur n'est pas l'ornement de la tragédie mais sa matrice : né du dithyrambe dionysiaque, il est le « spectateur idéal » qui transmet au public l'émotion du drame. Nietzsche renverse l'idée reçue d'un chœur-narrateur : avant l'action, il y a le chant collectif d'où l'action surgit…</div>
+        </div>
+        <div style="background:#FBF8F1;border:1px solid #E4DBC9;border-left:4px solid #B8893B;border-radius:10px;padding:14px 16px">
+          <div style="font-family:'Alegreya Sans',sans-serif;font-size:13px;font-weight:700;color:#221C16;margin-bottom:6px">Ce que tu as ajouté en réécrivant</div>
+          <div style="font-family:'EB Garamond',serif;font-size:14.5px;color:#5A4632;line-height:1.5;display:flex;gap:8px"><span>✓</span><span><mark style="background:#EFE4CF;color:#9A6A2E;border-radius:3px;padding:0 3px">« spectateur idéal »</mark> — juste, c'est bien le terme de Nietzsche (§III).</span></div>
+          <div style="font-family:'EB Garamond',serif;font-size:14.5px;color:#5A4632;line-height:1.5;display:flex;gap:8px;margin-top:6px"><span style="color:#A23E2E">⚠</span><span><mark style="background:#EFE4CF;color:#9A6A2E;border-radius:3px;padding:0 3px">« inventé par Eschyle »</mark> <span style="color:#A23E2E">— à vérifier : le texte ne l'affirme pas.</span></span></div>
+        </div>
+        <div style="background:#FBF8F1;border:1px solid #E4DBC9;border-left:4px solid #5B6E4A;border-radius:10px;padding:14px 16px">
+          <div style="font-family:'Alegreya Sans',sans-serif;font-size:13px;font-weight:700;color:#221C16;margin-bottom:6px">Architecture de ce que tu as lu</div>
+          <div style="font-family:'Alegreya Sans',sans-serif;font-size:11.5px;color:#8A6F4E;margin-bottom:3px">Ce que tu as déjà vu</div>
+          <div style="font-family:'EB Garamond',serif;font-size:14.5px;color:#5A4632;line-height:1.5">Le chœur prolonge l'opposition Apollon / Dionysos vue en semaine 2 : il est le versant dionysiaque incarné.</div>
+          <div style="font-family:'Alegreya Sans',sans-serif;font-size:11.5px;color:#8A6F4E;margin:8px 0 3px">Jalons à venir</div>
+          <div style="font-family:'EB Garamond',serif;font-size:14.5px;color:#5A4632;line-height:1.5">Garde en tête ce rôle du chœur : tu verras plus loin pourquoi sa disparition signe la « mort » de la tragédie.</div>
+        </div>
+      </div>
+      <!-- validation -->
+      <div style="background:#DDE3EC;border:1px solid #B9C6DC;border-radius:11px;padding:14px 16px;margin-top:14px">
+        <div style="font-family:'EB Garamond',serif;font-size:14.5px;color:#3A4A63;margin-bottom:10px">Pour clore la semaine, confirme que tu as lu ce retour.</div>
+        <div style="background:#B4452F;color:#FBF8F1;font-family:'Alegreya Sans',sans-serif;font-size:14px;font-weight:600;text-align:center;border-radius:8px;padding:11px">✓ J'ai lu mon retour — clore la semaine</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- B5 mobile -->
+<div data-screen-label="Retour final à valider — mobile" style="position:absolute;left:840px;top:4000px;width:300px">
+  <div data-drags-parent="1" style="position:absolute;top:-26px;left:2px;font-family:'Alegreya Sans',sans-serif;font-size:13px;color:#8A6F4E">Mobile</div>
+  <div style="border:11px solid #221C16;border-radius:38px;background:#221C16;box-shadow:0 6px 22px rgba(34,28,22,.22)">
+    <div style="background:#F3ECDD;border-radius:27px;height:620px;overflow:hidden;display:flex;flex-direction:column">
+      <div style="background:#ECE4D6;padding:11px 15px;display:flex;align-items:center;gap:9px"><span style="color:#5A4632;font-size:15px">←</span><span style="font-family:'Cinzel',serif;font-weight:600;font-size:12px;letter-spacing:.14em;color:#2C4A7C">ALETHEIA</span></div>
+      <div style="padding:13px 15px;flex:1;overflow:hidden">
+        <div style="font-family:'Cormorant Garamond',serif;font-weight:600;font-size:18px;color:#221C16">Semaine 3 — retour final</div>
+        <div style="display:flex;gap:4px;margin-top:9px"><span style="flex:1;height:5px;border-radius:3px;background:#5B6E4A"></span><span style="flex:1;height:5px;border-radius:3px;background:#5B6E4A"></span><span style="flex:1;height:5px;border-radius:3px;background:#5B6E4A"></span><span style="flex:1;height:5px;border-radius:3px;background:#2C4A7C"></span></div>
+        <div style="background:#FBF8F1;border:1px solid #E4DBC9;border-left:4px solid #2C4A7C;border-radius:10px;padding:11px 13px;margin-top:12px">
+          <div style="font-family:'Alegreya Sans',sans-serif;font-size:12px;font-weight:700;color:#221C16;margin-bottom:4px">Synthèse modèle</div>
+          <div style="font-family:'EB Garamond',serif;font-size:13px;color:#5A4632;line-height:1.5">Le chœur n'est pas l'ornement de la tragédie mais sa matrice : né du dithyrambe, il est le « spectateur idéal »…</div>
+        </div>
+        <div style="background:#FBF8F1;border:1px solid #E4DBC9;border-left:4px solid #5B6E4A;border-radius:10px;padding:11px 13px;margin-top:9px">
+          <div style="font-family:'Alegreya Sans',sans-serif;font-size:12px;font-weight:700;color:#221C16;margin-bottom:4px">Architecture</div>
+          <div style="font-family:'EB Garamond',serif;font-size:13px;color:#5A4632;line-height:1.5">Prolonge Apollon / Dionysos (sem. 2). Jalon : sa disparition = la mort de la tragédie.</div>
+        </div>
+        <div style="background:#DDE3EC;border:1px solid #B9C6DC;border-radius:10px;padding:11px 13px;margin-top:11px">
+          <div style="font-family:'EB Garamond',serif;font-size:12.5px;color:#3A4A63;margin-bottom:8px">Confirme que tu as lu ce retour pour clore la semaine.</div>
+          <div style="background:#B4452F;color:#FBF8F1;font-family:'Alegreya Sans',sans-serif;font-size:12.5px;font-weight:600;text-align:center;border-radius:8px;padding:9px">✓ J'ai lu — clore</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- B5 note -->
+<div style="position:absolute;left:1180px;top:4060px;width:262px">
+  <div style="background:#F3ECDD;border:1px solid #E4DBC9;border-left:3px solid #B4452F;border-radius:8px;padding:14px 16px;font-family:'EB Garamond',serif;font-size:15px;line-height:1.5;color:#5A4632">
+    <span style="font-family:'Alegreya Sans',sans-serif;font-size:11px;letter-spacing:.1em;color:#B4452F">LA CLÔTURE</span><br>
+    La synthèse modèle est plafonnée pour être lue en entier. Les ajouts de la VF sont surlignés et vérifiés (✓ / ⚠). Tant que l'élève ne valide pas la lecture, la semaine ne passe pas en <b>terminée</b> — mécanisme repris des Fragments.
+  </div>
+</div>
+
+<!-- ======================= C — REVUE (ANCIENNES SOUMISSIONS) ======================= -->
+<div style="position:absolute;left:80px;top:4920px;font-family:'Cormorant Garamond',serif;font-weight:600;font-size:30px;color:#B4452F">C · Revoir une semaine terminée — repensé ★</div>
+<div style="position:absolute;left:80px;top:4962px;font-family:'EB Garamond',serif;font-size:16px;color:#8A6F4E">⑥ DONE. C'est ici qu'on peut faire mieux : au lieu d'empiler quatre blocs égaux, on hiérarchise — la synthèse à relire d'abord, ton avant/après visible, le détail replié.</div>
+
+<!-- AVANT — current long stack -->
+<div data-screen-label="Revue — avant (actuel)" style="position:absolute;left:80px;top:5050px;width:230px">
+  <div data-drags-parent="1" style="position:absolute;top:-26px;left:2px;font-family:'Alegreya Sans',sans-serif;font-size:13px;color:#A23E2E">AVANT — aujourd'hui</div>
+  <div style="border:9px solid #221C16;border-radius:32px;background:#221C16;box-shadow:0 5px 18px rgba(34,28,22,.2)">
+    <div style="background:#F3ECDD;border-radius:23px;height:520px;overflow:hidden;padding:13px;display:flex;flex-direction:column;gap:9px">
+      <div style="font-family:'Cormorant Garamond',serif;font-weight:600;font-size:15px;color:#221C16">Semaine 2 — terminée</div>
+      <div style="background:#FBF8F1;border:1px solid #E4DBC9;border-radius:9px;padding:10px"><div style="font-family:'Alegreya Sans',sans-serif;font-size:11px;color:#8A6F4E;margin-bottom:6px">1. Ta lecture</div><div style="height:7px;width:90%;background:#E4DBC9;border-radius:4px;margin-bottom:4px"></div><div style="height:7px;width:80%;background:#E4DBC9;border-radius:4px;margin-bottom:4px"></div><div style="height:7px;width:85%;background:#E4DBC9;border-radius:4px"></div></div>
+      <div style="background:#FBF8F1;border:1px solid #E4DBC9;border-radius:9px;padding:10px"><div style="font-family:'Alegreya Sans',sans-serif;font-size:11px;color:#8A6F4E;margin-bottom:6px">2. Retour</div><div style="height:7px;width:88%;background:#E4DBC9;border-radius:4px;margin-bottom:4px"></div><div style="height:7px;width:75%;background:#E4DBC9;border-radius:4px"></div></div>
+      <div style="background:#FBF8F1;border:1px solid #E4DBC9;border-radius:9px;padding:10px"><div style="font-family:'Alegreya Sans',sans-serif;font-size:11px;color:#8A6F4E;margin-bottom:6px">3. Version finale</div><div style="height:7px;width:92%;background:#E4DBC9;border-radius:4px;margin-bottom:4px"></div><div style="height:7px;width:70%;background:#E4DBC9;border-radius:4px"></div></div>
+      <div style="background:#FBF8F1;border:1px solid #E4DBC9;border-radius:9px;padding:10px"><div style="font-family:'Alegreya Sans',sans-serif;font-size:11px;color:#8A6F4E;margin-bottom:6px">4. Retour final</div><div style="height:7px;width:85%;background:#E4DBC9;border-radius:4px"></div></div>
+    </div>
+  </div>
+  <div style="background:#F0DBD3;border:1px solid #DDB7AC;border-radius:7px;padding:9px 11px;margin-top:9px;font-family:'EB Garamond',serif;font-size:13px;color:#7A2E22;line-height:1.4">Quatre blocs de même poids, empilés → long défilement, rien ne ressort.</div>
+</div>
+
+<!-- APRÈS — desktop reworked -->
+<div data-screen-label="Revue — après (repensé) — ordi" style="position:absolute;left:360px;top:5050px;width:840px">
+  <div data-drags-parent="1" style="position:absolute;top:-26px;left:2px;font-family:'Alegreya Sans',sans-serif;font-size:13px;color:#5B6E4A">APRÈS — la revue hiérarchisée</div>
+  <div style="border:1px solid #D8CFBC;border-radius:12px;background:#FBF8F1;box-shadow:0 4px 16px rgba(34,28,22,.1);overflow:hidden">
+    <div style="background:#ECE4D6;padding:9px 14px;display:flex;align-items:center;gap:7px"><span style="width:10px;height:10px;border-radius:50%;background:#C9B89A"></span><span style="width:10px;height:10px;border-radius:50%;background:#C9B89A"></span><span style="width:10px;height:10px;border-radius:50%;background:#C9B89A"></span></div>
+    <div style="background:#F3ECDD;padding:22px 28px 26px">
+      <!-- header with done chip + all-green stepper -->
+      <div style="display:flex;align-items:center;gap:14px">
+        <span style="width:56px;height:56px;border-radius:50%;background:#DDE3EC;display:inline-flex;align-items:center;justify-content:center;overflow:hidden;flex-shrink:0"><img src="sceaux/aletheia.png" style="width:50px;height:50px;object-fit:cover;object-position:50% 40%;filter:brightness(1.09) contrast(1.04);mix-blend-mode:multiply" alt=""></span>
+        <div style="flex:1;min-width:0">
+          <div style="font-family:'Cinzel',serif;font-weight:600;font-size:13px;letter-spacing:.18em;color:#2C4A7C">ALETHEIA</div>
+          <div style="font-family:'Cormorant Garamond',serif;font-weight:600;font-size:24px;color:#221C16;line-height:1.1">Semaine 2 — Apollon &amp; Dionysos</div>
+        </div>
+        <span style="font-family:'Alegreya Sans',sans-serif;font-size:13px;color:#5B6E4A;background:#E4E8D8;padding:5px 13px;border-radius:9px;white-space:nowrap">✓ Terminée le 18/05</span>
+      </div>
+      <!-- 1. SYNTHÈSE — keeper -->
+      <div style="background:#FBF8F1;border:1px solid #E4DBC9;border-left:4px solid #2C4A7C;border-radius:11px;padding:16px 18px;margin-top:18px">
+        <div style="display:flex;align-items:center;justify-content:space-between">
+          <div style="font-family:'Alegreya Sans',sans-serif;font-size:11px;letter-spacing:.1em;color:#2C4A7C">★ À RELIRE — LA SYNTHÈSE MODÈLE</div>
+        </div>
+        <div style="font-family:'EB Garamond',serif;font-size:16px;color:#221C16;line-height:1.6;margin-top:8px">Apollon et Dionysos ne s'opposent pas comme le beau au laid, mais comme deux pulsions de l'art : le rêve qui donne forme et l'ivresse qui dissout les limites. La tragédie grecque naît de leur union — la mesure apollinienne mise au service de la vérité dionysiaque.</div>
+      </div>
+      <!-- 2. AVANT / APRÈS -->
+      <div style="font-family:'Alegreya Sans',sans-serif;font-size:11px;letter-spacing:.1em;color:#8A6F4E;margin:18px 0 9px">TON CHEMIN — DU PREMIER JET À LA VERSION FINALE</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;align-items:stretch">
+        <div style="background:#F0ECE2;border:1px solid #E4DBC9;border-radius:10px;padding:13px 15px">
+          <div style="font-family:'Alegreya Sans',sans-serif;font-size:12px;color:#8A6F4E;margin-bottom:6px">Ton premier jet</div>
+          <div style="font-family:'EB Garamond',serif;font-size:14.5px;color:#8A6F4E;line-height:1.5;font-style:italic">Apollon, c'est l'ordre et la beauté ; Dionysos, c'est le désordre et la fête. Ils sont opposés.</div>
+        </div>
+        <div style="background:#FBF8F1;border:1px solid #C7D2E0;border-radius:10px;padding:13px 15px;position:relative">
+          <div style="position:absolute;left:-19px;top:50%;transform:translateY(-50%);width:26px;height:26px;border-radius:50%;background:#F3ECDD;border:1px solid #C7D2E0;display:flex;align-items:center;justify-content:center;color:#2C4A7C;font-size:13px">→</div>
+          <div style="font-family:'Alegreya Sans',sans-serif;font-size:12px;color:#2C4A7C;margin-bottom:6px">Ta version finale</div>
+          <div style="font-family:'EB Garamond',serif;font-size:14.5px;color:#221C16;line-height:1.5">Deux pulsions de l'art, non deux humeurs : le rêve qui met en forme et l'ivresse qui dissout. La tragédie naît de leur union, pas de leur combat.</div>
+        </div>
+      </div>
+      <!-- 3. ARCHITECTURE -->
+      <div style="background:#FBF8F1;border:1px solid #E4DBC9;border-left:4px solid #5B6E4A;border-radius:11px;padding:14px 16px;margin-top:14px">
+        <div style="font-family:'Alegreya Sans',sans-serif;font-size:11px;letter-spacing:.1em;color:#5B6E4A;margin-bottom:6px">CE QUE CETTE SEMAINE T'A DÉVOILÉ</div>
+        <div style="font-family:'EB Garamond',serif;font-size:14.5px;color:#5A4632;line-height:1.5">L'opposition fondatrice du livre. <span style="color:#8A6F4E">Jalon :</span> tu retrouveras le couple Apollon/Dionysos derrière le rôle du chœur (semaine 3) et la « mort » de la tragédie (semaine 4).</div>
+      </div>
+      <!-- 4. DÉTAIL replié -->
+      <div style="margin-top:14px;display:flex;flex-direction:column;gap:7px">
+        <div style="font-family:'Alegreya Sans',sans-serif;font-size:11px;letter-spacing:.1em;color:#8A6F4E">REVOIR LE DÉTAIL</div>
+        <div style="background:#FBF8F1;border:1px solid #E4DBC9;border-radius:9px;padding:11px 14px;display:flex;align-items:center;gap:10px"><span style="color:#8A6F4E">▸</span><span style="font-family:'EB Garamond',serif;font-size:14.5px;color:#221C16;flex:1">Ton retour socratique — 4 relances &amp; tes questions</span><span style="font-family:'Alegreya Sans',sans-serif;font-size:12px;color:#8A6F4E">déplier</span></div>
+        <div style="background:#FBF8F1;border:1px solid #E4DBC9;border-radius:9px;padding:11px 14px;display:flex;align-items:center;gap:10px"><span style="color:#8A6F4E">▸</span><span style="font-family:'EB Garamond',serif;font-size:14.5px;color:#221C16;flex:1">Le retour final complet — nuances, ajouts vérifiés</span><span style="font-family:'Alegreya Sans',sans-serif;font-size:12px;color:#8A6F4E">déplier</span></div>
+        <div style="background:#FBF8F1;border:1px solid #E4DBC9;border-radius:9px;padding:11px 14px;display:flex;align-items:center;gap:10px"><span style="color:#8A6F4E">▸</span><span style="font-family:'EB Garamond',serif;font-size:14.5px;color:#221C16;flex:1">Ta saisie initiale — arguments, accord, vocabulaire</span><span style="font-family:'Alegreya Sans',sans-serif;font-size:12px;color:#8A6F4E">déplier</span></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- APRÈS — mobile -->
+<div data-screen-label="Revue — après (repensé) — mobile" style="position:absolute;left:1240px;top:5050px;width:300px">
+  <div data-drags-parent="1" style="position:absolute;top:-26px;left:2px;font-family:'Alegreya Sans',sans-serif;font-size:13px;color:#5B6E4A">Mobile — bascule version finale / premier jet</div>
+  <div style="border:11px solid #221C16;border-radius:38px;background:#221C16;box-shadow:0 6px 22px rgba(34,28,22,.22)">
+    <div style="background:#F3ECDD;border-radius:27px;height:640px;overflow:hidden;display:flex;flex-direction:column">
+      <div style="background:#ECE4D6;padding:11px 15px;display:flex;align-items:center;gap:9px"><span style="color:#5A4632;font-size:15px">←</span><span style="font-family:'Cinzel',serif;font-weight:600;font-size:12px;letter-spacing:.14em;color:#2C4A7C">ALETHEIA</span></div>
+      <div style="padding:13px 15px;flex:1;overflow:hidden">
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:8px">
+          <div style="font-family:'Cormorant Garamond',serif;font-weight:600;font-size:17px;color:#221C16;line-height:1.05">Semaine 2 — Apollon &amp; Dionysos</div>
+          <span style="font-family:'Alegreya Sans',sans-serif;font-size:10px;color:#5B6E4A;background:#E4E8D8;padding:2px 7px;border-radius:7px;white-space:nowrap">✓ Terminée</span>
+        </div>
+        <div style="background:#FBF8F1;border:1px solid #E4DBC9;border-left:4px solid #2C4A7C;border-radius:10px;padding:11px 13px;margin-top:11px">
+          <div style="font-family:'Alegreya Sans',sans-serif;font-size:10.5px;letter-spacing:.08em;color:#2C4A7C;margin-bottom:4px">★ À RELIRE — SYNTHÈSE</div>
+          <div style="font-family:'EB Garamond',serif;font-size:13px;color:#221C16;line-height:1.5">Apollon et Dionysos : deux pulsions de l'art — le rêve qui forme, l'ivresse qui dissout. La tragédie naît de leur union.</div>
+        </div>
+        <div style="display:flex;background:#ECE4D6;border-radius:9px;padding:3px;margin-top:11px;font-family:'Alegreya Sans',sans-serif;font-size:11.5px">
+          <div style="flex:1;text-align:center;background:#FBF8F1;border-radius:7px;padding:6px;color:#221C16;font-weight:700;box-shadow:0 1px 2px rgba(34,28,22,.08)">Ta version finale</div>
+          <div style="flex:1;text-align:center;padding:6px;color:#8A6F4E">Ton premier jet</div>
+        </div>
+        <div style="background:#FBF8F1;border:1px solid #C7D2E0;border-radius:10px;padding:10px 12px;margin-top:9px">
+          <div style="font-family:'EB Garamond',serif;font-size:13px;color:#221C16;line-height:1.5">Deux pulsions de l'art, non deux humeurs : le rêve qui met en forme et l'ivresse qui dissout. La tragédie naît de leur union.</div>
+        </div>
+        <div style="background:#FBF8F1;border:1px solid #E4DBC9;border-left:4px solid #5B6E4A;border-radius:10px;padding:10px 12px;margin-top:9px">
+          <div style="font-family:'Alegreya Sans',sans-serif;font-size:10.5px;letter-spacing:.08em;color:#5B6E4A;margin-bottom:3px">DÉVOILÉ CETTE SEMAINE</div>
+          <div style="font-family:'EB Garamond',serif;font-size:12.5px;color:#5A4632;line-height:1.45">L'opposition fondatrice. Jalon : le chœur (sem. 3), la mort de la tragédie (sem. 4).</div>
+        </div>
+        <div style="background:#FBF8F1;border:1px solid #E4DBC9;border-radius:9px;padding:9px 12px;margin-top:9px;display:flex;align-items:center;gap:9px"><span style="color:#8A6F4E">▸</span><span style="font-family:'EB Garamond',serif;font-size:12.5px;color:#221C16;flex:1">Revoir le détail des retours</span></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- C note -->
+<div style="position:absolute;left:360px;top:5810px;width:840px">
+  <div style="background:#F3ECDD;border:1px solid #E4DBC9;border-left:3px solid #5B6E4A;border-radius:8px;padding:14px 18px;font-family:'EB Garamond',serif;font-size:15px;line-height:1.55;color:#5A4632">
+    <span style="font-family:'Alegreya Sans',sans-serif;font-size:11px;letter-spacing:.1em;color:#5B6E4A">POURQUOI C'EST MIEUX</span><br>
+    Une semaine terminée n'a plus besoin d'être un formulaire : c'est une <b>archive à relire</b>. On remonte donc la <b>synthèse modèle</b> (ce qui vaut d'être gardé) tout en haut, on rend visible <b>ton avant/après</b> (le premier jet → la version finale, côte à côte : on <i>voit</i> le progrès), on garde le <b>dévoilement d'architecture</b> comme fil entre les semaines, et on <b>replie</b> les retours bruts derrière trois lignes « déplier ». Quatre blocs égaux → une hiérarchie de lecture. Réutilise le même langage deux-colonnes que l'atelier.
+  </div>
+</div>
+
+<!-- ======================= D — CAPSTONE ======================= -->
+<div style="position:absolute;left:80px;top:6020px;font-family:'Cormorant Garamond',serif;font-weight:600;font-size:30px;color:#2C4A7C">D · Le télos — la carte d'architecture</div>
+<div style="position:absolute;left:80px;top:6062px;font-family:'EB Garamond',serif;font-size:16px;color:#8A6F4E">Quand les six semaines sont terminées, le livre dévoile sa structure entière. Le sceau s'y déploie en grand — c'est l'aboutissement.</div>
+
+<!-- D ready -->
+<div data-screen-label="Capstone — carte prête" style="position:absolute;left:80px;top:6130px;width:760px">
+  <div data-drags-parent="1" style="position:absolute;top:-26px;left:2px;font-family:'Alegreya Sans',sans-serif;font-size:13px;color:#8A6F4E">Ordinateur — carte disponible</div>
+  <div style="border:1px solid #D8CFBC;border-radius:12px;background:#FBF8F1;box-shadow:0 4px 16px rgba(34,28,22,.1);overflow:hidden">
+    <div style="background:#ECE4D6;padding:9px 14px;display:flex;align-items:center;gap:7px"><span style="width:10px;height:10px;border-radius:50%;background:#C9B89A"></span><span style="width:10px;height:10px;border-radius:50%;background:#C9B89A"></span><span style="width:10px;height:10px;border-radius:50%;background:#C9B89A"></span></div>
+    <div style="background:#F3ECDD;padding:26px 30px 28px">
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:12px">
+        <div style="font-family:'Alegreya Sans',sans-serif;font-size:12.5px;color:#8A6F4E">← Planning</div>
+        <div style="font-family:'Alegreya Sans',sans-serif;font-size:12.5px;color:#2C4A7C;border:1px solid #C7D2E0;border-radius:8px;padding:6px 13px">⎙ Imprimer</div>
+      </div>
+      <!-- hero with big showcased seal -->
+      <div style="display:flex;flex-direction:column;align-items:center;text-align:center;margin-top:10px">
+        <span style="width:112px;height:112px;border-radius:50%;background:#DDE3EC;display:inline-flex;align-items:center;justify-content:center;overflow:hidden;flex-shrink:0;box-shadow:inset 0 0 0 1px rgba(44,74,124,.12)"><img src="sceaux/aletheia.png" style="width:98px;height:98px;object-fit:cover;object-position:50% 40%;filter:brightness(1.09) contrast(1.04);mix-blend-mode:multiply" alt=""></span>
+        <div style="font-family:'Cinzel',serif;font-weight:600;font-size:12px;letter-spacing:.2em;color:#2C4A7C;margin-top:12px">ALETHEIA · LA NAISSANCE DE LA TRAGÉDIE</div>
+        <div style="font-family:'Cormorant Garamond',serif;font-weight:600;font-size:30px;color:#221C16;line-height:1.1;margin-top:4px">✦ La carte d'architecture du livre</div>
+        <div style="font-family:'EB Garamond',serif;font-size:15.5px;color:#5A4632;margin-top:5px;max-width:480px">La vue d'ensemble du mouvement argumentatif, maintenant que tu as tout lu.</div>
+      </div>
+      <!-- fil conducteur -->
+      <div style="background:#FBF8F1;border:1px solid #E4DBC9;border-left:4px solid #B8893B;border-radius:11px;padding:16px 18px;margin-top:20px">
+        <div style="font-family:'Alegreya Sans',sans-serif;font-size:11px;letter-spacing:.1em;color:#9A6A2E;margin-bottom:6px">FIL CONDUCTEUR</div>
+        <div style="font-family:'EB Garamond',serif;font-size:16px;color:#221C16;line-height:1.6">Le livre suit une seule courbe : la tragédie naît de l'union d'Apollon et de Dionysos, s'épanouit par le chœur, puis meurt quand Socrate y substitue la raison — avant que Nietzsche n'appelle sa renaissance par le mythe et la musique.</div>
+      </div>
+      <!-- chapitres -->
+      <div style="background:#FBF8F1;border:1px solid #E4DBC9;border-radius:11px;padding:16px 18px;margin-top:14px">
+        <div style="font-family:'Cormorant Garamond',serif;font-weight:600;font-size:18px;color:#221C16;margin-bottom:10px">Les chapitres</div>
+        <div style="display:flex;flex-direction:column;gap:9px">
+          <div style="display:flex;gap:12px;align-items:baseline"><span style="font-family:'Cinzel',serif;font-size:11px;color:#2C4A7C;width:28px;flex-shrink:0">I-III</span><span style="font-family:'EB Garamond',serif;font-size:15px;color:#5A4632;line-height:1.45"><b style="color:#221C16">L'art tragique &amp; Apollon/Dionysos</b> — les deux pulsions de l'art.</span></div>
+          <div style="display:flex;gap:12px;align-items:baseline"><span style="font-family:'Cinzel',serif;font-size:11px;color:#2C4A7C;width:28px;flex-shrink:0">IV-VII</span><span style="font-family:'EB Garamond',serif;font-size:15px;color:#5A4632;line-height:1.45"><b style="color:#221C16">Le chœur</b> — matrice du drame, spectateur idéal.</span></div>
+          <div style="display:flex;gap:12px;align-items:baseline"><span style="font-family:'Cinzel',serif;font-size:11px;color:#2C4A7C;width:28px;flex-shrink:0">VIII-XII</span><span style="font-family:'EB Garamond',serif;font-size:15px;color:#5A4632;line-height:1.45"><b style="color:#221C16">Socrate</b> — la raison tue l'instinct tragique.</span></div>
+          <div style="display:flex;gap:12px;align-items:baseline"><span style="font-family:'Cinzel',serif;font-size:11px;color:#2C4A7C;width:28px;flex-shrink:0">XIII-XVIII</span><span style="font-family:'EB Garamond',serif;font-size:15px;color:#5A4632;line-height:1.45"><b style="color:#221C16">La renaissance</b> — le mythe et la musique rouvrent la voie.</span></div>
+        </div>
+      </div>
+      <!-- liens -->
+      <div style="background:#FBF8F1;border:1px solid #E4DBC9;border-radius:11px;padding:16px 18px;margin-top:14px">
+        <div style="font-family:'Cormorant Garamond',serif;font-weight:600;font-size:18px;color:#221C16;margin-bottom:10px">Comment les chapitres s'enchaînent</div>
+        <div style="display:flex;flex-direction:column;gap:8px;font-family:'EB Garamond',serif;font-size:15px;color:#5A4632;line-height:1.45">
+          <div><b style="color:#221C16">Apollon/Dionysos</b> <span style="color:#B8893B">→</span> <b style="color:#221C16">le chœur</b> : l'union des pulsions s'incarne dans le chant collectif.</div>
+          <div><b style="color:#221C16">Le chœur</b> <span style="color:#B8893B">→</span> <b style="color:#221C16">Socrate</b> : sa disparition ouvre la voie au rationalisme.</div>
+          <div><b style="color:#221C16">Socrate</b> <span style="color:#B8893B">→</span> <b style="color:#221C16">la renaissance</b> : la mort de la tragédie appelle son retour par le mythe.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- D pending -->
+<div data-screen-label="Capstone — en préparation" style="position:absolute;left:880px;top:6130px;width:300px">
+  <div data-drags-parent="1" style="position:absolute;top:-26px;left:2px;font-family:'Alegreya Sans',sans-serif;font-size:13px;color:#8A6F4E">Carte en préparation</div>
+  <div style="border:11px solid #221C16;border-radius:38px;background:#221C16;box-shadow:0 6px 22px rgba(34,28,22,.22)">
+    <div style="background:#F3ECDD;border-radius:27px;height:420px;overflow:hidden;display:flex;flex-direction:column">
+      <div style="background:#ECE4D6;padding:11px 15px;display:flex;align-items:center;gap:9px"><span style="color:#5A4632;font-size:15px">←</span><span style="font-family:'Cinzel',serif;font-weight:600;font-size:12px;letter-spacing:.14em;color:#2C4A7C">ALETHEIA</span></div>
+      <div style="padding:16px 15px;flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center">
+        <span style="width:76px;height:76px;border-radius:50%;background:#DDE3EC;display:inline-flex;align-items:center;justify-content:center;overflow:hidden;flex-shrink:0;opacity:.85"><img src="sceaux/aletheia.png" style="width:67px;height:67px;object-fit:cover;object-position:50% 40%;filter:brightness(1.09) contrast(1.04);mix-blend-mode:multiply" alt=""></span>
+        <div style="font-size:18px;color:#B8893B;margin-top:14px">◷</div>
+        <div style="font-family:'Cormorant Garamond',serif;font-weight:600;font-size:19px;color:#221C16;line-height:1.15;margin-top:6px">Ta carte d'architecture se prépare</div>
+        <div style="font-family:'EB Garamond',serif;font-size:13.5px;color:#5A4632;margin-top:6px;line-height:1.5">Tu as terminé le livre ! La page se mettra à jour automatiquement.</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- D note -->
+<div style="position:absolute;left:880px;top:6580px;width:300px">
+  <div style="background:#F3ECDD;border:1px solid #E4DBC9;border-left:3px solid #B8893B;border-radius:8px;padding:14px 16px;font-family:'EB Garamond',serif;font-size:15px;line-height:1.5;color:#5A4632">
+    <span style="font-family:'Alegreya Sans',sans-serif;font-size:11px;letter-spacing:.1em;color:#9A6A2E">ANTI-SPOILER</span><br>
+    La carte révèle tout l'aval : l'élève n'y accède qu'après avoir lui-même bouclé ses six semaines. Ici le sceau est <b>centré et agrandi</b> (112px) — la carte est une page à garder, voire à imprimer.
+  </div>
+</div>
+
+<!-- ======================= E — ÉTATS LIMITES ======================= -->
+<div style="position:absolute;left:80px;top:7040px;font-family:'Cormorant Garamond',serif;font-weight:600;font-size:30px;color:#8A6F4E">E · Les états limites</div>
+<div style="position:absolute;left:80px;top:7082px;font-family:'EB Garamond',serif;font-size:16px;color:#8A6F4E">Verrou, accès, erreur — les écrans qu'on oublie souvent mais que l'élève rencontre.</div>
+
+<div style="position:absolute;left:80px;top:7150px;width:1500px">
+  <div style="display:flex;gap:18px">
+    <!-- verrou -->
+    <div data-screen-label="Semaine verrouillée" style="flex:1">
+      <div style="border:1px solid #D8CFBC;border-radius:12px;background:#FBF8F1;box-shadow:0 2px 10px rgba(34,28,22,.08);overflow:hidden;height:100%">
+        <div style="background:#ECE4D6;padding:8px 13px;display:flex;align-items:center;gap:6px"><span style="width:9px;height:9px;border-radius:50%;background:#C9B89A"></span><span style="width:9px;height:9px;border-radius:50%;background:#C9B89A"></span><span style="width:9px;height:9px;border-radius:50%;background:#C9B89A"></span></div>
+        <div style="background:#F3ECDD;padding:20px;text-align:center">
+          <div style="font-family:'Alegreya Sans',sans-serif;font-size:12px;color:#8A6F4E;text-align:left;margin-bottom:14px">← Planning</div>
+          <div style="font-size:30px">🔒</div>
+          <div style="font-family:'Cormorant Garamond',serif;font-weight:600;font-size:20px;color:#221C16;margin-top:8px">Semaine verrouillée</div>
+          <div style="font-family:'EB Garamond',serif;font-size:14.5px;color:#5A4632;margin-top:5px;line-height:1.5">Termine d'abord la semaine précédente pour débloquer celle-ci.</div>
+          <div style="font-family:'Alegreya Sans',sans-serif;font-size:12px;color:#8A6F4E;margin-top:12px;padding-top:11px;border-top:1px solid #E4DBC9">Mode déblocage séquentiel (optionnel, réglé par le prof).</div>
+        </div>
+      </div>
+    </div>
+    <!-- module non activé -->
+    <div data-screen-label="Module non disponible" style="flex:1">
+      <div style="border:1px solid #D8CFBC;border-radius:12px;background:#FBF8F1;box-shadow:0 2px 10px rgba(34,28,22,.08);overflow:hidden;height:100%">
+        <div style="background:#ECE4D6;padding:8px 13px;display:flex;align-items:center;gap:6px"><span style="width:9px;height:9px;border-radius:50%;background:#C9B89A"></span><span style="width:9px;height:9px;border-radius:50%;background:#C9B89A"></span><span style="width:9px;height:9px;border-radius:50%;background:#C9B89A"></span></div>
+        <div style="background:#F3ECDD;padding:20px;text-align:center">
+          <div style="font-family:'Alegreya Sans',sans-serif;font-size:12px;color:#8A6F4E;text-align:left;margin-bottom:14px">← Retour</div>
+          <span style="width:54px;height:54px;border-radius:50%;background:#DDE3EC;display:inline-flex;align-items:center;justify-content:center;overflow:hidden;opacity:.6"><img src="sceaux/aletheia.png" style="width:48px;height:48px;object-fit:cover;object-position:50% 40%;filter:brightness(1.09) contrast(1.04);mix-blend-mode:multiply" alt=""></span>
+          <div style="font-family:'Cormorant Garamond',serif;font-weight:600;font-size:20px;color:#221C16;margin-top:10px">Module non disponible</div>
+          <div style="font-family:'EB Garamond',serif;font-size:14.5px;color:#5A4632;margin-top:5px;line-height:1.5">Ce module n'est pas encore activé pour ton compte. Reviens plus tard ou demande à ton professeur.</div>
+        </div>
+      </div>
+    </div>
+    <!-- aucun livre -->
+    <div data-screen-label="Aucun livre assigné" style="flex:1">
+      <div style="border:1px solid #D8CFBC;border-radius:12px;background:#FBF8F1;box-shadow:0 2px 10px rgba(34,28,22,.08);overflow:hidden;height:100%">
+        <div style="background:#ECE4D6;padding:8px 13px;display:flex;align-items:center;gap:6px"><span style="width:9px;height:9px;border-radius:50%;background:#C9B89A"></span><span style="width:9px;height:9px;border-radius:50%;background:#C9B89A"></span><span style="width:9px;height:9px;border-radius:50%;background:#C9B89A"></span></div>
+        <div style="background:#F3ECDD;padding:20px;text-align:center">
+          <div style="display:flex;align-items:center;gap:11px;text-align:left">
+            <span style="width:48px;height:48px;border-radius:50%;background:#DDE3EC;display:inline-flex;align-items:center;justify-content:center;overflow:hidden"><img src="sceaux/aletheia.png" style="width:42px;height:42px;object-fit:cover;object-position:50% 40%;filter:brightness(1.09) contrast(1.04);mix-blend-mode:multiply" alt=""></span>
+            <span style="font-family:'Cinzel',serif;font-weight:600;font-size:13px;letter-spacing:.16em;color:#2C4A7C">ALETHEIA</span>
+          </div>
+          <div style="border:1px dashed #CDBFA6;border-radius:10px;padding:18px;margin-top:16px;background:#F4EFE6">
+            <div style="font-size:24px">📖</div>
+            <div style="font-family:'Cormorant Garamond',serif;font-weight:600;font-size:18px;color:#221C16;margin-top:6px">Aucun livre assigné</div>
+            <div style="font-family:'EB Garamond',serif;font-size:14px;color:#5A4632;margin-top:4px;line-height:1.5">Aucun livre ne t'est assigné pour le moment.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <!-- erreur retour -->
+    <div data-screen-label="Échec de préparation du retour" style="flex:1">
+      <div style="border:1px solid #D8CFBC;border-radius:12px;background:#FBF8F1;box-shadow:0 2px 10px rgba(34,28,22,.08);overflow:hidden;height:100%">
+        <div style="background:#ECE4D6;padding:8px 13px;display:flex;align-items:center;gap:6px"><span style="width:9px;height:9px;border-radius:50%;background:#C9B89A"></span><span style="width:9px;height:9px;border-radius:50%;background:#C9B89A"></span><span style="width:9px;height:9px;border-radius:50%;background:#C9B89A"></span></div>
+        <div style="background:#F3ECDD;padding:20px">
+          <div style="font-family:'Alegreya Sans',sans-serif;font-size:12px;color:#8A6F4E;margin-bottom:14px">Semaine 4</div>
+          <div style="background:#F0DBD3;border:1px solid #DDB7AC;border-radius:10px;padding:13px 15px">
+            <div style="font-family:'Alegreya Sans',sans-serif;font-size:12.5px;font-weight:700;color:#A23E2E;margin-bottom:4px">⚠ La préparation n'a pas abouti</div>
+            <div style="font-family:'EB Garamond',serif;font-size:14px;color:#7A2E22;line-height:1.5">Renvoie ton travail ci-dessous ; si le problème persiste, préviens ton professeur.</div>
+          </div>
+          <div style="background:#FBF8F1;border:1px solid #E4DBC9;border-radius:9px;height:60px;margin-top:12px"></div>
+          <div style="background:#B4452F;color:#FBF8F1;font-family:'Alegreya Sans',sans-serif;font-size:13px;font-weight:600;text-align:center;border-radius:8px;padding:10px;margin-top:10px">Renvoyer mon travail</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- closing -->
+<div style="position:absolute;left:80px;top:7500px;width:760px">
+  <div style="background:#F4EFE6;border:1px solid #E4DBC9;border-radius:10px;padding:18px 20px;font-family:'EB Garamond',serif;font-size:15px;line-height:1.55;color:#5A4632;box-shadow:0 1px 3px rgba(34,28,22,.06)">
+    <div style="font-family:'Cormorant Garamond',serif;font-weight:600;font-size:21px;color:#221C16;margin-bottom:6px">Le bilan</div>
+    Le parcours est complet et cohérent : un en-tête de monde constant (sceau + semaine + stepper), une boucle claire en six états, un seul atelier deux-colonnes à apprendre. Les trois retouches : le <b>sceau remis en valeur</b> et ajouté au planning et au capstone ; la <b>revue d'une semaine terminée</b> qui passe d'une pile de formulaires à une archive hiérarchisée (synthèse + avant/après + détail replié) ; et une <b>lecture d'ensemble</b> du planning par les quatre points d'avancement.
+  </div>
+</div>
+</x-dc>
+</body>
+</html>

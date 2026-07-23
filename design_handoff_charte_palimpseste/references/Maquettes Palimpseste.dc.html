@@ -1,0 +1,569 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<meta name="design_doc_mode" content="canvas">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;500;600;700&family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500&family=EB+Garamond:ital,wght@0,400;0,500;0,600;1,400&family=Alegreya+Sans:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  body { margin:0; font-family:'EB Garamond',Georgia,serif; color:#2A2017; -webkit-font-smoothing:antialiased; }
+  .mono { font-family: ui-monospace,'SF Mono',Menlo,monospace; }
+</style>
+</helmet>
+
+<!-- ===== NOTE ===== -->
+<div style="position:absolute; left:80px; top:60px; width:900px">
+  <div data-drags-parent="1" style="position:absolute; top:-26px; font:600 12px 'Alegreya Sans',sans-serif; letter-spacing:.12em; text-transform:uppercase; color:rgba(60,50,40,.65)">Étape 3 · Maquettes</div>
+  <div style="background:#FBF8F1; border:1px solid #E4DBC9; border-radius:3px; box-shadow:0 1px 4px rgba(50,40,25,.1); padding:28px 34px">
+    <div style="font-family:'Cormorant Garamond',serif; font-weight:600; font-size:28px; color:#221C16">Vos écrans, habillés de la charte</div>
+    <p style="font:16.5px/1.55 'EB Garamond',serif; margin:12px 0 0; max-width:74ch; color:#3A2E22">Sept écrans réels du projet, en deux espaces. <strong>Espace élève</strong> — Connexion, Tableau de bord, et trois modules en pleine page (Aletheia, Fragments, Codex). <strong>Espace professeur</strong> — Tableau de bord et Scriptorium. Le parchemin unifie tout ; chaque module signe d'une couleur. La structure (en-tête, navigation, largeur centrée) reste fidèle à votre code Next/Tailwind. Faites glisser pour naviguer, commentez n'importe quel élément pour itérer.</p>
+  </div>
+</div>
+
+<!-- ============================================================= -->
+<!-- ===== ÉCRAN 1 · CONNEXION ===== -->
+<!-- ============================================================= -->
+<div style="position:absolute; left:80px; top:360px; width:680px">
+  <div data-drags-parent="1" style="position:absolute; top:-24px; font:600 12px 'Alegreya Sans',sans-serif; letter-spacing:.1em; text-transform:uppercase; color:rgba(60,50,40,.6)">1 · Connexion</div>
+  <div style="background:#fff; border-radius:9px; box-shadow:0 6px 26px rgba(50,40,25,.16); overflow:hidden">
+    <div style="height:38px; background:#E7DFCE; border-bottom:1px solid #D8CCB4; display:flex; align-items:center; gap:7px; padding:0 14px">
+      <span style="width:11px;height:11px;border-radius:50%;background:#C9B68E"></span><span style="width:11px;height:11px;border-radius:50%;background:#D8CDB2"></span><span style="width:11px;height:11px;border-radius:50%;background:#D8CDB2"></span>
+      <span class="mono" style="margin-left:12px; font-size:11px; color:#9A876A">palimpseste.app/login</span>
+    </div>
+    <div style="background:#EAE2D3; padding:70px 40px; display:flex; align-items:center; justify-content:center">
+      <div style="background:#FBF8F1; border:1px solid #E4DBC9; border-radius:10px; box-shadow:0 2px 10px rgba(60,45,25,.08); padding:38px 36px; width:368px">
+        <div style="text-align:center; margin-bottom:30px">
+          <div style="width:84px;height:84px;border-radius:50%;background:#EDE6D6;display:flex;align-items:center;justify-content:center;overflow:hidden;margin:0 auto 16px"><img src="uploads/Logo-Palimpseste.png" alt="" style="width:74px;height:74px;object-fit:cover;filter:brightness(1.09) contrast(1.04);mix-blend-mode:multiply"></div>
+          <div style="font-family:'Cinzel',serif; font-weight:600; font-size:24px; letter-spacing:.08em; color:#221C16">PALIMPSESTE</div>
+          <div style="font-family:'EB Garamond',serif; font-style:italic; font-size:15px; color:#8A6F4E; margin-top:3px">Plateforme pédagogique</div>
+        </div>
+        <div style="margin-bottom:16px">
+          <div style="font:500 13px 'Alegreya Sans',sans-serif; color:#5A4632; margin-bottom:6px">Adresse courriel</div>
+          <div style="background:#fff; border:1px solid #D8CCB4; border-radius:7px; padding:10px 12px; font:14px 'Alegreya Sans',sans-serif; color:#A8906A">prenom.nom@exemple.fr</div>
+        </div>
+        <div style="margin-bottom:24px">
+          <div style="font:500 13px 'Alegreya Sans',sans-serif; color:#5A4632; margin-bottom:6px">Mot de passe</div>
+          <div style="background:#fff; border:1px solid #D8CCB4; border-radius:7px; padding:10px 12px; font:14px 'Alegreya Sans',sans-serif; color:#5A4632; letter-spacing:.15em">••••••••••</div>
+        </div>
+        <div style="background:#5A4632; color:#FBF8F1; text-align:center; border-radius:7px; padding:11px; font:600 14px 'Alegreya Sans',sans-serif">Se connecter</div>
+        <div style="text-align:center; margin-top:22px; font-family:'Cormorant Garamond',serif; font-style:italic; font-size:14px; color:#B49B6E">Verba volant, scripta manent.</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ============================================================= -->
+<!-- ===== ÉCRAN 2 · TABLEAU DE BORD ÉLÈVE ===== -->
+<!-- ============================================================= -->
+<div style="position:absolute; left:840px; top:360px; width:1180px">
+  <div data-drags-parent="1" style="position:absolute; top:-24px; font:600 12px 'Alegreya Sans',sans-serif; letter-spacing:.1em; text-transform:uppercase; color:rgba(60,50,40,.6)">2 · Tableau de bord élève — tous les mondes réunis</div>
+  <div style="background:#fff; border-radius:9px; box-shadow:0 6px 26px rgba(50,40,25,.16); overflow:hidden">
+    <div style="height:38px; background:#E7DFCE; border-bottom:1px solid #D8CCB4; display:flex; align-items:center; gap:7px; padding:0 14px">
+      <span style="width:11px;height:11px;border-radius:50%;background:#C9B68E"></span><span style="width:11px;height:11px;border-radius:50%;background:#D8CDB2"></span><span style="width:11px;height:11px;border-radius:50%;background:#D8CDB2"></span>
+      <span class="mono" style="margin-left:12px; font-size:11px; color:#9A876A">palimpseste.app/eleve</span>
+    </div>
+
+    <!-- app header -->
+    <div style="background:#FBF8F1; border-bottom:1px solid #E4DBC9">
+      <div style="max-width:896px; margin:0 auto; padding:16px 24px 8px; display:flex; align-items:center; justify-content:space-between">
+        <span style="font-family:'Cinzel',serif; font-weight:600; font-size:17px; letter-spacing:.06em; color:#221C16">PALIMPSESTE</span>
+        <div style="display:flex; align-items:center; gap:14px">
+          <span style="font:500 13px 'Alegreya Sans',sans-serif; background:#EFE7D6; color:#5A4632; padding:6px 12px; border-radius:20px">Terminale HLP ▾</span>
+          <span style="font:14px 'Alegreya Sans',sans-serif; color:#8A6F4E">Se déconnecter</span>
+        </div>
+      </div>
+      <div style="max-width:896px; margin:0 auto; padding:0 24px 10px; display:flex; gap:6px">
+        <span style="font:500 14px 'Alegreya Sans',sans-serif; background:#E6DCC7; color:#2A2017; padding:6px 13px; border-radius:7px">Tableau de bord</span>
+        <span style="font:14px 'Alegreya Sans',sans-serif; color:#6E5A3E; padding:6px 13px; border-radius:7px">Calendrier</span>
+        <span style="font:14px 'Alegreya Sans',sans-serif; color:#6E5A3E; padding:6px 13px; border-radius:7px">Modules ▾</span>
+      </div>
+    </div>
+
+    <!-- main -->
+    <div style="background:#EAE2D3; padding:30px 24px 40px">
+      <div style="max-width:896px; margin:0 auto">
+        <div style="margin-bottom:26px">
+          <div style="font-family:'Cormorant Garamond',serif; font-weight:600; font-size:30px; color:#221C16; line-height:1.1">Bonjour, Camille</div>
+          <div style="font:14px 'Alegreya Sans',sans-serif; color:#8A6F4E; margin-top:2px">Terminale HLP · Semaine 7</div>
+        </div>
+
+        <!-- À FAIRE -->
+        <div style="font:600 12px 'Alegreya Sans',sans-serif; letter-spacing:.12em; text-transform:uppercase; color:#A8906A; margin-bottom:12px">À faire</div>
+        <div style="display:flex; flex-direction:column; gap:12px; margin-bottom:30px">
+          <!-- fragments -->
+          <div style="background:#FBF8F1; border:1px solid #E4DBC9; border-left:4px solid #5A6043; border-radius:11px; padding:15px 17px">
+            <div style="display:flex; align-items:center; justify-content:space-between; gap:12px">
+              <div style="display:flex; align-items:center; gap:12px">
+                <div style="width:38px;height:38px;border-radius:50%;background:#E2E3D2;display:flex;align-items:center;justify-content:center;overflow:hidden;flex-shrink:0"><img src="uploads/Logo-Fragments.png" alt="" style="width:34px;height:34px;object-fit:cover;filter:brightness(1.09) contrast(1.04);mix-blend-mode:multiply"></div>
+                <div>
+                  <div style="font:500 15px 'Alegreya Sans',sans-serif; color:#221C16">Fragments d'érudition</div>
+                  <div style="font:14px 'EB Garamond',serif; color:#9A6A2E">Semaine 7 — à déposer avant vendredi 18 h</div>
+                </div>
+              </div>
+              <span style="font:500 12px 'Alegreya Sans',sans-serif; background:#EFE4CF; color:#9A6A2E; padding:5px 11px; border-radius:20px; white-space:nowrap">à déposer</span>
+            </div>
+          </div>
+          <!-- quazian -->
+          <div style="background:#FBF8F1; border:1px solid #E4DBC9; border-left:4px solid #3E6B8E; border-radius:11px; padding:15px 17px">
+            <div style="display:flex; align-items:center; justify-content:space-between; gap:12px">
+              <div style="display:flex; align-items:center; gap:12px">
+                <div style="width:38px;height:38px;border-radius:50%;background:#DCE6EC;display:flex;align-items:center;justify-content:center;overflow:hidden;flex-shrink:0"><img src="uploads/Logo-Quazian.png" alt="" style="width:34px;height:34px;object-fit:cover;filter:brightness(1.09) contrast(1.04);mix-blend-mode:multiply"></div>
+                <div>
+                  <div style="font:500 15px 'Alegreya Sans',sans-serif; color:#221C16">Flashcards à réviser</div>
+                  <div style="font:14px 'EB Garamond',serif; color:#8A6F4E">Quazian — tiens la cadence</div>
+                </div>
+              </div>
+              <span style="font:500 12px 'Alegreya Sans',sans-serif; background:#DCE6EC; color:#345C78; padding:5px 11px; border-radius:20px; white-space:nowrap">12 cartes dues</span>
+            </div>
+          </div>
+          <!-- codex -->
+          <div style="background:#FBF8F1; border:1px solid #E4DBC9; border-left:4px solid #2E4A3C; border-radius:11px; padding:15px 17px">
+            <div style="display:flex; align-items:center; justify-content:space-between; gap:12px">
+              <div style="display:flex; align-items:center; gap:12px">
+                <div style="width:38px;height:38px;border-radius:50%;background:#DCE6DF;display:flex;align-items:center;justify-content:center;overflow:hidden;flex-shrink:0"><img src="uploads/Logo-Codex.png" alt="" style="width:34px;height:34px;object-fit:cover;filter:brightness(1.09) contrast(1.04);mix-blend-mode:multiply"></div>
+                <div>
+                  <div style="font:500 15px 'Alegreya Sans',sans-serif; color:#221C16">Synthèse Codex en cours</div>
+                  <div style="font:14px 'EB Garamond',serif; color:#8A6F4E">La classe rédige le plan ensemble</div>
+                </div>
+              </div>
+              <span style="font:600 12px 'Alegreya Sans',sans-serif; background:#DCE6DF; color:#2E4A3C; padding:5px 11px; border-radius:20px; white-space:nowrap">● en direct</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- PROGRESSION -->
+        <div style="font:600 12px 'Alegreya Sans',sans-serif; letter-spacing:.12em; text-transform:uppercase; color:#A8906A; margin-bottom:12px">Ta progression</div>
+        <div style="display:grid; grid-template-columns:repeat(3,1fr); gap:12px; margin-bottom:30px">
+          <div style="background:#FBF8F1; border:1px solid #E4DBC9; border-radius:11px; padding:15px 16px">
+            <div style="font:600 12px 'Alegreya Sans',sans-serif; color:#5B6E4A; margin-bottom:9px">Tes points forts</div>
+            <div style="display:flex; align-items:center; gap:8px; font:15px 'EB Garamond',serif; color:#3A2E22">Réflexions <span style="font:600 12px 'Alegreya Sans',sans-serif; background:#E4E8D8; color:#4A5B3B; padding:2px 8px; border-radius:5px">A</span></div>
+          </div>
+          <div style="background:#FBF8F1; border:1px solid #E4DBC9; border-radius:11px; padding:15px 16px">
+            <div style="font:600 12px 'Alegreya Sans',sans-serif; color:#345C78; margin-bottom:9px">Où tu progresses</div>
+            <div style="display:flex; align-items:center; gap:8px; font:15px 'EB Garamond',serif; color:#3A2E22">Sources <span style="font:600 12px 'Alegreya Sans',sans-serif; background:#DCE6EC; color:#345C78; padding:2px 8px; border-radius:5px">B+</span></div>
+          </div>
+          <div style="background:#FBF8F1; border:1px solid #E4DBC9; border-radius:11px; padding:15px 16px">
+            <div style="font:600 12px 'Alegreya Sans',sans-serif; color:#9A6A2E; margin-bottom:9px">À travailler</div>
+            <div style="display:flex; align-items:center; gap:8px; font:15px 'EB Garamond',serif; color:#3A2E22">Découvertes <span style="font:600 12px 'Alegreya Sans',sans-serif; background:#EFE4CF; color:#9A6A2E; padding:2px 8px; border-radius:5px">C</span></div>
+          </div>
+        </div>
+
+        <!-- MODULES -->
+        <div style="font:600 12px 'Alegreya Sans',sans-serif; letter-spacing:.12em; text-transform:uppercase; color:#A8906A; margin-bottom:12px">Tes modules</div>
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:14px">
+          <div style="background:#FBF8F1; border:1px solid #E4DBC9; border-radius:12px; padding:18px; display:flex; gap:14px; align-items:center">
+            <div style="width:52px;height:52px;border-radius:50%;background:#DDE3EC;display:flex;align-items:center;justify-content:center;overflow:hidden;flex-shrink:0"><img src="uploads/Logo-Aletheia.png" alt="" style="width:46px;height:46px;object-fit:cover;filter:brightness(1.09) contrast(1.04);mix-blend-mode:multiply"></div>
+            <div><div style="font-family:'Cinzel',serif; font-weight:600; font-size:15px; letter-spacing:.04em; color:#2C4A7C">ALETHEIA</div><div style="font:14px/1.4 'EB Garamond',serif; color:#8A6F4E">Retours socratiques sur tes essais</div></div>
+          </div>
+          <div style="background:#FBF8F1; border:1px solid #E4DBC9; border-radius:12px; padding:18px; display:flex; gap:14px; align-items:center">
+            <div style="width:52px;height:52px;border-radius:50%;background:#E2E3D2;display:flex;align-items:center;justify-content:center;overflow:hidden;flex-shrink:0"><img src="uploads/Logo-Fragments.png" alt="" style="width:46px;height:46px;object-fit:cover;filter:brightness(1.09) contrast(1.04);mix-blend-mode:multiply"></div>
+            <div><div style="font-family:'Cinzel',serif; font-weight:600; font-size:15px; letter-spacing:.04em; color:#4B5235">FRAGMENTS</div><div style="font:14px/1.4 'EB Garamond',serif; color:#8A6F4E">Dépôts d'érudition hebdomadaires</div></div>
+          </div>
+          <div style="background:#FBF8F1; border:1px solid #E4DBC9; border-radius:12px; padding:18px; display:flex; gap:14px; align-items:center">
+            <div style="width:52px;height:52px;border-radius:50%;background:#DCE6DF;display:flex;align-items:center;justify-content:center;overflow:hidden;flex-shrink:0"><img src="uploads/Logo-Codex.png" alt="" style="width:46px;height:46px;object-fit:cover;filter:brightness(1.09) contrast(1.04);mix-blend-mode:multiply"></div>
+            <div><div style="font-family:'Cinzel',serif; font-weight:600; font-size:15px; letter-spacing:.04em; color:#2E4A3C">CODEX</div><div style="font:14px/1.4 'EB Garamond',serif; color:#8A6F4E">Synthèses de lecture en direct</div></div>
+          </div>
+          <div style="background:#FBF8F1; border:1px solid #E4DBC9; border-radius:12px; padding:18px; display:flex; gap:14px; align-items:center">
+            <div style="width:52px;height:52px;border-radius:50%;background:#DCE6EC;display:flex;align-items:center;justify-content:center;overflow:hidden;flex-shrink:0"><img src="uploads/Logo-Quazian.png" alt="" style="width:46px;height:46px;object-fit:cover;filter:brightness(1.09) contrast(1.04);mix-blend-mode:multiply"></div>
+            <div><div style="font-family:'Cinzel',serif; font-weight:600; font-size:15px; letter-spacing:.04em; color:#3E6B8E">QUAZIAN</div><div style="font:14px/1.4 'EB Garamond',serif; color:#8A6F4E">Quizz & révision espacée</div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ============================================================= -->
+<!-- ===== ÉCRAN 3 · PAGE MODULE ALETHEIA ===== -->
+<!-- ============================================================= -->
+<div style="position:absolute; left:840px; top:1700px; width:1180px">
+  <div data-drags-parent="1" style="position:absolute; top:-24px; font:600 12px 'Alegreya Sans',sans-serif; letter-spacing:.1em; text-transform:uppercase; color:rgba(60,50,40,.6)">3 · Page de module — Aletheia (un monde en pleine page)</div>
+  <div style="background:#fff; border-radius:9px; box-shadow:0 6px 26px rgba(50,40,25,.16); overflow:hidden">
+    <div style="height:38px; background:#E7DFCE; border-bottom:1px solid #D8CCB4; display:flex; align-items:center; gap:7px; padding:0 14px">
+      <span style="width:11px;height:11px;border-radius:50%;background:#C9B68E"></span><span style="width:11px;height:11px;border-radius:50%;background:#D8CDB2"></span><span style="width:11px;height:11px;border-radius:50%;background:#D8CDB2"></span>
+      <span class="mono" style="margin-left:12px; font-size:11px; color:#9A876A">palimpseste.app/eleve/modules/aletheia</span>
+    </div>
+
+    <!-- app header (Modules actif) -->
+    <div style="background:#FBF8F1; border-bottom:1px solid #E4DBC9">
+      <div style="max-width:896px; margin:0 auto; padding:16px 24px 8px; display:flex; align-items:center; justify-content:space-between">
+        <span style="font-family:'Cinzel',serif; font-weight:600; font-size:17px; letter-spacing:.06em; color:#221C16">PALIMPSESTE</span>
+        <div style="display:flex; align-items:center; gap:14px">
+          <span style="font:500 13px 'Alegreya Sans',sans-serif; background:#EFE7D6; color:#5A4632; padding:6px 12px; border-radius:20px">Terminale HLP ▾</span>
+          <span style="font:14px 'Alegreya Sans',sans-serif; color:#8A6F4E">Se déconnecter</span>
+        </div>
+      </div>
+      <div style="max-width:896px; margin:0 auto; padding:0 24px 10px; display:flex; gap:6px">
+        <span style="font:14px 'Alegreya Sans',sans-serif; color:#6E5A3E; padding:6px 13px; border-radius:7px">Tableau de bord</span>
+        <span style="font:14px 'Alegreya Sans',sans-serif; color:#6E5A3E; padding:6px 13px; border-radius:7px">Calendrier</span>
+        <span style="font:500 14px 'Alegreya Sans',sans-serif; background:#E6DCC7; color:#2A2017; padding:6px 13px; border-radius:7px">Modules ▾</span>
+      </div>
+    </div>
+
+    <!-- main : vélin Aletheia -->
+    <div style="background:#F3ECDD; padding:34px 24px 44px">
+      <div style="max-width:896px; margin:0 auto">
+
+        <!-- hero du module -->
+        <div style="display:flex; gap:20px; align-items:center; margin-bottom:30px">
+          <div style="width:88px;height:88px;border-radius:50%;background:#DDE3EC;display:flex;align-items:center;justify-content:center;overflow:hidden;flex-shrink:0"><img src="uploads/Logo-Aletheia.png" alt="" style="width:78px;height:78px;object-fit:cover;filter:brightness(1.09) contrast(1.04);mix-blend-mode:multiply"></div>
+          <div>
+            <div style="font-family:'Cinzel',serif; font-weight:600; font-size:26px; letter-spacing:.06em; color:#2C4A7C">ALETHEIA</div>
+            <div style="font-family:'Cormorant Garamond',serif; font-style:italic; font-weight:500; font-size:20px; color:#6E5A3E; margin-top:2px">« Ce qui se dévoile » — le dialogue qui aiguise ta pensée.</div>
+          </div>
+        </div>
+
+        <div style="display:grid; grid-template-columns:1.5fr 1fr; gap:18px">
+          <!-- colonne gauche : dialogue socratique -->
+          <div style="display:flex; flex-direction:column; gap:14px">
+            <div style="background:#FBF8F1; border:1px solid #E4DBC9; border-radius:12px; overflow:hidden">
+              <div style="height:6px; background:#2C4A7C"></div>
+              <div style="padding:20px 22px">
+                <div style="font:600 12px 'Alegreya Sans',sans-serif; letter-spacing:.1em; text-transform:uppercase; color:#A8906A; margin-bottom:12px">Retour sur ton essai — « La vérité est-elle relative ? »</div>
+                <div style="display:flex; gap:12px; margin-bottom:14px">
+                  <div style="width:30px;height:30px;border-radius:50%;background:#DDE3EC;display:flex;align-items:center;justify-content:center;overflow:hidden;flex-shrink:0"><img src="uploads/Logo-Aletheia.png" alt="" style="width:27px;height:27px;object-fit:cover;filter:brightness(1.09) contrast(1.04);mix-blend-mode:multiply"></div>
+                  <p style="font:17px/1.55 'EB Garamond',serif; margin:0; color:#2A2017">Ta thèse est claire : la vérité dépend du point de vue. Mais si tout se vaut, comment expliques-tu qu'on puisse <em>se tromper</em> ?</p>
+                </div>
+                <div style="background:#F3ECDD; border:1px solid #E4DBC9; border-radius:9px; padding:13px 15px; margin-left:42px">
+                  <p style="font:16px/1.5 'EB Garamond',serif; margin:0; color:#5A4632">Parce qu'une erreur suppose une norme… donc quelque chose qui ne dépend pas de moi seul.</p>
+                </div>
+                <div style="display:flex; gap:9px; margin-top:16px">
+                  <span style="font:600 13px 'Alegreya Sans',sans-serif; background:#2C4A7C; color:#FBF8F1; padding:9px 18px; border-radius:7px">Répondre</span>
+                  <span style="font:500 13px 'Alegreya Sans',sans-serif; background:#fff; border:1px solid #C9D2E0; color:#2C4A7C; padding:9px 18px; border-radius:7px">Relire mon essai</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- pistes -->
+            <div style="background:#FBF8F1; border:1px solid #E4DBC9; border-radius:12px; padding:18px 20px">
+              <div style="font:600 12px 'Alegreya Sans',sans-serif; letter-spacing:.1em; text-transform:uppercase; color:#A8906A; margin-bottom:12px">Pistes à suivre</div>
+              <div style="display:flex; flex-direction:column; gap:10px">
+                <div style="display:flex; gap:10px; align-items:baseline; font:16px/1.45 'EB Garamond',serif; color:#3A2E22"><span style="color:#B8893B; font-weight:700">◆</span><span>Distingue « vérité » et « opinion » dès l'introduction.</span></div>
+                <div style="display:flex; gap:10px; align-items:baseline; font:16px/1.45 'EB Garamond',serif; color:#3A2E22"><span style="color:#B8893B; font-weight:700">◆</span><span>Convoque un contre-exemple scientifique au §2.</span></div>
+                <div style="display:flex; gap:10px; align-items:baseline; font:16px/1.45 'EB Garamond',serif; color:#3A2E22"><span style="color:#B8893B; font-weight:700">◆</span><span>Referme sur la nuance : relatif n'est pas arbitraire.</span></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- colonne droite : progression + lecture -->
+          <div style="display:flex; flex-direction:column; gap:14px">
+            <div style="background:#FBF8F1; border:1px solid #E4DBC9; border-radius:12px; padding:18px 20px">
+              <div style="font:600 12px 'Alegreya Sans',sans-serif; letter-spacing:.1em; text-transform:uppercase; color:#A8906A; margin-bottom:14px">Tes sections</div>
+              <div style="display:flex; flex-direction:column; gap:11px">
+                <div style="display:flex; justify-content:space-between; align-items:center; font:16px 'EB Garamond',serif; color:#3A2E22">Découvertes <span style="font:600 12px 'Alegreya Sans',sans-serif; background:#DDE3EC; color:#2C4A7C; padding:3px 10px; border-radius:6px">B</span></div>
+                <div style="display:flex; justify-content:space-between; align-items:center; font:16px 'EB Garamond',serif; color:#3A2E22">Sources <span style="font:600 12px 'Alegreya Sans',sans-serif; background:#F0E6CF; color:#8A6420; padding:3px 10px; border-radius:6px">A−</span></div>
+                <div style="display:flex; justify-content:space-between; align-items:center; font:16px 'EB Garamond',serif; color:#3A2E22">Réflexions <span style="font:600 12px 'Alegreya Sans',sans-serif; background:#F1DCD5; color:#9A3A28; padding:3px 10px; border-radius:6px">C+</span></div>
+              </div>
+            </div>
+            <div style="background:#2C4A7C; border-radius:12px; padding:20px; color:#EAF0F8">
+              <div style="font:600 12px 'Alegreya Sans',sans-serif; letter-spacing:.1em; text-transform:uppercase; color:#AFC2DE; margin-bottom:8px">Lecture en cours</div>
+              <div style="font-family:'Cormorant Garamond',serif; font-weight:600; font-size:23px; line-height:1.15; color:#fff">Le Théétète</div>
+              <div style="font:14px 'EB Garamond',serif; font-style:italic; color:#C6D3E6; margin-top:2px">Platon · semaine 3 sur 5</div>
+              <div style="height:6px; background:rgba(255,255,255,.18); border-radius:4px; margin-top:14px; overflow:hidden"><div style="width:60%; height:100%; background:#B8893B"></div></div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+</div>
+
+
+<!-- ===== SECTION LABEL : ÉLÈVE MODULES ===== -->
+<div data-drags-parent="0" style="position:absolute; left:80px; top:2780px; width:900px">
+  <div style="font-family:'Cinzel',serif; font-weight:600; font-size:20px; letter-spacing:.04em; color:#2A2017">Espace élève · autres mondes en pleine page</div>
+</div>
+
+<!-- ===== ÉCRAN 4 · MODULE FRAGMENTS ===== -->
+<div style="position:absolute; left:80px; top:2840px; width:1180px">
+  <div data-drags-parent="1" style="position:absolute; top:-24px; font:600 12px 'Alegreya Sans',sans-serif; letter-spacing:.1em; text-transform:uppercase; color:rgba(60,50,40,.6)">4 · Module Fragments — Pierre & laurier</div>
+  <div style="background:#fff; border-radius:9px; box-shadow:0 6px 26px rgba(50,40,25,.16); overflow:hidden">
+    <div style="height:38px; background:#E7DFCE; border-bottom:1px solid #D8CCB4; display:flex; align-items:center; gap:7px; padding:0 14px">
+      <span style="width:11px;height:11px;border-radius:50%;background:#C9B68E"></span><span style="width:11px;height:11px;border-radius:50%;background:#D8CDB2"></span><span style="width:11px;height:11px;border-radius:50%;background:#D8CDB2"></span>
+      <span class="mono" style="margin-left:12px; font-size:11px; color:#9A876A">palimpseste.app/eleve/modules/fragments-erudition</span>
+    </div>
+    <div style="background:#FBF8F1; border-bottom:1px solid #E4DBC9">
+      <div style="max-width:896px; margin:0 auto; padding:16px 24px 8px; display:flex; align-items:center; justify-content:space-between">
+        <span style="font-family:'Cinzel',serif; font-weight:600; font-size:17px; letter-spacing:.06em; color:#221C16">PALIMPSESTE</span>
+        <div style="display:flex; align-items:center; gap:14px"><span style="font:500 13px 'Alegreya Sans',sans-serif; background:#EFE7D6; color:#5A4632; padding:6px 12px; border-radius:20px">Terminale HLP ▾</span><span style="font:14px 'Alegreya Sans',sans-serif; color:#8A6F4E">Se déconnecter</span></div>
+      </div>
+      <div style="max-width:896px; margin:0 auto; padding:0 24px 10px; display:flex; gap:6px">
+        <span style="font:14px 'Alegreya Sans',sans-serif; color:#6E5A3E; padding:6px 13px; border-radius:7px">Tableau de bord</span>
+        <span style="font:14px 'Alegreya Sans',sans-serif; color:#6E5A3E; padding:6px 13px; border-radius:7px">Calendrier</span>
+        <span style="font:500 14px 'Alegreya Sans',sans-serif; background:#E6DCC7; color:#2A2017; padding:6px 13px; border-radius:7px">Modules ▾</span>
+      </div>
+    </div>
+    <div style="background:#EFE9DC; padding:34px 24px 44px">
+      <div style="max-width:896px; margin:0 auto">
+        <div style="display:flex; gap:20px; align-items:center; margin-bottom:30px">
+          <div style="width:88px;height:88px;border-radius:50%;background:#E2E3D2;display:flex;align-items:center;justify-content:center;overflow:hidden;flex-shrink:0"><img src="uploads/Logo-Fragments.png" alt="" style="width:78px;height:78px;object-fit:cover;filter:brightness(1.09) contrast(1.04);mix-blend-mode:multiply"></div>
+          <div>
+            <div style="font-family:'Cinzel',serif; font-weight:600; font-size:26px; letter-spacing:.06em; color:#4B5235">FRAGMENTS</div>
+            <div style="font-family:'Cormorant Garamond',serif; font-style:italic; font-weight:500; font-size:20px; color:#6E5A3E; margin-top:2px">Trois trouvailles par semaine — l'érudition se bâtit pierre à pierre.</div>
+          </div>
+        </div>
+        <div style="display:grid; grid-template-columns:1.5fr 1fr; gap:18px">
+          <div style="background:#FBF8F1; border:1px solid #E4DBC9; border-radius:12px; overflow:hidden">
+            <div style="height:6px; background:#5A6043"></div>
+            <div style="padding:20px 22px">
+              <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:16px">
+                <div style="font:600 12px 'Alegreya Sans',sans-serif; letter-spacing:.1em; text-transform:uppercase; color:#A8906A">Dépôt de la semaine 7</div>
+                <span style="font:500 12px 'Alegreya Sans',sans-serif; background:#EFE4CF; color:#9A6A2E; padding:5px 11px; border-radius:20px">avant vendredi 18 h</span>
+              </div>
+              <div style="display:flex; flex-direction:column; gap:13px">
+                <div><div style="font:500 13px 'Alegreya Sans',sans-serif; color:#4B5235; margin-bottom:5px">① Découvertes</div><div style="background:#fff; border:1px solid #DDD7C4; border-radius:8px; padding:11px 13px; font:15px/1.4 'EB Garamond',serif; color:#A8906A">Un fait, une œuvre, une idée croisée cette semaine…</div></div>
+                <div><div style="font:500 13px 'Alegreya Sans',sans-serif; color:#4B5235; margin-bottom:5px">② Sources</div><div style="background:#fff; border:1px solid #DDD7C4; border-radius:8px; padding:11px 13px; font:15px/1.4 'EB Garamond',serif; color:#A8906A">D'où cela vient-il ? Cite précisément.</div></div>
+                <div><div style="font:500 13px 'Alegreya Sans',sans-serif; color:#4B5235; margin-bottom:5px">③ Réflexion</div><div style="background:#fff; border:1px solid #DDD7C4; border-radius:8px; padding:11px 13px; font:15px/1.4 'EB Garamond',serif; color:#A8906A">En quoi cela nourrit-il ta pensée ?</div></div>
+              </div>
+              <div style="display:flex; gap:9px; align-items:center; margin-top:18px">
+                <span style="font:600 13px 'Alegreya Sans',sans-serif; background:#5A6043; color:#FBF8F1; padding:9px 18px; border-radius:7px">Déposer</span>
+                <span style="font:14px 'EB Garamond',serif; font-style:italic; color:#B26A4A">Brouillon enregistré il y a 2 min</span>
+              </div>
+            </div>
+          </div>
+          <div style="display:flex; flex-direction:column; gap:14px">
+            <div style="background:#FBF8F1; border:1px solid #E4DBC9; border-radius:12px; padding:18px 20px">
+              <div style="font:600 12px 'Alegreya Sans',sans-serif; letter-spacing:.1em; text-transform:uppercase; color:#A8906A; margin-bottom:14px">Tes dépôts passés</div>
+              <div style="display:flex; flex-direction:column; gap:11px">
+                <div style="display:flex; justify-content:space-between; align-items:center; font:16px 'EB Garamond',serif; color:#3A2E22">Semaine 6 <span style="font:600 12px 'Alegreya Sans',sans-serif; background:#E2E3D2; color:#4B5235; padding:3px 10px; border-radius:6px">B+</span></div>
+                <div style="display:flex; justify-content:space-between; align-items:center; font:16px 'EB Garamond',serif; color:#3A2E22">Semaine 5 <span style="font:600 12px 'Alegreya Sans',sans-serif; background:#E4E8D8; color:#4A5B3B; padding:3px 10px; border-radius:6px">A−</span></div>
+                <div style="display:flex; justify-content:space-between; align-items:center; font:16px 'EB Garamond',serif; color:#3A2E22">Semaine 4 <span style="font:600 12px 'Alegreya Sans',sans-serif; background:#F0E0D5; color:#9A4E2E; padding:3px 10px; border-radius:6px">C+</span></div>
+              </div>
+            </div>
+            <div style="background:#FBF8F1; border:1px solid #E4DBC9; border-left:4px solid #B26A4A; border-radius:12px; padding:18px 20px">
+              <div style="font:600 12px 'Alegreya Sans',sans-serif; letter-spacing:.1em; text-transform:uppercase; color:#9A4E2E; margin-bottom:12px">Pistes du dernier retour</div>
+              <div style="display:flex; flex-direction:column; gap:9px">
+                <div style="display:flex; gap:9px; align-items:baseline; font:15px/1.4 'EB Garamond',serif; color:#3A2E22"><span style="color:#B26A4A; font-weight:700">◆</span><span>Varie tes sources : moins de web, plus d'ouvrages.</span></div>
+                <div style="display:flex; gap:9px; align-items:baseline; font:15px/1.4 'EB Garamond',serif; color:#3A2E22"><span style="color:#B26A4A; font-weight:700">◆</span><span>Relie chaque trouvaille au cours en philosophie.</span></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== ÉCRAN 5 · MODULE CODEX ===== -->
+<div style="position:absolute; left:1340px; top:2840px; width:1180px">
+  <div data-drags-parent="1" style="position:absolute; top:-24px; font:600 12px 'Alegreya Sans',sans-serif; letter-spacing:.1em; text-transform:uppercase; color:rgba(60,50,40,.6)">5 · Module Codex — Bibliothèque</div>
+  <div style="background:#fff; border-radius:9px; box-shadow:0 6px 26px rgba(50,40,25,.16); overflow:hidden">
+    <div style="height:38px; background:#E7DFCE; border-bottom:1px solid #D8CCB4; display:flex; align-items:center; gap:7px; padding:0 14px">
+      <span style="width:11px;height:11px;border-radius:50%;background:#C9B68E"></span><span style="width:11px;height:11px;border-radius:50%;background:#D8CDB2"></span><span style="width:11px;height:11px;border-radius:50%;background:#D8CDB2"></span>
+      <span class="mono" style="margin-left:12px; font-size:11px; color:#9A876A">palimpseste.app/eleve/modules/codex</span>
+    </div>
+    <div style="background:#FBF8F1; border-bottom:1px solid #E4DBC9">
+      <div style="max-width:896px; margin:0 auto; padding:16px 24px 8px; display:flex; align-items:center; justify-content:space-between">
+        <span style="font-family:'Cinzel',serif; font-weight:600; font-size:17px; letter-spacing:.06em; color:#221C16">PALIMPSESTE</span>
+        <div style="display:flex; align-items:center; gap:14px"><span style="font:500 13px 'Alegreya Sans',sans-serif; background:#EFE7D6; color:#5A4632; padding:6px 12px; border-radius:20px">Terminale HLP ▾</span><span style="font:14px 'Alegreya Sans',sans-serif; color:#8A6F4E">Se déconnecter</span></div>
+      </div>
+      <div style="max-width:896px; margin:0 auto; padding:0 24px 10px; display:flex; gap:6px">
+        <span style="font:14px 'Alegreya Sans',sans-serif; color:#6E5A3E; padding:6px 13px; border-radius:7px">Tableau de bord</span>
+        <span style="font:14px 'Alegreya Sans',sans-serif; color:#6E5A3E; padding:6px 13px; border-radius:7px">Calendrier</span>
+        <span style="font:500 14px 'Alegreya Sans',sans-serif; background:#E6DCC7; color:#2A2017; padding:6px 13px; border-radius:7px">Modules ▾</span>
+      </div>
+    </div>
+    <div style="background:#F0EADE; padding:34px 24px 44px">
+      <div style="max-width:896px; margin:0 auto">
+        <div style="display:flex; gap:20px; align-items:center; margin-bottom:30px">
+          <div style="width:88px;height:88px;border-radius:50%;background:#DCE6DF;display:flex;align-items:center;justify-content:center;overflow:hidden;flex-shrink:0"><img src="uploads/Logo-Codex.png" alt="" style="width:78px;height:78px;object-fit:cover;filter:brightness(1.09) contrast(1.04);mix-blend-mode:multiply"></div>
+          <div>
+            <div style="font-family:'Cinzel',serif; font-weight:600; font-size:26px; letter-spacing:.06em; color:#2E4A3C">CODEX</div>
+            <div style="font-family:'Cormorant Garamond',serif; font-style:italic; font-weight:500; font-size:20px; color:#6E5A3E; margin-top:2px">La lecture se pense à plusieurs — une synthèse vivante.</div>
+          </div>
+        </div>
+        <div style="display:grid; grid-template-columns:1.5fr 1fr; gap:18px">
+          <div style="background:#FBF8F1; border:1px solid #E4DBC9; border-radius:12px; overflow:hidden">
+            <div style="height:6px; background:#2E4A3C"></div>
+            <div style="padding:20px 22px">
+              <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:14px">
+                <div style="font:600 12px 'Alegreya Sans',sans-serif; letter-spacing:.1em; text-transform:uppercase; color:#A8906A">Synthèse collective</div>
+                <span style="font:600 12px 'Alegreya Sans',sans-serif; background:#DCE6DF; color:#2E4A3C; padding:5px 11px; border-radius:20px">● en direct · Phase 2</span>
+              </div>
+              <div style="font-family:'Cormorant Garamond',serif; font-weight:600; font-size:22px; color:#221C16; margin-bottom:12px">Le plan de la classe se construit</div>
+              <div style="display:flex; flex-direction:column; gap:10px; margin-bottom:18px">
+                <div style="display:flex; gap:10px; align-items:baseline"><span style="font:700 13px 'Alegreya Sans',sans-serif; color:#2E4A3C">I.</span><p style="font:16px/1.45 'EB Garamond',serif; margin:0; color:#2A2017">Le divertissement nous détourne de notre condition <span style="font:11px 'Alegreya Sans',sans-serif; color:#7A8E80">· Léa</span></p></div>
+                <div style="display:flex; gap:10px; align-items:baseline"><span style="font:700 13px 'Alegreya Sans',sans-serif; color:#2E4A3C">II.</span><p style="font:16px/1.45 'EB Garamond',serif; margin:0; color:#2A2017">Mais il révèle aussi une vérité sur le désir <span style="font:11px 'Alegreya Sans',sans-serif; color:#7A8E80">· Tom</span></p></div>
+                <div style="display:flex; gap:10px; align-items:baseline; opacity:.6"><span style="font:700 13px 'Alegreya Sans',sans-serif; color:#2E4A3C">III.</span><p style="font:16px/1.45 'EB Garamond',serif; margin:0; color:#6E5A3E; font-style:italic">en cours de rédaction…</p></div>
+              </div>
+              <div style="display:flex; gap:9px; align-items:center">
+                <div style="flex:1; background:#fff; border:1px solid #C9D6CC; border-radius:8px; padding:9px 13px; font:14px 'EB Garamond',serif; color:#A8906A">Proposer un paragraphe…</div>
+                <span style="font:600 13px 'Alegreya Sans',sans-serif; background:#2E4A3C; color:#FBF8F1; padding:9px 16px; border-radius:7px">Envoyer</span>
+              </div>
+            </div>
+          </div>
+          <div style="display:flex; flex-direction:column; gap:14px">
+            <div style="background:#FBF8F1; border:1px solid #E4DBC9; border-radius:12px; padding:18px 20px">
+              <div style="font:600 12px 'Alegreya Sans',sans-serif; letter-spacing:.1em; text-transform:uppercase; color:#A8906A; margin-bottom:12px">Participants · 14 en ligne</div>
+              <div style="display:flex; flex-wrap:wrap; gap:6px">
+                <span style="width:30px;height:30px;border-radius:50%;background:#DCE6DF;color:#2E4A3C;display:flex;align-items:center;justify-content:center;font:600 12px 'Alegreya Sans',sans-serif">LM</span>
+                <span style="width:30px;height:30px;border-radius:50%;background:#E2E3D2;color:#4B5235;display:flex;align-items:center;justify-content:center;font:600 12px 'Alegreya Sans',sans-serif">TR</span>
+                <span style="width:30px;height:30px;border-radius:50%;background:#DDE3EC;color:#2C4A7C;display:flex;align-items:center;justify-content:center;font:600 12px 'Alegreya Sans',sans-serif">CB</span>
+                <span style="width:30px;height:30px;border-radius:50%;background:#EAD9D6;color:#7A3030;display:flex;align-items:center;justify-content:center;font:600 12px 'Alegreya Sans',sans-serif">+11</span>
+              </div>
+            </div>
+            <div style="background:#28324A; border-radius:12px; padding:20px; color:#E7ECF4">
+              <div style="font:600 12px 'Alegreya Sans',sans-serif; letter-spacing:.1em; text-transform:uppercase; color:#9DAAC4; margin-bottom:8px">Le texte étudié</div>
+              <div style="font-family:'Cormorant Garamond',serif; font-weight:600; font-size:22px; line-height:1.15; color:#fff">Pascal — Pensées</div>
+              <p style="font:15px/1.5 'EB Garamond',serif; font-style:italic; color:#C3CCDD; margin:8px 0 0">« Tout le malheur des hommes vient d'une seule chose, qui est de ne savoir pas demeurer en repos dans une chambre. »</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== SECTION LABEL : PROF ===== -->
+<div data-drags-parent="0" style="position:absolute; left:80px; top:4180px; width:900px">
+  <div style="font-family:'Cinzel',serif; font-weight:600; font-size:20px; letter-spacing:.04em; color:#2A2017">Espace professeur</div>
+</div>
+
+<!-- ===== ÉCRAN 6 · TABLEAU DE BORD PROF ===== -->
+<div style="position:absolute; left:80px; top:4240px; width:1180px">
+  <div data-drags-parent="1" style="position:absolute; top:-24px; font:600 12px 'Alegreya Sans',sans-serif; letter-spacing:.1em; text-transform:uppercase; color:rgba(60,50,40,.6)">6 · Tableau de bord professeur — Parchemin & encre</div>
+  <div style="background:#fff; border-radius:9px; box-shadow:0 6px 26px rgba(50,40,25,.16); overflow:hidden">
+    <div style="height:38px; background:#E7DFCE; border-bottom:1px solid #D8CCB4; display:flex; align-items:center; gap:7px; padding:0 14px">
+      <span style="width:11px;height:11px;border-radius:50%;background:#C9B68E"></span><span style="width:11px;height:11px;border-radius:50%;background:#D8CDB2"></span><span style="width:11px;height:11px;border-radius:50%;background:#D8CDB2"></span>
+      <span class="mono" style="margin-left:12px; font-size:11px; color:#9A876A">palimpseste.app/prof</span>
+    </div>
+    <div style="background:#FBF8F1; border-bottom:1px solid #E4DBC9">
+      <div style="max-width:896px; margin:0 auto; padding:16px 24px 8px; display:flex; align-items:center; justify-content:space-between">
+        <span style="font-family:'Cinzel',serif; font-weight:600; font-size:17px; letter-spacing:.06em; color:#221C16">PALIMPSESTE</span>
+        <span style="font:14px 'Alegreya Sans',sans-serif; color:#8A6F4E">M. Aubert · Se déconnecter</span>
+      </div>
+      <div style="max-width:896px; margin:0 auto; padding:0 24px 10px; display:flex; gap:6px">
+        <span style="font:500 14px 'Alegreya Sans',sans-serif; background:#E6DCC7; color:#2A2017; padding:6px 13px; border-radius:7px">Tableau de bord</span>
+        <span style="font:14px 'Alegreya Sans',sans-serif; color:#6E5A3E; padding:6px 13px; border-radius:7px">Pilotage ▾</span>
+        <span style="font:14px 'Alegreya Sans',sans-serif; color:#6E5A3E; padding:6px 13px; border-radius:7px">Modules ▾</span>
+      </div>
+    </div>
+    <div style="background:#EAE2D3; padding:30px 24px 44px">
+      <div style="max-width:896px; margin:0 auto">
+        <div style="font-family:'Cormorant Garamond',serif; font-weight:600; font-size:30px; color:#221C16; margin-bottom:4px">Tableau de bord</div>
+        <div style="font:14px 'Alegreya Sans',sans-serif; color:#8A6F4E; margin-bottom:24px">Lundi 23 juin · Semaine 7 · 3 classes</div>
+
+        <!-- À FAIRE -->
+        <div style="font:600 12px 'Alegreya Sans',sans-serif; letter-spacing:.12em; text-transform:uppercase; color:#A8906A; margin-bottom:12px">À faire</div>
+        <div style="background:#FBF8F1; border:1px solid #E4DBC9; border-radius:12px; padding:18px 20px; margin-bottom:30px">
+          <div style="font:500 15px 'Alegreya Sans',sans-serif; color:#221C16; margin-bottom:12px">5 fragments à valider</div>
+          <div style="display:flex; flex-direction:column; gap:9px">
+            <div style="display:flex; justify-content:space-between; align-items:center; font:16px 'EB Garamond',serif; color:#3A2E22">Léa Marchand <span style="color:#A8906A">· Terminale HLP · semaine 7</span><span style="font:500 13px 'Alegreya Sans',sans-serif; color:#5A4632; text-decoration:underline">Valider →</span></div>
+            <div style="display:flex; justify-content:space-between; align-items:center; font:16px 'EB Garamond',serif; color:#3A2E22">Tom Renaud <span style="color:#A8906A">· Terminale HLP · semaine 7</span><span style="font:500 13px 'Alegreya Sans',sans-serif; color:#5A4632; text-decoration:underline">Valider →</span></div>
+            <div style="display:flex; justify-content:space-between; align-items:center; font:16px 'EB Garamond',serif; color:#3A2E22">Inès Bouvier <span style="color:#A8906A">· Première HLP · semaine 6</span><span style="font:500 13px 'Alegreya Sans',sans-serif; color:#5A4632; text-decoration:underline">Valider →</span></div>
+          </div>
+        </div>
+
+        <!-- SANTÉ -->
+        <div style="font:600 12px 'Alegreya Sans',sans-serif; letter-spacing:.12em; text-transform:uppercase; color:#A8906A; margin-bottom:12px">Santé de la cohorte</div>
+        <div style="display:grid; grid-template-columns:repeat(3,1fr); gap:14px; margin-bottom:30px">
+          <div style="background:#FBF8F1; border:1px solid #E4DBC9; border-radius:12px; padding:18px 20px">
+            <div style="font-family:'Cormorant Garamond',serif; font-weight:600; font-size:38px; color:#5B6E4A; line-height:1">82%</div>
+            <div style="font:14px 'Alegreya Sans',sans-serif; color:#8A6F4E; margin-top:4px">à jour · 41 / 50 inscriptions</div>
+          </div>
+          <div style="background:#FBF8F1; border:1px solid #E4DBC9; border-left:4px solid #A23E2E; border-radius:12px; padding:18px 20px">
+            <div style="font-family:'Cormorant Garamond',serif; font-weight:600; font-size:38px; color:#A23E2E; line-height:1">3</div>
+            <div style="font:14px 'Alegreya Sans',sans-serif; color:#8A6F4E; margin-top:4px">en difficulté · voir le détail →</div>
+          </div>
+          <div style="background:#FBF8F1; border:1px solid #E4DBC9; border-radius:12px; padding:18px 20px">
+            <div style="font:600 12px 'Alegreya Sans',sans-serif; color:#A23E2E; margin-bottom:8px">Élèves à risque</div>
+            <div style="display:flex; flex-direction:column; gap:4px; font:15px 'EB Garamond',serif; color:#3A2E22">
+              <span>Hugo Lefèvre <span style="font:11px 'Alegreya Sans',sans-serif; color:#A8906A">· 1re HLP</span></span>
+              <span>Sarah Petit <span style="font:11px 'Alegreya Sans',sans-serif; color:#A8906A">· T. HLP</span></span>
+              <span>Yanis Roux <span style="font:11px 'Alegreya Sans',sans-serif; color:#A8906A">· T. Spé</span></span>
+            </div>
+          </div>
+        </div>
+
+        <!-- CLASSES -->
+        <div style="font:600 12px 'Alegreya Sans',sans-serif; letter-spacing:.12em; text-transform:uppercase; color:#A8906A; margin-bottom:12px">Classes</div>
+        <div style="display:grid; grid-template-columns:repeat(3,1fr); gap:12px">
+          <div style="background:#fff; border:1px solid #E4DBC9; border-left:4px solid #5B6E4A; border-radius:12px; padding:15px 16px">
+            <div style="font:500 15px 'Alegreya Sans',sans-serif; color:#221C16">Terminale HLP</div>
+            <div style="font:12px 'Alegreya Sans',sans-serif; color:#A8906A; margin-top:2px">Terminale · HLP · 2025-2026</div>
+            <div style="display:flex; gap:7px; margin-top:10px; align-items:center"><span style="font:13px 'Alegreya Sans',sans-serif; color:#8A6F4E">28 élèves</span><span style="font:500 11px 'Alegreya Sans',sans-serif; color:#5B6E4A">à jour</span></div>
+          </div>
+          <div style="background:#fff; border:1px solid #E4DBC9; border-left:4px solid #A23E2E; border-radius:12px; padding:15px 16px">
+            <div style="font:500 15px 'Alegreya Sans',sans-serif; color:#221C16">Première HLP</div>
+            <div style="font:12px 'Alegreya Sans',sans-serif; color:#A8906A; margin-top:2px">Première · HLP · 2025-2026</div>
+            <div style="display:flex; gap:7px; margin-top:10px; align-items:center"><span style="font:13px 'Alegreya Sans',sans-serif; color:#8A6F4E">22 élèves</span><span style="font:500 11px 'Alegreya Sans',sans-serif; background:#EFD9D2; color:#A23E2E; padding:2px 8px; border-radius:10px">2 à risque</span></div>
+          </div>
+          <div style="background:#fff; border:1px solid #E4DBC9; border-left:4px solid #D8CCB4; border-radius:12px; padding:15px 16px">
+            <div style="font:500 15px 'Alegreya Sans',sans-serif; color:#221C16">Terminale Spé HLP</div>
+            <div style="font:12px 'Alegreya Sans',sans-serif; color:#A8906A; margin-top:2px">Terminale · Spécialité · 2025-2026</div>
+            <div style="display:flex; gap:7px; margin-top:10px; align-items:center"><span style="font:13px 'Alegreya Sans',sans-serif; color:#8A6F4E">19 élèves</span><span style="font:11px 'Alegreya Sans',sans-serif; color:#A8906A">pas encore de fragments</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== ÉCRAN 7 · SCRIPTORIUM ===== -->
+<div style="position:absolute; left:1340px; top:4240px; width:1180px">
+  <div data-drags-parent="1" style="position:absolute; top:-24px; font:600 12px 'Alegreya Sans',sans-serif; letter-spacing:.1em; text-transform:uppercase; color:rgba(60,50,40,.6)">7 · Scriptorium — l'atelier, sobre (l'outil s'efface)</div>
+  <div style="background:#fff; border-radius:9px; box-shadow:0 6px 26px rgba(50,40,25,.16); overflow:hidden">
+    <div style="height:38px; background:#E7DFCE; border-bottom:1px solid #D8CCB4; display:flex; align-items:center; gap:7px; padding:0 14px">
+      <span style="width:11px;height:11px;border-radius:50%;background:#C9B68E"></span><span style="width:11px;height:11px;border-radius:50%;background:#D8CDB2"></span><span style="width:11px;height:11px;border-radius:50%;background:#D8CDB2"></span>
+      <span class="mono" style="margin-left:12px; font-size:11px; color:#9A876A">palimpseste.app/prof/scriptorium</span>
+    </div>
+    <div style="background:#FBF8F1; border-bottom:1px solid #E4DBC9">
+      <div style="max-width:896px; margin:0 auto; padding:16px 24px 8px; display:flex; align-items:center; justify-content:space-between">
+        <span style="font-family:'Cinzel',serif; font-weight:600; font-size:17px; letter-spacing:.06em; color:#221C16">PALIMPSESTE</span>
+        <span style="font:14px 'Alegreya Sans',sans-serif; color:#8A6F4E">M. Aubert · Se déconnecter</span>
+      </div>
+      <div style="max-width:896px; margin:0 auto; padding:0 24px 10px; display:flex; gap:6px">
+        <span style="font:14px 'Alegreya Sans',sans-serif; color:#6E5A3E; padding:6px 13px; border-radius:7px">Tableau de bord</span>
+        <span style="font:14px 'Alegreya Sans',sans-serif; color:#6E5A3E; padding:6px 13px; border-radius:7px">Pilotage ▾</span>
+        <span style="font:500 14px 'Alegreya Sans',sans-serif; background:#E6DCC7; color:#2A2017; padding:6px 13px; border-radius:7px">Modules ▾</span>
+      </div>
+    </div>
+    <div style="background:#EDE7DA; padding:30px 24px 44px">
+      <div style="max-width:896px; margin:0 auto">
+        <div style="display:flex; gap:18px; align-items:center; margin-bottom:24px">
+          <div style="width:72px;height:72px;border-radius:50%;background:#E6DDC9;display:flex;align-items:center;justify-content:center;overflow:hidden;flex-shrink:0"><img src="uploads/Logo-Scriptorium.png" alt="" style="width:64px;height:64px;object-fit:cover;filter:brightness(1.09) contrast(1.04);mix-blend-mode:multiply"></div>
+          <div>
+            <div style="font-family:'Cinzel',serif; font-weight:600; font-size:23px; letter-spacing:.06em; color:#4A3A28">SCRIPTORIUM</div>
+            <div style="font-family:'Cormorant Garamond',serif; font-style:italic; font-weight:500; font-size:19px; color:#6E5A3E; margin-top:1px">L'atelier d'écriture — où se composent les livres.</div>
+          </div>
+        </div>
+        <div style="display:grid; grid-template-columns:230px 1fr; gap:18px">
+          <!-- sidebar ouvrages -->
+          <div style="background:#FBF8F1; border:1px solid #E4DBC9; border-radius:10px; padding:16px 14px; height:fit-content">
+            <div style="font:600 11px 'Alegreya Sans',sans-serif; letter-spacing:.1em; text-transform:uppercase; color:#A8906A; margin-bottom:12px">Ouvrages</div>
+            <div style="display:flex; flex-direction:column; gap:3px">
+              <div style="background:#E6DDC9; border-radius:7px; padding:8px 11px; font:500 14px 'EB Garamond',serif; color:#4A3A28">Le bonheur — parcours</div>
+              <div style="padding:8px 11px; font:14px 'EB Garamond',serif; color:#6E5A3E">La conscience</div>
+              <div style="padding:8px 11px; font:14px 'EB Garamond',serif; color:#6E5A3E">L'art & la technique</div>
+              <div style="padding:8px 11px; font:14px 'EB Garamond',serif; color:#A8906A; font-style:italic">+ Nouvel ouvrage</div>
+            </div>
+          </div>
+          <!-- éditeur manuscrit -->
+          <div style="background:#FBF8F1; border:1px solid #E4DBC9; border-radius:10px; overflow:hidden">
+            <div style="border-bottom:1px solid #E4DBC9; padding:11px 18px; display:flex; align-items:center; justify-content:space-between">
+              <div style="display:flex; gap:16px; font:14px 'Alegreya Sans',sans-serif; color:#6E5A3E"><span style="font-weight:700; color:#4A3A28">B</span><span style="font-style:italic">I</span><span>“ ”</span><span>—</span></div>
+              <div style="display:flex; gap:9px; align-items:center"><span style="font:13px 'EB Garamond',serif; font-style:italic; color:#A8906A">Enregistré</span><span style="font:600 12px 'Alegreya Sans',sans-serif; background:#4A3A28; color:#FBF8F1; padding:6px 13px; border-radius:6px">Assigner</span></div>
+            </div>
+            <div style="padding:28px 34px">
+              <div style="font:600 11px 'Alegreya Sans',sans-serif; letter-spacing:.1em; text-transform:uppercase; color:#B6A88A; margin-bottom:6px">Chapitre II</div>
+              <div style="font-family:'Cormorant Garamond',serif; font-weight:600; font-size:30px; color:#221C16; line-height:1.1; margin-bottom:14px">Le bonheur se cherche-t-il&nbsp;?</div>
+              <p style="font:18px/1.65 'EB Garamond',serif; color:#2A2017; margin:0 0 13px">Si le bonheur était un état que l'on possède une fois pour toutes, il n'y aurait rien à en dire. Or chacun sent qu'il se dérobe à mesure qu'on le poursuit&nbsp;: <span style="background:#EAE0CC">le désir comblé renaît aussitôt ailleurs.</span></p>
+              <p style="font:18px/1.65 'EB Garamond',serif; color:#2A2017; margin:0 0 13px">C'est pourquoi les Anciens distinguaient le <em>plaisir</em>, qui passe, de la <em>félicité</em>, qui demande une vie entière. La question n'est donc pas «&nbsp;suis-je heureux&nbsp;?&nbsp;» mais «&nbsp;quelle vie vaut d'être menée&nbsp;?&nbsp;»</p>
+              <p style="font:18px/1.65 'EB Garamond',serif; color:#9A8870; margin:0"><span style="border-left:2px solid #C9BBA0; padding-left:8px">Reprendre ici la transition vers Épicure…</span></p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div></x-dc>
+</body>
+</html>

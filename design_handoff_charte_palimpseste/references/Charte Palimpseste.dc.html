@@ -1,0 +1,425 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;500;600;700&family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500&family=EB+Garamond:ital,wght@0,400;0,500;0,600;1,400&family=Alegreya+Sans:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  body { margin:0; background:#EAE2D3; font-family:'EB Garamond',Georgia,serif; color:#2A2017; -webkit-font-smoothing:antialiased; }
+  .mono { font-family: ui-monospace,'SF Mono',Menlo,monospace; }
+  ::selection { background:#D8C8A8; }
+</style>
+</helmet>
+
+<div style="max-width:1140px; margin:0 auto; padding:0 32px 96px">
+
+  <!-- ============ COUVERTURE ============ -->
+  <header style="text-align:center; padding:88px 0 40px">
+    <div style="width:128px;height:128px;border-radius:50%;background:#EDE6D6;display:flex;align-items:center;justify-content:center;overflow:hidden;margin:0 auto 26px;box-shadow:0 2px 10px rgba(60,45,25,.12)">
+      <img src="uploads/Logo-Palimpseste.png" alt="Sceau Palimpseste" style="width:112px;height:112px;object-fit:cover;filter:brightness(1.09) contrast(1.04);mix-blend-mode:multiply">
+    </div>
+    <div style="font:600 13px 'Alegreya Sans',sans-serif; letter-spacing:.32em; text-transform:uppercase; color:#8A6F4E">Charte graphique</div>
+    <h1 style="font-family:'Cinzel',serif; font-weight:600; font-size:52px; letter-spacing:.09em; margin:14px 0 0; color:#221C16">PALIMPSESTE</h1>
+    <p style="font-family:'Cormorant Garamond',serif; font-style:italic; font-weight:500; font-size:24px; color:#6E5A3E; margin:10px 0 0">Une encre, un parchemin — et six mondes.</p>
+    <div style="display:inline-flex; align-items:center; gap:14px; margin-top:26px"><span style="width:54px;height:1px;background:#C9BBA0"></span><span style="width:7px;height:7px;transform:rotate(45deg);background:#B49B6E"></span><span style="width:54px;height:1px;background:#C9BBA0"></span></div>
+  </header>
+
+  <!-- ============ 1 · PRINCIPES ============ -->
+  <section style="margin-top:48px">
+    <div style="display:flex; align-items:baseline; gap:14px; border-bottom:1px solid #D8CCB4; padding-bottom:12px; margin-bottom:28px">
+      <span class="mono" style="font-size:13px; color:#A8906A">01</span>
+      <h2 style="font-family:'Cormorant Garamond',serif; font-weight:600; font-size:30px; margin:0; color:#2A2017">Principes</h2>
+    </div>
+    <div style="display:grid; grid-template-columns:repeat(3,1fr); gap:22px">
+      <div style="background:#FBF8F1; border:1px solid #E4DBC9; border-radius:4px; padding:24px">
+        <div style="font-family:'Cinzel',serif; font-weight:600; font-size:14px; letter-spacing:.04em; color:#5A4632; margin-bottom:10px">ENCRE SUR PARCHEMIN</div>
+        <p style="font:16px/1.55 'EB Garamond',serif; margin:0; color:#3A2E22">Le fond reste un parchemin chaud, le texte une encre sombre. La couleur n'envahit jamais : elle ponctue. C'est ce qui garde l'ensemble lisible et savant.</p>
+      </div>
+      <div style="background:#FBF8F1; border:1px solid #E4DBC9; border-radius:4px; padding:24px">
+        <div style="font-family:'Cinzel',serif; font-weight:600; font-size:14px; letter-spacing:.04em; color:#5A4632; margin-bottom:10px">UN MODULE, UN MONDE</div>
+        <p style="font:16px/1.55 'EB Garamond',serif; margin:0; color:#3A2E22">Chaque module porte sa propre palette — comme les ateliers d'une même Renaissance. Ce qui les relie n'est pas la couleur, mais le parchemin, les sceaux gravés et la typographie.</p>
+      </div>
+      <div style="background:#FBF8F1; border:1px solid #E4DBC9; border-radius:4px; padding:24px">
+        <div style="font-family:'Cinzel',serif; font-weight:600; font-size:14px; letter-spacing:.04em; color:#5A4632; margin-bottom:10px">DOSE MODÉRÉE</div>
+        <p style="font:16px/1.55 'EB Garamond',serif; margin:0; color:#3A2E22">Le pigment vit dans les bordures, les badges, les têtières et les boutons — pas dans les grands aplats. Un écran reste à dominante parchemin, signé d'une seule couleur.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ 2 · BASE COMMUNE ============ -->
+  <section style="margin-top:60px">
+    <div style="display:flex; align-items:baseline; gap:14px; border-bottom:1px solid #D8CCB4; padding-bottom:12px; margin-bottom:28px">
+      <span class="mono" style="font-size:13px; color:#A8906A">02</span>
+      <h2 style="font-family:'Cormorant Garamond',serif; font-weight:600; font-size:30px; margin:0; color:#2A2017">La base commune</h2>
+      <span style="font-family:'EB Garamond',serif; font-style:italic; font-size:16px; color:#8A6F4E">partagée par tous les modules</span>
+    </div>
+
+    <div style="background:#FBF8F1; border:1px solid #E4DBC9; border-radius:4px; padding:28px 30px">
+      <div style="font:600 12px 'Alegreya Sans',sans-serif; letter-spacing:.14em; text-transform:uppercase; color:#A8906A; margin-bottom:14px">Parchemin & encre</div>
+      <div style="display:flex; gap:14px; flex-wrap:wrap; margin-bottom:26px">
+        <div style="flex:1; min-width:120px"><div style="height:62px; background:#F4EFE6; border:1px solid #E4DBC9; border-radius:3px"></div><div style="font:12px 'Alegreya Sans',sans-serif; color:#3A2E22; margin-top:7px">Parchemin clair</div><div class="mono" style="font-size:11px; color:#A8906A">#F4EFE6</div></div>
+        <div style="flex:1; min-width:120px"><div style="height:62px; background:#ECE4D6; border:1px solid #E4DBC9; border-radius:3px"></div><div style="font:12px 'Alegreya Sans',sans-serif; color:#3A2E22; margin-top:7px">Parchemin</div><div class="mono" style="font-size:11px; color:#A8906A">#ECE4D6</div></div>
+        <div style="flex:1; min-width:120px"><div style="height:62px; background:#FBF8F1; border:1px solid #E4DBC9; border-radius:3px"></div><div style="font:12px 'Alegreya Sans',sans-serif; color:#3A2E22; margin-top:7px">Carte (surface)</div><div class="mono" style="font-size:11px; color:#A8906A">#FBF8F1</div></div>
+        <div style="flex:1; min-width:120px"><div style="height:62px; background:#8A6F4E; border-radius:3px"></div><div style="font:12px 'Alegreya Sans',sans-serif; color:#3A2E22; margin-top:7px">Brun encre</div><div class="mono" style="font-size:11px; color:#A8906A">#8A6F4E</div></div>
+        <div style="flex:1; min-width:120px"><div style="height:62px; background:#5A4632; border-radius:3px"></div><div style="font:12px 'Alegreya Sans',sans-serif; color:#3A2E22; margin-top:7px">Sépia</div><div class="mono" style="font-size:11px; color:#A8906A">#5A4632</div></div>
+        <div style="flex:1; min-width:120px"><div style="height:62px; background:#221C16; border-radius:3px"></div><div style="font:12px 'Alegreya Sans',sans-serif; color:#3A2E22; margin-top:7px">Encre (texte)</div><div class="mono" style="font-size:11px; color:#A8906A">#221C16</div></div>
+      </div>
+
+      <div style="font:600 12px 'Alegreya Sans',sans-serif; letter-spacing:.14em; text-transform:uppercase; color:#A8906A; margin-bottom:14px">États — communs, indépendants du module</div>
+      <div style="display:flex; gap:20px; flex-wrap:wrap">
+        <div style="display:flex; align-items:center; gap:11px"><span style="width:38px;height:38px;border-radius:50%;background:#5B6E4A"></span><div><div style="font:13px 'Alegreya Sans',sans-serif; color:#2A2017">Fait · réussi</div><div class="mono" style="font-size:11px;color:#A8906A">#5B6E4A · tint #E4E8D8</div></div></div>
+        <div style="display:flex; align-items:center; gap:11px"><span style="width:38px;height:38px;border-radius:50%;background:#9A6A2E"></span><div><div style="font:13px 'Alegreya Sans',sans-serif; color:#2A2017">À faire · attention</div><div class="mono" style="font-size:11px;color:#A8906A">#9A6A2E · tint #EFE4CF</div></div></div>
+        <div style="display:flex; align-items:center; gap:11px"><span style="width:38px;height:38px;border-radius:50%;background:#A23E2E"></span><div><div style="font:13px 'Alegreya Sans',sans-serif; color:#2A2017">En retard · erreur</div><div class="mono" style="font-size:11px;color:#A8906A">#A23E2E · tint #EFD9D2</div></div></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ 3 · LES SIX MONDES ============ -->
+  <section style="margin-top:64px">
+    <div style="display:flex; align-items:baseline; gap:14px; border-bottom:1px solid #D8CCB4; padding-bottom:12px; margin-bottom:10px">
+      <span class="mono" style="font-size:13px; color:#A8906A">03</span>
+      <h2 style="font-family:'Cormorant Garamond',serif; font-weight:600; font-size:30px; margin:0; color:#2A2017">Les six mondes</h2>
+      <span style="font-family:'EB Garamond',serif; font-style:italic; font-size:16px; color:#8A6F4E">une palette par module</span>
+    </div>
+    <p style="font:16px/1.55 'EB Garamond',serif; color:#5A4632; margin:0 0 30px; max-width:70ch">Chaque module reçoit une <em>direction</em> de palette, son <em>pigment</em> de signature, et une <em>teinte claire</em> pour les badges. Le sceau est posé en pastille teintée de la couleur du module.</p>
+
+    <!-- MONDE : PALIMPSESTE -->
+    <div style="background:#FBF8F1; border:1px solid #E4DBC9; border-radius:6px; padding:28px 30px; margin-bottom:22px">
+      <div style="display:flex; gap:24px; align-items:flex-start; flex-wrap:wrap">
+        <div style="display:flex; gap:16px; align-items:center; min-width:280px; flex:1">
+          <div style="width:74px;height:74px;border-radius:50%;background:#EDE6D6;display:flex;align-items:center;justify-content:center;overflow:hidden;flex-shrink:0"><img src="uploads/Logo-Palimpseste.png" alt="" style="width:64px;height:64px;object-fit:cover;filter:brightness(1.09) contrast(1.04);mix-blend-mode:multiply"></div>
+          <div>
+            <div style="font-family:'Cinzel',serif; font-weight:600; font-size:19px; letter-spacing:.05em; color:#5A4632">PALIMPSESTE</div>
+            <div style="font:italic 15px 'EB Garamond',serif; color:#8A6F4E">L'ensemble · tableau de bord</div>
+            <div style="font:600 11px 'Alegreya Sans',sans-serif; letter-spacing:.1em; text-transform:uppercase; color:#A8906A; margin-top:3px">Parchemin & encre</div>
+          </div>
+        </div>
+        <div style="display:flex; gap:8px; flex-wrap:wrap">
+          <div><div style="width:78px;height:48px;background:#F4EFE6;border:1px solid #E4DBC9;border-radius:3px"></div><div class="mono" style="font-size:10px;color:#A8906A;margin-top:5px">#F4EFE6</div></div>
+          <div><div style="width:78px;height:48px;background:#8A6F4E;border-radius:3px"></div><div class="mono" style="font-size:10px;color:#A8906A;margin-top:5px">#8A6F4E</div></div>
+          <div><div style="width:78px;height:48px;background:#5A4632;border-radius:3px"></div><div class="mono" style="font-size:10px;color:#A8906A;margin-top:5px">#5A4632 ◆</div></div>
+          <div><div style="width:78px;height:48px;background:#E8DFCB;border:1px solid #E4DBC9;border-radius:3px"></div><div class="mono" style="font-size:10px;color:#A8906A;margin-top:5px">#E8DFCB</div></div>
+        </div>
+      </div>
+      <div style="display:flex; gap:16px; align-items:stretch; flex-wrap:wrap; margin-top:24px; border-top:1px solid #EFE7D6; padding-top:22px">
+        <div style="width:332px; background:#F4EFE6; border:1px solid #E4DBC9; border-radius:10px; overflow:hidden">
+          <div style="height:6px; background:#5A4632"></div>
+          <div style="padding:16px">
+            <div style="display:flex; gap:11px; align-items:center"><div style="width:40px;height:40px;border-radius:50%;background:#EDE6D6;display:flex;align-items:center;justify-content:center;overflow:hidden"><img src="uploads/Logo-Palimpseste.png" alt="" style="width:36px;height:36px;object-fit:cover;filter:brightness(1.09) contrast(1.04);mix-blend-mode:multiply"></div><div><div style="font-family:'Cinzel',serif;font-weight:600;font-size:13px;letter-spacing:.04em;color:#5A4632">TABLEAU DE BORD</div><div style="font:italic 12px 'EB Garamond',serif;color:#8A6F4E">Bonjour, Camille</div></div></div>
+            <p style="font:14px/1.5 'EB Garamond',serif;color:#3A2E22;margin:11px 0">Trois tâches t'attendent cette semaine. Reprends là où tu t'es arrêtée.</p>
+            <div style="display:flex;justify-content:space-between;align-items:center"><span style="font:500 11px 'Alegreya Sans',sans-serif;background:#E8DFCB;color:#6B5436;padding:4px 10px;border-radius:3px">3 à faire</span><span style="font:600 12px 'Alegreya Sans',sans-serif;background:#5A4632;color:#FBF8F1;padding:7px 15px;border-radius:5px">Continuer</span></div>
+          </div>
+        </div>
+        <div style="width:230px; background:#fff; border:1px solid #E4DBC9; border-left:4px solid #5A4632; border-radius:12px; padding:15px; height:fit-content">
+          <div style="display:flex;justify-content:space-between;align-items:start"><p style="font:500 14px 'Alegreya Sans',sans-serif;color:#221C16;margin:0">Mes modules</p><span style="color:#C9BBA0">→</span></div>
+          <p style="font:13px 'Alegreya Sans',sans-serif;color:#A8906A;margin:6px 0 0">5 actifs</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- MONDE : ALETHEIA -->
+    <div style="background:#FBF8F1; border:1px solid #E4DBC9; border-radius:6px; padding:28px 30px; margin-bottom:22px">
+      <div style="display:flex; gap:24px; align-items:flex-start; flex-wrap:wrap">
+        <div style="display:flex; gap:16px; align-items:center; min-width:280px; flex:1">
+          <div style="width:74px;height:74px;border-radius:50%;background:#DDE3EC;display:flex;align-items:center;justify-content:center;overflow:hidden;flex-shrink:0"><img src="uploads/Logo-Aletheia.png" alt="" style="width:64px;height:64px;object-fit:cover;filter:brightness(1.09) contrast(1.04);mix-blend-mode:multiply"></div>
+          <div>
+            <div style="font-family:'Cinzel',serif; font-weight:600; font-size:19px; letter-spacing:.05em; color:#2C4A7C">ALETHEIA</div>
+            <div style="font:italic 15px 'EB Garamond',serif; color:#8A6F4E">Vérité · retours socratiques</div>
+            <div style="font:600 11px 'Alegreya Sans',sans-serif; letter-spacing:.1em; text-transform:uppercase; color:#A8906A; margin-top:3px">Manuscrit enluminé</div>
+          </div>
+        </div>
+        <div style="display:flex; gap:8px; flex-wrap:wrap">
+          <div><div style="width:78px;height:48px;background:#F3ECDD;border:1px solid #E4DBC9;border-radius:3px"></div><div class="mono" style="font-size:10px;color:#A8906A;margin-top:5px">#F3ECDD</div></div>
+          <div><div style="width:78px;height:48px;background:#2C4A7C;border-radius:3px"></div><div class="mono" style="font-size:10px;color:#A8906A;margin-top:5px">#2C4A7C ◆</div></div>
+          <div><div style="width:78px;height:48px;background:#B8893B;border-radius:3px"></div><div class="mono" style="font-size:10px;color:#A8906A;margin-top:5px">#B8893B</div></div>
+          <div><div style="width:78px;height:48px;background:#B4452F;border-radius:3px"></div><div class="mono" style="font-size:10px;color:#A8906A;margin-top:5px">#B4452F</div></div>
+          <div><div style="width:78px;height:48px;background:#DDE3EC;border:1px solid #E4DBC9;border-radius:3px"></div><div class="mono" style="font-size:10px;color:#A8906A;margin-top:5px">#DDE3EC</div></div>
+        </div>
+      </div>
+      <div style="display:flex; gap:16px; align-items:stretch; flex-wrap:wrap; margin-top:24px; border-top:1px solid #EFE7D6; padding-top:22px">
+        <div style="width:332px; background:#F3ECDD; border:1px solid #E4DBC9; border-radius:10px; overflow:hidden">
+          <div style="height:6px; background:#2C4A7C"></div>
+          <div style="padding:16px">
+            <div style="display:flex; gap:11px; align-items:center"><div style="width:40px;height:40px;border-radius:50%;background:#DDE3EC;display:flex;align-items:center;justify-content:center;overflow:hidden"><img src="uploads/Logo-Aletheia.png" alt="" style="width:36px;height:36px;object-fit:cover;filter:brightness(1.09) contrast(1.04);mix-blend-mode:multiply"></div><div><div style="font-family:'Cinzel',serif;font-weight:600;font-size:13px;letter-spacing:.04em;color:#2C4A7C">ALETHEIA</div><div style="font:italic 12px 'EB Garamond',serif;color:#8A6F4E">Retour sur ton essai</div></div></div>
+            <p style="font:14px/1.5 'EB Garamond',serif;color:#3A2E22;margin:11px 0">« Ta thèse est claire — mais qu'est-ce qui pourrait la contredire ? »</p>
+            <div style="display:flex;justify-content:space-between;align-items:center"><span style="font:500 11px 'Alegreya Sans',sans-serif;background:#DDE3EC;color:#2C4A7C;padding:4px 10px;border-radius:3px">à relire</span><span style="font:600 12px 'Alegreya Sans',sans-serif;background:#2C4A7C;color:#FBF8F1;padding:7px 15px;border-radius:5px">Répondre</span></div>
+          </div>
+        </div>
+        <div style="width:230px; background:#fff; border:1px solid #E4DBC9; border-left:4px solid #2C4A7C; border-radius:12px; padding:15px; height:fit-content">
+          <div style="display:flex;justify-content:space-between;align-items:start"><p style="font:500 14px 'Alegreya Sans',sans-serif;color:#221C16;margin:0">Lecture en cours</p><span style="color:#C9BBA0">→</span></div>
+          <div style="display:flex;gap:6px;margin-top:9px"><span style="font:500 11px 'Alegreya Sans',sans-serif;background:#F0E6CF;color:#8A6420;padding:3px 8px;border-radius:10px">or</span><span style="font:500 11px 'Alegreya Sans',sans-serif;background:#F1DCD5;color:#9A3A28;padding:3px 8px;border-radius:10px">minium</span></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- MONDE : FRAGMENTS -->
+    <div style="background:#FBF8F1; border:1px solid #E4DBC9; border-radius:6px; padding:28px 30px; margin-bottom:22px">
+      <div style="display:flex; gap:24px; align-items:flex-start; flex-wrap:wrap">
+        <div style="display:flex; gap:16px; align-items:center; min-width:280px; flex:1">
+          <div style="width:74px;height:74px;border-radius:50%;background:#E2E3D2;display:flex;align-items:center;justify-content:center;overflow:hidden;flex-shrink:0"><img src="uploads/Logo-Fragments.png" alt="" style="width:64px;height:64px;object-fit:cover;filter:brightness(1.09) contrast(1.04);mix-blend-mode:multiply"></div>
+          <div>
+            <div style="font-family:'Cinzel',serif; font-weight:600; font-size:19px; letter-spacing:.05em; color:#4B5235">FRAGMENTS</div>
+            <div style="font:italic 15px 'EB Garamond',serif; color:#8A6F4E">Érudition · dépôts hebdomadaires</div>
+            <div style="font:600 11px 'Alegreya Sans',sans-serif; letter-spacing:.1em; text-transform:uppercase; color:#A8906A; margin-top:3px">Pierre & laurier</div>
+          </div>
+        </div>
+        <div style="display:flex; gap:8px; flex-wrap:wrap">
+          <div><div style="width:78px;height:48px;background:#EFE9DC;border:1px solid #E4DBC9;border-radius:3px"></div><div class="mono" style="font-size:10px;color:#A8906A;margin-top:5px">#EFE9DC</div></div>
+          <div><div style="width:78px;height:48px;background:#5A6043;border-radius:3px"></div><div class="mono" style="font-size:10px;color:#A8906A;margin-top:5px">#5A6043 ◆</div></div>
+          <div><div style="width:78px;height:48px;background:#4B5235;border-radius:3px"></div><div class="mono" style="font-size:10px;color:#A8906A;margin-top:5px">#4B5235</div></div>
+          <div><div style="width:78px;height:48px;background:#B26A4A;border-radius:3px"></div><div class="mono" style="font-size:10px;color:#A8906A;margin-top:5px">#B26A4A</div></div>
+          <div><div style="width:78px;height:48px;background:#E2E3D2;border:1px solid #E4DBC9;border-radius:3px"></div><div class="mono" style="font-size:10px;color:#A8906A;margin-top:5px">#E2E3D2</div></div>
+        </div>
+      </div>
+      <div style="display:flex; gap:16px; align-items:stretch; flex-wrap:wrap; margin-top:24px; border-top:1px solid #EFE7D6; padding-top:22px">
+        <div style="width:332px; background:#EFE9DC; border:1px solid #E4DBC9; border-radius:10px; overflow:hidden">
+          <div style="height:6px; background:#5A6043"></div>
+          <div style="padding:16px">
+            <div style="display:flex; gap:11px; align-items:center"><div style="width:40px;height:40px;border-radius:50%;background:#E2E3D2;display:flex;align-items:center;justify-content:center;overflow:hidden"><img src="uploads/Logo-Fragments.png" alt="" style="width:36px;height:36px;object-fit:cover;filter:brightness(1.09) contrast(1.04);mix-blend-mode:multiply"></div><div><div style="font-family:'Cinzel',serif;font-weight:600;font-size:13px;letter-spacing:.04em;color:#4B5235">FRAGMENTS</div><div style="font:italic 12px 'EB Garamond',serif;color:#8A6F4E">Semaine 7</div></div></div>
+            <p style="font:14px/1.5 'EB Garamond',serif;color:#3A2E22;margin:11px 0">Dépose trois découvertes, leurs sources, ta réflexion.</p>
+            <div style="display:flex;justify-content:space-between;align-items:center"><span style="font:500 11px 'Alegreya Sans',sans-serif;background:#EFE4CF;color:#9A6A2E;padding:4px 10px;border-radius:3px">avant vendredi 18h</span><span style="font:600 12px 'Alegreya Sans',sans-serif;background:#5A6043;color:#FBF8F1;padding:7px 15px;border-radius:5px">Déposer</span></div>
+          </div>
+        </div>
+        <div style="width:230px; background:#fff; border:1px solid #E4DBC9; border-left:4px solid #B26A4A; border-radius:12px; padding:15px; height:fit-content">
+          <div style="display:flex;justify-content:space-between;align-items:start"><p style="font:500 14px 'Alegreya Sans',sans-serif;color:#221C16;margin:0">Découvertes</p><span style="color:#C9BBA0">→</span></div>
+          <p style="font:13px 'Alegreya Sans',sans-serif;color:#A8906A;margin:6px 0 0">Note <span style="color:#5A6043;font-weight:700">B+</span> · en progrès</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- MONDE : CODEX -->
+    <div style="background:#FBF8F1; border:1px solid #E4DBC9; border-radius:6px; padding:28px 30px; margin-bottom:22px">
+      <div style="display:flex; gap:24px; align-items:flex-start; flex-wrap:wrap">
+        <div style="display:flex; gap:16px; align-items:center; min-width:280px; flex:1">
+          <div style="width:74px;height:74px;border-radius:50%;background:#DCE6DF;display:flex;align-items:center;justify-content:center;overflow:hidden;flex-shrink:0"><img src="uploads/Logo-Codex.png" alt="" style="width:64px;height:64px;object-fit:cover;filter:brightness(1.09) contrast(1.04);mix-blend-mode:multiply"></div>
+          <div>
+            <div style="font-family:'Cinzel',serif; font-weight:600; font-size:19px; letter-spacing:.05em; color:#2E4A3C">CODEX</div>
+            <div style="font:italic 15px 'EB Garamond',serif; color:#8A6F4E">Lecture · synthèse en direct</div>
+            <div style="font:600 11px 'Alegreya Sans',sans-serif; letter-spacing:.1em; text-transform:uppercase; color:#A8906A; margin-top:3px">Bibliothèque</div>
+          </div>
+        </div>
+        <div style="display:flex; gap:8px; flex-wrap:wrap">
+          <div><div style="width:78px;height:48px;background:#F0EADE;border:1px solid #E4DBC9;border-radius:3px"></div><div class="mono" style="font-size:10px;color:#A8906A;margin-top:5px">#F0EADE</div></div>
+          <div><div style="width:78px;height:48px;background:#2E4A3C;border-radius:3px"></div><div class="mono" style="font-size:10px;color:#A8906A;margin-top:5px">#2E4A3C ◆</div></div>
+          <div><div style="width:78px;height:48px;background:#6E2A2C;border-radius:3px"></div><div class="mono" style="font-size:10px;color:#A8906A;margin-top:5px">#6E2A2C</div></div>
+          <div><div style="width:78px;height:48px;background:#28324A;border-radius:3px"></div><div class="mono" style="font-size:10px;color:#A8906A;margin-top:5px">#28324A</div></div>
+          <div><div style="width:78px;height:48px;background:#DCE6DF;border:1px solid #E4DBC9;border-radius:3px"></div><div class="mono" style="font-size:10px;color:#A8906A;margin-top:5px">#DCE6DF</div></div>
+        </div>
+      </div>
+      <div style="display:flex; gap:16px; align-items:stretch; flex-wrap:wrap; margin-top:24px; border-top:1px solid #EFE7D6; padding-top:22px">
+        <div style="width:332px; background:#F0EADE; border:1px solid #E4DBC9; border-radius:10px; overflow:hidden">
+          <div style="height:6px; background:#2E4A3C"></div>
+          <div style="padding:16px">
+            <div style="display:flex; gap:11px; align-items:center"><div style="width:40px;height:40px;border-radius:50%;background:#DCE6DF;display:flex;align-items:center;justify-content:center;overflow:hidden"><img src="uploads/Logo-Codex.png" alt="" style="width:36px;height:36px;object-fit:cover;filter:brightness(1.09) contrast(1.04);mix-blend-mode:multiply"></div><div><div style="font-family:'Cinzel',serif;font-weight:600;font-size:13px;letter-spacing:.04em;color:#2E4A3C">CODEX</div><div style="font:italic 12px 'EB Garamond',serif;color:#8A6F4E">Synthèse collective</div></div></div>
+            <p style="font:14px/1.5 'EB Garamond',serif;color:#3A2E22;margin:11px 0">La classe construit le plan ensemble, paragraphe après paragraphe.</p>
+            <div style="display:flex;justify-content:space-between;align-items:center"><span style="font:500 11px 'Alegreya Sans',sans-serif;background:#DCE6DF;color:#2E4A3C;padding:4px 10px;border-radius:3px">● en direct</span><span style="font:600 12px 'Alegreya Sans',sans-serif;background:#2E4A3C;color:#FBF8F1;padding:7px 15px;border-radius:5px">Rejoindre</span></div>
+          </div>
+        </div>
+        <div style="width:230px; background:#fff; border:1px solid #E4DBC9; border-left:4px solid #2E4A3C; border-radius:12px; padding:15px; height:fit-content">
+          <div style="display:flex;justify-content:space-between;align-items:start"><p style="font:500 14px 'Alegreya Sans',sans-serif;color:#221C16;margin:0">Phase 2</p><span style="color:#C9BBA0">→</span></div>
+          <p style="font:13px 'Alegreya Sans',sans-serif;color:#A8906A;margin:6px 0 0">Rédaction · 14 élèves</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- MONDE : QUAZIAN -->
+    <div style="background:#FBF8F1; border:1px solid #E4DBC9; border-radius:6px; padding:28px 30px; margin-bottom:22px">
+      <div style="display:flex; gap:24px; align-items:flex-start; flex-wrap:wrap">
+        <div style="display:flex; gap:16px; align-items:center; min-width:280px; flex:1">
+          <div style="width:74px;height:74px;border-radius:50%;background:#DCE6EC;display:flex;align-items:center;justify-content:center;overflow:hidden;flex-shrink:0"><img src="uploads/Logo-Quazian.png" alt="" style="width:64px;height:64px;object-fit:cover;filter:brightness(1.09) contrast(1.04);mix-blend-mode:multiply"></div>
+          <div>
+            <div style="font-family:'Cinzel',serif; font-weight:600; font-size:19px; letter-spacing:.05em; color:#3E6B8E">QUAZIAN</div>
+            <div style="font:italic 15px 'EB Garamond',serif; color:#8A6F4E">Révisions · quizz & flashcards</div>
+            <div style="font:600 11px 'Alegreya Sans',sans-serif; letter-spacing:.1em; text-transform:uppercase; color:#A8906A; margin-top:3px">Fresque florentine</div>
+          </div>
+        </div>
+        <div style="display:flex; gap:8px; flex-wrap:wrap">
+          <div><div style="width:78px;height:48px;background:#F2ECE0;border:1px solid #E4DBC9;border-radius:3px"></div><div class="mono" style="font-size:10px;color:#A8906A;margin-top:5px">#F2ECE0</div></div>
+          <div><div style="width:78px;height:48px;background:#3E6B8E;border-radius:3px"></div><div class="mono" style="font-size:10px;color:#A8906A;margin-top:5px">#3E6B8E ◆</div></div>
+          <div><div style="width:78px;height:48px;background:#C8993F;border-radius:3px"></div><div class="mono" style="font-size:10px;color:#A8906A;margin-top:5px">#C8993F</div></div>
+          <div><div style="width:78px;height:48px;background:#BE8276;border-radius:3px"></div><div class="mono" style="font-size:10px;color:#A8906A;margin-top:5px">#BE8276</div></div>
+          <div><div style="width:78px;height:48px;background:#DCE6EC;border:1px solid #E4DBC9;border-radius:3px"></div><div class="mono" style="font-size:10px;color:#A8906A;margin-top:5px">#DCE6EC</div></div>
+        </div>
+      </div>
+      <div style="display:flex; gap:16px; align-items:stretch; flex-wrap:wrap; margin-top:24px; border-top:1px solid #EFE7D6; padding-top:22px">
+        <div style="width:332px; background:#F2ECE0; border:1px solid #E4DBC9; border-radius:10px; overflow:hidden">
+          <div style="height:6px; background:#3E6B8E"></div>
+          <div style="padding:16px">
+            <div style="display:flex; gap:11px; align-items:center"><div style="width:40px;height:40px;border-radius:50%;background:#DCE6EC;display:flex;align-items:center;justify-content:center;overflow:hidden"><img src="uploads/Logo-Quazian.png" alt="" style="width:36px;height:36px;object-fit:cover;filter:brightness(1.09) contrast(1.04);mix-blend-mode:multiply"></div><div><div style="font-family:'Cinzel',serif;font-weight:600;font-size:13px;letter-spacing:.04em;color:#3E6B8E">QUAZIAN</div><div style="font:italic 12px 'EB Garamond',serif;color:#8A6F4E">Révision du jour</div></div></div>
+            <p style="font:14px/1.5 'EB Garamond',serif;color:#3A2E22;margin:11px 0">Douze cartes sont dues. Cinq minutes suffisent pour tenir la cadence.</p>
+            <div style="display:flex;justify-content:space-between;align-items:center"><span style="font:500 11px 'Alegreya Sans',sans-serif;background:#DCE6EC;color:#345C78;padding:4px 10px;border-radius:3px">12 cartes dues</span><span style="font:600 12px 'Alegreya Sans',sans-serif;background:#3E6B8E;color:#FBF8F1;padding:7px 15px;border-radius:5px">Réviser</span></div>
+          </div>
+        </div>
+        <div style="width:230px; background:#fff; border:1px solid #E4DBC9; border-left:4px solid #C8993F; border-radius:12px; padding:15px; height:fit-content">
+          <div style="display:flex;justify-content:space-between;align-items:start"><p style="font:500 14px 'Alegreya Sans',sans-serif;color:#221C16;margin:0">Quizz lancé</p><span style="color:#C9BBA0">→</span></div>
+          <p style="font:13px 'Alegreya Sans',sans-serif;color:#A8906A;margin:6px 0 0">8 questions · chrono</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- MONDE : SCRIPTORIUM -->
+    <div style="background:#FBF8F1; border:1px solid #E4DBC9; border-radius:6px; padding:28px 30px">
+      <div style="display:flex; gap:24px; align-items:flex-start; flex-wrap:wrap">
+        <div style="display:flex; gap:16px; align-items:center; min-width:280px; flex:1">
+          <div style="width:74px;height:74px;border-radius:50%;background:#E6DDC9;display:flex;align-items:center;justify-content:center;overflow:hidden;flex-shrink:0"><img src="uploads/Logo-Scriptorium.png" alt="" style="width:64px;height:64px;object-fit:cover;filter:brightness(1.09) contrast(1.04);mix-blend-mode:multiply"></div>
+          <div>
+            <div style="font-family:'Cinzel',serif; font-weight:600; font-size:19px; letter-spacing:.05em; color:#4A3A28">SCRIPTORIUM</div>
+            <div style="font:italic 15px 'EB Garamond',serif; color:#8A6F4E">Atelier du professeur</div>
+            <div style="font:600 11px 'Alegreya Sans',sans-serif; letter-spacing:.1em; text-transform:uppercase; color:#A8906A; margin-top:3px">Parchemin & encre · sobre</div>
+          </div>
+        </div>
+        <div style="display:flex; gap:8px; flex-wrap:wrap">
+          <div><div style="width:78px;height:48px;background:#F0EADE;border:1px solid #E4DBC9;border-radius:3px"></div><div class="mono" style="font-size:10px;color:#A8906A;margin-top:5px">#F0EADE</div></div>
+          <div><div style="width:78px;height:48px;background:#6E5A3E;border-radius:3px"></div><div class="mono" style="font-size:10px;color:#A8906A;margin-top:5px">#6E5A3E</div></div>
+          <div><div style="width:78px;height:48px;background:#4A3A28;border-radius:3px"></div><div class="mono" style="font-size:10px;color:#A8906A;margin-top:5px">#4A3A28 ◆</div></div>
+          <div><div style="width:78px;height:48px;background:#E6DDC9;border:1px solid #E4DBC9;border-radius:3px"></div><div class="mono" style="font-size:10px;color:#A8906A;margin-top:5px">#E6DDC9</div></div>
+        </div>
+      </div>
+      <div style="display:flex; gap:16px; align-items:stretch; flex-wrap:wrap; margin-top:24px; border-top:1px solid #EFE7D6; padding-top:22px">
+        <div style="width:332px; background:#F0EADE; border:1px solid #E4DBC9; border-radius:10px; overflow:hidden">
+          <div style="height:6px; background:#4A3A28"></div>
+          <div style="padding:16px">
+            <div style="display:flex; gap:11px; align-items:center"><div style="width:40px;height:40px;border-radius:50%;background:#E6DDC9;display:flex;align-items:center;justify-content:center;overflow:hidden"><img src="uploads/Logo-Scriptorium.png" alt="" style="width:36px;height:36px;object-fit:cover;filter:brightness(1.09) contrast(1.04);mix-blend-mode:multiply"></div><div><div style="font-family:'Cinzel',serif;font-weight:600;font-size:13px;letter-spacing:.04em;color:#4A3A28">SCRIPTORIUM</div><div style="font:italic 12px 'EB Garamond',serif;color:#8A6F4E">Corriger les dépôts</div></div></div>
+            <p style="font:14px/1.5 'EB Garamond',serif;color:#3A2E22;margin:11px 0">L'espace réservé au professeur. Sobre, sans distraction — l'outil s'efface.</p>
+            <div style="display:flex;justify-content:space-between;align-items:center"><span style="font:500 11px 'Alegreya Sans',sans-serif;background:#E6DDC9;color:#4A3A28;padding:4px 10px;border-radius:3px">9 à corriger</span><span style="font:600 12px 'Alegreya Sans',sans-serif;background:#4A3A28;color:#FBF8F1;padding:7px 15px;border-radius:5px">Ouvrir</span></div>
+          </div>
+        </div>
+        <div style="width:230px; background:#fff; border:1px solid #E4DBC9; border-left:4px solid #4A3A28; border-radius:12px; padding:15px; height:fit-content">
+          <div style="display:flex;justify-content:space-between;align-items:start"><p style="font:500 14px 'Alegreya Sans',sans-serif;color:#221C16;margin:0">Classe HLP</p><span style="color:#C9BBA0">→</span></div>
+          <p style="font:13px 'Alegreya Sans',sans-serif;color:#A8906A;margin:6px 0 0">28 élèves · S2</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ 4 · TYPOGRAPHIE ============ -->
+  <section style="margin-top:64px">
+    <div style="display:flex; align-items:baseline; gap:14px; border-bottom:1px solid #D8CCB4; padding-bottom:12px; margin-bottom:28px">
+      <span class="mono" style="font-size:13px; color:#A8906A">04</span>
+      <h2 style="font-family:'Cormorant Garamond',serif; font-weight:600; font-size:30px; margin:0; color:#2A2017">Typographie</h2>
+      <span style="font-family:'EB Garamond',serif; font-style:italic; font-size:16px; color:#8A6F4E">quatre rôles</span>
+    </div>
+    <div style="display:grid; grid-template-columns:1fr 1fr; gap:18px">
+      <div style="background:#FBF8F1; border:1px solid #E4DBC9; border-radius:4px; padding:24px 26px">
+        <div style="font:600 11px 'Alegreya Sans',sans-serif; letter-spacing:.14em; text-transform:uppercase; color:#A8906A; margin-bottom:8px">Marque & sceaux — Cinzel</div>
+        <div style="font-family:'Cinzel',serif; font-weight:600; font-size:30px; letter-spacing:.07em; color:#221C16">PALIMPSESTE</div>
+        <p style="font:14px/1.5 'EB Garamond',serif; color:#8A6F4E; margin:8px 0 0">Capitale lapidaire, en écho aux sceaux. Réservée au nom de marque et aux noms de module, en capitales espacées. Jamais pour de longs textes.</p>
+      </div>
+      <div style="background:#FBF8F1; border:1px solid #E4DBC9; border-radius:4px; padding:24px 26px">
+        <div style="font:600 11px 'Alegreya Sans',sans-serif; letter-spacing:.14em; text-transform:uppercase; color:#A8906A; margin-bottom:8px">Titres — Cormorant Garamond</div>
+        <div style="font-family:'Cormorant Garamond',serif; font-weight:600; font-size:40px; color:#221C16; line-height:1.05">L'art de relire</div>
+        <p style="font:14px/1.5 'EB Garamond',serif; color:#8A6F4E; margin:8px 0 0">Serif humaniste contrasté, élégant. Pour les titres de page et de section. Sa hampe fine apporte la touche « humanités ».</p>
+      </div>
+      <div style="background:#FBF8F1; border:1px solid #E4DBC9; border-radius:4px; padding:24px 26px">
+        <div style="font:600 11px 'Alegreya Sans',sans-serif; letter-spacing:.14em; text-transform:uppercase; color:#A8906A; margin-bottom:8px">Corps — EB Garamond</div>
+        <p style="font-family:'EB Garamond',serif; font-size:19px; line-height:1.55; color:#2A2017; margin:0">Le palimpseste garde la trace de ce qu'on a effacé ; chaque relecture révèle une couche d'écriture sous la précédente. <em>L'italique sert aux nuances et citations.</em></p>
+        <p style="font:14px/1.5 'EB Garamond',serif; color:#8A6F4E; margin:8px 0 0">Texte courant, paragraphes, consignes. Très lisible, chaleureux.</p>
+      </div>
+      <div style="background:#FBF8F1; border:1px solid #E4DBC9; border-radius:4px; padding:24px 26px">
+        <div style="font:600 11px 'Alegreya Sans',sans-serif; letter-spacing:.14em; text-transform:uppercase; color:#A8906A; margin-bottom:8px">Interface — Alegreya Sans</div>
+        <div style="font-family:'Alegreya Sans',sans-serif; font-size:15px; color:#2A2017; line-height:1.6">Tableaux de bord · badges · dates · chiffres<br><span style="font-weight:700">Semaine 7 — vendredi 18 h</span> · <span style="background:#DCE6EC;color:#345C78;padding:2px 8px;border-radius:10px;font-size:12px;font-weight:500">12 cartes</span></div>
+        <p style="font:14px/1.5 'EB Garamond',serif; color:#8A6F4E; margin:10px 0 0">Sans-serif humaniste pour les interfaces denses, là où le serif fatigue. Garde la chaleur de l'écrit.</p>
+      </div>
+    </div>
+    <div style="background:#FBF8F1; border:1px solid #E4DBC9; border-radius:4px; padding:22px 26px; margin-top:18px">
+      <div style="font:600 11px 'Alegreya Sans',sans-serif; letter-spacing:.14em; text-transform:uppercase; color:#A8906A; margin-bottom:16px">Échelle</div>
+      <div style="display:flex; align-items:baseline; gap:18px; flex-wrap:wrap">
+        <span style="font-family:'Cormorant Garamond';font-weight:600;font-size:46px;color:#221C16">Aa</span><span class="mono" style="font-size:11px;color:#A8906A">Display · 46–52</span>
+        <span style="font-family:'Cormorant Garamond';font-weight:600;font-size:32px;color:#221C16">Aa</span><span class="mono" style="font-size:11px;color:#A8906A">Titre · 30–34</span>
+        <span style="font-family:'EB Garamond';font-size:19px;color:#221C16">Aa</span><span class="mono" style="font-size:11px;color:#A8906A">Corps · 18–19</span>
+        <span style="font-family:'Alegreya Sans';font-size:15px;color:#221C16">Aa</span><span class="mono" style="font-size:11px;color:#A8906A">Interface · 14–15</span>
+        <span style="font-family:'Alegreya Sans';font-size:12px;font-weight:700;letter-spacing:.1em;color:#221C16">AA</span><span class="mono" style="font-size:11px;color:#A8906A">Étiquette · 11–12 caps</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ 5 · LES SCEAUX ============ -->
+  <section style="margin-top:64px">
+    <div style="display:flex; align-items:baseline; gap:14px; border-bottom:1px solid #D8CCB4; padding-bottom:12px; margin-bottom:28px">
+      <span class="mono" style="font-size:13px; color:#A8906A">05</span>
+      <h2 style="font-family:'Cormorant Garamond',serif; font-weight:600; font-size:30px; margin:0; color:#2A2017">Les sceaux</h2>
+      <span style="font-family:'EB Garamond',serif; font-style:italic; font-size:16px; color:#8A6F4E">pastille teintée</span>
+    </div>
+    <div style="display:flex; gap:22px; flex-wrap:wrap">
+      <div style="flex:1; min-width:320px; background:#FBF8F1; border:1px solid #E4DBC9; border-radius:4px; padding:26px">
+        <div style="display:flex; gap:22px; align-items:flex-end; justify-content:center; margin-bottom:18px">
+          <div style="text-align:center"><div style="width:48px;height:48px;border-radius:50%;background:#DDE3EC;display:flex;align-items:center;justify-content:center;overflow:hidden;margin:0 auto"><img src="uploads/Logo-Aletheia.png" alt="" style="width:42px;height:42px;object-fit:cover;filter:brightness(1.09) contrast(1.04);mix-blend-mode:multiply"></div><div class="mono" style="font-size:10px;color:#A8906A;margin-top:6px">48</div></div>
+          <div style="text-align:center"><div style="width:84px;height:84px;border-radius:50%;background:#DDE3EC;display:flex;align-items:center;justify-content:center;overflow:hidden;margin:0 auto"><img src="uploads/Logo-Aletheia.png" alt="" style="width:74px;height:74px;object-fit:cover;filter:brightness(1.09) contrast(1.04);mix-blend-mode:multiply"></div><div class="mono" style="font-size:10px;color:#A8906A;margin-top:6px">84</div></div>
+          <div style="text-align:center"><div style="width:128px;height:128px;border-radius:50%;background:#DDE3EC;display:flex;align-items:center;justify-content:center;overflow:hidden;margin:0 auto"><img src="uploads/Logo-Aletheia.png" alt="" style="width:112px;height:112px;object-fit:cover;filter:brightness(1.09) contrast(1.04);mix-blend-mode:multiply"></div><div class="mono" style="font-size:10px;color:#A8906A;margin-top:6px">128</div></div>
+        </div>
+        <p style="font:15px/1.55 'EB Garamond',serif; color:#3A2E22; margin:0">La méthode : le sceau gravé reste <strong>noir & blanc</strong>, posé sur un disque de la teinte claire du module en mélange « multiply ». Le parchemin du sceau prend la couleur, l'encre reste sombre. Le disque est légèrement plus grand que le sceau pour englober tout le nom.</p>
+      </div>
+      <div style="flex:1; min-width:320px; display:flex; flex-direction:column; gap:14px">
+        <div style="background:#FBF8F1; border:1px solid #E4DBC9; border-left:4px solid #5B6E4A; border-radius:4px; padding:16px 18px">
+          <div style="font:600 12px 'Alegreya Sans',sans-serif; letter-spacing:.1em; text-transform:uppercase; color:#5B6E4A; margin-bottom:8px">À faire</div>
+          <ul style="margin:0; padding-left:18px; font:15px/1.6 'EB Garamond',serif; color:#3A2E22">
+            <li>Teinter le disque dans la couleur du module</li>
+            <li>Garder le sceau N&B, jamais déformé</li>
+            <li>Laisser de l'air autour : le disque enveloppe le nom</li>
+          </ul>
+        </div>
+        <div style="background:#FBF8F1; border:1px solid #E4DBC9; border-left:4px solid #A23E2E; border-radius:4px; padding:16px 18px">
+          <div style="font:600 12px 'Alegreya Sans',sans-serif; letter-spacing:.1em; text-transform:uppercase; color:#A23E2E; margin-bottom:8px">À éviter</div>
+          <ul style="margin:0; padding-left:18px; font:15px/1.6 'EB Garamond',serif; color:#3A2E22">
+            <li>Recolorer l'encre du sceau en plein</li>
+            <li>L'étirer, l'incliner ou le poser sur une image chargée</li>
+            <li>Mélanger deux teintes de module sur un même écran</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ 6 · TOKENS / HANDOFF ============ -->
+  <section style="margin-top:64px">
+    <div style="display:flex; align-items:baseline; gap:14px; border-bottom:1px solid #D8CCB4; padding-bottom:12px; margin-bottom:28px">
+      <span class="mono" style="font-size:13px; color:#A8906A">06</span>
+      <h2 style="font-family:'Cormorant Garamond',serif; font-weight:600; font-size:30px; margin:0; color:#2A2017">Jetons & intégration</h2>
+      <span style="font-family:'EB Garamond',serif; font-style:italic; font-size:16px; color:#8A6F4E">prêt pour Tailwind</span>
+    </div>
+    <p style="font:16px/1.55 'EB Garamond',serif; color:#5A4632; margin:0 0 18px; max-width:72ch">Variables CSS à déposer dans <span class="mono" style="font-size:13px">globals.css</span>. Le neutre vit dans <span class="mono" style="font-size:13px">:root</span> ; chaque module pose sa couleur via <span class="mono" style="font-size:13px">[data-module="…"]</span> sur le conteneur de page.</p>
+    <div style="background:#26201A; border-radius:6px; padding:24px 26px; overflow:auto">
+      <pre class="mono" style="margin:0; font-size:12.5px; line-height:1.7; color:#E7DCC6; white-space:pre"><span style="color:#9FB58A">/* Base commune — parchemin & encre */</span>
+:root {
+  --parchemin:    #F4EFE6;   --surface: #FBF8F1;
+  --encre:        #221C16;   --encre-douce: #5A4632;
+  --bordure:      #E4DBC9;   --muet: #8A6F4E;
+  <span style="color:#9FB58A">/* états */</span>
+  --ok: #5B6E4A;  --attention: #9A6A2E;  --retard: #A23E2E;
+}
+
+<span style="color:#9FB58A">/* Un monde par module */</span>
+[data-module="palimpseste"]{ --pigment:#5A4632; --teinte:#E8DFCB; --fond:#F4EFE6 }
+[data-module="aletheia"]   { --pigment:#2C4A7C; --teinte:#DDE3EC; --fond:#F3ECDD;
+                             --or:#B8893B; --minium:#B4452F }
+[data-module="fragments"]  { --pigment:#5A6043; --teinte:#E2E3D2; --fond:#EFE9DC;
+                             --terracotta:#B26A4A }
+[data-module="codex"]      { --pigment:#2E4A3C; --teinte:#DCE6DF; --fond:#F0EADE;
+                             --bordeaux:#6E2A2C; --nuit:#28324A }
+[data-module="quazian"]    { --pigment:#3E6B8E; --teinte:#DCE6EC; --fond:#F2ECE0;
+                             --ocre:#C8993F; --rose:#BE8276 }
+[data-module="scriptorium"]{ --pigment:#4A3A28; --teinte:#E6DDC9; --fond:#F0EADE }
+
+<span style="color:#9FB58A">/* Polices */</span>
+--police-marque: 'Cinzel';            --police-titre: 'Cormorant Garamond';
+--police-corps:  'EB Garamond';       --police-ui:    'Alegreya Sans';</pre>
+    </div>
+    <p style="font:14px/1.55 'EB Garamond',serif; color:#8A6F4E; margin:14px 0 0; font-style:italic">Les neutres existants (Tailwind « stone ») restent compatibles : <span class="mono" style="font-style:normal;font-size:12.5px">stone-50/100</span> ≈ parchemin, <span class="mono" style="font-style:normal;font-size:12.5px">stone-800/900</span> ≈ encre. La tuile passe simplement son <span class="mono" style="font-style:normal;font-size:12.5px">border-l</span> en <span class="mono" style="font-style:normal;font-size:12.5px">var(--pigment)</span>.</p>
+  </section>
+
+  <footer style="text-align:center; margin-top:72px; padding-top:28px; border-top:1px solid #D8CCB4">
+    <div style="display:inline-flex; align-items:center; gap:14px; color:#B49B6E"><span style="width:40px;height:1px;background:#C9BBA0"></span><span style="width:6px;height:6px;transform:rotate(45deg);background:#B49B6E"></span><span style="width:40px;height:1px;background:#C9BBA0"></span></div>
+    <p style="font-family:'Cormorant Garamond',serif; font-style:italic; font-size:18px; color:#8A6F4E; margin:14px 0 0">Verba volant, scripta manent, sapientia permanet.</p>
+  </footer>
+
+</div>
+</x-dc>
+</body>
+</html>

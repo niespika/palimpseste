@@ -1,0 +1,343 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<meta name="design_doc_mode" content="canvas">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600;700&family=Cormorant+Garamond:wght@500;600;700&family=EB+Garamond:wght@400;500;600&family=Alegreya+Sans:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  body { margin:0; font-family:'EB Garamond', Georgia, serif; color:#221C16; -webkit-font-smoothing:antialiased; }
+</style>
+</helmet>
+
+<!-- ======================= INTRO ======================= -->
+<div style="position:absolute;left:80px;top:40px;width:820px">
+  <div style="font-family:'Cinzel',serif;font-weight:600;font-size:13px;letter-spacing:.34em;color:#8A6F4E">PALIMPSESTE · ESPACE PROF · ALETHEIA</div>
+  <div style="font-family:'Cormorant Garamond',serif;font-weight:600;font-size:48px;line-height:1.04;color:#221C16;margin-top:6px">La fiche élève, réorganisée</div>
+  <div style="font-family:'EB Garamond',serif;font-size:18px;color:#5A4632;margin-top:8px;max-width:780px">Rendu fidèle à la charte de <b>/prof/aletheia/eleve/[eleveId]</b>. Pour Elo (bi-classe T1 + THLP, deux livres) : <b>un seul graphe</b> de progression en tête, les <b>livres repliés</b> regroupés par classe, et le détail d'une semaine en <b>maître-détail</b> — jamais empilé. La machine à états, les retours IA et le diagnostic prof-only sont inchangés.</div>
+</div>
+
+<!-- legend -->
+<div style="position:absolute;left:920px;top:40px;width:330px">
+  <div data-drags-parent="1" style="position:absolute;top:-26px;left:2px;font-family:'Alegreya Sans',sans-serif;font-size:13px;letter-spacing:.04em;color:#8A6F4E">CHARTE DU MONDE</div>
+  <div style="background:#FBF8F1;border:1px solid #E4DBC9;border-radius:11px;box-shadow:0 4px 16px rgba(34,28,22,.08);padding:15px 17px">
+    <div style="display:flex;flex-wrap:wrap;gap:9px 18px;align-items:center;font-family:'Alegreya Sans',sans-serif;font-size:13px;color:#5A4632">
+      <div style="display:flex;align-items:center;gap:7px"><span style="width:13px;height:13px;border-radius:50%;background:#2C4A7C"></span>Pigment outremer</div>
+      <div style="display:flex;align-items:center;gap:7px"><span style="width:13px;height:13px;border-radius:50%;background:#B4452F"></span>Bouton minium</div>
+    </div>
+    <div style="border-top:1px dashed #E4DBC9;margin:11px 0 10px"></div>
+    <div style="font-family:'Cinzel',serif;font-size:10px;letter-spacing:.12em;color:#8A6F4E;margin-bottom:8px">LE GRAPHE — UNE COULEUR PAR LIVRE</div>
+    <div style="display:flex;flex-direction:column;gap:7px;font-family:'Alegreya Sans',sans-serif;font-size:12.5px;color:#5A4632">
+      <div style="display:flex;align-items:center;gap:8px"><span style="width:22px;height:4px;border-radius:3px;background:#2C4A7C"></span>Du contrat social · T1</div>
+      <div style="display:flex;align-items:center;gap:8px"><span style="width:22px;height:4px;border-radius:3px;background:#B8893B"></span>Méditations métaphysiques · THLP</div>
+    </div>
+    <div style="border-top:1px dashed #E4DBC9;margin:11px 0 10px"></div>
+    <div style="display:flex;flex-wrap:wrap;gap:8px 16px;font-family:'Alegreya Sans',sans-serif;font-size:12.5px;color:#5A4632">
+      <div style="display:flex;align-items:center;gap:6px"><span style="width:11px;height:11px;border-radius:50%;background:#2C4A7C"></span>terminée</div>
+      <div style="display:flex;align-items:center;gap:6px"><span style="width:11px;height:11px;border-radius:50%;background:#9A6A2E"></span>à valider</div>
+      <div style="display:flex;align-items:center;gap:6px"><span style="width:11px;height:11px;border-radius:50%;border:1.5px solid #CDBFA6"></span>verrouillée</div>
+    </div>
+  </div>
+</div>
+
+<!-- ======================= ORDI ======================= -->
+<div style="position:absolute;left:80px;top:312px;font-family:'Cormorant Garamond',serif;font-weight:600;font-size:30px;color:#2C4A7C">Sur ordinateur — la page complète</div>
+<div style="position:absolute;left:80px;top:354px;font-family:'EB Garamond',serif;font-size:16px;color:#8A6F4E">Graphe en tête · livres repliés par classe à gauche · détail de la semaine sélectionnée à droite (ici S2 de « Du contrat social »).</div>
+
+<div data-screen-label="Fiche élève Aletheia — ordi (réorganisée)" style="position:absolute;left:80px;top:424px;width:1010px">
+  <div data-drags-parent="1" style="position:absolute;top:-26px;left:2px;font-family:'Alegreya Sans',sans-serif;font-size:13px;color:#8A6F4E">Ordinateur — Pilotage › Élèves › Elo Vasseur</div>
+  <div style="border:1px solid #D8CFBC;border-radius:12px;background:#FBF8F1;box-shadow:0 4px 16px rgba(34,28,22,.1);overflow:hidden">
+    <!-- chrome -->
+    <div style="background:#ECE4D6;padding:9px 14px;display:flex;align-items:center;gap:7px"><span style="width:10px;height:10px;border-radius:50%;background:#C9B89A"></span><span style="width:10px;height:10px;border-radius:50%;background:#C9B89A"></span><span style="width:10px;height:10px;border-radius:50%;background:#C9B89A"></span></div>
+    <div style="background:#ECE4D6;padding:0 22px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid #E0D6C2;height:52px">
+      <div style="display:flex;align-items:center;gap:10px"><span style="width:30px;height:30px;border-radius:50%;background:#F4EFE6;border:1px solid #D8CFBC;display:inline-flex;align-items:center;justify-content:center;overflow:hidden;flex-shrink:0"><img src="sceaux/palimpseste_medaillon.png" style="width:28px;height:28px;object-fit:cover;filter:brightness(1.05) contrast(1.05);mix-blend-mode:multiply" alt=""></span><span style="font-family:'Cinzel',serif;font-weight:600;font-size:15px;letter-spacing:.2em;color:#221C16">PALIMPSESTE</span></div>
+      <div style="display:flex;align-items:center;gap:4px;font-family:'Alegreya Sans',sans-serif;font-size:14px">
+        <span style="color:#5A4632;padding:6px 13px">Tableau de bord</span>
+        <span style="background:#F4EFE6;color:#221C16;padding:6px 13px;border-radius:7px;display:inline-flex;align-items:center;gap:4px">Pilotage <span style="font-size:10px">▾</span></span>
+        <span style="color:#5A4632;padding:6px 13px;display:inline-flex;align-items:center;gap:4px">Modules <span style="font-size:10px">▾</span></span>
+      </div>
+      <span style="font-family:'Alegreya Sans',sans-serif;font-size:13px;color:#8A6F4E">Mme Aubry · Déconnexion</span>
+    </div>
+    <!-- content -->
+    <div style="background:#F3ECDD;padding:20px 26px 26px">
+      <div style="font-family:'Alegreya Sans',sans-serif;font-size:12.5px;color:#8A6F4E">← Élèves</div>
+      <!-- élève header -->
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:16px;margin-top:6px">
+        <div>
+          <div style="font-family:'Cormorant Garamond',serif;font-weight:600;font-size:30px;color:#221C16;line-height:1.04">Elo Vasseur</div>
+          <div style="font-family:'Alegreya Sans',sans-serif;font-size:13px;color:#8A6F4E;margin-top:2px">elo.vasseur@lycee.fr</div>
+          <div style="display:flex;gap:6px;margin-top:9px">
+            <span style="font-family:'Alegreya Sans',sans-serif;font-size:11.5px;color:#2C4A7C;background:#DDE3EC;padding:3px 11px;border-radius:9px">Terminale 1</span>
+            <span style="font-family:'Alegreya Sans',sans-serif;font-size:11.5px;color:#2C4A7C;background:#DDE3EC;padding:3px 11px;border-radius:9px">Terminale HLP</span>
+          </div>
+        </div>
+        <span style="font-family:'Alegreya Sans',sans-serif;font-size:12px;color:#A23E2E;background:#EFD9D2;padding:4px 12px;border-radius:9px;white-space:nowrap">à risque</span>
+      </div>
+
+      <!-- GRAPHE -->
+      <div style="background:#FBF8F1;border:1px solid #E4DBC9;border-radius:13px;padding:16px 18px;margin-top:16px">
+        <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:9px">
+          <div>
+            <div style="font-family:'Cinzel',serif;font-size:11px;letter-spacing:.1em;color:#8A6F4E">PROGRESSION — TOUS LES LIVRES</div>
+            <div style="font-family:'Cormorant Garamond',serif;font-weight:600;font-size:21px;color:#221C16;line-height:1.05;margin-top:1px">Compréhension au fil des semaines (E → A)</div>
+          </div>
+          <span style="display:inline-flex;border:1px solid #D8CFBC;border-radius:8px;overflow:hidden;font-family:'Alegreya Sans',sans-serif;font-size:12.5px">
+            <span style="background:#2C4A7C;color:#FBF8F1;padding:6px 14px">Arguments</span>
+            <span style="color:#5A4632;padding:6px 14px">Thèse</span>
+          </span>
+        </div>
+        <svg viewBox="0 0 660 210" width="100%" height="200" style="display:block;margin-top:10px">
+          <g font-family="'Alegreya Sans',sans-serif" font-size="12" fill="#A89878">
+            <line x1="46" y1="24" x2="646" y2="24" stroke="#EFE7D8" stroke-width="1"/><text x="20" y="28">A</text>
+            <line x1="46" y1="64" x2="646" y2="64" stroke="#EFE7D8" stroke-width="1"/><text x="20" y="68">B</text>
+            <line x1="46" y1="103" x2="646" y2="103" stroke="#EFE7D8" stroke-width="1"/><text x="20" y="107">C</text>
+            <line x1="46" y1="143" x2="646" y2="143" stroke="#EFE7D8" stroke-width="1"/><text x="20" y="147">D</text>
+            <line x1="46" y1="182" x2="646" y2="182" stroke="#E4DBC9" stroke-width="1.2"/><text x="20" y="186">E</text>
+          </g>
+          <g font-family="'Alegreya Sans',sans-serif" font-size="12" fill="#A89878" text-anchor="middle">
+            <text x="96" y="202">déc.</text><text x="186" y="202">janv.</text><text x="276" y="202">févr.</text><text x="366" y="202">mars</text><text x="456" y="202">avr.</text><text x="546" y="202">mai</text>
+          </g>
+          <polyline points="96,103 186,64 276,64 366,24 456,24" fill="none" stroke="#2C4A7C" stroke-width="2.6"/>
+          <g fill="#2C4A7C"><circle cx="96" cy="103" r="4.5"/><circle cx="186" cy="64" r="4.5"/><circle cx="276" cy="64" r="4.5"/><circle cx="366" cy="24" r="4.5"/><circle cx="456" cy="24" r="4.5"/></g>
+          <polyline points="186,143 276,103 366,103 456,64 546,64" fill="none" stroke="#B8893B" stroke-width="2.6"/>
+          <g fill="#B8893B"><circle cx="186" cy="143" r="4.5"/><circle cx="276" cy="103" r="4.5"/><circle cx="366" cy="103" r="4.5"/><circle cx="456" cy="64" r="4.5"/><circle cx="546" cy="64" r="4.5"/></g>
+        </svg>
+        <div style="display:flex;flex-wrap:wrap;justify-content:space-between;gap:8px 20px;border-top:1px dashed #E4DBC9;margin-top:6px;padding-top:11px">
+          <div style="display:flex;flex-wrap:wrap;gap:8px 20px;font-family:'Alegreya Sans',sans-serif;font-size:12.5px;color:#5A4632">
+            <div style="display:flex;align-items:center;gap:7px"><span style="width:22px;height:4px;border-radius:3px;background:#2C4A7C"></span>Du contrat social <span style="color:#8A6F4E">· T1</span></div>
+            <div style="display:flex;align-items:center;gap:7px"><span style="width:22px;height:4px;border-radius:3px;background:#B8893B"></span>Méditations métaphysiques <span style="color:#8A6F4E">· THLP</span></div>
+          </div>
+          <span style="font-family:'Alegreya Sans',sans-serif;font-size:11.5px;color:#8A6F4E">Clique un point pour ouvrir la semaine →</span>
+        </div>
+      </div>
+
+      <!-- MASTER + DETAIL -->
+      <div style="display:flex;gap:18px;margin-top:18px;align-items:flex-start">
+        <!-- MASTER (left) -->
+        <div style="width:352px;flex-shrink:0;display:flex;flex-direction:column;gap:14px">
+          <!-- T1 -->
+          <div>
+            <div style="font-family:'Alegreya Sans',sans-serif;font-size:11px;letter-spacing:.1em;color:#8A6F4E;margin-bottom:7px">TERMINALE 1 · T1</div>
+            <div style="background:#FBF8F1;border:1px solid #E4DBC9;border-radius:12px;overflow:hidden">
+              <div style="display:flex;align-items:center;gap:11px;padding:11px 13px;border-bottom:1px solid #EFE7D8;border-left:4px solid #2C4A7C">
+                <span style="width:36px;height:36px;border-radius:50%;background:#DDE3EC;display:inline-flex;align-items:center;justify-content:center;overflow:hidden;flex-shrink:0"><img src="sceaux/aletheia.png" style="width:31px;height:31px;object-fit:cover;object-position:50% 40%;filter:brightness(1.09) contrast(1.04);mix-blend-mode:multiply" alt=""></span>
+                <div style="flex:1;min-width:0"><div style="font-family:'Cinzel',serif;font-weight:600;font-size:10px;letter-spacing:.12em;color:#2C4A7C">ALETHEIA</div><div style="font-family:'Cormorant Garamond',serif;font-weight:600;font-size:18px;color:#221C16;line-height:1.05">Du contrat social</div></div>
+                <span style="font-family:'Alegreya Sans',sans-serif;font-size:12px;color:#8A6F4E">3/6</span>
+                <span style="color:#2C4A7C;font-size:13px">▾</span>
+              </div>
+              <div style="padding:6px 8px;display:flex;flex-direction:column;gap:2px">
+                <!-- S1 -->
+                <div style="display:flex;align-items:center;gap:10px;padding:8px 8px;border-radius:8px"><span style="font-family:'Cormorant Garamond',serif;font-weight:600;font-size:17px;color:#B3A488;width:18px;text-align:center">1</span><span style="flex:1;min-width:0;font-family:'EB Garamond',serif;font-size:14px;color:#221C16;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">L'état de nature</span><span style="display:inline-flex;gap:3px"><span style="width:8px;height:8px;border-radius:50%;background:#2C4A7C"></span><span style="width:8px;height:8px;border-radius:50%;background:#2C4A7C"></span><span style="width:8px;height:8px;border-radius:50%;background:#2C4A7C"></span><span style="width:8px;height:8px;border-radius:50%;background:#2C4A7C"></span></span></div>
+                <!-- S2 SELECTED -->
+                <div style="display:flex;align-items:center;gap:10px;padding:9px 8px;border-radius:8px;background:#DDE3EC;border-left:3px solid #2C4A7C"><span style="font-family:'Cormorant Garamond',serif;font-weight:600;font-size:17px;color:#2C4A7C;width:18px;text-align:center">2</span><span style="flex:1;min-width:0;font-family:'EB Garamond',serif;font-size:14px;color:#221C16;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">Le pacte social</span><span style="display:inline-flex;gap:3px"><span style="width:8px;height:8px;border-radius:50%;background:#2C4A7C"></span><span style="width:8px;height:8px;border-radius:50%;background:#2C4A7C"></span><span style="width:8px;height:8px;border-radius:50%;background:#2C4A7C"></span><span style="width:8px;height:8px;border-radius:50%;background:#2C4A7C"></span></span></div>
+                <!-- S3 -->
+                <div style="display:flex;align-items:center;gap:10px;padding:8px 8px;border-radius:8px"><span style="font-family:'Cormorant Garamond',serif;font-weight:600;font-size:17px;color:#B3A488;width:18px;text-align:center">3</span><span style="flex:1;min-width:0;font-family:'EB Garamond',serif;font-size:14px;color:#221C16;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">Le souverain</span><span style="display:inline-flex;gap:3px"><span style="width:8px;height:8px;border-radius:50%;background:#2C4A7C"></span><span style="width:8px;height:8px;border-radius:50%;background:#2C4A7C"></span><span style="width:8px;height:8px;border-radius:50%;background:#2C4A7C"></span><span style="width:8px;height:8px;border-radius:50%;background:#2C4A7C"></span></span></div>
+                <!-- S4 à valider -->
+                <div style="display:flex;align-items:center;gap:10px;padding:8px 8px;border-radius:8px"><span style="font-family:'Cormorant Garamond',serif;font-weight:600;font-size:17px;color:#B3A488;width:18px;text-align:center">4</span><span style="flex:1;min-width:0;font-family:'EB Garamond',serif;font-size:14px;color:#221C16;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">La loi</span><span style="display:inline-flex;gap:3px"><span style="width:8px;height:8px;border-radius:50%;background:#2C4A7C"></span><span style="width:8px;height:8px;border-radius:50%;background:#2C4A7C"></span><span style="width:8px;height:8px;border-radius:50%;background:#2C4A7C"></span><span style="width:8px;height:8px;border-radius:50%;background:#2C4A7C"></span></span><span style="font-family:'Alegreya Sans',sans-serif;font-size:10px;color:#9A6A2E;background:#EFE4CF;padding:2px 7px;border-radius:8px">à valider</span></div>
+                <!-- S5 locked -->
+                <div style="display:flex;align-items:center;gap:10px;padding:8px 8px;border-radius:8px;opacity:.55"><span style="font-family:'Cormorant Garamond',serif;font-weight:600;font-size:17px;color:#B3A488;width:18px;text-align:center">5</span><span style="flex:1;min-width:0;font-family:'EB Garamond',serif;font-size:14px;color:#5A4632;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">Le gouvernement</span><span style="font-family:'Alegreya Sans',sans-serif;font-size:11px;color:#8A6F4E">🔒</span></div>
+                <!-- S6 locked -->
+                <div style="display:flex;align-items:center;gap:10px;padding:8px 8px;border-radius:8px;opacity:.55"><span style="font-family:'Cormorant Garamond',serif;font-weight:600;font-size:17px;color:#B3A488;width:18px;text-align:center">6</span><span style="flex:1;min-width:0;font-family:'EB Garamond',serif;font-size:14px;color:#5A4632;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">La volonté générale</span><span style="font-family:'Alegreya Sans',sans-serif;font-size:11px;color:#8A6F4E">🔒</span></div>
+              </div>
+            </div>
+          </div>
+          <!-- THLP collapsed -->
+          <div>
+            <div style="font-family:'Alegreya Sans',sans-serif;font-size:11px;letter-spacing:.1em;color:#8A6F4E;margin-bottom:7px">TERMINALE HLP · THLP</div>
+            <div style="background:#FBF8F1;border:1px solid #E4DBC9;border-radius:12px;display:flex;align-items:center;gap:11px;padding:11px 13px;border-left:4px solid #B8893B">
+              <span style="width:36px;height:36px;border-radius:50%;background:#DDE3EC;display:inline-flex;align-items:center;justify-content:center;overflow:hidden;flex-shrink:0"><img src="sceaux/aletheia.png" style="width:31px;height:31px;object-fit:cover;object-position:50% 40%;filter:brightness(1.09) contrast(1.04);mix-blend-mode:multiply" alt=""></span>
+              <div style="flex:1;min-width:0"><div style="font-family:'Cinzel',serif;font-weight:600;font-size:10px;letter-spacing:.12em;color:#2C4A7C">ALETHEIA</div><div style="font-family:'Cormorant Garamond',serif;font-weight:600;font-size:18px;color:#221C16;line-height:1.05">Méditations métaphysiques</div><div style="font-family:'Alegreya Sans',sans-serif;font-size:11px;color:#8A6F4E;margin-top:1px">1/6 · S2 à valider</div></div>
+              <span style="color:#2C4A7C;font-size:13px">▸</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- DETAIL (right) -->
+        <div style="flex:1;min-width:0;background:#FBF8F1;border:1px solid #E4DBC9;border-radius:13px;padding:18px 20px;display:flex;flex-direction:column;gap:15px">
+          <!-- header -->
+          <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;border-bottom:1px solid #EFE7D8;padding-bottom:14px">
+            <div>
+              <div style="font-family:'Cinzel',serif;font-weight:600;font-size:11px;letter-spacing:.16em;color:#2C4A7C">ALETHEIA · DU CONTRAT SOCIAL</div>
+              <div style="font-family:'Cormorant Garamond',serif;font-weight:600;font-size:23px;color:#221C16;line-height:1.05;margin-top:2px">Semaine 2 — Le pacte social</div>
+              <div style="font-family:'Alegreya Sans',sans-serif;font-size:12.5px;color:#8A6F4E;margin-top:2px"><span style="color:#2C4A7C">ch. VI–VIII</span> · rendue le 14 janvier</div>
+            </div>
+            <span style="font-family:'Alegreya Sans',sans-serif;font-size:12px;color:#2C4A7C;background:#DDE3EC;padding:4px 12px;border-radius:9px;white-space:nowrap">✓ Terminée</span>
+          </div>
+          <!-- named stepper (all done) -->
+          <div style="display:flex;align-items:center;gap:8px;font-family:'Alegreya Sans',sans-serif;font-size:12px;color:#2C4A7C;flex-wrap:wrap">
+            <span style="display:flex;align-items:center;gap:6px"><span style="width:19px;height:19px;border-radius:50%;background:#2C4A7C;color:#fff;display:inline-flex;align-items:center;justify-content:center;font-size:10px">✓</span>Lecture</span>
+            <span style="width:16px;height:1px;background:#CDBFA6"></span>
+            <span style="display:flex;align-items:center;gap:6px"><span style="width:19px;height:19px;border-radius:50%;background:#2C4A7C;color:#fff;display:inline-flex;align-items:center;justify-content:center;font-size:10px">✓</span>Retour</span>
+            <span style="width:16px;height:1px;background:#CDBFA6"></span>
+            <span style="display:flex;align-items:center;gap:6px"><span style="width:19px;height:19px;border-radius:50%;background:#2C4A7C;color:#fff;display:inline-flex;align-items:center;justify-content:center;font-size:10px">✓</span>Réécriture</span>
+            <span style="width:16px;height:1px;background:#CDBFA6"></span>
+            <span style="display:flex;align-items:center;gap:6px"><span style="width:19px;height:19px;border-radius:50%;background:#2C4A7C;color:#fff;display:inline-flex;align-items:center;justify-content:center;font-size:10px">✓</span>Retour final</span>
+          </div>
+
+          <!-- 1. DIAGNOSTIC (hero, prof-only) -->
+          <div style="background:#F1F4FA;border:1px solid #C9D4E6;border-left:4px solid #2C4A7C;border-radius:11px;padding:14px 16px">
+            <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:6px">
+              <span style="font-family:'Cinzel',serif;font-weight:600;font-size:11px;letter-spacing:.1em;color:#2C4A7C">◆ DIAGNOSTIC DE COMPRÉHENSION</span>
+              <span style="font-family:'Alegreya Sans',sans-serif;font-size:11px;color:#5A6E8E">prof — jamais montré à l'élève</span>
+            </div>
+            <div style="display:flex;flex-wrap:wrap;gap:14px 28px;margin-top:11px">
+              <div style="font-family:'EB Garamond',serif;font-size:14.5px;color:#3A4A63">Saisie de la thèse&nbsp;&nbsp;<span style="font-family:'Alegreya Sans',sans-serif;font-weight:700;font-size:12px;background:#ECE4D6;color:#8A6F4E;padding:1px 7px;border-radius:5px">C</span> <span style="color:#B8893B">→</span> <span style="font-family:'Alegreya Sans',sans-serif;font-weight:700;font-size:12px;background:#DDE3EC;color:#2C4A7C;padding:1px 7px;border-radius:5px">B</span></div>
+              <div style="font-family:'EB Garamond',serif;font-size:14.5px;color:#3A4A63">Restitution des arguments&nbsp;&nbsp;<span style="font-family:'Alegreya Sans',sans-serif;font-weight:700;font-size:12px;background:#DDE3EC;color:#2C4A7C;padding:1px 7px;border-radius:5px">B</span> <span style="color:#B8893B">→</span> <span style="font-family:'Alegreya Sans',sans-serif;font-weight:700;font-size:12px;background:#DDE3EC;color:#2C4A7C;padding:1px 7px;border-radius:5px">A</span></div>
+            </div>
+            <div style="font-family:'EB Garamond',serif;font-size:14px;color:#5A6E8E;font-style:italic;margin-top:10px;line-height:1.5;border-top:1px solid #D6DFEC;padding-top:9px">« La thèse gagne en netteté entre V1 et VF ; les arguments, d'abord juxtaposés, sont désormais hiérarchisés autour de la volonté générale. » <span style="color:#7E8CA4;font-style:normal">— note d'inventaire · V1→VF, E faible → A fort</span></div>
+          </div>
+
+          <!-- 2. AVANT / APRÈS -->
+          <div>
+            <div style="font-family:'Alegreya Sans',sans-serif;font-size:11px;letter-spacing:.1em;color:#8A6F4E;margin-bottom:9px">DU PREMIER JET À LA VERSION FINALE</div>
+            <div style="display:flex;gap:12px;align-items:stretch">
+              <div style="flex:1;background:#F4EFE6;border:1px solid #E4DBC9;border-radius:11px;padding:12px 14px">
+                <div style="font-family:'Alegreya Sans',sans-serif;font-size:11px;letter-spacing:.06em;color:#A89878;margin-bottom:7px">PREMIER JET (V1)</div>
+                <div style="font-family:'Alegreya Sans',sans-serif;font-size:11px;color:#8A6F4E">Idée principale</div>
+                <div style="font-family:'EB Garamond',serif;font-size:14px;color:#7A6A55;font-style:italic;line-height:1.45;margin-top:2px">Le contrat social, c'est quand les gens se mettent d'accord sur des règles pour vivre ensemble.</div>
+                <div style="font-family:'Alegreya Sans',sans-serif;font-size:11px;color:#8A6F4E;margin-top:9px">Arguments</div>
+                <div style="font-family:'EB Garamond',serif;font-size:14px;color:#7A6A55;font-style:italic;line-height:1.45;margin-top:2px">On donne des libertés pour être protégé. Sinon c'est le désordre.</div>
+              </div>
+              <div style="flex:1;background:#FBF8F1;border:1px solid #E4DBC9;border-left:3px solid #2C4A7C;border-radius:11px;padding:12px 14px">
+                <div style="font-family:'Alegreya Sans',sans-serif;font-size:11px;letter-spacing:.06em;color:#2C4A7C;margin-bottom:7px">VERSION FINALE (VF)</div>
+                <div style="font-family:'Alegreya Sans',sans-serif;font-size:11px;color:#8A6F4E">Idée principale</div>
+                <div style="font-family:'EB Garamond',serif;font-size:14px;color:#221C16;line-height:1.45;margin-top:2px">Par le pacte, chacun aliène ses droits à la communauté entière ; nul n'y perd, car tous gagnent un droit égal — la volonté générale fonde la souveraineté.</div>
+                <div style="font-family:'Alegreya Sans',sans-serif;font-size:11px;color:#8A6F4E;margin-top:9px">Arguments</div>
+                <div style="font-family:'EB Garamond',serif;font-size:14px;color:#221C16;line-height:1.45;margin-top:2px">L'aliénation totale rend la condition égale pour tous ; obéir à la volonté générale, c'est s'obéir à soi-même.</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- 3. RETOURS IA (collapsed) -->
+          <div>
+            <div style="font-family:'Alegreya Sans',sans-serif;font-size:11px;letter-spacing:.1em;color:#8A6F4E;margin-bottom:8px">LES RETOURS DE L'IA</div>
+            <div style="display:flex;flex-direction:column;gap:7px">
+              <div style="border:1px solid #E4DBC9;border-radius:9px;padding:11px 14px;display:flex;justify-content:space-between;align-items:center"><span style="font-family:'EB Garamond',serif;font-size:15px;color:#221C16">▸&nbsp; Retour socratique (V1)</span><span style="font-family:'Alegreya Sans',sans-serif;font-size:12px;color:#2C4A7C">déplier</span></div>
+              <div style="border:1px solid #E4DBC9;border-radius:9px;padding:11px 14px;display:flex;justify-content:space-between;align-items:center"><span style="font-family:'EB Garamond',serif;font-size:15px;color:#221C16">▸&nbsp; Retour final (VF) <span style="color:#8A6F4E;font-size:13px">— nuances, ajouts vérifiés, synthèse modèle</span></span><span style="font-family:'Alegreya Sans',sans-serif;font-size:12px;color:#2C4A7C">déplier</span></div>
+            </div>
+          </div>
+
+          <!-- 4. SAISIE complète (collapsed) -->
+          <div style="border:1px dashed #D8CFBC;border-radius:9px;padding:11px 14px;display:flex;justify-content:space-between;align-items:center"><span style="font-family:'EB Garamond',serif;font-size:15px;color:#5A4632">▸&nbsp; La saisie complète — ton accord, questions, vocabulaire</span><span style="font-family:'Alegreya Sans',sans-serif;font-size:12px;color:#2C4A7C">déplier</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- notes ordi -->
+<div style="position:absolute;left:1120px;top:464px;width:262px">
+  <div style="background:#F3ECDD;border:1px solid #E4DBC9;border-left:3px solid #2C4A7C;border-radius:8px;padding:14px 16px;font-family:'EB Garamond',serif;font-size:15px;line-height:1.5;color:#5A4632">
+    <span style="font-family:'Alegreya Sans',sans-serif;font-size:11px;letter-spacing:.1em;color:#2C4A7C">LE GRAPHE UNIQUE</span><br>
+    Fini une courbe par livre : <b>une ligne — une couleur — par livre</b> sur l'axe arguments, le temps en abscisse. La bascule <b>Thèse/Arguments</b> montre l'autre axe. Les deux lectures d'Elo se comparent d'un coup d'œil.
+  </div>
+</div>
+<div style="position:absolute;left:1120px;top:686px;width:262px">
+  <div style="background:#F3ECDD;border:1px solid #E4DBC9;border-left:3px solid #8A6F4E;border-radius:8px;padding:14px 16px;font-family:'EB Garamond',serif;font-size:15px;line-height:1.5;color:#5A4632">
+    <span style="font-family:'Alegreya Sans',sans-serif;font-size:11px;letter-spacing:.1em;color:#8A6F4E">LES LIVRES, REPLIÉS</span><br>
+    Regroupés <b>par classe</b> (T1, THLP). Repliés par défaut ; on déplie un livre pour la liste de ses semaines (sceau, micro-stepper, état). Plus d'architecture étalée d'office.
+  </div>
+</div>
+<div style="position:absolute;left:1120px;top:908px;width:262px">
+  <div style="background:#F1F4FA;border:1px solid #C9D4E6;border-left:3px solid #2C4A7C;border-radius:8px;padding:14px 16px;font-family:'EB Garamond',serif;font-size:15px;line-height:1.5;color:#3A4A63">
+    <span style="font-family:'Alegreya Sans',sans-serif;font-size:11px;letter-spacing:.1em;color:#2C4A7C">LE DÉTAIL, SANS CLUTTER</span><br>
+    Le panneau lit l'histoire de la semaine : <b>diagnostic</b> (le signal prof) → <b>avant/après</b> V1→VF (la preuve) → retours IA & saisie <b>repliés</b>. À l'ouverture, la dernière semaine rendue est pré-sélectionnée.
+  </div>
+</div>
+
+<!-- ======================= MOBILE ======================= -->
+<div style="position:absolute;left:80px;top:1820px;font-family:'Cormorant Garamond',serif;font-weight:600;font-size:30px;color:#2C4A7C">Sur mobile — liste, puis détail plein écran</div>
+<div style="position:absolute;left:80px;top:1862px;font-family:'EB Garamond',serif;font-size:16px;color:#8A6F4E">Pas de deux colonnes : la fiche montre le graphe + les livres repliés ; toucher une semaine ouvre son détail en plein écran, avec retour.</div>
+
+<!-- mobile list -->
+<div data-screen-label="Fiche élève Aletheia — mobile (liste)" style="position:absolute;left:80px;top:1900px;width:300px">
+  <div data-drags-parent="1" style="position:absolute;top:-26px;left:2px;font-family:'Alegreya Sans',sans-serif;font-size:13px;color:#8A6F4E">Mobile — la fiche (graphe + livres)</div>
+  <div style="border:11px solid #221C16;border-radius:38px;background:#221C16;box-shadow:0 6px 22px rgba(34,28,22,.22)">
+    <div style="background:#F3ECDD;border-radius:27px;height:636px;overflow:hidden;display:flex;flex-direction:column">
+      <div style="background:#ECE4D6;padding:11px 15px;display:flex;align-items:center;justify-content:space-between">
+        <span style="font-family:'Alegreya Sans',sans-serif;font-size:12px;color:#5A4632">← Élèves</span>
+        <span style="font-family:'Cinzel',serif;font-weight:600;font-size:12px;letter-spacing:.14em;color:#2C4A7C">ALETHEIA</span>
+      </div>
+      <div style="padding:13px 14px;flex:1;overflow:hidden">
+        <div style="display:flex;align-items:center;justify-content:space-between"><div style="font-family:'Cormorant Garamond',serif;font-weight:600;font-size:21px;color:#221C16">Elo Vasseur</div><span style="font-family:'Alegreya Sans',sans-serif;font-size:10px;color:#A23E2E;background:#EFD9D2;padding:2px 8px;border-radius:8px">à risque</span></div>
+        <div style="font-family:'Alegreya Sans',sans-serif;font-size:10.5px;color:#8A6F4E;margin-top:1px">Terminale 1 · Terminale HLP</div>
+        <!-- graphe -->
+        <div style="background:#FBF8F1;border:1px solid #E4DBC9;border-radius:10px;padding:9px 11px;margin-top:11px">
+          <div style="display:flex;justify-content:space-between;align-items:center"><span style="font-family:'Cinzel',serif;font-size:8.5px;letter-spacing:.08em;color:#8A6F4E">PROGRESSION · TOUS LES LIVRES</span><span style="display:inline-flex;border:1px solid #D8CFBC;border-radius:6px;overflow:hidden;font-family:'Alegreya Sans',sans-serif;font-size:8.5px"><span style="background:#2C4A7C;color:#FBF8F1;padding:2px 6px">Args</span><span style="color:#5A4632;padding:2px 6px">Thèse</span></span></div>
+          <svg viewBox="0 0 260 84" width="100%" height="74" style="display:block;margin-top:5px">
+            <g font-family="'Alegreya Sans',sans-serif" font-size="8" fill="#B3A488"><text x="2" y="12">A</text><text x="2" y="44">C</text><text x="2" y="74">E</text></g>
+            <polyline points="30,58 90,36 150,36 210,14" fill="none" stroke="#2C4A7C" stroke-width="2.2"/>
+            <g fill="#2C4A7C"><circle cx="30" cy="58" r="3.4"/><circle cx="90" cy="36" r="3.4"/><circle cx="150" cy="36" r="3.4"/><circle cx="210" cy="14" r="3.4"/></g>
+            <polyline points="90,68 150,48 210,32 248,32" fill="none" stroke="#B8893B" stroke-width="2.2"/>
+            <g fill="#B8893B"><circle cx="90" cy="68" r="3.4"/><circle cx="150" cy="48" r="3.4"/><circle cx="210" cy="32" r="3.4"/><circle cx="248" cy="32" r="3.4"/></g>
+          </svg>
+          <div style="display:flex;flex-wrap:wrap;gap:4px 12px;font-family:'Alegreya Sans',sans-serif;font-size:9px;color:#5A4632;border-top:1px dashed #E4DBC9;margin-top:4px;padding-top:6px"><span style="display:flex;align-items:center;gap:5px"><span style="width:16px;height:3px;border-radius:2px;background:#2C4A7C"></span>Contrat social</span><span style="display:flex;align-items:center;gap:5px"><span style="width:16px;height:3px;border-radius:2px;background:#B8893B"></span>Méditations</span></div>
+        </div>
+        <!-- books -->
+        <div style="font-family:'Alegreya Sans',sans-serif;font-size:9.5px;letter-spacing:.08em;color:#8A6F4E;margin-top:12px">TERMINALE 1 · T1</div>
+        <div style="background:#FBF8F1;border:1px solid #E4DBC9;border-radius:10px;margin-top:6px;overflow:hidden">
+          <div style="display:flex;align-items:center;gap:9px;padding:9px 11px;border-left:3px solid #2C4A7C;border-bottom:1px solid #EFE7D8"><span style="width:28px;height:28px;border-radius:50%;background:#DDE3EC;display:inline-flex;align-items:center;justify-content:center;overflow:hidden;flex-shrink:0"><img src="sceaux/aletheia.png" style="width:24px;height:24px;object-fit:cover;object-position:50% 40%;filter:brightness(1.09) contrast(1.04);mix-blend-mode:multiply" alt=""></span><div style="flex:1;min-width:0"><div style="font-family:'Cormorant Garamond',serif;font-weight:600;font-size:15px;color:#221C16;line-height:1">Du contrat social</div><div style="font-family:'Alegreya Sans',sans-serif;font-size:9.5px;color:#8A6F4E">3/6 terminées</div></div><span style="color:#2C4A7C;font-size:12px">▾</span></div>
+          <div style="padding:4px 7px;display:flex;flex-direction:column">
+            <div style="display:flex;align-items:center;gap:8px;padding:7px 5px;border-bottom:1px solid #F2EDE3"><span style="font-family:'Cormorant Garamond',serif;font-weight:600;font-size:14px;color:#B3A488;width:14px">2</span><span style="flex:1;min-width:0;font-family:'EB Garamond',serif;font-size:12.5px;color:#221C16;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">Le pacte social</span><span style="display:inline-flex;gap:2px"><span style="width:6px;height:6px;border-radius:50%;background:#2C4A7C"></span><span style="width:6px;height:6px;border-radius:50%;background:#2C4A7C"></span><span style="width:6px;height:6px;border-radius:50%;background:#2C4A7C"></span><span style="width:6px;height:6px;border-radius:50%;background:#2C4A7C"></span></span><span style="color:#2C4A7C;font-size:11px">›</span></div>
+            <div style="display:flex;align-items:center;gap:8px;padding:7px 5px;border-bottom:1px solid #F2EDE3"><span style="font-family:'Cormorant Garamond',serif;font-weight:600;font-size:14px;color:#B3A488;width:14px">4</span><span style="flex:1;min-width:0;font-family:'EB Garamond',serif;font-size:12.5px;color:#221C16;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">La loi</span><span style="font-family:'Alegreya Sans',sans-serif;font-size:9px;color:#9A6A2E;background:#EFE4CF;padding:1px 6px;border-radius:7px">à valider</span><span style="color:#2C4A7C;font-size:11px">›</span></div>
+            <div style="display:flex;align-items:center;gap:8px;padding:7px 5px;opacity:.55"><span style="font-family:'Cormorant Garamond',serif;font-weight:600;font-size:14px;color:#B3A488;width:14px">5</span><span style="flex:1;min-width:0;font-family:'EB Garamond',serif;font-size:12.5px;color:#5A4632;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">Le gouvernement</span><span style="font-family:'Alegreya Sans',sans-serif;font-size:10px;color:#8A6F4E">🔒</span></div>
+          </div>
+        </div>
+        <div style="font-family:'Alegreya Sans',sans-serif;font-size:9.5px;letter-spacing:.08em;color:#8A6F4E;margin-top:10px">TERMINALE HLP · THLP</div>
+        <div style="background:#FBF8F1;border:1px solid #E4DBC9;border-radius:10px;margin-top:6px;display:flex;align-items:center;gap:9px;padding:9px 11px;border-left:3px solid #B8893B"><span style="width:28px;height:28px;border-radius:50%;background:#DDE3EC;display:inline-flex;align-items:center;justify-content:center;overflow:hidden;flex-shrink:0"><img src="sceaux/aletheia.png" style="width:24px;height:24px;object-fit:cover;object-position:50% 40%;filter:brightness(1.09) contrast(1.04);mix-blend-mode:multiply" alt=""></span><div style="flex:1;min-width:0"><div style="font-family:'Cormorant Garamond',serif;font-weight:600;font-size:15px;color:#221C16;line-height:1">Méditations métaphysiques</div><div style="font-family:'Alegreya Sans',sans-serif;font-size:9.5px;color:#8A6F4E">1/6 · S2 à valider</div></div><span style="color:#2C4A7C;font-size:12px">▸</span></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- mobile detail -->
+<div data-screen-label="Fiche élève Aletheia — mobile (détail semaine)" style="position:absolute;left:420px;top:1900px;width:300px">
+  <div data-drags-parent="1" style="position:absolute;top:-26px;left:2px;font-family:'Alegreya Sans',sans-serif;font-size:13px;color:#8A6F4E">Mobile — détail d'une semaine (plein écran)</div>
+  <div style="border:11px solid #221C16;border-radius:38px;background:#221C16;box-shadow:0 6px 22px rgba(34,28,22,.22)">
+    <div style="background:#F3ECDD;border-radius:27px;height:636px;overflow:hidden;display:flex;flex-direction:column">
+      <div style="background:#ECE4D6;padding:11px 15px;display:flex;align-items:center;gap:9px"><span style="color:#5A4632;font-size:15px">←</span><span style="font-family:'Alegreya Sans',sans-serif;font-size:12px;color:#5A4632">Elo · Du contrat social</span></div>
+      <div style="padding:13px 14px;flex:1;overflow:hidden">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start"><div><div style="font-family:'Cinzel',serif;font-weight:600;font-size:9.5px;letter-spacing:.14em;color:#2C4A7C">SEMAINE 2</div><div style="font-family:'Cormorant Garamond',serif;font-weight:600;font-size:19px;color:#221C16;line-height:1.05">Le pacte social</div><div style="font-family:'Alegreya Sans',sans-serif;font-size:10px;color:#8A6F4E"><span style="color:#2C4A7C">ch. VI–VIII</span> · 14 janv.</div></div><span style="font-family:'Alegreya Sans',sans-serif;font-size:9.5px;color:#2C4A7C;background:#DDE3EC;padding:2px 8px;border-radius:8px;white-space:nowrap">✓</span></div>
+        <div style="display:flex;gap:4px;margin-top:10px"><span style="flex:1;height:5px;border-radius:3px;background:#2C4A7C"></span><span style="flex:1;height:5px;border-radius:3px;background:#2C4A7C"></span><span style="flex:1;height:5px;border-radius:3px;background:#2C4A7C"></span><span style="flex:1;height:5px;border-radius:3px;background:#2C4A7C"></span></div>
+        <!-- diagnostic -->
+        <div style="background:#F1F4FA;border:1px solid #C9D4E6;border-left:3px solid #2C4A7C;border-radius:10px;padding:10px 12px;margin-top:12px">
+          <div style="font-family:'Cinzel',serif;font-weight:600;font-size:9px;letter-spacing:.08em;color:#2C4A7C">◆ DIAGNOSTIC · PROF-ONLY</div>
+          <div style="font-family:'EB Garamond',serif;font-size:12.5px;color:#3A4A63;margin-top:6px">thèse <span style="font-family:'Alegreya Sans',sans-serif;font-weight:700;font-size:10px;background:#ECE4D6;color:#8A6F4E;padding:1px 5px;border-radius:4px">C</span><span style="color:#B8893B"> → </span><span style="font-family:'Alegreya Sans',sans-serif;font-weight:700;font-size:10px;background:#DDE3EC;color:#2C4A7C;padding:1px 5px;border-radius:4px">B</span>&nbsp;&nbsp; arguments <span style="font-family:'Alegreya Sans',sans-serif;font-weight:700;font-size:10px;background:#DDE3EC;color:#2C4A7C;padding:1px 5px;border-radius:4px">B</span><span style="color:#B8893B"> → </span><span style="font-family:'Alegreya Sans',sans-serif;font-weight:700;font-size:10px;background:#DDE3EC;color:#2C4A7C;padding:1px 5px;border-radius:4px">A</span></div>
+        </div>
+        <!-- avant/apres toggle -->
+        <div style="font-family:'Alegreya Sans',sans-serif;font-size:9.5px;letter-spacing:.08em;color:#8A6F4E;margin-top:12px">DU PREMIER JET À LA VERSION FINALE</div>
+        <div style="display:flex;background:#ECE4D6;border-radius:8px;padding:3px;margin-top:6px;font-family:'Alegreya Sans',sans-serif;font-size:11px"><div style="flex:1;text-align:center;background:#FBF8F1;border-radius:6px;padding:6px;color:#221C16;font-weight:700;box-shadow:0 1px 2px rgba(34,28,22,.08)">Version finale</div><div style="flex:1;text-align:center;padding:6px;color:#8A6F4E">Premier jet</div></div>
+        <div style="background:#FBF8F1;border:1px solid #E4DBC9;border-left:3px solid #2C4A7C;border-radius:9px;padding:10px 12px;margin-top:7px">
+          <div style="font-family:'Alegreya Sans',sans-serif;font-size:9.5px;color:#8A6F4E">Idée principale</div>
+          <div style="font-family:'EB Garamond',serif;font-size:12.5px;color:#221C16;line-height:1.45;margin-top:2px">Par le pacte, chacun aliène ses droits à la communauté ; nul n'y perd, car tous gagnent un droit égal — la volonté générale fonde la souveraineté.</div>
+        </div>
+        <!-- collapsed -->
+        <div style="border:1px solid #E4DBC9;border-radius:8px;padding:9px 12px;margin-top:8px;display:flex;justify-content:space-between;align-items:center"><span style="font-family:'EB Garamond',serif;font-size:13px;color:#221C16">▸ Les retours de l'IA</span><span style="font-family:'Alegreya Sans',sans-serif;font-size:10px;color:#2C4A7C">déplier</span></div>
+        <div style="border:1px dashed #D8CFBC;border-radius:8px;padding:9px 12px;margin-top:6px;display:flex;justify-content:space-between;align-items:center"><span style="font-family:'EB Garamond',serif;font-size:13px;color:#5A4632">▸ La saisie complète</span><span style="font-family:'Alegreya Sans',sans-serif;font-size:10px;color:#2C4A7C">déplier</span></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- mobile note -->
+<div style="position:absolute;left:760px;top:1940px;width:268px">
+  <div style="background:#F3ECDD;border:1px solid #E4DBC9;border-left:3px solid #2C4A7C;border-radius:8px;padding:14px 16px;font-family:'EB Garamond',serif;font-size:15px;line-height:1.5;color:#5A4632">
+    <span style="font-family:'Alegreya Sans',sans-serif;font-size:11px;letter-spacing:.1em;color:#2C4A7C">MAÎTRE-DÉTAIL → PLEIN ÉCRAN</span><br>
+    Sur mobile, la piste A retombe sur le bon réflexe : la fiche est la <b>liste</b>, la semaine s'ouvre en <b>plein écran</b> (retour en haut). Même hiérarchie qu'à l'écran : diagnostic → avant/après (en <b>bascule</b>) → le reste replié.
+  </div>
+  <div style="background:#F3ECDD;border:1px solid #E4DBC9;border-left:3px solid #B4452F;border-radius:8px;padding:14px 16px;margin-top:14px;font-family:'EB Garamond',serif;font-size:15px;line-height:1.5;color:#5A4632">
+    <span style="font-family:'Alegreya Sans',sans-serif;font-size:11px;letter-spacing:.1em;color:#B4452F">PRÊT À CODER</span><br>
+    Composants réutilisés : <code style="font-family:monospace;font-size:12.5px">Pastille</code>, <code style="font-family:monospace;font-size:12.5px">CourbeEvolution</code> (multi-séries), le micro-stepper, <code style="font-family:monospace;font-size:12.5px">AtelierDeuxColonnes</code> pour l'avant/après, <code style="font-family:monospace;font-size:12.5px">VueRetourV1/VF</code> dans les blocs repliés. Jetons et polices de la charte, rien en dur.
+  </div>
+</div>
+
+</x-dc>
+</body>
+</html>

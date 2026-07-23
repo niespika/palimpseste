@@ -1,0 +1,347 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="anonymous">
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,600;0,700;1,400;1,500&amp;family=EB+Garamond:ital,wght@0,400;0,500;0,600;1,400;1,500&amp;family=Alegreya+Sans:wght@400;500;700&amp;display=swap" rel="stylesheet">
+<style>
+body { margin:0; background:#F4EFE6; font-family:'EB Garamond',Georgia,serif; color:#221C16; -webkit-font-smoothing:antialiased; }
+::selection { background:#D8C8A8; }
+</style>
+</helmet>
+
+<div style="max-width:1060px;margin:0 auto;padding:26px 32px 80px">
+
+  <!-- ═══ Chrome du module ═══ -->
+  <a href="#" style="font:14px 'EB Garamond',serif;color:#8A6F4E;text-decoration:none">← Tableau de bord</a>
+  <h1 style="font-family:'Cormorant Garamond',serif;font-weight:600;font-size:26px;margin:8px 0 0;color:#2A2017">Calendrier</h1>
+
+  <!-- Onglets Vue / Configuration (conservés) -->
+  <nav style="display:flex;gap:4px;border-bottom:1px solid #E4DBC9;margin:18px 0 24px">
+    <span style="font:500 14px 'Alegreya Sans',sans-serif;color:#5A4632;padding:9px 16px;border-radius:8px 8px 0 0;border-bottom:2px solid transparent;cursor:pointer">Vue</span>
+    <span style="font:600 14px 'Alegreya Sans',sans-serif;color:#221C16;background:#E8DFCB;padding:9px 16px;border-radius:8px 8px 0 0;border-bottom:2px solid #5A4632">Configuration</span>
+  </nav>
+
+  <!-- ═══ Maître-détail ═══ -->
+  <div style="display:flex;gap:26px;align-items:flex-start">
+
+    <!-- Colonne étroite : les 4 catégories -->
+    <aside style="width:236px;flex:none;display:flex;flex-direction:column;gap:6px;position:sticky;top:20px">
+      <div style="font:600 11px 'Alegreya Sans',sans-serif;letter-spacing:.16em;text-transform:uppercase;color:#A8906A;padding:0 4px 6px">Paramètres</div>
+      <sc-for list="{{ railItems }}" as="item" hint-placeholder-count="4">
+        <div onClick="{{ item.onClick }}" style="{{ item.style }}">
+          <span style="font:600 16px 'EB Garamond',serif;color:#221C16">{{ item.label }}</span>
+          <div style="display:flex;align-items:center;gap:7px;flex-wrap:wrap">
+            <span style="font:13px 'Alegreya Sans',sans-serif;color:#8A6F4E">{{ item.sub }}</span>
+            <sc-if value="{{ item.warn }}" hint-placeholder-val="{{ false }}">
+              <span style="font:600 11px 'Alegreya Sans',sans-serif;color:#9A6A2E;background:#EFE4CF;border-radius:99px;padding:1px 8px;white-space:nowrap">{{ item.warn }}</span>
+            </sc-if>
+          </div>
+        </div>
+      </sc-for>
+      <div style="font:italic 12.5px 'EB Garamond',serif;color:#A8906A;padding:10px 4px 0;line-height:1.4">Fil de configuration : Fuseau → Semestres → Vacances → Classes.</div>
+    </aside>
+
+    <!-- Détail : l'écran de la catégorie active -->
+    <main style="flex:1;min-width:0">
+
+      <!-- ── FUSEAU ── -->
+      <sc-if value="{{ showFuseau }}" hint-placeholder-val="{{ false }}">
+        <section>
+          <div style="display:flex;align-items:baseline;gap:12px;flex-wrap:wrap;margin-bottom:16px">
+            <h2 style="font-family:'Cormorant Garamond',serif;font-weight:600;font-size:24px;margin:0;color:#2A2017">Fuseau horaire</h2>
+            <span style="font:italic 15px 'EB Garamond',serif;color:#8A6F4E">heure des échéances, quizz et photos</span>
+          </div>
+          <div style="background:#FBF8F1;border:1px solid #E4DBC9;border-radius:12px;padding:20px 22px;max-width:520px">
+            <div style="display:flex;align-items:center;gap:16px">
+              <span style="font:600 15px 'EB Garamond',serif;color:#221C16;flex:none">Fuseau</span>
+              <span style="flex:1;display:flex;align-items:center;justify-content:space-between;border:1px solid #D8CCB4;border-radius:8px;padding:9px 14px;background:#fff"><span style="font:15px 'EB Garamond',serif;color:#3A2E22">Europe/Paris</span><span style="color:#A8906A;font-size:11px">▾</span></span>
+            </div>
+            <p style="font:14px/1.5 'EB Garamond',serif;color:#8A6F4E;margin:14px 0 0">Les dates de semestre et de vacances ne dépendent pas du fuseau — seules les heures des événements s'y ajustent.</p>
+          </div>
+        </section>
+      </sc-if>
+
+      <!-- ── SEMESTRES (2b) ── -->
+      <sc-if value="{{ showSemestres }}" hint-placeholder-val="{{ true }}">
+        <section>
+          <div style="display:flex;align-items:baseline;gap:12px;flex-wrap:wrap;margin-bottom:16px">
+            <h2 style="font-family:'Cormorant Garamond',serif;font-weight:600;font-size:24px;margin:0;color:#2A2017">Semestres</h2>
+            <span style="font:italic 15px 'EB Garamond',serif;color:#8A6F4E">communs à toutes les classes — ancrent la numérotation des semaines</span>
+            <span style="margin-left:auto;display:inline-flex;gap:3px;border:1px solid #D8CCB4;border-radius:9px;padding:3px;background:#ECE4D6">
+              <span style="font:700 13px 'Alegreya Sans',sans-serif;padding:5px 14px;border-radius:6px;background:#FBF8F1;border:1px solid #D8CCB4;color:#2A2017;white-space:nowrap">2025-2026</span>
+              <span style="font:500 13px 'Alegreya Sans',sans-serif;padding:5px 14px;color:#8A6F4E;white-space:nowrap">Archives · 3</span>
+            </span>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:10px">
+            <sc-if value="{{ bandeauArchivage }}" hint-placeholder-val="{{ true }}">
+              <div style="display:flex;align-items:center;gap:12px;background:#EFE4CF;border:1px solid #D9BE8C;border-radius:12px;padding:12px 18px">
+                <span style="font-size:16px">🗄</span>
+                <span style="font:15px 'EB Garamond',serif;color:#6B5436;flex:1">« S1 2025-2026 » est terminé depuis le 23 janvier.</span>
+                <span style="font:600 13px 'Alegreya Sans',sans-serif;color:#5A4632;background:#FBF8F1;border:1px solid #C9BBA0;border-radius:8px;padding:6px 14px;white-space:nowrap;flex:none">Archiver</span>
+                <span style="font:500 13px 'Alegreya Sans',sans-serif;color:#8A6F4E;text-decoration:underline dotted;white-space:nowrap">plus tard</span>
+              </div>
+            </sc-if>
+            <div style="display:flex;align-items:center;gap:18px;background:#FBF8F1;border:1.5px solid #5B6E4A;border-radius:12px;padding:16px 20px">
+              <div style="flex:1;min-width:0">
+                <div style="display:flex;align-items:center;gap:10px">
+                  <span style="font:600 17px 'EB Garamond',serif;color:#221C16">S2 2025-2026</span>
+                  <span style="font:700 11px 'Alegreya Sans',sans-serif;letter-spacing:.06em;text-transform:uppercase;background:#E4E8D8;color:#5B6E4A;border-radius:99px;padding:2px 10px">actif</span>
+                </div>
+                <div style="display:flex;align-items:center;gap:0;margin-top:10px;max-width:440px">
+                  <span style="height:6px;flex:7;background:#5B6E4A;border-radius:99px 0 0 99px"></span>
+                  <span style="height:6px;flex:13;background:#E4DBC9;border-radius:0 99px 99px 0"></span>
+                </div>
+                <div style="font:13px 'EB Garamond',serif;color:#8A6F4E;margin-top:6px">semaine 7 / 20 · 26 janv. → 27 juin 2026 · 3 périodes de vacances</div>
+              </div>
+              <a href="#" style="font:500 13px 'Alegreya Sans',sans-serif;color:#8A6F4E;text-decoration:underline;flex:none">Éditer</a>
+            </div>
+            <div style="display:flex;align-items:center;gap:18px;background:#FBF8F1;border:1px solid #E4DBC9;border-radius:12px;padding:14px 20px;opacity:.8">
+              <div style="flex:1;min-width:0">
+                <div style="display:flex;align-items:center;gap:10px">
+                  <span style="font:600 16px 'EB Garamond',serif;color:#3A2E22">S1 2025-2026</span>
+                  <span style="font:600 11px 'Alegreya Sans',sans-serif;letter-spacing:.06em;text-transform:uppercase;background:#ECE4D6;color:#8A6F4E;border-radius:99px;padding:2px 10px">terminé</span>
+                </div>
+                <div style="font:13px 'EB Garamond',serif;color:#8A6F4E;margin-top:3px">1 sept. 2025 → 23 janv. 2026 · 18 semaines</div>
+              </div>
+              <a href="#" style="font:500 13px 'Alegreya Sans',sans-serif;color:#8A6F4E;text-decoration:underline;flex:none">Éditer</a>
+            </div>
+            <button style="align-self:flex-start;margin-top:2px;background:#5A4632;color:#FBF8F1;border:none;border-radius:10px;padding:10px 20px;font:500 15px 'Alegreya Sans',sans-serif;cursor:pointer">+ Nouveau semestre</button>
+          </div>
+        </section>
+      </sc-if>
+
+      <!-- ── VACANCES (nouveau) ── -->
+      <sc-if value="{{ showVacances }}" hint-placeholder-val="{{ false }}">
+        <section>
+          <div style="display:flex;align-items:baseline;gap:12px;flex-wrap:wrap;margin-bottom:16px">
+            <h2 style="font-family:'Cormorant Garamond',serif;font-weight:600;font-size:24px;margin:0;color:#2A2017">Vacances</h2>
+            <span style="font:italic 15px 'EB Garamond',serif;color:#8A6F4E">saisies par semestre — une semaine en vacances ne reçoit pas de numéro</span>
+            <span style="margin-left:auto;display:inline-flex;align-items:center;gap:8px;border:1px solid #D8CCB4;border-radius:8px;padding:6px 12px;background:#FBF8F1"><span style="font:600 13px 'Alegreya Sans',sans-serif;color:#2A2017">S2 2025-2026</span><span style="color:#A8906A;font-size:11px">▾</span></span>
+          </div>
+
+          <div style="display:flex;flex-direction:column;gap:9px">
+            <div style="display:flex;align-items:center;gap:16px;background:#FBF8F1;border:1px solid #E4DBC9;border-radius:12px;padding:13px 20px">
+              <div style="flex:1;min-width:0">
+                <div style="font:600 15.5px 'EB Garamond',serif;color:#221C16">Vacances d'hiver</div>
+                <div style="font:13px 'EB Garamond',serif;color:#8A6F4E;margin-top:2px">16 févr. → 1 mars · 2 semaines</div>
+              </div>
+              <a href="#" style="font:500 13px 'Alegreya Sans',sans-serif;color:#8A6F4E;text-decoration:underline">Éditer</a>
+              <a href="#" style="font:500 13px 'Alegreya Sans',sans-serif;color:#A23E2E;text-decoration:underline">Supprimer</a>
+            </div>
+            <div style="display:flex;align-items:center;gap:16px;background:#FBF8F1;border:1px solid #E4DBC9;border-radius:12px;padding:13px 20px">
+              <div style="flex:1;min-width:0">
+                <div style="font:600 15.5px 'EB Garamond',serif;color:#221C16">Vacances de printemps</div>
+                <div style="font:13px 'EB Garamond',serif;color:#8A6F4E;margin-top:2px">13 avr. → 26 avr. · 2 semaines</div>
+              </div>
+              <a href="#" style="font:500 13px 'Alegreya Sans',sans-serif;color:#8A6F4E;text-decoration:underline">Éditer</a>
+              <a href="#" style="font:500 13px 'Alegreya Sans',sans-serif;color:#A23E2E;text-decoration:underline">Supprimer</a>
+            </div>
+            <div style="display:flex;align-items:center;gap:16px;background:#FBF8F1;border:1px solid #E4DBC9;border-radius:12px;padding:13px 20px">
+              <div style="flex:1;min-width:0">
+                <div style="font:600 15.5px 'EB Garamond',serif;color:#221C16">Pont de l'Ascension</div>
+                <div style="font:13px 'EB Garamond',serif;color:#8A6F4E;margin-top:2px">14 mai → 17 mai · <span style="font-style:italic;color:#A8906A">n'enlève aucune semaine pédagogique</span></div>
+              </div>
+              <a href="#" style="font:500 13px 'Alegreya Sans',sans-serif;color:#8A6F4E;text-decoration:underline">Éditer</a>
+              <a href="#" style="font:500 13px 'Alegreya Sans',sans-serif;color:#A23E2E;text-decoration:underline">Supprimer</a>
+            </div>
+            <div style="display:flex;align-items:center;gap:10px;border:1.5px dashed #C9BBA0;border-radius:12px;padding:12px 20px;background:#F9F5EC;cursor:pointer">
+              <span style="font:600 15px 'Alegreya Sans',sans-serif;color:#5A4632">＋</span>
+              <span style="font:15px 'EB Garamond',serif;color:#5A4632">Ajouter une période</span>
+              <span style="margin-left:auto;font:italic 13px 'EB Garamond',serif;color:#A8906A">libellé · début · fin</span>
+            </div>
+          </div>
+
+          <!-- Semaines générées -->
+          <div style="background:#ECE4D6;border:1px solid #E4DBC9;border-radius:12px;padding:18px 20px;margin-top:16px">
+            <div style="display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;margin-bottom:4px">
+              <span style="font:600 15px 'EB Garamond',serif;color:#221C16">Semaines du semestre</span>
+              <span style="font:13px 'EB Garamond',serif;color:#5B6E4A;font-weight:600">18 semaines générées ✔</span>
+              <span style="font:italic 12.5px 'EB Garamond',serif;color:#A8906A;margin-left:auto">numérotées en continu, en sautant les vacances</span>
+            </div>
+            <div style="display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin:14px 0 12px">{{ semainesStrip }}</div>
+            <div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap">
+              <button style="background:#FBF8F1;color:#5A4632;border:1px solid #C9BBA0;border-radius:9px;padding:8px 16px;font:500 14px 'Alegreya Sans',sans-serif;cursor:pointer">Régénérer les semaines</button>
+              <span style="display:inline-flex;align-items:center;gap:12px;font:12.5px 'EB Garamond',serif;color:#8A6F4E">
+                <span style="display:inline-flex;align-items:center;gap:5px"><span style="width:15px;height:15px;border-radius:4px;background:#FBF8F1;border:1px solid #E4DBC9;display:inline-block"></span> semaine pédagogique</span>
+                <span style="display:inline-flex;align-items:center;gap:5px"><span style="width:15px;height:15px;border-radius:4px;background:repeating-linear-gradient(45deg,#E4D9C4 0 3px,#F1EADB 3px 6px);border:1px solid #C9BBA0;display:inline-block"></span> vacances</span>
+              </span>
+            </div>
+          </div>
+        </section>
+      </sc-if>
+
+      <!-- ── CLASSES (1a) ── -->
+      <sc-if value="{{ showClasses }}" hint-placeholder-val="{{ false }}">
+        <section>
+          <div style="display:flex;align-items:baseline;gap:12px;flex-wrap:wrap;margin-bottom:16px">
+            <h2 style="font-family:'Cormorant Garamond',serif;font-weight:600;font-size:24px;margin:0;color:#2A2017">Classes</h2>
+            <span style="font:italic 15px 'EB Garamond',serif;color:#8A6F4E">couleur et jours de cours — la couleur signe la classe sur tout le calendrier</span>
+          </div>
+          <div style="background:#FBF8F1;border:1px solid #E4DBC9;border-radius:12px">
+            <div style="display:flex;align-items:center;gap:14px;padding:14px 20px;border-bottom:1px solid #E4DBC9">
+              <span style="display:inline-flex;align-items:center;gap:8px;border:1px solid #D8CCB4;border-radius:8px;padding:7px 12px;background:#fff;width:220px"><span style="font-size:12px;opacity:.55">🔍</span><span style="font:14px 'EB Garamond',serif;color:#A8906A;font-style:italic">Filtrer les classes…</span></span>
+              <span style="font:500 13px 'Alegreya Sans',sans-serif;color:#8A6F4E">9 classes actives · 1 à configurer</span>
+              <span style="margin-left:auto;font:600 13px 'Alegreya Sans',sans-serif;color:#5A4632;background:#fff;border:1px solid #C9BBA0;border-radius:8px;padding:7px 14px;white-space:nowrap;flex:none">🎨 Couleurs auto</span>
+            </div>
+            <div style="display:grid;grid-template-columns:110px 74px 236px 1fr;gap:14px;padding:10px 20px 8px;font:600 11px 'Alegreya Sans',sans-serif;letter-spacing:.14em;text-transform:uppercase;color:#A8906A;border-bottom:1px solid #EFE7D6">
+              <span>Classe</span><span>Couleur</span><span>Jours de cours</span><span>Aperçu calendrier</span>
+            </div>
+            <sc-for list="{{ lignes }}" as="l" hint-placeholder-count="9">
+              <div style="{{ l.rowStyle }}">
+                <span style="font:600 16px 'EB Garamond',serif;color:#221C16">{{ l.nom }}</span>
+                <span style="display:flex;align-items:center;gap:5px"><span style="{{ l.swatchStyle }}"></span><span style="font-size:9px;color:#A8906A">▾</span></span>
+                <span style="display:flex;gap:5px">{{ l.jours }}</span>
+                <span style="justify-self:start;min-width:0">{{ l.apercu }}</span>
+                <sc-if value="{{ l.popover }}" hint-placeholder-val="{{ false }}">
+                  <div style="position:absolute;top:42px;left:104px;z-index:20;width:284px;background:#FBF8F1;border:1px solid #C9BBA0;border-radius:12px;box-shadow:0 10px 28px rgba(60,45,25,.22);padding:14px 16px">
+                    <div style="font:600 11px 'Alegreya Sans',sans-serif;letter-spacing:.14em;text-transform:uppercase;color:#A8906A;margin-bottom:10px">Palette — 12 teintes accordées</div>
+                    <div style="display:grid;grid-template-columns:repeat(6,1fr);gap:7px">{{ nuancier }}</div>
+                    <div style="font:12px 'EB Garamond',serif;font-style:italic;color:#A8906A;margin-top:8px">initiales = teinte déjà prise (reste choisissable)</div>
+                    <div style="border-top:1px dashed #D8CCB4;margin-top:10px;padding-top:9px;font:500 13px 'Alegreya Sans',sans-serif;color:#8A6F4E">◐ Autre couleur… <span style="color:#A8906A;font-weight:400">(pipette libre)</span></div>
+                  </div>
+                </sc-if>
+              </div>
+            </sc-for>
+            <div style="display:flex;align-items:center;gap:10px;padding:11px 20px;border-top:1px solid #EFE7D6;background:#F4EFE6;border-radius:0 0 12px 12px">
+              <span style="font:13px 'EB Garamond',serif;font-style:italic;color:#8A6F4E"><span style="color:#5B6E4A;font-style:normal;font-weight:700">✔</span> Enregistré automatiquement à chaque clic.</span>
+            </div>
+          </div>
+        </section>
+      </sc-if>
+
+    </main>
+  </div>
+</div>
+
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{
+  &quot;paletteOuverte&quot;: { &quot;editor&quot;: &quot;boolean&quot;, &quot;default&quot;: true, &quot;tsType&quot;: &quot;boolean&quot;, &quot;section&quot;: &quot;Démo&quot; },
+  &quot;bandeauArchivage&quot;: { &quot;editor&quot;: &quot;boolean&quot;, &quot;default&quot;: true, &quot;tsType&quot;: &quot;boolean&quot;, &quot;section&quot;: &quot;Démo&quot; }
+}">
+class Component extends DCLogic {
+  state = { active: 'semestres' };
+
+  renderVals() {
+    const e = React.createElement;
+    const active = this.state.active;
+    const paletteOuverte = this.props.paletteOuverte ?? true;
+    const bandeauArchivage = this.props.bandeauArchivage ?? true;
+
+    // ── Colonne de gauche : les 4 catégories ──
+    const RAIL = [
+      { key: 'classes',   label: 'Classes',   sub: '9 classes', warn: '1 à configurer' },
+      { key: 'semestres', label: 'Semestres', sub: 'S2 2025-2026 · actif' },
+      { key: 'vacances',  label: 'Vacances',  sub: '3 périodes · 18 sem.' },
+      { key: 'fuseau',    label: 'Fuseau',    sub: 'Europe/Paris' },
+    ];
+    const railItems = RAIL.map((it) => {
+      const on = active === it.key;
+      return {
+        label: it.label,
+        sub: it.sub,
+        warn: it.warn ?? false,
+        onClick: () => this.setState({ active: it.key }),
+        style: {
+          display: 'flex', flexDirection: 'column', gap: 3,
+          padding: '11px 14px', borderRadius: 10, boxSizing: 'border-box',
+          border: '1px solid ' + (on ? '#E4DBC9' : 'transparent'),
+          borderLeft: '3px solid ' + (on ? '#5A4632' : 'transparent'),
+          background: on ? '#EDE6D6' : 'transparent',
+          cursor: 'pointer',
+        },
+      };
+    });
+
+    // ── Bande des semaines (Vacances) ──
+    const weekChip = (n) => e('span', {
+      key: 'w' + n,
+      style: { width: 30, height: 30, borderRadius: 7, background: '#FBF8F1', border: '1px solid #E4DBC9', display: 'flex', alignItems: 'center', justifyContent: 'center', font: "600 12.5px 'Alegreya Sans',sans-serif", color: '#5A4632' },
+    }, n);
+    const vacPill = (label, key) => e('span', {
+      key,
+      style: { display: 'flex', alignItems: 'center', height: 30, padding: '0 13px', borderRadius: 7, background: 'repeating-linear-gradient(45deg,#E4D9C4 0 4px,#F1EADB 4px 8px)', border: '1px dashed #C9BBA0', font: "italic 12.5px 'EB Garamond',serif", color: '#8A6F4E', whiteSpace: 'nowrap' },
+    }, label);
+    const semainesStrip = [];
+    for (let n = 1; n <= 3; n++) semainesStrip.push(weekChip(n));
+    semainesStrip.push(vacPill('Vac. hiver', 'vh'));
+    for (let n = 4; n <= 9; n++) semainesStrip.push(weekChip(n));
+    semainesStrip.push(vacPill('Vac. printemps', 'vp'));
+    for (let n = 10; n <= 18; n++) semainesStrip.push(weekChip(n));
+
+    // ── Registre des classes (1a) ──
+    const JOURS = ['L', 'M', 'M', 'J', 'V', 'S', 'D'];
+    const CLASSES = [
+      { nom: 'TG1',     couleur: '#7C9CBF', jours: [0, 3], apercu: 'TG1 · échéance dissert.' },
+      { nom: 'TG2',     couleur: '#C08552', jours: [1, 4], apercu: 'TG2 · quizz Quazian' },
+      { nom: 'TG3',     couleur: '#7FA67F', jours: [0, 4], apercu: 'TG3 · fragments S7' },
+      { nom: 'TG5',     couleur: '#B07FA6', jours: [1, 3], apercu: 'TG5 · échéance', popover: true },
+      { nom: '1G1',     couleur: '#C0A35E', jours: [1],    apercu: '1G1 · photo de cours' },
+      { nom: '1G2',     couleur: '#6FA8A8', jours: [3],    apercu: '1G2 · quizz' },
+      { nom: '1G4',     couleur: '#B5736B', jours: [4],    apercu: '1G4 · relance' },
+      { nom: 'HLP Tle', couleur: '#5C8A9E', jours: [0, 1], apercu: 'HLP Tle · essai' },
+      { nom: 'HLP 1re', couleur: null,      jours: [],     apercu: null },
+    ];
+    const hex2rgba = (h, a) => {
+      const n = parseInt(h.slice(1), 16);
+      return 'rgba(' + (n >> 16) + ',' + ((n >> 8) & 255) + ',' + (n & 255) + ',' + a + ')';
+    };
+    const lignes = CLASSES.map((c) => {
+      const jours = JOURS.map((j, i) => {
+        const on = c.jours.includes(i);
+        return e('span', {
+          key: i,
+          style: on
+            ? { width: 28, height: 28, borderRadius: 7, background: c.couleur, color: '#FBF8F1', display: 'flex', alignItems: 'center', justifyContent: 'center', font: "600 12px 'Alegreya Sans',sans-serif", boxShadow: 'inset 0 0 0 1px rgba(34,28,22,.12)' }
+            : { width: 28, height: 28, borderRadius: 7, border: '1px solid #D8CCB4', background: '#fff', color: '#C9BBA0', display: 'flex', alignItems: 'center', justifyContent: 'center', font: "500 12px 'Alegreya Sans',sans-serif" },
+        }, j);
+      });
+      const apercu = c.couleur
+        ? e('span', { style: { display: 'inline-flex', alignItems: 'center', background: hex2rgba(c.couleur, 0.15), borderLeft: '3px solid ' + c.couleur, borderRadius: 5, padding: '3px 11px', font: "13.5px 'EB Garamond',serif", color: '#3A2E22', whiteSpace: 'nowrap' } }, c.apercu)
+        : e('span', { style: { font: "500 12.5px 'Alegreya Sans',sans-serif", color: '#9A6A2E', background: '#EFE4CF', borderRadius: 5, padding: '3px 11px', whiteSpace: 'nowrap' } }, '⚠ à configurer — couleur par défaut utilisée');
+      return {
+        nom: c.nom, jours, apercu,
+        popover: paletteOuverte && !!c.popover,
+        rowStyle: {
+          display: 'grid', gridTemplateColumns: '110px 74px 236px 1fr', gap: 14, alignItems: 'center',
+          padding: '9px 20px', borderBottom: '1px solid #EFE7D6', position: 'relative',
+          background: paletteOuverte && c.popover ? '#F1EADB' : 'transparent',
+        },
+        swatchStyle: c.couleur
+          ? { width: 30, height: 20, background: c.couleur, borderRadius: 5, border: paletteOuverte && c.popover ? '2px solid #5A4632' : '1px solid rgba(34,28,22,.18)', boxSizing: 'border-box' }
+          : { width: 30, height: 20, border: '1.5px dashed #C9BBA0', borderRadius: 5, background: '#fff', boxSizing: 'border-box' },
+      };
+    });
+
+    const TEINTES = [
+      ['#7C9CBF', 'TG1'], ['#C08552', 'TG2'], ['#7FA67F', 'TG3'], ['#B07FA6', null],
+      ['#C0A35E', '1G1'], ['#6FA8A8', '1G2'], ['#B5736B', '1G4'], ['#5C8A9E', 'HLP'],
+      ['#8B9556', ''], ['#9C7BB5', ''], ['#C77E9E', ''], ['#7E7EB8', ''],
+    ];
+    const nuancier = TEINTES.map(([hex, prise], i) =>
+      e('span', {
+        key: i,
+        style: { height: 26, borderRadius: 6, background: hex, position: 'relative', border: prise === null ? '2px solid #5A4632' : '1px solid rgba(34,28,22,.15)', boxShadow: prise === null ? '0 0 0 2px #FBF8F1 inset' : 'none', boxSizing: 'border-box' },
+      }, prise ? e('span', { style: { position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', font: "700 8.5px 'Alegreya Sans',sans-serif", color: '#FBF8F1', textShadow: '0 1px 2px rgba(34,28,22,.35)' } }, prise) : null)
+    );
+
+    return {
+      railItems, semainesStrip, lignes, nuancier,
+      paletteOuverte, bandeauArchivage,
+      showFuseau: active === 'fuseau',
+      showSemestres: active === 'semestres',
+      showVacances: active === 'vacances',
+      showClasses: active === 'classes',
+    };
+  }
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,496 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<meta name="design_doc_mode" content="canvas">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600;700&family=Cormorant+Garamond:wght@500;600;700&family=EB+Garamond:wght@400;500;600&family=Alegreya+Sans:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  body { margin:0; font-family:'EB Garamond', Georgia, serif; color:#221C16; -webkit-font-smoothing:antialiased; }
+</style>
+</helmet>
+
+<!-- ======================= INTRO ======================= -->
+<div style="position:absolute;left:80px;top:40px;width:1000px">
+  <div style="font-family:'Cinzel',serif;font-weight:600;font-size:13px;letter-spacing:.34em;color:#8A6F4E">PALIMPSESTE · ESPACE ÉLÈVE</div>
+  <div style="font-family:'Cormorant Garamond',serif;font-weight:600;font-size:50px;line-height:1.04;color:#221C16;margin-top:6px">Rendu fidèle à la charte</div>
+  <div style="font-family:'EB Garamond',serif;font-size:18px;color:#5A4632;margin-top:8px;max-width:780px">Piste A (barre du bas sur mobile, déroulants conservés sur ordi) + l'atelier « feedback côte à côte ». Encre sur parchemin, un pigment par monde, sceaux gravés. Glisse pour te déplacer, zoome pour les détails.</div>
+</div>
+
+<!-- legend -->
+<div style="position:absolute;left:80px;top:188px;width:430px">
+  <div data-drags-parent="1" style="position:absolute;top:-26px;left:2px;font-family:'Alegreya Sans',sans-serif;font-size:13px;letter-spacing:.04em;color:#8A6F4E">LES MONDES</div>
+  <div style="background:#FBF8F1;border:1px solid #E4DBC9;border-radius:10px;box-shadow:0 1px 3px rgba(34,28,22,.06);padding:16px 18px;display:flex;flex-wrap:wrap;gap:14px 22px;font-family:'Alegreya Sans',sans-serif;font-size:14px;color:#5A4632">
+    <div style="display:flex;align-items:center;gap:8px"><span style="width:14px;height:14px;border-radius:50%;background:#2C4A7C"></span>Aletheia</div>
+    <div style="display:flex;align-items:center;gap:8px"><span style="width:14px;height:14px;border-radius:50%;background:#616E30"></span>Fragments</div>
+    <div style="display:flex;align-items:center;gap:8px"><span style="width:14px;height:14px;border-radius:50%;background:#2E4A3C"></span>Codex</div>
+    <div style="display:flex;align-items:center;gap:8px"><span style="width:14px;height:14px;border-radius:50%;background:#3E6B8E"></span>Quazian</div>
+  </div>
+</div>
+
+<!-- handoff pointer -->
+<div style="position:absolute;left:560px;top:188px;width:430px">
+  <div style="background:#F3ECDD;border:1px solid #E4DBC9;border-left:3px solid #B8893B;border-radius:8px;padding:14px 16px;font-family:'EB Garamond',serif;font-size:15px;line-height:1.5;color:#5A4632">
+    <span style="font-family:'Alegreya Sans',sans-serif;font-size:11px;letter-spacing:.1em;color:#9A6A2E">POUR CLAUDE CODE</span><br>
+    Un document de handoff détaillé accompagne ces écrans : <b>HANDOFF_navigation_eleve.md</b> — composants, classes Tailwind, fichiers à toucher.
+  </div>
+</div>
+
+<!-- ======================= A — TABLEAU DE BORD ======================= -->
+<div style="position:absolute;left:80px;top:340px;font-family:'Cormorant Garamond',serif;font-weight:600;font-size:30px;color:#221C16">A · Tableau de bord</div>
+<div style="position:absolute;left:80px;top:382px;font-family:'EB Garamond',serif;font-size:16px;color:#8A6F4E">Une hiérarchie nette : une seule action « maintenant », le reste compact. Nav piste A.</div>
+
+<!-- A — mobile -->
+<div data-screen-label="Tableau de bord — mobile" style="position:absolute;left:80px;top:452px;width:300px">
+  <div data-drags-parent="1" style="position:absolute;top:-26px;left:2px;font-family:'Alegreya Sans',sans-serif;font-size:13px;color:#8A6F4E">Mobile</div>
+  <div style="border:11px solid #221C16;border-radius:38px;background:#221C16;box-shadow:0 6px 22px rgba(34,28,22,.22)">
+    <div style="background:#F4EFE6;border-radius:27px;height:580px;overflow:hidden;display:flex;flex-direction:column">
+      <!-- header -->
+      <div style="background:#ECE4D6;padding:13px 16px 11px;display:flex;justify-content:space-between;align-items:center">
+        <span style="font-family:'Cinzel',serif;font-weight:600;font-size:13px;letter-spacing:.16em;color:#221C16">PALIMPSESTE</span>
+        <span style="width:24px;height:24px;border-radius:50%;background:#DDE3EC;display:inline-flex;align-items:center;justify-content:center;font-family:'Alegreya Sans',sans-serif;font-size:11px;color:#2C4A7C">C</span>
+      </div>
+      <div style="padding:14px 16px 0;flex:1;overflow:hidden">
+        <div style="font-family:'Cormorant Garamond',serif;font-weight:600;font-size:26px;color:#221C16;line-height:1.1">Bonjour, Camille</div>
+        <!-- hero -->
+        <div style="background:#FBF8F1;border:1px solid #E4DBC9;border-radius:13px;overflow:hidden;margin-top:13px">
+          <div style="height:5px;background:#2C4A7C"></div>
+          <div style="padding:13px">
+            <div style="font-family:'Alegreya Sans',sans-serif;font-size:10.5px;letter-spacing:.1em;color:#2C4A7C">À FAIRE MAINTENANT</div>
+            <div style="font-family:'Cormorant Garamond',serif;font-weight:600;font-size:20px;color:#221C16;margin-top:4px;line-height:1.15">Aletheia — un retour t'attend</div>
+            <div style="font-family:'EB Garamond',serif;font-size:14px;color:#5A4632;margin-top:3px">Lis-le et réécris ta version finale.</div>
+            <div style="background:#B4452F;color:#FBF8F1;font-family:'Alegreya Sans',sans-serif;font-size:13px;font-weight:600;text-align:center;border-radius:8px;padding:9px;margin-top:11px">Ouvrir l'atelier →</div>
+          </div>
+        </div>
+        <!-- ensuite -->
+        <div style="font-family:'Alegreya Sans',sans-serif;font-size:10.5px;letter-spacing:.1em;color:#8A6F4E;margin-top:15px">ENSUITE</div>
+        <div style="display:flex;flex-direction:column;gap:7px;margin-top:7px">
+          <div style="background:#FBF8F1;border:1px solid #E4DBC9;border-radius:9px;padding:9px 11px;display:flex;align-items:center;gap:9px"><span style="width:9px;height:9px;border-radius:50%;background:#3E6B8E"></span><span style="font-family:'EB Garamond',serif;font-size:14.5px;color:#221C16;flex:1">8 cartes à réviser</span><span style="color:#8A6F4E">→</span></div>
+          <div style="background:#FBF8F1;border:1px solid #E4DBC9;border-radius:9px;padding:9px 11px;display:flex;align-items:center;gap:9px"><span style="width:9px;height:9px;border-radius:50%;background:#616E30"></span><span style="font-family:'EB Garamond',serif;font-size:14.5px;color:#221C16;flex:1">Fragment · dimanche</span><span style="color:#8A6F4E">→</span></div>
+        </div>
+      </div>
+      <!-- bottom tab bar -->
+      <div style="background:#FBF8F1;border-top:1px solid #E4DBC9;display:flex;justify-content:space-around;padding:8px 4px 9px">
+        <div style="text-align:center;color:#5A4632"><div style="width:19px;height:19px;border:2px solid #5A4632;border-radius:5px;margin:0 auto"></div><div style="font-family:'Alegreya Sans',sans-serif;font-size:9px;margin-top:3px">Aujourd'hui</div></div>
+        <div style="text-align:center;color:#B3A488"><div style="width:19px;height:19px;border:2px solid #CDBFA6;border-radius:5px;margin:0 auto"></div><div style="font-family:'Alegreya Sans',sans-serif;font-size:9px;margin-top:3px">Modules</div></div>
+        <div style="text-align:center;color:#B3A488"><div style="width:19px;height:19px;border:2px solid #CDBFA6;border-radius:5px;margin:0 auto"></div><div style="font-family:'Alegreya Sans',sans-serif;font-size:9px;margin-top:3px">Agenda</div></div>
+        <div style="text-align:center;color:#B3A488"><div style="width:19px;height:19px;border:2px solid #CDBFA6;border-radius:50%;margin:0 auto"></div><div style="font-family:'Alegreya Sans',sans-serif;font-size:9px;margin-top:3px">Moi</div></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- A — laptop -->
+<div data-screen-label="Tableau de bord — ordi" style="position:absolute;left:460px;top:452px;width:760px">
+  <div data-drags-parent="1" style="position:absolute;top:-26px;left:2px;font-family:'Alegreya Sans',sans-serif;font-size:13px;color:#8A6F4E">Ordinateur — déroulant Modules ▾ conservé</div>
+  <div style="border:1px solid #D8CFBC;border-radius:12px;background:#FBF8F1;box-shadow:0 4px 16px rgba(34,28,22,.1);overflow:hidden">
+    <div style="background:#ECE4D6;padding:9px 14px;display:flex;align-items:center;gap:7px"><span style="width:10px;height:10px;border-radius:50%;background:#C9B89A"></span><span style="width:10px;height:10px;border-radius:50%;background:#C9B89A"></span><span style="width:10px;height:10px;border-radius:50%;background:#C9B89A"></span></div>
+    <!-- app header -->
+    <div style="background:#ECE4D6;padding:0 22px 0;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid #E0D6C2;height:52px;position:relative">
+      <span style="font-family:'Cinzel',serif;font-weight:600;font-size:15px;letter-spacing:.2em;color:#221C16">PALIMPSESTE</span>
+      <div style="display:flex;align-items:center;gap:4px;font-family:'Alegreya Sans',sans-serif;font-size:14px">
+        <span style="background:#F4EFE6;color:#221C16;padding:6px 13px;border-radius:7px">Tableau de bord</span>
+        <span style="color:#5A4632;padding:6px 13px">Calendrier</span>
+        <span style="color:#221C16;padding:6px 13px;display:inline-flex;align-items:center;gap:4px">Modules <span style="font-size:10px">▾</span></span>
+      </div>
+      <span style="font-family:'Alegreya Sans',sans-serif;font-size:13px;color:#8A6F4E">2nde 4 · Déconnexion</span>
+      <!-- dropdown -->
+      <div style="position:absolute;top:46px;right:96px;background:#FBF8F1;border:1px solid #E4DBC9;border-radius:9px;box-shadow:0 6px 18px rgba(34,28,22,.16);padding:7px;display:flex;flex-direction:column;gap:2px;z-index:3;min-width:148px">
+        <span style="display:flex;align-items:center;gap:9px;font-family:'Alegreya Sans',sans-serif;font-size:13.5px;color:#221C16;padding:6px 9px;border-radius:6px"><span style="width:9px;height:9px;border-radius:50%;background:#2C4A7C"></span>Aletheia</span>
+        <span style="display:flex;align-items:center;gap:9px;font-family:'Alegreya Sans',sans-serif;font-size:13.5px;color:#221C16;padding:6px 9px;border-radius:6px"><span style="width:9px;height:9px;border-radius:50%;background:#616E30"></span>Fragments</span>
+        <span style="display:flex;align-items:center;gap:9px;font-family:'Alegreya Sans',sans-serif;font-size:13.5px;color:#221C16;padding:6px 9px;border-radius:6px"><span style="width:9px;height:9px;border-radius:50%;background:#2E4A3C"></span>Codex</span>
+        <span style="display:flex;align-items:center;gap:9px;font-family:'Alegreya Sans',sans-serif;font-size:13.5px;color:#221C16;padding:6px 9px;border-radius:6px;background:#F0ECE2"><span style="width:9px;height:9px;border-radius:50%;background:#3E6B8E"></span>Quazian</span>
+      </div>
+    </div>
+    <!-- content -->
+    <div style="background:#F4EFE6;padding:22px 28px 26px">
+      <div style="font-family:'Cormorant Garamond',serif;font-weight:600;font-size:30px;color:#221C16">Bonjour, Camille</div>
+      <div style="display:grid;grid-template-columns:1.5fr 1fr;gap:18px;margin-top:14px">
+        <!-- left -->
+        <div style="display:flex;flex-direction:column;gap:15px">
+          <div style="background:#FBF8F1;border:1px solid #E4DBC9;border-radius:13px;overflow:hidden">
+            <div style="height:5px;background:#2C4A7C"></div>
+            <div style="padding:16px 18px">
+              <div style="font-family:'Alegreya Sans',sans-serif;font-size:11px;letter-spacing:.1em;color:#2C4A7C">À FAIRE MAINTENANT</div>
+              <div style="font-family:'Cormorant Garamond',serif;font-weight:600;font-size:24px;color:#221C16;margin-top:5px">Aletheia — un retour t'attend</div>
+              <div style="font-family:'EB Garamond',serif;font-size:16px;color:#5A4632;margin-top:3px">Lis ton retour et réécris ta version finale.</div>
+              <div style="display:inline-block;background:#B4452F;color:#FBF8F1;font-family:'Alegreya Sans',sans-serif;font-size:14px;font-weight:600;border-radius:8px;padding:9px 18px;margin-top:13px">Ouvrir l'atelier →</div>
+            </div>
+          </div>
+          <div>
+            <div style="font-family:'Alegreya Sans',sans-serif;font-size:11px;letter-spacing:.1em;color:#8A6F4E;margin-bottom:8px">ENSUITE CETTE SEMAINE</div>
+            <div style="display:flex;flex-direction:column;gap:8px">
+              <div style="background:#FBF8F1;border:1px solid #E4DBC9;border-radius:10px;padding:11px 14px;display:flex;align-items:center;gap:11px"><span style="width:10px;height:10px;border-radius:50%;background:#3E6B8E"></span><span style="font-family:'EB Garamond',serif;font-size:16px;color:#221C16;flex:1">8 cartes à réviser — Quazian</span><span style="font-family:'Alegreya Sans',sans-serif;font-size:12px;color:#9A6A2E;background:#EFE4CF;padding:2px 8px;border-radius:9px">aujourd'hui</span></div>
+              <div style="background:#FBF8F1;border:1px solid #E4DBC9;border-radius:10px;padding:11px 14px;display:flex;align-items:center;gap:11px"><span style="width:10px;height:10px;border-radius:50%;background:#616E30"></span><span style="font-family:'EB Garamond',serif;font-size:16px;color:#221C16;flex:1">Déposer le fragment</span><span style="font-family:'Alegreya Sans',sans-serif;font-size:12px;color:#8A6F4E">dim. 23h</span></div>
+            </div>
+          </div>
+        </div>
+        <!-- right -->
+        <div style="display:flex;flex-direction:column;gap:15px">
+          <div>
+            <div style="font-family:'Alegreya Sans',sans-serif;font-size:11px;letter-spacing:.1em;color:#8A6F4E;margin-bottom:8px">MES MONDES</div>
+            <div style="display:flex;flex-direction:column;gap:8px">
+              <div style="background:#FBF8F1;border:1px solid #E4DBC9;border-radius:10px;padding:10px 12px;display:flex;align-items:center;gap:11px">
+                <span style="width:34px;height:34px;border-radius:50%;background:#DDE3EC;display:inline-flex;align-items:center;justify-content:center;overflow:hidden;flex-shrink:0"><img src="sceaux/aletheia.png" style="width:30px;height:30px;object-fit:cover;object-position:50% 40%;filter:brightness(1.09) contrast(1.04);mix-blend-mode:multiply" alt=""></span>
+                <span style="flex:1"><span style="font-family:'Cinzel',serif;font-weight:600;font-size:12.5px;letter-spacing:.08em;color:#2C4A7C">ALETHEIA</span></span>
+                <span style="font-family:'Alegreya Sans',sans-serif;font-size:11.5px;color:#9A6A2E;background:#EFE4CF;padding:2px 9px;border-radius:9px">retour à lire</span>
+              </div>
+              <div style="background:#FBF8F1;border:1px solid #E4DBC9;border-radius:10px;padding:10px 12px;display:flex;align-items:center;gap:11px">
+                <span style="width:34px;height:34px;border-radius:50%;background:#E2E3D2;display:inline-flex;align-items:center;justify-content:center;overflow:hidden;flex-shrink:0"><img src="sceaux/fragments.png" style="width:30px;height:30px;object-fit:cover;object-position:50% 40%;filter:brightness(1.09) contrast(1.04);mix-blend-mode:multiply" alt=""></span>
+                <span style="flex:1"><span style="font-family:'Cinzel',serif;font-weight:600;font-size:12.5px;letter-spacing:.08em;color:#616E30">FRAGMENTS</span></span>
+                <span style="font-family:'Alegreya Sans',sans-serif;font-size:11.5px;color:#9A6A2E;background:#EFE4CF;padding:2px 9px;border-radius:9px">à déposer</span>
+              </div>
+              <div style="background:#FBF8F1;border:1px solid #E4DBC9;border-radius:10px;padding:10px 12px;display:flex;align-items:center;gap:11px">
+                <span style="width:34px;height:34px;border-radius:50%;background:#DCE6DF;display:inline-flex;align-items:center;justify-content:center;overflow:hidden;flex-shrink:0"><img src="sceaux/codex.png" style="width:30px;height:30px;object-fit:cover;object-position:50% 40%;filter:brightness(1.09) contrast(1.04);mix-blend-mode:multiply" alt=""></span>
+                <span style="flex:1"><span style="font-family:'Cinzel',serif;font-weight:600;font-size:12.5px;letter-spacing:.08em;color:#2E4A3C">CODEX</span></span>
+                <span style="font-family:'Alegreya Sans',sans-serif;font-size:11.5px;color:#8A6F4E">à jour</span>
+              </div>
+              <div style="background:#FBF8F1;border:1px solid #E4DBC9;border-radius:10px;padding:10px 12px;display:flex;align-items:center;gap:11px">
+                <span style="width:34px;height:34px;border-radius:50%;background:#DCE6EC;display:inline-flex;align-items:center;justify-content:center;overflow:hidden;flex-shrink:0"><img src="sceaux/quazian.png" style="width:30px;height:30px;object-fit:cover;object-position:50% 40%;filter:brightness(1.09) contrast(1.04);mix-blend-mode:multiply" alt=""></span>
+                <span style="flex:1"><span style="font-family:'Cinzel',serif;font-weight:600;font-size:12.5px;letter-spacing:.08em;color:#3E6B8E">QUAZIAN</span></span>
+                <span style="font-family:'Alegreya Sans',sans-serif;font-size:11.5px;color:#9A6A2E;background:#EFE4CF;padding:2px 9px;border-radius:9px">8 cartes</span>
+              </div>
+            </div>
+          </div>
+          <div>
+            <div style="font-family:'Alegreya Sans',sans-serif;font-size:11px;letter-spacing:.1em;color:#8A6F4E;margin-bottom:8px">PROGRESSION</div>
+            <div style="background:#FBF8F1;border:1px solid #E4DBC9;border-radius:10px;padding:13px;display:flex;justify-content:space-around;text-align:center;font-family:'Alegreya Sans',sans-serif">
+              <div><div style="font-family:'Cormorant Garamond',serif;font-weight:600;font-size:22px;color:#5B6E4A">A</div><div style="font-size:11px;color:#8A6F4E">Découvertes</div></div>
+              <div><div style="font-family:'Cormorant Garamond',serif;font-weight:600;font-size:22px;color:#3E5C7E">B</div><div style="font-size:11px;color:#8A6F4E">Sources</div></div>
+              <div><div style="font-family:'Cormorant Garamond',serif;font-weight:600;font-size:22px;color:#9A6A2E">C</div><div style="font-size:11px;color:#8A6F4E">Réflexions</div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- A note -->
+<div style="position:absolute;left:1252px;top:512px;width:236px">
+  <div style="background:#F3ECDD;border:1px solid #E4DBC9;border-left:3px solid #2C4A7C;border-radius:8px;padding:14px 16px;font-family:'EB Garamond',serif;font-size:15px;line-height:1.5;color:#5A4632">
+    <span style="font-family:'Alegreya Sans',sans-serif;font-size:11px;letter-spacing:.1em;color:#2C4A7C">HIÉRARCHIE</span><br>
+    Une seule chose « maintenant » en grand (têtière du monde concerné), le reste en lignes compactes. La progression devient une bande. Fini les 3 blocs de poids égal.
+  </div>
+</div>
+
+<!-- ======================= B — ALETHEIA ATELIER ======================= -->
+<div style="position:absolute;left:80px;top:1200px;font-family:'Cormorant Garamond',serif;font-weight:600;font-size:30px;color:#2C4A7C">B · Aletheia — l'atelier</div>
+<div style="position:absolute;left:80px;top:1242px;font-family:'EB Garamond',serif;font-size:16px;color:#8A6F4E">Le cœur du sujet : le retour reste épinglé pendant la réécriture. Monde outremer, accents or & minium.</div>
+
+<!-- B — laptop -->
+<div data-screen-label="Aletheia atelier — ordi" style="position:absolute;left:80px;top:1312px;width:880px">
+  <div data-drags-parent="1" style="position:absolute;top:-26px;left:2px;font-family:'Alegreya Sans',sans-serif;font-size:13px;color:#8A6F4E">Ordinateur / tablette — deux colonnes</div>
+  <div style="border:1px solid #D8CFBC;border-radius:12px;background:#FBF8F1;box-shadow:0 4px 16px rgba(34,28,22,.1);overflow:hidden">
+    <div style="background:#ECE4D6;padding:9px 14px;display:flex;align-items:center;gap:7px"><span style="width:10px;height:10px;border-radius:50%;background:#C9B89A"></span><span style="width:10px;height:10px;border-radius:50%;background:#C9B89A"></span><span style="width:10px;height:10px;border-radius:50%;background:#C9B89A"></span></div>
+    <div style="background:#F3ECDD;padding:22px 28px 26px">
+      <!-- world header -->
+      <div style="display:flex;align-items:center;gap:14px">
+        <span style="width:56px;height:56px;border-radius:50%;background:#DDE3EC;display:inline-flex;align-items:center;justify-content:center;overflow:hidden;flex-shrink:0"><img src="sceaux/aletheia.png" style="width:50px;height:50px;object-fit:cover;object-position:50% 40%;filter:brightness(1.09) contrast(1.04);mix-blend-mode:multiply" alt=""></span>
+        <div>
+          <div style="font-family:'Cinzel',serif;font-weight:600;font-size:15px;letter-spacing:.18em;color:#2C4A7C">ALETHEIA</div>
+          <div style="font-family:'Cormorant Garamond',serif;font-weight:600;font-size:25px;color:#221C16;line-height:1.1">Semaine 3 — Le contrat social</div>
+        </div>
+      </div>
+      <!-- stepper -->
+      <div style="display:flex;align-items:center;gap:9px;margin-top:16px;font-family:'Alegreya Sans',sans-serif;font-size:13px;color:#8A6F4E">
+        <span style="display:flex;align-items:center;gap:6px"><span style="width:20px;height:20px;border-radius:50%;background:#5B6E4A;color:#fff;display:inline-flex;align-items:center;justify-content:center;font-size:11px">✓</span>Lecture</span>
+        <span style="width:22px;height:1px;background:#CDBFA6"></span>
+        <span style="display:flex;align-items:center;gap:6px"><span style="width:20px;height:20px;border-radius:50%;background:#5B6E4A;color:#fff;display:inline-flex;align-items:center;justify-content:center;font-size:11px">✓</span>Retour</span>
+        <span style="width:22px;height:1px;background:#CDBFA6"></span>
+        <span style="display:flex;align-items:center;gap:6px;color:#2C4A7C;font-weight:700"><span style="width:20px;height:20px;border-radius:50%;background:#2C4A7C;color:#fff;display:inline-flex;align-items:center;justify-content:center;font-size:11px">3</span>Réécriture</span>
+        <span style="width:22px;height:1px;background:#CDBFA6"></span>
+        <span style="display:flex;align-items:center;gap:6px;opacity:.5"><span style="width:20px;height:20px;border-radius:50%;border:1.5px solid #CDBFA6;display:inline-flex;align-items:center;justify-content:center;font-size:11px">4</span>Retour final</span>
+      </div>
+      <!-- two columns -->
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-top:18px">
+        <!-- LEFT retour pinned -->
+        <div>
+          <div style="font-family:'Alegreya Sans',sans-serif;font-size:11px;letter-spacing:.1em;color:#8A6F4E;margin-bottom:9px">◆ TON RETOUR — RESTE VISIBLE</div>
+          <div style="display:flex;flex-direction:column;gap:11px">
+            <div style="background:#FBF8F1;border:1px solid #E4DBC9;border-left:4px solid #2C4A7C;border-radius:10px;padding:13px 15px">
+              <div style="font-family:'Alegreya Sans',sans-serif;font-size:13.5px;font-weight:700;color:#221C16">Pour creuser ton idée</div>
+              <div style="font-family:'EB Garamond',serif;font-size:15px;color:#5A4632;margin-top:5px;line-height:1.5">Ta thèse est juste mais elle reste générale. Donne l'exemple concret du marché que tu avais en tête à l'oral.</div>
+            </div>
+            <div style="background:#FBF8F1;border:1px solid #E4DBC9;border-left:4px solid #B8893B;border-radius:10px;padding:13px 15px">
+              <div style="font-family:'Alegreya Sans',sans-serif;font-size:13.5px;font-weight:700;color:#221C16">Sur ton accord</div>
+              <div style="font-family:'EB Garamond',serif;font-size:15px;color:#5A4632;margin-top:5px;line-height:1.5">« les hommes renoncent » → attention à l'accord du participe avec le sujet.</div>
+            </div>
+            <div style="background:#FBF8F1;border:1px solid #E4DBC9;border-left:4px solid #B4452F;border-radius:10px;padding:13px 15px">
+              <div style="font-family:'Alegreya Sans',sans-serif;font-size:13.5px;font-weight:700;color:#221C16">Vocabulaire</div>
+              <div style="font-family:'EB Garamond',serif;font-size:15px;color:#5A4632;margin-top:5px;line-height:1.5">Emploie « aliéner » plutôt que « donner » — c'est le terme de Rousseau.</div>
+            </div>
+          </div>
+        </div>
+        <!-- RIGHT réécriture -->
+        <div>
+          <div style="font-family:'Alegreya Sans',sans-serif;font-size:11px;letter-spacing:.1em;color:#8A6F4E;margin-bottom:9px">✎ TA VERSION FINALE</div>
+          <div style="display:flex;flex-direction:column;gap:12px">
+            <div>
+              <div style="font-family:'Alegreya Sans',sans-serif;font-size:12.5px;color:#5A4632;margin-bottom:4px">Idée principale</div>
+              <div style="border:1px solid #D8CFBC;background:#fff;border-radius:8px;padding:10px 12px;font-family:'EB Garamond',serif;font-size:15px;color:#221C16;line-height:1.5">Selon Rousseau, le contrat social fonde la légitimité non sur la force mais sur la volonté générale…</div>
+            </div>
+            <div>
+              <div style="font-family:'Alegreya Sans',sans-serif;font-size:12.5px;color:#5A4632;margin-bottom:4px">Arguments</div>
+              <div style="border:1px solid #D8CFBC;background:#fff;border-radius:8px;height:88px"></div>
+            </div>
+            <div>
+              <div style="font-family:'Alegreya Sans',sans-serif;font-size:12.5px;color:#5A4632;margin-bottom:4px">Ton accord</div>
+              <div style="border:1px solid #D8CFBC;background:#fff;border-radius:8px;height:54px"></div>
+            </div>
+            <div style="background:#B4452F;color:#FBF8F1;font-family:'Alegreya Sans',sans-serif;font-size:14px;font-weight:600;text-align:center;border-radius:8px;padding:11px">Envoyer ma version finale</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- B — mobile -->
+<div data-screen-label="Aletheia atelier — mobile" style="position:absolute;left:1010px;top:1312px;width:300px">
+  <div data-drags-parent="1" style="position:absolute;top:-26px;left:2px;font-family:'Alegreya Sans',sans-serif;font-size:13px;color:#8A6F4E">Mobile — bandeau + bascule</div>
+  <div style="border:11px solid #221C16;border-radius:38px;background:#221C16;box-shadow:0 6px 22px rgba(34,28,22,.22)">
+    <div style="background:#F3ECDD;border-radius:27px;height:600px;overflow:hidden;display:flex;flex-direction:column">
+      <div style="background:#ECE4D6;padding:11px 15px;display:flex;align-items:center;gap:9px">
+        <span style="color:#5A4632;font-size:15px">←</span>
+        <span style="font-family:'Cinzel',serif;font-weight:600;font-size:12px;letter-spacing:.14em;color:#2C4A7C">ALETHEIA</span>
+      </div>
+      <div style="padding:13px 15px 0;flex:1;display:flex;flex-direction:column;overflow:hidden">
+        <div style="font-family:'Cormorant Garamond',serif;font-weight:600;font-size:19px;color:#221C16;line-height:1.1">Semaine 3 — réécriture</div>
+        <!-- pinned retour peek -->
+        <div style="background:#FBF8F1;border:1px solid #E4DBC9;border-left:4px solid #2C4A7C;border-radius:10px;padding:10px 12px;margin-top:11px">
+          <div style="display:flex;justify-content:space-between;align-items:center"><span style="font-family:'Alegreya Sans',sans-serif;font-size:12px;font-weight:700;color:#221C16">◆ Ton retour</span><span style="font-family:'Alegreya Sans',sans-serif;font-size:11px;color:#2C4A7C">déplier ⌄</span></div>
+          <div style="font-family:'EB Garamond',serif;font-size:13.5px;color:#5A4632;margin-top:4px;line-height:1.4">Creuse ton idée · accord du participe · « aliéner »…</div>
+        </div>
+        <!-- segmented -->
+        <div style="display:flex;background:#ECE4D6;border-radius:9px;padding:3px;margin-top:12px;font-family:'Alegreya Sans',sans-serif;font-size:12.5px">
+          <div style="flex:1;text-align:center;background:#FBF8F1;border-radius:7px;padding:7px;color:#221C16;font-weight:700;box-shadow:0 1px 2px rgba(34,28,22,.08)">Réécriture</div>
+          <div style="flex:1;text-align:center;padding:7px;color:#8A6F4E">Retour complet</div>
+        </div>
+        <!-- fields -->
+        <div style="display:flex;flex-direction:column;gap:10px;margin-top:12px;flex:1">
+          <div><div style="font-family:'Alegreya Sans',sans-serif;font-size:11.5px;color:#5A4632;margin-bottom:3px">Idée principale</div><div style="border:1px solid #D8CFBC;background:#fff;border-radius:7px;padding:8px;font-family:'EB Garamond',serif;font-size:13.5px;color:#221C16;line-height:1.4">Selon Rousseau, le contrat social fonde…</div></div>
+          <div><div style="font-family:'Alegreya Sans',sans-serif;font-size:11.5px;color:#5A4632;margin-bottom:3px">Arguments</div><div style="border:1px solid #D8CFBC;background:#fff;border-radius:7px;height:64px"></div></div>
+        </div>
+        <div style="background:#B4452F;color:#FBF8F1;font-family:'Alegreya Sans',sans-serif;font-size:13px;font-weight:600;text-align:center;border-radius:8px;padding:10px;margin:0 0 14px">Envoyer ma version finale</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- B note -->
+<div style="position:absolute;left:1010px;top:1944px;width:300px">
+  <div style="background:#F3ECDD;border:1px solid #E4DBC9;border-left:3px solid #B4452F;border-radius:8px;padding:14px 16px;font-family:'EB Garamond',serif;font-size:15px;line-height:1.5;color:#5A4632">
+    <span style="font-family:'Alegreya Sans',sans-serif;font-size:11px;letter-spacing:.1em;color:#B4452F">LE FIX CENTRAL</span><br>
+    Sur ordi, le retour est <b>épinglé à gauche</b> pendant qu'on réécrit à droite. Trop étroit sur mobile → le retour devient un <b>bandeau dépliable</b> + une bascule Réécriture / Retour complet.
+  </div>
+</div>
+
+<!-- ======================= C — CODEX ATELIER ======================= -->
+<div style="position:absolute;left:80px;top:2120px;font-family:'Cormorant Garamond',serif;font-weight:600;font-size:30px;color:#2E4A3C">C · Codex — l'atelier</div>
+<div style="position:absolute;left:80px;top:2162px;font-family:'EB Garamond',serif;font-size:16px;color:#8A6F4E">Même geste : les suggestions à corriger restent à côté de la photo du manuscrit. Monde bibliothèque, vert bouteille.</div>
+
+<!-- C — laptop -->
+<div data-screen-label="Codex atelier — ordi" style="position:absolute;left:80px;top:2232px;width:880px">
+  <div data-drags-parent="1" style="position:absolute;top:-26px;left:2px;font-family:'Alegreya Sans',sans-serif;font-size:13px;color:#8A6F4E">Ordinateur / tablette (mobile = même bascule qu'Aletheia)</div>
+  <div style="border:1px solid #D8CFBC;border-radius:12px;background:#FBF8F1;box-shadow:0 4px 16px rgba(34,28,22,.1);overflow:hidden">
+    <div style="background:#ECE4D6;padding:9px 14px;display:flex;align-items:center;gap:7px"><span style="width:10px;height:10px;border-radius:50%;background:#C9B89A"></span><span style="width:10px;height:10px;border-radius:50%;background:#C9B89A"></span><span style="width:10px;height:10px;border-radius:50%;background:#C9B89A"></span></div>
+    <div style="background:#F0EADE;padding:22px 28px 26px">
+      <div style="display:flex;align-items:center;gap:14px">
+        <span style="width:56px;height:56px;border-radius:50%;background:#DCE6DF;display:inline-flex;align-items:center;justify-content:center;overflow:hidden;flex-shrink:0"><img src="sceaux/codex.png" style="width:50px;height:50px;object-fit:cover;object-position:50% 40%;filter:brightness(1.09) contrast(1.04);mix-blend-mode:multiply" alt=""></span>
+        <div>
+          <div style="font-family:'Cinzel',serif;font-weight:600;font-size:15px;letter-spacing:.18em;color:#2E4A3C">CODEX</div>
+          <div style="font-family:'Cormorant Garamond',serif;font-weight:600;font-size:25px;color:#221C16;line-height:1.1">Synthèse — Phase 2 : ta version finale</div>
+        </div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-top:18px">
+        <!-- LEFT suggestions -->
+        <div>
+          <div style="font-family:'Alegreya Sans',sans-serif;font-size:11px;letter-spacing:.1em;color:#8A6F4E;margin-bottom:9px">◆ TES SUGGESTIONS V1 — À CORRIGER</div>
+          <div style="display:flex;flex-direction:column;gap:11px">
+            <div style="background:#FBF8F1;border:1px solid #E4DBC9;border-radius:10px;padding:13px 15px">
+              <div style="font-family:'Alegreya Sans',sans-serif;font-size:13.5px;font-weight:700;color:#9A6A2E">○ Ce que tu as oublié</div>
+              <div style="font-family:'EB Garamond',serif;font-size:15px;color:#5A4632;margin-top:5px;line-height:1.5">La distinction entre volonté générale et volonté de tous n'apparaît pas. C'est le cœur du texte.</div>
+            </div>
+            <div style="background:#FBF8F1;border:1px solid #E4DBC9;border-radius:10px;padding:13px 15px">
+              <div style="font-family:'Alegreya Sans',sans-serif;font-size:13.5px;font-weight:700;color:#A23E2E">△ Erreurs et ambiguïtés</div>
+              <div style="font-family:'EB Garamond',serif;font-size:15px;color:#5A4632;margin-top:5px;line-height:1.5">« le peuple obéit à lui-même » mérite d'être nuancé : il obéit à la loi qu'il s'est donnée.</div>
+            </div>
+            <div style="background:#FBF8F1;border:1px solid #E4DBC9;border-radius:10px;padding:13px 15px">
+              <div style="font-family:'Alegreya Sans',sans-serif;font-size:13.5px;font-weight:700;color:#6E2A2C">✎ Langue</div>
+              <div style="font-family:'EB Garamond',serif;font-size:15px;color:#5A4632;margin-top:5px;line-height:1.5">Deux phrases trop longues dans le §2 — coupe-les pour gagner en clarté.</div>
+            </div>
+          </div>
+        </div>
+        <!-- RIGHT capture -->
+        <div>
+          <div style="font-family:'Alegreya Sans',sans-serif;font-size:11px;letter-spacing:.1em;color:#8A6F4E;margin-bottom:9px">▣ TA V-FINALE (PHOTO DU MANUSCRIT)</div>
+          <div style="background:#DCE6DF;border:1px solid #C4D6CB;border-radius:9px;padding:10px 13px;font-family:'EB Garamond',serif;font-size:14.5px;color:#2E4A3C;margin-bottom:11px;line-height:1.45">Réécris ta synthèse à la main en corrigeant les suggestions, puis photographie-la.</div>
+          <div style="border:2px dashed #C4BCA8;background:#fff;border-radius:11px;height:172px;display:flex;flex-direction:column;align-items:center;justify-content:center;color:#8A6F4E">
+            <div style="font-size:34px;line-height:1">▣</div>
+            <div style="font-family:'Alegreya Sans',sans-serif;font-size:13.5px;margin-top:8px">Ajouter une photo</div>
+          </div>
+          <div style="background:#2E4A3C;color:#F0EADE;font-family:'Alegreya Sans',sans-serif;font-size:14px;font-weight:600;text-align:center;border-radius:8px;padding:11px;margin-top:13px">Envoyer ma V-finale</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- C note -->
+<div style="position:absolute;left:992px;top:2292px;width:250px">
+  <div style="background:#F0EADE;border:1px solid #E4DBC9;border-left:3px solid #2E4A3C;border-radius:8px;padding:14px 16px;font-family:'EB Garamond',serif;font-size:15px;line-height:1.5;color:#5A4632">
+    <span style="font-family:'Alegreya Sans',sans-serif;font-size:11px;letter-spacing:.1em;color:#2E4A3C">COHÉRENCE</span><br>
+    Codex demande déjà de « garder les suggestions sous les yeux » : ici elles le sont vraiment. Même disposition qu'Aletheia → <b>un seul geste à apprendre</b> pour toute réécriture.
+  </div>
+</div>
+
+<!-- ======================= D — QUAZIAN ======================= -->
+<div style="position:absolute;left:80px;top:2900px;font-family:'Cormorant Garamond',serif;font-weight:600;font-size:30px;color:#3E6B8E">D · Quazian — révision & quizz</div>
+<div style="position:absolute;left:80px;top:2942px;font-family:'EB Garamond',serif;font-size:16px;color:#8A6F4E">Deux activités, un écran d'entrée qui les sépare. Une chose à la fois, plein cadre. Monde fresque florentine.</div>
+
+<!-- D1 — accueil mobile -->
+<div data-screen-label="Quazian accueil — mobile" style="position:absolute;left:80px;top:3012px;width:300px">
+  <div data-drags-parent="1" style="position:absolute;top:-26px;left:2px;font-family:'Alegreya Sans',sans-serif;font-size:13px;color:#8A6F4E">Accueil — mobile</div>
+  <div style="border:11px solid #221C16;border-radius:38px;background:#221C16;box-shadow:0 6px 22px rgba(34,28,22,.22)">
+    <div style="background:#F2ECE0;border-radius:27px;height:580px;overflow:hidden;display:flex;flex-direction:column">
+      <div style="background:#ECE4D6;padding:11px 15px;display:flex;align-items:center;gap:9px">
+        <span style="color:#5A4632;font-size:15px">←</span>
+        <span style="font-family:'Cinzel',serif;font-weight:600;font-size:12px;letter-spacing:.14em;color:#3E6B8E">QUAZIAN</span>
+      </div>
+      <div style="padding:14px 15px;flex:1;overflow:hidden">
+        <div style="display:flex;align-items:center;gap:11px">
+          <span style="width:44px;height:44px;border-radius:50%;background:#DCE6EC;display:inline-flex;align-items:center;justify-content:center;overflow:hidden;flex-shrink:0"><img src="sceaux/quazian.png" style="width:39px;height:39px;object-fit:cover;object-position:50% 40%;filter:brightness(1.09) contrast(1.04);mix-blend-mode:multiply" alt=""></span>
+          <div style="font-family:'Cormorant Garamond',serif;font-weight:600;font-size:22px;color:#221C16;line-height:1.05">Réviser & s'entraîner</div>
+        </div>
+        <!-- stats -->
+        <div style="display:flex;gap:9px;margin-top:13px">
+          <div style="flex:1;background:#FBF8F1;border:1px solid #E4DBC9;border-radius:11px;padding:12px;text-align:center"><div style="font-family:'Cormorant Garamond',serif;font-weight:600;font-size:28px;color:#221C16;line-height:1">8</div><div style="font-family:'Alegreya Sans',sans-serif;font-size:10.5px;color:#8A6F4E;margin-top:2px">à réviser</div></div>
+          <div style="flex:1;background:#FBF8F1;border:1px solid #E4DBC9;border-radius:11px;padding:12px;text-align:center"><div style="font-family:'Cormorant Garamond',serif;font-weight:600;font-size:28px;color:#221C16;line-height:1">64</div><div style="font-family:'Alegreya Sans',sans-serif;font-size:10.5px;color:#8A6F4E;margin-top:2px">au total</div></div>
+        </div>
+        <div style="background:#3E6B8E;color:#F2ECE0;font-family:'Alegreya Sans',sans-serif;font-size:14px;font-weight:600;text-align:center;border-radius:10px;padding:13px;margin-top:12px">Réviser mes 8 cartes →</div>
+        <div style="background:#FBF8F1;border:1px solid #E4DBC9;color:#221C16;font-family:'Alegreya Sans',sans-serif;font-size:13px;text-align:center;border-radius:10px;padding:11px;margin-top:8px">Consulter toutes mes cartes</div>
+        <!-- quizz -->
+        <div style="font-family:'Alegreya Sans',sans-serif;font-size:10.5px;letter-spacing:.1em;color:#8A6F4E;margin-top:16px">QUIZZ</div>
+        <div style="background:#FBF8F1;border:1px solid #E4DBC9;border-left:4px solid #3E6B8E;border-radius:10px;padding:11px 13px;margin-top:6px">
+          <div style="display:flex;justify-content:space-between;align-items:center"><span style="font-family:'EB Garamond',serif;font-size:15px;color:#221C16">Le contrat social</span><span style="font-family:'Alegreya Sans',sans-serif;font-size:10.5px;color:#3E6B8E;background:#DCE6EC;padding:2px 8px;border-radius:9px">ouvert</span></div>
+          <div style="font-family:'Alegreya Sans',sans-serif;font-size:11.5px;color:#8A6F4E;margin-top:3px">6 questions · ferme dimanche</div>
+        </div>
+        <div style="background:#FBF8F1;border:1px solid #E4DBC9;border-radius:10px;padding:11px 13px;margin-top:7px;opacity:.75">
+          <div style="display:flex;justify-content:space-between;align-items:center"><span style="font-family:'EB Garamond',serif;font-size:15px;color:#5A4632">L'état de nature</span><span style="font-family:'Cormorant Garamond',serif;font-weight:600;font-size:16px;color:#5B6E4A">7,4/10</span></div>
+          <div style="font-family:'Alegreya Sans',sans-serif;font-size:11.5px;color:#8A6F4E;margin-top:3px">corrigé · voir le retour</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- D2 — flashcard ordi -->
+<div data-screen-label="Quazian flashcard — ordi" style="position:absolute;left:460px;top:3012px;width:560px">
+  <div data-drags-parent="1" style="position:absolute;top:-26px;left:2px;font-family:'Alegreya Sans',sans-serif;font-size:13px;color:#8A6F4E">Révision flashcard — ordinateur (idem mobile, plus aéré)</div>
+  <div style="border:1px solid #D8CFBC;border-radius:12px;background:#FBF8F1;box-shadow:0 4px 16px rgba(34,28,22,.1);overflow:hidden">
+    <div style="background:#ECE4D6;padding:9px 14px;display:flex;align-items:center;gap:7px"><span style="width:10px;height:10px;border-radius:50%;background:#C9B89A"></span><span style="width:10px;height:10px;border-radius:50%;background:#C9B89A"></span><span style="width:10px;height:10px;border-radius:50%;background:#C9B89A"></span></div>
+    <div style="background:#F2ECE0;padding:24px 46px 28px">
+      <div style="display:flex;align-items:center;gap:11px;max-width:430px;margin:0 auto 14px">
+        <div style="flex:1;height:6px;background:#E0D6C2;border-radius:3px;overflow:hidden"><div style="width:38%;height:100%;background:#3E6B8E"></div></div>
+        <span style="font-family:'Alegreya Sans',sans-serif;font-size:13px;color:#8A6F4E">3 / 8</span>
+      </div>
+      <div style="background:#FBF8F1;border:1px solid #E4DBC9;border-radius:16px;padding:26px;max-width:430px;margin:0 auto;box-shadow:0 3px 12px rgba(34,28,22,.07)">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:18px">
+          <span style="font-family:'Alegreya Sans',sans-serif;font-size:11px;color:#3E6B8E;background:#DCE6EC;padding:2px 10px;border-radius:9px">définition</span>
+          <span style="font-family:'Alegreya Sans',sans-serif;font-size:12px;color:#8A6F4E">Le contrat social</span>
+          <span style="margin-left:auto;font-family:'Alegreya Sans',sans-serif;font-size:12px;color:#8A6F4E">Unité 3</span>
+        </div>
+        <div style="text-align:center;font-family:'Cormorant Garamond',serif;font-weight:600;font-size:23px;color:#221C16;line-height:1.25;padding:6px 0 18px">Selon Rousseau, la « volonté générale » désigne…</div>
+        <div style="border-top:1px dashed #E0D6C2;padding-top:18px;text-align:center;font-family:'EB Garamond',serif;font-size:16px;color:#5A4632;line-height:1.5">l'intérêt commun du peuple souverain, distinct de la simple somme des intérêts particuliers.</div>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;max-width:430px;margin:14px auto 0;font-family:'Alegreya Sans',sans-serif">
+        <div style="background:#EFD9D2;border:1px solid #D9B3A8;border-radius:11px;padding:10px 4px;text-align:center"><div style="font-size:13px;font-weight:700;color:#A23E2E">Raté</div><div style="font-size:10px;color:#B07567">je ne savais pas</div></div>
+        <div style="background:#EFE4CF;border:1px solid #D9C295;border-radius:11px;padding:10px 4px;text-align:center"><div style="font-size:13px;font-weight:700;color:#9A6A2E">Difficile</div><div style="font-size:10px;color:#AE8F5C">à peine</div></div>
+        <div style="background:#DCE3EC;border:1px solid #A9BDD2;border-radius:11px;padding:10px 4px;text-align:center"><div style="font-size:13px;font-weight:700;color:#3E5C7E">Bien</div><div style="font-size:10px;color:#6982A1">après hésitation</div></div>
+        <div style="background:#E4E8D8;border:1px solid #B3C0A0;border-radius:11px;padding:10px 4px;text-align:center"><div style="font-size:13px;font-weight:700;color:#5B6E4A">Facile</div><div style="font-size:10px;color:#82906E">immédiatement</div></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- D3 — quizz ordi -->
+<div data-screen-label="Quazian quizz — ordi" style="position:absolute;left:1100px;top:3012px;width:640px">
+  <div data-drags-parent="1" style="position:absolute;top:-26px;left:2px;font-family:'Alegreya Sans',sans-serif;font-size:13px;color:#8A6F4E">Quizz « jetons » — ordinateur</div>
+  <div style="border:1px solid #D8CFBC;border-radius:12px;background:#FBF8F1;box-shadow:0 4px 16px rgba(34,28,22,.1);overflow:hidden">
+    <div style="background:#ECE4D6;padding:9px 14px;display:flex;align-items:center;gap:7px"><span style="width:10px;height:10px;border-radius:50%;background:#C9B89A"></span><span style="width:10px;height:10px;border-radius:50%;background:#C9B89A"></span><span style="width:10px;height:10px;border-radius:50%;background:#C9B89A"></span></div>
+    <div style="background:#F2ECE0;padding:22px 28px 26px">
+      <div style="display:flex;justify-content:space-between;align-items:center">
+        <span style="font-family:'Cinzel',serif;font-weight:600;font-size:13px;letter-spacing:.16em;color:#3E6B8E">QUIZZ · LE CONTRAT SOCIAL</span>
+        <div style="display:flex;gap:5px">
+          <span style="width:22px;height:6px;border-radius:3px;background:#3E6B8E"></span>
+          <span style="width:22px;height:6px;border-radius:3px;background:#3E6B8E"></span>
+          <span style="width:22px;height:6px;border-radius:3px;background:#A9C2D6"></span>
+          <span style="width:22px;height:6px;border-radius:3px;background:#E0D6C2"></span>
+          <span style="width:22px;height:6px;border-radius:3px;background:#E0D6C2"></span>
+          <span style="width:22px;height:6px;border-radius:3px;background:#E0D6C2"></span>
+        </div>
+      </div>
+      <div style="background:#FBF8F1;border:1px solid #E4DBC9;border-radius:13px;padding:22px;margin-top:14px">
+        <div style="font-family:'Alegreya Sans',sans-serif;font-size:11.5px;color:#8A6F4E">Question 3 / 6</div>
+        <div style="font-family:'Cormorant Garamond',serif;font-weight:600;font-size:22px;color:#221C16;margin-top:4px">Pour Rousseau, la souveraineté est…</div>
+        <div style="display:inline-block;background:#DCE6EC;color:#2C5470;font-family:'Alegreya Sans',sans-serif;font-size:12.5px;border-radius:8px;padding:5px 12px;margin-top:11px">Répartis 100 points entre les réponses selon ta confiance</div>
+        <div style="display:flex;flex-direction:column;gap:10px;margin-top:15px">
+          <div style="display:flex;align-items:center;gap:14px;background:#F2ECE0;border:1px solid #D8CFBC;border-radius:10px;padding:11px 15px">
+            <span style="font-family:'EB Garamond',serif;font-size:16px;color:#221C16;flex:1">A · La souveraineté est inaliénable</span>
+            <div style="height:6px;width:110px;background:#E0D6C2;border-radius:3px;overflow:hidden"><div style="width:60%;height:100%;background:#3E6B8E"></div></div>
+            <div style="display:flex;align-items:center;gap:9px"><span style="width:23px;height:23px;border:1px solid #C4BCA8;border-radius:6px;display:inline-flex;align-items:center;justify-content:center;color:#8A6F4E">–</span><span style="font-family:'Cormorant Garamond',serif;font-weight:600;font-size:18px;color:#3E6B8E;width:28px;text-align:center">60</span><span style="width:23px;height:23px;border:1px solid #C4BCA8;border-radius:6px;display:inline-flex;align-items:center;justify-content:center;color:#8A6F4E">+</span></div>
+          </div>
+          <div style="display:flex;align-items:center;gap:14px;background:#FBF8F1;border:1px solid #E4DBC9;border-radius:10px;padding:11px 15px">
+            <span style="font-family:'EB Garamond',serif;font-size:16px;color:#221C16;flex:1">B · La souveraineté est transférable</span>
+            <div style="height:6px;width:110px;background:#E0D6C2;border-radius:3px;overflow:hidden"><div style="width:25%;height:100%;background:#3E6B8E"></div></div>
+            <div style="display:flex;align-items:center;gap:9px"><span style="width:23px;height:23px;border:1px solid #C4BCA8;border-radius:6px;display:inline-flex;align-items:center;justify-content:center;color:#8A6F4E">–</span><span style="font-family:'Cormorant Garamond',serif;font-weight:600;font-size:18px;color:#3E6B8E;width:28px;text-align:center">25</span><span style="width:23px;height:23px;border:1px solid #C4BCA8;border-radius:6px;display:inline-flex;align-items:center;justify-content:center;color:#8A6F4E">+</span></div>
+          </div>
+          <div style="display:flex;align-items:center;gap:14px;background:#FBF8F1;border:1px solid #E4DBC9;border-radius:10px;padding:11px 15px">
+            <span style="font-family:'EB Garamond',serif;font-size:16px;color:#221C16;flex:1">C · La souveraineté est divisible</span>
+            <div style="height:6px;width:110px;background:#E0D6C2;border-radius:3px;overflow:hidden"><div style="width:15%;height:100%;background:#3E6B8E"></div></div>
+            <div style="display:flex;align-items:center;gap:9px"><span style="width:23px;height:23px;border:1px solid #C4BCA8;border-radius:6px;display:inline-flex;align-items:center;justify-content:center;color:#8A6F4E">–</span><span style="font-family:'Cormorant Garamond',serif;font-weight:600;font-size:18px;color:#3E6B8E;width:28px;text-align:center">15</span><span style="width:23px;height:23px;border:1px solid #C4BCA8;border-radius:6px;display:inline-flex;align-items:center;justify-content:center;color:#8A6F4E">+</span></div>
+          </div>
+          <div style="display:flex;align-items:center;gap:14px;background:#FBF8F1;border:1px solid #E4DBC9;border-radius:10px;padding:11px 15px">
+            <span style="font-family:'EB Garamond',serif;font-size:16px;color:#221C16;flex:1">D · La souveraineté peut être déléguée</span>
+            <div style="height:6px;width:110px;background:#E0D6C2;border-radius:3px;overflow:hidden"><div style="width:0%;height:100%;background:#3E6B8E"></div></div>
+            <div style="display:flex;align-items:center;gap:9px"><span style="width:23px;height:23px;border:1px solid #C4BCA8;border-radius:6px;display:inline-flex;align-items:center;justify-content:center;color:#8A6F4E">–</span><span style="font-family:'Cormorant Garamond',serif;font-weight:600;font-size:18px;color:#8A6F4E;width:28px;text-align:center">0</span><span style="width:23px;height:23px;border:1px solid #C4BCA8;border-radius:6px;display:inline-flex;align-items:center;justify-content:center;color:#8A6F4E">+</span></div>
+          </div>
+        </div>
+      </div>
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-top:14px;font-family:'Alegreya Sans',sans-serif">
+        <span style="font-size:14px;color:#5B6E4A">● 100 / 100 points placés</span>
+        <div style="display:flex;gap:10px">
+          <span style="background:#FBF8F1;border:1px solid #E4DBC9;color:#8A6F4E;border-radius:8px;padding:9px 18px;font-size:13.5px">Précédent</span>
+          <span style="background:#3E6B8E;color:#F2ECE0;border-radius:8px;padding:9px 18px;font-size:13.5px;font-weight:600">Suivant →</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- D note -->
+<div style="position:absolute;left:80px;top:3628px;width:940px">
+  <div style="background:#F2ECE0;border:1px solid #E4DBC9;border-left:3px solid #3E6B8E;border-radius:8px;padding:14px 18px;font-family:'EB Garamond',serif;font-size:15px;line-height:1.5;color:#5A4632">
+    <span style="font-family:'Alegreya Sans',sans-serif;font-size:11px;letter-spacing:.1em;color:#3E6B8E">UNE CHOSE À LA FOIS</span><br>
+    L'accueil sépare nettement <b>réviser</b> (flashcards, l'action du jour, en haut) et les <b>quizz</b> (liste avec statut). Dans chaque activité, le contenu occupe tout l'écran : une carte à retourner, ou une question avec ses jetons et le total <b>100/100</b> toujours visible. Les 4 boutons d'auto-évaluation et le mécanisme de jetons sont ceux déjà présents dans ton code.
+  </div>
+</div>
+
+<!-- closing -->
+<div style="position:absolute;left:1060px;top:3628px;width:300px">
+  <div style="background:#F4EFE6;border:1px solid #E4DBC9;border-radius:10px;padding:17px 19px;font-family:'EB Garamond',serif;font-size:15px;line-height:1.55;color:#5A4632;box-shadow:0 1px 3px rgba(34,28,22,.06)">
+    <div style="font-family:'Cormorant Garamond',serif;font-weight:600;font-size:21px;color:#221C16;margin-bottom:6px">Pour finir le travail</div>
+    Le document <b>HANDOFF_navigation_eleve.md</b> (livré à côté) traduit ces écrans en tâches concrètes pour Claude Code : composants à créer, classes Tailwind, fichiers du codebase à modifier — fidèle à ta charte et à tes patterns existants.
+  </div>
+</div>
+</x-dc>
+</body>
+</html>

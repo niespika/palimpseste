@@ -1,0 +1,893 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet data-dc-atomics>
+<meta name="design_doc_mode" content="canvas">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="anonymous">
+<link href="https://fonts.googleapis.com/css2?family=Caveat:wght@500;600&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#f0eee9;font-family:system-ui,sans-serif}
+.dv-turn{padding:44px 48px 34px;border-bottom:1px solid rgba(0,0,0,.08);scroll-margin-top:16px}
+.dv-thd{display:flex;align-items:baseline;gap:10px;margin:0 0 22px;flex-wrap:wrap}
+.dv-tid{font:600 10px ui-monospace,Menlo,monospace;padding:3px 7px;background:#1a1a1a;color:#fff;border-radius:4px;text-decoration:none}
+.dv-tname{font:600 13px/1.2 system-ui,sans-serif;color:#1a1a1a}
+.dv-cap{font:500 15px 'Caveat',cursive;color:#8a6f4e}
+.dv-opts{display:flex;flex-wrap:wrap;gap:38px;align-items:flex-start}
+.dv-opt{flex:none;display:flex;flex-direction:column;gap:10px;scroll-margin-top:16px}
+.dv-oid{font:600 10.5px ui-monospace,Menlo,monospace;padding:3px 7px;background:rgba(0,0,0,.08);color:#1a1a1a;border-radius:5px;text-decoration:none}
+.dv-olabel{display:flex;align-items:baseline;gap:8px;font:400 11.5px/1.3 system-ui,sans-serif;color:rgba(0,0,0,.55)}
+.dv-card{max-width:100%;background:#fff;border:1px solid rgba(0,0,0,.1);border-radius:9px;box-shadow:0 1px 3px rgba(0,0,0,.06);overflow:hidden}
+.dv-opt:target .dv-oid{background:#2a78d6;color:#fff}
+.dv-note{margin:2px 0 0;font:500 14px/1.45 'Caveat',cursive;color:#8a6f4e;max-width:660px}
+.dv-ptr{color:#2a78d6}
+.dv-next{margin:28px 0 0;font:12px/1.5 system-ui,sans-serif;color:rgba(0,0,0,.5)}
+.wf-tab{display:flex;align-items:center;gap:4px;padding:9px 16px;background:#f4f2ec;border-bottom:1px solid #ddd8cc}
+.wf-brand{font:700 11px system-ui;letter-spacing:.14em;color:#4a3a28;margin-right:12px}
+.wf-t{font-size:11px;color:#8b8478;padding:4px 11px;border-radius:6px}
+.wf-t.on{background:#e7dfce;color:#3f3a32;font-weight:600}
+.wf-h1{font-size:16px;font-weight:700;color:#2f2a23}
+.wf-sub{font-size:11px;color:#8b8478;margin-top:2px}
+.wf-eyebrow{font:600 9px system-ui;letter-spacing:.11em;text-transform:uppercase;color:#a49c8e}
+.wf-btn{font-size:12px;font-weight:600;padding:9px 13px;border-radius:8px;display:flex;flex-direction:column;gap:2px;cursor:default}
+.wf-btn small{font-size:9.5px;font-weight:400;opacity:.82}
+.wf-parc{background:#4a3a28;color:#f7f3ea}
+.wf-eval{background:#9a6a2e;color:#fdf6ea}
+.wf-tile{border:1px solid #e2ddd2;border-radius:8px;background:#fff;padding:11px 13px;display:flex;flex-direction:column;gap:5px;min-width:0}
+.wf-tile b{font-size:12.5px;font-weight:600;color:#2f2a23}
+.wf-tile span{font-size:10.5px;color:#8b8478}
+.wf-lp{border-left:3px solid #4a3a28}
+.wf-le{border-left:3px solid #9a6a2e}
+.wf-seg{display:inline-flex;border:1px solid #d9cfba;border-radius:7px;overflow:hidden;font-size:10.5px}
+.wf-seg span{padding:4px 11px;color:#8b8478}
+.wf-seg span.on{background:#4a3a28;color:#f7f3ea;font-weight:600}
+.wf-chip{font-size:9.5px;padding:2px 8px;border-radius:99px;border:1px solid #cfc9bd;color:#6b6459;background:#faf9f5}
+.sk{height:7px;border-radius:3px;background:#e4dfd4}
+</style>
+</helmet>
+
+<section class="dv-turn" id="tour3">
+  <div class="dv-thd"><a class="dv-tid" href="#tour3">T3</a><span class="dv-tname">Tour 3 — versions finales : accueil repliable (colonnes + groupes) · avancement à gauche</span><span class="dv-cap">✓ <a class="dv-oid" href="#2d">2d</a> et <a class="dv-oid" href="#3d">3d</a> verrouillés · voici l'accueil <a class="dv-oid" href="#1f">1f</a>/<a class="dv-oid" href="#1g">1g</a> et le plan <a class="dv-oid" href="#4e">4e</a></span></div>
+  <div class="dv-opts">
+
+    <!-- 1f -->
+    <div class="dv-opt" id="1f" data-screen-label="1f Accueil final replis">
+      <div class="dv-olabel"><a class="dv-oid" href="#1f">1f</a>Accueil final — <a class="dv-oid" href="#1d">1d</a> compact + groupes repliables des deux côtés (comme <a class="dv-oid" href="#1e">1e</a>) + repli d'une colonne entière</div>
+      <div class="dv-card" style="width:760px">
+        <div class="wf-tab"><span class="wf-brand">SCRIPTORIUM</span><span class="wf-t">Classes</span><span class="wf-t on">Parcours</span><span class="wf-t">Ressources</span><span class="wf-t">Paramètres</span></div>
+        <div style="padding:16px 18px;display:grid;grid-template-columns:1fr 1fr;gap:16px">
+          <div style="border:1px solid #e2ddd2;border-radius:9px;overflow:hidden;display:flex;flex-direction:column">
+            <div style="padding:9px 12px;background:#efe7db;border-top:3px solid #4a3a28;display:flex;align-items:center;gap:8px"><span style="font-size:12px;font-weight:700;color:#4a3a28;flex:1">◆ Parcours <span style="font-weight:400;color:#8b8478;font-size:9.5px">· 25</span></span><span style="font-size:9.5px;color:#8b8478">trier ▾</span><span title="Replier la colonne" style="font-size:12px;color:#8b8478;border-left:1px solid #d9cfba;padding-left:8px">⟨</span></div>
+            <div style="padding:10px 11px;display:flex;flex-direction:column;gap:7px">
+              <div class="wf-btn wf-parc" style="flex-direction:row;align-items:center;justify-content:center;padding:8px">＋ Nouveau parcours</div>
+              <div style="border:1px solid #d9cfba;border-radius:7px;padding:6px 10px;font-size:10.5px;color:#a49c8e;background:#faf9f5">🔍 Rechercher…</div>
+              <div style="display:flex;align-items:center;gap:7px;padding:5px 8px;background:#f6f2ea;border-radius:6px;font-size:10.5px;color:#4a3a28;font-weight:600"><span>▾</span> Assignés <span style="color:#a49c8e;font-weight:400">· 6</span></div>
+              <div style="border:1px solid #e2ddd2;border-radius:7px;overflow:hidden">
+                <div style="display:flex;align-items:center;gap:8px;padding:6px 10px;border-bottom:1px solid #efece4"><span style="width:6px;height:6px;border-radius:50%;background:#5b6e4a"></span><span style="font-size:11px;color:#3f3a32;flex:1">HLP — Terminale</span><span style="font-size:9px;color:#a49c8e">2 cl.</span></div>
+                <div style="display:flex;align-items:center;gap:8px;padding:6px 10px;border-bottom:1px solid #efece4"><span style="width:6px;height:6px;border-radius:50%;background:#5b6e4a"></span><span style="font-size:11px;color:#3f3a32;flex:1">Tronc commun 2de</span><span style="font-size:9px;color:#a49c8e">1 cl.</span></div>
+                <div style="display:flex;align-items:center;gap:8px;padding:6px 10px"><span style="width:6px;height:6px;border-radius:50%;background:#5b6e4a"></span><span style="font-size:11px;color:#3f3a32;flex:1">Méthodo — 1re</span><span style="font-size:9px;color:#a49c8e">3 cl.</span></div>
+              </div>
+              <div style="display:flex;align-items:center;gap:7px;padding:5px 8px;background:#f6f2ea;border-radius:6px;font-size:10.5px;color:#8b8478"><span>▸</span> Sans classe <span style="color:#a49c8e">· 19</span></div>
+            </div>
+          </div>
+          <div style="border:1px solid #e2ddd2;border-radius:9px;overflow:hidden;display:flex;flex-direction:column">
+            <div style="padding:9px 12px;background:#f0e6d5;border-top:3px solid #9a6a2e;display:flex;align-items:center;gap:8px"><span style="font-size:12px;font-weight:700;color:#9a6a2e;flex:1">◆ Plans</span><span class="wf-seg"><span class="on" style="background:#9a6a2e;padding:3px 9px">Par classe</span><span style="padding:3px 9px">Modèles</span></span><span title="Replier la colonne" style="font-size:12px;color:#8b8478;border-left:1px solid #d9cfba;padding-left:8px">⟩</span></div>
+            <div style="padding:10px 11px;display:flex;flex-direction:column;gap:7px">
+              <div style="border:1px solid #d9cfba;border-radius:7px;padding:6px 10px;font-size:10.5px;color:#a49c8e;background:#faf9f5">🔍 Rechercher…</div>
+              <div style="display:flex;align-items:center;gap:7px;padding:5px 8px;background:#f6f2ea;border-radius:6px;font-size:10.5px;color:#9a6a2e;font-weight:600"><span>▾</span> Validés <span style="color:#a49c8e;font-weight:400">· 4</span></div>
+              <div style="border:1px solid #e2ddd2;border-radius:7px;overflow:hidden">
+                <div style="display:flex;align-items:center;gap:8px;padding:6px 10px;border-bottom:1px solid #efece4"><span style="width:6px;height:6px;border-radius:50%;background:#5b6e4a"></span><span style="font-size:11px;color:#3f3a32;flex:1">TG1</span><span style="font-size:9px;color:#a49c8e">TC</span></div>
+                <div style="display:flex;align-items:center;gap:8px;padding:6px 10px"><span style="width:6px;height:6px;border-radius:50%;background:#5b6e4a"></span><span style="font-size:11px;color:#3f3a32;flex:1">TG2</span><span style="font-size:9px;color:#a49c8e">TC</span></div>
+              </div>
+              <div style="display:flex;align-items:center;gap:7px;padding:5px 8px;background:#f6f2ea;border-radius:6px;font-size:10.5px;color:#8b8478"><span>▸</span> Brouillons <span style="color:#a49c8e">· 3</span></div>
+              <div style="display:flex;align-items:center;gap:7px;padding:5px 8px;background:#f6f2ea;border-radius:6px;font-size:10.5px;color:#8b8478"><span>▸</span> Sans plan <span style="color:#a49c8e">· 2</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <p class="dv-note">→ chaque colonne se plie par groupe (Assignés/Sans classe · Validés/Brouillons/Sans plan) · le chevron <span class="dv-ptr">⟨ / ⟩</span> du bandeau replie la colonne entière → voir <a class="dv-oid" href="#1g">1g</a></p>
+    </div>
+
+    <!-- 1g -->
+    <div class="dv-opt" id="1g" data-screen-label="1g Accueil colonne repliee">
+      <div class="dv-olabel"><a class="dv-oid" href="#1g">1g</a>… et quand on replie une colonne — l'autre s'étale sur 2 colonnes</div>
+      <div class="dv-card" style="width:760px">
+        <div class="wf-tab"><span class="wf-brand">SCRIPTORIUM</span><span class="wf-t">Classes</span><span class="wf-t on">Parcours</span><span class="wf-t">Ressources</span><span class="wf-t">Paramètres</span></div>
+        <div style="padding:16px 18px;display:flex;gap:14px">
+          <div style="flex:1;border:1px solid #e2ddd2;border-radius:9px;overflow:hidden;display:flex;flex-direction:column">
+            <div style="padding:9px 12px;background:#efe7db;border-top:3px solid #4a3a28;display:flex;align-items:center;gap:8px"><span style="font-size:12px;font-weight:700;color:#4a3a28;flex:1">◆ Parcours <span style="font-weight:400;color:#8b8478;font-size:9.5px">· 25</span></span><span class="wf-btn wf-parc" style="flex-direction:row;padding:5px 10px;font-size:10px">＋ Nouveau</span></div>
+            <div style="padding:10px 11px;display:flex;flex-direction:column;gap:8px">
+              <div style="border:1px solid #d9cfba;border-radius:7px;padding:6px 10px;font-size:10.5px;color:#a49c8e;background:#faf9f5">🔍 Rechercher un parcours…</div>
+              <div style="font:600 8.5px system-ui;letter-spacing:.09em;text-transform:uppercase;color:#a49c8e">Assignés · 6</div>
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+                <div style="border:1px solid #e2ddd2;border-radius:7px;overflow:hidden">
+                  <div style="display:flex;align-items:center;gap:7px;padding:6px 10px;border-bottom:1px solid #efece4"><span style="width:6px;height:6px;border-radius:50%;background:#5b6e4a"></span><span style="font-size:10.5px;color:#3f3a32;flex:1">HLP — Terminale</span><span style="font-size:8.5px;color:#a49c8e">2 cl.</span></div>
+                  <div style="display:flex;align-items:center;gap:7px;padding:6px 10px"><span style="width:6px;height:6px;border-radius:50%;background:#5b6e4a"></span><span style="font-size:10.5px;color:#3f3a32;flex:1">Méthodo — 1re</span><span style="font-size:8.5px;color:#a49c8e">3 cl.</span></div>
+                </div>
+                <div style="border:1px solid #e2ddd2;border-radius:7px;overflow:hidden">
+                  <div style="display:flex;align-items:center;gap:7px;padding:6px 10px;border-bottom:1px solid #efece4"><span style="width:6px;height:6px;border-radius:50%;background:#5b6e4a"></span><span style="font-size:10.5px;color:#3f3a32;flex:1">Tronc commun 2de</span><span style="font-size:8.5px;color:#a49c8e">1 cl.</span></div>
+                  <div style="display:flex;align-items:center;gap:7px;padding:6px 10px"><span style="width:6px;height:6px;border-radius:50%;background:#5b6e4a"></span><span style="font-size:10.5px;color:#3f3a32;flex:1">Stoïciens — Tle</span><span style="font-size:8.5px;color:#a49c8e">2 cl.</span></div>
+                </div>
+              </div>
+              <div style="display:flex;align-items:center;gap:7px;padding:4px 8px;background:#f6f2ea;border-radius:6px;font-size:10px;color:#8b8478"><span>▸</span> Sans classe · 19</div>
+            </div>
+          </div>
+          <div style="width:38px;flex:none;border:1px solid #e2ddd2;border-radius:9px;background:#f0e6d5;display:flex;flex-direction:column;align-items:center;gap:10px;padding-top:11px;cursor:pointer"><span style="font-size:12px;color:#9a6a2e">⟨</span><span style="writing-mode:vertical-rl;font:700 9.5px system-ui;letter-spacing:.12em;color:#9a6a2e">◆ PLANS · 6</span></div>
+        </div>
+      </div>
+      <p class="dv-note">→ colonne « Plans » repliée en un rail → « Parcours » récupère la largeur et passe <span class="dv-ptr">sur 2 colonnes</span> · un clic sur le rail la rouvre · marche dans les deux sens</p>
+    </div>
+
+    <!-- 4e -->
+    <div class="dv-opt" id="4e" data-screen-label="4e Plan avancement a gauche">
+      <div class="dv-olabel"><a class="dv-oid" href="#4e">4e</a>Plan final — <a class="dv-oid" href="#4d">4d</a> avec la frise « avancement » déplacée à gauche, au-dessus des semaines</div>
+      <div class="dv-card" style="width:1000px">
+        <div style="display:flex;align-items:center;gap:8px;padding:8px 16px;background:#f4f2ec;border-bottom:1px solid #ddd8cc;font-size:10.5px;color:#8b8478"><span>Scriptorium</span><span>›</span><span>Par classe</span><span>›</span><span style="color:#9a6a2e;font-weight:600">TG1 — Plan 26–27</span><span style="margin-left:auto;color:#b3aa9a">◀ Toutes les classes</span></div>
+        <div style="display:flex;min-height:460px">
+          <div style="width:340px;flex:none;border-right:1px solid #e2ddd2;background:#faf9f5;display:flex;flex-direction:column">
+            <div style="padding:13px 14px;border-bottom:1px solid #e2ddd2;display:flex;flex-direction:column;gap:9px">
+              <span style="font:600 9.5px system-ui;letter-spacing:.08em;text-transform:uppercase;color:#7a6a4f">Avancement du plan</span>
+              <div style="display:flex;align-items:baseline;gap:8px"><span style="font-size:26px;font-weight:700;color:#2f2a23;line-height:1">18</span><span style="font-size:11px;color:#8b8478">exercices</span><span style="margin-left:auto;font-size:9px;color:#a06718">brouillon</span></div>
+              <div style="display:flex;height:8px;border-radius:99px;overflow:hidden"><span style="width:28%;background:#5b6e4a"></span><span style="width:61%;background:#c8a15a"></span><span style="width:11%;background:#a23e2e"></span></div>
+              <div style="display:flex;gap:12px;font-size:9.5px"><span style="color:#4a453c"><span style="color:#5b6e4a">●</span> 5 conçus</span><span style="color:#4a453c"><span style="color:#c8a15a">●</span> 11 à concevoir</span><span style="color:#4a453c"><span style="color:#a23e2e">●</span> 2 retard</span></div>
+            </div>
+            <div style="padding:11px 12px;display:flex;flex-direction:column;gap:5px;overflow:hidden">
+              <div style="font:600 9px system-ui;letter-spacing:.08em;text-transform:uppercase;color:#a49c8e;padding:0 2px 2px">Les semaines</div>
+              <div style="display:flex;align-items:center;gap:9px;border:1px solid #e2ddd2;border-radius:7px;background:#fff;padding:7px 10px"><span style="font:600 9px ui-monospace,Menlo,monospace;color:#8b8478;width:44px">07/09</span><span style="font-size:10.5px;color:#4a453c;flex:1">Écriture</span><span style="width:7px;height:7px;border-radius:50%;background:#c8a15a"></span></div>
+              <div style="display:flex;align-items:center;gap:9px;border:1.4px solid #9a6a2e;border-radius:7px;background:#fbf3e6;padding:7px 10px"><span style="font:600 9px ui-monospace,Menlo,monospace;color:#9a6a2e;width:44px">14/09</span><span style="font-size:10.5px;color:#2f2a23;font-weight:600;flex:1">Écriture · Quiz</span><span style="display:flex;gap:3px"><span style="width:7px;height:7px;border-radius:50%;background:#a23e2e"></span><span style="width:7px;height:7px;border-radius:50%;background:#5b6e4a"></span></span></div>
+              <div style="display:flex;align-items:center;gap:9px;border:1px solid #e2ddd2;border-radius:7px;background:#fff;padding:7px 10px"><span style="font:600 9px ui-monospace,Menlo,monospace;color:#8b8478;width:44px">21/09</span><span style="font-size:10.5px;color:#4a453c;flex:1">Lecture</span><span style="width:7px;height:7px;border-radius:50%;background:#c8a15a"></span></div>
+              <div style="display:flex;align-items:center;gap:9px;border:1px solid #e2ddd2;border-radius:7px;background:#fff;padding:7px 10px"><span style="font:600 9px ui-monospace,Menlo,monospace;color:#8b8478;width:44px">28/09</span><span style="font-size:10.5px;color:#4a453c;flex:1">Écriture</span><span style="width:7px;height:7px;border-radius:50%;background:#5b6e4a"></span></div>
+              <div style="text-align:center;font-size:9.5px;color:#a49c8e;padding:3px">⌄ … 08/06</div>
+            </div>
+          </div>
+          <div style="flex:1;padding:15px 17px;display:flex;flex-direction:column;gap:11px;min-width:0">
+            <div style="display:flex;align-items:baseline;gap:8px"><span style="font-size:14px;font-weight:700;color:#2f2a23">Semaine du 14/09</span><span style="font-size:10px;color:#a49c8e">Sem. 2</span><span style="margin-left:auto;font-size:8.5px;padding:2px 9px;border-radius:99px;background:#efd9d2;color:#a23e2e">budget dépassé</span></div>
+            <div style="border-left:2px solid #4a3a28;background:#f7f2ea;border-radius:0 7px 7px 0;padding:8px 12px"><div style="font-size:9px;color:#8a6f4e;text-transform:uppercase;letter-spacing:.07em;margin-bottom:3px">Enseigné cette semaine · via le parcours</div><div style="font-size:10.5px;color:#5a4632">Cours « l'absurde » · Lecture Camus</div></div>
+            <div><div style="font:600 9px system-ui;letter-spacing:.08em;text-transform:uppercase;color:#a49c8e;margin-bottom:6px">Exercices à évaluer</div>
+              <div style="display:flex;flex-direction:column;gap:7px">
+                <div style="border:1px solid #e2ddd2;border-radius:8px;background:#fff;padding:9px 11px;display:flex;align-items:center;gap:9px"><span style="font-size:11px;font-weight:600;color:#3f3a32">Écriture</span><span style="font-size:9.5px;color:#a49c8e">maison · à rendre 19/09</span><span style="margin-left:auto;font-size:8.5px;padding:2px 8px;border-radius:99px;background:#efd9d2;color:#a23e2e">en retard</span><span style="font-size:9.5px;color:#8b8478">Déplacer ▾ · Retirer</span></div>
+                <div style="border:1px solid #e2ddd2;border-radius:8px;background:#fff;padding:9px 11px;display:flex;align-items:center;gap:9px"><span style="font-size:11px;font-weight:600;color:#3f3a32">Quiz</span><span style="font-size:9.5px;color:#a49c8e">classe</span><span style="font-size:9px;padding:2px 8px;border:1px solid #d9cfba;border-radius:6px;color:#6b6459">jour à caler ▾</span><span style="margin-left:auto;font-size:8.5px;padding:2px 8px;border-radius:99px;background:#e4e8d8;color:#5b6e4a">conçu ✓</span></div>
+              </div>
+              <span style="display:inline-block;margin-top:8px;font-size:10.5px;color:#9a6a2e;font-weight:600">＋ Ajouter un exercice</span>
+            </div>
+            <div style="border-top:1px dashed #e2ddd2;padding-top:9px;display:flex;gap:16px"><span style="font-size:9.5px;color:#8b8478">🕮 Lecture Aletheia attendue</span><span style="font-size:9.5px;color:#8b8478">✍ Fragment attendu</span></div>
+          </div>
+        </div>
+      </div>
+      <p class="dv-note">→ le bilan coiffe la <span class="dv-ptr">colonne de gauche</span>, juste au-dessus des semaines : on lit « où en est le plan » puis on descend dans la liste des semaines, tout du même côté · plus logique</p>
+    </div>
+
+  </div>
+  <p class="dv-next">Pistes suivantes : « c'est bon : 1f + 2d + 3d + 4e, passe au rendu charte » · « dans 1g, montre plutôt Parcours replié » · « ajoute l'alerte “classe déjà servie” »</p>
+</section>
+
+<section class="dv-turn" id="tour2">
+  <div class="dv-thd"><a class="dv-tid" href="#tour2">T2</a><span class="dv-tname">Tour 2 — affinements : accueil à l'échelle · parcours repliable · création plan combinée · plan + bandeau d'avancement</span><span class="dv-cap">réponses à : « et si j'ai 25 parcours ? » · replis partout · fusion 3a+3b · bilan dans 4b</span></div>
+  <div class="dv-opts">
+
+    <!-- 1d -->
+    <div class="dv-opt" id="1d" data-screen-label="1d Accueil deux mondes a echelle">
+      <div class="dv-olabel"><a class="dv-oid" href="#1d">1d</a>Affine <a class="dv-oid" href="#1b">1b</a> — deux mondes, mais listes compactes qui tiennent 25 items (recherche + assignés d'abord)</div>
+      <div class="dv-card" style="width:740px">
+        <div class="wf-tab"><span class="wf-brand">SCRIPTORIUM</span><span class="wf-t">Classes</span><span class="wf-t on">Parcours</span><span class="wf-t">Ressources</span><span class="wf-t">Paramètres</span></div>
+        <div style="padding:16px 18px;display:grid;grid-template-columns:1fr 1fr;gap:16px">
+          <div style="border:1px solid #e2ddd2;border-radius:9px;overflow:hidden;display:flex;flex-direction:column">
+            <div style="padding:9px 12px;background:#efe7db;border-top:3px solid #4a3a28;display:flex;align-items:center;justify-content:space-between"><span style="font-size:12px;font-weight:700;color:#4a3a28">◆ Parcours</span><span style="font-size:9.5px;color:#8b8478">25 · trier ▾</span></div>
+            <div style="padding:10px 11px;display:flex;flex-direction:column;gap:8px">
+              <div class="wf-btn wf-parc" style="flex-direction:row;align-items:center;justify-content:center;padding:8px">＋ Nouveau parcours</div>
+              <div style="border:1px solid #d9cfba;border-radius:7px;padding:6px 10px;font-size:10.5px;color:#a49c8e;background:#faf9f5">🔍 Rechercher un parcours…</div>
+              <div style="font:600 8.5px system-ui;letter-spacing:.09em;text-transform:uppercase;color:#a49c8e;margin-top:2px">Assignés · 6</div>
+              <div style="border:1px solid #e2ddd2;border-radius:7px;overflow:hidden">
+                <div style="display:flex;align-items:center;gap:8px;padding:6px 10px;border-bottom:1px solid #efece4"><span style="width:6px;height:6px;border-radius:50%;background:#5b6e4a"></span><span style="font-size:11px;color:#3f3a32;flex:1">HLP — Terminale</span><span style="font-size:9px;color:#a49c8e">12 sem · 2 cl.</span></div>
+                <div style="display:flex;align-items:center;gap:8px;padding:6px 10px;border-bottom:1px solid #efece4"><span style="width:6px;height:6px;border-radius:50%;background:#5b6e4a"></span><span style="font-size:11px;color:#3f3a32;flex:1">Tronc commun 2de</span><span style="font-size:9px;color:#a49c8e">10 sem · 1 cl.</span></div>
+                <div style="display:flex;align-items:center;gap:8px;padding:6px 10px"><span style="width:6px;height:6px;border-radius:50%;background:#5b6e4a"></span><span style="font-size:11px;color:#3f3a32;flex:1">Méthodo — 1re</span><span style="font-size:9px;color:#a49c8e">6 sem · 3 cl.</span></div>
+              </div>
+              <div style="display:flex;align-items:center;gap:6px;font-size:10px;color:#8b8478;padding:2px 2px"><span>▸</span> Sans classe · 19 <span style="flex:1;border-top:1px dashed #d9cfba"></span></div>
+            </div>
+          </div>
+          <div style="border:1px solid #e2ddd2;border-radius:9px;overflow:hidden;display:flex;flex-direction:column">
+            <div style="padding:9px 12px;background:#f0e6d5;border-top:3px solid #9a6a2e;display:flex;align-items:center;justify-content:space-between"><span style="font-size:12px;font-weight:700;color:#9a6a2e">◆ Plans d'évaluation</span><span class="wf-seg"><span class="on" style="background:#9a6a2e;padding:3px 9px">Par classe</span><span style="padding:3px 9px">Modèles</span></span></div>
+            <div style="padding:10px 11px;display:flex;flex-direction:column;gap:8px">
+              <div class="wf-btn wf-eval" style="flex-direction:row;align-items:center;justify-content:center;padding:8px">＋ Nouveau plan</div>
+              <div style="border:1px solid #d9cfba;border-radius:7px;padding:6px 10px;font-size:10.5px;color:#a49c8e;background:#faf9f5">🔍 Rechercher une classe…</div>
+              <div style="border:1px solid #e2ddd2;border-radius:7px;overflow:hidden;margin-top:2px">
+                <div style="display:flex;align-items:center;gap:8px;padding:6px 10px;border-bottom:1px solid #efece4"><span style="width:6px;height:6px;border-radius:50%;background:#5b6e4a"></span><span style="font-size:11px;color:#3f3a32;flex:1">TG1</span><span style="font-size:9px;color:#3a7d44">validé</span></div>
+                <div style="display:flex;align-items:center;gap:8px;padding:6px 10px;border-bottom:1px solid #efece4"><span style="width:6px;height:6px;border-radius:50%;background:#c8a15a"></span><span style="font-size:11px;color:#3f3a32;flex:1">TG3</span><span style="font-size:9px;color:#a06718">brouillon</span></div>
+                <div style="display:flex;align-items:center;gap:8px;padding:6px 10px;border-bottom:1px solid #efece4"><span style="width:6px;height:6px;border-radius:50%;background:#c8a15a"></span><span style="font-size:11px;color:#3f3a32;flex:1">1reG2</span><span style="font-size:9px;color:#a06718">brouillon</span></div>
+                <div style="display:flex;align-items:center;gap:8px;padding:6px 10px"><span style="width:6px;height:6px;border-radius:50%;border:1px solid #cfc9bd"></span><span style="font-size:11px;color:#a49c8e;flex:1">2de 4</span><span style="font-size:9px;color:#a49c8e">aucun plan</span></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <p class="dv-note">→ mêmes deux mondes qu'en <a class="dv-oid" href="#1b">1b</a>, mais en <span class="dv-ptr">lignes compactes</span> : ~10 tiennent sans scroll · les assignés remontent, le reste se plie (« Sans classe · 19 ») · une recherche par colonne</p>
+    </div>
+
+    <!-- 1e -->
+    <div class="dv-opt" id="1e" data-screen-label="1e Accueil groupes repliables">
+      <div class="dv-olabel"><a class="dv-oid" href="#1e">1e</a>Autre voie pour l'échelle — deux mondes + groupes repliables par état (accordéon)</div>
+      <div class="dv-card" style="width:740px">
+        <div class="wf-tab"><span class="wf-brand">SCRIPTORIUM</span><span class="wf-t">Classes</span><span class="wf-t on">Parcours</span><span class="wf-t">Ressources</span><span class="wf-t">Paramètres</span></div>
+        <div style="padding:16px 18px;display:grid;grid-template-columns:1fr 1fr;gap:16px">
+          <div style="border:1px solid #e2ddd2;border-radius:9px;overflow:hidden;display:flex;flex-direction:column">
+            <div style="padding:9px 12px;background:#efe7db;border-top:3px solid #4a3a28;display:flex;align-items:center;justify-content:space-between"><span style="font-size:12px;font-weight:700;color:#4a3a28">◆ Parcours</span><span class="wf-btn wf-parc" style="flex-direction:row;padding:5px 10px;font-size:10.5px">＋ Nouveau</span></div>
+            <div style="padding:10px 11px;display:flex;flex-direction:column;gap:7px">
+              <div style="border:1px solid #d9cfba;border-radius:7px;padding:6px 10px;font-size:10.5px;color:#a49c8e;background:#faf9f5">🔍 Rechercher…</div>
+              <div style="display:flex;align-items:center;gap:7px;padding:5px 8px;background:#f6f2ea;border-radius:6px;font-size:10.5px;color:#4a3a28;font-weight:600"><span>▾</span> Assignés <span style="color:#a49c8e;font-weight:400">· 6</span></div>
+              <div style="display:flex;align-items:center;gap:8px;padding:4px 10px"><span style="width:6px;height:6px;border-radius:50%;background:#5b6e4a"></span><span style="font-size:11px;color:#3f3a32;flex:1">HLP — Terminale</span><span style="font-size:9px;color:#a49c8e">2 cl.</span></div>
+              <div style="display:flex;align-items:center;gap:8px;padding:4px 10px"><span style="width:6px;height:6px;border-radius:50%;background:#5b6e4a"></span><span style="font-size:11px;color:#3f3a32;flex:1">Tronc commun 2de</span><span style="font-size:9px;color:#a49c8e">1 cl.</span></div>
+              <div style="display:flex;align-items:center;gap:8px;padding:4px 10px"><span style="width:6px;height:6px;border-radius:50%;background:#5b6e4a"></span><span style="font-size:11px;color:#3f3a32;flex:1">Méthodo — 1re</span><span style="font-size:9px;color:#a49c8e">3 cl.</span></div>
+              <div style="display:flex;align-items:center;gap:7px;padding:5px 8px;background:#f6f2ea;border-radius:6px;font-size:10.5px;color:#8b8478"><span>▸</span> Sans classe <span style="color:#a49c8e">· 19</span></div>
+            </div>
+          </div>
+          <div style="border:1px solid #e2ddd2;border-radius:9px;overflow:hidden;display:flex;flex-direction:column">
+            <div style="padding:9px 12px;background:#f0e6d5;border-top:3px solid #9a6a2e;display:flex;align-items:center;justify-content:space-between"><span style="font-size:12px;font-weight:700;color:#9a6a2e">◆ Plans</span><span class="wf-btn wf-eval" style="flex-direction:row;padding:5px 10px;font-size:10.5px">＋ Nouveau</span></div>
+            <div style="padding:10px 11px;display:flex;flex-direction:column;gap:7px">
+              <span class="wf-seg"><span class="on" style="background:#9a6a2e;padding:3px 10px">Par classe</span><span style="padding:3px 10px">Modèles</span></span>
+              <div style="display:flex;align-items:center;gap:7px;padding:5px 8px;background:#f6f2ea;border-radius:6px;font-size:10.5px;color:#4a3a28;font-weight:600"><span>▾</span> Validés <span style="color:#a49c8e;font-weight:400">· 4</span></div>
+              <div style="display:flex;align-items:center;gap:8px;padding:4px 10px"><span style="width:6px;height:6px;border-radius:50%;background:#5b6e4a"></span><span style="font-size:11px;color:#3f3a32;flex:1">TG1</span><span style="font-size:9px;color:#a49c8e">TC</span></div>
+              <div style="display:flex;align-items:center;gap:8px;padding:4px 10px"><span style="width:6px;height:6px;border-radius:50%;background:#5b6e4a"></span><span style="font-size:11px;color:#3f3a32;flex:1">TG2</span><span style="font-size:9px;color:#a49c8e">TC</span></div>
+              <div style="display:flex;align-items:center;gap:7px;padding:5px 8px;background:#f6f2ea;border-radius:6px;font-size:10.5px;color:#8b8478"><span>▸</span> Brouillons <span style="color:#a49c8e">· 3</span></div>
+              <div style="display:flex;align-items:center;gap:7px;padding:5px 8px;background:#f6f2ea;border-radius:6px;font-size:10.5px;color:#8b8478"><span>▸</span> Sans plan <span style="color:#a49c8e">· 2</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <p class="dv-note">→ chaque monde se plie par état : on n'ouvre que « Assignés » / « Validés » au quotidien · les 19 sans classe restent à un clic, jamais dans les pieds · <span class="dv-ptr">au choix avec 1d</span> selon que tu préfères chercher ou déplier</p>
+    </div>
+
+    <!-- 2d -->
+    <div class="dv-opt" id="2d" data-screen-label="2d Parcours repliable semaines et classes">
+      <div class="dv-olabel"><a class="dv-oid" href="#2d">2d</a>Affine <a class="dv-oid" href="#2a">2a</a> — semaines repliables (comme <a class="dv-oid" href="#2c">2c</a>) + chaque classe repliable à droite</div>
+      <div class="dv-card" style="width:1000px">
+        <div style="display:flex;align-items:center;gap:8px;padding:8px 16px;background:#f4f2ec;border-bottom:1px solid #ddd8cc;font-size:10.5px;color:#8b8478"><span>Scriptorium</span><span>›</span><span>Parcours</span><span>›</span><span style="color:#4a3a28;font-weight:600">HLP — Terminale</span><span style="margin-left:auto;color:#b3aa9a">◀ Tous les parcours</span></div>
+        <div style="display:flex;min-height:440px">
+          <div style="flex:1;padding:14px 16px;display:flex;flex-direction:column;gap:7px;min-width:0;border-right:1px solid #e2ddd2">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:2px"><div style="font-size:15px;font-weight:700;color:#2f2a23">HLP — Terminale <span style="font-size:10.5px;font-weight:400;color:#8b8478">· 12 semaines</span></div><span style="font-size:10px;color:#4a3a28">⊟ Tout replier</span></div>
+            <div style="display:flex;align-items:center;gap:10px;border:1px solid #e2ddd2;border-radius:7px;background:#fff;padding:7px 11px"><span style="color:#8b8478">▸</span><span style="font:600 9px ui-monospace,Menlo,monospace;color:#8b8478;width:24px">S1</span><span style="font-size:11px;color:#4a453c;flex:1">Camus, extrait · Cours intro</span><span style="font-size:9px;color:#a49c8e">2 contenus</span></div>
+            <div style="border:1px solid #cbb48c;border-radius:8px;background:#fff;box-shadow:0 1px 4px rgba(40,32,20,.07)">
+              <div style="display:flex;align-items:center;gap:10px;padding:7px 11px;border-bottom:1px solid #efece4"><span style="color:#4a3a28">▾</span><span style="font:600 9px ui-monospace,Menlo,monospace;color:#8b8478;width:24px">S2</span><span style="font-size:11px;color:#2f2a23;font-weight:600;flex:1">Le Gai Savoir (tranche)</span><span style="font-size:10.5px;color:#4a3a28;font-weight:600">＋ Ajouter</span></div>
+              <div style="padding:8px 11px;display:flex;flex-direction:column;gap:6px">
+                <div style="display:flex;align-items:center;gap:8px;border:1px solid #e2ddd2;border-radius:6px;background:#fff;padding:7px 9px"><span style="color:#c3bcae">⠿</span><span style="font-size:9px;font-weight:600;padding:2px 7px;border-radius:5px;background:#dde3ec;color:#2c4a7c">Livre</span><span style="font-size:11px;color:#3f3a32">Le Gai Savoir · S3–S5</span><span style="margin-left:auto;font-size:9.5px;color:#a49c8e">Retirer</span></div>
+              </div>
+            </div>
+            <div style="display:flex;align-items:center;gap:10px;border:1px solid #e2ddd2;border-radius:7px;background:#fff;padding:7px 11px"><span style="color:#8b8478">▸</span><span style="font:600 9px ui-monospace,Menlo,monospace;color:#8b8478;width:24px">S3</span><span style="font-size:11px;color:#b3aa9a;flex:1">vide</span><span style="font-size:9px;color:#a49c8e">0 contenu</span></div>
+            <div style="display:flex;align-items:center;gap:10px;border:1px solid #e2ddd2;border-radius:7px;background:#fff;padding:7px 11px"><span style="color:#8b8478">▸</span><span style="font:600 9px ui-monospace,Menlo,monospace;color:#8b8478;width:24px">S4</span><span style="font-size:11px;color:#4a453c;flex:1">Pascal, Pensées</span><span style="font-size:9px;color:#a49c8e">1 contenu</span></div>
+            <div style="text-align:center;font-size:10px;color:#a49c8e;padding:2px">⌄ S5 → S12</div>
+          </div>
+          <div style="width:300px;flex:none;background:#faf9f5;padding:14px;display:flex;flex-direction:column;gap:9px">
+            <div style="display:flex;align-items:center;justify-content:space-between"><span style="font:600 10px system-ui;letter-spacing:.08em;text-transform:uppercase;color:#7a6a4f">Assigner à une classe</span><span style="font-size:9.5px;color:#8b8478">Tout replier</span></div>
+            <div style="border:1px solid #cbb48c;border-radius:8px;background:#fff;overflow:hidden">
+              <div style="display:flex;align-items:center;gap:8px;padding:9px 11px;border-bottom:1px solid #efece4"><span style="color:#4a3a28">▾</span><span style="font-size:12px;font-weight:600;color:#2f2a23;flex:1">TG1</span><span style="font-size:9px;color:#3a7d44">publié ✓</span></div>
+              <div style="padding:9px 11px;display:flex;flex-direction:column;gap:7px">
+                <div style="border:1px solid #d9cfba;border-radius:6px;padding:5px 9px;font-size:10.5px;color:#3f3a32">📅 début 08/09/2026</div>
+                <div style="border:1px solid #e9e3d6;border-radius:6px;overflow:hidden">
+                  <div style="display:flex;justify-content:space-between;padding:4px 8px;font-size:9.5px;color:#4a453c;border-bottom:1px solid #efece4"><span>Sem. 1</span><span style="color:#6b6459">08/09</span></div>
+                  <div style="display:flex;justify-content:space-between;padding:4px 8px;font-size:9.5px;color:#4a453c"><span>Sem. 2</span><span style="color:#6b6459">15/09</span></div>
+                </div>
+              </div>
+            </div>
+            <div style="border:1px solid #e2ddd2;border-radius:8px;background:#fff;padding:9px 11px;display:flex;align-items:center;gap:8px"><span style="color:#8b8478">▸</span><span style="font-size:12px;font-weight:600;color:#2f2a23;flex:1">TG3</span><span style="font-size:9px;color:#a49c8e">sans date</span></div>
+            <div style="border:1px solid #e2ddd2;border-radius:8px;background:#fff;padding:9px 11px;display:flex;align-items:center;gap:8px"><span style="color:#8b8478">▸</span><span style="font-size:12px;font-weight:600;color:#2f2a23;flex:1">2de 4</span><span style="font-size:9.5px;padding:2px 8px;border:1.2px solid #8f887b;border-radius:6px;color:#3f3a32">Assigner</span></div>
+          </div>
+        </div>
+      </div>
+      <p class="dv-note">→ à gauche : semaines repliées (survol de tout le parcours) → on déplie celle qu'on édite · à droite : chaque classe se plie aussi, seule la classe travaillée montre ses échéances · <span class="dv-ptr">tout reste scannable</span> (les classes restent bien à droite comme en 2a ; dis-moi si tu les veux à gauche)</p>
+    </div>
+
+    <!-- 3d -->
+    <div class="dv-opt" id="3d" data-screen-label="3d Creation plan combinee">
+      <div class="dv-olabel"><a class="dv-oid" href="#3d">3d</a>Fusion <a class="dv-oid" href="#3a">3a</a> + <a class="dv-oid" href="#3b">3b</a> — formulaire (h-g) · cadence (droite) · assigner (b-g)</div>
+      <div class="dv-card" style="width:920px">
+        <div style="display:flex;align-items:center;gap:8px;padding:8px 16px;background:#f4f2ec;border-bottom:1px solid #ddd8cc;font-size:10.5px;color:#8b8478"><span>Scriptorium</span><span>›</span><span>Plans d'évaluation</span><span>›</span><span style="color:#9a6a2e;font-weight:600">Nouveau modèle</span></div>
+        <div style="display:flex;min-height:430px">
+          <div style="width:430px;flex:none;border-right:1px solid #e2ddd2;display:flex;flex-direction:column">
+            <div style="padding:15px 17px;display:flex;flex-direction:column;gap:11px;border-bottom:1px solid #e2ddd2">
+              <div style="font-size:15px;font-weight:700;color:#2f2a23">Nouveau plan d'évaluation</div>
+              <div><div style="font-size:10px;color:#8b8478;margin-bottom:4px">Titre</div><div style="border:1px solid #d9cfba;border-radius:7px;padding:8px 11px;font-size:11.5px;color:#3f3a32;background:#fff">Terminale tronc commun — 2026</div></div>
+              <div style="display:flex;gap:10px"><div style="flex:1"><div style="font-size:10px;color:#8b8478;margin-bottom:4px">Gabarit</div><div style="display:flex;gap:5px"><span style="font-size:10px;padding:5px 10px;border-radius:6px;background:#9a6a2e;color:#fdf6ea;font-weight:600">TC</span><span style="font-size:10px;padding:5px 10px;border-radius:6px;border:1px solid #d9cfba;color:#6b6459">HLP</span><span style="font-size:10px;padding:5px 10px;border-radius:6px;border:1px solid #d9cfba;color:#6b6459">Vierge</span></div></div><div style="width:120px"><div style="font-size:10px;color:#8b8478;margin-bottom:4px">Début</div><div style="border:1px solid #d9cfba;border-radius:7px;padding:6px 9px;font-size:10.5px;color:#3f3a32;background:#fff">📅 07/09/26</div></div></div>
+            </div>
+            <div style="padding:14px 17px;display:flex;flex-direction:column;gap:9px;background:#faf9f5;flex:1">
+              <span style="font:600 10px system-ui;letter-spacing:.08em;text-transform:uppercase;color:#7a6a4f">Assigner à des classes</span>
+              <div style="border:1px solid #e2ddd2;border-radius:8px;background:#fff;padding:9px 11px;display:flex;align-items:center;gap:8px"><span style="font-size:11.5px;font-weight:600;color:#2f2a23;flex:1">TG1 <span style="font-size:9px;color:#a49c8e;font-weight:400">· TC</span></span><div style="border:1px solid #d9cfba;border-radius:6px;padding:4px 8px;font-size:9.5px;color:#3f3a32">07/09</div><span style="font-size:9.5px;padding:4px 10px;border-radius:6px;background:#9a6a2e;color:#fdf6ea;font-weight:600">Assigner</span></div>
+              <div style="border:1px solid #e2ddd2;border-radius:8px;background:#fff;padding:9px 11px;display:flex;align-items:center;gap:8px"><span style="font-size:11.5px;font-weight:600;color:#2f2a23;flex:1">TG3 <span style="font-size:9px;color:#a49c8e;font-weight:400">· TC</span></span><div style="border:1px solid #d9cfba;border-radius:6px;padding:4px 8px;font-size:9.5px;color:#3f3a32">07/09</div><span style="font-size:9.5px;padding:4px 10px;border-radius:6px;background:#9a6a2e;color:#fdf6ea;font-weight:600">Assigner</span></div>
+              <div style="font-size:9px;color:#8a6a3e;background:#fbf3e6;border:1px solid #efd9c0;border-radius:6px;padding:7px 9px;line-height:1.4">Chaque assignation crée un plan indépendant que la classe ajuste ensuite.</div>
+            </div>
+          </div>
+          <div style="flex:1;padding:15px 16px;background:#fdfcf9;display:flex;flex-direction:column;gap:9px;min-width:0">
+            <div style="display:flex;align-items:center;justify-content:space-between"><span style="font:600 10px system-ui;letter-spacing:.08em;text-transform:uppercase;color:#7a6a4f">Aperçu de la cadence</span><span style="font-size:9.5px;color:#a49c8e">≈ 18 exercices</span></div>
+            <div style="display:flex;flex-direction:column;gap:5px">
+              <div style="display:flex;align-items:center;gap:9px;background:#fff;border:1px solid #e2ddd2;border-radius:6px;padding:6px 10px"><span style="font:600 9px ui-monospace,Menlo,monospace;color:#8b8478;width:50px">07/09</span><span style="font-size:9px;font-weight:600;padding:2px 7px;border-radius:5px;background:#e4e8d8;color:#5b6e4a">Écriture</span></div>
+              <div style="display:flex;align-items:center;gap:9px;background:#fff;border:1px solid #e2ddd2;border-radius:6px;padding:6px 10px"><span style="font:600 9px ui-monospace,Menlo,monospace;color:#8b8478;width:50px">14/09</span><span style="font-size:9px;font-weight:600;padding:2px 7px;border-radius:5px;background:#e4e8d8;color:#5b6e4a">Écriture</span></div>
+              <div style="display:flex;align-items:center;gap:9px;background:#fff;border:1px solid #e2ddd2;border-radius:6px;padding:6px 10px"><span style="font:600 9px ui-monospace,Menlo,monospace;color:#8b8478;width:50px">21/09</span><span style="font-size:9px;font-weight:600;padding:2px 7px;border-radius:5px;background:#dde3ec;color:#2c4a7c">Lecture</span></div>
+              <div style="display:flex;align-items:center;gap:9px;background:#fff;border:1px solid #e2ddd2;border-radius:6px;padding:6px 10px"><span style="font:600 9px ui-monospace,Menlo,monospace;color:#8b8478;width:50px">28/09</span><span style="font-size:9px;font-weight:600;padding:2px 7px;border-radius:5px;background:#e4e8d8;color:#5b6e4a">Écriture</span></div>
+              <div style="display:flex;align-items:center;gap:9px;background:#fff;border:1px solid #e2ddd2;border-radius:6px;padding:6px 10px"><span style="font:600 9px ui-monospace,Menlo,monospace;color:#8b8478;width:50px">05/10</span><span style="font-size:9px;font-weight:600;padding:2px 7px;border-radius:5px;background:#e4e8d8;color:#5b6e4a">Écriture</span></div>
+              <div style="display:flex;align-items:center;gap:9px;background:#fff;border:1px solid #e2ddd2;border-radius:6px;padding:6px 10px"><span style="font:600 9px ui-monospace,Menlo,monospace;color:#8b8478;width:50px">12/10</span><span style="font-size:9px;font-weight:600;padding:2px 7px;border-radius:5px;background:#dde3ec;color:#2c4a7c">Lecture</span></div>
+            </div>
+            <div style="text-align:center;font-size:9.5px;color:#a49c8e">⌄ … jusqu'au 08/06</div>
+          </div>
+        </div>
+      </div>
+      <p class="dv-note">→ un seul écran fait tout : je nomme (h-g), je vois <span class="dv-ptr">ce que ça génère</span> (droite), j'assigne aux classes (b-g) · la cadence occupe toute la hauteur droite → plus d'espace vide</p>
+    </div>
+
+    <!-- 4d -->
+    <div class="dv-opt" id="4d" data-screen-label="4d Plan classe 4b + avancement">
+      <div class="dv-olabel"><a class="dv-oid" href="#4d">4d</a>Affine <a class="dv-oid" href="#4b">4b</a> — calendrier + semaine en détail, avec le bandeau « avancement » de <a class="dv-oid" href="#4a">4a</a> en haut à droite</div>
+      <div class="dv-card" style="width:1000px">
+        <div style="display:flex;align-items:center;gap:8px;padding:8px 16px;background:#f4f2ec;border-bottom:1px solid #ddd8cc;font-size:10.5px;color:#8b8478"><span>Scriptorium</span><span>›</span><span>Par classe</span><span>›</span><span style="color:#9a6a2e;font-weight:600">TG1 — Plan 26–27</span><span style="margin-left:auto;color:#b3aa9a">◀ Toutes les classes</span></div>
+        <div style="display:flex;min-height:450px">
+          <div style="width:340px;flex:none;border-right:1px solid #e2ddd2;background:#faf9f5;padding:12px;display:flex;flex-direction:column;gap:5px">
+            <div style="font:600 9.5px system-ui;letter-spacing:.08em;text-transform:uppercase;color:#a49c8e;padding:2px 4px 4px">Les semaines</div>
+            <div style="display:flex;align-items:center;gap:9px;border:1px solid #e2ddd2;border-radius:7px;background:#fff;padding:7px 10px"><span style="font:600 9px ui-monospace,Menlo,monospace;color:#8b8478;width:44px">07/09</span><span style="font-size:10.5px;color:#4a453c;flex:1">Écriture</span><span style="width:7px;height:7px;border-radius:50%;background:#c8a15a"></span></div>
+            <div style="display:flex;align-items:center;gap:9px;border:1.4px solid #9a6a2e;border-radius:7px;background:#fbf3e6;padding:7px 10px"><span style="font:600 9px ui-monospace,Menlo,monospace;color:#9a6a2e;width:44px">14/09</span><span style="font-size:10.5px;color:#2f2a23;font-weight:600;flex:1">Écriture · Quiz</span><span style="display:flex;gap:3px"><span style="width:7px;height:7px;border-radius:50%;background:#a23e2e"></span><span style="width:7px;height:7px;border-radius:50%;background:#5b6e4a"></span></span></div>
+            <div style="display:flex;align-items:center;gap:9px;border:1px solid #e2ddd2;border-radius:7px;background:#fff;padding:7px 10px"><span style="font:600 9px ui-monospace,Menlo,monospace;color:#8b8478;width:44px">21/09</span><span style="font-size:10.5px;color:#4a453c;flex:1">Lecture</span><span style="width:7px;height:7px;border-radius:50%;background:#c8a15a"></span></div>
+            <div style="display:flex;align-items:center;gap:9px;border:1px solid #e2ddd2;border-radius:7px;background:#fff;padding:7px 10px"><span style="font:600 9px ui-monospace,Menlo,monospace;color:#8b8478;width:44px">28/09</span><span style="font-size:10.5px;color:#4a453c;flex:1">Écriture</span><span style="width:7px;height:7px;border-radius:50%;background:#5b6e4a"></span></div>
+            <div style="text-align:center;font-size:9.5px;color:#a49c8e;padding:3px">⌄ … 08/06</div>
+          </div>
+          <div style="flex:1;display:flex;flex-direction:column;min-width:0">
+            <div style="display:flex;align-items:center;gap:14px;padding:11px 16px;background:#f7f4ee;border-bottom:1px solid #e2ddd2"><span style="font-size:9px;color:#a49c8e;text-transform:uppercase;letter-spacing:.08em;font-weight:600">Avancement</span><span style="font-size:16px;font-weight:700;color:#2f2a23">18 <span style="font-size:9.5px;font-weight:400;color:#8b8478">exos</span></span><div style="flex:1;max-width:150px;display:flex;height:7px;border-radius:99px;overflow:hidden"><span style="width:28%;background:#5b6e4a"></span><span style="width:61%;background:#c8a15a"></span><span style="width:11%;background:#a23e2e"></span></div><span style="font-size:9px;color:#4a453c">5 conçus · 11 à concevoir · <span style="color:#a23e2e">2 retard</span></span></div>
+            <div style="padding:14px 17px;display:flex;flex-direction:column;gap:11px">
+              <div style="display:flex;align-items:baseline;gap:8px"><span style="font-size:14px;font-weight:700;color:#2f2a23">Semaine du 14/09</span><span style="font-size:10px;color:#a49c8e">Sem. 2</span><span style="margin-left:auto;font-size:8.5px;padding:2px 9px;border-radius:99px;background:#efd9d2;color:#a23e2e">budget dépassé</span></div>
+              <div style="border-left:2px solid #4a3a28;background:#f7f2ea;border-radius:0 7px 7px 0;padding:8px 12px"><div style="font-size:9px;color:#8a6f4e;text-transform:uppercase;letter-spacing:.07em;margin-bottom:3px">Enseigné cette semaine · via le parcours</div><div style="font-size:10.5px;color:#5a4632">Cours « l'absurde » · Lecture Camus</div></div>
+              <div><div style="font:600 9px system-ui;letter-spacing:.08em;text-transform:uppercase;color:#a49c8e;margin-bottom:6px">Exercices à évaluer</div>
+                <div style="display:flex;flex-direction:column;gap:7px">
+                  <div style="border:1px solid #e2ddd2;border-radius:8px;background:#fff;padding:9px 11px;display:flex;align-items:center;gap:9px"><span style="font-size:11px;font-weight:600;color:#3f3a32">Écriture</span><span style="font-size:9.5px;color:#a49c8e">maison · 19/09</span><span style="margin-left:auto;font-size:8.5px;padding:2px 8px;border-radius:99px;background:#efd9d2;color:#a23e2e">en retard</span><span style="font-size:9.5px;color:#8b8478">Déplacer ▾</span></div>
+                  <div style="border:1px solid #e2ddd2;border-radius:8px;background:#fff;padding:9px 11px;display:flex;align-items:center;gap:9px"><span style="font-size:11px;font-weight:600;color:#3f3a32">Quiz</span><span style="font-size:9px;padding:2px 8px;border:1px solid #d9cfba;border-radius:6px;color:#6b6459">jour à caler ▾</span><span style="margin-left:auto;font-size:8.5px;padding:2px 8px;border-radius:99px;background:#e4e8d8;color:#5b6e4a">conçu ✓</span></div>
+                </div>
+                <span style="display:inline-block;margin-top:8px;font-size:10.5px;color:#9a6a2e;font-weight:600">＋ Ajouter un exercice</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <p class="dv-note">→ la vue <a class="dv-oid" href="#4b">4b</a> (année à gauche, semaine en détail à droite) coiffée du <span class="dv-ptr">bandeau d'avancement</span> : le bilan du plan reste sous les yeux pendant qu'on traite chaque semaine</p>
+    </div>
+
+  </div>
+  <p class="dv-next">Pistes suivantes : « <a class="dv-oid" href="#1d">1d</a> ou <a class="dv-oid" href="#1e">1e</a> pour l'accueil ? » · « valide l'ensemble, on passe au rendu charte » · « montre l'alerte “cette classe a déjà un plan” dans <a class="dv-oid" href="#3d">3d</a> »</p>
+</section>
+
+<section class="dv-turn" id="ecran1">
+  <div class="dv-thd"><a class="dv-tid" href="#ecran1">1</a><span class="dv-tname">Écran d'accueil de l'onglet « Parcours » — 3 pistes</span><span class="dv-cap">les 5 possibilités lisibles d'un coup d'œil · fil couleur : ◆ Parcours = noyer · ◆ Plans d'évaluation = ocre</span></div>
+  <div class="dv-opts">
+
+    <!-- réf actuel -->
+    <div class="dv-opt" data-screen-label="Ref accueil actuel">
+      <div class="dv-olabel"><span style="font:600 10.5px ui-monospace,Menlo,monospace;padding:3px 7px;background:#fff;border:1px dashed rgba(0,0,0,.3);color:#666;border-radius:5px">réf.</span>aujourd'hui — tout empilé</div>
+      <div class="dv-card" style="width:250px;background:#f8f7f3">
+        <div style="padding:11px;display:flex;flex-direction:column;gap:8px">
+          <div style="display:flex;align-items:center;justify-content:space-between;border:1px solid #d5cfc2;border-radius:8px;background:#fff;padding:7px 9px"><span style="font-size:10px;color:#4a453c">📋 Plan d'évaluation</span><span style="font-size:9px;color:#8b8478">Modèles · Par classe</span></div>
+          <div style="border:1px dashed #b9b1a2;border-radius:7px;padding:8px 10px;font-size:10px;color:#8b8478">＋ Nouveau parcours</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px">
+            <div style="height:34px;border:1px solid #d5cfc2;border-radius:6px;background:#fff"></div>
+            <div style="height:34px;border:1px solid #d5cfc2;border-radius:6px;background:#fff"></div>
+            <div style="height:34px;border:1px solid #d5cfc2;border-radius:6px;background:#fff"></div>
+            <div style="height:34px;border:1px solid #d5cfc2;border-radius:6px;background:#fff"></div>
+          </div>
+          <div style="font:500 13px 'Caveat',cursive;color:#b0483c;line-height:1.35">une barre, un bouton, une grille — parcours et plans mélangés, on cherche</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 1a -->
+    <div class="dv-opt" id="1a" data-screen-label="1a Accueil actions + registres">
+      <div class="dv-olabel"><a class="dv-oid" href="#1a">1a</a>« Actions en tête, deux registres » — créer d'abord, puis parcourir</div>
+      <div class="dv-card" style="width:960px">
+        <div class="wf-tab"><span class="wf-brand">SCRIPTORIUM</span><span class="wf-t">Classes</span><span class="wf-t on">Parcours</span><span class="wf-t">Ressources</span><span class="wf-t">Paramètres</span></div>
+        <div style="padding:18px 20px 20px;display:flex;flex-direction:column;gap:18px">
+          <div><div class="wf-h1">Parcours &amp; plans d'évaluation</div><div class="wf-sub">Orchestrer l'année d'une classe : ce qu'on enseigne (parcours) et ce qu'on évalue (plan).</div></div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+            <div class="wf-btn wf-parc">＋ Nouveau parcours<small>textes · cours · livres, semaine par semaine</small></div>
+            <div class="wf-btn wf-eval">＋ Nouveau plan d'évaluation<small>gabarit d'exercices sur l'année scolaire</small></div>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:9px">
+            <div style="display:flex;align-items:baseline;gap:8px"><span class="wf-eyebrow" style="color:#4a3a28">◆ Parcours</span><span style="font-size:10px;color:#a49c8e">3 existants</span></div>
+            <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px">
+              <div class="wf-tile wf-lp"><b>HLP — Terminale</b><span>12 semaines · 2 classes</span></div>
+              <div class="wf-tile wf-lp"><b>Tronc commun 2de</b><span>10 semaines · 1 classe</span></div>
+              <div class="wf-tile"><b>Spé HLP — 1re</b><span>8 semaines · non assigné</span></div>
+            </div>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:9px">
+            <div style="display:flex;align-items:center;gap:12px"><span class="wf-eyebrow" style="color:#9a6a2e">◆ Plans d'évaluation</span><span class="wf-seg"><span class="on" style="background:#9a6a2e">Par classe</span><span>Modèles</span></span></div>
+            <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px">
+              <div class="wf-tile wf-le"><b>TG1</b><span>Plan 26–27 · TC · <span style="color:#3a7d44">validé</span></span></div>
+              <div class="wf-tile wf-le"><b>TG3</b><span>Plan 26–27 · TC · <span style="color:#a06718">brouillon</span></span></div>
+              <div class="wf-tile"><b>2de 4</b><span style="color:#a49c8e">aucun plan — assigner un modèle</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <p class="dv-note">→ deux verbes en tête (créer), deux registres en dessous (parcourir) · le segment <span class="dv-ptr">Par classe / Modèles</span> loge la 5ᵉ entrée sans encombrer · fil couleur = on sait tout de suite si on est côté enseignement ou évaluation</p>
+    </div>
+
+    <!-- 1b -->
+    <div class="dv-opt" id="1b" data-screen-label="1b Accueil deux mondes">
+      <div class="dv-olabel"><a class="dv-oid" href="#1b">1b</a>« Deux mondes côte à côte » — chaque famille dans sa colonne</div>
+      <div class="dv-card" style="width:960px">
+        <div class="wf-tab"><span class="wf-brand">SCRIPTORIUM</span><span class="wf-t">Classes</span><span class="wf-t on">Parcours</span><span class="wf-t">Ressources</span><span class="wf-t">Paramètres</span></div>
+        <div style="padding:18px 20px 20px;display:flex;flex-direction:column;gap:16px">
+          <div><div class="wf-h1">Parcours &amp; plans d'évaluation</div><div class="wf-sub">Deux ateliers : à gauche ce qu'on enseigne, à droite ce qu'on évalue.</div></div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+            <div style="border:1px solid #e2ddd2;border-radius:9px;overflow:hidden">
+              <div style="padding:10px 13px;background:#efe7db;border-bottom:1px solid #e2ddd2;border-top:3px solid #4a3a28"><div style="font-size:12.5px;font-weight:700;color:#4a3a28">◆ Parcours</div><div style="font-size:10px;color:#8b8478">Orchestrer les contenus par semaine</div></div>
+              <div style="padding:12px 13px;display:flex;flex-direction:column;gap:9px">
+                <div class="wf-btn wf-parc" style="align-items:flex-start">＋ Nouveau parcours</div>
+                <div class="wf-tile wf-lp" style="border:1px solid #e2ddd2;border-left:3px solid #4a3a28"><b>HLP — Terminale</b><span>12 semaines · 2 classes</span></div>
+                <div class="wf-tile wf-lp" style="border:1px solid #e2ddd2;border-left:3px solid #4a3a28"><b>Tronc commun 2de</b><span>10 semaines · 1 classe</span></div>
+                <div class="wf-tile" style="border:1px solid #e2ddd2"><b>Spé HLP — 1re</b><span>8 semaines · non assigné</span></div>
+              </div>
+            </div>
+            <div style="border:1px solid #e2ddd2;border-radius:9px;overflow:hidden">
+              <div style="padding:10px 13px;background:#f0e6d5;border-bottom:1px solid #e2ddd2;border-top:3px solid #9a6a2e"><div style="font-size:12.5px;font-weight:700;color:#9a6a2e">◆ Plans d'évaluation</div><div style="font-size:10px;color:#8b8478">Gabarits d'exercices sur l'année</div></div>
+              <div style="padding:12px 13px;display:flex;flex-direction:column;gap:9px">
+                <div style="display:flex;align-items:center;justify-content:space-between"><div class="wf-btn wf-eval" style="align-items:flex-start;flex:1">＋ Nouveau plan</div></div>
+                <span class="wf-seg" style="align-self:flex-start"><span class="on" style="background:#9a6a2e">Par classe</span><span>Modèles</span></span>
+                <div class="wf-tile wf-le" style="border:1px solid #e2ddd2;border-left:3px solid #9a6a2e"><b>TG1</b><span>26–27 · TC · <span style="color:#3a7d44">validé</span></span></div>
+                <div class="wf-tile wf-le" style="border:1px solid #e2ddd2;border-left:3px solid #9a6a2e"><b>TG3</b><span>26–27 · TC · <span style="color:#a06718">brouillon</span></span></div>
+                <div class="wf-tile" style="border:1px solid #e2ddd2"><b>2de 4</b><span style="color:#a49c8e">aucun plan</span></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <p class="dv-note">→ séparation nette : jamais de doute sur « où je suis » · chaque colonne a son bouton créer en tête · vigilance : deux listes verticales = un peu de scroll si beaucoup d'items</p>
+    </div>
+
+    <!-- 1c -->
+    <div class="dv-opt" id="1c" data-screen-label="1c Accueil registre unifie">
+      <div class="dv-olabel"><a class="dv-oid" href="#1c">1c</a>« Registre unifié + filtres » — tout au même endroit, on filtre</div>
+      <div class="dv-card" style="width:960px">
+        <div class="wf-tab"><span class="wf-brand">SCRIPTORIUM</span><span class="wf-t">Classes</span><span class="wf-t on">Parcours</span><span class="wf-t">Ressources</span><span class="wf-t">Paramètres</span></div>
+        <div style="padding:18px 20px 20px;display:flex;flex-direction:column;gap:15px">
+          <div style="display:flex;align-items:flex-end;justify-content:space-between;gap:12px;flex-wrap:wrap">
+            <div><div class="wf-h1">Parcours &amp; plans d'évaluation</div><div class="wf-sub">Tout le pilotage de l'année dans un seul registre.</div></div>
+            <div style="display:flex;gap:8px"><span class="wf-btn wf-parc" style="flex-direction:row;align-items:center;padding:8px 12px">＋ Parcours</span><span class="wf-btn wf-eval" style="flex-direction:row;align-items:center;padding:8px 12px">＋ Plan</span></div>
+          </div>
+          <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+            <span class="wf-seg"><span class="on">Tout</span><span>Parcours</span><span>Plans</span><span>Modèles</span></span>
+            <div style="flex:1;min-width:120px;border:1px solid #d9cfba;border-radius:7px;padding:5px 10px;font-size:10.5px;color:#a49c8e;background:#faf9f5">Rechercher…</div>
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px">
+            <div class="wf-tile wf-lp"><div style="display:flex;justify-content:space-between;align-items:center"><b>HLP — Terminale</b><span class="wf-chip" style="border-color:#4a3a28;color:#4a3a28">Parcours</span></div><span>12 sem · 2 classes</span></div>
+            <div class="wf-tile wf-le"><div style="display:flex;justify-content:space-between;align-items:center"><b>TG1 — Plan 26–27</b><span class="wf-chip" style="border-color:#9a6a2e;color:#9a6a2e">Plan</span></div><span><span style="color:#3a7d44">validé</span> · TC</span></div>
+            <div class="wf-tile wf-le"><div style="display:flex;justify-content:space-between;align-items:center"><b>Terminale TC 2026</b><span class="wf-chip" style="border-color:#9a6a2e;color:#9a6a2e">Modèle</span></div><span><span style="color:#3a7d44">prêt</span> · 18 exos</span></div>
+            <div class="wf-tile wf-lp"><div style="display:flex;justify-content:space-between;align-items:center"><b>Tronc commun 2de</b><span class="wf-chip" style="border-color:#4a3a28;color:#4a3a28">Parcours</span></div><span>10 sem · 1 classe</span></div>
+            <div class="wf-tile wf-le"><div style="display:flex;justify-content:space-between;align-items:center"><b>TG3 — Plan 26–27</b><span class="wf-chip" style="border-color:#9a6a2e;color:#9a6a2e">Plan</span></div><span><span style="color:#a06718">brouillon</span> · TC</span></div>
+            <div class="wf-tile"><div style="display:flex;justify-content:space-between;align-items:center"><b>Spé HLP — 1re</b><span class="wf-chip" style="border-color:#4a3a28;color:#4a3a28">Parcours</span></div><span>non assigné</span></div>
+          </div>
+        </div>
+      </div>
+      <p class="dv-note">→ une seule surface, filtres pour trier · compact, tout visible sans changer d'écran · vigilance : parcours et plans partagent la même grille — les badges de type font tout le travail de lecture</p>
+    </div>
+
+  </div>
+  <p class="dv-next">Pistes suivantes : « je préfère <a class="dv-oid" href="#1a">1a</a>, passe-le en charte » · « dans <a class="dv-oid" href="#1b">1b</a>, montre l'onglet Modèles ouvert » · « et si l'accueil montrait aussi l'état d'avancement de chaque classe ? »</p>
+</section>
+
+<section class="dv-turn" id="ecran2">
+  <div class="dv-thd"><a class="dv-tid" href="#ecran2">2</a><span class="dv-tname">Créer, organiser &amp; assigner un parcours — 3 pistes</span><span class="dv-cap">liste de semaines aérée (ta piste 3) · reste à trancher : où vit l'assignation à une classe</span></div>
+  <div class="dv-opts">
+
+    <!-- réf actuel -->
+    <div class="dv-opt" data-screen-label="Ref builder actuel">
+      <div class="dv-olabel"><span style="font:600 10.5px ui-monospace,Menlo,monospace;padding:3px 7px;background:#fff;border:1px dashed rgba(0,0,0,.3);color:#666;border-radius:5px">réf.</span>aujourd'hui — semaines + assignation empilées</div>
+      <div class="dv-card" style="width:250px;background:#f8f7f3">
+        <div style="padding:11px;display:flex;flex-direction:column;gap:6px">
+          <div style="border:1px solid #d5cfc2;border-radius:6px;background:#fff;padding:5px 7px"><div style="font-size:8.5px;color:#a49c8e;text-transform:uppercase;letter-spacing:.08em">Semaine 1</div><div style="height:11px;border:1px solid #e2ddd2;border-radius:3px;margin-top:4px"></div><div style="height:11px;border:1px solid #e2ddd2;border-radius:3px;margin-top:3px"></div></div>
+          <div style="border:1px solid #d5cfc2;border-radius:6px;background:#fff;padding:5px 7px"><div style="font-size:8.5px;color:#a49c8e;text-transform:uppercase;letter-spacing:.08em">Semaine 2</div><div style="height:11px;border:1px solid #e2ddd2;border-radius:3px;margin-top:4px"></div></div>
+          <div style="font:8.5px system-ui;color:#a49c8e;text-align:center">⋯ 12 semaines</div>
+          <div style="border-top:1px solid #e2ddd2;margin-top:2px;padding-top:6px"><div style="font-size:8.5px;color:#a49c8e">Assignation par classe</div><div style="height:26px;border:1px solid #e2ddd2;border-radius:5px;margin-top:4px"></div><div style="height:26px;border:1px solid #e2ddd2;border-radius:5px;margin-top:4px"></div></div>
+          <div style="font:500 13px 'Caveat',cursive;color:#b0483c;line-height:1.35">tout en une colonne, contrôles minuscules (▲▼, selects) — dur à lire</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 2a -->
+    <div class="dv-opt" id="2a" data-screen-label="2a Builder + panneau assignation">
+      <div class="dv-olabel"><a class="dv-oid" href="#2a">2a</a>« Liste aérée + panneau d'assignation à droite » — structure &amp; classes côte à côte</div>
+      <div class="dv-card" style="width:1000px">
+        <div style="display:flex;align-items:center;gap:8px;padding:8px 16px;background:#f4f2ec;border-bottom:1px solid #ddd8cc;font-size:10.5px;color:#8b8478"><span>Scriptorium</span><span>›</span><span>Parcours</span><span>›</span><span style="color:#4a3a28;font-weight:600">HLP — Terminale</span><span style="margin-left:auto;color:#b3aa9a">◀ Tous les parcours</span></div>
+        <div style="display:flex;align-items:center;gap:12px;padding:13px 18px;border-bottom:1px solid #e2ddd2">
+          <div><div style="font-size:16px;font-weight:700;color:#2f2a23">HLP — Terminale</div><div style="font-size:10.5px;color:#8b8478">12 semaines · « Le tragique &amp; le bonheur »</div></div>
+          <div style="margin-left:auto;display:flex;gap:6px"><span style="font-size:10.5px;padding:5px 11px;border:1.2px solid #8f887b;border-radius:7px;color:#3f3a32;background:#fff">Modifier</span><span style="font-size:10.5px;padding:5px 9px;border:1px solid #d5cfc2;border-radius:7px;color:#a49c8e">🗑</span></div>
+        </div>
+        <div style="display:flex;min-height:470px">
+          <div style="flex:1;padding:14px 16px;display:flex;flex-direction:column;gap:11px;min-width:0;border-right:1px solid #e2ddd2">
+            <div style="border:1px solid #e2ddd2;border-radius:9px;overflow:hidden;background:#fdfcf9">
+              <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 12px;background:#f6f2ea;border-bottom:1px solid #e9e3d6"><span style="font:600 10px system-ui;letter-spacing:.08em;text-transform:uppercase;color:#7a6a4f">Semaine 1</span><span style="font-size:10.5px;color:#4a3a28;font-weight:600">＋ Ajouter</span></div>
+              <div style="padding:9px 10px;display:flex;flex-direction:column;gap:7px">
+                <div style="display:flex;align-items:center;gap:8px;border:1px solid #e2ddd2;border-radius:7px;background:#fff;padding:8px 10px"><span style="color:#c3bcae;font-size:12px">⠿</span><span style="font-size:9px;font-weight:600;padding:2px 7px;border-radius:5px;background:#e4e8d8;color:#5b6e4a">Texte</span><span style="font-size:11.5px;color:#3f3a32">Camus — « Le Mythe de Sisyphe » (extrait)</span><span style="margin-left:auto;font-size:9.5px;color:#a49c8e">S1 ▾ · Retirer</span></div>
+                <div style="display:flex;align-items:center;gap:8px;border:1px solid #e2ddd2;border-radius:7px;background:#fff;padding:8px 10px"><span style="color:#c3bcae;font-size:12px">⠿</span><span style="font-size:9px;font-weight:600;padding:2px 7px;border-radius:5px;background:#ece2cf;color:#8a6a3e">Cours</span><span style="font-size:11.5px;color:#3f3a32">Introduction — l'absurde</span><span style="margin-left:auto;font-size:9.5px;color:#a49c8e">S1 ▾ · Retirer</span></div>
+              </div>
+            </div>
+            <div style="border:1px solid #cdb98f;border-radius:9px;overflow:hidden;background:#fdfcf9;box-shadow:0 0 0 3px #f0e6d3">
+              <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 12px;background:#f6f2ea;border-bottom:1px solid #e9e3d6"><span style="font:600 10px system-ui;letter-spacing:.08em;text-transform:uppercase;color:#7a6a4f">Semaine 2</span><span style="font-size:10.5px;color:#9a6a2e;font-weight:600">Fermer ✕</span></div>
+              <div style="padding:9px 10px;display:flex;flex-direction:column;gap:7px">
+                <div style="display:flex;align-items:center;gap:8px;border:1px solid #e2ddd2;border-radius:7px;background:#fff;padding:8px 10px"><span style="color:#c3bcae;font-size:12px">⠿</span><span style="font-size:9px;font-weight:600;padding:2px 7px;border-radius:5px;background:#dde3ec;color:#2c4a7c">Livre</span><span style="font-size:11.5px;color:#3f3a32">Le Gai Savoir <span style="color:#a49c8e">· S3–S5 (tranche)</span></span><span style="margin-left:auto;font-size:9.5px;color:#a49c8e">S2 ▾ · Retirer</span></div>
+                <div style="border:1px solid #cdb98f;border-radius:8px;background:#fff;padding:10px;display:flex;flex-direction:column;gap:8px">
+                  <div style="display:flex;gap:6px"><span style="font-size:10px;padding:3px 10px;border-radius:6px;background:#4a3a28;color:#f7f3ea">Textes</span><span style="font-size:10px;padding:3px 10px;border-radius:6px;color:#8b8478">Cours</span><span style="font-size:10px;padding:3px 10px;border-radius:6px;color:#8b8478">Livres</span></div>
+                  <div style="border:1px solid #d9cfba;border-radius:6px;padding:5px 10px;font-size:10.5px;color:#a49c8e;background:#faf9f5">Rechercher un texte…</div>
+                  <div style="display:flex;flex-direction:column;gap:4px">
+                    <div style="border:1px solid #e2ddd2;border-radius:6px;padding:6px 9px;font-size:11px;color:#3f3a32">Pascal — « Pensées » <span style="color:#a49c8e">· fragments</span></div>
+                    <div style="border:1px solid #e2ddd2;border-radius:6px;padding:6px 9px;font-size:11px;color:#3f3a32">Épictète — « Manuel »</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div style="border:1px solid #e2ddd2;border-radius:9px;overflow:hidden;background:#fdfcf9">
+              <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 12px;background:#f6f2ea;border-bottom:1px solid #e9e3d6"><span style="font:600 10px system-ui;letter-spacing:.08em;text-transform:uppercase;color:#7a6a4f">Semaine 3</span><span style="font-size:10.5px;color:#4a3a28;font-weight:600">＋ Ajouter</span></div>
+              <div style="padding:12px 10px;font-size:10.5px;color:#b3aa9a;text-align:center">Aucun contenu — glisse un texte, un cours ou un livre ici</div>
+            </div>
+            <div style="text-align:center;font-size:10px;color:#a49c8e;padding:2px">⌄ Semaines 4 → 12</div>
+          </div>
+          <div style="width:296px;flex:none;background:#faf9f5;padding:14px;display:flex;flex-direction:column;gap:10px">
+            <div style="font:600 10px system-ui;letter-spacing:.08em;text-transform:uppercase;color:#7a6a4f">Assigner à une classe</div>
+            <div style="border:1px solid #cbb48c;border-radius:8px;background:#fff;padding:11px;display:flex;flex-direction:column;gap:8px">
+              <div style="display:flex;align-items:center;justify-content:space-between"><span style="font-size:12px;font-weight:600;color:#2f2a23">TG1</span><span style="font-size:9px;color:#3a7d44">assigné</span></div>
+              <div><div style="font-size:9.5px;color:#8b8478;margin-bottom:3px">Début pour cette classe</div><div style="border:1px solid #d9cfba;border-radius:6px;padding:5px 9px;font-size:10.5px;color:#3f3a32;background:#fff">📅 08 / 09 / 2026</div></div>
+              <div style="border:1px solid #e9e3d6;border-radius:6px;overflow:hidden">
+                <div style="display:flex;justify-content:space-between;padding:4px 8px;font-size:9.5px;color:#4a453c;border-bottom:1px solid #efece4"><span>Sem. 1</span><span style="color:#6b6459">08/09 · S1</span></div>
+                <div style="display:flex;justify-content:space-between;padding:4px 8px;font-size:9.5px;color:#4a453c;border-bottom:1px solid #efece4"><span>Sem. 2</span><span style="color:#6b6459">15/09 · S2</span></div>
+                <div style="display:flex;justify-content:space-between;padding:4px 8px;font-size:9.5px;color:#4a453c"><span>Sem. 3</span><span style="color:#6b6459">22/09 · S3</span></div>
+              </div>
+              <div style="display:flex;align-items:center;justify-content:space-between"><span style="font-size:9px;color:#3a7d44">✓ Horaire publié (v2)</span><span style="font-size:9.5px;color:#8b8478">Re-publier</span></div>
+            </div>
+            <div style="border:1px solid #e2ddd2;border-radius:8px;background:#fff;padding:10px 11px;display:flex;align-items:center;justify-content:space-between"><span style="font-size:12px;font-weight:600;color:#2f2a23">TG3</span><span style="font-size:9.5px;padding:3px 9px;border:1.2px solid #8f887b;border-radius:6px;color:#3f3a32">Assigner</span></div>
+            <div style="border:1px solid #e2ddd2;border-radius:8px;background:#fff;padding:10px 11px;display:flex;align-items:center;justify-content:space-between"><span style="font-size:12px;font-weight:600;color:#2f2a23">2de 4</span><span style="font-size:9.5px;padding:3px 9px;border:1.2px solid #8f887b;border-radius:6px;color:#3f3a32">Assigner</span></div>
+          </div>
+        </div>
+      </div>
+      <p class="dv-note">→ on construit à gauche, on assigne à droite sans quitter l'écran · l'aperçu des échéances (S→date réelle) est <span class="dv-ptr">visible tout de suite</span> quand on pose une date · le « + Ajouter » ouvre le picker dans la semaine même</p>
+    </div>
+
+    <!-- 2b -->
+    <div class="dv-opt" id="2b" data-screen-label="2b Builder puis etape assignation">
+      <div class="dv-olabel"><a class="dv-oid" href="#2b">2b</a>« Construire, puis assigner (2 étapes) » — pleine largeur, linéaire</div>
+      <div class="dv-card" style="width:760px">
+        <div style="display:flex;align-items:center;gap:8px;padding:8px 16px;background:#f4f2ec;border-bottom:1px solid #ddd8cc;font-size:10.5px;color:#8b8478"><span>Scriptorium</span><span>›</span><span>Parcours</span><span>›</span><span style="color:#4a3a28;font-weight:600">HLP — Terminale</span><span style="margin-left:auto;color:#b3aa9a">◀ Tous les parcours</span></div>
+        <div style="padding:14px 18px;display:flex;flex-direction:column;gap:13px">
+          <div style="display:flex;align-items:center;gap:8px"><span style="width:20px;height:20px;border-radius:50%;background:#4a3a28;color:#f7f3ea;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center">1</span><span style="font-size:13px;font-weight:700;color:#2f2a23">Composer les semaines</span></div>
+          <div style="display:flex;flex-direction:column;gap:9px">
+            <div style="border:1px solid #e2ddd2;border-radius:9px;overflow:hidden;background:#fdfcf9">
+              <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 12px;background:#f6f2ea;border-bottom:1px solid #e9e3d6"><span style="font:600 10px system-ui;letter-spacing:.08em;text-transform:uppercase;color:#7a6a4f">Semaine 1</span><span style="font-size:10.5px;color:#4a3a28;font-weight:600">＋ Ajouter</span></div>
+              <div style="padding:9px 10px;display:flex;flex-direction:column;gap:7px">
+                <div style="display:flex;align-items:center;gap:8px;border:1px solid #e2ddd2;border-radius:7px;background:#fff;padding:8px 10px"><span style="color:#c3bcae;font-size:12px">⠿</span><span style="font-size:9px;font-weight:600;padding:2px 7px;border-radius:5px;background:#e4e8d8;color:#5b6e4a">Texte</span><span style="font-size:11.5px;color:#3f3a32">Camus — « Le Mythe de Sisyphe »</span><span style="margin-left:auto;font-size:9.5px;color:#a49c8e">Retirer</span></div>
+                <div style="display:flex;align-items:center;gap:8px;border:1px solid #e2ddd2;border-radius:7px;background:#fff;padding:8px 10px"><span style="color:#c3bcae;font-size:12px">⠿</span><span style="font-size:9px;font-weight:600;padding:2px 7px;border-radius:5px;background:#ece2cf;color:#8a6a3e">Cours</span><span style="font-size:11.5px;color:#3f3a32">Introduction — l'absurde</span><span style="margin-left:auto;font-size:9.5px;color:#a49c8e">Retirer</span></div>
+              </div>
+            </div>
+            <div style="border:1px solid #e2ddd2;border-radius:9px;overflow:hidden;background:#fdfcf9">
+              <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 12px;background:#f6f2ea;border-bottom:1px solid #e9e3d6"><span style="font:600 10px system-ui;letter-spacing:.08em;text-transform:uppercase;color:#7a6a4f">Semaine 2</span><span style="font-size:10.5px;color:#4a3a28;font-weight:600">＋ Ajouter</span></div>
+              <div style="padding:9px 10px"><div style="display:flex;align-items:center;gap:8px;border:1px solid #e2ddd2;border-radius:7px;background:#fff;padding:8px 10px"><span style="color:#c3bcae;font-size:12px">⠿</span><span style="font-size:9px;font-weight:600;padding:2px 7px;border-radius:5px;background:#dde3ec;color:#2c4a7c">Livre</span><span style="font-size:11.5px;color:#3f3a32">Le Gai Savoir <span style="color:#a49c8e">· S3–S5</span></span><span style="margin-left:auto;font-size:9.5px;color:#a49c8e">Retirer</span></div></div>
+            </div>
+            <div style="text-align:center;font-size:10px;color:#a49c8e">⌄ Semaines 3 → 12</div>
+          </div>
+          <div style="display:flex;align-items:center;gap:8px;border-top:1px dashed #d9cfba;padding-top:13px"><span style="width:20px;height:20px;border-radius:50%;background:#9a6a2e;color:#fdf6ea;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center">2</span><span style="font-size:13px;font-weight:700;color:#2f2a23">Assigner à des classes</span></div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+            <div style="border:1px solid #cbb48c;border-radius:8px;background:#fff;padding:11px;display:flex;flex-direction:column;gap:7px">
+              <div style="display:flex;align-items:center;justify-content:space-between"><span style="font-size:12px;font-weight:600;color:#2f2a23">TG1</span><span style="font-size:9px;color:#3a7d44">assigné · publié ✓</span></div>
+              <div style="border:1px solid #d9cfba;border-radius:6px;padding:5px 9px;font-size:10.5px;color:#3f3a32">📅 début 08/09/2026</div>
+              <div style="font-size:9.5px;color:#6b6459">Sem. 1 → 08/09 · Sem. 12 → 01/12</div>
+            </div>
+            <div style="border:1px solid #e2ddd2;border-radius:8px;background:#fff;padding:11px;display:flex;flex-direction:column;gap:7px">
+              <div style="display:flex;align-items:center;justify-content:space-between"><span style="font-size:12px;font-weight:600;color:#2f2a23">TG3</span><span style="font-size:9.5px;padding:3px 9px;border:1.2px solid #8f887b;border-radius:6px;color:#3f3a32">Assigner</span></div>
+              <div style="font-size:9.5px;color:#a49c8e">pose une date pour voir les échéances</div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <p class="dv-note">→ deux étapes numérotées, on lit de haut en bas · l'assignation respire (2 colonnes de classes) · vigilance : sur un long parcours, l'étape 2 est loin sous le scroll</p>
+    </div>
+
+    <!-- 2c -->
+    <div class="dv-opt" id="2c" data-screen-label="2c Builder accordeon survol">
+      <div class="dv-olabel"><a class="dv-oid" href="#2c">2c</a>« Aperçu repliable » — tout le parcours scannable, on déplie pour éditer</div>
+      <div class="dv-card" style="width:1000px">
+        <div style="display:flex;align-items:center;gap:8px;padding:8px 16px;background:#f4f2ec;border-bottom:1px solid #ddd8cc;font-size:10.5px;color:#8b8478"><span>Scriptorium</span><span>›</span><span>Parcours</span><span>›</span><span style="color:#4a3a28;font-weight:600">HLP — Terminale</span><span style="margin-left:auto;color:#b3aa9a">◀ Tous les parcours</span></div>
+        <div style="display:flex;min-height:420px">
+          <div style="flex:1;padding:14px 16px;display:flex;flex-direction:column;gap:7px;min-width:0;border-right:1px solid #e2ddd2">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:2px"><div style="font-size:15px;font-weight:700;color:#2f2a23">HLP — Terminale <span style="font-size:10.5px;font-weight:400;color:#8b8478">· 12 semaines</span></div><span style="font-size:10px;color:#4a3a28">⊞ Tout déplier</span></div>
+            <div style="display:flex;align-items:center;gap:10px;border:1px solid #e2ddd2;border-radius:7px;background:#fff;padding:7px 11px"><span style="color:#8b8478">▸</span><span style="font:600 9px ui-monospace,Menlo,monospace;color:#8b8478;width:24px">S1</span><span style="font-size:11px;color:#4a453c;flex:1">Camus, extrait · Cours intro</span><span style="font-size:9px;color:#a49c8e">2 contenus</span></div>
+            <div style="border:1px solid #cbb48c;border-radius:8px;background:#fff;box-shadow:0 1px 4px rgba(40,32,20,.07)">
+              <div style="display:flex;align-items:center;gap:10px;padding:7px 11px;border-bottom:1px solid #efece4"><span style="color:#4a3a28">▾</span><span style="font:600 9px ui-monospace,Menlo,monospace;color:#8b8478;width:24px">S2</span><span style="font-size:11px;color:#2f2a23;font-weight:600;flex:1">Le Gai Savoir (tranche)</span><span style="font-size:10.5px;color:#4a3a28;font-weight:600">＋ Ajouter</span></div>
+              <div style="padding:8px 11px;display:flex;flex-direction:column;gap:6px">
+                <div style="display:flex;align-items:center;gap:8px;border:1px solid #e2ddd2;border-radius:6px;background:#fff;padding:7px 9px"><span style="color:#c3bcae">⠿</span><span style="font-size:9px;font-weight:600;padding:2px 7px;border-radius:5px;background:#dde3ec;color:#2c4a7c">Livre</span><span style="font-size:11px;color:#3f3a32">Le Gai Savoir · S3–S5</span><span style="margin-left:auto;font-size:9.5px;color:#a49c8e">Retirer</span></div>
+              </div>
+            </div>
+            <div style="display:flex;align-items:center;gap:10px;border:1px solid #e2ddd2;border-radius:7px;background:#fff;padding:7px 11px"><span style="color:#8b8478">▸</span><span style="font:600 9px ui-monospace,Menlo,monospace;color:#8b8478;width:24px">S3</span><span style="font-size:11px;color:#b3aa9a;flex:1">vide</span><span style="font-size:9px;color:#a49c8e">0 contenu</span></div>
+            <div style="display:flex;align-items:center;gap:10px;border:1px solid #e2ddd2;border-radius:7px;background:#fff;padding:7px 11px"><span style="color:#8b8478">▸</span><span style="font:600 9px ui-monospace,Menlo,monospace;color:#8b8478;width:24px">S4</span><span style="font-size:11px;color:#4a453c;flex:1">Pascal, Pensées</span><span style="font-size:9px;color:#a49c8e">1 contenu</span></div>
+            <div style="display:flex;align-items:center;gap:10px;border:1px solid #e2ddd2;border-radius:7px;background:#fff;padding:7px 11px"><span style="color:#8b8478">▸</span><span style="font:600 9px ui-monospace,Menlo,monospace;color:#8b8478;width:24px">S5</span><span style="font-size:11px;color:#4a453c;flex:1">Le Gai Savoir (suite)</span><span style="font-size:9px;color:#a49c8e">1 contenu</span></div>
+            <div style="text-align:center;font-size:10px;color:#a49c8e;padding:2px">⌄ S6 → S12 · 5 avec contenu, 2 vides</div>
+          </div>
+          <div style="width:296px;flex:none;background:#faf9f5;padding:14px;display:flex;flex-direction:column;gap:10px">
+            <div style="font:600 10px system-ui;letter-spacing:.08em;text-transform:uppercase;color:#7a6a4f">Assigner à une classe</div>
+            <div style="border:1px solid #cbb48c;border-radius:8px;background:#fff;padding:11px;display:flex;flex-direction:column;gap:8px">
+              <div style="display:flex;align-items:center;justify-content:space-between"><span style="font-size:12px;font-weight:600;color:#2f2a23">TG1</span><span style="font-size:9px;color:#3a7d44">assigné · publié ✓</span></div>
+              <div style="border:1px solid #d9cfba;border-radius:6px;padding:5px 9px;font-size:10.5px;color:#3f3a32">📅 début 08/09/2026</div>
+              <div style="font-size:9.5px;color:#6b6459">S1 → 08/09 · … · S12 → 01/12</div>
+            </div>
+            <div style="border:1px solid #e2ddd2;border-radius:8px;background:#fff;padding:10px 11px;display:flex;align-items:center;justify-content:space-between"><span style="font-size:12px;font-weight:600;color:#2f2a23">TG3</span><span style="font-size:9.5px;padding:3px 9px;border:1.2px solid #8f887b;border-radius:6px;color:#3f3a32">Assigner</span></div>
+            <div style="border:1px solid #e2ddd2;border-radius:8px;background:#fff;padding:10px 11px;display:flex;align-items:center;justify-content:space-between"><span style="font-size:12px;font-weight:600;color:#2f2a23">2de 4</span><span style="font-size:9.5px;padding:3px 9px;border:1.2px solid #8f887b;border-radius:6px;color:#3f3a32">Assigner</span></div>
+            <div style="font:500 12.5px 'Caveat',cursive;color:#8a6f4e;line-height:1.35;margin-top:2px">le panneau suit pendant qu'on parcourt les semaines</div>
+          </div>
+        </div>
+      </div>
+      <p class="dv-note">→ les 12 semaines tiennent à l'écran, chaque ligne dit son remplissage (2 contenus · vide) · on repère les trous <span class="dv-ptr">d'un coup d'œil</span> · une seule semaine ouverte à la fois pour éditer · assignation toujours à droite</p>
+    </div>
+
+  </div>
+  <p class="dv-next">Pistes suivantes : « garde <a class="dv-oid" href="#2c">2c</a> pour survoler + le picker de <a class="dv-oid" href="#2a">2a</a> » · « montre le glisser-déposer d'un contenu entre semaines » · « et l'état d'un parcours sans aucune classe assignée ? »</p>
+</section>
+<section class="dv-turn" id="ecran3">
+  <div class="dv-thd"><a class="dv-tid" href="#ecran3">3</a><span class="dv-tname">Créer un nouveau plan d'évaluation — 3 pistes</span><span class="dv-cap">un plan naît d'un modèle (gabarit d'année) qu'on assigne · l'enjeu : remplir la moitié droite vide</span></div>
+  <div class="dv-opts">
+
+    <!-- réf actuel -->
+    <div class="dv-opt" data-screen-label="Ref creation plan actuel">
+      <div class="dv-olabel"><span style="font:600 10.5px ui-monospace,Menlo,monospace;padding:3px 7px;background:#fff;border:1px dashed rgba(0,0,0,.3);color:#666;border-radius:5px">réf.</span>aujourd'hui — formulaire étroit, moitié droite vide</div>
+      <div class="dv-card" style="width:270px;background:#f8f7f3">
+        <div style="padding:11px;display:flex;gap:9px">
+          <div style="width:120px;display:flex;flex-direction:column;gap:6px"><div style="height:9px;background:#e4dfd4;border-radius:3px;width:70%"></div><div style="height:20px;border:1px solid #d5cfc2;border-radius:5px;background:#fff"></div><div style="height:15px;border:1px solid #d5cfc2;border-radius:5px;background:#fff"></div><div style="height:15px;border:1px solid #d5cfc2;border-radius:5px;background:#fff"></div><div style="height:15px;border:1px solid #d5cfc2;border-radius:5px;background:#fff"></div><div style="height:16px;background:#9a6a2e;border-radius:5px;width:80%"></div></div>
+          <div style="flex:1;border:1px dashed #d5cfc2;border-radius:6px;background:repeating-linear-gradient(135deg,#f3efe7,#f3efe7 5px,#faf8f3 5px,#faf8f3 10px);display:flex;align-items:center;justify-content:center"><span style="font:500 12px 'Caveat',cursive;color:#b0483c;text-align:center;line-height:1.3;padding:6px">vide</span></div>
+        </div>
+        <div style="padding:0 11px 11px;font:500 13px 'Caveat',cursive;color:#b0483c;line-height:1.35">le formulaire occupe un tiers, le reste est perdu</div>
+      </div>
+    </div>
+
+    <!-- 3a -->
+    <div class="dv-opt" id="3a" data-screen-label="3a Plan form + apercu cadence">
+      <div class="dv-olabel"><a class="dv-oid" href="#3a">3a</a>« Formulaire + aperçu vivant de la cadence » — on voit ce que ça va générer</div>
+      <div class="dv-card" style="width:880px">
+        <div style="display:flex;align-items:center;gap:8px;padding:8px 16px;background:#f4f2ec;border-bottom:1px solid #ddd8cc;font-size:10.5px;color:#8b8478"><span>Scriptorium</span><span>›</span><span>Plans d'évaluation</span><span>›</span><span style="color:#9a6a2e;font-weight:600">Nouveau modèle</span></div>
+        <div style="display:flex;min-height:400px">
+          <div style="width:400px;flex:none;padding:16px 18px;display:flex;flex-direction:column;gap:14px;border-right:1px solid #e2ddd2">
+            <div><div style="font-size:15px;font-weight:700;color:#2f2a23">Nouveau plan d'évaluation</div><div style="font-size:10.5px;color:#8b8478;margin-top:2px">Un modèle d'année, conçu une fois, assigné ensuite aux classes.</div></div>
+            <div><div style="font-size:10px;color:#8b8478;margin-bottom:4px">Titre</div><div style="border:1px solid #d9cfba;border-radius:7px;padding:8px 11px;font-size:11.5px;color:#3f3a32;background:#fff">Terminale tronc commun — 2026</div></div>
+            <div style="display:flex;flex-direction:column;gap:6px">
+              <div style="font-size:10px;color:#8b8478">Gabarit de cadence</div>
+              <div style="display:flex;align-items:flex-start;gap:9px;border:1.4px solid #9a6a2e;border-radius:8px;padding:9px 11px;background:#fbf3e6"><span style="width:13px;height:13px;border-radius:50%;border:4px solid #9a6a2e;margin-top:1px"></span><span><span style="font-size:11.5px;font-weight:600;color:#2f2a23">Tronc commun</span><span style="display:block;font-size:9.5px;color:#8b8478">1 exercice/sem · cycle écriture → écriture → lecture</span></span></div>
+              <div style="display:flex;align-items:flex-start;gap:9px;border:1px solid #e2ddd2;border-radius:8px;padding:9px 11px"><span style="width:13px;height:13px;border-radius:50%;border:1.4px solid #b9b1a2;margin-top:1px"></span><span><span style="font-size:11.5px;font-weight:600;color:#2f2a23">HLP</span><span style="display:block;font-size:9.5px;color:#8b8478">même cycle · fragments &amp; lecture suivent leur échéancier</span></span></div>
+              <div style="display:flex;align-items:flex-start;gap:9px;border:1px solid #e2ddd2;border-radius:8px;padding:9px 11px"><span style="width:13px;height:13px;border-radius:50%;border:1.4px solid #b9b1a2;margin-top:1px"></span><span><span style="font-size:11.5px;font-weight:600;color:#2f2a23">Vierge</span><span style="display:block;font-size:9.5px;color:#8b8478">aucun exercice généré — tout à la main</span></span></div>
+            </div>
+            <div><div style="font-size:10px;color:#8b8478;margin-bottom:4px">Date de début (ancre)</div><div style="width:150px;border:1px solid #d9cfba;border-radius:7px;padding:7px 11px;font-size:11px;color:#3f3a32;background:#fff">📅 07/09/2026</div></div>
+            <div style="background:#9a6a2e;color:#fdf6ea;font-size:12px;font-weight:600;padding:10px;border-radius:8px;text-align:center;width:220px">Créer le modèle (brouillon)</div>
+          </div>
+          <div style="flex:1;padding:16px;background:#faf9f5;display:flex;flex-direction:column;gap:9px;min-width:0">
+            <div style="display:flex;align-items:center;justify-content:space-between"><span style="font:600 10px system-ui;letter-spacing:.08em;text-transform:uppercase;color:#7a6a4f">Aperçu de la cadence</span><span style="font-size:9.5px;color:#a49c8e">≈ 18 exercices sur l'année</span></div>
+            <div style="display:flex;flex-direction:column;gap:5px">
+              <div style="display:flex;align-items:center;gap:9px;background:#fff;border:1px solid #e2ddd2;border-radius:6px;padding:6px 10px"><span style="font:600 9px ui-monospace,Menlo,monospace;color:#8b8478;width:52px">Lun 07/09</span><span style="font-size:9px;font-weight:600;padding:2px 7px;border-radius:5px;background:#e4e8d8;color:#5b6e4a">Écriture</span><span style="font-size:9.5px;color:#a49c8e">maison</span></div>
+              <div style="display:flex;align-items:center;gap:9px;background:#fff;border:1px solid #e2ddd2;border-radius:6px;padding:6px 10px"><span style="font:600 9px ui-monospace,Menlo,monospace;color:#8b8478;width:52px">Lun 14/09</span><span style="font-size:9px;font-weight:600;padding:2px 7px;border-radius:5px;background:#e4e8d8;color:#5b6e4a">Écriture</span><span style="font-size:9.5px;color:#a49c8e">maison</span></div>
+              <div style="display:flex;align-items:center;gap:9px;background:#fff;border:1px solid #e2ddd2;border-radius:6px;padding:6px 10px"><span style="font:600 9px ui-monospace,Menlo,monospace;color:#8b8478;width:52px">Lun 21/09</span><span style="font-size:9px;font-weight:600;padding:2px 7px;border-radius:5px;background:#dde3ec;color:#2c4a7c">Lecture</span><span style="font-size:9.5px;color:#a49c8e">classe</span></div>
+              <div style="display:flex;align-items:center;gap:9px;background:#fff;border:1px solid #e2ddd2;border-radius:6px;padding:6px 10px"><span style="font:600 9px ui-monospace,Menlo,monospace;color:#8b8478;width:52px">Lun 28/09</span><span style="font-size:9px;font-weight:600;padding:2px 7px;border-radius:5px;background:#e4e8d8;color:#5b6e4a">Écriture</span><span style="font-size:9.5px;color:#a49c8e">maison</span></div>
+              <div style="display:flex;align-items:center;gap:9px;background:#fff;border:1px solid #e2ddd2;border-radius:6px;padding:6px 10px"><span style="font:600 9px ui-monospace,Menlo,monospace;color:#8b8478;width:52px">Lun 05/10</span><span style="font-size:9px;font-weight:600;padding:2px 7px;border-radius:5px;background:#e4e8d8;color:#5b6e4a">Écriture</span><span style="font-size:9.5px;color:#a49c8e">maison</span></div>
+              <div style="display:flex;align-items:center;gap:9px;background:#fff;border:1px solid #e2ddd2;border-radius:6px;padding:6px 10px"><span style="font:600 9px ui-monospace,Menlo,monospace;color:#8b8478;width:52px">Lun 12/10</span><span style="font-size:9px;font-weight:600;padding:2px 7px;border-radius:5px;background:#dde3ec;color:#2c4a7c">Lecture</span><span style="font-size:9.5px;color:#a49c8e">classe</span></div>
+            </div>
+            <div style="text-align:center;font-size:9.5px;color:#a49c8e">⌄ … jusqu'au 08/06</div>
+          </div>
+        </div>
+      </div>
+      <p class="dv-note">→ la moitié droite montre <span class="dv-ptr">exactement</span> ce que le gabarit va poser, semaine par semaine · changer TC → HLP redessine l'aperçu en direct · on crée en confiance</p>
+    </div>
+
+    <!-- 3b -->
+    <div class="dv-opt" id="3b" data-screen-label="3b Plan form + assignation">
+      <div class="dv-olabel"><a class="dv-oid" href="#3b">3b</a>« Créer &amp; assigner sur le même écran » — la moitié droite = les classes</div>
+      <div class="dv-card" style="width:880px">
+        <div style="display:flex;align-items:center;gap:8px;padding:8px 16px;background:#f4f2ec;border-bottom:1px solid #ddd8cc;font-size:10.5px;color:#8b8478"><span>Scriptorium</span><span>›</span><span>Plans d'évaluation</span><span>›</span><span style="color:#9a6a2e;font-weight:600">Nouveau modèle</span></div>
+        <div style="display:flex;min-height:380px">
+          <div style="width:400px;flex:none;padding:16px 18px;display:flex;flex-direction:column;gap:13px;border-right:1px solid #e2ddd2">
+            <div><div style="font-size:15px;font-weight:700;color:#2f2a23">Nouveau plan d'évaluation</div><div style="font-size:10.5px;color:#8b8478;margin-top:2px">On conçoit le modèle, on l'assigne aux classes tout de suite.</div></div>
+            <div><div style="font-size:10px;color:#8b8478;margin-bottom:4px">Titre</div><div style="border:1px solid #d9cfba;border-radius:7px;padding:8px 11px;font-size:11.5px;color:#3f3a32;background:#fff">Terminale tronc commun — 2026</div></div>
+            <div style="display:flex;flex-direction:column;gap:6px"><div style="font-size:10px;color:#8b8478">Gabarit</div>
+              <div style="display:flex;gap:6px"><span style="font-size:10.5px;padding:6px 12px;border-radius:7px;background:#9a6a2e;color:#fdf6ea;font-weight:600">Tronc commun</span><span style="font-size:10.5px;padding:6px 12px;border-radius:7px;border:1px solid #d9cfba;color:#6b6459">HLP</span><span style="font-size:10.5px;padding:6px 12px;border-radius:7px;border:1px solid #d9cfba;color:#6b6459">Vierge</span></div>
+            </div>
+            <div><div style="font-size:10px;color:#8b8478;margin-bottom:4px">Date de début (ancre)</div><div style="width:150px;border:1px solid #d9cfba;border-radius:7px;padding:7px 11px;font-size:11px;color:#3f3a32;background:#fff">📅 07/09/2026</div></div>
+            <div style="border:1px solid #efd9c0;background:#fbf3e6;border-radius:7px;padding:9px 11px;font-size:9.5px;color:#8a6a3e;line-height:1.4">Chaque assignation crée un plan <b>indépendant</b> (copie du modèle) que la classe ajuste librement.</div>
+          </div>
+          <div style="flex:1;padding:16px;background:#faf9f5;display:flex;flex-direction:column;gap:10px;min-width:0">
+            <span style="font:600 10px system-ui;letter-spacing:.08em;text-transform:uppercase;color:#7a6a4f">Assigner à des classes</span>
+            <div style="border:1px solid #e2ddd2;border-radius:8px;background:#fff;padding:11px;display:flex;flex-direction:column;gap:8px">
+              <div style="display:flex;align-items:center;justify-content:space-between"><span style="font-size:12px;font-weight:600;color:#2f2a23">TG1 <span style="font-size:9px;color:#a49c8e;font-weight:400">· TC</span></span></div>
+              <div style="display:flex;gap:6px"><div style="flex:1;border:1px solid #d9cfba;border-radius:6px;padding:6px 9px;font-size:10px;color:#3f3a32">📅 07/09/2026</div><span style="font-size:10px;padding:6px 12px;border-radius:6px;background:#9a6a2e;color:#fdf6ea;font-weight:600">Assigner</span></div>
+            </div>
+            <div style="border:1px solid #e2ddd2;border-radius:8px;background:#fff;padding:11px;display:flex;flex-direction:column;gap:8px">
+              <span style="font-size:12px;font-weight:600;color:#2f2a23">TG3 <span style="font-size:9px;color:#a49c8e;font-weight:400">· TC</span></span>
+              <div style="display:flex;gap:6px"><div style="flex:1;border:1px solid #d9cfba;border-radius:6px;padding:6px 9px;font-size:10px;color:#3f3a32">📅 07/09/2026</div><span style="font-size:10px;padding:6px 12px;border-radius:6px;background:#9a6a2e;color:#fdf6ea;font-weight:600">Assigner</span></div>
+            </div>
+            <div style="border:1px solid #e2ddd2;border-radius:8px;background:#fff;padding:11px;display:flex;align-items:center;justify-content:space-between"><span style="font-size:12px;font-weight:600;color:#2f2a23">2de 4</span><span style="font-size:9.5px;color:#a49c8e">crée d'abord le modèle</span></div>
+          </div>
+        </div>
+      </div>
+      <p class="dv-note">→ tout le cycle création → assignation sur un écran · gain de temps quand on sert plusieurs classes d'un coup · vigilance : le contenu du plan (les exercices) n'est visible qu'après, en ouvrant le modèle</p>
+    </div>
+
+    <!-- 3c -->
+    <div class="dv-opt" id="3c" data-screen-label="3c Plan assistant large gabarits">
+      <div class="dv-olabel"><a class="dv-oid" href="#3c">3c</a>« Gabarits en grandes cartes » — le choix occupe toute la largeur</div>
+      <div class="dv-card" style="width:880px">
+        <div style="display:flex;align-items:center;gap:8px;padding:8px 16px;background:#f4f2ec;border-bottom:1px solid #ddd8cc;font-size:10.5px;color:#8b8478"><span>Scriptorium</span><span>›</span><span>Plans d'évaluation</span><span>›</span><span style="color:#9a6a2e;font-weight:600">Nouveau modèle</span></div>
+        <div style="padding:18px 22px 20px;display:flex;flex-direction:column;gap:16px">
+          <div><div style="font-size:16px;font-weight:700;color:#2f2a23">Nouveau plan d'évaluation</div><div style="font-size:10.5px;color:#8b8478;margin-top:2px">Choisis un gabarit d'année — tu ajusteras ensuite, classe par classe.</div></div>
+          <div style="display:flex;gap:14px;align-items:flex-end"><div style="flex:1"><div style="font-size:10px;color:#8b8478;margin-bottom:4px">Titre</div><div style="border:1px solid #d9cfba;border-radius:7px;padding:9px 12px;font-size:12px;color:#3f3a32;background:#fff">Terminale tronc commun — 2026</div></div><div style="width:170px"><div style="font-size:10px;color:#8b8478;margin-bottom:4px">Date de début</div><div style="border:1px solid #d9cfba;border-radius:7px;padding:9px 12px;font-size:11.5px;color:#3f3a32;background:#fff">📅 07/09/2026</div></div></div>
+          <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px">
+            <div style="border:1.6px solid #9a6a2e;border-radius:10px;background:#fbf3e6;padding:13px;display:flex;flex-direction:column;gap:9px">
+              <div style="display:flex;align-items:center;justify-content:space-between"><span style="font-size:13px;font-weight:700;color:#2f2a23">Tronc commun</span><span style="width:15px;height:15px;border-radius:50%;border:4px solid #9a6a2e"></span></div>
+              <div style="font-size:9.5px;color:#8b8478;line-height:1.4">1 exercice/sem · cycle écriture → écriture → lecture</div>
+              <div style="display:flex;gap:3px;flex-wrap:wrap">
+                <span style="font-size:8px;font-weight:600;padding:2px 5px;border-radius:4px;background:#e4e8d8;color:#5b6e4a">Éc</span><span style="font-size:8px;font-weight:600;padding:2px 5px;border-radius:4px;background:#e4e8d8;color:#5b6e4a">Éc</span><span style="font-size:8px;font-weight:600;padding:2px 5px;border-radius:4px;background:#dde3ec;color:#2c4a7c">Le</span><span style="font-size:8px;font-weight:600;padding:2px 5px;border-radius:4px;background:#e4e8d8;color:#5b6e4a">Éc</span><span style="font-size:8px;font-weight:600;padding:2px 5px;border-radius:4px;background:#e4e8d8;color:#5b6e4a">Éc</span><span style="font-size:8px;font-weight:600;padding:2px 5px;border-radius:4px;background:#dde3ec;color:#2c4a7c">Le</span><span style="font-size:8px;color:#a49c8e;padding:2px">⋯</span>
+              </div>
+            </div>
+            <div style="border:1px solid #e2ddd2;border-radius:10px;background:#fff;padding:13px;display:flex;flex-direction:column;gap:9px">
+              <div style="display:flex;align-items:center;justify-content:space-between"><span style="font-size:13px;font-weight:700;color:#2f2a23">HLP</span><span style="width:15px;height:15px;border-radius:50%;border:1.4px solid #b9b1a2"></span></div>
+              <div style="font-size:9.5px;color:#8b8478;line-height:1.4">Même cycle · fragments &amp; lecture suivent leur échéancier propre</div>
+              <div style="display:flex;gap:3px;flex-wrap:wrap">
+                <span style="font-size:8px;font-weight:600;padding:2px 5px;border-radius:4px;background:#e4e8d8;color:#5b6e4a">Éc</span><span style="font-size:8px;font-weight:600;padding:2px 5px;border-radius:4px;background:#e4e8d8;color:#5b6e4a">Éc</span><span style="font-size:8px;font-weight:600;padding:2px 5px;border-radius:4px;background:#dde3ec;color:#2c4a7c">Le</span><span style="font-size:8px;font-weight:600;padding:2px 5px;border-radius:4px;background:#ece2cf;color:#8a6a3e">Fr</span><span style="font-size:8px;color:#a49c8e;padding:2px">⋯</span>
+              </div>
+            </div>
+            <div style="border:1px solid #e2ddd2;border-radius:10px;background:#fff;padding:13px;display:flex;flex-direction:column;gap:9px">
+              <div style="display:flex;align-items:center;justify-content:space-between"><span style="font-size:13px;font-weight:700;color:#2f2a23">Vierge</span><span style="width:15px;height:15px;border-radius:50%;border:1.4px solid #b9b1a2"></span></div>
+              <div style="font-size:9.5px;color:#8b8478;line-height:1.4">Aucun exercice généré — tu poses tout à la main</div>
+              <div style="border:1px dashed #d9cfba;border-radius:5px;padding:6px;text-align:center;font-size:8.5px;color:#a49c8e">— vide —</div>
+            </div>
+          </div>
+          <div style="display:flex;align-items:center;gap:12px"><span style="background:#9a6a2e;color:#fdf6ea;font-size:12px;font-weight:600;padding:10px 18px;border-radius:8px">Créer le modèle (brouillon)</span><span style="font-size:10px;color:#8b8478">→ étape suivante : assigner à TG1, TG3…</span></div>
+        </div>
+      </div>
+      <p class="dv-note">→ le choix du gabarit devient l'objet principal : 3 grandes cartes, chacune montre sa cadence en miniature · large et aéré · beau parce que c'est le cœur de la décision</p>
+    </div>
+
+  </div>
+  <p class="dv-next">Pistes suivantes : « <a class="dv-oid" href="#3a">3a</a> avec l'assignation de <a class="dv-oid" href="#3b">3b</a> en bas » · « montre le modèle une fois créé (grille des semaines) » · « comment prévenir qu'une classe a déjà un plan ? »</p>
+</section>
+<section class="dv-turn" id="ecran4">
+  <div class="dv-thd"><a class="dv-tid" href="#ecran4">4</a><span class="dv-tname">Organiser un plan assigné à une classe — 3 pistes</span><span class="dv-cap">l'écran le plus dense · idée directrice : séparer « ce que j'évalue » (éditable) de « ce que la classe vit » (contexte, lecture seule) · l'enseignement vient du parcours → teinté noyer</span></div>
+  <div class="dv-opts">
+
+    <!-- réf actuel -->
+    <div class="dv-opt" data-screen-label="Ref plan classe actuel">
+      <div class="dv-olabel"><span style="font:600 10.5px ui-monospace,Menlo,monospace;padding:3px 7px;background:#fff;border:1px dashed rgba(0,0,0,.3);color:#666;border-radius:5px">réf.</span>aujourd'hui — 5-6 bandes empilées par semaine</div>
+      <div class="dv-card" style="width:260px;background:#f8f7f3">
+        <div style="padding:11px;display:flex;flex-direction:column;gap:5px">
+          <div style="border:1px solid #d5cfc2;border-radius:6px;background:#fff;padding:6px 8px;display:flex;flex-direction:column;gap:3px">
+            <div style="font-size:8px;color:#a49c8e">Lundi 07/09</div>
+            <div style="height:8px;background:#f2ece1;border-left:2px solid #b9a884;border-radius:2px"></div>
+            <div style="height:8px;border:1px solid #e2ddd2;border-radius:2px"></div>
+            <div style="height:8px;background:#eef2e6;border-radius:2px"></div>
+            <div style="height:8px;background:#f3eee6;border-radius:2px"></div>
+            <div style="height:7px;background:#efe4cf;border-radius:2px;width:60%"></div>
+          </div>
+          <div style="border:1px solid #d5cfc2;border-radius:6px;background:#fff;padding:6px 8px;display:flex;flex-direction:column;gap:3px">
+            <div style="font-size:8px;color:#a49c8e">Lundi 14/09</div>
+            <div style="height:8px;background:#f2ece1;border-left:2px solid #b9a884;border-radius:2px"></div>
+            <div style="height:8px;border:1px solid #e2ddd2;border-radius:2px"></div>
+            <div style="height:8px;background:#eef2e6;border-radius:2px"></div>
+          </div>
+          <div style="font:8px system-ui;color:#a49c8e;text-align:center">⋯ 30+ semaines</div>
+          <div style="font:500 13px 'Caveat',cursive;color:#b0483c;line-height:1.35">exercices, enseignements, lectures, budget, reflets — tout mélangé, chaque semaine est un mur</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 4a -->
+    <div class="dv-opt" id="4a" data-screen-label="4a Plan frise contexte replie">
+      <div class="dv-olabel"><a class="dv-oid" href="#4a">4a</a>« Frise épurée + contexte replié + bilan à droite »</div>
+      <div class="dv-card" style="width:1000px">
+        <div style="display:flex;align-items:center;gap:8px;padding:8px 16px;background:#f4f2ec;border-bottom:1px solid #ddd8cc;font-size:10.5px;color:#8b8478"><span>Scriptorium</span><span>›</span><span>Plans d'évaluation</span><span>›</span><span>Par classe</span><span>›</span><span style="color:#9a6a2e;font-weight:600">TG1</span><span style="margin-left:auto;color:#b3aa9a">◀ Toutes les classes</span></div>
+        <div style="display:flex;align-items:center;gap:12px;padding:12px 18px;border-bottom:1px solid #e2ddd2"><div><div style="font-size:15px;font-weight:700;color:#2f2a23">TG1 — Plan 2026–2027</div><div style="font-size:10px;color:#8b8478">TC · issu de « Terminale TC 2026 » · <span style="color:#a06718">brouillon</span></div></div><div style="margin-left:auto;display:flex;gap:8px;align-items:center"><span style="font-size:10px;color:#8b8478">Gabarit TC ▾ · Fragments comptés</span><span style="font-size:11px;font-weight:600;padding:7px 14px;border-radius:7px;background:#5b6e4a;color:#f2f4ea">Valider le plan</span></div></div>
+        <div style="display:flex;min-height:430px">
+          <div style="flex:1;padding:14px 16px;display:flex;flex-direction:column;gap:9px;min-width:0;border-right:1px solid #e2ddd2">
+            <div style="border:1px solid #e2ddd2;border-radius:9px;background:#fff;overflow:hidden">
+              <div style="display:flex;align-items:center;gap:10px;padding:8px 12px;background:#faf8f3;border-bottom:1px solid #efece4"><span style="font:600 9.5px ui-monospace,Menlo,monospace;color:#6b6459">Lun 07/09</span><span style="font-size:9.5px;color:#a49c8e">Sem. 1</span><span style="margin-left:auto;font-size:8.5px;padding:2px 8px;border-radius:99px;background:#eef2e6;color:#5b6e4a">1 exo · ok</span></div>
+              <div style="padding:9px 12px;display:flex;flex-direction:column;gap:7px">
+                <div style="display:flex;align-items:center;gap:8px"><span style="font-size:10.5px;font-weight:600;color:#3f3a32">Écriture</span><span style="font-size:9.5px;color:#a49c8e">maison · à rendre 12/09</span><span style="margin-left:auto;font-size:8.5px;padding:2px 8px;border-radius:99px;background:#efe4cf;color:#a06718">à concevoir</span></div>
+                <div style="display:flex;align-items:center;gap:7px;font-size:9.5px;color:#8b8478;border-top:1px dashed #efece4;padding-top:6px"><span style="color:#a49c8e">▸ Cette semaine :</span><span style="padding:1px 7px;border-radius:4px;background:#f2ece1;border-left:2px solid #4a3a28;color:#5a4632">Cours · l'absurde</span><span style="padding:1px 7px;border-radius:4px;background:#eef2f6;color:#2c4a7c">Lecture · Camus</span></div>
+                <span style="font-size:10px;color:#9a6a2e;font-weight:600">＋ Ajouter un exercice</span>
+              </div>
+            </div>
+            <div style="border:1px solid #e2ddd2;border-radius:9px;background:#fff;overflow:hidden">
+              <div style="display:flex;align-items:center;gap:10px;padding:8px 12px;background:#faf8f3;border-bottom:1px solid #efece4"><span style="font:600 9.5px ui-monospace,Menlo,monospace;color:#6b6459">Lun 14/09</span><span style="font-size:9.5px;color:#a49c8e">Sem. 2</span><span style="margin-left:auto;font-size:8.5px;padding:2px 8px;border-radius:99px;background:#efd9d2;color:#a23e2e">surchargé</span></div>
+              <div style="padding:9px 12px;display:flex;flex-direction:column;gap:7px">
+                <div style="display:flex;align-items:center;gap:8px"><span style="font-size:10.5px;font-weight:600;color:#3f3a32">Écriture</span><span style="font-size:9.5px;color:#a49c8e">maison · à rendre 19/09</span><span style="margin-left:auto;font-size:8.5px;padding:2px 8px;border-radius:99px;background:#efd9d2;color:#a23e2e">en retard</span></div>
+                <div style="display:flex;align-items:center;gap:8px"><span style="font-size:10.5px;font-weight:600;color:#3f3a32">Quiz</span><span style="font-size:9.5px;color:#a49c8e">classe · jour à caler</span><span style="margin-left:auto;font-size:8.5px;padding:2px 8px;border-radius:99px;background:#e4e8d8;color:#5b6e4a">conçu ✓</span></div>
+                <span style="font-size:10px;color:#9a6a2e;font-weight:600">＋ Ajouter un exercice</span>
+              </div>
+            </div>
+            <div style="border:1px solid #e2ddd2;border-radius:9px;background:#fff;overflow:hidden">
+              <div style="display:flex;align-items:center;gap:10px;padding:8px 12px;background:#faf8f3;border-bottom:1px solid #efece4"><span style="font:600 9.5px ui-monospace,Menlo,monospace;color:#6b6459">Lun 21/09</span><span style="font-size:9.5px;color:#a49c8e">Sem. 3</span><span style="margin-left:auto;font-size:8.5px;padding:2px 8px;border-radius:99px;background:#eef2e6;color:#5b6e4a">1 exo · ok</span></div>
+              <div style="padding:9px 12px;display:flex;flex-direction:column;gap:6px"><div style="display:flex;align-items:center;gap:8px"><span style="font-size:10.5px;font-weight:600;color:#3f3a32">Lecture</span><span style="font-size:9.5px;color:#a49c8e">classe · 26/09</span><span style="margin-left:auto;font-size:8.5px;padding:2px 8px;border-radius:99px;background:#efe4cf;color:#a06718">à concevoir</span></div></div>
+            </div>
+            <div style="text-align:center;font-size:10px;color:#a49c8e;padding:2px">⌄ Semaines 4 → 30</div>
+          </div>
+          <div style="width:270px;flex:none;background:#faf9f5;padding:15px;display:flex;flex-direction:column;gap:12px">
+            <div style="font:600 10px system-ui;letter-spacing:.08em;text-transform:uppercase;color:#7a6a4f">Avancement du plan</div>
+            <div style="font-size:30px;font-weight:700;color:#2f2a23;line-height:1">18 <span style="font-size:12px;font-weight:400;color:#8b8478">exercices</span></div>
+            <div style="display:flex;height:8px;border-radius:99px;overflow:hidden"><span style="width:28%;background:#5b6e4a"></span><span style="width:61%;background:#c8a15a"></span><span style="width:11%;background:#a23e2e"></span></div>
+            <div style="display:flex;flex-direction:column;gap:6px;font-size:10.5px">
+              <div style="display:flex;align-items:center;gap:7px"><span style="width:9px;height:9px;border-radius:50%;background:#5b6e4a"></span><span style="color:#4a453c">5 conçus</span></div>
+              <div style="display:flex;align-items:center;gap:7px"><span style="width:9px;height:9px;border-radius:50%;background:#c8a15a"></span><span style="color:#4a453c">11 à concevoir</span></div>
+              <div style="display:flex;align-items:center;gap:7px"><span style="width:9px;height:9px;border-radius:50%;background:#a23e2e"></span><span style="color:#4a453c">2 en retard</span></div>
+            </div>
+            <div style="border-top:1px solid #e9e3d6;padding-top:10px"><div style="font-size:9px;color:#a49c8e;text-transform:uppercase;letter-spacing:.08em;margin-bottom:4px">Prochaine échéance</div><div style="font-size:11px;color:#3f3a32"><b>Écriture</b> · vendredi 12/09</div></div>
+          </div>
+        </div>
+      </div>
+      <p class="dv-note">→ chaque semaine = une carte calme : les exercices (éditables) devant, le contexte du parcours en une <span class="dv-ptr">ligne repliée</span> · la pastille de budget signale la surcharge · le bilan à droite dit où en est le travail</p>
+    </div>
+
+    <!-- 4b -->
+    <div class="dv-opt" id="4b" data-screen-label="4b Plan calendrier + panneau semaine">
+      <div class="dv-olabel"><a class="dv-oid" href="#4b">4b</a>« Calendrier à gauche, la semaine en détail à droite »</div>
+      <div class="dv-card" style="width:1000px">
+        <div style="display:flex;align-items:center;gap:8px;padding:8px 16px;background:#f4f2ec;border-bottom:1px solid #ddd8cc;font-size:10.5px;color:#8b8478"><span>Scriptorium</span><span>›</span><span>Par classe</span><span>›</span><span style="color:#9a6a2e;font-weight:600">TG1 — Plan 26–27</span><span style="margin-left:auto;color:#b3aa9a">◀ Toutes les classes</span></div>
+        <div style="display:flex;min-height:440px">
+          <div style="width:360px;flex:none;border-right:1px solid #e2ddd2;background:#faf9f5;padding:12px;display:flex;flex-direction:column;gap:5px;overflow:hidden">
+            <div style="font:600 9.5px system-ui;letter-spacing:.08em;text-transform:uppercase;color:#a49c8e;padding:2px 4px 4px">Les semaines · 18 exercices</div>
+            <div style="display:flex;align-items:center;gap:9px;border:1px solid #e2ddd2;border-radius:7px;background:#fff;padding:7px 10px"><span style="font:600 9px ui-monospace,Menlo,monospace;color:#8b8478;width:44px">07/09</span><span style="font-size:10.5px;color:#4a453c;flex:1">Écriture</span><span style="width:7px;height:7px;border-radius:50%;background:#c8a15a"></span></div>
+            <div style="display:flex;align-items:center;gap:9px;border:1.4px solid #9a6a2e;border-radius:7px;background:#fbf3e6;padding:7px 10px"><span style="font:600 9px ui-monospace,Menlo,monospace;color:#9a6a2e;width:44px">14/09</span><span style="font-size:10.5px;color:#2f2a23;font-weight:600;flex:1">Écriture · Quiz</span><span style="display:flex;gap:3px"><span style="width:7px;height:7px;border-radius:50%;background:#a23e2e"></span><span style="width:7px;height:7px;border-radius:50%;background:#5b6e4a"></span></span></div>
+            <div style="display:flex;align-items:center;gap:9px;border:1px solid #e2ddd2;border-radius:7px;background:#fff;padding:7px 10px"><span style="font:600 9px ui-monospace,Menlo,monospace;color:#8b8478;width:44px">21/09</span><span style="font-size:10.5px;color:#4a453c;flex:1">Lecture</span><span style="width:7px;height:7px;border-radius:50%;background:#c8a15a"></span></div>
+            <div style="display:flex;align-items:center;gap:9px;border:1px solid #e2ddd2;border-radius:7px;background:#fff;padding:7px 10px"><span style="font:600 9px ui-monospace,Menlo,monospace;color:#8b8478;width:44px">28/09</span><span style="font-size:10.5px;color:#4a453c;flex:1">Écriture</span><span style="width:7px;height:7px;border-radius:50%;background:#5b6e4a"></span></div>
+            <div style="display:flex;align-items:center;gap:9px;border:1px solid #e2ddd2;border-radius:7px;background:#fff;padding:7px 10px"><span style="font:600 9px ui-monospace,Menlo,monospace;color:#8b8478;width:44px">05/10</span><span style="font-size:10.5px;color:#b3aa9a;flex:1">— vacances —</span></div>
+            <div style="display:flex;align-items:center;gap:9px;border:1px solid #e2ddd2;border-radius:7px;background:#fff;padding:7px 10px"><span style="font:600 9px ui-monospace,Menlo,monospace;color:#8b8478;width:44px">12/10</span><span style="font-size:10.5px;color:#4a453c;flex:1">Lecture</span><span style="width:7px;height:7px;border-radius:50%;background:#c8a15a"></span></div>
+            <div style="text-align:center;font-size:9.5px;color:#a49c8e;padding:3px">⌄ … jusqu'au 08/06</div>
+          </div>
+          <div style="flex:1;padding:15px 17px;display:flex;flex-direction:column;gap:12px;min-width:0">
+            <div style="display:flex;align-items:baseline;gap:8px"><span style="font-size:14px;font-weight:700;color:#2f2a23">Semaine du 14/09</span><span style="font-size:10px;color:#a49c8e">Sem. 2 · S1</span><span style="margin-left:auto;font-size:8.5px;padding:2px 9px;border-radius:99px;background:#efd9d2;color:#a23e2e">budget dépassé</span></div>
+            <div style="border-left:2px solid #4a3a28;background:#f7f2ea;border-radius:0 7px 7px 0;padding:8px 12px"><div style="font-size:9px;color:#8a6f4e;text-transform:uppercase;letter-spacing:.07em;margin-bottom:3px">Enseigné cette semaine · via le parcours</div><div style="font-size:10.5px;color:#5a4632">Cours « l'absurde » · Lecture Camus (S1–S5)</div></div>
+            <div><div style="font:600 9px system-ui;letter-spacing:.08em;text-transform:uppercase;color:#a49c8e;margin-bottom:6px">Exercices à évaluer</div>
+              <div style="display:flex;flex-direction:column;gap:7px">
+                <div style="border:1px solid #e2ddd2;border-radius:8px;background:#fff;padding:9px 11px;display:flex;align-items:center;gap:9px"><span style="font-size:11px;font-weight:600;color:#3f3a32">Écriture</span><span style="font-size:9.5px;color:#a49c8e">maison · à rendre 19/09</span><span style="margin-left:auto;font-size:8.5px;padding:2px 8px;border-radius:99px;background:#efd9d2;color:#a23e2e">en retard</span><span style="font-size:9.5px;color:#8b8478">Déplacer ▾ · Retirer</span></div>
+                <div style="border:1px solid #e2ddd2;border-radius:8px;background:#fff;padding:9px 11px;display:flex;align-items:center;gap:9px"><span style="font-size:11px;font-weight:600;color:#3f3a32">Quiz</span><span style="font-size:9.5px;color:#a49c8e">classe</span><span style="font-size:9px;padding:2px 8px;border:1px solid #d9cfba;border-radius:6px;color:#6b6459">jour à caler ▾</span><span style="margin-left:auto;font-size:8.5px;padding:2px 8px;border-radius:99px;background:#e4e8d8;color:#5b6e4a">conçu ✓</span></div>
+              </div>
+              <span style="display:inline-block;margin-top:8px;font-size:10.5px;color:#9a6a2e;font-weight:600">＋ Ajouter un exercice</span>
+            </div>
+            <div style="border-top:1px dashed #e2ddd2;padding-top:9px;display:flex;gap:16px"><span style="font-size:9.5px;color:#8b8478">🕮 Lecture Aletheia attendue</span><span style="font-size:9.5px;color:#8b8478">✍ Fragment attendu</span></div>
+          </div>
+        </div>
+      </div>
+      <p class="dv-note">→ à gauche l'année entière (date · exercices · pastilles d'état), à droite <span class="dv-ptr">une seule semaine</span> en grand : son contexte parcours + ses exercices éditables · idéal pour traiter les alertes une par une</p>
+    </div>
+
+    <!-- 4c -->
+    <div class="dv-opt" id="4c" data-screen-label="4c Plan tableau + tiroir">
+      <div class="dv-olabel"><a class="dv-oid" href="#4c">4c</a>« Tableau de l'année + tiroir d'édition » — tout se lit en un écran</div>
+      <div class="dv-card" style="width:1000px">
+        <div style="display:flex;align-items:center;gap:8px;padding:8px 16px;background:#f4f2ec;border-bottom:1px solid #ddd8cc;font-size:10.5px;color:#8b8478"><span>Scriptorium</span><span>›</span><span>Par classe</span><span>›</span><span style="color:#9a6a2e;font-weight:600">TG1 — Plan 26–27</span><span style="margin-left:auto;color:#b3aa9a">◀ Toutes les classes</span></div>
+        <div style="position:relative;overflow:hidden;min-height:420px">
+          <div style="padding:13px 16px">
+            <div style="display:grid;grid-template-columns:70px 1fr 1fr 84px;border:1px solid #e2ddd2;border-radius:8px;overflow:hidden">
+              <div style="grid-column:1/5;display:grid;grid-template-columns:70px 1fr 1fr 84px;background:#faf8f3;border-bottom:1px solid #e2ddd2;font:600 8.5px system-ui;letter-spacing:.07em;text-transform:uppercase;color:#a49c8e"><span style="padding:7px 9px">Semaine</span><span style="padding:7px 9px;border-left:2px solid #4a3a28">Enseigné · parcours</span><span style="padding:7px 9px">Exercices · évaluation</span><span style="padding:7px 9px">État</span></div>
+              <div style="grid-column:1/5;display:grid;grid-template-columns:70px 1fr 1fr 84px;border-bottom:1px solid #efece4;font-size:10px;color:#4a453c"><span style="padding:7px 9px;font:600 9px ui-monospace,Menlo,monospace;color:#6b6459">07/09</span><span style="padding:7px 9px;color:#5a4632;background:#faf7f1">Cours · l'absurde</span><span style="padding:7px 9px">Écriture <span style="color:#a49c8e">· maison</span></span><span style="padding:7px 9px;color:#a06718">à concevoir</span></div>
+              <div style="grid-column:1/5;display:grid;grid-template-columns:70px 1fr 1fr 84px;border-bottom:1px solid #efece4;font-size:10px;background:#eef2f6"><span style="padding:7px 9px;font:600 9px ui-monospace,Menlo,monospace;color:#2c4a7c">14/09</span><span style="padding:7px 9px;color:#5a4632;background:#f5f1ea">Lecture · Camus</span><span style="padding:7px 9px;color:#1f2a3d;font-weight:600">Écriture · Quiz</span><span style="padding:7px 9px;color:#a23e2e">1 en retard</span></div>
+              <div style="grid-column:1/5;display:grid;grid-template-columns:70px 1fr 1fr 84px;border-bottom:1px solid #efece4;font-size:10px;color:#4a453c"><span style="padding:7px 9px;font:600 9px ui-monospace,Menlo,monospace;color:#6b6459">21/09</span><span style="padding:7px 9px;color:#5a4632;background:#faf7f1">Cours · révolte</span><span style="padding:7px 9px">Lecture <span style="color:#a49c8e">· classe</span></span><span style="padding:7px 9px;color:#a06718">à concevoir</span></div>
+              <div style="grid-column:1/5;display:grid;grid-template-columns:70px 1fr 1fr 84px;border-bottom:1px solid #efece4;font-size:10px;color:#4a453c"><span style="padding:7px 9px;font:600 9px ui-monospace,Menlo,monospace;color:#6b6459">28/09</span><span style="padding:7px 9px;color:#5a4632;background:#faf7f1">Texte · Sisyphe</span><span style="padding:7px 9px">Écriture <span style="color:#a49c8e">· maison</span></span><span style="padding:7px 9px;color:#3a7d44">conçu ✓</span></div>
+              <div style="grid-column:1/5;display:grid;grid-template-columns:70px 1fr 1fr 84px;border-bottom:1px solid #efece4;font-size:10px;color:#b3aa9a"><span style="padding:7px 9px;font:600 9px ui-monospace,Menlo,monospace">05/10</span><span style="padding:7px 9px;background:#faf7f1">—</span><span style="padding:7px 9px">— vacances —</span><span style="padding:7px 9px"></span></div>
+              <div style="grid-column:1/5;display:grid;grid-template-columns:70px 1fr 1fr 84px;font-size:10px;color:#4a453c"><span style="padding:7px 9px;font:600 9px ui-monospace,Menlo,monospace;color:#6b6459">12/10</span><span style="padding:7px 9px;color:#5a4632;background:#faf7f1">Cours · autrui</span><span style="padding:7px 9px">Lecture <span style="color:#a49c8e">· classe</span></span><span style="padding:7px 9px;color:#a06718">à concevoir</span></div>
+            </div>
+            <div style="text-align:center;font-size:9.5px;color:#a49c8e;padding:8px">⌄ … 30 semaines · 5 conçus · 11 à concevoir · 2 en retard</div>
+          </div>
+          <div style="position:absolute;top:0;right:0;bottom:0;width:40%;background:#fff;border-left:1.4px solid #b9b1a2;box-shadow:-14px 0 26px rgba(40,32,20,.14);padding:14px 16px;display:flex;flex-direction:column;gap:11px">
+            <div style="display:flex;align-items:flex-start"><div><div style="font-size:13px;font-weight:700;color:#2f2a23">Semaine du 14/09</div><div style="font-size:9.5px;color:#8b8478">Sem. 2 · budget <span style="color:#a23e2e">dépassé</span></div></div><span style="margin-left:auto;font-size:11px;color:#a49c8e">✕</span></div>
+            <div style="border-left:2px solid #4a3a28;background:#f7f2ea;border-radius:0 6px 6px 0;padding:7px 10px"><div style="font-size:8.5px;color:#8a6f4e;text-transform:uppercase;letter-spacing:.07em">Enseigné · parcours</div><div style="font-size:10px;color:#5a4632;margin-top:2px">Lecture Camus · Cours l'absurde</div></div>
+            <div style="font:600 8.5px system-ui;letter-spacing:.08em;text-transform:uppercase;color:#a49c8e">Exercices</div>
+            <div style="border:1px solid #e2ddd2;border-radius:7px;padding:8px 10px;display:flex;align-items:center;gap:8px"><span style="font-size:10.5px;font-weight:600;color:#3f3a32">Écriture</span><span style="font-size:9px;color:#a49c8e">19/09</span><span style="margin-left:auto;font-size:8px;padding:2px 7px;border-radius:99px;background:#efd9d2;color:#a23e2e">en retard</span></div>
+            <div style="border:1px solid #e2ddd2;border-radius:7px;padding:8px 10px;display:flex;align-items:center;gap:8px"><span style="font-size:10.5px;font-weight:600;color:#3f3a32">Quiz</span><span style="font-size:9px;padding:1px 7px;border:1px solid #d9cfba;border-radius:5px;color:#6b6459">jour à caler</span><span style="margin-left:auto;font-size:8px;padding:2px 7px;border-radius:99px;background:#e4e8d8;color:#5b6e4a">conçu ✓</span></div>
+            <span style="font-size:10px;color:#9a6a2e;font-weight:600">＋ Ajouter un exercice</span>
+            <div style="margin-top:auto;display:flex;gap:6px"><span style="font-size:9px;padding:3px 9px;border:1px solid #cfc9bd;border-radius:6px;color:#6b6459">‹ 07/09</span><span style="font-size:9px;padding:3px 9px;border:1px solid #cfc9bd;border-radius:6px;color:#6b6459">21/09 ›</span></div>
+          </div>
+        </div>
+      </div>
+      <p class="dv-note">→ l'année entière en une grille : la colonne <span style="color:#5a4632">Enseigné (parcours)</span> et la colonne <span style="color:#9a6a2e">Exercices</span> côte à côte, l'état à droite · on clique une semaine, le tiroir l'ouvre sans perdre la vue d'ensemble (même patron que la vue livre)</p>
+    </div>
+
+  </div>
+  <p class="dv-next">Pistes suivantes : « je choisis mon accueil + un builder + un plan, passe l'ensemble en charte » · « <a class="dv-oid" href="#4a">4a</a> avec le tiroir de <a class="dv-oid" href="#4c">4c</a> » · « montre l'alerte “cette classe a déjà un plan” »</p>
+</section></x-dc>
+</body>
+</html>

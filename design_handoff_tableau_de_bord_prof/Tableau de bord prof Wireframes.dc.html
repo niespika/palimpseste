@@ -1,0 +1,526 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<meta name="design_doc_mode" content="canvas">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Caveat:wght@500;600;700&family=Architects+Daughter&display=swap" rel="stylesheet">
+<style>
+  body { margin:0; font-family:'Architects Daughter', cursive; color:#46402f; -webkit-font-smoothing:antialiased; }
+</style>
+</helmet>
+
+<!-- ======================= INTRO ======================= -->
+<div style="position:absolute;left:80px;top:36px;width:1100px">
+  <div style="font-family:'Caveat',cursive;font-weight:700;font-size:46px;line-height:1.05;color:#3a352c">Palimpseste · Espace prof — tableau de bord</div>
+  <div style="font-family:'Architects Daughter',cursive;font-size:16px;color:#7a7263;margin-top:8px;max-width:820px">Wireframes low-fi pour le tableau de bord enseignant : le coup d'œil au réveil, le mobile (beaucoup de sections), et le drill-down classe → élève. Glisse pour te déplacer, zoome pour les détails.</div>
+</div>
+
+<!-- brief post-it -->
+<div style="position:absolute;left:80px;top:168px;width:340px">
+  <div style="background:#fef4a8;padding:16px 16px 18px;box-shadow:0 1px 4px rgba(0,0,0,.12);transform:rotate(-1.2deg);font-family:'Architects Daughter',cursive;font-size:14.5px;line-height:1.5;color:#5a4a14">
+    <div style="font-family:'Caveat',cursive;font-weight:700;font-size:21px;margin-bottom:6px;color:#4a3c0c">Le brief</div>
+    Le prof ouvre le matin et doit voir <b>d'abord ce qui demande une action</b> (fragments à valider, signalements d'intégrité) et les <b>échéances proches à préparer</b>. Aujourd'hui tout est empilé à plat, de même poids. Objectif : une <b>hiérarchie claire</b> + un <b>mobile qui tient la route</b> malgré beaucoup de sections.
+  </div>
+</div>
+
+<!-- legend card -->
+<div style="position:absolute;left:470px;top:168px;width:430px">
+  <div data-drags-parent="1" style="position:absolute;top:-26px;left:2px;font-family:'Caveat',cursive;font-size:19px;color:#6f6755">Conventions & couleurs</div>
+  <div style="background:#fbfaf6;border:1.5px solid #cdc6b6;border-radius:10px;box-shadow:0 1px 3px rgba(0,0,0,.08);padding:16px">
+    <div style="font-size:11px;color:#8a8270;letter-spacing:.06em;margin-bottom:8px">SANTÉ D'UNE CLASSE</div>
+    <div style="display:flex;flex-wrap:wrap;gap:9px 18px;font-size:13px;color:#5b5444">
+      <div style="display:flex;align-items:center;gap:7px"><span style="width:13px;height:13px;border-radius:50%;background:#5b6e4a;display:inline-block"></span>à jour</div>
+      <div style="display:flex;align-items:center;gap:7px"><span style="width:13px;height:13px;border-radius:50%;background:#c4bca8;display:inline-block"></span>aucun signal</div>
+      <div style="display:flex;align-items:center;gap:7px"><span style="width:13px;height:13px;border-radius:50%;background:#a23e2e;display:inline-block"></span>élève(s) à risque</div>
+    </div>
+    <div style="border-top:1px dashed #d3ccba;margin:12px 0 10px"></div>
+    <div style="font-size:11px;color:#8a8270;letter-spacing:.06em;margin-bottom:8px">CONTENU DES MODULES</div>
+    <div style="display:flex;flex-wrap:wrap;gap:9px 16px;font-size:12.5px;color:#5b5444">
+      <div style="display:flex;align-items:center;gap:6px"><span style="width:11px;height:11px;border-radius:50%;background:#2C4A7C"></span>Aletheia</div>
+      <div style="display:flex;align-items:center;gap:6px"><span style="width:11px;height:11px;border-radius:50%;background:#5A6043"></span>Fragments</div>
+      <div style="display:flex;align-items:center;gap:6px"><span style="width:11px;height:11px;border-radius:50%;background:#2E4A3C"></span>Codex</div>
+      <div style="display:flex;align-items:center;gap:6px"><span style="width:11px;height:11px;border-radius:50%;background:#3E6B8E"></span>Quazian</div>
+    </div>
+    <div style="border-top:1px dashed #d3ccba;margin:12px 0 10px"></div>
+    <div style="display:flex;flex-direction:column;gap:8px;font-size:12.5px;color:#7a7263">
+      <div style="display:flex;align-items:center;gap:9px"><span style="width:38px;height:9px;border-radius:5px;background:#e4decf;display:inline-block"></span> texte / contenu</div>
+      <div style="display:flex;align-items:center;gap:9px"><span style="display:inline-block;background:#efe4cf;font-size:10px;padding:2px 6px;border-radius:3px;color:#9A6A2E">à valider</span> action attendue · <span style="display:inline-block;background:#f7ddd6;font-size:10px;padding:2px 6px;border-radius:3px;color:#a23e2e">à risque</span> alerte · <span style="display:inline-block;background:#fef4a8;font-size:10px;padding:2px 6px;border-radius:3px;color:#5a4a14">note</span> mon commentaire</div>
+    </div>
+  </div>
+</div>
+
+<!-- ======================= BAND 1 — DIAGNOSTIC ======================= -->
+<div style="position:absolute;left:80px;top:470px;font-family:'Caveat',cursive;font-weight:700;font-size:32px;color:#3a352c">1 · Le tableau de bord prof, aujourd'hui</div>
+<div style="position:absolute;left:80px;top:516px;font-family:'Architects Daughter',cursive;font-size:15px;color:#8a8270">L'écran réel, tel quel — toutes les sections empilées, de même poids visuel.</div>
+
+<!-- current dashboard — laptop -->
+<div data-screen-label="Tableau de bord prof — actuel (ordi)" style="position:absolute;left:80px;top:566px;width:680px">
+  <div data-drags-parent="1" style="position:absolute;top:-26px;left:2px;font-family:'Caveat',cursive;font-size:19px;color:#6f6755">Sur ordinateur — aujourd'hui</div>
+  <div style="border:1.5px solid #cdc6b6;border-radius:11px;background:#fff;box-shadow:0 2px 8px rgba(0,0,0,.1);overflow:hidden">
+    <div style="background:#ece4d6;padding:8px 12px;display:flex;align-items:center;gap:6px"><span style="width:9px;height:9px;border-radius:50%;background:#c9b89a"></span><span style="width:9px;height:9px;border-radius:50%;background:#c9b89a"></span><span style="width:9px;height:9px;border-radius:50%;background:#c9b89a"></span></div>
+    <div style="background:#f4efe6;padding:16px 18px;height:700px;overflow:hidden;position:relative">
+      <div style="display:flex;justify-content:space-between;align-items:baseline">
+        <span style="font-family:'Caveat',cursive;font-weight:700;font-size:14px;letter-spacing:.08em;color:#46402f">PALIMPSESTE</span>
+        <div style="font-size:11.5px;color:#7a7263;display:flex;gap:13px"><span style="color:#46402f;border-bottom:2px solid #46402f;padding-bottom:2px">Tableau de bord</span><span>Pilotage ▾</span><span>Modules ▾</span></div>
+      </div>
+      <div style="font-family:'Caveat',cursive;font-weight:700;font-size:20px;color:#46402f;margin-top:12px">Tableau de bord</div>
+      <!-- calendar tiles -->
+      <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:6px;margin-top:10px">
+        <div style="background:#fff;border:1.2px solid #ded6c4;border-radius:7px;padding:8px;height:40px"></div>
+        <div style="background:#fff;border:1.2px solid #ded6c4;border-radius:7px;padding:8px;height:40px"></div>
+        <div style="background:#fff;border:1.2px solid #ded6c4;border-radius:7px;padding:8px;height:40px"></div>
+        <div style="background:#fff;border:1.2px solid #ded6c4;border-radius:7px;padding:8px;height:40px"></div>
+        <div style="background:#fff;border:1.2px solid #ded6c4;border-radius:7px;padding:8px;height:40px"></div>
+      </div>
+      <!-- week band -->
+      <div style="background:#fff;border:1.2px solid #ded6c4;border-radius:7px;height:26px;margin-top:8px"></div>
+      <!-- à faire -->
+      <div style="font-size:11px;color:#8a8270;letter-spacing:.08em;margin-top:14px">À FAIRE</div>
+      <div style="display:flex;flex-direction:column;gap:7px;margin-top:6px">
+        <div style="background:#f7ddd6;border:1.2px solid #d99b8a;border-radius:8px;padding:9px"><div style="height:8px;width:60%;background:#e0b3a8;border-radius:4px"></div></div>
+        <div style="background:#fff;border:1.2px solid #ded6c4;border-radius:8px;padding:9px"><div style="height:8px;width:72%;background:#e4decf;border-radius:4px"></div></div>
+        <div style="background:#fff;border:1.2px solid #ded6c4;border-radius:8px;padding:9px"><div style="height:8px;width:55%;background:#e4decf;border-radius:4px;margin-bottom:6px"></div><div style="height:8px;width:48%;background:#e4decf;border-radius:4px"></div></div>
+      </div>
+      <!-- santé -->
+      <div style="font-size:11px;color:#8a8270;letter-spacing:.08em;margin-top:14px">SANTÉ DE LA COHORTE</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:7px;margin-top:6px">
+        <div style="background:#fff;border:1.2px solid #ded6c4;border-radius:8px;padding:9px;height:54px"></div>
+        <div style="background:#fff;border:1.2px solid #ded6c4;border-radius:8px;padding:9px;height:54px"></div>
+        <div style="background:#fff;border:1.2px solid #ded6c4;border-radius:8px;padding:9px;height:54px"></div>
+      </div>
+      <!-- coût api -->
+      <div style="font-size:11px;color:#8a8270;letter-spacing:.08em;margin-top:14px">COÛT API (CE MOIS)</div>
+      <div style="background:#fff;border:1.2px solid #ded6c4;border-radius:8px;height:30px;margin-top:6px"></div>
+      <!-- classes -->
+      <div style="font-size:11px;color:#8a8270;letter-spacing:.08em;margin-top:14px">CLASSES</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:7px;margin-top:6px">
+        <div style="background:#fff;border:1.2px solid #ded6c4;border-radius:8px;padding:9px;height:50px"></div>
+        <div style="background:#fff;border:1.2px solid #ded6c4;border-radius:8px;padding:9px;height:50px"></div>
+        <div style="background:#fff;border:1.2px solid #ded6c4;border-radius:8px;padding:9px;height:50px"></div>
+      </div>
+      <!-- fade -->
+      <div style="position:absolute;left:0;right:0;bottom:0;height:54px;background:linear-gradient(to bottom,rgba(244,239,230,0),#f4efe6)"></div>
+    </div>
+  </div>
+</div>
+
+<!-- current dashboard — mobile (endless scroll) -->
+<div data-screen-label="Tableau de bord prof — actuel (mobile)" style="position:absolute;left:800px;top:566px;width:300px">
+  <div data-drags-parent="1" style="position:absolute;top:-26px;left:2px;font-family:'Caveat',cursive;font-size:19px;color:#6f6755">Sur mobile — aujourd'hui</div>
+  <div style="border:2.5px solid #46402f;border-radius:30px;padding:9px;background:#46402f;box-shadow:0 3px 10px rgba(0,0,0,.13)">
+    <div style="height:5px;width:46px;background:#cdc6b6;border-radius:3px;margin:3px auto 7px"></div>
+    <div style="background:#f4efe6;border-radius:22px;padding:13px;height:620px;overflow:hidden;position:relative">
+      <div style="display:flex;justify-content:space-between;align-items:center;font-size:10px;color:#7a7263"><span style="font-family:'Caveat',cursive;font-weight:700;font-size:12px;letter-spacing:.06em;color:#46402f">PALIMPSESTE</span><span>☰</span></div>
+      <div style="font-family:'Caveat',cursive;font-weight:700;font-size:17px;color:#46402f;margin-top:8px">Tableau de bord</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:5px;margin-top:8px"><div style="background:#fff;border:1.2px solid #ded6c4;border-radius:7px;height:34px"></div><div style="background:#fff;border:1.2px solid #ded6c4;border-radius:7px;height:34px"></div></div>
+      <div style="background:#fff;border:1.2px solid #ded6c4;border-radius:7px;height:22px;margin-top:6px"></div>
+      <div style="font-size:9.5px;color:#8a8270;letter-spacing:.06em;margin-top:11px">À FAIRE</div>
+      <div style="background:#f7ddd6;border:1.2px solid #d99b8a;border-radius:7px;height:30px;margin-top:5px"></div>
+      <div style="background:#fff;border:1.2px solid #ded6c4;border-radius:7px;height:30px;margin-top:5px"></div>
+      <div style="background:#fff;border:1.2px solid #ded6c4;border-radius:7px;height:44px;margin-top:5px"></div>
+      <div style="font-size:9.5px;color:#8a8270;letter-spacing:.06em;margin-top:11px">SANTÉ DE LA COHORTE</div>
+      <div style="background:#fff;border:1.2px solid #ded6c4;border-radius:7px;height:48px;margin-top:5px"></div>
+      <div style="background:#fff;border:1.2px solid #ded6c4;border-radius:7px;height:48px;margin-top:5px"></div>
+      <div style="font-size:9.5px;color:#8a8270;letter-spacing:.06em;margin-top:11px">CLASSES</div>
+      <div style="background:#fff;border:1.2px solid #ded6c4;border-radius:7px;height:46px;margin-top:5px"></div>
+      <div style="background:#fff;border:1.2px solid #ded6c4;border-radius:7px;height:46px;margin-top:5px"></div>
+      <div style="position:absolute;left:0;right:0;bottom:0;height:80px;background:linear-gradient(to bottom,rgba(244,239,230,0),#f4efe6)"></div>
+      <div style="position:absolute;right:10px;bottom:14px;font-family:'Caveat',cursive;font-size:20px;color:#a59c88">scroll ↓ … ↓</div>
+    </div>
+  </div>
+</div>
+
+<!-- problem stickies -->
+<div style="position:absolute;left:1150px;top:600px;width:250px">
+  <div style="background:#f6c9bd;padding:14px;box-shadow:0 1px 4px rgba(0,0,0,.12);transform:rotate(1.4deg);font-size:13.5px;line-height:1.5;color:#7d3322">
+    <b>⚠ « Quoi maintenant ? » noyé.</b> « À faire » arrive après le calendrier, et dans la liste le <b>signalement d'intégrité</b> (urgent) a le même poids qu'un rappel de fin d'année.
+  </div>
+</div>
+<div style="position:absolute;left:1150px;top:770px;width:250px">
+  <div style="background:#f6c9bd;padding:14px;box-shadow:0 1px 4px rgba(0,0,0,.12);transform:rotate(-1.5deg);font-size:13.5px;line-height:1.5;color:#7d3322">
+    <b>⚠ Tout pèse pareil.</b> Calendrier + à faire + santé + coût API + classes : cinq sections de même taille. L'œil ne sait pas par quoi commencer.
+  </div>
+</div>
+<div style="position:absolute;left:1150px;top:940px;width:250px">
+  <div style="background:#f6c9bd;padding:14px;box-shadow:0 1px 4px rgba(0,0,0,.12);transform:rotate(1.2deg);font-size:13.5px;line-height:1.5;color:#7d3322">
+    <b>⚠ Mobile = scroll sans fin.</b> Les 5 sections s'enchaînent ; le <b>détail d'une classe</b> est tout en bas, après les tuiles.
+  </div>
+</div>
+
+<!-- ======================= BAND 2 — NAV MOBILE ======================= -->
+<div style="position:absolute;left:80px;top:1380px;font-family:'Caveat',cursive;font-weight:700;font-size:32px;color:#3a352c">2 · La nav prof sur mobile — 3 pistes</div>
+<div style="position:absolute;left:80px;top:1426px;font-family:'Architects Daughter',cursive;font-size:15px;color:#8a8270;max-width:920px">Le desktop a 3 onglets : <b>Tableau de bord · Pilotage ▾</b> (Élèves, Classes, Calendrier, Intégrité) <b>· Modules ▾</b> (Fragments, Scriptorium, Quazian, Codex, Aletheia, Accès). Au tactile les déroulants sautent — comment garder l'accès à tout&nbsp;?</div>
+
+<!-- Option α — bottom bar mirror -->
+<div data-screen-label="Nav mobile — option A (barre + sheets)" style="position:absolute;left:80px;top:1500px;width:300px">
+  <div data-drags-parent="1" style="position:absolute;top:-28px;left:2px;font-family:'Caveat',cursive;font-weight:700;font-size:21px;color:#46402f">A — Barre du bas, miroir du desktop</div>
+  <div style="border:2.5px solid #46402f;border-radius:30px;padding:9px;background:#46402f;box-shadow:0 3px 10px rgba(0,0,0,.13)">
+    <div style="height:5px;width:46px;background:#cdc6b6;border-radius:3px;margin:3px auto 7px"></div>
+    <div style="background:#f4efe6;border-radius:22px;height:520px;overflow:hidden;display:flex;flex-direction:column;position:relative">
+      <div style="padding:13px 13px 0;flex:1;opacity:.55">
+        <div style="font-family:'Caveat',cursive;font-weight:700;font-size:16px;color:#46402f">Tableau de bord</div>
+        <div style="background:#fff;border:1.2px solid #ded6c4;border-radius:7px;height:40px;margin-top:9px"></div>
+        <div style="background:#fff;border:1.2px solid #ded6c4;border-radius:7px;height:40px;margin-top:7px"></div>
+      </div>
+      <!-- bottom sheet open: Pilotage -->
+      <div style="background:#fff;border-top:1.4px solid #ded6c4;border-radius:16px 16px 0 0;box-shadow:0 -4px 14px rgba(0,0,0,.1);padding:12px 14px 8px">
+        <div style="width:34px;height:4px;background:#d3ccba;border-radius:3px;margin:0 auto 10px"></div>
+        <div style="font-size:11px;color:#8a8270;letter-spacing:.06em;margin-bottom:8px">PILOTAGE</div>
+        <div style="display:flex;flex-direction:column;gap:8px;font-size:13px;color:#46402f">
+          <div style="display:flex;align-items:center;justify-content:space-between"><span>Élèves</span><span style="color:#a59c88">→</span></div>
+          <div style="display:flex;align-items:center;justify-content:space-between"><span>Classes</span><span style="color:#a59c88">→</span></div>
+          <div style="display:flex;align-items:center;justify-content:space-between"><span>Calendrier</span><span style="color:#a59c88">→</span></div>
+          <div style="display:flex;align-items:center;justify-content:space-between"><span>Intégrité</span><span style="background:#f7ddd6;color:#a23e2e;font-size:10px;padding:1px 7px;border-radius:9px">2</span></div>
+        </div>
+      </div>
+      <!-- bottom tab bar -->
+      <div style="border-top:1.4px solid #ded6c4;background:#fbf8f1;display:flex;justify-content:space-around;padding:7px 4px">
+        <div style="text-align:center;color:#a59c88"><div style="width:18px;height:18px;border:2px solid #c4bca8;border-radius:5px;margin:0 auto"></div><div style="font-size:8.5px;margin-top:2px">Bord</div></div>
+        <div style="text-align:center;color:#46402f"><div style="width:18px;height:18px;border:2px solid #46402f;border-radius:5px;margin:0 auto;background:#e7e0d2"></div><div style="font-size:8.5px;margin-top:2px;font-weight:700">Pilotage</div></div>
+        <div style="text-align:center;color:#a59c88"><div style="width:18px;height:18px;border:2px solid #c4bca8;border-radius:5px;margin:0 auto"></div><div style="font-size:8.5px;margin-top:2px">Modules</div></div>
+        <div style="text-align:center;color:#a59c88"><div style="width:18px;height:18px;border:2px solid #c4bca8;border-radius:50%;margin:0 auto"></div><div style="font-size:8.5px;margin-top:2px">Moi</div></div>
+      </div>
+    </div>
+  </div>
+  <div style="font-size:12.5px;color:#5b5444;line-height:1.5;margin-top:11px">
+    4 onglets = les 3 groupes du desktop + <b>Moi</b>. Taper <b>Pilotage</b> ou <b>Modules</b> ouvre une <b>feuille</b> listant leurs entrées (badges d'alerte possibles).
+    <div style="margin-top:7px;color:#5b6e4a">+ même modèle mental qu'à l'écran ; pouce ; badges visibles</div>
+    <div style="color:#a23e2e">– un tap de plus pour atteindre une sous-page</div>
+  </div>
+</div>
+
+<!-- Option β — drawer -->
+<div data-screen-label="Nav mobile — option B (tiroir)" style="position:absolute;left:480px;top:1500px;width:300px">
+  <div data-drags-parent="1" style="position:absolute;top:-28px;left:2px;font-family:'Caveat',cursive;font-weight:700;font-size:21px;color:#46402f">B — Tiroir (hamburger)</div>
+  <div style="border:2.5px solid #46402f;border-radius:30px;padding:9px;background:#46402f;box-shadow:0 3px 10px rgba(0,0,0,.13)">
+    <div style="height:5px;width:46px;background:#cdc6b6;border-radius:3px;margin:3px auto 7px"></div>
+    <div style="background:#f4efe6;border-radius:22px;height:520px;overflow:hidden;position:relative;display:flex">
+      <!-- drawer -->
+      <div style="width:208px;background:#fff;border-right:1.4px solid #ded6c4;box-shadow:4px 0 14px rgba(0,0,0,.08);padding:14px 13px;display:flex;flex-direction:column;gap:4px">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px"><span style="font-family:'Caveat',cursive;font-weight:700;font-size:13px;letter-spacing:.06em;color:#46402f">PALIMPSESTE</span><span style="font-size:13px;color:#a59c88">✕</span></div>
+        <div style="background:#e7e0d2;border-radius:6px;padding:7px 9px;font-size:12.5px;font-weight:700;color:#46402f">Tableau de bord</div>
+        <div style="font-size:10px;color:#8a8270;letter-spacing:.06em;margin-top:9px">PILOTAGE</div>
+        <div style="font-size:12px;color:#5b5444;padding:4px 9px">Élèves</div>
+        <div style="font-size:12px;color:#5b5444;padding:4px 9px">Classes</div>
+        <div style="font-size:12px;color:#5b5444;padding:4px 9px">Calendrier</div>
+        <div style="font-size:12px;color:#5b5444;padding:4px 9px;display:flex;justify-content:space-between">Intégrité <span style="background:#f7ddd6;color:#a23e2e;font-size:9px;padding:1px 6px;border-radius:8px">2</span></div>
+        <div style="font-size:10px;color:#8a8270;letter-spacing:.06em;margin-top:9px">MODULES</div>
+        <div style="font-size:12px;color:#5b5444;padding:4px 9px">Fragments</div>
+        <div style="font-size:12px;color:#5b5444;padding:4px 9px">Scriptorium</div>
+        <div style="font-size:12px;color:#5b5444;padding:4px 9px">Quazian · Codex · …</div>
+      </div>
+      <!-- dimmed page behind -->
+      <div style="flex:1;background:rgba(70,64,47,.28)"></div>
+    </div>
+  </div>
+  <div style="font-size:12.5px;color:#5b5444;line-height:1.5;margin-top:11px">
+    Bouton <b>☰</b> en haut → tiroir latéral avec <b>les deux groupes dépliés</b> d'un coup. Beaucoup de place, tout est listé.
+    <div style="margin-top:7px;color:#5b6e4a">+ vue d'ensemble complète ; extensible sans limite</div>
+    <div style="color:#a23e2e">– cible en haut (pas au pouce) ; cache la page ; « patron desktop » plaqué</div>
+  </div>
+</div>
+
+<!-- Option γ — bottom bar + Plus -->
+<div data-screen-label="Nav mobile — option C (barre + Plus)" style="position:absolute;left:880px;top:1500px;width:300px">
+  <div data-drags-parent="1" style="position:absolute;top:-28px;left:2px;font-family:'Caveat',cursive;font-weight:700;font-size:21px;color:#46402f">C — Barre du bas + « Plus »</div>
+  <div style="border:2.5px solid #46402f;border-radius:30px;padding:9px;background:#46402f;box-shadow:0 3px 10px rgba(0,0,0,.13)">
+    <div style="height:5px;width:46px;background:#cdc6b6;border-radius:3px;margin:3px auto 7px"></div>
+    <div style="background:#f4efe6;border-radius:22px;height:520px;overflow:hidden;display:flex;flex-direction:column;position:relative">
+      <div style="padding:13px 13px 0;flex:1;opacity:.55">
+        <div style="font-family:'Caveat',cursive;font-weight:700;font-size:16px;color:#46402f">Tableau de bord</div>
+        <div style="background:#fff;border:1.2px solid #ded6c4;border-radius:7px;height:40px;margin-top:9px"></div>
+        <div style="background:#fff;border:1.2px solid #ded6c4;border-radius:7px;height:40px;margin-top:7px"></div>
+      </div>
+      <!-- Plus sheet (grid) -->
+      <div style="background:#fff;border-top:1.4px solid #ded6c4;border-radius:16px 16px 0 0;box-shadow:0 -4px 14px rgba(0,0,0,.1);padding:12px 14px 8px">
+        <div style="width:34px;height:4px;background:#d3ccba;border-radius:3px;margin:0 auto 10px"></div>
+        <div style="font-size:11px;color:#8a8270;letter-spacing:.06em;margin-bottom:8px">TOUT LE RESTE</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;text-align:center;font-size:10.5px;color:#5b5444">
+          <div><div style="width:30px;height:30px;border:1.4px solid #ded6c4;border-radius:8px;margin:0 auto 3px"></div>Élèves</div>
+          <div><div style="width:30px;height:30px;border:1.4px solid #ded6c4;border-radius:8px;margin:0 auto 3px"></div>Intégrité</div>
+          <div><div style="width:30px;height:30px;border:1.4px solid #ded6c4;border-radius:8px;margin:0 auto 3px"></div>Fragments</div>
+          <div><div style="width:30px;height:30px;border:1.4px solid #ded6c4;border-radius:8px;margin:0 auto 3px"></div>Quazian</div>
+          <div><div style="width:30px;height:30px;border:1.4px solid #ded6c4;border-radius:8px;margin:0 auto 3px"></div>Codex</div>
+          <div><div style="width:30px;height:30px;border:1.4px solid #ded6c4;border-radius:8px;margin:0 auto 3px"></div>Aletheia</div>
+        </div>
+      </div>
+      <div style="border-top:1.4px solid #ded6c4;background:#fbf8f1;display:flex;justify-content:space-around;padding:7px 4px">
+        <div style="text-align:center;color:#46402f"><div style="width:18px;height:18px;border:2px solid #46402f;border-radius:5px;margin:0 auto;background:#e7e0d2"></div><div style="font-size:8.5px;margin-top:2px;font-weight:700">Bord</div></div>
+        <div style="text-align:center;color:#a59c88"><div style="width:18px;height:18px;border:2px solid #c4bca8;border-radius:5px;margin:0 auto"></div><div style="font-size:8.5px;margin-top:2px">Classes</div></div>
+        <div style="text-align:center;color:#a59c88"><div style="width:18px;height:18px;border:2px solid #c4bca8;border-radius:5px;margin:0 auto"></div><div style="font-size:8.5px;margin-top:2px">Agenda</div></div>
+        <div style="text-align:center;color:#a59c88"><div style="width:18px;height:18px;border:2px dashed #c4bca8;border-radius:5px;margin:0 auto"></div><div style="font-size:8.5px;margin-top:2px">Plus</div></div>
+      </div>
+    </div>
+  </div>
+  <div style="font-size:12.5px;color:#5b5444;line-height:1.5;margin-top:11px">
+    Les 3 destinations <b>les plus utilisées</b> en accès direct (Bord, Classes, Agenda) + <b>Plus</b> qui ouvre une grille de tout le reste.
+    <div style="margin-top:7px;color:#5b6e4a">+ raccourcis sur l'essentiel ; pouce</div>
+    <div style="color:#a23e2e">– « Plus » fourre-tout ; ne calque plus la structure du desktop</div>
+  </div>
+</div>
+
+<!-- nav reco note -->
+<div style="position:absolute;left:1240px;top:1540px;width:250px">
+  <div style="background:#fef4a8;padding:14px;box-shadow:0 1px 4px rgba(0,0,0,.12);transform:rotate(1.3deg);font-size:13.5px;line-height:1.5;color:#5a4a14">
+    <div style="font-family:'Caveat',cursive;font-weight:700;font-size:19px;color:#4a3c0c;margin-bottom:5px">Penche pour A</div>
+    Comme côté élève, la <b>barre du bas</b> gagne. Ici elle reprend les 3 groupes du desktop → un seul modèle à apprendre. Les <b>feuilles</b> Pilotage/Modules accueillent sans limite les futures entrées.
+  </div>
+</div>
+
+<!-- ======================= BAND 3 — 3 PISTES DASHBOARD ======================= -->
+<div style="position:absolute;left:80px;top:2240px;font-family:'Caveat',cursive;font-weight:700;font-size:32px;color:#3a352c">3 · Le tableau de bord, trois hiérarchies</div>
+<div style="position:absolute;left:80px;top:2286px;font-family:'Architects Daughter',cursive;font-size:15px;color:#8a8270">Même contenu, trois façons de prioriser. Chaque piste : un bandeau « sur ordi », le mobile, et le pour / contre.</div>
+
+<!-- PISTE A — file d'actions -->
+<div data-screen-label="Piste A — file d'actions" style="position:absolute;left:80px;top:2350px;width:480px">
+  <div data-drags-parent="1" style="position:absolute;top:-28px;left:2px;font-family:'Caveat',cursive;font-weight:700;font-size:22px;color:#46402f">Piste A — « File d'actions »</div>
+  <div style="background:#fbfaf6;border:1.5px solid #cdc6b6;border-radius:12px;box-shadow:0 1px 4px rgba(0,0,0,.09);padding:18px">
+    <div style="font-size:11px;color:#8a8270;margin-bottom:6px">SUR ORDI — héros « à traiter maintenant » + le reste compact</div>
+    <div style="border:1.4px solid #d3ccba;border-radius:7px;background:#fff;padding:10px;margin-bottom:16px">
+      <div style="background:#fff;border:1.6px solid #a23e2e;border-radius:8px;padding:9px"><div style="font-size:9px;color:#a23e2e;letter-spacing:.05em">▸ À TRAITER</div><div style="height:7px;width:70%;background:#e0b3a8;border-radius:4px;margin-top:5px"></div></div>
+      <div style="display:flex;gap:6px;margin-top:7px"><div style="flex:1;height:22px;background:#f4efe6;border:1px solid #ded6c4;border-radius:6px"></div><div style="flex:1;height:22px;background:#f4efe6;border:1px solid #ded6c4;border-radius:6px"></div></div>
+    </div>
+    <div style="display:flex;gap:16px">
+      <div style="border:2.5px solid #46402f;border-radius:26px;padding:8px;background:#46402f;width:212px;flex-shrink:0">
+        <div style="height:4px;width:40px;background:#cdc6b6;border-radius:3px;margin:2px auto 6px"></div>
+        <div style="background:#f4efe6;border-radius:18px;height:380px;padding:11px;overflow:hidden">
+          <div style="font-family:'Caveat',cursive;font-weight:700;font-size:16px;color:#46402f">Bonjour</div>
+          <!-- hero action -->
+          <div style="background:#fff;border:1.6px solid #a23e2e;border-radius:10px;padding:10px;margin-top:8px">
+            <div style="font-size:9px;color:#a23e2e;letter-spacing:.05em">▸ À TRAITER MAINTENANT</div>
+            <div style="font-size:12px;font-weight:700;color:#46402f;margin-top:3px">2 fragments à valider</div>
+            <div style="font-size:10px;color:#7a7263;margin-top:1px">Terminale HLP · semaine 3</div>
+            <div style="margin-top:8px;background:#46402f;color:#f4efe6;text-align:center;border-radius:7px;padding:6px;font-size:11px">Ouvrir →</div>
+          </div>
+          <div style="font-size:9.5px;color:#8a8270;letter-spacing:.06em;margin-top:11px">ENSUITE</div>
+          <div style="display:flex;flex-direction:column;gap:6px;margin-top:5px">
+            <div style="background:#fbf8f1;border:1px solid #ded6c4;border-radius:8px;padding:7px;display:flex;align-items:center;gap:7px"><span style="width:8px;height:8px;border-radius:50%;background:#a23e2e"></span><span style="font-size:10.5px;color:#5b5444;flex:1">1 élève bloqué · intégrité</span><span style="font-size:9px;color:#a59c88">→</span></div>
+            <div style="background:#fbf8f1;border:1px solid #ded6c4;border-radius:8px;padding:7px;display:flex;align-items:center;gap:7px"><span style="width:8px;height:8px;border-radius:50%;background:#5A6043"></span><span style="font-size:10.5px;color:#5b5444;flex:1">Ouvrir semaine 4 · 28 juin</span><span style="font-size:9px;color:#a59c88">→</span></div>
+            <div style="background:#fbf8f1;border:1px solid #ded6c4;border-radius:8px;padding:7px;display:flex;align-items:center;gap:7px"><span style="width:8px;height:8px;border-radius:50%;background:#2f5a7d"></span><span style="font-size:10.5px;color:#5b5444;flex:1">Coût API · 12,40 € ce mois</span><span style="font-size:9px;color:#a59c88">→</span></div>
+          </div>
+          <div style="font-size:9.5px;color:#8a8270;letter-spacing:.06em;margin-top:11px">COHORTE</div>
+          <div style="background:#fbf8f1;border:1px solid #ded6c4;border-radius:8px;padding:8px;margin-top:5px;display:flex;justify-content:space-around;font-size:10.5px"><span style="color:#5b6e4a"><b>92%</b> à jour</span><span style="color:#a23e2e"><b>6</b> à risque</span></div>
+        </div>
+      </div>
+      <div style="font-size:12.5px;color:#5b5444;line-height:1.5">
+        <div style="font-family:'Caveat',cursive;font-weight:700;font-size:16px;color:#46402f;margin-bottom:4px">L'idée</div>
+        <b>Une action dominante</b> en haut (la plus urgente : valider &gt; intégrité &gt; échéance), puis « Ensuite » compact (échéances, intégrité, <b>coût API du mois</b>), puis la cohorte en <b>une bande</b>. Le calendrier passe sous le pli.
+        <div style="margin-top:9px;color:#5b6e4a">+ répond pile au brief : l'action d'abord</div>
+        <div style="color:#a23e2e">– le tri « le plus urgent » doit être juste</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- PISTE B — triage par classe -->
+<div data-screen-label="Piste B — triage par classe" style="position:absolute;left:600px;top:2350px;width:480px">
+  <div data-drags-parent="1" style="position:absolute;top:-28px;left:2px;font-family:'Caveat',cursive;font-weight:700;font-size:22px;color:#46402f">Piste B — « Triage par classe »</div>
+  <div style="background:#fbfaf6;border:1.5px solid #cdc6b6;border-radius:12px;box-shadow:0 1px 4px rgba(0,0,0,.09);padding:18px">
+    <div style="font-size:11px;color:#8a8270;margin-bottom:6px">SUR ORDI — les classes en tête, chacune montre son état</div>
+    <div style="border:1.4px solid #d3ccba;border-radius:7px;background:#fff;padding:10px;margin-bottom:16px;display:flex;gap:7px">
+      <div style="flex:1;border:1px solid #ded6c4;border-top:3px solid #a23e2e;border-radius:6px;height:40px"></div>
+      <div style="flex:1;border:1px solid #ded6c4;border-top:3px solid #5b6e4a;border-radius:6px;height:40px"></div>
+      <div style="flex:1;border:1px solid #ded6c4;border-top:3px solid #a23e2e;border-radius:6px;height:40px"></div>
+    </div>
+    <div style="display:flex;gap:16px">
+      <div style="border:2.5px solid #46402f;border-radius:26px;padding:8px;background:#46402f;width:212px;flex-shrink:0">
+        <div style="height:4px;width:40px;background:#cdc6b6;border-radius:3px;margin:2px auto 6px"></div>
+        <div style="background:#f4efe6;border-radius:18px;height:380px;padding:11px;overflow:hidden">
+          <div style="background:#fff;border:1.2px solid #ded6c4;border-radius:8px;padding:7px 9px;display:flex;justify-content:space-between;align-items:center;margin-bottom:9px"><span style="font-size:10.5px;font-weight:700;color:#46402f">À traiter</span><span style="background:#f7ddd6;color:#a23e2e;font-size:9.5px;padding:1px 7px;border-radius:9px">3</span></div>
+          <div style="font-size:9.5px;color:#8a8270;letter-spacing:.06em;margin-bottom:5px">MES CLASSES</div>
+          <div style="display:flex;flex-direction:column;gap:7px">
+            <div style="background:#fff;border:1.2px solid #ded6c4;border-left:4px solid #a23e2e;border-radius:9px;padding:9px"><div style="font-size:12px;font-weight:700;color:#46402f">Terminale HLP</div><div style="font-size:9.5px;color:#7a7263;margin-top:2px">24 élèves · <span style="color:#a23e2e">3 à risque · 2 à valider</span></div></div>
+            <div style="background:#fff;border:1.2px solid #ded6c4;border-left:4px solid #5b6e4a;border-radius:9px;padding:9px"><div style="font-size:12px;font-weight:700;color:#46402f">Première HLP</div><div style="font-size:9.5px;color:#5b6e4a;margin-top:2px">28 élèves · à jour</div></div>
+            <div style="background:#fff;border:1.2px solid #ded6c4;border-left:4px solid #a23e2e;border-radius:9px;padding:9px"><div style="font-size:12px;font-weight:700;color:#46402f">Terminale Philo</div><div style="font-size:9.5px;color:#7a7263;margin-top:2px">31 élèves · <span style="color:#a23e2e">2 à risque</span></div></div>
+          </div>
+        </div>
+      </div>
+      <div style="font-size:12.5px;color:#5b5444;line-height:1.5">
+        <div style="font-family:'Caveat',cursive;font-weight:700;font-size:16px;color:#46402f;margin-bottom:4px">L'idée</div>
+        La <b>classe est la colonne vertébrale</b>. Chaque tuile porte sa santé (liseré vert/rouge) + ses chiffres (à risque, à valider). « À traiter » devient un <b>bandeau fin</b> en haut.
+        <div style="margin-top:9px;color:#5b6e4a">+ santé par classe en un coup d'œil</div>
+        <div style="color:#a23e2e">– l'urgent transversal moins saillant</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- PISTE C — deux colonnes ordi -->
+<div data-screen-label="Piste C — deux colonnes" style="position:absolute;left:1120px;top:2350px;width:480px">
+  <div data-drags-parent="1" style="position:absolute;top:-28px;left:2px;font-family:'Caveat',cursive;font-weight:700;font-size:22px;color:#46402f">Piste C — « À faire | Santé »</div>
+  <div style="background:#fbfaf6;border:1.5px solid #cdc6b6;border-radius:12px;box-shadow:0 1px 4px rgba(0,0,0,.09);padding:18px">
+    <div style="font-size:11px;color:#8a8270;margin-bottom:6px">SUR ORDI — colonne actions à gauche, santé à droite</div>
+    <div style="border:1.4px solid #d3ccba;border-radius:7px;background:#fff;padding:10px;margin-bottom:16px;display:flex;gap:8px">
+      <div style="flex:1.3;display:flex;flex-direction:column;gap:5px"><div style="height:8px;width:80%;background:#e4decf;border-radius:4px"></div><div style="height:8px;width:65%;background:#e4decf;border-radius:4px"></div><div style="height:8px;width:72%;background:#e4decf;border-radius:4px"></div></div>
+      <div style="flex:1;border-left:1px solid #ece4d6;padding-left:8px;display:flex;flex-direction:column;gap:5px"><div style="height:8px;width:90%;background:#e4decf;border-radius:4px"></div><div style="height:8px;width:60%;background:#e4decf;border-radius:4px"></div></div>
+    </div>
+    <div style="display:flex;gap:16px">
+      <div style="border:2.5px solid #46402f;border-radius:26px;padding:8px;background:#46402f;width:212px;flex-shrink:0">
+        <div style="height:4px;width:40px;background:#cdc6b6;border-radius:3px;margin:2px auto 6px"></div>
+        <div style="background:#f4efe6;border-radius:18px;height:380px;padding:11px;overflow:hidden">
+          <div style="font-size:9.5px;color:#8a8270;letter-spacing:.06em">À FAIRE</div>
+          <div style="display:flex;flex-direction:column;gap:6px;margin-top:5px">
+            <div style="background:#fff;border:1.2px solid #ded6c4;border-left:3px solid #a23e2e;border-radius:7px;padding:7px"><div style="height:7px;width:75%;background:#e4decf;border-radius:4px"></div></div>
+            <div style="background:#fff;border:1.2px solid #ded6c4;border-radius:7px;padding:7px"><div style="height:7px;width:60%;background:#e4decf;border-radius:4px"></div></div>
+            <div style="background:#fff;border:1.2px solid #ded6c4;border-radius:7px;padding:7px"><div style="height:7px;width:68%;background:#e4decf;border-radius:4px"></div></div>
+          </div>
+          <div style="font-size:9.5px;color:#8a8270;letter-spacing:.06em;margin-top:11px">SANTÉ</div>
+          <div style="display:flex;gap:6px;margin-top:5px"><div style="flex:1;background:#fff;border:1.2px solid #ded6c4;border-radius:7px;padding:7px;text-align:center"><div style="font-family:'Caveat',cursive;font-weight:700;font-size:18px;color:#5b6e4a">92%</div><div style="font-size:8px;color:#8a8270">à jour</div></div><div style="flex:1;background:#fff;border:1.2px solid #ded6c4;border-radius:7px;padding:7px;text-align:center"><div style="font-family:'Caveat',cursive;font-weight:700;font-size:18px;color:#a23e2e">6</div><div style="font-size:8px;color:#8a8270">à risque</div></div></div>
+        </div>
+      </div>
+      <div style="font-size:12.5px;color:#5b5444;line-height:1.5">
+        <div style="font-family:'Caveat',cursive;font-weight:700;font-size:16px;color:#46402f;margin-bottom:4px">L'idée</div>
+        Sur grand écran, <b>deux colonnes</b> : à gauche le flux d'actions, à droite la santé + les élèves à risque. Tout est visible sans scroller.
+        <div style="margin-top:9px;color:#5b6e4a">+ exploite le grand écran ; rien sous le pli</div>
+        <div style="color:#a23e2e">– sur mobile ça redevient une pile ; 2 logiques</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ======================= BAND 4 — DRILL-DOWN ======================= -->
+<div style="position:absolute;left:80px;top:3100px;font-family:'Caveat',cursive;font-weight:700;font-size:32px;color:#3a352c">4 · Classe → élève — le shell réutilisable</div>
+<div style="position:absolute;left:80px;top:3146px;font-family:'Architects Daughter',cursive;font-size:15px;color:#8a8270;max-width:920px">La tuile-classe ouvre la liste des élèves. Sur la ligne : priorité au <b>badge à risque / à jour</b> et aux <b>dépôts fragments</b> ; le reste (moyenne, essai, Codex, révision) reste discret.</div>
+
+<!-- detail classe — laptop -->
+<div data-screen-label="Détail classe — ordi (déplié sur place)" style="position:absolute;left:80px;top:3220px;width:760px">
+  <div data-drags-parent="1" style="position:absolute;top:-26px;left:2px;font-family:'Caveat',cursive;font-size:19px;color:#6f6755">Sur ordinateur — la tuile se déplie sous la grille</div>
+  <div style="border:1.5px solid #cdc6b6;border-radius:11px;background:#fff;box-shadow:0 2px 8px rgba(0,0,0,.1);overflow:hidden">
+    <div style="background:#ece4d6;padding:8px 12px;display:flex;align-items:center;gap:6px"><span style="width:9px;height:9px;border-radius:50%;background:#c9b89a"></span><span style="width:9px;height:9px;border-radius:50%;background:#c9b89a"></span><span style="width:9px;height:9px;border-radius:50%;background:#c9b89a"></span></div>
+    <div style="background:#f4efe6;padding:18px">
+      <div style="font-size:11px;color:#8a8270;letter-spacing:.08em">CLASSES</div>
+      <!-- tuiles row, one selected -->
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-top:7px">
+        <div style="background:#fff;border:1.6px solid #46402f;border-left:4px solid #a23e2e;border-radius:9px;padding:10px"><div style="font-size:13px;font-weight:700;color:#46402f">Terminale HLP</div><div style="font-size:10px;color:#7a7263;margin-top:2px">Terminale · 25-26</div><div style="font-size:10px;color:#a23e2e;margin-top:5px">3 à risque · 2 à valider</div></div>
+        <div style="background:#fff;border:1px solid #ded6c4;border-left:4px solid #5b6e4a;border-radius:9px;padding:10px;opacity:.85"><div style="font-size:13px;font-weight:700;color:#46402f">Première HLP</div><div style="font-size:10px;color:#7a7263;margin-top:2px">Première · 25-26</div><div style="font-size:10px;color:#5b6e4a;margin-top:5px">à jour</div></div>
+        <div style="background:#fff;border:1px solid #ded6c4;border-left:4px solid #a23e2e;border-radius:9px;padding:10px;opacity:.85"><div style="font-size:13px;font-weight:700;color:#46402f">Terminale Philo</div><div style="font-size:10px;color:#7a7263;margin-top:2px">Terminale · 25-26</div><div style="font-size:10px;color:#a23e2e;margin-top:5px">2 à risque</div></div>
+      </div>
+      <!-- detail panel -->
+      <div style="background:#fff;border:1.4px solid #ded6c4;border-radius:11px;margin-top:12px;overflow:hidden">
+        <div style="background:#fbf8f1;border-bottom:1px solid #ded6c4;padding:11px 14px;display:flex;justify-content:space-between;align-items:center">
+          <div><span style="font-family:'Caveat',cursive;font-weight:700;font-size:18px;color:#46402f">Terminale HLP</span><span style="font-size:11px;color:#8a8270;margin-left:8px">Terminale · 24 élèves · 2025-26</span></div>
+          <span style="font-size:11px;color:#a23e2e;border:1px solid #d99b8a;border-radius:7px;padding:5px 11px">Effacer la classe</span>
+        </div>
+        <!-- column headers -->
+        <div style="display:flex;align-items:center;gap:10px;padding:7px 14px;font-size:9.5px;color:#a59c88;letter-spacing:.05em;border-bottom:1px dashed #ece4d6"><span style="flex:1.4">ÉLÈVE</span><span style="flex:1.1">DÉPÔTS FRAGMENTS</span><span style="width:90px">DIVERS</span><span style="width:70px;text-align:right">&nbsp;</span></div>
+        <!-- rows -->
+        <div style="display:flex;align-items:center;gap:10px;padding:9px 14px;font-size:12.5px;border-bottom:1px solid #f2ede3"><span style="flex:1.4;color:#46402f">Léa Fontaine <span style="background:#f7ddd6;color:#a23e2e;font-size:9.5px;padding:1px 7px;border-radius:9px;margin-left:4px">à risque</span></span><span style="flex:1.1;color:#a23e2e">6/8 · 2 manquants</span><span style="width:90px;color:#a59c88;font-size:10.5px">essai déposé</span><span style="width:70px;text-align:right;color:#a59c88;font-size:10.5px">Retirer</span></div>
+        <div style="display:flex;align-items:center;gap:10px;padding:9px 14px;font-size:12.5px;border-bottom:1px solid #f2ede3"><span style="flex:1.4;color:#46402f">Karim Benali <span style="background:#f7ddd6;color:#a23e2e;font-size:9.5px;padding:1px 7px;border-radius:9px;margin-left:4px">à risque</span></span><span style="flex:1.1;color:#5b5444">8/8 · à jour</span><span style="width:90px;color:#a59c88;font-size:10.5px">moy. C−</span><span style="width:70px;text-align:right;color:#a59c88;font-size:10.5px">Retirer</span></div>
+        <div style="display:flex;align-items:center;gap:10px;padding:9px 14px;font-size:12.5px;border-bottom:1px solid #f2ede3"><span style="flex:1.4;color:#46402f">Nina Lefèvre <span style="background:#f7ddd6;color:#a23e2e;font-size:9.5px;padding:1px 7px;border-radius:9px;margin-left:4px">à risque</span></span><span style="flex:1.1;color:#5b5444">8/8 · à jour</span><span style="width:90px;color:#a59c88;font-size:10.5px">14 à réviser</span><span style="width:70px;text-align:right;color:#a59c88;font-size:10.5px">Retirer</span></div>
+        <div style="display:flex;align-items:center;gap:10px;padding:9px 14px;font-size:12.5px;border-bottom:1px solid #f2ede3"><span style="flex:1.4;color:#46402f">Hugo Mercier</span><span style="flex:1.1;color:#5b5444">8/8 · à jour</span><span style="width:90px;color:#a59c88;font-size:10.5px">Codex ×2</span><span style="width:70px;text-align:right;color:#a59c88;font-size:10.5px">Retirer</span></div>
+        <div style="display:flex;align-items:center;gap:10px;padding:9px 14px;font-size:12.5px"><span style="flex:1.4;color:#46402f">Camille Roy</span><span style="flex:1.1;color:#5b5444">7/8 · à jour</span><span style="width:90px;color:#a59c88;font-size:10.5px">moy. B+</span><span style="width:70px;text-align:right;color:#a59c88;font-size:10.5px">Retirer</span></div>
+        <div style="background:#fbf8f1;text-align:center;padding:7px;font-size:11px;color:#8a8270;border-top:1px dashed #ece4d6">+ 19 autres élèves…</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- detail classe — mobile (full screen push) -->
+<div data-screen-label="Détail classe — mobile (écran plein)" style="position:absolute;left:880px;top:3220px;width:300px">
+  <div data-drags-parent="1" style="position:absolute;top:-26px;left:2px;font-family:'Caveat',cursive;font-size:19px;color:#6f6755">Sur mobile — écran plein « détail classe »</div>
+  <div style="border:2.5px solid #46402f;border-radius:30px;padding:9px;background:#46402f;box-shadow:0 3px 10px rgba(0,0,0,.13)">
+    <div style="height:5px;width:46px;background:#cdc6b6;border-radius:3px;margin:3px auto 7px"></div>
+    <div style="background:#f4efe6;border-radius:22px;height:560px;overflow:hidden;display:flex;flex-direction:column">
+      <div style="padding:13px 14px 10px;border-bottom:1px solid #ded6c4">
+        <div style="font-size:11px;color:#7a7263">← Classes</div>
+        <div style="font-family:'Caveat',cursive;font-weight:700;font-size:19px;color:#46402f;margin-top:3px">Terminale HLP</div>
+        <div style="font-size:10.5px;color:#8a8270">24 élèves · 3 à risque</div>
+      </div>
+      <div style="flex:1;overflow:hidden;padding:11px 12px;display:flex;flex-direction:column;gap:7px">
+        <div style="background:#fff;border:1px solid #ded6c4;border-radius:9px;padding:9px;display:flex;justify-content:space-between;align-items:center"><div><div style="font-size:12.5px;color:#46402f">Léa Fontaine</div><div style="font-size:10px;color:#a23e2e;margin-top:2px">6/8 dépôts · 2 manquants</div></div><span style="background:#f7ddd6;color:#a23e2e;font-size:9.5px;padding:2px 7px;border-radius:9px">à risque</span></div>
+        <div style="background:#fff;border:1px solid #ded6c4;border-radius:9px;padding:9px;display:flex;justify-content:space-between;align-items:center"><div><div style="font-size:12.5px;color:#46402f">Karim Benali</div><div style="font-size:10px;color:#5b5444;margin-top:2px">8/8 dépôts · moy. C−</div></div><span style="background:#f7ddd6;color:#a23e2e;font-size:9.5px;padding:2px 7px;border-radius:9px">à risque</span></div>
+        <div style="background:#fff;border:1px solid #ded6c4;border-radius:9px;padding:9px;display:flex;justify-content:space-between;align-items:center"><div><div style="font-size:12.5px;color:#46402f">Nina Lefèvre</div><div style="font-size:10px;color:#5b5444;margin-top:2px">8/8 · 14 à réviser</div></div><span style="background:#f7ddd6;color:#a23e2e;font-size:9.5px;padding:2px 7px;border-radius:9px">à risque</span></div>
+        <div style="background:#fff;border:1px solid #ded6c4;border-radius:9px;padding:9px;display:flex;justify-content:space-between;align-items:center"><div><div style="font-size:12.5px;color:#46402f">Hugo Mercier</div><div style="font-size:10px;color:#5b5444;margin-top:2px">8/8 dépôts · à jour</div></div><span style="color:#5b6e4a;font-size:10px">à jour</span></div>
+        <div style="background:#fff;border:1px solid #ded6c4;border-radius:9px;padding:9px;display:flex;justify-content:space-between;align-items:center"><div><div style="font-size:12.5px;color:#46402f">Camille Roy</div><div style="font-size:10px;color:#5b5444;margin-top:2px">7/8 dépôts · à jour</div></div><span style="color:#5b6e4a;font-size:10px">à jour</span></div>
+        <div style="text-align:center;font-size:10.5px;color:#8a8270;padding-top:2px">+ 19 autres…</div>
+      </div>
+      <div style="border-top:1px solid #ded6c4;padding:10px 14px"><div style="text-align:center;font-size:11.5px;color:#a23e2e;border:1px solid #d99b8a;border-radius:8px;padding:8px">Effacer la classe</div></div>
+    </div>
+  </div>
+</div>
+
+<!-- drill-down notes -->
+<div style="position:absolute;left:1220px;top:3260px;width:250px">
+  <div style="background:#fef4a8;padding:14px;box-shadow:0 1px 4px rgba(0,0,0,.12);transform:rotate(1.4deg);font-size:13.5px;line-height:1.5;color:#5a4a14">
+    <b>Décision drill-down.</b> Sur <b>ordi</b>, la tuile se déplie en liste sous la grille → le contexte des autres classes reste visible. Sur <b>mobile</b>, pas de place pour les deux : la tuile pousse un <b>écran plein</b>, retour en haut.
+  </div>
+</div>
+<div style="position:absolute;left:1220px;top:3470px;width:250px">
+  <div style="background:#fef4a8;padding:14px;box-shadow:0 1px 4px rgba(0,0,0,.12);transform:rotate(-1.3deg);font-size:13px;line-height:1.5;color:#5a4a14">
+    Même <b>shell</b> (tuile → élèves → ligne) pour les Lots 4 à 8 : seul le <b>statut par élève</b> change selon le module. Ici : dépôts fragments + badge.
+  </div>
+</div>
+
+<!-- ======================= BAND 5 — À RISQUE ======================= -->
+<div style="position:absolute;left:80px;top:3870px;font-family:'Caveat',cursive;font-weight:700;font-size:32px;color:#3a352c">5 · Élèves à risque — le « pourquoi »</div>
+<div style="position:absolute;left:80px;top:3916px;font-family:'Architects Daughter',cursive;font-size:15px;color:#8a8270">Depuis la santé cohorte, un écran dédié : qui, dans quelle classe, et <b>pour quelle raison</b> — calculé par inscription (un contexte de classe).</div>
+
+<!-- à risque — laptop -->
+<div data-screen-label="Élèves à risque — ordi" style="position:absolute;left:80px;top:3990px;width:760px">
+  <div data-drags-parent="1" style="position:absolute;top:-26px;left:2px;font-family:'Caveat',cursive;font-size:19px;color:#6f6755">Sur ordinateur</div>
+  <div style="border:1.5px solid #cdc6b6;border-radius:11px;background:#fff;box-shadow:0 2px 8px rgba(0,0,0,.1);overflow:hidden">
+    <div style="background:#ece4d6;padding:8px 12px;display:flex;align-items:center;gap:6px"><span style="width:9px;height:9px;border-radius:50%;background:#c9b89a"></span><span style="width:9px;height:9px;border-radius:50%;background:#c9b89a"></span><span style="width:9px;height:9px;border-radius:50%;background:#c9b89a"></span></div>
+    <div style="background:#f4efe6;padding:18px">
+      <div style="font-size:11px;color:#7a7263">← Tableau de bord</div>
+      <div style="font-family:'Caveat',cursive;font-weight:700;font-size:22px;color:#46402f;margin-top:4px">6 élèves à risque</div>
+      <div style="font-size:12px;color:#8a8270;margin-top:2px">Au moins un signal : fragment manquant, moyenne sous le seuil, ou retard de révision.</div>
+      <!-- group: Terminale HLP -->
+      <div style="font-size:11px;color:#8a8270;letter-spacing:.06em;margin-top:14px">TERMINALE HLP · 4</div>
+      <div style="display:flex;flex-direction:column;gap:7px;margin-top:6px">
+        <div style="background:#fff;border:1px solid #ded6c4;border-left:4px solid #a23e2e;border-radius:9px;padding:10px 12px;display:flex;align-items:center;gap:10px"><span style="font-size:13px;color:#46402f;width:150px">Léa Fontaine</span><span style="flex:1;display:flex;gap:6px;flex-wrap:wrap"><span style="background:#f7ddd6;color:#a23e2e;font-size:10.5px;padding:2px 8px;border-radius:9px">2 fragments manquants</span></span><span style="font-size:11px;color:#a59c88">Ouvrir la fiche →</span></div>
+        <div style="background:#fff;border:1px solid #ded6c4;border-left:4px solid #a23e2e;border-radius:9px;padding:10px 12px;display:flex;align-items:center;gap:10px"><span style="font-size:13px;color:#46402f;width:150px">Karim Benali</span><span style="flex:1;display:flex;gap:6px;flex-wrap:wrap"><span style="background:#f7ecd6;color:#9A6A2E;font-size:10.5px;padding:2px 8px;border-radius:9px">moyenne C− (sous seuil)</span></span><span style="font-size:11px;color:#a59c88">Ouvrir la fiche →</span></div>
+        <div style="background:#fff;border:1px solid #ded6c4;border-left:4px solid #a23e2e;border-radius:9px;padding:10px 12px;display:flex;align-items:center;gap:10px"><span style="font-size:13px;color:#46402f;width:150px">Nina Lefèvre</span><span style="flex:1;display:flex;gap:6px;flex-wrap:wrap"><span style="background:#dbe6ef;color:#2f5a7d;font-size:10.5px;padding:2px 8px;border-radius:9px">14 cartes en retard</span></span><span style="font-size:11px;color:#a59c88">Ouvrir la fiche →</span></div>
+        <div style="background:#fff;border:1px solid #ded6c4;border-left:4px solid #a23e2e;border-radius:9px;padding:10px 12px;display:flex;align-items:center;gap:10px"><span style="font-size:13px;color:#46402f;width:150px">Tom Garnier</span><span style="flex:1;display:flex;gap:6px;flex-wrap:wrap"><span style="background:#f7ddd6;color:#a23e2e;font-size:10.5px;padding:2px 8px;border-radius:9px">1 fragment manquant</span><span style="background:#dbe6ef;color:#2f5a7d;font-size:10.5px;padding:2px 8px;border-radius:9px">9 à réviser</span></span><span style="font-size:11px;color:#a59c88">Ouvrir la fiche →</span></div>
+      </div>
+      <!-- group: Terminale Philo -->
+      <div style="font-size:11px;color:#8a8270;letter-spacing:.06em;margin-top:14px">TERMINALE PHILO · 2</div>
+      <div style="display:flex;flex-direction:column;gap:7px;margin-top:6px">
+        <div style="background:#fff;border:1px solid #ded6c4;border-left:4px solid #a23e2e;border-radius:9px;padding:10px 12px;display:flex;align-items:center;gap:10px"><span style="font-size:13px;color:#46402f;width:150px">Inès Bouvier</span><span style="flex:1;display:flex;gap:6px;flex-wrap:wrap"><span style="background:#f7ecd6;color:#9A6A2E;font-size:10.5px;padding:2px 8px;border-radius:9px">moyenne D (sous seuil)</span></span><span style="font-size:11px;color:#a59c88">Ouvrir la fiche →</span></div>
+        <div style="background:#fff;border:1px solid #ded6c4;border-left:4px solid #a23e2e;border-radius:9px;padding:10px 12px;display:flex;align-items:center;gap:10px"><span style="font-size:13px;color:#46402f;width:150px">Lucas Petit</span><span style="flex:1;display:flex;gap:6px;flex-wrap:wrap"><span style="background:#f7ddd6;color:#a23e2e;font-size:10.5px;padding:2px 8px;border-radius:9px">2 fragments manquants</span></span><span style="font-size:11px;color:#a59c88">Ouvrir la fiche →</span></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- à risque — mobile -->
+<div data-screen-label="Élèves à risque — mobile" style="position:absolute;left:880px;top:3990px;width:300px">
+  <div data-drags-parent="1" style="position:absolute;top:-26px;left:2px;font-family:'Caveat',cursive;font-size:19px;color:#6f6755">Sur mobile</div>
+  <div style="border:2.5px solid #46402f;border-radius:30px;padding:9px;background:#46402f;box-shadow:0 3px 10px rgba(0,0,0,.13)">
+    <div style="height:5px;width:46px;background:#cdc6b6;border-radius:3px;margin:3px auto 7px"></div>
+    <div style="background:#f4efe6;border-radius:22px;height:560px;overflow:hidden;display:flex;flex-direction:column">
+      <div style="padding:13px 14px 10px;border-bottom:1px solid #ded6c4">
+        <div style="font-size:11px;color:#7a7263">← Tableau de bord</div>
+        <div style="font-family:'Caveat',cursive;font-weight:700;font-size:18px;color:#46402f;margin-top:3px">6 élèves à risque</div>
+      </div>
+      <div style="flex:1;overflow:hidden;padding:11px 12px;display:flex;flex-direction:column;gap:7px">
+        <div style="font-size:9.5px;color:#8a8270;letter-spacing:.06em">TERMINALE HLP</div>
+        <div style="background:#fff;border:1px solid #ded6c4;border-left:4px solid #a23e2e;border-radius:9px;padding:9px"><div style="font-size:12.5px;color:#46402f">Léa Fontaine</div><div style="margin-top:5px"><span style="background:#f7ddd6;color:#a23e2e;font-size:10px;padding:2px 7px;border-radius:9px">2 fragments manquants</span></div></div>
+        <div style="background:#fff;border:1px solid #ded6c4;border-left:4px solid #a23e2e;border-radius:9px;padding:9px"><div style="font-size:12.5px;color:#46402f">Karim Benali</div><div style="margin-top:5px"><span style="background:#f7ecd6;color:#9A6A2E;font-size:10px;padding:2px 7px;border-radius:9px">moyenne C− (sous seuil)</span></div></div>
+        <div style="background:#fff;border:1px solid #ded6c4;border-left:4px solid #a23e2e;border-radius:9px;padding:9px"><div style="font-size:12.5px;color:#46402f">Nina Lefèvre</div><div style="margin-top:5px"><span style="background:#dbe6ef;color:#2f5a7d;font-size:10px;padding:2px 7px;border-radius:9px">14 cartes en retard</span></div></div>
+        <div style="font-size:9.5px;color:#8a8270;letter-spacing:.06em;margin-top:3px">TERMINALE PHILO</div>
+        <div style="background:#fff;border:1px solid #ded6c4;border-left:4px solid #a23e2e;border-radius:9px;padding:9px"><div style="font-size:12.5px;color:#46402f">Inès Bouvier</div><div style="margin-top:5px"><span style="background:#f7ecd6;color:#9A6A2E;font-size:10px;padding:2px 7px;border-radius:9px">moyenne D (sous seuil)</span></div></div>
+        <div style="text-align:center;font-size:10.5px;color:#8a8270;padding-top:2px">+ 2 autres…</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- closing post-it -->
+<div style="position:absolute;left:1240px;top:4030px;width:270px">
+  <div style="background:#fef4a8;padding:15px;box-shadow:0 1px 4px rgba(0,0,0,.12);transform:rotate(-1.3deg);font-family:'Architects Daughter',cursive;font-size:13.5px;line-height:1.55;color:#5a4a14">
+    <div style="font-family:'Caveat',cursive;font-weight:700;font-size:20px;color:#4a3c0c;margin-bottom:5px">Prochaine étape</div>
+    Ma reco : nav mobile = <b>Option A</b> (barre du bas miroir du desktop, feuilles pour Pilotage/Modules) + tableau de bord <b>Piste A</b> (file d'actions priorisée). Dis-moi si ça te va, et je passe le tout en <b>rendu fidèle à la charte</b> (parchemin, sceaux), prêt à coder.
+  </div>
+</div>
+
+</x-dc>
+</body>
+</html>

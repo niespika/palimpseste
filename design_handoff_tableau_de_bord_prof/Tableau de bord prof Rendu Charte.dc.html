@@ -1,0 +1,454 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<meta name="design_doc_mode" content="canvas">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600;700&family=Cormorant+Garamond:wght@500;600;700&family=EB+Garamond:wght@400;500;600&family=Alegreya+Sans:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  body { margin:0; font-family:'EB Garamond', Georgia, serif; color:#221C16; -webkit-font-smoothing:antialiased; }
+</style>
+</helmet>
+
+<!-- ======================= INTRO ======================= -->
+<div style="position:absolute;left:80px;top:40px;width:1000px">
+  <div style="font-family:'Cinzel',serif;font-weight:600;font-size:13px;letter-spacing:.34em;color:#8A6F4E">PALIMPSESTE · ESPACE PROF</div>
+  <div style="font-family:'Cormorant Garamond',serif;font-weight:600;font-size:50px;line-height:1.04;color:#221C16;margin-top:6px">Tableau de bord — rendu charte</div>
+  <div style="font-family:'EB Garamond',serif;font-size:18px;color:#5A4632;margin-top:8px;max-width:820px">Piste A « file d'actions » : une seule chose à traiter en grand, le reste compact, le coût API dans le fil. Nav Option A (barre du bas sur mobile, déroulants conservés sur ordi). Logo en pastille, encre sur parchemin.</div>
+</div>
+
+<!-- ======================= A — TABLEAU DE BORD ======================= -->
+<div style="position:absolute;left:80px;top:230px;font-family:'Cormorant Garamond',serif;font-weight:600;font-size:30px;color:#221C16">Tableau de bord prof</div>
+<div style="position:absolute;left:80px;top:272px;font-family:'EB Garamond',serif;font-size:16px;color:#8A6F4E">À traiter maintenant &gt; à préparer &gt; santé de la cohorte &gt; mes classes. Le logo Palimpseste en pastille.</div>
+
+<!-- MOBILE -->
+<div data-screen-label="Tableau de bord prof — mobile" style="position:absolute;left:80px;top:342px;width:300px">
+  <div data-drags-parent="1" style="position:absolute;top:-26px;left:2px;font-family:'Alegreya Sans',sans-serif;font-size:13px;color:#8A6F4E">Mobile — logo en pastille (haut-droite), barre du bas</div>
+  <div style="border:11px solid #221C16;border-radius:38px;background:#221C16;box-shadow:0 6px 22px rgba(34,28,22,.22)">
+    <div style="background:#F4EFE6;border-radius:27px;height:582px;overflow:hidden;display:flex;flex-direction:column">
+      <!-- header -->
+      <div style="background:#ECE4D6;padding:11px 16px;display:flex;justify-content:space-between;align-items:center">
+        <span style="font-family:'Cinzel',serif;font-weight:600;font-size:13px;letter-spacing:.16em;color:#221C16">PALIMPSESTE</span>
+        <span style="width:32px;height:32px;border-radius:50%;background:#F4EFE6;border:1px solid #D8CFBC;display:inline-flex;align-items:center;justify-content:center;overflow:hidden;flex-shrink:0"><img src="sceaux/palimpseste_medaillon.png" style="width:30px;height:30px;object-fit:cover;filter:brightness(1.05) contrast(1.05);mix-blend-mode:multiply" alt="Palimpseste"></span>
+      </div>
+      <div style="padding:14px 16px 0;flex:1;overflow:hidden">
+        <div style="font-family:'Cormorant Garamond',serif;font-weight:600;font-size:26px;color:#221C16;line-height:1.05">Bonjour, Mme Aubry</div>
+        <div style="font-family:'Alegreya Sans',sans-serif;font-size:11.5px;color:#8A6F4E;margin-top:2px">mardi 25 juin · semaine 3</div>
+        <!-- hero -->
+        <div style="background:#FBF8F1;border:1px solid #E4DBC9;border-radius:13px;overflow:hidden;margin-top:13px">
+          <div style="height:5px;background:#616E30"></div>
+          <div style="padding:13px">
+            <div style="font-family:'Alegreya Sans',sans-serif;font-size:10.5px;letter-spacing:.1em;color:#616E30">À TRAITER MAINTENANT</div>
+            <div style="font-family:'Cormorant Garamond',serif;font-weight:600;font-size:20px;color:#221C16;margin-top:4px;line-height:1.15">2 fragments à valider</div>
+            <div style="font-family:'EB Garamond',serif;font-size:14px;color:#5A4632;margin-top:3px">Terminale HLP · semaine 3</div>
+            <div style="background:#616E30;color:#FBF8F1;font-family:'Alegreya Sans',sans-serif;font-size:13px;font-weight:600;text-align:center;border-radius:8px;padding:9px;margin-top:11px">Ouvrir la validation →</div>
+          </div>
+        </div>
+        <!-- ensuite -->
+        <div style="font-family:'Alegreya Sans',sans-serif;font-size:10.5px;letter-spacing:.1em;color:#8A6F4E;margin-top:15px">À PRÉPARER</div>
+        <div style="display:flex;flex-direction:column;gap:7px;margin-top:7px">
+          <div style="background:#FBF8F1;border:1px solid #E4DBC9;border-radius:9px;padding:9px 11px;display:flex;align-items:center;gap:9px"><span style="width:9px;height:9px;border-radius:50%;background:#A23E2E"></span><span style="font-family:'EB Garamond',serif;font-size:14.5px;color:#221C16;flex:1">1 élève bloqué · intégrité</span><span style="font-family:'Alegreya Sans',sans-serif;font-size:10.5px;color:#A23E2E;background:#EFD9D2;padding:2px 8px;border-radius:9px">à traiter</span></div>
+          <div style="background:#FBF8F1;border:1px solid #E4DBC9;border-radius:9px;padding:9px 11px;display:flex;align-items:center;gap:9px"><span style="width:9px;height:9px;border-radius:50%;background:#616E30"></span><span style="font-family:'EB Garamond',serif;font-size:14.5px;color:#221C16;flex:1">Ouvrir la semaine 4</span><span style="font-family:'Alegreya Sans',sans-serif;font-size:11px;color:#8A6F4E">28 juin</span></div>
+          <div style="background:#FBF8F1;border:1px solid #E4DBC9;border-radius:9px;padding:9px 11px;display:flex;align-items:center;gap:9px"><span style="width:9px;height:9px;border-radius:50%;background:#3E6B8E"></span><span style="font-family:'EB Garamond',serif;font-size:14.5px;color:#221C16;flex:1">Coût API · ce mois</span><span style="font-family:'Cormorant Garamond',serif;font-weight:600;font-size:15px;color:#221C16">12,40 €</span></div>
+        </div>
+        <!-- cohorte -->
+        <div style="font-family:'Alegreya Sans',sans-serif;font-size:10.5px;letter-spacing:.1em;color:#8A6F4E;margin-top:15px">SANTÉ DE LA COHORTE</div>
+        <div style="background:#FBF8F1;border:1px solid #E4DBC9;border-radius:10px;padding:11px 13px;margin-top:7px;display:flex;justify-content:space-around;align-items:center;text-align:center">
+          <div><div style="font-family:'Cormorant Garamond',serif;font-weight:600;font-size:22px;color:#5B6E4A;line-height:1">92%</div><div style="font-family:'Alegreya Sans',sans-serif;font-size:10.5px;color:#8A6F4E">à jour</div></div>
+          <div style="width:1px;height:30px;background:#E4DBC9"></div>
+          <div><div style="font-family:'Cormorant Garamond',serif;font-weight:600;font-size:22px;color:#A23E2E;line-height:1">6</div><div style="font-family:'Alegreya Sans',sans-serif;font-size:10.5px;color:#8A6F4E">à risque →</div></div>
+        </div>
+      </div>
+      <!-- bottom tab bar (Option A) -->
+      <div style="background:#FBF8F1;border-top:1px solid #E4DBC9;display:flex;justify-content:space-around;padding:8px 4px 9px">
+        <div style="text-align:center;color:#221C16"><div style="width:19px;height:19px;border:2px solid #221C16;border-radius:5px;margin:0 auto;background:#E7DFCF"></div><div style="font-family:'Alegreya Sans',sans-serif;font-size:9px;font-weight:700;margin-top:3px">Bord</div></div>
+        <div style="text-align:center;color:#B3A488"><div style="width:19px;height:19px;border:2px solid #CDBFA6;border-radius:5px;margin:0 auto"></div><div style="font-family:'Alegreya Sans',sans-serif;font-size:9px;margin-top:3px">Pilotage</div></div>
+        <div style="text-align:center;color:#B3A488"><div style="width:19px;height:19px;border:2px solid #CDBFA6;border-radius:5px;margin:0 auto"></div><div style="font-family:'Alegreya Sans',sans-serif;font-size:9px;margin-top:3px">Modules</div></div>
+        <div style="text-align:center;color:#B3A488"><div style="width:19px;height:19px;border:2px solid #CDBFA6;border-radius:50%;margin:0 auto"></div><div style="font-family:'Alegreya Sans',sans-serif;font-size:9px;margin-top:3px">Moi</div></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- LAPTOP -->
+<div data-screen-label="Tableau de bord prof — ordi" style="position:absolute;left:460px;top:342px;width:760px">
+  <div data-drags-parent="1" style="position:absolute;top:-26px;left:2px;font-family:'Alegreya Sans',sans-serif;font-size:13px;color:#8A6F4E">Ordinateur — logo + déroulants (Pilotage ▾ ouvert)</div>
+  <div style="border:1px solid #D8CFBC;border-radius:12px;background:#FBF8F1;box-shadow:0 4px 16px rgba(34,28,22,.1);overflow:hidden">
+    <div style="background:#ECE4D6;padding:9px 14px;display:flex;align-items:center;gap:7px"><span style="width:10px;height:10px;border-radius:50%;background:#C9B89A"></span><span style="width:10px;height:10px;border-radius:50%;background:#C9B89A"></span><span style="width:10px;height:10px;border-radius:50%;background:#C9B89A"></span></div>
+    <!-- app header -->
+    <div style="background:#ECE4D6;padding:0 22px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid #E0D6C2;height:54px;position:relative">
+      <div style="display:flex;align-items:center;gap:10px">
+        <span style="width:32px;height:32px;border-radius:50%;background:#F4EFE6;border:1px solid #D8CFBC;display:inline-flex;align-items:center;justify-content:center;overflow:hidden;flex-shrink:0"><img src="sceaux/palimpseste_medaillon.png" style="width:30px;height:30px;object-fit:cover;filter:brightness(1.05) contrast(1.05);mix-blend-mode:multiply" alt="Palimpseste"></span>
+        <span style="font-family:'Cinzel',serif;font-weight:600;font-size:15px;letter-spacing:.2em;color:#221C16">PALIMPSESTE</span>
+      </div>
+      <div style="display:flex;align-items:center;gap:4px;font-family:'Alegreya Sans',sans-serif;font-size:14px">
+        <span style="background:#F4EFE6;color:#221C16;padding:6px 13px;border-radius:7px">Tableau de bord</span>
+        <span style="color:#221C16;padding:6px 13px;display:inline-flex;align-items:center;gap:4px">Pilotage <span style="font-size:10px">▾</span></span>
+        <span style="color:#5A4632;padding:6px 13px;display:inline-flex;align-items:center;gap:4px">Modules <span style="font-size:10px">▾</span></span>
+      </div>
+      <span style="font-family:'Alegreya Sans',sans-serif;font-size:13px;color:#8A6F4E">Mme Aubry · Déconnexion</span>
+      <!-- dropdown Pilotage -->
+      <div style="position:absolute;top:48px;left:286px;background:#FBF8F1;border:1px solid #E4DBC9;border-radius:9px;box-shadow:0 6px 18px rgba(34,28,22,.16);padding:7px;display:flex;flex-direction:column;gap:2px;z-index:3;min-width:158px">
+        <span style="font-family:'Alegreya Sans',sans-serif;font-size:13.5px;color:#221C16;padding:6px 10px;border-radius:6px">Élèves</span>
+        <span style="font-family:'Alegreya Sans',sans-serif;font-size:13.5px;color:#221C16;padding:6px 10px;border-radius:6px;background:#F0ECE2">Classes</span>
+        <span style="font-family:'Alegreya Sans',sans-serif;font-size:13.5px;color:#221C16;padding:6px 10px;border-radius:6px">Calendrier</span>
+        <span style="font-family:'Alegreya Sans',sans-serif;font-size:13.5px;color:#221C16;padding:6px 10px;border-radius:6px;display:flex;justify-content:space-between;align-items:center">Intégrité <span style="font-family:'Alegreya Sans',sans-serif;font-size:10px;color:#A23E2E;background:#EFD9D2;padding:1px 7px;border-radius:9px">2</span></span>
+      </div>
+    </div>
+    <!-- content -->
+    <div style="background:#F4EFE6;padding:22px 28px 26px">
+      <div style="font-family:'Cormorant Garamond',serif;font-weight:600;font-size:30px;color:#221C16">Bonjour, Mme Aubry</div>
+      <div style="font-family:'Alegreya Sans',sans-serif;font-size:13px;color:#8A6F4E;margin-top:1px">mardi 25 juin · semaine 3</div>
+      <div style="display:grid;grid-template-columns:1.5fr 1fr;gap:18px;margin-top:14px">
+        <!-- left -->
+        <div style="display:flex;flex-direction:column;gap:15px">
+          <div style="background:#FBF8F1;border:1px solid #E4DBC9;border-radius:13px;overflow:hidden">
+            <div style="height:5px;background:#616E30"></div>
+            <div style="padding:16px 18px">
+              <div style="font-family:'Alegreya Sans',sans-serif;font-size:11px;letter-spacing:.1em;color:#616E30">À TRAITER MAINTENANT</div>
+              <div style="font-family:'Cormorant Garamond',serif;font-weight:600;font-size:24px;color:#221C16;margin-top:5px">2 fragments à valider</div>
+              <div style="font-family:'EB Garamond',serif;font-size:16px;color:#5A4632;margin-top:3px">Léa Fontaine & Hugo Mercier · Terminale HLP · semaine 3.</div>
+              <div style="display:inline-block;background:#616E30;color:#FBF8F1;font-family:'Alegreya Sans',sans-serif;font-size:14px;font-weight:600;border-radius:8px;padding:9px 18px;margin-top:13px">Ouvrir la validation →</div>
+            </div>
+          </div>
+          <div>
+            <div style="font-family:'Alegreya Sans',sans-serif;font-size:11px;letter-spacing:.1em;color:#8A6F4E;margin-bottom:8px">À PRÉPARER</div>
+            <div style="display:flex;flex-direction:column;gap:8px">
+              <div style="background:#FBF8F1;border:1px solid #E4DBC9;border-radius:10px;padding:11px 14px;display:flex;align-items:center;gap:11px"><span style="width:10px;height:10px;border-radius:50%;background:#A23E2E"></span><span style="font-family:'EB Garamond',serif;font-size:16px;color:#221C16;flex:1">1 élève bloqué — intégrité</span><span style="font-family:'Alegreya Sans',sans-serif;font-size:12px;color:#A23E2E;background:#EFD9D2;padding:2px 9px;border-radius:9px">à traiter</span></div>
+              <div style="background:#FBF8F1;border:1px solid #E4DBC9;border-radius:10px;padding:11px 14px;display:flex;align-items:center;gap:11px"><span style="width:10px;height:10px;border-radius:50%;background:#616E30"></span><span style="font-family:'EB Garamond',serif;font-size:16px;color:#221C16;flex:1">Ouvrir la semaine 4 — Terminale HLP</span><span style="font-family:'Alegreya Sans',sans-serif;font-size:12px;color:#8A6F4E">28 juin</span></div>
+              <div style="background:#FBF8F1;border:1px solid #E4DBC9;border-radius:10px;padding:11px 14px;display:flex;align-items:center;gap:11px"><span style="width:10px;height:10px;border-radius:50%;background:#2C4A7C"></span><span style="font-family:'EB Garamond',serif;font-size:16px;color:#221C16;flex:1">Diagnostic Aletheia — Première HLP</span><span style="font-family:'Alegreya Sans',sans-serif;font-size:12px;color:#8A6F4E">30 juin</span></div>
+              <div style="background:#FBF8F1;border:1px solid #E4DBC9;border-radius:10px;padding:11px 14px;display:flex;align-items:center;gap:11px"><span style="width:10px;height:10px;border-radius:50%;background:#3E6B8E"></span><span style="font-family:'EB Garamond',serif;font-size:16px;color:#221C16;flex:1">Coût API — ce mois</span><span style="font-family:'Cormorant Garamond',serif;font-weight:600;font-size:18px;color:#221C16">12,40 €</span><span style="font-family:'Alegreya Sans',sans-serif;font-size:12px;color:#8A6F4E">détail →</span></div>
+            </div>
+          </div>
+        </div>
+        <!-- right -->
+        <div style="display:flex;flex-direction:column;gap:15px">
+          <div>
+            <div style="font-family:'Alegreya Sans',sans-serif;font-size:11px;letter-spacing:.1em;color:#8A6F4E;margin-bottom:8px">SANTÉ DE LA COHORTE</div>
+            <div style="background:#FBF8F1;border:1px solid #E4DBC9;border-radius:11px;padding:14px 16px">
+              <div style="display:flex;align-items:baseline;justify-content:space-between">
+                <div><span style="font-family:'Cormorant Garamond',serif;font-weight:600;font-size:32px;color:#5B6E4A">92%</span><span style="font-family:'Alegreya Sans',sans-serif;font-size:12.5px;color:#8A6F4E;margin-left:6px">à jour · 77/83</span></div>
+                <span style="font-family:'Alegreya Sans',sans-serif;font-size:12.5px;color:#A23E2E">6 à risque →</span>
+              </div>
+              <div style="border-top:1px dashed #E4DBC9;margin:11px 0 9px"></div>
+              <div style="display:flex;flex-direction:column;gap:6px">
+                <div style="display:flex;align-items:center;gap:8px;font-family:'EB Garamond',serif;font-size:14px;color:#221C16"><span style="width:7px;height:7px;border-radius:50%;background:#A23E2E"></span>Léa Fontaine<span style="font-family:'Alegreya Sans',sans-serif;font-size:11.5px;color:#8A6F4E">· Terminale HLP</span></div>
+                <div style="display:flex;align-items:center;gap:8px;font-family:'EB Garamond',serif;font-size:14px;color:#221C16"><span style="width:7px;height:7px;border-radius:50%;background:#A23E2E"></span>Karim Benali<span style="font-family:'Alegreya Sans',sans-serif;font-size:11.5px;color:#8A6F4E">· Terminale HLP</span></div>
+                <div style="display:flex;align-items:center;gap:8px;font-family:'EB Garamond',serif;font-size:14px;color:#221C16"><span style="width:7px;height:7px;border-radius:50%;background:#A23E2E"></span>Inès Bouvier<span style="font-family:'Alegreya Sans',sans-serif;font-size:11.5px;color:#8A6F4E">· Terminale Philo</span></div>
+              </div>
+            </div>
+          </div>
+          <div>
+            <div style="font-family:'Alegreya Sans',sans-serif;font-size:11px;letter-spacing:.1em;color:#8A6F4E;margin-bottom:8px">MES CLASSES</div>
+            <div style="display:flex;flex-direction:column;gap:8px">
+              <div style="background:#FBF8F1;border:1px solid #E4DBC9;border-left:4px solid #A23E2E;border-radius:10px;padding:10px 13px"><div style="display:flex;justify-content:space-between;align-items:center"><span style="font-family:'Cormorant Garamond',serif;font-weight:600;font-size:17px;color:#221C16">Terminale HLP</span><span style="font-family:'Alegreya Sans',sans-serif;font-size:11.5px;color:#8A6F4E">24 élèves</span></div><div style="font-family:'Alegreya Sans',sans-serif;font-size:11.5px;color:#A23E2E;margin-top:2px">4 à risque · 2 à valider</div></div>
+              <div style="background:#FBF8F1;border:1px solid #E4DBC9;border-left:4px solid #5B6E4A;border-radius:10px;padding:10px 13px"><div style="display:flex;justify-content:space-between;align-items:center"><span style="font-family:'Cormorant Garamond',serif;font-weight:600;font-size:17px;color:#221C16">Première HLP</span><span style="font-family:'Alegreya Sans',sans-serif;font-size:11.5px;color:#8A6F4E">28 élèves</span></div><div style="font-family:'Alegreya Sans',sans-serif;font-size:11.5px;color:#5B6E4A;margin-top:2px">à jour</div></div>
+              <div style="background:#FBF8F1;border:1px solid #E4DBC9;border-left:4px solid #A23E2E;border-radius:10px;padding:10px 13px"><div style="display:flex;justify-content:space-between;align-items:center"><span style="font-family:'Cormorant Garamond',serif;font-weight:600;font-size:17px;color:#221C16">Terminale Philo</span><span style="font-family:'Alegreya Sans',sans-serif;font-size:11.5px;color:#8A6F4E">31 élèves</span></div><div style="font-family:'Alegreya Sans',sans-serif;font-size:11.5px;color:#A23E2E;margin-top:2px">2 à risque</div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- note hiérarchie -->
+<div style="position:absolute;left:1260px;top:402px;width:250px">
+  <div style="background:#F3ECDD;border:1px solid #E4DBC9;border-left:3px solid #616E30;border-radius:8px;padding:14px 16px;font-family:'EB Garamond',serif;font-size:15px;line-height:1.5;color:#5A4632">
+    <span style="font-family:'Alegreya Sans',sans-serif;font-size:11px;letter-spacing:.1em;color:#616E30">PISTE A · FILE D'ACTIONS</span><br>
+    Une seule action « maintenant » en grand (têtière du monde concerné), puis « à préparer » compact — <b>échéances, intégrité et coût API</b> sur le même fil — puis la cohorte et les classes condensées. Fini les cinq sections de poids égal.
+  </div>
+</div>
+
+<!-- note logo -->
+<div style="position:absolute;left:1260px;top:612px;width:250px">
+  <div style="background:#F3ECDD;border:1px solid #E4DBC9;border-left:3px solid #8A6F4E;border-radius:8px;padding:14px 16px;font-family:'EB Garamond',serif;font-size:15px;line-height:1.5;color:#5A4632">
+    <span style="font-family:'Alegreya Sans',sans-serif;font-size:11px;letter-spacing:.1em;color:#8A6F4E">LE LOGO</span><br>
+    Le sceau gravé seul (sans le mot dessous), en <b>pastille ronde</b> : haut-droite sur mobile, dans le lockup d'en-tête à gauche sur ordi. <code style="font-family:monospace;font-size:12px">mix-blend: multiply</code> sur fond parchemin pour garder la gravure.
+  </div>
+</div>
+
+<!-- note coût API -->
+<div style="position:absolute;left:1260px;top:822px;width:250px">
+  <div style="background:#F3ECDD;border:1px solid #E4DBC9;border-left:3px solid #3E6B8E;border-radius:8px;padding:14px 16px;font-family:'EB Garamond',serif;font-size:15px;line-height:1.5;color:#5A4632">
+    <span style="font-family:'Alegreya Sans',sans-serif;font-size:11px;letter-spacing:.1em;color:#3E6B8E">COÛT API</span><br>
+    Désormais une <b>ligne du fil d'action</b> (pastille bleue, montant du mois + lien « détail »), au lieu d'une section isolée. Toujours sous les yeux, sans alourdir.
+  </div>
+</div>
+
+
+<!-- ======================= DÉTAIL CLASSE ======================= -->
+<div style="position:absolute;left:80px;top:1130px;font-family:'Cormorant Garamond',serif;font-weight:600;font-size:30px;color:#221C16">Détail d'une classe</div>
+<div style="position:absolute;left:80px;top:1172px;font-family:'EB Garamond',serif;font-size:16px;color:#8A6F4E">Le shell réutilisable : la tuile-classe ouvre la liste des élèves — badge à risque / à jour et dépôts fragments en tête.</div>
+
+<!-- détail classe — laptop -->
+<div data-screen-label="Détail classe — ordi" style="position:absolute;left:80px;top:1242px;width:760px">
+  <div data-drags-parent="1" style="position:absolute;top:-26px;left:2px;font-family:'Alegreya Sans',sans-serif;font-size:13px;color:#8A6F4E">Ordinateur — la tuile se déplie sous la grille</div>
+  <div style="border:1px solid #D8CFBC;border-radius:12px;background:#FBF8F1;box-shadow:0 4px 16px rgba(34,28,22,.1);overflow:hidden">
+    <div style="background:#ECE4D6;padding:9px 14px;display:flex;align-items:center;gap:7px"><span style="width:10px;height:10px;border-radius:50%;background:#C9B89A"></span><span style="width:10px;height:10px;border-radius:50%;background:#C9B89A"></span><span style="width:10px;height:10px;border-radius:50%;background:#C9B89A"></span></div>
+    <div style="background:#ECE4D6;padding:0 22px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid #E0D6C2;height:54px">
+      <div style="display:flex;align-items:center;gap:10px">
+        <span style="width:32px;height:32px;border-radius:50%;background:#F4EFE6;border:1px solid #D8CFBC;display:inline-flex;align-items:center;justify-content:center;overflow:hidden;flex-shrink:0"><img src="sceaux/palimpseste_medaillon.png" style="width:30px;height:30px;object-fit:cover;filter:brightness(1.05) contrast(1.05);mix-blend-mode:multiply" alt="Palimpseste"></span>
+        <span style="font-family:'Cinzel',serif;font-weight:600;font-size:15px;letter-spacing:.2em;color:#221C16">PALIMPSESTE</span>
+      </div>
+      <div style="display:flex;align-items:center;gap:4px;font-family:'Alegreya Sans',sans-serif;font-size:14px">
+        <span style="color:#5A4632;padding:6px 13px">Tableau de bord</span>
+        <span style="background:#F4EFE6;color:#221C16;padding:6px 13px;border-radius:7px;display:inline-flex;align-items:center;gap:4px">Pilotage <span style="font-size:10px">▾</span></span>
+        <span style="color:#5A4632;padding:6px 13px;display:inline-flex;align-items:center;gap:4px">Modules <span style="font-size:10px">▾</span></span>
+      </div>
+      <span style="font-family:'Alegreya Sans',sans-serif;font-size:13px;color:#8A6F4E">Mme Aubry · Déconnexion</span>
+    </div>
+    <div style="background:#F4EFE6;padding:20px 28px 26px">
+      <div style="font-family:'Alegreya Sans',sans-serif;font-size:12px;color:#8A6F4E">Pilotage · <span style="color:#221C16">Classes</span></div>
+      <!-- tiles row -->
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-top:10px">
+        <div style="background:#FBF8F1;border:1.5px solid #221C16;border-left:4px solid #A23E2E;border-radius:10px;padding:11px 13px"><div style="font-family:'Cormorant Garamond',serif;font-weight:600;font-size:18px;color:#221C16">Terminale HLP</div><div style="font-family:'Alegreya Sans',sans-serif;font-size:11px;color:#8A6F4E;margin-top:1px">Terminale · 2025-26</div><div style="font-family:'Alegreya Sans',sans-serif;font-size:11.5px;color:#A23E2E;margin-top:6px">4 à risque · 2 à valider</div></div>
+        <div style="background:#FBF8F1;border:1px solid #E4DBC9;border-left:4px solid #5B6E4A;border-radius:10px;padding:11px 13px;opacity:.8"><div style="font-family:'Cormorant Garamond',serif;font-weight:600;font-size:18px;color:#221C16">Première HLP</div><div style="font-family:'Alegreya Sans',sans-serif;font-size:11px;color:#8A6F4E;margin-top:1px">Première · 2025-26</div><div style="font-family:'Alegreya Sans',sans-serif;font-size:11.5px;color:#5B6E4A;margin-top:6px">à jour</div></div>
+        <div style="background:#FBF8F1;border:1px solid #E4DBC9;border-left:4px solid #A23E2E;border-radius:10px;padding:11px 13px;opacity:.8"><div style="font-family:'Cormorant Garamond',serif;font-weight:600;font-size:18px;color:#221C16">Terminale Philo</div><div style="font-family:'Alegreya Sans',sans-serif;font-size:11px;color:#8A6F4E;margin-top:1px">Terminale · 2025-26</div><div style="font-family:'Alegreya Sans',sans-serif;font-size:11.5px;color:#A23E2E;margin-top:6px">2 à risque</div></div>
+      </div>
+      <!-- detail panel -->
+      <div style="background:#FBF8F1;border:1px solid #E4DBC9;border-radius:12px;margin-top:13px;overflow:hidden">
+        <div style="background:#F4EFE6;border-bottom:1px solid #E4DBC9;padding:12px 16px;display:flex;justify-content:space-between;align-items:center">
+          <div style="display:flex;align-items:baseline;gap:9px"><span style="font-family:'Cormorant Garamond',serif;font-weight:600;font-size:20px;color:#221C16">Terminale HLP</span><span style="font-family:'Alegreya Sans',sans-serif;font-size:12px;color:#8A6F4E">Terminale · 24 élèves · 2025-26</span></div>
+          <span style="font-family:'Alegreya Sans',sans-serif;font-size:12.5px;color:#A23E2E;border:1px solid #D9B3A8;border-radius:8px;padding:6px 13px">Effacer la classe</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:12px;padding:8px 16px;font-family:'Alegreya Sans',sans-serif;font-size:10px;letter-spacing:.06em;color:#A89878;border-bottom:1px dashed #E4DBC9"><span style="flex:1.5">ÉLÈVE</span><span style="flex:1.2">DÉPÔTS FRAGMENTS</span><span style="width:110px">DIVERS</span><span style="width:60px;text-align:right">&nbsp;</span></div>
+        <div style="display:flex;align-items:center;gap:12px;padding:11px 16px;border-bottom:1px solid #F0ECE2"><span style="flex:1.5;font-family:'EB Garamond',serif;font-size:16px;color:#221C16;display:flex;align-items:center;gap:8px">Léa Fontaine <span style="font-family:'Alegreya Sans',sans-serif;font-size:10.5px;color:#A23E2E;background:#EFD9D2;padding:2px 8px;border-radius:9px">à risque</span></span><span style="flex:1.2;font-family:'EB Garamond',serif;font-size:15px;color:#A23E2E">6/8 · 2 manquants</span><span style="width:110px;font-family:'Alegreya Sans',sans-serif;font-size:12px;color:#8A6F4E">essai déposé</span><span style="width:60px;text-align:right;font-family:'Alegreya Sans',sans-serif;font-size:12px;color:#A89878">Retirer</span></div>
+        <div style="display:flex;align-items:center;gap:12px;padding:11px 16px;border-bottom:1px solid #F0ECE2"><span style="flex:1.5;font-family:'EB Garamond',serif;font-size:16px;color:#221C16;display:flex;align-items:center;gap:8px">Karim Benali <span style="font-family:'Alegreya Sans',sans-serif;font-size:10.5px;color:#A23E2E;background:#EFD9D2;padding:2px 8px;border-radius:9px">à risque</span></span><span style="flex:1.2;font-family:'EB Garamond',serif;font-size:15px;color:#5A4632">8/8 · à jour</span><span style="width:110px;font-family:'Alegreya Sans',sans-serif;font-size:12px;color:#8A6F4E">moy. C−</span><span style="width:60px;text-align:right;font-family:'Alegreya Sans',sans-serif;font-size:12px;color:#A89878">Retirer</span></div>
+        <div style="display:flex;align-items:center;gap:12px;padding:11px 16px;border-bottom:1px solid #F0ECE2"><span style="flex:1.5;font-family:'EB Garamond',serif;font-size:16px;color:#221C16;display:flex;align-items:center;gap:8px">Nina Lefèvre <span style="font-family:'Alegreya Sans',sans-serif;font-size:10.5px;color:#A23E2E;background:#EFD9D2;padding:2px 8px;border-radius:9px">à risque</span></span><span style="flex:1.2;font-family:'EB Garamond',serif;font-size:15px;color:#5A4632">8/8 · à jour</span><span style="width:110px;font-family:'Alegreya Sans',sans-serif;font-size:12px;color:#8A6F4E">14 à réviser</span><span style="width:60px;text-align:right;font-family:'Alegreya Sans',sans-serif;font-size:12px;color:#A89878">Retirer</span></div>
+        <div style="display:flex;align-items:center;gap:12px;padding:11px 16px;border-bottom:1px solid #F0ECE2"><span style="flex:1.5;font-family:'EB Garamond',serif;font-size:16px;color:#221C16;display:flex;align-items:center;gap:8px">Tom Garnier <span style="font-family:'Alegreya Sans',sans-serif;font-size:10.5px;color:#A23E2E;background:#EFD9D2;padding:2px 8px;border-radius:9px">à risque</span></span><span style="flex:1.2;font-family:'EB Garamond',serif;font-size:15px;color:#A23E2E">7/8 · 1 manquant</span><span style="width:110px;font-family:'Alegreya Sans',sans-serif;font-size:12px;color:#8A6F4E">9 à réviser</span><span style="width:60px;text-align:right;font-family:'Alegreya Sans',sans-serif;font-size:12px;color:#A89878">Retirer</span></div>
+        <div style="display:flex;align-items:center;gap:12px;padding:11px 16px;border-bottom:1px solid #F0ECE2"><span style="flex:1.5;font-family:'EB Garamond',serif;font-size:16px;color:#221C16;display:flex;align-items:center;gap:8px">Hugo Mercier <span style="font-family:'Alegreya Sans',sans-serif;font-size:11px;color:#5B6E4A">à jour</span></span><span style="flex:1.2;font-family:'EB Garamond',serif;font-size:15px;color:#5A4632">8/8 · à jour</span><span style="width:110px;font-family:'Alegreya Sans',sans-serif;font-size:12px;color:#8A6F4E">Codex ×2</span><span style="width:60px;text-align:right;font-family:'Alegreya Sans',sans-serif;font-size:12px;color:#A89878">Retirer</span></div>
+        <div style="display:flex;align-items:center;gap:12px;padding:11px 16px"><span style="flex:1.5;font-family:'EB Garamond',serif;font-size:16px;color:#221C16;display:flex;align-items:center;gap:8px">Camille Roy <span style="font-family:'Alegreya Sans',sans-serif;font-size:11px;color:#5B6E4A">à jour</span></span><span style="flex:1.2;font-family:'EB Garamond',serif;font-size:15px;color:#5A4632">7/8 · à jour</span><span style="width:110px;font-family:'Alegreya Sans',sans-serif;font-size:12px;color:#8A6F4E">moy. B+</span><span style="width:60px;text-align:right;font-family:'Alegreya Sans',sans-serif;font-size:12px;color:#A89878">Retirer</span></div>
+        <div style="background:#F4EFE6;text-align:center;padding:9px;font-family:'Alegreya Sans',sans-serif;font-size:12px;color:#8A6F4E;border-top:1px dashed #E4DBC9">+ 18 autres élèves…</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- détail classe — mobile -->
+<div data-screen-label="Détail classe — mobile" style="position:absolute;left:880px;top:1242px;width:300px">
+  <div data-drags-parent="1" style="position:absolute;top:-26px;left:2px;font-family:'Alegreya Sans',sans-serif;font-size:13px;color:#8A6F4E">Mobile — écran plein « détail classe »</div>
+  <div style="border:11px solid #221C16;border-radius:38px;background:#221C16;box-shadow:0 6px 22px rgba(34,28,22,.22)">
+    <div style="background:#F4EFE6;border-radius:27px;height:586px;overflow:hidden;display:flex;flex-direction:column">
+      <div style="background:#ECE4D6;padding:12px 16px 11px">
+        <div style="display:flex;justify-content:space-between;align-items:center"><div style="font-family:'Alegreya Sans',sans-serif;font-size:12px;color:#5A4632">← Classes</div><span style="width:28px;height:28px;border-radius:50%;background:#F4EFE6;border:1px solid #D8CFBC;display:inline-flex;align-items:center;justify-content:center;overflow:hidden;flex-shrink:0"><img src="sceaux/palimpseste_medaillon.png" style="width:26px;height:26px;object-fit:cover;filter:brightness(1.05) contrast(1.05);mix-blend-mode:multiply" alt="Palimpseste"></span></div>
+        <div style="font-family:'Cormorant Garamond',serif;font-weight:600;font-size:21px;color:#221C16;margin-top:3px;line-height:1.05">Terminale HLP</div>
+        <div style="font-family:'Alegreya Sans',sans-serif;font-size:11px;color:#8A6F4E;margin-top:1px">24 élèves · 4 à risque</div>
+      </div>
+      <div style="flex:1;overflow:hidden;padding:12px 13px;display:flex;flex-direction:column;gap:8px">
+        <div style="background:#FBF8F1;border:1px solid #E4DBC9;border-radius:10px;padding:10px 12px;display:flex;justify-content:space-between;align-items:center"><div><div style="font-family:'EB Garamond',serif;font-size:15px;color:#221C16">Léa Fontaine</div><div style="font-family:'Alegreya Sans',sans-serif;font-size:11px;color:#A23E2E;margin-top:2px">6/8 dépôts · 2 manquants</div></div><span style="font-family:'Alegreya Sans',sans-serif;font-size:10px;color:#A23E2E;background:#EFD9D2;padding:2px 8px;border-radius:9px">à risque</span></div>
+        <div style="background:#FBF8F1;border:1px solid #E4DBC9;border-radius:10px;padding:10px 12px;display:flex;justify-content:space-between;align-items:center"><div><div style="font-family:'EB Garamond',serif;font-size:15px;color:#221C16">Karim Benali</div><div style="font-family:'Alegreya Sans',sans-serif;font-size:11px;color:#5A4632;margin-top:2px">8/8 dépôts · moy. C−</div></div><span style="font-family:'Alegreya Sans',sans-serif;font-size:10px;color:#A23E2E;background:#EFD9D2;padding:2px 8px;border-radius:9px">à risque</span></div>
+        <div style="background:#FBF8F1;border:1px solid #E4DBC9;border-radius:10px;padding:10px 12px;display:flex;justify-content:space-between;align-items:center"><div><div style="font-family:'EB Garamond',serif;font-size:15px;color:#221C16">Nina Lefèvre</div><div style="font-family:'Alegreya Sans',sans-serif;font-size:11px;color:#5A4632;margin-top:2px">8/8 · 14 à réviser</div></div><span style="font-family:'Alegreya Sans',sans-serif;font-size:10px;color:#A23E2E;background:#EFD9D2;padding:2px 8px;border-radius:9px">à risque</span></div>
+        <div style="background:#FBF8F1;border:1px solid #E4DBC9;border-radius:10px;padding:10px 12px;display:flex;justify-content:space-between;align-items:center"><div><div style="font-family:'EB Garamond',serif;font-size:15px;color:#221C16">Hugo Mercier</div><div style="font-family:'Alegreya Sans',sans-serif;font-size:11px;color:#5A4632;margin-top:2px">8/8 dépôts · à jour</div></div><span style="font-family:'Alegreya Sans',sans-serif;font-size:11px;color:#5B6E4A">à jour</span></div>
+        <div style="background:#FBF8F1;border:1px solid #E4DBC9;border-radius:10px;padding:10px 12px;display:flex;justify-content:space-between;align-items:center"><div><div style="font-family:'EB Garamond',serif;font-size:15px;color:#221C16">Camille Roy</div><div style="font-family:'Alegreya Sans',sans-serif;font-size:11px;color:#5A4632;margin-top:2px">7/8 dépôts · à jour</div></div><span style="font-family:'Alegreya Sans',sans-serif;font-size:11px;color:#5B6E4A">à jour</span></div>
+        <div style="text-align:center;font-family:'Alegreya Sans',sans-serif;font-size:11.5px;color:#8A6F4E;padding-top:2px">+ 19 autres…</div>
+      </div>
+      <div style="border-top:1px solid #E4DBC9;padding:11px 14px;background:#FBF8F1"><div style="text-align:center;font-family:'Alegreya Sans',sans-serif;font-size:12.5px;color:#A23E2E;border:1px solid #D9B3A8;border-radius:8px;padding:9px">Effacer la classe</div></div>
+    </div>
+  </div>
+</div>
+
+<!-- note détail -->
+<div style="position:absolute;left:1260px;top:1302px;width:250px">
+  <div style="background:#F3ECDD;border:1px solid #E4DBC9;border-left:3px solid #221C16;border-radius:8px;padding:14px 16px;font-family:'EB Garamond',serif;font-size:15px;line-height:1.5;color:#5A4632">
+    <span style="font-family:'Alegreya Sans',sans-serif;font-size:11px;letter-spacing:.1em;color:#221C16">DRILL-DOWN</span><br>
+    Sur ordi la tuile se déplie <b>sous la grille</b> (les autres classes restent en contexte). Sur mobile, pas de place pour les deux → un <b>écran plein</b>, retour en haut. Même shell pour les Lots 4 à 8 : seul le statut par élève change.
+  </div>
+</div>
+
+<!-- ======================= ÉLÈVES À RISQUE ======================= -->
+<div style="position:absolute;left:80px;top:1980px;font-family:'Cormorant Garamond',serif;font-weight:600;font-size:30px;color:#221C16">Élèves à risque — le « pourquoi »</div>
+<div style="position:absolute;left:80px;top:2022px;font-family:'EB Garamond',serif;font-size:16px;color:#8A6F4E">Depuis la santé de la cohorte : qui, dans quelle classe, et pour quelle raison — calculé par inscription.</div>
+
+<!-- à risque — laptop -->
+<div data-screen-label="Élèves à risque — ordi" style="position:absolute;left:80px;top:2092px;width:760px">
+  <div data-drags-parent="1" style="position:absolute;top:-26px;left:2px;font-family:'Alegreya Sans',sans-serif;font-size:13px;color:#8A6F4E">Ordinateur</div>
+  <div style="border:1px solid #D8CFBC;border-radius:12px;background:#FBF8F1;box-shadow:0 4px 16px rgba(34,28,22,.1);overflow:hidden">
+    <div style="background:#ECE4D6;padding:9px 14px;display:flex;align-items:center;gap:7px"><span style="width:10px;height:10px;border-radius:50%;background:#C9B89A"></span><span style="width:10px;height:10px;border-radius:50%;background:#C9B89A"></span><span style="width:10px;height:10px;border-radius:50%;background:#C9B89A"></span></div>
+    <div style="background:#ECE4D6;padding:0 22px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid #E0D6C2;height:54px">
+      <div style="display:flex;align-items:center;gap:10px">
+        <span style="width:32px;height:32px;border-radius:50%;background:#F4EFE6;border:1px solid #D8CFBC;display:inline-flex;align-items:center;justify-content:center;overflow:hidden;flex-shrink:0"><img src="sceaux/palimpseste_medaillon.png" style="width:30px;height:30px;object-fit:cover;filter:brightness(1.05) contrast(1.05);mix-blend-mode:multiply" alt="Palimpseste"></span>
+        <span style="font-family:'Cinzel',serif;font-weight:600;font-size:15px;letter-spacing:.2em;color:#221C16">PALIMPSESTE</span>
+      </div>
+      <div style="display:flex;align-items:center;gap:4px;font-family:'Alegreya Sans',sans-serif;font-size:14px">
+        <span style="background:#F4EFE6;color:#221C16;padding:6px 13px;border-radius:7px">Tableau de bord</span>
+        <span style="color:#5A4632;padding:6px 13px;display:inline-flex;align-items:center;gap:4px">Pilotage <span style="font-size:10px">▾</span></span>
+        <span style="color:#5A4632;padding:6px 13px;display:inline-flex;align-items:center;gap:4px">Modules <span style="font-size:10px">▾</span></span>
+      </div>
+      <span style="font-family:'Alegreya Sans',sans-serif;font-size:13px;color:#8A6F4E">Mme Aubry · Déconnexion</span>
+    </div>
+    <div style="background:#F4EFE6;padding:20px 28px 26px">
+      <div style="font-family:'Alegreya Sans',sans-serif;font-size:12px;color:#8A6F4E">← Tableau de bord</div>
+      <div style="font-family:'Cormorant Garamond',serif;font-weight:600;font-size:26px;color:#221C16;margin-top:5px">6 élèves à risque</div>
+      <div style="font-family:'EB Garamond',serif;font-size:15px;color:#5A4632;margin-top:2px">Au moins un signal : fragment manquant, moyenne sous le seuil, ou retard de révision important.</div>
+      <div style="font-family:'Alegreya Sans',sans-serif;font-size:11px;letter-spacing:.1em;color:#8A6F4E;margin-top:18px">TERMINALE HLP · 4</div>
+      <div style="display:flex;flex-direction:column;gap:8px;margin-top:8px">
+        <div style="background:#FBF8F1;border:1px solid #E4DBC9;border-left:4px solid #A23E2E;border-radius:10px;padding:11px 15px;display:flex;align-items:center;gap:12px"><span style="font-family:'EB Garamond',serif;font-size:16px;color:#221C16;width:150px">Léa Fontaine</span><span style="flex:1;display:flex;gap:7px;flex-wrap:wrap"><span style="font-family:'Alegreya Sans',sans-serif;font-size:11.5px;color:#A23E2E;background:#EFD9D2;padding:2px 9px;border-radius:9px">2 fragments manquants</span></span><span style="font-family:'Alegreya Sans',sans-serif;font-size:12px;color:#8A6F4E">Ouvrir la fiche →</span></div>
+        <div style="background:#FBF8F1;border:1px solid #E4DBC9;border-left:4px solid #A23E2E;border-radius:10px;padding:11px 15px;display:flex;align-items:center;gap:12px"><span style="font-family:'EB Garamond',serif;font-size:16px;color:#221C16;width:150px">Karim Benali</span><span style="flex:1;display:flex;gap:7px;flex-wrap:wrap"><span style="font-family:'Alegreya Sans',sans-serif;font-size:11.5px;color:#9A6A2E;background:#EFE4CF;padding:2px 9px;border-radius:9px">moyenne C− (sous seuil)</span></span><span style="font-family:'Alegreya Sans',sans-serif;font-size:12px;color:#8A6F4E">Ouvrir la fiche →</span></div>
+        <div style="background:#FBF8F1;border:1px solid #E4DBC9;border-left:4px solid #A23E2E;border-radius:10px;padding:11px 15px;display:flex;align-items:center;gap:12px"><span style="font-family:'EB Garamond',serif;font-size:16px;color:#221C16;width:150px">Nina Lefèvre</span><span style="flex:1;display:flex;gap:7px;flex-wrap:wrap"><span style="font-family:'Alegreya Sans',sans-serif;font-size:11.5px;color:#2C5470;background:#DCE6EC;padding:2px 9px;border-radius:9px">14 cartes en retard</span></span><span style="font-family:'Alegreya Sans',sans-serif;font-size:12px;color:#8A6F4E">Ouvrir la fiche →</span></div>
+        <div style="background:#FBF8F1;border:1px solid #E4DBC9;border-left:4px solid #A23E2E;border-radius:10px;padding:11px 15px;display:flex;align-items:center;gap:12px"><span style="font-family:'EB Garamond',serif;font-size:16px;color:#221C16;width:150px">Tom Garnier</span><span style="flex:1;display:flex;gap:7px;flex-wrap:wrap"><span style="font-family:'Alegreya Sans',sans-serif;font-size:11.5px;color:#A23E2E;background:#EFD9D2;padding:2px 9px;border-radius:9px">1 fragment manquant</span><span style="font-family:'Alegreya Sans',sans-serif;font-size:11.5px;color:#2C5470;background:#DCE6EC;padding:2px 9px;border-radius:9px">9 à réviser</span></span><span style="font-family:'Alegreya Sans',sans-serif;font-size:12px;color:#8A6F4E">Ouvrir la fiche →</span></div>
+      </div>
+      <div style="font-family:'Alegreya Sans',sans-serif;font-size:11px;letter-spacing:.1em;color:#8A6F4E;margin-top:16px">TERMINALE PHILO · 2</div>
+      <div style="display:flex;flex-direction:column;gap:8px;margin-top:8px">
+        <div style="background:#FBF8F1;border:1px solid #E4DBC9;border-left:4px solid #A23E2E;border-radius:10px;padding:11px 15px;display:flex;align-items:center;gap:12px"><span style="font-family:'EB Garamond',serif;font-size:16px;color:#221C16;width:150px">Inès Bouvier</span><span style="flex:1;display:flex;gap:7px;flex-wrap:wrap"><span style="font-family:'Alegreya Sans',sans-serif;font-size:11.5px;color:#9A6A2E;background:#EFE4CF;padding:2px 9px;border-radius:9px">moyenne D (sous seuil)</span></span><span style="font-family:'Alegreya Sans',sans-serif;font-size:12px;color:#8A6F4E">Ouvrir la fiche →</span></div>
+        <div style="background:#FBF8F1;border:1px solid #E4DBC9;border-left:4px solid #A23E2E;border-radius:10px;padding:11px 15px;display:flex;align-items:center;gap:12px"><span style="font-family:'EB Garamond',serif;font-size:16px;color:#221C16;width:150px">Lucas Petit</span><span style="flex:1;display:flex;gap:7px;flex-wrap:wrap"><span style="font-family:'Alegreya Sans',sans-serif;font-size:11.5px;color:#A23E2E;background:#EFD9D2;padding:2px 9px;border-radius:9px">2 fragments manquants</span></span><span style="font-family:'Alegreya Sans',sans-serif;font-size:12px;color:#8A6F4E">Ouvrir la fiche →</span></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- à risque — mobile -->
+<div data-screen-label="Élèves à risque — mobile" style="position:absolute;left:880px;top:2092px;width:300px">
+  <div data-drags-parent="1" style="position:absolute;top:-26px;left:2px;font-family:'Alegreya Sans',sans-serif;font-size:13px;color:#8A6F4E">Mobile</div>
+  <div style="border:11px solid #221C16;border-radius:38px;background:#221C16;box-shadow:0 6px 22px rgba(34,28,22,.22)">
+    <div style="background:#F4EFE6;border-radius:27px;height:560px;overflow:hidden;display:flex;flex-direction:column">
+      <div style="background:#ECE4D6;padding:12px 16px 11px">
+        <div style="display:flex;justify-content:space-between;align-items:center"><div style="font-family:'Alegreya Sans',sans-serif;font-size:12px;color:#5A4632">← Tableau de bord</div><span style="width:28px;height:28px;border-radius:50%;background:#F4EFE6;border:1px solid #D8CFBC;display:inline-flex;align-items:center;justify-content:center;overflow:hidden;flex-shrink:0"><img src="sceaux/palimpseste_medaillon.png" style="width:26px;height:26px;object-fit:cover;filter:brightness(1.05) contrast(1.05);mix-blend-mode:multiply" alt="Palimpseste"></span></div>
+        <div style="font-family:'Cormorant Garamond',serif;font-weight:600;font-size:20px;color:#221C16;margin-top:3px">6 élèves à risque</div>
+      </div>
+      <div style="flex:1;overflow:hidden;padding:12px 13px;display:flex;flex-direction:column;gap:8px">
+        <div style="font-family:'Alegreya Sans',sans-serif;font-size:10px;letter-spacing:.08em;color:#A89878">TERMINALE HLP</div>
+        <div style="background:#FBF8F1;border:1px solid #E4DBC9;border-left:4px solid #A23E2E;border-radius:10px;padding:10px 12px"><div style="font-family:'EB Garamond',serif;font-size:15px;color:#221C16">Léa Fontaine</div><div style="margin-top:5px"><span style="font-family:'Alegreya Sans',sans-serif;font-size:10.5px;color:#A23E2E;background:#EFD9D2;padding:2px 8px;border-radius:9px">2 fragments manquants</span></div></div>
+        <div style="background:#FBF8F1;border:1px solid #E4DBC9;border-left:4px solid #A23E2E;border-radius:10px;padding:10px 12px"><div style="font-family:'EB Garamond',serif;font-size:15px;color:#221C16">Karim Benali</div><div style="margin-top:5px"><span style="font-family:'Alegreya Sans',sans-serif;font-size:10.5px;color:#9A6A2E;background:#EFE4CF;padding:2px 8px;border-radius:9px">moyenne C− (sous seuil)</span></div></div>
+        <div style="background:#FBF8F1;border:1px solid #E4DBC9;border-left:4px solid #A23E2E;border-radius:10px;padding:10px 12px"><div style="font-family:'EB Garamond',serif;font-size:15px;color:#221C16">Nina Lefèvre</div><div style="margin-top:5px"><span style="font-family:'Alegreya Sans',sans-serif;font-size:10.5px;color:#2C5470;background:#DCE6EC;padding:2px 8px;border-radius:9px">14 cartes en retard</span></div></div>
+        <div style="font-family:'Alegreya Sans',sans-serif;font-size:10px;letter-spacing:.08em;color:#A89878;margin-top:3px">TERMINALE PHILO</div>
+        <div style="background:#FBF8F1;border:1px solid #E4DBC9;border-left:4px solid #A23E2E;border-radius:10px;padding:10px 12px"><div style="font-family:'EB Garamond',serif;font-size:15px;color:#221C16">Inès Bouvier</div><div style="margin-top:5px"><span style="font-family:'Alegreya Sans',sans-serif;font-size:10.5px;color:#9A6A2E;background:#EFE4CF;padding:2px 8px;border-radius:9px">moyenne D (sous seuil)</span></div></div>
+        <div style="text-align:center;font-family:'Alegreya Sans',sans-serif;font-size:11.5px;color:#8A6F4E;padding-top:2px">+ 2 autres…</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- note à risque -->
+<div style="position:absolute;left:1260px;top:2152px;width:250px">
+  <div style="background:#F3ECDD;border:1px solid #E4DBC9;border-left:3px solid #A23E2E;border-radius:8px;padding:14px 16px;font-family:'EB Garamond',serif;font-size:15px;line-height:1.5;color:#5A4632">
+    <span style="font-family:'Alegreya Sans',sans-serif;font-size:11px;letter-spacing:.1em;color:#A23E2E">LE POURQUOI</span><br>
+    On ne dit pas seulement « à risque » : chaque élève porte <b>sa raison</b> (puce colorée selon le signal). Un élève bi-classe n'apparaît qu'au titre du <b>contexte</b> où il décroche.
+  </div>
+</div>
+
+<!-- ======================= FICHE ÉLÈVE ======================= -->
+<div style="position:absolute;left:80px;top:2700px;font-family:'Cormorant Garamond',serif;font-weight:600;font-size:30px;color:#221C16">Fiche élève (le hub)</div>
+<div style="position:absolute;left:80px;top:2742px;font-family:'EB Garamond',serif;font-size:16px;color:#8A6F4E">La page derrière « Ouvrir la fiche → » : en-tête élève + accès « par module ». L'encart Signaux est une proposition (le hub actuel ne le porte pas encore).</div>
+
+<!-- fiche — laptop -->
+<div data-screen-label="Fiche élève — ordi" style="position:absolute;left:80px;top:2812px;width:760px">
+  <div data-drags-parent="1" style="position:absolute;top:-26px;left:2px;font-family:'Alegreya Sans',sans-serif;font-size:13px;color:#8A6F4E">Ordinateur — Pilotage › Élèves › Léa Fontaine</div>
+  <div style="border:1px solid #D8CFBC;border-radius:12px;background:#FBF8F1;box-shadow:0 4px 16px rgba(34,28,22,.1);overflow:hidden">
+    <div style="background:#ECE4D6;padding:9px 14px;display:flex;align-items:center;gap:7px"><span style="width:10px;height:10px;border-radius:50%;background:#C9B89A"></span><span style="width:10px;height:10px;border-radius:50%;background:#C9B89A"></span><span style="width:10px;height:10px;border-radius:50%;background:#C9B89A"></span></div>
+    <div style="background:#ECE4D6;padding:0 22px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid #E0D6C2;height:54px">
+      <div style="display:flex;align-items:center;gap:10px">
+        <span style="width:32px;height:32px;border-radius:50%;background:#F4EFE6;border:1px solid #D8CFBC;display:inline-flex;align-items:center;justify-content:center;overflow:hidden;flex-shrink:0"><img src="sceaux/palimpseste_medaillon.png" style="width:30px;height:30px;object-fit:cover;filter:brightness(1.05) contrast(1.05);mix-blend-mode:multiply" alt="Palimpseste"></span>
+        <span style="font-family:'Cinzel',serif;font-weight:600;font-size:15px;letter-spacing:.2em;color:#221C16">PALIMPSESTE</span>
+      </div>
+      <div style="display:flex;align-items:center;gap:4px;font-family:'Alegreya Sans',sans-serif;font-size:14px">
+        <span style="color:#5A4632;padding:6px 13px">Tableau de bord</span>
+        <span style="background:#F4EFE6;color:#221C16;padding:6px 13px;border-radius:7px;display:inline-flex;align-items:center;gap:4px">Pilotage <span style="font-size:10px">▾</span></span>
+        <span style="color:#5A4632;padding:6px 13px;display:inline-flex;align-items:center;gap:4px">Modules <span style="font-size:10px">▾</span></span>
+      </div>
+      <span style="font-family:'Alegreya Sans',sans-serif;font-size:13px;color:#8A6F4E">Mme Aubry · Déconnexion</span>
+    </div>
+    <div style="background:#F4EFE6;padding:20px 28px 26px">
+      <div style="font-family:'Alegreya Sans',sans-serif;font-size:12px;color:#8A6F4E">← Élèves</div>
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:16px;margin-top:6px">
+        <div>
+          <div style="font-family:'Cormorant Garamond',serif;font-weight:600;font-size:28px;color:#221C16;line-height:1.05">Léa Fontaine</div>
+          <div style="font-family:'Alegreya Sans',sans-serif;font-size:13px;color:#8A6F4E;margin-top:2px">lea.fontaine@lycee.fr</div>
+          <div style="display:flex;gap:6px;margin-top:8px">
+            <span style="font-family:'Alegreya Sans',sans-serif;font-size:11.5px;color:#2C5470;background:#DCE6EC;padding:2px 10px;border-radius:9px">Terminale HLP</span>
+          </div>
+        </div>
+        <span style="font-family:'Alegreya Sans',sans-serif;font-size:12px;color:#A23E2E;background:#EFD9D2;padding:4px 11px;border-radius:9px;white-space:nowrap">à risque</span>
+      </div>
+      <!-- signaux (proposition) -->
+      <div style="background:#FBF8F1;border:1px solid #E4DBC9;border-left:4px solid #A23E2E;border-radius:11px;padding:13px 16px;margin-top:14px">
+        <div style="display:flex;justify-content:space-between;align-items:center">
+          <span style="font-family:'Alegreya Sans',sans-serif;font-size:11px;letter-spacing:.1em;color:#A23E2E">SIGNAUX · TERMINALE HLP</span>
+          <span style="font-family:'Alegreya Sans',sans-serif;font-size:12px;color:#8A6F4E">par contexte de classe</span>
+        </div>
+        <div style="display:flex;gap:7px;flex-wrap:wrap;margin-top:9px">
+          <span style="font-family:'Alegreya Sans',sans-serif;font-size:11.5px;color:#A23E2E;background:#EFD9D2;padding:2px 9px;border-radius:9px">2 fragments manquants</span>
+        </div>
+        <div style="display:flex;gap:0;margin-top:12px;border-top:1px dashed #E4DBC9;padding-top:11px">
+          <div style="flex:1;text-align:center"><div style="font-family:'Cormorant Garamond',serif;font-weight:600;font-size:20px;color:#A23E2E;line-height:1">6/8</div><div style="font-family:'Alegreya Sans',sans-serif;font-size:10.5px;color:#8A6F4E;margin-top:1px">dépôts fragments</div></div>
+          <div style="width:1px;background:#E4DBC9"></div>
+          <div style="flex:1;text-align:center"><div style="font-family:'Cormorant Garamond',serif;font-weight:600;font-size:20px;color:#5A4632;line-height:1">C+</div><div style="font-family:'Alegreya Sans',sans-serif;font-size:10.5px;color:#8A6F4E;margin-top:1px">moyenne</div></div>
+          <div style="width:1px;background:#E4DBC9"></div>
+          <div style="flex:1;text-align:center"><div style="font-family:'Cormorant Garamond',serif;font-weight:600;font-size:20px;color:#5B6E4A;line-height:1">à jour</div><div style="font-family:'Alegreya Sans',sans-serif;font-size:10.5px;color:#8A6F4E;margin-top:1px">révision Quazian</div></div>
+        </div>
+      </div>
+      <!-- par module -->
+      <div style="font-family:'Alegreya Sans',sans-serif;font-size:11px;letter-spacing:.1em;color:#8A6F4E;margin:18px 0 9px">PAR MODULE</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+        <div style="background:#FBF8F1;border:1px solid #E4DBC9;border-left:4px solid #616E30;border-radius:11px;padding:12px 14px;display:flex;align-items:center;gap:12px">
+          <span style="width:40px;height:40px;border-radius:50%;background:#E2E3D2;display:inline-flex;align-items:center;justify-content:center;overflow:hidden;flex-shrink:0"><img src="sceaux/fragments.png" style="width:35px;height:35px;object-fit:cover;object-position:50% 40%;filter:brightness(1.09) contrast(1.04);mix-blend-mode:multiply" alt=""></span>
+          <div style="flex:1"><div style="font-family:'Cinzel',serif;font-weight:600;font-size:12.5px;letter-spacing:.08em;color:#616E30">FRAGMENTS</div><div style="font-family:'EB Garamond',serif;font-size:13.5px;color:#5A4632;margin-top:1px">Parcours, dépôts, analyses</div></div>
+          <span style="color:#8A6F4E">→</span>
+        </div>
+        <div style="background:#FBF8F1;border:1px solid #E4DBC9;border-left:4px solid #3E6B8E;border-radius:11px;padding:12px 14px;display:flex;align-items:center;gap:12px">
+          <span style="width:40px;height:40px;border-radius:50%;background:#DCE6EC;display:inline-flex;align-items:center;justify-content:center;overflow:hidden;flex-shrink:0"><img src="sceaux/quazian.png" style="width:35px;height:35px;object-fit:cover;object-position:50% 40%;filter:brightness(1.09) contrast(1.04);mix-blend-mode:multiply" alt=""></span>
+          <div style="flex:1"><div style="font-family:'Cinzel',serif;font-weight:600;font-size:12.5px;letter-spacing:.08em;color:#3E6B8E">QUAZIAN</div><div style="font-family:'EB Garamond',serif;font-size:13.5px;color:#5A4632;margin-top:1px">Diagnostic FSRS + quizz</div></div>
+          <span style="color:#8A6F4E">→</span>
+        </div>
+        <div style="background:#FBF8F1;border:1px solid #E4DBC9;border-left:4px solid #2C4A7C;border-radius:11px;padding:12px 14px;display:flex;align-items:center;gap:12px">
+          <span style="width:40px;height:40px;border-radius:50%;background:#DDE3EC;display:inline-flex;align-items:center;justify-content:center;overflow:hidden;flex-shrink:0"><img src="sceaux/aletheia.png" style="width:35px;height:35px;object-fit:cover;object-position:50% 40%;filter:brightness(1.09) contrast(1.04);mix-blend-mode:multiply" alt=""></span>
+          <div style="flex:1"><div style="font-family:'Cinzel',serif;font-weight:600;font-size:12.5px;letter-spacing:.08em;color:#2C4A7C">ALETHEIA</div><div style="font-family:'EB Garamond',serif;font-size:13.5px;color:#5A4632;margin-top:1px">Lectures, retours, diagnostic</div></div>
+          <span style="color:#8A6F4E">→</span>
+        </div>
+        <div style="background:#F4EFE6;border:1px dashed #D8CFBC;border-radius:11px;padding:12px 14px;display:flex;align-items:center;gap:12px;opacity:.7">
+          <span style="width:40px;height:40px;border-radius:50%;background:#DCE6DF;display:inline-flex;align-items:center;justify-content:center;overflow:hidden;flex-shrink:0"><img src="sceaux/codex.png" style="width:35px;height:35px;object-fit:cover;object-position:50% 40%;filter:brightness(1.09) contrast(1.04);mix-blend-mode:multiply" alt=""></span>
+          <div style="flex:1"><div style="font-family:'Cinzel',serif;font-weight:600;font-size:12.5px;letter-spacing:.08em;color:#2E4A3C">CODEX</div><div style="font-family:'Alegreya Sans',sans-serif;font-size:11.5px;color:#8A6F4E;margin-top:1px">Non assigné à sa classe</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- fiche — mobile -->
+<div data-screen-label="Fiche élève — mobile" style="position:absolute;left:880px;top:2812px;width:300px">
+  <div data-drags-parent="1" style="position:absolute;top:-26px;left:2px;font-family:'Alegreya Sans',sans-serif;font-size:13px;color:#8A6F4E">Mobile</div>
+  <div style="border:11px solid #221C16;border-radius:38px;background:#221C16;box-shadow:0 6px 22px rgba(34,28,22,.22)">
+    <div style="background:#F4EFE6;border-radius:27px;height:606px;overflow:hidden;display:flex;flex-direction:column">
+      <div style="background:#ECE4D6;padding:12px 16px 11px">
+        <div style="display:flex;justify-content:space-between;align-items:center"><div style="font-family:'Alegreya Sans',sans-serif;font-size:12px;color:#5A4632">← Élèves</div><span style="width:28px;height:28px;border-radius:50%;background:#F4EFE6;border:1px solid #D8CFBC;display:inline-flex;align-items:center;justify-content:center;overflow:hidden;flex-shrink:0"><img src="sceaux/palimpseste_medaillon.png" style="width:26px;height:26px;object-fit:cover;filter:brightness(1.05) contrast(1.05);mix-blend-mode:multiply" alt="Palimpseste"></span></div>
+        <div style="display:flex;align-items:center;gap:8px;margin-top:6px"><span style="font-family:'Cormorant Garamond',serif;font-weight:600;font-size:20px;color:#221C16;line-height:1.05">Léa Fontaine</span><span style="font-family:'Alegreya Sans',sans-serif;font-size:10px;color:#A23E2E;background:#EFD9D2;padding:2px 8px;border-radius:9px">à risque</span></div>
+        <div style="font-family:'Alegreya Sans',sans-serif;font-size:11px;color:#8A6F4E;margin-top:1px">lea.fontaine@lycee.fr · Terminale HLP</div>
+      </div>
+      <div style="flex:1;overflow:hidden;padding:12px 14px;display:flex;flex-direction:column;gap:9px">
+        <!-- signaux -->
+        <div style="background:#FBF8F1;border:1px solid #E4DBC9;border-left:4px solid #A23E2E;border-radius:10px;padding:10px 12px">
+          <div style="font-family:'Alegreya Sans',sans-serif;font-size:10px;letter-spacing:.08em;color:#A23E2E">SIGNAUX</div>
+          <div style="margin-top:6px"><span style="font-family:'Alegreya Sans',sans-serif;font-size:10.5px;color:#A23E2E;background:#EFD9D2;padding:2px 8px;border-radius:9px">2 fragments manquants</span></div>
+          <div style="display:flex;margin-top:9px;border-top:1px dashed #E4DBC9;padding-top:8px">
+            <div style="flex:1;text-align:center"><div style="font-family:'Cormorant Garamond',serif;font-weight:600;font-size:16px;color:#A23E2E;line-height:1">6/8</div><div style="font-family:'Alegreya Sans',sans-serif;font-size:9px;color:#8A6F4E">dépôts</div></div>
+            <div style="flex:1;text-align:center"><div style="font-family:'Cormorant Garamond',serif;font-weight:600;font-size:16px;color:#5A4632;line-height:1">C+</div><div style="font-family:'Alegreya Sans',sans-serif;font-size:9px;color:#8A6F4E">moyenne</div></div>
+            <div style="flex:1;text-align:center"><div style="font-family:'Cormorant Garamond',serif;font-weight:600;font-size:16px;color:#5B6E4A;line-height:1">à jour</div><div style="font-family:'Alegreya Sans',sans-serif;font-size:9px;color:#8A6F4E">révision</div></div>
+          </div>
+        </div>
+        <div style="font-family:'Alegreya Sans',sans-serif;font-size:10px;letter-spacing:.08em;color:#8A6F4E;margin-top:2px">PAR MODULE</div>
+        <div style="background:#FBF8F1;border:1px solid #E4DBC9;border-left:4px solid #616E30;border-radius:10px;padding:9px 11px;display:flex;align-items:center;gap:10px"><span style="width:32px;height:32px;border-radius:50%;background:#E2E3D2;display:inline-flex;align-items:center;justify-content:center;overflow:hidden;flex-shrink:0"><img src="sceaux/fragments.png" style="width:28px;height:28px;object-fit:cover;object-position:50% 40%;filter:brightness(1.09) contrast(1.04);mix-blend-mode:multiply" alt=""></span><span style="flex:1"><span style="font-family:'Cinzel',serif;font-weight:600;font-size:11.5px;letter-spacing:.06em;color:#616E30">FRAGMENTS</span></span><span style="color:#8A6F4E">→</span></div>
+        <div style="background:#FBF8F1;border:1px solid #E4DBC9;border-left:4px solid #3E6B8E;border-radius:10px;padding:9px 11px;display:flex;align-items:center;gap:10px"><span style="width:32px;height:32px;border-radius:50%;background:#DCE6EC;display:inline-flex;align-items:center;justify-content:center;overflow:hidden;flex-shrink:0"><img src="sceaux/quazian.png" style="width:28px;height:28px;object-fit:cover;object-position:50% 40%;filter:brightness(1.09) contrast(1.04);mix-blend-mode:multiply" alt=""></span><span style="flex:1"><span style="font-family:'Cinzel',serif;font-weight:600;font-size:11.5px;letter-spacing:.06em;color:#3E6B8E">QUAZIAN</span></span><span style="color:#8A6F4E">→</span></div>
+        <div style="background:#FBF8F1;border:1px solid #E4DBC9;border-left:4px solid #2C4A7C;border-radius:10px;padding:9px 11px;display:flex;align-items:center;gap:10px"><span style="width:32px;height:32px;border-radius:50%;background:#DDE3EC;display:inline-flex;align-items:center;justify-content:center;overflow:hidden;flex-shrink:0"><img src="sceaux/aletheia.png" style="width:28px;height:28px;object-fit:cover;object-position:50% 40%;filter:brightness(1.09) contrast(1.04);mix-blend-mode:multiply" alt=""></span><span style="flex:1"><span style="font-family:'Cinzel',serif;font-weight:600;font-size:11.5px;letter-spacing:.06em;color:#2C4A7C">ALETHEIA</span></span><span style="color:#8A6F4E">→</span></div>
+        <div style="background:#F4EFE6;border:1px dashed #D8CFBC;border-radius:10px;padding:9px 11px;display:flex;align-items:center;gap:10px;opacity:.7"><span style="width:32px;height:32px;border-radius:50%;background:#DCE6DF;display:inline-flex;align-items:center;justify-content:center;overflow:hidden;flex-shrink:0"><img src="sceaux/codex.png" style="width:28px;height:28px;object-fit:cover;object-position:50% 40%;filter:brightness(1.09) contrast(1.04);mix-blend-mode:multiply" alt=""></span><span style="flex:1"><span style="font-family:'Cinzel',serif;font-weight:600;font-size:11.5px;letter-spacing:.06em;color:#2E4A3C">CODEX</span><span style="font-family:'Alegreya Sans',sans-serif;font-size:10px;color:#8A6F4E;display:block">non assigné</span></span></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- note fiche -->
+<div style="position:absolute;left:1260px;top:2872px;width:250px">
+  <div style="background:#F3ECDD;border:1px solid #E4DBC9;border-left:3px solid #8A6F4E;border-radius:8px;padding:14px 16px;font-family:'EB Garamond',serif;font-size:15px;line-height:1.5;color:#5A4632">
+    <span style="font-family:'Alegreya Sans',sans-serif;font-size:11px;letter-spacing:.1em;color:#8A6F4E">UN HUB, PAS UNE IMPASSE</span><br>
+    La fiche reste le <b>point d'entrée</b> du code actuel (en-tête + accès par module). L'<b>encart Signaux</b> (raison + dépôts / moyenne / révision) est une <b>proposition</b> pour atterrir utilement depuis « à risque » — à valider avant de l'implémenter.
+  </div>
+</div>
+</x-dc>
+</body>
+</html>

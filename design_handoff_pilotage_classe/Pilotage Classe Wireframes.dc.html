@@ -1,0 +1,612 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<meta name="design_doc_mode" content="canvas">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Caveat:wght@500;600;700&family=Architects+Daughter&display=swap" rel="stylesheet">
+<style>
+  body { margin:0; font-family:'Architects Daughter', cursive; color:#46402f; -webkit-font-smoothing:antialiased; }
+</style>
+</helmet>
+
+<!-- ======================= INTRO ======================= -->
+<div style="position:absolute;left:80px;top:36px;width:1150px">
+  <div style="font-family:'Caveat',cursive;font-weight:700;font-size:46px;line-height:1.05;color:#3a352c">Palimpseste · Espace prof — Pilotage Classe</div>
+  <div style="font-family:'Architects Daughter',cursive;font-size:16px;color:#7a7263;margin-top:8px;max-width:900px">On remet à plat le suivi d'une classe. La carte-classe n'empile plus une liste illisible : <b>cliquer ouvre une section Pilotage dédiée</b>. Une matrice <b>élèves × modules</b> (ce qu'ils font), un <b>toggle</b> vers <b>élèves × compétences</b> (leur niveau), des <b>bulles « à risque »</b>, et le choix des <b>modules accessibles</b>. Glisse pour te déplacer, zoome pour les détails.</div>
+</div>
+
+<!-- brief post-it -->
+<div style="position:absolute;left:80px;top:160px;width:330px">
+  <div style="background:#fef4a8;padding:16px 16px 18px;box-shadow:0 1px 4px rgba(0,0,0,.12);transform:rotate(-1.1deg);font-family:'Architects Daughter',cursive;font-size:14px;line-height:1.5;color:#5a4a14">
+    <div style="font-family:'Caveat',cursive;font-weight:700;font-size:21px;margin-bottom:6px;color:#4a3c0c">Le brief</div>
+    Aujourd'hui la carte-classe déverse la liste d'élèves <b>en bas de page</b> → illisible. On veut, par classe : <b>(1)</b> voir <b>ce que font</b> les élèves dans chaque module, <b>(2)</b> basculer sur leur <b>niveau de compétence</b>, <b>(3)</b> repérer d'un coup les <b>élèves à risque</b>, <b>(4)</b> choisir les <b>modules accessibles</b>. Lisible sur <b>ordi & mobile</b>.
+  </div>
+</div>
+
+<!-- legend -->
+<div style="position:absolute;left:450px;top:160px;width:560px">
+  <div data-drags-parent="1" style="position:absolute;top:-26px;left:2px;font-family:'Caveat',cursive;font-size:19px;color:#6f6755">Conventions & couleurs</div>
+  <div style="background:#fbfaf6;border:1.5px solid #cdc6b6;border-radius:10px;box-shadow:0 1px 3px rgba(0,0,0,.08);padding:16px">
+    <div style="font-size:11px;color:#8a8270;letter-spacing:.06em;margin-bottom:8px">LES MODULES (COLONNES)</div>
+    <div style="display:flex;flex-wrap:wrap;gap:9px 16px;font-size:12.5px;color:#5b5444">
+      <div style="display:flex;align-items:center;gap:6px"><span style="width:11px;height:11px;border-radius:50%;background:#3E6B8E"></span>Quazian</div>
+      <div style="display:flex;align-items:center;gap:6px"><span style="width:11px;height:11px;border-radius:50%;background:#2C4A7C"></span>Aletheia</div>
+      <div style="display:flex;align-items:center;gap:6px"><span style="width:11px;height:11px;border-radius:50%;background:#5A6043"></span>Fragments</div>
+      <div style="display:flex;align-items:center;gap:6px"><span style="width:11px;height:11px;border-radius:50%;background:#2E4A3C"></span>Codex</div>
+      <div style="display:flex;align-items:center;gap:6px"><span style="width:11px;height:11px;border-radius:50%;background:#6B4E6E"></span>Scriptorium</div>
+    </div>
+    <div style="border-top:1px dashed #d3ccba;margin:12px 0 10px"></div>
+    <div style="font-size:11px;color:#8a8270;letter-spacing:.06em;margin-bottom:8px">CE QUE DIT UNE CASE</div>
+    <div style="display:flex;flex-direction:column;gap:8px;font-size:12.5px;color:#5b5444">
+      <div style="display:flex;align-items:center;gap:9px"><span style="display:inline-block;background:#f7ddd6;font-size:11px;padding:2px 8px;border-radius:9px;color:#a23e2e">2 à faire</span> action attendue de l'élève (rouge)</div>
+      <div style="display:flex;align-items:center;gap:9px"><span style="font-size:12px;color:#5b5444">lecture 3/5</span> position / en cours (encre)</div>
+      <div style="display:flex;align-items:center;gap:9px"><span style="font-size:12px;color:#5b6e4a">à jour</span> rien à faire (vert) · <span style="color:#b8b0a0">—</span> module non accessible</div>
+    </div>
+    <div style="border-top:1px dashed #d3ccba;margin:12px 0 10px"></div>
+    <div style="display:flex;flex-wrap:wrap;gap:10px 18px;font-size:12.5px;color:#5b5444">
+      <div style="display:flex;align-items:center;gap:8px"><span style="width:18px;height:18px;border-radius:50%;background:#a23e2e;color:#fff;font-size:11px;display:inline-flex;align-items:center;justify-content:center;font-family:'Caveat',cursive;font-weight:700">!</span> bulle « élève à risque »</div>
+      <div style="display:flex;align-items:center;gap:8px"><span style="display:inline-flex;width:22px;height:22px;border-radius:6px;align-items:center;justify-content:center;font-family:'Caveat',cursive;font-weight:700;font-size:14px;background:#f1e6d2;color:#9A6A2E">C</span> niveau de compétence (A→D)</div>
+    </div>
+  </div>
+</div>
+
+<!-- ======================= BAND 1 — VUE ACTIVITÉ ======================= -->
+<div style="position:absolute;left:80px;top:470px;font-family:'Caveat',cursive;font-weight:700;font-size:32px;color:#3a352c">1 · La carte ouvre le Pilotage — vue « Activité »</div>
+<div style="position:absolute;left:80px;top:516px;font-family:'Architects Daughter',cursive;font-size:15px;color:#8a8270">Un clic sur la carte-classe pousse une page dédiée : une matrice élèves × modules. On scanne d'un coup qui doit faire quoi.</div>
+
+<!-- entry card -->
+<div data-screen-label="Carte classe — point d'entrée" style="position:absolute;left:80px;top:600px;width:290px">
+  <div data-drags-parent="1" style="position:absolute;top:-26px;left:2px;font-family:'Caveat',cursive;font-size:19px;color:#6f6755">La carte (tableau de bord)</div>
+  <div style="background:#fff;border:1.6px solid #46402f;border-left:5px solid #a23e2e;border-radius:11px;padding:14px 15px;box-shadow:0 2px 8px rgba(0,0,0,.1);cursor:pointer">
+    <div style="display:flex;justify-content:space-between;align-items:baseline"><span style="font-family:'Caveat',cursive;font-weight:700;font-size:22px;color:#46402f">Terminale HLP</span><span style="font-size:12px;color:#8a8270">24 élèves</span></div>
+    <div style="font-size:12.5px;color:#a23e2e;margin-top:4px">4 à risque · 2 fragments à valider</div>
+    <div style="border-top:1px dashed #e0d8c6;margin:11px 0 9px"></div>
+    <div style="display:flex;justify-content:space-between;align-items:center"><span style="font-size:12.5px;color:#5b6e4a">Première HLP · à jour</span></div>
+    <div style="margin-top:12px;background:#f4efe6;border:1px dashed #c4bca8;border-radius:8px;text-align:center;padding:9px;font-size:13px;color:#46402f;font-family:'Caveat',cursive;font-weight:700">cliquer → ouvrir le Pilotage ↘</div>
+  </div>
+  <div style="font-size:12.5px;color:#5b5444;line-height:1.5;margin-top:12px">
+    Fini la liste dépliée <b>sous</b> la grille. La carte entière est cliquable → <b>page Pilotage Classe</b> en plein cadre (retour en haut).
+  </div>
+</div>
+
+<!-- LAPTOP — Activité matrix -->
+<div data-screen-label="Pilotage Classe — Activité (ordi)" style="position:absolute;left:430px;top:585px;width:1010px">
+  <div data-drags-parent="1" style="position:absolute;top:-26px;left:2px;font-family:'Caveat',cursive;font-size:19px;color:#6f6755">Sur ordinateur — matrice élèves × modules</div>
+  <div style="border:1.5px solid #cdc6b6;border-radius:11px;background:#fff;box-shadow:0 2px 10px rgba(0,0,0,.1);overflow:hidden">
+    <div style="background:#ece4d6;padding:8px 12px;display:flex;align-items:center;gap:6px"><span style="width:9px;height:9px;border-radius:50%;background:#c9b89a"></span><span style="width:9px;height:9px;border-radius:50%;background:#c9b89a"></span><span style="width:9px;height:9px;border-radius:50%;background:#c9b89a"></span></div>
+    <div style="background:#f4efe6;padding:16px 20px 20px">
+      <!-- breadcrumb -->
+      <div style="font-size:12px;color:#8a8270">← Pilotage · Classes &nbsp;›&nbsp; <span style="color:#46402f">Terminale HLP</span></div>
+      <!-- header row -->
+      <div style="display:flex;justify-content:space-between;align-items:flex-end;margin-top:8px;gap:16px">
+        <div>
+          <div style="font-family:'Caveat',cursive;font-weight:700;font-size:30px;color:#46402f;line-height:1">Terminale HLP</div>
+          <div style="font-size:12.5px;color:#8a8270;margin-top:3px">Terminale · 24 élèves · 2025-26 · <span style="color:#a23e2e">4 à risque</span></div>
+        </div>
+        <!-- segmented toggle -->
+        <div style="display:flex;align-items:center;gap:8px">
+          <span style="font-size:11px;color:#8a8270;letter-spacing:.05em">VUE</span>
+          <div style="display:inline-flex;background:#e7e0d2;border:1.4px solid #d3ccba;border-radius:9px;padding:3px">
+            <span style="background:#46402f;color:#f4efe6;font-size:13.5px;padding:6px 16px;border-radius:6px;font-weight:700">Activité</span>
+            <span style="color:#7a7263;font-size:13.5px;padding:6px 16px;border-radius:6px">Compétences</span>
+          </div>
+        </div>
+      </div>
+      <!-- access bar -->
+      <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:14px;background:#fbf8f1;border:1px solid #e4dbc9;border-radius:9px;padding:9px 12px">
+        <span style="font-size:11px;color:#8a8270;letter-spacing:.05em">MODULES ACCESSIBLES À LA CLASSE</span>
+        <span style="display:inline-flex;align-items:center;gap:6px;background:#eef1ea;border:1px solid #cdd3c4;border-radius:20px;padding:4px 11px;font-size:12.5px;color:#46402f"><span style="width:9px;height:9px;border-radius:50%;background:#3E6B8E"></span>Quazian <span style="color:#5b6e4a;font-weight:700">✓</span></span>
+        <span style="display:inline-flex;align-items:center;gap:6px;background:#eef1ea;border:1px solid #cdd3c4;border-radius:20px;padding:4px 11px;font-size:12.5px;color:#46402f"><span style="width:9px;height:9px;border-radius:50%;background:#2C4A7C"></span>Aletheia <span style="color:#5b6e4a;font-weight:700">✓</span></span>
+        <span style="display:inline-flex;align-items:center;gap:6px;background:#eef1ea;border:1px solid #cdd3c4;border-radius:20px;padding:4px 11px;font-size:12.5px;color:#46402f"><span style="width:9px;height:9px;border-radius:50%;background:#5A6043"></span>Fragments <span style="color:#5b6e4a;font-weight:700">✓</span></span>
+        <span style="display:inline-flex;align-items:center;gap:6px;background:#eef1ea;border:1px solid #cdd3c4;border-radius:20px;padding:4px 11px;font-size:12.5px;color:#46402f"><span style="width:9px;height:9px;border-radius:50%;background:#2E4A3C"></span>Codex <span style="color:#5b6e4a;font-weight:700">✓</span></span>
+        <span style="display:inline-flex;align-items:center;gap:6px;background:#f4efe6;border:1px dashed #c4bca8;border-radius:20px;padding:4px 11px;font-size:12.5px;color:#a59c88"><span style="width:9px;height:9px;border-radius:50%;background:#cdc6b6"></span>Scriptorium <span style="color:#b8b0a0">☐</span></span>
+        <span style="margin-left:auto;font-size:12px;color:#46402f;border:1px solid #cdc6b6;border-radius:7px;padding:5px 11px;background:#fff">⚙ gérer les accès</span>
+      </div>
+
+      <!-- MATRIX -->
+      <div style="background:#fff;border:1.4px solid #ded6c4;border-radius:11px;margin-top:13px;overflow:hidden">
+        <!-- column header -->
+        <div style="display:flex;background:#fbf8f1;border-bottom:1.4px solid #e4dbc9">
+          <div style="width:178px;flex-shrink:0;padding:9px 14px;font-size:10px;letter-spacing:.05em;color:#a59c88">ÉLÈVE</div>
+          <div style="flex:1;display:flex">
+            <div style="flex:1;padding:9px 6px;text-align:center;font-size:11px;color:#46402f;border-left:1px solid #ece4d6;display:flex;align-items:center;justify-content:center;gap:5px"><span style="width:8px;height:8px;border-radius:50%;background:#3E6B8E"></span>Quazian</div>
+            <div style="flex:1;padding:9px 6px;text-align:center;font-size:11px;color:#46402f;border-left:1px solid #ece4d6;display:flex;align-items:center;justify-content:center;gap:5px"><span style="width:8px;height:8px;border-radius:50%;background:#2C4A7C"></span>Aletheia</div>
+            <div style="flex:1;padding:9px 6px;text-align:center;font-size:11px;color:#46402f;border-left:1px solid #ece4d6;display:flex;align-items:center;justify-content:center;gap:5px"><span style="width:8px;height:8px;border-radius:50%;background:#5A6043"></span>Fragments</div>
+            <div style="flex:1;padding:9px 6px;text-align:center;font-size:11px;color:#46402f;border-left:1px solid #ece4d6;display:flex;align-items:center;justify-content:center;gap:5px"><span style="width:8px;height:8px;border-radius:50%;background:#2E4A3C"></span>Codex</div>
+            <div style="flex:1;padding:9px 6px;text-align:center;font-size:10.5px;color:#b8b0a0;border-left:1px solid #ece4d6;background:#faf7f0"><div style="display:flex;align-items:center;justify-content:center;gap:5px"><span style="width:8px;height:8px;border-radius:50%;background:#cdc6b6"></span>Scriptorium</div><div style="font-size:9px;margin-top:1px">non activé</div></div>
+          </div>
+        </div>
+        <!-- rows -->
+        <!-- Léa -->
+        <div style="display:flex;align-items:stretch;border-bottom:1px solid #f2ede3">
+          <div style="width:178px;flex-shrink:0;padding:11px 14px;display:flex;align-items:center;gap:8px"><span style="width:18px;height:18px;border-radius:50%;background:#a23e2e;color:#fff;font-size:11px;display:inline-flex;align-items:center;justify-content:center;font-family:'Caveat',cursive;font-weight:700;flex-shrink:0">!</span><span style="font-size:14.5px;color:#46402f">Léa Fontaine</span></div>
+          <div style="flex:1;display:flex;font-size:12px;text-align:center">
+            <div style="flex:1;padding:11px 4px;border-left:1px solid #f2ede3;display:flex;align-items:center;justify-content:center"><span style="background:#f7ddd6;color:#a23e2e;padding:2px 8px;border-radius:9px">12 à réviser</span></div>
+            <div style="flex:1;padding:11px 4px;border-left:1px solid #f2ede3;color:#5b5444;display:flex;align-items:center;justify-content:center">lecture 3/5</div>
+            <div style="flex:1;padding:11px 4px;border-left:1px solid #f2ede3;display:flex;align-items:center;justify-content:center"><span style="background:#f7ddd6;color:#a23e2e;padding:2px 8px;border-radius:9px">6/8 · 2 à faire</span></div>
+            <div style="flex:1;padding:11px 4px;border-left:1px solid #f2ede3;color:#5b6e4a;display:flex;align-items:center;justify-content:center">à jour</div>
+            <div style="flex:1;padding:11px 4px;border-left:1px solid #f2ede3;color:#cdc6b6;background:#faf7f0;display:flex;align-items:center;justify-content:center">—</div>
+          </div>
+        </div>
+        <!-- Karim -->
+        <div style="display:flex;align-items:stretch;border-bottom:1px solid #f2ede3">
+          <div style="width:178px;flex-shrink:0;padding:11px 14px;display:flex;align-items:center;gap:8px"><span style="width:18px;height:18px;border-radius:50%;background:#a23e2e;color:#fff;font-size:11px;display:inline-flex;align-items:center;justify-content:center;font-family:'Caveat',cursive;font-weight:700;flex-shrink:0">!</span><span style="font-size:14.5px;color:#46402f">Karim Benali</span></div>
+          <div style="flex:1;display:flex;font-size:12px;text-align:center">
+            <div style="flex:1;padding:11px 4px;border-left:1px solid #f2ede3;color:#5b6e4a;display:flex;align-items:center;justify-content:center">à jour</div>
+            <div style="flex:1;padding:11px 4px;border-left:1px solid #f2ede3;display:flex;align-items:center;justify-content:center"><span style="background:#f7ddd6;color:#a23e2e;padding:2px 8px;border-radius:9px">diagnostic à faire</span></div>
+            <div style="flex:1;padding:11px 4px;border-left:1px solid #f2ede3;color:#5b5444;display:flex;align-items:center;justify-content:center">8/8 · à jour</div>
+            <div style="flex:1;padding:11px 4px;border-left:1px solid #f2ede3;display:flex;align-items:center;justify-content:center"><span style="background:#f7ddd6;color:#a23e2e;padding:2px 8px;border-radius:9px">1 à rendre</span></div>
+            <div style="flex:1;padding:11px 4px;border-left:1px solid #f2ede3;color:#cdc6b6;background:#faf7f0;display:flex;align-items:center;justify-content:center">—</div>
+          </div>
+        </div>
+        <!-- Nina -->
+        <div style="display:flex;align-items:stretch;border-bottom:1px solid #f2ede3">
+          <div style="width:178px;flex-shrink:0;padding:11px 14px;display:flex;align-items:center;gap:8px"><span style="width:18px;height:18px;border-radius:50%;background:#a23e2e;color:#fff;font-size:11px;display:inline-flex;align-items:center;justify-content:center;font-family:'Caveat',cursive;font-weight:700;flex-shrink:0">!</span><span style="font-size:14.5px;color:#46402f">Nina Lefèvre</span></div>
+          <div style="flex:1;display:flex;font-size:12px;text-align:center">
+            <div style="flex:1;padding:11px 4px;border-left:1px solid #f2ede3;display:flex;align-items:center;justify-content:center"><span style="background:#f7ddd6;color:#a23e2e;padding:2px 8px;border-radius:9px">14 à réviser</span></div>
+            <div style="flex:1;padding:11px 4px;border-left:1px solid #f2ede3;color:#5b5444;display:flex;align-items:center;justify-content:center">lecture 5/5</div>
+            <div style="flex:1;padding:11px 4px;border-left:1px solid #f2ede3;color:#5b5444;display:flex;align-items:center;justify-content:center">8/8 · à jour</div>
+            <div style="flex:1;padding:11px 4px;border-left:1px solid #f2ede3;color:#5b6e4a;display:flex;align-items:center;justify-content:center">à jour</div>
+            <div style="flex:1;padding:11px 4px;border-left:1px solid #f2ede3;color:#cdc6b6;background:#faf7f0;display:flex;align-items:center;justify-content:center">—</div>
+          </div>
+        </div>
+        <!-- Hugo -->
+        <div style="display:flex;align-items:stretch;border-bottom:1px solid #f2ede3">
+          <div style="width:178px;flex-shrink:0;padding:11px 14px;display:flex;align-items:center;gap:8px"><span style="width:18px;height:18px;flex-shrink:0"></span><span style="font-size:14.5px;color:#46402f">Hugo Mercier</span></div>
+          <div style="flex:1;display:flex;font-size:12px;text-align:center">
+            <div style="flex:1;padding:11px 4px;border-left:1px solid #f2ede3;color:#5b6e4a;display:flex;align-items:center;justify-content:center">à jour</div>
+            <div style="flex:1;padding:11px 4px;border-left:1px solid #f2ede3;color:#5b5444;display:flex;align-items:center;justify-content:center">lecture 4/5</div>
+            <div style="flex:1;padding:11px 4px;border-left:1px solid #f2ede3;color:#5b5444;display:flex;align-items:center;justify-content:center">8/8 · à jour</div>
+            <div style="flex:1;padding:11px 4px;border-left:1px solid #f2ede3;color:#5b5444;display:flex;align-items:center;justify-content:center">2 en cours</div>
+            <div style="flex:1;padding:11px 4px;border-left:1px solid #f2ede3;color:#cdc6b6;background:#faf7f0;display:flex;align-items:center;justify-content:center">—</div>
+          </div>
+        </div>
+        <!-- Tom -->
+        <div style="display:flex;align-items:stretch;border-bottom:1px solid #f2ede3">
+          <div style="width:178px;flex-shrink:0;padding:11px 14px;display:flex;align-items:center;gap:8px"><span style="width:18px;height:18px;border-radius:50%;background:#a23e2e;color:#fff;font-size:11px;display:inline-flex;align-items:center;justify-content:center;font-family:'Caveat',cursive;font-weight:700;flex-shrink:0">!</span><span style="font-size:14.5px;color:#46402f">Tom Garnier</span></div>
+          <div style="flex:1;display:flex;font-size:12px;text-align:center">
+            <div style="flex:1;padding:11px 4px;border-left:1px solid #f2ede3;color:#5b6e4a;display:flex;align-items:center;justify-content:center">à jour</div>
+            <div style="flex:1;padding:11px 4px;border-left:1px solid #f2ede3;color:#5b5444;display:flex;align-items:center;justify-content:center">lecture 2/5</div>
+            <div style="flex:1;padding:11px 4px;border-left:1px solid #f2ede3;display:flex;align-items:center;justify-content:center"><span style="background:#f7ddd6;color:#a23e2e;padding:2px 8px;border-radius:9px">7/8 · 1 à faire</span></div>
+            <div style="flex:1;padding:11px 4px;border-left:1px solid #f2ede3;color:#5b6e4a;display:flex;align-items:center;justify-content:center">à jour</div>
+            <div style="flex:1;padding:11px 4px;border-left:1px solid #f2ede3;color:#cdc6b6;background:#faf7f0;display:flex;align-items:center;justify-content:center">—</div>
+          </div>
+        </div>
+        <!-- Camille -->
+        <div style="display:flex;align-items:stretch;border-bottom:1px solid #f2ede3">
+          <div style="width:178px;flex-shrink:0;padding:11px 14px;display:flex;align-items:center;gap:8px"><span style="width:18px;height:18px;flex-shrink:0"></span><span style="font-size:14.5px;color:#46402f">Camille Roy</span></div>
+          <div style="flex:1;display:flex;font-size:12px;text-align:center">
+            <div style="flex:1;padding:11px 4px;border-left:1px solid #f2ede3;color:#5b5444;display:flex;align-items:center;justify-content:center">3 à réviser</div>
+            <div style="flex:1;padding:11px 4px;border-left:1px solid #f2ede3;color:#5b6e4a;display:flex;align-items:center;justify-content:center">à jour</div>
+            <div style="flex:1;padding:11px 4px;border-left:1px solid #f2ede3;color:#5b5444;display:flex;align-items:center;justify-content:center">7/8 · à jour</div>
+            <div style="flex:1;padding:11px 4px;border-left:1px solid #f2ede3;color:#5b6e4a;display:flex;align-items:center;justify-content:center">à jour</div>
+            <div style="flex:1;padding:11px 4px;border-left:1px solid #f2ede3;color:#cdc6b6;background:#faf7f0;display:flex;align-items:center;justify-content:center">—</div>
+          </div>
+        </div>
+        <!-- Sarah -->
+        <div style="display:flex;align-items:stretch;border-bottom:1px solid #f2ede3">
+          <div style="width:178px;flex-shrink:0;padding:11px 14px;display:flex;align-items:center;gap:8px"><span style="width:18px;height:18px;flex-shrink:0"></span><span style="font-size:14.5px;color:#46402f">Sarah Cohen</span></div>
+          <div style="flex:1;display:flex;font-size:12px;text-align:center">
+            <div style="flex:1;padding:11px 4px;border-left:1px solid #f2ede3;color:#5b6e4a;display:flex;align-items:center;justify-content:center">à jour</div>
+            <div style="flex:1;padding:11px 4px;border-left:1px solid #f2ede3;color:#5b5444;display:flex;align-items:center;justify-content:center">lecture 5/5</div>
+            <div style="flex:1;padding:11px 4px;border-left:1px solid #f2ede3;color:#5b5444;display:flex;align-items:center;justify-content:center">8/8 · à jour</div>
+            <div style="flex:1;padding:11px 4px;border-left:1px solid #f2ede3;color:#5b6e4a;display:flex;align-items:center;justify-content:center">à jour</div>
+            <div style="flex:1;padding:11px 4px;border-left:1px solid #f2ede3;color:#cdc6b6;background:#faf7f0;display:flex;align-items:center;justify-content:center">—</div>
+          </div>
+        </div>
+        <!-- footer -->
+        <div style="background:#fbf8f1;text-align:center;padding:9px;font-size:12px;color:#8a8270;border-top:1px dashed #ece4d6">+ 17 autres élèves… &nbsp;·&nbsp; trier par : <span style="color:#46402f">à risque</span> · nom · module</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- notes band 1 -->
+<div style="position:absolute;left:1470px;top:600px;width:250px">
+  <div style="background:#fef4a8;padding:14px;box-shadow:0 1px 4px rgba(0,0,0,.12);transform:rotate(1.3deg);font-size:13.5px;line-height:1.5;color:#5a4a14">
+    <div style="font-family:'Caveat',cursive;font-weight:700;font-size:19px;color:#4a3c0c;margin-bottom:5px">La matrice</div>
+    Une <b>ligne par élève</b>, une <b>colonne par module</b>. Chaque case dit <b>où il en est</b> et <b>s'il a une action</b> (pastille rouge). Les <b>bulles « ! »</b> remontent les élèves à risque en tête de ligne.
+  </div>
+</div>
+<div style="position:absolute;left:1470px;top:790px;width:250px">
+  <div style="background:#fff;border:1.5px solid #cdc6b6;border-radius:9px;padding:13px 14px;box-shadow:0 1px 3px rgba(0,0,0,.07);font-size:13px;line-height:1.5;color:#5b5444">
+    <span style="font-family:'Caveat',cursive;font-weight:700;font-size:16px;color:#46402f">Scriptorium grisé</span><br>
+    La colonne d'un module <b>non accessible</b> reste visible mais <b>désactivée</b> (« — »). On l'active depuis la barre <b>Modules accessibles</b> ↑.
+  </div>
+</div>
+<div style="position:absolute;left:1470px;top:960px;width:250px">
+  <div style="background:#f6c9bd;padding:13px 14px;box-shadow:0 1px 4px rgba(0,0,0,.12);transform:rotate(-1.2deg);font-size:13px;line-height:1.5;color:#7d3322">
+    <b>Question ouverte :</b> faut-il une case <b>cliquable</b> → ouvrir le détail élève×module ? Et un <b>tri / filtre « à risque seulement »</b> ? Dis-moi.
+  </div>
+</div>
+
+<!-- ======================= BAND 2 — VUE COMPÉTENCES ======================= -->
+<div style="position:absolute;left:80px;top:1330px;font-family:'Caveat',cursive;font-weight:700;font-size:32px;color:#3a352c">2 · Le toggle « Compétences » — niveau par élève</div>
+<div style="position:absolute;left:80px;top:1376px;font-family:'Architects Daughter',cursive;font-size:15px;color:#8a8270;max-width:920px">Même matrice, autre lecture : les colonnes deviennent des <b>compétences</b>, chaque case porte la <b>lettre de niveau</b> (A→D). <b>Architecture à préparer</b> — la logique de calcul n'est pas encore construite.</div>
+
+<!-- LAPTOP — Compétences matrix -->
+<div data-screen-label="Pilotage Classe — Compétences (ordi)" style="position:absolute;left:80px;top:1450px;width:1010px">
+  <div data-drags-parent="1" style="position:absolute;top:-26px;left:2px;font-family:'Caveat',cursive;font-size:19px;color:#6f6755">Sur ordinateur — matrice élèves × compétences</div>
+  <div style="border:1.5px solid #cdc6b6;border-radius:11px;background:#fff;box-shadow:0 2px 10px rgba(0,0,0,.1);overflow:hidden;position:relative">
+    <!-- ribbon -->
+    <div style="position:absolute;top:14px;right:-40px;transform:rotate(34deg);background:#caa94e;color:#4a3c0c;font-family:'Caveat',cursive;font-weight:700;font-size:14px;padding:4px 46px;box-shadow:0 1px 4px rgba(0,0,0,.18);z-index:4">à construire</div>
+    <div style="background:#ece4d6;padding:8px 12px;display:flex;align-items:center;gap:6px"><span style="width:9px;height:9px;border-radius:50%;background:#c9b89a"></span><span style="width:9px;height:9px;border-radius:50%;background:#c9b89a"></span><span style="width:9px;height:9px;border-radius:50%;background:#c9b89a"></span></div>
+    <div style="background:#f4efe6;padding:16px 20px 20px">
+      <div style="font-size:12px;color:#8a8270">← Pilotage · Classes &nbsp;›&nbsp; <span style="color:#46402f">Terminale HLP</span></div>
+      <div style="display:flex;justify-content:space-between;align-items:flex-end;margin-top:8px;gap:16px">
+        <div>
+          <div style="font-family:'Caveat',cursive;font-weight:700;font-size:30px;color:#46402f;line-height:1">Terminale HLP</div>
+          <div style="font-size:12.5px;color:#8a8270;margin-top:3px">Terminale · 24 élèves · 2025-26 · <span style="color:#a23e2e">4 à risque</span></div>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px">
+          <span style="font-size:11px;color:#8a8270;letter-spacing:.05em">VUE</span>
+          <div style="display:inline-flex;background:#e7e0d2;border:1.4px solid #d3ccba;border-radius:9px;padding:3px">
+            <span style="color:#7a7263;font-size:13.5px;padding:6px 16px;border-radius:6px">Activité</span>
+            <span style="background:#46402f;color:#f4efe6;font-size:13.5px;padding:6px 16px;border-radius:6px;font-weight:700">Compétences</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- construction banner -->
+      <div style="margin-top:14px;background:#fbf3d8;border:1px dashed #caa94e;border-radius:9px;padding:9px 13px;font-size:13px;color:#7a5e1e">
+        <b>Zone en construction.</b> La grille de compétences et le calcul des niveaux ne sont pas encore définis — ce wireframe pose <b>l'architecture visuelle</b> (mêmes colonnes-modèle, lettre par case) pour valider la mise en page.
+      </div>
+
+      <!-- MATRIX -->
+      <div style="background:#fff;border:1.4px dashed #c4bca8;border-radius:11px;margin-top:13px;overflow:hidden">
+        <div style="display:flex;background:#fbf8f1;border-bottom:1.4px solid #e4dbc9">
+          <div style="width:178px;flex-shrink:0;padding:9px 14px;font-size:10px;letter-spacing:.05em;color:#a59c88">ÉLÈVE</div>
+          <div style="flex:1;display:flex">
+            <div style="flex:1;padding:9px 6px;text-align:center;font-size:11px;color:#46402f;border-left:1px solid #ece4d6">Analyser</div>
+            <div style="flex:1;padding:9px 6px;text-align:center;font-size:11px;color:#46402f;border-left:1px solid #ece4d6">Interpréter</div>
+            <div style="flex:1;padding:9px 6px;text-align:center;font-size:11px;color:#46402f;border-left:1px solid #ece4d6">Argumenter</div>
+            <div style="flex:1;padding:9px 6px;text-align:center;font-size:11px;color:#46402f;border-left:1px solid #ece4d6">Problématiser</div>
+            <div style="flex:1;padding:9px 6px;text-align:center;font-size:11px;color:#46402f;border-left:1px solid #ece4d6">Conceptualiser</div>
+          </div>
+        </div>
+        <!-- rows: name + letter badges -->
+        <!-- Léa -->
+        <div style="display:flex;align-items:stretch;border-bottom:1px solid #f2ede3">
+          <div style="width:178px;flex-shrink:0;padding:10px 14px;display:flex;align-items:center;gap:8px"><span style="width:18px;height:18px;border-radius:50%;background:#a23e2e;color:#fff;font-size:11px;display:inline-flex;align-items:center;justify-content:center;font-family:'Caveat',cursive;font-weight:700;flex-shrink:0">!</span><span style="font-size:14.5px;color:#46402f">Léa Fontaine</span></div>
+          <div style="flex:1;display:flex">
+            <div style="flex:1;padding:8px 4px;border-left:1px solid #f2ede3;display:flex;align-items:center;justify-content:center"><span style="display:inline-flex;width:26px;height:26px;border-radius:6px;align-items:center;justify-content:center;font-family:'Caveat',cursive;font-weight:700;font-size:16px;background:#f1e6d2;color:#9A6A2E">C</span></div>
+            <div style="flex:1;padding:8px 4px;border-left:1px solid #f2ede3;display:flex;align-items:center;justify-content:center"><span style="display:inline-flex;width:26px;height:26px;border-radius:6px;align-items:center;justify-content:center;font-family:'Caveat',cursive;font-weight:700;font-size:16px;background:#ece7da;color:#7a7263">B</span></div>
+            <div style="flex:1;padding:8px 4px;border-left:1px solid #f2ede3;display:flex;align-items:center;justify-content:center"><span style="display:inline-flex;width:26px;height:26px;border-radius:6px;align-items:center;justify-content:center;font-family:'Caveat',cursive;font-weight:700;font-size:16px;background:#f7ddd6;color:#a23e2e">D</span></div>
+            <div style="flex:1;padding:8px 4px;border-left:1px solid #f2ede3;display:flex;align-items:center;justify-content:center"><span style="display:inline-flex;width:26px;height:26px;border-radius:6px;align-items:center;justify-content:center;font-family:'Caveat',cursive;font-weight:700;font-size:16px;background:#f1e6d2;color:#9A6A2E">C</span></div>
+            <div style="flex:1;padding:8px 4px;border-left:1px solid #f2ede3;display:flex;align-items:center;justify-content:center"><span style="display:inline-flex;width:26px;height:26px;border-radius:6px;align-items:center;justify-content:center;font-family:'Caveat',cursive;font-weight:700;font-size:16px;background:#f0ece2;color:#b8b0a0">–</span></div>
+          </div>
+        </div>
+        <!-- Karim -->
+        <div style="display:flex;align-items:stretch;border-bottom:1px solid #f2ede3">
+          <div style="width:178px;flex-shrink:0;padding:10px 14px;display:flex;align-items:center;gap:8px"><span style="width:18px;height:18px;border-radius:50%;background:#a23e2e;color:#fff;font-size:11px;display:inline-flex;align-items:center;justify-content:center;font-family:'Caveat',cursive;font-weight:700;flex-shrink:0">!</span><span style="font-size:14.5px;color:#46402f">Karim Benali</span></div>
+          <div style="flex:1;display:flex">
+            <div style="flex:1;padding:8px 4px;border-left:1px solid #f2ede3;display:flex;align-items:center;justify-content:center"><span style="display:inline-flex;width:26px;height:26px;border-radius:6px;align-items:center;justify-content:center;font-family:'Caveat',cursive;font-weight:700;font-size:16px;background:#ece7da;color:#7a7263">B</span></div>
+            <div style="flex:1;padding:8px 4px;border-left:1px solid #f2ede3;display:flex;align-items:center;justify-content:center"><span style="display:inline-flex;width:26px;height:26px;border-radius:6px;align-items:center;justify-content:center;font-family:'Caveat',cursive;font-weight:700;font-size:16px;background:#f1e6d2;color:#9A6A2E">C</span></div>
+            <div style="flex:1;padding:8px 4px;border-left:1px solid #f2ede3;display:flex;align-items:center;justify-content:center"><span style="display:inline-flex;width:26px;height:26px;border-radius:6px;align-items:center;justify-content:center;font-family:'Caveat',cursive;font-weight:700;font-size:16px;background:#f1e6d2;color:#9A6A2E">C</span></div>
+            <div style="flex:1;padding:8px 4px;border-left:1px solid #f2ede3;display:flex;align-items:center;justify-content:center"><span style="display:inline-flex;width:26px;height:26px;border-radius:6px;align-items:center;justify-content:center;font-family:'Caveat',cursive;font-weight:700;font-size:16px;background:#ece7da;color:#7a7263">B</span></div>
+            <div style="flex:1;padding:8px 4px;border-left:1px solid #f2ede3;display:flex;align-items:center;justify-content:center"><span style="display:inline-flex;width:26px;height:26px;border-radius:6px;align-items:center;justify-content:center;font-family:'Caveat',cursive;font-weight:700;font-size:16px;background:#f0ece2;color:#b8b0a0">–</span></div>
+          </div>
+        </div>
+        <!-- Nina -->
+        <div style="display:flex;align-items:stretch;border-bottom:1px solid #f2ede3">
+          <div style="width:178px;flex-shrink:0;padding:10px 14px;display:flex;align-items:center;gap:8px"><span style="width:18px;height:18px;border-radius:50%;background:#a23e2e;color:#fff;font-size:11px;display:inline-flex;align-items:center;justify-content:center;font-family:'Caveat',cursive;font-weight:700;flex-shrink:0">!</span><span style="font-size:14.5px;color:#46402f">Nina Lefèvre</span></div>
+          <div style="flex:1;display:flex">
+            <div style="flex:1;padding:8px 4px;border-left:1px solid #f2ede3;display:flex;align-items:center;justify-content:center"><span style="display:inline-flex;width:26px;height:26px;border-radius:6px;align-items:center;justify-content:center;font-family:'Caveat',cursive;font-weight:700;font-size:16px;background:#e3ecdb;color:#5b6e4a">A</span></div>
+            <div style="flex:1;padding:8px 4px;border-left:1px solid #f2ede3;display:flex;align-items:center;justify-content:center"><span style="display:inline-flex;width:26px;height:26px;border-radius:6px;align-items:center;justify-content:center;font-family:'Caveat',cursive;font-weight:700;font-size:16px;background:#e3ecdb;color:#5b6e4a">A</span></div>
+            <div style="flex:1;padding:8px 4px;border-left:1px solid #f2ede3;display:flex;align-items:center;justify-content:center"><span style="display:inline-flex;width:26px;height:26px;border-radius:6px;align-items:center;justify-content:center;font-family:'Caveat',cursive;font-weight:700;font-size:16px;background:#ece7da;color:#7a7263">B</span></div>
+            <div style="flex:1;padding:8px 4px;border-left:1px solid #f2ede3;display:flex;align-items:center;justify-content:center"><span style="display:inline-flex;width:26px;height:26px;border-radius:6px;align-items:center;justify-content:center;font-family:'Caveat',cursive;font-weight:700;font-size:16px;background:#e3ecdb;color:#5b6e4a">A</span></div>
+            <div style="flex:1;padding:8px 4px;border-left:1px solid #f2ede3;display:flex;align-items:center;justify-content:center"><span style="display:inline-flex;width:26px;height:26px;border-radius:6px;align-items:center;justify-content:center;font-family:'Caveat',cursive;font-weight:700;font-size:16px;background:#f0ece2;color:#b8b0a0">–</span></div>
+          </div>
+        </div>
+        <!-- Hugo -->
+        <div style="display:flex;align-items:stretch;border-bottom:1px solid #f2ede3">
+          <div style="width:178px;flex-shrink:0;padding:10px 14px;display:flex;align-items:center;gap:8px"><span style="width:18px;height:18px;flex-shrink:0"></span><span style="font-size:14.5px;color:#46402f">Hugo Mercier</span></div>
+          <div style="flex:1;display:flex">
+            <div style="flex:1;padding:8px 4px;border-left:1px solid #f2ede3;display:flex;align-items:center;justify-content:center"><span style="display:inline-flex;width:26px;height:26px;border-radius:6px;align-items:center;justify-content:center;font-family:'Caveat',cursive;font-weight:700;font-size:16px;background:#ece7da;color:#7a7263">B</span></div>
+            <div style="flex:1;padding:8px 4px;border-left:1px solid #f2ede3;display:flex;align-items:center;justify-content:center"><span style="display:inline-flex;width:26px;height:26px;border-radius:6px;align-items:center;justify-content:center;font-family:'Caveat',cursive;font-weight:700;font-size:16px;background:#e3ecdb;color:#5b6e4a">A</span></div>
+            <div style="flex:1;padding:8px 4px;border-left:1px solid #f2ede3;display:flex;align-items:center;justify-content:center"><span style="display:inline-flex;width:26px;height:26px;border-radius:6px;align-items:center;justify-content:center;font-family:'Caveat',cursive;font-weight:700;font-size:16px;background:#ece7da;color:#7a7263">B</span></div>
+            <div style="flex:1;padding:8px 4px;border-left:1px solid #f2ede3;display:flex;align-items:center;justify-content:center"><span style="display:inline-flex;width:26px;height:26px;border-radius:6px;align-items:center;justify-content:center;font-family:'Caveat',cursive;font-weight:700;font-size:16px;background:#ece7da;color:#7a7263">B</span></div>
+            <div style="flex:1;padding:8px 4px;border-left:1px solid #f2ede3;display:flex;align-items:center;justify-content:center"><span style="display:inline-flex;width:26px;height:26px;border-radius:6px;align-items:center;justify-content:center;font-family:'Caveat',cursive;font-weight:700;font-size:16px;background:#f0ece2;color:#b8b0a0">–</span></div>
+          </div>
+        </div>
+        <!-- Tom -->
+        <div style="display:flex;align-items:stretch;border-bottom:1px solid #f2ede3">
+          <div style="width:178px;flex-shrink:0;padding:10px 14px;display:flex;align-items:center;gap:8px"><span style="width:18px;height:18px;border-radius:50%;background:#a23e2e;color:#fff;font-size:11px;display:inline-flex;align-items:center;justify-content:center;font-family:'Caveat',cursive;font-weight:700;flex-shrink:0">!</span><span style="font-size:14.5px;color:#46402f">Tom Garnier</span></div>
+          <div style="flex:1;display:flex">
+            <div style="flex:1;padding:8px 4px;border-left:1px solid #f2ede3;display:flex;align-items:center;justify-content:center"><span style="display:inline-flex;width:26px;height:26px;border-radius:6px;align-items:center;justify-content:center;font-family:'Caveat',cursive;font-weight:700;font-size:16px;background:#f1e6d2;color:#9A6A2E">C</span></div>
+            <div style="flex:1;padding:8px 4px;border-left:1px solid #f2ede3;display:flex;align-items:center;justify-content:center"><span style="display:inline-flex;width:26px;height:26px;border-radius:6px;align-items:center;justify-content:center;font-family:'Caveat',cursive;font-weight:700;font-size:16px;background:#f7ddd6;color:#a23e2e">D</span></div>
+            <div style="flex:1;padding:8px 4px;border-left:1px solid #f2ede3;display:flex;align-items:center;justify-content:center"><span style="display:inline-flex;width:26px;height:26px;border-radius:6px;align-items:center;justify-content:center;font-family:'Caveat',cursive;font-weight:700;font-size:16px;background:#f1e6d2;color:#9A6A2E">C</span></div>
+            <div style="flex:1;padding:8px 4px;border-left:1px solid #f2ede3;display:flex;align-items:center;justify-content:center"><span style="display:inline-flex;width:26px;height:26px;border-radius:6px;align-items:center;justify-content:center;font-family:'Caveat',cursive;font-weight:700;font-size:16px;background:#ece7da;color:#7a7263">B</span></div>
+            <div style="flex:1;padding:8px 4px;border-left:1px solid #f2ede3;display:flex;align-items:center;justify-content:center"><span style="display:inline-flex;width:26px;height:26px;border-radius:6px;align-items:center;justify-content:center;font-family:'Caveat',cursive;font-weight:700;font-size:16px;background:#f0ece2;color:#b8b0a0">–</span></div>
+          </div>
+        </div>
+        <div style="background:#fbf8f1;text-align:center;padding:9px;font-size:12px;color:#8a8270;border-top:1px dashed #ece4d6">+ 19 autres élèves… &nbsp;·&nbsp; <span style="color:#9A6A2E">échelle A (maîtrisé) → D (fragile)</span></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- notes band 2 -->
+<div style="position:absolute;left:1120px;top:1470px;width:260px">
+  <div style="background:#fef4a8;padding:14px;box-shadow:0 1px 4px rgba(0,0,0,.12);transform:rotate(1.2deg);font-size:13.5px;line-height:1.5;color:#5a4a14">
+    <div style="font-family:'Caveat',cursive;font-weight:700;font-size:19px;color:#4a3c0c;margin-bottom:5px">Même squelette</div>
+    Le <b>toggle</b> ne change <b>que les colonnes et le contenu des cases</b> : on garde la colonne élève + les bulles « ! ». L'œil ne réapprend rien.
+  </div>
+</div>
+<div style="position:absolute;left:1120px;top:1660px;width:260px">
+  <div style="background:#fff;border:1.5px solid #cdc6b6;border-radius:9px;padding:13px 14px;box-shadow:0 1px 3px rgba(0,0,0,.07);font-size:13px;line-height:1.5;color:#5b5444">
+    <span style="font-family:'Caveat',cursive;font-weight:700;font-size:16px;color:#46402f">À cadrer ensemble</span>
+    <div style="margin-top:6px">· La <b>liste des compétences</b> (5 ici, fictives) et leur <b>libellé</b>.</div>
+    <div style="margin-top:4px">· L'<b>échelle</b> (A→D ? acquis / en cours / fragile ?).</div>
+    <div style="margin-top:4px">· La <b>source</b> du niveau (auto par module ? saisi par le prof ?).</div>
+  </div>
+</div>
+<div style="position:absolute;left:1120px;top:1880px;width:260px">
+  <div style="background:#f6c9bd;padding:13px 14px;box-shadow:0 1px 4px rgba(0,0,0,.12);transform:rotate(-1.1deg);font-size:13px;line-height:1.5;color:#7d3322">
+    Tant que ce n'est pas tranché, je laisse le bandeau <b>« en construction »</b> + le ruban : on valide l'<b>architecture</b>, pas les données.
+  </div>
+</div>
+
+<!-- ======================= BAND 3 — ACCÈS MODULES ======================= -->
+<div style="position:absolute;left:80px;top:2230px;font-family:'Caveat',cursive;font-weight:700;font-size:32px;color:#3a352c">3 · Choisir les modules accessibles à la classe</div>
+<div style="position:absolute;left:80px;top:2276px;font-family:'Architects Daughter',cursive;font-size:15px;color:#8a8270">Le bouton « ⚙ gérer les accès » ouvre un panneau. Activer / couper un module pour cette classe — la colonne correspondante s'allume ou se grise dans la matrice.</div>
+
+<!-- panel -->
+<div data-screen-label="Accès modules — panneau (ordi)" style="position:absolute;left:80px;top:2350px;width:470px">
+  <div data-drags-parent="1" style="position:absolute;top:-26px;left:2px;font-family:'Caveat',cursive;font-size:19px;color:#6f6755">Panneau « gérer les accès »</div>
+  <div style="background:#fff;border:1.5px solid #cdc6b6;border-radius:12px;box-shadow:0 6px 22px rgba(0,0,0,.14);overflow:hidden">
+    <div style="background:#fbf8f1;border-bottom:1px solid #e4dbc9;padding:13px 16px;display:flex;justify-content:space-between;align-items:center">
+      <div><div style="font-family:'Caveat',cursive;font-weight:700;font-size:20px;color:#46402f">Modules de Terminale HLP</div><div style="font-size:12px;color:#8a8270;margin-top:1px">Coche les mondes ouverts à cette classe.</div></div>
+      <span style="font-size:16px;color:#a59c88">✕</span>
+    </div>
+    <div style="padding:8px 8px 10px">
+      <!-- row helper repeated -->
+      <div style="display:flex;align-items:center;gap:12px;padding:11px 12px;border-radius:9px">
+        <span style="width:12px;height:12px;border-radius:50%;background:#3E6B8E;flex-shrink:0"></span>
+        <div style="flex:1"><div style="font-size:14.5px;color:#46402f">Quazian</div><div style="font-size:11.5px;color:#8a8270">Révision FSRS + quizz diagnostic</div></div>
+        <div style="width:42px;height:24px;border-radius:13px;background:#5b6e4a;position:relative;flex-shrink:0"><span style="position:absolute;top:2px;right:2px;width:20px;height:20px;border-radius:50%;background:#fff"></span></div>
+      </div>
+      <div style="border-top:1px solid #f2ede3;margin:0 12px"></div>
+      <div style="display:flex;align-items:center;gap:12px;padding:11px 12px;border-radius:9px">
+        <span style="width:12px;height:12px;border-radius:50%;background:#2C4A7C;flex-shrink:0"></span>
+        <div style="flex:1"><div style="font-size:14.5px;color:#46402f">Aletheia</div><div style="font-size:11.5px;color:#8a8270">Lectures, retours, diagnostic</div></div>
+        <div style="width:42px;height:24px;border-radius:13px;background:#5b6e4a;position:relative;flex-shrink:0"><span style="position:absolute;top:2px;right:2px;width:20px;height:20px;border-radius:50%;background:#fff"></span></div>
+      </div>
+      <div style="border-top:1px solid #f2ede3;margin:0 12px"></div>
+      <div style="display:flex;align-items:center;gap:12px;padding:11px 12px;border-radius:9px">
+        <span style="width:12px;height:12px;border-radius:50%;background:#5A6043;flex-shrink:0"></span>
+        <div style="flex:1"><div style="font-size:14.5px;color:#46402f">Fragments</div><div style="font-size:11.5px;color:#8a8270">Parcours, dépôts, analyses</div></div>
+        <div style="width:42px;height:24px;border-radius:13px;background:#5b6e4a;position:relative;flex-shrink:0"><span style="position:absolute;top:2px;right:2px;width:20px;height:20px;border-radius:50%;background:#fff"></span></div>
+      </div>
+      <div style="border-top:1px solid #f2ede3;margin:0 12px"></div>
+      <div style="display:flex;align-items:center;gap:12px;padding:11px 12px;border-radius:9px">
+        <span style="width:12px;height:12px;border-radius:50%;background:#2E4A3C;flex-shrink:0"></span>
+        <div style="flex:1"><div style="font-size:14.5px;color:#46402f">Codex</div><div style="font-size:11.5px;color:#8a8270">Carnet, écrits longs</div></div>
+        <div style="width:42px;height:24px;border-radius:13px;background:#5b6e4a;position:relative;flex-shrink:0"><span style="position:absolute;top:2px;right:2px;width:20px;height:20px;border-radius:50%;background:#fff"></span></div>
+      </div>
+      <div style="border-top:1px solid #f2ede3;margin:0 12px"></div>
+      <!-- off row -->
+      <div style="display:flex;align-items:center;gap:12px;padding:11px 12px;border-radius:9px;opacity:.75">
+        <span style="width:12px;height:12px;border-radius:50%;background:#6B4E6E;flex-shrink:0"></span>
+        <div style="flex:1"><div style="font-size:14.5px;color:#46402f">Scriptorium <span style="font-size:11px;color:#a59c88">· coupé</span></div><div style="font-size:11.5px;color:#8a8270">Atelier d'écriture collaborative</div></div>
+        <div style="width:42px;height:24px;border-radius:13px;background:#d3ccba;position:relative;flex-shrink:0"><span style="position:absolute;top:2px;left:2px;width:20px;height:20px;border-radius:50%;background:#fff"></span></div>
+      </div>
+    </div>
+    <div style="background:#fbf8f1;border-top:1px solid #e4dbc9;padding:11px 16px;display:flex;justify-content:flex-end;gap:9px">
+      <span style="font-size:13px;color:#7a7263;padding:7px 14px">Annuler</span>
+      <span style="font-size:13px;color:#f4efe6;background:#46402f;border-radius:8px;padding:7px 16px">Enregistrer</span>
+    </div>
+  </div>
+</div>
+
+<!-- notes band 3 -->
+<div style="position:absolute;left:600px;top:2380px;width:270px">
+  <div style="background:#fef4a8;padding:14px;box-shadow:0 1px 4px rgba(0,0,0,.12);transform:rotate(1.3deg);font-size:13.5px;line-height:1.5;color:#5a4a14">
+    <div style="font-family:'Caveat',cursive;font-weight:700;font-size:19px;color:#4a3c0c;margin-bottom:5px">Un interrupteur par module</div>
+    Couper un module le retire du <b>parcours élève</b> et <b>grise sa colonne</b> dans la matrice (« — »). Réactivable à tout moment, sans perte de données.
+  </div>
+</div>
+<div style="position:absolute;left:600px;top:2560px;width:270px">
+  <div style="background:#fff;border:1.5px solid #cdc6b6;border-radius:9px;padding:13px 14px;box-shadow:0 1px 3px rgba(0,0,0,.07);font-size:13px;line-height:1.5;color:#5b5444">
+    <span style="font-family:'Caveat',cursive;font-weight:700;font-size:16px;color:#46402f">Raccourci</span><br>
+    Les <b>chips « Modules accessibles »</b> en haut de la matrice sont le même réglage en version rapide (clic = on/off). Le panneau ajoute les <b>descriptions</b>.
+  </div>
+</div>
+<div style="position:absolute;left:600px;top:2710px;width:270px">
+  <div style="background:#f6c9bd;padding:13px 14px;box-shadow:0 1px 4px rgba(0,0,0,.12);transform:rotate(-1.1deg);font-size:13px;line-height:1.5;color:#7d3322">
+    <b>À confirmer :</b> l'accès se règle-t-il <b>par classe</b> (ici) ou aussi <b>par élève</b> ? Et qui peut couper un module — prof ou admin ?
+  </div>
+</div>
+
+<!-- ======================= BAND 4 — MOBILE ======================= -->
+<div style="position:absolute;left:80px;top:2980px;font-family:'Caveat',cursive;font-weight:700;font-size:32px;color:#3a352c">4 · Sur mobile — la matrice glisse</div>
+<div style="position:absolute;left:80px;top:3026px;font-family:'Architects Daughter',cursive;font-size:15px;color:#8a8270;max-width:920px">Trop de colonnes pour l'écran : la <b>colonne élève reste figée</b> à gauche, les modules <b>défilent horizontalement</b>. Le toggle Activité / Compétences et l'accès modules passent en <b>feuille</b>.</div>
+
+<!-- mobile Activité -->
+<div data-screen-label="Pilotage Classe — Activité (mobile)" style="position:absolute;left:80px;top:3100px;width:300px">
+  <div data-drags-parent="1" style="position:absolute;top:-26px;left:2px;font-family:'Caveat',cursive;font-size:19px;color:#6f6755">Mobile — vue Activité</div>
+  <div style="border:2.5px solid #46402f;border-radius:30px;padding:9px;background:#46402f;box-shadow:0 3px 10px rgba(0,0,0,.13)">
+    <div style="height:5px;width:46px;background:#cdc6b6;border-radius:3px;margin:3px auto 7px"></div>
+    <div style="background:#f4efe6;border-radius:22px;height:580px;overflow:hidden;display:flex;flex-direction:column">
+      <!-- header -->
+      <div style="padding:12px 13px 10px;border-bottom:1px solid #ded6c4">
+        <div style="font-size:11px;color:#7a7263">← Classes</div>
+        <div style="font-family:'Caveat',cursive;font-weight:700;font-size:19px;color:#46402f;margin-top:2px">Terminale HLP</div>
+        <div style="font-size:10.5px;color:#8a8270">24 élèves · <span style="color:#a23e2e">4 à risque</span></div>
+        <!-- toggle -->
+        <div style="display:flex;background:#e7e0d2;border:1.3px solid #d3ccba;border-radius:8px;padding:3px;margin-top:9px">
+          <span style="flex:1;text-align:center;background:#46402f;color:#f4efe6;font-size:12px;padding:6px;border-radius:5px;font-weight:700">Activité</span>
+          <span style="flex:1;text-align:center;color:#7a7263;font-size:12px;padding:6px;border-radius:5px">Compétences</span>
+        </div>
+        <!-- access chips scroll -->
+        <div style="display:flex;gap:6px;margin-top:8px;overflow:hidden">
+          <span style="font-size:10.5px;background:#eef1ea;border:1px solid #cdd3c4;border-radius:14px;padding:3px 9px;white-space:nowrap;color:#46402f">Quazian ✓</span>
+          <span style="font-size:10.5px;background:#eef1ea;border:1px solid #cdd3c4;border-radius:14px;padding:3px 9px;white-space:nowrap;color:#46402f">Aletheia ✓</span>
+          <span style="font-size:10.5px;background:#eef1ea;border:1px solid #cdd3c4;border-radius:14px;padding:3px 9px;white-space:nowrap;color:#46402f">Frag… ✓</span>
+          <span style="font-size:10.5px;background:#fff;border:1px solid #cdc6b6;border-radius:14px;padding:3px 9px;white-space:nowrap;color:#46402f">⚙</span>
+        </div>
+      </div>
+      <!-- matrix with frozen col -->
+      <div style="flex:1;display:flex;position:relative;overflow:hidden">
+        <!-- frozen student col -->
+        <div style="width:104px;flex-shrink:0;background:#fbf8f1;border-right:1.5px solid #ded6c4;box-shadow:3px 0 8px rgba(0,0,0,.05);z-index:2">
+          <div style="padding:8px 9px;font-size:9px;color:#a59c88;letter-spacing:.05em;border-bottom:1.3px solid #e4dbc9;height:30px;box-sizing:border-box">ÉLÈVE</div>
+          <div style="padding:9px;font-size:11.5px;color:#46402f;border-bottom:1px solid #f2ede3;display:flex;align-items:center;gap:5px;height:46px;box-sizing:border-box"><span style="width:15px;height:15px;border-radius:50%;background:#a23e2e;color:#fff;font-size:9px;display:inline-flex;align-items:center;justify-content:center;font-family:'Caveat',cursive;font-weight:700;flex-shrink:0">!</span>Léa F.</div>
+          <div style="padding:9px;font-size:11.5px;color:#46402f;border-bottom:1px solid #f2ede3;display:flex;align-items:center;gap:5px;height:46px;box-sizing:border-box"><span style="width:15px;height:15px;border-radius:50%;background:#a23e2e;color:#fff;font-size:9px;display:inline-flex;align-items:center;justify-content:center;font-family:'Caveat',cursive;font-weight:700;flex-shrink:0">!</span>Karim B.</div>
+          <div style="padding:9px;font-size:11.5px;color:#46402f;border-bottom:1px solid #f2ede3;display:flex;align-items:center;gap:5px;height:46px;box-sizing:border-box"><span style="width:15px;height:15px;border-radius:50%;background:#a23e2e;color:#fff;font-size:9px;display:inline-flex;align-items:center;justify-content:center;font-family:'Caveat',cursive;font-weight:700;flex-shrink:0">!</span>Nina L.</div>
+          <div style="padding:9px;font-size:11.5px;color:#46402f;border-bottom:1px solid #f2ede3;display:flex;align-items:center;height:46px;box-sizing:border-box">Hugo M.</div>
+          <div style="padding:9px;font-size:11.5px;color:#46402f;border-bottom:1px solid #f2ede3;display:flex;align-items:center;gap:5px;height:46px;box-sizing:border-box"><span style="width:15px;height:15px;border-radius:50%;background:#a23e2e;color:#fff;font-size:9px;display:inline-flex;align-items:center;justify-content:center;font-family:'Caveat',cursive;font-weight:700;flex-shrink:0">!</span>Tom G.</div>
+          <div style="padding:9px;font-size:11.5px;color:#46402f;border-bottom:1px solid #f2ede3;display:flex;align-items:center;height:46px;box-sizing:border-box">Camille R.</div>
+        </div>
+        <!-- scrollable module cols (clipped) -->
+        <div style="flex:1;display:flex;position:relative">
+          <!-- Quazian -->
+          <div style="width:96px;flex-shrink:0;text-align:center">
+            <div style="padding:8px 4px;font-size:9.5px;color:#46402f;border-bottom:1.3px solid #e4dbc9;height:30px;box-sizing:border-box;display:flex;align-items:center;justify-content:center;gap:4px"><span style="width:7px;height:7px;border-radius:50%;background:#3E6B8E"></span>Quazian</div>
+            <div style="height:46px;box-sizing:border-box;border-bottom:1px solid #f2ede3;display:flex;align-items:center;justify-content:center;font-size:10px"><span style="background:#f7ddd6;color:#a23e2e;padding:2px 6px;border-radius:8px">12 à rév.</span></div>
+            <div style="height:46px;box-sizing:border-box;border-bottom:1px solid #f2ede3;display:flex;align-items:center;justify-content:center;font-size:10.5px;color:#5b6e4a">à jour</div>
+            <div style="height:46px;box-sizing:border-box;border-bottom:1px solid #f2ede3;display:flex;align-items:center;justify-content:center;font-size:10px"><span style="background:#f7ddd6;color:#a23e2e;padding:2px 6px;border-radius:8px">14 à rév.</span></div>
+            <div style="height:46px;box-sizing:border-box;border-bottom:1px solid #f2ede3;display:flex;align-items:center;justify-content:center;font-size:10.5px;color:#5b6e4a">à jour</div>
+            <div style="height:46px;box-sizing:border-box;border-bottom:1px solid #f2ede3;display:flex;align-items:center;justify-content:center;font-size:10.5px;color:#5b6e4a">à jour</div>
+            <div style="height:46px;box-sizing:border-box;border-bottom:1px solid #f2ede3;display:flex;align-items:center;justify-content:center;font-size:10.5px;color:#5b5444">3 à rév.</div>
+          </div>
+          <!-- Aletheia -->
+          <div style="width:96px;flex-shrink:0;text-align:center;border-left:1px solid #f2ede3">
+            <div style="padding:8px 4px;font-size:9.5px;color:#46402f;border-bottom:1.3px solid #e4dbc9;height:30px;box-sizing:border-box;display:flex;align-items:center;justify-content:center;gap:4px"><span style="width:7px;height:7px;border-radius:50%;background:#2C4A7C"></span>Aletheia</div>
+            <div style="height:46px;box-sizing:border-box;border-bottom:1px solid #f2ede3;display:flex;align-items:center;justify-content:center;font-size:10.5px;color:#5b5444">lect. 3/5</div>
+            <div style="height:46px;box-sizing:border-box;border-bottom:1px solid #f2ede3;display:flex;align-items:center;justify-content:center;font-size:10px"><span style="background:#f7ddd6;color:#a23e2e;padding:2px 6px;border-radius:8px">diag.</span></div>
+            <div style="height:46px;box-sizing:border-box;border-bottom:1px solid #f2ede3;display:flex;align-items:center;justify-content:center;font-size:10.5px;color:#5b5444">lect. 5/5</div>
+            <div style="height:46px;box-sizing:border-box;border-bottom:1px solid #f2ede3;display:flex;align-items:center;justify-content:center;font-size:10.5px;color:#5b5444">lect. 4/5</div>
+            <div style="height:46px;box-sizing:border-box;border-bottom:1px solid #f2ede3;display:flex;align-items:center;justify-content:center;font-size:10.5px;color:#5b5444">lect. 2/5</div>
+            <div style="height:46px;box-sizing:border-box;border-bottom:1px solid #f2ede3;display:flex;align-items:center;justify-content:center;font-size:10.5px;color:#5b6e4a">à jour</div>
+          </div>
+          <!-- right fade -->
+          <div style="position:absolute;top:0;right:0;bottom:0;width:46px;background:linear-gradient(to right,rgba(244,239,230,0),#f4efe6);pointer-events:none"></div>
+        </div>
+      </div>
+      <!-- scroll hint -->
+      <div style="border-top:1px solid #ded6c4;text-align:center;padding:7px;font-family:'Caveat',cursive;font-size:16px;color:#a59c88">glisser pour les autres modules →</div>
+    </div>
+  </div>
+</div>
+
+<!-- mobile Compétences -->
+<div data-screen-label="Pilotage Classe — Compétences (mobile)" style="position:absolute;left:470px;top:3100px;width:300px">
+  <div data-drags-parent="1" style="position:absolute;top:-26px;left:2px;font-family:'Caveat',cursive;font-size:19px;color:#6f6755">Mobile — vue Compétences</div>
+  <div style="border:2.5px solid #46402f;border-radius:30px;padding:9px;background:#46402f;box-shadow:0 3px 10px rgba(0,0,0,.13)">
+    <div style="height:5px;width:46px;background:#cdc6b6;border-radius:3px;margin:3px auto 7px"></div>
+    <div style="background:#f4efe6;border-radius:22px;height:580px;overflow:hidden;display:flex;flex-direction:column;position:relative">
+      <div style="position:absolute;top:18px;right:-38px;transform:rotate(34deg);background:#caa94e;color:#4a3c0c;font-family:'Caveat',cursive;font-weight:700;font-size:12px;padding:3px 42px;z-index:5">à construire</div>
+      <div style="padding:12px 13px 10px;border-bottom:1px solid #ded6c4">
+        <div style="font-size:11px;color:#7a7263">← Classes</div>
+        <div style="font-family:'Caveat',cursive;font-weight:700;font-size:19px;color:#46402f;margin-top:2px">Terminale HLP</div>
+        <div style="font-size:10.5px;color:#8a8270">24 élèves · niveau par compétence</div>
+        <div style="display:flex;background:#e7e0d2;border:1.3px solid #d3ccba;border-radius:8px;padding:3px;margin-top:9px">
+          <span style="flex:1;text-align:center;color:#7a7263;font-size:12px;padding:6px;border-radius:5px">Activité</span>
+          <span style="flex:1;text-align:center;background:#46402f;color:#f4efe6;font-size:12px;padding:6px;border-radius:5px;font-weight:700">Compétences</span>
+        </div>
+        <div style="margin-top:8px;background:#fbf3d8;border:1px dashed #caa94e;border-radius:7px;padding:6px 9px;font-size:10.5px;color:#7a5e1e">Architecture seulement — données fictives.</div>
+      </div>
+      <div style="flex:1;display:flex;position:relative;overflow:hidden">
+        <div style="width:104px;flex-shrink:0;background:#fbf8f1;border-right:1.5px solid #ded6c4;box-shadow:3px 0 8px rgba(0,0,0,.05);z-index:2">
+          <div style="padding:8px 9px;font-size:9px;color:#a59c88;letter-spacing:.05em;border-bottom:1.3px solid #e4dbc9;height:30px;box-sizing:border-box">ÉLÈVE</div>
+          <div style="padding:9px;font-size:11.5px;color:#46402f;border-bottom:1px solid #f2ede3;display:flex;align-items:center;gap:5px;height:44px;box-sizing:border-box"><span style="width:15px;height:15px;border-radius:50%;background:#a23e2e;color:#fff;font-size:9px;display:inline-flex;align-items:center;justify-content:center;font-family:'Caveat',cursive;font-weight:700;flex-shrink:0">!</span>Léa F.</div>
+          <div style="padding:9px;font-size:11.5px;color:#46402f;border-bottom:1px solid #f2ede3;display:flex;align-items:center;gap:5px;height:44px;box-sizing:border-box"><span style="width:15px;height:15px;border-radius:50%;background:#a23e2e;color:#fff;font-size:9px;display:inline-flex;align-items:center;justify-content:center;font-family:'Caveat',cursive;font-weight:700;flex-shrink:0">!</span>Karim B.</div>
+          <div style="padding:9px;font-size:11.5px;color:#46402f;border-bottom:1px solid #f2ede3;display:flex;align-items:center;gap:5px;height:44px;box-sizing:border-box"><span style="width:15px;height:15px;border-radius:50%;background:#a23e2e;color:#fff;font-size:9px;display:inline-flex;align-items:center;justify-content:center;font-family:'Caveat',cursive;font-weight:700;flex-shrink:0">!</span>Nina L.</div>
+          <div style="padding:9px;font-size:11.5px;color:#46402f;border-bottom:1px solid #f2ede3;display:flex;align-items:center;height:44px;box-sizing:border-box">Hugo M.</div>
+          <div style="padding:9px;font-size:11.5px;color:#46402f;border-bottom:1px solid #f2ede3;display:flex;align-items:center;gap:5px;height:44px;box-sizing:border-box"><span style="width:15px;height:15px;border-radius:50%;background:#a23e2e;color:#fff;font-size:9px;display:inline-flex;align-items:center;justify-content:center;font-family:'Caveat',cursive;font-weight:700;flex-shrink:0">!</span>Tom G.</div>
+          <div style="padding:9px;font-size:11.5px;color:#46402f;border-bottom:1px solid #f2ede3;display:flex;align-items:center;height:44px;box-sizing:border-box">Camille R.</div>
+        </div>
+        <div style="flex:1;display:flex;position:relative">
+          <div style="width:90px;flex-shrink:0;text-align:center">
+            <div style="padding:8px 4px;font-size:9.5px;color:#46402f;border-bottom:1.3px solid #e4dbc9;height:30px;box-sizing:border-box;display:flex;align-items:center;justify-content:center">Analyser</div>
+            <div style="height:44px;box-sizing:border-box;border-bottom:1px solid #f2ede3;display:flex;align-items:center;justify-content:center"><span style="width:23px;height:23px;border-radius:6px;display:inline-flex;align-items:center;justify-content:center;font-family:'Caveat',cursive;font-weight:700;font-size:14px;background:#f1e6d2;color:#9A6A2E">C</span></div>
+            <div style="height:44px;box-sizing:border-box;border-bottom:1px solid #f2ede3;display:flex;align-items:center;justify-content:center"><span style="width:23px;height:23px;border-radius:6px;display:inline-flex;align-items:center;justify-content:center;font-family:'Caveat',cursive;font-weight:700;font-size:14px;background:#ece7da;color:#7a7263">B</span></div>
+            <div style="height:44px;box-sizing:border-box;border-bottom:1px solid #f2ede3;display:flex;align-items:center;justify-content:center"><span style="width:23px;height:23px;border-radius:6px;display:inline-flex;align-items:center;justify-content:center;font-family:'Caveat',cursive;font-weight:700;font-size:14px;background:#e3ecdb;color:#5b6e4a">A</span></div>
+            <div style="height:44px;box-sizing:border-box;border-bottom:1px solid #f2ede3;display:flex;align-items:center;justify-content:center"><span style="width:23px;height:23px;border-radius:6px;display:inline-flex;align-items:center;justify-content:center;font-family:'Caveat',cursive;font-weight:700;font-size:14px;background:#ece7da;color:#7a7263">B</span></div>
+            <div style="height:44px;box-sizing:border-box;border-bottom:1px solid #f2ede3;display:flex;align-items:center;justify-content:center"><span style="width:23px;height:23px;border-radius:6px;display:inline-flex;align-items:center;justify-content:center;font-family:'Caveat',cursive;font-weight:700;font-size:14px;background:#f1e6d2;color:#9A6A2E">C</span></div>
+            <div style="height:44px;box-sizing:border-box;border-bottom:1px solid #f2ede3;display:flex;align-items:center;justify-content:center"><span style="width:23px;height:23px;border-radius:6px;display:inline-flex;align-items:center;justify-content:center;font-family:'Caveat',cursive;font-weight:700;font-size:14px;background:#ece7da;color:#7a7263">B</span></div>
+          </div>
+          <div style="width:90px;flex-shrink:0;text-align:center;border-left:1px solid #f2ede3">
+            <div style="padding:8px 4px;font-size:9.5px;color:#46402f;border-bottom:1.3px solid #e4dbc9;height:30px;box-sizing:border-box;display:flex;align-items:center;justify-content:center">Interpréter</div>
+            <div style="height:44px;box-sizing:border-box;border-bottom:1px solid #f2ede3;display:flex;align-items:center;justify-content:center"><span style="width:23px;height:23px;border-radius:6px;display:inline-flex;align-items:center;justify-content:center;font-family:'Caveat',cursive;font-weight:700;font-size:14px;background:#ece7da;color:#7a7263">B</span></div>
+            <div style="height:44px;box-sizing:border-box;border-bottom:1px solid #f2ede3;display:flex;align-items:center;justify-content:center"><span style="width:23px;height:23px;border-radius:6px;display:inline-flex;align-items:center;justify-content:center;font-family:'Caveat',cursive;font-weight:700;font-size:14px;background:#f1e6d2;color:#9A6A2E">C</span></div>
+            <div style="height:44px;box-sizing:border-box;border-bottom:1px solid #f2ede3;display:flex;align-items:center;justify-content:center"><span style="width:23px;height:23px;border-radius:6px;display:inline-flex;align-items:center;justify-content:center;font-family:'Caveat',cursive;font-weight:700;font-size:14px;background:#e3ecdb;color:#5b6e4a">A</span></div>
+            <div style="height:44px;box-sizing:border-box;border-bottom:1px solid #f2ede3;display:flex;align-items:center;justify-content:center"><span style="width:23px;height:23px;border-radius:6px;display:inline-flex;align-items:center;justify-content:center;font-family:'Caveat',cursive;font-weight:700;font-size:14px;background:#e3ecdb;color:#5b6e4a">A</span></div>
+            <div style="height:44px;box-sizing:border-box;border-bottom:1px solid #f2ede3;display:flex;align-items:center;justify-content:center"><span style="width:23px;height:23px;border-radius:6px;display:inline-flex;align-items:center;justify-content:center;font-family:'Caveat',cursive;font-weight:700;font-size:14px;background:#f7ddd6;color:#a23e2e">D</span></div>
+            <div style="height:44px;box-sizing:border-box;border-bottom:1px solid #f2ede3;display:flex;align-items:center;justify-content:center"><span style="width:23px;height:23px;border-radius:6px;display:inline-flex;align-items:center;justify-content:center;font-family:'Caveat',cursive;font-weight:700;font-size:14px;background:#e3ecdb;color:#5b6e4a">A</span></div>
+          </div>
+          <div style="position:absolute;top:0;right:0;bottom:0;width:46px;background:linear-gradient(to right,rgba(244,239,230,0),#f4efe6);pointer-events:none"></div>
+        </div>
+      </div>
+      <div style="border-top:1px solid #ded6c4;text-align:center;padding:7px;font-family:'Caveat',cursive;font-size:16px;color:#a59c88">glisser pour les autres compétences →</div>
+    </div>
+  </div>
+</div>
+
+<!-- mobile access sheet -->
+<div data-screen-label="Accès modules — feuille (mobile)" style="position:absolute;left:860px;top:3100px;width:300px">
+  <div data-drags-parent="1" style="position:absolute;top:-26px;left:2px;font-family:'Caveat',cursive;font-size:19px;color:#6f6755">Mobile — feuille « accès »</div>
+  <div style="border:2.5px solid #46402f;border-radius:30px;padding:9px;background:#46402f;box-shadow:0 3px 10px rgba(0,0,0,.13)">
+    <div style="height:5px;width:46px;background:#cdc6b6;border-radius:3px;margin:3px auto 7px"></div>
+    <div style="background:#f4efe6;border-radius:22px;height:580px;overflow:hidden;display:flex;flex-direction:column;position:relative">
+      <!-- dimmed matrix behind -->
+      <div style="flex:1;opacity:.4;padding:12px 13px">
+        <div style="font-family:'Caveat',cursive;font-weight:700;font-size:19px;color:#46402f">Terminale HLP</div>
+        <div style="background:#fff;border:1px solid #ded6c4;border-radius:8px;height:40px;margin-top:10px"></div>
+        <div style="background:#fff;border:1px solid #ded6c4;border-radius:8px;height:40px;margin-top:7px"></div>
+        <div style="background:#fff;border:1px solid #ded6c4;border-radius:8px;height:40px;margin-top:7px"></div>
+      </div>
+      <!-- sheet -->
+      <div style="background:#fff;border-top:1.4px solid #ded6c4;border-radius:18px 18px 0 0;box-shadow:0 -6px 18px rgba(0,0,0,.12);padding:13px 15px 16px">
+        <div style="width:36px;height:4px;background:#d3ccba;border-radius:3px;margin:0 auto 11px"></div>
+        <div style="font-family:'Caveat',cursive;font-weight:700;font-size:18px;color:#46402f">Modules accessibles</div>
+        <div style="font-size:11px;color:#8a8270;margin-bottom:9px">Terminale HLP</div>
+        <div style="display:flex;flex-direction:column;gap:2px">
+          <div style="display:flex;align-items:center;gap:10px;padding:9px 4px"><span style="width:10px;height:10px;border-radius:50%;background:#3E6B8E"></span><span style="flex:1;font-size:13.5px;color:#46402f">Quazian</span><div style="width:38px;height:22px;border-radius:12px;background:#5b6e4a;position:relative"><span style="position:absolute;top:2px;right:2px;width:18px;height:18px;border-radius:50%;background:#fff"></span></div></div>
+          <div style="border-top:1px solid #f2ede3"></div>
+          <div style="display:flex;align-items:center;gap:10px;padding:9px 4px"><span style="width:10px;height:10px;border-radius:50%;background:#2C4A7C"></span><span style="flex:1;font-size:13.5px;color:#46402f">Aletheia</span><div style="width:38px;height:22px;border-radius:12px;background:#5b6e4a;position:relative"><span style="position:absolute;top:2px;right:2px;width:18px;height:18px;border-radius:50%;background:#fff"></span></div></div>
+          <div style="border-top:1px solid #f2ede3"></div>
+          <div style="display:flex;align-items:center;gap:10px;padding:9px 4px"><span style="width:10px;height:10px;border-radius:50%;background:#5A6043"></span><span style="flex:1;font-size:13.5px;color:#46402f">Fragments</span><div style="width:38px;height:22px;border-radius:12px;background:#5b6e4a;position:relative"><span style="position:absolute;top:2px;right:2px;width:18px;height:18px;border-radius:50%;background:#fff"></span></div></div>
+          <div style="border-top:1px solid #f2ede3"></div>
+          <div style="display:flex;align-items:center;gap:10px;padding:9px 4px"><span style="width:10px;height:10px;border-radius:50%;background:#2E4A3C"></span><span style="flex:1;font-size:13.5px;color:#46402f">Codex</span><div style="width:38px;height:22px;border-radius:12px;background:#5b6e4a;position:relative"><span style="position:absolute;top:2px;right:2px;width:18px;height:18px;border-radius:50%;background:#fff"></span></div></div>
+          <div style="border-top:1px solid #f2ede3"></div>
+          <div style="display:flex;align-items:center;gap:10px;padding:9px 4px;opacity:.7"><span style="width:10px;height:10px;border-radius:50%;background:#6B4E6E"></span><span style="flex:1;font-size:13.5px;color:#46402f">Scriptorium</span><div style="width:38px;height:22px;border-radius:12px;background:#d3ccba;position:relative"><span style="position:absolute;top:2px;left:2px;width:18px;height:18px;border-radius:50%;background:#fff"></span></div></div>
+        </div>
+        <div style="background:#46402f;color:#f4efe6;text-align:center;border-radius:8px;padding:10px;font-size:13px;margin-top:12px">Enregistrer</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- closing notes -->
+<div style="position:absolute;left:1240px;top:3130px;width:270px">
+  <div style="background:#fef4a8;padding:15px;box-shadow:0 1px 4px rgba(0,0,0,.12);transform:rotate(1.2deg);font-family:'Architects Daughter',cursive;font-size:13.5px;line-height:1.55;color:#5a4a14">
+    <div style="font-family:'Caveat',cursive;font-weight:700;font-size:20px;color:#4a3c0c;margin-bottom:5px">Colonne figée</div>
+    Le nom + la bulle « ! » restent <b>toujours visibles</b> pendant qu'on fait glisser les modules. Pas de perte de repère. Même geste pour les deux vues.
+  </div>
+</div>
+<div style="position:absolute;left:1240px;top:3320px;width:270px">
+  <div style="background:#fff;border:1.5px solid #cdc6b6;border-radius:9px;padding:13px 14px;box-shadow:0 1px 3px rgba(0,0,0,.07);font-size:13px;line-height:1.5;color:#5b5444">
+    <span style="font-family:'Caveat',cursive;font-weight:700;font-size:16px;color:#46402f">Alternative mobile</span><br>
+    Si la matrice qui glisse te semble trop dense, je peux proposer une variante <b>« carte par élève »</b> (modules empilés). Dis-moi ce que tu préfères.
+  </div>
+</div>
+<div style="position:absolute;left:1240px;top:3500px;width:270px">
+  <div style="background:#fef4a8;padding:15px;box-shadow:0 1px 4px rgba(0,0,0,.12);transform:rotate(-1.2deg);font-family:'Architects Daughter',cursive;font-size:13.5px;line-height:1.55;color:#5a4a14">
+    <div style="font-family:'Caveat',cursive;font-weight:700;font-size:20px;color:#4a3c0c;margin-bottom:5px">Prochaine étape</div>
+    Tu valides : <b>(1)</b> la liaison carte → Pilotage, <b>(2)</b> la matrice Activité + bulles, <b>(3)</b> le toggle Compétences (en construction), <b>(4)</b> le réglage des accès. Ensuite je passe l'ensemble en <b>rendu charte</b> (parchemin, sceaux), prêt à coder.
+  </div>
+</div>
+
+</x-dc>
+</body>
+</html>

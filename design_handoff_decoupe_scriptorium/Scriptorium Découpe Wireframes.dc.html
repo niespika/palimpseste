@@ -1,0 +1,443 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<meta name="design_doc_mode" content="canvas">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Caveat:wght@500;600;700&family=Architects+Daughter&family=EB+Garamond:ital@0;1&family=Cormorant+Garamond:wght@500;600;700&display=swap" rel="stylesheet">
+<style>
+  body { margin:0; font-family:'Architects Daughter', cursive; color:#46402f; -webkit-font-smoothing:antialiased; }
+</style>
+</helmet>
+
+<!-- ============================ INTRO ============================ -->
+<div style="position:absolute;left:80px;top:36px;width:1180px">
+  <div style="font-family:'Caveat',cursive;font-weight:700;font-size:46px;line-height:1.05;color:#3a352c">Scriptorium · « Un seul PDF découpé » — réorganiser la découpe</div>
+  <div style="font-family:'Architects Daughter',cursive;font-size:16px;color:#7a7263;margin-top:8px;max-width:940px">Wireframes low-fi, ordinateur seulement. On retravaille le navigateur de découpe partagé (<b>NavigateurDecoupe</b>, utilisé par <b>DecoupePdf</b> en création et <b>EditeurLivre</b> en re-découpe). Glisse pour te déplacer, zoome pour les détails.</div>
+</div>
+
+<!-- brief post-it -->
+<div style="position:absolute;left:80px;top:160px;width:360px">
+  <div style="background:#fef4a8;padding:16px 16px 18px;box-shadow:0 1px 4px rgba(0,0,0,.12);transform:rotate(-1.1deg);font-family:'Architects Daughter',cursive;font-size:14px;line-height:1.5;color:#5a4a14">
+    <div style="font-family:'Caveat',cursive;font-weight:700;font-size:21px;margin-bottom:6px;color:#4a3c0c">Le brief</div>
+    Trois gènes à régler : <b>(1)</b> les pages n'ont pas l'air d'un livre et on n'en voit qu'une tranche ; <b>(2)</b> toutes les semaines (jusqu'à 52 !) empilées = liste fouillis ; <b>(3)</b> l'encart d'import trône au-dessus du livre. Objectif : <b>le livre devient le héros</b>, on pose début/fin <b>en cliquant une ligne</b>, et ça marche aussi en <b>re-découpe</b>.
+  </div>
+</div>
+
+<!-- legend / conventions -->
+<div style="position:absolute;left:480px;top:160px;width:540px">
+  <div data-drags-parent="1" style="position:absolute;top:-26px;left:2px;font-family:'Caveat',cursive;font-size:19px;color:#6f6755">Conventions & repères</div>
+  <div style="background:#fbfaf6;border:1.5px solid #cdc6b6;border-radius:10px;box-shadow:0 1px 3px rgba(0,0,0,.08);padding:16px">
+    <div style="display:flex;gap:22px;flex-wrap:wrap">
+      <div style="flex:1;min-width:220px">
+        <div style="font-size:11px;color:#8a8270;letter-spacing:.06em;margin-bottom:9px">MARQUEURS DE SEMAINE</div>
+        <div style="display:flex;flex-direction:column;gap:8px;font-size:13px;color:#5b5444">
+          <div style="display:flex;align-items:center;gap:9px"><span style="font-family:'Architects Daughter';font-weight:700;color:#5b6e4a;width:26px">▸ S3</span> début posé (vert)</div>
+          <div style="display:flex;align-items:center;gap:9px"><span style="font-family:'Architects Daughter';font-weight:700;color:#a23e2e;width:26px">◂ S2</span> fin posée (rouge)</div>
+          <div style="display:flex;align-items:center;gap:9px"><span style="width:26px;text-align:center"><span style="display:inline-block;width:11px;height:11px;border-radius:50%;background:#46402f"></span></span> semaine active</div>
+          <div style="display:flex;align-items:center;gap:9px"><span style="width:26px;text-align:center;color:#5b6e4a">✓</span> semaine bouclée</div>
+        </div>
+      </div>
+      <div style="flex:1;min-width:220px;border-left:1px dashed #d3ccba;padding-left:20px">
+        <div style="font-size:11px;color:#8a8270;letter-spacing:.06em;margin-bottom:9px">SUR LA PAGE</div>
+        <div style="display:flex;flex-direction:column;gap:8px;font-size:12.5px;color:#5b5444">
+          <div style="display:flex;align-items:center;gap:9px"><span style="font-family:'EB Garamond';font-size:11px;color:#b3a488;width:46px">aaaaa</span> texte du livre (faible contraste = illustratif)</div>
+          <div style="display:flex;align-items:center;gap:9px"><span style="font-family:'Cormorant Garamond';font-size:13px;color:#6e5f49;width:46px;text-align:center">Tt</span> titre tiré d'un <b>signet</b> (centré, Cormorant)</div>
+          <div style="display:flex;align-items:center;gap:9px"><span style="width:46px;text-align:center"><span style="background:#efe7d4;border-radius:3px;padding:1px 6px;font-size:10px;color:#8a7c60">survol</span></span> ligne survolée → cliquable</div>
+        </div>
+      </div>
+    </div>
+    <div style="border-top:1px dashed #d3ccba;margin:13px 0 10px"></div>
+    <div style="font-size:12px;color:#7a7263;line-height:1.5"><b>Low-fi :</b> tout est en gris/sépia, sans la charte. Le vrai texte du PDF s'affichera en clair au rendu charte (parchemin, noyer, Cormorant / EB Garamond).</div>
+  </div>
+</div>
+
+<!-- ============================ BAND 1 — ACTUEL ============================ -->
+<div style="position:absolute;left:80px;top:476px;font-family:'Caveat',cursive;font-weight:700;font-size:32px;color:#3a352c">1 · L'écran actuel</div>
+<div style="position:absolute;left:80px;top:520px;font-family:'Architects Daughter',cursive;font-size:15px;color:#8a8270;max-width:760px">Le navigateur de découpe partagé, tel quel : import en haut, lignes scrollables à gauche (numéros en chasse fixe), toutes les semaines empilées à droite.</div>
+
+<div data-screen-label="Découpe PDF — écran actuel" style="position:absolute;left:80px;top:572px;width:752px">
+  <div data-drags-parent="1" style="position:absolute;top:-26px;left:2px;font-family:'Caveat',cursive;font-size:19px;color:#6f6755">Aujourd'hui — création « 1 PDF découpé »</div>
+  <div style="border:1.5px solid #cdc6b6;border-radius:11px;background:#fff;box-shadow:0 2px 9px rgba(0,0,0,.1);overflow:hidden">
+    <div style="background:#ece4d6;padding:8px 12px;display:flex;align-items:center;gap:6px"><span style="width:9px;height:9px;border-radius:50%;background:#c9b89a"></span><span style="width:9px;height:9px;border-radius:50%;background:#c9b89a"></span><span style="width:9px;height:9px;border-radius:50%;background:#c9b89a"></span><span style="margin-left:8px;font-size:11px;color:#8a8270">prof · scriptorium · nouveau livre</span></div>
+    <div style="background:#f4efe6;padding:14px 16px">
+      <!-- upload card on top (problem 3) -->
+      <div style="border:1.4px solid #ded6c4;border-radius:8px;background:#fbf8f1;padding:11px">
+        <div style="font-size:11px;color:#8a8270">PDF du livre (texte sélectionnable, pas un scan)</div>
+        <div style="display:flex;align-items:center;gap:8px;margin-top:7px"><div style="background:#ece4d6;border-radius:6px;padding:5px 10px;font-size:11px;color:#7a7263">Choisir un fichier</div><div style="font-size:11px;color:#a59c88">la-naissance-de-la-tragedie.pdf</div></div>
+        <div style="font-size:11px;color:#5b5444;margin-top:7px">PDF de <b>248 pages</b> détecté.</div>
+      </div>
+      <!-- two columns -->
+      <div style="display:flex;gap:12px;margin-top:12px">
+        <!-- left: scrollable line list (problem 1) -->
+        <div style="flex:1">
+          <div style="display:flex;align-items:center;gap:7px;font-size:11px;color:#7a7263"><span style="border:1px solid #ded6c4;border-radius:5px;padding:2px 7px">‹</span><span>Page</span><span style="border:1px solid #ded6c4;border-radius:5px;padding:2px 8px;background:#fff">42</span><span>/ 248</span><span style="margin-left:auto;border:1px solid #ded6c4;border-radius:5px;padding:2px 7px">›</span></div>
+          <div style="font-size:10.5px;color:#8a8270;margin-top:7px">À placer : <b style="color:#5b5444">début de la semaine 3</b> — clique la ligne où elle commence.</div>
+          <div style="position:relative;border:1.4px solid #ded6c4;border-radius:7px;background:#fff;margin-top:6px;height:230px;overflow:hidden">
+            <div style="padding:6px 8px">
+              <div style="display:flex;gap:8px;align-items:baseline;padding:1.5px 0"><span style="font-family:monospace;font-size:9px;color:#b6a98e;width:16px;text-align:right">14</span><span style="height:5px;border-radius:3px;background:#e4decf;flex:1"></span></div>
+              <div style="display:flex;gap:8px;align-items:baseline;padding:1.5px 0"><span style="font-family:monospace;font-size:9px;color:#b6a98e;width:16px;text-align:right">15</span><span style="height:5px;border-radius:3px;background:#e4decf;width:82%"></span></div>
+              <div style="display:flex;gap:8px;align-items:baseline;padding:1.5px 0"><span style="font-family:monospace;font-size:9px;color:#b6a98e;width:16px;text-align:right">16</span><span style="height:5px;border-radius:3px;background:#e4decf;flex:1"></span></div>
+              <div style="display:flex;gap:8px;align-items:baseline;padding:1.5px 0"><span style="font-family:monospace;font-size:9px;color:#b6a98e;width:16px;text-align:right">17</span><span style="height:5px;border-radius:3px;background:#e4decf;width:68%"></span></div>
+              <div style="display:flex;gap:8px;align-items:baseline;padding:1.5px 0;background:#efe7d4;border-radius:3px"><span style="font-family:monospace;font-size:9px;color:#b6a98e;width:16px;text-align:right">18</span><span style="height:5px;border-radius:3px;background:#d8caa8;flex:1"></span></div>
+              <div style="display:flex;gap:8px;align-items:baseline;padding:1.5px 0"><span style="font-family:monospace;font-size:9px;color:#b6a98e;width:16px;text-align:right">19</span><span style="height:5px;border-radius:3px;background:#e4decf;flex:1"></span></div>
+              <div style="display:flex;gap:8px;align-items:baseline;padding:1.5px 0"><span style="font-family:monospace;font-size:9px;color:#b6a98e;width:16px;text-align:right">20</span><span style="height:5px;border-radius:3px;background:#e4decf;width:75%"></span></div>
+              <div style="display:flex;gap:8px;align-items:baseline;padding:1.5px 0"><span style="font-family:monospace;font-size:9px;color:#b6a98e;width:16px;text-align:right">21</span><span style="height:5px;border-radius:3px;background:#e4decf;flex:1"></span></div>
+              <div style="display:flex;gap:8px;align-items:baseline;padding:1.5px 0"><span style="font-family:monospace;font-size:9px;color:#b6a98e;width:16px;text-align:right">22</span><span style="height:5px;border-radius:3px;background:#e4decf;width:88%"></span></div>
+              <div style="display:flex;gap:8px;align-items:baseline;padding:1.5px 0"><span style="font-family:monospace;font-size:9px;color:#b6a98e;width:16px;text-align:right">23</span><span style="height:5px;border-radius:3px;background:#e4decf;flex:1"></span></div>
+              <div style="display:flex;gap:8px;align-items:baseline;padding:1.5px 0"><span style="font-family:monospace;font-size:9px;color:#b6a98e;width:16px;text-align:right">24</span><span style="height:5px;border-radius:3px;background:#e4decf;width:60%"></span></div>
+            </div>
+            <!-- fake scrollbar -->
+            <div style="position:absolute;top:6px;right:3px;width:4px;height:70px;border-radius:3px;background:#d8cfbb"></div>
+            <div style="position:absolute;left:0;right:0;bottom:0;height:34px;background:linear-gradient(to bottom,rgba(255,255,255,0),#fff)"></div>
+          </div>
+          <div style="font-size:10px;color:#a59c88;margin-top:4px;font-family:'Caveat';font-size:14px">↑ on ne voit qu'une dizaine de lignes à la fois</div>
+        </div>
+        <!-- right: all weeks stacked (problem 2) -->
+        <div style="width:236px">
+          <div style="font-size:11px;color:#8a8270;margin-bottom:6px">Semaines</div>
+          <div style="display:flex;flex-direction:column;gap:7px">
+            <div style="border:1.2px solid #ded6c4;border-radius:7px;background:#fff;padding:7px"><div style="display:flex;gap:5px;align-items:center"><span style="background:#ece4d6;border-radius:4px;font-size:9px;color:#7a7263;padding:1px 5px">S1</span><span style="flex:1;height:16px;border:1px solid #e4dcc9;border-radius:4px;background:#fbf8f1"></span></div><div style="height:16px;border:1px solid #e4dcc9;border-radius:4px;background:#fbf8f1;margin-top:5px"></div><div style="display:flex;gap:5px;margin-top:5px"><span style="flex:1;height:16px;border:1px solid #e4dcc9;border-radius:4px"></span><span style="flex:1;height:16px;border:1px solid #e4dcc9;border-radius:4px"></span></div></div>
+            <div style="border:1.2px solid #ded6c4;border-radius:7px;background:#fff;padding:7px"><div style="display:flex;gap:5px;align-items:center"><span style="background:#ece4d6;border-radius:4px;font-size:9px;color:#7a7263;padding:1px 5px">S2</span><span style="flex:1;height:16px;border:1px solid #e4dcc9;border-radius:4px;background:#fbf8f1"></span></div><div style="height:16px;border:1px solid #e4dcc9;border-radius:4px;background:#fbf8f1;margin-top:5px"></div><div style="display:flex;gap:5px;margin-top:5px"><span style="flex:1;height:16px;border:1px solid #e4dcc9;border-radius:4px"></span><span style="flex:1;height:16px;border:1px solid #e4dcc9;border-radius:4px"></span></div></div>
+            <div style="border:1.4px solid #cdbf9f;border-radius:7px;background:#fff;padding:7px"><div style="display:flex;gap:5px;align-items:center"><span style="background:#46402f;border-radius:4px;font-size:9px;color:#f4efe6;padding:1px 5px">S3</span><span style="flex:1;height:16px;border:1px solid #e4dcc9;border-radius:4px;background:#fbf8f1"></span></div><div style="height:16px;border:1px solid #e4dcc9;border-radius:4px;background:#fbf8f1;margin-top:5px"></div><div style="display:flex;gap:5px;margin-top:5px"><span style="flex:1;height:16px;border:1px dashed #cdbf9f;border-radius:4px"></span><span style="flex:1;height:16px;border:1px dashed #cdbf9f;border-radius:4px"></span></div></div>
+            <div style="border:1.2px solid #ded6c4;border-radius:7px;background:#fff;padding:7px;opacity:.92"><div style="display:flex;gap:5px;align-items:center"><span style="background:#ece4d6;border-radius:4px;font-size:9px;color:#7a7263;padding:1px 5px">S4</span><span style="flex:1;height:16px;border:1px solid #e4dcc9;border-radius:4px"></span></div><div style="display:flex;gap:5px;margin-top:5px"><span style="flex:1;height:16px;border:1px dashed #e0d6c0;border-radius:4px"></span><span style="flex:1;height:16px;border:1px dashed #e0d6c0;border-radius:4px"></span></div></div>
+            <div style="border:1.2px solid #ded6c4;border-radius:7px;background:#fff;padding:7px;opacity:.82"><div style="display:flex;gap:5px;align-items:center"><span style="background:#ece4d6;border-radius:4px;font-size:9px;color:#7a7263;padding:1px 5px">S5</span><span style="flex:1;height:16px;border:1px solid #e4dcc9;border-radius:4px"></span></div></div>
+            <div style="text-align:center;font-size:11px;color:#a59c88;font-family:'Caveat';font-size:15px">+ 3 semaines plus bas…</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- problem stickies -->
+<div style="position:absolute;left:872px;top:600px;width:264px">
+  <div style="background:#f6c9bd;padding:14px;box-shadow:0 1px 4px rgba(0,0,0,.12);transform:rotate(1.3deg);font-size:13.5px;line-height:1.5;color:#7d3322">
+    <b>⚠ 1 · Une tranche, pas une page.</b> La liste scrolle (max-h-96) avec des numéros en chasse fixe : aucune impression de livre, et on perd la page entière.
+  </div>
+</div>
+<div style="position:absolute;left:872px;top:752px;width:264px">
+  <div style="background:#f6c9bd;padding:14px;box-shadow:0 1px 4px rgba(0,0,0,.12);transform:rotate(-1.4deg);font-size:13.5px;line-height:1.5;color:#7d3322">
+    <b>⚠ 2 · Mur de semaines.</b> Les 8 (jusqu'à 52 !) empilées à droite, chacune titre + chapitres + début + fin. Un mur de champs avant même de commencer.
+  </div>
+</div>
+<div style="position:absolute;left:872px;top:910px;width:264px">
+  <div style="background:#f6c9bd;padding:14px;box-shadow:0 1px 4px rgba(0,0,0,.12);transform:rotate(1.1deg);font-size:13.5px;line-height:1.5;color:#7d3322">
+    <b>⚠ 3 · L'import au-dessus.</b> L'encart « Choisir un fichier » + « PDF de 248 pages » repousse le contenu — sur lequel on travaille vraiment — vers le bas.
+  </div>
+</div>
+
+<!-- ============================ BAND 2 — DEUX DIRECTIONS ============================ -->
+<div style="position:absolute;left:80px;top:1270px;font-family:'Caveat',cursive;font-weight:700;font-size:32px;color:#3a352c">2 · Deux directions</div>
+<div style="position:absolute;left:80px;top:1314px;font-family:'Architects Daughter',cursive;font-size:15px;color:#8a8270;max-width:900px">Même mécanique (<b>cliquer une ligne</b>), deux façons de faire du livre le héros et de dégonfler les semaines. Page unique, vue complète.</div>
+
+<!-- DIRECTION A -->
+<div id="dirA" data-screen-label="Direction A — livre + frise latérale" style="position:absolute;left:80px;top:1382px;width:724px">
+  <div data-drags-parent="1" style="position:absolute;top:-30px;left:2px;display:flex;align-items:center;gap:9px"><span style="background:#46402f;color:#f4efe6;font-family:'Caveat';font-weight:700;font-size:18px;width:30px;height:30px;border-radius:50%;display:flex;align-items:center;justify-content:center">A</span><span style="font-family:'Caveat',cursive;font-weight:700;font-size:22px;color:#46402f">Livre au centre · frise des semaines à gauche</span></div>
+  <div style="border:1.5px solid #cdc6b6;border-radius:11px;background:#fff;box-shadow:0 2px 9px rgba(0,0,0,.1);overflow:hidden">
+    <div style="background:#ece4d6;padding:8px 12px;display:flex;align-items:center;gap:6px"><span style="width:9px;height:9px;border-radius:50%;background:#c9b89a"></span><span style="width:9px;height:9px;border-radius:50%;background:#c9b89a"></span><span style="width:9px;height:9px;border-radius:50%;background:#c9b89a"></span></div>
+    <div style="background:#f4efe6;padding:0">
+      <!-- slim top bar (problem 3) -->
+      <div style="display:flex;align-items:center;gap:10px;padding:8px 14px;background:#fbf8f1;border-bottom:1px solid #e4dcc9">
+        <span style="font-family:'Cormorant Garamond';font-weight:600;font-size:15px;color:#46402f">La Naissance de la tragédie</span>
+        <span style="font-size:10.5px;color:#a59c88">Nietzsche</span>
+        <span style="width:1px;height:13px;background:#ded6c4"></span>
+        <span style="font-size:10.5px;color:#7a7263">PDF · 248 p.</span>
+        <span style="font-size:10.5px;color:#5b6e4a">✓ texte sélectionnable</span>
+        <span style="margin-left:auto;display:flex;align-items:center;gap:6px;font-size:11px;color:#7a7263"><span style="border:1px solid #ded6c4;border-radius:5px;padding:2px 7px;background:#fff">‹</span> p.<b style="color:#46402f">42</b> / 248 <span style="border:1px solid #ded6c4;border-radius:5px;padding:2px 7px;background:#fff">›</span></span>
+      </div>
+      <div style="display:flex">
+        <!-- LEFT rail: weeks frise (problem 2) -->
+        <div style="width:176px;flex:none;border-right:1px solid #e4dcc9;background:#fbf8f1;padding:11px 10px">
+          <div style="font-size:10px;color:#8a8270;letter-spacing:.07em;margin-bottom:8px">SEMAINES · 8</div>
+          <div style="display:flex;flex-direction:column;gap:5px">
+            <div style="display:flex;align-items:center;gap:7px;padding:5px 7px;border-radius:6px;font-size:11px;color:#8a8270"><span style="color:#5b6e4a">✓</span><span style="font-weight:700;color:#5b5444">S1</span><span style="color:#a59c88;font-size:10px">Prologue</span><span style="margin-left:auto;font-size:9.5px;color:#b6a98e">p.1–18</span></div>
+            <div style="display:flex;align-items:center;gap:7px;padding:5px 7px;border-radius:6px;font-size:11px;color:#8a8270"><span style="color:#5b6e4a">✓</span><span style="font-weight:700;color:#5b5444">S2</span><span style="color:#a59c88;font-size:10px">Le rêve</span><span style="margin-left:auto;font-size:9.5px;color:#b6a98e">p.19–41</span></div>
+            <!-- active S3 expanded -->
+            <div style="border:1.4px solid #b9ab8a;border-radius:8px;background:#fff;padding:8px;box-shadow:0 1px 3px rgba(0,0,0,.06)">
+              <div style="display:flex;align-items:center;gap:6px"><span style="display:inline-block;width:9px;height:9px;border-radius:50%;background:#46402f"></span><span style="font-weight:700;font-size:11px;color:#46402f">Semaine 3</span></div>
+              <div style="margin-top:7px;border:1px solid #e4dcc9;border-radius:5px;background:#fbf8f1;padding:4px 7px;font-family:'Cormorant Garamond';font-size:12px;color:#6e5f49">Apollon et Dionysos</div>
+              <div style="margin-top:5px;border:1px solid #e4dcc9;border-radius:5px;padding:4px 7px;font-size:10px;color:#a59c88">Chap. II</div>
+              <div style="display:flex;gap:5px;margin-top:7px">
+                <div style="flex:1;border:1px solid #cfe0c5;background:#eef3e7;border-radius:5px;padding:4px 6px;text-align:center"><div style="font-size:8.5px;color:#5b6e4a;letter-spacing:.04em">DÉBUT</div><div style="font-size:10px;color:#46402f;font-weight:700">p.42 · l.3</div></div>
+                <div style="flex:1;border:1px dashed #cdbf9f;border-radius:5px;padding:4px 6px;text-align:center"><div style="font-size:8.5px;color:#9A6A2E;letter-spacing:.04em">FIN</div><div style="font-size:10px;color:#b6a98e">à placer…</div></div>
+              </div>
+            </div>
+            <div style="display:flex;align-items:center;gap:7px;padding:5px 7px;border-radius:6px;font-size:11px;color:#8a8270"><span style="width:9px;display:inline-block"></span><span style="font-weight:700;color:#5b5444">S4</span><span style="margin-left:auto;font-size:9.5px;color:#c4b89d">— à placer</span></div>
+            <div style="display:flex;align-items:center;gap:7px;padding:5px 7px;border-radius:6px;font-size:11px;color:#8a8270"><span style="width:9px;display:inline-block"></span><span style="font-weight:700;color:#5b5444">S5</span><span style="margin-left:auto;font-size:9.5px;color:#c4b89d">— à placer</span></div>
+            <div style="display:flex;align-items:center;gap:7px;padding:5px 7px;border-radius:6px;font-size:11px;color:#8a8270"><span style="width:9px;display:inline-block"></span><span style="font-weight:700;color:#5b5444">S6</span><span style="margin-left:auto;font-size:9.5px;color:#c4b89d">— à placer</span></div>
+            <div style="text-align:center;font-size:13px;color:#a59c88;font-family:'Caveat';padding-top:2px">+ S7 · S8</div>
+          </div>
+        </div>
+        <!-- RIGHT: the book page (problem 1) -->
+        <div style="flex:1;padding:12px 16px 16px;position:relative">
+          <div style="font-size:10.5px;color:#8a8270;margin-bottom:8px;text-align:center">À placer : <b style="color:#a23e2e">fin de la semaine 3</b> — clique la ligne où elle finit.</div>
+          <!-- BOOK PAGE -->
+          <div style="max-width:430px;margin:0 auto;background:#fdfaf2;border:1px solid #e7decb;border-radius:3px;box-shadow:0 2px 7px rgba(70,55,30,.10);padding:16px 26px 12px 14px;position:relative">
+            <div style="text-align:center;font-family:'Architects Daughter';font-size:7.5px;letter-spacing:.16em;color:#bdb097">LA NAISSANCE DE LA TRAGÉDIE</div>
+            <div style="border-bottom:1px solid #efe6d4;margin:5px 0 8px"></div>
+            <!-- end of chapter I -->
+            <div style="display:flex;align-items:center"><span style="width:22px;flex:none"></span><span style="flex:1;font-family:'EB Garamond';font-size:9px;color:#b3a488;line-height:1.5">inséparable du fond douloureux qu'elle recouvre,</span></div>
+            <div style="display:flex;align-items:center"><span style="width:22px;flex:none;text-align:right;padding-right:5px;font-family:'Architects Daughter';font-size:8.5px;font-weight:700;color:#a23e2e">◂S2</span><span style="flex:1;font-family:'EB Garamond';font-size:9px;color:#b3a488;line-height:1.5;background:#f6ebe7;border-radius:2px">et qu'elle transfigure dans le même mouvement.</span></div>
+            <!-- chapter heading (signet-driven) + début S3 marker -->
+            <div style="display:flex;align-items:flex-start;margin:9px 0 7px"><span style="width:22px;flex:none;text-align:right;padding-right:5px;font-family:'Architects Daughter';font-size:8.5px;font-weight:700;color:#5b6e4a;padding-top:8px">▸S3</span><span style="flex:1;text-align:center"><div style="font-family:'Architects Daughter';font-size:7px;letter-spacing:.2em;color:#a89a7f">CHAPITRE II</div><div style="font-family:'Cormorant Garamond';font-weight:600;font-size:16px;color:#6e5f49;line-height:1.1;margin-top:1px">Apollon et Dionysos</div><div style="font-size:8px;color:#cbbfa6;margin-top:2px">— ❧ —</div></span></div>
+            <!-- paragraph 1 -->
+            <div style="display:flex;align-items:center"><span style="width:22px;flex:none"></span><span style="flex:1;font-family:'EB Garamond';font-size:9px;color:#b3a488;line-height:1.5;text-indent:13px">Les deux divinités de l'art président aux</span></div>
+            <div style="display:flex;align-items:center"><span style="width:22px;flex:none"></span><span style="flex:1;font-family:'EB Garamond';font-size:9px;color:#b3a488;line-height:1.5">puissances opposées qui traversent toute œuvre.</span></div>
+            <div style="display:flex;align-items:center"><span style="width:22px;flex:none"></span><span style="flex:1;font-family:'EB Garamond';font-size:9px;color:#b3a488;line-height:1.5">À l'une revient la mesure du rêve et la claire</span></div>
+            <div style="display:flex;align-items:center"><span style="width:22px;flex:none"></span><span style="flex:1;font-family:'EB Garamond';font-size:9px;color:#b3a488;line-height:1.5">délimitation des formes ; à l'autre, l'ivresse</span></div>
+            <div style="display:flex;align-items:center"><span style="width:22px;flex:none"></span><span style="flex:1;font-family:'EB Garamond';font-size:9px;color:#b3a488;line-height:1.5">qui dissout les contours et rend à l'homme</span></div>
+            <div style="display:flex;align-items:center"><span style="width:22px;flex:none"></span><span style="flex:1;font-family:'EB Garamond';font-size:9px;color:#b3a488;line-height:1.5">le sentiment d'une unité perdue.</span></div>
+            <!-- paragraph 2 -->
+            <div style="display:flex;align-items:center"><span style="width:22px;flex:none"></span><span style="flex:1;font-family:'EB Garamond';font-size:9px;color:#b3a488;line-height:1.5;text-indent:13px">Le chœur n'est pas le spectateur placé devant</span></div>
+            <div style="display:flex;align-items:center"><span style="width:22px;flex:none"></span><span style="flex:1;font-family:'EB Garamond';font-size:9px;color:#b3a488;line-height:1.5">la scène : il en est la matrice vivante. C'est de</span></div>
+            <!-- hovered candidate line for FIN -->
+            <div style="display:flex;align-items:center;position:relative"><span style="width:22px;flex:none"></span><span style="flex:1;font-family:'EB Garamond';font-size:9px;color:#8a7c60;line-height:1.5;background:#efe7d4;border-radius:2px;outline:1.4px solid #cdbf9f">son chant que se lève toute vision tragique.</span></div>
+            <div style="position:absolute;right:8px;bottom:30px;background:#46402f;color:#f4efe6;font-family:'Architects Daughter';font-size:9.5px;padding:3px 7px;border-radius:5px;box-shadow:0 1px 4px rgba(0,0,0,.2)">poser la fin de S3 ?</div>
+            <div style="text-align:center;font-family:'EB Garamond';font-size:9px;color:#c4b89d;margin-top:8px">· 42 ·</div>
+          </div>
+          <div style="text-align:center;font-size:13px;color:#a59c88;font-family:'Caveat';margin-top:7px">↑ la page entière, telle un vrai livre — clique une ligne pour poser la borne active</div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <!-- idea + pour/contre -->
+  <div style="display:flex;gap:14px;margin-top:13px">
+    <div style="flex:1;font-size:12.5px;color:#5b5444;line-height:1.5">
+      <div style="font-family:'Caveat',cursive;font-weight:700;font-size:17px;color:#46402f;margin-bottom:3px">L'idée</div>
+      Import réduit à une <b>barre fine</b> en haut. À gauche, une <b>frise verticale</b> : les semaines bouclées tiennent sur une ligne (✓ + plage), seule l'<b>active</b> se déplie (titre, chapitres, début/fin). On suit l'avancement de tout, sans mur de champs.
+    </div>
+    <div style="width:230px;font-size:12px;line-height:1.5">
+      <div style="color:#5b6e4a">+ l'état des 8 semaines d'un coup, compact</div>
+      <div style="color:#5b6e4a">+ la page reste grande</div>
+      <div style="color:#a23e2e">− le rail mange un peu de largeur</div>
+      <div style="color:#a23e2e">− au-delà de ~12 semaines, il défile</div>
+    </div>
+  </div>
+</div>
+
+<!-- DIRECTION B -->
+<div id="dirB" data-screen-label="Direction B — page plein cadre + stepper en bas" style="position:absolute;left:838px;top:1382px;width:724px">
+  <div data-drags-parent="1" style="position:absolute;top:-30px;left:2px;display:flex;align-items:center;gap:9px"><span style="background:#46402f;color:#f4efe6;font-family:'Caveat';font-weight:700;font-size:18px;width:30px;height:30px;border-radius:50%;display:flex;align-items:center;justify-content:center">B</span><span style="font-family:'Caveat',cursive;font-weight:700;font-size:22px;color:#46402f">Page plein cadre · semaines en bas (pas-à-pas)</span></div>
+  <div style="border:1.5px solid #cdc6b6;border-radius:11px;background:#fff;box-shadow:0 2px 9px rgba(0,0,0,.1);overflow:hidden">
+    <div style="background:#ece4d6;padding:8px 12px;display:flex;align-items:center;gap:6px"><span style="width:9px;height:9px;border-radius:50%;background:#c9b89a"></span><span style="width:9px;height:9px;border-radius:50%;background:#c9b89a"></span><span style="width:9px;height:9px;border-radius:50%;background:#c9b89a"></span></div>
+    <div style="background:#efe7d6;padding:0">
+      <!-- collapsed info pill (problem 3) -->
+      <div style="display:flex;align-items:center;gap:9px;padding:7px 14px">
+        <span style="display:flex;align-items:center;gap:6px;background:#fbf8f1;border:1px solid #e4dcc9;border-radius:14px;padding:3px 10px;font-size:10.5px;color:#7a7263"><span style="color:#a59c88">▸</span><span style="font-family:'Cormorant Garamond';font-weight:600;font-size:13px;color:#46402f">La Naissance de la tragédie</span><span style="color:#bdb097">·</span>248 p.<span style="color:#5b6e4a">✓</span></span>
+        <span style="margin-left:auto;display:flex;align-items:center;gap:6px;font-size:11px;color:#7a7263"><span style="border:1px solid #ded6c4;border-radius:5px;padding:2px 7px;background:#fff">‹</span> p.<b style="color:#46402f">42</b> / 248 <span style="border:1px solid #ded6c4;border-radius:5px;padding:2px 7px;background:#fff">›</span></span>
+      </div>
+      <!-- the book page, larger / full-frame -->
+      <div style="padding:2px 18px 10px;position:relative">
+        <div style="font-size:10.5px;color:#8a8270;margin-bottom:7px;text-align:center">À placer : <b style="color:#a23e2e">fin de la semaine 3</b> — clique la ligne où elle finit.</div>
+        <div style="max-width:452px;margin:0 auto;background:#fdfaf2;border:1px solid #e7decb;border-radius:3px;box-shadow:0 2px 9px rgba(70,55,30,.11);padding:16px 30px 12px 16px;position:relative">
+          <div style="text-align:center;font-family:'Architects Daughter';font-size:7.5px;letter-spacing:.16em;color:#bdb097">LA NAISSANCE DE LA TRAGÉDIE</div>
+          <div style="border-bottom:1px solid #efe6d4;margin:5px 0 8px"></div>
+          <div style="display:flex;align-items:center"><span style="width:22px;flex:none"></span><span style="flex:1;font-family:'EB Garamond';font-size:9.5px;color:#b3a488;line-height:1.5">inséparable du fond douloureux qu'elle recouvre,</span></div>
+          <div style="display:flex;align-items:center"><span style="width:22px;flex:none;text-align:right;padding-right:5px;font-family:'Architects Daughter';font-size:8.5px;font-weight:700;color:#a23e2e">◂S2</span><span style="flex:1;font-family:'EB Garamond';font-size:9.5px;color:#b3a488;line-height:1.5;background:#f6ebe7;border-radius:2px">et qu'elle transfigure dans le même mouvement.</span></div>
+          <div style="display:flex;align-items:flex-start;margin:9px 0 7px"><span style="width:22px;flex:none;text-align:right;padding-right:5px;font-family:'Architects Daughter';font-size:8.5px;font-weight:700;color:#5b6e4a;padding-top:8px">▸S3</span><span style="flex:1;text-align:center"><div style="font-family:'Architects Daughter';font-size:7px;letter-spacing:.2em;color:#a89a7f">CHAPITRE II</div><div style="font-family:'Cormorant Garamond';font-weight:600;font-size:17px;color:#6e5f49;line-height:1.1;margin-top:1px">Apollon et Dionysos</div><div style="font-size:8px;color:#cbbfa6;margin-top:2px">— ❧ —</div></span></div>
+          <div style="display:flex;align-items:center"><span style="width:22px;flex:none"></span><span style="flex:1;font-family:'EB Garamond';font-size:9.5px;color:#b3a488;line-height:1.5;text-indent:13px">Les deux divinités de l'art président aux</span></div>
+          <div style="display:flex;align-items:center"><span style="width:22px;flex:none"></span><span style="flex:1;font-family:'EB Garamond';font-size:9.5px;color:#b3a488;line-height:1.5">puissances opposées qui traversent toute œuvre.</span></div>
+          <div style="display:flex;align-items:center"><span style="width:22px;flex:none"></span><span style="flex:1;font-family:'EB Garamond';font-size:9.5px;color:#b3a488;line-height:1.5">À l'une revient la mesure du rêve et la claire</span></div>
+          <div style="display:flex;align-items:center"><span style="width:22px;flex:none"></span><span style="flex:1;font-family:'EB Garamond';font-size:9.5px;color:#b3a488;line-height:1.5">délimitation des formes ; à l'autre, l'ivresse</span></div>
+          <div style="display:flex;align-items:center"><span style="width:22px;flex:none"></span><span style="flex:1;font-family:'EB Garamond';font-size:9.5px;color:#b3a488;line-height:1.5">qui dissout les contours et rend à l'homme</span></div>
+          <div style="display:flex;align-items:center"><span style="width:22px;flex:none"></span><span style="flex:1;font-family:'EB Garamond';font-size:9.5px;color:#b3a488;line-height:1.5">le sentiment d'une unité perdue.</span></div>
+          <div style="display:flex;align-items:center"><span style="width:22px;flex:none"></span><span style="flex:1;font-family:'EB Garamond';font-size:9.5px;color:#b3a488;line-height:1.5;text-indent:13px">Le chœur n'est pas le spectateur placé devant</span></div>
+          <div style="display:flex;align-items:center"><span style="width:22px;flex:none"></span><span style="flex:1;font-family:'EB Garamond';font-size:9.5px;color:#b3a488;line-height:1.5">la scène : il en est la matrice vivante. C'est de</span></div>
+          <div style="display:flex;align-items:center;position:relative"><span style="width:22px;flex:none"></span><span style="flex:1;font-family:'EB Garamond';font-size:9.5px;color:#8a7c60;line-height:1.5;background:#efe7d4;border-radius:2px;outline:1.4px solid #cdbf9f">son chant que se lève toute vision tragique.</span></div>
+          <div style="text-align:center;font-family:'EB Garamond';font-size:9px;color:#c4b89d;margin-top:8px">· 42 ·</div>
+        </div>
+      </div>
+      <!-- bottom stepper bar (problem 2) -->
+      <div style="background:#fbf8f1;border-top:1px solid #e4dcc9;padding:9px 14px">
+        <div style="display:flex;align-items:center;gap:12px">
+          <div style="flex:none"><div style="font-family:'Cormorant Garamond';font-weight:700;font-size:15px;color:#46402f;line-height:1">Semaine 3 <span style="font-size:11px;color:#a59c88;font-family:'Architects Daughter'">/ 8</span></div></div>
+          <div style="flex:none;display:flex;flex-direction:column;gap:2px"><span style="font-family:'Cormorant Garamond';font-size:12px;color:#6e5f49">Apollon et Dionysos</span><span style="font-size:9.5px;color:#a59c88">Chap. II</span></div>
+          <div style="width:1px;height:26px;background:#e4dcc9"></div>
+          <div style="display:flex;gap:7px">
+            <span style="display:flex;align-items:center;gap:5px;background:#eef3e7;border:1px solid #cfe0c5;border-radius:5px;padding:3px 8px;font-size:10px;color:#46402f"><span style="color:#5b6e4a;font-weight:700">●</span> Début p.42 · l.3</span>
+            <span style="display:flex;align-items:center;gap:5px;background:#fff;border:1px dashed #cdbf9f;border-radius:5px;padding:3px 8px;font-size:10px;color:#9A6A2E"><span style="font-weight:700">○</span> Fin — à placer</span>
+          </div>
+          <div style="margin-left:auto;display:flex;gap:6px;font-size:10.5px;color:#7a7263"><span style="border:1px solid #ded6c4;border-radius:6px;padding:4px 9px;background:#fff">‹ S2</span><span style="border:1px solid #ded6c4;border-radius:6px;padding:4px 9px;background:#fff">S4 ›</span></div>
+        </div>
+        <!-- progress ribbon with chapter ticks -->
+        <div style="display:flex;gap:3px;margin-top:9px;align-items:flex-end">
+          <div style="flex:1;height:7px;border-radius:3px;background:#9caa86"></div>
+          <div style="flex:1;height:7px;border-radius:3px;background:#9caa86"></div>
+          <div style="flex:1.1;height:11px;border-radius:3px;background:#46402f;position:relative"><span style="position:absolute;left:0;top:-13px;font-size:8px;color:#46402f;font-family:'Architects Daughter'">S3</span></div>
+          <div style="flex:1;height:7px;border-radius:3px;background:#e0d6c0"></div>
+          <div style="flex:1;height:7px;border-radius:3px;background:#e0d6c0"></div>
+          <div style="flex:1;height:7px;border-radius:3px;background:#e0d6c0"></div>
+          <div style="flex:1;height:7px;border-radius:3px;background:#e0d6c0"></div>
+          <div style="flex:1;height:7px;border-radius:3px;background:#e0d6c0"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <!-- idea + pour/contre -->
+  <div style="display:flex;gap:14px;margin-top:13px">
+    <div style="flex:1;font-size:12.5px;color:#5b5444;line-height:1.5">
+      <div style="font-family:'Caveat',cursive;font-weight:700;font-size:17px;color:#46402f;margin-bottom:3px">L'idée</div>
+      L'import se <b>replie</b> en pastille une fois le PDF lu ; la page occupe tout. En bas, un guide <b>une-semaine-à-la-fois</b> (titre, chapitres, début/fin de l'active) + une <b>frise-progression</b> en segments, avec les repères de chapitres.
+    </div>
+    <div style="width:230px;font-size:12px;line-height:1.5">
+      <div style="color:#5b6e4a">+ page maximale, lecture immersive</div>
+      <div style="color:#5b6e4a">+ guidage très clair, zéro champ parasite</div>
+      <div style="color:#a23e2e">− on ne voit qu'une semaine à la fois</div>
+      <div style="color:#a23e2e">− aller à S40 = parcourir la frise</div>
+    </div>
+  </div>
+</div>
+
+<!-- reco note between/after directions -->
+<div style="position:absolute;left:1586px;top:1392px;width:268px">
+  <div style="background:#fef4a8;padding:15px;box-shadow:0 1px 4px rgba(0,0,0,.12);transform:rotate(1.2deg);font-family:'Architects Daughter',cursive;font-size:13.5px;line-height:1.55;color:#5a4a14">
+    <div style="font-family:'Caveat',cursive;font-weight:700;font-size:19px;color:#4a3c0c;margin-bottom:5px">Penche pour A</div>
+    A montre l'avancement de <b>toutes</b> les semaines, ce qui rassure quand il y en a 8+. On peut lui <b>emprunter le plein cadre de B</b> : un bouton « masquer la frise » fait basculer A en mode lecture. Le meilleur des deux.
+  </div>
+</div>
+
+<!-- ============================ BAND 3 — MODIFICATION ============================ -->
+<div style="position:absolute;left:80px;top:2210px;font-family:'Caveat',cursive;font-weight:700;font-size:32px;color:#3a352c">3 · La re-découpe (modification)</div>
+<div style="position:absolute;left:80px;top:2254px;font-family:'Architects Daughter',cursive;font-size:15px;color:#8a8270;max-width:900px">Le même navigateur, côté <b>EditeurLivre</b> : pas de PDF. Le texte des semaines est réassemblé en un flux continu, qu'on <b>feuillette en pages de lecture</b> — même confort qu'à la création.</div>
+
+<div data-screen-label="Re-découpe — modification d'un livre" style="position:absolute;left:80px;top:2322px;width:724px">
+  <div data-drags-parent="1" style="position:absolute;top:-26px;left:2px;font-family:'Caveat',cursive;font-size:19px;color:#6f6755">Modifier le livre — mêmes gestes, marqueurs déjà posés</div>
+  <div style="border:1.5px solid #cdc6b6;border-radius:11px;background:#fff;box-shadow:0 2px 9px rgba(0,0,0,.1);overflow:hidden">
+    <div style="background:#ece4d6;padding:8px 12px;display:flex;align-items:center;gap:6px"><span style="width:9px;height:9px;border-radius:50%;background:#c9b89a"></span><span style="width:9px;height:9px;border-radius:50%;background:#c9b89a"></span><span style="width:9px;height:9px;border-radius:50%;background:#c9b89a"></span></div>
+    <div style="background:#f4efe6;padding:0">
+      <!-- slim top bar : no upload, reassembled -->
+      <div style="display:flex;align-items:center;gap:10px;padding:8px 14px;background:#fbf8f1;border-bottom:1px solid #e4dcc9">
+        <span style="font-family:'Cormorant Garamond';font-weight:600;font-size:15px;color:#46402f">La Naissance de la tragédie</span>
+        <span style="width:1px;height:13px;background:#ded6c4"></span>
+        <span style="font-size:10.5px;color:#7a7263">Texte réassemblé · feuilleté en pages</span>
+        <span style="margin-left:auto;display:flex;align-items:center;gap:6px;font-size:11px;color:#7a7263"><span style="border:1px solid #ded6c4;border-radius:5px;padding:2px 7px;background:#fff">‹</span> page <b style="color:#46402f">2</b> / 11 <span style="border:1px solid #ded6c4;border-radius:5px;padding:2px 7px;background:#fff">›</span></span>
+      </div>
+      <div style="display:flex">
+        <!-- rail -->
+        <div style="width:176px;flex:none;border-right:1px solid #e4dcc9;background:#fbf8f1;padding:11px 10px">
+          <div style="font-size:10px;color:#8a8270;letter-spacing:.07em;margin-bottom:8px">SEMAINES · 8</div>
+          <div style="display:flex;flex-direction:column;gap:5px">
+            <div style="display:flex;align-items:center;gap:7px;padding:5px 7px;border-radius:6px;font-size:11px;color:#8a8270"><span style="color:#5b6e4a">✓</span><span style="font-weight:700;color:#5b5444">S2</span><span style="color:#a59c88;font-size:10px">Le rêve</span><span style="margin-left:auto;font-size:9.5px;color:#b6a98e">l.1–22</span></div>
+            <div style="border:1.4px solid #b9ab8a;border-radius:8px;background:#fff;padding:8px;box-shadow:0 1px 3px rgba(0,0,0,.06)">
+              <div style="display:flex;align-items:center;gap:6px"><span style="display:inline-block;width:9px;height:9px;border-radius:50%;background:#46402f"></span><span style="font-weight:700;font-size:11px;color:#46402f">Semaine 3</span></div>
+              <div style="margin-top:7px;border:1px solid #e4dcc9;border-radius:5px;background:#fbf8f1;padding:4px 7px;font-family:'Cormorant Garamond';font-size:12px;color:#6e5f49">Apollon et Dionysos</div>
+              <div style="display:flex;gap:5px;margin-top:7px">
+                <div style="flex:1;border:1px solid #cfe0c5;background:#eef3e7;border-radius:5px;padding:4px 6px;text-align:center"><div style="font-size:8.5px;color:#5b6e4a;letter-spacing:.04em">DÉBUT</div><div style="font-size:10px;color:#46402f;font-weight:700">l.23</div></div>
+                <div style="flex:1;border:1px solid #e6cfc7;background:#f6ebe7;border-radius:5px;padding:4px 6px;text-align:center"><div style="font-size:8.5px;color:#a23e2e;letter-spacing:.04em">FIN</div><div style="font-size:10px;color:#46402f;font-weight:700">l.40</div></div>
+              </div>
+            </div>
+            <div style="display:flex;align-items:center;gap:7px;padding:5px 7px;border-radius:6px;font-size:11px;color:#8a8270"><span style="color:#5b6e4a">✓</span><span style="font-weight:700;color:#5b5444">S4</span><span style="color:#a59c88;font-size:10px">L'ivresse</span><span style="margin-left:auto;font-size:9.5px;color:#b6a98e">l.41–63</span></div>
+            <div style="text-align:center;font-size:13px;color:#a59c88;font-family:'Caveat';padding-top:2px">S5 · S6 · S7 · S8</div>
+          </div>
+        </div>
+        <!-- page with pre-placed markers + destructive warning -->
+        <div style="flex:1;padding:12px 16px 14px;position:relative">
+          <div style="max-width:430px;margin:0 auto;background:#fdfaf2;border:1px solid #e7decb;border-radius:3px;box-shadow:0 2px 7px rgba(70,55,30,.10);padding:16px 26px 12px 14px;position:relative">
+            <div style="text-align:center;font-family:'Architects Daughter';font-size:7.5px;letter-spacing:.16em;color:#bdb097">LA NAISSANCE DE LA TRAGÉDIE — réassemblé</div>
+            <div style="border-bottom:1px solid #efe6d4;margin:5px 0 8px"></div>
+            <div style="display:flex;align-items:center"><span style="width:22px;flex:none"></span><span style="flex:1;font-family:'EB Garamond';font-size:9px;color:#b3a488;line-height:1.5">inséparable du fond douloureux qu'elle recouvre,</span></div>
+            <div style="display:flex;align-items:center"><span style="width:22px;flex:none;text-align:right;padding-right:5px;font-family:'Architects Daughter';font-size:8.5px;font-weight:700;color:#a23e2e">◂S2</span><span style="flex:1;font-family:'EB Garamond';font-size:9px;color:#b3a488;line-height:1.5;background:#f6ebe7;border-radius:2px">et qu'elle transfigure dans le même mouvement.</span></div>
+            <div style="display:flex;align-items:flex-start;margin:9px 0 7px"><span style="width:22px;flex:none;text-align:right;padding-right:5px;font-family:'Architects Daughter';font-size:8.5px;font-weight:700;color:#5b6e4a;padding-top:8px">▸S3</span><span style="flex:1;text-align:center"><div style="font-family:'Architects Daughter';font-size:7px;letter-spacing:.2em;color:#a89a7f">CHAPITRE II</div><div style="font-family:'Cormorant Garamond';font-weight:600;font-size:16px;color:#6e5f49;line-height:1.1;margin-top:1px">Apollon et Dionysos</div><div style="font-size:8px;color:#cbbfa6;margin-top:2px">— ❧ —</div></span></div>
+            <div style="display:flex;align-items:center"><span style="width:22px;flex:none"></span><span style="flex:1;font-family:'EB Garamond';font-size:9px;color:#b3a488;line-height:1.5;text-indent:13px">Les deux divinités de l'art président aux</span></div>
+            <div style="display:flex;align-items:center"><span style="width:22px;flex:none"></span><span style="flex:1;font-family:'EB Garamond';font-size:9px;color:#b3a488;line-height:1.5">puissances opposées qui traversent toute œuvre.</span></div>
+            <div style="display:flex;align-items:center"><span style="width:22px;flex:none"></span><span style="flex:1;font-family:'EB Garamond';font-size:9px;color:#b3a488;line-height:1.5">À l'une revient la mesure du rêve et la claire</span></div>
+            <div style="display:flex;align-items:center"><span style="width:22px;flex:none"></span><span style="flex:1;font-family:'EB Garamond';font-size:9px;color:#b3a488;line-height:1.5">délimitation des formes ; à l'autre, l'ivresse</span></div>
+            <div style="display:flex;align-items:center"><span style="width:22px;flex:none"></span><span style="flex:1;font-family:'EB Garamond';font-size:9px;color:#b3a488;line-height:1.5">qui dissout les contours et rend à l'homme</span></div>
+            <div style="display:flex;align-items:center"><span style="width:22px;flex:none;text-align:right;padding-right:5px;font-family:'Architects Daughter';font-size:8.5px;font-weight:700;color:#a23e2e">◂S3</span><span style="flex:1;font-family:'EB Garamond';font-size:9px;color:#b3a488;line-height:1.5;background:#f6ebe7;border-radius:2px">le sentiment d'une unité perdue.</span></div>
+            <!-- lines outside any week → destructive -->
+            <div style="display:flex;align-items:center"><span style="width:22px;flex:none"></span><span style="flex:1;font-family:'EB Garamond';font-size:9px;color:#cb9b90;line-height:1.5;text-decoration:line-through;text-indent:13px">Le chœur n'est pas le spectateur placé devant</span></div>
+            <div style="display:flex;align-items:center"><span style="width:22px;flex:none"></span><span style="flex:1;font-family:'EB Garamond';font-size:9px;color:#cb9b90;line-height:1.5;text-decoration:line-through">la scène : il en est la matrice vivante. C'est de</span></div>
+            <div style="text-align:center;font-family:'EB Garamond';font-size:9px;color:#c4b89d;margin-top:8px">· page 2 ·</div>
+          </div>
+        </div>
+      </div>
+      <!-- destructive warning banner -->
+      <div style="background:#f7ddd6;border-top:1px solid #e6b3a6;padding:8px 16px;display:flex;align-items:center;gap:8px">
+        <span style="color:#a23e2e;font-size:13px">⚠</span><span style="font-size:11.5px;color:#7d3322"><b>2 lignes hors de toute semaine seront DÉFINITIVEMENT retirées du livre</b> (barrées en rouge). En création, ce même cas n'est qu'informatif.</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- modification delta cards -->
+<div style="position:absolute;left:872px;top:2352px;width:282px">
+  <div style="background:#fbfaf6;border:1.5px solid #cdc6b6;border-radius:10px;padding:13px;box-shadow:0 1px 3px rgba(0,0,0,.08);font-size:12.5px;line-height:1.5;color:#5b5444">
+    <div style="font-family:'Caveat',cursive;font-weight:700;font-size:17px;color:#46402f;margin-bottom:6px">3 différences avec la création</div>
+    <div style="display:flex;gap:8px;margin-bottom:9px"><span style="font-family:'Caveat';font-weight:700;color:#8a6f4e;font-size:16px">Δ</span><div><b>Source.</b> Pas de PDF : le texte des semaines est réassemblé en un flux continu, puis <b>re-paginé</b> en pages de lecture (même page-unique-complète).</div></div>
+    <div style="display:flex;gap:8px;margin-bottom:9px"><span style="font-family:'Caveat';font-weight:700;color:#8a6f4e;font-size:16px">Δ</span><div><b>Marqueurs déjà posés.</b> Début/fin pré-placés aux bornes actuelles ; on les <b>déplace</b> au lieu de repartir de zéro.</div></div>
+    <div style="display:flex;gap:8px"><span style="font-family:'Caveat';font-weight:700;color:#a23e2e;font-size:16px">Δ</span><div><b>Avertissement destructif.</b> Toute ligne hors semaine est <b>retirée du livre</b> pour de bon (rouge), là où en création c'est juste informatif.</div></div>
+  </div>
+</div>
+<div style="position:absolute;left:872px;top:2588px;width:282px">
+  <div style="background:#fef4a8;padding:13px;box-shadow:0 1px 4px rgba(0,0,0,.12);transform:rotate(-1.2deg);font-family:'Architects Daughter',cursive;font-size:13px;line-height:1.5;color:#5a4a14">
+    <b>Astuce de cohérence.</b> En re-paginant le texte réassemblé en « pages », création et re-découpe partagent <b>exactement</b> le même écran. Un seul modèle mental, qu'on parte d'un PDF ou d'un livre existant.
+  </div>
+</div>
+
+<!-- ============================ BAND 4 — BONUS SIGNETS ============================ -->
+<div style="position:absolute;left:80px;top:2980px;font-family:'Caveat',cursive;font-weight:700;font-size:32px;color:#3a352c">4 · Bonus — les signets pour mettre en page</div>
+<div style="position:absolute;left:80px;top:3024px;font-family:'Architects Daughter',cursive;font-size:15px;color:#8a8270;max-width:900px">Ton idée : le PDF nous donne déjà ses <b>signets</b> (le sommaire). On s'en sert pour dessiner la page — en création <b>et</b> en re-découpe.</div>
+
+<!-- zoomed page -->
+<div data-screen-label="Bonus — page rendue depuis les signets (zoom)" style="position:absolute;left:80px;top:3088px;width:496px">
+  <div data-drags-parent="1" style="position:absolute;top:-26px;left:2px;font-family:'Caveat',cursive;font-size:19px;color:#6f6755">Zoom sur une page « bien dessinée »</div>
+  <div style="background:#fdfaf2;border:1px solid #e7decb;border-radius:4px;box-shadow:0 3px 12px rgba(70,55,30,.13);padding:26px 40px 22px 26px;position:relative">
+    <div style="text-align:center;font-family:'Architects Daughter';font-size:9px;letter-spacing:.18em;color:#bdb097">LA NAISSANCE DE LA TRAGÉDIE</div>
+    <div style="border-bottom:1px solid #efe6d4;margin:7px 0 12px"></div>
+    <div style="display:flex;align-items:center"><span style="width:26px;flex:none"></span><span style="flex:1;font-family:'EB Garamond';font-size:12px;color:#b3a488;line-height:1.55">inséparable du fond douloureux qu'elle recouvre,</span></div>
+    <div style="display:flex;align-items:center"><span style="width:26px;flex:none"></span><span style="flex:1;font-family:'EB Garamond';font-size:12px;color:#b3a488;line-height:1.55">et qu'elle transfigure dans le même mouvement.</span></div>
+    <!-- chapter heading, with ribbon -->
+    <div style="display:flex;align-items:flex-start;margin:16px 0 12px;position:relative"><span style="width:26px;flex:none"></span><span style="flex:1;text-align:center"><div style="font-family:'Architects Daughter';font-size:9px;letter-spacing:.24em;color:#a89a7f">CHAPITRE II</div><div style="font-family:'Cormorant Garamond';font-weight:700;font-size:25px;color:#5f5240;line-height:1.05;margin-top:2px">Apollon et Dionysos</div><div style="font-size:11px;color:#cbbfa6;margin-top:4px">— ❧ —</div></span>
+      <!-- ribbon bookmark -->
+      <div style="position:absolute;right:-40px;top:-2px;width:16px;height:34px;background:#b7472f;clip-path:polygon(0 0,100% 0,100% 100%,50% 80%,0 100%);box-shadow:0 1px 3px rgba(0,0,0,.2)"></div>
+      <div style="position:absolute;right:-58px;top:36px;font-family:'Architects Daughter';font-size:10px;color:#a05a44;width:60px">signet du&nbsp;PDF</div>
+    </div>
+    <!-- drop cap paragraph -->
+    <div style="display:flex;align-items:flex-start"><span style="width:26px;flex:none"></span><span style="flex:1;position:relative"><span style="float:left;font-family:'Cormorant Garamond';font-weight:700;font-size:30px;line-height:0.8;color:#8a6f4e;margin:2px 5px 0 0">L</span><span style="font-family:'EB Garamond';font-size:12px;color:#b3a488;line-height:1.55">es deux divinités de l'art président aux puissances opposées qui traversent toute œuvre. À l'une revient la mesure du rêve et la claire délimitation des formes ; à l'autre, l'ivresse qui dissout les contours.</span></span></div>
+    <div style="text-align:center;font-family:'EB Garamond';font-size:11px;color:#c4b89d;margin-top:16px">· 42 ·</div>
+  </div>
+</div>
+
+<!-- explanation -->
+<div style="position:absolute;left:616px;top:3098px;width:392px">
+  <div style="background:#fbfaf6;border:1.5px solid #cdc6b6;border-radius:10px;padding:15px;box-shadow:0 1px 3px rgba(0,0,0,.08)">
+    <div style="font-family:'Caveat',cursive;font-weight:700;font-size:19px;color:#46402f;margin-bottom:8px">Ce qu'on a déjà → ce qu'on en fait</div>
+    <div style="font-size:12.5px;color:#5b5444;line-height:1.55">
+      À l'analyse du PDF, on garde déjà les <b>signets</b> (stockés sur l'unité). Chaque entrée donne un <b>titre</b>, un <b>niveau</b> et une <b>page</b> — aujourd'hui inutilisés pour l'affichage.
+    </div>
+    <div style="border-top:1px dashed #d3ccba;margin:12px 0"></div>
+    <div style="display:flex;flex-direction:column;gap:9px;font-size:12.5px;color:#5b5444;line-height:1.45">
+      <div style="display:flex;gap:9px;align-items:flex-start"><span style="color:#5b6e4a;font-weight:700">→</span><div>Une ligne = un signet ? On la dessine en <b>vrai titre</b> : centré, en <b>Cormorant</b>, taille selon le <b>niveau</b>, petit ornement, ruban en marge.</div></div>
+      <div style="display:flex;gap:9px;align-items:flex-start"><span style="color:#5b6e4a;font-weight:700">→</span><div>Bonus UX : poser le <b>début d'une semaine</b> se cale naturellement sur ces débuts de chapitre.</div></div>
+      <div style="display:flex;gap:9px;align-items:flex-start"><span style="color:#9A6A2E;font-weight:700">≈</span><div>Repli possible : si un PDF n'a pas de signets, la page reste lisible (juste sans titres mis en valeur).</div></div>
+    </div>
+  </div>
+  <div style="margin-top:13px;background:#fbf8f1;border:1px solid #e4dcc9;border-radius:9px;padding:12px">
+    <div style="font-size:10px;color:#8a8270;letter-spacing:.06em;margin-bottom:7px">CE QUE LE SIGNET NOUS DONNE</div>
+    <div style="display:flex;gap:7px;flex-wrap:wrap;font-size:11px">
+      <span style="background:#ece4d6;border-radius:5px;padding:3px 9px;color:#5b5444">titre : « Apollon et Dionysos »</span>
+      <span style="background:#ece4d6;border-radius:5px;padding:3px 9px;color:#5b5444">niveau : 1</span>
+      <span style="background:#ece4d6;border-radius:5px;padding:3px 9px;color:#5b5444">page : 42</span>
+    </div>
+  </div>
+</div>
+
+<!-- closing reco -->
+<div style="position:absolute;left:616px;top:3470px;width:392px">
+  <div style="background:#fef4a8;padding:16px;box-shadow:0 1px 4px rgba(0,0,0,.12);transform:rotate(-1deg);font-family:'Architects Daughter',cursive;font-size:14px;line-height:1.55;color:#5a4a14">
+    <div style="font-family:'Caveat',cursive;font-weight:700;font-size:21px;color:#4a3c0c;margin-bottom:5px">Prochaine étape</div>
+    Ma reco : partir sur <b>A</b> (livre + frise) et lui emprunter le <b>plein cadre de B</b> quand on masque le rail. On garde le <b>clic-ligne</b>, on branche les <b>signets</b> pour la mise en page, et le même shell sert à la re-découpe. Dis-moi quelle direction te parle (<b>A</b> ou <b>B</b>, ou un mélange) et je passe au <b>rendu charte</b>.
+  </div>
+</div>
+
+</x-dc>
+</body>
+</html>

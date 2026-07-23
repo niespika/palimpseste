@@ -1,0 +1,798 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<meta name="design_doc_mode" content="canvas">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Caveat:wght@500;600;700&family=Architects+Daughter&display=swap" rel="stylesheet">
+<style>
+  body { margin:0; font-family:'Architects Daughter', cursive; color:#46402f; -webkit-font-smoothing:antialiased; }
+  /* reusable feel: hand-drawn wireframe. No classes used in markup (inline only); these are only resets. */
+</style>
+</helmet>
+
+<!-- ======================= INTRO ======================= -->
+<div style="position:absolute;left:80px;top:36px;width:1100px">
+  <div style="font-family:'Caveat',cursive;font-weight:700;font-size:46px;line-height:1.05;color:#3a352c">Palimpseste · Espace élève — pistes de navigation</div>
+  <div style="font-family:'Architects Daughter',cursive;font-size:16px;color:#7a7263;margin-top:8px;max-width:760px">Wireframes low-fi pour réorganiser la navigation et dégonfler la densité. On garde « un monde = une couleur ». Glisse pour te déplacer, zoome pour les détails.</div>
+</div>
+
+<!-- brief post-it -->
+<div style="position:absolute;left:80px;top:168px;width:330px">
+  <div style="background:#fef4a8;padding:16px 16px 18px;box-shadow:0 1px 4px rgba(0,0,0,.12);transform:rotate(-1.2deg);font-family:'Architects Daughter',cursive;font-size:14.5px;line-height:1.5;color:#5a4a14">
+    <div style="font-family:'Caveat',cursive;font-weight:700;font-size:21px;margin-bottom:6px;color:#4a3c0c">Le brief</div>
+    Trop d'infos au même endroit, tout en « tuiles empilées ». On veut une <b>hiérarchie claire</b> et surtout le <b>feedback côte à côte avec le nouveau brouillon</b> (Aletheia & Codex). Priorité : tableau de bord, Aletheia, écriture+retour.
+  </div>
+</div>
+
+<!-- legend card -->
+<div style="position:absolute;left:460px;top:168px;width:400px">
+  <div data-drags-parent="1" style="position:absolute;top:-26px;left:2px;font-family:'Caveat',cursive;font-size:19px;color:#6f6755">Conventions & couleurs des mondes</div>
+  <div style="background:#fbfaf6;border:1.5px solid #cdc6b6;border-radius:10px;box-shadow:0 1px 3px rgba(0,0,0,.08);padding:16px">
+    <div style="display:flex;flex-wrap:wrap;gap:10px 18px;font-size:13.5px;color:#5b5444">
+      <div style="display:flex;align-items:center;gap:7px"><span style="width:13px;height:13px;border-radius:50%;background:#2C4A7C;display:inline-block"></span>Aletheia</div>
+      <div style="display:flex;align-items:center;gap:7px"><span style="width:13px;height:13px;border-radius:50%;background:#5A6043;display:inline-block"></span>Fragments</div>
+      <div style="display:flex;align-items:center;gap:7px"><span style="width:13px;height:13px;border-radius:50%;background:#2E4A3C;display:inline-block"></span>Codex</div>
+      <div style="display:flex;align-items:center;gap:7px"><span style="width:13px;height:13px;border-radius:50%;background:#3E6B8E;display:inline-block"></span>Quazian</div>
+    </div>
+    <div style="border-top:1px dashed #d3ccba;margin:13px 0 11px"></div>
+    <div style="display:flex;flex-direction:column;gap:8px;font-size:13px;color:#7a7263">
+      <div style="display:flex;align-items:center;gap:9px"><span style="width:38px;height:9px;border-radius:5px;background:#e4decf;display:inline-block"></span> texte / contenu</div>
+      <div style="display:flex;align-items:center;gap:9px"><span style="width:38px;height:18px;border:1.4px solid #d3ccba;border-radius:5px;background:#fff;display:inline-block"></span> champ à remplir</div>
+      <div style="display:flex;align-items:center;gap:9px"><span style="display:inline-block;background:#fef4a8;font-size:10px;padding:2px 6px;border-radius:3px;color:#5a4a14">note</span> mon commentaire · <span style="display:inline-block;background:#f6c9bd;font-size:10px;padding:2px 6px;border-radius:3px;color:#7d3322">⚠</span> problème</div>
+    </div>
+  </div>
+</div>
+
+<!-- ======================= BAND 1 — DIAGNOSTIC ======================= -->
+<div style="position:absolute;left:80px;top:470px;font-family:'Caveat',cursive;font-weight:700;font-size:32px;color:#3a352c">1 · Ce qui coince aujourd'hui</div>
+<div style="position:absolute;left:80px;top:516px;font-family:'Architects Daughter',cursive;font-size:15px;color:#8a8270">Les écrans réels du site, tels qu'ils sont — tout est en pile verticale.</div>
+
+<!-- current Aletheia week (stacked) phone -->
+<div data-screen-label="Aletheia semaine — actuel" style="position:absolute;left:80px;top:566px;width:300px">
+  <div data-drags-parent="1" style="position:absolute;top:-26px;left:2px;font-family:'Caveat',cursive;font-size:19px;color:#6f6755">Aletheia · semaine — aujourd'hui</div>
+  <div style="border:2.5px solid #46402f;border-radius:30px;padding:9px;background:#46402f;box-shadow:0 3px 10px rgba(0,0,0,.13)">
+    <div style="height:5px;width:46px;background:#cdc6b6;border-radius:3px;margin:3px auto 7px"></div>
+    <div style="background:#f3ecdd;border-radius:22px;padding:14px;height:560px;overflow:hidden">
+      <div style="font-size:12px;color:#7a7263">← Planning</div>
+      <div style="font-family:'Caveat',cursive;font-weight:700;font-size:21px;color:#2C4A7C;margin-top:4px">Semaine 3 — Le contrat social</div>
+      <div style="display:flex;flex-direction:column;gap:10px;margin-top:12px">
+        <div style="background:#fff;border:1.4px solid #ded6c4;border-radius:9px;padding:10px">
+          <div style="font-size:13px;font-weight:700;color:#46402f">1. Ta lecture ✓</div>
+          <div style="display:flex;flex-direction:column;gap:5px;margin-top:7px">
+            <div style="height:8px;width:90%;background:#e4decf;border-radius:4px"></div>
+            <div style="height:8px;width:75%;background:#e4decf;border-radius:4px"></div>
+            <div style="height:8px;width:84%;background:#e4decf;border-radius:4px"></div>
+          </div>
+        </div>
+        <div style="background:#fff;border:1.4px solid #ded6c4;border-left:4px solid #2C4A7C;border-radius:9px;padding:10px">
+          <div style="font-size:13px;font-weight:700;color:#46402f">2. Retour — pour creuser</div>
+          <div style="display:flex;flex-direction:column;gap:5px;margin-top:7px">
+            <div style="height:8px;width:95%;background:#e4decf;border-radius:4px"></div>
+            <div style="height:8px;width:88%;background:#e4decf;border-radius:4px"></div>
+            <div style="height:8px;width:70%;background:#e4decf;border-radius:4px"></div>
+          </div>
+        </div>
+        <div style="background:#fff;border:1.4px solid #ded6c4;border-radius:9px;padding:10px">
+          <div style="font-size:13px;font-weight:700;color:#9A6A2E">3. Ta version finale ✎</div>
+          <div style="display:flex;flex-direction:column;gap:6px;margin-top:7px">
+            <div style="border:1.4px solid #d3ccba;background:#fff;border-radius:6px;height:30px"></div>
+            <div style="border:1.4px solid #d3ccba;background:#fff;border-radius:6px;height:42px"></div>
+          </div>
+        </div>
+        <div style="background:#fff;border:1.4px solid #ded6c4;border-radius:9px;padding:10px;opacity:.55">
+          <div style="font-size:13px;font-weight:700;color:#8a8270">4. Retour final — plus tard</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- problem sticky A -->
+<div style="position:absolute;left:404px;top:720px;width:236px">
+  <div style="background:#f6c9bd;padding:14px;box-shadow:0 1px 4px rgba(0,0,0,.12);transform:rotate(1.4deg);font-size:13.5px;line-height:1.5;color:#7d3322">
+    <b>⚠ Le nœud.</b> Pour réécrire le bloc 3, l'élève doit se souvenir du retour (bloc 2) situé plus haut → il scrolle sans arrêt et perd le fil entre lire et réécrire.
+  </div>
+  <div style="font-family:'Caveat',cursive;font-size:26px;color:#b4452f;margin-top:6px;margin-left:30px">↙ entre 2 et 3</div>
+</div>
+
+<!-- current dashboard (stacked) phone -->
+<div data-screen-label="Tableau de bord — actuel" style="position:absolute;left:700px;top:566px;width:300px">
+  <div data-drags-parent="1" style="position:absolute;top:-26px;left:2px;font-family:'Caveat',cursive;font-size:19px;color:#6f6755">Tableau de bord — aujourd'hui</div>
+  <div style="border:2.5px solid #46402f;border-radius:30px;padding:9px;background:#46402f;box-shadow:0 3px 10px rgba(0,0,0,.13)">
+    <div style="height:5px;width:46px;background:#cdc6b6;border-radius:3px;margin:3px auto 7px"></div>
+    <div style="background:#f4efe6;border-radius:22px;padding:14px;height:560px;overflow:hidden">
+      <div style="font-family:'Caveat',cursive;font-weight:700;font-size:20px;color:#46402f">Bonjour, Camille !</div>
+      <div style="font-size:11px;color:#8a8270;letter-spacing:.08em;margin-top:12px">À FAIRE</div>
+      <div style="display:flex;flex-direction:column;gap:7px;margin-top:6px">
+        <div style="background:#fff;border:1.4px solid #ded6c4;border-left:4px solid #5A6043;border-radius:8px;padding:9px"><div style="height:8px;width:80%;background:#e4decf;border-radius:4px"></div></div>
+        <div style="background:#fff;border:1.4px solid #ded6c4;border-left:4px solid #3E6B8E;border-radius:8px;padding:9px"><div style="height:8px;width:65%;background:#e4decf;border-radius:4px"></div></div>
+        <div style="background:#fff;border:1.4px solid #ded6c4;border-left:4px solid #2E4A3C;border-radius:8px;padding:9px"><div style="height:8px;width:72%;background:#e4decf;border-radius:4px"></div></div>
+      </div>
+      <div style="font-size:11px;color:#8a8270;letter-spacing:.08em;margin-top:13px">TA PROGRESSION</div>
+      <div style="display:flex;gap:7px;margin-top:6px">
+        <div style="flex:1;background:#fff;border:1.4px solid #ded6c4;border-radius:8px;padding:9px;height:46px"></div>
+        <div style="flex:1;background:#fff;border:1.4px solid #ded6c4;border-radius:8px;padding:9px;height:46px"></div>
+        <div style="flex:1;background:#fff;border:1.4px solid #ded6c4;border-radius:8px;padding:9px;height:46px"></div>
+      </div>
+      <div style="font-size:11px;color:#8a8270;letter-spacing:.08em;margin-top:13px">TES MODULES</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-top:6px">
+        <div style="background:#fff;border:1.4px solid #ded6c4;border-radius:8px;padding:9px;height:52px"></div>
+        <div style="background:#fff;border:1.4px solid #ded6c4;border-radius:8px;padding:9px;height:52px"></div>
+        <div style="background:#fff;border:1.4px solid #ded6c4;border-radius:8px;padding:9px;height:52px"></div>
+        <div style="background:#fff;border:1.4px solid #ded6c4;border-radius:8px;padding:9px;height:52px"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- problem sticky B -->
+<div style="position:absolute;left:1024px;top:720px;width:236px">
+  <div style="background:#f6c9bd;padding:14px;box-shadow:0 1px 4px rgba(0,0,0,.12);transform:rotate(-1.6deg);font-size:13.5px;line-height:1.5;color:#7d3322">
+    <b>⚠ Densité.</b> Trois grandes sections empilées, toutes de même poids. L'œil ne sait pas où aller en premier — « quoi faire maintenant ? » se perd.
+  </div>
+</div>
+
+<!-- ======================= BAND 2 — 3 PISTES ======================= -->
+<div style="position:absolute;left:80px;top:1290px;font-family:'Caveat',cursive;font-weight:700;font-size:32px;color:#3a352c">2 · Trois pistes de navigation</div>
+<div style="position:absolute;left:80px;top:1336px;font-family:'Architects Daughter',cursive;font-size:15px;color:#8a8270">Même contenu, trois façons de le ranger. Chaque piste : la nav sur mobile, un bandeau « sur ordi », et le pour / contre.</div>
+
+<!-- PISTE A -->
+<div data-screen-label="Piste A — barre du bas" style="position:absolute;left:80px;top:1400px;width:470px">
+  <div data-drags-parent="1" style="position:absolute;top:-28px;left:2px;font-family:'Caveat',cursive;font-weight:700;font-size:22px;color:#2C4A7C">Piste A — « Barre du bas · Aujourd'hui »</div>
+  <div style="background:#fbfaf6;border:1.5px solid #cdc6b6;border-radius:12px;box-shadow:0 1px 4px rgba(0,0,0,.09);padding:18px">
+    <!-- laptop strip -->
+    <div style="font-size:11px;color:#8a8270;margin-bottom:6px">SUR ORDI — déroulants conservés (moins de clics)</div>
+    <div style="position:relative;border:1.4px solid #d3ccba;border-radius:7px;background:#fff;padding:7px 9px;display:flex;align-items:center;gap:8px;font-size:12.5px;margin-bottom:16px">
+      <span style="font-family:'Caveat',cursive;font-weight:700;font-size:14px;color:#46402f;letter-spacing:.06em">PALIMPSESTE</span>
+      <span style="margin-left:6px;background:#ece4d6;color:#46402f;padding:3px 9px;border-radius:6px">Aujourd'hui</span>
+      <span style="color:#46402f;display:inline-flex;align-items:center;gap:3px">Modules <span style="font-size:9px">▾</span></span>
+      <span style="color:#7a7263">Calendrier</span><span style="color:#7a7263">Moi</span>
+      <!-- open dropdown -->
+      <div style="position:absolute;top:32px;left:120px;background:#fff;border:1.3px solid #d3ccba;border-radius:8px;box-shadow:0 4px 12px rgba(0,0,0,.13);padding:6px;display:flex;flex-direction:column;gap:3px;z-index:2;min-width:120px">
+        <span style="display:flex;align-items:center;gap:6px;font-size:11.5px;color:#5b5444;padding:3px 5px"><span style="width:7px;height:7px;border-radius:50%;background:#2C4A7C"></span>Aletheia</span>
+        <span style="display:flex;align-items:center;gap:6px;font-size:11.5px;color:#5b5444;padding:3px 5px"><span style="width:7px;height:7px;border-radius:50%;background:#5A6043"></span>Fragments</span>
+        <span style="display:flex;align-items:center;gap:6px;font-size:11.5px;color:#5b5444;padding:3px 5px"><span style="width:7px;height:7px;border-radius:50%;background:#2E4A3C"></span>Codex</span>
+        <span style="display:flex;align-items:center;gap:6px;font-size:11.5px;color:#5b5444;padding:3px 5px;background:#f0ece2;border-radius:5px"><span style="width:7px;height:7px;border-radius:50%;background:#3E6B8E"></span>Quazian</span>
+      </div>
+    </div>
+    <!-- phone -->
+    <div style="display:flex;gap:16px">
+      <div style="border:2.5px solid #46402f;border-radius:26px;padding:8px;background:#46402f;width:212px;flex-shrink:0">
+        <div style="height:4px;width:40px;background:#cdc6b6;border-radius:3px;margin:2px auto 6px"></div>
+        <div style="background:#f4efe6;border-radius:18px;height:360px;display:flex;flex-direction:column">
+          <div style="padding:12px 12px 0">
+            <div style="font-family:'Caveat',cursive;font-weight:700;font-size:18px;color:#46402f">Aujourd'hui</div>
+            <div style="font-size:10.5px;color:#8a8270">jeudi 25 — semaine 3</div>
+          </div>
+          <div style="padding:10px 12px;display:flex;flex-direction:column;gap:8px;flex:1">
+            <div style="background:#fff;border:1.4px solid #ded6c4;border-left:4px solid #2C4A7C;border-radius:9px;padding:10px">
+              <div style="font-size:9.5px;color:#2C4A7C;letter-spacing:.05em">▸ MAINTENANT</div>
+              <div style="font-size:12.5px;font-weight:700;color:#46402f;margin-top:3px">Aletheia — un retour t'attend</div>
+              <div style="font-size:10.5px;color:#7a7263;margin-top:2px">Lis-le et réécris ta version finale</div>
+            </div>
+            <div style="background:#fff;border:1.2px solid #ded6c4;border-radius:8px;padding:8px;display:flex;align-items:center;gap:7px">
+              <span style="width:9px;height:9px;border-radius:50%;background:#3E6B8E"></span><span style="font-size:11px;color:#5b5444">8 cartes à réviser</span>
+            </div>
+            <div style="background:#fff;border:1.2px solid #ded6c4;border-radius:8px;padding:8px;display:flex;align-items:center;gap:7px">
+              <span style="width:9px;height:9px;border-radius:50%;background:#5A6043"></span><span style="font-size:11px;color:#5b5444">Fragment à déposer · dim.</span>
+            </div>
+          </div>
+          <!-- bottom tab bar -->
+          <div style="border-top:1.4px solid #ded6c4;background:#fbf8f1;border-radius:0 0 18px 18px;display:flex;justify-content:space-around;padding:7px 4px">
+            <div style="text-align:center;color:#2C4A7C"><div style="width:18px;height:18px;border:2px solid #2C4A7C;border-radius:5px;margin:0 auto"></div><div style="font-size:8.5px;margin-top:2px">Aujourd'hui</div></div>
+            <div style="text-align:center;color:#a59c88"><div style="width:18px;height:18px;border:2px solid #c4bca8;border-radius:5px;margin:0 auto"></div><div style="font-size:8.5px;margin-top:2px">Modules</div></div>
+            <div style="text-align:center;color:#a59c88"><div style="width:18px;height:18px;border:2px solid #c4bca8;border-radius:5px;margin:0 auto"></div><div style="font-size:8.5px;margin-top:2px">Agenda</div></div>
+            <div style="text-align:center;color:#a59c88"><div style="width:18px;height:18px;border:2px solid #c4bca8;border-radius:50%;margin:0 auto"></div><div style="font-size:8.5px;margin-top:2px">Moi</div></div>
+          </div>
+        </div>
+      </div>
+      <div style="font-size:12.5px;color:#5b5444;line-height:1.5">
+        <div style="font-family:'Caveat',cursive;font-weight:700;font-size:16px;color:#46402f;margin-bottom:4px">L'idée</div>
+        <b>Mobile :</b> barre fixe en bas (au pouce), 4 onglets. <b>Ordi :</b> on garde les déroulants (Modules ▾) → un clic vers le monde voulu. « Aujourd'hui » remplace les 3 sections empilées par <b>un seul fil priorisé</b>.
+        <div style="margin-top:10px;color:#5b6e4a">+ rapide partout, dégonfle la densité</div>
+        <div style="color:#a23e2e">– « Aujourd'hui » doit bien trier l'urgent</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- PISTE B -->
+<div data-screen-label="Piste B — hub des mondes" style="position:absolute;left:600px;top:1400px;width:470px">
+  <div data-drags-parent="1" style="position:absolute;top:-28px;left:2px;font-family:'Caveat',cursive;font-weight:700;font-size:22px;color:#2E4A3C">Piste B — « Hub des mondes »</div>
+  <div style="background:#fbfaf6;border:1.5px solid #cdc6b6;border-radius:12px;box-shadow:0 1px 4px rgba(0,0,0,.09);padding:18px">
+    <div style="font-size:11px;color:#8a8270;margin-bottom:6px">SUR ORDI — rail des mondes à gauche</div>
+    <div style="border:1.4px solid #d3ccba;border-radius:7px;background:#fff;padding:8px;display:flex;gap:8px;font-size:11.5px;margin-bottom:16px">
+      <div style="width:74px;flex-shrink:0;border-right:1px solid #ece4d6;padding-right:8px;display:flex;flex-direction:column;gap:5px">
+        <div style="display:flex;align-items:center;gap:5px"><span style="width:8px;height:8px;border-radius:50%;background:#2C4A7C"></span>Aletheia</div>
+        <div style="display:flex;align-items:center;gap:5px"><span style="width:8px;height:8px;border-radius:50%;background:#5A6043"></span>Fragments</div>
+        <div style="display:flex;align-items:center;gap:5px"><span style="width:8px;height:8px;border-radius:50%;background:#2E4A3C"></span>Codex</div>
+        <div style="display:flex;align-items:center;gap:5px"><span style="width:8px;height:8px;border-radius:50%;background:#3E6B8E"></span>Quazian</div>
+      </div>
+      <div style="flex:1;display:flex;flex-direction:column;gap:5px;justify-content:center">
+        <div style="height:8px;width:80%;background:#e4decf;border-radius:4px"></div>
+        <div style="height:8px;width:60%;background:#e4decf;border-radius:4px"></div>
+      </div>
+    </div>
+    <div style="display:flex;gap:16px">
+      <div style="border:2.5px solid #46402f;border-radius:26px;padding:8px;background:#46402f;width:212px;flex-shrink:0">
+        <div style="height:4px;width:40px;background:#cdc6b6;border-radius:3px;margin:2px auto 6px"></div>
+        <div style="background:#f4efe6;border-radius:18px;height:360px;padding:11px;overflow:hidden">
+          <div style="background:#fff;border:1.4px solid #ded6c4;border-radius:8px;padding:7px 9px;display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+            <span style="font-size:11px;font-weight:700;color:#46402f">À faire</span><span style="background:#efe4cf;color:#9A6A2E;font-size:10px;padding:2px 7px;border-radius:10px">2</span>
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+            <div style="background:#fff;border:1.4px solid #ded6c4;border-radius:9px;overflow:hidden">
+              <div style="height:5px;background:#2C4A7C"></div>
+              <div style="padding:8px;text-align:center">
+                <div style="width:26px;height:26px;border-radius:50%;background:#dde3ec;margin:0 auto 5px"></div>
+                <div style="font-family:'Caveat',cursive;font-weight:700;font-size:13px;color:#2C4A7C">ALETHEIA</div>
+                <div style="font-size:8.5px;background:#efe4cf;color:#9A6A2E;border-radius:8px;padding:1px 5px;display:inline-block;margin-top:3px">retour à lire</div>
+              </div>
+            </div>
+            <div style="background:#fff;border:1.4px solid #ded6c4;border-radius:9px;overflow:hidden">
+              <div style="height:5px;background:#5A6043"></div>
+              <div style="padding:8px;text-align:center">
+                <div style="width:26px;height:26px;border-radius:50%;background:#e2e3d2;margin:0 auto 5px"></div>
+                <div style="font-family:'Caveat',cursive;font-weight:700;font-size:13px;color:#5A6043">FRAGMENTS</div>
+                <div style="font-size:8.5px;background:#efe4cf;color:#9A6A2E;border-radius:8px;padding:1px 5px;display:inline-block;margin-top:3px">à déposer</div>
+              </div>
+            </div>
+            <div style="background:#fff;border:1.4px solid #ded6c4;border-radius:9px;overflow:hidden">
+              <div style="height:5px;background:#2E4A3C"></div>
+              <div style="padding:8px;text-align:center">
+                <div style="width:26px;height:26px;border-radius:50%;background:#dce6df;margin:0 auto 5px"></div>
+                <div style="font-family:'Caveat',cursive;font-weight:700;font-size:13px;color:#2E4A3C">CODEX</div>
+                <div style="font-size:8.5px;color:#8a8270;margin-top:3px">à jour</div>
+              </div>
+            </div>
+            <div style="background:#fff;border:1.4px solid #ded6c4;border-radius:9px;overflow:hidden">
+              <div style="height:5px;background:#3E6B8E"></div>
+              <div style="padding:8px;text-align:center">
+                <div style="width:26px;height:26px;border-radius:50%;background:#dce6ec;margin:0 auto 5px"></div>
+                <div style="font-family:'Caveat',cursive;font-weight:700;font-size:13px;color:#3E6B8E">QUAZIAN</div>
+                <div style="font-size:8.5px;background:#efe4cf;color:#9A6A2E;border-radius:8px;padding:1px 5px;display:inline-block;margin-top:3px">8 cartes</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div style="font-size:12.5px;color:#5b5444;line-height:1.5">
+        <div style="font-family:'Caveat',cursive;font-weight:700;font-size:16px;color:#46402f;margin-bottom:4px">L'idée</div>
+        L'accueil <b>est</b> le choix du monde. Chaque tuile = sceau + nom + <b>son état</b> → on sait quoi ouvrir sans tout lire. Bandeau « à faire » compact en haut.
+        <div style="margin-top:10px;color:#5b6e4a">+ fidèle à « un monde = une couleur »</div>
+        <div style="color:#a23e2e">– l'urgent transversal moins visible</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- PISTE C -->
+<div data-screen-label="Piste C — fil + lanceur" style="position:absolute;left:1120px;top:1400px;width:470px">
+  <div data-drags-parent="1" style="position:absolute;top:-28px;left:2px;font-family:'Caveat',cursive;font-weight:700;font-size:22px;color:#9A6A2E">Piste C — « Fil de la semaine + lanceur »</div>
+  <div style="background:#fbfaf6;border:1.5px solid #cdc6b6;border-radius:12px;box-shadow:0 1px 4px rgba(0,0,0,.09);padding:18px">
+    <div style="font-size:11px;color:#8a8270;margin-bottom:6px">SUR ORDI — fil au centre, colonne « cette semaine »</div>
+    <div style="border:1.4px solid #d3ccba;border-radius:7px;background:#fff;padding:8px;display:flex;gap:8px;font-size:11.5px;margin-bottom:16px">
+      <div style="flex:1;display:flex;flex-direction:column;gap:5px;justify-content:center">
+        <div style="height:8px;width:90%;background:#e4decf;border-radius:4px"></div>
+        <div style="height:8px;width:70%;background:#e4decf;border-radius:4px"></div>
+        <div style="height:8px;width:80%;background:#e4decf;border-radius:4px"></div>
+      </div>
+      <div style="width:90px;flex-shrink:0;border-left:1px solid #ece4d6;padding-left:8px">
+        <div style="font-size:9.5px;color:#8a8270">CETTE SEMAINE</div>
+        <div style="height:7px;width:90%;background:#e4decf;border-radius:4px;margin-top:5px"></div>
+        <div style="height:7px;width:75%;background:#e4decf;border-radius:4px;margin-top:4px"></div>
+      </div>
+    </div>
+    <div style="display:flex;gap:16px">
+      <div style="border:2.5px solid #46402f;border-radius:26px;padding:8px;background:#46402f;width:212px;flex-shrink:0;position:relative">
+        <div style="height:4px;width:40px;background:#cdc6b6;border-radius:3px;margin:2px auto 6px"></div>
+        <div style="background:#f4efe6;border-radius:18px;height:360px;padding:11px;overflow:hidden">
+          <div style="font-family:'Caveat',cursive;font-weight:700;font-size:17px;color:#46402f">Cette semaine</div>
+          <div style="display:flex;flex-direction:column;gap:9px;margin-top:10px">
+            <div style="display:flex;gap:8px"><div style="width:11px;height:11px;border-radius:50%;background:#2C4A7C;margin-top:2px;flex-shrink:0"></div><div><div style="font-size:11px;font-weight:700;color:#46402f">Retour Aletheia à lire</div><div style="font-size:9.5px;color:#8a8270">aujourd'hui</div></div></div>
+            <div style="display:flex;gap:8px"><div style="width:11px;height:11px;border-radius:50%;background:#5A6043;margin-top:2px;flex-shrink:0"></div><div><div style="font-size:11px;font-weight:700;color:#46402f">Déposer le fragment</div><div style="font-size:9.5px;color:#8a8270">dimanche 23h</div></div></div>
+            <div style="display:flex;gap:8px"><div style="width:11px;height:11px;border-radius:50%;background:#3E6B8E;margin-top:2px;flex-shrink:0"></div><div><div style="font-size:11px;font-weight:700;color:#46402f">8 cartes à réviser</div><div style="font-size:9.5px;color:#8a8270">quand tu veux</div></div></div>
+          </div>
+        </div>
+        <!-- launcher FAB -->
+        <div style="position:absolute;right:18px;bottom:18px;width:42px;height:42px;border-radius:50%;background:#46402f;color:#f4efe6;display:flex;align-items:center;justify-content:center;font-size:24px;box-shadow:0 2px 6px rgba(0,0,0,.3)">⌗</div>
+      </div>
+      <div style="font-size:12.5px;color:#5b5444;line-height:1.5">
+        <div style="font-family:'Caveat',cursive;font-weight:700;font-size:16px;color:#46402f;margin-bottom:4px">L'idée</div>
+        L'accueil = une <b>ligne du temps</b> de la semaine (échéances, retours), pas des sections. Le bouton <b>⌗ lanceur</b> ouvre la grille des mondes partout.
+        <div style="margin-top:10px;color:#5b6e4a">+ met le calendrier au centre</div>
+        <div style="color:#a23e2e">– deux logiques à apprendre (fil + lanceur)</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ======================= BAND 3 — ÉCRANS CLÉS ======================= -->
+<div style="position:absolute;left:80px;top:2330px;font-family:'Caveat',cursive;font-weight:700;font-size:32px;color:#3a352c">3 · Les écrans clés, repensés</div>
+<div style="position:absolute;left:80px;top:2376px;font-family:'Architects Daughter',cursive;font-size:15px;color:#8a8270">Le cœur du sujet : hiérarchie claire + feedback côte à côte. Indépendant de la piste choisie.</div>
+
+<!-- 3a Dashboard reworked — phone -->
+<div data-screen-label="Tableau de bord repensé — mobile" style="position:absolute;left:80px;top:2440px;width:300px">
+  <div data-drags-parent="1" style="position:absolute;top:-26px;left:2px;font-family:'Caveat',cursive;font-size:19px;color:#6f6755">Tableau de bord — mobile</div>
+  <div style="border:2.5px solid #46402f;border-radius:30px;padding:9px;background:#46402f;box-shadow:0 3px 10px rgba(0,0,0,.13)">
+    <div style="height:5px;width:46px;background:#cdc6b6;border-radius:3px;margin:3px auto 7px"></div>
+    <div style="background:#f4efe6;border-radius:22px;padding:14px;height:540px;overflow:hidden">
+      <div style="font-family:'Caveat',cursive;font-weight:700;font-size:19px;color:#46402f">Bonjour, Camille</div>
+      <!-- hero -->
+      <div style="background:#fff;border:1.6px solid #2C4A7C;border-radius:11px;padding:12px;margin-top:10px">
+        <div style="font-size:10px;color:#2C4A7C;letter-spacing:.06em">▸ À FAIRE MAINTENANT</div>
+        <div style="font-size:14px;font-weight:700;color:#46402f;margin-top:4px">Aletheia — un retour t'attend</div>
+        <div style="font-size:11px;color:#7a7263;margin-top:2px">Lis-le et réécris ta version finale</div>
+        <div style="margin-top:9px;background:#2C4A7C;color:#f4efe6;text-align:center;border-radius:7px;padding:7px;font-size:12px">Ouvrir →</div>
+      </div>
+      <!-- compact next -->
+      <div style="font-size:10.5px;color:#8a8270;letter-spacing:.06em;margin-top:13px">ENSUITE</div>
+      <div style="display:flex;flex-direction:column;gap:6px;margin-top:5px">
+        <div style="background:#fbf8f1;border:1px solid #ded6c4;border-radius:8px;padding:8px;display:flex;align-items:center;gap:8px"><span style="width:8px;height:8px;border-radius:50%;background:#3E6B8E"></span><span style="font-size:11.5px;color:#5b5444;flex:1">8 cartes à réviser</span><span style="font-size:10px;color:#a59c88">→</span></div>
+        <div style="background:#fbf8f1;border:1px solid #ded6c4;border-radius:8px;padding:8px;display:flex;align-items:center;gap:8px"><span style="width:8px;height:8px;border-radius:50%;background:#5A6043"></span><span style="font-size:11.5px;color:#5b5444;flex:1">Fragment · dimanche</span><span style="font-size:10px;color:#a59c88">→</span></div>
+      </div>
+      <!-- progression: one compact strip -->
+      <div style="font-size:10.5px;color:#8a8270;letter-spacing:.06em;margin-top:13px">TA PROGRESSION</div>
+      <div style="background:#fbf8f1;border:1px solid #ded6c4;border-radius:8px;padding:9px;margin-top:5px;display:flex;justify-content:space-around;font-size:11px">
+        <span style="color:#5b6e4a">Découvertes <b>A</b></span><span style="color:#3E6B8E">Sources <b>B</b></span><span style="color:#9A6A2E">Réflexions <b>C</b></span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 3a Dashboard reworked — laptop -->
+<div data-screen-label="Tableau de bord repensé — ordi" style="position:absolute;left:440px;top:2440px;width:660px">
+  <div data-drags-parent="1" style="position:absolute;top:-26px;left:2px;font-family:'Caveat',cursive;font-size:19px;color:#6f6755">Tableau de bord — ordinateur</div>
+  <div style="border:1.5px solid #cdc6b6;border-radius:11px;background:#fff;box-shadow:0 2px 7px rgba(0,0,0,.1);overflow:hidden">
+    <div style="background:#ece4d6;padding:8px 12px;display:flex;align-items:center;gap:6px"><span style="width:9px;height:9px;border-radius:50%;background:#c9b89a"></span><span style="width:9px;height:9px;border-radius:50%;background:#c9b89a"></span><span style="width:9px;height:9px;border-radius:50%;background:#c9b89a"></span></div>
+    <div style="background:#f4efe6;padding:18px">
+      <div style="display:flex;justify-content:space-between;align-items:baseline">
+        <span style="font-family:'Caveat',cursive;font-weight:700;font-size:14px;letter-spacing:.08em;color:#46402f">PALIMPSESTE</span>
+        <div style="font-size:12px;color:#7a7263;display:flex;gap:14px"><span style="color:#46402f;border-bottom:2px solid #2C4A7C;padding-bottom:2px">Tableau de bord</span><span>Calendrier</span><span>Modules ▾</span></div>
+      </div>
+      <div style="font-family:'Caveat',cursive;font-weight:700;font-size:22px;color:#46402f;margin-top:14px">Bonjour, Camille</div>
+      <div style="display:grid;grid-template-columns:1.4fr 1fr;gap:14px;margin-top:12px">
+        <!-- left -->
+        <div style="display:flex;flex-direction:column;gap:12px">
+          <div style="background:#fff;border:1.6px solid #2C4A7C;border-radius:11px;padding:14px">
+            <div style="font-size:10.5px;color:#2C4A7C;letter-spacing:.06em">▸ À FAIRE MAINTENANT</div>
+            <div style="font-size:16px;font-weight:700;color:#46402f;margin-top:5px">Aletheia — un retour t'attend</div>
+            <div style="font-size:12.5px;color:#7a7263;margin-top:3px">Lis ton retour et réécris ta version finale.</div>
+            <div style="margin-top:11px;background:#2C4A7C;color:#f4efe6;display:inline-block;border-radius:8px;padding:8px 16px;font-size:13px">Ouvrir l'atelier →</div>
+          </div>
+          <div>
+            <div style="font-size:10.5px;color:#8a8270;letter-spacing:.06em;margin-bottom:6px">ENSUITE CETTE SEMAINE</div>
+            <div style="display:flex;flex-direction:column;gap:7px">
+              <div style="background:#fff;border:1px solid #ded6c4;border-radius:9px;padding:10px;display:flex;align-items:center;gap:10px"><span style="width:9px;height:9px;border-radius:50%;background:#3E6B8E"></span><span style="font-size:13px;color:#5b5444;flex:1">8 cartes à réviser — Quazian</span><span style="color:#a59c88;font-size:12px">→</span></div>
+              <div style="background:#fff;border:1px solid #ded6c4;border-radius:9px;padding:10px;display:flex;align-items:center;gap:10px"><span style="width:9px;height:9px;border-radius:50%;background:#5A6043"></span><span style="font-size:13px;color:#5b5444;flex:1">Fragment à déposer — dimanche 23h</span><span style="color:#a59c88;font-size:12px">→</span></div>
+            </div>
+          </div>
+        </div>
+        <!-- right -->
+        <div style="display:flex;flex-direction:column;gap:12px">
+          <div>
+            <div style="font-size:10.5px;color:#8a8270;letter-spacing:.06em;margin-bottom:6px">MES MONDES</div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+              <div style="background:#fff;border:1px solid #ded6c4;border-top:4px solid #2C4A7C;border-radius:8px;padding:9px"><div style="font-size:11px;font-weight:700;color:#2C4A7C">Aletheia</div><div style="font-size:9.5px;color:#9A6A2E">retour à lire</div></div>
+              <div style="background:#fff;border:1px solid #ded6c4;border-top:4px solid #5A6043;border-radius:8px;padding:9px"><div style="font-size:11px;font-weight:700;color:#5A6043">Fragments</div><div style="font-size:9.5px;color:#9A6A2E">à déposer</div></div>
+              <div style="background:#fff;border:1px solid #ded6c4;border-top:4px solid #2E4A3C;border-radius:8px;padding:9px"><div style="font-size:11px;font-weight:700;color:#2E4A3C">Codex</div><div style="font-size:9.5px;color:#8a8270">à jour</div></div>
+              <div style="background:#fff;border:1px solid #ded6c4;border-top:4px solid #3E6B8E;border-radius:8px;padding:9px"><div style="font-size:11px;font-weight:700;color:#3E6B8E">Quazian</div><div style="font-size:9.5px;color:#9A6A2E">8 cartes</div></div>
+            </div>
+          </div>
+          <div>
+            <div style="font-size:10.5px;color:#8a8270;letter-spacing:.06em;margin-bottom:6px">PROGRESSION</div>
+            <div style="background:#fff;border:1px solid #ded6c4;border-radius:9px;padding:11px;display:flex;justify-content:space-around;font-size:12px"><span style="color:#5b6e4a">Découvertes <b>A</b></span><span style="color:#3E6B8E">Sources <b>B</b></span><span style="color:#9A6A2E">Réflexions <b>C</b></span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- dashboard note -->
+<div style="position:absolute;left:1140px;top:2500px;width:250px">
+  <div style="background:#fef4a8;padding:14px;box-shadow:0 1px 4px rgba(0,0,0,.12);transform:rotate(1.3deg);font-size:13.5px;line-height:1.5;color:#5a4a14">
+    <b>Hiérarchie, pas pile.</b> Une seule chose « maintenant » en grand, le reste en lignes compactes. La progression devient une bande, plus 3 cartes. L'œil sait où aller.
+  </div>
+</div>
+
+<!-- 3b Aletheia atelier — laptop hero (side by side) -->
+<div style="position:absolute;left:80px;top:3160px;font-family:'Caveat',cursive;font-weight:700;font-size:24px;color:#2C4A7C">Aletheia · semaine — « l'atelier » : retour ↔ réécriture côte à côte</div>
+
+<div data-screen-label="Aletheia atelier — ordi" style="position:absolute;left:80px;top:3220px;width:900px">
+  <div data-drags-parent="1" style="position:absolute;top:-26px;left:2px;font-family:'Caveat',cursive;font-size:19px;color:#6f6755">Sur ordinateur / tablette</div>
+  <div style="border:1.5px solid #cdc6b6;border-radius:11px;background:#fff;box-shadow:0 2px 8px rgba(0,0,0,.1);overflow:hidden">
+    <div style="background:#ece4d6;padding:8px 12px;display:flex;align-items:center;gap:6px"><span style="width:9px;height:9px;border-radius:50%;background:#c9b89a"></span><span style="width:9px;height:9px;border-radius:50%;background:#c9b89a"></span><span style="width:9px;height:9px;border-radius:50%;background:#c9b89a"></span></div>
+    <div style="background:#f3ecdd;padding:20px">
+      <div style="font-size:12px;color:#7a7263">← Planning · Aletheia</div>
+      <div style="font-family:'Caveat',cursive;font-weight:700;font-size:24px;color:#2C4A7C;margin-top:4px">Semaine 3 — Le contrat social</div>
+      <!-- stepper -->
+      <div style="display:flex;align-items:center;gap:8px;margin-top:12px;font-size:11.5px;color:#7a7263">
+        <span style="display:flex;align-items:center;gap:5px"><span style="width:18px;height:18px;border-radius:50%;background:#5b6e4a;color:#fff;display:inline-flex;align-items:center;justify-content:center;font-size:11px">✓</span>Lecture</span>
+        <span style="color:#cdc6b6">—</span>
+        <span style="display:flex;align-items:center;gap:5px"><span style="width:18px;height:18px;border-radius:50%;background:#5b6e4a;color:#fff;display:inline-flex;align-items:center;justify-content:center;font-size:11px">✓</span>Retour</span>
+        <span style="color:#cdc6b6">—</span>
+        <span style="display:flex;align-items:center;gap:5px;color:#2C4A7C;font-weight:700"><span style="width:18px;height:18px;border-radius:50%;background:#2C4A7C;color:#fff;display:inline-flex;align-items:center;justify-content:center;font-size:11px">3</span>Réécriture</span>
+        <span style="color:#cdc6b6">—</span>
+        <span style="display:flex;align-items:center;gap:5px;opacity:.5"><span style="width:18px;height:18px;border-radius:50%;border:1.5px solid #c4bca8;display:inline-flex;align-items:center;justify-content:center;font-size:11px">4</span>Retour final</span>
+      </div>
+      <!-- two columns -->
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:16px">
+        <!-- LEFT: retour (pinned) -->
+        <div>
+          <div style="font-size:11px;color:#8a8270;letter-spacing:.05em;margin-bottom:6px">📌 TON RETOUR — RESTE VISIBLE</div>
+          <div style="display:flex;flex-direction:column;gap:9px">
+            <div style="background:#fff;border:1.3px solid #ded6c4;border-left:4px solid #2C4A7C;border-radius:9px;padding:11px">
+              <div style="font-size:12px;font-weight:700;color:#46402f">Pour creuser ton idée</div>
+              <div style="display:flex;flex-direction:column;gap:5px;margin-top:6px"><div style="height:8px;width:92%;background:#e4decf;border-radius:4px"></div><div style="height:8px;width:78%;background:#e4decf;border-radius:4px"></div></div>
+            </div>
+            <div style="background:#fff;border:1.3px solid #ded6c4;border-left:4px solid #3E6B8E;border-radius:9px;padding:11px">
+              <div style="font-size:12px;font-weight:700;color:#46402f">Sur ton accord</div>
+              <div style="display:flex;flex-direction:column;gap:5px;margin-top:6px"><div style="height:8px;width:85%;background:#e4decf;border-radius:4px"></div></div>
+            </div>
+            <div style="background:#fff;border:1.3px solid #ded6c4;border-left:4px solid #9A6A2E;border-radius:9px;padding:11px">
+              <div style="font-size:12px;font-weight:700;color:#46402f">Vocabulaire</div>
+              <div style="display:flex;flex-direction:column;gap:5px;margin-top:6px"><div style="height:8px;width:70%;background:#e4decf;border-radius:4px"></div></div>
+            </div>
+          </div>
+        </div>
+        <!-- RIGHT: réécriture -->
+        <div>
+          <div style="font-size:11px;color:#8a8270;letter-spacing:.05em;margin-bottom:6px">✎ TA VERSION FINALE</div>
+          <div style="display:flex;flex-direction:column;gap:11px">
+            <div><div style="font-size:11.5px;color:#5b5444;margin-bottom:4px">Idée principale</div><div style="border:1.4px solid #c4bca8;background:#fff;border-radius:7px;height:44px"></div></div>
+            <div><div style="font-size:11.5px;color:#5b5444;margin-bottom:4px">Arguments</div><div style="border:1.4px solid #c4bca8;background:#fff;border-radius:7px;height:78px"></div></div>
+            <div><div style="font-size:11.5px;color:#5b5444;margin-bottom:4px">Ton accord</div><div style="border:1.4px solid #c4bca8;background:#fff;border-radius:7px;height:52px"></div></div>
+            <div style="background:#2C4A7C;color:#f4efe6;text-align:center;border-radius:8px;padding:10px;font-size:13px">Envoyer ma version finale</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- annotation sticky on hero -->
+<div style="position:absolute;left:1010px;top:3280px;width:250px">
+  <div style="background:#fef4a8;padding:14px;box-shadow:0 1px 4px rgba(0,0,0,.12);transform:rotate(-1.5deg);font-size:13.5px;line-height:1.5;color:#5a4a14">
+    <b>Le fix central.</b> Le retour reste épinglé à gauche pendant que l'élève réécrit à droite. Plus besoin de scroller entre « lire » et « réécrire ».
+  </div>
+  <div style="font-family:'Caveat',cursive;font-size:26px;color:#9A6A2E;margin-top:4px;margin-left:14px">↖ collé en lisant</div>
+</div>
+
+<!-- 3b Aletheia atelier — phone (toggle) -->
+<div data-screen-label="Aletheia atelier — mobile" style="position:absolute;left:1300px;top:3220px;width:300px">
+  <div data-drags-parent="1" style="position:absolute;top:-26px;left:2px;font-family:'Caveat',cursive;font-size:19px;color:#6f6755">Sur téléphone</div>
+  <div style="border:2.5px solid #46402f;border-radius:30px;padding:9px;background:#46402f;box-shadow:0 3px 10px rgba(0,0,0,.13)">
+    <div style="height:5px;width:46px;background:#cdc6b6;border-radius:3px;margin:3px auto 7px"></div>
+    <div style="background:#f3ecdd;border-radius:22px;padding:13px;height:560px;overflow:hidden;display:flex;flex-direction:column">
+      <div style="font-family:'Caveat',cursive;font-weight:700;font-size:17px;color:#2C4A7C">Semaine 3 — réécriture</div>
+      <!-- pinned retour peek -->
+      <div style="background:#fff;border:1.3px solid #ded6c4;border-left:4px solid #2C4A7C;border-radius:9px;padding:9px;margin-top:9px">
+        <div style="display:flex;justify-content:space-between;align-items:center"><span style="font-size:11px;font-weight:700;color:#46402f">📌 Ton retour</span><span style="font-size:10px;color:#2C4A7C">déplier ⌄</span></div>
+        <div style="font-size:10.5px;color:#7a7263;margin-top:4px">Creuse ton idée · sur ton accord · vocabulaire…</div>
+      </div>
+      <!-- segmented toggle -->
+      <div style="display:flex;background:#ece4d6;border-radius:9px;padding:3px;margin-top:11px;font-size:11.5px">
+        <div style="flex:1;text-align:center;background:#fff;border-radius:7px;padding:6px;color:#46402f;font-weight:700">Réécriture</div>
+        <div style="flex:1;text-align:center;padding:6px;color:#8a8270">Retour complet</div>
+      </div>
+      <!-- fields -->
+      <div style="display:flex;flex-direction:column;gap:9px;margin-top:11px;flex:1">
+        <div><div style="font-size:11px;color:#5b5444;margin-bottom:3px">Idée principale</div><div style="border:1.4px solid #c4bca8;background:#fff;border-radius:7px;height:38px"></div></div>
+        <div><div style="font-size:11px;color:#5b5444;margin-bottom:3px">Arguments</div><div style="border:1.4px solid #c4bca8;background:#fff;border-radius:7px;height:64px"></div></div>
+        <div><div style="font-size:11px;color:#5b5444;margin-bottom:3px">Ton accord</div><div style="border:1.4px solid #c4bca8;background:#fff;border-radius:7px;height:40px"></div></div>
+      </div>
+      <div style="background:#2C4A7C;color:#f4efe6;text-align:center;border-radius:8px;padding:9px;font-size:12.5px;margin-top:8px">Envoyer ma version finale</div>
+    </div>
+  </div>
+</div>
+
+<!-- phone note -->
+<div style="position:absolute;left:1300px;top:3890px;width:250px">
+  <div style="background:#fef4a8;padding:13px;box-shadow:0 1px 4px rgba(0,0,0,.12);transform:rotate(1.4deg);font-size:13px;line-height:1.5;color:#5a4a14">
+    Trop étroit pour 2 colonnes : le retour devient un <b>bandeau épinglé qu'on déplie</b>, + une bascule <b>Réécriture / Retour complet</b>. On garde le retour « à portée de pouce ».
+  </div>
+</div>
+
+<!-- 3c Codex atelier — laptop -->
+<div style="position:absolute;left:80px;top:3960px;font-family:'Caveat',cursive;font-weight:700;font-size:24px;color:#2E4A3C">Codex · synthèse — suggestions ↔ V-finale côte à côte</div>
+
+<div data-screen-label="Codex atelier — ordi" style="position:absolute;left:80px;top:4020px;width:900px">
+  <div data-drags-parent="1" style="position:absolute;top:-26px;left:2px;font-family:'Caveat',cursive;font-size:19px;color:#6f6755">Sur ordinateur / tablette (mobile = même bascule qu'Aletheia)</div>
+  <div style="border:1.5px solid #cdc6b6;border-radius:11px;background:#fff;box-shadow:0 2px 8px rgba(0,0,0,.1);overflow:hidden">
+    <div style="background:#ece4d6;padding:8px 12px;display:flex;align-items:center;gap:6px"><span style="width:9px;height:9px;border-radius:50%;background:#c9b89a"></span><span style="width:9px;height:9px;border-radius:50%;background:#c9b89a"></span><span style="width:9px;height:9px;border-radius:50%;background:#c9b89a"></span></div>
+    <div style="background:#f0eade;padding:20px">
+      <div style="font-size:12px;color:#7a7263">← Codex</div>
+      <div style="font-family:'Caveat',cursive;font-weight:700;font-size:24px;color:#2E4A3C;margin-top:4px">Synthèse — Phase 2 : ta version finale</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:16px">
+        <!-- LEFT suggestions -->
+        <div>
+          <div style="font-size:11px;color:#8a8270;letter-spacing:.05em;margin-bottom:6px">📌 TES SUGGESTIONS V1 — À CORRIGER</div>
+          <div style="display:flex;flex-direction:column;gap:9px">
+            <div style="background:#fff;border:1.3px solid #ded6c4;border-radius:9px;padding:11px">
+              <div style="font-size:12px;font-weight:700;color:#9A6A2E">○ Ce que tu as oublié</div>
+              <div style="display:flex;flex-direction:column;gap:5px;margin-top:6px"><div style="height:8px;width:90%;background:#e4decf;border-radius:4px"></div><div style="height:8px;width:74%;background:#e4decf;border-radius:4px"></div></div>
+            </div>
+            <div style="background:#fff;border:1.3px solid #ded6c4;border-radius:9px;padding:11px">
+              <div style="font-size:12px;font-weight:700;color:#a23e2e">△ Erreurs et ambiguïtés</div>
+              <div style="display:flex;flex-direction:column;gap:5px;margin-top:6px"><div style="height:8px;width:88%;background:#e4decf;border-radius:4px"></div></div>
+            </div>
+            <div style="background:#fff;border:1.3px solid #ded6c4;border-radius:9px;padding:11px">
+              <div style="font-size:12px;font-weight:700;color:#7a7263">✎ Langue</div>
+              <div style="display:flex;flex-direction:column;gap:5px;margin-top:6px"><div style="height:8px;width:80%;background:#e4decf;border-radius:4px"></div></div>
+            </div>
+          </div>
+        </div>
+        <!-- RIGHT capture VF -->
+        <div>
+          <div style="font-size:11px;color:#8a8270;letter-spacing:.05em;margin-bottom:6px">📸 TA V-FINALE (photo du manuscrit)</div>
+          <div style="background:#efe4cf;border:1.3px solid #d8c39e;border-radius:9px;padding:10px;font-size:11.5px;color:#9A6A2E;margin-bottom:9px">Réécris ta synthèse à la main en corrigeant les suggestions, puis photographie-la.</div>
+          <div style="border:2px dashed #c4bca8;background:#fff;border-radius:10px;height:150px;display:flex;flex-direction:column;align-items:center;justify-content:center;color:#a59c88">
+            <div style="font-size:30px">⊕</div>
+            <div style="font-size:12px;margin-top:4px">Ajouter une photo</div>
+          </div>
+          <div style="background:#2E4A3C;color:#f0eade;text-align:center;border-radius:8px;padding:10px;font-size:13px;margin-top:11px">Envoyer ma V-finale</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- codex note -->
+<div style="position:absolute;left:1010px;top:4090px;width:260px">
+  <div style="background:#fef4a8;padding:14px;box-shadow:0 1px 4px rgba(0,0,0,.12);transform:rotate(1.5deg);font-size:13.5px;line-height:1.5;color:#5a4a14">
+    Codex dit déjà à l'élève « garde ces suggestions <b>sous les yeux</b> »… mais les place <b>au-dessus</b> de la photo. Ici elles sont vraiment à côté pendant la réécriture. Même principe que l'atelier Aletheia → un seul geste à apprendre.
+  </div>
+</div>
+
+<!-- ======================= BAND 4 — QUAZIAN ======================= -->
+<div style="position:absolute;left:80px;top:4640px;font-family:'Caveat',cursive;font-weight:700;font-size:32px;color:#3E6B8E">4 · Quazian — révision (flashcards) + quizz</div>
+<div style="position:absolute;left:80px;top:4686px;font-family:'Architects Daughter',cursive;font-size:15px;color:#8a8270">Deux activités sous un même monde. Même principe : une chose à la fois, plein écran, zéro distraction.</div>
+
+<!-- entry/dashboard note -->
+<div style="position:absolute;left:80px;top:4740px;width:300px">
+  <div data-drags-parent="1" style="position:absolute;top:-26px;left:2px;font-family:'Caveat',cursive;font-size:19px;color:#6f6755">Accueil Quazian — mobile</div>
+  <div style="border:2.5px solid #46402f;border-radius:30px;padding:9px;background:#46402f;box-shadow:0 3px 10px rgba(0,0,0,.13)">
+    <div style="height:5px;width:46px;background:#cdc6b6;border-radius:3px;margin:3px auto 7px"></div>
+    <div style="background:#f1f0ec;border-radius:22px;padding:14px;height:540px;overflow:hidden;display:flex;flex-direction:column">
+      <div style="font-size:12px;color:#7a7263">← Aujourd'hui</div>
+      <div style="font-family:'Caveat',cursive;font-weight:700;font-size:21px;color:#3E6B8E;margin-top:4px">Quazian</div>
+      <!-- two big stats -->
+      <div style="display:flex;gap:9px;margin-top:12px">
+        <div style="flex:1;background:#fff;border:1.4px solid #d9dbe0;border-radius:11px;padding:12px;text-align:center"><div style="font-family:'Caveat',cursive;font-weight:700;font-size:26px;color:#46402f">8</div><div style="font-size:10px;color:#8a8270">à réviser aujourd'hui</div></div>
+        <div style="flex:1;background:#fff;border:1.4px solid #d9dbe0;border-radius:11px;padding:12px;text-align:center"><div style="font-family:'Caveat',cursive;font-weight:700;font-size:26px;color:#46402f">64</div><div style="font-size:10px;color:#8a8270">cartes au total</div></div>
+      </div>
+      <!-- primary CTA flashcards -->
+      <div style="background:#3E6B8E;color:#f1f0ec;text-align:center;border-radius:10px;padding:13px;font-size:14px;font-weight:700;margin-top:12px">Réviser mes 8 cartes →</div>
+      <div style="background:#fff;border:1.4px solid #d9dbe0;color:#46402f;text-align:center;border-radius:10px;padding:11px;font-size:12.5px;margin-top:8px">Consulter toutes mes cartes</div>
+      <!-- quizz section -->
+      <div style="font-size:10.5px;color:#8a8270;letter-spacing:.06em;margin-top:16px">QUIZZ</div>
+      <div style="background:#fff;border:1.4px solid #d9dbe0;border-left:4px solid #3E6B8E;border-radius:10px;padding:11px;margin-top:6px">
+        <div style="display:flex;justify-content:space-between;align-items:center"><span style="font-size:12.5px;font-weight:700;color:#46402f">Le contrat social</span><span style="background:#dbe6ef;color:#2f5a7d;font-size:9.5px;padding:2px 7px;border-radius:9px">ouvert</span></div>
+        <div style="font-size:10.5px;color:#8a8270;margin-top:3px">8 questions · ferme dimanche</div>
+      </div>
+      <div style="background:#fff;border:1.4px solid #d9dbe0;border-radius:10px;padding:11px;margin-top:7px;opacity:.7">
+        <div style="display:flex;justify-content:space-between;align-items:center"><span style="font-size:12.5px;color:#5b5444">L'état de nature</span><span style="color:#5b6e4a;font-size:11px;font-weight:700">7,4/10</span></div>
+        <div style="font-size:10.5px;color:#8a8270;margin-top:3px">corrigé · voir le retour</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- accueil note -->
+<div style="position:absolute;left:404px;top:4900px;width:228px">
+  <div style="background:#fef4a8;padding:13px;box-shadow:0 1px 4px rgba(0,0,0,.12);transform:rotate(-1.4deg);font-size:13px;line-height:1.5;color:#5a4a14">
+    Un seul écran d'entrée sépare clairement les <b>deux activités</b> : réviser (flashcards, en haut, l'action du jour) et les <b>quizz</b> (liste avec statut). Plus de confusion entre les deux.
+  </div>
+</div>
+
+<!-- FLASHCARD revision — phone -->
+<div data-screen-label="Flashcard révision — mobile" style="position:absolute;left:700px;top:4740px;width:300px">
+  <div data-drags-parent="1" style="position:absolute;top:-26px;left:2px;font-family:'Caveat',cursive;font-size:19px;color:#6f6755">Révision flashcard — mobile</div>
+  <div style="border:2.5px solid #46402f;border-radius:30px;padding:9px;background:#46402f;box-shadow:0 3px 10px rgba(0,0,0,.13)">
+    <div style="height:5px;width:46px;background:#cdc6b6;border-radius:3px;margin:3px auto 7px"></div>
+    <div style="background:#f1f0ec;border-radius:22px;padding:14px;height:540px;overflow:hidden;display:flex;flex-direction:column">
+      <!-- progress -->
+      <div style="display:flex;align-items:center;gap:8px">
+        <div style="flex:1;height:6px;background:#dcdee3;border-radius:3px;overflow:hidden"><div style="width:38%;height:100%;background:#3E6B8E"></div></div>
+        <span style="font-size:10.5px;color:#8a8270">3 / 8</span>
+      </div>
+      <!-- card -->
+      <div style="background:#fff;border:1.4px solid #d9dbe0;border-radius:16px;padding:16px;margin-top:14px;flex:1;display:flex;flex-direction:column;box-shadow:0 2px 6px rgba(0,0,0,.06)">
+        <div style="display:flex;align-items:center;gap:6px">
+          <span style="background:#e7ecf1;color:#3E6B8E;font-size:9.5px;padding:2px 7px;border-radius:9px">définition</span>
+          <span style="font-size:10px;color:#a59c88">Le contrat social</span>
+          <span style="margin-left:auto;font-size:10px;color:#a59c88">U3</span>
+        </div>
+        <div style="flex:1;display:flex;align-items:center;justify-content:center;text-align:center;padding:14px 4px">
+          <div style="font-size:15px;color:#46402f;line-height:1.5;font-weight:600">Selon Rousseau, la « volonté générale » désigne…</div>
+        </div>
+        <div style="border-top:1px dashed #dcdee3;padding-top:12px;text-align:center">
+          <div style="font-size:13px;color:#46402f">l'intérêt commun du peuple souverain, distinct de la somme des intérêts particuliers.</div>
+        </div>
+      </div>
+      <!-- 4 rating buttons -->
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:6px;margin-top:12px">
+        <div style="background:#f7ddd6;border:1px solid #d99b8a;border-radius:9px;padding:7px 2px;text-align:center"><div style="font-size:11px;font-weight:700;color:#a23e2e">Raté</div></div>
+        <div style="background:#f7ecd6;border:1px solid #d9bd8a;border-radius:9px;padding:7px 2px;text-align:center"><div style="font-size:11px;font-weight:700;color:#9A6A2E">Dur</div></div>
+        <div style="background:#dbe6ef;border:1px solid #8ab0d0;border-radius:9px;padding:7px 2px;text-align:center"><div style="font-size:11px;font-weight:700;color:#2f5a7d">Bien</div></div>
+        <div style="background:#dde9d9;border:1px solid #9bc093;border-radius:9px;padding:7px 2px;text-align:center"><div style="font-size:11px;font-weight:700;color:#5b6e4a">Facile</div></div>
+      </div>
+      <div style="font-size:9.5px;color:#a59c88;text-align:center;margin-top:6px">Tape la carte pour la retourner</div>
+    </div>
+  </div>
+</div>
+
+<!-- flashcard desktop -->
+<div data-screen-label="Flashcard révision — ordi" style="position:absolute;left:1060px;top:4740px;width:560px">
+  <div data-drags-parent="1" style="position:absolute;top:-26px;left:2px;font-family:'Caveat',cursive;font-size:19px;color:#6f6755">Révision flashcard — ordinateur</div>
+  <div style="border:1.5px solid #cdc6b6;border-radius:11px;background:#fff;box-shadow:0 2px 8px rgba(0,0,0,.1);overflow:hidden">
+    <div style="background:#ece4d6;padding:8px 12px;display:flex;align-items:center;gap:6px"><span style="width:9px;height:9px;border-radius:50%;background:#c9b89a"></span><span style="width:9px;height:9px;border-radius:50%;background:#c9b89a"></span><span style="width:9px;height:9px;border-radius:50%;background:#c9b89a"></span></div>
+    <div style="background:#f1f0ec;padding:24px 48px">
+      <!-- progress -->
+      <div style="display:flex;align-items:center;gap:10px;max-width:420px;margin:0 auto">
+        <div style="flex:1;height:6px;background:#dcdee3;border-radius:3px;overflow:hidden"><div style="width:38%;height:100%;background:#3E6B8E"></div></div>
+        <span style="font-size:11px;color:#8a8270">3 / 8</span>
+      </div>
+      <!-- big centered card -->
+      <div style="background:#fff;border:1.4px solid #d9dbe0;border-radius:18px;padding:26px;margin:16px auto 0;max-width:420px;box-shadow:0 3px 10px rgba(0,0,0,.07)">
+        <div style="display:flex;align-items:center;gap:7px;margin-bottom:18px">
+          <span style="background:#e7ecf1;color:#3E6B8E;font-size:10.5px;padding:2px 9px;border-radius:9px">définition</span>
+          <span style="font-size:11px;color:#a59c88">Le contrat social</span>
+          <span style="margin-left:auto;font-size:11px;color:#a59c88">Unité 3</span>
+        </div>
+        <div style="text-align:center;font-size:18px;color:#46402f;font-weight:600;line-height:1.5;padding:8px 0 18px">Selon Rousseau, la « volonté générale » désigne…</div>
+        <div style="border-top:1px dashed #dcdee3;padding-top:18px;text-align:center;font-size:15px;color:#5b5444;line-height:1.55">l'intérêt commun du peuple souverain, distinct de la somme des intérêts particuliers.</div>
+      </div>
+      <!-- ratings -->
+      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;max-width:420px;margin:14px auto 0">
+        <div style="background:#f7ddd6;border:1px solid #d99b8a;border-radius:11px;padding:10px 4px;text-align:center"><div style="font-size:13px;font-weight:700;color:#a23e2e">Raté</div><div style="font-size:9.5px;color:#b06a5a">je ne savais pas</div></div>
+        <div style="background:#f7ecd6;border:1px solid #d9bd8a;border-radius:11px;padding:10px 4px;text-align:center"><div style="font-size:13px;font-weight:700;color:#9A6A2E">Difficile</div><div style="font-size:9.5px;color:#b08f5a">à peine</div></div>
+        <div style="background:#dbe6ef;border:1px solid #8ab0d0;border-radius:11px;padding:10px 4px;text-align:center"><div style="font-size:13px;font-weight:700;color:#2f5a7d">Bien</div><div style="font-size:9.5px;color:#5a82a3">après hésitation</div></div>
+        <div style="background:#dde9d9;border:1px solid #9bc093;border-radius:11px;padding:10px 4px;text-align:center"><div style="font-size:13px;font-weight:700;color:#5b6e4a">Facile</div><div style="font-size:9.5px;color:#7d9170">immédiatement</div></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- flashcard note -->
+<div style="position:absolute;left:1060px;top:5310px;width:560px">
+  <div style="background:#fef4a8;padding:13px 15px;box-shadow:0 1px 4px rgba(0,0,0,.12);transform:rotate(-0.6deg);font-size:13px;line-height:1.5;color:#5a4a14">
+    <b>Une carte = tout l'écran.</b> La barre de progression rassure (3/8), la carte est grande et centrée, les 4 boutons d'auto-évaluation sont déjà ceux du site (Raté · Difficile · Bien · Facile). Identique mobile/ordi, juste plus aéré sur grand écran.
+  </div>
+</div>
+
+<!-- QUIZZ jetons — phone -->
+<div data-screen-label="Quizz jetons — mobile" style="position:absolute;left:80px;top:5440px;width:300px">
+  <div data-drags-parent="1" style="position:absolute;top:-26px;left:2px;font-family:'Caveat',cursive;font-size:19px;color:#6f6755">Quizz (jetons) — mobile</div>
+  <div style="border:2.5px solid #46402f;border-radius:30px;padding:9px;background:#46402f;box-shadow:0 3px 10px rgba(0,0,0,.13)">
+    <div style="height:5px;width:46px;background:#cdc6b6;border-radius:3px;margin:3px auto 7px"></div>
+    <div style="background:#f1f0ec;border-radius:22px;padding:14px;height:560px;overflow:hidden;display:flex;flex-direction:column">
+      <!-- question dots -->
+      <div style="display:flex;gap:5px;justify-content:center">
+        <span style="width:18px;height:6px;border-radius:3px;background:#3E6B8E"></span>
+        <span style="width:18px;height:6px;border-radius:3px;background:#3E6B8E"></span>
+        <span style="width:18px;height:6px;border-radius:3px;background:#a9c2d6"></span>
+        <span style="width:18px;height:6px;border-radius:3px;background:#dcdee3"></span>
+        <span style="width:18px;height:6px;border-radius:3px;background:#dcdee3"></span>
+        <span style="width:18px;height:6px;border-radius:3px;background:#dcdee3"></span>
+      </div>
+      <div style="font-size:10.5px;color:#8a8270;margin-top:10px">Question 3 / 6</div>
+      <div style="font-size:14px;color:#46402f;font-weight:600;line-height:1.5;margin-top:5px">Pour Rousseau, la souveraineté est&nbsp;:</div>
+      <!-- token instruction -->
+      <div style="background:#e7ecf1;border-radius:8px;padding:7px 9px;font-size:10.5px;color:#2f5a7d;margin-top:11px">Répartis 100 points selon ta confiance</div>
+      <!-- options with token sliders -->
+      <div style="display:flex;flex-direction:column;gap:9px;margin-top:11px;flex:1">
+        <div style="background:#fff;border:1.4px solid #d9dbe0;border-radius:10px;padding:9px">
+          <div style="display:flex;justify-content:space-between;align-items:center"><span style="font-size:12px;color:#46402f">A · inaliénable</span><span style="font-size:12px;font-weight:700;color:#3E6B8E">60</span></div>
+          <div style="height:5px;background:#dcdee3;border-radius:3px;margin-top:6px;overflow:hidden"><div style="width:60%;height:100%;background:#3E6B8E"></div></div>
+        </div>
+        <div style="background:#fff;border:1.4px solid #d9dbe0;border-radius:10px;padding:9px">
+          <div style="display:flex;justify-content:space-between;align-items:center"><span style="font-size:12px;color:#46402f">B · transférable</span><span style="font-size:12px;font-weight:700;color:#3E6B8E">25</span></div>
+          <div style="height:5px;background:#dcdee3;border-radius:3px;margin-top:6px;overflow:hidden"><div style="width:25%;height:100%;background:#3E6B8E"></div></div>
+        </div>
+        <div style="background:#fff;border:1.4px solid #d9dbe0;border-radius:10px;padding:9px">
+          <div style="display:flex;justify-content:space-between;align-items:center"><span style="font-size:12px;color:#46402f">C · divisible</span><span style="font-size:12px;font-weight:700;color:#3E6B8E">15</span></div>
+          <div style="height:5px;background:#dcdee3;border-radius:3px;margin-top:6px;overflow:hidden"><div style="width:15%;height:100%;background:#3E6B8E"></div></div>
+        </div>
+        <div style="background:#fff;border:1.4px solid #d9dbe0;border-radius:10px;padding:9px">
+          <div style="display:flex;justify-content:space-between;align-items:center"><span style="font-size:12px;color:#46402f">D · déléguée</span><span style="font-size:12px;font-weight:700;color:#a59c88">0</span></div>
+          <div style="height:5px;background:#dcdee3;border-radius:3px;margin-top:6px;overflow:hidden"><div style="width:0%;height:100%;background:#3E6B8E"></div></div>
+        </div>
+      </div>
+      <!-- total + nav -->
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-top:10px">
+        <span style="font-size:11px;color:#5b6e4a">100 / 100 placés ✓</span>
+      </div>
+      <div style="display:flex;gap:8px;margin-top:8px">
+        <div style="flex:1;background:#fff;border:1.4px solid #d9dbe0;color:#7a7263;text-align:center;border-radius:9px;padding:9px;font-size:12px">Précédent</div>
+        <div style="flex:1;background:#3E6B8E;color:#f1f0ec;text-align:center;border-radius:9px;padding:9px;font-size:12px">Suivant</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- quizz desktop -->
+<div data-screen-label="Quizz jetons — ordi" style="position:absolute;left:440px;top:5440px;width:680px">
+  <div data-drags-parent="1" style="position:absolute;top:-26px;left:2px;font-family:'Caveat',cursive;font-size:19px;color:#6f6755">Quizz (jetons) — ordinateur</div>
+  <div style="border:1.5px solid #cdc6b6;border-radius:11px;background:#fff;box-shadow:0 2px 8px rgba(0,0,0,.1);overflow:hidden">
+    <div style="background:#ece4d6;padding:8px 12px;display:flex;align-items:center;gap:6px"><span style="width:9px;height:9px;border-radius:50%;background:#c9b89a"></span><span style="width:9px;height:9px;border-radius:50%;background:#c9b89a"></span><span style="width:9px;height:9px;border-radius:50%;background:#c9b89a"></span></div>
+    <div style="background:#f1f0ec;padding:22px 40px">
+      <!-- dots + title -->
+      <div style="display:flex;justify-content:space-between;align-items:center">
+        <span style="font-family:'Caveat',cursive;font-weight:700;font-size:18px;color:#3E6B8E">Quizz — Le contrat social</span>
+        <div style="display:flex;gap:5px">
+          <span style="width:20px;height:6px;border-radius:3px;background:#3E6B8E"></span>
+          <span style="width:20px;height:6px;border-radius:3px;background:#3E6B8E"></span>
+          <span style="width:20px;height:6px;border-radius:3px;background:#a9c2d6"></span>
+          <span style="width:20px;height:6px;border-radius:3px;background:#dcdee3"></span>
+          <span style="width:20px;height:6px;border-radius:3px;background:#dcdee3"></span>
+          <span style="width:20px;height:6px;border-radius:3px;background:#dcdee3"></span>
+        </div>
+      </div>
+      <div style="background:#fff;border:1.4px solid #d9dbe0;border-radius:13px;padding:22px;margin-top:14px">
+        <div style="font-size:11px;color:#8a8270">Question 3 / 6</div>
+        <div style="font-size:17px;color:#46402f;font-weight:600;margin-top:5px">Pour Rousseau, la souveraineté est :</div>
+        <div style="display:inline-block;background:#e7ecf1;color:#2f5a7d;border-radius:8px;padding:5px 11px;font-size:12px;margin-top:12px">Répartis 100 points entre les réponses selon ta confiance</div>
+        <!-- options as rows with steppers -->
+        <div style="display:flex;flex-direction:column;gap:10px;margin-top:14px">
+          <div style="display:flex;align-items:center;gap:14px;background:#f7f8f9;border:1.3px solid #d9dbe0;border-radius:10px;padding:11px 14px">
+            <span style="font-size:14px;color:#46402f;flex:1">A · La souveraineté est inaliénable</span>
+            <div style="height:6px;width:120px;background:#dcdee3;border-radius:3px;overflow:hidden"><div style="width:60%;height:100%;background:#3E6B8E"></div></div>
+            <div style="display:flex;align-items:center;gap:8px"><span style="width:22px;height:22px;border:1.2px solid #c4bca8;border-radius:6px;display:inline-flex;align-items:center;justify-content:center;color:#7a7263">–</span><span style="font-size:15px;font-weight:700;color:#3E6B8E;width:26px;text-align:center">60</span><span style="width:22px;height:22px;border:1.2px solid #c4bca8;border-radius:6px;display:inline-flex;align-items:center;justify-content:center;color:#7a7263">+</span></div>
+          </div>
+          <div style="display:flex;align-items:center;gap:14px;background:#fff;border:1.3px solid #d9dbe0;border-radius:10px;padding:11px 14px">
+            <span style="font-size:14px;color:#46402f;flex:1">B · La souveraineté est transférable</span>
+            <div style="height:6px;width:120px;background:#dcdee3;border-radius:3px;overflow:hidden"><div style="width:25%;height:100%;background:#3E6B8E"></div></div>
+            <div style="display:flex;align-items:center;gap:8px"><span style="width:22px;height:22px;border:1.2px solid #c4bca8;border-radius:6px;display:inline-flex;align-items:center;justify-content:center;color:#7a7263">–</span><span style="font-size:15px;font-weight:700;color:#3E6B8E;width:26px;text-align:center">25</span><span style="width:22px;height:22px;border:1.2px solid #c4bca8;border-radius:6px;display:inline-flex;align-items:center;justify-content:center;color:#7a7263">+</span></div>
+          </div>
+          <div style="display:flex;align-items:center;gap:14px;background:#fff;border:1.3px solid #d9dbe0;border-radius:10px;padding:11px 14px">
+            <span style="font-size:14px;color:#46402f;flex:1">C · La souveraineté est divisible</span>
+            <div style="height:6px;width:120px;background:#dcdee3;border-radius:3px;overflow:hidden"><div style="width:15%;height:100%;background:#3E6B8E"></div></div>
+            <div style="display:flex;align-items:center;gap:8px"><span style="width:22px;height:22px;border:1.2px solid #c4bca8;border-radius:6px;display:inline-flex;align-items:center;justify-content:center;color:#7a7263">–</span><span style="font-size:15px;font-weight:700;color:#3E6B8E;width:26px;text-align:center">15</span><span style="width:22px;height:22px;border:1.2px solid #c4bca8;border-radius:6px;display:inline-flex;align-items:center;justify-content:center;color:#7a7263">+</span></div>
+          </div>
+          <div style="display:flex;align-items:center;gap:14px;background:#fff;border:1.3px solid #d9dbe0;border-radius:10px;padding:11px 14px">
+            <span style="font-size:14px;color:#46402f;flex:1">D · La souveraineté peut être déléguée</span>
+            <div style="height:6px;width:120px;background:#dcdee3;border-radius:3px;overflow:hidden"><div style="width:0%;height:100%;background:#3E6B8E"></div></div>
+            <div style="display:flex;align-items:center;gap:8px"><span style="width:22px;height:22px;border:1.2px solid #c4bca8;border-radius:6px;display:inline-flex;align-items:center;justify-content:center;color:#7a7263">–</span><span style="font-size:15px;font-weight:700;color:#a59c88;width:26px;text-align:center">0</span><span style="width:22px;height:22px;border:1.2px solid #c4bca8;border-radius:6px;display:inline-flex;align-items:center;justify-content:center;color:#7a7263">+</span></div>
+          </div>
+        </div>
+      </div>
+      <!-- footer -->
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-top:14px">
+        <span style="font-size:13px;color:#5b6e4a">● 100 / 100 points placés</span>
+        <div style="display:flex;gap:10px">
+          <span style="background:#fff;border:1.3px solid #d9dbe0;color:#7a7263;border-radius:8px;padding:8px 18px;font-size:13px">Précédent</span>
+          <span style="background:#3E6B8E;color:#f1f0ec;border-radius:8px;padding:8px 18px;font-size:13px">Suivant →</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- quizz note -->
+<div style="position:absolute;left:1150px;top:5500px;width:250px">
+  <div style="background:#fef4a8;padding:14px;box-shadow:0 1px 4px rgba(0,0,0,.12);transform:rotate(1.3deg);font-size:13px;line-height:1.5;color:#5a4a14">
+    <b>Le quizz « jetons » respiré.</b> Une question plein cadre, les points répartis avec des <b>+ / −</b> (ou un glisseur au doigt sur mobile), le total <b>100/100</b> toujours visible. Les pastilles en haut = où j'en suis dans les 6 questions.
+  </div>
+  <div style="font-family:'Caveat',cursive;font-size:22px;color:#3E6B8E;margin-top:4px;margin-left:20px">↖ confiance, pas une seule case</div>
+</div>
+
+<!-- closing post-it -->
+<div style="position:absolute;left:1480px;top:5500px;width:260px">
+  <div style="background:#fef4a8;padding:15px;box-shadow:0 1px 4px rgba(0,0,0,.12);transform:rotate(-1.3deg);font-family:'Architects Daughter',cursive;font-size:13.5px;line-height:1.55;color:#5a4a14">
+    <div style="font-family:'Caveat',cursive;font-weight:700;font-size:20px;color:#4a3c0c;margin-bottom:5px">Prochaine étape</div>
+    Cap retenu : <b>Piste A</b> (barre du bas sur mobile, déroulants gardés sur ordi) + <b>atelier côte à côte</b>. Dis-moi si les écrans Quazian te conviennent, puis je passe le tout en <b>rendu fidèle à la charte</b> (parchemin, sceaux), prêt à coder.
+  </div>
+</div>
+</x-dc>
+</body>
+</html>

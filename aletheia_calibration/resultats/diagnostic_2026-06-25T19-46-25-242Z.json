@@ -1,0 +1,45 @@
+{
+  "meta": {
+    "N": 1,
+    "TEMPS": [
+      1
+    ],
+    "modele": "claude-sonnet-4-6",
+    "appels": 1,
+    "date": "2026-06-25T19-46-25-242Z"
+  },
+  "resultats": {
+    "S01": {
+      "gold": {
+        "these": "A",
+        "args": "A",
+        "mal_definie": false
+      },
+      "note_prof_20": 20,
+      "par_temp": {
+        "1": {
+          "n_ok": 0,
+          "n_err": 1,
+          "these": {
+            "modal": null,
+            "distrib": {},
+            "selfAccord": 0,
+            "amplitude": 0,
+            "exactGold": 0,
+            "within1Gold": 0
+          },
+          "args": {
+            "modal": null,
+            "distrib": {},
+            "selfAccord": 0,
+            "amplitude": 0,
+            "exactGold": 0,
+            "within1Gold": 0
+          },
+          "mal_definie_taux": 0,
+          "mal_definie_gold": false
+        }
+      }
+    }
+  }
+}

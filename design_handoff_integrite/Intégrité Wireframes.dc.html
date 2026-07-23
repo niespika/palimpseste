@@ -1,0 +1,429 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<meta name="design_doc_mode" content="canvas">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Caveat:wght@500;600;700&family=Architects+Daughter&display=swap" rel="stylesheet">
+<style>
+  body { margin:0; font-family:'Architects Daughter', cursive; color:#46402f; -webkit-font-smoothing:antialiased; }
+</style>
+</helmet>
+
+<!-- ======================= INTRO ======================= -->
+<div style="position:absolute;left:80px;top:38px;width:1080px">
+  <div style="font-family:'Caveat',cursive;font-weight:700;font-size:46px;line-height:1.04;color:#3a352c">Palimpseste · Espace prof — Intégrité (« petits malins »)</div>
+  <div style="font-family:'Architects Daughter',cursive;font-size:16px;color:#7a7263;margin-top:8px;max-width:940px">Aujourd'hui la page liste des signalements, mais on ne peut que faire « Vu ». Impossible de <b>voir la preuve</b>. On rend chaque signalement <b>cliquable → la copie s'ouvre</b> : la <b>photo déposée</b> (y compris vide), la <b>retranscription</b> avec le passage problématique surligné, le <b>motif</b> et le <b>type</b>. Puis on agit (Confirmer / Écarter, Bloquer / Débloquer). Glisse pour te déplacer, zoome pour les détails.</div>
+</div>
+
+<!-- brief post-it -->
+<div style="position:absolute;left:80px;top:172px;width:320px">
+  <div style="background:#fef4a8;padding:16px 16px 18px;box-shadow:0 1px 4px rgba(0,0,0,.12);transform:rotate(-1.1deg);font-family:'Architects Daughter',cursive;font-size:14px;line-height:1.5;color:#5a4a14">
+    <div style="font-family:'Caveat',cursive;font-weight:700;font-size:21px;margin-bottom:6px;color:#4a3c0c">Le brief</div>
+    « À part le <b>Vu</b> quand un élève s'est fait prendre, il n'y a rien. Je veux <b>cliquer sur la case</b> pour voir <b>exactement le problème</b> : la <b>retranscription problématique</b>, ou la <b>photo vide</b>. »
+  </div>
+</div>
+
+<!-- DIAGNOSTIC — current page -->
+<div data-screen-label="Existant — la page actuelle" style="position:absolute;left:440px;top:160px;width:560px">
+  <div data-drags-parent="1" style="position:absolute;top:-26px;left:2px;font-family:'Caveat',cursive;font-size:19px;color:#6f6755">Ce qu'on a aujourd'hui — une liste muette</div>
+  <div style="border:1.5px solid #cdc6b6;border-radius:11px;background:#fff;box-shadow:0 2px 10px rgba(0,0,0,.1);overflow:hidden">
+    <div style="background:#ece4d6;padding:8px 12px;display:flex;align-items:center;gap:6px"><span style="width:9px;height:9px;border-radius:50%;background:#c9b89a"></span><span style="width:9px;height:9px;border-radius:50%;background:#c9b89a"></span><span style="width:9px;height:9px;border-radius:50%;background:#c9b89a"></span></div>
+    <div style="background:#f4efe6;padding:16px 18px 18px">
+      <div style="font-family:'Caveat',cursive;font-weight:700;font-size:23px;color:#46402f">Intégrité — petits malins</div>
+      <div style="font-size:11px;letter-spacing:.06em;color:#a59c88;margin:12px 0 7px">SIGNALEMENTS À TRAITER</div>
+      <!-- a row -->
+      <div style="background:#fff;border:1px solid #e0d8c6;border-radius:9px;padding:11px 13px;display:flex;justify-content:space-between;align-items:flex-start;gap:12px">
+        <div style="font-size:13.5px;color:#46402f">
+          <div><b>Léa Fontaine</b> <span style="color:#8a8270">· Fragments · Rendu vide</span></div>
+          <div style="font-size:12px;color:#8a8270;margin-top:3px">Rendu quasi vide (12 caractères utiles).</div>
+          <div style="font-size:12px;color:#a59c88;margin-top:2px">détecté au rendu · 24 juin 14:02</div>
+        </div>
+        <span style="font-size:12px;color:#7a7263;border:1px solid #d3ccba;border-radius:7px;padding:5px 12px;white-space:nowrap">Vu</span>
+      </div>
+      <div style="background:#fff;border:1px solid #e0d8c6;border-radius:9px;padding:11px 13px;display:flex;justify-content:space-between;align-items:flex-start;gap:12px;margin-top:8px;opacity:.6">
+        <div style="font-size:13.5px;color:#46402f">
+          <div><b>Karim Benali</b> <span style="color:#8a8270">· Codex · Hors-sujet</span></div>
+          <div style="font-size:12px;color:#a59c88;margin-top:3px">détecté par l'IA · 23 juin</div>
+        </div>
+        <span style="font-size:12px;color:#7a7263;border:1px solid #d3ccba;border-radius:7px;padding:5px 12px;white-space:nowrap">Vu</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- pink: the problem -->
+<div style="position:absolute;left:1030px;top:172px;width:250px">
+  <div style="background:#f6c9bd;padding:14px 15px;box-shadow:0 1px 4px rgba(0,0,0,.12);transform:rotate(1.2deg);font-size:13px;line-height:1.5;color:#7d3322">
+    <div style="font-family:'Caveat',cursive;font-weight:700;font-size:19px;color:#7d3322;margin-bottom:4px">Le problème</div>
+    Le motif est une <b>phrase</b>, pas une preuve. Pour trancher, le prof devrait <b>rouvrir le module</b> et chercher le dépôt à la main. « Vu » ne montre <b>rien</b>.
+  </div>
+</div>
+<div style="position:absolute;left:1030px;top:330px;width:250px">
+  <div style="background:#fff;border:1.5px solid #cdc6b6;border-radius:9px;padding:13px 14px;box-shadow:0 1px 3px rgba(0,0,0,.07);font-size:12.5px;line-height:1.5;color:#5b5444">
+    <span style="font-family:'Caveat',cursive;font-weight:700;font-size:16px;color:#46402f">Données dispo</span><br>
+    Chaque signalement connaît déjà l'<b>élève</b>, le <b>module</b> (Aletheia · Codex · Fragments), le <b>type</b>, le <b>motif</b>, la <b>source</b> (au rendu / IA) et pointe vers le <b>dépôt</b>. Il « suffit » de l'afficher.
+  </div>
+</div>
+
+<!-- ======================= BAND 1 — STRUCTURE ======================= -->
+<div style="position:absolute;left:80px;top:540px;font-family:'Caveat',cursive;font-weight:700;font-size:32px;color:#3a352c">1 · Comment organiser la page — trois pistes</div>
+<div style="position:absolute;left:80px;top:586px;font-family:'Architects Daughter',cursive;font-size:15px;color:#8a8270;max-width:940px">Le « cliquer sur la case » peut prendre trois formes. Je les compare, puis je retiens la plus adaptée au volume réel (peu de signalements, mais chacun demande un examen).</div>
+
+<!-- Option A -->
+<div data-screen-label="Piste A — liste cliquable" style="position:absolute;left:80px;top:670px;width:360px">
+  <div data-drags-parent="1" style="position:absolute;top:-26px;left:2px;font-family:'Caveat',cursive;font-size:19px;color:#6f6755">A · Liste cliquable</div>
+  <div style="border:1.5px solid #cdc6b6;border-radius:11px;background:#fff;box-shadow:0 2px 10px rgba(0,0,0,.1);padding:14px 14px 16px">
+    <div style="display:flex;flex-direction:column;gap:8px">
+      <div style="border:1px solid #e0d8c6;border-radius:8px;padding:9px 11px;display:flex;justify-content:space-between;align-items:center"><span style="font-size:12.5px;color:#46402f"><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#5A6043;margin-right:6px"></span>Léa · Rendu vide</span><span style="color:#a59c88;font-size:15px">›</span></div>
+      <div style="border:1px solid #e0d8c6;border-radius:8px;padding:9px 11px;display:flex;justify-content:space-between;align-items:center"><span style="font-size:12.5px;color:#46402f"><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#2E4A3C;margin-right:6px"></span>Karim · Hors-sujet</span><span style="color:#a59c88;font-size:15px">›</span></div>
+      <div style="border:1px solid #e0d8c6;border-radius:8px;padding:9px 11px;display:flex;justify-content:space-between;align-items:center"><span style="font-size:12.5px;color:#46402f"><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#2C4A7C;margin-right:6px"></span>Tom · Aveu</span><span style="color:#a59c88;font-size:15px">›</span></div>
+    </div>
+    <div style="border-top:1px dashed #d3ccba;margin:12px 0 9px"></div>
+    <div style="font-size:12px;color:#5b6e4a;line-height:1.45">+ on garde l'existant, le clic ouvre la preuve (volet / écran).</div>
+    <div style="font-size:12px;color:#a23e2e;line-height:1.45;margin-top:3px">– quitter la liste pour voir, revenir, recommencer.</div>
+  </div>
+</div>
+
+<!-- Option B -->
+<div data-screen-label="Piste B — matrice élèves × modules" style="position:absolute;left:470px;top:670px;width:360px">
+  <div data-drags-parent="1" style="position:absolute;top:-26px;left:2px;font-family:'Caveat',cursive;font-size:19px;color:#6f6755">B · Matrice élèves × modules</div>
+  <div style="border:1.5px solid #cdc6b6;border-radius:11px;background:#fff;box-shadow:0 2px 10px rgba(0,0,0,.1);padding:14px 14px 16px">
+    <div style="display:flex;font-size:10px;color:#a59c88;border-bottom:1px solid #ece4d6;padding-bottom:5px">
+      <div style="width:74px;flex-shrink:0">ÉLÈVE</div>
+      <div style="flex:1;text-align:center">Aleth.</div><div style="flex:1;text-align:center">Codex</div><div style="flex:1;text-align:center">Frag.</div>
+    </div>
+    <div style="display:flex;align-items:center;font-size:11.5px;color:#46402f;border-bottom:1px solid #f2ede3;padding:7px 0"><div style="width:74px;flex-shrink:0">Léa</div><div style="flex:1;text-align:center;color:#cdc6b6">·</div><div style="flex:1;text-align:center;color:#cdc6b6">·</div><div style="flex:1;text-align:center"><span style="background:#f7ddd6;color:#a23e2e;border-radius:6px;padding:1px 7px;font-size:11px">!</span></div></div>
+    <div style="display:flex;align-items:center;font-size:11.5px;color:#46402f;border-bottom:1px solid #f2ede3;padding:7px 0"><div style="width:74px;flex-shrink:0">Karim</div><div style="flex:1;text-align:center;color:#cdc6b6">·</div><div style="flex:1;text-align:center"><span style="background:#fbf3d8;color:#7a5e1e;border-radius:6px;padding:1px 7px;font-size:11px">?</span></div><div style="flex:1;text-align:center;color:#cdc6b6">·</div></div>
+    <div style="display:flex;align-items:center;font-size:11.5px;color:#46402f;border-bottom:1px solid #f2ede3;padding:7px 0"><div style="width:74px;flex-shrink:0">Tom</div><div style="flex:1;text-align:center"><span style="background:#f7ddd6;color:#a23e2e;border-radius:6px;padding:1px 7px;font-size:11px">!</span></div><div style="flex:1;text-align:center;color:#cdc6b6">·</div><div style="flex:1;text-align:center;color:#cdc6b6">·</div></div>
+    <div style="display:flex;align-items:center;font-size:11.5px;color:#cdc6b6;padding:7px 0"><div style="width:74px;flex-shrink:0">Nina</div><div style="flex:1;text-align:center">·</div><div style="flex:1;text-align:center">·</div><div style="flex:1;text-align:center">·</div></div>
+    <div style="border-top:1px dashed #d3ccba;margin:9px 0 9px"></div>
+    <div style="font-size:12px;color:#5b6e4a;line-height:1.45">+ « case cliquable » au sens littéral, lecture par élève.</div>
+    <div style="font-size:12px;color:#a23e2e;line-height:1.45;margin-top:3px">– très clairsemé : 95 % de cases vides. Beaucoup de bruit pour peu de signaux.</div>
+  </div>
+</div>
+
+<!-- Option C -->
+<div data-screen-label="Piste C — file + panneau (master-detail)" style="position:absolute;left:860px;top:670px;width:360px">
+  <div data-drags-parent="1" style="position:absolute;top:-26px;left:2px;font-family:'Caveat',cursive;font-size:19px;color:#6f6755">C · File + panneau preuve</div>
+  <div style="border:1.5px solid #cdc6b6;border-radius:11px;background:#fff;box-shadow:0 2px 10px rgba(0,0,0,.1);padding:14px;display:flex;gap:10px">
+    <div style="width:108px;flex-shrink:0;display:flex;flex-direction:column;gap:6px">
+      <div style="border:1.6px solid #46402f;border-radius:7px;padding:7px 8px;font-size:11px;color:#46402f;background:#f4efe6">Léa · vide</div>
+      <div style="border:1px solid #e0d8c6;border-radius:7px;padding:7px 8px;font-size:11px;color:#8a8270">Karim · h-s</div>
+      <div style="border:1px solid #e0d8c6;border-radius:7px;padding:7px 8px;font-size:11px;color:#8a8270">Tom · aveu</div>
+    </div>
+    <div style="flex:1;border:1px dashed #c4bca8;border-radius:8px;background:#faf7f0;padding:9px;display:flex;flex-direction:column;gap:6px">
+      <div style="font-size:10px;color:#a59c88;letter-spacing:.05em">LA PREUVE</div>
+      <div style="height:42px;border:1px solid #ded6c4;border-radius:5px;background:repeating-linear-gradient(45deg,#f0ebe0,#f0ebe0 5px,#e8e1d2 5px,#e8e1d2 10px)"></div>
+      <div style="height:8px;background:#ece4d6;border-radius:3px"></div>
+      <div style="height:8px;width:70%;background:#ece4d6;border-radius:3px"></div>
+      <div style="display:flex;gap:5px;margin-top:2px"><span style="flex:1;background:#46402f;color:#f4efe6;font-size:10px;text-align:center;border-radius:5px;padding:4px">Confirmer</span><span style="flex:1;border:1px solid #d3ccba;font-size:10px;text-align:center;border-radius:5px;padding:4px;color:#7a7263">Écarter</span></div>
+    </div>
+  </div>
+  <div style="border-top:1px dashed #d3ccba;margin:10px 14px 0;padding-top:9px">
+    <div style="font-size:12px;color:#5b6e4a;line-height:1.45">+ voir la preuve <b>sans perdre la file</b> ; on enchaîne les cas vite.</div>
+  </div>
+</div>
+
+<!-- reco -->
+<div style="position:absolute;left:1250px;top:660px;width:250px">
+  <div style="background:#fef4a8;padding:15px;box-shadow:0 1px 4px rgba(0,0,0,.12);transform:rotate(1.3deg);font-size:13.5px;line-height:1.5;color:#5a4a14">
+    <div style="font-family:'Caveat',cursive;font-weight:700;font-size:20px;color:#4a3c0c;margin-bottom:5px">Je retiens C</div>
+    Sur ordi : <b>file à gauche, preuve à droite</b>. La matrice (B) serait quasi vide ; la liste seule (A) fait perdre le fil. C combine les deux — et reste une liste cliquable, donc proche de l'existant.
+  </div>
+</div>
+<div style="position:absolute;left:1250px;top:880px;width:250px">
+  <div style="background:#fff;border:1.5px solid #cdc6b6;border-radius:9px;padding:13px 14px;box-shadow:0 1px 3px rgba(0,0,0,.07);font-size:12.5px;line-height:1.5;color:#5b5444">
+    Sur <b>mobile</b>, pas de place pour deux colonnes → la file devient une liste, et le clic ouvre la preuve en <b>écran plein</b> (piste A appliquée au petit écran). Voir bande 4.
+  </div>
+</div>
+
+<!-- ======================= BAND 2 — RETENU (DESKTOP) ======================= -->
+<div style="position:absolute;left:80px;top:1140px;font-family:'Caveat',cursive;font-weight:700;font-size:32px;color:#3a352c">2 · La page retenue — la file, et la preuve qui s'ouvre</div>
+<div style="position:absolute;left:80px;top:1186px;font-family:'Architects Daughter',cursive;font-size:15px;color:#8a8270;max-width:980px">On clique un signalement à gauche → sa <b>preuve</b> s'affiche à droite : photo déposée (ici quasi vide), retranscription avec le passage problématique surligné, motif + type, et les actions.</div>
+
+<div data-screen-label="Intégrité — file + preuve (ordi)" style="position:absolute;left:80px;top:1266px;width:1200px">
+  <div data-drags-parent="1" style="position:absolute;top:-26px;left:2px;font-family:'Caveat',cursive;font-size:19px;color:#6f6755">Sur ordinateur — Pilotage › Intégrité</div>
+  <div style="border:1.5px solid #cdc6b6;border-radius:11px;background:#fff;box-shadow:0 2px 12px rgba(0,0,0,.11);overflow:hidden">
+    <div style="background:#ece4d6;padding:8px 12px;display:flex;align-items:center;gap:6px"><span style="width:9px;height:9px;border-radius:50%;background:#c9b89a"></span><span style="width:9px;height:9px;border-radius:50%;background:#c9b89a"></span><span style="width:9px;height:9px;border-radius:50%;background:#c9b89a"></span></div>
+    <!-- app header -->
+    <div style="background:#ece4d6;border-bottom:1px solid #e0d6c2;padding:0 20px;height:48px;display:flex;align-items:center;justify-content:space-between">
+      <div style="display:flex;align-items:center;gap:9px"><span style="width:26px;height:26px;border-radius:50%;background:#f4efe6;border:1px solid #d8cfbc;display:inline-flex;align-items:center;justify-content:center;font-family:'Caveat',cursive;font-weight:700;font-size:13px;color:#8a6f4e">P</span><span style="font-family:'Caveat',cursive;font-weight:700;font-size:16px;letter-spacing:.12em;color:#46402f">PALIMPSESTE</span></div>
+      <div style="display:flex;align-items:center;gap:3px;font-size:13px"><span style="color:#7a7263;padding:5px 11px">Tableau de bord</span><span style="background:#f4efe6;color:#46402f;padding:5px 11px;border-radius:6px">Pilotage ▾</span><span style="color:#7a7263;padding:5px 11px">Modules ▾</span></div>
+      <span style="font-size:12px;color:#8a8270">Mme Aubry</span>
+    </div>
+    <!-- content -->
+    <div style="background:#f4efe6;padding:16px 22px 22px">
+      <div style="font-size:12px;color:#8a8270">Pilotage <span style="color:#46402f">› Intégrité</span></div>
+      <div style="display:flex;justify-content:space-between;align-items:flex-end;margin-top:7px;gap:18px">
+        <div>
+          <div style="font-family:'Caveat',cursive;font-weight:700;font-size:30px;color:#46402f;line-height:1">Intégrité — petits malins</div>
+          <div style="font-size:12.5px;color:#8a8270;margin-top:3px">Rendus vides, aveux et hors-sujet repérés dans Aletheia · Codex · Fragments. À <b>3 strikes</b>, rendus & révision gelés (le quizz reste ouvert).</div>
+        </div>
+        <span style="font-size:12px;color:#46402f;border:1px solid #cdc6b6;border-radius:7px;padding:6px 12px;background:#fff;white-space:nowrap">⚙ Paramètres</span>
+      </div>
+
+      <!-- two-column workspace -->
+      <div style="display:flex;gap:16px;margin-top:15px;align-items:stretch">
+        <!-- LEFT RAIL -->
+        <div style="width:336px;flex-shrink:0;background:#fbf8f1;border:1px solid #e4dbc9;border-radius:11px;overflow:hidden;display:flex;flex-direction:column">
+          <div style="padding:11px 14px 7px;font-size:10.5px;letter-spacing:.06em;color:#a59c88;display:flex;justify-content:space-between"><span>À TRAITER</span><span style="color:#a23e2e">3</span></div>
+          <!-- selected row -->
+          <div style="margin:0 8px;background:#fff;border:1.6px solid #46402f;border-left:4px solid #5A6043;border-radius:9px;padding:10px 12px">
+            <div style="display:flex;justify-content:space-between;align-items:center"><span style="font-size:14px;color:#46402f"><b>Léa Fontaine</b></span><span style="font-size:10.5px;color:#a59c88">24 juin</span></div>
+            <div style="display:flex;align-items:center;gap:6px;margin-top:4px"><span style="display:inline-flex;align-items:center;gap:5px;font-size:11px;color:#5A6043"><span style="width:8px;height:8px;border-radius:50%;background:#5A6043"></span>Fragments</span><span style="background:#f7ddd6;color:#a23e2e;font-size:11px;padding:1px 8px;border-radius:8px">Rendu vide</span></div>
+            <div style="font-size:11px;color:#8a8270;margin-top:5px">détecté au rendu · strike déjà compté</div>
+          </div>
+          <!-- other rows -->
+          <div style="margin:8px 8px 0;background:#fff;border:1px solid #e8e0cf;border-radius:9px;padding:10px 12px">
+            <div style="display:flex;justify-content:space-between;align-items:center"><span style="font-size:14px;color:#46402f">Karim Benali</span><span style="font-size:10.5px;color:#a59c88">23 juin</span></div>
+            <div style="display:flex;align-items:center;gap:6px;margin-top:4px"><span style="display:inline-flex;align-items:center;gap:5px;font-size:11px;color:#2E4A3C"><span style="width:8px;height:8px;border-radius:50%;background:#2E4A3C"></span>Codex</span><span style="background:#fbf3d8;color:#7a5e1e;font-size:11px;padding:1px 8px;border-radius:8px">Hors-sujet</span></div>
+            <div style="font-size:11px;color:#caa94e;margin-top:5px">détecté par l'IA · à confirmer</div>
+          </div>
+          <div style="margin:8px 8px 0;background:#fff;border:1px solid #e8e0cf;border-radius:9px;padding:10px 12px">
+            <div style="display:flex;justify-content:space-between;align-items:center"><span style="font-size:14px;color:#46402f">Tom Garnier</span><span style="font-size:10.5px;color:#a59c88">22 juin</span></div>
+            <div style="display:flex;align-items:center;gap:6px;margin-top:4px"><span style="display:inline-flex;align-items:center;gap:5px;font-size:11px;color:#2C4A7C"><span style="width:8px;height:8px;border-radius:50%;background:#2C4A7C"></span>Aletheia</span><span style="background:#f7ddd6;color:#a23e2e;font-size:11px;padding:1px 8px;border-radius:8px">Aveu</span></div>
+            <div style="font-size:11px;color:#8a8270;margin-top:5px">détecté au rendu · strike déjà compté</div>
+          </div>
+          <div style="padding:13px 14px 7px;font-size:10.5px;letter-spacing:.06em;color:#a59c88;display:flex;justify-content:space-between"><span>BLOQUÉS</span><span style="color:#a23e2e">1</span></div>
+          <div style="margin:0 8px 10px;background:#fff;border:1px solid #e8e0cf;border-radius:9px;padding:10px 12px;display:flex;justify-content:space-between;align-items:center">
+            <div><div style="font-size:14px;color:#46402f">Nina Lefèvre</div><div style="font-size:11px;color:#a23e2e;margin-top:2px">3 strikes · bloquée</div></div>
+            <span style="font-size:11px;color:#5b6e4a;background:#eef1ea;border:1px solid #cdd3c4;border-radius:7px;padding:5px 9px;white-space:nowrap">Débloquer</span>
+          </div>
+          <div style="margin-top:auto;border-top:1px dashed #e4dbc9;text-align:center;padding:8px;font-size:11.5px;color:#8a8270">trier : récent · élève · module</div>
+        </div>
+
+        <!-- RIGHT — PROOF -->
+        <div style="flex:1;background:#fff;border:1px solid #e4dbc9;border-radius:11px;overflow:hidden;display:flex;flex-direction:column">
+          <!-- proof header -->
+          <div style="background:#fbf8f1;border-bottom:1px solid #ece4d6;padding:13px 18px;display:flex;justify-content:space-between;align-items:flex-start;gap:14px">
+            <div style="display:flex;align-items:center;gap:11px">
+              <span style="width:34px;height:34px;border-radius:50%;background:#e2e3d2;display:inline-flex;align-items:center;justify-content:center;font-family:'Caveat',cursive;font-weight:700;font-size:15px;color:#5A6043">LF</span>
+              <div><div style="font-family:'Caveat',cursive;font-weight:700;font-size:21px;color:#46402f;line-height:1">Léa Fontaine</div><div style="font-size:11.5px;color:#8a8270;margin-top:1px"><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#5A6043;margin-right:4px"></span>Fragments · dépôt semaine 24</div></div>
+            </div>
+            <div style="text-align:right"><span style="background:#f7ddd6;color:#a23e2e;font-size:12px;padding:3px 10px;border-radius:9px">Rendu vide</span><div style="font-size:11px;color:#a59c88;margin-top:5px">détecté au rendu · 24 juin 14:02</div></div>
+          </div>
+
+          <div style="padding:16px 18px 18px">
+            <div style="font-size:10.5px;letter-spacing:.06em;color:#a59c88;margin-bottom:9px">LA PREUVE</div>
+            <!-- two-up evidence -->
+            <div style="display:flex;gap:14px">
+              <!-- photo pane -->
+              <div style="flex:1">
+                <div style="font-size:11px;color:#8a8270;margin-bottom:5px">Photo déposée</div>
+                <div style="position:relative;border:1px solid #ded6c4;border-radius:9px;height:188px;background:repeating-linear-gradient(45deg,#f3efe6,#f3efe6 7px,#ece6d9 7px,#ece6d9 14px);overflow:hidden">
+                  <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:4px"><span style="font-family:monospace;font-size:11px;color:#a59c88;background:#fbf8f1;padding:3px 9px;border-radius:6px;border:1px solid #e4dbc9">page quasi blanche</span></div>
+                </div>
+                <div style="font-size:11px;color:#a59c88;margin-top:5px">1 photo · prise 14:01 · <span style="color:#46402f;text-decoration:underline">agrandir</span></div>
+              </div>
+              <!-- transcription pane -->
+              <div style="flex:1">
+                <div style="font-size:11px;color:#8a8270;margin-bottom:5px">Retranscription</div>
+                <div style="border:1px solid #ded6c4;border-radius:9px;height:188px;background:#fbfaf6;padding:12px 13px;font-size:13px;color:#5b5444;line-height:1.6;box-sizing:border-box;overflow:hidden">
+                  <span style="color:#a59c88;font-style:italic">Texte transcrit :</span><br>
+                  « <span style="background:#f7ddd6;color:#a23e2e;padding:1px 4px;border-radius:4px">azerty .</span> »
+                  <div style="margin-top:10px;font-family:monospace;font-size:11px;color:#a59c88">— 12 caractères utiles —</div>
+                </div>
+                <div style="font-size:11px;color:#a59c88;margin-top:5px">passage problématique surligné</div>
+              </div>
+            </div>
+
+            <!-- motif -->
+            <div style="margin-top:14px;background:#fdf6f4;border:1px solid #f0d8d1;border-left:3px solid #a23e2e;border-radius:8px;padding:10px 13px;font-size:13px;color:#7d3322"><b>⚑ Motif détecté</b> — Rendu quasi vide (12 caractères utiles). Type : <b>Rendu vide</b>.</div>
+
+            <!-- secondary context -->
+            <div style="margin-top:11px;display:flex;align-items:center;justify-content:space-between;gap:12px;font-size:12px;color:#8a8270;flex-wrap:wrap">
+              <span>Historique : <b style="color:#46402f">●●○</b> 2 strikes / seuil 3 · dernier il y a 5 j</span>
+              <span style="color:#46402f">Ouvrir l'analyse complète ↗</span>
+            </div>
+
+            <!-- actions -->
+            <div style="border-top:1px dashed #e4dbc9;margin-top:14px;padding-top:14px;display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+              <span style="background:#46402f;color:#f4efe6;font-size:13px;border-radius:8px;padding:9px 16px">Vu — retirer l'alerte</span>
+              <span style="border:1px solid #cdc6b6;color:#46402f;font-size:13px;border-radius:8px;padding:9px 16px;background:#fff">Ouvrir l'analyse complète</span>
+              <span style="margin-left:auto;color:#a23e2e;font-size:13px;border:1px solid #e3b3a8;border-radius:8px;padding:9px 16px;background:#fdf6f4">Bloquer l'élève</span>
+            </div>
+            <div style="margin-top:9px;font-size:11.5px;color:#a59c88;line-height:1.45">Cas « détecté au rendu » : le strike est déjà compté, « Vu » retire juste l'alerte. Un signal <b>IA</b> (hors-sujet, bâclé) afficherait à la place <b>Confirmer (+1 strike)</b> / <b>Écarter</b> — voir ci-contre.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- notes band 2 -->
+<div style="position:absolute;left:1310px;top:1280px;width:248px">
+  <div style="background:#fef4a8;padding:14px;box-shadow:0 1px 4px rgba(0,0,0,.12);transform:rotate(1.2deg);font-size:13.5px;line-height:1.5;color:#5a4a14">
+    <div style="font-family:'Caveat',cursive;font-weight:700;font-size:19px;color:#4a3c0c;margin-bottom:5px">Photo + texte côte à côte</div>
+    Les deux preuves citées dans le brief sont <b>toujours</b> visibles : la <b>photo</b> (vide ici) à gauche, la <b>retranscription</b> surlignée à droite. Plus besoin de rouvrir le module.
+  </div>
+</div>
+<div style="position:absolute;left:1310px;top:1470px;width:248px">
+  <div style="background:#fff;border:1.5px solid #cdc6b6;border-radius:9px;padding:13px 14px;box-shadow:0 1px 3px rgba(0,0,0,.07);font-size:12.5px;line-height:1.5;color:#5b5444">
+    <span style="font-family:'Caveat',cursive;font-weight:700;font-size:16px;color:#46402f">Le « pas tout le temps »</span><br>
+    Tu disais ne pas être sûr que <b>tout</b> soit utile. Du coup : preuve (photo + texte) + motif <b>en avant</b> ; historique, source et « analyse complète » en <b>ligne discrète</b>, dépliables au besoin.
+  </div>
+</div>
+<div style="position:absolute;left:1310px;top:1680px;width:248px">
+  <div style="background:#f6c9bd;padding:13px 14px;box-shadow:0 1px 4px rgba(0,0,0,.12);transform:rotate(-1.1deg);font-size:12.5px;line-height:1.5;color:#7d3322">
+    <b>À confirmer :</b> garde-t-on le mot « strikes » côté prof, ou un libellé plus neutre (« incidents ») ? Et « Bloquer » manuel : utile, ou seulement via le seuil ?
+  </div>
+</div>
+
+<!-- ======================= BAND 3 — FORMAT DE LA PREUVE ======================= -->
+<div style="position:absolute;left:80px;top:2200px;font-family:'Caveat',cursive;font-weight:700;font-size:32px;color:#3a352c">3 · Sous quelle forme ouvrir la preuve — et les actions IA</div>
+<div style="position:absolute;left:80px;top:2246px;font-family:'Architects Daughter',cursive;font-size:15px;color:#8a8270;max-width:980px">Sur la page Intégrité, la preuve est le <b>panneau de droite</b> (bande 2). Mais on arrive aussi sur un cas <b>depuis ailleurs</b> (alerte du tableau de bord, fiche élève) : là, elle s'ouvre par-dessus. Trois formats — et le jeu d'actions quand le signal vient de l'<b>IA</b>.</div>
+
+<!-- Volet -->
+<div data-screen-label="Format — volet latéral" style="position:absolute;left:80px;top:2330px;width:300px">
+  <div data-drags-parent="1" style="position:absolute;top:-26px;left:2px;font-family:'Caveat',cursive;font-size:19px;color:#6f6755">Volet (drawer)</div>
+  <div style="border:1.5px solid #cdc6b6;border-radius:10px;background:#fff;box-shadow:0 2px 10px rgba(0,0,0,.1);height:210px;position:relative;overflow:hidden">
+    <div style="position:absolute;inset:0;background:#f4efe6;opacity:.5;padding:12px"><div style="height:8px;width:60%;background:#ded6c4;border-radius:3px"></div><div style="height:8px;width:75%;background:#e4dccd;border-radius:3px;margin-top:8px"></div></div>
+    <div style="position:absolute;top:0;right:0;bottom:0;width:62%;background:#fff;border-left:1.5px solid #cdc6b6;box-shadow:-6px 0 16px rgba(0,0,0,.08);padding:12px">
+      <div style="font-family:'Caveat',cursive;font-weight:700;font-size:16px;color:#46402f">Léa · Rendu vide</div>
+      <div style="height:46px;border:1px solid #ded6c4;border-radius:6px;margin-top:8px;background:repeating-linear-gradient(45deg,#f3efe6,#f3efe6 6px,#ece6d9 6px,#ece6d9 12px)"></div>
+      <div style="height:7px;background:#ece4d6;border-radius:3px;margin-top:8px"></div>
+      <div style="height:7px;width:70%;background:#ece4d6;border-radius:3px;margin-top:6px"></div>
+    </div>
+  </div>
+  <div style="font-size:12px;color:#5b6e4a;line-height:1.45;margin-top:9px">+ garde le contexte derrière. Idéal depuis une <b>fiche élève</b>.</div>
+</div>
+
+<!-- Modale -->
+<div data-screen-label="Format — modale" style="position:absolute;left:410px;top:2330px;width:300px">
+  <div data-drags-parent="1" style="position:absolute;top:-26px;left:2px;font-family:'Caveat',cursive;font-size:19px;color:#6f6755">Modale</div>
+  <div style="border:1.5px solid #cdc6b6;border-radius:10px;background:#fff;box-shadow:0 2px 10px rgba(0,0,0,.1);height:210px;position:relative;overflow:hidden">
+    <div style="position:absolute;inset:0;background:#46402f;opacity:.28"></div>
+    <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:74%;background:#fff;border:1.5px solid #cdc6b6;border-radius:9px;box-shadow:0 8px 22px rgba(0,0,0,.2);padding:12px">
+      <div style="display:flex;justify-content:space-between;align-items:center"><span style="font-family:'Caveat',cursive;font-weight:700;font-size:16px;color:#46402f">Léa · Rendu vide</span><span style="font-size:13px;color:#a59c88">✕</span></div>
+      <div style="height:42px;border:1px solid #ded6c4;border-radius:6px;margin-top:8px;background:repeating-linear-gradient(45deg,#f3efe6,#f3efe6 6px,#ece6d9 6px,#ece6d9 12px)"></div>
+      <div style="height:7px;background:#ece4d6;border-radius:3px;margin-top:8px"></div>
+    </div>
+  </div>
+  <div style="font-size:12px;color:#5b6e4a;line-height:1.45;margin-top:9px">+ focus total sur un cas. Bien depuis l'<b>alerte du tableau de bord</b>.</div>
+</div>
+
+<!-- Écran plein -->
+<div data-screen-label="Format — écran plein" style="position:absolute;left:740px;top:2330px;width:300px">
+  <div data-drags-parent="1" style="position:absolute;top:-26px;left:2px;font-family:'Caveat',cursive;font-size:19px;color:#6f6755">Écran plein</div>
+  <div style="border:1.5px solid #cdc6b6;border-radius:10px;background:#fff;box-shadow:0 2px 10px rgba(0,0,0,.1);height:210px;overflow:hidden">
+    <div style="background:#f4efe6;padding:10px 12px;border-bottom:1px solid #e4dbc9;font-size:12px;color:#7a7263">← Intégrité</div>
+    <div style="padding:12px">
+      <div style="font-family:'Caveat',cursive;font-weight:700;font-size:16px;color:#46402f">Léa · Rendu vide</div>
+      <div style="display:flex;gap:8px;margin-top:8px"><div style="flex:1;height:60px;border:1px solid #ded6c4;border-radius:6px;background:repeating-linear-gradient(45deg,#f3efe6,#f3efe6 6px,#ece6d9 6px,#ece6d9 12px)"></div><div style="flex:1;height:60px;border:1px solid #ded6c4;border-radius:6px;background:#fbfaf6"></div></div>
+    </div>
+  </div>
+  <div style="font-size:12px;color:#5b6e4a;line-height:1.45;margin-top:9px">+ le format <b>mobile</b> par défaut (bande 4).</div>
+</div>
+
+<!-- IA actions inset -->
+<div data-screen-label="Actions — signal IA en attente" style="position:absolute;left:1070px;top:2330px;width:320px">
+  <div data-drags-parent="1" style="position:absolute;top:-26px;left:2px;font-family:'Caveat',cursive;font-size:19px;color:#6f6755">Quand c'est l'IA qui signale</div>
+  <div style="border:1.5px solid #cdc6b6;border-radius:10px;background:#fff;box-shadow:0 2px 10px rgba(0,0,0,.1);overflow:hidden">
+    <div style="background:#fbf8f1;border-bottom:1px solid #ece4d6;padding:11px 14px;display:flex;justify-content:space-between;align-items:center">
+      <span style="font-family:'Caveat',cursive;font-weight:700;font-size:17px;color:#46402f">Karim · Hors-sujet</span>
+      <span style="background:#fbf3d8;color:#7a5e1e;font-size:11px;padding:2px 9px;border-radius:8px">IA · à confirmer</span>
+    </div>
+    <div style="padding:13px 14px">
+      <div style="border:1px solid #ded6c4;border-radius:8px;background:#fbfaf6;padding:11px 12px;font-size:12.5px;color:#5b5444;line-height:1.55">« Pour les vacances je suis allé voir mes cousins et <span style="background:#fbe9c2;color:#7a5e1e;padding:1px 4px;border-radius:4px">on a fait du vélo tous les jours </span>… »</div>
+      <div style="font-size:11.5px;color:#7a5e1e;margin-top:8px;line-height:1.45"><b>⚑ Motif IA</b> — sans rapport avec l'unité demandée (indicatif, non probant).</div>
+      <div style="border-top:1px dashed #e4dbc9;margin-top:12px;padding-top:12px;display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+        <span style="background:#caa94e;color:#3a2e0c;font-size:12.5px;border-radius:7px;padding:8px 14px;font-weight:700">Confirmer (+1 strike)</span>
+        <span style="border:1px solid #cdc6b6;color:#7a7263;font-size:12.5px;border-radius:7px;padding:8px 14px">Écarter</span>
+      </div>
+    </div>
+  </div>
+  <div style="font-size:12px;color:#5b5444;line-height:1.45;margin-top:9px">Le signal IA <b>ne compte pas</b> tant que tu n'as pas confirmé. « Écarter » = faux positif, l'alerte disparaît sans strike.</div>
+</div>
+
+<!-- reco band 3 -->
+<div style="position:absolute;left:1070px;top:2620px;width:320px">
+  <div style="background:#fef4a8;padding:14px;box-shadow:0 1px 4px rgba(0,0,0,.12);transform:rotate(1.1deg);font-size:13px;line-height:1.5;color:#5a4a14">
+    <div style="font-family:'Caveat',cursive;font-weight:700;font-size:19px;color:#4a3c0c;margin-bottom:4px">Reco format</div>
+    Sur la <b>page Intégrité</b> : panneau de droite (pas d'overlay). Depuis <b>ailleurs</b> : <b>volet</b> (fiche élève) ou <b>modale</b> (alerte dashboard). Sur <b>mobile</b> : écran plein. Même contenu de preuve partout.
+  </div>
+</div>
+
+<!-- ======================= BAND 4 — MOBILE ======================= -->
+<div style="position:absolute;left:80px;top:2960px;font-family:'Caveat',cursive;font-weight:700;font-size:32px;color:#3a352c">4 · Sur mobile — la file, puis la preuve en plein écran</div>
+<div style="position:absolute;left:80px;top:3006px;font-family:'Architects Daughter',cursive;font-size:15px;color:#8a8270;max-width:940px">Une liste de signalements ; on tape une ligne → la preuve s'ouvre en écran plein (retour en haut). Photo + retranscription empilées, motif, puis actions.</div>
+
+<!-- phone 1 -->
+<div data-screen-label="Intégrité — file (mobile)" style="position:absolute;left:80px;top:3086px;width:300px">
+  <div data-drags-parent="1" style="position:absolute;top:-26px;left:2px;font-family:'Caveat',cursive;font-size:19px;color:#6f6755">Mobile — la file</div>
+  <div style="border:2.5px solid #46402f;border-radius:30px;padding:9px;background:#46402f;box-shadow:0 3px 10px rgba(0,0,0,.13)">
+    <div style="height:5px;width:46px;background:#cdc6b6;border-radius:3px;margin:3px auto 7px"></div>
+    <div style="background:#f4efe6;border-radius:22px;height:560px;overflow:hidden;display:flex;flex-direction:column">
+      <div style="background:#ece4d6;padding:11px 14px"><div style="display:flex;justify-content:space-between;align-items:center"><span style="font-size:11px;color:#7a7263">Pilotage</span><span style="width:24px;height:24px;border-radius:50%;background:#f4efe6;border:1px solid #d8cfbc;display:inline-flex;align-items:center;justify-content:center;font-family:'Caveat',cursive;font-weight:700;font-size:11px;color:#8a6f4e">P</span></div><div style="font-family:'Caveat',cursive;font-weight:700;font-size:20px;color:#46402f;margin-top:3px">Intégrité</div><div style="font-size:10.5px;color:#8a8270">3 à traiter · 1 bloqué · seuil 3</div></div>
+      <div style="flex:1;overflow:hidden;padding:11px 12px">
+        <div style="font-size:10px;letter-spacing:.06em;color:#a59c88;margin-bottom:7px">À TRAITER</div>
+        <div style="background:#fff;border:1px solid #e0d8c6;border-left:4px solid #5A6043;border-radius:9px;padding:10px 11px;margin-bottom:8px">
+          <div style="display:flex;justify-content:space-between"><span style="font-size:13.5px;color:#46402f"><b>Léa Fontaine</b></span><span style="font-size:14px;color:#a59c88">›</span></div>
+          <div style="display:flex;gap:6px;align-items:center;margin-top:4px"><span style="font-size:10.5px;color:#5A6043"><span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:#5A6043;margin-right:4px"></span>Fragments</span><span style="background:#f7ddd6;color:#a23e2e;font-size:10.5px;padding:1px 7px;border-radius:7px">Rendu vide</span></div>
+        </div>
+        <div style="background:#fff;border:1px solid #e0d8c6;border-radius:9px;padding:10px 11px;margin-bottom:8px">
+          <div style="display:flex;justify-content:space-between"><span style="font-size:13.5px;color:#46402f">Karim Benali</span><span style="font-size:14px;color:#a59c88">›</span></div>
+          <div style="display:flex;gap:6px;align-items:center;margin-top:4px"><span style="font-size:10.5px;color:#2E4A3C"><span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:#2E4A3C;margin-right:4px"></span>Codex</span><span style="background:#fbf3d8;color:#7a5e1e;font-size:10.5px;padding:1px 7px;border-radius:7px">Hors-sujet · IA</span></div>
+        </div>
+        <div style="background:#fff;border:1px solid #e0d8c6;border-radius:9px;padding:10px 11px;margin-bottom:8px">
+          <div style="display:flex;justify-content:space-between"><span style="font-size:13.5px;color:#46402f">Tom Garnier</span><span style="font-size:14px;color:#a59c88">›</span></div>
+          <div style="display:flex;gap:6px;align-items:center;margin-top:4px"><span style="font-size:10.5px;color:#2C4A7C"><span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:#2C4A7C;margin-right:4px"></span>Aletheia</span><span style="background:#f7ddd6;color:#a23e2e;font-size:10.5px;padding:1px 7px;border-radius:7px">Aveu</span></div>
+        </div>
+        <div style="font-size:10px;letter-spacing:.06em;color:#a59c88;margin:13px 0 7px">BLOQUÉS</div>
+        <div style="background:#fff;border:1px solid #e0d8c6;border-radius:9px;padding:10px 11px;display:flex;justify-content:space-between;align-items:center"><div><div style="font-size:13.5px;color:#46402f">Nina Lefèvre</div><div style="font-size:10.5px;color:#a23e2e">3 strikes · bloquée</div></div><span style="font-size:14px;color:#a59c88">›</span></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- phone 2 -->
+<div data-screen-label="Intégrité — preuve plein écran (mobile)" style="position:absolute;left:470px;top:3086px;width:300px">
+  <div data-drags-parent="1" style="position:absolute;top:-26px;left:2px;font-family:'Caveat',cursive;font-size:19px;color:#6f6755">Mobile — la preuve</div>
+  <div style="border:2.5px solid #46402f;border-radius:30px;padding:9px;background:#46402f;box-shadow:0 3px 10px rgba(0,0,0,.13)">
+    <div style="height:5px;width:46px;background:#cdc6b6;border-radius:3px;margin:3px auto 7px"></div>
+    <div style="background:#f4efe6;border-radius:22px;height:560px;overflow:hidden;display:flex;flex-direction:column">
+      <div style="background:#ece4d6;padding:11px 14px"><div style="font-size:11px;color:#7a7263">← Intégrité</div><div style="display:flex;justify-content:space-between;align-items:center;margin-top:3px"><span style="font-family:'Caveat',cursive;font-weight:700;font-size:19px;color:#46402f">Léa Fontaine</span><span style="background:#f7ddd6;color:#a23e2e;font-size:10.5px;padding:2px 8px;border-radius:8px">Rendu vide</span></div><div style="font-size:10.5px;color:#8a8270;margin-top:1px"><span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:#5A6043;margin-right:4px"></span>Fragments · au rendu · 24 juin</div></div>
+      <div style="flex:1;overflow:hidden;padding:12px 13px">
+        <div style="font-size:10px;letter-spacing:.06em;color:#a59c88;margin-bottom:6px">LA PREUVE</div>
+        <div style="font-size:10.5px;color:#8a8270;margin-bottom:4px">Photo déposée</div>
+        <div style="position:relative;border:1px solid #ded6c4;border-radius:8px;height:118px;background:repeating-linear-gradient(45deg,#f3efe6,#f3efe6 7px,#ece6d9 7px,#ece6d9 14px)"><div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center"><span style="font-family:monospace;font-size:10px;color:#a59c88;background:#fbf8f1;padding:2px 8px;border-radius:6px;border:1px solid #e4dbc9">page quasi blanche</span></div></div>
+        <div style="font-size:10.5px;color:#8a8270;margin:10px 0 4px">Retranscription</div>
+        <div style="border:1px solid #ded6c4;border-radius:8px;background:#fbfaf6;padding:10px 11px;font-size:12.5px;color:#5b5444">« <span style="background:#f7ddd6;color:#a23e2e;padding:1px 4px;border-radius:4px">azerty .</span> » <span style="font-family:monospace;font-size:10px;color:#a59c88;display:block;margin-top:6px">— 12 caractères utiles —</span></div>
+        <div style="margin-top:11px;background:#fdf6f4;border:1px solid #f0d8d1;border-left:3px solid #a23e2e;border-radius:7px;padding:8px 10px;font-size:11.5px;color:#7d3322"><b>⚑ Motif</b> — rendu quasi vide. <span style="color:#a59c88;display:block;margin-top:3px">●●○ 2 strikes / 3 · analyse complète ↗</span></div>
+      </div>
+      <div style="border-top:1px solid #e4dbc9;background:#fbf8f1;padding:10px 12px;display:flex;gap:8px;align-items:center">
+        <span style="flex:1;text-align:center;background:#46402f;color:#f4efe6;font-size:12.5px;border-radius:8px;padding:10px">Vu</span>
+        <span style="flex:1;text-align:center;color:#a23e2e;border:1px solid #e3b3a8;background:#fdf6f4;font-size:12.5px;border-radius:8px;padding:10px">Bloquer</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- closing notes -->
+<div style="position:absolute;left:870px;top:3110px;width:262px">
+  <div style="background:#fef4a8;padding:15px;box-shadow:0 1px 4px rgba(0,0,0,.12);transform:rotate(1.2deg);font-family:'Architects Daughter',cursive;font-size:13.5px;line-height:1.55;color:#5a4a14">
+    <div style="font-family:'Caveat',cursive;font-weight:700;font-size:20px;color:#4a3c0c;margin-bottom:4px">Même preuve partout</div>
+    Photo + retranscription surlignée + motif : identiques sur ordi (panneau), volet, modale et mobile. Un seul modèle mental, un seul bout d'UI à coder.
+  </div>
+</div>
+<div style="position:absolute;left:870px;top:3300px;width:262px">
+  <div style="background:#fff;border:1.5px solid #cdc6b6;border-radius:9px;padding:13px 14px;box-shadow:0 1px 3px rgba(0,0,0,.07);font-size:12.5px;line-height:1.5;color:#5b5444">
+    <span style="font-family:'Caveat',cursive;font-weight:700;font-size:16px;color:#46402f">Pour le rendu charte</span><br>
+    Ensuite je passe l'ensemble en parchemin/sceaux (comme Pilotage Classe) : pastilles de module, têtières colorées, polices Cinzel / Cormorant / EB Garamond.
+  </div>
+</div>
+<div style="position:absolute;left:870px;top:3470px;width:262px">
+  <div style="background:#f6c9bd;padding:14px;box-shadow:0 1px 4px rgba(0,0,0,.12);transform:rotate(-1.1deg);font-family:'Architects Daughter',cursive;font-size:13px;line-height:1.5;color:#7d3322">
+    <b>Tu valides ?</b> (1) structure C — file + preuve · (2) contenu de preuve (photo + texte surligné + motif, le reste discret) · (3) actions Vu / Confirmer-Écarter selon la source + Bloquer-Débloquer. Je pars alors sur le rendu charte.
+  </div>
+</div>
+</x-dc>
+</body>
+</html>

@@ -1,0 +1,696 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<meta name="design_doc_mode" content="canvas">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Caveat:wght@500;600;700&family=Architects+Daughter&display=swap" rel="stylesheet">
+<style>
+  body { margin:0; font-family:'Architects Daughter', cursive; color:#46402f; -webkit-font-smoothing:antialiased; }
+</style>
+</helmet>
+
+<!-- ======================= INTRO ======================= -->
+<div style="position:absolute;left:80px;top:36px;width:1120px">
+  <div style="font-family:'Caveat',cursive;font-weight:700;font-size:46px;line-height:1.05;color:#3a352c">Aletheia · vue prof d'un élève — réorganisation</div>
+  <div style="font-family:'Architects Daughter',cursive;font-size:16px;color:#7a7263;margin-top:8px;max-width:880px">Wireframes low-fi pour <b>/prof/aletheia/eleve/[eleveId]</b>. Le cas qui casse tout : un élève <b>bi-classe</b> (Elo, en T1 <i>et</i> en THLP) suit <b>plusieurs livres</b> → chaque livre empile sa courbe + ses 6 semaines, et le détail se déplie sur place. Objectif : <b>un seul graphe</b>, <b>livres repliés</b>, <b>détail jamais en dessous</b>. Glisse pour te déplacer, zoome pour les détails.</div>
+</div>
+
+<!-- brief post-it -->
+<div style="position:absolute;left:80px;top:206px;width:350px">
+  <div style="background:#fef4a8;padding:16px 16px 18px;box-shadow:0 1px 4px rgba(0,0,0,.12);transform:rotate(-1.2deg);font-family:'Architects Daughter',cursive;font-size:14.5px;line-height:1.5;color:#5a4a14">
+    <div style="font-family:'Caveat',cursive;font-weight:700;font-size:21px;margin-bottom:6px;color:#4a3c0c">Le brief</div>
+    « Quand un élève a plusieurs livres (Elo en T1 et en THLP), on ne sait plus quoi regarder, tout s'empile. » → <b>le graphe de progression montre tous les livres ensemble</b> ; <b>l'architecture des livres n'est pas dépliée par défaut</b> ; <b>le détail d'une semaine ne s'affiche plus juste à la suite</b>.
+  </div>
+</div>
+
+<!-- legend card -->
+<div style="position:absolute;left:474px;top:206px;width:440px">
+  <div data-drags-parent="1" style="position:absolute;top:-26px;left:2px;font-family:'Caveat',cursive;font-size:19px;color:#6f6755">Conventions & couleurs</div>
+  <div style="background:#fbfaf6;border:1.5px solid #cdc6b6;border-radius:10px;box-shadow:0 1px 3px rgba(0,0,0,.08);padding:16px">
+    <div style="font-size:11px;color:#8a8270;letter-spacing:.06em;margin-bottom:8px">LE GRAPHE — UNE COULEUR PAR LIVRE</div>
+    <div style="display:flex;flex-wrap:wrap;gap:9px 18px;font-size:13px;color:#5b5444">
+      <div style="display:flex;align-items:center;gap:7px"><span style="width:22px;height:4px;border-radius:3px;background:#2C4A7C;display:inline-block"></span>Du contrat social · T1</div>
+      <div style="display:flex;align-items:center;gap:7px"><span style="width:22px;height:4px;border-radius:3px;background:#6E4E86;display:inline-block"></span>Méditations métaphysiques · THLP</div>
+    </div>
+    <div style="border-top:1px dashed #d3ccba;margin:12px 0 10px"></div>
+    <div style="font-size:11px;color:#8a8270;letter-spacing:.06em;margin-bottom:8px">ÉTAT D'UNE SEMAINE (le micro-stepper · 4 points)</div>
+    <div style="display:flex;flex-wrap:wrap;gap:9px 16px;font-size:12.5px;color:#5b5444">
+      <div style="display:flex;align-items:center;gap:6px"><span style="display:inline-flex;gap:2px"><span style="width:7px;height:7px;border-radius:50%;background:#5b6e4a"></span><span style="width:7px;height:7px;border-radius:50%;background:#5b6e4a"></span><span style="width:7px;height:7px;border-radius:50%;background:#5b6e4a"></span><span style="width:7px;height:7px;border-radius:50%;background:#5b6e4a"></span></span>terminée</div>
+      <div style="display:flex;align-items:center;gap:6px"><span style="display:inline-flex;gap:2px"><span style="width:7px;height:7px;border-radius:50%;background:#5b6e4a"></span><span style="width:7px;height:7px;border-radius:50%;background:#2C4A7C"></span><span style="width:7px;height:7px;border-radius:50%;border:1px solid #c4bca8"></span><span style="width:7px;height:7px;border-radius:50%;border:1px solid #c4bca8"></span></span>en cours</div>
+      <div style="display:flex;align-items:center;gap:6px"><span style="font-size:12px;color:#a59c88">🔒</span>verrouillée</div>
+    </div>
+    <div style="border-top:1px dashed #d3ccba;margin:12px 0 10px"></div>
+    <div style="display:flex;flex-direction:column;gap:7px;font-size:12.5px;color:#7a7263">
+      <div style="display:flex;align-items:center;gap:9px"><span style="width:38px;height:9px;border-radius:5px;background:#e4decf;display:inline-block"></span> texte / contenu</div>
+      <div style="display:flex;flex-wrap:wrap;align-items:center;gap:6px"><span style="display:inline-block;background:#f7ddd6;font-size:10px;padding:2px 6px;border-radius:3px;color:#a23e2e">à risque</span><span style="display:inline-block;background:#f7ecd6;font-size:10px;padding:2px 6px;border-radius:3px;color:#9A6A2E">sous seuil</span><span style="display:inline-block;background:#fef4a8;font-size:10px;padding:2px 6px;border-radius:3px;color:#5a4a14">ma note</span><span style="display:inline-block;background:#f6c9bd;font-size:10px;padding:2px 6px;border-radius:3px;color:#7d3322">problème</span></div>
+    </div>
+  </div>
+</div>
+
+<!-- ======================= BAND 1 — AUJOURD'HUI ======================= -->
+<div style="position:absolute;left:80px;top:470px;font-family:'Caveat',cursive;font-weight:700;font-size:32px;color:#3a352c">1 · La fiche élève Aletheia, aujourd'hui</div>
+<div style="position:absolute;left:80px;top:516px;font-family:'Architects Daughter',cursive;font-size:15px;color:#8a8270">L'écran réel pour Elo (T1 + THLP). Chaque livre repose SA courbe, puis SES 6 semaines listées d'emblée ; cliquer une semaine déplie tout le détail sur place.</div>
+
+<!-- today — laptop -->
+<div data-screen-label="Fiche élève Aletheia — actuel (ordi)" style="position:absolute;left:80px;top:566px;width:720px">
+  <div data-drags-parent="1" style="position:absolute;top:-26px;left:2px;font-family:'Caveat',cursive;font-size:19px;color:#6f6755">Sur ordinateur — aujourd'hui</div>
+  <div style="border:1.5px solid #cdc6b6;border-radius:11px;background:#fff;box-shadow:0 2px 8px rgba(0,0,0,.1);overflow:hidden">
+    <div style="background:#ece4d6;padding:8px 12px;display:flex;align-items:center;gap:6px"><span style="width:9px;height:9px;border-radius:50%;background:#c9b89a"></span><span style="width:9px;height:9px;border-radius:50%;background:#c9b89a"></span><span style="width:9px;height:9px;border-radius:50%;background:#c9b89a"></span></div>
+    <div style="background:#f4efe6;padding:16px 18px;height:840px;overflow:hidden;position:relative">
+      <div style="display:flex;justify-content:space-between;align-items:baseline">
+        <span style="font-family:'Caveat',cursive;font-weight:700;font-size:14px;letter-spacing:.08em;color:#46402f">PALIMPSESTE</span>
+        <div style="font-size:11.5px;color:#7a7263">Pilotage › Élèves › <span style="color:#46402f">Elo Vasseur</span></div>
+      </div>
+      <div style="font-size:11px;color:#7a7263;margin-top:12px">← Classe</div>
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-top:4px">
+        <div>
+          <div style="font-family:'Caveat',cursive;font-weight:700;font-size:23px;color:#46402f">Elo Vasseur</div>
+          <div style="font-size:11.5px;color:#8a8270;margin-top:1px">Détail par livre et par semaine</div>
+        </div>
+        <span style="background:#f7ddd6;color:#a23e2e;font-size:10.5px;padding:3px 9px;border-radius:9px">à risque</span>
+      </div>
+
+      <!-- LIVRE 1 -->
+      <div style="display:flex;justify-content:space-between;align-items:baseline;margin-top:16px;padding-bottom:5px;border-bottom:1px solid #ded6c4">
+        <span style="font-size:14px;font-weight:700;color:#46402f">Du contrat social <span style="font-weight:400;color:#7a7263;font-size:11.5px">· Terminale 1</span></span>
+        <span style="font-size:10.5px;color:#8a8270">3/6 semaines terminées</span>
+      </div>
+      <!-- curve 1 -->
+      <div style="background:#fff;border:1.2px solid #ded6c4;border-left:3px solid #2C4A7C;border-radius:8px;padding:9px 11px;margin-top:8px">
+        <div style="font-size:10px;color:#8a8270;letter-spacing:.04em">DIAGNOSTIC — THÈSE / ARGUMENTS (E→A) · prof-only</div>
+        <svg viewBox="0 0 320 70" width="100%" height="58" style="margin-top:4px;display:block">
+          <line x1="22" y1="8" x2="22" y2="58" stroke="#ded6c4" stroke-width="1"/>
+          <line x1="22" y1="58" x2="312" y2="58" stroke="#ded6c4" stroke-width="1"/>
+          <polyline points="40,46 100,34 160,34 220,18 280,16" fill="none" stroke="#8b5cf6" stroke-width="1.6"/>
+          <polyline points="40,52 100,44 160,30 220,26 280,20" fill="none" stroke="#0ea5e9" stroke-width="1.6"/>
+        </svg>
+      </div>
+      <!-- weeks label -->
+      <div style="font-size:10px;color:#8a8270;letter-spacing:.06em;margin-top:11px">SEMAINES (les 6 listées d'emblée)</div>
+      <div style="display:flex;flex-direction:column;gap:5px;margin-top:6px">
+        <div style="background:#fff;border:1.2px solid #ded6c4;border-radius:7px;padding:8px 10px;display:flex;justify-content:space-between;align-items:center"><span style="font-size:12px;color:#46402f">▸ S1 — L'état de nature <span style="color:#2C4A7C;font-size:10.5px">· ch. I–III</span></span><span style="font-size:10px;color:#8a8270">Terminée</span></div>
+        <!-- expanded one -->
+        <div style="background:#fff;border:1.4px solid #c9bfa6;border-radius:7px;overflow:hidden">
+          <div style="padding:8px 10px;display:flex;justify-content:space-between;align-items:center;background:#fbf8f1"><span style="font-size:12px;color:#46402f">▾ S2 — Le pacte social <span style="color:#2C4A7C;font-size:10.5px">· ch. VI–VIII</span></span><span style="font-size:10px;color:#8a8270">Terminée</span></div>
+          <div style="border-top:1px solid #ded6c4;padding:9px 11px;display:flex;flex-direction:column;gap:8px">
+            <div><div style="font-size:9px;color:#a59c88;letter-spacing:.05em">VERSION INITIALE (V1)</div><div style="height:7px;width:88%;background:#e4decf;border-radius:4px;margin-top:4px"></div><div style="height:7px;width:74%;background:#e4decf;border-radius:4px;margin-top:4px"></div></div>
+            <div><div style="font-size:9px;color:#a59c88;letter-spacing:.05em">RETOUR V1 (IA)</div><div style="height:7px;width:80%;background:#e4decf;border-radius:4px;margin-top:4px"></div><div style="height:7px;width:66%;background:#e4decf;border-radius:4px;margin-top:4px"></div></div>
+            <div><div style="font-size:9px;color:#a59c88;letter-spacing:.05em">VERSION FINALE (VF)</div><div style="height:7px;width:82%;background:#e4decf;border-radius:4px;margin-top:4px"></div></div>
+            <div><div style="font-size:9px;color:#a59c88;letter-spacing:.05em">RETOUR FINAL + DIAGNOSTIC</div><div style="height:7px;width:90%;background:#e4decf;border-radius:4px;margin-top:4px"></div><div style="height:7px;width:58%;background:#e4decf;border-radius:4px;margin-top:4px"></div></div>
+          </div>
+        </div>
+        <div style="background:#fff;border:1.2px solid #ded6c4;border-radius:7px;padding:8px 10px;display:flex;justify-content:space-between;align-items:center"><span style="font-size:12px;color:#46402f">▸ S3 — Le souverain <span style="color:#2C4A7C;font-size:10.5px">· ch. I–IV</span></span><span style="font-size:10px;color:#8a8270">Terminée</span></div>
+        <div style="background:#fff;border:1.2px solid #ded6c4;border-radius:7px;padding:8px 10px;display:flex;justify-content:space-between;align-items:center"><span style="font-size:12px;color:#46402f">▸ S4 — La loi <span style="color:#2C4A7C;font-size:10.5px">· ch. VI</span></span><span style="font-size:10px;color:#9A6A2E">Retour final à valider</span></div>
+        <div style="background:#fff;border:1.2px solid #ded6c4;border-radius:7px;padding:8px 10px;display:flex;justify-content:space-between;align-items:center;opacity:.6"><span style="font-size:12px;color:#46402f">🔒 S5 — Le gouvernement</span><span style="font-size:10px;color:#8a8270">Verrouillée</span></div>
+      </div>
+
+      <!-- LIVRE 2 begins -->
+      <div style="display:flex;justify-content:space-between;align-items:baseline;margin-top:16px;padding-bottom:5px;border-bottom:1px solid #ded6c4">
+        <span style="font-size:14px;font-weight:700;color:#46402f">Méditations métaphysiques <span style="font-weight:400;color:#7a7263;font-size:11.5px">· Terminale HLP</span></span>
+        <span style="font-size:10.5px;color:#8a8270">1/6 semaines</span>
+      </div>
+      <div style="background:#fff;border:1.2px solid #ded6c4;border-left:3px solid #6E4E86;border-radius:8px;padding:9px 11px;margin-top:8px">
+        <div style="font-size:10px;color:#8a8270;letter-spacing:.04em">DIAGNOSTIC — THÈSE / ARGUMENTS (E→A) · prof-only</div>
+        <svg viewBox="0 0 320 40" width="100%" height="30" style="margin-top:4px;display:block"><polyline points="40,30 100,24 160,16" fill="none" stroke="#0ea5e9" stroke-width="1.6"/></svg>
+      </div>
+      <!-- fade -->
+      <div style="position:absolute;left:0;right:0;bottom:0;height:80px;background:linear-gradient(to bottom,rgba(244,239,230,0),#f4efe6)"></div>
+      <div style="position:absolute;right:14px;bottom:16px;font-family:'Caveat',cursive;font-size:20px;color:#a59c88">…et encore les 6 semaines du 2ᵉ livre ↓</div>
+    </div>
+  </div>
+</div>
+
+<!-- today — mobile -->
+<div data-screen-label="Fiche élève Aletheia — actuel (mobile)" style="position:absolute;left:840px;top:566px;width:300px">
+  <div data-drags-parent="1" style="position:absolute;top:-26px;left:2px;font-family:'Caveat',cursive;font-size:19px;color:#6f6755">Sur mobile — aujourd'hui</div>
+  <div style="border:2.5px solid #46402f;border-radius:30px;padding:9px;background:#46402f;box-shadow:0 3px 10px rgba(0,0,0,.13)">
+    <div style="height:5px;width:46px;background:#cdc6b6;border-radius:3px;margin:3px auto 7px"></div>
+    <div style="background:#f4efe6;border-radius:22px;padding:13px;height:700px;overflow:hidden;position:relative">
+      <div style="display:flex;justify-content:space-between;align-items:center;font-size:10px;color:#7a7263"><span style="font-family:'Caveat',cursive;font-weight:700;font-size:12px;letter-spacing:.06em;color:#46402f">PALIMPSESTE</span><span>☰</span></div>
+      <div style="font-family:'Caveat',cursive;font-weight:700;font-size:18px;color:#46402f;margin-top:8px">Elo Vasseur</div>
+      <div style="font-size:10px;color:#8a8270">Du contrat social · T1</div>
+      <div style="background:#fff;border:1.2px solid #ded6c4;border-left:3px solid #2C4A7C;border-radius:7px;height:54px;margin-top:8px"></div>
+      <div style="font-size:9px;color:#8a8270;letter-spacing:.06em;margin-top:9px">SEMAINES</div>
+      <div style="background:#fff;border:1.2px solid #ded6c4;border-radius:7px;height:30px;margin-top:5px"></div>
+      <div style="background:#fff;border:1.4px solid #c9bfa6;border-radius:7px;height:118px;margin-top:5px"></div>
+      <div style="background:#fff;border:1.2px solid #ded6c4;border-radius:7px;height:30px;margin-top:5px"></div>
+      <div style="background:#fff;border:1.2px solid #ded6c4;border-radius:7px;height:30px;margin-top:5px"></div>
+      <div style="font-size:10px;color:#8a8270;margin-top:11px">Méditations métaphysiques · THLP</div>
+      <div style="background:#fff;border:1.2px solid #ded6c4;border-left:3px solid #6E4E86;border-radius:7px;height:54px;margin-top:6px"></div>
+      <div style="position:absolute;left:0;right:0;bottom:0;height:90px;background:linear-gradient(to bottom,rgba(244,239,230,0),#f4efe6)"></div>
+      <div style="position:absolute;right:12px;bottom:14px;font-family:'Caveat',cursive;font-size:18px;color:#a59c88">scroll ↓ … ↓</div>
+    </div>
+  </div>
+</div>
+
+<!-- problem stickies -->
+<div style="position:absolute;left:1180px;top:600px;width:255px">
+  <div style="background:#f6c9bd;padding:14px;box-shadow:0 1px 4px rgba(0,0,0,.12);transform:rotate(1.4deg);font-size:13.5px;line-height:1.5;color:#7d3322">
+    <b>⚠ Une courbe par livre, empilées.</b> Deux livres = deux diagnostics l'un sous l'autre. On ne compare jamais les trajectoires, et ça repousse tout vers le bas.
+  </div>
+</div>
+<div style="position:absolute;left:1180px;top:760px;width:255px">
+  <div style="background:#f6c9bd;padding:14px;box-shadow:0 1px 4px rgba(0,0,0,.12);transform:rotate(-1.3deg);font-size:13.5px;line-height:1.5;color:#7d3322">
+    <b>⚠ Les 6 semaines listées d'emblée.</b> L'architecture de chaque livre est dépliée par défaut → ×2 livres, la page fait deux écrans avant même d'avoir cliqué.
+  </div>
+</div>
+<div style="position:absolute;left:1180px;top:928px;width:255px">
+  <div style="background:#f6c9bd;padding:14px;box-shadow:0 1px 4px rgba(0,0,0,.12);transform:rotate(1.2deg);font-size:13.5px;line-height:1.5;color:#7d3322">
+    <b>⚠ Le détail se déplie sur place.</b> Ouvrir S2 insère V1 + retours + VF + diagnostic juste en dessous : on perd le graphe, le fil, et la place des autres semaines.
+  </div>
+</div>
+
+<!-- ======================= BAND 2 — PARTIS PRIS + GRAPHE ======================= -->
+<div style="position:absolute;left:80px;top:1500px;font-family:'Caveat',cursive;font-weight:700;font-size:32px;color:#3a352c">2 · Trois partis pris, et le graphe unique</div>
+<div style="position:absolute;left:80px;top:1546px;font-family:'Architects Daughter',cursive;font-size:15px;color:#8a8270">Ce qui ne change pas d'une piste à l'autre : un seul graphe en tête, des livres repliés, un détail qui ne s'empile plus.</div>
+
+<!-- principes card -->
+<div data-screen-label="Les 3 partis pris" style="position:absolute;left:80px;top:1600px;width:440px">
+  <div data-drags-parent="1" style="position:absolute;top:-26px;left:2px;font-family:'Caveat',cursive;font-size:19px;color:#6f6755">Les 3 décisions partagées</div>
+  <div style="background:#fbfaf6;border:1.5px solid #cdc6b6;border-radius:12px;box-shadow:0 1px 4px rgba(0,0,0,.09);padding:18px;display:flex;flex-direction:column;gap:14px">
+    <div style="display:flex;gap:12px"><span style="font-family:'Caveat',cursive;font-weight:700;font-size:26px;color:#2C4A7C;line-height:1">1</span><div style="font-size:13.5px;line-height:1.5;color:#5b5444"><b>Un seul graphe, tous les livres.</b> Une couleur par livre, axe horizontal = le temps (les rythmes T1/THLP s'entrelacent), bascule <b>Arguments / Thèse</b>. Remplace les N courbes empilées.</div></div>
+    <div style="border-top:1px dashed #d3ccba"></div>
+    <div style="display:flex;gap:12px"><span style="font-family:'Caveat',cursive;font-weight:700;font-size:26px;color:#2C4A7C;line-height:1">2</span><div style="font-size:13.5px;line-height:1.5;color:#5b5444"><b>Livres repliés par défaut.</b> Chaque livre = une carte compacte (titre, classe, x/n, mini-courbe). On déplie pour révéler la liste des semaines — l'architecture ne s'étale plus toute seule.</div></div>
+    <div style="border-top:1px dashed #d3ccba"></div>
+    <div style="display:flex;gap:12px"><span style="font-family:'Caveat',cursive;font-weight:700;font-size:26px;color:#2C4A7C;line-height:1">3</span><div style="font-size:13.5px;line-height:1.5;color:#5b5444"><b>Le détail ne s'empile plus.</b> Cliquer une semaine ouvre son détail <b>ailleurs</b> (panneau / colonne / page) — jamais inséré sous la liste. C'est la question des 3 pistes ci-dessous.</div></div>
+  </div>
+</div>
+
+<!-- graphe unique — desktop detail -->
+<div data-screen-label="Le graphe unique — détail" style="position:absolute;left:560px;top:1600px;width:660px">
+  <div data-drags-parent="1" style="position:absolute;top:-26px;left:2px;font-family:'Caveat',cursive;font-size:19px;color:#6f6755">Le graphe unique « tous les livres » — de près</div>
+  <div style="border:1.5px solid #cdc6b6;border-radius:11px;background:#fff;box-shadow:0 2px 8px rgba(0,0,0,.1);overflow:hidden">
+    <div style="background:#f4efe6;padding:16px 18px">
+      <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px">
+        <span style="font-size:13px;font-weight:700;color:#46402f">Progression — compréhension (E→A)</span>
+        <span style="display:inline-flex;border:1.2px solid #c4bca8;border-radius:8px;overflow:hidden;font-size:11px">
+          <span style="background:#46402f;color:#f4efe6;padding:4px 11px">Arguments</span>
+          <span style="color:#7a7263;padding:4px 11px">Thèse</span>
+        </span>
+      </div>
+      <div style="background:#fff;border:1.2px solid #ded6c4;border-radius:9px;padding:12px 14px 8px;margin-top:10px">
+        <svg viewBox="0 0 600 220" width="100%" height="220" style="display:block">
+          <!-- y gridlines + labels -->
+          <g font-family="'Architects Daughter',cursive" font-size="12" fill="#a59c88">
+            <line x1="40" y1="20" x2="582" y2="20" stroke="#efe9dd" stroke-width="1"/><text x="12" y="24">A</text>
+            <line x1="40" y1="65" x2="582" y2="65" stroke="#efe9dd" stroke-width="1"/><text x="12" y="69">B</text>
+            <line x1="40" y1="110" x2="582" y2="110" stroke="#efe9dd" stroke-width="1"/><text x="12" y="114">C</text>
+            <line x1="40" y1="155" x2="582" y2="155" stroke="#efe9dd" stroke-width="1"/><text x="12" y="159">D</text>
+            <line x1="40" y1="186" x2="582" y2="186" stroke="#ded6c4" stroke-width="1.2"/><text x="12" y="190">E</text>
+          </g>
+          <!-- x labels (time) -->
+          <g font-family="'Architects Daughter',cursive" font-size="12" fill="#a59c88" text-anchor="middle">
+            <text x="80" y="208">déc.</text><text x="170" y="208">janv.</text><text x="260" y="208">févr.</text><text x="350" y="208">mars</text><text x="440" y="208">avr.</text><text x="530" y="208">mai</text>
+          </g>
+          <!-- Book A : Du contrat social (outremer) -->
+          <polyline points="80,110 170,65 260,65 350,20 440,20" fill="none" stroke="#2C4A7C" stroke-width="2.4"/>
+          <g fill="#2C4A7C"><circle cx="80" cy="110" r="4"/><circle cx="170" cy="65" r="4"/><circle cx="260" cy="65" r="4"/><circle cx="350" cy="20" r="4"/><circle cx="440" cy="20" r="4"/></g>
+          <!-- Book B : Méditations (plum), starts later -->
+          <polyline points="170,155 260,110 350,110 440,65 530,65" fill="none" stroke="#6E4E86" stroke-width="2.4"/>
+          <g fill="#6E4E86"><circle cx="170" cy="155" r="4"/><circle cx="260" cy="110" r="4"/><circle cx="350" cy="110" r="4"/><circle cx="440" cy="65" r="4"/><circle cx="530" cy="65" r="4"/></g>
+        </svg>
+        <div style="display:flex;flex-wrap:wrap;gap:8px 20px;border-top:1px dashed #ece4d6;margin-top:6px;padding-top:9px;font-size:12px;color:#5b5444">
+          <div style="display:flex;align-items:center;gap:7px"><span style="width:22px;height:4px;border-radius:3px;background:#2C4A7C;display:inline-block"></span>Du contrat social <span style="color:#8a8270">· T1</span></div>
+          <div style="display:flex;align-items:center;gap:7px"><span style="width:22px;height:4px;border-radius:3px;background:#6E4E86;display:inline-block"></span>Méditations métaphysiques <span style="color:#8a8270">· THLP</span></div>
+        </div>
+      </div>
+      <div style="font-size:11.5px;color:#7a7263;margin-top:9px;line-height:1.5">Cliquer un point = ouvrir le détail de cette semaine (même mécanique que la piste retenue). La <b>tendance</b> prime sur le point isolé.</div>
+    </div>
+  </div>
+</div>
+
+<!-- graph note -->
+<div style="position:absolute;left:1250px;top:1620px;width:255px">
+  <div style="background:#fef4a8;padding:14px;box-shadow:0 1px 4px rgba(0,0,0,.12);transform:rotate(1.3deg);font-size:13.5px;line-height:1.5;color:#5a4a14">
+    <div style="font-family:'Caveat',cursive;font-weight:700;font-size:19px;color:#4a3c0c;margin-bottom:5px">Pourquoi 1 ligne / livre</div>
+    On garde le diagnostic E→A (la substance) mais <b>une seule ligne par livre</b> (l'axe le plus robuste), pas thèse + arguments × livres. La bascule montre l'autre axe quand on veut creuser. Lisible même à 3-4 livres.
+  </div>
+</div>
+<div style="position:absolute;left:1250px;top:1830px;width:255px">
+  <div style="background:#fbfaf6;border:1.5px solid #cdc6b6;border-radius:10px;padding:13px 15px;box-shadow:0 1px 3px rgba(0,0,0,.08);font-size:13px;line-height:1.5;color:#5b5444">
+    <b>Variante d'axe.</b> Par défaut l'axe X = le temps (calendrier), pour voir l'élève sur tous ses fronts. On peut basculer en « indice de semaine (S1, S2…) » si tu préfères aligner les livres à leur départ.
+  </div>
+</div>
+
+<!-- ======================= BAND 3 — 3 PISTES DÉTAIL ======================= -->
+<div style="position:absolute;left:80px;top:2110px;font-family:'Caveat',cursive;font-weight:700;font-size:32px;color:#3a352c">3 · Où s'ouvre le détail d'une semaine — 3 pistes</div>
+<div style="position:absolute;left:80px;top:2156px;font-family:'Architects Daughter',cursive;font-size:15px;color:#8a8270">Même tête de page (graphe + livres repliés). Ce qui change : où atterrit le détail (V1, retours, VF, diagnostic) quand on clique une semaine.</div>
+
+<!-- PISTE A — maître-détail -->
+<div data-screen-label="Piste A — maître-détail" style="position:absolute;left:80px;top:2226px;width:470px">
+  <div data-drags-parent="1" style="position:absolute;top:-28px;left:2px;font-family:'Caveat',cursive;font-weight:700;font-size:22px;color:#46402f">A — « Maître-détail » (2 colonnes)</div>
+  <div style="background:#fbfaf6;border:1.5px solid #cdc6b6;border-radius:12px;box-shadow:0 1px 4px rgba(0,0,0,.09);padding:18px">
+    <div style="font-size:11px;color:#8a8270;margin-bottom:7px">SUR ORDI — liste à gauche, détail figé à droite</div>
+    <div style="border:2.5px solid #46402f;border-radius:14px;padding:7px;background:#46402f">
+      <div style="background:#f4efe6;border-radius:9px;height:250px;overflow:hidden;display:flex">
+        <!-- left list -->
+        <div style="width:150px;border-right:1.4px solid #ded6c4;padding:9px;display:flex;flex-direction:column;gap:5px;background:#fbf8f1">
+          <div style="font-size:8.5px;color:#8a8270;letter-spacing:.05em">T1 · CONTRAT SOCIAL</div>
+          <div style="background:#fff;border:1px solid #ded6c4;border-radius:6px;padding:5px 6px;font-size:9.5px;color:#46402f">S1</div>
+          <div style="background:#e7eef6;border:1.4px solid #2C4A7C;border-radius:6px;padding:5px 6px;font-size:9.5px;color:#2C4A7C;font-weight:700">S2 ◂</div>
+          <div style="background:#fff;border:1px solid #ded6c4;border-radius:6px;padding:5px 6px;font-size:9.5px;color:#46402f">S3</div>
+          <div style="font-size:8.5px;color:#8a8270;letter-spacing:.05em;margin-top:3px">THLP · MÉDITATIONS</div>
+          <div style="background:#fff;border:1px solid #ded6c4;border-radius:6px;padding:5px 6px;font-size:9.5px;color:#46402f">S1</div>
+        </div>
+        <!-- right detail -->
+        <div style="flex:1;padding:9px 10px;display:flex;flex-direction:column;gap:6px">
+          <div style="font-size:10px;font-weight:700;color:#46402f">S2 — Le pacte social</div>
+          <div style="font-size:8px;color:#a59c88;letter-spacing:.05em">V1</div>
+          <div style="height:6px;width:90%;background:#e4decf;border-radius:3px"></div>
+          <div style="font-size:8px;color:#a59c88;letter-spacing:.05em">RETOUR + VF + DIAGNOSTIC</div>
+          <div style="height:6px;width:80%;background:#e4decf;border-radius:3px"></div>
+          <div style="height:6px;width:70%;background:#e4decf;border-radius:3px"></div>
+          <div style="height:6px;width:76%;background:#e4decf;border-radius:3px"></div>
+        </div>
+      </div>
+    </div>
+    <!-- mobile mini -->
+    <div style="display:flex;align-items:flex-start;gap:12px;margin-top:13px">
+      <div style="border:2px solid #46402f;border-radius:16px;padding:5px;background:#46402f;width:92px;flex-shrink:0">
+        <div style="background:#f4efe6;border-radius:11px;height:140px;padding:7px;overflow:hidden">
+          <div style="font-size:8px;color:#8a8270">← Elo · S2</div>
+          <div style="font-size:9px;font-weight:700;color:#46402f;margin-top:3px">Le pacte social</div>
+          <div style="height:5px;width:90%;background:#e4decf;border-radius:3px;margin-top:6px"></div>
+          <div style="height:5px;width:70%;background:#e4decf;border-radius:3px;margin-top:4px"></div>
+          <div style="height:5px;width:80%;background:#e4decf;border-radius:3px;margin-top:4px"></div>
+          <div style="height:5px;width:64%;background:#e4decf;border-radius:3px;margin-top:4px"></div>
+        </div>
+      </div>
+      <div style="font-size:12px;color:#5b5444;line-height:1.45">Sur <b>mobile</b>, pas de 2 colonnes : la semaine ouvre un <b>écran plein</b> avec « ← retour à Elo ».</div>
+    </div>
+    <div style="font-size:12.5px;color:#5b5444;line-height:1.5;margin-top:11px">
+      Liste des livres/semaines à gauche, détail de la semaine sélectionnée à droite. Le graphe reste au-dessus, le contexte ne bouge pas.
+      <div style="margin-top:7px;color:#5b6e4a">+ outil de revue : la liste reste visible, zéro saut, idéal grand écran</div>
+      <div style="color:#a23e2e">– demande de la largeur ; le détail est un peu étroit</div>
+    </div>
+  </div>
+</div>
+
+<!-- PISTE B — tiroir -->
+<div data-screen-label="Piste B — tiroir latéral" style="position:absolute;left:600px;top:2226px;width:470px">
+  <div data-drags-parent="1" style="position:absolute;top:-28px;left:2px;font-family:'Caveat',cursive;font-weight:700;font-size:22px;color:#46402f">B — « Tiroir latéral »</div>
+  <div style="background:#fbfaf6;border:1.5px solid #cdc6b6;border-radius:12px;box-shadow:0 1px 4px rgba(0,0,0,.09);padding:18px">
+    <div style="font-size:11px;color:#8a8270;margin-bottom:7px">SUR ORDI — la page reste, un panneau glisse de droite</div>
+    <div style="border:2.5px solid #46402f;border-radius:14px;padding:7px;background:#46402f">
+      <div style="background:#f4efe6;border-radius:9px;height:250px;overflow:hidden;position:relative;padding:9px">
+        <!-- dimmed page behind -->
+        <div style="opacity:.4">
+          <div style="background:#fff;border:1px solid #ded6c4;border-radius:6px;height:46px"></div>
+          <div style="background:#fff;border:1px solid #ded6c4;border-left:3px solid #2C4A7C;border-radius:6px;height:30px;margin-top:6px"></div>
+          <div style="background:#fff;border:1px solid #ded6c4;border-left:3px solid #6E4E86;border-radius:6px;height:30px;margin-top:6px"></div>
+        </div>
+        <!-- scrim -->
+        <div style="position:absolute;inset:0;background:rgba(70,64,47,.22)"></div>
+        <!-- drawer -->
+        <div style="position:absolute;top:0;right:0;bottom:0;width:62%;background:#fff;border-left:1.4px solid #ded6c4;box-shadow:-5px 0 14px rgba(0,0,0,.14);padding:10px;display:flex;flex-direction:column;gap:6px">
+          <div style="display:flex;justify-content:space-between;align-items:center"><span style="font-size:10px;font-weight:700;color:#46402f">S2 — Le pacte social</span><span style="font-size:11px;color:#a59c88">✕</span></div>
+          <div style="font-size:8px;color:#a59c88;letter-spacing:.05em">V1 · RETOUR · VF · DIAGNOSTIC</div>
+          <div style="height:6px;width:92%;background:#e4decf;border-radius:3px"></div>
+          <div style="height:6px;width:78%;background:#e4decf;border-radius:3px"></div>
+          <div style="height:6px;width:85%;background:#e4decf;border-radius:3px"></div>
+          <div style="height:6px;width:70%;background:#e4decf;border-radius:3px"></div>
+          <div style="height:6px;width:80%;background:#e4decf;border-radius:3px"></div>
+        </div>
+      </div>
+    </div>
+    <!-- mobile mini -->
+    <div style="display:flex;align-items:flex-start;gap:12px;margin-top:13px">
+      <div style="border:2px solid #46402f;border-radius:16px;padding:5px;background:#46402f;width:92px;flex-shrink:0">
+        <div style="background:#f4efe6;border-radius:11px;height:140px;overflow:hidden;position:relative">
+          <div style="padding:7px;opacity:.4"><div style="height:5px;width:80%;background:#e4decf;border-radius:3px"></div><div style="height:5px;width:60%;background:#e4decf;border-radius:3px;margin-top:5px"></div></div>
+          <div style="position:absolute;left:0;right:0;bottom:0;height:100px;background:#fff;border-top:1.4px solid #ded6c4;border-radius:12px 12px 0 0;box-shadow:0 -3px 10px rgba(0,0,0,.12);padding:8px">
+            <div style="width:24px;height:3px;background:#d3ccba;border-radius:2px;margin:0 auto 6px"></div>
+            <div style="font-size:8.5px;font-weight:700;color:#46402f">S2 — Le pacte social</div>
+            <div style="height:5px;width:88%;background:#e4decf;border-radius:3px;margin-top:6px"></div>
+            <div style="height:5px;width:70%;background:#e4decf;border-radius:3px;margin-top:4px"></div>
+          </div>
+        </div>
+      </div>
+      <div style="font-size:12px;color:#5b5444;line-height:1.45">Sur <b>mobile</b>, le tiroir devient une <b>feuille</b> qui monte du bas (bottom-sheet).</div>
+    </div>
+    <div style="font-size:12.5px;color:#5b5444;line-height:1.5;margin-top:11px">
+      Un clic ouvre un panneau par-dessus ; la page (graphe + livres) reste dessous, atténuée. Fermer = revenir où on était.
+      <div style="margin-top:7px;color:#5b6e4a">+ même patron ordi/mobile ; ne casse pas le défilement ; détail large</div>
+      <div style="color:#a23e2e">– masque le graphe pendant la lecture ; un seul détail à la fois</div>
+    </div>
+  </div>
+</div>
+
+<!-- PISTE C — page dédiée -->
+<div data-screen-label="Piste C — page dédiée" style="position:absolute;left:1120px;top:2226px;width:470px">
+  <div data-drags-parent="1" style="position:absolute;top:-28px;left:2px;font-family:'Caveat',cursive;font-weight:700;font-size:22px;color:#46402f">C — « Page dédiée par semaine »</div>
+  <div style="background:#fbfaf6;border:1.5px solid #cdc6b6;border-radius:12px;box-shadow:0 1px 4px rgba(0,0,0,.09);padding:18px">
+    <div style="font-size:11px;color:#8a8270;margin-bottom:7px">SUR ORDI — la fiche = sommaire ; la semaine = sa page</div>
+    <div style="display:flex;align-items:center;gap:8px">
+      <div style="border:2.5px solid #46402f;border-radius:14px;padding:6px;background:#46402f;flex:1">
+        <div style="background:#f4efe6;border-radius:9px;height:150px;padding:9px;overflow:hidden">
+          <div style="font-size:9px;font-weight:700;color:#46402f">Elo — sommaire</div>
+          <div style="background:#fff;border:1px solid #ded6c4;border-radius:6px;height:40px;margin-top:6px"></div>
+          <div style="background:#fff;border:1px solid #ded6c4;border-left:3px solid #2C4A7C;border-radius:6px;padding:5px 7px;margin-top:6px;font-size:9px;color:#46402f">▾ Contrat social</div>
+          <div style="display:flex;gap:4px;margin-top:5px"><span style="background:#e7eef6;border:1px solid #2C4A7C;border-radius:5px;padding:3px 6px;font-size:8.5px;color:#2C4A7C">S2 →</span><span style="background:#fff;border:1px solid #ded6c4;border-radius:5px;padding:3px 6px;font-size:8.5px;color:#7a7263">S3</span></div>
+        </div>
+      </div>
+      <span style="font-family:'Caveat',cursive;font-size:22px;color:#a59c88;flex-shrink:0">→</span>
+      <div style="border:2.5px solid #46402f;border-radius:14px;padding:6px;background:#46402f;flex:1">
+        <div style="background:#f4efe6;border-radius:9px;height:150px;padding:9px;overflow:hidden">
+          <div style="font-size:8.5px;color:#7a7263">← Elo · Contrat social</div>
+          <div style="font-size:9px;font-weight:700;color:#46402f;margin-top:3px">S2 — Le pacte social</div>
+          <div style="font-size:8px;color:#a59c88;letter-spacing:.04em;margin-top:5px">V1 · RETOUR · VF · DIAG</div>
+          <div style="height:5px;width:90%;background:#e4decf;border-radius:3px;margin-top:5px"></div>
+          <div style="height:5px;width:74%;background:#e4decf;border-radius:3px;margin-top:4px"></div>
+          <div style="height:5px;width:82%;background:#e4decf;border-radius:3px;margin-top:4px"></div>
+          <div style="height:5px;width:66%;background:#e4decf;border-radius:3px;margin-top:4px"></div>
+        </div>
+      </div>
+    </div>
+    <!-- mobile mini -->
+    <div style="display:flex;align-items:flex-start;gap:12px;margin-top:13px">
+      <div style="border:2px solid #46402f;border-radius:16px;padding:5px;background:#46402f;width:92px;flex-shrink:0">
+        <div style="background:#f4efe6;border-radius:11px;height:140px;padding:7px;overflow:hidden">
+          <div style="font-size:8px;color:#7a7263">← Contrat social</div>
+          <div style="font-size:9px;font-weight:700;color:#46402f;margin-top:3px">S2 — Le pacte</div>
+          <div style="height:5px;width:90%;background:#e4decf;border-radius:3px;margin-top:6px"></div>
+          <div style="height:5px;width:72%;background:#e4decf;border-radius:3px;margin-top:4px"></div>
+          <div style="height:5px;width:80%;background:#e4decf;border-radius:3px;margin-top:4px"></div>
+        </div>
+      </div>
+      <div style="font-size:12px;color:#5b5444;line-height:1.45">Sur <b>mobile</b>, naturel : on navigue de page en page, comme le reste de l'app.</div>
+    </div>
+    <div style="font-size:12.5px;color:#5b5444;line-height:1.5;margin-top:11px">
+      La fiche reste un sommaire (graphe + livres repliés + accès semaines). Cliquer = aller sur la page de la semaine, avec retour.
+      <div style="margin-top:7px;color:#5b6e4a">+ détail plein écran ; identique ordi/mobile ; URL partageable</div>
+      <div style="color:#a23e2e">– on quitte le graphe à chaque semaine ; aller-retours pour comparer</div>
+    </div>
+  </div>
+</div>
+
+<!-- reco band 3 -->
+<div style="position:absolute;left:1620px;top:2250px;width:255px">
+  <div style="background:#fef4a8;padding:15px;box-shadow:0 1px 4px rgba(0,0,0,.12);transform:rotate(1.3deg);font-family:'Architects Daughter',cursive;font-size:13.5px;line-height:1.55;color:#5a4a14">
+    <div style="font-family:'Caveat',cursive;font-weight:700;font-size:20px;color:#4a3c0c;margin-bottom:5px">Penche pour A</div>
+    La fiche prof est un <b>outil de revue</b> : garder la liste sous les yeux et figer le détail à droite (A) sert mieux que masquer le graphe (B) ou multiplier les pages (C). Sur <b>mobile</b>, A retombe sur un <b>écran plein</b> (le bon réflexe de C).
+  </div>
+</div>
+
+<!-- ======================= BAND 4 — CARTE LIVRE REPLIÉE → DÉPLIÉE ======================= -->
+<div style="position:absolute;left:80px;top:2904px;font-family:'Caveat',cursive;font-weight:700;font-size:32px;color:#3a352c">4 · La carte d'un livre : repliée → dépliée</div>
+<div style="position:absolute;left:80px;top:2950px;font-family:'Architects Daughter',cursive;font-size:15px;color:#8a8270">À l'arrivée, chaque livre est une carte compacte. On déplie pour la liste des semaines (numéro, titre, micro-stepper, état, accès au détail) — sans jamais montrer le détail lui-même.</div>
+
+<!-- repliée -->
+<div data-screen-label="Carte livre — repliée (défaut)" style="position:absolute;left:80px;top:3014px;width:520px">
+  <div data-drags-parent="1" style="position:absolute;top:-26px;left:2px;font-family:'Caveat',cursive;font-size:19px;color:#6f6755">Repliée — par défaut</div>
+  <div style="border:1.5px solid #cdc6b6;border-radius:11px;background:#fff;box-shadow:0 2px 8px rgba(0,0,0,.1);overflow:hidden">
+    <div style="background:#f4efe6;padding:16px 18px">
+      <div style="font-size:10px;color:#8a8270;letter-spacing:.06em">TERMINALE 1 · T1</div>
+      <div style="background:#fff;border:1.2px solid #ded6c4;border-left:4px solid #2C4A7C;border-radius:10px;padding:12px 14px;margin-top:7px;display:flex;align-items:center;gap:13px">
+        <span style="width:42px;height:42px;border-radius:50%;background:#e3e7ef;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;font-size:9px;color:#2C4A7C;text-align:center;line-height:1.1">sceau</span>
+        <div style="flex:1">
+          <div style="font-size:9px;color:#2C4A7C;letter-spacing:.08em">ALETHEIA</div>
+          <div style="font-family:'Caveat',cursive;font-weight:700;font-size:19px;color:#46402f;line-height:1.05">Du contrat social</div>
+          <div style="display:flex;align-items:center;gap:8px;margin-top:5px">
+            <span style="font-size:10.5px;color:#7a7263">3/6 terminées</span>
+            <span style="flex:1;height:6px;background:#e7e0d2;border-radius:4px;overflow:hidden;max-width:130px"><span style="display:block;width:50%;height:100%;background:#5b6e4a"></span></span>
+          </div>
+          <svg viewBox="0 0 150 24" width="120" height="20" style="margin-top:6px;display:block"><polyline points="4,18 36,12 68,12 100,5 132,4" fill="none" stroke="#2C4A7C" stroke-width="1.6"/></svg>
+        </div>
+        <span style="font-size:14px;color:#a59c88">▸</span>
+      </div>
+      <div style="font-size:10px;color:#8a8270;letter-spacing:.06em;margin-top:14px">TERMINALE HLP · THLP</div>
+      <div style="background:#fff;border:1.2px solid #ded6c4;border-left:4px solid #6E4E86;border-radius:10px;padding:12px 14px;margin-top:7px;display:flex;align-items:center;gap:13px">
+        <span style="width:42px;height:42px;border-radius:50%;background:#ebe6f0;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;font-size:9px;color:#6E4E86;text-align:center;line-height:1.1">sceau</span>
+        <div style="flex:1">
+          <div style="font-size:9px;color:#6E4E86;letter-spacing:.08em">ALETHEIA</div>
+          <div style="font-family:'Caveat',cursive;font-weight:700;font-size:19px;color:#46402f;line-height:1.05">Méditations métaphysiques</div>
+          <div style="display:flex;align-items:center;gap:8px;margin-top:5px">
+            <span style="font-size:10.5px;color:#7a7263">1/6 terminées</span>
+            <span style="flex:1;height:6px;background:#e7e0d2;border-radius:4px;overflow:hidden;max-width:130px"><span style="display:block;width:17%;height:100%;background:#5b6e4a"></span></span>
+          </div>
+        </div>
+        <span style="font-size:14px;color:#a59c88">▸</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- dépliée -->
+<div data-screen-label="Carte livre — dépliée (au clic)" style="position:absolute;left:640px;top:3014px;width:520px">
+  <div data-drags-parent="1" style="position:absolute;top:-26px;left:2px;font-family:'Caveat',cursive;font-size:19px;color:#6f6755">Dépliée — au clic (liste des semaines)</div>
+  <div style="border:1.5px solid #cdc6b6;border-radius:11px;background:#fff;box-shadow:0 2px 8px rgba(0,0,0,.1);overflow:hidden">
+    <div style="background:#f4efe6;padding:16px 18px">
+      <div style="font-size:10px;color:#8a8270;letter-spacing:.06em">TERMINALE 1 · T1</div>
+      <div style="background:#fff;border:1.2px solid #ded6c4;border-left:4px solid #2C4A7C;border-radius:10px;margin-top:7px;overflow:hidden">
+        <!-- header -->
+        <div style="padding:11px 14px;display:flex;align-items:center;gap:12px;border-bottom:1px solid #ece4d6">
+          <span style="width:36px;height:36px;border-radius:50%;background:#e3e7ef;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;font-size:8px;color:#2C4A7C">sceau</span>
+          <div style="flex:1"><div style="font-size:9px;color:#2C4A7C;letter-spacing:.08em">ALETHEIA</div><div style="font-family:'Caveat',cursive;font-weight:700;font-size:18px;color:#46402f;line-height:1">Du contrat social</div></div>
+          <span style="font-size:10.5px;color:#7a7263">3/6</span>
+          <span style="font-size:14px;color:#2C4A7C">▾</span>
+        </div>
+        <!-- week rows -->
+        <div style="padding:7px 10px;display:flex;flex-direction:column;gap:4px">
+          <!-- S1 done -->
+          <div style="display:flex;align-items:center;gap:9px;padding:7px 8px;border-radius:7px"><span style="font-family:'Caveat',cursive;font-weight:700;font-size:15px;color:#a59c88;width:24px">1</span><span style="flex:1;font-size:11.5px;color:#46402f">L'état de nature <span style="color:#2C4A7C;font-size:10px">· ch. I–III</span></span><span style="display:inline-flex;gap:2px"><span style="width:7px;height:7px;border-radius:50%;background:#5b6e4a"></span><span style="width:7px;height:7px;border-radius:50%;background:#5b6e4a"></span><span style="width:7px;height:7px;border-radius:50%;background:#5b6e4a"></span><span style="width:7px;height:7px;border-radius:50%;background:#5b6e4a"></span></span><span style="font-size:10px;color:#2C4A7C;width:74px;text-align:right">Voir →</span></div>
+          <!-- S2 done -->
+          <div style="display:flex;align-items:center;gap:9px;padding:7px 8px;border-radius:7px"><span style="font-family:'Caveat',cursive;font-weight:700;font-size:15px;color:#a59c88;width:24px">2</span><span style="flex:1;font-size:11.5px;color:#46402f">Le pacte social <span style="color:#2C4A7C;font-size:10px">· ch. VI–VIII</span></span><span style="display:inline-flex;gap:2px"><span style="width:7px;height:7px;border-radius:50%;background:#5b6e4a"></span><span style="width:7px;height:7px;border-radius:50%;background:#5b6e4a"></span><span style="width:7px;height:7px;border-radius:50%;background:#5b6e4a"></span><span style="width:7px;height:7px;border-radius:50%;background:#5b6e4a"></span></span><span style="font-size:10px;color:#2C4A7C;width:74px;text-align:right">Voir →</span></div>
+          <!-- S3 done -->
+          <div style="display:flex;align-items:center;gap:9px;padding:7px 8px;border-radius:7px"><span style="font-family:'Caveat',cursive;font-weight:700;font-size:15px;color:#a59c88;width:24px">3</span><span style="flex:1;font-size:11.5px;color:#46402f">Le souverain <span style="color:#2C4A7C;font-size:10px">· ch. I–IV</span></span><span style="display:inline-flex;gap:2px"><span style="width:7px;height:7px;border-radius:50%;background:#5b6e4a"></span><span style="width:7px;height:7px;border-radius:50%;background:#5b6e4a"></span><span style="width:7px;height:7px;border-radius:50%;background:#5b6e4a"></span><span style="width:7px;height:7px;border-radius:50%;background:#5b6e4a"></span></span><span style="font-size:10px;color:#2C4A7C;width:74px;text-align:right">Voir →</span></div>
+          <!-- S4 current -->
+          <div style="display:flex;align-items:center;gap:9px;padding:7px 8px;border-radius:7px;background:#e7eef6;border:1px solid #c3d2e4"><span style="font-family:'Caveat',cursive;font-weight:700;font-size:15px;color:#2C4A7C;width:24px">4</span><span style="flex:1;font-size:11.5px;color:#46402f">La loi <span style="color:#2C4A7C;font-size:10px">· ch. VI</span></span><span style="display:inline-flex;gap:2px"><span style="width:7px;height:7px;border-radius:50%;background:#5b6e4a"></span><span style="width:7px;height:7px;border-radius:50%;background:#5b6e4a"></span><span style="width:7px;height:7px;border-radius:50%;background:#5b6e4a"></span><span style="width:7px;height:7px;border-radius:50%;background:#2C4A7C"></span></span><span style="font-size:10px;color:#9A6A2E;width:74px;text-align:right">à valider →</span></div>
+          <!-- S5 locked -->
+          <div style="display:flex;align-items:center;gap:9px;padding:7px 8px;border-radius:7px;opacity:.55"><span style="font-family:'Caveat',cursive;font-weight:700;font-size:15px;color:#a59c88;width:24px">5</span><span style="flex:1;font-size:11.5px;color:#46402f">Le gouvernement</span><span style="display:inline-flex;gap:2px"><span style="width:7px;height:7px;border-radius:50%;border:1px solid #c4bca8"></span><span style="width:7px;height:7px;border-radius:50%;border:1px solid #c4bca8"></span><span style="width:7px;height:7px;border-radius:50%;border:1px solid #c4bca8"></span><span style="width:7px;height:7px;border-radius:50%;border:1px solid #c4bca8"></span></span><span style="font-size:11px;color:#a59c88;width:74px;text-align:right">🔒</span></div>
+          <!-- S6 locked -->
+          <div style="display:flex;align-items:center;gap:9px;padding:7px 8px;border-radius:7px;opacity:.55"><span style="font-family:'Caveat',cursive;font-weight:700;font-size:15px;color:#a59c88;width:24px">6</span><span style="flex:1;font-size:11.5px;color:#46402f">La volonté générale</span><span style="display:inline-flex;gap:2px"><span style="width:7px;height:7px;border-radius:50%;border:1px solid #c4bca8"></span><span style="width:7px;height:7px;border-radius:50%;border:1px solid #c4bca8"></span><span style="width:7px;height:7px;border-radius:50%;border:1px solid #c4bca8"></span><span style="width:7px;height:7px;border-radius:50%;border:1px solid #c4bca8"></span></span><span style="font-size:11px;color:#a59c88;width:74px;text-align:right">🔒</span></div>
+        </div>
+      </div>
+      <div style="font-size:11px;color:#8a8270;margin-top:9px">→ « Voir » ouvre le détail dans la <b>colonne / le panneau</b> (piste retenue), pas sous la ligne.</div>
+    </div>
+  </div>
+</div>
+
+<!-- mobile expanded -->
+<div data-screen-label="Carte livre — dépliée (mobile)" style="position:absolute;left:1200px;top:3014px;width:300px">
+  <div data-drags-parent="1" style="position:absolute;top:-26px;left:2px;font-family:'Caveat',cursive;font-size:19px;color:#6f6755">Sur mobile — dépliée</div>
+  <div style="border:2.5px solid #46402f;border-radius:30px;padding:9px;background:#46402f;box-shadow:0 3px 10px rgba(0,0,0,.13)">
+    <div style="height:5px;width:46px;background:#cdc6b6;border-radius:3px;margin:3px auto 7px"></div>
+    <div style="background:#f4efe6;border-radius:22px;padding:13px;height:520px;overflow:hidden">
+      <div style="font-family:'Caveat',cursive;font-weight:700;font-size:17px;color:#46402f">Elo Vasseur</div>
+      <!-- mini graph -->
+      <div style="background:#fff;border:1.2px solid #ded6c4;border-radius:8px;padding:8px;margin-top:7px">
+        <div style="font-size:8.5px;color:#8a8270;letter-spacing:.04em">PROGRESSION — TOUS LES LIVRES</div>
+        <svg viewBox="0 0 250 70" width="100%" height="56" style="margin-top:3px;display:block">
+          <polyline points="20,52 80,34 140,34 200,16" fill="none" stroke="#2C4A7C" stroke-width="2"/>
+          <polyline points="80,60 140,46 200,30 240,30" fill="none" stroke="#6E4E86" stroke-width="2"/>
+        </svg>
+      </div>
+      <!-- book collapsed -->
+      <div style="background:#fff;border:1px solid #ded6c4;border-left:3px solid #6E4E86;border-radius:8px;padding:9px 11px;margin-top:8px;display:flex;justify-content:space-between;align-items:center"><div><div style="font-size:8px;color:#6E4E86;letter-spacing:.06em">ALETHEIA · THLP</div><div style="font-size:12.5px;font-weight:700;color:#46402f">Méditations</div><div style="font-size:9.5px;color:#7a7263">1/6 terminées</div></div><span style="font-size:13px;color:#a59c88">▸</span></div>
+      <!-- book expanded -->
+      <div style="background:#fff;border:1.2px solid #ded6c4;border-left:3px solid #2C4A7C;border-radius:8px;margin-top:8px;overflow:hidden">
+        <div style="padding:9px 11px;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid #ece4d6"><div><div style="font-size:8px;color:#2C4A7C;letter-spacing:.06em">ALETHEIA · T1</div><div style="font-size:12.5px;font-weight:700;color:#46402f">Du contrat social</div></div><span style="font-size:13px;color:#2C4A7C">▾</span></div>
+        <div style="padding:5px 9px;display:flex;flex-direction:column">
+          <div style="display:flex;align-items:center;gap:8px;padding:7px 4px;border-bottom:1px solid #f2ede3"><span style="font-family:'Caveat',cursive;font-weight:700;font-size:13px;color:#a59c88;width:16px">1</span><span style="flex:1;font-size:11px;color:#46402f">L'état de nature</span><span style="display:inline-flex;gap:2px"><span style="width:6px;height:6px;border-radius:50%;background:#5b6e4a"></span><span style="width:6px;height:6px;border-radius:50%;background:#5b6e4a"></span><span style="width:6px;height:6px;border-radius:50%;background:#5b6e4a"></span><span style="width:6px;height:6px;border-radius:50%;background:#5b6e4a"></span></span><span style="font-size:11px;color:#2C4A7C">→</span></div>
+          <div style="display:flex;align-items:center;gap:8px;padding:7px 4px;border-bottom:1px solid #f2ede3"><span style="font-family:'Caveat',cursive;font-weight:700;font-size:13px;color:#a59c88;width:16px">2</span><span style="flex:1;font-size:11px;color:#46402f">Le pacte social</span><span style="display:inline-flex;gap:2px"><span style="width:6px;height:6px;border-radius:50%;background:#5b6e4a"></span><span style="width:6px;height:6px;border-radius:50%;background:#5b6e4a"></span><span style="width:6px;height:6px;border-radius:50%;background:#5b6e4a"></span><span style="width:6px;height:6px;border-radius:50%;background:#5b6e4a"></span></span><span style="font-size:11px;color:#2C4A7C">→</span></div>
+          <div style="display:flex;align-items:center;gap:8px;padding:7px 4px;border-bottom:1px solid #f2ede3;background:#e7eef6"><span style="font-family:'Caveat',cursive;font-weight:700;font-size:13px;color:#2C4A7C;width:16px">4</span><span style="flex:1;font-size:11px;color:#46402f">La loi</span><span style="display:inline-flex;gap:2px"><span style="width:6px;height:6px;border-radius:50%;background:#5b6e4a"></span><span style="width:6px;height:6px;border-radius:50%;background:#5b6e4a"></span><span style="width:6px;height:6px;border-radius:50%;background:#5b6e4a"></span><span style="width:6px;height:6px;border-radius:50%;background:#2C4A7C"></span></span><span style="font-size:9px;color:#9A6A2E">valider</span></div>
+          <div style="display:flex;align-items:center;gap:8px;padding:7px 4px;opacity:.55"><span style="font-family:'Caveat',cursive;font-weight:700;font-size:13px;color:#a59c88;width:16px">5</span><span style="flex:1;font-size:11px;color:#46402f">Le gouvernement</span><span style="font-size:11px;color:#a59c88">🔒</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- band 4 note -->
+<div style="position:absolute;left:1540px;top:3038px;width:255px">
+  <div style="background:#fbfaf6;border:1.5px solid #cdc6b6;border-radius:10px;padding:13px 15px;box-shadow:0 1px 3px rgba(0,0,0,.08);font-size:13px;line-height:1.5;color:#5b5444">
+    <div style="font-family:'Caveat',cursive;font-weight:700;font-size:18px;color:#46402f;margin-bottom:5px">Le micro-stepper</div>
+    On réutilise les <b>4 points</b> du parcours élève (Lecture · Retour · Réécriture · Retour final). D'un coup d'œil, on voit jusqu'où chaque semaine est allée — sans rien ouvrir.
+  </div>
+</div>
+
+<!-- ======================= BAND 5 — RECO ======================= -->
+<div style="position:absolute;left:80px;top:3700px;font-family:'Caveat',cursive;font-weight:700;font-size:32px;color:#3a352c">5 · Ma reco & prochaine étape</div>
+
+<div style="position:absolute;left:80px;top:3770px;width:560px">
+  <div style="background:#fbfaf6;border:1.5px solid #cdc6b6;border-radius:12px;box-shadow:0 1px 4px rgba(0,0,0,.09);padding:20px;font-size:14px;line-height:1.6;color:#5b5444">
+    <div style="font-family:'Caveat',cursive;font-weight:700;font-size:22px;color:#46402f;margin-bottom:8px">La fiche réorganisée, en une phrase</div>
+    En tête, <b>un seul graphe</b> de progression (une couleur par livre, bascule Arguments/Thèse) ; en dessous, les <b>livres repliés</b> regroupés par classe (T1, THLP) ; on déplie un livre pour la <b>liste de ses semaines</b> (micro-stepper + état) ; un clic ouvre le détail en <b>maître-détail</b> sur ordi (colonne de droite) et en <b>écran plein</b> sur mobile. Plus rien ne s'empile.
+  </div>
+</div>
+
+<div style="position:absolute;left:680px;top:3770px;width:300px">
+  <div style="background:#fef4a8;padding:16px;box-shadow:0 1px 4px rgba(0,0,0,.12);transform:rotate(-1.2deg);font-family:'Architects Daughter',cursive;font-size:13.5px;line-height:1.55;color:#5a4a14">
+    <div style="font-family:'Caveat',cursive;font-weight:700;font-size:20px;color:#4a3c0c;margin-bottom:5px">Prochaine étape</div>
+    <b>✓ Validé :</b> graphe unique (1 ligne/livre, bascule Thèse/Arguments), livres repliés sous le graphe, piste <b>A</b> maître-détail, regroupement par classe. <b>Reste :</b> caler l'organisation du panneau de droite (bande 6 ↓). Ensuite → <b>rendu fidèle à la charte</b> (parchemin, sceaux, polices), prêt à coder.
+  </div>
+</div>
+
+<div style="position:absolute;left:1010px;top:3770px;width:300px">
+  <div style="background:#fbfaf6;border:1.5px solid #cdc6b6;border-radius:10px;padding:15px 16px;box-shadow:0 1px 3px rgba(0,0,0,.08);font-size:13px;line-height:1.55;color:#5b5444">
+    <div style="font-family:'Caveat',cursive;font-weight:700;font-size:18px;color:#46402f;margin-bottom:5px">Inchangé</div>
+    La machine à états (DRAFT→DONE), les retours IA, le diagnostic prof-only et le déblocage séquentiel <b>ne bougent pas</b> : on ne touche qu'à l'agencement de la vue prof. Le détail garde les mêmes blocs (V1, retours, VF, diagnostic), juste ailleurs.
+  </div>
+</div>
+
+
+<!-- ======================= BAND 6 — LE DÉTAIL DE DROITE ======================= -->
+<div style="position:absolute;left:80px;top:4090px;font-family:'Caveat',cursive;font-weight:700;font-size:32px;color:#3a352c">6 · Le détail de droite (piste A), sans clutter</div>
+<div style="position:absolute;left:80px;top:4136px;font-family:'Architects Daughter',cursive;font-size:15px;color:#8a8270;max-width:920px">Ta crainte est juste : ouvrir une semaine ne doit pas redéverser V1 + retours + VF + diagnostic en vrac à droite. On hiérarchise : <b>le signal d'abord (diagnostic), la preuve ensuite (avant/après), le verbeux replié</b>.</div>
+
+<!-- MAIN — A1 stacked hierarchy in full master-detail -->
+<div data-screen-label="Détail de droite — hiérarchisé (A1)" style="position:absolute;left:80px;top:4196px;width:820px">
+  <div data-drags-parent="1" style="position:absolute;top:-26px;left:2px;font-family:'Caveat',cursive;font-size:19px;color:#6f6755">Recommandé — le panneau hiérarchisé, dans son contexte</div>
+  <div style="border:1.5px solid #cdc6b6;border-radius:11px;background:#fff;box-shadow:0 2px 8px rgba(0,0,0,.1);overflow:hidden">
+    <div style="background:#ece4d6;padding:8px 12px;display:flex;align-items:center;gap:6px"><span style="width:9px;height:9px;border-radius:50%;background:#c9b89a"></span><span style="width:9px;height:9px;border-radius:50%;background:#c9b89a"></span><span style="width:9px;height:9px;border-radius:50%;background:#c9b89a"></span></div>
+    <div style="background:#f4efe6;padding:14px 16px">
+      <!-- graph strip on top (full width) -->
+      <div style="background:#fff;border:1.2px solid #ded6c4;border-radius:9px;padding:8px 11px;display:flex;align-items:center;gap:12px">
+        <div style="flex:1">
+          <div style="display:flex;justify-content:space-between;align-items:center"><span style="font-size:10px;color:#8a8270;letter-spacing:.05em">PROGRESSION — TOUS LES LIVRES (E→A)</span><span style="display:inline-flex;border:1px solid #c4bca8;border-radius:7px;overflow:hidden;font-size:9.5px"><span style="background:#46402f;color:#f4efe6;padding:2px 8px">Arguments</span><span style="color:#7a7263;padding:2px 8px">Thèse</span></span></div>
+          <svg viewBox="0 0 560 46" width="100%" height="40" style="margin-top:3px;display:block">
+            <polyline points="40,34 150,22 260,22 370,9 470,9" fill="none" stroke="#2C4A7C" stroke-width="2"/>
+            <polyline points="150,40 260,30 370,30 470,18 540,18" fill="none" stroke="#6E4E86" stroke-width="2"/>
+          </svg>
+        </div>
+      </div>
+      <!-- two columns: list | detail -->
+      <div style="display:flex;gap:12px;margin-top:12px">
+        <!-- left list -->
+        <div style="width:228px;flex-shrink:0;background:#fff;border:1.2px solid #ded6c4;border-radius:10px;overflow:hidden;align-self:flex-start">
+          <div style="padding:9px 11px;border-bottom:1px solid #ece4d6;display:flex;justify-content:space-between;align-items:center;border-left:4px solid #2C4A7C"><div><div style="font-size:8px;color:#2C4A7C;letter-spacing:.06em">ALETHEIA · T1</div><div style="font-size:13px;font-weight:700;color:#46402f">Du contrat social</div></div><span style="font-size:12px;color:#2C4A7C">▾</span></div>
+          <div style="padding:5px 7px;display:flex;flex-direction:column">
+            <div style="display:flex;align-items:center;gap:7px;padding:6px 6px"><span style="font-family:'Caveat',cursive;font-weight:700;font-size:13px;color:#a59c88;width:16px">1</span><span style="flex:1;font-size:11px;color:#46402f">L'état de nature</span><span style="font-size:10px;color:#2C4A7C">→</span></div>
+            <div style="display:flex;align-items:center;gap:7px;padding:7px 6px;background:#e7eef6;border:1px solid #2C4A7C;border-radius:6px"><span style="font-family:'Caveat',cursive;font-weight:700;font-size:13px;color:#2C4A7C;width:16px">2</span><span style="flex:1;font-size:11px;color:#2C4A7C;font-weight:700">Le pacte social ◂</span></div>
+            <div style="display:flex;align-items:center;gap:7px;padding:6px 6px"><span style="font-family:'Caveat',cursive;font-weight:700;font-size:13px;color:#a59c88;width:16px">3</span><span style="flex:1;font-size:11px;color:#46402f">Le souverain</span><span style="font-size:10px;color:#2C4A7C">→</span></div>
+            <div style="display:flex;align-items:center;gap:7px;padding:6px 6px"><span style="font-family:'Caveat',cursive;font-weight:700;font-size:13px;color:#2C4A7C;width:16px">4</span><span style="flex:1;font-size:11px;color:#46402f">La loi</span><span style="font-size:9px;color:#9A6A2E">valider</span></div>
+            <div style="display:flex;align-items:center;gap:7px;padding:6px 6px;opacity:.5"><span style="font-family:'Caveat',cursive;font-weight:700;font-size:13px;color:#a59c88;width:16px">5</span><span style="flex:1;font-size:11px;color:#46402f">Le gouvernement</span><span style="font-size:10px;color:#a59c88">🔒</span></div>
+          </div>
+        </div>
+        <!-- right detail (A1) -->
+        <div style="flex:1;background:#fff;border:1.2px solid #ded6c4;border-radius:10px;padding:13px 15px;display:flex;flex-direction:column;gap:13px">
+          <!-- header -->
+          <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px;border-bottom:1px solid #ece4d6;padding-bottom:11px">
+            <div>
+              <div style="font-family:'Caveat',cursive;font-weight:700;font-size:18px;color:#46402f;line-height:1.05">Semaine 2 — Le pacte social</div>
+              <div style="font-size:10.5px;color:#2C4A7C">ch. VI–VIII · rendue le 14 janv.</div>
+              <span style="display:inline-flex;gap:3px;margin-top:6px"><span style="width:8px;height:8px;border-radius:50%;background:#5b6e4a"></span><span style="width:8px;height:8px;border-radius:50%;background:#5b6e4a"></span><span style="width:8px;height:8px;border-radius:50%;background:#5b6e4a"></span><span style="width:8px;height:8px;border-radius:50%;background:#5b6e4a"></span></span>
+            </div>
+            <span style="background:#e7ede1;color:#5b6e4a;font-size:10px;padding:3px 9px;border-radius:9px;white-space:nowrap">✓ Terminée</span>
+          </div>
+          <!-- 1. DIAGNOSTIC (hero, prof-only) -->
+          <div style="background:#fbfaf6;border:1.2px solid #ded6c4;border-left:4px solid #2C4A7C;border-radius:9px;padding:11px 13px">
+            <div style="font-size:10px;color:#2C4A7C;letter-spacing:.06em">◆ DIAGNOSTIC — PROF, JAMAIS MONTRÉ À L'ÉLÈVE</div>
+            <div style="display:flex;flex-wrap:wrap;gap:18px;margin-top:8px">
+              <div style="font-size:11.5px;color:#5b5444">Saisie de la thèse&nbsp; <span style="display:inline-block;min-width:16px;text-align:center;background:#eef2f7;color:#46402f;font-size:11px;font-weight:700;padding:1px 5px;border-radius:4px">C</span> <span style="color:#a59c88">→</span> <span style="display:inline-block;min-width:16px;text-align:center;background:#e7ede1;color:#5b6e4a;font-size:11px;font-weight:700;padding:1px 5px;border-radius:4px">B</span></div>
+              <div style="font-size:11.5px;color:#5b5444">Restitution des arguments&nbsp; <span style="display:inline-block;min-width:16px;text-align:center;background:#eef2f7;color:#46402f;font-size:11px;font-weight:700;padding:1px 5px;border-radius:4px">B</span> <span style="color:#a59c88">→</span> <span style="display:inline-block;min-width:16px;text-align:center;background:#e7ede1;color:#5b6e4a;font-size:11px;font-weight:700;padding:1px 5px;border-radius:4px">A</span></div>
+            </div>
+            <div style="font-size:11px;color:#7a7263;font-style:italic;margin-top:8px;line-height:1.45">« La thèse gagne en netteté entre V1 et VF ; les arguments sont désormais hiérarchisés. » <span style="color:#a59c88">(note d'inventaire)</span></div>
+          </div>
+          <!-- 2. AVANT / APRÈS -->
+          <div>
+            <div style="font-size:10px;color:#8a8270;letter-spacing:.06em;margin-bottom:7px">DU PREMIER JET À LA VERSION FINALE</div>
+            <div style="display:flex;gap:10px">
+              <div style="flex:1;background:#f4efe6;border:1px solid #e4dcc9;border-radius:8px;padding:9px 10px">
+                <div style="font-size:9.5px;color:#a59c88;letter-spacing:.04em">PREMIER JET (V1)</div>
+                <div style="font-size:9px;color:#a59c88;margin-top:6px">idée principale</div><div style="height:6px;width:88%;background:#e4decf;border-radius:3px;margin-top:3px"></div>
+                <div style="font-size:9px;color:#a59c88;margin-top:6px">arguments</div><div style="height:6px;width:78%;background:#e4decf;border-radius:3px;margin-top:3px"></div><div style="height:6px;width:64%;background:#e4decf;border-radius:3px;margin-top:3px"></div>
+              </div>
+              <div style="flex:1;background:#fff;border:1px solid #ded6c4;border-left:3px solid #2C4A7C;border-radius:8px;padding:9px 10px">
+                <div style="font-size:9.5px;color:#2C4A7C;letter-spacing:.04em">VERSION FINALE (VF)</div>
+                <div style="font-size:9px;color:#a59c88;margin-top:6px">idée principale</div><div style="height:6px;width:92%;background:#d8cfba;border-radius:3px;margin-top:3px"></div>
+                <div style="font-size:9px;color:#a59c88;margin-top:6px">arguments</div><div style="height:6px;width:84%;background:#d8cfba;border-radius:3px;margin-top:3px"></div><div style="height:6px;width:72%;background:#d8cfba;border-radius:3px;margin-top:3px"></div>
+              </div>
+            </div>
+          </div>
+          <!-- 3. RETOURS IA (collapsed) -->
+          <div>
+            <div style="font-size:10px;color:#8a8270;letter-spacing:.06em;margin-bottom:7px">LES RETOURS DE L'IA</div>
+            <div style="display:flex;flex-direction:column;gap:6px">
+              <div style="border:1px solid #ded6c4;border-radius:7px;padding:8px 10px;display:flex;justify-content:space-between;align-items:center"><span style="font-size:11.5px;color:#46402f">▸ Retour socratique (V1)</span><span style="font-size:9.5px;color:#a59c88">déplier</span></div>
+              <div style="border:1px solid #ded6c4;border-radius:7px;padding:8px 10px;display:flex;justify-content:space-between;align-items:center"><span style="font-size:11.5px;color:#46402f">▸ Retour final (VF) — nuances, ajouts vérifiés, synthèse</span><span style="font-size:9.5px;color:#a59c88">déplier</span></div>
+            </div>
+          </div>
+          <!-- 4. SAISIE complète (collapsed) -->
+          <div style="border:1px dashed #d8cfba;border-radius:7px;padding:8px 10px;display:flex;justify-content:space-between;align-items:center"><span style="font-size:11.5px;color:#7a7263">▸ La saisie complète — accord, questions, vocabulaire</span><span style="font-size:9.5px;color:#a59c88">déplier</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- A2 — tabs alternative (right pane only) -->
+<div data-screen-label="Détail de droite — onglets (A2)" style="position:absolute;left:940px;top:4196px;width:344px">
+  <div data-drags-parent="1" style="position:absolute;top:-26px;left:2px;font-family:'Caveat',cursive;font-size:19px;color:#6f6755">Variante — le panneau en onglets</div>
+  <div style="border:1.5px solid #cdc6b6;border-radius:11px;background:#fff;box-shadow:0 2px 8px rgba(0,0,0,.1);overflow:hidden">
+    <div style="background:#f4efe6;padding:13px 14px">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start"><div><div style="font-family:'Caveat',cursive;font-weight:700;font-size:16px;color:#46402f">S2 — Le pacte social</div><div style="font-size:9.5px;color:#2C4A7C">ch. VI–VIII · rendue le 14 janv.</div></div><span style="background:#e7ede1;color:#5b6e4a;font-size:9px;padding:2px 7px;border-radius:8px;white-space:nowrap">✓ Terminée</span></div>
+      <!-- tab bar -->
+      <div style="display:flex;gap:4px;margin-top:11px;border-bottom:1.4px solid #ded6c4">
+        <span style="font-size:10px;color:#2C4A7C;font-weight:700;padding:6px 8px;border-bottom:2px solid #2C4A7C;margin-bottom:-1.4px">Diagnostic</span>
+        <span style="font-size:10px;color:#7a7263;padding:6px 8px">Avant/après</span>
+        <span style="font-size:10px;color:#7a7263;padding:6px 8px">Retours IA</span>
+        <span style="font-size:10px;color:#7a7263;padding:6px 8px">Saisie</span>
+      </div>
+      <!-- active tab body: diagnostic -->
+      <div style="background:#fbfaf6;border:1.2px solid #ded6c4;border-left:4px solid #2C4A7C;border-radius:9px;padding:11px 12px;margin-top:11px">
+        <div style="font-size:9.5px;color:#2C4A7C;letter-spacing:.05em">◆ PROF — JAMAIS MONTRÉ À L'ÉLÈVE</div>
+        <div style="font-size:11px;color:#5b5444;margin-top:8px">Saisie de la thèse&nbsp; <span style="display:inline-block;min-width:15px;text-align:center;background:#eef2f7;color:#46402f;font-size:10.5px;font-weight:700;padding:1px 5px;border-radius:4px">C</span> <span style="color:#a59c88">→</span> <span style="display:inline-block;min-width:15px;text-align:center;background:#e7ede1;color:#5b6e4a;font-size:10.5px;font-weight:700;padding:1px 5px;border-radius:4px">B</span></div>
+        <div style="font-size:11px;color:#5b5444;margin-top:7px">Restitution des arguments&nbsp; <span style="display:inline-block;min-width:15px;text-align:center;background:#eef2f7;color:#46402f;font-size:10.5px;font-weight:700;padding:1px 5px;border-radius:4px">B</span> <span style="color:#a59c88">→</span> <span style="display:inline-block;min-width:15px;text-align:center;background:#e7ede1;color:#5b6e4a;font-size:10.5px;font-weight:700;padding:1px 5px;border-radius:4px">A</span></div>
+        <div style="font-size:10.5px;color:#7a7263;font-style:italic;margin-top:8px;line-height:1.45">« La thèse gagne en netteté ; les arguments sont hiérarchisés. »</div>
+      </div>
+      <div style="font-size:10.5px;color:#8a8270;margin-top:9px;line-height:1.45">Un seul bloc à la fois, zéro défilement — mais on perd l'enchaînement diagnostic → preuve.</div>
+    </div>
+  </div>
+</div>
+
+<!-- mobile A1 -->
+<div data-screen-label="Détail de droite — mobile (A1)" style="position:absolute;left:1320px;top:4196px;width:300px">
+  <div data-drags-parent="1" style="position:absolute;top:-26px;left:2px;font-family:'Caveat',cursive;font-size:19px;color:#6f6755">Sur mobile — écran plein</div>
+  <div style="border:2.5px solid #46402f;border-radius:30px;padding:9px;background:#46402f;box-shadow:0 3px 10px rgba(0,0,0,.13)">
+    <div style="height:5px;width:46px;background:#cdc6b6;border-radius:3px;margin:3px auto 7px"></div>
+    <div style="background:#f4efe6;border-radius:22px;padding:13px;height:548px;overflow:hidden">
+      <div style="font-size:10px;color:#7a7263">← Elo · Du contrat social</div>
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-top:4px"><div><div style="font-family:'Caveat',cursive;font-weight:700;font-size:16px;color:#46402f">S2 — Le pacte social</div><div style="font-size:9px;color:#2C4A7C">ch. VI–VIII</div></div><span style="background:#e7ede1;color:#5b6e4a;font-size:9px;padding:2px 7px;border-radius:8px">✓</span></div>
+      <!-- diag -->
+      <div style="background:#fff;border:1px solid #ded6c4;border-left:3px solid #2C4A7C;border-radius:8px;padding:9px 11px;margin-top:9px">
+        <div style="font-size:8.5px;color:#2C4A7C;letter-spacing:.05em">◆ DIAGNOSTIC · PROF-ONLY</div>
+        <div style="font-size:10px;color:#5b5444;margin-top:6px">thèse <span style="background:#eef2f7;color:#46402f;font-size:9.5px;font-weight:700;padding:1px 4px;border-radius:3px">C</span>→<span style="background:#e7ede1;color:#5b6e4a;font-size:9.5px;font-weight:700;padding:1px 4px;border-radius:3px">B</span> &nbsp; args <span style="background:#eef2f7;color:#46402f;font-size:9.5px;font-weight:700;padding:1px 4px;border-radius:3px">B</span>→<span style="background:#e7ede1;color:#5b6e4a;font-size:9.5px;font-weight:700;padding:1px 4px;border-radius:3px">A</span></div>
+      </div>
+      <!-- avant/apres with toggle -->
+      <div style="font-size:8.5px;color:#8a8270;letter-spacing:.05em;margin-top:11px">AVANT / APRÈS</div>
+      <div style="display:inline-flex;border:1px solid #c4bca8;border-radius:7px;overflow:hidden;font-size:9px;margin-top:5px"><span style="background:#46402f;color:#f4efe6;padding:3px 9px">Version finale</span><span style="color:#7a7263;padding:3px 9px">Premier jet</span></div>
+      <div style="background:#fff;border:1px solid #ded6c4;border-left:3px solid #2C4A7C;border-radius:8px;padding:9px 10px;margin-top:6px"><div style="font-size:8px;color:#a59c88">idée principale</div><div style="height:6px;width:90%;background:#d8cfba;border-radius:3px;margin-top:3px"></div><div style="font-size:8px;color:#a59c88;margin-top:5px">arguments</div><div style="height:6px;width:82%;background:#d8cfba;border-radius:3px;margin-top:3px"></div><div style="height:6px;width:70%;background:#d8cfba;border-radius:3px;margin-top:3px"></div></div>
+      <!-- collapsed -->
+      <div style="border:1px solid #ded6c4;border-radius:7px;padding:8px 10px;margin-top:8px;display:flex;justify-content:space-between"><span style="font-size:10.5px;color:#46402f">▸ Retours de l'IA</span><span style="font-size:9px;color:#a59c88">déplier</span></div>
+      <div style="border:1px dashed #d8cfba;border-radius:7px;padding:8px 10px;margin-top:6px;display:flex;justify-content:space-between"><span style="font-size:10.5px;color:#7a7263">▸ Saisie complète</span><span style="font-size:9px;color:#a59c88">déplier</span></div>
+    </div>
+  </div>
+</div>
+
+<!-- band 6 notes -->
+<div style="position:absolute;left:1652px;top:4216px;width:255px">
+  <div style="background:#fef4a8;padding:15px;box-shadow:0 1px 4px rgba(0,0,0,.12);transform:rotate(1.3deg);font-family:'Architects Daughter',cursive;font-size:13.5px;line-height:1.55;color:#5a4a14">
+    <div style="font-family:'Caveat',cursive;font-weight:700;font-size:20px;color:#4a3c0c;margin-bottom:5px">Reco : le hiérarchisé</div>
+    Le prof lit de haut en bas : <b>diagnostic → avant/après → (le reste replié)</b>. C'est l'histoire de la semaine en 2 coups d'œil. Les onglets sont propres mais cachent le lien diagnostic ↔ preuve.
+  </div>
+</div>
+<div style="position:absolute;left:1652px;top:4430px;width:255px">
+  <div style="background:#fbfaf6;border:1.5px solid #cdc6b6;border-radius:10px;padding:13px 15px;box-shadow:0 1px 3px rgba(0,0,0,.08);font-size:13px;line-height:1.5;color:#5b5444">
+    <div style="font-family:'Caveat',cursive;font-weight:700;font-size:18px;color:#46402f;margin-bottom:5px">Les 4 règles anti-clutter</div>
+    <div style="display:flex;flex-direction:column;gap:5px">
+      <div><b>1.</b> Un seul héros : le diagnostic.</div>
+      <div><b>2.</b> La preuve = visuel (avant/après), pas un mur de texte.</div>
+      <div><b>3.</b> Le verbeux (retours IA, saisie) <b>replié</b>.</div>
+      <div><b>4.</b> Surtitres courts + air ; jamais 4 blocs de poids égal.</div>
+    </div>
+  </div>
+</div>
+</x-dc>
+</body>
+</html>

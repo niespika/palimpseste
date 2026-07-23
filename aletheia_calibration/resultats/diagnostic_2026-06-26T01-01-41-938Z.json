@@ -1,0 +1,306 @@
+{
+  "meta": {
+    "N": 12,
+    "TEMPS": [
+      0
+    ],
+    "modele": "claude-sonnet-4-6",
+    "appels": 192,
+    "date": "2026-06-26T01-01-41-938Z"
+  },
+  "resultats": {
+    "S01": {
+      "gold": {
+        "these": "A",
+        "args": "A",
+        "mal_definie": false
+      },
+      "note_prof_20": 20,
+      "par_temp": {
+        "0": {
+          "n_ok": 12,
+          "n_err": 0,
+          "these": {
+            "modal": "A",
+            "distrib": {
+              "B": 3,
+              "A": 9
+            },
+            "selfAccord": 0.75,
+            "amplitude": 1,
+            "exactGold": 0.75,
+            "within1Gold": 1
+          },
+          "args": {
+            "modal": "B",
+            "distrib": {
+              "B": 12
+            },
+            "selfAccord": 1,
+            "amplitude": 0,
+            "exactGold": 0,
+            "within1Gold": 1
+          },
+          "mal_definie_taux": 0,
+          "mal_definie_gold": false
+        }
+      }
+    },
+    "S02": {
+      "gold": {
+        "these": "B",
+        "args": "B",
+        "mal_definie": false
+      },
+      "note_prof_20": 15,
+      "par_temp": {
+        "0": {
+          "n_ok": 5,
+          "n_err": 7,
+          "these": {
+            "modal": "B",
+            "distrib": {
+              "B": 5
+            },
+            "selfAccord": 1,
+            "amplitude": 0,
+            "exactGold": 1,
+            "within1Gold": 1
+          },
+          "args": {
+            "modal": "C",
+            "distrib": {
+              "C": 5
+            },
+            "selfAccord": 1,
+            "amplitude": 0,
+            "exactGold": 0,
+            "within1Gold": 1
+          },
+          "mal_definie_taux": 0,
+          "mal_definie_gold": false
+        }
+      }
+    },
+    "S03": {
+      "gold": {
+        "these": "C",
+        "args": "C",
+        "mal_definie": false
+      },
+      "note_prof_20": 10,
+      "par_temp": {
+        "0": {
+          "n_ok": 6,
+          "n_err": 6,
+          "these": {
+            "modal": "B",
+            "distrib": {
+              "B": 6
+            },
+            "selfAccord": 1,
+            "amplitude": 0,
+            "exactGold": 0,
+            "within1Gold": 1
+          },
+          "args": {
+            "modal": "C",
+            "distrib": {
+              "C": 6
+            },
+            "selfAccord": 1,
+            "amplitude": 0,
+            "exactGold": 1,
+            "within1Gold": 1
+          },
+          "mal_definie_taux": 0,
+          "mal_definie_gold": false
+        }
+      }
+    },
+    "S04": {
+      "gold": {
+        "these": "D",
+        "args": "D",
+        "mal_definie": false
+      },
+      "note_prof_20": 8,
+      "par_temp": {
+        "0": {
+          "n_ok": 12,
+          "n_err": 0,
+          "these": {
+            "modal": "D",
+            "distrib": {
+              "D": 12
+            },
+            "selfAccord": 1,
+            "amplitude": 0,
+            "exactGold": 1,
+            "within1Gold": 1
+          },
+          "args": {
+            "modal": "D",
+            "distrib": {
+              "D": 12
+            },
+            "selfAccord": 1,
+            "amplitude": 0,
+            "exactGold": 1,
+            "within1Gold": 1
+          },
+          "mal_definie_taux": 0,
+          "mal_definie_gold": false
+        }
+      }
+    },
+    "S05": {
+      "gold": {
+        "these": "E",
+        "args": "E",
+        "mal_definie": false
+      },
+      "note_prof_20": 4,
+      "par_temp": {
+        "0": {
+          "n_ok": 12,
+          "n_err": 0,
+          "these": {
+            "modal": "E",
+            "distrib": {
+              "E": 12
+            },
+            "selfAccord": 1,
+            "amplitude": 0,
+            "exactGold": 1,
+            "within1Gold": 1
+          },
+          "args": {
+            "modal": "E",
+            "distrib": {
+              "E": 12
+            },
+            "selfAccord": 1,
+            "amplitude": 0,
+            "exactGold": 1,
+            "within1Gold": 1
+          },
+          "mal_definie_taux": 0,
+          "mal_definie_gold": false
+        }
+      }
+    },
+    "S06": {
+      "gold": {
+        "these": "B",
+        "args": "B",
+        "mal_definie": false
+      },
+      "note_prof_20": 11,
+      "par_temp": {
+        "0": {
+          "n_ok": 12,
+          "n_err": 0,
+          "these": {
+            "modal": "B",
+            "distrib": {
+              "B": 8,
+              "A": 4
+            },
+            "selfAccord": 0.6666666666666666,
+            "amplitude": 1,
+            "exactGold": 0.6666666666666666,
+            "within1Gold": 1
+          },
+          "args": {
+            "modal": "C",
+            "distrib": {
+              "C": 8,
+              "B": 4
+            },
+            "selfAccord": 0.6666666666666666,
+            "amplitude": 1,
+            "exactGold": 0.3333333333333333,
+            "within1Gold": 1
+          },
+          "mal_definie_taux": 0,
+          "mal_definie_gold": false
+        }
+      }
+    },
+    "S08": {
+      "gold": {
+        "these": "A",
+        "args": "C",
+        "mal_definie": false
+      },
+      "note_prof_20": 11,
+      "par_temp": {
+        "0": {
+          "n_ok": 10,
+          "n_err": 2,
+          "these": {
+            "modal": "B",
+            "distrib": {
+              "B": 10
+            },
+            "selfAccord": 1,
+            "amplitude": 0,
+            "exactGold": 0,
+            "within1Gold": 1
+          },
+          "args": {
+            "modal": "C",
+            "distrib": {
+              "D": 4,
+              "C": 6
+            },
+            "selfAccord": 0.6,
+            "amplitude": 1,
+            "exactGold": 0.6,
+            "within1Gold": 1
+          },
+          "mal_definie_taux": 0,
+          "mal_definie_gold": false
+        }
+      }
+    },
+    "S10": {
+      "gold": {
+        "these": null,
+        "args": "A",
+        "mal_definie": true
+      },
+      "note_prof_20": 9,
+      "par_temp": {
+        "0": {
+          "n_ok": 12,
+          "n_err": 0,
+          "these": {
+            "modal": null,
+            "distrib": {
+              "null": 12
+            },
+            "selfAccord": 1,
+            "amplitude": 0,
+            "exactGold": 1,
+            "within1Gold": 1
+          },
+          "args": {
+            "modal": "C",
+            "distrib": {
+              "B": 3,
+              "C": 9
+            },
+            "selfAccord": 0.75,
+            "amplitude": 1,
+            "exactGold": 0,
+            "within1Gold": 0.25
+          },
+          "mal_definie_taux": 1,
+          "mal_definie_gold": true
+        }
+      }
+    }
+  }
+}
