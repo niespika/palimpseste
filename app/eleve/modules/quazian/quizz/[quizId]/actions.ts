@@ -3,6 +3,7 @@
 import { revalidatePath } from 'next/cache'
 import { createClient } from '@/utils/supabase/server'
 import { createAdminClient } from '@/utils/supabase/admin'
+import { classeIdsActives } from '@/utils/acces'
 import { calculerScoreBrier, JETONS_NEUTRE, shuffleArray } from '@/utils/brier'
 
 async function verifierEleve() {
@@ -12,6 +13,28 @@ async function verifierEleve() {
   const { data: profile } = await supabase.from('profiles').select('role').eq('id', user.id).single()
   if (profile?.role !== 'eleve') throw new Error('Accès refusé')
   return { supabase, userId: user.id }
+}
+
+// Garde de classe (C1/A4 — le correctif du bug 0.3 étendu au quiz individuel) :
+// le quizz doit appartenir à une classe où l'élève a une inscription ACTIVE —
+// même scoping que la liste (`.in('classe_id', classeIds)` de page.tsx). Un
+// quizz d'une autre classe (ou sans classe) → null, refus propre sans données.
+// Défense applicative EN PLUS de la RLS SELECT (le socle quazian pré-lot1
+// n'est pas versionné, ses policies peuvent être plus larges).
+async function chargerQuizAccessible(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  userId: string,
+  quizId: string
+) {
+  const { data: quizz } = await supabase
+    .from('quazian_quizzes')
+    .select('statut, ferme_at, classe_id, moyenne_cohorte, ecart_type_cohorte')
+    .eq('id', quizId)
+    .single()
+  if (!quizz) return null
+  const classeIds = await classeIdsActives(supabase, userId)
+  if (!quizz.classe_id || !classeIds.includes(quizz.classe_id as string)) return null
+  return quizz
 }
 
 export interface QuestionPassation {
@@ -34,12 +57,7 @@ export interface DonneesPassation {
 export async function initialiserSession(quizId: string): Promise<DonneesPassation | { error: string }> {
   const { supabase, userId } = await verifierEleve()
 
-  const { data: quizz } = await supabase
-    .from('quazian_quizzes')
-    .select('statut, ferme_at')
-    .eq('id', quizId)
-    .single()
-
+  const quizz = await chargerQuizAccessible(supabase, userId, quizId)
   if (!quizz) return { error: 'Quizz introuvable' }
   if (quizz.statut === 'brouillon') return { error: 'Ce quizz n\'est pas encore lancé.' }
 
@@ -79,7 +97,10 @@ export async function initialiserSession(quizId: string): Promise<DonneesPassati
       ordreOptions[q.id] = shuffleArray([0, 1, 2, 3], userId + q.id)
     }
 
-    const { data: nouvelleSession, error } = await supabase
+    // Écriture serveur (C1) : plus aucune policy d'écriture élève sur
+    // quazian_sessions — l'insert passe par le client admin, gardé par la
+    // garde de classe ci-dessus (chargerQuizAccessible).
+    const { data: nouvelleSession, error } = await createAdminClient()
       .from('quazian_sessions')
       .insert({
         quiz_id: quizId,
@@ -154,11 +175,8 @@ export async function sauvegarderReponse(
     .eq('eleve_id', userId)
     .maybeSingle()
   if (!session || session.submitted_at) return
-  const { data: quizzGarde } = await supabase
-    .from('quazian_quizzes')
-    .select('statut, ferme_at')
-    .eq('id', session.quiz_id)
-    .single()
+  // Garde de classe (C1) en plus du statut/échéance : même helper que la page.
+  const quizzGarde = await chargerQuizAccessible(supabase, userId, session.quiz_id as string)
   if (!quizzGarde || quizzGarde.statut !== 'lance') return
   if (quizzGarde.ferme_at && new Date(quizzGarde.ferme_at as string) < new Date()) return
 
@@ -170,7 +188,10 @@ export async function sauvegarderReponse(
 
   const [pa, pb, pc, pd] = jetonsOriginaux.map((j) => j / 100)
 
-  await supabase.from('quazian_answers').upsert({
+  // Écriture serveur (C1) : quazian_answers n'a plus de policy d'écriture
+  // élève — l'upsert passe par le client admin, la propriété de la session et
+  // l'état du quizz ayant été revalidés ci-dessus.
+  await createAdminClient().from('quazian_answers').upsert({
     session_id: sessionId,
     question_id: questionId,
     p_a: pa,
@@ -184,21 +205,21 @@ export async function sauvegarderReponse(
 // Soumettre le quizz
 export async function soumettreQuizz(sessionId: string, quizId: string): Promise<{ error?: string }> {
   const { supabase, userId } = await verifierEleve()
+  const admin = createAdminClient()
 
   const maintenant = new Date().toISOString()
 
   // Stats cohorte (figées si quizz déjà fermé), chargées une fois et réutilisées plus bas.
-  const { data: quizz } = await supabase
-    .from('quazian_quizzes')
-    .select('statut, moyenne_cohorte, ecart_type_cohorte')
-    .eq('id', quizId)
-    .single()
+  // Garde de classe (C1) incluse : un quizz hors-classe → refus avant toute écriture.
+  const quizz = await chargerQuizAccessible(supabase, userId, quizId)
   if (!quizz) return { error: 'Quizz introuvable' }
 
   // Verrou one-shot : marquer la session soumise SEULEMENT si elle appartient à l'élève et
   // n'est pas déjà soumise (compare-and-set sur submitted_at IS NULL). Empêche un re-scoring
   // après coup (re-soumission pour améliorer son score) et la double soumission.
-  const { data: verrou } = await supabase
+  // Écriture serveur (C1) : le client admin bypasse la RLS → le compare-and-set
+  // `.eq('eleve_id', userId)` reste la garde de propriété, NE PAS le retirer.
+  const { data: verrou } = await admin
     .from('quazian_sessions')
     .update({ submitted_at: maintenant, auto_submitted: false })
     .eq('id', sessionId)
@@ -255,11 +276,13 @@ export async function soumettreQuizz(sessionId: string, quizId: string): Promise
 
   scoreMoyen /= questions.length
 
+  // Écritures serveur (C1) : la session vient d'être verrouillée au nom de
+  // l'élève — les scores s'écrivent en admin (plus de policy d'écriture élève).
   if (answersToInsert.length > 0) {
-    await supabase.from('quazian_answers').insert(answersToInsert)
+    await admin.from('quazian_answers').insert(answersToInsert)
   }
   for (const a of answersToUpdate) {
-    await supabase.from('quazian_answers')
+    await admin.from('quazian_answers')
       .update({ brier_brut: a.brier_brut, score: a.score })
       .eq('session_id', sessionId)
       .eq('question_id', a.question_id)
@@ -272,7 +295,9 @@ export async function soumettreQuizz(sessionId: string, quizId: string): Promise
     zQuiz = (scoreMoyen - quizz.moyenne_cohorte!) / quizz.ecart_type_cohorte
   }
 
-  await supabase.from('quazian_quiz_scores').upsert({
+  // Écriture serveur (C1) : la NOTE ne s'écrit plus jamais avec le JWT élève —
+  // client admin uniquement, calcul 100 % serveur (Brier ci-dessus).
+  await admin.from('quazian_quiz_scores').upsert({
     quiz_id: quizId,
     eleve_id: userId,
     score_moyen: scoreMoyen,
@@ -307,13 +332,10 @@ export async function chargerRetourQuizz(quizId: string): Promise<{
 
   if (!session || !session.submitted_at) return { error: 'Pas de session soumise.' }
 
-  const { data: quizz } = await supabase
-    .from('quazian_quizzes')
-    .select('statut')
-    .eq('id', quizId)
-    .single()
-
-  if (quizz?.statut !== 'ferme') return { error: 'Le quizz n\'est pas encore corrigé.' }
+  // Garde de classe (C1) : le retour d'un quizz hors-classe n'est pas servi.
+  const quizz = await chargerQuizAccessible(supabase, userId, quizId)
+  if (!quizz) return { error: 'Quizz introuvable.' }
+  if (quizz.statut !== 'ferme') return { error: 'Le quizz n\'est pas encore corrigé.' }
 
   const { data: questions } = await supabase
     .from('quazian_questions')
@@ -379,11 +401,12 @@ export async function etatNoteVue(quizId: string): Promise<boolean> {
 // AUTRES modules tant que la note n'est pas vue. Idempotent.
 export async function marquerNoteVue(quizId: string): Promise<{ success: true } | { error: string }> {
   try {
-    const { userId } = await verifierEleve()
+    const { supabase, userId } = await verifierEleve()
     const admin = createAdminClient()
     // La note n'est « à valider » que si le quizz est corrigé (fermé) et qu'un score existe.
-    const { data: quizz } = await admin.from('quazian_quizzes').select('statut').eq('id', quizId).single()
-    if (quizz?.statut !== 'ferme') return { error: 'Le quizz n’est pas encore corrigé.' }
+    // Garde de classe (C1) incluse — marquerNoteVue écrit en admin, AUCUNE RLS ne le protège.
+    const quizz = await chargerQuizAccessible(supabase, userId, quizId)
+    if (!quizz || quizz.statut !== 'ferme') return { error: 'Le quizz n’est pas encore corrigé.' }
     const { error } = await admin
       .from('quazian_quiz_scores')
       .update({ note_vue_at: new Date().toISOString() })

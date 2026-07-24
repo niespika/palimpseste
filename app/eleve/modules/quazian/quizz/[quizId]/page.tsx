@@ -1,7 +1,7 @@
 import Link from 'next/link'
 import { redirect, notFound } from 'next/navigation'
 import { createClient } from '@/utils/supabase/server'
-import { aAccesModule } from '@/utils/acces'
+import { aAccesModule, classeIdsActives } from '@/utils/acces'
 import { initialiserSession, chargerRetourQuizz, etatNoteVue } from './actions'
 import { PassationJetons } from './PassationJetons'
 import BoutonVuNote from './BoutonVuNote'
@@ -29,6 +29,15 @@ export default async function PassationPage({
     .single()
 
   if (!quizz) {
+    return <div className="text-center py-16 text-muet">Quizz introuvable.</div>
+  }
+
+  // Garde de classe (C1/A4) : le correctif du bug 0.3 ne couvrait que la LISTE.
+  // Même scoping ici : un élève d'une autre classe qui ouvre l'URL directe voit
+  // le même refus que si le quizz n'existait pas (pas de données servies). Les
+  // server actions appliquent la même garde (chargerQuizAccessible).
+  const classeIds = await classeIdsActives(supabase, user.id)
+  if (!quizz.classe_id || !classeIds.includes(quizz.classe_id as string)) {
     return <div className="text-center py-16 text-muet">Quizz introuvable.</div>
   }
 

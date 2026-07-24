@@ -254,6 +254,23 @@ export async function reinitialiserPhotos(sessionId: string, phase: Phase) {
   if ('error' in ctx) return { error: ctx.error }
   const { travailId, userId, admin } = ctx
 
+  // (C1/A3) Blocage « petit malin » : un élève bloqué ne détruit pas non plus
+  // son travail (même garde que confirmerEnvoiPhotos).
+  const blocage = await messageSiBloque(admin, userId)
+  if (blocage) return { error: blocage }
+
+  // (C1/A3) Un travail VALIDÉ par le prof est figé : sans cette garde, l'élève
+  // pouvait effacer retour_critique/synthese_completee d'un travail validé
+  // (la trace validée et les cartes déjà créées se désynchronisaient).
+  const { data: etatValidation } = await admin
+    .from('codex_travaux')
+    .select('statut_validation')
+    .eq('id', travailId)
+    .maybeSingle()
+  if (etatValidation?.statut_validation === 'valide') {
+    return { error: 'Ce travail a été validé par ton professeur : il ne peut plus être réinitialisé.' }
+  }
+
   const prefix = `${userId}/${sessionId}/${phase}`
   const { data: existants } = await admin.storage.from('codex').list(prefix)
   if (existants && existants.length > 0) {
@@ -270,6 +287,7 @@ export async function reinitialiserPhotos(sessionId: string, phase: Phase) {
     .from('codex_travaux')
     .update(reset)
     .eq('id', travailId)
+    .neq('statut_validation', 'valide') // ceinture : re-testé à l'écriture (course avec la validation prof)
 
   return { success: true }
 }
@@ -340,8 +358,21 @@ export async function chargerTrace(sessionId: string): Promise<TraceCodex | null
 // Marquer le retour de synthèse comme lu (T4). Possible seulement si le retour
 // est validé par le prof. Idempotent.
 export async function marquerSyntheseLue(sessionId: string): Promise<{ success: true } | { error: string }> {
-  const { userId } = await verifierEleve()
+  const { supabase, userId } = await verifierEleve()
   const admin = createAdminClient()
+
+  // (C1/A3) Garde de classe : la séance doit être visible de l'élève (une de
+  // ses classes actives, ou sans classe) — même convention que getTravail.
+  const { data: session } = await admin
+    .from('codex_sessions')
+    .select('classe_id')
+    .eq('id', sessionId)
+    .maybeSingle()
+  if (!session) return { error: 'Travail introuvable.' }
+  if (session.classe_id) {
+    const classeIds = await classeIdsActives(supabase, userId)
+    if (!classeIds.includes(session.classe_id as string)) return { error: 'Travail introuvable.' }
+  }
 
   const { data: t } = await admin
     .from('codex_travaux')

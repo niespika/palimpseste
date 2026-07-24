@@ -212,7 +212,7 @@ export default async function PageSemaineAletheia({ params }: { params: Promise<
   }
 
   const { evalQuestions, aides } = await lireReglages(admin)
-  const travaux = await travauxParSemaine(supabase, user.id, livreId)
+  const travaux = await travauxParSemaine(admin, user.id, livreId)
   const t: TravailAletheia | null = travaux.get(semaine) ?? null
   const statut = t?.statut ?? 'DRAFT'
   // Date de clôture : retour_vf_lu_at (posé exactement à FEEDBACK2_READY→DONE),

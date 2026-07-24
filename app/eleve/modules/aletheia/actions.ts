@@ -87,7 +87,8 @@ export async function soumettreV1(livreId: string, semaine: number, saisie: Sais
   // peutAccederSemaine intègre la garde d'appartenance à l'extrait (mode C) + le déblocage séquentiel.
   if (!(await peutAccederSemaine(admin, userId, livreId, semaine, active.classe_id))) return { error: 'Cette séance n\'est pas encore débloquée.' }
 
-  const { data: existing } = await supabase
+  // (C1) Lecture via admin + filtre eleve_id : aletheia_travaux fermé côté RLS élève.
+  const { data: existing } = await admin
     .from('aletheia_travaux')
     .select('id, statut')
     .eq('eleve_id', userId).eq('scriptorium_livre_id', livreId).eq('semaine_index', semaine)
@@ -114,12 +115,21 @@ export async function soumettreV1(livreId: string, semaine: number, saisie: Sais
     statut: (sig ? 'DRAFT' : 'V1_SUBMITTED') as StatutAletheia,
     updated_at: new Date().toISOString(),
   }
+  // (C1/A3) Chemin update : compare-and-set sur statut='DRAFT' — c'était la seule
+  // écriture non-CAS de la machine à états (course double-clic / 2 onglets : double
+  // génération IA, voire écrasement d'un FEEDBACK1_READY tout juste posé).
+  // `.eq('eleve_id', userId)` = ceinture de propriété sur l'écriture admin.
   const { data: saved, error } = existing
-    ? await admin.from('aletheia_travaux').update(payload).eq('id', existing.id).select('id').single()
+    ? await admin.from('aletheia_travaux').update(payload)
+        .eq('id', existing.id).eq('eleve_id', userId).eq('statut', 'DRAFT')
+        .select('id').maybeSingle()
     : await admin.from('aletheia_travaux').insert(payload).select('id').single()
   if (error || !saved) {
     // Course (double-clic / 2 onglets) : la contrainte d'unicité gagne → message clair.
     if ((error as { code?: string } | null)?.code === '23505') return { error: 'Le travail a déjà été soumis pour cette séance.' }
+    // CAS 0 ligne (chemin update) : la ligne a quitté DRAFT entre la lecture et
+    // l'écriture — même course, même message.
+    if (existing && !error) return { error: 'Le travail a déjà été soumis pour cette séance.' }
     return { error: error?.message ?? 'Erreur' }
   }
   const travailId = saved.id as string
@@ -174,7 +184,8 @@ export async function soumettreVf(livreId: string, semaine: number, vf: SaisieVf
   const { exposees } = await modeExposition(admin, livreId, active.classe_id)
   if (!dansExtrait(exposees, semaine)) return { error: 'Cette séance ne fait pas partie de ton parcours.' }
 
-  const { data: row } = await supabase
+  // (C1) Lecture via admin + filtre eleve_id : aletheia_travaux fermé côté RLS élève.
+  const { data: row } = await admin
     .from('aletheia_travaux')
     .select('id, statut')
     .eq('eleve_id', userId).eq('scriptorium_livre_id', livreId).eq('semaine_index', semaine)
@@ -187,7 +198,9 @@ export async function soumettreVf(livreId: string, semaine: number, vf: SaisieVf
   // RESTE en FEEDBACK1_READY — l'élève doit réécrire pour de vrai. Strike + message.
   const sig = detecterRenduVideTexte([these, args, accord]) ?? detecterAveuHeuristique(`${these}\n${args}\n${accord}`)
 
-  const { error } = await admin.from('aletheia_travaux').update({
+  // (C1/A3) `.select().maybeSingle()` : un CAS qui matche 0 ligne était un succès
+  // silencieux qui planifiait quand même la génération (double coût IA possible).
+  const { data: casVf, error } = await admin.from('aletheia_travaux').update({
     these_vf: these,
     arguments_vf: args,
     accord_vf: accord,
@@ -195,8 +208,10 @@ export async function soumettreVf(livreId: string, semaine: number, vf: SaisieVf
     retour_vf_erreur_at: null,
     statut: (sig ? 'FEEDBACK1_READY' : 'VF_SUBMITTED') as StatutAletheia,
     updated_at: new Date().toISOString(),
-  }).eq('id', row.id).eq('statut', 'FEEDBACK1_READY')
+  }).eq('id', row.id).eq('eleve_id', userId).eq('statut', 'FEEDBACK1_READY')
+    .select('id').maybeSingle()
   if (error) return { error: error.message }
+  if (!casVf) return { error: "La version finale n'est pas disponible à cette étape." }
 
   const travailId = row.id as string
   // Retour final (+ diagnostic sem. 1) UNIQUEMENT si non flagué par le détecteur algo.
@@ -232,7 +247,8 @@ export async function validerLectureRetourVf(livreId: string, semaine: number) {
   const { exposees } = await modeExposition(admin, livreId, active.classe_id)
   if (!dansExtrait(exposees, semaine)) return { error: 'Cette séance ne fait pas partie de ton parcours.' }
 
-  const { data: row } = await supabase
+  // (C1) Lecture via admin + filtre eleve_id : aletheia_travaux fermé côté RLS élève.
+  const { data: row } = await admin
     .from('aletheia_travaux')
     .select('id, statut')
     .eq('eleve_id', userId).eq('scriptorium_livre_id', livreId).eq('semaine_index', semaine)
@@ -240,11 +256,13 @@ export async function validerLectureRetourVf(livreId: string, semaine: number) {
   if (!row) return { error: 'Aucun travail pour cette séance.' }
   if (row.statut !== 'FEEDBACK2_READY') return { error: "La validation de lecture n'est pas disponible à cette étape." }
 
+  // (C1/A3) Ceinture de propriété sur l'écriture admin ; un CAS 0 ligne = déjà
+  // validé dans un autre onglet → succès idempotent, rien à re-signaler.
   const { error } = await admin.from('aletheia_travaux').update({
     retour_vf_lu_at: new Date().toISOString(),
     statut: 'DONE' as StatutAletheia,
     updated_at: new Date().toISOString(),
-  }).eq('id', row.id).eq('statut', 'FEEDBACK2_READY')
+  }).eq('id', row.id).eq('eleve_id', userId).eq('statut', 'FEEDBACK2_READY')
   if (error) return { error: error.message }
 
   revalider(livreId, semaine)
@@ -265,7 +283,8 @@ export async function relancerRetour(livreId: string, semaine: number) {
   const { exposees } = await modeExposition(admin, livreId, active.classe_id)
   if (!dansExtrait(exposees, semaine)) return { error: 'Cette séance ne fait pas partie de ton parcours.' }
 
-  const { data: row } = await supabase
+  // (C1) Lecture via admin + filtre eleve_id : aletheia_travaux fermé côté RLS élève.
+  const { data: row } = await admin
     .from('aletheia_travaux')
     .select('id, statut, updated_at')
     .eq('eleve_id', userId).eq('scriptorium_livre_id', livreId).eq('semaine_index', semaine)

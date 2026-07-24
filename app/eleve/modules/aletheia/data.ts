@@ -244,11 +244,13 @@ export async function toutesSemainesDone(admin: SupabaseClient, eleveId: string,
   return exposees.every(s => doneSet.has(s))
 }
 
-// Les travaux de l'élève pour un livre, indexés par numéro de semaine (RLS eleve_own).
+// Les travaux de l'élève pour un livre, indexés par numéro de semaine.
+// (C1) Lecture via le client ADMIN + filtre eleve_id : aletheia_travaux n'a plus
+// de policy SELECT élève (fermé pour ne pas exposer devoilement/retours à l'API).
 export async function travauxParSemaine(
-  supabase: SupabaseClient, eleveId: string, livreId: string,
+  admin: SupabaseClient, eleveId: string, livreId: string,
 ): Promise<Map<SeanceOrdinal, TravailAletheia>> {
-  const { data } = await supabase
+  const { data } = await admin
     .from('aletheia_travaux')
     .select('*')
     .eq('eleve_id', eleveId)

@@ -36,6 +36,9 @@ yarn-error.log*
 # vercel
 .vercel
 
+# backups (dumps SQL locaux — scripts/dump_sandbox.sh, jamais versionnés)
+/backups/
+
 # typescript
 *.tsbuildinfo
 next-env.d.ts

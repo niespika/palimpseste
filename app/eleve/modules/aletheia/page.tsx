@@ -48,7 +48,7 @@ export default async function PageAletheia() {
 
   const livres = await livresPourClasse(admin, active.classe_id)
   const travauxParLivre = new Map(
-    await Promise.all(livres.map(async l => [l.id, await travauxParSemaine(supabase, user.id, l.id)] as const)),
+    await Promise.all(livres.map(async l => [l.id, await travauxParSemaine(admin, user.id, l.id)] as const)),
   )
   // Capstone = carte du LIVRE, partagée. L'élève ne la voit qu'après avoir lui-même
   // tout terminé (bloc rendu sous `toutesDone`) → pas de spoiler de l'aval.

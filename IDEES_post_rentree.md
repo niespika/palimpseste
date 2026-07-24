@@ -18,7 +18,7 @@
 
 ## Idées nouvelles (au fil de l'eau)
 
-- …
+- **Codex — consignes prof jamais vues par l'élève.** `app/eleve/modules/codex/synthese/[sessionId]/page.tsx:60` lit `codex_params` (consigne_v1/consigne_vf) avec le client user-scoped, or `codex_params` est prof-only (RLS) → la lecture renvoie toujours `null` et l'élève voit TOUJOURS les consignes par défaut (`consignes.ts`), jamais celles éditées par le prof. Correctif : lire via client admin (comme les autres lectures Codex élève). *(repéré pendant l'inventaire C1-A, hors périmètre sécurité)*
 
 ## Bugs cosmétiques 🚩 acceptés pendant la passe UI (C10)
 
