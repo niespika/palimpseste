@@ -37,7 +37,7 @@
 |---|---|---|---|---|---|
 | *(exemple)* | *`exercices_l1.sql`* | *C4 — moteur exercices* | *☐* | *☐* | *— créer la ligne AVANT d'exécuter* |
 | 2026-07-23 | `scriptorium_rag_l1_sectionF.sql` | RAG L1 §F — matérialisation (déploiement RAG) | ☑ (23/07) | ☐ | Re-run idempotent de la SECTION F seule de `scriptorium_rag_l1.sql` (archivé), à l'étape de déploiement RAG (push `main` du 23/07 : RAG L1-L7 + C0 + C1). Matérialise les assignations parcours→classe existantes en instances. Sections A-E déjà en base → NE joue QUE §F. DRY-RUN avant / vérif après (dans le fichier). Gate `rag_actif` reste OFF. |
-| 2026-07-23 | `c1_rls_eleve.sql` | C1 — robustesse élève (Session A) | ☐ | ☐ | RLS élève FOR ALL → SELECT-only/FERMÉ : **aletheia_travaux FERMÉ** (5 lectures basculées admin) + **codex_travaux FERMÉ** (lectures 100 % admin) ; quazian_sessions/answers/quiz_scores en SELECT own (⚠️ **drop DES DEUX policies : lot1 `*_eleve_own` + socle `eleve_own_*`**, sinon écriture reste ouverte) ; ré-assertion codex_sessions_eleve_read stricte. **+ profiles : drop `Mise à jour profil personnel` (UPDATE) = ferme l'escalade élève→prof + auto-déblocage ; INSERT `Trigger peut créer un profil` resserré à `auth.uid()=id`** (trigger `handle_new_user` SECURITY DEFINER confirmé au dump → indépendant). Calé sur le dump pg_policies du 23/07. **Protocole renforcé (règle 5)** : code C1-A **mergé+poussé d'abord** (écritures Quazian + lectures Aletheia basculées admin), SQL ensuite, fenêtre calme, smoke test élève. Retour arrière prêt : `c1_rls_eleve_rollback.sql`. |
+| 2026-07-23 | `c1_rls_eleve.sql` | C1 — robustesse élève (Session A) | ☑ (23/07) | ☐ | RLS élève FOR ALL → SELECT-only/FERMÉ : **aletheia_travaux FERMÉ** (5 lectures basculées admin) + **codex_travaux FERMÉ** (lectures 100 % admin) ; quazian_sessions/answers/quiz_scores en SELECT own (⚠️ **drop DES DEUX policies : lot1 `*_eleve_own` + socle `eleve_own_*`**, sinon écriture reste ouverte) ; ré-assertion codex_sessions_eleve_read stricte. **+ profiles : drop `Mise à jour profil personnel` (UPDATE) = ferme l'escalade élève→prof + auto-déblocage ; INSERT `Trigger peut créer un profil` resserré à `auth.uid()=id`** (trigger `handle_new_user` SECURITY DEFINER confirmé au dump → indépendant). Calé sur le dump pg_policies du 23/07. **Protocole renforcé (règle 5)** : code C1-A **mergé+poussé d'abord** (écritures Quazian + lectures Aletheia basculées admin), SQL ensuite, fenêtre calme, smoke test élève. Retour arrière prêt : `c1_rls_eleve_rollback.sql`. |
 | 2026-07-23 | `c1_rls_eleve_rollback.sql` | C1 — robustesse élève (Session A) | ☐ | ☐ | **rollback — n'exécuter qu'en cas de problème.** Restaure les policies élève FOR ALL d'avant `c1_rls_eleve.sql` (aletheia_travaux, codex_travaux, quazian_sessions/answers/quiz_scores — doublons socle inclus), reconstituées d'après le dump du 23/07, et retire les SELECT-only introduites. Ne restaure **pas** `codex_sessions_eleve_read` (stricte), ni les resserrements profiles (UPDATE retirée, INSERT resserré) — les rouvrir n'apporterait rien. Requête `pg_policies` de contrôle en pied de fichier. |
 |  |  |  |  |  |  |
 
@@ -46,6 +46,15 @@
 > `photos_suspectes`/`signal_integrite` ou rétro-dater `statut` (module masqué dans le pilote
 > Aletheia-only ; chemin d'écriture delete+insert user-scoped délicat → à traiter en B, pas ici).
 > `quazian_card_states`/`review_log` — self-write FSRS d'auto-révision **non noté** → accepté tel quel.
+
+> **C1 Session A — CLOSE 23/07.** Code mergé+poussé (`main` `a686f61`, déployé), SQL exécuté sandbox.
+> Vérif `scripts/verif_rls_c1.mjs` : **13 PASS · 0 FAIL** — escalade `profiles` (role→prof, integrite,
+> INSERT forgé) définitivement fermée ; `codex_travaux`/`aletheia_travaux` fermés confirmés. Les 7 SKIP =
+> manque de données sur le compte test (pas de faille) ; la fermeture Quazian/Codex/Aletheia est garantie
+> par l'atomicité de la transaction (le blocage `profiles` prouve le commit). Smoke **Aletheia OK** sur
+> palimpseste.ink (planning + séance rendus → bascule des 5 lectures en admin validée).
+> **Reliquat test :** smoke Quazian/Codex **différé** (bloqué par un bug de création de séance, hors C1)
+> → à passer en recette C13 avec les vrais personas (le seed de démo aussi, pour ne pas polluer la base live).
 
 ---
 
