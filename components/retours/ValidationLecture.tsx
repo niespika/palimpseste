@@ -89,6 +89,11 @@ export default function ValidationLecture({ tuiles, dejaLu, marquerAction, label
         return
       }
       router.refresh()
+    } catch {
+      // (B2) Le clic qui CLÔT le gate de lecture ne doit jamais échouer en silence :
+      // sinon l'élève reste coincé sur le retour sans comprendre pourquoi rien n'avance
+      // (et, en amont, sans pouvoir rendre ailleurs). Réessayable — le bouton reste là.
+      setErreur('La validation a échoué — vérifie ta connexion et réessaie.')
     } finally {
       setPending(false)
     }

@@ -54,6 +54,12 @@ export default function FormulaireV1({
       // Rendu accepté mais signalé « petit malin » : on montre le message avant de continuer.
       if (res?.avertissement) { setAvertissement(res.avertissement); return }
       router.refresh()
+    } catch {
+      // (B2) La Server Action a REJETÉ (réseau coupé, session expirée, déploiement en
+      // cours). Sans ce catch, rien ne s'affichait : le spinner s'arrêtait (finally) et
+      // l'élève croyait la page cassée. Son texte reste dans le formulaire (state React
+      // intact) → il peut renvoyer sans rien retaper.
+      setErreur('L’envoi a échoué — ton texte est toujours là. Vérifie ta connexion et réessaie.')
     } finally {
       setChargement(false)
     }
@@ -63,7 +69,7 @@ export default function FormulaireV1({
     return (
       <div className="bg-attention-teinte border border-attention rounded-xl p-5 space-y-3">
         <p className="text-sm text-attention">{avertissement}</p>
-        <button onClick={() => router.refresh()}
+        <button onClick={() => setAvertissement(null)}
           className="text-sm font-medium text-attention underline hover:opacity-80">
           J’ai compris →
         </button>

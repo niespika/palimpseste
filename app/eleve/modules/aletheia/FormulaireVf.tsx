@@ -38,6 +38,11 @@ export default function FormulaireVf({ livreId, semaine, theseInitial = '', argu
       if (res?.error) { setErreur(res.error); return }
       if (res?.avertissement) { setAvertissement(res.avertissement); return }
       router.refresh()
+    } catch {
+      // (B2) La Server Action a REJETÉ (réseau coupé, session expirée, déploiement en
+      // cours). Sans ce catch, échec silencieux ; le texte réécrit reste dans le
+      // formulaire (state React) → renvoi possible sans rien retaper.
+      setErreur('L’envoi a échoué — ton texte est toujours là. Vérifie ta connexion et réessaie.')
     } finally {
       setChargement(false)
     }
@@ -47,7 +52,7 @@ export default function FormulaireVf({ livreId, semaine, theseInitial = '', argu
     return (
       <div className="bg-attention-teinte border border-attention rounded-xl p-5 space-y-3">
         <p className="text-sm text-attention">{avertissement}</p>
-        <button onClick={() => router.refresh()}
+        <button onClick={() => setAvertissement(null)}
           className="text-sm font-medium text-attention underline hover:opacity-80">
           J’ai compris →
         </button>

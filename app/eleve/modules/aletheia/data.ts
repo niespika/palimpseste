@@ -25,6 +25,29 @@ export async function contexteAletheia(
   return { moduleActif: true, inscriptions, active: inscriptionActive }
 }
 
+// (B4) Résout la classe à utiliser pour CE livre chez un élève potentiellement
+// multi-classes. On privilégie la classe active (cookie) si elle expose le livre ;
+// sinon on se replie sur une AUTRE inscription active (sur une classe ayant le module
+// Aletheia) qui l'expose. `resolue` = null seulement si AUCUNE classe active ne
+// l'expose (vrai 404). Motif : le gate « retours non lus » d'un élève bi-classe peut
+// pointer un livre de sa classe B alors que son cookie est sur la classe A → la page
+// semaine faisait notFound() sec. On résout désormais sur la classe qui expose le
+// livre, pour la LECTURE comme pour la SOUMISSION (mode C / dates / séquentiel suivent
+// cette même classe → cohérent). Mono-classe : `resolue` == `active` (non-régression).
+export async function resoudreInscriptionLivre(
+  admin: SupabaseClient, supabase: SupabaseClient, userId: string, livreId: string,
+): Promise<{ moduleActif: boolean; inscriptions: InscriptionAletheia[]; active: InscriptionAletheia | null; resolue: InscriptionAletheia | null }> {
+  const ctx = await contexteAletheia(supabase, userId)
+  if (!ctx.moduleActif || !ctx.active) return { ...ctx, resolue: null }
+  // Ordre d'essai : la classe active (cookie) D'ABORD (court-circuit mono-classe /
+  // cas nominal), puis les autres inscriptions actives (repli bi-classe déterministe).
+  const ordre = [ctx.active, ...ctx.inscriptions.filter((i) => i.id !== ctx.active!.id)]
+  for (const insc of ordre) {
+    if (await livreAccessible(admin, [insc.classe_id], livreId)) return { ...ctx, resolue: insc }
+  }
+  return { ...ctx, resolue: null }
+}
+
 // (Lot 2) La date indicative héritée « date_debut + (semaine-1)×7 » est SUPPRIMÉE :
 // une séance est décorrélée du calendrier (mode a = sans date). En mode b, la date
 // sera résolue en Lot 3 via resoudreDateSeance (dates issues du parcours). Le champ

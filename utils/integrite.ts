@@ -119,8 +119,9 @@ async function journaliser(admin: Admin, ev: EvenementIntegrite): Promise<void> 
 }
 
 // Strike AUTOMATIQUE (rendu vide / aveu) : haute confiance, comptabilisé direct.
-// Dédup par (élève, module, rendu) : re-soumettre le MÊME rendu ne re-strike pas.
-// Renvoie le message « cheeky » à montrer à l'élève (null si rien à dire).
+// Dédup par (élève, module, rendu) : re-soumettre le MÊME rendu ne re-strike pas —
+// mais renvoie QUAND MÊME le message d'avertissement (cf. `nouveau: false` plus bas).
+// Renvoie le message « cheeky » à montrer à l'élève (null seulement si système inactif).
 export async function signalerStrikeAuto(
   admin: Admin,
   opts: { eleveId: string; module: ModuleIntegrite; renduRef: string; type: TypeStrike; motif: string },
@@ -140,7 +141,13 @@ export async function signalerStrikeAuto(
         { onConflict: 'eleve_id,module,rendu_ref', ignoreDuplicates: true },
       )
       .select('id')
-    if (!inseres || inseres.length === 0) return { avertissement: null, bloque: false, nouveau: false }
+    // (B3) Rendu DÉJÀ signalé (re-soumission du même rendu encore flagué) : on ne
+    // re-strike PAS, mais on renvoie QUAND MÊME le message d'avertissement. Sinon la
+    // 2ᵉ tentative (et les suivantes) était un silence total — spinner qui s'arrête,
+    // rien à l'écran, formulaire inchangé — et l'élève croyait la page cassée. À ce
+    // point l'élève n'est jamais bloqué (tous les appelants passent messageSiBloque en
+    // amont) → c'est bien le messageStrike, pas messageBloque.
+    if (!inseres || inseres.length === 0) return { avertissement: params.messageStrike, bloque: false, nouveau: false }
 
     const signalementId = (inseres[0]?.id as string | undefined) ?? null
     const { bloque, dejaBloque, strikesAvant, strikesApres } = await incrementerStrike(admin, opts.eleveId, params.seuil)

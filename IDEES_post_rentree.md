@@ -18,6 +18,8 @@
 
 ## Idées nouvelles (au fil de l'eau)
 
+- **Fragments — page élève n'honore pas `modules.actif`.** Contrairement à codex/quazian/aletheia (dont les pages de validation font `notFound()` sur `!modules.actif`), `app/eleve/modules/fragments-erudition/page.tsx` et `validerLectureRetour` ne gardent que sur l'assignation (`inscriptionsModuleEleve`), jamais sur `modules.actif`. Donc désactiver Fragments globalement tout en le laissant assigné laisse l'élève y accéder. Piste consistance : ajouter la garde `actif` à la page + `validerLectureRetour` (le gate C1-B1 est déjà correct dans les deux cas — il reflète cette garde réelle par module). *(repéré pendant la revue C1-B1)*
+- **Aletheia/Codex — brouillon persistant des soumissions (localStorage).** C1-B2 rend l'échec de soumission visible et garde le texte dans le formulaire (state React), mais un rechargement / onglet fermé / redirection `/login` après expiration de session perd encore les 5 champs V1 (jusqu'à ~8000 car. chacun). Piste : autosave localStorage clé `(livreId, semaine, champ)` purgée à la soumission réussie. Le brouillon SERVEUR reste un non-but (SPEC B2). *(scope-out assumé pendant C1-B2)*
 - **Codex — consignes prof jamais vues par l'élève.** `app/eleve/modules/codex/synthese/[sessionId]/page.tsx:60` lit `codex_params` (consigne_v1/consigne_vf) avec le client user-scoped, or `codex_params` est prof-only (RLS) → la lecture renvoie toujours `null` et l'élève voit TOUJOURS les consignes par défaut (`consignes.ts`), jamais celles éditées par le prof. Correctif : lire via client admin (comme les autres lectures Codex élève). *(repéré pendant l'inventaire C1-A, hors périmètre sécurité)*
 
 ## Bugs cosmétiques 🚩 acceptés pendant la passe UI (C10)

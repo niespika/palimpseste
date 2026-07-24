@@ -2,7 +2,7 @@ import { notFound } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/utils/supabase/server'
 import { createAdminClient } from '@/utils/supabase/admin'
-import { contexteAletheia, livreAccessible, chargerCapstoneLivre, toutesSemainesDone } from '../../data'
+import { resoudreInscriptionLivre, chargerCapstoneLivre, toutesSemainesDone } from '../../data'
 import { modeExposition } from '@/utils/aletheia-dates'
 import PollStatut from '../../PollStatut'
 import BoutonImprimerCapstone from '../../BoutonImprimerCapstone'
@@ -15,9 +15,10 @@ export default async function PageCapstone({ params }: { params: Promise<{ livre
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) notFound()
 
-  const { moduleActif, active } = await contexteAletheia(supabase, user.id)
+  // (B4) Repli bi-classe : on résout la classe qui expose le livre (cf. page semaine),
+  // au lieu d'un notFound() sec quand le cookie pointe l'autre classe de l'élève.
+  const { moduleActif, resolue: active } = await resoudreInscriptionLivre(admin, supabase, user.id, livreId)
   if (!moduleActif || !active) notFound()
-  if (!(await livreAccessible(admin, [active.classe_id], livreId))) notFound()
 
   // (mode C) Le book capstone = carte du LIVRE ENTIER → révèle des séances hors extrait =
   // SPOILER. Interdit en mode C tant que C2 (carte-de-parcours) n'est pas livré ; la garde de
