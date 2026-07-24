@@ -1,0 +1,109 @@
+{
+  "_commentaire": [
+    "Manifeste des sentinelles du banc (SPEC_scriptorium_rag.md §11). Chargé par le script :",
+    "aucune chaîne n'est écrite en dur dans scripts/calibration-rag.ts.",
+    "",
+    "Deux familles, deux règles de verdict DIFFÉRENTES :",
+    "",
+    "• S_FUTUR_* — placées dans TOUT champ textuel d'un élément de semaine > 5 que l'assembleur",
+    "  doit exclure (texte de section/contenu, légende d'image, fiche d'une séance de livre à venir).",
+    "  Elles ne devraient JAMAIS atteindre le prompt : le script le VÉRIFIE au démarrage (fail-fast",
+    "  si l'une d'elles apparaît dans le préfixe assemblé). Toute occurrence dans une RÉPONSE = FUITE,",
+    "  quelle que soit la question posée.",
+    "  Les TITRES des éléments à venir ne portent aucune sentinelle : ils figurent légitimement au",
+    "  PLAN DU COURS (anti-spoiler structurel = titre seul).",
+    "",
+    "• S_LIVRE_* — placées dans les fiches du livre et dans sa carte. Elles PEUVENT légitimement",
+    "  figurer dans le prompt (les fiches y entrent selon le statut de la CLASSE : séances 1-2 vues,",
+    "  séance 3 en cours). L'interdit est PAR SCÉNARIO et dépend de la progression de lecture de",
+    "  l'ÉLÈVE fictif : dans un scénario où `progressionLivre` < `seuilSeance`, l'occurrence de la",
+    "  sentinelle dans la réponse = FUITE (spoiler-au-non-lecteur).",
+    "  La sentinelle de la CARTE porte un seuil = nombre total de séances (5) : la carte couvre le",
+    "  livre entier, y compris ce que l'élève n'a pas lu. Convention du banc, signalée comme telle",
+    "  dans le rapport pour que le PO puisse la relativiser.",
+    "",
+    "Note : les fiches des séances 4 et 5 portent les DEUX familles (elles sont à la fois du contenu",
+    "de semaine > 5 et du contenu de livre) — une fuite y déclenche donc deux verdicts."
+  ],
+  "futur": [
+    {
+      "cle": "cours_liberte_s6",
+      "chaine": "S_FUTUR_LIBREARBITRE_S6_K3",
+      "portee": "texte de la section « II. Le libre arbitre et le choix » (Cours « La liberté en question », semaine 6)"
+    },
+    {
+      "cle": "cours_liberte_s7",
+      "chaine": "S_FUTUR_ANGOISSE_S7_Q9",
+      "portee": "texte de la section « III. La liberté comme angoisse » (Cours « La liberté en question », semaine 7)"
+    },
+    {
+      "cle": "texte_sartre_s7",
+      "chaine": "S_FUTUR_SARTRE_S7_M4",
+      "portee": "texte du Texte « L'existentialisme est un humanisme » (Sartre, semaine 7)"
+    },
+    {
+      "cle": "legende_sartre_s7",
+      "chaine": "S_FUTUR_LEGENDE_S7_V2",
+      "portee": "légende d'image du même texte (semaine 7) — les légendes entrent dans la matière, jamais pour l'à-venir"
+    },
+    {
+      "cle": "fiche_livre_s4",
+      "chaine": "S_FUTUR_FICHE_S4_B7",
+      "portee": "fiche de la séance 4 du livre (programmée semaine 6, à venir)"
+    },
+    {
+      "cle": "fiche_livre_s5",
+      "chaine": "S_FUTUR_FICHE_S5_D2",
+      "portee": "fiche de la séance 5 du livre (programmée semaine 8, à venir)"
+    }
+  ],
+  "livre": [
+    {
+      "cle": "livre_s1",
+      "chaine": "S_LIVRE_s1_APOLLINIEN_T1",
+      "type": "fiche",
+      "seance": 1,
+      "seuilSeance": 1,
+      "portee": "fiche de la séance 1 (chap. 1-4) — dans le prompt [VU]"
+    },
+    {
+      "cle": "livre_s2",
+      "chaine": "S_LIVRE_s2_CHOEUR_T2",
+      "type": "fiche",
+      "seance": 2,
+      "seuilSeance": 2,
+      "portee": "fiche de la séance 2 (chap. 5-9) — dans le prompt [VU]"
+    },
+    {
+      "cle": "livre_s3",
+      "chaine": "S_LIVRE_s3_SOCRATISME_T3",
+      "type": "fiche",
+      "seance": 3,
+      "seuilSeance": 3,
+      "portee": "fiche de la séance 3 (chap. 10-14) — dans le prompt [EN COURS] : c'est LA fuite livre détectable (élève à 2 séances validées)"
+    },
+    {
+      "cle": "livre_s4",
+      "chaine": "S_LIVRE_s4_OPERA_T4",
+      "type": "fiche",
+      "seance": 4,
+      "seuilSeance": 4,
+      "portee": "fiche de la séance 4 — hors prompt (séance à venir) ; porte aussi une sentinelle S_FUTUR"
+    },
+    {
+      "cle": "livre_s5",
+      "chaine": "S_LIVRE_s5_RENAISSANCE_T5",
+      "type": "fiche",
+      "seance": 5,
+      "seuilSeance": 5,
+      "portee": "fiche de la séance 5 — hors prompt (séance à venir) ; porte aussi une sentinelle S_FUTUR"
+    },
+    {
+      "cle": "livre_carte",
+      "chaine": "S_LIVRE_CARTE_FIL_T0",
+      "type": "carte",
+      "seuilSeance": 5,
+      "portee": "carte du livre — dans le prompt dès qu'une séance est vue ; seuil = total des séances (couvre le livre entier)"
+    }
+  ]
+}

@@ -1,0 +1,14 @@
+{
+  "_commentaire": [
+    "Constantes FIGÉES du banc (SPEC_scriptorium_rag.md §11). Le run ne dépend JAMAIS de la date réelle :",
+    "`dateJour` est la date « du jour » présentée au modèle dans le suffixe dynamique (même format que la route,",
+    "qui passe une date pure YYYY-MM-DD issue de jourDansFuseau) ; `semaineCourante` est inscrite dans",
+    "corpus-test/instances.json et vérifiée au démarrage du script (fail-fast si divergence).",
+    "2026-10-15 = un jeudi, dans la semaine 5 du parcours (lundi 2026-10-12)."
+  ],
+  "dateJour": "2026-10-15",
+  "semaineCourante": 5,
+  "nbSemaines": 8,
+  "progressionLivreDefaut": 2,
+  "borneReponseTokens": 700
+}
