@@ -1,7 +1,7 @@
 import Anthropic from '@anthropic-ai/sdk'
 import { createAdminClient } from '@/utils/supabase/admin'
 import { noteVersLettre, lettreVersNote } from '@/utils/notation'
-import { coutMessage, enregistrerCoutApi } from '@/utils/cout-api'
+import { coutMessage, enregistrerCoutApi, normaliserUsage } from '@/utils/cout-api'
 import { REGISTRE, sansDelims, injecter, extraireJSON } from '@/utils/ia-commun'
 import { signalDepuisIA } from '@/utils/detecteur-integrite'
 import { signalerEnAttenteIA } from '@/utils/integrite'
@@ -286,7 +286,9 @@ export async function genererRetourV1(travailId: string): Promise<void> {
       max_tokens: 4096,
       messages: messagesAvecCache(prompt),
     })
-    await enregistrerCoutApi('aletheia', coutMessage(response.usage))
+    await enregistrerCoutApi('aletheia', coutMessage(response.usage), {
+      eleveId: t.eleve_id as string, modele: MODELE, tokens: normaliserUsage(response.usage),
+    })
     if (response.stop_reason === 'max_tokens') throw new Error('Réponse tronquée (max_tokens).')
 
     const texte = response.content[0]?.type === 'text' ? response.content[0].text : ''
@@ -593,7 +595,9 @@ export async function genererRetourVf(travailId: string): Promise<void> {
       temperature: 0,   // anti-spoiler : T=0 ferme le résidu de divulgation de l'aval (mesuré : 0 spoiler/40 vs ~12 % à T=1), teasers conservés
       messages: messagesAvecCache(prompt),
     })
-    await enregistrerCoutApi('aletheia', coutMessage(response.usage))
+    await enregistrerCoutApi('aletheia', coutMessage(response.usage), {
+      eleveId, modele: MODELE, tokens: normaliserUsage(response.usage),
+    })
     if (response.stop_reason === 'max_tokens') throw new Error('Réponse tronquée (max_tokens).')
 
     const texte = response.content[0]?.type === 'text' ? response.content[0].text : ''
@@ -711,7 +715,11 @@ export async function genererCapstone(livreId: string): Promise<void> {
       max_tokens: 4096,
       messages: [{ role: 'user', content: prompt }],
     })
-    await enregistrerCoutApi('aletheia', coutMessage(response.usage))
+    // Coût de LIVRE (déclenché par le prof, partagé par toute la classe) : ni
+    // élève ni classe — non attribué par nature, pas par manque d'information.
+    await enregistrerCoutApi('aletheia', coutMessage(response.usage), {
+      modele: MODELE, tokens: normaliserUsage(response.usage),
+    })
     if (response.stop_reason === 'max_tokens') throw new Error('Réponse tronquée (max_tokens).')
 
     const texte = response.content[0]?.type === 'text' ? response.content[0].text : ''
@@ -886,7 +894,10 @@ export async function genererReferenceLivre(livreId: string): Promise<void> {
         structure_semaines: inLot.map(d => d.ligne).join('\n'),
       })
       const response = await client.messages.create({ model: MODELE, max_tokens: 8000, messages: [{ role: 'user', content: prompt }] })
-      await enregistrerCoutApi('aletheia', coutMessage(response.usage))
+      // Coût de LIVRE, par lot de semaines : non attribué (cf. capstone ci-dessus).
+      await enregistrerCoutApi('aletheia', coutMessage(response.usage), {
+        modele: MODELE, tokens: normaliserUsage(response.usage),
+      })
       if (response.stop_reason === 'max_tokens') throw new Error('Réponse tronquée (max_tokens).')
       const texte = response.content[0]?.type === 'text' ? response.content[0].text : ''
       const parsed = JSON.parse(extraireJSON(texte)) as { chapitres?: unknown }
@@ -1026,9 +1037,11 @@ const parseInventaire = (x: Partial<InventaireDiagnostic> | null | undefined): I
 
 // Un appel IA = phase 1 (inventaire) puis phase 2 (niveau), pour un jeu de champs
 // (V1 ou VF) d'un travail. La référence du chapitre sert UNIQUEMENT la phase 2.
+// `eleveId` ne sert qu'à ATTRIBUER les deux coûts d'API (C11a-bis) — il n'entre
+// dans aucun prompt : le diagnostic reste jugé sur les seuls écrits de l'élève.
 async function diagnostiquerPhase(
   client: Anthropic, texteSemaine: string, ref: ReferenceChapitre | null, these: string, args: string,
-  prompts: { inventaire: string; niveau: string },
+  prompts: { inventaire: string; niveau: string }, eleveId: string,
 ): Promise<{ inventaire: InventaireDiagnostic; niveaux: NiveauxDiagnostic }> {
   // Phase 1 — inventaire (lit le texte + la prose élève).
   const pInv = injecter(prompts.inventaire, {
@@ -1037,7 +1050,9 @@ async function diagnostiquerPhase(
     arguments: sansDelims(args) || '(rien)',
   })
   const rInv = await client.messages.create({ model: MODELE, max_tokens: 2048, temperature: 0, messages: messagesAvecCache(pInv) })
-  await enregistrerCoutApi('aletheia', coutMessage(rInv.usage))
+  await enregistrerCoutApi('aletheia', coutMessage(rInv.usage), {
+    eleveId, modele: MODELE, tokens: normaliserUsage(rInv.usage),
+  })
   if (rInv.stop_reason === 'max_tokens') throw new Error('Inventaire tronqué.')
   const inventaire = parseInventaire(JSON.parse(extraireJSON(rInv.content[0]?.type === 'text' ? rInv.content[0].text : '')) as Partial<InventaireDiagnostic>)
 
@@ -1053,7 +1068,9 @@ async function diagnostiquerPhase(
     }, null, 2),
   })
   const rNiv = await client.messages.create({ model: MODELE, max_tokens: 512, temperature: 0, messages: [{ role: 'user', content: pNiv }] })
-  await enregistrerCoutApi('aletheia', coutMessage(rNiv.usage))
+  await enregistrerCoutApi('aletheia', coutMessage(rNiv.usage), {
+    eleveId, modele: MODELE, tokens: normaliserUsage(rNiv.usage),
+  })
   if (rNiv.stop_reason === 'max_tokens') throw new Error('Niveau tronqué.')
   const niv = JSON.parse(extraireJSON(rNiv.content[0]?.type === 'text' ? rNiv.content[0].text : '')) as { niveau_these?: unknown; niveau_arguments?: unknown; these_mal_definie?: unknown }
 
@@ -1103,14 +1120,14 @@ export async function diagnostiquerTravail(travailId: string): Promise<void> {
 
     const patch: Record<string, unknown> = { ...base, erreur_at: null, updated_at: new Date().toISOString() }
     if (faireV1) {
-      const r = await diagnostiquerPhase(client, texteSemaine, ref, txt(t.these), txt(t.arguments), prompts)
+      const r = await diagnostiquerPhase(client, texteSemaine, ref, txt(t.these), txt(t.arguments), prompts, eleveId)
       patch.inventaire_v1 = r.inventaire
       patch.niveau_these_v1 = r.niveaux.niveau_these
       patch.niveau_arguments_v1 = r.niveaux.niveau_arguments
       patch.these_mal_definie_v1 = r.niveaux.these_mal_definie
     }
     if (faireVf) {
-      const r = await diagnostiquerPhase(client, texteSemaine, ref, txt(t.these_vf), txt(t.arguments_vf), prompts)
+      const r = await diagnostiquerPhase(client, texteSemaine, ref, txt(t.these_vf), txt(t.arguments_vf), prompts, eleveId)
       patch.inventaire_vf = r.inventaire
       patch.niveau_these_vf = r.niveaux.niveau_these
       patch.niveau_arguments_vf = r.niveaux.niveau_arguments

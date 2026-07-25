@@ -1,5 +1,12 @@
 import Anthropic from '@anthropic-ai/sdk'
-import { coutMessage, enregistrerCoutApi } from '@/utils/cout-api'
+import { coutMessage, enregistrerCoutApi, normaliserUsage } from '@/utils/cout-api'
+
+const MODELE = 'claude-sonnet-4-6'
+
+// C11a-bis — attribution : ces trois générations partent d'une UNITÉ Scriptorium
+// (ou d'un simple recto), contenu partagé entre classes depuis le Lot 6. Il n'y a
+// donc ni élève ni classe à porter : les coûts sont journalisés avec leur modèle
+// et leurs tokens, non attribués. C'est structurel, pas un manque d'information.
 
 export interface FlashcardSuggestion {
   type: 'philosophe' | 'concept' | 'mouvement' | 'these'
@@ -60,7 +67,7 @@ export async function extraireFlashcards(
   const textreTronque = texte.length > 12000 ? texte.slice(0, 12000) + '\n[texte tronqué]' : texte
 
   const message = await client.messages.create({
-    model: 'claude-sonnet-4-6',
+    model: MODELE,
     max_tokens: 4096,
     system: PROMPT_SYSTEME,
     messages: [
@@ -70,7 +77,9 @@ export async function extraireFlashcards(
       },
     ],
   })
-  await enregistrerCoutApi('quazian', coutMessage(message.usage))
+  await enregistrerCoutApi('quazian', coutMessage(message.usage), {
+    modele: MODELE, tokens: normaliserUsage(message.usage),
+  })
 
   const texteReponse = message.content
     .filter((b) => b.type === 'text')
@@ -98,7 +107,7 @@ export async function extraireFlashcardsTexte(
   const textreTronque = texte.length > 12000 ? texte.slice(0, 12000) + '\n[texte tronqué]' : texte
 
   const message = await client.messages.create({
-    model: 'claude-sonnet-4-6',
+    model: MODELE,
     max_tokens: 1024,
     system: PROMPT_SYSTEME_TEXTE,
     messages: [
@@ -108,7 +117,9 @@ export async function extraireFlashcardsTexte(
       },
     ],
   })
-  await enregistrerCoutApi('quazian', coutMessage(message.usage))
+  await enregistrerCoutApi('quazian', coutMessage(message.usage), {
+    modele: MODELE, tokens: normaliserUsage(message.usage),
+  })
 
   const texteReponse = message.content
     .filter((b) => b.type === 'text')
@@ -125,7 +136,7 @@ export async function extraireFlashcardsTexte(
 export async function genererVerso(recto: string): Promise<string> {
   const client = new Anthropic()
   const message = await client.messages.create({
-    model: 'claude-sonnet-4-6',
+    model: MODELE,
     max_tokens: 256,
     messages: [
       {
@@ -134,7 +145,9 @@ export async function genererVerso(recto: string): Promise<string> {
       },
     ],
   })
-  await enregistrerCoutApi('quazian', coutMessage(message.usage))
+  await enregistrerCoutApi('quazian', coutMessage(message.usage), {
+    modele: MODELE, tokens: normaliserUsage(message.usage),
+  })
   return message.content
     .filter((b) => b.type === 'text')
     .map((b) => (b as { type: 'text'; text: string }).text)

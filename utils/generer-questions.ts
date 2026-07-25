@@ -1,5 +1,7 @@
 import Anthropic from '@anthropic-ai/sdk'
-import { coutMessage, enregistrerCoutApi } from '@/utils/cout-api'
+import { coutMessage, enregistrerCoutApi, normaliserUsage } from '@/utils/cout-api'
+
+const MODELE = 'claude-sonnet-4-6'
 
 export interface QuestionGeneree {
   enonce: string
@@ -46,9 +48,13 @@ Réponds UNIQUEMENT avec un tableau JSON valide, sans texte autour :
 
 index_correct est l'indice (0-3) de la bonne réponse dans le tableau options.`
 
+// `classeId` : purement comptable (C11a-bis) — un quizz est créé POUR une classe,
+// c'est le seul coût Quazian attribuable. Optionnel et sans effet sur la
+// génération ; l'appelant `creerQuizz` l'a déjà en main (aucune requête ajoutée).
 export async function genererQuestions(
   cartes: CarteSource[],
-  nbQuestions: number = 20
+  nbQuestions: number = 20,
+  classeId?: string | null
 ): Promise<QuestionGeneree[]> {
   const client = new Anthropic()
 
@@ -58,7 +64,7 @@ export async function genererQuestions(
     .join('\n')
 
   const message = await client.messages.create({
-    model: 'claude-sonnet-4-6',
+    model: MODELE,
     max_tokens: 6000,
     system: PROMPT_SYSTEME,
     messages: [
@@ -68,7 +74,9 @@ export async function genererQuestions(
       },
     ],
   })
-  await enregistrerCoutApi('quazian', coutMessage(message.usage))
+  await enregistrerCoutApi('quazian', coutMessage(message.usage), {
+    classeId, modele: MODELE, tokens: normaliserUsage(message.usage),
+  })
 
   const texte = message.content
     .filter((b) => b.type === 'text')
@@ -92,7 +100,7 @@ export async function regenererQuestion(
   const client = new Anthropic()
 
   const message = await client.messages.create({
-    model: 'claude-sonnet-4-6',
+    model: MODELE,
     max_tokens: 512,
     system: PROMPT_SYSTEME,
     messages: [
@@ -102,7 +110,11 @@ export async function regenererQuestion(
       },
     ],
   })
-  await enregistrerCoutApi('quazian', coutMessage(message.usage))
+  // Non attribué : l'appelant (régénération d'UNE question) ne connaît que l'id de
+  // la question — remonter à la classe demanderait une requête, exclue par C11a-bis.
+  await enregistrerCoutApi('quazian', coutMessage(message.usage), {
+    modele: MODELE, tokens: normaliserUsage(message.usage),
+  })
 
   const texte = message.content
     .filter((b) => b.type === 'text')
