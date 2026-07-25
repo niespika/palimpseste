@@ -168,8 +168,13 @@ export default async function ScriptoriumElevePage({
     'Aide-moi à faire le lien entre ce qu’on voit cette semaine et ce qu’on a déjà vu.',
   ]
 
+  // Wrapper partagé par les deux vues. C2.2-ter (Z1) : le `pb-8` d'ici doublait
+  // celui du <main> élève ; il est retiré. Les marges négatives `lg:` neutralisent
+  // LOCALEMENT (sans toucher au layout) le `pt-8`/`pb-8` du <main> pour ramener la
+  // bande au-dessus du cadre à 16px et la respiration basse à 24px. Sous lg :
+  // aucun décalage (le `pb-24` du <main> couvre toujours la barre d'onglets).
   return (
-    <div className="pb-8" data-module="scriptorium">
+    <div className="lg:-mt-4 lg:-mb-2" data-module="scriptorium">
       {vue === 'plan' ? (
         <PlanCours plan={plan} />
       ) : (

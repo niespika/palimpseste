@@ -218,23 +218,25 @@ export default function ChatScriptorium({
   // amorces) gardent le flux de page ; sous lg aussi (une boîte défilante à
   // 375 px serait pire).
   //
-  // 291px = hauteur MESURÉE de la coquille au-dessus/au-dessous de ce panneau
-  // sur l'écran Scriptorium élève : en-tête sticky 194,5px (2 barres + sous-
-  // onglets du module) + `pt-8` du <main> (32px) + respiration basse 64px
-  // (`pb-8` du <main> + `pb-8` du conteneur de page.tsx). Au-delà, la page
-  // reprendrait une barre de défilement.
+  // 235px = hauteur MESURÉE de la coquille au-dessus/au-dessous de ce panneau
+  // sur l'écran Scriptorium élève, RECALCULÉE en C2.2-ter après la reprise des
+  // zones mortes : en-tête sticky 194,5px (2 barres + sous-onglets du module)
+  // + 16px au-dessus du cadre (`pt-8` du <main>, ramené par le `lg:-mt-4` du
+  // wrapper de page.tsx) + 24px de respiration basse (`pb-8` du <main>, ramené
+  // par le `lg:-mb-2` du même wrapper ; son `pb-8` redondant a disparu).
+  // Au-delà, la page reprendrait une barre de défilement.
   const filDefilant = messages.length > 0
 
   return (
     <div
       className={`flex flex-col lg:flex-row items-stretch rounded-[6px] ${
-        filDefilant ? 'lg:h-[calc(100dvh-291px)]' : ''
+        filDefilant ? 'lg:h-[calc(100dvh-235px)]' : ''
       }`}
       style={{ background: 'var(--fond-module)' }}
     >
       {/* ── Rail des conversations — il s'efface, l'espace central est la lettre ── */}
       <aside
-        className={`w-full lg:w-[228px] flex-none px-4 py-5 lg:px-[15px] flex flex-col gap-3.5 ${
+        className={`w-full lg:w-[228px] flex-none px-4 py-5 lg:px-[15px] lg:py-3 flex flex-col gap-3.5 ${
           filDefilant ? 'lg:min-h-0' : ''
         }`}
       >
@@ -312,17 +314,18 @@ export default function ChatScriptorium({
         </div>
       </aside>
 
-      {/* ── La lettre : colonne unique, jamais élargie ─────────────────────── */}
+      {/* ── La lettre : colonne unique, en PLEINE LARGEUR ───────────────────
+          C2.2-ter (Z2) : les gouttières tombent (`lg:px-[30px]` → `px-4`) et le
+          cap `max-w-[720px]` est retiré — décision PO du 24/07, la densité passe
+          avant la cible 65-75 caractères du handoff ; la ligne peut atteindre
+          ~100-105 caractères, c'est voulu. La marge intérieure du feuillet
+          (`sm:px-[46px]`) reste : c'est la marge de la lettre, pas une zone morte. */}
       <div
-        className={`flex-1 min-w-0 px-4 pb-7 pt-0 lg:pt-[26px] lg:px-[30px] ${
+        className={`flex-1 min-w-0 px-4 pb-7 pt-0 lg:pt-3 ${
           filDefilant ? 'lg:flex lg:flex-col lg:min-h-0' : ''
         }`}
       >
-        <div
-          className={`max-w-[720px] mx-auto ${
-            filDefilant ? 'lg:flex lg:flex-col lg:min-h-0 lg:flex-1 lg:w-full' : ''
-          }`}
-        >
+        <div className={filDefilant ? 'lg:flex lg:flex-col lg:min-h-0 lg:flex-1 lg:w-full' : ''}>
 
           {/* Billet de transparence (première utilisation) — contenu inchangé. */}
           {premierUsage && messages.length === 0 && (
@@ -340,7 +343,7 @@ export default function ChatScriptorium({
           {/* Le feuillet */}
           <div
             ref={filRef}
-            className={`bg-surface border border-bordure rounded-[3px] px-5 sm:px-[46px] pt-[34px] pb-10 shadow-[0_8px_28px_rgba(74,58,40,0.06)] ${
+            className={`bg-surface border border-bordure rounded-[3px] px-5 sm:px-[46px] pt-[26px] pb-7 shadow-[0_8px_28px_rgba(74,58,40,0.06)] ${
               filDefilant ? 'lg:flex-1 lg:min-h-0 lg:overflow-y-auto' : ''
             }`}
           >
@@ -397,38 +400,36 @@ export default function ChatScriptorium({
             </div>
           ) : (
             <div
-              className={`mt-[22px] bg-surface border border-bordure-bouton rounded-[4px] px-5 pt-4 pb-3.5 shadow-[0_6px_20px_rgba(74,58,40,0.05)] ${filDefilant ? 'lg:flex-none' : ''}`}
+              className={`mt-3 bg-surface border border-bordure-bouton rounded-[4px] px-4 py-2.5 shadow-[0_6px_20px_rgba(74,58,40,0.05)] ${filDefilant ? 'lg:flex-none' : ''}`}
               style={{ borderTopWidth: 2, borderTopColor: 'rgba(74,58,40,.20)' }}
             >
-              <textarea
-                value={saisie}
-                onChange={e => setSaisie(e.target.value)}
-                onKeyDown={e => {
-                  if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); void envoyer() }
-                }}
-                rows={Math.min(6, Math.max(1, saisie.split('\n').length))}
-                placeholder="Ta question sur le cours… (Entrée pour envoyer)"
-                aria-label="Ta question sur le cours"
-                // `background: transparent` en style inline : la règle globale
-                // `input, textarea { background-color:#fff }` de globals.css n'est
-                // pas dans une couche Tailwind et l'emporterait sur une classe.
-                style={{ background: 'transparent' }}
-                className="w-full resize-none border-0 border-b border-bordure pb-2 font-corps text-[16px] leading-[1.5] text-encre placeholder:italic placeholder:text-[#7E6746] focus:outline-none"
-              />
-              <div className="flex items-center justify-between gap-3 mt-3">
-                {enCours ? (
-                  <span className="font-titre italic text-[14px] text-encre-douce">le tuteur écrit…</span>
-                ) : restant <= 10 ? (
-                  <span className="font-ui text-[12.5px]" style={{ color: ENCRE_META }}>
-                    {restant} message{restant > 1 ? 's' : ''} restant{restant > 1 ? 's' : ''} aujourd’hui
-                  </span>
-                ) : (
-                  <span />
-                )}
+              {/* C2.2-ter (Z3) : l'écritoire tient sur UNE ligne — le champ et le
+                  bouton côte à côte. `items-end` garde le bouton calé en bas
+                  quand le champ s'étire (1 → 6 lignes). */}
+              <div className="flex items-end gap-3">
+                <textarea
+                  value={saisie}
+                  onChange={e => setSaisie(e.target.value)}
+                  onKeyDown={e => {
+                    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); void envoyer() }
+                  }}
+                  rows={Math.min(6, Math.max(1, saisie.split('\n').length))}
+                  placeholder="Ta question sur le cours… (Entrée pour envoyer)"
+                  aria-label="Ta question sur le cours"
+                  // `background: transparent` en style inline : la règle globale
+                  // `input, textarea { background-color:#fff }` de globals.css n'est
+                  // pas dans une couche Tailwind et l'emporterait sur une classe.
+                  style={{ background: 'transparent' }}
+                  className="flex-1 min-w-0 resize-none border-0 border-b border-bordure pb-2 font-corps text-[16px] leading-[1.5] text-encre placeholder:italic placeholder:text-[#7E6746] focus:outline-none"
+                />
+                {/* Une seule case, de largeur ET de hauteur figées : « Stop » y
+                    remplace « Envoyer » pendant le streaming sans rien décaler.
+                    Le filet transparent d'« Envoyer » compense celui de « Stop »
+                    (sans lui, 41px contre 43px — la ligne sautait de 2px). */}
                 {enCours ? (
                   <button
                     onClick={stop}
-                    className="font-ui text-[14px] font-medium px-[22px] py-2.5 rounded-[6px] border border-bordure-bouton bg-parchemin text-encre-douce hover:text-encre focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pigment"
+                    className="flex-none w-[104px] font-ui text-[14px] font-medium py-2.5 rounded-[6px] border border-bordure-bouton bg-parchemin text-encre-douce hover:text-encre focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pigment"
                   >
                     Stop
                   </button>
@@ -436,12 +437,22 @@ export default function ChatScriptorium({
                   <button
                     onClick={() => void envoyer()}
                     disabled={!saisie.trim()}
-                    className="font-ui text-[14px] font-semibold px-6 py-2.5 rounded-[6px] bg-bouton-parcours text-bouton-parcours-texte hover:opacity-90 disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pigment"
+                    className="flex-none w-[104px] font-ui text-[14px] font-semibold py-2.5 rounded-[6px] border border-transparent bg-bouton-parcours text-bouton-parcours-texte hover:opacity-90 disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pigment"
                   >
                     Envoyer
                   </button>
                 )}
               </div>
+              {/* Ligne d'état — mêmes textes et mêmes conditions qu'avant, mais
+                  SOUS le champ : elle n'existe (et ne prend de la hauteur) que
+                  lorsqu'elle a quelque chose à dire. Aucune rangée permanente. */}
+              {enCours ? (
+                <p className="font-titre italic text-[12.5px] text-encre-douce mt-1.5">le tuteur écrit…</p>
+              ) : restant <= 10 ? (
+                <p className="font-ui text-[12.5px] mt-1.5" style={{ color: ENCRE_META }}>
+                  {restant} message{restant > 1 ? 's' : ''} restant{restant > 1 ? 's' : ''} aujourd’hui
+                </p>
+              ) : null}
             </div>
           )}
 
