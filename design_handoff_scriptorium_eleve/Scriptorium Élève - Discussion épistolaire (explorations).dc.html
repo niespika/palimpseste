@@ -1,0 +1,371 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<meta name="design_doc_mode" content="canvas">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="anonymous">
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600&amp;family=Cormorant+Garamond:ital,wght@0,500;0,600;1,500;1,600&amp;family=EB+Garamond:ital,wght@0,400;0,500;0,600;1,400;1,500&amp;family=Alegreya+Sans:wght@400;500;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#E7DECF;font-family:'EB Garamond',Georgia,serif;color:#221C16;-webkit-font-smoothing:antialiased}
+::selection{background:#D8C8A8}
+a{color:#4A3A28;text-decoration:none;border-bottom:1px solid rgba(74,58,40,.35)}
+a:hover{color:#221C16;border-color:#221C16}
+</style>
+</helmet>
+
+<section style="padding:46px 48px 96px">
+
+  <!-- ══════════ Titre + intention ══════════ -->
+  <div style="max-width:1120px;margin:0 auto 10px">
+    <span style="font:600 12px 'Alegreya Sans',sans-serif;letter-spacing:.06em;background:#E6DDC9;color:#4A3A28;padding:5px 12px;border-radius:20px">Exploration · Discussion — 24/07</span>
+    <h1 style="font-family:'Cormorant Garamond',serif;font-weight:600;font-size:34px;line-height:1.1;margin:16px 0 8px;color:#2A2017">La Discussion en espace épistolaire — trois partis à comparer</h1>
+    <p style="font:18px/1.6 'EB Garamond',serif;color:#5A4632;margin:0;max-width:82ch;text-wrap:pretty">On ne change pas la manière dont l’IA parle — on change le <em>lieu</em>. On veut que l’élève ait le sentiment de s’asseoir à un écritoire : une correspondance, pas une messagerie. Les trois partis partagent la même charte (encre &amp; parchemin, colonne unique généreuse, aucun aplat de couleur pour distinguer les voix). Ils diffèrent par <strong style="font-weight:600">la façon de poser les deux voix sur la page</strong>. Même conversation dans les trois, à l’état « échange en cours ». Choisis-en un : je le déclinerai ensuite sur tous les états réels (vierge + billet de transparence · streaming &amp; stop · réponse longue · quota atteint · rail à plusieurs conversations).</p>
+  </div>
+
+  <!-- ══════════ En-tête partagé (rappel) ══════════ -->
+  <div style="max-width:1120px;margin:30px auto 0">
+    <div style="font:700 11px 'Alegreya Sans',sans-serif;letter-spacing:.13em;text-transform:uppercase;color:#8A6F4E;margin:0 0 12px 2px">En-tête partagé — déjà validé · les onglets « Plan de cours · Discussion » vivent ici (bande seuil du module), pas dans une barre locale</div>
+    <div style="border:1px solid #E4DBC9;border-radius:12px 12px 0 0;overflow:hidden;box-shadow:0 12px 34px rgba(60,45,25,.12)">
+      <!-- Barre 1 -->
+      <div style="background:#FBF8F1;border-bottom:1px solid #E4DBC9;position:relative">
+        <div style="max-width:1040px;margin:0 auto;padding:11px 28px;display:flex;justify-content:center;gap:6px">
+          <span style="font:400 14px 'Alegreya Sans',sans-serif;color:#6E5A3E;padding:7px 14px;border-radius:8px">Tableau de bord</span>
+          <span style="font:400 14px 'Alegreya Sans',sans-serif;color:#6E5A3E;padding:7px 14px;border-radius:8px">Calendrier</span>
+          <span style="font:400 14px 'Alegreya Sans',sans-serif;color:#6E5A3E;padding:7px 14px;border-radius:8px">Intégrité</span>
+          <span style="font:500 14px 'Alegreya Sans',sans-serif;background:#ECE4D6;color:#221C16;padding:7px 14px;border-radius:8px">Modules&nbsp;▾</span>
+        </div>
+        <div style="position:absolute;right:24px;top:0;bottom:0;display:flex;align-items:center;gap:12px">
+          <span style="font:400 13px 'Alegreya Sans',sans-serif;color:#5A4632;background:#F6F1E7;border:1px solid #E4DBC9;border-radius:7px;padding:4px 10px">2de B&nbsp;▾</span>
+          <span style="width:1px;height:20px;background:#E4DBC9"></span>
+          <span style="font:400 13px 'Alegreya Sans',sans-serif;color:#9A836A">Se déconnecter</span>
+        </div>
+      </div>
+      <!-- Barre 2 : seuil du module -->
+      <div style="background:linear-gradient(90deg,#FBF8F1 26%,#EFE8D6 62%,#D9CCAE 100%);position:relative">
+        <span style="position:absolute;left:0;right:0;bottom:0;height:2px;background:linear-gradient(90deg,rgba(184,137,59,0),rgba(184,137,59,.55),#B8893B);pointer-events:none"></span>
+        <div style="max-width:1040px;margin:0 auto;padding:14px 28px 16px;display:flex;align-items:center;gap:22px">
+          <div style="display:flex;flex-direction:column;align-items:center;gap:7px;flex-shrink:0">
+            <span style="width:60px;height:60px;border-radius:50%;background:#EDE6D6;border:1px solid #E4DBC9;display:inline-flex;overflow:hidden"><img src="sceaux/palimpseste_medaillon.png" alt="" style="width:60px;height:60px;object-fit:cover;filter:brightness(1.05) contrast(1.05);mix-blend-mode:multiply"></span>
+            <span style="font:600 20px 'Cinzel',serif;letter-spacing:.05em;color:#221C16">Palimpseste</span>
+          </div>
+          <span style="width:1px;align-self:stretch;background:linear-gradient(transparent,rgba(60,50,40,.16),transparent)"></span>
+          <div style="flex:1;min-width:0;display:flex;flex-direction:column;align-items:center;gap:10px">
+            <div style="font-family:'Cormorant Garamond',serif;font-size:18px;color:#6E5A3E;text-align:center"><span style="font-variant:small-caps;letter-spacing:.05em">Ars Docendi</span><span style="font-style:italic"> — D’une main à l’autre</span></div>
+            <div style="display:flex;justify-content:center;gap:6px">
+              <span style="font:400 14px 'Alegreya Sans',sans-serif;color:#6A5C48;padding:7px 15px;border-radius:8px">Plan de cours</span>
+              <span style="font:500 14px 'Alegreya Sans',sans-serif;background:#E6DDC9;color:#4A3A28;padding:7px 15px;border-radius:8px">Discussion</span>
+            </div>
+          </div>
+          <span style="width:1px;align-self:stretch;background:linear-gradient(transparent,rgba(60,50,40,.16),transparent)"></span>
+          <div style="display:flex;flex-direction:column;align-items:center;gap:7px;flex-shrink:0">
+            <span style="position:relative;display:inline-flex">
+              <span style="width:60px;height:60px;border-radius:50%;background:#E6DDC9;display:inline-flex;overflow:hidden;border:1px solid #D3C6AA"><img src="sceaux/pastille-scriptorium.png" alt="Scriptorium" style="width:60px;height:60px;object-fit:cover;filter:brightness(1.06) contrast(1.04);mix-blend-mode:multiply"></span>
+              <span style="position:absolute;inset:0;border-radius:50%;border:3px solid #B8893B;box-shadow:0 3px 12px rgba(74,58,40,.30);pointer-events:none"></span>
+            </span>
+            <span style="font:600 20px 'Cinzel',serif;letter-spacing:.05em;color:#4A3A28">Scriptorium</span>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div style="text-align:center;font:italic 13px 'Cormorant Garamond',serif;color:#8A6F4E;margin-top:9px">↓ Sous cet en-tête, l’onglet Discussion. Voici trois façons de le rendre.</div>
+  </div>
+
+  <!-- ══════════ Les trois partis ══════════ -->
+  <div style="display:flex;gap:44px;align-items:flex-start;justify-content:flex-start;flex-wrap:nowrap;width:max-content;margin:48px auto 0">
+
+    <!-- ─────────────── PARTI A ─────────────── -->
+    <div id="1a" data-screen-label="Discussion épistolaire — parti A" style="width:1000px;flex:0 0 auto">
+      <div style="display:flex;align-items:center;gap:10px;margin:0 0 8px 2px">
+        <span style="font:600 13px 'Alegreya Sans',sans-serif;background:#6B5A46;color:#F1EADD;padding:4px 12px;border-radius:20px">1a</span>
+        <span style="font:600 19px 'Cormorant Garamond',serif;color:#2A2017">Correspondance continue</span>
+      </div>
+      <p style="font:15px/1.55 'EB Garamond',serif;color:#5A4632;margin:0 0 14px 2px;max-width:70ch">Un seul feuillet qui se lit d’un trait, comme une longue lettre. Les voix ne sont pas encadrées : le tuteur occupe la pleine colonne, les mots de l’élève sont <strong style="font-weight:600">mis en retrait derrière un filet au pigment</strong>. Le plus serein — l’effet « lettre » est maximal. <span style="color:#8A6F4E">Repère des tours un peu plus doux sur un très long fil.</span></p>
+
+      <div style="background:#F0EADE;border:1px solid #E4DBC9;border-top:2px solid #B8893B;border-radius:0 0 4px 4px;box-shadow:0 12px 34px rgba(60,45,25,.12)">
+        <div style="display:flex;min-height:660px">
+
+          <!-- rail effacé -->
+          <aside style="width:230px;flex:none;padding:22px 16px;display:flex;flex-direction:column;gap:14px">
+            <span style="display:block;text-align:center;font:500 13px 'Alegreya Sans',sans-serif;color:#6B5A46;border:1px solid rgba(107,90,70,.4);padding:9px;border-radius:7px">＋ Nouvelle conversation</span>
+            <div style="font:700 10px 'Alegreya Sans',sans-serif;letter-spacing:.14em;text-transform:uppercase;color:#A8906A;padding:2px 2px 0">Récentes</div>
+            <div style="display:flex;flex-direction:column;gap:2px">
+              <div style="border-left:2px solid #4A3A28;background:rgba(74,58,40,.05);padding:8px 12px">
+                <div style="font:500 15px 'EB Garamond',serif;color:#221C16;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Le point de vue chez Maupassant</div>
+                <div style="display:flex;align-items:center;gap:10px;margin-top:3px"><span style="font:11px 'Alegreya Sans',sans-serif;color:#8A6F4E;flex:1">aujourd’hui</span><span style="font:11px 'Alegreya Sans',sans-serif;color:#8A6F4E">Renommer</span><span style="font:11px 'Alegreya Sans',sans-serif;color:#A23E2E">Supprimer</span></div>
+              </div>
+              <div style="padding:8px 12px"><div style="font:400 15px 'EB Garamond',serif;color:#5A4632;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Aide pour mon portrait</div><div style="font:11px 'Alegreya Sans',sans-serif;color:#A8906A;margin-top:2px">hier</div></div>
+              <div style="padding:8px 12px"><div style="font:400 15px 'EB Garamond',serif;color:#5A4632;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Différence nouvelle / roman</div><div style="font:11px 'Alegreya Sans',sans-serif;color:#A8906A;margin-top:2px">lundi</div></div>
+              <div style="padding:8px 12px"><div style="font:400 15px 'EB Garamond',serif;color:#5A4632;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Réviser le schéma narratif</div><div style="font:11px 'Alegreya Sans',sans-serif;color:#A8906A;margin-top:2px">22 sept.</div></div>
+            </div>
+          </aside>
+
+          <!-- feuillet central -->
+          <div style="flex:1;min-width:0;padding:26px 30px 30px">
+            <div style="max-width:720px;margin:0 auto">
+
+              <!-- feuillet lettre -->
+              <div style="background:radial-gradient(130% 100% at 50% 0%,#FCFAF4,#FAF6ED);border:1px solid #E9DFCB;border-radius:3px;box-shadow:0 8px 28px rgba(74,58,40,.06);padding:34px 46px 40px">
+
+                <!-- entête de conversation : marque du Scriptorium -->
+                <div style="display:flex;align-items:center;gap:12px;padding-bottom:20px;border-bottom:1px solid #EDE3CF">
+                  <span style="width:38px;height:38px;border-radius:50%;background:#E6DDC9;border:1px solid #D3C6AA;display:inline-flex;overflow:hidden;flex:none"><img src="sceaux/pastille-scriptorium.png" alt="" style="width:38px;height:38px;object-fit:cover;filter:brightness(1.06) contrast(1.04);mix-blend-mode:multiply"></span>
+                  <div><div style="font:600 15px 'EB Garamond',serif;color:#221C16">Ton Tuteur</div><div style="font:13px 'EB Garamond',serif;color:#8A6F4E">Il s’appuie sur ce que ton professeur a préparé.</div></div>
+                </div>
+
+                <!-- séparateur de jour -->
+                <div style="display:flex;align-items:center;justify-content:center;gap:16px;margin:24px 0 26px">
+                  <span style="flex:1;height:1px;background:linear-gradient(90deg,transparent,rgba(74,58,40,.22))"></span>
+                  <span style="font:italic 19px 'Cormorant Garamond',serif;color:#6E5A3E;white-space:nowrap">Ce vendredi 24 juillet</span>
+                  <span style="flex:1;height:1px;background:linear-gradient(90deg,rgba(74,58,40,.22),transparent)"></span>
+                </div>
+
+                <!-- tuteur 1 -->
+                <p style="font:18px/1.66 'EB Garamond',serif;color:#221C16;margin:0 0 26px;text-wrap:pretty">Bonjour ! Reprenons le point de vue chez Maupassant. Dans « La Parure », le narrateur est-il un personnage de l’histoire, ou reste-t-il extérieur à elle ? Repense à la toute première phrase.</p>
+
+                <!-- élève 1 : en retrait, filet pigment -->
+                <div style="margin:0 0 26px 12%;padding-left:20px;border-left:2px solid rgba(74,58,40,.34)">
+                  <div style="font:600 11px 'Alegreya Sans',sans-serif;letter-spacing:.14em;text-transform:uppercase;color:#8A6F4E;margin:0 0 6px">Toi</div>
+                  <p style="font:18px/1.66 'EB Garamond',serif;color:#5A4632;margin:0">Il est extérieur je crois — il raconte à la troisième personne.</p>
+                </div>
+
+                <!-- tuteur 2 -->
+                <p style="font:18px/1.66 'EB Garamond',serif;color:#221C16;margin:0 0 4px;text-wrap:pretty">Exactement : un narrateur <em>externe</em>, à la troisième personne. Et pourtant il connaît les pensées de Mathilde — « elle songeait aux grands salons »… Comment appelle-t-on un narrateur qui a ainsi accès à l’intérieur des personnages ?</p>
+
+                <!-- fleuron : fin de réponse (un seul par écran) -->
+                <div style="display:flex;align-items:center;justify-content:center;gap:12px;margin:22px 0 26px">
+                  <span style="width:54px;height:1px;background:linear-gradient(90deg,transparent,rgba(74,58,40,.32))"></span>
+                  <span style="width:6px;height:6px;transform:rotate(45deg);background:#4A3A28;opacity:.72"></span>
+                  <span style="width:54px;height:1px;background:linear-gradient(90deg,rgba(74,58,40,.32),transparent)"></span>
+                </div>
+
+                <!-- élève 2 -->
+                <div style="margin:0 0 26px 12%;padding-left:20px;border-left:2px solid rgba(74,58,40,.34)">
+                  <div style="font:600 11px 'Alegreya Sans',sans-serif;letter-spacing:.14em;text-transform:uppercase;color:#8A6F4E;margin:0 0 6px">Toi</div>
+                  <p style="font:18px/1.66 'EB Garamond',serif;color:#5A4632;margin:0">Un narrateur omniscient ?</p>
+                </div>
+
+                <!-- tuteur 3 : en cours d'écriture (streaming) -->
+                <p style="font:18px/1.66 'EB Garamond',serif;color:#221C16;margin:0;text-wrap:pretty">Presque. On parlerait plutôt d’un point de vue omniscient. Regarde comment Maupassant s’en sert pour nous faire ressentir la honte de Mathilde sans jamais la<span style="display:inline-block;width:2px;height:19px;background:#4A3A28;margin-left:3px;vertical-align:-3px;opacity:.8"></span></p>
+                <div style="margin-top:14px"><span style="font:12px 'Alegreya Sans',sans-serif;color:#8A6F4E;border:1px solid #D8CCB4;border-radius:6px;padding:5px 13px">Interrompre</span></div>
+
+              </div>
+
+              <!-- écritoire -->
+              <div style="margin-top:22px;background:#FBF8F1;border:1px solid #D8CCB4;border-top:2px solid rgba(74,58,40,.20);border-radius:4px;box-shadow:0 6px 20px rgba(74,58,40,.05);padding:16px 20px 14px">
+                <div style="font:italic 17px/1.5 'EB Garamond',serif;color:#A08A66;padding-bottom:22px;border-bottom:1px solid #EDE3CF">Ta question sur le cours…</div>
+                <div style="display:flex;align-items:center;justify-content:space-between;margin-top:13px">
+                  <span style="font:12px 'Alegreya Sans',sans-serif;color:#A8906A">Entrée pour envoyer</span>
+                  <span style="font:600 14px 'Alegreya Sans',sans-serif;background:#6B5A46;color:#F1EADD;padding:9px 24px;border-radius:6px">Envoyer</span>
+                </div>
+              </div>
+              <div style="text-align:right;font:12px 'Alegreya Sans',sans-serif;color:#A8906A;margin-top:8px">Il te reste 18 messages aujourd’hui</div>
+
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+
+    <!-- ─────────────── PARTI B ─────────────── -->
+    <div id="1b" data-screen-label="Discussion épistolaire — parti B" style="width:1000px;flex:0 0 auto">
+      <div style="display:flex;align-items:center;gap:10px;margin:0 0 8px 2px">
+        <span style="font:600 13px 'Alegreya Sans',sans-serif;background:#6B5A46;color:#F1EADD;padding:4px 12px;border-radius:20px">1b</span>
+        <span style="font:600 19px 'Cormorant Garamond',serif;color:#2A2017">Feuillets alternés</span>
+        <span style="font:600 10px 'Alegreya Sans',sans-serif;letter-spacing:.08em;text-transform:uppercase;background:#DDE7D2;color:#4A5A38;padding:3px 9px;border-radius:20px">reco</span>
+      </div>
+      <p style="font:15px/1.55 'EB Garamond',serif;color:#5A4632;margin:0 0 14px 2px;max-width:70ch">Chaque tour est un <strong style="font-weight:600">feuillet</strong> posé sur l’écritoire, avec un en-tête d’adresse discret (« Ton Tuteur » / « Toi » en petites capitales). Les bords de tour restent nets — précieux pour des lycéens — tout en gardant la dignité d’une correspondance. Le meilleur équilibre lisibilité / effet lettre.</p>
+
+      <div style="background:#F0EADE;border:1px solid #E4DBC9;border-top:2px solid #B8893B;border-radius:0 0 4px 4px;box-shadow:0 12px 34px rgba(60,45,25,.12)">
+        <div style="display:flex;min-height:660px">
+
+          <aside style="width:230px;flex:none;padding:22px 16px;display:flex;flex-direction:column;gap:14px">
+            <span style="display:block;text-align:center;font:500 13px 'Alegreya Sans',sans-serif;color:#6B5A46;border:1px solid rgba(107,90,70,.4);padding:9px;border-radius:7px">＋ Nouvelle conversation</span>
+            <div style="font:700 10px 'Alegreya Sans',sans-serif;letter-spacing:.14em;text-transform:uppercase;color:#A8906A;padding:2px 2px 0">Récentes</div>
+            <div style="display:flex;flex-direction:column;gap:2px">
+              <div style="border-left:2px solid #4A3A28;background:rgba(74,58,40,.05);padding:8px 12px">
+                <div style="font:500 15px 'EB Garamond',serif;color:#221C16;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Le point de vue chez Maupassant</div>
+                <div style="display:flex;align-items:center;gap:10px;margin-top:3px"><span style="font:11px 'Alegreya Sans',sans-serif;color:#8A6F4E;flex:1">aujourd’hui</span><span style="font:11px 'Alegreya Sans',sans-serif;color:#8A6F4E">Renommer</span><span style="font:11px 'Alegreya Sans',sans-serif;color:#A23E2E">Supprimer</span></div>
+              </div>
+              <div style="padding:8px 12px"><div style="font:400 15px 'EB Garamond',serif;color:#5A4632;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Aide pour mon portrait</div><div style="font:11px 'Alegreya Sans',sans-serif;color:#A8906A;margin-top:2px">hier</div></div>
+              <div style="padding:8px 12px"><div style="font:400 15px 'EB Garamond',serif;color:#5A4632;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Différence nouvelle / roman</div><div style="font:11px 'Alegreya Sans',sans-serif;color:#A8906A;margin-top:2px">lundi</div></div>
+              <div style="padding:8px 12px"><div style="font:400 15px 'EB Garamond',serif;color:#5A4632;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Réviser le schéma narratif</div><div style="font:11px 'Alegreya Sans',sans-serif;color:#A8906A;margin-top:2px">22 sept.</div></div>
+            </div>
+          </aside>
+
+          <div style="flex:1;min-width:0;padding:26px 30px 30px">
+            <div style="max-width:730px;margin:0 auto">
+
+              <!-- entête conversation -->
+              <div style="display:flex;align-items:center;gap:12px;margin-bottom:22px">
+                <span style="width:38px;height:38px;border-radius:50%;background:#E6DDC9;border:1px solid #D3C6AA;display:inline-flex;overflow:hidden;flex:none"><img src="sceaux/pastille-scriptorium.png" alt="" style="width:38px;height:38px;object-fit:cover;filter:brightness(1.06) contrast(1.04);mix-blend-mode:multiply"></span>
+                <div style="flex:1"><div style="font:600 15px 'EB Garamond',serif;color:#221C16">Ton Tuteur</div><div style="font:13px 'EB Garamond',serif;color:#8A6F4E">Il s’appuie sur ce que ton professeur a préparé.</div></div>
+              </div>
+
+              <!-- séparateur de jour -->
+              <div style="display:flex;align-items:center;justify-content:center;gap:16px;margin:0 0 24px">
+                <span style="flex:1;height:1px;background:linear-gradient(90deg,transparent,rgba(74,58,40,.22))"></span>
+                <span style="font:italic 19px 'Cormorant Garamond',serif;color:#6E5A3E;white-space:nowrap">Ce vendredi 24 juillet</span>
+                <span style="flex:1;height:1px;background:linear-gradient(90deg,rgba(74,58,40,.22),transparent)"></span>
+              </div>
+
+              <!-- tuteur 1 : feuillet pleine largeur -->
+              <div style="background:#FCFAF4;border:1px solid #EBE1CF;border-radius:3px;box-shadow:0 2px 6px rgba(74,58,40,.05);padding:20px 26px;margin-bottom:16px">
+                <div style="font:600 11px 'Alegreya Sans',sans-serif;letter-spacing:.14em;text-transform:uppercase;color:#4A3A28;margin:0 0 9px">Ton Tuteur</div>
+                <p style="font:18px/1.66 'EB Garamond',serif;color:#221C16;margin:0;text-wrap:pretty">Bonjour ! Reprenons le point de vue chez Maupassant. Dans « La Parure », le narrateur est-il un personnage de l’histoire, ou reste-t-il extérieur à elle ? Repense à la toute première phrase.</p>
+              </div>
+
+              <!-- élève 1 : feuillet en retrait, filet pigment -->
+              <div style="background:#FBF8F1;border:1px solid #E9DFCB;border-left:2px solid rgba(74,58,40,.4);border-radius:3px;padding:18px 24px;margin:0 0 16px 15%">
+                <div style="font:600 11px 'Alegreya Sans',sans-serif;letter-spacing:.14em;text-transform:uppercase;color:#8A6F4E;margin:0 0 8px">Toi</div>
+                <p style="font:18px/1.66 'EB Garamond',serif;color:#5A4632;margin:0">Il est extérieur je crois — il raconte à la troisième personne.</p>
+              </div>
+
+              <!-- tuteur 2 -->
+              <div style="background:#FCFAF4;border:1px solid #EBE1CF;border-radius:3px;box-shadow:0 2px 6px rgba(74,58,40,.05);padding:20px 26px;margin-bottom:16px">
+                <div style="font:600 11px 'Alegreya Sans',sans-serif;letter-spacing:.14em;text-transform:uppercase;color:#4A3A28;margin:0 0 9px">Ton Tuteur</div>
+                <p style="font:18px/1.66 'EB Garamond',serif;color:#221C16;margin:0;text-wrap:pretty">Exactement : un narrateur <em>externe</em>, à la troisième personne. Et pourtant il connaît les pensées de Mathilde — « elle songeait aux grands salons »… Comment appelle-t-on un narrateur qui a ainsi accès à l’intérieur des personnages ?</p>
+                <!-- fleuron discret en pied de réponse -->
+                <div style="display:flex;align-items:center;justify-content:center;gap:11px;margin-top:16px">
+                  <span style="width:44px;height:1px;background:linear-gradient(90deg,transparent,rgba(74,58,40,.3))"></span>
+                  <span style="width:5px;height:5px;transform:rotate(45deg);background:#4A3A28;opacity:.7"></span>
+                  <span style="width:44px;height:1px;background:linear-gradient(90deg,rgba(74,58,40,.3),transparent)"></span>
+                </div>
+              </div>
+
+              <!-- élève 2 -->
+              <div style="background:#FBF8F1;border:1px solid #E9DFCB;border-left:2px solid rgba(74,58,40,.4);border-radius:3px;padding:18px 24px;margin:0 0 16px 15%">
+                <div style="font:600 11px 'Alegreya Sans',sans-serif;letter-spacing:.14em;text-transform:uppercase;color:#8A6F4E;margin:0 0 8px">Toi</div>
+                <p style="font:18px/1.66 'EB Garamond',serif;color:#5A4632;margin:0">Un narrateur omniscient ?</p>
+              </div>
+
+              <!-- tuteur 3 : streaming -->
+              <div style="background:#FCFAF4;border:1px solid #EBE1CF;border-radius:3px;box-shadow:0 2px 6px rgba(74,58,40,.05);padding:20px 26px">
+                <div style="font:600 11px 'Alegreya Sans',sans-serif;letter-spacing:.14em;text-transform:uppercase;color:#4A3A28;margin:0 0 9px">Ton Tuteur</div>
+                <p style="font:18px/1.66 'EB Garamond',serif;color:#221C16;margin:0;text-wrap:pretty">Presque. On parlerait plutôt d’un point de vue omniscient. Regarde comment Maupassant s’en sert pour nous faire ressentir la honte de Mathilde sans jamais la<span style="display:inline-block;width:2px;height:19px;background:#4A3A28;margin-left:3px;vertical-align:-3px;opacity:.8"></span></p>
+                <div style="margin-top:14px"><span style="font:12px 'Alegreya Sans',sans-serif;color:#8A6F4E;border:1px solid #D8CCB4;border-radius:6px;padding:5px 13px">Interrompre</span></div>
+              </div>
+
+              <!-- écritoire -->
+              <div style="margin-top:22px;background:#FBF8F1;border:1px solid #D8CCB4;border-top:2px solid rgba(74,58,40,.20);border-radius:4px;box-shadow:0 6px 20px rgba(74,58,40,.05);padding:16px 20px 14px">
+                <div style="font:italic 17px/1.5 'EB Garamond',serif;color:#A08A66;padding-bottom:22px;border-bottom:1px solid #EDE3CF">Ta question sur le cours…</div>
+                <div style="display:flex;align-items:center;justify-content:space-between;margin-top:13px">
+                  <span style="font:12px 'Alegreya Sans',sans-serif;color:#A8906A">Entrée pour envoyer</span>
+                  <span style="font:600 14px 'Alegreya Sans',sans-serif;background:#6B5A46;color:#F1EADD;padding:9px 24px;border-radius:6px">Envoyer</span>
+                </div>
+              </div>
+              <div style="text-align:right;font:12px 'Alegreya Sans',sans-serif;color:#A8906A;margin-top:8px">Il te reste 18 messages aujourd’hui</div>
+
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+
+    <!-- ─────────────── PARTI C ─────────────── -->
+    <div id="1c" data-screen-label="Discussion épistolaire — parti C" style="width:1000px;flex:0 0 auto">
+      <div style="display:flex;align-items:center;gap:10px;margin:0 0 8px 2px">
+        <span style="font:600 13px 'Alegreya Sans',sans-serif;background:#6B5A46;color:#F1EADD;padding:4px 12px;border-radius:20px">1c</span>
+        <span style="font:600 19px 'Cormorant Garamond',serif;color:#2A2017">La page &amp; la marge</span>
+      </div>
+      <p style="font:15px/1.55 'EB Garamond',serif;color:#5A4632;margin:0 0 14px 2px;max-width:70ch">Le parti le plus « belle édition » : le tuteur tient <strong style="font-weight:600">la page</strong> (pleine colonne, prose posée) ; les mots de l’élève deviennent des <strong style="font-weight:600">notes en marge</strong>, calées à droite en regard. Très élégant et le plus « lettre ». <span style="color:#8A6F4E">Demande une marge : la colonne de lecture est un peu plus étroite.</span></p>
+
+      <div style="background:#F0EADE;border:1px solid #E4DBC9;border-top:2px solid #B8893B;border-radius:0 0 4px 4px;box-shadow:0 12px 34px rgba(60,45,25,.12)">
+        <div style="display:flex;min-height:660px">
+
+          <aside style="width:230px;flex:none;padding:22px 16px;display:flex;flex-direction:column;gap:14px">
+            <span style="display:block;text-align:center;font:500 13px 'Alegreya Sans',sans-serif;color:#6B5A46;border:1px solid rgba(107,90,70,.4);padding:9px;border-radius:7px">＋ Nouvelle conversation</span>
+            <div style="font:700 10px 'Alegreya Sans',sans-serif;letter-spacing:.14em;text-transform:uppercase;color:#A8906A;padding:2px 2px 0">Récentes</div>
+            <div style="display:flex;flex-direction:column;gap:2px">
+              <div style="border-left:2px solid #4A3A28;background:rgba(74,58,40,.05);padding:8px 12px">
+                <div style="font:500 15px 'EB Garamond',serif;color:#221C16;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Le point de vue chez Maupassant</div>
+                <div style="display:flex;align-items:center;gap:10px;margin-top:3px"><span style="font:11px 'Alegreya Sans',sans-serif;color:#8A6F4E;flex:1">aujourd’hui</span><span style="font:11px 'Alegreya Sans',sans-serif;color:#8A6F4E">Renommer</span><span style="font:11px 'Alegreya Sans',sans-serif;color:#A23E2E">Supprimer</span></div>
+              </div>
+              <div style="padding:8px 12px"><div style="font:400 15px 'EB Garamond',serif;color:#5A4632;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Aide pour mon portrait</div><div style="font:11px 'Alegreya Sans',sans-serif;color:#A8906A;margin-top:2px">hier</div></div>
+              <div style="padding:8px 12px"><div style="font:400 15px 'EB Garamond',serif;color:#5A4632;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Différence nouvelle / roman</div><div style="font:11px 'Alegreya Sans',sans-serif;color:#A8906A;margin-top:2px">lundi</div></div>
+              <div style="padding:8px 12px"><div style="font:400 15px 'EB Garamond',serif;color:#5A4632;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Réviser le schéma narratif</div><div style="font:11px 'Alegreya Sans',sans-serif;color:#A8906A;margin-top:2px">22 sept.</div></div>
+            </div>
+          </aside>
+
+          <div style="flex:1;min-width:0;padding:26px 30px 30px">
+            <div style="max-width:760px;margin:0 auto">
+
+              <div style="background:radial-gradient(130% 100% at 50% 0%,#FCFAF4,#FAF6ED);border:1px solid #E9DFCB;border-radius:3px;box-shadow:0 8px 28px rgba(74,58,40,.06);padding:32px 40px 38px">
+
+                <div style="display:flex;align-items:center;gap:12px;padding-bottom:18px;border-bottom:1px solid #EDE3CF">
+                  <span style="width:38px;height:38px;border-radius:50%;background:#E6DDC9;border:1px solid #D3C6AA;display:inline-flex;overflow:hidden;flex:none"><img src="sceaux/pastille-scriptorium.png" alt="" style="width:38px;height:38px;object-fit:cover;filter:brightness(1.06) contrast(1.04);mix-blend-mode:multiply"></span>
+                  <div><div style="font:600 15px 'EB Garamond',serif;color:#221C16">Ton Tuteur</div><div style="font:13px 'EB Garamond',serif;color:#8A6F4E">Il s’appuie sur ce que ton professeur a préparé.</div></div>
+                </div>
+
+                <div style="display:flex;align-items:center;justify-content:center;gap:16px;margin:22px 0 26px">
+                  <span style="flex:1;height:1px;background:linear-gradient(90deg,transparent,rgba(74,58,40,.22))"></span>
+                  <span style="font:italic 19px 'Cormorant Garamond',serif;color:#6E5A3E;white-space:nowrap">Ce vendredi 24 juillet</span>
+                  <span style="flex:1;height:1px;background:linear-gradient(90deg,rgba(74,58,40,.22),transparent)"></span>
+                </div>
+
+                <!-- tuteur 1 : la page -->
+                <p style="font:18px/1.66 'EB Garamond',serif;color:#221C16;margin:0 0 22px;text-wrap:pretty">Bonjour ! Reprenons le point de vue chez Maupassant. Dans « La Parure », le narrateur est-il un personnage de l’histoire, ou reste-t-il extérieur à elle ? Repense à la toute première phrase.</p>
+
+                <!-- élève 1 : note en marge (calée à droite) -->
+                <div style="margin:0 0 22px auto;max-width:64%;background:#FBF8F1;border:1px solid #E9DFCB;border-radius:3px;padding:13px 17px;box-shadow:0 1px 3px rgba(74,58,40,.05)">
+                  <div style="font:600 10px 'Alegreya Sans',sans-serif;letter-spacing:.14em;text-transform:uppercase;color:#8A6F4E;margin:0 0 5px">Toi ✍</div>
+                  <p style="font:16.5px/1.55 'EB Garamond',serif;color:#5A4632;margin:0">Il est extérieur je crois — il raconte à la troisième personne.</p>
+                </div>
+
+                <!-- tuteur 2 -->
+                <p style="font:18px/1.66 'EB Garamond',serif;color:#221C16;margin:0 0 4px;text-wrap:pretty">Exactement : un narrateur <em>externe</em>, à la troisième personne. Et pourtant il connaît les pensées de Mathilde — « elle songeait aux grands salons »… Comment appelle-t-on un narrateur qui a ainsi accès à l’intérieur des personnages ?</p>
+
+                <div style="display:flex;align-items:center;justify-content:center;gap:12px;margin:22px 0 24px">
+                  <span style="width:54px;height:1px;background:linear-gradient(90deg,transparent,rgba(74,58,40,.32))"></span>
+                  <span style="width:6px;height:6px;transform:rotate(45deg);background:#4A3A28;opacity:.72"></span>
+                  <span style="width:54px;height:1px;background:linear-gradient(90deg,rgba(74,58,40,.32),transparent)"></span>
+                </div>
+
+                <!-- élève 2 -->
+                <div style="margin:0 0 22px auto;max-width:64%;background:#FBF8F1;border:1px solid #E9DFCB;border-radius:3px;padding:13px 17px;box-shadow:0 1px 3px rgba(74,58,40,.05)">
+                  <div style="font:600 10px 'Alegreya Sans',sans-serif;letter-spacing:.14em;text-transform:uppercase;color:#8A6F4E;margin:0 0 5px">Toi ✍</div>
+                  <p style="font:16.5px/1.55 'EB Garamond',serif;color:#5A4632;margin:0">Un narrateur omniscient ?</p>
+                </div>
+
+                <!-- tuteur 3 : streaming -->
+                <p style="font:18px/1.66 'EB Garamond',serif;color:#221C16;margin:0;text-wrap:pretty">Presque. On parlerait plutôt d’un point de vue omniscient. Regarde comment Maupassant s’en sert pour nous faire ressentir la honte de Mathilde sans jamais la<span style="display:inline-block;width:2px;height:19px;background:#4A3A28;margin-left:3px;vertical-align:-3px;opacity:.8"></span></p>
+                <div style="margin-top:14px"><span style="font:12px 'Alegreya Sans',sans-serif;color:#8A6F4E;border:1px solid #D8CCB4;border-radius:6px;padding:5px 13px">Interrompre</span></div>
+
+              </div>
+
+              <div style="margin-top:22px;background:#FBF8F1;border:1px solid #D8CCB4;border-top:2px solid rgba(74,58,40,.20);border-radius:4px;box-shadow:0 6px 20px rgba(74,58,40,.05);padding:16px 20px 14px">
+                <div style="font:italic 17px/1.5 'EB Garamond',serif;color:#A08A66;padding-bottom:22px;border-bottom:1px solid #EDE3CF">Ta question sur le cours…</div>
+                <div style="display:flex;align-items:center;justify-content:space-between;margin-top:13px">
+                  <span style="font:12px 'Alegreya Sans',sans-serif;color:#A8906A">Entrée pour envoyer</span>
+                  <span style="font:600 14px 'Alegreya Sans',sans-serif;background:#6B5A46;color:#F1EADD;padding:9px 24px;border-radius:6px">Envoyer</span>
+                </div>
+              </div>
+              <div style="text-align:right;font:12px 'Alegreya Sans',sans-serif;color:#A8906A;margin-top:8px">Il te reste 18 messages aujourd’hui</div>
+
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ══════════ Recommandation ══════════ -->
+  <div style="max-width:1120px;margin:52px auto 0;background:#FBF8F1;border:1px solid #E4DBC9;border-left:3px solid #6B5A46;border-radius:4px;padding:22px 28px">
+    <div style="font:700 11px 'Alegreya Sans',sans-serif;letter-spacing:.13em;text-transform:uppercase;color:#6B5A46;margin-bottom:9px">Ma reco</div>
+    <p style="font:17px/1.62 'EB Garamond',serif;color:#221C16;margin:0;max-width:88ch;text-wrap:pretty"><strong style="font-weight:600">Parti B — Feuillets alternés.</strong> Il donne l’effet « lettre » demandé tout en gardant des frontières de tour nettes — ce qui compte pour des lycéens de 16-17 ans qui doivent lire sans effort (critère non négociable). <a href="#1a">1a</a> est le plus serein mais les tours se repèrent moins bien sur un long fil ; <a href="#1c">1c</a> est le plus racé mais rétrécit la colonne de lecture. Dis-moi ton choix (ou un mélange : ex. « B, mais sans le cartouche autour des feuillets tuteur ») et je décline le parti retenu sur tous les états réels, puis je mets le handoff à jour.</p>
+  </div>
+
+</section>
+</x-dc>
+</body>
+</html>

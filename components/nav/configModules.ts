@@ -49,6 +49,10 @@ export interface SousOnglet {
   /** Vues (au sens `?vue=`) qui allument cet onglet. Défaut = [vue].
    *  Permet à un onglet parent de rester actif sur ses sous-vues regroupées. */
   vues?: string[]
+  /** Onglet allumé quand `?vue=` est absent de l'URL. Défaut = la 1re entrée de
+   *  la liste. Sert quand l'ordre d'affichage ≠ vue par défaut de la page
+   *  (Scriptorium élève : « Plan de cours » en tête, mais `discussion` par défaut). */
+  parDefaut?: boolean
 }
 
 export interface ModuleConfig {
@@ -63,6 +67,9 @@ export interface ModuleConfig {
   devise: DeviseMonde
   /** Sous-onglets prof (Barre 2). [] si aucun (Scriptorium). */
   sousOngletsProf: SousOnglet[]
+  /** Sous-onglets élève (Barre 2). Absent = aucun sous-onglet côté élève —
+   *  c'est le cas de tous les modules sauf Scriptorium (C2.2). */
+  sousOngletsEleve?: SousOnglet[]
 }
 
 export const MODULES: readonly ModuleConfig[] = [
@@ -188,6 +195,13 @@ export const MODULES: readonly ModuleConfig[] = [
       { href: '/prof/scriptorium?vue=ressources', label: 'Ressources', vue: 'ressources', vues: ['ressources', 'textes', 'cours', 'livres'] },
       { href: '/prof/scriptorium?vue=parametres', label: 'Paramètres', vue: 'parametres', vues: ['parametres'] },
     ],
+    // Face élève (C2.2) : « Plan de cours » et « Discussion » — même mécanique
+    // `?vue=` que le prof. Ordre d'affichage : le plan d'abord ; vue par défaut
+    // (URL sans `?vue=`) : la discussion, l'usage quotidien.
+    sousOngletsEleve: [
+      { href: '/eleve/modules/scriptorium?vue=plan',       label: 'Plan de cours', vue: 'plan',       vues: ['plan'] },
+      { href: '/eleve/modules/scriptorium?vue=discussion', label: 'Discussion',    vue: 'discussion', vues: ['discussion'], parDefaut: true },
+    ],
   },
 ]
 
@@ -195,6 +209,20 @@ export const MODULES: readonly ModuleConfig[] = [
 export const DEVISE_MAISON: DeviseMonde = {
   latin: 'Verba Volant, Scripta Manent, Sapientia Permanet',
   francais: '',
+}
+
+/**
+ * Sous-onglets du module POUR UN RÔLE — source unique de la Barre 2. Élève sans
+ * `sousOngletsEleve` → [] (aucun sous-onglet : le comportement de tous les
+ * modules sauf Scriptorium).
+ */
+export function sousOngletsPour(mod: ModuleConfig, role: 'prof' | 'eleve'): SousOnglet[] {
+  return (role === 'prof' ? mod.sousOngletsProf : mod.sousOngletsEleve) ?? []
+}
+
+/** Vue active quand `?vue=` est absent : l'onglet `parDefaut`, sinon le premier. */
+export function vueDefaut(onglets: SousOnglet[]): string | undefined {
+  return (onglets.find((o) => o.parDefaut) ?? onglets[0])?.vue
 }
 
 /**

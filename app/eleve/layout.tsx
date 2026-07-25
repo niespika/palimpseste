@@ -45,7 +45,9 @@ export default async function EleveLayout({ children }: { children: React.ReactN
           {active && <SelecteurClasseEleve inscriptions={inscriptions} activeId={active.id} />}
         </div>
       </div>
-      <main className="max-w-4xl mx-auto px-4 sm:px-6 pt-8 pb-24 sm:pb-8">
+      {/* Colonne alignée sur l'en-tête (`EnTeteSite` : max-w-[1040px] / px-[28px]) —
+          le contenu tombe sous la marque et le sceau. */}
+      <main className="max-w-[1040px] mx-auto px-4 sm:px-[28px] pt-8 pb-24 sm:pb-8">
         {children}
       </main>
       {/* Barre d'onglets fixe (mobile) — compensée par le pb-24 du <main>. */}
