@@ -2,7 +2,7 @@ import { notFound } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/utils/supabase/server'
 import { createAdminClient } from '@/utils/supabase/admin'
-import { contexteAletheia, livreAccessible, semaineLivre, travauxParSemaine, peutAccederSemaine, lireReglages } from '../../data'
+import { resoudreInscriptionLivre, semaineLivre, travauxParSemaine, peutAccederSemaine, lireReglages } from '../../data'
 import { resoudreDateSeance, formatEcheanceFr, modeExposition } from '@/utils/aletheia-dates'
 import { dansExtrait, numeroAffiche, titreSeanceAffiche } from '@/utils/aletheia-extrait'
 import { validerLectureRetourVf } from '../../actions'
@@ -177,10 +177,13 @@ export default async function PageSemaineAletheia({ params }: { params: Promise<
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) notFound()
 
-  // Accès : module actif + livre assigné à la classe ACTIVE (inscrite au module).
-  const { moduleActif, active } = await contexteAletheia(supabase, user.id)
+  // Accès : module actif + livre exposé dans UNE classe active de l'élève. (B4) Repli
+  // bi-classe : si la classe active (cookie) n'expose pas le livre mais une autre
+  // inscription active oui, on résout sur celle-là — au lieu d'un notFound() sec (le
+  // gate « retours non lus » peut pointer un livre de l'autre classe de l'élève). Tout
+  // le pilotage aval (mode C, dates, séquentiel) utilise cette classe résolue.
+  const { moduleActif, resolue: active } = await resoudreInscriptionLivre(admin, supabase, user.id, livreId)
   if (!moduleActif || !active) notFound()
-  if (!(await livreAccessible(admin, [active.classe_id], livreId))) notFound()
 
   // Mode C : la séance doit appartenir à l'extrait exposé (garde d'appartenance en LECTURE,
   // anti-URL-hack). Sous gate OFF, modeExposition renvoie B whole-book → exposees = toutes les

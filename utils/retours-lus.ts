@@ -1,5 +1,6 @@
 import 'server-only'
 import { createAdminClient } from '@/utils/supabase/admin'
+import { livresGouvernesPourClasses } from '@/utils/aletheia-dates'
 
 // ════════════════════════════════════════════════════════════════════════════
 // Validation de lecture des retours — logique TRANSVERSE et BLOQUANTE.
@@ -13,6 +14,19 @@ import { createAdminClient } from '@/utils/supabase/admin'
 // multi-classes reste bloqué par un retour non lu de N'IMPORTE laquelle de ses
 // classes actives (intention produit) — le href porte l'inscription concernée pour
 // que l'élève puisse y revenir.
+//
+// (B1) ALIGNEMENT SUR L'ACCÈS MODULE. Une source ne compte QUE si son module est
+// encore LISIBLE par l'élève, avec EXACTEMENT la garde réelle de la page où il valide
+// le retour (sinon un retour illisible gèlerait tous les rendus derrière une bannière
+// qui fait 404, sans issue — ou, à l'inverse, un retour resté lisible cesserait de
+// bloquer). Cette garde diffère par module :
+//   • codex / quazian / aletheia : assigné (classe_modules) ET globalement actif
+//     (modules.actif) — leurs pages de validation font notFound() sur !actif.
+//   • fragments-erudition : assigné SEULEMENT — sa page élève (et validerLectureRetour)
+//     ne gardent PAS sur modules.actif ; un retour Fragments d'un module désactivé mais
+//     resté assigné demeure lisible → il doit continuer de bloquer.
+// Dans tous les cas : retirer un module d'une classe (désassignation) rend le retour
+// illisible partout → il cesse de bloquer.
 //
 // Dégradation : chaque source est best-effort (erreurs DB loguées, jamais
 // propagées → la source renvoie []). Tant qu'une migration de colonne n'est pas
@@ -118,14 +132,22 @@ async function codexNonLus(admin: Admin, eleveId: string, classeIds: string[]): 
 async function aletheiaNonLus(admin: Admin, eleveId: string, classeIds: string[]): Promise<RetourNonLu[]> {
   try {
     if (classeIds.length === 0) return []
-    // Livres encore assignés à une classe active de l'élève (un livre retiré de la
-    // classe ne doit plus bloquer : sa validation deviendrait inatteignable).
-    const { data: liens, error: eLien } = await admin
-      .from('scriptorium_unite_classes')
-      .select('unite_id')
-      .in('classe_id', classeIds)
+    // Livres exposés à une classe active de l'élève — MÊME UNION que l'accès élève
+    // (livreAccessible, data.ts) : lien DIRECT (scriptorium_unite_classes) OU parcours
+    // assigné actif (livresGouvernesPourClasses). Sans le second bras, un livre exposé
+    // UNIQUEMENT via parcours produisait un retour VF lisible mais jamais bloquant
+    // (sous-blocage, contraire à l'alignement B1). Un livre retiré des DEUX ne bloque
+    // plus (sa validation devient inatteignable). Le bras parcours est best-effort :
+    // un échec ne doit pas tuer le bras direct → repli sur [] (fail-open partiel).
+    const [{ data: liens, error: eLien }, gouvernes] = await Promise.all([
+      admin.from('scriptorium_unite_classes').select('unite_id').in('classe_id', classeIds),
+      livresGouvernesPourClasses(admin, classeIds).catch((e) => {
+        log('aletheia (parcours)', { message: e instanceof Error ? e.message : String(e) })
+        return [] as string[]
+      }),
+    ])
     log('aletheia (liens)', eLien)
-    const livres = [...new Set((liens ?? []).map((l) => l.unite_id as string))]
+    const livres = [...new Set([...(liens ?? []).map((l) => l.unite_id as string), ...gouvernes])]
     if (livres.length === 0) return []
     // Non lu = retour VF prêt mais semaine pas close (une fois validé, statut → DONE).
     const { data, error } = await admin
@@ -176,6 +198,40 @@ async function quazianNonLus(admin: Admin, eleveId: string, classeIds: string[])
   }
 }
 
+// ── Accès module (B1) ─────────────────────────────────────────────────────────
+
+// Slugs des modules dont un retour est ENCORE LISIBLE par l'élève via ces classes
+// (cf. gros commentaire d'en-tête). Base commune : le module est ASSIGNÉ à une classe
+// active (classe_modules). Puis, pour les modules dont la page de validation garde sur
+// modules.actif (codex/quazian/aletheia), on exige AUSSI actif ; Fragments, dont la page
+// ne garde pas sur actif, reste lisible sur la seule assignation. Best-effort : une
+// erreur DB → set vide → aucune source ne bloque (fail-OPEN, cohérent avec le helper).
+const SLUGS_SANS_GARDE_ACTIF = new Set(['fragments-erudition'])
+async function slugsModulesAccessibles(admin: Admin, classeIds: string[]): Promise<Set<string>> {
+  try {
+    if (classeIds.length === 0) return new Set()
+    const { data: cm, error: eCm } = await admin
+      .from('classe_modules')
+      .select('module_id')
+      .in('classe_id', classeIds)
+    log('accès module (classe_modules)', eCm)
+    const moduleIds = [...new Set((cm ?? []).map((r) => r.module_id as string))]
+    if (moduleIds.length === 0) return new Set()
+    const { data: mods, error: eMod } = await admin
+      .from('modules')
+      .select('slug, actif')
+      .in('id', moduleIds)
+    log('accès module (modules)', eMod)
+    // `mods` ne contient que des modules ASSIGNÉS. On garde ceux lisibles : Fragments
+    // (assigné suffit) ou tout module globalement actif (codex/quazian/aletheia).
+    return new Set((mods ?? [])
+      .filter((m) => SLUGS_SANS_GARDE_ACTIF.has(m.slug as string) || m.actif)
+      .map((m) => m.slug as string))
+  } catch {
+    return new Set()
+  }
+}
+
 // ── API ─────────────────────────────────────────────────────────────────────
 
 /**
@@ -193,12 +249,16 @@ export async function retoursNonLus(admin: Admin, eleveId: string): Promise<Reto
   const inscriptionIds = (insc ?? []).map((i) => i.id as string)
   const classeIds = (insc ?? []).map((i) => i.classe_id as string)
 
+  // (B1) Alignement : une source ne s'exécute que si son module est encore accessible.
+  const slugs = await slugsModulesAccessibles(admin, classeIds)
+  const vide = (): Promise<RetourNonLu[]> => Promise.resolve([])
+
   const sources = await Promise.all([
-    fragmentsEcritNonLus(admin, inscriptionIds),
-    fragmentsEssaiNonLus(admin, inscriptionIds),
-    codexNonLus(admin, eleveId, classeIds),
-    aletheiaNonLus(admin, eleveId, classeIds),
-    quazianNonLus(admin, eleveId, classeIds),
+    slugs.has('fragments-erudition') ? fragmentsEcritNonLus(admin, inscriptionIds) : vide(),
+    slugs.has('fragments-erudition') ? fragmentsEssaiNonLus(admin, inscriptionIds) : vide(),
+    slugs.has('codex') ? codexNonLus(admin, eleveId, classeIds) : vide(),
+    slugs.has('aletheia') ? aletheiaNonLus(admin, eleveId, classeIds) : vide(),
+    slugs.has('quazian') ? quazianNonLus(admin, eleveId, classeIds) : vide(),
   ])
   return sources.flat()
 }

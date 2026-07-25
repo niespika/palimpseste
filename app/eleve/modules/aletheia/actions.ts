@@ -4,7 +4,7 @@ import { after } from 'next/server'
 import { revalidatePath } from 'next/cache'
 import { createClient } from '@/utils/supabase/server'
 import { createAdminClient } from '@/utils/supabase/admin'
-import { contexteAletheia, livreAccessible, semaineLivre, peutAccederSemaine } from './data'
+import { resoudreInscriptionLivre, semaineLivre, peutAccederSemaine } from './data'
 import { modeExposition } from '@/utils/aletheia-dates'
 import { dansExtrait } from '@/utils/aletheia-extrait'
 import { messageSiBloque, signalerStrikeAuto } from '@/utils/integrite'
@@ -79,10 +79,12 @@ export async function soumettreV1(livreId: string, semaine: number, saisie: Sais
   if (vocabulaire.some(v => v.length > MAX_TERME)) return { error: 'Un de tes mots de vocabulaire est trop long.' }
 
   const admin = createAdminClient()
-  // Accès : module actif + livre assigné à la classe ACTIVE (inscrite au module) + semaine valide.
-  const { active } = await contexteAletheia(supabase, userId)
-  if (!active) return { error: 'Ce module ne t\'est pas accessible.' }
-  if (!(await livreAccessible(admin, [active.classe_id], livreId))) return { error: 'Ce livre ne t\'est pas accessible.' }
+  // Accès : module actif + livre exposé dans une classe active + semaine valide. (B4)
+  // Repli bi-classe : on résout la classe qui expose le livre (cookie d'abord), pour
+  // que la soumission passe même si le cookie pointe l'autre classe de l'élève.
+  const { moduleActif, resolue: active } = await resoudreInscriptionLivre(admin, supabase, userId, livreId)
+  if (!moduleActif) return { error: 'Ce module ne t\'est pas accessible.' }
+  if (!active) return { error: 'Ce livre ne t\'est pas accessible.' }
   if (!(await semaineLivre(admin, livreId, semaine))) return { error: 'Séance introuvable.' }
   // peutAccederSemaine intègre la garde d'appartenance à l'extrait (mode C) + le déblocage séquentiel.
   if (!(await peutAccederSemaine(admin, userId, livreId, semaine, active.classe_id))) return { error: 'Cette séance n\'est pas encore débloquée.' }
@@ -152,7 +154,9 @@ export async function soumettreV1(livreId: string, semaine: number, saisie: Sais
 
   // Avec un avertissement « petit malin », on NE revalide PAS : le composant client
   // garde la carte cheeky affichée (un re-render serveur la remplacerait aussitôt).
-  // C'est le bouton « J'ai compris → » qui déclenche router.refresh() pour la suite.
+  // Le bouton « J'ai compris → » referme la carte côté client (setAvertissement(null))
+  // et rend de nouveau le formulaire, texte saisi conservé — l'élève corrige et resoumet
+  // (pas de router.refresh() : le rendu reste en DRAFT, un refresh ne changerait rien).
   if (!avertissement) revalider(livreId, semaine)
   return { success: true, avertissement }
 }
@@ -176,8 +180,9 @@ export async function soumettreVf(livreId: string, semaine: number, vf: SaisieVf
   if ([these, args, accord].some(t => t.length > MAX_TEXTE)) return { error: 'Un de tes champs est trop long (limite ~8000 caractères).' }
 
   const admin = createAdminClient()
-  const { active } = await contexteAletheia(supabase, userId)
-  if (!active || !(await livreAccessible(admin, [active.classe_id], livreId))) return { error: 'Ce livre ne t\'est pas accessible.' }
+  // (B4) Repli bi-classe : on résout la classe qui expose le livre (cookie d'abord).
+  const { resolue: active } = await resoudreInscriptionLivre(admin, supabase, userId, livreId)
+  if (!active) return { error: 'Ce livre ne t\'est pas accessible.' }
   // (mode C, F7) Garde d'APPARTENANCE à l'extrait sur l'ÉCRITURE : sans elle, un travail
   // orphelin (séance sortie de l'extrait) pourrait avancer VF→DONE et déclencher un retour
   // IA ancré livre entier = SPOILER. Sous gate OFF, exposees = toutes les séances → jamais bloqué.
@@ -229,7 +234,10 @@ export async function soumettreVf(livreId: string, semaine: number, vf: SaisieVf
     : { avertissement: null }
 
   // Cf. soumettreV1 : pas de revalidation tant qu'un avertissement « petit malin »
-  // doit être lu (sinon il flashe et la vue bascule en « retour en préparation »).
+  // doit être lu (sinon il flashe et la vue bascule en « retour en préparation »). Le
+  // bouton « J'ai compris → » referme la carte côté client (setAvertissement(null)) et
+  // rend de nouveau le formulaire VF, texte conservé — pas de router.refresh() (le rendu
+  // reste en FEEDBACK1_READY, un refresh ne ferait que réafficher la même vue).
   if (!avertissement) revalider(livreId, semaine)
   return { success: true, avertissement }
 }
@@ -241,8 +249,9 @@ export async function soumettreVf(livreId: string, semaine: number, vf: SaisieVf
 export async function validerLectureRetourVf(livreId: string, semaine: number) {
   const { supabase, userId } = await verifierEleve()
   const admin = createAdminClient()
-  const { active } = await contexteAletheia(supabase, userId)
-  if (!active || !(await livreAccessible(admin, [active.classe_id], livreId))) return { error: 'Ce livre ne t\'est pas accessible.' }
+  // (B4) Repli bi-classe : on résout la classe qui expose le livre (cookie d'abord).
+  const { resolue: active } = await resoudreInscriptionLivre(admin, supabase, userId, livreId)
+  if (!active) return { error: 'Ce livre ne t\'est pas accessible.' }
   // (mode C, F7) Garde d'appartenance à l'extrait sur la validation de lecture (clôture DONE).
   const { exposees } = await modeExposition(admin, livreId, active.classe_id)
   if (!dansExtrait(exposees, semaine)) return { error: 'Cette séance ne fait pas partie de ton parcours.' }
@@ -276,8 +285,9 @@ export async function validerLectureRetourVf(livreId: string, semaine: number) {
 export async function relancerRetour(livreId: string, semaine: number) {
   const { supabase, userId } = await verifierEleve()
   const admin = createAdminClient()
-  const { active } = await contexteAletheia(supabase, userId)
-  if (!active || !(await livreAccessible(admin, [active.classe_id], livreId))) return { error: 'Ce livre ne t\'est pas accessible.' }
+  // (B4) Repli bi-classe : on résout la classe qui expose le livre (cookie d'abord).
+  const { resolue: active } = await resoudreInscriptionLivre(admin, supabase, userId, livreId)
+  if (!active) return { error: 'Ce livre ne t\'est pas accessible.' }
   // (mode C, F7) Garde d'appartenance à l'extrait sur la relance IA (évite de relancer
   // genererRetourVf sur un orphelin → retour ancré livre entier = spoiler).
   const { exposees } = await modeExposition(admin, livreId, active.classe_id)

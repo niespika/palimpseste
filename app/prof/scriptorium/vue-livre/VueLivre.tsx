@@ -88,6 +88,12 @@ export default function VueLivre({ livre, classes, classeIds, docs, nbDocsSansSe
   const contenuVide = contenu.every(c => !c.these_canonique.trim())
   const liensResolus = resoudreLiens(capstone?.contenu?.liens ?? [], parSemaine)
   const rail = parSemaine.map(s => ({ semaine: s.semaine, titre: s.titre, etat: etatFiche(chapitreDe.get(s.semaine), amendeGlobal) }))
+  // Signal de génération PARTIELLE (C-b) : une référence READY dont certaines séances
+  // restent sans fiche (un lot a échoué/omis une semaine) → on le RÉVÈLE au prof plutôt
+  // que de laisser le partiel passer pour complet. Dérivé du rail : aucune colonne SQL.
+  const semainesManquantes = reference?.statut === 'READY'
+    ? rail.filter(r => r.etat === 'a_generer').map(r => r.semaine)
+    : []
 
   return (
     <ArtefactsLivreProvider
@@ -116,6 +122,12 @@ export default function VueLivre({ livre, classes, classeIds, docs, nbDocsSansSe
         {conflitClasses && conflitClasses.length > 0 && (
           <div className="border border-attention bg-attention-teinte/40 rounded-lg p-3 text-xs text-attention">
             ⚠ Ce livre est assigné en direct ET en entier via un parcours à : <b>{conflitClasses.join(', ')}</b>. Double planning possible — choisis une seule voie : garde l’assignation directe s’il n’y a rien de plus que le livre, ou passe par le parcours s’il ajoute des ressources (textes/cours).
+          </div>
+        )}
+
+        {semainesManquantes.length > 0 && (
+          <div className="border border-attention bg-attention-teinte/40 rounded-lg p-3 text-xs text-attention">
+            ⚠ Référence incomplète — {semainesManquantes.length === 1 ? 'la séance' : 'les séances'} <b>{semainesManquantes.join(', ')}</b> {semainesManquantes.length === 1 ? 'n’a' : 'n’ont'} pas de fiche (génération partielle). Le diagnostic Aletheia et la synthèse montrée à l’élève s’appuient dessus : régénère les fiches, ou sélectionne {semainesManquantes.length === 1 ? 'la séance' : 'ces séances'} dans le rail pour {semainesManquantes.length === 1 ? 'la' : 'les'} rédiger à la main.
           </div>
         )}
 

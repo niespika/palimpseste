@@ -1,0 +1,31 @@
+[
+  {
+    "cle": "NT",
+    "titre": "La Naissance de la tragédie",
+    "auteur": "Nietzsche",
+    "totalSeances": 5,
+    "carte": "fil conducteur : le livre suit une seule courbe — la tragédie grecque naît de l'accord entre deux forces opposées, atteint son sommet, puis meurt de l'intérieur quand la raison prétend tout expliquer ; repère S_LIVRE_CARTE_FIL_T0 | nœuds : chap. 1-4 — deux pulsions artistiques, l'apollinien de la forme et le dionysiaque de l'ivresse ; chap. 5-9 — le chœur comme matrice du drame, le spectateur devient participant ; chap. 10-14 — Euripide et Socrate introduisent la clarté qui tue le mythe ; chap. 15-20 — l'homme théorique, la science comme consolation et sa limite ; chap. 21-25 — l'espoir d'un retour du tragique par la musique | liens : apollinien → dionysiaque (opposition féconde, pas exclusion) ; chœur → drame (origine) ; socratisme → mort de la tragédie (cause) ; optimisme théorique → pessimisme tragique (renversement)",
+    "fiches": [
+      {
+        "seance": 1,
+        "texte": "« Les deux pulsions de l'art » (chap. 1-4) · thèse : l'art grec ne vient pas d'une seule source mais de la tension entre deux forces opposées — l'apollinien (la forme, la mesure, le rêve, la belle apparence qui protège) et le dionysiaque (l'ivresse, la démesure, la dissolution de l'individu dans le tout) · arguments : le rêve est le modèle de l'apparence belle et limitée ; l'ivresse est le modèle de l'unité retrouvée avec la nature ; la sculpture et l'épopée d'un côté, la musique et la danse de l'autre ; la tragédie est le rare moment où les deux tiennent ensemble · concepts : apollinien, dionysiaque, principe d'individuation, belle apparence · repère : S_LIVRE_s1_APOLLINIEN_T1"
+      },
+      {
+        "seance": 2,
+        "texte": "« Le chœur et la naissance du drame » (chap. 5-9) · thèse : la tragédie est née du chœur, et non de l'action représentée — le chœur de satyres est le public devenu acteur, le lieu où le spectateur cesse d'être spectateur · arguments : le chœur précède historiquement le dialogue ; il est un mur vivant qui isole la scène du monde ordinaire ; le héros tragique n'est qu'un masque de Dionysos ; le mythe d'Œdipe et celui de Prométhée montrent la double faute nécessaire · concepts : chœur, satyre, masque, justification esthétique de l'existence · repère : S_LIVRE_s2_CHOEUR_T2"
+      },
+      {
+        "seance": 3,
+        "texte": "« Euripide, Socrate et la mort de la tragédie » (chap. 10-14) · thèse : la tragédie ne s'éteint pas d'usure, elle se suicide — Euripide met sur scène le spectateur ordinaire et sa logique, sous l'inspiration d'un démon qui n'est plus Dionysos mais Socrate · arguments : le prologue explicatif supprime le mystère ; le deus ex machina remplace la nécessité tragique ; l'équation socratique « savoir = vertu = bonheur » chasse l'instinct au profit de la conscience ; le beau doit désormais être intelligible · concepts : socratisme esthétique, optimisme théorique, dialectique, instinct · repère : S_LIVRE_s3_SOCRATISME_T3"
+      },
+      {
+        "seance": 4,
+        "texte": "S_FUTUR_FICHE_S4_B7 · « L'homme théorique et sa limite » (chap. 15-20) · thèse : la science moderne prolonge le geste socratique — elle promet de corriger l'existence par la connaissance, jusqu'au point où, poussée à sa rigueur, elle découvre ses propres bords et bascule dans le tragique · arguments : le savant est un successeur du héros ; l'illusion socratique rend la vie supportable comme le faisait l'art ; Kant et Schopenhauer marquent la limite du connaissable ; la culture d'opéra est le symptôme d'un art sans mythe · concepts : homme théorique, culture alexandrine, sagesse tragique · repère : S_LIVRE_s4_OPERA_T4"
+      },
+      {
+        "seance": 5,
+        "texte": "S_FUTUR_FICHE_S5_D2 · « Le retour du mythe par la musique » (chap. 21-25) · thèse : ce qui a été perdu peut renaître — la musique allemande rouvre l'accès au mythe et donc la possibilité d'une culture tragique, à condition que l'auditeur consente à ne pas tout comprendre · arguments : la musique fait naître le mythe, non l'inverse ; le spectateur esthétique contre le critique ; l'exemple de Tristan comme épreuve limite ; la culture ne se décrète pas, elle se prépare · concepts : mythe, culture tragique, spectateur esthétique, consolation métaphysique · repère : S_LIVRE_s5_RENAISSANCE_T5"
+      }
+    ]
+  }
+]
