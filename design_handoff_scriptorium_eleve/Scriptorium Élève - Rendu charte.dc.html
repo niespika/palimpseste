@@ -1,0 +1,862 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<meta name="design_doc_mode" content="canvas">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="anonymous">
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600&amp;family=Cormorant+Garamond:ital,wght@0,500;0,600;1,500;1,600&amp;family=EB+Garamond:ital,wght@0,400;0,500;0,600;1,400;1,500&amp;family=Alegreya+Sans:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#E7DECF;font-family:'EB Garamond',Georgia,serif;color:#221C16;-webkit-font-smoothing:antialiased}
+::selection{background:#D8C8A8}
+a{color:#4A3A28;text-decoration:none;border-bottom:1px solid rgba(74,58,40,.35)}
+a:hover{color:#221C16;border-color:#221C16}
+</style>
+</helmet>
+
+<!-- ════════════════════════════════════════════════════════════════
+     RÉVISION DU 24/07 — cadre de lecture
+     ════════════════════════════════════════════════════════════════ -->
+<section style="padding:46px 48px 10px">
+  <div style="max-width:1180px;margin:0 auto">
+    <span style="font:600 12px 'Alegreya Sans',sans-serif;letter-spacing:.06em;background:#6B5A46;color:#F1EADD;padding:5px 13px;border-radius:20px">Révision du 24/07 · fait foi</span>
+    <h1 style="font-family:'Cormorant Garamond',serif;font-weight:600;font-size:36px;line-height:1.08;margin:16px 0 10px;color:#2A2017">Scriptorium · face élève — cible visuelle</h1>
+    <p style="font:18px/1.62 'EB Garamond',serif;color:#3A2E22;margin:0 0 22px;max-width:88ch;text-wrap:pretty">Deux onglets — <strong style="font-weight:600">Plan de cours</strong> et <strong style="font-weight:600">Discussion</strong> — portés par la bande « seuil du module » du nouvel en-tête. Aucune fonctionnalité nouvelle : le streaming, le stop, le rail de conversations, les statuts du plan, les amorces, le bandeau de transparence et le quota <strong style="font-weight:600">existent déjà</strong> ; ce document ne redéfinit que la <em>surface</em>.</p>
+
+    <div style="display:flex;gap:18px;flex-wrap:wrap;align-items:stretch">
+
+      <div style="flex:1 1 300px;background:#FBF8F1;border:1px solid #E4DBC9;border-left:3px solid #6B5A46;border-radius:4px;padding:18px 22px 20px">
+        <div style="font:700 11px 'Alegreya Sans',sans-serif;letter-spacing:.13em;text-transform:uppercase;color:#6B5A46;margin-bottom:9px">1 · Mobile retiré</div>
+        <p style="font:16px/1.58 'EB Garamond',serif;color:#3A2E22;margin:0 0 12px">Toutes les maquettes mobile et iPad sont retirées : elles poseraient sur un en-tête mobile qui n’existe pas encore. Le design mobile sera traité au <strong style="font-weight:600">chantier C10a</strong> (passe élève mobile-first).</p>
+        <div style="background:#F4EEE2;border:1px solid #E4DBC9;border-radius:3px;padding:13px 16px">
+          <div style="font:600 12px 'Alegreya Sans',sans-serif;letter-spacing:.04em;color:#4A3A28;margin-bottom:6px">Contraintes responsive minimales</div>
+          <p style="font:15.5px/1.55 'EB Garamond',serif;color:#3A2E22;margin:0">À 375 px, <strong style="font-weight:600">rien de cassé</strong> : empilement naturel des colonnes, rail de conversations escamotable, barres mobiles existantes conservées. Rien de plus n’est spécifié ici.</p>
+        </div>
+      </div>
+
+      <div style="flex:1 1 300px;background:#FBF8F1;border:1px solid #E4DBC9;border-left:3px solid #AC8552;border-radius:4px;padding:18px 22px 20px">
+        <div style="font:700 11px 'Alegreya Sans',sans-serif;letter-spacing:.13em;text-transform:uppercase;color:#8A6023;margin-bottom:9px">2 · Onglets &amp; commutateur</div>
+        <p style="font:16px/1.58 'EB Garamond',serif;color:#3A2E22;margin:0 0 10px">Les deux onglets sont les <strong style="font-weight:600">sous-onglets du module</strong> : ils vivent dans <code style="font:13px ui-monospace,monospace;background:#F0EADE;padding:1px 5px;border-radius:3px">SousNavModule</code>. <strong style="font-weight:600">Ne pas créer de barre d’onglets locale à la page</strong> — ce serait un second système.</p>
+        <p style="font:16px/1.58 'EB Garamond',serif;color:#3A2E22;margin:0">Dans Plan de cours, un commutateur <strong style="font-weight:600">Année | Parcours</strong>. La vue Parcours <em>existante</em> devient la vue par défaut et n’est pas redessinée. <strong style="font-weight:600">Règle v1 : tant que la vue Année n’existe pas, le toggle est absent</strong> — pas de bouton mort. Voir <a href="#1a">1a</a> (cible) et <a href="#1b">1b</a> (v1).</p>
+      </div>
+
+      <div style="flex:1 1 300px;background:#FBF8F1;border:1px solid #E4DBC9;border-left:3px solid #4A3A28;border-radius:4px;padding:18px 22px 20px">
+        <div style="font:700 11px 'Alegreya Sans',sans-serif;letter-spacing:.13em;text-transform:uppercase;color:#4A3A28;margin-bottom:9px">3 · Discussion épistolaire</div>
+        <p style="font:16px/1.58 'EB Garamond',serif;color:#3A2E22;margin:0 0 10px">Parti retenu : <strong style="font-weight:600">correspondance continue</strong>. Un feuillet unique qui se lit d’un trait ; le tuteur occupe la pleine colonne, les mots de l’élève sont en retrait derrière un filet au pigment. <strong style="font-weight:600">Jamais d’aplat de couleur</strong> pour distinguer les voix.</p>
+        <p style="font:16px/1.58 'EB Garamond',serif;color:#3A2E22;margin:0">Déclinée sur 5 états réels : <a href="#2a">2a</a> vierge · <a href="#2b">2b</a> streaming · <a href="#2c">2c</a> réponse longue · <a href="#2d">2d</a> quota · <a href="#2e">2e</a> rail.</p>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<!-- ════════════════════════════════════════════════════════════════
+     ONGLET PLAN DE COURS
+     ════════════════════════════════════════════════════════════════ -->
+<section style="padding:34px 48px 10px">
+  <div style="max-width:2600px;margin:0 auto">
+    <div style="font:700 12px 'Alegreya Sans',sans-serif;letter-spacing:.12em;text-transform:uppercase;color:#6E5A3E;margin:0 0 18px 2px">Onglet « Plan de cours » — vue Parcours (défaut), commutateur de vue</div>
+
+    <div style="display:flex;gap:44px;align-items:flex-start;flex-wrap:wrap">
+
+      <!-- ═══════════ 1a · Plan de cours, cible (avec toggle) ═══════════ -->
+      <div id="1a" data-screen-label="1a — Plan de cours, cible avec toggle" style="width:1120px;flex:0 0 auto">
+        <div style="display:flex;align-items:center;gap:10px;margin:0 0 13px 2px">
+          <span style="font:600 12px 'Alegreya Sans',sans-serif;letter-spacing:.05em;background:#E6DDC9;color:#4A3A28;padding:4px 11px;border-radius:20px">1a</span>
+          <span style="font:italic 15px 'Cormorant Garamond',serif;color:#5A4632">Cible — commutateur <strong style="font-style:normal;font-weight:600">Année | Parcours</strong> présent, vue Parcours active (inchangée)</span>
+        </div>
+
+        <div style="background:#fff;border:1px solid #E4DBC9;border-radius:12px;overflow:hidden;box-shadow:0 12px 40px rgba(60,45,25,.16)">
+
+          <!-- barre onglets généraux (élève) -->
+          <div style="background:#FBF8F1;border-bottom:1px solid #E4DBC9;position:relative">
+            <div style="max-width:1040px;margin:0 auto;padding:11px 28px;display:flex;justify-content:center;gap:6px">
+              <span style="font:400 14px 'Alegreya Sans',sans-serif;color:#6E5A3E;padding:7px 14px;border-radius:8px">Tableau de bord</span>
+              <span style="font:400 14px 'Alegreya Sans',sans-serif;color:#6E5A3E;padding:7px 14px;border-radius:8px">Calendrier</span>
+              <span style="font:400 14px 'Alegreya Sans',sans-serif;color:#6E5A3E;padding:7px 14px;border-radius:8px">Intégrité</span>
+              <span style="font:500 14px 'Alegreya Sans',sans-serif;background:#ECE4D6;color:#221C16;padding:7px 14px;border-radius:8px">Modules&nbsp;▾</span>
+            </div>
+            <div style="position:absolute;right:24px;top:0;bottom:0;display:flex;align-items:center;gap:12px">
+              <span style="font:400 13px 'Alegreya Sans',sans-serif;color:#5A4632;background:#F6F1E7;border:1px solid #E4DBC9;border-radius:7px;padding:4px 10px">2de B&nbsp;▾</span>
+              <span style="width:1px;height:20px;background:#E4DBC9"></span>
+              <span style="font:400 13px 'Alegreya Sans',sans-serif;color:#6E5A3E">Se déconnecter</span>
+            </div>
+          </div>
+
+          <!-- bande seuil du module : devise + sous-onglets (SousNavModule) -->
+          <div style="background:linear-gradient(90deg,#FBF8F1 26%,#EFE8D6 62%,#D9CCAE 100%);border-bottom:1px solid #E4DBC9;position:relative">
+            <span style="position:absolute;left:0;right:0;bottom:0;height:2px;background:linear-gradient(90deg,rgba(184,137,59,0),rgba(184,137,59,.55),#B8893B);pointer-events:none"></span>
+            <div style="max-width:1040px;margin:0 auto;padding:14px 28px 16px;display:flex;align-items:center;gap:22px">
+              <div style="display:flex;flex-direction:column;align-items:center;gap:7px;flex-shrink:0">
+                <span style="width:60px;height:60px;border-radius:50%;background:#EDE6D6;border:1px solid #E4DBC9;display:inline-flex;align-items:center;justify-content:center;overflow:hidden"><img src="sceaux/palimpseste_medaillon.png" alt="" style="width:60px;height:60px;object-fit:cover;filter:brightness(1.05) contrast(1.05);mix-blend-mode:multiply"></span>
+                <span style="font:600 20px 'Cinzel',serif;letter-spacing:.05em;color:#221C16">Palimpseste</span>
+              </div>
+              <span style="width:1px;align-self:stretch;background:linear-gradient(transparent,rgba(60,50,40,.16),transparent)"></span>
+              <div style="flex:1;min-width:0;display:flex;flex-direction:column;align-items:center;gap:10px">
+                <div style="font-family:'Cormorant Garamond',serif;font-size:18px;color:#6E5A3E;text-align:center"><span style="font-variant:small-caps;letter-spacing:.05em">Ars Docendi</span><span style="font-style:italic"> — D’une main à l’autre</span></div>
+                <div style="display:flex;justify-content:center;gap:6px">
+                  <span style="font:500 14px 'Alegreya Sans',sans-serif;background:#E6DDC9;color:#4A3A28;padding:7px 15px;border-radius:8px">Plan de cours</span>
+                  <span style="font:400 14px 'Alegreya Sans',sans-serif;color:#6A5C48;padding:7px 15px;border-radius:8px">Discussion</span>
+                </div>
+              </div>
+              <span style="width:1px;align-self:stretch;background:linear-gradient(transparent,rgba(60,50,40,.16),transparent)"></span>
+              <div style="display:flex;flex-direction:column;align-items:center;gap:7px;flex-shrink:0">
+                <span style="position:relative;display:inline-flex">
+                  <span style="width:60px;height:60px;border-radius:50%;background:#E6DDC9;display:inline-flex;align-items:center;justify-content:center;overflow:hidden;border:1px solid #D3C6AA"><img src="sceaux/pastille-scriptorium.png" alt="Scriptorium" style="width:60px;height:60px;object-fit:cover;filter:brightness(1.06) contrast(1.04);mix-blend-mode:multiply"></span>
+                  <span style="position:absolute;inset:0;border-radius:50%;border:3px solid #B8893B;box-shadow:0 3px 12px rgba(74,58,40,.30);pointer-events:none"></span>
+                </span>
+                <span style="font:600 20px 'Cinzel',serif;letter-spacing:.05em;color:#4A3A28">Scriptorium</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- ── CONTENU · PLAN DE COURS ── -->
+          <div style="background:#F7F2E8">
+            <div style="max-width:1040px;margin:0 auto;padding:26px 26px 34px">
+
+              <div style="display:flex;align-items:flex-end;justify-content:space-between;gap:22px;flex-wrap:wrap;margin-bottom:16px">
+                <div>
+                  <h2 style="font-family:'Cormorant Garamond',serif;font-weight:600;font-size:26px;margin:0;color:#2A2017">Le récit — de la nouvelle au roman</h2>
+                  <p style="font:15px 'EB Garamond',serif;color:#6E5A3E;margin:5px 0 0">10 semaines · commencé le 8 septembre · tu es en <strong style="color:#8A6023;font-weight:600">semaine 4</strong></p>
+                </div>
+                <div style="display:flex;flex-direction:column;align-items:flex-end;gap:11px">
+                  <!-- COMMUTATEUR DE VUE — sobre, filet pigment -->
+                  <div style="display:flex;align-items:center;gap:12px">
+                    <span style="font:500 13px 'Alegreya Sans',sans-serif;letter-spacing:.03em;color:#6E5A3E;padding-bottom:3px;border-bottom:2px solid transparent">Année</span>
+                    <span style="width:1px;height:15px;background:rgba(74,58,40,.32)"></span>
+                    <span style="font:600 13px 'Alegreya Sans',sans-serif;letter-spacing:.03em;color:#4A3A28;padding-bottom:3px;border-bottom:2px solid #4A3A28">Parcours</span>
+                  </div>
+                  <div style="display:flex;align-items:center;gap:16px;font:500 13px 'Alegreya Sans',sans-serif">
+                    <span style="display:flex;align-items:center;gap:6px;color:#4A5A38"><span style="width:11px;height:11px;border-radius:50%;background:#5B6E4A;display:inline-block"></span>vu</span>
+                    <span style="display:flex;align-items:center;gap:6px;color:#8A6023"><span style="width:11px;height:11px;border-radius:50%;background:#9A6A2E;display:inline-block"></span>cette semaine</span>
+                    <span style="display:flex;align-items:center;gap:6px;color:#6E5A3E"><span style="width:11px;height:11px;border-radius:50%;background:#fff;border:1.5px solid #C9BBA0;display:inline-block"></span>à venir</span>
+                  </div>
+                </div>
+              </div>
+
+              <!-- barre d'avancement (10 semaines) -->
+              <div style="display:flex;gap:3px;margin-bottom:26px">
+                <span style="height:7px;flex:1;border-radius:2px;background:#5B6E4A"></span>
+                <span style="height:7px;flex:1;border-radius:2px;background:#5B6E4A"></span>
+                <span style="height:7px;flex:1;border-radius:2px;background:#5B6E4A"></span>
+                <span style="height:7px;flex:1;border-radius:2px;background:#9A6A2E;box-shadow:0 0 0 2px #EFE4CF"></span>
+                <span style="height:7px;flex:1;border-radius:2px;background:#E6DBC6"></span>
+                <span style="height:7px;flex:1;border-radius:2px;background:#E6DBC6"></span>
+                <span style="height:7px;flex:1;border-radius:2px;background:#E6DBC6"></span>
+                <span style="height:7px;flex:1;border-radius:2px;background:#E6DBC6"></span>
+                <span style="height:7px;flex:1;border-radius:2px;background:#E6DBC6"></span>
+                <span style="height:7px;flex:1;border-radius:2px;background:#E6DBC6"></span>
+              </div>
+
+              <div>
+                <!-- S1 · vu -->
+                <div style="display:flex;align-items:stretch">
+                  <div style="width:104px;flex:none;text-align:right;padding:1px 16px 0 0">
+                    <div style="font:700 10px 'Alegreya Sans',sans-serif;letter-spacing:.09em;text-transform:uppercase;color:#8A7350">S1</div>
+                    <div style="font:600 13px 'Alegreya Sans',sans-serif;color:#6E5A3E;margin-top:2px">lun. 8 sept.</div>
+                  </div>
+                  <div style="width:24px;flex:none;position:relative;display:flex;justify-content:center">
+                    <span style="position:absolute;top:0;bottom:0;left:50%;width:2px;background:#E4DBC9;transform:translateX(-50%)"></span>
+                    <span style="position:relative;margin-top:3px;width:12px;height:12px;border-radius:50%;background:#5B6E4A;border:2px solid #F7F2E8"></span>
+                  </div>
+                  <div style="flex:1;min-width:0;padding-bottom:12px">
+                    <div style="background:#FCFAF4;border:1px solid #EBE1CF;border-radius:10px;padding:11px 16px">
+                      <div style="display:flex;flex-direction:column;gap:7px">
+                        <div style="display:flex;align-items:baseline;gap:10px"><span style="color:#4A5A38;font:15px 'Alegreya Sans',sans-serif;flex:none;width:14px">✓</span><span style="font:500 15px 'EB Garamond',serif;color:#3A2E22">Maupassant, « La Parure » — la nouvelle réaliste</span></div>
+                        <div style="display:flex;align-items:baseline;gap:10px"><span style="color:#4A5A38;font:15px 'Alegreya Sans',sans-serif;flex:none;width:14px">✓</span><span style="font:500 15px 'EB Garamond',serif;color:#3A2E22">Le schéma narratif</span></div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- S2 · vu -->
+                <div style="display:flex;align-items:stretch">
+                  <div style="width:104px;flex:none;text-align:right;padding:1px 16px 0 0">
+                    <div style="font:700 10px 'Alegreya Sans',sans-serif;letter-spacing:.09em;text-transform:uppercase;color:#8A7350">S2</div>
+                    <div style="font:600 13px 'Alegreya Sans',sans-serif;color:#6E5A3E;margin-top:2px">lun. 15 sept.</div>
+                  </div>
+                  <div style="width:24px;flex:none;position:relative;display:flex;justify-content:center">
+                    <span style="position:absolute;top:0;bottom:0;left:50%;width:2px;background:#E4DBC9;transform:translateX(-50%)"></span>
+                    <span style="position:relative;margin-top:3px;width:12px;height:12px;border-radius:50%;background:#5B6E4A;border:2px solid #F7F2E8"></span>
+                  </div>
+                  <div style="flex:1;min-width:0;padding-bottom:12px">
+                    <div style="background:#FCFAF4;border:1px solid #EBE1CF;border-radius:10px;padding:11px 16px">
+                      <div style="display:flex;align-items:baseline;gap:10px"><span style="color:#4A5A38;font:15px 'Alegreya Sans',sans-serif;flex:none;width:14px">✓</span><span style="font:500 15px 'EB Garamond',serif;color:#3A2E22">Narrateur et points de vue</span></div>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- S3 · vu -->
+                <div style="display:flex;align-items:stretch">
+                  <div style="width:104px;flex:none;text-align:right;padding:1px 16px 0 0">
+                    <div style="font:700 10px 'Alegreya Sans',sans-serif;letter-spacing:.09em;text-transform:uppercase;color:#8A7350">S3</div>
+                    <div style="font:600 13px 'Alegreya Sans',sans-serif;color:#6E5A3E;margin-top:2px">lun. 22 sept.</div>
+                  </div>
+                  <div style="width:24px;flex:none;position:relative;display:flex;justify-content:center">
+                    <span style="position:absolute;top:0;bottom:0;left:50%;width:2px;background:#E4DBC9;transform:translateX(-50%)"></span>
+                    <span style="position:relative;margin-top:3px;width:12px;height:12px;border-radius:50%;background:#5B6E4A;border:2px solid #F7F2E8"></span>
+                  </div>
+                  <div style="flex:1;min-width:0;padding-bottom:12px">
+                    <div style="background:#FCFAF4;border:1px solid #EBE1CF;border-radius:10px;padding:11px 16px">
+                      <div style="display:flex;align-items:baseline;gap:10px"><span style="color:#4A5A38;font:15px 'Alegreya Sans',sans-serif;flex:none;width:14px">✓</span><span style="font:500 15px 'EB Garamond',serif;color:#3A2E22">Zola, « Germinal » — l’incipit</span></div>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- S4 · en cours -->
+                <div style="display:flex;align-items:stretch">
+                  <div style="width:104px;flex:none;text-align:right;padding:2px 16px 0 0">
+                    <div style="font:700 10px 'Alegreya Sans',sans-serif;letter-spacing:.09em;text-transform:uppercase;color:#8A6023">S4</div>
+                    <div style="font:700 14px 'Alegreya Sans',sans-serif;color:#8A6023;margin-top:2px">lun. 29 sept.</div>
+                  </div>
+                  <div style="width:24px;flex:none;position:relative;display:flex;justify-content:center">
+                    <span style="position:absolute;top:0;bottom:0;left:50%;width:2px;background:#E4DBC9;transform:translateX(-50%)"></span>
+                    <span style="position:relative;margin-top:2px;width:16px;height:16px;border-radius:50%;background:#9A6A2E;border:3px solid #EFE4CF;box-shadow:0 0 0 1px #9A6A2E"></span>
+                  </div>
+                  <div style="flex:1;min-width:0;padding-bottom:12px">
+                    <div style="background:#FBF3E6;border:1px solid #E6C98F;border-left:3px solid #9A6A2E;border-radius:10px;padding:13px 16px 14px;box-shadow:0 4px 16px rgba(154,106,46,.13)">
+                      <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
+                        <span style="font:700 10px 'Alegreya Sans',sans-serif;letter-spacing:.06em;text-transform:uppercase;background:#9A6A2E;color:#FBF5EA;border-radius:99px;padding:3px 11px">cette semaine</span>
+                        <span style="font:italic 13px 'EB Garamond',serif;color:#7A5A2E">ce que vous étudiez en ce moment</span>
+                      </div>
+                      <div style="display:flex;flex-direction:column;gap:8px">
+                        <div style="display:flex;align-items:baseline;gap:10px"><span style="color:#8A6023;font:15px 'Alegreya Sans',sans-serif;flex:none;width:14px">●</span><span style="font:600 15.5px 'EB Garamond',serif;color:#221C16">Le personnage de roman</span></div>
+                        <div style="display:flex;align-items:baseline;gap:10px"><span style="color:#8A6023;font:15px 'Alegreya Sans',sans-serif;flex:none;width:14px">●</span><span style="font:600 15.5px 'EB Garamond',serif;color:#221C16">Balzac, « Le Père Goriot » — l’entrée en scène de Vautrin</span></div>
+                      </div>
+                      <div style="margin-top:12px"><span style="font:600 13px 'Alegreya Sans',sans-serif;color:#6B5A46">En parler avec le tuteur →</span></div>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- S5 · à venir -->
+                <div style="display:flex;align-items:stretch">
+                  <div style="width:104px;flex:none;text-align:right;padding:1px 16px 0 0">
+                    <div style="font:700 10px 'Alegreya Sans',sans-serif;letter-spacing:.09em;text-transform:uppercase;color:#8A7350">S5</div>
+                    <div style="font:500 13px 'Alegreya Sans',sans-serif;color:#6E5A3E;margin-top:2px">lun. 6 oct.</div>
+                  </div>
+                  <div style="width:24px;flex:none;position:relative;display:flex;justify-content:center">
+                    <span style="position:absolute;top:0;bottom:0;left:50%;width:2px;background:#E4DBC9;transform:translateX(-50%)"></span>
+                    <span style="position:relative;margin-top:3px;width:12px;height:12px;border-radius:50%;background:#fff;border:1.5px solid #C9BBA0"></span>
+                  </div>
+                  <div style="flex:1;min-width:0;padding-bottom:12px">
+                    <div style="background:#FBFAF6;border:1px dashed #E0D7C4;border-radius:10px;padding:11px 16px">
+                      <div style="display:flex;align-items:baseline;gap:10px"><span style="color:#B0A088;font:15px 'Alegreya Sans',sans-serif;flex:none;width:14px">○</span><span style="font:italic 15px 'EB Garamond',serif;color:#6E5A3E">La description réaliste</span></div>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- S6 · à venir -->
+                <div style="display:flex;align-items:stretch">
+                  <div style="width:104px;flex:none;text-align:right;padding:1px 16px 0 0">
+                    <div style="font:700 10px 'Alegreya Sans',sans-serif;letter-spacing:.09em;text-transform:uppercase;color:#8A7350">S6</div>
+                    <div style="font:500 13px 'Alegreya Sans',sans-serif;color:#6E5A3E;margin-top:2px">lun. 13 oct.</div>
+                  </div>
+                  <div style="width:24px;flex:none;position:relative;display:flex;justify-content:center">
+                    <span style="position:absolute;top:0;bottom:16px;left:50%;width:2px;background:#E4DBC9;transform:translateX(-50%)"></span>
+                    <span style="position:relative;margin-top:3px;width:12px;height:12px;border-radius:50%;background:#fff;border:1.5px solid #C9BBA0"></span>
+                  </div>
+                  <div style="flex:1;min-width:0;padding-bottom:12px">
+                    <div style="background:#FBFAF6;border:1px dashed #E0D7C4;border-radius:10px;padding:11px 16px">
+                      <div style="display:flex;align-items:baseline;gap:10px"><span style="color:#B0A088;font:15px 'Alegreya Sans',sans-serif;flex:none;width:14px">○</span><span style="font:italic 15px 'EB Garamond',serif;color:#6E5A3E">Écriture d’invention — un portrait</span></div>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- repli -->
+                <div style="display:flex;align-items:center">
+                  <div style="width:104px;flex:none"></div>
+                  <div style="width:24px;flex:none;display:flex;justify-content:center"><span style="color:#B0A088;font-size:15px">⌄</span></div>
+                  <div style="flex:1"><span style="font:italic 13px 'EB Garamond',serif;color:#6E5A3E">… jusqu’à la semaine 10 (8 décembre)</span></div>
+                </div>
+
+              </div>
+
+              <p style="font:italic 13px 'EB Garamond',serif;color:#6E5A3E;margin:20px 0 0;text-align:center">Seuls les titres apparaissent ici — le tuteur ne dévoilera pas la suite du cours, c’est voulu.</p>
+
+            </div>
+          </div>
+
+        </div>
+
+        <div style="margin-top:12px;background:#F4EEE2;border:1px solid #E4DBC9;border-left:3px solid #AC8552;border-radius:3px;padding:12px 17px">
+          <p style="font:15.5px/1.55 'EB Garamond',serif;color:#3A2E22;margin:0"><strong style="font-weight:600">Où vivent les onglets.</strong> « Plan de cours · Discussion » sont rendus par <code style="font:13px ui-monospace,monospace;background:#EDE4D2;padding:1px 5px;border-radius:3px">SousNavModule</code> dans la bande seuil de l’en-tête, pilotés par <code style="font:13px ui-monospace,monospace;background:#EDE4D2;padding:1px 5px;border-radius:3px">?vue=plan|discussion</code>. Le corps de page n’a <strong style="font-weight:600">aucune</strong> barre d’onglets. Le commutateur <strong style="font-weight:600">Année | Parcours</strong>, lui, est <em>local au contenu</em> du plan — c’est un changement de vue, pas de navigation.</p>
+        </div>
+      </div>
+
+      <!-- ═══════════ 1b · v1 sans toggle ═══════════ -->
+      <div id="1b" data-screen-label="1b — Plan de cours, v1 sans toggle" style="width:660px;flex:0 0 auto">
+        <div style="display:flex;align-items:center;gap:10px;margin:0 0 13px 2px">
+          <span style="font:600 12px 'Alegreya Sans',sans-serif;letter-spacing:.05em;background:#E6DDC9;color:#4A3A28;padding:4px 11px;border-radius:20px">1b</span>
+          <span style="font:italic 15px 'Cormorant Garamond',serif;color:#5A4632">v1 — <strong style="font-style:normal;font-weight:600">toggle absent</strong> tant que la vue Année n’existe pas</span>
+        </div>
+
+        <div style="background:#F7F2E8;border:1px solid #E4DBC9;border-radius:12px;overflow:hidden;box-shadow:0 12px 40px rgba(60,45,25,.16)">
+          <div style="padding:24px 26px 26px">
+            <div style="display:flex;align-items:flex-end;justify-content:space-between;gap:22px;flex-wrap:wrap;margin-bottom:16px">
+              <div>
+                <h2 style="font-family:'Cormorant Garamond',serif;font-weight:600;font-size:24px;margin:0;color:#2A2017">Le récit — de la nouvelle au roman</h2>
+                <p style="font:15px 'EB Garamond',serif;color:#6E5A3E;margin:5px 0 0">10 semaines · commencé le 8 septembre · tu es en <strong style="color:#8A6023;font-weight:600">semaine 4</strong></p>
+              </div>
+              <div style="display:flex;align-items:center;gap:14px;font:500 12.5px 'Alegreya Sans',sans-serif">
+                <span style="display:flex;align-items:center;gap:6px;color:#4A5A38"><span style="width:10px;height:10px;border-radius:50%;background:#5B6E4A;display:inline-block"></span>vu</span>
+                <span style="display:flex;align-items:center;gap:6px;color:#8A6023"><span style="width:10px;height:10px;border-radius:50%;background:#9A6A2E;display:inline-block"></span>cette semaine</span>
+                <span style="display:flex;align-items:center;gap:6px;color:#6E5A3E"><span style="width:10px;height:10px;border-radius:50%;background:#fff;border:1.5px solid #C9BBA0;display:inline-block"></span>à venir</span>
+              </div>
+            </div>
+
+            <div style="display:flex;gap:3px;margin-bottom:22px">
+              <span style="height:7px;flex:1;border-radius:2px;background:#5B6E4A"></span>
+              <span style="height:7px;flex:1;border-radius:2px;background:#5B6E4A"></span>
+              <span style="height:7px;flex:1;border-radius:2px;background:#5B6E4A"></span>
+              <span style="height:7px;flex:1;border-radius:2px;background:#9A6A2E;box-shadow:0 0 0 2px #EFE4CF"></span>
+              <span style="height:7px;flex:1;border-radius:2px;background:#E6DBC6"></span>
+              <span style="height:7px;flex:1;border-radius:2px;background:#E6DBC6"></span>
+              <span style="height:7px;flex:1;border-radius:2px;background:#E6DBC6"></span>
+              <span style="height:7px;flex:1;border-radius:2px;background:#E6DBC6"></span>
+              <span style="height:7px;flex:1;border-radius:2px;background:#E6DBC6"></span>
+              <span style="height:7px;flex:1;border-radius:2px;background:#E6DBC6"></span>
+            </div>
+
+            <div style="display:flex;align-items:stretch">
+              <div style="width:96px;flex:none;text-align:right;padding:2px 14px 0 0">
+                <div style="font:700 10px 'Alegreya Sans',sans-serif;letter-spacing:.09em;text-transform:uppercase;color:#8A6023">S4</div>
+                <div style="font:700 14px 'Alegreya Sans',sans-serif;color:#8A6023;margin-top:2px">lun. 29 sept.</div>
+              </div>
+              <div style="width:24px;flex:none;position:relative;display:flex;justify-content:center">
+                <span style="position:absolute;top:0;bottom:0;left:50%;width:2px;background:#E4DBC9;transform:translateX(-50%)"></span>
+                <span style="position:relative;margin-top:2px;width:16px;height:16px;border-radius:50%;background:#9A6A2E;border:3px solid #EFE4CF;box-shadow:0 0 0 1px #9A6A2E"></span>
+              </div>
+              <div style="flex:1;min-width:0;padding-bottom:12px">
+                <div style="background:#FBF3E6;border:1px solid #E6C98F;border-left:3px solid #9A6A2E;border-radius:10px;padding:13px 16px 14px">
+                  <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
+                    <span style="font:700 10px 'Alegreya Sans',sans-serif;letter-spacing:.06em;text-transform:uppercase;background:#9A6A2E;color:#FBF5EA;border-radius:99px;padding:3px 11px">cette semaine</span>
+                  </div>
+                  <div style="display:flex;flex-direction:column;gap:8px">
+                    <div style="display:flex;align-items:baseline;gap:10px"><span style="color:#8A6023;font:15px 'Alegreya Sans',sans-serif;flex:none;width:14px">●</span><span style="font:600 15.5px 'EB Garamond',serif;color:#221C16">Le personnage de roman</span></div>
+                    <div style="display:flex;align-items:baseline;gap:10px"><span style="color:#8A6023;font:15px 'Alegreya Sans',sans-serif;flex:none;width:14px">●</span><span style="font:600 15.5px 'EB Garamond',serif;color:#221C16">Balzac, « Le Père Goriot » — l’entrée en scène de Vautrin</span></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div style="display:flex;align-items:center">
+              <div style="width:96px;flex:none"></div>
+              <div style="width:24px;flex:none;display:flex;justify-content:center"><span style="color:#B0A088;font-size:15px">⌄</span></div>
+              <div style="flex:1"><span style="font:italic 13px 'EB Garamond',serif;color:#6E5A3E">… S5 à S10 à la suite, à l’identique de <a href="#1a">1a</a></span></div>
+            </div>
+          </div>
+        </div>
+
+        <div style="margin-top:12px;background:#FBF8F1;border:1px solid #E4DBC9;border-left:3px solid #6B5A46;border-radius:3px;padding:14px 17px">
+          <p style="font:15.5px/1.55 'EB Garamond',serif;color:#3A2E22;margin:0 0 9px"><strong style="font-weight:600">Règle v1.</strong> Le plan est coupé à la <strong style="font-weight:600">vue Parcours seule</strong>. Tant que la vue Année n’est pas construite, <strong style="font-weight:600">ne pas afficher le commutateur</strong> : pas de bouton mort, pas d’onglet désactivé, pas d’infobulle « bientôt ». Le reste du contenu est identique à <a href="#1a">1a</a>.</p>
+          <p style="font:15.5px/1.55 'EB Garamond',serif;color:#3A2E22;margin:0"><strong style="font-weight:600">Quand la vue Année arrivera.</strong> Même langage visuel que la vue Parcours : <strong style="font-weight:600">une carte par parcours</strong>, même grammaire (titre en Cormorant, méta en Alegreya Sans, statuts <code style="font:12.5px ui-monospace,monospace;background:#F0EADE;padding:1px 5px;border-radius:3px">ok</code> / <code style="font:12.5px ui-monospace,monospace;background:#F0EADE;padding:1px 5px;border-radius:3px">attention</code> / <code style="font:12.5px ui-monospace,monospace;background:#F0EADE;padding:1px 5px;border-radius:3px">muet</code>, cartes au filet). Aucune nouvelle grammaire à inventer. <strong style="font-weight:600">Elle n’est pas à dessiner maintenant.</strong></p>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<!-- ════════════════════════════════════════════════════════════════
+     ONGLET DISCUSSION — ESPACE ÉPISTOLAIRE
+     ════════════════════════════════════════════════════════════════ -->
+<section style="padding:44px 48px 96px">
+  <div style="max-width:2600px;margin:0 auto">
+
+    <div style="max-width:1180px;margin:0 0 26px 2px">
+      <div style="font:700 12px 'Alegreya Sans',sans-serif;letter-spacing:.12em;text-transform:uppercase;color:#6E5A3E;margin:0 0 12px">Onglet « Discussion » — espace épistolaire · parti retenu : correspondance continue</div>
+      <p style="font:17px/1.6 'EB Garamond',serif;color:#3A2E22;margin:0 0 16px;max-width:92ch;text-wrap:pretty">On ne change pas la manière dont l’IA parle — on change le <em>lieu</em>. L’élève s’assoit à un écritoire : colonne unique de ~68 caractères sur un feuillet <code style="font:13px ui-monospace,monospace;background:#F4EEE2;padding:1px 5px;border-radius:3px">#FBF8F1</code> posé sur le fond du module <code style="font:13px ui-monospace,monospace;background:#F4EEE2;padding:1px 5px;border-radius:3px">#F0EADE</code>. Le tuteur occupe la pleine page ; les mots de l’élève sont en retrait derrière un filet au pigment. La lisibilité gagne sur l’ambiance à chaque arbitrage : corps EB&nbsp;Garamond 18&nbsp;px, interligne 1,66, contraste AA partout.</p>
+      <div style="display:flex;gap:14px;flex-wrap:wrap">
+        <span style="font:500 13px 'Alegreya Sans',sans-serif;color:#3A2E22;background:#F4EEE2;border:1px solid #E4DBC9;border-radius:3px;padding:7px 13px">Aucun aplat de couleur pour les voix</span>
+        <span style="font:500 13px 'Alegreya Sans',sans-serif;color:#3A2E22;background:#F4EEE2;border:1px solid #E4DBC9;border-radius:3px;padding:7px 13px">Un ornement par écran, pas par message</span>
+        <span style="font:500 13px 'Alegreya Sans',sans-serif;color:#3A2E22;background:#F4EEE2;border:1px solid #E4DBC9;border-radius:3px;padding:7px 13px">Pas de cursive, pas de parchemin vieilli, pas de cire</span>
+        <span style="font:500 13px 'Alegreya Sans',sans-serif;color:#3A2E22;background:#F4EEE2;border:1px solid #E4DBC9;border-radius:3px;padding:7px 13px">Texte généré rendu <code style="font:12.5px ui-monospace,monospace">whitespace: pre-wrap</code>, inchangé</span>
+      </div>
+    </div>
+
+    <div style="display:flex;gap:44px;align-items:flex-start;flex-wrap:wrap">
+
+      <!-- ═══════════ 2a · conversation vierge + billet de transparence ═══════════ -->
+      <div id="2a" data-screen-label="2a — Discussion, conversation vierge" style="width:1120px;flex:0 0 auto">
+        <div style="display:flex;align-items:center;gap:10px;margin:0 0 13px 2px">
+          <span style="font:600 12px 'Alegreya Sans',sans-serif;letter-spacing:.05em;background:#E6DDC9;color:#4A3A28;padding:4px 11px;border-radius:20px">2a</span>
+          <span style="font:italic 15px 'Cormorant Garamond',serif;color:#5A4632">Conversation vierge — billet de transparence (première utilisation) + amorces en invitations</span>
+        </div>
+
+        <div style="background:#fff;border:1px solid #E4DBC9;border-radius:12px;overflow:hidden;box-shadow:0 12px 40px rgba(60,45,25,.16)">
+
+          <div style="background:#FBF8F1;border-bottom:1px solid #E4DBC9;position:relative">
+            <div style="max-width:1040px;margin:0 auto;padding:11px 28px;display:flex;justify-content:center;gap:6px">
+              <span style="font:400 14px 'Alegreya Sans',sans-serif;color:#6E5A3E;padding:7px 14px;border-radius:8px">Tableau de bord</span>
+              <span style="font:400 14px 'Alegreya Sans',sans-serif;color:#6E5A3E;padding:7px 14px;border-radius:8px">Calendrier</span>
+              <span style="font:400 14px 'Alegreya Sans',sans-serif;color:#6E5A3E;padding:7px 14px;border-radius:8px">Intégrité</span>
+              <span style="font:500 14px 'Alegreya Sans',sans-serif;background:#ECE4D6;color:#221C16;padding:7px 14px;border-radius:8px">Modules&nbsp;▾</span>
+            </div>
+            <div style="position:absolute;right:24px;top:0;bottom:0;display:flex;align-items:center;gap:12px">
+              <span style="font:400 13px 'Alegreya Sans',sans-serif;color:#5A4632;background:#F6F1E7;border:1px solid #E4DBC9;border-radius:7px;padding:4px 10px">2de B&nbsp;▾</span>
+              <span style="width:1px;height:20px;background:#E4DBC9"></span>
+              <span style="font:400 13px 'Alegreya Sans',sans-serif;color:#6E5A3E">Se déconnecter</span>
+            </div>
+          </div>
+
+          <div style="background:linear-gradient(90deg,#FBF8F1 26%,#EFE8D6 62%,#D9CCAE 100%);border-bottom:1px solid #E4DBC9;position:relative">
+            <span style="position:absolute;left:0;right:0;bottom:0;height:2px;background:linear-gradient(90deg,rgba(184,137,59,0),rgba(184,137,59,.55),#B8893B);pointer-events:none"></span>
+            <div style="max-width:1040px;margin:0 auto;padding:14px 28px 16px;display:flex;align-items:center;gap:22px">
+              <div style="display:flex;flex-direction:column;align-items:center;gap:7px;flex-shrink:0">
+                <span style="width:60px;height:60px;border-radius:50%;background:#EDE6D6;border:1px solid #E4DBC9;display:inline-flex;align-items:center;justify-content:center;overflow:hidden"><img src="sceaux/palimpseste_medaillon.png" alt="" style="width:60px;height:60px;object-fit:cover;filter:brightness(1.05) contrast(1.05);mix-blend-mode:multiply"></span>
+                <span style="font:600 20px 'Cinzel',serif;letter-spacing:.05em;color:#221C16">Palimpseste</span>
+              </div>
+              <span style="width:1px;align-self:stretch;background:linear-gradient(transparent,rgba(60,50,40,.16),transparent)"></span>
+              <div style="flex:1;min-width:0;display:flex;flex-direction:column;align-items:center;gap:10px">
+                <div style="font-family:'Cormorant Garamond',serif;font-size:18px;color:#6E5A3E;text-align:center"><span style="font-variant:small-caps;letter-spacing:.05em">Ars Docendi</span><span style="font-style:italic"> — D’une main à l’autre</span></div>
+                <div style="display:flex;justify-content:center;gap:6px">
+                  <span style="font:400 14px 'Alegreya Sans',sans-serif;color:#6A5C48;padding:7px 15px;border-radius:8px">Plan de cours</span>
+                  <span style="font:500 14px 'Alegreya Sans',sans-serif;background:#E6DDC9;color:#4A3A28;padding:7px 15px;border-radius:8px">Discussion</span>
+                </div>
+              </div>
+              <span style="width:1px;align-self:stretch;background:linear-gradient(transparent,rgba(60,50,40,.16),transparent)"></span>
+              <div style="display:flex;flex-direction:column;align-items:center;gap:7px;flex-shrink:0">
+                <span style="position:relative;display:inline-flex">
+                  <span style="width:60px;height:60px;border-radius:50%;background:#E6DDC9;display:inline-flex;align-items:center;justify-content:center;overflow:hidden;border:1px solid #D3C6AA"><img src="sceaux/pastille-scriptorium.png" alt="Scriptorium" style="width:60px;height:60px;object-fit:cover;filter:brightness(1.06) contrast(1.04);mix-blend-mode:multiply"></span>
+                  <span style="position:absolute;inset:0;border-radius:50%;border:3px solid #B8893B;box-shadow:0 3px 12px rgba(74,58,40,.30);pointer-events:none"></span>
+                </span>
+                <span style="font:600 20px 'Cinzel',serif;letter-spacing:.05em;color:#4A3A28">Scriptorium</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- ── CONTENU · DISCUSSION ── -->
+          <div style="background:#F0EADE">
+            <div style="max-width:1040px;margin:0 auto;display:flex;min-height:700px">
+
+              <!-- rail effacé -->
+              <aside style="width:228px;flex:none;padding:22px 15px;display:flex;flex-direction:column;gap:14px">
+                <span style="display:block;text-align:center;font:500 13px 'Alegreya Sans',sans-serif;color:#6B5A46;border:1px solid rgba(107,90,70,.42);padding:9px;border-radius:7px">＋ Nouvelle conversation</span>
+                <div style="font:700 10px 'Alegreya Sans',sans-serif;letter-spacing:.14em;text-transform:uppercase;color:#8A7350;padding:2px 2px 0">Récentes</div>
+                <p style="font:italic 14px/1.5 'EB Garamond',serif;color:#6E5A3E;margin:0;padding:0 2px">Rien encore. Ta première lettre ouvrira la liste.</p>
+              </aside>
+
+              <!-- feuillet -->
+              <div style="flex:1;min-width:0;padding:26px 30px 30px">
+                <div style="max-width:720px;margin:0 auto">
+
+                  <!-- billet de transparence — feuillet #E6DDC9, contenu strictement inchangé -->
+                  <div style="background:#E6DDC9;border:1px solid #D3C6AA;border-radius:3px;padding:22px 28px 24px;margin-bottom:22px">
+                    <div style="font:600 15px 'Alegreya Sans',sans-serif;letter-spacing:.02em;color:#221C16;margin:0 0 12px">Avant de commencer</div>
+                    <p style="font:17px/1.62 'EB Garamond',serif;color:#2A2017;margin:0 0 10px;text-wrap:pretty">Ton professeur ne lit pas tes conversations. Une synthèse anonyme hebdomadaire l’aide à ajuster le cours ; les tentatives de triche lui sont signalées.</p>
+                    <p style="font:17px/1.62 'EB Garamond',serif;color:#2A2017;margin:0;text-wrap:pretty">Supprimer une conversation la retire de ta liste, pas du traitement hebdomadaire.</p>
+                  </div>
+
+                  <!-- feuillet vierge : l'adresse -->
+                  <div style="background:radial-gradient(130% 100% at 50% 0%,#FCFAF4,#FAF6ED);border:1px solid #E9DFCB;border-radius:3px;box-shadow:0 8px 28px rgba(74,58,40,.06);padding:34px 46px 38px">
+                    <div style="display:flex;align-items:center;gap:12px;padding-bottom:20px;border-bottom:1px solid #EDE3CF">
+                      <span style="width:38px;height:38px;border-radius:50%;background:#E6DDC9;border:1px solid #D3C6AA;display:inline-flex;overflow:hidden;flex:none"><img src="sceaux/pastille-scriptorium.png" alt="" style="width:38px;height:38px;object-fit:cover;filter:brightness(1.06) contrast(1.04);mix-blend-mode:multiply"></span>
+                      <div>
+                        <div style="font:600 15px 'EB Garamond',serif;color:#221C16">Ton Tuteur</div>
+                        <div style="font:13.5px 'EB Garamond',serif;color:#6E5A3E">Il s’appuie sur ce que ton professeur a préparé.</div>
+                      </div>
+                    </div>
+                    <p style="font:18px/1.66 'EB Garamond',serif;color:#3A2E22;margin:30px 0 0;text-align:center;text-wrap:pretty">Pose une question sur ton cours — ou pars d’une amorce :</p>
+                    <div style="display:flex;align-items:center;justify-content:center;gap:12px;margin:26px 0 4px">
+                      <span style="width:54px;height:1px;background:linear-gradient(90deg,transparent,rgba(74,58,40,.32))"></span>
+                      <span style="width:6px;height:6px;transform:rotate(45deg);background:#4A3A28;opacity:.72"></span>
+                      <span style="width:54px;height:1px;background:linear-gradient(90deg,rgba(74,58,40,.32),transparent)"></span>
+                    </div>
+                  </div>
+
+                  <!-- écritoire -->
+                  <div style="margin-top:22px;background:#FBF8F1;border:1px solid #D8CCB4;border-top:2px solid rgba(74,58,40,.20);border-radius:4px;box-shadow:0 6px 20px rgba(74,58,40,.05);padding:16px 20px 14px">
+                    <div style="font:italic 17px/1.5 'EB Garamond',serif;color:#7E6746;padding-bottom:24px;border-bottom:1px solid #EDE3CF">Ta question sur le cours… (Entrée pour envoyer)</div>
+                    <div style="display:flex;align-items:center;justify-content:flex-end;margin-top:13px">
+                      <span style="font:600 14px 'Alegreya Sans',sans-serif;background:#6B5A46;color:#F1EADD;padding:9px 24px;border-radius:6px;opacity:.5">Envoyer</span>
+                    </div>
+                  </div>
+
+                  <!-- amorces : invitations discrètes sous l'écritoire -->
+                  <div style="margin-top:20px">
+                    <div style="font:600 11px 'Alegreya Sans',sans-serif;letter-spacing:.14em;text-transform:uppercase;color:#6E5A3E;margin:0 0 11px">Pour commencer</div>
+                    <div style="display:flex;flex-direction:column;gap:9px">
+                      <div style="background:#FBF8F1;border:1px solid #E4DBC9;border-radius:3px;padding:13px 17px;font:17px/1.5 'EB Garamond',serif;color:#3A2E22">Explique-moi « Le personnage de roman » qu’on découvre cette semaine.</div>
+                      <div style="background:#FBF8F1;border:1px solid #E4DBC9;border-radius:3px;padding:13px 17px;font:17px/1.5 'EB Garamond',serif;color:#3A2E22">Qu’est-ce qui est le plus important à retenir cette semaine ?</div>
+                      <div style="background:#FBF8F1;border:1px solid #E4DBC9;border-radius:3px;padding:13px 17px;font:17px/1.5 'EB Garamond',serif;color:#3A2E22">Aide-moi à faire le lien entre ce qu’on voit cette semaine et ce qu’on a déjà vu.</div>
+                    </div>
+                  </div>
+
+                </div>
+              </div>
+
+            </div>
+          </div>
+
+        </div>
+
+        <div style="margin-top:12px;background:#F4EEE2;border:1px solid #E4DBC9;border-left:3px solid #4A3A28;border-radius:3px;padding:12px 17px">
+          <p style="font:15.5px/1.55 'EB Garamond',serif;color:#3A2E22;margin:0">Le <strong style="font-weight:600">billet de transparence</strong> devient un feuillet à part entière (teinte <code style="font:13px ui-monospace,monospace;background:#EDE4D2;padding:1px 5px;border-radius:3px">#E6DDC9</code>), ton digne, <strong style="font-weight:600">contenu strictement inchangé</strong> (mêmes trois phrases que <code style="font:13px ui-monospace,monospace;background:#EDE4D2;padding:1px 5px;border-radius:3px">premierUsage</code>). Les <strong style="font-weight:600">amorces</strong> ne sont plus des chips : petites cartes au filet, sous l’écritoire, texte tel que généré côté serveur. « Envoyer » est estompé tant que la saisie est vide (état <code style="font:13px ui-monospace,monospace;background:#EDE4D2;padding:1px 5px;border-radius:3px">disabled</code> existant).</p>
+        </div>
+      </div>
+
+      <!-- ═══════════ 2b · échange en cours (streaming + stop) ═══════════ -->
+      <div id="2b" data-screen-label="2b — Discussion, streaming et stop" style="width:1120px;flex:0 0 auto">
+        <div style="display:flex;align-items:center;gap:10px;margin:0 0 13px 2px">
+          <span style="font:600 12px 'Alegreya Sans',sans-serif;letter-spacing:.05em;background:#E6DDC9;color:#4A3A28;padding:4px 11px;border-radius:20px">2b</span>
+          <span style="font:italic 15px 'Cormorant Garamond',serif;color:#5A4632">Échange en cours — la réponse s’écrit, bouton <strong style="font-style:normal;font-weight:600">Stop</strong> · en-tête identique à <a href="#2a">2a</a></span>
+        </div>
+
+        <div style="background:#F0EADE;border:1px solid #E4DBC9;border-top:2px solid #B8893B;border-radius:0 0 6px 6px;box-shadow:0 12px 40px rgba(60,45,25,.16)">
+          <div style="max-width:1040px;margin:0 auto;display:flex;min-height:700px">
+
+            <aside style="width:228px;flex:none;padding:22px 15px;display:flex;flex-direction:column;gap:14px">
+              <span style="display:block;text-align:center;font:500 13px 'Alegreya Sans',sans-serif;color:#6B5A46;border:1px solid rgba(107,90,70,.42);padding:9px;border-radius:7px">＋ Nouvelle conversation</span>
+              <div style="font:700 10px 'Alegreya Sans',sans-serif;letter-spacing:.14em;text-transform:uppercase;color:#8A7350;padding:2px 2px 0">Récentes</div>
+              <div style="display:flex;flex-direction:column;gap:2px">
+                <div style="border-left:2px solid #4A3A28;background:rgba(74,58,40,.05);padding:8px 12px">
+                  <div style="font:500 15px 'EB Garamond',serif;color:#221C16;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Le point de vue chez Maupassant</div>
+                  <div style="font:11.5px 'Alegreya Sans',sans-serif;color:#6E5A3E;margin-top:2px">aujourd’hui</div>
+                </div>
+                <div style="padding:8px 12px"><div style="font:400 15px 'EB Garamond',serif;color:#5A4632;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Aide pour mon portrait</div><div style="font:11.5px 'Alegreya Sans',sans-serif;color:#6E5A3E;margin-top:2px">hier</div></div>
+                <div style="padding:8px 12px"><div style="font:400 15px 'EB Garamond',serif;color:#5A4632;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Différence nouvelle / roman</div><div style="font:11.5px 'Alegreya Sans',sans-serif;color:#6E5A3E;margin-top:2px">lundi</div></div>
+              </div>
+            </aside>
+
+            <div style="flex:1;min-width:0;padding:26px 30px 30px">
+              <div style="max-width:720px;margin:0 auto">
+
+                <div style="background:radial-gradient(130% 100% at 50% 0%,#FCFAF4,#FAF6ED);border:1px solid #E9DFCB;border-radius:3px;box-shadow:0 8px 28px rgba(74,58,40,.06);padding:34px 46px 40px">
+
+                  <div style="display:flex;align-items:center;gap:12px;padding-bottom:20px;border-bottom:1px solid #EDE3CF">
+                    <span style="width:38px;height:38px;border-radius:50%;background:#E6DDC9;border:1px solid #D3C6AA;display:inline-flex;overflow:hidden;flex:none"><img src="sceaux/pastille-scriptorium.png" alt="" style="width:38px;height:38px;object-fit:cover;filter:brightness(1.06) contrast(1.04);mix-blend-mode:multiply"></span>
+                    <div>
+                      <div style="font:600 15px 'EB Garamond',serif;color:#221C16">Ton Tuteur</div>
+                      <div style="font:13.5px 'EB Garamond',serif;color:#6E5A3E">Il s’appuie sur ce que ton professeur a préparé.</div>
+                    </div>
+                  </div>
+
+                  <div style="display:flex;align-items:center;justify-content:center;gap:16px;margin:24px 0 26px">
+                    <span style="flex:1;height:1px;background:linear-gradient(90deg,transparent,rgba(74,58,40,.22))"></span>
+                    <span style="font:italic 19px 'Cormorant Garamond',serif;color:#5A4632;white-space:nowrap">Ce vendredi 24 juillet</span>
+                    <span style="flex:1;height:1px;background:linear-gradient(90deg,rgba(74,58,40,.22),transparent)"></span>
+                  </div>
+
+                  <p style="font:18px/1.66 'EB Garamond',serif;color:#221C16;margin:0 0 26px;text-wrap:pretty">Bonjour ! Reprenons le point de vue chez Maupassant. Dans « La Parure », le narrateur est-il un personnage de l’histoire, ou reste-t-il extérieur à elle ? Repense à la toute première phrase.</p>
+
+                  <div style="margin:0 0 26px 12%;padding-left:20px;border-left:2px solid rgba(74,58,40,.34)">
+                    <div style="font:600 11px 'Alegreya Sans',sans-serif;letter-spacing:.14em;text-transform:uppercase;color:#6E5A3E;margin:0 0 6px">Toi</div>
+                    <p style="font:18px/1.66 'EB Garamond',serif;color:#5A4632;margin:0">Il est extérieur je crois — il raconte à la troisième personne.</p>
+                  </div>
+
+                  <p style="font:18px/1.66 'EB Garamond',serif;color:#221C16;margin:0;text-wrap:pretty">Exactement : un narrateur <em>externe</em>, à la troisième personne. Et pourtant il connaît les pensées de Mathilde — « elle songeait aux grands salons »… Comment appelle-t-on un narrateur qui a ainsi accès à l’intérieur des personnages ?</p>
+
+                  <!-- fleuron : un seul par écran, en fin de réponse achevée -->
+                  <div style="display:flex;align-items:center;justify-content:center;gap:12px;margin:22px 0 26px">
+                    <span style="width:54px;height:1px;background:linear-gradient(90deg,transparent,rgba(74,58,40,.32))"></span>
+                    <span style="width:6px;height:6px;transform:rotate(45deg);background:#4A3A28;opacity:.72"></span>
+                    <span style="width:54px;height:1px;background:linear-gradient(90deg,rgba(74,58,40,.32),transparent)"></span>
+                  </div>
+
+                  <div style="margin:0 0 26px 12%;padding-left:20px;border-left:2px solid rgba(74,58,40,.34)">
+                    <div style="font:600 11px 'Alegreya Sans',sans-serif;letter-spacing:.14em;text-transform:uppercase;color:#6E5A3E;margin:0 0 6px">Toi</div>
+                    <p style="font:18px/1.66 'EB Garamond',serif;color:#5A4632;margin:0">Un narrateur omniscient ?</p>
+                  </div>
+
+                  <!-- réponse en cours d'écriture -->
+                  <p style="font:18px/1.66 'EB Garamond',serif;color:#221C16;margin:0;text-wrap:pretty">Presque. On parlerait plutôt d’un point de vue omniscient. Regarde comment Maupassant s’en sert pour nous faire ressentir la honte de Mathilde sans jamais la<span style="display:inline-block;width:2px;height:19px;background:#4A3A28;margin-left:3px;vertical-align:-3px;opacity:.8"></span></p>
+
+                </div>
+
+                <div style="margin-top:22px;background:#FBF8F1;border:1px solid #D8CCB4;border-top:2px solid rgba(74,58,40,.20);border-radius:4px;box-shadow:0 6px 20px rgba(74,58,40,.05);padding:16px 20px 14px">
+                  <div style="font:italic 17px/1.5 'EB Garamond',serif;color:#7E6746;padding-bottom:24px;border-bottom:1px solid #EDE3CF">Ta question sur le cours… (Entrée pour envoyer)</div>
+                  <div style="display:flex;align-items:center;justify-content:space-between;margin-top:13px">
+                    <span style="font:italic 14px 'Cormorant Garamond',serif;color:#5A4632">le tuteur écrit…</span>
+                    <span style="font:500 14px 'Alegreya Sans',sans-serif;color:#5A4632;border:1px solid #D8CCB4;background:#F6F1E7;padding:9px 22px;border-radius:6px">Stop</span>
+                  </div>
+                </div>
+
+              </div>
+            </div>
+
+          </div>
+        </div>
+
+        <div style="margin-top:12px;background:#F4EEE2;border:1px solid #E4DBC9;border-left:3px solid #4A3A28;border-radius:3px;padding:12px 17px">
+          <p style="font:15.5px/1.55 'EB Garamond',serif;color:#3A2E22;margin:0">Pendant le streaming, « Envoyer » est <strong style="font-weight:600">remplacé</strong> par « Stop » — comportement déjà en place. <strong style="font-weight:600">Aucune animation ajoutée</strong> : le texte qui s’écrit est déjà épistolaire ; le seul mouvement est le curseur au pigment en fin de ligne. Le séparateur de jour remplace les horodatages techniques ; il apparaît <strong style="font-weight:600">une fois par journée</strong> de correspondance.</p>
+        </div>
+      </div>
+
+      <!-- ═══════════ 2c · réponse longue ═══════════ -->
+      <div id="2c" data-screen-label="2c — Discussion, réponse longue" style="width:1120px;flex:0 0 auto">
+        <div style="display:flex;align-items:center;gap:10px;margin:0 0 13px 2px">
+          <span style="font:600 12px 'Alegreya Sans',sans-serif;letter-spacing:.05em;background:#E6DDC9;color:#4A3A28;padding:4px 11px;border-radius:20px">2c</span>
+          <span style="font:italic 15px 'Cormorant Garamond',serif;color:#5A4632">Réponse longue — le rythme vertical tient sur la durée, la colonne ne s’élargit jamais</span>
+        </div>
+
+        <div style="background:#F0EADE;border:1px solid #E4DBC9;border-top:2px solid #B8893B;border-radius:0 0 6px 6px;box-shadow:0 12px 40px rgba(60,45,25,.16)">
+          <div style="max-width:1040px;margin:0 auto;display:flex;min-height:700px">
+
+            <aside style="width:228px;flex:none;padding:22px 15px;display:flex;flex-direction:column;gap:14px">
+              <span style="display:block;text-align:center;font:500 13px 'Alegreya Sans',sans-serif;color:#6B5A46;border:1px solid rgba(107,90,70,.42);padding:9px;border-radius:7px">＋ Nouvelle conversation</span>
+              <div style="font:700 10px 'Alegreya Sans',sans-serif;letter-spacing:.14em;text-transform:uppercase;color:#8A7350;padding:2px 2px 0">Récentes</div>
+              <div style="display:flex;flex-direction:column;gap:2px">
+                <div style="border-left:2px solid #4A3A28;background:rgba(74,58,40,.05);padding:8px 12px">
+                  <div style="font:500 15px 'EB Garamond',serif;color:#221C16;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Le personnage de roman</div>
+                  <div style="font:11.5px 'Alegreya Sans',sans-serif;color:#6E5A3E;margin-top:2px">aujourd’hui</div>
+                </div>
+                <div style="padding:8px 12px"><div style="font:400 15px 'EB Garamond',serif;color:#5A4632;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Le point de vue chez Maupassant</div><div style="font:11.5px 'Alegreya Sans',sans-serif;color:#6E5A3E;margin-top:2px">hier</div></div>
+              </div>
+            </aside>
+
+            <div style="flex:1;min-width:0;padding:26px 30px 30px">
+              <div style="max-width:720px;margin:0 auto">
+
+                <div style="background:radial-gradient(130% 100% at 50% 0%,#FCFAF4,#FAF6ED);border:1px solid #E9DFCB;border-radius:3px;box-shadow:0 8px 28px rgba(74,58,40,.06);padding:34px 46px 40px">
+
+                  <div style="display:flex;align-items:center;justify-content:center;gap:16px;margin:0 0 26px">
+                    <span style="flex:1;height:1px;background:linear-gradient(90deg,transparent,rgba(74,58,40,.22))"></span>
+                    <span style="font:italic 19px 'Cormorant Garamond',serif;color:#5A4632;white-space:nowrap">Ce vendredi 24 juillet</span>
+                    <span style="flex:1;height:1px;background:linear-gradient(90deg,rgba(74,58,40,.22),transparent)"></span>
+                  </div>
+
+                  <div style="margin:0 0 28px 12%;padding-left:20px;border-left:2px solid rgba(74,58,40,.34)">
+                    <div style="font:600 11px 'Alegreya Sans',sans-serif;letter-spacing:.14em;text-transform:uppercase;color:#6E5A3E;margin:0 0 6px">Toi</div>
+                    <p style="font:18px/1.66 'EB Garamond',serif;color:#5A4632;margin:0">Explique-moi « Le personnage de roman » qu’on découvre cette semaine.</p>
+                  </div>
+
+                  <p style="font:18px/1.66 'EB Garamond',serif;color:#221C16;margin:0 0 20px;text-wrap:pretty">Volontiers. Commençons par une évidence trompeuse : un personnage de roman n’est pas une personne. C’est un <em>être de papier</em> — une construction faite de mots, dont l’auteur choisit ce qu’il montre et ce qu’il cache.</p>
+                  <p style="font:18px/1.66 'EB Garamond',serif;color:#221C16;margin:0 0 20px;text-wrap:pretty">Trois choses le construisent, et tu peux les chercher dans n’importe quel texte. D’abord son portrait : ce que le narrateur dit de son corps, de ses vêtements, de son visage. Ensuite ses actes : ce qu’il fait, et surtout ce qu’il choisit de ne pas faire. Enfin sa parole : la façon dont il parle le trahit souvent plus que ce qu’il dit.</p>
+                  <p style="font:18px/1.66 'EB Garamond',serif;color:#221C16;margin:0 0 20px;text-wrap:pretty">Prends l’entrée en scène de Vautrin, dans « Le Père Goriot » — c’est justement le texte de cette semaine. Balzac ne nous dit pas « cet homme est inquiétant ». Il décrit des épaules larges, une perruque, une familiarité un peu trop facile avec tout le monde. C’est nous qui concluons. Retiens ce mouvement : le romancier montre, le lecteur juge.</p>
+                  <p style="font:18px/1.66 'EB Garamond',serif;color:#221C16;margin:0;text-wrap:pretty">Une question pour vérifier que c’est solide : dans ce que tu as lu, qu’est-ce que Balzac te laisse deviner de Vautrin <em>sans jamais l’écrire</em> ?</p>
+
+                  <div style="display:flex;align-items:center;justify-content:center;gap:12px;margin:26px 0 0">
+                    <span style="width:54px;height:1px;background:linear-gradient(90deg,transparent,rgba(74,58,40,.32))"></span>
+                    <span style="width:6px;height:6px;transform:rotate(45deg);background:#4A3A28;opacity:.72"></span>
+                    <span style="width:54px;height:1px;background:linear-gradient(90deg,rgba(74,58,40,.32),transparent)"></span>
+                  </div>
+
+                </div>
+
+                <div style="margin-top:22px;background:#FBF8F1;border:1px solid #D8CCB4;border-top:2px solid rgba(74,58,40,.20);border-radius:4px;box-shadow:0 6px 20px rgba(74,58,40,.05);padding:16px 20px 14px">
+                  <div style="font:italic 17px/1.5 'EB Garamond',serif;color:#7E6746;padding-bottom:24px;border-bottom:1px solid #EDE3CF">Ta question sur le cours… (Entrée pour envoyer)</div>
+                  <div style="display:flex;align-items:center;justify-content:flex-end;margin-top:13px">
+                    <span style="font:600 14px 'Alegreya Sans',sans-serif;background:#6B5A46;color:#F1EADD;padding:9px 24px;border-radius:6px;opacity:.5">Envoyer</span>
+                  </div>
+                </div>
+
+              </div>
+            </div>
+
+          </div>
+        </div>
+
+        <div style="margin-top:12px;background:#F4EEE2;border:1px solid #E4DBC9;border-left:3px solid #4A3A28;border-radius:3px;padding:12px 17px">
+          <p style="font:15.5px/1.55 'EB Garamond',serif;color:#3A2E22;margin:0"><strong style="font-weight:600">Rien n’est ajouté au texte généré.</strong> Le rendu reste <code style="font:13px ui-monospace,monospace;background:#EDE4D2;padding:1px 5px;border-radius:3px">whitespace: pre-wrap</code> : les paragraphes qu’on voit ici sont les sauts de ligne du modèle, avec un espacement de bloc généreux (≈ 20 px) — pas du Markdown interprété. Le <strong style="font-weight:600">fleuron de fin</strong> se pose après la dernière réponse achevée : un par écran, jamais un par message.</p>
+        </div>
+      </div>
+
+      <!-- ═══════════ 2d · quota atteint ═══════════ -->
+      <div id="2d" data-screen-label="2d — Discussion, quota atteint" style="width:1120px;flex:0 0 auto">
+        <div style="display:flex;align-items:center;gap:10px;margin:0 0 13px 2px">
+          <span style="font:600 12px 'Alegreya Sans',sans-serif;letter-spacing:.05em;background:#E6DDC9;color:#4A3A28;padding:4px 11px;border-radius:20px">2d</span>
+          <span style="font:italic 15px 'Cormorant Garamond',serif;color:#5A4632">Quota atteint — l’écritoire se referme doucement, message inchangé</span>
+        </div>
+
+        <div style="background:#F0EADE;border:1px solid #E4DBC9;border-top:2px solid #B8893B;border-radius:0 0 6px 6px;box-shadow:0 12px 40px rgba(60,45,25,.16)">
+          <div style="max-width:1040px;margin:0 auto;display:flex;min-height:620px">
+
+            <aside style="width:228px;flex:none;padding:22px 15px;display:flex;flex-direction:column;gap:14px">
+              <span style="display:block;text-align:center;font:500 13px 'Alegreya Sans',sans-serif;color:#6B5A46;border:1px solid rgba(107,90,70,.42);padding:9px;border-radius:7px">＋ Nouvelle conversation</span>
+              <div style="font:700 10px 'Alegreya Sans',sans-serif;letter-spacing:.14em;text-transform:uppercase;color:#8A7350;padding:2px 2px 0">Récentes</div>
+              <div style="display:flex;flex-direction:column;gap:2px">
+                <div style="border-left:2px solid #4A3A28;background:rgba(74,58,40,.05);padding:8px 12px">
+                  <div style="font:500 15px 'EB Garamond',serif;color:#221C16;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Le personnage de roman</div>
+                  <div style="font:11.5px 'Alegreya Sans',sans-serif;color:#6E5A3E;margin-top:2px">aujourd’hui</div>
+                </div>
+                <div style="padding:8px 12px"><div style="font:400 15px 'EB Garamond',serif;color:#5A4632;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Le point de vue chez Maupassant</div><div style="font:11.5px 'Alegreya Sans',sans-serif;color:#6E5A3E;margin-top:2px">hier</div></div>
+              </div>
+            </aside>
+
+            <div style="flex:1;min-width:0;padding:26px 30px 30px">
+              <div style="max-width:720px;margin:0 auto">
+
+                <div style="background:radial-gradient(130% 100% at 50% 0%,#FCFAF4,#FAF6ED);border:1px solid #E9DFCB;border-radius:3px;box-shadow:0 8px 28px rgba(74,58,40,.06);padding:34px 46px 40px">
+
+                  <div style="display:flex;align-items:center;justify-content:center;gap:16px;margin:0 0 26px">
+                    <span style="flex:1;height:1px;background:linear-gradient(90deg,transparent,rgba(74,58,40,.22))"></span>
+                    <span style="font:italic 19px 'Cormorant Garamond',serif;color:#5A4632;white-space:nowrap">Ce vendredi 24 juillet</span>
+                    <span style="flex:1;height:1px;background:linear-gradient(90deg,rgba(74,58,40,.22),transparent)"></span>
+                  </div>
+
+                  <div style="margin:0 0 26px 12%;padding-left:20px;border-left:2px solid rgba(74,58,40,.34)">
+                    <div style="font:600 11px 'Alegreya Sans',sans-serif;letter-spacing:.14em;text-transform:uppercase;color:#6E5A3E;margin:0 0 6px">Toi</div>
+                    <p style="font:18px/1.66 'EB Garamond',serif;color:#5A4632;margin:0">Donc le portrait sert à préparer ce qu’il va faire après ?</p>
+                  </div>
+
+                  <p style="font:18px/1.66 'EB Garamond',serif;color:#221C16;margin:0;text-wrap:pretty">C’est exactement ça, et bien vu : chez Balzac le portrait est presque toujours une promesse. Garde cette idée pour lundi, elle te servira sur la description réaliste.</p>
+
+                  <div style="display:flex;align-items:center;justify-content:center;gap:12px;margin:26px 0 0">
+                    <span style="width:54px;height:1px;background:linear-gradient(90deg,transparent,rgba(74,58,40,.32))"></span>
+                    <span style="width:6px;height:6px;transform:rotate(45deg);background:#4A3A28;opacity:.72"></span>
+                    <span style="width:54px;height:1px;background:linear-gradient(90deg,rgba(74,58,40,.32),transparent)"></span>
+                  </div>
+
+                </div>
+
+                <!-- écritoire refermé : message doux, pas de champ -->
+                <div style="margin-top:22px;background:#F6F1E7;border:1px solid #D8CCB4;border-top:2px solid rgba(74,58,40,.14);border-radius:4px;padding:26px 24px">
+                  <p style="font:italic 19px/1.55 'Cormorant Garamond',serif;color:#3A2E22;margin:0;text-align:center">Tu as beaucoup travaillé aujourd’hui — on se retrouve demain.</p>
+                </div>
+
+              </div>
+            </div>
+
+          </div>
+        </div>
+
+        <div style="margin-top:12px;background:#F4EEE2;border:1px solid #E4DBC9;border-left:3px solid #4A3A28;border-radius:3px;padding:12px 17px">
+          <p style="font:15.5px/1.55 'EB Garamond',serif;color:#3A2E22;margin:0">Quand <code style="font:13px ui-monospace,monospace;background:#EDE4D2;padding:1px 5px;border-radius:3px">quotaEpuise</code>, le champ et le bouton disparaissent (comportement actuel) : reste un feuillet calme portant <strong style="font-weight:600">la phrase existante, mot pour mot</strong>, en Cormorant italique — la seule licence rituelle sur du texte d’interface. <strong style="font-weight:600">Aucun compteur, aucune alerte, aucun rouge.</strong> Au-dessus de 0 et sous 10 messages, la mention discrète « 4 messages restants aujourd’hui » reste alignée à droite sous l’écritoire, en Alegreya Sans <code style="font:13px ui-monospace,monospace;background:#EDE4D2;padding:1px 5px;border-radius:3px">#6E5A3E</code>.</p>
+        </div>
+      </div>
+
+      <!-- ═══════════ 2e · rail à plusieurs conversations ═══════════ -->
+      <div id="2e" data-screen-label="2e — Discussion, rail à plusieurs conversations" style="width:1120px;flex:0 0 auto">
+        <div style="display:flex;align-items:center;gap:10px;margin:0 0 13px 2px">
+          <span style="font:600 12px 'Alegreya Sans',sans-serif;letter-spacing:.05em;background:#E6DDC9;color:#4A3A28;padding:4px 11px;border-radius:20px">2e</span>
+          <span style="font:italic 15px 'Cormorant Garamond',serif;color:#5A4632">Rail à plusieurs conversations — <strong style="font-style:normal;font-weight:600">Renommer</strong> / <strong style="font-style:normal;font-weight:600">Supprimer</strong> au survol</span>
+        </div>
+
+        <div style="background:#F0EADE;border:1px solid #E4DBC9;border-top:2px solid #B8893B;border-radius:0 0 6px 6px;box-shadow:0 12px 40px rgba(60,45,25,.16)">
+          <div style="max-width:1040px;margin:0 auto;display:flex;min-height:620px">
+
+            <aside style="width:252px;flex:none;padding:22px 15px;display:flex;flex-direction:column;gap:14px">
+              <span style="display:block;text-align:center;font:500 13px 'Alegreya Sans',sans-serif;color:#6B5A46;border:1px solid rgba(107,90,70,.42);padding:9px;border-radius:7px">＋ Nouvelle conversation</span>
+              <div style="font:700 10px 'Alegreya Sans',sans-serif;letter-spacing:.14em;text-transform:uppercase;color:#8A7350;padding:2px 2px 0">Récentes</div>
+              <div style="display:flex;flex-direction:column;gap:2px">
+
+                <!-- active -->
+                <div style="border-left:2px solid #4A3A28;background:rgba(74,58,40,.05);padding:8px 12px">
+                  <div style="font:500 15px 'EB Garamond',serif;color:#221C16;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Le personnage de roman</div>
+                  <div style="font:11.5px 'Alegreya Sans',sans-serif;color:#6E5A3E;margin-top:2px">aujourd’hui</div>
+                </div>
+
+                <!-- au survol : actions révélées -->
+                <div style="background:#FBF8F1;border:1px solid #E4DBC9;border-radius:3px;padding:8px 12px">
+                  <div style="font:400 15px 'EB Garamond',serif;color:#221C16;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Aide pour mon portrait</div>
+                  <div style="display:flex;align-items:center;gap:11px;margin-top:4px">
+                    <span style="font:11.5px 'Alegreya Sans',sans-serif;color:#6E5A3E;flex:1">hier</span>
+                    <span style="font:500 11.5px 'Alegreya Sans',sans-serif;color:#4A3A28;border-bottom:1px solid rgba(74,58,40,.4)">Renommer</span>
+                    <span style="font:500 11.5px 'Alegreya Sans',sans-serif;color:#8C3322;border-bottom:1px solid rgba(140,51,34,.4)">Supprimer</span>
+                  </div>
+                </div>
+
+                <div style="padding:8px 12px"><div style="font:400 15px 'EB Garamond',serif;color:#5A4632;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Le point de vue chez Maupassant</div><div style="font:11.5px 'Alegreya Sans',sans-serif;color:#6E5A3E;margin-top:2px">mercredi</div></div>
+                <div style="padding:8px 12px"><div style="font:400 15px 'EB Garamond',serif;color:#5A4632;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Différence nouvelle / roman</div><div style="font:11.5px 'Alegreya Sans',sans-serif;color:#6E5A3E;margin-top:2px">lundi</div></div>
+                <div style="padding:8px 12px"><div style="font:400 15px 'EB Garamond',serif;color:#5A4632;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Réviser le schéma narratif</div><div style="font:11.5px 'Alegreya Sans',sans-serif;color:#6E5A3E;margin-top:2px">22 sept.</div></div>
+                <div style="padding:8px 12px"><div style="font:400 15px 'EB Garamond',serif;color:#5A4632;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Zola, l’incipit de Germinal</div><div style="font:11.5px 'Alegreya Sans',sans-serif;color:#6E5A3E;margin-top:2px">19 sept.</div></div>
+              </div>
+            </aside>
+
+            <div style="flex:1;min-width:0;padding:26px 30px 30px">
+              <div style="max-width:720px;margin:0 auto">
+
+                <div style="background:radial-gradient(130% 100% at 50% 0%,#FCFAF4,#FAF6ED);border:1px solid #E9DFCB;border-radius:3px;box-shadow:0 8px 28px rgba(74,58,40,.06);padding:34px 46px 40px">
+
+                  <div style="display:flex;align-items:center;gap:12px;padding-bottom:20px;border-bottom:1px solid #EDE3CF">
+                    <span style="width:38px;height:38px;border-radius:50%;background:#E6DDC9;border:1px solid #D3C6AA;display:inline-flex;overflow:hidden;flex:none"><img src="sceaux/pastille-scriptorium.png" alt="" style="width:38px;height:38px;object-fit:cover;filter:brightness(1.06) contrast(1.04);mix-blend-mode:multiply"></span>
+                    <div>
+                      <div style="font:600 15px 'EB Garamond',serif;color:#221C16">Ton Tuteur</div>
+                      <div style="font:13.5px 'EB Garamond',serif;color:#6E5A3E">Il s’appuie sur ce que ton professeur a préparé.</div>
+                    </div>
+                  </div>
+
+                  <div style="display:flex;align-items:center;justify-content:center;gap:16px;margin:24px 0 26px">
+                    <span style="flex:1;height:1px;background:linear-gradient(90deg,transparent,rgba(74,58,40,.22))"></span>
+                    <span style="font:italic 19px 'Cormorant Garamond',serif;color:#5A4632;white-space:nowrap">Ce vendredi 24 juillet</span>
+                    <span style="flex:1;height:1px;background:linear-gradient(90deg,rgba(74,58,40,.22),transparent)"></span>
+                  </div>
+
+                  <div style="margin:0 0 26px 12%;padding-left:20px;border-left:2px solid rgba(74,58,40,.34)">
+                    <div style="font:600 11px 'Alegreya Sans',sans-serif;letter-spacing:.14em;text-transform:uppercase;color:#6E5A3E;margin:0 0 6px">Toi</div>
+                    <p style="font:18px/1.66 'EB Garamond',serif;color:#5A4632;margin:0">Qu’est-ce qui est le plus important à retenir cette semaine ?</p>
+                  </div>
+
+                  <p style="font:18px/1.66 'EB Garamond',serif;color:#221C16;margin:0;text-wrap:pretty">Une seule idée, si tu n’en gardes qu’une : le personnage se construit par ce que le texte montre, pas par ce qu’il affirme. Le reste — portrait, actes, parole — n’est que la manière de le montrer.</p>
+
+                  <div style="display:flex;align-items:center;justify-content:center;gap:12px;margin:26px 0 0">
+                    <span style="width:54px;height:1px;background:linear-gradient(90deg,transparent,rgba(74,58,40,.32))"></span>
+                    <span style="width:6px;height:6px;transform:rotate(45deg);background:#4A3A28;opacity:.72"></span>
+                    <span style="width:54px;height:1px;background:linear-gradient(90deg,rgba(74,58,40,.32),transparent)"></span>
+                  </div>
+
+                </div>
+
+                <div style="margin-top:22px;background:#FBF8F1;border:1px solid #D8CCB4;border-top:2px solid rgba(74,58,40,.20);border-radius:4px;box-shadow:0 6px 20px rgba(74,58,40,.05);padding:16px 20px 14px">
+                  <div style="font:italic 17px/1.5 'EB Garamond',serif;color:#7E6746;padding-bottom:24px;border-bottom:1px solid #EDE3CF">Ta question sur le cours… (Entrée pour envoyer)</div>
+                  <div style="display:flex;align-items:center;justify-content:space-between;margin-top:13px">
+                    <span style="font:12.5px 'Alegreya Sans',sans-serif;color:#6E5A3E">4 messages restants aujourd’hui</span>
+                    <span style="font:600 14px 'Alegreya Sans',sans-serif;background:#6B5A46;color:#F1EADD;padding:9px 24px;border-radius:6px;opacity:.5">Envoyer</span>
+                  </div>
+                </div>
+
+              </div>
+            </div>
+
+          </div>
+        </div>
+
+        <div style="margin-top:12px;background:#F4EEE2;border:1px solid #E4DBC9;border-left:3px solid #4A3A28;border-radius:3px;padding:12px 17px">
+          <p style="font:15.5px/1.55 'EB Garamond',serif;color:#3A2E22;margin:0">Le rail <strong style="font-weight:600">s’efface</strong> : pas de cartouche, pas de fond propre, titres en EB Garamond, méta en Alegreya Sans. La conversation active se signale par un <strong style="font-weight:600">filet au pigment</strong> à gauche + un voile <code style="font:13px ui-monospace,monospace;background:#EDE4D2;padding:1px 5px;border-radius:3px">rgba(74,58,40,.05)</code> — pas de pastille de couleur. <strong style="font-weight:600">Renommer</strong> / <strong style="font-weight:600">Supprimer</strong> n’apparaissent qu’au survol / focus de la ligne (ici sur « Aide pour mon portrait ») ; « Supprimer » est le seul élément qui a droit au rouge, et il garde sa confirmation existante « Supprimer « … » de ta liste ? ».</p>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- ═══════════ jetons de la Discussion ═══════════ -->
+    <div style="max-width:1180px;margin:44px 0 0 2px;background:#FBF8F1;border:1px solid #E4DBC9;border-radius:4px;padding:24px 28px 26px">
+      <div style="font:700 11px 'Alegreya Sans',sans-serif;letter-spacing:.13em;text-transform:uppercase;color:#4A3A28;margin-bottom:16px">Jetons de l’espace épistolaire — aucun pigment nouveau</div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:22px">
+        <div>
+          <div style="font:600 13px 'Alegreya Sans',sans-serif;color:#4A3A28;margin-bottom:8px">Papier</div>
+          <div style="display:flex;flex-direction:column;gap:6px;font:14.5px/1.5 'EB Garamond',serif;color:#3A2E22">
+            <div><span style="display:inline-block;width:13px;height:13px;background:#F0EADE;border:1px solid #D3C6AA;vertical-align:-2px;margin-right:7px"></span>fond du module <code style="font:12.5px ui-monospace,monospace">#F0EADE</code></div>
+            <div><span style="display:inline-block;width:13px;height:13px;background:#FBF8F1;border:1px solid #D3C6AA;vertical-align:-2px;margin-right:7px"></span>feuillet / écritoire <code style="font:12.5px ui-monospace,monospace">#FBF8F1</code></div>
+            <div><span style="display:inline-block;width:13px;height:13px;background:#E6DDC9;border:1px solid #D3C6AA;vertical-align:-2px;margin-right:7px"></span>billet de transparence <code style="font:12.5px ui-monospace,monospace">#E6DDC9</code></div>
+          </div>
+        </div>
+        <div>
+          <div style="font:600 13px 'Alegreya Sans',sans-serif;color:#4A3A28;margin-bottom:8px">Encre</div>
+          <div style="display:flex;flex-direction:column;gap:6px;font:14.5px/1.5 'EB Garamond',serif;color:#3A2E22">
+            <div><span style="display:inline-block;width:13px;height:13px;background:#221C16;vertical-align:-2px;margin-right:7px"></span>corps <code style="font:12.5px ui-monospace,monospace">#221C16</code></div>
+            <div><span style="display:inline-block;width:13px;height:13px;background:#5A4632;vertical-align:-2px;margin-right:7px"></span>voix de l’élève <code style="font:12.5px ui-monospace,monospace">#5A4632</code></div>
+            <div><span style="display:inline-block;width:13px;height:13px;background:#4A3A28;vertical-align:-2px;margin-right:7px"></span>pigment : filets, fleuron <code style="font:12.5px ui-monospace,monospace">#4A3A28</code></div>
+            <div><span style="display:inline-block;width:13px;height:13px;background:#6E5A3E;vertical-align:-2px;margin-right:7px"></span>méta &amp; labels <code style="font:12.5px ui-monospace,monospace">#6E5A3E</code></div>
+          </div>
+        </div>
+        <div>
+          <div style="font:600 13px 'Alegreya Sans',sans-serif;color:#4A3A28;margin-bottom:8px">Typographie</div>
+          <div style="display:flex;flex-direction:column;gap:6px;font:14.5px/1.5 'EB Garamond',serif;color:#3A2E22">
+            <div>corps : <strong style="font-weight:600">EB Garamond 18 / 1,66</strong></div>
+            <div>rituel : <strong style="font-weight:600">Cormorant Garamond italique</strong> (dateline, quota)</div>
+            <div>outillage : <strong style="font-weight:600">Alegreya Sans</strong> (rail, boutons, méta)</div>
+            <div>colonne : <strong style="font-weight:600">720 px ≈ 68 caractères</strong></div>
+          </div>
+        </div>
+        <div>
+          <div style="font:600 13px 'Alegreya Sans',sans-serif;color:#4A3A28;margin-bottom:8px">Boutons (charte estompée)</div>
+          <div style="display:flex;flex-direction:column;gap:8px">
+            <span style="display:inline-block;font:600 13px 'Alegreya Sans',sans-serif;background:#6B5A46;color:#F1EADD;padding:8px 18px;border-radius:6px;width:fit-content">Envoyer</span>
+            <span style="display:inline-block;font:500 13px 'Alegreya Sans',sans-serif;color:#5A4632;border:1px solid #D8CCB4;background:#F6F1E7;padding:8px 18px;border-radius:6px;width:fit-content">Stop</span>
+            <div style="font:14.5px/1.5 'EB Garamond',serif;color:#3A2E22">noyer estompé <code style="font:12.5px ui-monospace,monospace">#6B5A46</code> / texte <code style="font:12.5px ui-monospace,monospace">#F1EADD</code> — jamais d’aplat franc</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</section>
+</x-dc>
+</body>
+</html>
