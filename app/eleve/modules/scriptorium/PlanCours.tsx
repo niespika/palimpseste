@@ -112,8 +112,8 @@ type Semaine = PlanEleve['parcours'][number]['semaines'][number]
 function Rangee({ s, etat, dernier }: { s: Semaine; etat: 'vu' | 'courante' | 'a_venir'; dernier: boolean }) {
   return (
     <div className="flex items-stretch">
-      {/* gouttière : ordinal + lundi */}
-      <div className="w-[104px] flex-none text-right pr-4 pt-0.5">
+      {/* gouttière : ordinal + lundi (resserrée sous sm — chantier 4) */}
+      <div className="w-[72px] sm:w-[104px] flex-none text-right pr-3 sm:pr-4 pt-0.5">
         <div
           className="font-ui text-[10px] font-bold uppercase tracking-[.09em]"
           style={{ color: etat === 'courante' ? OCRE_AA : undefined }}
@@ -140,7 +140,7 @@ function Rangee({ s, etat, dernier }: { s: Semaine; etat: 'vu' | 'courante' | 'a
         {etat === 'courante' ? (
           <span
             aria-hidden
-            className="relative mt-0.5 w-4 h-4 rounded-full bg-attention border-[3px] border-attention-teinte"
+            className="relative mt-0.5 w-[22px] h-[22px] rounded-full bg-attention border-[3px] border-attention-teinte"
             style={{ boxShadow: '0 0 0 1px var(--attention)' }}
           />
         ) : etat === 'vu' ? (
@@ -154,7 +154,7 @@ function Rangee({ s, etat, dernier }: { s: Semaine; etat: 'vu' | 'courante' | 'a
       <div className="flex-1 min-w-0 pb-3">
         {etat === 'courante' ? (
           <div className="rounded-[10px] border border-attention/40 border-l-[3px] border-l-attention bg-attention-teinte/40 px-4 pt-3.5 pb-3.5 shadow-[0_4px_16px_rgba(154,106,46,0.13)]">
-            <div className="flex items-center gap-2.5 mb-2.5">
+            <div className="flex items-center flex-wrap gap-x-2.5 gap-y-1 mb-2.5">
               <span
                 className="font-ui text-[10px] font-bold uppercase tracking-[.06em] rounded-full px-2.5 py-[3px] text-bouton-plan-texte"
                 style={{ background: OCRE_AA }}
@@ -243,7 +243,7 @@ function Parcours({ p }: { p: PlanEleve['parcours'][number] }) {
         ))}
         {derniereRepliee && (
           <div className="flex items-center">
-            <div className="w-[104px] flex-none" />
+            <div className="w-[72px] sm:w-[104px] flex-none" />
             <div className="w-6 flex-none flex justify-center text-puce text-[15px]" aria-hidden>⌄</div>
             <div className="flex-1 font-corps text-[13px] italic" style={{ color: ENCRE_META }}>
               … jusqu’à la semaine {derniereRepliee.k}{derniereRepliee.lundi ? ` (${derniereRepliee.lundi})` : ''}
