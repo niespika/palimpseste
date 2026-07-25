@@ -5,23 +5,45 @@ import { slugsModulesAccessibles } from '@/utils/acces'
 import { contexteClasseEleve } from '@/app/eleve/contexte-classe'
 import { lireReglagesRag } from '@/utils/scriptorium-rag'
 import { chargerMatiereClasse } from '@/utils/scriptorium-corpus'
-import { jourDansFuseau } from '@/utils/fuseau'
+import { jourDansFuseau, formatJour } from '@/utils/fuseau'
 import { lireFuseau } from '@/utils/fuseau-serveur'
 import { addDaysUTC, toISODate } from '@/utils/calendrier-grille'
-import ChatScriptorium, { type PlanEleve } from './ChatScriptorium'
+import ChatScriptorium from './ChatScriptorium'
+import PlanCours, { type PlanEleve } from './PlanCours'
 
 // Face ÉLÈVE de Scriptorium (RAG L5, SPEC §7.1) : espace de dialogue ancré sur
 // le parcours de SA classe (contexte cookie existant). GATÉ rag_actif : OFF →
-// notFound (aucune surface). L'esthétique fine (plan du cours, suggestions,
-// bandeau de transparence) arrive au L6 — ici le cœur : conversations + fil +
-// composer streaming + quota.
+// notFound (aucune surface).
+//
+// C2.2 — la page charge TOUT comme avant et répartit l'affichage entre les deux
+// sous-onglets du module (bande « seuil » de l'en-tête, cf. configModules) :
+//   ?vue=plan       → <PlanCours>        (le plan du cours, écran à part)
+//   ?vue=discussion → <ChatScriptorium>  (échange + historique) — DÉFAUT
+// `?conv=` continue de coexister ; il ne vaut que sous `discussion`.
 
 export const maxDuration = 30
+
+// Datation de lettre — « Ce vendredi 24 juillet » (rituel épistolaire : remplace
+// l'horodatage technique). Entrée : jour PUR déjà résolu dans le fuseau du prof.
+function datationLettre(jour: string): string {
+  return `Ce ${formatJour(jour, { weekday: 'long', day: 'numeric', month: 'long' })}`
+}
+
+// Méta du rail : « aujourd'hui » · « hier » · le jour de la semaine · « 22 sept. ».
+function libelleRecence(jour: string, aujourdHui: string): string {
+  const ecart = Math.round(
+    (Date.parse(aujourdHui + 'T00:00:00Z') - Date.parse(jour + 'T00:00:00Z')) / 86_400_000,
+  )
+  if (ecart <= 0) return 'aujourd’hui'
+  if (ecart === 1) return 'hier'
+  if (ecart < 7) return formatJour(jour, { weekday: 'long' })
+  return formatJour(jour, { day: 'numeric', month: 'short' })
+}
 
 export default async function ScriptoriumElevePage({
   searchParams,
 }: {
-  searchParams: Promise<{ conv?: string }>
+  searchParams: Promise<{ conv?: string; vue?: string }>
 }) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
@@ -40,7 +62,11 @@ export default async function ScriptoriumElevePage({
   const classe = contexte.active
   if (!classe) notFound()
 
-  const { conv: convSel } = await searchParams
+  const { conv: convSel, vue = 'discussion' } = await searchParams
+
+  // Fuseau du prof : gouverne le jour courant (quota) ET la datation des lettres.
+  const fuseau = await lireFuseau()
+  const aujourdHui = jourDansFuseau(new Date().toISOString(), fuseau)
 
   // Conversations vivantes de l'élève pour SA classe (RLS eleve_own).
   const { data: convs } = await supabase
@@ -53,30 +79,41 @@ export default async function ScriptoriumElevePage({
     id: c.id as string,
     titre: (c.titre as string | null) ?? 'Conversation',
     updatedAt: c.updated_at as string,
+    // Méta du rail (rendu seul — la donnée existait déjà).
+    recence: libelleRecence(jourDansFuseau(c.updated_at as string, fuseau), aujourdHui),
   }))
 
   // Fil de la conversation sélectionnée (l'intégralité est affichée — la
-  // fenêtre glissante ne concerne que ce qui part au modèle).
-  let convActive: { id: string; titre: string; messages: { role: 'eleve' | 'assistant'; contenu: string }[] } | null = null
+  // fenêtre glissante ne concerne que ce qui part au modèle). `created_at` sert
+  // au SÉPARATEUR DE JOUR de la correspondance (une datation par journée) :
+  // rendu seul, il ne franchit la frontière que sous forme de jour + libellé.
+  let convActive: {
+    id: string
+    titre: string
+    messages: { role: 'eleve' | 'assistant'; contenu: string; jour: string; datation: string }[]
+  } | null = null
   if (convSel && conversations.some(c => c.id === convSel)) {
     const { data: msgs } = await supabase
       .from('scriptorium_messages')
-      .select('role, contenu')
+      .select('role, contenu, created_at')
       .eq('conversation_id', convSel)
       .order('created_at', { ascending: true })
     convActive = {
       id: convSel,
       titre: conversations.find(c => c.id === convSel)?.titre ?? 'Conversation',
-      messages: (msgs ?? []).map(m => ({
-        role: m.role === 'eleve' ? ('eleve' as const) : ('assistant' as const),
-        contenu: m.contenu as string,
-      })),
+      messages: (msgs ?? []).map(m => {
+        const jour = jourDansFuseau(m.created_at as string, fuseau)
+        return {
+          role: m.role === 'eleve' ? ('eleve' as const) : ('assistant' as const),
+          contenu: m.contenu as string,
+          jour,
+          datation: datationLettre(jour),
+        }
+      }),
     }
   }
 
   // Quota restant du jour (fuseau prof, toutes conversations confondues).
-  const fuseau = await lireFuseau()
-  const aujourdHui = jourDansFuseau(new Date().toISOString(), fuseau)
   const { data: toutesConvs } = await admin
     .from('scriptorium_conversations').select('id').eq('eleve_id', user.id)
   const convIds = (toutesConvs ?? []).map(c => c.id as string)
@@ -133,17 +170,21 @@ export default async function ScriptoriumElevePage({
 
   return (
     <div className="pb-8" data-module="scriptorium">
-      <ChatScriptorium
-        key={convActive?.id ?? 'nouvelle'}
-        classeId={classe.classe_id}
-        classeNom={classe.classe_nom}
-        conversations={conversations}
-        convActive={convActive}
-        quotaRestant={quotaRestant}
-        plan={plan}
-        suggestions={suggestions}
-        premierUsage={conversations.length === 0}
-      />
+      {vue === 'plan' ? (
+        <PlanCours plan={plan} />
+      ) : (
+        <ChatScriptorium
+          key={convActive?.id ?? 'nouvelle'}
+          classeId={classe.classe_id}
+          conversations={conversations}
+          convActive={convActive}
+          quotaRestant={quotaRestant}
+          suggestions={suggestions}
+          premierUsage={conversations.length === 0}
+          datationAujourdhui={datationLettre(aujourdHui)}
+          jourAujourdhui={aujourdHui}
+        />
+      )}
     </div>
   )
 }
