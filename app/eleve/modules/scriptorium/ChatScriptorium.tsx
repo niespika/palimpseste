@@ -46,7 +46,7 @@ function Datation({ texte }: { texte: string }) {
   return (
     <div className="flex items-center justify-center gap-4 my-[26px]">
       <span aria-hidden className="flex-1 h-px" style={FILET_GAUCHE} />
-      <span className="font-titre italic text-[19px] whitespace-nowrap text-encre-douce">{texte}</span>
+      <span className="font-titre italic text-[18px] whitespace-nowrap text-encre-douce">{texte}</span>
       <span aria-hidden className="flex-1 h-px" style={FILET_DROIT} />
     </div>
   )
@@ -114,11 +114,15 @@ export default function ChatScriptorium({
   const convIdRef = useRef<string | null>(convActive?.id ?? null)
   const filRef = useRef<HTMLDivElement>(null)
 
-  // Le feuillet ne défile plus dans une boîte : il se lit d'un trait, avec la
-  // page. On garde le bas du fil en vue pendant que la réponse s'écrit.
+  // On garde le bas du fil en vue pendant que la réponse s'écrit — dans les DEUX
+  // régimes (cf. `filDefilant` plus bas) : si le feuillet est une boîte
+  // défilante, on défile la boîte ; sinon on défile la page comme avant.
   const versLeBas = () => {
     requestAnimationFrame(() => {
-      filRef.current?.scrollIntoView({ block: 'end' })
+      const fil = filRef.current
+      if (!fil) return
+      if (fil.scrollHeight > fil.clientHeight) fil.scrollTop = fil.scrollHeight
+      else fil.scrollIntoView({ block: 'end' })
     })
   }
 
@@ -207,13 +211,33 @@ export default function ChatScriptorium({
   // Le fleuron se pose après la DERNIÈRE réponse achevée (jamais pendant l'écriture).
   const montreFleuron = !enCours && dernier?.role === 'assistant' && dernier.contenu.length > 0
 
+  // Régime « le fil défile dans le feuillet » (C2.2-bis / K2) : dès qu'une
+  // conversation contient des messages, et SEULEMENT sur lg+, l'onglet tient
+  // dans la fenêtre — la page ne défile pas, le rail et l'écritoire restent
+  // visibles, seul le fil défile. État vide et première utilisation (billet +
+  // amorces) gardent le flux de page ; sous lg aussi (une boîte défilante à
+  // 375 px serait pire).
+  //
+  // 291px = hauteur MESURÉE de la coquille au-dessus/au-dessous de ce panneau
+  // sur l'écran Scriptorium élève : en-tête sticky 194,5px (2 barres + sous-
+  // onglets du module) + `pt-8` du <main> (32px) + respiration basse 64px
+  // (`pb-8` du <main> + `pb-8` du conteneur de page.tsx). Au-delà, la page
+  // reprendrait une barre de défilement.
+  const filDefilant = messages.length > 0
+
   return (
     <div
-      className="flex flex-col lg:flex-row items-stretch rounded-[6px]"
+      className={`flex flex-col lg:flex-row items-stretch rounded-[6px] ${
+        filDefilant ? 'lg:h-[calc(100dvh-291px)]' : ''
+      }`}
       style={{ background: 'var(--fond-module)' }}
     >
       {/* ── Rail des conversations — il s'efface, l'espace central est la lettre ── */}
-      <aside className="w-full lg:w-[228px] flex-none px-4 py-5 lg:px-[15px] flex flex-col gap-3.5">
+      <aside
+        className={`w-full lg:w-[228px] flex-none px-4 py-5 lg:px-[15px] flex flex-col gap-3.5 ${
+          filDefilant ? 'lg:min-h-0' : ''
+        }`}
+      >
         <Link
           href="/eleve/modules/scriptorium"
           className="block w-full text-center font-ui text-[13px] font-medium rounded-[7px] py-2.5 border border-bouton-parcours/40 text-bouton-parcours hover:bg-surface focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pigment"
@@ -234,7 +258,12 @@ export default function ChatScriptorium({
           Récentes {railOuvert ? '⌃' : '⌄'}
         </button>
 
-        <div id="rail-conversations" className={railOuvert ? '' : 'hidden lg:block'}>
+        <div
+          id="rail-conversations"
+          className={`${railOuvert ? '' : 'hidden lg:block'} ${
+            filDefilant ? 'lg:min-h-0 lg:overflow-y-auto' : ''
+          }`}
+        >
           <ul className="flex flex-col gap-0.5">
             {conversations.map(c => {
               const actif = convActive?.id === c.id
@@ -284,17 +313,25 @@ export default function ChatScriptorium({
       </aside>
 
       {/* ── La lettre : colonne unique, jamais élargie ─────────────────────── */}
-      <div className="flex-1 min-w-0 px-4 pb-7 pt-0 lg:pt-[26px] lg:px-[30px]">
-        <div className="max-w-[720px] mx-auto">
+      <div
+        className={`flex-1 min-w-0 px-4 pb-7 pt-0 lg:pt-[26px] lg:px-[30px] ${
+          filDefilant ? 'lg:flex lg:flex-col lg:min-h-0' : ''
+        }`}
+      >
+        <div
+          className={`max-w-[720px] mx-auto ${
+            filDefilant ? 'lg:flex lg:flex-col lg:min-h-0 lg:flex-1 lg:w-full' : ''
+          }`}
+        >
 
           {/* Billet de transparence (première utilisation) — contenu inchangé. */}
           {premierUsage && messages.length === 0 && (
             <div className="bg-pigment-teinte border border-bordure-bouton rounded-[3px] px-5 sm:px-7 pt-[22px] pb-6 mb-[22px]">
               <p className="font-ui font-semibold text-[15px] tracking-[.02em] text-encre mb-3">Avant de commencer</p>
-              <p className="font-corps text-[17px] leading-[1.62] text-encre mb-2.5">
+              <p className="font-corps text-[16px] leading-[1.62] text-encre mb-2.5">
                 Ton professeur ne lit pas tes conversations. Une synthèse anonyme hebdomadaire l’aide à ajuster le cours ; les tentatives de triche lui sont signalées.
               </p>
-              <p className="font-corps text-[17px] leading-[1.62] text-encre">
+              <p className="font-corps text-[16px] leading-[1.62] text-encre">
                 Supprimer une conversation la retire de ta liste, pas du traitement hebdomadaire.
               </p>
             </div>
@@ -303,13 +340,15 @@ export default function ChatScriptorium({
           {/* Le feuillet */}
           <div
             ref={filRef}
-            className="bg-surface border border-bordure rounded-[3px] px-5 sm:px-[46px] pt-[34px] pb-10 shadow-[0_8px_28px_rgba(74,58,40,0.06)]"
+            className={`bg-surface border border-bordure rounded-[3px] px-5 sm:px-[46px] pt-[34px] pb-10 shadow-[0_8px_28px_rgba(74,58,40,0.06)] ${
+              filDefilant ? 'lg:flex-1 lg:min-h-0 lg:overflow-y-auto' : ''
+            }`}
           >
             <EnTeteLettre />
 
             {messages.length === 0 ? (
               <>
-                <p className="font-corps text-[18px] leading-[1.66] text-encre-douce text-center mt-[30px]">
+                <p className="font-corps text-[16.5px] leading-[1.6] text-encre-douce text-center mt-[30px]">
                   Pose une question sur ton cours — ou pars d’une amorce :
                 </p>
                 <Fleuron />
@@ -327,15 +366,15 @@ export default function ChatScriptorium({
                           <p className="font-ui text-[11px] font-semibold uppercase tracking-[.14em] mb-1.5" style={{ color: ENCRE_META }}>
                             Toi
                           </p>
-                          <p className="font-corps text-[18px] leading-[1.66] text-encre-douce whitespace-pre-wrap">
+                          <p className="font-corps text-[16.5px] leading-[1.6] text-encre-douce whitespace-pre-wrap">
                             {m.contenu}
                           </p>
                         </div>
                       ) : (
-                        <p className={`font-corps text-[18px] leading-[1.66] text-encre whitespace-pre-wrap ${dernierMessage ? '' : 'mb-[26px]'}`}>
+                        <p className={`font-corps text-[16.5px] leading-[1.6] text-encre whitespace-pre-wrap ${dernierMessage ? '' : 'mb-[26px]'}`}>
                           {m.contenu}
                           {enCours && dernierMessage && (
-                            <span aria-hidden className="inline-block w-0.5 h-[19px] bg-pigment opacity-80 ml-[3px] align-[-3px]" />
+                            <span aria-hidden className="inline-block w-0.5 h-[18px] bg-pigment opacity-80 ml-[3px] align-[-3px]" />
                           )}
                         </p>
                       )}
@@ -351,14 +390,14 @@ export default function ChatScriptorium({
 
           {/* L'écritoire — une feuille, pas un champ de messagerie. */}
           {quotaEpuise ? (
-            <div className="mt-[22px] bg-parchemin border border-bordure-bouton rounded-[4px] px-6 py-[26px]">
+            <div className={`mt-[22px] bg-parchemin border border-bordure-bouton rounded-[4px] px-6 py-[26px] ${filDefilant ? 'lg:flex-none' : ''}`}>
               <p className="font-titre italic text-[19px] leading-[1.55] text-encre text-center">
                 Tu as beaucoup travaillé aujourd’hui — on se retrouve demain.
               </p>
             </div>
           ) : (
             <div
-              className="mt-[22px] bg-surface border border-bordure-bouton rounded-[4px] px-5 pt-4 pb-3.5 shadow-[0_6px_20px_rgba(74,58,40,0.05)]"
+              className={`mt-[22px] bg-surface border border-bordure-bouton rounded-[4px] px-5 pt-4 pb-3.5 shadow-[0_6px_20px_rgba(74,58,40,0.05)] ${filDefilant ? 'lg:flex-none' : ''}`}
               style={{ borderTopWidth: 2, borderTopColor: 'rgba(74,58,40,.20)' }}
             >
               <textarea
@@ -374,7 +413,7 @@ export default function ChatScriptorium({
                 // `input, textarea { background-color:#fff }` de globals.css n'est
                 // pas dans une couche Tailwind et l'emporterait sur une classe.
                 style={{ background: 'transparent' }}
-                className="w-full resize-none border-0 border-b border-bordure pb-2 font-corps text-[17px] leading-[1.5] text-encre placeholder:italic placeholder:text-[#7E6746] focus:outline-none"
+                className="w-full resize-none border-0 border-b border-bordure pb-2 font-corps text-[16px] leading-[1.5] text-encre placeholder:italic placeholder:text-[#7E6746] focus:outline-none"
               />
               <div className="flex items-center justify-between gap-3 mt-3">
                 {enCours ? (
@@ -418,7 +457,7 @@ export default function ChatScriptorium({
                     key={i}
                     onClick={() => void envoyer(s)}
                     disabled={enCours || restant <= 0}
-                    className="text-left bg-surface border border-bordure rounded-[3px] px-4 py-3 font-corps text-[17px] leading-[1.5] text-encre hover:border-bordure-bouton disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pigment"
+                    className="text-left bg-surface border border-bordure rounded-[3px] px-4 py-3 font-corps text-[16px] leading-[1.5] text-encre hover:border-bordure-bouton disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pigment"
                   >
                     {s}
                   </button>

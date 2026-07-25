@@ -52,6 +52,7 @@ export const NAV_ELEVE: NavTab[] = [
     label: 'Modules',
     items: [
       { label: 'Fragments', href: '/eleve/modules/fragments-erudition' },
+      { label: 'Scriptorium', href: '/eleve/modules/scriptorium' },
       { label: 'Quazian', href: '/eleve/modules/quazian' },
       { label: 'Codex', href: '/eleve/modules/codex' },
       { label: 'Aletheia', href: '/eleve/modules/aletheia' },
