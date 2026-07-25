@@ -21,9 +21,12 @@ import BarreNavigation from './BarreNavigation'
 import SceauModule from './SceauModule'
 import {
   moduleDepuisPathname,
+  sousOngletsPour,
+  vueDefaut,
   DEVISE_MAISON,
   type ModuleConfig,
   type DeviseMonde,
+  type SousOnglet,
 } from './configModules'
 import type { NavTab } from './configNavigation'
 import SelecteurClasseEleve from '@/app/eleve/SelecteurClasseEleve'
@@ -80,15 +83,16 @@ function Devise({ devise, couleur, maison }: { devise: DeviseMonde; couleur: str
 }
 
 // Rendu pur des sous-onglets ; `actif` décide de l'onglet en surbrillance.
+// La liste vient du RÔLE courant (prop `onglets`) — `mod` ne sert qu'aux couleurs.
 // `overflow-x-auto` + le `min-w-0` du parent gardent le sceau à l'écran quand
 // c'est serré (640–900px) sans changer le rendu à pleine largeur.
 function SousOngletsListe({
-  mod, compact, actif,
-}: { mod: ModuleConfig; compact: boolean; actif: (o: { href: string; vue?: string }) => boolean }) {
+  mod, onglets, compact, actif,
+}: { mod: ModuleConfig; onglets: SousOnglet[]; compact: boolean; actif: (o: { href: string; vue?: string }) => boolean }) {
   const c = mod.couleurs
   return (
     <div className="flex justify-center max-w-full overflow-x-auto py-1 -my-1" style={{ gap: compact ? 4 : 6 }}>
-      {mod.sousOngletsProf.map((o) => {
+      {onglets.map((o) => {
         const est = actif(o)
         return (
           <Link
@@ -113,36 +117,42 @@ function SousOngletsListe({
 }
 
 // Onglets pilotés par la ROUTE : actif = plus long préfixe (comme SousNavModule).
-function SousOngletsRoute({ mod, pathname, compact }: { mod: ModuleConfig; pathname: string; compact: boolean }) {
-  const actifHref = mod.sousOngletsProf.reduce<string | null>((best, o) => {
+function SousOngletsRoute({
+  mod, onglets, pathname, compact,
+}: { mod: ModuleConfig; onglets: SousOnglet[]; pathname: string; compact: boolean }) {
+  const actifHref = onglets.reduce<string | null>((best, o) => {
     const match = pathname === o.href || pathname.startsWith(o.href + '/')
     return match && o.href.length > (best?.length ?? -1) ? o.href : best
   }, null)
-  return <SousOngletsListe mod={mod} compact={compact} actif={(o) => o.href === actifHref} />
+  return <SousOngletsListe mod={mod} onglets={onglets} compact={compact} actif={(o) => o.href === actifHref} />
 }
 
-// Onglets pilotés par `?vue=` (Scriptorium). Isolé pour n'exiger la frontière
-// Suspense de useSearchParams QUE sur ce sous-arbre.
-function SousOngletsParam({ mod, compact }: { mod: ModuleConfig; compact: boolean }) {
-  const vueDefaut = mod.sousOngletsProf[0]?.vue
-  const vue = useSearchParams().get('vue') ?? vueDefaut
+// Onglets pilotés par `?vue=` (Scriptorium, prof ET élève). Isolé pour n'exiger
+// la frontière Suspense de useSearchParams QUE sur ce sous-arbre.
+function SousOngletsParam({
+  mod, onglets, compact,
+}: { mod: ModuleConfig; onglets: SousOnglet[]; compact: boolean }) {
+  const vue = useSearchParams().get('vue') ?? vueDefaut(onglets)
   // Un onglet est actif si la vue courante appartient à son groupe `vues`
   // (repli sur `[vue]`). Garde `vue != null` : `vue` est `string | undefined`.
   const estActif = (o: { vue?: string; vues?: string[] }) => {
     const groupe = o.vues ?? (o.vue ? [o.vue] : [])
     return vue != null && groupe.includes(vue)
   }
-  return <SousOngletsListe mod={mod} compact={compact} actif={estActif} />
+  return <SousOngletsListe mod={mod} onglets={onglets} compact={compact} actif={estActif} />
 }
 
 export default function EnTeteSite({ role, tabs, deconnexionAction, classe }: EnTeteSiteProps) {
   const pathname = usePathname()
   const mod = moduleDepuisPathname(pathname)
   const dashHref = role === 'prof' ? '/prof' : '/eleve'
-  const montreSousOnglets = role === 'prof' && !!mod && mod.sousOngletsProf.length > 0
+  // Liste du RÔLE courant : côté élève, seul Scriptorium en a (C2.2) — partout
+  // ailleurs elle est vide et la Barre 2 garde la devise seule.
+  const sousOnglets = mod ? sousOngletsPour(mod, role) : []
+  const montreSousOnglets = !!mod && sousOnglets.length > 0
   const estFragments = mod?.cle === 'fragments'
-  const sousOngletsCompacts = !!mod && mod.sousOngletsProf.length >= 6
-  const sousOngletsParParam = !!mod && mod.sousOngletsProf.some((o) => !!o.vue)
+  const sousOngletsCompacts = sousOnglets.length >= 6
+  const sousOngletsParParam = sousOnglets.some((o) => !!o.vue)
 
   return (
     <header className="hidden sm:block sticky top-0 z-10 print:hidden">
@@ -195,15 +205,16 @@ export default function EnTeteSite({ role, tabs, deconnexionAction, classe }: En
                       fallback={
                         <SousOngletsListe
                           mod={mod}
+                          onglets={sousOnglets}
                           compact={sousOngletsCompacts}
-                          actif={(o) => o.vue === mod.sousOngletsProf[0]?.vue}
+                          actif={(o) => o.vue === vueDefaut(sousOnglets)}
                         />
                       }
                     >
-                      <SousOngletsParam mod={mod} compact={sousOngletsCompacts} />
+                      <SousOngletsParam mod={mod} onglets={sousOnglets} compact={sousOngletsCompacts} />
                     </Suspense>
                   ) : (
-                    <SousOngletsRoute mod={mod} pathname={pathname} compact={sousOngletsCompacts} />
+                    <SousOngletsRoute mod={mod} onglets={sousOnglets} pathname={pathname} compact={sousOngletsCompacts} />
                   )}
                 </div>
               ) : (
