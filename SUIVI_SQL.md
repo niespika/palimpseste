@@ -38,6 +38,7 @@
 | *(exemple)* | *`exercices_l1.sql`* | *C4 — moteur exercices* | *☐* | *☐* | *— créer la ligne AVANT d'exécuter* |
 | 2026-07-23 | `scriptorium_rag_l1_sectionF.sql` | RAG L1 §F — matérialisation (déploiement RAG) | ☑ (23/07) | ☐ | Re-run idempotent de la SECTION F seule de `scriptorium_rag_l1.sql` (archivé), à l'étape de déploiement RAG (push `main` du 23/07 : RAG L1-L7 + C0 + C1). Matérialise les assignations parcours→classe existantes en instances. Sections A-E déjà en base → NE joue QUE §F. DRY-RUN avant / vérif après (dans le fichier). Gate `rag_actif` reste OFF. |
 | 2026-07-23 | `c1_rls_eleve.sql` | C1 — robustesse élève (Session A) | ☑ (23/07) | ☐ | RLS élève FOR ALL → SELECT-only/FERMÉ : **aletheia_travaux FERMÉ** (5 lectures basculées admin) + **codex_travaux FERMÉ** (lectures 100 % admin) ; quazian_sessions/answers/quiz_scores en SELECT own (⚠️ **drop DES DEUX policies : lot1 `*_eleve_own` + socle `eleve_own_*`**, sinon écriture reste ouverte) ; ré-assertion codex_sessions_eleve_read stricte. **+ profiles : drop `Mise à jour profil personnel` (UPDATE) = ferme l'escalade élève→prof + auto-déblocage ; INSERT `Trigger peut créer un profil` resserré à `auth.uid()=id`** (trigger `handle_new_user` SECURITY DEFINER confirmé au dump → indépendant). Calé sur le dump pg_policies du 23/07. **Protocole renforcé (règle 5)** : code C1-A **mergé+poussé d'abord** (écritures Quazian + lectures Aletheia basculées admin), SQL ensuite, fenêtre calme, smoke test élève. Retour arrière prêt : `c1_rls_eleve_rollback.sql`. |
+| 2026-07-25 | `c11a_api_couts.sql` | C11a — coûts API (journal transverse) | ☐ | ☐ | **Additive** (table neuve, aucune policy existante touchée) → protocole **normal**, pas de protocole renforcé. Crée `api_couts` (module, cout, created_at) + index `created_at` + RLS lecture prof. **Constat vérifié en base le 25/07 : `select to_regclass('public.api_couts')` → NULL — la table n'a jamais existé**, donc les 14 sites `enregistrerCoutApi()` (Aletheia ×6, Quazian ×6, Scriptorium/RAG ×2) écrivaient dans le vide depuis juin. Contenu identique à `api_couts.sql` (archivé, **à ne pas rejouer**) + bloc de vérification. Idempotent, rejouable. Le code du même chantier dé-silence l'écriture (`{ error }` au lieu d'un `await` nu) et la tuile prof (total partiel annoncé). Vérif après exécution : bloc en pied de fichier, puis `select module, count(*), sum(cout) from api_couts group by module` après une génération IA. |
 | 2026-07-23 | `c1_rls_eleve_rollback.sql` | C1 — robustesse élève (Session A) | ☐ | ☐ | **rollback — n'exécuter qu'en cas de problème.** Restaure les policies élève FOR ALL d'avant `c1_rls_eleve.sql` (aletheia_travaux, codex_travaux, quazian_sessions/answers/quiz_scores — doublons socle inclus), reconstituées d'après le dump du 23/07, et retire les SELECT-only introduites. Ne restaure **pas** `codex_sessions_eleve_read` (stricte), ni les resserrements profiles (UPDATE retirée, INSERT resserré) — les rouvrir n'apporterait rien. Requête `pg_policies` de contrôle en pied de fichier. |
 |  |  |  |  |  |  |
 
@@ -109,7 +110,8 @@ Ces fichiers restent dans le repo comme trace de conception, pas comme scripts r
 
 **Intégrité (2)** : `integrite_evenements.sql` · `integrite_petits_malins.sql`
 
-**Transverse (3)** : `api_couts.sql` *(statut réel inconnu — vérifié/réparé au chantier C11a)* ·
-`retours_lus.sql` · `review_fixes_2026-06-21.sql` ⚠️
+**Transverse (3)** : `api_couts.sql` *(**tranché le 25/07 (C11a) : JAMAIS exécuté** — table absente en
+base, constaté par `to_regclass`. Remplacé par `c11a_api_couts.sql` au journal actif ; celui-ci reste
+archivé et non rejouable)* · `retours_lus.sql` · `review_fixes_2026-06-21.sql` ⚠️
 
 **Seed (1)** : `seed_prod.sql`

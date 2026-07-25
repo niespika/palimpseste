@@ -74,15 +74,28 @@ export function coutSelonModele(
 }
 
 /**
- * Journalise un coût API pour un module sans ligne « hôte » (Quazian, Aletheia).
- * Best-effort : n'interrompt jamais le flux principal en cas d'erreur.
+ * Journalise un coût API pour un module sans ligne « hôte » (Quazian, Aletheia,
+ * Scriptorium/RAG). Best-effort : n'interrompt JAMAIS le flux principal — un
+ * coût perdu ne doit pas coûter son retour à un élève.
+ *
+ * ⚠️ C11a — le piège qui a rendu ce suivi muet de juin à juillet 2026 :
+ * supabase-js ne LÈVE pas sur erreur d'insertion, il retourne `{ error }`. Le
+ * `try/catch` seul ne captait donc que l'échec de `createAdminClient()` (env vars
+ * manquantes), et l'absence de la table `api_couts` passait totalement inaperçue.
+ * D'où le `const { error }` ci-dessous : best-effort, mais jamais silencieux.
  */
 export async function enregistrerCoutApi(module: string, cout: number): Promise<void> {
   if (!cout || cout <= 0) return
   try {
     const admin = createAdminClient()
-    await admin.from('api_couts').insert({ module, cout })
+    const { error } = await admin.from('api_couts').insert({ module, cout })
+    if (error) {
+      console.error(
+        `[cout-api] journalisation PERDUE — module=${module} cout=${cout.toFixed(6)}$`,
+        { code: error.code, message: error.message, details: error.details, hint: error.hint },
+      )
+    }
   } catch (e) {
-    console.error('[cout-api] échec journalisation', e)
+    console.error(`[cout-api] journalisation PERDUE (exception) — module=${module} cout=${cout.toFixed(6)}$`, e)
   }
 }

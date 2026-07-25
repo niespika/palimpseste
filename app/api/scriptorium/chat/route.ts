@@ -173,11 +173,18 @@ export async function POST(req: Request): Promise<Response> {
       // Le message élève est TOUJOURS conservé (re-tentative possible) — stocké BRUT.
       await admin.from('scriptorium_messages').insert({ conversation_id: convId, role: 'eleve', contenu: message })
       if (ok) {
+        // Coût du tour : mesuré depuis l'usage du fournisseur. Un usage
+        // indisponible ne veut PAS dire « rien facturé » — ça veut dire « pas
+        // mesuré » : on garde 0 (best-effort, le tour de chat n'échoue pas) mais
+        // on le DIT, sinon le coût RAG se met à sous-compter sans trace (C11a).
         let cout = 0
         try {
           const usage = usageFn ? await usageFn() : null
           if (usage) cout = coutSelonModele(reglages.modele, usage)
-        } catch { /* usage indisponible → coût 0 (rien de facturé de plus) */ }
+          else console.warn(`[scriptorium-chat] usage indisponible (modele=${reglages.modele}) — coût NON mesuré, compté 0`)
+        } catch (e) {
+          console.error(`[scriptorium-chat] usage illisible (modele=${reglages.modele}) — coût NON mesuré, compté 0`, e)
+        }
         await admin.from('scriptorium_messages').insert({
           conversation_id: convId, role: 'assistant', contenu: reponse, modele: reglages.modele, cout,
         })
