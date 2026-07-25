@@ -60,10 +60,16 @@ Par scénario : sentinelle future · sentinelle livre (scopée par la progressio
 
 ## État des runs (protocole §11 : Flash-Lite puis référence)
 
-| Run | Modèle | État |
-|---|---|---|
-| Défaut de prod | `gemini-3.5-flash-lite` | **fait** — 2026-07-24, 27/27 scénarios, 0 erreur, 0,0550 $, `rapport-gemini-3.5-flash-lite-2026-07-24.md` |
-| Référence | `claude-haiku-4-5` | **fait** — 2026-07-24, 27/27 scénarios, 0 erreur, 0,0734 $, `rapport-claude-haiku-4-5-2026-07-24.md` |
+| Run | Lot | Modèle | État |
+|---|---|---|---|
+| Défaut de prod | L8 (prompt v1) | `gemini-3.5-flash-lite` | **fait** — 2026-07-24, 27/27 scénarios, 0 erreur, 0,0550 $, `rapport-gemini-3.5-flash-lite-2026-07-24.md` |
+| Référence | L8 (prompt v1) | `claude-haiku-4-5` | **fait** — 2026-07-24, 27/27 scénarios, 0 erreur, 0,0734 $, `rapport-claude-haiku-4-5-2026-07-24.md` |
+| Défaut de prod | L8-bis (prompt amendé A1/A2/A3) | `gemini-3.5-flash-lite` | **fait** — 2026-07-25, 27/27 scénarios, 0 erreur, 0,0560 $, `rapport-gemini-3.5-flash-lite-2026-07-25.md` |
+| Référence | L8-bis (prompt amendé A1/A2/A3) | `claude-haiku-4-5` | **fait** — 2026-07-25, 27/27 scénarios, 0 erreur, 0,0849 $ (dont 0,0125 $ d'écriture de cache 1 h : le prompt amendé a invalidé le cache du 24/07), `rapport-claude-haiku-4-5-2026-07-25.md` |
+
+Banc **inchangé** entre L8 et L8-bis (fixtures, scénarios, sentinelles, heuristique, script) : seule la
+constante `PROMPT_RAG_DEFAUT` a bougé (3 732 → 4 790 caractères de prompt système). Les quatre rapports
+restent en place — c'est la comparaison avant/après.
 
 Pas de 3ᵉ run : `claude-sonnet-4-6` seulement si le PO le demande.
 
