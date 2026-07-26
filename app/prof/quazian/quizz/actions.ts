@@ -70,7 +70,7 @@ export async function creerQuizz(formData: FormData): Promise<CreerQuizzResult> 
   // Générer les questions via IA
   let questions
   try {
-    questions = await genererQuestions(cartes, Math.min(nbQuestions, cartes.length * 2))
+    questions = await genererQuestions(cartes, Math.min(nbQuestions, cartes.length * 2), classeId)
   } catch (e) {
     console.error('[quazian] génération questions :', e)
     return { error: "La génération IA a échoué (réponse inattendue du modèle). Réessaie." }

@@ -13,7 +13,7 @@ import { addDaysUTC, toISODate, lundiOnOrBefore } from './calendrier-grille'
 import { jourDansFuseau } from './fuseau'
 import { sansDelims, injecter, extraireJSON } from './ia-commun'
 import { fournisseurPour } from './ia-fournisseur'
-import { coutSelonModele, enregistrerCoutApi } from './cout-api'
+import { coutSelonModele, enregistrerCoutApi, normaliserUsage } from './cout-api'
 import { lireReglagesRag, PROMPT_SYNTHESE_RAG_DEFAUT, type ReglagesRag } from './scriptorium-rag'
 
 export interface StatsSynthese {
@@ -163,7 +163,10 @@ export async function genererSyntheseClasse(
     const contenu: ContenuSynthese = { stats, ...normaliserSortie(JSON.parse(extraireJSON(texte))) }
     const cout = coutSelonModele(reglages.modeleSynthese, usage)
     await poser({ statut: 'READY', contenu, cout, erreur_at: null })
-    await enregistrerCoutApi('scriptorium', cout)
+    // Coût de CLASSE : la synthèse porte sur toute la classe, jamais sur un élève.
+    await enregistrerCoutApi('scriptorium', cout, {
+      classeId, modele: reglages.modeleSynthese, tokens: normaliserUsage(usage),
+    })
     return { statut: 'READY' }
   } catch (e) {
     const message = e instanceof Error ? e.message : 'Erreur inconnue.'

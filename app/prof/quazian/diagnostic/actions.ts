@@ -3,7 +3,9 @@
 import { createClient } from '@/utils/supabase/server'
 import Anthropic from '@anthropic-ai/sdk'
 import { diagnostiquerEleve, type DiagnosticConcept } from '@/utils/diagnostic'
-import { coutMessage, enregistrerCoutApi } from '@/utils/cout-api'
+import { coutMessage, enregistrerCoutApi, normaliserUsage } from '@/utils/cout-api'
+
+const MODELE = 'claude-sonnet-4-6'
 
 async function verifierProf() {
   const supabase = await createClient()
@@ -230,14 +232,18 @@ export async function genererRapportFragilites(): Promise<{ rapport: string } | 
 
   const client = new Anthropic()
   const message = await client.messages.create({
-    model: 'claude-sonnet-4-6',
+    model: MODELE,
     max_tokens: 1024,
     messages: [{
       role: 'user',
       content: `Tu es un assistant pédagogique pour un professeur de philosophie au lycée. Analyse ces données de diagnostic de la classe et produis un rapport de fragilités concis (8-10 lignes max). Distingue clairement les idées fausses (à corriger en priorité) des lacunes (à exposer davantage). Formule des suggestions d'action concrètes.\n\n${contexte}`,
     }],
   })
-  await enregistrerCoutApi('quazian', coutMessage(message.usage))
+  // Non attribué (C11a-bis) : ce rapport agrège TOUTES les classes
+  // (`chargerDiagnosticClasse()` sans `classeId`) et aucun élève en particulier.
+  await enregistrerCoutApi('quazian', coutMessage(message.usage), {
+    modele: MODELE, tokens: normaliserUsage(message.usage),
+  })
 
   const rapport = message.content
     .filter((b) => b.type === 'text')

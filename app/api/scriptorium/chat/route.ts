@@ -19,8 +19,8 @@ import {
   lireReglagesRag, progressionLivres, construireSuffixe, baliserQuestion,
   MAX_TOKENS_CHAT, FENETRE_HISTORIQUE,
 } from '@/utils/scriptorium-rag'
-import { fournisseurPour, type AppelIA } from '@/utils/ia-fournisseur'
-import { coutSelonModele, enregistrerCoutApi } from '@/utils/cout-api'
+import { fournisseurPour, type AppelIA, type UsageIA } from '@/utils/ia-fournisseur'
+import { coutSelonModele, enregistrerCoutApi, normaliserUsage } from '@/utils/cout-api'
 import { sansDelims } from '@/utils/ia-commun'
 import { inscriptionEleveClasse, slugsModulesAccessibles } from '@/utils/acces'
 
@@ -142,7 +142,7 @@ export async function POST(req: Request): Promise<Response> {
   // Stream relayé au client ; persistance en after() une fois le flux terminé.
   let reponse = ''
   let ok = false
-  let usageFn: (() => Promise<{ entree: number; sortie: number; cacheLecture: number; cacheEcriture5m: number; cacheEcriture1h: number }>) | null = null
+  let usageFn: (() => Promise<UsageIA>) | null = null
   let resoudreFin: () => void = () => {}
   const finDuFlux = new Promise<void>(res => { resoudreFin = res })
 
@@ -173,15 +173,29 @@ export async function POST(req: Request): Promise<Response> {
       // Le message élève est TOUJOURS conservé (re-tentative possible) — stocké BRUT.
       await admin.from('scriptorium_messages').insert({ conversation_id: convId, role: 'eleve', contenu: message })
       if (ok) {
+        // Coût du tour : mesuré depuis l'usage du fournisseur. Un usage
+        // indisponible ne veut PAS dire « rien facturé » — ça veut dire « pas
+        // mesuré » : on garde 0 (best-effort, le tour de chat n'échoue pas) mais
+        // on le DIT, sinon le coût RAG se met à sous-compter sans trace (C11a).
         let cout = 0
+        // Hissé hors du try : les compteurs de tokens partent au journal des coûts
+        // (C11a-bis). Usage indisponible → `usage` reste null → colonnes tokens_*
+        // NULL en base, c.-à-d. « non mesuré » et non « 0 token ».
+        let usage: UsageIA | null = null
         try {
-          const usage = usageFn ? await usageFn() : null
+          usage = usageFn ? await usageFn() : null
           if (usage) cout = coutSelonModele(reglages.modele, usage)
-        } catch { /* usage indisponible → coût 0 (rien de facturé de plus) */ }
+          else console.warn(`[scriptorium-chat] usage indisponible (modele=${reglages.modele}) — coût NON mesuré, compté 0`)
+        } catch (e) {
+          console.error(`[scriptorium-chat] usage illisible (modele=${reglages.modele}) — coût NON mesuré, compté 0`, e)
+        }
         await admin.from('scriptorium_messages').insert({
           conversation_id: convId, role: 'assistant', contenu: reponse, modele: reglages.modele, cout,
         })
-        await enregistrerCoutApi('scriptorium', cout)
+        // Seul site à porter élève ET classe : un tour de chat appartient aux deux.
+        await enregistrerCoutApi('scriptorium', cout, {
+          eleveId: user.id, classeId, modele: reglages.modele, tokens: normaliserUsage(usage),
+        })
       }
       await admin.from('scriptorium_conversations')
         .update({ updated_at: new Date().toISOString() }).eq('id', convId)
