@@ -19,6 +19,10 @@ import {
   hookSyntheseRetraitClasse, hookSyntheseSuppressionParcours,
 } from '@/utils/plan-synthese-hooks'
 import { lireReglagesRag } from '@/utils/scriptorium-rag'
+import {
+  CLES_EDITABLES, MAX_CARACTERES_SECTION, normaliserSection,
+  type CleSectionEditable, type OverridesPromptTuteur,
+} from '@/utils/scriptorium-prompt-tuteur'
 import { genererSyntheseClasse, lundiSemaineEcoulee } from '@/utils/scriptorium-synthese-rag'
 import { jourDansFuseau } from '@/utils/fuseau'
 import { lireFuseau } from '@/utils/fuseau-serveur'
@@ -2091,12 +2095,15 @@ export async function regenererSyntheseRag(classeId: string): Promise<{ statut?:
 }
 
 // ── Réglages du RAG élève (L5, SPEC §8.3) — gate, modèles, quota, prompts ────
+// Le prompt du TUTEUR n'est plus ici : il s'édite par sections (L9, action
+// sauvegarderSectionsPromptTuteur ci-dessous) et cette action ne touche donc
+// jamais `rag_prompt` — l'ancienne colonne du prompt intégral reste telle quelle
+// en base (dormante), on ne l'écrase pas au passage.
 export async function sauvegarderReglagesRag(reglages: {
   actif: boolean
   modele: string
   modeleSynthese: string
   quotaJour: number
-  prompt: string | null            // null / vide / identique au défaut → défaut
   promptSynthese: string | null
 }): Promise<{ error?: string }> {
   await verifierProf()
@@ -2116,13 +2123,48 @@ export async function sauvegarderReglagesRag(reglages: {
     rag_modele: modele,
     rag_modele_synthese: modeleSynthese,
     rag_quota_jour: reglages.quotaJour,
-    rag_prompt: reglages.prompt?.trim() || null,
     rag_prompt_synthese: reglages.promptSynthese?.trim() || null,
   }, { onConflict: 'id' })
   if (error) return { error: error.message }
   revalidatePath('/prof/scriptorium')
   revalidatePath('/eleve/modules/scriptorium')
   return {}
+}
+
+// ── Prompt du tuteur, édition PAR SECTIONS (C2 · L9) ─────────────────────────
+// N'écrit QUE les trois sections éditables : les sections verrouillées
+// (anti-spoiler, périmètre, sources, refus) n'ont pas de colonne et ne peuvent
+// donc pas être écrites, même par un appel forgé — les clés inconnues sont
+// ignorées à la lecture ci-dessous, l'upsert ne porte que 4 colonnes.
+// `rag_prompt_sections_maj` horodate la divergence avec le prompt calibré au
+// banc L8 : c'est lui qui fait vivre le bandeau « recommandé : rejouer le banc ».
+// Retour au défaut sur les TROIS sections → horodatage effacé, bandeau éteint
+// (le prompt effectif est de nouveau celui de la calibration).
+export async function sauvegarderSectionsPromptTuteur(
+  sections: OverridesPromptTuteur,
+): Promise<{ error?: string; modifieLe?: string | null }> {
+  await verifierProf()
+  const stockees: Record<CleSectionEditable, string | null> = { ton: null, relances: null, longueur: null }
+  for (const cle of CLES_EDITABLES) {
+    const brut = sections[cle]
+    if (typeof brut === 'string' && brut.length > MAX_CARACTERES_SECTION) {
+      return { error: `Section « ${cle} » trop longue (${MAX_CARACTERES_SECTION} caractères maximum).` }
+    }
+    stockees[cle] = normaliserSection(cle, brut)
+  }
+  const modifieLe = CLES_EDITABLES.some(c => stockees[c] !== null) ? new Date().toISOString() : null
+  const admin = createAdminClient()
+  const { error } = await admin.from('scriptorium_params').upsert({
+    id: 1,
+    rag_prompt_ton: stockees.ton,
+    rag_prompt_relances: stockees.relances,
+    rag_prompt_longueur: stockees.longueur,
+    rag_prompt_sections_maj: modifieLe,
+  }, { onConflict: 'id' })
+  if (error) return { error: error.message }
+  revalidatePath('/prof/scriptorium')
+  revalidatePath('/eleve/modules/scriptorium')
+  return { modifieLe }
 }
 
 /** Retire un créneau de l'instance (cascade sur ses éléments — « vu » compris). */

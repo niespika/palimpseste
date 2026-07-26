@@ -7,8 +7,9 @@ import { sauvegarderReglagesRag } from './actions'
 
 // Réglages du Scriptorium ÉLÈVE (RAG L5, SPEC §8.3) : gate global, modèles par
 // simple réglage (bascule Anthropic ↔ Gemini sans redéploiement), quota souple,
-// overrides des prompts (chat + synthèse hebdo). Un prompt identique au défaut
-// (ou vide) est enregistré comme « défaut » (null) et suivra ses évolutions.
+// override du prompt de la synthèse hebdo. Un prompt identique au défaut (ou
+// vide) est enregistré comme « défaut » (null) et suivra ses évolutions.
+// Le prompt du TUTEUR n'est plus édité ici : il a sa tuile, par sections (L9).
 
 export default function FormulaireReglagesRag({
   initial, defauts,
@@ -18,17 +19,15 @@ export default function FormulaireReglagesRag({
     modele: string
     modeleSynthese: string
     quotaJour: number
-    prompt: string | null
     promptSynthese: string | null
   }
-  defauts: { prompt: string; promptSynthese: string }
+  defauts: { promptSynthese: string }
 }) {
   const router = useRouter()
   const [actif, setActif] = useState(initial.actif)
   const [modele, setModele] = useState(initial.modele)
   const [modeleSynthese, setModeleSynthese] = useState(initial.modeleSynthese)
   const [quota, setQuota] = useState(String(initial.quotaJour))
-  const [prompt, setPrompt] = useState(initial.prompt || defauts.prompt)
   const [promptSynthese, setPromptSynthese] = useState(initial.promptSynthese || defauts.promptSynthese)
   const [enregistrement, setEnregistrement] = useState(false)
   const [message, setMessage] = useState<{ type: 'ok' | 'err'; texte: string } | null>(null)
@@ -41,7 +40,6 @@ export default function FormulaireReglagesRag({
       modele,
       modeleSynthese,
       quotaJour: Number(quota),
-      prompt: prompt.trim() === defauts.prompt.trim() ? null : prompt,
       promptSynthese: promptSynthese.trim() === defauts.promptSynthese.trim() ? null : promptSynthese,
     })
     setEnregistrement(false)
@@ -83,11 +81,6 @@ export default function FormulaireReglagesRag({
             className="mt-1 w-full px-3 py-2 border border-bordure rounded-lg text-sm text-encre focus:outline-none focus:ring-2 focus:ring-pigment" />
         </label>
       </div>
-
-      <BlocPrompt
-        label="Prompt du tuteur (chat élève)" value={prompt} onChange={setPrompt} defaut={defauts.prompt} rows={18}
-        hint={<>Variable : <code>{'{registre}'}</code> (le REGISTRE transversal partagé avec Aletheia). Le corpus (plan, matière, livres) est ajouté automatiquement après ces instructions.</>}
-      />
 
       <BlocPrompt
         label="Prompt de la synthèse hebdomadaire (prof)" value={promptSynthese} onChange={setPromptSynthese} defaut={defauts.promptSynthese} rows={14}

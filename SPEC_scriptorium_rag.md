@@ -436,6 +436,16 @@ Réglages exposés dans **Paramètres** de Scriptorium (formulaire existant éte
 > l'élève »), carte bornée à la progression (« Traitement » 4), interdit resserré sur le *contenu* des
 > instructions plutôt que leur existence (« Refus nets »). Le texte ci-dessous les intègre ;
 > `utils/scriptorium-rag.ts` fait foi.
+>
+> **Amendé le 26/07/2026 (L9) — le prompt est désormais DÉCOUPÉ EN SECTIONS.** Le texte ci-dessous
+> est inchangé (l'assemblage sans override le rend octet pour octet, test de garde
+> `utils/scriptorium-prompt-tuteur.test.ts`), mais il vit maintenant en tranches nommées dans
+> **`utils/scriptorium-prompt-tuteur.ts`** (module pur), qui **fait foi** à la place de
+> `utils/scriptorium-rag.ts` (lequel ne fait plus que le ré-exporter et l'assembler à l'exécution).
+> Trois sections sont éditables par le prof depuis Paramètres — `ton` (paragraphe d'ouverture +
+> `{registre}`), `relances` (élément 3 de « Traitement »), `longueur` (« Forme ») ; **toutes les
+> autres sont verrouillées** — anti-spoiler du cours et par élève, périmètre de la matière, citation
+> des sources, refus nets — et n'ont **aucun stockage en base**.
 
 ```
 Tu es le tuteur du cours de philosophie, au service du professeur qui a préparé toute la matière que tu reçois. Un élève vient te poser des questions pour mieux comprendre le cours. Ton rôle : l'aider à approfondir sa compréhension — jamais faire le travail à sa place.
@@ -514,6 +524,16 @@ Règles : un thème = un point de MATIÈRE (pas « les élèves posent des quest
 ### 9.3 Overrides et factorisation
 
 `lireReglagesRag()` (données serveur) renvoie params + prompts effectifs (override sinon défaut). Le REGISTRE et `sansDelims`/`injecter`/`extraireJSON` sont **importés** d'un module partagé (`utils/ia-commun.ts`, extraction depuis `aletheia-retours.ts` sans en changer le comportement — `git diff` des prompts Aletheia vide).
+
+> **L9 (26/07/2026) — override SECTIONNÉ pour le prompt du tuteur.** `lireReglagesRag()` assemble
+> `sections verrouillées (code) + sections éditables (base si définies, défaut sinon)` via
+> `assemblerPromptTuteur()`, puis injecte le registre. Colonnes :
+> `scriptorium_params.rag_prompt_ton` / `_relances` / `_longueur` (`NULL` = défaut) +
+> `rag_prompt_sections_maj` (horodatage → bandeau « rejouer le banc L8 ») — migration
+> `c2_l9_prompt_tuteur.sql`. **`rag_prompt` (override du prompt INTÉGRAL) n'est plus lu** : il
+> permettrait d'écraser les sections verrouillées, ce que L9 interdit. La colonne reste en base,
+> dormante ; l'écran de Paramètres signale son contenu s'il y en a un. `rag_prompt_synthese`
+> (synthèse hebdo, §9.2) reste un override intégral — aucun enjeu anti-spoiler, prompt prof.
 
 ---
 
