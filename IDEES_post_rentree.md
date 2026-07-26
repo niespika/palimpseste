@@ -1,6 +1,6 @@
 # IDEES_post_rentree — le parking à idées
 
-> Règle du plan de rentrée : après le gel des specs (dim 26/07), **toute idée nouvelle atterrit ici**
+> Règle du plan de rentrée : après le gel des specs (mer 29/07), **toute idée nouvelle atterrit ici**
 > au lieu d'entrer dans le périmètre. On rouvre ce fichier en septembre, à tête reposée.
 
 ## Déjà différé par le plan (repris de PLAN_CHANTIERS_RENTREE.md §6)
