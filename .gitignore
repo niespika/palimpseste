@@ -42,3 +42,6 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# corbeille de session (les outils du pont ne peuvent pas supprimer, ils déplacent ici)
+/_to_delete/

@@ -79,6 +79,44 @@ Poids par cycle : S1 ≈ 6¾ · S2 ≈ 6 · S3 ≈ 6½ · **S4 ≈ 10¾ (+2 si C
 
 ---
 
+## 2 bis. Check-in de fin de cycle S1 — *rattrapé le jeu 30/07 (le mercredi soir a été manqué)*
+
+**Jalon S1 atteint sur les quatre chantiers.** « Sécurité/robustesse mergées ; coûts fiables ;
+spec C3 gelée » : les trois sont soldés, et C2 a même pris de l'avance sur S2.
+
+| Chantier | État réel au 30/07 | Preuve |
+|---|---|---|
+| **C0** hygiène & suivi SQL | fait | `9d02454` |
+| **C1** robustesse & sécurité | **fait le 24/07, mergé le 25/07** | `a686f61` · `fba3c11` · `c205e7b` → `e801647` |
+| **C2** RAG + écran élève | **fait, y compris la part S2** — L6, L8, L8-bis, L9 | `e8792ab` · `54235b1` · `9bb372d` · `b8facf1` |
+| **C11a** coûts API | **fait le 25/07**, recette 1-5 validée | `8d96c85` · `25e1884` · `7404cf7` |
+| **C3** spec exercices+compétences | **GELÉE le 29/07** — v4.3, amendements A1 à A19 | `SPEC_C3_exercices_competences.md` |
+
+**Consommation de crédits — c'est le point dur du check-in.** Le cycle S2 (jeu 30/07 → mer 05/08) a
+brûlé **42 % du bilan tous modèles et 31 % du bilan Fable en une seule journée, la première sur sept**.
+Au même rythme, le cycle est sec dimanche. Le 30/07 a porté quatre séances lourdes — révision intégrale
+du routeur, arbitrage des revues adversariales, audit + banc de Structure, constitution de la v1.7
+d'Expression : c'est un pic, pas un régime. **Coupe proposée pour la suite de S2 [à valider]** : une
+seule séance 🎻 par jour ; les bancs en Haiku sauf contre-épreuve explicite ; les sessions ⚙️ de code
+lancées directement dans Claude Code, sans passer par une séance de conception préalable.
+
+**Le chemin critique de S2 n'est pas le code, c'est `02-exercices.md`.** Le jalon de mercredi prochain
+demande « schéma + conception prof des exercices OK », or C4 ne peut pas démarrer avant que C3 passe
+en v4.4, qui attend la révision de `02-exercices.md` — règle de manifeste : un lot dont le manifeste
+exige un document « en relecture » s'arrête de lui-même, et **C4-L1 crée `exercices_types`**, dont les
+colonnes sortent de ce document. Séquence d'août arrêtée le 31/07 : *(1)* branche d'échec du pipeline
+(question F4) → *(2)* révision de `02-exercices.md` → *(3)* séance unique « construction de la semaine
++ ciblage lecture » → *(4)* matrice normative par statut de recette → *(5)* gel de C3 en un bloc →
+*(6)* réécriture de `PROMPT_Code_C4_L1.md` et `C4_L2` + création du lot R1-R6. En parallèle et
+indépendamment : **les bancs, seule échéance dure, tournés le 24/08 au soir**.
+
+**Amendements C3 en attente — liste de référence unique** : `AMENDEMENTS_C3_en_attente_2026-07-31.md`,
+vingt-sept amendements consolidés depuis trois sources qui ne se connaissaient pas, dont **six que le
+résumé du relevé d'arbitrage laissait tomber**. C'est de cette liste, et non du résumé, que part la
+passe C3.
+
+---
+
 ## 3. Les chantiers
 
 *(Modèle indiqué par chantier : 🎻 = Fable (finesse) · ⚙️ = standard (exécution). Voir §5.)*
@@ -90,6 +128,12 @@ rejouer `review_fixes_2026-06-21.sql` ni `codex_schema.sql §5` (régressions do
 **Fait quand :** journal en vigueur, repo propre. **Coupe :** aucune.
 
 ### C1 — Robustesse & sécurité élève *(S1 · 2,5 j-éq · 🎻 conception / ⚙️ exécution)*
+**✅ TERMINÉ le 24/07.** Session A close le 23/07 (RLS élève + gardes — code sur `main` `a686f61`, SQL
+sandbox ☑) ; Sessions B (B1-B4, parcours élève fail-visible) et C (items 7-8 : redirect sûr, fiche
+canonique continue, V1 nourri par la fiche) closes le 24/07 — commits `fba3c11` et `c205e7b` sur
+`feat/c2-l8-calibration`, **mergée vers `main` le 25/07** (`e801647`, qui embarque aussi le banc L8 de C2).
+Item 8 tenu dans S1 : coupe non activée. Tests humains soldés → `SUIVI_tests_manuels.md` ; les casses
+découvertes en testant (Quazian, semaines Fragments) sont consignées en ⚠️ dans C7/C8 ci-dessous.
 Correctifs ciblés des 🔴 de l'audit — pas de refonte : (1) RLS « FOR ALL » élève → policies granulaires
 + gardes serveur (notes de quiz, validation Codex, machine à états Aletheia) ; (2) garde de classe sur
 le quiz individuel ; (3) gate « retours non lus » aligné sur l'accès réel ; (4) soumissions V1/VF
@@ -101,16 +145,36 @@ multi-classes sur le gate Aletheia ; (7) open redirect `/auth/confirm` + vérif 
 la pose des policies est du standard.)*
 
 ### C2 — Scriptorium : finir le RAG + écran élève *(S1-S2 · 3 j-éq · ⚙️, calibration 🎻)*
+**✅ TERMINÉ le 26/07, part S2 comprise.** L6 écran élève (Plan de cours + Discussion épistolaire,
+sous-onglets, densité) mergé le 25/07 — `49cbfa5`, `e8792ab`, `0ec7930`, `e773ce1`, `7fa1cd0`,
+merge `9bb372d`. L8 banc anti-spoiler + L8-bis affinage : `2e1d6c8`, `54235b1`, clos au verdict du
+25/07 (`2159179`), merge `e801647`. L9 prompt du tuteur éditable par sections : `f357d68`, migration
+sandbox jouée (`4ad5311`), merge `b8facf1`. `rag_actif` reste **OFF** — le flip se décide en C13.
+Coupe « vue Année » non activée. Tests humains → `SUIVI_tests_manuels.md`.
 **L6 selon ta revue** : côté élève, 2 onglets **Plan de cours · Discussion** — Plan de cours en 2 vues
 (Année = les parcours ; Parcours = textes/livres, les livres renvoyant vers Aletheia), statuts
 vu/en cours/à venir ; Discussion au design « échange épistolaire » + bandeau de transparence.
 **L8** : banc de calibration anti-spoiler (fixtures + scénarios adversariaux) + un run complet +
 correctifs — **l'analyse des fuites se fait en Fable**, c'est le cœur pédagogique.
+**L9 (ajout du 25/07, demande Louis)** : le prompt du tuteur de Discussion devient **visible et
+éditable par sections** dans Scriptorium → Paramètres — éditables : ton, relances (dont les questions
+de fin de message), longueur ; **verrouillées** : les sections anti-spoiler que le banc L8 valide.
+Défaut dans le code (patron des prompts Fragments, spec Lot 5 §5.6) ; après toute édition, bandeau
+« recommandé : rejouer le banc L8 ».
 **Fait quand :** run L8 sans fuite de sentinelle ; l'écran élève tient sur mobile ; `rag_actif` reste
 OFF — flip décidé en C13. **Coupe :** vue « Année » (v1 = vue Parcours seule) ; flip OFF à la rentrée
-n'est pas un échec. *(Les « notes » dans l'espace de droite → post-rentrée.)*
+n'est pas un échec ; L9 dégrade en « prompt visible, non éditable » si S2 déborde. *(Les « notes » dans
+l'espace de droite → post-rentrée.)*
 
 ### C3 — SPEC unique « Exercices & Compétences » *(S1 · 1,5 j-éq · 🎻 pur — gel mer 29/07)*
+**✅ GELÉE le 29/07 — `SPEC_C3_exercices_competences.md`, v4.3, amendements A1 à A19.** Séance
+d'arbitrage intégrale (trois revues adversariales fusionnées, Louis a validé les items un par un —
+`RELEVE_Arbitrage_C3_2026-07-29.md`), puis passe unique d'application A9-A19 le 30/07 après la
+révision complète du `01-routeur.md`. Le gel ne fige pas la spec : il déplace la charge de la preuve,
+et **toute évolution est un amendement daté**, posé en un bloc et jamais au fil des relectures.
+⚠️ **v4.4 en attente** : vingt-sept amendements consolidés dans `AMENDEMENTS_C3_en_attente_2026-07-31.md`,
+dont un daté « avant que le lot C4-L1 crée les tables » (forme de `lucidite_incompris`). La passe est
+**bloquée derrière la révision de `02-exercices.md`** — voir le check-in du § 2 bis.
 Le seul gros morceau neuf. À trancher : (1) référentiel E-A — ~4-6 compétences d'écriture, ~4-6 de
 lecture, harmonisées avec les axes Fragments ; (2) formats v1 verrouillés — écriture formative maison
 (texte tapé), écriture diagnostique classe (manuscrit + pipeline Codex), lecture = extrait + 2-4
@@ -159,6 +223,7 @@ entrent en **file de validation prof** (mini-spec Fable : déclencheur, volume 1
 et calendrier, les modules restent par classe (v1) ; scoping classe respecté par Quazian ET Codex
 élève ; (4) diagnostic fondu dans C6 + entrée « fragilités » dans Quiz ; (5) vérifier le « flashcards
 gelées » de l'intégrité (assumer ou retirer) ; (6) affichages de notes cohérents.
+⚠️ **Constat 24/07 (tests C1, sandbox) :** la création de flashcards et de quiz est déjà **cassée** — Quazian ne reconnaît plus l'architecture Scriptorium actuelle. Le chantier commence donc par une remise en marche (diagnostic), pas seulement une réorganisation.
 **Fait quand :** cartes générées au « vu » et validées en file ; un bi-classe voit juste ; 2 onglets.
 **Coupe :** design Paramètres ; la génération auto peut dégrader en « bouton Générer » par élément
 (même file de validation) si le déclencheur « vu » résiste.
@@ -171,6 +236,7 @@ clic = progression ; Évaluations = Essai | Synthèse en toggle) ; (2) **validat
 cousin du « deux définitions de semaine N » de l'audit) ; (4) bug « Expression comptée deux fois » ;
 (5) synthèse de semestre minimale (générer + publier) ; (6) prompt hebdo par défaut dans le code ;
 (7) dates limites fuseau Toronto ; (8) côté élève : onglets **Écrit · Oral · Essai**, design vérifié.
+⚠️ **Constat 24/07 (tests C1, sandbox) :** le point (3) est confirmé et **bloquant** — Fragments ne reconnaît plus la nouvelle architecture du calendrier : impossible de créer des semaines, donc aucun dépôt possible. Diagnostic en tête de chantier.
 **Fait quand :** 30 dépôts validés < 30 min ; onglets en place des deux côtés ; le bug semestre est
 compris et corrigé. **Coupe :** toggle semestre retiré si superflu (ta question — on tranche au
 check-in) ; synthèse réduite ; D12 différé.
@@ -196,6 +262,9 @@ classes ; historique intégrité cliquable ; design calendrier léger.
 **Coupe :** mobile prof ; les 🚩 cosmétiques → `IDEES_post_rentree.md`.
 
 ### C11 — Coûts API, prod, sauvegardes *(C11a S1 · 0,75 — C11b S4 mar-mer · 1,75 j-éq · ⚙️)*
+**✅ C11a TERMINÉ le 25/07** — `api_couts` absente en base créée et journalisation dé-silencée
+(`8d96c85`), attribution élève/classe + modèle/tokens (`25e1884`), recette 1-5 validée et reliquats
+routés (`7404cf7`), merge `942a349`. Écran des coûts spécifié : `SPEC_C11c_ecran_couts.md`.
 **C11a :** l'audit conclut que le suivi Aletheia/Quazian est **probablement muet** (table `api_couts`
 peut-être jamais créée + erreur avalée dans `utils/cout-api.ts`). Vérifier/créer (sandbox + prod,
 journal R6), dé-silencer, tuile « coûts totaux » au tableau de bord, brancher les nouveaux appels.
@@ -295,7 +364,8 @@ Tout émergent → `IDEES_post_rentree.md`.
    tourner, tu **testes en utilisateur**. Bug simple → tu relances Code directement.
 3. **Question de fond, arbitrage, prompt pédagogique** → tu reviens ici plutôt que d'improviser dans Code.
 4. **Chantier fini** → tu me le dis en une ligne (« C4 fait », « C8 fait sauf synthèse ») → je mets à
-   jour le tableau de bord et ce fichier.
+   jour le tableau de bord, ce fichier **et `SUIVI_tests_manuels.md`** (créé le 24/07 : les tests
+   manuels de chaque chantier y vivent — ajoutés à l'écriture des specs, cochés à la validation).
 
 **Le suivi :** je ne me tiens **pas** au courant tout seul — je ne tourne pas entre nos échanges, et je
 ne vois ton dossier que quand l'app est ouverte. Le rituel qui remplace ça :
