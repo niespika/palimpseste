@@ -400,6 +400,21 @@ Chaque item passé à la question **« qu'est-ce que ça change à ce que Louis 
 
 *Cet item contestait une décision actée du 30/07. Elle est maintenue ; c'est en amont, à la conception, que le manque est comblé.*
 
+---
+
+> **NOTE AJOUTÉE LE 31 JUILLET 2026, à la révision de `02-exercices.md` (Louis × Mètis) — la décision tient, son ATTERRISSAGE était faux.**
+>
+> F23 posait que les contraintes préalables se déclarent « **au type et à l'instance** ». À l'examen du contrat des types, **aucun type n'en porte** — et il ne pouvait pas en être autrement : **R1 n'élit pas un type, elle élit une cible.** Le geste, le grain ou l'étayage d'un exercice ne changent rien au fait que la cible assignée est l'Expression. Le cas dur de l'angle mort G5 était donc hors de portée de tout attribut de type.
+>
+> **Le dispositif retenu le 31/07, avec le cadre que Louis pose d'abord** : « je reste un enseignant dans le système français. Que l'élève soit allophone ou dyslexique — ou dysgraphique — ne change rien au fait qu'il sera évalué sur la qualité de son expression. Il faut donc y faire attention et la travailler. » **Aucune exception ne dispense de travailler l'Expression.**
+>
+> Deux champs au **profil de l'élève**, à côté de `mode_saisie_force` — marques pédagogiques, jamais un diagnostic médical :
+>
+> - **`exception_expression`** → **une borne à R1** : au-delà de N cycles sans progrès, sa part descend d'un exercice sur deux à un sur trois ou quatre *(N : [à valider])*. **C'est une exception nommée et bornée à F5**, non un retour du principe « la stagnation réduit le volume » écarté le 29/07 — l'argument du 29/07 suppose une stagnation *remédiable*, alors qu'elle peut être *structurelle* ici, et R1 n'a ni compétence « suivante » ni borne de temps. **Arbitrage assumé** : l'argument de F5 — l'Expression masque les autres compétences dans la mesure — ne disparaît pas ; on accepte cette contamination plutôt qu'un canal qui possède la moitié de l'année.
+> - **`exception_orthographe`** → **un filtre en aval de la mesure**, jamais un prompt modifié. L'orthographe est « hors périmètre de la lettre » depuis le 18/07, mais elle rentre par deux portes : `accord_brouillant`, fait compté de la Fluidité, et le **plancher de correction** posé au `00-referentiel.md`. Le filtre retire l'un et lève l'autre **dans le code**, après P1 — possible parce qu'Expression est bi-phasée inversée et que l'agrégation est passée au code le 30/07. *Un prompt modifié par élève aurait fait diverger `instrument_version` : le banc et la recette supposent un instrument unique.*
+>
+> **Donc trois destinations, aucune dans `02-exercices.md`** : les deux champs → SPEC C3 §6 · la borne de R1 → `01-routeur.md` §5 · le filtre → `competences/expression.md` et le module d'agrégation. *La décision de F23 — « ça se règle en amont, pas en couche d'exécution » — reste vraie ; c'est « en amont » qui voulait dire le profil de l'élève, pas le type d'exercice.*
+
 ### F24 — La session datée dépend de la session sans date
 **Décision : AUTRE — les deux sessions n'en font qu'une, et la règle 2-1 revient sous forme de proportion.**
 

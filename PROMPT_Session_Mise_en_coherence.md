@@ -1,0 +1,516 @@
+# PROMPT — Passe de mise en cohérence : la SPEC C3 et les cinq sources
+
+> **Rédigé le 2 août 2026** (session Cowork, sur cadrage de Louis — ses cinq décisions de cadrage
+> sont rappelées ci-dessous). **À lancer dans une session Cowork neuve (poste Mètis, la session de
+> conception)**, avec les DEUX dossiers connectés : `palimpseste-conception` (les sources) et
+> `palimpseste` (le repo, où vivent la SPEC C3 et la liste d'amendements). Première vérification :
+> les deux montages répondent (`ls mnt/` via `device_bash`). S'il en manque un, demander à Louis
+> de l'ajouter (bouton « Ajouter un dossier ») avant toute autre chose.
+>
+> **Ce que c'est** : l'étape (1) de la séquence d'août arrêtée par Louis — le grand ménage qui
+> rend les documents lisibles, cohérents chacun en soi et entre eux. **C'est la dernière étape
+> avant la revue adversariale (étape 2 de la séquence).** Les étapes suivantes (construction de
+> la semaine, matrice normative, gel final, réécriture de C4-L1 — le premier lot de code du
+> moteur) ne sont PAS dans cette passe : elle prépare leur terrain, elle ne les absorbe pas.
+
+## Le cadrage de Louis (2 août au soir) — six décisions, toutes actées
+
+1. **La SPEC C3 d'abord.** La SPEC C3 (`SPEC_C3_exercices_competences.md`, repo — le contrat de
+   construction des chantiers de code C4/C5/C6) est gelée en v4.3. La passe commence par lui
+   appliquer les amendements en attente (chapitre 0) : elle passe en v4.4. Ensuite, et seulement
+   ensuite, elle est modifiable pendant la passe — toujours par amendement daté.
+2. **Le construct est stable : SIX compétences + le Monitoring.** La session dédiée
+   « Questionnement ↔ Monitoring » (en cours au moment du cadrage, le 2 août au soir) a conclu que
+   **le Questionnement survit comme compétence**. Ses décisions fines sont au journal du
+   `CONTEXTE.md` — les lire, pas les deviner.
+3. **Périmètre modifiable : six documents, et rien d'autre.**
+   `SPEC_C3_exercices_competences.md` (repo) ; `00-referentiel.md`, `01-routeur.md`,
+   `02-exercices.md`, `03-competences-ecriture.md`, `04-competences-lecture.md` (conception).
+   **Les fiches `competences/*.md` ne se touchent pas** — elles auront leur séance dédiée, et
+   leurs blocs machine nourrissent le banc de calibration (échéance dure du 24/08).
+4. **La liste de propagation est un livrable.** Tout écho d'un renommage ou d'une décision dans un
+   fichier hors périmètre (fiches, NOTES, protocole, prompts…) s'y consigne — fichier, section,
+   terme ou décision — au lieu d'être corrigé sur place. C'est l'entrée toute prête de la future
+   séance sur les fiches.
+5. **Les non-tranchés : trier, puis trancher les mûrs** en séance, un item à la fois (chapitre 5).
+6. **La présomption de fraîcheur va à `02-exercices.md`.** C'est le document révisé en dernier
+   (31/07 – 2/08) : il a été écrit en connaissance des révisions de `00-` et `01-` ET des
+   dernières décisions de Louis. En cas d'écart entre documents, **la proposition par défaut
+   aligne l'autre document sur `02-`** ; la présomption se renverse sur preuve (une entrée de
+   journal postérieure à la section concernée de `02-`, un arbitrage explicite contraire). Elle
+   règle le **sens des propositions**, jamais la décision — qui reste à Louis.
+
+## Pourquoi cette passe
+
+L'énorme travail de révision est fait, mais il s'est fait document par document, à des dates
+différentes — et le construct a changé APRÈS la relecture des deux premiers :
+
+- `00-referentiel.md` : relu en entier le 29/07 — **avant** la décision des six compétences.
+  Son §1 s'intitule encore « dix compétences, deux familles ».
+- `01-routeur.md` : relu et validé le 30/07 — avant aussi. Son §13 décrit une « aile lecture »
+  qui n'existe plus sous cette forme.
+- `02-exercices.md` : relu et validé le 2/08 — **le document le plus à jour, et la référence
+  présumée en cas d'écart** (cadrage n° 6) : écrit en connaissance de ce qui précède et des
+  dernières décisions de Louis. Porteur du construct actuel, avec le journal.
+- `03-` et `04-` : jamais relus. `04-competences-lecture.md` est probablement obsolète depuis la
+  disparition des compétences de lecture — son sort se statue en séance, avec Louis.
+- La SPEC C3 : v4.3, plus une liste d'amendements en attente
+  (`AMENDEMENTS_C3_en_attente_2026-07-31.md`, repo — la liste de référence unique ; 29 entrées au
+  31/07, d'autres ont pu s'ajouter depuis, notamment de la session Questionnement ↔ Monitoring —
+  relire la liste du jour, pas son souvenir).
+
+Le but, dans les mots de Louis : « il ne faut pas que dans 6 mois on se dise "hein, mais on
+parlait de quoi ici ?" ». Et que la revue adversariale qui suit ne perde pas son temps sur des
+faux positifs de vocabulaire ou des contradictions de dates.
+
+## Ta première action, avant toute autre chose
+
+Dans cet ordre, avant de répondre quoi que ce soit d'autre :
+
+1. `AGENTS.md` (conception) — les règles de travail avec Louis. La première est absolue.
+2. La mémoire de projet (`project_memory_read`) — au moins `palimpseste-chantier`,
+   `palimpseste-vocabulaire`, `exercices-contrat-interface`, `style-reponses-louis`,
+   `outils-fichiers-device`, `feedback-trace-sessions`.
+3. `CONTEXTE.md` (conception) — PAS en entier (330 Ko) : l'arborescence, les conventions, l'État
+   du chantier, et le journal **depuis le 30/07 inclus**. Lire par tranches (`sed -n` via
+   `device_bash`). **Garde-fou** : si l'entrée de journal de la session
+   « Questionnement ↔ Monitoring » n'y est pas encore, s'arrêter et demander à Louis — cette
+   passe a besoin de ses décisions.
+4. `AMENDEMENTS_C3_en_attente_2026-07-31.md` (repo) — en entier, y compris ses trois sections
+   annexes (les datés · ce qui n'appelle PAS d'amendement · les écarts entre les trois listes).
+5. La SPEC C3 (repo) — l'en-tête, le « Tableau de bord du socle » (A : journal des amendements ;
+   B : trous déclarés), et le §0 « Lexique et sources de vérité ». Le reste par sections, au
+   moment d'y travailler (le fichier fait 113 Ko).
+6. Les deux relevés d'arbitrage (repo) : `RELEVE_Arbitrage_C3_2026-07-29.md` et
+   `RELEVE_Arbitrage_Referentiel_Routeur_2026-07-30.md` — au moins leurs sommaires. Les items
+   F7, F18, F3 et F24 sont les plus consultés du second.
+7. `RAPPORT_Validation_Bibliotheque_Unique_2026-08-02.md` (conception) — surtout sa §6, la liste
+   de ce qui circule comme établi mais n'est pas vérifié.
+
+Vérifie la date réelle : `TZ=America/Toronto date` via `device_bash` (jamais via le bash du
+conteneur — il a déjà menti de plus de vingt-quatre heures).
+
+Puis présente à Louis un état des lieux COURT (où en est la table de progression ci-dessous, LA
+prochaine action) — et, si la session est neuve, propose-lui de la renommer dans la barre
+latérale (« Mise en cohérence — chapitre N ») : tu ne peux pas le faire à sa place.
+
+## La table de progression (à tenir à jour ici même, à chaque fin de séance)
+
+| chapitre | objet | état |
+|---|---|---|
+| 0 | La SPEC C3 passe en v4.4 — application des amendements en attente | **EN COURS — 27 entrées posées sur 30.** Séance 1 (02/08) : entrées 1-4, **A20 à A24**. Séance 2 (03/08) : entrées 5-16, **A25 à A36**. Séance 3 (03/08) : entrées **18 à 27 et 30**, **A37 à A48**. **IL NE RESTE QUE LE GROUPE 17 + 28 + 29** — plan d'attaque déposé ci-dessous. |
+| 1 | Le vocabulaire — table des termes, arbitrages, renommages | à faire |
+| 2 | Cohérence interne, document par document (00 → 01 → 02 → 03 → 04) | à faire |
+| 3 | Cohérence croisée (02 ↔ 01 d'abord ; 00 face aux deux ; sources ↔ C3 ; relevés ; rapport) | à faire |
+| 4 | L'appareil — justifications gardées, redites retirées | à faire |
+| 5 | Les non-tranchés — inventaire, tri, décisions mûres | à faire |
+| 6 | Sortie de passe — contrôles mécaniques, livrables, en-têtes | à faire |
+
+**Séance 1 (2 août, 22 h 45 – 00 h 00) — ce qu'il faut savoir pour reprendre.**
+
+- **Numérotation arrêtée** : les amendements de la passe se numérotent **dans l'ordre de la liste**,
+  à partir d'**A20** (entrée 1 → A20, entrée 2 → A21, etc.). Pour les quatre amendements issus du
+  chantier Structure, l'étiquette d'origine est rappelée en regard.
+- **Version incrémentée dès le premier amendement**, et non en fin de chapitre : l'en-tête de C3 est
+  en **v4.4** avec la mention « série A20-… en cours d'application ». *Motif : laisser v4.3 pendant
+  l'application dirait à une session Code qu'elle travaille sur le socle gelé.*
+- **Règle de conduite posée par Louis** : quand l'application d'une entrée découvre un **autre
+  endroit du même défaut**, on le corrige dans la même passe et on l'inscrit au périmètre de ce
+  qu'on tranche, au lieu d'en faire un item séparé. *A22 en est né.*
+- **Deux items déjà envoyés au chapitre 5** : la généralisation aux six compétences de la couverture
+  des deux familles au banc (A23) ; le partage des six compétences entre les deux passations de la
+  semaine 1 (A22, rattaché à l'entrée 29).
+- **Premier item de la liste de propagation** : `copies-tests/_commun/PROTOCOLE-CALIBRATION.md`
+  (hors périmètre) — son statut est « proposé, à valider par Louis », et il contredit la liste
+  d'amendements sur le nombre de tirages (5 contre 3).
+
+**Séance 2 (3 août, 8 h 20 – 10 h 30) — douze entrées, A25 à A36.**
+
+- **Trois arbitrages de Louis débloquent l'entrée 5** : le `PROTOCOLE-CALIBRATION.md` **fait foi**
+  (donc **cinq tirages**, ce qui renverse la décision « reste à trois » du 31/07) · le seuil se
+  compte **à la cellule** (copie × observable) · **le §1.7 garde 80 % en pourcentage brut**, la
+  borne basse d'IC ≥ 85 % du protocole étant sa règle d'**arrêt de cycle**, pas la porte de recette.
+- **Quatrième arbitrage, sur une divergence trouvée dans le code** : la bande de tolérance du
+  harnais ne vaut **pas** ±1 — elle vaut l'incertitude déclarée au gold, donc l'accord **exact**
+  quand le gold est certain. **Deux mesures, deux décisions** : le tri A/B/C/D garde la bande
+  déclarée, la porte de recette garde le ±1.
+- **Précédent de forme posé par Louis** : *« c'est vraiment nécessaire de mettre une note pour un
+  truc qui n'a plus d'utilité ? »* — **une correction de fait ne laisse pas de récit dans le corps
+  de la spec** ; le tableau de bord des amendements est son domicile.
+- **Louis a réfuté une proposition sur pièces, et il avait raison** : la proportion 2/3-1/3 (entrée
+  12) avait été rédigée en « écriture / lecture » d'après C3 §6, alors que `02-exercices.md` — le
+  plus à jour — a acté `composition` / `reception`. *La vérification a trouvé plus que le nom : la
+  table de propagation de `02-` annonce « F24 devient une proportion sur les modes », mais c'est un
+  **relevé de la séance 3**, et la **séance 4 a écarté** la généralisation au mode. La proportion
+  reste **binaire**.*
+- **La passe a touché une source pour la première fois** : le `01-routeur.md`, sur demande de Louis
+  (« réaligne tout de suite, pour éviter qu'on oublie un truc plus tard ») — quatre endroits, tous
+  liés à A32. L'inventaire de ce qui reste y est ci-dessous.
+- **Livrable ouvert** : `palimpseste-conception/PROPAGATION_Passe_Coherence.md`, **cinq items**
+  *(domicile à confirmer par Louis)*.
+- **Deux items envoyés au chapitre 5** : le régime du statut `differee`, qui n'est défini nulle part
+  (A31) · le recalcul de la fréquence de ciblage en réception, qui dépend de l'entrée 29 (A32).
+
+**Séance 3 (3 août, 10 h 37 – 12 h 00) — onze entrées, A37 à A48.**
+
+- **Quatre décisions de Louis, toutes prises en séance** : le renommage **`marquage_hypothese` → `marquage_supposition`** (A38) · le **retrait de `cout_api`** de `exercices_squelettes` (A40) · **`historique_cibles` tranché DÉRIVÉ** (A42) · la **fermeture** de la question du champ de dispersion (A43).
+- **Une correction de fait due à Louis, faite sur pièces** : il croyait le renommage `marquage_supposition` **déjà acté à `02-exercices.md`** ; il ne l'était nulle part — le mot n'apparaissait dans **aucun** fichier, et le `00-referentiel.md` §3 écrivait « le nom n'est PAS tranché ». *La décision qu'il avait en tête est la **Décision 8** du 02/08, sur `composer` / `composition` / `reception`.* **La décision est donc datée du 03/08, pas du 02.**
+- **Louis a demandé « pourquoi j'ai besoin de ça au fait ? » sur l'entrée 23, et la réponse était « tu n'en as pas besoin ».** *La dispersion est une propriété de l'**instrument**, pas de la mesure : un tirage unique ne peut pas déclarer sa propre instabilité, et `instrument_version` porte déjà le lien vers l'accord mesuré au banc.* **Précédent de méthode : quand une entrée demande un champ, chiffrer d'abord ce que son absence coûte — ici une **décision de routage** fausse, pas une note fausse.**
+- **Trois erreurs de la liste d'amendements trouvées en vérifiant** : l'entrée 21 annonçait un objet C3 qui n'existe pas · l'entrée 26 annonçait « §4, §6 » alors que C3 ne décrit pas le pipeline · **l'entrée 27 affirmait que « C3 §1.7 et §4 portent le seuil », ce qui est faux** — A19 l'avait déjà vérifié le 30/07.
+- **Une erreur de Mètis, dite vite et réparée dans la passe suivante** : A37 avait corrigé le §6 et **manqué le §1 point 1**, qui écrivait encore que « le Monitoring se lit en amplitude plus une direction ». Rattrapé par A44.
+- **Le trou le plus gros de la séance, trouvé en vérifiant l'entrée 21** : le `01-routeur.md` §2 nomme le « domaine partagé du profil » — trois tables de **C3 §6** —, et son §3 y déclare **trois champs stockés qui n'avaient aucune colonne** : `etat_escalade`, `historique_cibles`, `registre_retour`. **C4-L1 crée « toutes les tables du §6 » : il n'en aurait créé aucune.** Principe acté par Louis : **C3 §6 héberge l'état du routeur, le routeur reste le domicile des règles.**
+- **Le `01-routeur.md` a été touché quatre fois de plus** (§3 deux fois, §5 deux fois) — tous des **réalignements**. **Et `02-exercices.md` a reçu son premier AJOUT de la passe** : l'exigence (6) au §7, signalée à Louis avant écriture.
+- **Liste de propagation : trois items ajoutés** (6, 7, 8). **L'item 6 est le seul risque dur de la séance** : le **prompt P1 réel** (`competences-lecture/prompts-inventaire.md`) porte encore `marquage_hypothese` — *tant qu'il n'est pas repris, le champ extrait et le champ spécifié ne portent pas le même nom*. **Daté par le banc du 24/08**, pas par la rentrée.
+- **Deux items envoyés au chapitre 5** : la **longueur de la fenêtre** du taux de lucidité, fixée nulle part (A37) · et, déjà là, la généralisation de la couverture des deux familles (A23).
+
+### Le plan du groupe 17 + 28 + 29 — à exécuter tel quel en séance 4
+
+*Décision de Louis du 03/08 : « on fait 17, 28 et 29 en une seule passe ». Ce qui suit est l'organisation qu'il a demandée.*
+
+**Le principe : on groupe l'ÉCRITURE, pas les décisions.** Les trois entrées réécrivent la même table `exercices_types` ; l'écrire trois fois serait le gaspillage qu'il a voulu éviter. Mais la règle « un item à la fois, Louis valide, on avance » reste entière — elle s'applique aux **couches de décision**, pas aux coups d'éditeur.
+
+**L'ordre n'est PAS l'ordre numérique. Il est 29 → 17 → 28**, parce que les dépendances vont dans ce sens :
+
+1. **29 est la fondation** — six compétences, l'axe `modes[]`, `famille` dérivée du mode élu. Tant qu'il n'est pas posé, la liste d'attributs de 17 n'a pas de socle : `modes[]` **est** un attribut du contrat.
+2. **17 est le contrat** — la liste finale des attributs de `exercices_types`, une fois le construct fixé.
+3. **28 consomme 17** — la règle de montée lit `grain` et `crans[]` ; elle ne peut se rédiger qu'une fois les axes arrêtés.
+
+**Trois phases :**
+
+- **Phase A — décider, sans écrire.** Les trois couches dans l'ordre ci-dessus, item par item, Louis valide chacune. Rien n'est écrit tant que les trois ne sont pas arrêtées. *C'est la seule phase où l'on peut se tromper sans coût.*
+- **Phase B — écrire UNE fois.** Le bloc `exercices_types` du §6 est **régénéré en entier** depuis les trois couches, en une seule édition ancrée. Puis les endroits satellites, dans la foulée.
+- **Phase C — les annotations accumulées.** Elles sont listées ci-dessous : elles ont été **délibérément laissées en place** par les séances 2 et 3, parce qu'elles appartiennent à 29.
+
+**Les six annotations qui attendent le groupe** *(chacune a son amendement d'origine)* :
+
+| où | ce qui est périmé | posé par |
+|---|---|---|
+| C3 §6, `competences_niveaux` | « les deux parcours ont les **dix** compétences » | A39 |
+| C3 §1 point 1 | « les **neuf autres** compétences et le Questionnement » | A44 |
+| C3 §6, bloc de règle de `lettre` | le périmètre de la cause « pont E→A » — F19 disait « les **cinq compétences de lecture** » | A39 |
+| C3, ouverture 8 | **4 620 × X** et **7 700 × X** sont calculés sur **onze** compétences | A45 |
+| C3 §1 point 4 | les deux comptes de la semaine 1 (6 en écriture, 5 en lecture), passés `[à valider]` | A22 |
+| C3 §1.7 | la généralisation de la couverture des deux familles aux six — **item du chapitre 5**, à ne pas trancher au groupe | A23 |
+
+**Ce qui est déjà fait et n'est PAS à refaire** : la proportion 2/3-1/3 est **binaire** et le routeur est réaligné (A32) · le compte « (6+5) » est détaché des calculs du §10 (A22) · `historique_cibles` est dérivé (A42).
+
+**Le relevé mécanique à faire AVANT la phase A** *(il ne décide rien, il fait gagner la séance)* : mettre côte à côte la déclaration actuelle de `exercices_types` (C3 §6) et le contrat cible (`02-exercices.md` §1, « Le contrat d'interface »), attribut par attribut, avec pour chacun **créé / inchangé / devenu dérivé / écarté**. *Attention : les comptes qui circulent ne concordent pas — la mémoire de projet dit « deux attributs ajoutés, six écartés » pour la seule révision des séances 3-4, alors que `couverture_observables` et `exclusions_parcours[]` ont été ajoutés le 31/07. **Le relevé fait foi, pas le souvenir.***
+
+### Inventaire ouvert — le `01-routeur.md` porte encore le construct périmé (relevé le 03/08)
+
+*Déposé ici sur demande de Louis — « réaligne tout de suite, pour éviter qu'on oublie un truc plus
+tard » — pour que ni l'entrée 29 ni le chapitre 2 n'en manquent un. **Ce n'est pas une liste de
+décisions** : plusieurs de ces endroits attendent des arbitrages qui appartiennent à l'entrée 29.*
+
+**Déjà réaligné le 03/08 (amendement A32, entrée 12)** : l'énoncé de la proportion F24 au §1 · le
+partage « probabiliste » · la conséquence à surveiller · la ligne du registre au §11.
+
+**Reste à traiter. NUMÉROS DE LIGNE REFAITS EN FIN DE SÉANCE 3** — ils avaient bougé, la séance 3
+ayant inséré la branche d'échec au §5 *(fichier à 731 lignes)* :
+
+| § / ligne | ce qui est périmé |
+|---|---|
+| §1, l. 69 | « **dix compétences** plus le Monitoring », et l'énumération écriture/lecture qui suit |
+| §1, l. 46 | « toutes les règles qui élisent sont des règles d'**écriture** » — vrai, mais à redire dans le vocabulaire des familles dérivées |
+| §1, l. 128 | « **six** compétences en écriture » au tronc commun |
+| §4, l. 314 | « les couches 2 et 3, et R1-R6, sont écrites pour l'**écriture** » |
+| §5, l. 342 · §11, l. 612 | **K de R5** : « ≈ 6 côté écriture, ≈ 5 côté lecture » — *l'entrée 29 dit que K change ; ne pas trancher ici* |
+| §7, l. 528-532 | « l'explication porte **les cinq de lecture** » |
+| §12, l. 657-680 | l'ordre de développement puis l'ordre de lecture, qui énumèrent **Restitution, Reconstruction, Évaluation, Mouvement** |
+| §13, l. 691-717 | « **L'aile lecture** » en entier — dont « la plus faible des **cinq compétences de lecture** » (l. 703) et l'ordre de priorité (l. 713) |
+
+**Traité depuis, à ne pas rouvrir** : §1 (l'énoncé de F24, le partage probabiliste, la conséquence à
+surveiller) et §11 (la ligne du registre) — **A32**, séance 2 · §3 (« la lucidité se lit en
+présent/absent ») — **A37**, séance 3 · §3 (`historique_cibles` passé en dérivé) et §5 (la
+parenthèse de R5) — **A42** · §5 (la branche d'échec du pipeline) — **A46** · §5 (les gardiens du
+seuil, dépendance close) — **A47**.
+
+*Le §13 est déjà signalé au chapitre 2 du présent prompt comme un endroit connu. Cet inventaire le
+précise et l'étend.*
+
+Une passe = plusieurs séances, c'est prévu. Chaque séance reprend ce prompt, lit la table,
+continue où c'était. Les chapitres se font dans l'ordre.
+
+## Chapitre 0 — la SPEC C3 passe en v4.4
+
+**La liste `AMENDEMENTS_C3_en_attente_2026-07-31.md` fait foi**, dans son ordre. Les entrées sont
+**déjà arbitrées** : on ne ré-arbitre pas, on rédige. Pour chaque entrée :
+
+1. Relire son entrée détaillée dans la liste et le § de C3 visé (le tableau récapitulatif donne
+   les deux ; les entrées détaillées portent souvent un texte presque prêt — s'en servir).
+2. Montrer à Louis le texte exact à insérer ou à modifier — pas une paraphrase.
+3. Après son accord, écrire (édition ancrée via `device_bash`), inscrire l'entrée au tableau de
+   bord A de C3, cocher l'entrée dans la liste avec sa destination.
+4. Si l'application révèle un conflit avec le texte en place, ou si une entrée « *à vérifier* »
+   ne se vérifie pas : ne pas forcer. L'écart devient un item de séance — chapitre 5 s'il n'est
+   pas mûr.
+
+Le débit se règle avec Louis en début de chapitre : entrée par entrée par défaut ; les entrées
+purement mécaniques peuvent passer par petits lots s'il le préfère.
+
+Les régimes d'amendement, rappel : **(a)** correction d'une contradiction — s'applique au texte ;
+**(b)** question de périmètre non tranchée — s'inscrit ouverte (tableau de bord B, ou
+`[à valider]` au § visé) ; **(c)** trou déclaré — s'inscrit avec sa condition de fermeture. Les
+entrées « *à vérifier* » (n° 2, 4, 15, 21, 22, 26 au 31/07) se vérifient AVANT application — le
+n° 22 porte un problème d'objet connu : `historique_cibles` n'existe nulle part dans C3, c'est
+une structure du §3 du routeur.
+
+Les trois sections annexes de la liste font partie du travail : les **datés** gardent leur
+échéance visible dans C3 · la section « **ce qui n'appelle PAS d'amendement de schéma** » fait
+foi sur les destinations (paramètres au §11 du routeur — registre faisant foi depuis l'amendement
+A17 —, règles au texte des lots R1-R6…) ; ce qu'elle envoie côté routeur se vérifie au
+chapitre 3 · les « **écarts entre les trois listes** » se relisent pour n'en perdre aucun.
+
+**Sortie du chapitre** : C3 en **v4.4**, tableau de bord à jour, entrée de journal au
+`CONTEXTE.md`, la liste d'amendements marquée appliquée (entrée par entrée, avec destination).
+À partir de là, C3 est modifiable pendant la passe — mais toute modification reste **un
+amendement daté** au tableau de bord, et la version s'incrémente (les manifestes des lots de
+code contrôlent la version mécaniquement ; c'est ce qui protège les sessions Code).
+
+## Chapitre 1 — le vocabulaire : chaque chose a un nom, chaque nom a une chose
+
+**Livrable : la table des termes.** Pour chaque terme retenu : sa définition en une phrase, son
+domicile (le fichier + la section où il est défini), les termes proscrits qu'il remplace, et les
+comptes d'occurrences. Premier item à trancher avec Louis : **où vit cette table** (proposition :
+un `LEXIQUE.md` à la racine de `palimpseste-conception` ; le §0 de C3 garde son lexique propre
+côté contrat — les deux doivent rester cohérents, et se citer l'un l'autre).
+
+**Méthode, dans l'ordre :**
+
+1. **Relevé mécanique d'abord** : pour chaque terme candidat, `grep -c` sur les six documents.
+   Compter AVANT de proposer — un compte a déjà écarté un renommage en une minute le 2/08.
+2. Construire la table et la présenter par familles de termes.
+3. **Arbitrer les renommages un par un** : le problème, la proposition, le coût en occurrences,
+   ce que ça ne change pas — validation de Louis — item suivant.
+4. **Appliquer mécaniquement**, document par document, par remplacements ancrés via
+   `device_bash`.
+5. **Re-compter** : le terme proscrit doit tomber à zéro (hors journal et citations historiques,
+   qui ne se réécrivent pas).
+
+**Les chantiers connus** — liste d'amorçage à compléter par le relevé mécanique, pas une liste
+fermée :
+
+- **Le mode de composition et sa famille.** Les traces du 2/08 disent tantôt `produire` (« nom à
+  trancher »), tantôt `composer` ; la famille tantôt `production`, tantôt `composition`. La
+  collision avec les noms des crans (`production_etayee`, `production_autonome`,
+  `production_contrainte`) est documentée. Vérifier d'abord si le journal a tranché ; sinon,
+  c'est le premier arbitrage du chapitre.
+- **L'expression « compétences de lecture »** : il n'y en a plus depuis le 2/08. Ce que chaque
+  occurrence veut dire aujourd'hui — un mode réceptif, la famille réception, ou un signal de
+  réception — se réécrit au cas par cas.
+- **Restitution, Reconstruction, Évaluation** : ex-compétences devenues MODES (`restituer`,
+  `expliquer`, `évaluer`) ; et **Mouvement = la Structure en mode `expliquer`**.
+- **Problématisation → Questionnement** (fusion du 29/07) — l'ancien nom ne doit plus désigner
+  la compétence.
+- **`regime_v1vf`** (le régime du cycle première version → version finale, renommé le 30/07) —
+  l'ancien nom « régimes de cycle » ne doit plus apparaître.
+- **Les paires à ne jamais confondre**, dont les noms doivent porter la distinction : largeur de
+  mesure / richesse de sonde · `grain` / `Support` · cran de diagnostic / mode `évaluer` ·
+  `Support` / `provenance_materiau` · les deux « diagnostic » (crans de l'échelle d'autonomie,
+  types diagnostiques du §8 du routeur).
+- **type / objet / instance / exercice / sonde** — l'usage est-il partout celui que les §1 et §3
+  de `02-exercices.md` définissent ?
+
+**Règle du chapitre** : aucun renommage « au passage » dans les autres chapitres. Tout renommage
+passe par la table, son compte, et l'accord de Louis.
+
+## Chapitre 2 — cohérence interne, document par document
+
+Ordre : `00` → `01` → `02` → `03` → `04` (C3 a eu son chapitre 0 ; ses retouches croisées
+viennent au chapitre 3). **Ce n'est pas une re-révision** : les décisions sont prises, on
+vérifie que le texte les dit partout pareil. Le pas est donc plus rapide qu'une relecture —
+mais section par section quand même.
+
+Pour chaque document, quatre contrôles :
+
+1. **Le début contre la fin.** L'exemple canonique de Louis : une décision prise au §9 que le
+   §1, resté vieux, contredit. Chercher les sections écrites avant une décision et jamais
+   rattrapées.
+2. **La propagation du construct du 2 août** : six compétences + le Monitoring · les cinq
+   modes · les familles · `famille` dérivée des modes élus, jamais déclarée. **La référence de
+   la propagation est `02-exercices.md`** (ses §1, §2 et §4) plus le journal : on propage DE lui
+   VERS les autres, pas l'inverse (cadrage n° 6). Endroits connus :
+   le titre du §1 de `00` (« dix compétences, deux familles ») ; ses §3 (les ancres « des
+   dix »), §5 (le chantier des ancres de lecture), §7 (la covariance des duals) ; le §13 de `01`
+   (« l'aile lecture ») ; `04` en entier — son sort (absorbé, réécrit, ou marqué obsolète avec
+   renvoi) se statue avec Louis.
+3. **Les statuts.** Ce qui est écrit « acté » doit l'être vraiment (le journal et les relevés en
+   font foi). Les `[à valider]` et les *provisoires* s'inventorient au passage — c'est la
+   matière du chapitre 5.
+4. **Les renvois internes** : chaque « voir §X » pointe vers une section qui existe encore.
+
+**Méthode par écart** : restituer les deux passages côte à côte · dater les deux états au
+journal — **avec la présomption de fraîcheur pour `02-exercices.md`** (cadrage n° 6) : la
+proposition par défaut aligne sur lui, sauf preuve contraire datée ; c'est Louis qui tranche ·
+proposer la correction · écrire immédiatement après accord. **Journaliser après chaque document,
+pas en fin de séance.**
+
+## Chapitre 3 — cohérence croisée
+
+Dans cet ordre :
+
+1. **`02-exercices.md` ↔ `01-routeur.md`** — la demande explicite de Louis. Les points de
+   contact à passer systématiquement : la règle de montée (matrice grain × cran, état par grain,
+   marquage des sondes — amendement n° 28) · les deux colonnes dérivées de F7 (item 7 du relevé
+   du 30/07 : le routeur voit deux valeurs de ciblage, l'élève une seule) · ce que le routeur
+   consomme du contrat de type — **les six attributs écartés à la révision ne doivent plus être
+   consommés nulle part** (rang de richesse de sonde, `produit_mesure`, `duree_redaction_min`,
+   `complexite`, `etayage[]`, `statut_modal`) · `couverture_observables` et la règle de ciblage
+   R5 · le `regime_v1vf` dérivé des crans · `Support` et la règle de non-emboîtement ·
+   l'élection des modes et le ciblage. **En cas de divergence `02` ↔ `01`, la présomption de
+   fraîcheur (cadrage n° 6) vaut** : l'alignement par défaut se fait sur `02-exercices.md`, sauf
+   preuve au journal que le routeur porte la décision la plus récente.
+2. **`00-referentiel.md` ↔ les deux autres.** Le référentiel est le plus ancien des trois (relu
+   le 29/07, avant le changement de construct) : c'est lui qui a le plus de chances d'être en
+   retard. **Contre `02-exercices.md`** : les compétences et les modes que les types déclarent
+   (`competences[]`, `modes[]`) sont-ils exactement ceux que le référentiel définit (ses §1, §3
+   et §4.3) ? · les observables que les types exercent ou isolent (`couverture_observables`)
+   existent-ils tous au référentiel ? · l'échelle commune E→A (§2 de `00`) et l'échelle
+   d'autonomie à sept crans (§2 de `02`) restent deux échelles distinctes, citées sans
+   confusion. **Contre `01-routeur.md`** : les seuils nommés et les décisions structurantes de
+   l'échelle (§2 de `00`) face aux règles de lettres (§7 de `01`) · les ancres (§3 de `00`) face
+   aux diagnostics et mesures en classe (§8 de `01`) · le Monitoring de second ordre — jamais
+   noté, jamais cible — ne doit être ciblable nulle part dans le routeur · l'hypothèse de
+   covariance des duals (§7 de `00`) face à ce que le ciblage par famille suppose. Pour ces
+   écarts, la présomption de fraîcheur s'étage par dates de relecture — `02-` (2/08), puis
+   `01-` (30/07), puis `00-` (29/07) : l'alignement par défaut va vers le plus récent, preuve
+   datée au journal toujours possible, et Louis tranche.
+3. **Les sources ↔ C3 v4.4** : les points de contact listés à la fin de l'entrée du 29/07 du
+   journal, et ce que la liste d'amendements a renvoyé côté routeur — les paramètres qu'elle
+   envoie au §11 (le registre) y sont-ils réellement écrits ?
+4. **Les sources ↔ les deux relevés d'arbitrage.** Les items F1 à F27 et G1 à G5 du relevé du
+   30/07, un par un : la décision est-elle retombée dans le texte ? Même chose pour le relevé C3
+   du 29/07 — il porte des corrections de terrain que les documents n'ont pas toutes (Louis
+   enseigne au cégep, à des élèves de 17 ans et plus…).
+5. **Les sources ↔ le rapport de validation du 2/08** — sa §6 : ne rien laisser affirmé comme
+   établi qu'il marque non vérifié (les formules « aucune méthode n'est imposée » / « aucun
+   barème fixé d'avance » viennent d'une note de service abrogée).
+
+Même méthode par écart qu'au chapitre 2. Un écart tranché ici peut rouvrir une section déjà
+passée au chapitre 2 : c'est normal, et ça se note à la table de progression.
+
+## Chapitre 4 — l'appareil du texte : garder les pourquoi, retirer les redites
+
+Deux gestes symétriques, à ne pas confondre :
+
+- **Les justifications se GARDENT.** Un « pourquoi » attaché à une décision est de la
+  conception, pas du bavardage — demande explicite de Louis. Si une décision importante n'a PAS
+  sa justification dans le document, le signaler : elle existe souvent au journal ou dans un
+  relevé, et se rapatrie en une phrase + un renvoi.
+- **Les redites PARTENT — avec preuve de domicile.** Une note ne se supprime que si son contenu
+  vit ailleurs (fichier + section montrés à Louis), et un renvoi la remplace. Jamais de
+  suppression sèche. Proposer par petits lots (cinq ou six items, une ligne chacun : la note,
+  son domicile, le renvoi proposé), validation de Louis par lot.
+
+La règle de fond : **un contenu, un domicile, des renvois partout ailleurs.** Les domiciles
+établis : les observables → la fiche `competences/<nom>.md` (elle fait foi) · les paramètres →
+le §11 du routeur · les types → `02-exercices.md` · le contrat de construction → C3. Compter
+avant de proposer (le précédent du 2/08 : « 23 lignes, 27 mentions » là où le souvenir disait
+« trois renvois »).
+
+## Chapitre 5 — les non-tranchés : inventaire, tri, décisions
+
+1. **L'inventaire complet**, en croisant quatre gisements : les `[à valider]` et *provisoires*
+   relevés au chapitre 2 · les trous déclarés de `02-exercices.md` (la liste est en mémoire de
+   projet et au §9 du document) · le §11 du routeur (le registre des paramètres ouverts) · les
+   amendements de régime (b) restés ouverts après le chapitre 0 (n° 7, 23, 25, 26, 27… au
+   31/07).
+2. **Le tri, présenté à Louis** — trois piles : **mûr** (l'information pour trancher existe) ·
+   **attend une donnée** (dire laquelle, et quand elle arrive) · **session dédiée** (trop gros
+   pour un item de séance — la construction de la semaine, par exemple, est l'étape 3 de la
+   séquence, pas un item de ménage).
+3. **Trancher les mûrs, un par un** : le problème, la proposition, ce que ça change, ce que ça
+   ne change pas → validation → écriture immédiate → item suivant. Jamais un plateau.
+
+Ce qui reste ouvert en fin de passe est **écrit** — statut + condition de fermeture. La revue
+adversariale doit pouvoir distinguer une contradiction d'un ouvert assumé.
+
+## Chapitre 6 — la sortie de passe
+
+1. **Contrôle mécanique du vocabulaire** : pour chaque terme proscrit de la table, `grep -c` sur
+   les six documents, comptes affichés à Louis. Zéro attendu (hors journal et citations
+   historiques).
+2. **Contrôle des renvois** : les « voir §X de Y » pointent vers des sections existantes.
+3. **Les livrables déposés** : la table des termes (à son domicile choisi) · la **liste de
+   propagation** (fichier hors périmètre × terme ou décision × section — l'entrée de la future
+   séance sur les fiches) · l'inventaire des non-tranchés restants, avec statuts.
+4. **Les en-têtes des six documents** mis à jour : statut de relecture, date de la passe,
+   version.
+5. **L'état C3 consigné** : version atteinte, amendements posés pendant la passe.
+6. **Proposer le commit à Louis** — une commande à la fois, jamais de `git` via le pont.
+
+## Le régime de travail (inchangé — c'est celui de toutes les séances depuis la revue du routeur)
+
+**Un item à la fois.** Pour chaque section ou chaque écart :
+
+1. Tu restitues en quelques lignes — ce que le texte dit, en clair.
+2. Tu poses ce que les décisions actées imposent d'y changer, factuellement, sans plaider.
+3. Tu signales ce que tu vois de fragile.
+4. Louis commente. Tu reformules sa décision en spécification précise, tu la fais confirmer.
+5. Tu écris dans le fichier immédiatement — pas en fin de séance.
+
+**Règle cardinale** : tu ne tranches rien à la place de Louis. Tu proposes, tu chiffres, tu
+vérifies — et tu t'arrêtes. Non tranché se marque `[à valider]`, jamais « acté ».
+
+**Statuts** : *acté* / *provisoire (réglage empirique)* / *[à valider]*. Un « oui » de Louis
+acte un **principe**, jamais un résultat.
+
+**Convention anti-écrasement** : relire le passage sur disque juste avant d'écrire · modifier
+par insertions ciblées avec assertion sur la chaîne d'ancrage · ne jamais régénérer un fichier
+depuis ta mémoire. Écrire via `device_bash`, jamais par le montage (son cache peut mentir sur le
+contenu avec des métadonnées justes). Lire les gros fichiers par tranches.
+
+**Style** : lisibilité avant densité · chaque sigle explicité à sa première occurrence ·
+rappeler le contexte d'un point avant d'en discuter · deux phrases courtes plutôt qu'une longue.
+
+### Les leçons des séances passées, à appliquer
+
+- **Vérifier avant d'affirmer, et le montrer.** Grep d'abord, propose ensuite — c'est ce qui a
+  rapporté le plus, toutes séances confondues.
+- **Louis réfute sur pièces, et il a raison plus souvent qu'à son tour** (trois fois le 2/08).
+  Vérifier ses objections avant de défendre une position.
+- **Chercher si le système ne tient pas déjà la réponse** avant d'inventer un mécanisme.
+- **Préférer une dérivation à un champ déclaré** — le réflexe constant de Louis.
+- **Mètis se trompe, et doit le dire vite** — une édition qui tronque une table se répare à la
+  relecture immédiate, pas trois sections plus loin.
+
+## Fin de chaque séance (obligatoire, même si la séance est courte)
+
+1. **Mets à jour la table de progression** de ce prompt, et redépose-le au repo (même nom).
+2. **Journalise au `CONTEXTE.md`** : une entrée datée — les « non » et les solutions propres de
+   Louis en détail, les accords simples par plage, les fichiers touchés. Date vérifiée via
+   `device_bash`.
+3. **La ligne obligatoire d'impact.** Cette passe modifie C3 directement : la ligne cite ce qui
+   a été fait (« impact C3 : v4.4 posée », « impact C3 : amendement n° X ») — ou, pour une
+   séance qui n'a pas touché C3, « impact C3 : néant » après contrôle réel.
+4. **Le lien de session** s'inscrit aux « Sources historiques » de `CONTEXTE.md` (assert
+   d'absence d'abord — Louis l'a parfois déjà posé lui-même).
+5. **La mémoire de projet** : l'état de la passe, les arbitrages rendus, ceux en attente.
+6. S'il reste des arbitrages ouverts, **les rappeler à Louis sans les re-plaider**.
+
+## Interdits
+
+- **Rien trancher à la place de Louis** — y compris « juste un petit renommage ».
+- **Ne pas rouvrir les décisions des relevés et des séances passées.** Si l'une paraît fausse,
+  le dire à Louis, pièces à l'appui — ne pas la défaire de soi-même.
+- **Pas de conception nouvelle sous couvert de ménage.** La passe fait tenir ensemble
+  l'existant. Toute idée nouvelle : `IDEES_post_rentree.md` (repo), ou item du chapitre 5 si
+  elle bloque la cohérence.
+- **Ne pas toucher aux fichiers hors périmètre** — fiches `competences/*.md`, `copies-tests/`,
+  les NOTES, les prompts déposés, le journal (on y ajoute, on ne le réécrit pas). Leurs échos
+  vont à la liste de propagation.
+- **Aucun renommage hors table des termes ; aucune suppression sans domicile prouvé.**
+- **Pas de `git` via le pont Cowork.** Pour Louis : une seule commande de terminal à la fois,
+  jamais deux, jamais de `&&`, jamais de « si tu vois X fais ceci ».
+- **Aucun run de banc, aucun appel d'API** — la passe est purement documentaire.
+- **« Une case vide n'est pas un manque à combler »** (garde-fou du §1 de `02-exercices.md`) —
+  à ne pas confondre avec le contrôle de complétude, qui vérifie qu'on n'a rien perdu.
+- **Ne pas réintroduire les confusions connues** : les deux « diagnostic » · mode `évaluer` /
+  cran de diagnostic · `grain` / `Support` · `Support` / `provenance_materiau` · largeur de
+  mesure / richesse de sonde.
+
+---
+
+*Ce prompt suit le gabarit des sessions du chantier (révision de `02-exercices.md` en quatre
+séances ; session Questionnement ↔ Monitoring). Si ce prompt et un fichier du chantier se
+contredisent, **le fichier a raison** — et l'écart se signale à Louis.*
