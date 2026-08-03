@@ -99,9 +99,9 @@ latérale (« Mise en cohérence — chapitre N ») : tu ne peux pas le faire à
 | chapitre | objet | état |
 |---|---|---|
 | 0 | La SPEC C3 passe en v4.4 — application des amendements en attente | ✅ **TERMINÉ le 03/08/2026 — 30 entrées sur 30, amendements A20 à A51**, en quatre séances. Séance 1 (02/08) : entrées 1-4, **A20-A24**. Séance 2 (03/08) : entrées 5-16, **A25-A36**. Séance 3 (03/08) : entrées 18-27 et 30, **A37-A48**. Séance 4 (03/08) : le **groupe 17 + 28 + 29**, **A49-A51**. |
-| 1 | Le vocabulaire — table des termes, arbitrages, renommages | **à faire — C'EST LA PROCHAINE ÉTAPE** |
-| 2 | Cohérence interne, document par document (00 → 01 → 02 → 03 → 04) | à faire |
-| 3 | Cohérence croisée (02 ↔ 01 d'abord ; 00 face aux deux ; sources ↔ C3 ; relevés ; rapport) | à faire |
+| 1 | Le vocabulaire — table des termes, arbitrages, renommages | ✅ **TERMINÉ le 03/08/2026 — les quatre familles, en une séance** (séance 5, 13 h 17 – 15 h 20). Livrable : **`palimpseste-conception/LEXIQUE.md`**, **23 distinctions**. **Trois amendements C3 posés — A52, A53, A54 ; la spec passe en v4.5.** Contrôle mécanique de sortie fait. |
+| 2 | Cohérence interne, document par document (00 → 01 → 02 → 03 → 04) | **à faire — C'EST LA PROCHAINE ÉTAPE.** **Quatre items déjà en attente** : le `01-` §13 *(annoté le 03/08)*, le `00-` §7 *(contradiction sur les duals)*, l'avertissement **cran de diagnostic / mode `évaluer`** *(à écrire, aucune source ne le porte)*, et le sort de `04-` |
+| 3 | Cohérence croisée (02 ↔ 01 d'abord ; 00 face aux deux ; sources ↔ C3 ; relevés ; rapport) | à faire — **un item dur déjà inscrit** : le **contrôle des chiffres du routeur contre C3, en entier** *(le §8 et le registre du §11 portaient encore 4 620 / 7 700 × X après le réalignement en dix endroits de la séance 4 ; marqué `[À VÉRIFIER AU CHAPITRE 3]` dans le registre)* |
 | 4 | L'appareil — justifications gardées, redites retirées | à faire |
 | 5 | Les non-tranchés — inventaire, tri, décisions mûres | à faire |
 | 6 | Sortie de passe — contrôles mécaniques, livrables, en-têtes | à faire |
@@ -174,6 +174,81 @@ latérale (« Mise en cohérence — chapitre N ») : tu ne peux pas le faire à
 - **`01-routeur.md` réaligné dans la foulée, dix endroits** — §1 (les règles d'élection ; le compte), §2 (les trois puces TC/HLP), §4 (la note sur les couches 2-3), §5 et §11 (le **K de R5**, recompté à ≈ 6 des deux côtés), §7 (le format du diagnostic ; le pont E→A), §12 (annotation de l'ordre de lecture), plus l'**en-tête** (l. 17), qui annonçait encore des amendements C3 « non encore posés ». **Le §13 « L'aile lecture » part au chapitre 2, sur décision de Louis** : ce n'est plus un réalignement mais une réécriture de section.
 - **Items envoyés au chapitre 5** : la cadence de ciblage en réception (le recalcul d'A32, sa dépendance à l'entrée 29 étant close) · le régime du statut `differee`, que la réserve du Questionnement au segment 2 rejoint · et, déjà là, la couverture des deux familles au banc (A23, §1.7).
 
+**Séance 5 (3 août, 13 h 17 – 14 h 45) — chapitre 1, trois familles sur quatre, et le `LEXIQUE.md` existe.**
+
+- **Domicile du lexique tranché** : un **`LEXIQUE.md` à la racine de `palimpseste-conception`**, hors des six
+  documents. Le **§0 de C3 garde son lexique de contrat** ; les deux se citent — **C3 fait foi sur la forme
+  technique, le `LEXIQUE.md` sur le sens pédagogique.**
+- **LA RÈGLE DES BLOCS DATÉS, posée par Louis, gouverne tout le chapitre.** Ces documents mettent leur
+  histoire **en ligne, dans des blocs datés**, pas dans un journal séparé. **Un terme proscrit qui y figure
+  ne se réécrit pas** — le bloc reçoit **une ligne d'annotation en tête** (« partout ci-dessous, lire X là où
+  il est écrit Y »), **une par bloc, pas une par occurrence**. *La forme n'était pas neuve : `02-` §1 la
+  pratiquait déjà.* **Conséquence pour le chapitre 6 : la cible n'est plus « zéro » mais « zéro hors blocs
+  datés et annotés ».**
+- **La correction de Louis qui a changé le livrable** : *« ne pas simplement changer compétence pour mode ;
+  le vocabulaire des compétences de lecture doit juste disparaître »*. La table de correspondance que Mètis
+  proposait (Restitution → `restituer`…) aurait fait **retrouver quatre objets mesurables là où il n'y en a
+  plus**. Vérifié sur pièces : les règles d'élection élisent une **compétence**, il y a **une lettre par
+  compétence**, et la séance 4 a **écarté** le signal de ciblage au mode. → **les quatre noms sont proscrits
+  SANS REMPLAÇANT**, seul cas de la table.
+- **Seconde erreur de Mètis, réfutée en trois mots** : *« cran d'autonomie ? t'es sûr ? »*. Le terme était
+  bon ; la formulation disait « le cran **déclaré par le type** », alors que le type déclare la **plage
+  `crans[]`** et que **l'instance élit**. *Mètis allait réécrire le défaut qu'A49 avait réparé le matin même.*
+- **LE COMPTE BRUT MENT, ET C'EST LA LEÇON DE MÉTHODE.** 14 occurrences relevées → 6 vivantes
+  (`competences_secondaires`) · 43 → 1 (« Problématisation ») · 32 → 1 (« compétences de lecture ») ·
+  **108 → 0** (les quatre ex-compétences). **Ouvrir chaque occurrence avant d'annoncer un coût** : le compte
+  brut a surestimé le travail d'un facteur dix.
+- **Trois corrections de fond trouvées derrière des mots** : le `01-` §6 annonçait comme acté un **rang de
+  richesse de sonde** que `02-` avait écarté le 31/07 · le `01-` §1 disait le régime v1→vf « déclaré » quand
+  son propre §9 dit « dérivé » · le `01-` §8 **et le registre du §11** portaient encore **4 620 / 7 700 × X**
+  après le recalcul d'A51. **Les trois corrigées ; la troisième laisse un `[À VÉRIFIER AU CHAPITRE 3]`** dans
+  le registre, à la demande de Louis.
+- **Trouvaille** : il y a **TROIS « diagnostic »**, pas deux — le **cran**, les **types diagnostiques**, les
+  **trois diagnostics en classe** —, et l'avertissement n'existait que dans **une cellule de tableau** du
+  `01-` §9. Le relevé a rapporté **27 passages « à ne pas confondre » et 17 distinctions**, contre les cinq
+  paires que ce prompt annonçait.
+- **Deux trous inscrits plutôt que comblés au jugé** : les **deux « grain »** *(dette déclarée par la
+  Décision 8, dont aucune phrase du corpus ne dit les deux sens — chapitre 5)* · l'avertissement **cran de
+  diagnostic / mode `évaluer`** *(aucune source ne le porte — chapitre 2)*.
+- **Cinq blocs annotés**, dont le `00-` §4 « Les Constructs » : *les faits qu'il rapporte sont ceux-là mêmes
+  qui ont fondé la Décision 2 — c'est le statut des quatre noms qui a changé, pas les faits.*
+- **Impact C3 : néant** — la SPEC C3 n'a pas été modifiée ; les décisions appliquées y étaient déjà
+  (A38, A41, A49, A51).
+
+
+**Séance 5, suite et fin (3 août, 14 h 45 – 15 h 20) — la famille 4, et TROIS AMENDEMENTS C3.**
+
+- **La famille 4 s'est ouverte sur un item que C3 nous adressait**, et que la séance n'avait pas vu :
+  le journal de C3 du matin même écrivait « *la collision se règle au chapitre 1 de la passe* ». Trouvé
+  **en cherchant les deux « grain »**. → **A52** : le mot « mode » portait **trois sens vivants**, dont
+  **deux colonnes du même schéma**. `exercices.mode` → `contexte_passation`, `competences_mesures.mode`
+  → **`modes`**. *Même geste qu'A49 sur `cran`, écrit **trois lignes plus bas**.*
+- **A53, décision de Louis** : `contexte` devient **`lieu`** et passe de quatre valeurs à **deux**,
+  `maison` | `classe`. *« Toutes mes évals en classe sont des diagnostiques, et l'essai de Fragments est
+  une éval en classe. »* **Il n'y avait jamais eu quatre valeurs : deux, écrites quatre fois.**
+- **A54, idée lancée par Louis** — *« on pourrait imaginer que je décide de faire des formatifs en classe
+  et des diagnostiques à la maison »*. **Deux axes** : `exercices.lieu` (`maison`|`classe`) et
+  `competences_mesures.forme` (`formatif`|`sommatif`). **Le cœur n'est pas le champ, c'est la définition** :
+  *une **ancre** est une mesure dont le `lieu` vaut `classe` **ET** la `forme` vaut `sommatif`.* Le mot
+  « ancre » étant lu par **cinq** règles, ne faire lire `forme` qu'à la descente lui aurait fait dire deux
+  choses. Son miroir : « montée par le **maison** » devient « montée par la **trajectoire** ».
+  **Ce que ça achète, en termes d'élève** : un **formatif en classe ne fait plus descendre une lettre**.
+- **La question de Louis avant d'écrire — « est-ce que ça casse quelque chose ? » — a rapporté trois
+  faits** : le lieu **ne peut pas** quitter la mesure (`depot_id` est nullable) · ce qui fait une ancre est
+  la **surveillance**, pas la note *(la spec l'écrit quatre fois)*, donc **un diagnostique à la maison n'en
+  serait pas une** · le pipeline manuscrit + OCR s'indexe sur le **lieu seul**, il survit intact.
+- **L'audit d'usage proprement dit est un NON-ÉVÉNEMENT, et c'est un résultat** : `type`, `objet`,
+  `instance`, `exercice` sont **propres** sur 1 118 occurrences. **`cycle`** est le mot le plus chargé —
+  165 occurrences, **trois sens vivants**. **Un travail fait traînait comme à faire** : le renommage
+  `duree_cycle_min` → `duree_exercice_min`, accompli le 30/07 par A9, était encore écrit « à renommer ».
+- **Deux fois dans la séance, le contrôle APRÈS écriture a rattrapé des endroits que la liste d'édition
+  avait manqués** — quatre dans le `01-` pour A53, un pour le contrôle final. ***Greper le fichier entier,
+  pas seulement les endroits annoncés*** : c'est la leçon du matin, elle s'est reproduite deux fois.
+- **Une erreur de conduite de Mètis, relevée par Louis** : la séance a été déclarée close **sans qu'il
+  l'ait demandé**. Les traces de clôture ont été reprises à la vraie fin. *La fin de séance appartient à
+  Louis, comme le reste.*
+
+
 ### Inventaire ouvert — le `01-routeur.md` porte encore le construct périmé (relevé le 03/08)
 
 *Déposé ici sur demande de Louis — « réaligne tout de suite, pour éviter qu'on oublie un truc plus
@@ -187,7 +262,7 @@ partage « probabiliste » · la conséquence à surveiller · la ligne du regis
 
 | § | ce qui est périmé | où ça va |
 |---|---|---|
-| **§13, « L'aile lecture » en entier** | ce n'est plus une aile mais la famille **`reception`** — dont « la plus faible des **cinq compétences de lecture** » et l'ordre de priorité | **chapitre 2** *(décision de Louis, 03/08 : ce n'est plus un réalignement mais une réécriture de section)* |
+| **§13, « L'aile lecture » en entier** | ce n'est plus une aile mais la famille **`reception`** — dont « la plus faible des **cinq compétences de lecture** » et l'ordre de priorité | **chapitre 2** — **ANNOTÉE le 03/08** *(ligne « vocabulaire d'époque — section à réécrire » en tête ; décision de Louis, 03/08 : ce n'est plus un réalignement mais une réécriture de section)* |
 | **§12, l'ordre de lecture** | **annoté, non réécrit** : il ordonne quatre objets devenus des modes ; le ré-ordonner demande un **arbitrage**, non un réalignement | **session « construction de la semaine + ciblage lecture »**, que la liste désignait déjà comme son amendeur |
 
 
