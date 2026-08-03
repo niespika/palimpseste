@@ -25,7 +25,7 @@
    `CONTEXTE.md` — les lire, pas les deviner.
 3. **Périmètre modifiable : six documents, et rien d'autre.**
    `SPEC_C3_exercices_competences.md` (repo) ; `00-referentiel.md`, `01-routeur.md`,
-   `02-exercices.md`, `03-competences-ecriture.md`, `04-competences-lecture.md` (conception).
+   `02-exercices.md`, `03-competences.md`, `04-competences-lecture.md` (conception).
    **Les fiches `competences/*.md` ne se touchent pas** — elles auront leur séance dédiée, et
    leurs blocs machine nourrissent le banc de calibration (échéance dure du 24/08).
 4. **La liste de propagation est un livrable.** Tout écho d'un renommage ou d'une décision dans un
@@ -100,8 +100,8 @@ latérale (« Mise en cohérence — chapitre N ») : tu ne peux pas le faire à
 |---|---|---|
 | 0 | La SPEC C3 passe en v4.4 — application des amendements en attente | ✅ **TERMINÉ le 03/08/2026 — 30 entrées sur 30, amendements A20 à A51**, en quatre séances. Séance 1 (02/08) : entrées 1-4, **A20-A24**. Séance 2 (03/08) : entrées 5-16, **A25-A36**. Séance 3 (03/08) : entrées 18-27 et 30, **A37-A48**. Séance 4 (03/08) : le **groupe 17 + 28 + 29**, **A49-A51**. |
 | 1 | Le vocabulaire — table des termes, arbitrages, renommages | ✅ **TERMINÉ le 03/08/2026 — les quatre familles, en une séance** (séance 5, 13 h 17 – 15 h 20). Livrable : **`palimpseste-conception/LEXIQUE.md`**, **23 distinctions**. **Trois amendements C3 posés — A52, A53, A54 ; la spec passe en v4.5.** Contrôle mécanique de sortie fait. |
-| 2 | Cohérence interne, document par document (00 → 01 → 02 → 03 → 04) | **à faire — C'EST LA PROCHAINE ÉTAPE.** **Quatre items déjà en attente** : le `01-` §13 *(annoté le 03/08)*, le `00-` §7 *(contradiction sur les duals)*, l'avertissement **cran de diagnostic / mode `évaluer`** *(à écrire, aucune source ne le porte)*, et le sort de `04-` |
-| 3 | Cohérence croisée (02 ↔ 01 d'abord ; 00 face aux deux ; sources ↔ C3 ; relevés ; rapport) | à faire — **un item dur déjà inscrit** : le **contrôle des chiffres du routeur contre C3, en entier** *(le §8 et le registre du §11 portaient encore 4 620 / 7 700 × X après le réalignement en dix endroits de la séance 4 ; marqué `[À VÉRIFIER AU CHAPITRE 3]` dans le registre)* |
+| 2 | Cohérence interne, document par document (**00 → 01 → 02** — `03-` et `04-` **sortis du périmètre**, décision de Louis du 03/08) | **EN COURS — séance 6 (03/08, 15 h 40 – 17 h 40).** ✅ Le **`00-referentiel.md` est PASSÉ EN ENTIER** — sept items (en-tête, §1, §2, §3, §5, §6, §7 ; le §4 reste annoté). ✅ Le **`01-routeur.md` §13 est réécrit**, plus **six endroits hors §13**. **C3 en v4.6 — A55, A56, A57.** **RESTE** : deux renvois du routeur vers le `00-` §5 *(§3 l. 199, §8 l. 534)*, puis le journal du routeur ; puis **`02-exercices.md`**, dont un périmé est déjà repéré *(§1 l. 56 : « les sept autres » alors qu'il en reste trois)* |
+| 3 | Cohérence croisée (02 ↔ 01 d'abord ; 00 face aux deux ; sources ↔ C3 ; relevés ; rapport) | à faire — **un item dur déjà inscrit** : le **contrôle des chiffres du routeur contre C3, en entier** *(le §8 et le registre du §11 portaient encore 4 620 / 7 700 × X après le réalignement en dix endroits de la séance 4 ; marqué `[À VÉRIFIER AU CHAPITRE 3]` dans le registre)*. **Un second item inscrit le 03/08** : ce qui **bloque encore C5** est à recompter — l'ouverture n° 5 de C3 a perdu sa moitié « R1-R6 lecture » *(**A57**)*, mais ce qu'elle bloque n'a pas été restatué ; **c'est une décision de Louis** |
 | 4 | L'appareil — justifications gardées, redites retirées | à faire |
 | 5 | Les non-tranchés — inventaire, tri, décisions mûres | à faire |
 | 6 | Sortie de passe — contrôles mécaniques, livrables, en-têtes | à faire |
@@ -248,6 +248,42 @@ latérale (« Mise en cohérence — chapitre N ») : tu ne peux pas le faire à
   l'ait demandé**. Les traces de clôture ont été reprises à la vraie fin. *La fin de séance appartient à
   Louis, comme le reste.*
 
+
+**Séance 6 (3 août, 15 h 40 – 17 h 40) — chapitre 2 : le `00-` en entier, le `01-` §13, et C3 en v4.6.**
+
+- **DÉCISION DE PÉRIMÈTRE DE LOUIS** : *« pour avancer sur C4, il me faut juste une cohérence entre C3, 00,
+  01 et 02 »*. **Le chapitre 2 se limite à ces quatre documents.** `03-` et `04-` vont à un **chantier
+  compétences** dédié — celui qui produira les fiches dont les bancs ont besoin.
+- **Le sort de `04-` est tranché** : **voué à disparaître**, mais **après** transfert de ses observables au
+  `03-`. Jusque-là il reste la source de ses observables. Et **`03-competences-ecriture.md` devient
+  `03-competences.md`** *(16 occurrences comptées, 10 réécrites)*. **A56.**
+- **La décision qui a gouverné le `00-`** : la **colonne « Famille » du §1 est supprimée** — depuis la
+  Décision 4, `famille` est une propriété de la **mesure**, dérivée des modes, pas de la compétence.
+- **RÈGLE POSÉE PAR LOUIS, valable pour toute la passe** : on renomme « écriture »/« lecture » en
+  `composition`/`reception` **quand le mot désigne une famille** ; on ne touche à rien quand il désigne
+  l'acte ordinaire ou un objet nommé (« les ancres d'écriture », les titres de fichiers).
+- **LA LEÇON, TROISIÈME OCCURRENCE : greper les ELLIPSES du défaut, pas seulement son nom.** Le relevé
+  annoncé à quinze endroits en valait **vingt-trois** (« dix compétences », « onzième », « les 10 »,
+  « famille » n'étaient pas dans le motif) — d'où un **second tableau** non vu. Puis le routeur a livré
+  **« cinq de lecture »**, forme elliptique qu'aucun grep de la journée ne couvrait, **trois fois vivantes**.
+  *À porter au contrôle du chapitre 6 : compter les **comptes**, pas seulement les noms.*
+- **Trois trous déclarés au `00-`, envoyés au chapitre 5** : l'attribution de la calibration à deux axes de
+  juin (§3) · les **ancres non neutres** — Argumentation, Structure et Synthèse sont rédigées pour un élève
+  qui produit son propre texte, seul le Questionnement a été mis en termes neutres (§5) · le quatrième terme
+  du composite `Découvertes` (§6).
+- **Le §5 et le §7 du `00-` changent d'objet sans disparaître** : « Le chantier des ancres de lecture » →
+  **« Le pont E→A des mesures de réception »** ; « L'hypothèse de covariance des duals » →
+  **« Les deux hypothèses différées à juin 2027 »**.
+- **Deux faussetés trouvées par le contrôle des renvois, pas par le balayage du construct** : l'en-tête du
+  `00-` disait `02-exercices.md` « en relecture » *(faux depuis le 02/08)*, et **C3 le disait aussi, à
+  l'endroit qui fait foi** — **A55**. *Vérifié avant d'amender : aucun manifeste de lot ne cite `02-`, rien
+  n'était arrêté.*
+- **Deux fois les garde-fous d'écriture ont refusé d'écrire, et les deux fois ils avaient raison** : une
+  phrase crue unique existait deux fois, un numéro de ligne de C3 avait été décalé par nos propres
+  insertions. **La règle « ne rien écrire si un seul ancrage échoue » a payé deux fois en trente minutes.**
+- **Un renvoi cassé par notre propre écriture** : le routeur §8 renvoyait aux « blocs d'ancres vides » du
+  `00-` §3, retirés une heure plus tôt. *Le contrôle d'impact vaut aussi entre les sources, pas seulement
+  vers C3.*
 
 ### Inventaire ouvert — le `01-routeur.md` porte encore le construct périmé (relevé le 03/08)
 
