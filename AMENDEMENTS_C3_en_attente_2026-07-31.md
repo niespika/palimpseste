@@ -234,6 +234,12 @@ Retenu : le retour **ne révèle aucun observable**, mais il dit **où** porte l
 
 ### 17 — `produit_mesure` et les attributs de contrat de type · §6 `exercices_types` · (a) + (b) · daté
 
+> ✅ **POSÉE LE 03/08/2026 — amendement A49 de C3** (passe de mise en cohérence, chapitre 0, séance 4 ; groupe 17 + 28 + 29, phase B).
+> **Destinations réelles** : **C3 §6, bloc `exercices_types` RÉGÉNÉRÉ EN ENTIER** · **C3 §6, `exercices`** (trois valeurs élues ajoutées) · **C3 §6, `competences_escalade`** (`cran` → `cran_escalade`) · **C3 §0** (la description de `02-exercices.md`).
+> **RELEVÉ MÉCANIQUE FAIT AVANT RÉDACTION, et il corrige le compte de cette liste** : le bilan écrit plus bas — « deux attributs ajoutés » — est l'écart au **gabarit de `02-exercices.md`**, non au schéma C3. Face à C3, il y en a **six** : `couverture_observables`, `exclusions_parcours[]`, `crans[]`, `provenance_materiau`, `modes[]`, `support`.
+> **LE TROU LE PLUS LOURD, TROUVÉ EN VÉRIFIANT** : `exercices` ne portait **aucune** des valeurs élues. Sans le cran élu, ni le `regime_v1vf`, ni la durée à décompter, ni la `couverture_observables` applicable, ni la règle de montée ne se calculent. Trois colonnes ajoutées : `cran`, `provenance_materiau`, `support`.
+> **`support` en minuscule** et **objet partagé = une seule ligne** : deux décisions de Louis en séance.
+
 Quatre items convergent sur la même table.
 
 - **F4 (a)** : une **couverture d'observables par type** à trois valeurs — « exercé » / « isolé » / « seulement observable » —, lue par N1 pour « choisir dans la même famille un type qui l'isole » ; et un **rang de richesse de sonde par compétence secondaire**, lu par la règle d'espacement pour retenir l'exercice « dont le type offre le substrat le plus riche », `competences_secondaires[]` n'exprimant aujourd'hui qu'une éligibilité binaire. Ces deux champs sont consommés par des règles actées qui, sans eux, ne s'exécutent pas.
@@ -419,6 +425,10 @@ F7 volet 2 acte que **le seuil d'entrée du Questionnement vaut des deux côtés
 
 ### 28 — La règle de montée : matrice (grain × cran), état par grain, marquage des sondes · §4, §6 · (a) · daté
 
+> ✅ **POSÉE LE 03/08/2026 — amendement A50 de C3** (chapitre 0, séance 4 ; groupe 17 + 28 + 29).
+> **Destinations réelles** : **C3 §4** (la table des proportions change de forme) · **C3 §6, table neuve `competences_montee`** — clé (élève × compétence × grain), champs `cran_atteint` et `updated_at` · **C3 §6, `competences_mesures`** (booléen `sonde_montee`).
+> **VÉRIFICATION FAITE, ET ELLE CONFIRME L'ENTRÉE** : A49 ayant doté `exercices` de son cran, l'état de montée devenait **calculable** depuis le journal. La dérivation est écartée — c'est un **état**, non une trace : recalculé, un changement d'`instrument_version` ferait redescendre un élève d'un cran sans décision. *C'est pourquoi A42 a pu dériver `historique_cibles`, qui n'était qu'une trace dupliquée, et pourquoi celui-ci ne se dérive pas.*
+
 **Source : séance 2 de la révision de `02-exercices.md`, 1er août 2026 (Louis × Mètis).** Le contenu complet est écrit dans `palimpseste-conception/02-exercices.md` §3, sous « **La règle de montée** » ; ce bloc ne dit que ce que C3 doit en retenir. *La règle elle-même appartient au `01-routeur.md` — §4 pour la matrice, §6 pour le marquage — et y sera portée sur demande explicite de Louis, le routeur étant relu et validé ; elle est déposée dans `02-exercices.md` en attendant.*
 
 **Le trou qu'elle comble.** Le routeur **pose** le sens montant de la progression sans jamais le rendre exécutable : son **§4** dit « là où il progresse, il augmente la difficulté » **sans aucune règle attachée**, et son **§6** **définit** la « Progression » pour ne s'en servir qu'à la **désescalade**. La seule chose qui ouvre aujourd'hui un cran ou un grain à un élève est **la lettre qui monte** — alors que le §6 pose lui-même que la lettre est trop grossière pour voir le progrès (« cinq niveaux : le progrès intra-lettre y est invisible, le bruit domine »). **Objection de Louis, à l'origine de la règle** : « on ne peut pas réellement penser qu'un élève à D qui n'a que des exercices de crans 1 à 4 va progresser ; il faut qu'il produise de l'autonome. » *Vérifié sur pièces en séance : `competences/expression.md` §6 ne déclare que des types **transformatifs et diagnostiques** (6a, 6b, 6c, 13, 7-Expression) et **R1** prescrit explicitement « des types transformatifs » — la moitié des exercices d'un élève coté D en Expression, celle que R1 lui impose, **ne lui demande donc jamais de produire**.*
@@ -436,6 +446,12 @@ F7 volet 2 acte que **le seuil d'entrée du Questionnement vaut des deux côtés
 ---
 
 ### 29 — Les compétences de lecture disparaissent ; un axe `modes[]` entre au contrat · §1.7, §4, §6 · (a) · daté
+
+> ✅ **POSÉE LE 03/08/2026 — amendement A51 de C3** (chapitre 0, séance 4 ; groupe 17 + 28 + 29). **C'est la dernière des trente entrées : le chapitre 0 est clos.**
+> **Destinations réelles, onze et non trois** : en-tête · §0 (deux entrées de « Sources de vérité ») · **§1 point 1** (le construct, l'activation, HLP, A2) · **§1 point 4** (les deux listes compétence × mode) · §4 · §4bis (Budgets) · **§6** (`competences_mesures`, `competences_niveaux`, `exercices`) · **§9, manifeste du lot C5-L3** · §10 point 2 · **ouverture 8**.
+> **QUATRE DÉCISIONS DE LOUIS** : le partage du diagnostic de la semaine 1 *(essai = Expression, Argumentation, Structure en `composer` ; explication = Expression en `composer`, Argumentation et Structure en `expliquer`, Synthèse en `restituer` ; ni Connaissance ni Questionnement)* · **six identifiants nus**, sans préfixe de famille · `competences_actives_par_classe` : **on renomme et on dérive** · le manifeste C5-L3 dit **« les compétences dont la grille réceptive existe »**.
+> **CE QUE LE PARTAGE REFERME** : le périmètre laissé ouvert par A39 — les compétences sans lettre au sortir de la semaine 1 sont la **Connaissance** (hors rayon, R4 ; signal continu = Quazian) et le **Questionnement** (entre par le **segment 2**, la calibration). *Vérifié sur pièces au `01-routeur.md` §4, §5 et §11.*
+> **CINQ ENDROITS PÉRIMÉS TROUVÉS EN PLUS DES SIX ANNOTATIONS ATTENDUES**, périmètre étendu par Louis pour les inclure — dont **`competences_mesures` (« dix en tout »)** et le **manifeste du lot C5-L3**, qui ne sont pas de la formulation mais l'un le seed de C4-L1, l'autre ce qu'une session Code lit pour savoir quoi construire.
 
 > ⚠️ **DEUX ENDROITS DE C3 ONT DÉJÀ ÉTÉ TRAITÉS PAR ANTICIPATION, le 02/08 — amendement A22.** Ils ont été découverts en appliquant l'entrée 2, et corrigés dans la même passe sur décision de Louis (« autant ne pas perdre de temps à refaire deux fois ce qu'on peut faire en une »).
 > — **§10 point 2** : le calcul du coût de la semaine 1 s'appuyait sur « (6+5) compétences ». Le compte périmé en est **détaché** ; le calcul renvoie désormais au §1 point 4.

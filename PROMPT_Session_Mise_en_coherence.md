@@ -98,8 +98,8 @@ latérale (« Mise en cohérence — chapitre N ») : tu ne peux pas le faire à
 
 | chapitre | objet | état |
 |---|---|---|
-| 0 | La SPEC C3 passe en v4.4 — application des amendements en attente | **EN COURS — 27 entrées posées sur 30.** Séance 1 (02/08) : entrées 1-4, **A20 à A24**. Séance 2 (03/08) : entrées 5-16, **A25 à A36**. Séance 3 (03/08) : entrées **18 à 27 et 30**, **A37 à A48**. **IL NE RESTE QUE LE GROUPE 17 + 28 + 29** — plan d'attaque déposé ci-dessous. |
-| 1 | Le vocabulaire — table des termes, arbitrages, renommages | à faire |
+| 0 | La SPEC C3 passe en v4.4 — application des amendements en attente | ✅ **TERMINÉ le 03/08/2026 — 30 entrées sur 30, amendements A20 à A51**, en quatre séances. Séance 1 (02/08) : entrées 1-4, **A20-A24**. Séance 2 (03/08) : entrées 5-16, **A25-A36**. Séance 3 (03/08) : entrées 18-27 et 30, **A37-A48**. Séance 4 (03/08) : le **groupe 17 + 28 + 29**, **A49-A51**. |
+| 1 | Le vocabulaire — table des termes, arbitrages, renommages | **à faire — C'EST LA PROCHAINE ÉTAPE** |
 | 2 | Cohérence interne, document par document (00 → 01 → 02 → 03 → 04) | à faire |
 | 3 | Cohérence croisée (02 ↔ 01 d'abord ; 00 face aux deux ; sources ↔ C3 ; relevés ; rapport) | à faire |
 | 4 | L'appareil — justifications gardées, redites retirées | à faire |
@@ -163,38 +163,16 @@ latérale (« Mise en cohérence — chapitre N ») : tu ne peux pas le faire à
 - **Liste de propagation : trois items ajoutés** (6, 7, 8). **L'item 6 est le seul risque dur de la séance** : le **prompt P1 réel** (`competences-lecture/prompts-inventaire.md`) porte encore `marquage_hypothese` — *tant qu'il n'est pas repris, le champ extrait et le champ spécifié ne portent pas le même nom*. **Daté par le banc du 24/08**, pas par la rentrée.
 - **Deux items envoyés au chapitre 5** : la **longueur de la fenêtre** du taux de lucidité, fixée nulle part (A37) · et, déjà là, la généralisation de la couverture des deux familles (A23).
 
-### Le plan du groupe 17 + 28 + 29 — à exécuter tel quel en séance 4
+**Séance 4 (3 août, 12 h 08 – …) — le groupe 17 + 28 + 29, TROIS AMENDEMENTS, et le chapitre 0 est clos.**
 
-*Décision de Louis du 03/08 : « on fait 17, 28 et 29 en une seule passe ». Ce qui suit est l'organisation qu'il a demandée.*
-
-**Le principe : on groupe l'ÉCRITURE, pas les décisions.** Les trois entrées réécrivent la même table `exercices_types` ; l'écrire trois fois serait le gaspillage qu'il a voulu éviter. Mais la règle « un item à la fois, Louis valide, on avance » reste entière — elle s'applique aux **couches de décision**, pas aux coups d'éditeur.
-
-**L'ordre n'est PAS l'ordre numérique. Il est 29 → 17 → 28**, parce que les dépendances vont dans ce sens :
-
-1. **29 est la fondation** — six compétences, l'axe `modes[]`, `famille` dérivée du mode élu. Tant qu'il n'est pas posé, la liste d'attributs de 17 n'a pas de socle : `modes[]` **est** un attribut du contrat.
-2. **17 est le contrat** — la liste finale des attributs de `exercices_types`, une fois le construct fixé.
-3. **28 consomme 17** — la règle de montée lit `grain` et `crans[]` ; elle ne peut se rédiger qu'une fois les axes arrêtés.
-
-**Trois phases :**
-
-- **Phase A — décider, sans écrire.** Les trois couches dans l'ordre ci-dessus, item par item, Louis valide chacune. Rien n'est écrit tant que les trois ne sont pas arrêtées. *C'est la seule phase où l'on peut se tromper sans coût.*
-- **Phase B — écrire UNE fois.** Le bloc `exercices_types` du §6 est **régénéré en entier** depuis les trois couches, en une seule édition ancrée. Puis les endroits satellites, dans la foulée.
-- **Phase C — les annotations accumulées.** Elles sont listées ci-dessous : elles ont été **délibérément laissées en place** par les séances 2 et 3, parce qu'elles appartiennent à 29.
-
-**Les six annotations qui attendent le groupe** *(chacune a son amendement d'origine)* :
-
-| où | ce qui est périmé | posé par |
-|---|---|---|
-| C3 §6, `competences_niveaux` | « les deux parcours ont les **dix** compétences » | A39 |
-| C3 §1 point 1 | « les **neuf autres** compétences et le Questionnement » | A44 |
-| C3 §6, bloc de règle de `lettre` | le périmètre de la cause « pont E→A » — F19 disait « les **cinq compétences de lecture** » | A39 |
-| C3, ouverture 8 | **4 620 × X** et **7 700 × X** sont calculés sur **onze** compétences | A45 |
-| C3 §1 point 4 | les deux comptes de la semaine 1 (6 en écriture, 5 en lecture), passés `[à valider]` | A22 |
-| C3 §1.7 | la généralisation de la couverture des deux familles aux six — **item du chapitre 5**, à ne pas trancher au groupe | A23 |
-
-**Ce qui est déjà fait et n'est PAS à refaire** : la proportion 2/3-1/3 est **binaire** et le routeur est réaligné (A32) · le compte « (6+5) » est détaché des calculs du §10 (A22) · `historique_cibles` est dérivé (A42).
-
-**Le relevé mécanique à faire AVANT la phase A** *(il ne décide rien, il fait gagner la séance)* : mettre côte à côte la déclaration actuelle de `exercices_types` (C3 §6) et le contrat cible (`02-exercices.md` §1, « Le contrat d'interface »), attribut par attribut, avec pour chacun **créé / inchangé / devenu dérivé / écarté**. *Attention : les comptes qui circulent ne concordent pas — la mémoire de projet dit « deux attributs ajoutés, six écartés » pour la seule révision des séances 3-4, alors que `couverture_observables` et `exclusions_parcours[]` ont été ajoutés le 31/07. **Le relevé fait foi, pas le souvenir.***
+- **Le plan en trois phases a tenu tel quel** : décider sans écrire (ordre 29 → 17 → 28), écrire une fois, annoter. **Le relevé mécanique fait avant la phase A a rapporté deux fois** — il a corrigé le compte des attributs (**six** créés face à C3, non deux : le « bilan » de la liste comptait l'écart au gabarit de `02-exercices.md`) et il a fait trouver **cinq endroits périmés que la liste des six annotations ne portait pas**, dont deux à conséquence dure : `competences_mesures` (« dix en tout », c'est le seed de C4-L1) et le **manifeste du lot C5-L3** (« P1/P2 des cinq compétences »). **Louis a étendu le périmètre du groupe pour les inclure.**
+- **Sept décisions de Louis** : le partage du diagnostic de la semaine 1 *(essai = Expression, Argumentation, Structure en `composer` ; explication = Expression en `composer`, Argumentation et Structure en `expliquer`, Synthèse en `restituer` ; ni Connaissance ni Questionnement)* · **six identifiants nus** sans préfixe de famille · `competences_actives_par_classe` : **« on renomme, et on dérive »** · le manifeste C5-L3 dit **« les compétences dont la grille réceptive existe »** · un objet partagé prend **une seule ligne** · `Support` devient **`support`** · et, sur la collision de noms, c'est **`competences_escalade.cran` qui est renommé `cran_escalade`**, `cran` seul gardant le sens premier.
+- **Le trou le plus lourd, trouvé en vérifiant** : la table `exercices` — les instances conçues — **ne portait AUCUNE des quatre valeurs élues**. Sans le cran élu, ni le `regime_v1vf` de l'exercice, ni la durée à décompter, ni la `couverture_observables` applicable *(donc le candidat que N1 cherche)*, ni la règle de montée ne se calculent. **Trois colonnes ajoutées** : `cran`, `provenance_materiau`, `support`. *Même classe de défaut qu'A41.*
+- **Une dérivation cherchée et refusée, et la raison vaut au-delà** : le trou d'`exercices` comblé, l'état de montée devenait calculable depuis le journal. **Il reste stocké** — c'est un **ÉTAT**, non une trace : recalculé, un changement d'`instrument_version` ferait redescendre un élève d'un cran sans décision. *C'est pourquoi A42 a pu dériver `historique_cibles`, qui n'était qu'une trace dupliquée, et pourquoi `competences_montee` ne se dérive pas.*
+- **Deux recalculs mécaniques débloqués par le partage** : §10 point 2 passe de 1 540 à **980 appels** ; l'ouverture 8 passe de 4 620 / 7 700 × X à **2 940 / 4 900 × X**. *Le « onze » de ces chiffres était exactement le (6+5) du §1 point 4 — vérifié en refaisant le calcul.*
+- **Louis avait raison sur ses deux réponses, vérifiées sur pièces** : la Connaissance est déjà « hors rayon » à **R4** (jamais cible primaire, signal continu = Quazian, qui n'écrit pas dans le profil) ; et le **segment 2** est bien le segment de calibration, R2 suspendue au profit de la couverture (`01-routeur.md` §4, §5, §11).
+- **`01-routeur.md` réaligné dans la foulée, dix endroits** — §1 (les règles d'élection ; le compte), §2 (les trois puces TC/HLP), §4 (la note sur les couches 2-3), §5 et §11 (le **K de R5**, recompté à ≈ 6 des deux côtés), §7 (le format du diagnostic ; le pont E→A), §12 (annotation de l'ordre de lecture), plus l'**en-tête** (l. 17), qui annonçait encore des amendements C3 « non encore posés ». **Le §13 « L'aile lecture » part au chapitre 2, sur décision de Louis** : ce n'est plus un réalignement mais une réécriture de section.
+- **Items envoyés au chapitre 5** : la cadence de ciblage en réception (le recalcul d'A32, sa dépendance à l'entrée 29 étant close) · le régime du statut `differee`, que la réserve du Questionnement au segment 2 rejoint · et, déjà là, la couverture des deux familles au banc (A23, §1.7).
 
 ### Inventaire ouvert — le `01-routeur.md` porte encore le construct périmé (relevé le 03/08)
 
@@ -205,28 +183,13 @@ décisions** : plusieurs de ces endroits attendent des arbitrages qui appartienn
 **Déjà réaligné le 03/08 (amendement A32, entrée 12)** : l'énoncé de la proportion F24 au §1 · le
 partage « probabiliste » · la conséquence à surveiller · la ligne du registre au §11.
 
-**Reste à traiter. NUMÉROS DE LIGNE REFAITS EN FIN DE SÉANCE 3** — ils avaient bougé, la séance 3
-ayant inséré la branche d'échec au §5 *(fichier à 731 lignes)* :
+**RESTE À TRAITER : LE SEUL §13.** *(Les sept autres endroits ont été réalignés en séance 4, le 03/08 — voir ci-dessus.)*
 
-| § / ligne | ce qui est périmé |
-|---|---|
-| §1, l. 69 | « **dix compétences** plus le Monitoring », et l'énumération écriture/lecture qui suit |
-| §1, l. 46 | « toutes les règles qui élisent sont des règles d'**écriture** » — vrai, mais à redire dans le vocabulaire des familles dérivées |
-| §1, l. 128 | « **six** compétences en écriture » au tronc commun |
-| §4, l. 314 | « les couches 2 et 3, et R1-R6, sont écrites pour l'**écriture** » |
-| §5, l. 342 · §11, l. 612 | **K de R5** : « ≈ 6 côté écriture, ≈ 5 côté lecture » — *l'entrée 29 dit que K change ; ne pas trancher ici* |
-| §7, l. 528-532 | « l'explication porte **les cinq de lecture** » |
-| §12, l. 657-680 | l'ordre de développement puis l'ordre de lecture, qui énumèrent **Restitution, Reconstruction, Évaluation, Mouvement** |
-| §13, l. 691-717 | « **L'aile lecture** » en entier — dont « la plus faible des **cinq compétences de lecture** » (l. 703) et l'ordre de priorité (l. 713) |
+| § | ce qui est périmé | où ça va |
+|---|---|---|
+| **§13, « L'aile lecture » en entier** | ce n'est plus une aile mais la famille **`reception`** — dont « la plus faible des **cinq compétences de lecture** » et l'ordre de priorité | **chapitre 2** *(décision de Louis, 03/08 : ce n'est plus un réalignement mais une réécriture de section)* |
+| **§12, l'ordre de lecture** | **annoté, non réécrit** : il ordonne quatre objets devenus des modes ; le ré-ordonner demande un **arbitrage**, non un réalignement | **session « construction de la semaine + ciblage lecture »**, que la liste désignait déjà comme son amendeur |
 
-**Traité depuis, à ne pas rouvrir** : §1 (l'énoncé de F24, le partage probabiliste, la conséquence à
-surveiller) et §11 (la ligne du registre) — **A32**, séance 2 · §3 (« la lucidité se lit en
-présent/absent ») — **A37**, séance 3 · §3 (`historique_cibles` passé en dérivé) et §5 (la
-parenthèse de R5) — **A42** · §5 (la branche d'échec du pipeline) — **A46** · §5 (les gardiens du
-seuil, dépendance close) — **A47**.
-
-*Le §13 est déjà signalé au chapitre 2 du présent prompt comme un endroit connu. Cet inventaire le
-précise et l'étend.*
 
 Une passe = plusieurs séances, c'est prévu. Chaque séance reprend ce prompt, lit la table,
 continue où c'était. Les chapitres se font dans l'ordre.
