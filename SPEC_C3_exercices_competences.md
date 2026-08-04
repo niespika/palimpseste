@@ -1,6 +1,6 @@
 # SPEC C3 — Exercices & Compétences (spec unique, composition + réception)
 
-> **Statut : v4.7 — SOCLE DE CONSTRUCTION** (gel du 29/07/2026 ; amendée les 29 et 30/07, amendements A1 à A19).
+> **Statut : v4.8 — SOCLE DE CONSTRUCTION** (gel du 29/07/2026 ; amendée les 29 et 30/07, amendements A1 à A19).
 > **SÉRIE A20-A51 APPLIQUÉE EN ENTIER — chapitre 0 de la passe de mise en cohérence, CLOS le
 > 03/08/2026.** Les **30 entrées** de `AMENDEMENTS_C3_en_attente_2026-07-31.md` sont posées, en
 > quatre séances (02/08 : entrées 1-4 · 03/08 : 5-16, puis 18-27 et 30, puis le groupe **17 + 28 +
@@ -23,6 +23,12 @@
 > testable — deux faussetés depuis la Décision 2 du 02/08, et une contradiction avec ce que la spec
 > écrit plus bas (**A59**). Et le tableau des statuts de relecture ignorait le passage de la passe
 > sur le `01-` et le `02-` (**A60**).
+> **v4.8 — CHAPITRE 3 DE LA PASSE (cohérence croisée), le 03/08/2026 : amendement A61.**
+> `distance_contexte` listait ses trois valeurs **sans dire comment on les calcule**, alors que
+> **C4-L1 doit écrire ce champ à chaque mesure**. La règle est posée au §0 : **même objet ET même
+> `famille` → `meme_type` · même `famille`, objet différent → `meme_famille` · `famille` différente
+> → `transfert`**. Le **`cran`** est explicitement écarté de la
+> distance (**A61**).
 > **À partir d'ici, C3 redevient modifiable pendant la passe — mais toute modification reste un
 > amendement daté**, inscrit au tableau de bord, et la version s'incrémente.
 > **Règle de version (ajoutée le 29/07)** : toute série d'amendements **incrémente le numéro
@@ -182,6 +188,7 @@ jamais pendant. Chaque prompt de lot déclare la **version de la spec** contre l
 | **03/08/2026** | Passe de mise en cohérence, chapitre 2 — contrôle d'impact, séance 7 | **A58 — le TITRE de cette spec nommait encore les deux familles « écriture + lecture ».** Il devient « composition + réception », comme les titres des trois sources, réalignés le même jour *(décision de Louis, 03/08 : « c'est un oubli »)*. Régime (a) |
 | **03/08/2026** | Passe de mise en cohérence, chapitre 2 — contrôle d'impact, séance 7 | **A59 — le §0 déclarait « Mouvement » comme compétence de lecture, et l'hypothèse de covariance des duals comme testable.** Les deux sont caduques depuis la **Décision 2 du 02/08** : « Mouvement » est la **Structure en mode `expliquer`**, et l'hypothèse est **tombée** (`00-referentiel.md` §7). **La spec se contredisait elle-même** — elle écrit plus bas « Mouvement est la Structure en mode `expliquer` ». Une session Code lisant le §0 aurait créé une compétence inexistante. Régime (a) |
 | **03/08/2026** | Passe de mise en cohérence, chapitre 2 — contrôle d'impact, séance 7 | **A60 — le tableau des statuts de relecture du §0 ignorait le passage de la passe** sur `01-routeur.md` et `02-exercices.md` : seule la ligne du `00-` portait sa mention du 03/08. Les deux lignes la reçoivent. Régime (a) |
+| **03/08/2026** | Passe de mise en cohérence, **chapitre 3** (cohérence croisée), séance 8 | **A61 — `distance_contexte` listait trois valeurs sans dire comment on les calcule**, et C4-L1 doit écrire ce champ à chaque mesure. La règle est posée au §0 : **même objet ET même `famille` → `meme_type` · même `famille`, objet différent → `meme_famille` · `famille` différente → `transfert`**. *Opérandes : la `famille` est portée par la mesure (dérivée de `modes`), l'objet se lit par la chaîne du dépôt — **NULL quand `depot_id` l'est**, sans conséquence pour N2, qui ne lit que les mesures `formatif`. Le `cran` est écarté de la distance — l'y mettre éteindrait la troisième branche de N2 pour les élèves que N1 vient de traiter.* La phrase de finalité disait « le **type** qu'on vient de travailler » : lire « l'**objet** » *(`02-exercices.md` : « l'objet est le type »)*. Régime (a) |
 
 > **Sources des six amendements** : séance de relecture intégrale du `00-referentiel.md` (Louis × Mètis, 29/07 — les huit sections sont passées) et dépouillement des six conversations de conception désormais versées dans `palimpseste-conception/conversations/`. Détail et arguments : journal du `CONTEXTE.md` au 29/07, et `00-referentiel.md` §1, §2, §4.2, §6.
 
@@ -306,9 +313,20 @@ révisent, et leur révision est un amendement de régime (a), pas une renégoci
     du modèle de certitude) et `delai_mesures` (unité native du routeur — `01-routeur.md` §3 :
     « l'unité de temps du routeur est la mesure, pas la semaine »).
   - `distance_contexte` — énumération **`meme_type` / `meme_famille` / `transfert`**. Elle mesure
-    le transfert : un succès obtenu sur le type qu'on vient de travailler dix fois ne vaut pas un
-    succès sur un type neuf, et c'est ce qui permet à l'escalade N2 de distinguer un problème de
+    le transfert : un succès obtenu sur l'objet qu'on vient de travailler dix fois ne vaut pas un
+    succès sur un objet neuf, et c'est ce qui permet à l'escalade N2 de distinguer un problème de
     *réception* d'un problème de *transfert*.
+    **Elle se calcule, elle ne se juge pas** *(**A61**, 03/08)* : **même objet ET même `famille` →
+    `meme_type` · même `famille`, objet différent → `meme_famille` · `famille` différente →
+    `transfert`**. Les opérandes : la **`famille`** est portée par la mesure (dérivée de `modes`) ;
+    l'**objet** se lit par la chaîne du dépôt. *Quand la mesure ne remonte pas à un exercice
+    (`depot_id` NULL — les DS ingérés), l'objet est inconnu et `distance_contexte` vaut **NULL**.
+    **Sans conséquence pour N2, qui ne lit que les mesures `formatif`** (`01-routeur.md` §6) : les
+    mesures sans dépôt sont toutes `sommatif`.* *Le **`cran`** n'entre pas dans la
+    distance — c'est un axe de difficulté, non de nouveauté : l'y mettre éteindrait la troisième
+    branche de N2 pour les élèves que N1 vient de traiter, puisque N1 garde l'objet et change le
+    cran (`01-routeur.md` §6). Il reste journalisé sur l'exercice, donc récupérable si l'on veut
+    affiner.*
 - **`delta_v1_vf`** : **comparaison des squelettes** v1 et vf (jamais des verdicts) — la mesure du
   delta est ainsi objective. **NULL n'est pas 0** : une passation en classe n'a pas de vf, son delta
   est NULL, et le lire comme un zéro fabriquerait un faux signal de « réceptivité nulle » (§7).
