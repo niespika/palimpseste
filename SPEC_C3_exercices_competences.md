@@ -1,6 +1,6 @@
-# SPEC C3 — Exercices & Compétences (spec unique, écriture + lecture)
+# SPEC C3 — Exercices & Compétences (spec unique, composition + réception)
 
-> **Statut : v4.6 — SOCLE DE CONSTRUCTION** (gel du 29/07/2026 ; amendée les 29 et 30/07, amendements A1 à A19).
+> **Statut : v4.7 — SOCLE DE CONSTRUCTION** (gel du 29/07/2026 ; amendée les 29 et 30/07, amendements A1 à A19).
 > **SÉRIE A20-A51 APPLIQUÉE EN ENTIER — chapitre 0 de la passe de mise en cohérence, CLOS le
 > 03/08/2026.** Les **30 entrées** de `AMENDEMENTS_C3_en_attente_2026-07-31.md` sont posées, en
 > quatre séances (02/08 : entrées 1-4 · 03/08 : 5-16, puis 18-27 et 30, puis le groupe **17 + 28 +
@@ -17,6 +17,12 @@
 > spec l'écrivait encore « en relecture » (**A55**). Et `03-competences-ecriture.md` devient
 > **`03-competences.md`**, `04-competences-lecture.md` étant **voué à disparaître** au profit du `03-`
 > (**A56**, décision de Louis).
+> **v4.7 — CHAPITRE 2 DE LA PASSE, suite, le 03/08/2026 : amendements A58 à A60.** Le **titre** de
+> cette spec nommait encore les deux familles « écriture + lecture » (**A58**). Le §0 déclarait
+> **« Mouvement »** comme compétence de lecture, et l'hypothèse de covariance des duals comme
+> testable — deux faussetés depuis la Décision 2 du 02/08, et une contradiction avec ce que la spec
+> écrit plus bas (**A59**). Et le tableau des statuts de relecture ignorait le passage de la passe
+> sur le `01-` et le `02-` (**A60**).
 > **À partir d'ici, C3 redevient modifiable pendant la passe — mais toute modification reste un
 > amendement daté**, inscrit au tableau de bord, et la version s'incrémente.
 > **Règle de version (ajoutée le 29/07)** : toute série d'amendements **incrémente le numéro
@@ -173,6 +179,9 @@ jamais pendant. Chaque prompt de lot déclare la **version de la spec** contre l
 | **03/08/2026** | Passe de mise en cohérence, chapitre 2 — contrôle du tableau des statuts | **A55 — le tableau des statuts de relecture du §0 était périmé.** Il écrivait `02-exercices.md` **en relecture** alors que Louis l'a **relu et validé le 02/08**, ses neuf sections en quatre séances (31/07, 1er et 2 août) — le document le dit dans son propre en-tête. L'**ouverture n° 6** du tableau de bord B portait la même erreur. *Portée réelle vérifiée avant d'amender : **aucun manifeste de lot ne cite `02-exercices.md`** — les onze manifestes C4/C5/C6 ont été lus. Rien n'était donc arrêté ; c'est le registre qui était faux, et c'est lui qui fait foi.* La ligne du `00-referentiel.md` gagne au passage la mention de sa **révision du 03/08** (chapitre 2 de la passe). | §0 (tableau des statuts) ; tableau de bord B (ouverture n° 6) | **(a)** |
 | **03/08/2026** | Passe de mise en cohérence, chapitre 2 — **décision de Louis** | **A56 — `03-competences-ecriture.md` devient `03-competences.md`, et `04-competences-lecture.md` est voué à disparaître.** *Décisions de Louis : « 03- devient 03-competences » et « 04- est voué à disparaître après qu'on ait sauvé l'essentiel pour transfert vers 03-competences ».* Le `03-` cesse d'être le chapeau des seules fiches d'écriture : il recevra les **observables** de `04-`, dont les cinq blocs sont devenus des **modes** le 02/08 mais dont **les champs ne bougent pas**. **Le transfert n'est PAS fait** — il appartient à un **chantier compétences** dédié, celui qui produira les fiches dont les bancs ont besoin ; jusque-là `04-` reste la source de ses observables et ne doit pas être traité comme périmé. *Renommage appliqué le 03/08 : **16 occurrences relevées, 10 réécrites** — le reste est trace datée (journal du `CONTEXTE.md`, revue du 28/07) ou hors périmètre (liste de propagation). Le `01-routeur.md` n'écrit que la forme abrégée `03-` : zéro retouche.* | §0 (tableau des statuts ; sources de vérité) | **(a)** |
 | **03/08/2026** | Passe de mise en cohérence, chapitre 2 — réécriture du `01-routeur.md` §13 | **A57 — l'ouverture n° 5 rétrécit : il n'y a PAS de R1-R6 « lecture » à écrire.** La ligne disait « **Les règles de ciblage LECTURE (R1-R6 sont écrites pour l'écriture)** | session dédiée **Louis × Calame**, avant l'allumage | **Bloque : C5** ». **Trois choses fausses dans une ligne.** *(1)* La prémisse est **dissoute depuis la Décision 4 du 02/08** : `02-exercices.md` §8 écrit « il n'y a pas de R1-R6 « lecture » à écrire […] les règles lisent un signal dérivé, elles tournent **telles quelles** sur le signal de réception — ce ne sont pas d'autres règles, ce sont les mêmes, appelées **deux fois** ». *(2)* Le « **Louis × Calame** » était un **lapsus**, corrigé au routeur dès le 30/07 : c'est du travail de conception, donc Mètis — C3 le portait encore. *(3)* Ce qu'elle bloque n'est plus ce qu'elle disait. **Ce qui reste ouvert** : les **proportions exactes** de l'indexation mode ↔ niveau, la place de la **préférence de l'élève**, l'**ordre de priorité** *(qui vit au `01-routeur.md` §12, lui-même annoté périmé par A51)*. **Ce qui bloque encore C5 est à recompter — décision de Louis, non prise ici.** *Le même défaut vivait à **trois** endroits du routeur — §1, §5, §13 — tous réalignés le 03/08.* | tableau de bord B (ouverture n° 5) ; `01-routeur.md` §1, §5, §13 | **(a)** |
+| **03/08/2026** | Passe de mise en cohérence, chapitre 2 — contrôle d'impact, séance 7 | **A58 — le TITRE de cette spec nommait encore les deux familles « écriture + lecture ».** Il devient « composition + réception », comme les titres des trois sources, réalignés le même jour *(décision de Louis, 03/08 : « c'est un oubli »)*. Régime (a) |
+| **03/08/2026** | Passe de mise en cohérence, chapitre 2 — contrôle d'impact, séance 7 | **A59 — le §0 déclarait « Mouvement » comme compétence de lecture, et l'hypothèse de covariance des duals comme testable.** Les deux sont caduques depuis la **Décision 2 du 02/08** : « Mouvement » est la **Structure en mode `expliquer`**, et l'hypothèse est **tombée** (`00-referentiel.md` §7). **La spec se contredisait elle-même** — elle écrit plus bas « Mouvement est la Structure en mode `expliquer` ». Une session Code lisant le §0 aurait créé une compétence inexistante. Régime (a) |
+| **03/08/2026** | Passe de mise en cohérence, chapitre 2 — contrôle d'impact, séance 7 | **A60 — le tableau des statuts de relecture du §0 ignorait le passage de la passe** sur `01-routeur.md` et `02-exercices.md` : seule la ligne du `00-` portait sa mention du 03/08. Les deux lignes la reçoivent. Régime (a) |
 
 > **Sources des six amendements** : séance de relecture intégrale du `00-referentiel.md` (Louis × Mètis, 29/07 — les huit sections sont passées) et dépouillement des six conversations de conception désormais versées dans `palimpseste-conception/conversations/`. Détail et arguments : journal du `CONTEXTE.md` au 29/07, et `00-referentiel.md` §1, §2, §4.2, §6.
 
@@ -326,18 +335,19 @@ sont à jour.
 | Document | Statut |
 |---|---|
 | `00-referentiel.md` | **relu intégralement par Louis le 29/07** — les huit sections sont passées ; il porte les amendements A1 à A6. **Révisé le 03/08** — chapitre 2 de la passe de mise en cohérence : construct à six compétences propagé (§1, §2, §3, §5, §6, §7), trois trous déclarés |
-| `01-routeur.md` | **relu intégralement par Louis le 30/07** — quatorze passes (§1-§13 + annexe B), révision close. Son **§11 est le registre faisant foi des paramètres du routeur** (A17) |
-| `02-exercices.md` | **relu et validé par Louis le 02/08** — les neuf sections passées en quatre séances (31/07, 1er et 2 août) |
+| `01-routeur.md` | **relu intégralement par Louis le 30/07** — quatorze passes (§1-§13 + annexe B), révision close. Son **§11 est le registre faisant foi des paramètres du routeur** (A17). **Réaligné le 03/08** — chapitre 2 de la passe de mise en cohérence : construct à six compétences propagé section par section, **§13 réécrit en entier**, §12 annoté |
+| `02-exercices.md` | **relu et validé par Louis le 02/08** — les neuf sections passées en quatre séances (31/07, 1er et 2 août). **Annoté le 03/08** — chapitre 2 de la passe : la dette Questionnement ↔ Monitoring refermée, le compte des grilles d'observables remis à jour |
 | `03-competences.md` → `competences/*.md` | **en relecture** ; les fiches versées sont validées une à une par leur banc. *Renommé le 03/08 (**A56**) — il s'appelait `03-competences-ecriture.md` ; il recevra les observables de `04-`* |
 | `04-competences-lecture.md` → `competences-lecture/*` | **en relecture**, et **voué à disparaître** *(décision de Louis, 03/08 — **A56**)* : ses observables seront transférés au `03-` au chantier compétences. **Jusque-là il reste la source de ses observables** |
 
-*Sur le **nommage des duals** : la décision du 27/07 (« deux compétences distinctes, celle de lecture
-s'appelle Mouvement ») **reste vraie de la paire Structure / Mouvement** et **ne vaut plus pour la
-paire Problématisation** — l'amendement **A1** les a fusionnées en une seule compétence, le
-**Questionnement**. L'hypothèse de covariance des duals ne se teste donc plus que sur Structure /
-Mouvement : on ne mesure pas la covariance de deux choses qui n'en font qu'une. Le **Monitoring** est
-bien transversal lecture-écriture (il existe côté écriture via la phase « se juger ») et vit,
-**depuis A2, sur sa propre échelle** — voir §1.1.*
+*Sur le **nommage des duals** — **caduc depuis la Décision 2 du 02/08** (amendement A59, 03/08). La
+décision du 27/07 posait « deux compétences distinctes, celle de lecture s'appelle **Mouvement** ».
+**Il n'y a plus de duals** : la paire Problématisation a fusionné en une seule compétence, le
+**Questionnement** (A1), et **« Mouvement » n'est pas une compétence — c'est la Structure en mode
+`expliquer`** (`02-exercices.md` §4, Décision 2 ; cette spec l'écrit déjà ainsi plus bas).
+**L'hypothèse de covariance des duals est donc TOMBÉE** (`00-referentiel.md` §7) : elle ne se teste
+plus sur rien. Le **Monitoring** est bien transversal aux deux familles (il existe en composition via
+la phase « se juger ») et vit, **depuis A2, sur sa propre échelle** — voir §1.1.*
 
 - `00-referentiel.md` — le **Référentiel unifié** : **six compétences** — Expression,
   Argumentation, Structure, Connaissance, Synthèse, Questionnement, **toutes des deux familles**

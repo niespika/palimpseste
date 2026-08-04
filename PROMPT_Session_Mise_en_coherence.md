@@ -100,10 +100,10 @@ latérale (« Mise en cohérence — chapitre N ») : tu ne peux pas le faire à
 |---|---|---|
 | 0 | La SPEC C3 passe en v4.4 — application des amendements en attente | ✅ **TERMINÉ le 03/08/2026 — 30 entrées sur 30, amendements A20 à A51**, en quatre séances. Séance 1 (02/08) : entrées 1-4, **A20-A24**. Séance 2 (03/08) : entrées 5-16, **A25-A36**. Séance 3 (03/08) : entrées 18-27 et 30, **A37-A48**. Séance 4 (03/08) : le **groupe 17 + 28 + 29**, **A49-A51**. |
 | 1 | Le vocabulaire — table des termes, arbitrages, renommages | ✅ **TERMINÉ le 03/08/2026 — les quatre familles, en une séance** (séance 5, 13 h 17 – 15 h 20). Livrable : **`palimpseste-conception/LEXIQUE.md`**, **23 distinctions**. **Trois amendements C3 posés — A52, A53, A54 ; la spec passe en v4.5.** Contrôle mécanique de sortie fait. |
-| 2 | Cohérence interne, document par document (**00 → 01 → 02** — `03-` et `04-` **sortis du périmètre**, décision de Louis du 03/08) | **EN COURS — séance 6 (03/08, 15 h 40 – 17 h 40).** ✅ Le **`00-referentiel.md` est PASSÉ EN ENTIER** — sept items (en-tête, §1, §2, §3, §5, §6, §7 ; le §4 reste annoté). ✅ Le **`01-routeur.md` §13 est réécrit**, plus **six endroits hors §13**. **C3 en v4.6 — A55, A56, A57.** **RESTE** : deux renvois du routeur vers le `00-` §5 *(§3 l. 199, §8 l. 534)*, puis le journal du routeur ; puis **`02-exercices.md`**, dont un périmé est déjà repéré *(§1 l. 56 : « les sept autres » alors qu'il en reste trois)* |
+| 2 | Cohérence interne, document par document (**00 → 01 → 02** — `03-` et `04-` **sortis du périmètre**, décision de Louis du 03/08) | ✅ **TERMINÉ le 03/08/2026 — en deux séances.** Séance 6 (15 h 40 – 17 h 40) : le **`00-referentiel.md` passé en entier** (sept items ; le §4 annoté), le **`01-routeur.md` §13 réécrit** plus six endroits, **C3 en v4.6 (A55-A57)**. Séance 7 (18 h 05 – 20 h 00) : les deux renvois du routeur vers le `00-` §5, l'en-tête du routeur, **les quatre titres en « composition + réception »**, **19 fragments de vocabulaire de familles**, et **`02-exercices.md` passé sur les quatre contrôles** — dette Questionnement ↔ Monitoring refermée, compte des grilles corrigé, « Note du 30 juillet » annotée. **C3 en v4.7 (A58-A60).** |
 | 3 | Cohérence croisée (02 ↔ 01 d'abord ; 00 face aux deux ; sources ↔ C3 ; relevés ; rapport) | à faire — **un item dur déjà inscrit** : le **contrôle des chiffres du routeur contre C3, en entier** *(le §8 et le registre du §11 portaient encore 4 620 / 7 700 × X après le réalignement en dix endroits de la séance 4 ; marqué `[À VÉRIFIER AU CHAPITRE 3]` dans le registre)*. **Un second item inscrit le 03/08** : ce qui **bloque encore C5** est à recompter — l'ouverture n° 5 de C3 a perdu sa moitié « R1-R6 lecture » *(**A57**)*, mais ce qu'elle bloque n'a pas été restatué ; **c'est une décision de Louis** |
 | 4 | L'appareil — justifications gardées, redites retirées | à faire |
-| 5 | Les non-tranchés — inventaire, tri, décisions mûres | à faire |
+| 5 | Les non-tranchés — inventaire, tri, décisions mûres | à faire — **items déposés au 03/08** : *(a)* **ce que R0 écarte réellement à l'allumage** — la prémisse de l'item 6 du `01-` §13 est dissoute : il n'y a plus de « compétences de lecture » à écarter en bloc, et **la clé de recette n'est pas étendue à la famille** (§12), donc une compétence rendue `evaluee` en composition est ciblable en réception sans y avoir été éprouvée ; *(b)* l'inventaire des **19 marques de non-tranché de `02-exercices.md`**, relevées section par section ; *(c)* les trois trous du `00-` et les items des séances 1 à 4 déjà inscrits |
 | 6 | Sortie de passe — contrôles mécaniques, livrables, en-têtes | à faire |
 
 **Séance 1 (2 août, 22 h 45 – 00 h 00) — ce qu'il faut savoir pour reprendre.**
@@ -285,6 +285,50 @@ latérale (« Mise en cohérence — chapitre N ») : tu ne peux pas le faire à
   `00-` §3, retirés une heure plus tôt. *Le contrôle d'impact vaut aussi entre les sources, pas seulement
   vers C3.*
 
+**Séance 7 (3 août, 18 h 05 – 20 h 00) — le chapitre 2 est CLOS, et C3 passe en v4.7.**
+
+- **LE « NON » DE LOUIS EST LA TROUVAILLE DE LA SÉANCE, ET IL DEVIENT UNE RÈGLE.** Sur le point de
+  rebaptiser « le calendrier ne dit plus si la semaine appartient à l'**écriture** ou à la **lecture** »,
+  il arrête : *« cette idée n'a plus lieu d'être, ça renvoie une ancienne règle. À vérifier si on a
+  d'autres cas similaires. »* **Réécrire aurait fait rentrer l'idée morte par la porte du vocabulaire
+  neuf.** *La vérification a rapporté trois cas, dont **un de notre propre fait** — le §13, réécrit le
+  matin même, disait que la cadence 2-1 « garantissait **à la réception** une semaine sur trois ».*
+  **Son miroir se corrige, lui** : une règle **vivante** citée dans l'ancien vocabulaire se réaligne.
+  **Écrit au `LEXIQUE.md`.**
+- **« Modifie aussi les titres, c'est un oubli » — et le grep en a trouvé trois, pas deux**, plus un
+  renvoi au `00-` §8, plus **le titre de la SPEC C3**, sorti au contrôle d'impact. *Cause du trou : le
+  `LEXIQUE.md` ne proscrivait que trois formules ; **la paire « écriture » / « lecture » comme NOMS de
+  familles n'y était pas**. La ligne manquante est posée.*
+- **Le relevé des familles : 57 phrases apparient les deux mots, 19 fragments réécrits, 44 laissées** —
+  toutes ouvertes une à une. Ne bougent pas : les citations de la rédaction antérieure, la genèse du
+  `00-` §4, les noms de modules et de bibliothèques, et les descriptions de règles mortes.
+- **Un faux renommage démasqué en écrivant** : « une **cible d'écriture** » (§5 l. 320) contredit la
+  l. 322 réalignée le matin — « ces règles ne sont pas propres à une famille ». **La famille est
+  supprimée, pas traduite.**
+- **`02-exercices.md` déclarait ouverte une dette refermée le jour même** : la « dette Questionnement ↔
+  Monitoring », en trou déclaré à l'en-tête et « NON tranchée » au §4, alors que la session dédiée du
+  **2 août** a conclu que **la compétence survit**. *Le journal dit pourquoi : cette session **n'a
+  modifié qu'un seul fichier, le `00-`**.*
+- **Le Monitoring n'entre pas dans le compte des grilles, et Louis avait raison de le penser.** Vérifié
+  à trois endroits. **Compté sur disque plutôt que raisonné : quatre grilles existent** (Synthèse est
+  arrivée depuis), **il en reste deux**. Le §1 annonçait « les sept autres ».
+- **La « Note du 30 juillet » se disait antérieure à une révision qui a eu lieu.** Annotée en tête — ce
+  qui couvre du même coup les deux faits périmés de son corps.
+- **Contrôles mécaniques de `02-` : propres.** 13 renvois externes et 9 internes valides ; `Support`
+  majuscule, `marquage_hypothese`, `contexte`, `competences_escalade.cran` à **zéro**.
+  *Une fausse alerte évitée : un renvoi cru cassé existait bien — le premier grep le coupait à 190
+  caractères.* **Couper la sortie d'un grep, c'est fabriquer un faux positif.**
+- **Deux erreurs de Mètis, dites et réparées tout de suite** ; et **un `assert` d'ancrage a refusé
+  d'écrire** — les astérisques de gras n'entouraient pas ce qui était supposé. **Rien n'a été écrit tant
+  que l'ancrage n'a pas tenu.**
+- **Le pont Cowork est tombé en cours de séance.** L'appel n'a jamais atteint la machine. **L'état du
+  disque a été relu avant de réécrire**, et il confirmait ce qui avait été annoncé.
+- **Impact C3 : v4.7 — A58, A59, A60.** **A59 est le plus lourd** : le §0 déclarait **« Mouvement »**
+  comme compétence de lecture et l'hypothèse de covariance des duals comme testable — **et la spec se
+  contredisait elle-même**, écrivant plus bas « Mouvement est la Structure en mode `expliquer` ». *Une
+  session Code lisant le §0, l'endroit qui fait foi, aurait créé une compétence inexistante.*
+
+
 ### Inventaire ouvert — le `01-routeur.md` porte encore le construct périmé (relevé le 03/08)
 
 *Déposé ici sur demande de Louis — « réaligne tout de suite, pour éviter qu'on oublie un truc plus
@@ -294,7 +338,7 @@ décisions** : plusieurs de ces endroits attendent des arbitrages qui appartienn
 **Déjà réaligné le 03/08 (amendement A32, entrée 12)** : l'énoncé de la proportion F24 au §1 · le
 partage « probabiliste » · la conséquence à surveiller · la ligne du registre au §11.
 
-**RESTE À TRAITER : LE SEUL §13.** *(Les sept autres endroits ont été réalignés en séance 4, le 03/08 — voir ci-dessus.)*
+**SOLDÉ le 03/08 — le §13 a été réécrit en séance 6, et ses résidus (item 6 du registre, proportion F24) réalignés en séance 7.** *(Les sept autres endroits ont été réalignés en séance 4, le 03/08 — voir ci-dessus.)*
 
 | § | ce qui est périmé | où ça va |
 |---|---|---|
