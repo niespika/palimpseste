@@ -1,5 +1,7 @@
 # RELEVÉ D'ARBITRAGE — Séance de gel de la SPEC C3 (29 juillet 2026)
 
+> **Renommage du 04/08/2026 — décision de Louis.** Les items de ce relevé s'appellent désormais **`GC1` à `GC26`** (*gel de C3*), et non plus `F1` à `F26`. **Motif** : le relevé d'arbitrage du **30/07** (référentiel × routeur) numérote **aussi** ses items `F1` à `F27` — il y avait donc deux `F17`, deux `F25`, deux `F5`, sans moyen de les distinguer. **Un `F` nu, partout dans le chantier, désigne désormais le relevé du 30/07** ; les items de celui-ci portent la lettre. *Les sections C1-C21 (corrections mécaniques) et D1-D5 (constats écartés) de ce relevé ne sont pas renommées — elles ne sont presque jamais citées ailleurs.* Convention écrite au `LEXIQUE.md`. **Le journal, la liste d'amendements et les deux fichiers de fusion gardent leurs `F` nus : ce sont des blocs datés.**
+
 > **Rôle de ce fichier** : le relevé au fil de l'eau de la séance d'arbitrage Louis × Calame sur
 > `FUSION_revues_C3.md`. Il est écrit **pendant** la séance, item par item, pour qu'aucune décision
 > ni aucune donnée apportée par Louis ne se perde. Il fait foi pour l'application des décisions à
@@ -19,32 +21,32 @@
 
 | Item | Décision | Statut |
 |---|---|---|
-| F1 | **Autre** (solution Louis) — clavier à la maison, OCR réservé à la classe | acté (séance) |
-| F2 | **Oui, amendé** — arbitrage de fond : surnoter < sous-noter | acté (séance) |
-| F3 | **Oui, amendé** — critère de recette chiffré, 3 gates, voie mixte | acté (séance) |
-| F4 | **Oui** — `exercices_depots` créée à l'assignation | acté (séance) |
-| F5 | **Autre** — prémisse fausse : la validation est en amont, une fois | acté (séance) |
-| F6 | **Oui** — `exercices_jobs`, index uniques, plafonds de coût | acté (séance) |
-| F7 | **Oui, corrigé** — namespaces oui ; `classe_id` sur les niveaux : NON | acté (séance) |
-| F8 | **Autre** — budgets plancher/plafond par élève ; durée = cycle | acté (séance) |
-| F9 | **Oui, amendé** — un squelette par compétence mesurée ; ambiguïté levée | acté (séance) |
-| F10 | **Oui, amendé** — définitions M3 ; P2-vf **conservée** (garde-fou M1) | acté (séance) |
-| F11 | **Oui** — lettre Loi 25 prête le **22/08** | acté (séance) |
-| F12 | **Oui, amendé** — `mode` = contexte ; famille lue sur le type | acté (séance) |
-| F13 | **Oui** — manifeste de fichiers faisant foi par lot | acté (séance) |
-| F14 | **Oui, amendé** — la stagnation change la cible, jamais le volume | acté (séance) |
-| F15 | **Oui, amendé** — appariement par le compte élève | acté (séance) |
-| F16 | **Autre** — l'élève **corrige** sa transcription ; flux complet du diagnostique | acté (séance) |
-| F17 | **Oui** — `indetermine`, verdicts par observable, contestation → file prof | acté (séance) |
-| F18 | **Autre** — signal non bloquant au plan d'évaluation | en cours |
-| F19 | **Oui** — NULL ≠ 0 ; restitution à chaud retenue | acté (séance) |
-| F20 | **Oui** — geste sur les conditions au dépôt | acté (séance) |
-| F21 | **Oui** — défense contre l'injection retenue | acté (séance) |
-| F22 | **Oui** — geste observable, constat en vf, citations namespacées | acté (séance) |
-| F23 | **Oui** — borne d'élève, `borne_amont` journalisée | acté (séance) |
-| F24 | **Oui** — mesures de même nature, contrefactuel, volumes journalisés | acté (séance) |
-| F25 | **Autre** — lettres prof par défaut + **option élève** ; **pas de note dans Palimpseste** | acté (séance) |
-| F26 | **Oui, amendé** — contrat de latence à **3 minutes** | acté (séance) |
+| GC1 | **Autre** (solution Louis) — clavier à la maison, OCR réservé à la classe | acté (séance) |
+| GC2 | **Oui, amendé** — arbitrage de fond : surnoter < sous-noter | acté (séance) |
+| GC3 | **Oui, amendé** — critère de recette chiffré, 3 gates, voie mixte | acté (séance) |
+| GC4 | **Oui** — `exercices_depots` créée à l'assignation | acté (séance) |
+| GC5 | **Autre** — prémisse fausse : la validation est en amont, une fois | acté (séance) |
+| GC6 | **Oui** — `exercices_jobs`, index uniques, plafonds de coût | acté (séance) |
+| GC7 | **Oui, corrigé** — namespaces oui ; `classe_id` sur les niveaux : NON | acté (séance) |
+| GC8 | **Autre** — budgets plancher/plafond par élève ; durée = cycle | acté (séance) |
+| GC9 | **Oui, amendé** — un squelette par compétence mesurée ; ambiguïté levée | acté (séance) |
+| GC10 | **Oui, amendé** — définitions M3 ; P2-vf **conservée** (garde-fou M1) | acté (séance) |
+| GC11 | **Oui** — lettre Loi 25 prête le **22/08** | acté (séance) |
+| GC12 | **Oui, amendé** — `mode` = contexte ; famille lue sur le type | acté (séance) |
+| GC13 | **Oui** — manifeste de fichiers faisant foi par lot | acté (séance) |
+| GC14 | **Oui, amendé** — la stagnation change la cible, jamais le volume | acté (séance) |
+| GC15 | **Oui, amendé** — appariement par le compte élève | acté (séance) |
+| GC16 | **Autre** — l'élève **corrige** sa transcription ; flux complet du diagnostique | acté (séance) |
+| GC17 | **Oui** — `indetermine`, verdicts par observable, contestation → file prof | acté (séance) |
+| GC18 | **Autre** — signal non bloquant au plan d'évaluation | en cours |
+| GC19 | **Oui** — NULL ≠ 0 ; restitution à chaud retenue | acté (séance) |
+| GC20 | **Oui** — geste sur les conditions au dépôt | acté (séance) |
+| GC21 | **Oui** — défense contre l'injection retenue | acté (séance) |
+| GC22 | **Oui** — geste observable, constat en vf, citations namespacées | acté (séance) |
+| GC23 | **Oui** — borne d'élève, `borne_amont` journalisée | acté (séance) |
+| GC24 | **Oui** — mesures de même nature, contrefactuel, volumes journalisés | acté (séance) |
+| GC25 | **Autre** — lettres prof par défaut + **option élève** ; **pas de note dans Palimpseste** | acté (séance) |
+| GC26 | **Oui, amendé** — contrat de latence à **3 minutes** | acté (séance) |
 | Section C (C1-C21) | **Oui à tout** — C7 sans objet, C16 et C20 tranchés par Louis | acté (séance) |
 | Section D (D1-D5) | **Écartements confirmés** | acté (séance) |
 | Section C (C1-C21) | **Oui à tout** — C7 sans objet, C16 et C20 tranchés par Louis | acté (séance) |
@@ -54,7 +56,7 @@
 
 ## SECTION A
 
-### F1 — La vf manuscrite casse le geste de 10 min et le retour final
+### GC1 — La vf manuscrite casse le geste de 10 min et le retour final
 **Décision : AUTRE — solution Louis, qui remplace le correctif de la fusion.**
 
 Texte retenu :
@@ -84,15 +86,15 @@ ne survit qu'en classe. *« La vie est faite de compromis. »*
 
 Conséquences enregistrées :
 - Le faisceau anti-triche **change de nature** : la durée mesurée, morte sur manuscrit (constat de
-  F19), renaît ; s'y ajoutent rythme de frappe, apparition du texte par blocs, nombre de sessions,
+  GC19), renaît ; s'y ajoutent rythme de frappe, apparition du texte par blocs, nombre de sessions,
   tentatives de collage. Réserve consignée : le blocage du collage est **côté navigateur seulement**
   — il arrête le geste paresseux, pas l'élève déterminé.
 - Effet de bord assumé : l'élève qui rédige hors ligne ne peut plus coller ; certaines aides
   techniques passent par le collage.
 - **Coût OCR en forte baisse** : l'OCR ne tourne plus que sur ~140 copies deux à trois fois l'an.
-  Le chiffrage de F6 est à réviser à la baisse ; le risque n°8 du §10 se réduit au canal classe.
+  Le chiffrage de GC6 est à réviser à la baisse ; le risque n°8 du §10 se réduit au canal classe.
 
-### F2 — L'OCR ne fait pas qu'échouer : il corrige, et surtout chez les faibles
+### GC2 — L'OCR ne fait pas qu'échouer : il corrige, et surtout chez les faibles
 **Décision : OUI, amendé.**
 
 **Arbitrage de fond de Louis, qui gouverne l'item** : *le risque de surnoter les élèves est moins
@@ -102,7 +104,7 @@ grave que celui de les sous-noter.*
   `PROMPT_transcription_copies_tests.md` (repo), déjà **strictement littéral** (« Tu es un scribe,
   pas un correcteur »), gérant retours à la ligne et paragraphes, produisant une liste de
   « Doutes ». Sa **règle 7 neutralise l'injection de prompt par la copie** — cela couvre l'essentiel
-  de F21. Louis considère que **la génération réussie de ses copies-tests vaut test** : **aucun
+  de GC21. Louis considère que **la génération réussie de ses copies-tests vaut test** : **aucun
   jalon OCR n'entre au chemin critique d'août.**
   *Réserve consignée (journal du 28/07, décision D1) : Louis a dû réviser lui-même les
   transcriptions ; la génération n'était donc pas fidèle du premier coup. Risque encaissé par
@@ -122,7 +124,7 @@ grave que celui de les sous-noter.*
 révision, pas de retour final. **Le retour part en lot, au déclenchement du prof** (le soir même ou
 le lendemain) et arrive à l'élève en différé.
 
-### F3 — Statut de recette, gate unique, routeur qui ne filtre rien
+### GC3 — Statut de recette, gate unique, routeur qui ne filtre rien
 **Décision : OUI, amendé.**
 
 - **Trois gates** au lieu d'un : `exercices_actif` (les élèves peuvent-ils faire des exercices),
@@ -154,7 +156,7 @@ le lendemain) et arrive à l'élève en différé.
 - **§8 réécrit** : le cœur R1-R6 du routeur est **à écrire avant le 25 août** — la mention « le code
   du routeur peut s'écrire en C6 ou post-rentrée » disparaît (contradiction avec la variante B).
 
-### F4 — L'assignation individuelle n'existe pas dans le schéma
+### GC4 — L'assignation individuelle n'existe pas dans le schéma
 **Décision : OUI, tel quel.**
 
 Une ligne **`exercices_depots` créée dès l'assignation** (et non au dépôt) : elle porte le cycle
@@ -163,10 +165,10 @@ individuel. Champs ajoutés : `statut` énuméré
 `assigne_at`, `du_at`, `origine` (`routeur` | `prof`), `routeur_decision_id`.
 `exercices` reste l'instance partagée : type × matière × fenêtre.
 **`abandonne` est exclu des règles de stagnation.**
-**Effet de F1** : pour une passation en classe, la séquence s'arrête à `retour_publie` (pas de
+**Effet de GC1** : pour une passation en classe, la séquence s'arrête à `retour_publie` (pas de
 `vf_remis`).
 
-### F5 — La file de validation est intenable / semaine 2 à vide
+### GC5 — La file de validation est intenable / semaine 2 à vide
 **Décision : AUTRE — la prémisse des trois revues est fausse.**
 
 Correction de Louis : **une référence décomposée appartient à un texte support, pas à un élève.**
@@ -189,7 +191,7 @@ Ce qui est retenu :
 - **Corpus des exercices d'écriture** : chantier des prochaines semaines, **hors périmètre du gel**.
   `reference_id` reste optionnel.
 
-### F6 — Aucune infrastructure de traitement
+### GC6 — Aucune infrastructure de traitement
 **Décision : OUI, tel quel.**
 
 Table **`exercices_jobs`** (étape, statut, tentatives, clé d'idempotence) ; **index uniques**
@@ -198,10 +200,10 @@ Table **`exercices_jobs`** (étape, statut, tentatives, clé d'idempotence) ; **
 les dépôts restent en file), plafond d'appels par dépôt, compression des photos côté client.
 *Le mode de panne visé : un retry après timeout écrit une deuxième mesure pour la même copie →
 la règle « 2 sur 3 » monte une lettre sans progrès de l'élève.*
-**Renforcé par F1/F2** : le retour du diagnostique part **en lot au déclenchement du prof** — c'est
+**Renforcé par GC1/GC2** : le retour du diagnostique part **en lot au déclenchement du prof** — c'est
 un traitement par jobs. **Chiffrage à réviser à la baisse** (l'OCR a quitté le formatif maison).
 
-### F7 — Deux Problématisation, pas de dimension cours
+### GC7 — Deux Problématisation, pas de dimension cours
 **Décision : OUI pour les namespaces et la table des compétences actives ; NON pour `classe_id` sur
 les niveaux.**
 
@@ -220,7 +222,7 @@ Retenu :
 *(Point restant : le sort du champ `provenance` (`tc`|`hlp`) sur `competences_mesures` — voir
 « Questions ouvertes ».)*
 
-### F8 — `duree_attendue_min` sert trois maîtres ; le double budget TC+HLP
+### GC8 — `duree_attendue_min` sert trois maîtres ; le double budget TC+HLP
 **Décision : AUTRE — modèle de budget de Louis.**
 
 Donnée de terrain apportée par Louis, absente de la spec C3 mais présente dans `02-exercices.md` :
@@ -249,7 +251,7 @@ construction exacte se précise côté routeur (`01-routeur.md`), pas dans C3.*
 - **Ce que voit l'élève** : **pas de budget-temps hebdomadaire**. Il voit **la quantité d'exercices**
   que le routeur lui a prévue en début de semaine, et sur chaque exercice **une durée indicative**.
 
-### F9 — « Le squelette » : un par dépôt ou un par compétence ?
+### GC9 — « Le squelette » : un par dépôt ou un par compétence ?
 **Décision : OUI, amendé.**
 
 - **Le design bancé est conservé** : **P1 par compétence** (un P1 unique invaliderait le pilote
@@ -263,7 +265,7 @@ construction exacte se précise côté routeur (`01-routeur.md`), pas dans C3.*
   **compétence cible**.*
 - **Prompt caching** noté au lot C4-L5 : la copie en préfixe commun des N appels.
 
-### F10 — Champs de télémétrie jamais définis, appels sans consommateur
+### GC10 — Champs de télémétrie jamais définis, appels sans consommateur
 **Décision : OUI, amendé.**
 
 - **`aide_consommee`** = dépliages de la fiche stratégique + relectures. *Définition provisoire,
@@ -318,17 +320,17 @@ instrument neuf. Le gain d'entrée est déjà capté sans risque par le **prompt
 
 **Lien avec une décision ouverte du journal** : Louis souligne qu'il est « d'autant plus important
 d'être certain que le modèle le moins cher fonctionne bien avec mes prompts » — c'est la question
-D9 du 28/07, **[à valider]** : régime mixte Haiku-hebdo / Sonnet-ancres. Le chiffrage de F6 en
+D9 du 28/07, **[à valider]** : régime mixte Haiku-hebdo / Sonnet-ancres. Le chiffrage de GC6 en
 dépend.
 
-### F11 — Loi 25
+### GC11 — Loi 25
 **Décision : OUI, avec jalon daté.**
 
 **Jalon : une lettre présentant le traitement, prête le 22 août.** Elle porte :
 - la **table de traitement** — pour chaque donnée (photo de copie, transcription, squelette,
   verdict, retour, télémétrie) : finalité, lecteur, sous-traitant, **durée de conservation**,
   **mode d'effacement** ;
-- le principe que **toute contestation individuelle atteint un humain** (rejoint F17) ;
+- le principe que **toute contestation individuelle atteint un humain** (rejoint GC17) ;
 - **`mode_saisie_force = ecran`** au profil — **jamais** le diagnostic médical (dysgraphie, plan
   d'intervention) ;
 - la **purge des métadonnées EXIF** avant tout envoi ;
@@ -344,7 +346,7 @@ collège — aucun avis juridique n'a été donné en séance.*
 
 Si **Pangram** est adopté (§7, option), il s'ajoute à la liste des sous-traitants.
 
-### F12 — `mode` mélange famille et contexte
+### GC12 — `mode` mélange famille et contexte
 **Décision : OUI, amendé.**
 
 - **`mode` = `formatif_maison` | `diagnostique_classe`** — un contexte, rien d'autre. La valeur
@@ -357,7 +359,7 @@ Si **Pangram** est adopté (§7, option), il s'ajoute à la liste des sous-trait
 - **Enjeu réglé** : sans cette correction, un diagnostique de lecture n'aurait pas été une **ancre**
   — donc ni descente, ni plafond ancre+2 côté lecture, toute l'année.
 
-### F13 — R4 interdit aux sessions de lire ce qu'elles doivent implémenter
+### GC13 — R4 interdit aux sessions de lire ce qu'elles doivent implémenter
 **Décision : OUI, tel quel.**
 
 Chaque lot du §9 liste **son manifeste de fichiers faisant foi** — nom **et statut requis**. Un
@@ -365,7 +367,7 @@ fichier non validé **bloque le lot explicitement**. *(C4-L5 a besoin de `compet
 besoin de `01-routeur.md` — que R4 leur interdisait d'ouvrir.)* Les prompts C4-L1 et C4-L2 rédigés
 en fin de séance porteront ce manifeste.
 
-### F14 — « Stagne → pause, progresse → pousse » (décision actée, contestée par deux revues)
+### GC14 — « Stagne → pause, progresse → pousse » (décision actée, contestée par deux revues)
 **Décision : OUI, amendé — la décision du 27/07 n'est pas renversée, elle est mise en cohérence.**
 
 Constat établi en séance : **la moitié du correctif était déjà dans le routeur.** L'escalade **N3**
@@ -376,7 +378,7 @@ lève le pied ») qui a créé l'ambiguïté.
 Retenu :
 1. **La stagnation change la CIBLE, jamais le VOLUME.** Vocabulaire du §4 aligné sur N3.
 2. **Plancher de mesure** : au moins **une mesure toutes les 3 semaines** sur toute compétence
-   ciblée. *(Le modèle de secondaires espacées de F10 en fait déjà l'essentiel du travail.)*
+   ciblée. *(Le modèle de secondaires espacées de GC10 en fait déjà l'essentiel du travail.)*
 3. **Fenêtre de montée temporelle** : « 2 mesures améliorées sur les 3 dernières **ou** dans la
    fenêtre temporelle ». **Règle de cohérence retenue : fenêtre temporelle = 2 × la période du
    plancher** — donc **6 semaines** ici. Raison : une fenêtre plus courte que deux périodes de
@@ -391,7 +393,7 @@ ci-dessous).
 ### Assiduité et motivation — élément neuf apporté par Louis (hors fusion)
 **Statut : acté (séance) ; entre au périmètre du gel pour la collecte des données.**
 
-Dispositif réel de Louis, qui répond à l'objection de F14 :
+Dispositif réel de Louis, qui répond à l'objection de GC14 :
 - **Punition collective** : si **un tiers de la classe** ne fait rien **deux semaines de suite**,
   tout le monde rend le travail imprimé et c'est noté.
 - **Récompense individuelle** : **+1 par semaine de travail fait**, **par semestre** (les notes
@@ -408,14 +410,14 @@ Conséquences pour la spec :
 - **Semaines de vacances** : elles **ne comptent pas** comme semaines de travail dû (elles sortent
   du dénominateur) ; un élève qui veut travailler pendant ces semaines n'en est jamais empêché.
   *Dépendance : le compteur lit le calendrier scolaire (module Calendrier).*
-- **Barème : hors périmètre (révisé à F25).** Palimpseste n'affiche qu'un **pourcentage
+- **Barème : hors périmètre (révisé à GC25).** Palimpseste n'affiche qu'un **pourcentage
   d'assiduité** ; Louis fait lui-même la conversion en note, hors application. *(La formule
   `20 / (semaines_semestre − semaines_vacances)`, envisagée en séance, est abandonnée côté produit.)*
 - **Écrans (différés, conception ultérieure)** : une **frise** en haut de la page d'exercice montrant
   où en est l'élève dans son parcours ; une **page de parcours** au tableau de bord (progrès,
   objectifs, réussites, défauts récurrents).
 
-### F15 — Diagnostique en classe (téléphones, appariement, absents)
+### GC15 — Diagnostique en classe (téléphones, appariement, absents)
 **Décision : OUI, amendé.**
 
 - **Téléphones** : l'interdiction vise le **secondaire** ; Louis est au **cégep** et rien ne dit que
@@ -430,7 +432,7 @@ Conséquences pour la spec :
   capte le capital culturel, pas la compétence. *(Connaissance est de toute façon hors rayon du
   routeur depuis le 17/07.)*
 
-### F16 — La transcription visible de l'élève
+### GC16 — La transcription visible de l'élève
 **Décision : AUTRE — l'élève CORRIGE sa transcription. Et Louis spécifie le flux complet.**
 
 - **L'élève peut éditer le texte de sa transcription.** Pas de signalement, **pas de double version
@@ -475,29 +477,29 @@ diagnostiques). C'est du périmètre neuf : il étend le lot C4-L4.**
 **Conséquences à porter au schéma et aux lots :**
 - **`exercices_depots`** : ouverture manuelle du dépôt par le prof (état + horodatage).
 - **Nouveaux champs par dépôt de diagnostique** : `commentaire_general`, `corrige_par`,
-  `corrige_at`. **⚠️ Le champ `note` est retiré — décision F25** : Louis garde la note sur la copie
+  `corrige_at`. **⚠️ Le champ `note` est retiré — décision GC25** : Louis garde la note sur la copie
   papier et la saisit dans Pronote, comme aujourd'hui. Aucune note dans Palimpseste.
 - **`exercices_retours`** : `published_at` (déjà en liste mécanique) trouve ici son consommateur ;
   `lu_at` devient une **obligation** côté élève.
 - **Retour éditable par le prof** — donc une version « originale IA » et une version publiée,
   ou un champ d'édition ; à trancher à l'implémentation.
 - **Exigence de latence** : la transcription de ~35 copies doit revenir **en quelques secondes par
-  copie**, pendant l'heure de cours. Portée par `exercices_jobs` (F6), inscrite au lot C4-L4.
+  copie**, pendant l'heure de cours. Portée par `exercices_jobs` (GC6), inscrite au lot C4-L4.
 - **Loi 25** : la note et le commentaire sont des renseignements personnels — une ligne de plus à la
-  table de traitement (F11).
-- **Lien F25** : il y aura donc bien des **notes** dans Palimpseste, saisies par Louis, distinctes
-  des lettres de compétence. À reprendre à F25.
+  table de traitement (GC11).
+- **Lien GC25** : il y aura donc bien des **notes** dans Palimpseste, saisies par Louis, distinctes
+  des lettres de compétence. À reprendre à GC25.
 
-### F17 — Les faux négatifs de la calibration deviennent des « surconfiant » injustes
+### GC17 — Les faux négatifs de la calibration deviennent des « surconfiant » injustes
 **Décision : OUI, tel quel.**
 
 Valeur **`indetermine`** par défaut quand l'élève affirme un observable **absent** du squelette ;
 verdicts conservés **par observable** + **version des questions** ; message reformulé
 (« nous n'avons pas vu la même chose ») ; **toute contestation portant sur une citation absente part
-directement en file prof** — ce qui satisfait aussi l'exigence d'examen humain de F11.
+directement en file prof** — ce qui satisfait aussi l'exigence d'examen humain de GC11.
 *(Sans objet au diagnostique : il n'a pas de temps 3.)*
 
-### F18 — Cadence plancher des ancres et « ancre + 2 »
+### GC18 — Cadence plancher des ancres et « ancre + 2 »
 **Décision : AUTRE — solution Louis. Un point reste ouvert.**
 
 - **Les diagnostiques obligatoires de septembre, décembre et mars sont déjà au projet** ; s'y
@@ -510,8 +512,8 @@ directement en file prof** — ce qui satisfait aussi l'exigence d'examen humain
 - **Fraîcheur d'ancre exigée pour le second cran** au-dessus : à confirmer.
 - **Ancre aveugle par semestre** : à trancher (voir Questions ouvertes).
 
-### F19 — Anti-triche sur manuscrit
-**Décision : OUI — largement dissous par F1.**
+### GC19 — Anti-triche sur manuscrit
+**Décision : OUI — largement dissous par GC1.**
 
 Le manuscrit ne vit plus qu'en classe, sous surveillance. Restent :
 - **`delta_v1_vf` NULL n'est pas 0.** Un diagnostique n'a pas de vf : son delta est NULL. Le lire
@@ -520,7 +522,7 @@ Le manuscrit ne vit plus qu'en classe, sous surveillance. Restent :
   **Placement précisé par Louis : après la vérification de la transcription OCR, avant tout envoi à
   l'IA.** Incohérence forte avec le squelette = signal ; valeur pédagogique propre.
 
-### F20 — Le sous-effort massif est indiscernable de la difficulté
+### GC20 — Le sous-effort massif est indiscernable de la difficulté
 **Décision : OUI, tel quel.**
 
 Un geste unique au dépôt sur les **conditions** — « j'y ai mis le temps » / « fait au plus vite » /
@@ -530,7 +532,7 @@ allègement.
 *Note : le dispositif de +1 hebdomadaire rend ce geste plus fiable — « pas pu m'y mettre » coûte
 déjà son point, l'élève n'a rien à gagner à mentir.*
 
-### F18 (suite) — L'ancre aveugle
+### GC18 (suite) — L'ancre aveugle
 **Décision : OUI, sous la forme retenue, avec trois réserves de Louis.**
 
 Ce que la spec ajoute est minuscule : **le bac blanc (et les évaluations corrigées à la main, hors
@@ -554,11 +556,11 @@ lettres. Un instrument ne s'audite pas lui-même.*
 → **Règle de conception qui en découle** : le retour à l'élève **ne révèle jamais la grille complète
 des observables**. À écrire.
 
-### F21 — Injection de prompt par la copie
+### GC21 — Injection de prompt par la copie
 **Décision : OUI — « je prends la défense ».**
 
 **Constat neuf établi en séance** : la règle 7 du prompt de transcription ne protège plus, puisque
-F1 met tout le formatif au clavier et F16 laisse l'élève **éditer** sa transcription — l'injection
+GC1 met tout le formatif au clavier et GC16 laisse l'élève **éditer** sa transcription — l'injection
 peut être tapée en aval du rempart. La défense doit donc vivre au niveau de P1 et P2 :
 1. **Entrées délimitées** — la copie arrive dans un bloc explicitement balisé, jamais concaténée aux
    consignes ; la consigne dit que ce bloc est du matériau, jamais une instruction.
@@ -572,7 +574,7 @@ corrige la transcription des exercices notés en ayant la copie papier). Argumen
 malgré tout : une injection peut aussi corrompre le **retour** affiché ou **fausser silencieusement
 une mesure**, donc la télémétrie et l'analyse de fin d'année.*
 
-### F22 — Retour : intention inférée et citations non namespacées
+### GC22 — Retour : intention inférée et citations non namespacées
 **Décision : OUI, tel quel.**
 
 `{{GESTE_TENTE}}` = **geste observable dans le texte** (la voix « tu as visiblement essayé » reste,
@@ -580,14 +582,14 @@ l'inférence de cause disparaît) · en vf, le « pourquoi » causal devient « 
 d'après les deux versions » · en lecture, **citations namespacées** `copie_eleve` vs `texte_support`
 · `actif = true` exige `fiche.attendus_retour` non vide, sinon état **`retour_degrade`** explicite.
 
-### F23 — Non-spoiler : borne de classe ≠ borne d'élève
+### GC23 — Non-spoiler : borne de classe ≠ borne d'élève
 **Décision : OUI, tel quel.**
 
 `borne_amont` **journalisée à la décision** du routeur ; **interdiction d'assigner au-delà de la
 position de lecture connue de l'élève** ; à défaut, texte court hors livre.
 *Nuance de Louis consignée : les livres lus sont des classiques, le spoiler pèse moins.*
 
-### F24 — Étalonnage de fin d'année
+### GC24 — Étalonnage de fin d'année
 **Décision : OUI, tel quel.**
 
 Comparer des mesures **de même nature** — diagnostique de septembre contre **passation du même
@@ -595,7 +597,7 @@ format en juin**, jamais contre une lettre agrégée (sinon régression vers la 
 **groupe à faible assiduité comme contrefactuel** ; **volume assigné et volume terminé journalisés**.
 *(Les deux dernières pièces sont produites par le compteur d'assiduité.)*
 
-### F25 — « Les lettres affichées à l'élève SONT des notes » *(décision actée, contestée)*
+### GC25 — « Les lettres affichées à l'élève SONT des notes » *(décision actée, contestée)*
 **Décision : AUTRE — solution Louis.**
 
 **Position de fond de Louis** : ses élèves ont un **bulletin français** — des notes et des moyennes
@@ -607,11 +609,11 @@ format en juin**, jamais contre une lettre agrégée (sinon régression vers la 
   courbes de progression et tout le reste**. **C'est l'élève qui choisit** — pas le système.
 - **Côté prof** : les lettres, toujours.
 - **Aucune note dans Palimpseste.** La note reste sur la **copie papier** et se saisit dans
-  **Pronote**, comme aujourd'hui. *(Retire le champ `note` du flux F16.)*
+  **Pronote**, comme aujourd'hui. *(Retire le champ `note` du flux GC16.)*
 - **Assiduité** : Palimpseste affiche un **pourcentage**, rien de plus. Louis fait la conversion en
   note de son côté. *« Comme ça, aucune confusion. »*
 
-### F26 — Latence, relances, deux voix d'IA
+### GC26 — Latence, relances, deux voix d'IA
 **Décision : OUI, amendé — la latence passe à 3 minutes.**
 
 **Contrat de latence : le retour arrive en moins de 3 minutes** — au-delà, « ça perd son sens »
@@ -634,16 +636,16 @@ visuelle **Calame / Aletheia** renvoyée au design de C5.
 | C4 | Régime de cycle **`paires`** défini | *Déjà défini dans `02-exercices.md` §1 — la spec le cite* |
 | C5 | Valeurs de **`grain`** (micro/méso/macro) et de **segment** (1-4) énumérées | |
 | C6 | **`lu_at` dédupliqué** (il figure sur le dépôt et sur le retour) + horodatage du temps 6 | |
-| C7 | ~~`refaire_lisibilite` par version~~ | **Sans objet depuis F1** : la lisibilité ne vit plus que sur le canal classe, à version unique |
+| C7 | ~~`refaire_lisibilite` par version~~ | **Sans objet depuis GC1** : la lisibilité ne vit plus que sur le canal classe, à version unique |
 | C8 | **`lettre_equivalente` retirée des squelettes** (fausse précision) ; conservée sur `competences_mesures` | |
 | C9 | **Override prof journalisé** (`origine` + entrée de journal) | |
 | C10 | **Dépôt des photos par URL signée** (convention d'écritures serveur) | |
-| C11 | **Unicité `exercices_references` + validation sur empreinte immuable** | *Déjà acté à F5* |
-| C12 | **`photos[]`** : ordre, rotation, somme de contrôle, page manquante | *Renforcé par le flux F16* |
+| C11 | **Unicité `exercices_references` + validation sur empreinte immuable** | *Déjà acté à GC5* |
+| C12 | **`photos[]`** : ordre, rotation, somme de contrôle, page manquante | *Renforcé par le flux GC16* |
 | C13 | **`confiance_declaree` sur la v1 seule** | |
 | C14 | **Identifiants stables des points du retour** (sans quoi une contestation ne désigne rien) | |
-| C15 | **`published_at`** sur le retour | *Consommateur : la case à cocher du flux F16* |
-| C16 | **Problématisation d'écriture = compétence active pour les classes TC seulement** | **Tranché par Louis** : mesurée et entraînée dès que l'élève a du TC dans ses classes, ou que le diagnostique est assigné à une classe TC. Un élève HLP pur ne la voit jamais ; un bi-classe l'a. S'inscrit dans la table des compétences actives par classe (F7) |
+| C15 | **`published_at`** sur le retour | *Consommateur : la case à cocher du flux GC16* |
+| C16 | **Problématisation d'écriture = compétence active pour les classes TC seulement** | **Tranché par Louis** : mesurée et entraînée dès que l'élève a du TC dans ses classes, ou que le diagnostique est assigné à une classe TC. Un élève HLP pur ne la voit jamais ; un bi-classe l'a. S'inscrit dans la table des compétences actives par classe (GC7) |
 | C17 | **C4-L4 : « 30 copies » → 140** dans le critère de réussite | 70 élèves × 2 passations. Une file qui tient à 30 peut s'effondrer à 140 (débit du fournisseur, engorgement, coupure de coût, expirations) |
 | C18 | **C4-L6 : retirer « périmètre de ta revue »** | |
 | C19 | **Seuil des « contestations répétées » chiffré** | |
@@ -656,15 +658,15 @@ visuelle **Calame / Aletheia** renvoyée au design de C5.
 **Décision : les cinq écartements sont CONFIRMÉS.**
 
 - **D1** — « un seul P1 par copie » : contredit le pilote Argumentation, les 4 runs Structure et les
-  3 runs Expression. Design bancé conservé ; seule l'ambiguïté d'écriture est levée (F9).
+  3 runs Expression. Design bancé conservé ; seule l'ambiguïté d'écriture est levée (GC9).
 - **D2** — « le routeur ciblera Connaissance » : hors rayon du routeur depuis le 17/07 (R4). Ce qui
-  reste vrai est traité en F15 (lettre `differee` au diagnostique).
+  reste vrai est traité en GC15 (lettre `differee` au diagnostique).
 - **D3** — « surapprentissage du diagnostic » : c'est déjà le chantier **modèle de certitude**
-  (§4bis) ; les correctifs concrets sont repris en F14 et F15.
+  (§4bis) ; les correctifs concrets sont repris en GC14 et GC15.
 - **D4** — « la coupe de repli n'est pas exécutable » : elle est actée et le schéma la supporte ; la
-  part vraie (§8 contradictoire, gates, critère de bascule) est reprise en F3.
+  part vraie (§8 contradictoire, gates, critère de bascule) est reprise en GC3.
 - **D5** — « le parcage de la validation OCR est une erreur » : la piste était déjà au parking
-  `IDEES_post_rentree.md` ; la convergence indépendante l'a promue en spec (F16), que Louis a depuis
+  `IDEES_post_rentree.md` ; la convergence indépendante l'a promue en spec (GC16), que Louis a depuis
   largement dépassée avec son flux complet.
 
 ---
@@ -676,21 +678,23 @@ visuelle **Calame / Aletheia** renvoyée au design de C5.
 immense majorité → au Québec, **le consentement relève de l'élève lui-même** (dès 14 ans) ;
 l'information aux parents redevient une **pratique d'établissement**, pas une obligation légale.
 *(L'interdiction québécoise des téléphones vise le secondaire ; en cas d'extension, repli sur le
-chariot d'iPad — cf. F15.)*
+chariot d'iPad — cf. GC15.)*
 
 ---
 
 ## Questions ouvertes (à trancher avant l'application)
+
+> *Relu le 04/08/2026 (passe de mise en cohérence, chapitre 3) — **deux mentions ne valent plus** : la question ouverte n° 1, « la règle d'espacement des mesures secondaires », est **écrite au `01-routeur.md` §6 depuis le 30/07** *(seul son **plafond de sondes par cycle** reste `[à valider]`, au registre du §11)* · et « corpus → **20 textes** avant la semaine 2 » est renvoyé à `02-exercices.md` §7 par l'amendement **A71**. **La question n° 2 — le régime de modèle — reste ouverte** : c'est l'**ouverture n° 8** du tableau de bord de C3.*
 
 *(Résolues : `provenance` → conservée sous forme de `classe_id` sur la mesure, sa raison étant le
 drapeau « transfert » de R6, utile parce que les diagnostiques sont classe-dépendants — un élève
 peut sortir B en HLP-Expression et D en TC-Expression. Corpus → 20 textes avant la semaine 2, puis
 ajout au fil de l'eau ; validation à l'import de l'injecteur conservée.)*
 
-1. **La règle d'espacement des mesures secondaires** (F10) : quelle compétence, à quelle cadence ?
+1. **La règle d'espacement des mesures secondaires** (GC10) : quelle compétence, à quelle cadence ?
    Elle appartient au routeur, pas à C3 — mais elle doit être écrite avant l'allumage.
 2. **Le régime de modèle** (D9 du 28/07, **[à valider]**) : Haiku-hebdo / Sonnet-ancres ? Le
-   chiffrage de F6 en dépend, et Louis en fait une priorité.
+   chiffrage de GC6 en dépend, et Louis en fait une priorité.
 *(Toutes les autres questions ouvertes ont été tranchées en séance. Pour mémoire :
 `commentaire_general` **reste** dans Palimpseste ; l'assiduité se calcule en **semaines faites ÷
 (semaines du semestre − semaines de vacances)**, une semaine étant « faite » au seuil configuré
@@ -701,6 +705,8 @@ au numérateur ; le cadre légal est québécois et le consentement relève de l
 
 ## À porter au chemin critique d'août (à consolider en clôture)
 
+> *Relu le 04/08/2026 (passe de mise en cohérence, chapitre 3) — **quatre lignes ne valent plus** : « transcrire **25 copies** → lots (10 puis 5) » *(les deux lots définitifs sont scellés à **11 + 5 = 16 copies** — le compte du `copies-tests/_commun/PROTOCOLE-CALIBRATION.md`, qui fait foi ; décision de Louis, 04/08)* · « 15 copies × **5 compétences de lecture** » *(elles n'existent plus depuis la Décision 2 du 02/08 ; la famille `reception` les remplace)* · « **20 textes** avant la semaine 2 » *(renvoyé à `02-exercices.md` §7 par l'amendement **A71** — 4-6 textes au 25 août, ~10 de plus à l'allumage, 60-80 en croisière)* · « la **règle nouvelle d'espacement** des mesures secondaires » *(écrite au `01-routeur.md` §6 depuis le 30/07)*. **Le reste tient.***
+
 - **Transcrire 25 copies** → constituer les lots de calibration (10 puis 5) par compétence.
 - **Golds** : compléter les golds manquants avant lecture des sorties.
 - **Corpus lecture synthétique** : générer les copies de lecture (IA en aveugle des gabarits) +
@@ -710,4 +716,4 @@ au numérateur ; le cadre légal est québécois et le consentement relève de l
 - **Cœur R1-R6 du routeur** : avant le 25 août (§8 de la spec réécrit). **+ la règle nouvelle
   d'espacement des mesures secondaires.**
 - **Lettre Loi 25 prête le 22 août** (table de traitement + vérification auprès du collège).
-- *Retiré du chemin critique* : le test de fidélité OCR au banc (décision F2-a).
+- *Retiré du chemin critique* : le test de fidélité OCR au banc (décision GC2-a).

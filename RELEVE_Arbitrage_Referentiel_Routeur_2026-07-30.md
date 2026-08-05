@@ -39,7 +39,7 @@
 | G4 | **Oui** — un **délai**, pas un plafond : un dossier N3 non traité après N semaines se re-signale | acté (séance) |
 | G2 | **Réduit** — moitié gratuite retenue : journaliser le nombre de compétences fraîches par élève | acté (séance) |
 | G3 | **Réduit** — unité de comparaison écrite (écart en crans, par compétence) + journalisation ; seuil et action non fixés | acté (séance) |
-| Section G (5 ⚖️) | *non traités* | en attente |
+| ~~Section G (5 ⚖️)~~ | **tous tranchés dans cette même séance** — G1, G2, G3 et G4 sont listés ci-dessus, **G5 est réglé avec F23** | *corrigé le 04/08/2026 — la ligne disait « non traités / en attente », résidu de l'état d'ouverture de la séance* |
 
 ---
 
