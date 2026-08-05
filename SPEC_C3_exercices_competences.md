@@ -1,6 +1,6 @@
 # SPEC C3 — Exercices & Compétences (spec unique, composition + réception)
 
-> **Statut : v5.1 — SOCLE DE CONSTRUCTION** (gel du 29/07/2026 ; amendée les 29 et 30/07, amendements A1 à A19).
+> **Statut : v5.3 — SOCLE DE CONSTRUCTION** (gel du 29/07/2026 ; amendée les 29 et 30/07, amendements A1 à A19).
 > **SÉRIE A20-A51 APPLIQUÉE EN ENTIER — chapitre 0 de la passe de mise en cohérence, CLOS le
 > 03/08/2026.** Les **30 entrées** de `AMENDEMENTS_C3_en_attente_2026-07-31.md` sont posées, en
 > quatre séances (02/08 : entrées 1-4 · 03/08 : 5-16, puis 18-27 et 30, puis le groupe **17 + 28 +
@@ -98,6 +98,76 @@
 > classe » est sorti de la table des régimes.* **Le numéro 6 n'est pas réattribué** — `diagnostic_fin` reste le
 > **cran 7**, trou assumé, règle d'identifiant stable. La couche 3 du routeur sert désormais
 > **`production_autonome` à B et à A**, A recevant en plus `diagnostic_fin`.
+> **v5.2 — CHAPITRE 5 DE LA PASSE (les non-tranchés), le 05/08/2026 : amendement A76.** **Le régime
+> du statut `differee` est écrit, et le statut de recette cesse de se dériver** *(décision de
+> Louis)*. `differee` = **on ne mesure pas** ; `mesuree_silencieusement` = **on mesure et on stocke,
+> sans verdict**. Une compétence **sans fiche déposée** est `differee` **et ne peut pas être autre
+> chose** ; dès qu'une fiche est déposée, **le professeur choisit** parmi les trois, sans
+> automatisme. Le dépôt des fiches et le choix du statut demandent un **écran qui n'existe dans
+> aucun lot** — **ouverture B1-25**. **Conséquence de méthode, et c'est la plus lourde : aucun
+> document ne tient plus la liste des compétences prêtes ni celle des compétences sans lettre** —
+> l'état effectif se calcule, et une liste écrite dans une source périme au premier dépôt de fiche.
+> Cinq endroits l'énuméraient, ici et au routeur ; ils sont coupés. **Le Questionnement n'entre plus
+> par le segment 2 mais par sa fiche** — une compétence `differee` n'est pas mesurée, et le seuil de
+> couverture du segment 2 se compte par compétence `evaluee`.
+> **A77 (même série, 05/08) — le vocabulaire s'aligne sur le statut déclaré.** Le lot C5-L3
+> renvoyait au **protocole de banc** pour « imposer d'éprouver chaque mode » : le
+> `PROTOCOLE-CALIBRATION.md` ne porte pas cette contrainte. Ce qui la remplace était déjà écrit —
+> le principe de Louis du 30/07, *« un argument est un argument »* : la calibration porte sur le
+> squelette, donc elle **transfère d'un type, d'un genre et d'une famille à l'autre**. Et quatre
+> règles qui disaient « les compétences dont le banc a passé la recette » lisent désormais
+> **`evaluee`** — **cinq** en réalité, le compte annoncé en séance en avait manqué une — un seul
+> vocabulaire pour une seule chose. *L'escalade et les compteurs du segment 3
+> perdent au passage leur double condition : « la grille existe **et** le banc a passé » se résume à
+> `evaluee`, puisque sans fiche la compétence est `differee` de force.*
+> **v5.3 — CHAPITRE 5 DE LA PASSE, le 05/08/2026 : amendement A78.** **La table des modes admis
+> par compétence prend domicile** *(décision de Louis)* : elle vit désormais au `02-exercices.md`
+> **§4**, à la suite des trois règles de conception du 04/08, et le **§6** (contrat des types,
+> point 2) y renvoie. Elle dit **quels modes une compétence peut instancier** — Argumentation et
+> Structure : les cinq · Synthèse : `composer`, `restituer`, `interroger` · Expression :
+> `composer` seul — et elle **borne** ce qu'un type peut déclarer, sans rien élire. **La
+> Connaissance et le Questionnement n'y sont pas**, par décision du 04/08.
+> **A82 (même série, 05/08) — le K de R5 cesse de s'instancier en un nombre.** La règle de
+> couverture R5 porte la formule *« K ≥ le nombre de compétences `evaluee` de la famille, plus une
+> marge »*, qui **se remplit d'elle-même** ; la rédaction y ajoutait « **≈ 6 des deux côtés** »
+> *(A51, 03/08)*. C'est **une énumération déguisée en chiffre** — exactement ce qu'**A76** a
+> retiré de cinq autres endroits la veille — et **sa prémisse est fausse** au moins pour
+> l'**Expression**, mono-mode `composer`, donc jamais en réception *(table des modes admis,
+> `02-exercices.md` §4)*. Le chiffre part des deux endroits qui le portaient *(`01-routeur.md` §5
+> et son registre du §11)*. **Le recalcul de la cadence est ré-adressé** : il appartient à la
+> session « construction de la semaine + ciblage lecture », pas au chapitre 5.
+> **A81 (même série, 05/08) — deux renvois vers le chapitre 5 pointaient vers un travail déjà
+> fait.** Le balayage de sortie du chapitre a compté **26 occurrences** de « chapitre 5 » dans les
+> sources et cette spec, dont **dix prospectives** ; **deux étaient mortes, tuées la veille par
+> A77** — le §1.7 demandait encore si la couverture des deux familles au banc se généralise
+> *(A77 : non, les quatre lots du Questionnement restent l'exception)*, et le `01-routeur.md` §13
+> écrivait encore « ce que R0 écarte reste à statuer — envoyé au chapitre 5 » *(A77 : il n'y a pas
+> de trou)*. Les deux **renvoient désormais à A77** au lieu de recopier son raisonnement.
+> *Troisième fois de la passe que ce défaut frappe le travail de la veille.*
+> **A80 (même série, 05/08) — la fenêtre du taux de lucidité vaut 15 exercices.** Le §6
+> déclarait lui-même que « la longueur de la fenêtre n'est fixée nulle part » et qu'« un lot ne
+> peut pas calculer ce taux sans elle ». **Décision de Louis : 15 exercices**, statut *provisoire
+> (réglage empirique)*, **comptés en exercices** et jamais en cycles ni en semaines *(précédent
+> F11)*. La **valeur vivante** est au **registre du `01-routeur.md` §11**, qui reçoit sa table
+> **Monitoring (§3)** ; ce que le §6 en dit est daté. *Condition de fermeture : la distribution
+> observée de `n_fenetre` à l'automne.*
+> **A79 (même série, 05/08) — les deux « grain » cessent de se confondre là où le mot est nu.**
+> La **Décision 8** (02/08) réclamait un avertissement écrit pour les deux « grain » ; le relevé
+> du 05/08 a compté **127 occurrences du mot**, dont **huit** au sens de *finesse* — six se
+> définissent dans leur propre phrase (« au grain de **la cellule (copie × observable)** »,
+> « grain plus fin du champ »), **deux ne se définissent pas** : « retours révélables à
+> **différents grains** », au **§3bis** et au **§9 (lot C4-L4)**, où une session de code pouvait
+> lire l'attribut `grain` de l'exercice. Les deux reçoivent leur incise. **La dette est soldée** ;
+> la distinction complète reste à l'entrée 19 du `LEXIQUE.md`, et **aucun renommage** n'est fait.
+> **BILAN DE LA PASSE DE MISE EN COHÉRENCE — sortie le 5 août 2026.** Six chapitres, **dix-neuf
+> séances**, du 2 au 5 août (Louis × Mètis). Cette spec est passée de **v4.3 à v5.3** et a reçu
+> **soixante-trois amendements, A20 à A82** — **trente-deux au chapitre 0** *(l'application des
+> trente entrées de `AMENDEMENTS_C3_en_attente_2026-07-31.md`)* et **trente et un nés de la passe
+> elle-même** *(chapitres 1 à 5)*. *Contrôle de sortie : la plage **A1 à A82 est complète**, aucun
+> numéro ne manque au tableau de bord A.* Les cinq sources ont été passées une à une, puis les unes
+> contre les autres ; **trois annexes** ont recueilli les récits de séance qui vivaient dans les
+> sources ; et **les ouverts qui subsistent sont au registre `INVENTAIRE_Non_Tranches.md`** du
+> dossier de conception — **42 items**, chacun avec son statut et sa condition de fermeture.
 > **À partir d'ici, C3 redevient modifiable pendant la passe — mais toute modification reste un
 > amendement daté**, inscrit au tableau de bord, et la version s'incrémente.
 > **Règle de version (ajoutée le 29/07)** : toute série d'amendements **incrémente le numéro
@@ -265,13 +335,20 @@ jamais pendant. Chaque prompt de lot déclare la **version de la spec** contre l
 | **04/08/2026** | Passe de mise en cohérence, **chapitre 3**, séance 11 — contrôle des deux échelles | **A66 — `competences_escalade.cran_escalade` devient `degre_escalade`, et la prose du routeur cesse d'appeler `cran` une marche de l'échelle E→A.** Le `LEXIQUE.md` pose depuis le 03/08 que **`cran` seul = le cran d'autonomie**, et que l'échelle E→A et l'échelle d'autonomie sont **deux échelles distinctes, à citer sans confusion**. Or le `01-routeur.md` écrivait `cran` pour une marche de l'échelle E→A à **dix endroits** — dont la règle de montée du §7 (« → +1 cran ») et la règle d'ancre (« discordance ≥ 2 crans ») —, et pour le palier d'escalade à **quatre** autres. *Le risque : C4-L2 écrit les règles de lettres, et câblerait la montée sur la colonne du cran d'autonomie.* **Trois mots, trois choses** : `cran` = le barreau d'autonomie · **`palier`** = une marche de l'échelle E→A *(le mot que le `00-referentiel.md` §2 emploie déjà seize fois)* · **`degre_escalade`** = N1/N2/N3 *(« degré » proposé par Louis contre « cran d'escalade » : un qualificatif s'abrège, un mot distinct ne s'abrège pas)*. **A49 est annoté, non défait** : sa collision de colonnes était réelle, c'est le mot retenu qui change. *Vérifié avant d'écrire : « degré » n'était employé nulle part comme terme d'échelle — six occurrences, toutes en français ordinaire.* **APPLIQUÉ À C3 LUI-MÊME ET AU `LEXIQUE.md` LE 04/08** *(passe de mise en cohérence, chapitre 3, séance 6)* : la spec appelait encore `cran` une marche de l'échelle E→A à **cinq endroits** — le **§1.7** trois fois *(la tolérance de la porte de recette)* et le **§4** deux fois *(la fraîcheur d'ancre ; l'**écart en paliers** de l'ancre aveugle, dont C3 nomme pourtant `01-routeur.md` §8 comme domicile de la règle)* — et l'**entrée 9 du `LEXIQUE.md`**, posée la veille d'A66, contredisait son entrée 6. **Réparé sans amendement** *(décision de Louis)* : c'est A66 qui s'achève, aucune décision neuve. | C3 §6 (`competences_escalade`) · C3 §1.7 et §4 *(5 endroits, 04/08)* · `01-routeur.md` (14 endroits) · `LEXIQUE.md` (entrées 6 et 9) | **(a)** |
 | **04/08/2026** | Passe de mise en cohérence, **chapitre 3**, séance 11 — **décision de Louis** | **A67 — le mode `questionner` devient `interroger`.** Le mode portait le nom de la compétence **Questionnement**, et le **seuil** de cette compétence — le **recadrage**, la porte de son Acquis — était énoncé au `00-referentiel.md` §2 avec le verbe *s'interroger* : **trois choses, deux verbes, et le recouvrement au mauvais endroit**. *Vérifié avant d'écrire : dans le référentiel, **toutes** les occurrences vivantes de « interroger / interrogation » parlaient du seuil, sauf celle qui note que le mot avait été écarté le 29/07 comme nom de compétence (« veut dire contrôle en lycée » — objection sans portée sur un identifiant de schéma, que l'élève ne voit jamais).* **Le renversement est de Louis** : Mètis proposait de ne rien renommer ; Louis a déplacé le **seuil** — « on se pose des questions, et quand on sait se poser des questions, **on se questionne sur ses questions** » — ce qui libère *interroger* pour le mode et garde *question / questionner* à la compétence. **Note de conception de Louis, écrite au `00-` §1** : `interroger` **traverse** les six compétences comme les quatre autres modes, et c'est **le mode par lequel chacune est portée à un niveau méta-cognitif** — d'où, à terme, un questionnement. *Cinq endroits réalignés au `02-exercices.md` (les tables qui font foi) ; onze laissés dans le raisonnement daté du 2 août, sous une annotation unique en tête du §4.* | §6 (domaine de `modes[]`) · §1.4 · `02-exercices.md` §4, §7, §8 · `00-referentiel.md` §1, §2, §8 · `LEXIQUE.md` | **(a)** |
 | **04/08/2026** | Passe de mise en cohérence, **chapitre 3**, séance 12 — **décision de Louis** | **A68 — la synthèse en classe n'est pas une ancre.** La liste d'A54 la rangeait parmi les mesures dont la `forme` vaut `sommatif`, alors que le `01-routeur.md` §8 l'annonce « non sommative » depuis le 30/07 et que le `00-referentiel.md` §6 pose la règle qui les sépare : « *un formatif passé en classe n'est donc pas une ancre* ». **A54 se contredisait lui-même** — ce qu'il achetait était précisément qu'un formatif en classe ne fasse plus descendre une lettre. **Sa `forme` vaut `formatif` : elle ne porte ni la descente, ni le plafond ancre+2, ni la cadence d'ancre.** *Ce qui ne change pas : le sort du dispositif reste non tranché (§2 du routeur), et elle reste une source de mesure du profil.* | Tableau de bord A (A54) · `LEXIQUE.md` entrée 20 · `01-routeur.md` §8 | **(a)** |
-| **04/08/2026** | Passe de mise en cohérence, **chapitre 3**, séance 12 | **A69 — la Synthèse est la troisième compétence sans lettre au sortir de la semaine 1.** Le périmètre fixé par A51 en comptait deux, qu'aucune passation ne mesure. **Mais A51 a aussi arrêté que l'explication mesure la Synthèse en `restituer`** : la `famille` s'en dérive en **réception**, et F19 du 30/07 (A39) met à NULL **toutes** les mesures en réception tant que le pont E→A n'est pas validé. Argumentation et Structure subissent la même règle sur cette passation, mais l'essai leur rend une lettre en `composer` — **la Synthèse n'a pas ce recours**. *Le fait était déjà écrit au `01-routeur.md` §4, encadré « cold start » — « la Connaissance et la Synthèse restent `differee` » —, mais absent des deux endroits qui font foi.* **Sa porte : la recette de son banc** (24/08). **Deux fragilités envoyées au chapitre 5** : l'énumération mêle la cause « pont non validé » et une cause « non mesurée » jamais nommée comme telle · la liste du cold start omet le Questionnement, que C3 déclare pourtant non `evaluee` à la rentrée. | §6 (`competences_niveaux`) · `01-routeur.md` §8 | **(a)** |
+| **04/08/2026** | Passe de mise en cohérence, **chapitre 3**, séance 12 | **A69 — la Synthèse est la troisième compétence sans lettre au sortir de la semaine 1.** Le périmètre fixé par A51 en comptait deux, qu'aucune passation ne mesure. **Mais A51 a aussi arrêté que l'explication mesure la Synthèse en `restituer`** : la `famille` s'en dérive en **réception**, et F19 du 30/07 (A39) met à NULL **toutes** les mesures en réception tant que le pont E→A n'est pas validé. Argumentation et Structure subissent la même règle sur cette passation, mais l'essai leur rend une lettre en `composer` — **la Synthèse n'a pas ce recours**. *Le fait était déjà écrit au `01-routeur.md` §4, encadré « cold start » — « la Connaissance et la Synthèse restent `differee` » —, mais absent des deux endroits qui font foi.* **Sa porte : la recette de son banc** (24/08). **Deux fragilités envoyées au chapitre 5** : l'énumération mêle la cause « pont non validé » et une cause « non mesurée » jamais nommée comme telle · la liste du cold start omet le Questionnement, que C3 déclare pourtant non `evaluee` à la rentrée. ***Annoté le 05/08 — A76.** L'énumération que cet amendement portait est **retirée des documents** : le professeur dépose les fiches et choisit les statuts (§1 point 7), donc l'état effectif se calcule, et une liste écrite dans une source périme au premier dépôt. Le raisonnement reste juste ; c'est son objet qui n'a plus à figurer dans une source.* | §6 (`competences_niveaux`) · `01-routeur.md` §8 | **(a)** |
 | **04/08/2026** | Passe de mise en cohérence, **chapitre 3**, séance 12 | **A70 — le §0 emploie « ancre » dans ses deux sens et n'en définit qu'un.** Son lexique de contrat pose « une **ancre** est une mesure dont le `lieu` vaut `classe` ET la `forme` vaut `sommatif` » *(A54)*, et **quinze lignes plus bas** sa carte des sources écrit « l'échelle, **les ancres** » au sens des **descripteurs de paliers E→A** — deux objets, un mot, dans la section qui fait foi. *Même défaut qu'**A59**.* **Aucun renommage** *(196 occurrences ; ≈ 140 pour la mesure, ≈ 45 pour le descripteur, et les deux sens habitent des documents différents)* : la distinction est écrite au `LEXIQUE.md`, entrée 25, et le §0 emploie désormais « **ancres comportementales** », la formule que C3 §1 utilisait déjà. **DEUX RÉFÉRENCES PÉRIMÉES DANS LA MÊME PHRASE, ET UNE TROISIÈME AU §5** : « celles de réception restent à rédiger » — il n'y a plus d'ancres de réception depuis la Décision 2, et le `00-` §5 déclare un autre trou · « **aile lecture §13** » — terme **proscrit** au lexique, et titre disparu à la séance 6 · et « annexe A + **aile L** » au §5, remplacé par `02-exercices.md` *(décision de Louis — la Décision 5 a dissous la bibliothèque de lecture dans les treize objets)*. **Et le lexique lui-même avait une table cassée** : l'entrée 24, posée en séance 11, était séparée du tableau par une ligne vide — réparée. | §0 *(carte des sources)* · §5 *(couche type)* · `LEXIQUE.md` entrées 24 et 25 | **(a)** |
 | **04/08/2026** | Passe de mise en cohérence, **chapitre 3**, séance 6 — croisement `02-exercices.md` ↔ C3 | **A71 — le jalon d'août du corpus cesse d'être chiffré ici : le phasage vit à `02-exercices.md` §7.** Le §4 et le tableau B4 portaient « **20 textes** décomposés et validés avant la semaine 2, puis ajout au fil de l'eau » *(jalon du 29/07)*. Or le **§7 du `02-`**, passé le **2 août**, porte depuis un **phasage daté** — **4-6 textes au 25 août**, **~10 de plus à l'allumage**, **60 à 80 en croisière** — et déclare **périmée** l'ancienne estimation « ~20 instances par type », la refonte de la bibliothèque ayant changé l'unité. **Deux copies d'un même chiffre divergent** : C3 garde la **règle** *(le corpus est constitué avant l'allumage ; le prof ne valide rien au fil de l'eau)* et **renvoie** pour les comptes — même geste qu'A17 pour les paramètres du routeur. *Présomption de fraîcheur appliquée (cadrage n° 6).* | §4 · B4 · destination : `02-exercices.md` §7 | **(a)** |
 | **04/08/2026** | Passe de mise en cohérence, **chapitre 3**, séance 8 — l'item dur « ce qui bloque encore C5 » | **A72 — l'ouverture n° 5 ne bloque pas C5, elle bloque C4-L2.** A57 avait dissous sa moitié « R1-R6 lecture » sans restatuer ce qu'elle bloque. **Recompté** : les proportions de l'indexation mode ↔ niveau, la préférence de l'élève et l'ordre de priorité sont consommés par le **routeur**, implémenté par **C4-L2**, dont le manifeste cite `01-routeur.md` — **aucun lot de C5 ne cite le routeur, ni ne porte de manifeste**, ce qui a laissé l'étiquette en place sans jamais la contredire. *Ce qui bloque C5 est nommé : le format de la référence décomposée pour L1 (**A48**), les grilles réceptives d'observables pour L3.* **Nuance laissée ouverte** : si le routeur ne cible pas la réception dès l'allumage, l'ouverture ne bloque C4-L2 qu'à partir du moment où il la cible | tableau de bord B, ouverture n° 5 | **(b)** |
 | **04/08/2026** | Passe de mise en cohérence, **chapitre 3**, séance 8 — point 4, les sources face aux deux relevés | **A73 — les deux relevés d'arbitrage portaient la même numérotation.** Le relevé du 29/07 numérote `F1`-`F26`, celui du 30/07 `F1`-`F27` : **deux `F5`, deux `F17`, deux `F25`** dans le corpus, et **46 citations sans date** dans les six documents. *Décision de Louis : une lettre dans le nom, parce qu'un qualificatif s'abrège et qu'une date après virgule finit par tomber.* **Le sens minoritaire est renommé** — les items du 29/07 deviennent **`GC1` à `GC26`** (89 occurrences dans le relevé, 7 citations dans les six documents) — **et un `F` nu désigne désormais le 30/07** ; les 46 citations reçoivent leur date en plus. *Chiffré avant de trancher : marquer le 30/07 coûtait ≈ 450 modifications, marquer le 29/07 en coûte ≈ 100.* Convention au `LEXIQUE.md` entrée 27 ; le journal, la liste d'amendements et les deux fusions gardent leurs `F` nus *(propagation 18)* | §0 et 46 endroits · `LEXIQUE.md` · `RELEVE_Arbitrage_C3_2026-07-29.md` | **(a)** |
 | **04/08/2026** | Passe de mise en cohérence, **chapitre 4** — remontée des sources de vérité coincées dans les blocs datés de `02-exercices.md` | **A74 — la portée des matériaux par cran était fausse, et la définition de la cible se contredisait.** Le §6 portait, depuis A63, la table du 1er août **traduite sans être relue** : `materiau_cible` obligatoire aux crans 1, 2, 3 **et 7** · **cran 4** portant son appui en `materiau_source` · **crans 5 et 6** sans `materiau_source`, avec un `materiau_cible` « possible ». **Les trois énoncés sont faux. Lecture de Louis, qui fait foi** : **le cran ne commande que la CIBLE** — **présente** aux crans **1-3**, **facultative** au cran **4**, **`null`** aux crans **5-7** — et **la présence du `materiau_source` dépend du MODE, pas du cran** *(règle 1)*. *Motif de Louis : « dans une production sans appui ou en conditions d'examen, \"explique ce texte de Descartes\", le texte n'est pas l'objet de mon travail, c'est la source de vérité ».* **Et la définition du `materiau_cible` perd son ambiguïté** : « le matériau que l'élève modifie **ou juge** » contredisait « `null` dès qu'il produit du neuf » **au cran 7**, où l'élève juge ET rédige — elle devient « le matériau sur lequel l'élève **travaille directement** — il le modifie, ou il le juge **sans rien rédiger de neuf** ». *A63 est annoté, non défait : le dédoublement tient, c'est sa portée par cran qui était fausse.* **La rédaction fautive n'avait AUCUNE trace** — ni au journal, ni dans la ligne A63 : elle a été écrite en séance 10 entre les items 1b et 7, vérifié sur les sauvegardes. | §6 (`exercices_types`) · `02-exercices.md` §2 et §4 · `LEXIQUE.md` entrées `materiau_cible` et 4 | **(a)** |
-| **04/08/2026** | Passe de mise en cohérence, **chapitre 4** — **décision de Louis**, relecture de l'échelle d'autonomie | **A75 — le cran 6, `production_contrainte`, est retiré de l'échelle.** *Constat de Louis : « tels qu'ils sont définis, les crans 5 et 6 n'ont aucune différence ».* Les deux disent « l'élève produit seul » ; ce qui les séparait — les **conditions d'examen** — n'est pas un degré d'autonomie mais un **contexte de passation**, et il est **déjà porté par l'instance** depuis **A54** : `lieu` = `classe` **et** `forme` = `sommatif`. *C'est mot pour mot l'argument qui a fait sortir « en classe » de la table des régimes du routeur le 31/07.* **Le numéro n'est pas réattribué** : `diagnostic_fin` **reste le cran 7**, l'échelle assume son trou — règle d'identifiant stable du `02-exercices.md` §3, « attribué une fois, jamais réattribué, trous assumés ». **L'échelle compte six crans numérotés de 1 à 7.** **Conséquence acceptée par Louis** : la couche 3 sert `production_autonome` **à B et à A**, et ce qui distingue A côté production devient le seul `diagnostic_fin`. *Coût vérifié avant décision : 9 occurrences, dont 3 dans des blocs datés ; rien dans `copies-tests/`, rien dans les prompts C4, rien au `LEXIQUE.md`.* | §6 (`exercices_types`, `crans[]`) · `02-exercices.md` §2, §8 · `01-routeur.md` §4 et §9 · `LEXIQUE.md` entrée 14 | **(a)** |
+| **04/08/2026** | Passe de mise en cohérence, **chapitre 4** — **décision de Louis**, relecture de l'échelle d'autonomie | **A75 — le cran 6, `production_contrainte`, est retiré de l'échelle.** *Constat de Louis : « tels qu'ils sont définis, les crans 5 et 6 n'ont aucune différence ».* Les deux disent « l'élève produit seul » ; ce qui les séparait — les **conditions d'examen** — n'est pas un degré d'autonomie mais un **contexte de passation**, et il est **déjà porté par l'instance** depuis **A54** : `lieu` = `classe` **et** `forme` = `sommatif`. *C'est mot pour mot l'argument qui a fait sortir « en classe » de la table des régimes du routeur le 31/07.* **Le numéro n'est pas réattribué** : `diagnostic_fin` **reste le cran 7**, l'échelle assume son trou — règle d'identifiant stable du `02-exercices.md` §3, « attribué une fois, jamais réattribué, trous assumés ». **L'échelle compte six crans numérotés de 1 à 7.** **Conséquence acceptée par Louis** : la couche 3 sert `production_autonome` **à B et à A**, et ce qui distingue A côté production devient le seul `diagnostic_fin`. *Coût vérifié avant décision : 9 occurrences, dont 3 dans des blocs datés ; rien dans `copies-tests/`, rien dans les prompts C4, rien au `LEXIQUE.md`.* **Annoté le 05/08, séance 19 — deux résidus vivants trouvés et réparés sans amendement** : la table « ce que l'élève rend à chaque cran » du `02-exercices.md` §8 comptait encore le 6 parmi les crans de production, dans un passage dont l'annotation dit « ce que la table garde, et qui reste vrai » ; et **la dérivation de `regime_v1vf` du §6 de cette spec**, que lit une session de code, écrivait « 4, 5, 6 → plein ». *Le troisième reste, au `02-` §5, est dans la « Lecture 1 » écartée le 1er août — bloc daté, laissé.* | §6 (`exercices_types`, `crans[]`) · `02-exercices.md` §2, §8 · `01-routeur.md` §4 et §9 · `LEXIQUE.md` entrée 14 | **(a)** |
+| **05/08/2026** | Passe de mise en cohérence, **chapitre 5** (les non-tranchés), séance 17 — **décision de Louis** | **A76 — LE RÉGIME DU STATUT `differee` EST ÉCRIT, LE STATUT NE SE DÉRIVE PAS, ET LES DOCUMENTS CESSENT DE TENIR LA LISTE DES COMPÉTENCES PRÊTES.** Le §6 déclarait lui-même que « son régime n'est écrit nulle part — ni ici, ni au `01-routeur.md`, ni dans `02-exercices.md` », et la matrice normative laissait `[à valider]` « la mesure tourne ? » et « contenu du retour » : **un lot qui implémente les trois statuts n'avait rien à écrire pour le troisième.** **DÉCISION DE LOUIS, EN DEUX TEMPS.** *(i)* **Les définitions** : `differee` = **on ne mesure pas** · `mesuree_silencieusement` = **on mesure et on stocke, sans verdict**. *Les deux cessent enfin de se ressembler : jusqu'ici la seule différence écrite entre eux était la co-présence.* *(ii)* **Deux règles, une seule automatique** : une compétence **dont la fiche n'est pas déposée est `differee` et ne peut pas être autre chose** *(le plancher — la règle existait déjà à l'échelle du lot, C4-L5 et C5-L3, jamais comme règle)* ; **dès qu'une fiche est déposée, le professeur choisit** parmi les trois, sans automatisme *(« pour ce genre de chose, il vaut mieux y aller manuellement que de manière automatique. On laisse le prof faire ses choix. »)*. **`differee` a donc deux origines — forcé et choisi — et les mêmes effets.** **LA CONSÉQUENCE DE MÉTHODE EST LA PLUS LOURDE, ET ELLE EST DE LOUIS** : *« si ce qu'on veut c'est que le prof se débrouille pour faire les fiches des compétences, alors tout ce qui dit pourquoi les compétences ne sont pas là n'a aucun intérêt. Ne compliquons pas un projet déjà trop compliqué. »* **Aucun document ne tient plus la liste des compétences prêtes ni celle des compétences sans lettre** : l'état effectif est une **conséquence calculable**, et une liste écrite dans une source **périme au premier dépôt de fiche**. **LE RELEVÉ A TROUVÉ CINQ ENDROITS VIVANTS, PAS UN** : le §6 de cette spec *(l'énumération complète — trois compétences, leurs causes, « par où chacune entre », la réserve du segment 2)* · le **§8 du `01-routeur.md`**, qui en portait **une seconde copie** dans une parenthèse du bloc F19 · le **§4 du routeur**, encadré cold start · la clause « d'où leur absence de lettre… et les deux portes » du **§1 point 4** · et le lot **C5-L3**, « les compétences dont la grille réceptive existe », **gardé tel quel — ce n'est pas une énumération, c'est la règle, et la formulation est de Louis** *(« elle se remplit d'elle-même »)*. **UNE PORTE ÉTAIT FAUSSE ET DISPARAÎT SANS REMPLAÇANT** : C3 écrivait que le **Questionnement entre par le segment 2**, or le seuil de couverture de la calibration se compte « par compétence `evaluee` » *(`01-routeur.md` §11)* et une compétence `differee` n'est pas mesurée du tout — **sa porte est sa fiche** *(décision de Louis)*. La **réserve inscrite le 04/08**, qui renvoyait au régime de `differee`, est **levée**. **A51 n'est pas défait** — ce qu'il dit des deux passations reste vrai et porte le compte des sept couples ; A76 y ajoute la cause plus profonde, l'absence de fiche. **A69 est annoté.** *Les énumérations qui subsistent dans les lignes A39, A51 et A69 sont des **blocs datés** : elles ne se réécrivent pas, et **elles ne font plus foi**.* *La rédaction antérieure du §1 point 7 disait « déclarée à la recette (C13) » — **seule mention de C13 dans toute la spec**, sans lot au §9 : d'où l'**ouverture 25**.* | en-tête · §1 point 4 · §1 point 7 · §6 (`competences_niveaux`, matrice normative) · tableau de bord B (ouverture 25) · journal A (A69 annoté) · `01-routeur.md` §3, §4, §8 | **(a)** |
+| **05/08/2026** | Passe de mise en cohérence, **chapitre 5**, séance 17 — items « ce que R0 écarte » et **A23** | **A77 — R0 N'A PAS DE TROU, ET LE VOCABULAIRE S'ALIGNE SUR LE STATUT DÉCLARÉ.** L'item du chapitre 5 soupçonnait un trou : `statut_recette` vivant **sur la compétence** et non sur (compétence × mode), une compétence dont le banc a tourné **en composition** devient `evaluee` et R0 la laisse cibler **en réception**, où son instrument n'a jamais été éprouvé. **Le garde-fou que C3 annonçait n'existait pas** : le lot **C5-L3** écrivait « c'est le **protocole de banc** qui impose d'éprouver chaque mode », or le `PROTOCOLE-CALIBRATION.md` — qui fait foi — **ne porte pas cette contrainte** ; ses seules occurrences de « mode » sont le mode plat / niché du harnais, et ses seules mentions de familles relèvent du **construct mort**. **MAIS LA RÉPONSE ÉTAIT DÉJÀ ÉCRITE, DEUX FOIS.** *(i)* **Louis avait tranché la même objection le 30/07** *(arbitrage F3, `01-routeur.md` §5)*, quand une revue adversariale la posait sur le grain : *« un argument est un argument. On extrait des squelettes — ce sont ces squelettes que l'on évalue, et ils valent indépendamment des exercices. »* La calibration porte sur la **Phase 2**, qui juge depuis le squelette seul : elle **transfère d'un type, d'un genre et d'une famille à l'autre**. *(ii)* **Et depuis A76, le statut n'est pas dérivé du banc : il est déclaré par le professeur** — *« on est typiquement dans un cas où on veut automatiser quelque chose qui devrait être laissé au prof »* (Louis, 05/08). **Il n'y a donc pas de trou**, et **A23 ne se généralise pas** : les **quatre lots du Questionnement restent l'exception**, avec sa raison propre — une seule lettre alimentée par les deux familles. **CE QUI S'ÉCRIT** : le renvoi faux de C5-L3 est remplacé par le principe des squelettes et par le renvoi au §1 point 7 ; et **cinq règles qui disaient « les compétences dont le banc a passé la recette » lisent désormais `evaluee`** — la calibration du Monitoring *(`00-referentiel.md` §2, `01-routeur.md` §3, **et C3 §6**)*, l'escalade *(`01-` §3)*, les compteurs du segment 3 *(`01-` §4)*. **L'escalade et les compteurs perdent leur double condition** : « la grille existe **et** le banc a passé » se résume à `evaluee`, puisque sans fiche la compétence est `differee` de force. **UN RÉSIDU DE MÈTIS, ÉCRIT UNE HEURE PLUS TÔT ET RATTRAPÉ PAR LE BALAYAGE** : A76 avait redéfini `mesuree_silencieusement` et `differee` au `01-routeur.md` §3 **en laissant** `evaluee` glosé « son banc a passé la recette » — donc dérivé, trois lignes avant la règle qui l'interdit. **ET LE BALAYAGE DE SORTIE EN A TROUVÉ DEUX AUTRES, LES DEUX DE MÈTIS.** *(i)* Le **§1 point 7 lui-même** — la section qu'A76 venait d'écrire — glosait encore `evaluee` par « **banc passé** → verdicts élève », **dans le paragraphe qui interdit de dériver le statut**. *(ii)* Le compte annoncé de « quatre règles » était **faux : elles sont cinq** — la cinquième au **§6 de cette spec**, règle de périmètre du Monitoring. *Le compte brut ment, sixième fois de la passe ; et un contrôle qui ne balaie pas les fichiers entiers laisse passer ce que la séance vient d'écrire.* | §9 (lot C5-L3) · `00-referentiel.md` §2 · `01-routeur.md` §3, §4, §5 | **(a)** |
+| **05/08/2026** | Passe de mise en cohérence, **chapitre 5**, séance 18 — item « la table des modes admis n'a pas de domicile » ; la table elle-même est une décision de Louis du 04/08, prise en session parallèle sur l'**ouverture n° 5** | **A78 — LA TABLE DES MODES ADMIS PAR COMPÉTENCE PREND DOMICILE, ET C3 RENVOIE À ELLE.** La table arrêtée par Louis le 04/08 — *Argumentation et Structure : les cinq modes · **Synthèse** : `composer`, `restituer`, `interroger` · **Expression** : `composer` seul* — vivait dans un **dépôt de conversation qui ne fait pas foi**, et rien n'en était remonté. **Son domicile est `02-exercices.md` §4** *(décision de Louis)*, à la suite des **trois règles de conception du 04/08** : même nature — elles disent ce qu'une consigne a le droit de déclarer —, même jour, même point d'application, **la file de validation à l'import de l'injecteur**. *La règle 3 y écrivait déjà la moitié de la table (« `composer` […] reste déclarable pour l'**Expression** et la **Synthèse** ») et y portait déjà la réserve sur la Connaissance.* **CE QUE C3 GAGNE.** Le §6, contrat des types, point 2, annonçait « **Cinq valeurs** » sans dire qu'elles ne sont pas toutes ouvertes à toute compétence. **Une session de code lit C3 plus la section de son lot, rien de plus (R4)** : celle qui construira la validation à l'import ne l'aurait jamais su. Une phrase l'y borne, sur le modèle employé trois lignes plus bas (« `competences[]` **borne** la couverture ») et du renvoi vers `02-` §4 déjà présent quatre lignes plus haut. **La Connaissance et le Questionnement ne figurent pas dans la table**, par décision de Louis du 04/08 *(« n'en parlons pas pour le moment »)* — **pas de ligne plutôt qu'une ligne vide**, qui se lirait comme une interdiction. *Ce qui n'est PAS monté avec elle : le décompte des cases réceptives et la règle de proportion qui s'y appuie — ils restent à la session dédiée « construction de la semaine ».* | §6 (contrat des types, point 2) · `02-exercices.md` §4 | **(b)** |
+| **05/08/2026** | Passe de mise en cohérence, **chapitre 5**, séance 18 — item « les deux « grain » » ; dette d'avertissement de la **Décision 8** du 02/08 | **A79 — LA DETTE DES DEUX « GRAIN » EST SOLDÉE, ET ELLE NE COÛTE QUE DEUX INCISES.** **Le compte d'abord** : **127 occurrences** du mot dans les cinq documents, dont **huit** au sens ordinaire de *finesse* — trois « **au grain de la cellule (copie × observable)** » *(§1.7 deux fois, §6 une fois)*, une « au grain du squelette » *(§6)*, deux au `00-referentiel.md` §3 *(« ce qui est neuf, c'est le GRAIN » ; « grain plus fin du champ existant »)*, et **deux « retours révélables à différents grains »**. *Une neuvième n'est ni l'un ni l'autre : « trois retouches de grain », au sens de « de détail ».* **SEULES LES DEUX DERNIÈRES SONT AMBIGUËS** : partout ailleurs le sens se donne dans la phrase même. Et **l'une des deux est au §9, dans le manifeste du lot C4-L4** — donc dans ce qu'une session de code lit pour construire l'écran de correction du professeur, qui pouvait comprendre « filtrer par `micro`/`meso`/`macro` » au lieu de « révéler plus ou moins de détail ». **Chacune reçoit son incise** *(« du plus sommaire au plus détaillé ; ce n'est pas l'attribut `grain` de l'exercice »)*. **AUCUN RENOMMAGE** — la conclusion de l'entrée 19 du `LEXIQUE.md` tient : les deux usages sont clairs en contexte. *Deux constats de méthode : la prémisse de l'item — « aucun texte ne dit les deux sens » — **avait cessé d'être vraie** depuis le chapitre 1, l'entrée 19 les disant tous deux ; et le `00-referentiel.md` §3 **nommait déjà le piège** — « même famille de piège que les deux « grain » et les deux « diagnostic » » — **sans le payer**, en le désignant au lieu de dire les deux sens.* | §3bis · §9 (lot C4-L4) | **(a)** |
+| **05/08/2026** | Passe de mise en cohérence, **chapitre 5**, séance 18 — item « la longueur de la fenêtre du taux de lucidité », déposé le 03/08 avec **A37** | **A80 — LA FENÊTRE DU TAUX DE LUCIDITÉ VAUT 15 EXERCICES, ET LE REGISTRE DU ROUTEUR REÇOIT SA TABLE MONITORING.** **Le trou était déclaré par la spec elle-même** : *« la longueur de la fenêtre n'est fixée nulle part, ni ici, ni au §3 du `01-routeur.md`, ni à son registre des paramètres du §11. **Un lot ne peut pas calculer ce taux sans elle.** »* **DÉCISION DE LOUIS : 15 exercices**, statut **provisoire (réglage empirique)**. **L'UNITÉ N'ÉTAIT PAS EN QUESTION** : l'arbitrage **F11** (30/07) a converti la couverture R5 de « cycles » en « exercices » pour la raison exacte qui vaut ici — un cycle vaut **6-12 exercices chez un élève à D** et **2-3 chez un élève fort** *(volumes de Louis, 04/08)*, donc une fenêtre en cycles ne mesure pas la même chose chez les deux. **CE QUI A FAIT LE CHOIX DU CHIFFRE, ET C'EST LE CAS CONTRAIGNANT** : le dénominateur est **restreint** aux exercices où le squelette montre un échec, et **l'élève fort en a peu par construction** — une fenêtre de 10 lui aurait donné un taux calculé sur une ou deux observations, sautant entre 0, ½ et 1. Une fenêtre de 20 mélangeait en revanche septembre et novembre chez l'élève à D. **15 est l'arbitrage de Louis entre les deux.** **DOMICILE** : la valeur vivante va au **registre du `01-routeur.md` §11**, qui n'avait **aucune table Monitoring** — elle est créée ; le §3 du routeur **renvoie** au registre au lieu de recopier le chiffre *(règle d'A17 : deux copies d'un même chiffre finissent par diverger)*. **Le §6 de cette spec porte la valeur datée**, parce qu'une session de code lit C3 plus la section de son lot, rien de plus *(R4)*. **Condition de fermeture : la distribution observée de `n_fenetre` à l'automne.** | §6 (`monitoring_etat`) · `01-routeur.md` §3, §11 | **(c) → (a)** |
+| **05/08/2026** | Passe de mise en cohérence, **chapitre 5**, séance 18 — balayage de sortie du chapitre | **A81 — DEUX RENVOIS VERS LE CHAPITRE 5 POINTAIENT VERS UN TRAVAIL DÉJÀ FAIT, ET C'EST A77 QUI L'AVAIT FAIT, LA VEILLE.** **Le relevé** : **26 occurrences** de « chapitre 5 » dans les trois sources et cette spec, dont **dix prospectives** — un ouvert qui s'y renvoie. **Deux étaient mortes.** *(1)* Le **§1.7** demandait encore : « la couverture des deux familles au banc doit-elle valoir pour les six, pour aucune, ou rester une exception nommée sur le Questionnement ? **[à valider]** — item porté au chapitre 5 » — **A77 a répondu le 04-05/08** : elle **ne se généralise pas**, les **quatre lots du Questionnement restent l'exception**. La **question voisine** du même encadré — « le protocole de banc doit par ailleurs éprouver chaque mode » — est morte de la même façon : **le `PROTOCOLE-CALIBRATION.md` ne porte pas cette contrainte**, et ce qui en tient lieu était déjà écrit *(F3, 30/07)*. *(2)* Le **`01-routeur.md` §13** écrivait encore « **ce que R0 écarte réellement à l'allumage reste à statuer — envoyé au chapitre 5** » — **A77 : il n'y a pas de trou.** **LES DEUX RENVOIENT MAINTENANT À A77 au lieu de recopier son raisonnement**, règle du chantier : citer plutôt que dupliquer. *Le défaut « un travail fait qui traîne comme à faire » frappe ici **le travail de la veille**, pour la troisième fois de la passe. Le balayage qui le trouve est mécanique : compter les renvois vers le chapitre qu'on est en train de fermer.* **DEUX AUTRES RENVOIS PROSPECTIFS RESTENT VIVANTS ET NE SONT PAS TRAITÉS ICI** — le **K de R5** et le **recalcul de la cadence de ciblage en réception** *(`01-routeur.md` §5 et cette spec §3bis)* : ce sont de vrais ouverts, **absents de l'inventaire du 05/08**, et ils portent le « K de R5 est à modifier » acté par Louis le 04/08. | §1.7 · `01-routeur.md` §13 | **(a)** |
+| **05/08/2026** | Passe de mise en cohérence, **chapitre 5**, séance 18 — suite du balayage de sortie ; item acté par Louis le 04/08 (« le K de R5 est à modifier ») | **A82 — LE K DE R5 CESSE DE S'INSTANCIER EN UN NOMBRE, ET LE RECALCUL DE CADENCE CHANGE D'ADRESSE.** **La formule était bonne, l'instanciation était fausse.** R5 dit : *aucune compétence `evaluee` de la famille F ne reste plus de **K** exercices de cette famille sans être ciblée*, avec **K ≥ le nombre de compétences `evaluee` de la famille, plus une marge**. La rédaction y ajoutait « **≈ 6 des deux côtés** » *(A51, 03/08)*, sur la prémisse « les six compétences traversant les deux familles ». **DEUX RAISONS DE LE RETIRER, ET LA SECONDE EST LA PLUS FORTE.** *(1)* La prémisse est fausse au moins pour l'**Expression** : elle est **mono-mode `composer`**, donc **jamais en réception** — table des modes admis, domiciliée le matin même au `02-exercices.md` §4 (**A78**). *(2)* « ≈ 6 des deux côtés » est **une énumération déguisée en chiffre**, et **A76** a posé la veille qu'**aucun document ne tient plus la liste des compétences prêtes** — « l'état effectif est une conséquence calculable, et une liste écrite dans une source périme au premier dépôt de fiche ». Le relevé d'A76 avait trouvé **cinq endroits vivants** ; **celui-ci est le sixième**, et il avait échappé au balayage **parce qu'il ne ressemble pas à une liste — il ressemble à un paramètre**. **Seule la marge reste provisoire.** **RÉ-ADRESSAGE** : le §5 du routeur et le §3bis de cette spec renvoyaient le recalcul de cadence « au chapitre 5 de la passe » — **ce n'est pas le lieu d'un arbitrage de cadence** ; il appartient à la session **« construction de la semaine + ciblage lecture »**, qui porte déjà le recalcul de la cadence de ciblage en réception *(A32)*. *Ce que cet amendement NE fait PAS : il ne reprend pas l'argument tiré de la Synthèse. La table dit qu'elle **admet** `restituer` et `interroger` — donc qu'elle **peut** être en réception ; qu'elle porte toujours `composer` en pratique est une lecture de `conversations/proportion.md` §4, dont Louis a réfuté le voisinage le 05/08.* | §3bis · `01-routeur.md` §5, §11 | **(a)** |
 
 > **Sources des six amendements** : séance de relecture intégrale du `00-referentiel.md` (Louis × Mètis, 29/07 — les huit sections sont passées) et dépouillement des six conversations de conception désormais versées dans `palimpseste-conception/conversations/`. Détail et arguments : journal du `CONTEXTE.md` au 29/07, et `00-referentiel.md` §1, §2, §4.2, §6.
 
@@ -292,7 +369,8 @@ Une session qui rencontre l'un de ces points **ne l'invente pas** : elle s'arrê
 | 5 | **Le ciblage en réception — ce qui reste** : les **proportions exactes** de l'indexation mode ↔ niveau, la place de la préférence de l'élève, l'ordre de priorité. *La moitié « R1-R6 sont écrites pour l'écriture, il faut leur version lecture » est **DISSOUTE** depuis la Décision 4 du 02/08 — les règles lisent un signal dérivé et tournent telles quelles sur la réception (`02-exercices.md` §8) ; **A57**, 03/08. Le « Louis × Calame » était un lapsus : c'est du travail de conception, donc Mètis.* | session dédiée **Louis × Mètis**, avant l'allumage | **C4-L2 — PAS C5** *(recompté le 04/08, décision de Louis)*. Ce qui reste de cette ouverture — proportions de l'indexation mode ↔ niveau, place de la préférence de l'élève, ordre de priorité — est consommé par le **routeur**, dont le manifeste est celui de **C4-L2** ; **aucun lot de C5 ne cite le routeur, ni n'a de manifeste**. *Ce qui bloque C5 est ailleurs : le **format de la référence décomposée** pour L1 (**A48**) et les **grilles réceptives d'observables** pour L3.* **Nuance non tranchée** : si le routeur ne cible pas la réception dès l'allumage, l'ouverture ne bloque C4-L2 qu'à partir du moment où il la cible |
 | 6 | **Le statut des sources de vérité.** `00-referentiel.md` **relu et validé** (29/07, **révisé le 03/08**) · `01-routeur.md` **relu et validé** (30/07, quatorze passes) · `02-exercices.md` **relu et validé** (02/08, neuf sections) · `03-` et `04-` restent **en relecture** — le tableau du §0 fait foi | Louis | tout lot dont le manifeste exige un document encore en relecture. **Le routeur n'est plus un blocage** : C4-L2 et le futur lot R1-R6 ne sont plus arrêtés par *son* statut. ***Aucun manifeste de lot ne cite `02-exercices.md`*** *(vérifié le 03/08, A55)* |
 | ~~7~~ | ~~**Où vit l'état du Monitoring ?**~~ **TRANCHÉ le 29/07 (A8) : deux tables propres**, `monitoring_mesures` et `monitoring_niveaux` (§6). Le Monitoring ne figure ni dans `competences_mesures` ni dans `competences_niveaux` | — | *fermé* |
-| 8 | **Le déclencheur du lot C6-L4** — l'essai de Fragments était reconnu par `contexte = essai_fragments`, valeur supprimée par **A53** le 03/08 | **Se dérive** : toutes les évaluations en classe sont des diagnostiques, et l'essai de Fragments est une évaluation en classe *(Louis, 03/08)* — la provenance se retrouvera par la chaîne du dépôt ou de l'exercice. **À spécifier au moment du lot, pas avant.** | C6-L4 |
+| 23 | **Le déclencheur du lot C6-L4** — l'essai de Fragments était reconnu par `contexte = essai_fragments`, valeur supprimée par **A53** le 03/08 *(numéroté **8** à sa création, alors que le 8 était déjà pris par le régime de modèle en B2 ; renuméroté **23** le 05/08 — numéro jamais servi, aucun autre document ne le citait)* | **Se dérive** : toutes les évaluations en classe sont des diagnostiques, et l'essai de Fragments est une évaluation en classe *(Louis, 03/08)* — la provenance se retrouvera par la chaîne du dépôt ou de l'exercice. **À spécifier au moment du lot, pas avant.** | C6-L4 |
+| 25 | **L'écran de dépôt des fiches de compétences et de choix du statut de recette n'appartient à aucun lot du §9** *(**A76**, 05/08)*. Le professeur doit pouvoir **déposer une fiche**, **choisir le statut** de chaque compétence parmi les trois, et **voir ce que sont les compétences et comment elles sont mesurées**. Ni C4-L2 *(pilotage prof : budgets, exercices communs, assignation en lecture seule)* ni C6-L1 *(matrice prof : classe × compétence en lettres)* ne le portent. *« C13 » n'est nommé qu'une fois dans cette spec et n'a pas de lot* | Louis — créer le lot et le numéroter *(même geste que l'ouverture 1)* | le choix effectif des statuts au 24/08 — sans écran, ils se posent en base à la main |
 
 **B2 — Décisions différées**
 
@@ -431,13 +509,13 @@ conception ; aucun n'est tenu pour globalement acté tant que Louis ne l'a pas v
 unifié · Routeur · Exercices · Compétences Écriture · Compétences Lecture) ; les chemins ci-dessous
 sont à jour.
 
-**Statut de relecture (mis à jour le 04/08 — c'est lui que la règle de manifeste du §9 interroge) :**
+**Statut de relecture (mis à jour le 05/08 — c'est lui que la règle de manifeste du §9 interroge) :**
 
 | Document | Statut |
 |---|---|
-| `00-referentiel.md` | **relu intégralement par Louis le 29/07** — les huit sections sont passées ; il porte les amendements A1 à A6. **Révisé le 03/08** — chapitre 2 de la passe de mise en cohérence : construct à six compétences propagé (§1, §2, §3, §5, §6, §7), trois trous déclarés. **Complété le 04/08** — chapitre 3 de la passe : les **cinq modes sont nommés au §1** *(avec la note de conception de Louis sur `interroger`)*, le **seuil du Questionnement est reformulé au §2**, et le §8 porte le renvoi vers leur domicile (**A67**). **Complété le 04/08, séances 5 et 7** — chapitre 3 de la passe : la synthèse en classe cesse d'être une ancre au §6 (**A68**), et la citation de Kim (2026) au §2 reçoit sa réserve de fiabilité *(résultats inaccessibles — `RAPPORT_Validation_Bibliotheque_Unique_2026-08-02.md` §6)*. **Complété le 04/08, séance 8** : les citations d'items d'arbitrage y sont datées, et deux passent en `GC` (**A73**). **Allégé le 04/08, séance 9 — chapitre 4** : son **§4, « Les Constructs »** — **5 655 mots, un tiers du document** — part à **`Annexe-referentiel.md`** *(récit de genèse, ne fait pas foi ; numérotation 4.1-4.3 inchangée)* et laisse à sa place **le critère et les cinq refus**, en vocabulaire d'aujourd'hui. Le document passe de 17 295 à **12 039 mots** |
-| `01-routeur.md` | **relu intégralement par Louis le 30/07** — quatorze passes (§1-§13 + annexe B), révision close. Son **§11 est le registre faisant foi des paramètres du routeur** (A17). **Réaligné le 03/08** — chapitre 2 de la passe de mise en cohérence : construct à six compétences propagé section par section, **§13 réécrit en entier**, §12 annoté. **Réaligné le 04/08** — chapitre 3 de la passe : le routeur n'élit plus aucun mode, la couverture R5 compte sur la cible primaire (§1.2, §5, §11). **Complété le 04/08, séances 4 à 6** : la prose cesse d'appeler `cran` une marche de l'échelle E→A (**A66**) ; le critère de recette du §2 **renvoie** à C3 §1.7 au lieu d'en garder une copie ; deux renvois « C3 §5 » corrigés en « C3 §3 ». **Complété le 04/08, séance 8** : la note du §1 sur la **règle d'espacement** cesse de l'annoncer « à écrire » — elle est au §6 depuis le 30/07 — et les paramètres ouverts du §6 cessent d'être « à porter au §11 », où ils sont ; citations d'arbitrage datées (**A73**). **Complété le 04/08, séance 9 — chapitre 4** : trois notes de dette qui annonçaient un travail déjà fait sont retitrées ou retirées (§1, §2), et le **§9** précise que réviser une production ancienne est un cran de **diagnostic** *(règle P-b)* ; la **couche 3** et la table des régimes perdent le cran `production_contrainte` (**A75**) ; **les deux comptes rendus de séance qui ouvraient le document partent à `Annexe-routeur.md`**, les **treize tampons « Section passée le 30/07 »** sont retirés *(l'en-tête le dit déjà)*, et trois règles vivantes rédigées en note remontent dans le corps |
-| `02-exercices.md` | **relu et validé par Louis le 02/08** — les neuf sections passées en quatre séances (31/07, 1er et 2 août). **Annoté le 03/08** — chapitre 2 de la passe : la dette Questionnement ↔ Monitoring refermée, le compte des grilles d'observables remis à jour. **Révisé le 04/08** — chapitre 3 de la passe : le mode élu à la conception et les deux matériaux (§4), la table L1-L12 effacée et ses sept couples transférés (§8). **Complété le 04/08, séance 8** : ses **19 citations d'items d'arbitrage sont datées** (**A73**). **Révisé le 04/08, séance 9 — chapitre 4** : la **table des cinq modes** et les règles **P-a / P-b / P-c** sont remontées des blocs datés dans le corps (§4 et §7) ; la portée des matériaux par cran est réécrite au §2 et la définition du `materiau_cible` désambiguïsée au §4 (**A74**) ; deux notes de réserve éteintes retirées (§1, §2) ; **les deux grands récits de séance — refonte du 1er août, neuf Décisions du 2 août — partent à `Annexe-exercice.md`**, le document passe de 31 166 à 21 246 mots |
+| `00-referentiel.md` | **relu intégralement par Louis le 29/07** — les huit sections sont passées ; il porte les amendements A1 à A6. **Révisé le 03/08** — chapitre 2 de la passe de mise en cohérence : construct à six compétences propagé (§1, §2, §3, §5, §6, §7), trois trous déclarés. **Complété le 04/08** — chapitre 3 de la passe : les **cinq modes sont nommés au §1** *(avec la note de conception de Louis sur `interroger`)*, le **seuil du Questionnement est reformulé au §2**, et le §8 porte le renvoi vers leur domicile (**A67**). **Complété le 04/08, séances 5 et 7** — chapitre 3 de la passe : la synthèse en classe cesse d'être une ancre au §6 (**A68**), et la citation de Kim (2026) au §2 reçoit sa réserve de fiabilité *(résultats inaccessibles — `RAPPORT_Validation_Bibliotheque_Unique_2026-08-02.md` §6)*. **Complété le 04/08, séance 8** : les citations d'items d'arbitrage y sont datées, et deux passent en `GC` (**A73**). **Allégé le 04/08, séance 9 — chapitre 4** : son **§4, « Les Constructs »** — **5 655 mots, un tiers du document** — part à **`Annexe-referentiel.md`** *(récit de genèse, ne fait pas foi ; numérotation 4.1-4.3 inchangée)* et laisse à sa place **le critère et les cinq refus**, en vocabulaire d'aujourd'hui. Le document passe de 17 295 à **12 039 mots**. **Complété le 05/08, chapitre 5** : la règle de calibration du §2 lit désormais le statut `evaluee` déclaré par le professeur (**A77**) ; le **composite `Découvertes` du §6 passe à trois termes** — son quatrième portait la lecture, qui n'est plus une compétence, et le versant réceptif est désormais porté par le mode *(trou déclaré refermé ; impact C3 néant, la spec ne nomme pas ce composite)* |
+| `01-routeur.md` | **relu intégralement par Louis le 30/07** — quatorze passes (§1-§13 + annexe B), révision close. Son **§11 est le registre faisant foi des paramètres du routeur** (A17). **Réaligné le 03/08** — chapitre 2 de la passe de mise en cohérence : construct à six compétences propagé section par section, **§13 réécrit en entier**, §12 annoté. **Réaligné le 04/08** — chapitre 3 de la passe : le routeur n'élit plus aucun mode, la couverture R5 compte sur la cible primaire (§1.2, §5, §11). **Complété le 04/08, séances 4 à 6** : la prose cesse d'appeler `cran` une marche de l'échelle E→A (**A66**) ; le critère de recette du §2 **renvoie** à C3 §1.7 au lieu d'en garder une copie ; deux renvois « C3 §5 » corrigés en « C3 §3 ». **Complété le 04/08, séance 8** : la note du §1 sur la **règle d'espacement** cesse de l'annoncer « à écrire » — elle est au §6 depuis le 30/07 — et les paramètres ouverts du §6 cessent d'être « à porter au §11 », où ils sont ; citations d'arbitrage datées (**A73**). **Complété le 04/08, séance 9 — chapitre 4** : trois notes de dette qui annonçaient un travail déjà fait sont retitrées ou retirées (§1, §2), et le **§9** précise que réviser une production ancienne est un cran de **diagnostic** *(règle P-b)* ; la **couche 3** et la table des régimes perdent le cran `production_contrainte` (**A75**) ; **les deux comptes rendus de séance qui ouvraient le document partent à `Annexe-routeur.md`**, les **treize tampons « Section passée le 30/07 »** sont retirés *(l'en-tête le dit déjà)*, et trois règles vivantes rédigées en note remontent dans le corps. **Complété le 05/08, chapitre 5** : les trois statuts de recette reçoivent leur définition au §3, le cold start du §4 cesse de nommer les compétences, et le §8 perd la copie de l'énumération (**A76**) ; le **registre du §11 reçoit sa table Monitoring** — la fenêtre du taux de lucidité vaut **15 exercices**, provisoire, et le §3 y renvoie au lieu de recopier le chiffre (**A80**) |
+| `02-exercices.md` | **relu et validé par Louis le 02/08** — les neuf sections passées en quatre séances (31/07, 1er et 2 août). **Annoté le 03/08** — chapitre 2 de la passe : la dette Questionnement ↔ Monitoring refermée, le compte des grilles d'observables remis à jour. **Révisé le 04/08** — chapitre 3 de la passe : le mode élu à la conception et les deux matériaux (§4), la table L1-L12 effacée et ses sept couples transférés (§8). **Complété le 04/08, séance 8** : ses **19 citations d'items d'arbitrage sont datées** (**A73**). **Révisé le 04/08, séance 9 — chapitre 4** : la **table des cinq modes** et les règles **P-a / P-b / P-c** sont remontées des blocs datés dans le corps (§4 et §7) ; la portée des matériaux par cran est réécrite au §2 et la définition du `materiau_cible` désambiguïsée au §4 (**A74**) ; deux notes de réserve éteintes retirées (§1, §2) ; **les deux grands récits de séance — refonte du 1er août, neuf Décisions du 2 août — partent à `Annexe-exercice.md`**, le document passe de 31 166 à 21 246 mots. **Complété le 05/08, chapitre 5** : la **table des modes admis par compétence** est déposée au §4, à la suite des trois règles de conception du 04/08 (**A78**) |
 | `03-competences.md` → `competences/*.md` | **en relecture** ; les fiches versées sont validées une à une par leur banc. *Renommé le 03/08 (**A56**) — il s'appelait `03-competences-ecriture.md` ; il recevra les observables de `04-`* |
 | `04-competences-lecture.md` → `competences-lecture/*` | **en relecture**, et **voué à disparaître** *(décision de Louis, 03/08 — **A56**)* : ses observables seront transférés au `03-` au chantier compétences. **Jusque-là il reste la source de ses observables** |
 
@@ -459,7 +537,7 @@ la phase « se juger ») et vit, **depuis A2, sur sa propre échelle** — voir 
 - `01-routeur.md` — le routeur des **deux familles** (couches, R1-R6, escalade, lettres [révision
   « certitude » ouverte], télémétrie §10, état du ciblage en réception §13).
 - `02-exercices.md` — la **bibliothèque unique** : **treize objets**, l'échelle d'autonomie à sept
-  **crans**, l'axe des **modes**, le `Support`, la banque d'instances et l'injecteur *(A51, 03/08 —
+  **crans**, l'axe des **modes**, le `support`, la banque d'instances et l'injecteur *(A51, 03/08 —
   la description « écriture 1-14, lecture L1-L12, gestes » est périmée : il n'y a plus deux
   bibliothèques, et les codes `t1…t14` / `l1…l12` ne survivent pas)* — **le schéma n'en dépend
   pas** : un objet = une ligne de la table.
@@ -552,9 +630,8 @@ la phase « se juger ») et vit, **depuis A2, sur sa propre échelle** — voir 
    | **L'essai** | **Expression** · **Argumentation** · **Structure** — les trois en **`composer`** |
    | **L'explication de texte** | **Expression** en `composer` · **Argumentation** en `expliquer` · **Structure** en `expliquer` · **Synthèse** en `restituer` |
 
-   **La Connaissance et le Questionnement ne sont mesurés dans aucune des deux passations** — d'où
-   leur absence de lettre au sortir de la semaine 1, et les deux portes par lesquelles chacune entre
-   (§6, `competences_niveaux`). **Sept couples (compétence × passation) en tout**, contre onze dans
+   **La Connaissance et le Questionnement ne sont mesurés dans aucune des deux passations.**
+   **Sept couples (compétence × passation) en tout**, contre onze dans
    l'ancien compte : c'est ce chiffre que lisent le §10 point 2 et l'ouverture 8.
    Dépouillement immédiat (option A : tous les bancs tournés avant
    le 25/08). Le pipeline photo/OCR de Codex est donc **critique dès la semaine 1** (la coupe
@@ -572,9 +649,31 @@ la phase « se juger ») et vit, **depuis A2, sur sa propre échelle** — voir 
    commun. **Sans effet sur la construction** — voir le §4.
 6. **« Calame »** est le nom de l'IA qui guide tous les exercices côté élève (`composition` ET `reception`).
    Aletheia reste la voix des séances de lecture guidée des livres.
-7. **Statut de recette par compétence** : chaque compétence est, à la recette (C13), déclarée
-   `evaluee` (banc passé → verdicts élève) / `mesuree_silencieusement` (P1 stocké, pas de verdict)
-   / `differee`. La spec construit le mécanisme ; l'état effectif se décide selon les bancs au 24/08.
+7. **Statut de recette par compétence** : chaque compétence porte un statut —
+   `evaluee` (**déclarée telle par le professeur → verdicts élève**) / `mesuree_silencieusement` (**on mesure et on
+   stocke, aucun verdict**) / `differee` (**on ne mesure pas**). La spec construit le mécanisme ;
+   **l'état effectif appartient au professeur**.
+
+   **LE STATUT NE SE DÉRIVE PAS : IL SE CHOISIT, ET C'EST LE PROFESSEUR QUI CHOISIT**
+   *(**A76**, 05/08/2026 — décision de Louis)*. Deux règles, et **une seule est automatique**.
+   **(a) Le plancher, contraint.** Une compétence **dont la fiche n'est pas déposée** dans
+   Palimpseste **est `differee`, et ne peut pas être autre chose** : il n'y a pas d'instrument,
+   donc rien à mesurer. *La règle existait déjà deux fois, mais seulement à l'échelle d'un lot —
+   C4-L5 (« un fichier de compétence absent ou non bancé bloque cette compétence ») et C5-L3
+   (« les compétences dont la grille réceptive existe »). Elle monte ici d'un cran.*
+   **(b) Le choix, manuel.** Dès qu'une fiche est déposée, le statut devient **un choix du
+   professeur** entre les trois. **Le dépôt d'une fiche n'emporte aucun changement automatique.**
+   *Raison de Louis : « pour ce genre de chose, il vaut mieux y aller manuellement que de manière
+   automatique. On laisse le prof faire ses choix. »*
+   **`differee` a donc DEUX ORIGINES** — **forcé** (pas de fiche) ou **choisi** — **et les mêmes
+   effets dans les deux cas**.
+   **CONSÉQUENCE DE MÉTHODE, ET ELLE VAUT POUR TOUTE LA SPEC** : **aucun document ne tient la
+   liste des compétences prêtes, ni celle des compétences sans lettre**. L'état effectif est une
+   **conséquence calculable** du dépôt des fiches et des choix du professeur — une liste écrite
+   dans une source **périme au premier dépôt**.
+   *La rédaction antérieure disait « déclarée à la recette (C13) » : **seule mention de C13 dans
+   toute cette spec**, et sans lot au §9. Le dépôt des fiches et le choix du statut demandent un
+   écran — **ouverture B1-25**.*
 
    **La transition vers `evaluee` recalcule la lettre** *(**A24, 02/08** — arbitrage F2 du 30/07)*.
    Le passage de `mesuree_silencieusement` à `evaluee` **recalcule la lettre depuis les seules
@@ -679,12 +778,15 @@ la phase « se juger ») et vit, **depuis A2, sur sa propre échelle** — voir 
    > modes → `composition`, sinon `reception`) — **les six compétences traversent les deux
    > familles**. La question devient donc : *la couverture des deux familles au banc doit-elle
    > valoir pour les six, pour aucune, ou rester une exception nommée sur le Questionnement ?*
-   > **[à valider]** — item porté au **chapitre 5** de la passe de mise en cohérence. *En attendant,
-   > la condition est maintenue telle qu'elle a été décidée : elle protège, elle ne coûte que du
-   > temps de banc, et la retirer sur un raisonnement non tranché serait le mauvais sens du doute.*
-   > *Question voisine, du même chapitre : le protocole de banc doit par ailleurs éprouver **chaque
-   > mode** (entrée 29) — reste à dire si « les deux côtés » se lit sur la coupe binaire ou sur les
-   > cinq modes.*
+   > **TRANCHÉ le 05/08 — A77 : elle reste une exception nommée sur le Questionnement**, et ne
+   > se généralise pas aux six. Ses **quatre lots** gardent leur raison propre — *elle protège,
+   > et elle ne coûte que du temps de banc*. Le détail de l'arbitrage est à la ligne **A77** du
+   > journal ci-dessus.
+   > *Question voisine, réglée par le même amendement : le protocole de banc n'impose **pas**
+   > d'éprouver chaque mode — le `PROTOCOLE-CALIBRATION.md` a été ouvert, il ne porte pas cette
+   > contrainte. Ce qui en tient lieu était déjà écrit : la calibration porte sur le **squelette**,
+   > donc elle transfère d'un type, d'un genre **et d'une famille** à l'autre (Louis, 30/07,
+   > arbitrage F3 — « un argument est un argument »).*
 
    **Trou déclaré : aucun palier Acquis n'a encore été observé ouvert** *(**A26, 03/08** —
    requalification d'A6, régime (b) → (c) ; décision de Louis du 31/07, premier cas mesuré au
@@ -954,7 +1056,8 @@ et son retour arrive en différé. Le flux, spécifié par Louis, fait foi :
 9. Le prof **ramasse les copies papier**, qui restent la preuve.
 10. Le soir même ou un autre jour, le prof **déclenche l'analyse en lot** d'un clic.
 11. Il **corrige les copies à l'écran, retours MASQUÉS par défaut**, et peut les révéler à
-    différents grains s'il le souhaite. *(Dispositif anti-ancrage : il juge avant de voir la
+    différents grains — **du plus sommaire au plus détaillé ; ce n'est
+    pas l'attribut `grain` de l'exercice** — s'il le souhaite. *(Dispositif anti-ancrage : il juge avant de voir la
     machine — même esprit que le protocole de ses bancs.)*
 12. Il peut **modifier le retour**.
 13. Après lecture, il saisit un **commentaire général**. **Aucune note n'est saisie dans
@@ -1043,8 +1146,10 @@ provisoires ; le registre qui en fait foi est le §11 du `01-routeur.md` (A17).*
 > lecture », compte périmé. **La dépendance à l'entrée 29 est close le 03/08 (A51)** : les
 > compétences servies en réception sont les **six**, moins celles dont la grille réceptive n'existe
 > pas encore — donc **plus nombreuses que les cinq du calcul d'origine**, ce qui aggrave le
-> resserrement plutôt qu'il ne l'allège. **Le recalcul lui-même reste au chapitre 5 de la passe**,
-> avec le K de R5 et les autres paramètres de cadence. Le risque, lui, ne dépend pas du compte.*
+> resserrement plutôt qu'il ne l'allège. **Le recalcul lui-même appartient à la session « construction de la
+> semaine + ciblage lecture »** *(ré-adressé le 05/08 — **A82** ; il était renvoyé au chapitre 5
+> de la passe, qui n'est pas le lieu d'un arbitrage de cadence)*, avec le **K de R5** — dont le
+> « ≈ 6 des deux côtés » est retiré par le même amendement — et les autres paramètres de cadence. Le risque, lui, ne dépend pas du compte.*
 
 **Deux mécanismes du remplissage (actés 27/07, précisés le 29/07)** : la **préférence de l'élève** —
 recueillie à intervalle régulier (souhaites-tu davantage d'écriture ou de lecture ?), pesée par le
@@ -1110,10 +1215,10 @@ qui manquait ; chaque case porte sa source. **Il est incomplet, et il le déclar
 
 | | `evaluee` | `mesuree_silencieusement` | `differee` |
 |---|---|---|---|
-| **La mesure tourne ?** | oui | oui — **P1 stocké, pas de verdict** (§1 pt 7) | **[à valider]** |
+| **La mesure tourne ?** | oui | oui — **P1 stocké, pas de verdict** (§1 pt 7) | **non** — *on ne mesure pas (**A76**, 05/08)* |
 | **Ciblable par le routeur ?** | oui | **non** (§4 — le routeur ne cible que les `evaluee`) | **non** (idem ; le routeur ajoute qu'une compétence `differee` n'est pas co-présente) |
 | **Verdict ?** | oui | **non** (§1 pt 7) | non |
-| **Contenu du retour** | verdict + retour formatif | **registre descriptif** : montre ce que le squelette contient, **n'attribue aucun niveau** — *ligne neuve, F6* (30/07) | **[à valider]** |
+| **Contenu du retour** | verdict + retour formatif | **registre descriptif** : montre ce que le squelette contient, **n'attribue aucun niveau** — *ligne neuve, F6* (30/07) | **sans objet** — *rien n'est mesuré, donc rien n'est rendu sur cette compétence (**A76**)* |
 | **Lettre visible ?** | selon la gate `competences_affichage_actif` et la bascule de `profil_provisoire` | sans objet — il n'y a pas de lettre | sans objet |
 | **Compte pour la calibration du Monitoring ?** | oui | **non** (A8, §6 — seules les compétences ayant passé la recette comptent) | non |
 
@@ -1123,11 +1228,13 @@ la porte aussi. Elles sont **rassemblées ici, non recopiées** : le relevé dé
 matrice comme le lieu de la règle, « plutôt qu'au cas par cas ». La question de la **mesure** était
 déjà réglée (A24, arbitrage F2, 30/07) ; c'est celle du **retour** que rien ne traitait.*
 
-**Ce qui reste ouvert : la colonne `differee`.** Le statut est nommé au §1 point 7, mais **son
-régime n'est écrit nulle part** — ni ici, ni au `01-routeur.md`, ni dans `02-exercices.md`. On sait
-seulement qu'il n'est ni ciblé ni co-présent. Mesure-t-on encore ? que voit l'élève ? *[à valider],
-porté au **chapitre 5** de la passe de mise en cohérence — un lot qui implémente les trois statuts
-n'a aujourd'hui rien à écrire pour le troisième.*
+**La colonne `differee` est fermée** *(**A76, 05/08** — décision de Louis, chapitre 5 de la passe)*.
+**`differee` veut dire : on ne mesure pas.** Le statut a **deux origines** — **forcé**, quand la
+fiche de la compétence n'est pas déposée, et **choisi** par le professeur quand elle l'est
+(§1 point 7) — et **les deux ont les mêmes effets** : aucune mesure, aucun verdict, aucune lettre,
+pas de ciblage, pas de co-présence. *Ce qui distingue enfin les deux statuts sans verdict :
+`mesuree_silencieusement` **mesure et stocke**, `differee` **ne mesure pas**. Jusqu'ici la seule
+différence écrite entre eux était la co-présence.*
 
 **Ancres : cadence et audit (acté 29/07).** *(A19, 30/07 : seul le format de la semaine 1 est arrêté — essai + explication de texte. Ceux de décembre et de février/mars sont **[à valider]**, voir B3-22 ; leur existence au calendrier, elle, n'est pas en cause.)* Les diagnostiques de septembre, décembre et mars sont au
 projet, et les évaluations régulières en classe figurent au **plan d'évaluation**. La cadence cible
@@ -1211,8 +1318,9 @@ niveau — **le cran porte la difficulté, le grain porte la charge de travail**
 rôle en haut de l'échelle, où elle dit ce que le cran ne dit pas : « il ne sert à rien qu'un élève à
 B fasse de petits exercices ».*
 
-**§4bis — Lettres : montée, descente, et la révision « certitude » (26/07, chantier ouvert,
-NON bloquant pour le gel).** Règles v1 : celles du routeur §7 (montée par la **trajectoire** 2 mesures sur
+### §4bis — Lettres : montée, descente, et la révision « certitude » (26/07, chantier ouvert, NON bloquant pour le gel)
+
+Règles v1 : celles du routeur §7 (montée par la **trajectoire** 2 mesures sur
 3, descente par les **ancres** seules — `lieu` = `classe` et `forme` = `sommatif`, **A54** —,
 plafond ancre+2, rien d'affiché avant l'allumage). **Révision à
 l'étude** (session dédiée) : un **modèle de certitude cumulée** — chaque mesure apporte un poids de
@@ -1442,7 +1550,10 @@ C1), photos dans le bucket existant. Détail indicatif — la session Code ajust
   2. **PAR COMPÉTENCE.** **`modes[]`** se déclare **par compétence du type**, jamais par type —
      une même compétence peut en admettre plusieurs sur un même objet, l'instance élit. Cinq
      valeurs : `composer` · `restituer` · `expliquer` · `évaluer` · `interroger` *(renommé le 04/08 — **A67** ;
-     il s'appelait `questionner`)*. **Aucun mode ne
+     il s'appelait `questionner`)*. **Toutes ne sont pas admises pour toute
+     compétence** : la **table des modes admis par compétence** (`02-exercices.md` §4, arrêtée
+     le 04/08) borne ce qu'un type peut déclarer ; la Connaissance et le Questionnement n'y sont
+     pas encore réglés *(**A78**, 05/08)*. **Aucun mode ne
      se dérive du cran** *(A64)* : le mode se déclare à la conception. *Aux crans 1 et 7 l'élève
      rend un jugement et non un texte — c'est un guide de conception, pas une règle d'élection.*
   3. **`couverture_observables` croise les deux** — elle se déclare par **(cran × compétence ×
@@ -1457,7 +1568,7 @@ C1), photos dans le bucket existant. Détail indicatif — la session Code ajust
   les modes élus **pour cette compétence** → `composition`, sinon → `reception` *(A51 ; source des
   modes précisée par **A62**)* ·
   **`regime_v1vf`** — du **cran** : 1 et 7 → **par paires**, 2 et 3 → **pas de version finale
-  sauf escalade active**, 4, 5, 6 → **plein** *(A49)* · la **largeur de mesure** — du couple
+  sauf escalade active**, **4 et 5** → **plein** *(A49 ; le cran 6 est retiré depuis **A75**, 04/08)* · la **largeur de mesure** — du couple
   (`grain`, `cran`) *(A49)*. *La contradiction que F12 (30/07) signalait devient impossible par
   construction : on n'écrit plus le régime.*
 
@@ -1684,26 +1795,22 @@ C1), photos dans le bucket existant. Détail indicatif — la session Code ajust
   **`lettre` est NULLABLE, et l'absence de lettre est une règle, pas un cas limite** *(A39, 03/08 ;
   arbitrage F19 du 30/07)*. **Une compétence sans lettre n'est ni ciblable, ni sondable, ni
   plafonnée, et n'entre dans aucun départage.** *Domicile de la règle : `01-routeur.md` §3.*
-  **Deux causes connues.** *(1)* Un élève **inscrit tardivement**. *(2)* Tant que le **pont E→A**
-  n'est pas validé : la passation a lieu, les champs extraits sont conservés au journal, **aucun
-  niveau n'est produit**, et le niveau **se calcule rétroactivement sur des seuils observés** quand
-  le pont existe. **PÉRIMÈTRE FIXÉ LE 03/08** *(**A51** ; il remplace la formulation
-  périmée du 30/07, « les cinq compétences de lecture »)*. Au sortir du **diagnostic de la semaine
-  1**, les compétences sans lettre sont **TROIS** *(porté de deux à trois le 04/08 — **A69**)* : la
-  **Connaissance** et le **Questionnement**, qu'aucune des deux passations ne mesure (§1, point 4) ;
-  et la **Synthèse**, que l'explication de texte mesure en **`restituer`** — donc en **réception**,
-  où la cause (2) ci-dessus s'applique. *Argumentation et Structure sont mesurées en réception par la
-  même passation, mais l'essai leur rend une lettre en `composer` ; la Synthèse n'a pas ce recours —
-  l'essai ne la mesure pas.* **Par où chacune entre, puisque « sans lettre »
-  vaut « ni ciblable ni sondable »** : la **Connaissance** est **hors rayon** — R4 en fait une
-  compétence *jamais cible primaire*, et son signal continu est **Quazian**, qui n'écrit pas dans le
-  profil ; le **Questionnement entre par le segment 2**, les trois semaines de **calibration**, où
-  R2 est suspendue au profit de la **couverture** (`01-routeur.md` §4 et §5). **La Synthèse entre par la
-  recette de son banc** — échéance du 24/08 ; le `01-routeur.md` §4 la déclare déjà `differee` au
-  cold start, avec la Connaissance. *Réserve inscrite : le
-  seuil de couverture du segment 2 est écrit « par compétence **`evaluee`** », statut que le
-  Questionnement n'aura pas à la rentrée, sa fiche n'étant pas écrite — le point rejoint le régime
-  du statut `differee`, ouvert au chapitre 5 de la passe.*
+  **Elle est NULL tant qu'aucune mesure exploitable n'existe** — que la compétence soit `differee`
+  (§1 point 7), qu'aucune passation ne l'ait encore mesurée, ou que l'élève soit **inscrit
+  tardivement**. **Un cas a sa règle propre** : quand les mesures sont en **réception** et que le
+  **pont E→A** n'est pas validé, la passation a lieu, les champs extraits sont conservés au journal,
+  **aucun niveau n'est produit**, et le niveau **se calcule rétroactivement sur des seuils observés**
+  quand le pont existe.
+
+  **AUCUNE LISTE DE COMPÉTENCES N'EST TENUE ICI** *(**A76, 05/08** — décision de Louis)*. Cette
+  section disait quelles compétences sortiraient de la semaine 1 sans lettre, et par quelle porte
+  chacune entrerait. **La liste est retirée** : le professeur dépose les fiches et choisit les
+  statuts (§1 point 7), donc l'état effectif est **une conséquence calculable**, pas une donnée de
+  spec — et une liste écrite ici **périme au premier dépôt de fiche**. *« Si ce qu'on veut c'est
+  que le prof se débrouille pour faire les fiches des compétences, alors tout ce qui dit pourquoi
+  les compétences ne sont pas là n'a aucun intérêt. Ne compliquons pas un projet déjà trop
+  compliqué. »* **La même coupe est faite au `01-routeur.md`, §4 et §8, qui en portaient des
+  copies.**
   *Pourquoi C3 doit la porter et pas seulement le routeur : **R1, R2 et son départage, R3, le seuil
   du Questionnement, la table des proportions, le cran de la couche 3, le plafond et la descente
   lisent tous une lettre**, et aucun ne prévoyait qu'elle puisse manquer — alors que la discipline
@@ -1787,8 +1894,8 @@ C1), photos dans le bucket existant. Détail indicatif — la session Code ajust
   **Trois règles qui sont des contraintes d'implémentation, pas des commentaires :**
   1. **Le Monitoring tourne en dernier**, après toutes les autres mesures du dépôt — il en dépend.
   2. **Sa validité est plafonnée par celle des autres compétences**, d'où la règle de périmètre
-     chiffrée : **la calibration ne compte que sur les compétences dont le banc a passé la recette**
-     (le critère du §1.7 — ≥ 15 copies, accord ±1 ≥ 80 % au grain de la cellule). `competences_couvertes[]` enregistre
+     chiffrée : **la calibration ne compte que sur les compétences déclarées `evaluee`**
+     *(§1 point 7 ; le critère qui fonde la déclaration est au §1.7 — ≥ 15 copies, accord ±1 ≥ 80 % au grain de la cellule)*. `competences_couvertes[]` enregistre
      lesquelles ont compté, faute de quoi on ne saura jamais relire la mesure.
   3. **La lucidité est une observation directe de la Phase 1** (aucune comparaison) ; **la
      calibration est dérivée**, de deux sources — en local la phase « se juger » (comparaison **par
@@ -1823,9 +1930,12 @@ C1), photos dans le bucket existant. Détail indicatif — la session Code ajust
     **Ni booléen** : il ne montrerait aucun progrès. **`n_fenetre` = 0 ⇒ `taux_lucidite` NULL,
     jamais 0.** Le dénominateur restreint désamorce ainsi l'artefact de l'élève qui lisse tout :
     n'ayant rien raté, il obtient NULL, pas un mauvais score.
-    **[à valider] — la longueur de la fenêtre n'est fixée nulle part**, ni ici, ni au §3 du
-    `01-routeur.md`, ni à son registre des paramètres du §11. Un lot ne peut pas calculer ce taux
-    sans elle.
+    **La longueur de la fenêtre vaut 15 exercices** *(tranché par Louis le 05/08 — **A80** ;
+    statut **provisoire, réglage empirique**)*. Elle se compte **en exercices**, jamais en cycles
+    ni en semaines — un cycle vaut 6-12 exercices chez un élève à D et 2-3 chez un élève fort
+    *(précédent de l'arbitrage F11)*. **La valeur vivante est au registre du `01-routeur.md`
+    §11** ; celle-ci est datée du 05/08. *Ce qui la tranchera pour de bon : la distribution
+    observée de `n_fenetre` à l'automne.*
 
   **Les colonnes ne se croisent pas** : `amplitude_courante` et `direction_courante` sont NULL sur
   les lignes `lucidite_incompris` ; `taux_lucidite` et `n_fenetre` sont NULL sur les lignes
@@ -1977,7 +2087,8 @@ au lieu de le laisser s'improviser.
 - **L4 — Passation en classe** : le **flux complet du §3bis** — sujet au tableau, **ouverture
   manuelle du dépôt par le prof**, dépôt photos depuis le compte élève, **transcription en quelques
   secondes, éditable**, validation par l'élève, **traitement en lot au déclenchement du prof**, puis
-  l'**écran de correction prof** : retours **masqués par défaut** et révélables à différents grains,
+  l'**écran de correction prof** : retours **masqués par défaut** et révélables à différents grains
+  *(du plus sommaire au plus détaillé — **pas** l'attribut `grain`)*,
   retour **éditable**, **commentaire général**, validation **en masse ou individuelle**,
   **publication par case à cocher**, **obligation de lecture** côté élève. Les 2 sujets de la
   semaine 1 chargés.
@@ -2014,7 +2125,14 @@ au lieu de le laisser s'improviser.
   *(**A51**, 03/08 — il n'y a plus « cinq compétences de lecture » ; la formulation se remplit
   d'elle-même à mesure que les fiches arrivent, et aucune session ne construit un instrument
   manquant)*. **Un instrument par compétence, non par (compétence × mode)** : `statut_recette` reste
-  **sur la compétence** (F3, 30/07), et c'est le **protocole de banc** qui impose d'éprouver chaque mode.
+  **sur la compétence** (F3, 30/07). *Ce qui le fonde, et c'est un principe de Louis : « un argument
+  est un argument. On extrait des squelettes — ce sont ces squelettes que l'on évalue, et ils valent
+  indépendamment des exercices » ; la calibration porte sur la **Phase 2**, qui juge depuis le
+  squelette seul, donc elle transfère d'un type, d'un genre et d'une **famille** à l'autre
+  (`01-routeur.md` §5).* **Et le statut lui-même est déclaré par le professeur, non dérivé du banc**
+  (§1 point 7, **A76**). *La rédaction antérieure disait « c'est le protocole de banc qui impose
+  d'éprouver chaque mode » : le `PROTOCOLE-CALIBRATION.md` ne porte pas cette contrainte, et la
+  seule exception écrite est le **Questionnement** — quatre lots, **A23** (**A77**, 05/08).*
   Prompts de `prompts-inventaire.md`,
   Monitoring dérivé, mêmes tables. **L4 — Onglets Aletheia** (Exercices · Livres · Paramètres),
   design biblio. *(Coupes : un seul format élève (L7) ; design biblio en grille de tuiles.)*
