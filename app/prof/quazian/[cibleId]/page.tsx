@@ -1,9 +1,10 @@
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { createClient } from '@/utils/supabase/server'
-import { ajouterCarteManuellement, togglePublicationUnite, validerToutesLesSuggerees } from '../actions'
+import { ajouterCarteManuellement, togglePublication, validerToutesLesSuggerees } from '../actions'
 import { CarteFlashcard } from './CarteFlashcard'
-import { ExtractionIA } from './ExtractionIA'
+import BoutonGenererCartes from '../BoutonGenererCartes'
+import { colonneCible, resoudreCible } from '@/utils/quazian-cibles'
 
 async function actionAjouter(formData: FormData): Promise<void> {
   'use server'
@@ -11,68 +12,59 @@ async function actionAjouter(formData: FormData): Promise<void> {
 }
 async function actionToggle(formData: FormData): Promise<void> {
   'use server'
-  await togglePublicationUnite(formData)
+  await togglePublication(formData)
 }
 async function actionValiderToutes(formData: FormData): Promise<void> {
   'use server'
   await validerToutesLesSuggerees(formData)
 }
 
-export default async function UniteCartesPage({
+export default async function CibleCartesPage({
   params,
 }: {
-  params: Promise<{ uniteId: string }>
+  params: Promise<{ cibleId: string }>
 }) {
-  const { uniteId } = await params
+  const { cibleId } = await params
   const supabase = await createClient()
 
-  const { data: unite } = await supabase
-    .from('scriptorium_unites')
-    .select('id, label, classe')
-    .eq('id', uniteId)
-    .is('supprime_at', null)   // une unité supprimée n'est plus accessible (accès direct par URL)
-    .single()
+  // Bi-source : un contenu de bibliothèque OU une unité héritée. `resoudreCible`
+  // écarte les livres et les contenus en corbeille (accès direct par URL compris).
+  const cible = await resoudreCible(supabase, cibleId)
+  if (!cible) notFound()
 
-  if (!unite) notFound()
+  const colonne = colonneCible(cible.bras)
 
-  // Documents du Scriptorium avec texte extrait
-  const { data: docsTexte } = await supabase
-    .from('scriptorium_documents')
-    .select('id, titre, auteur')
-    .eq('unite_id', uniteId)
-    .not('texte_extrait', 'is', null)
-    .order('created_at', { ascending: true })
-
-  // Cartes (hors archivées, sauf si on veut les voir)
-  const { data: toutes } = await supabase
-    .from('quazian_flashcards')
-    .select('id, type, format, recto, verso, concept_tag, statut, source')
-    .eq('scriptorium_unite_id', uniteId)
-    .order('created_at', { ascending: true })
+  const [{ data: toutes }, { data: pub }] = await Promise.all([
+    supabase
+      .from('quazian_flashcards')
+      .select('id, type, format, recto, verso, concept_tag, statut, source')
+      .eq(colonne, cibleId)
+      .is('eleve_id', null)
+      .order('created_at', { ascending: true }),
+    supabase
+      .from('quazian_publications')
+      .select('flashcards_visibles')
+      .eq(colonne, cibleId)
+      .maybeSingle(),
+  ])
 
   const suggerees = (toutes ?? []).filter((c) => c.statut === 'suggere')
   const validees = (toutes ?? []).filter((c) => c.statut === 'valide')
   const archivees = (toutes ?? []).filter((c) => c.statut === 'archive')
   const aVerifier = (toutes ?? []).filter((c) => c.statut === 'a_verifier')
 
-  // Publication
-  const { data: pub } = await supabase
-    .from('quazian_publications')
-    .select('flashcards_visibles')
-    .eq('scriptorium_unite_id', uniteId)
-    .maybeSingle()
-
   const visible = pub?.flashcards_visibles ?? false
+  const genre = cible.genre === 'cours' ? 'Cours' : cible.genre === 'texte' ? 'Texte' : 'Unité (héritée)'
 
   return (
     <div>
       <div className="mb-6 flex items-start justify-between gap-4 flex-wrap">
         <div>
           <Link href="/prof/quazian" className="text-sm text-muet hover:text-encre-douce">
-            ← Toutes les unités
+            ← Tous les contenus
           </Link>
-          <h3 className="text-lg font-serif text-encre mt-2">{unite.label}</h3>
-          {unite.classe && <p className="text-sm text-muet">{unite.classe}</p>}
+          <h3 className="text-lg font-serif text-encre mt-2">{cible.label}</h3>
+          <p className="text-sm text-muet">{genre}</p>
           <p className="text-sm text-muet mt-1">
             {validees.length} validée{validees.length > 1 ? 's' : ''}
             {suggerees.length > 0 && ` · ${suggerees.length} à valider`}
@@ -81,7 +73,7 @@ export default async function UniteCartesPage({
         </div>
 
         <form action={actionToggle}>
-          <input type="hidden" name="uniteId" value={uniteId} />
+          <input type="hidden" name="cibleId" value={cibleId} />
           <input type="hidden" name="actuel" value={String(visible)} />
           <button
             type="submit"
@@ -97,9 +89,16 @@ export default async function UniteCartesPage({
         </form>
       </div>
 
-      {/* Extraction IA */}
-      <div className="bg-surface border border-bordure rounded-xl p-4 mb-6">
-        <ExtractionIA uniteId={uniteId} docs={docsTexte ?? []} />
+      {/* Génération IA depuis le contenu lui-même */}
+      <div className="bg-surface border border-bordure rounded-xl p-4 mb-6 flex items-center justify-between gap-3 flex-wrap">
+        <p className="text-xs text-muet">
+          {cible.bras === 'contenu' && cible.longueurTexte === 0
+            ? 'Ce contenu n’a pas de texte extrait dans le Scriptorium — rien à décortiquer.'
+            : cible.genre === 'texte'
+              ? 'Un texte source ne donne qu’1 à 2 cartes — l’essentiel du passage.'
+              : 'Un cours se décortique en cartes atomiques.'}
+        </p>
+        <BoutonGenererCartes cibleId={cibleId} dejaDesCartes={(toutes ?? []).length > 0} />
       </div>
 
       {/* Cartes à valider */}
@@ -110,7 +109,7 @@ export default async function UniteCartesPage({
               À valider ({suggerees.length})
             </h4>
             <form action={actionValiderToutes}>
-              <input type="hidden" name="uniteId" value={uniteId} />
+              <input type="hidden" name="cibleId" value={cibleId} />
               <button
                 type="submit"
                 className="px-3 py-1 text-xs bg-ok text-surface rounded-lg hover:opacity-90"
@@ -121,7 +120,7 @@ export default async function UniteCartesPage({
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             {suggerees.map((c) => (
-              <CarteFlashcard key={c.id} carte={{ ...c, unite_id: uniteId }} uniteId={uniteId} />
+              <CarteFlashcard key={c.id} carte={{ ...c, cible_id: cibleId }} cibleId={cibleId} />
             ))}
           </div>
         </section>
@@ -133,7 +132,7 @@ export default async function UniteCartesPage({
           <h4 className="text-sm font-medium text-retard mb-3">À vérifier ({aVerifier.length})</h4>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             {aVerifier.map((c) => (
-              <CarteFlashcard key={c.id} carte={{ ...c, unite_id: uniteId }} uniteId={uniteId} />
+              <CarteFlashcard key={c.id} carte={{ ...c, cible_id: cibleId }} cibleId={cibleId} />
             ))}
           </div>
         </section>
@@ -148,7 +147,7 @@ export default async function UniteCartesPage({
           </summary>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-3">
             {validees.map((c) => (
-              <CarteFlashcard key={c.id} carte={{ ...c, unite_id: uniteId }} uniteId={uniteId} />
+              <CarteFlashcard key={c.id} carte={{ ...c, cible_id: cibleId }} cibleId={cibleId} />
             ))}
           </div>
         </details>
@@ -163,7 +162,7 @@ export default async function UniteCartesPage({
           </summary>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-3">
             {archivees.map((c) => (
-              <CarteFlashcard key={c.id} carte={{ ...c, unite_id: uniteId }} uniteId={uniteId} />
+              <CarteFlashcard key={c.id} carte={{ ...c, cible_id: cibleId }} cibleId={cibleId} />
             ))}
           </div>
         </details>
@@ -171,7 +170,7 @@ export default async function UniteCartesPage({
 
       {(toutes ?? []).length === 0 && (
         <p className="text-muet text-sm text-center py-8">
-          Aucune carte pour l'instant. Lance l'extraction IA ou ajoute une carte manuellement.
+          Aucune carte pour l&apos;instant. Génère-les avec l&apos;IA ci-dessus, ou ajoute une carte à la main.
         </p>
       )}
 
@@ -179,7 +178,7 @@ export default async function UniteCartesPage({
       <section className="mt-8 bg-surface border border-bordure rounded-xl p-5">
         <h4 className="text-sm font-medium text-encre-douce mb-4">Ajouter une carte manuellement</h4>
         <form action={actionAjouter} className="space-y-3">
-          <input type="hidden" name="uniteId" value={uniteId} />
+          <input type="hidden" name="cibleId" value={cibleId} />
 
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
             {(['philosophe', 'concept', 'mouvement', 'these'] as const).map((t) => (

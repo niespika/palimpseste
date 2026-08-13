@@ -32,10 +32,10 @@ interface Carte {
   concept_tag: string
   statut: string
   source: string
-  unite_id: string
+  cible_id: string
 }
 
-export function CarteFlashcard({ carte, uniteId }: { carte: Carte; uniteId: string }) {
+export function CarteFlashcard({ carte, cibleId }: { carte: Carte; cibleId: string }) {
   const [mode, setMode] = useState<'vue' | 'edit'>('vue')
   const [recto, setRecto] = useState(carte.recto)
   const [verso, setVerso] = useState(carte.verso)
@@ -47,7 +47,7 @@ export function CarteFlashcard({ carte, uniteId }: { carte: Carte; uniteId: stri
     setPending(true)
     const fd = new FormData()
     fd.append('id', carte.id)
-    fd.append('uniteId', uniteId)
+    fd.append('cibleId', cibleId)
     await validerCarte(fd)
     setPending(false)
   }
@@ -56,7 +56,7 @@ export function CarteFlashcard({ carte, uniteId }: { carte: Carte; uniteId: stri
     setPending(true)
     const fd = new FormData()
     fd.append('id', carte.id)
-    fd.append('uniteId', uniteId)
+    fd.append('cibleId', cibleId)
     await archiverCarte(fd)
     setPending(false)
   }
@@ -65,7 +65,7 @@ export function CarteFlashcard({ carte, uniteId }: { carte: Carte; uniteId: stri
     setPending(true)
     const fd = new FormData()
     fd.append('id', carte.id)
-    fd.append('uniteId', uniteId)
+    fd.append('cibleId', cibleId)
     await supprimerCarte(fd)
     setPending(false)
   }
@@ -74,7 +74,7 @@ export function CarteFlashcard({ carte, uniteId }: { carte: Carte; uniteId: stri
     setPending(true)
     const fd = new FormData()
     fd.append('id', carte.id)
-    fd.append('uniteId', uniteId)
+    fd.append('cibleId', cibleId)
     fd.append('recto', recto)
     fd.append('verso', verso)
     fd.append('type', type)

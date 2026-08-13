@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { createClient } from '@/utils/supabase/server'
+import { libellesCibles } from '@/utils/quazian-cibles'
 import { validerToutesQuestions } from '../actions'
 import { QuestionCard } from './QuestionCard'
 
@@ -19,7 +20,7 @@ export default async function QuizzDetailPage({
 
   const { data: quizz } = await supabase
     .from('quazian_quizzes')
-    .select('id, statut, classe_id, classes(nom), scope_unites, duree_min, nb_questions, lance_at, ferme_at, moyenne_cohorte, ecart_type_cohorte')
+    .select('id, statut, classe_id, classes(nom), scope_unites, scope_contenus, duree_min, nb_questions, lance_at, ferme_at, moyenne_cohorte, ecart_type_cohorte')
     .eq('id', quizId)
     .single()
 
@@ -36,13 +37,14 @@ export default async function QuizzDetailPage({
     .eq('quiz_id', quizId)
     .order('created_at', { ascending: true })
 
-  const { data: unitesLabels } = await supabase
-    .from('scriptorium_unites')
-    .select('id, label')
-    .in('id', quizz.scope_unites as string[])
-
-  const labelsMap: Record<string, string> = {}
-  for (const u of unitesLabels ?? []) labelsMap[u.id] = u.label
+  // Périmètre BI-SOURCE (C7·L1) : contenus de bibliothèque d'abord, unités
+  // héritées ensuite. Un id que ni l'une ni l'autre table ne connaît retombe sur
+  // son uuid, comme avant.
+  const scope = [
+    ...((quizz.scope_contenus as string[] | null) ?? []),
+    ...((quizz.scope_unites as string[] | null) ?? []),
+  ]
+  const labelsMap = await libellesCibles(supabase, scope)
 
   const nbValidees = (questions ?? []).filter((q) => q.statut_validation === 'valide').length
   const total = (questions ?? []).length
@@ -60,7 +62,7 @@ export default async function QuizzDetailPage({
             {classeNom ?? 'Quizz'} — {total} questions
           </h3>
           <p className="text-sm text-muet mt-0.5">
-            {(quizz.scope_unites as string[]).map((id) => labelsMap[id] ?? id).join(' · ')}
+            {scope.map((id) => labelsMap.get(id) ?? id).join(' · ')}
           </p>
           <div className="flex items-center gap-3 mt-1 flex-wrap">
             <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${

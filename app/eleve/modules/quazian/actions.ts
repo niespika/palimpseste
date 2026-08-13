@@ -18,35 +18,106 @@ async function verifierEleve() {
   return { supabase, userId: user.id }
 }
 
-// ── Visibilité des cartes partagées (Lot 6/7) ────────────────────────────────
-// Une carte partagée d'une (unité, semaine) n'est visible que si un contenu Scriptorium de
-// cette semaine est assigné à une classe de l'élève ; les cartes legacy (semaine null)
-// restent visibles via la seule publication d'unité. Centralisé pour que la file, la
-// consultation ET les stats appliquent EXACTEMENT le même périmètre.
+// ── Visibilité des cartes partagées (Lot 6/7, recâblée à C7·L1) ──────────────
+// Deux conditions, toujours : la cible est PUBLIÉE par le prof, ET elle est au
+// programme d'une classe de l'élève.
+//
+//   • bras CONTENU (aujourd'hui) — « au programme » = le contenu figure dans
+//     l'INSTANCE de parcours d'une de ses classes. C'est l'unique chemin
+//     contenu → classe qui existe (cf. utils/quazian-cibles.ts).
+//   • bras UNITÉ (hérité) — inchangé : (unité, semaine) assignée via
+//     `scriptorium_document_classes`, et les cartes à semaine nulle restent
+//     visibles par la seule publication.
+//
+// ⚠️ Avant C7·L1, TOUT passait par `scriptorium_document_classes` — table vide
+// depuis la réorganisation du Scriptorium : aucune carte portant une semaine
+// n'était visible d'aucun élève (§4.4 du RAPPORT_Diagnostic_C7_quazian.md).
+//
+// Centralisé pour que la file, la consultation ET les stats appliquent EXACTEMENT
+// le même périmètre.
+interface PerimetreCartes {
+  unitesPubliees: string[]
+  contenusPublies: string[]
+  tuplesVisibles: Set<string>   // `${uniteId}:${semaine}` — bras hérité
+  contenusVisibles: Set<string> // bras contenu
+}
+
 async function contexteVisibiliteCartes(
   admin: ReturnType<typeof createAdminClient>,
   userId: string,
-): Promise<{ unitesVisibles: string[]; tuplesVisibles: Set<string> }> {
+): Promise<PerimetreCartes> {
   const { data: publis } = await admin
-    .from('quazian_publications').select('scriptorium_unite_id').eq('flashcards_visibles', true)
-  const unitesVisibles = (publis ?? []).map((p) => p.scriptorium_unite_id as string)
+    .from('quazian_publications')
+    .select('scriptorium_unite_id, contenu_id')
+    .eq('flashcards_visibles', true)
+  const unitesPubliees = (publis ?? []).map((p) => p.scriptorium_unite_id as string | null).filter((v): v is string => !!v)
+  const contenusPublies = (publis ?? []).map((p) => p.contenu_id as string | null).filter((v): v is string => !!v)
 
   const { data: inscrits } = await admin
     .from('inscriptions').select('classe_id').eq('eleve_id', userId).eq('statut', 'active')
   const classeIds = (inscrits ?? []).map((i) => i.classe_id as string)
 
   const tuplesVisibles = new Set<string>()
+  const contenusVisibles = new Set<string>()
   if (classeIds.length > 0) {
+    // Bras contenu — les contenus des instances de parcours ACTIVES de ses classes.
+    const { data: assigns } = await admin
+      .from('scriptorium_parcours_classes').select('id').in('classe_id', classeIds).eq('statut', 'active')
+    const pcIds = (assigns ?? []).map((a) => a.id as string)
+    if (pcIds.length > 0) {
+      const { data: creneaux } = await admin
+        .from('scriptorium_parcours_classe_creneaux').select('contenu_id')
+        .in('parcours_classe_id', pcIds).eq('ref_type', 'contenu')
+      for (const c of creneaux ?? []) {
+        if (c.contenu_id) contenusVisibles.add(c.contenu_id as string)
+      }
+    }
+
+    // Bras hérité — inchangé.
     const { data: liens } = await admin
       .from('scriptorium_document_classes').select('document_id').in('classe_id', classeIds)
     const docIds = [...new Set((liens ?? []).map((l) => l.document_id as string))]
     if (docIds.length > 0) {
-      const { data: contenus } = await admin
+      const { data: documents } = await admin
         .from('scriptorium_documents').select('unite_id, semaine').in('id', docIds).not('semaine', 'is', null)
-      for (const c of contenus ?? []) tuplesVisibles.add(`${c.unite_id}:${c.semaine}`)
+      for (const d of documents ?? []) tuplesVisibles.add(`${d.unite_id}:${d.semaine}`)
     }
   }
-  return { unitesVisibles, tuplesVisibles }
+  return { unitesPubliees, contenusPublies, tuplesVisibles, contenusVisibles }
+}
+
+/** Une carte partagée atteint-elle cet élève ? (la publication est déjà filtrée en amont) */
+function carteVisible(
+  carte: { contenu_id?: string | null; scriptorium_unite_id?: string | null; semaine?: number | null },
+  p: PerimetreCartes,
+): boolean {
+  if (carte.contenu_id) return p.contenusVisibles.has(carte.contenu_id)
+  const sem = carte.semaine
+  return sem == null || p.tuplesVisibles.has(`${carte.scriptorium_unite_id}:${sem}`)
+}
+
+/**
+ * Cartes partagées validées et publiées, des deux bras, déjà filtrées par le
+ * périmètre de l'élève. `select` doit inclure `contenu_id, scriptorium_unite_id,
+ * semaine` — les trois champs que `carteVisible` lit.
+ */
+async function cartesPartageesVisibles(
+  admin: ReturnType<typeof createAdminClient>,
+  p: PerimetreCartes,
+  select: string,
+): Promise<Record<string, unknown>[]> {
+  const requete = (colonne: 'contenu_id' | 'scriptorium_unite_id', ids: string[]) =>
+    ids.length > 0
+      ? admin.from('quazian_flashcards').select(select)
+          .eq('statut', 'valide').is('eleve_id', null).in(colonne, ids)
+      : Promise.resolve({ data: [] as Record<string, unknown>[] })
+
+  const [{ data: parContenu }, { data: parUnite }] = await Promise.all([
+    requete('contenu_id', p.contenusPublies),
+    requete('scriptorium_unite_id', p.unitesPubliees),
+  ])
+  return [...(parContenu ?? []), ...(parUnite ?? [])]
+    .filter((c) => carteVisible(c as Parameters<typeof carteVisible>[0], p)) as Record<string, unknown>[]
 }
 
 export interface CarteRevision {
@@ -63,50 +134,48 @@ export interface CarteRevision {
   due: string
 }
 
+// Colonnes lues pour une carte : les deux bras de l'arc, plus les deux relations
+// dont on tire le libellé affiché. `carteVisible` a besoin des trois premières.
+const SELECT_CARTE = `
+    id, recto, verso, format, type, concept_tag, semaine, created_at,
+    scriptorium_unite_id, contenu_id,
+    scriptorium_unites(label), scriptorium_contenus(titre)
+  `
+
+// Libellé affiché sous une carte : le titre du contenu, le label de l'unité
+// héritée, ou « Cartes personnelles » pour une carte sans cible visible (Codex).
+// Chaque relation arrive en objet OU en tableau selon la jointure Supabase — même
+// précaution que `libelleSession` (utils/codex-libelle.ts).
+function labelDeLaCarte(f: Record<string, unknown>, defaut = ''): string {
+  const u = (Array.isArray(f.scriptorium_unites) ? f.scriptorium_unites[0] : f.scriptorium_unites) as { label?: string } | null
+  const c = (Array.isArray(f.scriptorium_contenus) ? f.scriptorium_contenus[0] : f.scriptorium_contenus) as { titre?: string } | null
+  return c?.titre ?? u?.label ?? defaut
+}
+
 // Charger la file de révision du jour
 export async function chargerFileRevision(): Promise<CarteRevision[]> {
   const { supabase, userId } = await verifierEleve()
   const maintenant = new Date().toISOString()
 
-  // Unités publiées + visibilité par (unité, semaine) — admin pour contourner RLS.
+  // Cibles publiées + périmètre de classe de l'élève — admin pour contourner RLS.
   const admin = createAdminClient()
   // Blocage « petit malin » : la révision de flashcards est gelée (le quizz reste ouvert).
   if (await messageSiBloque(admin, userId)) return []
-  const { unitesVisibles, tuplesVisibles } = await contexteVisibiliteCartes(admin, userId)
+  const perimetre = await contexteVisibiliteCartes(admin, userId)
 
-  const selectCarte = `
-      id, recto, verso, format, type, concept_tag, semaine,
-      scriptorium_unite_id,
-      scriptorium_unites(label)
-    `
-
-  // Cartes partagées validées des unités publiées (eleve_id null)
-  const { data: partageesBrutes } = unitesVisibles.length > 0
-    ? await admin
-        .from('quazian_flashcards')
-        .select(selectCarte)
-        .eq('statut', 'valide')
-        .is('eleve_id', null)
-        .in('scriptorium_unite_id', unitesVisibles)
-    : { data: [] }
-
-  // Filtre dérivé : semaine nulle (legacy) OU (unité, semaine) assignée à l'élève.
-  const partagees = (partageesBrutes ?? []).filter((c) => {
-    const sem = (c as { semaine: number | null }).semaine
-    return sem == null || tuplesVisibles.has(`${c.scriptorium_unite_id}:${sem}`)
-  })
+  const partagees = await cartesPartageesVisibles(admin, perimetre, SELECT_CARTE)
 
   // Cartes personnelles de l'élève (ex. Codex) — toujours révisables par lui
   const { data: perso } = await admin
     .from('quazian_flashcards')
-    .select(selectCarte)
+    .select(SELECT_CARTE)
     .eq('statut', 'valide')
     .eq('eleve_id', userId)
 
-  const flashcards = [...(partagees ?? []), ...(perso ?? [])]
+  const flashcards = [...partagees, ...(perso ?? [])] as unknown as Record<string, unknown>[]
   if (flashcards.length === 0) return []
 
-  const flashcardIds = flashcards.map((f) => f.id)
+  const flashcardIds = flashcards.map((f) => f.id as string)
 
   // États FSRS existants pour cet élève
   const { data: etats } = await supabase
@@ -124,38 +193,24 @@ export async function chargerFileRevision(): Promise<CarteRevision[]> {
   const file: CarteRevision[] = []
 
   for (const f of flashcards) {
-    const etat = etatsMap[f.id]
-    const unites = f.scriptorium_unites as unknown as { label: string } | { label: string }[]
-    const labelUnite = Array.isArray(unites) ? unites[0]?.label : unites?.label ?? ''
+    const etat = etatsMap[f.id as string]
+    const labelUnite = labelDeLaCarte(f)
+    const commun = {
+      flashcard_id: f.id as string,
+      recto: f.recto as string,
+      verso: f.verso as string,
+      format: f.format as string,
+      type: f.type as string,
+      concept_tag: f.concept_tag as string,
+      label_unite: labelUnite,
+    }
 
     if (!etat) {
       // Nouvelle carte — à réviser
-      file.push({
-        flashcard_id: f.id,
-        card_state_id: null,
-        recto: f.recto,
-        verso: f.verso,
-        format: f.format,
-        type: f.type,
-        concept_tag: f.concept_tag,
-        label_unite: labelUnite,
-        state: 0, // New
-        due: maintenant,
-      })
+      file.push({ ...commun, card_state_id: null, state: 0 /* New */, due: maintenant })
     } else if (etat.due <= maintenant) {
       // Carte due
-      file.push({
-        flashcard_id: f.id,
-        card_state_id: etat.id,
-        recto: f.recto,
-        verso: f.verso,
-        format: f.format,
-        type: f.type,
-        concept_tag: f.concept_tag,
-        label_unite: labelUnite,
-        state: etat.state,
-        due: etat.due,
-      })
+      file.push({ ...commun, card_state_id: etat.id, state: etat.state, due: etat.due })
     }
   }
 
@@ -185,47 +240,35 @@ export async function chargerToutesLesCartes(): Promise<CarteConsultation[]> {
   const { supabase, userId } = await verifierEleve()
   const admin = createAdminClient()
 
-  // Unités publiées + visibilité par (unité, semaine) — même périmètre que la file.
-  const { unitesVisibles, tuplesVisibles } = await contexteVisibiliteCartes(admin, userId)
+  // Gel de l'intégrité : même garde que `chargerFileRevision`. Une Server Action
+  // exportée est un point d'entrée HTTP à part entière — la page ne l'appelle pas
+  // quand l'élève est bloqué, mais elle ne peut pas être la seule barrière
+  // (§5 du RAPPORT_Diagnostic_C7_quazian.md).
+  if (await messageSiBloque(admin, userId)) return []
 
-  const selectCarte = `
-      id, recto, verso, format, type, concept_tag, semaine, created_at,
-      scriptorium_unite_id, scriptorium_unites(label)
-    `
-
-  const { data: partageesBrutes } = unitesVisibles.length > 0
-    ? await admin
-        .from('quazian_flashcards')
-        .select(selectCarte)
-        .eq('statut', 'valide')
-        .is('eleve_id', null)
-        .in('scriptorium_unite_id', unitesVisibles)
-    : { data: [] }
-  const partagees = (partageesBrutes ?? []).filter((c) => {
-    const sem = (c as { semaine: number | null }).semaine
-    return sem == null || tuplesVisibles.has(`${c.scriptorium_unite_id}:${sem}`)
-  })
+  // Cibles publiées + périmètre de classe — MÊME périmètre que la file.
+  const perimetre = await contexteVisibiliteCartes(admin, userId)
+  const partagees = await cartesPartageesVisibles(admin, perimetre, SELECT_CARTE)
 
   const { data: perso } = await admin
     .from('quazian_flashcards')
-    .select(selectCarte)
+    .select(SELECT_CARTE)
     .eq('statut', 'valide')
     .eq('eleve_id', userId)
 
-  const flashcards = [...partagees, ...(perso ?? [])]
+  const flashcards = [...partagees, ...(perso ?? [])] as unknown as Record<string, unknown>[]
   if (flashcards.length === 0) return []
 
   const { data: etats } = await supabase
     .from('quazian_card_states')
     .select('flashcard_id')
     .eq('eleve_id', userId)
-    .in('flashcard_id', flashcards.map((f) => f.id))
+    .in('flashcard_id', flashcards.map((f) => f.id as string))
   const vues = new Set((etats ?? []).map((e) => e.flashcard_id as string))
 
   return flashcards
     .map((f) => {
-      const u = f.scriptorium_unites as unknown as { label: string } | { label: string }[] | null
-      const labelUnite = (Array.isArray(u) ? u[0]?.label : u?.label) ?? 'Cartes personnelles'
+      const labelUnite = labelDeLaCarte(f, 'Cartes personnelles')
       return {
         flashcard_id: f.id as string,
         recto: f.recto as string,
@@ -373,23 +416,19 @@ export async function chargerStatsRevision() {
   const maintenant = new Date().toISOString()
   const admin = createAdminClient()
 
-  // Unités publiées + visibilité par (unité, semaine) — MÊME périmètre que la file de
-  // révision, sinon les compteurs annoncent des cartes que l'élève ne verra jamais.
-  const { unitesVisibles, tuplesVisibles } = await contexteVisibiliteCartes(admin, userId)
+  // Gel de l'intégrité : les compteurs annoncent la file, et la file est vide
+  // quand l'élève est bloqué — sans cette garde ils promettraient un travail
+  // inaccessible (et l'action reste un point d'entrée HTTP, cf. §5 du rapport).
+  if (await messageSiBloque(admin, userId)) {
+    return { totalCartes: 0, connues: 0, dues: 0, nouvelles: 0, aFaire: 0 }
+  }
 
-  // Cartes partagées des unités publiées, filtrées par (unité, semaine) visibles.
-  const { data: partageesBrutes } = unitesVisibles.length > 0
-    ? await admin
-        .from('quazian_flashcards')
-        .select('id, scriptorium_unite_id, semaine')
-        .eq('statut', 'valide')
-        .is('eleve_id', null)
-        .in('scriptorium_unite_id', unitesVisibles)
-    : { data: [] }
-  const partagees = (partageesBrutes ?? []).filter((c) => {
-    const sem = (c as { semaine: number | null }).semaine
-    return sem == null || tuplesVisibles.has(`${c.scriptorium_unite_id}:${sem}`)
-  })
+  // Cibles publiées + périmètre de classe — MÊME périmètre que la file de révision,
+  // sinon les compteurs annoncent des cartes que l'élève ne verra jamais.
+  const perimetre = await contexteVisibiliteCartes(admin, userId)
+  const partagees = await cartesPartageesVisibles(
+    admin, perimetre, 'id, scriptorium_unite_id, contenu_id, semaine',
+  )
 
   const { data: perso } = await admin
     .from('quazian_flashcards')
@@ -397,9 +436,9 @@ export async function chargerStatsRevision() {
     .eq('statut', 'valide')
     .eq('eleve_id', userId)
 
-  const flashcards = [...(partagees ?? []), ...(perso ?? [])]
+  const flashcards = [...partagees, ...(perso ?? [])] as unknown as Record<string, unknown>[]
   const totalCartes = flashcards.length
-  const ids = flashcards.map((f) => f.id)
+  const ids = flashcards.map((f) => f.id as string)
 
   const { data: etats } = ids.length > 0
     ? await supabase

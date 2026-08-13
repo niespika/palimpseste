@@ -376,6 +376,74 @@ Louis le 13/08) :**
 > logs du serveur — muets sur le clic raté, puis `publierAnalysesLot([…]) in 694ms` — ont tranché
 > en deux secondes. Côté élève, la validation de lecture a été pilotée de la même façon.
 
+## C7 · L1 — Quazian : remise en marche des flashcards et des quiz (branche `feat/c7-quazian`)
+
+_Diagnostic complet : `RAPPORT_Diagnostic_C7_quazian.md`, écrit avant le correctif. Ce qui pouvait
+être prouvé sans session prof l'est déjà (répétition à blanc de la migration en transaction annulée,
+vérification des helpers contre la sandbox réelle, `npm test` 165/165, `tsc --noEmit` et
+`npm run build` verts). **Ce qui reste ci-dessous demande un vrai navigateur, connecté en prof puis
+en élève** — je n'ai pas de compte prof de test, et la règle du dépôt m'interdit de saisir un mot de
+passe. Rappel de la règle d'or : Chrome, pas l'aperçu embarqué, et Cmd-R avant de conclure à un bug._
+
+**⚠️ L'ORDRE COMPTE (protocole renforcé, règle 5 de `SUIVI_SQL.md`).** Le code part **d'abord**
+(merge + push), le SQL **ensuite**. Les tests C7L1-1 et 2 ne sont observables qu'AVANT d'exécuter
+`c7_quazian_contenus.sql`.
+
+**État de la sandbox au 13/08 (point de départ) :** 0 carte, 0 publication, 0 quiz. Contenus
+disponibles : **« NAture humaine »** (cours, 9 460 signes) et **« test »** (texte, 4 signes) — les
+deux au parcours de la classe **Test** (6 élèves actifs) ; **« Cognitif »** (cours, 2 953 signes) au
+parcours d'aucune classe. Les livres (4) restent hors de portée de Quazian.
+
+- [ ] **C7L1-1 · L'écran cesse d'être vide (à jouer AVANT le SQL — c'est LE test du chantier).**
+  `npm run dev`, prof → `/prof/quazian`. L'écran doit lister **trois contenus** (Cognitif, NAture
+  humaine, test) au lieu de « Aucune unité dans le Scriptorium ». _(Avant ce lot, cette page
+  s'arrêtait là, sans un seul bouton à presser.)_
+- [ ] **C7L1-2 · Le lot dit à qui il parle (AVANT le SQL également).** Cliquer « NAture humaine » →
+  le panneau doit annoncer « **Au parcours de Test** — ces élèves verront les cartes une fois
+  publiées » ; cliquer « Cognitif » → « **n'est au parcours d'aucune classe** : même publiées, ces
+  cartes n'atteindront personne ». C'est la contrepartie visible de la visibilité recâblée (§4.4 du
+  rapport).
+- [ ] **C7L1-3 · Migration.** SQL Editor de la sandbox → `c7_quazian_contenus.sql`, puis le bloc de
+  vérification en pied de fichier → attendu `colonnes = 3`, `fc_unite_nullable = t`,
+  `pub_unite_nullable = t`, `arcs_poses = t`, `index_poses = t`. Puis cocher la case **Sandbox** de
+  la ligne du 13/08 dans `SUIVI_SQL.md`.
+- [ ] **C7L1-4 · Génération de cartes depuis un contenu réel (critère de sortie, moitié flashcards).**
+  Sur « NAture humaine » → **✦ Générer les cartes** → un paquet de cartes atomiques arrive en
+  « À valider ». Les valider (« ✓ Tout valider »), puis **Publier aux élèves**. _(Sur « test », le
+  texte fait 4 signes : la génération doit refuser proprement, pas planter.)_
+- [ ] **C7L1-5 · L'élève les voit — et seulement lui.** Connecté avec un élève de la classe **Test** →
+  `/eleve/modules/quazian` : les cartes sont dans la file de révision. Avec un élève d'une autre
+  classe (T5 ou THLP) : rien. C'est le scoping par classe qui n'existait plus.
+- [ ] **C7L1-6 · Quiz créé et passé (critère de sortie, moitié quiz).** Prof → `/prof/quazian/quizz` →
+  « + Créer un nouveau quizz » : la liste des **contenus** doit être remplie (elle était vide). Cocher
+  « NAture humaine », choisir la classe **Test**, générer → valider les questions → lancer. Élève de
+  Test : passer le quiz. Prof : fermer, la note apparaît. _(Minimum 5 cartes validées, sinon le
+  refus est attendu et explicite.)_
+- [ ] **C7L1-7 · Le gel de l'intégrité tient toujours (item 5 du chantier — assumé, pas retiré).**
+  Bloquer l'élève de test depuis `/prof/integrite`, puis recharger sa page Quazian : bannière
+  « cheeky », **révision gelée**, section Quizz **toujours ouverte**. Débloquer ensuite. _(La garde
+  a été étendue à `chargerToutesLesCartes` et `chargerStatsRevision`, qui ne l'avaient pas — §5 du
+  rapport.)_
+- [ ] **C11a-7 · Quazian — coûts API** _(reporté ici depuis le 26/07)_. Après C7L1-6, la requête de
+  contrôle en pied de la section C11a doit montrer des lignes `quazian` : celle de la génération de
+  **questions** porte un `classe_id`, **jamais** d'`eleve_id`. Les lignes de génération de **cartes**
+  sont attendues **sans attribution** — c'est structurel (contenu partagé entre classes), pas un
+  manque : cf. le pied de la section C11a.
+
+```sql
+-- Contrôle C11a-7, après création d'un quiz
+select module, count(*) as appels, count(eleve_id) as attribues_eleve,
+       count(classe_id) as attribues_classe, count(tokens_entree) as avec_tokens,
+       round(sum(cout)::numeric, 4) as total_usd, max(created_at) as dernier
+  from api_couts where module = 'quazian' group by module;
+```
+
+**Reste hors de ce lot, volontairement :** les onglets « Flashcards · Quiz », le commutateur élève à
+trois états et la génération sur « vu » → **L2** ; l'affichage des notes élève en `/10` alors que
+tout le reste est en `/20` → **L2** (le correctif L1 ne passe pas par ces écrans, §6 du rapport) ; le
+diagnostic de fragilités → **C6** ; la même fracture côté **Codex prof** → notée dans
+`IDEES_post_rentree.md`.
+
 ## C2 — (à venir)
 
 _Les tests seront ajoutés à l'écriture des specs / à la clôture des sessions (écran élève, calibration L8…). S'y ajoutera le test reporté C11a-6 (synthèse hebdo → ligne `scriptorium` classe seule)._
@@ -401,7 +469,7 @@ au déploiement.
 - [x] **C11a-4 · Aletheia (le module le plus coûteux — test le plus important).** Retour V1 produit (soumission élève test) → ligne `aletheia` avec `eleve_id` renseigné. _(Validé le 26/07 — requête de contrôle.)_
 - [x] **C11a-5 · Scriptorium chat.** `rag_actif` ON temporairement, 2-3 messages élève, OFF → lignes `scriptorium` avec élève ET classe ; montants cohérents avec `scriptorium_messages`. _(Validé le 26/07 — requête de contrôle.)_
 - [ ] **C11a-6 · Synthèse hebdo.** « (Re)générer » sur une semaine ayant des messages → ligne `scriptorium` **classe seule** + `scriptorium_rag_syntheses.cout` renseigné ; semaine sans messages : `VIDE`, aucune ligne. _(**Reporté le 26/07 → recette C2** (fin du RAG, S2) — trop tôt ici.)_
-- [ ] **C11a-7 · Quazian.** Création d'un quiz → ligne `quazian` avec `classe_id`, jamais d'`eleve_id`. _(**Reporté le 26/07 → C7** — la création de flashcards/quiz est cassée en sandbox depuis le 24/07 ; C7 commence par la remise en marche.)_
+- [ ] **C11a-7 · Quazian.** Création d'un quiz → ligne `quazian` avec `classe_id`, jamais d'`eleve_id`. _(**Reporté le 26/07 → C7** — la création de flashcards/quiz est cassée en sandbox depuis le 24/07 ; C7 commence par la remise en marche.)_ ➜ **Rouvert et posé dans la section C7 · L1** (13/08) : il s'y joue après C7L1-6, la création de quiz étant redevenue possible. Le câblage est vérifié côté code — `genererQuestions` passe déjà `classeId` et jamais d'élève (`utils/generer-questions.ts:77`) — il reste à l'observer en vrai.
 - [ ] **C11a-8 · Fragments / Codex (l'autre source).** Un dépôt analysé, une séance Codex → la tuile voit monter « Fragments » / « Codex » sans passer par `api_couts`. _(**Reporté le 26/07 → C8 pour Fragments** (création de semaines bloquée) **· C4 ou C13 pour Codex** (création de séance bloquée, reliquat C1).)_ ⚠️ **Part Fragments jouée le 13/08 (C8·L1) — le test ne peut pas passer en l'état.** Le dépôt a bien été analysé et le coût écrit ($0,028 dans `fragments_analyses.cout_api`), mais **`api_couts` est resté vide de toute ligne `fragments`** : la chaîne Fragments n'appelle `enregistrerCoutApi()` nulle part (vérifié sur `analyse.ts`, `analyse-orale.ts`, `analyse-essai.ts`, `synthese-semestre.ts`, `transcription.ts`). Ce n'est pas un effet de C8 : c'est un câblage manquant de C11a. Correctif proposé dans `IDEES_post_rentree.md` — **à faire avant de recocher ce test**, et vérifier Codex au même moment.
 - [ ] **C11a-9 · Tuile complète.** Total = somme des modules affichés ; les 5 modules présents dès qu'ils ont un coût dans le mois _(critère « fait » du plan)_ ; format `$0.0421` / `$12.34`. _(**Reporté le 26/07 → C13** — le scénario de recette générale se termine déjà par « → coûts » : c'est là que les 5 modules seront visibles ensemble.)_
 - [x] **C11a-10 · Non-régression.** _(Aucune manipulation nouvelle : ce test dit seulement « le flux élève marche toujours pendant que le journal écrit » — la journalisation est best-effort et ne doit jamais coûter son retour à un élève. Or 4 et 5 ont été joués avec un élève réel au bout du flux : le retour V1 est arrivé, le chat a répondu, et `avec_tokens = appels` à la requête de contrôle. **Soldé par 4-5 le 26/07** — à décocher si quelque chose avait cloché côté élève pendant ces tests.)_

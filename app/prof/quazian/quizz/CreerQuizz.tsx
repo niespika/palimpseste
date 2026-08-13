@@ -4,11 +4,12 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { creerQuizz } from './actions'
 
-interface Unite {
+// Forme minimale d'une cible côté client (le module `utils/quazian-cibles` est
+// `server-only` — on n'en importe rien, pas même son type).
+interface CibleOption {
   id: string
   label: string
-  classe: string | null
-  ordre: number
+  genre: 'texte' | 'cours' | null
 }
 
 interface ClasseOption {
@@ -26,9 +27,9 @@ interface ExerciceContexte {
 interface SemaineOption { lundi: string; label: string }
 
 export function CreerQuizz({
-  unites, classes, contexte, semainesParClasse,
+  cibles, classes, contexte, semainesParClasse,
 }: {
-  unites: Unite[]
+  cibles: CibleOption[]
   classes: ClasseOption[]
   contexte?: ExerciceContexte | null
   semainesParClasse?: Record<string, SemaineOption[]> // Q3 : semaines du plan validé par classe
@@ -48,7 +49,7 @@ export function CreerQuizz({
   // Semaines à proposer (Q3) : uniquement hors deep-link, si la classe choisie a un plan validé.
   const semaines = !contexte ? (semainesParClasse?.[classeSel] ?? []) : []
 
-  function toggleUnite(id: string) {
+  function toggleCible(id: string) {
     setSelected((prev) =>
       prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]
     )
@@ -56,12 +57,12 @@ export function CreerQuizz({
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()
-    if (selected.length === 0) { setErreur('Sélectionne au moins une unité.'); return }
+    if (selected.length === 0) { setErreur('Sélectionne au moins un contenu.'); return }
     setLoading(true)
     setErreur(null)
 
     const fd = new FormData(e.currentTarget)
-    selected.forEach((id) => fd.append('scope_unites', id))
+    selected.forEach((id) => fd.append('scope_cibles', id))
 
     const res = await creerQuizz(fd)
     if ('error' in res) {
@@ -112,31 +113,33 @@ export function CreerQuizz({
         </div>
       )}
 
-      {/* Unités */}
+      {/* Périmètre : les contenus du Scriptorium (Textes, Cours) */}
       <div className="mb-4">
-        <p className="text-xs text-muet mb-2">Unités couvertes (périmètre des questions)</p>
-        {unites.length === 0 ? (
+        <p className="text-xs text-muet mb-2">Contenus couverts (périmètre des questions)</p>
+        {cibles.length === 0 ? (
           <p className="text-xs text-attention bg-attention-teinte rounded-lg px-3 py-2">
-            Aucune unité de cours disponible : l’IA a besoin de cartes Quazian validées, rattachées à une unité de cours (Scriptorium). Prépare le contenu avant de générer un quiz.
+            Aucun texte ni cours dans le Scriptorium : l’IA compose les questions à partir de cartes Quazian validées, rattachées à un contenu. Prépare le contenu avant de générer un quiz.
           </p>
         ) : (
           <div className="space-y-1 max-h-48 overflow-y-auto pr-1">
-            {unites.map((u) => (
-              <label key={u.id} className="flex items-center gap-2 text-sm cursor-pointer py-1">
+            {cibles.map((c) => (
+              <label key={c.id} className="flex items-center gap-2 text-sm cursor-pointer py-1">
                 <input
                   type="checkbox"
-                  checked={selected.includes(u.id)}
-                  onChange={() => toggleUnite(u.id)}
+                  checked={selected.includes(c.id)}
+                  onChange={() => toggleCible(c.id)}
                   className="accent-pigment"
                 />
-                <span className="text-encre">{u.label}</span>
-                {u.classe && <span className="text-muet text-xs">{u.classe}</span>}
+                <span className="text-encre">{c.label}</span>
+                <span className="text-muet text-xs">
+                  {c.genre === 'cours' ? 'Cours' : c.genre === 'texte' ? 'Texte' : 'Unité héritée'}
+                </span>
               </label>
             ))}
           </div>
         )}
         {selected.length > 0 && (
-          <p className="text-xs text-muet mt-1">{selected.length} unité{selected.length > 1 ? 's' : ''} sélectionnée{selected.length > 1 ? 's' : ''}</p>
+          <p className="text-xs text-muet mt-1">{selected.length} contenu{selected.length > 1 ? 's' : ''} sélectionné{selected.length > 1 ? 's' : ''}</p>
         )}
       </div>
 
