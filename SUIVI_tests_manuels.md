@@ -219,8 +219,13 @@ voir l'encadré en fin de section.
   Semestre test 2 → classe Test → « Générer » sur Camille : synthèse `generee` en ~30 s, note
   suggérée **4/20**, coût **0,0165 $**, texte réel et circonstancié (« *ce semestre s'ouvre sur un
   seul fragment rendu* »). Elle ne portait un vrai dossier que **parce que** C8L2-1 avait publié son
-  analyse — les deux tests se tiennent. _(La publication de la synthèse elle-même n'a pas été
-  rejouée : c'est le même `publierSynthese` que l'écran utilisait déjà avant ce lot, inchangé.)_
+  analyse — les deux tests se tiennent.
+- [x] **C8L2-7 bis · … et publiée — CRITÈRE DE SORTIE COMPLET.** Segment rejoué sur une pile
+  minimale : **Valider** (ouvre l'éditeur) → **Publier**. Synthèse passée à `publiee`
+  (`publiee_at = 13:53:25`, note validée 4/20), et **lue par l'élève sous sa propre identité** via
+  RLS (transaction annulée). Contrôle de cohérence au passage : ce second texte annonce « un seul
+  fragment sur les **cinq** attendus » — la semaine 5 étant redevenue une semaine de travail, le
+  dénominateur suit, exactement comme en C8L2-8.
 - [x] **C8L2-8 · Le taux de dépôt ne compte plus les vacances — PREUVE DIRECTE.** La semaine 5 a été
   passée en vacances (dénominateur SQL : 5 → **4**), la synthèse de Camille relancée. Texte produit :
   « *tu n'as rendu qu'un seul fragment sur **les quatre attendus**, soit un taux de participation de
@@ -239,12 +244,23 @@ voir l'encadré en fin de section.
   garde (`utils/prompt-fragment.test.ts`), dont le cas exact du piège : chaîne **vide** ≠ `NULL`.
   À jouer si tu veux la preuve de bout en bout — copier le prompt avant de vider le champ.
 
-> **État de la sandbox après la recette du 13/08 — nettoyée.** Les 5 dépôts, leurs 5 analyses et la
-> synthèse de recette ont été effacés dans une transaction ; la semaine 5 a retrouvé
-> `is_vacation = false` et `pedagogical_number = 5`. Vérifié après coup : **0 dépôt, 0 analyse,
-> 0 synthèse, 0 piste**, 5 semaines au semestre actif dont **0 en vacances**, échéances toujours au
-> dimanche **23 h 59 heure de Toronto**. `fragments_config` **jamais touchée** (10 064 signes,
-> `updated_at` toujours au 07/07). Rien de la recette ne survit.
+> **État de la sandbox après la recette du 13/08 — nettoyée, en deux passes.** Les dépôts de recette
+> (`RECETTE-C8L2` puis `RECETTE-C8L2b`), leurs analyses et les synthèses ont été effacés dans des
+> transactions ; la semaine 5 a retrouvé `is_vacation = false` et `pedagogical_number = 5`. Vérifié
+> après coup : **0 dépôt, 0 analyse, 0 synthèse, 0 piste, 0 photo**, 5 semaines de travail au
+> semestre actif dont **0 en vacances**, échéances toujours au dimanche **23 h 59 heure de Toronto**.
+> `fragments_config` **jamais touchée** (10 064 signes, `updated_at` toujours au 07/07). Rien de la
+> recette ne survit.
+>
+> **Coût de la recette :** deux appels de synthèse, **0,033 $** au total. Les analyses hebdomadaires
+> ont été écrites directement en base plutôt que générées — ce qui était sous test ici est la
+> **validation**, pas la génération.
+>
+> **Méthode, à ajouter au piège documenté en L1 :** le décalage de coordonnées du panneau navigateur
+> s'est reproduit et a fait rater deux clics d'affilée sur un bouton parfaitement vivant. Ce qui a
+> tranché : **les logs du serveur de dev nomment l'action serveur** (`publierAnalysesLot([…]) in
+> 332ms`) — un clic raté n'y laisse aucune trace. Le contournement fiable a été de piloter le clic
+> par le DOM plutôt que par les coordonnées.
 
 ## C2 — (à venir)
 
