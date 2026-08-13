@@ -102,25 +102,40 @@ conclure à un bug._
   régénérées, rendent encore `samedi 19:00:00` — le bug d'origine, visible côte à côte. Cas DST
   réel au passage : la semaine 10 tombe le **1ᵉʳ novembre 23:59:59 local**, jour du retour à
   l'heure d'hiver.)_
-- [ ] **C8L1-7 · Non-régression du reste du calendrier.** `/prof/calendrier`, `/eleve/calendrier`
+- [x] **C8L1-7 · Non-régression du reste du calendrier.** `/prof/calendrier`, `/eleve/calendrier`
   et le tableau de bord élève s'affichent sans erreur ; la bande « Semaines du semestre » du volet
   Vacances est verte (« *n* semaines ✔ ») une fois la génération faite.
+  _(**Validé le 13/08** : les trois écrans rendus sans erreur en session prof puis élève, bande
+  verte après génération, aucune erreur console ni serveur.)_
 - [ ] **C8L1-8 · Reprise du test reporté C11a-8 (part Fragments).** Une fois un dépôt analysé, la
   tuile « Coût API » de `/prof` doit voir monter la ligne **Fragments**. _(Reporté ici le 26/07 :
   la création de semaines était bloquée, on ne pouvait pas produire d'analyse.)_
+  ⚠️ **Joué le 13/08 — ÉCHOUE, et pas à cause de C8.** L'analyse a tourné et écrit son coût
+  ($0,028 dans `fragments_analyses.cout_api`), mais `api_couts` n'a reçu aucune ligne `fragments` :
+  la chaîne Fragments n'appelle `enregistrerCoutApi()` nulle part. Câblage manquant de C11a →
+  correctif décrit dans `IDEES_post_rentree.md`. **Ne pas recocher avant ce correctif**, et
+  vérifier Codex au même moment. Le test a fait son travail : il était reporté ici pour être
+  enfin jouable, et il l'a été.
 
-> **État de la sandbox après les tests du 13/08 — à trancher.** J'y ai laissé : le semestre
-> **« Semestre C8 test »** (24/08 → 19/12/2026, *à venir*, non actif) avec ses **17 semaines** et
-> la période **« Relache de novembre »** (02→08/11), plus les **5 semaines** générées sur
-> « Semestre test 2 ». Rien n'a été supprimé, aucun dépôt créé. À garder tel quel pour finir
-> C8L1-5/6, ou à effacer (le semestre se supprime depuis sa carte — refusé tant que des semaines
-> y sont rattachées, donc à faire dans l'ordre inverse).
+> **État de la sandbox après la recette du 13/08 — nettoyée.** Le semestre de recette
+> « Semestre C8 test » (24/08 → 19/12) a été effacé avec ses 17 semaines, sa période de vacances,
+> le dépôt de test, sa photo (bucket `fragments` compris) et son analyse — dans une transaction,
+> après remise de « Semestre test 2 » en semestre actif **par l'écran**, pour ne jamais laisser la
+> base sans semestre actif. Vérifié après coup : 2 semestres (1 vivant, 1 archivé), 0 semaine
+> orpheline, 0 dépôt, 0 photo, 0 analyse.
 >
-> **Note de méthode :** le panneau navigateur a un décalage de coordonnées (les clics visent
-> l'image de la capture, pas le viewport) — plusieurs clics ont paru « morts » alors que l'app
-> répondait normalement. Ce n'est pas la même chose que le piège documenté en tête de fichier
-> (`confirm()` muet dans l'aperçu embarqué), mais ça mène à la même conclusion fausse : vérifier
-> en base ou dans les logs du serveur avant de conclure à un bouton mort.
+> **Ce qui RESTE volontairement :** les **5 semaines de « Semestre test 2 »** générées au test
+> C8L1-2. Elles ne sont pas un résidu de recette — elles réparent le trou constaté le 24/07
+> (semestre actif sans une seule semaine). Le semestre archivé garde ses 15 semaines intactes,
+> y compris leur ancienne `date_limite` à minuit UTC (cf. Q4 du diagnostic).
+>
+> **Note de méthode, à ajouter à la règle d'or du haut de ce fichier.** Le panneau navigateur de
+> Code a un décalage de coordonnées : un clic visant l'image de la capture n'atterrit pas au même
+> endroit que dans le viewport. Plusieurs boutons ont paru **morts** alors que l'app répondait
+> parfaitement — même conclusion fausse que le piège `confirm()` documenté en tête de fichier,
+> pour une cause différente. **Réflexe : avant de conclure à un bouton mort, regarder les logs du
+> serveur de dev** (l'action serveur y apparaît nommément, avec sa durée) **ou la base**. C'est ce
+> qui a évité de diagnostiquer un faux bug deux fois dans la séance.
 
 **Soldé sans navigateur, le 13/08 (n'a pas besoin d'être rejoué) :**
 

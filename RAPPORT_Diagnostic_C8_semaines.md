@@ -191,7 +191,14 @@ répare d'un clic sur « Régénérer les semaines » si ce semestre revenait. U
 aurait déclenché le protocole renforcé de `SUIVI_SQL.md` (table d'un flux existant) pour zéro
 bénéfice réel. À rouvrir seulement si un semestre passé doit redevenir vivant.
 
-**Q5 — Le merge attend le vert humain.** Le prompt dit « commit + merge si vert », et « vert » = le
-test sandbox (semaine créée, dépôt élève réussi). Il demande une session **prof** dans un vrai
-navigateur ; les huit tests sont posés dans `SUIVI_tests_manuels.md` (section C8·L1). Commit fait sur
-`feat/c8-fragments`, merge non fait.
+**Q5 — Le merge attendait le vert humain. ✅ VERT le 13/08.** Recette jouée en session prof puis
+élève sur la sandbox : C8L1-1 à 7 validés (voir `SUIVI_tests_manuels.md`). **Le critère de sortie du
+lot est atteint** — semaine créée depuis l'écran prof, dépôt élève réussi dedans (`statut = depose`,
+pas `en_retard`), diagnostic écrit. Sandbox nettoyée de ses données de recette ensuite ; seules
+restent les 5 semaines de « Semestre test 2 », qui réparent le trou du 24/07.
+
+Un seul test reste ouvert, et il ne porte pas sur ce lot : **C8L1-8 / C11a-8** échoue parce que la
+chaîne Fragments n'appelle `enregistrerCoutApi()` nulle part — la tuile « Coût API » ne verra jamais
+Fragments. Câblage manquant de C11a, découvert seulement maintenant parce que ce test était bloqué
+depuis juillet par l'impossibilité de créer des semaines. Correctif décrit dans
+`IDEES_post_rentree.md`.
