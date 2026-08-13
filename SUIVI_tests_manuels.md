@@ -153,6 +153,115 @@ conclure à un bug._
   « le jour lu est le jour demandé » sur 4 fuseaux × 4 dates. `npm test` : **142/142**.
   `npm run build` et `npx tsc --noEmit` : verts.
 
+## C8 · L2 — Fragments : validation par lot et bugs de fond (branche `feat/c8-fragments`)
+
+_Diagnostic de l'item 4 : `RAPPORT_Diagnostic_C8_expression.md`._
+
+**✅ Recette jouée et VERTE le 13/08**, en session prof réelle sur la sandbox, sur une pile de test
+fabriquée dans la classe **Test** (élèves fictifs, autorisation Louis). Sandbox **nettoyée** ensuite —
+voir l'encadré en fin de section.
+
+**Soldé sans navigateur (n'a pas besoin d'être rejoué) :**
+
+- [x] **C8L2-A · La répartition d'un lot ne touche que ce qu'elle annonce.** 13 tests de garde
+  (`utils/validation-lot.test.ts`) sur une classe portant les cinq cas d'une vraie semaine (à
+  valider, déjà publiée, en cours, en erreur, déposée sans analyse, rien rendu) : « Publier » ne vise
+  que les `generee`, « Dépublier » que les `publiee`, « Relancer » tout dépôt coché ; un élève sans
+  dépôt n'entre dans aucun lot ; chaque cible relie le **bon** dépôt au **bon** élève (une inversion
+  relancerait l'analyse d'un élève sur l'historique d'un autre) ; la case d'en-tête reste décochée
+  sur une pile vide.
+- [x] **C8L2-B · Le prompt hebdo retombe sur son défaut.** 10 tests
+  (`utils/prompt-fragment.test.ts`) : config absente, champ vidé (**chaîne vide**, pas `NULL` — la
+  colonne est `NOT NULL`), champ d'espaces → défaut du code ; une personnalisation réelle l'emporte
+  sans fuite du défaut ; aucun `{{placeholder}}` ne survit ; les sentinelles anti-injection de
+  l'historique élève tiennent.
+- [x] **C8L2-C · Le dépôt compile et passe.** `npm test` **165/165**, `npx tsc --noEmit` et
+  `npm run build` verts (toutes les routes `/prof/fragments-erudition/*` bâties).
+- [x] **C8L2-D · L'écran de semaine rend sans erreur.** Session prof réelle, `/prof/fragments-erudition`
+  puis la vue Semaine 1 · classe Test : colonne de sélection présente, cases **désactivées** faute de
+  dépôt (comportement attendu), 0 erreur serveur, 0 erreur console applicative.
+
+**Joués en session prof sur la sandbox, le 13/08 :**
+
+- [x] **C8L2-0 · La pile de test (préalable, pas un test).** 5 dépôts posés en base sur la Semaine 1
+  de « Semestre test 2 », classe **Test**, portant **tous les cas de bord d'une vraie semaine** :
+  3 analyses « à valider », 1 déjà publiée, 1 encore « en cours », 1 élève sans dépôt, 1 dépôt en
+  retard, 1 signal d'intégrité. Analyses écrites directement (pas d'appel au modèle) : ce qu'on teste
+  ici est la **validation**, pas la génération.
+- [x] **C8L2-1 · Le geste du lot — CRITÈRE DE SORTIE ATTEINT.** La case d'en-tête a pris
+  **exactement 3** lignes : ni Elo (déjà publiée), ni RacemH (en cours), ni Sacha (rien rendu). La
+  barre a annoncé « **Publier (3)** » et « **Relancer l'analyse (3)** », **sans** bouton Dépublier.
+  Après le clic : « 3 retours publiés — les élèves y ont accès », compteurs passés à **À valider 0 ·
+  Publié 4**, sélection vidée. **Preuve d'un seul aller-retour : les trois lignes portent le même
+  `publiee_at` à la milliseconde** (`13:42:25.665`), pendant qu'Elo garde le sien
+  (`13:41:05.645`) — elle n'a pas été republiée. `modifie_par_prof` reste `false` : le lot ne
+  prétend pas avoir retouché. Action visible nommément dans les logs :
+  `publierAnalysesLot([3 ids]) in 332ms`.
+- [x] **C8L2-2 · L'élève voit ce que le lot a publié — et rien d'autre.** Sous l'identité réelle de
+  Camille (`set local role authenticated` + `request.jwt.claims`, transaction **annulée**) : elle lit
+  **sa** ligne, `publiee`, avec son commentaire — et **aucune** des quatre autres de la semaine. Le
+  scoping RLS tient, et c'est bien la publication en lot qui l'a rendue visible.
+- [x] **C8L2-3 · Juger sans ouvrir.** « Aperçu » sur la ligne Dylan : le motif d'intégrité
+  (« Le contenu ne se rattache à aucune des trois sections demandées ») **et** le commentaire général
+  s'affichent sous la ligne, avec « Ouvrir le retour complet → ». Le badge « ⚠ intégrité » est bien
+  sur la ligne.
+- [x] **C8L2-4 · Rattraper un lot publié trop vite.** Sélection d'Alice (publiée) : « Publier » passe
+  **sans compte** (désactivé) et « **Dépublier (1)** » apparaît. Après le clic : Alice repasse
+  `generee`, `publiee_at` à `null`, **les trois autres intactes**.
+  `depublierAnalysesLot([1 id]) in 501ms`.
+- [x] **C8L2-5 · « Refuser » = relancer — chaîne complète vérifiée.** Alice sélectionnée →
+  « Relancer l'analyse (1) » : `generee` → `en_cours` → `erreur`. L'`after()` s'est bien exécuté et
+  `lancerAnalyse` est allé jusqu'à son contrôle de photos (le dépôt de recette n'en portait pas) :
+  **tout le câblage est prouvé sauf l'appel au modèle lui-même**, et sans dépenser un crédit.
+  Seule Alice a bougé. ⚠️ **Reste à confirmer par Louis** : c'est la lecture retenue de « refuser »,
+  faute d'état « refusée » au schéma.
+- [x] **C8L2-7 · Synthèse de semestre : générer → CRITÈRE DE SORTIE ATTEINT.** Onglet **Synthèses** →
+  Semestre test 2 → classe Test → « Générer » sur Camille : synthèse `generee` en ~30 s, note
+  suggérée **4/20**, coût **0,0165 $**, texte réel et circonstancié (« *ce semestre s'ouvre sur un
+  seul fragment rendu* »). Elle ne portait un vrai dossier que **parce que** C8L2-1 avait publié son
+  analyse — les deux tests se tiennent.
+- [x] **C8L2-7 bis · … et publiée — CRITÈRE DE SORTIE COMPLET.** Segment rejoué sur une pile
+  minimale : **Valider** (ouvre l'éditeur) → **Publier**. Synthèse passée à `publiee`
+  (`publiee_at = 13:53:25`, note validée 4/20), et **lue par l'élève sous sa propre identité** via
+  RLS (transaction annulée). Contrôle de cohérence au passage : ce second texte annonce « un seul
+  fragment sur les **cinq** attendus » — la semaine 5 étant redevenue une semaine de travail, le
+  dénominateur suit, exactement comme en C8L2-8.
+- [x] **C8L2-8 · Le taux de dépôt ne compte plus les vacances — PREUVE DIRECTE.** La semaine 5 a été
+  passée en vacances (dénominateur SQL : 5 → **4**), la synthèse de Camille relancée. Texte produit :
+  « *tu n'as rendu qu'un seul fragment sur **les quatre attendus**, soit un taux de participation de
+  **25 %*** ». Avant le correctif, c'était 1/5 = 20 %. La semaine a été remise en semaine de travail
+  aussitôt après.
+- [x] **C8L2-9 · Non-régression de la validation à l'unité.** Le chemin dépôt par dépôt
+  (`publierAnalyse` / `depublierAnalyse` / `relancerAnalyse` depuis l'écran d'analyse) n'a **pas été
+  touché** par ce lot : les actions de lot sont des ajouts, `git diff` ne montre aucune modification
+  des trois actions unitaires.
+
+**Non joué, et pourquoi :**
+
+- [ ] **C8L2-6 · Le prompt hebdo vidé n'empêche plus l'analyse.** Demanderait de vider
+  `fragments_config.prompt_evaluation` (la personnalisation de 10 064 signes actuellement en base)
+  **et** un dépôt avec photos pour relancer une vraie analyse. La règle est tenue par 10 tests de
+  garde (`utils/prompt-fragment.test.ts`), dont le cas exact du piège : chaîne **vide** ≠ `NULL`.
+  À jouer si tu veux la preuve de bout en bout — copier le prompt avant de vider le champ.
+
+> **État de la sandbox après la recette du 13/08 — nettoyée, en deux passes.** Les dépôts de recette
+> (`RECETTE-C8L2` puis `RECETTE-C8L2b`), leurs analyses et les synthèses ont été effacés dans des
+> transactions ; la semaine 5 a retrouvé `is_vacation = false` et `pedagogical_number = 5`. Vérifié
+> après coup : **0 dépôt, 0 analyse, 0 synthèse, 0 piste, 0 photo**, 5 semaines de travail au
+> semestre actif dont **0 en vacances**, échéances toujours au dimanche **23 h 59 heure de Toronto**.
+> `fragments_config` **jamais touchée** (10 064 signes, `updated_at` toujours au 07/07). Rien de la
+> recette ne survit.
+>
+> **Coût de la recette :** deux appels de synthèse, **0,033 $** au total. Les analyses hebdomadaires
+> ont été écrites directement en base plutôt que générées — ce qui était sous test ici est la
+> **validation**, pas la génération.
+>
+> **Méthode, à ajouter au piège documenté en L1 :** le décalage de coordonnées du panneau navigateur
+> s'est reproduit et a fait rater deux clics d'affilée sur un bouton parfaitement vivant. Ce qui a
+> tranché : **les logs du serveur de dev nomment l'action serveur** (`publierAnalysesLot([…]) in
+> 332ms`) — un clic raté n'y laisse aucune trace. Le contournement fiable a été de piloter le clic
+> par le DOM plutôt que par les coordonnées.
+
 ## C2 — (à venir)
 
 _Les tests seront ajoutés à l'écriture des specs / à la clôture des sessions (écran élève, calibration L8…). S'y ajoutera le test reporté C11a-6 (synthèse hebdo → ligne `scriptorium` classe seule)._

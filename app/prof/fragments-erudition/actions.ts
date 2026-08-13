@@ -212,6 +212,100 @@ export async function depublierAnalyse(analyseId: string) {
   return { success: true }
 }
 
+// ============================================================
+// Validation par LOT (C8·L2) — le goulot du module
+// ------------------------------------------------------------
+// À ~90 élèves, publier les retours un par un coûte 3 à 7 h par semaine : une
+// navigation, un écran d'analyse et un clic pour chaque dépôt. Les deux actions
+// ci-dessous font le même geste sur une sélection, en UN aller-retour.
+//
+// Elles ne créent aucun état neuf : « valider » = publier (`generee` →
+// `publiee`), « refuser » = relancer l'analyse — exactement les deux gestes que
+// l'écran d'analyse offre déjà dépôt par dépôt. Aucune migration : le schéma
+// porte déjà tout ce qu'il faut.
+// ============================================================
+
+// Publie une sélection d'analyses. Ne touche QUE celles réellement en attente
+// (`generee`) : une ligne déjà publiée ou encore en cours n'est pas réécrite, et
+// l'écart entre le demandé et le fait est REMONTÉ, jamais avalé en silence.
+export async function publierAnalysesLot(analyseIds: string[]) {
+  await verifierProf()
+  if (analyseIds.length === 0) return { publiees: 0, ignorees: 0, error: null }
+
+  const admin = createAdminClient()
+
+  // `.select()` après un update renvoie les lignes touchées → le compte est
+  // constaté, pas supposé. supabase-js ne LÈVE pas sur erreur SQL : sans lire
+  // `error`, un échec total passerait pour un succès.
+  const { data, error } = await admin
+    .from('fragments_analyses')
+    .update({
+      statut: 'publiee',
+      publiee_at: new Date().toISOString(),
+      // `modifie_par_prof` reste tel quel : une validation en lot est
+      // précisément une publication SANS retouche.
+    })
+    .in('id', analyseIds)
+    .eq('statut', 'generee')
+    .select('id')
+
+  if (error) return { publiees: 0, ignorees: analyseIds.length, error: error.message }
+
+  const publiees = (data ?? []).length
+  revalidatePath('/prof/fragments-erudition', 'layout')
+  return { publiees, ignorees: analyseIds.length - publiees, error: null }
+}
+
+// Dépublie une sélection (le retour redevient invisible à l'élève et repasse
+// « à valider »). Filet de rattrapage d'un lot publié trop vite.
+export async function depublierAnalysesLot(analyseIds: string[]) {
+  await verifierProf()
+  if (analyseIds.length === 0) return { depubliees: 0, ignorees: 0, error: null }
+
+  const admin = createAdminClient()
+  const { data, error } = await admin
+    .from('fragments_analyses')
+    .update({ statut: 'generee', publiee_at: null })
+    .in('id', analyseIds)
+    .eq('statut', 'publiee')
+    .select('id')
+
+  if (error) return { depubliees: 0, ignorees: analyseIds.length, error: error.message }
+
+  const depubliees = (data ?? []).length
+  revalidatePath('/prof/fragments-erudition', 'layout')
+  return { depubliees, ignorees: analyseIds.length - depubliees, error: null }
+}
+
+// Relance l'analyse d'une sélection de dépôts (« refuser » : ce retour ne
+// convient pas, qu'il soit refait). Les lignes passent en `en_cours` tout de
+// suite pour que l'écran le montre, puis les appels au modèle se font en
+// arrière-plan et SÉQUENTIELLEMENT — même patron que `genererSynthesesLot`,
+// pour ne pas lancer trente appels d'un coup.
+export async function relancerAnalysesLot(cibles: { depotId: string; eleveId: string }[]) {
+  await verifierProf()
+  if (cibles.length === 0) return { relancees: 0, error: null }
+
+  const admin = createAdminClient()
+  const depotIds = cibles.map(c => c.depotId)
+
+  const { error } = await admin
+    .from('fragments_analyses')
+    .update({ statut: 'en_cours' })
+    .in('depot_id', depotIds)
+
+  if (error) return { relancees: 0, error: error.message }
+
+  after(async () => {
+    for (const { depotId, eleveId } of cibles) {
+      await lancerAnalyse(depotId, eleveId, { force: true })
+    }
+  })
+
+  revalidatePath('/prof/fragments-erudition', 'layout')
+  return { relancees: cibles.length, error: null }
+}
+
 export async function mettreAJourPiste(pisteId: string, statut: StatutPiste) {
   await verifierProf()
   const admin = createAdminClient()

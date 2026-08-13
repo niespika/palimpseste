@@ -68,6 +68,10 @@ export interface FragmentPiste {
   updated_at: string
 }
 
+// Ce que la vue Semaine connaît d'une analyse. Assez pour JUGER sans ouvrir
+// l'écran d'analyse — c'est la condition de la validation par lot (C8·L2) :
+// le commentaire général porte la substance du retour, le signal d'intégrité
+// désigne les copies à ne surtout pas publier les yeux fermés.
 export interface AnalyseResumee {
   id: string
   depot_id: string
@@ -75,6 +79,8 @@ export interface AnalyseResumee {
   note_decouvertes: number | null
   note_sources: number | null
   note_reflexions: number | null
+  commentaire_general: string | null
+  signal_integrite: { type: string; motif?: string; source?: string } | null
 }
 
 export type StatutPresentation = 'tire' | 'presente' | 'reporte'

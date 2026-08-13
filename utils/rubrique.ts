@@ -21,3 +21,15 @@ lettres ne s'additionnent pas (elles servent à l'affichage pour l'élève) :
 Évalue avec exigence mais sans sévérité gratuite (C = le contrat est rempli ;
 B = un vrai travail ; A = exceptionnel, rare). Respecte le format de sortie
 demandé plus bas dans ce prompt.`
+
+// ----------------------------------------------------------------------------
+// Barème 0-4 (legacy). Antérieur à la rubrique E-A ci-dessus, encore injecté par
+// {{bareme}} dans les prompts qui n'ont pas migré. Défaut versionné ici pour
+// que l'écran Paramètres et le code d'analyse lisent la MÊME source.
+// ----------------------------------------------------------------------------
+
+export const BAREME_DEFAUT = `0 — Travail non fait : la section est absente ou vide de contenu réel.
+1 — Le minimum : la section existe mais reste superficielle, expédiée, ou hors sujet.
+2 — Travail fait : le contrat est rempli honnêtement, sans plus.
+3 — Un bon travail : effort visible, contenu substantiel, soin réel.
+4 — Un excellent travail : richesse, précision, initiative personnelle ; rare.`
