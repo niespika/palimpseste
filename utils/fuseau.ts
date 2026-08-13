@@ -56,3 +56,39 @@ export function formatJour(dateStr: string, opts: Intl.DateTimeFormatOptions = {
   const iso = /^\d{4}-\d{2}-\d{2}$/.test(dateStr) ? `${dateStr}T00:00:00Z` : dateStr
   return new Date(iso).toLocaleDateString('fr-FR', { ...opts, timeZone: 'UTC' })
 }
+
+// Décalage (en minutes) du fuseau par rapport à UTC À CET INSTANT — positif à l'est.
+// Passe par Intl : pas de table DST à maintenir, et l'heure d'été est correcte.
+function decalageMinutes(instant: Date, tz: string): number {
+  const parts = Object.fromEntries(
+    new Intl.DateTimeFormat('en-CA', {
+      timeZone: tz, hour12: false,
+      year: 'numeric', month: '2-digit', day: '2-digit',
+      hour: '2-digit', minute: '2-digit', second: '2-digit',
+    })
+      .formatToParts(instant)
+      .map((p) => [p.type, p.value])
+  ) as Record<string, string>
+  // `hour12: false` peut rendre « 24 » à minuit selon la version d'ICU → % 24.
+  const local = Date.UTC(
+    +parts.year, +parts.month - 1, +parts.day,
+    +parts.hour % 24, +parts.minute, +parts.second
+  )
+  // Les millisecondes n'existent pas côté `local` : on tronque l'instant à la seconde.
+  return Math.round((local - Math.floor(instant.getTime() / 1000) * 1000) / 60000)
+}
+
+// Instant de FIN de journée (23:59:59.999 locales) d'une DATE PURE, dans le fuseau
+// donné, rendu en ISO UTC → à écrire dans une colonne `timestamptz`.
+// C'est la forme d'une DATE LIMITE : « rendu attendu avant la fin de ce jour-là,
+// heure de l'école ». Écrire la date pure telle quelle donnerait minuit UTC, soit
+// 19 h ou 20 h la VEILLE à Toronto — quatre à cinq heures de rendus comptés en retard.
+// Deux passes : le décalage dépend de l'instant, et un jour de bascule DST n'a pas
+// le même décalage à minuit et à 23 h 59 (la 2ᵉ passe part d'un instant déjà juste).
+export function finDeJourDansFuseau(dateStr: string, tz: string): string {
+  const [y, m, d] = dateStr.slice(0, 10).split('-').map(Number)
+  const naif = Date.UTC(y, m - 1, d, 23, 59, 59, 999)
+  let instant = naif - decalageMinutes(new Date(naif), tz) * 60000
+  instant = naif - decalageMinutes(new Date(instant), tz) * 60000
+  return new Date(instant).toISOString()
+}

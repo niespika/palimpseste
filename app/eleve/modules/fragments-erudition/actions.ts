@@ -68,6 +68,11 @@ export async function deposerCompteRendu(formData: FormData) {
     return { error: 'Cette semaine n’appartient pas au semestre en cours.' }
   }
 
+  // `date_limite` est un INSTANT : la fin de journée du dimanche DANS LE FUSEAU DE
+  // L'ÉCOLE (écrite par la synchronisation des semaines). La comparaison d'instants
+  // est donc juste telle quelle — et c'est bien la bonne heure depuis l'item 7 :
+  // avant, la date pure valait minuit UTC, et tout ce qui était rendu après 19 h ou
+  // 20 h le SAMEDI comptait déjà « en retard ».
   const maintenant = new Date()
   const statut = maintenant > new Date(semaine.date_limite) ? 'en_retard' : 'depose'
 

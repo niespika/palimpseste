@@ -441,12 +441,16 @@ async function ajouterReflets(
   if (semIds.length === 0) return lundisFragment
   const { data: fs } = await admin.from('fragments_semaines')
     .select('numero, date_limite').in('semestre_id', semIds).eq('is_vacation', false).not('date_limite', 'is', null)
+  // `date_limite` est un INSTANT (fin de journée dans le fuseau de l'école) : le jour se
+  // lit dans ce fuseau. Le tronquer donnerait le jour UTC, soit le LUNDI suivant à
+  // Toronto — l'échéance basculerait d'une semaine dans le budget.
+  const tz = await lireFuseau()
   for (const f of fs ?? []) {
     const numero = f.numero as number
     // 'quinzaine' : une échéance sur deux comptée (parité du numéro) — la part Fragments
     // ne sature plus la chip pour le prof qui alterne réellement (§7.3).
     if (compter === 'quinzaine' && numero % 2 === 0) continue
-    const date = (f.date_limite as string).slice(0, 10)
+    const date = jourDansFuseau(f.date_limite as string, tz)
     lundisFragment.add(semainePour(date).lundi)
   }
   return lundisFragment

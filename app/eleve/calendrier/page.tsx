@@ -45,7 +45,8 @@ export default async function CalendrierEleve({
   const vueExplicite: Vue | null =
     sp.vue === 'agenda' || sp.vue === 'mois' || sp.vue === 'semaine' || sp.vue === 'jour' ? sp.vue : null
   const vue: Vue = vueExplicite ?? 'mois'
-  const today = jourDansFuseau(new Date(), await lireFuseau())
+  const fuseau = await lireFuseau()
+  const today = jourDansFuseau(new Date(), fuseau)
   const anchor = sp.date && /^\d{4}-\d{2}-\d{2}$/.test(sp.date) ? sp.date : today
   const jourSel = sp.jour && /^\d{4}-\d{2}-\d{2}$/.test(sp.jour) ? sp.jour : today
 
@@ -107,9 +108,10 @@ export default async function CalendrierEleve({
     ? await admin.from('fragments_semaines').select('numero, date_limite').eq('semestre_id', sem.id).eq('is_vacation', false).not('date_limite', 'is', null)
     : { data: [] }
   const fragments = (semaines ?? [])
-    // date_limite est une date PURE (YYYY-MM-DD) → le jour est la date elle-même
-    // (surtout pas via le fuseau, sinon décalage d'un jour selon le fuseau choisi).
-    .map((s): Evt => ({ date: (s.date_limite as string).slice(0, 10), label: `Fragment S${s.numero} — à rendre`, couleur: COULEUR_FRAGMENTS, sousTitre: null }))
+    // date_limite est un INSTANT (fin de journée dans le fuseau de l'école) : le jour
+    // se lit dans ce fuseau. Le tronquer à 10 caractères donnerait le jour UTC, donc
+    // le LENDEMAIN à Toronto — l'échéance du dimanche s'afficherait le lundi.
+    .map((s): Evt => ({ date: jourDansFuseau(s.date_limite as string, fuseau), label: `Fragment S${s.numero} — à rendre`, couleur: COULEUR_FRAGMENTS, sousTitre: null }))
     .filter((e) => e.date >= debut && e.date <= fin)
 
   const parJour = new Map<string, Evt[]>()

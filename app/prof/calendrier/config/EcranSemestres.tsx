@@ -11,12 +11,16 @@ import {
   supprimerSemestre,
   archiverSemestre,
   restaurerSemestre,
+  regenererSemaines,
 } from './actions'
 import ChampDate from './ChampDate'
 
 export type SemestreInfo = Semestre & {
   anneeScolaire: string
+  /** Semaines pédagogiques de la grille CALCULÉE (semestre + vacances). */
   totalSemaines: number
+  /** Semaines réellement stockées dans `fragments_semaines` — ce que voit Fragments. */
+  semainesGenerees: number
   nbVacances: number
   semaineCourante: number
   termine: boolean
@@ -84,15 +88,21 @@ function CarteVivant({
   onEdit,
   onSetActif,
   onArchive,
+  onGenerer,
 }: {
   s: SemestreInfo
   busy: boolean
   onEdit: () => void
   onSetActif: () => void
   onArchive: () => void
+  onGenerer: () => void
 }) {
   const pct = s.totalSemaines > 0 ? Math.round((s.semaineCourante / s.totalSemaines) * 100) : 0
   const actif = s.is_active
+  // Les semaines de Fragments sont des LIGNES en base, pas la grille affichée ici.
+  // Tant qu'elles manquent, le module est muet et aucun élève ne peut déposer :
+  // l'écart doit se voir, et se réparer d'un clic depuis cette carte.
+  const aGenerer = s.semainesGenerees !== s.totalSemaines
   return (
     <div
       className={`bg-surface rounded-xl px-5 py-4 flex items-start gap-4 ${
@@ -138,6 +148,23 @@ function CarteVivant({
             {`Terminé le ${fmtJour(s.end_date)} — définis un autre semestre actif pour pouvoir l’archiver.`}
           </div>
         )}
+
+        {aGenerer && (
+          <div className="flex items-center gap-2.5 flex-wrap mt-2">
+            <span className="text-[12.5px] text-attention">
+              {s.semainesGenerees === 0
+                ? 'Aucune semaine générée — Fragments n’affichera rien et aucun élève ne pourra déposer.'
+                : `${s.semainesGenerees} semaine${s.semainesGenerees > 1 ? 's' : ''} générée${s.semainesGenerees > 1 ? 's' : ''} sur ${s.totalSemaines} — les semaines de Fragments ne suivent plus le calendrier.`}
+            </span>
+            <button
+              onClick={onGenerer}
+              disabled={busy}
+              className="font-ui text-[13px] font-semibold text-encre-douce bg-surface border border-puce rounded-lg px-3 py-1 whitespace-nowrap flex-none hover:bg-parchemin disabled:opacity-50"
+            >
+              Générer les semaines
+            </button>
+          </div>
+        )}
       </div>
 
       <div className="flex items-center gap-3 flex-none font-ui text-[13px]">
@@ -176,13 +203,20 @@ export default function EcranSemestres({ semestres }: { semestres: SemestreInfo[
   // Bandeau proactif : premier semestre terminé, non actif, non archivé, non masqué.
   const aArchiver = vivants.find((s) => s.termine && !s.is_active && !bannieresMasquees.has(s.id))
 
+  // Fail-visible : une action serveur qui LÈVE doit rendre la main et se dire,
+  // sinon le bouton reste désactivé et l'écran paraît simplement mort.
   async function agir(fn: () => Promise<{ error?: string }>) {
     setBusy(true)
     setErreur(null)
-    const res = await fn()
-    setBusy(false)
-    if (res.error) return setErreur(res.error)
-    router.refresh()
+    try {
+      const res = await fn()
+      if (res.error) return setErreur(res.error)
+      router.refresh()
+    } catch {
+      setErreur('Action impossible — recharge la page et réessaie.')
+    } finally {
+      setBusy(false)
+    }
   }
 
   async function handleCreer(e: React.FormEvent<HTMLFormElement>) {
@@ -343,6 +377,7 @@ export default function EcranSemestres({ semestres }: { semestres: SemestreInfo[
                   onEdit={() => setEditId(s.id)}
                   onSetActif={() => agir(() => definirSemestreActif(s.id))}
                   onArchive={() => agir(() => archiverSemestre(s.id))}
+                  onGenerer={() => agir(() => regenererSemaines(s.id))}
                 />
               )
             )}

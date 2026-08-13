@@ -15,15 +15,20 @@ import BilanSemestre from './BilanSemestre'
 import ValidationLecture from '@/components/retours/ValidationLecture'
 import { validerLectureRetour, validerLectureRetourEssai } from './actions'
 import { retoursNonLus } from '@/utils/retours-lus'
-import { formatJour } from '@/utils/fuseau'
+import { formatJour, formatInstant } from '@/utils/fuseau'
+import { lireFuseau } from '@/utils/fuseau-serveur'
 import type { FragmentAnalyse, FragmentPiste, FragmentOral, FragmentAnalyseOrale, EssaiDepotAnalyse, FragmentSynthese } from '@/types/fragments'
 import type { PointSemaine } from '@/components/fragments/GraphiqueProgression'
 
-const formatDateLimite = (dateStr: string) => formatJour(dateStr, { weekday: 'long', day: 'numeric', month: 'long' })
+// `date_limite` est un INSTANT (fin de journée dans le fuseau de l'école) : on le
+// nomme dans CE fuseau. Le lire en UTC ferait tomber l'échéance du dimanche un lundi.
+const formatDateLimite = (dateStr: string, tz: string) =>
+  formatInstant(dateStr, tz, { weekday: 'long', day: 'numeric', month: 'long' })
 
 export default async function PageFragments({ searchParams }: { searchParams: Promise<{ vue?: string; inscription?: string }> }) {
   const supabase = await createClient()
   const admin = createAdminClient()
+  const tz = await lireFuseau()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) notFound()
 
@@ -534,7 +539,7 @@ export default async function PageFragments({ searchParams }: { searchParams: Pr
                 <div>
                   <p className="text-xs text-muet mb-0.5">Semaine en cours</p>
                   <p className="font-medium text-encre">Semaine {semaine.numero}{semaine.titre ? ` — ${semaine.titre}` : ''}</p>
-                  <p className="text-xs text-muet mt-0.5">À rendre avant le {formatDateLimite(semaine.date_limite)}</p>
+                  <p className="text-xs text-muet mt-0.5">À rendre avant la fin du {formatDateLimite(semaine.date_limite, tz)}</p>
                 </div>
                 {depotActuel ? (
                   <span className={`flex-shrink-0 text-xs px-2 py-1 rounded-full ${depotEnRetard ? 'bg-retard-teinte text-retard' : 'bg-ok-teinte text-ok'}`}>
