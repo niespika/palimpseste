@@ -3,7 +3,8 @@
 import { revalidatePath } from 'next/cache'
 import { createClient } from '@/utils/supabase/server'
 import { lundiOnOrBefore, addDaysUTC, toISODate } from '@/utils/calendrier-grille'
-import { FUSEAUX, estFuseauValide } from '@/utils/fuseau'
+import { FUSEAUX, estFuseauValide, finDeJourDansFuseau } from '@/utils/fuseau'
+import { lireFuseau } from '@/utils/fuseau-serveur'
 import { PALETTE_CLASSES } from '@/utils/calendrier-couleurs'
 
 async function verifierProf() {
@@ -75,7 +76,11 @@ export async function creerSemestre(data: {
     .single()
 
   if (error || !row) return { error: error?.message ?? 'Création impossible.' }
-  revalidatePath('/prof/calendrier/config')
+  // Un semestre naît AVEC ses semaines. Sans cela, l'écran affiche « 12 semaines »
+  // (grille calculée) et Fragments n'en a aucune (aucune ligne fragments_semaines)
+  // → aucun dépôt élève possible, sans rien qui le signale.
+  await synchroniserEnSilence(supabase, row.id)
+  revaliderSemaines()
   return { data: { semestreId: row.id } }
 }
 
@@ -98,7 +103,11 @@ export async function modifierSemestre(
     .eq('id', id)
 
   if (error) return { error: error.message }
-  revalidatePath('/prof/calendrier/config')
+  // Les dates ont pu bouger : la grille se déplace, les semaines stockées doivent
+  // suivre (numérotation, fin de semaine, échéance). Les semaines qui sortent de
+  // l'intervalle ne sont PAS supprimées — elles sont comptées « hors calendrier ».
+  await synchroniserEnSilence(supabase, id)
+  revaliderSemaines()
   return {}
 }
 
@@ -216,7 +225,10 @@ export async function creerHoliday(data: {
     end_date: data.end_date,
   })
   if (error) return { error: error.message }
-  revalidatePath('/prof/calendrier/config')
+  // Une période de vacances retire des semaines pédagogiques et décale la
+  // numérotation : les lignes stockées doivent suivre la grille affichée.
+  await synchroniserEnSilence(supabase, data.semester_id)
+  revaliderSemaines()
   return {}
 }
 
@@ -248,19 +260,46 @@ export async function modifierHoliday(
     .update({ label, start_date: data.start_date, end_date: data.end_date })
     .eq('id', id)
   if (error) return { error: error.message }
-  revalidatePath('/prof/calendrier/config')
+  await synchroniserEnSilence(supabase, hol.semester_id as string)
+  revaliderSemaines()
   return {}
 }
 
 export async function supprimerHoliday(id: string): Promise<{ error?: string }> {
   const { supabase } = await verifierProf()
+  // Le semestre est relu AVANT la suppression : après, la ligne n'existe plus.
+  const { data: hol } = await supabase.from('holidays').select('semester_id').eq('id', id).maybeSingle()
   const { error } = await supabase.from('holidays').delete().eq('id', id)
   if (error) return { error: error.message }
-  revalidatePath('/prof/calendrier/config')
+  // Des semaines redeviennent pédagogiques : la numérotation se resserre.
+  if (hol?.semester_id) await synchroniserEnSilence(supabase, hol.semester_id as string)
+  revaliderSemaines()
   return {}
 }
 
 // ── Génération des semaines (ancrage calendaire) ────────────────────────────
+
+// Les écrans du Calendrier affichent une grille de semaines CALCULÉE (fonction pure
+// calculerGrilleSemaines) ; Fragments, lui, ne connaît que les LIGNES de
+// `fragments_semaines` — c'est à elles que les dépôts sont rattachés. La seule
+// couture entre les deux est la synchronisation ci-dessous : tant qu'elle n'a pas
+// tourné, l'écran affiche « 12 semaines » et Fragments n'en a aucune (constat du
+// 24/07 : semestre actif sans une seule semaine → aucun dépôt possible).
+// Elle est donc appelée à CHAQUE événement qui déplace la grille — création et
+// modification d'un semestre, ajout/édition/suppression d'une période de vacances —
+// et pas seulement par le bouton « Générer les semaines ».
+const CHEMINS_SEMAINES = [
+  '/prof/calendrier/config',
+  '/prof/calendrier',
+  '/prof/fragments-erudition',
+  '/eleve/modules/fragments-erudition',
+  '/eleve/calendrier',
+  '/eleve',
+] as const
+
+function revaliderSemaines() {
+  for (const chemin of CHEMINS_SEMAINES) revalidatePath(chemin)
+}
 
 /**
  * (Re)génère les semaines de TRAVAIL d'un semestre, alignées sur le calendrier
@@ -268,12 +307,14 @@ export async function supprimerHoliday(id: string): Promise<{ error?: string }> 
  * - Les semaines de vacances ne sont PAS stockées (calculées à l'affichage).
  * - Mise à jour EN PLACE par date de début ; NON destructive (ne supprime
  *   jamais : les semaines existantes hors alignement sont seulement signalées).
+ * - `date_limite` = fin de journée du dimanche DANS LE FUSEAU DE L'ÉCOLE (item 7).
+ *   Écrire la date pure donnerait minuit UTC = la veille au soir sur place.
+ * Idempotente : rejouée sans changement, elle ne fait que réécrire les mêmes valeurs.
  */
-export async function regenererSemaines(
+async function synchroniserSemaines(
+  supabase: ClientProf,
   semestreId: string
 ): Promise<{ error?: string; data?: { ajoutees: number; revues: number; horsCalendrier: number } }> {
-  const { supabase } = await verifierProf()
-
   const { data: sem } = await supabase
     .from('semesters')
     .select('start_date, end_date')
@@ -286,6 +327,9 @@ export async function regenererSemaines(
     .select('start_date, end_date')
     .eq('semester_id', semestreId)
   const holidays = hols ?? []
+
+  // Fuseau de l'école : il porte l'heure des échéances (jamais UTC — item 7).
+  const tz = await lireFuseau()
 
   // 1. Spans calendaires lundi→dimanche couvrant [start_date, end_date].
   type Span = { start: string; end: string; isVac: boolean; ped: number | null }
@@ -310,36 +354,66 @@ export async function regenererSemaines(
   }
 
   // 4. Réconcilier avec l'existant (par date de début), en place.
+  // On relit les valeurs, pas seulement les identifiants : cette synchronisation
+  // tourne désormais à chaque édition de vacances, et une semaine déjà juste ne doit
+  // pas coûter un aller-retour d'écriture (une vingtaine par semestre, sinon).
   const { data: existing } = await supabase
     .from('fragments_semaines')
-    .select('id, date_debut')
+    .select('id, date_debut, end_date, date_limite, numero, pedagogical_number, is_vacation')
     .eq('semestre_id', semestreId)
-  const parDebut = new Map((existing ?? []).map((w) => [w.date_debut as string, w.id as string]))
+  type Ligne = {
+    id: string; date_debut: string; end_date: string | null; date_limite: string | null
+    numero: number | null; pedagogical_number: number | null; is_vacation: boolean
+  }
+  const lignes = (existing ?? []) as unknown as Ligne[]
+  const parDebut = new Map(lignes.map((w) => [w.date_debut, w]))
   const spanStarts = new Set(spans.map((s) => s.start))
+  // `date_limite` revient de PostgREST en « 2026-07-06T03:59:59.999+00:00 » là où on
+  // écrit « …999Z » : comparer les instants, jamais les chaînes.
+  const memeInstant = (a: string | null, b: string) =>
+    a !== null && new Date(a).getTime() === new Date(b).getTime()
 
   let ajoutees = 0
   let revues = 0
   for (const span of spans) {
-    const id = parDebut.get(span.start)
+    const ligne = parDebut.get(span.start)
     if (span.isVac) {
       // Une semaine de travail déjà stockée qui passe en vacances (ajout/extension
       // d'une période) : la marquer vacance + retirer son numéro pédagogique, sans
       // la supprimer (d'éventuels dépôts restent rattachés). Pas de création.
-      if (id) {
+      if (ligne && !(ligne.is_vacation && ligne.pedagogical_number === null)) {
         const { error } = await supabase
           .from('fragments_semaines')
           .update({ is_vacation: true, pedagogical_number: null })
-          .eq('id', id)
+          .eq('id', ligne.id)
         if (error) return { error: error.message }
         revues++
       }
       continue
     }
-    if (id) {
+    // `date_limite` est REVUE aussi bien à la création qu'à la mise à jour : sans
+    // cela, une semaine créée avant ce correctif garderait éternellement une échéance
+    // à minuit UTC (= samedi soir sur place), et un déplacement des dates du semestre
+    // laisserait l'échéance sur l'ancien dimanche.
+    const dateLimite = finDeJourDansFuseau(span.end, tz)
+    if (ligne) {
+      const dejaJuste =
+        ligne.end_date === span.end &&
+        ligne.numero === span.ped &&
+        ligne.pedagogical_number === span.ped &&
+        ligne.is_vacation === false &&
+        memeInstant(ligne.date_limite, dateLimite)
+      if (dejaJuste) continue
       const { error } = await supabase
         .from('fragments_semaines')
-        .update({ end_date: span.end, pedagogical_number: span.ped, numero: span.ped, is_vacation: false })
-        .eq('id', id)
+        .update({
+          end_date: span.end,
+          date_limite: dateLimite,
+          pedagogical_number: span.ped,
+          numero: span.ped,
+          is_vacation: false,
+        })
+        .eq('id', ligne.id)
       if (error) return { error: error.message }
       revues++
     } else {
@@ -347,7 +421,7 @@ export async function regenererSemaines(
         semestre_id: semestreId,
         date_debut: span.start,
         end_date: span.end,
-        date_limite: span.end,
+        date_limite: dateLimite,
         numero: span.ped,
         pedagogical_number: span.ped,
         is_vacation: false,
@@ -359,10 +433,37 @@ export async function regenererSemaines(
   }
 
   // Semaines existantes non alignées sur une semaine calendaire (info, non supprimées).
-  const horsCalendrier = (existing ?? []).filter((w) => !spanStarts.has(w.date_debut as string)).length
+  const horsCalendrier = lignes.filter((w) => !spanStarts.has(w.date_debut)).length
 
-  revalidatePath('/prof/calendrier/config')
   return { data: { ajoutees, revues, horsCalendrier } }
+}
+
+/**
+ * Bouton « Générer les semaines » (écrans Semestres et Vacances de la config).
+ * Enveloppe l'action de synchronisation : contrôle du rôle + invalidation des vues.
+ */
+export async function regenererSemaines(
+  semestreId: string
+): Promise<{ error?: string; data?: { ajoutees: number; revues: number; horsCalendrier: number } }> {
+  const { supabase } = await verifierProf()
+  const res = await synchroniserSemaines(supabase, semestreId)
+  revaliderSemaines()
+  return res
+}
+
+/**
+ * Synchronisation implicite, déclenchée par les actions qui déplacent la grille.
+ * Best-effort : elle ne doit jamais faire échouer l'action porteuse (le semestre
+ * créé reste créé). Un échec est journalisé ET reste visible à l'écran — la config
+ * affiche « générées / prévues » et signale l'écart (cf. page.tsx / EcranSemestres).
+ */
+async function synchroniserEnSilence(supabase: ClientProf, semestreId: string) {
+  try {
+    const res = await synchroniserSemaines(supabase, semestreId)
+    if (res.error) console.error('[calendrier] synchronisation des semaines :', res.error)
+  } catch (e) {
+    console.error('[calendrier] synchronisation des semaines :', e)
+  }
 }
 
 // ── Couleur de classe ─────────────────────────────────────────────────────────

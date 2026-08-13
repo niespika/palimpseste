@@ -7,10 +7,11 @@ import Tuile from '@/components/Tuile'
 import VueSemaine from './VueSemaine'
 import TirageAuSort from './TirageAuSort'
 import type { EleveAvecDepot, StatutPresentation } from '@/types/fragments'
-import { formatJour } from '@/utils/fuseau'
+import { formatInstant } from '@/utils/fuseau'
 import { lireFuseau } from '@/utils/fuseau-serveur'
 
-const formatDate = (d: string) => formatJour(d, { day: 'numeric', month: 'long' })
+// `date_limite` est un INSTANT (fin de journée dans le fuseau de l'école).
+const formatDate = (d: string, tz: string) => formatInstant(d, tz, { day: 'numeric', month: 'long' })
 
 export default async function PageVueSemaine({
   params,
@@ -111,7 +112,7 @@ export default async function PageVueSemaine({
           <p className="font-medium text-encre">
             Semaine {semaine.numero}{semaine.titre ? ` — ${semaine.titre}` : ''}
           </p>
-          <p className="text-sm text-muet mt-0.5">Date limite : {formatDate(semaine.date_limite)}</p>
+          <p className="text-sm text-muet mt-0.5">Date limite : fin du {formatDate(semaine.date_limite, tz)}</p>
         </div>
         <span className={`text-xs px-2 py-1 rounded-full ${semaine.ouverte ? 'bg-ok-teinte text-ok' : 'bg-parchemin-fonce text-muet'}`}>
           {semaine.ouverte ? 'Ouverte' : 'Fermée'}

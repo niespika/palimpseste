@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import { createClient } from '@/utils/supabase/server'
-import { formatJour } from '@/utils/fuseau'
+import { formatInstant } from '@/utils/fuseau'
+import { lireFuseau } from '@/utils/fuseau-serveur'
 import { semestreFragmentsActif } from './contexte-semestre'
 import { toggleSemaineOuverte } from './actions'
 import type { FragmentSemaine } from '@/types/fragments'
@@ -10,10 +11,12 @@ async function toggleAction(formData: FormData): Promise<void> {
   await toggleSemaineOuverte(formData)
 }
 
-const formatDate = (dateStr: string) => formatJour(dateStr, { day: 'numeric', month: 'long' })
+// `date_limite` est un INSTANT (fin de journée dans le fuseau de l'école).
+const formatDate = (dateStr: string, tz: string) => formatInstant(dateStr, tz, { day: 'numeric', month: 'long' })
 
 export default async function PageFragmentsPof() {
   const supabase = await createClient()
+  const tz = await lireFuseau()
   const { semestre } = await semestreFragmentsActif(supabase)
 
   // Les semaines sont dérivées du semestre (+ vacances) dans le Calendrier
@@ -42,9 +45,21 @@ export default async function PageFragmentsPof() {
       </div>
 
       {!semaines || semaines.length === 0 ? (
-        <div className="bg-surface border border-bordure rounded-xl p-8 text-center text-muet text-sm">
-          Aucune semaine dans ce semestre. Les semaines sont générées automatiquement à partir du semestre et des vacances définis dans le{' '}
-          <Link href="/prof/calendrier/config" className="text-encre-douce underline">Calendrier</Link>.
+        // Sans semaine, aucun élève ne peut déposer : l'écran doit dire quoi faire et
+        // mener DIRECTEMENT au geste (le rail de la config s'ouvre sur « Classes »,
+        // et rien n'y porte le mot « semaines » — d'où l'ancre ?section=semestres).
+        <div className="bg-surface border border-bordure rounded-xl p-8 text-center text-sm space-y-2">
+          <p className="text-encre">
+            {semestre
+              ? 'Aucune semaine générée pour ce semestre — les élèves ne peuvent rien déposer.'
+              : 'Aucun semestre : crée-le dans le Calendrier, ses semaines suivront.'}
+          </p>
+          <p className="text-muet">
+            Les semaines se déduisent du semestre et des vacances.{' '}
+            <Link href="/prof/calendrier/config?section=semestres" className="text-encre-douce underline">
+              Générer les semaines dans le Calendrier →
+            </Link>
+          </p>
         </div>
       ) : (
         <div className="space-y-3">
@@ -60,7 +75,7 @@ export default async function PageFragmentsPof() {
                 <p className="font-medium text-encre group-hover:text-encre-douce">
                   Semaine {semaine.numero}{semaine.titre ? ` — ${semaine.titre}` : ''}
                 </p>
-                <p className="text-sm text-muet mt-0.5">Limite : {formatDate(semaine.date_limite)}</p>
+                <p className="text-sm text-muet mt-0.5">Limite : fin du {formatDate(semaine.date_limite, tz)}</p>
               </Link>
               <div className="flex items-center gap-3 flex-shrink-0">
                 <span className={`text-xs px-2 py-1 rounded-full ${

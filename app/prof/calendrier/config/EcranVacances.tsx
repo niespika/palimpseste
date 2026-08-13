@@ -58,11 +58,14 @@ export default function EcranVacances({
   selectedId,
   holidays,
   bande,
+  semainesGenerees,
 }: {
   semestres: Semestre[]
   selectedId: string | null
   holidays: HolidayInfo[]
   bande: SemaineGrille[]
+  /** Semaines réellement stockées (`fragments_semaines`) pour le semestre affiché. */
+  semainesGenerees: number
 }) {
   const router = useRouter()
   const [editId, setEditId] = useState<string | null>(null)
@@ -77,20 +80,38 @@ export default function EcranVacances({
 
   const jetons = jetonsDepuisBande(bande)
   const nbPeda = bande.filter((w) => !w.isVacation).length
+  // La bande ci-dessous est la grille CALCULÉE ; Fragments ne lit que les semaines
+  // STOCKÉES. Afficher « n semaines ✔ » sans les compter, c'est promettre au prof
+  // des semaines qui n'existent pas en base (constat du 24/07).
+  const aJour = semainesGenerees === nbPeda
 
   async function handleRegenerer() {
     if (!selectedId) return
     setBusy(true)
     setErreur(null)
     setGenMsg(null)
-    const res = await regenererSemaines(selectedId)
-    setBusy(false)
-    if (res.error) return setErreur(res.error)
-    const d = res.data!
-    const parts = [`${d.ajoutees} ajoutée(s)`, `${d.revues} mise(s) à jour`]
-    if (d.horsCalendrier > 0) parts.push(`${d.horsCalendrier} hors calendrier (conservée(s))`)
-    setGenMsg(`Semaines régénérées : ${parts.join(', ')}.`)
-    router.refresh()
+    // Fail-visible : une action serveur qui LÈVE (session expirée, rôle perdu) doit
+    // rendre la main et se dire. Sans le finally, le bouton restait sur « … » à vie
+    // et le prof concluait « la création de semaines ne marche pas ».
+    try {
+      const res = await regenererSemaines(selectedId)
+      if (res.error) return setErreur(res.error)
+      const d = res.data!
+      // La synchronisation n'écrit que ce qui diffère : 0 + 0 veut dire « déjà bon »,
+      // pas « rien ne s'est passé » — à dire, sinon le prof croit le bouton mort.
+      const parts = [`${d.ajoutees} ajoutée(s)`, `${d.revues} mise(s) à jour`]
+      if (d.horsCalendrier > 0) parts.push(`${d.horsCalendrier} hors calendrier (conservée(s))`)
+      setGenMsg(
+        d.ajoutees === 0 && d.revues === 0
+          ? 'Semaines déjà à jour — rien à changer.'
+          : `Semaines générées : ${parts.join(', ')}.`
+      )
+      router.refresh()
+    } catch {
+      setErreur('Génération impossible — recharge la page et réessaie.')
+    } finally {
+      setBusy(false)
+    }
   }
 
   async function handleCreer(e: React.FormEvent<HTMLFormElement>) {
@@ -263,9 +284,15 @@ export default function EcranVacances({
       <div className="bg-parchemin-fonce border border-bordure rounded-xl px-5 py-[18px]">
         <div className="flex items-baseline gap-2.5 flex-wrap mb-1">
           <span className="text-[15px] font-semibold text-encre">Semaines du semestre</span>
-          <span className="text-[13px] font-semibold text-ok">
-            {nbPeda} semaine{nbPeda > 1 ? 's' : ''} ✔
-          </span>
+          {aJour ? (
+            <span className="text-[13px] font-semibold text-ok">
+              {nbPeda} semaine{nbPeda > 1 ? 's' : ''} ✔
+            </span>
+          ) : (
+            <span className="text-[13px] font-semibold text-attention">
+              {nbPeda} prévue{nbPeda > 1 ? 's' : ''} · {semainesGenerees} générée{semainesGenerees > 1 ? 's' : ''}
+            </span>
+          )}
           <span className="ml-auto italic text-[12.5px] text-muet-clair">
             numérotées en continu, en sautant les vacances
           </span>
@@ -318,7 +345,7 @@ export default function EcranVacances({
             disabled={busy}
             className="font-ui text-sm font-medium bg-surface text-encre-douce border border-puce rounded-lg px-4 py-2 hover:bg-parchemin disabled:opacity-50"
           >
-            {busy ? '…' : 'Régénérer les semaines'}
+            {busy ? '…' : aJour ? 'Régénérer les semaines' : 'Générer les semaines'}
           </button>
           <span className="inline-flex items-center gap-3 text-[12.5px] text-muet">
             <span className="inline-flex items-center gap-1.5">

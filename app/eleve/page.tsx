@@ -6,7 +6,7 @@ import { lireReglagesRag } from '@/utils/scriptorium-rag'
 import { contexteClasseEleve } from './contexte-classe'
 import { noteVersLettre, type LettreSection } from '@/utils/notation'
 import { calculerGrilleSemaines } from '@/utils/calendrier-grille'
-import { jourDansFuseau, formatJour } from '@/utils/fuseau'
+import { jourDansFuseau, formatJour, formatInstant } from '@/utils/fuseau'
 import { lireFuseau } from '@/utils/fuseau-serveur'
 import { chargerStatsRevision } from './modules/quazian/actions'
 import { livresPourClasse, toutesSemainesDone } from './modules/aletheia/data'
@@ -108,8 +108,9 @@ export default async function TableauDeBordEleve() {
         .eq('inscription_id', active.id)
         .eq('semaine_id', semaine.id)
         .maybeSingle()
-      // date_limite est une date PURE → libellé jour (UTC), sans heure trompeuse.
-      const limite = formatJour(semaine.date_limite as string, { weekday: 'long', day: 'numeric', month: 'long' })
+      // date_limite est un INSTANT (fin de journée dans le fuseau de l'école) : on
+      // nomme le JOUR dans ce fuseau — en UTC, l'échéance du dimanche dirait lundi.
+      const limite = formatInstant(semaine.date_limite as string, await lireFuseau(), { weekday: 'long', day: 'numeric', month: 'long' })
       const enRetard = !depot && new Date(semaine.date_limite) < new Date()
       const texte = depot
         ? depot.statut === 'en_retard' ? `Semaine ${semaine.numero} — déposé en retard` : `Semaine ${semaine.numero} — déposé ✓`

@@ -38,6 +38,65 @@ et tests unitaires ; 8 et 9 non joués, risque accepté (dégradation propre cou
 
 _Clos → prochaine étape : merge de `feat/c2-l8-calibration` dans `main` (elle embarque aussi Session B et le banc de calibration L8)._
 
+## C8 · L1 — Fragments : remise en marche du calendrier et des semaines (branche `feat/c8-fragments`)
+
+_Diagnostic complet : `RAPPORT_Diagnostic_C8_semaines.md`. Ce qui a pu être prouvé sans session
+prof est déjà soldé (répétition à blanc en base, en transaction annulée + 142 tests unitaires
+verts). **Ce qui reste ci-dessous demande un vrai navigateur, connecté en prof** — je n'ai pas de
+compte prof de test. Rappel de la règle d'or : Chrome, pas l'aperçu embarqué, et Cmd-R avant de
+conclure à un bug._
+
+**État de la sandbox au 13/08 (point de départ des tests) :** semestre actif « Semestre test 2 »
+(01→31/07), **0 semaine**, 0 dépôt. Le semestre archivé « Semestre test » a ses 15 semaines.
+
+- [ ] **C8L1-1 · Le mensonge est parti (à jouer AVANT tout clic — c'est LE test du chantier).**
+  `npm run dev`, prof → `/prof/calendrier/config?section=semestres`. La carte « Semestre test 2 »
+  doit dire **« Aucune semaine générée — Fragments n'affichera rien et aucun élève ne pourra
+  déposer »** avec un bouton **Générer les semaines**, et le rail doit porter la pastille
+  « semaines à générer ». _(Avant ce lot, ce même écran affichait sereinement « 5 semaines ».)_
+- [ ] **C8L1-2 · Réparation d'un clic.** Presser « Générer les semaines » → la mention d'écart
+  disparaît. `/prof/fragments-erudition` liste alors **5 semaines** (S1 à S5), fermées.
+- [ ] **C8L1-3 · Un semestre neuf naît AVEC ses semaines (la vraie correction de la cause).**
+  Créer un semestre de test (p. ex. 24/08 → 19/12), le définir actif → **sans toucher à quoi que
+  ce soit d'autre**, `/prof/fragments-erudition` doit déjà lister ses semaines. Aucune mention
+  d'écart sur sa carte.
+- [ ] **C8L1-4 · Les vacances resserrent la numérotation.** Sur ce semestre, ajouter une période
+  de vacances au milieu → sans presser aucun bouton, la numérotation de Fragments doit sauter la
+  semaine concernée (elle disparaît de la liste) et les suivantes se renuméroter. Supprimer la
+  période → l'inverse.
+- [ ] **C8L1-5 · Dépôt élève de bout en bout (critère de sortie du lot).** Ouvrir une semaine
+  (« Rouvrir » sur `/prof/fragments-erudition`), se connecter avec le compte élève de test d'une
+  classe qui a le module (`Test` ou `T5`), déposer une photo → dépôt accepté, statut **« Déposé »**
+  et **pas « En retard »**, et le prof le voit sur `/prof/fragments-erudition/semaine/<id>`.
+- [ ] **C8L1-6 · L'échéance est à l'heure de l'école (item 7).** Sur cette semaine, l'élève doit
+  lire « À rendre avant la fin du **dimanche** … » et le prof « Limite : fin du … » — **le même
+  jour des deux côtés**, et le dimanche, jamais le lundi. Même contrôle sur
+  `/eleve/calendrier` : la pastille « Fragment S*n* — à rendre » tombe le **dimanche**.
+  _(Avant ce lot, l'échéance valait minuit UTC = samedi 20 h à Toronto : un dépôt du dimanche
+  était compté en retard.)_
+- [ ] **C8L1-7 · Non-régression du reste du calendrier.** `/prof/calendrier`, `/eleve/calendrier`
+  et le tableau de bord élève s'affichent sans erreur ; la bande « Semaines du semestre » du volet
+  Vacances est verte (« *n* semaines ✔ ») une fois la génération faite.
+- [ ] **C8L1-8 · Reprise du test reporté C11a-8 (part Fragments).** Une fois un dépôt analysé, la
+  tuile « Coût API » de `/prof` doit voir monter la ligne **Fragments**. _(Reporté ici le 26/07 :
+  la création de semaines était bloquée, on ne pouvait pas produire d'analyse.)_
+
+**Soldé sans navigateur, le 13/08 (n'a pas besoin d'être rejoué) :**
+
+- [x] **C8L1-A · La base accepte le flux.** Répétition à blanc sous l'identité réelle du prof puis
+  de l'élève (`set local role authenticated` + `request.jwt.claims`, transaction **annulée**) :
+  `est_prof()` → `t`, insertion des 5 semaines du semestre actif, rejeu idempotent de la mise à
+  jour, puis insertion d'un dépôt élève sur la semaine 1. `ROLLBACK` → sandbox intacte (0 semaine,
+  0 dépôt, vérifié après coup). Aucune policy ne bloque le chemin.
+- [x] **C8L1-B · Le calcul des semaines est juste.** Rejeu hors ligne de la génération sur les
+  données réelles : elle redonne **exactement** les 15 semaines du semestre archivé (mêmes dates de
+  début, mêmes numéros, mêmes sauts pour les deux périodes de vacances) et 5 semaines pour le
+  semestre actif.
+- [x] **C8L1-C · Fuseau et heure d'été.** 10 tests de garde (`utils/calendrier-semaines.test.ts`),
+  dont les deux dimanches de bascule DST 2026 à Toronto (8 mars, 1ᵉʳ novembre) et un invariant
+  « le jour lu est le jour demandé » sur 4 fuseaux × 4 dates. `npm test` : **142/142**.
+  `npm run build` et `npx tsc --noEmit` : verts.
+
 ## C2 — (à venir)
 
 _Les tests seront ajoutés à l'écriture des specs / à la clôture des sessions (écran élève, calibration L8…). S'y ajoutera le test reporté C11a-6 (synthèse hebdo → ligne `scriptorium` classe seule)._

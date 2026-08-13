@@ -83,6 +83,21 @@ export default async function CalendrierConfigPage({
   }
   const holidays = selId ? holidaysParSem.get(selId) ?? [] : []
 
+  // Semaines réellement STOCKÉES (`fragments_semaines`) — à ne pas confondre avec la
+  // grille calculée plus bas. C'est cette table que lit Fragments et à laquelle les
+  // dépôts sont rattachés : l'écran doit dire la vérité sur l'écart entre les deux,
+  // sinon un semestre sans aucune semaine s'affiche « 12 semaines ✔ » (constat 24/07).
+  const { data: semainesStockees } = await supabase
+    .from('fragments_semaines')
+    .select('semestre_id, is_vacation')
+    .eq('is_vacation', false)
+  const stockeesParSem = new Map<string, number>()
+  for (const w of semainesStockees ?? []) {
+    const sid = w.semestre_id as string | null
+    if (!sid) continue
+    stockeesParSem.set(sid, (stockeesParSem.get(sid) ?? 0) + 1)
+  }
+
   const { data: classesData } = await supabase
     .from('classes')
     .select('id, nom, couleur')
@@ -137,6 +152,7 @@ export default async function CalendrierConfigPage({
       ...s,
       anneeScolaire: anneeScolaire(s.start_date),
       totalSemaines: total,
+      semainesGenerees: stockeesParSem.get(s.id) ?? 0,
       nbVacances: hs.length,
       semaineCourante: courante,
       termine: s.end_date < today,
@@ -167,6 +183,10 @@ export default async function CalendrierConfigPage({
       sub: semActif
         ? `${semActif.name} · actif`
         : `${semestres.length} semestre${semestres.length > 1 ? 's' : ''}`,
+      // Un semestre vivant dont les semaines ne sont pas générées = Fragments muet.
+      warn: semestresInfo.some((s) => !s.archived_at && s.semainesGenerees !== s.totalSemaines)
+        ? 'semaines à générer'
+        : null,
     },
     {
       key: 'vacances',
@@ -212,6 +232,7 @@ export default async function CalendrierConfigPage({
               selectedId={selId}
               holidays={holidaysInfo}
               bande={bande}
+              semainesGenerees={selId ? stockeesParSem.get(selId) ?? 0 : 0}
             />
           </section>
         )}
