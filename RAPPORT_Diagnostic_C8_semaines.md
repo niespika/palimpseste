@@ -171,21 +171,25 @@ l'heure ; c'est la valeur implémentée (`finDeJourDansFuseau` → 23:59:59.999 
 changer un jour, c'est une ligne dans `utils/fuseau.ts` + un « Régénérer les semaines » pour
 repropager.
 
-**Q2 — Fuseau réglable ou Toronto en dur ?** *(ouverte, choix par défaut appliqué)* L'item 7 nomme
+**Q2 — Fuseau réglable ou Toronto en dur ? ✅ TRANCHÉ par Louis le 13/08 (clôture de L3) : « le
+fuseau est fixé par le calendrier ». C'est ce que fait le code — le choix par défaut devient la
+règle, le sélecteur du volet Fuseau reste.** L'item 7 nomme
 `America/Toronto` ; le code, lui, a déjà généralisé en fuseau **configurable**
 (`calendrier_params.fuseau`, réglé sur `America/Toronto` depuis le 07/07, sélecteur prof dans le
 volet Fuseau). J'ai suivi le réglage plutôt que d'écrire Toronto en dur — sinon le sélecteur prof
 mentirait sur les échéances. À confirmer : si l'intention était « Toronto quoi qu'il arrive », c'est
 le sélecteur qu'il faut retirer, pas le code des échéances.
 
-**Q3 — « Créer une semaine dans une classe de test » n'est pas réalisable à la lettre.** Le critère
+**Q3 — « Créer une semaine dans une classe de test » n'est pas réalisable à la lettre. ✅ CONFIRMÉ
+par Louis le 13/08 (clôture de L3) : les semaines sont globales et c'est le calendrier qui les gère.** Le critère
 de sortie du prompt suppose des semaines **par classe** ; `fragments_semaines` n'a pas de
 `classe_id` — les semaines sont **globales au semestre**, partagées par toutes les classes qui ont
 le module. Deux classes qui ne se voient pas les mêmes jours ont donc la même échéance du dimanche.
 Le test C8L1-5 est écrit dans cette réalité (une semaine, un dépôt depuis une classe qui a le
 module). Le recâblage par classe est déjà différé (D12) → noté dans `IDEES_post_rentree.md`.
 
-**Q4 — Les 15 semaines du semestre archivé gardent une `date_limite` à minuit UTC.** J'ai fait le
+**Q4 — Les 15 semaines du semestre archivé gardent une `date_limite` à minuit UTC. ✅ ACCEPTÉ par
+Louis le 13/08 (clôture de L3) — pas de migration.** J'ai fait le
 choix de **ne pas écrire de migration SQL** : semestre archivé, aucun dépôt en base, et la valeur se
 répare d'un clic sur « Régénérer les semaines » si ce semestre revenait. Une migration de données
 aurait déclenché le protocole renforcé de `SUIVI_SQL.md` (table d'un flux existant) pour zéro
