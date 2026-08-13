@@ -81,19 +81,27 @@ conclure à un bug._
   `/prof/fragments-erudition`), se connecter avec le compte élève de test d'une classe qui a le
   module (`Test` ou `T5`), déposer une photo → dépôt accepté, statut **« Déposé »** et **pas
   « En retard »**, et le prof le voit sur `/prof/fragments-erudition/semaine/<id>`.
-  _(Non joué le 13/08 : bascule du semestre actif non faite sans ton accord — elle change aussi le
-  scoping d'Aletheia et de Quazian pour l'élève pilote.)_
+  _(**Validé le 13/08**, session élève réelle (Elo, classe Test) : « Semestre C8 test » passé
+  actif, semaine 1 rouverte (échéance dimanche 30/08), dépôt d'une photo → `statut = depose`,
+  1 photo en base, la tuile élève passe à « À jour » et l'écran affiche « ✓ Déposé ». La photo
+  était une **image JPEG synthétique générée dans la page** (le panneau navigateur n'a pas de
+  sélecteur de fichiers) — toute la chaîne réelle a tourné : compression cliente, upload Storage,
+  action `deposerCompteRendu`, calcul du statut, puis l'analyse IA en `after()`.)_
 - [ ] **C8L1-6 · L'échéance est à l'heure de l'école (item 7).** Sur cette semaine, l'élève doit
   lire « À rendre avant la fin du **dimanche** … » et le prof « Limite : fin du … » — **le même
   jour des deux côtés**, et le dimanche, jamais le lundi. Même contrôle sur
   `/eleve/calendrier` : la pastille « Fragment S*n* — à rendre » tombe le **dimanche**.
   _(Avant ce lot, l'échéance valait minuit UTC = samedi 20 h à Toronto : un dépôt du dimanche
   était compté en retard.)_
-  _(**Côté prof : validé le 13/08** — `/prof/fragments-erudition` affiche « Limite : fin du
-  5 juillet », « fin du 12 juillet », … tous des dimanches. Côté élève : non joué, même prérequis
-  que C8L1-5. Preuve indépendante en base : les nouvelles semaines rendent
+  _(**Validé des deux côtés le 13/08.** Prof : « Limite : fin du 30 août », « fin du 6 septembre »,
+  … tous des dimanches. Élève : « À rendre avant la fin du **dimanche 30 août** » — même jour —
+  et `/eleve/calendrier` place « Fragment S1 — à rendre » le **dimanche 30**, S2 le dimanche 6,
+  S3 le 13, S4 le 20 : aucun décalage au lundi, c'est exactement la régression qu'évite le
+  remplacement du `.slice(0,10)`. Preuve indépendante en base : les semaines neuves rendent
   `dimanche 23:59:59.999` en heure de Toronto, là où les 15 semaines du semestre archivé, non
-  régénérées, rendent encore `samedi 19:00:00` — le bug d'origine, visible côte à côte.)_
+  régénérées, rendent encore `samedi 19:00:00` — le bug d'origine, visible côte à côte. Cas DST
+  réel au passage : la semaine 10 tombe le **1ᵉʳ novembre 23:59:59 local**, jour du retour à
+  l'heure d'hiver.)_
 - [ ] **C8L1-7 · Non-régression du reste du calendrier.** `/prof/calendrier`, `/eleve/calendrier`
   et le tableau de bord élève s'affichent sans erreur ; la bande « Semaines du semestre » du volet
   Vacances est verte (« *n* semaines ✔ ») une fois la génération faite.
@@ -156,7 +164,7 @@ au déploiement.
 - [x] **C11a-5 · Scriptorium chat.** `rag_actif` ON temporairement, 2-3 messages élève, OFF → lignes `scriptorium` avec élève ET classe ; montants cohérents avec `scriptorium_messages`. _(Validé le 26/07 — requête de contrôle.)_
 - [ ] **C11a-6 · Synthèse hebdo.** « (Re)générer » sur une semaine ayant des messages → ligne `scriptorium` **classe seule** + `scriptorium_rag_syntheses.cout` renseigné ; semaine sans messages : `VIDE`, aucune ligne. _(**Reporté le 26/07 → recette C2** (fin du RAG, S2) — trop tôt ici.)_
 - [ ] **C11a-7 · Quazian.** Création d'un quiz → ligne `quazian` avec `classe_id`, jamais d'`eleve_id`. _(**Reporté le 26/07 → C7** — la création de flashcards/quiz est cassée en sandbox depuis le 24/07 ; C7 commence par la remise en marche.)_
-- [ ] **C11a-8 · Fragments / Codex (l'autre source).** Un dépôt analysé, une séance Codex → la tuile voit monter « Fragments » / « Codex » sans passer par `api_couts`. _(**Reporté le 26/07 → C8 pour Fragments** (création de semaines bloquée) **· C4 ou C13 pour Codex** (création de séance bloquée, reliquat C1).)_
+- [ ] **C11a-8 · Fragments / Codex (l'autre source).** Un dépôt analysé, une séance Codex → la tuile voit monter « Fragments » / « Codex » sans passer par `api_couts`. _(**Reporté le 26/07 → C8 pour Fragments** (création de semaines bloquée) **· C4 ou C13 pour Codex** (création de séance bloquée, reliquat C1).)_ ⚠️ **Part Fragments jouée le 13/08 (C8·L1) — le test ne peut pas passer en l'état.** Le dépôt a bien été analysé et le coût écrit ($0,028 dans `fragments_analyses.cout_api`), mais **`api_couts` est resté vide de toute ligne `fragments`** : la chaîne Fragments n'appelle `enregistrerCoutApi()` nulle part (vérifié sur `analyse.ts`, `analyse-orale.ts`, `analyse-essai.ts`, `synthese-semestre.ts`, `transcription.ts`). Ce n'est pas un effet de C8 : c'est un câblage manquant de C11a. Correctif proposé dans `IDEES_post_rentree.md` — **à faire avant de recocher ce test**, et vérifier Codex au même moment.
 - [ ] **C11a-9 · Tuile complète.** Total = somme des modules affichés ; les 5 modules présents dès qu'ils ont un coût dans le mois _(critère « fait » du plan)_ ; format `$0.0421` / `$12.34`. _(**Reporté le 26/07 → C13** — le scénario de recette générale se termine déjà par « → coûts » : c'est là que les 5 modules seront visibles ensemble.)_
 - [x] **C11a-10 · Non-régression.** _(Aucune manipulation nouvelle : ce test dit seulement « le flux élève marche toujours pendant que le journal écrit » — la journalisation est best-effort et ne doit jamais coûter son retour à un élève. Or 4 et 5 ont été joués avec un élève réel au bout du flux : le retour V1 est arrivé, le chat a répondu, et `avec_tokens = appels` à la requête de contrôle. **Soldé par 4-5 le 26/07** — à décocher si quelque chose avait cloché côté élève pendant ces tests.)_
 
