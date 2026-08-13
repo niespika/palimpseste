@@ -418,7 +418,7 @@ parcours d'aucune classe. Les livres (4) restent hors de portée de Quazian.
   classe (T5 ou THLP) : rien. C'est le scoping par classe qui n'existait plus.
   _(**Validé le 13/08** : les cartes sont là côté élève. La visibilité passe désormais par
   l'instance de parcours de la classe, `scriptorium_document_classes` étant vide.)_
-- [ ] **C7L1-6 · Quiz créé et passé (critère de sortie, moitié quiz).** Prof → `/prof/quazian/quizz` →
+- [x] **C7L1-6 · Quiz créé et passé (critère de sortie, moitié quiz).** Prof → `/prof/quazian/quizz` →
   « + Créer un nouveau quizz » : la liste des **contenus** doit être remplie (elle était vide). Cocher
   « NAture humaine », choisir la classe **Test**, générer → valider les questions → lancer. Élève de
   Test : passer le quiz. Prof : fermer, la note apparaît. _(Minimum 5 cartes validées, sinon le
@@ -431,6 +431,16 @@ parcours d'aucune classe. Les livres (4) restent hors de portée de Quazian.
   embarqué). **À rejouer dans Chrome.** Au passage, cette chaîne était fail-silent de bout en bout —
   corrigé au commit `586c5a5` : chaque écriture vérifiée, l'erreur affichée sous le bouton, garde
   `statut='lance'` + `.select()`, et l'écran se rafraîchit tout seul.)_
+  _(**Clos le 13/08.** La cause était bien le `confirm()` natif : reproduit en session prof dans le
+  panneau — clic → **zéro requête réseau**, le handler s'arrêtait à sa première ligne. Remplacé par
+  une confirmation EN PAGE (patron `BoutonSupprimerUnite`, commit `89625fc`) ; **fermeture jouée et
+  validée** — quizz `ferme`, moyenne de cohorte 9,150, écart-type 0, Elo à 19,15/20, z = 0, les
+  5 réponses écrites et répondues, aucune auto-soumission. **Une inexactitude trouvée en relisant ce
+  qu'avait écrit la fermeture** : le panneau annonçait « 5 élèves ont commencé sans soumettre »
+  alors qu'aucun n'avait ouvert le quizz — `eleves` est le roster de la classe, pas la liste de ceux
+  qui ont commencé. Corrigé (`1904add`) : les deux populations sont comptées à part, « ouvert sans
+  soumettre → 25/25/25/25 » et « jamais ouvert → aucune note ». **À revoir au prochain quizz** :
+  celui-ci est fermé, le bouton n'existe plus.)_
 - [ ] **C7L1-7 · Le gel de l'intégrité tient toujours (item 5 du chantier — assumé, pas retiré).**
   Bloquer l'élève de test depuis `/prof/integrite`, puis recharger sa page Quazian : bannière
   « cheeky », **révision gelée**, section Quizz **toujours ouverte**. Débloquer ensuite. _(La garde
