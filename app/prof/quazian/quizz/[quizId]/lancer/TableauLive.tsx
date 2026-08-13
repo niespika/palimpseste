@@ -7,6 +7,7 @@ import { fermerQuizz } from './actions'
 interface EleveStatut {
   id: string
   display_name: string
+  commence: boolean
   soumis: boolean
   submitted_at: string | null
   score_moyen: number | null
@@ -89,7 +90,12 @@ export function TableauLive({ quizId, statut, fermeAt, eleves: elevesInit, moyen
 
   const nbSoumis = eleves.filter((e) => e.soumis).length
   const total = eleves.length
-  const nbNonSoumis = total - nbSoumis
+  // Deux populations très différentes à la fermeture : celui qui a OUVERT sans
+  // soumettre sera auto-soumis en 25/25/25/25 (il aura une note), celui qui n'a
+  // jamais ouvert n'aura AUCUNE note. Les confondre, c'est annoncer au prof des
+  // notes qui n'existeront pas.
+  const nbEnCours = eleves.filter((e) => e.commence && !e.soumis).length
+  const nbJamaisOuvert = eleves.filter((e) => !e.commence).length
 
   function formatTemps(s: number) {
     const m = Math.floor(s / 60)
@@ -154,13 +160,20 @@ export function TableauLive({ quizId, statut, fermeAt, eleves: elevesInit, moyen
                   Les notes sont calculées et figées : la moyenne de cohorte, l&apos;écart-type et
                   la note /20 de chaque élève.
                 </p>
-                {nbNonSoumis > 0 ? (
+                {nbEnCours > 0 && (
                   <p className="text-attention">
-                    <strong>{nbNonSoumis} élève{nbNonSoumis > 1 ? 's' : ''}</strong> {nbNonSoumis > 1 ? 'ont' : 'a'} commencé
-                    sans soumettre : {nbNonSoumis > 1 ? 'leurs réponses manquantes seront comptées' : 'ses réponses manquantes seront comptées'} 25/25/25/25.
+                    <strong>{nbEnCours} élève{nbEnCours > 1 ? 's' : ''}</strong> {nbEnCours > 1 ? 'ont' : 'a'} ouvert
+                    le quizz sans soumettre : {nbEnCours > 1 ? 'leurs réponses manquantes seront comptées' : 'ses réponses manquantes seront comptées'} 25/25/25/25.
                   </p>
-                ) : (
-                  <p className="text-muet">Tous les élèves qui ont commencé ont soumis.</p>
+                )}
+                {nbJamaisOuvert > 0 && (
+                  <p className="text-muet">
+                    <strong>{nbJamaisOuvert} élève{nbJamaisOuvert > 1 ? 's' : ''}</strong> {nbJamaisOuvert > 1 ? 'n’ont' : 'n’a'} jamais
+                    ouvert le quizz : {nbJamaisOuvert > 1 ? 'ils n’auront aucune note' : 'il n’aura aucune note'}.
+                  </p>
+                )}
+                {nbEnCours === 0 && nbJamaisOuvert === 0 && (
+                  <p className="text-muet">Toute la classe a soumis.</p>
                 )}
               </div>
               {erreur && <p className="text-sm text-retard">{erreur}</p>}
@@ -240,9 +253,13 @@ export function TableauLive({ quizId, statut, fermeAt, eleves: elevesInit, moyen
                     <span className="text-xs px-2 py-0.5 bg-ok-teinte text-ok rounded-full">
                       {e.auto ? 'Auto-soumis' : 'Soumis'}
                     </span>
-                  ) : (
+                  ) : e.commence ? (
                     <span className="text-xs px-2 py-0.5 bg-parchemin-fonce text-muet rounded-full">
                       En cours…
+                    </span>
+                  ) : (
+                    <span className="text-xs px-2 py-0.5 bg-parchemin-fonce text-muet rounded-full">
+                      Pas commencé
                     </span>
                   )}
                 </td>
