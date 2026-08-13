@@ -5,28 +5,48 @@
 // Sous-navigation d'un module SUR MOBILE (< sm). La Barre 2 de l'en-tête
 // (EnTeteSite) est `hidden sm:block` : elle porte les sous-onglets seulement
 // en desktop. Ce composant restitue les mêmes sous-onglets (source unique :
-// configModules.sousOngletsProf) en dessous de 640px, sinon les sous-pages
-// prof (Paramètres, Validation, Diagnostic, ?vue=…) seraient inatteignables.
-// Rendu une fois dans la coquille /prof ; renvoie null hors module.
+// configModules) en dessous de 640px, sinon les sous-pages seraient
+// inatteignables. Rendu une fois dans la coquille du rôle ; null hors module.
+//
+// C8·L3 : le composant prend un `role`. Côté élève, Fragments a désormais ses
+// onglets (Écrit · Oral · Essai [· Synthèse]) et l'élève est sur téléphone —
+// cette barre est donc sa navigation principale dans le module.
 // =========================================================================
 
 import { Suspense } from 'react'
 import Link from 'next/link'
 import { usePathname, useSearchParams } from 'next/navigation'
-import { moduleDepuisPathname, type ModuleConfig } from './configModules'
+import {
+  moduleDepuisPathname,
+  ongletActifParRoute,
+  sousOngletsPour,
+  vueDefaut,
+  type ModuleConfig,
+  type SousOnglet,
+} from './configModules'
+import OngletsFragmentsEleve, { classePastille, type PastilleOnglet } from './OngletsFragmentsEleve'
 
-function Barre({ mod, actif }: { mod: ModuleConfig; actif: (o: { href: string; vue?: string }) => boolean }) {
+interface BarreProps {
+  mod: ModuleConfig
+  onglets: SousOnglet[]
+  actif: (o: SousOnglet) => boolean
+  pastille?: PastilleOnglet
+}
+
+function Barre({ mod, onglets, actif, pastille }: BarreProps) {
   const c = mod.couleurs
   return (
     <nav className="sm:hidden flex gap-1 mb-6 border-b border-bordure overflow-x-auto -mx-4 px-4">
-      {mod.sousOngletsProf.map((o) => {
+      {onglets.map((o) => {
         const est = actif(o)
+        const p = pastille?.(o) ?? null
         return (
           <Link
             key={o.href}
             href={o.href}
             aria-current={est ? 'page' : undefined}
-            className="font-ui whitespace-nowrap rounded-t-lg px-4 py-2 text-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pigment"
+            // min-h 44px : cible tactile (l'élève est sur téléphone).
+            className="font-ui whitespace-nowrap rounded-t-lg px-4 min-h-[44px] inline-flex items-center gap-1.5 text-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pigment"
             style={{
               fontWeight: est ? 500 : 400,
               background: est ? c.ongletActifFond : 'transparent',
@@ -35,6 +55,12 @@ function Barre({ mod, actif }: { mod: ModuleConfig; actif: (o: { href: string; v
             }}
           >
             {o.label}
+            {p && (
+              <>
+                <span aria-hidden className={`w-1.5 h-1.5 rounded-full ${classePastille(p.couleur)}`} />
+                <span className="sr-only">— {p.libelle}</span>
+              </>
+            )}
           </Link>
         )
       })}
@@ -42,33 +68,50 @@ function Barre({ mod, actif }: { mod: ModuleConfig; actif: (o: { href: string; v
   )
 }
 
-// Onglets pilotés par `?vue=` (Scriptorium) — useSearchParams isolé sous Suspense.
-function BarreParam({ mod }: { mod: ModuleConfig }) {
-  const vue = useSearchParams().get('vue') ?? mod.sousOngletsProf[0]?.vue
+// Onglets pilotés par `?vue=` (Scriptorium, Fragments élève) — useSearchParams
+// isolé sous Suspense.
+function BarreParam({ mod, onglets, pastille }: Omit<BarreProps, 'actif'>) {
+  const vue = useSearchParams().get('vue') ?? vueDefaut(onglets)
   // Cf. EnTeteSite : actif = la vue courante appartient au groupe `vues` (repli `[vue]`).
-  const estActif = (o: { vue?: string; vues?: string[] }) => {
+  const estActif = (o: SousOnglet) => {
     const groupe = o.vues ?? (o.vue ? [o.vue] : [])
     return vue != null && groupe.includes(vue)
   }
-  return <Barre mod={mod} actif={estActif} />
+  return <Barre mod={mod} onglets={onglets} actif={estActif} pastille={pastille} />
 }
 
-export default function SousNavModuleMobile() {
+export default function SousNavModuleMobile({ role = 'prof' }: { role?: 'prof' | 'eleve' }) {
   const pathname = usePathname()
   const mod = moduleDepuisPathname(pathname)
-  if (!mod || mod.sousOngletsProf.length === 0) return null
+  if (!mod) return null
 
-  if (mod.sousOngletsProf.some((o) => o.vue)) {
+  const onglets = sousOngletsPour(mod, role)
+  if (onglets.length === 0) return null
+
+  const parParam = onglets.some((o) => !!o.vue)
+
+  // Fragments élève : la liste (3 ou 4 onglets) et les pastilles viennent de la base.
+  if (mod.cle === 'fragments' && role === 'eleve') {
     return (
-      <Suspense fallback={<Barre mod={mod} actif={(o) => o.vue === mod.sousOngletsProf[0]?.vue} />}>
-        <BarreParam mod={mod} />
+      <OngletsFragmentsEleve
+        base={onglets}
+        rendu={(liste, pastille) => (
+          <Suspense fallback={<Barre mod={mod} onglets={liste} actif={(o) => o.vue === vueDefaut(liste)} pastille={pastille} />}>
+            <BarreParam mod={mod} onglets={liste} pastille={pastille} />
+          </Suspense>
+        )}
+      />
+    )
+  }
+
+  if (parParam) {
+    return (
+      <Suspense fallback={<Barre mod={mod} onglets={onglets} actif={(o) => o.vue === vueDefaut(onglets)} />}>
+        <BarreParam mod={mod} onglets={onglets} />
       </Suspense>
     )
   }
 
-  const actifHref = mod.sousOngletsProf.reduce<string | null>((best, o) => {
-    const match = pathname === o.href || pathname.startsWith(o.href + '/')
-    return match && o.href.length > (best?.length ?? -1) ? o.href : best
-  }, null)
-  return <Barre mod={mod} actif={(o) => o.href === actifHref} />
+  const actifHref = ongletActifParRoute(onglets, pathname)
+  return <Barre mod={mod} onglets={onglets} actif={(o) => o.href === actifHref} />
 }

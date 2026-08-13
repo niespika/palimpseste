@@ -200,11 +200,13 @@ export default async function PageEleveDetail({
   return (
     <div className="space-y-6 pb-8">
       <div className="flex items-center gap-2">
+        {/* C8·L3 — on arrive ici depuis Suivi (clic sur le nom de l'élève) : le
+            retour y revient, sur la classe consultée. */}
         <Link
-          href="/prof/fragments-erudition"
+          href={`/prof/fragments-erudition/suivi${classeId ? `?classe=${classeId}` : ''}`}
           className="text-sm text-muet hover:text-encre-douce"
         >
-          ← Vue par semaine
+          ← Suivi
         </Link>
       </div>
 

@@ -5,9 +5,13 @@
 // Le shell est constant ; les Lots 4-8 fournissent leur payload.
 // ----------------------------------------------------------------------------
 
+import Link from 'next/link'
+
 export interface LigneEleve {
   id: string
   display_name: string
+  /** Si fourni : le NOM de l'élève devient un lien (C8·L3 — clic sur l'élève = sa progression). */
+  href?: string
   /** Statut injecté (badges, chiffres…). */
   statut?: React.ReactNode
   /** Actions injectées sur la ligne (ex. retirer l'élève). */
@@ -41,7 +45,16 @@ export default function DetailClasse({ nom, sousTitre, eleves, action, vide }: P
           {eleves.map((e) => (
             <li key={e.id} className="px-5 py-3 flex items-center justify-between gap-3">
               <div className="min-w-0">
-                <p className="text-sm font-medium text-encre">{e.display_name}</p>
+                {e.href ? (
+                  <Link
+                    href={e.href}
+                    className="text-sm font-medium text-encre hover:text-encre-douce underline underline-offset-2 decoration-bordure hover:decoration-encre-douce rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pigment"
+                  >
+                    {e.display_name}
+                  </Link>
+                ) : (
+                  <p className="text-sm font-medium text-encre">{e.display_name}</p>
+                )}
                 {e.statut && <div className="mt-1">{e.statut}</div>}
               </div>
               {e.actions && <div className="flex-shrink-0">{e.actions}</div>}

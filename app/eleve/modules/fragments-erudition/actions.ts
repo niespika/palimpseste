@@ -8,6 +8,7 @@ import { lancerAnalyse } from '@/utils/analyse'
 import { detecterAveuHeuristique } from '@/utils/detecteur-integrite'
 import { messageSiBloque, signalerStrikeAuto } from '@/utils/integrite'
 import { messageSiRetoursNonLus } from '@/utils/retours-lus'
+import { etatOngletsFragmentsEleve, type EtatOngletsFragments } from '@/utils/fragments-etat-eleve'
 
 // Vérifier que l'appelant est bien un élève
 async function verifierEleve() {
@@ -222,6 +223,14 @@ export async function validerLectureRetourEssai(analyseId: string) {
   } catch {
     return { error: 'Action indisponible pour le moment, réessaie.' }
   }
+}
+
+// C8·L3 — état des onglets (pastilles) pour la Barre 2 et la sous-nav mobile. Les
+// onglets vivent dans la coquille /eleve, au-dessus de la page : ils chargent donc
+// leur état eux-mêmes, comme le fait déjà le sélecteur de semestre côté prof.
+export async function chargerEtatOngletsFragments(): Promise<EtatOngletsFragments> {
+  const { supabase, userId } = await verifierEleve()
+  return etatOngletsFragmentsEleve(supabase, createAdminClient(), userId)
 }
 
 export async function getSignedUrls(chemins: string[]): Promise<Record<string, string>> {

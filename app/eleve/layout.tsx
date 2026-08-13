@@ -3,6 +3,7 @@ import { createClient } from '@/utils/supabase/server'
 import { deconnexion } from './actions'
 import EnTeteSite from '@/components/nav/EnTeteSite'
 import BarreOngletsMobile from '@/components/nav/BarreOngletsMobile'
+import SousNavModuleMobile from '@/components/nav/SousNavModuleMobile'
 import { navEleveFiltree } from '@/components/nav/configNavigation'
 import { slugsModulesAccessibles } from '@/utils/acces'
 import SelecteurClasseEleve from './SelecteurClasseEleve'
@@ -48,6 +49,8 @@ export default async function EleveLayout({ children }: { children: React.ReactN
       {/* Colonne alignée sur l'en-tête (`EnTeteSite` : max-w-[1040px] / px-[28px]) —
           le contenu tombe sous la marque et le sceau. */}
       <main className="max-w-[1040px] mx-auto px-4 sm:px-[28px] pt-8 pb-24 sm:pb-8">
+        {/* Sous-nav du module SUR MOBILE (la Barre 2 desktop est cachée < sm) — C8·L3. */}
+        <SousNavModuleMobile role="eleve" />
         {children}
       </main>
       {/* Barre d'onglets fixe (mobile) — compensée par le pb-24 du <main>. */}

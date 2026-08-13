@@ -21,6 +21,7 @@ import BarreNavigation from './BarreNavigation'
 import SceauModule from './SceauModule'
 import {
   moduleDepuisPathname,
+  ongletActifParRoute,
   sousOngletsPour,
   vueDefaut,
   DEVISE_MAISON,
@@ -28,6 +29,7 @@ import {
   type DeviseMonde,
   type SousOnglet,
 } from './configModules'
+import OngletsFragmentsEleve, { classePastille, type PastilleOnglet } from './OngletsFragmentsEleve'
 import type { NavTab } from './configNavigation'
 import SelecteurClasseEleve from '@/app/eleve/SelecteurClasseEleve'
 import SelecteurSemestre from '@/app/prof/fragments-erudition/SelecteurSemestre'
@@ -87,19 +89,27 @@ function Devise({ devise, couleur, maison }: { devise: DeviseMonde; couleur: str
 // `overflow-x-auto` + le `min-w-0` du parent gardent le sceau à l'écran quand
 // c'est serré (640–900px) sans changer le rendu à pleine largeur.
 function SousOngletsListe({
-  mod, onglets, compact, actif,
-}: { mod: ModuleConfig; onglets: SousOnglet[]; compact: boolean; actif: (o: { href: string; vue?: string }) => boolean }) {
+  mod, onglets, compact, actif, pastille,
+}: {
+  mod: ModuleConfig
+  onglets: SousOnglet[]
+  compact: boolean
+  actif: (o: { href: string; vue?: string }) => boolean
+  /** C8·L3 (Fragments élève) : point d'état à droite du libellé. */
+  pastille?: PastilleOnglet
+}) {
   const c = mod.couleurs
   return (
     <div className="flex justify-center max-w-full overflow-x-auto py-1 -my-1" style={{ gap: compact ? 4 : 6 }}>
       {onglets.map((o) => {
         const est = actif(o)
+        const p = pastille?.(o) ?? null
         return (
           <Link
             key={o.href}
             href={o.href}
             aria-current={est ? 'page' : undefined}
-            className="font-ui rounded-[8px] whitespace-nowrap transition-colors"
+            className="font-ui rounded-[8px] whitespace-nowrap transition-colors inline-flex items-center gap-1.5"
             style={{
               fontSize: compact ? 13.5 : 14,
               fontWeight: est ? 500 : 400,
@@ -109,6 +119,12 @@ function SousOngletsListe({
             }}
           >
             {o.label}
+            {p && (
+              <>
+                <span aria-hidden className={`w-1.5 h-1.5 rounded-full ${classePastille(p.couleur)}`} />
+                <span className="sr-only">— {p.libelle}</span>
+              </>
+            )}
           </Link>
         )
       })}
@@ -116,22 +132,19 @@ function SousOngletsListe({
   )
 }
 
-// Onglets pilotés par la ROUTE : actif = plus long préfixe (comme SousNavModule).
+// Onglets pilotés par la ROUTE : actif = plus long préfixe (href ou `prefixes`).
 function SousOngletsRoute({
   mod, onglets, pathname, compact,
 }: { mod: ModuleConfig; onglets: SousOnglet[]; pathname: string; compact: boolean }) {
-  const actifHref = onglets.reduce<string | null>((best, o) => {
-    const match = pathname === o.href || pathname.startsWith(o.href + '/')
-    return match && o.href.length > (best?.length ?? -1) ? o.href : best
-  }, null)
+  const actifHref = ongletActifParRoute(onglets, pathname)
   return <SousOngletsListe mod={mod} onglets={onglets} compact={compact} actif={(o) => o.href === actifHref} />
 }
 
 // Onglets pilotés par `?vue=` (Scriptorium, prof ET élève). Isolé pour n'exiger
 // la frontière Suspense de useSearchParams QUE sur ce sous-arbre.
 function SousOngletsParam({
-  mod, onglets, compact,
-}: { mod: ModuleConfig; onglets: SousOnglet[]; compact: boolean }) {
+  mod, onglets, compact, pastille,
+}: { mod: ModuleConfig; onglets: SousOnglet[]; compact: boolean; pastille?: PastilleOnglet }) {
   const vue = useSearchParams().get('vue') ?? vueDefaut(onglets)
   // Un onglet est actif si la vue courante appartient à son groupe `vues`
   // (repli sur `[vue]`). Garde `vue != null` : `vue` est `string | undefined`.
@@ -139,7 +152,7 @@ function SousOngletsParam({
     const groupe = o.vues ?? (o.vue ? [o.vue] : [])
     return vue != null && groupe.includes(vue)
   }
-  return <SousOngletsListe mod={mod} onglets={onglets} compact={compact} actif={estActif} />
+  return <SousOngletsListe mod={mod} onglets={onglets} compact={compact} actif={estActif} pastille={pastille} />
 }
 
 export default function EnTeteSite({ role, tabs, deconnexionAction, classe }: EnTeteSiteProps) {
@@ -151,6 +164,8 @@ export default function EnTeteSite({ role, tabs, deconnexionAction, classe }: En
   const sousOnglets = mod ? sousOngletsPour(mod, role) : []
   const montreSousOnglets = !!mod && sousOnglets.length > 0
   const estFragments = mod?.cle === 'fragments'
+  // Face élève de Fragments : onglets `?vue=` + pastilles d'état, chargés à part.
+  const estFragmentsEleve = estFragments && role === 'eleve' && montreSousOnglets
   const sousOngletsCompacts = sousOnglets.length >= 6
   const sousOngletsParParam = sousOnglets.some((o) => !!o.vue)
 
@@ -192,7 +207,9 @@ export default function EnTeteSite({ role, tabs, deconnexionAction, classe }: En
               <span className="w-px self-stretch" style={FILET_STYLE} />
               {montreSousOnglets ? (
                 <div className="flex-1 min-w-0 flex flex-col items-center" style={{ gap: 10 }}>
-                  {estFragments ? (
+                  {/* Le sélecteur de semestre est un outil du PROF : l'élève, lui, voit
+                      toujours le semestre courant (aucun choix). */}
+                  {estFragments && role === 'prof' ? (
                     <div className="flex items-center justify-center flex-wrap" style={{ gap: 14 }}>
                       <Devise devise={mod.devise} couleur="#6E5A3E" />
                       <SelecteurSemestre />
@@ -200,7 +217,28 @@ export default function EnTeteSite({ role, tabs, deconnexionAction, classe }: En
                   ) : (
                     <Devise devise={mod.devise} couleur="#6E5A3E" />
                   )}
-                  {sousOngletsParParam ? (
+                  {estFragmentsEleve ? (
+                    // C8·L3 — la liste (3 ou 4 onglets) et les pastilles d'état viennent
+                    // de la base ; le rendu reste celui de la Barre 2.
+                    <OngletsFragmentsEleve
+                      base={sousOnglets}
+                      rendu={(onglets, pastille) => (
+                        <Suspense
+                          fallback={
+                            <SousOngletsListe
+                              mod={mod}
+                              onglets={onglets}
+                              compact={sousOngletsCompacts}
+                              actif={(o) => o.vue === vueDefaut(onglets)}
+                              pastille={pastille}
+                            />
+                          }
+                        >
+                          <SousOngletsParam mod={mod} onglets={onglets} compact={sousOngletsCompacts} pastille={pastille} />
+                        </Suspense>
+                      )}
+                    />
+                  ) : sousOngletsParParam ? (
                     <Suspense
                       fallback={
                         <SousOngletsListe

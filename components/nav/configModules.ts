@@ -43,8 +43,12 @@ export interface DeviseMonde {
 export interface SousOnglet {
   href: string
   label: string
-  /** Pour les modules dont les onglets sont pilotés par un paramètre `?vue=` (Scriptorium)
-   *  plutôt que par la route : valeur de `vue` qui rend cet onglet actif. */
+  /** Routes filles qui allument cet onglet, en plus de `href` (onglets pilotés par la
+   *  ROUTE). Sans elles, un écran de détail (`…/eleve/<id>`, `…/essais/<id>`) tomberait
+   *  sur l'onglet racine du module, qui matche tout par préfixe. */
+  prefixes?: string[]
+  /** Pour les modules dont les onglets sont pilotés par un paramètre `?vue=` (Scriptorium,
+   *  Fragments élève) plutôt que par la route : valeur de `vue` qui rend cet onglet actif. */
   vue?: string
   /** Vues (au sens `?vue=`) qui allument cet onglet. Défaut = [vue].
    *  Permet à un onglet parent de rester actif sur ses sous-vues regroupées. */
@@ -136,13 +140,39 @@ export const MODULES: readonly ModuleConfig[] = [
       ombreAnneauRgb: '90,96,67',
     },
     devise: { latin: 'Ars Quaerendi', francais: 'Que rien ne se perde' },
+    // C8·L3 — quatre onglets (règle R8) : « Vue d'ensemble » + « Thèmes » fusionnent
+    // en Suivi ; « Essais » + « Synthèses » se rangent sous Évaluations (toggle interne
+    // `?vue=essai|synthese`, pas un onglet). Les écrans de détail restent où ils sont et
+    // allument leur onglet parent par `prefixes`.
     sousOngletsProf: [
-      { href: '/prof/fragments-erudition', label: 'Semaine' },
-      { href: '/prof/fragments-erudition/vue-ensemble', label: "Vue d'ensemble" },
-      { href: '/prof/fragments-erudition/themes', label: 'Thèmes' },
-      { href: '/prof/fragments-erudition/essais', label: 'Essais' },
-      { href: '/prof/fragments-erudition/semestres', label: 'Synthèses' },
+      {
+        href: '/prof/fragments-erudition',
+        label: 'Semaine',
+        prefixes: [
+          '/prof/fragments-erudition/semaine',
+          '/prof/fragments-erudition/analyse',
+          '/prof/fragments-erudition/presentation',
+        ],
+      },
+      {
+        href: '/prof/fragments-erudition/suivi',
+        label: 'Suivi',
+        prefixes: ['/prof/fragments-erudition/eleve'],
+      },
+      {
+        href: '/prof/fragments-erudition/evaluations',
+        label: 'Évaluations',
+        prefixes: ['/prof/fragments-erudition/essais', '/prof/fragments-erudition/depots'],
+      },
       { href: '/prof/fragments-erudition/parametres', label: 'Paramètres' },
+    ],
+    // C8·L3 — face élève : trois onglets pilotés par `?vue=` (même mécanique que
+    // Scriptorium). Le bilan de semestre est un QUATRIÈME onglet conditionnel, ajouté
+    // à l'exécution quand une synthèse est publiée (cf. ONGLET_SYNTHESE_ELEVE).
+    sousOngletsEleve: [
+      { href: '/eleve/modules/fragments-erudition?vue=ecrit', label: 'Écrit', vue: 'ecrit', vues: ['ecrit'], parDefaut: true },
+      { href: '/eleve/modules/fragments-erudition?vue=oral', label: 'Oral', vue: 'oral', vues: ['oral'] },
+      { href: '/eleve/modules/fragments-erudition?vue=essai', label: 'Essai', vue: 'essai', vues: ['essai'] },
     ],
   },
   {
@@ -204,6 +234,40 @@ export const MODULES: readonly ModuleConfig[] = [
     ],
   },
 ]
+
+/**
+ * Onglet élève CONDITIONNEL de Fragments (C8·L3) : le bilan de semestre n'a de
+ * surface que si une synthèse est publiée pour l'élève. Il est ajouté aux trois
+ * onglets fixes à l'exécution (cf. components/nav/OngletsFragmentsEleve.tsx).
+ */
+export const ONGLET_SYNTHESE_ELEVE: SousOnglet = {
+  href: '/eleve/modules/fragments-erudition?vue=synthese',
+  label: 'Synthèse',
+  vue: 'synthese',
+  vues: ['synthese'],
+}
+
+/**
+ * Onglet actif quand les onglets sont pilotés par la ROUTE : le plus long préfixe
+ * qui matche, `href` et `prefixes` confondus. Sans `prefixes`, un onglet racine
+ * (`/prof/fragments-erudition`) matcherait toutes ses routes filles.
+ * Partagé par la Barre 2 (desktop) et la sous-nav mobile.
+ */
+export function ongletActifParRoute(onglets: SousOnglet[], pathname: string): string | null {
+  let actif: string | null = null
+  let longueur = -1
+  for (const o of onglets) {
+    for (const candidat of [o.href, ...(o.prefixes ?? [])]) {
+      const base = candidat.split('?')[0]
+      const match = pathname === base || pathname.startsWith(base + '/')
+      if (match && base.length > longueur) {
+        actif = o.href
+        longueur = base.length
+      }
+    }
+  }
+  return actif
+}
 
 /** Devise de la maison (hors module). Rendue tout en petites capitales, sans partie française. */
 export const DEVISE_MAISON: DeviseMonde = {

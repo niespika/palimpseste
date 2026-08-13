@@ -103,7 +103,7 @@ export async function sauvegarderTheme(formData: FormData) {
       .insert({ inscription_id: inscriptionId, semestre_id: semestreId, eleve_id: insc.eleve_id, theme, description })
   }
 
-  revalidatePath('/prof/fragments-erudition/themes')
+  revalidatePath('/prof/fragments-erudition/suivi')
   return { success: true }
 }
 

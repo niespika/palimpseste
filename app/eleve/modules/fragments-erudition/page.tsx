@@ -4,7 +4,6 @@ import { createClient } from '@/utils/supabase/server'
 import { createAdminClient } from '@/utils/supabase/admin'
 import { inscriptionsModuleEleve } from '@/utils/acces'
 import { contexteClasseEleve } from '../../contexte-classe'
-import Tuile from '@/components/Tuile'
 import FormulaireDepot from './FormulaireDepot'
 import AnalysePubliee, { tuilesAnalyseEcrite } from './AnalysePubliee'
 import GraphiqueProgression from '@/components/fragments/GraphiqueProgression'
@@ -408,15 +407,6 @@ export default async function PageFragments({ searchParams }: { searchParams: Pr
   const retoursALire = vue === 'ecrit' ? await retoursNonLus(admin, user.id) : []
 
   const aOral = Object.keys(oralParSemaine).length > 0
-  const couleurEcrit: 'vert' | 'rouge' | 'neutre' = !semaine ? 'neutre' : (!depotActuel || gateActif) ? 'rouge' : 'vert'
-  const couleurOral: 'vert' | 'neutre' = aOral ? 'vert' : 'neutre'
-  // Un essai déposé reste signalé même après la fermeture des dépôts et avant la publication
-  // du retour : essaiEleve n'est chargé que si l'essai est ouvert, alors que
-  // essaiIdsInscription suit les dépôts quel que soit l'état d'ouverture.
-  const aDeposeEssai = essaiIdsInscription.length > 0
-  const couleurEssai: 'vert' | 'rouge' | 'neutre' =
-    !epreuveOuverte && !essaiEleve && !analyseEssaiPubliee && !aDeposeEssai ? 'neutre' : (epreuveOuverte && !essaiEleve) ? 'rouge' : 'vert'
-  const lien = (v: string) => `/eleve/modules/fragments-erudition?vue=${v}`
 
   return (
     <div className="space-y-6 pb-8">
@@ -479,41 +469,10 @@ export default async function PageFragments({ searchParams }: { searchParams: Pr
         </div>
       )}
 
-      {/* 3 tuiles d'état cliquables (vert / rouge / neutre) */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-        <Tuile
-          nom="Fragments écrits"
-          sousTitre={!semaine ? 'Rien de neuf' : !depotActuel ? 'À déposer' : gateActif ? 'Retour à lire' : 'À jour'}
-          couleur={couleurEcrit}
-          href={lien('ecrit')}
-          selectionnee={vue === 'ecrit'}
-        />
-        <Tuile
-          nom="Fragment oral"
-          sousTitre={aOral ? 'Retour disponible' : 'Rien de neuf'}
-          couleur={couleurOral}
-          href={lien('oral')}
-          selectionnee={vue === 'oral'}
-        />
-        {essaiActif && (
-          <Tuile
-            nom="Essai"
-            sousTitre={analyseEssaiPubliee ? 'Retour disponible' : (essaiEleve || (!epreuveOuverte && aDeposeEssai)) ? 'Déposé' : epreuveOuverte ? 'À déposer' : 'Rien de neuf'}
-            couleur={couleurEssai}
-            href={lien('essai')}
-            selectionnee={vue === 'essai'}
-          />
-        )}
-        {synthesePubliee && (
-          <Tuile
-            nom="Synthèse"
-            sousTitre="Bilan du semestre"
-            couleur="vert"
-            href={lien('synthese')}
-            selectionnee={vue === 'synthese'}
-          />
-        )}
-      </div>
+      {/* C8·L3 — les tuiles d'état ont laissé la place aux onglets du module
+          (Écrit · Oral · Essai [· Synthèse]) : la navigation est dans la Barre 2
+          en desktop, dans la sous-nav en mobile, et l'état de chaque volet y est
+          porté par une pastille (cf. utils/fragments-etat-eleve.ts). */}
 
       {/* Retour du dernier fragment + validation de lecture (vue écrite uniquement) */}
       {vue === 'ecrit' && derniereAnalyseEcrite && (
@@ -631,6 +590,14 @@ export default async function PageFragments({ searchParams }: { searchParams: Pr
       )}
 
       {/* ── Détail : Essai (dépôt si pas encore soumis + retour ; un seul essai) ── */}
+      {/* L'onglet Essai existe toujours (C8·L3) : sans essai activé pour l'élève,
+          il dit ce qu'il en est au lieu de rester vide. */}
+      {vue === 'essai' && !essaiActif && (
+        <div className="bg-surface border border-bordure rounded-xl p-6 text-center text-sm text-muet">
+          Aucun essai n&apos;est prévu pour toi pour l&apos;instant.
+        </div>
+      )}
+
       {vue === 'essai' && essaiActif && (
         <div className="space-y-4">
           {analyseEssaiPubliee && (

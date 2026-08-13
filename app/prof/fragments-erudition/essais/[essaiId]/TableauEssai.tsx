@@ -278,8 +278,8 @@ export default function TableauEssai({ epreuve, classeId, eleves, essaiParEleve,
       {eleves.length === 0 ? (
         <div className="bg-surface border border-bordure rounded-xl p-8 text-center text-muet text-sm">
           Aucun élève avec l'essai final activé.<br />
-          <Link href="/prof/fragments-erudition/themes" className="text-encre-douce underline">
-            Activer l'essai final dans Thèmes →
+          <Link href="/prof/fragments-erudition/suivi" className="text-encre-douce underline">
+            Activer l'essai final dans Suivi →
           </Link>
         </div>
       ) : (

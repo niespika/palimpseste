@@ -83,8 +83,8 @@ export default async function PageDepot({
               ← {epreuve?.titre ?? 'Essai'}
             </Link>
           ) : (
-            <Link href="/prof/fragments-erudition/essais" className="text-sm text-muet hover:text-encre-douce">
-              ← Essais
+            <Link href="/prof/fragments-erudition/evaluations?vue=essai" className="text-sm text-muet hover:text-encre-douce">
+              ← Évaluations
             </Link>
           )}
           <h3 className="text-lg font-medium text-encre mt-0.5">

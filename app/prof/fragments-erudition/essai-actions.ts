@@ -58,7 +58,7 @@ export async function creerEssai(data: {
     })))
   if (errLiens) return { error: errLiens.message, data: null }
 
-  revalidatePath('/prof/fragments-erudition/essais')
+  revalidatePath('/prof/fragments-erudition/evaluations')
   return { data: { epreuveId: epreuve.id }, error: null }
 }
 
@@ -78,7 +78,7 @@ export async function modifierEssai(epreuveId: string, data: {
     })
     .eq('id', epreuveId)
   if (error) return { error: error.message }
-  revalidatePath('/prof/fragments-erudition/essais')
+  revalidatePath('/prof/fragments-erudition/evaluations')
   revalidatePath(`/prof/fragments-erudition/essais/${epreuveId}`)
   return { success: true }
 }
@@ -94,7 +94,7 @@ export async function assignerEssaiClasse(epreuveId: string, classeId: string, d
       { onConflict: 'essai_id,classe_id', ignoreDuplicates: false }
     )
   if (error) return { error: error.message }
-  revalidatePath('/prof/fragments-erudition/essais')
+  revalidatePath('/prof/fragments-erudition/evaluations')
   return { success: true }
 }
 
@@ -107,7 +107,7 @@ export async function retirerEssaiClasse(epreuveId: string, classeId: string) {
     .eq('essai_id', epreuveId)
     .eq('classe_id', classeId)
   if (error) return { error: error.message }
-  revalidatePath('/prof/fragments-erudition/essais')
+  revalidatePath('/prof/fragments-erudition/evaluations')
   return { success: true }
 }
 
@@ -227,7 +227,7 @@ export async function confirmerUploadEssaiPhotos(essaiId: string) {
     const { analyserEssai } = await import('@/utils/analyse-essai')
     await analyserEssai(essaiId)
   })
-  revalidatePath('/prof/fragments-erudition/essais')
+  revalidatePath('/prof/fragments-erudition/evaluations')
   return { success: true }
 }
 
@@ -303,7 +303,7 @@ export async function publierAnalyseEssai(analyseId: string) {
     modifie_par_prof: true,
   }).eq('id', analyseId)
   if (error) return { error: error.message }
-  revalidatePath('/prof/fragments-erudition/essais')
+  revalidatePath('/prof/fragments-erudition/evaluations')
   return { success: true }
 }
 
@@ -315,7 +315,7 @@ export async function depublierAnalyseEssai(analyseId: string) {
     publiee_at: null,
   }).eq('id', analyseId)
   if (error) return { error: error.message }
-  revalidatePath('/prof/fragments-erudition/essais')
+  revalidatePath('/prof/fragments-erudition/evaluations')
   return { success: true }
 }
 
@@ -368,7 +368,7 @@ export async function toggleEssaiActif(inscriptionId: string, semestreId: string
     const eleveId = await eleveDeInscription(admin, inscriptionId)
     await admin.from('fragments_themes').insert({ inscription_id: inscriptionId, semestre_id: semestreId, eleve_id: eleveId, essai_actif: actif, theme: '' })
   }
-  revalidatePath('/prof/fragments-erudition/themes')
+  revalidatePath('/prof/fragments-erudition/suivi')
   return { success: true }
 }
 
@@ -391,7 +391,7 @@ export async function activerEssaiPourClasse(classeId: string, semestreId: strin
     ))
   )
 
-  revalidatePath('/prof/fragments-erudition/themes')
+  revalidatePath('/prof/fragments-erudition/suivi')
   return { success: true, count: inscrits.length }
 }
 
@@ -429,7 +429,7 @@ export async function genererSynthese(inscriptionId: string, semestreId: string)
     await genererSynthesePourEleve(inscriptionId, semestreId)
   })
 
-  revalidatePath(`/prof/fragments-erudition/semestres/${semestreId}`)
+  revalidatePath('/prof/fragments-erudition/evaluations')
   return { success: true }
 }
 
@@ -466,7 +466,7 @@ export async function genererSynthesesLot(inscriptionIds: string[], semestreId: 
     }
   })
 
-  revalidatePath(`/prof/fragments-erudition/semestres/${semestreId}`)
+  revalidatePath('/prof/fragments-erudition/evaluations')
   return { success: true, count: inscriptionIds.length }
 }
 
@@ -508,7 +508,7 @@ export async function publierSynthese(syntheseId: string) {
     publiee_at: new Date().toISOString(),
   }).eq('id', syntheseId)
   if (error) return { error: error.message }
-  revalidatePath('/prof/fragments-erudition/semestres')
+  revalidatePath('/prof/fragments-erudition/evaluations')
   return { success: true }
 }
 
@@ -520,7 +520,7 @@ export async function depublierSynthese(syntheseId: string) {
     publiee_at: null,
   }).eq('id', syntheseId)
   if (error) return { error: error.message }
-  revalidatePath('/prof/fragments-erudition/semestres')
+  revalidatePath('/prof/fragments-erudition/evaluations')
   return { success: true }
 }
 

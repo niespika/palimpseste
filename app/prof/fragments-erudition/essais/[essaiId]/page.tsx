@@ -49,10 +49,10 @@ export default async function PageEssai({
   if (!classe || !lien) {
     return (
       <div className="space-y-4">
-        <Link href="/prof/fragments-erudition/essais" className="text-sm text-muet hover:text-encre-douce">← Essais</Link>
+        <Link href="/prof/fragments-erudition/evaluations?vue=essai" className="text-sm text-muet hover:text-encre-douce">← Évaluations</Link>
         <div className="bg-surface border border-bordure rounded-xl p-8 text-center text-muet text-sm">
           Cet essai n&apos;est pas assigné à cette classe (ou la classe est introuvable).<br />
-          Reviens à <Link href="/prof/fragments-erudition/essais" className="underline">Essais</Link> et choisis une classe.
+          Reviens à <Link href="/prof/fragments-erudition/evaluations?vue=essai" className="underline">Évaluations</Link> et choisis une classe.
         </div>
       </div>
     )
@@ -145,8 +145,8 @@ export default async function PageEssai({
   return (
     <div className="space-y-6">
       <div className="flex items-center gap-2">
-        <Link href={`/prof/fragments-erudition/essais?classe=${classe.id}`} className="text-sm text-muet hover:text-encre-douce">
-          ← Essais
+        <Link href={`/prof/fragments-erudition/evaluations?vue=essai&classe=${classe.id}`} className="text-sm text-muet hover:text-encre-douce">
+          ← Évaluations
         </Link>
       </div>
 
