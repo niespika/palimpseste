@@ -128,14 +128,15 @@ export default function FormulaireParametres(props: Props) {
           <div>
             <EnTete label="Rubrique partagée (échelle des sections E → A)" onRestaurer={() => setRubrique(props.rubriqueDefaut)} />
             <p className="text-xs text-muet mb-2">
-              Source unique de l&apos;échelle des sections, importée par les 4 prompts via{' '}
-              <code className="font-mono">{'{{rubrique}}'}</code>. Le /20 final (essai, synthèse) n&apos;y touche pas.
+              Source unique de l&apos;échelle des sections. Les 4 prompts <em>par défaut</em> l&apos;importent via{' '}
+              <code className="font-mono">{'{{rubrique}}'}</code> — un prompt personnalisé ne la reçoit que s&apos;il
+              porte lui-même le jeton. Le /20 final (essai, synthèse) n&apos;y touche pas.
             </p>
             <textarea value={rubrique} onChange={e => setRubrique(e.target.value)} rows={8} className={TEXTAREA} />
           </div>
           <div>
             <EnTete label="Barème (0–4, legacy)" onRestaurer={() => setBareme(props.baremeDefaut)} />
-            <textarea value={bareme} onChange={e => setBareme(e.target.value)} rows={6} className={TEXTAREA} />
+            <textarea value={bareme || props.baremeDefaut} onChange={e => setBareme(e.target.value)} rows={6} className={TEXTAREA} />
           </div>
         </div>
       )}
@@ -145,14 +146,14 @@ export default function FormulaireParametres(props: Props) {
           <HintVariables vars={['{{theme}}', '{{description_theme}}', '{{numero_semaine}}', '{{historique}}', '{{bareme}}', '{{rubrique}}']} />
           <div>
             <EnTete label="Prompt d'évaluation du fragment" onRestaurer={() => setPrompt(props.promptDefaut)} />
-            <textarea value={prompt} onChange={e => setPrompt(e.target.value)} rows={30} className={TEXTAREA} />
+            <textarea value={prompt || props.promptDefaut} onChange={e => setPrompt(e.target.value)} rows={30} className={TEXTAREA} />
           </div>
         </div>
       )}
 
       {section === 'oral' && (
         <div className="bg-surface border border-bordure rounded-xl p-5 space-y-4">
-          <HintVariables vars={['{{theme}}', '{{description_theme}}', '{{numero_semaine}}', '{{duree}}', '{{nb_mots}}', '{{debit}}', '{{transcription_orale}}', '{{dossier}}', '{{bareme}}']} />
+          <HintVariables vars={['{{theme}}', '{{description_theme}}', '{{numero_semaine}}', '{{duree}}', '{{nb_mots}}', '{{debit}}', '{{transcription_orale}}', '{{dossier}}', '{{bareme}}', '{{rubrique}}']} />
           <div>
             <EnTete label="Prompt d'évaluation orale" onRestaurer={() => setPromptOral(props.promptOralDefaut)} />
             <textarea value={promptOral || props.promptOralDefaut} onChange={e => setPromptOral(e.target.value)} rows={20} className={TEXTAREA} />

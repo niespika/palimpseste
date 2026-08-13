@@ -153,6 +153,68 @@ conclure à un bug._
   « le jour lu est le jour demandé » sur 4 fuseaux × 4 dates. `npm test` : **142/142**.
   `npm run build` et `npx tsc --noEmit` : verts.
 
+## C8 · L2 — Fragments : validation par lot et bugs de fond (branche `feat/c8-fragments`)
+
+_Diagnostic de l'item 4 : `RAPPORT_Diagnostic_C8_expression.md`. **Prérequis de données :** la
+sandbox est repartie à **0 dépôt et 0 analyse** après le nettoyage de la recette L1 — les tests
+C8L2-1 à 5 ont donc besoin qu'on **fabrique d'abord une pile à valider** (étape 0 ci-dessous)._
+
+**Soldé sans navigateur (n'a pas besoin d'être rejoué) :**
+
+- [x] **C8L2-A · La répartition d'un lot ne touche que ce qu'elle annonce.** 13 tests de garde
+  (`utils/validation-lot.test.ts`) sur une classe portant les cinq cas d'une vraie semaine (à
+  valider, déjà publiée, en cours, en erreur, déposée sans analyse, rien rendu) : « Publier » ne vise
+  que les `generee`, « Dépublier » que les `publiee`, « Relancer » tout dépôt coché ; un élève sans
+  dépôt n'entre dans aucun lot ; chaque cible relie le **bon** dépôt au **bon** élève (une inversion
+  relancerait l'analyse d'un élève sur l'historique d'un autre) ; la case d'en-tête reste décochée
+  sur une pile vide.
+- [x] **C8L2-B · Le prompt hebdo retombe sur son défaut.** 10 tests
+  (`utils/prompt-fragment.test.ts`) : config absente, champ vidé (**chaîne vide**, pas `NULL` — la
+  colonne est `NOT NULL`), champ d'espaces → défaut du code ; une personnalisation réelle l'emporte
+  sans fuite du défaut ; aucun `{{placeholder}}` ne survit ; les sentinelles anti-injection de
+  l'historique élève tiennent.
+- [x] **C8L2-C · Le dépôt compile et passe.** `npm test` **165/165**, `npx tsc --noEmit` et
+  `npm run build` verts (toutes les routes `/prof/fragments-erudition/*` bâties).
+- [x] **C8L2-D · L'écran de semaine rend sans erreur.** Session prof réelle, `/prof/fragments-erudition`
+  puis la vue Semaine 1 · classe Test : colonne de sélection présente, cases **désactivées** faute de
+  dépôt (comportement attendu), 0 erreur serveur, 0 erreur console applicative.
+
+**À jouer en session prof sur la sandbox :**
+
+- [ ] **C8L2-0 · Fabriquer la pile (préalable, pas un test).** Il faut au moins **3 dépôts analysés**
+  dans une même semaine d'une classe de test, statut « À valider ». Le chemin réel : session élève →
+  dépôt photo → l'analyse part toute seule. ⚠️ Chaque dépôt coûte un appel Sonnet (~0,03 $).
+- [ ] **C8L2-1 · Le geste du lot (critère de sortie du lot).** Vue Semaine → classe → cocher la case
+  d'en-tête : elle prend **exactement** les analyses « À valider », pas les publiées ni les
+  manquantes. La barre d'action apparaît en bas et annonce « *n* dépôts sélectionnés » avec le
+  compte propre à chaque bouton. Cliquer **Publier** → un seul aller-retour, message « *n* retours
+  publiés », compteurs « À valider » / « Publié » mis à jour, sélection vidée.
+- [ ] **C8L2-2 · L'élève voit ce qui a été publié en lot.** Session élève, un des élèves du lot : son
+  retour de la semaine est visible, identique à ce qu'aurait donné une publication une par une.
+- [ ] **C8L2-3 · Juger sans ouvrir.** Sur une ligne analysée, cliquer **Aperçu** : le commentaire
+  général s'affiche sous la ligne, et « Ouvrir le retour complet → » mène à l'écran d'analyse. C'est
+  ce qui distingue une validation par lot d'une validation aveugle.
+- [ ] **C8L2-4 · Rattraper un lot publié trop vite.** Sélectionner une ligne publiée → le bouton
+  **Dépublier (1)** apparaît → cliquer : la ligne repasse « À valider » et le retour disparaît côté
+  élève.
+- [ ] **C8L2-5 · « Refuser » = relancer.** Sélectionner 2 lignes → **Relancer l'analyse (2)** : les
+  deux passent « En cours… » immédiatement, puis se refont **une par une** en arrière-plan.
+  ⚠️ Consomme un appel par dépôt. ⚠️ **Point à confirmer par Louis** : c'est la lecture retenue de
+  « refuser », faute d'état « refusée » au schéma (cf. question Q1 du lot).
+- [ ] **C8L2-6 · Le prompt hebdo n'est plus obligatoire.** Paramètres → Prompt Évaluation Fragment →
+  vider le champ → Enregistrer → relancer une analyse : elle aboutit (sur le défaut du code) au lieu
+  d'échouer. Puis **Restaurer la version par défaut** pour laisser la config propre. ⚠️ La
+  personnalisation actuelle (10 064 signes) est en base : **la copier avant** de vider le champ.
+- [ ] **C8L2-7 · Synthèse de semestre : générer + publier (critère de sortie).** Onglet **Synthèses**
+  → un semestre → une classe de test → **Générer tout**, puis sur un élève : **Valider** →
+  **Publier**. Vérifier côté élève que le bilan apparaît. ⚠️ Ne vaut que si l'élève a des analyses
+  **publiées** : à jouer après C8L2-1.
+- [ ] **C8L2-8 · Le taux de dépôt ne compte plus les vacances.** Sur un semestre qui porte au moins
+  une semaine de vacances, la synthèse générée doit annoncer un taux dont le **dénominateur exclut**
+  ces semaines (avant : elles gonflaient le dénominateur et faisaient baisser le taux de tous).
+- [ ] **C8L2-9 · Non-régression de la validation à l'unité.** Ouvrir une analyse, la publier depuis
+  l'écran d'analyse comme avant : rien n'a bougé sur ce chemin.
+
 ## C2 — (à venir)
 
 _Les tests seront ajoutés à l'écriture des specs / à la clôture des sessions (écran élève, calibration L8…). S'y ajoutera le test reporté C11a-6 (synthèse hebdo → ligne `scriptorium` classe seule)._

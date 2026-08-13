@@ -76,8 +76,10 @@ export default async function PageVueSemaine({
       : { data: [] }
     const depotParEleve = Object.fromEntries((depots ?? []).map(d => [d.eleve_id, d]))
     const depotIds = (depots ?? []).map(d => d.id)
+    // `commentaire_general` et `signal_integrite` remontent ici pour que la
+    // validation par lot se fasse en connaissance de cause (cf. AnalyseResumee).
     const { data: analyses } = depotIds.length > 0
-      ? await admin.from('fragments_analyses').select('id, depot_id, statut, note_decouvertes, note_sources, note_reflexions').in('depot_id', depotIds)
+      ? await admin.from('fragments_analyses').select('id, depot_id, statut, note_decouvertes, note_sources, note_reflexions, commentaire_general, signal_integrite').in('depot_id', depotIds)
       : { data: [] }
     const analyseParDepot = Object.fromEntries((analyses ?? []).map(a => [a.depot_id, a]))
     const elevesAvecDepot: EleveAvecDepot[] = (eleves ?? []).map(eleve => {
