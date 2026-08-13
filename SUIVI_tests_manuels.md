@@ -49,37 +49,70 @@ conclure à un bug._
 **État de la sandbox au 13/08 (point de départ des tests) :** semestre actif « Semestre test 2 »
 (01→31/07), **0 semaine**, 0 dépôt. Le semestre archivé « Semestre test » a ses 15 semaines.
 
-- [ ] **C8L1-1 · Le mensonge est parti (à jouer AVANT tout clic — c'est LE test du chantier).**
+- [x] **C8L1-1 · Le mensonge est parti (à jouer AVANT tout clic — c'est LE test du chantier).**
   `npm run dev`, prof → `/prof/calendrier/config?section=semestres`. La carte « Semestre test 2 »
   doit dire **« Aucune semaine générée — Fragments n'affichera rien et aucun élève ne pourra
   déposer »** avec un bouton **Générer les semaines**, et le rail doit porter la pastille
   « semaines à générer ». _(Avant ce lot, ce même écran affichait sereinement « 5 semaines ».)_
-- [ ] **C8L1-2 · Réparation d'un clic.** Presser « Générer les semaines » → la mention d'écart
+  _(**Joué et validé le 13/08**, session prof, panneau navigateur : les deux mentions sont là.)_
+- [x] **C8L1-2 · Réparation d'un clic.** Presser « Générer les semaines » → la mention d'écart
   disparaît. `/prof/fragments-erudition` liste alors **5 semaines** (S1 à S5), fermées.
-- [ ] **C8L1-3 · Un semestre neuf naît AVEC ses semaines (la vraie correction de la cause).**
-  Créer un semestre de test (p. ex. 24/08 → 19/12), le définir actif → **sans toucher à quoi que
-  ce soit d'autre**, `/prof/fragments-erudition` doit déjà lister ses semaines. Aucune mention
-  d'écart sur sa carte.
-- [ ] **C8L1-4 · Les vacances resserrent la numérotation.** Sur ce semestre, ajouter une période
+  _(**Validé le 13/08** : `regenererSemaines` en 854 ms, 5 lignes créées, échéances au dimanche
+  23:59:59 heure de Toronto, l'écart a disparu de la carte et du rail.)_
+- [x] **C8L1-3 · Un semestre neuf naît AVEC ses semaines (la vraie correction de la cause).**
+  Créer un semestre de test (p. ex. 24/08 → 19/12) → **sans toucher à quoi que ce soit d'autre**,
+  ses semaines doivent déjà exister. Aucune mention d'écart sur sa carte.
+  _(**Validé le 13/08** : « Semestre C8 test » 24/08 → 19/12 créé depuis l'écran, carte
+  « 17 semaines », aucune mention d'écart, aucune pastille au rail — 17 lignes en base,
+  première échéance dimanche 30/08 23:59:59 Toronto.)_
+- [x] **C8L1-4 · Les vacances resserrent la numérotation.** Sur ce semestre, ajouter une période
   de vacances au milieu → sans presser aucun bouton, la numérotation de Fragments doit sauter la
-  semaine concernée (elle disparaît de la liste) et les suivantes se renuméroter. Supprimer la
-  période → l'inverse.
-- [ ] **C8L1-5 · Dépôt élève de bout en bout (critère de sortie du lot).** Ouvrir une semaine
-  (« Rouvrir » sur `/prof/fragments-erudition`), se connecter avec le compte élève de test d'une
-  classe qui a le module (`Test` ou `T5`), déposer une photo → dépôt accepté, statut **« Déposé »**
-  et **pas « En retard »**, et le prof le voit sur `/prof/fragments-erudition/semaine/<id>`.
+  semaine concernée et les suivantes se renuméroter.
+  _(**Validé le 13/08** : période « Relache de novembre » 02→08/11 ajoutée → la semaine du 02/11
+  passe `is_vacation = true` / `pedagogical_number = null`, et celle du 09/11 passe de 12 à 11.
+  Suppression non rejouée — même chemin de code. **Deux effets de bord repérés au passage, notés
+  dans `IDEES_post_rentree.md`** : la ligne en vacances garde son ancien `numero` (doublon en
+  base, invisible dans l'app) et `synthese-semestre.ts` compte les semaines de vacances dans son
+  taux de dépôt — bug préexistant que ce chemin rend plus probable.)_
+- [ ] **C8L1-5 · Dépôt élève de bout en bout (critère de sortie du lot).** ⚠️ **Prérequis :
+  définir « Semestre C8 test » ACTIF** — l'écran élève ne lit que le semestre actif, et les
+  échéances de « Semestre test 2 » sont toutes dans le passé (juillet), donc tout dépôt y serait
+  légitimement « en retard ». Puis : ouvrir une semaine (« Rouvrir » sur
+  `/prof/fragments-erudition`), se connecter avec le compte élève de test d'une classe qui a le
+  module (`Test` ou `T5`), déposer une photo → dépôt accepté, statut **« Déposé »** et **pas
+  « En retard »**, et le prof le voit sur `/prof/fragments-erudition/semaine/<id>`.
+  _(Non joué le 13/08 : bascule du semestre actif non faite sans ton accord — elle change aussi le
+  scoping d'Aletheia et de Quazian pour l'élève pilote.)_
 - [ ] **C8L1-6 · L'échéance est à l'heure de l'école (item 7).** Sur cette semaine, l'élève doit
   lire « À rendre avant la fin du **dimanche** … » et le prof « Limite : fin du … » — **le même
   jour des deux côtés**, et le dimanche, jamais le lundi. Même contrôle sur
   `/eleve/calendrier` : la pastille « Fragment S*n* — à rendre » tombe le **dimanche**.
   _(Avant ce lot, l'échéance valait minuit UTC = samedi 20 h à Toronto : un dépôt du dimanche
   était compté en retard.)_
+  _(**Côté prof : validé le 13/08** — `/prof/fragments-erudition` affiche « Limite : fin du
+  5 juillet », « fin du 12 juillet », … tous des dimanches. Côté élève : non joué, même prérequis
+  que C8L1-5. Preuve indépendante en base : les nouvelles semaines rendent
+  `dimanche 23:59:59.999` en heure de Toronto, là où les 15 semaines du semestre archivé, non
+  régénérées, rendent encore `samedi 19:00:00` — le bug d'origine, visible côte à côte.)_
 - [ ] **C8L1-7 · Non-régression du reste du calendrier.** `/prof/calendrier`, `/eleve/calendrier`
   et le tableau de bord élève s'affichent sans erreur ; la bande « Semaines du semestre » du volet
   Vacances est verte (« *n* semaines ✔ ») une fois la génération faite.
 - [ ] **C8L1-8 · Reprise du test reporté C11a-8 (part Fragments).** Une fois un dépôt analysé, la
   tuile « Coût API » de `/prof` doit voir monter la ligne **Fragments**. _(Reporté ici le 26/07 :
   la création de semaines était bloquée, on ne pouvait pas produire d'analyse.)_
+
+> **État de la sandbox après les tests du 13/08 — à trancher.** J'y ai laissé : le semestre
+> **« Semestre C8 test »** (24/08 → 19/12/2026, *à venir*, non actif) avec ses **17 semaines** et
+> la période **« Relache de novembre »** (02→08/11), plus les **5 semaines** générées sur
+> « Semestre test 2 ». Rien n'a été supprimé, aucun dépôt créé. À garder tel quel pour finir
+> C8L1-5/6, ou à effacer (le semestre se supprime depuis sa carte — refusé tant que des semaines
+> y sont rattachées, donc à faire dans l'ordre inverse).
+>
+> **Note de méthode :** le panneau navigateur a un décalage de coordonnées (les clics visent
+> l'image de la capture, pas le viewport) — plusieurs clics ont paru « morts » alors que l'app
+> répondait normalement. Ce n'est pas la même chose que le piège documenté en tête de fichier
+> (`confirm()` muet dans l'aperçu embarqué), mais ça mène à la même conclusion fausse : vérifier
+> en base ou dans les logs du serveur avant de conclure à un bouton mort.
 
 **Soldé sans navigateur, le 13/08 (n'a pas besoin d'être rejoué) :**
 
