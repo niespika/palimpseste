@@ -25,6 +25,7 @@ interface Props {
 export function TableauLive({ quizId, statut, fermeAt, eleves: elevesInit, moyenneCohorte }: Props) {
   const router = useRouter()
   const [elevesLive, setElevesLive] = useState<EleveStatut[] | null>(null)
+  const [confirmation, setConfirmation] = useState(false)
   const [pending, setPending] = useState(false)
   const [erreur, setErreur] = useState<string | null>(null)
   const [secondesRestantes, setSecondesRestantes] = useState<number | null>(null)
@@ -70,7 +71,6 @@ export function TableauLive({ quizId, statut, fermeAt, eleves: elevesInit, moyen
   // le bouton même si l'action lève (patron C8·L1), et `router.refresh()` fait
   // apparaître l'écran fermé sans Cmd-R.
   async function handleFermer() {
-    if (!confirm('Fermer le quizz maintenant ? Les élèves non soumis seront auto-soumis avec 25/25/25/25.')) return
     setPending(true)
     setErreur(null)
     try {
@@ -78,6 +78,7 @@ export function TableauLive({ quizId, statut, fermeAt, eleves: elevesInit, moyen
       fd.append('quizId', quizId)
       const res = await fermerQuizz(fd)
       if ('error' in res && res.error) { setErreur(res.error); return }
+      setConfirmation(false)
       router.refresh()
     } catch {
       setErreur('La fermeture n’a pas abouti (erreur serveur). Réessaie — rien n’a été figé.')
@@ -88,6 +89,7 @@ export function TableauLive({ quizId, statut, fermeAt, eleves: elevesInit, moyen
 
   const nbSoumis = eleves.filter((e) => e.soumis).length
   const total = eleves.length
+  const nbNonSoumis = total - nbSoumis
 
   function formatTemps(s: number) {
     const m = Math.floor(s / 60)
@@ -125,16 +127,64 @@ export function TableauLive({ quizId, statut, fermeAt, eleves: elevesInit, moyen
           {statut === 'lance' && (
             <div className="text-right">
               <button
-                onClick={handleFermer}
-                disabled={pending}
-                className="px-5 py-2.5 bg-retard text-surface text-sm rounded-xl hover:opacity-90 disabled:opacity-50 transition-colors"
+                onClick={() => { setErreur(null); setConfirmation(true) }}
+                className="px-5 py-2.5 bg-retard text-surface text-sm rounded-xl hover:opacity-90 transition-colors"
               >
-                {pending ? 'Fermeture…' : 'Fermer le quizz'}
+                Fermer le quizz
               </button>
-              {erreur && <p className="text-xs text-retard mt-2 max-w-xs">{erreur}</p>}
+              {erreur && !confirmation && <p className="text-xs text-retard mt-2 max-w-xs">{erreur}</p>}
             </div>
           )}
         </div>
+
+        {/* Confirmation EN PAGE — jamais `confirm()`. Le dialogue natif est muet
+            dans l'aperçu embarqué : le bouton semblait mort, aucune requête ne
+            partait (règle d'or du 24/07, retombée ici pendant la recette C7·L1).
+            Patron `BoutonSupprimerUnite`, à un cran : fermer un quizz est grave
+            mais réparable, ça ne mérite pas la re-saisie du nom. */}
+        {confirmation && (
+          <div
+            className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4"
+            onClick={() => !pending && setConfirmation(false)}
+          >
+            <div className="bg-surface rounded-2xl max-w-md w-full p-6 space-y-4 shadow-xl" onClick={(e) => e.stopPropagation()}>
+              <h3 className="text-lg font-serif text-encre">Fermer le quizz maintenant ?</h3>
+              <div className="space-y-2 text-sm text-encre-douce">
+                <p>
+                  Les notes sont calculées et figées : la moyenne de cohorte, l&apos;écart-type et
+                  la note /20 de chaque élève.
+                </p>
+                {nbNonSoumis > 0 ? (
+                  <p className="text-attention">
+                    <strong>{nbNonSoumis} élève{nbNonSoumis > 1 ? 's' : ''}</strong> {nbNonSoumis > 1 ? 'ont' : 'a'} commencé
+                    sans soumettre : {nbNonSoumis > 1 ? 'leurs réponses manquantes seront comptées' : 'ses réponses manquantes seront comptées'} 25/25/25/25.
+                  </p>
+                ) : (
+                  <p className="text-muet">Tous les élèves qui ont commencé ont soumis.</p>
+                )}
+              </div>
+              {erreur && <p className="text-sm text-retard">{erreur}</p>}
+              <div className="flex gap-2 justify-end">
+                <button
+                  type="button"
+                  onClick={() => setConfirmation(false)}
+                  disabled={pending}
+                  className="px-4 py-2 text-sm bg-parchemin-fonce text-encre-douce rounded-lg hover:opacity-90 disabled:opacity-50 transition-colors"
+                >
+                  Annuler
+                </button>
+                <button
+                  type="button"
+                  onClick={handleFermer}
+                  disabled={pending}
+                  className="px-4 py-2 text-sm bg-retard text-surface rounded-lg hover:opacity-90 disabled:opacity-50 transition-colors"
+                >
+                  {pending ? 'Fermeture…' : 'Fermer le quizz'}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Barre de progression */}
         {total > 0 && (
