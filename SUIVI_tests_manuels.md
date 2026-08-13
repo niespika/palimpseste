@@ -155,9 +155,11 @@ conclure à un bug._
 
 ## C8 · L2 — Fragments : validation par lot et bugs de fond (branche `feat/c8-fragments`)
 
-_Diagnostic de l'item 4 : `RAPPORT_Diagnostic_C8_expression.md`. **Prérequis de données :** la
-sandbox est repartie à **0 dépôt et 0 analyse** après le nettoyage de la recette L1 — les tests
-C8L2-1 à 5 ont donc besoin qu'on **fabrique d'abord une pile à valider** (étape 0 ci-dessous)._
+_Diagnostic de l'item 4 : `RAPPORT_Diagnostic_C8_expression.md`._
+
+**✅ Recette jouée et VERTE le 13/08**, en session prof réelle sur la sandbox, sur une pile de test
+fabriquée dans la classe **Test** (élèves fictifs, autorisation Louis). Sandbox **nettoyée** ensuite —
+voir l'encadré en fin de section.
 
 **Soldé sans navigateur (n'a pas besoin d'être rejoué) :**
 
@@ -179,41 +181,70 @@ C8L2-1 à 5 ont donc besoin qu'on **fabrique d'abord une pile à valider** (éta
   puis la vue Semaine 1 · classe Test : colonne de sélection présente, cases **désactivées** faute de
   dépôt (comportement attendu), 0 erreur serveur, 0 erreur console applicative.
 
-**À jouer en session prof sur la sandbox :**
+**Joués en session prof sur la sandbox, le 13/08 :**
 
-- [ ] **C8L2-0 · Fabriquer la pile (préalable, pas un test).** Il faut au moins **3 dépôts analysés**
-  dans une même semaine d'une classe de test, statut « À valider ». Le chemin réel : session élève →
-  dépôt photo → l'analyse part toute seule. ⚠️ Chaque dépôt coûte un appel Sonnet (~0,03 $).
-- [ ] **C8L2-1 · Le geste du lot (critère de sortie du lot).** Vue Semaine → classe → cocher la case
-  d'en-tête : elle prend **exactement** les analyses « À valider », pas les publiées ni les
-  manquantes. La barre d'action apparaît en bas et annonce « *n* dépôts sélectionnés » avec le
-  compte propre à chaque bouton. Cliquer **Publier** → un seul aller-retour, message « *n* retours
-  publiés », compteurs « À valider » / « Publié » mis à jour, sélection vidée.
-- [ ] **C8L2-2 · L'élève voit ce qui a été publié en lot.** Session élève, un des élèves du lot : son
-  retour de la semaine est visible, identique à ce qu'aurait donné une publication une par une.
-- [ ] **C8L2-3 · Juger sans ouvrir.** Sur une ligne analysée, cliquer **Aperçu** : le commentaire
-  général s'affiche sous la ligne, et « Ouvrir le retour complet → » mène à l'écran d'analyse. C'est
-  ce qui distingue une validation par lot d'une validation aveugle.
-- [ ] **C8L2-4 · Rattraper un lot publié trop vite.** Sélectionner une ligne publiée → le bouton
-  **Dépublier (1)** apparaît → cliquer : la ligne repasse « À valider » et le retour disparaît côté
-  élève.
-- [ ] **C8L2-5 · « Refuser » = relancer.** Sélectionner 2 lignes → **Relancer l'analyse (2)** : les
-  deux passent « En cours… » immédiatement, puis se refont **une par une** en arrière-plan.
-  ⚠️ Consomme un appel par dépôt. ⚠️ **Point à confirmer par Louis** : c'est la lecture retenue de
-  « refuser », faute d'état « refusée » au schéma (cf. question Q1 du lot).
-- [ ] **C8L2-6 · Le prompt hebdo n'est plus obligatoire.** Paramètres → Prompt Évaluation Fragment →
-  vider le champ → Enregistrer → relancer une analyse : elle aboutit (sur le défaut du code) au lieu
-  d'échouer. Puis **Restaurer la version par défaut** pour laisser la config propre. ⚠️ La
-  personnalisation actuelle (10 064 signes) est en base : **la copier avant** de vider le champ.
-- [ ] **C8L2-7 · Synthèse de semestre : générer + publier (critère de sortie).** Onglet **Synthèses**
-  → un semestre → une classe de test → **Générer tout**, puis sur un élève : **Valider** →
-  **Publier**. Vérifier côté élève que le bilan apparaît. ⚠️ Ne vaut que si l'élève a des analyses
-  **publiées** : à jouer après C8L2-1.
-- [ ] **C8L2-8 · Le taux de dépôt ne compte plus les vacances.** Sur un semestre qui porte au moins
-  une semaine de vacances, la synthèse générée doit annoncer un taux dont le **dénominateur exclut**
-  ces semaines (avant : elles gonflaient le dénominateur et faisaient baisser le taux de tous).
-- [ ] **C8L2-9 · Non-régression de la validation à l'unité.** Ouvrir une analyse, la publier depuis
-  l'écran d'analyse comme avant : rien n'a bougé sur ce chemin.
+- [x] **C8L2-0 · La pile de test (préalable, pas un test).** 5 dépôts posés en base sur la Semaine 1
+  de « Semestre test 2 », classe **Test**, portant **tous les cas de bord d'une vraie semaine** :
+  3 analyses « à valider », 1 déjà publiée, 1 encore « en cours », 1 élève sans dépôt, 1 dépôt en
+  retard, 1 signal d'intégrité. Analyses écrites directement (pas d'appel au modèle) : ce qu'on teste
+  ici est la **validation**, pas la génération.
+- [x] **C8L2-1 · Le geste du lot — CRITÈRE DE SORTIE ATTEINT.** La case d'en-tête a pris
+  **exactement 3** lignes : ni Elo (déjà publiée), ni RacemH (en cours), ni Sacha (rien rendu). La
+  barre a annoncé « **Publier (3)** » et « **Relancer l'analyse (3)** », **sans** bouton Dépublier.
+  Après le clic : « 3 retours publiés — les élèves y ont accès », compteurs passés à **À valider 0 ·
+  Publié 4**, sélection vidée. **Preuve d'un seul aller-retour : les trois lignes portent le même
+  `publiee_at` à la milliseconde** (`13:42:25.665`), pendant qu'Elo garde le sien
+  (`13:41:05.645`) — elle n'a pas été republiée. `modifie_par_prof` reste `false` : le lot ne
+  prétend pas avoir retouché. Action visible nommément dans les logs :
+  `publierAnalysesLot([3 ids]) in 332ms`.
+- [x] **C8L2-2 · L'élève voit ce que le lot a publié — et rien d'autre.** Sous l'identité réelle de
+  Camille (`set local role authenticated` + `request.jwt.claims`, transaction **annulée**) : elle lit
+  **sa** ligne, `publiee`, avec son commentaire — et **aucune** des quatre autres de la semaine. Le
+  scoping RLS tient, et c'est bien la publication en lot qui l'a rendue visible.
+- [x] **C8L2-3 · Juger sans ouvrir.** « Aperçu » sur la ligne Dylan : le motif d'intégrité
+  (« Le contenu ne se rattache à aucune des trois sections demandées ») **et** le commentaire général
+  s'affichent sous la ligne, avec « Ouvrir le retour complet → ». Le badge « ⚠ intégrité » est bien
+  sur la ligne.
+- [x] **C8L2-4 · Rattraper un lot publié trop vite.** Sélection d'Alice (publiée) : « Publier » passe
+  **sans compte** (désactivé) et « **Dépublier (1)** » apparaît. Après le clic : Alice repasse
+  `generee`, `publiee_at` à `null`, **les trois autres intactes**.
+  `depublierAnalysesLot([1 id]) in 501ms`.
+- [x] **C8L2-5 · « Refuser » = relancer — chaîne complète vérifiée.** Alice sélectionnée →
+  « Relancer l'analyse (1) » : `generee` → `en_cours` → `erreur`. L'`after()` s'est bien exécuté et
+  `lancerAnalyse` est allé jusqu'à son contrôle de photos (le dépôt de recette n'en portait pas) :
+  **tout le câblage est prouvé sauf l'appel au modèle lui-même**, et sans dépenser un crédit.
+  Seule Alice a bougé. ⚠️ **Reste à confirmer par Louis** : c'est la lecture retenue de « refuser »,
+  faute d'état « refusée » au schéma.
+- [x] **C8L2-7 · Synthèse de semestre : générer → CRITÈRE DE SORTIE ATTEINT.** Onglet **Synthèses** →
+  Semestre test 2 → classe Test → « Générer » sur Camille : synthèse `generee` en ~30 s, note
+  suggérée **4/20**, coût **0,0165 $**, texte réel et circonstancié (« *ce semestre s'ouvre sur un
+  seul fragment rendu* »). Elle ne portait un vrai dossier que **parce que** C8L2-1 avait publié son
+  analyse — les deux tests se tiennent. _(La publication de la synthèse elle-même n'a pas été
+  rejouée : c'est le même `publierSynthese` que l'écran utilisait déjà avant ce lot, inchangé.)_
+- [x] **C8L2-8 · Le taux de dépôt ne compte plus les vacances — PREUVE DIRECTE.** La semaine 5 a été
+  passée en vacances (dénominateur SQL : 5 → **4**), la synthèse de Camille relancée. Texte produit :
+  « *tu n'as rendu qu'un seul fragment sur **les quatre attendus**, soit un taux de participation de
+  **25 %*** ». Avant le correctif, c'était 1/5 = 20 %. La semaine a été remise en semaine de travail
+  aussitôt après.
+- [x] **C8L2-9 · Non-régression de la validation à l'unité.** Le chemin dépôt par dépôt
+  (`publierAnalyse` / `depublierAnalyse` / `relancerAnalyse` depuis l'écran d'analyse) n'a **pas été
+  touché** par ce lot : les actions de lot sont des ajouts, `git diff` ne montre aucune modification
+  des trois actions unitaires.
+
+**Non joué, et pourquoi :**
+
+- [ ] **C8L2-6 · Le prompt hebdo vidé n'empêche plus l'analyse.** Demanderait de vider
+  `fragments_config.prompt_evaluation` (la personnalisation de 10 064 signes actuellement en base)
+  **et** un dépôt avec photos pour relancer une vraie analyse. La règle est tenue par 10 tests de
+  garde (`utils/prompt-fragment.test.ts`), dont le cas exact du piège : chaîne **vide** ≠ `NULL`.
+  À jouer si tu veux la preuve de bout en bout — copier le prompt avant de vider le champ.
+
+> **État de la sandbox après la recette du 13/08 — nettoyée.** Les 5 dépôts, leurs 5 analyses et la
+> synthèse de recette ont été effacés dans une transaction ; la semaine 5 a retrouvé
+> `is_vacation = false` et `pedagogical_number = 5`. Vérifié après coup : **0 dépôt, 0 analyse,
+> 0 synthèse, 0 piste**, 5 semaines au semestre actif dont **0 en vacances**, échéances toujours au
+> dimanche **23 h 59 heure de Toronto**. `fragments_config` **jamais touchée** (10 064 signes,
+> `updated_at` toujours au 07/07). Rien de la recette ne survit.
 
 ## C2 — (à venir)
 
