@@ -4,6 +4,7 @@ import { deconnexion } from './actions'
 import EnTeteSite from '@/components/nav/EnTeteSite'
 import BarreOngletsMobile from '@/components/nav/BarreOngletsMobile'
 import SousNavModuleMobile from '@/components/nav/SousNavModuleMobile'
+import { FournisseurEtatFragmentsEleve } from '@/components/nav/EtatFragmentsEleve'
 import { navEleveFiltree } from '@/components/nav/configNavigation'
 import { slugsModulesAccessibles } from '@/utils/acces'
 import SelecteurClasseEleve from './SelecteurClasseEleve'
@@ -30,6 +31,9 @@ export default async function EleveLayout({ children }: { children: React.ReactN
   const tabsEleve = navEleveFiltree(await slugsModulesAccessibles(supabase, user.id))
 
   return (
+    // Les deux barres d'onglets de Fragments (Barre 2 desktop et sous-nav mobile) sont
+    // montées ensemble ; le fournisseur leur charge leur état UNE fois pour deux.
+    <FournisseurEtatFragmentsEleve>
     <div className="min-h-screen bg-parchemin">
       {/* En-tête desktop (2 barres). Le sélecteur de classe est dans la Barre 1. */}
       <EnTeteSite
@@ -56,5 +60,6 @@ export default async function EleveLayout({ children }: { children: React.ReactN
       {/* Barre d'onglets fixe (mobile) — compensée par le pb-24 du <main>. */}
       <BarreOngletsMobile />
     </div>
+    </FournisseurEtatFragmentsEleve>
   )
 }

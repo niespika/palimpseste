@@ -342,9 +342,18 @@ Louis le 13/08) :**
   `retour_lu_at` est écrit en base, le dépôt redevient possible et la pastille passe au vert. Le
   mécanisme du Lot 10 / C8·L2 est intact.
 
+- [x] **C8L3-10 · Un seul chargement d'état par affichage (correctif de clôture).** Défaut trouvé
+  après coup, en relisant les logs : les deux barres d'onglets (Barre 2 desktop et sous-nav mobile)
+  étant **montées ensemble** — le responsive les masque en CSS, il ne les démonte pas — chacune
+  chargeait son état, soit **deux appels serveur identiques de ~1 s** par affichage de la page
+  élève. L'état est désormais chargé une fois pour deux par `FournisseurEtatFragmentsEleve`
+  (coquille `/eleve`), et rien n'est chargé hors du module. Vérifié en session élève : **un seul
+  `chargerEtatOngletsFragments()` par chargement** dans les logs (deux avant), onglets, pastilles et
+  sous-nav mobile inchangés (44 px, aucun débordement).
+
 **Non joué, et pourquoi :**
 
-- [ ] **C8L3-10 · Reprise du test C11a-8 (part Fragments).** ⚠️ **Cause inchangée depuis le 13/08
+- [ ] **C8L3-11 · Reprise du test C11a-8 (part Fragments).** ⚠️ **Cause inchangée depuis le 13/08
   (C8·L1) — revérifiée dans le code ce jour : `enregistrerCoutApi()` n'est appelé nulle part dans
   la chaîne Fragments** (`analyse.ts`, `analyse-orale.ts`, `analyse-essai.ts`,
   `synthese-semestre.ts`, `transcription.ts` : **0 occurrence**, seuls Quazian, Scriptorium et
