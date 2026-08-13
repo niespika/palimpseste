@@ -162,3 +162,36 @@ semaines » si ce semestre revient un jour.
 Hors périmètre déclaré par le prompt, laissé intact : validation par lot, synthèse de semestre,
 prompt hebdo (→ L2) ; onglets et design (→ L3) ; le toggle semestre (tranché au check-in, pas ici).
 Les découvertes hors réparation sont parquées dans `IDEES_post_rentree.md`.
+
+## 10. Questions posées par ce lot (règle R7 — noter, ne pas trancher seul)
+
+**Q1 — L'heure de la date limite. ✅ TRANCHÉ par Louis le 13/08 : dimanche 23 h 59, heure de
+l'école.** Le prompt fixait la règle (« en fuseau `America/Toronto`, jamais en UTC ») mais pas
+l'heure ; c'est la valeur implémentée (`finDeJourDansFuseau` → 23:59:59.999 locales). Si elle devait
+changer un jour, c'est une ligne dans `utils/fuseau.ts` + un « Régénérer les semaines » pour
+repropager.
+
+**Q2 — Fuseau réglable ou Toronto en dur ?** *(ouverte, choix par défaut appliqué)* L'item 7 nomme
+`America/Toronto` ; le code, lui, a déjà généralisé en fuseau **configurable**
+(`calendrier_params.fuseau`, réglé sur `America/Toronto` depuis le 07/07, sélecteur prof dans le
+volet Fuseau). J'ai suivi le réglage plutôt que d'écrire Toronto en dur — sinon le sélecteur prof
+mentirait sur les échéances. À confirmer : si l'intention était « Toronto quoi qu'il arrive », c'est
+le sélecteur qu'il faut retirer, pas le code des échéances.
+
+**Q3 — « Créer une semaine dans une classe de test » n'est pas réalisable à la lettre.** Le critère
+de sortie du prompt suppose des semaines **par classe** ; `fragments_semaines` n'a pas de
+`classe_id` — les semaines sont **globales au semestre**, partagées par toutes les classes qui ont
+le module. Deux classes qui ne se voient pas les mêmes jours ont donc la même échéance du dimanche.
+Le test C8L1-5 est écrit dans cette réalité (une semaine, un dépôt depuis une classe qui a le
+module). Le recâblage par classe est déjà différé (D12) → noté dans `IDEES_post_rentree.md`.
+
+**Q4 — Les 15 semaines du semestre archivé gardent une `date_limite` à minuit UTC.** J'ai fait le
+choix de **ne pas écrire de migration SQL** : semestre archivé, aucun dépôt en base, et la valeur se
+répare d'un clic sur « Régénérer les semaines » si ce semestre revenait. Une migration de données
+aurait déclenché le protocole renforcé de `SUIVI_SQL.md` (table d'un flux existant) pour zéro
+bénéfice réel. À rouvrir seulement si un semestre passé doit redevenir vivant.
+
+**Q5 — Le merge attend le vert humain.** Le prompt dit « commit + merge si vert », et « vert » = le
+test sandbox (semaine créée, dépôt élève réussi). Il demande une session **prof** dans un vrai
+navigateur ; les huit tests sont posés dans `SUIVI_tests_manuels.md` (section C8·L1). Commit fait sur
+`feat/c8-fragments`, merge non fait.
