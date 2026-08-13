@@ -262,6 +262,111 @@ voir l'encadré en fin de section.
 > 332ms`) — un clic raté n'y laisse aucune trace. Le contournement fiable a été de piloter le clic
 > par le DOM plutôt que par les coordonnées.
 
+## C8 · L3 — Fragments : onglets prof et élève (branche `feat/c8-fragments`)
+
+_Lot de réorganisation et de design : **aucune logique métier ne change**, aucune migration. Les
+écrans d'origine sont conservés — ce sont leurs surfaces qui fusionnent._
+
+**Arbitrages pris en séance (règle R7 — trois questions non tranchées par le prompt, arbitrées par
+Louis le 13/08) :**
+1. **Élève — le bilan de semestre garde un onglet, mais seulement s'il est publié** : trois onglets
+   fixes (Écrit · Oral · Essai) et un quatrième conditionnel (Synthèse).
+2. **Élève — les tuiles d'état disparaissent** au profit des onglets ; leur signal (vert/rouge,
+   « À déposer », « Retour à lire ») devient une **pastille** sur l'onglet concerné, mentions
+   reprises mot pour mot (`utils/fragments-etat-eleve.ts` — source unique des deux surfaces).
+3. **Prof — le côté Synthèse d'Évaluations entre directement sur le semestre du sélecteur** : la
+   liste des semestres disparaît (le sélecteur de la Barre 2 y donne déjà accès, archives comprises).
+
+**Joués en session prof réelle sur la sandbox, le 13/08 :**
+
+- [x] **C8L3-1 · Les quatre onglets prof.** La Barre 2 porte **Semaine · Suivi · Évaluations ·
+  Paramètres** (elle en portait six), sélecteur de semestre à sa place. Chaque écran de détail
+  allume son onglet parent : `semaine/<id>` → **Semaine**, `eleve/<id>` → **Suivi**,
+  `essais/<id>` → **Évaluations** (mécanisme `prefixes` de `configModules`).
+- [x] **C8L3-2 · Suivi = la fusion, sans rien perdre.** Tuiles de classe portant **à la fois** les
+  moyennes de sections en lettres et le compteur de thèmes ; classe ouverte : courbe d'évolution,
+  puis une ligne par élève avec moyennes, taux de dépôt, thème **éditable sur place** et bascule
+  « Essai » — plus le « Essai : Activer / Désactiver » au niveau de la classe. **Le nom de l'élève
+  est le lien vers sa progression** (critère du prompt), et le retour de cette page revient à Suivi
+  sur la bonne classe.
+- [x] **C8L3-3 · Évaluations, le toggle.** Un onglet, deux côtés : **Essai** (nouvel essai, tuiles
+  de classe, essais assignés) et **Synthèse** (tuiles de classe du semestre consulté →
+  `GestionSyntheses`, « 0/6 générées · 0 publiées » et les six élèves). Le toggle conserve la
+  classe choisie d'un côté à l'autre.
+- [x] **C8L3-4 · Aucune ancienne URL ne tombe.** Les cinq routes retirées de la navigation
+  redirigent, `?classe=` compris : `themes` → `suivi`, `vue-ensemble` → `suivi`,
+  `essais` → `evaluations?vue=essai`, `semestres` → `evaluations?vue=synthese`,
+  `semestres/<id>` → `evaluations?vue=synthese`. Vérifié en `fetch` : **5 sur 5 en 200**, sur la
+  bonne cible. `revalidatePath` et liens entrants (calendrier prof, fiche élève, intégrité) suivis.
+- [x] **C8L3-5 · Rien de cassé dans les flux réparés en L1-L2 — CRITÈRE DE SORTIE.** Dans l'ordre :
+  (a) la config du calendrier annonce toujours « semaine 5 / 5 » sans mention d'écart — le mensonge
+  réparé en L1 n'est pas revenu ; (b) **« Rouvrir » depuis l'écran Semaine** ouvre la semaine 5
+  (`ouverte = t` en base, échéance toujours au dimanche `23:59:59.999` heure de Toronto) ; (c) une
+  pile de 3 dépôts « à valider » posée en base (classe Test) — la vue Semaine les compte juste
+  (**3 déposés · 3 manquants · 3 à valider**) ; (d) **validation par lot** : case d'en-tête →
+  « **Publier (3)** », et après le clic les trois analyses passent `publiee` **au même `publiee_at`
+  à la milliseconde** (`15:33:53.751`), `modifie_par_prof` toujours `false`. Action nommée dans les
+  logs : `publierAnalysesLot([3 ids]) in 694ms`. Le geste de L2 traverse la réorganisation intact.
+  _(Le décalage de coordonnées du panneau a encore fait rater un clic : les logs du serveur, muets,
+  l'ont dit tout de suite — cf. la note de méthode en fin de section L2.)_
+
+**Soldé sans navigateur, le 13/08 :**
+
+- [x] **C8L3-A · Le dépôt compile et passe.** `npm test` **165/165**, `npx tsc --noEmit` et
+  `npm run build` verts — toutes les routes `/prof/fragments-erudition/*` bâties, `suivi` et
+  `evaluations` comprises. `eslint` : aucune erreur ; deux avertissements **préexistants**
+  (`pistesEnAttente`, `mesPresen` — deux requêtes mortes de la page élève, notées dans
+  `IDEES_post_rentree.md`).
+
+**Joués en session élève réelle (compte de test **Elo**, classe Test), le 13/08 :**
+
+- [x] **C8L3-6 · Les onglets élève, et leurs pastilles qui disent vrai.** La Barre 2 porte
+  **Écrit · Oral · Essai** — les anciennes tuiles d'état ont disparu, et le sélecteur de semestre
+  (outil du prof) ne s'affiche pas côté élève. Les trois états ont été observés **en changeant la
+  base sous l'écran**, pas en les décrivant : (a) semaine 5 ouverte, aucun dépôt → **Écrit ● rouge,
+  « À déposer »** ; (b) dépôt + retour publié non lu → **Écrit ● rouge, « Retour à lire »** ;
+  (c) après validation de lecture → **Écrit ● vert, « À jour »**. Le nom accessible de l'onglet
+  porte la mention (`Écrit — Retour à lire`), la pastille n'est pas le seul signal. Onglets Oral et
+  Essai rendus sans erreur (« Aucun retour d'oral… », « Aucun essai n'est prévu pour toi… » — le
+  message ajouté pour que l'onglet Essai ne soit jamais vide).
+- [x] **C8L3-7 · Le 4ᵉ onglet conditionnel.** Sans synthèse publiée : **trois** onglets. Une
+  synthèse publiée posée en base → **Synthèse** apparaît en quatrième, l'onglet s'allume et rend le
+  bilan. Synthèse retirée → l'onglet disparaît. C'est l'arbitrage 1 tenu exactement.
+- [x] **C8L3-8 · Design vérifié sur mobile (375 px).** Sous-nav du module sous l'en-tête, les
+  **quatre** onglets sur une seule ligne sans scroll (`scrollWidth = clientWidth = 375`), **aucun
+  débordement horizontal** de la page (`documentElement.scrollWidth = 375`), **cibles tactiles de
+  44 px** pour les quatre, barre d'onglets du bas dégagée. 0 erreur console, 0 erreur serveur.
+- [x] **C8L3-9 · Le gate de lecture traverse la réorganisation.** Retour publié non lu → l'écran
+  Écrit affiche « **Dépôt bloqué** — lis et valide ton retour en attente », le formulaire de dépôt
+  est remplacé par le lien de rattrapage ; après « J'ai tout lu » (les deux parties cochées),
+  `retour_lu_at` est écrit en base, le dépôt redevient possible et la pastille passe au vert. Le
+  mécanisme du Lot 10 / C8·L2 est intact.
+
+**Non joué, et pourquoi :**
+
+- [ ] **C8L3-10 · Reprise du test C11a-8 (part Fragments).** ⚠️ **Cause inchangée depuis le 13/08
+  (C8·L1) — revérifiée dans le code ce jour : `enregistrerCoutApi()` n'est appelé nulle part dans
+  la chaîne Fragments** (`analyse.ts`, `analyse-orale.ts`, `analyse-essai.ts`,
+  `synthese-semestre.ts`, `transcription.ts` : **0 occurrence**, seuls Quazian, Scriptorium et
+  Aletheia alimentent `api_couts`). Le test ne peut donc pas passer, quoi que fasse C8 : c'est le
+  câblage manquant de C11a. Le rejouer coûte un vrai dépôt élève avec photos (≈ 0,03 $) pour
+  reprouver un fait déjà établi — **à rejouer avec le correctif C11a, pas avant**.
+
+> **État de la sandbox après la recette du 13/08 — nettoyée.** Les 4 dépôts de recette
+> (`Dépôt de recette C8·L3…`), leurs 4 analyses et la synthèse de recette ont été effacés dans une
+> transaction, et la **semaine 5 refermée** comme elle l'était au départ. Vérifié après coup :
+> **0 dépôt, 0 analyse, 0 synthèse, 0 piste, 0 photo**, 5 semaines au semestre actif dont **0
+> ouverte**, `api_couts` toujours sans la moindre ligne `fragments`. `fragments_config` jamais
+> touchée. Rien de la recette ne survit.
+>
+> **Coût de la recette : 0 $.** Aucun appel au modèle — les analyses et la synthèse ont été écrites
+> directement en base : ce qui était sous test ici, ce sont des **surfaces**, pas de la génération.
+>
+> **Méthode.** Le décalage de coordonnées du panneau navigateur (documenté en L1 et L2) s'est
+> reproduit une fois de plus sur « Publier (3) » : le clic par **référence DOM** l'a réglé, et les
+> logs du serveur — muets sur le clic raté, puis `publierAnalysesLot([…]) in 694ms` — ont tranché
+> en deux secondes. Côté élève, la validation de lecture a été pilotée de la même façon.
+
 ## C2 — (à venir)
 
 _Les tests seront ajoutés à l'écriture des specs / à la clôture des sessions (écran élève, calibration L8…). S'y ajoutera le test reporté C11a-6 (synthèse hebdo → ligne `scriptorium` classe seule)._

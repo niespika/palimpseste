@@ -9,7 +9,7 @@ import {
   validerNoteSynthese,
   publierSynthese,
   depublierSynthese,
-} from '../../essai-actions'
+} from '../essai-actions'
 
 interface Eleve { id: string; display_name: string; classe: string | null; inscription_id: string }
 interface SyntheseRow {

@@ -27,7 +27,7 @@ export default async function ProfLayout({ children }: { children: React.ReactNo
       <EnTeteSite role="prof" tabs={NAV_PROF} deconnexionAction={deconnexion} />
       <main className="max-w-6xl mx-auto px-4 sm:px-6 pt-8 pb-20 sm:pb-8">
         {/* Sous-nav du module SUR MOBILE (la Barre 2 desktop est cachée < sm). */}
-        <SousNavModuleMobile />
+        <SousNavModuleMobile role="prof" />
         {children}
       </main>
       {/* Barre d'onglets fixe (mobile) — compensée par le pb-20 du <main>. */}
