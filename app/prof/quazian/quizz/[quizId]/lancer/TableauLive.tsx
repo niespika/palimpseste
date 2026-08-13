@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
+import { useRouter } from 'next/navigation'
 import { fermerQuizz } from './actions'
 
 interface EleveStatut {
@@ -22,9 +23,18 @@ interface Props {
 }
 
 export function TableauLive({ quizId, statut, fermeAt, eleves: elevesInit, moyenneCohorte }: Props) {
-  const [eleves, setEleves] = useState(elevesInit)
+  const router = useRouter()
+  const [elevesLive, setElevesLive] = useState<EleveStatut[] | null>(null)
   const [pending, setPending] = useState(false)
+  const [erreur, setErreur] = useState<string | null>(null)
   const [secondesRestantes, setSecondesRestantes] = useState<number | null>(null)
+
+  // Tableau DÉRIVÉ, pas copié : pendant le live, le sondage de 10 s est la source
+  // la plus fraîche ; une fois le quizz fermé, c'est le rendu serveur qui fait foi
+  // (il porte les notes définitives). Sans cette dérivation, le `router.refresh()`
+  // de la fermeture changeait le statut mais laissait le tableau sur les données
+  // du premier rendu — donc sans les scores.
+  const eleves = statut === 'lance' ? (elevesLive ?? elevesInit) : elevesInit
 
   // Timer
   useEffect(() => {
@@ -44,7 +54,7 @@ export function TableauLive({ quizId, statut, fermeAt, eleves: elevesInit, moyen
     const res = await fetch(`/api/quazian/live/${quizId}`)
     if (res.ok) {
       const data = await res.json()
-      setEleves(data.eleves)
+      setElevesLive(data.eleves)
     }
   }, [quizId, statut])
 
@@ -54,13 +64,26 @@ export function TableauLive({ quizId, statut, fermeAt, eleves: elevesInit, moyen
     return () => clearInterval(interval)
   }, [rafraichir, statut])
 
+  // FAIL-VISIBLE (C7·L1) : ce bouton jetait le résultat de `fermerQuizz` à la
+  // poubelle. Une fermeture qui échouait rendait la main sans un mot — le prof
+  // voyait le quizz rester ouvert sans savoir pourquoi. Le `try/finally` relâche
+  // le bouton même si l'action lève (patron C8·L1), et `router.refresh()` fait
+  // apparaître l'écran fermé sans Cmd-R.
   async function handleFermer() {
     if (!confirm('Fermer le quizz maintenant ? Les élèves non soumis seront auto-soumis avec 25/25/25/25.')) return
     setPending(true)
-    const fd = new FormData()
-    fd.append('quizId', quizId)
-    await fermerQuizz(fd)
-    setPending(false)
+    setErreur(null)
+    try {
+      const fd = new FormData()
+      fd.append('quizId', quizId)
+      const res = await fermerQuizz(fd)
+      if ('error' in res && res.error) { setErreur(res.error); return }
+      router.refresh()
+    } catch {
+      setErreur('La fermeture n’a pas abouti (erreur serveur). Réessaie — rien n’a été figé.')
+    } finally {
+      setPending(false)
+    }
   }
 
   const nbSoumis = eleves.filter((e) => e.soumis).length
@@ -100,13 +123,16 @@ export function TableauLive({ quizId, statut, fermeAt, eleves: elevesInit, moyen
           </div>
 
           {statut === 'lance' && (
-            <button
-              onClick={handleFermer}
-              disabled={pending}
-              className="px-5 py-2.5 bg-retard text-surface text-sm rounded-xl hover:opacity-90 disabled:opacity-50 transition-colors"
-            >
-              {pending ? 'Fermeture…' : 'Fermer le quizz'}
-            </button>
+            <div className="text-right">
+              <button
+                onClick={handleFermer}
+                disabled={pending}
+                className="px-5 py-2.5 bg-retard text-surface text-sm rounded-xl hover:opacity-90 disabled:opacity-50 transition-colors"
+              >
+                {pending ? 'Fermeture…' : 'Fermer le quizz'}
+              </button>
+              {erreur && <p className="text-xs text-retard mt-2 max-w-xs">{erreur}</p>}
+            </div>
           )}
         </div>
 
