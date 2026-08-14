@@ -529,7 +529,17 @@ invisible.
   — l'élève lit la colonne stockée `note_formative_20`, le prof **recalcule** `10 + score_moyen` — ne
   s'est pas matérialisé : même formule, même bornage, même résultat. _(Il reste théorique : si un jour
   la formule bouge d'un côté seulement, c'est là que ça se verra.)_
-- [ ] **C7L2-4 · Commutateur à trois états (le test du lot).** Avec le compte bi-classe :
+- [x] **C7L2-4 · Commutateur à trois états (le test du lot).** _(**Validé le 13/08 sur Sacha**, les
+  cinq points joués dans l'ordre. 1 : la puce offre « Toutes les classes · T5 · Test ». 2 : sur une
+  classe, le calendrier n'affiche que ses échéances et **sa légende de couleurs disparaît**. 3 : sur
+  Toutes, le tableau de bord dit « Toutes les classes » sous le bonjour, le héros porte « · Test », et
+  « Ensuite cette semaine » aligne **deux** lectures Aletheia — « · T5 » et « · Test » — pendant que
+  le calendrier remontre la légende Test · T5. 4 : entrer dans Quazian affiche « Quelle classe ? » ;
+  choisir Test amène les 18 cartes **et la puce de l'en-tête est passée sur Test**. 5 : la bascule
+  Test ↔ T5 depuis l'intérieur du module marche, sans repasser par le tableau de bord.
+  Vu au passage : le choix ne propose que les classes **qui ont le module** — Quazian n'offre que Test
+  (T5 ne l'a pas), Fragments offre les deux, avec le pigment du module. Aucune erreur console.)_
+  Avec le compte bi-classe :
   1. Le commutateur (puce de l'en-tête, ou bandeau mobile) propose **Toutes les classes · classe A ·
      classe B**.
   2. Sur **une classe** : le tableau de bord ne montre que le travail de cette classe, et le
@@ -541,12 +551,20 @@ invisible.
      **le commutateur de l'en-tête a suivi** (il n'est plus sur « Toutes »).
   5. Depuis l'intérieur du module, **rechanger de classe par le commutateur** sans repasser par le
      tableau de bord.
-- [ ] **C7L2-5 · Un bi-classe ne voit jamais l'autre classe (item 3, le point dur).** Publier des
-  cartes et lancer un quizz dans la classe A **seulement**. Élève bi-classe posé sur la **classe B** :
-  l'onglet Flashcards ne doit annoncer **aucune** carte de A, et l'onglet Quizz **aucun** quizz de A.
-  Basculer sur A : les deux reviennent. Même contrôle sur **Codex** (une séance lancée en A ne doit
-  pas apparaître quand le contexte est B). _(Avant ce lot, les deux modules lisaient l'UNION des
-  classes de l'élève et ignoraient le commutateur.)_
+- [x] **C7L2-5 · Un bi-classe ne voit jamais l'autre classe (item 3, le point dur).** _(**Validé le
+  13/08 sur Sacha**, dans les deux sens, même session, seul le commutateur changeant :_
+
+  | Contexte | Flashcards | Quizz |
+  |---|---|---|
+  | **T5** | 0 carte — « ton professeur n'a pas encore publié de cartes » | « aucun quizz pour l'instant » |
+  | **Test** | **18** cartes, 18 dues | le quizz du 13/08, « terminé (non passé) » |
+
+  _Les 18 cartes de « Cognitif » et le quizz appartiennent à Test : sur T5 ils sont bien invisibles.
+  Avant ce lot, les deux modules lisaient l'UNION des classes et ignoraient le commutateur — Sacha
+  aurait vu les deux dans les deux contextes.)_
+  **Reste à faire une fois : le même contrôle sur Codex.** La sandbox n'a de séance qu'en Test, donc
+  l'absence côté T5 ne prouve rien tant qu'une séance n'est pas lancée dans les deux classes. Le code
+  est le même chemin (`classeIdsDuContexte`), mais ce n'est pas une observation.
 - [ ] **C7L2-6 · Le gel de l'intégrité tient avec les onglets.** Bloquer l'élève depuis
   `/prof/integrite`, puis recharger sa page Quazian : onglet **Flashcards** = bannière « cheeky »
   seule (révision gelée), onglet **Quizz** = **toujours ouvert**. Débloquer ensuite. _(⚠️ Bloquer un
