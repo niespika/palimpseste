@@ -1,7 +1,7 @@
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import { createClient } from '@/utils/supabase/server'
-import { lireUnitesScriptorium } from './actions'
+import { lireCiblesCodex } from './actions'
 import { preparerSynthese } from '../scriptorium/evaluations/actions'
 import { chargerSynthesesAPreparer } from './synthese-a-preparer'
 import { FormulaireSynthese } from './FormulaireSynthese'
@@ -29,15 +29,15 @@ export default async function CodexProfPage({ searchParams }: { searchParams: Pr
   const supabase = await createClient()
   const { classe: classeSel } = await searchParams
 
-  const [unites, { data: syntheses }, { data: classes }] = await Promise.all([
-    lireUnitesScriptorium(),
+  const [cibles, { data: syntheses }, { data: classes }] = await Promise.all([
+    lireCiblesCodex(),
     supabase
       .from('codex_sessions')
       .select('id, statut, classe_id, scriptorium_unite_id, created_at, scriptorium_unites(label), classes(nom)')
       .order('created_at', { ascending: false }),
     supabase.from('classes').select('id, nom').order('nom'),
   ])
-  // Titres des cours (bras contenu bi-source) résolus à part, gaté (vide gate OFF).
+  // Titres des cours (bras contenu bi-source) résolus à part.
   const titresCours = await titresCoursParSession(supabase, (syntheses ?? []).map((s) => s.id as string))
 
   const labelUnite = (s: { id: string; scriptorium_unites: unknown }) =>
@@ -81,7 +81,7 @@ export default async function CodexProfPage({ searchParams }: { searchParams: Pr
 
   return (
     <div className="space-y-8">
-      <FormulaireSynthese unites={unites} classes={classesList} />
+      <FormulaireSynthese cibles={cibles} classes={classesList} />
 
       {/* Synthèses de fin de cours planifiées (plan d'évaluation). Gate OFF → aPreparer
           vide → rien ne s'affiche (page Codex inchangée). */}

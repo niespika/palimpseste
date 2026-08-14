@@ -3,20 +3,16 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { creerSynthese } from './actions'
-
-interface Unite {
-  id: string
-  label: string
-  classe: string | null
-  ordre: number
-}
+import type { CibleQuazian } from '@/utils/quazian-cibles'
 
 interface ClasseOption {
   id: string
   nom: string
 }
 
-export function FormulaireSynthese({ unites, classes }: { unites: Unite[]; classes: ClasseOption[] }) {
+const GENRE_LABEL: Record<string, string> = { texte: 'Texte', cours: 'Cours' }
+
+export function FormulaireSynthese({ cibles, classes }: { cibles: CibleQuazian[]; classes: ClasseOption[] }) {
   const router = useRouter()
   const [loading, setLoading] = useState(false)
   const [erreur, setErreur] = useState<string | null>(null)
@@ -39,10 +35,10 @@ export function FormulaireSynthese({ unites, classes }: { unites: Unite[]; class
     }
   }
 
-  if (unites.length === 0) {
+  if (cibles.length === 0) {
     return (
       <div className="bg-attention-teinte border border-attention rounded-xl p-4 text-sm text-attention">
-        Aucune unité dans le Scriptorium. Crée d&apos;abord une unité et dépose le cours avant de lancer une synthèse.
+        Aucun texte ni cours dans le Scriptorium. Dépose d&apos;abord un contenu avant de lancer une synthèse.
       </div>
     )
   }
@@ -68,17 +64,17 @@ export function FormulaireSynthese({ unites, classes }: { unites: Unite[]; class
       </div>
 
       <div className="mb-4">
-        <label className="text-xs text-muet mb-1 block">Unité du Scriptorium (le sujet de la synthèse)</label>
+        <label className="text-xs text-muet mb-1 block">Contenu du Scriptorium (le sujet de la synthèse)</label>
         <select
-          name="scriptorium_unite_id"
+          name="cible_id"
           required
           defaultValue=""
           className="w-full px-3 py-2 text-sm border border-bordure rounded-lg bg-surface"
         >
-          <option value="" disabled>Choisir une unité…</option>
-          {unites.map((u) => (
-            <option key={u.id} value={u.id}>
-              {u.label}{u.classe ? ` — ${u.classe}` : ''}
+          <option value="" disabled>Choisir un contenu…</option>
+          {cibles.map((c) => (
+            <option key={c.id} value={c.id}>
+              {c.label}{c.genre ? ` — ${GENRE_LABEL[c.genre] ?? c.genre}` : ''}
             </option>
           ))}
         </select>
