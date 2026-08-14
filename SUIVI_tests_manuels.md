@@ -565,11 +565,19 @@ invisible.
   **Reste à faire une fois : le même contrôle sur Codex.** La sandbox n'a de séance qu'en Test, donc
   l'absence côté T5 ne prouve rien tant qu'une séance n'est pas lancée dans les deux classes. Le code
   est le même chemin (`classeIdsDuContexte`), mais ce n'est pas une observation.
-- [ ] **C7L2-6 · Le gel de l'intégrité tient avec les onglets.** Bloquer l'élève depuis
-  `/prof/integrite`, puis recharger sa page Quazian : onglet **Flashcards** = bannière « cheeky »
-  seule (révision gelée), onglet **Quizz** = **toujours ouvert**. Débloquer ensuite. _(⚠️ Bloquer un
-  élève jamais signalé est impossible depuis l'écran — c'est la trouvaille de C7·L1 notée dans
-  `IDEES_post_rentree.md` ; contourner par SQL comme en L1.)_
+- [x] **C7L2-6 · Le gel de l'intégrité tient avec les onglets.** _(**Validé le 13/08** sur Elo,
+  bloquée : onglet **Flashcards** = la bannière « Rendus en pause » SEULE — ni compteurs, ni bouton de
+  révision ; onglet **Quizz** = **entièrement ouvert**, le quizz du 13/08 avec sa note et son
+  « revoir → ». La règle de L1 traverse donc la mise en onglets. **Le découpage la sert même** : la
+  bannière dit « le quizz, lui, reste ouvert » et l'onglet est désormais juste à côté, au lieu d'une
+  section empilée sous le message.
+  Vérifié en plus, parce que mon remaniement déplaçait ce point d'appel : le **tableau de bord**
+  n'annonce AUCUNE carte à réviser pendant le blocage (Quazian « à jour »), alors qu'Elo en a 18 une
+  fois débloquée — la garde de `chargerStatsRevision` tient, les compteurs ne promettent pas un
+  travail inaccessible.
+  ⚠️ **Elo est restée bloquée à la fin de la passe — la débloquer.**)_ _(Rappel : bloquer un élève
+  jamais signalé est impossible depuis l'écran — trouvaille de C7·L1 notée dans
+  `IDEES_post_rentree.md`.)_
 - [x] **C7L2-7 · Non-régression mono-classe.** Avec un élève d'une seule classe : **aucun
   commutateur** ne s'affiche, aucun écran « Quelle classe ? » n'apparaît, et le tableau de bord, le
   calendrier et les modules se comportent comme avant le lot. _(**Validé le 13/08** sur « Elo »,
