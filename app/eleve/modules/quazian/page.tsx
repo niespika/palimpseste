@@ -18,15 +18,19 @@ type QuizListItem = { id: string; statut: string; lance_at: string | null; nb_qu
 export default async function QuazianElevePage({
   searchParams,
 }: {
-  searchParams: Promise<{ vue?: string }>
+  searchParams: Promise<{ vue?: string; cours?: string }>
 }) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
   const tz = await lireFuseau() // lance_at = instant → fuseau choisi
   // C7·L2 — deux onglets (règle R8) : « Flashcards » (défaut) et « Quizz ».
-  const { vue: vueParam } = await searchParams
+  // C7·L3 — `?cours=` ouvre la consultation d'UN cours (tuiles par cours) :
+  // l'état vit dans l'URL, donc le retour arrière du navigateur y ramène.
+  const { vue: vueParam, cours: coursParam } = await searchParams
   const vue = vueParam === 'quizz' ? 'quizz' : 'flashcards'
+  // Le cours ouvert ne vaut que sur l'onglet Flashcards (le Quizz l'ignore).
+  const coursOuvert = vue === 'flashcards' ? (coursParam ?? null) : null
 
   // Vérifier que le module est actif et assigné
   const { data: module } = await supabase
@@ -120,12 +124,17 @@ export default async function QuazianElevePage({
 
   return (
     <div>
-      <Link
-        href="/eleve"
-        className="text-sm text-encre-douce hover:text-encre mb-6 inline-flex items-center gap-1"
-      >
-        ← Retour
-      </Link>
+      {/* C7·L3 — la consultation d'un cours porte SON propre « ← Retour » (vers
+          les tuiles) : en garder un second vers le tableau de bord juste au-dessus
+          empilerait deux retours qui ne mènent pas au même endroit. */}
+      {!coursOuvert && (
+        <Link
+          href="/eleve"
+          className="text-sm text-encre-douce hover:text-encre mb-6 inline-flex items-center gap-1"
+        >
+          ← Retour
+        </Link>
+      )}
 
       {/* Bannière quizz actif (à faire) */}
       {quizzActif && (
@@ -153,7 +162,12 @@ export default async function QuazianElevePage({
       ) : blocage ? (
         <BanniereIntegrite message={blocage} />
       ) : (
-        <QuazianDashboard stats={stats!} file={file} toutesCartes={toutesCartes} />
+        <QuazianDashboard
+          stats={stats!}
+          file={file}
+          toutesCartes={toutesCartes}
+          coursOuvert={coursOuvert}
+        />
       )}
     </div>
   )

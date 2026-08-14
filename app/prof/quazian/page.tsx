@@ -1,14 +1,21 @@
 import Link from 'next/link'
 import { createClient } from '@/utils/supabase/server'
 import { createAdminClient } from '@/utils/supabase/admin'
-import { togglePublication } from './actions'
 import Tuile from '@/components/Tuile'
 import BoutonGenererCartes from './BoutonGenererCartes'
-import { chargerCiblesQuazian, classesParContenu } from '@/utils/quazian-cibles'
+import { chargerCiblesQuazian, avancementVuParContenu } from '@/utils/quazian-cibles'
+import { lignesEtatVu, type CarteAncree } from '@/utils/quazian-visibilite'
 
-async function actionToggle(formData: FormData): Promise<void> {
-  'use server'
-  await togglePublication(formData)
+// Cartes partagées d'un coup, tolérant à l'absence de `section_id` : le code part
+// avant le SQL (protocole renforcé) — sans ce repli, l'écran prof serait vide
+// entre le déploiement et l'exécution de `c7_quazian_sections.sql`.
+async function lireCartesPartagees(supabase: Awaited<ReturnType<typeof createClient>>) {
+  const requete = (select: string) =>
+    supabase.from('quazian_flashcards').select(select).is('eleve_id', null)
+  const { data, error } = await requete('contenu_id, scriptorium_unite_id, section_id, statut')
+  if (!error) return (data ?? []) as unknown as Record<string, unknown>[]
+  const repli = await requete('contenu_id, scriptorium_unite_id, statut')
+  return (repli.data ?? []) as unknown as Record<string, unknown>[]
 }
 
 export default async function QuazianPage({ searchParams }: { searchParams: Promise<{ cible?: string }> }) {
@@ -19,44 +26,45 @@ export default async function QuazianPage({ searchParams }: { searchParams: Prom
   // Avant ce lot, cet écran demandait `scriptorium_unites` où `type='unite'` : zéro
   // ligne depuis la réorganisation, donc « Aucune unité dans le Scriptorium » et
   // aucun bouton à presser (§4.1 du RAPPORT_Diagnostic_C7_quazian.md).
-  const [cibles, { data: cartes }, { data: publications }] = await Promise.all([
+  const [cibles, cartes] = await Promise.all([
     chargerCiblesQuazian(supabase),
-    supabase.from('quazian_flashcards')
-      .select('contenu_id, scriptorium_unite_id, statut').is('eleve_id', null),
-    supabase.from('quazian_publications')
-      .select('contenu_id, scriptorium_unite_id, flashcards_visibles'),
+    lireCartesPartagees(supabase),
   ])
 
   type Stat = { total: number; valide: number; suggere: number }
   const cartesParCible = new Map<string, Stat>()
-  for (const c of cartes ?? []) {
+  const valideesParCible = new Map<string, CarteAncree[]>()
+  for (const c of cartes) {
     const cle = (c.contenu_id as string | null) ?? (c.scriptorium_unite_id as string | null)
     if (!cle) continue
     const st = cartesParCible.get(cle) ?? { total: 0, valide: 0, suggere: 0 }
     st.total++
-    if (c.statut === 'valide') st.valide++
+    if (c.statut === 'valide') {
+      st.valide++
+      const arr = valideesParCible.get(cle) ?? []
+      arr.push(c as CarteAncree)
+      valideesParCible.set(cle, arr)
+    }
     if (c.statut === 'suggere') st.suggere++
     cartesParCible.set(cle, st)
   }
 
-  const pubVisible = new Map<string, boolean>()
-  for (const p of publications ?? []) {
-    const cle = (p.contenu_id as string | null) ?? (p.scriptorium_unite_id as string | null)
-    if (cle) pubVisible.set(cle, !!p.flashcards_visibles)
-  }
-
-  // À qui la publication parlera-t-elle ? Un contenu n'atteint un élève que s'il est
-  // au parcours de sa classe (§4.4) — le dire ici évite le « j'ai publié et l'élève
-  // ne voit rien ». Lecture admin : les tables de parcours sont en RLS prof-only.
+  // ⚠️ C7·L3 — plus rien à publier : la visibilité élève suit le « VU » du
+  // Scriptorium (par classe, par élément). Cet écran DIT donc où en est ce « vu »
+  // là où il offrait un bouton — c'est ce qui évite le « j'ai publié et l'élève ne
+  // voit rien », et ce qui rend la divergence entre classes native (§10.2 du
+  // rapport). Lecture admin : les tables de parcours sont en RLS prof-only.
   const admin = createAdminClient()
   const contenuIds = cibles.filter(c => c.bras === 'contenu').map(c => c.id)
-  const [classesDuContenu, { data: classesNoms }] = await Promise.all([
-    classesParContenu(admin, contenuIds),
+  const [avancement, { data: classesNoms }] = await Promise.all([
+    avancementVuParContenu(admin, contenuIds),
     supabase.from('classes').select('id, nom'),
   ])
   const nomClasse = new Map((classesNoms ?? []).map(c => [c.id as string, c.nom as string]))
-  const libelleClasses = (cibleId: string) =>
-    [...(classesDuContenu.get(cibleId) ?? [])].map(id => nomClasse.get(id) ?? '—').sort()
+
+  /** Une ligne d'état par classe qui a ce contenu au parcours, prête à afficher. */
+  const etatDuVu = (cibleId: string) =>
+    lignesEtatVu(cibleId, valideesParCible.get(cibleId) ?? [], avancement.get(cibleId) ?? [], nomClasse)
 
   if (cibles.length === 0) {
     return (
@@ -73,7 +81,7 @@ export default async function QuazianPage({ searchParams }: { searchParams: Prom
   }
 
   const cibleChoisie = cibles.find(c => c.id === cibleSel)
-  const classesCible = cibleChoisie ? libelleClasses(cibleChoisie.id) : []
+  const etatChoisi = cibleChoisie ? etatDuVu(cibleChoisie.id) : []
   const stChoisie = cibleChoisie
     ? cartesParCible.get(cibleChoisie.id) ?? { total: 0, valide: 0, suggere: 0 }
     : null
@@ -84,6 +92,9 @@ export default async function QuazianPage({ searchParams }: { searchParams: Prom
         {cibles.map(c => {
           const st = cartesParCible.get(c.id) ?? { total: 0, valide: 0, suggere: 0 }
           const genre = c.genre === 'cours' ? 'Cours' : c.genre === 'texte' ? 'Texte' : 'Unité'
+          // Vert = des cartes atteignent RÉELLEMENT des élèves quelque part (le
+          // « vu » est passé), à la place du vert « publié » d'avant le lot.
+          const atteintDesEleves = etatDuVu(c.id).some(l => l.nbVisibles > 0)
           return (
             <Tuile
               key={c.id}
@@ -91,7 +102,7 @@ export default async function QuazianPage({ searchParams }: { searchParams: Prom
               sousTitre={`${genre} · ${st.valide} carte${st.valide > 1 ? 's' : ''} validée${st.valide > 1 ? 's' : ''}`}
               href={`/prof/quazian?cible=${c.id}`}
               selectionnee={cibleSel === c.id}
-              couleur={pubVisible.get(c.id) ? 'vert' : 'neutre'}
+              couleur={atteintDesEleves ? 'vert' : 'neutre'}
               resume={st.suggere > 0 ? <span className="text-xs text-attention">{st.suggere} à valider</span> : undefined}
             />
           )
@@ -106,30 +117,15 @@ export default async function QuazianPage({ searchParams }: { searchParams: Prom
               <p className="text-xs text-muet mt-0.5">
                 {cibleChoisie.genre === 'texte'
                   ? 'Un texte source ne donne qu’1 à 2 cartes — l’essentiel du passage.'
-                  : 'Un cours se décortique en cartes atomiques.'}
+                  : 'Un cours se décortique en cartes atomiques, sous-section par sous-section.'}
               </p>
             </div>
-            <div className="flex items-center gap-2">
-              <form action={actionToggle}>
-                <input type="hidden" name="cibleId" value={cibleChoisie.id} />
-                <input type="hidden" name="actuel" value={String(pubVisible.get(cibleChoisie.id) ?? false)} />
-                <button
-                  type="submit"
-                  disabled={stChoisie.valide === 0 && !pubVisible.get(cibleChoisie.id)}
-                  className={`px-3 py-1.5 text-xs rounded-lg transition-colors disabled:opacity-50 ${
-                    pubVisible.get(cibleChoisie.id) ? 'bg-ok-teinte text-ok hover:opacity-90' : 'bg-parchemin-fonce text-muet hover:opacity-90'
-                  }`}
-                >
-                  {pubVisible.get(cibleChoisie.id) ? 'Masquer aux élèves' : 'Publier aux élèves'}
-                </button>
-              </form>
-              <Link href={`/prof/quazian/${cibleChoisie.id}`} className="px-3 py-1.5 text-xs bg-bouton text-surface rounded-lg hover:opacity-90 transition-colors">
-                Revoir / éditer →
-              </Link>
-            </div>
+            <Link href={`/prof/quazian/${cibleChoisie.id}`} className="px-3 py-1.5 text-xs bg-bouton text-surface rounded-lg hover:opacity-90 transition-colors">
+              Revoir / éditer →
+            </Link>
           </div>
 
-          <div className="px-5 py-4 flex items-center justify-between gap-3 flex-wrap">
+          <div className="px-5 py-4 flex items-start justify-between gap-3 flex-wrap">
             <div className="min-w-0">
               <p className="text-sm text-encre">
                 {stChoisie.total === 0 ? 'Aucune carte — à générer' : (
@@ -139,13 +135,32 @@ export default async function QuazianPage({ searchParams }: { searchParams: Prom
                   </>
                 )}
               </p>
-              <p className="text-xs text-muet mt-0.5">
-                {cibleChoisie.bras !== 'contenu'
-                  ? 'Unité héritée — visibilité élève par les contenus assignés de sa semaine.'
-                  : classesCible.length > 0
-                    ? `Au parcours de ${classesCible.join(', ')} — ces élèves verront les cartes une fois publiées.`
-                    : 'Ce contenu n’est au parcours d’aucune classe : même publiées, ces cartes n’atteindront personne.'}
-              </p>
+
+              {/* L'état réel, à la place du bouton « Publier aux élèves ». */}
+              {cibleChoisie.bras !== 'contenu' ? (
+                <p className="text-xs text-muet mt-1">
+                  Unité héritée — visibilité élève par les contenus assignés de sa semaine.
+                </p>
+              ) : etatChoisi.length === 0 ? (
+                <p className="text-xs text-muet mt-1">
+                  Ce contenu n’est au parcours d’aucune classe : ses cartes n’atteindront personne
+                  tant qu’il n’y figure pas.
+                </p>
+              ) : (
+                <div className="mt-1.5">
+                  <p className="text-xs text-muet">
+                    Au parcours de — les cartes apparaissent au « vu » du Scriptorium, rien à publier :
+                  </p>
+                  <ul className="mt-1 space-y-0.5">
+                    {etatChoisi.map(l => (
+                      <li key={l.classe} className="text-xs">
+                        <span className="text-encre-douce font-medium">{l.classe}</span>
+                        <span className={l.nbVisibles > 0 ? 'text-ok' : 'text-muet'}> — {l.texte}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
             </div>
             <BoutonGenererCartes cibleId={cibleChoisie.id} dejaDesCartes={stChoisie.total > 0} />
           </div>

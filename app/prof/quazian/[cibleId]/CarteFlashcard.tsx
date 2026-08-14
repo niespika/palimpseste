@@ -33,6 +33,8 @@ interface Carte {
   statut: string
   source: string
   cible_id: string
+  /** Sous-section d'origine (C7·L3) — null = grain du contenu entier. */
+  section?: string | null
 }
 
 export function CarteFlashcard({ carte, cibleId }: { carte: Carte; cibleId: string }) {
@@ -156,6 +158,12 @@ export function CarteFlashcard({ carte, cibleId }: { carte: Carte; cibleId: stri
           {carte.format === 'cloze' ? 'cloze' : 'Q→R'}
         </span>
       </div>
+
+      {/* C7·L3 — d'où vient la carte : c'est cette sous-section qui devra être
+          cochée « vue » pour que l'élève la reçoive. */}
+      {carte.section && (
+        <p className="text-xs text-muet mb-1 truncate">§ {carte.section}</p>
+      )}
 
       <p className="text-sm text-encre font-medium mb-1">{carte.recto}</p>
       <p className="text-sm text-muet">{carte.verso}</p>

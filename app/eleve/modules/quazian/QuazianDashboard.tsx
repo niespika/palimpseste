@@ -1,8 +1,9 @@
 'use client'
 
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { SessionRevision } from './SessionRevision'
 import { ConsultationCartes } from './ConsultationCartes'
+import Tuile from '@/components/Tuile'
 import type { CarteRevision, CarteConsultation } from './actions'
 
 interface Stats {
@@ -17,24 +18,60 @@ interface Props {
   stats: Stats
   file: CarteRevision[]
   toutesCartes: CarteConsultation[]
+  /** Cours ouvert en consultation (`?cours=`), null = accueil de l'onglet. */
+  coursOuvert: string | null
 }
 
 const SUR_TITRE = 'font-ui text-xs tracking-[0.1em] text-muet uppercase'
 
+interface TuileCours {
+  id: string
+  label: string
+  total: number
+  aReviser: number
+  nouvelles: number
+}
+
 // C7·L2 — le quizz a quitté cet écran : il a son propre onglet. Ce composant ne
 // porte plus que la zone Réviser (stats, session, consultation).
-export function QuazianDashboard({ stats, file, toutesCartes }: Props) {
-  const [mode, setMode] = useState<'accueil' | 'revision' | 'consultation'>('accueil')
+//
+// C7·L3 — les cartes n'arrivent plus en un seul pot : une TUILE PAR COURS, comme
+// l'écran prof, et la consultation s'ouvre par cours. La FILE de révision, elle,
+// reste GLOBALE (décision R7 du prompt de lot) : la répétition espacée est
+// transverse — c'est elle qui décide quoi montrer aujourd'hui, pas le cours —
+// et chaque carte continue d'afficher le sien pendant la session.
+export function QuazianDashboard({ stats, file, toutesCartes, coursOuvert }: Props) {
+  const [mode, setMode] = useState<'accueil' | 'revision'>('accueil')
   const [nbRevues, setNbRevues] = useState<number | null>(null)
-  const nbNouvelles = toutesCartes.filter((c) => c.nouvelle).length
+
+  // Un cours = une cible (contenu, unité héritée, ou le pot « Cartes personnelles »).
+  // L'ordre suit le nom du cours : l'élève cherche un titre, pas une date.
+  const cours = useMemo<TuileCours[]>(() => {
+    const m = new Map<string, TuileCours>()
+    for (const c of toutesCartes) {
+      const t = m.get(c.cible_id) ?? { id: c.cible_id, label: c.label_unite, total: 0, aReviser: 0, nouvelles: 0 }
+      t.total++
+      if (c.a_reviser) t.aReviser++
+      if (c.nouvelle) t.nouvelles++
+      m.set(c.cible_id, t)
+    }
+    return [...m.values()].sort((a, b) => a.label.localeCompare(b.label))
+  }, [toutesCartes])
 
   function handleTermine(nb: number) {
     setNbRevues(nb)
     setMode('accueil')
   }
 
-  if (mode === 'consultation') {
-    return <ConsultationCartes cartes={toutesCartes} onRetour={() => setMode('accueil')} />
+  if (coursOuvert) {
+    const choisi = cours.find((c) => c.id === coursOuvert)
+    return (
+      <ConsultationCartes
+        cartes={toutesCartes.filter((c) => c.cible_id === coursOuvert)}
+        titre={choisi?.label ?? 'Cartes'}
+        retourHref="/eleve/modules/quazian"
+      />
+    )
   }
 
   if (mode === 'revision') {
@@ -76,40 +113,56 @@ export function QuazianDashboard({ stats, file, toutesCartes }: Props) {
           </div>
         </div>
 
-        {/* CTA + consultation */}
-        <div className="space-y-3">
-          {stats.aFaire > 0 ? (
-            <button
-              onClick={() => { setNbRevues(null); setMode('revision') }}
-              className="w-full py-4 bg-bouton text-surface rounded-xl hover:opacity-90 transition-colors font-medium"
-            >
-              Réviser mes {stats.aFaire} carte{stats.aFaire > 1 ? 's' : ''}
-            </button>
-          ) : (
-            <div className="w-full py-4 bg-ok-teinte border border-ok text-ok rounded-xl text-center text-sm">
-              ✓ Toutes les cartes sont à jour — reviens demain !
-            </div>
-          )}
-
-          {toutesCartes.length > 0 && (
-            <button
-              onClick={() => setMode('consultation')}
-              className="w-full py-3 bg-surface border border-bordure text-encre-douce rounded-xl hover:border-pigment transition-colors text-sm font-medium flex items-center justify-center gap-2"
-            >
-              Consulter toutes mes cartes
-              {nbNouvelles > 0 && (
-                <span className="text-xs bg-attention-teinte text-attention px-2 py-0.5 rounded-full">{nbNouvelles} nouvelle{nbNouvelles > 1 ? 's' : ''}</span>
-              )}
-            </button>
-          )}
-
-          {stats.totalCartes === 0 && (
-            <p className="text-center text-muet text-sm">
-              Ton professeur n'a pas encore publié de cartes.
-            </p>
-          )}
-        </div>
+        {/* La file mélange tous les cours — c'est le principe de la répétition espacée. */}
+        {stats.aFaire > 0 ? (
+          <button
+            onClick={() => { setNbRevues(null); setMode('revision') }}
+            className="w-full py-4 bg-bouton text-surface rounded-xl hover:opacity-90 transition-colors font-medium"
+          >
+            Réviser mes {stats.aFaire} carte{stats.aFaire > 1 ? 's' : ''}
+          </button>
+        ) : (
+          <div className="w-full py-4 bg-ok-teinte border border-ok text-ok rounded-xl text-center text-sm">
+            ✓ Toutes les cartes sont à jour — reviens demain !
+          </div>
+        )}
       </section>
+
+      {/* ── Zone MES COURS — une tuile par cours (C7·L3) ───────────────────── */}
+      {cours.length > 0 ? (
+        <section>
+          <h3 className={`${SUR_TITRE} mb-3`}>Mes cours</h3>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            {cours.map((c) => (
+              <Tuile
+                key={c.id}
+                nom={c.label}
+                sousTitre={`${c.total} carte${c.total > 1 ? 's' : ''}`}
+                href={`/eleve/modules/quazian?cours=${encodeURIComponent(c.id)}`}
+                couleur="neutre"
+                resume={
+                  <span className="flex items-center gap-2 text-xs">
+                    {c.aReviser > 0 && (
+                      <span className="bg-attention-teinte text-attention px-2 py-0.5 rounded-full">
+                        {c.aReviser} à réviser
+                      </span>
+                    )}
+                    {c.nouvelles > 0 && (
+                      <span className="text-muet">{c.nouvelles} nouvelle{c.nouvelles > 1 ? 's' : ''}</span>
+                    )}
+                  </span>
+                }
+              />
+            ))}
+          </div>
+        </section>
+      ) : (
+        // Reformulé à C7·L3 : le prof ne « publie » plus rien — les cartes
+        // arrivent au fil des cours vus en classe.
+        <p className="text-center text-muet text-sm">
+          Aucune carte pour l&apos;instant. Elles apparaîtront au fil des cours vus en classe.
+        </p>
+      )}
     </div>
   )
 }
