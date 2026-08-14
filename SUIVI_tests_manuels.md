@@ -629,10 +629,13 @@ l'écriture de cette section.**_
 _Prouvé sans navigateur : `tsc --noEmit` vert, `npm test` **172/172** (dont 8 neufs sur la règle de
 visibilité, `utils/quazian-visibilite.test.ts`), `npm run build` vert (toutes les routes compilées)._
 
-_**La recette navigateur n'est pas jouée** : elle demande la session prof PUIS la session élève, donc
-des mots de passe que cette session ne saisit pas. Les tests ci-dessous sont écrits pour être joués
-tels quels, **après** l'exécution du SQL. Règle d'or : Chrome, pas l'aperçu embarqué, et Cmd-R avant
-de conclure à un bug._
+_**RECETTE CLOSE le 14/08 — dix tests sur dix.** Les huit prévus, plus deux défauts découverts en
+chemin et corrigés dans la foulée (C7L3-9, la révision élève qui ne s'enregistrait jamais ;
+C7L3-10, le compteur qui annonçait trois nombres différents). Jouée à deux : les clics dans les
+sessions prof et élève par Louis (aucun mot de passe saisi par l'agent), le pilotage d'écran et
+tous les constats en base par l'agent. Règle d'or respectée : Chrome pour la re-découpe (`confirm()`
+natif), et Cmd-R avant de conclure à un bug — deux fois, une lecture trop rapide m'a fait croire à
+un clic mort qui n'en était pas un._
 
 **État de la sandbox au 14/08 (lu en base, lecture seule) — le terrain des tests :**
 
@@ -839,9 +842,17 @@ demande d'archiver ou supprimer les anciennes d'abord (parqué dans `IDEES_post_
   ⚠️ Au passage, un raté à moi rattrapé par la vérification navigateur : la constante du plafond
   était d'abord `export`, ce qu'un fichier `'use server'` interdit — `tsc` ne le voit pas, la page
   rendait une 500. Corrigé avant commit.)_
-- [ ] **C7L3-8 · Smoke élève immédiat après le SQL (protocole renforcé).** Connexion élève test +
+- [x] **C7L3-8 · Smoke élève immédiat après le SQL (protocole renforcé).** Connexion élève test +
   une soumission Aletheia + un tour sur `/eleve/modules/quazian`. Rien d'autre du flux existant ne
-  doit bouger.
+  doit bouger. _(**Validé le 14/08**, les deux volets joués APRÈS le retrait de la policy.
+  **Quazian** — c'était le vrai risque, la migration touchant précisément cette table : les états
+  FSRS passent de **30 à 35** (dernière révision 19:38:55), donc la lecture élève survit sans la
+  policy et l'écriture tient. **Aletheia** — soumission d'Elo à 19:38, `statut = FEEDBACK1_READY`,
+  retour V1 généré, aucun `retour_v1_erreur_at` : la chaîne complète (dépôt → génération → retour
+  prêt à lire) est passée. ⚠️ **Première tentative bloquée**, et c'est l'app qui a bien fonctionné :
+  le gate transverse « retours non lus » (`utils/retours-lus.ts`) gèle tout rendu tant qu'un retour
+  reste non lu — ici une note de quizz Quazian. Louis l'a levée en lisant la note, puis la
+  soumission est passée. Rien à corriger : le gate a fait exactement son travail.)_
 
 **Reste hors de ce lot, volontairement :** la génération AUTOMATIQUE au clic « vu » (déclencheur) →
 post-rentrée, écartée par le prompt de L2 et toujours écartée ; le diagnostic de fragilités et ses
