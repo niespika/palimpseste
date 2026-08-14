@@ -18,14 +18,16 @@ type QuizListItem = { id: string; statut: string; lance_at: string | null; nb_qu
 export default async function QuazianElevePage({
   searchParams,
 }: {
-  searchParams: Promise<{ vue?: string }>
+  searchParams: Promise<{ vue?: string; cours?: string }>
 }) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
   const tz = await lireFuseau() // lance_at = instant → fuseau choisi
   // C7·L2 — deux onglets (règle R8) : « Flashcards » (défaut) et « Quizz ».
-  const { vue: vueParam } = await searchParams
+  // C7·L3 — `?cours=` ouvre la consultation d'UN cours (tuiles par cours) :
+  // l'état vit dans l'URL, donc le retour arrière du navigateur y ramène.
+  const { vue: vueParam, cours: coursParam } = await searchParams
   const vue = vueParam === 'quizz' ? 'quizz' : 'flashcards'
 
   // Vérifier que le module est actif et assigné
@@ -153,7 +155,12 @@ export default async function QuazianElevePage({
       ) : blocage ? (
         <BanniereIntegrite message={blocage} />
       ) : (
-        <QuazianDashboard stats={stats!} file={file} toutesCartes={toutesCartes} />
+        <QuazianDashboard
+          stats={stats!}
+          file={file}
+          toutesCartes={toutesCartes}
+          coursOuvert={coursParam ?? null}
+        />
       )}
     </div>
   )

@@ -1,18 +1,16 @@
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { createClient } from '@/utils/supabase/server'
-import { ajouterCarteManuellement, togglePublication, validerToutesLesSuggerees } from '../actions'
+import { createAdminClient } from '@/utils/supabase/admin'
+import { ajouterCarteManuellement, validerToutesLesSuggerees } from '../actions'
 import { CarteFlashcard } from './CarteFlashcard'
 import BoutonGenererCartes from '../BoutonGenererCartes'
-import { colonneCible, resoudreCible } from '@/utils/quazian-cibles'
+import { avancementVuParContenu, colonneCible, resoudreCible } from '@/utils/quazian-cibles'
+import { lignesEtatVu, type CarteAncree } from '@/utils/quazian-visibilite'
 
 async function actionAjouter(formData: FormData): Promise<void> {
   'use server'
   await ajouterCarteManuellement(formData)
-}
-async function actionToggle(formData: FormData): Promise<void> {
-  'use server'
-  await togglePublication(formData)
 }
 async function actionValiderToutes(formData: FormData): Promise<void> {
   'use server'
@@ -34,26 +32,54 @@ export default async function CibleCartesPage({
 
   const colonne = colonneCible(cible.bras)
 
-  const [{ data: toutes }, { data: pub }] = await Promise.all([
-    supabase
-      .from('quazian_flashcards')
-      .select('id, type, format, recto, verso, concept_tag, statut, source')
-      .eq(colonne, cibleId)
-      .is('eleve_id', null)
-      .order('created_at', { ascending: true }),
-    supabase
-      .from('quazian_publications')
-      .select('flashcards_visibles')
-      .eq(colonne, cibleId)
-      .maybeSingle(),
+  // `section_id` en plus (C7·L3), avec repli : le code part avant le SQL
+  // (protocole renforcé) — sans lui, cet écran serait vide dans l'intervalle.
+  const requeteCartes = (select: string) =>
+    supabase.from('quazian_flashcards').select(select)
+      .eq(colonne, cibleId).is('eleve_id', null)
+      .order('created_at', { ascending: true })
+  const premiere = await requeteCartes('id, type, format, recto, verso, concept_tag, statut, source, section_id')
+  const toutes = (premiere.error
+    ? (await requeteCartes('id, type, format, recto, verso, concept_tag, statut, source')).data
+    : premiere.data) as unknown as Record<string, unknown>[] | null
+
+  // Sous-sections du cours (titre affiché sous chaque carte) + état du « vu ».
+  const admin = createAdminClient()
+  const [{ data: sections }, avancement, { data: classesNoms }] = await Promise.all([
+    cible.bras === 'contenu'
+      ? supabase.from('scriptorium_contenu_sections')
+          .select('id, ordre, titre').eq('contenu_id', cibleId).order('ordre', { ascending: true })
+      : Promise.resolve({ data: [] as Record<string, unknown>[] }),
+    cible.bras === 'contenu' ? avancementVuParContenu(admin, [cibleId]) : Promise.resolve(new Map()),
+    supabase.from('classes').select('id, nom'),
   ])
+  const titreSection = new Map((sections ?? []).map(s => [s.id as string, s.titre as string]))
+  const nomClasse = new Map((classesNoms ?? []).map(c => [c.id as string, c.nom as string]))
 
-  const suggerees = (toutes ?? []).filter((c) => c.statut === 'suggere')
-  const validees = (toutes ?? []).filter((c) => c.statut === 'valide')
-  const archivees = (toutes ?? []).filter((c) => c.statut === 'archive')
-  const aVerifier = (toutes ?? []).filter((c) => c.statut === 'a_verifier')
+  const carte = (c: Record<string, unknown>) => ({
+    id: c.id as string,
+    type: c.type as string,
+    format: c.format as string,
+    recto: c.recto as string,
+    verso: c.verso as string,
+    concept_tag: c.concept_tag as string,
+    statut: c.statut as string,
+    source: c.source as string,
+    cible_id: cibleId,
+    section: titreSection.get((c.section_id as string | null) ?? '') ?? null,
+  })
+  const parStatut = (statut: string) => (toutes ?? []).filter(c => c.statut === statut).map(carte)
+  const suggerees = parStatut('suggere')
+  const validees = parStatut('valide')
+  const archivees = parStatut('archive')
+  const aVerifier = parStatut('a_verifier')
 
-  const visible = pub?.flashcards_visibles ?? false
+  const etatVu = lignesEtatVu(
+    cibleId,
+    (toutes ?? []).filter(c => c.statut === 'valide') as CarteAncree[],
+    avancement.get(cibleId) ?? [],
+    nomClasse,
+  )
   const genre = cible.genre === 'cours' ? 'Cours' : cible.genre === 'texte' ? 'Texte' : 'Unité (héritée)'
 
   return (
@@ -72,21 +98,29 @@ export default async function CibleCartesPage({
           </p>
         </div>
 
-        <form action={actionToggle}>
-          <input type="hidden" name="cibleId" value={cibleId} />
-          <input type="hidden" name="actuel" value={String(visible)} />
-          <button
-            type="submit"
-            disabled={validees.length === 0 && !visible}
-            className={`px-4 py-2 text-sm rounded-lg transition-colors ${
-              visible
-                ? 'bg-ok-teinte text-ok hover:opacity-90'
-                : 'bg-parchemin-fonce text-muet hover:opacity-90'
-            } disabled:opacity-40`}
-          >
-            {visible ? '● Visible aux élèves — Masquer' : '○ Masqué — Publier aux élèves'}
-          </button>
-        </form>
+        {/* C7·L3 — plus de bouton « Publier » : l'état RÉEL, celui que le « vu »
+            du Scriptorium produit, classe par classe. */}
+        <div className="text-xs max-w-xs">
+          {cible.bras !== 'contenu' ? (
+            <p className="text-muet">Unité héritée — visibilité par les contenus assignés de sa semaine.</p>
+          ) : etatVu.length === 0 ? (
+            <p className="text-muet">
+              Au parcours d’aucune classe : ces cartes n’atteindront personne tant que ce contenu n’y figure pas.
+            </p>
+          ) : (
+            <>
+              <p className="text-muet">Visible au « vu » du Scriptorium — rien à publier :</p>
+              <ul className="mt-1 space-y-0.5">
+                {etatVu.map(l => (
+                  <li key={l.classe}>
+                    <span className="text-encre-douce font-medium">{l.classe}</span>
+                    <span className={l.nbVisibles > 0 ? 'text-ok' : 'text-muet'}> — {l.texte}</span>
+                  </li>
+                ))}
+              </ul>
+            </>
+          )}
+        </div>
       </div>
 
       {/* Génération IA depuis le contenu lui-même */}
@@ -96,7 +130,9 @@ export default async function CibleCartesPage({
             ? 'Ce contenu n’a pas de texte extrait dans le Scriptorium — rien à décortiquer.'
             : cible.genre === 'texte'
               ? 'Un texte source ne donne qu’1 à 2 cartes — l’essentiel du passage.'
-              : 'Un cours se décortique en cartes atomiques.'}
+              : titreSection.size > 0
+                ? `Cours découpé en ${titreSection.size} sous-sections : la génération les décortique une par une, et chaque carte apparaîtra au « vu » de SA sous-section.`
+                : 'Un cours se décortique en cartes atomiques. Non découpé, ses cartes apparaissent dès que le cours est entamé.'}
         </p>
         <BoutonGenererCartes cibleId={cibleId} dejaDesCartes={(toutes ?? []).length > 0} />
       </div>
@@ -120,7 +156,7 @@ export default async function CibleCartesPage({
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             {suggerees.map((c) => (
-              <CarteFlashcard key={c.id} carte={{ ...c, cible_id: cibleId }} cibleId={cibleId} />
+              <CarteFlashcard key={c.id} carte={c} cibleId={cibleId} />
             ))}
           </div>
         </section>
@@ -132,7 +168,7 @@ export default async function CibleCartesPage({
           <h4 className="text-sm font-medium text-retard mb-3">À vérifier ({aVerifier.length})</h4>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             {aVerifier.map((c) => (
-              <CarteFlashcard key={c.id} carte={{ ...c, cible_id: cibleId }} cibleId={cibleId} />
+              <CarteFlashcard key={c.id} carte={c} cibleId={cibleId} />
             ))}
           </div>
         </section>
@@ -147,7 +183,7 @@ export default async function CibleCartesPage({
           </summary>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-3">
             {validees.map((c) => (
-              <CarteFlashcard key={c.id} carte={{ ...c, cible_id: cibleId }} cibleId={cibleId} />
+              <CarteFlashcard key={c.id} carte={c} cibleId={cibleId} />
             ))}
           </div>
         </details>
@@ -162,7 +198,7 @@ export default async function CibleCartesPage({
           </summary>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-3">
             {archivees.map((c) => (
-              <CarteFlashcard key={c.id} carte={{ ...c, cible_id: cibleId }} cibleId={cibleId} />
+              <CarteFlashcard key={c.id} carte={c} cibleId={cibleId} />
             ))}
           </div>
         </details>

@@ -4,6 +4,11 @@ import { createClient } from '@/utils/supabase/server'
 import { createAdminClient } from '@/utils/supabase/admin'
 import { messageSiBloque } from '@/utils/integrite'
 import { classeIdsDuContexte } from '@/app/eleve/contexte-classe'
+import { perimetreVuClasses } from '@/utils/quazian-cibles'
+import {
+  carteVisible, perimetreVide,
+  type CarteAncree, type PerimetreCartes,
+} from '@/utils/quazian-visibilite'
 import { fsrs, createEmptyCard, type Card, type Grade } from 'ts-fsrs'
 
 async function verifierEleve() {
@@ -19,9 +24,15 @@ async function verifierEleve() {
   return { supabase, userId: user.id }
 }
 
-// ── Visibilité des cartes partagées (Lot 6/7, recâblée à C7·L1) ──────────────
-// Deux conditions, toujours : la cible est PUBLIÉE par le prof, ET elle est au
-// programme d'une classe de l'élève.
+// ── Visibilité des cartes partagées (Lot 6/7, recâblée à C7·L1 puis L3) ──────
+//
+// ⚠️ C7·L3 — LA PUBLICATION A DISPARU DU BRAS CONTENU. Le prof n'a plus à presser
+// « Publier aux élèves » : une carte validée devient visible quand l'élément
+// correspondant est coché « VU » dans le pilotage de la classe (Scriptorium).
+// La règle elle-même vit dans `utils/quazian-visibilite.ts` (pure, testée) ; ici
+// on ne fait que lui donner à manger. Deux grains :
+//   • carte née d'une SOUS-SECTION → cette sous-section doit être vue ;
+//   • carte au grain CONTENU → le contenu doit être ENTAMÉ (≥ 1 élément vu, R7).
 //
 // ⚠️ C7·L2 — « une classe de l'élève » veut dire les classes EN CONTEXTE, pas
 // l'union de ses inscriptions. Sur une page de module le contexte vaut toujours
@@ -30,80 +41,54 @@ async function verifierEleve() {
 // lisait les inscriptions elle-même : un bi-classe voyait les cartes de son
 // autre classe quel que soit le commutateur (item 3 du lot).
 //
-//   • bras CONTENU (aujourd'hui) — « au programme » = le contenu figure dans
-//     l'INSTANCE de parcours d'une de ses classes. C'est l'unique chemin
-//     contenu → classe qui existe (cf. utils/quazian-cibles.ts).
-//   • bras UNITÉ (hérité) — inchangé : (unité, semaine) assignée via
-//     `scriptorium_document_classes`, et les cartes à semaine nulle restent
-//     visibles par la seule publication.
-//
-// ⚠️ Avant C7·L1, TOUT passait par `scriptorium_document_classes` — table vide
-// depuis la réorganisation du Scriptorium : aucune carte portant une semaine
-// n'était visible d'aucun élève (§4.4 du RAPPORT_Diagnostic_C7_quazian.md).
+// Le bras UNITÉ (hérité) NE BOUGE PAS : publication + tuple (unité, semaine)
+// assigné via `scriptorium_document_classes`, cartes à semaine nulle visibles par
+// la seule publication. Il n'y a aucune unité en base ; `quazian_publications`
+// n'est donc plus lue que là, et n'est plus écrite nulle part.
 //
 // Centralisé pour que la file, la consultation ET les stats appliquent EXACTEMENT
 // le même périmètre.
-interface PerimetreCartes {
-  unitesPubliees: string[]
-  contenusPublies: string[]
-  tuplesVisibles: Set<string>   // `${uniteId}:${semaine}` — bras hérité
-  contenusVisibles: Set<string> // bras contenu
-}
-
 async function contexteVisibiliteCartes(
   admin: ReturnType<typeof createAdminClient>,
   classeIds: string[],
 ): Promise<PerimetreCartes> {
+  // Bras hérité — publications d'UNITÉS seulement (le bras contenu n'en a plus).
   const { data: publis } = await admin
     .from('quazian_publications')
-    .select('scriptorium_unite_id, contenu_id')
+    .select('scriptorium_unite_id')
     .eq('flashcards_visibles', true)
-  const unitesPubliees = (publis ?? []).map((p) => p.scriptorium_unite_id as string | null).filter((v): v is string => !!v)
-  const contenusPublies = (publis ?? []).map((p) => p.contenu_id as string | null).filter((v): v is string => !!v)
+    .not('scriptorium_unite_id', 'is', null)
+  const unitesPubliees = (publis ?? [])
+    .map((p) => p.scriptorium_unite_id as string | null)
+    .filter((v): v is string => !!v)
 
+  if (classeIds.length === 0) return { ...perimetreVide(), unitesPubliees }
+
+  // Bras contenu — LE « vu » des instances de parcours ACTIVES de ses classes.
+  const { contenusEntames, sectionsVues } = await perimetreVuClasses(admin, classeIds)
+
+  // Bras hérité — inchangé.
   const tuplesVisibles = new Set<string>()
-  const contenusVisibles = new Set<string>()
-  if (classeIds.length > 0) {
-    // Bras contenu — les contenus des instances de parcours ACTIVES de ses classes.
-    const { data: assigns } = await admin
-      .from('scriptorium_parcours_classes').select('id').in('classe_id', classeIds).eq('statut', 'active')
-    const pcIds = (assigns ?? []).map((a) => a.id as string)
-    if (pcIds.length > 0) {
-      const { data: creneaux } = await admin
-        .from('scriptorium_parcours_classe_creneaux').select('contenu_id')
-        .in('parcours_classe_id', pcIds).eq('ref_type', 'contenu')
-      for (const c of creneaux ?? []) {
-        if (c.contenu_id) contenusVisibles.add(c.contenu_id as string)
-      }
-    }
-
-    // Bras hérité — inchangé.
-    const { data: liens } = await admin
-      .from('scriptorium_document_classes').select('document_id').in('classe_id', classeIds)
-    const docIds = [...new Set((liens ?? []).map((l) => l.document_id as string))]
-    if (docIds.length > 0) {
-      const { data: documents } = await admin
-        .from('scriptorium_documents').select('unite_id, semaine').in('id', docIds).not('semaine', 'is', null)
-      for (const d of documents ?? []) tuplesVisibles.add(`${d.unite_id}:${d.semaine}`)
-    }
+  const { data: liens } = await admin
+    .from('scriptorium_document_classes').select('document_id').in('classe_id', classeIds)
+  const docIds = [...new Set((liens ?? []).map((l) => l.document_id as string))]
+  if (docIds.length > 0) {
+    const { data: documents } = await admin
+      .from('scriptorium_documents').select('unite_id, semaine').in('id', docIds).not('semaine', 'is', null)
+    for (const d of documents ?? []) tuplesVisibles.add(`${d.unite_id}:${d.semaine}`)
   }
-  return { unitesPubliees, contenusPublies, tuplesVisibles, contenusVisibles }
-}
 
-/** Une carte partagée atteint-elle cet élève ? (la publication est déjà filtrée en amont) */
-function carteVisible(
-  carte: { contenu_id?: string | null; scriptorium_unite_id?: string | null; semaine?: number | null },
-  p: PerimetreCartes,
-): boolean {
-  if (carte.contenu_id) return p.contenusVisibles.has(carte.contenu_id)
-  const sem = carte.semaine
-  return sem == null || p.tuplesVisibles.has(`${carte.scriptorium_unite_id}:${sem}`)
+  return { contenusEntames, sectionsVues, unitesPubliees, tuplesVisibles }
 }
 
 /**
- * Cartes partagées validées et publiées, des deux bras, déjà filtrées par le
- * périmètre de l'élève. `select` doit inclure `contenu_id, scriptorium_unite_id,
- * semaine` — les trois champs que `carteVisible` lit.
+ * Cartes partagées validées que le périmètre de l'élève laisse passer, des deux
+ * bras. `select` doit inclure `section_id, contenu_id, scriptorium_unite_id,
+ * semaine` — les quatre champs que `carteVisible` lit.
+ *
+ * Côté contenu, la requête part des contenus ENTAMÉS : une sous-section vue rend
+ * son contenu entamé, donc cet ensemble contient déjà toutes les cartes
+ * candidates des deux grains — `carteVisible` fait ensuite le tri fin.
  */
 async function cartesPartageesVisibles(
   admin: ReturnType<typeof createAdminClient>,
@@ -112,16 +97,49 @@ async function cartesPartageesVisibles(
 ): Promise<Record<string, unknown>[]> {
   const requete = (colonne: 'contenu_id' | 'scriptorium_unite_id', ids: string[]) =>
     ids.length > 0
-      ? admin.from('quazian_flashcards').select(select)
-          .eq('statut', 'valide').is('eleve_id', null).in(colonne, ids)
-      : Promise.resolve({ data: [] as Record<string, unknown>[] })
+      ? lireCartes(admin, select, { eleveId: null, colonne, ids })
+      : Promise.resolve([] as Record<string, unknown>[])
 
-  const [{ data: parContenu }, { data: parUnite }] = await Promise.all([
-    requete('contenu_id', p.contenusPublies),
+  const [parContenu, parUnite] = await Promise.all([
+    requete('contenu_id', [...p.contenusEntames]),
     requete('scriptorium_unite_id', p.unitesPubliees),
   ])
-  return [...(parContenu ?? []), ...(parUnite ?? [])]
-    .filter((c) => carteVisible(c as Parameters<typeof carteVisible>[0], p)) as Record<string, unknown>[]
+  return [...parContenu, ...parUnite].filter((c) => carteVisible(c as CarteAncree, p))
+}
+
+interface FiltreCartes {
+  /** `null` = cartes PARTAGÉES ; un id = les cartes personnelles de cet élève. */
+  eleveId: string | null
+  colonne?: 'contenu_id' | 'scriptorium_unite_id'
+  ids?: string[]
+}
+
+/**
+ * Lecture des cartes VALIDES, tolérante à l'absence de `section_id`.
+ *
+ * Le protocole renforcé fait partir le CODE avant le SQL : entre le déploiement
+ * et l'exécution de `c7_quazian_sections.sql`, la colonne n'existe pas encore et
+ * une requête qui la nomme rendrait zéro carte à l'élève. Le repli relit sans
+ * elle — la visibilité retombe alors au grain CONTENU (comportement d'avant le
+ * grain fin), au lieu de vider l'écran. Même idiome que le repli
+ * `horaire_snapshot` de `chargerInstanceDeClasse` (app/prof/scriptorium/instance-serveur.ts).
+ * Une fois le SQL joué, le premier appel passe : aucun aller-retour en plus.
+ */
+async function lireCartes(
+  admin: ReturnType<typeof createAdminClient>,
+  select: string,
+  f: FiltreCartes,
+): Promise<Record<string, unknown>[]> {
+  const requete = (s: string) => {
+    let q = admin.from('quazian_flashcards').select(s).eq('statut', 'valide')
+    q = f.eleveId === null ? q.is('eleve_id', null) : q.eq('eleve_id', f.eleveId)
+    if (f.colonne && f.ids) q = q.in(f.colonne, f.ids)
+    return q
+  }
+  const { data, error } = await requete(select)
+  if (!error) return (data ?? []) as unknown as Record<string, unknown>[]
+  const repli = await requete(select.replace(/\bsection_id\s*,?\s*/g, ''))
+  return (repli.data ?? []) as unknown as Record<string, unknown>[]
 }
 
 export interface CarteRevision {
@@ -138,11 +156,12 @@ export interface CarteRevision {
   due: string
 }
 
-// Colonnes lues pour une carte : les deux bras de l'arc, plus les deux relations
-// dont on tire le libellé affiché. `carteVisible` a besoin des trois premières.
+// Colonnes lues pour une carte : les deux bras de l'arc, la sous-section (C7·L3)
+// et les deux relations dont on tire le libellé affiché. `carteVisible` a besoin
+// des quatre premières.
 const SELECT_CARTE = `
     id, recto, verso, format, type, concept_tag, semaine, created_at,
-    scriptorium_unite_id, contenu_id,
+    scriptorium_unite_id, contenu_id, section_id,
     scriptorium_unites(label), scriptorium_contenus(titre)
   `
 
@@ -156,12 +175,20 @@ function labelDeLaCarte(f: Record<string, unknown>, defaut = ''): string {
   return c?.titre ?? u?.label ?? defaut
 }
 
+// C7·L3 — la CIBLE d'une carte, clé des tuiles par cours côté élève. Le grain de
+// la tuile est le COURS, jamais la sous-section : l'élève range ses cartes par
+// cours, c'est le « vu » du prof qui travaille au grain fin.
+const CIBLE_PERSO = 'perso'
+function cibleDeLaCarte(f: Record<string, unknown>): string {
+  return (f.contenu_id as string | null) ?? (f.scriptorium_unite_id as string | null) ?? CIBLE_PERSO
+}
+
 // Charger la file de révision du jour
 export async function chargerFileRevision(): Promise<CarteRevision[]> {
   const { supabase, userId } = await verifierEleve()
   const maintenant = new Date().toISOString()
 
-  // Cibles publiées + périmètre de classe de l'élève — admin pour contourner RLS.
+  // Périmètre « vu » des classes en contexte — admin pour contourner RLS.
   const admin = createAdminClient()
   // Blocage « petit malin » : la révision de flashcards est gelée (le quizz reste ouvert).
   if (await messageSiBloque(admin, userId)) return []
@@ -169,14 +196,11 @@ export async function chargerFileRevision(): Promise<CarteRevision[]> {
 
   const partagees = await cartesPartageesVisibles(admin, perimetre, SELECT_CARTE)
 
-  // Cartes personnelles de l'élève (ex. Codex) — toujours révisables par lui
-  const { data: perso } = await admin
-    .from('quazian_flashcards')
-    .select(SELECT_CARTE)
-    .eq('statut', 'valide')
-    .eq('eleve_id', userId)
+  // Cartes personnelles de l'élève (ex. Codex) — toujours révisables par lui.
+  // Elles ne passent PAS par le périmètre « vu » : elles sont à lui (C7·L3).
+  const perso = await lireCartes(admin, SELECT_CARTE, { eleveId: userId })
 
-  const flashcards = [...partagees, ...(perso ?? [])] as unknown as Record<string, unknown>[]
+  const flashcards = [...partagees, ...perso] as unknown as Record<string, unknown>[]
   if (flashcards.length === 0) return []
 
   const flashcardIds = flashcards.map((f) => f.id as string)
@@ -234,7 +258,11 @@ export interface CarteConsultation {
   type: string
   concept_tag: string
   label_unite: string
+  /** Cours / texte / unité d'origine — clé de regroupement des tuiles (C7·L3). */
+  cible_id: string
   nouvelle: boolean // pas encore d'état FSRS pour cet élève (= récemment ajoutée)
+  /** Mûre pour la révision d'aujourd'hui : jamais vue, ou échéance atteinte. */
+  a_reviser: boolean
   created_at: string
 }
 
@@ -250,29 +278,29 @@ export async function chargerToutesLesCartes(): Promise<CarteConsultation[]> {
   // (§5 du RAPPORT_Diagnostic_C7_quazian.md).
   if (await messageSiBloque(admin, userId)) return []
 
-  // Cibles publiées + périmètre de classe — MÊME périmètre que la file.
+  // Périmètre « vu » — MÊME périmètre que la file de révision.
   const perimetre = await contexteVisibiliteCartes(admin, await classeIdsDuContexte(supabase, userId))
   const partagees = await cartesPartageesVisibles(admin, perimetre, SELECT_CARTE)
 
-  const { data: perso } = await admin
-    .from('quazian_flashcards')
-    .select(SELECT_CARTE)
-    .eq('statut', 'valide')
-    .eq('eleve_id', userId)
+  const perso = await lireCartes(admin, SELECT_CARTE, { eleveId: userId })
 
-  const flashcards = [...partagees, ...(perso ?? [])] as unknown as Record<string, unknown>[]
+  const flashcards = [...partagees, ...perso] as unknown as Record<string, unknown>[]
   if (flashcards.length === 0) return []
 
+  // `due` en plus de l'id : les tuiles par cours annoncent « N à réviser », et
+  // ce compte doit sortir du MÊME prédicat que la file (jamais vue, ou échue).
+  const maintenant = new Date().toISOString()
   const { data: etats } = await supabase
     .from('quazian_card_states')
-    .select('flashcard_id')
+    .select('flashcard_id, due')
     .eq('eleve_id', userId)
     .in('flashcard_id', flashcards.map((f) => f.id as string))
-  const vues = new Set((etats ?? []).map((e) => e.flashcard_id as string))
+  const echeance = new Map((etats ?? []).map((e) => [e.flashcard_id as string, e.due as string]))
 
   return flashcards
     .map((f) => {
       const labelUnite = labelDeLaCarte(f, 'Cartes personnelles')
+      const due = echeance.get(f.id as string)
       return {
         flashcard_id: f.id as string,
         recto: f.recto as string,
@@ -281,7 +309,9 @@ export async function chargerToutesLesCartes(): Promise<CarteConsultation[]> {
         type: f.type as string,
         concept_tag: f.concept_tag as string,
         label_unite: labelUnite,
-        nouvelle: !vues.has(f.id as string),
+        cible_id: cibleDeLaCarte(f),
+        nouvelle: due === undefined,
+        a_reviser: due === undefined || due <= maintenant,
         created_at: f.created_at as string,
       }
     })
@@ -427,22 +457,18 @@ export async function chargerStatsRevision() {
     return { totalCartes: 0, connues: 0, dues: 0, nouvelles: 0, aFaire: 0 }
   }
 
-  // Cibles publiées + périmètre de classe — MÊME périmètre que la file de révision,
+  // Périmètre « vu » — MÊME périmètre que la file de révision,
   // sinon les compteurs annoncent des cartes que l'élève ne verra jamais. Sur le
   // tableau de bord en état « Toutes », le contexte rend les deux classes : les
   // compteurs agrègent, ce que l'écran annonce.
   const perimetre = await contexteVisibiliteCartes(admin, await classeIdsDuContexte(supabase, userId))
   const partagees = await cartesPartageesVisibles(
-    admin, perimetre, 'id, scriptorium_unite_id, contenu_id, semaine',
+    admin, perimetre, 'id, scriptorium_unite_id, contenu_id, section_id, semaine',
   )
 
-  const { data: perso } = await admin
-    .from('quazian_flashcards')
-    .select('id')
-    .eq('statut', 'valide')
-    .eq('eleve_id', userId)
+  const perso = await lireCartes(admin, 'id', { eleveId: userId })
 
-  const flashcards = [...partagees, ...(perso ?? [])] as unknown as Record<string, unknown>[]
+  const flashcards = [...partagees, ...perso] as unknown as Record<string, unknown>[]
   const totalCartes = flashcards.length
   const ids = flashcards.map((f) => f.id as string)
 

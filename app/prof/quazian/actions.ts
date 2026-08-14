@@ -27,35 +27,79 @@ async function verifierProf() {
 // ── Génération de cartes ─────────────────────────────────────────────────────
 
 /**
- * Le corpus d'une cible, et la manière de le décortiquer.
+ * Le corpus d'une cible, découpé en LOTS de génération — un appel IA par lot.
  *
- * Distinction F2 (antérieure à ce lot, restaurée ici) : un COURS se décortique en
+ * Distinction F2 (antérieure à C7·L1, restaurée là) : un COURS se décortique en
  * cartes atomiques ; un TEXTE SOURCE ne donne qu'1-2 cartes — on ne dissèque pas
  * un extrait d'œuvre comme un cours. Avant C7·L1 le test était `type === 'texte'`
  * sur `scriptorium_documents`, dont les lignes valent `'texte_source'` : la
  * comparaison était TOUJOURS fausse et tout partait en cours (§4.2 du rapport).
+ *
+ * ⚠️ C7·L3 — un cours DÉCOUPÉ se génère SOUS-SECTION PAR SOUS-SECTION, et chaque
+ * carte naît avec son `section_id`. C'est ce qui permet au « vu » de filtrer au
+ * bon grain : le Scriptorium matérialise un élément par sous-section, donc une
+ * carte qui ne saurait dire d'où elle vient ne pourrait être qu'au grain du cours
+ * entier. Un cours NON découpé et un texte source gardent le grain contenu.
  */
 const EST_TEXTE_SOURCE = new Set(['texte', 'texte_source'])
+
+/** Un appel IA : le texte à décortiquer, son étiquette, son ancrage. */
+interface LotGeneration {
+  texte: string
+  /** Libellé donné au prompt (« Cours — Sous-section »). */
+  label: string
+  /** F2 : plafonné à 1-2 cartes au lieu d'un décorticage complet. */
+  texteSource: boolean
+  /** Sous-section d'origine — null = grain contenu. */
+  sectionId: string | null
+}
 
 async function corpusDeLaCible(
   supabase: Awaited<ReturnType<typeof createClient>>,
   cible: CibleQuazian,
-): Promise<{ cours: string; textes: { titre: string; contenu: string }[] }> {
+): Promise<LotGeneration[]> {
   if (cible.bras === 'contenu') {
     const { data: c } = await supabase
       .from('scriptorium_contenus')
       .select('titre, auteur, type, texte_extrait')
       .eq('id', cible.id)
       .maybeSingle()
-    const texte = ((c?.texte_extrait as string | null) ?? '').trim()
-    if (!texte) return { cours: '', textes: [] }
-    const entete = `## ${c!.titre}${c!.auteur ? ` (${c!.auteur})` : ''}`
-    return EST_TEXTE_SOURCE.has(c!.type as string)
-      ? { cours: '', textes: [{ titre: c!.titre as string, contenu: `${entete}\n\n${texte}` }] }
-      : { cours: `${entete}\n\n${texte}`, textes: [] }
+    if (!c) return []
+    const titre = c.titre as string
+    const entete = `## ${titre}${c.auteur ? ` (${c.auteur})` : ''}`
+    const texte = ((c.texte_extrait as string | null) ?? '').trim()
+
+    if (EST_TEXTE_SOURCE.has(c.type as string)) {
+      return texte ? [{ texte: `${entete}\n\n${texte}`, label: titre, texteSource: true, sectionId: null }] : []
+    }
+
+    // Cours DÉCOUPÉ → un lot par sous-section, dans l'ordre du texte. Le corps de
+    // la section fait foi (`scriptorium_contenu_sections.texte`, dérivé côté
+    // serveur à la découpe), jamais un re-découpage improvisé du texte entier.
+    const { data: sections } = await supabase
+      .from('scriptorium_contenu_sections')
+      .select('id, ordre, titre, texte')
+      .eq('contenu_id', cible.id)
+      .order('ordre', { ascending: true })
+    const lots: LotGeneration[] = []
+    for (const s of sections ?? []) {
+      const corps = ((s.texte as string | null) ?? '').trim()
+      if (!corps) continue // sous-section vide → rien à décortiquer, on l'ignore
+      lots.push({
+        texte: `${entete} — ${s.titre}\n\n${corps}`,
+        label: `${titre} — ${s.titre as string}`,
+        texteSource: false,
+        sectionId: s.id as string,
+      })
+    }
+    if (lots.length > 0) return lots
+
+    // Cours non découpé (ou découpe entièrement vide) → grain contenu.
+    return texte ? [{ texte: `${entete}\n\n${texte}`, label: titre, texteSource: false, sectionId: null }] : []
   }
 
-  // Bras hérité : les documents de l'unité (une base sans unité n'entre jamais ici).
+  // Bras hérité : les documents de l'unité (une base sans unité n'entre jamais
+  // ici). Les unités n'ont pas de sections — le grain reste l'unité.
   const { data: docs } = await supabase
     .from('scriptorium_documents')
     .select('titre, texte_extrait, legende, type')
@@ -66,9 +110,16 @@ async function corpusDeLaCible(
 
   const cours = (docs ?? []).filter((d) => !EST_TEXTE_SOURCE.has((d.type as string) ?? 'cours'))
     .map(contenuDoc).filter((s) => s.length > 0).join('\n\n---\n\n')
-  const textes = (docs ?? []).filter((d) => EST_TEXTE_SOURCE.has((d.type as string) ?? 'cours'))
-    .map((d) => ({ titre: d.titre as string, contenu: contenuDoc(d) })).filter((t) => t.contenu.length > 0)
-  return { cours, textes }
+  const lots: LotGeneration[] = cours.trim()
+    ? [{ texte: cours, label: cible.label, texteSource: false, sectionId: null }]
+    : []
+  for (const d of (docs ?? []).filter((d) => EST_TEXTE_SOURCE.has((d.type as string) ?? 'cours'))) {
+    const contenu = contenuDoc(d as { titre: string; texte_extrait: string | null; legende: string | null })
+    if (contenu.length > 0) {
+      lots.push({ texte: contenu, label: d.titre as string, texteSource: true, sectionId: null })
+    }
+  }
+  return lots
 }
 
 /**
@@ -86,40 +137,52 @@ export async function genererCartes(cibleId: string) {
   const cible = await resoudreCible(supabase, cibleId)
   if (!cible) return { error: 'Contenu introuvable (ou retiré du Scriptorium).' }
 
-  const { cours, textes } = await corpusDeLaCible(supabase, cible)
-  if (!cours.trim() && textes.length === 0) {
+  const lots = await corpusDeLaCible(supabase, cible)
+  if (lots.length === 0) {
     return { error: `Aucun texte dans « ${cible.label} ». Ajoute son contenu dans le Scriptorium avant de générer.` }
   }
 
-  let suggestions: FlashcardSuggestion[]
+  const ancrage = refCible(cible)
+  const cartes: Record<string, unknown>[] = []
   try {
-    const lots: FlashcardSuggestion[][] = []
-    if (cours.trim()) lots.push(await extraireFlashcards(cours, cible.label))
-    // Un appel par texte source → le plafond 1-2 cartes est garanti par texte.
-    for (const t of textes) lots.push(await extraireFlashcardsTexte(t.contenu, t.titre, 2))
-    suggestions = lots.flat()
+    for (const lot of lots) {
+      // Un appel par lot : le plafond 1-2 cartes est garanti PAR texte source, et
+      // chaque sous-section est décortiquée pour elle-même.
+      const suggestions: FlashcardSuggestion[] = lot.texteSource
+        ? await extraireFlashcardsTexte(lot.texte, lot.label, 2)
+        : await extraireFlashcards(lot.texte, lot.label)
+      for (const s of suggestions) {
+        cartes.push({
+          ...ancrage,
+          ...(lot.sectionId ? { section_id: lot.sectionId } : {}),
+          type: s.type,
+          format: s.format,
+          recto: s.recto,
+          verso: s.verso,
+          concept_tag: s.concept_tag,
+          statut: 'suggere',
+          source: 'ia',
+          created_by: userId,
+        })
+      }
+    }
   } catch (e) {
     console.error('[quazian] génération de cartes :', e)
     return { error: 'La génération IA a échoué (réponse inattendue du modèle). Réessaie.' }
   }
 
-  if (suggestions.length === 0) return { error: "L'IA n'a généré aucune carte exploitable. Réessaie." }
-
-  const ancrage = refCible(cible)
-  const cartes = suggestions.map((s) => ({
-    ...ancrage,
-    type: s.type,
-    format: s.format,
-    recto: s.recto,
-    verso: s.verso,
-    concept_tag: s.concept_tag,
-    statut: 'suggere',
-    source: 'ia',
-    created_by: userId,
-  }))
+  if (cartes.length === 0) return { error: "L'IA n'a généré aucune carte exploitable. Réessaie." }
 
   const { error } = await supabase.from('quazian_flashcards').insert(cartes)
-  if (error) return { error: error.message }
+  if (error) {
+    // Le code part avant le SQL (protocole renforcé) : sur un cours DÉCOUPÉ, tant
+    // que `c7_quazian_sections.sql` n'est pas joué, Postgres refuse la colonne.
+    // Le dire en clair plutôt que de renvoyer son message brut.
+    if (error.message.includes('section_id')) {
+      return { error: 'La base ne connaît pas encore les sous-sections — joue `c7_quazian_sections.sql` (cf. SUIVI_SQL.md), puis régénère.' }
+    }
+    return { error: error.message }
+  }
 
   revalidatePath('/prof/quazian')
   revalidatePath(`/prof/quazian/${cibleId}`)
@@ -245,51 +308,22 @@ export async function validerToutesLesSuggerees(formData: FormData) {
   return { success: true }
 }
 
-// ── Publication ──────────────────────────────────────────────────────────────
-
-/**
- * Publier / dépublier une cible (visibilité des cartes aux élèves).
- *
- * `resoudreCible` est le garde-fou anti-spoiler : elle ne rend jamais un LIVRE
- * (son texte extrait est un ancrage IA d'Aletheia). Le refus explicite d'avant
- * C7·L1 (« Un livre ne se publie pas via Quazian ») devient donc structurel.
- *
- * ⚠️ `quazian_publications.classe_id` n'est PAS alimentée par le bras contenu :
- * c'est une colonne `text` héritée, écrite avec un LIBELLÉ de classe et lue par
- * personne (§4.5 du rapport). Son sort est un arbitrage (R7, §10.1), pas une
- * remise en marche — on ne reconduit simplement pas l'écriture.
- */
-export async function togglePublication(formData: FormData) {
-  const { supabase, userId } = await verifierProf()
-  const cibleId = formData.get('cibleId') as string
-  const actuel = formData.get('actuel') === 'true'
-
-  const cible = await resoudreCible(supabase, cibleId)
-  if (!cible) return { error: 'Contenu introuvable (ou retiré du Scriptorium).' }
-
-  const { data: existing } = await supabase
-    .from('quazian_publications')
-    .select('id')
-    .eq(colonneCible(cible.bras), cibleId)
-    .maybeSingle()
-
-  if (existing) {
-    const { error } = await supabase
-      .from('quazian_publications')
-      .update({ flashcards_visibles: !actuel, published_at: actuel ? null : new Date().toISOString() })
-      .eq('id', existing.id)
-    if (error) return { error: error.message }
-  } else {
-    const { error } = await supabase.from('quazian_publications').insert({
-      ...refCible(cible),
-      flashcards_visibles: true,
-      published_at: new Date().toISOString(),
-      created_by: userId,
-    })
-    if (error) return { error: error.message }
-  }
-
-  revalidatePath('/prof/quazian')
-  revalidatePath(`/prof/quazian/${cibleId}`)
-  return { success: true }
-}
+// ── Publication — SUPPRIMÉE (C7·L3) ──────────────────────────────────────────
+//
+// `togglePublication()` a été retirée avec le bouton « Publier aux élèves /
+// Masquer » qui l'appelait. La visibilité élève n'est plus un geste Quazian :
+// elle suit le « VU » du Scriptorium, celui que le prof pose déjà dans le
+// pilotage de sa classe (`marquerVu`, app/prof/scriptorium/actions.ts). La règle
+// vit dans `utils/quazian-visibilite.ts`, le périmètre dans
+// `perimetreVuClasses()` — et l'écran prof DIT cet état au lieu d'offrir un
+// bouton (« Test — 3 sous-sections vues sur 5 → 12 cartes visibles »).
+//
+// Ce que ça règle au passage : §10.2 du rapport de diagnostic (« la publication
+// reste globale, pas par classe ») — le « vu » étant par CLASSE, la divergence
+// entre classes est native, sans rien à publier deux fois.
+//
+// ⚠️ La TABLE `quazian_publications` reste en base, intacte : son sort (comme
+// celui de sa colonne morte `classe_id`, §4.5 et §10.1) est un arbitrage, pas
+// une remise en marche. Plus personne ne l'écrit ; seul le bras UNITÉ hérité la
+// lit encore (app/eleve/modules/quazian/actions.ts) — et il n'y a aucune unité
+// en base.

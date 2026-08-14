@@ -618,6 +618,102 @@ Modifier / Archiver + Supprimer** de `CarteFlashcard`. Les coûts partent bien d
 `quazian` (non attribués pour les cartes : contenu partagé, cf. pied de la section C11a). Rien n'a
 donc été réécrit là ; ce sont les tests C7L1-4 et C11a-7, déjà verts, qui le couvrent.
 
+## C7 · L3 — Quazian : tuiles par cours et visibilité au « vu » (branche `feat/c7-l3-vu`)
+
+_**Une migration dans ce lot** : `c7_quazian_sections.sql` (colonne `quazian_flashcards.section_id`,
+FK `on delete set null` + CHECK de subordination + index partiel), ligne créée au `SUIVI_SQL.md`
+**avant** exécution, rollback prêt (`c7_quazian_sections_rollback.sql`, non destructif). **Protocole
+RENFORCÉ** : code mergé + poussé d'abord, SQL ensuite, fenêtre calme, smoke élève. **Non exécutée à
+l'écriture de cette section.**_
+
+_Prouvé sans navigateur : `tsc --noEmit` vert, `npm test` **172/172** (dont 8 neufs sur la règle de
+visibilité, `utils/quazian-visibilite.test.ts`), `npm run build` vert (toutes les routes compilées)._
+
+_**La recette navigateur n'est pas jouée** : elle demande la session prof PUIS la session élève, donc
+des mots de passe que cette session ne saisit pas. Les tests ci-dessous sont écrits pour être joués
+tels quels, **après** l'exécution du SQL. Règle d'or : Chrome, pas l'aperçu embarqué, et Cmd-R avant
+de conclure à un bug._
+
+**État de la sandbox au 14/08 (lu en base, lecture seule) — le terrain des tests :**
+
+| Fait | Détail |
+|---|---|
+| Cartes en base | **18**, toutes sur « **Cognitif** » (cours, bras contenu), toutes `valide`, `section_id` null par construction |
+| Publications | **1** ligne : « Cognitif », `flashcards_visibles = true` — *plus lue par personne après ce lot* |
+| Cours découpé | « **NAture humaine** » : 2 sous-sections (« Qu'est-ce que la nature? », « Qu'est-ce que la nature humaine ? ») — **rien à découper pour la recette** |
+| Parcours « test » | assigné à **Test** (6 élèves, daté au 01/07) et **T5** (1 élève, non daté) |
+| « Vu » de **Test** | « NAture humaine » : **1 sous-section sur 2 vue** · « Cognitif » : élément `contenu` **NON vu** |
+| « Vu » de **T5** | « NAture humaine » : **0 sur 2** · « Cognitif » : **pas au parcours de T5** |
+
+**Le sort des cartes déjà publiées — comportement VOULU, pas une régression.** Les 18 cartes de
+« Cognitif » sont aujourd'hui visibles des 6 élèves de Test par la seule publication. Sous le régime
+« vu », elles **disparaissent** de leur écran tant que le prof n'a pas coché « vu » l'élément
+« Cognitif » de l'instance de Test — après quoi les 18 reviennent d'un coup (cours NON découpé →
+grain contenu → « entamé » suffit). C'est exactement ce que le lot cherche : la carte suit le cours
+fait en classe. À dire à Louis avant de jouer le SQL, pour que la disparition ne se lise pas comme un
+bug.
+
+**Ce que fait une RE-DÉCOUPE (diagnostic (a) du lot).** `remplacerDecoupe`
+(`app/prof/scriptorium/actions.ts:925`) **supprime** les éléments d'instance, **supprime** les
+sections, **réinsère** les sections dérivées puis **re-matérialise** les éléments en reportant les
+« vus » par correspondance exacte de TITRE. Les sections repartent donc avec des **uuid neufs**, même
+à découpe identique. D'où le choix de FK : `on delete set null` — en `restrict` la re-découpe d'un
+cours deviendrait impossible dès qu'il a des cartes (Quazian bloquerait le Scriptorium) ; en
+`cascade` elle détruirait les cartes **et** les `quazian_card_states` (l'historique FSRS des élèves,
+exactement ce que la garde `restrict` de L1 protège). En `set null`, la carte survit et retombe au
+grain « cours entier » : **une re-découpe dé-granule les cartes**, une re-génération leur rend leur
+sous-section. Aucune perte, une précision perdue — c'est le test C7L3-7 qui le vérifie en vrai.
+
+- [ ] **C7L3-1 · Le bouton « Publier » a disparu, l'écran dit l'état réel.** Prof →
+  `/prof/quazian` : plus aucun bouton « Publier aux élèves / Masquer », ni sur la fiche de la cible
+  choisie ni sur `/prof/quazian/<cible>`. À la place, pour « NAture humaine » : « **Test** — 1
+  sous-section vue sur 2 → N cartes visibles » et « **T5** — 0 sous-section vue sur 2 → 0 carte
+  visible ». Pour « Cognitif » : « **Test** — pas encore vu → 0 carte visible » (et pas de ligne T5,
+  qui ne l'a pas au parcours). La tuile n'est **verte** que si au moins une classe voit des cartes.
+- [ ] **C7L3-2 · Génération par sous-section.** Prof → `/prof/quazian?cible=<NAture humaine>` →
+  « ✦ Générer les cartes ». Attendu : **deux appels IA**, un par sous-section, et sur
+  `/prof/quazian/<cible>` chaque carte à valider porte son « § <titre de sous-section> ». Un cours
+  NON découpé (« Cognitif ») et un texte source (« test ») ne montrent aucun « § » — grain contenu.
+  ⚠️ Si le SQL n'est pas joué, la génération d'un cours découpé refuse avec le message dédié
+  (« La base ne connaît pas encore les sous-sections… ») : c'est le garde-fou, pas un bug.
+- [ ] **C7L3-3 · Le « vu » ouvre CETTE sous-section, et elle seule (le cœur du lot).** Valider les
+  cartes générées (**aucun geste de publication**). Scriptorium → grille d'instance de **Test** :
+  la sous-section 1 de « NAture humaine » est déjà vue, la 2 ne l'est pas. Élève de Test →
+  `/eleve/modules/quazian` : il voit les cartes de la sous-section **1** seulement, dans une tuile
+  au nom du cours. Cocher « vu » la sous-section 2 → les siennes apparaissent. Décocher → elles
+  repartent. Les compteurs du tableau de bord (« à réviser aujourd'hui », « cartes au total »)
+  suivent.
+- [ ] **C7L3-4 · Tuiles par cours côté élève.** Onglet Flashcards : une tuile par cours ayant des
+  cartes visibles — **nom du cours**, nb de cartes, badge « N à réviser ». Un clic ouvre la
+  consultation **de ce cours** (`?cours=<id>` dans l'URL, retour arrière du navigateur compris).
+  La **file de révision reste GLOBALE** (décision R7) : « Réviser mes N cartes » mélange les cours,
+  et chaque carte affiche le sien en haut à droite pendant la session.
+- [ ] **C7L3-5 · Les cartes déjà publiées passent sous le régime « vu ».** Avant de cocher quoi que
+  ce soit : l'élève de Test ne voit **plus** les 18 cartes de « Cognitif » (elles étaient publiées).
+  Cocher « vu » l'élément « Cognitif » de l'instance de Test → **les 18 reviennent** d'un coup.
+  Comportement voulu (cf. encadré ci-dessus), à consigner tel quel.
+- [ ] **C7L3-6 · Rejeu de C7L2-5 — le bi-classe reste étanche.** `Sacha` (`eleve1@test.com`, Test +
+  T5), même session, seul le commutateur change : en **T5** il ne voit **toujours rien** de
+  « Cognitif » (pas au parcours de T5) et rien de « NAture humaine » tant que T5 n'a coché aucune
+  sous-section ; en **Test** il voit ce que le « vu » de Test ouvre. Le « vu » étant par classe, la
+  divergence est native — c'est le §10.2 du rapport de diagnostic, réglé au passage.
+- [ ] **C7L3-7 · Re-découpe d'un cours qui a des cartes (le point dur du SQL).** Scriptorium →
+  éditeur de sections de « NAture humaine » → re-sauver la découpe (confirmation « re-découpe
+  consciente »). Attendu : **aucune carte supprimée** (le compte reste le même sur
+  `/prof/quazian/<cible>`), le « § » disparaît de chaque carte (dé-granulation par `set null`), et
+  côté élève les cartes deviennent visibles dès que le cours est **entamé** au lieu de suivre chaque
+  sous-section. Re-générer leur rend leur sous-section. ⚠️ Vérifier aussi que l'historique FSRS
+  survit : une carte déjà révisée ne redevient pas « Nouvelle ».
+- [ ] **C7L3-8 · Smoke élève immédiat après le SQL (protocole renforcé).** Connexion élève test +
+  une soumission Aletheia + un tour sur `/eleve/modules/quazian`. Rien d'autre du flux existant ne
+  doit bouger.
+
+**Reste hors de ce lot, volontairement :** la génération AUTOMATIQUE au clic « vu » (déclencheur) →
+post-rentrée, écartée par le prompt de L2 et toujours écartée ; le diagnostic de fragilités et ses
+deux fils cassés → **C6** ; le design des Paramètres → coupe pré-décidée ; le sort de
+`quazian_publications` et de sa colonne `classe_id` → arbitrage (§10.1) ; l'accès module × classe →
+séance dédiée (`PROMPT_Code_Acces_classes_L1.md`). Les quiz ne bougent pas.
+
 ## C2 — (à venir)
 
 _Les tests seront ajoutés à l'écriture des specs / à la clôture des sessions (écran élève, calibration L8…). S'y ajoutera le test reporté C11a-6 (synthèse hebdo → ligne `scriptorium` classe seule)._
