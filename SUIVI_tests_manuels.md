@@ -496,16 +496,20 @@ mono-classe) — aucun mot de passe saisi, la session était là. Ce qui reste d
 (tests 1 et 6) et **un compte bi-classe** (tests 4 et 5), que cette session ne donne pas. Règle d'or :
 Chrome, pas l'aperçu embarqué, et Cmd-R avant de conclure à un bug._
 
-**Le test 4 demande un élève BI-CLASSE.** S'il n'y en a pas en sandbox, inscrire l'élève de test dans
-une seconde classe (T5 ou THLP) le temps de la recette — c'est le seul moyen de voir le commutateur,
-masqué pour un mono-classe par construction.
+**Les tests 4 et 5 demandent un élève BI-CLASSE : c'est `Sacha` (`eleve1@test.com`), déjà inscrit en
+**Test** ET **T5** — constaté le 13/08 sur sa fiche. Rien à créer, il suffit de s'y connecter.** Le
+commutateur est masqué pour un mono-classe par construction : sans ce compte, le cœur du lot reste
+invisible.
 
-- [ ] **C7L2-1 · Trois onglets côté prof, et rien de perdu.** `/prof/quazian` → la Barre 2 doit
+- [x] **C7L2-1 · Trois onglets côté prof, et rien de perdu.** `/prof/quazian` → la Barre 2 doit
   afficher **Flashcards · Quizz · Paramètres** (cinq avant ce lot). Puis : « Notes de semestre → »
   en haut de l'écran Quizz mène à `/prof/quazian/semestre`, **où l'onglet Quizz reste allumé**, et le
-  « ← Quizz » du haut ramène. _(« Diagnostic » quitte la barre : l'écran est doublement muet et le
-  plan le range en C6 — sa page reste en place et reste atteignable depuis la fiche d'un élève,
-  `/prof/eleves/<id>`. À vérifier au passage : ce lien-là marche toujours.)_
+  « ← Quizz » du haut ramène. _(**Validé le 13/08** : les trois onglets sont en place, « Notes de
+  semestre → » est en tête de l'écran Quizz, et la page Semestre garde bien l'onglet Quizz allumé
+  (les `prefixes` font leur travail) sous son nouvel en-tête « ← Quizz · Notes de semestre ».
+  Le **Diagnostic**, sorti de la barre, reste atteignable : la fiche de Sacha affiche « QUAZIAN —
+  Diagnostic FSRS + quizz → » et `/prof/quazian/diagnostic/<id>` se charge sans erreur. Rien de
+  perdu.)_
 - [x] **C7L2-2 · Deux onglets côté élève.** Élève → `/eleve/modules/quazian` : **Flashcards** (par
   défaut, les stats et « Réviser mes N cartes ») et **Quizz** (la liste des quizz). Les deux zones
   empilées d'hier ne doivent plus coexister sur un même écran. _(**Validé le 13/08** : la Barre 2
@@ -518,10 +522,13 @@ masqué pour un mono-classe par construction.
   note formative ». La démonstration du bug est là : l'affichage d'avant disait « 9,1/10 » — un
   nombre qui passait pour une note sur 10 alors que c'est le score de Brier moyen, dont la note se
   déduit par `10 + score`. Un élève à 19/20 se croyait à 9/10.)_
-  **⚠️ Reste à croiser avec le prof** (`/prof/quazian/quizz/<id>/lancer`) : l'élève lit la colonne
-  stockée `note_formative_20`, le tableau du prof **recalcule** `10 + score_moyen`. Même formule, même
-  bornage — mais c'est le seul endroit où les deux pourraient diverger, donc la comparaison vaut d'être
-  faite une fois.
+  **Croisement prof/élève fait le 13/08 — les deux concordent.** Sur
+  `/prof/quazian/quizz/72fe18d6…/lancer`, la ligne d'Elo dit Score `9.15` · Note **19.1/20** ; l'élève
+  voit **19,1/20** sur sa tuile comme dans son détail. Le « 9.2 » de l'élève et le « 9.15 » du prof
+  sont le MÊME nombre à l'arrondi près (`toFixed(1)` contre `toFixed(2)`). Le risque que je signalais
+  — l'élève lit la colonne stockée `note_formative_20`, le prof **recalcule** `10 + score_moyen` — ne
+  s'est pas matérialisé : même formule, même bornage, même résultat. _(Il reste théorique : si un jour
+  la formule bouge d'un côté seulement, c'est là que ça se verra.)_
 - [ ] **C7L2-4 · Commutateur à trois états (le test du lot).** Avec le compte bi-classe :
   1. Le commutateur (puce de l'en-tête, ou bandeau mobile) propose **Toutes les classes · classe A ·
      classe B**.
