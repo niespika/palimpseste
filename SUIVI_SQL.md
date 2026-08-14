@@ -13,6 +13,23 @@
    (`*_rollback.sql`) et **smoke test élève immédiat** (au minimum : connexion élève test + une
    soumission Aletheia). Les migrations **additives et gatées** (tables neuves, flags OFF — C3/C4/C5)
    s'appliquent normalement : elles ne peuvent rien casser d'existant.
+6. **⚠️ Répétition à blanc : RETIRER le `begin;`/`commit;` du fichier avant de le jouer.**
+   La répétition à blanc (jouer la migration dans une transaction, constater, puis `rollback`)
+   est une bonne pratique — elle a validé `c7_quazian_contenus.sql` le 13/08. Mais **nos fichiers
+   de migration portent leur propre `begin;` … `commit;`** : les inclure tels quels (`\i`, ou un
+   copier-coller intégral) dans une transaction d'essai fait que **le `commit;` du fichier valide
+   la transaction englobante** — la répétition s'exécute alors POUR DE BON, et tout ce qui suit
+   passe en autocommit. Postgres ne prévient que par un discret `WARNING: there is already a
+   transaction in progress`.
+   **Le mode opératoire** : copier le CORPS du fichier (entre son `begin;` et son `commit;`) dans
+   sa propre transaction d'essai, jamais le fichier entier ; puis, après le `rollback`, **vérifier
+   par une requête** que le schéma et les données sont bien revenus à l'état d'avant — ne jamais
+   se fier au seul « ROLLBACK » affiché.
+   **Vécu le 14/08 (C7·L3)** : la répétition de `c7_quazian_sections.sql` s'est validée seule. La
+   migration est passée hors séquence (avant le merge du code), une carte de test est restée en
+   base, et les 2 sous-sections d'un cours plus leurs 4 éléments d'instance ont été **supprimés** —
+   reconstruits à l'identique depuis `texte_extrait`, sauf l'horodatage d'un clic « vu », qui
+   n'avait pas été relevé et reste donc inventé.
 
 > **Note prod :** la base de production n'existe pas encore. Elle naîtra au chantier C11b (~mar-mer
 > 18-19/08) d'un **dump du schéma de la sandbox** — tout l'historique ci-dessous y sera donc
