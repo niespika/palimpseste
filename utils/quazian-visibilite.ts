@@ -112,6 +112,13 @@ export interface LigneEtatVu {
  * nombre de cartes que chaque classe voit VRAIMENT, compté par la règle de
  * l'élève elle-même (`compterVisibles`), jamais par une approximation parallèle :
  * ce que l'écran prof annonce est exactement ce que l'élève verra.
+ *
+ * ⚠️ Accès & classes · L1 — `nomClasse` porte les classes ÉLIGIBLES, c'est-à-dire
+ * celles qui ont le module Quazian. Une classe absente de la map est SILENCIEUSE :
+ * un contenu peut être au parcours d'une classe sans Quazian (le Scriptorium et
+ * les modules sont deux assignations distinctes), et annoncer « Au parcours de
+ * T5 → 5 cartes visibles » pour une classe dont aucun élève n'ouvrira jamais
+ * Quazian était précisément le mensonge de cet écran.
  */
 export function lignesEtatVu(
   contenuId: string,
@@ -120,6 +127,7 @@ export function lignesEtatVu(
   nomClasse: Map<string, string>,
 ): LigneEtatVu[] {
   return avancement
+    .filter((a) => nomClasse.has(a.classeId))
     .map((a) => {
       const nbVisibles = compterVisibles(validees, {
         ...perimetreVide(),
@@ -132,7 +140,7 @@ export function lignesEtatVu(
         : a.entame
           ? `vu → ${cartes}`
           : `pas encore vu → ${cartes}`
-      return { classe: nomClasse.get(a.classeId) ?? '—', texte, nbVisibles }
+      return { classe: nomClasse.get(a.classeId) as string, texte, nbVisibles }
     })
     .sort((x, y) => x.classe.localeCompare(y.classe))
 }

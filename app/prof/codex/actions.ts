@@ -5,6 +5,7 @@ import { createClient } from '@/utils/supabase/server'
 import {
   chargerCiblesQuazian, resoudreCible, refCible, type CibleQuazian,
 } from '@/utils/quazian-cibles'
+import { classeAModule } from '@/utils/acces'
 
 async function verifierProf() {
   const supabase = await createClient()
@@ -47,6 +48,11 @@ export async function creerSynthese(formData: FormData) {
   // D2 : une synthèse a TOUJOURS une classe (le formulaire rend déjà le champ requis ;
   // cette garde tarit la source de sessions sans classe — cf. fix P0 calendrier).
   if (!classeId) return { error: 'Choisis une classe pour cette synthèse.' }
+  // Accès & classes · L1 — on ne conçoit pas pour une classe qui n'a pas le
+  // module (c'est ainsi qu'une synthèse Codex a pu naître sur T5, le 14/08).
+  if (!(await classeAModule(supabase, classeId, 'codex'))) {
+    return { error: 'Cette classe n’a pas le module Codex. Donne-lui le module depuis sa fiche, ou choisis une autre classe.' }
+  }
 
   // L'arc est EXCLUSIF (CHECK `codex_sessions_source_chk`, posé par
   // plan_evaluation_phase_a.sql) : on résout le bras de la cible pour n'écrire que

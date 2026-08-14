@@ -5,13 +5,18 @@
 //  (3) une sous-section vue n'ouvre PAS les autres sous-sections du même cours ;
 //  (4) plus aucune publication ne joue au bras contenu — seul le « vu » décide ;
 //  (5) bras UNITÉ hérité inchangé (tuple (unité, semaine), semaine nulle = tout).
+//  (6) Accès & classes · L1 — « Au parcours de… » ne parle que des classes AYANT
+//      le module Quazian : `nomClasse` porte les classes éligibles, les autres
+//      sont silencieuses.
 
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import {
   carteVisible,
   compterVisibles,
+  lignesEtatVu,
   perimetreVide,
+  type AvancementVuClasse,
   type PerimetreCartes,
   type CarteAncree,
 } from './quazian-visibilite'
@@ -89,4 +94,35 @@ test('compterVisibles applique EXACTEMENT la même règle que l’élève', () =
   ]
   assert.equal(compterVisibles(cartes, perimetre()), 3)
   assert.equal(compterVisibles(cartes, perimetreVide()), 0)
+})
+
+// ── « Au parcours de… » : classes éligibles seulement (Accès & classes · L1) ──
+
+/** Deux classes ont le cours au parcours ; une seule a le module Quazian. */
+const avancement = (): AvancementVuClasse[] => [
+  { classeId: 'classe-avec-quazian', total: 2, vus: 1, decoupe: true, sectionsVues: new Set([S1]), entame: true },
+  { classeId: 'classe-sans-quazian', total: 2, vus: 2, decoupe: true, sectionsVues: new Set([S1, S2]), entame: true },
+]
+const cartesCours: CarteAncree[] = [
+  { contenu_id: COURS, section_id: S1 },
+  { contenu_id: COURS, section_id: S2 },
+]
+
+test('une classe sans le module Quazian ne s’annonce pas au prof', () => {
+  const lignes = lignesEtatVu(COURS, cartesCours, avancement(), new Map([['classe-avec-quazian', 'Test']]))
+  assert.deepEqual(lignes.map((l) => l.classe), ['Test'])
+  assert.equal(lignes[0].nbVisibles, 1) // seule S1 est vue dans cette classe
+})
+
+test('aucune classe éligible → aucune ligne (jamais un « — » orphelin)', () => {
+  assert.deepEqual(lignesEtatVu(COURS, cartesCours, avancement(), new Map()), [])
+})
+
+test('toutes éligibles → toutes annoncées, triées par nom de classe', () => {
+  const lignes = lignesEtatVu(COURS, cartesCours, avancement(), new Map([
+    ['classe-sans-quazian', 'THLP'],
+    ['classe-avec-quazian', 'Test'],
+  ]))
+  assert.deepEqual(lignes.map((l) => l.classe), ['Test', 'THLP'])
+  assert.deepEqual(lignes.map((l) => l.nbVisibles), [1, 2])
 })

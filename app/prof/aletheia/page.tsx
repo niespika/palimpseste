@@ -1,6 +1,6 @@
 import Link from 'next/link'
 import { createAdminClient } from '@/utils/supabase/admin'
-import { inscriptionsClasse } from '@/utils/acces'
+import { classesAvecModule, inscriptionsClasse } from '@/utils/acces'
 import Tuile from '@/components/Tuile'
 import DetailClasse, { type LigneEleve } from '@/components/classes/DetailClasse'
 import { TrajectoireDiag } from '@/components/aletheia/Diagnostic'
@@ -57,12 +57,16 @@ export default async function ClasseAletheiaPage({ searchParams }: { searchParam
   const { classe: classeSel } = await searchParams
   const admin = createAdminClient()
 
-  const [{ data: classes }, { data: livreUnites }, { data: liens }] = await Promise.all([
-    admin.from('classes').select('id, nom').order('nom'),
+  // Accès & classes · L1 — le sélecteur de classe ne propose que les classes
+  // AYANT Aletheia. Un livre peut être assigné à une classe sans le module (le
+  // Scriptorium assigne les livres, `classe_modules` donne les modules) : la
+  // tuile promettait alors un parcours de lecture que l'élève ne verrait jamais.
+  const { data: moduleData } = await admin.from('modules').select('id').eq('slug', 'aletheia').maybeSingle()
+  const [classesList, { data: livreUnites }, { data: liens }] = await Promise.all([
+    moduleData ? classesAvecModule(admin, moduleData.id as string) : Promise.resolve([]),
     admin.from('scriptorium_unites').select('id').eq('type', 'livre'),
     admin.from('scriptorium_unite_classes').select('unite_id, classe_id'),
   ])
-  const classesList = (classes ?? []) as { id: string; nom: string }[]
   const livreIds = new Set((livreUnites ?? []).map(u => u.id as string))
 
   const nbLivresParClasse = new Map<string, number>()

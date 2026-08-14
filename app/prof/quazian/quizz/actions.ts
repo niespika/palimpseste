@@ -7,6 +7,7 @@ import { genererQuestions, regenererQuestion } from '@/utils/generer-questions'
 import { lireGatePlanActif, plansValidesCourants, synchroniserStatutExerciceQuiz, resoudreSemestrePourSemaine } from '@/utils/plan-exercices'
 import { semainesCouvertes } from '@/app/prof/scriptorium/evaluations/plan-serveur'
 import { resoudreCible } from '@/utils/quazian-cibles'
+import { classeAModule } from '@/utils/acces'
 
 // Normalise une relation imbriquée Supabase (objet ou tableau) en un objet.
 function un<T>(x: T | T[] | null | undefined): T | null {
@@ -44,6 +45,10 @@ export async function creerQuizz(formData: FormData): Promise<CreerQuizzResult> 
 
   if (scopeRaw.length === 0) return { error: 'Sélectionne au moins un contenu.' }
   if (!classeId) return { error: 'Sélectionne une classe.' }
+  // Accès & classes · L1 — on ne conçoit pas pour une classe qui n'a pas Quazian.
+  if (!(await classeAModule(supabase, classeId, 'quazian'))) {
+    return { error: 'Cette classe n’a pas le module Quazian. Donne-lui le module depuis sa fiche, ou choisis une autre classe.' }
+  }
 
   // C7·L1 — le périmètre est BI-SOURCE : des contenus de bibliothèque (le monde
   // d'aujourd'hui) et, pour une base qui en aurait encore, des unités héritées.

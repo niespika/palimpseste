@@ -5,6 +5,7 @@ import Tuile from '@/components/Tuile'
 import BoutonGenererCartes from './BoutonGenererCartes'
 import { chargerCiblesQuazian, avancementVuParContenu } from '@/utils/quazian-cibles'
 import { lignesEtatVu, type CarteAncree } from '@/utils/quazian-visibilite'
+import { classesAvecModule } from '@/utils/acces'
 
 // Cartes partagées d'un coup, tolérant à l'absence de `section_id` : le code part
 // avant le SQL (protocole renforcé) — sans ce repli, l'écran prof serait vide
@@ -54,13 +55,18 @@ export default async function QuazianPage({ searchParams }: { searchParams: Prom
   // là où il offrait un bouton — c'est ce qui évite le « j'ai publié et l'élève ne
   // voit rien », et ce qui rend la divergence entre classes native (§10.2 du
   // rapport). Lecture admin : les tables de parcours sont en RLS prof-only.
+  // Accès & classes · L1 — « Au parcours de… » n'annonce que des classes AYANT
+  // Quazian : un contenu peut être au parcours d'une classe sans le module (deux
+  // assignations distinctes), et cet écran promettait alors des cartes visibles
+  // à des élèves qui n'ouvriront jamais Quazian.
   const admin = createAdminClient()
   const contenuIds = cibles.filter(c => c.bras === 'contenu').map(c => c.id)
-  const [avancement, { data: classesNoms }] = await Promise.all([
+  const { data: moduleData } = await supabase.from('modules').select('id').eq('slug', 'quazian').maybeSingle()
+  const [avancement, classesQuazian] = await Promise.all([
     avancementVuParContenu(admin, contenuIds),
-    supabase.from('classes').select('id, nom'),
+    moduleData ? classesAvecModule(supabase, moduleData.id as string) : Promise.resolve([]),
   ])
-  const nomClasse = new Map((classesNoms ?? []).map(c => [c.id as string, c.nom as string]))
+  const nomClasse = new Map(classesQuazian.map(c => [c.id, c.nom]))
 
   /** Une ligne d'état par classe qui a ce contenu au parcours, prête à afficher. */
   const etatDuVu = (cibleId: string) =>

@@ -3,6 +3,7 @@ import Link from 'next/link'
 import { createClient } from '@/utils/supabase/server'
 import { createAdminClient } from '@/utils/supabase/admin'
 import { chargerCapstoneLivre, contexteAletheia, estSemaineDebloquee, lireReglages, livresPourClasse, travauxParSemaine } from './data'
+import ModuleHorsClasse from '../../ModuleHorsClasse'
 import ChoixClasseModule from '../../ChoixClasseModule'
 import { MicroStepper } from '@/components/aletheia/Steppers'
 import Pastille from '@/components/Pastille'
@@ -43,11 +44,17 @@ export default async function PageAletheia() {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) notFound()
 
-  const { moduleActif, inscriptions, active, toutes } = await contexteAletheia(supabase, user.id)
+  const { moduleActif, inscriptions, active, toutes, horsClasse } = await contexteAletheia(supabase, user.id)
   if (!moduleActif) return <CarteMessage>Ce module n&apos;est pas encore activé.</CarteMessage>
   if (!active) return <CarteMessage>Ce module n&apos;est pas disponible pour ton compte.</CarteMessage>
   // C7·L2 — les livres se lisent par classe : en état « Toutes », on la demande.
   if (toutes) return <ChoixClasseModule inscriptions={inscriptions} nomModule="Aletheia" />
+  // Accès & classes · L1 — la classe au commutateur n'a pas Aletheia : le repli
+  // silencieux sur une autre inscription montrait les livres d'une classe sous
+  // le nom d'une autre. On le dit, et on renvoie au commutateur.
+  if (horsClasse) {
+    return <ModuleHorsClasse nomModule="Aletheia" classeContexte={horsClasse} ailleurs={inscriptions.map(i => i.classe_nom)} />
+  }
 
   const livres = await livresPourClasse(admin, active.classe_id)
   const travauxParLivre = new Map(

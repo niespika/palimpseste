@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import { createClient } from '@/utils/supabase/server'
+import { classesAvecModule } from '@/utils/acces'
 import { lireCiblesCodex } from './actions'
 import { preparerSynthese } from '../scriptorium/evaluations/actions'
 import { chargerSynthesesAPreparer } from './synthese-a-preparer'
@@ -29,21 +30,27 @@ export default async function CodexProfPage({ searchParams }: { searchParams: Pr
   const supabase = await createClient()
   const { classe: classeSel } = await searchParams
 
-  const [cibles, { data: syntheses }, { data: classes }] = await Promise.all([
+  // Accès & classes · L1 — le module appartient à la classe : ce sélecteur ne
+  // propose plus que les classes AYANT Codex. Il gouverne à la fois le formulaire
+  // de synthèse (le prof ne peut plus concevoir pour une classe sans le module)
+  // et les tuiles de classes. `classesAvecModule` est le helper que Fragments
+  // emploie déjà sur ses quatre écrans.
+  const [cibles, { data: syntheses }, { data: moduleData }] = await Promise.all([
     lireCiblesCodex(),
     supabase
       .from('codex_sessions')
       .select('id, statut, classe_id, scriptorium_unite_id, created_at, scriptorium_unites(label), classes(nom)')
       .order('created_at', { ascending: false }),
-    supabase.from('classes').select('id, nom').order('nom'),
+    supabase.from('modules').select('id').eq('slug', 'codex').maybeSingle(),
   ])
+  const classes = moduleData ? await classesAvecModule(supabase, moduleData.id as string) : []
   // Titres des cours (bras contenu bi-source) résolus à part.
   const titresCours = await titresCoursParSession(supabase, (syntheses ?? []).map((s) => s.id as string))
 
   const labelUnite = (s: { id: string; scriptorium_unites: unknown }) =>
     libelleSession(s.scriptorium_unites, null) || titresCours.get(s.id) || ''
 
-  const classesList = (classes ?? []) as { id: string; nom: string }[]
+  const classesList = classes
   const toutes = syntheses ?? []
   // Synthèses de fin de cours planifiées (plan d'évaluation, gate). Vide gate OFF.
   const aPreparer = await chargerSynthesesAPreparer()

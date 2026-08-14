@@ -860,6 +860,93 @@ deux fils cassés → **C6** ; le design des Paramètres → coupe pré-décidé
 `quazian_publications` et de sa colonne `classe_id` → arbitrage (§10.1) ; l'accès module × classe →
 séance dédiée (`PROMPT_Code_Acces_classes_L1.md`). Les quiz ne bougent pas.
 
+## Accès & classes · L1 — le module appartient à la classe (branche `feat/acces-classes`)
+
+_**Une migration dans ce lot** : `acces_classes_l1_retirer_inscription.sql` (reprise de
+`retirer_inscription` — une instruction ajoutée, la purge des conversations Scriptorium), ligne créée
+au `SUIVI_SQL.md` **avant** exécution, rollback prêt (`acces_classes_l1_retirer_inscription_rollback.sql`,
+non destructif). **Protocole RENFORCÉ** : code mergé + poussé d'abord, SQL ensuite, fenêtre calme,
+smoke élève. **Non exécutée à l'écriture de cette section** — seule la répétition à blanc a tourné
+(corps du fichier seul, transaction annulée, règle 6 ; sandbox revérifiée intacte après le `rollback`)._
+
+_Prouvé sans navigateur : `tsc --noEmit` vert, `npm test` **175/175** (dont 3 neufs sur « Au parcours
+de… », `utils/quazian-visibilite.test.ts`), `npm run build` vert, `eslint` identique à `main`
+(13 problèmes, tous préexistants et hors des fichiers du lot)._
+
+### Le diagnostic de la croix de retrait (fait le 14/08, en base sandbox)
+
+Trois suspects étaient à départager. Verdict :
+
+| Suspect | Verdict |
+|---|---|
+| **(a)** `confirm()` natif muet | ✅ **C'EST LA CAUSE.** Les deux surfaces faisaient `if (!confirm(…)) return` : dans un aperçu embarqué ou un onglet ayant bloqué les dialogues, le handler abandonne **avant toute requête**. Cinquième morsure du même piège (24/07, C8·L2, C8·L3, C7·L1). |
+| **(b)** RPC de juin vs schéma d'août | ⚠️ **Pas un blocage, mais un vrai défaut.** Les **12 FK qui pointent `inscriptions` sont toutes `on delete cascade`** — aucune ne bloque le delete ; les FK élève-scopées pointent `profiles`, qu'un retrait ne touche pas. Répétition à blanc du retrait (Sacha × T5, transaction annulée) : passée sans erreur. **En revanche la fonction laisse du travail ORPHELIN** : `scriptorium_conversations` (née en juillet, RAG L5) est scopée (élève × CLASSE) **sans `inscription_id`** → aucune cascade ne l'atteint, la fonction ne la nommait pas. Prouvé : conversation + message semés sur Sacha × Test, retrait joué, `rollback` → **tous deux survivaient**. D'où la migration de ce lot. |
+| **(c)** `GestionEleves.tsx` | ✅ **Confirmé, et pire que la croix** : cette surface `await retirerEleve(fd)` et **jetait le résultat** — un échec serveur n'y apparaissait nulle part. `LigneEleve.tsx`, lui, affichait bien l'erreur (en petit, sous les jetons). |
+
+_Correctif : une seule confirmation EN PAGE (`components/pilotage/ConfirmationRetrait.tsx`, patron
+`TableauLive` du commit `89625fc`) partagée par les **deux** surfaces, qui **dit ce qui va partir**
+(aperçu serveur `apercuRetraitEleve` : dépôts, essais, oraux, synthèses Codex, quizz passés, séances
+Aletheia, conversations Scriptorium, et la révision FSRS si c'est la dernière classe) et affiche
+l'erreur dans le panneau, plus dans le vide._
+
+### Le recensement demandé (requête de contrôle du 14/08 — RIEN N'A ÉTÉ DÉTRUIT)
+
+Lignes déjà créées pour une classe qui n'a pas le module, balayage complet (Codex, Quazian, livres
+Aletheia, travaux Aletheia, conversations Scriptorium, dépôts Fragments) :
+
+| Objet | Classe | Lignes | Détail |
+|---|---|---|---|
+| `codex_sessions` | **T5** | 1 | « Cognitif », statut `phase_1`, créée le 14/08, **0 travail élève** |
+| Livre assigné (Aletheia) | **T5** | 1 | « LesLumière test » (`scriptorium_unite_classes`) |
+
+> ⚠️ **Conséquence à trancher (Louis).** Les tuiles de classe filtrant désormais elles aussi, la
+> synthèse « Cognitif » × T5 **n'est plus atteignable depuis `/prof/codex`** — elle est intacte en
+> base, mais l'écran ne l'offre plus, donc plus moyen de la fermer par l'interface. Trois issues
+> possibles : donner Codex à T5, supprimer la ligne, ou rouvrir une tuile « classes sans le module ».
+> Rien n'a été fait dans un sens ou dans l'autre.
+
+### Le balayage `from('classes')` — corrigé vs listé
+
+**Corrigés (surfaces de CONCEPTION)** : Codex `page.tsx` (formulaire **et** tuiles) · Quazian
+`quizz/page.tsx` (création + tuiles) · Quazian `page.tsx` et `[cibleId]/page.tsx` (le libellé « Au
+parcours de… ») · Aletheia `page.tsx` (tuiles de classes). **Plus deux gardes serveur** :
+`creerSynthese` et `creerQuizz` refusent une classe sans le module (filtrer le sélecteur empêche le
+geste nominal, la garde empêche le geste tout court).
+
+**Listés, NON touchés** (et pourquoi) :
+
+| Site | Motif |
+|---|---|
+| `app/prof/quazian/diagnostic/page.tsx:128` et `:250` | Écran de CONSULTATION, et rangé en **C6** par `IDEES_post_rentree.md` (ses deux fils sont cassés par ailleurs). |
+| `app/prof/quazian/semestre/page.tsx:42` | Résolution de noms pour des classes déjà dérivées des quiz fermés — consultation. |
+| `app/prof/codex/synthese-a-preparer.ts:37`, `aletheia/eleve/[eleveId]:259`, `fragments-erudition/essais/[essaiId]:36`, `quazian/quizz/plan-quazian.ts:63`, `scriptorium/instance-serveur.ts:74`, `evaluations/panoptique-serveur.ts:143` | Lectures **par id** (résolution de nom), pas des sélecteurs. |
+| `app/prof/scriptorium/page.tsx:83`, `evaluations/modele-serveur.ts:170`, `evaluations/plan-serveur.ts:120` | Sélecteurs de conception, mais **transverses aux modules** : le Scriptorium assigne des livres et des parcours, le plan d'évaluation couvre plusieurs modules à la fois — « le » module qui filtrerait n'est pas défini. **Question ouverte, non tranchée ici.** |
+| `/prof/a-risque`, `/prof/calendrier/*`, `/prof/classes/*`, `/prof/eleves`, `/prof/modules`, `/prof/page.tsx`, `utils/calendrier-*`, `utils/rappels.ts` | Hors d'un écran de module. |
+
+### Les tests
+
+_Terrain (lu en base le 14/08) : **T5** n'a que `fragments-erudition` · **Test** a les cinq modules ·
+**THLP** n'a qu'`aletheia`. **Sacha** est bi-classe (Test + T5), **Elo** mono-classe (Test)._
+_Règle d'or : Chrome, pas l'aperçu embarqué, et Cmd-R avant de conclure à un bug._
+_⚠️ **Ne pas jouer le test 9 sur Sacha** — les tests bi-classe vivent sur lui : créer un élève JETABLE._
+
+- [ ] **ACL1-1 · Prof / Codex** — `/prof/codex` : le formulaire de synthèse ne propose plus **T5** (Test seule), et les tuiles de classe non plus.
+- [ ] **ACL1-2 · Prof / Quazian** — `/prof/quazian/quizz` : la création de quizz ne propose que **Test**. Sur `/prof/quazian` et sur la fiche d'un cours, « Au parcours de… » n'annonce plus **T5**.
+- [ ] **ACL1-3 · Prof / Aletheia** — `/prof/aletheia` : les tuiles de classe montrent **Test** et **THLP**, pas T5.
+- [ ] **ACL1-4 · Recensement intact** — en base, la synthèse « Cognitif » × T5 et le livre assigné à T5 sont **toujours là** (rien détruit).
+- [ ] **ACL1-5 · Sacha, contexte Test** — la grille « Mes mondes » montre les modules de **Test** ; en basculant sur **T5**, elle se réduit à **Fragments** seul.
+- [ ] **ACL1-6 · Sacha, le cas réel** — entrer dans **Quazian** depuis Test, puis basculer le commutateur sur **T5** : l'écran-message « Quazian n'est pas ouvert pour T5 · Passe sur Test avec le commutateur » s'affiche (plus la page vide d'hier, cf. C7L3-6).
+- [ ] **ACL1-7 · Sacha, état « Toutes »** — comportement **C7L2-4 inchangé** : le tableau de bord agrège, et chaque module demande « Quelle classe ? ».
+- [ ] **ACL1-8 · Elo, mono-classe** — **rien ne change** (C7L2-7) : aucun écran-message, aucun choix de classe.
+- [ ] **ACL1-9 · Pilotage, la croix retire vraiment** — créer un élève **JETABLE**, l'inscrire dans **deux** classes, y semer un peu de travail (au moins une conversation Scriptorium sur Test, le cas que la migration répare). Croix sur un jeton de classe → le panneau s'ouvre **et dit ce qui va partir**. Confirmer. **Vérifier en base** : l'inscription part, le travail scopé de cette classe part (conversations comprises), l'autre classe survit.
+- [ ] **ACL1-10 · L'échec se voit** — provoquer un échec (ex. retirer deux fois) : le message s'affiche **en clair dans le panneau**.
+- [ ] **ACL1-11 · L'autre surface** — même geste depuis « Gérer les élèves » d'une classe (`GestionEleves`) : **même panneau**, même aperçu, même affichage d'erreur.
+
+**Reste hors de ce lot, volontairement :** le sort du travail d'une classe à qui l'on RETIRE un
+module (séances, cartes, contenus restent en base — la règle d'accès de ce lot suffit à le rendre
+inatteignable dans le contexte de cette classe) → check-in ; la visibilité Quazian au « vu » →
+`PROMPT_Code_C7_L3.md` ; « bloquer un élève jamais signalé » → non.
+
 ## C2 — (à venir)
 
 _Les tests seront ajoutés à l'écriture des specs / à la clôture des sessions (écran élève, calibration L8…). S'y ajoutera le test reporté C11a-6 (synthèse hebdo → ligne `scriptorium` classe seule)._

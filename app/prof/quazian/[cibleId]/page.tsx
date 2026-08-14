@@ -7,6 +7,7 @@ import { CarteFlashcard } from './CarteFlashcard'
 import BoutonGenererCartes from '../BoutonGenererCartes'
 import { avancementVuParContenu, colonneCible, resoudreCible } from '@/utils/quazian-cibles'
 import { lignesEtatVu, type CarteAncree } from '@/utils/quazian-visibilite'
+import { classesAvecModule } from '@/utils/acces'
 
 async function actionAjouter(formData: FormData): Promise<void> {
   'use server'
@@ -44,17 +45,20 @@ export default async function CibleCartesPage({
     : premiere.data) as unknown as Record<string, unknown>[] | null
 
   // Sous-sections du cours (titre affiché sous chaque carte) + état du « vu ».
+  // Accès & classes · L1 — même règle que l'écran de liste : « Au parcours de… »
+  // n'annonce que les classes AYANT Quazian.
   const admin = createAdminClient()
-  const [{ data: sections }, avancement, { data: classesNoms }] = await Promise.all([
+  const { data: moduleData } = await supabase.from('modules').select('id').eq('slug', 'quazian').maybeSingle()
+  const [{ data: sections }, avancement, classesQuazian] = await Promise.all([
     cible.bras === 'contenu'
       ? supabase.from('scriptorium_contenu_sections')
           .select('id, ordre, titre').eq('contenu_id', cibleId).order('ordre', { ascending: true })
       : Promise.resolve({ data: [] as Record<string, unknown>[] }),
     cible.bras === 'contenu' ? avancementVuParContenu(admin, [cibleId]) : Promise.resolve(new Map()),
-    supabase.from('classes').select('id, nom'),
+    moduleData ? classesAvecModule(supabase, moduleData.id as string) : Promise.resolve([]),
   ])
   const titreSection = new Map((sections ?? []).map(s => [s.id as string, s.titre as string]))
-  const nomClasse = new Map((classesNoms ?? []).map(c => [c.id as string, c.nom as string]))
+  const nomClasse = new Map(classesQuazian.map(c => [c.id, c.nom]))
 
   const carte = (c: Record<string, unknown>) => ({
     id: c.id as string,
