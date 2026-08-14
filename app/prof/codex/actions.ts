@@ -2,6 +2,9 @@
 
 import { revalidatePath } from 'next/cache'
 import { createClient } from '@/utils/supabase/server'
+import {
+  chargerCiblesQuazian, resoudreCible, refCible, type CibleQuazian,
+} from '@/utils/quazian-cibles'
 
 async function verifierProf() {
   const supabase = await createClient()
@@ -16,32 +19,44 @@ async function verifierProf() {
   return { supabase, userId: user.id }
 }
 
-// Lire les unités du Scriptorium (contrat de lecture)
-export async function lireUnitesScriptorium() {
+// Cibles d'une synthèse Codex — l'arc BI-SOURCE, recâblé le 14/08.
+//
+// Avant : cette fonction demandait `scriptorium_unites` où `type='unite'`. Zéro
+// ligne depuis la réorganisation du Scriptorium → le formulaire affichait
+// « Aucune unité dans le Scriptorium » alors que la bibliothèque en contenait
+// trois, et le chemin NOMINAL de création était mort. Seul survivait le chemin
+// gaté du plan d'évaluation, qui ancre par `contenu_id`.
+//
+// C'est la fracture exacte que C7·L1 a réparée pour Quazian, et le vocabulaire
+// qu'il a posé se réemploie tel quel : `scriptorium_unites` reste lisible (bras
+// hérité), les Textes et Cours de la bibliothèque deviennent les cibles du jour,
+// et les livres Aletheia restent hors de portée (anti-spoiler, filtré à la source).
+export async function lireCiblesCodex(): Promise<CibleQuazian[]> {
   const { supabase } = await verifierProf()
-  const { data: unites } = await supabase
-    .from('scriptorium_unites')
-    .select('id, label, classe, ordre')
-    .eq('type', 'unite')   // exclut les « livres » Aletheia des unités de cours
-    .is('supprime_at', null)   // exclut les unités supprimées (plus de nouvelles synthèses dessus)
-    .order('ordre', { ascending: true })
-  return unites ?? []
+  return chargerCiblesQuazian(supabase)
 }
 
-// Créer une synthèse (classe × unité) en brouillon
+// Créer une synthèse (classe × cible) en brouillon
 export async function creerSynthese(formData: FormData) {
   const { supabase, userId } = await verifierProf()
-  const uniteId = formData.get('scriptorium_unite_id') as string
+  const cibleId = formData.get('cible_id') as string
   const classeId = (formData.get('classe_id') as string) || null
   const dureeMin = parseInt(formData.get('duree_phase_min') as string) || 25
 
-  if (!uniteId) return { error: 'Choisis une unité du Scriptorium.' }
+  if (!cibleId) return { error: 'Choisis un contenu du Scriptorium.' }
   // D2 : une synthèse a TOUJOURS une classe (le formulaire rend déjà le champ requis ;
   // cette garde tarit la source de sessions sans classe — cf. fix P0 calendrier).
   if (!classeId) return { error: 'Choisis une classe pour cette synthèse.' }
 
+  // L'arc est EXCLUSIF (CHECK `codex_sessions_source_chk`, posé par
+  // plan_evaluation_phase_a.sql) : on résout le bras de la cible pour n'écrire que
+  // sa colonne. Une cible introuvable (retirée entre l'affichage et l'envoi, ou un
+  // livre) est refusée ici plutôt que de heurter le CHECK.
+  const cible = await resoudreCible(supabase, cibleId)
+  if (!cible) return { error: 'Ce contenu n’existe plus dans le Scriptorium.' }
+
   const { error } = await supabase.from('codex_sessions').insert({
-    scriptorium_unite_id: uniteId,
+    ...refCible(cible),
     classe_id: classeId,
     duree_phase_min: dureeMin,
     statut: 'brouillon',

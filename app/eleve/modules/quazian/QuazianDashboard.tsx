@@ -17,13 +17,13 @@ interface Props {
   stats: Stats
   file: CarteRevision[]
   toutesCartes: CarteConsultation[]
-  /** Section « Quizz » rendue sous la zone Réviser (uniquement en mode accueil). */
-  quizz?: React.ReactNode
 }
 
 const SUR_TITRE = 'font-ui text-xs tracking-[0.1em] text-muet uppercase'
 
-export function QuazianDashboard({ stats, file, toutesCartes, quizz }: Props) {
+// C7·L2 — le quizz a quitté cet écran : il a son propre onglet. Ce composant ne
+// porte plus que la zone Réviser (stats, session, consultation).
+export function QuazianDashboard({ stats, file, toutesCartes }: Props) {
   const [mode, setMode] = useState<'accueil' | 'revision' | 'consultation'>('accueil')
   const [nbRevues, setNbRevues] = useState<number | null>(null)
   const nbNouvelles = toutesCartes.filter((c) => c.nouvelle).length
@@ -110,14 +110,6 @@ export function QuazianDashboard({ stats, file, toutesCartes, quizz }: Props) {
           )}
         </div>
       </section>
-
-      {/* ── Zone QUIZZ ────────────────────────────────────────────────────── */}
-      {quizz && (
-        <section>
-          <h3 className={`${SUR_TITRE} mb-3`}>Quizz</h3>
-          {quizz}
-        </section>
-      )}
     </div>
   )
 }

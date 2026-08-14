@@ -8,7 +8,7 @@ import { FournisseurEtatFragmentsEleve } from '@/components/nav/EtatFragmentsEle
 import { navEleveFiltree } from '@/components/nav/configNavigation'
 import { slugsModulesAccessibles } from '@/utils/acces'
 import SelecteurClasseEleve from './SelecteurClasseEleve'
-import { contexteClasseEleve } from './contexte-classe'
+import { contexteClasseEleve, VALEUR_TOUTES } from './contexte-classe'
 
 export default async function EleveLayout({ children }: { children: React.ReactNode }) {
   const supabase = await createClient()
@@ -25,7 +25,10 @@ export default async function EleveLayout({ children }: { children: React.ReactN
   if (profile?.role !== 'eleve') redirect('/prof')
 
   // Commutateur de classe global (Lot 9) — remonté dans l'en-tête (F3).
-  const { inscriptions, active } = await contexteClasseEleve(supabase, user.id)
+  // C7·L2 — trois états : en « Toutes », `active` est null sans que l'élève soit
+  // pour autant sans classe ; le commutateur se pilote donc sur `valeurActive`.
+  const { inscriptions, active, toutes } = await contexteClasseEleve(supabase, user.id)
+  const valeurActive = toutes ? VALEUR_TOUTES : active?.id ?? null
 
   // Nav filtrée : on ne propose que les modules réellement accessibles à l'élève.
   const tabsEleve = navEleveFiltree(await slugsModulesAccessibles(supabase, user.id))
@@ -40,14 +43,14 @@ export default async function EleveLayout({ children }: { children: React.ReactN
         role="eleve"
         tabs={tabsEleve}
         deconnexionAction={deconnexion}
-        classe={{ inscriptions, activeId: active?.id ?? null }}
+        classe={{ inscriptions, activeId: valeurActive }}
       />
       {/* Bandeau mobile (< sm) : conserve wordmark + sélecteur de classe, sinon
           l'élève perdrait le commutateur de classe sous 640px. Déconnexion : onglet « Moi ». */}
       <div className="sm:hidden sticky top-0 z-10 bg-surface border-b border-bordure print:hidden">
         <div className="max-w-4xl mx-auto px-4 pt-4 pb-2 flex items-center justify-between gap-3">
           <span className="font-marque text-base font-semibold tracking-[0.1em] text-encre">PALIMPSESTE</span>
-          {active && <SelecteurClasseEleve inscriptions={inscriptions} activeId={active.id} />}
+          {valeurActive && <SelecteurClasseEleve inscriptions={inscriptions} activeId={valeurActive} />}
         </div>
       </div>
       {/* Colonne alignée sur l'en-tête (`EnTeteSite` : max-w-[1040px] / px-[28px]) —

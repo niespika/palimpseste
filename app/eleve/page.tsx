@@ -39,6 +39,8 @@ interface Tache {
   urgence: number        // plus haut = plus urgent
   badge?: { texte: string; ton: Ton; pulse?: boolean }
   pistes?: string[]
+  /** Classe d'origine, affichée seulement quand le tableau agrège (C7·L2). */
+  classe?: string
 }
 
 const TON_BADGE: Record<Ton, string> = {
@@ -68,7 +70,11 @@ export default async function TableauDeBordEleve() {
   const { data: { user } } = await supabase.auth.getUser()
   const { data: profile } = await supabase.from('profiles').select('display_name').eq('id', user!.id).single()
 
-  const { active } = await contexteClasseEleve(supabase, user!.id)
+  // C7·L2 — le tableau de bord AGRÈGE en état « Toutes » : la collecte ci-dessous
+  // ne tourne plus sur une inscription mais sur toutes celles en contexte (une
+  // seule dans l'état classe, d'où l'absence de changement pour un mono-classe).
+  const { inscriptions, active, toutes } = await contexteClasseEleve(supabase, user!.id)
+  const enContexte = toutes ? inscriptions : active ? [active] : []
 
   // Modules réellement accessibles à l'élève : on ne dérive AUCUNE tâche/échéance
   // d'un module hors périmètre (ex. pilote Aletheia-only ne voit pas Fragments,
@@ -79,17 +85,20 @@ export default async function TableauDeBordEleve() {
   const accCodex = slugs.has('codex')
   const accAletheia = slugs.has('aletheia')
 
-  // ── Collecte (scopée sur l'inscription active) ─────────────────────────────
-  let fragmentTache: { texte: string; depose: boolean; enRetard: boolean; pistes: string[] } | null = null
+  // ── Collecte (une passe par inscription EN CONTEXTE) ───────────────────────
+  // Une seule inscription dans l'état classe (cas d'hier, inchangé) ; les deux
+  // dans l'état « Toutes », d'où une tâche par classe.
+  interface FragmentTache { texte: string; depose: boolean; enRetard: boolean; pistes: string[]; classe: string; inscriptionId: string }
+  const fragmentTaches: FragmentTache[] = []
   let cartesDues = 0
-  let codexEnCoursId: string | null = null
-  let quizzEnCoursId: string | null = null
-  let aletheiaAFaire = false
+  const codexEnCours: { id: string; classe: string }[] = []
+  const quizzEnCours: { id: string; classe: string }[] = []
+  const aletheiaAFaire: { classe: string }[] = []
   let semaineCourante: { label: string; debut: string; fin: string; vacances: boolean } | null = null
 
-  if (active) {
+  if (enContexte.length > 0) {
     // Semaine ouverte scopée au semestre actif (évite une semaine restée ouverte
-    // d'un semestre précédent).
+    // d'un semestre précédent). Globale au semestre : une seule lecture.
     const { data: semActif } = await supabase.from('semesters').select('id').eq('is_active', true).maybeSingle()
     let reqSemaine = supabase
       .from('fragments_semaines')
@@ -101,63 +110,69 @@ export default async function TableauDeBordEleve() {
       .limit(1)
       .maybeSingle()
 
-    if (semaine && accFragments) {
-      const { data: depot } = await supabase
-        .from('fragments_depots')
-        .select('id, statut')
-        .eq('inscription_id', active.id)
-        .eq('semaine_id', semaine.id)
-        .maybeSingle()
-      // date_limite est un INSTANT (fin de journée dans le fuseau de l'école) : on
-      // nomme le JOUR dans ce fuseau — en UTC, l'échéance du dimanche dirait lundi.
-      const limite = formatInstant(semaine.date_limite as string, await lireFuseau(), { weekday: 'long', day: 'numeric', month: 'long' })
-      const enRetard = !depot && new Date(semaine.date_limite) < new Date()
-      const texte = depot
-        ? depot.statut === 'en_retard' ? `Semaine ${semaine.numero} — déposé en retard` : `Semaine ${semaine.numero} — déposé ✓`
-        : `Semaine ${semaine.numero} — à déposer avant ${limite}`
-      fragmentTache = { texte, depose: !!depot, enRetard, pistes: [] }
+    for (const insc of enContexte) {
+      if (semaine && accFragments) {
+        const { data: depot } = await supabase
+          .from('fragments_depots')
+          .select('id, statut')
+          .eq('inscription_id', insc.id)
+          .eq('semaine_id', semaine.id)
+          .maybeSingle()
+        // date_limite est un INSTANT (fin de journée dans le fuseau de l'école) : on
+        // nomme le JOUR dans ce fuseau — en UTC, l'échéance du dimanche dirait lundi.
+        const limite = formatInstant(semaine.date_limite as string, await lireFuseau(), { weekday: 'long', day: 'numeric', month: 'long' })
+        const enRetard = !depot && new Date(semaine.date_limite) < new Date()
+        const texte = depot
+          ? depot.statut === 'en_retard' ? `Semaine ${semaine.numero} — déposé en retard` : `Semaine ${semaine.numero} — déposé ✓`
+          : `Semaine ${semaine.numero} — à déposer avant ${limite}`
+        fragmentTaches.push({ texte, depose: !!depot, enRetard, pistes: [], classe: insc.classe_nom, inscriptionId: insc.id })
+      }
+
+      if (accCodex) {
+        const { data: codex } = await admin.from('codex_sessions').select('id').eq('classe_id', insc.classe_id).in('statut', ['phase_1', 'phase_2']).limit(1).maybeSingle()
+        if (codex?.id) codexEnCours.push({ id: codex.id as string, classe: insc.classe_nom })
+      }
+      if (accQuazian) {
+        const { data: quizz } = await admin.from('quazian_quizzes').select('id').eq('classe_id', insc.classe_id).eq('statut', 'lance').limit(1).maybeSingle()
+        if (quizz?.id) quizzEnCours.push({ id: quizz.id as string, classe: insc.classe_nom })
+      }
+
+      // Aletheia : au moins un livre dont toutes les semaines ne sont pas terminées.
+      if (accAletheia) {
+        const livres = (await livresPourClasse(admin, insc.classe_id)).filter((l) => l.semaines.length > 0)
+        // (perf #2) livresPourClasse a déjà les séances exposées → on les passe pour éviter un
+        // modeExposition redondant par livre.
+        const done = await Promise.all(livres.map((l) => toutesSemainesDone(admin, user!.id, l.id, insc.classe_id, l.semaines.map((s) => s.semaine))))
+        if (done.some((d) => !d)) aletheiaAFaire.push({ classe: insc.classe_nom })
+      }
     }
 
     // Pistes du dernier retour (analyse publiée la plus récente de cette inscription)
-    if (accFragments && fragmentTache) {
-      const { data: depots } = await admin.from('fragments_depots').select('id').eq('inscription_id', active.id)
-      const depotIds = (depots ?? []).map((d) => d.id as string)
-      const { data: derniere } = depotIds.length > 0
-        ? await admin.from('fragments_analyses').select('id').eq('statut', 'publiee').in('depot_id', depotIds).order('created_at', { ascending: false }).limit(1).maybeSingle()
-        : { data: null }
-      if (derniere) {
-        const { data: ps } = await admin
-          .from('fragments_pistes')
-          .select('contenu')
-          .eq('analyse_id', derniere.id)
-          .eq('statut', 'proposee')
-          .order('created_at')
-          .limit(3)
-        fragmentTache.pistes = (ps ?? []).map((p) => p.contenu as string)
+    if (accFragments) {
+      for (const ft of fragmentTaches) {
+        const { data: depots } = await admin.from('fragments_depots').select('id').eq('inscription_id', ft.inscriptionId)
+        const depotIds = (depots ?? []).map((d) => d.id as string)
+        const { data: derniere } = depotIds.length > 0
+          ? await admin.from('fragments_analyses').select('id').eq('statut', 'publiee').in('depot_id', depotIds).order('created_at', { ascending: false }).limit(1).maybeSingle()
+          : { data: null }
+        if (derniere) {
+          const { data: ps } = await admin
+            .from('fragments_pistes')
+            .select('contenu')
+            .eq('analyse_id', derniere.id)
+            .eq('statut', 'proposee')
+            .order('created_at')
+            .limit(3)
+          ft.pistes = (ps ?? []).map((p) => p.contenu as string)
+        }
       }
     }
 
     // Flashcards dues — via la même dérivation de visibilité que la file de révision
     // (sinon on comptait des cartes d'unités non publiées / non assignées à l'élève).
+    // `chargerStatsRevision` lit le contexte de classe : il agrège de lui-même en
+    // état « Toutes », d'où un seul appel ici et un compteur unique.
     if (accQuazian) cartesDues = (await chargerStatsRevision()).dues
-
-    if (accCodex) {
-      const { data: codex } = await admin.from('codex_sessions').select('id').eq('classe_id', active.classe_id).in('statut', ['phase_1', 'phase_2']).limit(1).maybeSingle()
-      codexEnCoursId = (codex?.id as string) ?? null
-    }
-    if (accQuazian) {
-      const { data: quizz } = await admin.from('quazian_quizzes').select('id').eq('classe_id', active.classe_id).eq('statut', 'lance').limit(1).maybeSingle()
-      quizzEnCoursId = (quizz?.id as string) ?? null
-    }
-
-    // Aletheia : au moins un livre dont toutes les semaines ne sont pas terminées.
-    if (accAletheia) {
-      const livres = (await livresPourClasse(admin, active.classe_id)).filter((l) => l.semaines.length > 0)
-      // (perf #2) livresPourClasse a déjà les séances exposées → on les passe pour éviter un
-      // modeExposition redondant par livre.
-      const done = await Promise.all(livres.map((l) => toutesSemainesDone(admin, user!.id, l.id, active.classe_id, l.semaines.map((s) => s.semaine))))
-      aletheiaAFaire = done.some((d) => !d)
-    }
 
     // Semaine calendaire en cours (depuis le semestre actif + vacances).
     const { data: semCal } = await admin.from('semesters').select('id, start_date, end_date').eq('is_active', true).maybeSingle()
@@ -178,11 +193,13 @@ export default async function TableauDeBordEleve() {
 
   // ── Progression : moyenne par section (Fragments) → lettre, en une bande ────
   const sectionsProg: { label: string; lettre: LettreSection }[] = []
-  if (active && accFragments) {
+  if (enContexte.length > 0 && accFragments) {
+    // En état « Toutes », la progression moyenne se calcule sur les dépôts des
+    // deux classes réunis — c'est la même question posée à tout le travail.
     const { data: depots } = await admin
       .from('fragments_depots')
       .select('id, fragments_semaines(numero)')
-      .eq('inscription_id', active.id)
+      .in('inscription_id', enContexte.map((i) => i.id))
     const numParDepot = new Map((depots ?? []).map((d) => [d.id as string, (d.fragments_semaines as unknown as { numero: number } | null)?.numero ?? 0]))
     const depotIds = (depots ?? []).map((d) => d.id as string)
     const { data: analyses } = depotIds.length > 0
@@ -218,24 +235,26 @@ export default async function TableauDeBordEleve() {
   const modulesActifs = (mods ?? []).filter((m): m is ModuleInfo => !!m && m.actif === true && !masquesEleve.includes(m.slug))
 
   // ── Construction des tâches priorisées ──────────────────────────────────────
+  // En état « Toutes », chaque tâche porte sa classe (`classe`) et une clé qui la
+  // distingue de sa jumelle de l'autre classe.
   const taches: Tache[] = []
-  if (quizzEnCoursId) taches.push({
-    cle: 'quizz', module: 'quazian', titre: 'Quizz en cours', detail: 'Un quizz est ouvert en ce moment.',
-    href: `/eleve/modules/quazian/quizz/${quizzEnCoursId}`, cta: 'Participer au quizz', urgence: 100,
-    badge: { texte: 'en direct', ton: 'ok', pulse: true },
+  for (const q of quizzEnCours) taches.push({
+    cle: `quizz-${q.id}`, module: 'quazian', titre: 'Quizz en cours', detail: 'Un quizz est ouvert en ce moment.',
+    href: `/eleve/modules/quazian/quizz/${q.id}`, cta: 'Participer au quizz', urgence: 100,
+    badge: { texte: 'en direct', ton: 'ok', pulse: true }, classe: q.classe,
   })
-  if (codexEnCoursId) taches.push({
-    cle: 'codex', module: 'codex', titre: 'Synthèse Codex', detail: 'Une séance de synthèse est en cours.',
-    href: `/eleve/modules/codex/synthese/${codexEnCoursId}`, cta: 'Rejoindre la séance', urgence: 95,
-    badge: { texte: 'en direct', ton: 'ok', pulse: true },
+  for (const c of codexEnCours) taches.push({
+    cle: `codex-${c.id}`, module: 'codex', titre: 'Synthèse Codex', detail: 'Une séance de synthèse est en cours.',
+    href: `/eleve/modules/codex/synthese/${c.id}`, cta: 'Rejoindre la séance', urgence: 95,
+    badge: { texte: 'en direct', ton: 'ok', pulse: true }, classe: c.classe,
   })
-  if (fragmentTache && !fragmentTache.depose) taches.push({
-    cle: 'fragment', module: 'fragments', titre: "Fragments d'érudition", detail: fragmentTache.texte,
-    href: '/eleve/modules/fragments-erudition',
-    cta: fragmentTache.enRetard ? 'Déposer (en retard)' : 'Déposer mon fragment',
-    urgence: fragmentTache.enRetard ? 90 : 70,
-    badge: fragmentTache.enRetard ? { texte: 'en retard', ton: 'retard' } : { texte: 'à rendre', ton: 'attention' },
-    pistes: fragmentTache.pistes,
+  for (const f of fragmentTaches.filter((f) => !f.depose)) taches.push({
+    cle: `fragment-${f.inscriptionId}`, module: 'fragments', titre: "Fragments d'érudition", detail: f.texte,
+    href: `/eleve/modules/fragments-erudition?inscription=${f.inscriptionId}`,
+    cta: f.enRetard ? 'Déposer (en retard)' : 'Déposer mon fragment',
+    urgence: f.enRetard ? 90 : 70,
+    badge: f.enRetard ? { texte: 'en retard', ton: 'retard' } : { texte: 'à rendre', ton: 'attention' },
+    pistes: f.pistes, classe: f.classe,
   })
   if (cartesDues > 0) taches.push({
     cle: 'cartes', module: 'quazian', titre: 'Flashcards à réviser',
@@ -243,10 +262,10 @@ export default async function TableauDeBordEleve() {
     href: '/eleve/modules/quazian', cta: `Réviser mes ${cartesDues} carte${cartesDues > 1 ? 's' : ''}`, urgence: 50,
     badge: { texte: `${cartesDues} due${cartesDues > 1 ? 's' : ''}`, ton: 'attention' },
   })
-  if (aletheiaAFaire) taches.push({
-    cle: 'aletheia', module: 'aletheia', titre: 'Lecture à poursuivre', detail: 'Reprends ta lecture là où tu en étais.',
+  for (const [i, a] of aletheiaAFaire.entries()) taches.push({
+    cle: `aletheia-${i}`, module: 'aletheia', titre: 'Lecture à poursuivre', detail: 'Reprends ta lecture là où tu en étais.',
     href: '/eleve/modules/aletheia', cta: 'Continuer ma lecture', urgence: 40,
-    badge: { texte: 'Aletheia', ton: 'muet' },
+    badge: { texte: 'Aletheia', ton: 'muet' }, classe: a.classe,
   })
   taches.sort((a, b) => b.urgence - a.urgence)
   const hero = taches[0] ?? null
@@ -265,15 +284,15 @@ export default async function TableauDeBordEleve() {
     <div className="space-y-8">
       <div>
         <h2 className="font-titre text-2xl text-encre">Bonjour, {profile?.display_name} !</h2>
-        {active && (
+        {enContexte.length > 0 && (
           <p className="text-muet text-sm mt-0.5">
-            {active.classe_nom}
+            {toutes ? 'Toutes les classes' : active?.classe_nom}
             {semaineCourante && <span> · {semaineCourante.label} · {fmtJourCourt(semaineCourante.debut)}–{fmtJourCourt(semaineCourante.fin)}</span>}
           </p>
         )}
       </div>
 
-      {!active ? (
+      {enContexte.length === 0 ? (
         <div className="bg-surface border border-bordure rounded-xl p-8 text-center text-encre-douce text-sm">
           Tu n&apos;es inscrit dans aucune classe pour l&apos;instant.<br />Ton professeur t&apos;y ajoutera bientôt.
         </div>
@@ -291,7 +310,12 @@ export default async function TableauDeBordEleve() {
                       {hero.badge && <Badge {...hero.badge} />}
                     </div>
                     <h4 className="font-titre text-2xl text-encre leading-tight mt-2">{hero.titre}</h4>
-                    <p className="text-sm text-encre-douce mt-1">{hero.detail}</p>
+                    <p className="text-sm text-encre-douce mt-1">
+                      {hero.detail}
+                      {/* La classe n'est dite que quand le tableau agrège : dans
+                          l'état classe, elle est déjà en tête d'écran. */}
+                      {toutes && hero.classe && <span className="text-muet"> · {hero.classe}</span>}
+                    </p>
 
                     {hero.pistes && hero.pistes.length > 0 && (
                       <div className="mt-3 border-t border-bordure pt-3">
@@ -331,7 +355,10 @@ export default async function TableauDeBordEleve() {
                         className="flex items-center gap-3 px-4 py-3 hover:bg-parchemin-fonce transition-colors"
                       >
                         <span className="w-2.5 h-2.5 rounded-full bg-pigment shrink-0" aria-hidden />
-                        <span className="text-sm text-encre flex-1 min-w-0 truncate">{t.titre}</span>
+                        <span className="text-sm text-encre flex-1 min-w-0 truncate">
+                          {t.titre}
+                          {toutes && t.classe && <span className="text-muet"> · {t.classe}</span>}
+                        </span>
                         {t.badge && <Badge {...t.badge} />}
                         <span className="text-bordure shrink-0" aria-hidden>→</span>
                       </Link>

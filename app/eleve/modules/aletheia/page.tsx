@@ -3,6 +3,7 @@ import Link from 'next/link'
 import { createClient } from '@/utils/supabase/server'
 import { createAdminClient } from '@/utils/supabase/admin'
 import { chargerCapstoneLivre, contexteAletheia, estSemaineDebloquee, lireReglages, livresPourClasse, travauxParSemaine } from './data'
+import ChoixClasseModule from '../../ChoixClasseModule'
 import { MicroStepper } from '@/components/aletheia/Steppers'
 import Pastille from '@/components/Pastille'
 import type { StatutAletheia } from './types'
@@ -42,9 +43,11 @@ export default async function PageAletheia() {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) notFound()
 
-  const { moduleActif, active } = await contexteAletheia(supabase, user.id)
+  const { moduleActif, inscriptions, active, toutes } = await contexteAletheia(supabase, user.id)
   if (!moduleActif) return <CarteMessage>Ce module n&apos;est pas encore activé.</CarteMessage>
   if (!active) return <CarteMessage>Ce module n&apos;est pas disponible pour ton compte.</CarteMessage>
+  // C7·L2 — les livres se lisent par classe : en état « Toutes », on la demande.
+  if (toutes) return <ChoixClasseModule inscriptions={inscriptions} nomModule="Aletheia" />
 
   const livres = await livresPourClasse(admin, active.classe_id)
   const travauxParLivre = new Map(

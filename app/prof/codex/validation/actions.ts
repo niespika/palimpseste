@@ -3,6 +3,7 @@
 import { revalidatePath } from 'next/cache'
 import { createClient } from '@/utils/supabase/server'
 import { createAdminClient } from '@/utils/supabase/admin'
+import { refCible } from '@/utils/quazian-cibles'
 
 async function verifierProf() {
   const supabase = await createClient()
@@ -84,7 +85,7 @@ export async function validerTravail(travailId: string) {
   // Contexte synthèse (unité + classe) pour les cartes
   const { data: session } = await admin
     .from('codex_sessions')
-    .select('scriptorium_unite_id, classe_id')
+    .select('scriptorium_unite_id, contenu_id, classe_id')
     .eq('id', travail.session_id)
     .single()
 
@@ -133,18 +134,30 @@ export async function validerTravail(travailId: string) {
       if (anterieure?.flashcard_id) {
         flashcardId = anterieure.flashcard_id
         recurrente = true
-      } else if (session?.scriptorium_unite_id) {
+      } else if (session?.scriptorium_unite_id || session?.contenu_id) {
         // Nouvelle carte personnelle (sûre : correction validée, adossée au cours).
-        // Garde D13 : une session ancrée `contenu_id` (bras parcours) N'A PAS d'unité →
-        // pas de carte FSRS (sa FK scriptorium_unite_id serait null) ; l'erreur reste
-        // tracée dans codex_erreurs. Recâblage flashcards→contenus = chantier de suivi.
+        //
+        // La garde D13 est LEVÉE (14/08). Elle refusait la carte quand la session
+        // était ancrée `contenu_id`, parce que `quazian_flashcards` exigeait alors
+        // une unité (`scriptorium_unite_id not null`). C7·L1 a rendu cette colonne
+        // nullable et posé la FK `contenu_id` : le « chantier de suivi » qu'annonçait
+        // le commentaire est fait, la carte peut suivre le bras de sa session.
+        //
+        // Sans cette levée, le recâblage de la création aurait eu un coût caché :
+        // toute synthèse créée désormais étant ancrée contenu, PLUS AUCUNE erreur
+        // validée ne serait devenue une carte — une fonctionnalité perdue en
+        // silence, l'erreur restant seulement tracée dans `codex_erreurs`.
         const recto = tag ? `${tag} — la bonne version ?` : 'Point à retenir'
         const { data: carte } = await admin
           .from('quazian_flashcards')
           .insert({
             inscription_id: inscriptionId,
             eleve_id: travail.eleve_id,
-            scriptorium_unite_id: session.scriptorium_unite_id,
+            ...refCible(
+              session.contenu_id
+                ? { id: session.contenu_id as string, bras: 'contenu' }
+                : { id: session.scriptorium_unite_id as string, bras: 'unite' }
+            ),
             type: 'concept',
             format: 'recto_verso',
             recto,

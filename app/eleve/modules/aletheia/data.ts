@@ -13,16 +13,21 @@ export interface InscriptionAletheia { id: string; classe_id: string; classe_nom
 // Contexte Aletheia de l'élève : module actif ? inscriptions sur des classes AYANT
 // le module (gate de visibilité), et inscription active (commutateur Lot 9). Source
 // unique pour le planning, la page semaine ET les actions → scoping cohérent.
+// C7·L2 — `toutes` remonte l'état « Toutes les classes » du commutateur. Le
+// repli `?? inscriptions[0]` ci-dessous reste en place et sert toujours aux
+// écrans PROFONDS (une semaine, un livre : la classe y est impliquée par le
+// livre, cf. `resoudreInscriptionLivre`) ; c'est l'ENTRÉE du module qui doit
+// demander la classe plutôt que d'en choisir une en silence.
 export async function contexteAletheia(
   supabase: SupabaseClient, userId: string,
-): Promise<{ moduleActif: boolean; inscriptions: InscriptionAletheia[]; active: InscriptionAletheia | null }> {
+): Promise<{ moduleActif: boolean; inscriptions: InscriptionAletheia[]; active: InscriptionAletheia | null; toutes: boolean }> {
   const { data: moduleData } = await supabase.from('modules').select('id, actif').eq('slug', 'aletheia').maybeSingle()
-  if (!moduleData?.actif) return { moduleActif: false, inscriptions: [], active: null }
+  if (!moduleData?.actif) return { moduleActif: false, inscriptions: [], active: null, toutes: false }
   const inscriptions = await inscriptionsModuleEleve(supabase, userId, moduleData.id as string)
-  if (inscriptions.length === 0) return { moduleActif: true, inscriptions: [], active: null }
-  const { active } = await contexteClasseEleve(supabase, userId)
+  if (inscriptions.length === 0) return { moduleActif: true, inscriptions: [], active: null, toutes: false }
+  const { active, toutes } = await contexteClasseEleve(supabase, userId)
   const inscriptionActive = inscriptions.find(i => i.id === active?.id) ?? inscriptions[0]
-  return { moduleActif: true, inscriptions, active: inscriptionActive }
+  return { moduleActif: true, inscriptions, active: inscriptionActive, toutes }
 }
 
 // (B4) Résout la classe à utiliser pour CE livre chez un élève potentiellement

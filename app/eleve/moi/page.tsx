@@ -1,7 +1,7 @@
 import { redirect } from 'next/navigation'
 import { createClient } from '@/utils/supabase/server'
 import { deconnexion } from '../actions'
-import { contexteClasseEleve } from '../contexte-classe'
+import { contexteClasseEleve, VALEUR_TOUTES } from '../contexte-classe'
 import SelecteurClasseEleve from '../SelecteurClasseEleve'
 
 // Onglet « Moi » (barre tactile). Profil minimal : nom, classe(s), bascule de
@@ -14,7 +14,7 @@ export default async function MoiEleve() {
   if (!user) redirect('/login')
 
   const { data: profile } = await supabase.from('profiles').select('display_name').eq('id', user.id).single()
-  const { inscriptions, active } = await contexteClasseEleve(supabase, user.id)
+  const { inscriptions, active, toutes } = await contexteClasseEleve(supabase, user.id)
 
   return (
     <div className="space-y-6 max-w-lg">
@@ -26,18 +26,26 @@ export default async function MoiEleve() {
       {/* Classe(s) */}
       <section className="bg-surface border border-bordure rounded-xl p-5 space-y-3">
         <h3 className="font-ui text-xs tracking-[0.1em] text-muet uppercase">Ma classe</h3>
-        {active ? (
+        {/* C7·L2 — trois états : `active` est aussi null en « Toutes », où l'élève
+            est bel et bien inscrit. Le message « aucune classe » ne vaut que
+            lorsqu'il n'a réellement aucune inscription. */}
+        {inscriptions.length === 0 ? (
+          <p className="text-sm text-muet">Tu n&apos;es inscrit dans aucune classe pour l&apos;instant.</p>
+        ) : (
           <>
-            <p className="text-sm text-encre">{active.classe_nom}</p>
+            <p className="text-sm text-encre">
+              {toutes ? 'Toutes les classes' : active?.classe_nom}
+            </p>
             {inscriptions.length > 1 && (
               <div>
                 <p className="text-xs text-muet mb-1.5">Changer de classe</p>
-                <SelecteurClasseEleve inscriptions={inscriptions} activeId={active.id} />
+                <SelecteurClasseEleve
+                  inscriptions={inscriptions}
+                  activeId={toutes ? VALEUR_TOUTES : active!.id}
+                />
               </div>
             )}
           </>
-        ) : (
-          <p className="text-sm text-muet">Tu n&apos;es inscrit dans aucune classe pour l&apos;instant.</p>
         )}
       </section>
 

@@ -69,7 +69,15 @@ export default async function QuizzListePage({ searchParams }: { searchParams: P
         <Link href="/prof/quazian" className="text-sm text-muet hover:text-encre-douce">
           ← Flashcards
         </Link>
-        <h3 className="text-lg font-serif text-encre mt-2">Quizz</h3>
+        {/* C7·L2 — « Semestre » n'est plus un onglet (R8 : trois au plus) : les
+            notes de semestre se calculent depuis les quiz fermés, elles entrent
+            donc ici. */}
+        <div className="flex items-baseline justify-between gap-3 mt-2">
+          <h3 className="text-lg font-serif text-encre">Quizz</h3>
+          <Link href="/prof/quazian/semestre" className="text-sm text-pigment hover:underline">
+            Notes de semestre →
+          </Link>
+        </div>
       </div>
 
       <CreerQuizz cibles={cibles} classes={classes ?? []} contexte={ctxPlan.contexte} semainesParClasse={ctxPlan.semainesParClasse} />

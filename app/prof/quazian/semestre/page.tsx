@@ -82,6 +82,15 @@ export default async function SemestrePage({
 
   return (
     <div>
+      {/* C7·L2 — cet écran n'a plus d'onglet à lui (R8) : il s'atteint depuis
+          Quizz, et l'onglet Quizz reste allumé pendant qu'on y est. */}
+      <div className="mb-6">
+        <Link href="/prof/quazian/quizz" className="text-sm text-muet hover:text-encre-douce">
+          ← Quizz
+        </Link>
+        <h3 className="text-lg font-serif text-encre mt-2">Notes de semestre</h3>
+      </div>
+
       {/* Sélecteur de semestre */}
       {semestres.length === 0 ? (
         <p className="text-muet text-sm text-center py-12">

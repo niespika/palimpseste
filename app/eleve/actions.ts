@@ -14,6 +14,9 @@ export async function deconnexion() {
 
 // Commutateur de contexte de classe (élève bi-classe). Mémorise l'inscription
 // active ; scope toute l'expérience élève.
+// C7·L2 — accepte aussi `VALEUR_TOUTES` (troisième état). La valeur n'est pas
+// validée ici : c'est `contexteClasseEleve` qui la résout, et une valeur qui ne
+// correspond à rien retombe sur la première inscription.
 export async function definirClasseEleve(inscriptionId: string) {
   const cookieStore = await cookies()
   cookieStore.set(COOKIE_CLASSE_ELEVE, inscriptionId, {

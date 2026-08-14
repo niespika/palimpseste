@@ -481,6 +481,143 @@ tout le reste est en `/20` → **L2** (le correctif L1 ne passe pas par ces écr
 diagnostic de fragilités → **C6** ; la même fracture côté **Codex prof** → notée dans
 `IDEES_post_rentree.md`.
 
+## C7 · L2 — Quazian : onglets, génération au bouton, commutateur trois états (branche `feat/c7-quazian`)
+
+_**Aucune migration dans ce lot** — vérifié : le troisième état du commutateur tient dans la valeur
+du cookie existant (`eleve_classe` = `toutes`), la file de validation et ses statuts
+(`suggere`/`valide`/`archive`) datent de L1, et la note /20 lit `quazian_quiz_scores.note_formative_20`,
+colonne déjà en base. Rien à jouer dans le SQL Editor, donc pas de ligne au `SUIVI_SQL.md`._
+
+_Prouvé sans navigateur : `tsc --noEmit` vert, `npm test` **165/165**, `npm run build` vert (toutes
+les routes compilées)._
+
+_**Trois tests joués le 13/08 dans une session élève déjà ouverte** (« Elo », classe **Test**,
+mono-classe) — aucun mot de passe saisi, la session était là. Ce qui reste demande **le compte prof**
+(tests 1 et 6) et **un compte bi-classe** (tests 4 et 5), que cette session ne donne pas. Règle d'or :
+Chrome, pas l'aperçu embarqué, et Cmd-R avant de conclure à un bug._
+
+**Les tests 4 et 5 demandent un élève BI-CLASSE : c'est `Sacha` (`eleve1@test.com`), déjà inscrit en
+**Test** ET **T5** — constaté le 13/08 sur sa fiche. Rien à créer, il suffit de s'y connecter.** Le
+commutateur est masqué pour un mono-classe par construction : sans ce compte, le cœur du lot reste
+invisible.
+
+- [x] **C7L2-1 · Trois onglets côté prof, et rien de perdu.** `/prof/quazian` → la Barre 2 doit
+  afficher **Flashcards · Quizz · Paramètres** (cinq avant ce lot). Puis : « Notes de semestre → »
+  en haut de l'écran Quizz mène à `/prof/quazian/semestre`, **où l'onglet Quizz reste allumé**, et le
+  « ← Quizz » du haut ramène. _(**Validé le 13/08** : les trois onglets sont en place, « Notes de
+  semestre → » est en tête de l'écran Quizz, et la page Semestre garde bien l'onglet Quizz allumé
+  (les `prefixes` font leur travail) sous son nouvel en-tête « ← Quizz · Notes de semestre ».
+  Le **Diagnostic**, sorti de la barre, reste atteignable : la fiche de Sacha affiche « QUAZIAN —
+  Diagnostic FSRS + quizz → » et `/prof/quazian/diagnostic/<id>` se charge sans erreur. Rien de
+  perdu.)_
+- [x] **C7L2-2 · Deux onglets côté élève.** Élève → `/eleve/modules/quazian` : **Flashcards** (par
+  défaut, les stats et « Réviser mes N cartes ») et **Quizz** (la liste des quizz). Les deux zones
+  empilées d'hier ne doivent plus coexister sur un même écran. _(**Validé le 13/08** : la Barre 2
+  affiche « Flashcards · Quizz », la vue Flashcards ne porte plus que la zone Réviser — 18 cartes,
+  18 dues — et la vue Quizz la seule liste. Zéro erreur console. **Reste à voir sur mobile (< 640 px)**,
+  où la sous-nav est un composant distinct : non joué.)_
+- [x] **C7L2-3 · La note passe en /20 (item 6).** Sur l'onglet Quizz, un quizz corrigé affiche
+  `x/20`. Ouvrir le quizz : la tuile de gauche dit « score moyen » **sans « /10 »**. _(**Validé le
+  13/08** : la tuile annonce **19,1/20**, l'écran de détail « 9.2 · score moyen » puis « 19.1/20 ·
+  note formative ». La démonstration du bug est là : l'affichage d'avant disait « 9,1/10 » — un
+  nombre qui passait pour une note sur 10 alors que c'est le score de Brier moyen, dont la note se
+  déduit par `10 + score`. Un élève à 19/20 se croyait à 9/10.)_
+  **Croisement prof/élève fait le 13/08 — les deux concordent.** Sur
+  `/prof/quazian/quizz/72fe18d6…/lancer`, la ligne d'Elo dit Score `9.15` · Note **19.1/20** ; l'élève
+  voit **19,1/20** sur sa tuile comme dans son détail. Le « 9.2 » de l'élève et le « 9.15 » du prof
+  sont le MÊME nombre à l'arrondi près (`toFixed(1)` contre `toFixed(2)`). Le risque que je signalais
+  — l'élève lit la colonne stockée `note_formative_20`, le prof **recalcule** `10 + score_moyen` — ne
+  s'est pas matérialisé : même formule, même bornage, même résultat. _(Il reste théorique : si un jour
+  la formule bouge d'un côté seulement, c'est là que ça se verra.)_
+- [x] **C7L2-4 · Commutateur à trois états (le test du lot).** _(**Validé le 13/08 sur Sacha**, les
+  cinq points joués dans l'ordre. 1 : la puce offre « Toutes les classes · T5 · Test ». 2 : sur une
+  classe, le calendrier n'affiche que ses échéances et **sa légende de couleurs disparaît**. 3 : sur
+  Toutes, le tableau de bord dit « Toutes les classes » sous le bonjour, le héros porte « · Test », et
+  « Ensuite cette semaine » aligne **deux** lectures Aletheia — « · T5 » et « · Test » — pendant que
+  le calendrier remontre la légende Test · T5. 4 : entrer dans Quazian affiche « Quelle classe ? » ;
+  choisir Test amène les 18 cartes **et la puce de l'en-tête est passée sur Test**. 5 : la bascule
+  Test ↔ T5 depuis l'intérieur du module marche, sans repasser par le tableau de bord.
+  Vu au passage : le choix ne propose que les classes **qui ont le module** — Quazian n'offre que Test
+  (T5 ne l'a pas), Fragments offre les deux, avec le pigment du module. Aucune erreur console.)_
+  Avec le compte bi-classe :
+  1. Le commutateur (puce de l'en-tête, ou bandeau mobile) propose **Toutes les classes · classe A ·
+     classe B**.
+  2. Sur **une classe** : le tableau de bord ne montre que le travail de cette classe, et le
+     **calendrier n'affiche plus que ses échéances** _(avant ce lot il agrégeait toujours)_.
+  3. Sur **Toutes** : le tableau de bord agrège — une ligne « à faire » par classe, chacune suffixée
+     du nom de sa classe — et le calendrier remontre les deux, avec sa légende de couleurs.
+  4. Sur **Toutes**, entrer dans un module (Quazian, Fragments, Codex, Aletheia, Scriptorium) : un
+     écran **« Quelle classe ? »** s'affiche à la place du contenu. Choisir → le contenu arrive, et
+     **le commutateur de l'en-tête a suivi** (il n'est plus sur « Toutes »).
+  5. Depuis l'intérieur du module, **rechanger de classe par le commutateur** sans repasser par le
+     tableau de bord.
+- [x] **C7L2-5 · Un bi-classe ne voit jamais l'autre classe (item 3, le point dur).** _(**Validé le
+  13/08 sur Sacha**, dans les deux sens, même session, seul le commutateur changeant :_
+
+  | Contexte | Flashcards | Quizz |
+  |---|---|---|
+  | **T5** | 0 carte — « ton professeur n'a pas encore publié de cartes » | « aucun quizz pour l'instant » |
+  | **Test** | **18** cartes, 18 dues | le quizz du 13/08, « terminé (non passé) » |
+
+  _Les 18 cartes de « Cognitif » et le quizz appartiennent à Test : sur T5 ils sont bien invisibles.
+  Avant ce lot, les deux modules lisaient l'UNION des classes et ignoraient le commutateur — Sacha
+  aurait vu les deux dans les deux contextes.)_
+  **Volet Codex clos le 14/08**, une fois la création de synthèse réparée (elle bloquait le test) et
+  une séance lancée dans CHAQUE classe :
+
+  | Contexte | Synthèse en cours | Session |
+  |---|---|---|
+  | **T5** | « Cognitif » | `32cc4f85…` |
+  | **Test** | « NAture humaine » | `6e69e56e…` |
+
+  _Deux sessions distinctes, même élève, même session de navigation : seul le commutateur a changé.
+  Avant le lot, `classeIdsActives` rendait l'union et `visibles.find(live)` en désignait une au
+  hasard, quel que soit le contexte affiché._
+- [x] **C7L2-6 · Le gel de l'intégrité tient avec les onglets.** _(**Validé le 13/08** sur Elo,
+  bloquée : onglet **Flashcards** = la bannière « Rendus en pause » SEULE — ni compteurs, ni bouton de
+  révision ; onglet **Quizz** = **entièrement ouvert**, le quizz du 13/08 avec sa note et son
+  « revoir → ». La règle de L1 traverse donc la mise en onglets. **Le découpage la sert même** : la
+  bannière dit « le quizz, lui, reste ouvert » et l'onglet est désormais juste à côté, au lieu d'une
+  section empilée sous le message.
+  Vérifié en plus, parce que mon remaniement déplaçait ce point d'appel : le **tableau de bord**
+  n'annonce AUCUNE carte à réviser pendant le blocage (Quazian « à jour »), alors qu'Elo en a 18 une
+  fois débloquée — la garde de `chargerStatsRevision` tient, les compteurs ne promettent pas un
+  travail inaccessible.
+  ⚠️ **Elo est restée bloquée à la fin de la passe — la débloquer.**)_ _(Rappel : bloquer un élève
+  jamais signalé est impossible depuis l'écran — trouvaille de C7·L1 notée dans
+  `IDEES_post_rentree.md`.)_
+- [x] **C7L2-7 · Non-régression mono-classe.** Avec un élève d'une seule classe : **aucun
+  commutateur** ne s'affiche, aucun écran « Quelle classe ? » n'apparaît, et le tableau de bord, le
+  calendrier et les modules se comportent comme avant le lot. _(**Validé le 13/08** sur « Elo »,
+  mono-classe. Les cinq surfaces touchées par le troisième état ont été ouvertes une à une —
+  tableau de bord, calendrier (scopé « Test », une échéance de quizz), Fragments (3 onglets),
+  Codex (synthèse en cours), Aletheia (2 livres, 4 séances) : toutes rendues, **aucun commutateur,
+  aucun écran de choix, zéro erreur console**. C'est le test qui comptait le plus ici : le troisième
+  état a traversé les cinq modules, il aurait pu les casser tous.)_
+
+**⚠️ Trouvaille du 14/08, à trancher — l'écran « Quelle classe ? » de Codex n'offre que Test.**
+Le choix ne propose que les classes qui ONT le module (`classe_modules`), pour ne pas mener à « tu
+n'as pas accès à ce module ». Or **T5 n'a pas le module Codex** alors qu'une synthèse Codex y est
+lancée et que Sacha la voit très bien en contexte T5 — l'accès élève est l'UNION de ses classes
+(`utils/acces.ts`, règle du Lot 1), pas la classe. Conséquence : un bi-classe en état « Toutes » ne
+peut PAS atteindre la synthèse de T5 par le choix de classe ; il doit passer par le commutateur.
+Deux lectures, à trancher :
+1. **C'est une lacune de configuration** — donner le module Codex à T5 dans les paramètres, et le
+   choix proposera les deux. Rien à changer au code. _(Lecture la plus probable : on vient de créer
+   une séance Codex pour une classe qui n'a pas le module.)_
+2. **C'est le choix qui est trop étroit** — lister toutes les inscriptions ; une classe sans le
+   module mènerait alors à un cul-de-sac honnête plutôt qu'à une classe invisible.
+Non tranché : aucune des deux n'est appliquée.
+
+**Reste hors de ce lot, volontairement :** le déclencheur automatique sur « vu » → post-rentrée
+(explicitement écarté par le prompt de session) ; le diagnostic de fragilités et ses **deux** fils
+cassés → **C6** ; le design des Paramètres → coupe pré-décidée. **Item 2 du lot (bouton « Générer »
++ file de validation prof) : déjà livré par L1** — `BoutonGenererCartes`, statut `suggere` → section
+« À valider » avec « ✓ Tout valider », et *valider / corriger / jeter* = les boutons **Valider /
+Modifier / Archiver + Supprimer** de `CarteFlashcard`. Les coûts partent bien dans `api_couts` sous
+`quazian` (non attribués pour les cartes : contenu partagé, cf. pied de la section C11a). Rien n'a
+donc été réécrit là ; ce sont les tests C7L1-4 et C11a-7, déjà verts, qui le couvrent.
+
 ## C2 — (à venir)
 
 _Les tests seront ajoutés à l'écriture des specs / à la clôture des sessions (écran élève, calibration L8…). S'y ajoutera le test reporté C11a-6 (synthèse hebdo → ligne `scriptorium` classe seule)._

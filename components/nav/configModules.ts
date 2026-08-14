@@ -192,12 +192,23 @@ export const MODULES: readonly ModuleConfig[] = [
       ombreAnneauRgb: '62,107,142',
     },
     devise: { latin: 'Ars Memoriae', francais: "Contre l'oubli" },
+    // C7·L2 — de cinq onglets à trois (règle R8). « Diagnostic » quitte la barre :
+    // l'écran est doublement muet (il demande des unités disparues et agrège sur
+    // `scope_unites`, que les quiz d'aujourd'hui laissent vide) et le plan le range
+    // dans la matrice de C6 — sa page reste en place, à reprendre là-bas.
+    // « Semestre » se replie sous Quizz : ses notes ne viennent que des quiz fermés,
+    // et `prefixes` garde l'onglet Quizz allumé quand on y est.
     sousOngletsProf: [
       { href: '/prof/quazian', label: 'Flashcards' },
-      { href: '/prof/quazian/quizz', label: 'Quizz' },
-      { href: '/prof/quazian/diagnostic', label: 'Diagnostic' },
-      { href: '/prof/quazian/semestre', label: 'Semestre' },
+      { href: '/prof/quazian/quizz', label: 'Quizz', prefixes: ['/prof/quazian/semestre'] },
       { href: '/prof/quazian/parametres', label: 'Paramètres' },
+    ],
+    // C7·L2 — face élève : deux onglets pilotés par `?vue=` (même mécanique que
+    // Fragments élève). Les deux zones de l'écran d'accueil deviennent les deux
+    // onglets ; « Semaine » n'a jamais existé ici.
+    sousOngletsEleve: [
+      { href: '/eleve/modules/quazian?vue=flashcards', label: 'Flashcards', vue: 'flashcards', vues: ['flashcards'], parDefaut: true },
+      { href: '/eleve/modules/quazian?vue=quizz', label: 'Quizz', vue: 'quizz', vues: ['quizz'] },
     ],
   },
   {

@@ -3,6 +3,7 @@ import { createClient } from '@/utils/supabase/server'
 import { createAdminClient } from '@/utils/supabase/admin'
 import { slugsModulesAccessibles } from '@/utils/acces'
 import { contexteClasseEleve } from '@/app/eleve/contexte-classe'
+import ChoixClasseModule from '@/app/eleve/ChoixClasseModule'
 import { lireReglagesRag } from '@/utils/scriptorium-rag'
 import { chargerMatiereClasse } from '@/utils/scriptorium-corpus'
 import { jourDansFuseau, formatJour } from '@/utils/fuseau'
@@ -59,6 +60,11 @@ export default async function ScriptoriumElevePage({
   if (!slugs.has('scriptorium')) notFound()
 
   const contexte = await contexteClasseEleve(supabase, user.id)
+  // C7·L2 — en état « Toutes », `active` est null sans que l'élève soit sans
+  // classe : le module demande laquelle au lieu de rendre un 404 (item 3).
+  if (contexte.toutes) {
+    return <ChoixClasseModule inscriptions={contexte.inscriptions} nomModule="Le Scriptorium" />
+  }
   const classe = contexte.active
   if (!classe) notFound()
 
