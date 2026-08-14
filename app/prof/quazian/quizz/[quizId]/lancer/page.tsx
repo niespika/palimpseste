@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import { notFound, redirect } from 'next/navigation'
 import { createClient } from '@/utils/supabase/server'
+import { libellesCibles } from '@/utils/quazian-cibles'
 import { eleveIdsAvecAccesModule } from '@/utils/acces'
 import { lancerQuizz } from './actions'
 import { TableauLive } from './TableauLive'
@@ -23,7 +24,7 @@ export default async function LancerPage({
 
   const { data: quizz } = await supabase
     .from('quazian_quizzes')
-    .select('id, statut, classe_id, classes(nom), scope_unites, duree_min, nb_questions, lance_at, ferme_at, moyenne_cohorte, ecart_type_cohorte')
+    .select('id, statut, classe_id, classes(nom), scope_unites, scope_contenus, duree_min, nb_questions, lance_at, ferme_at, moyenne_cohorte, ecart_type_cohorte')
     .eq('id', quizId)
     .single()
 
@@ -81,6 +82,10 @@ export default async function LancerPage({
     return {
       id: p.id,
       display_name: p.display_name as string,
+      // `commence` distingue « a ouvert le quizz » de « est dans la classe » : sans
+      // lui, un élève qui n'a jamais ouvert était compté comme « en cours » et
+      // annoncé comme futur auto-soumis, alors qu'il n'aura simplement AUCUNE note.
+      commence: !!session,
       soumis: !!session?.submitted_at,
       submitted_at: session?.submitted_at ?? null,
       score_moyen: scoresMap[p.id] ?? null,
@@ -88,13 +93,14 @@ export default async function LancerPage({
     }
   }).sort((a, b) => a.display_name.localeCompare(b.display_name))
 
-  const { data: unitesLabels } = await supabase
-    .from('scriptorium_unites')
-    .select('id, label')
-    .in('id', quizz.scope_unites as string[])
-
-  const labelsMap: Record<string, string> = {}
-  for (const u of unitesLabels ?? []) labelsMap[u.id] = u.label
+  // Périmètre BI-SOURCE (C7·L1) : contenus de bibliothèque d'abord, unités
+  // héritées ensuite. Un id que ni l'une ni l'autre table ne connaît retombe sur
+  // son uuid, comme avant.
+  const scope = [
+    ...((quizz.scope_contenus as string[] | null) ?? []),
+    ...((quizz.scope_unites as string[] | null) ?? []),
+  ]
+  const labelsMap = await libellesCibles(supabase, scope)
 
   return (
     <div>
@@ -106,7 +112,7 @@ export default async function LancerPage({
           {classeNom ?? 'Passation'} — {quizz.nb_questions} questions
         </h3>
         <p className="text-sm text-muet">
-          {(quizz.scope_unites as string[]).map((id) => labelsMap[id] ?? id).join(' · ')}
+          {scope.map((id) => labelsMap.get(id) ?? id).join(' · ')}
           {' · '}{quizz.duree_min} min
         </p>
       </div>

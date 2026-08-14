@@ -42,6 +42,10 @@ export async function GET(
     return {
       id: p.id,
       display_name: p.display_name as string,
+      // `commence` distingue « a ouvert le quizz » de « est dans la classe » : sans
+      // lui, un élève qui n'a jamais ouvert était compté comme « en cours » et
+      // annoncé comme futur auto-soumis, alors qu'il n'aura simplement AUCUNE note.
+      commence: !!session,
       soumis: !!session?.submitted_at,
       submitted_at: session?.submitted_at ?? null,
       score_moyen: scoresMap[p.id] ?? null,

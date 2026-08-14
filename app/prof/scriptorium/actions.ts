@@ -833,6 +833,17 @@ export async function purgerContenuBiblio(id: string): Promise<{ success?: boole
   if (!eSess && sessAncree) {
     return { error: 'Ce cours a des séances Codex — purge impossible. Une séance est de l’historique élève et n’est pas détachée.' }
   }
+
+  // (c bis) ≥1 carte Quazian ancrée sur ce contenu (C7·L1) → REFUS. Sa FK est en
+  // ON DELETE RESTRICT à dessein : en cascade, la purge emporterait en silence les
+  // `quazian_card_states`, c'est-à-dire l'historique de révision des élèves. Le
+  // refus explicite vaut mieux qu'une 23503 brute. TOLÉRANT si la colonne n'existe
+  // pas encore (migration c7_quazian_contenus.sql non jouée → rien à heurter).
+  const { data: carteAncree, error: eCarte } = await supabase
+    .from('quazian_flashcards').select('id').eq('contenu_id', id).limit(1).maybeSingle()
+  if (!eCarte && carteAncree) {
+    return { error: 'Ce contenu a des cartes Quazian — purge impossible. Archive ou supprime ses cartes depuis Quazian d’abord.' }
+  }
   if (!eSess) {
     // (a) exercices bras `semaine` référant ce contenu (matière facultative) → détacher
     //     (le CHECK d'ancrage interdit contenu_id null sur une synthèse, d'où le split).

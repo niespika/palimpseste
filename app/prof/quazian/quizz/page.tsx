@@ -3,6 +3,7 @@ import { createClient } from '@/utils/supabase/server'
 import { supprimerQuizz } from './actions'
 import { CreerQuizz } from './CreerQuizz'
 import { chargerContexteQuazianPlan } from './plan-quazian'
+import { chargerCiblesQuazian, libellesCibles } from '@/utils/quazian-cibles'
 import Tuile from '@/components/Tuile'
 import { formatInstant, formatJour } from '@/utils/fuseau'
 import { lireFuseau } from '@/utils/fuseau-serveur'
@@ -31,17 +32,16 @@ export default async function QuizzListePage({ searchParams }: { searchParams: P
   // Contexte plan d'évaluation (lot 4, gate) : encart « à concevoir » + deep-link.
   const ctxPlan = await chargerContexteQuazianPlan(exercice ?? null)
 
-  const [{ data: quizzes }, { data: unites }, { data: classes }] = await Promise.all([
+  // C7·L1 — le périmètre d'un quizz se choisit parmi les CONTENUS du Scriptorium
+  // (Textes, Cours) ; les livres restent hors de portée (anti-spoiler). Avant ce
+  // lot, cette requête demandait `type='unite'` : zéro ligne, donc un formulaire
+  // sans rien à cocher (§4.1 du RAPPORT_Diagnostic_C7_quazian.md).
+  const [{ data: quizzes }, cibles, { data: classes }] = await Promise.all([
     supabase
       .from('quazian_quizzes')
-      .select('id, statut, classe_id, classes(nom), scope_unites, lance_at, ferme_at, nb_questions, created_at')
+      .select('id, statut, classe_id, classes(nom), scope_unites, scope_contenus, lance_at, ferme_at, nb_questions, created_at')
       .order('created_at', { ascending: false }),
-    supabase
-      .from('scriptorium_unites')
-      .select('id, label, classe, ordre')
-      .eq('type', 'unite')   // exclut les « livres » Aletheia du périmètre de quizz
-      .is('supprime_at', null)   // exclut les unités supprimées (pas de nouveau quizz dessus)
-      .order('ordre', { ascending: true }),
+    chargerCiblesQuazian(supabase),
     supabase.from('classes').select('id, nom').order('nom'),
   ])
 
@@ -57,9 +57,11 @@ export default async function QuizzListePage({ searchParams }: { searchParams: P
     if (q.statut_validation === 'valide') qMap[q.quiz_id].validees++
   }
 
-  // Labels des unités
-  const labelsUnites: Record<string, string> = {}
-  for (const u of unites ?? []) labelsUnites[u.id] = u.label
+  // Libellés du périmètre — bi-source : les quiz d'aujourd'hui portent des
+  // contenus, les quiz hérités des unités. Un id inconnu retombe sur son uuid.
+  const scopeDuQuiz = (qz: { scope_unites: unknown; scope_contenus: unknown }) =>
+    [...((qz.scope_contenus as string[] | null) ?? []), ...((qz.scope_unites as string[] | null) ?? [])]
+  const labelsCibles = await libellesCibles(supabase, (quizzes ?? []).flatMap(scopeDuQuiz))
 
   return (
     <div>
@@ -70,7 +72,7 @@ export default async function QuizzListePage({ searchParams }: { searchParams: P
         <h3 className="text-lg font-serif text-encre mt-2">Quizz</h3>
       </div>
 
-      <CreerQuizz unites={unites ?? []} classes={classes ?? []} contexte={ctxPlan.contexte} semainesParClasse={ctxPlan.semainesParClasse} />
+      <CreerQuizz cibles={cibles} classes={classes ?? []} contexte={ctxPlan.contexte} semainesParClasse={ctxPlan.semainesParClasse} />
 
       {/* Encart « À concevoir » : quiz planifiés (plans validés) pas encore conçus.
           Gate OFF → ctxPlan.aConcevoir vide → rien ne s'affiche (page inchangée). */}
@@ -133,7 +135,7 @@ export default async function QuizzListePage({ searchParams }: { searchParams: P
         {(quizzes ?? []).filter((q) => !classeSel || q.classe_id === classeSel).map((qz) => {
           const stats = qMap[qz.id] ?? { total: 0, validees: 0 }
           const statut = STATUT_LABELS[qz.statut] ?? STATUT_LABELS.brouillon
-          const scope = (qz.scope_unites as string[]).map((id) => labelsUnites[id] ?? id)
+          const scope = scopeDuQuiz(qz).map((id) => labelsCibles.get(id) ?? id)
 
           return (
             <div key={qz.id} className="bg-surface border border-bordure rounded-xl p-4 flex items-center gap-4">

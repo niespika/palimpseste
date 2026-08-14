@@ -6,6 +6,7 @@ import { createAdminClient } from '@/utils/supabase/admin'
 import { genererQuestions, regenererQuestion } from '@/utils/generer-questions'
 import { lireGatePlanActif, plansValidesCourants, synchroniserStatutExerciceQuiz, resoudreSemestrePourSemaine } from '@/utils/plan-exercices'
 import { semainesCouvertes } from '@/app/prof/scriptorium/evaluations/plan-serveur'
+import { resoudreCible } from '@/utils/quazian-cibles'
 
 // Normalise une relation imbriquée Supabase (objet ou tableau) en un objet.
 function un<T>(x: T | T[] | null | undefined): T | null {
@@ -37,34 +38,44 @@ export async function creerQuizz(formData: FormData): Promise<CreerQuizzResult> 
   const classeId = (formData.get('classe_id') as string) || null
   const dureeMin = parseInt(formData.get('duree_min') as string) || 25
   const nbQuestions = parseInt(formData.get('nb_questions') as string) || 20
-  const scopeRaw = formData.getAll('scope_unites') as string[]
+  const scopeRaw = formData.getAll('scope_cibles') as string[]
   // Conception depuis le plan d'évaluation (Q1) — gate ON uniquement.
   const exerciceId = (formData.get('exercice_id') as string) || null
 
-  if (scopeRaw.length === 0) return { error: 'Sélectionne au moins une unité.' }
+  if (scopeRaw.length === 0) return { error: 'Sélectionne au moins un contenu.' }
   if (!classeId) return { error: 'Sélectionne une classe.' }
 
-  // Garde-fou : un quizz ne porte JAMAIS sur un « livre » Aletheia — seules les
-  // unités de cours (cours + textes) alimentent les questions. L'UI filtre déjà
-  // type='unite', ceci est une défense en profondeur côté serveur.
-  const { data: unitesScope } = await supabase
-    .from('scriptorium_unites')
-    .select('id, type')
-    .in('id', scopeRaw)
-  if ((unitesScope ?? []).some(u => u.type === 'livre')) {
-    return { error: 'Un quizz ne peut pas porter sur un livre (lecture Aletheia). Choisis des unités de cours.' }
+  // C7·L1 — le périmètre est BI-SOURCE : des contenus de bibliothèque (le monde
+  // d'aujourd'hui) et, pour une base qui en aurait encore, des unités héritées.
+  // `resoudreCible` est aussi le garde-fou anti-spoiler : elle ne rend jamais un
+  // LIVRE Aletheia ni un contenu en corbeille → une valeur forgée hors formulaire
+  // ne passe pas. Avant ce lot, l'UI proposait `type='unite'` — zéro ligne depuis
+  // la réorganisation (§4.1 du RAPPORT_Diagnostic_C7_quazian.md) : le formulaire
+  // était vide et cette action refusait toujours faute de sélection.
+  const cibles = (await Promise.all(scopeRaw.map((id) => resoudreCible(supabase, id)))).filter((c) => c !== null)
+  if (cibles.length !== scopeRaw.length) {
+    return { error: 'Un des contenus choisis n’est plus disponible (retiré, ou livre de lecture Aletheia). Refais ta sélection.' }
   }
+  const contenuIds = cibles.filter((c) => c.bras === 'contenu').map((c) => c.id)
+  const uniteIds = cibles.filter((c) => c.bras === 'unite').map((c) => c.id)
 
-  // Récupérer les cartes validées des unités choisies (partagées uniquement)
-  const { data: cartes } = await supabase
-    .from('quazian_flashcards')
-    .select('recto, verso, type, concept_tag')
-    .in('scriptorium_unite_id', scopeRaw)
-    .eq('statut', 'valide')
-    .is('eleve_id', null)
+  // Cartes validées PARTAGÉES des contenus choisis — une requête par bras (plutôt
+  // qu'un `.or()` à construire par concaténation d'uuid).
+  const selectCarte = 'recto, verso, type, concept_tag'
+  const [{ data: cartesContenu }, { data: cartesUnite }] = await Promise.all([
+    contenuIds.length > 0
+      ? supabase.from('quazian_flashcards').select(selectCarte)
+          .in('contenu_id', contenuIds).eq('statut', 'valide').is('eleve_id', null)
+      : Promise.resolve({ data: [] as { recto: string; verso: string; type: string; concept_tag: string }[] }),
+    uniteIds.length > 0
+      ? supabase.from('quazian_flashcards').select(selectCarte)
+          .in('scriptorium_unite_id', uniteIds).eq('statut', 'valide').is('eleve_id', null)
+      : Promise.resolve({ data: [] as { recto: string; verso: string; type: string; concept_tag: string }[] }),
+  ])
+  const cartes = [...(cartesContenu ?? []), ...(cartesUnite ?? [])]
 
-  if (!cartes || cartes.length < 5) {
-    return { error: `Pas assez de cartes validées dans les unités sélectionnées (${cartes?.length ?? 0} carte${(cartes?.length ?? 0) > 1 ? 's' : ''} trouvée${(cartes?.length ?? 0) > 1 ? 's' : ''}, minimum 5).` }
+  if (cartes.length < 5) {
+    return { error: `Pas assez de cartes validées dans les contenus sélectionnés (${cartes.length} carte${cartes.length > 1 ? 's' : ''} trouvée${cartes.length > 1 ? 's' : ''}, minimum 5).` }
   }
 
   // Générer les questions via IA
@@ -162,7 +173,8 @@ export async function creerQuizz(formData: FormData): Promise<CreerQuizzResult> 
       classe_id: classeId,
       semester_id: semesterId,
       statut: 'brouillon',
-      scope_unites: scopeRaw,
+      scope_unites: uniteIds,
+      scope_contenus: contenuIds,
       duree_min: dureeMin,
       nb_questions: questions.length,
     })

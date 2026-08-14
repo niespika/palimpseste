@@ -21,17 +21,41 @@ export async function lancerQuizz(formData: FormData) {
   const maintenant = new Date()
   const fermeAt = new Date(maintenant.getTime() + dureeMin * 60 * 1000)
 
-  const { error } = await supabase.from('quazian_quizzes').update({
+  // `select()` : sans lui, un quizz déjà lancé (double-clic, second onglet) rendait
+  // 0 ligne SANS erreur — indiscernable d'un succès. Symétrique de `fermerQuizz`.
+  const { data: lances, error } = await supabase.from('quazian_quizzes').update({
     statut: 'lance',
     lance_at: maintenant.toISOString(),
     ferme_at: fermeAt.toISOString(),
-  }).eq('id', quizId).eq('statut', 'brouillon')
+  }).eq('id', quizId).eq('statut', 'brouillon').select('id')
 
   if (error) return { error: error.message }
+  if (!lances || lances.length === 0) {
+    const { data: q } = await supabase.from('quazian_quizzes').select('statut').eq('id', quizId).maybeSingle()
+    if (q?.statut === 'lance') return { success: true } // déjà lancé ailleurs
+    return { error: q ? `Ce quizz est « ${q.statut} » : seul un brouillon se lance.` : 'Quizz introuvable.' }
+  }
   revalidatePath(`/prof/quazian/quizz/${quizId}/lancer`)
   return { success: true }
 }
 
+/**
+ * Fermer le quizz : auto-soumettre les retardataires, figer les stats de cohorte,
+ * poser les notes.
+ *
+ * FAIL-VISIBLE (C7·L1). Avant, cette fonction renvoyait `{ success: true }` quoi
+ * qu'il arrive : supabase-js ne LÈVE pas sur erreur d'écriture, il retourne
+ * `{ error }` — et aucune des cinq écritures ne le regardait. Une fermeture qui
+ * échouait laissait donc le quizz ouvert **en silence**, sans une ligne à l'écran
+ * ni dans les logs. Même piège que celui qui a rendu `api_couts` muet de juin à
+ * juillet (cf. l'en-tête de `utils/cout-api.ts`). Chaque écriture est désormais
+ * vérifiée, et l'appelant AFFICHE ce qui revient.
+ *
+ * Une auto-soumission ratée n'est pas rattrapable après coup : elle vaudrait une
+ * note fausse pour cet élève et fausserait la cohorte de tous les autres. On
+ * s'arrête donc AVANT de figer quoi que ce soit, et le quizz reste ouvert — un
+ * état réparable, contrairement à des notes publiées de travers.
+ */
 export async function fermerQuizz(formData: FormData) {
   const { supabase } = await verifierProf()
   const quizId = formData.get('quizId') as string
@@ -39,32 +63,39 @@ export async function fermerQuizz(formData: FormData) {
   const maintenant = new Date().toISOString()
 
   // Récupérer les questions
-  const { data: questions } = await supabase
+  const { data: questions, error: eQuestions } = await supabase
     .from('quazian_questions')
     .select('id, index_correct')
     .eq('quiz_id', quizId)
 
-  if (!questions) return { error: 'Questions introuvables' }
-
-  const indexMap: Record<string, number> = {}
-  for (const q of questions) indexMap[q.id] = q.index_correct
+  if (eQuestions) return { error: `Lecture des questions impossible : ${eQuestions.message}` }
+  // `length === 0` autant que `null` : sans question, `_soumettrSession` diviserait
+  // par zéro et écrirait des notes NaN.
+  if (!questions || questions.length === 0) return { error: 'Ce quizz n’a aucune question — rien à corriger.' }
 
   // Auto-soumettre les sessions non soumises
-  const { data: sessionsOuvertes } = await supabase
+  const { data: sessionsOuvertes, error: eSessions } = await supabase
     .from('quazian_sessions')
-    .select('id, eleve_id, ordre_questions, ordre_options')
+    .select('id, eleve_id')
     .eq('quiz_id', quizId)
     .is('submitted_at', null)
 
+  if (eSessions) return { error: `Lecture des sessions impossible : ${eSessions.message}` }
+
   for (const session of sessionsOuvertes ?? []) {
-    await _soumettrSession(supabase, session.id, session.eleve_id, quizId, questions, true, maintenant)
+    const echec = await soumettreSession(supabase, session.id, session.eleve_id, quizId, questions, true, maintenant)
+    if (echec) {
+      return { error: `Auto-soumission d’un élève impossible (${echec}) — le quizz reste ouvert, rien n’a été figé. Réessaie.` }
+    }
   }
 
   // Calculer les stats de cohorte (sur les sessions soumises)
-  const { data: scores } = await supabase
+  const { data: scores, error: eScores } = await supabase
     .from('quazian_quiz_scores')
-    .select('score_moyen')
+    .select('id, score_moyen')
     .eq('quiz_id', quizId)
+
+  if (eScores) return { error: `Lecture des scores impossible : ${eScores.message}` }
 
   const scoresMoyens = (scores ?? []).map((s) => s.score_moyen).filter((s) => s != null)
   let moyenneCohorte = 0
@@ -77,38 +108,66 @@ export async function fermerQuizz(formData: FormData) {
   }
 
   // Calculer les z_quiz et note formative pour chaque session
-  const { data: tousScores } = await supabase
-    .from('quazian_quiz_scores')
-    .select('id, eleve_id, score_moyen')
-    .eq('quiz_id', quizId)
-
-  for (const s of tousScores ?? []) {
+  for (const s of scores ?? []) {
     const zQuiz = ecartTypeCohorte > 0
       ? (s.score_moyen - moyenneCohorte) / ecartTypeCohorte
       : 0
     const noteFormative = Math.min(Math.max(10 + s.score_moyen, 0), 20)
 
-    await supabase.from('quazian_quiz_scores').update({
+    const { error: eNote } = await supabase.from('quazian_quiz_scores').update({
       z_quiz: zQuiz,
       note_formative_20: noteFormative,
     }).eq('id', s.id)
+    if (eNote) return { error: `Écriture d’une note impossible (${eNote.message}) — le quizz reste ouvert. Réessaie.` }
   }
 
-  // Figer le quizz
-  await supabase.from('quazian_quizzes').update({
-    statut: 'ferme',
-    ferme_at: maintenant,
-    moyenne_cohorte: moyenneCohorte,
-    ecart_type_cohorte: ecartTypeCohorte,
-  }).eq('id', quizId)
+  // Figer le quizz. Garde `statut='lance'` + `select()` : un double-clic ou un
+  // second onglet ne recalcule pas la cohorte, et un UPDATE qui ne touche AUCUNE
+  // ligne cesse d'être indiscernable d'un succès.
+  const { data: fermes, error: eFermeture } = await supabase
+    .from('quazian_quizzes')
+    .update({
+      statut: 'ferme',
+      ferme_at: maintenant,
+      moyenne_cohorte: moyenneCohorte,
+      ecart_type_cohorte: ecartTypeCohorte,
+    })
+    .eq('id', quizId)
+    .eq('statut', 'lance')
+    .select('id')
+
+  if (eFermeture) return { error: `La fermeture a échoué : ${eFermeture.message}` }
+
+  if (!fermes || fermes.length === 0) {
+    // Zéro ligne : soit un autre onglet a fermé entre-temps (succès), soit le
+    // quizz n'est pas dans un état fermable — deux cas très différents à dire.
+    const { data: q } = await supabase.from('quazian_quizzes').select('statut').eq('id', quizId).maybeSingle()
+    if (q?.statut === 'ferme') {
+      revalidatePath(`/prof/quazian/quizz/${quizId}/lancer`)
+      revalidatePath(`/prof/quazian/quizz/${quizId}`)
+      return { success: true }
+    }
+    return {
+      error: q
+        ? `Ce quizz est « ${q.statut} » : seul un quizz lancé se ferme.`
+        : 'Quizz introuvable.',
+    }
+  }
 
   revalidatePath(`/prof/quazian/quizz/${quizId}/lancer`)
   revalidatePath(`/prof/quazian/quizz/${quizId}`)
   return { success: true }
 }
 
-// Factorisation : soumettre une session (normale ou auto)
-async function _soumettrSession(
+/**
+ * Soumettre une session (ici : toujours en auto, à la fermeture).
+ *
+ * Renvoie `null` si tout s'est écrit, sinon le message d'erreur — cette fonction
+ * décide d'une NOTE : un échec muet vaudrait un 0 imputé à un élève qui avait
+ * répondu. Elle n'est plus exportée : un export d'un fichier `'use server'` est
+ * un point d'entrée HTTP, et celle-ci n'a jamais eu d'appelant hors de ce fichier.
+ */
+async function soumettreSession(
   supabase: Awaited<ReturnType<typeof import('@/utils/supabase/server').createClient>>,
   sessionId: string,
   eleveId: string,
@@ -116,12 +175,14 @@ async function _soumettrSession(
   questions: { id: string; index_correct: number }[],
   autoSubmit: boolean,
   maintenant: string
-) {
+): Promise<string | null> {
   // Réponses existantes
-  const { data: reponsesExistantes } = await supabase
+  const { data: reponsesExistantes, error: eLecture } = await supabase
     .from('quazian_answers')
     .select('question_id, p_a, p_b, p_c, p_d, repondu')
     .eq('session_id', sessionId)
+
+  if (eLecture) return eLecture.message
 
   const repMap: Record<string, typeof reponsesExistantes extends (infer T)[] | null ? T : never> = {}
   for (const r of reponsesExistantes ?? []) repMap[r.question_id] = r
@@ -153,35 +214,41 @@ async function _soumettrSession(
         score: scoreBrut,
       })
     } else {
-      await supabase.from('quazian_answers').update({
+      const { error } = await supabase.from('quazian_answers').update({
         brier_brut: scoreBrut / 10,
         score: scoreBrut,
       }).eq('session_id', sessionId).eq('question_id', q.id)
+      if (error) return error.message
     }
 
     scoreMoyen += scoreBrut
   }
 
   if (answersToInsert.length > 0) {
-    await supabase.from('quazian_answers').insert(answersToInsert)
+    const { error } = await supabase.from('quazian_answers').insert(answersToInsert)
+    if (error) return error.message
   }
 
   scoreMoyen /= questions.length
 
-  // Marquer la session comme soumise
-  await supabase.from('quazian_sessions').update({
-    submitted_at: maintenant,
-    auto_submitted: autoSubmit,
-  }).eq('id', sessionId)
-
-  // Upsert le score agrégé
-  await supabase.from('quazian_quiz_scores').upsert({
+  // Le score agrégé AVANT le verrou de session : si l'upsert échoue, la session
+  // reste ouverte et l'appelant peut rejouer. Dans l'autre ordre, une session
+  // marquée soumise sans score serait un élève sans note, invisible à l'écran.
+  const { error: eScore } = await supabase.from('quazian_quiz_scores').upsert({
     quiz_id: quizId,
     eleve_id: eleveId,
     score_moyen: scoreMoyen,
     note_formative_20: Math.min(Math.max(10 + scoreMoyen, 0), 20),
     z_quiz: 0,  // sera recalculé à la fermeture
   }, { onConflict: 'quiz_id,eleve_id' })
-}
+  if (eScore) return eScore.message
 
-export { _soumettrSession }
+  // Marquer la session comme soumise
+  const { error: eSession } = await supabase.from('quazian_sessions').update({
+    submitted_at: maintenant,
+    auto_submitted: autoSubmit,
+  }).eq('id', sessionId)
+  if (eSession) return eSession.message
+
+  return null
+}

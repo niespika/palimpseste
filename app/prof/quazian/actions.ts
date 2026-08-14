@@ -3,6 +3,7 @@
 import { revalidatePath } from 'next/cache'
 import { createClient } from '@/utils/supabase/server'
 import { extraireFlashcards, extraireFlashcardsTexte, genererVerso, type FlashcardSuggestion } from '@/utils/extraire-flashcards'
+import { colonneCible, refCible, resoudreCible, type CibleQuazian } from '@/utils/quazian-cibles'
 
 async function verifierProf() {
   const supabase = await createClient()
@@ -17,136 +18,96 @@ async function verifierProf() {
   return { supabase, userId: user.id }
 }
 
-// Lire les unités du Scriptorium (contrat de lecture)
-export async function lireUnitesScriptorium() {
-  const { supabase } = await verifierProf()
+// C7·L1 — `lireUnitesScriptorium()` a été retirée : elle demandait
+// `scriptorium_unites` où `type='unite'`, c'est-à-dire zéro ligne depuis la
+// réorganisation du Scriptorium (§4.1 du RAPPORT_Diagnostic_C7_quazian.md), et
+// n'avait plus aucun appelant. La liste des cibles vit désormais dans
+// `utils/quazian-cibles.ts` (`chargerCiblesQuazian`), bi-source.
 
-  const { data: unites } = await supabase
-    .from('scriptorium_unites')
-    .select('id, label, classe, ordre')
-    .eq('type', 'unite')   // exclut les « livres » Aletheia des unités de cours
-    .is('supprime_at', null)   // exclut les unités supprimées (plus de nouvelles cartes dessus)
-    .order('ordre', { ascending: true })
+// ── Génération de cartes ─────────────────────────────────────────────────────
 
-  return unites ?? []
-}
+/**
+ * Le corpus d'une cible, et la manière de le décortiquer.
+ *
+ * Distinction F2 (antérieure à ce lot, restaurée ici) : un COURS se décortique en
+ * cartes atomiques ; un TEXTE SOURCE ne donne qu'1-2 cartes — on ne dissèque pas
+ * un extrait d'œuvre comme un cours. Avant C7·L1 le test était `type === 'texte'`
+ * sur `scriptorium_documents`, dont les lignes valent `'texte_source'` : la
+ * comparaison était TOUJOURS fausse et tout partait en cours (§4.2 du rapport).
+ */
+const EST_TEXTE_SOURCE = new Set(['texte', 'texte_source'])
 
-// Lancer l'extraction IA de flashcards pour une unité (ou un document spécifique)
-export async function lancerExtractionIA(formData: FormData) {
-  const { supabase, userId } = await verifierProf()
-  const uniteId = formData.get('uniteId') as string
-  const documentId = (formData.get('documentId') as string) || null
-
-  // Récupérer le label de l'unité
-  const { data: unite } = await supabase
-    .from('scriptorium_unites')
-    .select('label')
-    .eq('id', uniteId)
-    .single()
-
-  if (!unite) return { error: 'Unité introuvable' }
-
-  let docsQuery = supabase
-    .from('scriptorium_documents')
-    .select('titre, auteur, texte_extrait')
-    .eq('unite_id', uniteId)
-    .not('texte_extrait', 'is', null)
-
-  if (documentId) docsQuery = docsQuery.eq('id', documentId)
-
-  const { data: docs } = await docsQuery
-
-  if (!docs || docs.length === 0) return { error: "Aucun texte extrait dans cette unité. Dépose d'abord des documents dans le Scriptorium." }
-
-  const texteComplet = docs
-    .map((d) => `## ${d.titre}${d.auteur ? ` (${d.auteur})` : ''}\n\n${d.texte_extrait}`)
-    .join('\n\n---\n\n')
-
-  let suggestions
-  try {
-    suggestions = await extraireFlashcards(texteComplet, unite.label)
-  } catch (e) {
-    console.error('[quazian] extraction flashcards :', e)
-    return { error: "La génération IA a échoué (réponse inattendue du modèle). Réessaie." }
+async function corpusDeLaCible(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  cible: CibleQuazian,
+): Promise<{ cours: string; textes: { titre: string; contenu: string }[] }> {
+  if (cible.bras === 'contenu') {
+    const { data: c } = await supabase
+      .from('scriptorium_contenus')
+      .select('titre, auteur, type, texte_extrait')
+      .eq('id', cible.id)
+      .maybeSingle()
+    const texte = ((c?.texte_extrait as string | null) ?? '').trim()
+    if (!texte) return { cours: '', textes: [] }
+    const entete = `## ${c!.titre}${c!.auteur ? ` (${c!.auteur})` : ''}`
+    return EST_TEXTE_SOURCE.has(c!.type as string)
+      ? { cours: '', textes: [{ titre: c!.titre as string, contenu: `${entete}\n\n${texte}` }] }
+      : { cours: `${entete}\n\n${texte}`, textes: [] }
   }
 
-  // Insérer les cartes avec statut "suggere"
-  const cartes = suggestions.map((s) => ({
-    scriptorium_unite_id: uniteId,
-    type: s.type,
-    format: s.format,
-    recto: s.recto,
-    verso: s.verso,
-    concept_tag: s.concept_tag,
-    statut: 'suggere',
-    source: 'ia',
-    created_by: userId,
-  }))
-
-  const { error } = await supabase.from('quazian_flashcards').insert(cartes)
-  if (error) return { error: error.message }
-
-  revalidatePath(`/prof/quazian/${uniteId}`)
-  return { success: true, nb: cartes.length }
-}
-
-// Générer les cartes d'UNE semaine d'une unité (modèle Scriptorium, Lot 7).
-// Le texte de tous les contenus de cette (unité, semaine) alimente la génération ;
-// les cartes portent la semaine → visibilité élève dérivée du contenu (Lot 6).
-export async function genererCartesSemaine(uniteId: string, semaine: number) {
-  const { supabase, userId } = await verifierProf()
-
-  const { data: unite } = await supabase
-    .from('scriptorium_unites')
-    .select('label')
-    .eq('id', uniteId)
-    .single()
-  if (!unite) return { error: 'Unité introuvable' }
-
+  // Bras hérité : les documents de l'unité (une base sans unité n'entre jamais ici).
   const { data: docs } = await supabase
     .from('scriptorium_documents')
     .select('titre, texte_extrait, legende, type')
-    .eq('unite_id', uniteId)
-    .eq('semaine', semaine)
+    .eq('unite_id', cible.id)
 
   const contenuDoc = (d: { titre: string; texte_extrait: string | null; legende: string | null }) =>
     [`## ${d.titre}`, d.texte_extrait, d.legende ? `(Légende : ${d.legende})` : null].filter(Boolean).join('\n\n').trim()
 
-  // Distinction cours / texte (F2) : les cours sont décortiqués en cartes atomiques ;
-  // chaque texte source ne donne qu'1-2 cartes (génération distincte, plafonnée).
-  const coursDocs = (docs ?? []).filter(d => (d.type ?? 'cours') !== 'texte')
-  const texteDocs = (docs ?? []).filter(d => d.type === 'texte')
+  const cours = (docs ?? []).filter((d) => !EST_TEXTE_SOURCE.has((d.type as string) ?? 'cours'))
+    .map(contenuDoc).filter((s) => s.length > 0).join('\n\n---\n\n')
+  const textes = (docs ?? []).filter((d) => EST_TEXTE_SOURCE.has((d.type as string) ?? 'cours'))
+    .map((d) => ({ titre: d.titre as string, contenu: contenuDoc(d) })).filter((t) => t.contenu.length > 0)
+  return { cours, textes }
+}
 
-  const corpusCours = coursDocs.map(contenuDoc).filter(s => s.length > 0).join('\n\n---\n\n')
-  const textesAvecContenu = texteDocs.map(d => ({ titre: d.titre, contenu: contenuDoc(d) })).filter(t => t.contenu.length > 0)
+/**
+ * Génère les cartes d'UNE cible (un cours, un texte, ou une unité héritée) et les
+ * dépose en `suggere` — la file de validation prof existe déjà, on l'alimente.
+ *
+ * Le coût API est journalisé par `extraireFlashcards*` (module `quazian`), sans
+ * classe ni élève : le contenu est PARTAGÉ entre classes, il n'y a structurellement
+ * personne à qui l'attribuer (cf. utils/extraire-flashcards.ts et le pied de la
+ * section C11a de SUIVI_tests_manuels.md).
+ */
+export async function genererCartes(cibleId: string) {
+  const { supabase, userId } = await verifierProf()
 
-  if (!corpusCours.trim() && textesAvecContenu.length === 0) {
-    return { error: "Aucun texte dans cette semaine. Ajoute du contenu (texte ou légende) dans le Scriptorium." }
+  const cible = await resoudreCible(supabase, cibleId)
+  if (!cible) return { error: 'Contenu introuvable (ou retiré du Scriptorium).' }
+
+  const { cours, textes } = await corpusDeLaCible(supabase, cible)
+  if (!cours.trim() && textes.length === 0) {
+    return { error: `Aucun texte dans « ${cible.label} ». Ajoute son contenu dans le Scriptorium avant de générer.` }
   }
 
   let suggestions: FlashcardSuggestion[]
   try {
     const lots: FlashcardSuggestion[][] = []
-    if (corpusCours.trim()) {
-      lots.push(await extraireFlashcards(corpusCours, `${unite.label} — Semaine ${semaine}`))
-    }
-    // Un appel par texte → plafond 1-2 cartes garanti par texte.
-    for (const t of textesAvecContenu) {
-      lots.push(await extraireFlashcardsTexte(t.contenu, `${t.titre} (${unite.label} — Semaine ${semaine})`, 2))
-    }
+    if (cours.trim()) lots.push(await extraireFlashcards(cours, cible.label))
+    // Un appel par texte source → le plafond 1-2 cartes est garanti par texte.
+    for (const t of textes) lots.push(await extraireFlashcardsTexte(t.contenu, t.titre, 2))
     suggestions = lots.flat()
   } catch (e) {
-    console.error('[quazian] génération cartes semaine :', e)
-    return { error: "La génération IA a échoué (réponse inattendue du modèle). Réessaie." }
+    console.error('[quazian] génération de cartes :', e)
+    return { error: 'La génération IA a échoué (réponse inattendue du modèle). Réessaie.' }
   }
 
-  if (suggestions.length === 0) {
-    return { error: "L'IA n'a généré aucune carte exploitable. Réessaie." }
-  }
+  if (suggestions.length === 0) return { error: "L'IA n'a généré aucune carte exploitable. Réessaie." }
 
-  const cartes = suggestions.map(s => ({
-    scriptorium_unite_id: uniteId,
-    semaine,
+  const ancrage = refCible(cible)
+  const cartes = suggestions.map((s) => ({
+    ...ancrage,
     type: s.type,
     format: s.format,
     recto: s.recto,
@@ -161,15 +122,17 @@ export async function genererCartesSemaine(uniteId: string, semaine: number) {
   if (error) return { error: error.message }
 
   revalidatePath('/prof/quazian')
-  revalidatePath(`/prof/quazian/${uniteId}`)
+  revalidatePath(`/prof/quazian/${cibleId}`)
   return { success: true, nb: cartes.length }
 }
+
+// ── Vie d'une carte ──────────────────────────────────────────────────────────
 
 // Valider une carte
 export async function validerCarte(formData: FormData) {
   const { supabase } = await verifierProf()
   const id = formData.get('id') as string
-  const uniteId = formData.get('uniteId') as string
+  const cibleId = formData.get('cibleId') as string
 
   const { error } = await supabase
     .from('quazian_flashcards')
@@ -177,7 +140,7 @@ export async function validerCarte(formData: FormData) {
     .eq('id', id)
 
   if (error) return { error: error.message }
-  revalidatePath(`/prof/quazian/${uniteId}`)
+  revalidatePath(`/prof/quazian/${cibleId}`)
   return { success: true }
 }
 
@@ -185,11 +148,11 @@ export async function validerCarte(formData: FormData) {
 export async function supprimerCarte(formData: FormData) {
   const { supabase } = await verifierProf()
   const id = formData.get('id') as string
-  const uniteId = formData.get('uniteId') as string
+  const cibleId = formData.get('cibleId') as string
 
   const { error } = await supabase.from('quazian_flashcards').delete().eq('id', id)
   if (error) return { error: error.message }
-  revalidatePath(`/prof/quazian/${uniteId}`)
+  revalidatePath(`/prof/quazian/${cibleId}`)
   return { success: true }
 }
 
@@ -197,7 +160,7 @@ export async function supprimerCarte(formData: FormData) {
 export async function archiverCarte(formData: FormData) {
   const { supabase } = await verifierProf()
   const id = formData.get('id') as string
-  const uniteId = formData.get('uniteId') as string
+  const cibleId = formData.get('cibleId') as string
 
   const { error } = await supabase
     .from('quazian_flashcards')
@@ -205,7 +168,7 @@ export async function archiverCarte(formData: FormData) {
     .eq('id', id)
 
   if (error) return { error: error.message }
-  revalidatePath(`/prof/quazian/${uniteId}`)
+  revalidatePath(`/prof/quazian/${cibleId}`)
   return { success: true }
 }
 
@@ -213,7 +176,7 @@ export async function archiverCarte(formData: FormData) {
 export async function modifierCarte(formData: FormData) {
   const { supabase } = await verifierProf()
   const id = formData.get('id') as string
-  const uniteId = formData.get('uniteId') as string
+  const cibleId = formData.get('cibleId') as string
   const recto = formData.get('recto') as string
   const verso = formData.get('verso') as string
   const concept_tag = formData.get('concept_tag') as string
@@ -225,17 +188,20 @@ export async function modifierCarte(formData: FormData) {
     .eq('id', id)
 
   if (error) return { error: error.message }
-  revalidatePath(`/prof/quazian/${uniteId}`)
+  revalidatePath(`/prof/quazian/${cibleId}`)
   return { success: true }
 }
 
 // Ajouter une carte manuellement
 export async function ajouterCarteManuellement(formData: FormData) {
   const { supabase, userId } = await verifierProf()
-  const uniteId = formData.get('uniteId') as string
+  const cibleId = formData.get('cibleId') as string
+
+  const cible = await resoudreCible(supabase, cibleId)
+  if (!cible) return { error: 'Contenu introuvable (ou retiré du Scriptorium).' }
 
   const { error } = await supabase.from('quazian_flashcards').insert({
-    scriptorium_unite_id: uniteId,
+    ...refCible(cible),
     type: formData.get('type') as string,
     format: formData.get('format') as string,
     recto: formData.get('recto') as string,
@@ -247,7 +213,7 @@ export async function ajouterCarteManuellement(formData: FormData) {
   })
 
   if (error) return { error: error.message }
-  revalidatePath(`/prof/quazian/${uniteId}`)
+  revalidatePath(`/prof/quazian/${cibleId}`)
   return { success: true }
 }
 
@@ -260,62 +226,70 @@ export async function aideIAVers(formData: FormData) {
   return { verso }
 }
 
-// Publier / dépublier une unité (visibilité des cartes aux élèves)
-export async function togglePublicationUnite(formData: FormData) {
-  const { supabase, userId } = await verifierProf()
-  const uniteId = formData.get('uniteId') as string
-  const actuel = formData.get('actuel') === 'true'
-
-  // Garde-fou : un « livre » Aletheia ne se publie jamais via Quazian — son texte
-  // extrait est un ancrage IA qui ne doit pas atteindre l'élève (defense-in-depth).
-  const { data: u } = await supabase.from('scriptorium_unites').select('type').eq('id', uniteId).maybeSingle()
-  if (u?.type === 'livre') return { error: 'Un livre ne se publie pas via Quazian.' }
-
-  const { data: existing } = await supabase
-    .from('quazian_publications')
-    .select('id')
-    .eq('scriptorium_unite_id', uniteId)
-    .maybeSingle()
-
-  if (existing) {
-    await supabase
-      .from('quazian_publications')
-      .update({ flashcards_visibles: !actuel, published_at: actuel ? null : new Date().toISOString() })
-      .eq('id', existing.id)
-  } else {
-    // Récupérer la classe depuis l'unité
-    const { data: unite } = await supabase
-      .from('scriptorium_unites')
-      .select('classe')
-      .eq('id', uniteId)
-      .single()
-
-    await supabase.from('quazian_publications').insert({
-      scriptorium_unite_id: uniteId,
-      classe_id: unite?.classe ?? null,
-      flashcards_visibles: true,
-      published_at: new Date().toISOString(),
-      created_by: userId,
-    })
-  }
-
-  revalidatePath('/prof/quazian')
-  revalidatePath(`/prof/quazian/${uniteId}`)
-  return { success: true }
-}
-
-// Valider toutes les cartes "suggere" d'un coup
+// Valider toutes les cartes "suggere" d'une cible d'un coup
 export async function validerToutesLesSuggerees(formData: FormData) {
   const { supabase } = await verifierProf()
-  const uniteId = formData.get('uniteId') as string
+  const cibleId = formData.get('cibleId') as string
+
+  const cible = await resoudreCible(supabase, cibleId)
+  if (!cible) return { error: 'Contenu introuvable (ou retiré du Scriptorium).' }
 
   const { error } = await supabase
     .from('quazian_flashcards')
     .update({ statut: 'valide' })
-    .eq('scriptorium_unite_id', uniteId)
+    .eq(colonneCible(cible.bras), cibleId)
     .eq('statut', 'suggere')
 
   if (error) return { error: error.message }
-  revalidatePath(`/prof/quazian/${uniteId}`)
+  revalidatePath(`/prof/quazian/${cibleId}`)
+  return { success: true }
+}
+
+// ── Publication ──────────────────────────────────────────────────────────────
+
+/**
+ * Publier / dépublier une cible (visibilité des cartes aux élèves).
+ *
+ * `resoudreCible` est le garde-fou anti-spoiler : elle ne rend jamais un LIVRE
+ * (son texte extrait est un ancrage IA d'Aletheia). Le refus explicite d'avant
+ * C7·L1 (« Un livre ne se publie pas via Quazian ») devient donc structurel.
+ *
+ * ⚠️ `quazian_publications.classe_id` n'est PAS alimentée par le bras contenu :
+ * c'est une colonne `text` héritée, écrite avec un LIBELLÉ de classe et lue par
+ * personne (§4.5 du rapport). Son sort est un arbitrage (R7, §10.1), pas une
+ * remise en marche — on ne reconduit simplement pas l'écriture.
+ */
+export async function togglePublication(formData: FormData) {
+  const { supabase, userId } = await verifierProf()
+  const cibleId = formData.get('cibleId') as string
+  const actuel = formData.get('actuel') === 'true'
+
+  const cible = await resoudreCible(supabase, cibleId)
+  if (!cible) return { error: 'Contenu introuvable (ou retiré du Scriptorium).' }
+
+  const { data: existing } = await supabase
+    .from('quazian_publications')
+    .select('id')
+    .eq(colonneCible(cible.bras), cibleId)
+    .maybeSingle()
+
+  if (existing) {
+    const { error } = await supabase
+      .from('quazian_publications')
+      .update({ flashcards_visibles: !actuel, published_at: actuel ? null : new Date().toISOString() })
+      .eq('id', existing.id)
+    if (error) return { error: error.message }
+  } else {
+    const { error } = await supabase.from('quazian_publications').insert({
+      ...refCible(cible),
+      flashcards_visibles: true,
+      published_at: new Date().toISOString(),
+      created_by: userId,
+    })
+    if (error) return { error: error.message }
+  }
+
+  revalidatePath('/prof/quazian')
+  revalidatePath(`/prof/quazian/${cibleId}`)
   return { success: true }
 }
