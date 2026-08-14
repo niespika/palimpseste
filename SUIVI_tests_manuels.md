@@ -762,7 +762,7 @@ demande d'archiver ou supprimer les anciennes d'abord (parqué dans `IDEES_post_
   Le prompt de ce lot l'avait anticipé : « l'accès module × classe → session dédiée
   (`PROMPT_Code_Acces_classes_L1.md`), **ne pas l'entamer ici, même si les deux se frôlent sur
   l'écran élève Quazian** ». **Rien touché**, décision de Louis confirmée sur le moment.)_
-- [~] **C7L3-7 · Re-découpe d'un cours qui a des cartes (le point dur du SQL).** Scriptorium →
+- [x] **C7L3-7 · Re-découpe d'un cours qui a des cartes (le point dur du SQL).** Scriptorium →
   éditeur de sections de « NAture humaine » → re-sauver la découpe (confirmation « re-découpe
   consciente »). Attendu : **aucune carte supprimée** (le compte reste le même sur
   `/prof/quazian/<cible>`), le « § » disparaît de chaque carte (dé-granulation par `set null`), et
@@ -782,9 +782,17 @@ demande d'archiver ou supprimer les anciennes d'abord (parqué dans `IDEES_post_
   il n'y avait aucun historique à faire survivre, et c'est en le cherchant qu'on a trouvé le bug
   muet de `soumettreNote` (test C7L3-9 ci-dessous). Depuis le correctif, l'historique existe
   (18 états FSRS sur ce cours) : **une seconde re-découpe le prouverait pour de bon** — à jouer.
-  Note : le raisonnement le donne déjà (le `set null` ne touche que `quazian_flashcards.section_id`,
-  les `quazian_card_states` pointent `flashcard_id` et aucune carte n'est supprimée), mais tant que
-  ce n'est pas constaté, la case reste ouverte.)_
+  ➜ **CLAUSE FERMÉE le 14/08, seconde re-découpe jouée par Louis** — cette fois avec un historique
+  à mettre en danger. Constat en base, et l'horodatage scelle la démonstration : les sections sont
+  **encore recréées avec des uuid neufs** (`7a6739eb…` / `04e81be6…`, `created_at` **18:57:55** —
+  différents du jeu précédent, `19cc2392…` / `06b78428…` à 18:33:40, donc bien deux destructions
+  successives) ; les **45 cartes** sont là, toutes dé-granulées ; et surtout **les 18 états FSRS de
+  ce cours sont intacts, 18 révisions comptées, ZÉRO carte revenue à l'état « New »** — alors que la
+  plus ancienne révision date de **18:47:52**, soit AVANT la re-découpe de 18:57:55. Les 30 lignes
+  de `quazian_review_log` sont également intactes. Louis le confirme à l'écran : aucune carte n'est
+  redevenue « Nouvelle ». **Le choix `on delete set null` est donc validé de bout en bout** : la
+  re-découpe reste possible (ce que `restrict` interdirait), et elle n'emporte ni les cartes ni
+  l'historique FSRS des élèves (ce que `cascade` détruirait).)_
 - [x] **C7L3-9 · Un bug MUET débusqué par la recette : la révision élève ne s'enregistrait jamais.**
   _(Hors plan de test initial — trouvé le 14/08 en cherchant à prouver la clause FSRS de C7L3-7.)_
   **Le symptôme :** `quazian_card_states` était **vide pour toute la base**, alors qu'Elo venait de
