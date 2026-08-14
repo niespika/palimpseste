@@ -562,9 +562,17 @@ invisible.
   _Les 18 cartes de « Cognitif » et le quizz appartiennent à Test : sur T5 ils sont bien invisibles.
   Avant ce lot, les deux modules lisaient l'UNION des classes et ignoraient le commutateur — Sacha
   aurait vu les deux dans les deux contextes.)_
-  **Reste à faire une fois : le même contrôle sur Codex.** La sandbox n'a de séance qu'en Test, donc
-  l'absence côté T5 ne prouve rien tant qu'une séance n'est pas lancée dans les deux classes. Le code
-  est le même chemin (`classeIdsDuContexte`), mais ce n'est pas une observation.
+  **Volet Codex clos le 14/08**, une fois la création de synthèse réparée (elle bloquait le test) et
+  une séance lancée dans CHAQUE classe :
+
+  | Contexte | Synthèse en cours | Session |
+  |---|---|---|
+  | **T5** | « Cognitif » | `32cc4f85…` |
+  | **Test** | « NAture humaine » | `6e69e56e…` |
+
+  _Deux sessions distinctes, même élève, même session de navigation : seul le commutateur a changé.
+  Avant le lot, `classeIdsActives` rendait l'union et `visibles.find(live)` en désignait une au
+  hasard, quel que soit le contexte affiché._
 - [x] **C7L2-6 · Le gel de l'intégrité tient avec les onglets.** _(**Validé le 13/08** sur Elo,
   bloquée : onglet **Flashcards** = la bannière « Rendus en pause » SEULE — ni compteurs, ni bouton de
   révision ; onglet **Quizz** = **entièrement ouvert**, le quizz du 13/08 avec sa note et son
@@ -586,6 +594,20 @@ invisible.
   Codex (synthèse en cours), Aletheia (2 livres, 4 séances) : toutes rendues, **aucun commutateur,
   aucun écran de choix, zéro erreur console**. C'est le test qui comptait le plus ici : le troisième
   état a traversé les cinq modules, il aurait pu les casser tous.)_
+
+**⚠️ Trouvaille du 14/08, à trancher — l'écran « Quelle classe ? » de Codex n'offre que Test.**
+Le choix ne propose que les classes qui ONT le module (`classe_modules`), pour ne pas mener à « tu
+n'as pas accès à ce module ». Or **T5 n'a pas le module Codex** alors qu'une synthèse Codex y est
+lancée et que Sacha la voit très bien en contexte T5 — l'accès élève est l'UNION de ses classes
+(`utils/acces.ts`, règle du Lot 1), pas la classe. Conséquence : un bi-classe en état « Toutes » ne
+peut PAS atteindre la synthèse de T5 par le choix de classe ; il doit passer par le commutateur.
+Deux lectures, à trancher :
+1. **C'est une lacune de configuration** — donner le module Codex à T5 dans les paramètres, et le
+   choix proposera les deux. Rien à changer au code. _(Lecture la plus probable : on vient de créer
+   une séance Codex pour une classe qui n'a pas le module.)_
+2. **C'est le choix qui est trop étroit** — lister toutes les inscriptions ; une classe sans le
+   module mènerait alors à un cul-de-sac honnête plutôt qu'à une classe invisible.
+Non tranché : aucune des deux n'est appliquée.
 
 **Reste hors de ce lot, volontairement :** le déclencheur automatique sur « vu » → post-rentrée
 (explicitement écarté par le prompt de session) ; le diagnostic de fragilités et ses **deux** fils
