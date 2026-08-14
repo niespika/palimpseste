@@ -661,8 +661,11 @@ sections, **réinsère** les sections dérivées puis **re-matérialise** les é
 cours deviendrait impossible dès qu'il a des cartes (Quazian bloquerait le Scriptorium) ; en
 `cascade` elle détruirait les cartes **et** les `quazian_card_states` (l'historique FSRS des élèves,
 exactement ce que la garde `restrict` de L1 protège). En `set null`, la carte survit et retombe au
-grain « cours entier » : **une re-découpe dé-granule les cartes**, une re-génération leur rend leur
-sous-section. Aucune perte, une précision perdue — c'est le test C7L3-7 qui le vérifie en vrai.
+grain « cours entier » : **une re-découpe dé-granule les cartes**. Aucune perte, une précision
+perdue — c'est le test C7L3-7 qui le vérifie en vrai. ⚠️ Et « ✦ Régénérer » ne rend PAS cette
+précision : `genererCartes` insère sans rien remplacer, donc on obtiendrait les anciennes cartes au
+grain contenu PLUS un jeu neuf ancré aux sous-sections — des doublons. Retrouver le grain fin
+demande d'archiver ou supprimer les anciennes d'abord (parqué dans `IDEES_post_rentree.md`).
 
 - [x] **C7L3-1 · Le bouton « Publier » a disparu, l'écran dit l'état réel.** Prof →
   `/prof/quazian` : plus aucun bouton « Publier aux élèves / Masquer », ni sur la fiche de la cible

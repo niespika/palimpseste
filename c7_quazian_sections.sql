@@ -37,8 +37,11 @@
 --     reste visible dès que le cours est entamé, son historique FSRS est intact.
 --     C'est le comportement voulu.
 -- Conséquence à assumer, et à dire au prof : re-découper un cours DÉ-GRANULE ses
--- cartes (toutes retombent au grain contenu). Les re-générer après re-découpe
--- leur redonne leur sous-section. Aucune perte, une précision perdue.
+-- cartes (toutes retombent au grain contenu). Aucune perte, une précision perdue.
+-- ⚠️ Et « régénérer » ne la rend PAS : `genererCartes` INSÈRE, elle ne remplace
+-- rien — on obtiendrait les anciennes cartes au grain contenu PLUS un jeu neuf
+-- ancré aux sous-sections, donc des doublons. Retrouver le grain fin demande
+-- d'archiver ou supprimer les anciennes d'abord (constat de la recette du 14/08).
 --
 -- CE QUE ÇA NE FAIT PAS : aucune policy touchée, aucune RLS modifiée, aucune
 -- colonne supprimée, aucune donnée détruite. `quazian_publications` RESTE en
