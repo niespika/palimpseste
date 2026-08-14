@@ -67,8 +67,11 @@ export default async function PassationPage({
         {retour.scoreMoyen !== null && (
           <div className="grid grid-cols-2 gap-3 mb-6">
             <div className="bg-surface border border-bordure rounded-xl p-4 text-center">
+              {/* C7·L2 (item 6) — « /10 » retiré : ce champ est le score de Brier
+                  moyen, centré sur 0, dont la note /20 se déduit (10 + score). Le
+                  tableau du prof l'appelle « Score », sans dénominateur. */}
               <p className="text-2xl font-serif text-encre">{retour.scoreMoyen.toFixed(1)}</p>
-              <p className="text-xs text-muet mt-1">score moyen /10</p>
+              <p className="text-xs text-muet mt-1">score moyen</p>
             </div>
             <div className="bg-surface border border-bordure rounded-xl p-4 text-center">
               <p className="text-2xl font-serif text-encre">

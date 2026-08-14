@@ -481,6 +481,73 @@ tout le reste est en `/20` → **L2** (le correctif L1 ne passe pas par ces écr
 diagnostic de fragilités → **C6** ; la même fracture côté **Codex prof** → notée dans
 `IDEES_post_rentree.md`.
 
+## C7 · L2 — Quazian : onglets, génération au bouton, commutateur trois états (branche `feat/c7-quazian`)
+
+_**Aucune migration dans ce lot** — vérifié : le troisième état du commutateur tient dans la valeur
+du cookie existant (`eleve_classe` = `toutes`), la file de validation et ses statuts
+(`suggere`/`valide`/`archive`) datent de L1, et la note /20 lit `quazian_quiz_scores.note_formative_20`,
+colonne déjà en base. Rien à jouer dans le SQL Editor, donc pas de ligne au `SUIVI_SQL.md`._
+
+_Prouvé sans navigateur : `tsc --noEmit` vert, `npm test` **165/165**, `npm run build` vert (toutes
+les routes compilées). **Tout le reste demande un vrai navigateur, connecté en prof puis en élève** —
+je n'ai pas de compte de test et la règle du dépôt m'interdit de saisir un mot de passe. Règle d'or :
+Chrome, pas l'aperçu embarqué, et Cmd-R avant de conclure à un bug._
+
+**Le test 4 demande un élève BI-CLASSE.** S'il n'y en a pas en sandbox, inscrire l'élève de test dans
+une seconde classe (T5 ou THLP) le temps de la recette — c'est le seul moyen de voir le commutateur,
+masqué pour un mono-classe par construction.
+
+- [ ] **C7L2-1 · Trois onglets côté prof, et rien de perdu.** `/prof/quazian` → la Barre 2 doit
+  afficher **Flashcards · Quizz · Paramètres** (cinq avant ce lot). Puis : « Notes de semestre → »
+  en haut de l'écran Quizz mène à `/prof/quazian/semestre`, **où l'onglet Quizz reste allumé**, et le
+  « ← Quizz » du haut ramène. _(« Diagnostic » quitte la barre : l'écran est doublement muet et le
+  plan le range en C6 — sa page reste en place et reste atteignable depuis la fiche d'un élève,
+  `/prof/eleves/<id>`. À vérifier au passage : ce lien-là marche toujours.)_
+- [ ] **C7L2-2 · Deux onglets côté élève.** Élève → `/eleve/modules/quazian` : **Flashcards** (par
+  défaut, les stats et « Réviser mes N cartes ») et **Quizz** (la liste des quizz). Les deux zones
+  empilées d'hier ne doivent plus coexister sur un même écran. Vérifier aussi sur mobile (< 640 px),
+  où la sous-nav est un composant distinct.
+- [ ] **C7L2-3 · La note passe en /20 (item 6).** Sur l'onglet Quizz, un quizz corrigé affiche
+  `x/20` — **la même valeur que la colonne « Note /20 » du tableau du prof** (`/prof/quazian/quizz/<id>/lancer`).
+  Ouvrir le quizz : la tuile de gauche dit « score moyen » **sans « /10 »**. _(Le « /10 » d'avant était
+  faux, pas seulement incohérent : le champ affiché est le score de Brier moyen, centré sur 0, dont la
+  note se déduit par `10 + score`.)_
+- [ ] **C7L2-4 · Commutateur à trois états (le test du lot).** Avec le compte bi-classe :
+  1. Le commutateur (puce de l'en-tête, ou bandeau mobile) propose **Toutes les classes · classe A ·
+     classe B**.
+  2. Sur **une classe** : le tableau de bord ne montre que le travail de cette classe, et le
+     **calendrier n'affiche plus que ses échéances** _(avant ce lot il agrégeait toujours)_.
+  3. Sur **Toutes** : le tableau de bord agrège — une ligne « à faire » par classe, chacune suffixée
+     du nom de sa classe — et le calendrier remontre les deux, avec sa légende de couleurs.
+  4. Sur **Toutes**, entrer dans un module (Quazian, Fragments, Codex, Aletheia, Scriptorium) : un
+     écran **« Quelle classe ? »** s'affiche à la place du contenu. Choisir → le contenu arrive, et
+     **le commutateur de l'en-tête a suivi** (il n'est plus sur « Toutes »).
+  5. Depuis l'intérieur du module, **rechanger de classe par le commutateur** sans repasser par le
+     tableau de bord.
+- [ ] **C7L2-5 · Un bi-classe ne voit jamais l'autre classe (item 3, le point dur).** Publier des
+  cartes et lancer un quizz dans la classe A **seulement**. Élève bi-classe posé sur la **classe B** :
+  l'onglet Flashcards ne doit annoncer **aucune** carte de A, et l'onglet Quizz **aucun** quizz de A.
+  Basculer sur A : les deux reviennent. Même contrôle sur **Codex** (une séance lancée en A ne doit
+  pas apparaître quand le contexte est B). _(Avant ce lot, les deux modules lisaient l'UNION des
+  classes de l'élève et ignoraient le commutateur.)_
+- [ ] **C7L2-6 · Le gel de l'intégrité tient avec les onglets.** Bloquer l'élève depuis
+  `/prof/integrite`, puis recharger sa page Quazian : onglet **Flashcards** = bannière « cheeky »
+  seule (révision gelée), onglet **Quizz** = **toujours ouvert**. Débloquer ensuite. _(⚠️ Bloquer un
+  élève jamais signalé est impossible depuis l'écran — c'est la trouvaille de C7·L1 notée dans
+  `IDEES_post_rentree.md` ; contourner par SQL comme en L1.)_
+- [ ] **C7L2-7 · Non-régression mono-classe.** Avec un élève d'une seule classe : **aucun
+  commutateur** ne s'affiche, aucun écran « Quelle classe ? » n'apparaît, et le tableau de bord, le
+  calendrier et les modules se comportent comme avant le lot.
+
+**Reste hors de ce lot, volontairement :** le déclencheur automatique sur « vu » → post-rentrée
+(explicitement écarté par le prompt de session) ; le diagnostic de fragilités et ses **deux** fils
+cassés → **C6** ; le design des Paramètres → coupe pré-décidée. **Item 2 du lot (bouton « Générer »
++ file de validation prof) : déjà livré par L1** — `BoutonGenererCartes`, statut `suggere` → section
+« À valider » avec « ✓ Tout valider », et *valider / corriger / jeter* = les boutons **Valider /
+Modifier / Archiver + Supprimer** de `CarteFlashcard`. Les coûts partent bien dans `api_couts` sous
+`quazian` (non attribués pour les cartes : contenu partagé, cf. pied de la section C11a). Rien n'a
+donc été réécrit là ; ce sont les tests C7L1-4 et C11a-7, déjà verts, qui le couvrent.
+
 ## C2 — (à venir)
 
 _Les tests seront ajoutés à l'écriture des specs / à la clôture des sessions (écran élève, calibration L8…). S'y ajoutera le test reporté C11a-6 (synthèse hebdo → ligne `scriptorium` classe seule)._

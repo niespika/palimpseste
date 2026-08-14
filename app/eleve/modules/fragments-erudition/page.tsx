@@ -4,6 +4,7 @@ import { createClient } from '@/utils/supabase/server'
 import { createAdminClient } from '@/utils/supabase/admin'
 import { inscriptionsModuleEleve } from '@/utils/acces'
 import { contexteClasseEleve } from '../../contexte-classe'
+import ChoixClasseModule from '../../ChoixClasseModule'
 import FormulaireDepot from './FormulaireDepot'
 import AnalysePubliee, { tuilesAnalyseEcrite } from './AnalysePubliee'
 import GraphiqueProgression from '@/components/fragments/GraphiqueProgression'
@@ -67,7 +68,13 @@ export default async function PageFragments({ searchParams }: { searchParams: Pr
   // (cas du retour non lu dans une classe non affichée) : on l'honore s'il correspond
   // à une inscription valide de l'élève (sinon cookie, sinon 1ʳᵉ). Aucun risque de fuite :
   // inscriptions ne contient que les inscriptions actives de l'élève pour ce module.
-  const { active } = await contexteClasseEleve(supabase, user.id)
+  // C7·L2 — en état « Toutes », le repli `?? inscriptions[0]` ci-dessous ferait
+  // lire à un bi-classe le flux d'une classe en croyant les voir toutes : on
+  // demande laquelle (item 3).
+  const { active, toutes } = await contexteClasseEleve(supabase, user.id)
+  if (toutes && !inscriptionParam) {
+    return <ChoixClasseModule inscriptions={inscriptions} nomModule="Fragments d’Érudition" />
+  }
   const inscriptionActive =
     (inscriptionParam ? inscriptions.find(i => i.id === inscriptionParam) : undefined)
     ?? inscriptions.find(i => i.id === active?.id)

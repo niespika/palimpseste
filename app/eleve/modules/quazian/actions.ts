@@ -3,6 +3,7 @@
 import { createClient } from '@/utils/supabase/server'
 import { createAdminClient } from '@/utils/supabase/admin'
 import { messageSiBloque } from '@/utils/integrite'
+import { classeIdsDuContexte } from '@/app/eleve/contexte-classe'
 import { fsrs, createEmptyCard, type Card, type Grade } from 'ts-fsrs'
 
 async function verifierEleve() {
@@ -21,6 +22,13 @@ async function verifierEleve() {
 // ── Visibilité des cartes partagées (Lot 6/7, recâblée à C7·L1) ──────────────
 // Deux conditions, toujours : la cible est PUBLIÉE par le prof, ET elle est au
 // programme d'une classe de l'élève.
+//
+// ⚠️ C7·L2 — « une classe de l'élève » veut dire les classes EN CONTEXTE, pas
+// l'union de ses inscriptions. Sur une page de module le contexte vaut toujours
+// une seule classe (l'état « Toutes » y est intercepté par le choix de classe) ;
+// le tableau de bord, lui, agrège et passe les deux. Avant ce lot, la fonction
+// lisait les inscriptions elle-même : un bi-classe voyait les cartes de son
+// autre classe quel que soit le commutateur (item 3 du lot).
 //
 //   • bras CONTENU (aujourd'hui) — « au programme » = le contenu figure dans
 //     l'INSTANCE de parcours d'une de ses classes. C'est l'unique chemin
@@ -44,7 +52,7 @@ interface PerimetreCartes {
 
 async function contexteVisibiliteCartes(
   admin: ReturnType<typeof createAdminClient>,
-  userId: string,
+  classeIds: string[],
 ): Promise<PerimetreCartes> {
   const { data: publis } = await admin
     .from('quazian_publications')
@@ -52,10 +60,6 @@ async function contexteVisibiliteCartes(
     .eq('flashcards_visibles', true)
   const unitesPubliees = (publis ?? []).map((p) => p.scriptorium_unite_id as string | null).filter((v): v is string => !!v)
   const contenusPublies = (publis ?? []).map((p) => p.contenu_id as string | null).filter((v): v is string => !!v)
-
-  const { data: inscrits } = await admin
-    .from('inscriptions').select('classe_id').eq('eleve_id', userId).eq('statut', 'active')
-  const classeIds = (inscrits ?? []).map((i) => i.classe_id as string)
 
   const tuplesVisibles = new Set<string>()
   const contenusVisibles = new Set<string>()
@@ -161,7 +165,7 @@ export async function chargerFileRevision(): Promise<CarteRevision[]> {
   const admin = createAdminClient()
   // Blocage « petit malin » : la révision de flashcards est gelée (le quizz reste ouvert).
   if (await messageSiBloque(admin, userId)) return []
-  const perimetre = await contexteVisibiliteCartes(admin, userId)
+  const perimetre = await contexteVisibiliteCartes(admin, await classeIdsDuContexte(supabase, userId))
 
   const partagees = await cartesPartageesVisibles(admin, perimetre, SELECT_CARTE)
 
@@ -247,7 +251,7 @@ export async function chargerToutesLesCartes(): Promise<CarteConsultation[]> {
   if (await messageSiBloque(admin, userId)) return []
 
   // Cibles publiées + périmètre de classe — MÊME périmètre que la file.
-  const perimetre = await contexteVisibiliteCartes(admin, userId)
+  const perimetre = await contexteVisibiliteCartes(admin, await classeIdsDuContexte(supabase, userId))
   const partagees = await cartesPartageesVisibles(admin, perimetre, SELECT_CARTE)
 
   const { data: perso } = await admin
@@ -424,8 +428,10 @@ export async function chargerStatsRevision() {
   }
 
   // Cibles publiées + périmètre de classe — MÊME périmètre que la file de révision,
-  // sinon les compteurs annoncent des cartes que l'élève ne verra jamais.
-  const perimetre = await contexteVisibiliteCartes(admin, userId)
+  // sinon les compteurs annoncent des cartes que l'élève ne verra jamais. Sur le
+  // tableau de bord en état « Toutes », le contexte rend les deux classes : les
+  // compteurs agrègent, ce que l'écran annonce.
+  const perimetre = await contexteVisibiliteCartes(admin, await classeIdsDuContexte(supabase, userId))
   const partagees = await cartesPartageesVisibles(
     admin, perimetre, 'id, scriptorium_unite_id, contenu_id, semaine',
   )

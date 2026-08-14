@@ -52,8 +52,14 @@ export default async function CalendrierEleve({
 
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
-  const { inscriptions } = await contexteClasseEleve(supabase, user!.id)
-  const classeIds = new Set(inscriptions.map((i) => i.classe_id))
+  // C7·L2 — le calendrier suit le commutateur : il AGRÈGE en état « Toutes »
+  // (comportement historique, color-codé par classe) et se scope à la classe
+  // choisie sinon. Avant ce lot il agrégeait toujours : un bi-classe posé sur
+  // une classe voyait quand même les échéances de l'autre.
+  const { inscriptions, active, toutes } = await contexteClasseEleve(supabase, user!.id)
+  const classeIds = new Set(
+    toutes ? inscriptions.map((i) => i.classe_id) : active ? [active.classe_id] : []
+  )
   const slugs = await slugsModulesAccessibles(supabase, user!.id)
 
   const admin = createAdminClient()

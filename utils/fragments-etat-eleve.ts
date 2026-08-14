@@ -58,7 +58,12 @@ export async function etatOngletsFragmentsEleve(
   const inscriptions = await inscriptionsModuleEleve(supabase, userId, moduleData.id)
   if (inscriptions.length === 0) return ETAT_VIDE
 
-  const { active } = await contexteClasseEleve(supabase, userId)
+  // C7·L2 — en état « Toutes », aucune classe n'est choisie : les pastilles des
+  // onglets Fragments n'ont rien à annoncer (le module demande la classe à son
+  // entrée). Sans ce retour, le repli ci-dessous colorerait les pastilles avec
+  // l'état d'une classe que l'élève n'a pas désignée.
+  const { active, toutes } = await contexteClasseEleve(supabase, userId)
+  if (toutes) return ETAT_VIDE
   const inscription = inscriptions.find(i => i.id === active?.id) ?? inscriptions[0]
   const inscriptionId = inscription.id
 

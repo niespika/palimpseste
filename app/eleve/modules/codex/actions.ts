@@ -5,6 +5,7 @@ import { revalidatePath } from 'next/cache'
 import { createClient } from '@/utils/supabase/server'
 import { createAdminClient } from '@/utils/supabase/admin'
 import { classeIdsActives } from '@/utils/acces'
+import { classeIdsDuContexte } from '@/app/eleve/contexte-classe'
 import { messageSiBloque } from '@/utils/integrite'
 import { messageSiRetoursNonLus } from '@/utils/retours-lus'
 import { libelleSession } from '@/utils/codex-libelle'
@@ -38,7 +39,10 @@ export interface SyntheseActive {
 export async function chargerSyntheseActive(): Promise<SyntheseActive | null> {
   const { supabase, userId } = await verifierEleve()
   const admin = createAdminClient()
-  const classeIds = await classeIdsActives(supabase, userId)
+  // C7·L2 (item 3) — périmètre d'AFFICHAGE : la ou les classes en contexte, et
+  // non l'union des inscriptions. Un bi-classe voyait ici la synthèse en cours
+  // de son autre classe quel que soit le commutateur.
+  const classeIds = await classeIdsDuContexte(supabase, userId)
 
   // Sessions non-brouillon visibles pour cet élève (une de ses classes, ou sans classe)
   const { data: sessions } = await admin
@@ -87,7 +91,8 @@ export interface SynthesePassee {
 export async function chargerHistorique(): Promise<SynthesePassee[]> {
   const { supabase, userId } = await verifierEleve()
   const admin = createAdminClient()
-  const classeIds = await classeIdsActives(supabase, userId)
+  // Périmètre d'AFFICHAGE, comme `chargerSyntheseActive` (C7·L2, item 3).
+  const classeIds = await classeIdsDuContexte(supabase, userId)
 
   const { data: sessions } = await admin
     .from('codex_sessions')
@@ -144,6 +149,10 @@ async function getTravail(sessionId: string, phase: Phase) {
   // L'élève doit appartenir à la classe de la synthèse (ou synthèse sans classe). Le client
   // admin contourne RLS : sans ce contrôle, n'importe quel élève connaissant un sessionId
   // pourrait écrire dans la synthèse d'une autre classe et déclencher une analyse IA payante.
+  // ⚠️ Garde de SÉCURITÉ : elle reste sur l'union des inscriptions (`classeIdsActives`),
+  // pas sur le contexte de classe. Le contexte dit ce qu'on AFFICHE ; l'appartenance dit
+  // ce qu'on a le DROIT d'écrire. La rétrécir au contexte refuserait à un bi-classe
+  // d'écrire dans une séance légitime au motif que son commutateur est ailleurs (C7·L2).
   if (session.classe_id) {
     const classeIds = await classeIdsActives(supabase, userId)
     if (!classeIds.includes(session.classe_id as string)) {
@@ -369,6 +378,7 @@ export async function marquerSyntheseLue(sessionId: string): Promise<{ success: 
     .eq('id', sessionId)
     .maybeSingle()
   if (!session) return { error: 'Travail introuvable.' }
+  // Garde de SÉCURITÉ (appartenance), pas périmètre d'affichage — cf. `getTravail`.
   if (session.classe_id) {
     const classeIds = await classeIdsActives(supabase, userId)
     if (!classeIds.includes(session.classe_id as string)) return { error: 'Travail introuvable.' }
