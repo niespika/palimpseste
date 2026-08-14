@@ -489,8 +489,11 @@ du cookie existant (`eleve_classe` = `toutes`), la file de validation et ses sta
 colonne déjà en base. Rien à jouer dans le SQL Editor, donc pas de ligne au `SUIVI_SQL.md`._
 
 _Prouvé sans navigateur : `tsc --noEmit` vert, `npm test` **165/165**, `npm run build` vert (toutes
-les routes compilées). **Tout le reste demande un vrai navigateur, connecté en prof puis en élève** —
-je n'ai pas de compte de test et la règle du dépôt m'interdit de saisir un mot de passe. Règle d'or :
+les routes compilées)._
+
+_**Trois tests joués le 13/08 dans une session élève déjà ouverte** (« Elo », classe **Test**,
+mono-classe) — aucun mot de passe saisi, la session était là. Ce qui reste demande **le compte prof**
+(tests 1 et 6) et **un compte bi-classe** (tests 4 et 5), que cette session ne donne pas. Règle d'or :
 Chrome, pas l'aperçu embarqué, et Cmd-R avant de conclure à un bug._
 
 **Le test 4 demande un élève BI-CLASSE.** S'il n'y en a pas en sandbox, inscrire l'élève de test dans
@@ -503,15 +506,22 @@ masqué pour un mono-classe par construction.
   « ← Quizz » du haut ramène. _(« Diagnostic » quitte la barre : l'écran est doublement muet et le
   plan le range en C6 — sa page reste en place et reste atteignable depuis la fiche d'un élève,
   `/prof/eleves/<id>`. À vérifier au passage : ce lien-là marche toujours.)_
-- [ ] **C7L2-2 · Deux onglets côté élève.** Élève → `/eleve/modules/quazian` : **Flashcards** (par
+- [x] **C7L2-2 · Deux onglets côté élève.** Élève → `/eleve/modules/quazian` : **Flashcards** (par
   défaut, les stats et « Réviser mes N cartes ») et **Quizz** (la liste des quizz). Les deux zones
-  empilées d'hier ne doivent plus coexister sur un même écran. Vérifier aussi sur mobile (< 640 px),
-  où la sous-nav est un composant distinct.
-- [ ] **C7L2-3 · La note passe en /20 (item 6).** Sur l'onglet Quizz, un quizz corrigé affiche
-  `x/20` — **la même valeur que la colonne « Note /20 » du tableau du prof** (`/prof/quazian/quizz/<id>/lancer`).
-  Ouvrir le quizz : la tuile de gauche dit « score moyen » **sans « /10 »**. _(Le « /10 » d'avant était
-  faux, pas seulement incohérent : le champ affiché est le score de Brier moyen, centré sur 0, dont la
-  note se déduit par `10 + score`.)_
+  empilées d'hier ne doivent plus coexister sur un même écran. _(**Validé le 13/08** : la Barre 2
+  affiche « Flashcards · Quizz », la vue Flashcards ne porte plus que la zone Réviser — 18 cartes,
+  18 dues — et la vue Quizz la seule liste. Zéro erreur console. **Reste à voir sur mobile (< 640 px)**,
+  où la sous-nav est un composant distinct : non joué.)_
+- [x] **C7L2-3 · La note passe en /20 (item 6).** Sur l'onglet Quizz, un quizz corrigé affiche
+  `x/20`. Ouvrir le quizz : la tuile de gauche dit « score moyen » **sans « /10 »**. _(**Validé le
+  13/08** : la tuile annonce **19,1/20**, l'écran de détail « 9.2 · score moyen » puis « 19.1/20 ·
+  note formative ». La démonstration du bug est là : l'affichage d'avant disait « 9,1/10 » — un
+  nombre qui passait pour une note sur 10 alors que c'est le score de Brier moyen, dont la note se
+  déduit par `10 + score`. Un élève à 19/20 se croyait à 9/10.)_
+  **⚠️ Reste à croiser avec le prof** (`/prof/quazian/quizz/<id>/lancer`) : l'élève lit la colonne
+  stockée `note_formative_20`, le tableau du prof **recalcule** `10 + score_moyen`. Même formule, même
+  bornage — mais c'est le seul endroit où les deux pourraient diverger, donc la comparaison vaut d'être
+  faite une fois.
 - [ ] **C7L2-4 · Commutateur à trois états (le test du lot).** Avec le compte bi-classe :
   1. Le commutateur (puce de l'en-tête, ou bandeau mobile) propose **Toutes les classes · classe A ·
      classe B**.
@@ -535,9 +545,14 @@ masqué pour un mono-classe par construction.
   seule (révision gelée), onglet **Quizz** = **toujours ouvert**. Débloquer ensuite. _(⚠️ Bloquer un
   élève jamais signalé est impossible depuis l'écran — c'est la trouvaille de C7·L1 notée dans
   `IDEES_post_rentree.md` ; contourner par SQL comme en L1.)_
-- [ ] **C7L2-7 · Non-régression mono-classe.** Avec un élève d'une seule classe : **aucun
+- [x] **C7L2-7 · Non-régression mono-classe.** Avec un élève d'une seule classe : **aucun
   commutateur** ne s'affiche, aucun écran « Quelle classe ? » n'apparaît, et le tableau de bord, le
-  calendrier et les modules se comportent comme avant le lot.
+  calendrier et les modules se comportent comme avant le lot. _(**Validé le 13/08** sur « Elo »,
+  mono-classe. Les cinq surfaces touchées par le troisième état ont été ouvertes une à une —
+  tableau de bord, calendrier (scopé « Test », une échéance de quizz), Fragments (3 onglets),
+  Codex (synthèse en cours), Aletheia (2 livres, 4 séances) : toutes rendues, **aucun commutateur,
+  aucun écran de choix, zéro erreur console**. C'est le test qui comptait le plus ici : le troisième
+  état a traversé les cinq modules, il aurait pu les casser tous.)_
 
 **Reste hors de ce lot, volontairement :** le déclencheur automatique sur « vu » → post-rentrée
 (explicitement écarté par le prompt de session) ; le diagnostic de fragilités et ses **deux** fils
