@@ -385,6 +385,12 @@ vérification des helpers contre la sandbox réelle, `npm test` 165/165, `tsc --
 en élève** — je n'ai pas de compte prof de test, et la règle du dépôt m'interdit de saisir un mot de
 passe. Rappel de la règle d'or : Chrome, pas l'aperçu embarqué, et Cmd-R avant de conclure à un bug._
 
+**✅ Lot C7 · L1 VERT le 13/08 — les 7 tests + C11a-7 sont soldés.** Flashcards et quiz se créent à
+nouveau depuis les contenus actuels, l'élève les voit par sa classe, le quiz se passe et se ferme,
+le gel de l'intégrité tient. Trois défauts trouvés EN JOUANT la recette et corrigés dans la foulée :
+la fermeture fail-silent (`586c5a5`), le `confirm()` natif qui rendait le bouton muet (`89625fc`),
+et un tableau live qui confondait « pas commencé » et « en cours » (`1904add`). Reste à merger.
+
 **⚠️ L'ORDRE COMPTE (protocole renforcé, règle 5 de `SUIVI_SQL.md`).** Le code part **d'abord**
 (merge + push), le SQL **ensuite**. Les tests C7L1-1 et 2 ne sont observables qu'AVANT d'exécuter
 `c7_quazian_contenus.sql`.
@@ -441,11 +447,16 @@ parcours d'aucune classe. Les livres (4) restent hors de portée de Quazian.
   qui ont commencé. Corrigé (`1904add`) : les deux populations sont comptées à part, « ouvert sans
   soumettre → 25/25/25/25 » et « jamais ouvert → aucune note ». **À revoir au prochain quizz** :
   celui-ci est fermé, le bouton n'existe plus.)_
-- [ ] **C7L1-7 · Le gel de l'intégrité tient toujours (item 5 du chantier — assumé, pas retiré).**
+- [x] **C7L1-7 · Le gel de l'intégrité tient toujours (item 5 du chantier — assumé, pas retiré).**
   Bloquer l'élève de test depuis `/prof/integrite`, puis recharger sa page Quazian : bannière
   « cheeky », **révision gelée**, section Quizz **toujours ouverte**. Débloquer ensuite. _(La garde
   a été étendue à `chargerToutesLesCartes` et `chargerStatsRevision`, qui ne l'avaient pas — §5 du
   rapport.)_
+  _(**Validé le 13/08.** ⚠️ **Le blocage a dû être posé en SQL** : « Bloquer l'élève » n'existe que
+  dans le panneau d'un signalement, et il n'y avait aucun signalement en attente — un prof ne peut
+  donc pas mettre en pause un élève jamais signalé. Trou noté dans `IDEES_post_rentree.md`
+  (`d36d149`), périmètre Intégrité. Le drapeau reposé à `false` après le test, `integrite_strikes`
+  remis à 0 : Elo est exactement dans son état d'avant.)_
 - [x] **C11a-7 · Quazian — coûts API** _(reporté ici depuis le 26/07)_. Après C7L1-6, la requête de
   contrôle en pied de la section C11a doit montrer des lignes `quazian` : celle de la génération de
   **questions** porte un `classe_id`, **jamais** d'`eleve_id`. Les lignes de génération de **cartes**
