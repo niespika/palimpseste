@@ -812,7 +812,33 @@ demande d'archiver ou supprimer les anciennes d'abord (parqué dans `IDEES_post_
   contre 0 avant. Le geste qui tombait dans le vide depuis six semaines est réparé.)_
   **Suite SQL (voie 2, décidée par Louis) :** la policy morte est retirée par
   `c7_quazian_rls_eleve.sql` — pas réécrite, pour ne pas tenir la règle du « vu » à deux endroits.
-  À jouer après le merge, comme le reste.
+  _(**Jouée en sandbox le 14/08**, après merge et push : les trois drapeaux à `t`
+  — `policy_retiree`, `policy_prof_intacte`, `rls_toujours_active`.)_
+- [x] **C7L3-10 · Trois nombres pour une seule notion : le compteur mentait à l'élève.**
+  _(Hors plan de test initial — signalé par Louis en révisant ses cartes, le 14/08.)_
+  **Le symptôme :** l'écran annonçait « **50** à réviser », la session n'en servait que **30**, et la
+  somme des tuiles par cours en disait **58**. Trois définitions concurrentes sur un même écran,
+  pour l'état réel d'Elo : 63 cartes, 28 nouvelles, 30 dues.
+  **La cause :** deux formules qui n'ont jamais concordé. `chargerFileRevision` coupe la file à
+  `slice(0, 30)` ; `chargerStatsRevision` annonçait `dues + min(nouvelles, 20)` — une troisième
+  valeur, qui ne correspond ni au stock mûr ni à la session. Le plafond de « 20 nouvelles par
+  jour » qu'esquissait cette formule **n'a jamais existé dans la file**. **Antérieur au lot**
+  (Lots 6/7), mais invisible tant qu'un élève restait sous le plafond : Elo avait 18 cartes avant
+  C7·L3, les trois nombres coïncidaient. **Le troisième nombre, lui, vient de ce lot** — les tuiles
+  par cours comptent les cartes mûres avec le même prédicat que la file, ce qui a rendu
+  l'incohérence flagrante.
+  **Correctif (formulation proposée par Louis) : un état honnête, deux notions, deux mots.**
+  `mures` = tout ce qui est prêt (jamais vu, ou échéance atteinte) ; `aFaire` = `min(mures, 30)`,
+  c'est-à-dire ce que la file servira vraiment, le plafond de session étant désormais une constante
+  partagée par les deux. L'écran dit « Tu as X cartes mûres — aujourd'hui tu en révises Y », le
+  bouton ne promet que Y, et les tuiles par cours disent « N mûres » : elles décrivent l'état d'un
+  cours, elles ne promettent pas une session. _(**Validé le 14/08 à l'écran**, session Elo :
+  « 30 à réviser aujourd'hui · 63 cartes au total », « Tu as 63 cartes mûres — aujourd'hui tu en
+  révises 30 », bouton « Réviser mes 30 cartes », tuiles « 18 mûres » et « 45 mûres ». Croisé avec
+  la base : 63 cartes, 28 nouvelles, 35 dues, **63 mûres** — l'écran dit exactement l'état réel.
+  ⚠️ Au passage, un raté à moi rattrapé par la vérification navigateur : la constante du plafond
+  était d'abord `export`, ce qu'un fichier `'use server'` interdit — `tsc` ne le voit pas, la page
+  rendait une 500. Corrigé avant commit.)_
 - [ ] **C7L3-8 · Smoke élève immédiat après le SQL (protocole renforcé).** Connexion élève test +
   une soumission Aletheia + un tour sur `/eleve/modules/quazian`. Rien d'autre du flux existant ne
   doit bouger.

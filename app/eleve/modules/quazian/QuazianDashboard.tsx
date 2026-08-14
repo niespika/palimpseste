@@ -11,6 +11,9 @@ interface Stats {
   connues: number
   dues: number
   nouvelles: number
+  /** Tout ce qui est prêt à être revu (jamais vu, ou échéance atteinte). */
+  mures: number
+  /** Ce que la session servira vraiment — `mures` plafonné. */
   aFaire: number
 }
 
@@ -113,6 +116,17 @@ export function QuazianDashboard({ stats, file, toutesCartes, coursOuvert }: Pro
           </div>
         </div>
 
+        {/* C7·L3 — l'écart entre ce qui est MÛR et ce que la session sert est dit
+            en clair. Il annonçait auparavant un troisième nombre, qui ne
+            correspondait ni à l'un ni à l'autre : « 50 à réviser » pour 30 cartes
+            servies. Deux notions, deux mots, et le bouton ne promet que ce qu'il tient. */}
+        {stats.mures > stats.aFaire && (
+          <p className="text-xs text-muet mb-4 text-center">
+            Tu as {stats.mures} cartes mûres — aujourd&apos;hui tu en révises {stats.aFaire}.
+            Le reste attendra demain, c&apos;est le principe.
+          </p>
+        )}
+
         {/* La file mélange tous les cours — c'est le principe de la répétition espacée. */}
         {stats.aFaire > 0 ? (
           <button
@@ -144,7 +158,7 @@ export function QuazianDashboard({ stats, file, toutesCartes, coursOuvert }: Pro
                   <span className="flex items-center gap-2 text-xs">
                     {c.aReviser > 0 && (
                       <span className="bg-attention-teinte text-attention px-2 py-0.5 rounded-full">
-                        {c.aReviser} à réviser
+                        {c.aReviser} mûre{c.aReviser > 1 ? 's' : ''}
                       </span>
                     )}
                     {c.nouvelles > 0 && (

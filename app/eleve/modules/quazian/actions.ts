@@ -142,6 +142,15 @@ async function lireCartes(
   return (repli.data ?? []) as unknown as Record<string, unknown>[]
 }
 
+/**
+ * Combien de cartes une session de révision sert au plus. C'est un choix
+ * pédagogique — ne pas noyer l'élève — et c'est LE plafond que l'écran doit
+ * annoncer : le compteur ne promet que ce que la file servira.
+ */
+// (non exportée : un fichier `'use server'` ne peut exporter que des fonctions
+// asynchrones — les deux seuls lecteurs, la file et les stats, vivent ici.)
+const PLAFOND_SESSION = 30
+
 export interface CarteRevision {
   flashcard_id: string
   card_state_id: string | null  // null = première révision
@@ -246,8 +255,8 @@ export async function chargerFileRevision(): Promise<CarteRevision[]> {
   const nouvelles = file.filter((c) => c.card_state_id === null)
   const dues = file.filter((c) => c.card_state_id !== null)
 
-  // Limiter à 30 cartes par session
-  return [...nouvelles, ...dues].slice(0, 30)
+  // Plafond de session — LE nombre que `chargerStatsRevision` doit annoncer.
+  return [...nouvelles, ...dues].slice(0, PLAFOND_SESSION)
 }
 
 export interface CarteConsultation {
@@ -478,7 +487,7 @@ export async function chargerStatsRevision() {
   // quand l'élève est bloqué — sans cette garde ils promettraient un travail
   // inaccessible (et l'action reste un point d'entrée HTTP, cf. §5 du rapport).
   if (await messageSiBloque(admin, userId)) {
-    return { totalCartes: 0, connues: 0, dues: 0, nouvelles: 0, aFaire: 0 }
+    return { totalCartes: 0, connues: 0, dues: 0, nouvelles: 0, mures: 0, aFaire: 0 }
   }
 
   // Périmètre « vu » — MÊME périmètre que la file de révision,
@@ -508,5 +517,14 @@ export async function chargerStatsRevision() {
   const dues = etats?.filter((e) => e.due <= maintenant).length ?? 0
   const nouvelles = totalCartes - connues
 
-  return { totalCartes, connues, dues, nouvelles, aFaire: dues + Math.min(nouvelles, 20) }
+  // Deux nombres, deux sens — et c'est le correctif du 14/08 (recette C7·L3) :
+  //   • `mures`  = tout ce qui est prêt à être revu (jamais vu, ou échéance atteinte) ;
+  //   • `aFaire` = ce que la session servira VRAIMENT, plafond compris.
+  // Avant, l'écran annonçait `dues + min(nouvelles, 20)` — une troisième formule
+  // qui ne correspondait ni au stock mûr ni à la session : Elo lisait « 50 à
+  // réviser » et n'en recevait que 30. Le plafond des 20 nouvelles/jour qu'elle
+  // esquissait n'a jamais existé dans la file ; on ne l'invente pas ici, on
+  // aligne l'annonce sur ce que la file fait réellement.
+  const mures = dues + nouvelles
+  return { totalCartes, connues, dues, nouvelles, mures, aFaire: Math.min(mures, PLAFOND_SESSION) }
 }
