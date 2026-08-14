@@ -358,8 +358,32 @@ export async function soumettreNote(
 
   // Garde de visibilité (création d'un nouvel état uniquement) : carte partagée valide, ou
   // carte personnelle de l'élève. Empêche de semer un état FSRS pour une carte arbitraire.
+  //
+  // ⚠️ Lecture ADMIN, et c'est le correctif d'un bug MUET découvert à la recette
+  // de C7·L3 (14/08). Cette garde lisait `quazian_flashcards` avec le client
+  // user-scoped ; or la policy RLS `eleve_read_flashcards` joint sur
+  // `scriptorium_unite_id` et exige une ligne `quazian_publications`. Pour une
+  // carte du bras CONTENU, `scriptorium_unite_id` est NULL — `NULL = NULL` n'est
+  // jamais vrai — donc la policy ne laissait passer AUCUNE carte : `fc` valait
+  // `null`, la garde sortait en silence, et l'état FSRS n'était JAMAIS créé.
+  // L'élève notait ses cartes, l'écran avançait, « ✓ N cartes révisées »
+  // s'affichait, et rien n'était enregistré : toute carte restait « nouvelle »
+  // pour toujours. Constat en base à la recette : 0 ligne dans
+  // `quazian_card_states`, tous élèves confondus.
+  //
+  // Le bug date de C7·L1 (naissance du bras contenu sans que la policy suive) et
+  // restait masqué parce que la LECTURE passe partout ailleurs par le client
+  // admin — cette garde était le seul endroit à interroger la table sous RLS.
+  // Le reste de l'action (états FSRS, journal de révision) continue d'écrire
+  // sous RLS : `eleve_own_card_states` et `eleve_own_review_log` portent bien
+  // leurs lignes, elles n'ont jamais été le problème.
+  //
+  // ⚠️ Ce que cette garde ne fait TOUJOURS pas : vérifier le PÉRIMÈTRE (« vu »).
+  // Elle reproduit exactement le contrôle d'avant — carte partagée valide, ou
+  // carte personnelle de l'élève — sans rien resserrer. Y ajouter `carteVisible`
+  // serait une décision de conception (R7), notée en fin de session.
   if (!etat) {
-    const { data: fc } = await supabase
+    const { data: fc } = await createAdminClient()
       .from('quazian_flashcards').select('eleve_id, statut').eq('id', flashcardId).maybeSingle()
     if (!fc || (fc.eleve_id === null ? fc.statut !== 'valide' : fc.eleve_id !== userId)) {
       return { due: maintenant.toISOString(), state: 0, cardStateId: null }

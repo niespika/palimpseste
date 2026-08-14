@@ -1,0 +1,85 @@
+-- ============================================================================
+-- C7 · L3 — La policy de lecture élève des flashcards s'en va (elle est morte).
+-- Fichier : c7_quazian_rls_eleve.sql — cf. PROMPT_Code_C7_L3.md,
+-- SUIVI_tests_manuels.md §C7·L3 (découverte à la recette du 14/08).
+-- ----------------------------------------------------------------------------
+-- POURQUOI : `eleve_read_flashcards` dit, en substance, « un élève peut lire une
+-- carte si l'UNITÉ de cette carte a été PUBLIÉE ». Ses deux moitiés sont mortes :
+--   • elle joint sur `scriptorium_unite_id`, NULL pour toute carte du bras
+--     CONTENU — et `NULL = NULL` n'est jamais vrai en SQL ;
+--   • elle exige une ligne `quazian_publications`, or C7·L3 abolit la publication.
+-- Résultat mesuré le 14/08, en simulant l'identité d'un élève (rôle
+-- `authenticated` + claims JWT, transaction annulée) : **zéro carte lisible**.
+-- La règle n'autorise donc plus rien. Ce n'est pas un trou de sécurité — elle
+-- échoue du bon côté — mais c'est une règle qui MENT sur ce qu'elle protège.
+--
+-- ⚠️ ELLE A COÛTÉ UN BUG MUET, déjà corrigé côté code. `soumettreNote`
+-- (app/eleve/modules/quazian/actions.ts) lisait la carte avec le client
+-- user-scoped avant de créer l'état FSRS : la policy rendait `null`, la garde
+-- sortait en silence, et AUCUN état n'était jamais créé. L'élève notait ses
+-- cartes, l'écran affichait « ✓ N cartes révisées », et rien n'était enregistré —
+-- toute carte restait « nouvelle » à jamais. Constat en base : 0 ligne dans
+-- `quazian_card_states`, tous élèves confondus, depuis C7·L1. Après correctif
+-- (lecture admin) : 30 états et 30 lignes de journal au premier essai.
+--
+-- CE QUE ÇA FAIT : `drop policy eleve_read_flashcards`. Rien d'autre.
+--
+-- CE QUE ÇA NE FAIT PAS : la RLS reste ACTIVE sur la table, et
+-- `prof_all_flashcards` n'est pas touchée. Aucune donnée, aucune colonne,
+-- aucune autre policy. Après ce fichier, la table n'a plus qu'une règle : le
+-- prof fait ce qu'il veut, l'élève ne lit RIEN en direct.
+--
+-- ── Pourquoi c'est sans risque : l'inventaire des accès (fait le 14/08) ──────
+-- Toute lecture élève passe déjà par le client ADMIN + une garde applicative :
+--   • app/eleve/modules/quazian/actions.ts:134  (file, consultation, stats) → admin
+--   • app/eleve/modules/quazian/actions.ts:387  (garde de `soumettreNote`)   → admin
+-- Tous les autres appels sont côté PROF, couverts par `prof_all_flashcards` :
+--   app/prof/quazian/{actions,page,[cibleId]/page,quizz/actions}, et
+--   app/prof/scriptorium/actions.ts:843 (garde de purge d'un contenu).
+-- La création de carte personnelle par Codex (app/prof/codex/validation/actions.ts:152)
+-- écrit en `admin`. Le quizz ÉLÈVE ne touche pas cette table.
+-- Autrement dit : plus personne n'interroge `quazian_flashcards` sous l'identité
+-- d'un élève. La policy retirée ne servait qu'à faire échouer ce seul appel.
+--
+-- ── Le choix de fond (validé par Louis le 14/08) ─────────────────────────────
+-- Trois voies étaient ouvertes : la laisser (elle n'autorise rien, échec du bon
+-- côté), la RETIRER (dire noir sur blanc que l'élève ne lit jamais cette table
+-- en direct), ou la réécrire pour refaire en SQL toute la logique du « vu ».
+-- La troisième est écartée délibérément : la règle vivrait alors à DEUX endroits,
+-- en TypeScript (`utils/quazian-visibilite.ts`, pure et testée) et en SQL — et
+-- les deux divergeraient, ce qui est exactement l'accident qu'on répare ici.
+-- La règle vit dans le CODE, c'est le patron déjà retenu pour le Scriptorium RAG
+-- (scriptorium_rag_l1.sql §D : aucune policy élève, lecture admin + garde
+-- applicative comme première ligne de l'anti-spoiler). Ce fichier aligne Quazian
+-- sur cette décision au lieu de la contredire à moitié.
+--
+-- ── Protocole (règles R6 + 5 de SUIVI_SQL.md) ────────────────────────────────
+-- Elle touche une POLICY d'un flux existant (Quazian) : PROTOCOLE RENFORCÉ.
+-- Code mergé + poussé d'abord (le correctif de `soumettreNote` doit être en
+-- ligne AVANT, sinon on retire la policy sous les pieds d'un appel qui la lit
+-- encore), SQL ensuite, fenêtre calme, retour arrière prêt
+-- (`c7_quazian_rls_eleve_rollback.sql`), smoke test élève : une révision de
+-- flashcard qui crée bien sa ligne dans `quazian_card_states`.
+-- Idempotent, rejouable (`drop policy if exists`).
+-- ============================================================================
+
+begin;
+
+drop policy if exists eleve_read_flashcards on quazian_flashcards;
+
+commit;
+
+-- ── Vérification (à exécuter après ; attendu : tout à `t`) ───────────────────
+-- select
+--   (select count(*) = 0 from pg_policies
+--      where schemaname='public' and tablename='quazian_flashcards'
+--        and policyname='eleve_read_flashcards')                as policy_retiree,
+--   (select count(*) = 1 from pg_policies
+--      where schemaname='public' and tablename='quazian_flashcards'
+--        and policyname='prof_all_flashcards')                  as policy_prof_intacte,
+--   (select relrowsecurity from pg_class
+--      where relname='quazian_flashcards')                      as rls_toujours_active;
+--
+-- ── Smoke élève (après le SQL) ───────────────────────────────────────────────
+-- Réviser 2-3 cartes avec un compte élève, puis :
+-- select count(*) as etats_fsrs from quazian_card_states;   -- doit AVOIR augmenté

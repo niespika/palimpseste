@@ -29,6 +29,8 @@ export default async function QuazianElevePage({
   // l'état vit dans l'URL, donc le retour arrière du navigateur y ramène.
   const { vue: vueParam, cours: coursParam } = await searchParams
   const vue = vueParam === 'quizz' ? 'quizz' : 'flashcards'
+  // Le cours ouvert ne vaut que sur l'onglet Flashcards (le Quizz l'ignore).
+  const coursOuvert = vue === 'flashcards' ? (coursParam ?? null) : null
 
   // Vérifier que le module est actif et assigné
   const { data: module } = await supabase
@@ -122,12 +124,17 @@ export default async function QuazianElevePage({
 
   return (
     <div>
-      <Link
-        href="/eleve"
-        className="text-sm text-encre-douce hover:text-encre mb-6 inline-flex items-center gap-1"
-      >
-        ← Retour
-      </Link>
+      {/* C7·L3 — la consultation d'un cours porte SON propre « ← Retour » (vers
+          les tuiles) : en garder un second vers le tableau de bord juste au-dessus
+          empilerait deux retours qui ne mènent pas au même endroit. */}
+      {!coursOuvert && (
+        <Link
+          href="/eleve"
+          className="text-sm text-encre-douce hover:text-encre mb-6 inline-flex items-center gap-1"
+        >
+          ← Retour
+        </Link>
+      )}
 
       {/* Bannière quizz actif (à faire) */}
       {quizzActif && (
@@ -159,7 +166,7 @@ export default async function QuazianElevePage({
           stats={stats!}
           file={file}
           toutesCartes={toutesCartes}
-          coursOuvert={coursParam ?? null}
+          coursOuvert={coursOuvert}
         />
       )}
     </div>
