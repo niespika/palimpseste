@@ -126,6 +126,96 @@ export async function inscrireEleve(formData: FormData) {
   return { success: true }
 }
 
+/** Ce qu'un retrait va emporter — pour que la confirmation le DISE. */
+export interface ApercuRetrait {
+  eleveNom: string
+  classeNom: string
+  /** Lignes prêtes à afficher (« 3 dépôts Fragments »). Vide = rien à perdre. */
+  lignes: string[]
+  /** Classes où l'élève reste inscrit après le retrait. */
+  autresClasses: string[]
+}
+
+const pluriel = (n: number, un: string, plusieurs = `${un}s`) => `${n} ${n > 1 ? plusieurs : un}`
+
+/**
+ * Aperçu du retrait, lu AVANT le geste. Le `confirm()` natif ne disait qu'une
+ * phrase générique (« son travail dans CETTE classe sera supprimé ») — et, dans
+ * un aperçu embarqué, il ne disait rien du tout : il rendait `false` et le
+ * bouton paraissait mort (règle d'or de `SUIVI_tests_manuels.md`, cinquième
+ * morsure). Le panneau en page dit ce qui part, ligne par ligne.
+ * Les comptes suivent EXACTEMENT ce que `retirer_inscription` efface.
+ */
+export async function apercuRetraitEleve(formData: FormData): Promise<ApercuRetrait | { error: string }> {
+  await verifierProf()
+  const admin = createAdminClient()
+  const classeId = formData.get('classeId') as string
+  const eleveId = formData.get('eleveId') as string
+
+  const [{ data: insc }, { data: profil }, { data: classe }] = await Promise.all([
+    admin.from('inscriptions').select('id').eq('classe_id', classeId).eq('eleve_id', eleveId).maybeSingle(),
+    admin.from('profiles').select('display_name').eq('id', eleveId).maybeSingle(),
+    admin.from('classes').select('nom').eq('id', classeId).maybeSingle(),
+  ])
+  const eleveNom = (profil?.display_name as string) ?? 'Cet élève'
+  const classeNom = (classe?.nom as string) ?? 'cette classe'
+  if (!insc) return { error: 'Cet élève n’est plus inscrit dans cette classe.' }
+  const inscriptionId = insc.id as string
+
+  const parInscription = async (table: string): Promise<number> => {
+    const { count } = await admin.from(table)
+      .select('id', { count: 'exact', head: true })
+      .eq('inscription_id', inscriptionId)
+    return count ?? 0
+  }
+
+  // Codex / Quazian : le travail est scopé par inscription depuis le Lot 1 ; les
+  // livres Aletheia sont assignés à la CLASSE, d'où le passage par les liens.
+  const { data: livresClasse } = await admin
+    .from('scriptorium_unite_classes').select('unite_id').eq('classe_id', classeId)
+  const livreIds = (livresClasse ?? []).map((l) => l.unite_id as string)
+
+  const [depots, essais, oraux, codex, quizz, aletheia, conversations, autres] = await Promise.all([
+    parInscription('fragments_depots'),
+    parInscription('fragments_essai_depots'),
+    parInscription('fragments_oraux'),
+    parInscription('codex_travaux'),
+    parInscription('quazian_sessions'),
+    livreIds.length > 0
+      ? admin.from('aletheia_travaux').select('id', { count: 'exact', head: true })
+          .eq('eleve_id', eleveId).in('scriptorium_livre_id', livreIds).then((r) => r.count ?? 0)
+      : Promise.resolve(0),
+    admin.from('scriptorium_conversations').select('id', { count: 'exact', head: true })
+      .eq('eleve_id', eleveId).eq('classe_id', classeId).is('supprime_at', null).then((r) => r.count ?? 0),
+    admin.from('inscriptions').select('classe_id, classes(nom)')
+      .eq('eleve_id', eleveId).neq('id', inscriptionId).eq('statut', 'active'),
+  ])
+
+  const lignes: string[] = []
+  if (depots > 0) lignes.push(`${pluriel(depots, 'dépôt')} Fragments`)
+  if (essais > 0) lignes.push(`${pluriel(essais, 'essai')} Fragments`)
+  if (oraux > 0) lignes.push(`${pluriel(oraux, 'oral', 'oraux')} Fragments`)
+  if (codex > 0) lignes.push(`${pluriel(codex, 'synthèse')} Codex`)
+  if (quizz > 0) lignes.push(`${pluriel(quizz, 'quizz')} Quazian passé${quizz > 1 ? 's' : ''}`)
+  if (aletheia > 0) lignes.push(`${pluriel(aletheia, 'séance')} de lecture Aletheia`)
+  if (conversations > 0) lignes.push(`${pluriel(conversations, 'conversation')} du Scriptorium`)
+
+  const autresClasses = (autres.data ?? [])
+    .map((r) => (r as unknown as { classes: { nom: string } | null }).classes?.nom)
+    .filter((n): n is string => !!n)
+    .sort((a, b) => a.localeCompare(b))
+
+  // Dernière inscription : les états de révision FSRS, partagés entre classes,
+  // partent avec elle (c'est la règle de la RPC — ils n'ont plus de porteur).
+  if (autresClasses.length === 0) {
+    const { count } = await admin.from('quazian_card_states')
+      .select('id', { count: 'exact', head: true }).eq('eleve_id', eleveId)
+    if ((count ?? 0) > 0) lignes.push(`sa révision Quazian (${pluriel(count ?? 0, 'carte')} en mémoire)`)
+  }
+
+  return { eleveNom, classeNom, lignes, autresClasses }
+}
+
 // Retrait DUR d'un élève (décision Lot 2) : supprime son inscription + tout son
 // travail scopé sur CETTE classe (+ notes de semestre, journal, fichiers), sans
 // toucher au compte ni à ses autres classes.

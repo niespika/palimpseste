@@ -4,7 +4,8 @@ import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { modifierEleve, reinitialiserMotDePasse, supprimerEleve, renvoyerInvitation } from './actions'
-import { inscrireEleve, retirerEleve } from '@/app/prof/classes/actions'
+import { inscrireEleve } from '@/app/prof/classes/actions'
+import ConfirmationRetrait from '@/components/pilotage/ConfirmationRetrait'
 import type { EleveAvecEmail } from '@/types'
 
 type Msg = { type: 'ok' | 'erreur'; texte: string }
@@ -23,6 +24,8 @@ export default function LigneEleve({
   const [message, setMessage] = useState<Msg | null>(null)
   const [messageClasse, setMessageClasse] = useState<Msg | null>(null)
   const [pendingClasse, startClasse] = useTransition()
+  /** Retrait en cours de confirmation (panneau en page). */
+  const [retrait, setRetrait] = useState<{ classeId: string; nomClasse: string } | null>(null)
 
   // Une seule opération à la fois sur la ligne (évite Supprimer ↔ retrait-classe
   // en parallèle, qui touchent des données qui se recouvrent).
@@ -86,16 +89,14 @@ export default function LigneEleve({
   }
 
   // Retirer l'élève d'une classe — DESTRUCTIF (supprime son travail dans cette
-  // classe). Même garde de confirmation que la gestion côté Classes.
+  // classe). La garde est un panneau EN PAGE : le `confirm()` natif d'hier
+  // rendait `false` sans un mot dans l'aperçu embarqué ou un onglet ayant bloqué
+  // les dialogues, et la croix paraissait morte (Accès & classes · L1). Même
+  // composant que la gestion côté Classes — une seule garde pour deux surfaces.
   function retirerClasse(classeId: string, nomClasse: string) {
     if (occupe) return
-    if (!confirm(`Retirer ${eleve.display_name} de ${nomClasse} ? Son travail dans CETTE classe sera supprimé (compte et autres classes intacts).`)) return
     setMessageClasse(null)
-    startClasse(async () => {
-      const r = await retirerEleve(toFd(classeId, eleve.id))
-      if (r?.error) setMessageClasse({ type: 'erreur', texte: r.error })
-      else router.refresh()
-    })
+    setRetrait({ classeId, nomClasse })
   }
 
   function toFd(classeId: string, eleveId: string) {
@@ -228,6 +229,16 @@ export default function LigneEleve({
         </div>
         {messageClasse && (
           <p className={`text-xs mt-1 ${messageClasse.type === 'ok' ? 'text-ok' : 'text-retard'}`}>{messageClasse.texte}</p>
+        )}
+        {retrait && (
+          <ConfirmationRetrait
+            classeId={retrait.classeId}
+            eleveId={eleve.id}
+            eleveNom={eleve.display_name}
+            classeNom={retrait.nomClasse}
+            onFerme={() => setRetrait(null)}
+            onRetire={() => { setRetrait(null); router.refresh() }}
+          />
         )}
       </td>
       <td className="px-4 py-3 text-sm text-encre-douce align-top">{eleve.email}</td>

@@ -1,7 +1,7 @@
 import Link from 'next/link'
 import { createClient } from '@/utils/supabase/server'
 import { createAdminClient } from '@/utils/supabase/admin'
-import { moduleIdsAccessibles, slugsModulesAccessibles } from '@/utils/acces'
+import { moduleIdsDesClasses, slugsModulesParClasse } from '@/utils/acces'
 import { lireReglagesRag } from '@/utils/scriptorium-rag'
 import { contexteClasseEleve } from './contexte-classe'
 import { noteVersLettre, type LettreSection } from '@/utils/notation'
@@ -76,14 +76,18 @@ export default async function TableauDeBordEleve() {
   const { inscriptions, active, toutes } = await contexteClasseEleve(supabase, user!.id)
   const enContexte = toutes ? inscriptions : active ? [active] : []
 
-  // Modules réellement accessibles à l'élève : on ne dérive AUCUNE tâche/échéance
-  // d'un module hors périmètre (ex. pilote Aletheia-only ne voit pas Fragments,
-  // dont la semaine est globale au semestre). Réutilise le modèle d'accès existant.
-  const slugs = await slugsModulesAccessibles(supabase, user!.id)
-  const accFragments = slugs.has('fragments-erudition')
-  const accQuazian = slugs.has('quazian')
-  const accCodex = slugs.has('codex')
-  const accAletheia = slugs.has('aletheia')
+  // Modules réellement accessibles : on ne dérive AUCUNE tâche/échéance d'un
+  // module hors périmètre (ex. pilote Aletheia-only ne voit pas Fragments, dont
+  // la semaine est globale au semestre).
+  // Accès & classes · L1 — le périmètre est PAR INSCRIPTION, plus par élève : le
+  // module appartient à la classe, donc une tâche Quazian ne naît que d'une
+  // classe qui A Quazian. En état « Toutes », l'écran agrège deux classes aux
+  // modules différents — un drapeau unique en union y faisait naître, pour la
+  // classe qui n'a pas le module, des tâches sans objet.
+  const modulesParClasse = await slugsModulesParClasse(supabase, enContexte.map((i) => i.classe_id))
+  const aModule = (classeId: string, slug: string) => modulesParClasse.get(classeId)?.has(slug) ?? false
+  /** Au moins une classe en contexte a ce module (pour les lectures globales). */
+  const uneClasseA = (slug: string) => enContexte.some((i) => aModule(i.classe_id, slug))
 
   // ── Collecte (une passe par inscription EN CONTEXTE) ───────────────────────
   // Une seule inscription dans l'état classe (cas d'hier, inchangé) ; les deux
@@ -111,7 +115,7 @@ export default async function TableauDeBordEleve() {
       .maybeSingle()
 
     for (const insc of enContexte) {
-      if (semaine && accFragments) {
+      if (semaine && aModule(insc.classe_id, 'fragments-erudition')) {
         const { data: depot } = await supabase
           .from('fragments_depots')
           .select('id, statut')
@@ -128,17 +132,17 @@ export default async function TableauDeBordEleve() {
         fragmentTaches.push({ texte, depose: !!depot, enRetard, pistes: [], classe: insc.classe_nom, inscriptionId: insc.id })
       }
 
-      if (accCodex) {
+      if (aModule(insc.classe_id, 'codex')) {
         const { data: codex } = await admin.from('codex_sessions').select('id').eq('classe_id', insc.classe_id).in('statut', ['phase_1', 'phase_2']).limit(1).maybeSingle()
         if (codex?.id) codexEnCours.push({ id: codex.id as string, classe: insc.classe_nom })
       }
-      if (accQuazian) {
+      if (aModule(insc.classe_id, 'quazian')) {
         const { data: quizz } = await admin.from('quazian_quizzes').select('id').eq('classe_id', insc.classe_id).eq('statut', 'lance').limit(1).maybeSingle()
         if (quizz?.id) quizzEnCours.push({ id: quizz.id as string, classe: insc.classe_nom })
       }
 
       // Aletheia : au moins un livre dont toutes les semaines ne sont pas terminées.
-      if (accAletheia) {
+      if (aModule(insc.classe_id, 'aletheia')) {
         const livres = (await livresPourClasse(admin, insc.classe_id)).filter((l) => l.semaines.length > 0)
         // (perf #2) livresPourClasse a déjà les séances exposées → on les passe pour éviter un
         // modeExposition redondant par livre.
@@ -147,24 +151,24 @@ export default async function TableauDeBordEleve() {
       }
     }
 
-    // Pistes du dernier retour (analyse publiée la plus récente de cette inscription)
-    if (accFragments) {
-      for (const ft of fragmentTaches) {
-        const { data: depots } = await admin.from('fragments_depots').select('id').eq('inscription_id', ft.inscriptionId)
-        const depotIds = (depots ?? []).map((d) => d.id as string)
-        const { data: derniere } = depotIds.length > 0
-          ? await admin.from('fragments_analyses').select('id').eq('statut', 'publiee').in('depot_id', depotIds).order('created_at', { ascending: false }).limit(1).maybeSingle()
-          : { data: null }
-        if (derniere) {
-          const { data: ps } = await admin
-            .from('fragments_pistes')
-            .select('contenu')
-            .eq('analyse_id', derniere.id)
-            .eq('statut', 'proposee')
-            .order('created_at')
-            .limit(3)
-          ft.pistes = (ps ?? []).map((p) => p.contenu as string)
-        }
+    // Pistes du dernier retour (analyse publiée la plus récente de cette inscription).
+    // `fragmentTaches` ne contient déjà que des inscriptions dont la classe a le
+    // module : la boucle porte son propre périmètre.
+    for (const ft of fragmentTaches) {
+      const { data: depots } = await admin.from('fragments_depots').select('id').eq('inscription_id', ft.inscriptionId)
+      const depotIds = (depots ?? []).map((d) => d.id as string)
+      const { data: derniere } = depotIds.length > 0
+        ? await admin.from('fragments_analyses').select('id').eq('statut', 'publiee').in('depot_id', depotIds).order('created_at', { ascending: false }).limit(1).maybeSingle()
+        : { data: null }
+      if (derniere) {
+        const { data: ps } = await admin
+          .from('fragments_pistes')
+          .select('contenu')
+          .eq('analyse_id', derniere.id)
+          .eq('statut', 'proposee')
+          .order('created_at')
+          .limit(3)
+        ft.pistes = (ps ?? []).map((p) => p.contenu as string)
       }
     }
 
@@ -172,7 +176,7 @@ export default async function TableauDeBordEleve() {
     // (sinon on comptait des cartes d'unités non publiées / non assignées à l'élève).
     // `chargerStatsRevision` lit le contexte de classe : il agrège de lui-même en
     // état « Toutes », d'où un seul appel ici et un compteur unique.
-    if (accQuazian) cartesDues = (await chargerStatsRevision()).dues
+    if (uneClasseA('quazian')) cartesDues = (await chargerStatsRevision()).dues
 
     // Semaine calendaire en cours (depuis le semestre actif + vacances).
     const { data: semCal } = await admin.from('semesters').select('id, start_date, end_date').eq('is_active', true).maybeSingle()
@@ -193,13 +197,15 @@ export default async function TableauDeBordEleve() {
 
   // ── Progression : moyenne par section (Fragments) → lettre, en une bande ────
   const sectionsProg: { label: string; lettre: LettreSection }[] = []
-  if (enContexte.length > 0 && accFragments) {
+  // Périmètre : les inscriptions dont la classe A Fragments (Accès & classes · L1).
+  const inscriptionsFragments = enContexte.filter((i) => aModule(i.classe_id, 'fragments-erudition'))
+  if (inscriptionsFragments.length > 0) {
     // En état « Toutes », la progression moyenne se calcule sur les dépôts des
     // deux classes réunis — c'est la même question posée à tout le travail.
     const { data: depots } = await admin
       .from('fragments_depots')
       .select('id, fragments_semaines(numero)')
-      .in('inscription_id', enContexte.map((i) => i.id))
+      .in('inscription_id', inscriptionsFragments.map((i) => i.id))
     const numParDepot = new Map((depots ?? []).map((d) => [d.id as string, (d.fragments_semaines as unknown as { numero: number } | null)?.numero ?? 0]))
     const depotIds = (depots ?? []).map((d) => d.id as string)
     const { data: analyses } = depotIds.length > 0
@@ -226,7 +232,11 @@ export default async function TableauDeBordEleve() {
   }
 
   // ── Modules accessibles (pour « Mes mondes ») ───────────────────────────────
-  const idsAccessibles = await moduleIdsAccessibles(supabase, user!.id)
+  // Accès & classes · L1 — les modules DES CLASSES EN CONTEXTE : en état classe,
+  // seuls ceux de CETTE classe ; en état « Toutes », `enContexte` porte toutes
+  // les inscriptions, donc l'union — qui y reste juste, chaque module demandant
+  // ensuite sa classe via `ChoixClasseModule`.
+  const idsAccessibles = await moduleIdsDesClasses(supabase, enContexte.map((i) => i.classe_id))
   const { data: mods } = idsAccessibles.size > 0
     ? await supabase.from('modules').select('id, slug, nom, description, actif').in('id', [...idsAccessibles])
     : { data: [] as ModuleInfo[] }

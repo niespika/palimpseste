@@ -1,7 +1,7 @@
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/utils/supabase/server'
-import { aAccesModule } from '@/utils/acces'
+import { seuilModule } from '@/app/eleve/seuil-module'
 
 export default async function PageModule({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params
@@ -18,8 +18,11 @@ export default async function PageModule({ params }: { params: Promise<{ slug: s
 
   if (!module) notFound()
 
-  // Vérifier que l'élève a accès à ce module (dérivé de ses classes)
-  if (!(await aAccesModule(supabase, user!.id, module.id))) notFound()
+  // Accès & classes · L1 — l'accès se juge sur la classe EN CONTEXTE, pas sur
+  // l'union des classes de l'élève. Le 404 sec devient un écran qui dit dans
+  // quelle classe le module est ouvert (et reste un refus si aucune ne l'a).
+  const seuil = await seuilModule(supabase, user!.id, module.id, module.nom)
+  if (seuil.type === 'ecran') return seuil.noeud
 
   return (
     <div>

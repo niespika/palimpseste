@@ -4,6 +4,7 @@ import { supprimerQuizz } from './actions'
 import { CreerQuizz } from './CreerQuizz'
 import { chargerContexteQuazianPlan } from './plan-quazian'
 import { chargerCiblesQuazian, libellesCibles } from '@/utils/quazian-cibles'
+import { classesAvecModule } from '@/utils/acces'
 import Tuile from '@/components/Tuile'
 import { formatInstant, formatJour } from '@/utils/fuseau'
 import { lireFuseau } from '@/utils/fuseau-serveur'
@@ -36,14 +37,17 @@ export default async function QuizzListePage({ searchParams }: { searchParams: P
   // (Textes, Cours) ; les livres restent hors de portée (anti-spoiler). Avant ce
   // lot, cette requête demandait `type='unite'` : zéro ligne, donc un formulaire
   // sans rien à cocher (§4.1 du RAPPORT_Diagnostic_C7_quazian.md).
-  const [{ data: quizzes }, cibles, { data: classes }] = await Promise.all([
+  // Accès & classes · L1 — la création de quizz ne propose plus que les classes
+  // AYANT Quazian : le module appartient à la classe (décision du 14/08).
+  const [{ data: quizzes }, cibles, { data: moduleData }] = await Promise.all([
     supabase
       .from('quazian_quizzes')
       .select('id, statut, classe_id, classes(nom), scope_unites, scope_contenus, lance_at, ferme_at, nb_questions, created_at')
       .order('created_at', { ascending: false }),
     chargerCiblesQuazian(supabase),
-    supabase.from('classes').select('id, nom').order('nom'),
+    supabase.from('modules').select('id').eq('slug', 'quazian').maybeSingle(),
   ])
+  const classes = moduleData ? await classesAvecModule(supabase, moduleData.id as string) : []
 
   // Compter les questions par quizz
   const { data: questions } = await supabase

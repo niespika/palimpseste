@@ -5,6 +5,7 @@ import { createAdminClient } from '@/utils/supabase/admin'
 import { inscriptionsModuleEleve } from '@/utils/acces'
 import { contexteClasseEleve } from '../../contexte-classe'
 import ChoixClasseModule from '../../ChoixClasseModule'
+import ModuleHorsClasse from '../../ModuleHorsClasse'
 import FormulaireDepot from './FormulaireDepot'
 import AnalysePubliee, { tuilesAnalyseEcrite } from './AnalysePubliee'
 import GraphiqueProgression from '@/components/fragments/GraphiqueProgression'
@@ -71,14 +72,26 @@ export default async function PageFragments({ searchParams }: { searchParams: Pr
   // C7·L2 — en état « Toutes », le repli `?? inscriptions[0]` ci-dessous ferait
   // lire à un bi-classe le flux d'une classe en croyant les voir toutes : on
   // demande laquelle (item 3).
+  // Accès & classes · L1 — le repli `?? inscriptions[0]` faisait lire à un
+  // bi-classe le flux d'une classe SOUS LE NOM d'une autre dès que celle au
+  // commutateur n'a pas Fragments. Le lien ciblé (`?inscription=`) reste honoré :
+  // il désigne explicitement une inscription qui, elle, a bien le module.
   const { active, toutes } = await contexteClasseEleve(supabase, user.id)
-  if (toutes && !inscriptionParam) {
+  const cible = inscriptionParam ? inscriptions.find(i => i.id === inscriptionParam) : undefined
+  if (toutes && !cible) {
     return <ChoixClasseModule inscriptions={inscriptions} nomModule="Fragments d’Érudition" />
   }
-  const inscriptionActive =
-    (inscriptionParam ? inscriptions.find(i => i.id === inscriptionParam) : undefined)
-    ?? inscriptions.find(i => i.id === active?.id)
-    ?? inscriptions[0]
+  const ici = inscriptions.find(i => i.id === active?.id)
+  if (!cible && !toutes && !ici) {
+    return (
+      <ModuleHorsClasse
+        nomModule="Fragments d’Érudition"
+        classeContexte={active?.classe_nom ?? ''}
+        ailleurs={inscriptions.map(i => i.classe_nom)}
+      />
+    )
+  }
+  const inscriptionActive = cible ?? ici ?? inscriptions[0]
   const inscriptionId = inscriptionActive.id
 
   // Thème du semestre courant (un thème par inscription × semestre). L'élève

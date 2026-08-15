@@ -2,7 +2,6 @@ import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import { createClient } from '@/utils/supabase/server'
 import { createAdminClient } from '@/utils/supabase/admin'
-import { aAccesModule, inscriptionsModuleEleve } from '@/utils/acces'
 import { messageSiBloque } from '@/utils/integrite'
 import { chargerFileRevision, chargerStatsRevision, chargerToutesLesCartes } from './actions'
 import { formatInstant } from '@/utils/fuseau'
@@ -10,8 +9,7 @@ import { lireFuseau } from '@/utils/fuseau-serveur'
 import { QuazianDashboard } from './QuazianDashboard'
 import BanniereIntegrite from '@/components/BanniereIntegrite'
 import Tuile from '@/components/Tuile'
-import { contexteClasseEleve } from '@/app/eleve/contexte-classe'
-import ChoixClasseModule from '@/app/eleve/ChoixClasseModule'
+import { seuilModule } from '@/app/eleve/seuil-module'
 
 type QuizListItem = { id: string; statut: string; lance_at: string | null; nb_questions: number }
 
@@ -47,40 +45,22 @@ export default async function QuazianElevePage({
     )
   }
 
-  if (!(await aAccesModule(supabase, user.id, module.id))) {
-    return (
-      <div className="text-center py-16 text-muet text-sm">
-        Tu n'as pas encore accès à ce module.
-      </div>
-    )
-  }
-
-  // C7·L2 — le module travaille UNE classe. En état « Toutes », on ne devine pas
-  // laquelle : on la demande (item 3), le commutateur de l'en-tête restant offert
-  // pour en changer sans repasser par le tableau de bord. Le choix ne porte que
-  // sur les classes qui ont Quazian — en proposer une autre mènerait à « tu n'as
-  // pas accès à ce module ».
-  const { active, toutes } = await contexteClasseEleve(supabase, user.id)
-  if (toutes) {
-    return (
-      <ChoixClasseModule
-        inscriptions={await inscriptionsModuleEleve(supabase, user.id, module.id)}
-        nomModule="Quazian"
-      />
-    )
-  }
+  // Seuil du module : quelle classe, et a-t-elle Quazian ? (C7·L2 pour l'état
+  // « Toutes » ; Accès & classes · L1 pour la classe qui n'a pas le module — le
+  // test C7L3-6 avait constaté que Sacha atteignait cet écran en contexte T5,
+  // qui n'a pas Quazian, et y trouvait un vide honnête au lieu d'un refus.)
+  const seuil = await seuilModule(supabase, user.id, module.id, 'Quazian')
+  if (seuil.type === 'ecran') return seuil.noeud
+  const active = seuil.inscription
 
   // Quizz de la classe EN CONTEXTE (et non plus l'union des classes de l'élève,
   // qui montrait à un bi-classe les quizz de son autre classe — item 3).
-  const classeIds = active ? [active.classe_id] : []
-  const { data: quizzes } = classeIds.length > 0
-    ? await supabase
-        .from('quazian_quizzes')
-        .select('id, statut, lance_at, ferme_at, nb_questions')
-        .in('classe_id', classeIds)
-        .in('statut', ['lance', 'ferme'])
-        .order('lance_at', { ascending: false })
-    : { data: [] }
+  const { data: quizzes } = await supabase
+    .from('quazian_quizzes')
+    .select('id, statut, lance_at, ferme_at, nb_questions')
+    .eq('classe_id', active.classe_id)
+    .in('statut', ['lance', 'ferme'])
+    .order('lance_at', { ascending: false })
   const quizList = (quizzes ?? []) as QuizListItem[]
 
   // État de soumission de l'élève par quizz

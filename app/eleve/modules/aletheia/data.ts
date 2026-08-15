@@ -18,16 +18,23 @@ export interface InscriptionAletheia { id: string; classe_id: string; classe_nom
 // écrans PROFONDS (une semaine, un livre : la classe y est impliquée par le
 // livre, cf. `resoudreInscriptionLivre`) ; c'est l'ENTRÉE du module qui doit
 // demander la classe plutôt que d'en choisir une en silence.
+// Accès & classes · L1 — ce repli MENT à l'entrée du module quand la classe au
+// commutateur n'a pas Aletheia : l'élève lit les livres d'une autre classe sous
+// le nom de celle affichée. `horsClasse` nomme cette classe (null sinon), et
+// c'est la page d'entrée qui décide d'en faire un écran-message ; les écrans
+// profonds, eux, gardent le repli intact (non-régression B4).
 export async function contexteAletheia(
   supabase: SupabaseClient, userId: string,
-): Promise<{ moduleActif: boolean; inscriptions: InscriptionAletheia[]; active: InscriptionAletheia | null; toutes: boolean }> {
+): Promise<{ moduleActif: boolean; inscriptions: InscriptionAletheia[]; active: InscriptionAletheia | null; toutes: boolean; horsClasse: string | null }> {
   const { data: moduleData } = await supabase.from('modules').select('id, actif').eq('slug', 'aletheia').maybeSingle()
-  if (!moduleData?.actif) return { moduleActif: false, inscriptions: [], active: null, toutes: false }
+  if (!moduleData?.actif) return { moduleActif: false, inscriptions: [], active: null, toutes: false, horsClasse: null }
   const inscriptions = await inscriptionsModuleEleve(supabase, userId, moduleData.id as string)
-  if (inscriptions.length === 0) return { moduleActif: true, inscriptions: [], active: null, toutes: false }
+  if (inscriptions.length === 0) return { moduleActif: true, inscriptions: [], active: null, toutes: false, horsClasse: null }
   const { active, toutes } = await contexteClasseEleve(supabase, userId)
-  const inscriptionActive = inscriptions.find(i => i.id === active?.id) ?? inscriptions[0]
-  return { moduleActif: true, inscriptions, active: inscriptionActive, toutes }
+  const ici = inscriptions.find(i => i.id === active?.id)
+  const inscriptionActive = ici ?? inscriptions[0]
+  const horsClasse = !toutes && active && !ici ? active.classe_nom : null
+  return { moduleActif: true, inscriptions, active: inscriptionActive, toutes, horsClasse }
 }
 
 // (B4) Résout la classe à utiliser pour CE livre chez un élève potentiellement

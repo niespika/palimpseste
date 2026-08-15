@@ -1,9 +1,7 @@
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import { createClient } from '@/utils/supabase/server'
-import { aAccesModule, inscriptionsModuleEleve } from '@/utils/acces'
-import { contexteClasseEleve } from '@/app/eleve/contexte-classe'
-import ChoixClasseModule from '@/app/eleve/ChoixClasseModule'
+import { seuilModule } from '@/app/eleve/seuil-module'
 import { chargerSyntheseActive, chargerHistorique } from './actions'
 
 export default async function CodexElevePage() {
@@ -23,24 +21,11 @@ export default async function CodexElevePage() {
     )
   }
 
-  if (!(await aAccesModule(supabase, user.id, module.id))) {
-    return (
-      <div className="text-center py-16 text-muet text-sm">Tu n&apos;as pas encore accès à ce module.</div>
-    )
-  }
-
-  // C7·L2 — un module travaille une classe à la fois : en état « Toutes », on la
-  // demande plutôt que de retomber en silence sur la première (item 3). Le choix
-  // ne porte que sur les classes qui ont Codex.
-  const { toutes } = await contexteClasseEleve(supabase, user.id)
-  if (toutes) {
-    return (
-      <ChoixClasseModule
-        inscriptions={await inscriptionsModuleEleve(supabase, user.id, module.id)}
-        nomModule="Codex"
-      />
-    )
-  }
+  // Seuil du module : classe en contexte, et cette classe a-t-elle Codex ?
+  // (C7·L2 pour l'état « Toutes » ; Accès & classes · L1 pour la classe qui n'a
+  // pas le module — la garde en union laissait entrer et rendait une page vide.)
+  const seuil = await seuilModule(supabase, user.id, module.id, 'Codex')
+  if (seuil.type === 'ecran') return seuil.noeud
 
   const [synthese, historique] = await Promise.all([chargerSyntheseActive(), chargerHistorique()])
   const live = synthese && (synthese.statut === 'phase_1' || synthese.statut === 'phase_2') ? synthese : null

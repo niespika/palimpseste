@@ -1,9 +1,7 @@
 import { notFound } from 'next/navigation'
 import { createClient } from '@/utils/supabase/server'
 import { createAdminClient } from '@/utils/supabase/admin'
-import { slugsModulesAccessibles } from '@/utils/acces'
-import { contexteClasseEleve } from '@/app/eleve/contexte-classe'
-import ChoixClasseModule from '@/app/eleve/ChoixClasseModule'
+import { seuilModule } from '@/app/eleve/seuil-module'
 import { lireReglagesRag } from '@/utils/scriptorium-rag'
 import { chargerMatiereClasse } from '@/utils/scriptorium-corpus'
 import { jourDansFuseau, formatJour } from '@/utils/fuseau'
@@ -56,17 +54,16 @@ export default async function ScriptoriumElevePage({
   const reglages = await lireReglagesRag(admin)
   if (!reglages.actif) notFound()
 
-  const slugs = await slugsModulesAccessibles(supabase, user.id)
-  if (!slugs.has('scriptorium')) notFound()
+  const { data: moduleData } = await admin
+    .from('modules').select('id').eq('slug', 'scriptorium').maybeSingle()
+  if (!moduleData) notFound()
 
-  const contexte = await contexteClasseEleve(supabase, user.id)
-  // C7·L2 — en état « Toutes », `active` est null sans que l'élève soit sans
-  // classe : le module demande laquelle au lieu de rendre un 404 (item 3).
-  if (contexte.toutes) {
-    return <ChoixClasseModule inscriptions={contexte.inscriptions} nomModule="Le Scriptorium" />
-  }
-  const classe = contexte.active
-  if (!classe) notFound()
+  // Seuil du module (C7·L2 pour l'état « Toutes » ; Accès & classes · L1 pour la
+  // classe qui n'a pas Scriptorium — la garde en union ouvrait la page et
+  // l'ancrait sur une classe sans corpus). Le gate `rag_actif` reste au-dessus.
+  const seuil = await seuilModule(supabase, user.id, moduleData.id as string, 'Le Scriptorium')
+  if (seuil.type === 'ecran') return seuil.noeud
+  const classe = seuil.inscription
 
   const { conv: convSel, vue = 'discussion' } = await searchParams
 

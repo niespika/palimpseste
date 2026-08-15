@@ -4,7 +4,8 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import FeuillePanneau from './FeuillePanneau'
 import ConfirmationEffacement from '@/app/prof/classes/ConfirmationEffacement'
-import { inscrireEleve, retirerEleve } from '@/app/prof/classes/actions'
+import { inscrireEleve } from '@/app/prof/classes/actions'
+import ConfirmationRetrait from './ConfirmationRetrait'
 
 interface Eleve { id: string; display_name: string }
 
@@ -23,6 +24,8 @@ export default function GestionEleves({ classeId, classeNom, inscrits, tousEleve
   const [ouvert, setOuvert] = useState(false)
   const [pending, setPending] = useState(false)
   const [selEleve, setSelEleve] = useState('')
+  /** Retrait en cours de confirmation (panneau en page — cf. ConfirmationRetrait). */
+  const [retrait, setRetrait] = useState<{ id: string; nom: string } | null>(null)
 
   const inscritsIds = new Set(inscrits.map((e) => e.id))
   const disponibles = tousEleves.filter((e) => !inscritsIds.has(e.id))
@@ -39,15 +42,13 @@ export default function GestionEleves({ classeId, classeNom, inscrits, tousEleve
     router.refresh()
   }
 
-  async function retirer(eleveId: string, nom: string) {
-    if (!confirm(`Retirer ${nom} de cette classe ? Son travail dans CETTE classe sera supprimé (compte et autres classes intacts).`)) return
-    setPending(true)
-    const fd = new FormData()
-    fd.append('classeId', classeId)
-    fd.append('eleveId', eleveId)
-    await retirerEleve(fd)
-    setPending(false)
-    router.refresh()
+  // Accès & classes · L1 — cette surface était la plus muette des deux : le
+  // `confirm()` natif pouvait rendre `false` sans un mot, et le résultat de
+  // `retirerEleve` était JETÉ, donc un échec serveur ne s'affichait nulle part.
+  // Le panneau confirme en page, dit ce qui part et montre l'erreur.
+  function retirer(eleveId: string, nom: string) {
+    if (pending) return
+    setRetrait({ id: eleveId, nom })
   }
 
   return (
@@ -123,6 +124,17 @@ export default function GestionEleves({ classeId, classeNom, inscrits, tousEleve
             <ConfirmationEffacement classeId={classeId} classeNom={classeNom} nbEleves={inscrits.length} variante="bouton" onSuccessHref="/prof/classes" />
           </div>
         </FeuillePanneau>
+      )}
+
+      {retrait && (
+        <ConfirmationRetrait
+          classeId={classeId}
+          eleveId={retrait.id}
+          eleveNom={retrait.nom}
+          classeNom={classeNom}
+          onFerme={() => setRetrait(null)}
+          onRetire={() => { setRetrait(null); router.refresh() }}
+        />
       )}
     </>
   )
