@@ -11,10 +11,16 @@ import { titresCoursParSession } from '@/utils/codex-titre'
 import { formatJour } from '@/utils/fuseau'
 import Tuile from '@/components/Tuile'
 
+// Accès & classes · L1 — l'échec ne peut plus être MUET. Cette action jetait le
+// `error` de `preparerSynthese` : le prof pressait « Préparer → » et il ne se
+// passait rien, sans un mot. Depuis que la garde de module refuse une classe sans
+// Codex, ce silence serait devenu la règle plutôt que l'exception — et un bouton
+// qui refuse sans le dire est le même défaut que la croix du Pilotage.
 async function actionPreparer(formData: FormData): Promise<void> {
   'use server'
   const res = await preparerSynthese(formData.get('exercice_id') as string)
   if (res.sessionId) redirect(`/prof/codex/synthese/${res.sessionId}`)
+  if (res.error) redirect(`/prof/codex?echec=${encodeURIComponent(res.error)}`)
 }
 
 const STATUT_BADGE: Record<string, { label: string; classe: string }> = {
@@ -26,9 +32,9 @@ const STATUT_BADGE: Record<string, { label: string; classe: string }> = {
 
 const SANS_CLASSE = 'aucune'
 
-export default async function CodexProfPage({ searchParams }: { searchParams: Promise<{ classe?: string }> }) {
+export default async function CodexProfPage({ searchParams }: { searchParams: Promise<{ classe?: string; echec?: string }> }) {
   const supabase = await createClient()
-  const { classe: classeSel } = await searchParams
+  const { classe: classeSel, echec } = await searchParams
 
   // Accès & classes · L1 — le module appartient à la classe : ce sélecteur ne
   // propose plus que les classes AYANT Codex. Il gouverne à la fois le formulaire
@@ -97,6 +103,9 @@ export default async function CodexProfPage({ searchParams }: { searchParams: Pr
           <h3 className="font-ui text-[11px] font-medium uppercase tracking-[0.12em] text-muet mb-2">
             Synthèses à préparer · {aPreparer.length}
           </h3>
+          {echec && (
+            <p className="text-sm text-retard bg-retard-teinte rounded-lg px-3 py-2 mb-2">{echec}</p>
+          )}
           <div className="space-y-2">
             {aPreparer.map((s) => (
               <form key={s.exerciceId} action={actionPreparer} className="flex items-center gap-3 rounded-lg border border-bordure px-3 py-2">

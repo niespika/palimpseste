@@ -15,6 +15,7 @@ import { resoudreSemestrePourSemaine } from '@/utils/plan-exercices'
 import { jourDansFuseau } from '@/utils/fuseau'
 import { lireFuseau } from '@/utils/fuseau-serveur'
 import { semainesCouvertes } from './plan-serveur'
+import { classeAModule } from '@/utils/acces'
 
 const RE_UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 const GABARITS: Gabarit[] = ['tc', 'hlp', 'vierge']
@@ -863,6 +864,18 @@ export async function preparerSynthese(exerciceId: string): Promise<{ success?: 
     .from('scriptorium_plans_evaluation').select('classe_id').eq('id', exo.plan_id as string).maybeSingle()
   const classeId = plan?.classe_id as string | undefined
   if (!classeId) return { error: 'Classe du plan introuvable.' }
+
+  // Accès & classes · L1 — LA PORTE DÉROBÉE. C'est le seul endroit du plan
+  // d'évaluation qui écrit dans un flux vivant (`codex_sessions`) : le reste ne
+  // touche que ses propres tables. Sans cette garde, un plan fabrique une
+  // synthèse Codex pour une classe qui n'a pas Codex — exactement le bug réparé
+  // ailleurs dans ce lot, par un autre chemin, et gate ON celui-ci est ouvert.
+  // Le sélecteur de classe du plan, lui, ne filtre PAS et ne le doit pas : un
+  // plan couvre plusieurs modules à la fois, aucun ne peut le filtrer seul.
+  // C'est donc ici, au moment d'écrire dans Codex, que la règle se tient.
+  if (!(await classeAModule(supabase, classeId, 'codex'))) {
+    return { error: 'La classe de ce plan n’a pas le module Codex. Donne-lui le module depuis sa fiche avant de préparer la synthèse.' }
+  }
 
   const { data: sess, error: eSess } = await supabase
     .from('codex_sessions')

@@ -869,7 +869,14 @@ non destructif). **Protocole RENFORCÉ, et respecté** : répétition à blanc d
 seul, transaction annulée, règle 6 — sandbox revérifiée intacte après le `rollback`), puis code mergé
 et poussé (`a68f2d8`), puis SQL en sandbox, puis smoke élève. **Exécutée le 14/08.**_
 
-_**RECETTE CLOSE le 14/08 — onze tests sur onze.** Jouée à deux : les sessions prof et élève ouvertes
+_**Questions ouvertes tranchées par Louis le 14/08, après la recette** : la synthèse « Cognitif » × T5
+— **il redonne Codex à T5 et l'efface lui-même** ; les sélecteurs transverses (Scriptorium, plan
+d'évaluation) — **on ne les filtre pas**, motifs en table ci-dessous, mais la règle se tient au moment
+d'écrire (ACL1-12) ; la nav élève, l'index « Tes mondes » et le calendrier — **restent sur l'union**,
+donc en contexte T5 un onglet Codex reste offert et mène à « Pas dans cette classe » ; le Scriptorium
+élève — **garde la phrase de refus** plutôt que le 404._
+
+_**RECETTE CLOSE le 14/08 — douze tests sur douze.** Jouée à deux : les sessions prof et élève ouvertes
 par Louis (aucun mot de passe saisi par l'agent), le pilotage d'écran et tous les constats en base par
 l'agent. Face élève dans l'aperçu embarqué — sans risque, aucun `confirm()` n'y intervient — et **face
 Pilotage dans Chrome**, le seul endroit où la preuve comptait puisque c'est là que le dialogue natif
@@ -916,9 +923,9 @@ Aletheia, travaux Aletheia, conversations Scriptorium, dépôts Fragments) :
 
 **Corrigés (surfaces de CONCEPTION)** : Codex `page.tsx` (formulaire **et** tuiles) · Quazian
 `quizz/page.tsx` (création + tuiles) · Quazian `page.tsx` et `[cibleId]/page.tsx` (le libellé « Au
-parcours de… ») · Aletheia `page.tsx` (tuiles de classes). **Plus deux gardes serveur** :
-`creerSynthese` et `creerQuizz` refusent une classe sans le module (filtrer le sélecteur empêche le
-geste nominal, la garde empêche le geste tout court).
+parcours de… ») · Aletheia `page.tsx` (tuiles de classes). **Plus TROIS gardes serveur** :
+`creerSynthese`, `creerQuizz` et `preparerSynthese` refusent une classe sans le module (filtrer le
+sélecteur empêche le geste nominal, la garde empêche le geste tout court).
 
 **Listés, NON touchés** (et pourquoi) :
 
@@ -927,7 +934,8 @@ geste nominal, la garde empêche le geste tout court).
 | `app/prof/quazian/diagnostic/page.tsx:128` et `:250` | Écran de CONSULTATION, et rangé en **C6** par `IDEES_post_rentree.md` (ses deux fils sont cassés par ailleurs). |
 | `app/prof/quazian/semestre/page.tsx:42` | Résolution de noms pour des classes déjà dérivées des quiz fermés — consultation. |
 | `app/prof/codex/synthese-a-preparer.ts:37`, `aletheia/eleve/[eleveId]:259`, `fragments-erudition/essais/[essaiId]:36`, `quazian/quizz/plan-quazian.ts:63`, `scriptorium/instance-serveur.ts:74`, `evaluations/panoptique-serveur.ts:143` | Lectures **par id** (résolution de nom), pas des sélecteurs. |
-| `app/prof/scriptorium/page.tsx:83`, `evaluations/modele-serveur.ts:170`, `evaluations/plan-serveur.ts:120` | Sélecteurs de conception, mais **transverses aux modules** : le Scriptorium assigne des livres et des parcours, le plan d'évaluation couvre plusieurs modules à la fois — « le » module qui filtrerait n'est pas défini. **Question ouverte, non tranchée ici.** |
+| `app/prof/scriptorium/page.tsx:83` | Sélecteur de conception, mais **transverse** : c'est l'atelier où l'on assigne un livre à une classe, et ce livre est lu par **Aletheia**, pas par le Scriptorium. Le filtrer ferait disparaître **THLP** — qui a Aletheia sans avoir le Scriptorium — et interdirait de lui donner un livre. **Tranché le 14/08 : on ne filtre pas.** |
+| `evaluations/modele-serveur.ts:170`, `evaluations/plan-serveur.ts:120` | Sélecteurs du plan d'évaluation : un plan fabrique du travail pour **plusieurs modules à la fois**, aucun ne peut le filtrer seul. **Tranché le 14/08 : on ne filtre pas le sélecteur — la règle se tient au moment d'écrire** (cf. ACL1-12 ci-dessous). |
 | `/prof/a-risque`, `/prof/calendrier/*`, `/prof/classes/*`, `/prof/eleves`, `/prof/modules`, `/prof/page.tsx`, `utils/calendrier-*`, `utils/rappels.ts` | Hors d'un écran de module. |
 
 ### Les tests
@@ -953,6 +961,9 @@ _⚠️ **Ne pas jouer le test 9 sur Sacha** — les tests bi-classe vivent sur 
   _**Seconde moitié jouée le 14/08, APRÈS la migration**, sur le même élève remis en place (Test + T5, 2 conversations Scriptorium — dont l'orpheline du premier essai — + 4 messages, et 1 séance Aletheia) : le panneau annonce cette fois « 2 conversations du Scriptorium », et le retrait emporte **tout** — inscription Test partie, **conversations 2 → 0**, **messages 4 → 0**, séance Aletheia partie, **T5 intacte**, compte intact. Aucun dégât collatéral : Elo (3), Girard Dupont (1) et Sacha (1) gardent leurs conversations. Le trou est donc constaté ET refermé sur la même donnée, le même jour. **Test soldé.**_
 - [x] **ACL1-10 · L'échec se voit** — provoquer un échec (ex. retirer deux fois) : le message s'affiche **en clair dans le panneau**. _(Joué le 14/08 : inscription retirée en base derrière le dos d'une page restée ouverte, puis clic sur « Retirer » → « **Cet élève n'est plus inscrit dans cette classe.** » s'affiche en rouge dans le panneau. C'est la surface qui, avant ce lot, jetait purement et simplement le résultat de l'action.)_
 - [x] **ACL1-11 · L'autre surface** — même geste depuis « Gérer les élèves » d'une classe (`GestionEleves`) : **même panneau**, même aperçu, même affichage d'erreur. _(Joué le 14/08 : même composant, et les deux formulations alternatives vérifiées au passage — « Il n'a encore aucun travail dans cette classe. » et « C'est sa dernière classe. »)_
+
+- [x] **ACL1-12 · La porte dérobée du plan d'évaluation** — trouvée en tranchant les questions ouvertes, le 14/08, **après la clôture des onze premiers tests**. Le plan d'évaluation est le seul endroit qui écrit dans un flux vivant (`codex_sessions`, via « Préparer → ») ; il ne vérifiait pas que la classe a Codex, et le gate est **actif** (`plan_evaluation_actif = t`). C'est très probablement ce qui a produit la synthèse « Cognitif » × T5. _(Joué sur pièce : un plan JETABLE créé sur T5 — classe sans Codex — avec une synthèse « à concevoir ». L'écran affichait bien « NAture humaine — T5 · Préparer → » alors que la tuile T5 avait disparu. **Deux pressions du bouton : aucune séance Codex créée, l'exercice reste `a_concevoir`, aucune session liée.** Cas de recette retiré ensuite, sandbox revérifiée à son état.)_
+  _⚠️ **Et un second défaut trouvé au passage, corrigé dans la foulée** : la garde refusait **en silence** — l'action jetait son `error`, le prof pressait « Préparer → » et il ne se passait rien, sans un mot. C'est le même défaut que la croix du Pilotage, dans un autre écran. L'échec s'affiche désormais en clair au-dessus de la liste : « La classe de ce plan n'a pas le module Codex. Donne-lui le module depuis sa fiche avant de préparer la synthèse. »_
 
 > **Dérive d'état pendant la recette, dite plutôt que lissée.** `classe_modules` a changé en cours de
 > route : **T5 a reçu le module Scriptorium le 14/08 à 22:42 UTC** (Louis, en cochant le chip du
