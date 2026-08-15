@@ -865,9 +865,16 @@ séance dédiée (`PROMPT_Code_Acces_classes_L1.md`). Les quiz ne bougent pas.
 _**Une migration dans ce lot** : `acces_classes_l1_retirer_inscription.sql` (reprise de
 `retirer_inscription` — une instruction ajoutée, la purge des conversations Scriptorium), ligne créée
 au `SUIVI_SQL.md` **avant** exécution, rollback prêt (`acces_classes_l1_retirer_inscription_rollback.sql`,
-non destructif). **Protocole RENFORCÉ** : code mergé + poussé d'abord, SQL ensuite, fenêtre calme,
-smoke élève. **Non exécutée à l'écriture de cette section** — seule la répétition à blanc a tourné
-(corps du fichier seul, transaction annulée, règle 6 ; sandbox revérifiée intacte après le `rollback`)._
+non destructif). **Protocole RENFORCÉ, et respecté** : répétition à blanc d'abord (corps du fichier
+seul, transaction annulée, règle 6 — sandbox revérifiée intacte après le `rollback`), puis code mergé
+et poussé (`a68f2d8`), puis SQL en sandbox, puis smoke élève. **Exécutée le 14/08.**_
+
+_**RECETTE CLOSE le 14/08 — onze tests sur onze.** Jouée à deux : les sessions prof et élève ouvertes
+par Louis (aucun mot de passe saisi par l'agent), le pilotage d'écran et tous les constats en base par
+l'agent. Face élève dans l'aperçu embarqué — sans risque, aucun `confirm()` n'y intervient — et **face
+Pilotage dans Chrome**, le seul endroit où la preuve comptait puisque c'est là que le dialogue natif
+mordait. ACL1-9 a été joué en DEUX temps, avant et après la migration, pour constater le trou en vrai
+plutôt que le déduire._
 
 _Prouvé sans navigateur : `tsc --noEmit` vert, `npm test` **175/175** (dont 3 neufs sur « Au parcours
 de… », `utils/quazian-visibilite.test.ts`), `npm run build` vert, `eslint` identique à `main`
@@ -938,12 +945,12 @@ _⚠️ **Ne pas jouer le test 9 sur Sacha** — les tests bi-classe vivent sur 
 - [x] **ACL1-6 · Sacha, le cas réel** — entrer dans **Quazian** depuis Test, puis basculer le commutateur sur **T5** : l'écran-message « Quazian n'est pas ouvert pour T5 · Passe sur Test avec le commutateur » s'affiche (plus la page vide d'hier, cf. C7L3-6). _(Joué le 14/08, sans quitter la page : « **Pas dans cette classe** — Quazian n'est pas ouvert pour T5. Passe sur Test avec le commutateur, en haut, pour y accéder. » **Et le refus ne déborde pas** : en contexte T5, Fragments — que T5 a — s'ouvre normalement, tandis que Codex, Aletheia et le Scriptorium donnent le même message, chacun sous son propre nom.)_
 - [x] **ACL1-7 · Sacha, état « Toutes »** — comportement **C7L2-4 inchangé** : le tableau de bord agrège, et chaque module demande « Quelle classe ? ». _(Joué le 14/08. Le tableau agrège et chaque tâche porte sa classe (« Une séance de synthèse est en cours. · Test ») ; « Mes mondes » montre l'union — juste, le périmètre EST l'union dans cet état ; le Scriptorium demande « Quelle classe ? » en n'offrant que **Test**, T5 ne l'ayant pas.)_
 - [x] **ACL1-8 · Elo, mono-classe** — **rien ne change** (C7L2-7) : aucun écran-message, aucun choix de classe. _(Joué le 14/08. Commutateur absent, « Mes mondes » = les 5 modules de Test, les trois tâches du tableau de bord présentes, et les 5 modules ouverts un par un s'affichent normalement — Quazian, Codex, Scriptorium, Aletheia, Fragments. Aucun écran-message, aucun « Quelle classe ? ». Joué dans l'aperçu embarqué : sans risque ici, aucun `confirm()` n'intervient côté élève.)_
-- [ ] **ACL1-9 · Pilotage, la croix retire vraiment** — créer un élève **JETABLE**, l'inscrire dans **deux** classes, y semer un peu de travail (au moins une conversation Scriptorium sur Test, le cas que la migration répare). Croix sur un jeton de classe → le panneau s'ouvre **et dit ce qui va partir**. Confirmer. **Vérifier en base** : l'inscription part, le travail scopé de cette classe part (conversations comprises), l'autre classe survit.
+- [x] **ACL1-9 · Pilotage, la croix retire vraiment** — créer un élève **JETABLE**, l'inscrire dans **deux** classes, y semer un peu de travail (au moins une conversation Scriptorium sur Test, le cas que la migration répare). Croix sur un jeton de classe → le panneau s'ouvre **et dit ce qui va partir**. Confirmer. **Vérifier en base** : l'inscription part, le travail scopé de cette classe part (conversations comprises), l'autre classe survit.
   _**Première moitié jouée le 14/08, AVANT la migration** (élève « ZZ Jetable ACL1 », inscrit Test + T5, semé d'1 conversation Scriptorium + 2 messages et d'1 séance Aletheia, tous sur Test) :_
   - _le panneau s'ouvre **dans la page** et annonce « 1 séance de lecture Aletheia · 1 conversation du Scriptorium », puis « Son compte n'est pas touché. Il reste inscrit en T5, où son travail est intact. » ;_
   - _**la croix retire vraiment** — c'était le bug (a) : inscription Test partie, T5 intacte, séance Aletheia partie ;_
   - _**et le trou est constaté en vrai** : la conversation Scriptorium et ses 2 messages **ont survécu** au retrait, exactement ce que la répétition à blanc annonçait. Le panneau promet donc une suppression que la RPC de juin ne fait pas._
-  _**Reste à rejouer APRÈS la migration** pour cocher : la conversation doit partir avec le reste._
+  _**Seconde moitié jouée le 14/08, APRÈS la migration**, sur le même élève remis en place (Test + T5, 2 conversations Scriptorium — dont l'orpheline du premier essai — + 4 messages, et 1 séance Aletheia) : le panneau annonce cette fois « 2 conversations du Scriptorium », et le retrait emporte **tout** — inscription Test partie, **conversations 2 → 0**, **messages 4 → 0**, séance Aletheia partie, **T5 intacte**, compte intact. Aucun dégât collatéral : Elo (3), Girard Dupont (1) et Sacha (1) gardent leurs conversations. Le trou est donc constaté ET refermé sur la même donnée, le même jour. **Test soldé.**_
 - [x] **ACL1-10 · L'échec se voit** — provoquer un échec (ex. retirer deux fois) : le message s'affiche **en clair dans le panneau**. _(Joué le 14/08 : inscription retirée en base derrière le dos d'une page restée ouverte, puis clic sur « Retirer » → « **Cet élève n'est plus inscrit dans cette classe.** » s'affiche en rouge dans le panneau. C'est la surface qui, avant ce lot, jetait purement et simplement le résultat de l'action.)_
 - [x] **ACL1-11 · L'autre surface** — même geste depuis « Gérer les élèves » d'une classe (`GestionEleves`) : **même panneau**, même aperçu, même affichage d'erreur. _(Joué le 14/08 : même composant, et les deux formulations alternatives vérifiées au passage — « Il n'a encore aucun travail dans cette classe. » et « C'est sa dernière classe. »)_
 
