@@ -990,10 +990,10 @@ deux fois SANS le calage**) et `semestreActifAttendu` (dans le S1, dans le S2, a
 après la fin d'année, aucun semestre, déterminisme). Trois tests de plus prouvent P8 : une année
 calée ne laisse à la frise ni avis de troncature, ni `avisBloquant`, ni `a_definir`._
 
-**✅ RECETTE JOUÉE LE 20/08 — huit tests sur neuf.** Jouée à deux : session prof ouverte par Louis
-(aucun mot de passe saisi par l'agent), pilotage d'écran et constats en base par l'agent, **dans
-Chrome** (pas l'aperçu embarqué — règle d'or). Seul **CAL-5b** (dépôt élève) reste à jouer : il
-demande la session élève.
+**✅ RECETTE CLOSE LE 20/08 — neuf tests sur neuf.** Jouée à deux : sessions prof et élève ouvertes
+par Louis (aucun mot de passe saisi par l'agent), pilotage d'écran et constats en base par l'agent.
+Face prof **dans Chrome** (règle d'or — c'est là que les confirmations comptaient) ; face élève dans
+le navigateur intégré, sans risque : l'écran de dépôt ne porte aucun `confirm()`.
 
 **État de la sandbox au départ (20/08, relevé en lecture seule) :** un seul semestre vivant,
 « Semestre test 2 » (2026-07-01 → 2026-08-21), **de l'année scolaire 2025-2026** — donc pas de
@@ -1001,7 +1001,9 @@ l'année du jour. L'écran Année ouvrait un formulaire vide pour 2026-2027 (com
 signalait ce semestre dans le bloc « Encore vivant hors de 2026-2027 ». 2 semestres, 2 périodes de
 vacances, 23 semaines, **0 dépôt**.
 
-**État à l'arrivée :** année 2026-2027 créée — `Semestre 1` 2026-08-31 → 2027-01-24 et `Semestre 2`
+**État à l'arrivée (à savoir avant de jouer avec) :** la **Semaine 1 est OUVERTE** et porte **un
+dépôt de contrôle** de l'élève Elo (photo générée, commentaire « Dépôt de contrôle — recette CAL-5b »).
+À retirer quand tu voudras repartir vierge. Par ailleurs : année 2026-2027 créée — `Semestre 1` 2026-08-31 → 2027-01-24 et `Semestre 2`
 2027-01-25 → 2027-06-20 ; l'année 2025-2026 archivée (ses deux semestres, restaurables) ; 4 périodes
 de vacances ; 69 lignes `fragments_semaines` (jamais une de moins qu'au départ) ; une seule ligne
 `is_active`. ⚠️ **Reliquat de recette** : le S2 porte **4 semaines hors calendrier** (2026-12-21,
@@ -1057,8 +1059,23 @@ les affiche. À purger à la main si tu veux repartir propre.
   du Semestre 1 — exactement les 18 semaines d'enseignement de la frise, vacances sautées — avec
   les échéances au **dimanche** (« Limite : fin du 6 septembre », pas le 5 : la discipline de fuseau
   de l'item 7 tient). _(Validé le 20/08.)_
-- [ ] **CAL-5b · Un dépôt élève passe.** Smoke test de la règle 5 du `SUIVI_SQL.md` : connexion
-  élève test + une soumission. _(À jouer — demande la session élève.)_
+- [x] **CAL-5b · Un dépôt élève passe.** Smoke test de la règle 5 du `SUIVI_SQL.md`. Élève « Elo »
+  (classe Test) : Fragments disait d'abord « Aucune semaine n'est ouverte » — juste, les semaines
+  naissent fermées ; après « Rouvrir » sur la Semaine 1 côté prof, l'élève voit **« Semaine 1 · À
+  rendre avant la fin du dimanche 6 septembre »** et le dépôt **passe** (« ✓ Déposé »). En base :
+  1 ligne `fragments_depots` (`statut = depose`, **1 photo** stockée — donc l'upload et la RLS ont
+  fonctionné), rattachée à la **semaine n° 1 du Semestre 1**, celui qui porte `is_active`, et sa
+  `date_limite` vaut `2026-09-07T03:59:59.999+00:00` — soit **dimanche 6 septembre 23 h 59 à
+  Toronto**. L'item 7 tient donc jusqu'au dépôt réel, pas seulement dans les tests.
+  _(Validé le 20/08. **Réserve honnête** : aucun outil ne pilote le sélecteur de fichiers de l'OS —
+  la photo a été fabriquée dans la page et remise à l'`<input type=file>`. Tout le reste du chemin
+  — compression, EXIF, upload au stockage, action serveur, RLS — est le vrai.)_
+- [x] **CAL-3b · P4, l'avertissement « dépôts existants ».** Rejoué APRÈS CAL-5b, une fois un dépôt
+  en base — il n'avait pas pu se déclencher jusque-là. « Enregistrer l'année » ouvre bien la
+  confirmation : « L'année 2026-2027 porte déjà **1 dépôt**. Déplacer les bornes renumérote les
+  semaines : un élève qui avait lu « Semaine 7 » pourra lire « Semaine 6 ». Aucun dépôt n'est perdu
+  (ils suivent leur semaine), et aucune ligne n'est supprimée. » _(Validé le 20/08, puis **annulé** —
+  rien n'a été réécrit.)_
 - [x] **CAL-6 · Le parcours vit.** Vérifié sur pièce en rejouant `construireFrise` (la vraie
   fonction du dépôt) sur les données de la sandbox : **`avis` aucun, `avisBloquant` aucun**, ancre
   résolue à l'index 1 sans avis, **39 semaines de parcours dont 0 non résolue** (donc plus aucun
