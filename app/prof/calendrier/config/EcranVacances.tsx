@@ -60,6 +60,7 @@ const libelleCourt = (l: string) =>
 export default function EcranVacances({
   semestres,
   actifId,
+  horsBornesParSem,
   selectedId,
   holidays,
   bande,
@@ -68,6 +69,9 @@ export default function EcranVacances({
   semestres: Semestre[]
   /** Semestre actif ATTENDU à la date du jour (fonction pure), pas la colonne. */
   actifId: string | null
+  /** Périodes sorties des dates de leur semestre, par semestre (P5) — pour que le
+      sélecteur porte la marque même quand ce n'est pas le semestre affiché. */
+  horsBornesParSem: Record<string, number>
   selectedId: string | null
   holidays: HolidayInfo[]
   bande: SemaineGrille[]
@@ -186,15 +190,34 @@ export default function EcranVacances({
             onChange={(e) => router.push(`/prof/calendrier/config?section=vacances&sem=${e.target.value}`)}
             className="bg-surface border border-bordure-bouton rounded-lg px-3 py-1.5 text-[13px] font-ui font-semibold text-encre"
           >
-            {semestres.map((s) => (
-              <option key={s.id} value={s.id}>
-                {s.name}
-                {s.id === actifId ? ' (actif)' : ''}
-              </option>
-            ))}
+            {semestres.map((s) => {
+              const hors = horsBornesParSem[s.id] ?? 0
+              return (
+                <option key={s.id} value={s.id}>
+                  {s.name}
+                  {s.id === actifId ? ' (actif)' : ''}
+                  {hors > 0 ? ` — ${hors} période${hors > 1 ? 's' : ''} à replacer` : ''}
+                </option>
+              )
+            })}
           </select>
         </div>
       )}
+
+      {/* P5 — l'anomalie peut être sur l'AUTRE semestre : le message d'enregistrement
+          renvoie ici, l'écran ne doit pas être muet pour autant. */}
+      {(() => {
+        const ailleurs = semestres
+          .filter((s) => s.id !== selectedId && (horsBornesParSem[s.id] ?? 0) > 0)
+          .map((s) => `${s.name} (${horsBornesParSem[s.id]})`)
+        return ailleurs.length > 0 ? (
+          <p className="text-[13px] text-attention bg-attention-teinte border border-bordure rounded-lg px-4 py-2.5">
+            Des périodes sont sorties des dates de leur semestre depuis le déplacement de
+            l&apos;année : {ailleurs.join(', ')}. Choisis ce semestre ci-dessus pour les corriger —
+            rien n&apos;a été supprimé.
+          </p>
+        ) : null
+      })()}
 
       {erreur && <p className="text-retard text-sm">{erreur}</p>}
 

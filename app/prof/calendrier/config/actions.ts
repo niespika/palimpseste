@@ -170,6 +170,25 @@ export async function enregistrerAnnee(data: {
 
   const existants = await semestresDeAnnee(supabase, ayJour, true)
   if (existants === null) return { error: 'Lecture des semestres impossible — réessaie.' }
+
+  // Filet contre la RECRÉATION EN DOUBLON : la garde de chevauchement ignore les
+  // archivés (à raison — ils ne gênent personne), donc rien n'empêcherait d'insérer
+  // une copie exacte d'une année qu'on vient d'archiver. Les dépôts, semaines et
+  // thèmes resteraient sur les `id` archivés pendant que les lignes neuves et vides
+  // porteraient le drapeau actif. On refuse, et on montre la sortie : restaurer.
+  const archives = await semestresDeAnnee(supabase, ayJour, false)
+  if (archives === null) return { error: 'Lecture des semestres impossible — réessaie.' }
+  const copie = archives.find(
+    (a) =>
+      (a.start_date === bornes.s1.start && a.end_date === bornes.s1.end) ||
+      (a.start_date === bornes.s2.start && a.end_date === bornes.s2.end),
+  )
+  if (copie) {
+    return {
+      error: `Ces dates sont déjà celles de « ${copie.name} », archivé. Restaure l’année depuis l’onglet Archives plutôt que d’en créer une copie — sinon les dépôts et les semaines resteraient sur l’ancienne.`,
+    }
+  }
+
   if (existants.length > 2) {
     return {
       error: `${existants.length} semestres vivants pour ${libelleAnneeScolaire(ayJour)} : archive les surnuméraires avant d’enregistrer l’année.`,
@@ -272,6 +291,28 @@ async function recalerVacances(
   return { vacancesRattachees: rattachees, vacancesSignalees: signalees }
 }
 
+/**
+ * Archive UN semestre isolé. L'archivage nominal porte sur l'ANNÉE (spec §2) — cette
+ * action ne sert qu'au cas anormal « trois semestres vivants ou plus » (spec §5), où
+ * l'écran demande d'archiver les SURNUMÉRAIRES : sans elle, la seule sortie offerte
+ * était « archiver toute l'année », qui emportait aussi le semestre porteur des dépôts.
+ */
+export async function archiverSemestre(id: string): Promise<{ error?: string }> {
+  const { supabase } = await verifierProf()
+  const { data: sem } = await supabase
+    .from('semesters').select('id, archived_at').eq('id', id).maybeSingle()
+  if (!sem) return { error: 'Semestre introuvable.' }
+  if (sem.archived_at) return { error: 'Ce semestre est déjà archivé.' }
+  const { error } = await supabase
+    .from('semesters')
+    .update({ archived_at: new Date().toISOString() })
+    .eq('id', id)
+  if (error) return { error: error.message }
+  await materialiserSemestreActif()
+  revaliderSemaines()
+  return {}
+}
+
 /** Archive les DEUX semestres d'une année d'un coup (l'archivage porte sur l'année). */
 export async function archiverAnnee(ay: number): Promise<{ error?: string }> {
   const { supabase } = await verifierProf()
@@ -299,6 +340,25 @@ export async function restaurerAnnee(ay: number): Promise<{ error?: string }> {
   // Dé-archiver ne doit pas recréer un chevauchement : la garde ignore les archivés,
   // donc une année restaurée peut entrer en conflit avec une année vivante.
   const ids = archives.map((s) => s.id)
+
+  // Les archivées doivent d'abord être cohérentes ENTRE ELLES : `chevauchementSemestre`
+  // ne lit que les vivants, il ne les compare donc pas. Une AY qui porte plusieurs
+  // générations archivées (accident de recréation) les ressusciterait toutes d'un coup,
+  // et la frise du parcours lèverait un `avisBloquant` sur le premier chevauchement.
+  const triees = [...archives].sort((a, b) => (a.start_date < b.start_date ? -1 : 1))
+  for (let i = 1; i < triees.length; i++) {
+    if (triees[i].start_date <= triees[i - 1].end_date) {
+      return {
+        error: `Restauration impossible : « ${triees[i].name} » chevauche « ${triees[i - 1].name} » dans les archives de cette année. Restaure-les un par un après avoir corrigé leurs dates.`,
+      }
+    }
+  }
+  if (archives.length > 2) {
+    return {
+      error: `${archives.length} semestres archivés pour cette année — l’écran en attend deux au plus. Restaure-les un par un après avoir corrigé leurs dates.`,
+    }
+  }
+
   for (const s of archives) {
     const chevauche = await chevauchementSemestre(supabase, s.start_date, s.end_date, ids)
     if (!chevauche.ok) {

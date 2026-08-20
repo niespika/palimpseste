@@ -1087,6 +1087,47 @@ les affiche. À purger à la main si tu veux repartir propre.
   restaure depuis l'onglet Archives »). Aucune boîte native. _(Validé le 20/08. « Supprimer » et
   l'avertissement « dépôts existants » partagent le même composant, non déclenchés faute de dépôt.)_
 
+**🔍 REVUE ADVERSARIALE (20/08, après la recette).** Quinze agents sur six lentilles, puis un
+sceptique par constat chargé de le RÉFUTER : **cinq constats sont tombés, huit ont tenu**. Six ont
+été corrigés dans la foulée, les trois plus graves vérifiés à la main avant correction :
+
+- **A · « Archiver l'année » pouvait laisser ZÉRO `is_active`, et ça désarmait une garde côté élève.**
+  Le lot avait levé le garde-fou « ne jamais archiver l'actif » (l'archivage porte désormais sur
+  l'année). Or `app/eleve/modules/fragments-erudition/actions.ts` lisait
+  `if (semActifDepot && …)` — garde **sautée** quand personne n'est actif, donc un dépôt passait sur
+  une semaine restée ouverte d'un semestre archivé. Passée en **fail-closed** : plus de semestre
+  actif = plus de dépôt. _(Trou ouvert par ce lot, refermé par ce lot.)_
+- **B · Le formulaire ne se resynchronisait jamais avec la base.** Après « Archiver l'année », les
+  trois champs gardaient les dates archivées, le bouton repassait à « Créer l'année », et un clic
+  insérait **deux lignes en doublon exact** — la garde de chevauchement ignore les archivés, à
+  raison. Dépôts et semaines seraient restés sur les `id` archivés pendant que les lignes neuves et
+  vides auraient pris le drapeau. Corrigé des deux côtés : resynchronisation des props pendant le
+  rendu côté client, **et** refus serveur de recréer des bornes déjà présentes en archive.
+  _(Vérifié en vrai le 20/08 : archivage → champs vides ; restauration → champs remplis, sans
+  navigation.)_
+- **C · La branche « trois semestres ou plus » n'offrait que « Archiver toute l'année ».** La spec
+  §5 demande d'archiver les **surnuméraires** ; la seule sortie offerte emportait aussi le semestre
+  porteur des dépôts. `archiverSemestre(id)` est réintroduite, réservée à cette branche, avec un
+  bouton par carte. _(Non joué en vrai : la branche est inatteignable par l'écran — l'action refuse
+  au-delà de deux — il faudrait insérer une troisième ligne à la main.)_
+- **D · `restaurerAnnee` ne comparait pas les archivées entre elles** (`chevauchementSemestre` ne
+  lit que les vivants). Une AY portant plusieurs générations archivées les ressuscitait toutes d'un
+  coup → `avisBloquant` sur la frise. Tri + refus de chevauchement, et refus au-delà de deux.
+- **E · `semainesGenerees` comptait les lignes hors calendrier.** Vu à l'écran pendant la recette
+  sans être relevé : « 21 semaines générées sur 17 » **et** « 4 hors calendrier » — 17 + 4 = 21. La
+  pastille « semaines à générer » restait donc allumée à vie après un déplacement de bornes. Le
+  compte ne retient plus que les lignes alignées sur la grille. _(Vérifié : la pastille a disparu.)_
+- **F · La pastille « ACTIF » sur un semestre pas encore commencé** contredisait le rail de la même
+  page (« S1 à venir ») et affichait une barre de progression à 0 %. **Décision de Louis : l'état
+  temporel prime.** La carte dit désormais « à venir » / « en cours » / « terminé », la bordure verte
+  reste sur l'actif attendu, et une ligne en clair dit le reste : « Porte le drapeau actif — c'est ce
+  semestre que lisent Fragments et Quazian ».
+- **G · Le signalement P5 était invisible sur l'écran vers lequel il renvoie.** `horsBornes` n'était
+  calculé que pour le semestre affiché, et l'écran Vacances s'ouvre par défaut sur l'actif : si la
+  période signalée appartenait à l'autre, le prof arrivait sur un écran muet. Le compte se fait
+  désormais sur tous les semestres, le rail porte « n à replacer », le sélecteur marque les
+  semestres concernés, et un bandeau renvoie vers le bon.
+
 **Reste hors de ce lot, volontairement :** plus de deux semestres (trimestres, sessions d'été) ;
 réparer les semaines hors calendrier (les montrer suffit) ; geler le `numero` sous un dépôt ; le taux
 de dépôt qui compte les semaines de vacances ; recâbler les lecteurs de `is_active` ; **préparer

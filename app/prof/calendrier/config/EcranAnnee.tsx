@@ -7,6 +7,7 @@ import { calerAnnee, type BornesAnnee } from '@/utils/calendrier-grille'
 import {
   enregistrerAnnee,
   archiverAnnee,
+  archiverSemestre,
   restaurerAnnee,
   supprimerAnnee,
   regenererSemaines,
@@ -22,6 +23,8 @@ export interface SemestreAnnee {
   end_date: string
   /** Actif ATTENDU à la date du jour (fonction pure) — pas la colonne `is_active`. */
   actif: boolean
+  /** Aujourd'hui (fuseau de l'école) tombe dans ses bornes — ≠ « actif ». */
+  enCours: boolean
   /** Semaines pédagogiques de la grille CALCULÉE (semestre + vacances). */
   totalSemaines: number
   /** Semaines réellement stockées dans `fragments_semaines` — ce que voit Fragments. */
@@ -48,13 +51,23 @@ function CarteSemestre({
   rang,
   busy,
   onGenerer,
+  onArchiver,
 }: {
   s: SemestreAnnee
   rang: number
   busy: boolean
   onGenerer: () => void
+  /** Uniquement dans la branche « trois semestres ou plus » : archiver un surnuméraire. */
+  onArchiver?: () => void
 }) {
   const pct = s.totalSemaines > 0 ? Math.round((s.semaineCourante / s.totalSemaines) * 100) : 0
+  // L'état TEMPOREL prime sur le drapeau : `semestreActifAttendu` désigne aussi bien
+  // un semestre pas encore commencé (règle 2) qu'un semestre déjà clos (règle 3), et
+  // une pastille « actif » sur l'un des deux contredisait le rail de la même page
+  // (« S1 à venir ») tout en affichant une barre de progression à 0 %.
+  // « en cours » est calculé côté SERVEUR (page.tsx) : « aujourd'hui » se lit dans le
+  // fuseau de l'école, jamais dans celui du navigateur de l'élève ou du prof.
+  const enCours = s.enCours
   // Les semaines de Fragments sont des LIGNES en base, pas la grille affichée ici.
   // Tant qu'elles manquent, le module est muet et aucun élève ne peut déposer :
   // l'écart doit se voir, et se réparer d'un clic depuis cette carte.
@@ -69,35 +82,52 @@ function CarteSemestre({
         <span className="font-ui text-[11px] font-bold uppercase tracking-wide text-muet-clair">
           S{rang + 1}
         </span>
-        <span className={`font-semibold text-encre ${s.actif ? 'text-[17px]' : 'text-base'}`}>{s.name}</span>
-        {s.actif ? (
-          <span className="font-ui text-[11px] font-bold uppercase tracking-wide text-ok bg-ok-teinte rounded-full px-2.5 py-0.5">
-            actif
-          </span>
-        ) : s.termine ? (
+        <span className={`font-semibold text-encre ${enCours ? 'text-[17px]' : 'text-base'}`}>{s.name}</span>
+        {s.termine ? (
           <span className="font-ui text-[11px] font-semibold uppercase tracking-wide text-muet bg-parchemin-fonce rounded-full px-2.5 py-0.5">
             terminé
+          </span>
+        ) : enCours ? (
+          <span className="font-ui text-[11px] font-bold uppercase tracking-wide text-ok bg-ok-teinte rounded-full px-2.5 py-0.5">
+            en cours
           </span>
         ) : (
           <span className="font-ui text-[11px] font-semibold uppercase tracking-wide text-encre-douce bg-parchemin-fonce rounded-full px-2.5 py-0.5">
             à venir
           </span>
         )}
+        {onArchiver && (
+          <button
+            onClick={onArchiver}
+            disabled={busy}
+            className="ml-auto font-ui text-[13px] text-muet hover:text-encre underline disabled:opacity-50"
+          >
+            Archiver ce semestre
+          </button>
+        )}
       </div>
 
-      {s.actif && !s.termine && s.totalSemaines > 0 && (
+      {enCours && s.totalSemaines > 0 && (
         <div className="flex h-1.5 rounded-full overflow-hidden max-w-[440px] mt-2.5 bg-bordure">
           <div className="bg-ok" style={{ width: `${pct}%` }} />
         </div>
       )}
 
       <div className="text-[13px] text-muet mt-1.5">
-        {s.actif && s.semaineCourante > 0 && `semaine ${s.semaineCourante} / ${s.totalSemaines} · `}
+        {enCours && s.semaineCourante > 0 && `semaine ${s.semaineCourante} / ${s.totalSemaines} · `}
         {fmt(s.start_date)} → {fmt(s.end_date)}
-        {!(s.actif && s.semaineCourante > 0) &&
+        {!(enCours && s.semaineCourante > 0) &&
           ` · ${s.totalSemaines} semaine${s.totalSemaines > 1 ? 's' : ''}`}
         {s.nbVacances > 0 && ` · ${s.nbVacances} période${s.nbVacances > 1 ? 's' : ''} de vacances`}
       </div>
+
+      {/* Le drapeau ne disparaît pas pour autant : c'est lui que lisent les autres
+          modules. Il se dit en clair, à sa place, plutôt qu'en pastille trompeuse. */}
+      {s.actif && !enCours && (
+        <div className="italic text-[12.5px] text-muet-clair mt-1">
+          Porte le drapeau actif — c’est ce semestre que lisent Fragments et Quazian.
+        </div>
+      )}
 
       {aGenerer && (
         <div className="flex items-center gap-2.5 flex-wrap mt-2">
@@ -237,6 +267,28 @@ export default function EcranAnnee({
   // Remonte les ChampDate après un enregistrement : ce qui est retenu (dates CALÉES)
   // n'est pas toujours ce qui a été saisi, et le champ doit dire la vérité.
   const [versionForm, setVersionForm] = useState(0)
+
+  // Les PROPS font foi. Archiver, restaurer ou supprimer une année passe par
+  // `router.refresh()`, qui renvoie de nouvelles bornes SANS remonter ce composant :
+  // sans cette resynchronisation, le formulaire gardait les dates d'avant, le bouton
+  // repassait à « Créer l'année », et un clic créait deux lignes en DOUBLON exact des
+  // archivées — dépôts et semaines restant sur les anciens `id` (constat de revue
+  // 20/08). La signature ne bouge que si les lignes de l'année ont bougé : la saisie
+  // en cours n'est jamais effacée par un rafraîchissement pour une autre raison
+  // (« Générer les semaines », par exemple).
+  // Patron « ajuster l'état quand une prop change » (pendant le rendu, pas dans un
+  // effet : pas de passe de rendu perdue, et pas de `set-state-in-effect`).
+  const signature = semestres.map((s) => `${s.id}|${s.start_date}|${s.end_date}`).join('~')
+  const [signaturePrec, setSignaturePrec] = useState(signature)
+  if (signature !== signaturePrec) {
+    setSignaturePrec(signature)
+    setDates({
+      rentree: semestres[0]?.start_date ?? '',
+      finS1: semestres[0]?.end_date ?? '',
+      finAnnee: semestres[1]?.end_date ?? '',
+    })
+    setVersionForm((v) => v + 1)
+  }
 
   const trop = semestres.length > 2
   const complet = !!dates.rentree && !!dates.finS1 && !!dates.finAnnee
@@ -421,15 +473,21 @@ export default function EcranAnnee({
               deux au plus. Rien n’est enregistré tant que les surnuméraires ne sont pas archivés.
             </p>
           </div>
+          {/* Un bouton PAR SEMESTRE : la spec demande d'archiver les SURNUMÉRAIRES.
+              « Archiver toute l'année » emporterait aussi celui qui porte les dépôts —
+              il reste offert, mais en second, et il se confirme. */}
           <div className="space-y-2.5">
-            {semestres.map((s) => (
-              <div key={s.id} className="bg-surface border border-bordure rounded-xl px-5 py-3.5">
-                <div className="font-semibold text-encre">{s.name}</div>
-                <div className="text-[13px] text-muet mt-0.5">
-                  {fmt(s.start_date)} → {fmt(s.end_date)} · {s.totalSemaines} semaine
-                  {s.totalSemaines > 1 ? 's' : ''}
-                </div>
-              </div>
+            {semestres.map((s, i) => (
+              <CarteSemestre
+                key={s.id}
+                s={s}
+                rang={i}
+                busy={busy}
+                onGenerer={() => agir(() => regenererSemaines(s.id), 'Semaines générées.')}
+                onArchiver={() =>
+                  agir(() => archiverSemestre(s.id), `« ${s.name} » archivé.`)
+                }
+              />
             ))}
           </div>
           <button

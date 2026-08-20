@@ -151,7 +151,21 @@ export default async function CalendrierConfigPage({
   }
   // P5 — déplacer les bornes de l'année peut faire SORTIR une période de son
   // semestre. Rien n'est détruit : celles qui ne tombaient pas entièrement dans
-  // l'autre semestre restent en place, et se signalent ici.
+  // l'autre semestre restent en place, et se signalent.
+  // Le compte se fait sur TOUS les semestres, pas seulement l'affiché : le message
+  // d'enregistrement renvoie vers « Vacances », et l'écran s'ouvre par défaut sur le
+  // semestre actif — si la période signalée appartient à l'autre, le prof arrivait
+  // sur un écran muet (constat de revue 20/08).
+  const bornesParSem = new Map(semestres.map((s) => [s.id, s]))
+  const horsBornesParSem = new Map<string, number>()
+  for (const h of (allHolidaysData ?? []) as Holiday[]) {
+    const sien = bornesParSem.get(h.semester_id)
+    if (!sien) continue
+    if (h.start_date < sien.start_date || h.end_date > sien.end_date) {
+      horsBornesParSem.set(h.semester_id, (horsBornesParSem.get(h.semester_id) ?? 0) + 1)
+    }
+  }
+  const nbHorsBornes = [...horsBornesParSem.values()].reduce((a, b) => a + b, 0)
   const holidaysInfo = holidays.map((h) => ({
     ...h,
     semaines: retirees.get(h.id) ?? 0,
@@ -161,7 +175,7 @@ export default async function CalendrierConfigPage({
   // ── Infos par semestre ────────────────────────────────────────────────────
   const infosParSem = new Map<
     string,
-    { totalSemaines: number; semainesGenerees: number; horsCalendrier: number; nbVacances: number; semaineCourante: number; termine: boolean }
+    { totalSemaines: number; semainesGenerees: number; horsCalendrier: number; nbVacances: number; semaineCourante: number; termine: boolean; enCours: boolean }
   >()
   for (const s of semestres) {
     const hs = holidaysParSem.get(s.id) ?? []
@@ -171,7 +185,12 @@ export default async function CalendrierConfigPage({
     const lignes = stockeesParSem.get(s.id) ?? []
     infosParSem.set(s.id, {
       totalSemaines: total,
-      semainesGenerees: lignes.filter((w) => !w.is_vacation).length,
+      // Ne compter QUE les lignes alignées sur la grille : une orpheline « hors
+      // calendrier » est stockée mais ne répond à aucune semaine du semestre. Les
+      // inclure faisait dire à la carte « 21 semaines générées sur 17 » et laissait
+      // l'écart — donc la pastille « semaines à générer » — allumé à vie après un
+      // déplacement de bornes, alors que tout est bien généré (constat de revue 20/08).
+      semainesGenerees: lignes.filter((w) => !w.is_vacation && debuts.has(w.date_debut)).length,
       // Même définition que `synchroniserSemaines` : une ligne stockée dont le lundi
       // n'est plus un lundi de la grille. Jamais supprimée (des dépôts y sont
       // rattachés) — mais désormais MONTRÉE.
@@ -179,6 +198,10 @@ export default async function CalendrierConfigPage({
       nbVacances: hs.length,
       semaineCourante: Math.min(total, grille.filter((w) => !w.isVacation && w.start <= today).length),
       termine: s.end_date < today,
+      // « en cours » ≠ « actif » : le drapeau désigne aussi bien le prochain à commencer
+      // (règle 2) que le dernier terminé (règle 3). Calculé ici, où « aujourd'hui » se
+      // lit dans le fuseau de l'école.
+      enCours: s.start_date <= today && today <= s.end_date,
     })
   }
 
@@ -306,6 +329,10 @@ export default async function CalendrierConfigPage({
       key: 'vacances',
       label: 'Vacances',
       sub: `${holidays.length} période${holidays.length > 1 ? 's' : ''} · ${nbSemainesPeda} sem.`,
+      // Une période sortie des dates de son semestre après un déplacement de l'année :
+      // rien n'est détruit, mais il faut que ça se voie depuis le rail, pas seulement
+      // sur le semestre qui se trouve être affiché.
+      warn: nbHorsBornes > 0 ? `${nbHorsBornes} à replacer` : null,
     },
     { key: 'fuseau', label: 'Fuseau', sub: fuseauLabel },
   ]
@@ -351,6 +378,7 @@ export default async function CalendrierConfigPage({
             <EcranVacances
               semestres={semestresVivants}
               actifId={actifId}
+              horsBornesParSem={Object.fromEntries(horsBornesParSem)}
               selectedId={selId}
               holidays={holidaysInfo}
               bande={bande}
