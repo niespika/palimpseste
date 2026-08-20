@@ -983,73 +983,116 @@ _**Aucune migration dans ce lot** : ni table, ni colonne. `semesters` reste la s
 ses trente-huit lectures ne bougent pas — seule la PORTE D'ENTRÉE change (une action d'année à la
 place des actions de semestre)._
 
-_**Vert avant recette** : `npm test` 189/189, `tsc --noEmit` propre, `eslint` propre, `next build`
+_**Vert avant recette** : `npm test` 192/192, `tsc --noEmit` propre, `eslint` propre, `next build`
 compilé. Les nouveaux tests purs couvrent `calerAnnee` (rentrée un mercredi, fin de S1 un mercredi,
-S2 qui démarre bien le lundi suivant, année d'une seule semaine, semaine à cheval comptée deux fois
-SANS le calage) et `semestreActifAttendu` (dans le S1, dans le S2, avant la rentrée, après la fin
-d'année, aucun semestre, déterminisme)._
+S2 qui démarre bien le lundi suivant, année d'une seule semaine, **et la semaine à cheval comptée
+deux fois SANS le calage**) et `semestreActifAttendu` (dans le S1, dans le S2, avant la rentrée,
+après la fin d'année, aucun semestre, déterminisme). Trois tests de plus prouvent P8 : une année
+calée ne laisse à la frise ni avis de troncature, ni `avisBloquant`, ni `a_definir`._
 
-_**⚠️ État de la sandbox au 20/08 (point de départ des tests, relevé en lecture seule).** Un seul
-semestre vivant, **« Semestre test 2 » (2026-07-01 → 2026-08-21)**, et il appartient à l'année
-scolaire **2025-2026** (frontière du 1er août) — pas à l'année du jour (2026-2027). Deux
-conséquences pour la recette : **le test 1 « Adoption » ne se joue pas tel quel** (l'écran Année
-ouvre un formulaire VIDE pour 2026-2027, ce qui est le comportement voulu), et ce semestre apparaît
-dans le nouveau bloc **« Encore vivant hors de 2026-2027 »**, avec son bouton « Archiver l'année
-2025-2026 ». Pour jouer l'adoption pour de vrai : créer d'abord l'année 2026-2027 (test 2), puis
-recharger l'écran — les trois dates doivent revenir pré-remplies. La matérialisation du drapeau
-actif, elle, **n'écrira rien au premier chargement** (répétition à blanc : « Semestre test 2 »
-contient le 20/08, il est déjà `is_active = true`)._
+**✅ RECETTE JOUÉE LE 20/08 — huit tests sur neuf.** Jouée à deux : session prof ouverte par Louis
+(aucun mot de passe saisi par l'agent), pilotage d'écran et constats en base par l'agent, **dans
+Chrome** (pas l'aperçu embarqué — règle d'or). Seul **CAL-5b** (dépôt élève) reste à jouer : il
+demande la session élève.
 
-- [ ] **CAL-1 · Adoption.** Ouvrir `/prof/calendrier/config?section=annee` **une fois l'année
-  2026-2027 créée** (cf. encadré ci-dessus) : les trois dates sont pré-remplies depuis les bornes des
-  deux semestres (`rentrée = S1.start`, `fin S1 = S1.end`, `fin d'année = S2.end`), **aucune ligne
-  créée, aucun `id` changé**. Contrôle en base : `select id, name, start_date, end_date from semesters
-  order by start_date;` avant/après ouverture — identique.
-- [ ] **CAL-2 · Saisie non calée.** Saisir trois dates qui ne tombent pas sur des bornes de semaine —
-  par exemple **mercredi 2026-09-02**, **mercredi 2027-01-20**, **jeudi 2027-06-17**. Avant
-  d'enregistrer, le bloc « Ce qui sera retenu » doit annoncer **« Semestre 1 : lundi 31 août →
-  dimanche 24 janvier »** et **« Semestre 2 : lundi 25 janvier → dimanche 20 juin »**. Enregistrer :
-  **deux** lignes créées ou mises à jour, et **aucune** date de début de semaine portée par deux
-  lignes `fragments_semaines`. Requête de contrôle :
+**État de la sandbox au départ (20/08, relevé en lecture seule) :** un seul semestre vivant,
+« Semestre test 2 » (2026-07-01 → 2026-08-21), **de l'année scolaire 2025-2026** — donc pas de
+l'année du jour. L'écran Année ouvrait un formulaire vide pour 2026-2027 (comportement voulu) et
+signalait ce semestre dans le bloc « Encore vivant hors de 2026-2027 ». 2 semestres, 2 périodes de
+vacances, 23 semaines, **0 dépôt**.
+
+**État à l'arrivée :** année 2026-2027 créée — `Semestre 1` 2026-08-31 → 2027-01-24 et `Semestre 2`
+2027-01-25 → 2027-06-20 ; l'année 2025-2026 archivée (ses deux semestres, restaurables) ; 4 périodes
+de vacances ; 69 lignes `fragments_semaines` (jamais une de moins qu'au départ) ; une seule ligne
+`is_active`. ⚠️ **Reliquat de recette** : le S2 porte **4 semaines hors calendrier** (2026-12-21,
+12-28, 2027-01-04, 01-11), nées des allers-retours de CAL-3/CAL-7 et conservées à dessein. L'écran
+les affiche. À purger à la main si tu veux repartir propre.
+
+- [x] **CAL-1 · Adoption.** Ouvrir `/prof/calendrier/config?section=annee` : les trois dates sont
+  pré-remplies depuis les bornes des deux semestres (`rentrée = S1.start`, `fin S1 = S1.end`,
+  `fin d'année = S2.end`), **aucune ligne créée, aucun `id` changé** (relevé en base avant/après :
+  identique, `6868293f` et `87942c63` inchangés). _(Joué après CAL-2, l'adoption n'ayant rien à
+  adopter au départ — cf. l'état de sandbox ci-dessus.)_
+- [x] **CAL-2 · Saisie non calée.** Trois dates hors bornes de semaine — **mercredi 2026-09-02**,
+  **mercredi 2027-01-20**, **jeudi 2027-06-17**. Le bloc « Ce qui sera retenu » a annoncé, au mot
+  près de la spec, **« Semestre 1 : lundi 31 août → dimanche 24 janvier »** et **« Semestre 2 :
+  lundi 25 janvier → dimanche 20 juin »**. Enregistrement : **2 lignes créées**, 21 semaines
+  chacune, et **aucune semaine à cheval**. _(Validé le 20/08.)_
+  **⚠️ La requête de contrôle a dû être corrigée** — celle d'origine
+  (`select date_debut, count(*) … having count(*) > 1`) est **trop grossière** : elle compte aussi
+  les semaines « hors calendrier », que le lot conserve VOLONTAIREMENT (P3) et qui peuvent partager
+  un lundi avec une semaine vivante de l'autre semestre. Le contrôle qui vaut ne regarde que les
+  lignes **alignées sur la grille de leur propre semestre** :
   ```sql
-  select date_debut, count(*) from fragments_semaines group by date_debut having count(*) > 1;
+  -- (a) le vrai bug visé : deux semestres VIVANTS dont les grilles partagent un lundi
+  select a.name, b.name
+  from semesters a join semesters b on a.id < b.id
+  where a.archived_at is null and b.archived_at is null
+    and a.start_date <= b.end_date and b.start_date <= a.end_date;   -- → 0 ligne
+
+  -- (b) deux lignes ALIGNÉES qui portent le même lundi (hors orphelines)
+  select w.date_debut, count(*)
+  from fragments_semaines w join semesters s on s.id = w.semestre_id
+  where w.date_debut between s.start_date - 6 and s.end_date
+  group by w.date_debut having count(*) > 1;                          -- → 0 ligne
   ```
-  → **0 ligne** (relevé de référence avant le lot : 0 ligne, y compris par semestre).
-- [ ] **CAL-3 · Déplacement.** Reculer la rentrée d'un mois et réenregistrer. Les **deux** semestres
-  suivent, la numérotation se recale, l'avertissement « dépôts existants » paraît **avant**
-  l'enregistrement s'il y a au moins un dépôt sur l'année, le compteur **« n semaines hors calendrier »**
-  s'affiche sur la carte du semestre concerné, et **aucune ligne n'est supprimée** :
-  `select count(*) from fragments_semaines;` avant/après — jamais en baisse.
-- [ ] **CAL-4 · Actif.** Le semestre en cours porte le drapeau `actif` à l'écran, et en base **une
-  seule ligne** à `is_active = true` : `select count(*) from semesters where is_active;` → 1. Il n'y
-  a **plus aucun bouton « Définir actif »**. _(La règle 2 — « le prochain à commencer » — se vérifie
-  par le test pur, pas en bougeant l'horloge de la machine.)_
-- [ ] **CAL-5 · Fragments vit.** `/prof/fragments-erudition` affiche les semaines du semestre actif,
-  et un dépôt élève passe (smoke test de la règle 5 du `SUIVI_SQL.md` : connexion élève test + une
-  soumission).
-- [ ] **CAL-6 · Le parcours vit.** L'aperçu du plan d'évaluation d'une classe s'affiche **sans avis
-  bloquant** et sans l'avis « dernière semaine tronquée » (le calage sur le dimanche l'éteint), et le
-  statut `a_definir` ne paraît plus une fois les deux semestres définis.
-- [ ] **CAL-7 · Vacances.** Créer une période dans le S1, puis déplacer les bornes de l'année de sorte
-  qu'elle tombe entièrement dans le S2 → elle est **rattachée** (message à l'enregistrement, et elle
-  apparaît sous le S2 dans l'écran Vacances). Refaire l'essai avec une période **à cheval** sur la
-  frontière S1/S2 → elle est **signalée** en place (« Hors des dates de ce semestre depuis le
-  déplacement de l'année »), **jamais perdue ni découpée** : `select count(*) from holidays;`
-  inchangé dans les deux cas.
-- [ ] **CAL-8 · Le rail dit « Année ».** Le rail de configuration porte **Année** (plus « Semestres »),
-  son résumé dit l'année scolaire et son état (« 2026-2027 · S1 en cours »), le fil de configuration
-  se lit « Fuseau → Année → Vacances → Classes », et l'ancre `?section=semestres` (encore posée dans
-  les signets et dans l'écran Fragments avant ce lot) atterrit bien sur Année.
-- [ ] **CAL-9 · Plus de `confirm()` natif.** Sur **Chrome** : « Archiver l'année », « Supprimer » et
-  l'avertissement « dépôts existants » ouvrent une confirmation **dans la page**, qui dit ce qui va
-  partir. Aucune boîte native. _(Rappel de la règle d'or : l'aperçu embarqué de Code rendrait ces
-  boutons muets si un `confirm()` subsistait.)_
+  _(Les deux à 0 le 20/08, y compris après les déplacements de CAL-3 et CAL-7.)_
+- [x] **CAL-3 · Déplacement.** Rentrée **repoussée** d'un mois (31 août → 28 septembre) : les deux
+  semestres suivent, S1 passe de 21 à 17 semaines, la numérotation se recale, le compteur
+  **« 4 semaines hors calendrier — conservées telles quelles »** apparaît sur la carte du S1 (P3,
+  qui ne vivait jusqu'ici que dans un message fugace), le rail porte « semaines à générer », et
+  **aucune ligne n'est supprimée** (65 lignes avant, 65 après ; l'`id` du semestre inchangé).
+  _(Validé le 20/08. L'avertissement « dépôts existants » n'a pas pu être vu : 0 dépôt en base.)_
+  **⚠️ Note sur l'énoncé** : « reculer la rentrée d'un mois » depuis le 31 août franchit la
+  frontière du 1er août. Joué tel quel, l'écran **refuse proprement** : « Une année scolaire va du
+  1er août au 31 juillet : ces dates enjambent la frontière (2025-2026 → 2026-2027) », et le bloc
+  « Ce qui sera retenu » montre pourquoi (« lundi 27 juillet »). Rien n'a été écrit. Le piège du §3
+  est donc vérifié en vrai, en plus du test pur.
+- [x] **CAL-4 · Actif.** Après archivage de l'année 2025-2026, `Semestre 1` a pris le drapeau
+  **sans aucune intervention** — alors qu'il ne commence que le 31 août, soit onze jours plus tard :
+  c'est la **règle 2** (« le prochain à commencer ») démontrée sur données réelles. En base, une
+  seule ligne `is_active = true`, et le semestre archivé a bien vu son drapeau **éteint**. Plus
+  aucun bouton « Définir actif » à l'écran. _(Validé le 20/08.)_
+- [x] **CAL-5a · Fragments vit (face prof).** `/prof/fragments-erudition` liste les **18 semaines**
+  du Semestre 1 — exactement les 18 semaines d'enseignement de la frise, vacances sautées — avec
+  les échéances au **dimanche** (« Limite : fin du 6 septembre », pas le 5 : la discipline de fuseau
+  de l'item 7 tient). _(Validé le 20/08.)_
+- [ ] **CAL-5b · Un dépôt élève passe.** Smoke test de la règle 5 du `SUIVI_SQL.md` : connexion
+  élève test + une soumission. _(À jouer — demande la session élève.)_
+- [x] **CAL-6 · Le parcours vit.** Vérifié sur pièce en rejouant `construireFrise` (la vraie
+  fonction du dépôt) sur les données de la sandbox : **`avis` aucun, `avisBloquant` aucun**, ancre
+  résolue à l'index 1 sans avis, **39 semaines de parcours dont 0 non résolue** (donc plus aucun
+  `a_definir`), frontière S1→S2 contiguë (dernier dimanche 2027-01-17 → premier lundi 2027-01-25)
+  et index continus. Le calage éteint bien la troncature de `end_date` non dominicale.
+  _(Validé le 20/08. La vue Évaluations elle-même est derrière le flag `plan_evaluation_actif` :
+  la preuve a été prise sur la fonction, pas sur l'écran.)_
+- [x] **CAL-7 · Vacances — les deux branches.** (a) **Rattachée** : une période créée dans le S1
+  (« Relâche de test », 18→24 janv.) et devenue entièrement intérieure au S2 après déplacement de la
+  frontière → `semester_id` passé de S1 à S2, **même `id`**, message « 1 période de vacances
+  rattachée à l'autre semestre ». (b) **Signalée** : une période à cheval sur la frontière
+  (« Vacances de Noël », 24 déc. → 3 janv.) → laissée en place, message « 1 période désormais hors
+  des dates de son semestre — à corriger dans Vacances (rien n'a été supprimé) », et l'écran
+  Vacances porte l'avertissement sur la ligne. (c) **Sens inverse** : remise de l'année à ses dates
+  initiales → les deux périodes reviennent au S1. `select count(*) from holidays` inchangé à chaque
+  fois. _(Validé le 20/08.)_
+- [x] **CAL-8 · Le rail dit « Année ».** Le rail porte **Année**, son résumé dit l'année scolaire et
+  son état (« 2026-2027 · S1 à venir », puis « S1 en cours » à la rentrée), le fil se lit
+  « Fuseau → Année → Vacances → Classes », et l'ancre `?section=semestres` atterrit bien sur Année.
+  _(Validé le 20/08 — **après correctif** : le rail annonçait « à définir » sur une année pourtant
+  saisie, parce que l'état se lisait sur le drapeau GLOBAL, porté par un semestre d'une autre année
+  scolaire. Il se lit désormais sur les semestres de l'année elle-même.)_
+- [x] **CAL-9 · Plus de `confirm()` natif.** Sur **Chrome** : « Archiver l'année » ouvre une
+  confirmation **dans la page**, qui dit ce qui va partir (« 1 semestre quitte les listes de l'app.
+  Rien n'est détruit : dépôts, thèmes, synthèses, quizz et semaines restent en base, et l'année se
+  restaure depuis l'onglet Archives »). Aucune boîte native. _(Validé le 20/08. « Supprimer » et
+  l'avertissement « dépôts existants » partagent le même composant, non déclenchés faute de dépôt.)_
 
 **Reste hors de ce lot, volontairement :** plus de deux semestres (trimestres, sessions d'été) ;
 réparer les semaines hors calendrier (les montrer suffit) ; geler le `numero` sous un dépôt ; le taux
 de dépôt qui compte les semaines de vacances ; recâbler les lecteurs de `is_active` ; **préparer
 l'année suivante pendant l'année en cours** (l'écran travaille sur l'année scolaire du jour, et
 refuse explicitement des dates d'une autre année plutôt que de réécrire l'année en cours en silence).
+`EcranVacances` garde son `confirm()` natif — touché par le lot, hors de son périmètre.
 
 ## C2 — (à venir)
 

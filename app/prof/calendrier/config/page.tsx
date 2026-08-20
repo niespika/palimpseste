@@ -266,7 +266,13 @@ export default async function CalendrierConfigPage({
   const nbAConfigurer = classes.filter((c) => !c.couleur).length
   const fuseauLabel = FUSEAUX.find((f) => f.id === fuseau)?.label ?? fuseau
   const libelleAnnee = libelleAnneeScolaire(ayJour)
-  const idxActif = semestresAnnee.findIndex((s) => s.id === actifId)
+  // L'état DE L'ANNÉE se lit sur ses propres semestres, jamais sur le drapeau global :
+  // tant qu'un semestre d'une AUTRE année scolaire est encore vivant, c'est lui qui porte
+  // `is_active`, et le rail annonçait « à définir » sur une année pourtant déjà saisie
+  // (constaté en recette le 20/08). `semestreActifAttendu` rend toujours un id sur une
+  // liste non vide — le `< 0` ne couvre donc plus que le cas « aucun semestre ».
+  const actifDeAnnee = semestreActifAttendu(semestresAnnee, today)
+  const idxActif = semestresAnnee.findIndex((s) => s.id === actifDeAnnee)
   const etatAnnee =
     semestresAnnee.length > 2
       ? `${semestresAnnee.length} semestres — à corriger`
