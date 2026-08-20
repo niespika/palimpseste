@@ -7,6 +7,7 @@ import SousNavModuleMobile from '@/components/nav/SousNavModuleMobile'
 import { FournisseurEtatFragmentsEleve } from '@/components/nav/EtatFragmentsEleve'
 import { navEleveFiltree } from '@/components/nav/configNavigation'
 import { slugsModulesAccessibles } from '@/utils/acces'
+import { materialiserSemestreActif } from '@/utils/semestre-actif'
 import SelecteurClasseEleve from './SelecteurClasseEleve'
 import { contexteClasseEleve, VALEUR_TOUTES } from './contexte-classe'
 
@@ -23,6 +24,11 @@ export default async function EleveLayout({ children }: { children: React.ReactN
     .single()
 
   if (profile?.role !== 'eleve') redirect('/prof')
+
+  // Second (et dernier) point d'appel de la matérialisation du semestre actif : la
+  // bascule doit avoir lieu même si c'est un ÉLÈVE qui ouvre l'app le premier ce
+  // matin-là — d'où l'écriture par client admin (la policy `semesters` est prof-only).
+  await materialiserSemestreActif()
 
   // Commutateur de classe global (Lot 9) — remonté dans l'en-tête (F3).
   // C7·L2 — trois états : en « Toutes », `active` est null sans que l'élève soit

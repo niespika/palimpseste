@@ -2,9 +2,17 @@
 
 import { revalidatePath } from 'next/cache'
 import { createClient } from '@/utils/supabase/server'
-import { lundiOnOrBefore, addDaysUTC, toISODate } from '@/utils/calendrier-grille'
-import { FUSEAUX, estFuseauValide, finDeJourDansFuseau } from '@/utils/fuseau'
+import {
+  lundiOnOrBefore,
+  addDaysUTC,
+  toISODate,
+  calerAnnee,
+  type BornesAnnee,
+} from '@/utils/calendrier-grille'
+import { anneeScolaireDe, libelleAnneeScolaire } from '@/utils/frise-enseignement'
+import { FUSEAUX, estFuseauValide, finDeJourDansFuseau, jourDansFuseau } from '@/utils/fuseau'
 import { lireFuseau } from '@/utils/fuseau-serveur'
+import { materialiserSemestreActif } from '@/utils/semestre-actif'
 import { PALETTE_CLASSES } from '@/utils/calendrier-couleurs'
 
 async function verifierProf() {
@@ -27,19 +35,25 @@ type ClientProf = Awaited<ReturnType<typeof verifierProf>>['supabase']
 // numérotation continue (cf. SPEC Parcours §5.3(d) / décision PO 4). On refuse donc
 // la saisie à la source. Comparaison lexicale sûre sur YYYY-MM-DD. Renvoie le nom du
 // semestre en conflit, ou null. Ne compare qu'aux semestres NON archivés.
+// Une LISTE d'ids à exclure, jamais un seul : l'enregistrement d'une année écrit
+// DEUX lignes, et l'état intermédiaire (nouveau S1 déjà écrit, ancien S2 pas encore)
+// ferait mordre la garde sur les semestres de l'année qu'on est justement en train
+// de déplacer. Exclure les deux ; continuer de protéger contre les AUTRES années.
 async function chevauchementSemestre(
   supabase: ClientProf,
   start: string,
   end: string,
-  exclureId?: string,
+  exclureIds: string[] = [],
 ): Promise<{ ok: boolean; nom?: string }> {
-  let q = supabase.from('semesters').select('id, name, start_date, end_date').is('archived_at', null)
-  if (exclureId) q = q.neq('id', exclureId)
-  const { data, error } = await q
+  const { data, error } = await supabase
+    .from('semesters')
+    .select('id, name, start_date, end_date')
+    .is('archived_at', null)
   if (error) return { ok: false } // fail-closed : on refuse plutôt que d'autoriser en aveugle
-  const conflit = (data ?? []).find(
-    s => start <= (s.end_date as string) && (s.start_date as string) <= end,
-  )
+  const exclus = new Set(exclureIds)
+  const conflit = (data ?? [])
+    .filter(s => !exclus.has(s.id as string))
+    .find(s => start <= (s.end_date as string) && (s.start_date as string) <= end)
   return conflit ? { ok: false, nom: conflit.name as string } : { ok: true }
 }
 
@@ -49,144 +63,303 @@ function messageChevauchement(res: { ok: boolean; nom?: string }): string {
     : 'Vérification des chevauchements impossible — réessaie.'
 }
 
-// ── Semestre ────────────────────────────────────────────────────────────────
+// ── Année scolaire ──────────────────────────────────────────────────────────
+//
+// Ce qui se conçoit, c'est l'ANNÉE : trois dates (rentrée · fin du 1er semestre ·
+// fin d'année), et les deux semestres s'en déduisent. La table `semesters` reste la
+// source de vérité — trente-huit lectures dans vingt-deux fichiers en dépendent, et
+// ce lot n'en touche aucune. Seule la PORTE D'ENTRÉE change : au lieu d'écrire une
+// ligne à la fois, on en écrit deux d'un coup.
+//
+// L'année scolaire ne porte pas de colonne : elle se DÉDUIT des dates, par
+// `anneeScolaireDe` (frontière du 1er août, testée) — la seule définition qui fait foi.
 
-export async function creerSemestre(data: {
-  name: string
-  start_date: string
-  end_date: string
-}): Promise<{ error?: string; data?: { semestreId: string } }> {
-  const { supabase } = await verifierProf()
+const NOMS_DEFAUT = ['Semestre 1', 'Semestre 2'] as const
 
-  const name = data.name?.trim()
-  if (!name) return { error: 'Donne un nom au semestre.' }
-  if (!data.start_date || !data.end_date) return { error: 'Renseigne les deux dates.' }
-  if (data.end_date < data.start_date) return { error: 'La date de fin doit suivre la date de début.' }
-  const chevauche = await chevauchementSemestre(supabase, data.start_date, data.end_date)
-  if (!chevauche.ok) return { error: messageChevauchement(chevauche) }
+type LigneSemestre = { id: string; name: string; start_date: string; end_date: string }
 
-  // Le premier semestre créé devient actif par défaut.
-  const { count } = await supabase.from('semesters').select('id', { count: 'exact', head: true })
-  const premier = (count ?? 0) === 0
-
-  const { data: row, error } = await supabase
+/** Semestres (vivants ou archivés, au choix) dont l'année scolaire est `ay`, triés. */
+async function semestresDeAnnee(
+  supabase: ClientProf,
+  ay: number,
+  vivants: boolean,
+): Promise<LigneSemestre[] | null> {
+  // Même fenêtre que la frise du parcours (`parcours/frise-serveur.ts`) : l'AY se
+  // lit sur la DATE DE DÉBUT, [ay-08-01, (ay+1)-07-31].
+  let q = supabase
     .from('semesters')
-    .insert({ name, start_date: data.start_date, end_date: data.end_date, is_active: premier })
-    .select('id')
-    .single()
-
-  if (error || !row) return { error: error?.message ?? 'Création impossible.' }
-  // Un semestre naît AVEC ses semaines. Sans cela, l'écran affiche « 12 semaines »
-  // (grille calculée) et Fragments n'en a aucune (aucune ligne fragments_semaines)
-  // → aucun dépôt élève possible, sans rien qui le signale.
-  await synchroniserEnSilence(supabase, row.id)
-  revaliderSemaines()
-  return { data: { semestreId: row.id } }
+    .select('id, name, start_date, end_date')
+    .gte('start_date', `${ay}-08-01`)
+    .lte('start_date', `${ay + 1}-07-31`)
+    .order('start_date', { ascending: true })
+  q = vivants ? q.is('archived_at', null) : q.not('archived_at', 'is', null)
+  const { data, error } = await q
+  if (error) return null
+  return (data ?? []) as LigneSemestre[]
 }
 
-export async function modifierSemestre(
-  id: string,
-  data: { name: string; start_date: string; end_date: string }
-): Promise<{ error?: string }> {
-  const { supabase } = await verifierProf()
-
-  const name = data.name?.trim()
-  if (!name) return { error: 'Donne un nom au semestre.' }
-  if (!data.start_date || !data.end_date) return { error: 'Renseigne les deux dates.' }
-  if (data.end_date < data.start_date) return { error: 'La date de fin doit suivre la date de début.' }
-  const chevauche = await chevauchementSemestre(supabase, data.start_date, data.end_date, id)
-  if (!chevauche.ok) return { error: messageChevauchement(chevauche) }
-
-  const { error } = await supabase
-    .from('semesters')
-    .update({ name, start_date: data.start_date, end_date: data.end_date })
-    .eq('id', id)
-
-  if (error) return { error: error.message }
-  // Les dates ont pu bouger : la grille se déplace, les semaines stockées doivent
-  // suivre (numérotation, fin de semaine, échéance). Les semaines qui sortent de
-  // l'intervalle ne sont PAS supprimées — elles sont comptées « hors calendrier ».
-  await synchroniserEnSilence(supabase, id)
-  revaliderSemaines()
-  return {}
+/** Année scolaire du jour, lue dans le fuseau de l'école (jamais en heure serveur). */
+async function anneeScolaireDuJour(): Promise<number> {
+  return anneeScolaireDe(jourDansFuseau(new Date(), await lireFuseau()))
 }
 
-export async function definirSemestreActif(id: string): Promise<{ error?: string }> {
-  const { supabase } = await verifierProf()
-  await supabase.from('semesters').update({ is_active: false }).eq('is_active', true)
-  const { error } = await supabase.from('semesters').update({ is_active: true }).eq('id', id)
-  if (error) return { error: error.message }
-  revalidatePath('/prof/calendrier/config')
-  return {}
-}
-
-export async function supprimerSemestre(id: string): Promise<{ error?: string }> {
-  const { supabase } = await verifierProf()
-
-  // Refuser si des entités pédagogiques y sont rattachées : sinon la suppression
-  // CASCADE détruirait silencieusement thèmes, synthèses, essais (et
-  // les dépôts déposés par les élèves), ainsi que les notes de semestre Quazian.
-  // Tables Fragments (FK `semestre_id`).
-  for (const table of ['fragments_semaines', 'fragments_themes', 'fragments_syntheses', 'fragments_essais_epreuves'] as const) {
-    const { count } = await supabase
-      .from(table)
-      .select('id', { count: 'exact', head: true })
-      .eq('semestre_id', id)
-    if ((count ?? 0) > 0) {
-      return { error: 'Ce semestre est utilisé par Fragments (semaines, thèmes, synthèses ou essais). Détache-les d\'abord.' }
-    }
+/**
+ * Enregistre l'ANNÉE : crée **ou** met à jour les deux lignes `semesters` à partir
+ * de trois dates. `S1 = [rentrée, fin S1]`, `S2 = [lendemain de fin S1, fin d'année]`,
+ * bornes calées sur la semaine calendaire (`calerAnnee`).
+ *
+ * Ce qui n'est JAMAIS fait ici : supprimer une ligne, changer un `id`, réécrire un
+ * nom déjà saisi. Les dépôts, quiz, plans et semaines rattachés survivent tels quels.
+ */
+export async function enregistrerAnnee(data: {
+  rentree: string
+  finS1: string
+  finAnnee: string
+}): Promise<{
+  error?: string
+  data?: {
+    bornes: BornesAnnee
+    crees: number
+    misAJour: number
+    vacancesRattachees: number
+    vacancesSignalees: number
   }
-  // Tables Quazian (FK `semester_id`).
-  for (const table of ['quazian_quizzes', 'quazian_semester'] as const) {
-    const { count } = await supabase
-      .from(table)
-      .select('id', { count: 'exact', head: true })
-      .eq('semester_id', id)
-    if ((count ?? 0) > 0) {
-      return { error: 'Ce semestre est utilisé par Quazian (quizz ou notes de semestre). Détache-les d\'abord.' }
+}> {
+  const { supabase } = await verifierProf()
+
+  const { rentree, finS1, finAnnee } = data
+  const estDate = (v: string) => /^\d{4}-\d{2}-\d{2}$/.test(v ?? '')
+  if (!estDate(rentree) || !estDate(finS1) || !estDate(finAnnee)) {
+    return { error: 'Renseigne les trois dates : rentrée, fin du 1er semestre, fin de l’année.' }
+  }
+  if (finS1 < rentree) return { error: 'La fin du 1er semestre doit suivre la rentrée.' }
+  if (finAnnee < finS1) return { error: 'La fin de l’année doit suivre la fin du 1er semestre.' }
+
+  const bornes = calerAnnee(rentree, finS1, finAnnee)
+
+  // Le calage peut vider le second semestre : si la fin d'année tombe dans la même
+  // semaine calendaire que la fin du S1, `s2` démarrerait le lundi SUIVANT son
+  // dimanche de fin. Les dates saisies sont pourtant dans le bon ordre — d'où ce
+  // refus distinct, formulé sur ce que l'app aurait retenu.
+  if (bornes.s2.end < bornes.s2.start) {
+    return {
+      error: 'La fin de l’année tombe dans la même semaine que la fin du 1er semestre : le second semestre serait vide. Recule la fin de l’année d’au moins une semaine.',
     }
   }
 
-  const { error } = await supabase.from('semesters').delete().eq('id', id)
-  if (error) return { error: error.message }
-  revalidatePath('/prof/calendrier/config')
-  return {}
+  // Une année qui enjambe la frontière du 1er août ferait tomber les deux semestres
+  // dans deux années scolaires différentes — et la frise du parcours, qui filtre par
+  // AY, n'en verrait plus qu'un (`parcours/frise-serveur.ts`).
+  const ayDebut = anneeScolaireDe(bornes.s1.start)
+  const ayFin = anneeScolaireDe(bornes.s2.end)
+  if (ayDebut !== ayFin) {
+    return {
+      error: `Une année scolaire va du 1er août au 31 juillet : ces dates enjambent la frontière (${libelleAnneeScolaire(ayDebut)} → ${libelleAnneeScolaire(ayFin)}). Resserre la rentrée ou la fin de l’année.`,
+    }
+  }
+
+  // L'écran travaille sur l'année scolaire DU JOUR (préparer l'année suivante en
+  // avance n'est pas de ce lot). Sans ce refus, saisir les dates de l'an prochain
+  // réécrirait en silence les bornes de l'année en cours, sous les dépôts déjà faits.
+  const ayJour = await anneeScolaireDuJour()
+  if (ayDebut !== ayJour) {
+    return {
+      error: `Ces dates appartiennent à l’année scolaire ${libelleAnneeScolaire(ayDebut)}, alors que l’écran travaille sur ${libelleAnneeScolaire(ayJour)}. Préparer une année à l’avance n’est pas encore possible.`,
+    }
+  }
+
+  const existants = await semestresDeAnnee(supabase, ayJour, true)
+  if (existants === null) return { error: 'Lecture des semestres impossible — réessaie.' }
+  if (existants.length > 2) {
+    return {
+      error: `${existants.length} semestres vivants pour ${libelleAnneeScolaire(ayJour)} : archive les surnuméraires avant d’enregistrer l’année.`,
+    }
+  }
+
+  // P1 — la garde de chevauchement doit ignorer les DEUX semestres de l'année
+  // éditée (sinon l'état intermédiaire se mord la queue), sans cesser de protéger
+  // contre les autres années.
+  const exclus = existants.map((s) => s.id)
+  for (const b of [bornes.s1, bornes.s2]) {
+    const chevauche = await chevauchementSemestre(supabase, b.start, b.end, exclus)
+    if (!chevauche.ok) return { error: messageChevauchement(chevauche) }
+  }
+
+  // Écriture : la ligne la plus précoce devient S1, la suivante S2. Un nom déjà
+  // saisi n'est jamais réécrit — seules les dates bougent.
+  const ids: string[] = []
+  let crees = 0
+  let misAJour = 0
+  for (const [rang, b] of [bornes.s1, bornes.s2].entries()) {
+    const existant = existants[rang]
+    if (existant) {
+      const { error } = await supabase
+        .from('semesters')
+        .update({ start_date: b.start, end_date: b.end })
+        .eq('id', existant.id)
+      if (error) return { error: error.message }
+      ids.push(existant.id)
+      misAJour++
+    } else {
+      const { data: row, error } = await supabase
+        .from('semesters')
+        .insert({ name: NOMS_DEFAUT[rang], start_date: b.start, end_date: b.end, is_active: false })
+        .select('id')
+        .single()
+      if (error || !row) return { error: error?.message ?? 'Création du semestre impossible.' }
+      ids.push(row.id as string)
+      crees++
+    }
+  }
+
+  // P5 — les vacances appartiennent à un SEMESTRE, pas à l'année : déplacer les
+  // bornes peut faire sortir une période de son semestre. On ne détruit rien.
+  const vacances = await recalerVacances(supabase, ids[0], bornes.s1, ids[1], bornes.s2)
+
+  // P2 — la grille a bougé pour les DEUX semestres : les lignes `fragments_semaines`
+  // doivent suivre. Best-effort (l'écart reste visible à l'écran, « générées / prévues »).
+  for (const id of ids) await synchroniserEnSilence(supabase, id)
+
+  // Le drapeau `is_active` se recalcule : il n'est plus saisi (plus de « Définir actif »).
+  await materialiserSemestreActif()
+
+  revaliderSemaines()
+  return { data: { bornes, crees, misAJour, ...vacances } }
 }
 
-export async function archiverSemestre(id: string): Promise<{ error?: string }> {
-  const { supabase } = await verifierProf()
-  // Garde-fou : ne jamais archiver le semestre actif (il pilote la numérotation
-  // des semaines et sert de référence à Fragments/Quazian).
-  const { data: sem } = await supabase.from('semesters').select('is_active').eq('id', id).maybeSingle()
-  if (!sem) return { error: 'Semestre introuvable.' }
-  if (sem.is_active) {
-    return { error: 'Impossible d\'archiver le semestre actif. Définis d\'abord un autre semestre actif.' }
+/**
+ * Après un déplacement des bornes : une période de vacances qui tombe ENTIÈREMENT
+ * dans l'autre semestre de la même année y est RATTACHÉE (changement de FK, rien de
+ * perdu) ; toute autre période hors de son semestre est laissée en place et
+ * SIGNALÉE sur l'écran Vacances. Une période à cheval sur la frontière S1/S2 se
+ * signale, elle ne se découpe pas toute seule.
+ */
+async function recalerVacances(
+  supabase: ClientProf,
+  s1Id: string,
+  s1: { start: string; end: string },
+  s2Id: string,
+  s2: { start: string; end: string },
+): Promise<{ vacancesRattachees: number; vacancesSignalees: number }> {
+  const { data, error } = await supabase
+    .from('holidays')
+    .select('id, semester_id, start_date, end_date')
+    .in('semester_id', [s1Id, s2Id])
+  if (error) return { vacancesRattachees: 0, vacancesSignalees: 0 }
+
+  const bornes = new Map([[s1Id, s1], [s2Id, s2]])
+  let rattachees = 0
+  let signalees = 0
+  for (const h of data ?? []) {
+    const sien = bornes.get(h.semester_id as string)!
+    const debut = h.start_date as string
+    const fin = h.end_date as string
+    if (debut >= sien.start && fin <= sien.end) continue // toujours chez lui
+    const autreId = h.semester_id === s1Id ? s2Id : s1Id
+    const autre = bornes.get(autreId)!
+    if (debut >= autre.start && fin <= autre.end) {
+      const { error: errMaj } = await supabase
+        .from('holidays')
+        .update({ semester_id: autreId })
+        .eq('id', h.id)
+      if (!errMaj) {
+        rattachees++
+        continue
+      }
+    }
+    signalees++
   }
+  return { vacancesRattachees: rattachees, vacancesSignalees: signalees }
+}
+
+/** Archive les DEUX semestres d'une année d'un coup (l'archivage porte sur l'année). */
+export async function archiverAnnee(ay: number): Promise<{ error?: string }> {
+  const { supabase } = await verifierProf()
+  const vivants = await semestresDeAnnee(supabase, ay, true)
+  if (vivants === null) return { error: 'Lecture des semestres impossible — réessaie.' }
+  if (vivants.length === 0) return { error: 'Aucun semestre vivant pour cette année.' }
   const { error } = await supabase
     .from('semesters')
     .update({ archived_at: new Date().toISOString() })
-    .eq('id', id)
+    .in('id', vivants.map((s) => s.id))
   if (error) return { error: error.message }
-  revalidatePath('/prof/calendrier/config')
+  // L'ancien garde-fou « ne jamais archiver le semestre actif » n'a plus lieu d'être :
+  // le drapeau n'est plus un choix, il se recalcule sur ce qu'il reste de vivant.
+  await materialiserSemestreActif()
+  revaliderSemaines()
   return {}
 }
 
-export async function restaurerSemestre(id: string): Promise<{ error?: string }> {
+/** Restaure les semestres archivés d'une année (les deux ensemble). */
+export async function restaurerAnnee(ay: number): Promise<{ error?: string }> {
   const { supabase } = await verifierProf()
-  // Dé-archiver ne doit pas recréer un chevauchement : le garde-fou ignore les
-  // archivés, donc un semestre restauré peut entrer en conflit avec un semestre vivant.
-  const { data: sem } = await supabase
-    .from('semesters').select('start_date, end_date').eq('id', id).maybeSingle()
-  if (!sem) return { error: 'Semestre introuvable.' }
-  const chevauche = await chevauchementSemestre(supabase, sem.start_date as string, sem.end_date as string, id)
-  if (!chevauche.ok) {
-    return { error: chevauche.nom
-      ? `Restauration impossible : ces dates chevauchent le semestre « ${chevauche.nom} ». Modifie l'un des deux d'abord.`
-      : 'Vérification des chevauchements impossible — réessaie.' }
+  const archives = await semestresDeAnnee(supabase, ay, false)
+  if (archives === null) return { error: 'Lecture des semestres impossible — réessaie.' }
+  if (archives.length === 0) return { error: 'Aucun semestre archivé pour cette année.' }
+  // Dé-archiver ne doit pas recréer un chevauchement : la garde ignore les archivés,
+  // donc une année restaurée peut entrer en conflit avec une année vivante.
+  const ids = archives.map((s) => s.id)
+  for (const s of archives) {
+    const chevauche = await chevauchementSemestre(supabase, s.start_date, s.end_date, ids)
+    if (!chevauche.ok) {
+      return {
+        error: chevauche.nom
+          ? `Restauration impossible : « ${s.name} » chevauche le semestre « ${chevauche.nom} ». Modifie l’année en cours d’abord.`
+          : 'Vérification des chevauchements impossible — réessaie.',
+      }
+    }
   }
-  const { error } = await supabase.from('semesters').update({ archived_at: null }).eq('id', id)
+  const { error } = await supabase.from('semesters').update({ archived_at: null }).in('id', ids)
   if (error) return { error: error.message }
-  revalidatePath('/prof/calendrier/config')
+  await materialiserSemestreActif()
+  revaliderSemaines()
+  return {}
+}
+
+/**
+ * Supprime définitivement les semestres d'une année. Garde les vérifications de
+ * rattachement de l'ancien `supprimerSemestre` — et refuse l'année ENTIÈRE dès
+ * qu'UN des deux semestres est utilisé : sinon la suppression CASCADE détruirait
+ * silencieusement thèmes, synthèses, essais, dépôts d'élèves et notes Quazian.
+ */
+export async function supprimerAnnee(
+  ay: number,
+  inclureArchives = false,
+): Promise<{ error?: string }> {
+  const { supabase } = await verifierProf()
+  const vivants = await semestresDeAnnee(supabase, ay, true)
+  const archives = inclureArchives ? await semestresDeAnnee(supabase, ay, false) : []
+  if (vivants === null || archives === null) return { error: 'Lecture des semestres impossible — réessaie.' }
+  const cibles = inclureArchives ? archives : vivants
+  if (cibles.length === 0) return { error: 'Aucun semestre à supprimer pour cette année.' }
+
+  for (const sem of cibles) {
+    // Tables Fragments (FK `semestre_id`).
+    for (const table of ['fragments_semaines', 'fragments_themes', 'fragments_syntheses', 'fragments_essais_epreuves'] as const) {
+      const { count } = await supabase
+        .from(table)
+        .select('id', { count: 'exact', head: true })
+        .eq('semestre_id', sem.id)
+      if ((count ?? 0) > 0) {
+        return { error: `« ${sem.name} » est utilisé par Fragments (semaines, thèmes, synthèses ou essais). Détache-les d’abord — l’année entière est conservée.` }
+      }
+    }
+    // Tables Quazian (FK `semester_id`).
+    for (const table of ['quazian_quizzes', 'quazian_semester'] as const) {
+      const { count } = await supabase
+        .from(table)
+        .select('id', { count: 'exact', head: true })
+        .eq('semester_id', sem.id)
+      if ((count ?? 0) > 0) {
+        return { error: `« ${sem.name} » est utilisé par Quazian (quizz ou notes de semestre). Détache-les d’abord — l’année entière est conservée.` }
+      }
+    }
+  }
+
+  const { error } = await supabase.from('semesters').delete().in('id', cibles.map((s) => s.id))
+  if (error) return { error: error.message }
+  await materialiserSemestreActif()
+  revaliderSemaines()
   return {}
 }
 

@@ -10,10 +10,20 @@
 //  (2) Une DATE LIMITE est un instant de FIN de journée dans le fuseau de l'école,
 //      jamais une date pure écrite telle quelle (qui vaut minuit UTC, soit la VEILLE
 //      au soir à Toronto — item 7 du chantier C8).
+//
+//  (3) L'ANNÉE se conçoit en trois dates et les semestres s'en déduisent, CALÉS sur
+//      la semaine calendaire (calerAnnee) ; le semestre actif se DÉDUIT de la date du
+//      jour (semestreActifAttendu) et ne se saisit plus (lot Calendrier · Année).
 
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { calculerGrilleSemaines, lundiOnOrBefore, toISODate } from './calendrier-grille'
+import {
+  calculerGrilleSemaines,
+  calerAnnee,
+  lundiOnOrBefore,
+  semestreActifAttendu,
+  toISODate,
+} from './calendrier-grille'
 import { finDeJourDansFuseau, jourDansFuseau } from './fuseau'
 
 const TO = 'America/Toronto'
@@ -105,4 +115,117 @@ test('RÉGRESSION item 7 : la date pure écrite telle quelle est déjà la VEILL
   // UTC, soit le samedi 4 à 20 h à Toronto — quatre heures de rendus « en retard ».
   assert.equal(jourDansFuseau('2026-07-05T00:00:00Z', TO), '2026-07-04')
   assert.notEqual(finDeJourDansFuseau('2026-07-05', TO), '2026-07-05T00:00:00.000Z')
+})
+
+// ── (3) Année : trois dates → deux semestres calés sur la semaine ────────────
+
+test('calerAnnee : rentrée un mercredi → S1 démarre au lundi de sa semaine', () => {
+  // 2026-09-02 est un mercredi ; son lundi est le 31 août.
+  const a = calerAnnee('2026-09-02', '2027-01-20', '2027-06-17')
+  assert.equal(a.s1.start, '2026-08-31')
+  assert.equal(new Date(a.s1.start + 'T00:00:00Z').getUTCDay(), 1) // lundi
+})
+
+test('calerAnnee : fin de S1 un mercredi → S1 s’arrête au dimanche de sa semaine', () => {
+  // 2027-01-20 est un mercredi ; son dimanche est le 24 janvier.
+  const a = calerAnnee('2026-09-02', '2027-01-20', '2027-06-17')
+  assert.equal(a.s1.end, '2027-01-24')
+  assert.equal(new Date(a.s1.end + 'T00:00:00Z').getUTCDay(), 0) // dimanche
+})
+
+test('calerAnnee : S2 démarre le LUNDI suivant, jamais un jour à cheval', () => {
+  const a = calerAnnee('2026-09-02', '2027-01-20', '2027-06-17')
+  assert.equal(a.s2.start, '2027-01-25')
+  assert.equal(new Date(a.s2.start + 'T00:00:00Z').getUTCDay(), 1)
+  assert.equal(a.s2.end, '2027-06-20') // dimanche de la semaine du jeudi 17 juin
+  assert.equal(new Date(a.s2.end + 'T00:00:00Z').getUTCDay(), 0)
+  // Aucun jour n'appartient aux deux semestres, et il n'y a pas de trou d'un jour.
+  assert.ok(a.s1.end < a.s2.start)
+  assert.equal(
+    toISODate(new Date(new Date(a.s1.end + 'T00:00:00Z').getTime() + 86400000)),
+    a.s2.start
+  )
+})
+
+test('calerAnnee : sans calage, la semaine à cheval serait comptée DEUX fois', () => {
+  // C'est le bug qu'on évite : avec des bornes brutes (S1 finit le mercredi 20/01,
+  // S2 démarre le jeudi 21/01), la grille des DEUX semestres contient le lundi 18/01
+  // — donc deux lignes `fragments_semaines` pour la même semaine réelle.
+  const brutS1 = calculerGrilleSemaines({ start_date: '2026-09-02', end_date: '2027-01-20' }, [])
+  const brutS2 = calculerGrilleSemaines({ start_date: '2027-01-21', end_date: '2027-06-17' }, [])
+  const communes = brutS1.filter((w) => brutS2.some((v) => v.start === w.start))
+  assert.equal(communes.length, 1)
+  assert.equal(communes[0].start, '2027-01-18')
+
+  // Avec le calage, plus aucun lundi partagé.
+  const a = calerAnnee('2026-09-02', '2027-01-20', '2027-06-17')
+  const g1 = calculerGrilleSemaines({ start_date: a.s1.start, end_date: a.s1.end }, [])
+  const g2 = calculerGrilleSemaines({ start_date: a.s2.start, end_date: a.s2.end }, [])
+  assert.equal(g1.filter((w) => g2.some((v) => v.start === w.start)).length, 0)
+})
+
+test('calerAnnee : année d’une seule semaine — les trois dates dans la même semaine', () => {
+  // Mardi → jeudi → vendredi de la semaine du lundi 31 août 2026.
+  const a = calerAnnee('2026-09-01', '2026-09-03', '2026-09-04')
+  assert.deepEqual(a.s1, { start: '2026-08-31', end: '2026-09-06' })
+  // Le S2 est alors DÉGÉNÉRÉ : il démarre le lundi suivant et se termine le dimanche
+  // de la semaine de la fin d'année, c'est-à-dire AVANT son début. La fonction ne
+  // corrige rien (elle dit ce qui serait retenu) ; c'est à la saisie de refuser.
+  assert.equal(a.s2.start, '2026-09-07')
+  assert.equal(a.s2.end, '2026-09-06')
+  assert.ok(a.s2.end < a.s2.start)
+})
+
+test('calerAnnee : une rentrée un dimanche recule d’une semaine (piège du 1er août)', () => {
+  // Dimanche 2026-08-02 → lundi 2026-07-27, qui appartient à l'année scolaire
+  // PRÉCÉDENTE : c'est ce que l'action serveur refuse (frontière du 1er août).
+  const a = calerAnnee('2026-08-02', '2026-12-16', '2027-06-17')
+  assert.equal(a.s1.start, '2026-07-27')
+})
+
+// ── (3 bis) Semestre actif : déduit de la date du jour ───────────────────────
+
+const S1 = { id: 's1', start_date: '2026-08-31', end_date: '2027-01-24' }
+const S2 = { id: 's2', start_date: '2027-01-25', end_date: '2027-06-20' }
+const ANNEE = [S1, S2]
+
+test('semestreActifAttendu : une date dans le S1 → le S1', () => {
+  assert.equal(semestreActifAttendu(ANNEE, '2026-10-14'), 's1')
+  assert.equal(semestreActifAttendu(ANNEE, '2026-08-31'), 's1') // premier jour inclus
+  assert.equal(semestreActifAttendu(ANNEE, '2027-01-24'), 's1') // dernier jour inclus
+})
+
+test('semestreActifAttendu : une date dans le S2 → le S2', () => {
+  assert.equal(semestreActifAttendu(ANNEE, '2027-03-08'), 's2')
+  assert.equal(semestreActifAttendu(ANNEE, '2027-01-25'), 's2') // le lendemain bascule
+})
+
+test('semestreActifAttendu : AVANT la rentrée → le prochain à commencer', () => {
+  // La règle qui compte à l'usage : saisie en août, le S1 est actif sans y revenir.
+  assert.equal(semestreActifAttendu(ANNEE, '2026-08-20'), 's1')
+  assert.equal(semestreActifAttendu(ANNEE, '2026-01-01'), 's1')
+})
+
+test('semestreActifAttendu : APRÈS la fin d’année → le dernier terminé', () => {
+  assert.equal(semestreActifAttendu(ANNEE, '2027-07-15'), 's2')
+  assert.equal(semestreActifAttendu(ANNEE, '2030-01-01'), 's2')
+})
+
+test('semestreActifAttendu : aucun semestre → aucun actif', () => {
+  assert.equal(semestreActifAttendu([], '2026-10-14'), null)
+})
+
+test('semestreActifAttendu : le S1 seul, l’année de l’an dernier encore vivante', () => {
+  // Trois lignes vivantes de deux années : « en cours » l'emporte sur « prochain ».
+  const anPasse = { id: 'v1', start_date: '2025-08-25', end_date: '2026-06-21' }
+  assert.equal(semestreActifAttendu([anPasse, ...ANNEE], '2026-03-02'), 'v1')
+  // Entre les deux années (été) : le prochain à commencer, pas le dernier terminé.
+  assert.equal(semestreActifAttendu([anPasse, ...ANNEE], '2026-07-10'), 's1')
+})
+
+test('semestreActifAttendu : déterministe — l’ordre de la liste ne change rien', () => {
+  const melange = [S2, S1]
+  for (const jour of ['2026-08-20', '2026-10-14', '2027-03-08', '2027-07-15']) {
+    assert.equal(semestreActifAttendu(melange, jour), semestreActifAttendu(ANNEE, jour), jour)
+  }
 })

@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import type { Semestre, Holiday } from '@/types/calendrier'
 import type { SemaineGrille } from '@/utils/calendrier-grille'
@@ -14,8 +15,11 @@ const INPUT =
 const fmt = (d: string) => formatJour(d, { day: 'numeric', month: 'short' })
 
 // Une période enrichie du nombre de semaines pédagogiques qu'elle retire
-// réellement (calculé côté serveur depuis la grille).
-type HolidayInfo = Holiday & { semaines: number }
+// réellement (calculé côté serveur depuis la grille) et d'un drapeau « hors des
+// dates de son semestre » : déplacer les bornes de l'année peut faire SORTIR une
+// période de son semestre. L'app ne détruit rien — celles qui ne tombaient pas
+// entièrement dans l'autre semestre restent en place et se signalent ici (P5).
+type HolidayInfo = Holiday & { semaines: number; horsBornes: boolean }
 
 // Regroupe les semaines de vacances consécutives d'une même période en une pilule,
 // en retenant le NOMBRE de semaines couvertes (`semaines`) pour dimensionner la
@@ -55,12 +59,15 @@ const libelleCourt = (l: string) =>
 
 export default function EcranVacances({
   semestres,
+  actifId,
   selectedId,
   holidays,
   bande,
   semainesGenerees,
 }: {
   semestres: Semestre[]
+  /** Semestre actif ATTENDU à la date du jour (fonction pure), pas la colonne. */
+  actifId: string | null
   selectedId: string | null
   holidays: HolidayInfo[]
   bande: SemaineGrille[]
@@ -75,7 +82,16 @@ export default function EcranVacances({
   const [genMsg, setGenMsg] = useState<string | null>(null)
 
   if (semestres.length === 0) {
-    return <p className="text-sm text-muet">Crée d&apos;abord un semestre.</p>
+    // P9 — les semestres ne se créent plus un à un : ils se déduisent de l'année.
+    return (
+      <p className="text-sm text-muet">
+        Définis d&apos;abord l&apos;
+        <Link href="/prof/calendrier/config?section=annee" className="text-encre-douce underline">
+          année
+        </Link>{' '}
+        (rentrée, fin du 1er semestre, fin de l&apos;année) — les deux semestres s&apos;en déduisent.
+      </p>
+    )
   }
 
   const jetons = jetonsDepuisBande(bande)
@@ -173,7 +189,7 @@ export default function EcranVacances({
             {semestres.map((s) => (
               <option key={s.id} value={s.id}>
                 {s.name}
-                {s.is_active ? ' (actif)' : ''}
+                {s.id === actifId ? ' (actif)' : ''}
               </option>
             ))}
           </select>
@@ -226,6 +242,13 @@ export default function EcranVacances({
                     <span className="italic text-muet-clair">n&apos;enlève aucune semaine pédagogique</span>
                   )}
                 </div>
+                {/* P5 — rien n'est détruit ni découpé : on signale, le prof tranche. */}
+                {h.horsBornes && (
+                  <div className="text-[12.5px] text-attention mt-1">
+                    Hors des dates de ce semestre depuis le déplacement de l&apos;année — corrige ses
+                    dates, ou déplace-la sur l&apos;autre semestre. Rien n&apos;a été supprimé.
+                  </div>
+                )}
               </div>
               <button
                 onClick={() => setEditId(h.id)}

@@ -43,7 +43,7 @@ export default function RailConfig({ active, items }: { active: string; items: R
         )
       })}
       <p className="italic text-[12.5px] text-muet-clair px-1 pt-2.5 leading-snug">
-        Fil de configuration : Fuseau → Semestres → Vacances → Classes.
+        Fil de configuration : Fuseau → Année → Vacances → Classes.
       </p>
     </aside>
   )

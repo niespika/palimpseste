@@ -977,6 +977,80 @@ module (séances, cartes, contenus restent en base — la règle d'accès de ce 
 inatteignable dans le contexte de cette classe) → check-in ; la visibilité Quazian au « vu » →
 `PROMPT_Code_C7_L3.md` ; « bloquer un élève jamais signalé » → non.
 
+## Calendrier · Année — on borne l'année, les semestres se déduisent (branche `feat/calendrier-annee`)
+
+_**Aucune migration dans ce lot** : ni table, ni colonne. `semesters` reste la source de vérité et
+ses trente-huit lectures ne bougent pas — seule la PORTE D'ENTRÉE change (une action d'année à la
+place des actions de semestre)._
+
+_**Vert avant recette** : `npm test` 189/189, `tsc --noEmit` propre, `eslint` propre, `next build`
+compilé. Les nouveaux tests purs couvrent `calerAnnee` (rentrée un mercredi, fin de S1 un mercredi,
+S2 qui démarre bien le lundi suivant, année d'une seule semaine, semaine à cheval comptée deux fois
+SANS le calage) et `semestreActifAttendu` (dans le S1, dans le S2, avant la rentrée, après la fin
+d'année, aucun semestre, déterminisme)._
+
+_**⚠️ État de la sandbox au 20/08 (point de départ des tests, relevé en lecture seule).** Un seul
+semestre vivant, **« Semestre test 2 » (2026-07-01 → 2026-08-21)**, et il appartient à l'année
+scolaire **2025-2026** (frontière du 1er août) — pas à l'année du jour (2026-2027). Deux
+conséquences pour la recette : **le test 1 « Adoption » ne se joue pas tel quel** (l'écran Année
+ouvre un formulaire VIDE pour 2026-2027, ce qui est le comportement voulu), et ce semestre apparaît
+dans le nouveau bloc **« Encore vivant hors de 2026-2027 »**, avec son bouton « Archiver l'année
+2025-2026 ». Pour jouer l'adoption pour de vrai : créer d'abord l'année 2026-2027 (test 2), puis
+recharger l'écran — les trois dates doivent revenir pré-remplies. La matérialisation du drapeau
+actif, elle, **n'écrira rien au premier chargement** (répétition à blanc : « Semestre test 2 »
+contient le 20/08, il est déjà `is_active = true`)._
+
+- [ ] **CAL-1 · Adoption.** Ouvrir `/prof/calendrier/config?section=annee` **une fois l'année
+  2026-2027 créée** (cf. encadré ci-dessus) : les trois dates sont pré-remplies depuis les bornes des
+  deux semestres (`rentrée = S1.start`, `fin S1 = S1.end`, `fin d'année = S2.end`), **aucune ligne
+  créée, aucun `id` changé**. Contrôle en base : `select id, name, start_date, end_date from semesters
+  order by start_date;` avant/après ouverture — identique.
+- [ ] **CAL-2 · Saisie non calée.** Saisir trois dates qui ne tombent pas sur des bornes de semaine —
+  par exemple **mercredi 2026-09-02**, **mercredi 2027-01-20**, **jeudi 2027-06-17**. Avant
+  d'enregistrer, le bloc « Ce qui sera retenu » doit annoncer **« Semestre 1 : lundi 31 août →
+  dimanche 24 janvier »** et **« Semestre 2 : lundi 25 janvier → dimanche 20 juin »**. Enregistrer :
+  **deux** lignes créées ou mises à jour, et **aucune** date de début de semaine portée par deux
+  lignes `fragments_semaines`. Requête de contrôle :
+  ```sql
+  select date_debut, count(*) from fragments_semaines group by date_debut having count(*) > 1;
+  ```
+  → **0 ligne** (relevé de référence avant le lot : 0 ligne, y compris par semestre).
+- [ ] **CAL-3 · Déplacement.** Reculer la rentrée d'un mois et réenregistrer. Les **deux** semestres
+  suivent, la numérotation se recale, l'avertissement « dépôts existants » paraît **avant**
+  l'enregistrement s'il y a au moins un dépôt sur l'année, le compteur **« n semaines hors calendrier »**
+  s'affiche sur la carte du semestre concerné, et **aucune ligne n'est supprimée** :
+  `select count(*) from fragments_semaines;` avant/après — jamais en baisse.
+- [ ] **CAL-4 · Actif.** Le semestre en cours porte le drapeau `actif` à l'écran, et en base **une
+  seule ligne** à `is_active = true` : `select count(*) from semesters where is_active;` → 1. Il n'y
+  a **plus aucun bouton « Définir actif »**. _(La règle 2 — « le prochain à commencer » — se vérifie
+  par le test pur, pas en bougeant l'horloge de la machine.)_
+- [ ] **CAL-5 · Fragments vit.** `/prof/fragments-erudition` affiche les semaines du semestre actif,
+  et un dépôt élève passe (smoke test de la règle 5 du `SUIVI_SQL.md` : connexion élève test + une
+  soumission).
+- [ ] **CAL-6 · Le parcours vit.** L'aperçu du plan d'évaluation d'une classe s'affiche **sans avis
+  bloquant** et sans l'avis « dernière semaine tronquée » (le calage sur le dimanche l'éteint), et le
+  statut `a_definir` ne paraît plus une fois les deux semestres définis.
+- [ ] **CAL-7 · Vacances.** Créer une période dans le S1, puis déplacer les bornes de l'année de sorte
+  qu'elle tombe entièrement dans le S2 → elle est **rattachée** (message à l'enregistrement, et elle
+  apparaît sous le S2 dans l'écran Vacances). Refaire l'essai avec une période **à cheval** sur la
+  frontière S1/S2 → elle est **signalée** en place (« Hors des dates de ce semestre depuis le
+  déplacement de l'année »), **jamais perdue ni découpée** : `select count(*) from holidays;`
+  inchangé dans les deux cas.
+- [ ] **CAL-8 · Le rail dit « Année ».** Le rail de configuration porte **Année** (plus « Semestres »),
+  son résumé dit l'année scolaire et son état (« 2026-2027 · S1 en cours »), le fil de configuration
+  se lit « Fuseau → Année → Vacances → Classes », et l'ancre `?section=semestres` (encore posée dans
+  les signets et dans l'écran Fragments avant ce lot) atterrit bien sur Année.
+- [ ] **CAL-9 · Plus de `confirm()` natif.** Sur **Chrome** : « Archiver l'année », « Supprimer » et
+  l'avertissement « dépôts existants » ouvrent une confirmation **dans la page**, qui dit ce qui va
+  partir. Aucune boîte native. _(Rappel de la règle d'or : l'aperçu embarqué de Code rendrait ces
+  boutons muets si un `confirm()` subsistait.)_
+
+**Reste hors de ce lot, volontairement :** plus de deux semestres (trimestres, sessions d'été) ;
+réparer les semaines hors calendrier (les montrer suffit) ; geler le `numero` sous un dépôt ; le taux
+de dépôt qui compte les semaines de vacances ; recâbler les lecteurs de `is_active` ; **préparer
+l'année suivante pendant l'année en cours** (l'écran travaille sur l'année scolaire du jour, et
+refuse explicitement des dates d'une autre année plutôt que de réécrire l'année en cours en silence).
+
 ## C2 — (à venir)
 
 _Les tests seront ajoutés à l'écriture des specs / à la clôture des sessions (écran élève, calibration L8…). S'y ajoutera le test reporté C11a-6 (synthèse hebdo → ligne `scriptorium` classe seule)._
