@@ -1,25 +1,22 @@
 import { createClient } from '@/utils/supabase/server'
+import { createAdminClient } from '@/utils/supabase/admin'
 import type { Semestre, Holiday } from '@/types/calendrier'
 import { lireFuseau } from '@/utils/fuseau-serveur'
 import { FUSEAUX, jourDansFuseau } from '@/utils/fuseau'
-import { calculerGrilleSemaines } from '@/utils/calendrier-grille'
+import { calculerGrilleSemaines, semestreActifAttendu } from '@/utils/calendrier-grille'
+import { anneeScolaireDe, libelleAnneeScolaire } from '@/utils/frise-enseignement'
 import RailConfig from './RailConfig'
-import EcranSemestres from './EcranSemestres'
+import EcranAnnee, { type SemestreAnnee, type AnneeArchivee } from './EcranAnnee'
 import EcranVacances from './EcranVacances'
 import EcranClasses from './EcranClasses'
 import EcranFuseau from './EcranFuseau'
 
-const SECTIONS = ['classes', 'semestres', 'vacances', 'fuseau'] as const
+const SECTIONS = ['classes', 'annee', 'vacances', 'fuseau'] as const
 type Section = (typeof SECTIONS)[number]
 
-// Année scolaire déduite des dates (rentrée septembre → août) : aucun champ saisi.
-function anneeScolaire(dateStr: string): string {
-  const d = new Date(dateStr + 'T00:00:00Z')
-  const y = d.getUTCFullYear()
-  // Frontière AOÛT (getUTCMonth : 0 = janvier … 7 = août) : couvre aussi bien les
-  // rentrées de septembre que celles de fin août (sessions d'automne Québec/CEGEP).
-  return d.getUTCMonth() >= 7 ? `${y}-${y + 1}` : `${y - 1}-${y}`
-}
+// L'ancienne section « semestres » : les liens déjà posés ailleurs (Fragments) et
+// les signets du prof doivent continuer d'atterrir au bon endroit.
+const ALIAS_SECTION: Record<string, Section> = { semestres: 'annee' }
 
 // En-tête d'un volet : titre serif + sous-titre italique (charte Palimpseste).
 function EnteteEcran({ titre, soustitre }: { titre: string; soustitre: string }) {
@@ -61,12 +58,23 @@ export default async function CalendrierConfigPage({
   // de l'app — donc exclus du sélecteur et des candidats par défaut du volet Vacances.
   const semestresVivants = semestres.filter((s) => !s.archived_at)
 
+  // Aujourd'hui dans le fuseau de l'école (date pure) — pour la progression, l'année
+  // scolaire courante et le semestre actif ATTENDU.
+  const today = jourDansFuseau(new Date(), fuseau)
+  const ayJour = anneeScolaireDe(today)
+
+  // Le semestre actif se DÉDUIT de la date du jour (fonction pure) : c'est cette
+  // valeur qu'affiche l'écran, jamais la colonne `is_active`. La colonne reste
+  // matérialisée pour les autres modules (cf. utils/semestre-actif.ts), mais elle
+  // peut avoir un rendu de retard le jour d'une bascule — l'écran, lui, ne ment pas.
+  const actifId = semestreActifAttendu(semestresVivants, today)
+
   // Semestre sélectionné pour la gestion des vacances (défaut : actif, sinon premier
   // vivant). Un ?sem= pointant un semestre archivé est ignoré.
   const selId =
     sem && semestresVivants.some((s) => s.id === sem)
       ? sem
-      : semestresVivants.find((s) => s.is_active)?.id ?? semestresVivants[0]?.id ?? null
+      : semestresVivants.find((s) => s.id === actifId)?.id ?? semestresVivants[0]?.id ?? null
   const semSel = semestresVivants.find((s) => s.id === selId) ?? null
 
   // Toutes les vacances en une requête → map par semestre (sert au volet Vacances
@@ -87,15 +95,20 @@ export default async function CalendrierConfigPage({
   // grille calculée plus bas. C'est cette table que lit Fragments et à laquelle les
   // dépôts sont rattachés : l'écran doit dire la vérité sur l'écart entre les deux,
   // sinon un semestre sans aucune semaine s'affiche « 12 semaines ✔ » (constat 24/07).
+  // On lit AUSSI `date_debut` et les semaines de vacances : c'est ce qui permet de
+  // compter les semaines « hors calendrier » (lignes stockées qui ne s'alignent plus
+  // sur aucune semaine de la grille — typiquement après un recul de la rentrée).
   const { data: semainesStockees } = await supabase
     .from('fragments_semaines')
-    .select('semestre_id, is_vacation')
-    .eq('is_vacation', false)
-  const stockeesParSem = new Map<string, number>()
+    .select('id, semestre_id, is_vacation, date_debut')
+  type LigneSemaine = { id: string; is_vacation: boolean; date_debut: string }
+  const stockeesParSem = new Map<string, LigneSemaine[]>()
   for (const w of semainesStockees ?? []) {
     const sid = w.semestre_id as string | null
     if (!sid) continue
-    stockeesParSem.set(sid, (stockeesParSem.get(sid) ?? 0) + 1)
+    const arr = stockeesParSem.get(sid) ?? []
+    arr.push({ id: w.id as string, is_vacation: !!w.is_vacation, date_debut: w.date_debut as string })
+    stockeesParSem.set(sid, arr)
   }
 
   const { data: classesData } = await supabase
@@ -136,40 +149,164 @@ export default async function CalendrierConfigPage({
     const couvrante = holidays.find((h) => h.start_date <= w.end && w.start <= h.end_date)
     if (couvrante) retirees.set(couvrante.id, (retirees.get(couvrante.id) ?? 0) + 1)
   }
-  const holidaysInfo = holidays.map((h) => ({ ...h, semaines: retirees.get(h.id) ?? 0 }))
+  // P5 — déplacer les bornes de l'année peut faire SORTIR une période de son
+  // semestre. Rien n'est détruit : celles qui ne tombaient pas entièrement dans
+  // l'autre semestre restent en place, et se signalent.
+  // Le compte se fait sur TOUS les semestres, pas seulement l'affiché : le message
+  // d'enregistrement renvoie vers « Vacances », et l'écran s'ouvre par défaut sur le
+  // semestre actif — si la période signalée appartient à l'autre, le prof arrivait
+  // sur un écran muet (constat de revue 20/08).
+  const bornesParSem = new Map(semestres.map((s) => [s.id, s]))
+  const horsBornesParSem = new Map<string, number>()
+  for (const h of (allHolidaysData ?? []) as Holiday[]) {
+    const sien = bornesParSem.get(h.semester_id)
+    if (!sien) continue
+    if (h.start_date < sien.start_date || h.end_date > sien.end_date) {
+      horsBornesParSem.set(h.semester_id, (horsBornesParSem.get(h.semester_id) ?? 0) + 1)
+    }
+  }
+  const nbHorsBornes = [...horsBornesParSem.values()].reduce((a, b) => a + b, 0)
+  const holidaysInfo = holidays.map((h) => ({
+    ...h,
+    semaines: retirees.get(h.id) ?? 0,
+    horsBornes: !!semSel && (h.start_date < semSel.start_date || h.end_date > semSel.end_date),
+  }))
 
-  // Aujourd'hui dans le fuseau de l'école (date pure) — pour la progression.
-  const today = jourDansFuseau(new Date(), fuseau)
-
-  // Infos par semestre : année scolaire, total de semaines pédagogiques, nombre de
-  // périodes de vacances, semaine courante (progression), état « terminé ».
-  const semestresInfo = semestres.map((s) => {
+  // ── Infos par semestre ────────────────────────────────────────────────────
+  const infosParSem = new Map<
+    string,
+    { totalSemaines: number; semainesGenerees: number; horsCalendrier: number; nbVacances: number; semaineCourante: number; termine: boolean; enCours: boolean }
+  >()
+  for (const s of semestres) {
     const hs = holidaysParSem.get(s.id) ?? []
     const grille = calculerGrilleSemaines(s, hs)
     const total = grille.filter((w) => !w.isVacation).length
-    const courante = Math.min(total, grille.filter((w) => !w.isVacation && w.start <= today).length)
-    return {
-      ...s,
-      anneeScolaire: anneeScolaire(s.start_date),
+    const debuts = new Set(grille.map((w) => w.start))
+    const lignes = stockeesParSem.get(s.id) ?? []
+    infosParSem.set(s.id, {
       totalSemaines: total,
-      semainesGenerees: stockeesParSem.get(s.id) ?? 0,
+      // Ne compter QUE les lignes alignées sur la grille : une orpheline « hors
+      // calendrier » est stockée mais ne répond à aucune semaine du semestre. Les
+      // inclure faisait dire à la carte « 21 semaines générées sur 17 » et laissait
+      // l'écart — donc la pastille « semaines à générer » — allumé à vie après un
+      // déplacement de bornes, alors que tout est bien généré (constat de revue 20/08).
+      semainesGenerees: lignes.filter((w) => !w.is_vacation && debuts.has(w.date_debut)).length,
+      // Même définition que `synchroniserSemaines` : une ligne stockée dont le lundi
+      // n'est plus un lundi de la grille. Jamais supprimée (des dépôts y sont
+      // rattachés) — mais désormais MONTRÉE.
+      horsCalendrier: lignes.filter((w) => !debuts.has(w.date_debut)).length,
       nbVacances: hs.length,
-      semaineCourante: courante,
+      semaineCourante: Math.min(total, grille.filter((w) => !w.isVacation && w.start <= today).length),
       termine: s.end_date < today,
-    }
-  })
+      // « en cours » ≠ « actif » : le drapeau désigne aussi bien le prochain à commencer
+      // (règle 2) que le dernier terminé (règle 3). Calculé ici, où « aujourd'hui » se
+      // lit dans le fuseau de l'école.
+      enCours: s.start_date <= today && today <= s.end_date,
+    })
+  }
 
-  // Section active (?section=) — défaut : Classes si un semestre existe, sinon Semestres.
-  const section: Section = SECTIONS.includes(rawSection as Section)
-    ? (rawSection as Section)
+  // ── L'ANNÉE en cours : les semestres vivants de l'année scolaire du jour ───
+  const semestresAnnee = semestresVivants
+    .filter((s) => anneeScolaireDe(s.start_date) === ayJour)
+    .sort((a, b) => (a.start_date < b.start_date ? -1 : a.start_date > b.start_date ? 1 : 0))
+
+  // P4 — renuméroter sous un dépôt déjà fait : avertir AVANT d'enregistrer dès qu'un
+  // semestre de l'année porte au moins un dépôt. Lecture admin (les pages prof lisent
+  // `fragments_depots` par le client admin ; la page est déjà gardée prof par le layout).
+  const idsSemainesAnnee = semestresAnnee.flatMap((s) =>
+    (stockeesParSem.get(s.id) ?? []).map((w) => w.id)
+  )
+  let nbDepotsAnnee = 0
+  if (idsSemainesAnnee.length > 0) {
+    const { count } = await createAdminClient()
+      .from('fragments_depots')
+      .select('id', { count: 'exact', head: true })
+      .in('semaine_id', idsSemainesAnnee)
+    nbDepotsAnnee = count ?? 0
+  }
+
+  const semestresAnneeInfo: SemestreAnnee[] = semestresAnnee.map((s) => ({
+    id: s.id,
+    name: s.name,
+    start_date: s.start_date,
+    end_date: s.end_date,
+    actif: s.id === actifId,
+    ...infosParSem.get(s.id)!,
+  }))
+
+  // ── Archives, groupées par ANNÉE scolaire (c'est la maille de ce lot) ──────
+  const parAnnee = new Map<number, AnneeArchivee>()
+  for (const s of semestres.filter((x) => x.archived_at)) {
+    const ay = anneeScolaireDe(s.start_date)
+    const entree = parAnnee.get(ay) ?? { ay, libelle: libelleAnneeScolaire(ay), semestres: [] }
+    entree.semestres.push({
+      id: s.id,
+      name: s.name,
+      start_date: s.start_date,
+      end_date: s.end_date,
+      totalSemaines: infosParSem.get(s.id)!.totalSemaines,
+    })
+    parAnnee.set(ay, entree)
+  }
+  const archives = [...parAnnee.values()]
+    .map((a) => ({
+      ...a,
+      semestres: a.semestres.sort((x, y) => (x.start_date < y.start_date ? -1 : 1)),
+    }))
+    .sort((a, b) => b.ay - a.ay)
+
+  // Semestres VIVANTS d'une AUTRE année scolaire que celle du jour. L'écran ne les
+  // édite pas (préparer l'année suivante est hors périmètre de ce lot) — mais il ne
+  // peut pas les taire : ils comptent dans le calcul du semestre actif, dans le
+  // sélecteur des vacances et dans la garde de chevauchement, et sans cet endroit
+  // aucune UI ne permettrait de les archiver. On signale, et on offre la remise.
+  const autresParAnnee = new Map<number, AnneeArchivee>()
+  for (const s of semestresVivants.filter((x) => anneeScolaireDe(x.start_date) !== ayJour)) {
+    const ayS = anneeScolaireDe(s.start_date)
+    const entree = autresParAnnee.get(ayS) ?? { ay: ayS, libelle: libelleAnneeScolaire(ayS), semestres: [] }
+    entree.semestres.push({
+      id: s.id,
+      name: s.name,
+      start_date: s.start_date,
+      end_date: s.end_date,
+      totalSemaines: infosParSem.get(s.id)!.totalSemaines,
+    })
+    autresParAnnee.set(ayS, entree)
+  }
+  const autresVivantes = [...autresParAnnee.values()]
+    .map((a) => ({ ...a, semestres: a.semestres.sort((x, y) => (x.start_date < y.start_date ? -1 : 1)) }))
+    .sort((a, b) => b.ay - a.ay)
+
+  // Section active (?section=) — défaut : Classes si un semestre existe, sinon Année.
+  const demandee = ALIAS_SECTION[rawSection ?? ''] ?? (rawSection as Section)
+  const section: Section = SECTIONS.includes(demandee)
+    ? demandee
     : semestres.length > 0
       ? 'classes'
-      : 'semestres'
+      : 'annee'
 
-  // Résumés du rail.
+  // ── Résumés du rail ───────────────────────────────────────────────────────
   const nbAConfigurer = classes.filter((c) => !c.couleur).length
-  const semActif = semestres.find((s) => s.is_active)
   const fuseauLabel = FUSEAUX.find((f) => f.id === fuseau)?.label ?? fuseau
+  const libelleAnnee = libelleAnneeScolaire(ayJour)
+  // L'état DE L'ANNÉE se lit sur ses propres semestres, jamais sur le drapeau global :
+  // tant qu'un semestre d'une AUTRE année scolaire est encore vivant, c'est lui qui porte
+  // `is_active`, et le rail annonçait « à définir » sur une année pourtant déjà saisie
+  // (constaté en recette le 20/08). `semestreActifAttendu` rend toujours un id sur une
+  // liste non vide — le `< 0` ne couvre donc plus que le cas « aucun semestre ».
+  const actifDeAnnee = semestreActifAttendu(semestresAnnee, today)
+  const idxActif = semestresAnnee.findIndex((s) => s.id === actifDeAnnee)
+  const etatAnnee =
+    semestresAnnee.length > 2
+      ? `${semestresAnnee.length} semestres — à corriger`
+      : idxActif < 0
+        ? 'à définir'
+        : semestresAnnee[idxActif].start_date > today
+          ? `S${idxActif + 1} à venir`
+          : semestresAnnee[idxActif].end_date < today
+            ? 'année terminée'
+            : `S${idxActif + 1} en cours`
+
   const railItems = [
     {
       key: 'classes',
@@ -178,13 +315,13 @@ export default async function CalendrierConfigPage({
       warn: nbAConfigurer > 0 ? `${nbAConfigurer} à configurer` : null,
     },
     {
-      key: 'semestres',
-      label: 'Semestres',
-      sub: semActif
-        ? `${semActif.name} · actif`
-        : `${semestres.length} semestre${semestres.length > 1 ? 's' : ''}`,
+      key: 'annee',
+      label: 'Année',
+      sub: `${libelleAnnee} · ${etatAnnee}`,
       // Un semestre vivant dont les semaines ne sont pas générées = Fragments muet.
-      warn: semestresInfo.some((s) => !s.archived_at && s.semainesGenerees !== s.totalSemaines)
+      warn: semestresVivants.some(
+        (s) => infosParSem.get(s.id)!.semainesGenerees !== infosParSem.get(s.id)!.totalSemaines
+      )
         ? 'semaines à générer'
         : null,
     },
@@ -192,6 +329,10 @@ export default async function CalendrierConfigPage({
       key: 'vacances',
       label: 'Vacances',
       sub: `${holidays.length} période${holidays.length > 1 ? 's' : ''} · ${nbSemainesPeda} sem.`,
+      // Une période sortie des dates de son semestre après un déplacement de l'année :
+      // rien n'est détruit, mais il faut que ça se voie depuis le rail, pas seulement
+      // sur le semestre qui se trouve être affiché.
+      warn: nbHorsBornes > 0 ? `${nbHorsBornes} à replacer` : null,
     },
     { key: 'fuseau', label: 'Fuseau', sub: fuseauLabel },
   ]
@@ -211,13 +352,20 @@ export default async function CalendrierConfigPage({
           </section>
         )}
 
-        {section === 'semestres' && (
+        {section === 'annee' && (
           <section>
             <EnteteEcran
-              titre="Semestres"
-              soustitre="communs à toutes les classes — ancrent la numérotation des semaines"
+              titre="Année"
+              soustitre="trois dates — les deux semestres s’en déduisent et ancrent la numérotation des semaines"
             />
-            <EcranSemestres semestres={semestresInfo} />
+            <EcranAnnee
+              libelleAnnee={libelleAnnee}
+              semestres={semestresAnneeInfo}
+              archives={archives}
+              autresVivantes={autresVivantes}
+              nbDepotsAnnee={nbDepotsAnnee}
+              ay={ayJour}
+            />
           </section>
         )}
 
@@ -229,10 +377,12 @@ export default async function CalendrierConfigPage({
             />
             <EcranVacances
               semestres={semestresVivants}
+              actifId={actifId}
+              horsBornesParSem={Object.fromEntries(horsBornesParSem)}
               selectedId={selId}
               holidays={holidaysInfo}
               bande={bande}
-              semainesGenerees={selId ? stockeesParSem.get(selId) ?? 0 : 0}
+              semainesGenerees={selId ? infosParSem.get(selId)?.semainesGenerees ?? 0 : 0}
             />
           </section>
         )}

@@ -55,6 +55,19 @@ export function anneeScolaireDe(dateISO: string): number {
   return mois >= 8 ? annee : annee - 1
 }
 
+// Libellé d'affichage d'une année scolaire (« 2026-2027 ») — DÉRIVÉ de la seule
+// définition qui fait foi, `anneeScolaireDe`. Une seconde implémentation vivait
+// dans `app/prof/calendrier/config/page.tsx` (même frontière d'août, code séparé) :
+// l'écran Année fait de cette notion sa maille, elle ne doit exister qu'une fois.
+export function libelleAnneeScolaire(ay: number): string {
+  return `${ay}-${ay + 1}`
+}
+
+/** Raccourci : libellé de l'année scolaire d'une date pure. */
+export function libelleAnneeScolaireDe(dateISO: string): string {
+  return libelleAnneeScolaire(anneeScolaireDe(dateISO))
+}
+
 /**
  * Concatène, dans l'ordre chronologique des semestres, les semaines
  * d'enseignement (hors vacances) de chaque `calculerGrilleSemaines`, et les

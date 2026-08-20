@@ -6,11 +6,14 @@ import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import {
   anneeScolaireDe,
+  libelleAnneeScolaire,
+  libelleAnneeScolaireDe,
   friseEnseignementContinue,
   resoudreAncre,
   mapperParcours,
   type SemestreFrise,
 } from './frise-enseignement'
+import { calerAnnee } from './calendrier-grille'
 import type { Holiday } from '../types/calendrier'
 
 // ── Fixtures : l'exemple du product owner (SPEC §5.2) ────────────────────────
@@ -218,4 +221,66 @@ test('dates pures : toutes les frontières sont des lundis/dimanches UTC', () =>
     assert.equal(lundi.getUTCDay(), 1, `${w.dateDebutLundi} devrait être un lundi`)
     assert.equal(dimanche.getUTCDay(), 0, `${w.dateFinDimanche} devrait être un dimanche`)
   }
+})
+
+test('libelleAnneeScolaire : le libellé d’affichage DÉRIVE de anneeScolaireDe', () => {
+  // Une seule définition de l'année scolaire (frontière d'août) ; l'écran Calendrier
+  // en fait sa maille et ne réimplémente plus la sienne (lot Calendrier · Année).
+  assert.equal(libelleAnneeScolaire(2026), '2026-2027')
+  assert.equal(libelleAnneeScolaireDe('2026-08-31'), '2026-2027')
+  assert.equal(libelleAnneeScolaireDe('2027-01-24'), '2026-2027') // janvier : même AY
+  assert.equal(libelleAnneeScolaireDe('2026-07-31'), '2025-2026') // juillet : AY précédente
+})
+
+// ── P8 : une année CALÉE ne laisse plus d'avis à la frise ────────────────────
+// Le lot Calendrier · Année cale les bornes sur la semaine (lundi → dimanche).
+// Deux effets à VÉRIFIER, pas à supposer : la dernière semaine d'un semestre n'est
+// plus tronquée (`end_date` toujours dominicale), et le S2 ne chevauche jamais le S1
+// (il démarre le lendemain du dimanche de fin). Sans quoi l'aperçu du plan
+// d'évaluation porterait un avis, voire un `avisBloquant`.
+test('année calée : la frise ne rend AUCUN avis, et enchaîne les deux semestres', () => {
+  const a = calerAnnee('2026-09-02', '2027-01-20', '2027-06-17') // mercredi, mercredi, jeudi
+  const sems: SemestreFrise[] = [
+    { id: 'a1', name: 'Semestre 1', start_date: a.s1.start, end_date: a.s1.end, archived_at: null },
+    { id: 'a2', name: 'Semestre 2', start_date: a.s2.start, end_date: a.s2.end, archived_at: null },
+  ]
+  const res = friseEnseignementContinue(sems, new Map())
+  assert.equal(res.avis, undefined) // ni troncature, ni gap aberrant
+  assert.equal(res.avisBloquant, undefined) // ni chevauchement
+  // Continuité : index contigus, aucun lundi émis deux fois, la frontière se suit.
+  res.frise.forEach((w, i) => assert.equal(w.indexContinu, i + 1))
+  assert.equal(new Set(res.frise.map((w) => w.dateDebutLundi)).size, res.frise.length)
+  const dernierS1 = res.frise.filter((w) => w.semestreId === 'a1').at(-1)!
+  const premierS2 = res.frise.find((w) => w.semestreId === 'a2')!
+  assert.equal(premierS2.dateDebutLundi, a.s2.start)
+  assert.equal(dernierS1.dateFinDimanche, a.s1.end)
+  assert.equal(premierS2.indexContinu, dernierS1.indexContinu + 1)
+})
+
+test('année calée : un parcours ancré à la rentrée n’a aucune semaine « à définir »', () => {
+  const a = calerAnnee('2026-09-02', '2027-01-20', '2027-06-17')
+  const sems: SemestreFrise[] = [
+    { id: 'a1', name: 'Semestre 1', start_date: a.s1.start, end_date: a.s1.end, archived_at: null },
+    { id: 'a2', name: 'Semestre 2', start_date: a.s2.start, end_date: a.s2.end, archived_at: null },
+  ]
+  const res = friseEnseignementContinue(sems, new Map())
+  const { ancreIdx, avis } = resoudreAncre(res, a.s1.start)
+  assert.equal(ancreIdx, 1)
+  assert.equal(avis, undefined)
+  // Le statut `a_definir` (« semestre de la même AY encore à créer ») devient rare :
+  // tant qu'on reste dans les semaines de l'année, tout se résout.
+  const map = mapperParcours(res, ancreIdx, res.frise.length)
+  assert.equal(map.filter((c) => c.statut !== 'resolue').length, 0)
+})
+
+test('année calée : les deux semestres tombent dans la MÊME année scolaire', () => {
+  // La frise du parcours filtre par AY : une année à cheval sur le 1er août ferait
+  // tomber les deux semestres dans deux AY et n'en montrerait qu'un.
+  const a = calerAnnee('2026-09-02', '2027-01-20', '2027-06-17')
+  assert.equal(anneeScolaireDe(a.s1.start), 2026)
+  assert.equal(anneeScolaireDe(a.s2.end), 2026)
+  // Contre-exemple : une rentrée un dimanche début août recule au lundi de juillet.
+  const b = calerAnnee('2026-08-02', '2026-12-16', '2027-06-17')
+  assert.equal(anneeScolaireDe(b.s1.start), 2025) // ≠ 2026 → refusé à la saisie
+  assert.equal(anneeScolaireDe(b.s2.end), 2026)
 })

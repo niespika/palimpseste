@@ -26,10 +26,15 @@ export default function ChampDate({
   name,
   defaultValue = '',
   ariaLabel,
+  onChange,
 }: {
   name: string
   defaultValue?: string
   ariaLabel?: string
+  /** Optionnel : notifie le parent à chaque choix. L'input caché reste la source
+      pour les formulaires FormData — ce rappel sert aux écrans qui doivent MONTRER
+      ce qu'ils retiendront des dates saisies (écran Année) avant l'enregistrement. */
+  onChange?: (valeur: string) => void
 }) {
   const [value, setValue] = useState(defaultValue)
   const [open, setOpen] = useState(false)
@@ -86,7 +91,9 @@ export default function ChampDate({
   }
 
   function choisir(d: number) {
-    setValue(iso(ym.y, ym.m, d))
+    const v = iso(ym.y, ym.m, d)
+    setValue(v)
+    onChange?.(v)
     setOpen(false)
   }
 

@@ -47,16 +47,16 @@ export default async function PageFragmentsPof() {
       {!semaines || semaines.length === 0 ? (
         // Sans semaine, aucun élève ne peut déposer : l'écran doit dire quoi faire et
         // mener DIRECTEMENT au geste (le rail de la config s'ouvre sur « Classes »,
-        // et rien n'y porte le mot « semaines » — d'où l'ancre ?section=semestres).
+        // et rien n'y porte le mot « semaines » — d'où l'ancre ?section=annee).
         <div className="bg-surface border border-bordure rounded-xl p-8 text-center text-sm space-y-2">
           <p className="text-encre">
             {semestre
               ? 'Aucune semaine générée pour ce semestre — les élèves ne peuvent rien déposer.'
-              : 'Aucun semestre : crée-le dans le Calendrier, ses semaines suivront.'}
+              : 'Aucun semestre : définis l’année dans le Calendrier, ses semaines suivront.'}
           </p>
           <p className="text-muet">
             Les semaines se déduisent du semestre et des vacances.{' '}
-            <Link href="/prof/calendrier/config?section=semestres" className="text-encre-douce underline">
+            <Link href="/prof/calendrier/config?section=annee" className="text-encre-douce underline">
               Générer les semaines dans le Calendrier →
             </Link>
           </p>

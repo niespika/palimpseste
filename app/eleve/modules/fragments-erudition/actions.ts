@@ -63,9 +63,17 @@ export async function deposerCompteRendu(formData: FormData) {
 
   if (!semaine?.ouverte) return { error: 'Cette semaine est fermée.' }
   // Refuser le dépôt sur une semaine hors semestre actif (semaine restée ouverte
-  // d'un semestre précédent).
+  // d'un semestre précédent). FAIL-CLOSED : l'absence de semestre actif ne vaut pas
+  // autorisation. La garde était `if (semActifDepot && …)` — donc SAUTÉE quand aucune
+  // ligne ne porte le drapeau, et un dépôt passait alors sur une semaine ouverte d'un
+  // semestre archivé. Ce cas était hors d'atteinte tant qu'on ne pouvait pas archiver
+  // le semestre actif ; le lot Calendrier · Année a levé ce garde-fou (l'archivage
+  // porte désormais sur l'année entière), d'où ce resserrement.
   const { data: semActifDepot } = await supabase.from('semesters').select('id').eq('is_active', true).maybeSingle()
-  if (semActifDepot && semaine.semestre_id && semaine.semestre_id !== semActifDepot.id) {
+  if (!semActifDepot) {
+    return { error: 'Aucun semestre en cours — le dépôt est fermé. Préviens ton enseignant.' }
+  }
+  if (semaine.semestre_id && semaine.semestre_id !== semActifDepot.id) {
     return { error: 'Cette semaine n’appartient pas au semestre en cours.' }
   }
 
