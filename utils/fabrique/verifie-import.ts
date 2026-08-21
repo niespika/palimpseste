@@ -131,7 +131,10 @@ class Verdict {
 
 const estObjet = (x: unknown): x is Record<string, any> =>
   typeof x === 'object' && x !== null && !Array.isArray(x)
-const liste = (x: unknown): any[] => (Array.isArray(x) ? x : [])
+// ⚠️ PAS DE `liste()` COERCITIF ICI. Il y en avait un — `Array.isArray(x) ? x : []`
+//    — et sa coercion muette rendait IMPORTABLE une banque dont une liste
+//    racine était malformée. Ce qui coerce en silence ne doit pas exister à
+//    portée de main : les listes racines passent par `listeRacine()`, qui REFUSE.
 const chaine = (x: unknown): string => (typeof x === 'string' ? x : '')
 const nonVide = (x: unknown): boolean => chaine(x).trim().length > 0
 
@@ -260,11 +263,28 @@ export function controleImport(
   clesInconnues(v, 'fichier', b, 'racine')
   const racineRefusee = v.refus.length > avantRacine
 
-  const textes = liste(b.textes)
-  const sujets = liste(b.sujets)
-  const materiaux = liste(b.materiaux)
-  const exercices = liste(b.exercices)
-  const demonstrations = liste(b.demonstrations)
+  // ⚠️ MAL FORMÉ N'EST PAS ABSENT — À LA RACINE AUSSI, ET C'EST LÀ QUE ÇA COÛTE
+  // LE PLUS CHER. `liste()` coerce en tableau vide ; sur une BANQUE ENTIÈRE,
+  // cette coercion est MUETTE ET DESTRUCTRICE : `"exercices": "x"` rendait
+  // « 0 refus, 0 blocage, 0 signalement », le fichier était déclaré IMPORTABLE,
+  // et l'écrivain — qui refait la même coercion (`import-ecriture.ts`) —
+  // n'écrivait rien. Le professeur voyait une coche verte sur un dépôt disparu.
+  // Le script qui fait foi, lui, S'ARRÊTE : `banque.get("textes") or []` garde
+  // la valeur telle quelle et se casse dessus.
+  // Une clé ABSENTE, `null` ou `[]` reste légitime — une banque n'est pas tenue
+  // de porter les cinq listes, et `or []` les ramène toutes au même vide.
+  const listeRacine = (nom: string, x: unknown): any[] => {
+    if (Array.isArray(x)) return x
+    if (declare(x)) {
+      v.refuse('fichier', `\`${nom}\` n'est pas une liste : ${JSON.stringify(x)}`, 5)
+    }
+    return []
+  }
+  const textes = listeRacine('textes', b.textes)
+  const sujets = listeRacine('sujets', b.sujets)
+  const materiaux = listeRacine('materiaux', b.materiaux)
+  const exercices = listeRacine('exercices', b.exercices)
+  const demonstrations = listeRacine('demonstrations', b.demonstrations)
   v.annonces.push(`${textes.length} texte(s) · ${sujets.length} sujet(s) · `
     + `${materiaux.length} matériau(x) · ${exercices.length} exercice(s) · `
     + `${demonstrations.length} démonstration(s)`)
@@ -458,13 +478,17 @@ export function controleImport(
 
     // REFUS n° 7 — le genre (`02-` §1.3).
     const genre = e.genre
+    // ⚠️ `declare()` ET NON LA VÉRITÉ JAVASCRIPT : le script écrit `if not genre`
+    //    et `elif genre`, où `[]` et `{}` sont FAUX. Sans lui, `genre: []` sur un
+    //    objet qui n'en porte pas faisait REFUSER LE PROFESSEUR À TORT, et sur un
+    //    objet terminal il sortait « genre inadmis » au lieu de « sans genre ».
     if (o.genres.length) {
-      if (!genre) {
+      if (!declare(genre)) {
         v.refuse(ou, `\`${objet}\` est terminal : une instance sans genre est refusée (\`02-\` §1.3)`, 7)
       } else if (!o.genres.includes(genre)) {
         v.refuse(ou, `genre \`${genre}\` inadmis pour \`${objet}\` — ${o.genres.join(' · ')}`, 7)
       }
-    } else if (genre) {
+    } else if (declare(genre)) {
       v.refuse(ou, `\`genre\` non nul sur \`${objet}\`, qui n'en porte pas`, 7)
     }
 

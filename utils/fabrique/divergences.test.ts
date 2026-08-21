@@ -220,3 +220,147 @@ test('FAMILLE — un libellé qui porte une barre verticale ne fusionne pas deux
   assert.equal(v.signalements.filter((s) => s.includes('un seul membre')).length, 3,
     'trois familles d’un seul membre, pas moins')
 })
+
+
+// ============================================================================
+// SECONDE REVUE ADVERSARIALE (21/08) - l'execution differentielle.
+// ----------------------------------------------------------------------------
+// Les vecteurs ci-dessus venaient d'une revue a l'oeil. Ceux-ci viennent d'un
+// HARNAIS qui a joue 1 594 charges et 571 couples dans le Python ET dans ce
+// port, puis compare verdict par verdict. Chacun ferme une divergence CONSTATEE
+// a l'execution, pas supposee a la lecture.
+//
+// LES CARACTERES EN CAUSE SONT INVISIBLES. On les construit donc par leur point
+// de code, jamais en les collant : un BOM tape au clavier dans ce fichier ne se
+// verrait pas, et un editeur zele le deplacerait sans que rien ne le dise.
+// ============================================================================
+
+const CAR = (...points: number[]) => String.fromCharCode(...points)
+const NEL = CAR(0x85)             // le blanc de Python que trim() ignore
+const BOM = CAR(0xfeff)           // le blanc de trim() que Python garde
+const NBSP = CAR(0xa0)
+const ELLIPSE = CAR(0x2026)
+const EXPOSANT_2 = CAR(0xb2)
+const ESZETT_CAPITAL = CAR(0x1e9e)
+const LIGATURE_FI = CAR(0xfb01)
+const LOGOS_CAPITALES = CAR(0x39b, 0x39f, 0x393, 0x39f, 0x3a3)
+const LOGOS_PLIE = CAR(0x3bb, 0x3bf, 0x3b3, 0x3bf, 0x3c3)  // sigma NON final
+
+/** Une reference minimale sur un texte d'une phrase, avec ses concepts. */
+const verdictConcept = (texte: string, formes: string[]) => controleReference({
+  phrases: [{ n: 1, fonctions: ['explique'], statuts: ['affirme'] }],
+  moments: [{ m: 'M1', de: 1, a: 1, fonction: 'pose', cible: [], statuts: [],
+    etiquette: 'un deux trois quatre cinq' }],
+  concepts: [{ concept: 'C', formes }], lectures: [],
+  armature: { question_directrice: 'Quoi ?', these: 'x', these_phrases: [] },
+}, texte)
+
+const introuvable = (v: { refus: string[] }) =>
+  v.refus.some((x) => x.includes('ne se retrouve dans le texte'))
+
+/** Une reference minimale dont on ne fait varier que la these. */
+const refThese = (these: string) => controleReference({
+  phrases: [{ n: 1, fonctions: ['explique'], statuts: ['affirme'] }],
+  moments: [{ m: 'M1', de: 1, a: 1, fonction: 'pose', cible: [], statuts: [],
+    etiquette: 'un deux trois quatre cinq' }],
+  concepts: [], lectures: [],
+  armature: { question_directrice: 'Quoi ?', these, these_phrases: [] },
+}, 'Une phrase.')
+
+// -- La coercion muette : le SEUL ecart ou une donnee fausse entrait ---------
+test('LISTE RACINE - une banque ecrite en chaine est REFUSEE, jamais videe en silence', () => {
+  const v = controleImport({
+    format: 'palimpseste/import-exercices', version: '1.1', exercices: 'x',
+  } as any, doctrine)
+  assert.ok(v.refus.some((x) => x.includes("n'est pas une liste")),
+    'le port la declarait IMPORTABLE avec zero refus, et l ecrivain n ecrivait rien')
+})
+
+test('LISTE RACINE - absente, null ou [] reste legitime : le `or []` les confond', () => {
+  for (const valeur of [undefined, null, [] as unknown[]]) {
+    const b: any = { format: 'palimpseste/import-exercices', version: '1.1' }
+    if (valeur !== undefined) b.textes = valeur
+    const v = controleImport(b, doctrine)
+    assert.equal(v.refus.filter((x) => x.includes("n'est pas une liste")).length, 0,
+      `une banque n'est pas tenue de porter les cinq listes (${JSON.stringify(valeur)})`)
+  }
+})
+
+// -- declare() la ou il manquait encore -------------------------------------
+test('GENRE - [] est FAUX en Python : un objet qui n en porte pas ne se refuse pas', () => {
+  const v = controleImport(banque((b) => { b.exercices[0].genre = [] }), doctrine)
+  assert.equal(v.refus.filter((x) => x.includes('`genre` non nul')).length, 0,
+    'argument ne porte pas de genre ; genre: [] bloquait le professeur a tort')
+})
+
+// -- Le repli : NFD, et l ORDRE des operations ------------------------------
+test('PLIE - NFD et non NFKD : l insecable ne se replie PAS sur l espace', () => {
+  assert.ok(introuvable(verdictConcept(`a${NBSP}b.`, ['a b'])),
+    'NFKD rabattait l insecable sur l espace ; casefold() n en fait rien')
+})
+
+test('PLIE - NFD et non NFKD : ni l ellipse ni l exposant ne se rabattent', () => {
+  assert.ok(introuvable(verdictConcept(`a${ELLIPSE}`, ['a...'])), 'U+2026 n est pas trois points')
+  assert.ok(introuvable(verdictConcept(`x${EXPOSANT_2}.`, ['x2'])), 'l exposant n est pas le chiffre')
+})
+
+test('PLIE - l eszett CAPITAL (U+1E9E) vaut ss, comme casefold()', () => {
+  assert.ok(!introuvable(verdictConcept(`A${ESZETT_CAPITAL}.`, ['ass'])),
+    'replier l eszett AVANT toLowerCase() le laissait devenir un eszett minuscule : '
+    + 'le refus n 10 se declenchait a tort et GELAIT la validation d une reference corrigee')
+})
+
+test('PLIE - le sigma final vaut le sigma', () => {
+  assert.ok(!introuvable(verdictConcept(`${LOGOS_CAPITALES}.`, [LOGOS_PLIE])),
+    'toLowerCase() applique la regle Final_Sigma ; casefold() non')
+})
+
+test('PLIE - les ligatures latines se deplient, comme casefold()', () => {
+  assert.ok(!introuvable(verdictConcept(`${LIGATURE_FI}n.`, ['fin'])), 'U+FB01 vaut fi')
+})
+
+// -- str.strip() n est pas String.trim() ------------------------------------
+test('ROGNE - le NEL EST du blanc pour Python : une these reduite a U+0085 est VIDE', () => {
+  assert.ok(refThese(NEL).refus.some((x) => x.includes('vide')),
+    'trim() ignore U+0085 ; str.strip() le retire')
+})
+
+test('ROGNE - le BOM n est PAS du blanc pour Python : une these reduite au BOM est PLEINE', () => {
+  assert.equal(refThese(BOM).refus.filter((x) => x.includes('vide')).length, 0,
+    'trim() retirait le BOM que Python garde')
+})
+
+// -- La segmentation, qui LOCALISE un exercice dans le texte -----------------
+test('SEGMENTATION - un BOM en queue ne fait pas disparaitre une phrase', () => {
+  assert.equal(phrasesDuTexte(`A. ${BOM}`).length, 2,
+    'Python garde le BOM : deux phrases. trim() n en rendait qu une.')
+})
+
+test('SEGMENTATION - U+001C a U+001F et U+0085 sont du blanc pour Python', () => {
+  for (const point of [0x1c, 0x1d, 0x1e, 0x1f, 0x85]) {
+    assert.deepEqual(phrasesDuTexte(`${CAR(point)}Une phrase. Une autre.`),
+      ['Une phrase.', 'Une autre.'],
+      `U+${point.toString(16).padStart(4, '0').toUpperCase()} doit se rogner`)
+  }
+})
+
+// -- Les messages qui nomment la mauvaise chose au professeur ----------------
+test('DOUBLONS - le tri est NUMERIQUE : [3,10], jamais [10,3]', () => {
+  const phrases = [3, 3, 10, 10].map((n) => ({ n, fonctions: ['explique'], statuts: ['affirme'] }))
+  const v = controleReference({
+    phrases, moments: [], concepts: [], lectures: [],
+    armature: { question_directrice: 'Quoi ?', these: 'x', these_phrases: [] },
+  }, 'Un. Deux. Trois. Quatre. Cinq. Six. Sept. Huit. Neuf. Dix.')
+  const m = v.refus.find((x) => x.includes('deux fois'))
+  assert.ok(m && m.includes('[3,10]'), `tri lexicographique : ${m}`)
+})
+
+test('INDEX PAR DEFAUT - n: null n est pas une cle absente', () => {
+  const v = controleReference({
+    phrases: [{ n: null, inconnue: 1 } as any],
+    moments: [], concepts: [], lectures: [],
+    armature: { question_directrice: 'Quoi ?', these: 'x', these_phrases: [] },
+  }, 'Une phrase.')
+  assert.ok(v.refus.some((x) => x.includes('phrase null')),
+    'le ?? substituait l index sur null ; p.get("n", i) ne le fait que si la cle manque')
+})

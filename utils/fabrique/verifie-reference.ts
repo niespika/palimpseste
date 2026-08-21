@@ -75,12 +75,23 @@ const ESPACE = '[ \\t\\n\\r\\f\\v\\x1c-\\x1f\\x85\\u00a0\\u1680\\u2000-\\u200a'
 const COUPURE = new RegExp(`(?<=[.!?…])${ESPACE}+`)
 const NON_ESPACE = new RegExp(`(?:(?!${ESPACE})[\\s\\S])+`, 'g')
 
+/**
+ * ⚠️ `str.strip()` DE PYTHON, ET NON `String.trim()`. La classe ci-dessus était
+ * déjà la bonne ; c'est le ROGNAGE qui ne l'était pas. `trim()` retire le BOM
+ * (U+FEFF) que Python GARDE, et ignore U+001C–U+001F et U+0085 (NEL) que Python
+ * RETIRE. Un caractère d'un côté, cinq de l'autre — et la segmentation
+ * divergeait : un BOM en queue donnait deux phrases à Python et une au port,
+ * alors que c'est CETTE segmentation qui localise un exercice dans le texte.
+ */
+const ROGNE = new RegExp(`^(?:${ESPACE})+|(?:${ESPACE})+$`, 'g')
+const rogne = (s: string): string => (s || '').replace(ROGNE, '')
+
 /** La segmentation QUI FAIT FOI — la même que le pré-relevé de la Synthèse
  *  (`05-` §4.7). C'est elle qui fait que la référence et les copies se comptent
  *  en phrases identiques. */
 export function phrasesDuTexte(texte: string): string[] {
-  const brut = (texte || '').trim().split(COUPURE)
-  return brut.map((p) => p.trim()).filter((p) => p.length > 0)
+  const brut = rogne(texte || '').split(COUPURE)
+  return brut.map(rogne).filter((p) => p.length > 0)
 }
 
 /**
@@ -91,15 +102,34 @@ export function phrasesDuTexte(texte: string): string[] {
  * déclaré en capitales ne se retrouverait pas dans un texte qui porte
  * l'eszett, le refus n° 10 se déclencherait à tort, et la validation d'une
  * référence corrigée serait GELÉE — cette fonction est en ligne, à l'écran du
- * `05-` §4.4. On approche `casefold()` par NFKD, qui décompose les ligatures,
- * plus le repli explicite de l'eszett.
+ * `05-` §4.4. Le détail du repli, et les deux pièges, sont dans le corps.
  */
 function plie(s: string): string {
+  // \u26a0\ufe0f LA SOURCE \u00c9CRIT : NFD \u2192 retrait des marques `Mn` \u2192 `casefold()`.
+  //
+  // 1. **NFKD n'est PAS NFD.** NFKD est une d\u00e9composition de COMPATIBILIT\u00c9 :
+  //    elle rabat l'ins\u00e9cable sur l'espace, `\u2026` sur trois points, `x\u00b2` sur
+  //    `x2`, la pleine chasse sur l'ASCII. `casefold()` n'en fait RIEN \u2014 le
+  //    port acceptait donc des formes que le script refuse.
+  // 2. **L'ORDRE.** Replier l'eszett AVANT `toLowerCase()` laissait passer
+  //    l'eszett CAPITAL (U+1E9E) : il devenait `\u00df` et ne valait plus \u00ab ss \u00bb.
+  //    Le refus n\u00b0 10 se d\u00e9clenchait alors \u00e0 tort \u2014 exactement le GEL que le
+  //    commentaire ci-dessus annonce vouloir \u00e9viter. On minusculise d'abord.
+  //
+  // `toLowerCase()` n'est pas un repli complet : on ajoute ce que `casefold()`
+  // fait et qu'il ne fait pas \u2014 l'eszett, les ligatures latines, le sigma final
+  // (`toLowerCase()` applique la r\u00e8gle Final_Sigma, `casefold()` non) et le
+  // signe micro. Le reste du repli complet n'existe pas dans ce corpus.
   return (s || '')
-    .normalize('NFKD')
+    .normalize('NFD')
     .replace(/\p{Mn}/gu, '')
-    .replace(/\u00df/g, 'ss')
     .toLowerCase()
+    .replace(/[\u00df\u1e9e]/g, 'ss')
+    .replace(/\u03c2/g, '\u03c3')
+    .replace(/\ufb00/g, 'ff').replace(/\ufb01/g, 'fi').replace(/\ufb02/g, 'fl')
+    .replace(/\ufb03/g, 'ffi').replace(/\ufb04/g, 'ffl')
+    .replace(/[\ufb05\ufb06]/g, 'st')
+    .replace(/\u00b5/g, '\u03bc')
 }
 
 function mots(s: unknown): string[] {
@@ -154,24 +184,31 @@ export function controleReference(ref: unknown, texte: string): VerdictReference
   const concepts = trier(r.concepts, 'concepts')
   const lectures = trier(r.lectures, 'lectures')
 
+  // ⚠️ `p.get('n', i)` DE PYTHON : l'index ne remplace la valeur que si la clé
+  //    est ABSENTE. `??` le fait AUSSI sur `null` — une phrase `{"n": null}`
+  //    s'annonçait « phrase 0 » au professeur là où le script écrit « phrase
+  //    None » : un identifiant faux dans le message qui doit le guider.
+  const ouIndex = (o: Record<string, unknown>, cle: string, i: number): unknown =>
+    (Object.hasOwn(o, cle) ? o[cle] : i)
+
   phrases.forEach((p, i) => {
     for (const k of Object.keys(p)) {
-      if (!CLES.phrase.has(k)) refus.push(`phrase ${p.n ?? i} : clé « ${k} » non déclarée`)
+      if (!CLES.phrase.has(k)) refus.push(`phrase ${ouIndex(p, 'n', i)} : clé « ${k} » non déclarée`)
     }
   })
   moments.forEach((m, i) => {
     for (const k of Object.keys(m)) {
-      if (!CLES.moment.has(k)) refus.push(`moment ${m.m ?? i} : clé « ${k} » non déclarée`)
+      if (!CLES.moment.has(k)) refus.push(`moment ${ouIndex(m, 'm', i)} : clé « ${k} » non déclarée`)
     }
   })
   concepts.forEach((c, i) => {
     for (const k of Object.keys(c)) {
-      if (!CLES.concept.has(k)) refus.push(`concept ${c.concept ?? i} : clé « ${k} » non déclarée`)
+      if (!CLES.concept.has(k)) refus.push(`concept ${ouIndex(c, 'concept', i)} : clé « ${k} » non déclarée`)
     }
   })
   lectures.forEach((l, i) => {
     for (const k of Object.keys(l)) {
-      if (!CLES.lecture.has(k)) refus.push(`lectures, phrase ${l.n ?? i} : clé « ${k} » non déclarée`)
+      if (!CLES.lecture.has(k)) refus.push(`lectures, phrase ${ouIndex(l, 'n', i)} : clé « ${k} » non déclarée`)
     }
   })
 
@@ -186,8 +223,16 @@ export function controleReference(ref: unknown, texte: string): VerdictReference
   const enTrop = [...vusSet]
     .filter((x) => x !== null && x !== undefined && !attendus.includes(x as number))
     .sort((a, b) => (a as number) - (b as number))
+  // ⚠️ `.sort()` NU TRIE EN CHAÎNES : {3, 10} sortait « [10,3] » au professeur,
+  //    là où `sorted()` rend « [3, 10] ». Les nombres d'abord, numériquement.
   const doublons = [...new Set(vus.filter((x) => x !== undefined && x !== null
-    && vus.filter((y) => y === x).length > 1))].sort()
+    && vus.filter((y) => y === x).length > 1))]
+    .sort((a, b) => {
+      const na = typeof a === 'number'; const nb = typeof b === 'number'
+      if (na && nb) return (a as number) - (b as number)
+      if (na !== nb) return na ? -1 : 1
+      return String(a) < String(b) ? -1 : String(a) > String(b) ? 1 : 0
+    })
   if (manquantes.length) refus.push(`phrases sans entrée : ${JSON.stringify(manquantes)}`)
   if (enTrop.length) refus.push(`entrées pour des phrases qui n'existent pas : ${JSON.stringify(enTrop)}`)
   if (doublons.length) refus.push(`phrases déclarées deux fois : ${JSON.stringify(doublons)}`)
@@ -331,8 +376,10 @@ export function controleReference(ref: unknown, texte: string): VerdictReference
       if (!CLES.armature.has(k)) refus.push(`armature : clé « ${k} » que le format ne déclare pas`)
     }
   }
-  const q = texteDe(arm.question_directrice).trim()
-  const th = texteDe(arm.these).trim()
+  // `rogne`, jamais `trim` : le script fait `.strip()` (cf. la note en tête).
+  // Une thèse réduite à un NEL est VIDE pour Python et pleine pour `trim()`.
+  const q = rogne(texteDe(arm.question_directrice))
+  const th = rogne(texteDe(arm.these))
   if (armDeclaree) {
     if (!q) refus.push('armature : la question directrice est vide')
     if (!th) refus.push('armature : la thèse est vide')
