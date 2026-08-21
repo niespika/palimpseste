@@ -221,6 +221,15 @@ export async function deposerFichierImport(
     // LE CONTRÔLE » — et le blocage n° 2 la force à `false`, quoi que le fichier
     // déclare (`08-` §2 ; piège 14).
     const valide = !!t.validee && !st.bloque
+    // ⚠️ CE QUI SUIT PEUT ÉCHOUER, et le texte est DÉJÀ au corpus du Scriptorium
+    //   — la table que le RAG et les écrans du Scriptorium lisent. On défait ce
+    //   qu'on a créé avant de passer au suivant : il ne doit rester AUCUNE trace
+    //   d'un texte qui n'est pas entré.
+    const defaire = async (motif: string) => {
+      await admin.from('scriptorium_contenus').delete().eq('id', contenuRow.id)
+      incidents.push(`texte ${id} : ${motif} — rien n'est resté au corpus.`)
+    }
+
     const { data: refRow, error: eR } = await admin.from('exercices_references').insert({
       source_contenu_id: contenuRow.id,
       localisation: String(t.reference ?? ''),
@@ -231,7 +240,7 @@ export async function deposerFichierImport(
       validee_par: valide ? deposePar : null,
       validee_at: valide ? new Date().toISOString() : null,
     }).select('id').single()
-    if (eR) { incidents.push(`texte ${id} : ${eR.message}`); continue }
+    if (eR) { await defaire(eR.message); continue }
 
     const cours = t.cours
     const coursEtat = cours === 'generique' ? 'generique'
@@ -249,11 +258,21 @@ export async function deposerFichierImport(
       plan_semaine: plan ? Number(plan.semaine) : null,
       statut: 'a_valider', bloque: st.bloque, blocages: st.blocages,
     }).select('id').single()
-    if (eT) { incidents.push(`texte ${id} : ${eT.message}`); continue }
+    if (eT) {
+      await admin.from('exercices_references').delete().eq('id', refRow.id)
+      await defaire(eT.message)
+      continue
+    }
     idTexte.set(id, texteRow.id as string)
     if (coursEtat === 'liste') {
-      await admin.from('exercices_textes_cours').insert(
+      // Les cours DÉCLARÉS par le fichier : sans eux, l'onglet du rattachement
+      // n'a rien à apparier, et le texte reste « jamais servable » en silence.
+      const { error: eC2 } = await admin.from('exercices_textes_cours').insert(
         (cours as string[]).map((c) => ({ texte_id: texteRow.id, cours_declare: c })))
+      if (eC2) {
+        incidents.push(`texte ${id} : les cours déclarés n'ont pas été enregistrés `
+          + `(${eC2.message}) — le rattachement est à refaire à la main.`)
+      }
     }
     entres.textes += 1
     if (st.bloque) bloques.textes += 1
@@ -288,8 +307,12 @@ export async function deposerFichierImport(
     if (error) { incidents.push(`sujet ${id} : ${error.message}`); continue }
     idSujet.set(id, data.id as string)
     if (coursEtat === 'liste') {
-      await admin.from('exercices_sujets_cours').insert(
+      const { error: eC2 } = await admin.from('exercices_sujets_cours').insert(
         (cours as string[]).map((c) => ({ sujet_id: data.id, cours_declare: c })))
+      if (eC2) {
+        incidents.push(`sujet ${id} : les cours déclarés n'ont pas été enregistrés `
+          + `(${eC2.message}) — le rattachement est à refaire à la main.`)
+      }
     }
     entres.sujets += 1
     if (st.bloque) bloques.sujets += 1
@@ -387,14 +410,24 @@ export async function deposerFichierImport(
 
     // L'APPUI, PAR CAS — « il vit EN CLAIR sur l'instance, jamais noyé dans la
     // consigne » (§1.1).
-    const { error: eCas } = await admin.from('exercices_cas').insert(cas.map((c, i) => ({
-      exercice_id: data.id, ordre: i + 1,
-      materiau_id: c?.materiau ? (idMateriau.get(String(c.materiau)) ?? null) : null,
-      defaut: c?.defaut ?? null,
-      distracteurs: c?.distracteurs ?? null,
-      reponse_attendue: c?.reponse_attendue ?? null,
-    })))
-    if (eCas) incidents.push(`exercice ${id} — les cas : ${eCas.message}`)
+    const { data: casEcrits, error: eCas } = await admin.from('exercices_cas')
+      .insert(cas.map((c, i) => ({
+        exercice_id: data.id, ordre: i + 1,
+        materiau_id: c?.materiau ? (idMateriau.get(String(c.materiau)) ?? null) : null,
+        defaut: c?.defaut ?? null,
+        distracteurs: c?.distracteurs ?? null,
+        reponse_attendue: c?.reponse_attendue ?? null,
+      }))).select('ordre')
+    // ⚠️ UNE INSTANCE SANS SON APPUI N'EST PAS « ENTRÉE ». Comptée comme telle,
+    //   elle passait en file, se validait, et son écran d'édition — qui rend un
+    //   champ par cas — n'en affichait aucun : la première correction effaçait
+    //   la consigne que l'élève lit. On la retire.
+    if (eCas || (casEcrits ?? []).length !== cas.length) {
+      await admin.from('exercices').delete().eq('id', data.id)
+      incidents.push(`exercice ${id} : l'appui n'a pas pu être écrit `
+        + `(${eCas?.message ?? 'écriture partielle'}) — l'instance a été retirée.`)
+      continue
+    }
     entres.exercices += 1
     if (st.bloque) bloques.exercices += 1
   }

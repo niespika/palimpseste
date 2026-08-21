@@ -111,8 +111,17 @@ export async function validerEnFile(
   let passables = ids
   let nBloques = 0
   if (porteBloque) {
-    const { data: bloques } = await admin.from(table)
+    // ⚠️ C'EST LE SEUL GARDE-FOU SERVEUR de « une entrée bloquée ne se valide
+    //   jamais » : aucune contrainte de base ne lie `bloque` à `statut`. Une
+    //   lecture ratée avalée par un `?? []` le désarmait entièrement, et les
+    //   bloquées passaient — sans qu'une seule ligne du message le dise.
+    const { data: bloques, error: eBloques } = await admin.from(table)
       .select('id').in('id', ids).eq('bloque', true)
+    if (eBloques) {
+      return { ok: false,
+        message: 'Impossible de savoir quelles entrées sont bloquées : rien n’a été validé. '
+          + eBloques.message }
+    }
     const s = new Set(((bloques ?? []) as unknown as Ligne[]).map((x) => String(x.id)))
     nBloques = s.size
     passables = ids.filter((i) => !s.has(i))
@@ -165,8 +174,17 @@ export async function retirerEntree(
   if (banque === 'exercices') {
     return { ok: false, message: 'Le retrait d’un exercice passe par son écran d’édition.' }
   }
-  const { error } = await admin.from(table).update({ statut: 'retire' }).eq('id', id)
+  // ⚠️ Le retrait d'une entrée DÉJÀ VALIDÉE la sortirait du service sans que
+  //   rien ne le relise : la garde ne vivait qu'à l'écran, où le bouton était
+  //   simplement caché. Un écran n'est pas une garde.
+  const { data, error } = await admin.from(table)
+    .update({ statut: 'retire' }).eq('id', id).eq('statut', 'a_valider').select('id')
   if (error) return { ok: false, message: error.message }
+  if ((data ?? []).length === 0) {
+    return { ok: false,
+      message: 'Rien n’a été retiré : cette entrée n’existe pas, ou elle est déjà validée — '
+        + 'une entrée validée se corrige, elle ne se retire pas d’ici.' }
+  }
   revalidatePath('/prof/corpus')
   return { ok: true, message: 'Entrée retirée — elle peut être redéposée sous un `id` neuf.' }
 }
@@ -192,28 +210,71 @@ export async function rattacherAuCours(
   const enfant = banque === 'textes' ? 'exercices_textes_cours' : 'exercices_sujets_cours'
   const cle = banque === 'textes' ? 'texte_id' : 'sujet_id'
 
-  const { error } = await admin.from(table)
-    .update({ cours_etat: etat, updated_at: new Date().toISOString() }).eq('id', id)
-  if (error) return { ok: false, message: error.message }
+  // ⚠️ L'APPARIEMENT SE FAIT PAR NOM, JAMAIS PAR POSITION. Le formulaire postait
+  //   deux listes — les noms déclarés d'un côté, les cours choisis de l'autre —
+  //   appariées par index, sur deux lectures qu'aucun `order()` n'ordonnait. Un
+  //   `update` de Postgres déplace la ligne mise à jour : dès le second passage,
+  //   « cours-Platon » pouvait recevoir le cours de « cours-Kant », et l'écran
+  //   annonçait « servable ». Chaque couple voyage désormais ensemble.
+  //   Le couple arrive encodé en JSON : `["le nom déclaré", "l'id du cours"]`.
+  //   Un séparateur invisible ne survivrait pas au transport du formulaire.
+  const couples = form.getAll('couple').map(String).filter(Boolean).flatMap((x) => {
+    try {
+      const [nom, coursId] = JSON.parse(x) as [string, string]
+      return typeof nom === 'string' ? [{ nom, coursId: String(coursId ?? '') }] : []
+    } catch { return [] }
+  })
+  const apparies = couples.filter((c) => c.coursId)
 
+  // ⚠️ `liste` SANS AUCUN COURS EST « JAMAIS SERVABLE », et l'écran annonçait
+  //   l'inverse. On refuse plutôt que de mentir.
+  if (etat === 'liste' && apparies.length === 0 && coursIds.length === 0) {
+    return { ok: false,
+      message: 'Vous avez choisi « un ou plusieurs cours » sans en apparier aucun : l’entrée '
+        + 'resterait « jamais servable ». Choisissez un cours, ou déclarez `generique`.' }
+  }
+
+  const { data: maj, error } = await admin.from(table)
+    .update({ cours_etat: etat, updated_at: new Date().toISOString() }).eq('id', id).select('id')
+  if (error) return { ok: false, message: error.message }
+  if ((maj ?? []).length === 0) return { ok: false, message: 'Aucune entrée n’a été rattachée.' }
+
+  const rates: string[] = []
   if (etat === 'liste') {
-    // On apparie ce que le fichier a DÉCLARÉ à ce que la plateforme porte.
-    const { data: declares } = await admin.from(enfant).select('cours_declare').eq(cle, id)
-    const noms = ((declares ?? []) as unknown as Ligne[]).map((d) => String(d.cours_declare))
-    if (noms.length === 0 && coursIds.length > 0) {
-      await admin.from(enfant).insert(coursIds.map((c) => ({
-        [cle]: id, cours_declare: c, cours_id: c,
-      })))
-    } else {
-      for (let i = 0; i < noms.length; i++) {
-        await admin.from(enfant).update({ cours_id: coursIds[i] ?? null })
-          .eq(cle, id).eq('cours_declare', noms[i])
+    const { data: declares, error: eLecture } = await admin.from(enfant)
+      .select('cours_declare').eq(cle, id)
+    if (eLecture) return { ok: false, message: `Les cours déclarés n'ont pas pu être lus : ${eLecture.message}` }
+    const noms = new Set(((declares ?? []) as unknown as Ligne[]).map((d) => String(d.cours_declare)))
+    for (const { nom, coursId } of couples) {
+      if (noms.has(nom)) {
+        const { data: u, error: eU } = await admin.from(enfant)
+          .update({ cours_id: coursId || null }).eq(cle, id).eq('cours_declare', nom).select(cle)
+        if (eU) rates.push(`« ${nom} » : ${eU.message}`)
+        else if ((u ?? []).length === 0) rates.push(`« ${nom} » : aucune ligne touchée`)
+      } else if (coursId) {
+        // Un cours choisi à l'écran sur une entrée que le fichier n'avait pas
+        // déclarée : il devient son propre déclaré.
+        const { error: eI } = await admin.from(enfant)
+          .insert({ [cle]: id, cours_declare: nom || coursId, cours_id: coursId })
+        if (eI) rates.push(`« ${nom || coursId} » : ${eI.message}`)
       }
     }
+    // Le formulaire simple (aucun déclaré) poste `cours_id` seul.
+    for (const c of coursIds) {
+      if (couples.length > 0) break
+      const { error: eI } = await admin.from(enfant)
+        .insert({ [cle]: id, cours_declare: c, cours_id: c })
+      if (eI) rates.push(`« ${c} » : ${eI.message}`)
+    }
   } else {
-    await admin.from(enfant).update({ cours_id: null }).eq(cle, id)
+    const { error: eR } = await admin.from(enfant).update({ cours_id: null }).eq(cle, id)
+    if (eR) rates.push(eR.message)
   }
   revalidatePath('/prof/corpus')
+  if (rates.length > 0) {
+    return { ok: false, message: 'L’état est posé, mais l’appariement des cours a échoué.',
+      blocages: rates }
+  }
   return {
     ok: true,
     message: etat === 'generique' ? 'Servable en tout temps.'
@@ -232,10 +293,11 @@ export async function apparierLivre(
   const { admin } = await garderProf(false)
   const id = String(form.get('id') ?? '')
   const livreId = String(form.get('livre_id') ?? '')
-  const { error } = await admin.from('exercices_textes')
+  const { data, error } = await admin.from('exercices_textes')
     .update({ plan_livre_id: livreId || null, updated_at: new Date().toISOString() })
-    .eq('id', id)
+    .eq('id', id).select('id')
   if (error) return { ok: false, message: error.message }
+  if ((data ?? []).length === 0) return { ok: false, message: 'Aucun texte apparié.' }
   revalidatePath('/prof/corpus')
   return {
     ok: true,

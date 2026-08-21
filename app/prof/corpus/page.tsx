@@ -18,6 +18,7 @@
 // ============================================================================
 
 import Link from 'next/link'
+import { lire, incidentsDe } from '@/utils/fabrique/lecture'
 import { garderProf } from '@/utils/fabrique/acces'
 import { formatJour } from '@/utils/fuseau'
 import DepotCorpus from './DepotCorpus'
@@ -56,25 +57,45 @@ export default async function DepotDuCorpus({
   const onglet = ONGLETS.some(([v]) => v === brut) ? brut! : 'depot'
   const { admin, actif } = await garderProf()
 
-  const [{ data: imports }, { data: textes }, { data: sujets },
-    { data: materiaux }, { data: exercices }, { data: demos },
-    { data: cours }, { data: livres }] = await Promise.all([
-    admin.from('exercices_imports').select('*').order('depose_at', { ascending: false }).limit(10),
-    admin.from('exercices_textes').select('*, exercices_textes_cours(cours_declare, cours_id)')
-      .neq('statut', 'retire').order('created_at'),
-    admin.from('exercices_sujets').select('*, exercices_sujets_cours(cours_declare, cours_id)')
-      .neq('statut', 'retire').order('created_at'),
-    admin.from('exercices_materiaux').select('id, id_import, objet_code, mode, famille, defaut, statut')
-      .neq('statut', 'retire').order('created_at'),
-    admin.from('exercices').select('id, id_import, cran, lieu, statut, bloque, blocages, signalements, exercices_types(code)')
-      .not('id_import', 'is', null).order('created_at'),
-    admin.from('exercices_demonstrations').select('*').order('competence'),
-    admin.from('scriptorium_contenus').select('id, titre').eq('type', 'cours').order('titre'),
+  // ⚠️ UNE LECTURE RATÉE N'EST PAS UNE BASE VIDE : « Aucune entrée » et « je n'ai
+  //   pas pu lire » ne se disent pas de la même façon, et c'est de cette
+  //   confusion que partent les gestes qui abîment.
+  const [lImports, lTextes, lSujets, lMateriaux, lExercices, lDemos,
+    lCours, lLivres] = await Promise.all([
+    lire<Ligne>('les dépôts précédents',
+      admin.from('exercices_imports').select('*').order('depose_at', { ascending: false }).limit(10)),
+    lire<Ligne>('les textes',
+      admin.from('exercices_textes').select('*, exercices_textes_cours(cours_declare, cours_id)')
+        .neq('statut', 'retire').order('created_at')),
+    lire<Ligne>('les sujets',
+      admin.from('exercices_sujets').select('*, exercices_sujets_cours(cours_declare, cours_id)')
+        .neq('statut', 'retire').order('created_at')),
+    lire<Ligne>('les matériaux',
+      admin.from('exercices_materiaux').select('id, id_import, objet_code, mode, famille, defaut, statut')
+        .neq('statut', 'retire').order('created_at')),
+    lire<Ligne>('les exercices importés',
+      admin.from('exercices').select('id, id_import, cran, lieu, statut, bloque, blocages, signalements, exercices_types(code)')
+        .not('id_import', 'is', null).order('created_at')),
+    lire<Ligne>('les démonstrations',
+      admin.from('exercices_demonstrations').select('*').order('competence')),
+    lire<Ligne>('les cours du Scriptorium',
+      admin.from('scriptorium_contenus').select('id, titre').eq('type', 'cours').order('titre')),
     // Les LIVRES de la plateforme — `aletheia_livre_reference` pointe une UNITÉ
     // du Scriptorium de type `livre`, et c'est son `label` qui se lit.
-    admin.from('aletheia_livre_reference')
-      .select('id, scriptorium_unites:scriptorium_livre_id(label, supprime_at)').limit(50),
+    lire<Ligne>('les livres',
+      admin.from('aletheia_livre_reference')
+        .select('id, scriptorium_unites:scriptorium_livre_id(label, supprime_at)').limit(50)),
   ])
+  const incidents = incidentsDe(lImports, lTextes, lSujets, lMateriaux, lExercices,
+    lDemos, lCours, lLivres)
+  const imports = lImports.lignes
+  const textes = lTextes.lignes
+  const sujets = lSujets.lignes
+  const materiaux = lMateriaux.lignes
+  const exercices = lExercices.lignes
+  const demos = lDemos.lignes
+  const cours = lCours.lignes
+  const livres = lLivres.lignes
 
   return (
     <div className="space-y-6 pb-12">
@@ -96,6 +117,18 @@ export default async function DepotDuCorpus({
         </p>
       )}
 
+      {incidents.length > 0 && (
+        <div className="rounded-lg border border-retard bg-retard-teinte px-3 py-2 space-y-1">
+          <p className="font-ui text-sm text-encre">
+            <strong>Des lectures ont échoué.</strong> Ce que cet écran ne montre pas n’est
+            peut-être pas absent : il n’a pas pu être lu.
+          </p>
+          {incidents.map((x, i) => (
+            <p key={i} className="font-ui text-xs text-encre-douce">· {x}</p>
+          ))}
+        </div>
+      )}
+
       <nav className="inline-flex flex-wrap rounded-lg border border-bordure bg-surface p-0.5 font-ui text-sm">
         {ONGLETS.map(([v, libelle]) => (
           <Link
@@ -114,11 +147,11 @@ export default async function DepotDuCorpus({
           <DepotCorpus />
           <div className="rounded-xl border border-bordure bg-surface p-4 space-y-2">
             <h2 className="font-titre text-lg text-encre">Les dépôts précédents</h2>
-            {(imports ?? []).length === 0
+            {imports.length === 0
               ? <p className="font-ui text-sm text-muet">Aucun dépôt.</p>
               : (
                 <ul className="divide-y divide-bordure font-ui text-sm">
-                  {((imports ?? []) as unknown as Ligne[]).map((i) => {
+                  {(imports as unknown as Ligne[]).map((i) => {
                     const r = lig(i.rapport)
                     return (
                       <li key={txt(i.id)} className="py-2 space-y-1">
@@ -144,26 +177,26 @@ export default async function DepotDuCorpus({
 
       {onglet === 'file' && (
         <FileDeValidation
-          textes={((textes ?? []) as unknown as Ligne[]).map((t) => ({
+          textes={(textes as unknown as Ligne[]).map((t) => ({
             id: txt(t.id), idImport: txt(t.id_import), libelle: `${txt(t.auteur)} — ${txt(t.titre)}`,
             statut: txt(t.statut), bloque: oui(t.bloque), blocages: tab(t.blocages).map(txt),
           }))}
-          sujets={((sujets ?? []) as unknown as Ligne[]).map((s) => ({
+          sujets={(sujets as unknown as Ligne[]).map((s) => ({
             id: txt(s.id), idImport: txt(s.id_import), libelle: txt(s.enonce),
             statut: txt(s.statut), bloque: oui(s.bloque), blocages: tab(s.blocages).map(txt),
           }))}
-          materiaux={((materiaux ?? []) as unknown as Ligne[]).map((m) => ({
+          materiaux={(materiaux as unknown as Ligne[]).map((m) => ({
             id: txt(m.id), idImport: txt(m.id_import),
             libelle: `${txt(m.objet_code)} · ${txt(m.mode)} — ${txt(m.defaut)}`,
             statut: txt(m.statut), bloque: false, blocages: [],
           }))}
-          exercices={((exercices ?? []) as unknown as Ligne[]).map((e) => ({
+          exercices={(exercices as unknown as Ligne[]).map((e) => ({
             id: txt(e.id), idImport: txt(e.id_import),
             libelle: `${txt(jointure(e, 'exercices_types').code) || '?'} · cran ${txt(e.cran)} · ${txt(e.lieu)}`,
             statut: txt(e.statut), bloque: oui(e.bloque), blocages: tab(e.blocages).map(txt),
             signalements: tab(e.signalements).map(txt),
           }))}
-          demonstrations={((demos ?? []) as unknown as Ligne[]).filter((d) => d.id_import).map((d) => ({
+          demonstrations={(demos as unknown as Ligne[]).filter((d) => d.id_import).map((d) => ({
             id: txt(d.id), idImport: txt(d.id_import),
             libelle: `${txt(d.competence)} · ${txt(d.grain)} · ${txt(d.forme)} — ${txt(d.theme)}`,
             statut: txt(d.statut), bloque: false, blocages: [],
@@ -174,7 +207,7 @@ export default async function DepotDuCorpus({
 
       {onglet === 'rattachement' && (
         <Rattachement
-          textes={((textes ?? []) as unknown as Ligne[]).map((t) => ({
+          textes={(textes as unknown as Ligne[]).map((t) => ({
             id: txt(t.id), idImport: txt(t.id_import), libelle: `${txt(t.auteur)} — ${txt(t.titre)}`,
             coursEtat: txt(t.cours_etat),
             declares: tab(t.exercices_textes_cours).map((c) => ({
@@ -183,14 +216,14 @@ export default async function DepotDuCorpus({
             planLivreId: t.plan_livre_id === null ? null : txt(t.plan_livre_id),
             planSemaine: num(t.plan_semaine),
           }))}
-          sujets={((sujets ?? []) as unknown as Ligne[]).map((s) => ({
+          sujets={(sujets as unknown as Ligne[]).map((s) => ({
             id: txt(s.id), idImport: txt(s.id_import), libelle: txt(s.enonce),
             coursEtat: txt(s.cours_etat),
             declares: tab(s.exercices_sujets_cours).map((c) => ({
               nom: txt(lig(c).cours_declare), coursId: lig(c).cours_id === null ? null : txt(lig(c).cours_id) })),
           }))}
-          cours={((cours ?? []) as unknown as Ligne[]).map((c) => ({ id: txt(c.id), titre: txt(c.titre) }))}
-          livres={((livres ?? []) as unknown as Ligne[])
+          cours={(cours as unknown as Ligne[]).map((c) => ({ id: txt(c.id), titre: txt(c.titre) }))}
+          livres={(livres as unknown as Ligne[])
             .filter((l) => !jointure(l, 'scriptorium_unites').supprime_at)
             .map((l) => ({
               id: txt(l.id), titre: txt(jointure(l, 'scriptorium_unites').label) || txt(l.id) }))}
@@ -199,7 +232,7 @@ export default async function DepotDuCorpus({
 
       {onglet === 'demonstrations' && (
         <Demonstrations
-          demonstrations={((demos ?? []) as unknown as Ligne[]).map((d) => ({
+          demonstrations={(demos as unknown as Ligne[]).map((d) => ({
             id: txt(d.id), competence: txt(d.competence), grain: txt(d.grain),
             forme: txt(d.forme), theme: txt(d.theme), statut: txt(d.statut),
             signalements: tab(d.signalements).map(txt),

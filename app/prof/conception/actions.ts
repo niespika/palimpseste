@@ -162,6 +162,9 @@ export async function concevoirInstance(
     materiau_source_localisation: lireIntervalle('localisation'),
     materiau_source_englobant: saisie.englobant,
     materiau_cible_texte_id: texteCibleId,
+    // ⚠️ Un sujet choisi comme CIBLE se range en cible. Il partait en source, et
+    //    `materiau_cible_provenance` restait `sujet` sans identifiant.
+    materiau_cible_sujet_id: (String(form.get('sujet_cible') ?? '').trim() || null),
     materiau_cible_localisation: lireIntervalle('localisation_cible'),
     materiau_cible_englobant: lireIntervalle('englobant_cible'),
     observable_isole_code: saisie.observableCode,
@@ -178,12 +181,23 @@ export async function concevoirInstance(
   }).select('id').single()
   if (error) return { ok: false, message: error.message }
 
-  const { error: eCas } = await admin.from('exercices_cas').insert(saisie.cas.map((cs, i) => ({
-    exercice_id: data.id, ordre: i + 1,
-    materiau_id: cs.materiauId, defaut: cs.defaut,
-    distracteurs: cs.distracteurs, reponse_attendue: cs.reponseAttendue,
-  })))
-  if (eCas) return { ok: false, message: `L'instance est créée, mais son appui non : ${eCas.message}` }
+  const { data: casEcrits, error: eCas } = await admin.from('exercices_cas')
+    .insert(saisie.cas.map((cs, i) => ({
+      exercice_id: data.id, ordre: i + 1,
+      materiau_id: cs.materiauId, defaut: cs.defaut,
+      distracteurs: cs.distracteurs, reponse_attendue: cs.reponseAttendue,
+    }))).select('ordre')
+  // ⚠️ UNE INSTANCE SANS SON APPUI EST INUTILISABLE, et pire : son écran
+  // d'édition n'affiche alors aucun cas, et la première correction écraserait
+  // la consigne que l'élève lit. On ne la laisse pas derrière nous.
+  if (eCas || (casEcrits ?? []).length !== saisie.cas.length) {
+    await admin.from('exercices').delete().eq('id', data.id)
+    return {
+      ok: false,
+      message: `L'appui n'a pas pu être écrit : ${eCas?.message ?? 'écriture partielle'}. `
+        + 'L\'instance a été retirée — rien d\'incomplet ne reste.',
+    }
+  }
 
   revalidatePath('/prof/conception')
   return {
@@ -200,30 +214,60 @@ export async function editerInstance(
 ): Promise<RetourConception> {
   const { admin } = await garderProf(false)
   const id = String(form.get('id') ?? '')
-  const { data: ex } = await admin.from('exercices')
-    .select('statut, paire_diagnostic, cran').eq('id', id).single()
+  const { data: ex, error: eLecture } = await admin.from('exercices')
+    .select('statut, paire_diagnostic, cran, exercices_cas(ordre)').eq('id', id).maybeSingle()
+  if (eLecture) return { ok: false, message: `Lecture impossible : ${eLecture.message}` }
   if (!ex) return { ok: false, message: 'Instance inconnue.' }
   if (ex.statut === 'assigne' || ex.statut === 'clos') {
     return { ok: false, message: 'Cette instance est déjà assignée : l’édition avant validation est passée.' }
   }
+
+  // ⚠️ CE QUE LE FORMULAIRE PORTE ET CE QUE LA BASE DÉCLARE DOIVENT S'ACCORDER.
+  //   Le nombre de consignes à écrire vient de `paire_diagnostic` ; le nombre de
+  //   champs affichés vient des lignes `exercices_cas`. Quand les deux divergent
+  //   — une instance dont l'écriture des cas a échoué —, `form.get('cas_2_…')`
+  //   rend `null`, la consigne devient vide, et LE TEXTE QUE L'ÉLÈVE LIT EST
+  //   EFFACÉ sous un message vert. On refuse plutôt que d'écrire à l'aveugle.
   const n = ex.paire_diagnostic ? 2 : 1
+  const casEnBase = (ex.exercices_cas as Array<{ ordre: number }> | null) ?? []
+  if (casEnBase.length !== n) {
+    return {
+      ok: false,
+      message: `Cette instance déclare ${n} cas et n'en porte que ${casEnBase.length} : `
+        + 'son appui est incomplet. Elle ne peut pas être corrigée en l’état — retirez-la et '
+        + 'redéposez-la sous un `id` neuf.',
+    }
+  }
   const cas = lireCas(form, n)
-  const { error } = await admin.from('exercices').update({
+  if (cas.some((c) => !c.consigne.trim())) {
+    return { ok: false, message: 'Une consigne est vide : c’est le texte que l’élève lit, '
+      + 'il ne s’efface pas par mégarde.' }
+  }
+
+  const { data: maj, error } = await admin.from('exercices').update({
     consigne_instanciee: ex.paire_diagnostic ? cas.map((x) => x.consigne) : cas[0].consigne,
     guide: (String(form.get('guide') ?? '').trim() || null),
     lieu: String(form.get('lieu') ?? 'maison'),
     optin_se_juger: form.get('optin_se_juger') === 'oui',
     optin_confiance_remise: form.get('optin_confiance_remise') === 'oui',
     updated_at: new Date().toISOString(),
-  }).eq('id', id)
+  }).eq('id', id).select('id')
   if (error) return { ok: false, message: error.message }
+  if ((maj ?? []).length === 0) return { ok: false, message: 'Aucune ligne corrigée.' }
+
+  const rates: string[] = []
   for (let i = 0; i < cas.length; i++) {
-    await admin.from('exercices_cas').update({
+    const { data: casMaj, error: eCas } = await admin.from('exercices_cas').update({
       defaut: cas[i].defaut, distracteurs: cas[i].distracteurs,
       reponse_attendue: cas[i].reponseAttendue,
-    }).eq('exercice_id', id).eq('ordre', i + 1)
+    }).eq('exercice_id', id).eq('ordre', i + 1).select('ordre')
+    if (eCas) rates.push(`cas ${i + 1} : ${eCas.message}`)
+    else if ((casMaj ?? []).length === 0) rates.push(`cas ${i + 1} : aucune ligne touchée`)
   }
   revalidatePath(`/prof/conception/${id}`)
+  if (rates.length > 0) {
+    return { ok: false, message: 'La consigne est corrigée, mais pas tout l’appui.', empechements: rates }
+  }
   return { ok: true, message: 'Instance corrigée.' }
 }
 
@@ -246,7 +290,9 @@ export async function assignerALaClasse(
   const fin = String(form.get('fenetre_fin') ?? '') || null
   if (!classeId) return { ok: false, message: 'Aucune classe choisie.' }
 
-  const { data: ex } = await admin.from('exercices').select('statut, bloque').eq('id', id).single()
+  const { data: ex, error: eLecture } = await admin.from('exercices')
+    .select('statut, bloque, classe_id').eq('id', id).maybeSingle()
+  if (eLecture) return { ok: false, message: `Lecture impossible : ${eLecture.message}` }
   if (!ex) return { ok: false, message: 'Instance inconnue.' }
   // « Une entrée bloquée ne se valide pas tant qu'elle l'est » — a fortiori elle
   // ne s'assigne pas.
@@ -254,40 +300,84 @@ export async function assignerALaClasse(
   if (ex.statut === 'a_concevoir') {
     return { ok: false, message: 'Cette instance n’est pas encore conçue.' }
   }
+  // ⚠️ CHANGER DE CLASSE LAISSERAIT LES DÉPÔTS DE L'ANCIENNE ORPHELINS —
+  //   assignés, comptés à l'assiduité, et rattachés à un exercice qui ne
+  //   s'adresse plus à eux. On refuse plutôt que de le faire en silence.
+  if (ex.classe_id && ex.classe_id !== classeId) {
+    return {
+      ok: false,
+      message: 'Cette instance est déjà assignée à une autre classe. Changer de classe laisserait '
+        + 'les dépôts de la première orphelins : concevez une seconde instance pour l’autre classe.',
+    }
+  }
 
-  const { error: eEx } = await admin.from('exercices').update({
+  // ⚠️ ON LIT LES INSCRITS AVANT D'ÉCRIRE QUOI QUE CE SOIT. Poser `assigne` puis
+  //   découvrir qu'il n'y a personne murait l'instance : l'édition la refusait
+  //   ensuite (« déjà assignée ») et aucun dépôt n'existait.
+  const { data: inscrits, error: eInscrits } = await admin.from('inscriptions')
+    .select('eleve_id').eq('classe_id', classeId).eq('statut', 'active')
+  if (eInscrits) return { ok: false, message: `Les inscriptions n'ont pas pu être lues : ${eInscrits.message}` }
+  const eleves = [...new Set(((inscrits ?? []) as unknown as Ligne[]).map((i) => String(i.eleve_id)))]
+  if (eleves.length === 0) {
+    return { ok: false, message: 'Aucun élève inscrit dans cette classe : rien n’entrerait au '
+      + 'calendrier, et l’instance n’a pas été assignée.' }
+  }
+
+  const echeance = fin ? new Date(fin).toISOString() : null
+
+  // ⚠️ NE JAMAIS RÉÉCRIRE L'ÉTAT D'UN ÉLÈVE QUI A COMMENCÉ. Un `upsert` qui
+  //   repose `statut` et `assigne_at` ferait repasser à `assigne` un élève déjà
+  //   à `v1_remis` : son travail resterait, son état non — et l'assiduité le
+  //   recompterait. On n'insère que les lignes manquantes, et on ne touche que
+  //   l'échéance des autres.
+  const { data: dejaLa, error: eDeja } = await admin.from('exercices_depots')
+    .select('eleve_id').eq('exercice_id', id)
+  if (eDeja) return { ok: false, message: `Les dépôts n'ont pas pu être lus : ${eDeja.message}` }
+  const connus = new Set(((dejaLa ?? []) as unknown as Ligne[]).map((d) => String(d.eleve_id)))
+  const neufs = eleves.filter((e) => !connus.has(e))
+
+  let crees = 0
+  if (neufs.length > 0) {
+    const { data: poses, error: eDep } = await admin.from('exercices_depots').insert(
+      neufs.map((eleveId) => ({
+        eleve_id: eleveId, exercice_id: id,
+        // « `origine` `prof` » — ce qui distingue la voie du professeur de celle
+        // du routeur, DANS LES MÊMES TABLES (§1.1 ; §5).
+        origine: 'prof',
+        assigne_at: new Date().toISOString(),
+        echeance,
+        statut: 'assigne',
+      }))).select('eleve_id')
+    if (eDep) return { ok: false, message: `Les dépôts n'ont pas été écrits : ${eDep.message}` }
+    crees = (poses ?? []).length
+  }
+  // L'échéance, elle, se repousse — mais seulement sur ce qui n'est pas clos.
+  let repousses = 0
+  if (connus.size > 0) {
+    const { data: maj, error: eMaj } = await admin.from('exercices_depots')
+      .update({ echeance }).eq('exercice_id', id).neq('statut', 'clos').select('eleve_id')
+    if (eMaj) return { ok: false, message: `L'échéance n'a pas pu être repoussée : ${eMaj.message}` }
+    repousses = (maj ?? []).length
+  }
+
+  // L'instance ne bascule qu'une fois les dépôts en place.
+  const { data: majEx, error: eEx } = await admin.from('exercices').update({
     classe_id: classeId,
     fenetre_debut: debut ? new Date(debut).toISOString() : null,
     fenetre_fin: fin ? new Date(fin).toISOString() : null,
     statut: 'assigne',
     updated_at: new Date().toISOString(),
-  }).eq('id', id)
+  }).eq('id', id).select('id')
   if (eEx) return { ok: false, message: eEx.message }
-
-  const { data: inscrits } = await admin.from('inscriptions')
-    .select('eleve_id').eq('classe_id', classeId).eq('statut', 'active')
-  const eleves = [...new Set(((inscrits ?? []) as unknown as Ligne[])
-    .map((i) => String(i.eleve_id)))]
-  if (eleves.length === 0) {
-    return { ok: false, message: 'Aucun élève inscrit dans cette classe : rien n’entre au calendrier.' }
-  }
-  const { error: eDep } = await admin.from('exercices_depots').upsert(eleves.map((eleveId) => ({
-    eleve_id: eleveId, exercice_id: id,
-    // « `origine` `prof` » — c'est ce qui distingue la voie du professeur de
-    // celle du routeur, DANS LES MÊMES TABLES (§1.1 ; §5).
-    origine: 'prof',
-    assigne_at: new Date().toISOString(),
-    echeance: fin ? new Date(fin).toISOString() : null,
-    statut: 'assigne',
-  })), { onConflict: 'eleve_id,exercice_id' })
-  if (eDep) return { ok: false, message: `L'instance est assignée, mais les dépôts non : ${eDep.message}` }
+  if ((majEx ?? []).length === 0) return { ok: false, message: 'L’instance n’a pas été assignée.' }
 
   revalidatePath(`/prof/conception/${id}`)
   revalidatePath('/prof/conception')
   return {
     ok: true,
-    message: `Exercice commun assigné : ${eleves.length} ligne(s) d’\`exercices_depots\`, `
-      + '`origine` `prof` — il entre au calendrier de chaque élève.',
+    message: `Exercice commun assigné — ${crees} dépôt(s) créé(s), \`origine\` \`prof\``
+      + (repousses ? `, ${repousses} échéance(s) repoussée(s) sans toucher à l’état des élèves` : '')
+      + '. Il entre au calendrier de chaque élève.',
   }
 }
 
@@ -328,11 +418,18 @@ export async function validerReference(
     .update({ validee_par: userId, validee_at: new Date().toISOString() }).eq('id', id)
   if (error) return { ok: false, message: error.message }
   // Le texte cesse d'être bloqué du même coup : son blocage n° 2 est levé.
-  await admin.from('exercices_textes')
+  const { error: eTexte } = await admin.from('exercices_textes')
     .update({ bloque: false, blocages: [], updated_at: new Date().toISOString() })
     .eq('reference_id', id)
   revalidatePath('/prof/conception')
   revalidatePath('/prof/corpus')
+  if (eTexte) {
+    return {
+      ok: false,
+      message: 'La référence est validée, mais le texte reste BLOQUÉ en file : '
+        + `${eTexte.message}. Levez le blocage depuis l'écran du corpus.`,
+    }
+  }
   return { ok: true, message: 'Référence validée — un seul geste, pour toute la référence.' }
 }
 
@@ -345,16 +442,33 @@ export async function devaliderReference(
 ): Promise<RetourConception> {
   const { admin } = await garderProf(false)
   const id = String(form.get('reference_id') ?? '')
-  const { count } = await admin.from('exercices')
-    .select('id', { count: 'exact', head: true })
-    .or(`materiau_source_texte_id.not.is.null,materiau_cible_texte_id.not.is.null`)
-  const { error } = await admin.from('exercices_references')
-    .update({ validee_par: null, validee_at: null }).eq('id', id)
+  // ⚠️ COMPTER CE DONT ON PARLE. Le compte portait sur TOUTE instance bâtie sur
+  //   un texte quelconque : il n'avait aucun lien avec la référence dévalidée.
+  const { data: textes } = await admin.from('exercices_textes').select('id').eq('reference_id', id)
+  const idsTextes = ((textes ?? []) as unknown as Ligne[]).map((x) => String(x.id))
+  let concernees = 0
+  if (idsTextes.length > 0) {
+    const { count } = await admin.from('exercices')
+      .select('id', { count: 'exact', head: true })
+      .or(`materiau_source_texte_id.in.(${idsTextes.join(',')}),`
+        + `materiau_cible_texte_id.in.(${idsTextes.join(',')})`)
+    concernees = count ?? 0
+  }
+  const { data: maj, error } = await admin.from('exercices_references')
+    .update({ validee_par: null, validee_at: null }).eq('id', id).select('id')
   if (error) return { ok: false, message: error.message }
+  if ((maj ?? []).length === 0) return { ok: false, message: 'Aucune référence dévalidée.' }
   revalidatePath('/prof/conception')
+  revalidatePath('/prof/corpus')
+  // ⚠️ DIRE CE QUE ÇA FAIT, ET RIEN DE PLUS. La dévalidation ferme la CONCEPTION
+  //   à venir — « une référence non validée n'entre jamais en Phase 2 » — elle
+  //   ne défait pas les instances déjà assignées.
   return {
     ok: true,
-    message: 'Référence dévalidée — aucune instance ne tourne plus dessus tant qu’elle ne l’est '
-      + `pas à nouveau${count ? ` (${count} instance(s) bâtie(s) sur un texte)` : ''}.`,
+    message: 'Référence dévalidée : aucune instance NEUVE ne peut plus se concevoir dessus. '
+      + (concernees > 0
+        ? `${concernees} instance(s) déjà bâtie(s) sur ce texte ne sont pas défaites — `
+          + 'retirez-les une à une si c’est ce que vous voulez.'
+        : 'Aucune instance n’était bâtie dessus.'),
   }
 }

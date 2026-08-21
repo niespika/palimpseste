@@ -24,6 +24,7 @@
 //     professeur qui prépare » (piège 41).
 // ============================================================================
 
+import { lire, incidentsDe } from '@/utils/fabrique/lecture'
 import { garderProf, lireLesTroisInterrupteurs } from '@/utils/fabrique/acces'
 import { COMPETENCES_FICHE } from '@/utils/fabrique/fiche-competence'
 import { formatJour } from '@/utils/fuseau'
@@ -32,6 +33,9 @@ import LigneCompetence from './LigneCompetence'
 import OptOutClasses from './OptOutClasses'
 
 export const dynamic = 'force-dynamic'
+
+/** Une ligne rendue par Supabase — le client ne connaît pas le schéma. */
+type Ligne = Record<string, unknown>
 
 /** Les six du `07-` §1.2, dans l'ordre du référentiel, puis le Monitoring. */
 const LES_SIX = COMPETENCES_FICHE.filter((c) => c !== 'monitoring')
@@ -46,15 +50,27 @@ export default async function LieuDesCompetences() {
   const { admin, actif } = await garderProf()
   const troisOff = await lireLesTroisInterrupteurs(admin)
 
-  const [{ data: fiches }, { data: corr }, { data: niveaux },
-    { data: monitoring }, { data: classes }, { data: actives }] = await Promise.all([
-    admin.from('competences_fiches').select('*'),
-    admin.from('competences_correspondance').select('competence, observable_code, fiche_version'),
-    admin.from('competences_niveaux').select('competence, statut_recette, statut_recette_pose_le'),
-    admin.from('monitoring_niveaux').select('sous_dimension, statut_recette'),
-    admin.from('classes').select('id, nom, niveau, filiere').order('nom'),
-    admin.from('competences_actives_par_classe').select('classe_id, competence, active'),
+  // ⚠️ UNE LECTURE RATÉE N'EST PAS UNE BASE VIDE : chaque requête rend son
+  //   incident, et l'écran le montre plutôt que d'afficher « aucune fiche ».
+  const [lFiches, lCorr, lNiveaux, lMonitoring, lClasses, lActives] = await Promise.all([
+    lire<Ligne>('les fiches déposées', admin.from('competences_fiches').select('*')),
+    lire<Ligne>('la correspondance',
+      admin.from('competences_correspondance').select('competence, observable_code, fiche_version')),
+    lire<Ligne>('les statuts de recette',
+      admin.from('competences_niveaux').select('competence, statut_recette, statut_recette_pose_le')),
+    lire<Ligne>('le Monitoring',
+      admin.from('monitoring_niveaux').select('sous_dimension, statut_recette')),
+    lire<Ligne>('les classes', admin.from('classes').select('id, nom, niveau, filiere').order('nom')),
+    lire<Ligne>('l’activation par classe',
+      admin.from('competences_actives_par_classe').select('classe_id, competence, active')),
   ])
+  const incidents = incidentsDe(lFiches, lCorr, lNiveaux, lMonitoring, lClasses, lActives)
+  const fiches = lFiches.lignes
+  const corr = lCorr.lignes
+  const niveaux = lNiveaux.lignes
+  const monitoring = lMonitoring.lignes
+  const classes = lClasses.lignes
+  const actives = lActives.lignes
 
   const parFiche = new Map((fiches ?? []).map((f) => [f.competence as string, f]))
   const nbCorr = new Map<string, number>()
@@ -100,6 +116,18 @@ export default async function LieuDesCompetences() {
           se pose</strong> — sans lui il se poserait en base, à la main, sans que rien ne le relise.
         </p>
       </header>
+
+      {incidents.length > 0 && (
+        <div className="rounded-lg border border-retard bg-retard-teinte px-3 py-2 space-y-1">
+          <p className="font-ui text-sm text-encre">
+            <strong>Des lectures ont échoué.</strong> Ce que cet écran ne montre pas n’est
+            peut-être pas absent : il n’a pas pu être lu.
+          </p>
+          {incidents.map((x, i) => (
+            <p key={i} className="font-ui text-xs text-encre-douce">· {x}</p>
+          ))}
+        </div>
+      )}
 
       {!actif && (
         <p className="rounded-lg border border-attention bg-attention-teinte px-3 py-2 font-ui text-sm text-encre">

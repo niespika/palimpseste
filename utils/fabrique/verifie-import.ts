@@ -19,8 +19,8 @@
 //   l'autotest du script — chaque refus provoqué un par un, les blocages, les
 //   signalements — sur la doctrine dérivée des mêmes sources.
 //
-// ⚠️ DEUX DIFFÉRENCES ASSUMÉES AVEC LE CONTRÔLE HORS LIGNE, et le `08-` les veut
-//   toutes les deux :
+// ⚠️ TROIS DIFFÉRENCES ASSUMÉES AVEC LE CONTRÔLE HORS LIGNE. Le `08-` veut les
+//   deux premières ; la troisième est une conséquence du port :
 //   (1) « Les renvois se résolvent dans le fichier ET DANS CE QUI EST DÉJÀ EN
 //       BASE : un `texte`, un `sujet`, un `materiau` visé peut venir d'un dépôt
 //       antérieur. Le contrôle hors ligne ne voit que le fichier ; LE TIEN VOIT
@@ -29,6 +29,11 @@
 //       jamais dupliquée, jamais écrasée en silence —, et l'import rend le
 //       compte de ce qu'il a ignoré, BANQUE PAR BANQUE » (`08-` §1 ; piège 11).
 //       Le contrôle hors ligne n'a pas de base : il ne peut pas l'ignorer.
+//   (3) LE CRIBLE « CITE OU REFUSE » n'a pas d'équivalent ici. Le script s'arrête
+//       quand une déclaration du `02-` §6 A a bougé mot pour mot ; la plateforme
+//       n'a pas les sources sous la main, et son équivalent est le CONTRÔLE DE
+//       DÉRIVATION (`scripts/derive-doctrine.py --verifie`). Le refus n° 17
+//       « le contrôle a échoué » n'a donc pas de jumeau, et c'est voulu.
 // ============================================================================
 
 import {
@@ -129,6 +134,41 @@ const estObjet = (x: unknown): x is Record<string, any> =>
 const liste = (x: unknown): any[] => (Array.isArray(x) ? x : [])
 const chaine = (x: unknown): string => (typeof x === 'string' ? x : '')
 const nonVide = (x: unknown): boolean => chaine(x).trim().length > 0
+
+/**
+ * ⚠️ LA VÉRITÉ DE PYTHON, PAS CELLE DE JAVASCRIPT.
+ *
+ * Le script qui fait foi écrit `elif d:`, `and r`, `if e.get("bonus")`. En
+ * Python, `[]`, `{}`, `""` et `0` sont FAUX ; en JavaScript, `[]` et `{}` sont
+ * VRAIS. Un générateur qui écrit « pas de distracteurs » en liste vide plutôt
+ * qu'en `null` ferait donc refuser sa banque par la plateforme et accepter par
+ * le script — deux verdicts sur le même fichier.
+ *
+ * `declare()` rend ce que Python appellerait « vrai » : quelque chose EST là.
+ */
+const declare = (x: unknown): boolean => {
+  if (x === null || x === undefined || x === false) return false
+  if (typeof x === 'string') return x.length > 0
+  if (typeof x === 'number') return x !== 0
+  if (Array.isArray(x)) return x.length > 0
+  if (typeof x === 'object') return Object.keys(x as object).length > 0
+  return Boolean(x)
+}
+
+/**
+ * ⚠️ L'APPARTENANCE, SANS TRAVERSER `Object.prototype`.
+ *
+ * `'constructor' in d.objets` est VRAI sur un objet littéral, et
+ * `d.objets['toString']` rend une fonction. Un fichier déposé avec
+ * `"objet": "constructor"` faisait donc passer le contrôle d'objet inconnu,
+ * puis TOMBER le contrôle entier sur un `TypeError`. Python teste sur un
+ * `dict`, qui n'a pas de prototype : on fait pareil.
+ */
+const declaree = (m: Record<string, unknown>, cle: unknown): boolean =>
+  typeof cle === 'string' && Object.hasOwn(m, cle)
+/** La lecture qui va avec : rien ne remonte du prototype. */
+const dans = <T>(m: Record<string, T>, cle: unknown): T | undefined =>
+  (typeof cle === 'string' && Object.hasOwn(m, cle)) ? m[cle] : undefined
 
 function clesInconnues(v: Verdict, ou: string, entree: unknown, schema: string, n = 2) {
   if (!estObjet(entree)) return
@@ -258,9 +298,14 @@ export function controleImport(
 
   const formes = new Set(Object.values(d.objets).flatMap((o) => o.genres))
 
+  /** Les textes dont le BLOCAGE N° 2 force `validee` à `false` (`08-` §2). */
+  const forcesNonValides = new Set<string>()
+
   // ── Les textes ────────────────────────────────────────────────────────────
-  for (const t of textes) {
-    if (!estObjet(t)) continue
+  for (const [it, t] of textes.entries()) {
+    // MAL FORMÉ N'EST PAS ABSENT : le script qui fait foi s'arrête ici,
+    // et écarter l'entrée en silence rendait le fichier importable.
+    if (!estObjet(t)) { v.refuse('textes', `l'entrée ${it} n'est pas un objet`, 5); continue }
     const ou = `texte ${t.id}`
     v.entree = `textes|${t.id}`
     clesInconnues(v, ou, t, 'texte')
@@ -274,13 +319,24 @@ export function controleImport(
     // et l'import LE REJOUE » (`08-` §2 ; piège 14).
     const verd = controleReference(t.decomposition, chaine(t.contenu))
     if (verd.refus.length) v.refuse(ou, `décomposition refusée — ${verd.refus[0]}`, 17)
-    else if (verd.blocages.length) v.bloque(ou, `décomposition bloquée — ${verd.blocages[0]}`, 2)
+    else if (verd.blocages.length) {
+      v.bloque(ou, `décomposition bloquée — ${verd.blocages[0]}`, 2)
+      // ⚠️ « Un texte dont la décomposition est BLOQUÉE entre avec
+      // `validee: false`, QUOI QUE LE FICHIER DÉCLARE » (`08-` §2 et §7.2 ;
+      // piège 14). La valeur EFFECTIVE est donc fausse — et c'est ELLE que le
+      // blocage n° 1 lit plus bas. Sans cette ligne, une instance bâtie sur ce
+      // texte passait sans blocage et pouvait être validée sur une référence
+      // non relue : ce que le `02-` §6 A interdit.
+      forcesNonValides.add(chaine(t.id))
+    }
     for (const s of verd.signalements) v.signale(ou, `décomposition — ${s}`)
   }
 
   // ── Les sujets ────────────────────────────────────────────────────────────
-  for (const s of sujets) {
-    if (!estObjet(s)) continue
+  for (const [is, s] of sujets.entries()) {
+    // MAL FORMÉ N'EST PAS ABSENT : le script qui fait foi s'arrête ici,
+    // et écarter l'entrée en silence rendait le fichier importable.
+    if (!estObjet(s)) { v.refuse('sujets', `l'entrée ${is} n'est pas un objet`, 5); continue }
     const ou = `sujet ${s.id}`
     v.entree = `sujets|${s.id}`
     clesInconnues(v, ou, s, 'sujet')
@@ -290,13 +346,15 @@ export function controleImport(
     if (s.forme !== undefined && s.forme !== null && !formes.has(s.forme)) {
       v.refuse(ou, `\`forme\` hors des valeurs du \`genre\` : ${JSON.stringify(s.forme)}`, 5)
     }
-    if (s.texte && !texteConnu(s.texte)) v.refuse(ou, `renvoie au texte inconnu ${s.texte}`, 4)
+    if (declare(s.texte) && !texteConnu(s.texte)) v.refuse(ou, `renvoie au texte inconnu ${s.texte}`, 4)
   }
 
   // ── Les démonstrations (`08-` §5 bis) ─────────────────────────────────────
   const grains = new Set(Object.values(d.objets).map((o) => o.grain))
-  for (const dm of demonstrations) {
-    if (!estObjet(dm)) continue
+  for (const [idm, dm] of demonstrations.entries()) {
+    // MAL FORMÉ N'EST PAS ABSENT : le script qui fait foi s'arrête ici,
+    // et écarter l'entrée en silence rendait le fichier importable.
+    if (!estObjet(dm)) { v.refuse('demonstrations', `l'entrée ${idm} n'est pas un objet`, 5); continue }
     const ou = `démonstration ${dm.id}`
     v.entree = `demonstrations|${dm.id}`
     clesInconnues(v, ou, dm, 'demonstration')
@@ -304,24 +362,24 @@ export function controleImport(
       v.refuse(ou, '`theme` vide — une démonstration porte toujours sur un thème, '
         + "et jamais celui de l'exercice servi", 3)
     }
-    if (!(dm.competence in d.modesAdmis)) {
+    if (!declaree(d.modesAdmis, dm.competence)) {
       v.refuse(ou, `compétence inconnue : ${JSON.stringify(dm.competence)}`, 5)
     }
     if (!grains.has(dm.grain)) v.refuse(ou, `grain inconnu : ${JSON.stringify(dm.grain)}`, 5)
     const forme = dm.forme
     const attendu = d.formesDemonstration
-    if (!(forme in attendu)) {
+    if (!declaree(attendu, forme)) {
       v.refuse(ou, `\`forme\` inconnue : ${JSON.stringify(forme)} — attendu `
         + Object.keys(attendu).sort().join(' · '), 5)
       continue
     }
     if (corpsDemoMalForme(forme, dm.corps)) {
       v.refuse(ou, `\`corps\` ne va pas avec la forme « ${forme} »`, 5)
-    } else if (dm.grain !== attendu[forme]) {
+    } else if (dm.grain !== dans(attendu, forme)) {
       // SIGNALEMENT, jamais refus : « l'appariement du `06-` §2 décrit une
       // progression qui déborde l'appariement, et la règle se discute au `06-` ».
       v.signale(ou, `forme « ${forme} » au grain « ${dm.grain} » — le \`06-\` §2 `
-        + `l'attend au « ${attendu[forme]} »`)
+        + `l'attend au « ${dans(attendu, forme)} »`)
     }
   }
 
@@ -338,12 +396,14 @@ export function controleImport(
   }
 
   // ── Les matériaux ─────────────────────────────────────────────────────────
-  for (const m of materiaux) {
-    if (!estObjet(m)) continue
+  for (const [im, m] of materiaux.entries()) {
+    // MAL FORMÉ N'EST PAS ABSENT : le script qui fait foi s'arrête ici,
+    // et écarter l'entrée en silence rendait le fichier importable.
+    if (!estObjet(m)) { v.refuse('materiaux', `l'entrée ${im} n'est pas un objet`, 5); continue }
     const ou = `matériau ${m.id}`
     v.entree = `materiaux|${m.id}`
     clesInconnues(v, ou, m, 'materiau')
-    if (!(m.objet in d.objets)) v.refuse(ou, `objet inconnu : ${JSON.stringify(m.objet)}`, 5)
+    if (!declaree(d.objets, m.objet)) v.refuse(ou, `objet inconnu : ${JSON.stringify(m.objet)}`, 5)
     if (!(SUPPORTS as readonly unknown[]).includes(m.support) || m.support == null) {
       v.refuse(ou, `\`support\` inconnu : ${JSON.stringify(m.support)}`, 5)
     }
@@ -353,7 +413,7 @@ export function controleImport(
     }
     const obs = estObjet(m.observable) ? m.observable : {}
     clesInconnues(v, ou, obs, 'observable')
-    if (!(obs.competence in d.modesAdmis)) {
+    if (!declaree(d.modesAdmis, obs.competence)) {
       v.refuse(ou, `compétence inconnue : ${JSON.stringify(obs.competence)}`, 5)
     }
     // ⚠️ « Le `defaut` d'un matériau n'est pas toujours un défaut : une réussite
@@ -366,17 +426,19 @@ export function controleImport(
   const vises = new Set<string>()
 
   // ── Les exercices ─────────────────────────────────────────────────────────
-  for (const e of exercices) {
-    if (!estObjet(e)) continue
+  for (const [ie, e] of exercices.entries()) {
+    // MAL FORMÉ N'EST PAS ABSENT : le script qui fait foi s'arrête ici,
+    // et écarter l'entrée en silence rendait le fichier importable.
+    if (!estObjet(e)) { v.refuse('exercices', `l'entrée ${ie} n'est pas un objet`, 5); continue }
     const ou = `exercice ${e.id}`
     v.entree = `exercices|${e.id}`
     clesInconnues(v, ou, e, 'exercice')
 
     const objet = e.objet
-    const o = d.objets[objet]
+    const o = dans(d.objets, objet)
     if (!o) { v.refuse(ou, `objet inconnu : ${JSON.stringify(objet)}`, 5); continue }
     const cran = e.cran
-    if (typeof cran !== 'number' || !Number.isInteger(cran) || !(cran in d.crans)) {
+    if (typeof cran !== 'number' || !Number.isInteger(cran) || !d.crans[cran]) {
       v.refuse(ou, `cran hors de 1–9 : ${JSON.stringify(cran)}`, 5); continue
     }
     const c = d.crans[cran]
@@ -390,7 +452,7 @@ export function controleImport(
       v.signale(ou, '`lieu` vaut `classe` — la passation en classe se pose par le '
         + 'professeur, pas par le routeur')
     }
-    if (e.bonus) {
+    if (declare(e.bonus)) {
       v.signale(ou, '`bonus` à `true` à l\'import — le drapeau est une décision du routeur')
     }
 
@@ -407,6 +469,16 @@ export function controleImport(
     }
 
     // Les deux matériaux (`08-` §5.1).
+    // ⚠️ MAL FORMÉ N'EST PAS ABSENT. Le script qui fait foi s'ARRÊTE sur un
+    // matériau écrit en chaîne ; le coercer à `null` ferait taire le refus
+    // n° 11 (« le cran veut la cible nulle ») et rendrait le fichier importable.
+    for (const [nom, brutMat] of [['materiau_source', e.materiau_source],
+      ['materiau_cible', e.materiau_cible]] as Array<[string, unknown]>) {
+      if (brutMat !== null && brutMat !== undefined && !estObjet(brutMat)) {
+        v.refuse(ou, `${nom} mal formé : ${JSON.stringify(brutMat)} — attendu un objet `
+          + '`{ provenance, support }`, ou `null`', 5)
+      }
+    }
     const ms = estObjet(e.materiau_source) ? e.materiau_source : null
     const mc = estObjet(e.materiau_cible) ? e.materiau_cible : null
     for (const [nom, m] of [['materiau_source', ms], ['materiau_cible', mc]] as Array<[string, any]>) {
@@ -436,7 +508,7 @@ export function controleImport(
           }
           // « obligatoire et NON VIDE sur l'objet `phrase`, dont la règle
           // d'instance exige le co-texte » (`04-` §11).
-          if (objet === 'phrase' && !m.englobant) {
+          if (objet === 'phrase' && !declare(m.englobant)) {
             v.refuse(ou, `${nom} : \`englobant\` vide sur l'objet \`phrase\`, dont la `
               + "règle d'instance exige le co-texte", 16)
           }
@@ -473,11 +545,11 @@ export function controleImport(
       modes = {}
     }
     for (const [comp, m] of Object.entries(modes)) {
-      if (!(comp in d.modesAdmis)) {
+      if (!declaree(d.modesAdmis, comp)) {
         v.refuse(ou, `compétence inconnue : ${JSON.stringify(comp)}`, 5)
       } else if (!o.competences.includes(comp)) {
         v.refuse(ou, `\`${comp}\` ne figure pas dans le \`competences[]\` de \`${objet}\``, 9)
-      } else if (!d.modesAdmis[comp].includes(m as string)) {
+      } else if (!(dans(d.modesAdmis, comp) ?? []).includes(m as string)) {
         v.refuse(ou, `la compétence \`${comp}\` n'admet pas le mode \`${m}\` (\`02-\` §3)`, 9)
       }
     }
@@ -494,8 +566,9 @@ export function controleImport(
     const auteurSource = !!(ms && ms.provenance === 'texte_auteur')
     const auteurCible = !!(mc && mc.provenance === 'texte_auteur')
     for (const [comp, m] of Object.entries(modes)) {
-      if (!(comp in d.modesAdmis)) continue
-      const mono = d.modesAdmis[comp].length === 1
+      const admis = dans(d.modesAdmis, comp)
+      if (!admis) continue
+      const mono = admis.length === 1
       if (m !== 'composer' && !(auteurSource || auteurCible) && !mono) {
         v.refuse(ou, "règle 3 : aucun texte d'auteur servi, le seul mode déclarable "
           + `est \`composer\` — \`${comp}\` déclare \`${m}\``, 10)
@@ -514,7 +587,7 @@ export function controleImport(
     // REFUS n° 15 et BLOCAGE n° 3 — l'observable isolé.
     const obs = e.observable_isole
     if (c.isole) {
-      if (!obs) {
+      if (!declare(obs)) {
         v.refuse(ou, `le cran ${cran} isole : \`observable_isole\` est exigé`, 15)
       } else {
         clesInconnues(v, `${ou} — observable_isole`, obs, 'observable')
@@ -535,18 +608,18 @@ export function controleImport(
           }
         }
       }
-    } else if (obs) {
+    } else if (declare(obs)) {
       v.refuse(ou, `le cran ${cran} n'isole rien : \`observable_isole\` doit être nul (\`04-\` §14)`, 15)
     }
 
     // REFUS n° 12 — le guide suit le cran.
-    if (c.guide === 'null' && e.guide) v.refuse(ou, `le cran ${cran} ne sert aucun guide`, 12)
+    if (c.guide === 'null' && declare(e.guide)) v.refuse(ou, `le cran ${cran} ne sert aucun guide`, 12)
     if ((c.guide === 'complet' || c.guide === 'léger') && !nonVide(e.guide)) {
       v.refuse(ou, `le cran ${cran} exige un guide ${c.guide}`, 12)
     }
     // SIGNALEMENT — « une consigne qui nomme un observable à un cran de
     // production ferait d'`exerce` un `isole` sans que personne l'ait décidé ».
-    if (e.guide && !c.isole && !obs) {
+    if (declare(e.guide) && !c.isole && !declare(obs)) {
       for (const r of d.routes[`${objet}|${modeEx}`] ?? []) {
         if (r.code && chaine(e.guide).includes(r.code)) {
           v.signale(ou, `le guide nomme l'observable \`${r.code}\` à un cran de `
@@ -578,7 +651,7 @@ export function controleImport(
       const oc = `${ou} — cas ${i + 1}`
       clesInconnues(v, oc, cs, 'cas')
       if (!nonVide(cs?.consigne)) v.refuse(oc, '`consigne` vide', 3)
-      if (cs?.materiau) {
+      if (declare(cs?.materiau)) {
         vises.add(cs.materiau)
         if (!matConnu(cs.materiau)) v.refuse(oc, `matériau inconnu : ${cs.materiau}`, 4)
       } else if (mc && mc.provenance === 'genere') {
@@ -603,7 +676,7 @@ export function controleImport(
           }
           for (const dd of dis) clesInconnues(v, oc, dd, 'distracteur')
         }
-      } else if (dis) {
+      } else if (declare(dis)) {
         v.refuse(oc, `le cran ${cran} ne sert aucun distracteur`, 12)
       }
 
@@ -611,7 +684,7 @@ export function controleImport(
       if (c.reponseAttendue === 'présent' && !nonVide(r)) {
         v.refuse(oc, `le cran ${cran} exige une \`reponse_attendue\``, 12)
       }
-      if (c.reponseAttendue === 'null' && r) {
+      if (c.reponseAttendue === 'null' && declare(r)) {
         v.refuse(oc, `le cran ${cran} ne déclare aucune \`reponse_attendue\``, 12)
       }
 
@@ -620,7 +693,7 @@ export function controleImport(
         v.refuse(oc, `le cran ${cran} exige un \`defaut\` — c'est lui qui décide quel `
           + 'observable est isolé', 12)
       }
-      if (c.defaut === 'null' && df) v.refuse(oc, `le cran ${cran} n'injecte rien`, 12)
+      if (c.defaut === 'null' && declare(df)) v.refuse(oc, `le cran ${cran} n'injecte rien`, 12)
     })
 
     // ── BLOCAGE n° 1 — la référence non validée, SUR LES DEUX MATÉRIAUX ─────
@@ -633,7 +706,9 @@ export function controleImport(
       const id = chaine(mat.texte)
       const t = _textes.get(id)
       let validee: boolean
-      if (t) validee = !!t.validee
+      // La valeur EFFECTIVE, pas celle que le fichier déclare : le blocage n° 2
+      // l'a peut-être forcée à `false` juste au-dessus.
+      if (t) validee = declare(t.validee) && !forcesNonValides.has(id)
       else if (deja.textes?.has(id)) validee = !!deja.textesValides?.has(id)
       else continue      // renvoi mort : le refus n° 4 l'a déjà dit — et il est
                          // RÉPARABLE, quand le blocage attend un événement qui
@@ -664,14 +739,17 @@ export function controleImport(
   const familles = new Map<string, string[]>()
   for (const m of materiaux) {
     if (!estObjet(m) || !m.famille) continue
-    const cle = `${m.objet}|${m.famille}`
+    // ⚠️ Une `famille` est un libellé LIBRE : elle peut porter une barre
+    // verticale, et deux familles distinctes se confondraient sous une même
+    // étiquette. On sépare par un caractère qu'un libellé ne porte pas.
+    const cle = `${m.objet}\u0000${m.famille}`
     const membres = familles.get(cle) ?? []
     membres.push(m.id)
     familles.set(cle, membres)
   }
   for (const [cle, membres] of familles) {
     if (membres.length < 2) {
-      const [objet, f] = cle.split('|')
+      const [objet, f] = cle.split('\u0000')
       v.signale(`famille « ${f} » (${objet})`, 'un seul membre — aucune paire ne pourra s\'y faire')
     }
   }

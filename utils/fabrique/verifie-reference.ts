@@ -60,21 +60,50 @@ export interface VerdictReference {
   annonces: string[]
 }
 
+/**
+ * ⚠️ `\s` N'EST PAS LE MÊME JEU DE CARACTÈRES DES DEUX CÔTÉS.
+ *
+ * Le `\s` de Python prend NEL et les séparateurs de fichier ; celui de
+ * JavaScript non. Celui de JavaScript prend le BOM ; celui de Python non. Deux
+ * moteurs, deux découpages — donc DEUX COMPTES DE PHRASES pour le même texte,
+ * alors que cette segmentation FAIT FOI et sert aussi au pré-relevé de la
+ * Synthèse. Un BOM au milieu d'un texte concaténé suffit à les faire diverger.
+ * On écrit donc la classe en toutes lettres, celle de Python.
+ */
+const ESPACE = '[ \\t\\n\\r\\f\\v\\x1c-\\x1f\\x85\\u00a0\\u1680\\u2000-\\u200a'
+  + '\\u2028\\u2029\\u202f\\u205f\\u3000]'
+const COUPURE = new RegExp(`(?<=[.!?…])${ESPACE}+`)
+const NON_ESPACE = new RegExp(`(?:(?!${ESPACE})[\\s\\S])+`, 'g')
+
 /** La segmentation QUI FAIT FOI — la même que le pré-relevé de la Synthèse
  *  (`05-` §4.7). C'est elle qui fait que la référence et les copies se comptent
  *  en phrases identiques. */
 export function phrasesDuTexte(texte: string): string[] {
-  const brut = (texte || '').trim().split(/(?<=[.!?…])\s+/)
+  const brut = (texte || '').trim().split(COUPURE)
   return brut.map((p) => p.trim()).filter((p) => p.length > 0)
 }
 
-/** Casse et accents repliés, pour chercher une forme de concept. */
+/**
+ * Casse et accents repliés, pour chercher une forme de concept.
+ *
+ * ⚠️ Python replie par `casefold()`, qui va PLUS LOIN que `toLowerCase()` : il
+ * rabat l'eszett sur « ss » et décompose les ligatures. Sans cela, un concept
+ * déclaré en capitales ne se retrouverait pas dans un texte qui porte
+ * l'eszett, le refus n° 10 se déclencherait à tort, et la validation d'une
+ * référence corrigée serait GELÉE — cette fonction est en ligne, à l'écran du
+ * `05-` §4.4. On approche `casefold()` par NFKD, qui décompose les ligatures,
+ * plus le repli explicite de l'eszett.
+ */
 function plie(s: string): string {
-  return (s || '').normalize('NFD').replace(/\p{Mn}/gu, '').toLowerCase()
+  return (s || '')
+    .normalize('NFKD')
+    .replace(/\p{Mn}/gu, '')
+    .replace(/\u00df/g, 'ss')
+    .toLowerCase()
 }
 
 function mots(s: unknown): string[] {
-  return typeof s === 'string' ? (s.match(/\S+/g) ?? []) : []
+  return typeof s === 'string' ? (s.match(NON_ESPACE) ?? []) : []
 }
 
 const estObjet = (x: unknown): x is Record<string, unknown> =>
@@ -110,10 +139,20 @@ export function controleReference(ref: unknown, texte: string): VerdictReference
     if (!CLES.racine.has(k)) refus.push(`racine : clé « ${k} » que le format ne déclare pas`)
   }
 
-  const phrases = liste(r.phrases).filter(estObjet)
-  const moments = liste(r.moments).filter(estObjet)
-  const concepts = liste(r.concepts).filter(estObjet)
-  const lectures = liste(r.lectures).filter(estObjet)
+  // ⚠️ MAL FORMÉ N'EST PAS ABSENT. Le script qui fait foi s'ARRÊTE sur un `null`
+  // glissé dans `moments[]` ou `concepts[]` — et l'import le traduit en refus
+  // n° 17. Les écarter en silence rendait la référence « conforme ».
+  const trier = (brut: unknown, nom: string) => {
+    const tout = liste(brut)
+    for (const [i, x] of tout.entries()) {
+      if (!estObjet(x)) refus.push(`${nom} : l'entrée ${i} n'est pas un objet (${JSON.stringify(x)})`)
+    }
+    return tout.filter(estObjet)
+  }
+  const phrases = trier(r.phrases, 'phrases')
+  const moments = trier(r.moments, 'moments')
+  const concepts = trier(r.concepts, 'concepts')
+  const lectures = trier(r.lectures, 'lectures')
 
   phrases.forEach((p, i) => {
     for (const k of Object.keys(p)) {
@@ -141,9 +180,12 @@ export function controleReference(ref: unknown, texte: string): VerdictReference
   const attendus = Array.from({ length: N }, (_, i) => i + 1)
   const vusSet = new Set(vus)
   const manquantes = attendus.filter((x) => !vusSet.has(x)).sort((a, b) => a - b)
+  // Python garde TOUT ce qui n'est pas `None` : une entrée dont le numéro est
+  // écrit en chaîne y est une phrase qui n'existe pas, et refuse. Ne retenir
+  // que les nombres la laissait passer.
   const enTrop = [...vusSet]
-    .filter((x): x is number => typeof x === 'number' && !attendus.includes(x))
-    .sort((a, b) => a - b)
+    .filter((x) => x !== null && x !== undefined && !attendus.includes(x as number))
+    .sort((a, b) => (a as number) - (b as number))
   const doublons = [...new Set(vus.filter((x) => x !== undefined && x !== null
     && vus.filter((y) => y === x).length > 1))].sort()
   if (manquantes.length) refus.push(`phrases sans entrée : ${JSON.stringify(manquantes)}`)
@@ -366,7 +408,8 @@ export function controleReference(ref: unknown, texte: string): VerdictReference
     + phrases.length * 2
     + lectures.reduce((s, l) => s + liste(l.lectures).length + 1, 0)
     + concepts.length
-    + (armDeclaree ? 2 + liste(arm.these_phrases).length : 0)
+    // `if arm else 0` en Python : un objet vide y est FAUX, il ne compte rien.
+    + (Object.keys(arm).length > 0 ? 2 + liste(arm.these_phrases).length : 0)
   annonces.push(`valeurs déclarées, telles que l'écran les compte : ~${valeurs}`)
 
   return {

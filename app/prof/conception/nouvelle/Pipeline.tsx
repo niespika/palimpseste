@@ -257,7 +257,8 @@ export default function Pipeline({ porte, carte, textes, sujets, materiaux }: {
             {provenanceCodex === 'sujet' && (
               <label className="min-w-64 flex-1 space-y-0.5">
                 <span className="block text-xs text-muet">le sujet</span>
-                <select name="sujet_source" value={sujetId} onChange={(e) => setSujetId(e.target.value)}
+                <select name={roleMateriau === 'source' ? 'sujet_source' : 'sujet_cible'}
+                  value={sujetId} onChange={(e) => setSujetId(e.target.value)}
                   className={`${CHAMP} w-full`}>
                   <option value="">— choisir —</option>
                   {sujets.map((s) => <option key={s.id} value={s.id}>{s.libelle}</option>)}

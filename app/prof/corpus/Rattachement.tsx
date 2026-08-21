@@ -46,13 +46,22 @@ function FormeCours({ banque, ligne, cours }: {
           ? ligne.declares.map((d) => (
             <label key={d.nom} className="flex items-center gap-1 font-ui text-xs text-encre-douce">
               <code>{d.nom}</code> →
+              {/* ⚠️ LE NOM DÉCLARÉ ET LE COURS CHOISI VOYAGENT ENSEMBLE, dans une
+                  seule valeur. Deux listes appariées par index se décalaient dès
+                  que Postgres réordonnait les lignes.
+                  ⚠️ Et le couple s'encode en JSON, pas avec un séparateur
+                  invisible : un caractère NUL ne SURVIT PAS au transport du
+                  formulaire — il arrive remplacé, et le découpage part de
+                  travers sans que rien ne le dise. */}
               <select
                 key={d.coursId ?? 'nul'}
-                name="cours_id" defaultValue={d.coursId ?? ''}
+                name="couple" defaultValue={JSON.stringify([d.nom, d.coursId ?? ''])}
                 className="rounded-md border border-bordure-bouton bg-parchemin px-1.5 py-0.5 text-xs"
               >
-                <option value="">— pas encore apparié —</option>
-                {cours.map((c) => <option key={c.id} value={c.id}>{c.titre}</option>)}
+                <option value={JSON.stringify([d.nom, ''])}>— pas encore apparié —</option>
+                {cours.map((c) => (
+                  <option key={c.id} value={JSON.stringify([d.nom, c.id])}>{c.titre}</option>
+                ))}
               </select>
             </label>
           ))
@@ -73,7 +82,14 @@ function FormeCours({ banque, ligne, cours }: {
         </button>
       </div>
       {retour && (
-        <p className={`font-ui text-xs ${retour.ok ? 'text-ok' : 'text-retard'}`}>{retour.message}</p>
+        <div className="space-y-0.5">
+          <p className={`font-ui text-xs ${retour.ok ? 'text-ok' : 'text-retard'}`}>{retour.message}</p>
+          {/* Le détail que l'action renvoie : sans lui, « l'appariement a échoué »
+              n'apprend rien à personne. */}
+          {(retour.blocages ?? []).map((b, i) => (
+            <p key={i} className="font-ui text-xs text-attention">· {b}</p>
+          ))}
+        </div>
       )}
     </form>
   )
