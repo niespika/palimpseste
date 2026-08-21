@@ -53,7 +53,7 @@ import re
 import sys
 
 RACINE_DEFAUT = "/Users/louissagnieres/Documents/GitTest/palimpseste-conception"
-OUTIL = "scripts/derive-doctrine.py 1.0"
+OUTIL = "scripts/derive-doctrine.py 1.1"
 
 # Les six crans qui isolent, dans l'ordre où le `04-` §0 les nomme.
 CRANS_QUI_ISOLENT = (1, 3, 4, 5, 7, 9)
@@ -64,6 +64,20 @@ SOURCES = ("02-exercices.md", "04-Instances_Exercices.md", "06-Palimpseste.md")
 SOURCES_INSTANCES = tuple("instances/04-%s.md" % c for c in (
     "expression", "argumentation", "structure",
     "connaissance", "synthese", "questionnement"))
+
+# Les six fiches de compétence. Le §6 de chacune porte une ligne
+# `<!-- PRODUCTION exerce=… -->` : les objets où elle est ciblable AUX CRANS DE
+# PRODUCTION (`04-` §0, deuxieme operande de `couverture_observables`).
+# `competences/monitoring.md` n'en porte pas, et ne doit pas en porter : le
+# Monitoring n'est jamais cible du routeur (`07-` §1.4).
+SOURCES_FICHES = tuple("competences/%s.md" % c for c in (
+    "expression", "argumentation", "structure",
+    "connaissance", "synthese", "questionnement"))
+
+# Les comptes que la prose des fiches annonce en toutes lettres.
+NOMBRES = {"un": 1, "deux": 2, "trois": 3, "quatre": 4, "cinq": 5, "six": 6,
+           "sept": 7, "huit": 8, "neuf": 9, "dix": 10, "onze": 11, "douze": 12,
+           "treize": 13}
 
 
 # ---------------------------------------------------------------------------
@@ -194,6 +208,83 @@ def charge(racine):
             "`02-` §2.3.3 : le support `mot`, propre à la cible, ne se lit plus — %s"
             % d.cible_supports)
 
+    # (e) `couverture_observables` AUX CRANS DE PRODUCTION — la ligne
+    #     `<!-- PRODUCTION exerce=… -->` du §6 de chaque fiche. Le `04-` §0 :
+    #     « `exerce` <- le §6 de la FICHE de la compétence, qui dit sur quels
+    #     objets elle est ciblable aux crans de production » ; `observable_seul`
+    #     est le RÉSIDU. Rien n'est recopié : la ligne est citée, ou l'on refuse.
+    d.production = {}
+    for nom in SOURCES_FICHES:
+        comp = os.path.basename(nom)[:-3]
+        if comp not in d.modes_admis:
+            raise SourceMouvante("`%s` : compétence inconnue du `02-` §3" % nom)
+        texte = io.open(os.path.join(racine, nom), encoding="utf-8").read()
+
+        lig = [l for l in texte.split("\n") if l.startswith("<!-- PRODUCTION ")]
+        if len(lig) != 1:
+            raise SourceMouvante(
+                "`%s` §6 : %d ligne(s) `<!-- PRODUCTION … -->`, une attendue"
+                % (nom, len(lig)))
+        mo = re.fullmatch(r"<!-- PRODUCTION exerce=([a-z_]+(?:,[a-z_]+)*) -->",
+                          lig[0].strip())
+        if not mo:
+            raise SourceMouvante("`%s` §6 : la ligne PRODUCTION ne se lit plus — %r"
+                                 % (nom, lig[0][:120]))
+        objets = mo.group(1).split(",")
+        if len(set(objets)) != len(objets):
+            raise SourceMouvante("`%s` §6 : un objet y est nommé deux fois" % nom)
+
+        # Chaque objet existe, et DÉCLARE la compétence : une fiche ne se rend
+        # pas ciblable là où le `02-` §1 ne la porte pas.
+        for code in objets:
+            if code not in d.objets:
+                raise SourceMouvante("`%s` §6 : objet inconnu `%s`" % (nom, code))
+            if comp not in d.objets[code].competences:
+                raise SourceMouvante(
+                    "`%s` §6 : `%s` ne déclare pas `%s` dans ses `competences[]` "
+                    "(`02-` §1) — une fiche ne peut pas s'y rendre ciblable"
+                    % (nom, code, comp))
+
+        # Le COMPTE que la prose annonce en toutes lettres. C'est lui, et lui
+        # seul, qui empêche la ligne et le paragraphe de diverger en silence :
+        # sans compte, on ne saurait jamais dire non.
+        para = [l for l in texte.split("\n")
+                if l.startswith("**Aux crans de production**")]
+        if len(para) != 1:
+            raise SourceMouvante(
+                "`%s` §6 : %d paragraphe(s) « Aux crans de production », un attendu"
+                % (nom, len(para)))
+        mc = re.search(r"(?:ciblable|en jeu) sur (?:les |ses )?([a-zà-ÿ]+)"
+                       r"(?: de ses ([a-zà-ÿ]+))? objets", para[0].replace("*", ""))
+        if not mc or mc.group(1) not in NOMBRES:
+            raise SourceMouvante(
+                "`%s` §6 : le paragraphe de production n'annonce plus son COMPTE "
+                "d'objets ciblables en toutes lettres — sans lui, la ligne "
+                "PRODUCTION et la prose divergeraient sans que rien ne le voie"
+                % nom)
+        if NOMBRES[mc.group(1)] != len(objets):
+            raise SourceMouvante(
+                "`%s` §6 : la prose annonce « %s » objets ciblables, la ligne "
+                "PRODUCTION en nomme %d" % (nom, mc.group(1), len(objets)))
+        porteurs = [c for c, o in d.objets.items() if comp in o.competences]
+        if mc.group(2) is not None:
+            if mc.group(2) not in NOMBRES:
+                raise SourceMouvante("`%s` §6 : « de ses %s objets » ne se lit pas"
+                                     % (nom, mc.group(2)))
+            if NOMBRES[mc.group(2)] != len(porteurs):
+                raise SourceMouvante(
+                    "`%s` §6 : la prose dit « de ses %s objets », le `02-` §1 lui "
+                    "en déclare %d" % (nom, mc.group(2), len(porteurs)))
+        d.production[comp] = objets
+
+    # Le Monitoring ne déclare rien ici, et son silence se contrôle.
+    if "<!-- PRODUCTION" in io.open(
+            os.path.join(racine, "competences", "monitoring.md"),
+            encoding="utf-8").read():
+        raise SourceMouvante(
+            "`competences/monitoring.md` porte une ligne PRODUCTION — le "
+            "Monitoring n'est jamais cible du routeur (`07-` §1.4)")
+
     d.empreintes = empreintes(racine)
     return d
 
@@ -201,7 +292,7 @@ def charge(racine):
 def empreintes(racine):
     """sha256 de chaque source lue — c'est ce qui rend la divergence visible."""
     out = {}
-    for nom in SOURCES + SOURCES_INSTANCES:
+    for nom in SOURCES + SOURCES_INSTANCES + SOURCES_FICHES:
         p = os.path.join(racine, nom)
         with io.open(p, "rb") as f:
             out[nom] = hashlib.sha256(f.read()).hexdigest()
@@ -292,7 +383,16 @@ def lignes(d):
                         "observables": [{"competence": a, "code": b, "nom": n, "mode": m}
                                         for (a, b, n, m) in obs]}
             else:
-                couv = None      # non dérivable du manifeste — voir la note
+                # Aux trois crans de production, la couverture ne vaut pas la
+                # même chose pour toutes les compétences de l'objet : celles que
+                # le §6 de leur fiche déclare ciblable ICI sont `exerce`, les
+                # autres `observable_seul` — le RÉSIDU du `04-` §0.
+                ex = sorted(c for c in o.competences
+                            if code in d.production.get(c, ()))
+                couv = {"valeur": "exerce",
+                        "source": "competences/*.md §6 — lignes <!-- PRODUCTION -->",
+                        "exerce": ex,
+                        "observable_seul": sorted(set(o.competences) - set(ex))}
             tc.append((code, cran, couv, cible, duree))
     L["exercices_types_crans"] = tc
 
@@ -391,7 +491,10 @@ def sql_remplissage(d, racine):
     w("  join exercices_types t on t.code = v.code;")
     w("")
 
-    w("-- ── Les deux axes par cran — couverture (isole), cible, durée ────────────")
+    w("-- ── L'axe par cran — couverture, cible, durée ────────────────────────────")
+    w("-- `couverture_observables` : `isole` aux six crans qui isolent (lignes")
+    w("-- ROUTAGE d'`instances/`), `exerce` aux trois crans de production (lignes")
+    w("-- PRODUCTION du §6 des fiches) — `04-` §0, ses trois opérandes.")
     w("-- `provenances_admises_source` reste NULL : son domicile est")
     w("-- `exercices_types_modes_source` (`02-` §2.3 : « aucun cran ne le borne »).")
     w("insert into exercices_types_crans (type_id,cran,couverture_observables,"
@@ -737,20 +840,15 @@ if __name__ == "__main__":
 
 
 # ============================================================================
-# NOTE — `couverture_observables` aux TROIS CRANS DE PRODUCTION reste NULL,
-# et c'est un signalement, pas un oubli.
+# NOTE — `couverture_observables` a TROIS opérandes, et deux domiciles lus ici.
 # ----------------------------------------------------------------------------
-# Le `04-` §0 dit où chacune des trois valeurs se lit :
-#   · `isole`           → la ligne `<!-- ROUTAGE -->` d'`instances/` — AU MANIFESTE,
-#                         et c'est ce que ce script dérive ;
-#   · `exerce`          → « le §6 de la FICHE de la compétence, qui dit sur quels
-#                         objets elle est ciblable aux crans de production » ;
-#   · `observable_seul` → le RÉSIDU des deux précédentes.
-# Or les sept fiches de `competences/` NE SONT PAS AU MANIFESTE de C4-L8, et le
-# prompt est explicite : « aucune règle ne s'y lit pour ce lot ». Déclarer
-# `exerce` sur toutes les compétences du type depuis le seul `02-` §2.3.2
-# SUR-DÉCLARERAIT — le §6 des fiches restreint par objet.
-# Conformément au piège 39 — « laisse vide ce qu'aucune section [du manifeste]
-# ne déclare, en le signalant » — la colonne reste NULL aux crans 2, 6 et 8, et
-# la question part au relevé de séance.
+# Le `04-` §0 :
+#   · `isole`           <- la ligne `<!-- ROUTAGE -->` d'`instances/`, aux six
+#                          crans qui isolent ;
+#   · `exerce`          <- la ligne `<!-- PRODUCTION -->` du §6 de la fiche de
+#                          la compétence, aux trois crans de production ;
+#   · `observable_seul` <- le RÉSIDU des deux précédentes.
+# Les deux lignes sont CITÉES, jamais recopiées : si l'une bouge, le chargement
+# refuse. Et la prose du §6 annonce son compte en toutes lettres — c'est ce
+# compte qui empêche la ligne et le paragraphe de diverger sans témoin.
 # ============================================================================
