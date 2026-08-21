@@ -27,6 +27,14 @@ export const NAV_PROF: NavTab[] = [
     items: [
       { label: 'Élèves', href: '/prof/eleves' },
       { label: 'Classes', href: '/prof/classes' },
+      // C4-L8 — « le lieu où vivent les compétences », DANS LE MODULE PILOTAGE
+      // (07- §2 ; piège 7). C'est le seul endroit d'où un statut de recette se pose.
+      { label: 'Compétences', href: '/prof/competences' },
+      // C4-L8 — le dépôt du corpus et sa file de validation (07- §2 ; 08- §0 :
+      // « le fichier d'import est de la DONNÉE, la file est un ÉCRAN »).
+      { label: 'Corpus', href: '/prof/corpus' },
+      // C4-L8 — la conception en ligne, l'édition et l'aperçu (07- §2).
+      { label: 'Conception', href: '/prof/conception' },
       { label: 'Calendrier', href: '/prof/calendrier' },
       { label: 'Intégrité', href: '/prof/integrite' },
     ],
