@@ -84,7 +84,7 @@ export default async function SynthesePage({
     <div>
       <div className="mb-6">
         <Link href="/prof/codex" className="text-sm text-muet hover:text-encre-douce">
-          ← Synthèses
+          ← Exercices
         </Link>
         <h3 className="text-lg font-serif text-encre mt-2">{uniteLabel}</h3>
         <p className="text-sm text-muet">

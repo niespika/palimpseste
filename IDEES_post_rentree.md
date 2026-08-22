@@ -293,3 +293,38 @@ jusqu'à la RPC. C'est le seul chemin d'écriture élève de C4-L4 sans contrôl
 journal de collage d'un autre**, jamais lire ni altérer sa copie —, mais elle est réelle. **L'action
 de C4-L3 relit le dépôt par `lireDepotMaison` avant d'appeler**, donc son chemin est fermé ; celui
 de C4-L4 reste ouvert.
+
+## C4-L6 · Les onglets de l'écriture — trois renvois de périmètre (22/08/2026)
+
+**Ce lot était une réorganisation de navigation, et rien d'autre.** Les trois points ci-dessous ont
+été **vus, nommés, et laissés là** — chacun avec son destinataire.
+
+**1. Le déménagement de `app/prof/conception/` dans l'atelier de son mode.** L'onglet Exercices de
+Codex **y renvoie par un lien** ; l'écran n'a pas bougé. *Le motif du déménagement à terme* : **le
+`01-routeur.md` §2 veut que l'exercice se conçoive dans l'atelier de son mode** — *« les exercices
+formatifs se conçoivent dans l'atelier de leur mode : Codex pour `composer`, Aletheia pour
+`restituer`, `expliquer`, `évaluer` et `interroger` »* *(repris au `02-exercices.md` §6 B)*.
+⚠️ **Ce qui l'a empêché ici** : l'écran est **partagé entre Codex et Aletheia**, et **C5-L4 n'est
+pas joué** — le déplacer avant qu'Aletheia ait ses onglets casserait celui qui n'en a pas.
+**Décision de Louis, 22/08** : *« on va simplement y renvoyer pour le moment, mais il faudra à terme
+qu'il déménage. »* **Destinataire : C5-L4**, où il est déjà déposé en boîte
+*(`PLAN_DE_CHANTIER.md` §5)*.
+
+**2. Aletheia porte exactement les mêmes écrans orphelins que Codex, et C4-L6 les a laissés là
+délibérément.** *« Les onglets de la lecture sont C5-L4 »* *(`07-` §2)*, et la symétrie est
+tentante — elle est hors périmètre. Les trois routes, vérifiées le 22/08 :
+`app/prof/aletheia/passation/[exerciceId]` ne s'atteint que depuis `app/prof/conception/[id]` ·
+`app/prof/aletheia/examen-diagnostique/[planifieId]` que par `EncartAConcevoir` ·
+`app/eleve/modules/aletheia/passation/[depotId]` que par `SignalDeLancement`. **Aletheia n'a que
+deux onglets prof — Classe · Paramètres — et AUCUN côté élève.** *Le critère qui a rangé Codex vaut
+ici : « un écran sans porte n'existe pas ».* **Destinataire : C5-L4**, déjà en boîte.
+
+**3. Les deux défauts de la Synthèse ne se corrigent pas ici, et ils sont déjà consignés.** La
+mission parle d'une *« revue complète d'une synthèse rendue »* : **ce n'est pas un travail à faire**
+— c'est le nom de ce que le professeur fait quand les copies sont rendues, et l'onglet Exercices se
+borne à l'héberger. Les deux défauts restent où ils sont, dans ce fichier :
+**(a)** *les consignes que le professeur écrit à ses Paramètres ne parviennent jamais à l'élève* —
+`codex_params` lue par un client au périmètre de l'élève sur une table prof-only *(entrée « Codex —
+consignes prof jamais vues par l'élève »)* ; **(b)** *une synthèse lancée ne se retire plus, même
+vide* *(entrée « Une synthèse Codex LANCÉE ne peut jamais être retirée »)*. **Aucun des deux n'a été
+touché.**

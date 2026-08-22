@@ -49,7 +49,7 @@ export function FormulaireSynthese({ cibles, classes }: { cibles: CibleQuazian[]
         onClick={() => setOpen(true)}
         className="w-full py-3 bg-bouton text-surface text-sm rounded-xl hover:opacity-90 transition-colors"
       >
-        + Nouvelle synthèse
+        + Nouvelle synthèse en classe
       </button>
     )
   }
@@ -57,7 +57,7 @@ export function FormulaireSynthese({ cibles, classes }: { cibles: CibleQuazian[]
   return (
     <form onSubmit={handleSubmit} className="bg-surface border border-bordure rounded-xl p-5 mb-6">
       <div className="flex items-center justify-between mb-4">
-        <h3 className="text-sm font-medium text-encre-douce">Nouvelle synthèse</h3>
+        <h3 className="text-sm font-medium text-encre-douce">Nouvelle synthèse en classe</h3>
         <button type="button" onClick={() => setOpen(false)} className="text-muet hover:text-encre-douce text-xs">
           Annuler
         </button>

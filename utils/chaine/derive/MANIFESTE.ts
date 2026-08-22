@@ -40,9 +40,9 @@ export const MANIFESTE_INSTRUMENTS = {
   "racine_conception": "/Users/louissagnieres/Documents/GitTest/palimpseste-conception",
   "sources": {
     "07-Implementation.md": {
-      "empreinte": "71da6ffc8460dec7e6a3174355095cfb41e11f468527b69bc38ce503dfa51335",
+      "empreinte": "ba712df015b3e2bc5be3e3dcce09fb30771c8ef72b43d48ad5ccd902fc0ded61",
       "statut": "RELU ET VALIDÉ.",
-      "version": "2.31"
+      "version": "2.32"
     },
     "competences/monitoring.md": {
       "empreinte": "b344f320f60905768b94f7b7cc4f006771eb2c33bd6c7d6d3a5fc2a3052b7500",

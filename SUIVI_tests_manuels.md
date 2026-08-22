@@ -2626,3 +2626,237 @@ n'y pendait** — zéro squelette, zéro métacognition, zéro mesure —, et **
   signale, elle ne s'invente pas »*. L'écran compose donc un **point de départ** *(l'intitulé du
   type, puis le matériau)* que **le professeur arrête** : c'est le texte qu'il arrête que l'élève
   lit. **Si un gabarit doit exister, il se décide en source.**
+
+---
+
+## C4 · L6 — Les onglets de l'écriture (⚠️ **AUCUNE MIGRATION** — aucune n'était attendue, aucune n'a été nécessaire)
+
+_Section ouverte le 22/08 depuis `RELEVE_C4_L6_2026-08-22.md`, à la clôture du lot._
+
+**Ce que le lot porte** : **deux onglets de chaque côté** — *Exercices* et *Paramètres* pour le
+professeur, *Exercices* et *Examens* pour l'élève — et **l'ouverture des portes** que la
+réorganisation rend possible. *« Un écran sans porte n'existe pas. »*
+
+**Où il vit** : `components/nav/configModules.ts` *(le domicile unique des sous-onglets)* ·
+`utils/codex-onglets/` *(`regles.ts` PUR + `liste.ts` serveur)* · `app/prof/codex/page.tsx` ·
+`app/eleve/modules/codex/page.tsx` · `app/eleve/modules/codex/examens/page.tsx` *(route neuve)* ·
+plus quatre retouches de libellé et **un `revalidatePath`**.
+
+⚠️⚠️ **ÉTAT LAISSÉ EN SANDBOX À LA CLÔTURE — À REFERMER.** Le décor de recette d'**Elo** et
+**Alice** *(6 instances et 6 dépôts, **une synthèse en classe fermée** avec le travail d'Elo, et **une ligne
+de plan diagnostique à concevoir**)*
+**est laissé en place à la demande de Louis**, et
+**`exercices_actif` est resté à ON** : sans lui la liste est vide, et le décor ne montrerait rien.
+**Un seul geste remet tout comme avant** — le décor part, l'interrupteur revient à OFF :
+
+    node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON \
+         scripts/recette/decor-c4l6.mjs --retire
+
+*(`--etat` dit ce qui est en base et où en est l'interrupteur ; le registre de ce qui a été semé vit
+dans `.decor-c4l6.json`, git-ignoré, et un repli par la marque `DECOR-C4L6` rattrape un décor semé
+sans registre.)*
+
+⚠️ **Les six interrupteurs étaient à OFF**, re-constatés par la recette de C4-L9 rejouée en clôture :
+`exercices_actif`, `routeur_actif`, `competences_affichage_actif`, `fabrique_actif`, `chaine_actif`,
+`passation_classe_actif`. **Ce lot n'en allume aucun, n'en crée aucun, et n'en détourne aucun** — il
+en **lit** un seul, `exercices_actif`, pour expliquer un vide côté élève.
+
+⚠️ **Les quatre dossiers qui devaient sortir INCHANGÉS le sont, à la ligne près** :
+`utils/deroule/`, `utils/passation/`, `utils/chaine/`, `utils/examens/` — plus `components/deroule/`,
+`components/passation/` et `components/examens/`. **Zéro écart à justifier** *(`git status` sur les
+sept chemins : rien)*.
+
+⚠️ **La face professeur a été éprouvée EN DEUX TEMPS.** La session Code était connectée en **élève**
+— une session Code ne saisit pas d'identifiants. Louis a ensuite ouvert son propre Chrome, où la
+session **professeur** était déjà active, et **les cinq contrôles prof ont été joués là**
+*(C4L6-11, -14, -18, -19, -20)*. **C'est cette reprise qui a trouvé le défaut d'ordre de C4L6-20.**
+
+_`npx tsc --noEmit` : **rien**. `eslint` sur tout le dépôt : **0 erreur**, 4 avertissements
+préexistants dans des fichiers non touchés *(`fragments-erudition/page.tsx`,
+`utils/synthese-semestre.ts`)*. **`npm test` : 1010 tests, 0 échec** — dont **29 neufs**._
+
+_**La doctrine : sans objet, et c'est vérifié.** La convention ne demande `derive-doctrine.py
+--verifie` que si un écran du lot **lit les tables de doctrine**. Aucun ne le fait : les lectures de
+ce lot portent sur `exercices_depots`, `exercices`, `exercices_retours`, `codex_travaux`,
+`scriptorium_exercices_planifies` et `classes`. **`derive-instruments.py --verifie` a été rejoué,
+lui, parce que le `07-` a bougé** — voir C4L6-9._
+
+### Ce qui est prouvé — pour ne pas le rejouer
+
+- [x] **C4L6-1 · Les deux barres portent DEUX onglets, et deux seulement.**
+  Prof : *Exercices* · *Paramètres*. Élève : *Exercices* · *Examens*. **« Validation » et
+  « Synthèses » ne sont plus des onglets** ; les quatre autres modules gardent leur compte exact
+  *(aletheia 2/0, fragments 4/3, quazian 3/2, scriptorium 4/2)*. Tenu par test —
+  `utils/codex-onglets/onglets.test.ts`, qui lit **la config réelle**, jamais une copie. _(22/08.)_
+- [x] **C4L6-2 · ⭐ LES TREIZE ROUTES DE CODEX ALLUMENT LE BON ONGLET.**
+  Les sept routes prof allument *Exercices* — `/prof/codex`, `synthese/<id>`, `validation`,
+  `validation/<id>`, `travail/<id>/v1`, `passation/<id>`, `examen-diagnostique/<id>` — et
+  `/prof/codex/parametres` allume *Paramètres* : **le plus long préfixe gagne**, la racine ne
+  l'emporte jamais par accident. Côté élève, `/eleve/modules/codex` et `exercice/<id>` allument
+  *Exercices* ; `examens`, `passation/<id>` et `synthese/<id>` allument *Examens*. _(22/08, par
+  test.)_
+- [x] **C4L6-3 · ⭐ LE PARCOURS DE REVUE TIENT BOUT À BOUT SOUS LE MÊME ONGLET.**
+  liste → `synthese/<id>` → `travail/<id>/v1` → `validation/<id>` : **quatre écrans, un seul onglet
+  allumé**. C'est la *« revue complète d'une synthèse rendue »* du `07-` §2 — au sens de l'onglet
+  allumé, pas de la page. _(22/08, par test.)_
+- [x] **C4L6-4 · La face élève, À L'ÉCRAN, en desktop et à 375 px.**
+  Les deux onglets sont rendus **par les deux composants** — Barre 2 `hidden sm:block` et
+  `SousNavModuleMobile` `sm:hidden` — depuis le **domicile unique** : rien n'a été écrit dans les
+  layouts de module. À **375 px** : hauteur **44 px** *(la cible tactile)*, largeurs 82 et 81 px,
+  **`scrollWidth === clientWidth` sur les deux libellés** *(aucun mot coupé)*, et **la page ne
+  défile pas horizontalement**. `aria-current="page"` tombe sur le bon onglet dans les deux barres.
+  _(22/08, navigateur, compte élève réel.)_
+- [x] **C4L6-5 · Le vide de l'onglet Exercices élève est EXPLIQUÉ, et il ne clignote pas.**
+  `exercices_actif` étant à OFF, l'onglet **s'affiche** et rend *« Les exercices ne sont pas encore
+  ouverts. Ton professeur t'indiquera quand ils commencent. »* — jamais un onglet qui disparaît
+  selon un drapeau, jamais le nom d'un interrupteur dit à un élève. L'onglet Examens fait de même
+  *(« Rien en classe pour le moment… »)*. _(22/08, à l'écran.)_
+- [x] **C4L6-6 · Les deux gardes précèdent le contenu, sous LES DEUX onglets.**
+  `modules.actif` puis `seuilModule()` — même ordre, même refus, sur `/eleve/modules/codex` et sur
+  `/eleve/modules/codex/examens` : cliquer l'autre onglet ne mène jamais à une page vide, mais au
+  même écran-seuil qui explique. _(22/08, à la lecture des deux pages + rendu à l'écran.)_
+- [x] **C4L6-7 · ⭐⭐ RIEN DE CE QUE C4-L3, C4-L4, C4-L5 ET C4-L9 ONT ÉPROUVÉ N'A CASSÉ — REJOUÉ,
+  PAS RELU.** Les quatre recettes en base, dans l'ordre :
+  `deroule-c4l3.mjs --sans-appel` → **88 contrôles, 87 passés, 0 échoué, 1 non éprouvé (⊘)** —
+  identique au relevé d'origine ; `examens-c4l9.mjs` → **138 vérifications, 0 en échec**, et les
+  **six interrupteurs re-constatés à OFF** ; `passation-c4l4.mjs --sans-appel` → **44 verts, 0
+  rouge** ; `chaine-c4l5.mjs --sans-appel` → **31 passés, 0 échoué**. **Les quatre sèment puis
+  retirent** : la sandbox est revenue à son état d'avant, **vérifié par requête table par table**
+  *(classes=3 · exercices=11 · exercices_depots=25 · exercices_jobs=2 · exercices_retours=1 …)*.
+  _(22/08.)_
+- [x] **C4L6-8 · Le `revalidatePath` a suivi le déménagement.**
+  `marquerSyntheseLue` ne revalidait que `/eleve/modules/codex` — devenue l'onglet *Exercices*, qui
+  n'affiche plus aucune synthèse. `/eleve/modules/codex/examens` a été **ajoutée**, la racine
+  **gardée** *(la lecture d'un retour débloque des rendus ailleurs, `utils/retours-lus.ts`)*.
+  ⚠️ **Les deux autres écritures qui touchent Codex élève passent déjà en `'layout'`**
+  *(`app/deroule/actions.ts`, `app/passation/actions.ts`)* : elles couvrent la route neuve sans
+  retouche. _(22/08, vérifié site par site sur les quatre fichiers d'actions.)_
+- [x] **C4L6-9 · Le `07-` §5 amendé, et les instruments re-dérivés.**
+  Le §5 ne nommait que **trois** interrupteurs quand la base en porte **six** ; l'écart est
+  désormais écrit *(le `07-` passe en **2.32**)*. La ligne VERSION ayant bougé,
+  `derive-instruments.py --verifie` a dit **DIVERGE** → `--ecris` rejoué → **IDENTIQUE (4 fichiers
+  dérivés)**. **Le gabarit Calame n'a pas changé** : le diff ne porte que la version et l'empreinte
+  de la source. `npm test` **1010/1010** après. _(22/08.)_
+- [x] **C4L6-10 · Aucun libellé ne nomme plus un onglet disparu.**
+  `← Synthèses` devient `← Exercices` sur l'écran de séance ; *« à valider dans l'onglet
+  Validation »* devient *« dans la file de validation, sous l'onglet Exercices »* ; la fiche élève
+  du professeur ne renvoie plus vers « Synthèses ». **Et la chose garde son nom** — *« la synthèse
+  en classe, et pas un autre »* *(`01-` §10)* : le formulaire de création et l'historique élève le
+  portent. _(22/08.)_
+
+- [x] **C4L6-11 · ⭐ LA FACE PROFESSEUR, À L'ÉCRAN — sur le Chrome du professeur, connecté.**
+  *(Rejoué le 22/08 après coup, sur autorisation de Louis : la session Code était connectée en
+  élève et ne saisit pas d'identifiants ; son Chrome, lui, portait déjà la session professeur.)*
+  **La barre à DEUX onglets** — Exercices allumé sur `/prof/codex`, dans les deux rendus — ·
+  **le bouton « File de validation »**, qui ouvre la file *(vide ce jour-là, d'où l'absence de
+  badge)* **en gardant l'onglet Exercices allumé** · **« Concevoir un exercice → »**, qui mène à
+  l'écran de C4-L8 *(lequel dit lui-même « `fabrique_actif` est à OFF »)* — **un renvoi, pas un
+  déménagement** · **la section « Passations en classe · 6 »**, avec ses six deep-links ·
+  **« + Nouvelle synthèse en classe »** au nom canonique du `01-` §10. _(22/08.)_
+- [x] **C4L6-14 · ⭐ LA PORTE DE LA PASSATION EN CLASSE, FRANCHIE.** « Ouvrir → » sur la première
+  des six mène à `/prof/codex/passation/e834dcf3…`, l'écran de C4-L4 s'affiche
+  *(« Passation en classe · Codex — l'écriture diagnostique »)*, **et l'onglet Exercices reste
+  allumé**. L'écran dit lui-même *« La passation en classe est à OFF […] l'interrupteur s'ouvre à
+  la recette »* — **un vide expliqué, exactement le régime voulu**. _(22/08.)_
+- [x] **C4L6-18 · ⚠️ `/prof/codex/parametres` allume bien PARAMÈTRES, et l'onglet est intact.**
+  La règle du plus long préfixe, vérifiée à l'écran et non plus seulement par test ; les **quatre
+  champs** de `codex_params` sont là — deux consignes, deux prompts. _(22/08.)_
+- [x] **C4L6-19 · Le message `?echec=` s'affiche EN TÊTE, hors de toute condition.**
+  `/prof/codex?echec=…` rend le bandeau rouge **au-dessus des portes**, que la liste « Synthèses à
+  préparer » soit là ou non. *Avant le lot il vivait DANS ce bloc : liste vide, message muet.*
+  _(22/08.)_
+- [x] **C4L6-20 · ⚠️ UN DÉFAUT TROUVÉ PAR L'ÉCRAN, ET CORRIGÉ : l'ordre des passations n'était pas
+  déterministe.** Les six instances ont **toutes `fenetre_debut` à NULL** — le tri par date rendait
+  donc `0` sur les six comparaisons, et l'ordre était **celui que la base servait**, changeant d'un
+  rechargement à l'autre sous les yeux du professeur. **Départage ajouté sur `exerciceId`**, la clé
+  unique. Vérifié à l'écran : l'ordre rendu est **strictement croissant par identifiant**, et il
+  l'est encore après re-fetch. _(22/08.)_
+- [x] **C4L6-12 · ⭐⭐ LA PORTE DU DÉROULÉ, FRANCHIE AU CLIC, AVEC DES DONNÉES RÉELLES.**
+  Décor semé par `scripts/recette/decor-c4l6.mjs --seme --ouvre --eleves=Elo,Alice` : **trois
+  exercices de maison par élève**, dans **leur vraie classe** *(Test)*, en trois états — *à faire*
+  avec échéance · *à faire* sans échéance · *commencé*. L'onglet **Exercices** d'Elo rend **ses
+  trois lignes et rien de plus** *(les trois d'Alice n'y sont pas — la garde `eleve_id` tient à
+  l'écran)*, **dans l'ordre voulu** : ce qui appelle un geste d'abord, la plus proche échéance en
+  tête, le sans-échéance en fin. **Un clic** ouvre `…/exercice/<depotId>` — **le déroulé à six temps
+  de C4-L3 s'affiche** *(frise « Préparer · Écrire · Se juger · Retour · Réviser · Retour final »,
+  la consigne, le champ avec « le collage est désactivé »)* **et l'onglet Exercices reste allumé**.
+  ⭐ *C'est la clause centrale du « fait quand » : « tout écran d'écriture posé par les lots
+  précédents s'atteint sans connaître d'identifiant ».* _(22/08.)_
+- [x] **C4L6-13 · ⭐ LE CLOISONNEMENT PAR CLASSE, ÉPROUVÉ SUR UN VRAI BI-CLASSE.**
+  `decor-c4l6.mjs --biclasse` : un exercice semé **dans chacune des deux classes** de **Sacha**
+  *(Test + T5)*, puis **le code de l'écran** *(`exercicesMaisonDeLEleve`)* interrogé une fois par
+  classe en contexte. **Chaque contexte ne rend que le sien** — *« dans les modules on reste par
+  classe »*. Décor du contrôle **retiré dans un `finally`**, échec compris. _(22/08.)_
+- [x] **C4L6-22 · ⭐ LE NETTOYAGE EST ÉPROUVÉ, PAS SEULEMENT ÉCRIT.** `--retire` a été **joué pour
+  de vrai** avant d'être documenté : **6 instances retirées, dépôts compris**, `exercices_actif`
+  **remis à OFF comme trouvé**, et `--etat` re-constate **0 instance**. Le décor a ensuite été
+  **re-semé** pour que Louis puisse regarder. ⚠️ *Ce contrôle a rattrapé une régression de la
+  séance même* : l'import de `liste.ts` était au niveau supérieur du script, ce qui rendait le
+  résolveur de calibration obligatoire pour **les quatre gestes** — `--retire`, celui qui remet la
+  sandbox comme elle était, **aurait échoué** dès qu'on l'appelle sans lui. L'import est désormais
+  **paresseux**, dans `--biclasse` seul : *le geste de nettoyage ne doit dépendre de rien*. _(22/08.)_
+- [x] **C4L6-16 · ⭐⭐ LA REVUE COMPLÈTE D'UNE SYNTHÈSE RENDUE, PARCOURUE AU CLIC, BOUT À BOUT.**
+  Décor semé par `decor-c4l6.mjs --synthese` : une **synthèse en classe FERMÉE** pour la classe
+  Test *(bras `contenu_id`, le chemin nominal)*, avec le **travail d'Elo** — V1 et V-finale
+  envoyées, deux analyses `prete`, retour non validé. *La séance naît fermée parce que la revue est
+  ce que le professeur fait QUAND LES COPIES SONT RENDUES.* **Les quatre écrans, cliqués dans
+  l'ordre, l'onglet Exercices allumé sur chacun** :
+  **(1)** `/prof/codex` → la tuile « Test · 1 synthèse » → la section « Test — synthèses en classe »
+  → la ligne « NAture humaine · Fermée » ;
+  **(2)** le **tableau de la séance** — l'encart dit *« à valider dans la file de validation, sous
+  l'onglet Exercices »* *(le libellé corrigé par ce lot)*, et la ligne d'Elo porte « Voir → » en V1
+  et en V-finale, plus « À valider » ;
+  **(3)** la **V1** — oublis signalés, erreurs, transcription ;
+  **(4)** la **validation** — l'éditeur complet : tag, importance, correction éditable, suivi des
+  suggestions, les deux onglets internes, « Enregistrer » et « Valider le retour ».
+  ⚠️ **Rien n'a été validé** : cliquer « Valider le retour » écrit en base et engendre des cartes de
+  révision. ✓ **Et « File de validation » porte bien le compte 1** — le badge de C4L6-11, éprouvé
+  cette fois avec une ligne réelle. _(22/08.)_
+- [x] **C4L6-17 · TRANCHÉ — la section « Passations en classe » n'ira PAS chercher de date.**
+  *(Décision de Louis, 22/08, sur constat.)* Les six passations ont **toutes `fenetre_debut` à
+  NULL** ; `EncartAConcevoir`, lui, **résout** la sienne depuis la ligne de plan
+  *(`dateEffectiveSemaine`)* — d'où la question. **Ce qui la referme, vérifié par requête : aucune
+  des six ne porte de `exercice_planifie_id`.** Aller chercher la date sur le plan **ne donnerait
+  rien** — une lecture de plus en base pour afficher le même vide. ⭐ Et les passations qui *ont*
+  une ligne de plan sont les **examens diagnostiques**, qui passent déjà par l'encart au-dessus,
+  **avec leur date et leur drapeau de retard**. *Si une vraie passation planifiée apparaît un jour
+  dans cette liste sans date, ce sera le signe qu'il faut la résoudre — pas avant.* _(22/08.)_
+- [x] **C4L6-23 · ⚠️ LE DÉCOR DE LA REVUE A CASSÉ L'ÉCRAN AVANT DE LE PROUVER — et c'était le
+  décor.** Premier jet : `retour_critique` rempli avec des objets `{titre, detail}` partout →
+  `/prof/codex/validation/<id>` tombe sur *« Objects are not valid as a React child »*. **La forme
+  n'est pas libre** : `RetourCritique` *(`app/prof/codex/validation/actions.ts`)* mêle des listes
+  d'**objets à clés fixes** — `erreurs_corrections` *(`concept_tag`, `description`, `correction`,
+  `importance`)*, `suivi_suggestions` *(`suggestion`, `statut`, `commentaire`)*, `ajouts`
+  *(`titre`, `contenu`)* — et des listes de **chaînes nues** — `pouvait_aller_plus_loin`,
+  `non_ameliore`. **Le script porte désormais la bonne forme, et le pourquoi**, pour que le
+  prochain décor ne retombe pas dedans. *L'écran n'a jamais été en cause.* _(22/08.)_
+- [x] **C4L6-15 · ⭐ L'ENCART « EXAMENS DIAGNOSTIQUES À CONCEVOIR » S'AFFICHE, ET SA PORTE S'OUVRE.**
+  Décor semé par `decor-c4l6.mjs --examen` : **une ligne de plan diagnostique `a_concevoir`**
+  *(`ecriture` × `diagnostique`, fenêtre `septembre`)* sur le plan validé de la classe Test, calée
+  sur **un lundi passé** pour que le retard se voie. ⚠️ **Ce n'était pas la porte du plan** :
+  `plan_evaluation_actif` est à ON *(l'écran affiche « Synthèses à préparer »)* — il n'existait
+  simplement aucune ligne, les recettes retirant les leurs. **À l'écran** : l'encart rend
+  « **Examens diagnostiques à concevoir · 1** », la ligne « *Écriture — examen diagnostique ·
+  septembre — Test* », **« 10 août · en retard »** *(le drapeau est CALCULÉ, jamais saisi)*, et la
+  note *« la date vient du plan d'évaluation ; l'écran de conception ne la demande jamais »*.
+  **« Concevoir → » ouvre** `/prof/codex/examen-diagnostique/<planifieId>` — l'écran de C4-L9,
+  **l'onglet Exercices toujours allumé** —, qui affiche sa date, son retard, sa fenêtre, et dit
+  lui-même *« `fabrique_actif` est à OFF »*. _(22/08.)_
+- [x] **C4L6-24 · ⭐ LE RETRAIT EMPORTE LES TROIS DÉCORS, LIGNE DE PLAN COMPRISE — éprouvé.**
+  `--retire` rejoué avec les trois en place : **1 ligne de plan · 1 séance (travaux compris) · 6
+  instances (dépôts compris)**, `exercices_actif` **remis à OFF**, et `--etat` re-constate **0**.
+  ⚠️ **La ligne de plan appartient au PLAN DU PROFESSEUR** : le retrait la vise par **son
+  identifiant au registre ET par sa `note` de marque** — jamais par un critère qui pourrait
+  attraper une ligne qu'il aurait posée lui-même. Les trois décors ont été **re-semés** ensuite.
+  _(22/08.)_
+- [x] **C4L6-21 · ⚠️ UN SECOND DÉFAUT TROUVÉ PAR LE DÉCOR : la liste ne naissait pas derrière sa
+  porte.** `exercicesMaisonDeLEleve` listait les dépôts **quel que soit `exercices_actif`** — or
+  l'écran du déroulé, lui, **se ferme sur ce drapeau** *(`utils/deroule/acces.ts`)*. L'élève aurait
+  donc vu une liste d'exercices « à faire » **menant chacun à un refus poli** : *un lien qui promet
+  une porte close*, exactement ce que `utils/examens/signal.ts` évite pour la sienne. **La lecture
+  est désormais dans la fonction**, pas au site d'appel : une garde qu'on peut oublier en écrivant
+  un second écran n'est pas une garde. ⚠️ **L'onglet ne clignote toujours pas** *(piège 41)* : il
+  s'affiche, et son contenu dit *« Les exercices ne sont pas encore ouverts. »* _(22/08.)_
+
+### Ce qui reste à jouer en recette
+

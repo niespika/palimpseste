@@ -399,6 +399,16 @@ export async function marquerSyntheseLue(sessionId: string): Promise<{ success: 
   }
 
   revalidatePath(`/eleve/modules/codex/synthese/${sessionId}`)
+  // ⚠️ C4-L6 — LA SYNTHÈSE A CHANGÉ D'ONGLET : son historique et son « à lire »
+  //    vivent désormais sous `/eleve/modules/codex/examens` (la face élève se
+  //    partage maison / classe, `06-` §1). Le seul `revalidatePath` d'ici visait
+  //    la racine du module — devenue l'onglet EXERCICES, qui n'affiche plus
+  //    aucune synthèse. Sans la ligne ci-dessous, la pastille « à lire » serait
+  //    restée à l'écran après lecture, sans que rien ne lève d'erreur : un
+  //    `revalidatePath` sur un chemin qui n'affiche plus la chose ne se plaint
+  //    jamais, l'écran reste simplement périmé. La racine est gardée : la
+  //    lecture d'un retour peut débloquer un rendu ailleurs (`utils/retours-lus.ts`).
   revalidatePath('/eleve/modules/codex')
+  revalidatePath('/eleve/modules/codex/examens')
   return { success: true }
 }

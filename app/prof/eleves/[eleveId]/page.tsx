@@ -76,7 +76,9 @@ export default async function PageEleveHub({
   const cartes: { slug: string; module: ModuleSceau; nom: string; href: string; note: string }[] = [
     { slug: 'fragments-erudition', module: 'fragments', nom: 'Fragments', href: `/prof/fragments-erudition/eleve/${eleveId}${qsClasse}`, note: 'Parcours, dépôts, analyses' },
     { slug: 'quazian', module: 'quazian', nom: 'Quazian', href: `/prof/quazian/diagnostic/${eleveId}`, note: 'Diagnostic FSRS + quizz' },
-    { slug: 'codex', module: 'codex', nom: 'Codex', href: `/prof/codex`, note: 'Synthèses (vue par synthèse)' },
+    // C4-L6 — la destination est l'onglet EXERCICES ; « Synthèses » nommait
+    // l'onglet disparu, et Codex n'a toujours pas de vue par élève.
+    { slug: 'codex', module: 'codex', nom: 'Codex', href: `/prof/codex`, note: 'Exercices (vue par synthèse en classe)' },
     { slug: 'aletheia', module: 'aletheia', nom: 'Aletheia', href: `/prof/aletheia/eleve/${eleveId}`, note: 'Lectures, retours, diagnostic' },
   ]
 

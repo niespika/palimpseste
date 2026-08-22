@@ -71,8 +71,10 @@ export interface ModuleConfig {
   devise: DeviseMonde
   /** Sous-onglets prof (Barre 2). [] si aucun (Scriptorium). */
   sousOngletsProf: SousOnglet[]
-  /** Sous-onglets élève (Barre 2). Absent = aucun sous-onglet côté élève —
-   *  c'est le cas de tous les modules sauf Scriptorium (C2.2). */
+  /** Sous-onglets élève (Barre 2). Absent = aucun sous-onglet côté élève.
+   *  ⚠️ Ce n'est plus « le cas de tous les modules sauf Scriptorium » : Quazian
+   *  (C7·L2), Fragments (C8·L3) et Codex (C4-L6) en portent aussi. Aujourd'hui,
+   *  seul ALETHEIA n'en a pas — ses onglets sont C5-L4. */
   sousOngletsEleve?: SousOnglet[]
 }
 
@@ -116,10 +118,57 @@ export const MODULES: readonly ModuleConfig[] = [
       ombreAnneauRgb: '46,74,60',
     },
     devise: { latin: 'Ars Scribendi', francais: 'Écrire pour penser' },
+    // C4-L6 — « Codex prend DEUX onglets de chaque côté, et ce ne sont pas les
+    // mêmes » (`07-` §2). Côté professeur : Exercices et Paramètres — « TOUS LES
+    // EXERCICES VIVENT SOUS UN SEUL ONGLET ». « Validation » n'est donc plus un
+    // onglet : sa file reste un écran, atteint depuis Exercices. Et « Synthèses »
+    // disparaît avec lui — l'onglet range des exercices, la chose qu'il crée
+    // garde son nom, « la synthèse en classe » (`01-` §10).
+    //
+    // ⚠️ Les `prefixes` sont ce qui empêche l'onglet de SAUTER quand le
+    //    professeur clique une ligne de sa propre liste : sans eux, les cinq
+    //    routes filles tomberaient sur l'onglet racine, qui matche tout par
+    //    préfixe. Elles sont ici au complet, et le parcours de revue d'une
+    //    synthèse rendue (liste → séance → V1 → validation) les traverse toutes.
     sousOngletsProf: [
-      { href: '/prof/codex', label: 'Synthèses' },
-      { href: '/prof/codex/validation', label: 'Validation' },
+      {
+        href: '/prof/codex',
+        label: 'Exercices',
+        prefixes: [
+          '/prof/codex/synthese',
+          '/prof/codex/validation',
+          '/prof/codex/travail',
+          '/prof/codex/passation',
+          '/prof/codex/examen-diagnostique',
+        ],
+      },
       { href: '/prof/codex/parametres', label: 'Paramètres' },
+    ],
+    // C4-L6 — côté élève : Exercices, où il passe ce qui lui est donné, et
+    // Examens, où vivent la synthèse en classe et les examens diagnostiques.
+    // ⭐ Le partage n'est pas arbitraire : c'est la table du `06-` §1 —
+    //    « écriture formative, À LA MAISON, à l'écran » → Exercices ; « écriture
+    //    diagnostique, EN CLASSE, manuscrit → photos → transcription » →
+    //    Examens. Et la synthèse en classe est en classe (`01-` §10).
+    //
+    // ⚠️ Pilotés par la ROUTE, jamais par `?vue=`, et le motif est le même que
+    //    côté prof : les trois écrans de détail (`exercice/<id>`,
+    //    `passation/<id>`, `synthese/<id>`) doivent allumer LEUR onglet. Un
+    //    pilotage par paramètre ne le peut pas — `?vue=` est absent d'une route
+    //    de détail, et `vueDefaut` allumerait « Exercices » au-dessus d'une
+    //    passation en classe. Les deux mécaniques ne se mélangent pas dans un
+    //    même module (`SousNavModuleMobile` choisit par `onglets.some(o => !!o.vue)`).
+    sousOngletsEleve: [
+      {
+        href: '/eleve/modules/codex',
+        label: 'Exercices',
+        prefixes: ['/eleve/modules/codex/exercice'],
+      },
+      {
+        href: '/eleve/modules/codex/examens',
+        label: 'Examens',
+        prefixes: ['/eleve/modules/codex/passation', '/eleve/modules/codex/synthese'],
+      },
     ],
   },
   {

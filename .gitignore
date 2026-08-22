@@ -45,3 +45,6 @@ next-env.d.ts
 
 # corbeille de session (les outils du pont ne peuvent pas supprimer, ils déplacent ici)
 /_to_delete/
+
+# Registre local du décor de recette C4-L6 (scripts/recette/decor-c4l6.mjs)
+.decor-c4l6.json

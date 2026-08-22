@@ -162,8 +162,9 @@ export function TableauSynthese({ sessionId, statut, phaseFinAt, eleves: elevesI
 
       {statut === 'fermee' && (
         <div className="bg-info-teinte border border-info rounded-xl p-4 mb-6 text-sm text-info">
-          La synthèse est fermée. Le retour critique de la V-finale est à valider dans l&apos;onglet{' '}
-          <Link href="/prof/codex/validation" className="underline font-medium">Validation</Link>.
+          La synthèse en classe est fermée. Le retour critique de la V-finale est à valider dans la{' '}
+          <Link href="/prof/codex/validation" className="underline font-medium">file de validation</Link>,
+          sous l&apos;onglet Exercices.
         </div>
       )}
 
