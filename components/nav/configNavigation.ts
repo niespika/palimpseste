@@ -35,6 +35,14 @@ export const NAV_PROF: NavTab[] = [
       { label: 'Corpus', href: '/prof/corpus' },
       // C4-L8 — la conception en ligne, l'édition et l'aperçu (07- §2).
       { label: 'Conception', href: '/prof/conception' },
+      // C4-L2 — LE PILOTAGE : les budgets par élève, l'assignation EN LECTURE
+      // SEULE et l'assiduité. « Ces informations s'affichent AU PILOTAGE, dans
+      // la vue par classe » (01- §2) ; « le professeur NE VALIDE RIEN AU FIL DE
+      // L'EAU : il voit, et il peut écraser par override » (07- §1.2).
+      // ⚠️ Le quatrième écran du lot — le panneau des cinq segments — n'est pas
+      //    ici : il vit À LA CONCEPTION D'UN PLAN D'ÉVALUATION, « c'est là que le
+      //    professeur voit ce que son calendrier produit » (01- §4, couche 1).
+      { label: 'Routeur', href: '/prof/routeur' },
       { label: 'Calendrier', href: '/prof/calendrier' },
       { label: 'Intégrité', href: '/prof/integrite' },
     ],
