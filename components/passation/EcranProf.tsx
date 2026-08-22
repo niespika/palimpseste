@@ -43,6 +43,9 @@ export interface LigneCopie {
   /** Ce que la machine a peiné à lire — jamais un score (piège 56). */
   doutes: number
   commentaire: string | null
+  /** Quand l'ÉLÈVE a remis sa copie — `v1_remis_at`. */
+  remiseLe: string | null
+  /** Quand le PROFESSEUR a arrêté sa correction — `corrige_at`. Ce n'est PAS la remise. */
   valideeLe: string | null
   messageReporte: string | null
   retour: {
@@ -201,14 +204,19 @@ function Ouverture({ vue }: { vue: VueProf }) {
 
 function Lot({ vue }: { vue: VueProf }) {
   const [etat, action, enCours] = useActionState(actionDeclencherLeLot, null as Reponse | null)
-  const remises = vue.copies.filter((c) => c.transcription != null && c.valideeLe != null).length
+  // ⚠️ ON COMPTE LA REMISE DE L'ÉLÈVE, pas la validation du professeur. La
+  //    première version lisait `corrige_at` et affichait « 0 copie validée sur 7 »
+  //    alors qu'une copie était bel et bien remise — pendant que le serveur, lui,
+  //    en mettait une en file. Un écran qui compte autre chose que ce qu'il dit
+  //    est un écran qui ment (smoke test du 22/08).
+  const remises = vue.copies.filter((c) => c.remiseLe != null).length
   return (
     <section className="rounded-lg border border-bordure bg-surface p-4">
       <h2 className="font-cinzel text-sm uppercase tracking-wide text-muet-clair">
         2 · Déclencher l’analyse en lot
       </h2>
       <p className="mt-2 text-sm text-encre-douce">
-        Le soir même ou un autre jour. {remises} copie{remises > 1 ? 's' : ''} validée
+        Le soir même ou un autre jour. {remises} copie{remises > 1 ? 's' : ''} remise
         {remises > 1 ? 's' : ''} sur {vue.copies.length}. Le traitement est différé : il tourne au
         fil de la file, sans exigence de délai.
       </p>
@@ -359,8 +367,12 @@ function Copie({
           {cran === 1 && (
             <ul className="mt-2 space-y-1 text-sm text-encre">
               {sommaire.parCompetence.map((s) => (
-                <li key={s.competence} className="capitalize">
-                  {s.competence} — {s.reussites} réussite(s), {s.pointsDeTravail} point(s) de travail
+                // ⚠️ `capitalize` sur la LIGNE mettait une majuscule à chaque mot
+                //    — « 1 Réussite(S), 0 Point(S) De Travail ». Il ne porte que
+                //    sur le nom de la compétence (smoke test du 22/08).
+                <li key={s.competence}>
+                  <span className="capitalize">{s.competence}</span> — {s.reussites} réussite(s),
+                  {' '}{s.pointsDeTravail} point(s) de travail
                 </li>
               ))}
               {sommaire.total === 0 && <li className="italic text-muet">Aucun point.</li>}

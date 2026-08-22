@@ -110,6 +110,7 @@ export async function chargerVueProf(
       nbBlocs: d.transcription_v1 ? blocs(d.transcription_v1).length : 0,
       doutes: Array.isArray(d.transcription_v1_doutes) ? d.transcription_v1_doutes.length : 0,
       commentaire: d.commentaire_general,
+      remiseLe: d.v1_remis_at,
       valideeLe: d.corrige_at,
       messageReporte: d.message_lisibilite_reporte,
       retour: r ? {
