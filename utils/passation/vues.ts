@@ -18,6 +18,7 @@ import { offreSeJuger, offreConfianceRemise, offreCredence, LIBELLES_CONFIANCE }
 import { avertissementsDuPrompt } from './transcription'
 import { lireConfigPassation } from './config'
 import { blocs } from './transcription-calcul'
+import { lireLesCollages } from './collage'
 import type { VueEleve } from '@/components/passation/EcranEleve'
 import type { VueProf, LigneCopie } from '@/components/passation/EcranProf'
 import type { PointRetour } from '@/utils/chaine/types'
@@ -63,6 +64,7 @@ export async function chargerVueEleve(
     auClavier,
     photos: d.photos_v1,
     transcription: d.transcription_v1,
+    texteClavier: d.texte_v1,
     doutes: (d.transcription_v1_doutes ?? null) as Doute[] | null,
     valide: d.v1_remis_at != null,
     messageReporte,
@@ -101,14 +103,23 @@ export async function chargerVueProf(
     // `retour_publie` (piège 4).
     const r = retours.find((x) => x.moment === 'chaud') ?? retours[0] ?? null
     const points = r ? pointsAAfficher(r) : []
+    const copie = d.transcription_v1 ?? d.texte_v1
     copies.push({
       depotId: d.id,
       eleve: noms.get(d.eleve_id) ?? d.eleve_id.slice(0, 8),
       statut: d.statut,
       aDeposé: (d.photos_v1?.length ?? 0) > 0,
-      transcription: d.transcription_v1,
-      nbBlocs: d.transcription_v1 ? blocs(d.transcription_v1).length : 0,
+      // ⚠️ LA COPIE, C'EST L'UN OU L'AUTRE — la transcription des photos, ou le
+      //    texte tapé par l'élève EXEMPTÉ. L'écran ne lisait que la première
+      //    jusqu'au 22/08 : la copie d'un élève exempté n'apparaissait NULLE
+      //    PART côté professeur, qui corrigeait à l'aveugle un retour dont la
+      //    chaîne, elle, avait bien lu le texte (`utils/chaine/contexte.ts`,
+      //    `production()` lit `texte_v1` OU `transcription_v1`).
+      copie,
+      auClavier: d.transcription_v1 == null && d.texte_v1 != null,
+      nbBlocs: copie ? blocs(copie).length : 0,
       doutes: Array.isArray(d.transcription_v1_doutes) ? d.transcription_v1_doutes.length : 0,
+      collages: lireLesCollages(d.collages_bloques),
       commentaire: d.commentaire_general,
       remiseLe: d.v1_remis_at,
       valideeLe: d.corrige_at,

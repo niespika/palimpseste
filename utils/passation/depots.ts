@@ -32,6 +32,7 @@ import { cheminPage, prefixeDepot, BUCKET } from './chemins'
 import { refuserPhotos, renumeroter, type Photo } from './photos'
 import { lireConfigPassation } from './config'
 import { normaliserRetours, type Doute } from './transcription-calcul'
+import type { CollageBloque, MoyenDeCollage } from './collage'
 
 type Admin = SupabaseClient
 
@@ -64,6 +65,8 @@ export interface DepotDePassation {
   exercice_id: string
   statut: string
   photos_v1: Photo[] | null
+  /** La copie de l'élève EXEMPTÉ, tapée au clavier — il n'y a pas eu de photo. */
+  texte_v1: string | null
   transcription_v1: string | null
   confiance_ocr_v1: number | null
   transcription_v1_doutes: Doute[] | null
@@ -77,6 +80,8 @@ export interface DepotDePassation {
   commentaire_general: string | null
   corrige_par: string | null
   corrige_at: string | null
+  /** Le journal des tentatives de collage BLOQUÉES — rapporté au professeur. */
+  collages_bloques: CollageBloque[] | null
   /** L'instance dont il vient — le `lieu` commande tout, jamais le module. */
   exercice: {
     id: string
@@ -91,10 +96,11 @@ export interface DepotDePassation {
 }
 
 const CHAMPS_DEPOT =
-  'id, eleve_id, exercice_id, statut, photos_v1, transcription_v1, confiance_ocr_v1, '
+  'id, eleve_id, exercice_id, statut, photos_v1, texte_v1, transcription_v1, '
+  + 'confiance_ocr_v1, '
   + 'transcription_v1_doutes, confiance_declaree, message_lisibilite_reporte, '
   + 'ouvert_par_prof_at, ouvert_at, v1_remis_at, juger_debut_at, juger_fin_at, '
-  + 'commentaire_general, corrige_par, corrige_at, '
+  + 'commentaire_general, corrige_par, corrige_at, collages_bloques, '
   + 'exercice:exercices!inner(id, lieu, classe_id, consigne_instanciee, optin_se_juger, '
   + 'optin_confiance_remise, cran, statut)'
 
@@ -545,21 +551,46 @@ export async function eleveExempte(admin: Admin, eleveId: string): Promise<boole
  * L'élève exempté rédige AU CLAVIER, et sa copie est une ANCRE.
  *
  * « Les champs de rédaction refusent le collage — raccourci clavier,
- * glisser-déposer, menu contextuel », et « chaque tentative bloquée est
- * journalisée » (`06-` §1 ; piège 37). Le refus est posé côté écran ; ici, la
- * trace.
+ * glisser-déposer, menu contextuel », et « CHAQUE TENTATIVE BLOQUÉE EST
+ * JOURNALISÉE » (`06-` §1 ; piège 37). Le refus est posé côté écran ; ici, le
+ * journal.
  *
- * ⚠️ EN CLASSE, C'EST UNE TRACE, PAS UN SIGNAL. « La journalisation d'une
- *    tentative alimente le faisceau, qui ne regarde que la maison » (`06-` §6) :
- *    on n'écrit donc RIEN dans `integrite_signalements` — le canal existant ne
- *    nomme ni ce module ni ce type, et un lot « le réutilise, il n'en crée pas
- *    un second » (piège 45). Une trace serveur en tient lieu, comme pour
- *    l'avertissement d'absence de démonstration (§2).
+ * ⭐ DÉCISION DE LOUIS, 22/08 : ELLE SE RAPPORTE AU PROFESSEUR. Elle a vécu
+ *    quelques heures en `console.warn` — un journal que personne ne lit, qui
+ *    expire avec les journaux de l'hébergeur, et que le professeur ne voit
+ *    jamais. Elle s'écrit désormais sur le dépôt, et l'écran de correction la
+ *    montre.
+ *
+ * ⚠️ CE N'EST TOUJOURS PAS UN SIGNAL D'INTÉGRITÉ, et le motif tient. « La
+ *    journalisation d'une tentative alimente le faisceau, qui ne regarde que la
+ *    maison » (`06-` §6) ; et le §7 de la SPEC ne fait jamais d'un signal isolé
+ *    un drapeau — c'est la CONVERGENCE qui part au professeur, par
+ *    `signalerEnAttenteIA`, avec confirmation humaine. On n'écrit donc rien dans
+ *    `integrite_signalements`. ⚠️ Rectification d'un motif FAUX qui traînait
+ *    ici : `integrite_signalements_module_check` NOMME BIEN `codex` et
+ *    `aletheia`, et `type` n'a aucune contrainte — le canal aurait accepté la
+ *    ligne (et son `unique (eleve_id, module, rendu_ref)` n'en aurait gardé
+ *    qu'une, quand il en faut N). C'est la doctrine qui l'interdit, pas la forme
+ *    de la table.
+ *
+ * ⚠️ L'AJOUT EST ATOMIQUE, par RPC : un lire-modifier-écrire perdrait une
+ *    tentative sur deux `Cmd+V` rapprochés — c'est exactement ce qu'on compte.
+ * ⚠️ ELLE NE LÈVE JAMAIS. Une tentative de collage n'est pas un geste dont
+ *    l'échec doive interrompre un élève en train de composer.
  */
-export function journaliserCollageBloque(depotId: string, eleveId: string, moyen: string): void {
-  console.warn(`[passation] collage BLOQUÉ — dépôt ${depotId}, élève ${eleveId}, moyen ${moyen}. `
-    + 'Trace seule : en classe, le faisceau ne regarde pas (`06-` §6), et aucun signalement '
-    + 'd\'intégrité n\'est levé.')
+export async function journaliserCollageBloque(
+  admin: Admin, depotId: string, eleveId: string, moyen: MoyenDeCollage,
+): Promise<void> {
+  const { error } = await admin.rpc('journaliser_collage', {
+    p_depot_id: depotId, p_moyen: moyen,
+  })
+  if (error) {
+    console.error(`[passation] collage BLOQUÉ mais NON JOURNALISÉ — dépôt ${depotId}, élève `
+      + `${eleveId}, moyen ${moyen} — ${error.code} ${error.message}`)
+    return
+  }
+  console.warn(`[passation] collage bloqué et journalisé — dépôt ${depotId}, élève ${eleveId}, `
+    + `moyen ${moyen}. Rapporté au professeur ; aucun signalement d'intégrité.`)
 }
 
 /** L'élève écrit-il au clavier plutôt qu'à la main ? La question, en un seul endroit. */

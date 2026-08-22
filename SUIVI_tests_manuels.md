@@ -2051,13 +2051,32 @@ auraient attendu une tâche planifiée qui « ne tient pas la seconde » et qui 
   et le dit : « **Cas 1 : les jetons doivent totaliser 100 (ils font 40)** ». ⭐ **Cran NOMMÉ** :
   **un pourcentage unique, AUCUN candidat**. En base, les deux sont stockées **en tableau**, une
   entrée par cas, chacune portant sa forme. ⚠️ **C'est ce test qui a trouvé le défaut C4L4-G.**
-- [ ] **C4L4-7bis · La crédence sur une PAIRE de diagnostic** — « il y en a une par diagnostic, donc
-  DEUX sur une paire » (§1.2). Le décor du jour n'avait qu'un cas ; la forme en base est un tableau,
-  donc elle le porte, mais la paire n'est pas éprouvée. ⚠️ **Constat revérifié par requête le
-  22/08** : les deux types diagnostiques seedés (`diagnostic_essai`,
-  `diagnostic_explication_texte`) sont **SANS CRAN** — `crans_admis` vaut `{}`, et
-  `exercices_types_crans` ne porte **aucune ligne** pour eux. Il n'y a donc **aucun écran de
-  crédence à servir pour eux** aujourd'hui.
+- [x] **C4L4-7bis · LA CRÉDENCE SUR UNE PAIRE — JOUÉE le 22/08, et ⚠️ ELLE A TROUVÉ UN DÉFAUT.**
+  Décor monté pour la première fois : **deux vraies paires** de classe — un exercice,
+  `paire_diagnostic = true`, **DEUX `exercices_cas`** aux distracteurs et réponses attendues
+  différents, deux consignes. ⚠️⚠️ **Avant correction, l'écran ne servait qu'UNE crédence** — celle
+  du cas 1, avec les candidats du cas 1 — et la base recevait `[{"cas": 1, …}]` **sur une paire**.
+  Or *« il y en a une par diagnostic, donc DEUX sur une paire »* (§1.2), et c'est **l'écart entre
+  les deux** qui mesure le transfert (`02-` §2.3.1 a) : **une crédence unique sur une paire ne
+  mesure rien**. ✅ **Corrigé et rejoué aux DEUX formes** : cran **guidé** → 8 champs (`j:1:…`,
+  `j:2:…`), **quatre candidats DIFFÉRENTS par cas**, base = deux entrées (70 puis 40 sur la bonne
+  réponse) ; cran **nommé** → 2 champs (`pourcentage:1`, `pourcentage:2`), base = deux entrées
+  (85 % puis 35 %). ✅ Les gardes nomment le bon cas : « **Cas 2** : les jetons doivent totaliser
+  100 (ils font 40). » et « **Une paire demande une crédence par cas : il manque celle du cas 2.** »
+  ⭐ **Et « absent n'est pas zéro »** : un champ manquant au cran nommé aurait enregistré « 0 % de
+  chances » — une crédence **inventée** que le Monitoring aurait crue déclarée (même règle que
+  « `delta_v1_vf` NULL n'est pas 0 »). L'action ne pousse plus rien pour un cas muet.
+  ✅ **Recette rejouée : 44 verts, 0 rouge** — le chemin à un seul cas n'a pas bougé.
+  ⚠️ **RESTE UNE QUESTION DE SOURCE, portée au relevé** : la paire est « un exercice EN DEUX TEMPS »,
+  et *« la correction du premier cas est servie avant le second »* — **le flux de classe n'a pas ce
+  moment**. Les deux crédences se collectent donc au même instant, après la copie entière : l'écart
+  existe, mais **ce n'est pas l'écart que la source définit**.
+- [ ] **C4L4-7ter · La crédence sur une paire dont les deux cas visent DES MATÉRIAUX distincts.**
+  Le décor du 22/08 laisse `materiau_id` NULL des deux côtés — le trigger `garde_cas_de_la_paire`
+  (« un même matériau servi deux fois ne mesure aucun transfert ») n'est donc **pas éprouvé**.
+  ⚠️ **Constat revérifié par requête le 22/08** : les deux types diagnostiques seedés
+  (`diagnostic_essai`, `diagnostic_explication_texte`) sont **SANS CRAN** — `crans_admis` vaut `{}`,
+  et `exercices_types_crans` ne porte **aucune ligne** pour eux.
 - [ ] **C4L4-8 · LES SUJETS DES DEUX PASSATIONS DIAGNOSTIQUES — ⚠️⚠️ BLOQUÉ, et le blocage est
   établi par requête le 22/08.** Les deux types seedés par C4-L1 — `diagnostic_essai` et
   `diagnostic_explication_texte` — sont **entièrement vides** : `crans_admis = {}`, **0 mode,
@@ -2086,6 +2105,33 @@ auraient attendu une tâche planifiée qui « ne tient pas la seconde » et qui 
   signalement d'intégrité** sur les trois. *Réserve honnête : l'événement est DISPATCHÉ, pas produit
   par une souris ; ce qui est prouvé est que le gestionnaire est câblé et annule, pas le geste de
   l'utilisateur.*
+- [x] **C4L4-9ter · LES TROIS COLLAGES RAPPORTÉS AU PROFESSEUR — JOUÉ le 22/08, sur pièce.**
+  ⭐ **Décision de Louis du 22/08** : la journalisation n'était **pas** un journal — un
+  `console.warn` que personne ne lit et **que le professeur ne voit jamais**. Elle s'écrit désormais
+  sur le dépôt (`collages_bloques`, ajout **atomique** par RPC) et **l'écran de correction la
+  montre**. **Rejoué en vrai, les trois vecteurs** — `Cmd+V` au presse-papiers **réel** du système,
+  **clic droit réel**, `DragEvent` porteur d'un vrai `DataTransfer` : **rien ne s'insère** (244
+  caractères avant, 244 après), et la base porte **trois entrées horodatées par le SERVEUR**, une
+  par moyen. ⭐ **Ce que l'écran du professeur rend, mot pour mot** : « **3 tentatives de collage
+  bloquées — 1 au raccourci clavier, 1 au glisser-déposer, 1 au menu contextuel.** Le collage est
+  refusé dans le champ de rédaction ; ces tentatives n'ont rien inséré. C'est une information, pas
+  un verdict : rien n'a été signalé, et le blocage est côté navigateur seulement — il arrête le
+  geste paresseux, pas l'élève déterminé. » ✅ **`integrite_signalements` : 13 lignes, toutes du
+  24/07, aucune nouvelle** — zéro signalement levé, le motif tient. ✅ **Les élèves à zéro tentative
+  n'affichent RIEN** (Elo, Dylan, Sacha vérifiés) : « un écran n'affiche un nombre que si ce nombre
+  compte quelque chose » (`06-` §5) — et un zéro afficherait une garantie que le blocage, côté
+  navigateur seulement, ne donne pas. ✅ Le journal **survit à la validation** de la copie.
+- [x] **C4L4-9quater · LA COPIE DE L'ÉLÈVE EXEMPTÉ ÉTAIT INVISIBLE — TROUVÉ ET CORRIGÉ le 22/08.**
+  ⚠️⚠️ **Deux écrans mentaient sur le même chemin, et le smoke test du 22/08 ne pouvait pas le
+  voir** parce qu'il a tapé et validé **d'un seul trait, sans jamais recharger**.
+  **(1) Côté PROFESSEUR** : l'écran de correction ne lisait que `transcription_v1` — la copie d'un
+  élève exempté, qui vit dans `texte_v1`, **n'apparaissait NULLE PART**. Le professeur corrigeait un
+  retour **sans pouvoir lire la copie**, alors que la chaîne, elle, la lisait bien
+  (`production()` lit l'un **ou** l'autre). **(2) Côté ÉLÈVE** : le champ s'initialisait sur
+  `vue.transcription` — l'élève qui **rouvrait sa page après avoir validé** trouvait un champ
+  **vide et verrouillé** : sa copie avait disparu de son écran. ✅ **Les deux corrigés et éprouvés
+  au navigateur** : l'élève retrouve ses 244 caractères en lecture seule, et le professeur lit
+  « **La copie (3 paragraphes · tapée au clavier (aménagement))** » avec le texte dedans.
 - [x] **C4L4-10 · L'EFFACEMENT D'UNE CLASSE — JOUÉ le 22/08**, sur une classe **jetable**
   (`SMOKE-EFFACEMENT`), par le même chemin que l'écran du professeur —
   `collecterCheminsInscriptions` → `effacer_classe` → `retirerFichiers`. ⚠️ **Jamais sur `THLP`.**

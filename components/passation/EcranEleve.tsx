@@ -45,6 +45,7 @@ import { auQuartDeTour, marqueurPageManquante, photoDeposee, type Photo, type Ro
   from '@/utils/passation/photos'
 import { blocs } from '@/utils/passation/transcription-calcul'
 import type { Doute } from '@/utils/passation/transcription-calcul'
+import type { MoyenDeCollage } from '@/utils/passation/collage'
 import type { OffreSeJuger, OffreConfiance, OffreCredence } from '@/utils/passation/metacognition'
 
 export interface VueEleve {
@@ -55,6 +56,13 @@ export interface VueEleve {
   auClavier: boolean
   photos: Photo[] | null
   transcription: string | null
+  /**
+   * La copie tapée AU CLAVIER par l'élève exempté — `texte_v1`, jamais
+   * `transcription_v1` : il n'y a pas eu de photo, donc rien à transcrire.
+   * ⚠️ Sans elle, l'élève qui rouvrait sa page après avoir validé trouvait un
+   *    champ VIDE et verrouillé : sa copie avait disparu de son écran.
+   */
+  texteClavier: string | null
   doutes: Doute[] | null
   valide: boolean
   /** Le message reporté de la passation PRÉCÉDENTE (`06-` §1, règle 3). */
@@ -456,7 +464,7 @@ function Relecture({
 
 function RedactionClavier({ vue }: { vue: VueEleve }) {
   const [etat, action, enCours] = useActionState(actionValiderLaSaisieClavier, null as Reponse | null)
-  const [texte, setTexte] = useState(vue.transcription ?? '')
+  const [texte, setTexte] = useState(vue.texteClavier ?? '')
   const nbBlocs = blocs(texte).length
 
   /**
@@ -465,9 +473,14 @@ function RedactionClavier({ vue }: { vue: VueEleve }) {
    * journalisée » (`06-` §1 ; piège 37). ⚠️ Réserve écrite noir sur blanc dans
    * la source : le blocage n'est QUE côté navigateur.
    * ⚠️ En classe, la trace n'alimente PAS le faisceau, « qui ne regarde que la
-   *    maison » (`06-` §6) : elle reste une trace serveur.
+   *    maison » (`06-` §6) : aucun signalement d'intégrité n'est levé. ⭐ Mais
+   *    elle est JOURNALISÉE SUR LE DÉPÔT et RAPPORTÉE AU PROFESSEUR sur son
+   *    écran de correction (décision de Louis, 22/08) — informer n'est pas
+   *    accuser.
+   * ⚠️ Le moyen est TYPÉ : il voyage jusqu'à une garde en base qui ferme le
+   *    domaine aux trois vecteurs que la source nomme.
    */
-  function refuserLeCollage(moyen: string) {
+  function refuserLeCollage(moyen: MoyenDeCollage) {
     return (e: React.SyntheticEvent) => {
       e.preventDefault()
       void actionCollageBloque(vue.depotId, moyen)
@@ -593,34 +606,70 @@ function ConfianceRemise({ vue }: { vue: VueEleve }) {
   )
 }
 
+/**
+ * LA CRÉDENCE — UNE PAR DIAGNOSTIC, DONC DEUX SUR UNE PAIRE.
+ *
+ * ⭐ Corrigé le 22/08 : l'écran n'en servait qu'UNE, avec les candidats du
+ *    PREMIER cas quoi qu'il arrive. Sur une paire — « un exercice EN DEUX
+ *    TEMPS », `02-` §2.3.1 a — la seconde crédence n'existait donc pas, et
+ *    c'est elle qui porte la mesure : « l'ÉCART entre les deux dit si la
+ *    confiance s'est déplacée juste après la correction ».
+ *
+ * ⚠️ CHAQUE CAS SERT SES PROPRES CANDIDATS : le second temps est « un cas NEUF
+ *    de la même famille », et lui resservir les candidats du premier ferait de
+ *    la seconde crédence une copie de la première.
+ */
 function Credence({ vue }: { vue: VueEleve }) {
   const [etat, action, enCours] = useActionState(actionCredence, null as Reponse | null)
   const jetons = vue.credence.forme === 'jetons_sur_100'
+  const cas = vue.credence.cas
   return (
     <section className="rounded-lg border border-bordure bg-surface p-4">
       <h2 className="font-cinzel text-sm uppercase tracking-wide text-muet-clair">
         Quelle chance donnes-tu à ta réponse ?
       </h2>
-      <form action={action} className="mt-3 space-y-3">
+      {vue.credence.paire && (
+        <p className="mt-2 text-sm text-encre-douce">
+          Cet exercice est une <strong>paire</strong> : une chance par cas, avant de savoir si tu as
+          raison.
+        </p>
+      )}
+      <form action={action} className="mt-3 space-y-4">
         <input type="hidden" name="depot_id" value={vue.depotId} />
-        {jetons ? (
-          <>
-            <p className="text-sm text-encre-douce">Répartis 100 jetons entre ces quatre réponses.</p>
-            {vue.credence.candidats.map((c) => (
-              <label key={c} className="flex items-center gap-2 text-sm text-encre">
-                <input type="number" name={`j:${c}`} min={0} max={100} defaultValue={25}
+        {cas.map((c) => (
+          <fieldset key={c.ordre} className="space-y-2 rounded border border-bordure-bouton p-3">
+            {cas.length > 1 && (
+              <legend className="px-1 font-cinzel text-xs uppercase tracking-wide text-muet-clair">
+                Cas {c.ordre}
+              </legend>
+            )}
+            {cas.length > 1 && c.consigne && (
+              <p className="text-xs text-muet">{c.consigne}</p>
+            )}
+            {jetons ? (
+              <>
+                <p className="text-sm text-encre-douce">
+                  Répartis 100 jetons entre ces quatre réponses.
+                </p>
+                {c.candidats.map((cand) => (
+                  <label key={cand} className="flex items-center gap-2 text-sm text-encre">
+                    <input type="number" name={`j:${c.ordre}:${cand}`} min={0} max={100}
+                      defaultValue={25}
+                      className="w-20 rounded border border-bordure-bouton bg-parchemin p-1" />
+                    {cand}
+                  </label>
+                ))}
+              </>
+            ) : (
+              <label className="flex items-center gap-2 text-sm text-encre">
+                <input type="number" name={`pourcentage:${c.ordre}`} min={0} max={100}
+                  defaultValue={50}
                   className="w-20 rounded border border-bordure-bouton bg-parchemin p-1" />
-                {c}
+                % de chances que ta réponse soit juste
               </label>
-            ))}
-          </>
-        ) : (
-          <label className="flex items-center gap-2 text-sm text-encre">
-            <input type="number" name="pourcentage" min={0} max={100} defaultValue={50}
-              className="w-20 rounded border border-bordure-bouton bg-parchemin p-1" />
-            % de chances que ta réponse soit juste
-          </label>
-        )}
+            )}
+          </fieldset>
+        ))}
         <button type="submit" disabled={enCours}
           className="rounded bg-bouton px-4 py-2 text-sm text-parchemin disabled:opacity-40">
           {enCours ? '…' : 'Enregistrer'}
