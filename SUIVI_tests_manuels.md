@@ -2294,3 +2294,148 @@ retire)*.
   est posé *(date + réponse libre)*, et l'écran **le dit au professeur**. ⚠️ **Ni la question ni ses
   valeurs ne sont écrites dans les sources**, et **sa place dans le ciblage n'est pas tranchée** :
   aucune règle du lot ne la lit. **Ce n'est pas une recette à jouer, c'est une décision à prendre.**
+
+## C4 · L3 — Le déroulé de l'élève, à la maison (sandbox, migration du 22/08)
+
+_Section ouverte le 22/08 depuis `RELEVE_C4_L3_2026-08-22.md`, à la clôture du lot._
+
+**Ce que le lot porte** : les **six temps à l'écran, branchés sur le `regime_v1vf`** *(dérivé du
+cran **plus l'escalade**, jamais gravé)*, le **blocage du collage** sur ses trois vecteurs et la
+**journalisation de chaque tentative**, les **horodatages de tout le déroulé**, les **trois gestes
+de la remise**, la phase **« se juger »** avec sa garde `indetermine`, la **contestation à
+identifiants stables**, le **retour final** — et **la contrainte d'interface qui n'est pas
+cosmétique** : le champ de rédaction **encourage et préserve le découpage en paragraphes**.
+
+**Où il vit** : `utils/deroule/` *(11 modules PURS + 6 serveur)* · `components/deroule/` *(7
+composants)* · `app/deroule/actions.ts` · `app/eleve/modules/codex/exercice/[depotId]/page.tsx` ·
+`c4_l3_deroule.sql` *(additive, jouée le 22/08)* · `scripts/recette/deroule-c4l3.mjs` *(la recette
+en base — elle sème et elle retire)*.
+
+⚠️ **Les six interrupteurs sont à OFF**, re-constatés après la migration et après la recette :
+`exercices_actif`, `routeur_actif`, `competences_affichage_actif`, `fabrique_actif`, `chaine_actif`,
+`passation_classe_actif`. L'écran naît derrière **`exercices_actif`**, et **ce lot n'en détourne
+aucun autre**.
+
+_`npx tsc --noEmit` et `eslint` sur les fichiers du lot : **rien**. **220 tests neufs, 0 échec**.
+`scripts/recette/deroule-c4l3.mjs --sans-appel` : **88 contrôles, 87 passés, 0 échoué, 1 non
+éprouvé (⊘)**, joués **par le même code que les écrans**, décor semé puis **retiré** (base revenue à
+son état d'avant, **vérifié par requête table par table**)._
+
+⚠️ **`npm test` complet porte UN échec qui n'est PAS de ce lot** : `derive-instruments --verifie`
+DIVERGE parce que le `07-` a bougé pendant la séance *(2.25 → 2.27 par une session parallèle, puis
+2.28 par nos amendements)*. **Le gabarit Calame n'a pas changé** — c'est la ligne VERSION du dérivé
+qui diverge. La re-dérivation appartient à qui a fait bouger la source.
+
+### Ce qui est prouvé — pour ne pas le rejouer
+
+- [x] **C4L3-1 · La migration est en base, et les six interrupteurs n'ont pas bougé.**
+  Répétition à blanc d'abord *(corps seul, règle 6)* : **dix drapeaux à `t`**, puis `rollback;`, et
+  le retour arrière **vérifié PAR REQUÊTE** — cinq colonnes absentes, trois gardes absentes, la
+  fonction absente, **`collages_bloques` de C4-L4 intacte**, **25 dépôts et 2 démonstrations
+  inchangés**. Puis pour de bon : `COMMIT`, **dix drapeaux à `t`**, les six interrupteurs à `f`.
+  _(22/08.)_
+- [x] **C4L3-2 · La doctrine rend IDENTIQUE sur les ONZE tables, les empreintes et la fixture.**
+  `derive-doctrine.py --verifie` **puis son SQL joué par `psql`** *(le script ne vérifie rien tout
+  seul : il génère)*. `SOURCES : IDENTIQUE` · `FIXTURE : IDENTIQUE` · les onze verdicts, dont
+  **`exercices_routes` 3264** et **`exercices_consignes_isolees` 336**. ⚠️ `exercices_types_crans`
+  **n'est couverte par aucun verdict** — ses 117 lignes comptées à la main. _(22/08.)_
+- [x] **C4L3-3 · ⭐⭐ LES RETOURS À LA LIGNE ARRIVENT INTACTS JUSQU'À CE QUE L'EXTRACTION REÇOIT.**
+  Une copie de **quatre paragraphes en `\r\n\r\n`** — ce qu'un formulaire HTML produit. Un découpage
+  qui ne normalise pas y compte **1 bloc** *(défaillance forte)* ; en base, **0 `\r`** et
+  **`blocs()` = 4** ; **l'indentation de deux espaces a survécu** *(pas de `trim()` en son sein)* ;
+  et **`lireContexte().productionV1` — ce que la chaîne lit — porte 4 blocs**, `productionVf` aussi.
+  _(22/08, par requête.)_
+- [x] **C4L3-4 · Chaque transition est horodatée, par requête.** Les **cinq** horodatages posés et
+  non nuls, **ordre chronologique strict, 0 inversion** ; `ouvert_at` **ne se réécrit pas** au second
+  appel *(le chronomètre ne repart pas)* ; `juger_debut_at` et `juger_fin_at` **distincts** —
+  contrairement au canal classe, où ils sont posés au même instant. _(22/08.)_
+- [x] **C4L3-5 · Les trois vecteurs de collage sont journalisés, et RIEN ne part à l'intégrité.**
+  Trois entrées en base, chacune avec son `moyen` et son `at` ; `integrite_signalements` **13 avant,
+  13 après**. La colonne, la RPC atomique et le module pur sont **ceux de C4-L4** : « un lot le
+  réutilise, il n'en crée pas un second ». _(22/08.)_
+- [x] **C4L3-6 · Les trois gardes de lecture tiennent.** Dépôt d'un autre élève → `null` ; exercice
+  `lieu = classe` → `null` ; dépôt **`retire`** → `null` — ⭐ **le filtre que personne ne posait**
+  *(piège 41)* —, avec un **témoin au statut `assigne`** qui prouve que le `null` vient bien du
+  filtre. État remis d'avant. _(22/08.)_
+- [x] **C4L3-7 · ⭐ LE MÊLAGE DES CANDIDATS — la décision de Louis, tenue.** Sur douze dépôts
+  simulés, la `reponse_attendue` tombe aux rangs `[1,2,2,1,2,1,2,1,2,1,1,1]` : **elle n'est plus la
+  dernière à tous les coups**. Et le mêlage est **STABLE** sur `(dépôt × cas)` — un rechargement rend
+  le même ordre. L'aperçu du professeur **n'a pas été touché** *(piège 38)*. _(22/08.)_
+- [x] **C4L3-8 · La paire : deux cas, deux crédences, et la correction servie ENTRE LES DEUX.**
+  `correctionDuPremierCas` est **`null` avant la crédence du cas 1**, servie après — *sans quoi
+  l'élève déclarerait sa sûreté en connaissant la réponse*. La crédence du cas 2 **n'efface pas**
+  celle du cas 1. En base : `jetons` **et** `index_correct`, **les deux clés que la chaîne lit**.
+  _(22/08.)_
+- [x] **C4L3-9 · L'ordre des trois gestes est MÉCANIQUE, pas espéré.** La remise **refuse** sans
+  restitution à chaud, **refuse encore** sans conditions, **passe** une fois les deux posées. Et
+  `confiance_declaree` **reste NULL** : 0 compétence `evaluee`, donc le geste **ne se présente pas**
+  — *la fiche §6, flux 2, et ce n'est pas une panne*. _(22/08.)_
+- [x] **C4L3-10 · La file : idempotente, et le job REPOSÉ quand la chaîne est fermée.**
+  `cle_idempotence` = `<depotId>:mesure_v1` ; **un seul job après deux déclenchements** *(le
+  double-clic ne paie pas deux mesures)* ; sous `chaine_actif` à OFF, le job revient
+  **`en_attente`** et **sa tentative lui est rendue** (`tentatives = 0`). _(22/08.)_
+- [x] **C4L3-11 · Le régime se dérive du cran PLUS l'escalade.** Escalade N2 posée en base sur
+  `(argumentation × garant_present)` → régime **`plein`**, `vfRequiseParEscalade = true`, **six
+  temps** ; escalade retirée → **`sans_vf`**, **quatre temps**, aucune échéance calculée. ⭐ **Et une
+  PAIRE reste une paire sous escalade** — un test le tient. _(22/08.)_
+- [x] **C4L3-12 · ⚠️ LA NON-RÉGRESSION `cible_primaire`.** La recette a trouvé que le lot lisait
+  **une colonne qui n'existe pas** : PostgREST faisait échouer la requête **entière** (`42703`), donc
+  `lireDepotMaison` rendait `null`, et **l'écran était mort pour tous les élèves** — avec pour seul
+  symptôme « exercice introuvable ». **Corrigé en séance** : la cible se lit sur
+  `routeur_decisions.cible_retenue`. La recette vérifie désormais **sur pièce** que le SELECT ne la
+  nomme plus, **et par appel** que `lireDepotMaison` rend un dépôt maison **réel** de la sandbox.
+  _(22/08.)_
+- [x] **C4L3-13 · Le décor est retiré, et la base est revenue à son état d'avant.** Onze tables
+  comptées **avant et après**, identiques ; interrupteurs remis exactement comme trouvés ; **aucune
+  classe `RECETTE-C4L3%` ne survit**. _(22/08.)_
+
+### Ce qui reste à jouer en recette
+
+- [ ] ⚠️ **C4L3-14 · LE RETOUR FINAL QUI CITE UN PROGRÈS RÉEL — bloqué par la clause granulaire,
+  pas par ce lot.** Le « fait quand » l'exige, et il *« suppose un retour final **engendré**, sur
+  deux squelettes réels — des textes posés à la main ne citent aucun progrès »*. **La chaîne est
+  jouée et ne peut rien engendrer** : `MANIFESTE_INSTRUMENTS` porte `ouverte: false` sur les six
+  compétences, faute de fiche *versée et bancée* ; `traiterDepot` n'écrit ni squelette, ni mesure,
+  ni retour. **Aucun texte n'a été posé à la main pour faire semblant.** *Même mur que C4L2-11.*
+  **Condition de reprise : la première fiche versée et bancée.**
+- [ ] ⚠️ **C4L3-15 · « SE JUGER » ET LA CONFIANCE DE REMISE — zéro compétence `evaluee`.** Les deux
+  flux ont leur troisième condition fermée sur `evaluee`, et **les 34 lignes de
+  `competences_niveaux` sont toutes `mesuree_silencieusement`**. Le code est écrit et testé *(la
+  garde `indetermine` et ses trois cas compris)* ; l'écran refuse proprement. **Condition de
+  reprise : un statut `evaluee` posé à la fabrique** — ce qui suppose la fiche, la recette, et la
+  correspondance *(les trois sont là ; seul le choix du professeur manque)*.
+- [ ] ⚠️ **C4L3-16 · LA COMPARAISON DE « SE JUGER » NE REND AUCUN ACCORD — il manque un champ à la
+  SOURCE.** `competences_correspondance` porte quatre colonnes et **aucune ne dit quelle réponse
+  vaut « réussi »** ; le sens **varie ligne à ligne** *(« aucune » sur `jointure_presente`, « non »
+  sur `charniere_formule`, « oui » sur `plan_tenu`)*. La comparaison **consigne les deux côtés** et
+  rend `accord: null` — *collecter d'abord, convertir ensuite*. **Ce n'est pas une recette à jouer,
+  c'est une décision de source** : une cinquième colonne aux sections de correspondance des sept
+  fiches. *Le troisième cas de la garde `indetermine`, lui, est actif dès aujourd'hui.*
+- [ ] **C4L3-17 · Le smoke élève à l'écran, dans un vrai navigateur.** Rien n'a été vu à l'écran :
+  la séance a tout éprouvé **par requête et par appel**. À jouer, `exercices_actif` ouvert, sur un
+  dépôt maison réel : les six temps, **le collage refusé sur les trois vecteurs au clavier réel**
+  *(`Cmd+V`, clic droit, glisser-déposer avec un vrai `DataTransfer` — comme C4L4-9)*, le compteur
+  de paragraphes, la micro-question de dépassement, la crédence au doigt sur téléphone, et **le
+  rendu du gras des consignes**. ⚠️ **Règle d'or : un vrai Chrome, jamais l'aperçu embarqué.**
+- [ ] **C4L3-18 · La parade à l'imitation de surface ne mord sur rien.** `cours_declares` et
+  `notions` existent sur les démonstrations, la parade les lit — **et le format d'import ne les
+  connaît pas** *(`verifie-import.ts` : `demonstration: new Set(['id','competence','grain','theme',
+  'forme','corps'])`)*. Les **deux** démonstrations en base sont donc non déclarées : elles sont
+  **servies, et le professeur est averti** *(décision du PO, 22/08)*. **Adressé à C4-L8** : deux
+  clés au `08-FORMAT_IMPORT.md` §5 bis et à son contrôle.
+- [ ] **C4L3-19 · La file professeur des contestations sur citation absente n'a pas d'écran.**
+  Le lot **détecte**, **marque en base** (`citation_absente`) et laisse une **trace serveur** ; il
+  **n'invente aucune file**. ⚠️ C'est **l'exigence d'examen humain de la loi** *(`06-` §2 et §7)*,
+  pas un confort. **Adressé à C6-L1.**
+- [ ] ⚠️ **C4L3-20 · `exercices.cran` porte DEUX formes en base — 6 lignes au CODE, 5 au NUMÉRO.**
+  La colonne est un `text` **sans CHECK**. `utils/deroule/vue.ts` lit par le **code** ;
+  `utils/chaine/contexte.ts` fait `Number(cran)` et lit par le **numéro** — sur une instance au code,
+  il part avec `cran=eq.NaN` *(400 avalé)* et rend `cran`, `cranCode`, `regimeV1vf`, `servable` et
+  `patronProduction` **tous vides**. **Hors manifeste de C4-L3, non corrigé.** **À trancher au lot
+  de correctifs : quelle forme fait foi ?**
+- [ ] **C4L3-21 · L'encart langue ne s'affiche jamais.** *N* se compte **depuis le relevé de langue
+  que la chaîne produit**, et **la chaîne n'en produit aucun** — le champ `orthographe` vit dans la
+  fiche Expression, qui n'est pas ouverte. Le chemin de lecture est écrit et testé ; **l'absence est
+  le cas nominal**, et ce n'est pas une panne. *Même condition de reprise que C4L3-14.*
+
+---

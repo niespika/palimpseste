@@ -204,3 +204,92 @@ sont possibles et ce sont des décisions de doctrine, pas d'implémentation.*
   parade, c'est un instrument de mesure du décalage** que l'arbitrage du §6 assume
   aujourd'hui à l'aveugle. ⚠️ **Hors périmètre de C4-L4**, qui n'a pas à ouvrir un
   chantier de validité ; et hors périmètre de C4-L5, qui ne voit pas les passes.
+
+
+---
+
+## C4-L9 · « Examen sur le livre » et « Bac Blanc » sont des ancres par la lettre (22/08/2026)
+
+**Le constat, trouvé en écrivant l'entrée C4-L9 au `07-Implementation.md` §2.** Une ancre est
+*« une mesure dont le `lieu` vaut `classe` **et** la `forme` vaut `sommatif` »* (`01-routeur.md`
+§10), et la `forme` se lit à la ligne du plan d'évaluation — où `evaluatif` **est** le `sommatif`
+du `07-` §1.2. Or la typologie verrouillée de `scriptorium_exercices_planifies` admet **quatre
+autres couples `classe` × `evaluatif`** que les deux examens diagnostiques :
+
+- `quiz` × quazian ;
+- `examen_livre` × aletheia — « Examen sur le livre » ;
+- `fragment` × fragments — *réservé, 0 ligne en v1* ;
+- `essai` × fragments — *réservé, 0 ligne en v1*.
+
+Plus **`bac_blanc`**, qui vit dans les libellés de l'écran du plan
+(`app/prof/scriptorium/evaluations/GrillePlan.tsx`) et dans le type de `utils/plan-cadence.ts`.
+
+**Par la lettre de la définition, ce sont des ancres. En fait, aucun n'en produit** : aucun ne
+fabrique **une copie que la chaîne de mesure lit**. Le quiz est de la rétention Quazian ; l'examen
+sur le livre et le bac blanc n'ont **aucun type derrière eux dans `exercices_types`**, donc aucune
+instance, donc aucun squelette et aucune mesure.
+
+**C4-L9 est donc borné aux deux types qui produisent une copie**, et la source ne dit rien de
+ces quatre-là — un document de référence ne porte pas la trace de ce qu'on a écarté.
+
+**Ce qu'il faudrait avant d'en faire des ancres réelles** — c'est un chantier, pas un branchement :
+
+1. **dire ce que chacun mesure**, compétence par compétence et mode par mode, comme le `01-` §10 le
+   fait déjà pour l'essai et l'explication de texte ;
+2. leur donner **un type dans `exercices_types`** avec ses `genres_admis` — un bac blanc porte un
+   genre terminal entier, exactement comme un examen diagnostique ;
+3. décider si le **quiz** entre : il ne produit pas de prose, et toute la chaîne de mesure lit de la
+   prose.
+
+⚠️ **Le risque si on oublie ce constat** : quelqu'un lira la définition du §10, verra que
+`examen_livre` est `classe` × `evaluatif`, et en conclura que **la descente des lettres et le
+plafond d'inflation** devraient s'y appliquer. **Ils ne le peuvent pas** — il n'y a rien à mesurer.
+
+*(constat Mètis en séance de conception, retenu par Louis le 22/08 : « oui, super c'est noté, mets
+ça à idées post rentrée ».)*
+
+
+---
+
+## C4-L3 · Quatre défauts de code TROUVÉS EN PASSANT, hors périmètre du lot (22/08/2026)
+
+*Le déroulé de l'élève les a rencontrés en s'y branchant. Aucun n'appartient à C4-L3, aucun ne l'a
+empêché de se construire, et **aucun n'a été « réparé en passant »** — la règle du dépôt est qu'une
+découverte hors périmètre se pose ici, pas dans le code d'un autre lot.*
+
+**1. ⚠️ `exercices_cas.distracteurs` porte DEUX FORMES PHYSIQUES INCOMPATIBLES, et la seconde
+détruit la première.** L'**import** écrit des objets `{texte, pourquoi_faux}` *(`08-` §5.2 ;
+`utils/fabrique/import-ecriture.ts:419`)* ; l'**écran de conception** écrit des **chaînes**
+*(`app/prof/conception/actions.ts:61-67`)*. **Tous les lecteurs supposent la seconde** :
+`app/prof/conception/[id]/page.tsx:96` mappe par une fonction qui rend `''` sur un objet — l'aperçu
+d'une instance **importée** affiche donc **trois boutons radio VIDES** ; et le textarea d'édition
+affiche `"\n\n"`, si bien que **sauver l'édition remplace définitivement la banque importée par
+trois chaînes vides**. `utils/passation/metacognition.ts:586` sert `"[object Object]"` à l'élève.
+⚠️ **Ni la recette ni les tests ne le voient** — les tests d'import rejouent le contrôle, jamais
+l'écriture *puis la relecture*. C4-L3 lit les deux formes défensivement
+*(`utils/deroule/credence.ts:texteDuCandidat`)*, **mais la destruction à l'édition reste entière**.
+*Le geste juste est côté C4-L8 : normaliser à l'écriture, ou lire l'objet partout.*
+
+**2. `regimeV1Vf` (C4-L2, `utils/routeur/escalade.ts`) promeut N'IMPORTE QUEL régime en `plein`.**
+Sa docstring dit *« le régime "pas de version finale" **des crans de transformation** »*, **son code
+ne le vérifie pas** : appelée avec `par paires`, elle rend `plein`. Une paire de diagnostic
+promue perdrait le signal que N2 lit — *« au régime par paires, c'est LA PAIRE que N2 lit »*
+*(`01-` §8.4)*. Elle **n'avait aucun appelant** ; C4-L3 est le premier, et **il garde à son site
+d'appel** *(`utils/deroule/regime.ts`)* plutôt que de réécrire le lot voisin. *Un test le tient
+(`regime.test.ts` : « une PAIRE reste une paire sous escalade »).*
+
+**3. `utils/retours-lus.ts` ignore `exercices_retours`.** Le blocage transverse — *« un retour non
+lu bloque tous les rendus »* — ne connaît que **cinq sources** *(Fragments écrit, Fragments essai,
+Codex, Aletheia, Quazian)*. Un retour d'exercice non lu **ne bloque donc rien ailleurs**, et la
+phrase que l'écran de C4-L4 affiche à l'élève *(« tu dois valider ta lecture pour pouvoir rendre
+autre chose »)* est **une promesse que le garde-fou serveur ne tient pas**. C4-L3 *appelle* la garde
+— un retour Aletheia non lu bloque bien son déroulé — mais **n'ajoute pas sa propre source** : ce
+serait une décision transverse qui touche cinq modules.
+
+**4. `journaliserCollageBloque` ne vérifie pas que le dépôt est à l'élève.** *(C4-L4,
+`utils/passation/depots.ts:581`)* — `eleveId` n'y sert **qu'au message d'erreur** ; il ne voyage pas
+jusqu'à la RPC. C'est le seul chemin d'écriture élève de C4-L4 sans contrôle de propriété *(comparer
+`enregistrerLesPhotos`, `depots.ts:279`)*. La conséquence est mince — on ne peut que **gonfler le
+journal de collage d'un autre**, jamais lire ni altérer sa copie —, mais elle est réelle. **L'action
+de C4-L3 relit le dépôt par `lireDepotMaison` avant d'appeler**, donc son chemin est fermé ; celui
+de C4-L4 reste ouvert.
