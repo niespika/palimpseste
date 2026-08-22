@@ -15,6 +15,16 @@
 //   · au test, par `doctrine.fixture.json`, qui est une SORTIE du même script.
 // Un seul assemblage, donc rien qui puisse diverger entre le test et l'écran.
 //
+// ⚠️ C4 · L8-bis — LA LECTURE SE PAGINE, ET ELLE SE CONTRÔLE. Une réponse
+// PostgREST est plafonnée à mille lignes sans rien signaler ; `exercices_routes`
+// en porte 3264. Sept objets sur treize se sont ainsi affichés SANS AUCUNE
+// ROUTE — banque de consignes vide, choix obligatoire, objet inconcevable —
+// pendant que la garde serveur et le contrôle d'import refusaient « non routé »
+// des observables pourtant routés. Les lignes étaient en base : c'est la lecture
+// applicative qui plafonnait, et `derive-doctrine.py --verifie` ne pouvait pas
+// le voir, puisqu'il lit les SOURCES. D'où `lireTable` — les douze tables, par
+// un seul chemin, ordonnées, paginées, et confrontées au décompte de la base.
+//
 // ⚠️ AUCUNE VALEUR DE DOCTRINE N'EST ÉCRITE DANS CE FICHIER. Les seules
 // constantes sont l'identité du FORMAT D'IMPORT (`08-` §1), que la plateforme
 // doit connaître pour dire si elle sait lire un fichier — et « le MAJEUR seul
@@ -165,6 +175,21 @@ export interface Doctrine {
 }
 
 export class DoctrineAbsente extends Error {}
+
+/**
+ * C4 · L8-bis — la doctrine lue EN PARTIE, ce qui est pire que pas lue du tout.
+ *
+ * Une doctrine vide ACCEPTE tout ; une doctrine tronquée REFUSE ce qui est
+ * licite, avec le motif de la source — « l'observable n'est routé ni pour cet
+ * objet, ni pour ce mode, ni pour ce cran » (`08-` §7.1, refus n° 15) alors que
+ * la route existe en base. C'est le pire des silences : le message accuse la
+ * doctrine, et c'est la lecture qui a menti.
+ *
+ * Elle hérite de `DoctrineAbsente` parce qu'elle se traite comme elle : rien ne
+ * l'attrape dans les quatre chemins qui chargent la doctrine, et son message
+ * remonte tel quel à l'écran.
+ */
+export class DoctrineTronquee extends DoctrineAbsente {}
 
 const entier = (x: unknown): number =>
   typeof x === 'number' ? x : Number.parseInt(String(x), 10)
@@ -363,38 +388,139 @@ export function banqueDeConsignes(
 
 // ── Le chargement en base ───────────────────────────────────────────────────
 
-/** Le client Supabase, réduit à ce qu'on lui demande ici. */
+/**
+ * Le client Supabase, réduit à ce qu'on lui demande ici — et on lui demande
+ * deux choses : une table LUE, ordonnée et paginée, et le DÉCOMPTE qu'elle
+ * annonce.
+ *
+ * ⚠️ Élargi au strict minimum de ce que `lireTable` appelle : `.order()` et
+ * `.range()` sont le prix de la pagination, `{ count, head }` celui du
+ * garde-fou. Le remplacer par `SupabaseClient` ferait perdre à ce module ce
+ * qui le rend lisible — il déclare exactement ce qu'il exige de son client, et
+ * les quatre appelants lui passent déjà `admin as never`.
+ */
+type ReponseLignes = Promise<{ data: unknown[] | null; error: unknown }>
+type ReponseCompte = Promise<{ count: number | null; error: unknown }>
+type RequeteLignes = {
+  order: (colonne: string, options?: { ascending?: boolean }) => RequeteLignes
+  range: (debut: number, fin: number) => ReponseLignes
+}
 type ClientLecture = {
   from: (table: string) => {
-    select: (cols: string) => Promise<{ data: unknown[] | null; error: unknown }>
+    select: {
+      (cols: string): RequeteLignes
+      (cols: string, options: { count: 'exact'; head: true }): ReponseCompte
+    }
   }
+}
+
+/** Le plafond de lignes de PostgREST — `db-max-rows`, mille par défaut. Une
+ *  réponse qui l'atteint NE SIGNALE RIEN : `error` reste nul, et la table
+ *  revient tronquée comme si elle était complète. */
+const PAGE = 1000
+
+/**
+ * C4 · L8-bis — UNE TABLE, LUE EN ENTIER. Le seul chemin, pour les douze.
+ *
+ * Trois gestes, et aucun n'est décoratif :
+ *
+ * · ON PAGINE. Le patron est déjà au dépôt — `depenseParPages` de
+ *   `utils/chaine/couts-serveur.ts` : « on pagine, et on ne s'arrête que quand
+ *   une page revient courte ». **Les douze tables, pas la seule qui déborde
+ *   aujourd'hui** : une seule dépasse mille lignes (`exercices_routes`, 3264),
+ *   la suivante en porte 336, et sur les onze autres la première page revient
+ *   courte — la boucle s'arrête au premier tour, le coût est nul. Ne viser que
+ *   la table qui déborde ferait revenir le même défaut, en silence, le jour où
+ *   une source grossit.
+ *
+ * · ON ORDONNE sur une clé stable. Sans `order`, l'ordre de retour n'est
+ *   garanti par rien d'une requête à l'autre : deux pages peuvent se recouvrir
+ *   ET une ligne se perdre. C'est le défaut le plus vicieux du geste, parce
+ *   qu'il rend une doctrine du bon NOMBRE et du mauvais CONTENU.
+ *
+ * · ON CONFRONTE au décompte que la base annonce, et on S'ARRÊTE quand les deux
+ *   diffèrent. Le décompte se demande avec LE MÊME `select` que la lecture —
+ *   jointures embarquées comprises —, pour que les deux nombres portent sur le
+ *   même ensemble par construction. ⚠️ **Le décompte vient de la BASE, jamais
+ *   des comptes de la fixture** : `exercices_types` porte quinze lignes en base
+ *   — les treize objets dérivés plus les deux types diagnostiques du seed de
+ *   C4-L1 — quand la fixture n'en porte que treize.
+ *
+ * Le garde-fou vit ICI et pas dans `assemblerDoctrine` : l'assemblage sert aussi
+ * la fixture, qui n'a pas de base à interroger, et il n'y a pas d'autre endroit
+ * où le décompte annoncé existe.
+ */
+async function lireTable(
+  admin: ClientLecture, nom: string, cols: string, cle: string[],
+): Promise<never[]> {
+  // Le décompte part AVEC la première page, pas après la dernière : il ne dépend
+  // d'aucune d'elles, et l'attendre en série ajouterait un aller-retour par
+  // table à une page que douze lectures parallèles font déjà attendre.
+  //
+  // ⚠️ LE `Promise.resolve` N'EST PAS DÉCORATIF. Un constructeur de requête
+  // Supabase est PARESSEUX : il ne part qu'au premier `then`. Le garder tel quel
+  // dans une variable ne lancerait rien — la requête ne serait émise qu'au
+  // `await` du bas, c'est-à-dire en série, et le gain serait nul sans que rien
+  // ne le dise.
+  const decompte = Promise.resolve(
+    admin.from(nom).select(cols, { count: 'exact', head: true }))
+
+  const lignes: unknown[] = []
+  for (let debut = 0; ; debut += PAGE) {
+    let q = admin.from(nom).select(cols)
+    for (const colonne of cle) q = q.order(colonne, { ascending: true })
+    const { data, error } = await q.range(debut, debut + PAGE - 1)
+    if (error) throw new DoctrineAbsente(`lecture de ${nom} : ${JSON.stringify(error)}`)
+    const page = data ?? []
+    lignes.push(...page)
+    if (page.length < PAGE) break
+  }
+
+  const { count, error } = await decompte
+  if (error) throw new DoctrineAbsente(`décompte de ${nom} : ${JSON.stringify(error)}`)
+  if (count === null || count !== lignes.length) {
+    throw new DoctrineTronquee(
+      `Doctrine TRONQUÉE — la table ${nom} : ${lignes.length} ligne(s) lue(s), `
+      + `${count === null ? 'décompte indisponible' : `${count} en base`}. `
+      + 'On s\'arrête : une doctrine incomplète ne se dénonce pas d\'elle-même, '
+      + 'elle refuse ce qui est licite avec le motif de la source — un observable '
+      + 'pourtant routé s\'y ferait refuser « non routé ». '
+      + 'Rien n\'est à corriger en base : c\'est la LECTURE qui n\'a pas tout rendu. '
+      + 'Si le nombre en base est lui-même trop bas, c\'est une dérivation qui '
+      + 'manque, et elle se rejoue par `python3 scripts/derive-doctrine.py --sql`.')
+  }
+  return lignes as never[]
 }
 
 /**
  * Les lignes, lues en base. Les tables de doctrine ne portent AUCUNE ligne
  * d'élève : la lecture passe par le client admin, côté serveur, comme toutes
  * les écritures (`07-` §1).
+ *
+ * ⚠️ LES DOUZE APPELS RESTENT EN PARALLÈLE. Chacun se pagine pour son compte ;
+ * les mettre en série « pour simplifier » ferait attendre la page de conception
+ * douze fois au lieu d'une.
+ *
+ * La clé de tri de chaque table est SA CLÉ PRIMAIRE — ou, pour
+ * `exercices_guides_production`, qui n'en porte pas, son unique
+ * `(type_id, genre)`. C'est ce qui rend l'ordre total, donc la pagination sûre.
  */
 export async function chargerLignesDepuisBase(admin: ClientLecture): Promise<LignesDoctrine> {
-  const table = async (nom: string, cols: string) => {
-    const { data, error } = await admin.from(nom).select(cols)
-    if (error) throw new DoctrineAbsente(`lecture de ${nom} : ${JSON.stringify(error)}`)
-    return (data ?? []) as never[]
-  }
+  const table = (nom: string, cols: string, cle: string[]) => lireTable(admin, nom, cols, cle)
   const [types, modes, source, parCran, cransT, durees, admis, routes,
     consignes, patrons, guides, formes] = await Promise.all([
-    table('exercices_types', 'code,nature,grain,libelle,supports_source,genres_admis,competences,crans_admis,exclusions_parcours'),
-    table('exercices_types_modes', 'competence,modes,exercices_types!inner(code)'),
-    table('exercices_types_modes_source', 'mode,provenances_admises,supports_admis,exercices_types!inner(code)'),
-    table('exercices_types_crans', 'cran,couverture_observables,provenances_admises_cible,duree_exercice_min,exercices_types!inner(code)'),
-    table('exercices_crans', '*'),
-    table('exercices_durees', '*'),
-    table('competences_modes_admis', 'competence,mode'),
-    table('exercices_routes', 'objet_code,mode,cran,competence,observable_code,observable_nom,source_fichier,source_section'),
-    table('exercices_consignes_isolees', '*'),
-    table('exercices_consignes_production', 'mode,cran,patron'),
-    table('exercices_guides_production', 'objet_code,genre,figure,guide_cran2,guide_cran6'),
-    table('demonstrations_formes', 'forme,grain'),
+    table('exercices_types', 'code,nature,grain,libelle,supports_source,genres_admis,competences,crans_admis,exclusions_parcours', ['id']),
+    table('exercices_types_modes', 'competence,modes,exercices_types!inner(code)', ['id']),
+    table('exercices_types_modes_source', 'mode,provenances_admises,supports_admis,exercices_types!inner(code)', ['type_id', 'mode']),
+    table('exercices_types_crans', 'cran,couverture_observables,provenances_admises_cible,duree_exercice_min,exercices_types!inner(code)', ['id']),
+    table('exercices_crans', '*', ['cran']),
+    table('exercices_durees', '*', ['geste', 'grain']),
+    table('competences_modes_admis', 'competence,mode', ['competence', 'mode']),
+    table('exercices_routes', 'objet_code,mode,cran,competence,observable_code,observable_nom,source_fichier,source_section', ['id']),
+    table('exercices_consignes_isolees', '*', ['competence', 'source_section', 'cran']),
+    table('exercices_consignes_production', 'mode,cran,patron', ['mode', 'cran']),
+    table('exercices_guides_production', 'objet_code,genre,figure,guide_cran2,guide_cran6', ['type_id', 'genre']),
+    table('demonstrations_formes', 'forme,grain', ['forme']),
   ])
   const code = (r: Record<string, unknown>) =>
     (r.exercices_types as { code: string } | null)?.code ?? ''

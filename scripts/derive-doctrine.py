@@ -53,7 +53,7 @@ import re
 import sys
 
 RACINE_DEFAUT = "/Users/louissagnieres/Documents/GitTest/palimpseste-conception"
-OUTIL = "scripts/derive-doctrine.py 1.1"
+OUTIL = "scripts/derive-doctrine.py 1.2"
 
 # Les six crans qui isolent, dans l'ordre où le `04-` §0 les nomme.
 CRANS_QUI_ISOLENT = (1, 3, 4, 5, 7, 9)

@@ -1197,3 +1197,721 @@ de livre), flashcards et régénération de question Quazian (contenu partagé),
 attribués » de `SPEC_C11c_ecran_couts.md`. Trou de comptage connu, accepté : un tour de chat dont
 l'usage fournisseur est indisponible n'écrit rien au journal (compté 0, loggé `usage indisponible`
 — recoupable via `scriptorium_messages`)._
+
+## C4 · L8 — La fabrique du professeur (sandbox, quatre migrations du 20/08)
+
+_Section ouverte le 21/08 depuis `RELEVE_C4_L8_2026-08-20.md`. **Le chantier C4 n'avait aucune
+section ici** — ni C4-L1, joué le 18/08, ni C4-L8 : le suivi du chantier commence à cette ligne, et
+les trois restes ci-dessous ne vivaient jusqu'ici que dans un relevé que personne ne relit._
+
+_Ce qui a été prouvé EN SÉANCE est coché avec sa preuve. `npm test` : **296 tests, 0 échec** ;
+`derive-doctrine.py --verifie` dit **IDENTIQUE** sur les onze tables, les neuf empreintes de source
+et la fixture. **Les trois restes demandaient un vrai navigateur, connecté en prof** — règle d'or :
+Chrome, jamais l'aperçu embarqué, et Cmd-R avant de conclure à un bug._
+
+_**Séance du 21/08 — « les trois épreuves » : LES QUINZE SONT COCHÉES.** Les trois dernières ont été
+jouées dans Chrome, connecté en professeur, et la séance a rapporté **un défaut grave qu'elle n'a
+pas réparé** — la doctrine lue tronquée à 1000 routes sur 3264 (**F1** ci-dessous), qui vide la
+banque de consignes de **sept objets sur treize**. Elle n'invalide aucune des quinze preuves : les
+3264 routes sont bien en base, c'est la LECTURE applicative qui plafonne._
+
+⚠️ **Quatre interrupteurs sont à OFF** : les trois du `07-` §1.5 (`exercices_actif`, `routeur_actif`,
+`competences_affichage_actif`) plus `fabrique_actif`, propre au lot. Et **les statuts de recette ont
+été remis à `mesuree_silencieusement`** après les preuves — `evaluee` est un acte du professeur, pas
+d'une recette. Les reposer fait partie de tout test qui en dépend.
+
+### Les trois dernières, jouées le 21/08 dans Chrome (session « trois épreuves »)
+
+_Jouées **dans Chrome**, connecté en professeur, contre le serveur de développement et la sandbox
+`aoakpxxlyvthzueaywna` ; chaque preuve est une ligne de base ou ce que l'écran affiche, relu par
+requête. **Les quatre interrupteurs étaient et sont restés à OFF** ; le statut `evaluee` posé pour
+C4L8-2 a été **remis à `mesuree_silencieusement`**, vérifié par requête._
+
+- [x] **C4L8-1 · La porte Codex, de bout en bout.** Les six étapes du `02-` §6 B.2, dans l'ordre.
+  (1) **Dépôt du matériau `genere`** par le bouton du corpus — `recette_c4l8_materiau_codex.json`,
+  rapport à l'écran : « materiaux : **1 entrée(s)** », 0 refus, **2 signalements** (« visé par aucune
+  instance » ; « famille « le lien manque » (argument) : un seul membre — aucune paire ne pourra s'y
+  faire »), puis validé en file : `mat-lien-codex-0001` → `statut = valide`
+  (`fbd50f7c-36e3-495c-9a8d-8b4e3e2c0cd3`, `argument` × `composer`, support `extrait`).
+  (2) **Conception par la porte Codex** — `argument` × `composer` × **cran 3** *(transformation_guidee)*,
+  `materiau_cible` `genere` / `extrait`, observable **`charniere_formule` · structure** pris à la
+  route, banque de **12 distracteurs** saisie : instance `d15ef81f-f3bc-4d24-bbad-f15adbe57a88`,
+  `statut = concu`, `modes_par_competence = {"structure": ["composer"]}`.
+  ⭐ **La porte tient sa règle** : la provenance n'offre que `genere` et `sujet` —
+  **`texte_auteur` n'y est pas** (piège 28).
+  (3) **Édition** — « Instance corrigée. » à l'écran, `consigne_instanciee` réécrite et
+  `updated_at ≠ created_at` en base.
+  (4) **APERÇU — le constat que le prompt disait le plus grave, et il est BON** : sur une banque de **12**,
+  l'aperçu rend **QUATRE candidats** — trois distracteurs *(« d'ailleurs », « or », « en
+  conséquence »)* **plus la `reponse_attendue`** — et **jamais la banque entière** ; **aucune ligne
+  de correction** (cran 3 = `transformer`, pas `diagnostiquer`). **Tirage déterministe vérifié** :
+  les trois mêmes après rechargement.
+  (5-6) **Assignation** à T5, fenêtre 22 → 29 septembre : « Exercice commun assigné — **2 dépôt(s)
+  créé(s), `origine` `prof`** ». En base : `exercices` `statut = assigne`, `classe_id` T5 ; et
+  **2 lignes d'`exercices_depots`, `origine = prof`, `statut = assigne`, `echeance =
+  2026-09-29 00:00:00+00`**. _(21/08.)_
+  ⚠️ **Deux écarts constatés en chemin, décrits et NON réparés** — voir « Ce que la séance a trouvé »
+  plus bas : la **doctrine lue tronquée** (F1) et la **`reponse_attendue` toujours en dernière
+  position** (F2).
+  ℹ️ Le relevé disait « la banque ne porte aucun matériau `genere` pour un couple objet ×
+  `composer` » : **elle en portait déjà deux** (`mat-garant-a`, `mat-garant-b`, `argument` ×
+  `composer`, `valide`, entrés par l'import du 20/08). Le dépôt a été fait quand même — c'est le
+  geste que l'épreuve demande.
+- [x] **C4L8-2 · L'opt-out d'une classe, AU BOUTON.** `expression` posée **`evaluee` au bouton**
+  (« expression → evaluee — **17 ligne(s) d'élève**, la date posée dans le même geste »), puis
+  **clic sur le bouton « active » de THLP × Expression** : « expression : opt-out posé — ce cours ne
+  la travaille pas », le bouton devient **`opt-out`** et son `aria-label` passe de « Retirer » à
+  « Remettre ». En base : **THLP `active = f`** (`updated_at 18:40:32`) et **T5 et Test restent
+  `active = t`, `updated_at` inchangé à `02:38:00`** — la compétence n'a bougé que pour cette classe.
+  **Le geste est rejouable** : « redevient active » → `t`, puis retiré une seconde fois → `f`
+  (`18:41:15`), puis remis `t`. Synthèse n'a bougé dans aucune des trois classes.
+  **Remises en état vérifiées par requête** : les 6 lignes à `active = t`, `expression` de retour à
+  `mesuree_silencieusement` sur ses 17 lignes. _(21/08.)_
+  ℹ️ **Le bouton n'est pas là où la règle le loge.** Le `07-` §1.3 dit « au **profil de la classe**,
+  au tableau de pilotage » ; il vit en fait à **`/prof/competences` §4**, en matrice classes ×
+  compétences. Le profil de classe *a* un onglet « Compétences »
+  (`/prof/classes/[id]?vue=competences`) mais c'est une **« Zone en construction »** qui affiche
+  cinq colonnes inventées *(Analyser · Interpréter · Argumenter · Problématiser · Conceptualiser)*
+  et « Aucune donnée réelle » — **ce ne sont pas les six du `07-` §1.2**. Écran antérieur à C4
+  (`project_pilotage_classe`), hors périmètre du lot : constaté, non touché.
+  ⭐ **TRANCHÉ par Louis le 21/08 : le bouton DÉMÉNAGE au profil de la classe**, comme le `07-` §1.3
+  l'écrit. Geste au **lot de correctifs** — déplacer `OptOutClasses.tsx` *(l'action `poserOptOut` ne bouge
+  pas)* et décider du sort de la zone en construction. Inscrit au `PLAN_DE_CHANTIER.md` §6. **La preuve
+  ci-dessus reste valable** : c'est le bouton qui a été éprouvé, pas son adresse.
+- [x] **C4L8-3 · La dévalidation d'une référence validée — jouée, et voici ce qu'elle fait.**
+  Dévalidée à l'écran (`ff46eabc-…`, la décomposition de `txt-descartes-med2`), retour affiché :
+  « **Référence dévalidée : aucune instance NEUVE ne peut plus se concevoir dessus. 1 instance(s)
+  déjà bâtie(s) sur ce texte ne sont pas défaites — retirez-les une à une si c'est ce que vous
+  voulez.** » Ce que la plateforme fait **exactement** :
+  · **Ce qu'elle FERME, et immédiatement** — `validee_at` et `validee_par` passent à `null` ; la
+    porte **Aletheia n'offre plus aucun texte** (liste vérifiée : 1 texte avant, **0 après**) ; la
+    référence **revient en file** (« Les références à valider » passe de **1 à 2**) ; et la garde
+    serveur de `concevoirInstance` refuse en source **comme en cible**.
+  · **Ce qu'elle NE FAIT PAS** — l'instance `473b2c25-…` qui vise ce texte **reste `assigne`**,
+    `bloque = f`, `blocages = []`, `updated_at` **inchangé** ; ses **2 dépôts restent `assigne`**
+    avec leur échéance ; son écran ne porte **aucun bandeau**, et le bouton **« Assigner à la
+    classe » y reste actif** — `assignerALaClasse` ne lit jamais la référence. Le texte lui-même
+    **reste `valide` et non bloqué** au corpus : `validerReference` lève le blocage du texte,
+    `devaliderReference` **ne le repose pas**.
+  ⭐ **Verdict : la règle est LAISSÉE OUVERTE, pas satisfaite ni dépassée.** Le `02-` §6 A veut
+  qu'**aucune** instance ne tourne sur une référence non relue, et le `08-` §7 en fait son blocage
+  n° 1 : la plateforme l'applique **à la conception à venir** et **le dit honnêtement**, mais
+  **rien de mécanique ne retient une instance déjà assignée** — elle serait servie telle quelle si
+  `exercices_actif` passait à ON. **Aucun élève n'a rien vu** : les quatre interrupteurs sont à OFF.
+  **Remise en état** : la référence a été **re-validée au bouton** ; `validee_at` porte une
+  **nouvelle date** (`2026-08-21 18:44:48+00` au lieu de `02:46:41`) — l'état est le même, l'horodate
+  ne l'est pas. _(21/08.)_
+  ⭐ **TRANCHÉ par Louis le 21/08 : le message honnête suffit** — on assume que la règle reste ouverte, et
+  **aucun mécanisme ne sera posé** pour retenir les instances déjà assignées. *Le doute est noté avec la
+  décision (« je crois »).* ⚠️ **Ce qui la rouvrirait** : une passation réelle sur une référence dévalidée
+  en cours de route — impossible tant qu'`exercices_actif` est à OFF. Inscrit au `PLAN_DE_CHANTIER.md` §6.
+
+### Ce que la séance a trouvé, et n'a PAS réparé
+
+_**Les quatre écarts ont été soumis à Louis le 21/08 et tranchés le jour même** ; chaque arbitrage est recopié sous son écart, et son geste est inscrit au `PLAN_DE_CHANTIER.md`._
+
+- ⛔ **F1 — LA DOCTRINE EST LUE TRONQUÉE : 1000 routes sur 3264.**
+  `chargerLignesDepuisBase` (`utils/fabrique/doctrine.ts`) lit `exercices_routes` par un
+  `admin.from('exercices_routes').select(…)` **sans `range`** ; PostgREST plafonne la réponse.
+  Constaté par en-tête : `content-range: 0-999/3264`, **stable sur trois lectures**. Conséquences
+  vues **à l'écran**, pas déduites : à la porte Codex, `argument` × `composer` × cran 3 propose
+  **16 consignes** quand la base en route **24** *(les **7 routes d'Argumentation** et
+  `connaissance/contresens` manquent)* ; et `partie` × `composer` × cran 3 affiche
+  « — choisir une consigne de la banque **(0)** — » quand la base en porte **40** — le `select` étant
+  `required`, **l'objet devient inconcevable**. **Sept objets sur treize n'ont AUCUNE route
+  visible** : `paragraphe`, `partie`, `phrase`, `plan`, `problematisation`, `reference`,
+  `transition`. La même doctrine tronquée sert la **garde serveur** (`empechementsDeConception`) et
+  le **contrôle d'import de la plateforme** (`verifie-import.ts`) : un observable pourtant routé s'y
+  ferait refuser « non routé » (refus n° 15 / blocage n° 3). Règle enfreinte : « l'observable vient
+  **DE LA ROUTE** » (`04-` §0) et « la banque du couple objet × mode × cran s'affiche » (`02-` §6 B).
+  ⚠️ **C4L8-15 reste vrai** — les **3264 routes SONT en base**, et le contrôle Python qui dit
+  `IDENTIQUE` lit les sources, pas PostgREST : c'est **la lecture applicative** qui est en défaut,
+  pas la dérivation. **`exercices_routes` est la seule des douze tables de doctrine à dépasser 1000
+  lignes** (la suivante, `exercices_consignes_isolees`, en porte 336).
+  ⭐ **TRANCHÉ par Louis le 21/08 : F1 devient SON PROPRE LOT, et il passe AVANT C4-L3.** Inscrit au
+  `PLAN_DE_CHANTIER.md` §2 et §3 sous le nom **`C4-L8-bis` — la doctrine lue en entier** ; C4-L3 en dépend
+  désormais au graphe. **Rien n'a été réparé ici.**
+  ✅ **RÉPARÉ le 21/08 par C4-L8-bis** — voir la section de ce lot plus bas. `chargerLignesDepuisBase`
+  pagine désormais **les douze tables** par un seul chemin (`lireTable`), chacune **ordonnée sur sa clé
+  primaire**, et **confronte ce qu'elle a lu au décompte que la base annonce** : elle **s'arrête** sur
+  une doctrine tronquée au lieu de refuser en silence ce qui est licite. Constaté à l'écran :
+  `partie` × `composer` × cran 3 passe de **(0) à (40)**, **les treize objets offrent leur banque**, et
+  un observable routé sur un objet naguère aveugle **passe la garde serveur ET le contrôle d'import**.
+  ⚠️ **La liste des sept objets aveugles n'était PAS stable** : au rejeu du 21/08 au soir,
+  `argument` × `composer` × cran 3 affichait déjà **24** avant correction (et non 16) — `--sql` refait
+  l'ordre physique à chaque passe, et c'est lui qui décide quelles mille lignes reviennent. **Les sept
+  objets nommés ci-dessus étaient bien les sept aveugles au moment du rejeu.**
+- ⚠️ **F2 — la `reponse_attendue` est toujours le dernier candidat.** `composerApercu`
+  (`utils/fabrique/conception.ts`) compose `[...tirerTrois(banque), reponseAttendue]` : la bonne
+  réponse **n'est jamais mêlée**, elle est en position 4 à tous les coups — vérifié à l'écran, deux
+  affichages sur deux. Le commentaire du même fichier écrit pourtant « **QUATRE candidats, mêlés** ».
+  Le tirage réel de la passation vit au déroulé (C4-L3) et n'existe pas encore ; l'aperçu, lui, est
+  ce que le professeur relit pour juger le placement.
+  ⭐ **TRANCHÉ par Louis le 21/08 : on laisse C4-L3 le corriger.** L'aperçu du professeur **reste
+  déterministe** — c'est ce qui permet de le relire deux fois sans qu'il change ; **le mêlage appartient au
+  tirage réel de la passation**, qui n'existe pas encore. Déposé en **neuvième item de la boîte de C4-L3**
+  (`PLAN_DE_CHANTIER.md` §5).
+- ℹ️ **F3 — la consigne dérivée dit « ces trois », l'écran en sert quatre.** La banque écrit
+  « **Parmi ces trois** mots de liaison… » ; l'aperçu affiche trois distracteurs **plus** la
+  `reponse_attendue`. La réécriture de la formulation par le professeur suffit à le corriger — c'est
+  ce qui a été fait sur l'instance de C4L8-1 — mais **la source rendra « trois » à chaque
+  dérivation**.
+  ⭐ **CORRIGÉ À LA SOURCE LE 21/08** *(accord de Louis)*. **Ce n'était pas un arbitrage** : le
+  `02-` §6 *(« l'écran sert QUATRE candidats »)* et le `04-` §1 *(« l'instance en tire TROIS — avec la
+  `reponse_attendue`, quatre »)* disent tous deux quatre, **et le code était conforme** ; ce sont les
+  libellés d'`instances/` qui étaient faux. **117 lignes réalignées** — **112 consignes** des crans 1 et 3
+  et **5 paragraphes « Variante d'objet »** —, les six fichiers bumpés *(argumentation 1.2 · connaissance
+  1.1 · expression 2.2 · questionnement 1.1 · structure 1.1 · synthèse 2.2)*. ✅ **RE-DÉRIVÉ ET JOUÉ EN SANDBOX LE 21/08 à
+  20:51:13 UTC**, depuis le Mac : `--fixture` régénérée *(empreinte `cf1d46cd5ceb…`)*, `npm test`
+  **414/414**, puis le `--sql` **par `psql`** — répétition à blanc *(`commit;` → `rollback;`)* d'abord,
+  comptes identiques des deux côtés, puis `COMMIT`. **Vérifié par requête** : `like '%ces trois%'` →
+  **0**, `like '%ces quatre%'` → **96**, `doctrine_derivation` → **6 passes**, `outil 1.2`.
+  Ligne **cochée** au `SUIVI_SQL.md`. ⚠️ **Mais l'écran, lui, n'en montrera que 6 objets sur 13**
+  tant que F1 *(la pagination de `chargerLignesDepuisBase`)* n'est pas levé — lot `C4-L8-bis`.
+- ℹ️ **Une autre séance a écrit dans le dépôt pendant celle-ci** — `SUIVI_SQL.md`,
+  `scripts/derive-doctrine.py` (`OUTIL` **1.1 → 1.2**) et `utils/fabrique/doctrine.fixture.json`,
+  à `14:38` locale, **sans accès à la base et sans exécution**. **Vérifié par requête : la doctrine
+  en sandbox n'a pas bougé** — `doctrine_derivation` s'arrête à la **quatrième passe**, `outil 1.1`,
+  `2026-08-21 16:05:41+00`, et c'est le `derive_at` que portent `exercices_routes` et
+  `exercices_consignes_isolees`. Les constats ci-dessus portent bien sur l'état décrit par le prompt.
+- ✔️ **Le balisage markdown se rend à l'écran** — `« **Parmi ces trois…** »`, `**la raison manque**`
+  avec leurs astérisques, à l'aperçu comme à l'édition. **Conforme à l'arbitrage du 21/08**, rendu
+  restreint attendu de C4-L3 : constaté, **non réparé**.
+
+### Le décor que cette séance a ajouté, et qui reste
+
+_Rien n'a été retiré : ces lignes **sont** la preuve de C4L8-1. Toutes datent du **21/08 vers
+18 h 30 UTC**, toutes portent la marque de la recette._
+
+| | identifiant | ce que c'est |
+|---|---|---|
+| matériau | `mat-lien-codex-0001` · `fbd50f7c-36e3-495c-9a8d-8b4e3e2c0cd3` | `argument` × `composer`, famille « le lien manque », `valide` |
+| import | `recette_c4l8_materiau_codex.json` | la trace du dépôt |
+| instance | `d15ef81f-f3bc-4d24-bbad-f15adbe57a88` | `argument` × cran 3, conçue **par la porte Codex**, assignée à **T5** |
+| dépôts | 2 lignes | `origine = prof`, échéance `2026-09-29` |
+| cas | 1 ligne | 12 distracteurs en banque |
+
+**Comptes avant → après** : `exercices` 4 → **5** · `exercices_depots` 12 → **14** ·
+`exercices_cas` 6 → **7** · `exercices_materiaux` 2 → **3** · `exercices_imports` 6 → **7**.
+`exercices_textes`, `exercices_sujets` et `exercices_demonstrations` **inchangés**. Aucune table
+`aletheia_*`, `scriptorium_*` ni `profiles` n'a été touchée.
+
+### Ce qui est prouvé — pour ne pas le rejouer
+
+- [x] **C4L8-4 · Dépôt d'une fiche et statut à l'écran.** Dépôt **par le bouton**, 7 fiches lues ;
+  statut posé par `poser_statut_recette`. _(Séance du 20/08.)_
+- [x] **C4L8-5 · Un import refusé pour un motif lisible, puis accepté.** `[R02] exercice … : clé
+  « credence_cible » que le 08- ne déclare pas` — **le même motif que le script qui fait foi** —
+  puis le même fichier corrigé, redéposé sous les mêmes `id`, accepté ; **le second dépôt montre le
+  compte des ignorées, banque par banque**. _(20/08.)_
+- [x] **C4L8-6 · Un exercice conçu en ligne (voie Aletheia).** Conçu à l'écran (`argument` ×
+  `expliquer` × cran 4), édité, aperçu rendu, **assigné → 2 lignes d'`exercices_depots`, `origine`
+  `prof`, avec échéance**. _(20/08.)_
+- [x] **C4L8-7 · Un exercice conçu dehors suit le même chemin.** L'importé
+  `ex-argument-04-garant-0001` passe par la **file** (`a_concevoir` → `concu`), l'édition, l'aperçu,
+  et entre au calendrier **par le même geste** — 10 lignes de dépôt. _(20/08.)_
+- [x] **C4L8-8 · Les démonstrations, par compétence et par grain.** 2 démonstrations entrées par la
+  **cinquième banque** ; la table compétence × grain les montre, et **l'avertissement d'absence
+  compte les 16 couples vides**. _(20/08.)_
+- [x] **C4L8-9 · La correspondance d'une fiche déposée, lisible en base.** 51 blocs, 6 compétences,
+  par requête — **et le Monitoring n'en a aucun, comme la règle le veut**. _(20/08.)_
+- [x] **C4L8-10 · Le statut porte sa date.** `statut_recette_pose_le` sur les 17 lignes, **et la
+  garde refuse** un statut changé sans sa date. _(20/08.)_
+- [x] **C4L8-11 · Sujet et texte rattachés à un cours.** `generique` pour le sujet, un cours apparié
+  pour le texte ; **la ligne agrégée des « sans rattachement » disparaît** dès que tout est trié.
+  _(20/08.)_
+- [x] **C4L8-12 · Une compétence `evaluee` est active dans toutes les classes, sauf opt-out.**
+  3 classes ouvertes **sans second geste** ; l'opt-out posé au profil d'une classe s'y lit, pour
+  cette classe seule. _(20/08 — le geste au bouton reste à rejouer : C4L8-2.)_
+- [x] **C4L8-13 · Le Monitoring a sa ligne et son avertissement.** Une ligne, **deux
+  sous-dimensions**, et le passage à `evaluee` **impossible tant que la confirmation n'est pas
+  cochée** — l'avertissement d'abord, la confirmation ensuite. _(20/08.)_
+- [x] **C4L8-14 · La file de validation, en masse ou une à une.** Les cinq banques validées en
+  masse ; **et la validation en masse ne prend jamais une entrée bloquée** — « Tout prendre (0) —
+  les bloquées restent dehors ». _(20/08.)_
+- [x] **C4L8-15 · La doctrine est lisible en base, et DÉRIVÉE.** 9 crans · 13 modes · 3264 routes ·
+  336 consignes isolées · 15 patrons · 24 guides · les `crans[]` des 13 objets. Le contrôle dit
+  **IDENTIQUE**, et **il sait dire DIVERGE** : éprouvé sur une valeur changée, sur quinze routes
+  retirées, et sur **un seul octet ajouté à `06-Palimpseste.md`**. _(20/08.)_
+
+### Une dette de code ouverte le 21/08, hors recette
+
+⚠️ **`utils/fabrique/verifie-import.ts` est à ré-aligner sur son script.** Le 21/08,
+`generateur/verifie-import.py` (dépôt `palimpseste-conception`) a été réparé : le blocage n° 2 force
+désormais `validee` à faux, et le blocage n° 1 lit cette valeur **effective** — ce que le `08-` §1
+écrivait déjà (« un texte dont la décomposition est bloquée entre avec `validee: false`, quoi que le
+fichier déclare »). Son autotest passe de **46 à 48 vecteurs**, dont un qui **échoue sans la
+réparation** (`B1 attendu, rendus ['B2']`). Le port en porte 48 + 2 sondes : il lui manque donc les
+deux mêmes vecteurs, et la faute que le port recopiait fidèlement (piège 22). **La plateforme, elle,
+se comporte déjà bien** — c'est l'écriture qui referme la porte par un B1 hérité —, donc rien
+n'urge ; mais tant que les deux contrôles divergent, leurs verdicts ne sont plus comparables.
+
+---
+
+## C4 · L8-bis — La doctrine lue en entier (séance du 21/08 — **AUCUNE MIGRATION**)
+
+**Ce que le lot a changé, et rien d'autre** : `utils/fabrique/doctrine.ts`. La lecture des **douze
+tables de doctrine** passe par un seul chemin, `lireTable`, qui **pagine** par pages de mille
+*(patron de `depenseParPages`, `utils/chaine/couts-serveur.ts`)*, **ordonne sur la clé primaire de
+chaque table**, et **confronte le nombre lu au décompte que la base annonce** — `DoctrineTronquee`,
+qui hérite de `DoctrineAbsente`, arrête la lecture quand les deux diffèrent. Plus
+`utils/fabrique/doctrine-lecture.test.ts`, qui prouve tout cela **sans base et sans racine**.
+
+⚠️ **Aucune migration, aucune ligne au `SUIVI_SQL.md`, aucune re-dérivation** : ce lot n'écrit rien
+en base et ne lit rien de neuf — il lit mieux ce qui était déjà lu. Vérifié en fin de séance :
+`doctrine_derivation` **compte toujours 6** *(pas de septième passe)*, dernier outil
+`scripts/derive-doctrine.py 1.2`, `exercices_routes` **3264**, `like '%ces trois%'` **0** /
+`'%ces quatre%'` **96**, le décor de recette C4L8-1 (`mat-lien-codex-0001`) **intact**, et les
+**cinq interrupteurs toujours à OFF** *(`exercices_actif`, `routeur_actif`,
+`competences_affichage_actif`, `fabrique_actif`, `chaine_actif`)*.
+
+### Le contrôle d'entrée — joué avant d'écrire une ligne
+
+- [x] **Les quatre pièces du manifeste, à leur version.** `07-` **2.21** · `02-` **5.4** · `04-`
+  **3.2** · `08-` **1.2**, toutes **VALIDÉ ET GELÉ** *(vaut relu et validé)*. _(21/08.)_
+- [x] **La convention de doctrine — `derive-doctrine.py --verifie`, joué contre la sandbox.**
+  `SOURCES : IDENTIQUE` + **onze tables IDENTIQUE** + `FIXTURE : IDENTIQUE`. ⚠️ **Onze contrôlées,
+  douze remplies** — `exercices_types_crans` est écrite par `--sql` et jamais lue par `--verifie`
+  *(hors périmètre : lot de correctifs)*. _(21/08.)_
+
+### Ce qui est prouvé — pour ne pas le rejouer
+
+- [x] **L8bis-1 · Le défaut reproduit par la lecture applicative, avant correction.**
+  `chargerLignesDepuisBase` avec le vrai client admin : `exercices_routes` **1000 lues / 3264 en
+  base**, les onze autres tables exactes. Banque `composer` × cran 3 : **sept objets à 0** —
+  `paragraphe`, `partie`, `phrase`, `plan`, `problematisation`, `reference`, `transition`.
+  ⚠️ `argument` était déjà à **24** *(et non 16 comme le 21/08 au matin)* : **la liste des aveugles
+  n'est pas stable**, elle dépend de l'ordre physique que `--sql` refait à chaque passe. _(21/08.)_
+- [x] **L8bis-2 · La lecture rend autant de lignes que la base en compte, table par table.**
+  Après correction, les **douze** concordent : `exercices_types` **15/15** *(13 objets dérivés + les
+  2 types diagnostiques du seed C4-L1 — la fixture, elle, n'en porte que 13)* ·
+  `exercices_types_modes` **54/54** · `exercices_types_modes_source` **46/46** ·
+  `exercices_types_crans` **117/117** · `exercices_crans` **9/9** · `exercices_durees` **9/9** ·
+  `competences_modes_admis` **13/13** · `exercices_routes` **3264/3264** ·
+  `exercices_consignes_isolees` **336/336** · `exercices_consignes_production` **15/15** ·
+  `exercices_guides_production` **24/24** · `demonstrations_formes` **3/3**. _(21/08.)_
+- [x] **L8bis-3 · Le CONTENU, pas seulement le nombre.** Les 3264 routes lues, réduites à leur
+  clé `(objet, mode, cran, compétence, code, fichier, section)` : **3264 distinctes**, et **`diff`
+  vide** contre les 3264 lignes de la base. **Aucune ligne sautée, aucune répétée** — c'est le tri
+  stable qui le garantit. _(21/08.)_
+- [x] **L8bis-4 · Les trois cas de la doublure de client — hors ligne, sans base ni racine.**
+  `utils/fabrique/doctrine-lecture.test.ts`, **14 tests verts** : ① **pagination complète** —
+  4 tours sur `exercices_routes` *(0-999 · 1000-1999 · 2000-2999 · 3000-3999)*, arrêt sur page
+  courte, **une seule page** sur les onze autres tables, et **les 3264 sections distinctes et dans
+  l'ordre** ; ② **décompte concordant** — la doctrine s'assemble, et le décompte se demande **à la
+  base, jamais à la fixture** ; ③ **décompte divergent** — `DoctrineTronquee` levée, **éprouvée sur
+  les douze tables une par une**, plus le cas du décompte indisponible. La doctrine **vide** reste
+  refusée par son propre message, et **les deux refus ne se confondent pas**. _(21/08.)_
+- [x] **L8bis-5 · Le refus est lisible par un humain.** `Doctrine TRONQUÉE — la table
+  exercices_routes : 1000 ligne(s) lue(s), 3264 en base. On s'arrête : […] Rien n'est à corriger en
+  base : c'est la LECTURE qui n'a pas tout rendu. Si le nombre en base est lui-même trop bas, c'est
+  une dérivation qui manque, et elle se rejoue par \`python3 scripts/derive-doctrine.py --sql\`.`
+  **Table, nombre lu, nombre attendu**, et ce qu'il faut faire. _(21/08.)_
+- [x] **L8bis-6 · Les treize objets offrent leur banque — porte Codex, à l'écran.**
+  `composer` × cran 3, objet par objet, lu au libellé du `select` :
+  `argument` **24** · `conclusion` **21** · `exemple` **11** · `introduction` **22** · `mot` **7** ·
+  `objection` **25** · `paragraphe` **31** · **`partie` 40** · `phrase` **8** · `plan` **15** ·
+  `problematisation` **14** · `reference` **10** · `transition` **18**. **Aucune vide.** _(21/08.)_
+- [x] **L8bis-7 · `partie` × `composer` × cran 3 : de (0) à (40).** Le chiffre qui rendait l'objet
+  **inconcevable**, le `select` étant `required`. Constaté à l'écran, avant et après. _(21/08.)_
+- [x] **L8bis-8 · Les treize objets — porte Aletheia, à l'écran.** **33 couples** objet × mode
+  réceptif au cran 3, **aucun vide**, minimum 2 :
+  `argument` 6·12·8·6 · `mot` 2·2·2·2 · `objection` 6·13·10·6 · `paragraphe` 20·17·13·9 ·
+  `phrase` 8·10·9·6 · `plan` 6·8·6·6 · `problematisation` 9·9·9·9 · `partie` 20·17·13·9
+  *(englobant `texte`)* · `conclusion` `restituer` **10**
+  *(dans l'ordre `restituer` · `expliquer` · `évaluer` · `interroger`)*.
+  ⚠️ **Quatre objets ne peuvent PAS paraître en Aletheia, et c'est la doctrine, pas un défaut** :
+  `exemple`, `introduction`, `reference` et `transition` **ne déclarent que `composer`**
+  *(`02-` §3, table des modes admis)*. _(21/08.)_
+- [x] **L8bis-9 · Les 112 consignes réalignées apparaissent enfin sur les objets aveugles.** Sur
+  `partie`, la consigne servie par la banque est « **Parmi ces quatre ajouts, lequel donne la
+  raison ?** » — la réécriture de la sixième passe, **visible pour la première fois** sur un objet
+  qui n'avait aucune route. _(21/08.)_
+- [x] **L8bis-10 · La conception d'une instance sur un objet naguère aveugle, jusqu'à
+  l'assignation.** `partie` × `composer` × cran 3, `genre` `generique`, observable **`garant_present`
+  (argumentation)** pris **dans la banque** ; matériau `mat-l8bis-partie-0001`, 12 distracteurs,
+  `reponse_attendue`. La **garde serveur passe** — « Instance conçue » —, l'aperçu élève rend les
+  quatre candidats, et l'assignation à la classe `Test · terminale · HLP` crée **7 lignes
+  d'`exercices_depots`, `origine` `prof`** ; l'exercice passe `concu` → `assigne`
+  *(id `974b6f51-3723-446d-9e46-f7964051662f`)*. _(21/08.)_
+- [x] **L8bis-11 · Le contrôle d'import : refus n° 15 AVANT, entrée APRÈS.** Le **même fichier**
+  (`recette_c4l8bis_partie_routee.json`, un `observable_isole` **routé** sur `partie`), déposé par
+  `scripts/recette/deposer-import.mjs`. **Avant** *(lecture non paginée, `doctrine.ts` remis à
+  `HEAD` le temps de la preuve)* : `verdict : REFUS` — `[R15] exercice
+  ex-l8bis-partie-composer-03-garant_present-0001 : l'observable \`garant_present\`
+  (argumentation) n'est routé ni pour \`partie\`, ni pour \`composer\``. **Après** : `verdict :
+  IMPORTABLE`, l'exercice entre `a_concevoir`, et le matériau déjà déposé est **reconnu et ignoré**
+  *(idempotence)*. Seul reste un **signalement légitime** — famille à un seul membre. _(21/08.)_
+- [x] **L8bis-12 · Les deux messages de la garde serveur restent distincts.** « l'observable `X`
+  n'est pas routé pour … » et « la route existe, la consigne manque (blocage n° 3) » — **non
+  fusionnés, non affaiblis** ; le second doit rester possible et le reste. _(21/08, par lecture de
+  `empechementsDeConception`.)_
+- [x] **L8bis-13 · `npm test` : 428 tests, 428 verts.** **+14** par rapport aux 414 d'avant la
+  séance, **et l'échec pré-existant refermé** *(L8bis-14)*. `tsc --noEmit` et `eslint` **propres**
+  sur les deux fichiers touchés. _(21/08.)_
+- [x] **L8bis-14 · L'échec pré-existant de la chaîne, refermé sur décision de Louis.**
+  `derive-instruments.py --ecris` rejoué **à la demande explicite de Louis** — le piège 4 du prompt
+  disait « ne touche pas la chaîne », l'arbitrage le lève. `--verifie` passe de **DIVERGE** à
+  **`INSTRUMENTS : IDENTIQUE (3 fichier(s) dérivé(s))`**, et `utils/chaine/instruments.test.ts`
+  repasse au vert. ⚠️ **Ce qui a changé est de la MÉTADONNÉE, rien d'autre** : `MANIFESTE.ts` et
+  `calame-retour.ts` voient leur `empreinte_source`, leur `statut_source` et leur `version_source`
+  passer de `2.20` / « VALIDÉ ET GELÉ » à **`2.23` / « RELU ET VALIDÉ »** ; `monitoring.ts` est
+  **inchangé** (même empreinte). **Le texte du gabarit Calame est identique octet pour octet** —
+  3422 caractères, même empreinte avant et après : **aucun comportement de la chaîne n'a bougé**,
+  seule l'estampille de provenance a rattrapé sa source. Six lignes changées en tout. _(21/08.)_
+
+- [x] **L8bis-15 · LES NEUF CRANS, objet par objet, aux deux portes — balayage exhaustif à
+  l'écran.** **425 lectures, AUCUNE banque vide.**
+  · **Codex** *(`composer`)* : **117 / 117** — les 13 objets × les 9 crans. Aux **six crans qui
+  isolent**, chaque objet rend **le même compte à tous les six** *(chaque route couvre les six)* :
+  `argument` 24 · `conclusion` 21 · `exemple` 11 · `introduction` 22 · `mot` 7 · `objection` 25 ·
+  `paragraphe` 31 · **`partie` 40** · `phrase` 8 · `plan` 15 · `problematisation` 14 ·
+  `reference` 10 · `transition` 18. Aux **trois crans de production**, un **patron** est servi
+  partout — jamais un vide.
+  · **Aletheia** *(les 4 modes réceptifs)* : **297 / 297** — les **33 couples** objet × mode
+  déclarables × 9 crans, **0 manquant, 0 vide**, même régularité.
+  · **Le `genre` au cran 6, sur les trois objets terminaux** : **11 / 11** — `conclusion` et
+  `introduction` × leurs 4 genres, `partie` × ses 3. Chacun sert **ses moments nommés**
+  *(« bilan · réponse · ouverture », « situer le texte · la thèse qu'il défend · l'annonce des
+  mouvements », …)*. ⚠️ **Trouvé en chemin** : **sans genre élu, le cran 6 d'un objet terminal rend
+  un appui nommé VIDE** — « Écris la conclusion.  » — parce que son guide se décline au genre
+  *(`04-` §14.2)*. **Ce n'est pas un défaut de ce lot** : le `genre` est `required` sur ces trois
+  objets, l'écran ne laisse pas concevoir sans lui. _(21/08.)_
+- [x] **L8bis-16 · Les crans de production ne changent pas, et c'était attendu.** Aux crans **2, 6,
+  8**, `exercices_routes` est **vide par contrainte** *(`routes_cran_isole_chk`)* : la banque vient
+  des **quinze patrons** du `04-` §14.1 et des guides du §14.2, que la pagination ne touche pas.
+  **Constaté aux 13 objets × 3 crans en Codex et aux 33 couples × 3 crans en Aletheia : un patron
+  partout, jamais un vide.** _(21/08.)_
+
+### Ce qui reste à jouer en recette
+
+- [x] ~~**L8bis-R1 · Les crans de production (2, 6, 8).**~~ ~~**L8bis-R2 · Les cinq autres crans
+  qui isolent (1, 4, 5, 7, 9), objet par objet.**~~ **JOUÉS le 21/08 sur demande de Louis — voir
+  L8bis-15 ci-dessus.**
+- [x] ~~**L8bis-R3 · Le décor de recette de cette séance, à retirer ou à garder.**~~ **TRANCHÉ ET
+  JOUÉ par Louis le 21/08 : le fichier au dépôt, le décor en base retiré.**
+  ✅ **Le FICHIER est versé** : `scripts/recette/recette_c4l8bis_partie_routee.json`, avec son
+  paragraphe au `scripts/recette/LISEZ-MOI.md` — **la preuve L8bis-11 se rejoue d'une commande**, et
+  son idempotence a été revérifiée depuis ce domicile.
+  ✅ **Le DÉCOR EN BASE est retiré** — en une transaction, dans l'ordre qu'impose
+  `exercices_cas.materiau_id` *(**ON DELETE RESTRICT** : les exercices d'abord, le matériau ensuite)* :
+  les **2 exercices** *(l'importé `ec7073d4-…` et celui conçu à l'écran `974b6f51-…`)*, leurs
+  **2 `exercices_cas`** et leurs **7 `exercices_depots`** par cascade, puis le matériau
+  `mat-l8bis-partie-0001`. ⚠️ **Vérifié AVANT de supprimer que rien d'aval n'existait** — `jobs`,
+  `squelettes`, `metacognition`, `retours`, `competences_mesures`, `monitoring_mesures`, `api_couts`,
+  `routeur_decisions` : **0 partout**, et **aucun dépôt horodaté** *(la cascade des dépôts détruit le
+  travail élève : elle ne se lance pas à l'aveugle)*. Vérifié APRÈS : **0 reste** côté `l8bis`, aucun
+  orphelin, et le **décor de C4L8-1 intact** *(`mat-lien-codex-0001`, instance `d15ef81f-…`, ses
+  2 dépôts)*. Totaux revenus à leur état d'avant la séance : 5 exercices · 3 matériaux · 14 dépôts.
+  ⚠️ **Aucune migration : ce n'est pas du schéma, c'est le geste symétrique de la recette** — rien au
+  `SUIVI_SQL.md`, comme pour le décor semé-puis-retiré de C4-L5.
+  ℹ️ **Les 4 lignes du journal `exercices_imports` ont été GARDÉES**, délibérément : un journal
+  atteste ce qui a eu lieu, et l'effacer falsifierait l'historique — celle de C4L8-1 est restée de
+  même. *Elles se retirent d'un `delete … where nom_fichier = 'recette_c4l8bis_partie_routee.json'`
+  si vous préférez.*
+  ⚠️ **Conséquence à assumer : L8bis-10 et L8bis-11 ne se vérifient plus PAR REQUÊTE** — leurs
+  lignes n'existent plus. Elles restent prouvées par ce qui est écrit ici, et **rejouables** : le
+  fichier d'import est au dépôt, la conception se refait à l'écran en quelques clics.
+- [x] ~~**L8bis-R4 · `npm test` porte UN échec pré-existant, étranger à ce lot.**~~ **TRANCHÉ ET
+  JOUÉ par Louis le 21/08** — voir **L8bis-14** ci-dessus. *(L'autre dette de la chaîne, la racine
+  absolue embarquée dans la fixture, reste ouverte et n'a pas été frôlée : le test neuf de ce lot ne
+  lit ni base ni chemin absolu.)*
+
+---
+
+## C4 · L5 — Les mesures et les niveaux : la chaîne froide (sandbox, migration du 21/08)
+
+_Section ouverte le 21/08 depuis `RELEVE_C4_L5_2026-08-21.md`, à la clôture du lot._
+
+_Ce qui a été prouvé EN SÉANCE est coché avec sa preuve. `npm test` : **380 passés, 0 échoué**
+(dont ~90 neufs sur ce lot) ; `npx tsc --noEmit` et `eslint` sur les fichiers du lot : rien ;
+`scripts/recette/chaine-c4l5.mjs` : **45 contrôles, 45 passés**, joués **par le même code que la
+route**, en base, décor semé puis **retiré** (sandbox revenue à son état d'avant, vérifié par
+requête)._
+
+⚠️ **Cinq interrupteurs sont à OFF** : `chaine_actif`, propre à ce lot, plus les quatre de C4-L8
+(`exercices_actif`, `routeur_actif`, `competences_affichage_actif`, `fabrique_actif`).
+
+⚠️⚠️ **LES QUATRE RESTES SONT DERRIÈRE UNE SEULE ET MÊME PORTE : la première fiche de compétence
+*versée et bancée*.** Tant qu'aucune ne l'est, la clause granulaire tient chaque compétence hors de
+la chaîne — **zéro compétence ouverte**, donc aucune matière pour ces tests. **Ce n'est pas un oubli
+de séance** : c'est la dépendance qui n'est pas un lot (`PLAN_DE_CHANTIER.md` §3), et le prompt du
+lot ordonnait de le dire au relevé. **Rien de ce qui suit ne se tente avant cette porte.**
+
+### Ce qui reste à jouer — les quatre
+
+- [ ] **C4L5-1 · Un dépôt produit squelettes, mesures et retours conformes au contrat, sur une VRAIE
+  compétence.** C'est le « fait quand » du lot. Les formes du `07-` §1.2, le gabarit du §4 et
+  **RR1-RR4 relus sur pièce**, sur le texte d'un retour réel — pas sur un test.
+- [ ] **C4L5-2 · La latence à PLUSIEURS compétences en parallèle.** Mesurée en séance sur **un seul
+  appel — 3,1 s** contre un contrat de moins de trois minutes. **C'est à deux compétences et plus
+  que le contrat mord**, les chaînes étant lancées en parallèle.
+- [ ] **C4L5-3 · La reprise après expiration, sur la chaîne ENTIÈRE.** Prouvée en séance sur la
+  fonction d'écriture et sur l'index unique (C4L5-8). Reste à **tuer un job après P1** sur une
+  compétence ouverte, et à constater **le squelette unique** au bout.
+- [ ] **C4L5-4 · Le `delta_v1_vf` et les deux résultats de la paire.** Le code les attache, mais
+  **leur calcul est au branchement de chaque fiche** — il n'y a donc rien à jouer avant la première.
+
+### Ce qui est prouvé — pour ne pas le rejouer
+
+- [x] **C4L5-5 · La clause granulaire tient en production.** 0 compétence ouverte, et **chaque
+  écartée dit pourquoi**. _(21/08.)_
+- [x] **C4L5-6 · La clé d'idempotence.** Deux mises en file → **un seul job**. _(21/08.)_
+- [x] **C4L5-7 · Le bail, et son expiration PROVOQUÉE.** Bail pris, personne d'autre ne l'obtient
+  tant qu'il court ; puis bail d'une seconde, attente, **le job se reprend**, tentative comptée,
+  **toujours un seul job**. _(21/08.)_
+- [x] **C4L5-8 · Une reprise n'écrit jamais une seconde mesure.** `ecrireMesure` deux fois → la
+  seconde rend `dejaLa`, **une seule mesure au bout** ; et l'**index unique partiel
+  `(depot_id, competence)`** refuse la seconde en SQL, tandis que **deux mesures sans dépôt
+  passent**. _(21/08.)_
+- [x] **C4L5-9 · La chaîne en vrai, avec un appel réel.** Un dépôt de synthèse en classe, l'étage du
+  Monitoring, **3,1 s**. _(21/08 — mais voir C4L5-2.)_
+- [x] **C4L5-10 · La lucidité sur pièce.** La copie porte « ce passage me résiste » → `signale` ;
+  « on peut supposer que » → `distingue`. _(21/08.)_
+- [x] **C4L5-11 · `n/a` déclaré, et NULL jamais 0.** Amplitude **et** direction à `n/a` ;
+  dénominateur vide → `taux = null` avec `denominateur_fenetre = 0` ; et les colonnes de l'autre
+  sous-dimension restent à NULL. _(21/08.)_
+- [x] **C4L5-12 · La calibration ne compte que sur les `evaluee`.** Aucune mesure de calibration, la
+  Connaissance n'étant pas `evaluee`. _(21/08.)_
+- [x] **C4L5-13 · Le journal des coûts dit l'étage.** **1 ligne d'`api_couts` pour 1 appel**, `phase`
+  = `p1`, avec modèle, coût et les **quatre compteurs de jetons**. _(21/08.)_
+- [x] **C4L5-14 · Le Monitoring n'entre jamais dans `competences_mesures`.** 0 mesure, 0 squelette.
+  _(21/08.)_
+- [x] **C4L5-15 · La coupure automatique bascule le bon interrupteur.** Plafond atteint →
+  `chaine_actif` **à OFF**, **les trois du `07-` §1.5 intacts** ; les dépôts restent `en_attente`,
+  `echec_definitif` faux, **tentative rendue**, motif lisible. _(21/08.)_
+- [x] **C4L5-16 · La migration, éprouvée par l'échec dans la même transaction.** Répétition à blanc
+  jouée d'abord (corps seul, `rollback`), sept drapeaux à `t`, **retour à l'état d'avant vérifié par
+  requête**. Puis : un retour **en bloc** refusé · un point **sans identifiant** refusé · une
+  citation **sans source** refusée · **deux points au même identifiant** refusés · le cas légitime
+  accepté · `spontane` refusé et `spontanee` accepté. _(21/08.)_
+- [x] **C4L5-17 · La dérivation refuse, et elle sait dire DIVERGE.** Épreuve négative **en trois
+  sens**, sur une racine **ombre** en liens symboliques : un octet de `competences/monitoring.md` →
+  **DIVERGE** · un dérivé édité à la main → **DIVERGE** · le marqueur `<!-- DEBUT-CONFIG -->` retiré
+  → **SOURCE MOUVANTE**, il s'arrête · rien → **IDENTIQUE (3 fichiers)**. _(21/08.)_
+
+### Ce que les arbitrages du 21/08 ont changé APRÈS le jeu du lot
+
+_Quatre questions ouvertes du relevé ont été tranchées le soir même. **Deux n'ont rien changé au
+code** — elles ont écrit dans les sources ce que la chaîne faisait déjà : la `forme` de la mesure se
+lit à la ligne du plan d'évaluation, `evaluatif` étant le `sommatif` du `07-` (§1.2) ; et la chaîne
+**n'intersecte pas** `competences_actives_par_classe`, l'opt-out se lisant à l'assignation et jamais
+à la mesure (§1.3). **Les deux autres créent du travail, reporté à un lot de correctifs** et inscrit
+au `PLAN_DE_CHANTIER.md` §6 avec sa condition de fermeture — **avant la première fiche versée et
+bancée, et de toute façon avant C4-L7** :_
+
+- [ ] **C4L5-18 · La `cible_primaire` de l'exercice conçu par le professeur.** `exercices` gagne une
+  colonne NULLABLE, l'écran de conception de C4-L8 gagne le champ, et `cibleDuRetour` la lit avant
+  tout défaut (`07-` §1.1). **Aujourd'hui la chaîne prend la première compétence mesurée** — un
+  ordre de clés JSONB, que le `07-` §1.1 refuse explicitement de tenir pour une hiérarchie.
+- [ ] **C4L5-19 · Le retrait de `exercices_squelettes.prompt_version`.** **Rien n'est versionné par
+  phase** : l'`instrument_version` bouge dès qu'un prompt bouge, un prompt vivant dans sa fiche
+  (`01-` §11 v5.4, `07-` §1.2). La table est **vide** et la colonne nullable — personne ne l'écrit
+  ni ne la lit.
+- [ ] **C4L5-20 · `maxDuration`, le commentaire qui le justifie, et le DÉCLENCHEUR.** La route porte
+  `maxDuration = 60` et un commentaire qui le présente comme *« le plafond du plan Vercel Hobby »* —
+  **c'est faux** : avec fluid compute, l'offre gratuite est à **300 s en défaut ET en maximum**, donc
+  au-dessus du contrat de trois minutes. Passer à **300** et réécrire le commentaire. ⚠️ **Mais la
+  vraie contrainte est ailleurs** : les tâches planifiées de l'offre gratuite ne tournent **qu'une
+  fois par jour** (±59 min), alors que la route est conçue pour être drainée par l'une d'elles
+  (`CRON_SECRET`, patron de `synthese-hebdo`). **Le contrat de trois minutes exige donc que le dépôt
+  appelle lui-même le déclencheur (C4-L3), ou une offre payante** — `07-` §1.2. Et `vercel.json` ne
+  porte à ce jour **aucune entrée de tâche planifiée pour cette route** : le déclencheur n'est pas
+  branché. _(Le lot n'a, lui, aucune exigence de latence : l'analyse en lot est différée — « le soir
+  même ou un autre jour », `02-` §6.D étape 12.)_
+- [ ] **C4L5-21 · Le `ton` et la `longueur` du gabarit du retour.** Le `07-` §4 les déclare éditables ;
+  rien n'existe, et le gabarit sert ses défauts. Tranché le 21/08 : **le `ton` n'a pas de domicile
+  propre** — c'est le bloc de voix transversal (`utils/ia-commun.ts`, `REGISTRE`), *« injecté dans
+  TOUS les prompts »*, que **le gabarit de Calame est aujourd'hui le seul à ne pas recevoir** ; la
+  **`longueur`** prend un paramètre de plateforme, NULL valant la règle 7. Donc, au correctif :
+  injecter le bloc partagé dans la couche contrat, ajouter le paramètre, faire **émettre par
+  `derive-instruments.py` un gabarit découpé en sections nommées** (les défauts viennent de la
+  source, jamais du code — contrairement au tuteur), et l'écran. ⚠️ **Collision de nom à ne pas
+  manquer en câblant** : `REGISTRE` d'`ia-commun` est le registre de **LANGUE** ; `{{REGISTRE}}` du
+  gabarit est le registre de **RETOUR** (descriptif / interrogatif / démonstratif, `01-` §8.7).
+  Substituer l'un dans l'autre remplirait la règle 8 avec le bloc de langue.
+  ⭐ **Le même geste porte l'ALIGNEMENT DE LA PERSONA** (question n° 2, tranchée le 21/08) : « Calame »
+  n'existe aujourd'hui que dans `utils/chaine/` — **zéro occurrence** dans le prompt du tuteur, dans
+  `scriptorium-rag.ts`, dans `ia-commun.ts` —, alors que le `07-` §4 veut une seule voix sur les
+  **trois** surfaces (retours, Discussion, séances de lecture guidée). L'identité doit donc entrer
+  dans **le bloc partagé**, chaque atelier ne gardant que son **rôle** ; un override du professeur ne
+  peut pas la porter, ce serait le second fichier de personnalité que le §4 interdit.
+  ⚠️ **Coût à tracer ici, parce que rien ne le lèvera tout seul** : toucher au bloc partagé diverge du
+  **prompt calibré au banc L8 des 24-25/07** — et il irrigue aussi les retours Aletheia. Le bandeau
+  « recommandé : rejouer le banc » ne s'allume que sur une **édition du professeur**
+  (`rag_prompt_sections_maj`), **jamais sur un changement de défaut dans le code**. **Rejouer le banc
+  L8 fait donc partie de ce correctif**, décoché tant qu'il ne l'est pas.
+
+
+---
+
+## SÉCURITÉ · La vue ouverte à `anon` et le résumé aveugle (séance du 21/08 — **PRÉPARÉE, NON EXÉCUTÉE**)
+
+_Section ouverte le 21/08 depuis `PROMPT_Session_Correctifs_RLS_et_Resume.md`
+(deux constats de la revue bornée de C4-L8, §6.5 et §8). Relevé de séance :
+`RELEVE_Correctifs_RLS_et_Resume_2026-08-21.md`._
+
+✅✅ **LES DEUX CHANTIERS SONT JOUÉS ET PROUVÉS — 21/08.** Le **chantier 1** depuis **l'éditeur SQL Supabase piloté dans Chrome** *(le navigateur de Louis était le seul chemin qui ait le réseau)* ; le **chantier 2** par **`psql` depuis sa machine** *(le `--sql` fait 0,81 Mo : un `delete`+`insert` sur douze tables ne se colle pas dans un éditeur web)*. **Les dix-huit points ci-dessous sont cochés avec leur preuve.**
+
+⚠️⚠️ **LE DIAGNOSTIC RÉSEAU, PUISQU'IL RESSERVIRA. La séance n'avait aucun accès réseau à la base** — ports 5432 et
+6543 fermés par l'allowlist côté conteneur *(DNS résolu, TCP refusé)*, et **ni `psql` ni DNS** sur
+le shell qui voit les dossiers montés. Tout ce qui suit est donc **prouvé hors base** ou **reste à
+jouer**, et rien n'est coché sur la foi d'une prédiction. **Les trois lignes du `SUIVI_SQL.md` sont
+créées AVANT exécution et décochées.**
+
+⚠️ **Le dépôt est en `OUTIL 1.2`, la base en `1.1`** — et **`--verifie` ne le dira pas** : ni
+`doctrine.py` ni la version de l'outil n'entrent dans les quinze empreintes. Tant que la ligne du
+journal n'est pas cochée, cet écart existe et **aucun contrôle ne le voit**.
+
+### Ce qui est prouvé — avec sa preuve
+
+- [x] **SEC-1 · Le nouveau résumé VOIT une perte de six consignes.** Racine jetable *(copies
+  réelles, jamais un répertoire de liens)*, les **six lignes** de la table « Les six crans qui
+  isolent » d'un observable retirées : le résumé passe à **`330 consignes isolées (56 × 6)`** et
+  finit par **`⚠ 1 CROISEMENT ROMPU : … synthese §1 (0/6 — manque 1, 3, 4, 5, 7, 9)`**. _(21/08.)_
+- [x] **SEC-2 · L'ANCIEN résumé est aveugle à la MÊME perte.** Joué sur la **même** racine mutée,
+  il rend une ligne **rigoureusement identique** à celle de la racine saine : « 56 observables
+  instanciés » intact, rien d'autre ne bouge. ⭐ *C'est ce couple SEC-1/SEC-2 qui prouve que la
+  réparation sert à quelque chose — pas SEC-1 seul.* _(21/08.)_
+- [x] **SEC-3 · Le croisement voit ce qu'un compte ne verrait pas.** Trois mutations, trois
+  verdicts : **six consignes retirées** → 330, `(0/6 — manque 1, 3, 4, 5, 7, 9)` ; **une seule
+  retirée** → 335, `(5/6 — manque 9)` ; ⭐ **une consigne DÉPLACÉE d'un cran à l'autre** → **le
+  total reste 336** et le résumé dit quand même `(6/6 — manque 9, en trop 2)`. *Un compte global
+  n'aurait rien vu du troisième cas.* Témoin positif : racine saine → « les croisements
+  tiennent ». _(21/08.)_
+- [x] **SEC-4 · La racine de reconstruction est PROUVÉE PAR EMPREINTE.** La fixture régénérée
+  depuis la racine reconstruite au **chemin absolu réel** est **octet pour octet** celle du dépôt
+  *(`0a974e48…52f0a`)* — donc tout ce qui a été diffé contre elle l'a été contre le vrai état
+  d'avant, et l'angle mort du chemin absolu est neutralisé pour cette séance. _(21/08.)_
+- [x] **SEC-5 · La passe de dérivation ne change QUE la ligne de journal.** `--sql` avant et
+  après : **3999 lignes de part et d'autre**, **trois lignes diffèrent** — l'`OUTIL` de l'en-tête,
+  le résumé de l'en-tête, le `insert into doctrine_derivation`. **Aucune ligne de données.** Côté
+  fixture : **les douze tables `IDENTIQUE`**, `_derivation.empreintes` et `_derivation.racine`
+  `IDENTIQUE`, **seuls `outil` et `resume` changent**. _(21/08.)_
+- [x] **SEC-6 · Le résumé nomme les DOUZE comptes que la dérivation verse.** 13 · 9 · 6 · 13 · 9 ·
+  3 · 46 · 46 · 54 · 117 · 544 → 3264 · 56 · 336 · 15 · 24 (13 + 11), vérifiés un à un contre la
+  sortie `--resume` table par table. ⭐ Dont **`exercices_types_crans` (117)**, la seule table
+  qu'aucun bloc de `--verifie` ne relit : **le résumé en est désormais l'unique témoin**. _(21/08.)_
+- [x] **SEC-7 · `npm test` au vert avec la fixture régénérée.** **414 tests, 0 échoué** — et ⚠️
+  **le compte des ignorés dépend de la machine** : **414 passés, 0 ignoré** sur le Mac de Louis
+  *(qui fait foi)*, **413 passés + 1 ignoré** sur le Linux du bac à sable Cowork. Un test est
+  donc conditionné par l'environnement — à savoir si l'on relit ces chiffres un jour. Aucun test n'assertait sur `_derivation` :
+  vérifié par balayage, `doctrine.fixture.json` n'est lu que par `divergences.test.ts` et
+  `verifie-import.test.ts`. _(21/08, sur la machine de Louis.)_
+- [x] **SEC-8 · Le résumé se reproduit sur les VRAIS fichiers.** `--resume` joué sur le dépôt monté
+  rend **la même ligne, caractère pour caractère**, que la racine reconstruite. _(21/08.)_
+- [x] **SEC-9 · Aucun chemin de code ne lit `assiduite_hebdo_classe`.** Balayage `.ts` / `.tsx` /
+  `.mjs` hors `node_modules` : **zéro occurrence**. C'est ce qui fait du constat un contournement
+  **structurel** et non une fuite. _(21/08.)_
+- [x] **SEC-10 · Le sort de `handle_new_user()` est tranché et écrit.** Elle **reçoit son
+  `search_path`, elle n'est PAS retirée** — code mort mais déjà révoquée *(surface nulle)*, et un
+  `drop function` sur un objet du flux `auth` relève de la règle 5 et d'un lot de nettoyage. Raisons
+  au long en tête du `.sql`. _(21/08.)_
+
+### Les deux gestes de la rallonge du 21/08 — joués après coup, sur demande de Louis
+
+- [x] **SEC-19 · Les cinq autres `security definer` alignées sur `public, pg_temp`.**
+  Répétition à blanc *(corps seul, `rollback`)* : **7 fonctions, `divergent_encore = 0`** dans
+  l'essai ; **rollback vérifié par requête** — 5 divergeaient de nouveau. Puis pour de bon : les
+  **SEPT** alignées, ⭐ **`divergent_encore = 0`** *(le contrôle qui compte, pas « sept
+  lignes »)*, **aucun privilège déplacé**. ⚠️ *Fait pour la DOCTRINE, pas pour le risque : les
+  cinq étaient fermées à `anon` et `authenticated`, donc l'attaque par `pg_temp` supposait déjà
+  d'être `service_role`. Ce qu'on ferme, c'est la divergence — deux formes d'une même règle.*
+  _(21/08.)_
+- [x] **SEC-20 · `handle_new_user()` est retirée.** Orpheline **constatée par requête** :
+  **0 trigger · 0 fonction qui la nomme · 0 policy · 0 dépendance de catalogue**, et `f | f`
+  pour `anon`/`authenticated`. `drop function` **SANS `cascade`** — délibérément : un `cascade`
+  aurait emporté en silence ce que le constat aurait manqué. Après : `to_regprocedure` rend
+  **NULL**, **six** `security definer` restantes toutes à `public, pg_temp`, **une seule**
+  exécutable par `anon`, **`profiles` intacte (18 profils, 4 policies)**. _(21/08.)_
+- [ ] ⚠️ **SEC-21 · LE SMOKE TEST DU RETRAIT — créer un élève depuis l'écran professeur.**
+  C'est le **seul** chemin que la suppression pourrait toucher, et **ce n'est pas une requête**
+  qui le prouve : il faut créer un compte et constater sa ligne dans `profiles`. ⭐ **C'est le
+  chemin de mardi 25** *(création des comptes élèves)*. Retour arrière prêt si besoin :
+  `securite_handle_new_user_retrait_rollback.sql` — ⚠️ *qui recrée la fonction **et la referme
+  dans la même transaction**, sans quoi elle renaîtrait grantée à `anon`.*
+
+### Ce qui reste à jouer — tout ce qui touche la base
+
+- [x] **SEC-11 · Le constat AVANT, par requête. _(21/08.)_** `server_version_num >= 150000` *(sans quoi
+  `security_invoker` n'existe pas et le fichier est à revoir)* · l'option et les grants de la vue ·
+  le `proconfig` de **toutes** les fonctions `security definer` · le compte des policies qui
+  appellent `est_prof` *(attendu : 19)*. **On ne corrige rien qu'on n'ait vu.**
+- [x] **SEC-12 · ⭐ LE BALAYAGE DE TOUTES LES VUES DU SCHÉMA `public` — RÉPONSE : AUCUNE AUTRE.**
+  Serveur **17.6** ; **une seule ligne**, `assiduite_hebdo_classe`, genre « vue », **aucune vue
+  matérialisée** ; `security_invoker` **non posé** ; `anon` et `authenticated` à `SELECT = t`
+  *(et les six privilèges à `t` pour les deux)* ; propriétaire `postgres` ; **19 policies**
+  appellent `est_prof` ; `assiduite_hebdo` **0 ligne**, la vue **0 ligne** ; **19 inscriptions
+  actives** et **4 `holidays`** pour l'épreuve. ⭐⭐ **Trouvaille non prédite** : sur les sept
+  fonctions `security definer`, **les cinq autres portaient déjà `search_path=public`** — sans
+  `pg_temp`. **Non traitées, hors périmètre** ; risque nul en pratique *(fermées à `anon` et
+  `authenticated`)*, mais **la base porte deux formes** → au lot de correctifs. _(21/08.)_ Dire **combien** d'autres
+  vues sont dans le même cas. *Attendu d'après le dépôt : celle-ci et elle seule — un seul
+  `create view` dans tout le dépôt, **zéro vue** au dump du 23/07. Mais le dépôt n'est pas la base,
+  et la leçon du 21/08 est justement que le troisième cas vivait ailleurs.* ⚠️ La requête inclut les
+  vues **matérialisées**, qui ne connaissent pas `security_invoker` : s'il en sort une, c'est un cas
+  **à part**, à traiter par les privilèges — à dire, pas à « corriger » avec la même option.
+- [x] **SEC-13 · La répétition à blanc — FAITE, et confondue avec l'épreuve.** ⭐ Le DDL étant
+  transactionnel, l'épreuve à trois temps **est** la répétition à blanc : `alter view` et
+  `revoke` y ont été joués puis annulés. **Rollback vérifié PAR REQUÊTE** *(règle 6, jamais sur
+  la foi du mot affiché)* : `assiduite_hebdo` **0 ligne**, option de la vue **« non posée »**,
+  `anon_lit` **true**, **0** table temporaire restante. _(21/08.)_ Règle 6 : le fichier porte son propre
+  `begin;`/`commit;`, l'inclure entier dans une transaction d'essai la validerait pour de bon. Puis
+  **revérifier par requête** que l'option et les `proconfig` sont revenus — jamais sur la foi du
+  « ROLLBACK » affiché.
+- [x] **SEC-14 · ⭐⭐ L'ÉPREUVE PAR L'ÉCHEC — LES QUATRE PRÉDICTIONS EXACTES.** Décor posé : la
+  vue rend **1** sous le propriétaire. **Temps 1** *(rien de corrigé)* → **1 sous `anon`** —
+  ⭐ **le contournement vu à l'œil : sous la clé anonyme, la vue rendait une ligne d'assiduité
+  d'un élève réel**. **Temps 2** *(après `security_invoker = true`)* → **0**. **Temps 3**
+  *(après le `revoke`)* → **`REFUSE — permission denied (42501)`**. **Témoin positif `holidays`
+  = 4 aux quatre lignes** : les zéros et le refus sont réels. _(21/08.)_
+  ⚠️ **Elle ne peut pas être « 0 ligne »** : la vue rend 0 ligne aujourd'hui **sous n'importe quel
+  rôle** *(`assiduite_hebdo` est vide)*, donc un zéro constaté tel quel serait vrai avant comme
+  après. Le bloc du `.sql` fabrique **une ligne**, puis pose les deux gestes **l'un après l'autre**
+  — le DDL est transactionnel, donc **ce bloc EST aussi la répétition à blanc** — en relisant la
+  vue sous `set local role anon` **à chaque temps**, sur la même ligne et dans la même session :
+  **1** *(état actuel)* → **1 ligne**, le contournement ; **2** *(après `security_invoker`)* →
+  **0**, la RLS joue ; **3** *(après le `revoke`)* → **REFUSÉ, 42501**. Témoin positif `holidays`
+  *(policy `for select using (true)`)* aux trois temps. ⚠️ Si le témoin vaut 0 sur une ligne, cette
+  ligne ne prouve rien : changer de témoin. ⚠️ Si le temps 1 rend déjà 0 avec un témoin non nul,
+  **le constat de la revue est à réexaminer avant de corriger quoi que ce soit.**
+- [x] **SEC-15 · Le correctif exécuté, et sa vérification. _(21/08.)_** La vue à
+  **`security_invoker = true`**, **`anon` = false**, **`authenticated` = true** *(gardé : C4-L2
+  construit le taux d'inactivité par classe)*, `service_role` = true. `est_prof` à
+  **`search_path=public, pg_temp`** et **toujours `t | t`** — rien n'a été révoqué sur les
+  fonctions. `handle_new_user` à **`search_path=public, pg_temp`** et **toujours `f | f`** — le
+  revoke du 21/08 tient. **Les cinq autres fonctions intactes.** `security_invoker = true` sur la vue ;
+  `search_path` sur les deux fonctions ; et **les privilèges INCHANGÉS** — `est_prof` toujours à
+  `t | t` *(19 policies l'appellent)*, `handle_new_user` toujours à `f | f` *(le revoke du 21/08
+  tient)*.
+- [x] **SEC-16 · La cinquième dérivation — JOUÉE le 21/08 à 19:58:43 UTC, en `1.2`.**
+  **Répétition à blanc d'abord** *(`sed 's/^commit;$/rollback;/'` — le fichier ne porte qu'un
+  seul `commit;`)*, puis **vérification PAR REQUÊTE** que `doctrine_derivation` portait
+  **toujours 4 passes** : le constat en pied de fichier, lui, rend les mêmes comptes des deux
+  côtés et **ne pouvait rien voir**. ⭐⭐ **La preuve de la passe n'est pas dans les comptes**
+  *(identiques à blanc et pour de bon : `routes=3264 consignes_isolees=336 types_crans=117 …`)*
+  **mais dans la ligne de journal** : `outil` `1.1` → **`1.2`**, et le `resume` qui devient
+  « … 9 crans (6 isolent, 3 produisent) … ». ✅ `--fixture` régénérée sur la machine de Louis :
+  empreinte **`3fa7c3ee…a648e`**, ⭐ **exactement celle de la fixture déposée**. ✅ `--verifie` :
+  **`SOURCES : IDENTIQUE`**, **onze tables `IDENTIQUE`**, **`FIXTURE : IDENTIQUE`**. ✅
+  **`npm test` : 414 / 414, 0 échoué.** ⚠️ **Le douzième `IDENTIQUE` n'existe pas** —
+  `exercices_types_crans` reste hors de `--verifie` : ces onze ne sont **pas** une couverture
+  complète. _(21/08.)_ `--verifie` *(attendu : **tout `IDENTIQUE`** — c'est le
+  piège, pas un feu vert)*, répétition à blanc, `--sql` en sandbox, `--fixture` régénérée sur la
+  machine de Louis *(elle doit rendre le fichier déjà posé à l'identique)*, `npm test`. **Puis
+  relire la colonne `resume` de la nouvelle ligne de `doctrine_derivation` — c'est la SEULE trace
+  que la passe existe.**
+- [x] **SEC-17 · Les deux points d'arbitrage, TRANCHÉS par Louis le 21/08.** **(A)** `search_path
+  = public, pg_temp` — *« prends l'alternative la plus sécurisée »* ; **(B)** **oui au second tour
+  de clef** : `revoke all on assiduite_hebdo_classe from anon`. ⚠️ `authenticated` **garde** son
+  droit *(C4-L2 construit le taux d'inactivité par classe, et la RLS suffit à ce que seul un
+  professeur y voie quelque chose)*. Le `.sql` et son rollback sont réécrits en conséquence.
+  _(21/08.)_
+- [x] **SEC-18 · La contre-épreuve d'après correctif — PASSÉE.** Sous `anon`, la lecture de la
+  vue rend **`REFUSE — permission denied (42501)`**, témoin `holidays` = **4**. *Le refus a été
+  capté par un gestionnaire d'exception plutôt que par deux transactions séparées — l'éditeur
+  SQL n'ayant pas de session persistante entre deux exécutions, c'est la forme qui convient là.*
+  _(21/08.)_ La lecture de la vue
+  sous `anon` doit **échouer en 42501** — et une transaction qui a avorté ignore tout ce qui suit,
+  donc le **témoin positif** doit vivre dans **sa propre** transaction. Les deux blocs sont au pied
+  du `.sql`.

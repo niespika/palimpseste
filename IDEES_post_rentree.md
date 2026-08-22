@@ -18,6 +18,8 @@
 
 ## Idées nouvelles (au fil de l'eau)
 
+- **Fabrique du professeur (C4-L8) — la génération EN LIGNE des matériaux, des appuis et des références.** Tranché avant le lot : la conception en ligne n'appelle aucun modèle, l'instance s'assemble depuis les choix du professeur et ce qui s'engendre s'engendre au générateur hors plateforme, puis arrive par l'import *(`07-Implementation.md` §2 et §5)*. Louis le veut **à terme en ligne**. Ce que ça suppose, à poser avant de coder : un domicile qui fasse foi pour les prompts du générateur *(matériau, appui, guide, sujets — aujourd'hui dans `generateur/prompts/`, « pas de la doctrine »)*, sur le patron du `05-` pour G1-G3 *(marqueurs + dérivation)* ; une `phase` pour ces appels au journal `api_couts` *(le `07-` §1.2 n'en prévoit que trois, hors exercices = NULL)* ; et la même file de validation à la sortie que pour l'import. *Ligne posée le 21/08, à la fabrication du prompt C4-L8.*
+
 - **Monitoring — localiser l'aveu d'incompréhension sur l'observable qui a échoué.** Le taux de « lucidité sur l'incompris » compte un exercice comme réussi dès qu'il porte **au moins un** aveu et **au moins un** observable en échec. Un élève qui avoue ne pas être sûr d'une date, puis affirme un contresens central sur le cogito, compte donc comme lucide — c'est le constat **`RF12`** de la revue adversariale de fond, vérifié exact. **Décision du 17/08 : on ne fait rien tout de suite** ; la limite est écrite et pré-enregistrée au §3 de `palimpseste-conception/competences/monitoring.md`. **Mais la voie n'est pas fermée, et Mètis avait tort de l'écrire** : le dispositif a déjà des cas où une phase de jugement voit **une partie** de la prose — les **citations verbatim** que le relevé P1 porte au squelette, sur les six compétences ; la fiche Monitoring §4 disait « aucune phase de jugement ne voit la prose », c'était trop fort, et la phrase a été corrigée le même jour. **Ce que la localisation demanderait** : que le relevé de lucidité porte lui aussi sa citation et son ancrage, une règle d'appariement citation ↔ observable, un schéma de collecte et des golds. ⚠️ **Vigilance à ne jamais perdre si l'idée revient** : deux règles protègent la mesure et l'appariement doit se faire **après** l'extraction, jamais dedans — *aucun exercice n'est construit pour susciter ces marques* (fiche §4), et le prompt d'extraction dit *« tu ne dis jamais si son incertitude tombe au bon endroit »*. Solliciter le geste le rendrait vrai pour tout le monde. *(idée Louis, 17/08 : « on a déjà des cas où le jugement voit la prose. Là tout de suite on ne fera rien, mais je me réserve le droit de développer cette possibilité. »)*
 
 - **Aletheia (livres) — variante du cycle à cinq temps.** Le cycle standard des exercices (préparer → v1 → se juger → retour → vf, acté le 25/07 côté conception, cf. `palimpseste-conception/NOTE-CYCLE-PEDAGOGIQUE.md`) pourrait avoir une déclinaison propre aux séances de lecture guidée des livres : préparation = stratégie de lecture du passage, phase métacognitive = auto-jugement de sa lecture contre le squelette. À instruire post-rentrée. *(idée Louis, 25/07)*
@@ -81,3 +83,104 @@
 ## Bugs cosmétiques 🚩 acceptés pendant la passe UI (C10)
 
 - **Le résumé d'une tuile sélectionnée devient illisible.** `components/Tuile.tsx` peint la carte active en aplat de pigment (`plein`) et éclaircit le titre et le sous-titre — mais le `resume`, fourni par l'appelant, garde ses classes de fond clair (`text-muet`, badges `COULEUR_LETTRE`) : sur l'aplat sombre, la ligne devient un texte sombre sur fond sombre. Visible sur **Suivi** et sur **Évaluations · Synthèse** (C8·L3), déjà vrai avant le lot sur « Vue d'ensemble » et « Thèmes ». Piste : que `Tuile` impose une variante claire à son `resume` quand `selectionnee`, plutôt que de laisser chaque appelant deviner. *(constaté pendant C8·L3)*
+
+## C4-L8 — deux points hors périmètre, relevés le 20/08/2026
+
+- **`generateur/verifie-import.py` : le blocage n° 2 n'appelle pas le n° 1.**
+  Une décomposition bloquée force `validee` à `false` « quoi que le fichier
+  déclare », mais le blocage n° 1 lit le `validee` DU FICHIER : une instance
+  bâtie sur ce texte-là passe sans blocage au contrôle hors ligne. La plateforme
+  referme la porte à l'écriture (`utils/fabrique/import-ecriture.ts`) ; le
+  contrôle hors ligne, lui, garde l'écart. À recaler un jour, pour que les deux
+  verdicts se ressemblent. *(Détail au `RELEVE_C4_L8_2026-08-20.md` §4.)*
+
+- **`c4_l1_schema.sql` — le commentaire de `exercices_references.empreinte`
+  disait « du texte source NORMALISÉ ».** Rectifié par `c4_l8_fabrique.sql` :
+  l'empreinte est celle du contenu exact, octet pour octet. Le fichier de C4-L1
+  garde son ancienne rédaction ; un dépôt neuf la rejouerait, et le correctif de
+  C4-L8 la rattraperait aussitôt après. À corriger à la source si C4-L1 est
+  réécrit.
+
+## C4-L8 — ce que la revue adversariale a renvoyé au générateur (21/08/2026)
+
+- **`generateur/verifie-import.py` : `"cran": 4.0` est refusé, et il ne devrait
+  pas l'être.** Le `08-` §5 dit « un entier de 1 à 9 », et `4.0` *est* l'entier 4 ;
+  le refus vient du typage de Python (`isinstance(4.0, int)` est faux), pas de la
+  règle. La plateforme l'accepte, et c'est elle qui a raison — un JSON ne
+  distingue pas les deux après lecture. À assouplir côté script :
+  `isinstance(x, (int, float)) and float(x).is_integer()`. Idem pour la semaine
+  du plan de lecture et les bornes d'intervalle. *(Arbitré par Louis le 21/08 :
+  aligner dans le sens du port.)*
+
+- **`generateur/verifie-import.py` : `"cran": true` passe.** Le miroir du
+  précédent — en Python `bool` est un `int`, et `True == 1` : l'exercice est jugé
+  au cran 1 et passe sans un refus. La plateforme le refuse. Même correctif.
+
+- **Les deux scripts s'ARRÊTENT sur une entrée mal formée** (`AttributeError`,
+  `TypeError`) là où le format demande un refus : un `materiau_cible` écrit en
+  chaîne, un `null` glissé dans `moments[]`, un cas qui n'est pas un objet. Le
+  port les REFUSE proprement. À reprendre côté script, pour que l'outil hors
+  ligne ne tombe pas sur un fichier qu'un professeur pourrait déposer.
+
+## C4-L8-bis — une découverte hors périmètre (21/08/2026) — ✅ REFERMÉE le jour même
+
+- ~~**Les dérivés de la chaîne (`utils/chaine/derive/`) portent `07-` 2.20 quand la
+  source est à 2.21.**~~ `derive-instruments.py --verifie` disait **DIVERGE** sur
+  `MANIFESTE.ts` et `calame-retour.ts` — seul rouge de `npm test` (427/428).
+  ⭐ **TRANCHÉ par Louis le 21/08 : rejouer `--ecris`**, malgré le piège 4 du prompt
+  (« ne touche pas la chaîne »). Fait. `--verifie` dit **IDENTIQUE**, `npm test`
+  passe à **428/428**. ⚠️ **Ce qui a changé est de la métadonnée seule** —
+  `empreinte_source`, `statut_source`, `version_source` (`2.20` / « VALIDÉ ET GELÉ »
+  → `2.23` / « RELU ET VALIDÉ ») ; `monitoring.ts` inchangé, et **le texte du gabarit
+  Calame est identique octet pour octet**. Aucun comportement n'a bougé.
+  *(La dette de la racine absolue dans la fixture, elle, reste ouverte.)*
+
+- ⭐ **Suite du même : `utils/chaine/instruments.test.ts` garde une SYNCHRONISATION,
+  pas un invariant.** Il compare des dérivés à une source **vivante** : le `07-` a
+  bougé **deux fois pendant la seule séance C4-L8-bis** (2.21 → 2.22 → 2.23), et
+  `--ecris` a dû être rejoué deux fois pour ramener `npm test` au vert. **Tant que
+  le `07-` est en cours d'écriture, tout lot Code héritera de ce rouge sans l'avoir
+  causé.** À noter : en deux versions, **le texte du gabarit Calame n'a pas bougé
+  d'un octet** — seule l'empreinte du fichier entier change. Pistes, non tranchées :
+  comparer l'empreinte du **gabarit** plutôt que celle du fichier, ou sortir ce
+  contrôle de `npm test`.
+
+## C4-L8-bis — `composer` sur un `texte_auteur` n'a aucune porte (21/08/2026)
+
+*Trouvé en répondant à une question de Louis sur `introduction` × `explication_texte_tc`.
+**Non tranché, et volontairement pas marqué `[faux]`** : au moins quatre issues
+sont possibles et ce sont des décisions de doctrine, pas d'implémentation.*
+
+- ⭐ **La règle 4 garde `composer` ouvert pour l'Expression et la Connaissance quand
+  un `texte_auteur` est en source — et aucun écran ne permet de concevoir cet
+  exercice.** Le `02-` §2.3.3 règle 4 écrit : *« Il le reste pour l'Expression et la
+  Connaissance — ces deux-là seraient sinon **immesurables** dès qu'un texte
+  d'auteur est présent. »* Or le `02-` §6 B.2 ferme `texte_auteur` dans **Codex** en
+  invoquant la règle 4 *« qui le rend incompatible avec `composer` pour
+  l'Argumentation, la Structure et le Questionnement »* — **la justification laisse
+  dehors les deux compétences que la règle 4 protège**. Et **Aletheia** ne sert que
+  les modes réceptifs. Résultat : `composer` + `texte_auteur` n'a **aucune porte**,
+  ce qui produit exactement l'« immesurable » que la règle 4 voulait éviter.
+
+- ⛔ **Conséquence totale sur `introduction` × `explication_texte_tc` : l'instance est
+  IMPORTABLE et INCONCEVABLE en ligne.** `explication_texte_tc` **exige** un
+  `texte_auteur` en `materiau_source` (`02-` §1.3) ; `introduction` est **le seul
+  objet terminal sans aucun mode réceptif** (`exercices_types_modes_source` :
+  `composer` seul ; 132 routes, toutes en `composer`) — donc Aletheia ne la liste
+  pas, et Codex n'ouvre pas `texte_auteur`. **Vérifié le 21/08** : la garde serveur
+  l'accepte (`empechementsDeConception` → liste vide sur `composer` +
+  `texte_auteur`), le contrôle d'import l'accepte (**0 refus** sur l'entrée), et le
+  `04-` §14.2 lui **écrit même un guide de cran 6** — *« situer le texte · la thèse
+  qu'il défend · l'annonce des mouvements »*. Seul l'écran manque.
+  ⚠️ `conclusion` et `partie` s'en tirent **par la bande seulement** : elles
+  déclarent des modes réceptifs, donc Aletheia les liste — mais ce qu'on y conçoit
+  est **un autre exercice** (« dis ce que la conclusion du texte dit »). **La version
+  `composer` — écrire l'introduction d'une explication — n'est concevable pour aucun
+  des trois.**
+
+- **Les issues possibles, à trancher par Louis** : ouvrir `texte_auteur` dans Codex
+  pour l'Expression et la Connaissance · donner des modes réceptifs à
+  `introduction` · retirer `explication_texte_tc` de ses genres · ou **assumer** que
+  ces instances passent uniquement par l'import. *Ce n'est pas un défaut de
+  C4-L8-bis : la pagination n'y change rien, et `introduction` offre bien sa banque
+  (22 consignes au cran 3, porte Codex).*
