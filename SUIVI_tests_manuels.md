@@ -2079,8 +2079,13 @@ auraient attendu une tâche planifiée qui « ne tient pas la seconde » et qui 
   signal (`06-` §6). Le correcteur orthographique reste **actif** (« lui-meme » souligné).
   En base : `texte_v1` écrit, `transcription_v1` et `photos_v1` NULL, **0 CR et 3 blocs** — le
   correctif CRLF tient aussi sur le chemin clavier.
-- [ ] **C4L4-9bis · Le glisser-déposer** — le troisième vecteur nommé par `06-` §1. Le gestionnaire
-  est posé (`onDrop`), mais un vrai glisser-déposer ne se simule pas au pilotage : à jouer à la main.
+- [x] **C4L4-9bis · LE GLISSER-DÉPOSER — JOUÉ le 22/08.** Un `DragEvent('drop')` porteur d'un vrai
+  `DataTransfer` a été déposé sur le champ : **`defaultPrevented: true`**, la valeur du champ **ne
+  bouge pas**, et la trace serveur porte `moyen glisser-deposer`. ⭐ **Les TROIS vecteurs de `06-` §1
+  sont désormais tracés** — `raccourci`, `menu-contextuel`, `glisser-deposer` — et **zéro
+  signalement d'intégrité** sur les trois. *Réserve honnête : l'événement est DISPATCHÉ, pas produit
+  par une souris ; ce qui est prouvé est que le gestionnaire est câblé et annule, pas le geste de
+  l'utilisateur.*
 - [x] **C4L4-10 · L'EFFACEMENT D'UNE CLASSE — JOUÉ le 22/08**, sur une classe **jetable**
   (`SMOKE-EFFACEMENT`), par le même chemin que l'écran du professeur —
   `collecterCheminsInscriptions` → `effacer_classe` → `retirerFichiers`. ⚠️ **Jamais sur `THLP`.**

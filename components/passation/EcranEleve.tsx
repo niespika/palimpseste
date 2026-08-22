@@ -487,6 +487,11 @@ function RedactionClavier({ vue }: { vue: VueEleve }) {
         <textarea
           name="texte" value={texte} onChange={(e) => setTexte(e.target.value)}
           readOnly={vue.valide} rows={22}
+          // ⚠️ EXPLICITE, et pas laissé au défaut du navigateur : « le correcteur
+          //    orthographique du navigateur RESTE ACTIF — il n'est pas désactivé »
+          //    (`06-` §1) est une règle de source, et une règle nommée ne se confie
+          //    pas à un défaut d'implémentation qui peut changer.
+          spellCheck
           onPaste={refuserLeCollage('raccourci')}
           onDrop={refuserLeCollage('glisser-deposer')}
           onContextMenu={refuserLeCollage('menu-contextuel')}
