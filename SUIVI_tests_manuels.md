@@ -2044,23 +2044,52 @@ auraient attendu une tâche planifiée qui « ne tient pas la seconde » et qui 
   et Synthèse). Le drapeau est nécessaire, pas suffisant.
 - [ ] **C4L4-6 · La confiance de remise réellement collectée.** L'étape **est servie** et **sert un
   objet vide** — construite quand même, c'est la collecte qu'une année manquée ne rattrape pas.
-- [ ] **C4L4-7 · La crédence, sur une instance qui en porte.** ⚠️ **Constat revérifié par requête le
+- [x] **C4L4-7 · LA CRÉDENCE — JOUÉE le 22/08, aux DEUX formes.** Décor monté : deux instances de
+  classe, l'une au cran **`diagnostic_guide`**, l'autre au cran **`diagnostic_nomme`**.
+  ⭐ **Cran GUIDÉ** : l'écran sert **QUATRE candidats** — trois distracteurs tirés de la banque plus
+  la `reponse_attendue` — et 100 jetons à répartir (`02-` §5, à la lettre). La garde du total tient
+  et le dit : « **Cas 1 : les jetons doivent totaliser 100 (ils font 40)** ». ⭐ **Cran NOMMÉ** :
+  **un pourcentage unique, AUCUN candidat**. En base, les deux sont stockées **en tableau**, une
+  entrée par cas, chacune portant sa forme. ⚠️ **C'est ce test qui a trouvé le défaut C4L4-G.**
+- [ ] **C4L4-7bis · La crédence sur une PAIRE de diagnostic** — « il y en a une par diagnostic, donc
+  DEUX sur une paire » (§1.2). Le décor du jour n'avait qu'un cas ; la forme en base est un tableau,
+  donc elle le porte, mais la paire n'est pas éprouvée. ⚠️ **Constat revérifié par requête le
   22/08** : les deux types diagnostiques seedés (`diagnostic_essai`,
   `diagnostic_explication_texte`) sont **SANS CRAN** — `crans_admis` vaut `{}`, et
   `exercices_types_crans` ne porte **aucune ligne** pour eux. Il n'y a donc **aucun écran de
   crédence à servir pour eux** aujourd'hui.
-- [ ] **C4L4-8 · LES SUJETS DES DEUX PASSATIONS DIAGNOSTIQUES.** ⚠️ **Non faits.** En base au 22/08 :
-  **un** sujet (« Peut-on douter de tout ? », `generique`, `valide`) et **deux** textes, mais
-  **AUCUNE instance `lieu = classe`** — les cinq instances sont toutes `maison`. **C'est un geste de
-  FABRIQUE (C4-L8, joué), pas de ce lot**, et il reste entier. C'est la quatrième ligne du « fait
-  quand » de C4-L4.
-- [ ] **C4L4-9 · L'élève exempté, de bout en bout.** `profiles.mode_saisie_force = 'ecran'` n'est
-  posé sur **aucun profil** en base. Le chemin clavier est construit et testé au type, jamais joué.
-- [ ] **C4L4-10 · L'effacement d'une classe qui porte des dépôts.** ⚠️ **Les FICHIERS partent**
-  (`utils/effacement.ts` les collecte, paginé) ; **les LIGNES de dépôt, non** —
-  `effacer_classe()` ne touche pas `exercices_depots`, les tables de C4-L1 étant nées après elle.
-  **Dette écrite au relevé, §5.1** : c'est un `security definer` d'un flux existant, protocole
-  renforcé, et cela ne se fait pas en passant.
+- [ ] **C4L4-8 · LES SUJETS DES DEUX PASSATIONS DIAGNOSTIQUES — ⚠️⚠️ BLOQUÉ, et le blocage est
+  établi par requête le 22/08.** Les deux types seedés par C4-L1 — `diagnostic_essai` et
+  `diagnostic_explication_texte` — sont **entièrement vides** : `crans_admis = {}`, **0 mode,
+  0 cran, aucun grain**, `nature = 'complet'`. Or **l'écran de conception de C4-L8 dérive ses choix
+  de LA DOCTRINE**, qui ne connaît **que les treize objets** (`exercices_routes` :
+  `argument, conclusion, exemple, introduction, mot, objection, paragraphe, partie, phrase, plan,
+  problematisation, reference, transition`) — **les deux diagnostiques n'y sont pas**.
+  ⚠️ **Une passation diagnostique n'est donc pas concevable par l'écran** : ce n'est pas un objet à
+  un cran, c'est une copie entière. **Ce n'est ni un défaut de C4-L4, ni un défaut de C4-L8** — c'est
+  une question de source : par quelle voie ces deux passations naissent-elles ? *(Question portée au
+  relevé de C4-L4.)*
+- [x] **C4L4-9 · L'ÉLÈVE EXEMPTÉ — JOUÉ le 22/08, de bout en bout, dans Chrome.**
+  `mode_saisie_force = 'ecran'` posé sur un compte de test → l'écran bascule en **« RÉDIGE TA
+  COPIE »**, et ⭐ **le rappel de lisibilité DISPARAÎT** — « ne livre pas l'exigence sans
+  l'exemption » (piège 34) est tenu à l'écran. ⭐⭐ **LE REFUS DU COLLAGE EST PROUVÉ POUR DE VRAI** :
+  texte chargé dans le presse-papiers du système, `Cmd+V` → **rien ne s'insère** ; clic droit → **le
+  menu ne s'ouvre pas**. Les deux vecteurs laissent leur trace serveur (`moyen raccourci`,
+  `moyen menu-contextuel`) et ⭐ **ZÉRO signalement d'intégrité** — en classe c'est une trace, pas un
+  signal (`06-` §6). Le correcteur orthographique reste **actif** (« lui-meme » souligné).
+  En base : `texte_v1` écrit, `transcription_v1` et `photos_v1` NULL, **0 CR et 3 blocs** — le
+  correctif CRLF tient aussi sur le chemin clavier.
+- [ ] **C4L4-9bis · Le glisser-déposer** — le troisième vecteur nommé par `06-` §1. Le gestionnaire
+  est posé (`onDrop`), mais un vrai glisser-déposer ne se simule pas au pilotage : à jouer à la main.
+- [x] **C4L4-10 · L'EFFACEMENT D'UNE CLASSE — JOUÉ le 22/08**, sur une classe **jetable**
+  (`SMOKE-EFFACEMENT`), par le même chemin que l'écran du professeur —
+  `collecterCheminsInscriptions` → `effacer_classe` → `retirerFichiers`. ⚠️ **Jamais sur `THLP`.**
+  **Ce qu'il établit, et c'est plus précis que la dette telle qu'elle était écrite :**
+  ✅ **les FICHIERS partent** — la collecte trouve la photo de passation, 0 fichier restant ;
+  ✅ **l'INSTANCE est DÉTACHÉE** (`classe_id → NULL`) — c'est exactement le régime que `06-` §7
+  prescrit au *contenu créé par le professeur* ; ✅ **le JOURNAL DES COÛTS survit**, et c'est voulu ;
+  ⚠️ **le DÉPÔT, le RETOUR et le JOB survivent** — or c'est du **travail d'élève**, qui doit être
+  *supprimé*. **C'est la dette du relevé §5.1, désormais chiffrée.**
 
 ### Ce qui est prouvé — pour ne pas le rejouer
 
@@ -2117,3 +2146,100 @@ auraient attendu une tâche planifiée qui « ne tient pas la seconde » et qui 
   ouverts sans en décider aucun — et la recette les **affiche en tête** à chaque passage. _(22/08.)_
 - [x] **C4L4-27 · Un seul sous-traitant.** L'appel passe par `utils/chaine/appel.ts` → le
   fournisseur d'IA, et par lui seul. Aucun OCR tiers, aucun service d'images. _(22/08.)_
+
+---
+
+## C4 · L2 — Le pilotage du professeur et le moteur du routeur (sandbox, migration du 22/08)
+
+**Ce que le lot porte** : le **cœur des règles de ciblage** *(les cinq règles, les trois phases de
+la construction de la semaine, l'espacement des sondes)*, le **moteur d'escalade** *(N1, N2, N3,
+leurs compteurs, la désescalade)*, et **quatre écrans du professeur** — les budgets par élève,
+l'assignation **en lecture seule**, l'assiduité, et le **panneau des cinq segments** au plan
+d'évaluation.
+
+**Où il vit** : `utils/routeur/` *(quinze modules PURS + deux modules serveur)* ·
+`app/prof/routeur/` *(les trois écrans du Pilotage)* ·
+`app/prof/scriptorium/evaluations/PanneauSegments.tsx` *(le quatrième)* ·
+`c4_l2_routeur.sql` *(additive, jouée le 22/08)* · `scripts/recette/routeur-c4l2.mjs` *(la recette
+en base, lecture seule)* et `routeur-c4l2-decor.mjs` *(le décor des écrans — il se sème et se
+retire)*.
+
+### Ce qui est prouvé — pour ne pas le rejouer
+
+- [x] **C4L2-1 · La migration est en base, et les six interrupteurs n'ont pas bougé.**
+  Répétition à blanc d'abord *(corps seul, règle 6)* : **douze drapeaux à `t`**, puis `rollback;`,
+  et le retour arrière **vérifié par requête** — dix colonnes absentes, quatre gardes absentes, les
+  trois aménagements de C4-L1 intacts, **18 profils intacts**. Puis pour de bon : `COMMIT`, **douze
+  drapeaux à `t`**, et `exercices_actif · routeur_actif · competences_affichage_actif ·
+  chaine_actif · fabrique_actif · passation_classe_actif` **tous à `f`**. _(22/08.)_
+- [x] **C4L2-2 · Les observables requis se lisent AUX FICHES, et sur les six.**
+  `01-` §8.3 : « c'est la fiche de la compétence qui le déclare — le routeur lit, il ne décide
+  pas ». Le lecteur tourne sur `competences_fiches.contenu` et rend **argumentation 8/9 ·
+  expression 7/9 · structure 8/8 · questionnement 7/9 · synthèse 12/13 · connaissance 0/8** —
+  exactement ce que chaque fiche déclare, **avertissements : aucun**, y compris le recoupement de
+  « les sept premiers ». ⭐ **Et il fallait bien les lire là** : `competences_correspondance` **ne
+  coïncide pas** — elle donne un bloc à `reussites`, qui n'est pas requis, et sept à la
+  Connaissance, qui n'en a aucun. _(22/08, `routeur-c4l2.mjs` §2.)_
+- [x] **C4L2-3 · LE PIÈGE DE LA VACUITÉ se déclenche sur des élèves RÉELS.**
+  *Condition de recette nommée au `07-` §1.3.* Sur les **17 élèves** de la base : **2 servis**
+  *(T5, tronc commun — budget `tc_seul` 45–60 min, dérivé de sa situation)* et **15 non servis**,
+  chacun avec le motif `aucun_parcours`, **jamais en silence**. L'écran des budgets les **nomme en
+  tête**, avec leur classe. _(22/08, par requête et à l'écran.)_
+- [x] **C4L2-4 · Les cinq segments se dérivent du VRAI calendrier.**
+  Sur les deux semestres non archivés : **39 semaines de cours → C = 37, R = 33 → 1 · 3 · 11 · 11 ·
+  11**, la somme se refermant sur C. Vu **à l'écran** au panneau du plan d'évaluation, avec ses
+  dates réelles *(diagnostic 31/08 · calibration 07/09–21/09 · amorce 28/09–07/12 · stabilisation
+  14/12–15/03 · clôture 22/03–31/05)*. _(22/08.)_
+- [x] **C4L2-5 · Un calendrier trop court SE SIGNALE SANS RIEN BLOQUER.**
+  Le modèle de plan existant pointe vers une année scolaire sans semestre : le panneau rend **C = 0**,
+  les cinq segments **« aucune semaine · aucune borne — le routeur n'en invente pas »**, et le
+  **signal non bloquant**. L'écran reste entier. _(22/08, à l'écran.)_
+- [x] **C4L2-6 · L'écran d'assignation est EN LECTURE SEULE, et l'override se journalise.**
+  Aucun geste de validation nulle part. Le retrait a été **joué à l'écran** sur un dépôt réel : le
+  dépôt passe à **`retire`** *(jamais `abandonne`)*, et `routeur_decisions.override_prof` porte
+  `{ geste: 'retrait', depot_id, motif, par: <id du professeur>, at }` — **origine comprise**,
+  comme le §1.5 l'exige. **État remis d'avant après l'épreuve**, vérifié par requête. _(22/08.)_
+- [x] **C4L2-7 · L'assiduité : les deux agrégats, la frise et le tableau.**
+  Décor semé sur T5 *(trois semaines, trois distributions)* : la **frise à trois couleurs** rend
+  `vert · vert+orange · vert+rouge`, l'**avertissement de classe** part — « T5 n'a pas fait sa
+  semaine : 1 élève sur 2 n'ont pas rendu les 75 % attendus, quand le contrat en demande 75 % de
+  faites » —, et le **tableau dit qui** *(Sacha 100 %, l'autre 0 %)*. ⭐ **Les deux seuils se lisent
+  EN CONFIGURATION**, pas en dur : `assiduite_seuil_semaine_faite` **0,75** et
+  `assiduite_borne_basse_frise` **0,50**, et l'écran les affiche tels qu'il les a lus. **Décor
+  retiré**, base vérifiée à **0 ligne**. _(22/08.)_
+- [x] **C4L2-8 · Les lectures sont paginées et confrontées au décompte.**
+  Le défaut qui a coûté C4-L8-bis ne se répète pas : `lirePagine` pagine par 1000, **ordonne sur une
+  clé unique** et **lève `LectureTronquee`** quand le décompte `count: 'exact'` diffère. Les six
+  lectures du lot passent par lui. _(22/08.)_
+- [x] **C4L2-9 · Les règles sont éprouvées — 251 tests neufs, `npm test` 731/731.**
+  Les trois cas de l'**Annexe A** du `01-` sont des tests qui passent : « Le canal bouché » *(R1 en
+  exercices, seuil du Questionnement franchi)*, « La stagnation instructive » *(3 mesures plates →
+  N1, vf requise, delta faible → N2 réception)*, « Le fort au mauvais jour » *(plafond D+2 = B,
+  bute, **aucun drapeau**)*. _(22/08.)_
+- [x] **C4L2-10 · `routeur_actif` reste à OFF, et les écrans ne s'y ferment pas.**
+  « Le routeur prend ses couches à l'allumage **sans rien changer au schéma ni aux écrans** »
+  *(`07-` §5)*. Les quatre écrans se visitent, et le bandeau dit que le moteur est éteint. _(22/08.)_
+
+### Ce qui reste à jouer en recette
+
+- [ ] ⚠️ **C4L2-11 · L'ESCALADE SUR DONNÉES RÉELLES — bloquée par la clause granulaire, pas par ce
+  lot.** Le « fait quand » demande qu'« une escalade se déclenche, s'applique et se désescalade sur
+  des données réelles ». Elle **ne le peut pas aujourd'hui** : le taux de réussite d'un observable
+  se lit contre le **seuil de sa fiche**, que `derive-instruments.py` verse — et
+  `MANIFESTE_INSTRUMENTS` porte **`ouverte: false` sur les six**, faute de fiche *versée et bancée*.
+  Sans instrument, `statutDeLaMesure` rend `sans_objet`, le taux vaut `null`, et « un observable
+  sans taux ne se classe pas ». **C'est la clause granulaire du `07-` §2** — « une fiche seulement
+  déposée bloque *sa* compétence, pas le lot ». Les règles sont écrites et éprouvées *(34 tests sur
+  l'escalade seule)*. **Condition de reprise : la première fiche versée et bancée.**
+- [ ] **C4L2-12 · Une semaine réellement remplie par le moteur.** Aujourd'hui **zéro compétence est
+  `evaluee`** *(les deux qui existent sont `mesuree_silencieusement`)* : R0 n'en laisse passer
+  aucune, et la semaine entière revient à la **voie mixte** — « un régime normal, pas un repli », et
+  « une semaine pleine en voie mixte est une semaine conforme ». **Condition de reprise : un statut
+  `evaluee` posé à la fabrique**, plus des instances conçues à servir.
+- [ ] **C4L2-13 · Le smoke prof des quatre écrans, connecté comme professeur.** Les écrans ont été
+  vus en session serveur ; le parcours complet *(régler un budget, noter un recueil, naviguer les
+  semaines)* reste à faire à la main.
+- [ ] **C4L2-14 · La préférence de l'élève — LE CONTENU MANQUE, et il ne s'invente pas.** Le recueil
+  est posé *(date + réponse libre)*, et l'écran **le dit au professeur**. ⚠️ **Ni la question ni ses
+  valeurs ne sont écrites dans les sources**, et **sa place dans le ciblage n'est pas tranchée** :
+  aucune règle du lot ne la lit. **Ce n'est pas une recette à jouer, c'est une décision à prendre.**
