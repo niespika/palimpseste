@@ -6,6 +6,7 @@ import {
   ajouterExerciceModele, retirerExerciceModele, deplacerExerciceModele,
   regenererModele, marquerModelePret, supprimerModele,
 } from './modele-actions'
+import PanneauSegments from './PanneauSegments'
 import type { ModeleDetail, ModeleExerciceLigne, LigneAssignationModele } from './modele-serveur'
 import AssignationModeleClasses from './AssignationModeleClasses'
 import { libelleSemainePeda } from '@/utils/plan-cadence'
@@ -287,6 +288,9 @@ export default function GrilleModele({
 
       {/* ── Droite : aperçu de la cadence (surface claire) ────────────────────── */}
       <div className="flex-1 min-w-0 bg-surface p-6">
+        {/* C4-L2 — « les cinq segments SE CALCULENT À LA CONCEPTION D'UN PLAN
+            D'ÉVALUATION, ET ILS S'Y AFFICHENT » (01- §4, couche 1). */}
+        <PanneauSegments semaines={modele.semaines} />
         <div className="flex items-baseline justify-between mb-3">
           <span className="font-ui text-[11px] font-bold uppercase tracking-[0.1em] text-encre-douce">Aperçu de la cadence</span>
           <span className="font-corps italic text-[13px] text-muet-clair">≈ {nbExercices} exercice{nbExercices > 1 ? 's' : ''} sur l’année</span>

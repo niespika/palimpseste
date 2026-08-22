@@ -7,6 +7,7 @@ import {
   validerPlan, supprimerPlan, marquerConcu, retirerExercice,
   deplacerExercice, ajouterExercice, recalerExercice, regenererPlan, fixerJourExercice,
 } from './actions'
+import PanneauSegments from './PanneauSegments'
 import type { PlanDetail, ExerciceLigne } from './plan-serveur'
 import type { Panoptique, SemainePanoptique } from './panoptique-serveur'
 import { libelleSemainePeda } from '@/utils/plan-cadence'
@@ -414,6 +415,8 @@ export default function GrillePlan({ plan, panoptique }: { plan: PlanDetail; pan
 
         {/* ── Droite : détail de la semaine sélectionnée (surface claire) ─────── */}
         <div className="flex-1 min-w-0 bg-surface p-6">
+          {/* C4-L2 — le panneau des cinq segments, à la conception du plan. */}
+          <PanneauSegments semaines={plan.semaines} />
           {!semSel || !panoSel ? (
             <p className="font-corps text-[15px] text-muet">Sélectionne une semaine à gauche.</p>
           ) : (
