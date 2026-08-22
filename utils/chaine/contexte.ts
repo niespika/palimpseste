@@ -1,0 +1,381 @@
+import 'server-only'
+// ============================================================================
+// C4 · L5 — CE QUE LA CHAÎNE LIT AVANT DE PARTIR.
+// ----------------------------------------------------------------------------
+// Un seul endroit où l'on va chercher en base, pour qu'aucun module de calcul
+// n'ait à le faire. Trois disciplines s'y tiennent :
+//
+//  · « LA COUCHE TYPE LIT CE QUI EST DÉRIVÉ — `exercices_routes`,
+//    `exercices_types_crans`, `exercices_crans` —, et NE LIS PAS la doctrine
+//    dans le `04-` à l'exécution » (piège 4) ;
+//  · « la correspondance observable → formulation, LUE EN BASE, déposée par la
+//    fabrique ; JAMAIS lue des fiches en session » (piège 30) ;
+//  · « le régime v1→vf SE DÉRIVE DU CRAN ÉLU » (piège 18 ; `02-` §2.2) — et non
+//    d'une colonne qu'on aurait ajoutée.
+// ============================================================================
+
+import { createAdminClient } from '@/utils/supabase/admin'
+import { formeDepuisLePlan } from './modele'
+import type { Competence, Forme, Grain, Lieu, StatutRecette } from './types'
+import { COMPETENCES } from './types'
+
+type Admin = ReturnType<typeof createAdminClient>
+
+export interface ContexteDepot {
+  depotId: string
+  eleveId: string
+  exerciceId: string
+  classeId: string | null
+  lieu: Lieu
+  forme: Forme
+  /** Le code de l'objet — l'opérande « objet » de `distance_contexte` (`01-` §11). */
+  objet: string
+  grain: Grain
+  cran: number | null
+  cranCode: string | null
+  /** `02-` §2.2 — `par paires` · `pas de vf, sauf escalade` · `plein`. */
+  regimeV1vf: string | null
+  genre: string | null
+  bonus: boolean
+  paireDiagnostic: boolean
+  /** `exercices.modes_par_competence` — les modes ÉLUS, par compétence mesurée. */
+  modesParCompetence: Record<string, string[]>
+  consigne: string
+  /** La production mesurée : le texte saisi, ou la transcription CORRIGÉE (`02-` §6.D). */
+  productionV1: string | null
+  productionVf: string | null
+  /** `07-` §1.3 — le seul endroit où la mécanique touche la lettre (piège 53). */
+  exceptionOrthographe: boolean
+  statutsRecette: Record<Competence, StatutRecette>
+  /** La couche compétence, lue en base (`competences_correspondance`). */
+  correspondance: Record<string, Array<{ observable_code: string; dimension_eleve: string }>>
+  /** La couche type — « Ce qui est servable ici », lue de la doctrine dérivée. */
+  servable: Array<{ competence: string; observable_nom: string }>
+  /**
+   * Aux TROIS CRANS DE PRODUCTION (2, 6, 8), `exercices_routes` ne porte rien —
+   * « les trois crans de production, QUE LES TABLES NE PEUVENT PAS PORTER »
+   * (`04-` §0 et §14), et une contrainte de C4-L8 le tient. Ce n'est donc pas un
+   * trou de données : c'est la doctrine. Ce que le `04-` §14 porte pour eux, ce
+   * sont les QUINZE PATRONS de consigne — l'autre moitié de la couche type,
+   * « ce que l'exercice servi demandait » (`01-` §12).
+   */
+  patronProduction: string | null
+  /**
+   * Ce que la DÉCISION D'ASSIGNATION porte. « Le drapeau [de sonde de montée]
+   * vient de la décision d'assignation ; la chaîne LE RECOPIE sur la mesure,
+   * ELLE NE LE DEVINE PAS » (piège 20).
+   */
+  decision: {
+    cibleRetenue: string | null
+    /** Les compétences SONDÉES — silencieuses : elles ne produisent aucun retour. */
+    sondes: string[]
+    /**
+     * Les compétences sondées EN MONTÉE, nommément. Le drapeau se recopie sur
+     * LEUR mesure, jamais sur celle de la cible : « une mesure de sonde de montée
+     * est marquée et NEUTRE POUR TOUT LE RESTE » (`01-` §8.8, M-e).
+     */
+    sondesMontee: string[]
+  } | null
+  /** `confiance_declaree`, par compétence — une valeur par `evaluee` mesurée (§1.1). */
+  confianceDeclaree: Record<string, string>
+  /**
+   * Le référent de la production. « UN SEUL appel d'extraction quand le référent
+   * est LE COURS — l'aligneur ne tourne pas » (`07-` §1.2 ; piège 6) ; la
+   * synthèse en classe a le cours pour référent (`01-` §10).
+   */
+  referent: 'texte' | 'cours' | null
+  /**
+   * LE SITE UNIQUE des deux observables de lucidité — « la synthèse en classe »,
+   * et pas un autre (`01-` §10 ; `competences/monitoring.md` §4 et §6).
+   * Elle se reconnaît à sa ligne de plan : `type_exercice = 'synthese'`, que la
+   * garde du plan tient déjà en `formatif` × `classe` × `codex`.
+   */
+  estSyntheseEnClasse: boolean
+}
+
+const NUL = 'introuvable'
+
+// Le dépôt n'a pas de types générés : les `select` concaténés ne s'infèrent pas,
+// et le patron du dépôt est le transtypage explicite (`utils/acces.ts`,
+// `utils/plan-exercices.ts`). Les formes ci-dessous disent CE QU'ON LIT, colonne
+// par colonne — elles ne déclarent rien de plus que la requête au-dessus d'elles.
+interface LigneDepot {
+  id: string; eleve_id: string; exercice_id: string; statut: string
+  texte_v1: string | null; transcription_v1: string | null
+  texte_vf: string | null; transcription_vf: string | null
+  confiance_declaree: Record<string, string> | null
+  routeur_decision_id: string | null
+}
+interface LigneExercice {
+  id: string; type_id: string; classe_id: string | null; lieu: string
+  consigne_instanciee: unknown; paire_diagnostic: boolean; cran: string | null
+  genre: string | null; modes_par_competence: Record<string, string[]> | null
+  bonus: boolean; exercice_planifie_id: string | null; reference_id: string | null
+}
+
+export class DepotIllisible extends Error {}
+
+export async function lireContexte(admin: Admin, depotId: string): Promise<ContexteDepot> {
+  const { data: depotBrut, error: eDepot } = await admin
+    .from('exercices_depots')
+    .select('id, eleve_id, exercice_id, statut, texte_v1, transcription_v1, texte_vf, '
+      + 'transcription_vf, confiance_declaree, routeur_decision_id')
+    .eq('id', depotId).maybeSingle()
+  if (eDepot) throw new DepotIllisible(`dépôt ${depotId} : ${eDepot.code} ${eDepot.message}`)
+  if (!depotBrut) throw new DepotIllisible(`dépôt ${depotId} : ${NUL}`)
+  const depot = depotBrut as unknown as LigneDepot
+
+  const { data: exerciceBrut, error: eEx } = await admin
+    .from('exercices')
+    .select('id, type_id, classe_id, lieu, consigne_instanciee, paire_diagnostic, cran, genre, '
+      + 'modes_par_competence, bonus, exercice_planifie_id, reference_id')
+    .eq('id', depot.exercice_id).maybeSingle()
+  if (eEx || !exerciceBrut) throw new DepotIllisible(`exercice de ${depotId} : ${eEx?.message ?? NUL}`)
+  const exercice = exerciceBrut as unknown as LigneExercice
+
+  const { data: typeBrut } = await admin
+    .from('exercices_types').select('code, grain').eq('id', exercice.type_id).maybeSingle()
+  if (!typeBrut) throw new DepotIllisible(`type de l'exercice ${exercice.id} : ${NUL}`)
+  const type = typeBrut as unknown as { code: string; grain: Grain | null }
+
+  // ── La `forme` de la mesure, dérivée de la ligne de plan (voir `modele.ts`) ──
+  let nature: string | null = null
+  let typeExercice: string | null = null
+  if (exercice.exercice_planifie_id) {
+    const { data: planBrut } = await admin
+      .from('scriptorium_exercices_planifies').select('nature, type_exercice')
+      .eq('id', exercice.exercice_planifie_id).maybeSingle()
+    const plan = planBrut as unknown as { nature: string | null; type_exercice: string | null } | null
+    nature = plan?.nature ?? null
+    typeExercice = plan?.type_exercice ?? null
+  }
+
+  const cran = exercice.cran == null || exercice.cran === '' ? null : Number(exercice.cran)
+  let cranCode: string | null = null
+  let regimeV1vf: string | null = null
+  if (cran != null && Number.isFinite(cran)) {
+    const { data: cBrut } = await admin
+      .from('exercices_crans').select('code, regime_v1vf').eq('cran', cran).maybeSingle()
+    const c = cBrut as unknown as { code: string | null; regime_v1vf: string | null } | null
+    cranCode = c?.code ?? null
+    regimeV1vf = c?.regime_v1vf ?? null
+  }
+
+  const modesParCompetence = (exercice.modes_par_competence ?? {}) as Record<string, string[]>
+  const tousLesModes = [...new Set(Object.values(modesParCompetence).flat())]
+
+  // ── La couche type : « Ce qui est servable ici », DÉRIVÉ en base (piège 4) ──
+  //
+  // ⚠️ `exercices_routes` NE PORTE QUE LES SIX CRANS QUI ISOLENT (1·3·4·5·7·9) —
+  //    une contrainte de C4-L8 le tient, parce que « les trois crans de
+  //    production, les tables ne peuvent pas les porter » (`04-` §0 et §14). Aux
+  //    crans 2, 6 et 8 — le geste PRODUIRE, donc l'essai, la dissertation, le
+  //    diagnostic de la semaine 1 —, filtrer sur les routes rendait une liste
+  //    vide, et le prompt affirmait au modèle que « rien n'est déclaré ». La
+  //    couche type y lit donc `exercices_types_crans.couverture_observables`, que
+  //    le piège 4 nomme AUSSI, et qui dit ce que le cran couvre.
+  let servable: ContexteDepot['servable'] = []
+  if (cran != null && tousLesModes.length) {
+    const { data: routes } = await admin
+      .from('exercices_routes').select('competence, observable_nom')
+      .eq('objet_code', type.code).eq('cran', cran).in('mode', tousLesModes)
+    const vus = new Set<string>()
+    servable = ((routes ?? []) as unknown as Array<{ competence: string; observable_nom: string }>)
+      .filter((r) => {
+        const c = `${r.competence}|${r.observable_nom}`
+        if (vus.has(c)) return false
+        vus.add(c)
+        return true
+      })
+    // Aux crans de PRODUCTION, `exercices_routes` est vide par contrainte : on
+    // demande alors sa couverture au cran lui-même, avant de retomber sur le
+    // patron de consigne.
+    if (servable.length === 0) {
+      servable = await couvertureDuCran(
+        admin, exercice.type_id, cran, tousLesModes, Object.keys(modesParCompetence))
+    }
+  }
+
+  // ── La couche compétence : la correspondance, lue EN BASE (piège 30) ────────
+  const competencesEnJeu = Object.keys(modesParCompetence)
+  const { data: corr } = await admin
+    .from('competences_correspondance')
+    .select('competence, observable_code, dimension_eleve, ordre')
+    .in('competence', competencesEnJeu.length ? competencesEnJeu : ['__aucune__'])
+    .order('ordre', { ascending: true })
+  const correspondance: ContexteDepot['correspondance'] = {}
+  for (const l of (corr ?? []) as unknown as Array<{ competence: string; observable_code: string; dimension_eleve: string }>) {
+    ;(correspondance[l.competence] ??= []).push({
+      observable_code: l.observable_code, dimension_eleve: l.dimension_eleve,
+    })
+  }
+
+  const statutsRecette = await lireStatutsRecette(admin, depot.eleve_id)
+
+  const { data: profilBrut } = await admin
+    .from('profiles').select('exception_orthographe').eq('id', depot.eleve_id).maybeSingle()
+  const profil = profilBrut as unknown as { exception_orthographe: boolean | null } | null
+
+  let decision: ContexteDepot['decision'] = null
+  if (depot.routeur_decision_id) {
+    const { data: dBrut } = await admin
+      .from('routeur_decisions').select('cible_retenue, sondes_retenues')
+      .eq('id', depot.routeur_decision_id).maybeSingle()
+    const d = dBrut as unknown as { cible_retenue: string | null; sondes_retenues: unknown } | null
+    if (d) {
+      const sondes = Array.isArray(d.sondes_retenues)
+        ? (d.sondes_retenues as Array<{ competence?: string; sonde_montee?: boolean }>)
+        : []
+      decision = {
+        cibleRetenue: d.cible_retenue ?? null,
+        sondes: sondes.map((s) => s.competence ?? '').filter(Boolean),
+        sondesMontee: sondes.filter((s) => s.sonde_montee === true)
+          .map((s) => s.competence ?? '').filter(Boolean),
+      }
+    }
+  }
+
+  return {
+    depotId,
+    eleveId: depot.eleve_id,
+    exerciceId: exercice.id,
+    classeId: exercice.classe_id ?? null,
+    lieu: exercice.lieu as Lieu,
+    forme: formeDepuisLePlan(nature, typeExercice === 'synthese' && exercice.lieu === 'classe'),
+    objet: type.code,
+    grain: type.grain ?? 'meso',
+    cran: cran != null && Number.isFinite(cran) ? cran : null,
+    cranCode,
+    regimeV1vf,
+    genre: exercice.genre ?? null,
+    bonus: !!exercice.bonus,
+    paireDiagnostic: !!exercice.paire_diagnostic,
+    modesParCompetence,
+    consigne: enTexte(exercice.consigne_instanciee),
+    productionV1: production(depot.texte_v1, depot.transcription_v1),
+    productionVf: production(depot.texte_vf, depot.transcription_vf),
+    exceptionOrthographe: !!profil?.exception_orthographe,
+    statutsRecette,
+    correspondance,
+    servable,
+    patronProduction: cran != null && Number.isFinite(cran)
+      ? await patronDeProduction(admin, tousLesModes, cran)
+      : null,
+    decision,
+    confianceDeclaree: (depot.confiance_declaree ?? {}) as Record<string, string>,
+    estSyntheseEnClasse: typeExercice === 'synthese' && exercice.lieu === 'classe',
+    referent: typeExercice === 'synthese' && exercice.lieu === 'classe'
+      ? 'cours'
+      : (exercice.reference_id ? 'texte' : null),
+  }
+}
+
+/**
+ * Le statut de recette, par compétence, pour cet élève.
+ *
+ * Ligne absente : `01-` §3, principe 5 — « une compétence dont la fiche n'est
+ * pas déposée est `differee` ET NE PEUT PAS ÊTRE AUTRE CHOSE » ; sinon « une
+ * compétence NAÎT `mesuree_silencieusement` » (`07-` §5). On ne devine rien
+ * au-delà de ces deux phrases.
+ */
+export async function lireStatutsRecette(
+  admin: Admin, eleveId: string,
+): Promise<Record<Competence, StatutRecette>> {
+  const { data: fiches } = await admin.from('competences_fiches').select('competence')
+  const deposees = new Set(((fiches ?? []) as unknown as Array<{ competence: string }>).map((f) => f.competence))
+  const { data: niveaux } = await admin
+    .from('competences_niveaux').select('competence, statut_recette').eq('eleve_id', eleveId)
+  const poses = new Map(((niveaux ?? []) as unknown as Array<{ competence: string; statut_recette: string }>)
+    .map((n) => [n.competence, n.statut_recette as StatutRecette]))
+  const out = {} as Record<Competence, StatutRecette>
+  for (const c of COMPETENCES) {
+    out[c] = poses.get(c) ?? (deposees.has(c) ? 'mesuree_silencieusement' : 'differee')
+  }
+  return out
+}
+
+/**
+ * « Ce que ce type mesure », aux crans que `exercices_routes` ne porte pas.
+ * `exercices_types_crans.couverture_observables` déclare, par cran, ce que le
+ * cran couvre — `isole` / `exerce` (`02-` §2.3.2) — pour chaque observable de
+ * chaque compétence que l'objet mesure.
+ */
+/**
+ * « Ce que ce type mesure » au grain de l'observable, quand la doctrine le porte.
+ *
+ * La forme est celle que la dérivation verse — relue EN BASE, pas devinée :
+ * `{ source, valeur: 'isole' | 'exerce', observables: [{ nom, code, mode, competence }] }`.
+ *
+ * ⚠️ Au 21/08, cette colonne est VIDE aux trois crans de production : « les trois
+ *    crans de production, QUE LES TABLES NE PEUVENT PAS PORTER » (`04-` §0 et
+ *    §14). Le professeur est en train d'y remédier — les six fiches portent
+ *    depuis ce matin une ligne `<!-- PRODUCTION exerce=… -->` à leur §6, et
+ *    `scripts/derive-doctrine.py` 1.1 la lit. Ce lot lit donc LES DEUX ÉTATS :
+ *    la couverture si elle est là, le patron de consigne sinon.
+ */
+async function couvertureDuCran(
+  admin: Admin, typeId: string, cran: number, modes: readonly string[],
+  competences: readonly string[],
+): Promise<Array<{ competence: string; observable_nom: string }>> {
+  const { data, error } = await admin
+    .from('exercices_types_crans').select('couverture_observables')
+    .eq('type_id', typeId).eq('cran', String(cran)).maybeSingle()
+  if (error) {
+    console.error(`[chaine] couverture du cran illisible — ${error.code} ${error.message}`)
+    return []
+  }
+  const brut = (data as unknown as { couverture_observables: unknown } | null)?.couverture_observables as
+    { observables?: Array<{ nom?: string; mode?: string; competence?: string }> } | null
+  const liste = Array.isArray(brut?.observables) ? brut!.observables! : []
+  const vus = new Set<string>()
+  const out: Array<{ competence: string; observable_nom: string }> = []
+  for (const o of liste) {
+    if (!o?.competence || !o?.nom) continue
+    if (competences.length && !competences.includes(o.competence)) continue
+    if (modes.length && o.mode && !modes.includes(o.mode)) continue
+    const cle = `${o.competence}|${o.nom}`
+    if (vus.has(cle)) continue
+    vus.add(cle)
+    out.push({ competence: o.competence, observable_nom: o.nom })
+  }
+  return out
+}
+
+async function patronDeProduction(
+  admin: Admin, modes: readonly string[], cran: number,
+): Promise<string | null> {
+  if (!modes.length) return null
+  const { data, error } = await admin
+    .from('exercices_consignes_production').select('mode, patron')
+    .eq('cran', String(cran)).in('mode', modes)
+  if (error) {
+    console.error(`[chaine] patron de production illisible — ${error.code} ${error.message}`)
+    return null
+  }
+  const lignes = (data ?? []) as unknown as Array<{ mode: string; patron: string }>
+  if (!lignes.length) return null
+  return lignes.map((l) => `${l.mode} : ${l.patron}`).join(' · ')
+}
+
+/** Le texte saisi d'abord, la transcription CORRIGÉE ensuite — jamais les deux. */
+function production(texte: unknown, transcription: unknown): string | null {
+  const t = typeof texte === 'string' && texte.trim() !== '' ? texte : null
+  if (t) return t
+  const tr = typeof transcription === 'string' && transcription.trim() !== '' ? transcription : null
+  return tr
+}
+
+/** La consigne, quelle que soit sa forme physique — le §1.1 la laisse libre. */
+function enTexte(v: unknown): string {
+  if (typeof v === 'string') return v
+  if (v && typeof v === 'object') {
+    const o = v as Record<string, unknown>
+    if (typeof o.texte === 'string') return o.texte
+    if (Array.isArray(o.cas)) {
+      return (o.cas as unknown[])
+        .map((c, i) => `Cas ${i + 1} — ${typeof c === 'string' ? c : JSON.stringify(c)}`)
+        .join('\n')
+    }
+  }
+  return JSON.stringify(v ?? null)
+}
