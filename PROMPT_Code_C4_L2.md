@@ -1,180 +1,165 @@
-# PROMPT — Session Code ⚙️ : C4 · Lot L2 — Pilotage prof (budgets, assignation visible, assiduité)
+# PROMPT — Session Code : C4-L2 — Le pilotage du professeur, et le moteur qui remplit la semaine
 
-> **À coller dans une session Claude Code FRAÎCHE** (règle R4 du plan : une session = un lot).
-> **C4-L1 doit être fait et joué en sandbox** — ce lot écrit dans ses tables.
+> **À coller dans une session Claude Code fraîche.** Une session, un lot.
 >
-> **Manifeste de fichiers faisant foi — à lire en démarrant, rien de plus** (règle de manifeste,
-> SPEC C3 §9) :
->
-> | Fichier | Ce qu'on y lit | Statut requis |
-> |---|---|---|
-> | `SPEC_C3_exercices_competences.md` | **le Tableau de bord du socle** (section B : ce qui n'est PAS décidé — **B1-1, B1-2, B1-3 et B1-6** te concernent directement ; B1-7 est fermée depuis A8), **§4 (sélection, budgets, gates)**, **§4ter (assiduité)**, §6 (schéma), §9 (le lot) | **v4.2 — socle de construction (gel du 29/07, amendements A1 à A8)** ✔ |
-> | `SUIVI_SQL.md` | protocole R6 + journal | à jour ✔ |
-> | `AGENTS.md` | conventions repo, dont R8 : un module = 2-3 onglets | ✔ |
-> | `globals.css` | les jetons de couleur et de police par module — **jamais de hex en dur** | ✔ |
->
-> **`01-routeur.md` (dossier de conception) n'est PAS au manifeste de ce lot** : le cœur R1-R6 fait
-> l'objet d'un lot distinct. Ce lot construit les **écrans du prof** et les **compteurs**, pas
-> l'algorithme de routage. Si tu penses avoir besoin d'une règle du routeur, **arrête-toi et
-> signale-le**.
->
-> **Contrôle de version, mécanique** : ce prompt est écrit contre la **v4.2**. Si la spec porte une
-> version supérieure, **arrête-toi** et lis son **journal des amendements** — un amendement touchant
-> §4, §4ter ou §6 invalide une partie de ce prompt.
+> Ce prompt est fabriqué selon la recette du `PLAN_DE_CHANTIER.md` §5. Ce que le lot construit, son manifeste et son « fait quand » font foi au `07-Implementation.md` §2 — ils sont recopiés ci-dessous avec leurs versions au moment de l'écriture.
 
 ---
 
-## Mission
+## Le manifeste — recopié du `07-Implementation.md` §2
 
-Donner au professeur les trois choses dont il a besoin pour piloter la rentrée :
+> *Manifeste* : **ce document, §1 et §5** · `01-routeur.md` §4, §5, §6, §8, §9 — **relu et validé** · `06-Palimpseste.md` §5.
 
-1. **régler les budgets** de travail hebdomadaire de ses élèves ;
-2. **voir** ce qui a été assigné cette semaine, et pouvoir l'écraser ;
-3. **savoir qui travaille** — les compteurs d'assiduité.
+« Ce document » est le `07-Implementation.md`. Les trois pièces :
 
-**Il n'y a pas de file de validation.** L'arbitrage du 29/07 l'a supprimée (SPEC C3 §4) : les
-références décomposées se valident **une fois, à la constitution du corpus**, jamais au fil de l'eau.
-Ne la reconstruis pas sous un autre nom.
-
-**Tout naît derrière `exercices_actif` OFF** (règle R2).
-
-## Ce qui existe déjà (à réutiliser, pas à réécrire)
-
-- Le **schéma du lot L1** : `exercices`, `exercices_depots`, `exercices_types`, `assiduite_hebdo`,
-  `routeur_decisions`, les trois gates.
-- Le **module Calendrier** : c'est lui qui sait quelles semaines sont des semaines de cours et
-  lesquelles sont des vacances. **Le compteur d'assiduité le lit — il ne recompte pas les semaines
-  tout seul.**
-- Le patron d'écran prof et les **jetons `globals.css`** du module Codex.
-- Le patron de **validation par lot** (leçon Fragments) — utile pour la sélection multiple, même
-  s'il n'y a plus de file à valider.
-
----
-
-## 1. Écran « Budgets » — le budget est une propriété de l'ÉLÈVE
-
-Le prof règle, **en début d'année**, pour chaque élève : un **plancher**, un **plafond** et un
-**quota optionnel**, exprimés en **minutes de cycle** (`duree_cycle_min`, jamais la durée de
-rédaction). Valeurs par défaut à proposer, **toutes provisoires et modifiables** :
-
-| Situation | Plancher | Plafond | Optionnel |
+| Pièce | Où | Statut requis | Au moment de l'écriture |
 |---|---|---|---|
-| HLP seul | 60 min | 90 min | + 30 min |
-| TC seul | 45 min | 60 min | + 30 min |
-| Bi-classe (TC + HLP) | 90 min | 120 min | + 30 min |
+| `07-Implementation.md`, **§1 et §5** | `/Users/louissagnieres/Documents/GitTest/palimpseste-conception/` | aucun — un lot n'exige pas un statut de la source qui le déclare *(`07-` §2)* | **VERSION 2.23** · RELU ET VALIDÉ · **§1 et §5 sont OUVERTS À L'IMPLÉMENTATION** *(en-tête du document)* |
+| `01-routeur.md`, **§4, §5, §6, §8, §9** | même dépôt | **relu et validé** *(explicite au manifeste)* | **VERSION 5.4** · VALIDÉ ET GELÉ *(vaut relu et validé — le statut requis est atteint)* |
+| `06-Palimpseste.md`, **§5** | même dépôt | **déposé** *(entrée sans statut explicite — `07-` §2)* | **VERSION 2.5** · VALIDÉ ET GELÉ |
 
-- **Le budget ne se règle pas par classe.** Un élève inscrit en TC **et** en HLP a **un seul**
-  budget, partagé entre ses deux cours — c'est la conséquence directe du **profil unifié**
-  (confirmé par l'amendement A1 : les deux parcours ont les **dix** compétences ; ce qui varie est
-  la **famille** dans laquelle chacune est active). Un écran qui donnerait deux budgets à cet élève
-  est un bug de conception, pas une commodité.
-- Réglage **par lot** (sélection multiple d'élèves → appliquer un jeu de valeurs) **et** individuel.
-- **Préférence de l'élève** (davantage d'écriture ou de lecture) : le champ existe, il est recueilli
-  à intervalle régulier et **affiché au prof**. Il est pesé par le routeur plus tard — ici, on le
-  stocke et on le montre.
+**Rien de plus : la règle de manifeste veut que ce qui n'y figure pas ne se lise pas** *(`07-` §2)*. Quatre précisions pour que la règle ne fasse pas trébucher :
 
-## 2. Écran « La semaine » — en LECTURE SEULE, plus l'override
+- l'`AGENTS.md` du dépôt n'est pas une source : Claude Code le charge d'office, il porte les conventions du repo ;
+- **`SPEC_C3_exercices_competences.md` est archivée : elle ne fait foi sur rien et ne se lit pas.** Elle traîne à la racine de ce dépôt, son nom ressemble au sujet du lot — ne l'ouvre pas ;
+- **aucun relevé de lot ne se lit** — ni celui qu'une première tentative de C4-L2 a rendu, ni ceux de C4-L5 ou de C4-L8. La règle de manifeste l'interdit, et ce n'est pas une privation : **ce que ces lots avaient à te dire est déjà dans les pièges ci-dessous**, versé par la boîte aux lettres du `PLAN_DE_CHANTIER.md` §5 ;
+- **le statut porte sur le fichier, la section dit seulement où lire — et une citation se suit pour ce qu'elle désigne, rien d'autre** *(`07-` §2)*. Les sections du manifeste citent, et tu suivras ces citations-là : dans le `01-` — dont le statut couvre tout le fichier — le **§1** *(cycle et exercice, le nombre de cycles, les huit principes)*, le **§2** *(le module Calendrier ; Quazian n'écrit pas dans le profil)*, le **§3** *(les dérivées et leurs valeurs : la médiane des 3, la fenêtre de quatre)*, le **§7** *(la proportion des modes)*, le **§10** *(la définition de l'ancre)*, le **§11** *(le contenu du journal)*, le **§12** *(le contrat de latence)* ; hors des fichiers du manifeste, au statut qu'une citation présume — *déposé* — le `02-exercices.md` **§1** *(`competences[]`)*, **§3** *(les modes admis)*, **§4** *(l'exclusion de parcours)*, **§2.3.2** *(exerce / isole)*, et `competences/<nom>.md` pour **les observables requis** que le §8.3 y renvoie.
 
-Un tableau : pour chaque élève, **ce qui lui a été assigné cette semaine** — type, compétence cible,
-durée de cycle, échéance, statut du dépôt, et **l'origine** (`routeur` ou `prof`).
+## Le contrôle d'entrée — en deux temps, et les deux ne font pas la même chose
 
-- **Aucun geste de validation.** Le prof regarde ; il ne valide rien. C'est le remplacement explicite
-  de la file supprimée.
-- **Override** : le prof peut retirer un exercice assigné, ou en imposer un autre. **Tout override
-  est journalisé** — `origine` passe à `prof`, et une entrée part au journal
-  (`routeur_decisions` porte déjà le tie-breaking et la `borne_amont` ; ajoute l'override au même
-  endroit ou à côté, à ta convenance, mais **journalisé**).
-- **Total par élève affiché** : la somme des `duree_cycle_min` de sa semaine, avec un repère visuel
-  quand elle sort de ses bornes plancher/plafond. C'est le seul endroit où un budget-temps
-  s'affiche — **l'élève, lui, ne voit jamais de budget** (§3 de la spec).
+> **Le statut bloque.** Un fichier du manifeste dont l'en-tête porte un statut inférieur à celui exigé **arrête le lot**, explicitement. Le barème est au `07-Implementation.md` §2 : *déposé* → *relu et validé* → *versé et bancé*, cumulatifs ; « VALIDÉ ET GELÉ » vaut *relu et validé*.
+>
+> **La version avertit.** Si la ligne VERSION d'un fichier du manifeste diffère de celle inscrite ici, **relis son en-tête avant de continuer** — une version qui bouge dit qu'un texte a changé, pas qu'il est devenu faux.
+>
+> **Le blocage est granulaire quand il peut l'être.** Une fiche de compétence absente ou non bancée bloque **cette compétence**, pas le lot.
 
-## 3. Exercices communs
+Concrètement, pour ce lot : vérifie que les trois pièces **existent**, que le `07-` porte **VERSION 2.23**, le `01-` **VERSION 5.4** avec un statut valant au moins *relu et validé*, le `06-` **VERSION 2.5**. Le manifeste ne compte aucune fiche de compétence — la clause granulaire n'a pas d'objet ici ; à l'exécution, c'est R0 qui fait ce travail : une compétence non prête n'entre pas dans le ciblage.
 
-Le prof crée un exercice **imposé à toute une classe** : choix du type, instanciation de la consigne,
-fenêtre. Il atterrit comme n'importe quel exercice (`origine = prof`), avec une ligne
-`exercices_depots` par élève de la classe, à l'état `assigne`.
+**Vérifie aussi que tes trois dépendances sont jouées** *(`PLAN_DE_CHANTIER.md` §2 et §3)* : les tables du `07-` §1 existent en base **(C4-L1)**, la fabrique et la doctrine dérivée aussi **(C4-L8)**, et la chaîne de mesure vit dans `utils/chaine/` **(C4-L5)**. Ce lot n'en recrée aucune. Si une pièce manque ou bloque, **arrête-toi et signale-le, ne devine pas**.
 
-C'est ce mécanisme qui porte la **voie mixte** décidée le 29/07 : tant que peu de compétences sont
-`evaluee`, le routeur ne remplit qu'une partie du budget et **le reste va aux exercices communs**.
+**Ce que tu peux écrire dans une source, et ce que tu ne peux pas.** Deux régimes, à ne pas confondre :
 
-## 4. Compteurs d'assiduité (§4ter)
+- **Le `07-` §1 et §5 sont ouverts à l'implémentation** : ce que la construction fait apparaître — une donnée qu'il faut nommer, une garde que le schéma exigeait sans le dire — **s'y écrit depuis ton relevé, sans accord préalable** ; la modification se dit au relevé et n'attend rien. *La règle de manifeste du §2, elle, reste gelée.*
+- **Partout ailleurs, une session Code ne corrige jamais une source** *(`07-` §2)*. Quand tu trouves une source **fausse** — pas incomplète, fausse —, tu poses **`[faux]`** au point de l'erreur et tu portes la correction au **registre des ouverts**, section **DETTES** du `INVENTAIRE_Non_Tranches.md`, avec l'avant et l'après. **Une source qui porte `[faux]` ne bloque aucun lot** : elle cesse de faire foi sur ce point, et elle le dit.
 
-**C'est la partie à ne pas différer** : un semestre ne se recompte pas après coup. Si la collecte ne
-démarre pas à la rentrée, le premier semestre est perdu. Les **écrans** peuvent être minimaux ; les
-**compteurs**, non.
+## La mission — reprise du `07-Implementation.md` §2
 
-Deux agrégats, alimentés depuis `exercices_depots` et le Calendrier :
+> **C4-L2 — Le pilotage du professeur, et le moteur qui remplit la semaine.** Il porte **trois choses que rien d'autre ne porte** :
+>
+> - le **cœur des règles de ciblage** — les cinq règles, les trois phases de la construction de la semaine, la règle d'espacement des sondes secondaires *(`01-routeur.md` §5, §6, §8.9)* ;
+> - le **moteur d'escalade** — N1, N2, N3, leurs compteurs, la désescalade *(`01-routeur.md` §8)* ;
+> - les **écrans de pilotage** : les **budgets par élève** *(plancher, plafond, budget optionnel, préférence recueillie à intervalle régulier)*, l'**écran en lecture seule** de ce que le routeur a assigné — *le professeur ne valide rien au fil de l'eau ; il voit, et il peut écraser par override* —, et les **compteurs d'assiduité** *(`06-Palimpseste.md` §5)*. **Plus le panneau des cinq segments, au plan d'évaluation** : leurs bornes se **dérivent du Calendrier** *(`01-routeur.md` §4)*, et c'est à la conception d'un plan que le professeur voit ce que son calendrier produit.
+>
+> *Ce que ce lot ne porte pas : **tout ce que le professeur fabrique** — déposer ses fiches de compétence, déposer son corpus, concevoir ou importer un exercice. C'est le lot **C4-L8**. Le partage tient à ce que le professeur en fait : ici il **pilote**, là il **fabrique**.*
 
-- **Taux d'inactivité hebdomadaire par classe** — la proportion d'élèves qui n'ont rien rendu de la
-  semaine. *(Le professeur s'en sert comme déclencheur : un tiers de la classe inactive deux semaines
-  de suite change sa conduite de classe.)*
-- **Pourcentage d'assiduité par élève** :
+**Et rien d'autre.** Ce lot est le moteur qui lit les tables de C4-L1, l'appelant de la chaîne de C4-L5, et les quatre écrans du professeur qui regardent le résultat. Il se construit **sans la préférence de l'élève** *(`PLAN_DE_CHANTIER.md` §6)* et **derrière `routeur_actif` à OFF** *(`07-` §5)*.
 
-  > **% assiduité = semaines faites ÷ (semaines du semestre − semaines de vacances)**
-  >
-  > Une **semaine est « faite »** quand l'élève a rendu au moins la **proportion configurée** de ses
-  > exercices assignés de la semaine. **Le seuil est un paramètre de configuration** (valeurs
-  > envisagées : 2/3 ou 3/4) — **jamais un nombre en dur dans le code**.
-  >
-  > Les **semaines de vacances sortent du dénominateur** — sans jamais empêcher un élève de
-  > travailler pendant ces semaines. Le travail fait pendant les vacances peut ajouter **au plus une
-  > semaine** au numérateur, sur tout le semestre.
+## Les pièges — les décisions dont l'oubli coûte une migration
 
-- **Aucune note.** La plateforme affiche un **pourcentage**, rien d'autre. Il n'existe **aucun champ
-  de note** dans Palimpseste : le professeur fait lui-même la conversion, hors application. Si tu te
-  surprends à écrire un barème, tu es hors périmètre.
-- Un exercice à l'état **`abandonne`** compte comme non fait pour l'assiduité, et **n'entre jamais
-  dans les règles de stagnation**.
+*Sauf mention, les renvois pointent au `01-routeur.md`. En cas de doute entre ce prompt et la source : la source a raison.*
 
-## 5. Périmètre d'affichage
+### Ce que ce lot ne construit pas
 
-- **Les lettres A-E sont visibles du professeur**, jamais de l'élève par défaut (§4ter). Ce lot est
-  côté prof : les lettres y ont leur place **si et seulement si**
-  `competences_affichage_actif` le permet, et de toute façon **rien ne s'affiche tant qu'aucune
-  compétence n'est `evaluee`**.
-- **Le Monitoring ne s'affiche pas comme une lettre** (amendement A8) : son état est une **amplitude
-  d'écart plus une direction**, il vit dans `monitoring_niveaux`, et il n'est **jamais noté ni
-  cible du routeur**. Si tu l'affiches ici, affiche-le comme tel — sinon ne l'affiche pas du tout,
-  ce lot ne l'exige pas.
-- **Dix compétences, pas onze**, et la **famille est une colonne** : il n'y a qu'un `questionnement`,
-  actif en lecture pour tous et en écriture pour les seules classes TC (A1).
-- Respecte R8 : **un module = 2-3 onglets**. Ces trois écrans ne créent pas trois onglets — ils
-  vivent dans l'onglet de pilotage de Codex.
+1. **La fabrique est C4-L8, et elle est JOUÉE** — déposer des fiches, poser un statut de recette, déposer un corpus, concevoir, importer, **et la création d'exercices communs**. La voie mixte de ce lot **lit** les exercices du professeur, elle ne refait ni son écran ni son geste *(`07-` §2 et §5)*.
+2. **La chaîne de mesure est C4-L5, et elle est JOUÉE** — `utils/chaine/`. Ce lot **n'appelle jamais un modèle** et n'écrit aucune mesure : toutes ses sorties sont des décisions calculées de ses règles, et journalisées. **Tu déclenches par une écriture en file** — `mettreEnFile(admin, depotId, 'mesure_v1' | 'mesure_vf')`, idempotent — et **tu passes le registre élu** à `traiterDepot({ registre })` *(piège 37)*. **Ne réécris pas la chaîne, ne la double pas.**
+3. **Les écrans d'ailleurs.** La file des dossiers N3 est l'écran de **C6-L1** — *« le moteur qui les ouvre appartient à C4-L2 ; c'est l'écran qui vit ici »* *(`07-` §2)* ; l'écran de la semaine côté élève est **C6-L2** ; la matrice des lettres est **C6-L1** ; les six temps de l'élève sont **C4-L3**. Ce lot porte **quatre écrans, tous côté professeur** — les budgets, l'assignation en lecture seule, l'assiduité, et le panneau des cinq segments au plan d'évaluation.
+4. **Le pull et le push sont C6-L3** *(`PLAN_DE_CHANTIER.md` §3)*. Ici, la **valeur** du budget optionnel se règle à l'écran des budgets ; sa **consommation** *(PB5 exercice par exercice, la suggestion push, le marquage `bonus` — §5)* ne se construit pas. Et la phase C n'aura jamais de sonde à poser sur un bonus : elle a placé les siennes à la construction, quand il n'existait pas.
+5. **La préférence de l'élève : un recueil, aucune règle.** L'écran des budgets la recueille à intervalle régulier *(`07-` §2)* — et c'est tout : **sa place dans le ciblage n'est pas tranchée** *(§5, « Non tranché » ; `PLAN_DE_CHANTIER.md` §6 : « C4-L2 se construit sans elle »)*. **Ni sa question ni ses valeurs ne sont écrites dans les sources** : pose le recueil, signale le contenu manquant au professeur — il ne s'invente pas, et il ne se repêche pas dans l'archive.
+6. **Aucun écran d'édition de retour côté maison.** `texte_edite_par_prof` reste NULL sur tout retour formatif de la maison — conséquence du contrat de latence ; l'édition, la validation et la publication par case appartiennent au **flux de classe, C4-L4** *(`07-` §1.2)*.
 
-## Interdits (périmètre verrouillé)
+### Ce qui ne se stocke pas, ce qui ne se code pas en dur
 
-- **Aucun algorithme de routage** — pas de R1-R6, pas de choix de cible, pas de sélection de type.
-  Ce lot affiche et règle ; il ne décide pas.
-- **Aucun appel IA.**
-- **Aucune file de validation**, sous aucun nom.
-- **Aucun champ de note**, aucune conversion en note, aucun barème.
-- **Aucun budget attaché à une classe** plutôt qu'à un élève.
-- **Aucune lettre pour le Monitoring**, et aucune ligne de Monitoring dans les tables de
-  compétences.
-- Pas de hex en dur : jetons `globals.css` uniquement.
-- Toute migration éventuelle (paramètre de seuil, colonne de préférence) suit **R6** : fichier `.sql`
-  + ligne dans `SUIVI_SQL.md` **avant** exécution, sandbox d'abord.
-- Décision manquante → **note-la, ne la prends pas** (R7).
+7. **Les six valeurs qui ne sont pas des colonnes** *(`07-` §1, table d'ouverture)* — quatre te concernent de près : le **registre courant** *(recalculé à chaque exercice)*, l'**historique des cibles** *(une requête sur `routeur_decisions`, qui porte déjà la cible — jamais une seconde liste)*, le **signal de ciblage** et la **valeur de ciblage non plafonnée**. *Un état se stocke, une lecture se recalcule.* **Les valeurs des dérivées vivent au §3, « et nulle part ailleurs »** : la médiane des lettres-équivalentes des **3** dernières mesures du contexte *(à 2 : la plus basse ; à 1 : elle-même ; à 0 : la valeur non plafonnée en repli)*, la fenêtre d'évidence de **quatre** mesures, hors sondes de montée.
+8. **K (R5) ne s'instancie pas en nombre — délibérément** : la formule **se remplit d'elle-même** — le nombre de compétences `evaluee` plus une marge calée sur le plancher de mesure, soit **K ≈ les exercices que trois cycles produisent** *(§6, R5)*. Code la formule ; une constante K écraserait R1, R2, R3 et l'escalade à chaque tour. L'ancienneté se compte **sur tous les exercices**.
+9. **Aucune liste des compétences prêtes, nulle part** *(`07-` §1.3)* : ce qui est ciblable est une conséquence de `statut_recette` *(R0)*. Et **le passage de `mesuree_silencieusement` à `evaluee` recalcule la lettre depuis les seules mesures postérieures à la recette** *(§3)* — la borne est la **date de pose du statut**, portée par `competences_niveaux` et **écrite par la fabrique** *(`07-` §1.3)* ; `updated_at` ne peut pas en tenir lieu.
+10. **Les chiffres arrêtés s'implémentent tels quels** — *provisoire, réglage empirique* ne veut pas dire négociable en séance : les tables du §4, X, Y, T et p *(§7)*, les plafonds et seuils du §5, du §8.9 et du §9. **Deux seulement sont déclarés réglages** : le seuil de « semaine faite » et la borne basse de la frise *(`06-` §5 : « jamais une constante en dur »)* ; et les **budgets par situation** sont des valeurs par défaut **réglables par élève et par lot** *(§4, couche 0)* — proposées, jamais imposées.
+11. **Ce lot ne crée aucune table** — le schéma est joué à C4-L1 *(`07-` §1)*. Ce que le §1 **nomme** sans que la base le porte encore — le plancher et le plafond de l'élève, la préférence recueillie, un seuil en configuration — s'ajoute en **migration additive** sous les conventions de dépôt ; **la forme physique t'appartient** *(`07-` §1)*. Une donnée que **rien** ne nomme se signale, elle ne s'invente pas.
 
-## Fait quand
+### La construction de la semaine — trois phases qui ne se mélangent pas
 
-- [ ] Le prof règle les budgets d'une classe entière **par lot**, et d'un élève **individuellement**.
-- [ ] Un élève bi-classe a **un seul** budget — vérifié sur un cas réel de la sandbox.
-- [ ] L'écran « la semaine » affiche l'assignation de chaque élève avec son **total de minutes de
-      cycle** et un repère quand il sort des bornes. *(Le remplissage peut être fait à la main ou par
-      des exercices communs tant que le routeur n'existe pas — l'écran, lui, doit être juste.)*
-- [ ] Un **override** retire ou impose un exercice, et **laisse une trace journalisée**.
-- [ ] Un exercice commun crée bien **une ligne `exercices_depots` par élève**, à l'état `assigne`.
-- [ ] Le **taux d'inactivité par classe** et le **pourcentage d'assiduité par élève** se calculent, en
-      lisant les semaines de vacances depuis le **Calendrier**, avec le **seuil en configuration**.
-- [ ] `exercices_actif` est **toujours OFF** à la fin du lot.
-- [ ] Aucun champ de note n'existe nulle part.
+12. **Tout se décide à la construction du cycle.** `delai_mesures`, `delai_jours`, `etat_escalade` et la fenêtre d'évidence se lisent **une fois**, à cet instant, et ne se rafraîchissent qu'au cycle suivant ; **aucune mesure du cycle en cours n'alimente sa propre construction** ; seul `historique_cibles` s'accumule pendant la pose *(§5)*.
+13. **La phase A ne regarde jamais le temps ; la phase B ne rouvre jamais l'élection ; la phase C ne pose aucun exercice** *(§5)*. La liste de priorité *(PA2)* se construit **une seule fois par cycle** : filtre R0, **filtre N3 — avant R2**, puis R1, R2, R3 et la dette de R5. **PA3** : la seconde inscription d'une compétence en progression — au plus **une** par cycle, atteinte seulement si le budget épuise la liste.
+14. **PB2 est dure et sans exception** — jamais deux fois de suite la même compétence ; **PB5** reparcourt dans le même ordre et **permute à la couture** entre deux tours ; **PB6** : on ajoute tant qu'un exercice tient sous le plafond — le reliquat sous **5 minutes** est perdu. **Le plafond borne, le plancher signale** : sous le plancher, l'écart se **journalise** *(minutes assignées / minutes de budget)* et le solde revient aux exercices communs — **la voie mixte est un régime normal, pas un repli** *(§5 ; `07-` §5 ; `PLAN_DE_CHANTIER.md` §4)*. *L'alternance n'est pas un réglage : c'est un principe de conception, opéré par PB2 et PB3 et garanti dans la durée par R5 *(§1, principe 7)*.*
+15. **La largeur de mesure se dérive, elle ne se déclare pas** *(§5)* : `produire` déclare `exerce` — plusieurs cibles possibles ; **`transformer` et `diagnostiquer` déclarent `isole` — une seule cible** ; une compétence en `observable_seul` est **matériau de mesure, jamais cible**. Plafond dur de cibles par grain : **1** au micro, **2** au méso, **3** au macro.
+16. **Le budget est une propriété de l'ÉLÈVE, pas de la classe** — un bi-classe a **un seul** budget *(§4, couche 0)* ; et **le nombre de cycles est une dérivée du Calendrier** *(§1, principe 2)* — `semaines de cours − 2`, lu au module, jamais une constante du code.
+17. ⭐ **Les cinq segments se DÉRIVENT du Calendrier, et le calcul est écrit** *(§4, couche 1)* : soit **C** = `semaines de cours − 2` ; les segments 1 et 2 en prennent **quatre** ; **R = C − 4** se partage en **⌈R/3⌉** au segment 3, **⌊R/3⌋** au segment 4, **le solde** au segment 5. *Pour C = 32 : 10, 9 et 9 semaines.* **Ils se calculent à la conception d'un plan d'évaluation et s'y affichent** — c'est l'écran de ce lot. ⚠️ **En dessous de C = 5, les segments 3, 4 et 5 n'ont aucune semaine : le routeur N'INVENTE AUCUNE BORNE et émet un signal non bloquant**, comme pour la cadence d'ancre manquée *(§10)*. **Aucune date en dur nulle part** : la table des proportions ne porte plus de mois.
+18. **La phase C parcourt les compétences, pas les exercices** *(§5)*. Le meilleur substrat se lit au **geste** *(`produire` > `transformer` > `diagnostiquer`)* puis au **grain** ; une compétence **sans substrat n'est pas sondée et garde son rang** ; **une sonde par compétence par cycle, plafond de 4 par cycle** ; **le grain ne borne pas les sondes** — il borne le retour. Qui sonder, et dans quel ordre, vient du **§8.9** : N3 en entretien d'abord, puis palier cible atteint non vérifié depuis plus de 5 semaines, puis la plus anciennement mesurée, tirage journalisé à égalité. Éligible : **`evaluee` OU `mesuree_silencieusement`** — mais *mesurer n'est pas faire monter* : une sonde réussie ne compte pour la montée que si la compétence est `evaluee` *(§8.9 ; §9)*.
+19. **La couche 4 sélectionne, elle n'habille rien** *(§4)* : jamais d'instanciation à la volée. **Le rattachement au cours a trois états, portés par le matériau** — **`generique`**, servable en tout temps · **rien de déclaré**, **jamais servable** · **un ou plusieurs cours**, servable dès qu'**au moins un** a été **en partie vu**. *L'absence vaut « jamais servable » : rien ne part avant que le professeur ait trié.* **Le non-spoiler compare sur le plan de lecture du livre** — ses semaines numérotées ; la position de l'élève est **la dernière qu'il a lui-même terminée**, jamais celle de la classe ; à défaut, un **texte court hors livre**. La **`borne_amont`** se journalise.
+20. **Le choix de l'élève : 2-3 propositions iso-durée** — même budget de minutes, **le remplissage reste déterministe** *(§4)*. Il n'existe qu'au **méso et au macro, aux crans de `produire` et `transformer`, sauf `transformation_guidee`** ; partout ailleurs, **une seule proposition**. Le choix se journalise *(§11)*.
+21. **Le filtre de parcours** *(§4 ; §3)* : le **`genre`** des trois objets terminaux **ou** `exclusions_parcours[]` du type — **jamais combinés** ; l'éligibilité lit l'**union des inscriptions actives** ; `type_pedagogique` à valeurs fermées, **jamais le libellé de filière** *(`07-` §1.3)*. ⭐ **Et le piège de la vacuité, condition de recette de ce lot** *(`07-` §1.3)* : un élève dont **aucune** inscription active ne porte de parcours **ne reçoit aucun exercice routé, et le professeur en est averti** — la règle d'exclusion, *vraie par vacuité* sur un ensemble vide, l'exclurait de tout en silence ; jamais un service réduit aux seuls types génériques.
 
-## Fin de session
+### Le ciblage — ce que le §6 porte réellement
 
-Commit : `feat(codex): C4 L2 — pilotage prof (budgets par élève, semaine en lecture seule +
-override, exercices communs, compteurs d'assiduité)`.
+22. **« Les cinq règles » de la mission se lisent au §6, qui porte davantage** : la **règle de calibration** *(segment 2)*, le **filtre R0** — aucune règle ne peut proposer une compétence non `evaluee` —, **R1 à R5**, et la **branche d'échec**. Tout ce que la section porte s'implémente ; le compte de la mission ne borne rien.
+23. **La calibration éprouve le diagnostic, elle ne cible pas** *(§6)* : R1, R2 et R3 **inactives** ; cible = les `evaluee` au **moins de mesures**, jusqu'à **trois** chacune ; grain indexé sur ce qu'on éprouve *(micro-méso : Argumentation, Structure, Questionnement ; méso seul : Expression, Synthèse)* ; confirmations en priorité sur les observables que le diagnostic a marqués ; **aucune lettre affichée, aucun compteur d'escalade ne court** ; à la clôture, `profil_provisoire` bascule et **chaque lettre est jugée une fois** — 2 confirmations concordantes → ±1 palier, jamais plus *(§9, clôture)*.
+24. **R1 se compte en exercices, pas en semaines** ; on en sort à **B** ; **à C la part réservée tombe** et l'Expression prend **en plus** une place de cible secondaire sur tout méso/macro **dont le geste est `produire`** ; `exception_expression` : au-delà de **6 cycles** sans progrès, un sur trois — **au palier D seulement** ; et **N3 ne filtre jamais R1** *(§6 ; §8.4)*.
+25. **R2 élit sur le signal de ciblage du groupe de modes que la proportion réclame** *(§7)*, et sur la **valeur non plafonnée** quand elle n'en réclame aucun — **jamais sur la lettre affichée** ; à groupes différents **on compare quand même** — le retard prime ; **chez les HLP, le Questionnement n'est jamais ciblé en `composer`** ; départage : l'ancienneté, puis **Argumentation > Structure > Questionnement** — **inversé** en Questionnement > Argumentation > Structure quand les trois lettres sont ≥ B.
+26. **Le seuil d'entrée du Questionnement : Argumentation ET Structure à C — lu sur la lettre AFFICHÉE des deux gardiens, pas sur le signal** — même quand il porte la plus basse lettre du trio, et **il vaut dans les cinq modes** *(§6, R2)*.
+27. **R3 est une dette qui monte, pas une horloge** : probabilité **(d / 2C)²**, cadence **4 / 6 / 8** selon le palier, certitude à 2C ; **tirage journalisé** ; **suspendue si l'élève est en R1**. *Rien d'autre ne la force : la clause de montée en charge avant les périodes d'explication de texte a été retirée de la source.*
+28. **R4 : la Connaissance n'est jamais cible primaire.** L'effondrement → **renvoi hors routeur** — signal vers Quazian, drapeau professeur ; et **Quazian n'écrit pas dans le profil** *(§2)*. Le routeur sait dire « ce n'est pas mon rayon ».
+29. **Les tables de la couche 1 et de la couche 3** *(§4)* : le palier qui indexe est **celui de la compétence CIBLE**, pas celui de l'élève ; la table des crans est écrite **en noms de crans, jamais en numéros** ; c'est une **distribution par zone, pas une assignation** ; les invariants — **le micro n'est jamais programmé chez B-A** *(N1 l'injecte à la demande)*, **le macro n'apparaît chez E-D qu'au segment 4**, **le plancher macro du segment 5 vaut 25 % à tous les paliers**.
+30. **Le contrôle de trajectoire du §7 gouverne les trois tables** *(une ENTRÉE, calculée à la clôture du cycle précédent — PA1)* : objectifs de période, **pas de fenêtre glissante** ; `taux requis = (O − q·p) / (1 − p)` ; *peut* entre O et T, *doit* au-delà de **T = 1,5 × O** ; **au-delà de 100 % on cesse de forcer et on journalise** ; **un changement de lettre remplace O, ne réinitialise jamais q ni p**. Les unités diffèrent et c'est structurel : **les modes en MESURES sur l'année, les crans en EXERCICES sur l'année, le grain en EXERCICES par segment** — compter les crans en mesures les multiplierait par N. **Les groupes de modes se recouvrent** ; Expression, Connaissance et Synthèse sont **exemptes mécaniquement**, Structure et Argumentation ne connaissent que X ; **quand plusieurs « doit » tombent ensemble : tirage journalisé**.
+31. **La branche d'échec** *(§6)* : si **aucun cran ne porte l'observable visé**, on sert quand même — l'exercice vaut `exerce`, **N1 reste sur le cran courant, dégrade en retour mono-focal, et journalise `degrade`** ; la troisième branche de N2 y retombe. **Sans la colonne, le compteur n'existe pas** *(`07-` §1.5)*.
 
-Termine par la note de journal habituelle et une **liste sèche pour le PO** : décisions laissées
-ouvertes, endroits où l'absence du routeur t'a contraint, et tout ce que tu as dû simuler pour
-tester.
+### L'escalade et la montée — §8
+
+32. **L'escalade ne démarre qu'au segment 3** : compétence **`evaluee`**, **jamais en `profil_provisoire`** *(§8.1)*. Elle **ne réduit jamais le volume**, et elle a **priorité sur les tables de proportion** — une injection à la demande, indexée sur les observables.
+33. **La stagnation se lit sur les observables et la valeur de ciblage NON PLAFONNÉE — jamais la lettre affichée** *(§8.2)*. **Tout observable est réputé non acquis au départ** ; acquis ≈ **2/3 sur la fenêtre d'évidence**, sondes de montée exclues ; les **deux préconditions** de déclenchement *(§8.3)* ; **les observables requis font foi aux fiches — le routeur lit, il ne décide pas** : aucune liste en dur ; la stabilité acquise produit entretien ou rien, **jamais N1**.
+34. **Les seuils se comptent en MESURES, jamais en semaines** *(§1, principe 8)* — une mesure est une tentative, et **la paire entière vaut UNE mesure** *(§8.4)*. Les compteurs : **N1 et N2 acceptent les sondes secondaires ; N3 n'accepte que les mesures où la compétence était CIBLE** *(§8.6)* ; le compteur **ne se réinitialise pas** et survit aux intercalations ; **désescalade dès que l'observable ciblé change de statut**. Et **une sonde échouée nourrit N1 et N2, jamais N3 — ni la descente de lettre** *(§9)*.
+35. **N2 ne lit que les mesures `formatif`** *(§8.4)*. Ses branches lisent le **delta v1→vf restreint à l'observable** et `distance_contexte` ; **au régime par paires, la correspondance est terme à terme** — la correction joue le delta, le nouveau cas joue les v1 — et **la troisième branche est sans objet** ; quand toutes les mesures récentes portent `meme_type`, **N2 ne conclut pas : il crée le test** — un type différent portant le même observable, rejugé au tour suivant.
+36. **N3 : DOUBLE condition — 8 mesures plates ET 5 semaines depuis l'entrée en N1** — la date d'entrée en N1 est stockée pour ça *(`07-` §1.3)*. Dossier complet au drapeau, **date d'ouverture stockée, re-signalement à 3 semaines** — **le moteur d'ouverture et de re-signalement est de ce lot ; l'écran de la file est C6-L1** *(`07-` §2)*. **Ni plafond ni file d'attente.** Le régime d'entretien fait de la compétence la **candidate prioritaire de sonde** *(§8.9, priorité 1)*, le primaire allant à la suivante.
+37. **La version finale pendant l'escalade** *(§8.5)* : le régime « pas de version finale » des crans de transformation passe **« plein »** sur les exercices portant l'observable ciblé. **Le `regime_v1vf` ne se dérive donc jamais du cran seul : l'état d'escalade entre dans la dérivation.** Sans lui, le delta vaut NULL — et **NULL n'est pas 0** : N2 serait aveugle.
+38. **Le registre est une élection, jamais un état** *(§8.7)*, **et l'élection est CHEZ TOI** : préséance **statut de recette** *(un exercice commun sur `mesuree_silencieusement` → descriptif, aucun palier attribué)*, puis **l'escalade** *(retour au défaut dès que les 2 dernières mesures portent un signal redevenu bon)*, puis **la table palier × position de la case**. Le registre **élu** sort de la couche 3 et **se passe à la chaîne** — `traiterDepot({ registre })` ; le registre **servi** se trace sur le dépôt *(`exercices_retours.registre`)*. **Sans décision de routeur, la chaîne prend la première compétence mesurée** : c'est ton journal qui la lui donne *(piège 45)*.
+39. **La montée** *(§8.8)* : l'unité d'assignation est le **couple (`grain`, `cran`)** *(M-a)* ; les sondes de montée sont **chiffrées à la table de la couche 3, rien chez A** *(M-b)* ; l'état est le **cran atteint PAR GRAIN** *(`competences_montee`)* et **la distribution ne se stocke jamais** *(M-c)* ; **deux sondes réussies à la même case déplacent la masse — pas de taux, pas de fenêtre glissante** *(M-d)* ; la mesure de sonde de montée est **marquée `sonde_montee` et neutre** — ni acquisition, ni stagnation *(M-e)*. **Les deux sondes ne se confondent jamais** : la sonde de **montée** ne compte pas ; la sonde **secondaire** compte.
+
+### Les lettres — §9
+
+40. **Montée par la trajectoire : 2 mesures ≥ lettre+1 sur les 3 dernières OU dans la fenêtre de montée** — **6 cycles, soit 2 × la période du plancher de mesure : les deux paramètres ne se règlent jamais séparément** ; jamais plus d'un palier à la fois. **L'incohérence répétée** entre la restitution à chaud et le squelette **bloque la montée et lève un drapeau professeur**.
+41. **Le plafond ancre + 2 borne l'AFFICHAGE, jamais le ciblage ni la stagnation**, qui lisent les valeurs non plafonnées ; **la descente passe par les ancres uniquement** *(§10)* ; **discordance ≥ 2 paliers → la lettre suit l'ancre ET un drapeau part** — jamais d'écrasement silencieux.
+42. ⭐ **Ce qui fait qu'une mesure est une ancre ne t'appartient pas : la `forme` se lit à la ligne du plan d'évaluation** — `scriptorium_exercices_planifies.nature`, où **`evaluatif` EST le `sommatif`** du corpus ; **sans ligne de plan, la `forme` vaut `formatif`**, et ce n'est pas un repli : l'ancre est portée par le plan, qui appartient au professeur *(`07-` §1.2 ; §9)*. **Un exercice que tu assignes n'est donc jamais une ancre par lui-même.**
+43. **Compétence sans ancre réelle — un régime propre** : plafond à **valeur initiale + 1**, **descente impossible**, **aucun drapeau de discordance** ; et **la médiane de classe d'un absent n'est JAMAIS écrite dans `derniere_ancre`** *(§4)*. **Cadence d'ancre manquée : signal non bloquant, et la lettre ne gèle pas** ; **aucune cadence différenciée par parcours — rien à construire** *(§9)*.
+44. **`profil_provisoire` : aucune lettre ne s'affiche et aucune escalade ne se déclenche** ; il bascule à la fin du segment 2 ; **le retour formatif, lui, est actif dès le premier exercice** *(§9 ; `06-` §5)*.
+
+### Ce que d'autres lots ont laissé pour toi
+
+*Ces quatre-là viennent de la boîte aux lettres du `PLAN_DE_CHANTIER.md` §5 : ce sont des constats de lots déjà joués, versés ici parce qu'une session Code ne lit pas un relevé.*
+
+45. ⭐ **Ce que la chaîne attend de toi, et ce qu'elle ne fera pas** : la **cible primaire**, les **sondes** et le drapeau de **sonde de montée** se lisent sur **`routeur_decisions`** — sans décision, la chaîne prend la première compétence mesurée. Les colonnes que tes règles lisent — **`distance_contexte`, `delai_jours`, `delai_mesures`, `delta_v1_vf`, les deux résultats de la paire** — **sont écrites par la chaîne, jamais interprétées par elle** : le sens est chez toi.
+46. ⭐ **`competences_actives_par_classe` est REMPLIE PAR C4-L8**, depuis le statut de recette et l'opt-out au profil de la classe : **le routeur la LIT, il ne l'écrit pas** — *et lui seul : la chaîne ne l'intersecte pas* *(`07-` §1.3)*. Et **`exercices_depots.origine = 'prof'` existe déjà** : la voie mixte se lit dans **les tables du routeur**, pas dans une table à part.
+47. **`cible_primaire` reste NULL sur ta voie** *(`07-` §1.1)* : la cible est la sortie de ta couche 2 et vit à la décision — `routeur_decisions.cible_retenue`. La colonne de l'instance sert la voie du professeur, où l'écran de conception la lui demande. **Ne la remplis pas en assignant.**
+48. ⚠️ **Une question ouverte te concerne, et elle n'est pas tranchée** : **où doit vivre le partage primaire / secondaire / sonde, hors de `routeur_decisions` ?** *(registre des ouverts)* **Ne la tranche pas en passant** : fais au plus simple, dis-le au relevé, et laisse la décision au professeur.
+
+### Les écrans, les compteurs, la conduite
+
+49. **L'écran d'assignation est en LECTURE SEULE** — aucun geste de validation, le professeur ne valide rien au fil de l'eau *(`07-` §1.2)* ; **l'override retire ou impose, et TOUT override se journalise dans `routeur_decisions`** *(`07-` §1.5 ; §11)*, origine comprise. ⭐ **Le retrait écrit le statut `retire`, qui ne se confond JAMAIS avec `abandonne`** : *l'un est une décision du professeur, l'autre un non-geste de l'élève, et l'assiduité mesure l'élève* ; il reste permis **tant que le dépôt n'est pas `clos`** *(`07-` §1.1)*.
+50. **L'assiduité** *(`06-` §5 ; `07-` §1.5)* : **% = semaines faites ÷ (semaines du semestre − semaines de vacances)** ; une semaine est « faite » à **trois quarts** des exercices assignés rendus — **paramètre de configuration, jamais une constante en dur** ; **les vacances sortent du dénominateur**, et le travail de vacances ajoute **au plus une semaine** au numérateur, sur tout le semestre ; **le dénominateur vient du Calendrier** — le module existe, il se lit, il ne se recompte pas. ⭐ **Un exercice `retire` sort du dénominateur POUR L'AVENIR SEULEMENT** : *une semaine dont le compte est déjà arrêté ne se recalcule pas — un chiffre déjà montré au professeur ne bouge plus.* **La collecte démarre à la rentrée, les écrans peuvent attendre.**
+51. **Le taux d'inactivité d'une classe est la part de ses élèves dont la semaine n'est pas « faite »** — le même booléen, au même seuil : **un seul signal, qui ne distingue pas « rien rendu » de « pas assez rendu »** *(`06-` §5)*. Une semaine sans exercice assigné est « faite » par construction — **jamais une division par zéro**. **Et la classe a fait sa semaine quand les trois quarts de ses élèves ont fait la leur** : **le professeur est averti quand le contrat n'est pas rempli** — un avertissement, jamais une action automatique.
+52. **La vue fine est une VUE, pas une troisième mesure** *(`06-` §5)* : **une frise à trois couleurs** — **vert**, la semaine « faite », du seuil à 100 % ; **orange**, au moins la moitié sans atteindre le seuil ; **rouge**, sous la moitié — **et un tableau, la liste des élèves avec leur pourcentage de complétion** *(rendus ÷ assignés)*. Tout se lit des comptes qu'`assiduite_hebdo` tient déjà — **aucune table neuve, aucun agrégat stocké**. **La borne haute de la frise est le seuil même de la semaine « faite »**, et la moitié, comme lui, est un réglage.
+53. **Aucune note, nulle part, sous aucune forme** *(`06-` §5)* ; et **pas de fausse précision** : `n`, le nombre de mesures, est un décompte réel — **aucune « confiance » agrégée ne s'affiche**, rien ne la définit.
+54. **`routeur_actif` reste à OFF** — le routeur prend ses couches à l'allumage **« sans rien changer au schéma ni aux écrans »** *(`07-` §5)* : si l'allumage exige un changement, quelque chose est mal construit. Et **la table des statuts de recette du §5 « ne fait foi sur rien »** : en cas de divergence, la source citée a raison.
+
+## Le « fait quand » — recopié du `07-Implementation.md` §2
+
+> *Fait quand* : le routeur **remplit une semaine entière** dans les bornes de chaque élève ; le professeur voit l'assignation et peut l'écraser ; le **taux d'inactivité par classe** et le **pourcentage d'assiduité par élève** se calculent ; une escalade se déclenche, s'applique et se désescalade sur des données réelles ; les **cinq segments s'affichent au plan d'évaluation**, et un calendrier trop court **se signale sans rien bloquer**.
+
+C'est la condition de recette, et **elle ne se négocie pas en séance**. Trois précisions qui n'en changent rien :
+
+- **« dans les bornes » se lit au §5 du `01-`** : le plafond n'est jamais dépassé ; le plancher est atteint, **ou** l'écart est journalisé et le solde revient à la voie mixte — une semaine pleine en voie mixte est une semaine conforme ;
+- **« des données réelles » sont des lignes réelles des tables** — des mesures posées en base en tiennent lieu, des mocks du moteur non ;
+- **le `07-` §1.3 déclare une condition de recette de plus, nommément pour ce lot** : l'élève sans parcours ne reçoit **aucun** exercice routé et **le professeur en est averti** *(piège 21)*.
+
+**Vérifié veut dire par requête et à l'écran, pas supposé.**
+
+## Les conventions — `PLAN_DE_CHANTIER.md` §5
+
+**Trois conventions de dépôt.** Les deux premières valent pour tout lot qui touche la base :
+
+- **Une ligne au `SUIVI_SQL.md` avant exécution**, jamais après — et **sandbox d'abord** *(protocole, règles 1 et 2)* ; **ne rejoue jamais un fichier de l'Archive** *(règle 4)* ; **répétition à blanc : copie le CORPS du fichier, jamais le fichier entier** — son `commit;` validerait la transaction englobante —, puis **vérifie par requête** le retour à l'état d'avant *(règle 6)*. Ce lot ne crée aucune table ; s'il lui faut une migration, une touche à une table qu'un élève réel utilise suit le **protocole renforcé** *(règle 5)*.
+- **Les migrations sont additives et gatées** — les trois interrupteurs restent à OFF jusqu'à la recette.
+- ⭐ **La doctrine en base est DÉRIVÉE, jamais tapée, et il n'y a qu'un dériveur.** Avant de lire ses tables, joue `python3 scripts/derive-doctrine.py --verifie` : il doit dire **IDENTIQUE** sur les onze tables, les empreintes de source et la fixture. **S'il dit DIVERGE, rejoue `--sql` ; jamais corriger la base à la main.** ⚠️ **Deux angles morts connus, et le premier te vise** : **`exercices_types_crans` est écrite par `--sql` et n'est PAS contrôlée par `--verifie`** — or c'est elle qui porte la `couverture_observables` que N1 consomme ; un « onze IDENTIQUE » ne dit donc rien d'elle. Et **la lecture applicative de `exercices_routes` plafonne à 1000 lignes sur 3264** — c'est le défaut que **C4-L8-bis** corrige : **si tu passes par elle, n'en contourne rien, signale-le** *(`PLAN_DE_CHANTIER.md` §2 et §6)*.
+
+**Une convention de clôture.** Ajoute **ta section au `SUIVI_tests_manuels.md`** — ce qui a été prouvé en séance, **coché avec sa preuve**, et ce qui **reste à jouer en recette**, décoché. *Un reste de recette qui ne vit que dans un relevé ne se rappelle à personne.*
+
+**Une convention de dette.** Une source trouvée **fausse** se marque, elle ne se corrige pas : **`[faux]`** au point de l'erreur, **plus une ligne à la section DETTES** du `INVENTAIRE_Non_Tranches.md`, avec l'avant et l'après. *Le `07-` §1 et §5 font exception — ils sont ouverts à l'implémentation et s'écrivent depuis ton relevé.*
+
+*La convention d'ouverture de compétence — les trois gestes de `utils/chaine/LISEZ-MOI.md` — n'a pas d'objet ici : ce lot n'ouvre aucune compétence dans la chaîne.*

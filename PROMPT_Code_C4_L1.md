@@ -1,210 +1,111 @@
-# PROMPT — Session Code ⚙️ : C4 · Lot L1 — Schéma & gates du moteur d'exercices
+# PROMPT — Session Code : C4-L1 — Le schéma et les interrupteurs
 
-> **À coller dans une session Claude Code FRAÎCHE** (règle R4 du plan : une session = un lot).
+> **À coller dans une session Claude Code fraîche.** Une session, un lot.
 >
-> **Manifeste de fichiers faisant foi — à lire en démarrant, rien de plus** (règle de manifeste,
-> SPEC C3 §9) :
->
-> | Fichier | Ce qu'on y lit | Statut requis |
-> |---|---|---|
-> | `SPEC_C3_exercices_competences.md` | **le Tableau de bord du socle** (section B : ce qui n'est PAS décidé), **§6 (le schéma)**, §0 (définitions de télémétrie), §1.7 (statuts de recette), §9 (le lot) | **v4.2 — socle de construction (gel du 29/07, amendements A1 à A8)** ✔ |
-> | `SUIVI_SQL.md` | le protocole R6 et le journal | à jour ✔ |
-> | `c1_rls_eleve.sql` | le patron RLS élève (SELECT own strict / FERMÉ) | exécuté sandbox ✔ |
-> | `AGENTS.md` | conventions repo | ✔ |
->
-> Si l'un de ces fichiers n'est pas au statut requis, **arrête-toi et signale-le** — ne devine pas.
-> **Contrôle de version, mécanique** : ce prompt est écrit contre la **v4.2**. Si la spec porte une
-> version supérieure, **arrête-toi** et lis son **journal des amendements** — un amendement touchant
-> le §6 invalide une partie de ce prompt.
+> Ce prompt est fabriqué selon la recette du `PLAN_DE_CHANTIER.md` §5. Ce que le lot construit, son manifeste et son « fait quand » font foi au `07-Implementation.md` §2 — ils sont recopiés ci-dessous avec leurs versions au moment de l'écriture.
 
 ---
 
-## Mission
+## Le manifeste — recopié du `07-Implementation.md` §2
 
-Poser **tout le schéma du moteur d'exercices et de compétences** (SPEC C3 §6), **derrière trois
-gates OFF**, avec les RLS et les gardes serveur. Rien d'autre : **aucun écran, aucun appel IA,
-aucune logique de routage**. Ta réussite = des migrations additives propres, jouées en sandbox,
-journalisées ligne par ligne, et un seed lisible.
+> *Manifeste* : **ce document, §1** · le **suivi SQL** · le fichier de **RLS élève**, comme patron *(déposé)*.
 
-Toutes les tables sont **neuves** : les migrations sont **additives et gatées**, donc **protocole
-SQL normal** (pas le protocole renforcé — elles ne peuvent rien casser d'existant). Deux exceptions
-qui touchent de l'existant et demandent de la prudence : la **FK inverse** sur
-`scriptorium_exercices_planifies` et le **champ d'aménagement au profil élève**.
+« Ce document » est le `07-Implementation.md`. Les trois pièces :
 
-## Livrables
+| Pièce | Où | Statut requis | Au moment de l'écriture |
+|---|---|---|---|
+| `07-Implementation.md`, **§1** | `/Users/louissagnieres/Documents/GitTest/palimpseste-conception/` | aucun — un lot n'exige pas un statut de la source qui le déclare *(`07-` §2)* | **VERSION 2.2** · VALIDÉ ET GELÉ *(vaut relu et validé)* |
+| `SUIVI_SQL.md` | racine de ce dépôt | **déposé** *(entrée sans statut explicite — `07-` §2)* | pas de ligne VERSION — un journal vivant, ouvert le 23/07/2026 |
+| `c1_rls_eleve.sql` | racine de ce dépôt | **déposé** *(explicite au manifeste)* | pas de ligne VERSION — en-tête calé sur le dump `pg_policies` du 23/07 |
 
-- Un ou plusieurs fichiers `.sql` à la racine, préfixés `c4_l1_` (découpe libre, mais **une zone
-  cohérente par fichier** et un ordre d'exécution explicite en tête).
-- **Une ligne par fichier dans le journal de `SUIVI_SQL.md`**, créée **AVANT** exécution.
-- Un **seed lisible** des types (voir §4 ci-dessous).
-- Un bloc de vérification en pied de chaque fichier (comptage des colonnes/tables créées).
+**Rien de plus : la règle de manifeste veut que ce qui n'y figure pas ne se lise pas** *(`07-` §2)*. Deux précisions pour que la règle ne fasse pas trébucher :
 
----
+- l'`AGENTS.md` du dépôt n'est pas une source : Claude Code le charge d'office, il porte les conventions du repo ;
+- **`SPEC_C3_exercices_competences.md` est archivée : elle ne fait foi sur rien et ne se lit pas.** Elle traîne à la racine de ce dépôt, son nom ressemble au sujet du lot — ne l'ouvre pas.
 
-## 1. Les tables (SPEC C3 §6 fait foi — ce qui suit en rappelle les pièges)
+## Le contrôle d'entrée — en deux temps, et les deux ne font pas la même chose
 
-Crée, dans l'ordre des dépendances :
+> **Le statut bloque.** Un fichier du manifeste dont l'en-tête porte un statut inférieur à celui exigé **arrête le lot**, explicitement. Le barème est au `07-Implementation.md` §2 : *déposé* → *relu et validé* → *versé et bancé*, cumulatifs ; « VALIDÉ ET GELÉ » vaut *relu et validé*.
+>
+> **La version avertit.** Si la ligne VERSION d'un fichier du manifeste diffère de celle inscrite ici, **relis son en-tête avant de continuer** — une version qui bouge dit qu'un texte a changé, pas qu'il est devenu faux.
+>
+> **Le blocage est granulaire quand il peut l'être.** Une fiche de compétence absente ou non bancée bloque **cette compétence**, pas le lot.
 
-`exercices_types` · `exercices_references` · `exercices` · `exercices_depots` · `exercices_jobs` ·
-`exercices_squelettes` · `exercices_metacognition` · `exercices_retours` · `competences_mesures` ·
-`competences_niveaux` · **`monitoring_mesures`** · **`monitoring_niveaux`** ·
-`competences_actives_par_classe` · `assiduite_hebdo` · `routeur_decisions`.
+Concrètement, pour ce lot : vérifie que les trois pièces **existent**, et que l'en-tête du `07-` porte bien **VERSION 2.2**. Le manifeste ne compte aucune fiche de compétence — la clause granulaire n'a pas d'objet ici. Si une pièce manque ou bloque, **arrête-toi et signale-le, ne devine pas**.
 
-**Les quatorze pièges à ne pas manquer** — ce sont des décisions d'arbitrage du 29/07 et ses
-amendements A1 à A8, pas des détails :
+## La mission — reprise du `07-Implementation.md` §2
 
-1. **`exercices_depots` se crée à l'ASSIGNATION**, pas au dépôt. Son `statut` est énuméré :
-   `assigne` → `ouvert` → `v1_remis` → `retour_publie` → `vf_remis` → `clos`, plus `abandonne`.
-   Pour une passation en classe, la séquence s'arrête à `retour_publie` (pas de vf).
-2. **Index unique `(depot_id, competence, version)` sur `exercices_squelettes`.** C'est le garde-fou
-   d'idempotence : sans lui, un retry après expiration écrit une seconde mesure pour la même copie,
-   et la règle de montée « 2 sur 3 » fait monter une lettre sans que l'élève ait rien fait.
-3. **`competences_niveaux` n'a PAS de `classe_id` dans sa clé.** Le profil est **unifié par élève ×
-   compétence** (décision actée du 17/07, confirmée par A1, règle R6 du routeur).
-4. **`competences_mesures.classe_id` est NULLABLE, et NULL est le cas MAJORITAIRE (A3).** Il
-   remplace l'ancien `provenance` (`tc`|`hlp`). Le parcours TC/HLP n'est **pas observable sur le
-   travail fait à la maison** : un élève bi-classe y reçoit un flux unique, servi par un routeur
-   unique sur un profil unique. Le parcours n'est établi que pour les **passations en classe** et
-   la **lecture du livre** ; partout ailleurs il vaut `indetermine`. Ne mets donc **pas** de
-   contrainte NOT NULL, et ne traite pas le NULL comme une anomalie de collecte.
-5. **DIX compétences, pas onze — et la famille est une COLONNE, pas un préfixe (A1).** Les deux
-   Problématisations ont fusionné en une seule compétence, le **Questionnement**, qui appartient aux
-   **deux** familles. Il n'y a donc **pas** d'identifiants `ecriture.problematisation` /
-   `lecture.problematisation` : **un identifiant par compétence, dix en tout**, plus une colonne
-   **`famille`** (`ecriture`|`lecture`) sur `competences_mesures`. Écriture : Expression,
-   Argumentation, Structure, Connaissance, Synthèse. Lecture : Restitution, Reconstruction,
-   Évaluation, Mouvement. Et le Questionnement, des deux.
-6. **`competences_actives_par_classe` a une clé à TROIS colonnes (A1)** : **(classe, compétence,
-   famille)**. C'est elle qui porte le cas du Questionnement — **inactif en écriture pour HLP,
-   actif en lecture**. Une clé à deux colonnes rendrait ce cas inexprimable.
-7. **Le Monitoring a ses TABLES PROPRES (A8) : `monitoring_mesures` et `monitoring_niveaux`.** Il
-   n'apparaît **ni** dans `competences_mesures` **ni** dans `competences_niveaux` — son état n'est
-   pas une lettre. Voir §1bis ci-dessous.
-8. **`exercices.mode` = `formatif_maison` | `diagnostique_classe`**, et rien d'autre : c'est un
-   **contexte**. La valeur `lecture` n'existe pas — la **famille se lit sur le type**.
-9. **`lettre_equivalente` ne vit PAS sur `exercices_squelettes`** (fausse précision) ; elle vit sur
-   `competences_mesures`.
-10. **`lu_at` vit sur `exercices_retours`, une seule fois** — pas aussi sur le dépôt.
-11. **`exercices_references`** : contrainte d'**unicité** + **empreinte immuable** (un hash du
-   contenu). Un texte ne se décompose jamais deux fois ; une référence validée ne se modifie plus en
-   silence.
-12. **`delta_v1_vf` est nullable et NULL n'est pas 0.** Documente-le en commentaire de colonne : une
-   passation en classe n'a pas de vf, et lire son NULL comme un zéro fabriquerait un faux signal
-   d'intégrité.
-13. **Deux champs de durée** sur `exercices_types` : `duree_cycle_min` (**NOT NULL**, la seule
-    décomptée du budget) et `duree_redaction_min` (**nullable**, types à rédaction suivie seulement).
-    L'ancien `duree_attendue_min` n'existe pas.
-14. **Deux champs de délai** sur `competences_mesures` : `delai_jours` et `delai_mesures`.
+> **C4-L1 — Le schéma et les interrupteurs.** Toutes les tables du §1, le **seed** des treize objets et des types diagnostiques, les clés étrangères vers le plan d'exercices, la **RLS et les gardes serveur**, les **trois interrupteurs posés à OFF**, l'**index unique du squelette** et l'**unicité avec empreinte** sur les références.
 
-**Énumérations à figer** : `grain` (`micro`|`meso`|`macro`) · `regime_cycle`
-(`plein`|`optionnel`|`paires`) · `mode_saisie` (`manuscrit`|`ecran`|`mixte`) · `contexte`
-(`maison`|`classe`|`diagnostic`|`essai_fragments`) · `statut_recette`
-(`evaluee`|`mesuree_silencieusement`|`differee`) · `calibration`
-(`bien_calibre`|`surconfiant`|`sous_confiant`|`indetermine`) · `conditions_declarees`
-(`temps_mis`|`au_plus_vite`|`pas_pu`) · `duree_taguee` (`normale`|`interrompue`|`suspecte`) ·
-`origine` (`routeur`|`prof`) · `distance_contexte` (`meme_type`|`meme_famille`|`transfert`) ·
-**`sous_dimension`** (`lucidite_incompris`|`calibration_confiance`) · **`direction`**
-(`surconfiance`|`sous_confiance`).
+**Et rien d'autre** — ni écran, ni appel de modèle, ni règle de routage. Ce lot bloque tout le reste : *aucun autre lot n'écrit sans ses tables* *(`PLAN_DE_CHANTIER.md` §3)* ; il ne construit que la base.
 
-**Champs de versionnage de l'instrument** : `prompt_version` et `modele` sur les squelettes (par
-phase), `instrument_version` sur les mesures. Sans eux, on ne pourra jamais séparer « l'élève a
-progressé » de « le prompt a changé ».
+**Le `07-` §1 fait foi et se lit en entier.** Ses cinq blocs — les objets et les instances *(§1.1)*, la mesure *(§1.2)*, l'état *(§1.3)*, le Monitoring *(§1.4)*, le journal et les compteurs *(§1.5)* — déclarent **dix-sept tables neuves**, **les démonstrations du temps 1** *(§1.1 — la forme physique t'appartient)*, **trois touches à l'existant** *(`api_couts`, `profiles`, `classes`)* et **les clés étrangères vers le plan d'exercices**. **La forme physique t'appartient** — colonne, table fille ou JSONB : le document exige que la donnée existe, qu'elle soit nommée et qu'elle soit gardée ; il ne choisit pas son type *(`07-` §1)*.
 
-## 1bis. Les deux tables du Monitoring (A8 — lis le §6 de la spec, il fait foi)
+## Les pièges — les décisions dont l'oubli coûte une migration
 
-Le Monitoring est une compétence de **second ordre** : jamais notée, jamais cible du routeur, deux
-sous-dimensions qui **ne se moyennent pas**, et un état qui **n'est pas une lettre**. D'où deux
-tables à part — c'est une décision de Louis du 29/07, pas une commodité.
+*Sauf mention, les renvois pointent au `07-Implementation.md`. En cas de doute entre ce prompt et la source : la source a raison.*
 
-- **`monitoring_mesures`** : `eleve_id` · `sous_dimension` · **`amplitude_ecart`** (0 calibré → 3
-  massif) · **`direction`** (**NULL quand l'amplitude vaut 0** — pose la contrainte) · `observables`
-  JSONB · `contexte` · `famille` · **`classe_id` nullable** · `depot_id?` ·
-  **`competences_couvertes[]`** · `delai_jours` · `delai_mesures` · `prompt_version` · `modele` ·
-  `instrument_version` · `created_at`.
-- **`monitoring_niveaux`** : `eleve_id` · `sous_dimension` · `amplitude_courante` ·
-  `direction_courante` · `n` · `statut_recette` · `profil_provisoire` · `updated_at`.
+### Ce qui ne se crée pas
 
-**Trois choses à ne pas rater :**
+1. **Six valeurs ne sont pas des colonnes** — la série d'une mesure, le `regime_v1vf` d'un exercice, le registre courant du retour, l'historique des cibles, le signal de ciblage, la valeur de ciblage non plafonnée : **un état se stocke, une lecture se recalcule** *(§1, table d'ouverture)*.
+2. **Aucune table ne porte de colonne `famille`** — le partage composition / réception se dérive des modes élus *(§1)*.
+3. **Six attributs d'`exercices_types` ne seront pas créés** — `produit_mesure`, `duree_redaction_min`, `complexite`, `etayage[]`, `duree_v1_min`, `duree_vf_min`. Le §1.1 est écrit « pour qu'une session ne les cherche pas ».
+4. **Aucun champ `note`, nulle part** *(§1.1)* · **aucune lettre et aucun coût sur les squelettes** *(§1.2)* · **aucun champ de dispersion sur les mesures** — la dispersion appartient à l'instrument et se lit par `instrument_version` *(§1.2)* · **aucune liste des compétences dans `competences_niveaux`** — ce qui a une lettre est une conséquence calculable *(§1.3)* · **la distribution de montée ne se stocke jamais** *(§1.3)* · **l'agrégation des coûts se fait en requête, jamais en colonne** *(§1.2)*.
 
-1. **`competences_couvertes[]` n'est pas décoratif.** La calibration ne compte que sur les
-   compétences dont le banc a passé la recette (§1.7) : sans cette colonne, aucune mesure de
-   Monitoring ne sera relisible plus tard.
-2. **Les quatre champs de télémétrie vont dans `exercices_metacognition`**, et doivent exister **dès
-   la première migration** : confiance déclarée à la remise de la v1, jugement de l'élève item par
-   item, réponse du squelette sur ces mêmes items, niveau réellement obtenu. Aucun banc ne peut
-   valider le Monitoring avant la rentrée — c'est l'année 2026-27 qui en tient lieu, et **une année
-   de collecte manquante ne se rattrape pas**.
-3. **Aucune ligne du Monitoring dans `competences_mesures` ni `competences_niveaux`.** Si tu te
-   surprends à y ajouter une colonne pour lui, tu es en train de défaire A8.
+### Les clés — quatre tables d'état, quatre clés différentes
 
-## 2. Les deux touches à de l'existant
+5. `competences_niveaux` : **(élève × compétence)** — **pas de classe dans la clé**, le profil est unifié par élève *(§1.3)*.
+6. `competences_escalade` : **(élève × compétence × observable)** — un élève peut être en N2 sur un observable et en régime normal partout ailleurs *(§1.3)*.
+7. `competences_montee` : **(élève × compétence × grain)**, un `cran_atteint` — **pas trois colonnes** `_micro`/`_meso`/`_macro`, qui graveraient l'énuméré des grains dans des noms *(§1.3)*. **C'est un ÉTAT, pas une trace** : recalculé du journal, un changement d'`instrument_version` ferait redescendre un élève d'un cran sans que personne ne l'ait décidé *(§1.3)*.
+8. `competences_actives_par_classe` : **(classe × compétence)** — **aucune composante de série dans la clé** *(§1.3)*.
+9. **L'index unique `(dépôt, compétence, version)` sur `exercices_squelettes`** — le garde-fou d'idempotence, nommé par la mission : une copie ne produit jamais deux squelettes pour la même compétence *(§1.2)*.
+10. `exercices_references` : **unicité et empreinte immuable** — un texte ne se décompose jamais deux fois, une référence validée ne se modifie plus en silence — et **une référence non validée n'entre jamais dans une phase de jugement** *(§1.1)*.
 
-- **FK inverse** `scriptorium_exercices_planifies` → `exercices` (la boucle plan → module).
-  Additive, nullable, `on delete set null`.
-- **Champ d'aménagement au profil élève** : `mode_saisie_force` (`ecran` | NULL), posé par le prof.
-  **JAMAIS de diagnostic médical** — pas de colonne « dysgraphie », pas de motif, pas de texte
-  libre. C'est une exigence de conformité (SPEC C3 §11), pas une préférence.
+### Une ligne, pas deux
 
-## 3. Gates et RLS
+11. **Une paire de diagnostic est UNE ligne d'`exercices`** — `consigne_instanciee` déclare **deux cas, dans l'ordre** *(§1.1)* — **un seul dépôt, deux crédences, UNE mesure** : les deux résultats de la paire s'attachent à la mesure, **le nouveau cas n'écrit jamais une seconde ligne**, et **NULL n'est pas un échec** — une paire non terminée est NULL *(§1.2)*.
+12. **Un objet partagé par deux compétences prend une seule ligne** d'`exercices_types` — deux lignes ne se séparent que si ce que l'élève produit diffère *(§1.1)*.
+13. **`exercices_depots` se crée dès l'ASSIGNATION, pas au dépôt** *(§1.1)*. Statut : `assigne` → `ouvert` → `v1_remis` → `retour_publie` → `vf_remis` → `clos`, plus **`abandonne`, exclu des règles de stagnation** ; **en classe, la séquence s'arrête à `retour_publie`** *(§1.1)*.
 
-- **Trois gates**, patron `rag_actif`, même emplacement : **`exercices_actif`**,
-  **`routeur_actif`**, **`competences_affichage_actif`**. **Tous OFF.** Vérifie-le explicitement dans
-  le bloc de contrôle.
-- **RLS** — patron `c1_rls_eleve.sql` : élève = **SELECT own strict**, toutes les écritures passent
-  par le serveur.
-- **Deux tables FERMÉES à l'élève** (patron `aletheia_travaux`) : **`exercices_squelettes`** et
-  **`exercices_metacognition`** ne doivent **JAMAIS** être lisibles par l'élève, avant comme après
-  publication. Ce qu'il voit, c'est le **retour publié**, jamais le squelette ni le verdict.
-- `exercices_retours` : lisible par l'élève **seulement si `published_at` est non nul**.
-- `assiduite_hebdo` : l'élève voit sa propre ligne ; le prof voit sa classe.
-- **`monitoring_mesures` et `monitoring_niveaux`** : mêmes règles que leurs équivalents compétences —
-  écritures serveur, lecture élève strictement `own`, et **rien avant l'allumage**.
+### NULL, listes et valeurs qui piègent
 
-## 4. Seed
+14. **La compétence s'écrit en identifiant nu** — `expression` · `argumentation` · `structure` · `connaissance` · `synthese` · `questionnement` : **six, pas de préfixe**, les six traversent les deux séries *(§1.2)*. **Les `modes` sont une liste, jamais une valeur** *(§1.2)* — et sur l'instance, ils s'élisent **par compétence mesurée** *(§1.1)*.
+15. **La `lettre` de `competences_niveaux` est NULLABLE, et l'absence de lettre est une règle, pas un cas limite** *(§1.3)*.
+16. **`confiance_declaree` : une valeur par compétence `evaluee` mesurée, jamais un scalaire** *(§1.1)* ; la **`credence`** : plusieurs valeurs par dépôt — deux sur une paire *(§1.2)*.
+17. **`motif_depassement` : NULL quand la micro-question n'a pas été déclenchée ou pas répondue** *(§1.1)* · **les observables d'une mesure viennent de la v1 seule**, la version finale n'alimente que le delta *(§1.2)* · **`sonde_montee` se marque** — à ne pas confondre avec les sondes secondaires, qui comptent *(§1.2)*.
+18. **Monitoring : `n/a` est une valeur déclarée** — l'amplitude n'est **pas un entier nu**, les deux colonnes doivent l'accepter *(§1.4)* · **direction NULL quand l'amplitude vaut 0** *(§1.4)* · **dénominateur à zéro → taux NULL, jamais zéro** *(§1.4)* · les colonnes propres aux deux sous-dimensions **ne se croisent pas** *(§1.4)* · **la `source` est un champ, pas un commentaire** *(§1.4)*.
+19. **Le Monitoring a ses deux tables — `monitoring_mesures`, `monitoring_niveaux` — et n'entre jamais dans `competences_mesures` ni `competences_niveaux`** *(§1.2, §1.4)*. `exercices_metacognition` alimente `monitoring_mesures`, **jamais `competences_mesures`** *(§1.2)* ; **la saisie de crédence vit au dépôt, le Monitoring ne reçoit que l'accord** *(§1.2, §1.4)*.
+20. **Le parcours** : `type_pedagogique` **à valeurs fermées** sur la classe, **nullable**, distinct du **libellé de filière** libre — le filtre ne lit que le second et ne le dérive jamais du premier ; **le parcours d'un élève ne se stocke pas**, il se dérive de l'**union de ses inscriptions actives** *(§1.3)*.
+21. **`profiles` : les trois champs d'aménagement s'ajoutent en migration additive** — `mode_saisie_force`, `exception_expression`, `exception_orthographe` : des **marques pédagogiques, jamais un diagnostic médical**, pas de motif, pas de texte libre ; leurs règles vivent ailleurs, ce lot pose les champs *(§1.3)*. **Et la policy self-service reste morte : aucun élève n'écrit sa propre ligne** — ne la réintroduis pas *(§1.3)*.
 
-- **Types d'écriture 1-14** (`02-exercices.md` §3 est la source, mais **tu ne l'ouvres pas** : les
-  codes, grains, gestes, compétences et régimes de cycle te sont fournis dans la spec §6 et dans le
-  seed que tu écris à partir d'elle ; si une valeur te manque, **laisse la ligne incomplète et
-  signale-la**, ne l'invente pas).
-- **Types diagnostiques** : trois lignes — essai, dissertation, explication de texte. Codes à ta
-  convenance, cohérents avec la convention `t*` / `l*`.
-- **`competences_actives_par_classe`** : le seed doit rendre vrai le cas du **Questionnement** —
-  **inactif en écriture pour HLP, actif en lecture** ; actif dans les deux familles pour TC. Attention
-  au piège : « HLP n'a pas le Questionnement » est **faux**, il l'a par la lecture. Les neuf autres
-  compétences sont actives dans leur famille propre, pour les deux parcours.
-- Le seed doit se relire en trente secondes : un fichier, une ligne par type, commentaires courts.
+### Ce qui existe déjà — se réutilise, ne se recrée pas
 
-## Interdits (périmètre verrouillé)
+22. **`api_couts` existe.** Deux ajouts : la **`phase`** — `p1`, `p2`, `retour`, **NULL hors exercices** ; elle dit **l'étage, pas le nombre d'appels** — et le **rattachement à l'exercice** *(dépôt, compétence, version)* — **tous nullables, au mieux** : un coût non attribuable reste une ligne valide *(§1.2)*.
+23. **Le drapeau d'intégrité passe par `signalerEnAttenteIA`** *(`utils/integrite.ts`)*, qui écrit dans `integrite_signalements` — **un lot le réutilise, il n'en crée pas un second** *(§1.2)*.
+24. **`inscriptions`, `classes` et `profiles` existent** — tout s'y ajoute en additif *(§1.3)*. **Les photos vont au bucket existant**, par URL signée, **métadonnées EXIF purgées** *(§1)* ; `photos[]` porte l'ordre, la rotation, une somme de contrôle, **et sait dire qu'une page manque** *(§1.1)*.
+25. **Les trois interrupteurs — `exercices_actif`, `routeur_actif`, `competences_affichage_actif` — au même emplacement que les interrupteurs existants, tous à OFF** *(§1.5 ; ce que chacun commande : le §5 du même document, que le §1.5 cite)*.
+26. **`routeur_decisions` porte le tirage aléatoire et `degrade`** — sans colonne, le compteur n'existe pas *(§1.5)* · **`assiduite_hebdo` se collecte dès la rentrée** et porte les **deux compteurs de minutes** *(§1.5)* · `exercices_jobs` : **clé d'idempotence**, plafond de tentatives, **`echec_definitif` visible** *(§1.1)* · **`duree_exercice_min` ne se saisit jamais à la main** — obligatoire, dérivée du geste et du grain ; la stocker par cran admis ou la calculer à la volée est un choix d'implémentation *(§1.1)* · **les deux drapeaux d'opt-in de classe : sur l'instance, jamais sur le type, faux par défaut, sans effet quand `lieu` vaut `maison`** *(§1.1)*.
 
-- **Aucun écran, aucune route, aucun appel IA, aucune logique de routage.** Ce lot est du schéma.
-- **Aucune modification** des tables, policies ou flux existants au-delà des deux touches du §2.
-- **Ne rejoue jamais** un fichier de la section « Archive » de `SUIVI_SQL.md`.
-- N'ouvre pas `01-routeur.md`, `02-exercices.md` ni les fichiers de `palimpseste-conception/` : ils
-  ne sont pas au manifeste de ce lot.
-- Si une décision te manque — un type de colonne discutable, une énumération incomplète, un choix de
-  découpe — **note-la et laisse-la ouverte** (règle R7 : les décisions se prennent hors session).
+### Le seed — d'où vient son contenu
 
-## Fait quand
+27. **Les treize objets font foi au `02-exercices.md` §1** — c'est une **citation portée par le §1.1**, et une citation se suit pour ce qu'elle désigne, au statut qu'elle présume — *déposé* : « la section dit seulement où lire » *(`07-` §2)*. **Ouvre ce passage-là, rien d'autre du `02-`.** Sa table à six colonnes est le contenu du seed.
+28. **Les deux axes de déclaration** — par cran, par compétence *(§1.1)* — **existent en structure dès ce lot ; leur contenu vit hors manifeste** : la couche type dérivée du `04-` s'injecte au lot C4-L5, l'import du professeur arrive au lot C4-L8 *(`07-` §2)*. **Une valeur que le seed ne peut pas citer se laisse vide et se signale — elle ne s'invente pas.**
+29. **Les types diagnostiques** : la mission les nomme, le §1 ne les détaille pas. Pose leurs lignes avec ce qu'une citation du §1 te donne ; **ce qui manque reste incomplet et se signale au professeur** — les décisions se prennent hors session.
 
-- [ ] Les migrations sont **jouées en sandbox**, leurs blocs de vérification passent.
-- [ ] **`SUIVI_SQL.md` est à jour, une ligne par fichier**, avec date sandbox cochée.
-- [ ] Les **trois gates existent et sont OFF** — vérifié par requête, pas supposé.
-- [ ] L'**index unique `(depot_id, competence, version)`** existe — vérifié par requête.
-- [ ] `competences_niveaux` **n'a pas** de `classe_id` ; `competences_mesures` **en a un, nullable**.
-- [ ] **`competences_actives_par_classe` a bien une clé à trois colonnes** — vérifié par requête.
-- [ ] **`monitoring_mesures` et `monitoring_niveaux` existent**, et **aucune colonne de Monitoring
-      n'a été ajoutée** à `competences_mesures` ni à `competences_niveaux`.
-- [ ] **Les quatre champs de télémétrie du Monitoring existent** sur `exercices_metacognition`.
-- [ ] **Aucun identifiant de compétence préfixé `ecriture.` / `lecture.`** — dix identifiants, la
-      famille en colonne.
-- [ ] Le seed des types est lisible et `competences_actives_par_classe` porte le cas du
-      Questionnement (inactif en écriture pour HLP, actif en lecture).
-- [ ] Aucune policy existante n'a été modifiée (dump `pg_policies` avant/après en pied de fichier).
+### La conduite SQL — le manifeste la porte
 
-## Fin de session
+30. **Une ligne au journal de `SUIVI_SQL.md` AVANT exécution** *(protocole, règle 1)* · **sandbox d'abord** *(règle 2)* · **ne rejoue jamais un fichier de l'Archive** *(règle 4)*.
+31. **Les tables neuves, additives et gatées, suivent le protocole normal ; les touches à l'existant — `profiles`, `classes`, `api_couts` — suivent le protocole renforcé** : un élève réel utilise la base *(règle 5)*.
+32. **Répétition à blanc : ne joue jamais le fichier entier dans une transaction d'essai** — son `commit;` validerait la transaction englobante. Copie le **corps** seul, et après le `rollback`, **vérifie par requête** le retour à l'état d'avant *(règle 6)*.
+33. **RLS — le patron est `c1_rls_eleve.sql`** : lecture élève = **ses propres lignes, strictement** ; **toutes les écritures passent par le serveur** *(§1)* ; gare aux **doublons de policies OR'ées**, que le patron documente. **Deux tables ne sont jamais lisibles par l'élève avant la publication de son retour : les squelettes et la métacognition** — c'est la garde la plus facile à casser et la plus coûteuse : elle donne la grille et les réponses *(§1, §1.2)*.
 
-Commit : `feat(codex): C4 L1 — schéma du moteur d'exercices et compétences (tables, tables Monitoring,
-RLS, 3 gates OFF, seed des types)`.
+## Le « fait quand » — recopié du `07-Implementation.md` §2
 
-Termine par la note de journal habituelle et une **liste sèche pour le PO** : décisions laissées
-ouvertes, valeurs de seed manquantes, écarts avec la spec §6 s'il y en a et pourquoi.
+> *Fait quand* : les migrations passent en bac à sable, le **suivi SQL est à jour ligne par ligne**, un seed est lisible, et **les trois interrupteurs sont vérifiés à OFF**.
+
+C'est la condition de recette, et **elle ne se négocie pas en séance**. « Vérifiés » veut dire **par requête, pas supposés**.
+
+## Les deux conventions de dépôt — pour tout lot qui touche la base
+
+- **Une ligne au `SUIVI_SQL.md` avant exécution**, jamais après.
+- **Les migrations sont additives et gatées** — les trois interrupteurs restent à OFF jusqu'à la recette.

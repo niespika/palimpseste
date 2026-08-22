@@ -23,7 +23,7 @@
 | F13 | **Autre** — le §7 consomme la **restitution à chaud** ; fraîcheur d'ancre non rétablie ; indicateur §10 | acté (séance) |
 | F14 | **Oui** — **découpler** la lettre affichée (plafonnée) de la lettre de ciblage (dérivée) | acté (séance) |
 | F15 | **Oui** — état initial conventionnel « non acquis » + préconditions d'escalade aux deux bornes | acté (séance) |
-| F16 | **Autre** — la bascule reste **datée**, la date devient un paramètre du professeur | acté (séance) |
+| F16 | ~~**Autre** — la bascule reste **datée**, la date devient un paramètre du professeur~~ | **acté (séance), puis RENVERSÉ le 13/08/2026** |
 | F17 | **Oui, borné** — les sondes nourrissent **N1 et N2**, jamais **N3** | acté (séance) |
 | F18 | **Oui** — exception nommée : trio ≥ B ⇒ Questionnement > Argumentation > Structure | acté (séance) |
 | F19 | **Oui** — champs bruts conservés, **aucun niveau** avant validation du pont E→A ; `lettre = NULL` entre au §3 | acté (séance) |
@@ -281,6 +281,8 @@ Retenu, à écrire au §6 :
 Écarté, avec sa raison : **« deux fenêtres consécutives closes »**, proposition d'O — il avait lui-même écrit deux paragraphes plus haut que cette lecture rend N1 impossible « avant six à huit mesures… auquel cas N1 arrive **après le seuil nominal de N2** ». Son correctif adoptait l'inconvénient qu'il venait de dénoncer. *(Relevé en séance.)*
 
 ### F16 — La bascule de `profil_provisoire` est datée, pas conditionnée
+
+> ⚠️ **CET ARBITRAGE EST RENVERSÉ — 13 août 2026, décision de Louis.** *« F16 ne compte pas. Le profil provisoire bascule à la fin du segment 2. C'est ça qui est bon. »* La bascule reste **dérivée** de la clôture du segment 2 ; elle n'est pas un paramètre du plan. **Le `01-routeur.md` §3 fait foi et n'a pas eu à changer.**
 **Décision : AUTRE — la date est maintenue, et devient un paramètre du professeur. Constat écarté.**
 
 **Raison de Louis** : « `profil_provisoire` n'a d'intérêt que lors du premier mois d'école. Donc il faut une date, fixée par le prof. » Le drapeau est un dispositif de début d'année, borné dans le temps par nature ; une date est le bon déclencheur.
