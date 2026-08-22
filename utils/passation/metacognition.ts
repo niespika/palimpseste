@@ -127,7 +127,7 @@ export interface PerimetreDuDepot {
 export async function lirePerimetre(admin: Admin, depotId: string): Promise<PerimetreDuDepot | null> {
   const { data, error } = await admin.from('exercices_depots')
     .select('id, eleve_id, exercices!inner(id, cran, modes_par_competence, '
-      + 'exercices_types!inner(grain))')
+      + 'exercices_types!inner(grain, nature))')
     .eq('id', depotId).maybeSingle()
   if (error || !data) {
     if (error) console.error(`[passation] périmètre illisible (${depotId}) — ${error.code} ${error.message}`)
@@ -155,7 +155,24 @@ export async function lirePerimetre(admin: Admin, depotId: string): Promise<Peri
     : null
 
   const cranCode = ex?.cran != null ? String(ex.cran) : null
-  const geste = cranCode ? await gesteDuCran(admin, cranCode) : null
+  // ⭐ LE GESTE D'UN EXAMEN DIAGNOSTIQUE SE DÉRIVE DE SA NATURE (C4-L9-bis,
+  //    décision de Louis du 22/08). Pour les treize objets, le geste vient du
+  //    CRAN (`exercices_crans.geste`) ; un type de nature `complet` — les deux
+  //    examens diagnostiques — n'a PAS de cran, et ne doit jamais en avoir : « un
+  //    cran faux ferait dériver `regime_v1vf`, `couverture_observables` et la
+  //    durée ». Sans cette dérivation, `geste` restait NULL et « SE JUGER » NE SE
+  //    SERVAIT JAMAIS sur les deux examens de la semaine 1 — le drapeau se
+  //    levait, l'étape ne venait pas, et rien ne le disait.
+  //    ⚠️ CE N'EST PAS UN CONTOURNEMENT DE `02-` §5 : c'est la reconnaissance que
+  //    l'examen SATISFAIT sa condition. L'élève y produit une COPIE ENTIÈRE — le
+  //    geste est donc `produire` —, et « il porte un genre terminal entier […] IL
+  //    EST DONC MACRO PAR CONSTRUCTION » (`01-` §10). Le GRAIN, lui, est STOCKÉ
+  //    (`macro`, garde `types_complet_macro_sans_cran_chk`) parce qu'il a une
+  //    colonne et plusieurs lecteurs ; le GESTE n'en a aucune, et lui en créer
+  //    une serait un SECOND DOMICILE de ce que le cran porte déjà pour les treize.
+  const geste = cranCode ? await gesteDuCran(admin, cranCode)
+    : type?.nature === 'complet' ? 'produire'
+    : null
 
   return {
     declarees,

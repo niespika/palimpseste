@@ -2454,7 +2454,8 @@ retrouvent l'une l'autre** ; au lancement, **l'élève voit son signal** et entr
 **Où il vit** : `utils/examens/` *(4 modules — 2 purs, 2 serveur)* · `components/examens/`
 *(3 composants)* · `app/prof/examens-diagnostiques/actions.ts` ·
 `app/prof/{codex,aletheia}/examen-diagnostique/[planifieId]/page.tsx` ·
-`c4_l9_examens_diagnostiques.sql` *(jouée le 22/08)* · `scripts/recette/examens-c4l9.mjs`.
+`c4_l9_examens_diagnostiques.sql` **et `c4_l9_bis_examen_produire_macro.sql`** *(jouées le 22/08)* ·
+`scripts/recette/examens-c4l9.mjs`.
 
 ⚠️ **Les six interrupteurs sont à OFF**, re-constatés **après la migration, après la recette, et
 après le smoke** : `exercices_actif`, `routeur_actif`, `competences_affichage_actif`,
@@ -2464,7 +2465,7 @@ l'élève derrière **les deux portes de C4-L4** *(`exercices_actif` **et** `pas
 le plus fermé gagne)*. **Ce lot n'en crée aucun septième et n'en détourne aucun.**
 
 _`npx tsc --noEmit` et `eslint` sur les fichiers du lot : **rien**. **18 tests neufs, 0 échec**
-(`npm test` : 981 tests, 980 passés). `scripts/recette/examens-c4l9.mjs` : **114 vérifications, 0
+(`npm test` : 981 tests, 980 passés). `scripts/recette/examens-c4l9.mjs` : **138 vérifications, 0
 échec**, jouées **par le même code que les écrans**, décor semé puis **retiré** (base revenue à son
 état d'avant, **vérifié par requête**)._
 
@@ -2540,6 +2541,32 @@ les lignes de plan — *dans cet ordre*, `exercices → scriptorium_exercices_pl
   deux pages de module prof et les deux pages de module élève rendent `307 → /login` sans
   authentification, **sans erreur de compilation ni d'exécution** *(journal du serveur de dev)*.
 
+- [x] ⭐⭐ **C4L9-15 · « SE JUGER » SE SERT SUR UN EXAMEN DIAGNOSTIQUE — le blocage de STRUCTURE
+  est levé** *(C4-L9-bis, 22/08 — décision de Louis)*. Le défaut livré par C4-L9 était **silencieux** :
+  le drapeau se levait, la confiance de remise passait, et **« se juger » ne venait jamais** —
+  `offreSeJuger` exige un geste **`produire`** au grain **`meso`/`macro`** *(`02-` §5)*, or le geste
+  se lit au **cran** *(un examen n'en a pas)* et le grain au **type** *(la garde l'interdisait sur
+  `complet`)*. ⭐ **Ce n'est pas la condition qu'on a relâchée, c'est l'examen qui la satisfait** :
+  il porte « un genre terminal entier […] **il est donc macro par construction** » *(`01-` §10)*.
+  **Preuve, par le même code que l'écran** *(recette, étape H bis)* : le refus **ne porte plus sur
+  le geste ni sur le grain** ; un statut `evaluee` posé le temps de la vérification, **« se juger »
+  se sert sur les deux examens** — **deux questions, jamais trois**, sur la compétence évaluée, avec
+  la version de la fiche *(3.1)* et la liste fermée des réponses ; le geste dérivé vaut `produire`,
+  le grain stocké vaut `macro`, et l'instance reste **SANS CRAN** — *rien n'a été inventé*. Les
+  statuts et **leurs dates** sont remis, re-constatés par requête.
+- [x] ⭐ **C4L9-15 bis · Et la « durée fantôme » ne peut pas naître** — la peur qui justifiait
+  d'interdire le grain. **Preuve** : la durée vit à `exercices_types_crans`, **clé (type_id, cran)**
+  *(`utils/deroule/vue.ts`)*, `crans_admis` reste `'{}'`, et **aucune ligne de cette table ne porte
+  l'un des deux types**. ✓ **Ils ne deviennent pas non plus servables comme exercices** :
+  l'assemblage de la doctrine écarte sur **`nature === 'complet'`, jamais sur le grain**
+  *(`utils/fabrique/doctrine.ts`)*.
+- [x] ⚠️ **C4L9-15 ter · LE PIÈGE DU NULL DANS UN CHECK, attrapé par l'épreuve de la migration.**
+  La garde écrite `grain = 'macro'` **laissait passer un `complet` SANS grain** : `NULL = 'macro'`
+  rend **NULL**, et **un CHECK qui rend NULL est réputé satisfait** — elle n'interdisait donc pas le
+  cas même qu'elle visait. Corrigée en **`grain is not distinct from 'macro'`**. *Cousin exact du
+  piège `array_length` d'un tableau vide, déjà relevé en tête de `c4_l1_schema.sql`.* **À retenir :
+  dans un CHECK, tout ce qui peut rendre NULL laisse passer.**
+
 ### Ce qui reste à jouer en recette
 
 - [ ] ⚠️ **C4L9-13 · LE SMOKE PROFESSEUR, À L'ÉCRAN, DANS UN VRAI NAVIGATEUR.** **Rien n'a été vu à
@@ -2555,16 +2582,9 @@ les lignes de plan — *dans cet ordre*, `exercices → scriptorium_exercices_pl
   professeur*. Le dépôt est là *(décor laissé)*, la preuve par requête est faite **et la vue à
   l'écran ne l'est pas**. À jouer avec le compte élève de test *(classe **Test**)*, après avoir
   ouvert **`exercices_actif` ET `passation_classe_actif`** — **et les avoir refermés ensuite**.
-- [ ] ⚠️ **C4L9-15 · « SE JUGER » NE SE SERT PAS SUR UN EXAMEN DIAGNOSTIQUE, ET CE N'EST PAS UN BUG
-  DE CE LOT — c'est une QUESTION DE SOURCE.** L'écran lève bien le drapeau *(`optin_se_juger`
-  posé)*, et la **confiance de remise est servie** ; mais `offreSeJuger` (C4-L4) exige un **geste
-  `produire`** et un **grain `meso`/`macro`** *(`02-` §5)*, or un examen diagnostique **n'a ni cran
-  ni grain** — son type est `complet`, et `types_complet_sans_objet_ni_cran_chk` le lui interdit.
-  Motif rendu à la recette : *« se juger n'est servi qu'en geste `produire` ; le cran servi est sans
-  cran »*. ⚠️ **La tension est entre deux sources** : le `02-` §6.D **étape 9** met « se juger »
-  dans le flux de la passation en classe, et le `01-` §10 dit l'examen **« macro par
-  construction »** — quand le `07-` §1 lui interdit tout grain. **Non tranché ici, et non
-  contourné** *(`utils/passation/` est resté intact)*. **À trancher.**
+  ⭐ **Et « se juger » y est désormais visible**, à condition d'avoir posé un statut `evaluee` à la
+  fabrique : sans lui l'étape se refuse encore, **et c'est la décision du professeur, pas un
+  blocage de structure** *(C4L9-15)*.
 - [ ] **C4L9-16 · L'écran de C4-L8 rend « cran NaN » sur une instance d'examen diagnostique.**
   `/prof/conception/{id}` compose son titre avec `Number(e.cran)` — `NaN` sur une instance sans
   cran — et son bloc **Édition** refuse *(elle lit `exercices_cas`, qu'un examen n'a pas : son appui
