@@ -483,19 +483,58 @@ export const CRANS_A_CREDENCE = [
 
 export const CRANS_GUIDES = ['diagnostic_guide', 'transformation_guidee'] as const
 
+/**
+ * La consigne d'UN cas, quelle que soit sa forme physique — le `07-` §1.1 la
+ * laisse libre. Elle n'est là que pour ÉTIQUETER les deux blocs de crédence
+ * d'une paire : l'élève doit savoir lequel des deux temps il crédite.
+ */
+function enTexteBref(v: unknown): string | null {
+  if (typeof v === 'string') return v.trim() === '' ? null : v
+  if (v && typeof v === 'object') {
+    const o = v as Record<string, unknown>
+    if (typeof o.texte === 'string') return o.texte
+    if (typeof o.consigne === 'string') return o.consigne
+  }
+  return null
+}
+
 export type FormeCredence = 'jetons_sur_100' | 'pourcentage_unique'
+
+/**
+ * UN diagnostic à créditer. Il y en a UN sur un exercice simple, et **DEUX sur
+ * une paire** — « il y en a une par diagnostic, donc deux sur une paire »
+ * (`07-` §1.2).
+ */
+export interface CasDeCredence {
+  /** 1, ou 2 pour le second temps d'une paire. `exercices_cas.ordre` le borne aux deux. */
+  ordre: number
+  /** La consigne DE CE CAS — une paire en porte une par cas. `null` hors paire. */
+  consigne: string | null
+  /** Aux crans guidés : les QUATRE candidats DE CE CAS — trois distracteurs, plus la réponse attendue. */
+  candidats: string[]
+}
 
 export interface OffreCredence {
   servie: boolean
   motif: string | null
   forme: FormeCredence | null
-  /** Aux crans guidés : les QUATRE candidats — trois distracteurs, plus la réponse attendue. */
-  candidats: string[]
+  /**
+   * ⭐ UN CAS, OU DEUX SUR UNE PAIRE — corrigé le 22/08.
+   *
+   * ⚠️ L'écran n'en servait qu'UN, et il lisait les candidats du PREMIER cas
+   *    quoi qu'il arrive. Sur une paire, la seconde crédence n'existait donc
+   *    pas — et c'est elle qui porte la mesure : « l'ÉCART entre les deux dit si
+   *    la confiance s'est déplacée juste après la correction » (`02-` §2.3.1 a).
+   *    Une seule crédence sur une paire ne mesure aucun transfert.
+   */
+  cas: CasDeCredence[]
+  /** L'exercice est-il une paire de diagnostic ? — `exercices.paire_diagnostic`. */
+  paire: boolean
 }
 
 export async function offreCredence(admin: Admin, depotId: string): Promise<OffreCredence> {
   const vide = (motif: string): OffreCredence =>
-    ({ servie: false, motif, forme: null, candidats: [] })
+    ({ servie: false, motif, forme: null, cas: [], paire: false })
 
   const p = await lirePerimetre(admin, depotId)
   if (!p) return vide('périmètre illisible')
@@ -508,38 +547,65 @@ export async function offreCredence(admin: Admin, depotId: string): Promise<Offr
       + 'la crédence ne se collecte qu’aux gestes `diagnostiquer` et `transformer`.')
   }
 
-  const guide = (CRANS_GUIDES as readonly string[]).includes(p.cranCode)
-  if (!guide) {
-    return { servie: true, motif: null, forme: 'pourcentage_unique', candidats: [] }
-  }
-
-  // « L'écran sert QUATRE candidats : trois distracteurs tirés de la banque,
-  //   plus la `reponse_attendue` » (`02-` §5).
+  // ⚠️ ON LIT LA PAIRE ET SES CAS DANS TOUS LES CAS, guidé ou non : le nombre de
+  //    crédences ne dépend PAS de la forme. Un `diagnostic_nomme` en paire
+  //    demande DEUX pourcentages, sans aucun candidat.
   const { data, error } = await admin.from('exercices_depots')
-    .select('exercices!inner(id, exercices_cas(ordre, distracteurs, reponse_attendue))')
+    .select('exercices!inner(id, paire_diagnostic, consigne_instanciee, '
+          + 'exercices_cas(ordre, distracteurs, reponse_attendue))')
     .eq('id', depotId).maybeSingle()
-  if (error) return vide(`banque de distracteurs illisible : ${error.message}`)
-  const ex = un((data as Record<string, unknown>)?.exercices) as Record<string, unknown> | null
-  const cas = (ex?.exercices_cas ?? []) as Array<{
+  if (error) return vide(`instance illisible : ${error.message}`)
+  const ex = un((data as unknown as Record<string, unknown> | null)?.exercices) as
+    Record<string, unknown> | null
+  const paire = ex?.paire_diagnostic === true
+  const rangs = (ex?.exercices_cas ?? []) as Array<{
     ordre: number; distracteurs: unknown; reponse_attendue: unknown
   }>
-  const premier = [...cas].sort((a, b) => a.ordre - b.ordre)[0]
-  const banque = Array.isArray(premier?.distracteurs) ? premier.distracteurs.map(String) : []
-  const attendue = premier?.reponse_attendue != null ? String(premier.reponse_attendue) : null
+  // « La paire est UN SEUL exercice — un exercice EN DEUX TEMPS » (`02-` §2.3.1 a),
+  // et `exercices_cas_ordre_check` borne l'ordre à {1, 2}.
+  const attendus = paire ? [1, 2] : [1]
 
-  // « Trois distracteurs en banque sont le PLANCHER : en dessous, l'instance ne
-  //   peut pas composer son écran » (`02-` §5).
-  if (banque.length < 3 || !attendue) {
-    return vide(`cran guidé sans banque suffisante : ${banque.length} distracteur(s) et `
-      + `${attendue ? 'une' : 'aucune'} réponse attendue. Le plancher est de trois distracteurs `
-      + 'plus la réponse attendue (`02-exercices.md` §5) — l’écran ne se compose pas.')
+  // Une paire porte DEUX consignes — `exercices_paire_chk` l'exige en base.
+  const consignes = Array.isArray(ex?.consigne_instanciee)
+    ? (ex.consigne_instanciee as unknown[]).map((c) => enTexteBref(c))
+    : []
+
+  const guide = (CRANS_GUIDES as readonly string[]).includes(p.cranCode)
+  const cas: CasDeCredence[] = []
+  for (const ordre of attendus) {
+    const r = rangs.find((x) => x.ordre === ordre)
+    let candidats: string[] = []
+    if (guide) {
+      // « L'écran sert QUATRE candidats : trois distracteurs tirés de la banque,
+      //   plus la `reponse_attendue` » (`02-` §5) — CEUX DE CE CAS. Sur une
+      //   paire, le second cas est « un cas NEUF de la même famille » : servir
+      //   les candidats du premier ferait de la seconde crédence une copie de
+      //   la première.
+      const banque = Array.isArray(r?.distracteurs) ? r.distracteurs.map(String) : []
+      const attendue = r?.reponse_attendue != null ? String(r.reponse_attendue) : null
+      // « Trois distracteurs en banque sont le PLANCHER : en dessous, l'instance
+      //   ne peut pas composer son écran » (`02-` §5).
+      if (banque.length < 3 || !attendue) {
+        return vide(`cran guidé sans banque suffisante au cas ${ordre} : ${banque.length} `
+          + `distracteur(s) et ${attendue ? 'une' : 'aucune'} réponse attendue. Le plancher est de `
+          + 'trois distracteurs plus la réponse attendue (`02-exercices.md` §5) — l’écran ne se '
+          + 'compose pas.')
+      }
+      // L'instance TIRE dans la banque — « elle n'en affiche jamais quinze ».
+      candidats = [...banque.slice(0, 3), attendue]
+    } else if (paire && !r) {
+      return vide(`la paire annonce deux temps mais ne porte pas de cas ${ordre} : `
+        + 'la seconde crédence n’aurait rien à créditer.')
+    }
+    cas.push({ ordre, consigne: consignes[ordre - 1] ?? null, candidats })
   }
+
   return {
     servie: true,
     motif: null,
-    forme: 'jetons_sur_100',
-    // L'instance TIRE dans la banque — « elle n'en affiche jamais quinze ».
-    candidats: [...banque.slice(0, 3), attendue],
+    forme: guide ? 'jetons_sur_100' : 'pourcentage_unique',
+    cas,
+    paire,
   }
 }
 
@@ -567,15 +633,35 @@ export async function enregistrerCredence(
   const offre = await offreCredence(admin, depotId)
   if (!offre.servie) return refus(`La crédence n’est pas servie ici : ${offre.motif}`)
 
+  // ⚠️ CHAQUE CAS EST ATTENDU, ET AUCUN DE PLUS. « Il y en a une par diagnostic,
+  //    donc DEUX sur une paire » (§1.2) : une paire qui ne rendrait qu'une
+  //    crédence perdrait l'écart, et l'écart EST la mesure du transfert
+  //    (`02-` §2.3.1 a). Une saisie muette est donc refusée, pas complétée.
+  const attendus = offre.cas.map((c) => c.ordre)
+  const rendus = saisies.map((s) => s.cas)
+  const manquants = attendus.filter((o) => !rendus.includes(o))
+  if (manquants.length > 0) {
+    return refus(offre.paire
+      ? `Une paire demande une crédence par cas : il manque celle du cas ${manquants.join(' et ')}.`
+      : `Crédence manquante pour le cas ${manquants.join(' et ')}.`)
+  }
+  if (new Set(rendus).size !== rendus.length) return refus('Deux crédences pour le même cas.')
+
   for (const s of saisies) {
+    const leCas = offre.cas.find((c) => c.ordre === s.cas)
+    if (!leCas) return refus(`Cas ${s.cas} : cet exercice ne le porte pas.`)
     if (offre.forme === 'jetons_sur_100') {
       const v = s.valeurs as Record<string, number>
       const total = Object.values(v).reduce((a, b) => a + (Number(b) || 0), 0)
       if (Math.round(total) !== 100) {
         return refus(`Cas ${s.cas} : les jetons doivent totaliser 100 (ils font ${total}).`)
       }
+      // ⚠️ SES candidats, pas ceux du premier cas : le second temps d'une paire
+      //    est « un cas NEUF de la même famille ».
       for (const cle of Object.keys(v)) {
-        if (!offre.candidats.includes(cle)) return refus(`Cas ${s.cas} : candidat inconnu « ${cle} ».`)
+        if (!leCas.candidats.includes(cle)) {
+          return refus(`Cas ${s.cas} : candidat inconnu « ${cle} ».`)
+        }
       }
     } else {
       const p = (s.valeurs as { pourcentage: number }).pourcentage

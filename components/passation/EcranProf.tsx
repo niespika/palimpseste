@@ -32,16 +32,30 @@ import {
   type CranRevelation,
 } from '@/utils/passation/revelation'
 import type { PointRetour } from '@/utils/chaine/types'
+import { resumerCollages, phraseDesCollages, type CollageBloque } from '@/utils/passation/collage'
 
 export interface LigneCopie {
   depotId: string
   eleve: string
   statut: string
   aDeposé: boolean
-  transcription: string | null
+  /**
+   * La copie telle que la mesure la lira : la transcription des photos, OU le
+   * texte tapé par l'élève EXEMPTÉ — « la chaîne lit l'un ou l'autre ».
+   * ⚠️ Elle ne lisait QUE la transcription jusqu'au 22/08 : la copie d'un élève
+   *    exempté était invisible au professeur, qui corrigeait à l'aveugle.
+   */
+  copie: string | null
+  /** La copie vient-elle du CLAVIER ? Alors il n'y a ni photo ni doute de lecture. */
+  auClavier: boolean
   nbBlocs: number
   /** Ce que la machine a peiné à lire — jamais un score (piège 56). */
   doutes: number
+  /**
+   * Les tentatives de collage BLOQUÉES — rapportées au professeur (décision de
+   * Louis, 22/08). Jamais un verdict, et jamais un signalement d'intégrité.
+   */
+  collages: CollageBloque[]
   commentaire: string | null
   /** Quand l'ÉLÈVE a remis sa copie — `v1_remis_at`. */
   remiseLe: string | null
@@ -329,16 +343,19 @@ function Copie({
         <Etat copie={copie} />
       </div>
 
-      {copie.transcription && (
+      {copie.copie && (
         <details className="mt-2">
           <summary className="cursor-pointer text-sm text-encre-douce">
             La copie ({copie.nbBlocs} paragraphe{copie.nbBlocs > 1 ? 's' : ''}
+            {copie.auClavier ? ' · tapée au clavier (aménagement)' : ''}
             {copie.doutes > 0 ? ` · ${copie.doutes} passage(s) difficile(s) à lire` : ''})
           </summary>
           <pre className="mt-2 max-h-96 overflow-auto whitespace-pre-wrap rounded bg-parchemin p-3
-                          font-mono text-sm leading-relaxed text-encre">{copie.transcription}</pre>
+                          font-mono text-sm leading-relaxed text-encre">{copie.copie}</pre>
         </details>
       )}
+
+      <Collages copie={copie} />
 
       {copie.retour ? (
         <div className="mt-3 rounded border border-bordure p-3">
@@ -439,6 +456,42 @@ function Etat({ copie }: { copie: LigneCopie }) {
     retour_publie: 'retour publié', retire: 'retiré', abandonne: 'abandonné', clos: 'clos',
   }
   return <span className="text-xs uppercase tracking-wide text-muet">{t[copie.statut] ?? copie.statut}</span>
+}
+
+/**
+ * LES TENTATIVES DE COLLAGE BLOQUÉES — rapportées au professeur.
+ *
+ * ⭐ « Chaque tentative de collage bloquée est journalisée » (`06-` §1) ; et,
+ *    décision de Louis du 22/08, LES TROIS VECTEURS SE RAPPORTENT AU PROFESSEUR.
+ *    C'est ici que le journal arrive à ses yeux — sur la copie, au moment où il
+ *    la corrige, et nulle part ailleurs.
+ *
+ * ⚠️ INFORMER N'EST PAS ACCUSER, et l'écran le montre par sa forme autant que
+ *    par ses mots : ton d'attention, aucune couleur de faute, aucun mot de
+ *    triche, aucune action offerte — le professeur n'a rien à valider ni à
+ *    signaler ici. Le §7 de la SPEC ne fait jamais d'un signal isolé un
+ *    drapeau : c'est la CONVERGENCE qui part au prof, ailleurs, avec
+ *    confirmation humaine.
+ *
+ * ⚠️ LA RÉSERVE DE LA SOURCE EST ÉCRITE À L'ÉCRAN, pas seulement dans le code :
+ *    « ce blocage est côté navigateur seulement ». Sans elle, un professeur
+ *    lirait « 0 » comme une garantie — et zéro tentative ne prouve rien.
+ *    On n'affiche donc RIEN quand il n'y en a aucune (`phraseDesCollages` rend
+ *    `null`) : « un écran n'affiche un nombre que si ce nombre compte quelque
+ *    chose » (`06-` §5).
+ */
+function Collages({ copie }: { copie: LigneCopie }) {
+  const phrase = phraseDesCollages(resumerCollages(copie.collages))
+  if (!phrase) return null
+  return (
+    <p className="mt-2 rounded border border-attention bg-attention-teinte px-3 py-2 text-xs
+                  text-encre-douce">
+      <strong className="font-cinzel">{phrase}.</strong>{' '}
+      Le collage est refusé dans le champ de rédaction ; ces tentatives n’ont rien inséré.
+      C’est une information, pas un verdict : rien n’a été signalé, et le blocage est
+      côté navigateur seulement — il arrête le geste paresseux, pas l’élève déterminé.
+    </p>
+  )
 }
 
 function EditionDuRetour({ retourId, points }: { retourId: string; points: PointRetour[] }) {

@@ -365,7 +365,12 @@ async function principal() {
   dire(cr.servie, `confiance de remise : ${cr.servie ? 'SERVIE' : `non servie — ${cr.motif}`}`
     + `${cr.motif && cr.servie ? ` (${cr.motif})` : ''}`)
   const cd = await offreCredence(admin, d0.id)
-  dire(true, `crédence : ${cd.servie ? `SERVIE (${cd.forme})` : `non servie — ${cd.motif}`}`)
+  // ⭐ « Il y en a une par diagnostic, donc DEUX sur une paire » (`07-` §1.2) :
+  //    la recette dit le NOMBRE DE CAS servis, pas seulement la forme — c'est
+  //    le compte qui a manqué jusqu'au 22/08.
+  dire(true, `crédence : ${cd.servie
+    ? `SERVIE (${cd.forme}, ${cd.cas.length} cas${cd.paire ? ', PAIRE' : ''})`
+    : `non servie — ${cd.motif}`}`)
 
   // ── F. LE LOT ─────────────────────────────────────────────────────────────
   titre('F. Le traitement en lot — par la MÊME file')

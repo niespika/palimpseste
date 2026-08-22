@@ -33,6 +33,7 @@ import {
   editerLeRetour, validerLesCorrections, publier, depublier, validerLaLecture,
 } from '@/utils/passation/retours'
 import type { Photo } from '@/utils/passation/photos'
+import type { MoyenDeCollage } from '@/utils/passation/collage'
 import type { PointRetour } from '@/utils/chaine/types'
 
 export interface Reponse { ok: boolean; message: string }
@@ -261,10 +262,18 @@ export async function actionValiderLaSaisieClavier(
   return succes('Copie validée.')
 }
 
-/** Une tentative de collage bloquée — TRACE SERVEUR, jamais un signal du faisceau. */
-export async function actionCollageBloque(depotId: string, moyen: string): Promise<void> {
-  const { userId } = await garderEleve(false)
-  journaliserCollageBloque(depotId, userId, moyen)
+/**
+ * Une tentative de collage bloquée — JOURNALISÉE SUR LE DÉPÔT et rapportée au
+ * professeur (décision de Louis, 22/08) ; jamais un signal du faisceau.
+ *
+ * ⚠️ `moyen` est TYPÉ, et pas une chaîne libre : il voyage jusqu'à une garde en
+ *    base qui ferme le domaine aux trois vecteurs de la source.
+ */
+export async function actionCollageBloque(
+  depotId: string, moyen: MoyenDeCollage,
+): Promise<void> {
+  const { admin, userId } = await garderEleve(false)
+  await journaliserCollageBloque(admin, depotId, userId, moyen)
 }
 
 /** ÉTAPE 9 — « se juger », deux questions, jamais trois. */
@@ -311,13 +320,32 @@ export async function actionCredence(_prec: Reponse | null, form: FormData): Pro
   const offre = await offreCredence(admin, depotId)
   if (!offre.servie) return echec(`La crédence n’est pas servie ici : ${offre.motif}`)
 
+  // ⭐ UNE SAISIE PAR CAS — « il y en a une par diagnostic, donc DEUX sur une
+  //    paire » (`07-` §1.2). Le formulaire préfixe donc chaque champ par
+  //    l'ordre du cas : avant le 22/08 il n'en lisait qu'un, et le second temps
+  //    d'une paire n'était jamais crédité.
   const saisies: Array<{ cas: number; valeurs: Record<string, number> | { pourcentage: number } }> = []
-  if (offre.forme === 'jetons_sur_100') {
-    const valeurs: Record<string, number> = {}
-    for (const c of offre.candidats) valeurs[c] = Number(form.get(`j:${c}`) ?? 0)
-    saisies.push({ cas: 1, valeurs })
-  } else {
-    saisies.push({ cas: 1, valeurs: { pourcentage: Number(form.get('pourcentage') ?? 0) } })
+  for (const c of offre.cas) {
+    if (offre.forme === 'jetons_sur_100') {
+      const valeurs: Record<string, number> = {}
+      let vu = false
+      for (const cand of c.candidats) {
+        const brut = form.get(`j:${c.ordre}:${cand}`)
+        if (brut != null) vu = true
+        valeurs[cand] = Number(brut ?? 0)
+      }
+      if (vu) saisies.push({ cas: c.ordre, valeurs })
+    } else {
+      // ⚠️ ABSENT N'EST PAS ZÉRO — la même règle que « `delta_v1_vf` NULL n'est
+      //    pas 0 » (`06-` §6). Un champ manquant fabriqué en « 0 % de chances »
+      //    serait une crédence INVENTÉE, et le Monitoring la croirait déclarée.
+      //    On ne pousse rien : la garde d'`enregistrerCredence` refuse alors la
+      //    saisie en nommant le cas qui manque.
+      const brut = form.get(`pourcentage:${c.ordre}`)
+      if (brut != null) {
+        saisies.push({ cas: c.ordre, valeurs: { pourcentage: Number(brut) } })
+      }
+    }
   }
   const r = await enregistrerCredence(admin, depotId, userId, saisies)
   if (!r.ok) return echec(r.message)
