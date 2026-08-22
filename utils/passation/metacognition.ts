@@ -585,11 +585,29 @@ export async function enregistrerCredence(
     }
   }
 
+  // ⚠️ UN TABLEAU, JAMAIS UN OBJET — et la garde en base l'exige :
+  //    `metacog_credence_chk` vaut `jsonb_typeof(credence) = 'array'`. Elle met
+  //    en œuvre le §1.2 : « la `credence` […] PLUSIEURS VALEURS PAR DÉPÔT — il y
+  //    en a une par diagnostic, donc DEUX SUR UNE PAIRE ».
+  //    La première version enveloppait les saisies dans `{ forme, saisies }` et
+  //    se faisait refuser par une `23514` À L'ÉCRAN DE L'ÉLÈVE, après qu'il eut
+  //    réparti ses jetons. Trouvé par le smoke test du 22/08 — et LA RECETTE NE
+  //    POUVAIT PAS LE VOIR : son décor n'avait aucun cran à crédence, ce que le
+  //    piège 25 annonçait déjà (les deux types diagnostiques sont sans cran).
+  //    Chaque entrée porte SA forme : la ligne se relit sans jointure au cran.
+  const lignes = saisies.map((s) => ({ cas: s.cas, forme: offre.forme, valeurs: s.valeurs }))
   const { error } = await admin.from('exercices_metacognition').upsert({
     depot_id: depotId,
-    credence: { forme: offre.forme, saisies },
+    credence: lignes,
     updated_at: new Date().toISOString(),
   }, { onConflict: 'depot_id' })
-  if (error) return refus(`La crédence n’a pas été enregistrée : ${error.message}`)
+  if (error) {
+    // 23514 = la garde de forme. On la traduit, plutôt que de la montrer nue.
+    if (error.code === '23514') {
+      return refus('La forme de la crédence a été refusée par la base : elle se stocke en '
+        + 'liste, une entrée par cas.')
+    }
+    return refus(`La crédence n’a pas été enregistrée : ${error.message}`)
+  }
   return ok(undefined)
 }
