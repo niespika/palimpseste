@@ -36,8 +36,17 @@ grant execute on function public.poser_statut_recette(text, text, timestamptz)
   to anon, authenticated;
 grant execute on function public.poser_statut_recette_monitoring(text, timestamptz)
   to anon, authenticated;
-grant execute on function public.handle_new_user()
-  to anon, authenticated;
+-- ⚠️⚠️ CETTE LIGNE ÉCHOUERA — et c'est voulu. `handle_new_user()` a été
+--    RETIRÉE de la base le 21/08 (`securite_handle_new_user_retrait.sql`),
+--    parce qu'elle était du code mort : 0 trigger, 0 appelant, 0 policy.
+--    `function public.handle_new_user() does not exist` est donc le
+--    comportement NORMAL de ce fichier depuis cette date.
+--    ⇒ Si tu joues ce rollback, RETIRE cette ligne d'abord. Et si tu veux
+--      vraiment la fonction, c'est l'autre rollback qu'il faut :
+--      `securite_handle_new_user_retrait_rollback.sql`, qui la recrée ET
+--      la referme dans la même transaction.
+-- grant execute on function public.handle_new_user()
+--   to anon, authenticated;
 
 commit;
 

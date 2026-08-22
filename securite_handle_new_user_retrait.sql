@@ -1,0 +1,121 @@
+-- ============================================================================
+-- NETTOYAGE — `handle_new_user()` EST RETIRÉE.
+-- Décision de Louis, le 21/08, après que la séance des correctifs RLS eut posé
+-- son `search_path` « par cohérence » et laissé le retrait ouvert.
+-- ----------------------------------------------------------------------------
+-- CE QU'ELLE EST. Une fonction `security definer` en `plpgsql` qui insère une
+-- ligne dans `public.profiles` à partir d'un `new` de trigger. Elle date du
+-- montage initial du projet, où Supabase propose ce patron pour peupler une
+-- table de profils depuis `auth.users`.
+--
+-- CE QU'ELLE N'EST PLUS — et c'est constaté par requête, pas supposé.
+-- Relevé le 21/08 sur le catalogue :
+--     triggers qui l'appellent                     0
+--     autres fonctions qui la nomment              0
+--     policies qui la nomment                      0
+--     exécutable par anon / authenticated          f | f   (revoke du 21/08)
+-- Et le chemin de création de comptes ne passe pas par elle :
+-- `app/prof/eleves/actions.ts:117-131` fait `admin.auth.admin.createUser` puis
+-- un `insert` EXPLICITE dans `profiles`, avec suppression du compte si le
+-- profil échoue. Le commentaire du dépôt dit pourquoi : l'insertion manuelle
+-- est « plus fiable que le trigger ».
+--
+-- **Elle est donc du code mort, orphelin et sans appelant.**
+--
+-- POURQUOI LA RETIRER PLUTÔT QUE LA LAISSER DORMIR. Parce qu'une fonction
+-- `security definer` qui NE VÉRIFIE PAS SON APPELANT est une serrure qui ne
+-- tient que par un `grant`. La dette écrite au `securite_rpc_definer.sql` le
+-- dit : *« une migration future qui recrée la fonction la fera renaître
+-- grantée »*. Sur une fonction vivante, c'est un risque à gérer ; sur une
+-- fonction morte, c'est un risque **à supprimer**. Ce qui n'existe plus ne
+-- peut pas être re-granté par mégarde.
+--
+-- ⚠️ CE FICHIER EST LE SEUL DE LA SÉRIE QUI SOIT DESTRUCTIF. Les précédents ne
+-- posaient que des options. Celui-ci **supprime un objet**. La règle 5 du
+-- `SUIVI_SQL.md` s'applique dans son esprit — objet du flux `auth` —, même si
+-- ici rien ne peut casser : il n'y a **aucun appelant à casser**.
+--   · à jouer en fenêtre calme ;
+--   · retour arrière prêt et RÉELLEMENT testé : `securite_handle_new_user_retrait_rollback.sql`
+--     recrée la fonction à l'identique, depuis sa source relevée au catalogue ;
+--   · smoke test après : **créer un élève depuis l'écran professeur**, et
+--     vérifier que la ligne `profiles` est bien née. C'est le seul chemin que
+--     ce retrait pourrait toucher, et c'est le chemin de mardi 25.
+--
+-- ⚠️ CONSÉQUENCE À CONNAÎTRE, ET ELLE EST RÉELLE :
+-- `securite_rpc_definer_rollback.sql` porte un `grant execute on function
+-- public.handle_new_user() to anon, authenticated`. **Une fois ce fichier
+-- joué, cette ligne-là échouera** (`function ... does not exist`). Ce n'est pas
+-- grave — ce rollback rouvre une faille et ne doit pas être joué —, mais il
+-- faut le savoir avant de le lancer un jour dans l'urgence. Une note l'y dit.
+--
+-- ⚠️ CE QUI N'EST PAS TOUCHÉ : la policy `« Trigger peut créer un profil »` sur
+-- `profiles` (INSERT, `with check auth.uid() = id`). Son NOM parle d'un trigger
+-- qui n'existe plus, mais **elle sert toujours** — c'est elle qui autorise
+-- l'insertion du profil au moment de la création de compte. La renommer serait
+-- un geste de confort, à faire sciemment et pas en passant.
+-- ============================================================================
+
+
+-- ════════════════════════════════════════════════════════════════════════════
+-- CONSTAT AVANT — À JOUER, ET À LIRE. On ne supprime pas ce qu'on n'a pas vu.
+-- Attendu, écrit AVANT de jouer : **une ligne, quatre zéros**.
+-- ⚠️ SI UN SEUL DE CES COMPTES N'EST PAS ZÉRO, NE PAS JOUER LE FICHIER : la
+--    fonction a un appelant, et ce n'est plus du code mort.
+-- ════════════════════════════════════════════════════════════════════════════
+-- select 'handle_new_user()'                                             as fonction,
+--        (select count(*) from pg_trigger t
+--          where not t.tgisinternal
+--            and t.tgfoid = 'public.handle_new_user()'::regprocedure)     as triggers,
+--        (select count(*) from pg_proc q join pg_namespace m on m.oid = q.pronamespace
+--          where m.nspname not in ('pg_catalog','information_schema')
+--            and q.prokind = 'f'
+--            and q.oid <> 'public.handle_new_user()'::regprocedure
+--            and pg_get_functiondef(q.oid) like '%handle_new_user%')      as autres_fonctions,
+--        (select count(*) from pg_policies
+--          where schemaname = 'public'
+--            and (coalesce(qual,'') like '%handle_new_user%'
+--              or coalesce(with_check,'') like '%handle_new_user%'))      as policies,
+--        (select count(*) from pg_depend d
+--          where d.refobjid = 'public.handle_new_user()'::regprocedure
+--            and d.deptype <> 'p')                                        as dependances_catalogue;
+--   -- attendu : 0 · 0 · 0 · 0
+--
+-- -- Et la SOURCE, à relire une dernière fois avant de la supprimer — c'est
+-- -- elle que le rollback recrée.
+-- select pg_get_functiondef('public.handle_new_user()'::regprocedure);
+-- ════════════════════════════════════════════════════════════════════════════
+
+
+begin;
+
+-- ⚠️ `drop function` SANS `cascade`, et c'est délibéré : si un objet en dépend
+--    malgré le constat, PostgreSQL REFUSE et la transaction s'arrête. Un
+--    `cascade` emporterait cet objet en silence — c'est exactement ce qu'on ne
+--    veut pas d'une suppression.
+drop function public.handle_new_user();
+
+commit;
+
+
+-- ============================================================================
+-- VÉRIFICATION APRÈS EXÉCUTION.
+-- Attendu : `to_regprocedure` rend NULL — la fonction n'existe plus —, et il
+-- reste **SIX** fonctions `security definer` dans `public`, toutes à
+-- `search_path=public, pg_temp`.
+-- ============================================================================
+-- select to_regprocedure('public.handle_new_user()')                as doit_etre_null,
+--        (select count(*) from pg_proc p join pg_namespace n on n.oid = p.pronamespace
+--          where n.nspname = 'public' and p.prosecdef)              as security_definer_restantes;
+--   -- attendu : NULL · 6
+--
+-- select p.oid::regprocedure::text                                    as signature,
+--        coalesce(array_to_string(p.proconfig, ' | '), '-- aucun --')  as config,
+--        has_function_privilege('anon',          p.oid, 'EXECUTE')     as anon,
+--        has_function_privilege('authenticated', p.oid, 'EXECUTE')     as authenticated
+--   from pg_proc p join pg_namespace n on n.oid = p.pronamespace
+--  where n.nspname = 'public' and p.prosecdef
+--  order by p.proname;
+--
+-- -- ⭐ LE SMOKE TEST QUI COMPTE N'EST PAS UNE REQUÊTE : créer un élève depuis
+-- --   l'écran professeur, puis constater sa ligne.
+-- select count(*) as profils from profiles;

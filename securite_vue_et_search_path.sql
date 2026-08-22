@@ -1,0 +1,357 @@
+-- ============================================================================
+-- SÉCURITÉ — LA VUE QUI CONTOURNE LA RLS, ET LE `search_path` DES DEUX
+-- FONCTIONS `security definer` QUE LE 21/08 A LAISSÉES SANS.
+-- Trouvé par la revue adversariale bornée de C4-L8 (§8), le 21/08/2026 ;
+-- inscrit au `PLAN_DE_CHANTIER.md` §6 le même jour.
+-- ----------------------------------------------------------------------------
+-- LE DÉFAUT (1) — `assiduite_hebdo_classe` N'A PAS `security_invoker`.
+-- Une vue créée sans cette option s'exécute avec les droits de son
+-- PROPRIÉTAIRE : les policies RLS des tables qu'elle lit ne sont pas évaluées
+-- pour l'appelant, mais pour le propriétaire. La vue devient une porte de
+-- service qui contourne exactement ce que la RLS ferme.
+--   · `assiduite_hebdo` porte la RLS et une seule policy, `prof_all`
+--     (`c4_l1_schema.sql`, le bloc `do $rls$`) ;
+--   · `inscriptions` porte la sienne (`inscriptions_eleve_read`) ;
+--   · et la vue les traverse toutes les deux sans les faire jouer.
+-- Elle est de surcroît LISIBLE PAR `anon` — la clé anonyme vit dans le bundle
+-- du navigateur : elle n'est pas un secret.
+--
+-- ⚠️ CE N'EST PAS UNE FUITE AUJOURD'HUI, et il faut le dire pour ne pas se
+-- payer de mots : `assiduite_hebdo` compte 0 ligne, la vue n'en rend donc
+-- aucune, et AUCUN chemin de code ne la lit (balayé le 21/08 sur `.ts`/`.tsx`/
+-- `.mjs` : zéro occurrence). C'est un CONTOURNEMENT STRUCTUREL — la mesure se
+-- pose AVANT que la donnée n'arrive, pas après.
+--
+-- LE DÉFAUT (2) — `est_prof()` et `handle_new_user()` n'ont pas de
+-- `search_path` fixé. Une fonction `security definer` sans `search_path` résout
+-- ses noms d'objets dans le chemin de SON APPELANT : qui peut planter un objet
+-- leurre sur ce chemin fait exécuter son leurre avec les droits du
+-- propriétaire.
+-- ⚠️ NON EXPLOITABLE AUJOURD'HUI, et là encore il faut le dire : ni `anon` ni
+-- `authenticated` n'ont le droit `CREATE` nulle part, et PostgREST ne leur
+-- laisse pas exécuter de SQL arbitraire — donc pas de `create temp table
+-- profiles` possible. Mais `est_prof()` est la CLEF DE VOÛTE DES POLICIES : le
+-- jour où quelqu'un gagne un droit `CREATE`, elle devient le point unique par
+-- où tout tombe. Une clef de voûte se ferre avant, pas après.
+--
+-- ----------------------------------------------------------------------------
+-- CE QUE CE FICHIER FAIT — TROIS GESTES, ET RIEN D'AUTRE.
+--   (1) `security_invoker` sur une vue qui rend 0 ligne et que personne ne lit ;
+--   (2) ⭐ `revoke all` sur cette vue pour `anon` — LE SECOND TOUR DE CLEF,
+--       tranché par Louis le 21/08 ;
+--   (3) `search_path` sur deux fonctions, PAR `alter function` — jamais par
+--       `create or replace`.
+-- Il ne touche NI une table, NI une donnée, NI une policy. Le seul privilège
+-- qu'il déplace, il le RETIRE.
+--
+-- ⚠️⚠️ POURQUOI `alter function` ET SURTOUT PAS `create or replace` :
+-- Supabase pose au montage du projet un `alter default privileges in schema
+-- public grant all on functions to anon, authenticated`. Recréer une fonction
+-- de `public` la fait donc RENAÎTRE GRANTÉE à `anon` — c'est exactement le trou
+-- que `securite_rpc_definer.sql` a refermé le 21/08. `alter function … set`
+-- change l'option et NE TOUCHE PAS AUX PRIVILÈGES : le trou reste fermé.
+--
+-- ⚠️ `est_prof` EST GRANTÉE À `anon` ET `authenticated`, ET C'EST VOULU :
+-- 19 policies RLS l'appellent (constat du 21/08 sur `pg_policies`). La révoquer
+-- casserait l'évaluation des policies — c'est-à-dire la sécurité elle-même.
+-- CE FICHIER NE LUI RETIRE RIEN. Il ajoute un `search_path`, pas une serrure.
+--
+-- ⚠️ `est_prof()` est en `language sql` : un `SET` sur une fonction SQL empêche
+-- son « inlining » par le planificateur — ce qui, sur une fonction appelée par
+-- 19 policies, se paierait. SANS EFFET ICI : PostgreSQL n'inline JAMAIS une
+-- fonction `security definer` (`inline_function()` refuse sur `prosecdef`).
+-- Le plan des policies est donc inchangé.
+--
+-- ⭐ LE `search_path` PORTE `pg_temp` EN DERNIER, ET CE N'EST PAS UN DÉTAIL.
+-- Quand `pg_temp` n'est pas NOMMÉ dans le chemin, PostgreSQL le cherche
+-- IMPLICITEMENT EN PREMIER — `set search_path = public` laisserait donc le
+-- schéma temporaire DEVANT `public`, c'est-à-dire précisément le trou qu'on
+-- croit boucher. Le nommer EN DERNIER est la parade que documente
+-- `CREATE FUNCTION` : « forcing the temporary schema to be searched last ».
+-- *Le relevé écrivait « `set search_path = public` » ; Louis a tranché le 21/08
+-- pour la variante la plus sûre.*
+--
+-- ⭐ LE `revoke` SUR LA VUE — CE QU'IL CHANGE, ET CE QU'IL COÛTE.
+-- `security_invoker` seul suffit à fermer la fuite : la RLS joue, `anon` voit
+-- 0 ligne. Le `revoke` va plus loin — `anon` ne peut plus lire la vue DU TOUT,
+-- et l'appel rend « permission denied » au lieu d'un ensemble vide. Deux
+-- conséquences à assumer :
+--   · la preuve change de forme : le « fait quand » demandait « 0 ligne sous
+--     anon », on obtiendra « REFUSÉ ». L'ÉPREUVE DU BAS PROUVE LES DEUX, en
+--     posant les gestes l'un après l'autre dans une transaction annulée ;
+--   · ⚠️ `authenticated` GARDE son droit, volontairement. C4-L2 doit
+--     construire le taux d'inactivité par classe ; le lui retirer aujourd'hui
+--     poserait un piège à une session future, et la RLS suffit à ce que seul un
+--     professeur y voie quelque chose.
+--
+-- ----------------------------------------------------------------------------
+-- LE SORT DE `handle_new_user()` — TRANCHÉ, ET DIT.
+-- Elle est DU CODE MORT : vérifié le 21/08, elle n'est rattachée à aucun
+-- trigger dans toute la base ; le chemin de création de comptes
+-- (`app/prof/eleves/actions.ts:117-131`) ne l'utilise pas ; et le commentaire
+-- du dépôt dit que l'insertion manuelle dans `profiles` est « plus fiable que
+-- le trigger ». Le prompt de séance demandait de choisir : lui poser son
+-- `search_path` par cohérence, OU la retirer.
+--
+-- ⭐ CHOISI : LUI POSER SON `search_path`. ELLE N'EST PAS RETIRÉE. Trois
+-- raisons, dans cet ordre :
+--   1. Retirer n'apporte RIEN AUJOURD'HUI : elle est déjà révoquée de `public,
+--      anon, authenticated` (21/08), donc injoignable par PostgREST, et
+--      rattachée à aucun trigger. La surface est déjà nulle.
+--   2. Retirer est un geste DESTRUCTIF sur un objet du flux `auth` — la règle 5
+--      du `SUIVI_SQL.md` le met sous protocole renforcé (fenêtre calme, code
+--      d'abord, smoke test élève). Un `drop function` ne se glisse pas dans un
+--      fichier qui, sinon, ne touche à rien.
+--   3. Un retrait de code mort est un GESTE DE NETTOYAGE, pas un correctif de
+--      sécurité : il doit emporter avec lui ses mentions au dépôt (`c1_rls_eleve
+--      .sql`, `securite_rpc_definer*.sql`) et sa ligne de journal. C'est un lot,
+--      pas une ligne.
+-- ⇒ Ce fichier la met en cohérence avec sa sœur et laisse le retrait à une
+--   décision de Louis, hors de cette séance. Rien n'est fait à moitié : les
+--   DEUX fonctions `security definer` que la séance nomme sortent d'ici avec
+--   leur `search_path`.
+--
+-- ----------------------------------------------------------------------------
+-- LA DETTE, INCHANGÉE ET RAPPELÉE : le `search_path` et le `revoke` sont des
+-- serrures EXTÉRIEURES. Une fonction `security definer` devrait vérifier son
+-- appelant elle-même. Cette garde interne n'est PAS écrite ici (elle exigerait
+-- de recréer les fonctions — voir le ⚠️⚠️ ci-dessus) ; elle reste au
+-- `securite_rpc_definer.sql` et au `PLAN_DE_CHANTIER.md`.
+--
+-- Retour arrière : `securite_vue_et_search_path_rollback.sql`.
+-- ============================================================================
+
+
+-- ════════════════════════════════════════════════════════════════════════════
+-- CONSTAT AVANT — À JOUER D'ABORD, ET À LIRE. On ne corrige rien qu'on n'ait vu.
+-- ----------------------------------------------------------------------------
+-- Les six requêtes sont en LECTURE SEULE. Attendu écrit AVANT de jouer :
+--   (0) server_version_num >= 150000  ── sinon `security_invoker` n'existe pas
+--       et TOUT ce fichier est à revoir.
+--   (1) `assiduite_hebdo_classe` : security_invoker = « non posé », et `anon`
+--       comme `authenticated` à `select = t`.
+--       ⭐ ET LE BALAYAGE DE TOUT LE SCHÉMA `public` : dire COMBIEN d'autres
+--       vues sont dans le même cas. (Attendu, d'après le dépôt : cette vue et
+--       elle seule — 1 seul `create view` dans tout le dépôt, 0 vue au dump du
+--       23/07. À CONFIRMER PAR LA REQUÊTE, pas par le dépôt.)
+--   (2) le détail des privilèges d'`anon` sur la vue — c'est ce que le rollback
+--       devra rendre. Attendu : SELECT/INSERT/UPDATE/DELETE à `t` (le
+--       `grant all on tables to anon` du montage Supabase).
+--   (3) `est_prof` et `handle_new_user` : proconfig = NULL toutes les deux.
+--   (4) le compte des policies qui appellent `est_prof` : 19 (le relevé) —
+--       c'est ce chiffre qui interdit de la révoquer.
+--   (5) la vue est VIDE — c'est ce qui rend l'épreuve du bas nécessaire.
+-- ════════════════════════════════════════════════════════════════════════════
+-- (0) La version du serveur — `security_invoker` sur les vues date de PG 15.
+-- select current_setting('server_version') as version,
+--        (current_setting('server_version_num')::int >= 150000) as security_invoker_disponible;
+--
+-- (1) TOUTES les vues et vues matérialisées du schéma `public`.
+--     ⚠️ Une vue MATÉRIALISÉE ne connaît pas `security_invoker` et ne fait
+--        jamais jouer la RLS : si la colonne `genre` en montre une, elle est
+--        un cas À PART, à traiter par les privilèges — le dire, ne pas la
+--        « corriger » avec la même option.
+-- select c.relname                                                as vue,
+--        case c.relkind when 'v' then 'vue' else 'vue matérialisée' end as genre,
+--        coalesce((select option_value from pg_options_to_table(c.reloptions)
+--                   where option_name = 'security_invoker'), '— non posé —')  as security_invoker,
+--        pg_get_userbyid(c.relowner)                              as proprietaire,
+--        has_table_privilege('anon',          c.oid, 'SELECT')    as anon_lit,
+--        has_table_privilege('authenticated', c.oid, 'SELECT')    as authenticated_lit
+--   from pg_class c join pg_namespace n on n.oid = c.relnamespace
+--  where n.nspname = 'public' and c.relkind in ('v', 'm')
+--  order by 1;
+--
+-- (2) Le détail de ce qu'`anon` a sur la vue — ce que le rollback devra rendre.
+-- select p as privilege,
+--        has_table_privilege('anon', 'public.assiduite_hebdo_classe', p) as anon
+--   from unnest(array['SELECT','INSERT','UPDATE','DELETE','REFERENCES','TRIGGER']) p;
+--
+-- (3) Le `proconfig` de TOUTES les fonctions `security definer` de `public`
+--     (pas seulement des deux nommées : on balaye, on ne suppose pas).
+-- select p.proname,
+--        p.prosecdef                                              as security_definer,
+--        coalesce(array_to_string(p.proconfig, ' | '), '— aucun —') as config,
+--        has_function_privilege('anon',          p.oid, 'EXECUTE') as anon,
+--        has_function_privilege('authenticated', p.oid, 'EXECUTE') as authenticated
+--   from pg_proc p join pg_namespace n on n.oid = p.pronamespace
+--  where n.nspname = 'public' and p.prosecdef
+--  order by p.proname;
+--
+-- (4) Combien de policies appellent `est_prof` — le chiffre qui interdit de la
+--     révoquer.
+-- select count(*) as policies_qui_appellent_est_prof
+--   from pg_policies
+--  where schemaname = 'public'
+--    and (coalesce(qual, '') like '%est_prof%'
+--      or coalesce(with_check, '') like '%est_prof%');
+--
+-- (5) Le rappel de ce qui rend la preuve difficile : la vue est VIDE.
+-- select (select count(*) from assiduite_hebdo)        as lignes_assiduite_hebdo,
+--        (select count(*) from assiduite_hebdo_classe) as lignes_vue;
+-- ════════════════════════════════════════════════════════════════════════════
+
+
+begin;
+
+-- ── (1) La vue s'exécute désormais avec les droits de SON APPELANT ──────────
+-- `alter view … set (…)` ne retouche NI la définition de la vue, NI ses
+-- privilèges : la seule chose qui change est QUI la RLS regarde.
+alter view public.assiduite_hebdo_classe set (security_invoker = true);
+
+-- ── (2) ⭐ LE SECOND TOUR DE CLEF — `anon` ne lit plus la vue DU TOUT ───────
+-- Tranché par Louis le 21/08. `security_invoker` suffisait à fermer la fuite ;
+-- ceci ferme l'accès. ⚠️ `authenticated` GARDE son droit : C4-L2 construit le
+-- taux d'inactivité par classe, et la RLS suffit à ce que seul un professeur y
+-- voie quelque chose. Le lui retirer poserait un piège à une session future.
+revoke all on public.assiduite_hebdo_classe from anon;
+
+-- ── (3) Le `search_path` des deux fonctions `security definer` ──────────────
+-- `pg_temp` EN DERNIER, jamais omis (voir l'en-tête).
+-- ⚠️ `alter function`, jamais `create or replace` : les privilèges ne bougent
+--    pas, donc le `revoke` du 21/08 tient.
+alter function public.est_prof()        set search_path = public, pg_temp;
+alter function public.handle_new_user() set search_path = public, pg_temp;
+
+commit;
+
+
+-- ============================================================================
+-- VÉRIFICATION APRÈS EXÉCUTION — à jouer telle quelle.
+-- Attendu, écrit AVANT de jouer :
+--   · `assiduite_hebdo_classe` : security_invoker = « true », `anon_lit` = f,
+--     `authenticated_lit` = t ;
+--   · `est_prof` et `handle_new_user` : config = « search_path=public, pg_temp » ;
+--   · `est_prof` toujours à `anon: t | authenticated: t` — RIEN n'a été révoqué
+--     sur les FONCTIONS ;
+--   · `handle_new_user` toujours à `f | f` — le revoke du 21/08 tient.
+-- ============================================================================
+-- select c.relname as vue,
+--        coalesce((select option_value from pg_options_to_table(c.reloptions)
+--                   where option_name = 'security_invoker'), '— non posé —') as security_invoker,
+--        has_table_privilege('anon',          c.oid, 'SELECT') as anon_lit,
+--        has_table_privilege('authenticated', c.oid, 'SELECT') as authenticated_lit
+--   from pg_class c join pg_namespace n on n.oid = c.relnamespace
+--  where n.nspname = 'public' and c.relkind in ('v','m') order by 1;
+--
+-- select p.proname,
+--        coalesce(array_to_string(p.proconfig, ' | '), '— aucun —')  as config,
+--        has_function_privilege('anon',          p.oid, 'EXECUTE')   as anon,
+--        has_function_privilege('authenticated', p.oid, 'EXECUTE')   as authenticated,
+--        has_function_privilege('service_role',  p.oid, 'EXECUTE')   as service
+--   from pg_proc p join pg_namespace n on n.oid = p.pronamespace
+--  where n.nspname = 'public' and p.prosecdef order by p.proname;
+
+
+-- ============================================================================
+-- ⭐⭐ L'ÉPREUVE PAR L'ÉCHEC — À JOUER **AVANT** LE CORRECTIF, TELLE QUELLE.
+-- ----------------------------------------------------------------------------
+-- ⚠️⚠️ POURQUOI ELLE NE PEUT PAS ÊTRE « 0 LIGNE SOUS anon ». La vue rend 0
+-- ligne AUJOURD'HUI, sous N'IMPORTE QUEL RÔLE, parce que `assiduite_hebdo` est
+-- VIDE. Un « 0 ligne » constaté tel quel serait vrai AVANT le correctif comme
+-- APRÈS : il ne prouverait rien. Une preuve qui serait vraie sans le correctif
+-- n'est pas une preuve.
+--
+-- Ce bloc fait donc trois choses dans UNE SEULE transaction, qu'il ANNULE : il
+-- DONNE à la vue quelque chose à rendre, puis il pose les deux gestes du
+-- correctif L'UN APRÈS L'AUTRE, en relisant la vue sous `anon` à chaque étape.
+-- Les trois mesures portent sur la MÊME ligne, dans la MÊME session — c'est
+-- l'écart entre elles qui est la preuve.
+--
+--   temps 1 — état actuel                      →  vue sous anon = 1   ← LE CONTOURNEMENT
+--   temps 2 — après `security_invoker = true`  →  vue sous anon = 0   ← LA RLS JOUE
+--   temps 3 — après le `revoke`                →  REFUSÉ (42501)      ← LE SECOND TOUR DE CLEF
+--   aux trois temps                            →  témoin positif > 0  ← le rôle a bien pris
+--
+-- ⚠️ Ce bloc EST AUSSI la répétition à blanc du correctif (règle 6 du
+--    `SUIVI_SQL.md`) : le DDL est transactionnel en PostgreSQL, `alter view` et
+--    `revoke` s'annulent avec le reste. Il ne contient AUCUN `commit;` et ne
+--    peut donc pas se valider tout seul. Le jouer TEL QUEL — ne PAS le coller à
+--    l'intérieur d'une autre transaction.
+-- ⚠️ Après le `rollback`, REVÉRIFIER PAR REQUÊTE que `assiduite_hebdo` est
+--    revenue à son compte d'avant ET que la vue n'a gardé ni l'option ni la
+--    révocation — ne jamais se fier au seul « ROLLBACK » affiché (vécu le
+--    14/08).
+-- ============================================================================
+-- begin;
+--
+-- create temp table epreuve(t int, temps text, vue_sous_anon text, temoin_positif int);
+--
+-- -- Le décor : une ligne d'assiduité pour un élève RÉELLEMENT inscrit et actif
+-- -- — sans quoi la jointure de la vue ne rendrait rien et la preuve serait
+-- -- vide. Aucun UUID en dur : on prend le premier venu.
+-- insert into assiduite_hebdo (eleve_id, cycle_lundi, exercices_assignes,
+--                              exercices_termines, semaine_faite)
+-- select i.eleve_id, date '2026-08-17', 3, 0, false
+--   from inscriptions i
+--  where i.statut = 'active'
+--  limit 1;
+--
+-- -- Le témoin de fabrication : la vue a bien quelque chose à rendre.
+-- select 'décor posé' as etape,
+--        (select count(*) from assiduite_hebdo_classe) as vue_sous_proprietaire;
+--   -- attendu : 1. Si 0 → aucune inscription active : la preuve est À REFAIRE
+--   -- avec une inscription, PAS à conclure.
+--
+-- -- La lecture sous `anon`, encapsulée pour que le refus du temps 3 n'avorte
+-- -- pas la transaction (le gestionnaire d'exception ouvre une sous-transaction).
+-- create or replace function pg_temp.lire_sous_anon(p_t int, p_temps text)
+-- returns void language plpgsql as $f$
+-- declare v_vue text; v_temoin int;
+-- begin
+--   set local role anon;
+--   begin
+--     select count(*)::text into v_vue from assiduite_hebdo_classe;
+--   exception
+--     when insufficient_privilege then v_vue := 'REFUSÉ — permission denied (42501)';
+--     when others                 then v_vue := 'ERREUR ' || sqlstate || ' — ' || sqlerrm;
+--   end;
+--   select count(*) into v_temoin from holidays;   -- policy `for select using (true)`
+--   reset role;                                     -- avant d'écrire : anon n'écrit pas
+--   insert into epreuve values (p_t, p_temps, v_vue, v_temoin);
+-- end $f$;
+--
+-- select pg_temp.lire_sous_anon(1, 'état actuel — rien n''est encore corrigé');
+--
+-- alter view public.assiduite_hebdo_classe set (security_invoker = true);
+-- select pg_temp.lire_sous_anon(2, 'après security_invoker = true');
+--
+-- revoke all on public.assiduite_hebdo_classe from anon;
+-- select pg_temp.lire_sous_anon(3, 'après le revoke — le second tour de clef');
+--
+-- select * from epreuve order by t;
+--   -- ATTENDU, écrit avant de jouer :
+--   --   1 | état actuel                   | 1                                  | > 0
+--   --   2 | après security_invoker = true | 0                                  | > 0
+--   --   3 | après le revoke               | REFUSÉ — permission denied (42501) | > 0
+--   -- ⚠️ Si `temoin_positif` vaut 0 sur une ligne, CETTE LIGNE NE PROUVE RIEN :
+--   --    le rôle n'a peut-être pas pris. Trouver un autre témoin lisible par
+--   --    `anon` et recommencer.
+--   -- ⚠️ Si le temps 1 rend déjà 0 avec un témoin non nul, LE CONSTAT DE LA
+--   --    REVUE EST À RÉEXAMINER avant de corriger quoi que ce soit.
+--
+-- rollback;
+--
+-- -- APRÈS le rollback, la vérification qui ne se fie à rien :
+-- select (select count(*) from assiduite_hebdo)                              as lignes_apres_rollback,
+--        coalesce((select option_value from pg_options_to_table(c.reloptions)
+--                   where option_name = 'security_invoker'), '— non posé —') as option_apres_rollback,
+--        has_table_privilege('anon', c.oid, 'SELECT')                        as anon_lit_apres_rollback
+--   from pg_class c join pg_namespace n on n.oid = c.relnamespace
+--  where n.nspname = 'public' and c.relname = 'assiduite_hebdo_classe';
+--   -- attendu : le compte d'AVANT (0 au 21/08) · « — non posé — » · t
+
+
+-- ── ET APRÈS LE CORRECTIF, la contre-épreuve en deux transactions ───────────
+-- ⚠️ DEUX transactions séparées, et ce n'est pas un caprice de mise en forme :
+--    la première AVORTE sur le refus, et tout ce qui la suivrait dans la même
+--    transaction serait ignoré. Le témoin doit donc vivre dans la sienne.
+-- begin;
+--   set local role anon;
+--   select count(*) from assiduite_hebdo_classe;      -- attendu : ERREUR 42501
+-- rollback;
+--
+-- begin;
+--   set local role anon;
+--   select current_user, count(*) as temoin_positif from holidays;  -- attendu : anon, > 0
+-- rollback;
