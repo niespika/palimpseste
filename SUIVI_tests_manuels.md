@@ -2567,24 +2567,34 @@ les lignes de plan — *dans cet ordre*, `exercices → scriptorium_exercices_pl
   piège `array_length` d'un tableau vide, déjà relevé en tête de `c4_l1_schema.sql`.* **À retenir :
   dans un CHECK, tout ce qui peut rendre NULL laisse passer.**
 
+- [x] ⭐⭐ **C4L9-13 · LE SMOKE PROFESSEUR, JOUÉ À L'ÉCRAN LE 22/08** — Chrome réel, session prof,
+  `localhost:3000`. **L'encart** « EXAMENS DIAGNOSTIQUES À CONCEVOIR · 1 » s'affiche dans le module,
+  avec sa date, son **retard**, sa fenêtre et son deep-link. **L'écran de conception** rend
+  l'intitulé, la classe, `fabrique_actif est à OFF`, l'avertissement de **classe sans parcours**, le
+  sélecteur de texte, la **consigne pré-composée et éditable**, et **les deux cases d'opt-in cochées**.
+  ⭐ **VÉRIFIÉ NOMMÉMENT : AUCUN CHAMP DE DATE NULLE PART** — seulement la mention « la date vient de
+  la ligne de plan et ne se saisit pas ici ». **Le refus déplié nomme la référence**, mot pour mot.
+  **Conception jouée pour de vrai depuis le bouton** → « L'examen est conçu », et en base :
+  ligne de plan `concu` **horodatée**, instance `lieu = classe`, **sans cran, sans genre, sans
+  fenêtre**, `modes_par_competence` = l'arrêté du `01-` §10, référence portée, type au grain `macro`.
+- [x] ⭐⭐ **C4L9-14 · LE SMOKE ÉLÈVE, JOUÉ À L'ÉCRAN LE 22/08** — session élève réelle (Elo, classe
+  Test). ⭐ **Portes fermées : AUCUN signal** — le gate est inerte, vérifié à l'écran avant tout.
+  Portes ouvertes : **« Passation en classe ouverte — Examen diagnostique — l'essai »** dans Codex et
+  **« — l'explication de texte »** dans Aletheia, **chacun dans son module et sans fuite dans
+  l'autre**. Le clic mène à `/eleve/modules/aletheia/passation/{depotId}` — et **le texte de Descartes
+  y est servi en entier**, avec le rappel de lisibilité et l'étape photo. **Les deux portes ont été
+  refermées et re-constatées.**
+- [x] ⭐⭐ **C4L9-15 quater · ET « TE JUGER » EST À L'ÉCRAN.** Après validation de la copie par le
+  **vrai code de C4-L4** (`validerLaTranscription`, jamais une ligne posée à la main), l'écran élève
+  rend **« TE JUGER » avec DEUX questions** — les vraies questions de la fiche Expression, avec leurs
+  listes fermées — **et « COMMENT TE SENS-TU ? »** pour la confiance de remise. *C'est la preuve à
+  l'écran de ce que C4-L9-bis a débloqué.* Le statut `evaluee` posé pour la vérification a été
+  **rendu au professeur, avec sa date d'origine**.
+- [x] **C4L9-13 bis · Les libellés du plan, à l'écran** : la grille rend **« Examen diagnostique —
+  écriture »** et **« Examen diagnostique — lecture »**, et non plus « Écriture diagnostique ».
+
 ### Ce qui reste à jouer en recette
 
-- [ ] ⚠️ **C4L9-13 · LE SMOKE PROFESSEUR, À L'ÉCRAN, DANS UN VRAI NAVIGATEUR.** **Rien n'a été vu à
-  l'écran côté prof** : la séance n'avait pas de compte professeur. À jouer, **`fabrique_actif`
-  ouvert ou non** *(l'écran marche dans les deux cas, il le dit)*, sur le décor laissé en place :
-  l'**encart « Examens diagnostiques à concevoir »** dans `/prof/codex` et `/prof/aletheia` *(date,
-  retard, deep-link)* ; l'**écran de conception** *(le sélecteur de matière, la consigne
-  pré-composée et **éditable**, le repli des refusés avec leur motif, les deux cases d'opt-in)* ; et
-  ⚠️ **qu'aucun champ de date n'y apparaisse nulle part**. ⚠️ **Règle d'or : un vrai Chrome, jamais
-  l'aperçu embarqué.**
-- [ ] ⚠️ **C4L9-14 · LE SMOKE ÉLÈVE, À L'ÉCRAN.** Le « fait quand » l'exige nommément — *« l'élève
-  voit son signal » se vérifie **à l'écran**, sur un dépôt réellement ouvert par le geste du
-  professeur*. Le dépôt est là *(décor laissé)*, la preuve par requête est faite **et la vue à
-  l'écran ne l'est pas**. À jouer avec le compte élève de test *(classe **Test**)*, après avoir
-  ouvert **`exercices_actif` ET `passation_classe_actif`** — **et les avoir refermés ensuite**.
-  ⭐ **Et « se juger » y est désormais visible**, à condition d'avoir posé un statut `evaluee` à la
-  fabrique : sans lui l'étape se refuse encore, **et c'est la décision du professeur, pas un
-  blocage de structure** *(C4L9-15)*.
 - [ ] **C4L9-16 · L'écran de C4-L8 rend « cran NaN » sur une instance d'examen diagnostique.**
   `/prof/conception/{id}` compose son titre avec `Number(e.cran)` — `NaN` sur une instance sans
   cran — et son bloc **Édition** refuse *(elle lit `exercices_cas`, qu'un examen n'a pas : son appui

@@ -173,7 +173,8 @@ export default function EcranConceptionExamen({ vue, actif }: { vue: EcranConcep
           {refusés.length > 0 && (
             <details className="rounded-md border border-bordure p-3">
               <summary className="cursor-pointer font-ui text-sm text-encre">
-                {refusés.length} {motDeLaMatiere}{refusés.length > 1 ? 's' : ''} ne {refusés.length > 1 ? 'sont' : 'est'} pas servable{refusés.length > 1 ? 's' : ''}
+                {refusés.length} {motDeLaMatiere}{refusés.length > 1 ? 's' : ''}{' '}
+                {refusés.length > 1 ? 'ne sont pas servables' : 'n’est pas servable'}
               </summary>
               <ul className="mt-2 space-y-1 font-ui text-xs text-encre-douce">
                 {refusés.map((c) => (
