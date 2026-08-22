@@ -127,7 +127,7 @@ export interface PerimetreDuDepot {
 export async function lirePerimetre(admin: Admin, depotId: string): Promise<PerimetreDuDepot | null> {
   const { data, error } = await admin.from('exercices_depots')
     .select('id, eleve_id, exercices!inner(id, cran, modes_par_competence, '
-      + 'exercices_types!inner(grain))')
+      + 'exercices_types!inner(grain, nature))')
     .eq('id', depotId).maybeSingle()
   if (error || !data) {
     if (error) console.error(`[passation] périmètre illisible (${depotId}) — ${error.code} ${error.message}`)
@@ -155,7 +155,24 @@ export async function lirePerimetre(admin: Admin, depotId: string): Promise<Peri
     : null
 
   const cranCode = ex?.cran != null ? String(ex.cran) : null
-  const geste = cranCode ? await gesteDuCran(admin, cranCode) : null
+  // ⭐ LE GESTE D'UN EXAMEN DIAGNOSTIQUE SE DÉRIVE DE SA NATURE (C4-L9-bis,
+  //    décision de Louis du 22/08). Pour les treize objets, le geste vient du
+  //    CRAN (`exercices_crans.geste`) ; un type de nature `complet` — les deux
+  //    examens diagnostiques — n'a PAS de cran, et ne doit jamais en avoir : « un
+  //    cran faux ferait dériver `regime_v1vf`, `couverture_observables` et la
+  //    durée ». Sans cette dérivation, `geste` restait NULL et « SE JUGER » NE SE
+  //    SERVAIT JAMAIS sur les deux examens de la semaine 1 — le drapeau se
+  //    levait, l'étape ne venait pas, et rien ne le disait.
+  //    ⚠️ CE N'EST PAS UN CONTOURNEMENT DE `02-` §5 : c'est la reconnaissance que
+  //    l'examen SATISFAIT sa condition. L'élève y produit une COPIE ENTIÈRE — le
+  //    geste est donc `produire` —, et « il porte un genre terminal entier […] IL
+  //    EST DONC MACRO PAR CONSTRUCTION » (`01-` §10). Le GRAIN, lui, est STOCKÉ
+  //    (`macro`, garde `types_complet_macro_sans_cran_chk`) parce qu'il a une
+  //    colonne et plusieurs lecteurs ; le GESTE n'en a aucune, et lui en créer
+  //    une serait un SECOND DOMICILE de ce que le cran porte déjà pour les treize.
+  const geste = cranCode ? await gesteDuCran(admin, cranCode)
+    : type?.nature === 'complet' ? 'produire'
+    : null
 
   return {
     declarees,
@@ -469,12 +486,16 @@ export async function enregistrerConfianceRemise(
  * ⚠️ ELLE N'EST PAS COMMANDÉE PAR LE LIEU MAIS PAR LE GESTE : on lit le cran de
  *    l'instance servie, on ne suppose rien.
  *
- * ⭐ CONSTAT DU 22/08, PAR REQUÊTE : les deux types diagnostiques seedés par
- *    C4-L1 — `diagnostic_essai` et `diagnostic_explication_texte` — sont SANS
- *    CRAN (`crans_admis` vaut `{}`, et `exercices_types_crans` ne porte AUCUNE
- *    ligne pour eux). Il n'y a donc, au 22/08, AUCUN écran de crédence à servir
- *    pour eux ; une instance de classe qui porterait un cran de diagnostic ou de
- *    transformation en aurait besoin, et cette fonction le dit.
+ * ⭐ CONSTAT DU 22/08, PAR REQUÊTE : les deux types d'examen diagnostique seedés
+ *    par C4-L1 — `examen_diagnostique_essai` et
+ *    `examen_diagnostique_explication_texte` (renommés par C4-L9 ; ils
+ *    s'appelaient `diagnostic_essai` et `diagnostic_explication_texte`, un
+ *    préfixe qu'ils partageaient avec les TROIS CRANS du geste `diagnostiquer`
+ *    ci-dessous, qui n'ont rien à voir) — sont SANS CRAN (`crans_admis` vaut
+ *    `{}`, et `exercices_types_crans` ne porte AUCUNE ligne pour eux). Il n'y a
+ *    donc AUCUN écran de crédence à servir pour eux ; une instance de classe qui
+ *    porterait un cran de diagnostic ou de transformation en aurait besoin, et
+ *    cette fonction le dit.
  */
 export const CRANS_A_CREDENCE = [
   'diagnostic_guide', 'diagnostic_nomme', 'diagnostic_fin',

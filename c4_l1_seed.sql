@@ -84,11 +84,11 @@ on conflict (code) do nothing;
 insert into exercices_types (code, nature, grain, supports_source, genres_admis, competences)
 values
   -- L'essai. Aucun support d'auteur n'est exigé par construction.
-  ('diagnostic_essai', 'complet', null, '{}', null,
+  ('examen_diagnostique_essai', 'complet', null, '{}', null,
      array['expression','argumentation','structure','connaissance','synthese','questionnement']),
   -- L'explication de texte. `texte` est la plus large étendue admise (`02-`
   -- §1.2) : il n'y a pas d'explication de texte sans texte à expliquer.
-  ('diagnostic_explication_texte', 'complet', null, array['texte'], null,
+  ('examen_diagnostique_explication_texte', 'complet', null, array['texte'], null,
      array['expression','argumentation','structure','connaissance','synthese','questionnement'])
 on conflict (code) do nothing;
 

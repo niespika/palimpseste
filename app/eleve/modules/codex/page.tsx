@@ -3,6 +3,9 @@ import { redirect } from 'next/navigation'
 import { createClient } from '@/utils/supabase/server'
 import { seuilModule } from '@/app/eleve/seuil-module'
 import { chargerSyntheseActive, chargerHistorique } from './actions'
+import { createAdminClient } from '@/utils/supabase/admin'
+import { signauxDeLancement } from '@/utils/examens/signal'
+import SignalDeLancement from '@/components/examens/SignalDeLancement'
 
 export default async function CodexElevePage() {
   const supabase = await createClient()
@@ -27,7 +30,13 @@ export default async function CodexElevePage() {
   const seuil = await seuilModule(supabase, user.id, module.id, 'Codex')
   if (seuil.type === 'ecran') return seuil.noeud
 
-  const [synthese, historique] = await Promise.all([chargerSyntheseActive(), chargerHistorique()])
+  // C4-L9 — le signal du LANCEMENT (jamais celui de l'assignation, qui est
+  // C6-L2). Lecture par le SERVEUR, filtrée sur `eleve_id` : le moteur ne
+  // porte AUCUNE policy élève, et ce lot n'en ouvre pas.
+  const [synthese, historique, signaux] = await Promise.all([
+    chargerSyntheseActive(), chargerHistorique(),
+    signauxDeLancement(createAdminClient(), user.id, 'codex'),
+  ])
   const live = synthese && (synthese.statut === 'phase_1' || synthese.statut === 'phase_2') ? synthese : null
 
   // À faire (T4) : retours validés par le prof mais pas encore lus par l'élève.
@@ -41,6 +50,8 @@ export default async function CodexElevePage() {
 
       {/* Identité du module portée par la Barre 2 ; on garde la consigne. */}
       <p className="text-sm text-muet mb-6 mt-2">Écrire de mémoire le récapitulatif d&apos;une unité, puis l&apos;améliorer.</p>
+
+      <SignalDeLancement signaux={signaux} />
 
       {live && (
         <Link
