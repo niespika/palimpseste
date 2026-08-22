@@ -44,9 +44,9 @@ const { poserPassationClasse, lireLesPortes } = await import(`${RACINE}/utils/pa
 const {
   ouvrirLesDepots, enregistrerLesPhotos, mettreLaTranscriptionEnFile, validerLaTranscription,
   declencherLeLot, ecrireLeCommentaireGeneral, poserLeMessageReporte, lireLeMessageReporte,
-  lireDepot, lireDepotsDeLInstance, attenteDuDepot, ETAPE_TRANSCRIPTION,
+  lireDepot, attenteDuDepot, ETAPE_TRANSCRIPTION,
 } = await import(`${RACINE}/utils/passation/depots.ts`)
-const { transcrireMaintenant, transcrireDepot } = await import(`${RACINE}/utils/passation/ouvrier.ts`)
+const { transcrireMaintenant } = await import(`${RACINE}/utils/passation/ouvrier.ts`)
 const { leverLesDrapeaux, offreSeJuger, offreConfianceRemise, offreCredence, lirePerimetre } =
   await import(`${RACINE}/utils/passation/metacognition.ts`)
 const {
@@ -54,7 +54,7 @@ const {
   pointsAAfficher,
 } = await import(`${RACINE}/utils/passation/retours.ts`)
 const { auCran, sommaireDuRetour, CRAN_INITIAL } = await import(`${RACINE}/utils/passation/revelation.ts`)
-const { photoDeposee, marqueurPageManquante } = await import(`${RACINE}/utils/passation/photos.ts`)
+const { photoDeposee } = await import(`${RACINE}/utils/passation/photos.ts`)
 const { blocs, empreinteDuDecoupage } = await import(`${RACINE}/utils/passation/transcription-calcul.ts`)
 const { cheminPage } = await import(`${RACINE}/utils/passation/chemins.ts`)
 const { avertissementsDuPrompt, promptDeTranscription } =
