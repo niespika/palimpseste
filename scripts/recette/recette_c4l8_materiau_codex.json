@@ -1,0 +1,22 @@
+{
+  "format": "palimpseste/import-exercices",
+  "version": "1.1",
+  "genere_le": "2026-08-21",
+  "genere_par": "recette C4-L8 — epreuve C4L8-1 (porte Codex)",
+  "materiaux": [
+    {
+      "id": "mat-lien-codex-0001",
+      "objet": "argument",
+      "mode": "composer",
+      "support": "extrait",
+      "famille": "le lien manque",
+      "contenu": "Les villes du Nord ont interdit les feux de bois cet hiver. La qualite de l'air y est donc meilleure qu'ailleurs.",
+      "observable": {
+        "code": "lien_explicite",
+        "competence": "argumentation"
+      },
+      "defaut": "la raison est dans la tete de l'eleve, pas sur la page : rien a citer, le lecteur doit la reconstituer",
+      "version_corrigee": "Les villes du Nord ont interdit les feux de bois cet hiver. Or les feux de bois sont la premiere source de particules fines en hiver. La qualite de l'air y est donc meilleure qu'ailleurs."
+    }
+  ]
+}

@@ -1,0 +1,59 @@
+{
+  "format": "palimpseste/import-exercices",
+  "version": "1.1",
+  "genere_le": "2026-08-21",
+  "genere_par": "recette C4-L8-bis — un observable ROUTE sur un objet naguere aveugle (partie)",
+  "materiaux": [
+    {
+      "id": "mat-l8bis-partie-0001",
+      "objet": "partie",
+      "mode": "composer",
+      "support": "texte",
+      "famille": "le garant manque",
+      "contenu": "La technique nous rend libres. Les machines font a notre place ce que nos mains faisaient hier, et le temps ainsi degage est du temps rendu a nous-memes. Ainsi l'ouvrier qui surveille une chaine automatisee dispose d'une liberte que le forgeron n'avait pas. La technique est donc une emancipation.",
+      "observable": {
+        "code": "garant_present",
+        "competence": "argumentation"
+      },
+      "defaut": "la preuve et la conclusion sont la, le lien qui les tient ne l'est pas — « ainsi » et « donc » occupent la place de la raison",
+      "version_corrigee": "La technique nous rend libres. Les machines font a notre place ce que nos mains faisaient hier, et le temps ainsi degage est du temps rendu a nous-memes. Or disposer de son temps est la condition premiere de toute liberte reelle, puisque nul ne peut se choisir une fin s'il n'a pas d'heures a lui. Ainsi l'ouvrier qui surveille une chaine automatisee dispose d'une liberte que le forgeron n'avait pas. La technique est donc une emancipation."
+    }
+  ],
+  "exercices": [
+    {
+      "id": "ex-l8bis-partie-composer-03-garant_present-0001",
+      "objet": "partie",
+      "cran": 3,
+      "genre": "generique",
+      "lieu": "maison",
+      "modes": { "argumentation": "composer" },
+      "observable_isole": { "code": "garant_present", "competence": "argumentation" },
+      "materiau_source": { "provenance": null, "support": null },
+      "materiau_cible": { "provenance": "genere", "support": "texte" },
+      "guide": null,
+      "bonus": false,
+      "cas": [
+        {
+          "consigne": "Parmi ces quatre ajouts, lequel donne la raison qui manque a cette partie ?",
+          "materiau": "mat-l8bis-partie-0001",
+          "defaut": "la preuve et la conclusion sont la, le lien qui les tient ne l'est pas",
+          "distracteurs": [
+            "Ainsi, on le voit bien, la technique est une emancipation.",
+            "Il est donc evident que la technique libere l'homme.",
+            "La technique, en effet, est ce qui nous rend libres.",
+            "Par consequent, l'ouvrier d'aujourd'hui est plus libre.",
+            "Nombreux sont les auteurs qui l'ont souligne avant nous.",
+            "Cette these se verifie dans tous les domaines de la vie moderne.",
+            "L'histoire des techniques le montre a chaque etape.",
+            "On peut citer ici Marx, qui ne disait pas autre chose.",
+            "Le forgeron, lui, travaillait douze heures par jour.",
+            "Les machines sont plus rapides que les mains humaines.",
+            "La liberte est un bien que chacun recherche.",
+            "Il faudrait toutefois nuancer cette affirmation."
+          ],
+          "reponse_attendue": "Or disposer de son temps est la condition premiere de toute liberte reelle, puisque nul ne peut se choisir une fin s'il n'a pas d'heures a lui."
+        }
+      ]
+    }
+  ]
+}
