@@ -87,9 +87,18 @@ const LIBELLE_TYPE: Record<TypeExercice, string> = {
   fragment: 'fragment',
   essai: 'essai',
 }
+// ⭐ C4-L9 — LE RENOMMAGE N'EST PAS UN REMPLACEMENT DE CHAÎNE : c'est un
+// changement de RÈGLE DE COMPOSITION. On rendait « écriture diagnostique » en
+// accolant le mot à la fin ; on rend désormais « examen diagnostique — écriture ».
+// Le motif : cinq codes partageaient le préfixe `diagnostic_` — trois pour le
+// GESTE `diagnostiquer` (des crans d'un objet) et deux pour l'ANCRE, qui n'ont
+// rien à voir. Un « examen diagnostique » est une COPIE ENTIÈRE, macro par
+// construction et hors routage (`01-` §10).
+// ⚠️ CETTE FONCTION EST EN MINUSCULES (« écriture »), les deux grilles du plan
+//    sont en capitale initiale : chacune garde sa casse.
 export function libelleTypeExercice(type: string, diagnostique = false): string {
   const base = LIBELLE_TYPE[type as TypeExercice] ?? 'exercice'
-  return diagnostique ? `${base} diagnostique` : base
+  return diagnostique ? `examen diagnostique — ${base}` : base
 }
 
 // Durées indicatives (min) — §4 du PROMPT.

@@ -2439,3 +2439,154 @@ qui diverge. La re-dérivation appartient à qui a fait bouger la source.
   le cas nominal**, et ce n'est pas une panne. *Même condition de reprise que C4L3-14.*
 
 ---
+
+## C4 · L9 — La conception des examens diagnostiques (sandbox, migration du 22/08)
+
+_Section ouverte le 22/08 depuis `RELEVE_C4_L9_2026-08-22.md`, à la clôture du lot._
+
+**Ce que le lot porte** : **toute ancre naît là**. Les **deux types d'examen diagnostique**
+deviennent **concevables** *(l'essai dans Codex, l'explication de texte dans Aletheia)* ; le
+professeur **voit ce qu'il a à concevoir dans son module**, avec sa date et son retard ; il conçoit
+— un **sujet** dans Codex, un **texte** dans Aletheia — **sans qu'aucune date lui soit demandée** ;
+l'instance naît avec **`lieu = classe`**, la **ligne de plan passe conçue**, et **les deux se
+retrouvent l'une l'autre** ; au lancement, **l'élève voit son signal** et entre **par son module**.
+
+**Où il vit** : `utils/examens/` *(4 modules — 2 purs, 2 serveur)* · `components/examens/`
+*(3 composants)* · `app/prof/examens-diagnostiques/actions.ts` ·
+`app/prof/{codex,aletheia}/examen-diagnostique/[planifieId]/page.tsx` ·
+`c4_l9_examens_diagnostiques.sql` *(jouée le 22/08)* · `scripts/recette/examens-c4l9.mjs`.
+
+⚠️ **Les six interrupteurs sont à OFF**, re-constatés **après la migration, après la recette, et
+après le smoke** : `exercices_actif`, `routeur_actif`, `competences_affichage_actif`,
+`fabrique_actif`, `chaine_actif`, `passation_classe_actif`. L'écran de conception vit derrière
+**`fabrique_actif`** *(montré, jamais fermant — le régime de toute la fabrique)*, et le signal de
+l'élève derrière **les deux portes de C4-L4** *(`exercices_actif` **et** `passation_classe_actif`,
+le plus fermé gagne)*. **Ce lot n'en crée aucun septième et n'en détourne aucun.**
+
+_`npx tsc --noEmit` et `eslint` sur les fichiers du lot : **rien**. **18 tests neufs, 0 échec**
+(`npm test` : 981 tests, 980 passés). `scripts/recette/examens-c4l9.mjs` : **114 vérifications, 0
+échec**, jouées **par le même code que les écrans**, décor semé puis **retiré** (base revenue à son
+état d'avant, **vérifié par requête**)._
+
+⚠️ **`npm test` complet porte UN échec qui n'est PAS de ce lot**, et c'est **le même qu'à C4-L3** :
+`derive-instruments --verifie` DIVERGE parce que le `07-` a bougé. **Vérifié cette fois-ci à
+l'octet** : le gabarit Calame est **identique**, seuls `empreinte_source` et `version_source`
+*(2.25 → 2.28)* diffèrent. **La re-dérivation appartient à qui a fait bouger la source.**
+
+⚠️ **`derive-doctrine.py --verifie` dit `SOURCES : DIVERGE — 06-Palimpseste.md`**, et **les onze
+tables sont IDENTIQUES** — joué **avant et après** le geste de ce lot, sans changement. Le `06-` a
+bougé le 22/08 ; ce qu'il alimente *(`demonstrations_formes`)* est inchangé. **Hors périmètre de ce
+lot, non corrigé.**
+
+⚠️ **LE DÉCOR DE RECETTE EST LAISSÉ EN PLACE**, pour que les smokes ci-dessous soient jouables :
+**deux lignes de plan** *(`note = 'RECETTE C4-L9'`, fenêtre `septembre`, classe **Test**)*, leurs
+**deux instances** *(`assigne`, `lieu = classe`)* et **14 dépôts** *(7 élèves × 2)*, **ouverts par
+le geste réel du professeur**. **Pour le retirer** : supprimer les dépôts, puis les instances, puis
+les lignes de plan — *dans cet ordre*, `exercices → scriptorium_exercices_planifies` étant en
+`on delete restrict`.
+
+### Ce qui est prouvé — pour ne pas le rejouer
+
+- [x] **C4L9-1 · Les deux types sont concevables.** Les deux lignes portent leurs `genres_admis`
+  *(`dissertation_tc` + `essai_hlp` · `explication_texte_tc` + `interpretation_hlp`)*,
+  `exclusions_parcours = '{}'` **écrit explicitement**, `mode_saisie = 'manuscrit'` et leur
+  `libelle`. ⚠️ **Ni `grain` ni `crans_admis` remplis**, `competences` toujours **les six**
+  *(plafond)*. **Preuve** : 15 drapeaux de vérification de `c4_l9_examens_diagnostiques.sql`, tous
+  à `t`.
+- [x] **C4L9-2 · Le renommage est fait, et il ne casse rien.** `diagnostic_essai` →
+  `examen_diagnostique_essai`, `diagnostic_explication_texte` →
+  `examen_diagnostique_explication_texte`. **Preuve** : les **sept** clés étrangères vers
+  `exercices_types` pointent son `id`, jamais son `code` *(requête)*, et **zéro** ligne
+  d'`exercices_routes.objet_code` ne portait l'un des deux anciens.
+- [x] ⭐ **C4L9-3 · LE MUR EST TOMBÉ, ET DANS LES DEUX SENS.** `exercices_cran_chk` refusait toute
+  conception d'examen diagnostique dès `statut = 'concu'`. **Preuve, par écriture réelle en
+  transaction rollbackée** *(bloc « ÉPREUVE DU MUR »)* : un examen `concu` **sans cran passe** ; un
+  examen **avec** un cran est **refusé** *(le sens qu'aucun CHECK ne pouvait exprimer)* ; un
+  **objet** `concu` sans cran **reste refusé** *(la règle d'avant, mot pour mot)*.
+- [x] ⭐ **C4L9-4 · L'insertion de l'instance EST le claim.** Deux conceptions sur la même ligne de
+  plan : la **seconde perd**, et **une seule** instance revendique la ligne. **Preuve** :
+  `uk_exercices_planifie` éprouvé en transaction rollbackée *(migration)* **et** par le geste réel
+  *(recette, étape G)*.
+- [x] ⭐ **C4L9-5 · Les deux se retrouvent l'une l'autre — PAR REQUÊTE, DANS LES DEUX SENS.** De
+  l'instance vers la ligne par `exercice_planifie_id` ; de la ligne vers l'instance par la lecture
+  inverse. **Et aucune colonne neuve n'est allée sur la ligne de plan** *(vérifié : pas
+  d'`exercice_id` sur `scriptorium_exercices_planifies`)*. **Preuve** : recette, étape E.
+- [x] ⭐ **C4L9-6 · La `forme` vaut `sommatif`** — lue **là où la chaîne l'écrit**, jamais sur
+  `exercices` *(elle n'y est pas)* : `utils/chaine/contexte.ts` appelé **sur l'instance réelle**
+  rend `forme = 'sommatif'` et `lieu = 'classe'` pour les deux examens. **C'EST UNE ANCRE.**
+  **Preuve** : recette, étape F.
+- [x] ⭐ **C4L9-7 · Le refus de référence, et son motif la nomme.** À l'affichage **et au geste** —
+  *« un écran n'est pas une garde »*. Après le refus, **aucune instance ne reste** et la ligne de
+  plan est **restée `a_concevoir`**. **Preuve** : recette, étape C, sur le texte réel
+  `txt-bloque-0001` dont la référence n'est pas validée.
+- [x] ⭐ **C4L9-8 · Le flux de C4-L4 prend l'instance SANS UNE LIGNE DE CHANGEMENT.**
+  `ouvrirLesDepots()` accepte l'instance, `chargerVueEleve()` rend une vue, le dépôt s'y voit
+  ouvert, l'élève lit sa consigne — et côté Aletheia **le texte à expliquer y est** *(1 270
+  caractères servis)*. **Preuve** : recette, étape H. ✓ **Et le diff le confirme** : `git diff` sur
+  `utils/passation/` et `components/passation/` ne porte **que des lignes de commentaire**, dans un
+  seul fichier *(le renommage du piège 30 à `metacognition.ts`)*.
+- [x] ⭐ **C4L9-9 · L'élève voit son signal, et entre par son module.** Le signal se lève sur un
+  dépôt **réellement ouvert par le geste du professeur**, porte l'instant de ce geste, mène à
+  `/eleve/modules/{module}/passation/{depotId}`, **ne fuit pas dans l'autre module**, et **s'éteint
+  à la remise**. ⚠️ **Et portes fermées, il est INERTE** — aucun signal. **Preuve** : recette,
+  étape I.
+- [x] **C4L9-10 · Les deux examens de la semaine 1 sont montés, un par module.** Et la garantie
+  **préexistait au plan** : une **seconde** écriture diagnostique de septembre est refusée par
+  `uk_exercices_diagnostic`. **Preuve** : recette, étape J — *servi comme preuve, jamais construit*.
+- [x] **C4L9-11 · Aucune policy élève n'a été ouverte**, ni par la migration ni par le code : le
+  signal se sert **par le serveur**, filtré sur `eleve_id`. **Preuve** : drapeau 13 de la migration
+  et requête `pg_policies` re-jouée après la recette.
+- [x] **C4L9-12 · Les quatre routes compilent et se comportent.** Les deux écrans de conception, les
+  deux pages de module prof et les deux pages de module élève rendent `307 → /login` sans
+  authentification, **sans erreur de compilation ni d'exécution** *(journal du serveur de dev)*.
+
+### Ce qui reste à jouer en recette
+
+- [ ] ⚠️ **C4L9-13 · LE SMOKE PROFESSEUR, À L'ÉCRAN, DANS UN VRAI NAVIGATEUR.** **Rien n'a été vu à
+  l'écran côté prof** : la séance n'avait pas de compte professeur. À jouer, **`fabrique_actif`
+  ouvert ou non** *(l'écran marche dans les deux cas, il le dit)*, sur le décor laissé en place :
+  l'**encart « Examens diagnostiques à concevoir »** dans `/prof/codex` et `/prof/aletheia` *(date,
+  retard, deep-link)* ; l'**écran de conception** *(le sélecteur de matière, la consigne
+  pré-composée et **éditable**, le repli des refusés avec leur motif, les deux cases d'opt-in)* ; et
+  ⚠️ **qu'aucun champ de date n'y apparaisse nulle part**. ⚠️ **Règle d'or : un vrai Chrome, jamais
+  l'aperçu embarqué.**
+- [ ] ⚠️ **C4L9-14 · LE SMOKE ÉLÈVE, À L'ÉCRAN.** Le « fait quand » l'exige nommément — *« l'élève
+  voit son signal » se vérifie **à l'écran**, sur un dépôt réellement ouvert par le geste du
+  professeur*. Le dépôt est là *(décor laissé)*, la preuve par requête est faite **et la vue à
+  l'écran ne l'est pas**. À jouer avec le compte élève de test *(classe **Test**)*, après avoir
+  ouvert **`exercices_actif` ET `passation_classe_actif`** — **et les avoir refermés ensuite**.
+- [ ] ⚠️ **C4L9-15 · « SE JUGER » NE SE SERT PAS SUR UN EXAMEN DIAGNOSTIQUE, ET CE N'EST PAS UN BUG
+  DE CE LOT — c'est une QUESTION DE SOURCE.** L'écran lève bien le drapeau *(`optin_se_juger`
+  posé)*, et la **confiance de remise est servie** ; mais `offreSeJuger` (C4-L4) exige un **geste
+  `produire`** et un **grain `meso`/`macro`** *(`02-` §5)*, or un examen diagnostique **n'a ni cran
+  ni grain** — son type est `complet`, et `types_complet_sans_objet_ni_cran_chk` le lui interdit.
+  Motif rendu à la recette : *« se juger n'est servi qu'en geste `produire` ; le cran servi est sans
+  cran »*. ⚠️ **La tension est entre deux sources** : le `02-` §6.D **étape 9** met « se juger »
+  dans le flux de la passation en classe, et le `01-` §10 dit l'examen **« macro par
+  construction »** — quand le `07-` §1 lui interdit tout grain. **Non tranché ici, et non
+  contourné** *(`utils/passation/` est resté intact)*. **À trancher.**
+- [ ] **C4L9-16 · L'écran de C4-L8 rend « cran NaN » sur une instance d'examen diagnostique.**
+  `/prof/conception/{id}` compose son titre avec `Number(e.cran)` — `NaN` sur une instance sans
+  cran — et son bloc **Édition** refuse *(elle lit `exercices_cas`, qu'un examen n'a pas : son appui
+  ne dépend que du cran)*. Le bloc **Assignation**, lui, **fonctionne** — et c'est par lui que passe
+  la suite du flux. **Cosmétique et hors périmètre** *(écran de C4-L8)*. **Adressé au lot de
+  correctifs.**
+- [ ] **C4L9-17 · Le geste d'assignation reste celui de C4-L8.** Ce lot conçoit *(instance `concu`,
+  ligne de plan `concu`)* et **n'assigne pas** — la mission en compte quatre choses, et
+  l'assignation n'en est pas. Le professeur passe donc par `/prof/conception/{id}` **hors de son
+  module** pour créer les dépôts. **L'écran le dit et l'y mène**, mais **le chemin traverse deux
+  modules**. **À trancher : l'assignation doit-elle rejoindre l'écran du module ?**
+- [ ] **C4L9-18 · `idx_exercices_planifie` est devenu redondant.** `uk_exercices_planifie` a la même
+  clé et le même prédicat, en UNIQUE. **Laissé en place** — il appartient à C4-L1, les migrations de
+  ce lot sont additives, et aucun piège n'en demandait le retrait. **Retrait à faire au lot de
+  correctifs, ou jamais** *(le coût est une écriture d'index de plus par instance)*.
+- [ ] **C4L9-19 · La garde « référence validée » vit maintenant à DEUX endroits.**
+  `app/prof/conception/actions.ts:130` *(C4-L8)* et `utils/examens/conception.ts` lisent la **même**
+  colonne `exercices_references.validee_at` avec le **même** prédicat. **L'extraction en une
+  fonction partagée toucherait un fichier de C4-L8**, hors périmètre. **Adressé au lot de
+  correctifs.**
+- [ ] **C4L9-20 · `consigne_gabarit` reste NULL sur les deux types, et c'est délibéré.** Aucune
+  source n'arrête le texte d'une consigne d'examen diagnostique — *« une donnée que rien ne nomme se
+  signale, elle ne s'invente pas »*. L'écran compose donc un **point de départ** *(l'intitulé du
+  type, puis le matériau)* que **le professeur arrête** : c'est le texte qu'il arrête que l'élève
+  lit. **Si un gabarit doit exister, il se décide en source.**

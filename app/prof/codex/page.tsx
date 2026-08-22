@@ -5,6 +5,9 @@ import { classesAvecModule } from '@/utils/acces'
 import { lireCiblesCodex } from './actions'
 import { preparerSynthese } from '../scriptorium/evaluations/actions'
 import { chargerSynthesesAPreparer } from './synthese-a-preparer'
+import { createAdminClient } from '@/utils/supabase/admin'
+import { examensAConcevoir } from '@/utils/examens/plan'
+import EncartAConcevoir from '@/components/examens/EncartAConcevoir'
 import { FormulaireSynthese } from './FormulaireSynthese'
 import { libelleSession } from '@/utils/codex-libelle'
 import { titresCoursParSession } from '@/utils/codex-titre'
@@ -60,6 +63,10 @@ export default async function CodexProfPage({ searchParams }: { searchParams: Pr
   const toutes = syntheses ?? []
   // Synthèses de fin de cours planifiées (plan d'évaluation, gate). Vide gate OFF.
   const aPreparer = await chargerSynthesesAPreparer()
+  // C4-L9 — « le professeur voit ce qu'il a à concevoir, DANS SON MODULE ».
+  // Lecture admin : les tables du plan sont en RLS prof-only. Gate du plan
+  // OFF/absent → liste vide → encart absent, page inchangée.
+  const examens = await examensAConcevoir(createAdminClient(), 'codex')
 
   // Nombre de synthèses par classe (clé SANS_CLASSE pour les synthèses non rattachées)
   const nbParClasse = new Map<string, number>()
@@ -95,6 +102,8 @@ export default async function CodexProfPage({ searchParams }: { searchParams: Pr
   return (
     <div className="space-y-8">
       <FormulaireSynthese cibles={cibles} classes={classesList} />
+
+      <EncartAConcevoir module="codex" examens={examens} />
 
       {/* Synthèses de fin de cours planifiées (plan d'évaluation). Gate OFF → aPreparer
           vide → rien ne s'affiche (page Codex inchangée). */}

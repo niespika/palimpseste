@@ -7,6 +7,7 @@ import { lireFuseau } from '@/utils/fuseau-serveur'
 import { lireGatePlanActif, plansValidesCourants } from '@/utils/plan-exercices'
 import { resoudreDatesSyntheses } from '@/utils/plan-synthese'
 import { dateEffectiveSemaine, libelleTypeExercice } from '@/utils/plan-cadence'
+import { moduleDuType } from '@/utils/examens/types'
 import { construireApercuAssign, memoSocleFrise, type ApercuSemaine } from '@/utils/parcours-apercu'
 import { semaineCourante } from '@/utils/scriptorium-corpus'
 
@@ -97,9 +98,21 @@ export async function tachesDeriveesDuCalendrier(joursAvant = 10): Promise<Tache
         // Deep-link PAR MODULE quand le flux de conception existe (Q1) : un quiz mène
         // à sa conception Quazian pré-remplie ; les autres types, faute d'écran dédié,
         // renvoient à la grille du plan (relais manuel « Marquer conçu »).
+        // ⭐ C4-L9 — LE TROISIÈME SITE. Les deux EXAMENS DIAGNOSTIQUES ont désormais
+        //    leur écran de conception, chacun DANS SON MODULE : ils tombaient jusqu'ici
+        //    dans la branche par défaut, et « un lot qui pose l'encart et oublie le
+        //    calendrier laisse deux chemins qui disent des choses différentes ».
+        //    ⚠️ La condition lit `diagnostique`, jamais le seul `type_exercice` : une
+        //    écriture FORMATIVE (maison) est aussi de type `ecriture`, et elle n'a pas
+        //    d'écran — elle reste au renvoi vers la grille.
+        const moduleExamen = e.diagnostique === true
+          ? moduleDuType(type)
+          : null
         const href = type === 'quiz'
           ? `/prof/quazian/quizz?exercice=${e.id}`
-          : `/prof/scriptorium?vue=evaluations&classe=${classeId}`
+          : moduleExamen
+            ? `/prof/${moduleExamen}/examen-diagnostique/${e.id}`
+            : `/prof/scriptorium?vue=evaluations&classe=${classeId}`
         taches.push({
           id: `exo-${e.id}`,
           label: `${enRetard ? 'Exercice en retard' : 'Exercice à concevoir'} — ${libelle}`,

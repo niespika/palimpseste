@@ -10,6 +10,8 @@ import {
   STATUT_LABEL, type LivreProf,
 } from './donnees'
 import type { TravailAletheia, DiagnosticTravail } from '@/app/eleve/modules/aletheia/types'
+import { examensAConcevoir } from '@/utils/examens/plan'
+import EncartAConcevoir from '@/components/examens/EncartAConcevoir'
 
 function Barre({ done, total }: { done: number; total: number }) {
   const pct = total > 0 ? Math.round((done / total) * 100) : 0
@@ -68,6 +70,11 @@ export default async function ClasseAletheiaPage({ searchParams }: { searchParam
     admin.from('scriptorium_unite_classes').select('unite_id, classe_id'),
   ])
   const livreIds = new Set((livreUnites ?? []).map(u => u.id as string))
+
+  // C4-L9 — « le professeur voit ce qu'il a à concevoir, DANS SON MODULE ».
+  // Lecture admin : les tables du plan sont en RLS prof-only. Gate du plan
+  // OFF/absent → liste vide → encart absent, page inchangée.
+  const examens = await examensAConcevoir(admin, 'aletheia')
 
   const nbLivresParClasse = new Map<string, number>()
   for (const l of liens ?? []) {
@@ -137,6 +144,8 @@ export default async function ClasseAletheiaPage({ searchParams }: { searchParam
 
   return (
     <div className="space-y-6">
+      <EncartAConcevoir module="aletheia" examens={examens} />
+
       {classesList.length === 0 ? (
         <p className="text-center text-muet text-sm py-8">Aucune classe pour le moment.</p>
       ) : (

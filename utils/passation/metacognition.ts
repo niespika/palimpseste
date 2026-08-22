@@ -469,12 +469,16 @@ export async function enregistrerConfianceRemise(
  * ⚠️ ELLE N'EST PAS COMMANDÉE PAR LE LIEU MAIS PAR LE GESTE : on lit le cran de
  *    l'instance servie, on ne suppose rien.
  *
- * ⭐ CONSTAT DU 22/08, PAR REQUÊTE : les deux types diagnostiques seedés par
- *    C4-L1 — `diagnostic_essai` et `diagnostic_explication_texte` — sont SANS
- *    CRAN (`crans_admis` vaut `{}`, et `exercices_types_crans` ne porte AUCUNE
- *    ligne pour eux). Il n'y a donc, au 22/08, AUCUN écran de crédence à servir
- *    pour eux ; une instance de classe qui porterait un cran de diagnostic ou de
- *    transformation en aurait besoin, et cette fonction le dit.
+ * ⭐ CONSTAT DU 22/08, PAR REQUÊTE : les deux types d'examen diagnostique seedés
+ *    par C4-L1 — `examen_diagnostique_essai` et
+ *    `examen_diagnostique_explication_texte` (renommés par C4-L9 ; ils
+ *    s'appelaient `diagnostic_essai` et `diagnostic_explication_texte`, un
+ *    préfixe qu'ils partageaient avec les TROIS CRANS du geste `diagnostiquer`
+ *    ci-dessous, qui n'ont rien à voir) — sont SANS CRAN (`crans_admis` vaut
+ *    `{}`, et `exercices_types_crans` ne porte AUCUNE ligne pour eux). Il n'y a
+ *    donc AUCUN écran de crédence à servir pour eux ; une instance de classe qui
+ *    porterait un cran de diagnostic ou de transformation en aurait besoin, et
+ *    cette fonction le dit.
  */
 export const CRANS_A_CREDENCE = [
   'diagnostic_guide', 'diagnostic_nomme', 'diagnostic_fin',

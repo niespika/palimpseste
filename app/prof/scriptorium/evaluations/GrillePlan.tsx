@@ -35,9 +35,15 @@ const LABELS: Record<string, string> = {
   ecriture: 'Écriture', lecture: 'Lecture', synthese: 'Synthèse', quiz: 'Quiz',
   examen_livre: 'Examen sur le livre', bac_blanc: 'Bac Blanc', fragment: 'Fragment', essai: 'Essai',
 }
+// ⭐ C4-L9 — CHANGEMENT DE RÈGLE DE COMPOSITION, pas un remplacement de chaîne :
+// « Écriture diagnostique » devient « Examen diagnostique — écriture ». Le mot
+// `diagnostique` accolé à la fin confondait l'ANCRE (une copie entière, macro par
+// construction, `01-` §10) avec le GESTE `diagnostiquer` (un cran d'un objet).
+// ⚠️ Capitale initiale ici, minuscules dans `utils/plan-cadence.ts` : chaque site
+//    garde sa casse.
 function libelleType(e: ExerciceLigne): string {
   const base = LABELS[e.typeExercice] ?? e.typeExercice
-  return e.diagnostique ? `${base} diagnostique` : base
+  return e.diagnostique ? `Examen diagnostique — ${base.toLowerCase()}` : base
 }
 
 const TYPES_AJOUT = [
@@ -45,8 +51,8 @@ const TYPES_AJOUT = [
   { v: 'lecture', label: 'Lecture (maison)' },
   { v: 'quiz', label: 'Quiz (classe)' },
   { v: 'examen_livre', label: 'Examen sur le livre (classe)' },
-  { v: 'ecriture_diag', label: 'Écriture diagnostique (classe)' },
-  { v: 'lecture_diag', label: 'Lecture diagnostique (classe)' },
+  { v: 'ecriture_diag', label: 'Examen diagnostique — écriture (classe)' },
+  { v: 'lecture_diag', label: 'Examen diagnostique — lecture (classe)' },
   { v: 'bac_blanc', label: 'Bac Blanc (classe)' },
 ]
 

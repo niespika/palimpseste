@@ -8,6 +8,8 @@ import ChoixClasseModule from '../../ChoixClasseModule'
 import { MicroStepper } from '@/components/aletheia/Steppers'
 import Pastille from '@/components/Pastille'
 import type { StatutAletheia } from './types'
+import { signauxDeLancement } from '@/utils/examens/signal'
+import SignalDeLancement from '@/components/examens/SignalDeLancement'
 
 const BADGE: Record<StatutAletheia, { texte: string; classe: string }> = {
   DRAFT: { texte: 'À commencer', classe: 'bg-parchemin-fonce text-muet' },
@@ -66,10 +68,15 @@ export default async function PageAletheia() {
     await Promise.all(livres.map(async l => [l.id, await chargerCapstoneLivre(admin, l.id)] as const)),
   )
   const { deblocageSequentiel } = await lireReglages(admin)
+  // C4-L9 — le signal du LANCEMENT (jamais celui de l'assignation, qui est
+  // C6-L2). Lecture par le SERVEUR, filtrée sur `eleve_id`.
+  const signaux = await signauxDeLancement(admin, user.id, 'aletheia')
 
   return (
     <div className="space-y-8 pb-8">
       <Link href="/eleve" className="text-sm text-muet hover:text-encre-douce">← Retour</Link>
+
+      <SignalDeLancement signaux={signaux} />
 
       {livres.length === 0 ? (
         <CarteMessage>Aucun livre ne t&apos;est assigné pour le moment.</CarteMessage>

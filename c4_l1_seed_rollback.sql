@@ -25,7 +25,7 @@ delete from exercices_types where code in (
   'problematisation','transition','argument','objection','exemple','reference','plan',
   'introduction','conclusion','mot','phrase','paragraphe','partie',
   -- les deux types diagnostiques (nature `complet`)
-  'diagnostic_essai','diagnostic_explication_texte');
+  'examen_diagnostique_essai','examen_diagnostique_explication_texte');
 
 commit;
 
@@ -34,4 +34,4 @@ select count(*) = 0 as les_quinze_lignes_du_seed_retirees, count(*) as reste
   from exercices_types where code in (
     'problematisation','transition','argument','objection','exemple','reference','plan',
     'introduction','conclusion','mot','phrase','paragraphe','partie',
-    'diagnostic_essai','diagnostic_explication_texte');
+    'examen_diagnostique_essai','examen_diagnostique_explication_texte');

@@ -243,10 +243,10 @@ test('le décompte se demande à la BASE, jamais aux comptes de la fixture', asy
   const contenu = lignesDe(10)
   contenu.exercices_types = [
     ...contenu.exercices_types,
-    { code: 'diagnostic_essai', nature: 'complet', grain: null, libelle: null,
+    { code: 'examen_diagnostique_essai', nature: 'complet', grain: null, libelle: null,
       supports_source: [], genres_admis: null, competences: [], crans_admis: [],
       exclusions_parcours: [] },
-    { code: 'diagnostic_explication_texte', nature: 'complet', grain: null, libelle: null,
+    { code: 'examen_diagnostique_explication_texte', nature: 'complet', grain: null, libelle: null,
       supports_source: [], genres_admis: null, competences: [], crans_admis: [],
       exclusions_parcours: [] },
   ]
