@@ -13,8 +13,42 @@ import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import {
   separerDoutes, desaccordDesPasses, blocs, retoursALaLigne,
-  empreinteDuDecoupage, decoupagePreserve, enMots, ZONES_MAX,
+  empreinteDuDecoupage, decoupagePreserve, enMots, ZONES_MAX, normaliserRetours,
 } from './transcription-calcul'
+
+// ── LE CRLF — trouvé par le smoke test du 22/08, en vrai navigateur ─────────
+
+test('⚠️ CRLF : quatre paragraphes soumis par un FORMULAIRE restent quatre', () => {
+  // La soumission d'un formulaire HTML normalise la valeur d'un `<textarea>` en
+  // CRLF — c'est la spécification. Sans normalisation, `\r\n\r\n` ne matche pas
+  // `\n[ \t]*\n` et la copie se lit EN UN SEUL BLOC : « défaillance forte ».
+  const commeLeNavigateurLEnvoie = 'Un.\r\n\r\nDeux.\r\n\r\nTrois.\r\n\r\nQuatre.'
+  assert.equal(blocs(commeLeNavigateurLEnvoie).length, 4)
+  assert.equal(empreinteDuDecoupage(commeLeNavigateurLEnvoie), '1-1-1-1')
+})
+
+test('CRLF : le texte NORMALISÉ est identique au même texte tapé en \\n', () => {
+  assert.equal(normaliserRetours('a\r\nb\r\n\r\nc'), 'a\nb\n\nc')
+  assert.equal(normaliserRetours('a\rb'), 'a\nb')          // vieux Mac, lone CR
+  assert.equal(normaliserRetours('a\nb'), 'a\nb')          // déjà propre : inchangé
+})
+
+test('normaliserRetours ne « nettoie » RIEN D\'AUTRE — les fautes survivent', () => {
+  const brut = '  sa va mieu ,  il ya   deux\r\n\r\n  raisons.  '
+  const sorti = normaliserRetours(brut)
+  assert.ok(sorti.includes('sa va mieu ,'), 'la faute et son espace avant virgule tiennent')
+  assert.ok(sorti.includes('il ya   deux'), 'les espaces multiples tiennent')
+  assert.ok(sorti.startsWith('  '), 'l\'indentation de tête tient')
+  assert.ok(sorti.endsWith('  '), 'les espaces de fin tiennent')
+  assert.equal(sorti.replace(/\n/g, '§'), brut.replace(/\r\n/g, '§').replace(/\n/g, '§'))
+})
+
+test('CRLF : le découpage est PRÉSERVÉ entre un texte en \\n et le même en CRLF', () => {
+  const machine = 'Premier.\n\nSecond.'
+  const renvoyeParLeNavigateur = 'Premier.\r\n\r\nSecond.'
+  assert.equal(decoupagePreserve(machine, renvoyeParLeNavigateur), true)
+  assert.equal(retoursALaLigne(machine), retoursALaLigne(renvoyeParLeNavigateur))
+})
 
 // ── Le découpage ────────────────────────────────────────────────────────────
 
