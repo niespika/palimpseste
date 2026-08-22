@@ -31,7 +31,7 @@ import { mettreEnFile, etatDesJobs, type EtatLisible } from '@/utils/chaine/file
 import { cheminPage, prefixeDepot, BUCKET } from './chemins'
 import { refuserPhotos, renumeroter, type Photo } from './photos'
 import { lireConfigPassation } from './config'
-import type { Doute } from './transcription-calcul'
+import { normaliserRetours, type Doute } from './transcription-calcul'
 
 type Admin = SupabaseClient
 
@@ -367,7 +367,7 @@ export async function validerLaTranscription(
 
   const maintenant = new Date().toISOString()
   const { error } = await admin.from('exercices_depots').update({
-    transcription_v1: texte.replace(/\n+$/, ''),
+    transcription_v1: normaliserRetours(texte).replace(/\n+$/, ''),
     statut: 'v1_remis',
     v1_remis_at: maintenant,
     updated_at: maintenant,
@@ -386,7 +386,7 @@ export async function enregistrerLaTranscription(
   if (!depotOuvert(d)) return refus('Le dépôt n’est pas encore ouvert.')
   if (d.v1_remis_at) return refus('Tu as déjà validé ta copie.')
   const { error } = await admin.from('exercices_depots')
-    .update({ transcription_v1: texte.replace(/\n+$/, ''), updated_at: new Date().toISOString() })
+    .update({ transcription_v1: normaliserRetours(texte).replace(/\n+$/, ''), updated_at: new Date().toISOString() })
     .eq('id', depotId)
   return error ? refus(`Enregistrement impossible : ${error.message}`) : ok(undefined)
 }
@@ -588,7 +588,7 @@ export async function validerLaSaisieClavier(
 
   const maintenant = new Date().toISOString()
   const { error } = await admin.from('exercices_depots').update({
-    texte_v1: texte.replace(/\n+$/, ''),
+    texte_v1: normaliserRetours(texte).replace(/\n+$/, ''),
     statut: 'v1_remis',
     v1_remis_at: maintenant,
     updated_at: maintenant,

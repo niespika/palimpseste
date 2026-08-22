@@ -270,6 +270,36 @@ function zonesDuChemin(
 // ─────────────────────────────────────────────────────────────────────────────
 
 /**
+ * ⚠️⚠️ LA NORMALISATION DES RETOURS À LA LIGNE — TROUVÉE PAR LE SMOKE TEST DU 22/08,
+ *      ET C'ÉTAIT UNE DÉFAILLANCE FORTE SILENCIEUSE.
+ *
+ * **La soumission d'un formulaire HTML normalise la valeur d'un `<textarea>` en
+ * CRLF** — c'est la spécification, pas un caprice de navigateur. Le texte validé
+ * par l'élève arrivait donc au serveur avec des `\r\n`, et se stockait tel quel.
+ *
+ * Conséquence, mesurée sur une vraie copie : `blocs()` cherche `\n[ \t]*\n`, et
+ * `\r\n\r\n` NE MATCHE PAS — le `\r` n'est ni une espace ni une tabulation. Une
+ * copie de QUATRE paragraphes se lisait donc comme UN SEUL BLOC.
+ *
+ * Et c'est précisément la panne que les sources décrivent : « une transcription
+ * qui fusionne deux paragraphes fabrique une copie SANS ARCHITECTURE, et la copie
+ * est lue EN DÉFAILLANCE FORTE » (`06-` §4) ; « une copie saisie sans retour à la
+ * ligne est lue comme dépourvue d'architecture — défaillance forte » (`07-` §3).
+ * Toute copie validée depuis un navigateur aurait vu sa Structure plancher.
+ *
+ * ⚠️ LA RECETTE NE POUVAIT PAS LE VOIR : elle appelle les fonctions serveur depuis
+ *    Node, avec des `\n`. Il fallait un vrai navigateur — c'est la raison d'être
+ *    de la règle d'or du `SUIVI_tests_manuels.md`.
+ *
+ * ⚠️ CETTE FONCTION NE « NETTOIE » RIEN D'AUTRE (piège 16) : ni la ponctuation, ni
+ *    les espaces, ni les lignes vides, ni les fautes. Elle ramène UNIQUEMENT les
+ *    fins de ligne à `\n`. Une transcription lissée est inutilisable.
+ */
+export function normaliserRetours(texte: string): string {
+  return texte.replace(/\r\n?/g, '\n')
+}
+
+/**
  * Les BLOCS d'un texte — le paragraphe typographique, tel que la Structure le lit.
  *
  * « La Structure se mesure sur le découpage en blocs TEL QU'IL EST ÉCRIT SUR LA
@@ -281,13 +311,16 @@ function zonesDuChemin(
  * Le bloc est donc ce que séparent une ou plusieurs lignes vides.
  */
 export function blocs(texte: string): string[] {
-  return texte.split(/\n[ \t]*\n+/).map((b) => b.replace(/^\n+|\n+$/g, ''))
+  // ⚠️ On NORMALISE d'abord. Un texte qui aurait échappé à la normalisation
+  //    d'écriture (CRLF d'un formulaire, import, copier-coller) se lirait sinon
+  //    comme UN SEUL BLOC — défaillance forte silencieuse (22/08).
+  return normaliserRetours(texte).split(/\n[ \t]*\n+/).map((b) => b.replace(/^\n+|\n+$/g, ''))
     .filter((b) => b.trim() !== '')
 }
 
 /** Les retours à la ligne, tous — l'autre moitié de ce que le prompt garantit. */
 export function retoursALaLigne(texte: string): number {
-  return (texte.match(/\n/g) ?? []).length
+  return (normaliserRetours(texte).match(/\n/g) ?? []).length
 }
 
 /**

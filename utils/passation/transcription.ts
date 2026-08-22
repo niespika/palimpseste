@@ -41,7 +41,7 @@ import { lireConfigPassation } from './config'
 import { pagesAvecFichier, rangsManquants, type Photo } from './photos'
 import { BUCKET } from './chemins'
 import {
-  separerDoutes, desaccordDesPasses, blocs, type Doute,
+  separerDoutes, desaccordDesPasses, blocs, normaliserRetours, type Doute,
 } from './transcription-calcul'
 
 type Admin = SupabaseClient
@@ -239,7 +239,10 @@ export async function transcrire(
   }
 
   return {
-    texte: retenue.transcription,
+    // ⚠️ NORMALISÉ DÈS LA SOURCE : le texte stocké est canonique, en `\n`. Un
+    //    modèle qui rendrait du CRLF ferait lire la copie en UN SEUL BLOC —
+    //    défaillance forte silencieuse (le smoke test du 22/08).
+    texte: normaliserRetours(retenue.transcription),
     confiance,
     doutes: doutes.filter((d) => d.extrait.trim() !== ''),
     appels,
