@@ -2479,12 +2479,18 @@ tables sont IDENTIQUES** — joué **avant et après** le geste de ce lot, sans 
 bougé le 22/08 ; ce qu'il alimente *(`demonstrations_formes`)* est inchangé. **Hors périmètre de ce
 lot, non corrigé.**
 
-⚠️ **LE DÉCOR DE RECETTE EST LAISSÉ EN PLACE**, pour que les smokes ci-dessous soient jouables :
-**deux lignes de plan** *(`note = 'RECETTE C4-L9'`, fenêtre `septembre`, classe **Test**)*, leurs
-**deux instances** *(`assigne`, `lieu = classe`)* et **14 dépôts** *(7 élèves × 2)*, **ouverts par
-le geste réel du professeur**. **Pour le retirer** : supprimer les dépôts, puis les instances, puis
-les lignes de plan — *dans cet ordre*, `exercices → scriptorium_exercices_planifies` étant en
-`on delete restrict`.
+✅ **LE DÉCOR DE RECETTE A ÉTÉ RETIRÉ**, une fois les deux smokes joués *(22/08)* — **14 dépôts,
+3 instances et 4 lignes de plan** *(`note = 'RECETTE C4-L9'`)*, dans l'ordre imposé par le
+`on delete restrict` : les dépôts, puis les instances, puis les lignes de plan. ✓ **Rien de dérivé
+n'y pendait** — zéro squelette, zéro métacognition, zéro mesure —, et **la base est revenue à son
+état d'avant la séance, vérifié par requête** : 11 instances *(celles de la recette C4-L8)*,
+10 lignes de plan, **aucune instance liée au plan**.
+
+**Ce que le lot laisse en base, et rien d'autre** : les **deux lignes de type** *(codes renommés,
+`genres_admis`, `exclusions_parcours` vide, `mode_saisie = manuscrit`, `libelle`, **`grain = macro`**,
+`crans_admis` toujours vide)*, l'**index unique** `uk_exercices_planifie`, le **trigger**
+`trg_exercices_cran_selon_le_type` et la **garde** `types_complet_macro_sans_cran_chk`.
+**Les six interrupteurs à OFF, zéro statut `evaluee`, zéro policy élève.**
 
 ### Ce qui est prouvé — pour ne pas le rejouer
 
