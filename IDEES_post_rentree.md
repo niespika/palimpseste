@@ -184,3 +184,23 @@ sont possibles et ce sont des décisions de doctrine, pas d'implémentation.*
   ces instances passent uniquement par l'import. *Ce n'est pas un défaut de
   C4-L8-bis : la pagination n'y change rien, et `introduction` offre bien sa banque
   (22 consignes au cran 3, porte Codex).*
+
+---
+
+## C4-L4 · La passation en classe — trouvée le 22/08, hors périmètre
+
+- **La transcription surestime l'Expression, et on a maintenant de quoi le MESURER.**
+  Le `07-` §6 déclare le biais comme *connu et assumé* — « un modèle de vision
+  tranche les graphies ambiguës vers la forme correcte », « et davantage chez les
+  élèves faibles » —, mais il n'existait aucun chiffre. **La colonne
+  `transcription_v1_doutes`, posée par C4-L4, en fabrique un sans rien coûter de
+  plus** : chaque endroit où **les deux passes ont divergé** est un endroit où la
+  graphie était ambiguë, et où l'une des deux lectures a tranché. Sur la copie
+  réelle du test de charge, **13 puis 23 endroits** sur une seule page.
+  *L'idée : à la première passation réelle, croiser le nombre de désaccords par
+  copie avec la lettre d'Expression obtenue. Si le biais est bien orienté, les
+  copies les plus faibles porteront le plus de désaccords — et l'écart entre la
+  passe retenue et l'autre en donnerait l'ordre de grandeur.* **Ce n'est pas une
+  parade, c'est un instrument de mesure du décalage** que l'arbitrage du §6 assume
+  aujourd'hui à l'aveugle. ⚠️ **Hors périmètre de C4-L4**, qui n'a pas à ouvrir un
+  chantier de validité ; et hors périmètre de C4-L5, qui ne voit pas les passes.

@@ -23,6 +23,17 @@ export interface ContexteCout {
   classeId?: string | null
   modele?: string | null
   tokens?: CompteursTokens | null
+  /**
+   * C4-L5 — le rattachement à l'exercice, ajouté par `c4_l1_existant.sql`.
+   * « La `phase` dit L'ÉTAGE, pas le nombre d'appels : `p1`, `p2`, `retour`,
+   * NULL hors exercices ; le nombre d'appels d'un étage se lit AU NOMBRE DE
+   * LIGNES » (`07-` §1.2). Tous nullables, au mieux : un coût non attribuable
+   * reste une ligne valide. Un lot RÉUTILISE ce journal, il n'en crée pas un second.
+   */
+  phase?: 'p1' | 'p2' | 'retour' | null
+  depotId?: string | null
+  competence?: string | null
+  version?: 'v1' | 'vf' | null
 }
 
 /**
@@ -68,6 +79,10 @@ function ligneCout(module: string, cout: number, ctx?: ContexteCout): Record<str
     ligne.tokens_cache_lecture = ctx.tokens.cacheLecture
     ligne.tokens_cache_ecriture = ctx.tokens.cacheEcriture
   }
+  if (ctx?.phase) ligne.phase = ctx.phase
+  if (ctx?.depotId) ligne.depot_id = ctx.depotId
+  if (ctx?.competence) ligne.competence = ctx.competence
+  if (ctx?.version) ligne.version = ctx.version
   return ligne
 }
 
@@ -78,5 +93,9 @@ function decrireAttribution(ctx?: ContexteCout): string {
   if (ctx?.eleveId) bouts.push(`eleveId=${ctx.eleveId}`)
   if (ctx?.classeId) bouts.push(`classeId=${ctx.classeId}`)
   if (ctx?.modele) bouts.push(`modele=${ctx.modele}`)
+  if (ctx?.phase) bouts.push(`phase=${ctx.phase}`)
+  if (ctx?.depotId) bouts.push(`depotId=${ctx.depotId}`)
+  if (ctx?.competence) bouts.push(`competence=${ctx.competence}`)
+  if (ctx?.version) bouts.push(`version=${ctx.version}`)
   return bouts.length ? ` ${bouts.join(' ')}` : ''
 }

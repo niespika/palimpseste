@@ -165,6 +165,34 @@ export default async function EditionEtApercu({
           id: txt(x.id), nom: [x.nom, x.niveau, x.filiere].filter(Boolean).map(txt).join(' · '),
         }))}
       />
+
+      {/* C4-L4 — LA PORTE DE LA PASSATION EN CLASSE.
+          « Tes écrans se posent dans Codex et Aletheia TELS QU'ILS SONT : ils ne
+          réorganisent pas la navigation, qui est C4-L6 et C5-L4 » (piège 55).
+          D'où un LIEN, ici, où le professeur vient déjà d'assigner — et aucun
+          sous-onglet de plus. Le module se choisit sur le CANAL de l'instance :
+          Codex pour l'écriture (`composer`), Aletheia pour la lecture.
+          ⚠️ C'est le `lieu` qui commande l'existence de ce lien, jamais le module. */}
+      {txt(e.lieu) === 'classe' && txt(e.statut) === 'assigne' && (
+        <div className="rounded-xl border border-bordure bg-surface p-4 space-y-2">
+          <h2 className="font-titre text-lg text-encre">Le jour de la passation</h2>
+          <p className="font-ui text-xs text-encre-douce max-w-3xl">
+            Ouvrir le dépôt, lever les deux drapeaux de Monitoring, déclencher l&apos;analyse en
+            lot, corriger et publier. <strong>L&apos;ouverture est un geste manuel</strong> — jamais
+            une fenêtre calendaire.
+          </p>
+          <div className="flex flex-wrap gap-3 font-ui text-sm">
+            <Link href={`/prof/codex/passation/${id}`}
+              className="rounded-md bg-bouton px-3 py-1.5 text-parchemin">
+              Passation — dans Codex
+            </Link>
+            <Link href={`/prof/aletheia/passation/${id}`}
+              className="rounded-md border border-bordure-bouton px-3 py-1.5 text-encre-douce">
+              Passation — dans Aletheia
+            </Link>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

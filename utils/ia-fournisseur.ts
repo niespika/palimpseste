@@ -21,6 +21,15 @@ export interface AppelIA {
   historique: { role: 'eleve' | 'assistant'; contenu: string }[]   // fenêtre glissante
   message: string                 // question du tour (déjà balisée par l'appelant)
   maxTokensSortie: number
+  // C4-L4 — les IMAGES du dernier tour (photos d'une copie manuscrite). Ajout
+  // ADDITIF : `undefined` laisse les deux adaptateurs strictement inchangés.
+  // Elles vivent AVANT le texte du tour, dans l'ordre reçu — « transcris dans
+  // l'ordre des images » (règle 8 du prompt de transcription).
+  // ⚠️ Elles ne sont JAMAIS cachées : le préfixe cacheable est le prompt, qui ne
+  //    change pas d'une copie à l'autre ; les photos, elles, changent à chaque
+  //    fois. Les mettre dans le préfixe ferait payer une écriture de cache par
+  //    copie, pour zéro relecture.
+  images?: { base64: string; mime: 'image/jpeg' | 'image/png' | 'image/webp' }[]
 }
 
 export interface UsageIA {
@@ -69,7 +78,21 @@ function messagesAnthropic(appel: AppelIA): { system: Anthropic.TextBlockParam[]
     role: h.role === 'eleve' ? ('user' as const) : ('assistant' as const),
     content: h.contenu,
   }))
-  messages.push({ role: 'user', content: [appel.suffixeDynamique, appel.message].filter(t => t.trim()).join('\n\n') })
+  const texteDuTour = [appel.suffixeDynamique, appel.message].filter(t => t.trim()).join('\n\n')
+  // Les images d'abord, le texte ensuite : c'est l'ordre du patron du dépôt
+  // (`utils/analyse-essai.ts`), et celui que « transcris dans l'ordre des
+  // images » suppose. Sans image, le contenu reste une CHAÎNE — byte-identique
+  // à ce que ce module envoyait avant l'ajout.
+  const content: Anthropic.ContentBlockParam[] | string = appel.images?.length
+    ? [
+        ...appel.images.map(img => ({
+          type: 'image' as const,
+          source: { type: 'base64' as const, media_type: img.mime, data: img.base64 },
+        })),
+        { type: 'text' as const, text: texteDuTour },
+      ]
+    : texteDuTour
+  messages.push({ role: 'user', content })
   return { system: system.length ? system : undefined, messages }
 }
 
@@ -121,7 +144,8 @@ function usageGemini(u?: UsageGemini | null): UsageIA {
   }
 }
 
-interface ContenuGemini { role: 'user' | 'model'; parts: { text: string }[] }
+type PartGemini = { text: string } | { inlineData: { mimeType: string; data: string } }
+interface ContenuGemini { role: 'user' | 'model'; parts: PartGemini[] }
 
 function contenusGemini(appel: AppelIA): ContenuGemini[] {
   // Préfixe en TÊTE DU PREMIER TOUR, position stable → le cache implicite matche
@@ -146,6 +170,16 @@ function contenusGemini(appel: AppelIA): ContenuGemini[] {
     if (prefixe) contents.push({ role: 'user', parts: [{ text: prefixe }] })
     contents.push(...hist)
     contents.push({ role: 'user', parts: [{ text: dernier }] })
+  }
+  // C4-L4 — les images du DERNIER tour, devant son texte. Elles sont ajoutées
+  // ici, après coup, pour que les trois branches ci-dessus restent telles
+  // qu'elles étaient : sans image, `contents` est byte-identique à avant.
+  if (appel.images?.length) {
+    const dernierTour = contents[contents.length - 1]
+    dernierTour.parts = [
+      ...appel.images.map(img => ({ inlineData: { mimeType: img.mime, data: img.base64 } })),
+      ...dernierTour.parts,
+    ]
   }
   return contents
 }

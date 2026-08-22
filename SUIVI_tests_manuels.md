@@ -1915,3 +1915,176 @@ journal n'est pas cochée, cet écart existe et **aucun contrôle ne le voit**.
   sous `anon` doit **échouer en 42501** — et une transaction qui a avorté ignore tout ce qui suit,
   donc le **témoin positif** doit vivre dans **sa propre** transaction. Les deux blocs sont au pied
   du `.sql`.
+
+---
+
+## C4 · L4 — La passation en classe (sandbox, migration du 22/08)
+
+_Section ouverte le 22/08 depuis `RELEVE_C4_L4_2026-08-22.md`, à la clôture du lot._
+
+_Ce qui a été prouvé EN SÉANCE est coché avec sa preuve. `npm test` : **476 passés, 0 échoué**
+(dont **48 neufs** sur ce lot) ; `npx tsc --noEmit` : rien ;
+`python3 scripts/derive-instruments.py --verifie` : **IDENTIQUE (4 fichiers dérivés)**, le prompt de
+transcription compris ; `scripts/recette/passation-c4l4.mjs --charge=140` : **56 contrôles, 55
+passés, 1 échoué** — et **l'échoué est un CONSTAT, pas un défaut de construction** (la latence,
+C4L4-1 ci-dessous). Décor semé puis **retiré**, sandbox revenue à son état d'avant, vérifié par
+requête._
+
+⚠️ **SIX interrupteurs sont à OFF, et ils ont été RECONSTATÉS après la recette** :
+`exercices_actif`, `routeur_actif`, `competences_affichage_actif`, `fabrique_actif`, `chaine_actif`,
+et `passation_classe_actif`, propre à ce lot. *La recette ouvre les deux dernières portes le temps
+de son passage et les remet exactement comme elle les a trouvées ; elle le vérifie et le dit.*
+
+### ⚠️ LE TEST DE CHARGE — joué à l'échelle, le 22/08, et voici ses chiffres
+
+_Cent quarante copies, **la même photo réelle** d'une copie manuscrite d'élève (une page pleine
+d'écriture cursive avec ratures, 338 Ko, prise au stockage du **compte de test** `test@test.com` —
+aucune copie d'élève réel n'a été renvoyée au sous-traitant). Lancées **par vagues de trente-cinq**,
+le chiffre de la simultanéité d'une salle (`02-` §6.D), par **le chemin réel** de l'écran de
+l'élève. Modèle `claude-sonnet-4-6`, **deux passes par copie**._
+
+| Ce que le « fait quand » demande | Mesuré le 22/08 | |
+|---|---|---|
+| **140 copies traversent SANS INTERVENTION** | **140/140 transcrites, 0 en échec** | ✅ |
+| aucun `echec_definitif` | **0** | ✅ |
+| aucune copie oubliée en file | **0** — et **140/140 jobs CLOS `abouti`** | ✅ |
+| aucun job repris à la main | **0 job à plus d'une tentative** | ✅ |
+| la transcription revient **en quelques secondes par copie** | **médiane 22,4 s · p95 24,3 s · max 25,2 s** | ❌ |
+| alertes de repli alphabétique | **0** sur les dépôts sondés | ✅ |
+| le découpage tient à l'échelle | **4 blocs sur les 140 copies**, aucune en un seul bloc | ✅ |
+| la facture | **280 lignes d'`api_couts`, 4,54 $** — soit **exactement 2,0 appels par copie** | ✅ |
+
+⭐ **Une salle entière revient en vingt-cinq secondes** : les trente-cinq copies d'une vague
+reviennent ensemble, et les cent quarante d'une journée en **99 s de bout en bout**. **La file tient
+à cent quarante** — c'est le risque n° 1 du corpus, et il est levé.
+
+⚠️⚠️ **MAIS LE CONTRAT DE LATENCE N'EST PAS TENU, ET IL FAUT LE DIRE NET.** *« Quelques secondes par
+copie, pendant l'heure de cours »* (`02-` §6.D) : l'élève attend **vingt-deux secondes**, pas
+quelques-unes. La recette lit le contrat **à dix secondes** et rend un rouge : *une recette qui se
+donne trente secondes de marge ne mesure plus le contrat, elle le déplace.* **Les leviers sont tous
+des décisions de Louis, aucune n'appartenant à ce lot** — un modèle plus rapide pour la
+transcription · une seule passe (mais `confiance_ocr` disparaît, et c'est une règle de source) ·
+ou admettre que « quelques secondes » veuille dire une demi-minute.
+
+⭐⭐ **CE QUE LE TEST DE CHARGE A TROUVÉ, ET QUI A ÉTÉ RÉPARÉ EN SÉANCE.** Au premier passage, les
+140 copies étaient transcrites **mais leurs 140 jobs restaient en file**. Le rouge a fait remonter
+un vrai défaut de conception : `reclamerJobs` trie par `created_at ASC`, et *« le dépôt appelle
+lui-même le déclencheur »* réclamait donc **le job du PREMIER dépôt de la file**, pas le sien. **À
+trente-cinq élèves dans une salle, un seul écran aurait répondu** ; les trente-quatre autres
+auraient attendu une tâche planifiée qui « ne tient pas la seconde » et qui n'est même pas posée.
+`reclamerJobs` accepte désormais un `depotId`, et le second passage rend **0 copie oubliée**.
+*Le test de charge a payé pour lui-même.*
+
+### La cadence que l'offre d'hébergement autorise — **le constat, pas le geste**
+
+- [x] **C4L4-C · La cadence est vérifiée, et elle autorise la minute.** Documentation Vercel
+  consultée le 22/08 (« Usage & Pricing for Cron Jobs ») : **Hobby — 100 crons/projet, intervalle
+  minimal UNE FOIS PAR JOUR, précision à l'heure (±59 min) ; Pro — 100 crons/projet, intervalle
+  minimal UNE FOIS PAR MINUTE, précision à la minute.** ⭐ **Louis étant passé au plan payant le
+  21/08, la cadence à la minute que le `07-` §1.1 réclame EST autorisée.** _(Constat lu à la
+  documentation ; il n'y a sur cette machine ni CLI ni jeton Vercel pour lire le plan du compte.)_
+- [x] **C4L4-D · `maxDuration = 60` n'a JAMAIS été un plafond d'hébergement — confirmé.** Même
+  source (« Vercel Functions Limits », fluid compute) : **Hobby 300 s par défaut ET maximum ; Pro
+  300 s par défaut, 800 s maximum, 1 800 s en maximum étendu (bêta).** Le commentaire de
+  `app/api/chaine/route.ts` disait « le plafond du plan Vercel Hobby » : **il était faux**, il est
+  corrigé dans le fichier. _(22/08.)_
+- [ ] **C4L4-E · POSER LA CADENCE et monter `maxDuration`.** ⚠️ **Ce geste appartient AU LOT DE
+  CORRECTIFS, pas à C4-L4** (`PLAN_DE_CHANTIER.md` §6). Il reste que **rien ne vise `/api/chaine`
+  aujourd'hui** : `vercel.json` ne déclare qu'un cron, celui de la synthèse hebdomadaire. **Tant
+  qu'il n'est pas fait, la recette de C4-L4 est PARTIELLE** — elle a appelé l'ouvrier en direct,
+  comme l'écran de l'élève le fait, mais **le filet qui reprend les jobs orphelins n'existe pas**.
+
+### Ce qui reste à jouer en recette
+
+- [ ] **C4L4-1 · La latence, rejouée après la décision de Louis sur le modèle** (question Q3 du
+  relevé). **22,4 s médiane** aujourd'hui. Rien d'autre ne bloque : la file, elle, tient.
+- [ ] **C4L4-2 · Un SMOKE TEST ÉLÈVE, dans un vrai navigateur.** ⚠️ **Aucun écran de ce lot n'a été
+  ouvert dans Chrome** : tout ce qui est coché ci-dessous est prouvé **par le code et par requête**.
+  À jouer : photographier depuis un téléphone, déclarer une page manquante, tourner une page,
+  relire, corriger, valider. **Règle d'or du fichier : Chrome, jamais l'aperçu embarqué.**
+- [ ] **C4L4-3 · Un SMOKE TEST PROFESSEUR, dans un vrai navigateur** : lever les deux drapeaux,
+  ouvrir le dépôt, déclencher le lot, révéler cran par cran, éditer, commenter, valider en masse,
+  cocher la case, constater la lecture de l'élève.
+- [ ] **C4L4-4 · Le retour AFFICHÉ, sur un vrai retour engendré.** ⚠️ **Derrière la même porte que
+  les quatre restes de C4-L5 : la première fiche *versée et bancée*.** La chaîne ouvre **zéro
+  compétence**, n'engendre **aucun retour**, et la recette a donc **posé une fixture** à la forme
+  exacte que C4-L5 écrira — et l'a dit. Le flux, la transcription, la file, la correction, la
+  publication et l'obligation de lecture s'éprouvent tous sans elle ; **le retour affiché, non.**
+- [ ] **C4L4-5 · « Se juger » réellement servi.** Il ne l'est pas : **aucune compétence n'est
+  `evaluee`** en base (`competences_niveaux` ne porte que `mesuree_silencieusement`, sur Expression
+  et Synthèse). Le drapeau est nécessaire, pas suffisant.
+- [ ] **C4L4-6 · La confiance de remise réellement collectée.** L'étape **est servie** et **sert un
+  objet vide** — construite quand même, c'est la collecte qu'une année manquée ne rattrape pas.
+- [ ] **C4L4-7 · La crédence, sur une instance qui en porte.** ⚠️ **Constat revérifié par requête le
+  22/08** : les deux types diagnostiques seedés (`diagnostic_essai`,
+  `diagnostic_explication_texte`) sont **SANS CRAN** — `crans_admis` vaut `{}`, et
+  `exercices_types_crans` ne porte **aucune ligne** pour eux. Il n'y a donc **aucun écran de
+  crédence à servir pour eux** aujourd'hui.
+- [ ] **C4L4-8 · LES SUJETS DES DEUX PASSATIONS DIAGNOSTIQUES.** ⚠️ **Non faits.** En base au 22/08 :
+  **un** sujet (« Peut-on douter de tout ? », `generique`, `valide`) et **deux** textes, mais
+  **AUCUNE instance `lieu = classe`** — les cinq instances sont toutes `maison`. **C'est un geste de
+  FABRIQUE (C4-L8, joué), pas de ce lot**, et il reste entier. C'est la quatrième ligne du « fait
+  quand » de C4-L4.
+- [ ] **C4L4-9 · L'élève exempté, de bout en bout.** `profiles.mode_saisie_force = 'ecran'` n'est
+  posé sur **aucun profil** en base. Le chemin clavier est construit et testé au type, jamais joué.
+- [ ] **C4L4-10 · L'effacement d'une classe qui porte des dépôts.** ⚠️ **Les FICHIERS partent**
+  (`utils/effacement.ts` les collecte, paginé) ; **les LIGNES de dépôt, non** —
+  `effacer_classe()` ne touche pas `exercices_depots`, les tables de C4-L1 étant nées après elle.
+  **Dette écrite au relevé, §5.1** : c'est un `security definer` d'un flux existant, protocole
+  renforcé, et cela ne se fait pas en passant.
+
+### Ce qui est prouvé — pour ne pas le rejouer
+
+- [x] **C4L4-11 · L'ouverture est un geste MANUEL, et elle commande.** Avant elle : statut
+  `assigne`, aucun horodatage, **et le dépôt des photos est REFUSÉ**. Après : statut `ouvert`,
+  `ouvert_par_prof_at` posé. Une instance de **maison** la refuse — c'est le `lieu` qui commande.
+  **Aucune minuterie ne ferme quoi que ce soit** : rien ne lit `fenetre_fin`. _(22/08.)_
+- [x] **C4L4-12 · Les deux drapeaux se lèvent JUSQU'À l'ouverture, et plus après.** Levés avant :
+  acceptés, indépendants. Après : refusés, avec leur motif. _(22/08.)_
+- [x] **C4L4-13 · La mise en file est IDEMPOTENTE.** Deux mises en file → un job, `deja = true` — un
+  double-clic ne paie pas deux transcriptions, donc pas **quatre** appels. _(22/08.)_
+- [x] **C4L4-14 · LE DÉCOUPAGE SURVIT DE BOUT EN BOUT.** Sur une copie réelle : la machine rend
+  **4 blocs**, l'élève édite, la mesure lira **4 blocs** — empreinte de découpage identique des deux
+  côtés. Et à l'échelle : **4 blocs sur les 140 copies, aucune en un seul bloc**. Plus **19 tests
+  purs** qui tiennent la règle : deux paragraphes fusionnés se voient, corriger une faute ne change
+  rien, une ligne vide mangée se voit. _(22/08.)_
+- [x] **C4L4-15 · Aucune version double n'est conservée.** Le texte machine est **écrasé** par
+  l'édition de l'élève ; aucune colonne de transcription brute, aucun diff, aucun compteur de
+  corrections, aucun drapeau d'écart. _(22/08.)_
+- [x] **C4L4-16 · La garde de classe refuse la version finale.** `texte_vf` sur un dépôt de classe →
+  **`23514`**. La séquence s'arrête à `retour_publie`. _(22/08.)_
+- [x] **C4L4-17 · Le traitement en lot passe par LA MÊME FILE.** Chaque dépôt validé y entre en
+  `mesure_v1` ; relancer le lot crée **0 doublon** ; les copies non remises sont **écartées** plutôt
+  que mises en file (elles brûleraient une tentative pour rien). _(22/08.)_
+- [x] **C4L4-18 · Le lot REFUSE de partir sur une liste tronquée.** La lecture des dépôts est
+  paginée et **confrontée au décompte que la base annonce** ; si les deux diffèrent, rien n'est mis
+  en file — *un lot posé sur une liste tronquée oublierait des copies en silence*. _(22/08.)_
+- [x] **C4L4-19 · Les retours sont MASQUÉS PAR DÉFAUT, et la révélation est graduée.** Cran 0 : rien.
+  Cran 1 : le compte, **ni texte ni citation**. Cran 2 : les points, **sans citation**. Cran 3 : le
+  détail. **Le cran est PAR COPIE et ne se persiste nulle part** — rouvrir l'écran remasque tout ;
+  **aucun interrupteur global** n'existe. **L'identifiant stable survit à tous les crans.** _(22/08.)_
+- [x] **C4L4-20 · L'édition du professeur passe la garde, et conserve les identifiants.** Un point
+  **sans ancrage** passe (« il peut modifier le retour ») ; un identifiant **inventé** est refusé ;
+  un texte fait d'**espaces** est refusé ; un point **ajouté** par le professeur se reconnaît à son
+  préfixe. **La garde en base est appelée à DEUX arguments**, et elle n'a qu'un domicile. _(22/08.)_
+- [x] **C4L4-21 · AUCUNE NOTE, NULLE PART.** Aucune colonne dont le nom porte `note` sur le dépôt ;
+  le professeur saisit un **commentaire général**, avec `corrige_par` et `corrige_at`. _(22/08.)_
+- [x] **C4L4-22 · La publication et l'obligation de lecture, de bout en bout.** Avant la case :
+  `published_at` NULL. Après : posé, et le dépôt passe à `retour_publie`. L'élève valide sa lecture
+  → `lu_at`, **sur le retour, un seul domicile** ; valider deux fois est sans effet. **Dépublier
+  retire la case MAIS PAS la lecture** — un élève qui a lu a lu. _(22/08.)_
+- [x] **C4L4-23 · Le message reporté a UN SEUL domicile, et il est sur le dépôt.** Posé sur la copie
+  qui l'a motivé, **lu à la passation SUIVANTE du même élève**, et **pas** sur celle qui l'a motivé
+  — *« la copie est écrite et l'heure est passée »*. **Aucun second domicile au profil.** _(22/08.)_
+- [x] **C4L4-24 · La `phase` de la transcription est NULL, avec son `depot_id`.** Les 280 lignes du
+  test de charge la portent — la transcription est dans un exercice **sans être un étage de la
+  chaîne**, et la contrainte en base n'admet que `p1`, `p2`, `retour` ou NULL. _(22/08.)_
+- [x] **C4L4-25 · `photos[]` sait dire qu'une page manque, VRAIMENT.** Une page manquante **tient
+  son rang** : une copie de quatre pages dont la 3 est absente se dépose en **quatre** entrées, dont
+  une vide. Un **trou** dans l'ordre est refusé. `rotation` est bornée au **quart de tour**, en base
+  et dans le code. **`null` et `[]` restent légitimes** — un dépôt sans photo existe. _(22/08.)_
+- [x] **C4L4-26 · Le prompt de transcription est DÉRIVÉ, et son contrôle le dit.**
+  `--verifie` : **IDENTIQUE**. Il est découpé en trois parts, ce qui **nomme** les deux réglages
+  ouverts sans en décider aucun — et la recette les **affiche en tête** à chaque passage. _(22/08.)_
+- [x] **C4L4-27 · Un seul sous-traitant.** L'appel passe par `utils/chaine/appel.ts` → le
+  fournisseur d'IA, et par lui seul. Aucun OCR tiers, aucun service d'images. _(22/08.)_
