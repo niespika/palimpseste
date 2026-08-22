@@ -1998,13 +1998,42 @@ auraient attendu une tâche planifiée qui « ne tient pas la seconde » et qui 
 
 - [ ] **C4L4-1 · La latence, rejouée après la décision de Louis sur le modèle** (question Q3 du
   relevé). **22,4 s médiane** aujourd'hui. Rien d'autre ne bloque : la file, elle, tient.
-- [ ] **C4L4-2 · Un SMOKE TEST ÉLÈVE, dans un vrai navigateur.** ⚠️ **Aucun écran de ce lot n'a été
-  ouvert dans Chrome** : tout ce qui est coché ci-dessous est prouvé **par le code et par requête**.
-  À jouer : photographier depuis un téléphone, déclarer une page manquante, tourner une page,
-  relire, corriger, valider. **Règle d'or du fichier : Chrome, jamais l'aperçu embarqué.**
-- [ ] **C4L4-3 · Un SMOKE TEST PROFESSEUR, dans un vrai navigateur** : lever les deux drapeaux,
-  ouvrir le dépôt, déclencher le lot, révéler cran par cran, éditer, commenter, valider en masse,
-  cocher la case, constater la lecture de l'élève.
+- [x] **C4L4-2 · SMOKE TEST ÉLÈVE — JOUÉ le 22/08, dans Chrome, sur `localhost`.** Vraie copie
+  manuscrite déposée, **page 2 déclarée manquante** (la copie garde son compte de pages), page
+  tournée, transcription revenue, **passages difficiles affichés SANS aucun score**, texte corrigé
+  à deux endroits, copie validée. La transcription est **diplomatique** — « Heidegge », « univront »,
+  « un vie bons », « à un certain dégré », les `[illisible]` : **rien n'est corrigé**. Le rappel de
+  lisibilité est bien **une ligne en italique**, pas un encart. ⭐ **C'est ce test qui a trouvé le
+  CRLF** — voir ci-dessous.
+- [x] **C4L4-3 · SMOKE TEST PROFESSEUR — JOUÉ le 22/08.** Les deux drapeaux levés **avant**
+  l'ouverture puis **grisés après** (« le dépôt est ouvert : les drapeaux ne se lèvent plus »),
+  ouverture horodatée pour 7 élèves, lot déclenché (**« 1 copie mise en file, 6 sans copie remise,
+  écartée(s) »**), révélation **cran par cran** — Masqué → Le compte → Les points → Le détail, chacun
+  montrant strictement plus —, retour **édité** (un point réécrit, un point retiré : 3 → 2), **commentaire
+  général** saisi, correction validée, **case de publication cochée**, et l'élève a **validé sa
+  lecture**. Vérifié en base au bout : `retour_publie`, **identifiants stables `["r1","r2"]`
+  conservés**, `transcription_v1` **abouti en 1 tentative**. ⭐ **Le cran revient à « Masqué » au
+  rechargement** — la révélation ne se persiste nulle part, comme le piège 27 l'exige.
+
+### ⚠️⚠️ CE QUE LE SMOKE TEST A TROUVÉ — trois défauts, tous corrigés le 22/08
+
+- [x] **C4L4-A · LE CRLF FAISAIT LIRE TOUTE COPIE EN UN SEUL BLOC — défaillance forte silencieuse.**
+  La soumission d'un formulaire HTML **normalise la valeur d'un `<textarea>` en CRLF** (c'est la
+  spécification). Le texte validé par l'élève arrivait donc en `\r\n` et s'y stockait ; or `blocs()`
+  cherche `\n[ \t]*\n`, et **`\r\n\r\n` ne matche pas**. Mesuré sur la vraie copie :
+  **`blocs()` = 1 au lieu de 4**. C'est mot pour mot la panne du `06-` §4 et du `07-` §3 — « la copie
+  est lue en défaillance forte » —, et **la Structure de toute copie validée depuis un navigateur
+  aurait planché**. ⚠️ **Ni la recette ni les 476 tests ne pouvaient le voir** : ils écrivent depuis
+  Node, avec des `\n`. **C'est la règle d'or du 24/07 qui a payé.** Corrigé par `normaliserRetours()`
+  à l'écriture ET à la lecture, sans rien « nettoyer » d'autre (un test compare caractère à
+  caractère) ; 4 tests neufs ; ligne déjà stockée réparée. _(commit `702a60f`.)_
+- [x] **C4L4-B · « 0 copie validée sur 7 » alors qu'une copie était remise.** L'écran comptait
+  `corrige_at` — la validation DU PROFESSEUR — au lieu de `v1_remis_at`, la remise de l'élève.
+  **Le serveur, lui, comptait juste** (« 1 copie mise en file »). Un écran qui compte autre chose
+  que ce qu'il dit est un écran qui ment. Corrigé : « **1 copie remise sur 7** ». _(22/08.)_
+- [x] **C4L4-F · `capitalize` sur toute la ligne du sommaire** — « 1 Réussite(S), 0 Point(S) De
+  Travail ». Il ne porte plus que sur le nom de la compétence : « **Argumentation — 1 réussite(s),
+  0 point(s) de travail** ». _(22/08.)_
 - [ ] **C4L4-4 · Le retour AFFICHÉ, sur un vrai retour engendré.** ⚠️ **Derrière la même porte que
   les quatre restes de C4-L5 : la première fiche *versée et bancée*.** La chaîne ouvre **zéro
   compétence**, n'engendre **aucun retour**, et la recette a donc **posé une fixture** à la forme
