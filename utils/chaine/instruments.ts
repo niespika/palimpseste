@@ -625,13 +625,27 @@ export function verifierCoherence(): string[] {
  *    matériaux, jamais le TEXTE d'un sujet distinct (`07-` §1.1) — la chaîne
  *    n'a donc pas d'autre sujet à servir. Ce que la consigne dit couvre ce que
  *    le slot demande : « ce qu'il y a à faire, ce qu'il faut produire, ce sur
- *    quoi on travaille ». *Le jour où le matériau déposé remontera jusqu'à la
- *    chaîne, c'est ici que le fournisseur se sépare — pas dans un branchement.*
+ *    quoi on travaille ».
  *
- * Tout le reste — référent, corpus du cours, référence décomposée — passe par
- * `preP2`, « ce que le CONTEXTE de l'exercice donne » (`CONTRAT` §2).
+ * ⭐⭐ `reference` ET `source` SONT DESCENDUS DEPUIS LE 23/08 — le jour annoncé
+ *    par la note qui tenait ici est arrivé, et le fournisseur s'est séparé ICI,
+ *    pas dans un branchement. `lireContexte` joint `exercices_references` :
+ *    `contenu` donne la référence décomposée, `source_contenu_id ->
+ *    scriptorium_contenus.texte_extrait` donne le matériau. **Une seule jointure
+ *    ferme les DEUX manques** — les quatre modes réceptifs du Questionnement,
+ *    qui lit `armature.question_directrice`, et le référent texte de la
+ *    Synthèse, qui a besoin des deux : la référence pour son aligneur et pour le
+ *    document de son juge, le matériau pour son pré-relevé mécanique.
+ * ⛔ **Servis SEULEMENT si la référence est VALIDÉE** — une garde en base lève
+ *    sinon (voir `contexte.ts`) — et **absents** plutôt que vides : une clé
+ *    absente et une clé vide ne disent pas la même chose au contrôle de slots.
+ *
+ * Il reste UN manque, et il n'est pas de code : le **corpus du cours** de la
+ * Connaissance, qu'« aucune source qui fait foi ne déclare » (sa fiche §8). Il
+ * passe par `preP2`, « ce que le CONTEXTE de l'exercice donne » (`CONTRAT` §2),
+ * et il y sera servi à `null` tant qu'une source ne l'aura pas écrit.
  */
-export const FOURNISSEURS_NATIFS = ['sujet', 'copie', 'consigne', 'mode'] as const
+export const FOURNISSEURS_NATIFS = ['sujet', 'copie', 'consigne', 'mode', 'reference', 'source'] as const
 
 /**
  * Les refus de slots d'un branchement, tous référents confondus.

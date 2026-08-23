@@ -316,8 +316,16 @@ test('les crochets pré-phase reproduisent le module', (t) => {
   for (const c of FIXTURE!.pre_p1b) {
     const ctx: ContexteBranchement = {
       modes: [], cran: null, referent: 'texte', exceptionOrthographe: false,
-      contexteExercice: c.contexte.reference != null
-        ? { reference: JSON.stringify(c.contexte.reference) } : {},
+      // ⚠️ Le module ne lit PAS le matériau dans `pre_p1b` — il ne relit que les
+      //    recouvrements déjà calculés. La chaîne, elle, distingue « aucune
+      //    reprise trouvée » de « rien n'a été cherché » : on lui sert donc un
+      //    matériau pour que les deux textes se comparent. La branche honnête,
+      //    elle, est assérée juste après.
+      contexteExercice: {
+        source: 'le matériau du banc, servi pour que les deux textes se comparent',
+        ...(c.contexte.reference != null
+          ? { reference: JSON.stringify(c.contexte.reference) } : {}),
+      },
       prives: (c.contexte._mesures != null ? { _mesures: c.contexte._mesures } : {}),
       sorties: (c.contexte.sorties ?? {}) as Objet,
       parametres: { ...PARAMS_DEFAUT },
@@ -329,6 +337,17 @@ test('les crochets pré-phase reproduisent le module', (t) => {
     assert.equal(rendu.reference_decomposee === null, c.rendu.reference_decomposee === null,
       `${c.nom} — reference_decomposee servi à null, ou non`)
   }
+  // ⛔ ET LA BRANCHE HONNÊTE : sans matériau, l'aligneur ne s'entend PAS dire
+  //    « aucune reprise littérale ». Son prompt lui demande de « confirmer » les
+  //    recouvrements que le pré-relevé signale, jamais d'en inventer — un
+  //    « aucune » faux le pousserait à ne coter aucune `copie`, donc à effacer
+  //    `copie_verbatim` et la branche Absent du §4.
+  const sansMateriau = prePhase1b({
+    modes: [], cran: null, referent: 'texte', exceptionOrthographe: false,
+    contexteExercice: {}, prives: {}, sorties: {}, parametres: { ...PARAMS_DEFAUT },
+  }) as Objet
+  assert.ok(String(sansMateriau.recouvrements).includes('matériau non servi'))
+  assert.ok(!String(sansMateriau.recouvrements).includes('aucune'))
   console.log(`  · ${FIXTURE!.pre_p1a.length} cas de pré-relevé, ${FIXTURE!.pre_p1b.length} d'aligneur`)
 })
 
@@ -929,15 +948,181 @@ test('extractions — DEUX étages, et UN SEUL quand le référent est le cours'
   assert.deepEqual([...inst.prompts.P2.matchAll(/\{([a-z0-9_]+)\}/g)].map((x) => x[1]), ['squelette'])
 })
 
-test('⚠️ LE RÉFÉRENT TEXTE S\'ARRÊTE — la chaîne ne descend pas la référence décomposée', () => {
-  // C'est le comportement VOULU, pas une panne : « un slot servi à `null` arrête
-  // la mesure en le nommant » (`CONTRAT` §2). Le jour où la chaîne sert la
-  // référence, ce test change de côté — et c'est ainsi qu'on le saura.
+/**
+ * LA RÉFÉRENCE AU FORMAT QUI FAIT FOI — `02-exercices.md` §6, schéma déclaré CLOS
+ * par `copies-tests/_commun/verifie-reference.py` : `phrases {n, fonctions,
+ * statuts}`, `moments {m, de, a, fonction, cible, statuts, etiquette}`, plus
+ * `armature`, `concepts`, `lectures`, `hesitation`. ⛔ Ni `unites`, ni
+ * `moments[].unites` — que le module de la Synthèse est le seul du corpus à lire.
+ */
+const REF_CANONIQUE = {
+  phrases: [
+    { n: 1, fonctions: ['defend_these'], statuts: ['rapporte'] },
+    { n: 2, fonctions: ['illustre'], statuts: [] },
+    { n: 3, fonctions: ['defend_these'], statuts: ['affirme'] },
+    { n: 4, fonctions: ['explique'], statuts: [] },
+  ],
+  moments: [
+    { m: 'M1', de: 1, a: 2, fonction: 'pose', cible: [], statuts: ['hypothetique'],
+      etiquette: 'La mémoire conserve tout' },
+    { m: 'M2', de: 3, a: 4, fonction: 'refute', cible: ['M1'], statuts: [],
+      etiquette: 'Oublier est une sélection' },
+  ],
+  armature: { these: 'Oublier trie.', these_phrases: [3], question_directrice: 'Que garde-t-on ?' },
+  concepts: [], lectures: [], hesitation: null,
+}
+
+test('⭐⭐ LA RÉFÉRENCE CANONIQUE SE NORMALISE — et la normalisation est ADDITIVE', () => {
+  const ctx: ContexteBranchement = {
+    ...ctxEpreuve('texte'),
+    contexteExercice: { copie: 'x', reference: JSON.stringify(REF_CANONIQUE) },
+  }
+  const rendu = prePhase1b({ ...ctx, sorties: { p1a: { unites: [{ u: 1 }] } } }) as Objet
+  const servie = JSON.parse(String(rendu.reference_decomposee)) as Objet
+  // `phrases[].n` devient `unites[].u` — la segmentation est la MÊME des deux
+  // côtés : `verifie-reference.py` le dit en toutes lettres.
+  assert.deepEqual(servie.unites, [
+    { u: 1, fonctions: ['defend_these'] }, { u: 2, fonctions: ['illustre'] },
+    { u: 3, fonctions: ['defend_these'] }, { u: 4, fonctions: ['explique'] },
+  ])
+  assert.deepEqual((servie.moments as Objet[])[0].unites, [1, 2])
+  assert.deepEqual((servie.moments as Objet[])[1].unites, [3, 4])
+  // ⛔ ADDITIVE : rien du format canonique n'est perdu — c'est là que le juge
+  //    prend le STATUT D'ÉNONCIATION et les LECTURES DÉFENDABLES.
+  assert.deepEqual(servie.phrases, REF_CANONIQUE.phrases)
+  assert.deepEqual(servie.armature, REF_CANONIQUE.armature)
+  assert.equal((servie.moments as Objet[])[0].etiquette, 'La mémoire conserve tout')
+  assert.deepEqual((servie.moments as Objet[])[0].statuts, ['hypothetique'])
+})
+
+test('⛔ UNE RÉFÉRENCE QUI DÉCLARE DÉJÀ SES `unites` N\'EST PAS RE-DÉRIVÉE', () => {
+  // ⚠️ Le cas HYBRIDE — `unites` déclarées ET `phrases` présentes. Il n'existe ni
+  //    au format canonique (schéma CLOS, sans `unites`) ni aux vecteurs du module
+  //    (sans `phrases`), mais c'est lui qui rend la garde discriminante : sans
+  //    elle, la dérivation ÉCRASERAIT ce qui a été explicitement déclaré.
+  //    *Ce qui est déclaré fait foi sur ce qui se dérive — c'est la règle du
+  //    chantier, et elle vaut ici comme au statut des unités (§3.2).*
+  const hybride = {
+    unites: [{ u: 7, fonctions: ['defend_these'] }],
+    phrases: [{ n: 1, fonctions: ['illustre'], statuts: [] },
+      { n: 2, fonctions: ['explique'], statuts: [] }],
+    moments: [{ m: 'M1', de: 1, a: 2, unites: [7], fonction: 'pose', cible: [] }],
+  }
+  const ctx: ContexteBranchement = {
+    ...ctxEpreuve('texte'),
+    contexteExercice: { copie: 'x', reference: JSON.stringify(hybride) },
+  }
+  const rendu = prePhase1b({ ...ctx, sorties: { p1a: { unites: [{ u: 1 }] } } }) as Objet
+  const servie = JSON.parse(String(rendu.reference_decomposee)) as Objet
+  assert.deepEqual(servie.unites, hybride.unites,
+    'les `unites` déclarées l\'emportent — les dériver des `phrases` les écraserait')
+  assert.deepEqual((servie.moments as Objet[])[0].unites, [7],
+    'et un moment qui déclare ses unités garde les siennes, jamais l\'intervalle `de..a`')
+  // Et le calcul suit ce qui a été déclaré : l'unité de référence est la 7.
+  const c1 = BRANCHEMENT_SYNTHESE.code1({ p1a: {
+    unites: [{ u: 1 }], rapports: [], apports: [], these_forme: 'absente',
+    alignement: [{ u: 1, correspond_a: [7], operation: 'paraphrase' }],
+  } }, ctx)
+  assert.equal(c1.mesures.nb_essentielles, 1)
+  assert.equal(c1.mesures.couvrantes, 1)
+  assert.deepEqual(c1.mesures.essentielles_couvertes, [7])
+})
+
+test('⭐⭐ LE RÉFÉRENT TEXTE MESURE, de bout en bout, sur une référence CANONIQUE', () => {
+  const ctx: ContexteBranchement = {
+    ...ctxEpreuve('texte'),
+    contexteExercice: { copie: 'x', reference: JSON.stringify(REF_CANONIQUE) },
+  }
+  const p1: Objet = {
+    unites: [{ u: 1 }, { u: 2 }],
+    rapports: [{ entre: [1, 2], nature: 'refute' }],
+    apports: [{ terme_cite: 'économie du passé', unites_recouvertes: [1, 2] }],
+    these_forme: 'affirmation_complete',
+    // ⭐ DEUX fusions : la part intégrative doit être STRICTEMENT majoritaire
+    //    pour ouvrir Bon — à ½ pile, le §4 dit Moyen, et c'est le cas de
+    //    frontière que le balayage éprouve à part.
+    alignement: [
+      { u: 1, correspond_a: [1, 2], operation: 'fusion' },
+      { u: 2, correspond_a: [3, 4], operation: 'fusion' },
+    ],
+  }
+  const c1 = BRANCHEMENT_SYNTHESE.code1({ p1a: p1 }, ctx)
+  assert.equal(c1.mesures.referent, 'texte')
+  // Les statuts se DÉRIVENT des `fonctions` des phrases : 1 et 3 essentielles.
+  assert.equal(c1.mesures.nb_essentielles, 2)
+  assert.equal(c1.mesures.couvrantes, 2)
+  assert.equal(c1.mesures.part_integrative, 1)
+  // M2 (`refute`, cible M1) est déclaré ET rendu : le rapport de la copie couvre
+  // {1,2} et {3} — le moment qui porte, et celui qu'il vise.
+  assert.equal(c1.mesures.rapports_declares, 1)
+  assert.equal(c1.mesures.relation_rendue, 1)
+  // ⭐ Le document du juge porte la référence ENTIÈRE — statuts d'énonciation
+  //    compris, puisque c'est d'eux qu'il « en a les moyens » (§4).
+  const doc = c1.document_p2 as Objet
+  assert.ok(JSON.stringify(doc.reference).includes('"rapporte"'))
+  assert.ok(JSON.stringify(doc.reference).includes('question_directrice'))
+
+  const c2 = BRANCHEMENT_SYNTHESE.code2(
+    juge([{ terme_cite: 'économie du passé', verdict: 'organisateur' }],
+      [{ u: 1, etat: 'fidele' }, { u: 2, etat: 'fidele' }]), c1, ctx)
+  assert.equal(c2.verdicts.palier_base, 'Bon')
+  assert.equal(c2.verdicts.niveau, 'Acquis')
+  // ⭐⭐ ET LES OBSERVABLES DU RÉFÉRENT TEXTE SONT LÀ.
+  const { releve, alertesReleve } = (() => {
+    const r = BRANCHEMENT_SYNTHESE.releve(c2, ctx)
+    return { releve: r.releve, alertesReleve: r.alertes }
+  })()
+  for (const code of OBSERVABLES_TEXTE_SEULEMENT) {
+    if (code === 'taux_compression') continue      // il demande le matériau
+    assert.ok(code in releve, `${code} manque au relevé sur le référent texte`)
+  }
+  assert.equal(releve.couverture_essentielles, 1)
+  assert.equal(releve.copie_verbatim, 0)
+  assert.equal(releve.contresens_majeur, 0)
+  assert.ok(alertesReleve.some((a) => a.startsWith('taux_compression :')))
+})
+
+test('⛔ UNE RÉFÉRENCE ILLISIBLE NE COMPOSE AUCUN VERDICT — jamais un Moyen sur du vide', () => {
+  // Un objet que ni le module ni le portage ne savent lire : ni `unites`, ni
+  // `phrases`. ⚠️ Le module, lui, y composerait un palier sur des décomptes tous
+  // nuls — statuts vides, toutes les correspondances « inexistantes », zéro
+  // couvrante — et rendrait un MOYEN, donc une lettre C servie à un élève.
+  const illisible = { moments: [{ m: 'M1', fonction: 'refute', cible: ['M0'] }], armature: {} }
+  const ctx: ContexteBranchement = {
+    ...ctxEpreuve('texte'),
+    contexteExercice: { copie: 'x', reference: JSON.stringify(illisible) },
+  }
+  // ⭐ Premier verrou, et il ne coûte AUCUN appel : l'aligneur n'est pas servi.
+  const rendu = prePhase1b({ ...ctx, sorties: { p1a: { unites: [{ u: 1 }] } } }) as Objet
+  assert.equal(rendu.reference_decomposee, null)
+
+  // ⭐ Second verrou, si la référence arrivait par une autre route.
+  const c1 = BRANCHEMENT_SYNTHESE.code1({ p1a: {
+    unites: [{ u: 1 }, { u: 2 }], rapports: [{ entre: [1, 2], nature: 'refute' }],
+    apports: [], these_forme: 'absente',
+    alignement: [{ u: 1, correspond_a: [1], operation: 'paraphrase' }],
+  } }, ctx)
+  assert.equal(c1.mesures.referent, 'texte')
+  assert.ok(c1.alertes.some((a) => a.includes('référence décomposée illisible')))
+  const c2 = BRANCHEMENT_SYNTHESE.code2(juge([], []), c1, ctx)
+  assert.deepEqual(c2.verdicts, { niveau: null, palier_base: null, seuil_franchi: null })
+  assert.ok(c2.alertes.some((a) => a.startsWith('RÉFÉRENCE ILLISIBLE')))
+  const { releve } = BRANCHEMENT_SYNTHESE.releve(c2, ctx)
+  assert.deepEqual(releve, {}, 'un relevé publié sur une référence illisible est une mesure fausse')
+})
+
+test('⚠️ SANS RÉFÉRENCE AU CONTEXTE, le référent texte s\'arrête toujours — au slot', () => {
+  // ⭐ CE TEST A CHANGÉ DE CÔTÉ LE 23/08, comme il annonçait qu'il le ferait :
+  //    `lireContexte` descend désormais la référence décomposée. Ce qu'il garde,
+  //    c'est le cas où l'exercice n'en porte pas — ou porte une référence NON
+  //    VALIDÉE, que `contexte.ts` refuse de servir parce qu'une garde en base
+  //    lèverait à l'écriture du jugement. « Un slot servi à `null` arrête la
+  //    mesure en le nommant » reste alors la conduite (`CONTRAT` §2).
   const ctx = ctxEpreuve('texte')
   const rendu = prePhase1b(ctx) as Objet
   assert.equal(rendu.reference_decomposee, null,
     'sans référence au contexte, le slot doit être servi à null')
-  // ⭐ Et servie, elle passe : le portage est prêt, c'est le canal qui manque.
+  // ⭐ Et servie, elle passe.
   const ctxServi: ContexteBranchement = {
     ...ctx, contexteExercice: { reference: JSON.stringify(REF_EPREUVE) },
   }

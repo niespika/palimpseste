@@ -519,6 +519,17 @@ async function chaineDUneCompetence(
       consigne: ctx.consigne,
       copie,
       mode: modes.join(', '),
+      // ⭐⭐ LA RÉFÉRENCE DÉCOMPOSÉE ET SON MATÉRIAU — descendus depuis
+      //    `exercices_references` par `lireContexte`, et servis SÉRIALISÉS :
+      //    `contexteExercice` ne porte que des textes, parce qu'un slot de
+      //    prompt est un texte. Les crochets qui en ont besoin le reparsent
+      //    (`armatureDe` au Questionnement, `referenceDuContexte` à la Synthèse).
+      // ⛔ ABSENTS quand la référence n'est pas VALIDÉE, ou quand l'exercice n'en
+      //    porte pas : le crochet sert alors son slot à `null`, et la mesure
+      //    s'arrête EN LE NOMMANT. *Une clé absente et une clé vide ne disent pas
+      //    la même chose — on n'écrit donc pas `''`.*
+      ...(ctx.reference != null ? { reference: JSON.stringify(ctx.reference) } : {}),
+      ...(ctx.materiau ? { source: ctx.materiau } : {}),
     },
     prives: {},
     sorties: {},

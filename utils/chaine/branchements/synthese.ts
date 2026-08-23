@@ -357,12 +357,71 @@ function _param(ctx: ContexteBranchement, nom: string): number {
   return PARAMS_DEFAUT[nom]
 }
 
-/** La référence décomposée, telle que le contexte la porterait — le jour où il la sert. */
+/**
+ * ⭐⭐ LA NORMALISATION DU FORMAT DE RÉFÉRENCE — et elle appartient au HARNAIS.
+ *
+ * ⛔ LE MODULE ET LA SOURCE NE PARLENT PAS LE MÊME FORMAT, et il a fallu servir
+ *    la référence pour s'en apercevoir. Le format qui fait foi est celui du
+ *    `02-exercices.md` §6, et `copies-tests/_commun/verifie-reference.py` le
+ *    déclare **CLOS** : à la racine `phrases`, `moments`, `concepts`, `lectures`,
+ *    `armature`, `hesitation` — et *« toute autre clé est la porte par laquelle
+ *    une crédence chiffrée reviendrait »*. Une **phrase** y porte `{n, fonctions,
+ *    statuts}` ; un **moment**, `{m, de, a, fonction, cible, statuts, etiquette}`.
+ *    ⚠️ Or `copies-tests/synthese/code.py` lit `reference["unites"]` — avec un `u`
+ *    — et `moments[].unites`. **Ni l'une ni l'autre n'existe au format canonique.**
+ *    *Le module n'a jamais vu de vraie référence : son banc ne pouvait pas
+ *    tourner (`document_p2`), et la chaîne ne descendait pas la référence.*
+ *
+ * ⭐ **Le contrat dit à qui revient l'adaptation** : *« le parsage tolérant
+ *    appartient au BANC, pas au module : les crochets reçoivent des objets
+ *    propres »*. Le banc est le harnais du module en calibration ; la chaîne
+ *    l'est en production. **Normaliser la source vers ce que le module lit est
+ *    donc le travail du harnais** — pas une règle inventée, et pas une
+ *    divergence : les deux harnais servent au module la même forme.
+ *
+ * ⭐ **ET LA CORRESPONDANCE EST MÉCANIQUE, TOTALE ET SANS PERTE.** `phrases[].n`
+ *    est le numéro d'unité (`verifie-reference.py` : *« la segmentation qui fait
+ *    foi — LA MÊME QUE LE PRÉ-RELEVÉ DE LA SYNTHÈSE »*, et c'est le même
+ *    découpage au caractère près) ; `fonctions` porte déjà son nom ; et les
+ *    unités d'un moment sont l'intervalle `de..a`, que le validateur garantit
+ *    **contigu, sans trou ni chevauchement, commençant à 1**.
+ *
+ * ⛔ **ELLE EST ADDITIVE, ET C'EST LE POINT.** On AJOUTE `unites` à côté de
+ *    `phrases`, jamais à leur place : le juge lit la référence **entière** par
+ *    `document_p2` — c'est là qu'il prend le **statut d'énonciation** dont le §4
+ *    dit qu'« il en a les moyens », et les **lectures déclarées défendables**.
+ *    Remplacer les aurait fait juger la fidélité sans ce qui la décide.
+ *
+ * ⚠️ Une référence qui porte DÉJÀ `unites` repart telle quelle : c'est la forme
+ *    des vecteurs embarqués du module, et la normalisation n'y touche pas.
+ */
+function normaliserReference(ref: unknown): unknown {
+  if (!estObjet(ref)) return ref
+  if (Array.isArray(ref.unites)) return ref            // déjà à la forme du module
+  const phrases = Array.isArray(ref.phrases) ? ref.phrases : null
+  if (!phrases) return ref                             // ni l'une ni l'autre : le garde-fou parlera
+  const normale: Objet = { ...ref }
+  normale.unites = phrases.filter(estObjet).map((p) => ({ u: p.n, fonctions: p.fonctions ?? [] }))
+  if (Array.isArray(ref.moments)) {
+    normale.moments = ref.moments.map((m) => {
+      if (!estObjet(m) || Array.isArray(m.unites)) return m
+      const de = typeof m.de === 'number' ? m.de : null
+      const a = typeof m.a === 'number' ? m.a : null
+      if (de === null || a === null || a < de) return m
+      const dedans: number[] = []
+      for (let i = de; i <= a; i += 1) dedans.push(i)
+      return { ...m, unites: dedans }
+    })
+  }
+  return normale
+}
+
+/** La référence décomposée, telle que le contexte la sert — et normalisée. */
 function referenceDuContexte(ctx: ContexteBranchement, artefactsP1: Record<string, unknown>): unknown {
   const brute = ctx.contexteExercice?.reference
   if (typeof brute === 'string' && strip(brute) !== '') {
     try {
-      return JSON.parse(brute)
+      return normaliserReference(JSON.parse(brute))
     } catch {
       return null
     }
@@ -459,12 +518,34 @@ function prePhase1b(ctx: ContexteBranchement): Record<string, unknown> {
   const unites = estObjet(p1a) ? (p1a.unites ?? []) : []
   const mes = ctx.prives?._mesures
   const recs = estObjet(mes) && Array.isArray(mes.recouvrements) ? mes.recouvrements : []
+  // ⭐ L'aligneur reçoit la référence NORMALISÉE — la même que `code1` lira, pour
+  //    que les numéros qu'il rend dans `correspond_a` désignent les mêmes unités
+  //    des deux côtés. La normalisation est ADDITIVE : `phrases`, `statuts`,
+  //    `armature` et `lectures` y restent.
+  // ⛔ Et `null` quand elle n'est pas lisible : « un slot servi à `null` arrête la
+  //    mesure en le nommant », AVANT le premier appel payé. Sans ce contrôle-ci,
+  //    la chaîne dépenserait deux appels pour s'arrêter ensuite à `code2`.
   const brute = ctx.contexteExercice?.reference
-  const ref = typeof brute === 'string' && strip(brute) !== '' ? brute : null
+  let ref: string | null = null
+  if (typeof brute === 'string' && strip(brute) !== '') {
+    try {
+      const normale = normaliserReference(JSON.parse(brute))
+      if (Array.isArray(champ(normale, 'unites')) && (champ(normale, 'unites') as unknown[]).length) {
+        ref = JSON.stringify(normale, null, 2)
+      }
+    } catch { ref = null }
+  }
+  // ⚠️ Le pré-relevé n'a pas cherché de reprise littérale s'il n'avait pas le
+  //    matériau : le dire, plutôt que d'affirmer à l'aligneur qu'il n'y en a
+  //    aucune. *Le prompt lui demande de « confirmer » les recouvrements, pas
+  //    d'en inventer — un « aucune » faux le pousse à ne coter aucune `copie`.*
+  const materiauServi = strip(ctx.contexteExercice?.source ?? '') !== ''
   return {
     unites_relevees: JSON.stringify(unites, null, 2),
     reference_decomposee: ref,
-    recouvrements: !recs.length ? 'aucune' : recs.map((r) => `« ${str(r)} »`).join('; '),
+    recouvrements: recs.length ? recs.map((r) => `« ${str(r)} »`).join('; ')
+      : (materiauServi ? 'aucune'
+        : 'matériau non servi à la chaîne — elles n’ont pas pu être cherchées'),
   }
 }
 
@@ -642,7 +723,23 @@ function code1(artefactsP1: Record<string, unknown>, ctx: ContexteBranchement): 
   }
 
   // --- référent texte : statuts dérivés, alignement, appariement
-  const refUnites = Array.isArray(champ(reference, 'unites')) ? champ(reference, 'unites') as unknown[] : []
+  //
+  // ⚠️ PORTAGE — LE GARDE-FOU DU FORMAT. Une référence qui ne porte NI `unites`
+  //    NI `phrases` n'est pas lisible par ce calcul : le module, lui, y
+  //    composerait un palier sur des décomptes tous nuls — statuts vides, toutes
+  //    les correspondances « inexistantes », zéro couvrante — et rendrait un
+  //    MOYEN sur une référence qu'il n'a pas su lire. C'est exactement « une
+  //    valeur par défaut » là où le contrat §3 veut une alerte. *Inatteignable
+  //    par un vecteur : les vecteurs portent tous `unites`.*
+  const refUnitesBrut = champ(reference, 'unites')
+  if (!Array.isArray(refUnitesBrut) || !refUnitesBrut.length) {
+    alertes.push('référence décomposée illisible : elle ne porte ni `unites` ni `phrases` — '
+      + 'aucun statut ne peut être dérivé, et aucun décompte de couverture composé. '
+      + 'Le format qui fait foi est celui du `02-exercices.md` §6')
+    mesures.couvrantes = null
+    return { mesures, document_p2: document, alertes }
+  }
+  const refUnites = refUnitesBrut
   const statuts = new Map<unknown, string | null>()
   for (const ru of refUnites) {
     statuts.set(champ(ru, 'u'), statutDeFonctions(champ(ru, 'fonctions'), alertes, champ(ru, 'u')))
@@ -992,6 +1089,32 @@ function code2(artefactP2: unknown, sortieCode1: SortieCode1, ctx: ContexteBranc
   // —, l'appartenance s'applique. Sans elle, une fidélité dont le `u` ne
   // correspond à rien était écartée EN SILENCE : un `contresens_majeur` sans `u`
   // faisait remonter Faible à Bon sans une seule alerte. (RM19.)
+  // ⚠️ PORTAGE — LE GARDE-FOU DU FORMAT, refermé ICI. `code1` a pu alerter sans
+  //    pouvoir arrêter : c'est `code2` qui compose. ⭐ Et le canal est celui que
+  //    la boîte aux lettres prescrit — *« n'ajoute pas un canal privé dans
+  //    `mesures` : `document_p2` EST le relevé, et `code2` le reçoit ; lis-le là,
+  //    et `mesures` reste comparable octet pour octet au module »*. Sans ce
+  //    refus, une référence illisible rendrait un palier **Moyen** composé sur
+  //    des décomptes tous nuls, avec une lettre servie à l'élève.
+  if (referent === 'texte') {
+    const doc = estObjet(c1.document_p2) ? c1.document_p2 as Objet : null
+    const refDoc = doc ? champ(doc.reference, 'unites') : null
+    if (!Array.isArray(refDoc) || !refDoc.length) {
+      const msg = 'RÉFÉRENCE ILLISIBLE — le référent est « texte » et la référence décomposée '
+        + 'ne porte aucune unité exploitable. Aucun verdict n\'est composé : un palier bâti sur '
+        + 'des décomptes vides serait une lettre fausse servie à un élève.'
+      alertes.push(msg)
+      const vides: Record<string, null> = {}
+      for (const o of OBSERVABLES_MODULE) vides[o] = null
+      return {
+        verdicts: vides,
+        trace: [...trace, msg],
+        alertes,
+        _telemetrie: telemetrieMuette('la référence décomposée n\'est pas lisible'),
+      }
+    }
+  }
+
   const corrObjet = estObjet(m.corr_par_unite) ? m.corr_par_unite as Objet : null
   const connuesCanon: string[] | null = corrObjet ? Object.keys(corrObjet) : null
   const connues: Set<string> | null = connuesCanon ? new Set(connuesCanon) : null

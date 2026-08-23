@@ -282,3 +282,110 @@ l'analyse** : sur les treize codes de cette fiche, **un seul est un mot françai
 `elagage`** —, et `fuitesRR4` compare **en sous-chaîne et sans replier les accents** : un retour qui
 écrit « élagage » ne déclenche rien, un retour qui écrirait « elagage » ferait refuser tout le retour.
 *Le risque est réel mais mince ; il n'a pas été observé.*
+
+---
+
+# ADDENDUM — 23/08, après coup : la référence décomposée descend dans `contexte.ts`
+
+*À la demande de Louis, et hors du lot : ce que le relevé ci-dessus laissait comme
+« décision de Louis » est fait. Trois choses en sont sorties, dont deux que
+personne n'aurait vues sans servir une VRAIE référence.*
+
+## Ce que j'ai posé
+
+**`contexte.ts` joint `exercices_references`** : `contenu` donne la référence
+décomposée, `source_contenu_id → scriptorium_contenus.texte_extrait` donne le
+matériau. `chaine.ts` les sert à `contexteExercice`, sérialisés ; `FOURNISSEURS_NATIFS`
+passe de quatre noms à six. **Une seule jointure ferme les deux manques** — le
+référent texte de la Synthèse, et les quatre modes réceptifs du Questionnement, qui
+lisait déjà `ctx.contexteExercice.reference` en attendant ce jour.
+
+⛔ **Servie SEULEMENT si la référence est VALIDÉE**, et ce n'est pas une prudence :
+`garde_reference_validee`, en base, **lève une exception** dès qu'un
+`artefact_jugement` s'écrit sur une référence non validée. Tant que la chaîne
+s'arrêtait avant P2, la garde ne tirait jamais ; en servant la référence, elle
+tirerait — et une exception de base emporte la trace, au lieu d'une mesure qui
+s'arrête proprement en nommant ce qui manque.
+
+## ⛔ TROUVAILLE 1 — le module et la source ne parlent pas le même format
+
+**Le format qui fait foi n'est pas celui que le module lit.**
+`copies-tests/_commun/verifie-reference.py` déclare le schéma **CLOS** :
+`phrases {n, fonctions, statuts}` · `moments {m, de, a, fonction, cible, statuts,
+etiquette}` · `armature` · `concepts` · `lectures` · `hesitation`. ⚠️ Or
+`synthese/code.py` lit `reference["unites"]` et `moments[].unites` — **ni l'une ni
+l'autre n'existe**. *Le Questionnement, lui, lit `armature.question_directrice` :
+canonique.*
+
+⭐ **Descendre la référence sans traiter ça aurait été pire que de ne rien faire** :
+`code1` aurait composé un palier **Moyen** sur des décomptes tous nuls — statuts
+vides, toutes les correspondances « inexistantes », zéro couvrante — et servi une
+lettre C à un élève. **Un arrêt propre échangé contre une mesure fausse.**
+
+**Ce que j'ai fait, et pourquoi c'est le harnais qui le fait.** Le contrat §7 :
+*« le parsage tolérant appartient au BANC, pas au module : les crochets reçoivent
+des objets propres »*. Le banc est le harnais du module en calibration, la chaîne
+l'est en production — **normaliser la source vers ce que le module lit est le
+travail du harnais**. La correspondance est mécanique et garantie :
+`phrases[].n → unites[].u` *(`verifie-reference.py` : « la segmentation qui fait
+foi — LA MÊME QUE LE PRÉ-RELEVÉ DE LA SYNTHÈSE »)*, et `de..a → moments[].unites`
+*(le validateur garantit que les moments pavent les phrases, sans trou ni
+chevauchement, à partir de 1)*.
+
+⛔ **Elle est ADDITIVE, et c'est le point** : on ajoute `unites` **à côté** de
+`phrases`, jamais à leur place. Le juge lit la référence **entière** par
+`document_p2` — c'est là qu'il prend le **statut d'énonciation** dont le §4 dit
+qu'« il en a les moyens », et les **lectures déclarées défendables**. Les remplacer
+aurait fait juger la fidélité sans ce qui la décide.
+
+⭐ **Et deux verrous, pas un** : `pre_p1b` refuse de servir une référence
+illisible — **avant le premier appel payé** — et `code2` refuse de composer si elle
+arrivait par une autre route, par le canal que la boîte aux lettres prescrit
+(*« `document_p2` EST le relevé, et `code2` le reçoit ; `mesures` reste comparable
+octet pour octet »*).
+
+## ⚠️⚠️ TROUVAILLE 2 — une dette de source : `relance`
+
+La vraie référence en base porte **`relance`** sur 4 de ses 17 phrases. Le
+`02-exercices.md` §6 pose la liste des fonctions **OUVERTE**, initiée à
+`defend_these · illustre · explique · relance`, et dit ce qu'elle vaut : *« `relance`
+est la phrase qui ouvre la suite sans rien avancer […] **Elle ne porte aucun contenu
+à restituer : une phrase dont `relance` est la seule fonction n'est pas une unité de
+restitution.** »* ⛔ **Le bloc machine de la Synthèse n'en déclare que TROIS.**
+
+⭐ **La conduite reste juste** — ces phrases sortent des décomptes de couverture,
+exactement ce que la source prescrit — mais **par deux alertes chacune** *(« fonction
+inconnue » puis « aucune fonction lisible »)* au lieu d'une exclusion nommée. **La
+fiche est en retard sur le `02-` §6.** *Marquée, non corrigée — c'est la convention
+du chantier.*
+
+## ⭐ TROUVAILLE 3 — la règle « ne rien créditer » tient sur pièce
+
+La recette a servi la seule référence validée de la base — un texte de Descartes — à
+une copie qui restitue un cours sur la mémoire. **L'aligneur a rendu six `apport`,
+zéro correspondance** : *« une unité de la référence n'est restituée que si l'unité
+de l'élève la dit effectivement, jamais parce que ça va de soi »* (fiche §1). Zéro
+couvrante, donc zéro fidélité — et le prompt du juge le prescrit. **La règle absolue
+de l'extraction s'observe, et elle tient.**
+
+## Les preuves
+
+| Contrôle | Résultat |
+|---|---|
+| Portage contre module, les trois clés | **6 069 cas** — inchangés, la normalisation est un no-op sur les vecteurs |
+| **Épreuve négative** | **65 mutations, 65 tombées, 0 survivante** *(6 neuves sur le canal)* |
+| `npm test` · `tsc` · `eslint` | **1 234/1 234** · rien · 0 erreur |
+| Recette en base, **16 appels de plus** | référent **cours** : mesure **A**, retour engendré · référent **texte** : squelette à **deux phases** `p1a,p1b`, mesure **E**, et **`taux_compression = 0,58`** — le matériau est descendu |
+
+⚠️ **Un rouge, et c'était mon attendu, pas le code** : j'avais assuré que le juge
+rendrait des fidélités, en oubliant que mon propre décor est délibérément incohérent.
+L'assertion est corrigée pour asserter la vraie règle *(zéro couvrante ⇒ zéro
+fidélité)* ; **elle n'a pas été rejouée** — la relancer coûtait un run payé pour
+prouver ce que le run précédent avait déjà montré.
+
+## Ce qui reste
+
+- **Le corpus de cours de la Connaissance** — le seul manque de fournisseur qui
+  demeure, et il n'est pas de code : *« aucune source qui fait foi ne le déclare »*.
+- **`relance` au bloc machine de la Synthèse** — dette de source ci-dessus.
+- **`termes_reference`** — le garde-fou acté inerte, inchangé.

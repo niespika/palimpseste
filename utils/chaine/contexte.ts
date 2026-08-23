@@ -95,6 +95,42 @@ export interface ContexteDepot {
    */
   referent: 'texte' | 'cours' | null
   /**
+   * ⭐⭐ LA RÉFÉRENCE DÉCOMPOSÉE DU TEXTE, telle que `exercices_references.contenu`
+   * la porte — le format qui fait foi au `02-exercices.md` §6, et que
+   * `copies-tests/_commun/verifie-reference.py` déclare CLOS : `phrases`,
+   * `moments`, `concepts`, `lectures`, `armature`, `hesitation`, et rien d'autre.
+   *
+   * ⛔ ELLE N'EST SERVIE QUE VALIDÉE, et ce n'est pas une prudence : une garde
+   *    EN BASE (`garde_reference_validee`, `c4_l1_schema.sql`) **lève une
+   *    exception** dès qu'un `artefact_jugement` s'écrit sur un dépôt dont
+   *    l'exercice porte une référence non validée. Tant que la chaîne s'arrêtait
+   *    avant P2, la garde ne tirait jamais ; en servant la référence, elle
+   *    tirerait — et une exception de base emporte la trace avec elle, au lieu
+   *    d'une mesure qui s'arrête proprement en NOMMANT ce qui manque.
+   *    *Une référence non validée laisse donc ce champ à `null`, le slot du
+   *    branchement est servi à `null`, et la mesure s'arrête en le nommant.*
+   *
+   * ⚠️ `null` NE VEUT PAS DIRE « pas de référent » : `referent` reste `'texte'`
+   *    dès que l'exercice porte une `reference_id`. Les deux disent deux choses
+   *    différentes — ce que l'exercice DÉCLARE, et ce que la chaîne PEUT SERVIR.
+   */
+  reference: unknown | null
+  /**
+   * LE MATÉRIAU — le texte source de la référence, `scriptorium_contenus.texte_extrait`.
+   *
+   * ⭐ Il vient de la MÊME jointure : `exercices_references.source_contenu_id`.
+   * Le pré-relevé mécanique de la Synthèse en a besoin — « le nombre de mots de
+   * la production ET DU MATÉRIAU, le taux de compression, et les recouvrements
+   * verbatim » (`competences/synthese.md` §3) —, et sans lui son aligneur
+   * s'entendrait dire « aucune reprise littérale » alors que rien n'a été
+   * cherché. *Servir la référence sans le matériau activerait un chemin sur un
+   * énoncé faux : les deux descendent ensemble, ou aucun.*
+   *
+   * ⚠️ L'arc de source est EXCLUSIF : une référence bâtie sur un livre
+   *    (`source_livre_id`) n'a pas de `texte_extrait`, et ce champ reste `null`.
+   */
+  materiau: string | null
+  /**
    * LE SITE UNIQUE des deux observables de lucidité — « la synthèse en classe »,
    * et pas un autre (`01-` §10 ; `competences/monitoring.md` §4 et §6).
    * Elle se reconnaît à sa ligne de plan : `type_exercice = 'synthese'`, que la
@@ -187,6 +223,40 @@ export async function lireContexte(admin: Admin, depotId: string): Promise<Conte
     cran = cranNumero(c?.cran) ?? cran
     cranCode = c?.code ?? null
     regimeV1vf = c?.regime_v1vf ?? null
+  }
+
+  // ── LA RÉFÉRENCE DÉCOMPOSÉE, ET SON MATÉRIAU ──────────────────────────────
+  //
+  // ⭐ UNE SEULE JOINTURE FERME DEUX MANQUES : `exercices_references` porte le
+  //    `contenu` — la référence au format du `02-` §6 — ET le lien vers son
+  //    texte source. Le Questionnement en lit `armature.question_directrice`
+  //    dans les quatre modes réceptifs ; la Synthèse en a besoin pour son
+  //    aligneur, pour le document de son juge, et — par le matériau — pour son
+  //    pré-relevé mécanique.
+  //
+  // ⛔ VALIDÉE SEULEMENT. `garde_reference_validee` (en base) LÈVE dès qu'un
+  //    `artefact_jugement` s'écrit sur une référence non validée. Servir une
+  //    référence non validée échangerait un arrêt propre, qui NOMME le slot qui
+  //    manque, contre une exception de base qui emporte la trace.
+  let reference: unknown | null = null
+  let materiau: string | null = null
+  if (exercice.reference_id) {
+    const { data: refBrut } = await admin
+      .from('exercices_references')
+      .select('contenu, validee_at, source_contenu_id')
+      .eq('id', exercice.reference_id).maybeSingle()
+    const ref = refBrut as unknown as
+      { contenu: unknown; validee_at: string | null; source_contenu_id: string | null } | null
+    if (ref?.validee_at) {
+      reference = ref.contenu ?? null
+      if (ref.source_contenu_id) {
+        const { data: srcBrut } = await admin
+          .from('scriptorium_contenus').select('texte_extrait')
+          .eq('id', ref.source_contenu_id).maybeSingle()
+        const src = srcBrut as unknown as { texte_extrait: string | null } | null
+        materiau = src?.texte_extrait ?? null
+      }
+    }
   }
 
   const modesParCompetence = (exercice.modes_par_competence ?? {}) as Record<string, string[]>
@@ -297,6 +367,8 @@ export async function lireContexte(admin: Admin, depotId: string): Promise<Conte
     referent: typeExercice === 'synthese' && exercice.lieu === 'classe'
       ? 'cours'
       : (exercice.reference_id ? 'texte' : null),
+    reference,
+    materiau,
   }
 }
 

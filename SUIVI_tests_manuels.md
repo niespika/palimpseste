@@ -4316,8 +4316,19 @@ lot est fait, prouvé et vert.
 
 ### Ce qui reste à jouer en recette
 
-- [ ] **C4L10S-14 · ⚠️⚠️ LA SYNTHÈSE SE TAIT SUR LE RÉFÉRENT TEXTE, ET C'EST LE MÊME CANAL QUE CELUI
-  DU QUESTIONNEMENT.** Constaté **en base**, sur un dépôt réel portant une `reference_id` : l'aligneur
+- [x] **C4L10S-14 · ✅ LEVÉ LE 23/08, À LA DEMANDE DE LOUIS — LA RÉFÉRENCE DÉCOMPOSÉE DESCEND, ET
+  LE RÉFÉRENT TEXTE MESURE.** `lireContexte` joint `exercices_references` : `contenu` donne la
+  référence, `source_contenu_id → scriptorium_contenus.texte_extrait` donne **le matériau**.
+  `FOURNISSEURS_NATIFS` passe de quatre noms à **six**. ⛔ **Servie SEULEMENT si elle est VALIDÉE** —
+  `garde_reference_validee`, en base, **lève une exception** dès qu'un `artefact_jugement` s'écrit
+  sinon : servir une référence non validée échangerait un arrêt propre contre une exception qui
+  emporte la trace. *Constaté en base : squelette à **deux phases** `p1a,p1b`, mesure écrite
+  (**E**), et `taux_compression = 0,58` — le matériau est là.* ⭐ **Et le même geste ouvre les quatre
+  modes réceptifs du Questionnement**, qui lisait déjà `ctx.contexteExercice.reference` en attendant
+  ce jour. **Voir `C4L10S-20`, `C4L10S-21` et `C4L10S-22` : le chemin a fait apparaître trois choses
+  que personne ne pouvait voir sans servir une VRAIE référence.** ~~L'énoncé d'origine~~
+- [ ] ~~**C4L10S-14 (origine) · LA SYNTHÈSE SE TAIT SUR LE RÉFÉRENT TEXTE, ET C'EST LE MÊME CANAL QUE
+  CELUI DU QUESTIONNEMENT.**~~ Constaté **en base**, sur un dépôt réel portant une `reference_id` : l'aligneur
   réclame `{reference_decomposee}`, `pre_p1b` le sert à **`null`**, et la chaîne **arrête la mesure en
   nommant le slot** — *« synthese : REFUS : le contexte de l'exercice ne porte pas de quoi servir
   reference_decomposee à P1B »*. **Aucune mesure, AUCUN squelette** *(le refus tombe au service des
@@ -4331,6 +4342,48 @@ lot est fait, prouvé et vert.
   *(le texte source, dont le pré-relevé de la Synthèse a besoin pour la compression et les
   recouvrements)*. **Condition de reprise : la décision de Louis** — poser ces fournisseurs natifs
   touche `contexte.ts` et `chaine.ts`, hors du périmètre d'un lot « à diff quasi nul ».
+- [ ] **C4L10S-20 · ⛔⛔ LE MODULE ET LA SOURCE NE PARLENT PAS LE MÊME FORMAT DE RÉFÉRENCE — trouvé
+  le 23/08 en servant la première VRAIE référence.** `copies-tests/_commun/verifie-reference.py`
+  déclare le schéma **CLOS** : `phrases {n, fonctions, statuts}` · `moments {m, de, a, fonction,
+  cible, statuts, etiquette}` · `armature` · `concepts` · `lectures` · `hesitation` — et *« toute
+  autre clé est la porte par laquelle une crédence chiffrée reviendrait »*. ⚠️ Or
+  `copies-tests/synthese/code.py` lit `reference["unites"]` et `moments[].unites` : **ni l'une ni
+  l'autre n'existe au format canonique**. *Le Questionnement, lui, lit `armature.question_directrice` :
+  canonique.* ⭐⭐ **Et ce n'est pas une curiosité** : descendre la référence sans traiter ça aurait
+  fait composer un palier **Moyen** sur des décomptes tous nuls — un arrêt propre échangé contre une
+  **lettre C servie à un élève**. ⭐ **Ce que le portage fait, et pourquoi c'est à lui de le faire** :
+  le contrat §7 pose que *« le parsage tolérant appartient au BANC, pas au module »* — le banc est le
+  harnais du module en calibration, la chaîne l'est en production, donc **normaliser la source vers
+  ce que le module lit est le travail du harnais**. La correspondance est mécanique et garantie
+  (`phrases[].n → unites[].u` — *« la segmentation qui fait foi, la même que le pré-relevé de la
+  Synthèse »* —, `de..a → moments[].unites`, le validateur garantissant le pavage). ⛔ **Elle est
+  ADDITIVE** : `unites` s'ajoute **à côté** de `phrases`, jamais à leur place — le juge lit la
+  référence entière par `document_p2`, et c'est là qu'il prend le **statut d'énonciation** et les
+  **lectures défendables**. **Deux verrous** : `pre_p1b` refuse une référence illisible **avant le
+  premier appel payé**, et `code2` refuse de composer si elle arrivait par une autre route.
+  **Condition de reprise : le pré-vol du Run 1 de la Synthèse** — c'est au MODULE de lire le format
+  qui fait foi, et la normalisation du harnais devra alors devenir un no-op.
+- [ ] **C4L10S-21 · ⚠️⚠️ DETTE DE SOURCE — LA FICHE SYNTHÈSE IGNORE `relance`, QUE LE `02-` §6
+  DÉCLARE.** La vraie référence en base porte **`relance`** sur **4 de ses 17 phrases**. Le
+  `02-exercices.md` §6 pose la liste des fonctions de phrase **OUVERTE**, initiée à `defend_these ·
+  illustre · explique · relance`, et dit ce qu'elle vaut : *« `relance` est la phrase qui ouvre la
+  suite sans rien avancer […] **Elle ne porte aucun contenu à restituer : une phrase dont `relance`
+  est la seule fonction n'est pas une unité de restitution.** »* ⛔ Le bloc machine de
+  `competences/synthese.md` n'en déclare que **TROIS**, et son §3.2 ne dérive un statut que de
+  celles-là. ⭐ **La conduite reste juste** — ces phrases sortent des décomptes de couverture,
+  exactement ce que la source prescrit — **mais par DEUX ALERTES chacune** *(« fonction inconnue »,
+  puis « aucune fonction lisible »)* au lieu d'une exclusion nommée. ⚠️ **Non corrigé** : une source
+  trouvée en retard se **marque**, elle ne se corrige pas depuis le code. **Condition de reprise : la
+  séance de conception qui accordera le bloc machine de la Synthèse au `02-` §6** — le geste est
+  d'ajouter `relance` au catalogue et de dire au §3.2 qu'il n'ouvre aucun statut.
+- [x] **C4L10S-22 · ⭐ LA RÈGLE ABSOLUE DE L'EXTRACTION TIENT SUR PIÈCE — « ne rien créditer ».** La
+  recette a servi la seule référence validée de la base — un texte de Descartes — à une copie qui
+  restitue un cours sur la mémoire. **L'aligneur a rendu six `apport`, ZÉRO correspondance** : *« une
+  unité de la référence n'est restituée que si l'unité de l'élève la dit effectivement, jamais parce
+  que ça va de soi »* (fiche §1). Zéro couvrante, donc **zéro fidélité** — et le prompt du juge le
+  prescrit : *« si aucun alignement ne t'est fourni, rends `fidelite: []` »*. ⚠️ *Un attendu de la
+  recette a rougi là-dessus : il supposait un décor cohérent. L'assertion porte désormais la vraie
+  règle — zéro couvrante ⇒ zéro fidélité.*
 - [ ] **C4L10S-15 · ⚠️⚠️ UN GARDE-FOU ACTÉ EST INERTE DANS LE MODULE, ET RIEN NE LE DIT.**
   `code2` lit `mesures["termes_reference"]` *(ligne 490)*, **qu'aucun chemin de `code1` n'écrit** — au
   module comme au portage. Le garde-fou **acté** `apport_apparie` — *« un apport dont le terme se
@@ -4346,8 +4399,11 @@ lot est fait, prouvé et vert.
   l'escalade : *« un signal de conformité de consigne, pas de compétence : il pilote la confiance,
   jamais l'escalade »*. ⛔ **Et le slot NE MENT PAS** : sans matériau, le pré-relevé **ne dit pas**
   « aucune » reprise littérale — il dit qu'il n'a pas pu chercher. *C'est le seul point où le portage
-  s'écarte du module, et c'est un durcissement : le banc, lui, sert toujours une source.* **Même
-  condition de reprise que `C4L10S-14`** — le texte source vient par le même canal.
+  s'écarte du module, et c'est un durcissement : le banc, lui, sert toujours une source.* ⭐ **LEVÉ LE 23/08 SUR LE RÉFÉRENT TEXTE** : le matériau descend par la même jointure que la
+  référence (`source_contenu_id → scriptorium_contenus.texte_extrait`), et `taux_compression` a
+  mesuré **0,58** sur un dépôt réel. ⚠️ **Il reste `n/a` sur le référent COURS**, et c'est normal :
+  le §5 l'y déclare sans objet, et un cours n'a pas de texte source. **Condition de reprise :
+  aucune.**
 - [ ] **C4L10S-17 · ⚠️ LE RETOUR N'A PAS ÉTÉ INSPECTÉ SUR CE TOUR, et `elagage` est le seul des treize
   codes qui soit un mot français ordinaire.** L'item 37 de la boîte aux lettres demandait ce geste.
   **Fait par l'analyse, pas par l'observation** : `fuitesRR4` *(`utils/chaine/retour.ts`)* cherche

@@ -422,25 +422,49 @@ try {
   dire(slotsDu(gabaritP1B).sort().join(',') === 'recouvrements,reference_decomposee,unites_relevees',
     `⭐ le prompt P1B porte TROIS slots, tous servis par \`pre_p1b\` : ${
       slotsDu(gabaritP1B).sort().join(', ')}`)
-  const rendu1b = p1b.pre({ ...ctxDe('texte'), sorties: { p1a: { unites: [{ u: 1 }] } } })
-  dire(rendu1b.reference_decomposee === null,
-    '⚠️⚠️ `{reference_decomposee}` EST SERVI À `null` : le contexte de l\'exercice ne porte '
-    + 'AUCUNE référence décomposée, et aucun fournisseur natif ne l\'a. « Un slot servi à '
-    + '`null` arrête la mesure EN LE NOMMANT » — le comportement voulu (`CONTRAT` §2)')
-  const rendu1bServi = p1b.pre({
+  // ⭐⭐ LE CANAL EST DESCENDU LE 23/08 : `lireContexte` joint `exercices_references`.
+  const ctxTexteReel = {
     ...ctxDe('texte'),
-    sorties: { p1a: { unites: [{ u: 1 }] } },
     contexteExercice: {
       ...ctxDe('texte').contexteExercice,
-      reference: JSON.stringify({ unites: [{ u: 1, fonctions: ['defend_these'] }] }),
+      ...(ctxTexte.reference != null ? { reference: JSON.stringify(ctxTexte.reference) } : {}),
+      ...(ctxTexte.materiau ? { source: ctxTexte.materiau } : {}),
     },
-  })
-  dire(typeof rendu1bServi.reference_decomposee === 'string'
-    && rendu1bServi.reference_decomposee.includes('defend_these'),
-  '⭐ et il le sert dès que le contexte le porte : LE CANAL EST BON, c\'est LA CHAÎNE qui ne '
-  + 'le descend pas. `exercices_references` porte pourtant `contenu` ET le texte source '
-  + '(`source_contenu_id → scriptorium_contenus.texte_extrait`) — un seul geste ferme les deux '
-  + 'manques, et il ferme AUSSI celui du Questionnement.')
+  }
+  dire(ctxTexte.reference != null,
+    '⭐⭐ LA RÉFÉRENCE DÉCOMPOSÉE EST DESCENDUE — `lireContexte` la lit sur '
+    + '`exercices_references.contenu`, et elle n\'est servie QUE VALIDÉE (une garde en base '
+    + 'lève sinon, à l\'écriture du jugement)')
+  dire(typeof ctxTexte.materiau === 'string' && ctxTexte.materiau.length > 0,
+    `⭐ ET LE MATÉRIAU AVEC — ${(ctxTexte.materiau ?? '').length} caractères, lus par la MÊME `
+    + 'jointure (`source_contenu_id → scriptorium_contenus.texte_extrait`)')
+  // ⛔ LE FORMAT QUI FAIT FOI N'EST PAS CELUI QUE LE MODULE LIT.
+  const clesRef = Object.keys(ctxTexte.reference ?? {})
+  dire(clesRef.includes('phrases') && clesRef.includes('moments') && !clesRef.includes('unites'),
+    '⛔ LE FORMAT QUI FAIT FOI N\'EST PAS CELUI QUE LE MODULE LIT : la référence porte '
+    + `[${clesRef.join(', ')}] — donc \`phrases\` et \`moments{de,a}\`, JAMAIS \`unites\`, `
+    + 'que le module de la Synthèse est le seul du corpus à chercher. Le schéma est déclaré '
+    + 'CLOS par `verifie-reference.py`. *C\'est le branchement qui normalise, parce que le '
+    + 'contrat confie le parsage au HARNAIS, jamais au module.*')
+  const rendu1b = p1b.pre({ ...ctxTexteReel, sorties: { p1a: { unites: [{ u: 1 }] } } })
+  dire(typeof rendu1b.reference_decomposee === 'string',
+    '⭐ et l\'aligneur EST SERVI : le branchement normalise le format canonique vers ce que '
+    + 'le module lit — `phrases[].n` devient `unites[].u`, `de..a` devient l\'intervalle du '
+    + 'moment —, et il le fait de façon ADDITIVE : `statuts`, `armature` et `lectures` y restent')
+  const servie = JSON.parse(String(rendu1b.reference_decomposee))
+  dire(Array.isArray(servie.unites) && servie.unites.length > 0
+    && Array.isArray(servie.phrases) && !!servie.armature,
+  `⭐⭐ NORMALISATION ADDITIVE, VÉRIFIÉE SUR LA VRAIE RÉFÉRENCE : ${servie.unites.length} `
+  + `unités dérivées de ${servie.phrases.length} phrases, et le format canonique est INTACT `
+  + '— c\'est de lui que le juge tire le STATUT D\'ÉNONCIATION, dont le §4 dit qu\'« il en '
+  + 'a les moyens »')
+  dire(JSON.stringify(servie.moments ?? []).includes('"unites"'),
+    '⭐ et chaque moment porte son intervalle `de..a` déplié en unités')
+  // Le cas qui reste : un exercice SANS référence, ou dont la référence n'est pas validée.
+  const rendu1bSans = p1b.pre({ ...ctxDe('texte'), sorties: { p1a: { unites: [{ u: 1 }] } } })
+  dire(rendu1bSans.reference_decomposee === null,
+    '⚠️ SANS référence au contexte — ou sur une référence NON VALIDÉE, que `contexte.ts` '
+    + 'refuse de servir — le slot est servi à `null`, et « la mesure s\'arrête EN LE NOMMANT »')
 
   // ── P2 — un seul slot, et c'est le document ─────────────────────────────
   const specP2 = branchement.jugement(ctxDe('cours'))
@@ -582,31 +606,90 @@ try {
       `⭐ et \`apport_organisateur\` — l'observable du seuil — un verdict : ${
         ecrits.apport_organisateur}`)
 
-    // ⚠️⚠️ LE RÉFÉRENT TEXTE — le fait du jour, constaté EN BASE.
+    // ⭐⭐ LE RÉFÉRENT TEXTE — LE CHEMIN QUE LE 23/08 A OUVERT.
     const dt = decor.referent_texte
+    const t1 = Date.now()
     const bilanT = await traiterDepot(admin, dt.depotId, 'v1')
-    note(`référent texte — bilan : ${bilanT.appels} appel(s), mesures écrites ${bilanT.mesuresEcrites}`)
+    note(`référent texte — bilan : ${bilanT.appels} appel(s), ${Date.now() - t1} ms, `
+      + `mesures écrites ${bilanT.mesuresEcrites}`)
     for (const a of bilanT.alertes) note(`alerte : ${a}`)
     const refusRef = (bilanT.alertes ?? [])
       .find((x) => x.startsWith('synthese : ') && x.includes('reference_decomposee'))
-    dire(!!refusRef,
-      '⚠️⚠️ SUR LE RÉFÉRENT TEXTE, LA SYNTHÈSE N\'ÉCRIT AUCUNE MESURE, ET LA CHAÎNE LE DIT '
-      + 'PAR UNE ALERTE NOMMÉE — jamais un trou silencieux')
-    dire(/REFUS.*reference_decomposee/.test(refusRef ?? ''),
-      `⭐ ET L'ALERTE NOMME LE SLOT : « ${refusRef ?? '(aucune)'} »`)
-    const mesT = lu('competences_mesures (référent texte)', await admin
-      .from('competences_mesures').select('competence, lettre_equivalente')
-      .eq('depot_id', dt.depotId))
-    dire(!(mesT ?? []).some((x) => x.competence === 'synthese'),
-      `⭐ et AUCUNE mesure de synthèse n'est écrite sur ce dépôt — les autres, si : ${
-        (mesT ?? []).map((x) => `${x.competence}=${x.lettre_equivalente}`).join(', ') || 'aucune'}`)
+    dire(!refusRef,
+      '⭐⭐ PLUS AUCUN REFUS DE SLOT SUR LE RÉFÉRENT TEXTE — la référence décomposée est '
+      + `descendue${refusRef ? ` — mais : « ${refusRef} »` : ''}`)
     const sqT = lu('exercices_squelettes (référent texte)', await admin
-      .from('exercices_squelettes').select('competence, artefact_extraction')
+      .from('exercices_squelettes').select('competence, artefact_extraction, artefact_jugement')
       .eq('depot_id', dt.depotId))
     const s0T = (sqT ?? []).find((x) => x.competence === 'synthese')
-    dire(!s0T,
-      '⭐ et AUCUN squelette non plus : la chaîne s\'arrête AVANT le premier appel de la '
-      + 'phase qui manque — le refus tombe au service des slots, pas après')
+    dire(!!s0T, '⭐⭐ LE SQUELETTE DU RÉFÉRENT TEXTE EST ÉCRIT')
+    if (s0T?.artefact_extraction) {
+      const phases = Object.keys(s0T.artefact_extraction)
+      dire(phases.sort().join(',') === 'p1a,p1b',
+        `⭐⭐ ET IL PORTE SES DEUX PHASES — c'est la seule chaîne des six à en avoir deux : ${
+          phases.join(', ')}`)
+      const al = (s0T.artefact_extraction.p1b ?? {}).alignement ?? []
+      note(`aligneur — ${al.length} unité(s) alignée(s) : ${al
+        .map((x) => `u${x.u}→[${(x.correspond_a ?? []).join(',')}] ${x.operation}`).join(' · ')}`)
+    }
+    if (s0T?.artefact_jugement) {
+      const p2T = s0T.artefact_jugement
+      const couvrantes = ((s0T.artefact_extraction?.p1b ?? {}).alignement ?? [])
+        .filter((x) => (x.correspond_a ?? []).length > 0).length
+      note(`fidélités : ${(p2T.fidelite ?? []).map((f) => `u${f.u}=${f.etat}`).join(' · ') || 'aucune'}`)
+      // ⚠️ LE DÉCOR EST DÉLIBÉRÉMENT INCOHÉRENT, et c'est ce qui le rend probant :
+      //    la copie est une synthèse de COURS sur la mémoire, la seule référence
+      //    validée en base est un TEXTE de Descartes. ⭐ L'aligneur doit alors
+      //    n'accorder AUCUNE correspondance — « ne rien créditer : une unité de la
+      //    référence n'est restituée que si l'unité de l'élève la dit
+      //    effectivement, jamais parce que ça va de soi » (fiche §1). Zéro
+      //    couvrante, donc zéro fidélité, et le prompt du juge le prescrit :
+      //    « si aucun alignement ne t'est fourni, rends fidelite: [] ».
+      dire(couvrantes === 0
+        ? (p2T.fidelite ?? []).length === 0
+        : (p2T.fidelite ?? []).length > 0,
+      `⭐⭐ LA RÈGLE « NE RIEN CRÉDITER » TIENT SUR PIÈCE : ${couvrantes} unité(s) couvrante(s) `
+      + `pour ${(p2T.fidelite ?? []).length} fidélité(s) — une copie qui ne restitue RIEN du `
+      + 'texte servi n\'obtient aucune correspondance, et le juge ne juge alors aucune fidélité')
+      const avecNote = (p2T.fidelite ?? []).find((f) => (f.note ?? '').trim() !== '')
+      if (avecNote) note(`note du juge : ${JSON.stringify(avecNote.note).slice(0, 220)}`)
+    }
+    // ⚠️⚠️ LA DETTE DE SOURCE QUE CE CHEMIN A FAIT APPARAÎTRE — `relance`.
+    const fonctionsRef = new Set((ctxTexte.reference?.phrases ?? [])
+      .flatMap((x) => x.fonctions ?? []))
+    const horsCatalogue = [...fonctionsRef]
+      .filter((f) => !['defend_these', 'explique', 'illustre'].includes(f))
+    dire(horsCatalogue.length > 0,
+      `⚠️⚠️ LA VRAIE RÉFÉRENCE PORTE DES FONCTIONS QUE LA FICHE NE DÉCLARE PAS : ${
+        horsCatalogue.join(', ') || 'aucune'}. Le \`02-exercices.md\` §6 pose la liste OUVERTE `
+      + '— `defend_these · illustre · explique · relance` — et dit qu\'« une phrase dont '
+      + '`relance` est la seule fonction N\'EST PAS UNE UNITÉ DE RESTITUTION » ; le bloc machine '
+      + 'de la Synthèse n\'en déclare que TROIS. ⭐ La conduite reste juste — ces phrases sortent '
+      + 'des décomptes, ce que la source prescrit — mais par DEUX ALERTES chacune, au lieu d\'une '
+      + 'exclusion nommée. *Dette de source : la fiche est en retard sur le `02-` §6.*')
+    const mesT = lu('competences_mesures (référent texte)', await admin
+      .from('competences_mesures').select('competence, lettre_equivalente, observables')
+      .eq('depot_id', dt.depotId))
+    const m0T = (mesT ?? []).find((x) => x.competence === 'synthese')
+    dire(!!m0T, `⭐⭐ ET LA MESURE DU RÉFÉRENT TEXTE EST ÉCRITE : ${
+      (mesT ?? []).map((x) => `${x.competence}=${x.lettre_equivalente}`).join(', ')}`)
+    if (m0T) {
+      const ecritsT = m0T.observables ?? {}
+      const naT = Object.entries(ecritsT).filter(([, v]) => v === 'n/a').map(([c]) => c)
+      note(`observables du référent texte : ${Object.entries(ecritsT)
+        .map(([c, v]) => `${c}=${typeof v === 'number' ? v.toFixed(2) : v}`).join(' · ')}`)
+      // ⭐ Les SEPT observables REQUIS du référent texte portent une valeur ; seul
+      //    `taux_compression` peut rester en `n/a`, et il n'est pas requis (§5).
+      const requisTexte = OBSERVABLES_TEXTE_SEULEMENT.filter((c) => c !== 'taux_compression')
+      const muets = requisTexte.filter((c) => naT.includes(c))
+      dire(muets.length < requisTexte.length,
+        `⭐⭐ LES OBSERVABLES DU RÉFÉRENT TEXTE MESURENT — ${
+          requisTexte.length - muets.length}/${requisTexte.length} portent une valeur${
+          muets.length ? ` (en \`n/a\` : ${muets.join(', ')})` : ''}`)
+      dire(typeof ecritsT.taux_compression === 'number',
+        `⭐ ET \`taux_compression\` AUSSI, puisque le MATÉRIAU est descendu avec la référence : ${
+          ecritsT.taux_compression}`)
+    }
 
     console.log('\n══ F. L\'IDEMPOTENCE ═══════════════════════════════════════════')
     // ⚠️ « Un squelette par (dépôt × version × compétence), et l'index unique le
