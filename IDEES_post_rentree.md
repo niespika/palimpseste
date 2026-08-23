@@ -347,3 +347,57 @@ plateforme est **E → A**, cinq (`utils/notation.ts`). Le jour où la grille de
 pour de bon — `competences_niveaux`, derrière `competences_affichage_actif` —, il faudra **choisir**
 entre l'aligner sur l'échelle réelle et le remplacer. **Ce n'est pas un correctif : c'est l'écran des
 niveaux, qui reste à faire.**
+
+- **Déposer une fiche n'est pas archiver un document : c'est mettre un instrument en production.**
+La page Compétences (C4-L8) a l'air d'un classeur — on y dépose un `.md`, il affiche une version et
+un statut. Ce n'en est pas un. Le fichier déposé n'est pas rangé : **il est relu à l'exécution, tel
+quel, et ce qu'il déclare fait autorité sur la conduite de l'élève.** C'est une pièce vive du moteur,
+au même titre que le code — sauf qu'elle s'installe par un bouton, sans revue, sans test, et sans que
+rien ne vérifie qu'elle s'accorde avec ce qui mesure vraiment.
+
+**Ce que le dépôt commande DÉJÀ, aujourd'hui, en production :**
+
+  1. **La banque des questions « se juger »** — `competences_correspondance`, remplacée à chaque
+     dépôt, lue par `utils/passation/metacognition.ts`, `utils/chaine/contexte.ts`,
+     `utils/deroule/vue.ts`, `utils/deroule/rappel.ts` et `utils/chaine/retour.ts`. Ce sont les mots
+     que l'élève lit sur lui-même.
+  2. **Le statut de recette par défaut** — `lireStatutsRecette()` (`utils/chaine/contexte.ts`) : une
+     compétence dont la fiche n'est pas déposée est `differee` et *ne peut pas être autre chose* ;
+     déposée, elle naît `mesuree_silencieusement`.
+  3. **La version citée** par `exercices_metacognition.questions_version`, et le statut affiché.
+
+⭐ **Et ce qui vient, et qui est le vrai sujet de cette entrée.** `utils/routeur/fiche-observables.ts`
+(C4-L2) lit `competences_fiches.contenu` — *le texte déposé par le bouton* — et en parse la
+sous-section « ### Les observables pour la télémétrie du routeur » pour produire la liste des
+observables **requis**, celle qu'exigent `preconditionHaute()` et `stabiliteAcquise()`
+(`utils/routeur/observables.ts`), donc l'escalade. Le module est écrit, commenté, testé — et
+**personne ne l'appelle** : `lireLesFiches()` (`utils/routeur/donnees.ts:301`) a zéro appelant, et
+les trois sites qui invoquent `etatDesObservables()` passent leur argument `requis` en dur
+(`[code]` à `escalade.ts:75`, `[]` à `deroule/rappel.ts` et `deroule/juger.ts`). **Le jour où ce fil
+se branche — et il est fait pour se brancher, le `01-` §8.3 le prescrit : « le routeur lit, il ne
+décide pas » —, le `.md` que Louis dépose depuis son navigateur devient une entrée exécutable du
+routeur, par élève, à chaque passage.**
+
+⛔ **Les deux gardes qui manqueront ce jour-là, et qui manquent déjà :**
+
+  - **L'écran ne dit pas si la chaîne est branchée.** Ses deux planchers mécaniques ne vérifient que
+    « fiche déposée » et « correspondance non vide » ; ni l'un ni l'autre ne regarde
+    `etatCompetence()`. On peut donc poser `evaluee` sur une compétence dont le branchement n'existe
+    pas : l'écran accepte, et la compétence mesure zéro. Le motif existe déjà, servi
+    (`instruments.ts`), et le bilan d'un dépôt l'affiche — il suffirait de le montrer aussi ici.
+  - ⚠️ **Rien ne croise la fiche déposée avec la fiche qui mesure.** Ce qui est mesuré vient de
+    `utils/chaine/derive/competences/<nom>.ts`, dérivé par `derive-instruments.py` depuis le dépôt de
+    **conception** ; ce qui est déposé vit en base. Aucun code ne compare les deux versions —
+    `fiche-observables.ts` ne voit jamais l'instrument. On peut afficher v4.4 sur l'écran pendant que
+    la chaîne mesure avec v4.3, sans une ligne de log. Piste : le manifeste dérivé porte déjà
+    `version` et `empreinte` par source ; il suffirait de les confronter au dépôt et de le dire.
+
+⚠️ **L'asymétrie à ne jamais perdre de vue quand ce fil se branchera.** `etatDesObservables()` boucle
+sur les codes de **l'instrument dérivé** et n'utilise la liste de la fiche que comme filtre
+(`requis.includes(code)`). Donc un observable **ajouté** à la fiche déposée sera invisible — jamais
+mesuré, absent de la liste des états, pas même en `n/a` —, tandis qu'un observable **retiré du
+requis, renommé, ou touché par une clause « … sauf `x` »** changera l'escalade immédiatement.
+L'ajout ne fera rien, le retrait fera tout, et aucune alerte ne distinguera les deux.
+
+*(constaté avec Cowork le 23/08, en fabriquant les prompts C4-L10 — Louis : « l'import importe
+réellement quelque chose et cet import a des conséquences réelles ». Oui, et il en aura davantage.)*
