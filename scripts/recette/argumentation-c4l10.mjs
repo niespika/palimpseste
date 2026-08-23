@@ -56,8 +56,17 @@ const { traiterDepot, cibleDuRetour, cibleIndeterminee, competencesDeLExercice }
   await import(`${RACINE}/utils/chaine/chaine.ts`)
 const {
   competencesOuvertes, competencesEnAttenteDeBranchement, etatCompetence, verifierCoherence,
-  valeursDesParametres,
+  valeursDesParametres, MANIFESTE_LU,
 } = await import(`${RACINE}/utils/chaine/instruments.ts`)
+
+// ⚠️ LA VERSION NE S'ÉPINGLE PAS EN DUR, ET C'EST UNE LEÇON DE LA SÉANCE : la
+//    fiche est passée de 4.2 à 4.3 PENDANT le lot (une séance de conception a
+//    nommé la population des deux `proportion`). Un `=== '4.2'` recopié ici
+//    aurait rendu la recette rouge pour une raison qui n'en est pas une. Ce qui
+//    doit être vrai, c'est que l'instrument importé porte LA VERSION QUE LE
+//    MANIFESTE DÉRIVÉ DÉCLARE — et `--verifie` dit, lui, si le dérivé a divergé
+//    de sa source.
+const VERSION_ATTENDUE = MANIFESTE_LU.competences.argumentation?.version
 const { separerTete, messageDuGabarit, slotsDu } = await import(`${RACINE}/utils/chaine/slots.ts`)
 const { lireStatutsRecette, lireContexte } = await import(`${RACINE}/utils/chaine/contexte.ts`)
 
@@ -206,8 +215,9 @@ try {
   const attente = competencesEnAttenteDeBranchement()
   note(`en attente de branchement (C4-L10 se rejoue pour elles) : ${attente.join(', ') || 'aucune'}`)
   const etat = etatCompetence('argumentation')
-  dire(etat.instrument?.version === '4.2',
-    `l'instrument dérivé porte la VERSION DE LA FICHE : ${etat.instrument?.version}`)
+  dire(!!VERSION_ATTENDUE && etat.instrument?.version === VERSION_ATTENDUE,
+    `l'instrument dérivé porte la VERSION DE LA FICHE que le manifeste déclare : `
+    + `${etat.instrument?.version} (manifeste : ${VERSION_ATTENDUE})`)
   dire(Object.keys(etat.instrument?.observables_mesure ?? {}).length === 9,
     `neuf observables de télémétrie au bloc machine (§5) : ${
       Object.keys(etat.instrument?.observables_mesure ?? {}).length}`)
@@ -323,7 +333,7 @@ try {
     const s0 = (sq ?? []).find((x) => x.competence === 'argumentation')
     dire(!!s0?.artefact_extraction && !!s0?.artefact_jugement,
       'le squelette de l\'Argumentation porte SES DEUX artefacts — l\'extraction et le jugement')
-    dire(s0?.instrument_version === '4.2',
+    dire(s0?.instrument_version === VERSION_ATTENDUE,
       `\`instrument_version\` EST la ligne VERSION de la fiche : ${s0?.instrument_version}`)
     const p1 = s0?.artefact_extraction?.p1 ?? {}
     dire(Array.isArray(p1.unites) && p1.unites.length > 0,

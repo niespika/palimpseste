@@ -3256,7 +3256,7 @@ et **cinq vrais appels de modèle**, décor semé puis **retiré** (aucun reste,
 ### Ce qui est prouvé — pour ne pas le rejouer
 
 - [x] **C4L10A-1 · L'ARGUMENTATION EST OUVERTE — dérivée, importée, branchée.**
-  `derive-instruments.py --resume` la déclare **OUVERTE** (`argumentation v4.2 — 9 observables de
+  `derive-instruments.py --resume` la déclare **OUVERTE** (`argumentation v4.3 — 9 observables de
   télémétrie`) et `--verifie` dit **IDENTIQUE** ; `verifierCoherence()` ne rend **aucun écart** ;
   `competencesOuvertes()` rend **`['expression', 'argumentation']`**. ⭐ **Le premier des trois
   gestes était déjà fait** — les six fiches dérivent depuis C4-L10 · Expression ; ce lot n'a porté
@@ -3299,7 +3299,9 @@ et **cinq vrais appels de modèle**, décor semé puis **retiré** (aucun reste,
 - [x] **C4L10A-6 · UN DÉPÔT RÉEL, DEUX COMPÉTENCES, DEUX SQUELETTES, DEUX MESURES.**
   `scripts/recette/argumentation-c4l10.mjs`, **52 contrôles verts**, sur un `paragraphe` de la maison
   qui mesure l'Expression **et** l'Argumentation : **5 appels** (p1, p1, p2, p2, retour), **2
-  squelettes** portant chacun ses deux artefacts, **2 mesures**, `instrument_version = 4.2`, la
+  squelettes** portant chacun ses deux artefacts, **2 mesures**, un `instrument_version` **égal à la
+  ligne VERSION de la fiche** *(la recette le lit au manifeste dérivé, jamais en dur — voir
+  C4L10A-19)*, la
   **lettre-équivalente « D »** pour l'Argumentation, et **les neuf observables écrits, aucun en
   `n/a`** — `garant_present=0.4 · lien_explicite=0.2 · preuve_circulaire=0.4 · garant_circulaire=0 ·
   source_cosmetique=0 · garant_ambigu=0 · garant_vague=0 · objection_traitee="oui" · nb_limites=0.2`.
@@ -3400,6 +3402,19 @@ et **cinq vrais appels de modèle**, décor semé puis **retiré** (aucun reste,
   la condition de fermeture du pari, le premier lot réel** — qui dira quelle part des alertes sont de
   vraies inventions et quelle part des artefacts de normalisation. *Le tour de recette a d'ailleurs
   vu le contrôle de l'**Expression** lever **2 citations infidèles** sur la même copie.*
+- [x] **C4L10A-19 · ⭐ LA FICHE EST PASSÉE DE 4.2 À 4.3 PENDANT LE LOT, et dans le sens du
+  portage.** Une séance de conception a nommé, le 23/08 en cours de séance, **la population des deux
+  observables `proportion`** — « proportion **des unités du décompte** », aux deux endroits (table du
+  §5 et champ `sens` du bloc machine) — et changé `nb_limites` de « **nombre** » à « **part** », ce
+  qui confirme aussi la division du `comptage rapporté`. **C'est mot pour mot la lecture que le
+  branchement avait prise** *(registre des ouverts, item 48 : déposé et **clos le jour même**)*.
+  **Rien à changer dans le code** ; instrument re-dérivé en **4.3**, `--verifie` **IDENTIQUE**, et
+  le `[faux]` du §7 **a survécu** à l'amendement — la dette D2 reste ouverte. ⚠️ **UNE SEULE CHOSE
+  ÉTAIT CASSÉE** : la recette épinglait `'4.2'` **en dur**, à deux endroits ; elle lit désormais
+  `MANIFESTE_LU.competences.argumentation.version`. *Une version recopiée dans un contrôle rougit
+  pour une raison qui n'en est pas une ; savoir si le dérivé a divergé de sa source est le travail
+  de `--verifie`, et de lui seul.*
+
 - [ ] **C4L10A-18 · `seuil_franchi` RECOUVRE DEUX CHOSES, ET LE CONTEXTE NE PERMET PAS DE LES
   SÉPARER.** Le `non` dit tantôt « l'élève n'a pas franchi », tantôt « l'élève **n'a pas pu** » —
   *« un exercice qui ne porte qu'une ou deux unités sans place pour une objection ne peut pas faire

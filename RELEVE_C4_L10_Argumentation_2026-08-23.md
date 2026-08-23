@@ -16,7 +16,7 @@ Les **six pièces** du manifeste existent. Cinq aux versions attendues, une qui 
 | `07-Implementation.md` §1 et §2 | **2.34**, RELU ET VALIDÉ | **2.36**, RELU ET VALIDÉ | ⚠️ **la version a bougé → en-tête relu**, comme la règle le demande. Les amendements de la 2.35 et de la 2.36 viennent de **C4-L11**, et ils portent sur les sections **ouvertes** : la forme de la `cible_primaire` et du `cran` au §1.1, le retrait de `prompt_version` au §1.2, la cadence du déclencheur au §5. **Le §2 — la règle de manifeste — n'a pas bougé.** Rien de ce qui a changé ne contredit ce lot ; deux de ces amendements le SERVENT *(voir §2)*. |
 | `03-competences.md` §1, §2, §9 | **2.1**, VALIDÉ ET GELÉ | **2.1**, VALIDÉ ET GELÉ | ✅ |
 | `01-routeur.md` §3, §8.2, §11 | **5.5**, VALIDÉ ET GELÉ | **5.5**, VALIDÉ ET GELÉ | ✅ *(+ le §8.3 que le §8.2 cite, et le §12 que ce prompt ouvre explicitement)* |
-| `competences/argumentation.md` | **4.2**, RELUE ET VALIDÉE | **4.2**, RELUE ET VALIDÉE | ✅ — et c'est bien *relu et validé* qui est exigé, jamais *versé et bancé* |
+| `competences/argumentation.md` | **4.2**, RELUE ET VALIDÉE | **4.2** à l'entrée, **4.3 à la clôture**, RELUE ET VALIDÉE | ✅ — et c'est bien *relu et validé* qui est exigé, jamais *versé et bancé*. ⭐ **Elle a bougé PENDANT le lot**, et dans le sens du portage : voir §14 |
 | `copies-tests/_commun/CONTRAT-MODULES.md` | déposé | validé par Louis item par item, 1er-2 août | ✅ |
 | `copies-tests/argumentation/code.py` | déposé | v0.3, `--autotest` **29 réussis, 0 échoués** | ✅ |
 
@@ -56,7 +56,7 @@ sous `check between 1 and 9`. Le décor de recette l'écrit en entier, jamais au
 Les huit points annoncés étaient tous là, et aucun n'a demandé de reprise.
 
 1. **Le verrou est aligné.** `derive-instruments.py --resume` : les six compétences **OUVERTES**,
-   `argumentation v4.2 — 9 observables de télémétrie`. `--verifie` : **IDENTIQUE**, dix dérivés.
+   `argumentation v4.3 — 9 observables de télémétrie`. `--verifie` : **IDENTIQUE**, dix dérivés.
 2. **`utils/chaine/slots.ts`** — tête invariante *(4056 caractères sur le P1 de l'Argumentation)*,
    substitution sous balise de matériau, refus des deux sens au chargement.
 3. **`code2(artefactP2, sortieCode1, ctx)`** — la signature est celle du contrat.
@@ -160,12 +160,12 @@ croisent pas.*
 2. **`garant_cite` n'est plus dans `mesures`** : `code1` le jette une fois les bruts comptés. La
    télémétrie le **relit sur `document_p2`**, qui est le relevé entier — plutôt que d'ajouter un
    canal privé dans `mesures`, ce qui aurait rendu `mesures` incomparable au module.
-3. ⚠️ **LA POPULATION DES DEUX `proportion` N'EST PAS NOMMÉE PAR LA FICHE.** Les cinq `comptage
-   rapporté` déclarent leur `rapporte_a` ; `garant_present` et `lien_explicite` écrivent seulement
-   « proportion d'unités ». **Lecture retenue : les unités du décompte**, et pour un motif tiré de la
-   fiche — leur `sens` déclaré les adosse à la **règle d'agrégation du §4**, qui ne compte que le
-   décompte. *L'autre lecture donnerait 5/7 au lieu de 4/5 sur la copie de recette.* **Relevé au
-   registre des ouverts, item 48** : si Louis tranche autrement, c'est une ligne à changer.
+3. ⚠️ **LA POPULATION DES DEUX `proportion` N'ÉTAIT PAS NOMMÉE PAR LA FICHE — elle l'est depuis
+   4.3.** Les cinq `comptage rapporté` déclarent leur `rapporte_a` ; `garant_present` et
+   `lien_explicite` écrivaient seulement « proportion d'unités ». **Lecture retenue : les unités du
+   décompte**, pour un motif tiré de la fiche — leur `sens` les adosse à la **règle d'agrégation du
+   §4**, qui ne compte que le décompte. *L'autre lecture donnait 5/7 au lieu de 4/5 sur la copie de
+   recette.* ✅ **LA FICHE A TRANCHÉ DANS CE SENS LE JOUR MÊME** *(voir §14)* — item 48 **clos**.
 
 ---
 
@@ -196,7 +196,7 @@ fiche §4)*, et les deux `proportion` du §5 se rendent **non arrondies** — ex
 
 | Ce qui est exigé | Constaté |
 |---|---|
-| `--resume` déclare la compétence **ouverte** | ✅ `argumentation v4.2 — 9 observables de télémétrie` |
+| `--resume` déclare la compétence **ouverte** | ✅ `argumentation v4.3 — 9 observables de télémétrie` |
 | `--verifie` dit **IDENTIQUE** | ✅ dix dérivés |
 | `verifierCoherence()` ne rend **aucun écart** | ✅ |
 | Le branchement reproduit `code.py --autotest`, **sans appel de modèle** | ✅ **29 vecteurs** *(2 `code1`, 27 de composition)*, **les trois clés** comparées, `trace` mot pour mot |
@@ -219,7 +219,8 @@ l'épreuve négative sur la télémétrie AVANT de la faire sur le calcul.*
 
 **La recette sur base réelle — 52 contrôles verts, cinq vrais appels, deux compétences.**
 Bilan : `p1, p1, p2, p2, retour`, **52 s** *(trois tours : 47 s, 49 s, 52 s)*, deux squelettes portant
-chacun leurs deux artefacts, deux mesures, `instrument_version = 4.2`, `delta_v1_vf` **NULL**,
+chacun leurs deux artefacts, deux mesures, `instrument_version` **égale à la ligne VERSION de la
+fiche**, `delta_v1_vf` **NULL**,
 idempotence tenue, **aucune ligne `code1` ni `code2` au journal**, décor **retiré** *(aucun reste,
 vérifié par requête)*, `chaine_actif` **revenu à OFF**, **aucun statut `evaluee` posé**.
 
@@ -345,7 +346,8 @@ aucune. **Aucun statut de recette posé, et aucun proposé.**
 
 ## 13. Les questions ouvertes que ce lot NE tranche pas
 
-1. **La population des deux `proportion`** — lecture prise et motivée, relevée *(item 48)*.
+1. ~~**La population des deux `proportion`**~~ — ✅ **TRANCHÉE PAR LA FICHE 4.3, le jour même, dans
+   le sens du portage** *(item 48 clos ; voir §14)*.
 2. **Le `delta_v1_vf`** — la fiche se tait, comme celle de l'Expression *(item 47)*.
 3. **`seuil_franchi` recouvre deux choses** — « n'a pas franchi » et « n'a pas pu » — et le contexte
    promis au branchement ne porte **ni l'objet, ni la section d'instance** *(`CONTRAT-MODULES.md`
@@ -354,3 +356,39 @@ aucune. **Aucun statut de recette posé, et aucun proposé.**
    comme de trois autres. **Non inventé ici** *(`[à valider]`, §8)*. *Le tour de recette a d'ailleurs
    vu le contrôle de l'**Expression** lever **2 citations infidèles** sur la même copie.*
 5. **La latence à six compétences** — mesurée à deux *(47-52 s)*, extrapolation non faite.
+
+---
+
+## 14. ⭐ LA FICHE A BOUGÉ PENDANT LE LOT — 4.2 → 4.3, et dans le sens du portage
+
+**Constaté à la clôture, sur pièce** : `competences/argumentation.md` porte **VERSION 4.3** *(mtime
+08:53)*, et `copies-tests/_commun/config/argumentation.yaml` a été re-dérivée dans la foulée. Une
+séance de conception a tourné en parallèle de celle-ci.
+
+**Ce qu'elle change, et c'est exactement la question 3 du §6 :**
+
+| Avant (4.2) | Après (4.3) |
+|---|---|
+| `sens` : « la majorité stricte **des unités** portent un garant cité » | « la majorité stricte **des unités DU DÉCOMPTE** portent un garant cité » |
+| `sens` : « la majorité stricte **des unités** sont explicites après crible » | « la majorité stricte **des unités DU DÉCOMPTE** sont explicites après crible » |
+| §5 : « **proportion d'unités** dont `garant_cite` ≠ `[absent]` » | « proportion **DES UNITÉS DU DÉCOMPTE** dont `garant_cite` ≠ `[absent]` » |
+| §5 : « **proportion d'unités** `explicite` après crible » | « proportion **DES UNITÉS DU DÉCOMPTE** `explicite` après crible » |
+| §5 : `nb_limites`, « **nombre** d'unités `limite`, écartées comprises » | « **part** d'unités `limite`, écartées comprises » |
+
+⭐ **C'est mot pour mot la lecture que le branchement avait prise**, et pour le motif que la fiche
+vient d'écrire. Le cinquième changement confirme en outre la division du `comptage rapporté` : c'est
+bien une **part**, pas un nombre brut, que l'observable porte une fois la chaîne passée.
+
+**Ce que ça a demandé** : **rien dans le code du portage.** L'instrument a été re-dérivé — il porte
+**4.3**, `--verifie` dit **IDENTIQUE** —, et **le `[faux]` posé au §7 a survécu à l'amendement** *(il
+est hors des marqueurs, et la séance de conception ne l'a pas retiré : la dette D2 reste ouverte)*.
+
+⚠️ **UNE SEULE CHOSE ÉTAIT CASSÉE, ET C'EST UNE LEÇON** : la recette épinglait `'4.2'` **en dur**,
+à deux endroits. Une version recopiée dans un contrôle rougit pour une raison qui n'en est pas une.
+**Elle lit désormais `MANIFESTE_LU.competences.argumentation.version`** — ce qui doit être vrai,
+c'est que l'instrument importé porte la version que le manifeste dérivé déclare ; savoir si le
+dérivé a divergé de sa source, c'est le travail de `--verifie`, et de lui seul.
+
+⚠️ **La leçon reste pour les quatre reprises** : les familles `proportion` **ne déclarent pas** de
+`rapporte_a`, et leur population se lit dans le champ `sens`. *Déposée à la boîte aux lettres, item
+12.*
