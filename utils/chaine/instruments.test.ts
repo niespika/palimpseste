@@ -24,11 +24,13 @@ test('l\'instrument dérivé et son branchement sont COHÉRENTS', () => {
   assert.deepEqual(verifierCoherence(), [])
 })
 
-test('DEUX COMPÉTENCES SONT OUVERTES — dérivées ET branchées (C4-L10)', () => {
-  // ⭐ L'Expression le 22/08, l'Argumentation le 23/08. « Une compétence de plus
-  //    est une compétence de plus à la rentrée, pas un lot de plus. »
-  assert.deepEqual(competencesOuvertes(), ['expression', 'argumentation'])
-  for (const c of ['expression', 'argumentation'] as const) {
+test('TROIS COMPÉTENCES SONT OUVERTES — dérivées ET branchées (C4-L10)', () => {
+  // ⭐ L'Expression le 22/08, l'Argumentation puis la Structure le 23/08. « Une
+  //    compétence de plus est une compétence de plus à la rentrée, pas un lot de
+  //    plus. » ⚠️ L'ordre est celui de `COMPETENCES` (`07-` §1.2), pas celui des
+  //    branchements : `competencesOuvertes()` filtre la liste des six.
+  assert.deepEqual(competencesOuvertes(), ['expression', 'argumentation', 'structure'])
+  for (const c of ['expression', 'argumentation', 'structure'] as const) {
     const e = etatCompetence(c)
     assert.equal(e.ouverte, true, c)
     assert.equal(e.motif, null, c)
@@ -37,12 +39,12 @@ test('DEUX COMPÉTENCES SONT OUVERTES — dérivées ET branchées (C4-L10)', ()
   }
 })
 
-test('LES QUATRE AUTRES SONT DÉRIVÉES, ET ATTENDENT LEUR BRANCHEMENT', () => {
+test('LES TROIS AUTRES SONT DÉRIVÉES, ET ATTENDENT LEUR BRANCHEMENT', () => {
   // ⚠️ Dérivée n'est pas branchée, et c'est un état NORMAL : C4-L10 se rejoue
   //    une compétence à la fois. Ce n'est pas une incohérence — mais ce n'est
   //    pas tacite non plus, et c'est tout l'objet de cette liste.
   assert.deepEqual(competencesEnAttenteDeBranchement(),
-    ['structure', 'connaissance', 'synthese', 'questionnement'])
+    ['connaissance', 'synthese', 'questionnement'])
   for (const c of COMPETENCES) {
     assert.equal(!!MANIFESTE_LU.competences[c]?.ouverte, true,
       `${c} : la fiche devrait dériver — le seuil est *relu et validé*`)
@@ -91,6 +93,33 @@ test('L\'ARGUMENTATION porte ses NEUF observables du §5, et AUCUN paramètre', 
   assert.deepEqual(valeursDesParametres(e.instrument!), {})
   assert.deepEqual(Object.keys(e.instrument!.prompts).sort(), ['P1', 'P2'])
   assert.match(e.instrument!.statut, /RELUE ET VALIDÉE/)
+})
+
+test('LA STRUCTURE porte ses HUIT observables du §5, et le SEUL `prepare_copie`', () => {
+  const e = etatCompetence('structure')
+  assert.deepEqual(Object.keys(e.instrument!.observables_mesure).sort(), [
+    'bloc_relie', 'bloc_unite', 'charniere_formule', 'charniere_motivee',
+    'derive', 'jointure_presente', 'plan_tenu', 'promesse_presente',
+  ])
+  // Les DEUX dénominateurs, sous le nom EXACT que la fiche leur donne.
+  assert.equal(e.instrument!.observables_mesure.charniere_formule.rapporte_a,
+    'les charnières du squelette')
+  assert.equal(e.instrument!.observables_mesure.derive.rapporte_a,
+    'les blocs de développement')
+  // ⭐ `plan_tenu` est le SEUL observable des trois compétences ouvertes à porter
+  //    un `sans_objet_si` : « n/a sans annonce, et n/a n'est ni réussi ni raté ».
+  assert.equal(e.instrument!.observables_mesure.plan_tenu.sans_objet_si, 'n/a')
+  // Aucun paramètre : la pondération cohérence/cohésion reste la question
+  // ouverte du §8, et « le jour où elle se tranche, elle entre en paramètre ».
+  assert.deepEqual(valeursDesParametres(e.instrument!), {})
+  assert.deepEqual(Object.keys(e.instrument!.prompts).sort(), ['P1', 'P2'])
+  assert.match(e.instrument!.statut, /RELUE ET VALIDÉE/)
+  // ⭐⭐ ET LE CROCHET QUI N'EXISTE QUE POUR ELLE : « les lignes vides sont des
+  //    frontières de blocs ». C'est une copie RENUMÉROTÉE que P1 reçoit, et ce
+  //    sont ces numéros que tout le relevé désigne.
+  assert.equal(typeof etatCompetence('structure').branchement!.prepareCopie, 'function')
+  assert.equal(etatCompetence('expression').branchement!.prepareCopie, undefined)
+  assert.equal(etatCompetence('argumentation').branchement!.prepareCopie, undefined)
 })
 
 test('les PARAMÈTRES se lisent APLATIS — un bloc lu tel quel serait un objet', () => {

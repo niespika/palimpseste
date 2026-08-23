@@ -1677,7 +1677,13 @@ sont plus les mêmes, et elles ne se lèveront pas ensemble.
   fiche ne dit nulle part ce que « comparer deux squelettes » veut dire pour elle, et l'inventer
   depuis le code serait trancher une règle de grille. La chaîne le dit par une alerte et laisse
   **NULL — qui n'est pas 0**. **Condition de reprise : une fiche qui DÉFINIT son delta.** *Porté au
-  registre des ouverts, et à la boîte aux lettres de C4-L10.*
+  registre des ouverts, et à la boîte aux lettres de C4-L10.* ⭐⭐ **AMENDÉ LE 23/08 — TROIS FICHES
+  SUR TROIS SE TAISENT, ET LA TROISIÈME COMPTE DESSUS.** L'Argumentation ne le définit pas non plus
+  *(le mot n'y figure pas une fois)* ; **la Structure non plus — mais son §8 en fait l'arbitre
+  empirique de sa seule vraie question ouverte**, la pondération cohérence/cohésion : *« arbitre
+  empirique possible : les deltas v1→vf »*. **Une source s'appuie donc sur une grandeur que rien ne
+  calcule.** Ce n'est plus un oubli de l'Expression : c'est **une case du gabarit du `03-` §1 que
+  personne n'a remplie**. *Registre des ouverts, item 47, amendé deux fois.*
 
 ### Ce qui est prouvé — pour ne pas le rejouer
 
@@ -3027,9 +3033,9 @@ CODE ; poser `evaluee` est un geste **du professeur**, à l'écran de C4-L8. **R
   ⚠️ **Condition de reprise nommée** : la règle 2 du gabarit exige de « commencer par une réussite réelle, citée », la
   règle 1 interdit d'en inventer une, et une copie plancher n'en porte aucune — le retour est alors
   **structurellement impossible**, et l'élève ne reçoit rien. *Porté au registre des ouverts.*
-- [ ] **C4L10-15 · ⭐ LES QUATRE AUTRES COMPÉTENCES — DÉPEND D'UNE AUTRE COMPÉTENCE QUE CELLE
-  OUVERTE.** ✅ **L'ARGUMENTATION EST BRANCHÉE LE 23/08** — elles ne sont plus cinq mais quatre.
-  `structure`, `connaissance`, `synthese`, `questionnement` sont **dérivées et en
+- [ ] **C4L10-15 · ⭐ LES AUTRES COMPÉTENCES — DÉPEND D'UNE AUTRE COMPÉTENCE QUE CELLE
+  OUVERTE.** ✅ **L'ARGUMENTATION PUIS LA STRUCTURE SONT BRANCHÉES LE 23/08** — elles ne sont plus
+  cinq, ni quatre, mais **TROIS**. `connaissance`, `synthese`, `questionnement` sont **dérivées et en
   attente de branchement**. **Condition de reprise : C4-L10 rejoué pour chacune** — le lot est écrit
   pour ça, et la boîte aux lettres du `PLAN_DE_CHANTIER.md` §5 porte ce que le premier portage a
   appris. ⚠️ **Trois d'entre elles ont un obstacle NOMMÉ, trouvé en lisant leurs modules** : la
@@ -3039,8 +3045,12 @@ CODE ; poser `evaluee` est un geste **du professeur**, à l'écran de C4-L8. **R
   ce lot — c'est « le seul défaut de ce contrat dont RIEN NE TÉMOIGNE »)* ; la **Connaissance** dont
   `pre_p1` prend le TEXTE là où le contrat §2 et le banc passent le CONTEXTE *(même écart que
   l'Expression — le banc lèverait une `AttributeError` au premier passage ; ce lot l'a contourné en
-  suivant LE CONTRAT, qui est au manifeste)* ; et la **Structure**, dont `prepare_copie` doit être
-  confronté au correctif CRLF de C4-L4 *(piège 17)*.
+  suivant LE CONTRAT, qui est au manifeste)* ; et ~~la **Structure**, dont `prepare_copie` doit être
+  confronté au correctif CRLF de C4-L4 *(piège 17)*~~ — ✅ **LE TROISIÈME OBSTACLE EST TOMBÉ LE
+  23/08, ET IL N'EN ÉTAIT PAS UN** : `normaliserRetours()` ramène `\r\n?` à `\n` **à l'écriture**
+  du dépôt et ne nettoie rien d'autre, `prepare_copie` découpe et renumérote **à la lecture** — le
+  premier garantit au second que ses `\n` sont des `\n`, et le crochet tient même sur du CRLF brut
+  *(C4L10S-6)*. **Deux obstacles restent, et ils sont au chantier de conception.**
 - [x] **C4L10-16 · LA LATENCE À DEUX COMPÉTENCES — JOUÉE le 23/08, par C4-L10 · Argumentation.**
   La deuxième compétence est branchée. **47 s, 49 s et 52 s** sur trois tours réels à deux
   compétences, contre 39 s à une — les chaînes tournent bien en parallèle *(= C4L5-2)*.
@@ -3423,3 +3433,231 @@ et **cinq vrais appels de modèle**, décor semé puis **retiré** (aucun reste,
   d'instance** (`CONTRAT-MODULES.md` §8, `[à valider]`). **Le portage rend le comportement du module
   tel qu'il est** — `oui`/`non`, jamais `n/a`. **Condition de reprise : l'arbitrage de ce que le
   CONTEXTE doit porter**, qui n'est pas une règle de notation.
+
+---
+
+## C4 · L10 — L'ouverture d'une compétence dans la chaîne : la STRUCTURE (sandbox, 23/08)
+
+_Section ouverte le 23/08 à la clôture du lot. **Aucune migration** : ce lot ne touche que du code,
+un dérivé et un `[faux]` de source — le suivi SQL n'a pas bougé, et n'avait pas à bouger._
+
+_Ce qui a été prouvé EN SÉANCE est coché avec sa preuve. `npm test` : **1116 passés, 0 échoué**
+(dont **32 neufs** sur ce portage ; l'état d'entrée était 1083/1083, plus une entrée de registre
+mise à jour) ; `npx tsc --noEmit` : rien ; `npx eslint` sur les fichiers du lot : **0 erreur**,
+2 avertissements sur des paramètres de contrat volontairement non lus, chacun commenté — les mêmes
+que sur l'Argumentation ; `python3 scripts/derive-instruments.py --verifie` : **IDENTIQUE** sur les
+dix dérivés ; `scripts/recette/structure-c4l10.mjs` : **60 contrôles, 60 passés**, joués **par le
+même code que la route**, en base, sur un **dépôt réel à TROIS compétences** et **sept vrais appels
+de modèle**, décor semé puis **retiré** (aucun reste, vérifié par requête)._
+
+⛔ **AUCUN STATUT DE RECETTE N'A ÉTÉ POSÉ, et aucun n'est proposé.** La Structure est
+`mesuree_silencieusement` — son état de naissance. **Rien n'a changé pour un élève.**
+
+⚠️ **`chaine_actif` est REVENU à OFF**, vérifié par requête à la fin de chaque tour de recette.
+
+### Ce qui est prouvé — pour ne pas le rejouer
+
+- [x] **C4L10S-1 · LA STRUCTURE EST OUVERTE — dérivée, importée, branchée.**
+  `derive-instruments.py --resume` la déclare **ouverte** en **v3.3**, `--verifie` dit **IDENTIQUE**,
+  `verifierCoherence()` rend **[]**, et `competencesOuvertes()` rend
+  **`expression, argumentation, structure`**. Les trois qui restent —
+  `connaissance, synthese, questionnement` — sont **dérivées et en attente**, et
+  `competencesEnAttenteDeBranchement()` les nomme.
+- [x] **C4L10S-2 · ⭐⭐ LA CONTRE-ÉPREUVE DES 112 COUPLES RÉELS — la preuve que les cinq autres
+  compétences n'auront pas.** `TESTS_P2_PARFAIT` est **vide**, `TESTS_CODE1_PARFAIT` porte **UN**
+  vecteur, `VERSION_GOLDS_TESTEE` vaut **None** : les vecteurs embarqués ne prouvent presque rien.
+  ⚠️ **Et les « 9 golds » du dossier `golds/` n'en sont pas** : ce sont neuf `Gabarit-CopieN.doc`,
+  des **gabarits Word vides**. La fiche §9 le dit — *« le fichier qui fait foi est
+  `gold-structure.md`, celui qui porte un `version_golds` — **il n'existe pas encore** »*. **La
+  Structure repart au Run 1, golds d'abord.**
+  Mais `copies-tests/structure/resultats/` porte **112 couples (P1, P2) RÉELLEMENT PRODUITS PAR LE
+  BANC** — 15 du 17/07, 27 du run du 30/07, 70 des trois bancs nichés 5×5. **Les deux côtés les
+  rejouent sur les mêmes entrées, et LES TROIS CLÉS sont identiques** : `verdicts`, `trace` mot pour
+  mot, `alertes`. **Aucun appel, aucune dépense.** ⭐ Ils portent ce qu'aucun vecteur synthétique ne
+  porte : des accents, des apostrophes typographiques, des `niveau` hors catalogue, des
+  `parties[].blocs` en dictionnaires, **deux générations de schéma de squelette**, et un P2 qui
+  rendait encore des niveaux. ⚠️ **Et il a fallu les DÉSENVELOPPER** : les `-p2.json` du 30/07 ne
+  portent pas la sortie de P2 mais une **enveloppe de run** `{jugements_modele, calcul_code}` ; passée
+  telle quelle, elle n'a ni `doublon` ni `retour_en_arriere`, et **les 97 couples tombaient tous en
+  `PASSAGE MANQUÉ`** — la contre-épreuve était verte et ne prouvait qu'une chose : que les deux côtés
+  savent refuser une sortie tronquée. *Les **65** qui restent en `PASSAGE MANQUÉ` après
+  désenveloppage sont les vrais : leur P2 est d'avant la v1.4 et ne rend pas les deux booléens
+  obligatoires — « le silence du juge ne vaut jamais acquiescement », sur pièce.*
+- [x] **C4L10S-3 · LE BALAYAGE — 1 254 cas de plus, dans la même fonction du même module.** Neuf
+  familles : **400** distributions de charnières × tissu *(A6, A7)*, **210** statuts déclarés et
+  notes de « limite », **336** états du socle de la cohérence *(A1)*, **96** croisements de la
+  cascade A10, **96** paliers couvrant **les seize cellules** du croisement, **76** textes de la
+  RECETTE, **23** découpages de `prepare_copie`, **17** valeurs d'énumération bordées de blancs, et
+  **27** formes illisibles. **Il n'invente aucune règle** — il cesse de ne la demander qu'une fois.
+- [x] **C4L10S-4 · ⭐⭐ L'ÉPREUVE NÉGATIVE — 29 MUTATIONS, 29 TOMBÉES.** Le portage a été cassé
+  **règle par règle**, et le contrôle a été regardé. **Cinq ont survécu au premier passage**, et
+  l'avertissement de la boîte aux lettres s'est vérifié : **TROIS des cinq étaient dans la
+  TÉLÉMÉTRIE**. La parade a été celle qu'elle prescrit — des comptes **asymétriques**, et **au moins
+  un élément écarté du décompte qui porte quand même la propriété mesurée** :
+  · `bloc_relie` — une couture de tissu à **relation illisible** *(la seule chose qui sépare
+  « du tissu » de « des relations lisibles »)* ;
+  · `derive` — un bloc de **service déclaré « hors annonce »** *(la seule chose qui sépare « les
+  blocs de développement » de « tous les blocs »)* ;
+  · `promesse_presente` — les cas où **UN SEUL** des deux termes du « et/ou » est présent ;
+  · le garde-fou Absent — **deux formes hors catalogue** *(« question posée » l'ouvre, « tension » ne
+  l'ouvre pas)*, parce que toute forme DU catalogue rend Absent inatteignable et laisse la lecture
+  stricte inéprouvable ;
+  · `_n()` — des valeurs d'énumération bordées de **`\x85`, `\x1f` et de la BOM**.
+  ⭐ **Au deuxième passage, les 29 tombent.** *Le fichier est restauré à l'identique après chaque
+  mutation, vérifié par `diff`.*
+- [x] **C4L10S-5 · ⭐⭐ LES QUATRE ÉCARTS DE LANGAGE, ET UN CINQUIÈME QUE CE LOT A TROUVÉ.**
+  `utils/chaine/python.ts` en portait quatre depuis l'Argumentation ; **la Structure en a ajouté
+  un** : **les blancs de Python ne sont pas ceux de JavaScript.** Vérifié caractère par caractère —
+  Python tient `\x1c`-`\x1f` et `\x85` pour des blancs, JavaScript non ; JavaScript tient la BOM
+  pour un blanc, Python non. Or `_n()` fait un `strip()` **de Python** sur TOUTES les valeurs
+  d'énumération du squelette, et `prepare_copie` découpe sur `\n\s*\n+`. ⚠️⚠️ **CE QUE ÇA COÛTE, ET
+  ÇA NE SE VOIT PAS** : une ligne « vide » faite d'un `\x85` est une **frontière de bloc** pour
+  Python et pas pour JavaScript — donc **une couture de plus ou de moins** ; et « étape 1 » et
+  « étape\x1f1 » sont **la même étape** pour Python — donc du TISSU — et deux étapes différentes
+  pour JavaScript — donc une **CHARNIÈRE**. ⭐ **Deuxième trouvaille, et elle est cent fois plus
+  fréquente** : le `\w` de Python est UNICODE. Vérifié — **« la 3ème partie » ne contient AUCUN
+  nombre pour lui**, et « café3 » non plus. Porté naïvement, le contrôle de recette aurait accusé le
+  juge d'avoir compté **à chaque copie qui écrit « 3ème »**. Le module de formes porte désormais
+  `CAR_BLANC_PYTHON`, `CAR_MOT_PYTHON`, `CAR_CHIFFRE_PYTHON`, `strip`, `remplaceBlancs`, `estVrai`,
+  `itere`, `longueur` et `trie` — **écrits une fois, pour les six**.
+- [x] **C4L10S-6 · ⭐ `prepare_copie` NE SE CONTREDIT PAS AVEC LE CORRECTIF CRLF — l'obstacle annoncé
+  n'en était pas un.** Vérifié sur pièce : `normaliserRetours()` ramène `\r\n?` à `\n` **et ne
+  nettoie rien d'autre** ; il tourne à **l'ÉCRITURE** du dépôt (`utils/deroule/depot.ts`).
+  `prepare_copie` découpe et renumérote à la **LECTURE**. Le premier garantit au second que ses `\n`
+  sont des `\n`. ⭐ **Et le crochet tient même sur du CRLF brut** — son `\n\s*\n+` avale le `\r` —,
+  ce qui est précisément **ce qui rendait le défaut de C4-L4 invisible de ce côté-ci** : ce n'est
+  jamais `prepare_copie` qui planchait, c'est `blocs()`. ⚠️ **UNE SEULE NUANCE, RELEVÉE ET NON
+  ARBITRÉE** : `blocs()` coupe sur `\n[ \t]*\n+`, le module sur `\n\s*\n+`. **Une ligne « vide »
+  faite d'une espace insécable est UNE frontière pour la Structure et AUCUNE pour l'écran de
+  l'élève** — le compteur de blocs qu'il voit et celui que la mesure lit divergeraient d'un. Un test
+  le fixe dans les deux sens.
+- [x] **C4L10S-7 · LES HUIT OBSERVABLES DU §5 ONT TOUS UNE VALEUR, OU LEUR ALERTE NOMMÉE.** Vérifié
+  sur **les 1 366 passages** du corpus : pour chacun des huit, ou bien le relevé porte une entrée, ou
+  bien une alerte commence par son code — **jamais ni l'un ni l'autre, jamais les deux**. ⭐ **Et un
+  `PASSAGE MANQUÉ` ne les fait pas taire** : sept des huit ne dépendent d'aucun des deux jugements
+  manquants, et ils se rendent quand même ; **seul `derive` dit son alerte**. *Les perdre serait
+  perdre sept signaux d'escalade sur une copie que la chaîne a pourtant lue.*
+- [x] **C4L10S-8 · LES DEUX DÉNOMINATEURS SONT DES PHRASES, et le relevé les porte.**
+  `charniere_formule` se rapporte à **« les charnières du squelette »**, `derive` à **« les blocs de
+  développement »** — `observables.ts` cherche l'entrée **sous ce nom exact**. Un test les échange
+  volontairement et le contrôle tombe.
+- [x] **C4L10S-9 · ⭐⭐ CE QUE PORTER RETIRE, MESURÉ SUR LE CORPUS RÉEL.** Le P2 de la Structure
+  ouvre la route de la promesse sur *« problème **et/ou** plan annoncés »*, et « les deux modèles
+  réparaient le et/ou sans le dire ». **Le code applique le texte.** Compté sur les 112 couples :
+  **69 portent UN SEUL des deux termes** *(60 un problème seul, 9 un plan seul)* — sur ces 69, le
+  code ouvre la route là où un « et » la fermerait. ⚠️ **Et la route ouverte est PLUS FACILE** : sa
+  clause « étapes réalisées dans l'ordre » devient vide sans annonce, et sur une copie faible cela
+  donne `défaillance` au lieu de `défaillance forte`. **C'est la coupure D/C du routeur, et elle
+  tient à un « ou ».** *L'écart est nommé, mesuré, et il ne se corrige pas : la fiche fait foi.*
+- [x] **C4L10S-10 · LE CONTRÔLE GRATUIT DU CONTRAT §7 — ce que le modèle réparait, cas par cas.**
+  **Onze motifs d'alerte nommés** sont rencontrés sur le corpus réel : `PASSAGE MANQUÉ` (65),
+  `RECETTE` (27), `CONFORMITE` (27), `CRIBLE_NON_APPARIE` (26),
+  `GARDE_FOU_REINTEGRATION_SEUILS` (21), `PROMESSE_INCOHERENTE` (14), `SQUELETTE_INCOHERENT` (15),
+  `NIVEAU_HORS_CATALOGUE` (12), `COPIE_SANS_COUTURE` (3), `OBJETS_DISTINCTS_HORS_PERIMETRE` (3),
+  `TROU_DECLARE_ACQUIS` (1). **Le portage n'a eu à en créer aucune** — c'est le bénéfice de
+  l'extraction. ⚠️ **QUATRE CAS Y ÉCHAPPENT POURTANT**, et ils sont au registre des ouverts *(item
+  51)* : une `relation_nommee` illisible **(68 fois sur 112)**, un `entre` illisible **(11 fois)**,
+  un `statut` et un `role` hors catalogue. ⛔ **Le portage ne les a pas ajoutées** : une alerte de
+  plus ferait diverger la troisième clé, et le « fait quand » exige l'identité.
+- [x] **C4L10S-11 · LE PORTAGE NE LÈVE JAMAIS.** **Quinze** des vingt-sept formes du balayage font
+  **lever le module** — `.get` sur un non-dictionnaire, `for … in` sur un nombre, `len()` sur un
+  entier —, quand le contrat §3 l'interdit. Chacune rend ici **une alerte nommée**, et un verdict
+  sort quand même. ⭐ **Et une forme n'est PAS un durcissement mais la sémantique** : une CHAÎNE est
+  itérable en Python et rend ses caractères, donc `gestes: "manque"` ne porte **aucun** geste
+  « manque ». Un portage qui la lirait comme un geste unique **inventerait une motivation** et
+  ferait monter la copie d'un cran.
+- [x] **C4L10S-12 · LE DÉPÔT RÉEL, À TROIS COMPÉTENCES.** Sept appels, **TROIS squelettes**, **TROIS
+  mesures**, la lettre **C** pour la Structure, ses **huit** observables écrits, `delta_v1_vf` à
+  **NULL**, une ligne d'`api_couts` **par appel** (`p1, p1, p1, p2, p2, p2, retour`) et **aucune**
+  pour `code1`/`code2`. **Reprise** : aucune seconde mesure, aucun second squelette. ⭐ **P1 a rendu
+  EXACTEMENT autant de blocs que la copie en portait de paragraphes** (5 pour 5) — « le découpage
+  t'est donné, tu n'en fusionnes aucun » —, **et il n'a qualifié aucune jointure** : ni `statut`, ni
+  `niveau`, exactement comme la fiche §3 le pose.
+- [x] **C4L10S-13 · ⭐ LA `cible_primaire` BAT L'ORDRE ALPHABÉTIQUE, sur trois instances.** Le repli
+  aurait dit « argumentation » dans les trois cas ; il ne sert que sur celle qui ne vise rien, et
+  **l'alerte tombe**. *C4-L11 tenait sa promesse ; le piège de l'alphabet ne mord pas.*
+- [x] **C4L10S-14 · ⭐ LA LATENCE À TROIS COMPÉTENCES : 55 s.** Contre **39 s à une** (Expression) et
+  **47-52 s à deux** (Argumentation), pour un contrat de moins de trois minutes. ⭐ **La marge se
+  lit, et la courbe est plate** : passer de deux à trois coûte **~4 s**, quand passer d'une à deux en
+  coûtait ~13 — les chaînes tournent bien en parallèle, et le retour est l'appel commun.
+  ⚠️ **À six, l'extrapolation reste à faire.**
+- [x] **C4L10S-15 · LE RETOUR ENGENDRÉ ET LU — trois points, RR4 propre.** Le retour est sorti,
+  segmenté en trois points à identifiant stable, `published_at` **NULL**, registre `descriptif`. Son
+  texte intégral est au relevé de cette séance. **Aucun nom d'observable, aucun palier, aucune note**
+  n'y paraît. ⭐ **Et le point 2 porte bien sur la Structure** — la charnière rétrogradée —, avec sa
+  citation exacte et son levier.
+- [x] **C4L10S-16 · AUCUN CANAL N'A ÉTÉ AJOUTÉ AU SOCLE.** La promesse de l'item 1 de la boîte aux
+  lettres tient pour la **troisième** fois : `BranchementCompetence` n'a pas bougé, et
+  `prepareCopie` — le seul crochet que la Structure ouvre pour de bon — **y était déjà**, posé par la
+  séance Expression sans client. *Le seul ajout est au module de FORMES, pas à l'interface.*
+
+### Ce que ce lot vient de LEVER ailleurs dans ce fichier
+
+- [ ] **C4L10-15 · Les compétences qui restent — ELLES NE SONT PLUS QUATRE MAIS TROIS.**
+  `connaissance`, `synthese`, `questionnement` sont dérivées et en attente de branchement.
+  **Condition de reprise inchangée : C4-L10 rejoué pour chacune.** ⭐ **ET LE TROISIÈME OBSTACLE
+  NOMMÉ AU TOUR DE L'EXPRESSION EST TOMBÉ** — « la Structure et son `prepare_copie` face au
+  correctif CRLF » n'en était pas un *(voir C4L10S-6)*. **Les deux autres tiennent** : la Synthèse
+  dont `code1` ne rend pas `document_p2`, la Connaissance dont `pre_p1` prend le TEXTE.
+- [ ] **C4L5-4 · Le `delta_v1_vf` — TROIS FICHES SUR TROIS SE TAISENT, et la troisième compte
+  dessus.** Condition de reprise **inchangée** : *une fiche qui DÉFINIT son delta*. ⚠️ **Mais elle
+  s'est durcie** : `competences/structure.md` ne le définit nulle part **et son §8 en fait l'arbitre
+  empirique de sa seule vraie question ouverte** — *« la pondération cohérence/cohésion … arbitre
+  empirique possible : les deltas v1→vf »*. **Elle s'appuie sur une grandeur que rien ne calcule.**
+  *Registre des ouverts, item 47, amendé.*
+- [ ] **C4L5-1bis · Le RETOUR relu sur pièce (RR1-RR4) — un deuxième retour est disponible.** La
+  condition était levée depuis le 23/08 ; **le tour de la Structure en a engendré un second**, sur
+  une copie différente et à trois compétences. Son texte intégral est au relevé. **Ce qui reste est
+  toujours la relecture RR1-RR4 par le professeur** — automatiquement, seule RR4 est contrôlée.
+  ⭐ **Bonne nouvelle sur l'item 49** : ce retour-ci **n'invente aucun passé** — il ne porte aucune
+  comparaison temporelle. *Un cas ne fait pas une garde ; la question reste ouverte.*
+- [ ] **C4L10-14 · Le retour engendré sur une copie qui porte une réussite — MÊME LEVÉE, même
+  reste** *(voir C4L5-1bis)*.
+
+### Ce qui reste à jouer en recette
+
+- [ ] **C4L10S-17 · LE SMOKE PROF ET ÉLÈVE À L'ÉCRAN.** Rien n'a été vu dans un navigateur : tout ce
+  qui précède est prouvé **par requête et sur pièce**, jamais à l'œil. À voir : la tuile de la
+  fabrique, qui doit maintenant dire **trois** compétences ouvertes. **Condition de reprise :
+  `fabrique_actif` ouvert le temps du smoke, et refermé après.** *Le même reste que C4L10-13 et
+  C4L10A-13 — il s'accumule, et il se jouera d'un coup.*
+- [ ] **C4L10S-18 · ⚠️⚠️ `bloc_relie` — LE §5 ET LE §4 NE COMPTENT PAS LA MÊME POPULATION.** Le §5
+  écrit *« proportion **du tissu** dont la relation est nommée »* — le tissu ENTIER, et c'est ce que
+  le portage applique. Le champ `sens` du bloc machine l'adosse au **§4, point 4**, qui compare
+  `oui > non` et **laisse dehors** toute couture dont la relation est illisible. **Les deux lectures
+  divergent sur ce seul cas — et il apparaît 68 fois sur les 112 couples réels.** ⛔ **Le portage a
+  suivi la fiche** : elle nomme sa population, et une session Code ne corrige pas une source. **La
+  lecture est commentée et fixée par un test discriminant** — si l'arbitrage tombe dans l'autre sens,
+  c'est **une ligne à changer**. **Condition de reprise : une décision de Louis sur la population**
+  *(registre des ouverts, item 50)*.
+- [ ] **C4L10S-19 · ⚠️ QUATRE VALEURS ILLISIBLES DU SQUELETTE NE LÈVENT AUCUNE ALERTE.** Le contrat
+  §3 veut *« une alerte, pas une valeur par défaut »* ; le module le tient sur onze motifs et le
+  manque sur quatre — `relation_nommee` illisible **(68/112)**, `entre` illisible **(11/112)**,
+  `statut` et `role` hors catalogue. ⛔ **Ne pas les ajouter au branchement** : ce serait diverger du
+  module sur la troisième clé. **Condition de reprise : une décision de MODULE, au chantier de
+  conception, AVANT le Run 1 de la Structure** *(registre des ouverts, item 51)*.
+- [ ] **C4L10S-20 · ⚠️ LE PARI DU §8 EST ACTIF, ET IL SE VOIT SUR PIÈCE.** *« Le dispositif mesure
+  l'architecture TELLE QU'ELLE EST ÉCRITE : une copie saisie sans retour à la ligne est lue comme
+  dépourvue d'architecture — défaillance forte, alerte déclarée. »* Le corpus réel le montre **trois
+  fois** (`COPIE_SANS_COUTURE`, avec sa RÉSERVE), et **21 fois** le garde-fou de réintégration des
+  seuils. ⚠️ **Sa condition de fermeture est une contrainte D'INTERFACE, pas de mesure** — *« une
+  interface de rédaction qui garantit le découpage en paragraphes »* *(`07-` §3)*. **Condition de
+  reprise : le smoke de l'écran de rédaction**, qui dira si l'élève peut rendre une copie d'un seul
+  tenant sans être averti.
+- [ ] **C4L10S-21 · ⚠️ LE CONTRÔLE D'EXISTENCE DES CITATIONS N'EXISTE PAS SUR LA STRUCTURE.** Son P1
+  rend **quatre champs de verbatim** — `texte_cite`, `fin_bloc_precedent`, `debut_bloc_suivant`,
+  `idee_directrice_citee` — et le `CONTRAT-MODULES.md` §3 rend le contrôle **obligatoire** ; le §8
+  constate que *« Argumentation, Questionnement, Structure et Synthèse n'en ont aucun »*.
+  ⭐ **Le module reçoit pourtant la copie** — `code1` la lit sous `contexte["copie"]` — **et ne s'en
+  sert jamais** : le canal est là, le client n'y est pas. ⛔ **Ne pas l'inventer dans le
+  branchement.** **Condition de reprise : la condition de fermeture du pari de l'Expression, le
+  premier lot réel.**
+- [ ] **C4L10S-22 · ⚠️ P1 A SOUS-DÉCLARÉ SES PARTIES MARQUÉES, SUR LE DÉPÔT RÉEL — et la cascade a
+  rattrapé.** La copie de recette ouvre deux paragraphes par « D'abord » et « Dans un second temps »,
+  que le prompt P1 nomme explicitement comme **marqueurs de partie** ; **P1 a rendu `parties: []`**.
+  La charnière est née quand même, **par la troisième branche de la cascade A10** *(deux étapes
+  annoncées différentes)*. ⭐ **Les deux routes vers une charnière ne sont donc pas redondantes**, et
+  sur cette copie **seule la seconde a servi** — une copie sans annonce de plan n'aurait eu ni l'une
+  ni l'autre. ⛔ **Ce n'est pas un défaut du portage** : le code compose ce que P1 consigne.
+  **Condition de reprise : le Run 1 de la Structure**, qui dira si la sous-déclaration est fréquente
+  — et, si elle l'est, si c'est le prompt qu'il faut resserrer.

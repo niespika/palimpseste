@@ -36,6 +36,8 @@ import { INSTRUMENT_EXPRESSION } from './derive/competences/expression'
 import { BRANCHEMENT_EXPRESSION } from './branchements/expression'
 import { INSTRUMENT_ARGUMENTATION } from './derive/competences/argumentation'
 import { BRANCHEMENT_ARGUMENTATION } from './branchements/argumentation'
+import { INSTRUMENT_STRUCTURE } from './derive/competences/structure'
+import { BRANCHEMENT_STRUCTURE } from './branchements/structure'
 import { refusSlotsExtraction, refusSlotsJugement } from './slots'
 import { COMPETENCES, type Competence } from './types'
 
@@ -381,6 +383,16 @@ const INSTRUMENTS: Partial<Record<Competence, InstrumentCompetence>> = {
   //    portage se prouve aux 29 vecteurs embarqués du module ET AU BALAYAGE —
   //    723 entrées de plus dans les mêmes fonctions du même module.
   argumentation: INSTRUMENT_ARGUMENTATION as unknown as InstrumentCompetence,
+  // C4-L10, 23/08/2026 — la Structure est LA TROISIÈME, et elle est la seule des
+  // six à ouvrir DEUX choses de plus. ⭐ `prepare_copie` : elle est la seule à le
+  // définir, et le contrat dit pourquoi — « les lignes vides sont des frontières
+  // de blocs » ; c'est une copie RENUMÉROTÉE que P1 reçoit, et ce sont ces
+  // numéros que tout le relevé désigne. ⭐⭐ Et LES ARTEFACTS DE RUN : elle n'a ni
+  // gold ni vecteur P2 (`TESTS_P2_PARFAIT` vide, `VERSION_GOLDS_TESTEE = None`),
+  // mais 112 couples (P1, P2) réellement produits par le banc dorment dans son
+  // dossier — une contre-épreuve gratuite qu'aucune des cinq autres n'a, et qui
+  // porte deux générations de schéma de squelette.
+  structure: INSTRUMENT_STRUCTURE as unknown as InstrumentCompetence,
 }
 
 /**
@@ -394,6 +406,7 @@ const INSTRUMENTS: Partial<Record<Competence, InstrumentCompetence>> = {
 const BRANCHEMENTS: Partial<Record<Competence, BranchementCompetence>> = {
   expression: BRANCHEMENT_EXPRESSION,
   argumentation: BRANCHEMENT_ARGUMENTATION,
+  structure: BRANCHEMENT_STRUCTURE,
 }
 
 export interface EtatCompetence {
