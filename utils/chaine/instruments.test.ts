@@ -24,16 +24,14 @@ test('l\'instrument dérivé et son branchement sont COHÉRENTS', () => {
   assert.deepEqual(verifierCoherence(), [])
 })
 
-test('CINQ COMPÉTENCES SONT OUVERTES — dérivées ET branchées (C4-L10)', () => {
-  // ⭐ L'Expression le 22/08 ; l'Argumentation, la Structure, la Connaissance
-  //    puis le Questionnement le 23/08. « Une compétence de plus est une
-  //    compétence de plus à la rentrée, pas un lot de plus. » ⚠️ L'ordre est
-  //    celui de `COMPETENCES` (`07-` §1.2), pas celui des branchements :
-  //    `competencesOuvertes()` filtre la liste des six.
-  assert.deepEqual(competencesOuvertes(),
-    ['expression', 'argumentation', 'structure', 'connaissance', 'questionnement'])
-  for (const c of ['expression', 'argumentation', 'structure', 'connaissance',
-    'questionnement'] as const) {
+test('LES SIX COMPÉTENCES SONT OUVERTES — dérivées ET branchées (C4-L10)', () => {
+  // ⭐ L'Expression le 22/08 ; l'Argumentation, la Structure, la Connaissance,
+  //    le Questionnement puis LA SYNTHÈSE le 23/08. « Une compétence de plus est
+  //    une compétence de plus à la rentrée, pas un lot de plus » — et il n'en
+  //    reste plus. ⚠️ L'ordre est celui de `COMPETENCES` (`07-` §1.2), pas celui
+  //    des branchements : `competencesOuvertes()` filtre la liste des six.
+  assert.deepEqual(competencesOuvertes(), [...COMPETENCES])
+  for (const c of COMPETENCES) {
     const e = etatCompetence(c)
     assert.equal(e.ouverte, true, c)
     assert.equal(e.motif, null, c)
@@ -42,15 +40,17 @@ test('CINQ COMPÉTENCES SONT OUVERTES — dérivées ET branchées (C4-L10)', ()
   }
 })
 
-test('LA DERNIÈRE EST DÉRIVÉE, ET ATTEND SON BRANCHEMENT', () => {
-  // ⚠️ Dérivée n'est pas branchée, et c'est un état NORMAL : C4-L10 se rejoue
-  //    une compétence à la fois. Ce n'est pas une incohérence — mais ce n'est
-  //    pas tacite non plus, et c'est tout l'objet de cette liste.
-  // ⚠️ La Synthèse porte un blocage NOMMÉ, et il appartient au chantier de
-  //    CONCEPTION : son `code1` ne rend pas `document_p2` — « le seul défaut de
-  //    ce contrat dont rien ne témoigne » (`CONTRAT` §2). À traiter avant de
-  //    l'ouvrir.
-  assert.deepEqual(competencesEnAttenteDeBranchement(), ['synthese'])
+test('AUCUNE N\'ATTEND PLUS SON BRANCHEMENT — C4-L10 est joué pour les six', () => {
+  // ⚠️ Dérivée n'est pas branchée, et c'était un état NORMAL tant que C4-L10 se
+  //    rejouait une compétence à la fois. La liste est désormais VIDE, et c'est
+  //    ce qui se contrôle : une reprise qui importerait un instrument sans son
+  //    branchement la ferait repousser, et la compétence serait silencieusement
+  //    muette.
+  // ⭐ Le blocage nommé de la Synthèse — son `code1` ne rendait pas
+  //    `document_p2`, « le seul défaut de ce contrat dont rien ne témoigne »
+  //    (`CONTRAT` §2) — a été RÉPARÉ au chantier de conception le 23/08, sur
+  //    mandat de Louis, avant l'ouverture.
+  assert.deepEqual(competencesEnAttenteDeBranchement(), [])
   for (const c of COMPETENCES) {
     assert.equal(!!MANIFESTE_LU.competences[c]?.ouverte, true,
       `${c} : la fiche devrait dériver — le seuil est *relu et validé*`)

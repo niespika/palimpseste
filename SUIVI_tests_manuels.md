@@ -4159,3 +4159,212 @@ de Louis.** Tout le reste du lot est fait, prouvé et vert.
   désormais un `lu()` qui lève sur `error`**, et c'est la parade générale. ⚠️ **Même motif que
   `C4L10C-24`** — « la recette lisait le mauvais champ et rougissait pour rien » : c'est la
   **deuxième fois en deux lots**. **Condition de reprise : aucune — c'est une leçon, pas un reste.**
+
+---
+
+## C4 · L10 — L'ouverture d'une compétence dans la chaîne : la SYNTHÈSE (sandbox, 23/08)
+
+_Section ouverte le 23/08 à la clôture du lot — **la sixième et dernière**. **Aucune migration** : ce
+lot ne touche que du code, le suivi SQL n'a pas bougé et n'avait pas à bouger. **Aucun `[faux]` posé
+dans une source** : rien de ce que le portage a trouvé n'est une source fausse._
+
+_Ce qui a été prouvé EN SÉANCE est coché avec sa preuve. `npm test` : **1 230 passés, 0 échoué**
+(dont **32 neufs** sur ce portage ; l'état d'entrée était **1 198/1 198**, et les 32 neufs
+l'ont porté à 1 230 — **deux entrées de registre** ont alors rougi, qui disaient « cinq compétences
+ouvertes » et « la dernière attend son branchement » : elles sont à jour) ; `npx tsc --noEmit` : **rien** ; `npx eslint` sur les fichiers du lot : **0 erreur**, 2
+avertissements `no-unused-vars` sur des paramètres imposés par la signature de l'interface — la même
+forme que `structure.ts` et `questionnement.ts` ; `derive-instruments.py --verifie` : **IDENTIQUE**
+sur les dix dérivés, **et la fiche n'a pas bougé** — aucun `--ecris` n'a été nécessaire.
+`scripts/recette/synthese-c4l10.mjs` : **64 contrôles, 64 passés**, joués **par le même code que la
+route**, en base, sur des **dépôts réels** et **seize vrais appels de modèle**, décor semé puis
+**retiré** (aucun reste, vérifié par requête)._
+
+⛔ **AUCUN STATUT DE RECETTE N'A ÉTÉ POSÉ, et aucun n'est proposé.** La Synthèse est
+`mesuree_silencieusement` — son état de naissance. **Rien n'a changé pour un élève.**
+
+⚠️ **`chaine_actif` est REVENU à OFF**, vérifié par requête à la fin de chaque tour de recette.
+
+⭐⭐ **ET CE LOT SE FERME SUR DEUX GESTES, DANS DEUX DÉPÔTS.** Le portage a été précédé d'une
+**réparation au chantier de conception**, sur mandat explicite de Louis : `synthese.code1` ne rendait
+`document_p2` sur **aucun** de ses deux chemins, et `banc.py` refusait le run pour ça — **le banc
+n'avait donc jamais pu tourner sur la Synthèse**. Voir `C4L10S-1` et `C4L10S-2`.
+
+⚠️⚠️ **ET IL SE FERME SUR UN FAIT QUI N'EST PAS UNE PANNE : LA SYNTHÈSE MESURE SUR LE RÉFÉRENT COURS
+ET SE TAIT SUR LE RÉFÉRENT TEXTE**, faute que la chaîne descende la **référence décomposée**. Voir
+`C4L10S-14`. ⭐ **C'est LE MÊME canal manquant que celui du Questionnement (`C4L10Q-15`), et un seul
+geste ferme les deux** — `exercices_references` porte `contenu` ET le texte source. Tout le reste du
+lot est fait, prouvé et vert.
+
+### Ce qui est prouvé — pour ne pas le rejouer
+
+- [x] **C4L10S-1 · ⭐⭐ LE MODULE DE CALIBRATION EST RÉPARÉ — `document_p2` EST RENDU SUR SES DEUX
+  CHEMINS.** *(dépôt de conception, `copies-tests/synthese/code.py`, NON commité)* `code1` rendait
+  `mesures` sans la quatrième clé du `CONTRAT-MODULES.md` §2 — obligatoire dès qu'un module définit
+  `code1` — avec un commentaire ligne 264 qui affirmait qu'elle *« n'est pas une clé du contrat »*.
+  ⚠️ **`banc.py` ligne 580 refusait le run pour ça : LE BANC N'A JAMAIS PU TOURNER SUR LA SYNTHÈSE**,
+  et rien ne le disait — l'autotest passait ses 57 vecteurs, `verifie-module.py` rendait REÇU. *Preuve :
+  autotest **57 → 66 vecteurs, 0 échec** (les 57 intacts) · `verifie-module.py` **REÇU** · le pilote du
+  banc conduit **en boîte**, sans un appel, passe `verifie_slots_p2`, `verifie_slots_p1` **et
+  `apres_p1`** sur les deux référents · prompt P2 assemblé à **6 359 car. (cours)** et **7 630
+  (texte)**, aucun slot non servi.*
+- [x] **C4L10S-2 · ⭐⭐ CE QUE LE JUGE LIT SE DÉCIDE AU §4 DE LA FICHE, ET NULLE PART AILLEURS — ET IL
+  Y A DEUX FORMES.** Le prompt P2 ne porte **qu'un slot** (`{squelette}`) et le module n'a **aucun
+  `pre_p2`** : `document_p2` est **tout** ce que le juge verra. Le §4 le tranche en trois phrases :
+  *« le juge lit le squelette nu »* → le relevé de P1A (`unites`, `rapports`, `apports`,
+  `these_forme`) ; *« aucun nombre n'est injecté »* → ni pré-relevé, ni `mesures`, ni clé à tiret bas ;
+  *« le juge nomme l'origine du contresens, **et il en a les moyens** : la référence déclare le statut
+  d'énonciation de chaque phrase »* → **ses moyens n'ont pas d'autre route**. ⭐ **Référent texte : +
+  l'alignement de P1B + la référence décomposée entière** ; **référent cours : ni l'un ni l'autre**
+  (*« le cours n'a pas de référence décomposée, et ne doit pas en avoir »*, §1 acté ; la fidélité est
+  *« référent texte seulement »*, §4). *Preuve : 6 mutations sur 6 tombent — clé retirée de chaque
+  chemin, `_corr` qui fuit, nombre injecté, référence servie sur le cours, squelette amputé.*
+- [x] **C4L10S-3 · LA SYNTHÈSE EST OUVERTE — dérivée, importée, branchée, ET LES SIX AVEC ELLE.**
+  `derive-instruments.py --resume` rend les six OUVERTES, `synthese v3.4 — 13 observables` ;
+  `--verifie` dit **IDENTIQUE** ; `verifierCoherence()` ne rend **aucun écart**, **les trois référents
+  éprouvés** (`texte`, `cours`, `null`) ; `competencesEnAttenteDeBranchement()` est **VIDE**.
+- [x] **C4L10S-4 · LE PORTAGE REPRODUIT LE MODULE, SUR LES TROIS CLÉS, EN 6 069 CAS.** `code1`
+  (`mesures` / `document_p2` / `alertes`), `code2` (`verdicts` / `trace` / `alertes`) et `conformite`
+  sont rejoués des deux côtés sur les mêmes entrées, par `scripts/vecteurs-synthese.py`, qui **importe
+  le module et le rejoue à chaque exécution** — jamais une fixture figée. Les **5** vecteurs de Code1
+  et les **15** de composition y sont, plus les balayages. ⚠️ `TESTS_P2_PARFAIT` est **VIDE** et
+  `VERSION_GOLDS_TESTEE` vaut **`None`** : la Synthèse n'a **ni gold, ni copie, ni critère, ni run
+  stocké** — c'est **le balayage** qui porte la preuve.
+- [x] **C4L10S-5 · ⭐⭐ 4 800 CAS DE FRONTIÈRE — parce que « balayer les seuils » NE SUFFIT PAS.**
+  L'item 28 de la boîte aux lettres disait de balayer les paramètres, pas seulement les entrées.
+  ⚠️ **Vérifié ici : c'est nécessaire et insuffisant.** Quatre comparaisons du palier — `partInt <=
+  0.5`, `rendus < pr`, `couvEss < pe`, `partiels > plafond` — survivaient à l'épreuve négative **parce
+  qu'un autre terme du `ou` faisait déjà tomber le palier**, et déplacer l'inégalité ne changeait rien.
+  ⭐ **La parade : une référence bâtie pour ISOLER chaque seuil** — quatre essentielles (`couvEss ∈ {0,
+  ¼, ½, ¾, 1}`), quatre moments déclarés (`rendus ∈ {0, ¼, ½, ¾}`), **aucune fonction `illustre`**
+  (donc **jamais** d'inversion pour masquer), et deux familles d'alignement dont l'une met `partInt` à
+  **½ pile**. Les quatre tombent alors.
+- [x] **C4L10S-6 · ⭐⭐ L'ÉPREUVE NÉGATIVE — 61 MUTATIONS, 61 TOMBÉES, ZÉRO SURVIVANTE.** *(2/14,
+  5/29, 2/40 et 5/55 aux quatre portages précédents.)* ⚠️ **Mais pas du premier coup : ONZE
+  survivaient**, et les traiter est le vrai travail de la séance. **Deux étaient des trous réels de
+  télémétrie**, **quatre étaient masquées par la disjonction** (`C4L10S-5`), **quatre étaient des
+  écarts de langage éprouvés au mauvais endroit** (`C4L10S-8`), **une était un décompte muet**.
+- [x] **C4L10S-7 · ⚠️ `elagage` PORTE LES INVERSIONS, ET NON LE TAUX D'ÉLAGAGE — et le confondre
+  survivait.** Le `sens` de l'observable le dit : *« l'observable rend **deux nombres**, le verdict ne
+  lit que celui-là »*, et son `porte_sur` nomme *« les inversions comptées à part »*. ⛔ **Sur la
+  plupart des copies les deux valent 0** et l'écart ne se voit pas : il a fallu une référence où le
+  taux d'élagage vaut **½** et où **aucune** inversion n'a lieu. Le second nombre part **à la trace**,
+  où il se lit sans rien décider.
+- [x] **C4L10S-8 · ⚠️⚠️ LES ÉCARTS PYTHON/JS SE PROUVENT DANS LE CHAMP QUI EN DÉPEND, PAS AILLEURS.**
+  Quatre survivantes venaient de là — les balayages faisaient bien passer blancs et ligatures, **mais
+  jamais où ils décident** : `casefold()` → il fallait la **ligature `ﬁ`** *(qu'une OCR produit)*
+  **dans une note de « limite »**, où elle décide d'un palier ; `strip()` → la **BOM dans un
+  `terme_cite`**, où l'appariement du crible décide du seuil donc d'Acquis ; les **blancs de Python**
+  (`\x85`, `\x1c`-`\x1f`) → même champ ; `sorted()` → des identifiants **à deux chiffres**, le tri
+  par défaut de JavaScript étant **lexical**. ⭐ Sont aussi éprouvés et portés : le **`\b` UNICODE**
+  (*« infidèle »* ne contient **pas** *« fidele »* isolé pour Python), le **`\w` UNICODE**, le
+  formatage **`%.2f`** *(qui tranche AU PAIR)*, **`str()` d'un flottant** *(`relation_rendue` à 1.0
+  s'écrit « 1.0 », `String(1)` rend « 1 » — et c'est **dans la trace**)*, **`str()` d'une liste**, et
+  **`for x in v` sur une CHAÎNE** *(un `entre: "12"` ne relie PAS 1 et 2 : il porte deux unités
+  inexistantes)*.
+- [x] **C4L10S-9 · ⭐⭐ LES TREIZE OBSERVABLES DU §5 ONT LEUR VALEUR AU RELEVÉ — le plus gros paquet
+  des six, quand le module n'en rend que trois.** **Un se RECOPIE** : `apport_organisateur` a mot pour
+  mot la définition de `seuil_franchi` — un seul calcul, deux lectures, le relevé recopie le verdict de
+  `code2`. **Six se lisent aux mesures.** **Six demandent un calcul propre** : `couverture_essentielles`
+  *(après la fidélité — c'est ce que la règle d'agrégation lit)*, les trois rétrogradations du crible
+  *(par étiquette, après l'appariement des termes)*, et les deux contresens *(après la borne basse)*.
+  ⚠️ **DEUX dénominateurs**, portés sous leur nom exact : *« les apports tentés »* — qui vaut
+  `nb_apports`, ce que **l'élève** a écrit, et non le nombre de criblés — et *« les unités appariées à
+  la référence »*, qui vaut `couvrantes`.
+- [x] **C4L10S-10 · ⛔ LA POPULATION DE `copie_verbatim` EST UN ARBITRAGE DE LOUIS, PAS UNE LECTURE.**
+  Cinq des six `proportion` de cette fiche écrivent leur fraction ; **`copie_verbatim` est *« part
+  d'unités en `copie` »*, sans dénominateur**, et la fiche distingue deux populations. ⚠️ **La question
+  porte DEUX FOIS** : sur l'observable **et** sur la branche **Absent** du §4 *(« reprise verbatim
+  dominante »)*. Trois unités dont une `copie` et deux `apport` donnent **1,0** sur les couvrantes et
+  **0,33** sur toutes les unités. ⭐ **Tranché le 23/08 : les unités couvrantes**, comme le module —
+  et c'est le parallèle de `part_integrative`, que le §4 « Ce que le code compose » #3 met dans la même
+  énumération. *Marqué comme décision de source dans le code, et fixé par un test discriminant.*
+- [x] **C4L10S-11 · UN DÉPÔT RÉEL TRAVERSE LA CHAÎNE ET ÉCRIT UN SQUELETTE, UNE MESURE ET SA
+  LETTRE.** Référent **cours** — la synthèse en classe : **6 appels, 46 s à deux chaînes**, un
+  squelette portant **son extraction ET son jugement**, **une mesure, lettre A**, et **les treize
+  observables en base** (aucun absent). `instrument_version = 3.4`, la ligne VERSION de la fiche.
+  ⭐ **L'extraction est rangée PAR PHASE — `{ p1a: … }` — et le cours n'en a qu'UNE** : c'est la
+  Synthèse qui a fait exister cette forme, étant la seule à avoir deux étages.
+- [x] **C4L10S-12 · ⭐ LA COPIE DE RECETTE A MONTRÉ LE CRIBLE À L'ŒUVRE, SUR PIÈCE.** P1A a relevé
+  **6 unités, 5 rapports** *(dont un `additive`)* **et 3 apports** ; le crible en a rendu **deux
+  `organisateur` et un `vide`** — et le `vide` est *« la mémoire est une question complexe »*,
+  exactement le chapeau que la copie portait pour lui. `mobilisation_reliee = 0,833`, base **Bon**,
+  seuil ouvert → **Acquis**. ⭐ Et `apport_vide = 1/3` : le dénominateur est bien **les apports
+  tentés**. ⭐ **Le jugement porte `"fidelite": []`**, comme le prompt le prescrit sans alignement, et
+  **P1A ne rend aucun alignement** — l'aligneur n'a pas tourné.
+- [x] **C4L10S-13 · LES SEPT SLOTS, ET LA SEULE CHAÎNE DES SIX QUI CHANGE DE FORME.** **P1A** porte
+  trois slots — `{consigne}` **natif**, `{pre_releve}` et `{production}` servis par `pre_p1a`, qui
+  range son calcul sous **`_mesures`**, à tiret bas ; **P1B** en porte trois, tous servis par
+  `pre_p1b` ; **P2** n'en porte **qu'un**, donc c'est le document, **sans déclaration**, et il n'y a
+  **aucun `pre_p2`**. ⭐ `extractions()` rend **UN** étage sur le cours et **DEUX** ailleurs, lu sur
+  `ctx.referent`. La **tête cacheable** de P1A fait **4 733 caractères** et ne porte aucun slot.
+  `refusSlotsExtraction` et `refusSlotsJugement` rendent **0 refus**, au chargement, dans les deux
+  sens.
+- [x] **C4L10S-13bis · LA `cible_primaire` BAT L'ORDRE ALPHABÉTIQUE, une SIXIÈME fois**, sur trois
+  instances — le repli aurait dit « expression » dans les trois cas. Et **sans** `cible_primaire`,
+  l'alerte tombe. **L'IDEMPOTENCE** : une reprise rejoue la chaîne *(6 appels — ce n'est pas un
+  cache)* et n'écrit **aucune seconde mesure** ; le bilan le dit par `mesuresDejaLa = 2`,
+  `mesuresEcrites = 0`.
+
+### Ce que ce lot vient de LEVER ailleurs dans ce fichier
+
+- ⭐⭐ **`C4L10-15` NE COMPTE PLUS AUCUNE COMPÉTENCE EN ATTENTE.** Les six sont ouvertes ; C4-L10 ne
+  se rejoue plus.
+- ⭐ **`C4L5-4`** *(« une fiche qui définit son delta »)* **ne se lèvera jamais par une reprise de
+  C4-L10 : SIX fiches sur six se taisent, le corpus entier est épuisé.** Le mot « delta » n'apparaît
+  **pas une seule fois** dans `competences/synthese.md`. *La condition doit être requalifiée : ce
+  n'est plus « la prochaine fiche », c'est une décision de conception sur le gabarit du `03-` §1.*
+
+### Ce qui reste à jouer en recette
+
+- [ ] **C4L10S-14 · ⚠️⚠️ LA SYNTHÈSE SE TAIT SUR LE RÉFÉRENT TEXTE, ET C'EST LE MÊME CANAL QUE CELUI
+  DU QUESTIONNEMENT.** Constaté **en base**, sur un dépôt réel portant une `reference_id` : l'aligneur
+  réclame `{reference_decomposee}`, `pre_p1b` le sert à **`null`**, et la chaîne **arrête la mesure en
+  nommant le slot** — *« synthese : REFUS : le contexte de l'exercice ne porte pas de quoi servir
+  reference_decomposee à P1B »*. **Aucune mesure, AUCUN squelette** *(le refus tombe au service des
+  slots, avant le premier appel de la phase qui manque)*, et **l'expression du même dépôt mesure
+  normalement** *(A)*. ⭐ **Le canal est bon** : servi une référence au contexte, `pre_p1b` la sert.
+  ⛔ **Ce qui manque est le FOURNISSEUR** : `contexteExercice` porte quatre noms, et `contexte.ts` ne
+  lit `exercices.reference_id` **que** pour en déduire `texte | cours | null`. ⭐⭐ **UN SEUL GESTE
+  FERME LES DEUX MANQUES DE LA SYNTHÈSE ET CELUI DU QUESTIONNEMENT (`C4L10Q-15`)** :
+  `exercices_references` porte **`contenu`** *(la référence — dont le Questionnement lit
+  `armature.question_directrice`)* **ET** `source_contenu_id → scriptorium_contenus.texte_extrait`
+  *(le texte source, dont le pré-relevé de la Synthèse a besoin pour la compression et les
+  recouvrements)*. **Condition de reprise : la décision de Louis** — poser ces fournisseurs natifs
+  touche `contexte.ts` et `chaine.ts`, hors du périmètre d'un lot « à diff quasi nul ».
+- [ ] **C4L10S-15 · ⚠️⚠️ UN GARDE-FOU ACTÉ EST INERTE DANS LE MODULE, ET RIEN NE LE DIT.**
+  `code2` lit `mesures["termes_reference"]` *(ligne 490)*, **qu'aucun chemin de `code1` n'écrit** — au
+  module comme au portage. Le garde-fou **acté** `apport_apparie` — *« un apport dont le terme se
+  retrouve dans la référence n'ouvre pas le seuil »*, bloc machine, statut **acté** — ne se déclenche
+  donc **jamais**. ⛔ **Non corrigé** : le mandat de la séance ne levait le piège A-2 que pour
+  `document_p2`, et corriger ici ferait diverger le portage du module que le banc validera.
+  **Condition de reprise : le pré-vol du Run 1 de la Synthèse**, qui est le moment où le module se
+  reprend.
+- [ ] **C4L10S-16 · ⚠️ `taux_compression` NE SE MESURERA PAS TANT QUE LA CHAÎNE NE PORTERA PAS LE
+  MATÉRIAU.** Le pré-relevé du §3 compte *« le nombre de mots de la production **et du matériau** »* ;
+  `contexteExercice` ne porte aucun matériau, `taux_compression` sort donc en **`n/a`** avec son alerte
+  nommée. ⭐ **Il n'est pas requis** — le §5 l'exclut explicitement des observables requis de
+  l'escalade : *« un signal de conformité de consigne, pas de compétence : il pilote la confiance,
+  jamais l'escalade »*. ⛔ **Et le slot NE MENT PAS** : sans matériau, le pré-relevé **ne dit pas**
+  « aucune » reprise littérale — il dit qu'il n'a pas pu chercher. *C'est le seul point où le portage
+  s'écarte du module, et c'est un durcissement : le banc, lui, sert toujours une source.* **Même
+  condition de reprise que `C4L10S-14`** — le texte source vient par le même canal.
+- [ ] **C4L10S-17 · ⚠️ LE RETOUR N'A PAS ÉTÉ INSPECTÉ SUR CE TOUR, et `elagage` est le seul des treize
+  codes qui soit un mot français ordinaire.** L'item 37 de la boîte aux lettres demandait ce geste.
+  **Fait par l'analyse, pas par l'observation** : `fuitesRR4` *(`utils/chaine/retour.ts`)* cherche
+  chaque code **en sous-chaîne** et **ne replie pas les accents** — un retour qui écrit « élagage » ne
+  déclenche rien, un retour qui écrirait « elagage » **ferait refuser tout le retour**. *Le risque est
+  réel mais mince.* ⭐ La lecture de `bilan.retourEcrit` est **ajoutée au script de recette** pour le
+  prochain tour. **Condition de reprise : le prochain tour de `synthese-c4l10.mjs`, ou C4-L7.**
+- [ ] **C4L10S-18 · LA LATENCE À DEUX CHAÎNES : 46 s.** À comparer aux **39 s à une**, **47-52 s à
+  deux**, **55 s à trois** *(mesuré deux fois indépendamment)* et **59 s à quatre** *(non comparable)*
+  des lots précédents. ⭐ **La mesure tombe dans la fourchette de la Structure et de l'Argumentation au
+  même nombre de chaînes**, et la courbe reste plate. ⚠️ La variance du fournisseur reste du même ordre
+  que l'effet mesuré. **Condition de reprise : C4-L7**, qui mesure le flux de bout en bout.
+- [ ] **C4L10S-19 · ⚠️ LE MODULE LÈVE SUR DIX-NEUF FORMES QUE P1 OU P2 PEUVENT PRENDRE, et le contrat
+  §3 l'interdit.** Mesuré sur les 6 069 cas : un `crible` non-objet ou en texte, une note de
+  « limite » qui n'est pas une chaîne, un `correspond_a` non parcourable, un `alignement` en texte,
+  des `fonctions` de référence qui sont un nombre, une unité du relevé qui n'est pas un objet.
+  ⭐ **Le portage traverse et NOMME**, chaque durcissement marqué en commentaire, et **aucun ne se
+  déclenche sur un vecteur** — un test assère qu'il ne lève jamais et qu'il ne se tait jamais.
+  ⛔ **Le module n'est pas corrigé** : hors mandat. **Condition de reprise : le pré-vol du Run 1**,
+  avec `C4L10S-15`.

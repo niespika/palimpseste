@@ -42,6 +42,8 @@ import { INSTRUMENT_CONNAISSANCE } from './derive/competences/connaissance'
 import { BRANCHEMENT_CONNAISSANCE } from './branchements/connaissance'
 import { INSTRUMENT_QUESTIONNEMENT } from './derive/competences/questionnement'
 import { BRANCHEMENT_QUESTIONNEMENT } from './branchements/questionnement'
+import { INSTRUMENT_SYNTHESE } from './derive/competences/synthese'
+import { BRANCHEMENT_SYNTHESE } from './branchements/synthese'
 import { refusSlotsExtraction, refusSlotsJugement } from './slots'
 import { COMPETENCES, type Competence } from './types'
 
@@ -450,6 +452,34 @@ const INSTRUMENTS: Partial<Record<Competence, InstrumentCompetence>> = {
   //    conception la valide et `exercices_references` la porte — c'est la chaîne
   //    qui ne la sert pas. *Relevé, non tranché : décision de Louis.*
   questionnement: INSTRUMENT_QUESTIONNEMENT as unknown as InstrumentCompetence,
+  // C4-L10, 23/08/2026 — la Synthèse est LA SIXIÈME ET DERNIÈRE, et elle est la
+  // seule des six dont LA CHAÎNE A UNE AUTRE FORME : TROIS appels — relevé
+  // aveugle, aligneur, juge —, et DEUX quand le référent est le cours, « où
+  // l'aligneur ne tourne pas » (`07-` §1.2). *« L'alignement EST sa mesure »
+  // (`01-` §11).*
+  // ⭐ ELLE PORTE LE PLUS GROS PAQUET D'OBSERVABLES DE TÉLÉMÉTRIE : TREIZE, quand
+  //    son module n'en rend que trois. C'est chez elle que l'écart entre le
+  //    portage et le travail réel est le plus grand.
+  // ⭐ Son module a dû être RÉPARÉ avant le portage (mandat de Louis, 22/08) :
+  //    `code1` ne rendait `document_p2` sur AUCUN de ses deux chemins, et
+  //    `banc.py` refusait le run pour ça — le banc n'avait donc jamais pu tourner
+  //    sur la Synthèse. Ce que le juge y lit est décidé au §4 de la fiche : le
+  //    squelette nu, plus — sur le référent texte seulement — l'alignement et la
+  //    référence, dont le juge « a les moyens » pour nommer l'origine d'un
+  //    contresens.
+  // ⚠️ Elle n'a NI GOLD, NI COPIE, NI CRITÈRE, NI RUN STOCKÉ
+  //    (`VERSION_GOLDS_TESTEE = None`, `TESTS_P2_PARFAIT` vide, dossier vide sauf
+  //    prompts et module) : son portage se prouve aux vecteurs embarqués, au
+  //    BALAYAGE et à l'épreuve négative.
+  // ⚠️⚠️ ET ELLE NE MESURERA QUE SUR LE RÉFÉRENT COURS tant que la chaîne ne
+  //    descendra pas la RÉFÉRENCE DÉCOMPOSÉE : son aligneur réclame
+  //    `{reference_decomposee}`, `contexteExercice` porte quatre noms, et servi à
+  //    `null` le slot arrête la mesure EN LE NOMMANT — le comportement voulu.
+  //    ⭐ C'est LE MÊME CANAL que celui du Questionnement, et `exercices_references`
+  //    porte les DEUX choses qui manquent : la référence (`contenu`) et le
+  //    matériau (`source_contenu_id → scriptorium_contenus.texte_extrait`, dont le
+  //    pré-relevé a besoin pour la compression). *Une décision de code, relevée.*
+  synthese: INSTRUMENT_SYNTHESE as unknown as InstrumentCompetence,
 }
 
 /**
@@ -466,6 +496,7 @@ const BRANCHEMENTS: Partial<Record<Competence, BranchementCompetence>> = {
   structure: BRANCHEMENT_STRUCTURE,
   connaissance: BRANCHEMENT_CONNAISSANCE,
   questionnement: BRANCHEMENT_QUESTIONNEMENT,
+  synthese: BRANCHEMENT_SYNTHESE,
 }
 
 export interface EtatCompetence {
