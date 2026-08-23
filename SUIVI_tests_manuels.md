@@ -3910,3 +3910,252 @@ COURS.** Voir `C4L10C-9`. Tout le reste du lot est fait, prouvé et vert.
   avait mesuré 98 s** sur le même décor, avec un appel de plus — la variance du fournisseur est du
   même ordre que l'effet mesuré. **Condition de reprise : la Connaissance mesurant vraiment**, donc
   `C4L10C-19`.
+
+---
+
+## C4 · L10 — L'ouverture d'une compétence dans la chaîne : le QUESTIONNEMENT (sandbox, 23/08)
+
+_Section ouverte le 23/08 à la clôture du lot. **Aucune migration** : ce lot ne touche que du code —
+le suivi SQL n'a pas bougé, et n'avait pas à bouger. **Aucun `[faux]` posé dans une source** : rien
+de ce que le portage a trouvé n'était une source fausse (voir `C4L10Q-16` et `C4L10Q-17`, qui sont
+des dettes de CADRE, pas de fiche)._
+
+_Ce qui a été prouvé EN SÉANCE est coché avec sa preuve. `npm test` : **1198 passés, 0 échoué**
+(dont **38 neufs** sur ce portage ; l'état d'entrée était **1160/1160**, plus deux entrées de
+registre mises à jour — « quatre compétences ouvertes » devient **cinq**) ; `npx tsc --noEmit` :
+**rien** ; `npx eslint` sur les cinq fichiers du lot : **0 erreur**, 4 avertissements
+`no-unused-vars` sur des paramètres imposés par la signature de l'interface — la même forme que
+`structure.ts` ; `derive-instruments.py --verifie` : **IDENTIQUE** sur les dix dérivés. ⚠️ **La FICHE
+n'a pas bougé — aucun `[faux]` n'y est posé —, mais un `--ecris` a été rendu nécessaire par le
+passage du `07-Implementation.md` en 2.39** : `MANIFESTE.ts` et `calame-retour.ts` portent la version
+de ce document, et le diff des deux dérivés fait **4 lignes**, la version et rien d'autre.
+`scripts/recette/questionnement-c4l10.mjs` : **50 contrôles,
+50 passés**, joués **par le même code que la route**, en base, sur un **dépôt réel à TROIS
+compétences** et **sept vrais appels de modèle**, décor semé puis **retiré** (aucun reste, vérifié
+par requête)._
+
+⛔ **AUCUN STATUT DE RECETTE N'A ÉTÉ POSÉ, et aucun n'est proposé.** Le Questionnement est
+`mesuree_silencieusement` — son état de naissance. **Rien n'a changé pour un élève.**
+
+⚠️ **`chaine_actif` est REVENU à OFF**, vérifié par requête à la fin de chaque tour de recette.
+
+⚠️⚠️ **ET CE LOT SE FERME SUR UN FAIT QUI N'EST PAS UNE PANNE, ET QU'IL FAUT LIRE EN PREMIER : LE
+QUESTIONNEMENT MESURE EN `composer` ET SE TAIT DANS LES QUATRE MODES RÉCEPTIFS**, faute que la chaîne
+descende la **référence décomposée**. Voir `C4L10Q-15`. ⭐ **La différence d'avec le corpus de cours
+de la Connaissance est décisive** : là, aucune source ne déclarait l'objet ; ici **la source le
+déclare**, l'écran de conception le valide et `exercices_references` le porte — c'est **la chaîne**
+qui ne le sert pas. **C'est donc une question de CODE, pas de conception, et elle attend l'arbitrage
+de Louis.** Tout le reste du lot est fait, prouvé et vert.
+
+### Ce qui est prouvé — pour ne pas le rejouer
+
+- [x] **C4L10Q-1 · LE QUESTIONNEMENT EST OUVERT — dérivé, importé, branché.**
+  `derive-instruments.py --resume` le déclare **ouvert** en **v2.2** avec ses **9 observables de
+  télémétrie**, `--verifie` dit **IDENTIQUE**, `verifierCoherence()` rend **[]**, et
+  `competencesOuvertes()` rend **`expression, argumentation, structure, connaissance,
+  questionnement`**. La dernière — `synthese` — est **dérivée et en attente**, et
+  `competencesEnAttenteDeBranchement()` la nomme seule.
+- [x] **C4L10Q-2 · LE PORTAGE REPRODUIT LE MODULE, SUR LES TROIS CLÉS, EN 3 635 CAS.**
+  `scripts/vecteurs-questionnement.py` importe `copies-tests/questionnement/code.py` **à chaque
+  exécution** — jamais une fixture recopiée —, joue ses crochets et rend ses entrées ET ses sorties
+  en JSON ; `utils/chaine/branchements/questionnement.test.ts` rejoue **les mêmes entrées** sur le
+  branchement et compare `code1.mesures`, `code1.document_p2`, `code1.alertes`, puis
+  **`verdicts`, `trace` ET `alertes`** de `code2` — *« une trace qui diverge dit qu'un chemin de
+  calcul a changé, même quand le verdict tombe juste »*. **30 vecteurs embarqués + 7 vecteurs
+  d'alerte + 26 cas de référent + 19 de conformité + 3 553 cas de balayage.**
+- [x] **C4L10Q-3 · ⚠️⚠️ LES DEUX NOMS DU « FAIT QUAND » N'EXISTENT PAS DANS CE MODULE, ET LE TEST
+  L'ASSÈRE.** Ni `TESTS_P2_PARFAIT` ni `TESTS_CODE1_PARFAIT` : le module porte `VECTEURS` (**30**),
+  `ALERTES_ATTENDUES` (**7**) et `VECTEURS_REFERENT` (**7**), plus **2 cas de conformité écrits en
+  dur dans `autotest()`**. ⛔ Un `getattr(m, "TESTS_P2_PARFAIT", [])` aurait rendu **un zéro qui
+  ressemble à une mesure** : le harnais écrit `meta.absentes`, et le premier test du fichier vérifie
+  que les deux valent `false`. ⚠️ **Le TYPE est vérifié aussi, pas supposé** — chez l'Expression,
+  `TESTS_CODE1_PARFAIT` est une CHAÎNE, et un `len()` y a rendu « 52 vecteurs » qui étaient
+  52 caractères. **Ici les cinq constantes sont bien des LISTES**, vérifié par `type().__name__`.
+- [x] **C4L10Q-4 · LE BALAYAGE COUVRE LA CASCADE ENTIÈRE — 3 072 cas.** 4 formes × 4 tensions ×
+  4 enjeux × 4 débats × 4 `question_propre` × 3 `question_specifique`, à `conjonction_bon` stricte,
+  **plus 81 cas** sur les deux valeurs du paramètre *(et une troisième, illégale, qui retombe en
+  silence sur le mode permissif)*. Les **quatre paliers de base** sont atteints — un balayage qui
+  n'atteindrait pas ses paliers contrôlerait des chemins morts.
+- [x] **C4L10Q-5 · LE CRIBLE ENTIER, 180 cas + 8 lots multiples.** déplacement (écrit / vide /
+  `[aucun]`) × reprise (écrite / vide / `[aucune]`) × 5 verdicts du juge × 4 tests. ⭐ **L'ORDRE DES
+  DEUX TESTS EST PORTEUR, et il est prouvé sur son cas discriminant** : ni déplacement ni reprise
+  rend **`verbal`**, jamais `non_tenu` — *« sa reprise ne se regarde même pas »* ; et un juge qui
+  dit `verbal` sur un recadrage à reprise vide **l'emporte** sur le pré-verdict du code.
+- [x] **C4L10Q-6 · LA BORNE HAUTE DES `limite`, sur les HUIT parties des trois champs × 8 notes.**
+  Un `limite` seul → **le plus fort des deux** ; deux ou plus → **tout retombe à la borne basse** ;
+  une note qui ne nomme pas deux valeurs → **`LIMITE_ILLISIBLE`** et borne basse. ⚠️ **Le cas « une
+  seule valeur nommée » a été ajouté APRÈS l'épreuve négative** : sans lui, `len(lus) < 2` et
+  `len(lus) < 1` rendaient la même chose partout et la mutation survivait.
+- [x] **C4L10Q-7 · ⭐⭐ SEULEMENT DEUX DES HUIT ÉCARTS PYTHON/JS MORDENT ICI, ET ILS SONT PROUVÉS SUR
+  CE QUI LES DISCRIMINE.** Le module n'importe **pas `re`**, n'appelle **ni `round()`, ni `%.1f`, ni
+  `.casefold()`, ni `.split()`, ni `len()` d'une chaîne** — les écarts 1, 4, 5 *(en partie)*, 6, 7 et
+  8 des lots précédents **ne peuvent pas mordre**. Restent :
+  **(a) les BLANCS** — `strip()` de Python retire `\x85` (NEL) et `\x1c`-`\x1f` que `trim()` garde,
+  et **garde la BOM `﻿` que `trim()` mange** : les deux sens sont éprouvés, sur les valeurs de
+  catalogue **et** sur les `cite` du crible ;
+  **(b) `str()` implicite** — `str(['limite'])` rend `['limite']` là où `String(['limite'])` rend
+  `limite` *(⚠️ un port naïf y aurait vu un `limite`, donc une borne haute, donc un palier de plus)*,
+  `str({})` rend `{}` contre `[object Object]`, et **`str(None)` rend `None` contre `undefined`** —
+  ce dernier dans le texte de l'alerte `test_illisible`, sur un chemin **atteignable** ;
+  **(c) la VÉRITÉ d'une valeur** — `[]` et `{}` sont FAUX en Python, VRAIS en JavaScript ;
+  **(d) ⭐ UN NEUVIÈME ÉCART, ET IL N'ÉTAIT PAS PORTÉ : `s[:n]`** — Python tranche par POINTS DE
+  CODE, `slice` par unités UTF-16. Le module s'en sert pour citer les 40 premiers caractères d'une
+  requalification inappariable ; le balayage l'éprouve sur `𝔔` (hors du plan de base) et sur un
+  émoji en tête. *Il est porté **dans le branchement**, pas dans `python.ts` : il n'a qu'un client.*
+- [x] **C4L10Q-8 · ⭐⭐ LES NEUF OBSERVABLES DU §5 ONT LEUR VALEUR AU RELEVÉ — et TROIS demandaient
+  un calcul propre.** Cinq se lisent tels quels *(`question_presente` sur `forme_question` ;
+  `notions_en_tension`, `enjeu` et `debat_situe` sur les champs **RÉSOLUS** par la borne haute, ceux
+  que la cascade lit ; `question_propre` sur le jugement)* ; **`question_specifique` est RECOPIÉ du
+  verdict de `code2`** *(voir `C4L10Q-9`)* ; et **trois ne se lisaient nulle part** :
+  **`recadrage`** — « au moins un recadrage `valide` après crible », ⛔ **et ce n'est PAS
+  `seuil_franchi`**, qui exige en plus le palier de base Bon —, **`recadrage_verbal`** et
+  **`recadrage_non_tenu`**, comptés sur les verdicts finaux du crible. Le **dénominateur** part au
+  relevé sous son nom littéral **« les recadrages tentés »** — `observables.ts` le cherche à la
+  lettre. **Vérifié EN BASE** : 9 entrées écrites, **aucun `n/a`**, sur le dépôt réel.
+- [x] **C4L10Q-9 · ⭐⭐ `question_specifique` EST LE SEUL OBSERVABLE DU CORPUS DANS LES DEUX LISTES —
+  UN SEUL CALCUL, DEUX LECTURES.** Sur 24 observables de module et 56 de télémétrie, *« un seul
+  observable croise les deux listes »* *(`03-` §9)*, et c'est le nôtre. Le relevé **RECOPIE** le
+  verdict composé par `code2` ; deux calculs seraient deux domiciles qui divergent. Un test l'assère
+  sur les **trois** valeurs du catalogue, et une mutation qui lui donnerait un second domicile
+  **tombe**.
+- [x] **C4L10Q-10 · ⭐⭐ L'ÉPREUVE NÉGATIVE — 55 MUTATIONS, 53 TOMBÉES, ET LES DEUX SURVIVANTES SONT
+  DES ÉQUIVALENTS DÉMONTRÉS.** Le portage a été cassé **règle par règle** — les 11 lignes de la
+  cascade, les 3 du seuil, les 8 du crible, les 5 de la borne `limite`, les 9 écarts de langage, les
+  12 de la télémétrie, les 7 du contrat — et le test rejoué à chaque fois.
+  ⚠️ **Au premier passage, CINQ ont survécu, dont TROIS étaient des trous réels — et DEUX des trois
+  étaient dans la TÉLÉMÉTRIE**, exactement comme les portages précédents l'annonçaient :
+  `question_presente` lisant `question_posee` et `question_propre` lisant un champ du relevé
+  passaient, **parce que les assertions vérifiaient qu'un observable EXISTE et n'est pas `n/a`,
+  jamais CE QU'IL VAUT**. ⭐ **La parade, et elle a fermé les trois** : une copie où les six champs
+  lus portent des valeurs **toutes différentes et toutes différentes de leur valeur réussie**, plus
+  le cas `limite` à note d'une seule valeur.
+  ⭐ **Les deux survivantes restantes sont du CODE ÉQUIVALENT, et deux tests le DÉMONTRENT par
+  exhaustion** : la vérité de Python et celle de JS ne divergent que sur `[]` et `{}`, dont le
+  `str()` — `[]` et `{}` — n'égale ni `limite` ni aucune des huit valeurs d'échelle ; et `sorted()`
+  et `.sort()` coïncident sur les **trois** noms de champ, tous ASCII minuscules.
+- [x] **C4L10Q-11 · LE « CONTRÔLE GRATUIT » DU CONTRAT §7, MESURÉ : DIX CHAMPS À LISTE FERMÉE SUR
+  DIX LÈVENT UNE ALERTE, et le portage n'a eu à en créer AUCUNE.** `forme_question`,
+  `notions_en_tension`, `enjeu`, `reponses_concurrentes`, `recadrages[].type`, `question_propre`,
+  `question_specifique`, `crible[].verdict`, `crible[].test`, `confiance` — mesuré en injectant une
+  valeur hors catalogue dans chacun. **C'est le bénéfice de l'extraction, pour la cinquième fois.**
+- [x] **C4L10Q-12 · UN DÉPÔT RÉEL TRAVERSE LA CHAÎNE ET ÉCRIT UN SQUELETTE, UNE MESURE ET SA
+  LETTRE.** `scripts/recette/questionnement-c4l10.mjs`, en base, par **le même code que la route** :
+  **3 squelettes** *(expression, questionnement, structure)*, celui du Questionnement portant **son
+  extraction ET son jugement** ; **3 mesures** — `questionnement=E, expression=A, structure=D` ;
+  `instrument_version = 2.2`, la ligne VERSION de la fiche et rien d'autre ; `delta_v1_vf` **NULL**.
+  **7 appels**, `chaine_actif` allumé puis **éteint**, décor **retiré**.
+- [x] **C4L10Q-13 · ⭐⭐ ET LA COPIE DE RECETTE A MONTRÉ LE PLANCHER À L'ŒUVRE, SUR PIÈCE.** La copie
+  porte **tout** ce qu'il faut pour Acquis — question explicite, notions articulées, enjeu énoncé,
+  réponse concurrente énoncée, **et un recadrage valide après crible**. Le juge a pourtant rendu
+  `question_propre: "reprise_enonce"` — parce que **la première phrase EST le sujet retourné** — et
+  la cascade a donné **Absent (E)**. ⭐ *« Une copie qui recopie l'énoncé au point d'interrogation
+  est parfaitement spécifique, et ce champ est le seul qui l'attrape »* *(fiche §4)* : **le second
+  plancher a mordu sur une copie réelle, du premier coup.** ⭐⭐ **Et la dissociation portée en
+  `C4L10Q-8` s'observe alors en vrai** : `recadrage = oui` **avec** `niveau = E`. L'élève a recadré,
+  la télémétrie le sait, et sa lettre ne le dit pas — c'est exactement ce que le §5 veut.
+  L'alerte l'écrit : *« le seuil ouvre Acquis, il n'élève jamais la base : un recadrage valide sur un
+  palier de base Absent ne fait pas monter la copie »*.
+- [x] **C4L10Q-14 · LA `cible_primaire` BAT L'ORDRE ALPHABÉTIQUE, une CINQUIÈME fois**, sur trois
+  instances *(le repli aurait dit « expression » dans les trois cas)*, et **l'alerte de repli tombe**
+  sur l'instance sans cible. C4-L11 tient sa promesse.
+- [x] **C4L10Q-14bis · L'IDEMPOTENCE — une reprise n'écrit AUCUNE seconde mesure.** 3 avant, 3 après,
+  et le bilan le DIT : `mesuresDejaLa = 3`, `mesuresEcrites = 0`. ⚠️ **Elle rejoue bien la chaîne**
+  *(7 appels)* — ce n'est pas un cache : c'est l'index unique qui garde la ligne.
+- [x] **C4L10Q-14ter · LES CINQ SLOTS, ET LE CAS LE PLUS SIMPLE DES SIX.** P1 porte **DEUX** slots,
+  `{copie}` et `{sujet}`, **tous deux NATIFS** : le module ne définit **ni `pre_p1` ni
+  `prepare_copie`**, et `slotsFournis` est **vide**. P2 en porte **TROIS**, dont
+  **`SLOT_DOCUMENT_P2 = "squelette_phase_1"` DÉCLARÉ par le module** — obligatoire à trois slots — et
+  **le document n'est PAS le référent**. `refusSlotsJugement` rend **0 refus**, au chargement, dans
+  les deux sens. La **tête cacheable** fait **4 429 caractères** et ne porte aucun slot.
+
+### Ce que ce lot vient de LEVER ailleurs dans ce fichier
+
+- ⭐ **`C4L10-15` compte désormais UNE compétence en attente** — `synthese` seule.
+- ⭐ **`C4L5-4`** *(« une fiche qui définit son delta »)* **ne bouge toujours pas, et se durcit une
+  fois de plus : CINQ fiches sur cinq se taisent.** Le mot « delta » n'apparaît **pas une seule
+  fois** dans `competences/questionnement.md`.
+
+### Ce qui reste à jouer en recette
+
+- [ ] **C4L10Q-15 · ⚠️⚠️ LE QUESTIONNEMENT SE TAIT DANS LES QUATRE MODES RÉCEPTIFS, ET C'EST UNE
+  QUESTION DE CODE — LA SEULE DÉCISION QUE CE LOT LAISSE À LOUIS.** Constaté **en base**, sur un
+  dépôt réel en `interroger` : `pre_p2` sert `referent` à **`null`**, la chaîne **arrête la mesure en
+  nommant le slot** — *« REFUS : `preP2` ne peut pas servir « referent » — le contexte de l'exercice
+  ne le porte pas »* —, aucune mesure de questionnement n'est écrite, et **les autres compétences du
+  même dépôt mesurent normalement** *(expression = A)*. ⭐ **Le canal est bon** : servi une référence,
+  `pre_p2` la lit sous le SEUL champ que le module lit — `armature.question_directrice`. ⛔ **Ce qui
+  manque est le FOURNISSEUR** : `contexteExercice` porte quatre noms — `sujet`, `consigne`, `copie`,
+  `mode` —, et `contexte.ts` ne lit `exercices.reference_id` **que** pour en déduire un référent
+  `texte | cours | null`, jamais le contenu. ⚠️⚠️ **Ce n'est PAS le cas du corpus de cours** : là,
+  aucune source ne déclarait l'objet ; **ici la fiche §4 le déclare** — *« tel que la référence
+  décomposée le porte, c'est son champ `armature.question_directrice` »* —, l'écran de conception
+  **refuse un texte dont la référence n'est pas validée**, et `exercices_references` la porte. ⚠️ **Et
+  la portée est grande** : le Questionnement est l'une des **deux seules** compétences à qui la table
+  de proportion s'applique en entier — **≥ 40 %** en échelle réceptive et **≥ 15 %** en `interroger`
+  *(fiche §1.4)* —, et **chez les HLP il n'est ciblé QU'en modes autres que `composer`** *(`01-` §3,
+  R2)*. **Condition de reprise : la décision de Louis** — poser le fournisseur natif de la référence
+  décomposée dans `contexte.ts` + `chaine.ts` est un geste hors du périmètre d'un lot « à diff quasi
+  nul », et il ouvre les quatre modes réceptifs d'un coup.
+- [ ] **C4L10Q-16 · ⚠️⚠️ RR4 REFUSE UN RETOUR QUI EMPLOIE « recadrage » OU « enjeu » — et ce sont les
+  DEUX SEULS observables du corpus qui soient des mots français ordinaires.** Observé **une fois sur
+  deux tours de recette** : *« retour refusé : RR4 : le texte nomme des observables — recadrage »*.
+  `fuitesRR4` *(`utils/chaine/retour.ts`)* cherche chaque code **en SOUS-CHAÎNE**, ce qui convient à
+  `garant_circulaire` ou `densite_friction` — mais **`enjeu` et `recadrage` sont le vocabulaire même
+  du levier** que la fiche prescrit au juge *(« interroger ta problématique, redéfinir un mot »)*.
+  **Mesuré : sur les 56 observables de télémétrie des six fiches, DEUX seulement sont des mots
+  ordinaires, et les deux sont au Questionnement.** ⛔ **Non corrigé** : RR4 est au `01-` §12, source
+  gelée, et ce lot ne corrige pas une source. **Trois issues possibles, et c'est un arbitrage** :
+  RR4 cherche le **mot isolé** plutôt que la sous-chaîne · la fiche **renomme** ses deux codes · le
+  prompt de retour **proscrit** ces deux mots. **Condition de reprise : le lot qui touche au retour,
+  ou une décision de conception sur RR4.**
+- [ ] **C4L10Q-17 · ⚠️⚠️ LE PREMIER TROU SILENCIEUX DU QUESTIONNEMENT EST DANS UN CHAMP LIBRE, ET IL
+  OUVRE LE SEUIL — mesuré, pas supposé.** `deplacement` et `reprise` sont du **verbatim libre**
+  qu'aucune liste fermée ne peut garder, et **ils décident du `pre_verdict` donc du seuil**. Mesuré
+  sur la même copie, toutes choses égales par ailleurs : un P1 honnête *(l'élève n'a rien écrit :
+  `[aucun]` / `[aucune]`)* rend **Bon**, seuil fermé, **avec** l'alerte `promotion_refusee` ; un P1
+  qui **invente** un déplacement et une reprise rend **ACQUIS**, seuil ouvert, **et ZÉRO alerte**.
+  ⚠️ C'est le pendant exact du `source` de la Connaissance — sauf qu'ici ça ne coûte pas un cran,
+  **ça ouvre le palier le plus haut de la compétence**. ⛔ **Ne pas ajouter l'alerte au branchement**
+  *(elle ferait diverger la troisième clé)*. **C'est le `[à valider]` du contrat §8**, partagé avec
+  l'Argumentation, la Structure et la Synthèse : *aucun contrôle d'existence des citations contre la
+  copie*. **Condition de reprise : le Run 1, qui dira la fréquence** — et la séance de conception qui
+  tranchera le `[à valider]`.
+- [ ] **C4L10Q-18 · ⚠️ UN EXERCICE À PLUSIEURS MODES POUR LA MÊME COMPÉTENCE — l'arbitrage est
+  DOCUMENTÉ, pas tranché par une source.** `exercices.modes_par_competence[c]` est un **tableau**, et
+  `chaine.ts` sert `mode: modes.join(', ')` ; le module, lui, lit **UN** mode. Le portage retient la
+  lecture **prudente** : *réceptif dès que l'un des modes l'est* — le référent d'un texte ne se
+  remplace pas par un sujet. ⭐ **Le cas n'existe pas en base aujourd'hui** : sur les **16** couples
+  (exercice × compétence) portant des modes, **aucun** n'en porte plus d'un. **Condition de reprise :
+  la première instance à deux modes sur une même compétence** — ou une source qui dit ce qu'un
+  exercice multi-modes veut dire pour un référent.
+- [ ] **C4L10Q-19 · ⚠️ LA TRACE DU QUESTIONNEMENT EST STRUCTURÉE, ET `SortieCode2['trace']` LA
+  DÉCLARE `string[]`.** Le module rend `[{rang, verdict}]` sur le chemin nominal et `[texte]` sur le
+  PASSAGE MANQUÉ — **il est le seul des six**, les quatre déjà portés ne rendant que du texte. Le
+  « fait quand » exigeant l'**identité** sur les trois clés, la conversion est **contenue dans une
+  fonction nommée** du branchement, commentée, et **rien dans la chaîne ne LIT la trace**. ⛔ Élargir
+  le type toucherait `instruments.ts` **et les tests des quatre branchements déjà écrits**, qui
+  appellent `.startsWith` sur leurs lignes. **Condition de reprise : un lot qui touche à
+  `SortieCode2`** — ou la Synthèse, si sa trace est structurée elle aussi.
+- [ ] **C4L10Q-20 · ⚠️ `question_propre` N'A PAS DE `sans_objet_si`, ALORS QUE `n/a` EST UNE VALEUR
+  LÉGALE DE SON CATALOGUE.** `question_specifique` déclare `sans_objet_si: n/a` au bloc machine ;
+  `question_propre`, **non** — alors que la fiche §4 écrit *« `n/a` si `question_posee` est vide »*.
+  Lu à la lettre, un `n/a` compterait **RATÉ**. ⭐ **Le cadre tranche dans le sens de la fiche par un
+  autre chemin** : `NA = 'n/a'` est la sentinelle **globale** d'`observables.ts`, et
+  `statutDeLaMesure` rend `sans_objet` sur elle avant même de regarder `sans_objet_si`. **Un test le
+  fixe.** ⛔ **Non corrigé dans la fiche** : la conduite est bonne aujourd'hui, et l'asymétrie ne
+  coûte rien tant que la sentinelle globale existe. **Condition de reprise : la révision du
+  `03-competences.md` §1** *(registre des ouverts, item 31)*, qui est le domicile du vocabulaire.
+- [ ] **C4L10Q-21 · LA LATENCE À TROIS COMPÉTENCES : 55 s** — et c'est **exactement** la mesure de la
+  Structure au même nombre de chaînes *(39 s à une, 47-52 s à deux, 55 s à trois, 59 s à quatre mais
+  non comparable)*. ⭐ **La courbe reste plate**, et deux mesures indépendantes tombent sur le même
+  chiffre. ⚠️ Un premier tour du même décor avait mesuré **68 s** avec un appel de plus : la variance
+  du fournisseur reste du même ordre que l'effet mesuré. **Condition de reprise : C4-L7**, qui mesure
+  le flux de bout en bout.
+- [ ] **C4L10Q-22 · LA RECETTE A ROUGI POUR UNE RAISON QUI N'EN ÉTAIT PAS UNE — et c'est le piège
+  transverse de `supabase-js`.** Au premier tour, six contrôles rouges disaient « 0 mesure écrite »
+  quand la chaîne en avait écrit trois : le `select` demandait `competences_mesures.alertes`, **une
+  colonne qui n'existe pas**, et `supabase-js` **ne lève pas** — il rend `{ data: null, error }`, et
+  `(data ?? []).length` rend alors **zéro, qui ressemble à une mesure**. ⭐ **Le script porte
+  désormais un `lu()` qui lève sur `error`**, et c'est la parade générale. ⚠️ **Même motif que
+  `C4L10C-24`** — « la recette lisait le mauvais champ et rougissait pour rien » : c'est la
+  **deuxième fois en deux lots**. **Condition de reprise : aucune — c'est une leçon, pas un reste.**

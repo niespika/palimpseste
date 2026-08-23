@@ -40,6 +40,8 @@ import { INSTRUMENT_STRUCTURE } from './derive/competences/structure'
 import { BRANCHEMENT_STRUCTURE } from './branchements/structure'
 import { INSTRUMENT_CONNAISSANCE } from './derive/competences/connaissance'
 import { BRANCHEMENT_CONNAISSANCE } from './branchements/connaissance'
+import { INSTRUMENT_QUESTIONNEMENT } from './derive/competences/questionnement'
+import { BRANCHEMENT_QUESTIONNEMENT } from './branchements/questionnement'
 import { refusSlotsExtraction, refusSlotsJugement } from './slots'
 import { COMPETENCES, type Competence } from './types'
 
@@ -51,7 +53,14 @@ export interface EntreeObservableMesure {
   reussie: 'au_moins' | 'au_plus' | 'plus_de' | 'moins_de' | 'vaut' | 'sans_objet'
   seuil?: number | string
   seuil_parametre?: string
-  valeur_reussie?: number | string | boolean
+  /**
+   * ⚠️ SCALAIRE, OU LISTE — `question_presente` du Questionnement est le seul
+   *    observable du corpus qui en déclare une : « `forme_question` ∈
+   *    {`question_explicite`, `tension_affirmee`} » (fiche §5). Le `03-` §1 ne
+   *    l'interdit pas, et le dériveur l'accepte : le lire en scalaire seul rend
+   *    l'observable `ratee` à chaque mesure, sans un symptôme.
+   */
+  valeur_reussie?: number | string | boolean | ReadonlyArray<number | string | boolean>
   sans_objet_si?: number | string
   statut?: string
   sens?: string
@@ -414,6 +423,33 @@ const INSTRUMENTS: Partial<Record<Competence, InstrumentCompetence>> = {
   //    cours n'est déclaré dans aucune source qui fait foi ». *Relevé ; c'est une
   //    décision de conception.*
   connaissance: INSTRUMENT_CONNAISSANCE as unknown as InstrumentCompetence,
+  // C4-L10, 23/08/2026 — le Questionnement est LE CINQUIÈME, et il est le plus
+  // simple des six en slots : DEUX à P1, tous deux NATIFS (`{copie}`, `{sujet}`),
+  // aucun `pre_p1`, aucun `prepare_copie`. Tout son crochet de contexte est à P2 :
+  // `{nature_referent}` et `{referent}`, plus `{squelette_phase_1}` en document —
+  // et `SLOT_DOCUMENT_P2` est DÉCLARÉ par le module, obligatoire à trois slots.
+  // ⭐ IL PORTE LE SEUL OBSERVABLE DU CORPUS QUI SOIT DANS LES DEUX LISTES —
+  //    `question_specifique` : « un seul observable croise les deux listes »
+  //    (`03-` §9), sur 24 de module et 56 de télémétrie. Un seul calcul, deux
+  //    lectures : le relevé recopie le verdict de `code2`, il ne le refait pas.
+  // ⭐ Il porte aussi le seul `valeur_reussie` EN LISTE du corpus
+  //    (`question_presente`), que `observables.ts` lisait en scalaire — corrigé
+  //    ici, une fois pour les six.
+  // ⚠️ Il n'a NI GOLD, NI COPIE, NI RUN STOCKÉ (`VERSION_GOLDS_TESTEE = None`,
+  //    dossier vide sauf prompts et module), et ses constantes de test ne portent
+  //    PAS les noms du contrat : ni `TESTS_P2_PARFAIT` ni `TESTS_CODE1_PARFAIT`,
+  //    mais `VECTEURS` (30), `ALERTES_ATTENDUES` (7) et `VECTEURS_REFERENT` (7).
+  // ⚠️⚠️ ET IL NE MESURERA RIEN DANS LES QUATRE MODES RÉCEPTIFS tant que la
+  //    chaîne ne descendra pas la RÉFÉRENCE DÉCOMPOSÉE. Son `pre_p2` lit
+  //    `armature.question_directrice`, « et le module n'en lit aucun autre »
+  //    (fiche §4) ; le contexte de l'exercice porte quatre noms, et
+  //    `contexte.ts` ne lit `reference_id` que pour en déduire un référent
+  //    `texte | cours | null`. Servi à `null`, le slot ARRÊTE la mesure en le
+  //    nommant — le comportement voulu. ⚠️ La différence d'avec le corpus de
+  //    cours de la Connaissance : ici la SOURCE déclare la référence, l'écran de
+  //    conception la valide et `exercices_references` la porte — c'est la chaîne
+  //    qui ne la sert pas. *Relevé, non tranché : décision de Louis.*
+  questionnement: INSTRUMENT_QUESTIONNEMENT as unknown as InstrumentCompetence,
 }
 
 /**
@@ -429,6 +465,7 @@ const BRANCHEMENTS: Partial<Record<Competence, BranchementCompetence>> = {
   argumentation: BRANCHEMENT_ARGUMENTATION,
   structure: BRANCHEMENT_STRUCTURE,
   connaissance: BRANCHEMENT_CONNAISSANCE,
+  questionnement: BRANCHEMENT_QUESTIONNEMENT,
 }
 
 export interface EtatCompetence {

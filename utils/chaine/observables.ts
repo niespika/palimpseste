@@ -165,8 +165,23 @@ export function statutDeLaMesure(
 
   // « Un observable BINAIRE n'a pas de seuil — réussi quand le verdict est celui
   //   que la fiche nomme » (`01-` §8.2).
+  //
+  // ⚠️⚠️ `valeur_reussie` PEUT ÊTRE UNE LISTE, et un seul observable du corpus en
+  //    porte une : `question_presente` du Questionnement, dont le §5 écrit
+  //    « `forme_question` ∈ {`question_explicite`, `tension_affirmee`} ». Le
+  //    `03-` §1 nomme `valeur_reussie` sans dire qu'elle est scalaire, et
+  //    `derive-instruments.py` l'accepte telle quelle. ⛔ Une égalité stricte
+  //    contre un tableau est FAUSSE POUR TOUTE VALEUR : l'observable serait
+  //    `ratee` à chaque mesure — pire qu'un `n/a`, qui au moins sort du
+  //    dénominateur —, et c'est un observable REQUIS de l'escalade (§5).
+  //    *Trouvé en portant le Questionnement (C4-L10, 23/08) ; écrit une fois
+  //    pour les six.*
   if (entree.reussie === 'vaut') {
-    return valeur === entree.valeur_reussie ? 'reussie' : 'ratee'
+    const attendue = entree.valeur_reussie
+    if (Array.isArray(attendue)) {
+      return attendue.some((v) => v === valeur) ? 'reussie' : 'ratee'
+    }
+    return valeur === attendue ? 'reussie' : 'ratee'
   }
 
   const seuil = seuilDe(entree, parametres)
