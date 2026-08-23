@@ -26,7 +26,7 @@ import { createAdminClient } from '@/utils/supabase/admin'
 import { lireContexte, DepotIllisible, type ContexteDepot } from '../chaine/contexte'
 import { competencesDeLExercice } from '../chaine/chaine'
 import { fenetreDEvidence } from '../chaine/mesures'
-import { etatCompetence } from '../chaine/instruments'
+import { etatCompetence, valeursDesParametres } from '../chaine/instruments'
 import { lireFuseau } from '../fuseau-serveur'
 import type { Mesure } from '../routeur/mesure'
 
@@ -384,8 +384,11 @@ async function construireLeRappel(
   ])
   const etat = etatCompetence(cible)
   const instrument = etat.instrument
+    // ⚠️ APLATIS À LEUR DÉFAUT : la fiche écrit un bloc par paramètre, et un
+    //    `seuil_parametre` lu sur le bloc sortirait l'observable du
+    //    dénominateur sans un symptôme (C4-L10).
     ? { observablesMesure: etat.instrument.observables_mesure,
-      parametres: etat.instrument.parametres }
+      parametres: valeursDesParametres(etat.instrument) }
     : null
   return rappelDuTemps1(
     cible, ctx.grain, (niveau?.lettre ?? null) as Palier | null,

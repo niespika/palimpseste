@@ -406,8 +406,9 @@ async function principal() {
     feed_forward: 'La prochaine fois, relis ton premier paragraphe avant d’écrire le second.',
   }).select('id').single()
   dire(!eRetour, `un retour SEGMENTÉ à identifiants stables passe la garde de forme${eRetour ? ` — ${eRetour.message}` : ''}`)
-  note('⚠️ ce retour est une FIXTURE : aucune fiche n\'est *versée et bancée*, la chaîne '
-    + 'n\'ouvre zéro compétence et n\'engendre donc aucun retour (le « fait quand »).')
+  note('⚠️ ce retour est une FIXTURE : ce lot n\'engendre aucun retour, il éprouve la garde '
+    + 'de forme. ⭐ C4-L10 a ouvert l\'Expression le 22/08 — un retour RÉELLEMENT engendré '
+    + 'se joue désormais, et c\'est un reste décoché du suivi des tests manuels.')
 
   const points = pointsAAfficher((await lireLesRetours(admin, d0.id))[0])
   dire(auCran(points, CRAN_INITIAL).length === 0, 'MASQUÉ PAR DÉFAUT — le cran d\'ouverture ne montre rien')

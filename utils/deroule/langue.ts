@@ -37,9 +37,10 @@
 //      SA CONSÉQUENCE, ET ELLE EST NOMINALE : **l'encart NE S'AFFICHE PAS, ET
 //      CE N'EST PAS UNE PANNE.** Ce module PRÉVOIT LE CHEMIN DE LECTURE et
 //      traite **l'absence comme le cas normal** : il ne fabrique jamais un
-//      relevé vide pour avoir quelque chose à montrer. Le jour où la fiche
-//      Expression est *versée et bancée* et son slot branché, le chemin s'ouvre
-//      sans qu'on retouche à une ligne d'écran.
+//      relevé vide pour avoir quelque chose à montrer. ⭐ **C4-L10 a branché
+//      l'Expression (22/08/2026)** : le chemin est ouvert, sans qu'on ait
+//      retouché à une ligne d'écran. Ce qu'il attend désormais est un dépôt
+//      réellement mesuré — donc un statut de recette posé par le professeur.
 //
 // ⭐ **NULL N'EST PAS ZÉRO** — la doctrine de `delta_v1_vf`, mot pour mot
 //    (`01-` §11 ; `06-` §6). « Aucune faute » et « on n'a pas regardé » sont

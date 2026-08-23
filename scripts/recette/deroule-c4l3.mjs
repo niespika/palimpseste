@@ -263,8 +263,9 @@ async function controleDEntree() {
   const { error: eCible } = await admin.from('exercices').select('id, cible_primaire').limit(1)
   note(`état de la base : \`exercices.cible_primaire\` est ${eCible ? 'TOUJOURS ABSENTE' : 'PRÉSENTE'}`
     + `${eCible ? ` (${eCible.code} ${eCible.message})` : ''} — report assumé au lot de correctifs, `
-    + 'condition de fermeture écrite : avant la première fiche versée et bancée, et de toute '
-    + 'façon avant C4-L7.')
+    + 'condition de fermeture écrite : avant la première compétence ouverte à la chaîne, et de '
+    + 'toute façon avant C4-L7. ⚠️ C4-L10 a ouvert l’Expression le 22/08 : la condition est '
+    + 'ÉCHUE, et ce report est désormais dû.')
 
   // Sur pièce : le SELECT du lot, commentaires ôtés, ne la nomme plus.
   const sourceDepot = fs.readFileSync(`${RACINE}/utils/deroule/depot.ts`, 'utf-8')
@@ -293,8 +294,8 @@ async function controleDEntree() {
   // ── Ce que la chaîne ouvre : rien, et il faut le dire avant de compter ────
   const ouvertes = competencesOuvertes()
   note(`compétences OUVERTES à la chaîne : ${ouvertes.length ? ouvertes.join(', ') : 'AUCUNE'} — `
-    + 'aucune fiche n’est « versée et bancée », donc aucune mesure ne s’écrira '
-    + '(sections G et J : ce n’est pas une panne).')
+    + 'depuis C4-L10 (22/08), l’Expression est dérivée ET branchée ; une mesure ne s’écrit '
+    + 'toutefois que si le professeur a posé un statut de recette (sections G et J).')
 
   // ── Une discordance de fond, constatée par requête, hors manifeste du lot ─
   const { data: crans } = await admin.from('exercices').select('id, cran, lieu').order('created_at')

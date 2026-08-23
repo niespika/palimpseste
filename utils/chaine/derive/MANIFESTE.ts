@@ -6,28 +6,102 @@
 export const MANIFESTE_INSTRUMENTS = {
   "competences": {
     "argumentation": {
-      "motif": "statut « RELUE ET VALIDÉE » — pas *versé et bancé* : sa compétence reste hors de la chaîne (clause granulaire, `07-` §2).",
-      "ouverte": false
+      "observables_mesure": [
+        "garant_ambigu",
+        "garant_circulaire",
+        "garant_present",
+        "garant_vague",
+        "lien_explicite",
+        "nb_limites",
+        "objection_traitee",
+        "preuve_circulaire",
+        "source_cosmetique"
+      ],
+      "ouverte": true,
+      "statut": "RELUE ET VALIDÉE",
+      "version": "4.2"
     },
     "connaissance": {
-      "motif": "statut « RELUE ET VALIDÉE » — pas *versé et bancé* : sa compétence reste hors de la chaîne (clause granulaire, `07-` §2).",
-      "ouverte": false
+      "observables_mesure": [
+        "contresens",
+        "diversite_registres",
+        "diversite_sources",
+        "etendue_rappel",
+        "inverifiable",
+        "mobilisation",
+        "taux_justesse",
+        "unite_plaquee"
+      ],
+      "ouverte": true,
+      "statut": "RELUE ET VALIDÉE",
+      "version": "2.2"
     },
     "expression": {
-      "motif": "statut « RELUE ET VALIDÉE » — pas *versé et bancé* : sa compétence reste hors de la chaîne (clause granulaire, `07-` §2).",
-      "ouverte": false
+      "observables_mesure": [
+        "attache_presente",
+        "densite_friction",
+        "densite_generique",
+        "mot_impropre",
+        "orthographe",
+        "repetition_pauvre",
+        "reussites",
+        "savant_plaque",
+        "taux_sens_passe"
+      ],
+      "ouverte": true,
+      "statut": "RELUE ET VALIDÉE",
+      "version": "3.2"
     },
     "questionnement": {
-      "motif": "statut « RELUE ET VALIDÉE » — pas *versé et bancé* : sa compétence reste hors de la chaîne (clause granulaire, `07-` §2).",
-      "ouverte": false
+      "observables_mesure": [
+        "debat_situe",
+        "enjeu",
+        "notions_en_tension",
+        "question_presente",
+        "question_propre",
+        "question_specifique",
+        "recadrage",
+        "recadrage_non_tenu",
+        "recadrage_verbal"
+      ],
+      "ouverte": true,
+      "statut": "RELUE ET VALIDÉE",
+      "version": "2.2"
     },
     "structure": {
-      "motif": "statut « RELUE ET VALIDÉE » — pas *versé et bancé* : sa compétence reste hors de la chaîne (clause granulaire, `07-` §2).",
-      "ouverte": false
+      "observables_mesure": [
+        "bloc_relie",
+        "bloc_unite",
+        "charniere_formule",
+        "charniere_motivee",
+        "derive",
+        "jointure_presente",
+        "plan_tenu",
+        "promesse_presente"
+      ],
+      "ouverte": true,
+      "statut": "RELUE ET VALIDÉE",
+      "version": "3.3"
     },
     "synthese": {
-      "motif": "statut « RELUE ET VALIDÉE » — pas *versé et bancé* : sa compétence reste hors de la chaîne (clause granulaire, `07-` §2).",
-      "ouverte": false
+      "observables_mesure": [
+        "apport_decoratif",
+        "apport_non_couvrant",
+        "apport_organisateur",
+        "apport_vide",
+        "contresens_majeur",
+        "contresens_partiel",
+        "copie_verbatim",
+        "couverture_essentielles",
+        "elagage",
+        "mobilisation_reliee",
+        "part_integrative",
+        "relation_rendue",
+        "taux_compression"
+      ],
+      "ouverte": true,
+      "statut": "RELUE ET VALIDÉE",
+      "version": "3.4"
     }
   },
   "monitoring": {
@@ -40,14 +114,44 @@ export const MANIFESTE_INSTRUMENTS = {
   "racine_conception": "/Users/louissagnieres/Documents/GitTest/palimpseste-conception",
   "sources": {
     "07-Implementation.md": {
-      "empreinte": "ba712df015b3e2bc5be3e3dcce09fb30771c8ef72b43d48ad5ccd902fc0ded61",
+      "empreinte": "9d7cd9d6e42bbb2d922964bc323bb8cddbfc78283ea7937c403cf1e600d1d1fc",
       "statut": "RELU ET VALIDÉ.",
-      "version": "2.32"
+      "version": "2.34"
+    },
+    "competences/argumentation.md": {
+      "empreinte": "3f7d2960c92765ed93a2712303a24a6d4d1ae047db5e6c1e429ac894ca75f379",
+      "statut": "RELUE ET VALIDÉE",
+      "version": "4.2"
+    },
+    "competences/connaissance.md": {
+      "empreinte": "cfb7bda95ee30625a9287933036c6f71c9ca7587117c6097e94b953e570d64a4",
+      "statut": "RELUE ET VALIDÉE",
+      "version": "2.2"
+    },
+    "competences/expression.md": {
+      "empreinte": "d7c017bb93e5aad2994c367e887d3f006372359cab8e650b04183bdc0f6c456e",
+      "statut": "RELUE ET VALIDÉE",
+      "version": "3.2"
     },
     "competences/monitoring.md": {
       "empreinte": "b344f320f60905768b94f7b7cc4f006771eb2c33bd6c7d6d3a5fc2a3052b7500",
       "statut": "RELUE ET VALIDÉE",
       "version": "2.1"
+    },
+    "competences/questionnement.md": {
+      "empreinte": "6e5d0134fd6fa5dcd1aa9ecd452055dd777ecc8185fac284fa9c5d362d7488b2",
+      "statut": "RELUE ET VALIDÉE",
+      "version": "2.2"
+    },
+    "competences/structure.md": {
+      "empreinte": "2ebc4879cf11a22936a65f86b67080bae4e8404545ccde1c2978b2ce93178649",
+      "statut": "RELUE ET VALIDÉE",
+      "version": "3.3"
+    },
+    "competences/synthese.md": {
+      "empreinte": "3b3beeadf8f19e9501ef10613ad0f69ab18c8f7542bedffbc5252d9a0cb97441",
+      "statut": "RELUE ET VALIDÉE",
+      "version": "3.4"
     },
     "copies-tests/PROMPT_transcription_copies_tests.md": {
       "empreinte": "d79ae85b43f0a7a651e0153d1a1805ea84c96ceb41c1fea491dd0fbb9b0ef1c0",

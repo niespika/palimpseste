@@ -28,10 +28,33 @@ deux parts ouvertes pour que la décision, le jour où elle tombe, se fasse dans
 la source et se re-dérive d'un geste.
 
 LA CLAUSE GRANULAIRE EST APPLIQUÉE ICI, ET NULLE PART AILLEURS.
-Une fiche dont l'en-tête ne porte pas *versé et bancé* NE SE LIT PAS : aucun
+Une fiche dont l'en-tête ne porte pas *relu et validé* NE SE LIT PAS : aucun
 instrument n'est dérivé pour elle, et sa compétence reste hors de la chaîne
-(`07-` §2 ; PROMPT §piège 54). `competences/monitoring.md` est au statut PLAFOND
-qu'elle déclare — *relue et validée*, pas de banc : son étage se dérive.
+(`07-` §2). `competences/monitoring.md` est au statut PLAFOND qu'elle déclare —
+*relue et validée*, pas de banc : son étage se dérive au même seuil.
+
+⭐ C4-L10 — LE SEUIL EST *RELU ET VALIDÉ*, ET IL L'EST PAR ALIGNEMENT SUR LES
+SOURCES. Il valait *versé et bancé* depuis C4-L5, et ce durcissement n'avait
+AUCUNE source : le `03-` §9 écrit que les trois conditions de banc « ne sont
+gardées par aucun mécanisme […] c'est le professeur qui les vérifie avant de
+poser `evaluee` », et le `01-` §3 que « c'est le professeur qui choisit, sans
+automatisme — sauf le plancher : une compétence dont la fiche n'est pas déposée
+est `differee` ». Le seuil de banc n'existait que comme EXIGENCE D'UN LOT — la
+ligne de manifeste de C4-L5 au `07-` §2 —, que ce script avait durcie en code.
+Un contrôle plus strict que sa source refuse du licite, et il le refuse EN
+SILENCE : les six fiches, toutes *relues et validées*, restaient illisibles.
+
+⚠️ CE QUI NE BOUGE PAS, ET C'EST LE CONTRÔLE DE NON-RÉGRESSION DU GESTE : les
+DEUX PLANCHERS MÉCANIQUES du `03-` §9. Une fiche ABSENTE ou seulement DÉPOSÉE
+reste hors de la chaîne (ci-dessous, et `01-` §3 : `differee` et rien d'autre) ;
+et la correspondance observable → formulation non uploadée tient sa compétence
+non déclarable `evaluee` (C4-L8, `competences/monitoring.md` §4). Ni l'un ni
+l'autre n'est à ce script de les lever.
+
+⛔ ET LES EN-TÊTES DES SIX FICHES NE SONT PAS TOUCHÉES. Écrire « VERSÉE ET
+BANCÉE » dans six sources qui font foi affirmerait qu'un banc a eu lieu, quand
+chaque fiche porte en plus une phrase de prose qui dit le contraire. Le seuil
+descend ici, une fois ; les sources ne mentent pas.
 
 CITE OU REFUSE. Un marqueur absent, un bloc sans clôture, un YAML hors du
 sous-ensemble lu : le script S'ARRÊTE au lieu de deviner. Une source qui bouge
@@ -627,10 +650,14 @@ def charge_competence(racine, nom):
     texte = lire(chemin)
     version, statut = entete(texte, rel)
     degre = degre_du_statut(statut)
-    if degre < BANCE:
-        # « Une fiche dont l'en-tête ne porte pas *versé et bancé* NE SE LIT PAS. »
-        # On s'arrête ici : rien du corps de la fiche n'est ouvert.
-        return None, ("statut « %s » — pas *versé et bancé* : sa compétence reste hors de "
+    if degre < RELU:
+        # ⭐ C4-L10 — LE SEUIL EST *RELU ET VALIDÉ* (voir le docstring d'en-tête).
+        # Une fiche seulement DÉPOSÉE ne se lit pas : rien de son corps n'est
+        # ouvert. C'est le PREMIER des deux planchers mécaniques du `03-` §9, et
+        # il n'est pas à ce script de le lever — le `01-` §3 le pose en toutes
+        # lettres : « une compétence dont la fiche n'est pas déposée est
+        # `differee` et ne peut pas être autre chose ».
+        return None, ("statut « %s » — pas *relu et validé* : sa compétence reste hors de "
                       "la chaîne (clause granulaire, `07-` §2)." % statut)
 
     machine = yaml_strict(bloc_clos(entre_marqueurs(texte, MARQ_CONFIG, rel), rel, "yaml"))

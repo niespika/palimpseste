@@ -370,13 +370,18 @@ async function rafraichirNiveauLucidite(admin: Admin, eleveId: string): Promise<
 async function auMoinsUnEchec(admin: Admin, depotId: string): Promise<boolean> {
   const { data } = await admin
     .from('competences_mesures').select('competence, observables').eq('depot_id', depotId)
-  const { etatCompetence } = await import('./instruments')
+  const { etatCompetence, valeursDesParametres } = await import('./instruments')
   const { statutDeLaMesure } = await import('./observables')
   for (const m of (data ?? []) as Array<{ competence: string; observables: Record<string, unknown> }>) {
     const etat = etatCompetence(m.competence as Competence)
     if (!etat.instrument) continue
     for (const [code, entree] of Object.entries(etat.instrument.observables_mesure)) {
-      const s = statutDeLaMesure(m.observables?.[code] as never, entree, etat.instrument.parametres)
+      // ⚠️ `valeursDesParametres` et jamais `instrument.parametres` : la fiche
+      //    écrit un BLOC par paramètre (`defaut`, `bornes`, `statut`), et un
+      //    `seuil_parametre` lu sur le bloc rendrait un objet — donc une
+      //    comparaison impossible, donc `sans_objet` EN SILENCE (C4-L10).
+      const s = statutDeLaMesure(m.observables?.[code] as never, entree,
+        valeursDesParametres(etat.instrument))
       if (s === 'ratee') return true
     }
   }

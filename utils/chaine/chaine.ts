@@ -27,9 +27,14 @@ import { lireContexte, type ContexteDepot } from './contexte'
 import { appelsDuDepot, controlerLaFacture } from './couts-serveur'
 import { depotAAtteintSonPlafond } from './couts'
 import {
-  competencesOuvertes, etatCompetence, CALAME,
+  competencesOuvertes, etatCompetence, refusFormeCode2, valeursDesParametres,
+  CALAME, FOURNISSEURS_NATIFS,
   type BranchementCompetence, type ContexteBranchement, type InstrumentCompetence,
+  type SpecExtraction,
 } from './instruments'
+import {
+  messageDuGabarit, refusSlotsExtraction, refusSlotsJugement, separerTete, slotsDu,
+} from './slots'
 import { modeleDeLaChaine } from './modele'
 import { messageAvecMateriau, tentativeDeSortieDeBloc } from './anti-injection'
 import { appliquerObservablesMesure } from './observables'
@@ -260,7 +265,8 @@ export async function traiterDepot(
  * « La mesure tourne ? `evaluee` : oui · `mesuree_silencieusement` : OUI, on
  * mesure et on stocke · `differee` : NON, on ne mesure pas » (`07-` §5).
  * Plus la clause granulaire, qui écarte toute compétence dont la fiche n'est pas
- * versée et bancée — et c'est le cas des six aujourd'hui.
+ * DÉRIVÉE ET BRANCHÉE — la dérivation lit toute fiche *relue et validée*
+ * (C4-L10), et le branchement s'écrit une compétence à la fois.
  */
 export function competencesDeLExercice(ctx: ContexteDepot): {
   mesurees: Competence[]
@@ -277,7 +283,9 @@ export function competencesDeLExercice(ctx: ContexteDepot): {
     }
     const etat = etatCompetence(c)
     if (!etat.ouverte) {
-      ecartees.push({ competence: nom, motif: etat.motif ?? 'fiche non versée et bancée' })
+      // Ce motif-là est SERVI : le bilan d'un dépôt l'affiche. Un motif faux ne
+      // se lit pas comme un commentaire faux — il se croit.
+      ecartees.push({ competence: nom, motif: etat.motif ?? 'compétence non branchée à la chaîne' })
       continue
     }
     mesurees.push(c)
@@ -322,6 +330,58 @@ export function sondesDeLExercice(ctx: ContexteDepot): Set<string> {
   return new Set(ctx.decision?.sondes ?? [])
 }
 
+/**
+ * Les valeurs des slots d'UNE phase d'extraction — et le refus, s'il y a lieu.
+ *
+ * Le contrôle est celui du banc (`verifie_slots_p1`), joué ici sur les VALEURS.
+ * Sa version au CHARGEMENT, sur les seules déclarations, vit à
+ * `verifierCoherence()` : c'est là que le refus doit tomber d'abord, avant qu'un
+ * appel ait été dépensé. Ici, c'est le filet — et il attrape ce qu'une
+ * déclaration ne peut pas voir : un crochet qui ne rend pas ce qu'il annonce, et
+ * un contexte qui ne porte pas ce que le crochet lui demandait.
+ *
+ * ⚠️ « Une clé préfixée d'un tiret bas rendue par un crochet pré-phase N'EST PAS
+ *    UN SLOT : c'est un calcul que le banc range DANS LE CONTEXTE, sous le même
+ *    nom, à disposition des crochets suivants et de `code1` » (`CONTRAT` §2).
+ */
+function slotsDeLaPhase(
+  gabarit: string,
+  spec: SpecExtraction,
+  ctxPhase: ContexteBranchement,
+  prives: Record<string, unknown>,
+): { slots: Record<string, string>; refus: string | null } {
+  const rendu = spec.pre ? spec.pre(ctxPhase) : {}
+  const fournis: Record<string, string | null> = {}
+  for (const [cle, valeur] of Object.entries(rendu)) {
+    if (cle.startsWith('_')) { prives[cle] = valeur; continue }
+    fournis[cle] = valeur == null ? null : String(valeur)
+  }
+
+  const vides = Object.keys(fournis).filter((k) => fournis[k] === null).sort()
+  if (vides.length) {
+    return { slots: {}, refus: `REFUS : le contexte de l'exercice ne porte pas de quoi servir `
+      + `${vides.join(', ')} à ${spec.tetePrompt}.` }
+  }
+  // La déclaration et le rendu doivent coïncider : la première est ce que le
+  // chargement contrôle, le second ce qui part au modèle. Les laisser diverger,
+  // c'est contrôler autre chose que ce qui s'exécute.
+  const declares = [...spec.slotsFournis].sort()
+  const rendus = Object.keys(fournis).sort()
+  if (declares.join(' ') !== rendus.join(' ')) {
+    return { slots: {}, refus: `REFUS : ${spec.tetePrompt} DÉCLARE fournir `
+      + `[${declares.join(', ')}] et rend [${rendus.join(', ')}] — la déclaration est ce que le `
+      + 'chargement contrôle, le rendu est ce qui part au modèle.' }
+  }
+  const refus = refusSlotsExtraction(gabarit, rendus, FOURNISSEURS_NATIFS, spec.tetePrompt)
+  if (refus.length) return { slots: {}, refus: refus.join(' | ') }
+
+  const slots: Record<string, string> = {}
+  for (const nom of slotsDu(gabarit)) {
+    slots[nom] = fournis[nom] ?? ctxPhase.contexteExercice[nom] ?? ''
+  }
+  return { slots, refus: null }
+}
+
 // ── La chaîne d'UNE compétence : P1 → Code1 → P2 → Code2 ────────────────────
 
 interface ResultatCompetence {
@@ -344,7 +404,13 @@ async function chaineDUneCompetence(
 ): Promise<ResultatCompetence> {
   const { ctx, competence, version, production, modele, instrument, branchement } = a
   const modes = ctx.modesParCompetence[competence] ?? []
-  const ctxBranchement: ContexteBranchement = {
+  let appels = 0
+  const alertes: string[] = []
+
+  // ── Temps 0 — `prepare_copie`. « Le texte donné à P1 » (`CONTRAT` §2). ─────
+  // Structure le définit, et le contrat dit pourquoi : « les lignes vides sont
+  // des frontières de blocs ». Absent, la production part telle quelle.
+  const ctxAvantPreparation: ContexteBranchement = {
     modes,
     cran: ctx.cranCode,
     // « UN SEUL appel d'extraction quand le référent est LE COURS — l'aligneur ne
@@ -352,26 +418,58 @@ async function chaineDUneCompetence(
     //   référent (`01-` §10) ; ailleurs, c'est la référence décomposée du texte.
     referent: ctx.referent,
     exceptionOrthographe: ctx.exceptionOrthographe,
+    contexteExercice: {}, prives: {}, sorties: {},
+    parametres: valeursDesParametres(instrument),
   }
-  let appels = 0
-  const alertes: string[] = []
+  const copie = branchement.prepareCopie
+    ? branchement.prepareCopie(production, ctxAvantPreparation)
+    : production
+
+  // LES FOURNISSEURS NATIFS DES SLOTS. `sujet` EST la consigne instanciée : la
+  // table `exercices` porte la consigne et la PROVENANCE de ses matériaux, jamais
+  // le texte d'un sujet distinct (`07-` §1.1) — c'est tout ce que la chaîne a, et
+  // la consigne dit précisément « ce sur quoi on travaille ».
+  const ctxBranchement: ContexteBranchement = {
+    ...ctxAvantPreparation,
+    contexteExercice: {
+      sujet: ctx.consigne,
+      consigne: ctx.consigne,
+      copie,
+      mode: modes.join(', '),
+    },
+    prives: {},
+    sorties: {},
+  }
 
   // ── Temps 1 — P1. Un appel pour cinq compétences, DEUX pour la Synthèse. ──
   const artefactsP1: Record<string, unknown> = {}
+  // Le contexte s'ENRICHIT à mesure : les calculs privés des crochets pré-phase,
+  // et les sorties des phases déjà jouées (`CONTRAT` §2).
+  const prives: Record<string, unknown> = {}
+  const sorties: Record<string, unknown> = {}
   const specs = branchement.extractions(ctxBranchement)
   for (const spec of specs) {
-    const prompt = instrument.prompts[spec.tetePrompt]
-    if (!prompt) {
+    const gabarit = instrument.prompts[spec.tetePrompt]
+    if (!gabarit) {
       return { competence, appels, ecrite: false, dejaLa: false, lettre_equivalente: null, squelette: null,
         alerte: `prompt d'extraction « ${spec.tetePrompt} » absent de l'instrument dérivé` }
     }
+    const ctxPhase: ContexteBranchement = { ...ctxBranchement, prives: { ...prives }, sorties: { ...sorties } }
+    const { slots, refus } = slotsDeLaPhase(gabarit, spec, ctxPhase, prives)
+    if (refus) {
+      return { competence, appels, ecrite: false, dejaLa: false, lettre_equivalente: null, squelette: null,
+        alerte: refus }
+    }
+    // ⭐ LA SUBSTITUTION DES SLOTS. La tête du gabarit ne porte AUCUN slot : elle
+    //    est identique d'une copie à l'autre, donc elle se cache. La queue porte
+    //    les slots, chacun substitué SOUS BALISE — et le gabarit brut ne part
+    //    jamais à côté du substitué.
+    const { tete, queue } = separerTete(gabarit)
     const r = await appeler<Record<string, unknown>>({
       phase: 'p1', modele,
       systeme: 'Tu es un extracteur. Tu relèves, tu ne juges pas.',
-      prefixeCacheable: prompt,
-      message: messageAvecMateriau(
-        [{ nom: `la copie de l'élève (${version})`, contenu: production }],
-        `Consigne servie à l'élève : ${ctx.consigne}\n\nRends le relevé au format déclaré ci-dessus.`),
+      prefixeCacheable: tete,
+      message: messageDuGabarit(queue, slots, 'Rends le relevé au format déclaré ci-dessus.'),
       // Le relevé d'une fiche a une forme qui FAIT FOI À LA FICHE (`03-` §1) :
       // on exige un objet, on ne prétend pas en connaître les clés. `champs: {}`
       // aurait voulu dire « l'objet VIDE, et rien d'autre » — et refusé tout.
@@ -381,10 +479,22 @@ async function chaineDUneCompetence(
     })
     appels += r.appels
     artefactsP1[spec.cle] = r.valeur
+    sorties[spec.tetePrompt.toLowerCase()] = r.valeur
   }
+  const ctxEnrichi: ContexteBranchement = { ...ctxBranchement, prives, sorties }
 
   // ── Temps 2 — CODE1. Il ne journalise rien : ce n'est pas un appel. ────────
-  const prepare = branchement.code1(artefactsP1, ctxBranchement)
+  const prepare = branchement.code1(artefactsP1, ctxEnrichi)
+  // « `document_p2` est OBLIGATOIRE dès que `code1` existe. Un module qui l'omet
+  //   fait servir `null` à son juge, qui juge alors à vide — et c'est le SEUL
+  //   défaut de ce contrat dont RIEN NE TÉMOIGNE » (`CONTRAT` §2). La chaîne en
+  //   témoigne. ⚠️ La VALEUR peut être nulle ; c'est l'absence de la CLÉ qui est
+  //   l'erreur.
+  if (!('document_p2' in prepare)) {
+    return { competence, appels, ecrite: false, dejaLa: false, lettre_equivalente: null, squelette: null,
+      alerte: 'REFUS : `code1` ne rend pas la clé `document_p2` — le juge recevrait « null » à la '
+        + 'place du relevé et jugerait à vide (`CONTRAT-MODULES.md` §2)' }
+  }
   alertes.push(...prepare.alertes)
 
   await upsertSquelette(admin, ctx.depotId, competence, version, {
@@ -393,20 +503,57 @@ async function chaineDUneCompetence(
   })
 
   // ── Temps 3 — P2, observable par observable ───────────────────────────────
-  const specP2 = branchement.jugement(ctxBranchement)
-  const promptP2 = instrument.prompts[specP2.tetePrompt]
-  if (!promptP2) {
+  const specP2 = branchement.jugement(ctxEnrichi)
+  const gabaritP2 = instrument.prompts[specP2.tetePrompt]
+  if (!gabaritP2) {
     return { competence, appels, ecrite: false, dejaLa: false, lettre_equivalente: null, squelette: null,
       alerte: `prompt de jugement « ${specP2.tetePrompt} » absent de l'instrument dérivé` }
   }
+  // Le slot du DOCUMENT, plus ce que `preP2` sert — « ce que le CONTEXTE de
+  // l'exercice donne » (`CONTRAT` §2). Le contrôle est le même qu'au chargement ;
+  // ici il porte les VALEURS, et un `null` servi arrête la mesure en le nommant.
+  const { slotDocument, refus: refusP2 } = refusSlotsJugement(
+    gabaritP2, specP2.slotDocument ?? null, specP2.slotsFournis ?? [], [])
+  if (refusP2.length || !slotDocument) {
+    return { competence, appels, ecrite: false, dejaLa: false, lettre_equivalente: null, squelette: null,
+      alerte: refusP2.join(' | ') || 'REFUS : le prompt de jugement n\'a pas de slot de document' }
+  }
+  const slotsP2: Record<string, string> = {
+    [slotDocument]: JSON.stringify(prepare.document_p2, null, 2),
+  }
+  for (const [nom, valeur] of Object.entries(specP2.preP2 ? specP2.preP2(ctxEnrichi) : {})) {
+    if (valeur == null) {
+      // « Un slot que `pre_p2` sert à `None` l'arrête aussi : c'est ainsi qu'un
+      //   module dit "le contexte ne porte pas ce qu'il me faut" sans jamais
+      //   lever d'exception ni inventer une valeur. »
+      return { competence, appels, ecrite: false, dejaLa: false, lettre_equivalente: null, squelette: null,
+        alerte: `REFUS : \`preP2\` ne peut pas servir « ${nom} » — le contexte de l'exercice ne `
+          + 'le porte pas' }
+    }
+    slotsP2[nom] = valeur
+  }
+  const { tete: teteP2, queue: queueP2 } = separerTete(gabaritP2)
   const jugement = await appeler<Record<string, unknown>>({
     phase: 'p2', modele,
     systeme: 'Tu es un juge. Tu ne rends ni niveau, ni dimension, ni décompte.',
-    prefixeCacheable: promptP2,
-    message: messageAvecMateriau(
-      [{ nom: 'le relevé préparé pour le jugement', contenu: JSON.stringify(prepare.document_p2) }],
-      'Rends le jugement au format déclaré ci-dessus.'),
-    forme: { type: 'objet', champs: {}, optionnels: [] },
+    prefixeCacheable: teteP2,
+    message: messageDuGabarit(queueP2, slotsP2, 'Rends le jugement au format déclaré ci-dessus.'),
+    // ⚠️ C4-L10, TROUVÉ PAR LE PREMIER DÉPÔT RÉEL. Cette ligne disait
+    //    `{ type: 'objet', champs: {}, optionnels: [] }` — c'est-à-dire
+    //    « L'OBJET VIDE, ET RIEN D'AUTRE » : la garde des clés inconnues
+    //    REFUSAIT TOUTE SORTIE DE P2, relance comprise. Le verdict de la fiche
+    //    revenait complet et juste, et il était rejeté clé par clé — `niveau`,
+    //    `grades`, `profil`, `levier`… — puis la chaîne levait, sans mesure.
+    //
+    //    `schema.ts` porte l'avertissement mot pour mot, et P1 avait déjà été
+    //    corrigé : « C'est la distinction qui manquait, et elle bloquait la
+    //    chaîne entière LE JOUR OÙ UNE COMPÉTENCE S'OUVRE. » Ce jour est arrivé.
+    //
+    //    Le jugement d'une fiche a une forme QUI FAIT FOI À LA FICHE (`03-` §1),
+    //    exactement comme son relevé : on exige un objet, on ne prétend pas en
+    //    connaître les clés. La validation STRICTE du `01-` §12 est intacte —
+    //    elle porte sur la FORME, et le branchement, lui, refuse le fond.
+    forme: { type: 'objet_libre' },
     attribution: { module: MODULE_COUT, eleveId: ctx.eleveId, classeId: ctx.classeId,
       depotId: ctx.depotId, competence, version },
   })
@@ -418,11 +565,32 @@ async function chaineDUneCompetence(
   })
 
   // ── Temps 4 — CODE2. « Du code agrège » : le palier DE LA MESURE. ─────────
-  const agrege = branchement.code2(jugement.valeur, ctxBranchement)
+  // ⭐ IL REÇOIT LA SORTIE DE CODE1, et c'est ce que le contrat écrit deux fois :
+  //    « le JSON de P2 déjà parsé + la sortie du crochet 3 ». Sans ce canal, une
+  //    agrégation qui croise les mesures comptées par Code1 avec les verdicts de
+  //    P2 n'a rien à croiser.
+  const agrege = branchement.code2(jugement.valeur, prepare, ctxEnrichi)
+  const refusForme = refusFormeCode2(agrege)
+  if (refusForme) {
+    return { competence, appels, ecrite: false, dejaLa: false, lettre_equivalente: null, squelette: null,
+      alerte: refusForme }
+  }
   alertes.push(...agrege.alertes)
+
+  // `conformite` TOURNE À CHAQUE PASSAGE, d'office — « le contrôle passe de
+  // script à lancer à propriété du banc ». Il rend une liste d'alertes, jamais un
+  // verdict : elles rejoignent celles de Code2. *Un contrôle qu'on n'appelle pas
+  // est un contrôle qui n'existe pas.*
+  if (branchement.conformite) {
+    alertes.push(...branchement.conformite(artefactsP1, jugement.valeur, prepare, agrege, ctxEnrichi))
+  }
+
+  const { releve, alertes: alertesReleve } = branchement.releve(agrege, ctxEnrichi)
+  alertes.push(...alertesReleve)
   const { observables, alertes: alertesObs } =
-    appliquerObservablesMesure(instrument.observables_mesure, agrege.releve)
+    appliquerObservablesMesure(instrument.observables_mesure, releve)
   alertes.push(...alertesObs.map((x) => `${x.observable} : ${x.motif}`))
+  const lettreEquivalente = branchement.lettre(agrege, ctxEnrichi)
 
   const squelette: SqueletteServi = { competence, extraction: artefactsP1, jugement: jugement.valeur }
 
@@ -432,7 +600,7 @@ async function chaineDUneCompetence(
   if (version === 'vf') {
     const squeletteV1 = await lireSquelette(admin, ctx.depotId, competence, 'v1')
     const delta = branchement.delta && squeletteV1 != null
-      ? branchement.delta(squeletteV1, artefactsP1, ctxBranchement)
+      ? branchement.delta(squeletteV1, artefactsP1, ctxEnrichi)
       : null
     if (delta === null && !branchement.delta) {
       alertes.push('`delta_v1_vf` reste NULL : le branchement de la compétence n\'en déclare '
@@ -440,7 +608,7 @@ async function chaineDUneCompetence(
     }
     await attacherDelta(admin, ctx.depotId, competence, delta)
     return { competence, appels, ecrite: false, dejaLa: false,
-      lettre_equivalente: agrege.lettre_equivalente, squelette,
+      lettre_equivalente: lettreEquivalente, squelette,
       alerte: alertes.length ? alertes.join(' · ') : null }
   }
 
@@ -451,7 +619,7 @@ async function chaineDUneCompetence(
     eleve_id: ctx.eleveId,
     competence,
     modes,
-    lettre_equivalente: agrege.lettre_equivalente,
+    lettre_equivalente: lettreEquivalente,
     observables,
     lieu: ctx.lieu,
     forme: ctx.forme,
@@ -488,7 +656,7 @@ async function chaineDUneCompetence(
   return {
     competence, appels,
     ecrite: ecriture.ecrite, dejaLa: ecriture.dejaLa,
-    lettre_equivalente: agrege.lettre_equivalente,
+    lettre_equivalente: lettreEquivalente,
     squelette,
     alerte: alertes.length ? alertes.join(' · ') : null,
   }

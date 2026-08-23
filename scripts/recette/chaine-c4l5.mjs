@@ -40,7 +40,7 @@ const { mettreEnFile, reclamerJobs, etatDesJobs, cleIdempotence, terminerJob } =
 const { ecrireMesure } = await import(`${RACINE}/utils/chaine/mesures.ts`)
 const { traiterDepot, tourDeFile } = await import(`${RACINE}/utils/chaine/chaine.ts`)
 const { lireConfig } = await import(`${RACINE}/utils/chaine/config.ts`)
-const { competencesOuvertes, MANIFESTE_LU } = await import(`${RACINE}/utils/chaine/instruments.ts`)
+const { competencesOuvertes, verifierCoherence, MANIFESTE_LU } = await import(`${RACINE}/utils/chaine/instruments.ts`)
 const { controlerLaFacture } = await import(`${RACINE}/utils/chaine/couts-serveur.ts`)
 
 const admin = createClient(env.NEXT_PUBLIC_SUPABASE_URL, env.SUPABASE_SERVICE_ROLE_KEY,
@@ -128,9 +128,16 @@ let decor = null
 try {
   console.log('\n══ 0. L\'ÉTAT DU JOUR ═══════════════════════════════════════════')
   const ouvertes = competencesOuvertes()
-  dire(ouvertes.length === 0,
-    `clause granulaire : ${ouvertes.length} compétence(s) ouverte(s) — attendu 0 `
-    + '(six fiches *relues et validées*, aucune *versée et bancée*)')
+  // ⭐ AMENDÉ PAR C4-L10 (22/08/2026). Cette ligne exigeait ZÉRO compétence
+  //    ouverte, et c'était l'état du jour de C4-L5 : le seuil de la dérivation
+  //    valait alors *versé et bancé*, qu'aucune fiche ne porte. C4-L10 l'a
+  //    descendu à *relu et validé* — un alignement sur le `03-` §9 et le `01-`
+  //    §3 — puis a branché l'Expression. Ce qui se vérifie ici n'est donc plus
+  //    un COMPTE mais une COHÉRENCE : la chaîne n'ouvre que ce qui est à la
+  //    fois dérivé et branché, et elle ne se contredit nulle part.
+  dire(verifierCoherence().length === 0,
+    `clause granulaire : ${ouvertes.length} compétence(s) ouverte(s) — `
+    + `${ouvertes.length ? ouvertes.join(', ') : 'aucune'} — et AUCUN écart de cohérence`)
   dire(MANIFESTE_LU.monitoring.ouvert === true,
     `le Monitoring est ouvert à son statut PLAFOND (v${MANIFESTE_LU.monitoring.version})`)
   const av = await etatInterrupteur()

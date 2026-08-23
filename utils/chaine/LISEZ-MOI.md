@@ -54,19 +54,33 @@ refuse* : le script s'arrête au lieu de deviner. **S'il diverge, rejouer
 > chaîne** — pas d'instrument dérivé, pas de mesure. »
 
 Elle est appliquée **à la dérivation, et nulle part ailleurs** : une fiche qui
-n'est pas *versée et bancée* ne produit aucun fichier dans `derive/competences/`.
-Au 21/08/2026, **c'est le cas des six** ; `competences/monitoring.md` est à son
-**statut plafond déclaré** — pas de banc, « versé et bancé » ne s'applique pas —
-et son étage est construit en entier.
+n'est pas *relue et validée* ne produit aucun fichier dans `derive/competences/`.
 
-**Ouvrir un slot**, le jour où une fiche passe sa porte, tient en trois gestes :
+⭐ **Le seuil est *relu et validé* depuis C4-L10 (22/08/2026), et c'est un
+alignement sur les sources.** Il valait *versé et bancé*, et ce durcissement
+n'avait aucune source : le `03-competences.md` §9 confie les trois conditions de
+banc **au professeur** — « elles ne sont gardées par aucun mécanisme » —, et le
+`01-routeur.md` §3 dit qu'« il choisit, sans automatisme ». Un contrôle plus
+strict que sa source refuse du licite, **en silence**. `competences/monitoring.md`
+est à son **statut plafond déclaré** — pas de banc, « versé et bancé » ne s'y
+applique pas — et son étage est construit en entier.
+
+⚠️ **Dérivée n'est pas branchée.** Les six fiches dérivent ; **C4-L10 les branche
+une par une**, et une compétence dérivée sans branchement est un état NORMAL, pas
+une incohérence. `competencesEnAttenteDeBranchement()` les nomme, et
+`etatCompetence()` sert le motif que le bilan d'un dépôt affiche.
+
+**Ouvrir un slot**, le jour où C4-L10 se rejoue pour une compétence, tient en
+trois gestes :
 
 1. `python3 scripts/derive-instruments.py --ecris` — le dérivé apparaît ;
 2. importer `INSTRUMENT_<NOM>` dans `instruments.ts` et le poser dans `INSTRUMENTS` ;
 3. écrire son **branchement** dans `BRANCHEMENTS` — quel prompt est P1, lequel
-   est P2, ce que Code1 prépare, ce que Code2 agrège. **Cela ne se devine pas
-   depuis les titres des blocs** : « le détail de chaque chaîne fait foi à sa
-   fiche » (`03-` §1), et la fiche est alors lisible.
+   est P2, ce que Code1 prépare, ce que Code2 agrège, **et le relevé des
+   observables du §5**. **Cela ne se devine pas depuis les titres des blocs** :
+   « le détail de chaque chaîne fait foi à sa fiche » (`03-` §1), et le module de
+   calibration — `copies-tests/<nom>/code.py` — porte le calcul et ses vecteurs.
+   **C'est une extraction, jamais une régénération** (`CONTRAT-MODULES.md` §7).
 
 `verifierCoherence()` refuse un slot branché sans dérivé, et l'inverse ; la route
 ne part pas si elle rend quelque chose.

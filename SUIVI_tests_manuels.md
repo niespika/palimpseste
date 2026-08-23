@@ -1632,25 +1632,45 @@ requête)._
 ⚠️ **Cinq interrupteurs sont à OFF** : `chaine_actif`, propre à ce lot, plus les quatre de C4-L8
 (`exercices_actif`, `routeur_actif`, `competences_affichage_actif`, `fabrique_actif`).
 
-⚠️⚠️ **LES QUATRE RESTES SONT DERRIÈRE UNE SEULE ET MÊME PORTE : la première fiche de compétence
-*versée et bancée*.** Tant qu'aucune ne l'est, la clause granulaire tient chaque compétence hors de
-la chaîne — **zéro compétence ouverte**, donc aucune matière pour ces tests. **Ce n'est pas un oubli
-de séance** : c'est la dépendance qui n'est pas un lot (`PLAN_DE_CHANTIER.md` §3), et le prompt du
-lot ordonnait de le dire au relevé. **Rien de ce qui suit ne se tente avant cette porte.**
+⚠️⚠️ **LA PORTE EST OUVERTE DEPUIS LE 22/08 — C4-L10 A BRANCHÉ L'EXPRESSION.** Ces quatre restes
+étaient tous derrière la même : « la première fiche de compétence *versée et bancée* ». Cette
+condition **n'existe plus** — le seuil de la dérivation est passé à *relu et validé*, par alignement
+sur le `03-` §9 et le `01-` §3, et l'Expression est dérivée **et branchée**. **Deux des quatre sont
+joués, deux restent, et leurs conditions sont désormais NOMMÉES UNE PAR UNE ci-dessous** : ce ne
+sont plus les mêmes, et elles ne se lèveront pas ensemble.
 
 ### Ce qui reste à jouer — les quatre
 
-- [ ] **C4L5-1 · Un dépôt produit squelettes, mesures et retours conformes au contrat, sur une VRAIE
-  compétence.** C'est le « fait quand » du lot. Les formes du `07-` §1.2, le gabarit du §4 et
-  **RR1-RR4 relus sur pièce**, sur le texte d'un retour réel — pas sur un test.
+- [x] **C4L5-1 · Un dépôt produit squelette et mesure sur une VRAIE compétence — JOUÉ le 22/08, par
+  C4-L10.** `scripts/recette/expression-c4l10.mjs`, **29 contrôles verts**, en base, sur un dépôt
+  réel et **deux vrais appels** : un squelette portant SES DEUX artefacts, une mesure, sa
+  **lettre-équivalente « E »**, et **les neuf observables du §5 écrits, aucun en `n/a`**.
+  ⚠️ **LE RETOUR, LUI, A ÉTÉ REFUSÉ, et c'est un constat de fond, pas un incident** : la règle 2 du
+  gabarit exige de « COMMENCER PAR UNE RÉUSSITE réelle, citée », la règle 1 interdit « un compliment
+  sans citation », et la copie de recette **n'en porte aucune** au relevé — la fiche §3 le pose
+  ainsi : « l'absence de réussite n'est pas un défaut […] elle ne s'invente pas ». **Sur une copie
+  plancher, le retour est donc structurellement impossible**, et l'élève ne reçoit rien. *La mesure,
+  elle, s'écrit quand même : la chaîne dégrade proprement.* **Porté au registre des ouverts.**
+- [ ] **C4L5-1bis · Le RETOUR engendré, relu sur pièce (RR1-RR4, `07-` §4).** Reste à jouer **sur une
+  copie qui porte au moins une réussite au relevé** — la seule condition qui manque.
 - [ ] **C4L5-2 · La latence à PLUSIEURS compétences en parallèle.** Mesurée en séance sur **un seul
   appel — 3,1 s** contre un contrat de moins de trois minutes. **C'est à deux compétences et plus
-  que le contrat mord**, les chaînes étant lancées en parallèle.
+  que le contrat mord**, les chaînes étant lancées en parallèle. ⚠️ **Condition de reprise : LA
+  DEUXIÈME compétence branchée** — C4-L10 rejoué pour l'une des cinq qui attendent. *Mesure du jour,
+  à UNE compétence, en séance du 22/08 : **39 s** pour P1 + P2 + retour, dont un retour refusé. Loin
+  du contrat, mais c'est un chiffre à une compétence, sur un dépôt froid.*
 - [ ] **C4L5-3 · La reprise après expiration, sur la chaîne ENTIÈRE.** Prouvée en séance sur la
   fonction d'écriture et sur l'index unique (C4L5-8). Reste à **tuer un job après P1** sur une
-  compétence ouverte, et à constater **le squelette unique** au bout.
+  compétence ouverte, et à constater **le squelette unique** au bout. ⭐ **DEVENU JOUABLE le 22/08** :
+  une compétence est ouverte. *L'idempotence a par ailleurs été reprouvée sur la chaîne réelle —
+  `traiterDepot` rejoué : **une** mesure, **un** squelette (recette C4-L10).*
 - [ ] **C4L5-4 · Le `delta_v1_vf` et les deux résultats de la paire.** Le code les attache, mais
-  **leur calcul est au branchement de chaque fiche** — il n'y a donc rien à jouer avant la première.
+  **leur calcul est au branchement de chaque fiche**. ⚠️ **LA CONDITION A CHANGÉ, ET ELLE S'EST
+  PRÉCISÉE** : l'Expression est branchée, et **son branchement NE DÉCLARE PAS de `delta`** — sa
+  fiche ne dit nulle part ce que « comparer deux squelettes » veut dire pour elle, et l'inventer
+  depuis le code serait trancher une règle de grille. La chaîne le dit par une alerte et laisse
+  **NULL — qui n'est pas 0**. **Condition de reprise : une fiche qui DÉFINIT son delta.** *Porté au
+  registre des ouverts, et à la boîte aux lettres de C4-L10.*
 
 ### Ce qui est prouvé — pour ne pas le rejouer
 
@@ -2034,14 +2054,18 @@ auraient attendu une tâche planifiée qui « ne tient pas la seconde » et qui 
 - [x] **C4L4-F · `capitalize` sur toute la ligne du sommaire** — « 1 Réussite(S), 0 Point(S) De
   Travail ». Il ne porte plus que sur le nom de la compétence : « **Argumentation — 1 réussite(s),
   0 point(s) de travail** ». _(22/08.)_
-- [ ] **C4L4-4 · Le retour AFFICHÉ, sur un vrai retour engendré.** ⚠️ **Derrière la même porte que
-  les quatre restes de C4-L5 : la première fiche *versée et bancée*.** La chaîne ouvre **zéro
-  compétence**, n'engendre **aucun retour**, et la recette a donc **posé une fixture** à la forme
-  exacte que C4-L5 écrira — et l'a dit. Le flux, la transcription, la file, la correction, la
-  publication et l'obligation de lecture s'éprouvent tous sans elle ; **le retour affiché, non.**
+- [ ] **C4L4-4 · Le retour AFFICHÉ, sur un vrai retour engendré.** ⭐ **LA PORTE D'ORIGINE EST
+  LEVÉE** — C4-L10 a branché l'Expression le 22/08, la chaîne engendre. La recette de C4-L4 avait
+  posé une **fixture** à la forme exacte, et l'avait dit. ⚠️ **Une seconde condition est apparue, et
+  elle est nommée** : le retour n'est engendré que sur une copie **portant au moins une réussite au
+  relevé** — la règle 2 du gabarit exige de commencer par une réussite citée, la règle 1 interdit
+  d'en inventer une. **Condition de reprise : un dépôt réel dont le relevé porte une réussite.**
 - [ ] **C4L4-5 · « Se juger » réellement servi.** Il ne l'est pas : **aucune compétence n'est
-  `evaluee`** en base (`competences_niveaux` ne porte que `mesuree_silencieusement`, sur Expression
-  et Synthèse). Le drapeau est nécessaire, pas suffisant.
+  `evaluee`** en base (`competences_niveaux` ne porte que `mesuree_silencieusement`). Le drapeau est
+  nécessaire, pas suffisant. ⚠️ **CETTE CONDITION-LÀ N'EST PAS CELLE QUE C4-L10 A LEVÉE**, et les
+  deux ne se confondent pas : ouvrir une compétence à la chaîne est un geste de CODE ; poser
+  `evaluee` est un geste **DU PROFESSEUR**, à l'écran de C4-L8, et aucun lot ne le fait à sa place
+  (`01-` §3 ; `03-` §9). **Condition de reprise : un statut `evaluee` posé à la fabrique.**
 - [ ] **C4L4-6 · La confiance de remise réellement collectée.** L'étape **est servie** et **sert un
   objet vide** — construite quand même, c'est la collecte qu'une année manquée ne rattrape pas.
 - [x] **C4L4-7 · LA CRÉDENCE — JOUÉE le 22/08, aux DEUX formes.** Décor monté : deux instances de
@@ -2281,7 +2305,11 @@ retire)*.
   Sans instrument, `statutDeLaMesure` rend `sans_objet`, le taux vaut `null`, et « un observable
   sans taux ne se classe pas ». **C'est la clause granulaire du `07-` §2** — « une fiche seulement
   déposée bloque *sa* compétence, pas le lot ». Les règles sont écrites et éprouvées *(34 tests sur
-  l'escalade seule)*. **Condition de reprise : la première fiche versée et bancée.**
+  l'escalade seule)*. ⭐ **LA PREMIÈRE MOITIÉ EST LEVÉE le 22/08** : l'Expression est dérivée et
+  branchée, son instrument porte ses NEUF seuils de réussite, et une mesure réelle écrit ses neuf
+  observables. **Condition de reprise restante : assez de mesures pour remplir une fenêtre
+  d'évidence** — quatre mesures sur la compétence —, **plus un statut `evaluee`** pour que le routeur
+  la cible (« le routeur ne cible que les `evaluee` »).
 - [ ] **C4L2-12 · Une semaine réellement remplie par le moteur.** Aujourd'hui **zéro compétence est
   `evaluee`** *(les deux qui existent sont `mesuree_silencieusement`)* : R0 n'en laisse passer
   aucune, et la semaine entière revient à la **voie mixte** — « un régime normal, pas un repli », et
@@ -2397,7 +2425,10 @@ qui diverge. La re-dérivation appartient à qui a fait bouger la source.
   jouée et ne peut rien engendrer** : `MANIFESTE_INSTRUMENTS` porte `ouverte: false` sur les six
   compétences, faute de fiche *versée et bancée* ; `traiterDepot` n'écrit ni squelette, ni mesure,
   ni retour. **Aucun texte n'a été posé à la main pour faire semblant.** *Même mur que C4L2-11.*
-  **Condition de reprise : la première fiche versée et bancée.**
+  ⭐ **LE MUR EST TOMBÉ le 22/08 (C4-L10)** : `traiterDepot` écrit désormais squelette et mesure sur
+  l'Expression. **Condition de reprise restante — et elle est double** : un dépôt en **version
+  finale** (le retour final se compare à DEUX squelettes), et une copie **portant une réussite au
+  relevé**, sans quoi la règle 2 du gabarit refuse le retour.
 - [ ] ⚠️ **C4L3-15 · « SE JUGER » ET LA CONFIANCE DE REMISE — zéro compétence `evaluee`.** Les deux
   flux ont leur troisième condition fermée sur `evaluee`, et **les 34 lignes de
   `competences_niveaux` sont toutes `mesuree_silencieusement`**. Le code est écrit et testé *(la
@@ -2434,9 +2465,13 @@ qui diverge. La re-dérivation appartient à qui a fait bouger la source.
   `patronProduction` **tous vides**. **Hors manifeste de C4-L3, non corrigé.** **À trancher au lot
   de correctifs : quelle forme fait foi ?**
 - [ ] **C4L3-21 · L'encart langue ne s'affiche jamais.** *N* se compte **depuis le relevé de langue
-  que la chaîne produit**, et **la chaîne n'en produit aucun** — le champ `orthographe` vit dans la
-  fiche Expression, qui n'est pas ouverte. Le chemin de lecture est écrit et testé ; **l'absence est
-  le cas nominal**, et ce n'est pas une panne. *Même condition de reprise que C4L3-14.*
+  que la chaîne produit**, et **la chaîne n'en produisait aucun** — le champ `orthographe` vit dans
+  la fiche Expression, qui n'était pas ouverte. Le chemin de lecture est écrit et testé ; **l'absence
+  était le cas nominal**, et ce n'est pas une panne. ⭐ **LA CONDITION EST LEVÉE le 22/08 (C4-L10)** :
+  l'Expression est branchée, la chaîne écrit un squelette dont le relevé porte `orthographe`, et
+  l'encart a de quoi se remplir **sans qu'une ligne d'écran ait été retouchée**. **Condition de
+  reprise restante : le smoke élève à l'écran**, sur un dépôt dont le relevé porte des fautes —
+  celui de la recette du 22/08 en déclarait **zéro**, et zéro n'est pas `null`.
 
 ---
 
@@ -2860,3 +2895,126 @@ lui, parce que le `07-` a bougé** — voir C4L6-9._
 
 ### Ce qui reste à jouer en recette
 
+
+---
+
+## C4 · L10 — L'ouverture d'une compétence dans la chaîne : l'EXPRESSION (sandbox, 22/08)
+
+_Section ouverte le 22/08 à la clôture du lot. **Aucune migration** : ce lot ne touche que du code
+et des dérivés — le suivi SQL n'a pas bougé, et n'avait pas à bouger._
+
+_Ce qui a été prouvé EN SÉANCE est coché avec sa preuve. `npm test` : **1047 passés, 0 échoué**
+(dont **37 neufs** sur ce lot ; l'état d'entrée était 1009/1010, l'unique rouge étant le contrôle de
+dérivation, que le `07-` passé en 2.33 le matin même avait rendu divergent) ; `npx tsc --noEmit` :
+rien ; `python3 scripts/derive-instruments.py --verifie` : **IDENTIQUE** sur les dix dérivés ;
+`scripts/recette/expression-c4l10.mjs` : **29 contrôles, 29 passés**, joués **par le même code que
+la route**, en base, sur un **dépôt réel** et **deux vrais appels de modèle**, décor semé puis
+**retiré** (aucun reste, vérifié par requête)._
+
+⛔ **AUCUN STATUT DE RECETTE N'A ÉTÉ POSÉ, et aucun n'est proposé.** L'Expression est
+`mesuree_silencieusement` — son état de naissance. Ouvrir une compétence à la chaîne est un geste de
+CODE ; poser `evaluee` est un geste **du professeur**, à l'écran de C4-L8. **Rien n'a changé pour un
+élève** : la chaîne mesure et écrit, et aucune lettre n'est servie.
+
+⚠️ **`chaine_actif` est REVENU À OFF**, vérifié par requête à la fin de chaque tour de recette.
+
+### Ce qui est prouvé — pour ne pas le rejouer
+
+- [x] **C4L10-1 · LE VERROU DE LA DÉRIVATION EST DESCENDU À *RELU ET VALIDÉ*, et les six fiches
+  dérivent.** `derive-instruments.py --resume` : les six compétences sont **OUVERTES à la
+  dérivation** (9 · 9 · 8 · 8 · 13 · 9 observables de télémétrie, **56 en tout**), là où l'état
+  d'entrée disait « AUCUNE ». `--verifie` dit **IDENTIQUE**. ⭐ **C'est un alignement, pas un
+  contournement** : le seuil de banc n'est une règle dans **aucune** des neuf sources — vérifié
+  par lecture ET par `grep` sur les neuf —, il n'existait que comme **exigence d'un lot**, à la
+  ligne de manifeste de C4-L5. Cette ligne est réécrite en *relu et validé*, `07-` **2.34**. _(22/08.)_
+- [x] **C4L10-2 · LES DEUX PLANCHERS MÉCANIQUES TIENNENT — c'est le seul contrôle de non-régression
+  du geste.** Fiche **absente ou seulement déposée** → hors de la chaîne, avec son motif (le refus
+  est resté, à `degre < RELU`) ; **correspondance observable → formulation** non uploadée → non
+  déclarable `evaluee`, intacte à C4-L8. **Aucun des deux n'était à ce lot de les lever.** _(22/08.)_
+- [x] **C4L10-3 · `verifierCoherence()` NE REND AUCUN ÉCART**, l'Expression est ouverte, et **les
+  cinq autres sont NOMMÉES comme attendant leur branchement** — `competencesEnAttenteDeBranchement()`.
+  ⚠️ « Dérivée » n'est plus « branchée », et ce n'est pas une incohérence : C4-L10 se rejoue une
+  compétence à la fois. _(22/08.)_
+- [x] **C4L10-4 · LES SLOTS SONT SUBSTITUÉS, ET LE REFUS TOMBE AU CHARGEMENT.** Avant ce lot, le
+  modèle recevait **la chaîne littérale `{copie}`** : `chaine.ts` passait le gabarit tel quel. Sur
+  pièce, dans la recette : plus aucun slot littéral, la copie **renumérotée** (`[¶1]`, `[1] …`), les
+  trois valeurs **en blocs balisés**, la déclaration de matériau **avant** les blocs, et une **tête
+  cachable de 9008 caractères sans un seul slot**. Le contrôle des deux sens — slot sans
+  fournisseur, et bloc calculé jamais injecté — est porté de `banc.py` et joué par
+  `verifierCoherence()`, donc **avant tout appel payé**. **15 tests** sur `slots.ts`. _(22/08.)_
+- [x] **C4L10-5 · LE PORTAGE REPRODUIT LE MODULE, SUR LES TROIS CLÉS.** `scripts/vecteurs-expression.py`
+  rejoue `copies-tests/expression/code.py` **à chaque exécution** — jamais une fixture recopiée, qui
+  « pourrirait en silence » — et le test confronte `verdicts`, **`trace` mot pour mot** et `alertes`
+  sur : les **7 vecteurs gold**, le **balayage des 25 couples de grades**, les **6 bandes du
+  garde-fou bas**, les **3 cas du crible**, et **3 chaînes complètes** (`code1` → `code2` →
+  `conformite`, `document_p2` comparé clé pour clé). **L'autotest du module est vert**, et le test
+  le vérifie : un portage confronté à un module rouge ne prouve rien. _(22/08.)_
+- [x] **C4L10-6 · ⚠️ L'ÉPREUVE NÉGATIVE — le contrôle a été CASSÉ EXPRÈS, trois fois.** Un contrôle
+  qui ne peut pas échouer n'est pas un contrôle. **(a)** Inverser le seuil du profil dissocié
+  (`ecart <= 1` → `<= 2`) **passait les sept vecteurs gold** : ils portent tous un écart ≤ 1. D'où le
+  **balayage des 25 couples**, qui le fait tomber. **(b)** Remplacer l'arrondi de Python par
+  `Math.round` **passait les seize tests du portage** : aucun vecteur ne tombe sur une égalité
+  exacte. D'où `arrondi.test.ts`, qui confronte **33 valeurs** à `python3` — dont les égalités, où
+  Python tranche AU PAIR et JavaScript vers le haut. **(c)** Retirer « vers le bas » de la trace
+  fait tomber deux tests. _(22/08.)_
+- [x] **C4L10-7 · LES NEUF OBSERVABLES DU §5 ONT TOUS UNE VALEUR, OU UNE ALERTE NOMMÉE.** C'est
+  l'autre moitié du lot, et elle ne se voit pas : « un observable oublié ne lève aucune erreur — il
+  rend `n/a`, `n/a` sort du dénominateur, et l'escalade est aveugle sur lui POUR TOUJOURS, SANS UN
+  SYMPTÔME ». Sur un dépôt réel, **les neuf sont écrits en base** : `taux_sens_passe=0.5` ·
+  `densite_friction=4.71` · `attache_presente=1` · `densite_generique=8.24` · `mot_impropre=0` ·
+  `savant_plaque=0` · `repetition_pauvre=2.35` · `reussites=0` · `orthographe=0` — **aucun en
+  `n/a`**. Un test l'exige des deux côtés : valeur **ou** alerte nommée, jamais ni l'un ni l'autre,
+  jamais les deux. _(22/08.)_
+- [x] **C4L10-8 · UN DÉPÔT RÉEL TRAVERSE LA CHAÎNE, ET ÉCRIT.** Un squelette portant **ses deux
+  artefacts**, `instrument_version` = **3.2** (la ligne VERSION de la fiche), **une** mesure, sa
+  **lettre-équivalente « E »**, `delta_v1_vf` **NULL** (et NULL n'est pas 0), les neuf observables,
+  et le journal **une ligne par appel avec sa phase** — `p1`, `p2`, `retour` —, chacune rattachée au
+  dépôt, à la compétence et à la version. _(22/08.)_
+- [x] **C4L10-9 · L'IDEMPOTENCE SUR LA CHAÎNE RÉELLE.** `traiterDepot` rejoué sur le même dépôt :
+  **une** mesure, **un** squelette, et la reprise compte « 1 mesure déjà là ». _(22/08.)_
+- [x] **C4L10-10 · ⚠️ LE DÉSACCORD MODÈLE / CALCUL, ATTRAPÉ EN VRAI, DÈS LA PREMIÈRE COPIE.** P2 a
+  déclaré « Faible » ; le croisement calcule « **Absent** ». **Le calcul fait foi, et le désaccord
+  est la donnée** : il sort en alerte de `code2` ET en alerte de `conformite`. *C'est exactement le
+  défaut que le module existe pour attraper — « confier le calcul au modèle produit des erreurs
+  d'arithmétique » —, et il s'est produit au premier essai.* Le **contrôle d'existence des
+  citations** a de son côté trouvé **2 citations infidèles** sur la même copie : alerte seule, rien
+  retiré — le pari de la fiche §8, qui se ferme au premier lot réel. _(22/08.)_
+- [x] **C4L10-11 · ⚠️ LE DÉFAUT QUE SEUL UN DÉPÔT RÉEL POUVAIT VOIR — LA FORME DE SORTIE DE P2.**
+  `chaine.ts` déclarait le jugement `{ type: 'objet', champs: {}, optionnels: [] }`, c'est-à-dire
+  « **l'objet VIDE, et rien d'autre** » : la garde des clés inconnues **refusait toute sortie de
+  P2**, relance comprise — `niveau`, `grades`, `profil`, `levier`… rejetés un par un —, puis la
+  chaîne levait, **sans aucune mesure**. Le verdict revenait pourtant complet et juste. `schema.ts`
+  portait l'avertissement mot pour mot, et **P1 avait déjà été corrigé** : « c'est la distinction
+  qui manquait, et elle bloquait la chaîne entière **le jour où une compétence s'ouvre** ». Ce jour
+  est arrivé. **Corrigé en séance** — une ligne, `objet_libre`. *Aucun test pur ne pouvait le voir :
+  il fallait un vrai appel.* _(22/08.)_
+- [x] **C4L10-12 · LE DÉCOR EST RETIRÉ, ET LE GESTE EST SYMÉTRIQUE.** `--retire` retrouve un décor
+  laissé par sa MARQUE, même si le tour a cassé ; le `finally` nettoie toujours. Vérifié par
+  requête : **zéro reste**, `chaine_actif` à OFF, **zéro statut `evaluee`** sur l'Expression. _(22/08.)_
+
+### Ce qui reste à jouer en recette
+
+- [ ] **C4L10-13 · LE SMOKE PROF ET ÉLÈVE À L'ÉCRAN.** Rien n'a été vu dans un navigateur : tout ce
+  qui précède est prouvé **par requête et sur pièce**, jamais à l'œil. À voir : la tuile de la
+  fabrique qui dit l'Expression ouverte, et l'**encart langue** du déroulé élève (C4L3-21).
+- [ ] **C4L10-14 · LE RETOUR ENGENDRÉ SUR UNE COPIE QUI PORTE UNE RÉUSSITE.** ⚠️ **Condition de
+  reprise nommée** : la règle 2 du gabarit exige de « commencer par une réussite réelle, citée », la
+  règle 1 interdit d'en inventer une, et une copie plancher n'en porte aucune — le retour est alors
+  **structurellement impossible**, et l'élève ne reçoit rien. *Porté au registre des ouverts.*
+- [ ] **C4L10-15 · ⭐ LES CINQ AUTRES COMPÉTENCES — DÉPEND D'UNE AUTRE COMPÉTENCE QUE CELLE OUVERTE.**
+  `argumentation`, `structure`, `connaissance`, `synthese`, `questionnement` sont **dérivées et en
+  attente de branchement**. **Condition de reprise : C4-L10 rejoué pour chacune** — le lot est écrit
+  pour ça, et la boîte aux lettres du `PLAN_DE_CHANTIER.md` §5 porte ce que le premier portage a
+  appris. ⚠️ **Trois d'entre elles ont un obstacle NOMMÉ, trouvé en lisant leurs modules** : la
+  **Synthèse** dont `code1` ne rend pas `document_p2` — **sur ses DEUX chemins de sortie**, et dont
+  un commentaire affirme même que « `document_p2` n'est pas une clé du contrat » quand le contrat §2
+  l'exige **dès que `code1` existe** *(le banc refuserait le run ; la chaîne le refuse aussi depuis
+  ce lot — c'est « le seul défaut de ce contrat dont RIEN NE TÉMOIGNE »)* ; la **Connaissance** dont
+  `pre_p1` prend le TEXTE là où le contrat §2 et le banc passent le CONTEXTE *(même écart que
+  l'Expression — le banc lèverait une `AttributeError` au premier passage ; ce lot l'a contourné en
+  suivant LE CONTRAT, qui est au manifeste)* ; et la **Structure**, dont `prepare_copie` doit être
+  confronté au correctif CRLF de C4-L4 *(piège 17)*.
+- [ ] **C4L10-16 · LA LATENCE À DEUX COMPÉTENCES.** Mesure du jour, **à une seule** : **39 s** pour
+  P1 + P2 + retour sur un dépôt froid, contre un contrat de moins de trois minutes. Le contrat mord
+  à deux et plus, les chaînes étant lancées en parallèle. **Condition de reprise : la deuxième
+  compétence branchée** *(= C4L5-2)*.
