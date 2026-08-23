@@ -24,15 +24,16 @@ test('l\'instrument dérivé et son branchement sont COHÉRENTS', () => {
   assert.deepEqual(verifierCoherence(), [])
 })
 
-test('QUATRE COMPÉTENCES SONT OUVERTES — dérivées ET branchées (C4-L10)', () => {
-  // ⭐ L'Expression le 22/08, l'Argumentation, la Structure puis la Connaissance
-  //    le 23/08. « Une compétence de plus est une compétence de plus à la
-  //    rentrée, pas un lot de plus. » ⚠️ L'ordre est celui de `COMPETENCES`
-  //    (`07-` §1.2), pas celui des branchements : `competencesOuvertes()` filtre
-  //    la liste des six.
+test('CINQ COMPÉTENCES SONT OUVERTES — dérivées ET branchées (C4-L10)', () => {
+  // ⭐ L'Expression le 22/08 ; l'Argumentation, la Structure, la Connaissance
+  //    puis le Questionnement le 23/08. « Une compétence de plus est une
+  //    compétence de plus à la rentrée, pas un lot de plus. » ⚠️ L'ordre est
+  //    celui de `COMPETENCES` (`07-` §1.2), pas celui des branchements :
+  //    `competencesOuvertes()` filtre la liste des six.
   assert.deepEqual(competencesOuvertes(),
-    ['expression', 'argumentation', 'structure', 'connaissance'])
-  for (const c of ['expression', 'argumentation', 'structure', 'connaissance'] as const) {
+    ['expression', 'argumentation', 'structure', 'connaissance', 'questionnement'])
+  for (const c of ['expression', 'argumentation', 'structure', 'connaissance',
+    'questionnement'] as const) {
     const e = etatCompetence(c)
     assert.equal(e.ouverte, true, c)
     assert.equal(e.motif, null, c)
@@ -41,7 +42,7 @@ test('QUATRE COMPÉTENCES SONT OUVERTES — dérivées ET branchées (C4-L10)', 
   }
 })
 
-test('LES DEUX AUTRES SONT DÉRIVÉES, ET ATTENDENT LEUR BRANCHEMENT', () => {
+test('LA DERNIÈRE EST DÉRIVÉE, ET ATTEND SON BRANCHEMENT', () => {
   // ⚠️ Dérivée n'est pas branchée, et c'est un état NORMAL : C4-L10 se rejoue
   //    une compétence à la fois. Ce n'est pas une incohérence — mais ce n'est
   //    pas tacite non plus, et c'est tout l'objet de cette liste.
@@ -49,7 +50,7 @@ test('LES DEUX AUTRES SONT DÉRIVÉES, ET ATTENDENT LEUR BRANCHEMENT', () => {
   //    CONCEPTION : son `code1` ne rend pas `document_p2` — « le seul défaut de
   //    ce contrat dont rien ne témoigne » (`CONTRAT` §2). À traiter avant de
   //    l'ouvrir.
-  assert.deepEqual(competencesEnAttenteDeBranchement(), ['synthese', 'questionnement'])
+  assert.deepEqual(competencesEnAttenteDeBranchement(), ['synthese'])
   for (const c of COMPETENCES) {
     assert.equal(!!MANIFESTE_LU.competences[c]?.ouverte, true,
       `${c} : la fiche devrait dériver — le seuil est *relu et validé*`)
