@@ -169,8 +169,18 @@ export async function chargerLeDeroule(
   const maintenant = new Date()
 
   // ── Le cran : son geste, et le libellé de régime que la doctrine porte ──
-  const { data: cran } = await admin.from('exercices_crans')
-    .select('geste, regime_v1vf, guide').eq('code', depot.exercice.cran ?? '').maybeSingle()
+  // ⭐ C4-L11 — LU PAR LE NUMÉRO, comme partout ailleurs. Cet écran lisait
+  //    `exercices_crans` PAR LE CODE tandis que la chaîne le lisait par le
+  //    numéro : deux lecteurs, deux formes, sur une colonne qui portait les
+  //    deux. La forme unique est le numéro (`utils/cran.ts`) ; `ctx.cran` le
+  //    porte, déjà résolu — y compris pour une instance d'avant la conversion.
+  //    ⚠️ `ctx.cran` est NULL sur un examen diagnostique, qui n'a pas de cran :
+  //    la lecture ne part pas, et `geste` reste null. C'est le comportement
+  //    voulu, pas un trou.
+  const { data: cran } = ctx.cran == null
+    ? { data: null }
+    : await admin.from('exercices_crans')
+      .select('geste, regime_v1vf, guide').eq('cran', ctx.cran).maybeSingle()
   const geste = (cran?.geste as string | null) ?? null
 
   // ── L'escalade qui pèse sur CET exercice (`01-` §8.5) ──
@@ -221,8 +231,12 @@ export async function chargerLeDeroule(
         ? brut.exercices_materiaux[0] : brut.exercices_materiaux)
       : null
     const materiau = mat?.contenu ?? null
-    const offre = geste && credenceDemandee(geste as never) && depot.exercice.cran
-      ? offreDeCredence(depot.exercice.cran as never, i + 1, depotId, {
+    // ⚠️ `offreDeCredence` prend un CODE de cran (`CodeCran`), et c'est juste :
+    //    la doctrine de la crédence se dit en codes. Le CODE se lit sur
+    //    `ctx.cranCode`, résolu depuis le numéro — jamais sur la colonne brute,
+    //    qui portait tantôt l'un tantôt l'autre (C4-L11).
+    const offre = geste && credenceDemandee(geste as never) && ctx.cranCode
+      ? offreDeCredence(ctx.cranCode as never, i + 1, depotId, {
         distracteurs: brut?.distracteurs, reponseAttendue: brut?.reponse_attendue ?? null,
       })
       : null
@@ -252,11 +266,13 @@ export async function chargerLeDeroule(
     : null
 
   // ── Temps 1 : le rappel, dosé par le palier ──
-  // ⚠️ La cible vient de la DÉCISION, et non d'`exercices.cible_primaire` : la
-  //    colonne n'existe pas en base et son ajout est reporté au lot de
-  //    correctifs (voir `depot.ts`). `lireContexte` applique déjà le repli
-  //    alphabétique de la chaîne quand la décision manque.
-  const cible = (ctx.decision?.cibleRetenue ?? null) as Competence | null
+  // ⭐ C4-L11 — L'ORDRE DE LECTURE DU `07-` §1.1 : la DÉCISION du routeur, puis
+  //    `exercices.cible_primaire`, qui existe désormais. ⚠️ Pas de repli
+  //    alphabétique ICI, et c'est délibéré : cet écran sert un RAPPEL et une
+  //    DÉMONSTRATION, et les servir sur une compétence tirée d'un ordre de
+  //    tableau vaut moins que ne rien servir. La chaîne, elle, doit trancher —
+  //    elle a un retour à écrire — et son repli est dit en alerte.
+  const cible = ((ctx.decision?.cibleRetenue ?? ctx.ciblePrimaire) ?? null) as Competence | null
   const rappel = await construireLeRappel(admin, depot, ctx, cible)
 
   // ── Temps 1 : la démonstration ──
@@ -308,7 +324,9 @@ export async function chargerLeDeroule(
     depotId, ouvert: a.ouvert,
     regime, vfRequiseParEscalade, temps,
     tempsCourant: tempsCourantDe(depot, regime, retours, seJuger.servie),
-    grain: ctx.grain, cranCode: depot.exercice.cran, geste,
+    // ⭐ Le CODE, résolu depuis le numéro par `lireContexte` — jamais la colonne
+    //    brute, qui portait tantôt le code tantôt le numéro (C4-L11).
+    grain: ctx.grain, cranCode: ctx.cranCode, geste,
     estUnePaire, etapePaire: etape,
 
     consigne: baliser(ctx.consigne),
@@ -483,9 +501,12 @@ async function compterLesCiblages(
 async function dureeDeLInstance(
   admin: Admin, depot: DepotMaison, ctx: ContexteDepot,
 ): Promise<unknown> {
+  if (ctx.cran == null) return null
   const { data } = await admin.from('exercices_types_crans')
     .select('duree_exercice_min')
-    .eq('type_id', depot.exercice.type_id).eq('cran', String(ctx.cran ?? '')).maybeSingle()
+    // Le numéro, sans aller-retour de type : `exercices_types_crans.cran` était
+    // la seule table de doctrine à porter du texte (C4-L11).
+    .eq('type_id', depot.exercice.type_id).eq('cran', ctx.cran).maybeSingle()
   return data?.duree_exercice_min ?? null
 }
 

@@ -15,6 +15,7 @@ import 'server-only'
 // ============================================================================
 
 import { createAdminClient } from '@/utils/supabase/admin'
+import { cranEstUnCode, cranNumero } from '@/utils/cran'
 import { formeDepuisLePlan } from './modele'
 import type { Competence, Forme, Grain, Lieu, StatutRecette } from './types'
 import { COMPETENCES } from './types'
@@ -33,6 +34,15 @@ export interface ContexteDepot {
   grain: Grain
   cran: number | null
   cranCode: string | null
+  /**
+   * `exercices.cible_primaire` — « la compétence qui commande le retour »
+   * (`07-` §1.1 ; `01-` §1, point 1 : « l'exercice porte la cible »).
+   *
+   * ⚠️ NULLABLE, et elle le reste : « sur la voie du routeur elle reste NULL —
+   *    la cible est la sortie de la couche 2 et vit à la décision ». Un
+   *    `NOT NULL` casserait toute la voie du routeur.
+   */
+  ciblePrimaire: Competence | null
   /** `02-` §2.2 — `par paires` · `pas de vf, sauf escalade` · `plein`. */
   regimeV1vf: string | null
   genre: string | null
@@ -108,7 +118,8 @@ interface LigneDepot {
 }
 interface LigneExercice {
   id: string; type_id: string; classe_id: string | null; lieu: string
-  consigne_instanciee: unknown; paire_diagnostic: boolean; cran: string | null
+  consigne_instanciee: unknown; paire_diagnostic: boolean; cran: string | number | null
+  cible_primaire: string | null
   genre: string | null; modes_par_competence: Record<string, string[]> | null
   bonus: boolean; exercice_planifie_id: string | null; reference_id: string | null
 }
@@ -127,8 +138,10 @@ export async function lireContexte(admin: Admin, depotId: string): Promise<Conte
 
   const { data: exerciceBrut, error: eEx } = await admin
     .from('exercices')
+    // ⭐ C4-L11 — `cible_primaire` DESCEND JUSQU'ICI. Sans elle dans ce select,
+    //    la colonne existerait et ne commanderait rien.
     .select('id, type_id, classe_id, lieu, consigne_instanciee, paire_diagnostic, cran, genre, '
-      + 'modes_par_competence, bonus, exercice_planifie_id, reference_id')
+      + 'cible_primaire, modes_par_competence, bonus, exercice_planifie_id, reference_id')
     .eq('id', depot.exercice_id).maybeSingle()
   if (eEx || !exerciceBrut) throw new DepotIllisible(`exercice de ${depotId} : ${eEx?.message ?? NUL}`)
   const exercice = exerciceBrut as unknown as LigneExercice
@@ -150,13 +163,28 @@ export async function lireContexte(admin: Admin, depotId: string): Promise<Conte
     typeExercice = plan?.type_exercice ?? null
   }
 
-  const cran = exercice.cran == null || exercice.cran === '' ? null : Number(exercice.cran)
+  // ── LE CRAN — une seule forme, et une lecture qui ne rend jamais NaN ───────
+  // ⚠️⚠️ `Number(exercice.cran)` rendait **NaN** sur une instance dont le cran
+  //    est écrit AU CODE — et `NaN != null` est vrai. La requête partait alors
+  //    en `cran=eq.NaN`, PostgREST rendait un 400 que supabase-js avale, et
+  //    `cran`, `cranCode`, `regimeV1vf`, `servable` ET `patronProduction`
+  //    ressortaient tous les cinq VIDES sur une instance parfaitement valide.
+  //    Trois gardes `Number.isFinite` existaient déjà — la ligne du `servable`
+  //    n'en avait pas. `cranNumero()` ferme la porte à la source (C4-L11).
+  // ⭐ Et la lecture RÉSOUT un cran écrit au code, une fois, par sa table : la
+  //    forme unique est le NUMÉRO (`utils/cran.ts`), mais une instance d'avant
+  //    la conversion doit continuer de traverser la chaîne, pas rendre du vide.
+  let cran = cranNumero(exercice.cran)
   let cranCode: string | null = null
   let regimeV1vf: string | null = null
-  if (cran != null && Number.isFinite(cran)) {
-    const { data: cBrut } = await admin
-      .from('exercices_crans').select('code, regime_v1vf').eq('cran', cran).maybeSingle()
-    const c = cBrut as unknown as { code: string | null; regime_v1vf: string | null } | null
+  if (cran != null || cranEstUnCode(exercice.cran)) {
+    const q = admin.from('exercices_crans').select('cran, code, regime_v1vf')
+    const { data: cBrut } = await (cran != null
+      ? q.eq('cran', cran)
+      : q.eq('code', String(exercice.cran).trim())).maybeSingle()
+    const c = cBrut as unknown as
+      { cran: number | null; code: string | null; regime_v1vf: string | null } | null
+    cran = cranNumero(c?.cran) ?? cran
     cranCode = c?.code ?? null
     regimeV1vf = c?.regime_v1vf ?? null
   }
@@ -244,8 +272,10 @@ export async function lireContexte(admin: Admin, depotId: string): Promise<Conte
     forme: formeDepuisLePlan(nature, typeExercice === 'synthese' && exercice.lieu === 'classe'),
     objet: type.code,
     grain: type.grain ?? 'meso',
-    cran: cran != null && Number.isFinite(cran) ? cran : null,
+    cran,
     cranCode,
+    ciblePrimaire: (COMPETENCES as readonly string[]).includes(String(exercice.cible_primaire ?? ''))
+      ? exercice.cible_primaire as Competence : null,
     regimeV1vf,
     genre: exercice.genre ?? null,
     bonus: !!exercice.bonus,
@@ -319,7 +349,10 @@ async function couvertureDuCran(
 ): Promise<Array<{ competence: string; observable_nom: string }>> {
   const { data, error } = await admin
     .from('exercices_types_crans').select('couverture_observables')
-    .eq('type_id', typeId).eq('cran', String(cran)).maybeSingle()
+    // ⚠️ Le numéro, jamais `String(cran)` : `exercices_types_crans.cran` était
+    //    la SEULE table de doctrine à le porter en texte, et l'aller-retour de
+    //    type disparaît avec la forme unique (C4-L11).
+    .eq('type_id', typeId).eq('cran', cran).maybeSingle()
   if (error) {
     console.error(`[chaine] couverture du cran illisible — ${error.code} ${error.message}`)
     return []
@@ -347,7 +380,7 @@ async function patronDeProduction(
   if (!modes.length) return null
   const { data, error } = await admin
     .from('exercices_consignes_production').select('mode, patron')
-    .eq('cran', String(cran)).in('mode', modes)
+    .eq('cran', cran).in('mode', modes)
   if (error) {
     console.error(`[chaine] patron de production illisible — ${error.code} ${error.message}`)
     return null

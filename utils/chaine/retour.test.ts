@@ -5,8 +5,9 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import {
-  assemblerRetour, controlerRetour, coucheContrat, identifiantStable,
-  plafondApplicable, segmenter, type EntreeRetour,
+  assemblerGabarit, assemblerRetour, controlerRetour, coucheContrat, identifiantStable,
+  plafondApplicable, segmenter, SECTION_LONGUEUR,
+  type EntreeRetour, type SectionCalame,
 } from './retour'
 
 const GABARIT = [
@@ -29,8 +30,12 @@ test('le plafond de la règle 2 suit le grain, et en vf il ne borne QUE les réu
   assert.deepEqual(plafondApplicable('macro', 'vf'), { plafond: 5, porte: 'reussites' })
 })
 
+/** Le fichier de personnalité partagé, tel que la couche contrat le REÇOIT. */
+const PERSONNALITE = { identite: '## Qui tu es\nTu es Calame.', ton: '## Registre\nPhrases courtes.' }
+
 const ENTREE: EntreeRetour = {
   moment: 'v1', registre: 'descriptif', palierAttribue: false,
+  personnalite: PERSONNALITE,
   competencePrimaire: 'argumentation',
   couchesCompetence: [{ competence: 'argumentation', vocabulaire: ['garant'], correspondance: [] }],
   coucheType: { consigne: 'Écris un argument.', grain: 'micro', servable: [] },
@@ -47,6 +52,64 @@ test('sans état antérieur, le retour S\'EN PASSE — sans le signaler à l\'é
 test('hors `evaluee`, le message dit qu\'AUCUN PALIER n\'est attribué', () => {
   const { message } = assemblerRetour(GABARIT, ENTREE)
   assert.match(message, /N'ATTRIBUE AUCUN PALIER/)
+})
+
+
+// ── `07-` §4 — la collision de nom, le découpage, le paramètre `longueur` ────
+
+test('⚠️ `{{REGISTRE}}` REFUSE le registre de LANGUE — la collision du §4', () => {
+  // « Substituer l'un dans l'autre remplirait la règle 8 avec le bloc de
+  //   langue » : c'est « un mode de panne, pas une hypothèse » (`07-` §4).
+  assert.throws(
+    () => coucheContrat(GABARIT, {
+      COMPETENCE: 'argumentation', MOMENT: 'v1',
+      REGISTRE: '## Registre (RÈGLE TRANSVERSALE)\nPhrases COURTES…' as never,
+    }),
+    /registre de RETOUR/,
+  )
+})
+
+const SECTIONS: SectionCalame[] = [
+  { cle: 'entete', numero: null, titre: 'En-tête', verrouillee: true, corps: 'SYSTÈME — CALAME' },
+  { cle: 'regle_6', numero: 6, titre: 'JAMAIS DE NOTE', verrouillee: true, corps: 'JAMAIS DE NOTE.' },
+  { cle: 'regle_7', numero: 7, titre: 'LONGUEUR', verrouillee: false, corps: 'LONGUEUR : 80 à 200 mots.' },
+  { cle: 'regle_8', numero: 8, titre: 'REGISTRE', verrouillee: true, corps: 'REGISTRE : {{REGISTRE}}.' },
+]
+
+test('le gabarit se recolle DEPUIS SES SECTIONS, numéros compris', () => {
+  assert.equal(
+    assemblerGabarit(SECTIONS),
+    'SYSTÈME — CALAME\n\n6. JAMAIS DE NOTE.\n\n7. LONGUEUR : 80 à 200 mots.\n\n8. REGISTRE : {{REGISTRE}}.',
+  )
+})
+
+test('la `longueur` remplace la SECTION 7 — et NULL vaut la règle 7', () => {
+  // « Son domicile est un paramètre de plateforme […] NULL VALANT LA RÈGLE 7. »
+  assert.equal(assemblerGabarit(SECTIONS, { longueur: null }), assemblerGabarit(SECTIONS))
+  assert.equal(assemblerGabarit(SECTIONS, { longueur: '   ' }), assemblerGabarit(SECTIONS))
+  const court = assemblerGabarit(SECTIONS, { longueur: 'LONGUEUR : 40 mots au plus.' })
+  assert.match(court, /7\. LONGUEUR : 40 mots au plus\./)
+  assert.equal(/80 à 200 mots/.test(court), false)
+  // Ce n'est PAS une variable : rien n'a été substitué dans le texte.
+  assert.match(court, /8\. REGISTRE : \{\{REGISTRE\}\}\./)
+  assert.equal(SECTION_LONGUEUR, 'regle_7')
+})
+
+test('une section VERROUILLÉE ne se remplace jamais', () => {
+  const verrouille: SectionCalame[] = SECTIONS.map(
+    (s) => (s.cle === 'regle_7' ? { ...s, verrouillee: true } : s))
+  assert.equal(
+    assemblerGabarit(verrouille, { longueur: 'LONGUEUR : 40 mots au plus.' }),
+    assemblerGabarit(verrouille),
+  )
+})
+
+test('la couche contrat REÇOIT le `ton` partagé, elle n\'en porte pas de copie', () => {
+  const { systeme } = assemblerRetour(GABARIT, ENTREE)
+  assert.ok(systeme.startsWith(PERSONNALITE.identite), "l'identité partagée n'est pas reçue")
+  assert.ok(systeme.includes(PERSONNALITE.ton), 'le `ton` partagé n\'est pas reçu')
+  // Et le registre de RETOUR reste celui du `01-` §8.7, intact.
+  assert.match(systeme, /REGISTRE : descriptif\./)
 })
 
 const OK = {

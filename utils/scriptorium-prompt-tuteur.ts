@@ -42,11 +42,13 @@ export const SECTIONS_PROMPT_TUTEUR: readonly SectionPromptTuteur[] = [
   {
     cle: 'ton',
     titre: 'Ton et persona',
-    resume: 'Qui parle, à qui, dans quel registre de langue',
+    resume: 'Le RÔLE du tuteur — l’identité et le registre viennent du fichier partagé',
     editable: true,
-    aide: 'Le rôle du tuteur et son registre. « {registre} » est remplacé à l’exécution par le REGISTRE transversal défini dans le code (le MÊME bloc que les prompts Aletheia) : le retirer d’ici le retire du prompt du tuteur, et de lui seul.',
+    aide: 'Le RÔLE du tuteur, et rien de plus. « {identite} » et « {registre} » sont remplacés à l’exécution par le fichier de personnalité PARTAGÉ défini dans le code (le MÊME bloc que les prompts Aletheia et que le retour d’exercice) : l’identité de Calame et le registre de langue vivent là, jamais ici — « l’identité vit dans le fichier partagé ; chaque atelier n’écrit que son RÔLE » (`07-` §4). Les retirer d’ici les retire du prompt du tuteur, et de lui seul.',
     avant: '',
-    defaut: `Tu es le tuteur du cours de philosophie, au service du professeur qui a préparé toute la matière que tu reçois. Un élève vient te poser des questions pour mieux comprendre le cours. Ton rôle : l'aider à approfondir sa compréhension — jamais faire le travail à sa place.
+    defaut: `{identite}
+
+Ton rôle ici : tu es le tuteur du cours de philosophie, au service du professeur qui a préparé toute la matière que tu reçois. Un élève vient te poser des questions pour mieux comprendre le cours. Ton rôle : l'aider à approfondir sa compréhension — jamais faire le travail à sa place.
 
 {registre}`,
   },

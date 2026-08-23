@@ -30,7 +30,14 @@ import {
 } from './expression'
 import type { ContexteBranchement, SortieCode1 } from '../instruments'
 
-const RACINE_CONCEPTION = '/Users/louissagnieres/Documents/GitTest/palimpseste-conception'
+// ⚠️ Le dépôt de conception vit à un chemin ABSOLU hors de ce dépôt. Le fixer en
+// dur ici faisait SAUTER le contrôle partout ailleurs que sur la machine du
+// professeur — et un `npm test` vert sans le contrôle ne prouve rien (C4-L11).
+// `PALIMPSESTE_RACINE_CONCEPTION` déclare la racine ; à défaut, le chemin du
+// professeur tient lieu de défaut. Le `--racine` est passé au script : les deux
+// bouts lisent la MÊME racine, jamais deux.
+const RACINE_CONCEPTION = process.env.PALIMPSESTE_RACINE_CONCEPTION
+  || '/Users/louissagnieres/Documents/GitTest/palimpseste-conception'
 
 interface CasCode2 {
   nom: string
@@ -95,7 +102,8 @@ let motifDuSaut: string | null = null
 if (!existsSync(RACINE_CONCEPTION)) {
   motifDuSaut = 'dépôt de conception absent'
 } else {
-  const r = spawnSync('python3', ['scripts/vecteurs-expression.py'],
+  const r = spawnSync('python3',
+    ['scripts/vecteurs-expression.py', '--racine', RACINE_CONCEPTION],
     { encoding: 'utf-8', maxBuffer: 64 * 1024 * 1024 })
   if (r.status !== 0) {
     motifDuSaut = null

@@ -73,7 +73,12 @@ export interface DepotMaison {
     classe_id: string | null
     type_id: string
     consigne_instanciee: unknown
-    cran: string | null
+    /** Le NUMÉRO du cran, en base depuis C4-L11 (`utils/cran.ts`) — NULL sur un
+     *  examen diagnostique, qui n'en porte aucun. Le type reste large : une
+     *  instance d'avant la conversion doit continuer de traverser l'écran. */
+    cran: string | number | null
+    /** `07-` §1.1 — « la compétence qui commande le retour ». NULLABLE. */
+    cible_primaire: string | null
     genre: string | null
     paire_diagnostic: boolean
     guide: string | null
@@ -93,20 +98,18 @@ const CHAMPS =
   + 'ouvert_at, v1_remis_at, vf_remis_at, juger_debut_at, juger_fin_at, duree_taguee, '
   + 'collages_bloques, saisie_telemetrie, aide_consommee, routeur_decision_id, '
   + 'exercice:exercices!inner(id, lieu, classe_id, type_id, consigne_instanciee, cran, genre, '
-  // ⚠️⚠️ **`cible_primaire` N'EST PAS DANS CE SELECT, ET C'EST DÉLIBÉRÉ.** Le
-  //    `07-` §1.1 la NOMME sur l'instance — mais **la colonne n'existe pas en
-  //    base**, et son absence est un report ASSUMÉ : « la colonne, le champ à
-  //    l'écran et sa lecture par la chaîne sont REPORTÉS AU LOT DE CORRECTIFS »
-  //    *(constat de C4-L4, revérifié par requête le 22/08 :
-  //    `information_schema.columns` ne la connaît pas)*.
-  //    ⚠️ La sélectionner quand même **fait échouer la requête ENTIÈRE**
-  //    (`42703`), donc rendre `null` — et **l'écran du déroulé serait mort pour
-  //    tous les élèves, sans autre symptôme qu'un « exercice introuvable »**.
-  //    En attendant la colonne, la cible se lit **sur la DÉCISION du routeur**
-  //    (`routeur_decisions.cible_retenue`), qui est son domicile de sortie
-  //    (`07-` §1.1 : « sur la voie du routeur elle reste NULL »), avec le repli
-  //    alphabétique de la chaîne — la convention en vigueur.
-  + 'paire_diagnostic, guide, statut, observable_isole_code, '
+  // ⭐⭐ **`cible_primaire` EST DANS CE SELECT DEPUIS C4-L11, ET C'EST LE POINT.**
+  //    Le `07-` §1.1 la nomme sur l'instance — « la compétence qui commande le
+  //    retour » —, et elle existe désormais en base (nullable : « sur la voie du
+  //    routeur elle reste NULL »). ⚠️ L'OUBLIER ICI ÉTAIT LE PIÈGE : c'est un
+  //    `select` EXPLICITE, et la colonne aurait existé **sans jamais descendre
+  //    jusqu'à la chaîne** — un correctif qui n'aurait rien corrigé, en silence.
+  //    ⚠️ Et la garde d'avant vaut toujours dans l'autre sens : sélectionner une
+  //    colonne absente fait échouer la requête ENTIÈRE (`42703`), donc rendre
+  //    `null` — l'écran du déroulé serait mort pour tous les élèves, sans autre
+  //    symptôme qu'un « exercice introuvable ». Le code est donc passé APRÈS le
+  //    SQL sur ce point précis, et le protocole du `SUIVI_SQL.md` le dit.
+  + 'cible_primaire, paire_diagnostic, guide, statut, observable_isole_code, '
   + 'observable_isole_competence, materiau_source_sujet_id, materiau_source_texte_id, '
   + 'materiau_cible_sujet_id, materiau_cible_texte_id)'
 

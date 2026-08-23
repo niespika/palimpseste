@@ -28,10 +28,28 @@
 //    FILET. Le chemin normal est « le dépôt appelle lui-même le déclencheur »
 //    (§1.1) : `utils/passation/ouvrier.ts`, `transcrireMaintenant()`.
 //
-// ⚠️ `maxDuration = 60` est un plafond posé pour une offre d'hébergement qui n'en
-//    était pas une. Le geste — poser la cadence et monter `maxDuration` —
-//    appartient AU LOT DE CORRECTIFS, pas à C4-L4 (piège 46). Ce que C4-L4 a
-//    fait, c'est le VÉRIFIER et l'écrire au relevé.
+// ⭐⭐ C4-L11 — CE QUI L'APPELLE, ET À QUELLE CADENCE.
+//    `vercel.json` déclare désormais `{ "path": "/api/chaine", "schedule":
+//    "* * * * *" }`. ⚠️ CE CRON EST LE **FILET**, PAS LE CHEMIN NORMAL : « le
+//    contrat exige que la file se réclame dans la minute qui suit le dépôt, par
+//    l'une des deux voies : LE DÉPÔT APPELLE LUI-MÊME LE DÉCLENCHEUR, ou une
+//    tâche planifiée à la minute » (`07-` §1.1). Le premier chemin existe
+//    (`utils/passation/ouvrier.ts`, `transcrireMaintenant()` ; C4-L3 met en
+//    file) ; ce cron « reprend les jobs dont le bail a expiré et que plus aucun
+//    dépôt ne rappelle ».
+//    ⭐ LA CADENCE EST CELLE QUE L'OFFRE AUTORISE, constatée le 22/08 (C4L4-C) :
+//    plan Pro — intervalle minimal UNE FOIS PAR MINUTE, précision à la minute
+//    (Hobby : une fois par jour, ±59 min, ce qui ne tiendrait pas le filet d'un
+//    contrat de trois minutes). ⛔ Aucun chiffre d'hébergeur ne vit dans les
+//    sources, et c'est délibéré : il vit ici et dans `vercel.json`.
+//
+// ⭐ `maxDuration` — À LA MESURE DU CONTRAT DE LATENCE, plus la marge.
+//    « Le retour arrive en moins de trois minutes » (`01-` §12) : une invocation
+//    doit pouvoir mener UN job de mesure jusqu'au bout sans être tuée en vol.
+//    180 s de contrat, et l'offre donne 300 s par défaut (Pro : 300 s défaut,
+//    800 s maximum ; Hobby : 300 s défaut ET maximum — le chiffre dégrade donc
+//    proprement). ⛔ Le commentaire « 60 s est le plafond du plan Hobby » ÉTAIT
+//    FAUX, C4-L4 l'a corrigé : ne le réintroduis sous aucune forme.
 // ============================================================================
 
 import { createAdminClient } from '@/utils/supabase/admin'
@@ -43,7 +61,7 @@ import { verifierCoherence } from '@/utils/chaine/instruments'
 import { passationOuverteAEleve } from '@/utils/passation/acces'
 import { traiterUnJobDeTranscription } from '@/utils/passation/ouvrier'
 
-export const maxDuration = 60
+export const maxDuration = 300
 
 // ⚠️ UN job réclamé à la fois. `reclamerJobs` pose le bail sur tous les jobs
 //    qu'il rend, mais `tourDeFile` les traite EN SÉRIE : réclamer quatre jobs
@@ -52,6 +70,39 @@ export const maxDuration = 60
 const LOT_PAR_TOUR = 1
 /** Ce qu'on garde pour clore proprement avant que la fonction soit tuée. */
 const MARGE_MS = 8_000
+
+/**
+ * ⭐⭐ LA RÉSERVATION — LA MOITIÉ QUI MANQUAIT À LA GARDE DE BUDGET (C4-L11).
+ *
+ * La boucle bornée existait déjà : `while (Date.now() - debut < budgetMs)`. Ce
+ * qui manquait n'était pas la borne, c'était la RÉSERVATION. La condition disait
+ * « il reste du budget », pas « il reste DE QUOI TRAITER le job que je vais
+ * réclamer » — et comme `reclamerJobs` pose le bail ET INCRÉMENTE `tentatives`
+ * À LA PRISE (`utils/chaine/file.ts`, compare-and-swap), **le dernier job de
+ * chaque invocation était réclamé puis tué en vol, sans clôture, en brûlant une
+ * tentative**. `tentatives_max` vaut 3 : trois tours, et c'est `echec_definitif`
+ * sur une copie jamais traitée. Ce n'était pas un cas limite — c'était le
+ * dernier job de CHAQUE tour.
+ *
+ * Le correctif est une ESTIMATION DE DURÉE PAR ÉTAPE, comparée au reste, AVANT
+ * `reclamerJobs` — pas une seconde boucle. Et il ne se contente pas d'arrêter :
+ * il RESSERRE LE FILTRE `etapes`, de sorte qu'un tour à quarante secondes de la
+ * fin puisse encore prendre une transcription sans jamais prendre une mesure.
+ *
+ * ⚠️ CES CHIFFRES SONT DES MESURES, PAS DES SOURCES, et aucun ne vit dans le
+ *    corpus. La transcription : test de charge du 22/08, 140 copies, deux passes
+ *    — médiane 22,4 s, p95 24,3 s, max 25,2 s ; on réserve 30 s. La mesure : le
+ *    CONTRAT DE LATENCE lui-même (`config.latenceCibleMs`, 3 min par défaut,
+ *    `01-` §12) — réserver moins serait promettre un contrat qu'on n'honore pas.
+ *
+ * ⚠️ La réserve doit rester ≤ `config.bailMs` (5 min par défaut) : un job dont
+ *    le bail expire pendant qu'on le traite serait repris par un autre tour.
+ */
+const RESERVE_TRANSCRIPTION_MS = 30_000
+
+function reserveDeLEtape(etape: EtapeChaine, latenceCibleMs: number): number {
+  return estUneMesure(etape) ? latenceCibleMs : RESERVE_TRANSCRIPTION_MS
+}
 
 export async function GET(req: Request): Promise<Response> {
   const secret = process.env.CRON_SECRET
@@ -63,6 +114,13 @@ export async function GET(req: Request): Promise<Response> {
   if (ecarts.length) {
     // Un instrument branché sans dérivé (ou l'inverse) servirait une grille
     // fantôme : on ne part pas.
+    // ⚠️ À LA CADENCE DE LA MINUTE, CE 409 SE RÉPÉTERAIT 1440 FOIS PAR JOUR — et
+    //    un 409 dans le journal d'un cron ne réveille personne. La garde RESTE
+    //    (elle rend 409 AVANT tout appel payé) ; ce qu'on ajoute, c'est de quoi
+    //    savoir qu'elle s'est allumée : une ligne d'erreur serveur, qui remonte
+    //    aux journaux de l'hébergeur là où le corps de la réponse ne remonte pas.
+    console.error('[chaine] ARRÊT — instruments incohérents, aucun job réclamé :',
+      ecarts.join(' | '))
     return Response.json({ arret: 'instruments incohérents', ecarts }, { status: 409 })
   }
 
@@ -90,10 +148,24 @@ export async function GET(req: Request): Promise<Response> {
   let traites = 0
 
   // On réclame UN job, on le traite, et on ne réclame le suivant que s'il reste
-  // du budget : aucun job ne porte un bail qu'on n'a pas l'intention d'honorer.
-  while (Date.now() - debut < budgetMs) {
-    const jobs = await reclamerJobs(admin, { limite: LOT_PAR_TOUR, bailMs: config.bailMs, etapes })
-    if (!jobs.length) break
+  // DE QUOI LE TRAITER : aucun job ne porte un bail qu'on n'a pas l'intention
+  // d'honorer. C4-L11 : le code tient enfin cette phrase (voir `reserveDeLEtape`).
+  let arret: string | null = null
+  for (;;) {
+    const reste = budgetMs - (Date.now() - debut)
+    // Les étapes qu'il reste ASSEZ DE TEMPS pour servir — le filtre se resserre
+    // à mesure que le budget fond, il ne s'éteint pas d'un coup.
+    const servables = etapes.filter((e) => reserveDeLEtape(e, config.latenceCibleMs) <= reste)
+    if (!servables.length) {
+      arret = reste <= 0
+        ? 'budget épuisé'
+        : `budget insuffisant pour réserver une étape (${Math.max(0, Math.round(reste / 1000))} s restantes)`
+      break
+    }
+    const jobs = await reclamerJobs(admin, {
+      limite: LOT_PAR_TOUR, bailMs: config.bailMs, etapes: servables,
+    })
+    if (!jobs.length) { arret = 'file vide'; break }
     reclames += jobs.length
 
     // Le DISPATCH par étape. Une transcription passée à `traiterDepot` serait
@@ -127,8 +199,17 @@ export async function GET(req: Request): Promise<Response> {
         dureeMs: s.bilan?.dureeMs ?? 0, alertes: s.bilan?.alertes ?? [],
       })
     }
-    if (suspendu) break
+    if (suspendu) { arret = 'chaîne suspendue (gate ou facture)'; break }
   }
 
-  return Response.json({ reclames, traites, bilans })
+  // ⭐ `reclames` et `traites` SE COMPARENT, et c'est la preuve que la garde
+  //    tient : « une invocation qui traite n jobs doit avoir réclamé n jobs ».
+  //    Un écart dit qu'un job a été pris sans être mené au bout — donc qu'une
+  //    tentative a brûlé pour rien.
+  return Response.json({
+    reclames, traites, arret,
+    tuesEnVol: reclames - traites,
+    dureeMs: Date.now() - debut,
+    bilans,
+  })
 }

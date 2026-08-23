@@ -34,6 +34,30 @@ export default async function PilotageClasse({
   if (!classe) notFound()
 
   const vue: Vue = vueParam === 'competences' ? 'competences' : 'activite'
+
+  // ── C4-L11 — L'OPT-OUT ATTERRIT ICI, et l'onglet dit pourquoi il est vide ──
+  // « Le profil de la classe, au tableau de pilotage, porte l'opt-out »
+  // (`07-` §1.3). Les deux lectures ne se font QUE pour cet onglet : l'onglet
+  // Activité n'en a aucun usage, et une requête de plus sur chaque affichage du
+  // pilotage ne se paie pas pour rien.
+  // ⚠️ supabase-js ne lève pas : il rend `{ error }`. Une lecture ratée laisse
+  //    l'opt-out vide — donc TOUT ACTIF, qui est le défaut du `07-` §1.3 : « une
+  //    compétence déclarée `evaluee` l'est pour toutes les classes ». Un défaut
+  //    faux dans l'autre sens aurait retiré des compétences que personne
+  //    n'a retirées.
+  const optOut: Record<string, boolean> = {}
+  let affichageActif = false
+  if (vue === 'competences') {
+    const [rActives, rParams] = await Promise.all([
+      admin.from('competences_actives_par_classe')
+        .select('competence, active').eq('classe_id', classeId),
+      admin.from('scriptorium_params').select('competences_affichage_actif').limit(1).maybeSingle(),
+    ])
+    for (const a of (rActives.data ?? []) as Array<{ competence: string; active: boolean }>) {
+      optOut[a.competence] = a.active
+    }
+    affichageActif = !!rParams.data?.competences_affichage_actif
+  }
   const tri: TriPilotage = triParam === 'nom' ? 'nom' : 'risque'
   const base = `/prof/classes/${classeId}`
 
@@ -104,7 +128,13 @@ export default async function PilotageClasse({
           <MatricePilotage colonnes={matrice.colonnes} lignes={lignesTriees} tri={tri} base={base} />
         </div>
       ) : (
-        <MatriceCompetences lignes={lignesTriees} />
+        <MatriceCompetences
+          lignes={lignesTriees}
+          classeId={classeId}
+          classeNom={[classe.nom, classe.niveau, classe.filiere].filter(Boolean).join(' · ')}
+          optOut={optOut}
+          affichageActif={affichageActif}
+        />
       )}
 
       <div className="sm:hidden">

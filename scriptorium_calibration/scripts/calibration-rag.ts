@@ -44,7 +44,7 @@ import {
 import {
   PROMPT_RAG_DEFAUT, MAX_TOKENS_CHAT, construireSuffixe, baliserQuestion,
 } from '@/utils/scriptorium-rag'
-import { REGISTRE, injecter, sansDelims } from '@/utils/ia-commun'
+import { IDENTITE, REGISTRE, injecter, sansDelims } from '@/utils/ia-commun'
 import { fournisseurPour, type AppelIA, type UsageIA } from '@/utils/ia-fournisseur'
 import { TARIFS, coutSelonModele } from '@/utils/cout-api'
 
@@ -461,7 +461,7 @@ async function main(): Promise<void> {
     throw new Error(`Intégrité du banc compromise — le préfixe ne correspond pas au manifeste :\n  - ${problemes.join('\n  - ')}`)
   }
 
-  const systeme = injecter(PROMPT_RAG_DEFAUT, { registre: REGISTRE })
+  const systeme = injecter(PROMPT_RAG_DEFAUT, { identite: IDENTITE, registre: REGISTRE })
 
   process.stderr.write(
     `Banc de calibration RAG — modèle ${MODELE}\n` +

@@ -255,27 +255,31 @@ async function controleDEntree() {
   //    autre symptôme.
   //
   // Le lot a été corrigé le jour même : la colonne est sortie du SELECT et du
-  // type, et la cible se lit sur la DÉCISION du routeur — son domicile de
-  // sortie. Ce contrôle est désormais LE GARDE-FOU : il éprouve que le point
-  // d'entrée rend bien un dépôt sur du RÉEL, et que la colonne reste absente
-  // sans que cela empêche quoi que ce soit.
+  // type, et la cible se lisait sur la DÉCISION du routeur — son domicile de
+  // sortie.
+  //
+  // ⭐⭐ C4-L11 A RETOURNÉ CETTE ASSERTION, ET C'ÉTAIT LE PLAN. Elle était écrite
+  //    À L'ENVERS EXPRÈS — « ne nomme PLUS `cible_primaire` » —, pour tenir tant
+  //    que le report tenait, et ce fichier disait lui-même que « ce report est
+  //    désormais dû ». La colonne existe depuis C4-L11, et le SELECT DOIT
+  //    la nommer : sans elle, la colonne existerait « et ne descendrait jamais
+  //    jusqu'à la chaîne ». L'assertion se RETOURNE, elle ne se supprime pas :
+  //    c'est le même garde-fou, dans l'autre sens.
   // ══════════════════════════════════════════════════════════════════════════
   const { error: eCible } = await admin.from('exercices').select('id, cible_primaire').limit(1)
-  note(`état de la base : \`exercices.cible_primaire\` est ${eCible ? 'TOUJOURS ABSENTE' : 'PRÉSENTE'}`
-    + `${eCible ? ` (${eCible.code} ${eCible.message})` : ''} — report assumé au lot de correctifs, `
-    + 'condition de fermeture écrite : avant la première compétence ouverte à la chaîne, et de '
-    + 'toute façon avant C4-L7. ⚠️ C4-L10 a ouvert l’Expression le 22/08 : la condition est '
-    + 'ÉCHUE, et ce report est désormais dû.')
+  dire(!eCible,
+    'EN BASE — `exercices.cible_primaire` EXISTE (C4-L11 ; `07-` §1.1, NULLABLE)'
+    + `${eCible ? ` — ${eCible.code} ${eCible.message}` : ''}`)
 
-  // Sur pièce : le SELECT du lot, commentaires ôtés, ne la nomme plus.
+  // Sur pièce : le SELECT du lot, commentaires ôtés, LA NOMME.
   const sourceDepot = fs.readFileSync(`${RACINE}/utils/deroule/depot.ts`, 'utf-8')
   const blocChamps = sourceDepot.slice(sourceDepot.indexOf('const CHAMPS ='),
     sourceDepot.indexOf('function normaliser('))
   const selectSansCommentaires = blocChamps.split('\n')
     .filter((l) => !l.trim().startsWith('//')).join('\n')
-  dire(!selectSansCommentaires.includes('cible_primaire'),
-    'SUR PIÈCE — le SELECT de `utils/deroule/depot.ts` (commentaires ôtés) ne nomme plus '
-    + '`cible_primaire`')
+  dire(selectSansCommentaires.includes('cible_primaire'),
+    'SUR PIÈCE — le SELECT de `utils/deroule/depot.ts` (commentaires ôtés) NOMME '
+    + '`cible_primaire` : la colonne descend jusqu’à la chaîne')
 
   // Et par appel, sur du RÉEL : le point d'entrée rend un dépôt.
   const { data: unMaison } = await admin.from('exercices_depots')
@@ -373,7 +377,7 @@ async function semer() {
   // ── 1. L'instance de PRODUCTION — régime plein, et du `**gras**` en consigne
   const exProd = await poserExercice({
     lieu: 'maison',
-    cran: 'production_autonome',
+    cran: '8',  // production_autonome
     consigne_instanciee: `${MARQUE} — Peut-on douter de tout ? Rédige un paragraphe qui pose `
       + 'une **thèse**, l’appuie sur une *raison*, et examine une **objection**.',
     modes_par_competence: { expression: ['composer'], structure: ['composer'] },
@@ -385,7 +389,7 @@ async function semer() {
   // ── 2. L'instance de CLASSE — pour la deuxième garde de lecture
   const exClasse = await poserExercice({
     lieu: 'classe',
-    cran: 'production_autonome',
+    cran: '8',  // production_autonome
     consigne_instanciee: `${MARQUE} — une passation EN CLASSE, qui n’a pas ces six temps.`,
     modes_par_competence: { expression: ['composer'] },
   }, 'lieu classe')
@@ -395,7 +399,7 @@ async function semer() {
   // ⚠️ `exercices_paire_chk` : `consigne_instanciee` doit être un TABLEAU de 2.
   const exPaire = await poserExercice({
     lieu: 'maison',
-    cran: 'diagnostic_guide',
+    cran: '1',  // diagnostic_guide
     paire_diagnostic: true,
     consigne_instanciee: [
       `${MARQUE} — Cas 1 : quel **défaut** ce raisonnement porte-t-il ?`,
@@ -423,7 +427,7 @@ async function semer() {
   // ── 4. L'instance de TRANSFORMATION — pour le régime et l'escalade
   const exTransfo = await poserExercice({
     lieu: 'maison',
-    cran: 'transformation_guidee',
+    cran: '3',  // transformation_guidee
     consigne_instanciee: `${MARQUE} — Réécris ce passage sans le défaut.`,
     modes_par_competence: { argumentation: ['composer'] },
     observable_isole_code: 'garant_present',

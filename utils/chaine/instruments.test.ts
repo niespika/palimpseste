@@ -135,7 +135,14 @@ test('le manifeste porte les empreintes de ses sources — c\'est ce qui rend la
 // qu'aucun signal ne se lève. Les assertions ci-dessus comparent le dérivé À
 // LUI-MÊME : elles ne peuvent structurellement rien voir.
 
-const RACINE_CONCEPTION = '/Users/louissagnieres/Documents/GitTest/palimpseste-conception'
+// ⚠️ Le dépôt de conception vit à un chemin ABSOLU hors de ce dépôt. Le fixer en
+// dur ici faisait SAUTER le contrôle partout ailleurs que sur la machine du
+// professeur — et un `npm test` vert sans le contrôle ne prouve rien (C4-L11).
+// `PALIMPSESTE_RACINE_CONCEPTION` déclare la racine ; à défaut, le chemin du
+// professeur tient lieu de défaut. Le `--racine` est passé au script : les deux
+// bouts lisent la MÊME racine, jamais deux.
+const RACINE_CONCEPTION = process.env.PALIMPSESTE_RACINE_CONCEPTION
+  || '/Users/louissagnieres/Documents/GitTest/palimpseste-conception'
 
 test('les dérivés sont IDENTIQUES à leurs sources (derive-instruments.py --verifie)', (t) => {
   if (!existsSync(RACINE_CONCEPTION)) {
@@ -143,7 +150,9 @@ test('les dérivés sont IDENTIQUES à leurs sources (derive-instruments.py --ve
     t.skip('dépôt de conception absent')
     return
   }
-  const r = spawnSync('python3', ['scripts/derive-instruments.py', '--verifie'], { encoding: 'utf-8' })
+  const r = spawnSync('python3',
+    ['scripts/derive-instruments.py', '--racine', RACINE_CONCEPTION, '--verifie'],
+    { encoding: 'utf-8' })
   assert.equal(r.status, 0,
     'les dérivés ont divergé de leurs sources — rejouer `derive-instruments.py --ecris`\n'
     + `${r.stdout}${r.stderr}`)

@@ -35,6 +35,9 @@ import {
   CODE_TYPE, INTITULE, MATIERE, MODES_MESURES, moduleDuType, type ModuleExamen,
 } from './types'
 import { consigneANoter, consigneDepuisLeSujet, consigneDepuisLeTexte, enTete } from './consigne'
+import {
+  SELECT_REFERENCE_VALIDEE, motifDeRefusDeLaReference,
+} from '@/utils/reference-validee'
 
 type Admin = SupabaseClient
 type Ligne = Record<string, unknown>
@@ -211,8 +214,8 @@ async function lireLaMatiere(
   // ── Aletheia : un TEXTE, et sa référence décomposée doit être VALIDÉE ──────
   const { data, error } = await admin
     .from('exercices_textes')
-    .select('id, auteur, titre, reference, statut, bloque, reference_id, '
-      + 'exercices_references(id, validee_at), scriptorium_contenus(texte_extrait)')
+    .select('id, auteur, titre, reference, statut, bloque, '
+      + `${SELECT_REFERENCE_VALIDEE}, scriptorium_contenus(texte_extrait)`)
     .neq('statut', 'retire').order('auteur')
   if (error) {
     incidents.push(`Les textes n’ont pas pu être lus : ${error.message}`)
@@ -237,35 +240,16 @@ async function lireLaMatiere(
  *    (`02-` §6 A). Le `07-` §1.1 en fait l'une des DEUX gardes qui portent la
  *    validité de TOUTE LA RÉCEPTION.
  *
- * ⚠️ LA VALIDATION EST UN ÉTAT, JAMAIS UNE TRACE (`05-` §4.5) : on lit
- *    `validee_at`, on ne cherche pas un journal, et il n'y a ni date ni version.
- *
- * ⚠️ MÊME PRÉDICAT QUE `app/prof/conception/actions.ts:130` (C4-L8), qui le tient
- *    déjà mot pour mot pour la voie de la doctrine. Les deux sites lisent la
- *    MÊME colonne de la MÊME table ; le jour où l'un bouge, l'autre doit suivre.
- *    (L'extraction en une fonction partagée est signalée au relevé : elle
- *    toucherait un fichier de C4-L8, hors du périmètre de ce lot.)
- *
- * ⚠️ Et « une référence DÉVALIDÉE en cours de route ne défait pas les instances
- *    déjà assignées » : c'est tranché, assumé, et ce n'est pas ce lot — rien
- *    n'est « réparé » de ce côté.
+ * ⭐ C4-L11 — ELLE N'EST PLUS ÉCRITE ICI. Le prédicat vivait mot pour mot à deux
+ *    endroits — ici et `app/prof/conception/actions.ts` (C4-L8) — sur la MÊME
+ *    colonne de la MÊME table. Il vit désormais à `utils/reference-validee.ts`,
+ *    seul. Ce site garde ce qui lui est propre : il charge une LISTE de textes,
+ *    donc il appelle le PRÉDICAT sur des lignes déjà jointes, jamais une requête
+ *    par ligne — « la fonction partagée […] ne recopie pas une jointure ».
  */
 function motifDeRefusDuTexte(t: Ligne): string | null {
-  const ref = jointure(t, 'exercices_references')
-  const nom = enTete(txt(t.auteur), txt(t.titre), txt(t.reference)) || 'ce texte'
-  if (!t.reference_id || !ref.id) {
-    return `Aucune référence décomposée n’est déposée pour « ${nom} » : `
-      + 'une référence non validée n’entre jamais en Phase 2 (`02-` §6 A).'
-  }
-  if (!ref.validee_at) {
-    return `La référence décomposée de « ${nom} » n’est pas validée : `
-      + 'une référence non validée n’entre jamais en Phase 2 (`02-` §6 A). '
-      + 'Elle se lit et se valide à l’écran de la référence.'
-  }
-  if (t.bloque === true) {
-    return `« ${nom} » est bloqué en file de validation : il ne sert aucune instance.`
-  }
-  return null
+  return motifDeRefusDeLaReference(
+    t, enTete(txt(t.auteur), txt(t.titre), txt(t.reference)) || 'ce texte')
 }
 
 // ═════════════════════════════════════════════════════════════════════════════
@@ -353,8 +337,17 @@ export async function concevoirExamenDiagnostique(
     //  · `paire_diagnostic` — c'est le geste `diagnostiquer` d'un formatif, PAS
     //    l'examen diagnostique. Les deux vocabulaires ne se rencontrent pas ;
     //  · `bonus` — sans objet ;
-    //  · `cible_primaire` — la colonne n'existe pas encore, et un examen en
-    //    mesure trois ou quatre : c'est reporté à un lot de correctifs ;
+    //  · `cible_primaire` — ⭐ RELU ET MAINTENU PAR C4-L11. La colonne existe
+    //    désormais ; le SECOND motif, lui, tient toujours et il suffit : « un
+    //    examen en mesure trois ou quatre ». Le `07-` §1.1 fait poser la cible
+    //    « parmi les compétences que son exercice mesure, ET UNE SEULE ; quand
+    //    il n'y en a QU'UNE POSSIBLE […] l'écran la pose sans la demander » —
+    //    or il y en a trois ou quatre ici, et CET ÉCRAN NE LA DEMANDE PAS. Le
+    //    champ va à l'écran de conception de C4-L8, et à lui seul.
+    //    ⚠️ CONSÉQUENCE, DITE ET NON MASQUÉE : le retour d'un examen retombe
+    //    donc sur le repli alphabétique, et la chaîne le SIGNALE en alerte
+    //    (`cibleIndeterminee`). C'est l'état que la source décrit — « imposé en
+    //    classe, HORS ROUTAGE » (`01-` §10) —, pas un oubli ;
     //  · `fenetre_debut` / `fenetre_fin` — L'ÉCRAN NE DEMANDE AUCUNE DATE ;
     //  · `borne_amont` — le non-spoiler borne le ROUTEUR (`01-` §4), et un
     //    examen diagnostique est « imposé en classe, HORS ROUTAGE » (`01-` §10).

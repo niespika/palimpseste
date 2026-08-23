@@ -28,8 +28,11 @@
 import { revalidatePath } from 'next/cache'
 import { garderProf } from '@/utils/fabrique/acces'
 import { chargerDoctrineDepuisBase } from '@/utils/fabrique/doctrine'
-import { empechementsDeConception } from '@/utils/fabrique/conception'
+import {
+  ciblePrimaireDeLInstance, ciblePrimaireRetenue, empechementsDeConception,
+} from '@/utils/fabrique/conception'
 import { controleReference } from '@/utils/fabrique/verifie-reference'
+import { referenceValidee } from '@/utils/reference-validee'
 
 /** Une ligne rendue par Supabase — lue par accesseurs, jamais à l'aveugle. */
 type Ligne = Record<string, unknown>
@@ -53,6 +56,13 @@ interface Cas {
   distracteurs: string[] | null
   reponseAttendue: string | null
   materiauId: string | null
+}
+
+/** Une jointure Supabase rend tantôt un objet, tantôt un tableau d'un élément. */
+function jointureNature(x: unknown): string | null {
+  const v = Array.isArray(x) ? x[0] : x
+  const n = (v as { nature?: unknown } | null)?.nature
+  return typeof n === 'string' ? n : null
 }
 
 function lireCas(form: FormData, n: number): Cas[] {
@@ -121,19 +131,38 @@ export async function concevoirInstance(
     return { ok: false, message: 'La saisie ne passe pas les règles de conception.', empechements }
   }
 
+  // ── LA `cible_primaire` — « l'exercice porte la cible » (`01-` §1) ─────────
+  // ⭐ RE-DÉRIVÉE ICI, jamais reçue sur parole : « un écran n'est pas une
+  //    garde ». Quand une seule cible est possible, l'écran la pose sans la
+  //    demander (`07-` §1.1) et le champ n'est même pas envoyé.
+  // ⚠️ Elle reste NULLABLE, et un refus serait un contresens : « sur la voie du
+  //    routeur elle reste NULL ». Un `produire` à deux compétences dont le
+  //    professeur n'a rien dit sort donc à NULL, et la chaîne le SIGNALE en
+  //    alerte au lieu de le taire.
+  const regleCible = ciblePrimaireDeLInstance({
+    geste: c.geste,
+    observableCompetence: saisie.observableCompetence,
+    competences: Object.keys(competences),
+  })
+  const ciblePrimaire = ciblePrimaireRetenue(
+    regleCible, String(form.get('cible_primaire') ?? '').trim() || null)
+
   // ⚠️ « Une référence NON VALIDÉE n'entre JAMAIS en Phase 2 » (`02-` §6 A) : un
   // texte déposé sans décomposition validée ne sert AUCUNE instance qui le
   // vise — en source COMME EN CIBLE (piège 25).
+  // ⭐ C4-L11 — LA GARDE N'EST PLUS ICI : elle vit à `utils/reference-validee.ts`,
+  //    seule, et la conception d'examen (C4-L9) lit la même. Deux copies d'un
+  //    même prédicat sur une même colonne finissent par diverger. Le RÔLE
+  //    — source ou cible — reste dit ici : lui seul est propre à cet écran.
   const texteSourceId = (String(form.get('texte_source') ?? '').trim() || null)
   const texteCibleId = (String(form.get('texte_cible') ?? '').trim() || null)
   for (const [id, role] of [[texteSourceId, 'source'], [texteCibleId, 'cible']] as Array<[string | null, string]>) {
     if (!id) continue
-    const { data } = await admin.from('exercices_textes')
-      .select('id_import, exercices_references(validee_at)').eq('id', id).maybeSingle()
-    if (!jointure(data, 'exercices_references').validee_at) {
+    const verdict = await referenceValidee(admin, id)
+    if (!verdict.ok) {
       return { ok: false,
         message: `Le matériau ${role} vise une référence NON VALIDÉE — aucune instance ne tourne dessus.`,
-        empechements: ['valider la référence avant de concevoir (02- §6 A ; 05- §4.4)'] }
+        empechements: [verdict.motif ?? 'valider la référence avant de concevoir (02- §6 A ; 05- §4.4)'] }
     }
   }
 
@@ -148,6 +177,7 @@ export async function concevoirInstance(
     consigne_instanciee: paire ? saisie.cas.map((x) => x.consigne) : saisie.cas[0].consigne,
     paire_diagnostic: paire,
     cran: String(cran),
+    cible_primaire: ciblePrimaire,
     genre,
     // ⚠️ « En base, les modes sont UNE LISTE, jamais une valeur » (§1.2) :
     // l'écran enveloppe, comme l'import (piège 19).
@@ -215,7 +245,8 @@ export async function editerInstance(
   const { admin } = await garderProf(false)
   const id = String(form.get('id') ?? '')
   const { data: ex, error: eLecture } = await admin.from('exercices')
-    .select('statut, paire_diagnostic, cran, exercices_cas(ordre)').eq('id', id).maybeSingle()
+    .select('statut, paire_diagnostic, cran, exercices_types(nature), exercices_cas(ordre)')
+    .eq('id', id).maybeSingle()
   if (eLecture) return { ok: false, message: `Lecture impossible : ${eLecture.message}` }
   if (!ex) return { ok: false, message: 'Instance inconnue.' }
   if (ex.statut === 'assigne' || ex.statut === 'clos') {
@@ -228,7 +259,16 @@ export async function editerInstance(
   //   — une instance dont l'écriture des cas a échoué —, `form.get('cas_2_…')`
   //   rend `null`, la consigne devient vide, et LE TEXTE QUE L'ÉLÈVE LIT EST
   //   EFFACÉ sous un message vert. On refuse plutôt que d'écrire à l'aveugle.
-  const n = ex.paire_diagnostic ? 2 : 1
+  // ⭐ C4-L11 — UN EXAMEN DIAGNOSTIQUE N'A PAS DE CAS, et il n'en aura jamais.
+  //    Un type de nature `complet` n'a PAS DE CRAN (`07-` §1.1), donc aucun
+  //    appui à déclarer et aucune ligne `exercices_cas` : la garde ci-dessous,
+  //    écrite pour les treize objets, lisait « déclare 1 cas, n'en porte 0 » et
+  //    REFUSAIT TOUTE ÉDITION. Le bloc d'assignation, lui, fonctionnait — c'est
+  //    ce qui rendait le défaut cosmétique. L'examen édite sa consigne, son
+  //    lieu et ses deux opt-ins ; le reste ne le concerne pas.
+  const nature = jointureNature(ex.exercices_types)
+  const examen = nature === 'complet'
+  const n = examen ? 0 : (ex.paire_diagnostic ? 2 : 1)
   const casEnBase = (ex.exercices_cas as Array<{ ordre: number }> | null) ?? []
   if (casEnBase.length !== n) {
     return {
@@ -239,13 +279,18 @@ export async function editerInstance(
     }
   }
   const cas = lireCas(form, n)
-  if (cas.some((c) => !c.consigne.trim())) {
+  // Sans cas, la consigne se saisit à part : c'est le seul texte que l'examen
+  // porte, et il reste « le texte que l'élève lit ».
+  const consigneExamen = String(form.get('consigne') ?? '')
+  if (examen ? !consigneExamen.trim() : cas.some((c) => !c.consigne.trim())) {
     return { ok: false, message: 'Une consigne est vide : c’est le texte que l’élève lit, '
       + 'il ne s’efface pas par mégarde.' }
   }
 
   const { data: maj, error } = await admin.from('exercices').update({
-    consigne_instanciee: ex.paire_diagnostic ? cas.map((x) => x.consigne) : cas[0].consigne,
+    consigne_instanciee: examen
+      ? consigneExamen
+      : (ex.paire_diagnostic ? cas.map((x) => x.consigne) : cas[0].consigne),
     guide: (String(form.get('guide') ?? '').trim() || null),
     lieu: String(form.get('lieu') ?? 'maison'),
     optin_se_juger: form.get('optin_se_juger') === 'oui',

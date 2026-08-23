@@ -32,6 +32,7 @@ import 'server-only'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { INSTRUMENT_MONITORING } from '@/utils/chaine/derive/monitoring'
 import { COMPETENCES, type Competence } from '@/utils/chaine/types'
+import { cranEstUnCode, cranNumero } from '@/utils/cran'
 
 type Admin = SupabaseClient
 
@@ -108,12 +109,11 @@ export interface PerimetreDuDepot {
   /** La cible du retour, par la convention en vigueur. */
   cible: Competence | null
   /**
-   * ⚠️ L'alerte de repli alphabétique (piège 51). `cible_primaire` est décidée et
-   *    écrite en source, mais « la colonne, le champ à l'écran et sa lecture par
-   *    la chaîne sont REPORTÉS AU LOT DE CORRECTIFS » — vérifié le 22/08 :
-   *    aucune colonne `cible_primaire` sur `exercices`. En attendant, l'ordre
-   *    alphabétique sert de convention, et elle se DIT dès qu'elle sert sur plus
-   *    d'une compétence. On la compte, on ne la fait pas taire.
+   * ⚠️ L'alerte de repli alphabétique. ⭐ C4-L11 — `exercices.cible_primaire`
+   *    EXISTE DÉSORMAIS, et l'ordre de lecture est celui de la chaîne :
+   *    décision du routeur → `cible_primaire` de l'instance → repli
+   *    alphabétique. L'alerte ne se lève donc plus que si LES DEUX manquent, sur
+   *    plus d'une compétence — elle ne se supprime pas, elle se resserre.
    */
   replisAlphabetiques: string | null
   /** Le geste du cran servi — `produire`, `diagnostiquer` ou `transformer`. */
@@ -126,7 +126,8 @@ export interface PerimetreDuDepot {
 
 export async function lirePerimetre(admin: Admin, depotId: string): Promise<PerimetreDuDepot | null> {
   const { data, error } = await admin.from('exercices_depots')
-    .select('id, eleve_id, exercices!inner(id, cran, modes_par_competence, '
+    .select('id, eleve_id, routeur_decision_id, '
+      + 'exercices!inner(id, cran, cible_primaire, modes_par_competence, '
       + 'exercices_types!inner(grain, nature))')
     .eq('id', depotId).maybeSingle()
   if (error || !data) {
@@ -143,18 +144,28 @@ export async function lirePerimetre(admin: Admin, depotId: string): Promise<Peri
   const statuts = await lireStatutsRecette(admin, String(d.eleve_id))
   const evaluees = declarees.filter((c) => statuts[c] === 'evaluee')
 
-  // La MÊME convention que la chaîne (`utils/chaine/chaine.ts`, `cibleDuRetour`) :
-  // la décision du routeur si elle existe, l'ordre alphabétique sinon. Une
-  // seconde convention ferait servir « se juger » sur une compétence et le
-  // retour sur une autre.
-  const cible = [...evaluees].sort()[0] ?? null
-  const replis = evaluees.length > 1
-    ? `cible du retour INDÉTERMINÉE : aucune décision de routeur, et ${evaluees.length} `
-      + `compétences évaluées — « ${cible} » sert par convention (ordre alphabétique), `
-      + 'pas par intention.'
+  // La MÊME convention que la chaîne (`utils/chaine/chaine.ts`, `cibleDuRetour`),
+  // et elle DOIT rester la même : deux conventions feraient servir « se juger »
+  // sur une compétence et le retour sur une autre.
+  // ⭐ C4-L11 — l'ordre est désormais celui du `07-` §1.1 : décision du routeur
+  //    → `exercices.cible_primaire` → repli alphabétique.
+  const decidee = await cibleDeLaDecisionDuRouteur(admin, d.routeur_decision_id)
+  const primaire = estUneCompetence(String(ex?.cible_primaire ?? ''))
+    ? String(ex?.cible_primaire) as Competence : null
+  const cible = choisirLaCible(decidee, primaire, evaluees)
+  // « Elle doit désormais ne se lever que si LES DEUX manquent. »
+  const replis = cible !== null
+    && !(decidee && evaluees.includes(decidee))
+    && !(primaire && evaluees.includes(primaire))
+    && evaluees.length > 1
+    ? `cible du retour INDÉTERMINÉE : ni décision de routeur ni \`cible_primaire\`, et `
+      + `${evaluees.length} compétences évaluées — « ${cible} » sert par convention `
+      + '(ordre alphabétique), pas par intention.'
     : null
 
-  const cranCode = ex?.cran != null ? String(ex.cran) : null
+  // ⚠️ Le CODE du cran, pour `gesteDuCran` — la base porte le NUMÉRO depuis
+  //    C4-L11 (`utils/cran.ts`), et le code se relit sur `exercices_crans`.
+  const cranCode = await codeDuCran(admin, ex?.cran)
   // ⭐ LE GESTE D'UN EXAMEN DIAGNOSTIQUE SE DÉRIVE DE SA NATURE (C4-L9-bis,
   //    décision de Louis du 22/08). Pour les treize objets, le geste vient du
   //    CRAN (`exercices_crans.geste`) ; un type de nature `complet` — les deux
@@ -215,6 +226,50 @@ async function gesteDuCran(admin: Admin, code: string): Promise<string | null> {
   const { data } = await admin.from('exercices_crans')
     .select('geste').eq('code', code).maybeSingle()
   return data?.geste != null ? String(data.geste) : null
+}
+
+/**
+ * Le CODE du cran d'une instance — `null` quand elle n'en porte aucun.
+ *
+ * La base porte le NUMÉRO (`utils/cran.ts`, l'arbitrage de C4-L11) ; le code
+ * vit à `exercices_crans.code`, `unique`, et se relit d'une jointure. On tolère
+ * encore une valeur écrite au code : une instance d'avant la conversion doit
+ * continuer de servir, pas rendre du vide.
+ */
+async function codeDuCran(admin: Admin, brut: unknown): Promise<string | null> {
+  const n = cranNumero(brut)
+  if (n == null) return cranEstUnCode(brut) ? String(brut).trim() : null
+  const { data } = await admin.from('exercices_crans')
+    .select('code').eq('cran', n).maybeSingle()
+  return data?.code != null ? String(data.code) : null
+}
+
+/** La cible retenue par la décision du routeur, quand il y en a une. */
+async function cibleDeLaDecisionDuRouteur(
+  admin: Admin, decisionId: unknown,
+): Promise<Competence | null> {
+  if (typeof decisionId !== 'string' || decisionId === '') return null
+  const { data } = await admin.from('routeur_decisions')
+    .select('cible_retenue').eq('id', decisionId).maybeSingle()
+  const c = String(data?.cible_retenue ?? '')
+  return estUneCompetence(c) ? c : null
+}
+
+/**
+ * L'ORDRE DE LECTURE DU `07-` §1.1 — décision du routeur, puis
+ * `cible_primaire`, puis le repli alphabétique.
+ *
+ * ⚠️ « Les deux premiers ne coexistent jamais par construction » : NULL sur la
+ *    voie du routeur, posée sur la voie du professeur. La décision passe
+ *    d'abord, et un cas où les deux existent se DIT — il ne se choisit pas en
+ *    silence (`alerteDeCoexistence`, `utils/chaine/chaine.ts`).
+ */
+function choisirLaCible(
+  decidee: Competence | null, primaire: Competence | null, admises: readonly Competence[],
+): Competence | null {
+  if (decidee && admises.includes(decidee)) return decidee
+  if (primaire && admises.includes(primaire)) return primaire
+  return [...admises].sort()[0] ?? null
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

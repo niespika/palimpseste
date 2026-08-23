@@ -2,6 +2,7 @@
 // Sortie de `python3 scripts/derive-instruments.py --ecris`.
 // La source fait foi ; `--verifie` dit si ce fichier en a divergé
 // (piège 52 ; `03-` §1 ; `07-` §4).
+// Racine de conception lue : /Users/louissagnieres/Documents/GitTest/palimpseste-conception
 
 export const MANIFESTE_INSTRUMENTS = {
   "competences": {
@@ -111,12 +112,11 @@ export const MANIFESTE_INSTRUMENTS = {
     "version": "2.1"
   },
   "outil": "scripts/derive-instruments.py 1.0",
-  "racine_conception": "/Users/louissagnieres/Documents/GitTest/palimpseste-conception",
   "sources": {
     "07-Implementation.md": {
-      "empreinte": "9d7cd9d6e42bbb2d922964bc323bb8cddbfc78283ea7937c403cf1e600d1d1fc",
+      "empreinte": "57cfceea81ee3ee9c2a6a6574e1a13fabfe3e1b6b23de2ad45934c6119c7811e",
       "statut": "RELU ET VALIDÉ.",
-      "version": "2.34"
+      "version": "2.36"
     },
     "competences/argumentation.md": {
       "empreinte": "3f7d2960c92765ed93a2712303a24a6d4d1ae047db5e6c1e429ac894ca75f379",

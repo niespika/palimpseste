@@ -30,6 +30,7 @@
 
 import { MANIFESTE_INSTRUMENTS } from './derive/MANIFESTE'
 import { GABARIT_CALAME } from './derive/calame-retour'
+import type { SectionCalame } from './retour'
 import { INSTRUMENT_MONITORING } from './derive/monitoring'
 import { INSTRUMENT_EXPRESSION } from './derive/competences/expression'
 import { BRANCHEMENT_EXPRESSION } from './branchements/expression'
@@ -577,6 +578,14 @@ export const CALAME = GABARIT_CALAME as unknown as {
   source: string
   version_source: string
   gabarit: string
+  /**
+   * Le gabarit DÉCOUPÉ — « la dérivation émet le gabarit découpé en sections
+   * nommées, pour qu'un remplacement ait quelque chose d'identifié à
+   * remplacer » (`07-` §4). `gabarit` reste, à l'octet : le découpage s'ajoute.
+   * L'assemblage passe par `assemblerGabarit` (`./retour`), jamais par une
+   * concaténation locale.
+   */
+  sections: readonly SectionCalame[]
   variables: readonly string[]
   regles_verrouillees: readonly number[]
   sections_editables: readonly string[]

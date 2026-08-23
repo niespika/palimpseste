@@ -25,7 +25,7 @@ import { chaineActive } from './acces'
 import { lireConfig, type ConfigChaine } from './config'
 import { lireContexte, type ContexteDepot } from './contexte'
 import { appelsDuDepot, controlerLaFacture } from './couts-serveur'
-import { depotAAtteintSonPlafond } from './couts'
+import { appelsDeLErreur, depotAAtteintSonPlafond } from './couts'
 import {
   competencesOuvertes, etatCompetence, refusFormeCode2, valeursDesParametres,
   CALAME, FOURNISSEURS_NATIFS,
@@ -43,7 +43,14 @@ import {
   type LigneMesure,
 } from './mesures'
 import { traiterLeMonitoring } from './monitoring'
-import { assemblerRetour, controlerRetour, segmenter, type CoucheCompetence } from './retour'
+import {
+  assemblerGabarit, assemblerRetour, controlerRetour, segmenter,
+  type CoucheCompetence,
+} from './retour'
+// Le FICHIER DE PERSONNALITÉ PARTAGÉ — l'identité et le `ton`, reçus, jamais
+// recopiés (`07-` §4). ⚠️ `REGISTRE` est ici le registre de LANGUE : il ne
+// touche jamais `{{REGISTRE}}`, qui est le registre de RETOUR du `01-` §8.7.
+import { IDENTITE, REGISTRE as TON_PARTAGE } from '@/utils/ia-commun'
 import { reposerJob, terminerJob, type Job } from './file'
 import type { Competence, Registre, RetourSegmente, Version } from './types'
 
@@ -152,10 +159,13 @@ export async function traiterDepot(
   const cible = cibleDuRetour(ctx, mesurees)
   if (cibleIndeterminee(ctx, mesurees)) {
     alertes.push(
-      `cible du retour INDÉTERMINÉE : aucune décision de routeur, et ${mesurees.length} compétences `
-      + `mesurées — « ${cible} » sert par convention (ordre alphabétique), pas par intention. `
+      'cible du retour INDÉTERMINÉE : ni décision de routeur ni `cible_primaire`, et '
+      + `${mesurees.length} compétences mesurées — « ${cible} » sert par convention `
+      + '(ordre alphabétique), pas par intention. '
       + 'Le partage primaire / secondaire / sonde appartient à C4-L2 (01- §1).')
   }
+  const coexistence = alerteDeCoexistence(ctx)
+  if (coexistence) alertes.push(coexistence)
   const competencesFroides = version === 'v1' ? mesurees : (cible ? [cible] : [])
 
   let appels = 0
@@ -189,6 +199,18 @@ export async function traiterDepot(
     const motif = r.reason instanceof Error ? r.reason.message : String(r.reason)
     ecartees.push({ competence: competencesFroides[i], motif: `la chaîne a levé — ${motif}` })
     alertes.push(`${competencesFroides[i]} : chaîne interrompue — ${motif}`)
+    // ⭐ C4-L11 — LE COMPTE D'APPELS NE SE PERD PLUS ICI. `SortieNonConforme` et
+    //    `AppelInterrompu` portent tous deux un `appels` en lecture seule,
+    //    « les appels RÉELLEMENT dépensés avant l'abandon — L'APPELANT LES
+    //    COMPTE » (`appel.ts`). L'appelant ne les comptait pas : sur un
+    //    `rejected`, le motif partait en alerte et le compte tombait, alors que
+    //    les lignes étaient déjà écrites au journal (`bilan.appels = 0` avec
+    //    trois lignes en base, constaté en vrai).
+    //    ⚠️ C'est un CHIFFRE DE DIAGNOSTIC, pas une garde : « aucune décision
+    //    n'en dépend — le plafond par dépôt se lit au nombre de lignes en
+    //    base ». Les deux gardes — `controlerLaFacture` et `appelsDuDepot` —
+    //    ne passent pas par ce bilan et ne changent pas.
+    appels += appelsDeLErreur(r.reason)
   })
 
   for (const r of resultats) {
@@ -294,31 +316,92 @@ export function competencesDeLExercice(ctx: ContexteDepot): {
 }
 
 /**
- * La compétence que le retour commande — « un exercice a UNE cible primaire :
- * c'est elle qui commande le retour » (`01-` §1).
+ * La compétence que le retour commande — « L'EXERCICE PORTE LA CIBLE. Un exercice
+ * a UNE cible primaire : c'est elle qui commande le retour » (`01-` §1, point 1).
  *
- * ⚠️ Le partage primaire / secondaire / sonde vit dans la DÉCISION du routeur
- *    (`routeur_decisions.cible_retenue`), qui appartient à C4-L2. Sans décision,
- *    RIEN NE HIÉRARCHISE les compétences que l'instance déclare : elles vivent
- *    dans un `jsonb`, dont Postgres n'ordonne les clés ni par saisie ni par
- *    intention — il les range par longueur puis par octets. « La première
- *    compétence mesurée » n'est donc pas celle que le professeur a nommée en
- *    premier : ce serait, en pratique, celle dont le nom est le plus court.
+ * ⭐ C4-L11 — L'ORDRE DE LECTURE EST CELUI DU `07-` §1.1, ET IL A TROIS CRANS :
+ *      1. la DÉCISION du routeur (`routeur_decisions.cible_retenue`) — « la
+ *         cible est la sortie de la couche 2 et vit à la décision » ;
+ *      2. `exercices.cible_primaire` — la voie du PROFESSEUR : « l'écran de
+ *         conception la lui demande, parmi les compétences que son exercice
+ *         mesure, et UNE SEULE » ;
+ *      3. le repli ALPHABÉTIQUE, assumé comme convention.
  *
- *    D'où un repli qui s'assume comme tel : l'ORDRE ALPHABÉTIQUE, déterministe
- *    et sans prétention. `cibleIndeterminee()` dit quand il a servi, pour que
- *    l'appelant le porte en alerte plutôt que de le taire.
+ * ⚠️ LES DEUX PREMIERS NE COEXISTENT JAMAIS PAR CONSTRUCTION : « sur la voie du
+ *    routeur elle reste NULL », « sur la voie du professeur, l'écran de
+ *    conception la lui demande ». S'ils coexistent, ce n'est pas un cas à
+ *    trancher en silence — `alerteDeCoexistence()` le DIT.
+ *
+ * ⚠️⚠️ ET LA PREMIÈRE BRANCHE EST DORMANTE AUJOURD'HUI — constaté sur pièces par
+ *    C4-L11 (23/08), et ce n'est PAS un défaut de ce lot. Le moteur du routeur
+ *    est écrit et éprouvé (`utils/routeur/`, fonctions PURES), mais **RIEN NE
+ *    PERSISTE SA DÉCISION** : aucun code n'écrit `routeur_decisions.cible_retenue`
+ *    — le seul `insert` du dépôt est le journal d'override, qui pose
+ *    `regle_declenchee: 'override_prof'` sans cible, et sur la branche même où le
+ *    dépôt n'a PAS de décision —, et rien n'écrit
+ *    `exercices_depots.routeur_decision_id`. En base : 0 ligne de
+ *    `routeur_decisions`, 0 dépôt sur 25 qui en porte une.
+ *    ⭐ CE QUE ÇA CHANGE, ET C'EST DANS L'AUTRE SENS : avant C4-L11, **cent pour
+ *    cent des dépôts tombaient sur le repli alphabétique**, la voie du professeur
+ *    comprise. La `cible_primaire` est donc aujourd'hui **le seul domicile qui
+ *    puisse empêcher le repli** — ce qui rendait ce chantier plus nécessaire, pas
+ *    moins. L'écrivain de la décision n'est à l'inventaire d'aucun lot que ce
+ *    lot-ci ait le droit de lire ; la question est posée au relevé de C4-L11.
+ *
+ * ⚠️ Sans aucun des deux, RIEN NE HIÉRARCHISE les compétences que l'instance
+ *    déclare : elles vivent dans un `jsonb`, dont Postgres n'ordonne les clés ni
+ *    par saisie ni par intention — il les range par longueur puis par octets.
+ *    « La première compétence mesurée » serait, en pratique, celle dont le nom
+ *    est le plus court. D'où le repli alphabétique, déterministe et sans
+ *    prétention, que `cibleIndeterminee()` dénonce dès qu'il sert.
+ *
+ * ⭐ Ce que la cible engage, et pourquoi l'échéance était ferme : « en version
+ *    finale, les appels froids ne se rejouent que pour la SEULE compétence visée
+ *    par le retour (`01-` §11) — une cible tirée de l'ordre d'un tableau ferait
+ *    porter le `delta_v1_vf`, donc le signal de réceptivité de N2, sur une
+ *    compétence que personne n'a choisie. »
  */
 export function cibleDuRetour(ctx: ContexteDepot, mesurees: readonly Competence[]): Competence | null {
   const declaree = ctx.decision?.cibleRetenue as Competence | undefined
   if (declaree && mesurees.includes(declaree)) return declaree
+  if (ctx.ciblePrimaire && mesurees.includes(ctx.ciblePrimaire)) return ctx.ciblePrimaire
   return [...mesurees].sort()[0] ?? null
 }
 
-/** Vrai quand la cible relève du repli, et que plus d'une compétence est en jeu. */
+/**
+ * Vrai quand la cible relève du REPLI — donc quand NI la décision NI la
+ * `cible_primaire` ne portent une compétence mesurée — et que plus d'une
+ * compétence est en jeu. L'alerte ne se supprime pas : elle se resserre.
+ */
 export function cibleIndeterminee(ctx: ContexteDepot, mesurees: readonly Competence[]): boolean {
   const declaree = ctx.decision?.cibleRetenue as Competence | undefined
-  return !(declaree && mesurees.includes(declaree)) && mesurees.length > 1
+  if (declaree && mesurees.includes(declaree)) return false
+  if (ctx.ciblePrimaire && mesurees.includes(ctx.ciblePrimaire)) return false
+  return mesurees.length > 1
+}
+
+/**
+ * La COEXISTENCE que la source dit impossible — décision du routeur ET
+ * `cible_primaire` sur la même instance.
+ *
+ * « Les deux premiers ne coexistent jamais par construction (`07-` §1.1 : NULL
+ *   sur la voie du routeur, posée sur la voie du professeur) — si tu constates
+ *   qu'ils coexistent, NE CHOISIS PAS EN SILENCE. » La décision l'emporte, parce
+ *   qu'elle est la sortie de la couche 2 ; mais le fait se dit, à chaque dépôt
+ *   concerné, plutôt que d'attendre qu'on le remarque.
+ *
+ * ⚠️ Elle NE PEUT PAS SE LEVER AUJOURD'HUI, et c'est cohérent : rien ne persiste
+ *    de décision de routeur (voir `cibleDuRetour`). C'est une garde POSÉE
+ *    D'AVANCE, pour le jour où l'écrivain de la décision existera — pas une
+ *    alerte qu'on a vue tomber.
+ */
+export function alerteDeCoexistence(ctx: ContexteDepot): string | null {
+  const declaree = ctx.decision?.cibleRetenue as Competence | undefined
+  if (!declaree || !ctx.ciblePrimaire) return null
+  return 'COEXISTENCE que le `07-` §1.1 dit impossible : cette instance porte À LA FOIS une '
+    + `décision de routeur (« ${declaree} ») et une \`cible_primaire\` (« ${ctx.ciblePrimaire} ») — `
+    + 'or la colonne « reste NULL sur la voie du routeur ». La décision l\'emporte (elle est la '
+    + 'sortie de la couche 2), et le fait est signalé, pas tranché en silence.'
 }
 
 /**
@@ -497,9 +580,14 @@ async function chaineDUneCompetence(
   }
   alertes.push(...prepare.alertes)
 
+  // ⛔ PAS DE `prompt_version` : « RIEN N'EST VERSIONNÉ PAR PHASE » (`01-` §11).
+  //    Elle portait EXACTEMENT `instrument.version`, ici comme au jugement — et
+  //    « deux copies du même chiffre finissent par diverger » (`07-` §1.2).
+  //    ⭐ `instrument_version` RESTE, et c'est l'erreur symétrique à ne pas
+  //    faire : c'est LE versionnage, « sur la mesure ET sur le squelette ».
   await upsertSquelette(admin, ctx.depotId, competence, version, {
     artefact_extraction: artefactsP1, modele,
-    prompt_version: instrument.version, instrument_version: instrument.version,
+    instrument_version: instrument.version,
   })
 
   // ── Temps 3 — P2, observable par observable ───────────────────────────────
@@ -559,9 +647,12 @@ async function chaineDUneCompetence(
   })
   appels += jugement.appels
 
+  // ⛔ La SECONDE écriture de `prompt_version` — retirée avec la première : une
+  //    colonne, DEUX écritures (C4-L11 ; `01-` §11, « rien n'est versionné par
+  //    phase »).
   await upsertSquelette(admin, ctx.depotId, competence, version, {
     artefact_jugement: jugement.valeur, modele,
-    prompt_version: instrument.version, instrument_version: instrument.version,
+    instrument_version: instrument.version,
   })
 
   // ── Temps 4 — CODE2. « Du code agrège » : le palier DE LA MESURE. ─────────
@@ -761,9 +852,19 @@ async function engendrerLeRetour(
     })).filter((x) => x.tendance !== '')
     : null
 
-  const { systeme, message } = assemblerRetour(CALAME.gabarit, {
+  // `07-` §4 — « la `longueur` […] son domicile est un PARAMÈTRE DE PLATEFORME,
+  // au même endroit que les interrupteurs (§5), NULL VALANT LA RÈGLE 7 ». La
+  // section nommée `regle_7` est la seule ouverte ; les autres ne se remplacent
+  // pas, et `assemblerGabarit` tient cette garde.
+  const longueur = await lireLongueurDuRetour(admin)
+  if (longueur) alertes.push('longueur du retour : paramètre de plateforme servi à la place de la règle 7')
+  const gabarit = assemblerGabarit(CALAME.sections, { longueur })
+
+  const { systeme, message } = assemblerRetour(gabarit, {
     moment: version,
     registre: registreServi,
+    // Le fichier partagé, REÇU — « elle n'en porte pas de copie » (`07-` §4).
+    personnalite: { identite: IDENTITE, ton: TON_PARTAGE },
     palierAttribue: evaluee,
     competencePrimaire: cible,
     couchesCompetence: couches,
@@ -785,7 +886,10 @@ async function engendrerLeRetour(
       // DEUX exemplaires contradictoires du même contrat, dont un où la règle 8
       // se lit littéralement « REGISTRE : {{REGISTRE}} ». Le préfixe reste
       // cachable : il est stable pour un même (compétence, moment, registre).
-      systeme: 'Tu es Calame. Tu écris à un élève, et tu suis le contrat qui suit.',
+      // ⚠️ L'IDENTITÉ NE SE RECOPIE PLUS ICI (C4-L11) : elle vient du fichier
+      // partagé et voyage dans le préfixe cacheable, avec le `ton` et le
+      // contrat. Une seconde copie en système était un second Calame en germe.
+      systeme: 'Tu suis le contrat qui suit.',
       prefixeCacheable: systeme,
       message,
       // La validation fine est faite par `controlerRetour` juste après.
@@ -853,6 +957,25 @@ async function ecrireRetour(
  * DONNÉ SUR SA v1 » (`07-` §4, ce que le modèle reçoit). Il se lit dans sa forme
  * SEGMENTÉE, celle-là même que la chaîne a écrite.
  */
+/**
+ * La `longueur` du retour — LE PARAMÈTRE DE PLATEFORME du `07-` §4.
+ *
+ * « Son domicile est un paramètre de plateforme, au même endroit que les
+ *   interrupteurs (§5), NULL VALANT LA RÈGLE 7 DU GABARIT. »
+ *
+ * ⚠️ supabase-js NE LÈVE PAS : il rend `{ error }`. Une lecture dont on ignore
+ *    le retour échoue en silence — ici, silencieusement au défaut, ce qui est le
+ *    comportement voulu (NULL = la règle 7) mais mérite d'être écrit.
+ * ⛔ Ce n'est PAS `rag_prompt_longueur` : celle-là est la section éditable DU
+ *    TUTEUR (`utils/scriptorium-rag.ts`). Deux ateliers, deux réglages.
+ */
+async function lireLongueurDuRetour(admin: Admin): Promise<string | null> {
+  const { data } = await admin.from('scriptorium_params')
+    .select('exercices_retour_longueur').eq('id', 1).maybeSingle()
+  const v = (data as { exercices_retour_longueur?: string | null } | null)?.exercices_retour_longueur
+  return v && v.trim() !== '' ? v.trim() : null
+}
+
 async function lireRetourV1(admin: Admin, depotId: string): Promise<RetourSegmente | null> {
   const { data } = await admin.from('exercices_retours')
     .select('texte, action_revision, feed_forward')

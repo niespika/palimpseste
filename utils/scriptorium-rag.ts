@@ -16,7 +16,7 @@ import 'server-only'
 // Paramètres signale son contenu s'il y en avait un.
 
 import type { SupabaseClient } from '@supabase/supabase-js'
-import { REGISTRE, injecter } from '@/utils/ia-commun'
+import { IDENTITE, REGISTRE, injecter } from '@/utils/ia-commun'
 import { assemblerPromptTuteur, PROMPT_RAG_DEFAUT } from '@/utils/scriptorium-prompt-tuteur'
 import type { LivreRefCorpus } from '@/utils/scriptorium-corpus'
 
@@ -54,7 +54,7 @@ export async function lireReglagesRag(admin: SupabaseClient): Promise<ReglagesRa
     modele: 'gemini-3.5-flash-lite',
     modeleSynthese: 'claude-sonnet-4-6',
     quotaJour: 40,
-    prompt: injecter(PROMPT_RAG_DEFAUT, { registre: REGISTRE }),
+    prompt: injecter(PROMPT_RAG_DEFAUT, { identite: IDENTITE, registre: REGISTRE }),
     promptSyntheseBrut: null,
   }
   const { data, error } = await admin
@@ -78,7 +78,7 @@ export async function lireReglagesRag(admin: SupabaseClient): Promise<ReglagesRa
     modele: (params.rag_modele as string | null) || defauts.modele,
     modeleSynthese: (params.rag_modele_synthese as string | null) || defauts.modeleSynthese,
     quotaJour: (params.rag_quota_jour as number | null) ?? defauts.quotaJour,
-    prompt: injecter(prompt, { registre: REGISTRE }),
+    prompt: injecter(prompt, { identite: IDENTITE, registre: REGISTRE }),
     promptSyntheseBrut: texte('rag_prompt_synthese'),
   }
 }

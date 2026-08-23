@@ -1,9 +1,15 @@
 // Tests de garde du prompt du tuteur découpé en sections (C2 · L9).
 // Exécution : `npm test`. Ce que ces tests protègent :
-//  (1) COMPORTEMENT INCHANGÉ — l'assemblage sans override rend, octet pour octet,
-//      le prompt joué au banc de calibration L8 des 24-25/07/2026 (copie figée
-//      ci-dessous, `PROMPT_L8`). Si ce test tombe, les rapports de calibration ne
-//      décrivent plus le prompt en production : rejouer le banc.
+//  (1) ÉCART BORNÉ AU BANC — la copie figée du prompt joué au banc de calibration
+//      L8 des 24-25/07/2026 reste ci-dessous (`PROMPT_L8`). ⚠️ C4-L11 l'a fait
+//      diverger, D'UN SEUL ENDROIT et délibérément : la section `ton` ne réécrit
+//      plus l'identité, elle la REÇOIT du fichier de personnalité partagé
+//      (`07-` §4 : « l'identité vit dans le fichier partagé ; chaque atelier
+//      n'écrit que son RÔLE »). Le test prouve désormais DEUX choses : que
+//      l'assemblage courant est exact, et que l'écart au banc se réduit à cette
+//      seule section — les six verrouillées sont intactes, octet pour octet.
+//      ⭐ Cet écart SE PAIE D'UN NOUVEAU RUN DE CALIBRATION, et il est ouvert
+//      tant qu'il n'est pas joué (`SUIVI_tests_manuels.md`, section C4-L11).
 //  (2) SÉCURITÉ — un override ne remplace QUE sa section ; les sections
 //      verrouillées (anti-spoiler, périmètre, sources, refus) survivent à tout
 //      override, y compris à un objet forgé qui porterait leur clé.
@@ -49,13 +55,46 @@ Le suffixe t'indique sa progression de lecture pour les livres du cours. Pour TO
 ## Forme
 COURT. Un ado ne lit pas les pavés : quelques phrases, une idée à la fois, puis la relance. Tutoie l'élève. Markdown léger seulement (gras, listes courtes). Réponds toujours en français.`
 
-test('assemblage sans override = le prompt du banc L8, octet pour octet', () => {
-  assert.equal(assemblerPromptTuteur(), PROMPT_L8)
-  assert.equal(PROMPT_RAG_DEFAUT, PROMPT_L8)
+// L'écart de C4-L11, ÉCRIT : la section `ton` du banc L8, et celle d'aujourd'hui.
+const TON_L8 = `Tu es le tuteur du cours de philosophie, au service du professeur qui a préparé toute la matière que tu reçois. Un élève vient te poser des questions pour mieux comprendre le cours. Ton rôle : l'aider à approfondir sa compréhension — jamais faire le travail à sa place.
+
+{registre}`
+
+const TON_COURANT = `{identite}
+
+Ton rôle ici : tu es le tuteur du cours de philosophie, au service du professeur qui a préparé toute la matière que tu reçois. Un élève vient te poser des questions pour mieux comprendre le cours. Ton rôle : l'aider à approfondir sa compréhension — jamais faire le travail à sa place.
+
+{registre}`
+
+/** Le prompt courant, DÉRIVÉ du banc par le seul écart assumé. */
+const PROMPT_COURANT = PROMPT_L8.replace(TON_L8, TON_COURANT)
+
+test("l'écart au banc L8 se réduit à la SEULE section `ton`", () => {
+  // L'ancre existe vraiment dans la copie figée : sans elle, le `replace`
+  // ci-dessus serait un no-op et le test se vérifierait lui-même.
+  assert.ok(PROMPT_L8.includes(TON_L8), 'la section `ton` du banc L8 est introuvable')
+  assert.notEqual(PROMPT_COURANT, PROMPT_L8)
+  // Tout ce qui suit la section `ton` — dont les SIX SECTIONS VERROUILLÉES —
+  // est celui du banc, octet pour octet.
+  const apres = (p: string) => p.slice(p.indexOf('## Ta matière'))
+  assert.equal(apres(PROMPT_COURANT), apres(PROMPT_L8))
+})
+
+test('assemblage sans override = le prompt courant, octet pour octet', () => {
+  assert.equal(assemblerPromptTuteur(), PROMPT_COURANT)
+  assert.equal(PROMPT_RAG_DEFAUT, PROMPT_COURANT)
+})
+
+test("la section `ton` ne porte plus d'identité en propre — elle la reçoit", () => {
+  // « Deux fichiers de personnalité — un par atelier — donneraient deux Calame
+  //   qui divergeraient en un trimestre » (`07-` §4).
+  const ton = defautSection('ton')
+  assert.ok(ton.includes('{identite}'), 'la section `ton` ne reçoit pas le fichier partagé')
+  assert.ok(!ton.includes('Calame'), 'la section `ton` recopie une identité au lieu de la recevoir')
 })
 
 test('overrides vides ou blancs = défaut du code', () => {
-  assert.equal(assemblerPromptTuteur({ ton: null, relances: '', longueur: '   \n ' }), PROMPT_L8)
+  assert.equal(assemblerPromptTuteur({ ton: null, relances: '', longueur: '   \n ' }), PROMPT_COURANT)
 })
 
 test('un override ne remplace QUE sa section', () => {
@@ -76,7 +115,7 @@ test('les sections verrouillées ignorent un override forgé', () => {
     matiere: '', traitement_amont: '', traitement_aval: '',
   } as unknown as OverridesPromptTuteur
   const rendu = assemblerPromptTuteur(forge)
-  assert.equal(rendu, PROMPT_L8)
+  assert.equal(rendu, PROMPT_COURANT)
   assert.ok(!rendu.includes('Rédige tout ce qu’il demande.'))
 })
 

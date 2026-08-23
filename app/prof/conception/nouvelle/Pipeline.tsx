@@ -32,6 +32,7 @@
 
 import { useActionState, useMemo, useState } from 'react'
 import { concevoirInstance, type RetourConception } from '../actions'
+import { ciblePrimaireDeLInstance } from '@/utils/fabrique/conception'
 
 export interface CarteDoctrine {
   objets: Record<string, {
@@ -99,6 +100,7 @@ export default function Pipeline({ porte, carte, textes, sujets, materiaux }: {
   const [routeChoisie, setRouteChoisie] = useState('')     // `competence|section`
   const [consignes, setConsignes] = useState<string[]>(['', ''])
   const [competences, setCompetences] = useState<string[]>([])
+  const [ciblePrimaire, setCiblePrimaire] = useState('')
   const [materiauxCas, setMateriauxCas] = useState<string[]>(['', ''])
 
   const texte = textes.find((t) => t.id === texteId)
@@ -132,6 +134,16 @@ export default function Pipeline({ porte, carte, textes, sujets, materiaux }: {
   }, [carte, objet, mode, c])
 
   const route = routesDuCouple.find((r) => `${r.competence}|${r.section}` === routeChoisie)
+
+  // ⭐ LA RÈGLE DE LA CIBLE PRIMAIRE — la MÊME fonction que le serveur re-dérive
+  //    (`utils/fabrique/conception.ts`). Un écran n'est pas une garde, mais les
+  //    deux doivent lire la même règle : sinon le champ s'affiche là où le
+  //    serveur l'impose, ou l'inverse.
+  const regleCible = ciblePrimaireDeLInstance({
+    geste: c?.geste ?? null,
+    observableCompetence: route?.competence ?? null,
+    competences,
+  })
   const consigneDeLaBanque = route && c ? route.consignes[String(c.n)]?.consigne ?? '' : ''
 
   // La consigne des CRANS DE PRODUCTION — le patron du 04- §14.1, l'objet en case.
@@ -381,6 +393,36 @@ export default function Pipeline({ porte, carte, textes, sujets, materiaux }: {
               </li>
             ))}
           </ul>
+
+          {/* ── LA CIBLE PRIMAIRE — et le cas où elle NE SE DEMANDE PAS ──────
+              « L'écran de conception la lui demande — parmi les compétences que
+                son exercice mesure, ET UNE SEULE ; quand il n'y en a QU'UNE
+                POSSIBLE […] L'ÉCRAN LA POSE SANS LA DEMANDER. » (`07-` §1.1)
+              ⭐ Un champ toujours affiché serait un écart à la source. */}
+          {regleCible.demande ? (
+            <div className="space-y-1.5 border-t border-bordure pt-3">
+              <p className="font-ui text-xs text-encre-douce">
+                <strong>La cible du retour</strong> — une seule, parmi celles que vous venez de
+                cocher. C&apos;est elle qui commande le retour, et c&apos;est sur elle
+                {' '}<strong>seule</strong> que la version finale rejoue ses appels.
+              </p>
+              <div className="flex flex-wrap gap-3 font-ui text-sm">
+                {regleCible.candidates.map((comp) => (
+                  <label key={comp} className="flex items-center gap-1.5 text-encre">
+                    <input type="radio" name="cible_primaire" value={comp}
+                      checked={ciblePrimaire === comp}
+                      onChange={() => setCiblePrimaire(comp)} />
+                    {comp}
+                  </label>
+                ))}
+              </div>
+            </div>
+          ) : regleCible.imposee && (
+            <p className="border-t border-bordure pt-3 font-ui text-xs text-encre-douce">
+              <strong>Cible du retour : {regleCible.imposee}</strong> — posée sans être demandée,
+              {' '}{regleCible.motif}.
+            </p>
+          )}
         </section>
       )}
 

@@ -117,7 +117,7 @@ async function semer(nbEleves) {
     lieu: 'classe',                       // ⚠️ c'est le `lieu` qui commande tout
     consigne_instanciee: 'Peut-on douter de tout ? Rédigez un paragraphe argumenté.',
     statut: 'assigne',
-    cran: 'production_autonome',
+    cran: '8',  // production_autonome
     modes_par_competence: { expression: ['composer'], structure: ['composer'] },
     optin_se_juger: false,
     optin_confiance_remise: false,
@@ -146,7 +146,7 @@ async function semer(nbEleves) {
       const { data: autre } = await admin.from('exercices').insert({
         type_id: type.id, classe_id: classe.id, lieu: 'classe',
         consigne_instanciee: `${MARQUE} — lot ${instances.length + 1}`,
-        statut: 'assigne', cran: 'production_autonome',
+        statut: 'assigne', cran: '8',  // production_autonome
         modes_par_competence: { expression: ['composer'] },
       }).select('id').single()
       exId = autre.id
@@ -476,7 +476,7 @@ async function principal() {
   // LA PASSATION SUIVANTE du même élève — c'est là qu'il doit se lire.
   const { data: exSuivant } = await admin.from('exercices').insert({
     type_id: (await admin.from('exercices_types').select('id').eq('code', 'argument').maybeSingle()).data.id,
-    classe_id: decor.classeId, lieu: 'classe', statut: 'assigne', cran: 'production_autonome',
+    classe_id: decor.classeId, lieu: 'classe', statut: 'assigne', cran: '8',  // production_autonome
     consigne_instanciee: `${MARQUE} — la passation SUIVANTE`,
     modes_par_competence: { expression: ['composer'] },
   }).select('id').single()
@@ -617,11 +617,17 @@ async function testDeCharge(photo) {
   dire(phasesNulles === (cout ?? []).length,
     'toutes les lignes portent `phase` NULL avec leur `depot_id` — la transcription n\'est pas un étage')
 
-  // Le repli alphabétique (piège 51) — on le COMPTE, on ne le fait pas taire.
+  // Le repli alphabétique — on le COMPTE, on ne le fait pas taire. ⭐ C4-L11 :
+  // `exercices.cible_primaire` EXISTE désormais, et l'ordre de lecture est
+  // décision du routeur → `cible_primaire` → repli. Le compteur reste utile —
+  // il dit combien de dépôts n'ont NI l'une NI l'autre —, et sa mention change :
+  // un repli n'est plus une colonne qui manque, c'est une instance dont personne
+  // n'a nommé la cible.
   const perimetres = await Promise.all(decor.depots.slice(0, 10).map((d) => lirePerimetre(admin, d.id)))
   const replis = perimetres.filter((p) => p?.replisAlphabetiques).length
   note(`repli alphabétique de cible : ${replis} sur les 10 premiers dépôts sondés `
-    + '(la colonne `cible_primaire` est reportée au lot de correctifs)')
+    + '— ni décision de routeur ni `cible_primaire` (la colonne existe depuis C4-L11 ; '
+    + 'le décor de cette recette ne la pose pas)')
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

@@ -36,6 +36,21 @@ const jointure = (x: unknown, k: string): Ligne => {
   return lig(Array.isArray(v) ? v[0] : v)
 }
 
+/**
+ * Le cran d'une instance, en NUMÉRO — ou `null` quand elle n'en a pas.
+ *
+ * `exercices.cran` est du texte, et une instance de type `complet` — les deux
+ * examens diagnostiques — n'en porte AUCUN (`07-` §1.1). Un `Number()` nu
+ * rendait 0 sur le NULL et NaN sur un cran écrit au code : deux façons
+ * d'afficher un chiffre qui ne compte rien (`06-` §5).
+ */
+const cranDeLInstance = (x: unknown): number | null => {
+  const brut = txt(x).trim()
+  if (brut === '') return null
+  const n = Number(brut)
+  return Number.isInteger(n) && n >= 1 && n <= 9 ? n : null
+}
+
 
 export default async function EditionEtApercu({
   params,
@@ -50,9 +65,18 @@ export default async function EditionEtApercu({
   if (!ex) notFound()
   const e = ex as unknown as Ligne
 
-  const cran = Number(txt(e.cran))
   const objet = txt(jointure(e, 'exercices_types').code)
-  const c = d.crans[cran]
+  // ⭐ C4-L11 — UNE INSTANCE D'EXAMEN DIAGNOSTIQUE N'A PAS DE CRAN DU TOUT.
+  //    Pas « un cran dans l'autre forme » : AUCUN — « le CRAN reste interdit »
+  //    sur un type de nature `complet` (`07-` §1.1), et le trigger
+  //    `trg_exercices_cran_selon_le_type` le tient. `Number(txt(e.cran))`
+  //    rendait donc 0 sur un NULL, et NaN sur un cran écrit au code — puis
+  //    `d.crans[…]` rendait `undefined` et l'en-tête affichait « cran NaN ».
+  //    Unifier la forme du `cran` ne l'aurait pas réglé : il fallait un cas
+  //    « sans cran » à l'affichage. Le reste de l'écran ne bouge pas — le bloc
+  //    d'assignation, par où passe la suite du flux, fonctionnait déjà.
+  const cran = cranDeLInstance(e.cran)
+  const c = cran === null ? undefined : d.crans[cran]
 
   // Le matériau SOURCE, tel qu'il s'affichera dans les textes de support.
   let sourceTexte: string | null = null
@@ -87,7 +111,9 @@ export default async function EditionEtApercu({
     ? e.consigne_instanciee.map(txt)
     : [txt(e.consigne_instanciee)]
 
-  const apercu = composerApercu(d, {
+  // Sans cran, il n'y a rien à composer : l'aperçu se tait plutôt que de rendre
+  // un placement tiré d'un cran inventé.
+  const apercu = cran === null ? null : composerApercu(d, {
     objet, cran,
     materiauSourceTexte: sourceTexte,
     materiauCibleTexte: cibleTexte,
@@ -111,8 +137,10 @@ export default async function EditionEtApercu({
           <Link href="/prof/conception" className="underline">Conception</Link>
         </p>
         <h1 className="font-titre text-2xl text-encre">
-          {txt(jointure(e, 'exercices_types').libelle) || objet} · cran {cran} ·{' '}
-          <span className="text-encre-douce">{c?.code}</span>
+          {txt(jointure(e, 'exercices_types').libelle) || objet}
+          {cran === null
+            ? <span className="text-encre-douce"> · sans cran</span>
+            : <> · cran {cran} · <span className="text-encre-douce">{c?.code}</span></>}
         </h1>
         <p className="font-ui text-sm text-encre-douce">
           statut <strong>{txt(e.statut)}</strong>
@@ -139,6 +167,8 @@ export default async function EditionEtApercu({
         }}
         optinSeJuger={oui(e.optin_se_juger)}
         optinConfiance={oui(e.optin_confiance_remise)}
+        sansCran={cran === null}
+        consigneSeule={consignes[0] ?? ''}
         cas={casTries.map((cs, i) => {
           const mat = jointure(cs, 'exercices_materiaux')
           return {

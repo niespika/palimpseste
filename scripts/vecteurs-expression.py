@@ -38,7 +38,14 @@ import json
 import os
 import sys
 
-RACINE_DEFAUT = "/Users/louissagnieres/Documents/GitTest/palimpseste-conception"
+# ⚠️ Le chemin du dépôt de conception est ABSOLU, et c'est délibéré (le dépôt
+# n'est pas un sous-dossier de celui-ci). Mais il ne peut pas être le SEUL :
+# ailleurs que sur la machine du professeur, aucune commande ne trouvait la
+# source, et le contrôle SAUTAIT au lieu de tourner (C4-L11). La variable
+# d'environnement `PALIMPSESTE_RACINE_CONCEPTION` déclare la racine ;
+# à défaut, le chemin du professeur tient lieu de défaut, comme avant.
+RACINE_DEFAUT = (os.environ.get("PALIMPSESTE_RACINE_CONCEPTION")
+                 or "/Users/louissagnieres/Documents/GitTest/palimpseste-conception")
 
 
 def charge_module(racine):

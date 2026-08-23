@@ -535,7 +535,10 @@ export async function chargerLignesDepuisBase(admin: ClientLecture): Promise<Lig
       supports_admis: r.supports_admis as string[],
     })),
     exercices_types_crans: (parCran as Array<Record<string, unknown>>).map((r) => ({
-      objet_code: code(r), cran: r.cran as string,
+      // `cran` est un ENTIER depuis C4-L11 (l'arbitrage de la forme) ; le type
+      // reste large parce que `entier()` normalise, et qu'une base d'avant la
+      // conversion doit continuer de se charger.
+      objet_code: code(r), cran: r.cran as number | string,
       couverture_observables: r.couverture_observables,
       provenances_admises_cible: r.provenances_admises_cible as string[],
       duree_exercice_min: r.duree_exercice_min as number,
