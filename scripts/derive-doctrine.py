@@ -52,7 +52,14 @@ import os
 import re
 import sys
 
-RACINE_DEFAUT = "/Users/louissagnieres/Documents/GitTest/palimpseste-conception"
+# ⚠️ Le chemin du dépôt de conception est ABSOLU, et c'est délibéré (le dépôt
+# n'est pas un sous-dossier de celui-ci). Mais il ne peut pas être le SEUL :
+# ailleurs que sur la machine du professeur, aucune commande ne trouvait la
+# source, et le contrôle SAUTAIT au lieu de tourner (C4-L11). La variable
+# d'environnement `PALIMPSESTE_RACINE_CONCEPTION` déclare la racine ;
+# à défaut, le chemin du professeur tient lieu de défaut, comme avant.
+RACINE_DEFAUT = (os.environ.get("PALIMPSESTE_RACINE_CONCEPTION")
+                 or "/Users/louissagnieres/Documents/GitTest/palimpseste-conception")
 OUTIL = "scripts/derive-doctrine.py 1.2"
 
 # Les six crans qui isolent, dans l'ordre où le `04-` §0 les nomme.
@@ -497,11 +504,18 @@ def sql_remplissage(d, racine):
     w("-- PRODUCTION du §6 des fiches) — `04-` §0, ses trois opérandes.")
     w("-- `provenances_admises_source` reste NULL : son domicile est")
     w("-- `exercices_types_modes_source` (`02-` §2.3 : « aucun cran ne le borne »).")
+    # ⭐ C4-L11 — `cran` EST UN ENTIER, comme dans les trois autres tables de
+    #    doctrine (`exercices_crans`, `exercices_routes`,
+    #    `exercices_consignes_production`). Cette table était la SEULE à le
+    #    porter en texte, et le code payait l'aller-retour (`String(cran)` d'un
+    #    côté, `Number(cran)` de l'autre). L'arbitrage de la forme du `cran` —
+    #    LE NUMÉRO FAIT FOI (`utils/cran.ts`) — se joue ici pour la doctrine :
+    #    « corriger la base à la main la ferait diverger au prochain passage ».
     w("insert into exercices_types_crans (type_id,cran,couverture_observables,"
       "provenances_admises_cible,duree_exercice_min)")
     w("select t.id, v.cran, v.couv, v.cible, v.duree")
     w("  from (values\n       %s) as v(code, cran, couv, cible, duree)"
-      % _bloc_values([(c, str(cr), couv, cible, duree)
+      % _bloc_values([(c, cr, couv, cible, duree)
                       for c, cr, couv, cible, duree in L["exercices_types_crans"]]))
     w("  join exercices_types t on t.code = v.code;")
     w("")
@@ -610,10 +624,28 @@ def fixture(d, racine):
     return out
 
 
+def _sans_racine(f):
+    """La fixture, débarrassée du seul champ qui porte un chemin absolu.
+
+    C4-L11. `_derivation.racine` est une TRACE DE PROVENANCE — elle reste dans
+    le fichier committé, et elle reste utile : elle dit d'où la fixture vient.
+    Mais elle vivait DANS ce que l'empreinte compare : sur une machine où le
+    dépôt de conception n'est pas au même chemin absolu, `--verifie` disait
+    FIXTURE : DIVERGE alors que les treize tables étaient identiques à l'octet
+    — et `npm test` ne pouvait donc passer ni en intégration continue, ni sur
+    un second poste. Elle sort de la COMPARAISON, jamais du fichier.
+    """
+    f = dict(f)
+    d = dict(f.get("_derivation", {}))
+    d.pop("racine", None)
+    f["_derivation"] = d
+    return f
+
+
 def empreinte_fixture(d, racine):
     """L'empreinte du contenu de la fixture — ce que `--verifie` compare."""
-    plat = json.dumps(fixture(d, racine), ensure_ascii=False, sort_keys=True,
-                      separators=(",", ":"))
+    plat = json.dumps(_sans_racine(fixture(d, racine)), ensure_ascii=False,
+                      sort_keys=True, separators=(",", ":"))
     return hashlib.sha256(plat.encode("utf-8")).hexdigest()
 
 
@@ -747,6 +779,46 @@ end as verdict;""" % {"t": table, "c": cols})
 end as verdict;""" % {"t": table, "e": expr, "s": source})
         w("")
 
+    # ── La DOUZIÈME table — `exercices_types_crans` ──────────────────────────
+    # C4-L11 : `--sql` la remplissait, `--verifie` ne la lisait pas — douze
+    # tables écrites, onze contrôlées, et la manquante était justement celle où
+    # « la couche type se remplit aux crans de production » (`04-` §14 : « aux
+    # crans 2, 6 et 8, `couverture_observables` vaut `exerce` »).
+    # Elle ne tient pas dans `COMPARAISONS` (le `type_id` est un uuid : il faut
+    # joindre `exercices_types` pour retrouver le `code`), ni dans les grandes
+    # tables (son `couverture_observables` est du JSONB, qu'une concaténation de
+    # texte comparerait sur la sérialisation et non sur le contenu). Elle a donc
+    # son bloc, avec le MÊME diff symétrique que les autres.
+    # ⚠️ `cran` se compare en `text` des deux côtés : la colonne peut changer de
+    #    type sans que ce contrôle mente (`02-` §2.1 donne le # et le code).
+    w("-- ── La couche type par cran — `exercices_types_crans` ────────────────────")
+    w("create temp table attendu_exercices_types_crans"
+      "(code text, cran text, couv jsonb, cible text[], duree int) on commit drop;")
+    w("insert into attendu_exercices_types_crans values\n       %s;"
+      % _bloc_values([(c, str(cr), couv, cible, duree)
+                      for c, cr, couv, cible, duree in L["exercices_types_crans"]]))
+    # ⚠️ `cran` se compare en `text` DES DEUX CÔTÉS (la vue ci-dessous le caste) :
+    #    le contrôle ne ment donc ni avant ni après le changement de type.
+    w("""create temp view base_exercices_types_crans as
+  select t.code, tc.cran::text as cran, tc.couverture_observables as couv,
+         tc.provenances_admises_cible as cible, tc.duree_exercice_min as duree
+    from exercices_types_crans tc join exercices_types t on t.id = tc.type_id;""")
+    w("""select 'exercices_types_crans : ' || case
+  when (select count(*) from ((select code,cran,couv,cible,duree from attendu_exercices_types_crans)
+                       except (select code,cran,couv,cible,duree from base_exercices_types_crans)) x) = 0
+   and (select count(*) from ((select code,cran,couv,cible,duree from base_exercices_types_crans)
+                       except (select code,cran,couv,cible,duree from attendu_exercices_types_crans)) y) = 0
+    then 'IDENTIQUE (' || (select count(*) from base_exercices_types_crans) || ' lignes)'
+  else 'DIVERGE — ' ||
+    (select count(*) from ((select code,cran,couv,cible,duree from attendu_exercices_types_crans)
+                    except (select code,cran,couv,cible,duree from base_exercices_types_crans)) x)
+    || ' manquantes en base, ' ||
+    (select count(*) from ((select code,cran,couv,cible,duree from base_exercices_types_crans)
+                    except (select code,cran,couv,cible,duree from attendu_exercices_types_crans)) y)
+    || ' en trop'
+end as verdict;""")
+    w("")
+
     w("-- ── Les `crans[]` et `exclusions_parcours[]` sur les objets ──────────────")
     w("create temp table attendu_types_objet(code text primary key, crans text[], excl text[], libelle text) on commit drop;")
     w("insert into attendu_types_objet values\n       %s;"
@@ -823,7 +895,7 @@ def main(argv=None):
         if not os.path.isfile(chemin):
             sys.stderr.write("FIXTURE : ABSENTE — jouer --fixture > %s\n" % chemin)
         else:
-            actuel = json.dumps(json.load(io.open(chemin, encoding="utf-8")),
+            actuel = json.dumps(_sans_racine(json.load(io.open(chemin, encoding="utf-8"))),
                                 ensure_ascii=False, sort_keys=True,
                                 separators=(",", ":"))
             sha = hashlib.sha256(actuel.encode("utf-8")).hexdigest()

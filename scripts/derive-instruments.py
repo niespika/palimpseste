@@ -28,10 +28,33 @@ deux parts ouvertes pour que la décision, le jour où elle tombe, se fasse dans
 la source et se re-dérive d'un geste.
 
 LA CLAUSE GRANULAIRE EST APPLIQUÉE ICI, ET NULLE PART AILLEURS.
-Une fiche dont l'en-tête ne porte pas *versé et bancé* NE SE LIT PAS : aucun
+Une fiche dont l'en-tête ne porte pas *relu et validé* NE SE LIT PAS : aucun
 instrument n'est dérivé pour elle, et sa compétence reste hors de la chaîne
-(`07-` §2 ; PROMPT §piège 54). `competences/monitoring.md` est au statut PLAFOND
-qu'elle déclare — *relue et validée*, pas de banc : son étage se dérive.
+(`07-` §2). `competences/monitoring.md` est au statut PLAFOND qu'elle déclare —
+*relue et validée*, pas de banc : son étage se dérive au même seuil.
+
+⭐ C4-L10 — LE SEUIL EST *RELU ET VALIDÉ*, ET IL L'EST PAR ALIGNEMENT SUR LES
+SOURCES. Il valait *versé et bancé* depuis C4-L5, et ce durcissement n'avait
+AUCUNE source : le `03-` §9 écrit que les trois conditions de banc « ne sont
+gardées par aucun mécanisme […] c'est le professeur qui les vérifie avant de
+poser `evaluee` », et le `01-` §3 que « c'est le professeur qui choisit, sans
+automatisme — sauf le plancher : une compétence dont la fiche n'est pas déposée
+est `differee` ». Le seuil de banc n'existait que comme EXIGENCE D'UN LOT — la
+ligne de manifeste de C4-L5 au `07-` §2 —, que ce script avait durcie en code.
+Un contrôle plus strict que sa source refuse du licite, et il le refuse EN
+SILENCE : les six fiches, toutes *relues et validées*, restaient illisibles.
+
+⚠️ CE QUI NE BOUGE PAS, ET C'EST LE CONTRÔLE DE NON-RÉGRESSION DU GESTE : les
+DEUX PLANCHERS MÉCANIQUES du `03-` §9. Une fiche ABSENTE ou seulement DÉPOSÉE
+reste hors de la chaîne (ci-dessous, et `01-` §3 : `differee` et rien d'autre) ;
+et la correspondance observable → formulation non uploadée tient sa compétence
+non déclarable `evaluee` (C4-L8, `competences/monitoring.md` §4). Ni l'un ni
+l'autre n'est à ce script de les lever.
+
+⛔ ET LES EN-TÊTES DES SIX FICHES NE SONT PAS TOUCHÉES. Écrire « VERSÉE ET
+BANCÉE » dans six sources qui font foi affirmerait qu'un banc a eu lieu, quand
+chaque fiche porte en plus une phrase de prose qui dit le contraire. Le seuil
+descend ici, une fois ; les sources ne mentent pas.
 
 CITE OU REFUSE. Un marqueur absent, un bloc sans clôture, un YAML hors du
 sous-ensemble lu : le script S'ARRÊTE au lieu de deviner. Une source qui bouge
@@ -58,7 +81,19 @@ import os
 import re
 import sys
 
-RACINE_CONCEPTION = "/Users/louissagnieres/Documents/GitTest/palimpseste-conception"
+# ⚠️ Le chemin du dépôt de conception est ABSOLU, et c'est délibéré (le dépôt
+# n'est pas un sous-dossier de celui-ci). Mais il ne peut pas être le SEUL :
+# ailleurs que sur la machine du professeur, aucune commande ne trouvait la
+# source, et le contrôle SAUTAIT au lieu de tourner (C4-L11). La variable
+# d'environnement `PALIMPSESTE_RACINE_CONCEPTION` déclare la racine CANONIQUE ;
+# à défaut, le chemin du professeur tient lieu de défaut, comme avant.
+# ⭐ C'est bien la racine CANONIQUE, pas un simple défaut : c'est elle que le
+#    refus d'`--ecris` (plus bas) compare. Un `--racine <essai>` reste refusé —
+#    « une seule commande d'essai réécrivait les dérivés DE PRODUCTION ». Ce que
+#    la variable permet, c'est de déclarer où vit la source sur CETTE machine,
+#    en un geste explicite ; elle ne relâche pas le refus.
+RACINE_CONCEPTION = (os.environ.get("PALIMPSESTE_RACINE_CONCEPTION")
+                     or "/Users/louissagnieres/Documents/GitTest/palimpseste-conception")
 RACINE_CODE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 SORTIE = os.path.join(RACINE_CODE, "utils", "chaine", "derive")
 OUTIL = "scripts/derive-instruments.py 1.0"
@@ -502,6 +537,78 @@ def charge_transcription(racine):
 # Le gabarit de la couche contrat — `07-` §4
 # ---------------------------------------------------------------------------
 
+# Les règles VERROUILLÉES du gabarit — `07-` §4, mot pour mot : « les règles 1 à
+# 6 et la règle 8 sont verrouillées, la règle 7 est la seule ouverte ».
+REGLES_VERROUILLEES_CALAME = (1, 2, 3, 4, 5, 6, 8)
+
+# Une règle du gabarit commence en début de ligne par « N. », N de 1 à 9.
+_DEBUT_REGLE = re.compile(r"^([1-9])\. ", re.M)
+# Son TITRE est la course de capitales qui l'ouvre — « CITE SES MOTS »,
+# « LONGUEUR », « REGISTRE ». Dérivé du texte, jamais inventé : « ici les défauts
+# ne se recopient pas dans le code, ils viennent de la source » (`07-` §4).
+_TITRE_REGLE = re.compile(r"^([A-ZÀ-ÖØ-Þ'’ ]{3,}?)(?=[\s]*[:.,]|\s+[a-zà-öø-ÿ])")
+
+
+def sections_calame(gabarit):
+    """Le gabarit DÉCOUPÉ EN SECTIONS NOMMÉES — `07-` §4.
+
+    « Pour qu'un remplacement ait quelque chose d'identifié à remplacer, la
+      dérivation émet le gabarit découpé en sections nommées. […] Le découpage
+      est donné par ce document : les règles 1 à 6 et la règle 8 sont
+      verrouillées, la règle 7 est la seule ouverte. »
+
+    Le découpage ne s'invente pas : l'en-tête (le rôle, ce que le modèle reçoit,
+    et le titre « RÈGLES ABSOLUES »), puis une section par règle numérotée.
+    ⚠️ Le RECOLLAGE doit rendre le gabarit à l'octet : si la source change de
+    forme, on s'arrête plutôt que d'émettre un découpage qui ment.
+    """
+    debuts = list(_DEBUT_REGLE.finditer(gabarit))
+    if not debuts:
+        raise SourceMouvante(
+            "07- §4 : aucune règle numérotée dans le gabarit — le découpage en "
+            "sections nommées que le §4 exige n'a rien à découper.")
+    numeros = [int(m.group(1)) for m in debuts]
+    if numeros != list(range(1, len(numeros) + 1)):
+        raise SourceMouvante(
+            "07- §4 : les règles du gabarit sont numérotées %s — le découpage "
+            "attend une suite de 1 à N." % numeros)
+
+    sections = [{
+        "cle": "entete",
+        "numero": None,
+        "titre": "En-tête — le rôle, ce que le modèle reçoit",
+        "verrouillee": True,
+        "corps": gabarit[:debuts[0].start()].rstrip("\n"),
+    }]
+    for i, m in enumerate(debuts):
+        fin = debuts[i + 1].start() if i + 1 < len(debuts) else len(gabarit)
+        corps = gabarit[m.end():fin].rstrip("\n")
+        t = _TITRE_REGLE.match(corps)
+        sections.append({
+            "cle": "regle_%d" % numeros[i],
+            "numero": numeros[i],
+            "titre": (t.group(1).strip() if t else "règle %d" % numeros[i]),
+            "verrouillee": numeros[i] in REGLES_VERROUILLEES_CALAME,
+            "corps": corps,
+        })
+
+    recolle = recolle_calame(sections)
+    if recolle != gabarit:
+        raise SourceMouvante(
+            "07- §4 : le découpage en sections ne recolle pas le gabarit à "
+            "l'octet — la forme de la source a bougé.")
+    return sections
+
+
+def recolle_calame(sections):
+    """Les sections, remises bout à bout — le SEUL assemblage du gabarit."""
+    morceaux = []
+    for s in sections:
+        morceaux.append(s["corps"] if s["numero"] is None
+                        else "%d. %s" % (s["numero"], s["corps"]))
+    return "\n\n".join(morceaux)
+
+
 def charge_calame(racine):
     chemin = os.path.join(racine, "07-Implementation.md")
     texte = lire(chemin)
@@ -524,9 +631,13 @@ def charge_calame(racine):
         "statut_source": statut,
         "degre_statut": degre_du_statut(statut),
         "gabarit": gabarit,
+        # Le gabarit DÉCOUPÉ — « pour qu'un remplacement ait quelque chose
+        # d'identifié à remplacer » (`07-` §4). `gabarit` reste, à l'octet : le
+        # découpage s'ajoute, il ne remplace pas.
+        "sections": sections_calame(gabarit),
         "variables": list(VARIABLES_CALAME),
         # `07-` §4 — « Les règles 1 à 6 et la règle 8 sont verrouillées. »
-        "regles_verrouillees": [1, 2, 3, 4, 5, 6, 8],
+        "regles_verrouillees": list(REGLES_VERROUILLEES_CALAME),
         "sections_editables": list(SECTIONS_EDITABLES_CALAME),
         "empreinte_source": empreinte(texte),
     }
@@ -627,10 +738,14 @@ def charge_competence(racine, nom):
     texte = lire(chemin)
     version, statut = entete(texte, rel)
     degre = degre_du_statut(statut)
-    if degre < BANCE:
-        # « Une fiche dont l'en-tête ne porte pas *versé et bancé* NE SE LIT PAS. »
-        # On s'arrête ici : rien du corps de la fiche n'est ouvert.
-        return None, ("statut « %s » — pas *versé et bancé* : sa compétence reste hors de "
+    if degre < RELU:
+        # ⭐ C4-L10 — LE SEUIL EST *RELU ET VALIDÉ* (voir le docstring d'en-tête).
+        # Une fiche seulement DÉPOSÉE ne se lit pas : rien de son corps n'est
+        # ouvert. C'est le PREMIER des deux planchers mécaniques du `03-` §9, et
+        # il n'est pas à ce script de le lever — le `01-` §3 le pose en toutes
+        # lettres : « une compétence dont la fiche n'est pas déposée est
+        # `differee` et ne peut pas être autre chose ».
+        return None, ("statut « %s » — pas *relu et validé* : sa compétence reste hors de "
                       "la chaîne (clause granulaire, `07-` §2)." % statut)
 
     machine = yaml_strict(bloc_clos(entre_marqueurs(texte, MARQ_CONFIG, rel), rel, "yaml"))
@@ -750,10 +865,32 @@ BANDEAU = (
     "// La source fait foi ; `--verifie` dit si ce fichier en a divergé\n"
     "// (piège 52 ; `03-` §1 ; `07-` §4).\n")
 
+# ── La provenance : une TRACE, jamais une comparaison ───────────────────────
+# C4-L11. Le chemin absolu de la racine de conception vivait DANS la donnée
+# dérivée (`manifeste.racine_conception`), donc dans ce que `--verifie` compare
+# octet pour octet : ailleurs que sur la machine du professeur, le contrôle
+# disait DIVERGE alors que tout le reste était identique — et `npm test` ne
+# pouvait donc passer ni en intégration continue, ni sur un second poste.
+# La racine descend ici, en commentaire d'en-tête, et le contrôle la NORMALISE
+# des deux côtés avant de comparer. ⚠️ Ce n'est pas un retrait : la trace reste
+# lisible dans le fichier, et le REFUS d'écrire depuis une racine d'essai
+# (plus bas, dans `main`) reste entier — c'est lui qui protège les dérivés de
+# production, pas cette ligne.
+MARQUE_PROVENANCE = "// Racine de conception lue : "
 
-def module_ts(nom_export, valeur):
+
+def _sans_provenance(texte):
+    """Le contenu, débarrassé de la seule ligne qui porte un chemin absolu."""
+    return "\n".join(l for l in texte.split("\n")
+                     if not l.startswith(MARQUE_PROVENANCE))
+
+
+def module_ts(nom_export, valeur, provenance=None):
+    bandeau = BANDEAU
+    if provenance is not None:
+        bandeau += MARQUE_PROVENANCE + provenance + "\n"
     return "%s\nexport const %s = %s as const\n" % (
-        BANDEAU, nom_export, json.dumps(valeur, ensure_ascii=False, indent=2, sort_keys=True))
+        bandeau, nom_export, json.dumps(valeur, ensure_ascii=False, indent=2, sort_keys=True))
 
 
 def fichiers_attendus(paquet):
@@ -767,7 +904,8 @@ def fichiers_attendus(paquet):
         if inst is not None:
             out[os.path.join("competences", "%s.ts" % nom)] = module_ts(
                 "INSTRUMENT_%s" % nom.upper(), inst)
-    out["MANIFESTE.ts"] = module_ts("MANIFESTE_INSTRUMENTS", paquet["manifeste"])
+    out["MANIFESTE.ts"] = module_ts("MANIFESTE_INSTRUMENTS", paquet["manifeste"],
+                                    provenance=paquet["racine_conception"])
     return out
 
 
@@ -789,7 +927,10 @@ def assemble(racine):
         motifs[nom] = motif
     manifeste = {
         "outil": OUTIL,
-        "racine_conception": racine,
+        # `racine_conception` N'EST PLUS ICI, et c'est délibéré (C4-L11) : un
+        # chemin absolu dans la donnée dérivée fait DIVERGER le contrôle sur
+        # toute machine autre que celle du professeur. Elle vit au bandeau du
+        # `MANIFESTE.ts`, en trace, normalisée par `_sans_provenance`.
         "sources": {
             "07-Implementation.md": {
                 "version": calame["version_source"], "statut": calame["statut_source"],
@@ -839,7 +980,10 @@ def assemble(racine):
                 "texte de source.",
     }
     return {"calame": calame, "monitoring": monitoring, "transcription": transcription,
-            "competences": competences, "manifeste": manifeste}
+            "competences": competences, "manifeste": manifeste,
+            # Hors du manifeste : la provenance descend au bandeau, elle
+            # n'entre plus dans la donnée comparée (C4-L11).
+            "racine_conception": racine}
 
 
 # ---------------------------------------------------------------------------
@@ -942,7 +1086,11 @@ def main(argv=None):
         chemin = os.path.join(SORTIE, rel)
         if not os.path.exists(chemin):
             ecarts.append("MANQUANT : %s" % rel)
-        elif io.open(chemin, encoding="utf-8").read() != contenu:
+        elif _sans_provenance(io.open(chemin, encoding="utf-8").read()) \
+                != _sans_provenance(contenu):
+            # La comparaison ignore la seule ligne qui porte un chemin absolu :
+            # sans quoi le contrôle dirait DIVERGE depuis toute autre racine,
+            # alors que tout le reste est identique à l'octet (C4-L11).
             ecarts.append("DIVERGE : %s" % rel)
     # Le balayage porte sur LES DEUX dossiers : un `expression.ts` égaré à la
     # racine de `derive/` restait importable et le contrôle jurait que tout allait

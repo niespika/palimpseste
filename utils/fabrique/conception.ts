@@ -190,6 +190,76 @@ export function genresDeclarables(d: Doctrine, objet: string): string[] {
  * Le contrôle d'import fait foi sur le fond ; celui-ci ne fait que refuser une
  * SAISIE incomplète, avec le motif de la source.
  */
+// ── LA `cible_primaire` — `07-` §1.1, et le cas où elle NE SE DEMANDE PAS ────
+
+/**
+ * Ce que l'écran de conception doit faire de la `cible_primaire`.
+ *
+ * « Sur la voie du professeur, l'écran de conception la lui demande — parmi les
+ *   compétences que son exercice mesure, ET UNE SEULE ; quand il n'y en a QU'UNE
+ *   POSSIBLE — l'exercice n'en mesure qu'une, ou le cran est de `transformer` ou
+ *   de `diagnostiquer`, où l'instance n'a qu'une cible (`01-` §5) —, L'ÉCRAN LA
+ *   POSE SANS LA DEMANDER. »                                    — `07-` §1.1
+ *
+ * ⭐ Un champ TOUJOURS AFFICHÉ est un écart à la source, pas un confort : c'est
+ *    pourquoi cette fonction rend `demande: false` avec la valeur, plutôt que de
+ *    laisser l'écran décider.
+ *
+ * Aux crans qui isolent, la cible est celle de l'OBSERVABLE ISOLÉ : « `transformer`
+ * et `diagnostiquer` déclarent `isole`, et l'instance choisit UN SEUL DÉFAUT
+ * INJECTÉ — donc UNE SEULE CIBLE » (`01-` §5). Elle ne se choisit donc pas : elle
+ * se lit sur la route élue.
+ */
+export interface CiblePrimaireDeLInstance {
+  /** L'écran doit-il POSER LA QUESTION ? Faux quand une seule cible est possible. */
+  demande: boolean
+  /** Les compétences entre lesquelles choisir — vide quand `demande` est faux. */
+  candidates: string[]
+  /** La cible, quand elle se déduit sans demander. */
+  imposee: string | null
+  /** Pourquoi elle ne se demande pas — pour que l'écran le DISE. */
+  motif: string | null
+}
+
+export function ciblePrimaireDeLInstance(saisie: {
+  geste: string | null
+  /** La compétence de l'observable isolé, quand le cran isole. */
+  observableCompetence: string | null
+  /** Les compétences que l'instance déclare mesurer. */
+  competences: readonly string[]
+}): CiblePrimaireDeLInstance {
+  const mesurees = [...new Set(saisie.competences.filter(Boolean))]
+  if (saisie.geste === 'transformer' || saisie.geste === 'diagnostiquer') {
+    return {
+      demande: false,
+      candidates: [],
+      imposee: saisie.observableCompetence || (mesurees.length === 1 ? mesurees[0] : null),
+      motif: 'ce cran ISOLE : l’instance n’a qu’une cible, celle de l’observable isolé (01- §5)',
+    }
+  }
+  if (mesurees.length === 1) {
+    return {
+      demande: false,
+      candidates: [],
+      imposee: mesurees[0],
+      motif: 'l’instance ne mesure qu’une compétence : il n’y a rien à choisir',
+    }
+  }
+  return { demande: mesurees.length > 1, candidates: mesurees, imposee: null, motif: null }
+}
+
+/**
+ * La cible RETENUE, re-dérivée côté serveur — « un écran n'est pas une garde ».
+ * Rend `null` quand rien ne la fixe et que le professeur n'a rien choisi, ou
+ * quand son choix est hors des compétences mesurées.
+ */
+export function ciblePrimaireRetenue(
+  regle: CiblePrimaireDeLInstance, choisie: string | null,
+): string | null {
+  if (!regle.demande) return regle.imposee
+  return choisie && regle.candidates.includes(choisie) ? choisie : null
+}
+
 export function empechementsDeConception(d: Doctrine, saisie: {
   objet: string; mode: string; cran: number; genre: string | null
   competences: Record<string, string>

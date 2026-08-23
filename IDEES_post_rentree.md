@@ -328,3 +328,22 @@ borne à l'héberger. Les deux défauts restent où ils sont, dans ce fichier :
 consignes prof jamais vues par l'élève »)* ; **(b)** *une synthèse lancée ne se retire plus, même
 vide* *(entrée « Une synthèse Codex LANCÉE ne peut jamais être retirée »)*. **Aucun des deux n'a été
 touché.**
+
+---
+
+## Trouvé par C4-L11 (23/08), hors périmètre — un composant devenu orphelin
+
+**`components/pilotage/PastilleNiveau.tsx` n'a plus aucun lecteur.** C4-L11 a retiré la grille de
+faux niveaux de l'onglet Compétences du profil de classe — cinq colonnes inventées, une pastille
+vide par élève, « aucune donnée réelle » —, et ce composant en était le seul usage. Le `grep` est net :
+`PastilleNiveau` et son type `NiveauLettre` ne sont plus nommés que dans leur propre fichier.
+
+⛔ **Il n'a PAS été supprimé, et c'est délibéré** : la suppression n'était aucun des douze chantiers
+du lot, et « la réussite se mesure en diff minimal ». *Rappel de méthode : ne jamais supprimer sur la
+foi d'un outil seul — c'est la leçon du lot « audit du code mort ».*
+
+⚠️ **Et il ne se réutilisera pas tel quel.** Son échelle est **A → D**, quatre lettres ; celle de la
+plateforme est **E → A**, cinq (`utils/notation.ts`). Le jour où la grille des niveaux se construira
+pour de bon — `competences_niveaux`, derrière `competences_affichage_actif` —, il faudra **choisir**
+entre l'aligner sur l'échelle réelle et le remplacer. **Ce n'est pas un correctif : c'est l'écran des
+niveaux, qui reste à faire.**

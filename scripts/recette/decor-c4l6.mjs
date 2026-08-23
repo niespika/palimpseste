@@ -200,7 +200,7 @@ async function semer() {
     for (const l of lots) {
       const ex = verifie(`instance (${p.display_name})`, await admin.from('exercices').insert({
         type_id: type.id, classe_id: classeId, lieu: 'maison', statut: 'assigne',
-        cran: 'production_autonome', consigne_instanciee: l.consigne,
+        cran: '8', consigne_instanciee: l.consigne,  // cran 8 = production_autonome
         modes_par_competence: { expression: ['composer'], structure: ['composer'] },
       }).select('id').single())
       registre.exercices.push(ex.id)
@@ -546,7 +546,7 @@ async function biclasse() {
     for (const i of ses) {
       const ex = verifie('instance', await admin.from('exercices').insert({
         type_id: type.id, classe_id: i.classe_id, lieu: 'maison', statut: 'assigne',
-        cran: 'production_autonome',
+        cran: '8',  // production_autonome
         consigne_instanciee: `${MARQUE}-BICLASSE — exercice de « ${i.classes?.nom} ».`,
         modes_par_competence: { expression: ['composer'] },
       }).select('id').single())

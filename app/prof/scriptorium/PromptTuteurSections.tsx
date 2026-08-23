@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { REGISTRE, injecter } from '@/utils/ia-commun'
+import { IDENTITE, REGISTRE, injecter } from '@/utils/ia-commun'
 import {
   SECTIONS_PROMPT_TUTEUR, CLES_EDITABLES, MAX_CARACTERES_SECTION,
   assemblerPromptTuteur, defautSection, normaliserSection,
@@ -125,7 +125,7 @@ export default function PromptTuteurSections({ initial, modifieLeInitial, ancien
           </button>
           {apercu && (
             <pre className={`${PRE} max-h-96 overflow-auto`}>
-              {injecter(assemblerPromptTuteur(textes), { registre: REGISTRE })}
+              {injecter(assemblerPromptTuteur(textes), { identite: IDENTITE, registre: REGISTRE })}
             </pre>
           )}
 

@@ -14,8 +14,17 @@
 --      NULL, et `exclusions_parcours` à `'{}'` (sa valeur de seed). Rien n'est
 --      perdu qui ne se réécrive : ces quatre valeurs sont dans la migration.
 --    · `uk_exercices_planifie` disparaît — deux instances peuvent alors
---      revendiquer la même ligne de plan, en silence. `idx_exercices_planifie`
---      (C4-L1, non unique) reste : les lectures continuent de marcher.
+--      revendiquer la même ligne de plan, en silence.
+--      ⚠️⚠️ AMENDÉ PAR C4-L11 (23/08). Cette ligne disait : « `idx_exercices_planifie`
+--         (C4-L1, non unique) reste : les lectures continuent de marcher ».
+--         ELLE EST DEVENUE FAUSSE : C4-L11 a retiré `idx_exercices_planifie`,
+--         devenu redondant (même clé, même prédicat que l'unique). Sans
+--         correctif, ce rollback aurait laissé `exercice_planifie_id` SANS AUCUN
+--         INDEX, et la lecture inverse — de la ligne de plan vers son instance —
+--         serait passée au balayage complet, EN SILENCE.
+--         ⭐ Ce fichier RECRÉE donc l'index simple quand il retire l'unique
+--         (ci-dessous). Il n'a jamais été joué (☐ sandbox, ☐ prod) : on amende
+--         un fichier qui n'a rien fait tourner, pas une migration jouée.
 --    · Le trigger `trg_exercices_cran_selon_le_type` et sa fonction partent, et
 --      `exercices_cran_chk` REVIENT DANS SON ÉTAT DU 18/08.
 --      ⚠️⚠️ ET C'EST LÀ QUE CE ROLLBACK PEUT ÉCHOUER, LÉGITIMEMENT : si une
@@ -63,7 +72,12 @@ drop function if exists public.garde_cran_selon_le_type();
 alter table public.exercices
   add constraint exercices_cran_chk check (statut = 'a_concevoir' or cran is not null);
 
--- L'unicité s'en va ; l'index non unique de C4-L1 reste et sert les lectures.
+-- L'unicité s'en va — et l'index NON UNIQUE de C4-L1 est REMIS pour servir les
+-- lectures. ⚠️ C4-L11 l'avait retiré comme redondant : sans cette ligne, ce
+-- rollback laisserait la colonne sans aucun index (voir l'en-tête).
+create index if not exists idx_exercices_planifie
+  on public.exercices (exercice_planifie_id)
+  where exercice_planifie_id is not null;
 drop index if exists public.uk_exercices_planifie;
 
 -- Les quatre valeurs posées sur les deux lignes retournent à l'état du seed.
@@ -107,6 +121,10 @@ select
   not exists (select 1 from pg_indexes
                where schemaname = 'public' and indexname = 'uk_exercices_planifie')
                                                        as unicite_retiree,
+  -- ⭐ C4-L11 — et la colonne n'est PAS restée sans index.
+  exists (select 1 from pg_indexes
+           where schemaname = 'public' and indexname = 'idx_exercices_planifie')
+                                                       as index_simple_remis,
   exists (select 1 from pg_constraint where conname = 'exercices_cran_chk'
             and conrelid = 'public.exercices'::regclass)
   and not exists (select 1 from pg_trigger

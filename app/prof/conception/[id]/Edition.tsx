@@ -10,6 +10,7 @@ const CHAMP = 'rounded-md border border-bordure-bouton bg-parchemin px-2 py-1 fo
 
 export default function Edition({
   id, paire, lieu, guide, guideExige, cranCommande, optinSeJuger, optinConfiance, cas,
+  sansCran = false, consigneSeule = '',
 }: {
   id: string; paire: boolean; lieu: string; guide: string | null
   guideExige: string
@@ -17,6 +18,10 @@ export default function Edition({
   optinSeJuger: boolean; optinConfiance: boolean
   cas: Array<{ ordre: number; consigne: string; defaut: string | null
     distracteurs: string; reponseAttendue: string | null; materiau: string | null }>
+  /** C4-L11 — une instance d'examen diagnostique (type `complet`) : pas de cran,
+   *  donc AUCUN appui et aucun cas. Elle édite sa consigne, et rien d'autre. */
+  sansCran?: boolean
+  consigneSeule?: string
 }) {
   const [retour, action, enCours] = useActionState<RetourConception | null, FormData>(
     editerInstance, null)
@@ -46,6 +51,20 @@ export default function Edition({
           opt-in confiance de remise
         </label>
       </div>
+
+      {sansCran && (
+        <fieldset className="space-y-2 rounded-md border border-bordure p-3">
+          <legend className="px-1 font-ui text-xs uppercase tracking-wide text-muet-clair">
+            la consigne
+          </legend>
+          <p className="font-ui text-xs text-muet">
+            Un examen diagnostique <strong>n&apos;a pas de cran</strong> : il ne porte ni appui, ni
+            défaut, ni distracteurs, ni réponse attendue. Sa consigne est tout ce qui s&apos;édite ici.
+          </p>
+          <textarea name="consigne" rows={3} defaultValue={consigneSeule}
+            className={`${CHAMP} w-full`} required />
+        </fieldset>
+      )}
 
       {cas.map((cs, i) => (
         <fieldset key={cs.ordre} className="space-y-2 rounded-md border border-bordure p-3">

@@ -3,9 +3,16 @@
 // L'opt-out, au profil de la classe. « Aucune liste d'activation à cocher classe
 // par classe, aucune ligne à la main » : le DÉFAUT EST ACTIF, et ce qui se pose
 // ici est le retrait — la compétence que ce cours ne travaille pas (07- §1.3).
+//
+// ⭐ C4-L11 — IL A DÉMÉNAGÉ. Il vivait au tableau des compétences
+//    (`app/prof/competences/`) ; sa place est « LE PROFIL DE LA CLASSE, AU
+//    TABLEAU DE PILOTAGE » (`07-` §1.3), onglet Compétences. Ce qui n'a PAS
+//    bougé, et ne doit pas : l'action `poserOptOut` (elle reste à
+//    `app/prof/competences/actions.ts`), la table
+//    `competences_actives_par_classe`, et le routeur qui la lit.
 
 import { useActionState } from 'react'
-import { poserOptOut, type Retour } from './actions'
+import { poserOptOut, type Retour } from '@/app/prof/competences/actions'
 
 export default function OptOutClasses({
   classes, competences, etat,

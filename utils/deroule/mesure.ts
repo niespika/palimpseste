@@ -88,18 +88,25 @@ export async function attenteDuDepot(admin: Admin, depotId: string): Promise<Att
 // ── Le registre : on ASSEMBLE les signaux, C4-L2 ÉLIT ────────────────────────
 
 /**
- * La cible du retour. ⚠️ Elle se lit sur la DÉCISION du routeur, et non sur
- * `exercices.cible_primaire` : le `07-` §1.1 nomme la colonne, mais **elle
- * n'existe pas en base** et son ajout est reporté au lot de correctifs (voir
- * `depot.ts`). C'est de toute façon son domicile de sortie — « sur la voie du
- * routeur elle reste NULL : la cible est la sortie de la couche 2 et vit à la
- * décision » (`07-` §1.1).
+ * La cible du retour, DANS L'ORDRE DU `07-` §1.1 (C4-L11) :
+ *   1. la DÉCISION du routeur — son domicile de sortie, « sur la voie du
+ *      routeur elle reste NULL : la cible est la sortie de la couche 2 et vit
+ *      à la décision » ;
+ *   2. `exercices.cible_primaire` — la voie du PROFESSEUR, où l'écran de
+ *      conception la lui demande.
+ *
+ * ⚠️ Les deux ne coexistent jamais par construction ; la chaîne DIT le cas où
+ *    elle les trouve ensemble (`alerteDeCoexistence`, `utils/chaine/chaine.ts`)
+ *    plutôt que de le trancher en silence.
  */
 async function cibleDeLaDecision(admin: Admin, depot: DepotMaison): Promise<string | null> {
-  if (!depot.routeur_decision_id) return null
-  const { data } = await admin.from('routeur_decisions')
-    .select('cible_retenue').eq('id', depot.routeur_decision_id).maybeSingle()
-  return (data?.cible_retenue as string | null) ?? null
+  if (depot.routeur_decision_id) {
+    const { data } = await admin.from('routeur_decisions')
+      .select('cible_retenue').eq('id', depot.routeur_decision_id).maybeSingle()
+    const c = (data?.cible_retenue as string | null) ?? null
+    if (c) return c
+  }
+  return depot.exercice.cible_primaire ?? null
 }
 
 /**

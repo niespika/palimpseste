@@ -24,13 +24,21 @@
 //     professeur qui prépare » (piège 41).
 // ============================================================================
 
+import Link from 'next/link'
 import { lire, incidentsDe } from '@/utils/fabrique/lecture'
 import { garderProf, lireLesTroisInterrupteurs } from '@/utils/fabrique/acces'
 import { COMPETENCES_FICHE } from '@/utils/fabrique/fiche-competence'
 import { formatJour } from '@/utils/fuseau'
 import DepotFiche from './DepotFiche'
 import LigneCompetence from './LigneCompetence'
-import OptOutClasses from './OptOutClasses'
+/** Combien d'opt-out une classe porte — un décompte réel, jamais une jauge
+ *  (`06-` §5 : « un écran n'affiche un nombre que si ce nombre compte quelque
+ *  chose »). Une ligne absente vaut « active » : seules les `false` comptent. */
+function nbOptOut(etat: Map<string, boolean>, classeId: string): number {
+  let n = 0
+  for (const [cle, active] of etat) if (cle.startsWith(`${classeId}|`) && !active) n += 1
+  return n
+}
 
 export const dynamic = 'force-dynamic'
 
@@ -223,25 +231,40 @@ export default async function LieuDesCompetences() {
         </ul>
       </section>
 
-      {/* ── 4. L'opt-out, au profil de la classe ───────────────────────────── */}
+      {/* ── 4. L'opt-out — IL N'EST PLUS ICI (C4-L11) ─────────────────────────
+          « Le PROFIL DE LA CLASSE, au tableau de pilotage, porte l'opt-out — la
+            compétence qu'un cours ne travaille pas » (`07-` §1.3). Il vivait à
+          cet écran-ci ; il vit désormais au profil de chaque classe. Ce qui reste
+          ici est le RENVOI : un écran qui perd une fonction sans le dire fait
+          chercher. ⚠️ Ni la table, ni l'action, ni le routeur n'ont bougé. */}
       <section className="rounded-xl border border-bordure bg-surface p-4 space-y-3">
         <h2 className="font-titre text-lg text-encre">
           L&apos;activation par classe — l&apos;opt-out
         </h2>
         <p className="font-ui text-sm text-encre-douce max-w-3xl">
           Une compétence déclarée <code>evaluee</code> <strong>l&apos;est pour toutes les
-          classes</strong>, sans second geste. Ce qui se pose ici est un <strong>opt-out</strong> :
-          {' '}la compétence que ce cours ne travaille pas. Le routeur lit cette table, il ne
-          l&apos;écrit pas.
+          classes</strong>, sans second geste. Ce qui se pose est un <strong>opt-out</strong> :
+          {' '}la compétence que ce cours ne travaille pas — et il se pose{' '}
+          <strong>au profil de la classe</strong>, onglet Compétences. Le routeur lit cette table,
+          il ne l&apos;écrit pas.
         </p>
-        <OptOutClasses
-          classes={(classes ?? []).map((c) => ({
-            id: c.id as string,
-            nom: [c.nom, c.niveau, c.filiere].filter(Boolean).join(' · '),
-          }))}
-          competences={LES_SIX.map((c) => ({ code: c, nom: NOM[c] }))}
-          etat={Object.fromEntries(optOut)}
-        />
+        {(classes ?? []).length === 0 ? (
+          <p className="font-ui text-sm text-muet">Aucune classe.</p>
+        ) : (
+          <ul className="flex flex-wrap gap-2 font-ui text-sm">
+            {(classes ?? []).map((c) => (
+              <li key={c.id as string}>
+                <Link href={`/prof/classes/${c.id as string}?vue=competences`}
+                  className="rounded-md border border-bordure-bouton px-2 py-1 text-encre-douce
+                             hover:text-encre">
+                  {[c.nom, c.niveau, c.filiere].filter(Boolean).join(' · ')}
+                  {nbOptOut(optOut, c.id as string) > 0
+                    && <span className="text-muet"> · {nbOptOut(optOut, c.id as string)} opt-out</span>}
+                </Link>
+              </li>
+            ))}
+          </ul>
+        )}
       </section>
     </div>
   )

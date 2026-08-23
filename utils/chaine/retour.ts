@@ -38,13 +38,76 @@ export interface VariablesCalame {
 
 const TOKEN = /\{\{\s*(COMPETENCE|MOMENT|REGISTRE)\b[^}]*\}\}/g
 
+/** Les trois valeurs que `{{REGISTRE}}` peut prendre — `01-` §8.7. */
+const REGISTRES_DE_RETOUR = new Set(['descriptif', 'interrogatif', 'demonstratif'])
+
 /**
  * Substitue les trois variables dans le gabarit dérivé. Un `{{X}}` inconnu
  * resterait tel quel — mais la dérivation refuse déjà une source qui en
  * porterait un quatrième, donc le cas ne se présente pas en production.
+ *
+ * ⚠️⚠️ LA COLLISION DE NOM EST UN MODE DE PANNE, PAS UNE HYPOTHÈSE (`07-` §4).
+ * `{{REGISTRE}}` est le registre de RETOUR — descriptif / interrogatif /
+ * démonstratif, élu par le `01-` §8.7. Le `REGISTRE` d'`utils/ia-commun.ts` est
+ * le registre de LANGUE, le bloc de voix transversal : « substituer l'un dans
+ * l'autre remplirait la règle 8 avec le bloc de langue ». La garde ci-dessous
+ * ne coûte rien et rend le mode de panne impossible.
  */
 export function coucheContrat(gabarit: string, v: VariablesCalame): string {
+  if (!REGISTRES_DE_RETOUR.has(String(v.REGISTRE))) {
+    throw new Error(
+      '`{{REGISTRE}}` reçoit le registre de RETOUR (`01-` §8.7), jamais le '
+      + 'registre de LANGUE d\'`ia-commun.ts` — `07-` §4, la collision de nom.')
+  }
   return gabarit.replace(TOKEN, (_m, cle: keyof VariablesCalame) => String(v[cle]))
+}
+
+// ── Le gabarit DÉCOUPÉ EN SECTIONS NOMMÉES — `07-` §4 ───────────────────────
+
+/**
+ * Une section du gabarit, telle que la dérivation l'émet.
+ * « Pour qu'un remplacement ait quelque chose d'identifié à remplacer, la
+ *   dérivation émet le gabarit découpé en sections nommées. Le découpage est
+ *   donné par ce document : les règles 1 à 6 et la règle 8 sont verrouillées,
+ *   la règle 7 est la seule ouverte. »
+ */
+export interface SectionCalame {
+  cle: string
+  numero: number | null
+  titre: string
+  verrouillee: boolean
+  corps: string
+}
+
+/** `07-` §4 — la seule section ouverte, et son nom dans la source. */
+export const SECTION_LONGUEUR = 'regle_7'
+
+/**
+ * Le gabarit, assemblé DEPUIS SES SECTIONS — le seul chemin d'assemblage.
+ *
+ * `longueur` est le **paramètre de plateforme** du §4 : « son domicile est un
+ * paramètre de plateforme, au même endroit que les interrupteurs (§5), **NULL
+ * valant la règle 7 du gabarit** ». NULL ou vide → la règle 7 de la source
+ * tient, mot pour mot.
+ *
+ * ⛔ Ce n'est PAS une variable : « `{{...}}` ne désigne que ce que l'assembleur
+ *    substitue : `{{COMPETENCE}}`, `{{MOMENT}}` et `{{REGISTRE}}`. Il n'y en a
+ *    pas d'autres. » Un remplacement de SECTION n'est pas une substitution.
+ *
+ * ⛔ Et une section VERROUILLÉE ne se remplace jamais : la garde est ici, pas
+ *    dans l'appelant.
+ */
+export function assemblerGabarit(
+  sections: readonly SectionCalame[],
+  remplacements: { longueur?: string | null } = {},
+): string {
+  const longueur = remplacements.longueur?.trim()
+  return sections.map((s) => {
+    const corps = (longueur && s.cle === SECTION_LONGUEUR && !s.verrouillee)
+      ? longueur
+      : s.corps
+    return s.numero == null ? corps : `${s.numero}. ${corps}`
+  }).join('\n\n')
 }
 
 // ── La couche compétence — lue EN BASE, jamais des fiches en session ─────────
@@ -110,9 +173,35 @@ export interface EtatAnterieurObservable {
   tendance: string
 }
 
+/**
+ * Le fichier de personnalité PARTAGÉ, tel que la couche contrat le REÇOIT.
+ *
+ * « Le `ton` n'est pas propre au retour, et il n'a donc pas de domicile propre.
+ *   C'est celui du fichier de personnalité partagé […], et la couche contrat le
+ *   REÇOIT, ELLE N'EN PORTE PAS DE COPIE. » — `07-` §4
+ *
+ * ⚠️ `ton` est le registre de LANGUE (`REGISTRE` d'`utils/ia-commun.ts`), jamais
+ *    le registre de retour de `{{REGISTRE}}` (`01-` §8.7).
+ * ⛔ Et jamais `scriptorium_params.rag_prompt_ton` : c'est la section éditable
+ *    DU TUTEUR — l'y accrocher ferait « le second fichier de personnalité que le
+ *    §4 interdit ».
+ */
+export interface PersonnalitePartagee {
+  /** Qui parle — l'identité, une pour toute la plateforme. */
+  identite: string
+  /** Le `ton` — le rappel de registre de langue que tous les prompts reçoivent. */
+  ton: string
+}
+
 export interface EntreeRetour {
   moment: Version
   registre: Registre
+  /**
+   * Le fichier partagé, REÇU. Le gabarit, lui, ne porte que le RÔLE — « qui
+   * parle, à qui, et sur quoi » —, et c'est ce qui « reste écrit au gabarit et
+   * ne s'édite pas » (`07-` §4).
+   */
+  personnalite: PersonnalitePartagee
   /** `01-` §8.7, signal 1 : hors `evaluee`, aucun palier n'est attribué. */
   palierAttribue: boolean
   competencePrimaire: Competence
@@ -138,11 +227,17 @@ export interface EntreeRetour {
 
 /** Le message de l'appel chaud. Le gabarit (couche contrat) part en SYSTÈME. */
 export function assemblerRetour(gabarit: string, e: EntreeRetour): { systeme: string; message: string } {
-  const systeme = coucheContrat(gabarit, {
-    COMPETENCE: e.competencePrimaire,
-    MOMENT: e.moment,
-    REGISTRE: e.registre,
-  })
+  // L'identité et le `ton` viennent du fichier PARTAGÉ et précèdent le contrat :
+  // le gabarit n'écrit que le rôle (« le guide d'exercices de Palimpseste »).
+  const systeme = [
+    e.personnalite.identite,
+    e.personnalite.ton,
+    coucheContrat(gabarit, {
+      COMPETENCE: e.competencePrimaire,
+      MOMENT: e.moment,
+      REGISTRE: e.registre,
+    }),
+  ].map((x) => x.trim()).filter(Boolean).join('\n\n')
 
   const { plafond, porte } = plafondApplicable(e.coucheType.grain, e.moment)
 

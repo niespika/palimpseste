@@ -2,7 +2,10 @@ import Anthropic from '@anthropic-ai/sdk'
 import { createAdminClient } from '@/utils/supabase/admin'
 import { noteVersLettre, lettreVersNote } from '@/utils/notation'
 import { coutMessage, enregistrerCoutApi, normaliserUsage } from '@/utils/cout-api'
-import { REGISTRE, sansDelims, injecter, extraireJSON } from '@/utils/ia-commun'
+// C4-L11 — `IDENTITE` : le fichier de personnalité PARTAGÉ (`07-` §4). Les deux
+// prompts de retour de lecture sont l'une des trois surfaces où Calame parle à
+// l'élève ; ils ne réécrivent plus qui il est, seulement leur RÔLE.
+import { IDENTITE, REGISTRE, sansDelims, injecter, extraireJSON } from '@/utils/ia-commun'
 import { signalDepuisIA } from '@/utils/detecteur-integrite'
 import { signalerEnAttenteIA } from '@/utils/integrite'
 import type {
@@ -19,7 +22,9 @@ const txt = (x: unknown): string => (typeof x === 'string' ? x : '')
 
 // ── Prompt par défaut — Retour V1 socratique, par section (SPEC §2.1) ─────────
 // Override éditable par le prof dans aletheia_params.prompt_feedback_1.
-export const PROMPT_FEEDBACK_V1_DEFAUT = `Tu es un tuteur de lecture, généreux mais exigeant. Un élève lit en autonomie un livre exigeant, semaine après semaine. Il vient de remplir CINQ champs sur les chapitres de CETTE semaine : idée principale, arguments, accord, questions, vocabulaire. Ton rôle : l'aider à approfondir sa lecture — sans jamais faire le travail à sa place.
+export const PROMPT_FEEDBACK_V1_DEFAUT = `${IDENTITE}
+
+Ton rôle ici : le guide de lecture, généreux mais exigeant. Un élève lit en autonomie un livre exigeant, semaine après semaine. Il vient de remplir CINQ champs sur les chapitres de CETTE semaine : idée principale, arguments, accord, questions, vocabulaire. Ton rôle : l'aider à approfondir sa lecture — sans jamais faire le travail à sa place.
 
 ${REGISTRE}
 
@@ -329,7 +334,9 @@ export async function genererRetourV1(travailId: string): Promise<void> {
 
 // ── Prompt par défaut — Retour VF (reconstruction + architecture, SPEC §2.2) ──
 // Override éditable par le prof dans aletheia_params.prompt_feedback_2.
-export const PROMPT_FEEDBACK_VF_DEFAUT = `Tu es un tuteur de lecture, généreux mais exigeant. Un élève lit un livre exigeant sur {total_semaines} semaines. Il vient de RETRAVAILLER trois champs sur les chapitres de la SEMAINE {semaine_courante_N} : idée principale, arguments, accord — après un premier retour. Tu disposes de TROIS sources : un RÉSUMÉ de l'amont (ce qui précède, déjà lu), le TEXTE INTÉGRAL de la semaine {semaine_courante_N} (ce que tu évalues), et les TITRES SEULS de l'aval (la suite). Tu n'as PAS le contenu de l'aval : tu peux ANNONCER un titre / une question à venir pour donner ENVIE de lire, mais tu ne peux ni ne dois en RÉVÉLER la réponse, la conclusion ou l'argument — l'élève doit les découvrir lui-même.
+export const PROMPT_FEEDBACK_VF_DEFAUT = `${IDENTITE}
+
+Ton rôle ici : le guide de lecture, généreux mais exigeant. Un élève lit un livre exigeant sur {total_semaines} semaines. Il vient de RETRAVAILLER trois champs sur les chapitres de la SEMAINE {semaine_courante_N} : idée principale, arguments, accord — après un premier retour. Tu disposes de TROIS sources : un RÉSUMÉ de l'amont (ce qui précède, déjà lu), le TEXTE INTÉGRAL de la semaine {semaine_courante_N} (ce que tu évalues), et les TITRES SEULS de l'aval (la suite). Tu n'as PAS le contenu de l'aval : tu peux ANNONCER un titre / une question à venir pour donner ENVIE de lire, mais tu ne peux ni ne dois en RÉVÉLER la réponse, la conclusion ou l'argument — l'élève doit les découvrir lui-même.
 
 ${REGISTRE}
 
