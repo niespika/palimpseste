@@ -3661,3 +3661,252 @@ de modèle**, décor semé puis **retiré** (aucun reste, vérifié par requête
   ni l'autre. ⛔ **Ce n'est pas un défaut du portage** : le code compose ce que P1 consigne.
   **Condition de reprise : le Run 1 de la Structure**, qui dira si la sous-déclaration est fréquente
   — et, si elle l'est, si c'est le prompt qu'il faut resserrer.
+
+---
+
+## C4 · L10 — L'ouverture d'une compétence dans la chaîne : la CONNAISSANCE (sandbox, 23/08)
+
+_Section ouverte le 23/08 à la clôture du lot. **Aucune migration** : ce lot ne touche que du code,
+deux dérivés et deux `[faux]` de source — le suivi SQL n'a pas bougé, et n'avait pas à bouger._
+
+_Ce qui a été prouvé EN SÉANCE est coché avec sa preuve. `npm test` : **1160 passés, 0 échoué**
+(dont **44 neufs** sur ce portage ; l'état d'entrée était 1116/1116, plus deux entrées de registre
+mises à jour — « trois compétences ouvertes » devient quatre) ; `npx tsc --noEmit` : **rien** ;
+`npx eslint` sur les cinq fichiers du lot : **0 erreur, 0 avertissement** ; `derive-instruments.py
+--verifie` : **IDENTIQUE** sur les dix dérivés, après un `--ecris` rendu nécessaire par le `[faux]`
+posé dans la fiche ; `scripts/recette/connaissance-c4l10.mjs` : **54 contrôles, 54 passés**, joués
+**par le même code que la route**, en base, sur un **dépôt réel à QUATRE compétences** et **huit
+vrais appels de modèle**, décor semé puis **retiré** (aucun reste, vérifié par requête)._
+
+⛔ **AUCUN STATUT DE RECETTE N'A ÉTÉ POSÉ, et aucun n'est proposé.** La Connaissance est
+`mesuree_silencieusement` — son état de naissance. **Rien n'a changé pour un élève.**
+
+⚠️ **`chaine_actif` est REVENU à OFF**, vérifié par requête à la fin de chaque tour de recette.
+
+⚠️⚠️ **ET CE LOT SE FERME SUR UN FAIT QUI N'EST PAS UNE PANNE, ET QU'IL FAUT LIRE EN PREMIER : LA
+CONNAISSANCE EST BRANCHÉE ET N'ÉCRIRA AUCUNE MESURE TANT QUE LA CHAÎNE NE PORTERA PAS DE CORPUS DE
+COURS.** Voir `C4L10C-9`. Tout le reste du lot est fait, prouvé et vert.
+
+### Ce qui est prouvé — pour ne pas le rejouer
+
+- [x] **C4L10C-1 · LA CONNAISSANCE EST OUVERTE — dérivée, importée, branchée.**
+  `derive-instruments.py --resume` la déclare **ouverte** en **v2.2**, `--verifie` dit **IDENTIQUE**,
+  `verifierCoherence()` rend **[]**, et `competencesOuvertes()` rend
+  **`expression, argumentation, structure, connaissance`**. Les deux qui restent — `synthese`,
+  `questionnement` — sont **dérivées et en attente**, et `competencesEnAttenteDeBranchement()` les
+  nomme.
+- [x] **C4L10C-2 · LE PORTAGE REPRODUIT LE MODULE, SUR LES TROIS CLÉS, EN 1 023 CAS.**
+  `scripts/vecteurs-connaissance.py` importe `copies-tests/connaissance/code.py` **à chaque
+  exécution** — jamais une fixture recopiée —, joue ses crochets et rend ses entrées ET ses sorties
+  en JSON ; le test rejoue **les mêmes entrées** et compare `verdicts`, **`trace` mot pour mot** et
+  `alertes`. **18 vecteurs `code2` + 4 vecteurs `code1` + 1 001 cas de balayage**, tous identiques.
+  ⚠️ **Les types des constantes sont vérifiés, pas seulement leurs tailles** — « chez l'Expression,
+  `TESTS_CODE1_PARFAIT` est une CHAÎNE, et un `len()` y a rendu 52 vecteurs qui étaient 52
+  caractères ». **Aucun appel de modèle.**
+- [x] **C4L10C-3 · ⭐⭐ L'ÉPREUVE NÉGATIVE — 40 MUTATIONS, 40 TUÉES, 0 SURVIVANTE.** Le portage a été
+  cassé **exprès, règle par règle**, par un harnais qui patche le fichier et relance le test
+  (`.tmp-c4l10/mutations.mjs`, retiré à la clôture). **La télémétrie D'ABORD**, comme le deuxième
+  portage l'a appris : 10 mutations sur les huit observables et les deux dénominateurs, 30 sur le
+  calcul. ⭐ **Deux ont SURVÉCU au premier passage, et les deux étaient des CHEMINS MORTS**, pas des
+  trous — voir `C4L10C-4` et `C4L10C-6`. **Après les deux cas ajoutés pour les atteindre : aucune
+  survivante.**
+- [x] **C4L10C-4 · ⭐⭐ LA STRICTE INÉGALITÉ DE LA PORTE 2 EST INÉPROUVABLE AUX PARAMÈTRES PAR
+  DÉFAUT — vérifié par énumération, pas raisonné.** Inverser `ratio > seuil` en `>=` survivait à tout
+  le balayage. **Énumération jusqu'à n = 4 000** : **aucun** couple (unités, invérifiables) ne met le
+  rapport EXACTEMENT à 4,5 sans que la PORTE 1 ait déjà arrêté la copie — `200k = 9(k+j)j` n'a pas de
+  solution entière sous le plafond. La règle contrôlait donc **un chemin mort**. ⭐ **Elle redevient
+  atteignable dès que le seuil bouge, et il bougera** : cinq des six paramètres sont *provisoire
+  (réglage empirique)*. À `seuil_ratio_haut = 5.0`, une copie de **cinq unités dont une
+  invérifiable** a un rapport de **5,0 pile**. D'où le balayage **aux seuils déplacés** — 108 cas sur
+  neuf jeux de paramètres —, et la mutation tombe. *« Cherche toujours si la règle que tu éprouves
+  est ATTEIGNABLE par la chaîne ; sinon, tu contrôles un chemin mort. »*
+- [x] **C4L10C-5 · ⭐⭐ LE SEPTIÈME ÉCART DE LANGAGE : LE FORMATAGE `%.1f` / `%.2f`.** L'arrondi de
+  `round()` était le premier ; **le formatage d'une trace en est un autre, et il n'était pas porté**.
+  `"%.1f" % 6.25` vaut **`6.2`** en Python *(round-half-even)* et `toFixed(1)` rend **`6.3`** ;
+  `"%.2f" % 0.625` vaut **`0.62`** contre **`0.63`**. ⚠️ **Et l'égalité exacte n'est pas une
+  curiosité** : la part d'unités invérifiables vaut `100·k/n`, donc **6,25 % pour UNE unité sur
+  SEIZE**, 31,25 % pour cinq sur seize, 12,5 % pour une sur huit. **Aucun des 18 vecteurs ne tombe
+  dessus** — ils tombent sur des valeurs rondes. ⭐ `utils/chaine/python.ts` porte désormais
+  `formateFlottant()`, **écrit une fois pour les six**, et adossé à `arrondi()` : mesuré identique à
+  Python sur douze valeurs, là où `toFixed` divergeait sur trois.
+- [x] **C4L10C-6 · ⭐⭐ LE HUITIÈME ÉCART, TROUVÉ AUX SEUILS DÉPLACÉS : `str()` D'UN FLOTTANT
+  PYTHON.** `python.ts` le nommait déjà, en le tenant pour théorique — *« cela ne touche QUE des
+  textes d'alerte, jamais un verdict »*. **Il touche une TRACE**, et le « fait quand » exige
+  l'identité sur les trois clés. Python distingue `5` de `5.0` et écrit `« 5.0 »` ; JavaScript perd
+  le type en JSON et écrit `« 5 »`. Au défaut de **4,5** les deux textes coïncident et **rien ne se
+  voit** ; le jour où le banc règle `seuil_ratio_haut` sur un entier — ce que le balayage d'un
+  paramètre *provisoire* fait —, la trace diverge. ⭐ **Le type ne se retrouve qu'à la DÉCLARATION** :
+  un paramètre dont la fiche écrit `bornes: [0.0, 100.0]` est un flottant, `[0, 100]` un entier.
+  `python.ts` gagne `strFlottant()`, le branchement un `PARAMS_FLOTTANTS`, et **un test confronte cet
+  ensemble aux types Python réels du module** — il ne peut donc pas diverger en silence.
+- [x] **C4L10C-7 · ⭐ LA BOM EST LE SEUL BLANC QUI SÉPARE `strip()` DE PYTHON ET `trim()` DE JS —
+  et sans l'épreuve négative, le contrôle était vide.** Remplacer `strip()` par `trim()` dans `_n`
+  **survivait** : le `.strip()` initial est en effet **REDONDANT** avec le `" ".join(s.split())`
+  final, qui retire déjà les blancs de Python aux deux bords. Il ne cesse de l'être que sur **la
+  BOM (U+FEFF)**, que `trim()` mange et que `strip()` garde. Vérifié en Python : `_n("﻿reference")`
+  vaut `"﻿reference"`, **hors catalogue** — un portage en `trim()` aurait compté le registre,
+  **sans une alerte**. Le cas est entré au balayage ; la mutation tombe. *Le NEL, lui, EST un blanc
+  pour Python : `"\x85reference\x85"` compte, et sans alerte — les deux sens sont éprouvés.*
+- [x] **C4L10C-8 · LES HUIT OBSERVABLES DU §5 ONT TOUS UNE VALEUR, OU UNE ALERTE NOMMÉE — et LES
+  DEUX DÉNOMINATEURS AUSSI.** `mobilisation`, `diversite_registres`, `diversite_sources`,
+  `taux_justesse`, `contresens`, `unite_plaquee`, `inverifiable`, `etendue_rappel`. ⭐ **Quatre se
+  lisent sur ce que le module compte déjà ; les quatre autres demandent les POPULATIONS DE LA
+  CASCADE**, que le module calcule en local et ne rend jamais. ⚠️ **Et `rapporte_a` est un TEXTE
+  LIBRE dont il existe DEUX valeurs distinctes** — `les unités jugées, les inverifiable exclues (§4)`
+  pour `contresens` et `unite_plaquee`, `les unités du relevé` pour `inverifiable` :
+  `observables.ts` cherche l'entrée **sous ce nom exact**, et il en manquerait une que les
+  observables concernés sortiraient en `n/a` **sans un mot**. Les deux sont au relevé, et un test
+  les fixe. ⭐ **`taux_justesse` est la SEULE `proportion` de la fiche, et elle NOMME sa population,
+  exclusion comprise** — *« les `inverifiable` hors du dénominateur »* au §5, *« la majorité stricte
+  des unités JUGÉES »* au champ `sens` : **les deux endroits disent la même chose**, rien à arbitrer
+  *(contrairement à l'Argumentation et à la Structure)*. Un dénominateur nul rend **`null`, donc
+  `n/a`, jamais 0**.
+- [x] **C4L10C-9 · ⚠️⚠️ UN DÉPÔT RÉEL TRAVERSE LA CHAÎNE, ÉCRIT SON SQUELETTE — ET S'ARRÊTE AU
+  JUGEMENT, FAUTE DE CORPUS DE COURS.** Sur un dépôt réel à quatre compétences : **quatre squelettes
+  écrits**, celui de la Connaissance portant **son extraction et pas son jugement** — la chaîne s'est
+  arrêtée exactement entre les deux. **Le motif est nommé** : `REFUS : preP2 ne peut pas servir
+  « corpus_cours » — le contexte de l'exercice ne le porte pas`. ⭐ **C'est le comportement voulu,
+  pas une panne** : la Justesse se juge contre **deux référents** et le premier est *« le corpus du
+  cours de la classe […] c'est lui qui fait foi quand le cours diverge de la doctrine des manuels »*
+  (fiche §1) ; servir un vide au juge aurait produit **une lettre fausse sur un référent absent**.
+  ⚠️ **Et la fiche le savait** : son §8 l'écrit dans **« LES VRAIES QUESTIONS OUVERTES »** — *« Le
+  corpus de cours n'est déclaré dans aucune source qui fait foi : le `01-routeur.md` §2 le mentionne
+  en passant […] Le premier référent de la Justesse repose donc sur un objet que le chantier n'a
+  jamais écrit »*, condition de fermeture : *« la séance qui écrira l'assembleur, ou celle qui
+  déclarera le corpus dans une source »*. **Vérifié en base, pas supposé** : aucun `corpus_cours`
+  n'existe nulle part dans le dépôt, et `contexteExercice` ne sert que `sujet`, `consigne`, `copie`,
+  `mode`. ⭐ **Le canal, lui, est bon** : dès qu'un contexte porte un corpus, `pre_p2` le sert —
+  éprouvé dans la recette. **C'est LA SOURCE qui manque.**
+- [x] **C4L10C-10 · LES TROIS AUTRES CHAÎNES NE SONT PAS EMPORTÉES.** Sur le même dépôt,
+  `expression`, `structure` et `argumentation` ont écrit leurs **trois mesures et leurs trois
+  lettres** (C, C, C) pendant que la Connaissance refusait. **L'arrêt d'une chaîne n'en emporte
+  aucune autre**, et `mesuresEcrites` vaut **3**.
+- [x] **C4L10C-11 · ⭐ LE PRÉ-RELEVÉ MÉCANIQUE TOURNE SUR UNE COPIE RÉELLE, ET LE RELEVÉ EST
+  AVEUGLE.** `pre_p1` a numéroté **8 phrases, 181 mots**, à partir de `[1]`, et **le message
+  réellement assemblé porte le pré-relevé numéroté** — ce sont ces numéros que le relevé cite. P1 a
+  rendu **5 unités mobilisées couvrant LES QUATRE REGISTRES** (`reference`, `concept`, `exemple`,
+  `donnee`), **zéro décompte**, **zéro verdict de justesse** — *« c'est ce qui l'empêche de corriger
+  l'élève en le relevant »* (fiche §3) —, et il a rangé **« Comme le dit Kant, il faut y réfléchir »
+  dans `mentions_vides`**, sans en faire une unité : le pari du §8 tient sur ce premier cas.
+  `code1` sur ce relevé réel : **5 unités, 4 registres, 3 sources, 1 mention vide, 2 `[posee_seule]`**.
+- [x] **C4L10C-12 · ⚠️⚠️ CE QUE LE MODÈLE RÉPARAIT EN SILENCE — MESURÉ, PAS RAISONNÉ, ET IL RESTE
+  UN TROU.** Le « contrôle gratuit » du contrat §7 a été fait **en comptant** : tous les champs à
+  liste fermée alertent — `type` hors catalogue, `justesse`/`attribution`/`apropos`/`referent` hors
+  liste *(l'unité est écartée, donc la bijection tombe, donc `PASSAGE MANQUÉ`)*, `etendue` hors
+  liste, `citation` vide ou illisible. **Le portage n'a eu à créer aucune alerte** — bénéfice de
+  l'extraction, pour la quatrième fois. ⚠️⚠️ **MAIS `source` EST UN TEXTE LIBRE, ET IL N'A AUCUN
+  GARDE-FOU — et il a mordu SUR LA PREMIÈRE COPIE RÉELLE.** La fiche §3 veut *« l'auteur, l'œuvre ou
+  le domaine que la copie nomme, mots exacts »* ; P1 a rendu **`"distinction que nous avons vue en
+  cours"`** — une phrase. **Mesuré, toutes choses égales par ailleurs** : cette seule entrée fait
+  passer `sources` de **2 à 3**, donc la Diversité de **`satisfaite` à `haut`**, donc **le niveau de
+  BON à ACQUIS — avec ZÉRO alerte**. ⛔ **Non corrigé, et délibérément** : ajouter une alerte ferait
+  diverger la troisième clé, et le « fait quand » exige l'identité. **Relevé** *(boîte aux lettres,
+  et `C4L10C-19`)*.
+- [x] **C4L10C-13 · LA `cible_primaire` BAT L'ORDRE ALPHABÉTIQUE — QUATRIÈME FOIS, sur trois
+  instances.** Sur `vise_connaissance` (4 compétences) et `vise_connaissance_bis` (2), la cible du
+  retour est **`connaissance`** ; le repli aurait dit **`argumentation`** dans les deux cas. Et sur
+  l'instance **sans** `cible_primaire`, **l'alerte tombe** et le repli désigne `argumentation`, que
+  personne ne vise. C4-L11 tient sa promesse.
+- [x] **C4L10C-14 · LES SEPT SLOTS, ET LE CONTRÔLE DES DEUX SENS AU CHARGEMENT.** ⭐ **La
+  Connaissance est la plus exigeante en slots des six** : **trois à P1** — `{consigne}` NATIF,
+  `{production}` et `{pre_releve}` par `pre_p1` — et **QUATRE à P2**, le maximum du corpus :
+  `{releve_phase_1}` le document, plus `{consigne}`, `{corpus_cours}` et `{restitution_de_cours}`
+  par `pre_p2`. `refusSlotsJugement()` rend **0 refus**, et `verifierCoherence()` **[]** : le
+  contrôle tombe **au chargement**, dans les deux sens, avant le premier appel payé. ⭐ **La tête
+  invariante de P1 fait 4 476 caractères et ne porte AUCUN slot** — elle se cache ; les trois
+  matériaux arrivent **en blocs balisés**, et aucun slot littéral ne subsiste dans le message.
+- [x] **C4L10C-15 · `SLOT_DOCUMENT_P2` EST DÉCLARÉ, JAMAIS DEVINÉ.** Le module l'annonce
+  (`"releve_phase_1"`), le branchement le reprend tel quel, et un test confronte les deux. ⛔ *« Le
+  slot du document se déclare dès que le prompt P2 en porte plus d'un »*, et le contrat dit pourquoi :
+  *« jusqu'au jour où un `pre_p2` incomplet ferait passer le relevé entier dans le slot du
+  référent, sans que rien ne le voie »*. Le prompt en porte **quatre**.
+- [x] **C4L10C-16 · `valeursDesParametres()` EST LE SEUL DOMICILE, ET LA CONNAISSANCE EST L'UNE DES
+  DEUX FICHES CONCERNÉES.** Ses **six** paramètres sortent en **nombres** par
+  `valeursDesParametres()`, quand `instrument.parametres.seuil_ratio_haut` porte bien un **OBJET**
+  (`defaut`, `bornes`, `statut`) — vérifié en recette. ⛔ **Aucun seuil en dur** : les défauts du
+  branchement ne sont qu'un **repli**, et **un test les confronte à ceux du module**, donc à ceux de
+  la fiche.
+- [x] **C4L10C-17 · `conformite` TOURNE À CHAQUE PASSAGE, ET LE CONTRÔLE DE FIDÉLITÉ EST BRANCHÉ.**
+  ⭐ La Connaissance est **l'un des deux modules sur six** à porter le contrôle d'existence des
+  citations, et **le seul à le porter dans `conformite`** *(l'Expression le porte dans `code1`)* —
+  un `[à valider]` du contrat §8. **Le portage garde le sien où il est** et n'uniformise rien.
+  ⚠️ **UNE DÉCISION D'IMPLÉMENTATION, DÉCLARÉE** : le module cherche la production sous
+  `mesures._production` puis `sortie_p1._production`, **et rien ne les remplit jamais** — son alerte
+  de repli dit d'ailleurs le motif, *« la production n'est pas jointe au CONTEXTE »*. Dans la chaîne
+  **elle l'est** (`ctx.contexteExercice.copie`), et le portage la lit là **en troisième recours** :
+  c'est le contrôle du module, alimenté par l'entrée qu'il nomme, et non un contrôle nouveau. **Sur
+  les vecteurs, où le contexte est vide, le repli « NON EXÉCUTÉ » tombe exactement comme dans le
+  module** — les 14 cas de `conformite` sont identiques des deux côtés. *À confirmer par Louis si
+  la lecture ne lui convient pas ; l'annuler tient en une ligne.*
+- [x] **C4L10C-18 · L'IDEMPOTENCE, ET LE DÉCOR RETIRÉ.** `traiterDepot` rejoué sur le même dépôt :
+  **3 mesures avant, 3 après**, aucune seconde écriture. Le décor semé est **retiré** — plus aucune
+  entrée `RECETTE-C4L10-CON` en base, vérifié par requête —, et `chaine_actif` est **rendu à son
+  état d'avant**.
+
+### Ce que ce lot vient de LEVER ailleurs dans ce fichier
+
+- **`C4L10-15` · Les compétences qui restent — ELLES NE SONT PLUS TROIS MAIS DEUX.** `synthese` et
+  `questionnement` sont dérivées et en attente de branchement. **Condition de reprise inchangée :
+  C4-L10 rejoué pour chacune.** ⭐ **ET L'OBSTACLE NOMMÉ DE LA CONNAISSANCE EST TRAITÉ** — son
+  `pre_p1` prend le TEXTE là où le contrat passe le CONTEXTE : **le portage a suivi LE CONTRAT**,
+  qui est au manifeste, et la dette est désormais **au registre, D4**, à traiter avant le Run 1.
+  ⚠️ **Il n'en restait qu'un, et il en reste toujours un** : la **Synthèse**, dont `code1` ne rend
+  pas `document_p2` sur ses deux chemins de sortie. **⚠️ Mais un obstacle NOUVEAU est né du portage
+  de la Connaissance, et il n'appartient à aucune des deux qui restent** — voir `C4L10C-9` : le
+  **corpus de cours**.
+- **`C4L5-4` · Le `delta_v1_vf` — QUATRE FICHES SUR QUATRE SE TAISENT.** Condition de reprise
+  **inchangée** : *une fiche qui DÉFINIT son delta*. ⚠️ **Elle ne se lève pas et ne se durcit pas
+  non plus** : le mot « delta » **n'apparaît pas une seule fois** dans `competences/connaissance.md`
+  — ni §3, ni §4, ni §5, ni bloc machine, ni §8. *Registre des ouverts, item 47, amendé une
+  troisième fois.*
+
+### Ce qui reste à jouer en recette
+
+- [ ] **C4L10C-19 · ⚠️⚠️ LE CORPUS DE COURS — LA CONNAISSANCE NE MESURERA RIEN SANS LUI, ET CE N'EST
+  PAS UN LOT CODE.** Voir `C4L10C-9`. Il faut **déclarer le corpus dans une source** — ce qu'il est,
+  d'où il vient *(Scriptorium ?)*, sa granularité, et par quel canal le contexte de l'exercice le
+  sert — **puis** ajouter le fournisseur. ⛔ **Aucun lot Code ne peut le trancher** : *« le premier
+  référent de la Justesse repose sur un objet que le chantier n'a jamais écrit »*.
+  **Condition de reprise : une source qui déclare le corpus de cours, ou la séance qui écrira
+  l'assembleur** *(la condition de fermeture est celle de la fiche §8, mot pour mot)*.
+- [ ] **C4L10C-20 · ⚠️ LA `source` LIBRE QUI GONFLE `diversite_sources` — mesuré à Bon → Acquis sur
+  la PREMIÈRE copie réelle.** Voir `C4L10C-12`. Trois issues possibles, toutes de conception :
+  resserrer le prompt P1, ajouter un `source_canonique` au relevé *(le §8 l'envisage déjà, mais pour
+  un autre motif — les graphies multiples)*, ou accepter le bruit et le mesurer.
+  **Condition de reprise : le Run 1 de la Connaissance**, qui dira quelle part des `source` relevées
+  ne sont pas des désignations. ⛔ **Ne pas ajouter d'alerte au branchement** : elle ferait diverger
+  la troisième clé.
+- [ ] **C4L10C-21 · ⚠️ LE CHAMP `phrases` DU RELEVÉ N'EST LU PAR PERSONNE.** La fiche §3 le déclare
+  — *« les numéros de phrase du pré-relevé qui la portent »* — et `pre_p1` numérote **pour lui** ;
+  **ni `code1`, ni `code2`, ni `conformite` ne le lisent jamais**. Il ne sert donc qu'au retour, à
+  la relecture humaine, et **rien ne vérifie qu'il pointe une phrase existante**. ⛔ **Ne pas
+  inventer le contrôle** *(il ferait diverger la troisième clé)*. **Condition de reprise : le Run 1**,
+  et la question à trancher est celle du contrat §3 — *l'EFFET du contrôle est une décision par
+  compétence*.
+- [ ] **C4L10C-22 · LE SMOKE PROF ET ÉLÈVE À L'ÉCRAN.** Rien n'a été vu dans un navigateur : tout ce
+  que ce lot prouve passe par le test, par la recette et par la base. **Condition de reprise :
+  le même smoke que `C4L10-13`**, dont ce lot ne change ni l'objet ni la condition.
+- [ ] **C4L10C-23 · LA DETTE D4 AVANT LE RUN 1.** `copies-tests/expression/code.py` et
+  `copies-tests/connaissance/code.py` : `pre_p1` prend le TEXTE là où le contrat passe le CONTEXTE.
+  **Le banc lèverait une `AttributeError` au premier passage sur les deux.** ⭐ Le `code1` de la
+  Connaissance porte déjà le patron du repli — la correction est **de deux lignes par module**.
+  **Condition de reprise : la séance de conception qui ouvre le Run 1** de l'une ou l'autre.
+  *Registre des ouverts, DETTES, D4.*
+- [ ] **C4L10C-24 · ⚠️ `competencesMesurees` NOMME CE QUI EST SOUMIS, PAS CE QUI EST MESURÉ — et ce
+  lot est le premier à le rendre visible.** Le bilan d'un dépôt calcule `competencesMesurees` **avant
+  les passages** (`competencesFroides.filter(ouvertes.has)`), et `competencesEcartees` ne porte que
+  les écartements **de pré-vol** *(statut `differee`, compétence non branchée)* ou les chaînes qui
+  **ont levé**. Une chaîne qui tourne et **refuse proprement** — le cas de la Connaissance — reste
+  dans « mesurées » et dit son motif **en alerte**. ⭐ **Rien n'est tu** : `mesuresEcrites` vaut 3
+  quand `competencesMesurees` en compte 4, et `resumerBilan` affiche les deux côte à côte. ⚠️ **Mais
+  le cas n'existait pas avant** : la Connaissance est **la première compétence du chantier refusée
+  EN COURS DE CHAÎNE plutôt qu'au pré-vol**. ⛔ **Non corrigé ici** — `chaine.ts` est bâtie et
+  éprouvée, et ce lot se mesure à un diff quasi nul hors d'`instruments.ts`. **Condition de reprise :
+  le prochain lot qui touche au bilan d'un dépôt** *(un candidat naturel pour un lot de correctifs)*.
+- [ ] **C4L10C-25 · LA LATENCE À QUATRE COMPÉTENCES — 59 s, et la courbe n'est plus plate.** 39 s à
+  une, 47-52 s à deux, 55 s à trois, **59 s à quatre** — mais ⚠️ **la quatrième chaîne s'arrête à
+  P2** : elle ne dépense qu'un appel d'extraction là où les trois autres en dépensent deux. **Le
+  chiffre n'est donc PAS comparable aux trois précédents**, et il sous-estime. ⚠️ **Un premier tour
+  avait mesuré 98 s** sur le même décor, avec un appel de plus — la variance du fournisseur est du
+  même ordre que l'effet mesuré. **Condition de reprise : la Connaissance mesurant vraiment**, donc
+  `C4L10C-19`.

@@ -38,6 +38,8 @@ import { INSTRUMENT_ARGUMENTATION } from './derive/competences/argumentation'
 import { BRANCHEMENT_ARGUMENTATION } from './branchements/argumentation'
 import { INSTRUMENT_STRUCTURE } from './derive/competences/structure'
 import { BRANCHEMENT_STRUCTURE } from './branchements/structure'
+import { INSTRUMENT_CONNAISSANCE } from './derive/competences/connaissance'
+import { BRANCHEMENT_CONNAISSANCE } from './branchements/connaissance'
 import { refusSlotsExtraction, refusSlotsJugement } from './slots'
 import { COMPETENCES, type Competence } from './types'
 
@@ -393,6 +395,25 @@ const INSTRUMENTS: Partial<Record<Competence, InstrumentCompetence>> = {
   // dossier — une contre-épreuve gratuite qu'aucune des cinq autres n'a, et qui
   // porte deux générations de schéma de squelette.
   structure: INSTRUMENT_STRUCTURE as unknown as InstrumentCompetence,
+  // C4-L10, 23/08/2026 — la Connaissance est LA QUATRIÈME, et elle est la plus
+  // exigeante en SLOTS des six : SEPT, servis par DEUX crochets — trois à P1
+  // (`{consigne}` natif, `{production}` et `{pre_releve}` par `pre_p1`) et
+  // QUATRE à P2 (`{releve_phase_1}` le document, plus `{consigne}`,
+  // `{corpus_cours}` et `{restitution_de_cours}` par `pre_p2`). ⭐ Elle est aussi
+  // la seule à DÉCLARER `SLOT_DOCUMENT_P2`, et c'est obligatoire chez elle : « le
+  // slot du document se déclare dès que le prompt P2 en porte plus d'un ».
+  // ⚠️ Elle n'a NI GOLD, NI COPIE, NI CRITÈRE, NI RUN STOCKÉ
+  //    (`VERSION_GOLDS_TESTEE = None`, dossier vide sauf prompts et module) : son
+  //    portage se prouve aux 22 vecteurs embarqués ET AU BALAYAGE — 891 entrées
+  //    de plus dans les mêmes fonctions du même module.
+  // ⚠️⚠️ ET ELLE NE MESURERA RIEN TANT QUE LA CHAÎNE NE PORTERA PAS DE CORPUS DE
+  //    COURS. Son `pre_p2` le sert depuis le contexte de l'exercice ; aucun
+  //    fournisseur natif ne l'a, et servi à `null` il ARRÊTE la mesure en le
+  //    nommant — ce qui est le comportement voulu, pas une panne. La fiche
+  //    l'écrit à son §8, parmi ses VRAIES QUESTIONS OUVERTES : « le corpus de
+  //    cours n'est déclaré dans aucune source qui fait foi ». *Relevé ; c'est une
+  //    décision de conception.*
+  connaissance: INSTRUMENT_CONNAISSANCE as unknown as InstrumentCompetence,
 }
 
 /**
@@ -407,6 +428,7 @@ const BRANCHEMENTS: Partial<Record<Competence, BranchementCompetence>> = {
   expression: BRANCHEMENT_EXPRESSION,
   argumentation: BRANCHEMENT_ARGUMENTATION,
   structure: BRANCHEMENT_STRUCTURE,
+  connaissance: BRANCHEMENT_CONNAISSANCE,
 }
 
 export interface EtatCompetence {

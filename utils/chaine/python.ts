@@ -19,7 +19,11 @@
 //     (C4-L10 · Structure) ;
 //   · la VÉRITÉ, l'ITÉRATION et `len()` — un `or []`, un `for x in v`, un
 //     `len(v)` ne se comportent pas comme leurs voisins JavaScript, et c'est ce
-//     qui décide du chemin de calcul (C4-L10 · Structure).
+//     qui décide du chemin de calcul (C4-L10 · Structure) ;
+//   · `"%.1f"` / `"%.2f"` — le FORMATAGE d'un flottant, qui tranche les égalités
+//     AU PAIR comme `round()`, quand `toFixed()` les tranche vers le haut
+//     (C4-L10 · Connaissance : `"%.1f" % 6.25` vaut `6.2`, `toFixed(1)` rend
+//     `6.3` — et 6,25 % d'invérifiable, c'est une unité sur seize).
 //
 // ⚠️ AUCUN DE CES ÉCARTS NE SE VOIT SUR UN VECTEUR. Les vecteurs des modules
 //    portent des rangs entiers, des thèses en `t1`/`t2` et des notes sans
@@ -30,15 +34,23 @@
 //    TypeScript ce que Python rend, et rien d'autre.
 // ============================================================================
 
+import { arrondi } from './arrondi'
+
 /**
  * `repr()` de Python, sur les valeurs qu'un relevé jugé peut porter — c'est-à-
  * dire ce que `JSON.parse` produit, plus `undefined` (le pendant JavaScript
  * d'une clé absente, que `dict.get()` rend `None`).
  *
- * ⚠️ La seule divergence connue, et elle est de nature, pas d'implémentation :
- *    Python distingue `2` de `2.0` (`'2'` contre `'2.0'`), JavaScript non — un
- *    JSON qui porterait `2.0` rendrait ici `2`. Cela ne touche QUE des textes
- *    d'alerte, jamais un verdict.
+ * ⚠️⚠️ LA DIVERGENCE DE NATURE — et elle a MORDU, pour de bon. Python distingue
+ *    `2` de `2.0` (`'2'` contre `'2.0'`), JavaScript non : un JSON qui porterait
+ *    `2.0` rend ici `2`. Cette note disait « cela ne touche QUE des textes
+ *    d'alerte » ; C4-L10 · Connaissance l'a trouvée DANS UNE TRACE, et le « fait
+ *    quand » du lot exige l'identité sur les trois clés. Un seuil déclaré
+ *    FLOTTANT à la fiche — `seuil_ratio_haut`, `bornes: [0.0, 100.0]` — vaut
+ *    `5.0` pour Python et `5` pour JavaScript dès qu'on le règle sur un entier,
+ *    et c'est précisément ce qu'un réglage empirique fait. ⭐ Le pendant fidèle
+ *    est `strFlottant()` ci-dessous : quand on SAIT que la valeur est un
+ *    flottant Python, on l'écrit comme Python l'écrit.
  */
 export function repr(v: unknown): string {
   if (v === null || v === undefined) return 'None'
@@ -61,6 +73,25 @@ export function repr(v: unknown): string {
  */
 export function str(v: unknown): string {
   return typeof v === 'string' ? v : repr(v)
+}
+
+/**
+ * `str()` D'UN FLOTTANT PYTHON, quand l'appelant SAIT que c'en est un.
+ *
+ * Python garde le point décimal d'un flottant entier — `str(5.0)` vaut `'5.0'`,
+ * `str(25.0)` vaut `'25.0'` — là où `String(5)` de JavaScript rend `'5'`. Le
+ * type se perd en JSON ; il ne se retrouve qu'à la DÉCLARATION, et c'est là que
+ * l'appelant le lit : un paramètre dont la fiche écrit `bornes: [0.0, 100.0]`
+ * est un flottant, un paramètre dont elle écrit `bornes: [0, 100]` est un
+ * entier.
+ *
+ * ⚠️ Hors des entiers, le texte est déjà le même des deux côtés : Python et
+ *    JavaScript écrivent tous deux la plus courte représentation qui
+ *    aller-retourne. C'est le point décimal terminal, et lui seul, qui manque.
+ */
+export function strFlottant(v: unknown): string {
+  if (typeof v !== 'number' || !Number.isFinite(v)) return str(v)
+  return Number.isInteger(v) ? `${v}.0` : String(v)
 }
 
 function reprFlottantSpecial(v: number): string {
@@ -171,6 +202,61 @@ export function strip(s: string): string {
 /** `re.sub(r"\s+", remplacement, s)` de Python. */
 export function remplaceBlancs(s: string, remplacement: string): string {
   return (s ?? '').replace(RE_BLANCS, remplacement)
+}
+
+/**
+ * `str.split()` DE PYTHON, SANS ARGUMENT — et ce n'est pas `split(/\s+/)`.
+ *
+ * Sans séparateur, Python découpe sur des SUITES de blancs, ignore ceux des
+ * bords, et ne rend **aucune chaîne vide** : `"".split()` vaut `[]`, quand
+ * `"".split(/\s+/)` de JavaScript rend `['']` — donc « un mot » là où Python en
+ * compte zéro. *La Connaissance s'en sert pour le nombre de mots du pré-relevé,
+ * qui part au modèle dans le slot `{pre_releve}`.*
+ */
+export function separeParBlancs(s: string): string[] {
+  const t = strip(s ?? '')
+  return t === '' ? [] : t.split(RE_BLANCS)
+}
+
+/**
+ * `str.strip(caracteres)` de Python — la variante à ENSEMBLE DE CARACTÈRES, qui
+ * n'a rien à voir avec `strip()` nu : elle retire, aux deux bords, tout
+ * caractère APPARTENANT à l'ensemble, jusqu'au premier qui n'y est pas.
+ *
+ * *`"[posee_seule]".strip("[]")` rend `posee_seule` ; `'"« x »"'.strip('"« »')`
+ * rend `x` — l'espace fait partie de l'ensemble, et c'est ce qui le fait
+ * marcher.* Les deux cas sont ceux du module de la Connaissance.
+ */
+export function stripCaracteres(s: string, caracteres: string): string {
+  const ens = new Set([...(caracteres ?? '')])
+  const c = [...(s ?? '')]
+  let d = 0
+  let f = c.length
+  while (d < f && ens.has(c[d])) d += 1
+  while (f > d && ens.has(c[f - 1])) f -= 1
+  return c.slice(d, f).join('')
+}
+
+/**
+ * `"%.<n>f" % x` DE PYTHON — le formatage d'un flottant à `n` décimales.
+ *
+ * ⚠️ C'EST LE MÊME PIÈGE QUE `round()`, ET IL EST DANS LES TEXTES DE TRACE.
+ *    Python formate en tranchant les égalités exactes AU PAIR ; `toFixed()` les
+ *    tranche vers le haut. Mesuré : `"%.1f" % 6.25` vaut `6.2` et `toFixed(1)`
+ *    rend `6.3` ; `"%.2f" % 0.125` vaut `0.12` et `toFixed(2)` rend `0.13`.
+ *
+ * *Et l'égalité exacte n'est pas une curiosité : la part d'unités invérifiables
+ * d'une copie vaut `100 · k / n`, donc `6,25` pour une unité sur seize et `12,5`
+ * pour une sur huit. Le verdict ne change pas — les comparaisons portent sur le
+ * flottant, jamais sur son texte —, mais LA TRACE DIVERGE, et le « fait quand »
+ * du lot exige l'identité sur les trois clés.*
+ *
+ * L'arrondi correct est celui de `./arrondi` ; il ne reste qu'à poser les zéros
+ * de queue, ce que `toFixed` fait alors sans plus rien arrondir.
+ */
+export function formateFlottant(x: number, n: number): string {
+  if (!Number.isFinite(x)) return x > 0 ? 'inf' : (Number.isNaN(x) ? 'nan' : '-inf')
+  return arrondi(x, n).toFixed(n)
 }
 
 /**

@@ -337,7 +337,7 @@ export const INSTRUMENT_CONNAISSANCE = {
   },
   "competence": "connaissance",
   "degre_statut": 2,
-  "empreinte_source": "cfb7bda95ee30625a9287933036c6f71c9ca7587117c6097e94b953e570d64a4",
+  "empreinte_source": "bb0854bea4c2152f65dbb536d2790a95960fd3b02a1e722ed571bdc1c897bad1",
   "observables_mesure": {
     "contresens": {
       "famille": "comptage rapporté",
