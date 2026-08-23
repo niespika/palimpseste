@@ -24,21 +24,25 @@ test('l\'instrument dérivé et son branchement sont COHÉRENTS', () => {
   assert.deepEqual(verifierCoherence(), [])
 })
 
-test('L\'EXPRESSION EST OUVERTE — dérivée ET branchée (C4-L10, 22/08/2026)', () => {
-  assert.deepEqual(competencesOuvertes(), ['expression'])
-  const e = etatCompetence('expression')
-  assert.equal(e.ouverte, true)
-  assert.equal(e.motif, null)
-  assert.equal(e.instrument?.competence, 'expression')
-  assert.ok(e.branchement)
+test('DEUX COMPÉTENCES SONT OUVERTES — dérivées ET branchées (C4-L10)', () => {
+  // ⭐ L'Expression le 22/08, l'Argumentation le 23/08. « Une compétence de plus
+  //    est une compétence de plus à la rentrée, pas un lot de plus. »
+  assert.deepEqual(competencesOuvertes(), ['expression', 'argumentation'])
+  for (const c of ['expression', 'argumentation'] as const) {
+    const e = etatCompetence(c)
+    assert.equal(e.ouverte, true, c)
+    assert.equal(e.motif, null, c)
+    assert.equal(e.instrument?.competence, c)
+    assert.ok(e.branchement, c)
+  }
 })
 
-test('LES CINQ AUTRES SONT DÉRIVÉES, ET ATTENDENT LEUR BRANCHEMENT', () => {
+test('LES QUATRE AUTRES SONT DÉRIVÉES, ET ATTENDENT LEUR BRANCHEMENT', () => {
   // ⚠️ Dérivée n'est pas branchée, et c'est un état NORMAL : C4-L10 se rejoue
   //    une compétence à la fois. Ce n'est pas une incohérence — mais ce n'est
   //    pas tacite non plus, et c'est tout l'objet de cette liste.
   assert.deepEqual(competencesEnAttenteDeBranchement(),
-    ['argumentation', 'structure', 'connaissance', 'synthese', 'questionnement'])
+    ['structure', 'connaissance', 'synthese', 'questionnement'])
   for (const c of COMPETENCES) {
     assert.equal(!!MANIFESTE_LU.competences[c]?.ouverte, true,
       `${c} : la fiche devrait dériver — le seuil est *relu et validé*`)
@@ -65,6 +69,27 @@ test('LES SIX FICHES DÉRIVENT, et l\'Expression porte ses NEUF observables du �
   // Les prompts viennent du DÉRIVÉ, jamais d'ici — « aucun prompt ne se tape ».
   assert.deepEqual(Object.keys(e.instrument!.prompts).sort(), ['P1', 'P2'])
   assert.match(e.instrument!.prompts.P1, /^# RÔLE/)
+  assert.match(e.instrument!.statut, /RELUE ET VALIDÉE/)
+})
+
+test('L\'ARGUMENTATION porte ses NEUF observables du §5, et AUCUN paramètre', () => {
+  const e = etatCompetence('argumentation')
+  assert.deepEqual(Object.keys(e.instrument!.observables_mesure).sort(), [
+    'garant_ambigu', 'garant_circulaire', 'garant_present', 'garant_vague',
+    'lien_explicite', 'nb_limites', 'objection_traitee', 'preuve_circulaire',
+    'source_cosmetique',
+  ])
+  // ⚠️ Les deux dénominateurs sont des PHRASES, pas des codes : le relevé porte
+  //    une entrée sous ce nom exact, sans quoi les cinq `comptage rapporté`
+  //    n'auraient rien à diviser et sortiraient en `n/a` (`01-` §8.2).
+  assert.equal(e.instrument!.observables_mesure.preuve_circulaire.rapporte_a,
+    'les unités du décompte')
+  assert.equal(e.instrument!.observables_mesure.nb_limites.rapporte_a,
+    'les unités du décompte, écartées comprises')
+  // « Si tu te surprends à vouloir un seuil réglable, c'est qu'une valeur est en
+  //   dur dans le module » — il n'y en a aucune : `PARAMS` est vide des deux côtés.
+  assert.deepEqual(valeursDesParametres(e.instrument!), {})
+  assert.deepEqual(Object.keys(e.instrument!.prompts).sort(), ['P1', 'P2'])
   assert.match(e.instrument!.statut, /RELUE ET VALIDÉE/)
 })
 

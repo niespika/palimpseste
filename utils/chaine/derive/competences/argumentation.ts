@@ -84,7 +84,7 @@ export const INSTRUMENT_ARGUMENTATION = {
         "garant_present": {
           "famille": "proportion",
           "reussie": "plus_de",
-          "sens": "la majorité stricte des unités portent un garant cité — « absent → Absent » à la règle d'agrégation du §4",
+          "sens": "la majorité stricte des unités du décompte portent un garant cité — « absent → Absent » à la règle d'agrégation du §4",
           "seuil": 0.5,
           "statut": "acté"
         },
@@ -99,7 +99,7 @@ export const INSTRUMENT_ARGUMENTATION = {
         "lien_explicite": {
           "famille": "proportion",
           "reussie": "plus_de",
-          "sens": "la majorité stricte des unités sont explicites après crible — « explicite → Bon » à la règle d'agrégation du §4",
+          "sens": "la majorité stricte des unités du décompte sont explicites après crible — « explicite → Bon » à la règle d'agrégation du §4",
           "seuil": 0.5,
           "statut": "acté"
         },
@@ -231,7 +231,7 @@ export const INSTRUMENT_ARGUMENTATION = {
   },
   "competence": "argumentation",
   "degre_statut": 2,
-  "empreinte_source": "3f7d2960c92765ed93a2712303a24a6d4d1ae047db5e6c1e429ac894ca75f379",
+  "empreinte_source": "e901a0f5a8425fda02f0365d1e0381828eddaa78b565485abc124b802469db72",
   "observables_mesure": {
     "garant_ambigu": {
       "famille": "comptage rapporté",
@@ -252,7 +252,7 @@ export const INSTRUMENT_ARGUMENTATION = {
     "garant_present": {
       "famille": "proportion",
       "reussie": "plus_de",
-      "sens": "la majorité stricte des unités portent un garant cité — « absent → Absent » à la règle d'agrégation du §4",
+      "sens": "la majorité stricte des unités du décompte portent un garant cité — « absent → Absent » à la règle d'agrégation du §4",
       "seuil": 0.5,
       "statut": "acté"
     },
@@ -267,7 +267,7 @@ export const INSTRUMENT_ARGUMENTATION = {
     "lien_explicite": {
       "famille": "proportion",
       "reussie": "plus_de",
-      "sens": "la majorité stricte des unités sont explicites après crible — « explicite → Bon » à la règle d'agrégation du §4",
+      "sens": "la majorité stricte des unités du décompte sont explicites après crible — « explicite → Bon » à la règle d'agrégation du §4",
       "seuil": 0.5,
       "statut": "acté"
     },
@@ -309,5 +309,5 @@ export const INSTRUMENT_ARGUMENTATION = {
   },
   "source": "competences/argumentation.md",
   "statut": "RELUE ET VALIDÉE",
-  "version": "4.2"
+  "version": "4.3"
 } as const

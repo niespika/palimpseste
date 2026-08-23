@@ -34,6 +34,8 @@ import type { SectionCalame } from './retour'
 import { INSTRUMENT_MONITORING } from './derive/monitoring'
 import { INSTRUMENT_EXPRESSION } from './derive/competences/expression'
 import { BRANCHEMENT_EXPRESSION } from './branchements/expression'
+import { INSTRUMENT_ARGUMENTATION } from './derive/competences/argumentation'
+import { BRANCHEMENT_ARGUMENTATION } from './branchements/argumentation'
 import { refusSlotsExtraction, refusSlotsJugement } from './slots'
 import { COMPETENCES, type Competence } from './types'
 
@@ -371,6 +373,14 @@ const INSTRUMENTS: Partial<Record<Competence, InstrumentCompetence>> = {
   // autres portent `None`). Son portage est donc le seul qui puisse être
   // vérifié jusqu'au gold.
   expression: INSTRUMENT_EXPRESSION as unknown as InstrumentCompetence,
+  // C4-L10, 23/08/2026 — l'Argumentation est LA DEUXIÈME, et c'est elle qui fait
+  // mordre l'alerte de repli alphabétique : « la `cible_primaire` … lève une
+  // alerte dès que ce repli sert sur plus d'une compétence », et sa condition de
+  // fermeture était « AVANT LA DEUXIÈME COMPÉTENCE BRANCHÉE ». C4-L11 l'a tenue.
+  // ⚠️ Elle n'a NI GOLD NI RUN STOCKÉ (`VERSION_GOLDS_TESTEE = None`) : son
+  //    portage se prouve aux 29 vecteurs embarqués du module ET AU BALAYAGE —
+  //    723 entrées de plus dans les mêmes fonctions du même module.
+  argumentation: INSTRUMENT_ARGUMENTATION as unknown as InstrumentCompetence,
 }
 
 /**
@@ -383,6 +393,7 @@ const INSTRUMENTS: Partial<Record<Competence, InstrumentCompetence>> = {
  */
 const BRANCHEMENTS: Partial<Record<Competence, BranchementCompetence>> = {
   expression: BRANCHEMENT_EXPRESSION,
+  argumentation: BRANCHEMENT_ARGUMENTATION,
 }
 
 export interface EtatCompetence {

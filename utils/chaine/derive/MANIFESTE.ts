@@ -20,7 +20,7 @@ export const MANIFESTE_INSTRUMENTS = {
       ],
       "ouverte": true,
       "statut": "RELUE ET VALIDÉE",
-      "version": "4.2"
+      "version": "4.3"
     },
     "connaissance": {
       "observables_mesure": [
@@ -119,9 +119,9 @@ export const MANIFESTE_INSTRUMENTS = {
       "version": "2.36"
     },
     "competences/argumentation.md": {
-      "empreinte": "3f7d2960c92765ed93a2712303a24a6d4d1ae047db5e6c1e429ac894ca75f379",
+      "empreinte": "e901a0f5a8425fda02f0365d1e0381828eddaa78b565485abc124b802469db72",
       "statut": "RELUE ET VALIDÉE",
-      "version": "4.2"
+      "version": "4.3"
     },
     "competences/connaissance.md": {
       "empreinte": "cfb7bda95ee30625a9287933036c6f71c9ca7587117c6097e94b953e570d64a4",
