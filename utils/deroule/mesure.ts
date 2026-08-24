@@ -258,7 +258,13 @@ export async function mesurerMaintenant(
 }
 
 function resume(b: BilanDepot): string {
+  // ⭐ `C4L7-7` — le témoin ne se tait que quand il n'a rien à dire. Un écart
+  //    entre le bilan et la base est INTERMITTENT : s'il ne s'écrit pas au
+  //    moment où il arrive, on ne le retrouve plus.
+  const temoin = b.appelsEnBase !== null && b.appelsEnBase !== b.appels
+    ? ` ⚠️ ÉCART : ${b.appelsEnBase} en base (${b.passages} passage(s))`
+    : ''
   return `${b.competencesMesurees.length} mesurée(s), ${b.mesuresEcrites} écrite(s), `
     + `retour ${b.retourEcrit ? 'écrit' : 'non écrit'}, ${b.appels} appel(s), `
-    + `${Math.round(b.dureeMs / 1000)} s`
+    + `${Math.round(b.dureeMs / 1000)} s${temoin}`
 }

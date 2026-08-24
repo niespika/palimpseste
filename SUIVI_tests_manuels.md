@@ -2214,7 +2214,7 @@ auraient attendu une tâche planifiée qui « ne tient pas la seconde » et qui 
 - [x] **C4L4-F · `capitalize` sur toute la ligne du sommaire** — « 1 Réussite(S), 0 Point(S) De
   Travail ». Il ne porte plus que sur le nom de la compétence : « **Argumentation — 1 réussite(s),
   0 point(s) de travail** ». _(22/08.)_
-- [ ] **C4L4-4 · Le retour AFFICHÉ, sur un vrai retour engendré.** ⭐ **LA PORTE D'ORIGINE EST
+- [x] **C4L4-4 · Le retour AFFICHÉ, sur un vrai retour engendré.** ⭐ **LA PORTE D'ORIGINE EST
   LEVÉE** — C4-L10 a branché l'Expression le 22/08, la chaîne engendre. La recette de C4-L4 avait
   posé une **fixture** à la forme exacte, et l'avait dit. ⚠️ **Une seconde condition est apparue, et
   elle est nommée** : le retour n'est engendré que sur une copie **portant au moins une réussite au
@@ -2234,6 +2234,7 @@ auraient attendu une tâche planifiée qui « ne tient pas la seconde » et qui 
   **SEGMENTÉ — une liste de points, chacun avec son identifiant stable et son ancrage —, jamais un
   bloc que l'écran découperait** *(§1.2 ; piège 20)*. **Pour retirer le décor ensuite :**
   `node --import ./scripts/register-calibration-resolver.mjs scripts/recette/traversee-c4l7.mjs --retire`.
+  ✅ **COCHÉ LE 24/08 — VU À L'ŒIL, ET SEGMENTÉ.** La preuve complète est sous `C4L7-11`, aux smokes du 24/08 : 5 points, chacun avec sa compétence, sa nature, sa citation, et en base son identifiant stable `{depot}:v1:01…05`.
 - [x] **C4L4-5 · « Se juger » réellement servi.** Il ne l'est pas : **aucune compétence n'est
   `evaluee`** en base (`competences_niveaux` ne porte que `mesuree_silencieusement`). Le drapeau est
   nécessaire, pas suffisant. ⚠️ **CETTE CONDITION-LÀ N'EST PAS CELLE QUE C4-L10 A LEVÉE**, et les
@@ -5244,7 +5245,7 @@ manifeste, mission, « fait quand » — sont **identiques au mot près** à ceu
   C4-L7 — « retour final LU » — cesse d'être insatisfaisable.*
   ⭐ **CONTRE-ÉPREUVE FAITE** : sur la voie **classe** *(le décor de ce lot)*, `published_at` reste
   celui que le professeur a posé — l'automatisme ne déborde pas.
-- [ ] **C4L7-7 · ⚠️ `bilan.appels` PEUT SOUS-COMPTER — 7 ANNONCÉS, 8 LIGNES EN BASE.** Sur le
+- [x] **C4L7-7 · ⚠️ `bilan.appels` PEUT SOUS-COMPTER — 7 ANNONCÉS, 8 LIGNES EN BASE.** Sur le
   **premier** des deux tours de la voie classe, le dépôt portait **8 lignes d'`api_couts`** quand
   `bilan.appels` disait **7** — un `p1` d'`expression` de plus, journalisé **après** tous les `p2`,
   avec un `tokens_entree` **identique** au premier *(675)* et une sortie différente.
@@ -5258,6 +5259,24 @@ manifeste, mission, « fait quand » — sont **identiques au mot près** à ceu
   jamais au bilan »*. C'est le **chiffre de diagnostic** qui ment, pas la garde.
   **Condition de reprise : le premier lot qui touche `utils/chaine/chaine.ts`** — instrumenter
   `traiterCompetence` pour compter ses passages, et confronter à `api_couts` à chaque tour.
+  ✅ **INSTRUMENTÉ LE 24/08 — LA CONDITION ÉTAIT ÉCHUE, ET ELLE L'A ÉTÉ PAR MOI.** Le correctif de
+  la publication automatique a touché `utils/chaine/chaine.ts` **sans instrumenter**, ce que cette
+  entrée exigeait du premier lot qui y toucherait. *Relevé en relisant la section, réparé dans la
+  foulée.*
+  ⭐ **CE QUI EST POSÉ — un témoin, pas une garde.** `traiterDepot` compte désormais ses
+  **`passages`** *(les entrées dans une chaîne de compétence — on compte les ENTRÉES, pas les
+  retours : une chaîne qui lève est passée, et ses appels sont payés)* et **confronte le bilan à la
+  base à chaque tour** : `appelsDuDepot` est relu en fin de tour, et `apresLeTour − dejaFaits` dit
+  ce que ce tour a **réellement** écrit au journal. **L'écart part en alerte avec ses deux
+  chiffres**, et le résumé servi à l'élève le porte aussi *(`utils/deroule/mesure.ts`)*.
+  ⚠️ **`appels` NE CHANGE PAS DE SENS** et reste un chiffre de diagnostic : les deux gardes —
+  `controlerLaFacture` et `appelsDuDepot` — lisent la base et ne passent pas par ce bilan
+  *(piège 72)*. **Rien n'a été déplacé : un témoin a été ajouté.**
+  ⚠️ **Une base illisible ne fabrique pas un faux écart** : `appelsDuDepot` rend `+Infinity` sur
+  erreur, et le témoin vaut alors `null` avec son alerte propre — *on le dit, on n'accuse personne*.
+  ⛔ **L'origine du passage surnuméraire reste NON ÉTABLIE** — c'est un défaut **intermittent**, vu
+  une fois. **Ce qui change : il se dénoncera de lui-même la prochaine fois.** *Un chiffre qui ment
+  une fois sur deux ne se débusque pas en le relisant.*
 - [x] **C4L7-8 · ⚠️ DEUX ASSERTIONS DE `deroule-c4l3.mjs` SONT PÉRIMÉES — PAR C4-L14, ET CE N'EST
   PAS UNE RÉGRESSION.** `scripts/recette/deroule-c4l3.mjs --sans-appel` rend **84 passés, 2 échoués,
   1 non éprouvé**. Les deux rouges sont aux **lignes 929 et 963**, et ils assèrent sur
@@ -5552,7 +5571,13 @@ Tout ce qui suit est donc la face **professeur**, et **les smokes élève resten
   « créer un élève depuis l'écran professeur », après le retrait de `handle_new_user()` le 21/08 —
   section SÉCURITÉ)* · `C4L14-13` *(le cran 3 n'a jamais servi de correction — **condition : le
   premier import de la banque 1.2**)* · `C4L14-16` *(la migration en prod — **condition : C11b**)*.
-- [ ] **C4L7-13 · ⚠️ CE QUE LA TRAVERSÉE A LAISSÉ EN BASE, ET QUI N'Y ÉTAIT PAS À L'ENTRÉE.**
+- [x] **C4L7-13 · ⚠️ CE QUE LA TRAVERSÉE A LAISSÉ EN BASE — ✅ RETIRÉ LE 24/08, SA RAISON D'ÊTRE
+  ÉTANT REMPLIE.** Le décor n'était gardé que pour que Louis coche `C4L4-4` à l'œil : **c'est fait**
+  *(le retour vu SEGMENTÉ, 5 points avec leurs identifiants stables)*. `traversee-c4l7.mjs --retire`
+  rend **3 passés, 0 en échec** — instance `0f6c3fb4`, ligne de plan `4770f701`, et « AUCUNE trace
+  de la traversée dans le plan ». ⭐ **Contrôlé après, table par table** : 0 dépôt du décor, **0
+  mesure, 0 squelette, 0 retour, 0 job, 0 métacognition orphelins**, et les **six interrupteurs à
+  OFF**. *Le texte d'origine, pour mémoire :*
   Outre le décor de smoke ci-dessus, **rien** : les décors maison, de reprise et de route ont été
   **retirés dans le run même**, et les six interrupteurs **re-constatés à OFF**.
   ⚠️⚠️ **UN DÉFAUT DE LA RECETTE ELLE-MÊME, TROUVÉ ET RÉPARÉ EN SÉANCE — et c'est le patron exact que

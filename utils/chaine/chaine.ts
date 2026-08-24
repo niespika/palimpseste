@@ -75,6 +75,29 @@ export interface BilanDepot {
   retourEcrit: boolean
   monitoring: { mesures: number; motifs: string[] }
   appels: number
+  /**
+   * ⭐ L'INSTRUMENTATION DE `C4L7-7`, posée le 24/08 — la première fois que ce
+   *    fichier était touché depuis le constat.
+   *
+   * Le défaut : `bilan.appels` a annoncé **7** quand la base en portait **8**,
+   * une fois, sans se reproduire. Il est INTERMITTENT, et son origine n'a
+   * jamais été établie : `expression` ne déclare qu'UNE extraction, et les
+   * seuls émetteurs de `phase: 'p1'` sont attribués. Un chiffre de diagnostic
+   * qui ment une fois sur deux ne se débusque pas en le relisant : il faut
+   * qu'il se DÉNONCE lui-même, à chaque tour.
+   *
+   * · `passages` — combien de fois une chaîne de compétence a été ENTRÉE ;
+   * · `appelsEnBase` — ce que `api_couts` porte RÉELLEMENT pour ce tour,
+   *   c'est-à-dire après moins avant.
+   *
+   * ⚠️ `appels` NE CHANGE PAS DE SENS : il reste la somme que les étages
+   *    remontent, et il reste un chiffre de DIAGNOSTIC. Les deux gardes —
+   *    `controlerLaFacture` et `appelsDuDepot` — lisent la base et ne passent
+   *    pas par ce bilan (piège 72). On n'a rien déplacé : on a ajouté un témoin.
+   */
+  passages: number
+  /** `null` quand la base est illisible — on ne fabrique pas un zéro. */
+  appelsEnBase: number | null
   dureeMs: number
   alertes: string[]
 }
@@ -182,11 +205,15 @@ export async function traiterDepot(
   // ⚠️ `allSettled`, jamais `all` : avec `all`, une compétence qui lève emporte
   //    le RÉSULTAT des autres — dont les mesures sont pourtant déjà écrites et
   //    les appels déjà payés —, et le dépôt reste sans retour.
+  // ⭐ `C4L7-7` — on compte les ENTRÉES, pas les retours : une chaîne qui lève
+  //    est quand même passée, et ses appels sont quand même payés.
+  let passages = 0
   const regles = await Promise.allSettled(competencesFroides.map(async (c) => {
     const etat = etatCompetence(c)
     if (!etat.ouverte || !etat.instrument || !etat.branchement) {
       return { competence: c, ecartee: etat.motif ?? 'compétence fermée', appels: 0 }
     }
+    passages += 1
     return chaineDUneCompetence(admin, {
       ctx, competence: c, version, production, modele,
       instrument: etat.instrument, branchement: etat.branchement,
@@ -265,6 +292,28 @@ export async function traiterDepot(
       + 'pas de retour engendré (clause granulaire).')
   }
 
+  // ⭐⭐ `C4L7-7` — LA CONFRONTATION, À CHAQUE TOUR. `dejaFaits` a été lu AVANT
+  //    que la chaîne parte ; on relit maintenant, et la différence est ce que ce
+  //    tour a RÉELLEMENT écrit au journal. Si le bilan et la base divergent,
+  //    l'écart part en alerte AVEC SES DEUX CHIFFRES — c'est ce qui manquait le
+  //    jour où « 7 annoncés, 8 en base » n'a laissé aucune trace exploitable.
+  // ⚠️ `appelsDuDepot` rend `+Infinity` quand la lecture échoue : une base
+  //    illisible ne doit pas fabriquer un faux écart. On le dit, et on n'accuse
+  //    personne.
+  const apresLeTour = await appelsDuDepot(admin, depotId)
+  const appelsEnBase = Number.isFinite(apresLeTour) && Number.isFinite(dejaFaits)
+    ? apresLeTour - dejaFaits
+    : null
+  if (appelsEnBase === null) {
+    alertes.push('témoin d’appels indisponible : `api_couts` illisible sur ce tour — '
+      + 'le bilan n’a pas pu être confronté à la base.')
+  } else if (appelsEnBase !== appels) {
+    alertes.push(`⚠️ ÉCART DE COMPTE D'APPELS — le bilan annonce ${appels}, la base en porte `
+      + `${appelsEnBase} sur ce tour (${passages} chaîne(s) de compétence entrée(s), `
+      + `version ${version}). C'est le défaut C4L7-7, et il vient de se reproduire : `
+      + `le chiffre de diagnostic ment, les gardes lisent la base et tiennent.`)
+  }
+
   const dureeMs = Date.now() - debut
   if (dureeMs > config.latenceCibleMs) {
     alertes.push(`contrat de latence dépassé : ${Math.round(dureeMs / 1000)} s pour une cible de `
@@ -277,7 +326,7 @@ export async function traiterDepot(
     competencesEcartees: ecartees,
     mesuresEcrites, mesuresDejaLa, retourEcrit,
     monitoring: { mesures: monitoring.mesures, motifs: monitoring.motifs },
-    appels, dureeMs, alertes,
+    appels, passages, appelsEnBase, dureeMs, alertes,
   }
 }
 
