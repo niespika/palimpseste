@@ -17,6 +17,7 @@ import { notFound } from 'next/navigation'
 import { garderProf } from '@/utils/fabrique/acces'
 import { chargerDoctrineDepuisBase } from '@/utils/fabrique/doctrine'
 import { composerApercu } from '@/utils/fabrique/conception'
+import { cranNumero } from '@/utils/cran'
 import Edition from './Edition'
 import Apercu from './Apercu'
 import Assignation from './Assignation'
@@ -39,17 +40,19 @@ const jointure = (x: unknown, k: string): Ligne => {
 /**
  * Le cran d'une instance, en NUMÉRO — ou `null` quand elle n'en a pas.
  *
- * `exercices.cran` est du texte, et une instance de type `complet` — les deux
- * examens diagnostiques — n'en porte AUCUN (`07-` §1.1). Un `Number()` nu
- * rendait 0 sur le NULL et NaN sur un cran écrit au code : deux façons
- * d'afficher un chiffre qui ne compte rien (`06-` §5).
+ * ⛔ NE PAS REDÉFINIR ICI. `utils/cran.ts` est « le SEUL endroit où la forme se
+ *    lit » (C4-L11), et il accepte LES DEUX formes — le numéro que la base porte
+ *    depuis `c4_l11_cran_forme.sql`, et le code résiduel des scripts de recette.
+ *
+ * ⚠️ LA COPIE PRIVÉE QUI VIVAIT ICI FILTRAIT PAR `txt()`, donc n'acceptait QUE
+ *    du texte — elle datait d'avant C4-L11, quand `exercices.cran` était du
+ *    texte. Sur un `cran` entier, `txt(2)` rend `''` et le cran devenait `null` :
+ *    TOUTE instance ayant un vrai cran s'affichait « sans cran », donc comme un
+ *    examen diagnostique, et son formulaire de correction perdait le cas, le
+ *    guide et les trois appuis. C'est très exactement le défaut que `utils/cran.ts`
+ *    nomme — « cinq champs vides sur une instance parfaitement valide ».
  */
-const cranDeLInstance = (x: unknown): number | null => {
-  const brut = txt(x).trim()
-  if (brut === '') return null
-  const n = Number(brut)
-  return Number.isInteger(n) && n >= 1 && n <= 9 ? n : null
-}
+const cranDeLInstance = (x: unknown): number | null => cranNumero(x)
 
 
 export default async function EditionEtApercu({

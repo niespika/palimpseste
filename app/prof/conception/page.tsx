@@ -8,6 +8,7 @@
 import Link from 'next/link'
 import { garderProf } from '@/utils/fabrique/acces'
 import { formatJour } from '@/utils/fuseau'
+import { cranNumero } from '@/utils/cran'
 
 export const dynamic = 'force-dynamic'
 
@@ -120,7 +121,11 @@ export default async function Conception() {
                 <li key={txt(e.id)} className="flex flex-wrap items-center justify-between gap-3 py-2">
                   <span className="min-w-0">
                     <Link href={`/prof/conception/${txt(e.id)}`} className="text-encre underline">
-                      {txt(jointure(e, 'exercices_types').libelle) || txt(jointure(e, 'exercices_types').code)} · cran {txt(e.cran)}
+                      {txt(jointure(e, 'exercices_types').libelle) || txt(jointure(e, 'exercices_types').code)}
+                      {/* ⛔ JAMAIS `txt(e.cran)` : la base porte le NUMÉRO depuis C4-L11, et
+                          `txt()` d'un entier rend `''` — la liste affichait « cran » suivi de
+                          rien. `utils/cran.ts` est le seul endroit où la forme se lit. */}
+                      {cranNumero(e.cran) === null ? ' · sans cran' : ` · cran ${cranNumero(e.cran)}`}
                     </Link>
                     <span className="text-muet">
                       {' '}· {txt(e.lieu)}{e.genre ? ` · ${txt(e.genre)}` : ''}

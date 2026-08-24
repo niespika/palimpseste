@@ -25,6 +25,7 @@ import DepotCorpus from './DepotCorpus'
 import FileDeValidation from './FileDeValidation'
 import Rattachement from './Rattachement'
 import Demonstrations from './Demonstrations'
+import { cranNumero } from '@/utils/cran'
 
 export const dynamic = 'force-dynamic'
 
@@ -71,10 +72,18 @@ export default async function DepotDuCorpus({
       admin.from('exercices_sujets').select('*, exercices_sujets_cours(cours_declare, cours_id)')
         .neq('statut', 'retire').order('created_at')),
     lire<Ligne>('les matériaux',
-      admin.from('exercices_materiaux').select('id, id_import, objet_code, mode, famille, defaut, statut')
+      admin.from('exercices_materiaux').select('id, id_import, import_id, objet_code, mode, famille, defaut, statut')
         .neq('statut', 'retire').order('created_at')),
+    // ⭐ `consigne_instanciee` est ici POUR L'ÉCRAN, et pour rien d'autre : sans
+    //    elle, la file affiche « argument · cran 2 · maison » et le professeur
+    //    valide un exercice dont il ignore le contenu.
     lire<Ligne>('les exercices importés',
-      admin.from('exercices').select('id, id_import, cran, lieu, statut, bloque, blocages, signalements, exercices_types(code)')
+      // ⚠️ LE `select` RESTE UN LITTÉRAL D'UN SEUL TENANT. Coupé en deux avec un
+      //    `+`, il cesse d'être une constante de type : le typeur de supabase-js
+      //    ne sait plus le lire et rend `GenericStringError[]` — la ligne
+      //    devient inassignable, et rien ne dit que c'est la MISE EN FORME qui
+      //    l'a cassée. Même piège que celui déjà noté à `utils/routeur/donnees.ts`.
+      admin.from('exercices').select('id, id_import, import_id, cran, lieu, statut, bloque, blocages, signalements, consigne_instanciee, exercices_types(code)')
         .not('id_import', 'is', null).order('created_at')),
     lire<Ligne>('les démonstrations',
       admin.from('exercices_demonstrations').select('*').order('competence')),
@@ -88,6 +97,17 @@ export default async function DepotDuCorpus({
   ])
   const incidents = incidentsDe(lImports, lTextes, lSujets, lMateriaux, lExercices,
     lDemos, lCours, lLivres)
+
+  // ⭐ D'OÙ VIENT CHAQUE ENTRÉE. La file affichait son `id_import` — l'étiquette
+  //    de la LIGNE — mais jamais le FICHIER qui l'a déposée. Or c'est lui qui
+  //    dit la nature : `import_bloque.json` se lit tout seul, et une entrée
+  //    bloquée à dessein cesse alors de ressembler à un geste qui attend.
+  // ⚠️ On lit la table ENTIÈRE, pas les dix derniers dépôts : une entrée peut
+  //    venir d'un import plus ancien, et son nom manquerait sans qu'on le voie.
+  const lTousImports = await lire<Ligne>('les dépôts d’import',
+    admin.from('exercices_imports').select('id, nom_fichier'))
+  const fichierDe = new Map((lTousImports.lignes as unknown as Ligne[])
+    .map((i) => [txt(i.id), txt(i.nom_fichier)]))
   const imports = lImports.lignes
   const textes = lTextes.lignes
   const sujets = lSujets.lignes
@@ -178,26 +198,41 @@ export default async function DepotDuCorpus({
       {onglet === 'file' && (
         <FileDeValidation
           textes={(textes as unknown as Ligne[]).map((t) => ({
-            id: txt(t.id), idImport: txt(t.id_import), libelle: `${txt(t.auteur)} — ${txt(t.titre)}`,
+            id: txt(t.id), idImport: txt(t.id_import),
+            fichier: fichierDe.get(txt(t.import_id)) ?? null, libelle: `${txt(t.auteur)} — ${txt(t.titre)}`,
             statut: txt(t.statut), bloque: oui(t.bloque), blocages: tab(t.blocages).map(txt),
           }))}
           sujets={(sujets as unknown as Ligne[]).map((s) => ({
-            id: txt(s.id), idImport: txt(s.id_import), libelle: txt(s.enonce),
+            id: txt(s.id), idImport: txt(s.id_import),
+            fichier: fichierDe.get(txt(s.import_id)) ?? null, libelle: txt(s.enonce),
             statut: txt(s.statut), bloque: oui(s.bloque), blocages: tab(s.blocages).map(txt),
           }))}
           materiaux={(materiaux as unknown as Ligne[]).map((m) => ({
             id: txt(m.id), idImport: txt(m.id_import),
+            fichier: fichierDe.get(txt(m.import_id)) ?? null,
             libelle: `${txt(m.objet_code)} · ${txt(m.mode)} — ${txt(m.defaut)}`,
             statut: txt(m.statut), bloque: false, blocages: [],
           }))}
           exercices={(exercices as unknown as Ligne[]).map((e) => ({
             id: txt(e.id), idImport: txt(e.id_import),
-            libelle: `${txt(jointure(e, 'exercices_types').code) || '?'} · cran ${txt(e.cran)} · ${txt(e.lieu)}`,
+            fichier: fichierDe.get(txt(e.import_id)) ?? null,
+            // ⛔ JAMAIS `txt(e.cran)` : la base porte le NUMÉRO depuis C4-L11, et `txt()`
+            //    d'un entier rend `''`. `utils/cran.ts` lit la forme, seul.
+            libelle: `${txt(jointure(e, 'exercices_types').code) || '?'} · ${
+              cranNumero(e.cran) === null ? 'sans cran' : `cran ${cranNumero(e.cran)}`
+            } · ${txt(e.lieu)}`,
             statut: txt(e.statut), bloque: oui(e.bloque), blocages: tab(e.blocages).map(txt),
             signalements: tab(e.signalements).map(txt),
+            // Ce que l'entrée EST, en clair — la consigne est le seul texte qui le dise.
+            detail: Array.isArray(e.consigne_instanciee)
+              ? e.consigne_instanciee.map(txt).join(' · ')
+              : txt(e.consigne_instanciee),
+            // Et de quoi aller voir le détail plutôt que de valider à l'aveugle.
+            lien: `/prof/conception/${txt(e.id)}`,
           }))}
           demonstrations={(demos as unknown as Ligne[]).filter((d) => d.id_import).map((d) => ({
             id: txt(d.id), idImport: txt(d.id_import),
+            fichier: fichierDe.get(txt(d.import_id)) ?? null,
             libelle: `${txt(d.competence)} · ${txt(d.grain)} · ${txt(d.forme)} — ${txt(d.theme)}`,
             statut: txt(d.statut), bloque: false, blocages: [],
             signalements: tab(d.signalements).map(txt),

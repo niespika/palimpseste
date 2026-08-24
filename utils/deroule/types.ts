@@ -25,9 +25,14 @@ export type Version = 'v1' | 'vf'
 export type Geste = 'diagnostiquer' | 'transformer' | 'produire'
 
 /**
- * Les neuf crans (`02-` §2.1). Le CODE est la clé partout côté application —
- * `exercices.cran` porte le code, pas le numéro (`metacognition.ts` lit par
- * code, la doctrine indexe par numéro).
+ * Les neuf crans (`02-` §2.1).
+ *
+ * ⚠️ CE COMMENTAIRE DISAIT L'INVERSE JUSQU'AU 23/08, et il était périmé :
+ *    « `exercices.cran` porte le code, pas le numéro ». **C4-L11 a tranché
+ *    l'autre sens** — la base porte LE NUMÉRO (`c4_l11_cran_forme.sql`), et
+ *    `utils/cran.ts` est « le SEUL endroit où la forme se lit ». Une copie
+ *    privée écrite sur l'ancienne phrase a déjà coûté un écran entier
+ *    (`C4L11-F`) : ne pas en réécrire une.
  */
 export const CRANS = [
   'diagnostic_guide', 'production_guidee', 'transformation_guidee',
