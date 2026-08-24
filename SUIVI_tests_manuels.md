@@ -5756,8 +5756,12 @@ Tout ce qui suit est donc la face **professeur**, et **les smokes élève resten
   un second déclencheur est interdit** : « deux crons sur une même clé fabriquent deux lignes ».
   **Condition de reprise : une décision de Louis** — un bouton prof, ou rien.
 
-- [ ] **C4L13-19 · ⚠️ LE PIÈGE 22 RESTE OUVERT POUR UN ÉLÈVE INSCRIT *APRÈS* LE COMPTAGE — et c'est
-  le seul cas où « une ligne absente se lit VERT » subsiste.** La collecte pose une ligne pour
+- [x] **C4L13-19 · ⚠️ UN ÉLÈVE INSCRIT *APRÈS* LE COMPTAGE SE LIT VERT — ⭐ DÉFAUT CONNU ET ASSUMÉ.**
+  *(Décision de Louis, 24/08 : « on assume le problème ». Coché parce qu'il n'y a plus rien à jouer
+  ni à décider — **pas** parce que le défaut est corrigé. Il reste vrai, et il est décrit ci-dessous
+  pour qu'on ne le rouvre pas comme un bug.)*
+  C'est **le seul cas où « une ligne absente se lit VERT » subsiste**, et il est étroit : un élève
+  déjà inscrit au moment du comptage a toujours sa ligne. La collecte pose une ligne pour
   **tous** les élèves actifs au moment où elle compte : à l'intérieur d'une semaine comptée, plus
   aucun trou. ⛔ **Mais `chargerAssiduite` liste les élèves de la classe AUJOURD'HUI** : un élève
   inscrit après coup apparaît au tableau d'une semaine antérieure **sans ligne**. **Éprouvé** — ligne
@@ -5765,9 +5769,13 @@ Tout ce qui suit est donc la face **professeur**, et **les smokes élève resten
   "vert"}`, et **le taux d'inactivité de la classe le compte comme actif** *(0,1429 sur 7 élèves)*.
   ⚠️ **Ce n'est pas rattrapable par la collecte** — « une semaine dont le compte est arrêté ne se
   recalcule pas », et rétro-poser des lignes pour un nouvel inscrit **fabriquerait une assiduité
-  qu'il n'a pas eue**. **Condition de reprise : une décision de conception** — soit l'écran distingue
-  « pas de ligne » de « ligne à zéro » *(ce que la base permet, l'absence étant discernable)*, soit
-  la frise borne son tableau aux élèves inscrits **à la date de la semaine**. *Relevé, non tranché.*
+  qu'il n'a pas eue**. ⭐ **CE QUE ÇA COÛTE, ET POURQUOI C'EST ASSUMABLE** : l'élève neuf paraît
+  assidu sur les semaines d'avant son arrivée, et il abaisse d'autant le taux d'inactivité de sa
+  classe **sur ces semaines-là seulement**. Dès la première semaine comptée après son inscription,
+  tout est juste. *Le cas se produit à chaque arrivée en cours d'année.*
+  **Si on veut le fermer un jour**, deux voies, toutes deux côté ÉCRAN et non côté collecte : soit
+  l'écran distingue « pas de ligne » de « ligne à zéro » *(la base le permet — l'absence est
+  discernable)*, soit la frise borne son tableau aux élèves inscrits **à la date de la semaine**.
 
 - [x] **C4L13-17 · LE BONUS DE VACANCES — ⭐ TRANCHÉ : IL EST FERMÉ.** *(Décision de Louis, 24/08,
   en clôture du lot. Il n'y a donc plus rien à jouer en recette.)* `06-` §5 accordait « au plus une
