@@ -74,7 +74,15 @@ posée sous `app/` ne serait jamais éprouvée, sans qu'aucun message ne le dise
   dépôts en `origine = 'routeur'`, et **l'écriture de la lettre** — que la chaîne
   délègue nommément ici *(`utils/chaine/mesures.ts:10`)* et que personne ne fait ;
 - **les compteurs d'assiduité ne s'écrivent pas ici non plus — c'est `C4-L13`** :
-  `assiduite.ts` calcule, et **rien n'écrit `assiduite_hebdo`**.
+  `assiduite.ts` calcule, et l'écrivain vit **ailleurs, à `utils/assiduite/`** —
+  `collecte.ts` *(pur : la jonction dépôts → `(assignés, terminés)`)* et
+  `collecte-serveur.ts` *(`poserLaSemaineDAssiduite()`, le seul écrivain
+  d'`assiduite_hebdo` du dépôt, déclenché par `/api/assiduite/hebdo`)`*.
+  ⭐ **C'est délibéré, et c'est ce qui garde vraie l'affirmation ci-dessus** :
+  ce dossier n'écrit toujours rien. *Constat de C4-L13, 24/08.*
+  ⚠️ Le nouveau dossier **importe d'ici sans rien y ajouter** : `estRendu`,
+  `entreAuDenominateur`, `semaineFaite` et `retraitCompteDansLaSemaine` restent
+  les seules règles, et elles ne se recopient nulle part.
 
 ## Trois pièges qui coûtent cher
 

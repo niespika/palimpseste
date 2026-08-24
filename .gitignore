@@ -51,3 +51,8 @@ next-env.d.ts
 
 # Registre local du décor de recette C4-L7 (scripts/recette/traversee-c4l7.mjs)
 scripts/recette/.traversee-c4l7-registre.json
+
+# Registre local du décor de recette C4-L2 (scripts/recette/routeur-c4l2-decor.mjs).
+# Posé par C4-L13 : le retrait du décor d'assiduité ne se fait plus par signature
+# de minutes — 45-60 min est un budget RÉEL — mais par les couples qu'il nomme.
+scripts/recette/.routeur-c4l2-decor-registre.json
