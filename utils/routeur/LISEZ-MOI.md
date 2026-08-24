@@ -6,7 +6,10 @@
 
 ## La règle de ce dossier : tout est PUR
 
-Aucun fichier de ce dossier n'importe `server-only` et aucun ne touche la base.
+**Les RÈGLES sont pures — pas le dossier entier, et la nuance compte.** Aucun fichier de
+règle n'importe `server-only` ni ne touche la base ; **deux fichiers font exception, et ils
+ne portent aucune règle** : `donnees.ts` *(qui importe bien `server-only`, l. 21)* et
+`acces.ts` *(la garde de rôle et la lecture de `routeur_actif`)*.
 Le motif est mécanique : `npm test` ne résout pas `server-only`, et un module qui
 l'importe devient **inexécutable sous test**. Or les règles du routeur sont
 exactement ce qu'il faut éprouver.
@@ -16,7 +19,16 @@ D'où le partage, le même que celui de `utils/chaine/` :
 | | Ce qu'il fait |
 |---|---|
 | `*.ts` de ce dossier | **calculent**, sur des données qu'on leur passe |
-| `donnees.ts`, `moteur.ts` | **lisent et écrivent** — eux seuls parlent à la base |
+| `donnees.ts`, `acces.ts` | **LISENT** — les deux seuls de ce dossier qui parlent à la base, et **aucun des deux n'écrit** |
+
+⚠️ **RIEN DANS CE DOSSIER N'ÉCRIT — c'est un état vérifié, pas une intention.** Aucun `insert`,
+`update`, `upsert` ni `rpc` dans tout `utils/routeur/` — vérifié le 23/08, `donnees.ts` et
+`acces.ts` compris. *Cette ligne annonçait autrefois un
+`moteur.ts` « qui lit et écrit » : **ce fichier n'a jamais existé** — aucun commit de l'historique
+ne le porte, et c'était sa seule occurrence dans le dépôt —, et `donnees.ts` n'écrit pas davantage.
+L'écrivain du routeur n'était pas absent de ce dossier par oubli : **il n'était écrit nulle part.**
+Il a désormais son lot — **`C4-L12`**, `07-` §2, échéance avant le segment 2. Constat de C4-L11,
+déposé à `C4L2-15` ; corrigé ici le 23/08.*
 
 ⚠️ **Le glob de `npm test` est `utils/**/*.test.ts` et rien d'autre** : une règle
 posée sous `app/` ne serait jamais éprouvée, sans qu'aucun message ne le dise.
@@ -55,7 +67,14 @@ posée sous `app/` ne serait jamais éprouvée, sans qu'aucun message ne le dise
 - **la file des dossiers N3 est l'écran de C6-L1** — le moteur d'ouverture et de
   re-signalement, lui, est ici ;
 - **le pull et le push sont C6-L3** : ici la *valeur* du budget optionnel se
-  règle, sa *consommation* ne se construit pas.
+  règle, sa *consommation* ne se construit pas ;
+- ⭐ **il ne FAIT TOURNER aucune de ces règles, et n'en persiste aucune sortie —
+  c'est `C4-L12`**, né le 23/08 *(`07-` §2, v2.42)*. Le vivier que `poserLaSemaine`
+  interroge, l'orchestrateur par élève, l'écriture de `routeur_decisions` et des
+  dépôts en `origine = 'routeur'`, et **l'écriture de la lettre** — que la chaîne
+  délègue nommément ici *(`utils/chaine/mesures.ts:10`)* et que personne ne fait ;
+- **les compteurs d'assiduité ne s'écrivent pas ici non plus — c'est `C4-L13`** :
+  `assiduite.ts` calcule, et **rien n'écrit `assiduite_hebdo`**.
 
 ## Trois pièges qui coûtent cher
 

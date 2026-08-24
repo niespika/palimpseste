@@ -2444,6 +2444,24 @@ retire)*.
   le moteur d'escalade et les écrans, dont l'assignation **« en lecture seule »**. **Le constat est
   déposé ici parce que c'est là qu'un `grep` le retrouvera ; le destinataire est une question pour
   Louis**, pas une décision de session Code. *Voir `C4L11-8` pour les pièces.*
+  ⭐⭐ **TRANCHÉ LE 23/08 — DÉCISION DE LOUIS : L'ÉCRIVAIN A SON LOT, ET CE N'EST PLUS UN RESTE DE
+  CELUI-CI.** La question posée par cet item était le **destinataire** ; elle est fermée. **Le geste
+  part à `C4-L12` — « Ce qui écrit ce que le routeur décide »** *(`07-` §2, v2.42)* : le **vivier**
+  et ses trois filtres *(parcours, cours vu, non-spoiler — aucun des trois n'existe)*, l'**orchestrateur
+  par élève**, la **persistance de la décision** *(`cible_retenue`, `sondes_retenues`, `etat_escalade`,
+  `borne_amont`, `origine = 'routeur'`, `routeur_decision_id`)* et l'**écriture de la lettre**, que la
+  chaîne délègue nommément et que personne ne fait. **Échéance : AVANT LE SEGMENT 2** — le segment 1
+  est hors routage, le routeur ne s'allume qu'au 2 *(`01-` §4, couche 1)*. ⚠️ **Les gestes manquants ont été
+  recomptés sur pièces le 23/08 : ils sont DOUZE** — et l'un d'eux n'existe **à aucun étage**, pas
+  même en règle pure : la **recombinaison en 2-3 propositions iso-durée** et le choix de l'élève
+  *(`01-` §4, couche 4 ; `routeur_decisions.propositions_iso_duree` et `choix_eleve`, zéro ligne de
+  code)*. ⭐ **Et le verrou du statut est tombé le même soir** : Louis a posé les six compétences à
+  `evaluee`. ⚠️ **Mais `filtreR0` en exige DEUX** — `evaluee` ET `lettre !== null` — et
+  `competences_niveaux.lettre` n'a aucun écrivain. **Ce second verrou est DANS `C4-L12`**, c'est son
+  quatrième geste. *La condition de reprise de `C4L2-12` — « un statut `evaluee` posé à la
+  fabrique » — est donc DATÉE D'AVANT le 23/08 au soir, et ce n'est plus elle qui bloque.* ⭐ **Ce qui reste ici** :
+  rien. *Les compteurs d'assiduité, qui souffraient du même défaut d'écrivain, partent à `C4-L13` —
+  échéance À LA RENTRÉE, parce qu'« un semestre ne se recompte pas après coup ».*
 - [ ] **C4L2-13 · Le smoke prof des quatre écrans, connecté comme professeur.** Les écrans ont été
   vus en session serveur ; le parcours complet *(régler un budget, noter un recueil, naviguer les
   semaines)* reste à faire à la main.
