@@ -37,7 +37,7 @@ import { journaliserCollageBloque } from '@/utils/passation/depots'
 import { estUnMoyen, type MoyenDeCollage } from '@/utils/passation/collage'
 import { messageSiBloque } from '@/utils/integrite'
 import { messageSiRetoursNonLus } from '@/utils/retours-lus'
-import type { Competence, TelemetrieSaisie, Version } from '@/utils/deroule/types'
+import type { TelemetrieSaisie, Version } from '@/utils/deroule/types'
 
 export interface Reponse { ok: boolean; message: string }
 const echec = (message: string): Reponse => ({ ok: false, message })
@@ -392,4 +392,14 @@ export async function actionPointsContestes(depotId: string): Promise<string[]> 
   return pointsContestes(data?.contestation_points).map((c) => c.point_id)
 }
 
-export type { Competence }
+// ⛔ NE JAMAIS RÉ-EXPORTER UN TYPE D'ICI — trouvé au smoke élève du 24/08.
+//    Ce fichier porte `'use server'`, et un module de server actions ne peut
+//    exporter QUE des fonctions async. Un `export type { … }` y est accepté par
+//    `tsc` — le type existe à la compilation — mais le compilateur le laisse
+//    devenir un export de VALEUR, et le module entier meurt à l'évaluation :
+//    `ReferenceError: Competence is not defined`.
+//    ⚠️ CE N'EST PAS UNE PANNE PARTIELLE : c'est TOUT le déroulé élève qui se
+//    tait — la crédence, la remise, la contestation, la validation de lecture.
+//    Et rien ne le voyait : `tsc --noEmit` passe, `npm test` passe, la page se
+//    RENVOIE normalement ; seule une action, à l'écran, échoue.
+//    Le type se lit à sa source : `@/utils/deroule/types`.

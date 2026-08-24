@@ -5436,13 +5436,79 @@ Tout ce qui suit est donc la face **professeur**, et **les smokes élève resten
   l'allumage. » ⛔ **Non coché** : l'entrée demande « régler un budget, noter un recueil, naviguer
   les semaines », **et ce sont des écritures sur des élèves réels** — une session Code ne les fait
   pas sans demande. **Condition de reprise : le parcours à la main.**
-- [ ] **C4L3-17 · C4L14-12 — INTOUCHABLES DEPUIS UNE SESSION CODE, et le motif n'a pas changé.**
-  Les deux sont des smokes **ÉLÈVE** *(les six temps, le collage refusé sur ses trois vecteurs au
-  clavier réel, la crédence au doigt ; et la correction à trois volets côté élève)*. La session
-  travaille dans une session **professeur** et **ne saisit pas d'identifiants** *(piège 66)* ; et le
-  navigateur embarqué rend les `confirm()` natifs **muets**. ⚠️ **`C4L14-12` a en outre besoin d'une
-  instance de cran 1 NON assignée** — celle qui a servi ci-dessus a été retirée. **Condition de
-  reprise inchangée : le Chrome de Louis, en session élève.**
+- [x] **C4L3-17 · ⭐ LE SMOKE ÉLÈVE — JOUÉ LE 24/08, Louis ayant ouvert une session élève dans le
+  navigateur local et une session professeur dans son Chrome.** *(Les deux limites tombent : la
+  session Code n'a saisi aucun identifiant, et les `confirm()` natifs sont accessibles côté prof.)*
+  Sur un dépôt maison réel *(Elo, classe Test, `argument × composer × cran 2`)* :
+  ⭐ **LES SIX TEMPS sont servis** — Préparer · Écrire · Se juger · Retour · Réviser · Retour final.
+  ⭐ **LE COLLAGE EST REFUSÉ SUR SES TROIS VECTEURS**, et deux fois plutôt qu'une : par événements
+  *(`paste`, `drop`, `contextmenu` — les trois rendent `defaultPrevented: true`, la valeur du champ
+  ne bouge pas)* **et AU CLAVIER RÉEL** — le presse-papier système chargé par `pbcopy`, puis `Cmd+V`
+  dans le champ : **le texte n'entre pas**, longueur inchangée.
+  ⭐ **LE COMPTEUR DE PARAGRAPHES** compte juste : deux blocs séparés d'une ligne vide, tapés au
+  clavier réel, rendent « 2 paragraphes ».
+  ⭐ **LE GRAS EST RENDU** *(piège 36, « le gras est du SENS »)* : sur la consigne d'un cran à
+  candidats, `<strong>` porte bien le segment balisé, et **zéro `**` n'est visible à l'écran**.
+  ⭐ **AUCUN CRLF** dans la saisie React — le champ contrôlé rend des `\n` seuls. *Le piège CRLF de
+  C4-L4 visait un formulaire HTML classique ; il ne mord pas ici.*
+  ⛔ **Restent non joués** : la **micro-question de dépassement** *(il faut dépasser la durée
+  indicative — l'éprouver demande de reculer `ouvert_at`, donc d'écrire sur un dépôt)* et la
+  **crédence au doigt sur téléphone** *(un cran 2 n'a pas de crédence, et le tactile n'est pas
+  éprouvable ici)*.
+- [ ] **C4L14-12 · ⛔⛔ INJOUABLE — ET LE SMOKE A TROUVÉ POURQUOI. LA CORRECTION À TROIS VOLETS NE
+  PEUT PAS S'AFFICHER SUR UN CRAN À CANDIDATS EN PAIRE.** *Voir `C4L7-15`. L'entrée reste ouverte,
+  et sa condition de reprise n'est plus « un smoke » mais **un correctif**.*
+
+### ⛔⛔ CE QUE LE SMOKE ÉLÈVE DU 24/08 A TROUVÉ — trois défauts, dont un corrigé sur place
+
+- [x] **C4L7-14 · ⛔⛔ TOUT LE DÉROULÉ ÉLÈVE ÉTAIT MORT — `ReferenceError: Competence is not
+  defined`. CORRIGÉ EN SÉANCE, UNE LIGNE.** *Le défaut le plus grave de la journée, et **rien** ne
+  pouvait le voir sans ouvrir l'écran.*
+  **Le symptôme** : toute action de l'élève rendait « L'envoi n'a pas abouti. Réessaie dans un
+  instant — rien n'est perdu. » — la crédence, la remise, la contestation, la validation de lecture.
+  **La cause, sur pièces** : `app/deroule/actions.ts` porte `'use server'` et se terminait par
+  **`export type { Competence }`**. Un module de server actions **ne peut exporter que des fonctions
+  async** : `tsc` accepte le ré-export *(le type existe à la compilation)*, mais le compilateur le
+  laisse devenir un export de VALEUR, et **le module entier meurt à son évaluation** — donc **toutes**
+  les actions du fichier, pas une seule.
+  ⚠️⚠️ **ET RIEN NE LE VOYAIT** : `npx tsc --noEmit` **passe**, `npm test` **1 260/1 260 passe**, la
+  recette `deroule-c4l3.mjs` **passe** *(elle appelle les fonctions de `utils/`, jamais le module
+  d'actions)*, et **la page se rend normalement** — seule une ACTION, à l'écran, échoue.
+  ⭐ **Le ré-export n'avait AUCUN importeur** *(balayage de `app/` et `utils/`)* : il est né le 22/08
+  avec C4-L3 *(`04604df`)* et n'a jamais servi. **Retiré, et la leçon écrite à sa place** ; la
+  crédence s'enregistre depuis. *Le type se lit à sa source, `@/utils/deroule/types`.*
+- [ ] **C4L7-15 · ⛔⛔ SUR UN CRAN À CANDIDATS EN PAIRE, L'AUTOMATE NE DÉPASSE JAMAIS `cas_1` — LA
+  CORRECTION N'EST DONC JAMAIS SERVIE.** *C'est ce qui rend `C4L14-12` injouable, et ce n'est pas un
+  manque de décor : c'est le code.*
+  **Sur pièces** : `utils/deroule/vue.ts:282` appelle
+  `etapeDeLaPaire([depot.texte_v1, depot.texte_vf], [credence_1, credence_2])` — **les « réponses
+  aux DEUX CAS de la paire » sont la v1 et la VERSION FINALE de la rédaction.** Or à un cran à
+  candidats *(1 et 3)* **l'élève ne rédige pas** : sa réponse à chaque cas **EST sa crédence**.
+  `texte_v1` reste donc `null`, `repondu(0)` reste faux, et `etapeDeLaPaire` s'arrête à sa toute
+  première ligne — `if (!repondu(0)) return 'cas_1'` *(`utils/deroule/regime.ts:202`)* — **avant même
+  de regarder la crédence**.
+  ⭐ **MESURÉ EN VRAI, sur un dépôt réel** : crédence du cas 1 écrite en base
+  *(`{cas:1, choix:0, jetons:[100,0,0,0], index_correct:1}`)*, et pourtant `repondu(0) = false`,
+  `credencee(0) = true`, **`etapePaire = cas_1`**, et `correctionDue(1) = false`. **L'élève a chargé
+  100 jetons sur un mauvais candidat et n'a rien reçu en retour.**
+  ⚠️ **POURQUOI LES 20 TESTS DE `correction.test.ts` SONT VERTS** : ils éprouvent la fonction PURE,
+  avec des réponses fabriquées. **Le défaut est dans l'APPEL, pas dans la fonction** — c'est
+  exactement l'angle mort qu'un test unitaire ne couvre pas et qu'un smoke trouve.
+  ⛔ **NON CORRIGÉ — c'est une décision** : il faut arrêter ce qui tient lieu de « réponse à un cas »
+  aux crans à candidats *(la crédence elle-même, très probablement)*, et cela touche le code de
+  C4-L14. **Condition de reprise : la décision de Louis, puis le lot qui la porte.**
+- [ ] **C4L7-16 · ⚠️ LA CONSIGNE D'UNE PAIRE EST SERVIE À L'ÉLÈVE COMME DU JSON BRUT — ET À LA
+  CHAÎNE AUSSI.** L'en-tête « LA CONSIGNE » de l'écran élève affiche, littéralement :
+  `["« Parmi ces quatre, … »","« Parmi ces quatre, … »"]`.
+  **La cause** : `enTexte()` *(`utils/chaine/contexte.ts:476`)* connaît **trois** formes — une
+  chaîne, un objet `{texte}`, un objet `{cas:[…]}` — et se replie sur `JSON.stringify(v)` pour tout
+  le reste. Or sur une paire, `consigne_instanciee` est **un TABLEAU NU**, `cas.map(x => x.consigne)`
+  *(`app/prof/conception/actions.ts`)* : ce n'est aucune des trois, et le repli sort la bouillie.
+  ⚠️⚠️ **CE N'EST PAS QU'UN DÉFAUT D'ÉCRAN** : `lireContexte` vit dans `utils/chaine/`, et
+  `ctx.consigne` est ce que la chaîne sert au modèle qui écrit le retour. **Le modèle reçoit la même
+  chose que l'élève.** ⭐ *Les consignes PAR CAS, elles, s'affichent correctement plus bas — c'est le
+  bloc d'en-tête qui est fautif.* **Non corrigé** : la forme à servir *(la consigne du cas courant ?
+  les deux, nommées ?)* est un choix d'écran, pas une évidence.
 
 - [ ] **C4L7-12 · RAPPELS — CE QUI EST DÛ ET QUI N'EST PAS DE CE LOT.** `C4L11-C` *(le cron vu
   tourner chez l'hébergeur — **condition : le premier déploiement**, pas moi ; C4-L7 a appelé la
