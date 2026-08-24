@@ -2479,6 +2479,12 @@ retire)*.
   EN CONFIGURATION**, pas en dur : `assiduite_seuil_semaine_faite` **0,75** et
   `assiduite_borne_basse_frise` **0,50**, et l'écran les affiche tels qu'il les a lus. **Décor
   retiré**, base vérifiée à **0 ligne**. _(22/08.)_
+  > ⚠️ **CETTE ENTRÉE A ÉTÉ COCHÉE SUR UN DÉCOR — et C4-L13 la rend enfin vraie** *(24/08)*.
+  > Ce qu'elle prouvait, c'était que **l'écran sait lire** ; elle ne pouvait rien prouver de la
+  > **collecte**, qui n'existait pas : le seul écrivain d'`assiduite_hebdo` du dépôt était
+  > `routeur-c4l2-decor.mjs`, qui semait `exercices_assignes: 4` et des minutes en dur. Les deux
+  > agrégats **se calculent désormais depuis des dépôts réels** — voir `C4L13-1` à `C4L13-4`. ⛔ Et
+  > le décor **ne peut plus être pris pour une mesure** : voir `C4L13-5`.
 - [x] **C4L2-8 · Les lectures sont paginées et confrontées au décompte.**
   Le défaut qui a coûté C4-L8-bis ne se répète pas : `lirePagine` pagine par 1000, **ordonne sur une
   clé unique** et **lève `LectureTronquee`** quand le décompte `count: 'exact'` diffère. Les six
@@ -5588,3 +5594,173 @@ Tout ce qui suit est donc la face **professeur**, et **les smokes élève resten
   routeur. **Constatées par requête, supprimées, et les deux chemins de nettoyage du script
   corrigés** *(le run et `--retire`)*. **Vérifié après : 0 mesure orpheline, 0 squelette orphelin,
   0 retour orphelin, 0 job orphelin.** *« Un retour ignoré ment » — un `on delete set null` aussi.*
+
+---
+
+## C4 · L13 — Les compteurs d'assiduité (⚠️ **AUCUNE MIGRATION** — aucune n'était attendue, aucune n'a été nécessaire)
+
+> **Le lot en une phrase** : `assiduite_hebdo` existait depuis C4-L1, les écrans depuis C4-L2, les
+> règles depuis C4-L2 — et **rien ne l'écrivait**. Son seul écrivain du dépôt était un **décor de
+> recette**. Elle a désormais un écrivain de production, `poserLaSemaineDAssiduite()`, et un
+> déclencheur hebdomadaire unique, `/api/assiduite/hebdo`.
+>
+> ⚠️ **Échéance : LA RENTRÉE.** *« Une semaine non comptée ne se rattrape pas. »*
+>
+> **La recette est un script, et c'est délibéré** — à l'écran, un semis et une mesure sont
+> **indiscernables** *(`assiduite_hebdo` n'a aucune colonne de provenance)* :
+>
+> ```
+> node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON \
+>      --import ./scripts/register-calibration-resolver.mjs \
+>      scripts/recette/assiduite-c4l13.mjs
+> ```
+>
+> **38 vérifications, 0 en échec** *(24/08, sandbox)*, base rendue à l'identique par requête
+> — `assiduite_hebdo` = 0, `exercices_depots` = 46, six interrupteurs à OFF.
+
+### Le « fait quand », clause par clause
+
+- [x] **C4L13-1 · « Une semaine réelle laisse une ligne par élève en base. »**
+  Semaine `2026-08-31` *(semaine pédagogique 1 du semestre non archivé, résolue à l'exécution —
+  jamais une date en dur)* : **17 lignes posées pour 17 élèves attendus**, et **17 lignes relues
+  PAR REQUÊTE**. ⭐ **Les 13 élèves sans aucun dépôt ont bien leur ligne, à zéro** — sans elles,
+  « une semaine sans assignation disparaîtrait du dénominateur au lieu d'y entrer », et le
+  pourcentage d'assiduité serait faux. ⚠️ **Et ces lignes à zéro se lisent « faite par
+  construction »** *(la complétion rend `null`, « et ce n'est pas 0 »)* : c'est la règle, pas un
+  défaut, mais la lecture est contre-intuitive. _(24/08.)_
+
+- [x] **C4L13-2 · « Ses deux agrégats se calculent depuis des dépôts RÉELS. »**
+  14 dépôts semés sur 4 instances *(la contrainte `uk_depots_eleve_exercice` impose une instance
+  par dépôt)*, avec les statuts qui font les cas : **17/17 lignes concordent avec un recompte
+  INDÉPENDANT des dépôts**, fait dans le script sans passer par le code éprouvé. Les quatre règles,
+  vues séparément : `v1_remis`/`retour_publie`/`vf_remis`/`clos` comptent au numérateur *(4/4)* ·
+  deux rendus sur quatre passent **sous** le seuil *(non faite)* · ⚠️ **`abandonne` RESTE au
+  dénominateur** *(3/4, faite)* — « un non-geste de l'ÉLÈVE, et l'assiduité mesure l'élève » · ⛔
+  **`retire` EN SORT** *(1/1)* — « une décision du professeur ». _(24/08.)_
+
+- [x] **C4L13-3 · ⭐ LE DÉPÔT DU DIMANCHE SOIR TOMBE DANS LA SEMAINE QUI S'ACHÈVE.**
+  Un dépôt à **2026-09-07T00:30:00Z**, c'est-à-dire **dimanche 20 h 30 à Toronto** : compté dans la
+  semaine `2026-08-31`, **pas dans la suivante**. Lu en UTC il aurait ouvert la semaine d'après — « à
+  l'heure exacte à laquelle les élèves déposent ». Le rattachement passe par `lundiDuCycle`, la
+  fonction canonique, et **aucune quatrième fonction de calendrier n'a été écrite**. _(24/08.)_
+
+- [x] **C4L13-4 · « Les écrans de C4-L2 cessent de lire un décor. »**
+  Prouvé **par la chaîne complète**, pas à l'œil : dépôts réels → déclencheur → ligne → **la vue SQL
+  `assiduite_hebdo_classe` relit ce que le cron a posé** *(3 classes, taux d'inactivité 0,1429 / 0 /
+  0)*. ⛔ La vue n'a **pas** été touchée, et son rollback n'a **pas** été rejoué. _(24/08.)_
+
+- [x] **C4L13-5 · ⛔⛔ LE DÉCOR DE C4-L2 NE PEUT PLUS ÊTRE PRIS POUR UNE MESURE — ses deux dents,
+  fermées et ÉPROUVÉES SUR UNE VRAIE MESURE.**
+  Épreuve : une mesure réelle posée là où le décor sème, **avec la signature exacte de l'ancien
+  `--retire`** *(`minutes_assignees: 50`, budget `45-60` — le budget réel d'un élève de tronc
+  commun)*.
+  · **Dent 1** — `--retire` supprimait `.eq('minutes_assignees', 50).eq('minutes_budget_plancher',
+  45)` : il **aurait effacé cette mesure**. Il consomme désormais un **registre des couples
+  (élève × semaine) réellement semés** *(`.routeur-c4l2-decor-registre.json`, gitignoré)* : **5
+  couples retirés nommément, la mesure INTACTE (6/7, minutes 50/45-60) après le retrait.**
+  · **Dent 2** — son en-tête affirmait « il n'écrit que des lignes neuves » quand son écriture était
+  un `upsert` : le semis lit d'abord et **n'insère que les couples absents**. Vérifié : *« 1 ligne
+  d'assiduité EXISTE DÉJÀ sur ces semaines : elle est une MESURE, pas du décor. Elle n'est pas
+  touchée. »*, et la mesure est **intacte après `--seme`**.
+  · **Et son `0.75` en dur** — le seul défaut du chantier assiduité sur ce point — **lit désormais
+  la configuration** *(« seuil lu : 0.75 »)*.
+  · ⚠️ **Sa preuve de retour à l'état d'avant ne compte plus toute la table** : « 0 ligne en base »
+  était un présupposé qui **cesse d'être vrai le jour de la rentrée**. Elle porte sur les couples
+  semés. _(24/08.)_
+
+### Ce qui est prouvé — pour ne pas le rejouer
+
+- [x] **C4L13-6 · La garde du cron, éprouvée PAR L'ÉCHEC, quatre fois.**
+  Sans `Bearer` → **401** · mauvais secret → **401** · en paramètre d'URL au lieu d'un en-tête →
+  **401** · ⭐ **`CRON_SECRET` absente de l'environnement → 401 aussi** : *un déploiement sans la
+  variable est FERMÉ, pas ouvert*. Puis **200** dès que le secret passe, le corps portant le bilan.
+  _(24/08.)_
+
+- [x] **C4L13-7 · ⭐⭐ LES MINUTES DE C4-L12 SURVIVENT AU CRON — les deux faits d'API, éprouvés en
+  base AVANT d'écrire une ligne de l'écrivain.**
+  *(1)* Une ligne dont les minutes sont remplies *(95 / 45-60, ce que `C4-L12` fera)*, puis le cron
+  repasse : **les minutes sont intactes** — une clé qu'on n'envoie pas garde sa valeur. *(2)* ⛔ **Un
+  `upsert` EN LOT unifie les colonnes de son tableau** : dans une épreuve dédiée, une ligne portant
+  `minutes_assignees` dans le même envoi qu'une ligne sans a mis **la seconde à `NULL`**. D'où la
+  garde `verifierLaCharge()`, qui **lève** si une clé de minutes entre dans la charge ou si les
+  jeux de clés d'un envoi sont hétérogènes — et **aucune autre ligne n'a été contaminée** au run.
+  _(24/08.)_
+
+- [x] **C4L13-8 · ⛔ LE RETRAIT NE RÉTROAGIT PAS — « un chiffre déjà montré ne bouge plus ».**
+  Élève à **2/4**, puis le professeur retire un exercice de cette semaine **après coup**, puis le
+  cron rejoue avec un « aujourd'hui » de la semaine suivante : **0 ligne réécrite, 17 figées**, le
+  bilan **dit pourquoi**, et **le chiffre est toujours 2/4**. ⭐ Et le pendant : une ligne
+  **manquante** se rattrape *(1 posée, 16 figées)* — une semaine jamais comptée n'a jamais été
+  montrée à personne. *La garde porte sur l'existence de la ligne, pas sur la date.* _(24/08.)_
+
+- [x] **C4L13-9 · L'idempotence, et l'horodatage.**
+  **Trois passages du déclencheur → toujours 17 lignes** *(`upsert` sur `(eleve_id, cycle_lundi)`)*.
+  ⚠️ **`updated_at` est posé par la charge** : la colonne n'a **aucun trigger** et son `default` ne
+  joue qu'à l'INSERT — sans cela on perdrait la seule trace qui dise que le cron est passé.
+  _(24/08.)_
+
+- [x] **C4L13-10 · ⛔⛔ DEUX ÉLÈVES SONT INSCRITS DANS DEUX CLASSES — constaté en base, et ce
+  n'était pas théorique.** 19 inscriptions actives → **17 élèves**. La clé primaire est
+  (élève × cycle), **pas** (élève × classe × cycle) : une population construite classe par classe
+  aurait envoyé **deux fois la même clé**, et Postgres refuse **tout le lot** — `21000 : ON CONFLICT
+  DO UPDATE command cannot affect row a second time` *(éprouvé)*. La population est dédoublonnée.
+  _(24/08.)_
+
+- [x] **C4L13-11 · La contrainte du lundi ISO refuse, et supabase-js NE LÈVE PAS.**
+  Un `cycle_lundi` au mardi → **`23514`, `assiduite_lundi_chk`**, rendu en `{ error }` **sans
+  exception**. C'est pourquoi le `{ error }` de l'écriture est lu et journalisé *(« COLLECTE
+  PERDUE »)*, sur le patron de `utils/cout-api.ts` — et **pas** sur celui du cron voisin, qui
+  ignore le sien. _(24/08.)_
+
+- [x] **C4L13-12 · ⚠️ LE BILAN DISTINGUE « RIEN À COMPTER » DE « PAS PASSÉ » — et il l'a prouvé sur
+  la base réelle, sans qu'on le provoque.** Appelée sur la vraie semaine écoulée *(`2026-08-17`)*,
+  la route rend `semaineDeTravail: false`, son **motif nommé**, et ⭐ **`depotsOrphelins: 46`** — les
+  46 dépôts réels de la sandbox ont tous été assignés **avant le début du semestre**, et **aucune
+  ligne ne les comptera jamais**. *Sans ce compteur, le silence aurait été indiscernable d'une
+  semaine légitimement vide* — et « une ligne absente se lit VERT à l'écran ». _(24/08.)_
+
+### Ce qui reste à jouer en recette — chacun avec sa condition de reprise NOMMÉE
+
+- [ ] **C4L13-13 · LE CRON VU TOURNER CHEZ L'HÉBERGEUR.** La route a été appelée **par la recette
+  elle-même** — cela prouve la route, **pas que Vercel l'appelle**. ⚠️ **Deux conditions, pas une** :
+  *(a)* **le premier déploiement** après ce commit, et *(b)* **`CRON_SECRET` posée dans Vercel** —
+  elle n'est **pas** dans `.env.example`, elle ne vit que là, et **sans elle la route rend 401 à
+  tout le monde, cron compris**. *Même réserve que `C4L11-C`, dont c'est le jumeau.*
+
+- [ ] **C4L13-14 · LE PREMIER LUNDI RÉEL DE LA RENTRÉE.** ⚠️ **C'est la seule vérification dont le
+  coût soit irréversible.** **Condition de reprise : le lundi 2026-09-07 après 09:30 UTC** — le
+  premier passage qui comptera une vraie semaine de travail *(`2026-08-31`, semaine pédagogique 1)*.
+  **Ce qu'il faut regarder** : `select count(*), min(cycle_lundi) from assiduite_hebdo` doit rendre
+  **une ligne par élève actif** sur `2026-08-31`. ⛔ **Le lundi 2026-08-31 lui-même ne posera RIEN**,
+  et c'est correct : sa semaine écoulée *(`2026-08-24`)* est hors calendrier.
+
+- [ ] **C4L13-15 · LE RETRAIT D'UN EXERCICE, JOUÉ À L'ÉCRAN.** La correction des deux lectures UTC
+  *(geste séparé, commit `6168049`)* est éprouvée **en calcul**, et `tsc` + `npm test` passent — mais
+  ⛔ **`app/prof/routeur/actions.ts` est un `'use server'`, et le résolveur de recette ne sait pas
+  résoudre son import de `next/cache`** : **son chargement n'est pas prouvé**. *C'est exactement la
+  classe de défaut d'`export type` dans un `'use server'`, que seule une action à l'écran révèle.*
+  **Condition de reprise : le premier passage sur `/prof/routeur?vue=assignation` avec un dépôt à
+  retirer.**
+
+- [ ] **C4L13-16 · LA SEMAINE EN COURS N'EST JAMAIS EN BASE — et l'écran la montre donc VERTE.**
+  Le déclencheur compte **la semaine écoulée** *(sans quoi il compterait une semaine vide chaque
+  semaine)*. Conséquence, qui **n'est pas un défaut de ce lot mais une lecture de C4-L2** : tant que
+  le lundi suivant n'est pas passé, la semaine courante n'a aucune ligne, et `chargerAssiduite`
+  remplace l'absence par `assignes: 0` → bande **verte**, tableau « — faite ». ⭐ **Le point d'entrée
+  sait déjà poser une semaine nommée** *(`poserLaSemaineDAssiduite(admin, fuseau, aujourdHui,
+  semaineLundi)`)* et recalcule sans réserve tant qu'elle est en cours. ⛔ **Mais ouvrir un second
+  déclencheur est interdit** : « deux crons sur une même clé fabriquent deux lignes ».
+  **Condition de reprise : une décision de Louis** — un bouton prof, ou rien.
+
+- [ ] **C4L13-17 · LE BONUS DE VACANCES RESTE DU CODE SANS EMPLOI.** `06-` §5 accorde « au plus une
+  semaine » au travail fait pendant les vacances ; le code existe et il est testé *(`assiduite.ts`
+  106-125)*. ⛔ **Il ne servira jamais tant que la collecte ne pose que des semaines de travail** —
+  ce qui est précisément ce qui rend le dénominateur juste **sans colonne `en_vacances`**, laquelle
+  n'existe pas. `enVacances` reste donc **câblé à `false` aux quatre sites** *(les trois d'origine,
+  plus la construction de la ligne)*. **Condition de reprise : une décision de conception** — soit
+  le bonus est abandonné, soit il faut **une colonne**, donc une migration. *Relevé, non tranché.*
+
+- [ ] **C4L13-18 · LA MIGRATION EN PROD.** ⚠️ **Sans objet pour ce lot — il n'écrit AUCUN SQL.**
+  Mais `c4_l1_schema.sql` *(la table, ses gardes, sa RLS, sa vue)* et `c4_l2_routeur.sql` *(les
+  seuils)* sont **joués en bac à sable seulement**. ⛔ **La collecte ne peut pas démarrer en prod
+  tant qu'ils n'y sont pas.** **Condition de reprise : C11b (RUNBOOK).**
