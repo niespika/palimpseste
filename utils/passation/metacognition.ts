@@ -33,6 +33,7 @@ import type { SupabaseClient } from '@supabase/supabase-js'
 import { INSTRUMENT_MONITORING } from '@/utils/chaine/derive/monitoring'
 import { COMPETENCES, type Competence } from '@/utils/chaine/types'
 import { cranEstUnCode, cranNumero } from '@/utils/cran'
+import { lireLesStatutsDeRecette } from '@/utils/statut-recette'
 
 type Admin = SupabaseClient
 
@@ -141,7 +142,7 @@ export async function lirePerimetre(admin: Admin, depotId: string): Promise<Peri
   const modes = (ex?.modes_par_competence ?? {}) as Record<string, unknown>
   const declarees = Object.keys(modes).filter(estUneCompetence)
 
-  const statuts = await lireStatutsRecette(admin, String(d.eleve_id))
+  const statuts = await lireStatutsRecette(admin)
   const evaluees = declarees.filter((c) => statuts[c] === 'evaluee')
 
   // La MÊME convention que la chaîne (`utils/chaine/chaine.ts`, `cibleDuRetour`),
@@ -204,19 +205,13 @@ function estUneCompetence(nom: string): nom is Competence {
   return (COMPETENCES as readonly string[]).includes(nom)
 }
 
-async function lireStatutsRecette(
-  admin: Admin, eleveId: string,
-): Promise<Record<string, string>> {
-  const { data, error } = await admin
-    .from('competences_niveaux').select('competence, statut_recette').eq('eleve_id', eleveId)
-  if (error) {
-    console.error(`[passation] statuts de recette illisibles (${eleveId}) — `
-      + `${error.code} ${error.message}. Aucune compétence n'est tenue pour évaluée.`)
-    return {}
-  }
-  const out: Record<string, string> = {}
-  for (const n of (data ?? []) as Array<{ competence: string; statut_recette: string }>) {
-    out[n.competence] = n.statut_recette
+// ⛔ LE STATUT N'EST PLUS PAR ÉLÈVE — il ne l'a jamais été en doctrine (`07-`
+//    §1.3 : « une compétence déclarée `evaluee` l'est POUR TOUTES LES CLASSES »).
+//    Le lire par élève laissait tout élève inscrit après la pose SANS AUCUNE
+//    ligne, donc hors du routeur, en silence. `utils/statut-recette.ts`.
+async function lireStatutsRecette(admin: Admin): Promise<Record<string, string>> {
+  const out: Record<string, string> = {
+    ...(await lireLesStatutsDeRecette(admin as never)),
   }
   return out
 }

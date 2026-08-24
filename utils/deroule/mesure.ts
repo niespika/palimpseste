@@ -46,6 +46,7 @@ import { elireLeRegistre, receptiviteRetrouvee, type SignauxRegistre } from '../
 import type { Registre } from '../chaine/types'
 import type { DepotMaison } from './depot'
 import type { Version } from './types'
+import { lireLeStatutDeRecette } from '@/utils/statut-recette'
 
 type Admin = ReturnType<typeof createAdminClient>
 
@@ -136,8 +137,11 @@ export async function registreDuRetour(
   }
 
   const [{ data: niveau }, { data: escalades }] = await Promise.all([
+    // ⛔ `statut_recette` ne se lit plus ici : il est GLOBAL (`07-` §1.3), et
+    //    par élève il retombait au défaut pour tout inscrit d'après la pose —
+    //    donc ni « se juger », ni palier au retour. `utils/statut-recette.ts`.
     admin.from('competences_niveaux')
-      .select('lettre, statut_recette')
+      .select('lettre')
       .eq('eleve_id', depot.eleve_id).eq('competence', cible).maybeSingle(),
     admin.from('competences_escalade')
       .select('observable, degre')
@@ -163,7 +167,7 @@ export async function registreDuRetour(
   )
 
   return elireLeRegistre({
-    statutRecette: (niveau?.statut_recette ?? 'mesuree_silencieusement') as never,
+    statutRecette: (await lireLeStatutDeRecette(admin as never, cible as never)) as never,
     brancheN2: enN2 ? 'reception' : null,
     receptiviteRetrouvee: retrouvee,
     palierCible: (niveau?.lettre ?? null) as never,

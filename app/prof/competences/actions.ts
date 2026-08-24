@@ -159,14 +159,16 @@ export async function poserStatut(_prec: Retour | null, form: FormData): Promise
     })
     if (error) return { ok: false, message: error.message }
     revalidatePath('/prof/competences')
-    // ⚠️ « 0 ligne » n'est pas un succès : le statut vit PAR ÉLÈVE (§1.3), et
-    // sans ligne il n'a aucun domicile. L'annoncer en vert contredirait le
-    // bandeau, qui affichera « aucun statut posé » au rafraîchissement.
+    // ⭐ LE RETOUR A CHANGÉ DE SENS avec le déménagement du statut : ce n'est
+    //    plus « combien de lignes d'élève », c'est À COMBIEN D'ÉLÈVES INSCRITS
+    //    il s'applique. ⛔ Et « 0 » N'EST PLUS UN ÉCHEC : le statut a toujours
+    //    son domicile — sa propre ligne —, même si aucun élève n'est encore
+    //    inscrit. C'était l'inverse avant, et c'était le défaut : sans élève
+    //    inscrit, le statut n'existait nulle part. (`c4_statut_recette_global.sql`)
     const n = Number(data ?? 0)
-    return n > 0
-      ? { ok: true, message: `Monitoring → ${statut} — ${n} ligne(s), ses deux sous-dimensions.` }
-      : { ok: false, message: 'Aucune ligne où poser ce statut : aucun élève n’a d’inscription '
-          + 'active. Le statut n’a pas de domicile tant qu’il n’y en a pas.' }
+    return { ok: true,
+      message: `Monitoring → ${statut}, ses deux sous-dimensions — ${n} élève(s) inscrit(s) `
+        + 'couvert(s), et tous ceux qui s’inscriront.' }
   }
 
   const { data, error } = await admin.rpc('poser_statut_recette', {
@@ -175,13 +177,12 @@ export async function poserStatut(_prec: Retour | null, form: FormData): Promise
   if (error) return { ok: false, message: error.message }
   revalidatePath('/prof/competences')
   revalidatePath('/prof/classes')
+  // ⭐ Même changement de sens, et même raison : le statut est GLOBAL, il a sa
+  //    ligne, et « 0 élève inscrit » ne l'empêche plus d'exister.
   const n = Number(data ?? 0)
-  return n > 0
-    ? { ok: true,
-      message: `${competence} → ${statut} — ${n} ligne(s) d'élève, la date posée dans le même geste.` }
-    : { ok: false,
-      message: 'Aucune ligne où poser ce statut : aucun élève n’a d’inscription active. '
-        + 'Le statut vit par élève, et sans ligne il n’a pas de domicile.' }
+  return { ok: true,
+    message: `${competence} → ${statut}, la date posée dans le même geste — ${n} élève(s) `
+      + 'inscrit(s) couvert(s), et tous ceux qui s’inscriront.' }
 }
 
 /**

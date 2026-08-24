@@ -64,10 +64,16 @@ export default async function LieuDesCompetences() {
     lire<Ligne>('les fiches déposées', admin.from('competences_fiches').select('*')),
     lire<Ligne>('la correspondance',
       admin.from('competences_correspondance').select('competence, observable_code, fiche_version')),
+    // ⛔ LES DEUX LECTURES VIENNENT DE LA MÊME TABLE DEPUIS LE DÉMÉNAGEMENT :
+    //    le statut est GLOBAL (`07-` §1.3), et le Monitoring y tient UNE ligne
+    //    pour ses DEUX sous-dimensions (`07-` §1.4). Les colonnes par élève
+    //    sont DORMANTES — la base le dit dans leur commentaire.
     lire<Ligne>('les statuts de recette',
-      admin.from('competences_niveaux').select('competence, statut_recette, statut_recette_pose_le')),
+      admin.from('competences_statut_recette')
+        .select('competence, statut_recette, statut_recette_pose_le')),
     lire<Ligne>('le Monitoring',
-      admin.from('monitoring_niveaux').select('sous_dimension, statut_recette')),
+      admin.from('competences_statut_recette')
+        .select('competence, statut_recette').eq('competence', 'monitoring')),
     lire<Ligne>('les classes', admin.from('classes').select('id, nom, niveau, filiere').order('nom')),
     lire<Ligne>('l’activation par classe',
       admin.from('competences_actives_par_classe').select('classe_id, competence, active')),
@@ -88,9 +94,10 @@ export default async function LieuDesCompetences() {
     versionCorr.set(c.competence as string, c.fiche_version as string)
   }
 
-  // Le statut vit PAR ÉLÈVE (§1.3) et « aucune liste de compétences n'est tenue
-  // ici » : on le LIT sur les lignes, on ne le stocke pas une seconde fois.
-  // Un désaccord entre lignes se voit plutôt qu'il ne se masque.
+  // ⭐ LE STATUT EST GLOBAL — une ligne par compétence (`07-` §1.3, et la
+  //    migration `c4_statut_recette_global.sql`). Ce qui s'affiche à côté n'est
+  //    donc plus un compte de lignes mais LE NOMBRE D'ÉLÈVES QU'IL COUVRE, et
+  //    il en couvrira d'autres sans qu'on repose quoi que ce soit.
   const etat = new Map<string, { statuts: Set<string>; date: string | null; lignes: number }>()
   for (const n of niveaux ?? []) {
     const e = etat.get(n.competence as string)
@@ -105,6 +112,24 @@ export default async function LieuDesCompetences() {
     statuts: new Set((monitoring ?? []).map((m) => m.statut_recette as string)),
     lignes: (monitoring ?? []).length,
   }
+
+  // Combien d'ÉLÈVES ce statut couvre aujourd'hui — la RPC rend le même nombre,
+  // et les deux doivent s'accorder à l'écran.
+  // ⚠️ COMPTER LES LIGNES DONNERAIT UN AUTRE CHIFFRE : un élève inscrit dans
+  //    DEUX classes porte DEUX inscriptions. Vu sur pièce — 17 élèves, 19
+  //    inscriptions —, et l'écran affichait alors 19 quand la RPC disait 17.
+  //    La RPC fait `count(distinct eleve_id)` ; on fait pareil.
+  // ⚠️⚠️ Et on PAGINE : supabase-js plafonne toute réponse à 1000 lignes sans
+  //    rien signaler.
+  const eleves = new Set<string>()
+  for (let de = 0; ; de += 1000) {
+    const { data, error } = await admin.from('inscriptions')
+      .select('eleve_id').eq('statut', 'active').order('eleve_id').range(de, de + 999)
+    if (error || !data?.length) break
+    for (const i of data as unknown as Array<{ eleve_id: string }>) eleves.add(i.eleve_id)
+    if (data.length < 1000) break
+  }
+  const nbEleves = eleves.size
 
   const optOut = new Map<string, boolean>()
   for (const a of actives ?? []) {
@@ -190,7 +215,7 @@ export default async function LieuDesCompetences() {
                 blocsCorrespondance={nbCorr.get(c) ?? 0}
                 versionCorrespondance={versionCorr.get(c) ?? null}
                 statutCourant={e ? [...e.statuts] : []}
-                lignesEleves={e?.lignes ?? 0}
+                lignesEleves={nbEleves ?? 0}
                 statutPoseLe={e?.date
                   ? formatJour(e.date, { day: 'numeric', month: 'short', year: 'numeric' })
                   : null}
@@ -221,7 +246,7 @@ export default async function LieuDesCompetences() {
             blocsCorrespondance={0}
             versionCorrespondance={null}
             statutCourant={[...etatMonitoring.statuts]}
-            lignesEleves={etatMonitoring.lignes}
+            lignesEleves={nbEleves ?? 0}
             statutPoseLe={null}
             avertissement={
               "L'instrument n'a pas de banc avant l'année qui le sert : aucun banc ne peut le "

@@ -16,6 +16,7 @@ import 'server-only'
 
 import { createAdminClient } from '@/utils/supabase/admin'
 import { cranEstUnCode, cranNumero } from '@/utils/cran'
+import { lireLesStatutsDeRecette } from '@/utils/statut-recette'
 import { formeDepuisLePlan } from './modele'
 import type { Competence, Forme, Grain, Lieu, StatutRecette } from './types'
 import { COMPETENCES } from './types'
@@ -308,7 +309,7 @@ export async function lireContexte(admin: Admin, depotId: string): Promise<Conte
     })
   }
 
-  const statutsRecette = await lireStatutsRecette(admin, depot.eleve_id)
+  const statutsRecette = await lireStatutsRecette(admin)
 
   const { data: profilBrut } = await admin
     .from('profiles').select('exception_orthographe').eq('id', depot.eleve_id).maybeSingle()
@@ -381,14 +382,15 @@ export async function lireContexte(admin: Admin, depotId: string): Promise<Conte
  * au-delà de ces deux phrases.
  */
 export async function lireStatutsRecette(
-  admin: Admin, eleveId: string,
+  admin: Admin,
 ): Promise<Record<Competence, StatutRecette>> {
   const { data: fiches } = await admin.from('competences_fiches').select('competence')
   const deposees = new Set(((fiches ?? []) as unknown as Array<{ competence: string }>).map((f) => f.competence))
-  const { data: niveaux } = await admin
-    .from('competences_niveaux').select('competence, statut_recette').eq('eleve_id', eleveId)
-  const poses = new Map(((niveaux ?? []) as unknown as Array<{ competence: string; statut_recette: string }>)
-    .map((n) => [n.competence, n.statut_recette as StatutRecette]))
+  // ⛔ LE STATUT SE LIT À SA SOURCE UNIQUE, jamais par élève : il est global
+  //    (`07-` §1.3), et le ranger par élève laissait les inscrits d'après la
+  //    pose sans aucune ligne. `utils/statut-recette.ts`.
+  const globaux = await lireLesStatutsDeRecette(admin as never)
+  const poses = new Map(Object.entries(globaux) as Array<[string, StatutRecette]>)
   const out = {} as Record<Competence, StatutRecette>
   for (const c of COMPETENCES) {
     out[c] = poses.get(c) ?? (deposees.has(c) ? 'mesuree_silencieusement' : 'differee')

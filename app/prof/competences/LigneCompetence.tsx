@@ -69,13 +69,19 @@ export default function LigneCompetence({
       </p>
 
       <p className="font-ui text-xs text-muet">
+        {/* ⭐ LE STATUT EST GLOBAL, et le libellé le dit maintenant. Il affichait
+            « N ligne(s) d’élève » du temps où il était stocké par élève — ce qui
+            laissait croire qu’un élève de plus demanderait un geste de plus.
+            C’était vrai, et c’était le défaut : les inscrits d’après la pose
+            n’avaient aucune ligne. (`utils/statut-recette.ts`) */}
         {statutCourant.length === 0
-          ? 'Aucun statut posé — aucune ligne d’élève n’existe encore.'
+          ? 'Aucun statut posé.'
           : statutCourant.length === 1
-            ? <>Statut : <strong>{statutCourant[0]}</strong> · {lignesEleves} ligne(s) d’élève
+            ? <>Statut : <strong>{statutCourant[0]}</strong> · s’applique aux
+              {' '}{lignesEleves} élève(s) inscrit(s) <em>et à tous ceux qui s’inscriront</em>
               {statutPoseLe ? <> · posé le {statutPoseLe}</> : <> · <span className="text-attention">
                 sans date</span></>}</>
-            : <span className="text-retard">Les lignes d’élève ne portent pas le même statut :
+            : <span className="text-retard">Deux statuts pour une seule compétence :
               {' '}{statutCourant.join(', ')} — à reposer.</span>}
       </p>
 

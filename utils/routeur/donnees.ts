@@ -28,6 +28,8 @@ import type { InscriptionActive, ReglageBudget } from './budget'
 import type { DecisionLue } from './profil'
 import type { Competence, Mode, Palier, Parcours } from './types'
 import { SEUILS_DE_DEMARRAGE, type SeuilsAssiduite } from './assiduite'
+import { lireLesStatutsAvecDate, STATUT_PAR_DEFAUT } from '@/utils/statut-recette'
+import { COMPETENCES } from '@/utils/chaine/types'
 
 /** Le plafond que PostgREST applique sans le dire. */
 const PAGE = 1000
@@ -137,7 +139,7 @@ export async function lireLesMesures(admin: Admin, eleveId: string): Promise<Mes
 interface LigneNiveau {
   competence: string; lettre: string | null; ancre_derniere_date: string | null
   ancre_derniere_valeur: string | null; lettre_initiale: string | null
-  statut_recette: string; statut_recette_pose_le: string | null; profil_provisoire: boolean
+  profil_provisoire: boolean
 }
 
 export interface NiveauLu extends EtatNiveau { competence: Competence; statutRecette: string }
@@ -146,20 +148,43 @@ export interface NiveauLu extends EtatNiveau { competence: Competence; statutRec
 export async function lireLesNiveaux(admin: Admin, eleveId: string): Promise<NiveauLu[]> {
   const lignes = await lirePagine<LigneNiveau>(admin, 'competences_niveaux',
     'competence, lettre, ancre_derniere_date, ancre_derniere_valeur, lettre_initiale, '
-    + 'statut_recette, statut_recette_pose_le, profil_provisoire',
+    + 'profil_provisoire',
     ['competence'], (q) => (q as never as { eq: (a: string, b: string) => unknown })
       .eq('eleve_id', eleveId))
+  // ⛔ LE STATUT ET SA DATE NE VIENNENT PLUS D'ICI. Ils sont GLOBAUX (`07-`
+  //    §1.3), et les lire par élève laissait tout inscrit d'après la pose sans
+  //    ligne — donc, cette fonction ne rendant QUE les lignes existantes, avec
+  //    zéro compétence, et le routeur sans rien à cibler. `utils/statut-recette.ts`.
+  const globaux = await lireLesStatutsAvecDate(admin as never)
+  const parCompetence = new Map(globaux.map((g) => [g.competence as string, g]))
+  const parEleve = new Map(lignes.map((l) => [l.competence, l]))
   const palier = (v: string | null) => (v && PALIERS_VALIDES.has(v) ? (v as Palier) : null)
-  return lignes.map((l) => ({
-    competence: l.competence as Competence,
-    lettre: palier(l.lettre),
-    ancreDerniereDate: l.ancre_derniere_date,
-    ancreDerniereValeur: palier(l.ancre_derniere_valeur),
-    lettreInitiale: palier(l.lettre_initiale),
-    profilProvisoire: !!l.profil_provisoire,
-    statutRecettePoseLe: l.statut_recette_pose_le,
-    statutRecette: l.statut_recette,
-  }))
+
+  // ⛔⛔ ON ÉNUMÈRE LES COMPÉTENCES, PAS LES LIGNES TROUVÉES — et c'est la
+  //    moitié du correctif que la migration seule ne faisait pas.
+  //    Cette fonction rendait `lignes.map(...)` : un élève SANS ligne rendait
+  //    un tableau VIDE, et le routeur n'avait alors AUCUNE compétence à
+  //    cibler — pas même une compétence « non évaluée » qu'il aurait pu
+  //    écarter en le disant. Déplacer le statut ne suffisait pas : il fallait
+  //    aussi que l'ABSENCE D'ÉTAT PAR ÉLÈVE cesse de valoir absence de
+  //    compétence. Un élève inscrit en septembre n'a évidemment aucune lettre
+  //    ni aucune ancre — c'est vrai, et ça se dit par des `null`, jamais par
+  //    une liste vide. (`c4_statut_recette_global.sql`)
+  return COMPETENCES.map((c) => {
+    const l = parEleve.get(c)
+    return {
+      competence: c as Competence,
+      lettre: palier(l?.lettre ?? null),
+      ancreDerniereDate: l?.ancre_derniere_date ?? null,
+      ancreDerniereValeur: palier(l?.ancre_derniere_valeur ?? null),
+      lettreInitiale: palier(l?.lettre_initiale ?? null),
+      // `profil_provisoire` vaut `true` par défaut en base : un élève sans
+      // ligne n'a évidemment pas de profil arrêté.
+      profilProvisoire: l ? !!l.profil_provisoire : true,
+      statutRecettePoseLe: parCompetence.get(c)?.poseLe ?? null,
+      statutRecette: parCompetence.get(c)?.statut ?? STATUT_PAR_DEFAUT,
+    }
+  })
 }
 
 interface LigneEscalade {
