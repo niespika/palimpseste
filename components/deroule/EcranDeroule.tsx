@@ -73,14 +73,27 @@ export function EcranDeroule({ vue }: { vue: VueDuDeroule }) {
       <Fil vue={vue} />
 
       {/* ── TEMPS 1 — PRÉPARER ─────────────────────────────────────────── */}
+      {/* ⚠️ SUR UNE PAIRE, PAS DE CONSIGNE EN EN-TÊTE — trouvé au smoke élève du
+          24/08. « Pour une paire il y a DEUX consignes, une pour chaque
+          exercice » (Louis) : chaque cas porte déjà la sienne, plus bas. Les
+          empiler ici les servait toutes les deux hors de leur cas — et avant le
+          correctif d'`enTexte`, sous forme de JSON brut. On garde la section
+          pour la durée, qui vaut pour la paire entière. */}
       <section className="rounded-lg border border-bordure bg-surface p-4">
         <h2 className="font-marque text-sm uppercase tracking-wide text-muet-clair">
-          La consigne
+          {vue.estUnePaire ? 'Deux cas, l’un après l’autre' : 'La consigne'}
         </h2>
-        {/* ⭐ Le balisage SE REND : « le gras est du SENS » (piège 36). */}
-        <p className="mt-2 font-corps text-base leading-relaxed text-encre">
-          <TexteBalise jetons={vue.consigne} />
-        </p>
+        {vue.estUnePaire ? (
+          <p className="mt-2 font-corps text-base leading-relaxed text-encre">
+            Tu traites le premier cas, tu reçois sa correction, puis tu passes au second.
+            {' '}<strong>Chacun porte sa propre consigne.</strong>
+          </p>
+        ) : (
+          /* ⭐ Le balisage SE REND : « le gras est du SENS » (piège 36). */
+          <p className="mt-2 font-corps text-base leading-relaxed text-encre">
+            <TexteBalise jetons={vue.consigne} />
+          </p>
+        )}
         {vue.dureeIndicativeMin !== null && (
           <p className="mt-2 text-xs text-muet">
             Durée indicative : {vue.dureeIndicativeMin} minutes.

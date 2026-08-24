@@ -123,6 +123,44 @@ test('la paire avance cas 1 → crédence 1 → correction → cas 2 → créden
     'le cas du transfert reçoit LA MÊME CORRECTION que le premier — décision de Louis, 23/08')
 })
 
+test('⭐⭐ AUX CRANS À CANDIDATS, LA CRÉDENCE EST LA RÉPONSE — sans quoi la correction ne sort JAMAIS', () => {
+  // Le défaut trouvé au smoke élève du 24/08, et qu'aucun test ne voyait : ces
+  // tests-ci éprouvaient la fonction PURE avec des réponses fabriquées, quand le
+  // défaut était dans l'APPEL. Aux crans 1 et 3 l'élève NE RÉDIGE PAS — le
+  // jugement est algorithmique —, donc `texte_v1`/`texte_vf` restent `null`.
+  const AUCUN_TEXTE = [null, null]
+
+  // ⛔ AVANT : sans le drapeau, on reste bloqué à `cas_1` POUR TOUJOURS, même
+  //    avec la crédence donnée. C'est ce qui privait l'élève de sa correction.
+  assert.equal(etapeDeLaPaire(AUCUN_TEXTE, [{ cas: 1 }, null]), 'cas_1',
+    'sans le drapeau, la crédence ne fait pas avancer : c’est le bug du 24/08')
+
+  // ✅ APRÈS : la crédence tient lieu de réponse, et la paire avance.
+  assert.equal(etapeDeLaPaire(AUCUN_TEXTE, [null, null], true), 'cas_1')
+  assert.equal(etapeDeLaPaire(AUCUN_TEXTE, [{ cas: 1 }, null], true), 'correction',
+    'la crédence du cas 1 donnée ⇒ sa correction est due, et le cas 2 est offert')
+  assert.equal(etapeDeLaPaire(AUCUN_TEXTE, [{ cas: 1 }, { cas: 2 }], true), 'correction_2',
+    'les deux crédences données ⇒ le cas du transfert reçoit la sienne')
+
+  // ⚠️ Et le texte rédigé n'entre PLUS en compte quand la crédence est la
+  //    réponse : un `texte_v1` qui traînerait ne doit pas faire sauter d'étape.
+  assert.equal(etapeDeLaPaire(['un texte qui traîne', null], [null, null], true), 'cas_1',
+    'la crédence commande seule — le texte ne fait pas avancer')
+})
+
+test('aux crans SANS candidats, rien ne change — l’élève rédige, et c’est sa réponse', () => {
+  // Le défaut réparé ne doit pas déborder : au cran 4 (`diagnostic_nomme`) et
+  // aux autres, l'élève écrit, et au régime `par_paires` `texte_v1` porte sa
+  // réponse au cas 1, `texte_vf` celle au cas 2.
+  assert.equal(etapeDeLaPaire([null, null], [{ cas: 1 }, null], false), 'cas_1',
+    'une crédence sans réponse écrite ne fait pas avancer un cran qui demande d’écrire')
+  assert.equal(etapeDeLaPaire(['une réponse', null], [null, null], false), 'credence_1')
+  assert.equal(etapeDeLaPaire(['une réponse', null], [{ cas: 1 }, null], false), 'correction')
+  // ⭐ Le défaut par défaut est le comportement d'AVANT : le drapeau est opt-in.
+  assert.equal(etapeDeLaPaire(['une réponse', null], [{ cas: 1 }, null]), 'correction',
+    'sans troisième argument, le comportement est inchangé')
+})
+
 test('⭐ le sixième état vient APRÈS la crédence 2, jamais avant', () => {
   // La même règle que le troisième état : « la correction ne se sert qu'une fois
   // la crédence donnée — sans quoi l'élève déclarerait sa sûreté en connaissant

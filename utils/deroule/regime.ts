@@ -191,13 +191,38 @@ export const ETAPES_PAIRE: EtapePaire[] = [
  * L'étape courante d'une paire, lue sur ce que l'élève a déjà déposé.
  * @param reponses les réponses déposées, une par cas, dans l'ordre.
  * @param credences les crédences déjà données, une par cas.
+ * @param laCredenceEstLaReponse aux crans à CANDIDATS, l'élève ne rédige pas :
+ *        répartir ses jetons EST sa réponse. Voir ci-dessous.
+ *
+ * ⭐⭐ AUX CRANS À CANDIDATS, LA CRÉDENCE EST LA RÉPONSE — trouvé au smoke élève
+ *    du 24/08, tranché par Louis le jour même : « la réponse c'est la crédence,
+ *    il n'y a pas de retour IA, c'est juste de l'algo ».
+ *
+ * ⛔ CE QUE CE PARAMÈTRE RÉPARE. Aux crans 1 et 3 le jugement est algorithmique
+ *    et l'élève ne rédige RIEN : `texte_v1` et `texte_vf` restent `null` pour
+ *    toujours. Sans ce drapeau, `repondu(0)` était donc toujours faux, la
+ *    fonction s'arrêtait à sa PREMIÈRE ligne — avant même de regarder la
+ *    crédence —, l'étape ne dépassait jamais `cas_1`, et **la correction
+ *    n'était JAMAIS servie** : un élève pouvait poser ses cent jetons sur un
+ *    mauvais candidat et ne rien recevoir en retour.
+ *
+ * ⚠️ Aux autres crans, rien ne change : l'élève écrit, et au régime `par_paires`
+ *    `texte_v1` porte sa réponse au cas 1, `texte_vf` celle au cas 2.
+ *
+ * ⚠️ Quand la crédence EST la réponse, `credence_1` et `credence_2` deviennent
+ *    inatteignables, et c'est JUSTE : il n'y a pas d'étape de réponse distincte
+ *    de la crédence. Aucun écran ne lit ces états — `etapePaire` ne sert qu'à
+ *    `correctionDue`.
  */
 export function etapeDeLaPaire(
   reponses: ReadonlyArray<string | null>,
   credences: ReadonlyArray<unknown>,
+  laCredenceEstLaReponse = false,
 ): EtapePaire {
-  const repondu = (i: number) => (reponses[i] ?? '').trim() !== ''
   const credencee = (i: number) => credences[i] != null
+  const repondu = (i: number) => (laCredenceEstLaReponse
+    ? credencee(i)
+    : (reponses[i] ?? '').trim() !== '')
 
   if (!repondu(0)) return 'cas_1'
   if (!credencee(0)) return 'credence_1'

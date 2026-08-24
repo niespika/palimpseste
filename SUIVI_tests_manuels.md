@@ -5178,7 +5178,7 @@ manifeste, mission, « fait quand » — sont **identiques au mot près** à ceu
   **ne porte pas** *(pièges 16-17)* ; et la variance du fournisseur reste du même ordre que l'effet.
   ⛔ **L'extrapolation à SIX chaînes reste à faire** — aucune instance du décor ne mesure six
   compétences. *(Détail à `C4L10SY-18`.)*
-- [ ] **C4L7-5 · ⛔⛔ LA VOIE DE LA MAISON VA JUSQU'AU RETOUR FINAL — ET S'ARRÊTE LÀ. LA CLAUSE
+- [x] **C4L7-5 · ⛔⛔ LA VOIE DE LA MAISON VA JUSQU'AU RETOUR FINAL — ET S'ARRÊTE LÀ. LA CLAUSE
   « RETOUR FINAL **LU** » N'EST PAS ATTEIGNABLE.** **47 contrôles, 0 échec**, et tout le flux passe :
   instance conçue à la fabrique → assignation *(`origine: 'prof'`)* → déroulé → **les trois gestes de
   la remise dans l'ordre** *(remise prématurée REFUSÉE ; condition hors des trois valeurs REFUSÉE)* →
@@ -5190,7 +5190,7 @@ manifeste, mission, « fait quand » — sont **identiques au mot près** à ceu
 
 ### Ce que la couture a fait apparaître — défauts relevés, non corrigés
 
-- [ ] **C4L7-6 · ⛔⛔ RIEN NE PEUT PUBLIER UN RETOUR DE LA MAISON : IL EST ENGENDRÉ, PUIS
+- [x] **C4L7-6 · ⛔⛔ RIEN NE PEUT PUBLIER UN RETOUR DE LA MAISON : IL EST ENGENDRÉ, PUIS
   STRUCTURELLEMENT INVISIBLE À L'ÉLÈVE.** *Le défaut central de ce lot, et aucun des dix qui le
   précèdent ne pouvait le voir : chacun est juste à sa frontière, et le trou est **entre** eux.*
   **Établi sur pièces, exhaustivement** : *(a)* la chaîne **n'écrit jamais** `published_at` — aucune
@@ -5230,7 +5230,20 @@ manifeste, mission, « fait quand » — sont **identiques au mot près** à ceu
   ⚠️ **LE GARDE-FOU À NE PAS OUBLIER À L'ÉCRITURE** : conditionner sur **`lieu = maison`**. En
   classe, `publier()` **est** la case que coche le professeur *(`app/passation/actions.ts:159`)* ;
   un automatisme non conditionné court-circuiterait son geste.
-  **Condition de reprise : le lot qui porte la décision — il n'a pas encore de numéro au `07-` §2.**
+  ✅✅ **POSÉE ET ÉPROUVÉE LE 24/08 — LE DÉFAUT CENTRAL DE C4-L7 EST FERMÉ.** `ecrireRetour`
+  *(`utils/chaine/chaine.ts`)* reçoit désormais le `lieu` et pose `published_at` **aux deux
+  moments** quand il vaut `maison`. ⛔ **Et seulement là** : en classe, `published_at` **EST** la
+  case que coche le professeur — publier automatiquement lui retirerait le contrôle de ce que ses
+  élèves lisent.
+  ⭐⭐ **PROUVÉ SUR UN VRAI RUN, PAS PAR LECTURE** : copie remise à la maison *(cran 2, Elo)*, les
+  trois gestes de la remise dans l'ordre, chaîne déclenchée, **retour engendré en 30 s**, et en
+  base `published_at = 14:09:24`. ⭐ **PUIS VU À L'ÉCRAN DE L'ÉLÈVE** — « TON RETOUR · Reçu le
+  24 août à 10 h 09 », un point **Réussi** et un point **À travailler**, chacun avec sa citation et
+  son bouton « Je ne suis pas d'accord ». ⭐⭐ **ET `lu_at` EST ENFIN ATTEIGNABLE** : « J'ai lu mon
+  retour » → « Lecture validée. » → `lu_at = 14:10:00` en base. *La clause du « fait quand » de
+  C4-L7 — « retour final LU » — cesse d'être insatisfaisable.*
+  ⭐ **CONTRE-ÉPREUVE FAITE** : sur la voie **classe** *(le décor de ce lot)*, `published_at` reste
+  celui que le professeur a posé — l'automatisme ne déborde pas.
 - [ ] **C4L7-7 · ⚠️ `bilan.appels` PEUT SOUS-COMPTER — 7 ANNONCÉS, 8 LIGNES EN BASE.** Sur le
   **premier** des deux tours de la voie classe, le dépôt portait **8 lignes d'`api_couts`** quand
   `bilan.appels` disait **7** — un `p1` d'`expression` de plus, journalisé **après** tous les `p2`,
@@ -5455,7 +5468,7 @@ Tout ce qui suit est donc la face **professeur**, et **les smokes élève resten
   indicative — l'éprouver demande de reculer `ouvert_at`, donc d'écrire sur un dépôt)* et la
   **crédence au doigt sur téléphone** *(un cran 2 n'a pas de crédence, et le tactile n'est pas
   éprouvable ici)*.
-- [ ] **C4L14-12 · ⛔⛔ INJOUABLE — ET LE SMOKE A TROUVÉ POURQUOI. LA CORRECTION À TROIS VOLETS NE
+- [x] **C4L14-12 · ⛔⛔ INJOUABLE — ET LE SMOKE A TROUVÉ POURQUOI. LA CORRECTION À TROIS VOLETS NE
   PEUT PAS S'AFFICHER SUR UN CRAN À CANDIDATS EN PAIRE.** *Voir `C4L7-15`. L'entrée reste ouverte,
   et sa condition de reprise n'est plus « un smoke » mais **un correctif**.*
 
@@ -5477,7 +5490,7 @@ Tout ce qui suit est donc la face **professeur**, et **les smokes élève resten
   ⭐ **Le ré-export n'avait AUCUN importeur** *(balayage de `app/` et `utils/`)* : il est né le 22/08
   avec C4-L3 *(`04604df`)* et n'a jamais servi. **Retiré, et la leçon écrite à sa place** ; la
   crédence s'enregistre depuis. *Le type se lit à sa source, `@/utils/deroule/types`.*
-- [ ] **C4L7-15 · ⛔⛔ SUR UN CRAN À CANDIDATS EN PAIRE, L'AUTOMATE NE DÉPASSE JAMAIS `cas_1` — LA
+- [x] **C4L7-15 · ⛔⛔ SUR UN CRAN À CANDIDATS EN PAIRE, L'AUTOMATE NE DÉPASSE JAMAIS `cas_1` — LA
   CORRECTION N'EST DONC JAMAIS SERVIE.** *C'est ce qui rend `C4L14-12` injouable, et ce n'est pas un
   manque de décor : c'est le code.*
   **Sur pièces** : `utils/deroule/vue.ts:282` appelle
@@ -5494,10 +5507,22 @@ Tout ce qui suit est donc la face **professeur**, et **les smokes élève resten
   ⚠️ **POURQUOI LES 20 TESTS DE `correction.test.ts` SONT VERTS** : ils éprouvent la fonction PURE,
   avec des réponses fabriquées. **Le défaut est dans l'APPEL, pas dans la fonction** — c'est
   exactement l'angle mort qu'un test unitaire ne couvre pas et qu'un smoke trouve.
-  ⛔ **NON CORRIGÉ — c'est une décision** : il faut arrêter ce qui tient lieu de « réponse à un cas »
-  aux crans à candidats *(la crédence elle-même, très probablement)*, et cela touche le code de
-  C4-L14. **Condition de reprise : la décision de Louis, puis le lot qui la porte.**
-- [ ] **C4L7-16 · ⚠️ LA CONSIGNE D'UNE PAIRE EST SERVIE À L'ÉLÈVE COMME DU JSON BRUT — ET À LA
+  ✅✅ **TRANCHÉ ET CORRIGÉ LE 24/08.** Décision de Louis : *« la réponse c'est la crédence, il n'y a
+  pas de retour IA, c'est juste de l'algo »*. `etapeDeLaPaire` reçoit un troisième argument,
+  `laCredenceEstLaReponse`, que `vue.ts` lève sur les crans à candidats — et là, `repondu(i)`
+  **est** `credencee(i)`. ⚠️ `credence_1` et `credence_2` deviennent alors inatteignables, et
+  **c'est juste** : à ces crans il n'y a pas d'étape de réponse distincte de la crédence. *Vérifié
+  avant de toucher : **aucun écran ne lit `etapePaire`** — il ne sert qu'à `correctionDue`.*
+  ⭐⭐ **ÉPROUVÉ À L'ÉCRAN DE L'ÉLÈVE, SUR LES DEUX CAS** : crédence donnée → **la correction
+  sort**. Cas 1 : « CE QU'IL FALLAIT VOIR » + « POURQUOI C'EST CELLE-LÀ ». Cas 2, avec des
+  distracteurs au format de l'import : **LES TROIS VOLETS**, dont « CE QUE TU AVAIS RETENU — “Le
+  plan est annoncé deux fois” » et sa réfutation. **`C4L14-12` est donc COCHÉ par la même
+  épreuve**, et **le second cas reçoit bien sa correction** — la décision de Louis du 23/08, vue à
+  l'œil pour la première fois.
+  ⭐ **Six tests neufs le tiennent**, dont celui qui rejoue le bug : sans le drapeau, une crédence
+  donnée laisse l'étape à `cas_1`. *Le drapeau est opt-in — les crans où l'élève rédige ne bougent
+  pas.*
+- [x] **C4L7-16 · ⚠️ LA CONSIGNE D'UNE PAIRE EST SERVIE À L'ÉLÈVE COMME DU JSON BRUT — ET À LA
   CHAÎNE AUSSI.** L'en-tête « LA CONSIGNE » de l'écran élève affiche, littéralement :
   `["« Parmi ces quatre, … »","« Parmi ces quatre, … »"]`.
   **La cause** : `enTexte()` *(`utils/chaine/contexte.ts:476`)* connaît **trois** formes — une
@@ -5508,7 +5533,18 @@ Tout ce qui suit est donc la face **professeur**, et **les smokes élève resten
   `ctx.consigne` est ce que la chaîne sert au modèle qui écrit le retour. **Le modèle reçoit la même
   chose que l'élève.** ⭐ *Les consignes PAR CAS, elles, s'affichent correctement plus bas — c'est le
   bloc d'en-tête qui est fautif.* **Non corrigé** : la forme à servir *(la consigne du cas courant ?
-  les deux, nommées ?)* est un choix d'écran, pas une évidence.
+  ✅✅ **CORRIGÉ LE 24/08, EN DEUX ENDROITS.** Louis : *« pour une paire il y a deux consignes, une
+  pour chaque exercice — comme ils sont conçus en paires, ça ne devrait poser aucun problème »*.
+  **La donnée était bonne ; c'étaient la lecture et l'affichage.**
+  *(a)* **`enTexte` connaît désormais le TABLEAU NU** et rend les deux consignes **nommées** —
+  « Cas 1 — … / Cas 2 — … », jamais collées à plat : *un modèle qui reçoit deux énoncés bout à bout
+  ne sait plus lequel il juge*. ⭐ **Extrait dans un module PUR, `utils/chaine/consigne.ts`** —
+  `contexte.ts` porte `import 'server-only'` et n'était donc pas testable *(patron du dépôt, cf.
+  `utils/cout-usage.ts`)* : **six tests neufs**, dont la paire dégénérée à un seul cas, le tableau
+  vide, et le repli qui ne sert plus qu'à ce qui n'est pas une consigne.
+  *(b)* **L'écran ne répète plus les deux consignes en en-tête** : sur une paire il dit « Deux cas,
+  l'un après l'autre — chacun porte sa propre consigne », et la durée reste, qui vaut pour la paire
+  entière. ⭐ **Vérifié à l'écran : plus aucun `["` visible.**
 
 - [ ] **C4L7-12 · RAPPELS — CE QUI EST DÛ ET QUI N'EST PAS DE CE LOT.** `C4L11-C` *(le cron vu
   tourner chez l'hébergeur — **condition : le premier déploiement**, pas moi ; C4-L7 a appelé la

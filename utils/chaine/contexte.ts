@@ -18,6 +18,7 @@ import { createAdminClient } from '@/utils/supabase/admin'
 import { cranEstUnCode, cranNumero } from '@/utils/cran'
 import { lireLesStatutsDeRecette } from '@/utils/statut-recette'
 import { formeDepuisLePlan } from './modele'
+import { enTexte } from './consigne'
 import type { Competence, Forme, Grain, Lieu, StatutRecette } from './types'
 import { COMPETENCES } from './types'
 
@@ -470,19 +471,4 @@ function production(texte: unknown, transcription: unknown): string | null {
   if (t) return t
   const tr = typeof transcription === 'string' && transcription.trim() !== '' ? transcription : null
   return tr
-}
-
-/** La consigne, quelle que soit sa forme physique — le §1.1 la laisse libre. */
-function enTexte(v: unknown): string {
-  if (typeof v === 'string') return v
-  if (v && typeof v === 'object') {
-    const o = v as Record<string, unknown>
-    if (typeof o.texte === 'string') return o.texte
-    if (Array.isArray(o.cas)) {
-      return (o.cas as unknown[])
-        .map((c, i) => `Cas ${i + 1} — ${typeof c === 'string' ? c : JSON.stringify(c)}`)
-        .join('\n')
-    }
-  }
-  return JSON.stringify(v ?? null)
 }

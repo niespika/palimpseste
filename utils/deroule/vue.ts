@@ -278,15 +278,25 @@ export async function chargerLeDeroule(
   //    de la paire, et il ne recevait rien : aux crans au jugement algorithmique
   //    aucun retour IA ne vient derrière (`06-` §2, temps 4). Décision de Louis,
   //    23/08 : il reçoit LA MÊME CORRECTION que le premier.
+  // Le cran sert-il quatre candidats ? C'est ce qui décide si la correction est
+  // la réponse SEULE (crans 4 et 5) ou les trois choses (crans 1 et 3) — ET,
+  // depuis le 24/08, ce qui tient lieu de RÉPONSE à un cas.
+  const surDesCandidats = ctx.cranCode !== null
+    && CRANS_GUIDES.includes(ctx.cranCode as never)
+  // ⭐⭐ AUX CRANS À CANDIDATS, LA CRÉDENCE EST LA RÉPONSE — smoke élève du
+  //    24/08, tranché par Louis : « la réponse c'est la crédence, il n'y a pas
+  //    de retour IA, c'est juste de l'algo ».
+  // ⛔ Sans ce troisième argument, on passait `[texte_v1, texte_vf]` comme
+  //    « réponses aux deux cas » — or à ces crans l'élève NE RÉDIGE PAS, les
+  //    deux restent `null`, l'étape ne dépassait jamais `cas_1`, et la
+  //    correction n'était JAMAIS servie. Éprouvé en vrai : crédence écrite en
+  //    base, `repondu(0) = false`, `correctionDue = false`.
   const etape: EtapePaire | null = estUnePaire
     ? etapeDeLaPaire(
       [depot.texte_v1, depot.texte_vf].map((t) => t),
-      [cas[0]?.credenceDonnee, cas[1]?.credenceDonnee])
+      [cas[0]?.credenceDonnee, cas[1]?.credenceDonnee],
+      surDesCandidats)
     : null
-  // Le cran sert-il quatre candidats ? C'est ce qui décide si la correction est
-  // la réponse SEULE (crans 4 et 5) ou les trois choses (crans 1 et 3).
-  const surDesCandidats = ctx.cranCode !== null
-    && CRANS_GUIDES.includes(ctx.cranCode as never)
   const sertUneCorrection = correctionServieAuCran(geste, ctx.cranCode)
   const corrections: Array<CorrectionServie | null> = cas.map((c) => {
     if (!sertUneCorrection) return null

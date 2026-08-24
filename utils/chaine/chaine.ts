@@ -52,7 +52,7 @@ import {
 // touche jamais `{{REGISTRE}}`, qui est le registre de RETOUR du `01-` §8.7.
 import { IDENTITE, REGISTRE as TON_PARTAGE } from '@/utils/ia-commun'
 import { reposerJob, terminerJob, type Job } from './file'
-import type { Competence, Registre, RetourSegmente, Version } from './types'
+import type { Lieu,Competence, Registre, RetourSegmente, Version } from './types'
 
 type Admin = ReturnType<typeof createAdminClient>
 
@@ -922,7 +922,8 @@ async function engendrerLeRetour(
     }
 
     const segmente = segmenter(controle.verdict.valeur, ctx.depotId, version)
-    const ecriture = await ecrireRetour(admin, ctx.depotId, version, registreServi, segmente)
+    const ecriture = await ecrireRetour(
+      admin, ctx.depotId, version, registreServi, segmente, ctx.lieu)
     if (!ecriture.ecrit) alertes.push(`retour NON écrit en base : ${ecriture.erreur}`)
     return { ecrit: ecriture.ecrit, appels: r.appels, alertes }
   } catch (e) {
@@ -941,11 +942,33 @@ async function engendrerLeRetour(
 /**
  * `exercices_retours` — le texte SEGMENTÉ, le registre SERVI (la trace, jamais
  * l'état), et l'action de révision / le pont, que LE CODE journalise (piège 32).
+ *
+ * ⭐⭐ ET LA PUBLICATION, POUR LA MAISON SEULEMENT — décision de Louis, 24/08.
+ *
+ * Jusqu'ici la chaîne n'écrivait JAMAIS `published_at`, et rien d'autre ne le
+ * posait côté maison : `publier()` n'a que deux appelants, tous deux dans le
+ * flux de classe, et la pile de correction exclut la maison par construction
+ * (`utils/passation/vues.ts:49`). Un retour de maison était donc engendré puis
+ * **structurellement invisible** — `utils/deroule/vue.ts` saute tout retour sans
+ * `published_at`, et `lu_at` devenait inatteignable (défaut central de C4-L7).
+ *
+ * ⚠️ LES DEUX MOMENTS, et c'est le chaud qui compte le plus : il est le TEMPS 4,
+ *    celui sur lequel l'élève RÉVISE au temps 5. Sans lui la révision se ferait
+ *    à l'aveugle, et le `delta_v1_vf` mesurerait l'écart entre deux versions
+ *    dont la seconde n'a rien lu.
+ *
+ * ⛔ ET SEULEMENT LA MAISON. En classe, `published_at` EST la case que coche le
+ *    professeur (`app/passation/actions.ts`) : il corrige, il valide, puis il
+ *    publie — pour toute la classe, quand il le décide. Publier automatiquement
+ *    là court-circuiterait son geste et lui retirerait le contrôle de ce que ses
+ *    élèves lisent. Le `lieu` commande, jamais le module (piège 24).
  */
 async function ecrireRetour(
   admin: Admin, depotId: string, version: Version, registre: Registre, r: RetourSegmente,
+  lieu: Lieu,
 ): Promise<{ ecrit: boolean; erreur: string | null }> {
   const moment = version === 'v1' ? 'chaud' : 'final'
+  const maintenant = new Date().toISOString()
   const { error } = await admin.from('exercices_retours').upsert({
     depot_id: depotId,
     moment,
@@ -954,7 +977,11 @@ async function ecrireRetour(
     feed_forward: r.feed_forward,
     registre_servi: registre,
     points_ids: r.points.map((p) => p.id),
-    updated_at: new Date().toISOString(),
+    // ⚠️ On ne REPUBLIE pas ce qui l'était : `upsert` réécrit la ligne entière,
+    //    et un retour republié perdrait sa date de première publication. La
+    //    maison la pose ; la classe la laisse à `null`, au professeur.
+    ...(lieu === 'maison' ? { published_at: maintenant } : {}),
+    updated_at: maintenant,
   }, { onConflict: 'depot_id,moment' })
   if (error) {
     console.error(`[chaine] retour non écrit — ${error.code} ${error.message}`)

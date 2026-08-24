@@ -926,8 +926,12 @@ async function laCredenceEtLaPaire(d, porte) {
   await enregistrerLeTexte(admin, dep, 'v1',
     'Le lien entre la preuve et la conclusion me paraît manquer.', null, instant())
   vue = await charger()
-  dire(vue.etapePaire === 'credence_1' && (vue.corrections?.[0] ?? null) === null,
-    `le cas 1 est répondu mais non crédencé : étape « ${vue.etapePaire} », `
+  // ⭐ AU CRAN 1, LA CRÉDENCE EST LA RÉPONSE (correctif du 24/08, `C4L7-15`) :
+  //    il n'existe pas d'état « répondu mais pas encore crédencé » — l'élève ne
+  //    rédige pas, il répartit ses jetons. L'étape reste donc `cas_1` tant que
+  //    la crédence n'est pas donnée, et c'est ce qui la fait AVANCER ensuite.
+  dire(vue.etapePaire === 'cas_1' && (vue.corrections?.[0] ?? null) === null,
+    `le cas 1 n’est pas encore crédencé : étape « ${vue.etapePaire} », `
     + `\`corrections[0]\` = ${JSON.stringify(vue.corrections?.[0] ?? null)} — sans quoi `
     + 'l’élève déclarerait sa sûreté en connaissant la réponse')
 
