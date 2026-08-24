@@ -401,3 +401,126 @@ L'ajout ne fera rien, le retrait fera tout, et aucune alerte ne distinguera les 
 
 *(constaté avec Cowork le 23/08, en fabriquant les prompts C4-L10 — Louis : « l'import importe
 réellement quelque chose et cet import a des conséquences réelles ». Oui, et il en aura davantage.)*
+
+---
+
+## Vocabulaire élève — « autre chose » ne dira rien à un élève (23/08/2026)
+
+**Le constat est de Louis**, à la relecture du premier lot d'exercices fabriqué par le générateur :
+*« le "autre chose" va faire tiquer les élèves »*.
+
+**Où ça vit.** `palimpseste-conception/competences/questionnement.md`, section « La correspondance
+observable → formulation ». Pour `question_propre` :
+
+| | |
+|---|---|
+| la dimension, dite à l'élève | ta problématique, ou celle du sujet ? |
+| la question « se juger » | Ta problématique dit-elle **autre chose** que le sujet remis au point d'interrogation ? |
+| réponses possibles | oui, **autre chose** · non, c'est le sujet retourné · j'ai plutôt donné mon avis |
+
+**Ce qui cloche.** « Autre chose » ne dit pas *autre chose que quoi, et en quoi*. Un élève de première
+ou de terminale peut le lire comme « n'importe quoi d'autre », donc comme une invitation à s'écarter du
+sujet — **l'inverse exact de ce que l'observable mesure**.
+
+**⚠️ La portée a doublé le 23/08.** Le générateur d'exercices lit désormais cette table et **écrit ses
+consignes dans ses mots** (`generateur/noyau/doctrine.py`, `_formulations` ; `noyau/materiau.py`,
+`commande_appui`). La formule paraîtra donc **deux fois** devant le même élève : dans la **consigne
+d'un exercice**, puis dans la **question qu'il se pose** au temps 3. Le remplaçant devra tenir sur les
+deux surfaces, faute de quoi le chantier enseignera deux mots pour une seule mesure.
+
+**⛔ Ce n'est pas une dette.** La source n'est pas fausse, elle est **inéprouvée** — et ce qui manque
+n'est pas un chiffre mais **de voir ce qu'un élève en fait**. D'où le parking : la donnée arrive en
+classe, après la rentrée.
+
+**⛔ Et le remplaçant n'est pas trouvé.** *« Ajoute quelque chose d'important au texte »*, avancé en
+séance, **a été écarté sur pièces** : c'est la formulation d'`enjeu` — *« ce que la solution
+changerait »* — et une consigne qui la reprendrait pousserait l'élève à **ajouter un enjeu** quand
+l'exercice mesure s'il a **reformulé**. *Le précédent est au `CONTEXTE.md` du 17/08 : quatre consignes
+de cran sur six « devenaient plus strictes que la mesure ».*
+
+**⭐ Même famille que l'item 62 du registre des ouverts** (*le nom de l'unité, dit à l'élève, n'existe
+nulle part* — le retour engendré écrivait « unité », mot de grille). Les deux disent la même chose :
+**le chantier a un vocabulaire de grille outillé, et un vocabulaire élève qui ne l'est qu'à moitié.**
+À instruire ensemble.
+
+*(idée Louis, 23/08 — séance « la fabrique sur papier », à la relecture du lot de calibration.)*
+
+---
+
+## Crédence — servir la réfutation À LA MESURE de la confiance (23/08/2026)
+
+**L'effet d'hypercorrection** *(Butterfield & Metcalfe, 2001, et répliqué depuis par plusieurs
+équipes)* : **une erreur commise avec forte confiance est mieux corrigée qu'une erreur commise dans le
+doute** — l'écart entre ce que l'élève croyait et ce qu'il lit capte son attention. La conséquence
+pratique est que **toutes les erreurs ne méritent pas la même quantité d'explication**.
+
+**⭐ Palimpseste a le signal, et il est déjà en base.** Aux deux crans guidés, l'élève **répartit
+cent jetons** sur quatre candidats *(`02-` §5)*, et `saisieARegistrer` *(`utils/deroule/credence.ts`)*
+journalise **`jetons`, `choix`, `index_correct` et `candidats`**. On sait donc, cas par cas :
+combien de jetons ont été posés sur la mauvaise réponse, et comment le reste s'est étalé. **Rien n'est
+à collecter — seule la règle d'affichage est à écrire.**
+
+**Ce que la règle pourrait faire.** Servir davantage de réfutation quand la charge sur l'erreur est
+forte ; en servir moins quand l'élève avait déjà réparti son doute. Et traiter les deux cas que la
+règle simple ne couvre pas :
+
+- **l'égalité** — `choix: j.indexOf(Math.max(...j))` rend **0** sur un 25/25/25/25 : « le candidat le
+  plus chargé » n'existe pas, et on montrerait la réfutation d'un candidat que l'élève n'a pas choisi ;
+- **l'étalement** — sur un 40/30/20/10, l'élève a mis du poids réel sur **trois** mauvais candidats, et
+  n'en verrait réfuter qu'un.
+
+**⚠️ Le contrepoids à ne pas perdre.** L'effet de **renversement d'expertise** dit que la rétroaction
+élaborée **surcharge** les élèves à faible bagage et devient **redondante** pour les avancés. Une règle
+qui servirait les trois réfutations à tout le monde irait contre. *C'est pourquoi le premier geste,
+tranché le 23/08, est volontairement minimal : `pourquoi_juste` toujours, `pourquoi_faux` sur la seule
+réponse choisie.*
+
+**⛔ Ce que ce n'est PAS.** Une mesure de plus : la crédence est déjà collectée, déjà notée au score de
+Brier de la porte 2. C'est **une règle d'affichage** qui lit ce qui existe.
+
+*(idée Louis, 23/08 — « la question de l'affichage en fonction de la crédence demande un peu plus de
+travail ». Littérature réunie dans la même séance ; l'archéologie du champ `pourquoi_faux` est à
+l'entrée du CONTEXTE.md du chantier de conception, même date.)*
+
+⭐ **MISE À JOUR DU 24/08 — L'ÉGALITÉ EST TRANCHÉE, ET LA RÈGLE PARQUÉE HÉRITE D'UN POINT DE DÉPART.**
+C4-L14 a dû écrire la règle de l'égalité pour servir la correction, et il l'a écrite **au minimum** :
+**sur une égalité, aucun candidat n'est le plus chargé** — la correction ne sert **aucun**
+`pourquoi_faux`, elle sert le `pourquoi_juste` **seul**, et **elle le dit à l'élève**. Elle vit à
+`utils/deroule/correction.ts:leCandidatLePlusCharge`, avec un test discriminant. ⛔ **`choix` n'a pas
+bougé** — il part en base et la chaîne le relit : l'égalité est une règle **de l'écran de correction**.
+**Le premier des deux cas non couverts est donc fermé ; l'ÉTALEMENT reste entier**, et c'est lui, avec
+le dosage à la mesure de la confiance, que cette entrée garde.
+
+---
+
+## `02-` §2.3.4 et `08-` §8 énumèrent QUATRE champs d'appui, le cas en porte CINQ (24/08/2026)
+
+Depuis le **format 1.2**, un cas porte `defaut`, `distracteurs`, `reponse_attendue`, `guide` **et
+`pourquoi_juste`**. Le `07-Implementation.md` §1.1 a été amendé par C4-L14 et en nomme **cinq**. Mais
+le `02-exercices.md` §2.3.4 écrit toujours *« l'appui […] se compose de **quatre** champs »*, et le
+renvoi du `08-` §8 les liste de même.
+
+⚠️ **Aucun des deux n'est FAUX** — ils décrivent l'appui tel que le `02-` le définit, et le `08-` §0 dit
+lui-même que « ce qu'un exercice EST fait foi au `02-` ». **Aucun `[faux]` n'a donc été posé.** Le
+risque est ailleurs : **une session qui lirait le `02-` §2.3.4 seul manquerait le champ**. Les deux
+documents sont **GELÉS** ; les rouvrir demande l'accord explicite de Louis.
+
+*(constat C4-L14, 24/08 — il ne bloque rien : le `07-` §1.1 fait foi sur ce que la conception élit par cas.)*
+
+---
+
+## Au cran 3 sous escalade, une version finale est requise et rien ne l'engendre (24/08/2026)
+
+Le cran **3** (`transformation_guidee`) est au régime *« pas de vf, sauf escalade »*. Sous **escalade
+active** sur l'observable qu'il isole, `regimeDuDeroule` le passe à **`plein`** — une version finale
+devient requise, parce que c'est elle qui fournit le `delta_v1_vf` dont N2 a besoin *(`01-` §8.5)*.
+
+⛔ **Or à ce cran le jugement est ALGORITHMIQUE** *(`02-` §2.3.4)* : il n'y a ni extraction, ni
+squelette, donc **aucun retour ne s'engendre** pour guider la révision *(`06-` §2, temps 4)*. L'élève
+se voit demander une version finale **sans retour**, et le delta se calculerait sur un geste que rien
+n'a orienté. **La tension préexiste à C4-L14** — elle naît du croisement du §8.5 et de la table des
+crans — et elle vaut aussi pour le cran **1**, que `regimeDuDeroule` protège déjà *(une paire reste une
+paire sous escalade)* : c'est **le cran 3 seul** qui bascule.
+
+*(constat C4-L14, 24/08 — le lot a servi la correction au cran 3 comme son « fait quand » l'exige ; il
+n'a pas touché à l'escalade, qui n'est pas de son périmètre.)*

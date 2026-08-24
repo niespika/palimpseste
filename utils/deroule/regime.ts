@@ -162,15 +162,29 @@ export function versionFinaleServie(regime: RegimeV1vf): boolean {
  * traité seul. La CORRECTION DU PREMIER CAS EST SERVIE AVANT LE SECOND — c'est
  * elle qui rend l'écart des deux crédences interprétable » (`02-` §2.3.1 a).
  *
- * Les cinq états que l'écran traverse. ⚠️ `correction` est un état À PART
+ * Les SIX états que l'écran traverse. ⚠️ `correction` est un état À PART
  * ENTIÈRE, et non une donnée du cas 1 : la correction ne se sert qu'une fois
  * la première crédence donnée — sans quoi l'élève déclarerait sa sûreté en
  * connaissant la réponse, et la porte 2 ne mesurerait plus rien.
+ *
+ * ⭐ C4-L14 — LE SIXIÈME ÉTAT, `correction_2`. La paire s'arrêtait à
+ * `credence_2`, et **le second cas ne recevait rien** : or c'est LE CAS DU
+ * TRANSFERT, celui qui porte toute la raison d'être de la paire. Aux crans au
+ * jugement ALGORITHMIQUE, aucun retour IA ne vient derrière — « le retour
+ * s'engendre depuis le squelette » (`06-` §2, temps 4), et il n'y a pas de
+ * squelette sans extraction : sans cet état, le second cas restait muet pour
+ * toujours. *Décision de Louis, 23/08 : il reçoit LA MÊME CORRECTION que le
+ * premier.*
+ *
+ * ⚠️ Le sixième état obéit à la MÊME règle que le troisième : il vient **après**
+ * `credence_2`, jamais avant. La correction ne se sert qu'une fois la crédence
+ * de SON cas donnée.
  */
-export type EtapePaire = 'cas_1' | 'credence_1' | 'correction' | 'cas_2' | 'credence_2'
+export type EtapePaire =
+  'cas_1' | 'credence_1' | 'correction' | 'cas_2' | 'credence_2' | 'correction_2'
 
 export const ETAPES_PAIRE: EtapePaire[] = [
-  'cas_1', 'credence_1', 'correction', 'cas_2', 'credence_2',
+  'cas_1', 'credence_1', 'correction', 'cas_2', 'credence_2', 'correction_2',
 ]
 
 /**
@@ -189,7 +203,11 @@ export function etapeDeLaPaire(
   if (!credencee(0)) return 'credence_1'
   if (!repondu(1)) return 'correction'   // la correction se sert AVANT le cas 2
   if (!credencee(1)) return 'credence_2'
-  return 'credence_2'
+  // ⚠️⚠️ C4-L14 — C'EST LE CAS TERMINAL QUI A CHANGÉ, PAS UNE BRANCHE DE PLUS.
+  //    Cette fonction ne rendait JAMAIS `cas_2`, et son dernier `return` valait
+  //    `credence_2` : ajouter un sixième état à la fin de la liste sans toucher
+  //    ici l'aurait rendu INATTEIGNABLE, et rien ne serait tombé.
+  return 'correction_2'
 }
 
 /**

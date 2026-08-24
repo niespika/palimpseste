@@ -55,6 +55,9 @@ interface Cas {
   defaut: string | null
   distracteurs: string[] | null
   reponseAttendue: string | null
+  /** ⭐ C4-L14 — « pourquoi ce candidat-là est le bon » (`08-` §5.2, format 1.2).
+   *  Aux crans 1 et 3 seulement ; ailleurs la `reponse_attendue` EST le pourquoi. */
+  pourquoiJuste: string | null
   materiauId: string | null
 }
 
@@ -76,6 +79,9 @@ function lireCas(form: FormData, n: number): Cas[] {
       // et l'instance y tire les trois candidats » (`02-` §5 et §6).
       distracteurs: brut ? brut.split('\n').map((x) => x.trim()).filter(Boolean) : null,
       reponseAttendue: (String(form.get(`cas_${i}_reponse`) ?? '').trim() || null),
+      // ⭐ C4-L14 — LE MÊME PATRON À PLAT, PAR CAS, que les quatre autres champs
+      //    de l'appui : une entrée `cas_<i>_pourquoi_juste` par cas.
+      pourquoiJuste: (String(form.get(`cas_${i}_pourquoi_juste`) ?? '').trim() || null),
       materiauId: (String(form.get(`cas_${i}_materiau`) ?? '').trim() || null),
     })
   }
@@ -216,6 +222,10 @@ export async function concevoirInstance(
       exercice_id: data.id, ordre: i + 1,
       materiau_id: cs.materiauId, defaut: cs.defaut,
       distracteurs: cs.distracteurs, reponse_attendue: cs.reponseAttendue,
+      // ⭐ C4-L14 — SANS CE CHAMP ICI, une instance conçue EN LIGNE naîtrait
+      //    MUETTE là où une instance IMPORTÉE parle : même écran pour l'élève,
+      //    deux comportements selon la voie par où l'instance est entrée.
+      pourquoi_juste: cs.pourquoiJuste,
     }))).select('ordre')
   // ⚠️ UNE INSTANCE SANS SON APPUI EST INUTILISABLE, et pire : son écran
   // d'édition n'affiche alors aucun cas, et la première correction écraserait
@@ -305,6 +315,12 @@ export async function editerInstance(
     const { data: casMaj, error: eCas } = await admin.from('exercices_cas').update({
       defaut: cas[i].defaut, distracteurs: cas[i].distracteurs,
       reponse_attendue: cas[i].reponseAttendue,
+      // ⚠️⚠️ C4-L14 — LE TROISIÈME SITE D'ÉCRITURE, ET C'EST CELUI QU'ON OUBLIE.
+      //    L'oublier ne casse rien : ça fait PERDRE le `pourquoi_juste` **en
+      //    silence, à la première correction du professeur** — et une perte
+      //    silencieuse ne se voit qu'à l'écran de l'élève, des semaines plus
+      //    tard, quand la correction s'est tue sans que personne l'ait décidé.
+      pourquoi_juste: cas[i].pourquoiJuste,
     }).eq('exercice_id', id).eq('ordre', i + 1).select('ordre')
     if (eCas) rates.push(`cas ${i + 1} : ${eCas.message}`)
     else if ((casMaj ?? []).length === 0) rates.push(`cas ${i + 1} : aucune ligne touchée`)

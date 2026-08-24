@@ -529,6 +529,23 @@ export default function Pipeline({ porte, carte, textes, sujets, materiaux }: {
                   <input name={`cas_${i + 1}_reponse`} required className={`${CHAMP} w-full`} />
                 </label>
               )}
+              {/* ⭐ C4-L14 — LE POURQUOI, AUX DEUX CRANS À CANDIDATS. À ces crans
+                  la réponse attendue s'affiche NUE, dans la forme des
+                  distracteurs : rien en elle ne peut dire pourquoi elle est
+                  juste. ⚠️ NON REQUIS — son absence SIGNALE, elle ne refuse pas
+                  (`08-` §7.3) ; un `required` ici rendrait inconcevable en ligne
+                  une instance parfaitement importable. */}
+              {c.distracteurs === 'présent' && (
+                <label className="block space-y-0.5">
+                  <span className="block font-ui text-xs text-muet">
+                    le <code>pourquoi_juste</code> — <em>pourquoi ce candidat-là est le bon.
+                    L&apos;élève le lira à la correction</em> ; sans lui, elle ne montrera que
+                    la réponse.
+                  </span>
+                  <textarea name={`cas_${i + 1}_pourquoi_juste`} rows={2}
+                    className={`${CHAMP} w-full`} />
+                </label>
+              )}
             </fieldset>
           ))}
 

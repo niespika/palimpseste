@@ -269,7 +269,7 @@ export function empechementsDeConception(d: Doctrine, saisie: {
   observableCode: string | null; observableCompetence: string | null
   guide: string | null
   cas: Array<{ consigne: string; defaut: string | null; distracteurs: string[] | null
-    reponseAttendue: string | null; materiauId: string | null }>
+    reponseAttendue: string | null; pourquoiJuste?: string | null; materiauId: string | null }>
 }): string[] {
   const out: string[] = []
   const o = d.objets[saisie.objet]
@@ -375,6 +375,19 @@ export function empechementsDeConception(d: Doctrine, saisie: {
     } else if (dis.length > 0) {
       out.push(`${ou} : le cran ${saisie.cran} ne sert aucun distracteur`)
     }
+    // ⭐ C4-L14 — LE JUMEAU DU REFUS N° 12 POUR LA VOIE EN LIGNE. **Deux voies,
+    //    une seule règle : si l'import refuse, l'écran doit refuser aussi.**
+    //    Le discriminant est la présence des DISTRACTEURS — les crans 1 et 3 —,
+    //    jamais celle de la réponse attendue : « là où la réponse attendue est
+    //    un CANDIDAT, elle a besoin d'un pourquoi ; ailleurs, elle EST le
+    //    pourquoi » (`08-` §5.2).
+    // ⚠️ SON ABSENCE NE S'EMPÊCHE PAS. À l'import elle SIGNALE, et un empêchement
+    //    ici la ferait refuser : l'écran serait alors PLUS STRICT que le format,
+    //    et une instance importable deviendrait inconcevable en ligne.
+    if (c.distracteurs !== 'présent' && cs.pourquoiJuste?.trim()) {
+      out.push(`${ou} : le cran ${saisie.cran} ne déclare aucun \`pourquoi_juste\` : sa `
+        + '`reponse_attendue` EST déjà le pourquoi')
+    }
   })
   return out
 }
@@ -412,6 +425,14 @@ export interface ApercuCas {
   candidats: string[]
   /** Servie AVANT le cas 2, aux crans de diagnostic. */
   correctionServieAvantLeSuivant: string | null
+  /**
+   * ⭐ C4-L14 — « pourquoi ce candidat-là est le bon », tel que l'élève le lira
+   * à la correction. `null` hors des crans 1 et 3, où la `reponse_attendue` EST
+   * le pourquoi. ⚠️ **Le TIRAGE n'a pas bougé** : `tirerTrois` reste
+   * délibérément déterministe, « pour qu'un rechargement ne change pas ce que le
+   * professeur relit » — on MONTRE le pourquoi, on ne retouche pas l'aperçu.
+   */
+  pourquoiJuste: string | null
 }
 
 export interface Apercu {
@@ -445,7 +466,8 @@ export function composerApercu(d: Doctrine, instance: {
   materiauCibleTexte: string | null
   guide: string | null
   cas: Array<{ consigne: string; distracteurs: string[] | null
-    reponseAttendue: string | null; materiauContenu: string | null }>
+    reponseAttendue: string | null; pourquoiJuste?: string | null
+    materiauContenu: string | null }>
 }): Apercu | null {
   const c = d.crans[instance.cran]
   if (!c) return null
@@ -469,6 +491,8 @@ export function composerApercu(d: Doctrine, instance: {
       // qui rend l'écart des deux crédences interprétable » (`02-` §2.3.1 a).
       correctionServieAvantLeSuivant:
         c.geste === 'diagnostiquer' && i === 0 ? (cs.reponseAttendue ?? null) : null,
+      // Il ne se montre QUE là où il a un sens — les deux crans à candidats.
+      pourquoiJuste: c.distracteurs === 'présent' ? (cs.pourquoiJuste ?? null) : null,
     }
   })
   return {

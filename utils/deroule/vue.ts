@@ -34,7 +34,9 @@ import { lireDepotMaison, collagesDuDepot, type DepotMaison } from './depot'
 import { regimeDuDeroule, tempsServis, nombreDeCas, credenceDemandee, etapeDeLaPaire,
   type EscaladePesante, type EtapePaire } from './regime'
 import { rappelDuTemps1, momentDeLaDemonstration, type Rappel } from './rappel'
-import { offreDeCredence, type OffreCredence } from './credence'
+import { offreDeCredence, CRANS_GUIDES, type OffreCredence } from './credence'
+import { composerLaCorrection, correctionDue, correctionServieAuCran,
+  type CorrectionServie } from './correction'
 import { phaseServie, candidates, offreSeJugerMaison, verdictDeCalibration,
   type CouvertureTestee, type LigneDeVerdict, type OffreSeJuger } from './juger'
 import { choisirLaDemonstration, lireLeContenu,
@@ -99,8 +101,21 @@ export interface VueDuDeroule {
   /** ⚠️ Le GUIDE de l'appui — deux objets, deux mécanismes (`02-` §2.3.4). */
   guide: string | null
   cas: CasServi[]
-  /** La correction du cas 1, servie APRÈS sa crédence et AVANT le cas 2. */
-  correctionDuPremierCas: string | null
+  /**
+   * ⭐ C4-L14 — LA CORRECTION, PAR CAS. Indexée comme `cas` : `corrections[i]`
+   * est celle de `cas[i]`. `null` = rien à servir, ou pas encore l'heure.
+   *
+   * ⚠️ ELLE N'ENTRE PAS DANS LA CHARGE UTILE DU CAS, et c'est structurant :
+   * « ce champ n'est pas une donnée de l'énoncé » (piège 40 de C4-L3). Elle se
+   * sert depuis L'ÉTAT, jamais depuis le cas — un `pourquoi_juste` qui partirait
+   * avec l'énoncé serait lisible AVANT la crédence, et la porte 2 ne mesurerait
+   * plus rien.
+   *
+   * ⚠️ UN SEUL CHAMP, GÉNÉRALISÉ PAR CAS — jamais deux champs pour la même
+   * chose : « deux champs pour la même chose sont deux domiciles qui divergent ».
+   * Il remplace `correctionDuPremierCas`, qui ne pouvait rien dire du second.
+   */
+  corrections: Array<CorrectionServie | null>
 
   // ── Temps 2 — ÉCRIRE ──
   dureeIndicativeMin: number | null
@@ -204,13 +219,16 @@ export async function chargerLeDeroule(
   // pas, et le patron est le TRANSTYPAGE EXPLICITE (`utils/chaine/contexte.ts`,
   // `utils/acces.ts`). La forme ci-dessous dit CE QU'ON LIT, colonne par colonne.
   const { data: casLus } = await admin.from('exercices_cas')
-    .select('ordre, defaut, distracteurs, reponse_attendue, exercices_materiaux(contenu)')
+    .select('ordre, defaut, distracteurs, reponse_attendue, pourquoi_juste, '
+      + 'exercices_materiaux(contenu)')
     .eq('exercice_id', depot.exercice_id).order('ordre')
   const casBruts = (casLus ?? []) as unknown as Array<{
     ordre: number
     defaut: string | null
     distracteurs: unknown
     reponse_attendue: string | null
+    /** ⭐ C4-L14 — « pourquoi ce candidat-là est le bon » (`08-` §5.2). */
+    pourquoi_juste: string | null
     exercices_materiaux: { contenu?: string } | Array<{ contenu?: string }> | null
   }>
 
@@ -250,20 +268,38 @@ export async function chargerLeDeroule(
     })
   }
 
-  // ⭐ LA CORRECTION DU PREMIER CAS — servie AVANT le second (`02-` §2.3.1 a).
-  // ⚠️ Elle N'ENTRE PAS dans la charge utile du cas 1 (piège 40) : « ce champ
+  // ⭐⭐ LA CORRECTION, PAR CAS — servie APRÈS la crédence DE SON CAS.
+  // ⚠️ Elle N'ENTRE PAS dans la charge utile du cas (piège 40) : « ce champ
   //    n'est pas une donnée de l'énoncé ». Elle ne sort d'ici qu'une fois la
-  //    première crédence donnée — sans quoi l'élève déclarerait sa sûreté en
-  //    connaissant la réponse, et la porte 2 ne mesurerait plus rien.
+  //    crédence donnée — sans quoi l'élève déclarerait sa sûreté en connaissant
+  //    la réponse, et la porte 2 ne mesurerait plus rien.
+  // ⭐ C4-L14 — ELLE SE COMPOSE POUR LES DEUX CAS, ET PLUS SEULEMENT LE PREMIER.
+  //    Le second est LE CAS DU TRANSFERT, celui qui porte toute la raison d'être
+  //    de la paire, et il ne recevait rien : aux crans au jugement algorithmique
+  //    aucun retour IA ne vient derrière (`06-` §2, temps 4). Décision de Louis,
+  //    23/08 : il reçoit LA MÊME CORRECTION que le premier.
   const etape: EtapePaire | null = estUnePaire
     ? etapeDeLaPaire(
       [depot.texte_v1, depot.texte_vf].map((t) => t),
       [cas[0]?.credenceDonnee, cas[1]?.credenceDonnee])
     : null
-  const correctionDuPremierCas = estUnePaire
-    && etape !== null && etape !== 'cas_1' && etape !== 'credence_1'
-    ? casBruts.find((c) => c.ordre === 1)?.reponse_attendue ?? null
-    : null
+  // Le cran sert-il quatre candidats ? C'est ce qui décide si la correction est
+  // la réponse SEULE (crans 4 et 5) ou les trois choses (crans 1 et 3).
+  const surDesCandidats = ctx.cranCode !== null
+    && CRANS_GUIDES.includes(ctx.cranCode as never)
+  const sertUneCorrection = correctionServieAuCran(geste, ctx.cranCode)
+  const corrections: Array<CorrectionServie | null> = cas.map((c) => {
+    if (!sertUneCorrection) return null
+    if (!correctionDue(c.ordre, { estUnePaire, etape, credenceDonnee: c.credenceDonnee })) {
+      return null
+    }
+    const brut = casBruts.find((x) => x.ordre === c.ordre)
+    if (!brut) return null
+    return composerLaCorrection(
+      { reponseAttendue: brut.reponse_attendue, pourquoiJuste: brut.pourquoi_juste,
+        distracteurs: brut.distracteurs },
+      c.credenceDonnee, surDesCandidats)
+  })
 
   // ── Temps 1 : le rappel, dosé par le palier ──
   // ⭐ C4-L11 — L'ORDRE DE LECTURE DU `07-` §1.1 : la DÉCISION du routeur, puis
@@ -337,7 +373,7 @@ export async function chargerLeDeroule(
       ? lireLeContenu(demonstration.demonstration.forme, demonstration.demonstration.contenu)
       : null,
     guide: depot.exercice.guide,
-    cas, correctionDuPremierCas,
+    cas, corrections,
 
     dureeIndicativeMin: dureeMin,
     microQuestionDue: dureeMin !== null && ecouleMs !== null

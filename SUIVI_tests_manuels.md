@@ -4806,3 +4806,110 @@ lot est fait, prouvé et vert.
   déclenche sur un vecteur** — un test assère qu'il ne lève jamais et qu'il ne se tait jamais.
   ⛔ **Le module n'est pas corrigé** : hors mandat. **Condition de reprise : le pré-vol du Run 1**,
   avec `C4L10SY-15`.
+
+
+---
+
+## C4 · L14 — La correction d'un cran à candidats, et le champ qui la rend possible (sandbox, migration du 24/08)
+
+_Section ouverte le 24/08 à la clôture du lot. **Une migration** : `c4_l14_pourquoi_juste.sql`,
+**additive et gatée**, jouée en bac à sable le 24/08 *(ligne au `SUIVI_SQL.md` écrite AVANT, répétition
+à blanc sur le CORPS du fichier, retour vérifié par requête)*. **Aucun `[faux]` posé dans une source** :
+rien de ce que ce portage a trouvé n'est une source fausse — les deux constats transverses sont portés
+à `IDEES_post_rentree.md`._
+
+_Ce qui a été prouvé EN SÉANCE est coché avec sa preuve. **`npm test` à l'entrée : 1 234 tests,
+1 233 passés, 1 ÉCHOUÉ** — `utils/chaine/instruments.test.ts`, échec **PRÉEXISTANT** et étranger à ce
+lot *(le `07-` était passé de 2.41 à 2.43 et les dérivés portaient l'ancienne empreinte)*, résolu
+**pendant la séance par une autre session** *(commit `fc30441`, Louis ayant rejoué `--ecris`)*.
+**À la sortie : 1 260 tests, 1 259 passés, 1 échoué** — **le même test**, et cette fois **à cause de ce
+lot** : l'amendement du `07-` §1.1 et de l'inventaire du §2, que ce lot avait mandat de faire, le fait
+passer en **2.44** et périme la **provenance** des deux dérivés. **Vérifié fichier par fichier sur les
+dix dérivés : QUATRE LIGNES, DEUX FICHIERS, toutes de provenance** — l'empreinte SHA-256 du `07-` et
+son numéro de version ; **le gabarit Calame n'a pas bougé d'un octet**. `npx tsc --noEmit` : **rien** ;
+`npm run lint` sur les fichiers du lot : **0 erreur, 0 avertissement** *(les 2 erreurs du dépôt sont
+dans `handoff_en_tete/support.js`, préexistantes et étrangères)*._
+
+### Prouvé en séance
+
+- [x] **C4L14-1 · Le port rend LES MÊMES VERDICTS que le script sur ses 53 vecteurs.**
+  `verifie-import.py --autotest` : **53 vérification(s) jouée(s), ✓ tout passe**. Le port TS :
+  `utils/fabrique/verifie-import.test.ts`, **60 tests, 60 passés**, dont les **quatre vecteurs neufs
+  recopiés sans adaptation** — un cran 1 complet *(douze candidats motivés + `pourquoi_juste`)* qui
+  **passe**, son pendant négatif *(il ne signale ni candidat muet ni pourquoi manquant)*, **S10**
+  *(un cran 1 sans `pourquoi_juste`)*, **S11** *(deux distracteurs muets — UNE ligne, agrégée)* et
+  **R12** *(un `pourquoi_juste` hors des crans 1 et 3)*.
+- [x] **C4L14-2 · ⭐ LES DEUX CONTRÔLES, CONFRONTÉS SUR LE MÊME FICHIER RÉEL, MOT POUR MOT.**
+  `generateur/banque/banque.json`, produite par `papier.py`. **Deux états successifs de ce fichier ont
+  été mesurés** *(une autre session l'a versée pendant la séance)*, et les deux contrôles ont rendu
+  **exactement la même ligne à chaque fois** : d'abord `→ IMPORTABLE — 0 refus, 0 blocage(s),
+  **18 signalement(s)**` *(9 exercices, sous la 1.0)*, puis `→ IMPORTABLE — 0 refus, 0 blocage(s),
+  **6 signalement(s)**` *(22 exercices, **sous la 1.2**, 26 des 29 cas de cran 1/3 motivés)* —
+  signalement par signalement, dont les trois qui nomment les cas encore muets.
+- [x] **C4L14-3 · Le « fait quand », première clause : un fichier produit par `papier.py` SOUS LE
+  FORMAT 1.2 entre SANS REFUS.** Prouvé sur le fichier réel ci-dessus, `"version": "1.2"`, **0 refus**.
+  ⭐ **Et le port d'AVANT le refusait** : mesuré en rejouant la version `HEAD` du module sur le même
+  fichier — **3 refus, tous `[R02]`**, « clé « pourquoi_juste » que le `08-` ne déclare pas ». C'est
+  exactement le chiffre annoncé par le `07-` §2.
+- [x] **C4L14-4 · La colonne, en base.** `exercices_cas.pourquoi_juste` : `text`, `is_nullable = YES`,
+  **aucun défaut**, **aucune contrainte de plus** *(6 avant, 6 après)*, **aucune policy touchée**
+  *(1 avant, 1 après)*. **`les_six_toujours_a_off = t`.** Constat d'entrée : 17 cas en base, dont
+  **6 aux crans à candidats**.
+- [x] **C4L14-5 · ⭐⭐ LA RÈGLE DE L'ÉGALITÉ, ÉCRITE ET TENUE PAR UN TEST DISCRIMINANT.**
+  `utils/deroule/correction.ts:leCandidatLePlusCharge`. **Sur une égalité, aucun candidat n'est le plus
+  chargé** : aucun `pourquoi_faux`, le `pourquoi_juste` **seul**, **et l'écran le dit**. Le test assère
+  **les deux valeurs sur le même `25/25/25/25`** — `choix` rend **0**, la correction rend **`null`** —,
+  plus l'égalité partielle en tête *(40/40/20/0)*, l'égalité hors tête *(60/20/20/0, qui ne compte
+  pas)* et trois répartitions illisibles. ⛔ **`choix` n'a pas été touché.**
+- [x] **C4L14-6 · Les trois choses, et LA SEULE réfutation.** `utils/deroule/correction.test.ts` :
+  **20 tests, 20 passés**. Un test assère explicitement que **les deux autres `pourquoi_faux`
+  n'apparaissent nulle part** dans ce que l'écran sert. Quatre silences se disent sans rien inventer :
+  égalité · bonne réponse chargée · candidat muet *(dont **une instance conçue en ligne**, dont la
+  banque est faite de chaînes)* · crédence illisible.
+- [x] **C4L14-7 · Le sixième état, et le cas terminal qui a changé.** `etapeDeLaPaire(['a','b'],
+  [{cas:1},{cas:2}])` rend désormais **`correction_2`** ; `[{cas:1}, null]` rend toujours
+  **`credence_2`**. `ETAPES_PAIRE` en compte **six**, dans l'ordre. `utils/deroule/regime.test.ts` :
+  **18 tests, 18 passés**.
+- [x] **C4L14-8 · Les DEUX endroits qui rendaient le second cas muet sont tombés.** `vue.ts` ne compose
+  plus la correction depuis `casBruts.find(c => c.ordre === 1)` : **un seul champ, `corrections[]`,
+  généralisé par cas** ; et `EcranDeroule.tsx` n'a plus sa garde `c.ordre === 1`.
+- [x] **C4L14-9 · L'affirmation renversée est retirée, ET ELLE SEULE.** `grep` sur *« n'est pas servi à
+  l'élève — c'est une note de »* dans `utils/deroule/credence.ts` : **0**. Les deux formes physiques,
+  les deux écrivains et « on ne normalise rien en base » **sont toujours là**.
+- [x] **C4L14-10 · Les TROIS sites d'écriture sont câblés**, et le troisième est celui qu'on oublie :
+  `import-ecriture.ts` *(insert)*, `app/prof/conception/actions.ts` *(insert à la création)* et **le
+  même fichier à la mise à jour de l'édition**. Le champ se **saisit** aux deux formulaires
+  *(`Pipeline.tsx`, `Edition.tsx`)* et **se relit** *(`[id]/page.tsx`)*.
+
+### Reste à jouer en recette
+
+- [ ] **C4L14-11 · ⛔ LE CONTRÔLE DE DÉRIVATION DES INSTRUMENTS EST ROUGE, ET C'EST CE LOT QUI L'A
+  ROUGI.** `derive-instruments.py --verifie` dit **DIVERGE** sur `MANIFESTE.ts` et `calame-retour.ts`
+  — **4 lignes, 2 fichiers, uniquement l'empreinte du `07-` et son numéro (2.43 → 2.44)**, vérifié par
+  régénération dans un dossier d'essai : **aucune ligne de contenu ne diffère**. Le geste qui le
+  referme est `python3 scripts/derive-instruments.py --ecris`. ⚠️ **Il n'a PAS été joué** : le commit
+  `fc30441` du 24/08 pose que *« une session Code n'en a pas le droit »* et que Louis l'a rejoué
+  lui-même la veille pour la même cause. **Condition de reprise : un geste de Louis** — une commande,
+  puis `npm test` doit rendre **1 260/1 260**.
+- [ ] **C4L14-12 · L'ÉCRAN DE L'ÉLÈVE N'A PAS ÉTÉ VU.** La correction à trois volets — la réponse, son
+  pourquoi, la réfutation du candidat chargé — est **prouvée en fonctions pures et en types**, jamais
+  **à l'écran**. Il faut un dépôt réel au **cran 1**, une première crédence donnée, puis le second cas
+  et sa crédence. ⚠️ **Et la phrase de l'égalité n'a jamais été affichée.** **Condition de reprise : le
+  smoke prof/élève de C4-L7**, ou un décor de recette au cran 1 *(le décor de C4-L3 est au cran 4)*.
+- [ ] **C4L14-13 · LE CRAN 3 N'A JAMAIS SERVI DE CORRECTION EN VRAI.** C'est le cas **hors paire** :
+  pas d'état, la crédence du cas seule commande. Aucune instance de cran 3 n'existe en base *(les
+  6 cas aux crans à candidats sont des crans 1 et 3 de la banque, non importés)*. **Condition de
+  reprise : le premier import de la banque 1.2**, qui en portera.
+- [ ] **C4L14-14 · L'ÉCRAN DE CONCEPTION N'A PAS ÉTÉ MANIPULÉ.** La saisie de `pourquoi_juste`, sa
+  relecture après enregistrement, **et surtout sa SURVIE À UNE CORRECTION DU PROFESSEUR** *(le
+  troisième site d'écriture)* sont câblées et typées, jamais exercées. ⚠️ **C'est précisément la perte
+  silencieuse que le `07-` §2 met en garde** : elle ne se verrait qu'à l'écran de l'élève, des semaines
+  plus tard. **Condition de reprise : le smoke prof de C4-L7**, en concevant une instance au cran 1,
+  en la corrigeant, et en relisant le champ.
+- [ ] **C4L14-15 · LE JUMEAU DU REFUS N° 12 À L'ÉCRAN N'A PAS DE TEST.** `empechementsDeConception`
+  refuse désormais un `pourquoi_juste` hors des crans 1 et 3, comme l'import. Le module n'a pas de
+  banc de test dans le dépôt, et ce lot n'en a pas créé un. **Condition de reprise : C4-L7**, ou le
+  premier lot qui touche `utils/fabrique/conception.ts`.
+- [ ] **C4L14-16 · LA MIGRATION N'EST PAS EN PROD** — la prod n'existe pas encore *(C11b)*. ⚠️ **Et le
+  RUNBOOK de C11b n'emporte aucune table de C4** : la colonne naîtra du `--schema-only`, mais **aucune
+  ligne** ne suivra. **Condition de reprise : C11b.**

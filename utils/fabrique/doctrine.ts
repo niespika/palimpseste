@@ -33,7 +33,15 @@
 
 /** `08-` §1, l'en-tête du fichier d'import. Le majeur seul décide. */
 export const FORMAT_IMPORT = 'palimpseste/import-exercices'
-export const VERSION_IMPORT = '1.1'
+/**
+ * ⚠️ C4-L14 — LA MINEURE PASSE À 1.2, ET ELLE NE CHANGE AUCUN VERDICT. « Le
+ * majeur SEUL décide si l'import sait lire le fichier, et le mineur n'est lu par
+ * personne : il déclare l'intention du producteur » (`08-` §1). Ce qu'elle dit
+ * ici, c'est le format que ce port PARLE — la 1.2, celle qui déclare
+ * `pourquoi_juste` et la forme d'un distracteur. `generateur/noyau/banque.py`
+ * porte la même valeur ; les deux bouts se lisent ensemble.
+ */
+export const VERSION_IMPORT = '1.2'
 
 export const MODES = ['composer', 'restituer', 'expliquer', 'évaluer', 'interroger'] as const
 export const COMPETENCES = ['expression', 'argumentation', 'structure',

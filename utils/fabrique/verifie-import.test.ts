@@ -68,7 +68,7 @@ const DECO_T = {
 
 /** La banque minimale et conforme — le pendant de `_fixture(racine)`. */
 const banque = () => JSON.parse(JSON.stringify({
-  format: 'palimpseste/import-exercices', version: '1.1',
+  format: 'palimpseste/import-exercices', version: '1.2',
   genere_le: '2026-08-18', genere_par: 'autotest',
   textes: [{
     id: 'txt-descartes', auteur: 'Descartes', titre: 'Méditations métaphysiques',
@@ -181,6 +181,12 @@ const REFUS: Array<[string, (b: B) => void, number]> = [
       cs.distracteurs = [0, 1].map((i) => ({ texte: `c${i}`, pourquoi_faux: 'r' }))
     }
   }, 13],
+  // ⭐ C4-L14 — LE FORMAT 1.2. « Le n° 12 est UN SEUL refus, celui de l'appui
+  //    qui ne suit pas le cran » : le `pourquoi_juste` y entre comme quatrième
+  //    cas, jamais comme dix-neuvième refus.
+  ['R12 un `pourquoi_juste` hors des crans 1 et 3', (b) => {
+    b.exercices[0].cas[0].pourquoi_juste = "il n'a rien à faire ici"
+  }, 12],
   ['R05 un `cours` mal formé', (b) => { b.sujets[0].cours = ['c-0012', 7] }, 5],
   ["R05 un `cours` qui n'est pas la chaîne réservée", (b) => { b.textes[0].cours = 'toujours' }, 5],
   ['R05 une semaine de plan de lecture SANS son livre', (b) => { b.textes[0].plan_de_lecture = 7 }, 5],
@@ -216,6 +222,22 @@ const REFUS: Array<[string, (b: B) => void, number]> = [
   }, 18],
 ]
 
+/**
+ * ⭐ C4-L14 — UN CRAN 1 COMPLET, au sens du format 1.2 : douze candidats
+ * MOTIVÉS (chacun son `pourquoi_faux`) et un `pourquoi_juste` par cas. C'est le
+ * vecteur dont les deux suivants sont les dégradations — et c'est lui qui prouve
+ * que le port ne signale rien quand tout est là.
+ */
+function cran1Complet(b: B) {
+  const e = b.exercices[0]
+  e.cran = 1
+  for (const cs of e.cas) {
+    cs.distracteurs = Array.from({ length: 12 },
+      (_, i) => ({ texte: `c${i}`, pourquoi_faux: `r${i}` }))
+    cs.pourquoi_juste = "parce qu'elle seule tient sur ce matériau"
+  }
+}
+
 function demo(kw: Record<string, unknown> = {}) {
   return {
     id: 'dem-0001', competence: 'argumentation', grain: 'micro',
@@ -244,6 +266,7 @@ const PASSENT: Array<[string, (b: B) => void]> = [
   }],
   ['une démonstration bien formée', (b) => { b.demonstrations = [demo()] }],
   ['un fichier écrit contre la 1.0 reste importable en 1.1', (b) => { b.version = '1.0' }],
+  ['un cran 1 COMPLET — douze candidats motivés, et un `pourquoi_juste`', cran1Complet],
 ]
 for (const [nom, f] of PASSENT) {
   test(`IMPORT PASSE — ${nom}`, () => {
@@ -313,6 +336,20 @@ const SIGNALEMENTS: Array<[string, (b: B) => void, string]> = [
     'la passation en classe se pose par le professeur'],
   ['S6 un `bonus` à `true` à l\'import', (b) => { b.exercices[0].bonus = true },
     'décision du routeur'],
+  // ⭐ C4-L14 — LES DEUX SIGNALEMENTS DU FORMAT 1.2. Aucun des deux ne refuse :
+  //    « une mineure n'ajoute que des champs FACULTATIFS » (`08-` §1), et un
+  //    fichier de la 1.1 doit rester importable.
+  ['S10 un cran 1 sans `pourquoi_juste` — la correction sera muette', (b) => {
+    cran1Complet(b)
+    for (const cs of b.exercices[0].cas) cs.pourquoi_juste = null
+  }, 'aucun `pourquoi_juste`'],
+  ['S11 deux distracteurs muets — UNE ligne, agrégée', (b) => {
+    cran1Complet(b)
+    for (const cs of b.exercices[0].cas) {
+      cs.distracteurs[3].pourquoi_faux = ''
+      cs.distracteurs[7].pourquoi_faux = '   '
+    }
+  }, '2 distracteur(s) sans'],
 ]
 for (const [nom, f, motif] of SIGNALEMENTS) {
   test(`IMPORT SIGNALEMENT — ${nom}`, () => {
@@ -325,6 +362,15 @@ for (const [nom, f, motif] of SIGNALEMENTS) {
 
 // Les pendants NÉGATIFS : sans eux, un contrôle qui signalerait tout le temps
 // passerait les tests d'à côté.
+test('IMPORT — et il ne signale ni candidat muet ni pourquoi manquant', () => {
+  // ⭐ C4-L14 — LE PENDANT NÉGATIF DES DEUX SIGNALEMENTS DU FORMAT 1.2, sur le
+  //    MÊME vecteur que le « cran 1 complet » qui passe : un port qui signalerait
+  //    toujours passerait S10 et S11 sans rien contrôler.
+  const v = controleImport(casse(cran1Complet), doctrine)
+  assert.ok(!contient(v.signalements, 'pourquoi'),
+    `rien ne devait parler de « pourquoi » — rendus : ${JSON.stringify(v.signalements)}`)
+})
+
 test('IMPORT — rien n\'est signalé quand tout est rattaché', () => {
   const v = controleImport(casse((b) => {
     b.sujets[0].cours = 'generique'; b.textes[0].cours = 'generique'

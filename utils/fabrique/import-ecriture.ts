@@ -417,6 +417,12 @@ export async function deposerFichierImport(
         defaut: c?.defaut ?? null,
         distracteurs: c?.distracteurs ?? null,
         reponse_attendue: c?.reponse_attendue ?? null,
+        // ⭐ C4-L14 — LE FORMAT 1.2. « Pourquoi ce candidat-là est le bon »
+        //    (`08-` §5.2) : sans lui, la correction servie à l'élève n'aurait
+        //    aucune source, puisqu'à ces crans le jugement est algorithmique et
+        //    qu'aucun retour IA ne vient derrière. Le contrôle l'a déjà borné au
+        //    cran (refus n° 12) ; ici on ne fait que l'écrire.
+        pourquoi_juste: c?.pourquoi_juste ?? null,
       }))).select('ordre')
     // ⚠️ UNE INSTANCE SANS SON APPUI N'EST PAS « ENTRÉE ». Comptée comme telle,
     //   elle passait en file, se validait, et son écran d'édition — qui rend un

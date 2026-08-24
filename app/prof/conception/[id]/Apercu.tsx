@@ -96,6 +96,24 @@ export default function Apercu({ apercu }: { apercu: TypeApercu }) {
             </p>
           )}
 
+          {/* ⭐ C4-L14 — LE POURQUOI DE LA BONNE RÉPONSE, aux deux crans à
+              candidats. Il se montre ICI parce que la correction que l'élève
+              lira le porte ; le TIRAGE, lui, n'a pas bougé (piège 38). */}
+          {cs.pourquoiJuste && (
+            <div className="rounded-md border border-bordure bg-parchemin-fonce p-2">
+              <p className="font-ui text-xs uppercase tracking-wide text-muet-clair">
+                Pourquoi ce candidat-là est le bon
+              </p>
+              <p className="font-serif text-sm text-encre">{cs.pourquoiJuste}</p>
+            </div>
+          )}
+          {cs.candidats.length > 0 && !cs.pourquoiJuste && (
+            <p className="font-ui text-xs text-attention">
+              <em>Aucun <code>pourquoi_juste</code> : la correction ne montrera que la réponse,
+              pas pourquoi elle est la bonne.</em>
+            </p>
+          )}
+
           {/* « La correction du premier cas est SERVIE AVANT LE SECOND — c'est
               elle qui rend l'écart des deux crédences interprétable. » */}
           {cs.correctionServieAvantLeSuivant && (

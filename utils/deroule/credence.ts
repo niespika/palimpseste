@@ -65,14 +65,52 @@ export function formeDeLaCredence(cran: CodeCran): FormeCredence | null {
  *    (`08-` §5.2 ; `import-ecriture.ts`), l'ÉCRAN DE CONCEPTION écrit des
  *    chaînes (`app/prof/conception/actions.ts`). On LIT les deux et on ne
  *    normalise rien en base : réécrire la banque d'une instance importée la
- *    détruirait. `pourquoi_faux` n'est pas servi à l'élève — c'est une note de
- *    conception.
+ *    détruirait.
+ *
+ * ⭐ C4-L14 — CE BLOC PORTAIT UNE PHRASE DE PLUS, ET ELLE EST RENVERSÉE.
+ *    Elle disait : « `pourquoi_faux` n'est pas servi à l'élève — c'est une note
+ *    de conception. » **Personne ne l'avait jamais tranché** : la forme
+ *    `candidats: string[]` est née pour l'APERÇU DU PROFESSEUR (C4-L8), elle est
+ *    devenue le patron de l'élève par une instruction de réemploi, et le
+ *    commentaire l'a justifiée après coup. **La décision inverse est prise le
+ *    23/08 :** `pourquoi_faux` **est** servi à l'élève, à la correction, pour le
+ *    seul candidat qu'il a le plus chargé (`correction.ts`). La phrase part avec
+ *    elle ; le reste de ce bloc reste, et c'est lui qui tient la garde
+ *    « on ne normalise rien en base ».
  */
 export function texteDuCandidat(brut: unknown): string | null {
   if (typeof brut === 'string') return brut.trim() === '' ? null : brut
   if (brut && typeof brut === 'object') {
     const t = (brut as Record<string, unknown>).texte
     if (typeof t === 'string' && t.trim() !== '') return t
+  }
+  return null
+}
+
+/**
+ * ⭐ C4-L14 — LE `pourquoi_faux` D'UN CANDIDAT SERVI, retrouvé PAR SON TEXTE.
+ *
+ * ⚠️ On entre par le TEXTE, jamais par un index : les `candidats` journalisés
+ *    portent ce qui a été réellement affiché, **dans l'ordre réellement mêlé**,
+ *    et cet ordre n'est pas celui de la banque — l'écran en sert TROIS quand
+ *    elle en porte dix à quinze (`02-` §5). « Le texte retrouve son entrée en
+ *    banque » : c'est ce que fait cette fonction, et rien de plus.
+ *
+ * ⚠️ LES DEUX FORMES PHYSIQUES, ENCORE (voir `texteDuCandidat`). Sur une
+ *    instance **conçue en ligne**, un candidat est une CHAÎNE : il n'a pas de
+ *    `pourquoi_faux`, et cette fonction rend `null` — l'écran se taira sur la
+ *    réfutation **sans se taire sur le `pourquoi_juste`**, qui, lui, existe.
+ *    ⛔ On ne normalise toujours rien en base : la normalisation est à C4-L11.
+ *
+ * @returns le motif, ou `null` — candidat introuvable, forme chaîne, motif vide.
+ */
+export function pourquoiFauxDuCandidat(brutBanque: unknown, texteServi: string): string | null {
+  if (!Array.isArray(brutBanque)) return null
+  for (const x of brutBanque) {
+    if (texteDuCandidat(x) !== texteServi) continue
+    if (!x || typeof x !== 'object') return null
+    const pf = (x as Record<string, unknown>).pourquoi_faux
+    return typeof pf === 'string' && pf.trim() !== '' ? pf : null
   }
   return null
 }
@@ -229,6 +267,11 @@ export function saisieARegistrer(
     const valeur: SaisieCredence & Record<string, unknown> = {
       cas, forme: 'repartition',
       jetons: [j[0], j[1], j[2], j[3]],
+      // ⚠️ `choix` NE BOUGE PAS, et c'est délibéré : il part en base et la chaîne
+      //    le relit. Sur une ÉGALITÉ il rend 0, qui ne désigne alors personne —
+      //    et cette question-là ne se règle pas ici : la règle de l'égalité est
+      //    une règle DE L'ÉCRAN DE CORRECTION, et elle vit à
+      //    `correction.ts:leCandidatLePlusCharge` (C4-L14).
       choix: j.indexOf(Math.max(...j)),
       at: maintenant,
       // Les deux clés que la chaîne LIT, plus la trace de ce qui a été servi :

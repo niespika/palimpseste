@@ -9,7 +9,7 @@ import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import {
   regimeDuCran, regimeDuDeroule, RegimeInconnu, tempsServis, versionFinaleServie,
-  nombreDeCas, credenceDemandee, etapeDeLaPaire, statutApresRemise, deroulTermine,
+  nombreDeCas, credenceDemandee, etapeDeLaPaire, ETAPES_PAIRE, statutApresRemise, deroulTermine,
   SANS_ESCALADE, type EscaladePesante,
 } from './regime'
 
@@ -111,11 +111,26 @@ test('⭐ la correction du premier cas ne se sert QU’APRÈS sa crédence', () 
   assert.equal(etapeDeLaPaire(['une réponse', null], [{ cas: 1 }, null]), 'correction')
 })
 
-test('la paire avance cas 1 → crédence 1 → correction → cas 2 → crédence 2', () => {
+test('la paire avance cas 1 → crédence 1 → correction → cas 2 → crédence 2 → CORRECTION 2', () => {
   assert.equal(etapeDeLaPaire([null, null], [null, null]), 'cas_1')
   assert.equal(etapeDeLaPaire(['  ', null], [null, null]), 'cas_1', 'un blanc n’est pas une réponse')
   assert.equal(etapeDeLaPaire(['a', 'b'], [{ cas: 1 }, null]), 'credence_2')
-  assert.equal(etapeDeLaPaire(['a', 'b'], [{ cas: 1 }, { cas: 2 }]), 'credence_2')
+  // ⭐ C4-L14 — LE CAS TERMINAL A CHANGÉ, et c'est là que ça se voit. La
+  //    fonction ne rendait JAMAIS `cas_2` et rendait `credence_2` deux fois :
+  //    un sixième état ajouté en bout de liste, sans toucher ce `return`, serait
+  //    resté INATTEIGNABLE — et le second cas serait resté muet.
+  assert.equal(etapeDeLaPaire(['a', 'b'], [{ cas: 1 }, { cas: 2 }]), 'correction_2',
+    'le cas du transfert reçoit LA MÊME CORRECTION que le premier — décision de Louis, 23/08')
+})
+
+test('⭐ le sixième état vient APRÈS la crédence 2, jamais avant', () => {
+  // La même règle que le troisième état : « la correction ne se sert qu'une fois
+  // la crédence donnée — sans quoi l'élève déclarerait sa sûreté en connaissant
+  // la réponse, et la porte 2 ne mesurerait plus rien ».
+  assert.equal(etapeDeLaPaire(['a', 'b'], [{ cas: 1 }, null]), 'credence_2')
+  assert.equal(ETAPES_PAIRE.length, 6)
+  assert.deepEqual(ETAPES_PAIRE,
+    ['cas_1', 'credence_1', 'correction', 'cas_2', 'credence_2', 'correction_2'])
 })
 
 test('la remise fait avancer le statut, et jamais au-delà de ce que la version dit', () => {

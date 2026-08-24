@@ -125,6 +125,7 @@ export default async function EditionEtApercu({
       consigne: consignes[i] ?? '',
       distracteurs: Array.isArray(cs.distracteurs) ? cs.distracteurs.map(txt) : null,
       reponseAttendue: cs.reponse_attendue === null ? null : txt(cs.reponse_attendue),
+      pourquoiJuste: cs.pourquoi_juste === null ? null : txt(cs.pourquoi_juste),
       materiauContenu: txt(jointure(cs, 'exercices_materiaux').contenu) || null,
     })),
   })
@@ -180,6 +181,7 @@ export default async function EditionEtApercu({
             defaut: cs.defaut === null ? null : txt(cs.defaut),
             distracteurs: Array.isArray(cs.distracteurs) ? cs.distracteurs.map(txt).join('\n') : '',
             reponseAttendue: cs.reponse_attendue === null ? null : txt(cs.reponse_attendue),
+            pourquoiJuste: cs.pourquoi_juste === null ? null : txt(cs.pourquoi_juste),
             materiau: mat.defaut
               ? `${mat.famille ? `[${txt(mat.famille)}] ` : ''}${txt(mat.defaut)}`
               : null,

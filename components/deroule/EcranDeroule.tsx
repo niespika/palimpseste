@@ -120,7 +120,7 @@ export function EcranDeroule({ vue }: { vue: VueDuDeroule }) {
       )}
 
       {/* ── TEMPS 2 — ÉCRIRE ───────────────────────────────────────────── */}
-      {vue.cas.map((c) => (
+      {vue.cas.map((c, i) => (
         <div key={c.ordre} className="space-y-3">
           {(vue.estUnePaire || c.materiau) && (
             <section className="rounded-lg border border-bordure bg-surface p-4">
@@ -142,14 +142,52 @@ export function EcranDeroule({ vue }: { vue: VueDuDeroule }) {
             </section>
           )}
 
-          {/* ⭐ LA CORRECTION DU PREMIER CAS SE SERT AVANT LE SECOND — et
-              seulement après la première crédence (`02-` §2.3.1 a). */}
-          {c.ordre === 1 && vue.correctionDuPremierCas && (
+          {/* ⭐⭐ LA CORRECTION — servie APRÈS la crédence DE CE CAS, et pour
+              LES DEUX cas de la paire : le second est celui du transfert, et
+              aux crans au jugement algorithmique rien ne vient derrière lui.
+              ⚠️ La garde `c.ordre === 1` qui vivait ici est TOMBÉE (C4-L14) :
+              c'était l'un des deux endroits qui rendaient le second cas muet. */}
+          {vue.corrections[i] && (
             <Encart ton="ok">
               <h3 className="font-marque text-sm uppercase tracking-wide text-muet-clair">
                 Ce qu’il fallait voir
               </h3>
-              <TexteBrut texte={vue.correctionDuPremierCas} className="mt-2 text-sm text-encre" />
+              <TexteBrut texte={vue.corrections[i]!.reponse} className="mt-2 text-sm text-encre" />
+
+              {/* ⭐ LE POURQUOI. Aux crans à candidats la réponse ci-dessus est
+                  un CANDIDAT NU : elle ne peut rien dire d'elle-même. */}
+              {vue.corrections[i]!.pourquoiJuste && (
+                <>
+                  <h4 className="mt-3 font-marque text-xs uppercase tracking-wide text-muet-clair">
+                    Pourquoi c’est celle-là
+                  </h4>
+                  <TexteBrut texte={vue.corrections[i]!.pourquoiJuste!}
+                    className="mt-1 text-sm text-encre" />
+                </>
+              )}
+
+              {/* ⚠️ LA RÉFUTATION DU SEUL CANDIDAT LE PLUS CHARGÉ — jamais des
+                  trois : la rétroaction élaborée surcharge l'élève à faible
+                  bagage et devient redondante pour l'avancé. */}
+              {vue.corrections[i]!.refutation && (
+                <>
+                  <h4 className="mt-3 font-marque text-xs uppercase tracking-wide text-muet-clair">
+                    Ce que tu avais retenu — « {vue.corrections[i]!.refutation!.candidat} »
+                  </h4>
+                  <TexteBrut texte={vue.corrections[i]!.refutation!.pourquoiFaux}
+                    className="mt-1 text-sm text-encre" />
+                </>
+              )}
+
+              {/* ⭐ L'ÉGALITÉ SE DIT, elle ne se tait pas : « servir la
+                  réfutation d'un candidat que l'élève n'a pas choisi est pire
+                  que n'en servir aucune ». L'absence est honnête. */}
+              {vue.corrections[i]!.silence === 'egalite' && (
+                <p className="mt-3 font-ui text-xs text-encre-douce">
+                  Tu avais réparti tes jetons à égalité : aucun candidat n’était celui que tu
+                  tenais le plus pour vrai. Rien n’est donc repris ici en particulier.
+                </p>
+              )}
             </Encart>
           )}
 

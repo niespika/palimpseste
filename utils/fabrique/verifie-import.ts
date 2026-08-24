@@ -58,7 +58,14 @@ const CLES: Record<string, ReadonlySet<string>> = {
   exercice: new Set(['id', 'objet', 'cran', 'genre', 'lieu', 'modes',
     'observable_isole', 'materiau_source', 'materiau_cible', 'guide', 'cas', 'bonus']),
   materiau_ref: new Set(['provenance', 'support', 'texte', 'sujet', 'localisation', 'englobant']),
-  cas: new Set(['consigne', 'materiau', 'defaut', 'distracteurs', 'reponse_attendue']),
+  // ⭐ C4-L14 — `pourquoi_juste` entre au jeu de clés du `cas` (format 1.2).
+  //    Sans lui, une clé de plus valait refus n° 2 PAR CAS, donc sur tout
+  //    exercice neuf : le port refusait le format que le générateur produit.
+  cas: new Set(['consigne', 'materiau', 'defaut', 'distracteurs', 'reponse_attendue',
+    'pourquoi_juste']),
+  // ⚠️ La forme du distracteur était DÉJÀ portée ici avant que le `08-` §5.2 la
+  //    déclare — « cette forme était appliquée par le contrôle machine sans
+  //    qu'aucun document la déclare ; ce paragraphe paie la dette ».
   distracteur: new Set(['texte', 'pourquoi_faux']),
 }
 
@@ -698,7 +705,28 @@ export function controleImport(
           if (!(dis.length >= 10 && dis.length <= 15)) {
             v.signale(oc, `${dis.length} distracteurs en banque — le \`02-\` §6 en veut de 10 à 15`)
           }
-          for (const dd of dis) clesInconnues(v, oc, dd, 'distracteur')
+          // ⭐ C4-L14 — LE CANDIDAT MUET. « Un distracteur porte DEUX choses, et
+          //    la seconde est pour l'élève : `pourquoi_faux`, ce qui lui sera
+          //    montré quand la correction viendra » (`08-` §5.2). Sans elle, il
+          //    « s'affichera sans que rien ne dise à l'élève en quoi il ratait »
+          //    (`08-` §7.3).
+          // ⚠️ LE SIGNALEMENT DU COMPTE DE BANQUE, JUSTE AU-DESSUS, RESTE : le
+          //    nôtre S'AJOUTE, il ne le remplace pas — l'un parle de la taille de
+          //    la banque, l'autre de ce que ses entrées disent.
+          let muets = 0
+          for (const dd of dis) {
+            if (!estObjet(dd)) continue
+            clesInconnues(v, oc, dd, 'distracteur')
+            if (!nonVide(dd.pourquoi_faux)) muets += 1
+          }
+          // ⚠️ UNE SEULE LIGNE, AGRÉGÉE, QUI EN DONNE LE COMPTE (`08-` §7.3,
+          //    le patron des entrées sans rattachement au cours) : quinze
+          //    candidats muets ne font pas quinze signalements, ils font UN
+          //    SEUL défaut de conception.
+          if (muets) {
+            v.signale(oc, `${muets} distracteur(s) sans \`pourquoi_faux\` — ils s'afficheront `
+              + 'sans que rien ne dise à l\'élève en quoi ils rataient')
+          }
         }
       } else if (declare(dis)) {
         v.refuse(oc, `le cran ${cran} ne sert aucun distracteur`, 12)
@@ -710,6 +738,29 @@ export function controleImport(
       }
       if (c.reponseAttendue === 'null' && declare(r)) {
         v.refuse(oc, `le cran ${cran} ne déclare aucune \`reponse_attendue\``, 12)
+      }
+
+      // ⭐ C4-L14 — `pourquoi_juste`, format 1.2. « Là où la réponse attendue est
+      //    un CANDIDAT, elle a besoin d'un pourquoi ; ailleurs, elle EST le
+      //    pourquoi » (`08-` §5.2). Le discriminant est donc la présence des
+      //    DISTRACTEURS — les crans 1 et 3 —, jamais celle de la réponse
+      //    attendue, qui vit aussi aux crans 4 et 5.
+      // ⚠️ SON ABSENCE SIGNALE, ELLE NE REFUSE JAMAIS : « une mineure n'ajoute
+      //    que des champs FACULTATIFS ; casser la compatibilité, c'est
+      //    incrémenter le majeur » (`08-` §1). Un fichier de la 1.1 s'importe
+      //    toujours — sans quoi ce port casserait la banque déjà produite.
+      // ⚠️ SA PRÉSENCE HORS DES CRANS 1 ET 3 EST LE REFUS N° 12, celui de
+      //    « l'appui qui ne suit pas le cran » — le même que le distracteur, la
+      //    réponse attendue et le guide hors de leurs crans. Pas un dix-neuvième.
+      const pj = cs?.pourquoi_juste
+      if (c.distracteurs === 'présent') {
+        if (!nonVide(pj)) {
+          v.signale(oc, 'aucun `pourquoi_juste` — la correction servie avant le cas suivant '
+            + 'ne pourra montrer que la réponse, pas pourquoi elle est la bonne')
+        }
+      } else if (declare(pj)) {
+        v.refuse(oc, `le cran ${cran} ne déclare aucun \`pourquoi_juste\` : sa `
+          + '`reponse_attendue` EST déjà le pourquoi', 12)
       }
 
       const df = cs?.defaut

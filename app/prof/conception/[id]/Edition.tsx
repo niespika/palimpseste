@@ -17,7 +17,12 @@ export default function Edition({
   cranCommande: { defaut: boolean; distracteurs: boolean; reponseAttendue: boolean }
   optinSeJuger: boolean; optinConfiance: boolean
   cas: Array<{ ordre: number; consigne: string; defaut: string | null
-    distracteurs: string; reponseAttendue: string | null; materiau: string | null }>
+    distracteurs: string; reponseAttendue: string | null
+    /** ⭐ C4-L14 — il se SAISIT et il se RELIT : un champ qu'on n'affiche pas se
+     *  perd à la première correction, et la perte ne se voit qu'à l'écran de
+     *  l'élève, des semaines plus tard. */
+    pourquoiJuste: string | null
+    materiau: string | null }>
   /** C4-L11 — une instance d'examen diagnostique (type `complet`) : pas de cran,
    *  donc AUCUN appui et aucun cas. Elle édite sa consigne, et rien d'autre. */
   sansCran?: boolean
@@ -97,6 +102,16 @@ export default function Edition({
               <span className="block font-ui text-xs text-muet">la <code>reponse_attendue</code></span>
               <input name={`cas_${cs.ordre}_reponse`} defaultValue={cs.reponseAttendue ?? ''}
                 className={`${CHAMP} w-full`} />
+            </label>
+          )}
+          {cranCommande.distracteurs && (
+            <label className="block space-y-0.5">
+              <span className="block font-ui text-xs text-muet">
+                le <code>pourquoi_juste</code> — <em>pourquoi ce candidat-là est le bon</em> ;
+                l&apos;élève le lit à la correction
+              </span>
+              <textarea name={`cas_${cs.ordre}_pourquoi_juste`} rows={2}
+                defaultValue={cs.pourquoiJuste ?? ''} className={`${CHAMP} w-full`} />
             </label>
           )}
         </fieldset>
