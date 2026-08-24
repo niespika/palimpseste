@@ -5742,15 +5742,32 @@ Tout ce qui suit est donc la face **professeur**, et **les smokes élève resten
   **Condition de reprise : le premier passage sur `/prof/routeur?vue=assignation` avec un dépôt à
   retirer.**
 
-- [ ] **C4L13-16 · LA SEMAINE EN COURS N'EST JAMAIS EN BASE — et l'écran la montre donc VERTE.**
+- [ ] **C4L13-16 · LA SEMAINE EN COURS N'EST JAMAIS EN BASE — et l'écran ne la montre PAS DU TOUT.**
+  ⚠️ *Rectifié le 24/08, après vérification à l'exécution : une première rédaction disait « l'écran
+  la montre VERTE ». **C'est faux, et la réalité est meilleure.*** `chargerAssiduite` construit ses
+  semaines **À PARTIR DES LIGNES QUI EXISTENT** *(`lundis = [...new Set(siennes.map(l =>
+  l.cycleLundi))]`)* : une semaine sans aucune ligne **n'entre jamais dans la frise**, et
+  `semaineAffichee` retombe sur la dernière semaine comptée. **Éprouvé** — semaine `2026-08-31`
+  peuplée, `2026-09-07` laissée vide : frise `["2026-08-31"]`, semaine affichée `2026-08-31`.
   Le déclencheur compte **la semaine écoulée** *(sans quoi il compterait une semaine vide chaque
-  semaine)*. Conséquence, qui **n'est pas un défaut de ce lot mais une lecture de C4-L2** : tant que
-  le lundi suivant n'est pas passé, la semaine courante n'a aucune ligne, et `chargerAssiduite`
-  remplace l'absence par `assignes: 0` → bande **verte**, tableau « — faite ». ⭐ **Le point d'entrée
-  sait déjà poser une semaine nommée** *(`poserLaSemaineDAssiduite(admin, fuseau, aujourdHui,
-  semaineLundi)`)* et recalcule sans réserve tant qu'elle est en cours. ⛔ **Mais ouvrir un second
-  déclencheur est interdit** : « deux crons sur une même clé fabriquent deux lignes ».
+  semaine)* : le professeur voit donc **la dernière semaine close, jamais celle en cours**. ⭐ **Le
+  point d'entrée sait déjà poser une semaine nommée** *(`poserLaSemaineDAssiduite(admin, fuseau,
+  aujourdHui, semaineLundi)`)* et recalcule sans réserve tant qu'elle est en cours. ⛔ **Mais ouvrir
+  un second déclencheur est interdit** : « deux crons sur une même clé fabriquent deux lignes ».
   **Condition de reprise : une décision de Louis** — un bouton prof, ou rien.
+
+- [ ] **C4L13-19 · ⚠️ LE PIÈGE 22 RESTE OUVERT POUR UN ÉLÈVE INSCRIT *APRÈS* LE COMPTAGE — et c'est
+  le seul cas où « une ligne absente se lit VERT » subsiste.** La collecte pose une ligne pour
+  **tous** les élèves actifs au moment où elle compte : à l'intérieur d'une semaine comptée, plus
+  aucun trou. ⛔ **Mais `chargerAssiduite` liste les élèves de la classe AUJOURD'HUI** : un élève
+  inscrit après coup apparaît au tableau d'une semaine antérieure **sans ligne**. **Éprouvé** — ligne
+  retirée pour un élève d'une semaine peuplée : `{assignes: 0, termines: 0, completion: null, bande:
+  "vert"}`, et **le taux d'inactivité de la classe le compte comme actif** *(0,1429 sur 7 élèves)*.
+  ⚠️ **Ce n'est pas rattrapable par la collecte** — « une semaine dont le compte est arrêté ne se
+  recalcule pas », et rétro-poser des lignes pour un nouvel inscrit **fabriquerait une assiduité
+  qu'il n'a pas eue**. **Condition de reprise : une décision de conception** — soit l'écran distingue
+  « pas de ligne » de « ligne à zéro » *(ce que la base permet, l'absence étant discernable)*, soit
+  la frise borne son tableau aux élèves inscrits **à la date de la semaine**. *Relevé, non tranché.*
 
 - [ ] **C4L13-17 · LE BONUS DE VACANCES RESTE DU CODE SANS EMPLOI.** `06-` §5 accorde « au plus une
   semaine » au travail fait pendant les vacances ; le code existe et il est testé *(`assiduite.ts`
