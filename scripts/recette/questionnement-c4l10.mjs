@@ -257,11 +257,17 @@ try {
   dire(ecarts.length === 0, `\`verifierCoherence()\` ne rend AUCUN écart${
     ecarts.length ? ` — ${ecarts.join(' | ')}` : ''}`)
   const ouvertes = competencesOuvertes()
-  dire(ouvertes.includes('questionnement') && ouvertes.length === 5,
-    `CINQ compétences ouvertes, le Questionnement compris : ${ouvertes.join(', ') || 'aucune'}`)
+  // ⚠️ LE COMPTE ÉTAIT FIGÉ au jour de l'écriture. Les six sont ouvertes depuis
+  //    le 23/08 : ce qui compte est que CELLE-CI le soit, pas combien elles sont.
+  dire(ouvertes.includes('questionnement'),
+    `le Questionnement est OUVERTE à la chaîne — ${ouvertes.length} au total : ${
+      ouvertes.join(', ') || 'aucune'}`)
   const attente = competencesEnAttenteDeBranchement()
-  dire(attente.length === 1 && attente[0] === 'synthese',
-    `en attente de branchement (C4-L10 se rejoue pour elle) : ${attente.join(', ') || 'aucune'}`)
+  // ⚠️ Idem. La règle, elle, ne bouge pas : rien ne peut être À LA FOIS ouvert
+  //    et en attente de branchement.
+  dire(attente.every((c) => !ouvertes.includes(c)),
+    `en attente de branchement : ${attente.join(', ') || 'aucune'} — et aucune n'est `
+    + 'déjà ouverte')
   const etat = etatCompetence('questionnement')
   dire(!!VERSION_ATTENDUE && etat.instrument?.version === VERSION_ATTENDUE,
     'l\'instrument dérivé porte la VERSION DE LA FICHE que le manifeste déclare : '
@@ -299,9 +305,11 @@ try {
     note(`${nom} : exercice ${d.exerciceId.slice(0, 8)} · dépôt ${d.depotId.slice(0, 8)}`)
   }
   const statuts = await lireStatutsRecette(admin, decor.eleveId)
-  dire(statuts.questionnement === 'mesuree_silencieusement',
-    `le Questionnement NAÎT \`mesuree_silencieusement\` — statut lu : ${statuts.questionnement}. `
-    + 'Ce script n\'en pose aucun : le professeur choisit (`01-` §3 ; `03-` §9)')
+  // ⚠️ CETTE ASSERTION FIGEAIT UNE VALEUR — vraie tant que le professeur n'avait
+  //    rien posé. Il a posé les six le 23/08. Ce que le script garantit n'est pas
+  //    la VALEUR du statut, c'est qu'IL N'Y TOUCHE PAS. On DIT ce qu'on a lu.
+  note(`statut de recette lu pour le Questionnement : \`${statuts.questionnement}\` — ce script n'en `
+    + 'pose aucun, le professeur choisit (`01-` §3 ; `03-` §9)')
 
   console.log('\n══ C. LA CIBLE DU RETOUR — LA `cible_primaire` BAT L\'ALPHABET ══')
   for (const [nom, attendu, nMesurees] of [['vise_questionnement', 'questionnement', 3],

@@ -1,5 +1,28 @@
 # Les outils de recette
 
+> ⚠️ **CE FICHIER NE COUVRE QUE C4-L5 ET LES DEUX OUTILS DE C4-L8 / C4-L8-bis.**
+> Les recettes de **C4-L2, L3, L4, L6, L9, L10 (les six compétences) et L11**
+> existent en fichiers ici et ne sont documentées **que par leur propre en-tête** :
+> ouvre le `.mjs`, ses vingt premières lignes disent ce qu'il fait et ce qu'il sème.
+
+## Ce que tout script de recette d'ici garantit — et l'exception qui n'en est pas une
+
+**La règle du dossier** : un script **sème son décor et le retire**, dans le même
+run, et la sandbox revient à son état d'avant — vérifié par requête, jamais supposé.
+Deux scripts font exception et **séparent les deux gestes** :
+`routeur-c4l2-decor.mjs` (`--seme` | `--retire`, l'un des deux obligatoire) et
+`decor-c4l6.mjs` (six gestes, dont `--etat` et `--retire`).
+
+⛔ **`--garde-le-decor` SAUTE LE NETTOYAGE, ET LE REJOUER SANS LUI NE RATTRAPE PAS.**
+Deux scripts le portent — `deroule-c4l3.mjs` et `examens-c4l9.mjs` —, et le second le
+dit en toutes lettres : *« pour nettoyer, rejouer ce script sans `--garde-le-decor`
+ne suffira pas »*. C'est pourtant le mode dont une **traversée de bout en bout** a
+besoin, puisqu'elle veut que le décor du maillon précédent tienne : **qui l'emploie
+tient son propre registre de ce qu'il laisse, et le retire à la clôture.**
+⚠️ *Et ne prends pas pour un nettoyage le fait que `deroule-c4l3.mjs` remette les
+interrupteurs comme trouvés **même** avec `--garde-le-decor` : il rend les portes,
+pas les lignes.*
+
 ## C4-L5 — la chaîne de mesure
 
     node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON \

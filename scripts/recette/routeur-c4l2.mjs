@@ -141,8 +141,11 @@ if (unEleve) {
 
 // ── 5. R0 aujourd'hui : la voie mixte est le régime en cours ───────────────
 titre('5. R0 — ce qui est ciblable aujourd\'hui')
+// ⛔ LE STATUT EST GLOBAL depuis `c4_statut_recette_global.sql` — une ligne par
+//    compétence. La colonne de `competences_niveaux` est DORMANTE, et la lire
+//    ici rendait autant de lignes que d'élèves pour dire une seule chose.
 const { data: statuts } = await admin
-  .from('competences_niveaux').select('competence, statut_recette')
+  .from('competences_statut_recette').select('competence, statut_recette')
 const evaluees = new Set((statuts ?? []).filter((s) => s.statut_recette === 'evaluee')
   .map((s) => s.competence))
 ok(true, `compétences \`evaluee\` en base : ${evaluees.size}`,

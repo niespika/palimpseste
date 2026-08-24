@@ -81,6 +81,17 @@ const SANS_APPEL = process.argv.includes('--sans-appel')
 const RETIRE_SEUL = process.argv.includes('--retire')
 const MARQUE = 'RECETTE-C4L10-STR'
 let ok = 0
+
+// ⛔ LE STATUT DE RECETTE NE SE LIT PLUS DANS `competences_niveaux` : cette
+//    colonne est DORMANTE depuis `c4_statut_recette_global.sql` — le statut est
+//    GLOBAL, une ligne par compétence dans `competences_statut_recette`.
+// ⚠️ ET L'ASSERTION DE CLÔTURE A CHANGÉ DE FORME. Elle disait « AUCUN statut
+//    `evaluee` n'a été posé » — vrai quand rien ne l'était, FAUX depuis que le
+//    professeur les a posés délibérément (23/08). Ce que la recette doit
+//    garantir n'est pas que le statut soit d'une valeur : c'est qu'ELLE N'Y AIT
+//    PAS TOUCHÉ. On le mesure donc par un AVANT/APRÈS, pas par une constante.
+const statutDEntree = (await admin.from('competences_statut_recette')
+  .select('statut_recette').eq('competence', 'structure').maybeSingle()).data?.statut_recette ?? null
 let ko = 0
 const dire = (bon, texte) => { if (bon) ok++; else ko++; console.log(`${bon ? '✓' : '✗'} ${texte}`) }
 const note = (texte) => console.log(`  · ${texte}`)
@@ -228,11 +239,18 @@ try {
   dire(ecarts.length === 0, `\`verifierCoherence()\` ne rend AUCUN écart${
     ecarts.length ? ` — ${ecarts.join(' | ')}` : ''}`)
   const ouvertes = competencesOuvertes()
-  dire(ouvertes.includes('structure') && ouvertes.length === 3,
-    `TROIS compétences ouvertes, la Structure comprise : ${ouvertes.join(', ') || 'aucune'}`)
+  // ⚠️ LE COMPTE ÉTAIT FIGÉ au jour où ce script a été écrit (deux, trois…).
+  //    Les six sont ouvertes depuis le 23/08 : ce qui compte est que CELLE-CI
+  //    le soit, pas combien elles sont.
+  dire(ouvertes.includes('structure'),
+    `la Structure est OUVERTE à la chaîne — ${ouvertes.length} au total : ${
+      ouvertes.join(', ') || 'aucune'}`)
   const attente = competencesEnAttenteDeBranchement()
-  dire(attente.length === 3,
-    `en attente de branchement (C4-L10 se rejoue pour elles) : ${attente.join(', ') || 'aucune'}`)
+  // ⚠️ Idem : « il en reste trois » était vrai ce jour-là. La règle, elle, ne
+  //    bouge pas — rien ne peut être À LA FOIS ouvert et en attente.
+  dire(attente.every((c) => !ouvertes.includes(c)),
+    `en attente de branchement : ${attente.join(', ') || 'aucune'} — et aucune n'est `
+    + 'déjà ouverte')
   const etat = etatCompetence('structure')
   dire(!!VERSION_ATTENDUE && etat.instrument?.version === VERSION_ATTENDUE,
     'l\'instrument dérivé porte la VERSION DE LA FICHE que le manifeste déclare : '
@@ -257,9 +275,13 @@ try {
     note(`${nom} : exercice ${d.exerciceId.slice(0, 8)} · dépôt ${d.depotId.slice(0, 8)}`)
   }
   const statuts = await lireStatutsRecette(admin, decor.eleveId)
-  dire(statuts.structure === 'mesuree_silencieusement',
-    `la Structure NAÎT \`mesuree_silencieusement\` — statut lu : ${statuts.structure}. `
-    + 'Ce script n\'en pose aucun : le professeur choisit (`01-` §3 ; `03-` §9)')
+  // ⚠️ CETTE ASSERTION FIGEAIT UNE VALEUR — « NAÎT `mesuree_silencieusement` » —
+  //    vraie tant que le professeur n'avait rien posé. Il a posé les six le
+  //    23/08. Ce que le script doit garantir n'est pas la VALEUR du statut,
+  //    c'est qu'IL N'Y TOUCHE PAS : c'est l'avant/après de la clôture qui le
+  //    prouve. Ici, on se contente de DIRE ce qu'on a lu.
+  note(`statut de recette lu pour la Structure : \`${statuts.structure}\` — ce script n'en `
+    + 'pose aucun, le professeur choisit (`01-` §3 ; `03-` §9)')
 
   console.log('\n══ C. LA CIBLE DU RETOUR — LA `cible_primaire` BAT L\'ALPHABET ══')
   // ⚠️ « Le retour et le squelette de version finale s'attacheraient à la
@@ -513,12 +535,11 @@ try {
     `le décor semé est RETIRÉ — restes portant « ${MARQUE} » : ${restesBis.length}`)
   const apres = await etatInterrupteur()
   dire(apres?.chaine_actif === false, '`chaine_actif` est REVENU à OFF')
-  const { data: n } = await admin.from('competences_niveaux')
-    .select('statut_recette').eq('competence', 'structure')
-  const poses = (n ?? []).filter((x) => x.statut_recette === 'evaluee')
-  dire(poses.length === 0,
-    `AUCUN statut \`evaluee\` n'a été posé sur la Structure — pas même « pour tester » : ${
-      poses.length}`)
+  const statutDeSortie = (await admin.from('competences_statut_recette')
+    .select('statut_recette').eq('competence', 'structure').maybeSingle()).data?.statut_recette ?? null
+  dire(statutDeSortie === statutDEntree,
+    `LA RECETTE N'A PAS TOUCHÉ AU STATUT DE la Structure — ni « pour tester » : `
+    + `${statutDEntree} à l'entrée, ${statutDeSortie} à la sortie`)
 }
 
 console.log(`\n══ ${ko === 0 ? 'RECETTE VERTE' : 'RECETTE ROUGE'} — ${ok} vert(s), ${ko} rouge(s) ══\n`)

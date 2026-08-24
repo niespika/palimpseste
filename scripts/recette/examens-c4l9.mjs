@@ -380,48 +380,41 @@ titre('H bis. « se juger » — le blocage de STRUCTURE est levé')
 
 // ⚠️ DEUX CONDITIONS, ET UNE SEULE EST DE STRUCTURE. `offreSeJuger` exige
 //    (1) un geste `produire` au grain `meso`/`macro` — c'est la STRUCTURE, et
-//    c'est ce que C4-L9-bis répare — et (2) une compétence au statut `evaluee`
-//    — c'est LA DÉCISION DU PROFESSEUR, posée à la fabrique, et les 34 lignes de
-//    `competences_niveaux` sont aujourd'hui `mesuree_silencieusement`.
-//    On prouve donc (1) EN POSANT (2) le temps de la vérification, puis en le
-//    REMETTANT — et on le re-constate par requête.
-for (const d of deposes) {
-  const eleveId = d.depots[0].eleve_id
-  const avantFix = await offreSeJuger(admin, d.depots[0].id)
-  dit(avantFix.servie === false && /evaluee/.test(avantFix.motif ?? ''),
-    `${d.module} · sans compétence \`evaluee\`, l'étape se refuse — et le motif dit LAQUELLE `
-    + 'des deux conditions manque',
-    (avantFix.motif ?? '').slice(0, 90) + '…')
-  // ⭐ CE QUI COMPTE : le motif n'est PLUS « le cran servi est sans cran ».
-  dit(!/sans cran|geste .produire./.test(avantFix.motif ?? ''),
-    `⭐ ${d.module} · le refus NE PORTE PLUS sur le geste ni sur le grain`)
-}
-
-// On pose `evaluee` sur UNE compétence que les deux examens mesurent.
-const COMP = 'expression'
-const eleveIds2 = [...new Set(deposes.flatMap((d) => d.depots.map((x) => x.eleve_id)))]
-const { data: avant2 } = await admin.from('competences_niveaux')
-  .select('eleve_id, statut_recette, statut_recette_pose_le')
-  .eq('competence', COMP).in('eleve_id', eleveIds2)
-const repose = new Map((avant2 ?? []).map((r) => [r.eleve_id, r]))
-// ⚠️ LE STATUT ET SA DATE SE POSENT DANS LE MÊME GESTE — une garde de C4-L2 le
-//    tient (`07-` §1.3 : la date a un lecteur unique, le recalcul de la lettre
-//    « depuis les seules mesures postérieures à la recette »). Un `update` du
-//    seul statut est REFUSÉ par la base, en `23514`.
-// ⚠️⚠️ ET ON LIT LE `error` : supabase-js NE LÈVE PAS. Sans cette lecture, le
-//    refus passait inaperçu et la recette concluait à tort que « se juger » ne
-//    se servait pas — c'est exactement ce qui s'est produit au premier essai.
-const { error: ePose } = await admin.from('competences_niveaux')
-  .update({ statut_recette: 'evaluee', statut_recette_pose_le: new Date().toISOString() })
-  .eq('competence', COMP).in('eleve_id', eleveIds2)
-dit(!ePose, `le statut \`evaluee\` est posé sur « ${COMP} » le temps de la vérification`,
-  ePose?.message ?? '')
+//    c'est ce que C4-L9-bis répare — et (2) une compétence au statut `evaluee`,
+//    qui est LA DÉCISION DU PROFESSEUR, posée à la fabrique.
+// ⛔⛔ CE BLOC POSAIT UN STATUT PUIS LE RESTAURAIT. IL NE LE PEUT PLUS, ET IL NE
+//     LE DOIT PLUS. Depuis `c4_statut_recette_global.sql`, le statut est GLOBAL
+//     — UNE ligne par compétence — et le poser « le temps de la vérification »
+//     changerait le statut POUR TOUS LES ÉLÈVES, pas pour les sept du décor.
+//     Une recette ne décide pas à la place du professeur : elle LIT l'état.
+// ⚠️  ET SES ASSERTIONS FIGEAIENT UN MONDE — « aucune compétence n'est
+//     `evaluee` » — qui a pris fin le 23/08 : elles rendaient CINQ ROUGES sur un
+//     système sain. On assère désormais LA RÈGLE, vraie dans les deux mondes :
+//     « se juger » se sert EXACTEMENT quand la compétence servie est `evaluee`,
+//     et le refus, s'il y en a un, ne porte JAMAIS sur le geste ni sur le grain
+//     (c'est ce que C4-L9-bis a réparé, et c'est ce qui doit tenir).
+const { data: statutsGlobaux } = await admin.from('competences_statut_recette')
+  .select('competence, statut_recette')
+const evaluees = new Set((statutsGlobaux ?? [])
+  .filter((x) => x.statut_recette === 'evaluee').map((x) => x.competence))
+console.log(`  (compétences \`evaluee\` en base : ${[...evaluees].join(', ') || 'AUCUNE'})`)
 
 for (const d of deposes) {
   const offre = await offreSeJuger(admin, d.depots[0].id)
-  dit(offre.servie === true,
-    `⭐ ${d.module} · « SE JUGER » SE SERT`, offre.servie ? '' : (offre.motif ?? ''))
-  dit(offre.competence === COMP, `${d.module} · sur la compétence évaluée`, String(offre.competence))
+  // LA RÈGLE, dans les deux sens : servie ⟺ la compétence servie est `evaluee`.
+  dit(offre.servie === (offre.competence != null && evaluees.has(offre.competence)),
+    `⭐ ${d.module} · « SE JUGER » SE SERT EXACTEMENT quand la compétence l'est`,
+    `servie=${offre.servie} · compétence=${offre.competence} · ${offre.motif ?? ''}`)
+  // ⭐ CE QUI COMPTE, ET QUI VAUT DANS LES DEUX MONDES : quand ça refuse, le
+  //    motif ne porte NI sur le geste NI sur le grain — c'est C4-L9-bis.
+  dit(offre.servie || !/sans cran|geste .produire./.test(offre.motif ?? ''),
+    `⭐ ${d.module} · un refus ne porte JAMAIS sur le geste ni sur le grain`,
+    (offre.motif ?? '').slice(0, 90))
+  if (!offre.servie) {
+    console.log(`  · ${d.module} : « se juger » ne se sert pas — le reste de la forme ne se `
+      + 'vérifie pas sur une offre absente.')
+    continue
+  }
   dit(offre.questions.length === 2,
     `⭐ ${d.module} · DEUX questions, jamais trois (\`02-\` §5, en classe)`,
     `${offre.questions.length} question(s)`)
@@ -445,27 +438,13 @@ const { count: dureesFantomes } = await admin.from('exercices_types_crans')
 dit((dureesFantomes ?? 0) === 0,
   '⭐ AUCUNE durée ne peut naître : `exercices_types_crans` ne porte aucune ligne pour ces types')
 
-// On REMET les statuts, et on le CONSTATE.
-for (const [eleveId, r] of repose) {
-  const { error: eRemise } = await admin.from('competences_niveaux')
-    .update({ statut_recette: r.statut_recette, statut_recette_pose_le: r.statut_recette_pose_le })
-    .eq('competence', COMP).eq('eleve_id', eleveId)
-  if (eRemise) dit(false, `remise du statut de ${eleveId.slice(0, 8)}`, eRemise.message)
-}
-const { count: resteEvaluee } = await admin.from('competences_niveaux')
-  .select('eleve_id', { count: 'exact', head: true })
-  .eq('competence', COMP).eq('statut_recette', 'evaluee').in('eleve_id', eleveIds2)
-dit((resteEvaluee ?? 0) === 0,
-  '⭐ les statuts de recette sont REMIS — la recette ne décide pas à la place du professeur')
-// ⚠️ LA DATE SE COMPARE À CE QU'ELLE ÉTAIT, jamais à NULL : elle n'était pas
-//    nulle avant (C4-L2 l'a posée le 21/08), et une recette qui la remettrait à
-//    NULL détruirait la borne du recalcul de la lettre (`07-` §1.3).
-const { data: apresRemise } = await admin.from('competences_niveaux')
-  .select('eleve_id, statut_recette_pose_le').eq('competence', COMP).in('eleve_id', eleveIds2)
-const datesRendues = (apresRemise ?? []).every((r) =>
-  r.statut_recette_pose_le === repose.get(r.eleve_id)?.statut_recette_pose_le)
-dit(datesRendues,
-  '⭐ et la DATE de pose est rendue TELLE QU\'ELLE ÉTAIT — elle borne le recalcul de la lettre')
+// ⛔ LA REMISE DES STATUTS A DISPARU AVEC LA POSE : il n'y a plus rien à
+//    remettre, puisqu'on ne pose plus rien. C'est la meilleure garantie que
+//    « la recette ne décide pas à la place du professeur » — elle n'écrit pas.
+const { data: statutsApres } = await admin.from('competences_statut_recette')
+  .select('competence, statut_recette')
+dit(JSON.stringify(statutsApres) === JSON.stringify(statutsGlobaux),
+  '⭐ LES STATUTS DE RECETTE N\'ONT PAS BOUGÉ — la recette ne les touche plus du tout')
 
 titre('I. « au lancement, l’élève voit son signal, et entre par son module »')
 

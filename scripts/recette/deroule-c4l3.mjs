@@ -775,21 +775,40 @@ async function lesTroisGestes(d, porte) {
   const vue = await chargerLeDeroule(admin, d.depotB.id, d.eleveB,
     { ouvert: porte.exercicesActifs, delaiVfJours: porte.delaiVfJours })
   if (!vue) { dire(false, 'la vue du dépôt B est nulle : G ne peut pas être jouée'); return }
-  const { data: statuts } = await admin.from('competences_niveaux')
-    .select('competence, statut_recette').eq('eleve_id', d.eleveB)
-  const evaluees = (statuts ?? []).filter((s) => s.statut_recette === 'evaluee')
-  dire(evaluees.length === 0,
-    `PAR REQUÊTE : ${evaluees.length} compétence \`evaluee\` pour cet élève sur `
-    + `${(statuts ?? []).length} ligne(s) de \`competences_niveaux\``)
-  dire(vue.competencesDeLaConfiance.length === 0,
-    `\`vue.competencesDeLaConfiance\` est VIDE (${vue.competencesDeLaConfiance.length}) — la fiche `
-    + '§6, flux 2 : sans `evaluee`, le geste NE SE PRÉSENTE PAS. Ce n’est pas une panne.')
-  dire(!vue.gestesRestants.includes('confiance'),
-    `les gestes restants sont [${vue.gestesRestants.join(', ')}] — « confiance » n’y est pas`)
+  // ⛔ LE STATUT NE SE LIT PLUS PAR ÉLÈVE : il est GLOBAL, une ligne par
+  //    compétence (`c4_statut_recette_global.sql`), et la colonne de
+  //    `competences_niveaux` est DORMANTE.
+  // ⚠️⚠️ ET CETTE SECTION FIGEAIT UN MONDE — « zéro compétence `evaluee` » —
+  //    qui a pris fin le 23/08. Ce que la fiche §6 flux 2 garantit n'est pas
+  //    l'absence du geste : c'est que **le geste se présente EXACTEMENT quand
+  //    une compétence évaluée le porte**. On l'écrit donc en INVARIANT, vrai
+  //    dans les deux mondes, et l'on n'invente aucun attendu.
+  const { data: statuts } = await admin.from('competences_statut_recette')
+    .select('competence, statut_recette')
+  const evaluees = (statuts ?? []).filter((x) => x.statut_recette === 'evaluee')
+  note(`compétences \`evaluee\` en base : ${evaluees.length} — ${
+    evaluees.map((x) => x.competence).join(', ') || 'AUCUNE'}`)
+
+  const gesteOffert = vue.competencesDeLaConfiance.length > 0
+  dire(gesteOffert === vue.gestesRestants.includes('confiance'),
+    `\`competencesDeLaConfiance\` (${vue.competencesDeLaConfiance.length}) et les gestes restants `
+    + `[${vue.gestesRestants.join(', ')}] DISENT LA MÊME CHOSE — l'un ne se présente pas sans l'autre`)
+  dire(!gesteOffert || evaluees.length > 0,
+    'le geste ne se présente JAMAIS sans compétence `evaluee` (fiche §6, flux 2)')
+
   let dep = await relire(d.depotB.id, d.eleveB)
-  const conf = await enregistrerLaConfiance(admin, dep, { expression: 'moyenne' }, [], instant())
-  dire(!conf.ok && /ne se présente pas/.test(conf.message),
-    `et l’écriture est refusée mécaniquement : « ${conf.message} »`)
+  // ⛔ ON N'ÉCRIT QUE DANS LE CAS DU REFUS, et c'est délibéré : écrire une
+  //    confiance quand le geste EST offert changerait l'état du dépôt, et une
+  //    assertion plus bas dans cette même section vérifie que
+  //    `confiance_declaree` reste NULL. Une recette ne se marche pas dessus.
+  if (!gesteOffert) {
+    const conf = await enregistrerLaConfiance(admin, dep, { expression: 'moyenne' }, [], instant())
+    dire(!conf.ok && /ne se présente pas/.test(conf.message),
+      `le geste n'est pas offert, et l'écriture est refusée mécaniquement : « ${conf.message} »`)
+  } else {
+    note('le geste EST offert (au moins une compétence `evaluee`) — l\'écriture n\'est pas '
+      + 'tentée ici pour ne pas perturber la suite de la section')
+  }
 
   // ── L'ORDRE : `remettre` REFUSE tant que les deux gestes manquent ─────────
   dep = await relire(d.depotB.id, d.eleveB)
@@ -841,9 +860,13 @@ async function lesTroisGestes(d, porte) {
     && typeof ligne.conditions_declarees?.at === 'string',
     `\`conditions_declarees\` = ${JSON.stringify(ligne.conditions_declarees)} — un objet, pour que `
     + 'la règle des « trois `pas_pu` d’affilée » puisse se compter dans l’ordre')
+  // ⚠️ LE MOTIF A CHANGÉ, PAS L'ATTENDU. Il disait « aucune compétence
+  //    `evaluee`, donc aucune valeur » — vrai jusqu'au 23/08. La raison vraie
+  //    est plus simple et ne dépend d'aucun monde : L'ÉLÈVE N'EN A DÉCLARÉ
+  //    AUCUNE, et rien ne pose de valeur à sa place.
   dire(ligne.confiance_declaree === null,
-    `\`confiance_declaree\` reste NULL (${JSON.stringify(ligne.confiance_declaree)}) : aucune `
-    + 'compétence `evaluee`, donc aucune valeur — jamais un défaut posé à la place de l’élève')
+    `\`confiance_declaree\` reste NULL (${JSON.stringify(ligne.confiance_declaree)}) : l’élève `
+    + 'n’a rien déclaré — jamais un défaut posé à la place de l’élève')
 
   // Et l'ordre tient DANS L'AUTRE SENS : une fois la v1 remise, les trois gestes
   // se ferment — « un jugement porté après le retour ne mesure plus l'élève ».
@@ -1063,13 +1086,27 @@ async function laideConsommee(d) {
     + 'portes » (piège 35), la chaîne la RECOPIE et ne la calcule jamais')
 
   // ── ⚠️ CE QU'ON NE PEUT PAS PROUVER, ET POURQUOI ─────────────────────────
+  // ⚠️ LE MOTIF DE CE ⊘ A CHANGÉ, ET IL FAUT LE DIRE. Il invoquait « la porte
+  //    est la PREMIÈRE FICHE VERSÉE ET BANCÉE » — cette porte est OUVERTE depuis
+  //    C4-L10 : les six compétences sont branchées. Le seul obstacle restant est
+  //    que LA CHAÎNE N'A PAS TOURNÉ sur ce dépôt (mode `--sans-appel`, ou
+  //    `chaine_actif` à OFF). Le contrôle peut donc VERDIR — il le fait dès
+  //    qu'une mesure existe.
   const ouvertes = competencesOuvertes()
-  const { count: mesures } = await admin.from('competences_mesures')
-    .select('depot_id', { count: 'exact', head: true }).eq('depot_id', d.depotA.id)
-  manque(`le bout-en-bout \`aide_consommee\` → \`competences_mesures.aide_consommee\` N’EST PAS `
-    + `ÉPROUVÉ : ${ouvertes.length} compétence ouverte à la chaîne, donc `
-    + `${mesures ?? 0} mesure écrite pour ce dépôt (constaté par requête). La porte est la `
-    + 'PREMIÈRE FICHE VERSÉE ET BANCÉE, pas ce lot. Ce n’est pas un vert.')
+  const { data: mes } = await admin.from('competences_mesures')
+    .select('competence, aide_consommee').eq('depot_id', d.depotA.id)
+  if ((mes ?? []).length > 0) {
+    const attendue = (await ligneDuDepot(d.depotA.id, 'aide_consommee')).aide_consommee ?? null
+    dire((mes ?? []).every((m) => m.aide_consommee === attendue),
+      `⭐ LE BOUT-EN-BOUT EST ÉPROUVÉ : \`aide_consommee\` = ${attendue} au dépôt, et `
+      + `${(mes ?? []).map((m) => `${m.competence}=${m.aide_consommee}`).join(' · ')} en mesure `
+      + '— la chaîne la RECOPIE, elle ne la calcule pas')
+  } else {
+    manque(`le bout-en-bout \`aide_consommee\` → \`competences_mesures.aide_consommee\` n’est pas `
+      + `éprouvé ICI : ${ouvertes.length} compétence(s) ouverte(s) à la chaîne — la porte de C4-L10 `
+      + 'est donc LEVÉE —, mais la chaîne n’a pas tourné sur ce dépôt (0 mesure, constaté par '
+      + 'requête) : `--sans-appel`, ou `chaine_actif` à OFF. Ce n’est pas un vert.')
+  }
 }
 
 // ════════════════════════════════════════════════════════════════════════════

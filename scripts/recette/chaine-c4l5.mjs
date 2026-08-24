@@ -259,11 +259,21 @@ try {
     const bilan = await traiterDepot(admin, decor.depotId, 'v1', { config: lireConfig() })
     const duree = Date.now() - t0
 
-    dire(bilan.competencesMesurees.length === 0,
-      'aucune compétence n\'entre dans la chaîne — la clause granulaire tient EN PRODUCTION')
-    dire(bilan.competencesEcartees.length >= 1
-      && bilan.competencesEcartees.every((e) => /banc|dériv|branch/i.test(e.motif)),
-      `chaque compétence écartée DIT POURQUOI (${bilan.competencesEcartees.map((e) => e.competence).join(', ')})`)
+    // ⚠️ CES DEUX ASSERTIONS FIGEAIENT LE MONDE D'AVANT C4-L10 — « aucune
+    //    compétence n'entre », vrai quand `INSTRUMENTS` était vide. Les six sont
+    //    ouvertes depuis le 23/08 : elles ENTRENT. Ce que la clause granulaire
+    //    garantit n'est pas le vide, c'est que RIEN NE TOMBE EN SILENCE — une
+    //    compétence entre parce qu'elle est ouverte, ou elle est écartée EN
+    //    DISANT POURQUOI. On assère donc la règle.
+    const ouvertesIci = new Set(competencesOuvertes())
+    dire(bilan.competencesMesurees.every((c) => ouvertesIci.has(c)),
+      'une compétence n\'entre dans la chaîne QUE si elle est ouverte — la clause granulaire '
+      + `tient EN PRODUCTION (mesurées : ${bilan.competencesMesurees.join(', ') || 'aucune'})`)
+    dire(bilan.competencesMesurees.length + bilan.competencesEcartees.length > 0,
+      'la chaîne a CONSIDÉRÉ au moins une compétence — aucune ne disparaît sans trace')
+    dire(bilan.competencesEcartees.every((e) => !!e.motif && e.motif.trim().length > 0),
+      `toute compétence écartée DIT POURQUOI (${
+        bilan.competencesEcartees.map((e) => e.competence).join(', ') || 'aucune écartée'})`)
     dire(bilan.monitoring.mesures >= 1,
       `l'étage du Monitoring a tourné : ${bilan.monitoring.mesures} mesure(s)`)
     dire(duree < 180_000, `le retour arrive en ${(duree / 1000).toFixed(1)} s — contrat : < 180 s`)
@@ -290,10 +300,21 @@ try {
       'l\'amplitude est `n/a` sur la calibration et NULLE sur la lucidité — les deux formes '
       + 'd\'état ne se croisent pas, y compris dans `monitoring_mesures`')
 
+    // ⚠️ CETTE ASSERTION FIGEAIT UN MONDE, et ce monde a pris fin le 23/08 :
+    //    elle disait « AUCUNE mesure de calibration, la Connaissance n'est pas
+    //    `evaluee` » — vrai tant que rien ne l'était. Ce que la règle garantit
+    //    n'est pas l'absence : c'est que « la calibration NE COMPTE QUE SUR LES
+    //    `evaluee` ». On l'écrit donc en BICONDITIONNELLE, vraie dans les deux
+    //    mondes. ⛔ Et le statut se lit à sa source unique : la colonne de
+    //    `competences_niveaux` est DORMANTE (`c4_statut_recette_global.sql`).
     const calib = (mm ?? []).find((l) => l.sous_dimension === 'calibration_confiance')
-    dire(!calib,
-      'AUCUNE mesure de calibration : la Connaissance n\'est pas `evaluee`, '
-      + '« la calibration ne compte que sur les `evaluee` »')
+    const statutConnaissance = (await admin.from('competences_statut_recette')
+      .select('statut_recette').eq('competence', 'connaissance').maybeSingle())
+      .data?.statut_recette ?? 'mesuree_silencieusement'
+    const connaissanceEvaluee = statutConnaissance === 'evaluee'
+    dire(!!calib === connaissanceEvaluee,
+      'la calibration NE COMPTE QUE SUR LES `evaluee` — Connaissance '
+      + `« ${statutConnaissance} », mesure de calibration ${calib ? 'présente' : 'absente'}`)
 
     const apres = await niveauxDe(decor.eleveId)
     const nl = apres.lucidite_incompris
@@ -322,9 +343,16 @@ try {
     dire((couts ?? []).every((l) => l.modele && l.cout > 0),
       `le modèle et le coût sont journalisés (${couts?.[0]?.modele}, ${couts?.[0]?.cout} $)`)
 
-    const { data: sq } = await admin.from('exercices_squelettes').select('id').eq('depot_id', decor.depotId)
-    dire((sq ?? []).length === 0,
-      'aucun squelette : le Monitoring n\'écrit PAS dans les squelettes de compétence')
+    // ⚠️ « AUCUN squelette » était vrai quand rien n'entrait dans la chaîne. Ce
+    //    que la règle dit du Monitoring n'est pas qu'il n'y ait AUCUN squelette :
+    //    c'est qu'IL n'en écrive aucun. Les squelettes présents appartiennent aux
+    //    compétences mesurées — jamais à lui.
+    const { data: sq } = await admin.from('exercices_squelettes')
+      .select('competence').eq('depot_id', decor.depotId)
+    dire((sq ?? []).every((x) => x.competence !== 'monitoring'),
+      'le Monitoring n\'écrit AUCUN squelette — les '
+      + `${(sq ?? []).length} présent(s) sont ceux des compétences mesurées (${
+        [...new Set((sq ?? []).map((x) => x.competence))].join(', ') || 'aucune'})`)
     const { count: nMes2 } = await admin.from('competences_mesures')
       .select('id', { count: 'exact', head: true }).eq('depot_id', decor.depotId)
     dire(nMes2 === 0,

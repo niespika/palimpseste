@@ -277,12 +277,17 @@ try {
   dire(ecarts.length === 0, `\`verifierCoherence()\` ne rend AUCUN écart${
     ecarts.length ? ` — ${ecarts.join(' | ')}` : ''}`)
   const ouvertes = competencesOuvertes()
-  dire(ouvertes.includes('synthese') && ouvertes.length === 6,
-    `⭐⭐ LES SIX COMPÉTENCES SONT OUVERTES : ${ouvertes.join(', ') || 'aucune'}`)
+  // ⚠️ LE COMPTE ÉTAIT FIGÉ au jour de l'écriture. Les six sont ouvertes depuis
+  //    le 23/08 : ce qui compte est que CELLE-CI le soit, pas combien elles sont.
+  dire(ouvertes.includes('synthese'),
+    `la Synthèse est OUVERTE à la chaîne — ${ouvertes.length} au total : ${
+      ouvertes.join(', ') || 'aucune'}`)
   const attente = competencesEnAttenteDeBranchement()
-  dire(attente.length === 0,
-    `⭐ AUCUNE n'attend plus son branchement — C4-L10 est joué pour les six${
-      attente.length ? ` (reste : ${attente.join(', ')})` : ''}`)
+  // ⚠️ Idem. La règle, elle, ne bouge pas : rien ne peut être À LA FOIS ouvert
+  //    et en attente de branchement.
+  dire(attente.every((c) => !ouvertes.includes(c)),
+    `en attente de branchement : ${attente.join(', ') || 'aucune'} — et aucune n'est `
+    + 'déjà ouverte')
   const etat = etatCompetence('synthese')
   dire(!!VERSION_ATTENDUE && etat.instrument?.version === VERSION_ATTENDUE,
     'l\'instrument dérivé porte la VERSION DE LA FICHE que le manifeste déclare : '
@@ -329,9 +334,11 @@ try {
     note(`${nom} : exercice ${d.exerciceId.slice(0, 8)} · dépôt ${d.depotId.slice(0, 8)}`)
   }
   const statuts = await lireStatutsRecette(admin, decor.eleveId)
-  dire(statuts.synthese === 'mesuree_silencieusement',
-    `la Synthèse NAÎT \`mesuree_silencieusement\` — statut lu : ${statuts.synthese}. `
-    + 'Ce script n\'en pose aucun : le professeur choisit (`01-` §3 ; `03-` §9)')
+  // ⚠️ CETTE ASSERTION FIGEAIT UNE VALEUR — vraie tant que le professeur n'avait
+  //    rien posé. Il a posé les six le 23/08. Ce que le script garantit n'est pas
+  //    la VALEUR du statut, c'est qu'IL N'Y TOUCHE PAS. On DIT ce qu'on a lu.
+  note(`statut de recette lu pour la Synthèse : \`${statuts.synthese}\` — ce script n'en `
+    + 'pose aucun, le professeur choisit (`01-` §3 ; `03-` §9)')
 
   // ⭐⭐ LE RÉFÉRENT, DÉRIVÉ EN BASE — le fait qui commande toute la forme de la chaîne.
   const ctxCours = await lireContexte(admin, decor.referent_cours.depotId)

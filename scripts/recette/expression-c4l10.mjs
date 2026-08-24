@@ -58,6 +58,17 @@ const SANS_APPEL = process.argv.includes('--sans-appel')
 const RETIRE_SEUL = process.argv.includes('--retire')
 const MARQUE = 'RECETTE-C4L10'
 let ok = 0
+
+// ⛔ LE STATUT DE RECETTE NE SE LIT PLUS DANS `competences_niveaux` : cette
+//    colonne est DORMANTE depuis `c4_statut_recette_global.sql` — le statut est
+//    GLOBAL, une ligne par compétence dans `competences_statut_recette`.
+// ⚠️ ET L'ASSERTION DE CLÔTURE A CHANGÉ DE FORME. Elle disait « AUCUN statut
+//    `evaluee` n'a été posé » — vrai quand rien ne l'était, FAUX depuis que le
+//    professeur les a posés délibérément (23/08). Ce que la recette doit
+//    garantir n'est pas que le statut soit d'une valeur : c'est qu'ELLE N'Y AIT
+//    PAS TOUCHÉ. On le mesure donc par un AVANT/APRÈS, pas par une constante.
+const statutDEntree = (await admin.from('competences_statut_recette')
+  .select('statut_recette').eq('competence', 'expression').maybeSingle()).data?.statut_recette ?? null
 let ko = 0
 const dire = (bon, texte) => { if (bon) ok++; else ko++; console.log(`${bon ? '✓' : '✗'} ${texte}`) }
 const note = (texte) => console.log(`  · ${texte}`)
@@ -177,9 +188,13 @@ try {
   note(`exercice ${decor.exerciceId.slice(0, 8)} · dépôt ${decor.depotId.slice(0, 8)} `
     + `· élève ${decor.eleveId.slice(0, 8)}`)
   const statuts = await lireStatutsRecette(admin, decor.eleveId)
-  dire(statuts.expression === 'mesuree_silencieusement',
-    `l'Expression NAÎT \`mesuree_silencieusement\` — statut lu : ${statuts.expression}. `
-    + 'Ce script n\'en pose aucun : le professeur choisit (`01-` §3 ; `03-` §9)')
+  // ⚠️ CETTE ASSERTION FIGEAIT UNE VALEUR — « NAÎT `mesuree_silencieusement` » —
+  //    vraie tant que le professeur n'avait rien posé. Il a posé les six le
+  //    23/08. Ce que le script doit garantir n'est pas la VALEUR du statut,
+  //    c'est qu'IL N'Y TOUCHE PAS : c'est l'avant/après de la clôture qui le
+  //    prouve. Ici, on se contente de DIRE ce qu'on a lu.
+  note(`statut de recette lu pour l'Expression : \`${statuts.expression}\` — ce script n'en `
+    + 'pose aucun, le professeur choisit (`01-` §3 ; `03-` §9)')
 
   console.log('\n══ C. LES SLOTS ════════════════════════════════════════════════')
   // Les mêmes fonctions que la chaîne, sur les mêmes entrées — et sans appel.
@@ -329,11 +344,11 @@ try {
   dire(restes.length === 0, `le décor semé est RETIRÉ — restes portant « ${MARQUE} » : ${restes.length}`)
   const apres = await etatInterrupteur()
   dire(apres?.chaine_actif === false, '`chaine_actif` est REVENU à OFF')
-  const { data: n } = await admin.from('competences_niveaux')
-    .select('statut_recette').eq('competence', 'expression')
-  const poses = (n ?? []).filter((x) => x.statut_recette === 'evaluee')
-  dire(poses.length === 0,
-    `AUCUN statut \`evaluee\` n'a été posé sur l'Expression — pas même « pour tester » : ${poses.length}`)
+  const statutDeSortie = (await admin.from('competences_statut_recette')
+    .select('statut_recette').eq('competence', 'expression').maybeSingle()).data?.statut_recette ?? null
+  dire(statutDeSortie === statutDEntree,
+    `LA RECETTE N'A PAS TOUCHÉ AU STATUT DE l'Expression — ni « pour tester » : `
+    + `${statutDEntree} à l'entrée, ${statutDeSortie} à la sortie`)
 }
 
 console.log(`\n══ ${ko === 0 ? 'RECETTE VERTE' : 'RECETTE ROUGE'} — ${ok} vert(s), ${ko} rouge(s) ══\n`)
