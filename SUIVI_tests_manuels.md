@@ -5306,6 +5306,144 @@ manifeste, mission, « fait quand » — sont **identiques au mot près** à ceu
   ⚠️ **Le décor laissé** : ligne de plan `4770f701` *(note `RECETTE C4-L7`)*, instance `0f6c3fb4`,
   **7 dépôts**. **Registre : `scripts/recette/.traversee-c4l7-registre.json`. Retrait :
   `scripts/recette/traversee-c4l7.mjs --retire`.**
+### ⭐ ANNEXE au 24/08 — L'ÉCRAN DE L'ALLUMAGE, né d'un manque que ce lot a mis au jour
+
+_Ce lot a dû ouvrir et refermer des interrupteurs pour traverser, et il l'a fait **par requête**,
+faute d'autre chemin. Le constat qui en sort est net : **les six interrupteurs que le `07-` §5
+confie au professeur n'avaient aucun écran.** `poserPassationClasse`
+*(`utils/passation/acces.ts:75`)* porte même le commentaire « ouvrir et refermer sont des gestes du
+professeur ; **ceci existe pour la recette** » — et rien dans `app/` ne les basculait. Trois d'entre
+eux — `routeur_actif`, `competences_affichage_actif`, `fabrique_actif` — n'avaient **aucun écrivain
+applicatif du tout** : ils ne se posaient qu'en SQL, à la main._
+
+**Décision de Louis, 24/08 : l'écran est construit, et il vit à `/prof/allumage`**, dans Pilotage.
+*Le nom vient de la source — le `07-` §5 s'appelle « L'allumage ».*
+
+⚠️ **IL EST HORS LOT, et cette ligne en tient lieu d'entrée.** Aucune entrée du `07-` §2 ne le
+porte : C4-L6 est clos *(navigation Codex)* et C4-L11 déclare en toutes lettres « n'ouvre aucun
+écran ». **Décision de Louis : une annexe à C4-L7 suffit — il n'y aura pas d'entrée au `07-` §2
+pour lui.** *Il ne construit aucune fonctionnalité neuve : il sert des interrupteurs que le §5
+déclarait déjà, et que personne ne pouvait atteindre.*
+
+**Ce que le §5 imposait, et que l'écran porte** — il interdisait la présentation naïve en six
+bascules :
+
+- **DEUX GROUPES SÉPARÉS.** « Les trois ci-dessus répondent à des questions **du professeur** […]
+  les trois ci-dessous à une question **de chantier** — **c'est pourquoi ils ne se mélangent pas aux
+  premiers**. »
+- **Chacun dit SA QUESTION**, recopiée du §5 au mot près, **et ce qu'il commande** — relevé sur les
+  lecteurs réels du dépôt, jamais deviné.
+- **Aucun grisage, aucune séquence imposée** : « ils s'ouvrent dans l'ordre que le professeur
+  décide ».
+- ⛔ **L'écran ne se ferme derrière AUCUN des six** — un écran d'allumage gardé par ce qu'il commande
+  serait une porte fermée à clé de l'intérieur. Sa seule garde est `garderProf`.
+- ⛔ **Et il n'est pas un septième interrupteur** : « aucun lot n'en crée un septième pour ses
+  écrans ».
+
+⭐ **TROIS AVERTISSEMENTS QUI ÉVITENT TROIS FAUSSES PANNES**, et c'est là que l'écran vaut mieux que
+six cases : *(a)* **`chaine_actif` est le seul des six qu'une MACHINE bascule** — la coupure
+automatique de coût l'éteint au plafond mensuel ; s'il se referme seul le 12 du mois, c'est la
+facture, pas un bug ; *(b)* **`passation_classe_actif` — le plus fermé gagne, ET SEULEMENT D'UN
+CÔTÉ** : l'élève exige les deux portes, le professeur une seule *(`acces.ts:57` vs `:70`)* ;
+*(c)* ⚠️ **`routeur_actif` à ON N'ALLUME RIEN** — `filtreR0` exige `evaluee` **et** une lettre, et
+`competences_niveaux.lettre` n'a aucun écrivain avant `C4-L12`. *C'est le constat de `C4L7-2`,
+désormais dit à l'écran plutôt que découvert par un professeur qui conclurait à une panne.*
+
+**Trois défauts trouvés par la revue et corrigés avant la fin :** *(1)*
+`components/pilotage/Interrupteur.tsx` **existait déjà**, jetonné, `role="switch"`, commenté
+« réutilisable (accès modules, futurs réglages) », et **sans aucun importeur** — l'écran l'emploie
+au lieu de redessiner un toggle ; *(2)* ⛔ **un `update` qui ne trouve pas sa ligne rend
+`error: null` et zéro ligne touchée** : *refermer* un interrupteur aurait « réussi » sans rien
+écrire, la relecture rendant `false` — justement la valeur voulue. **La relecture seule ne voit que
+la moitié du cas** ; `.select('id')` + test de longueur ferme le trou ; *(3)* la revalidation ne
+portait que sur `/prof` alors que **ces six booléens commandent d'abord des écrans ÉLÈVE**.
+
+**Éprouvé de bout en bout, pas seulement affiché** : clic → écriture constatée **en base par
+requête** *(un seul interrupteur touché, les cinq autres intacts)* → écran à jour → **et effet réel
+sur un autre écran** *(la fabrique s'ouvre ; et `competences_affichage_actif` fait passer le profil
+de classe de « l'affichage est fermé » à « aucune lettre n'est encore posée » — **le vide expliqué
+dans ses DEUX régimes**)*. `npm test` **1 260/1 260** · `tsc` rien · `eslint` rien.
+
+### ⭐ LES SMOKES DU 24/08 — joués en session Code, dans le navigateur embarqué
+
+_⚠️ **Deux limites, dites d'emblée** : le navigateur embarqué rend les `confirm()` natifs **muets**
+*(règle de terrain de `C4L7-11`)*, et une session Code **ne peut pas passer en session élève**.
+Tout ce qui suit est donc la face **professeur**, et **les smokes élève restent entiers**._
+
+- [x] **C4L4-4 · ⭐⭐ LE RETOUR AFFICHÉ, SUR UN VRAI RETOUR ENGENDRÉ — VU, ET SEGMENTÉ.** Écran de
+  correction de la passation, sur le décor laissé par ce lot *(instance `0f6c3fb4`)*. Le dépôt de
+  Sacha porte **RETOUR PUBLIÉ**, « publié le 24/08 07 h 39 · **lu par l'élève** le 24/08 07 h 39 ».
+  ⭐ **Le retour est SERVI SEGMENTÉ**, comme le piège 20 l'exige — **5 points**, chacun avec sa
+  compétence et sa nature *(`EXPRESSION · RÉUSSITE`, `STRUCTURE · RÉUSSITE`, `ARGUMENTATION · À
+  TRAVAILLER` ×2, `STRUCTURE · À TRAVAILLER`)*, **chacun citant la copie** — et **jamais un bloc que
+  l'écran découperait** : confronté à la base, chaque point porte son **identifiant stable**,
+  `{depot}:v1:01` … `:05`, doublé par la colonne `points_ids`, plus sa `competence`, sa `nature`
+  (`reussite` / `point_de_travail`) et son `ancrage`. ⭐ **Le retour s'ouvre sur des réussites
+  CITÉES** — la règle 2 du gabarit, tenue. ⚠️ *Le retour est **masqué par défaut** derrière trois
+  volets (« Le compte · Les points · Le détail ») : « jugez d'abord ; révélez ensuite ».*
+- [x] **C4L14-14 · ⭐⭐ `pourquoi_juste` À L'ÉCRAN DE CONCEPTION — LES TROIS EXIGENCES TOMBENT, Y
+  COMPRIS LA SURVIE À UNE CORRECTION.** *C'était le smoke le plus précieux de la liste : il traque
+  une **perte silencieuse**, « qui ne se verrait qu'à l'écran de l'élève, des semaines plus tard ».*
+  **(1) La saisie** : une instance neuve conçue au **cran 1** en paire *(argument × composer,
+  consigne de banque `lien_explicite`)* — les deux `cas_<i>_pourquoi_juste` sont écrits en base.
+  **(2) La relecture** : les deux se relisent à l'écran d'édition après enregistrement.
+  **(3) ⭐ LA SURVIE** : une correction ne touchant **que la consigne** a été soumise — la consigne
+  a bien changé en base, **et les deux `pourquoi_juste` sont INTACTS**. **Le troisième site
+  d'écriture tient** *(`editerInstance`, `app/prof/conception/actions.ts:325`)*. **La perte
+  silencieuse annoncée n'a pas lieu.**
+  ⚠️ **ET UNE CONDITION QUE L'ENTRÉE NE DISAIT PAS** : le smoke **ne peut pas se jouer sur une
+  instance `assigne`** — `editerInstance` refuse en tête, « Cette instance est déjà assignée :
+  l'édition avant validation est passée », et le refus **s'affiche proprement**. Les trois instances
+  de cran 1 en base étant toutes `assigne`, il **faut** en concevoir une. *Elle a été **retirée
+  après le contrôle**, enfants d'abord — la leçon de `C4L7-13`.*
+- [x] **C4L11-D · LES TROIS ÉCRANS TOUCHÉS — VUS, `fabrique_actif` ouvert puis REFERMÉ.**
+  *(a)* **L'écran de conception sur un examen diagnostique** : l'en-tête dit bien
+  **« L'examen diagnostique — l'essai · SANS CRAN »** *(là où les autres instances portent « cran 1 »,
+  « cran 4 »…)*, et le bloc d'édition **accepte** la consigne — `textarea[name=consigne]` ni
+  `disabled` ni `readOnly`, portant le texte réel, avec son explication : « Un examen diagnostique
+  n'a pas de cran : il ne porte ni appui, ni défaut, ni distracteurs, ni réponse attendue. **Sa
+  consigne est tout ce qui s'édite ici.** » ⭐ *La condition « la base n'en porte aucun : il faut en
+  concevoir un » est **levée par le décor de ce lot**.*
+  *(b)* **Le profil de classe, onglet Compétences** : l'opt-out est rendu en matrice sur **les six
+  vraies compétences**, toutes `active`. ⭐ **La « zone en construction » aux cinq colonnes inventées
+  — Analyser · Interpréter · Argumenter · Problématiser · Conceptualiser — A DISPARU.**
+  ⭐ **Et le vide est EXPLIQUÉ** : « L'affichage des lettres est fermé (`competences_affichage_actif`).
+  Cet onglet reste ouvert, et il est vide **pour cette raison-là — pas parce que la classe n'a rien
+  fait**. » *Ouvert puis refermé, le message devient « Aucune lettre n'est encore posée » : les deux
+  régimes du vide, et aucun des deux ne ment.*
+  *(c)* **L'écran des compétences — le renvoi** : « il se pose au profil de la classe, onglet
+  Compétences », avec **un lien par classe** vers `?vue=competences`. ✓
+- [ ] **C4L10E-13 · C4L10A-13 · C4L10S-17 · C4L10C-22 — ⚠️ CE QU'ELLES DEMANDENT DE VOIR N'EXISTE
+  À AUCUN ÉCRAN.** Les quatre veulent « **la tuile de la fabrique** qui dit N compétences
+  **ouvertes** » *(une, deux, trois… six aujourd'hui)*. **Établi sur pièces :
+  `competencesOuvertes()` *(`utils/chaine/instruments.ts:545`)* n'a QU'UN SEUL LECTEUR dans tout le
+  dépôt — `utils/chaine/chaine.ts:141` — et AUCUN écran.** *Il existe bien un
+  `competencesOuvertes` dans `app/prof/conception/nouvelle/Pipeline.tsx:161`, mais c'est un
+  **homonyme local** : il calcule les modes admis par le `02-` §3, pas les compétences branchées à
+  la chaîne. Les confondre ferait cocher ces quatre entrées à tort.*
+  ⭐ **Ce que la fabrique montre, en revanche, est juste et a été vu** : les six fiches avec leur
+  version et leur statut de source *(RELUE ET VALIDÉE)*, leur correspondance *(8 · 8 · 8 · 7 · 11 ·
+  9 observables)*, **les six statuts de recette à `evaluee` posés le 23 août**, et le Monitoring à
+  part en `mesuree_silencieusement` avec sa règle.
+  **Condition de reprise : une décision — soit l'écran de la fabrique dit ce que la chaîne a
+  ouvert, soit ces quatre entrées se requalifient sur ce qu'il montre déjà.** *Ce n'est pas un
+  smoke qui manque, c'est un afficheur.*
+- [ ] **C4L2-13 · LES QUATRE ÉCRANS DU PILOTAGE — VUS, MAIS LE PARCOURS D'ÉCRITURE NON JOUÉ.** Les
+  trois vues rendent : **Budgets** *(avec le piège de la vacuité en tête, nommé — « 15 élèves ne
+  reçoivent aucun exercice routé »)*, **Assignation** *(navigation par semaines, « cet écran montre,
+  il ne demande pas »)*, **Assiduité**. ⭐ **Le gate se MONTRE sans fermer** : « Le routeur est
+  éteint. `routeur_actif` est à OFF […] Ces écrans, eux, restent ouverts — ils préparent
+  l'allumage. » ⛔ **Non coché** : l'entrée demande « régler un budget, noter un recueil, naviguer
+  les semaines », **et ce sont des écritures sur des élèves réels** — une session Code ne les fait
+  pas sans demande. **Condition de reprise : le parcours à la main.**
+- [ ] **C4L3-17 · C4L14-12 — INTOUCHABLES DEPUIS UNE SESSION CODE, et le motif n'a pas changé.**
+  Les deux sont des smokes **ÉLÈVE** *(les six temps, le collage refusé sur ses trois vecteurs au
+  clavier réel, la crédence au doigt ; et la correction à trois volets côté élève)*. La session
+  travaille dans une session **professeur** et **ne saisit pas d'identifiants** *(piège 66)* ; et le
+  navigateur embarqué rend les `confirm()` natifs **muets**. ⚠️ **`C4L14-12` a en outre besoin d'une
+  instance de cran 1 NON assignée** — celle qui a servi ci-dessus a été retirée. **Condition de
+  reprise inchangée : le Chrome de Louis, en session élève.**
+
 - [ ] **C4L7-12 · RAPPELS — CE QUI EST DÛ ET QUI N'EST PAS DE CE LOT.** `C4L11-C` *(le cron vu
   tourner chez l'hébergeur — **condition : le premier déploiement**, pas moi ; C4-L7 a appelé la
   route **lui-même**, ce qui coche `C4L11-B` et non `C4L11-C`)* · `C4L11-E` et `SEC-21` *(le smoke

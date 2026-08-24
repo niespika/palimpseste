@@ -45,6 +45,10 @@ export const NAV_PROF: NavTab[] = [
       { label: 'Routeur', href: '/prof/routeur' },
       { label: 'Calendrier', href: '/prof/calendrier' },
       { label: 'Intégrité', href: '/prof/integrite' },
+      // `07-` §5, « L'allumage » — les SIX interrupteurs, et ce que chacun ouvre.
+      // Le §5 les confie au professeur depuis C4-L1 ; jusqu'ici rien ne les
+      // servait, et il fallait une requête en base pour en basculer un.
+      { label: 'Allumage', href: '/prof/allumage' },
     ],
   },
   {
