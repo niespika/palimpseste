@@ -18,7 +18,9 @@
 import { revalidatePath } from 'next/cache'
 import { garderProf } from '@/utils/routeur/acces'
 import { retraitCompteDansLaSemaine } from '@/utils/routeur/assiduite'
-import { lundiDe } from './serveur'
+import { toISODate } from '@/utils/calendrier-grille'
+import { lundiDuCycle } from '@/utils/deroule/echeance'
+import { lireFuseau } from '@/utils/fuseau-serveur'
 
 export interface Retour { ok: boolean; message: string; details?: string[] }
 
@@ -133,7 +135,14 @@ export async function retirerLExercice(_prec: Retour | null, form: FormData): Pr
 
   // « TOUT override du professeur SE JOURNALISE dans `routeur_decisions`,
   //   ORIGINE COMPRISE » (07- §1.5 ; 01- §11, point 1).
-  const cycleLundi = lundiDe(d.assigne_at.slice(0, 10))
+  // ⚠️ LES INSTANTS SE LISENT DANS LE FUSEAU, les DATES PURES restent en UTC.
+  //    `assigne_at.slice(0, 10)` prenait le JOUR UTC d'un `timestamptz` : un
+  //    dépôt du dimanche 20 h 30 à Toronto est le lundi 00 h 30 UTC, et se
+  //    datait donc de la semaine SUIVANTE — à l'heure exacte à laquelle les
+  //    élèves déposent. `lundiDuCycle` est la fonction canonique, et elle rend
+  //    une DATE PURE ancrée à minuit UTC, dont le jour ISO vaut 1.
+  const fuseau = await lireFuseau()
+  const cycleLundi = toISODate(lundiDuCycle(new Date(d.assigne_at), fuseau))
   const entree = {
     geste: 'retrait', depot_id: depotId, motif: motif || null,
     par: userId, at: new Date().toISOString(),
@@ -157,7 +166,12 @@ export async function retirerLExercice(_prec: Retour | null, form: FormData): Pr
     })
   }
 
-  const quand = retraitCompteDansLaSemaine(cycleLundi, lundiDe(new Date().toISOString().slice(0, 10)))
+  // ⚠️ Le « cycle courant » se lisait de la même façon — et c'est l'argument de
+  //    la règle « une semaine déjà arrêtée ne se recalcule pas ». Un dimanche
+  //    soir, il désignait déjà la semaine suivante, et le retrait basculait donc
+  //    du côté « semaine arrêtée » un jour trop tôt.
+  const cycleCourant = toISODate(lundiDuCycle(new Date(), fuseau))
+  const quand = retraitCompteDansLaSemaine(cycleLundi, cycleCourant)
   revalidatePath('/prof/routeur')
   return { ok: true, message: 'Exercice retiré.', details: [quand.motif] }
 }
