@@ -96,11 +96,16 @@ export const FICHES: Record<Interrupteur, FicheDInterrupteur> = {
       'le MOTEUR du routeur — à OFF, rien n’est assigné automatiquement',
     ],
     avertissement:
-      '⚠️ L’OUVRIR NE SUFFIT PAS À ALLUMER LE ROUTEUR, et il faut le savoir avant de '
-      + 'conclure à une panne : le ciblage exige d’une compétence qu’elle soit `evaluee` '
-      + 'ET qu’elle porte une LETTRE. Les six sont `evaluee` — mais rien n’écrit encore '
-      + 'la lettre, et c’est le quatrième geste de C4-L12. À ON, cet interrupteur ne '
-      + 'produira donc aucune décision tant que ce lot n’est pas joué. '
+      '⚠️ LE CIBLAGE EXIGE DEUX CHOSES D’UNE COMPÉTENCE : qu’elle soit `evaluee` ET '
+      + 'qu’elle porte une LETTRE. Les six sont `evaluee` depuis le 23/08, et la lettre '
+      + 'a désormais son écrivain — C4-L12, quatrième geste (24/08). '
+      + 'À ON, le routeur pose une semaine par élève au déclencheur hebdomadaire '
+      + '(`/api/assiduite/hebdo`, sur lequel il se greffe). '
+      + '⚠️ CE QUI PEUT ENCORE LE RENDRE MUET N’EST PLUS LA LETTRE, MAIS LE VIVIER : '
+      + 'la couche 4 ne sert que les instances rattachées à un cours DÉJÀ VU, dans le '
+      + 'parcours de l’élève, et sous sa position de lecture. Un vivier vide donne une '
+      + 'semaine vide, et le bilan du routeur DIT lequel des trois filtres a mordu — '
+      + '« rien à poser » et « rien à servir » ne sont pas la même panne. '
       + '(Les écrans de pilotage, eux, ne se ferment pas derrière lui : ils le lisent '
       + 'pour le montrer, et restent ouverts — ils préparent l’allumage.)',
   },

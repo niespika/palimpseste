@@ -108,10 +108,30 @@ function LigneDepot({ depot }: { depot: DepotAssigne }) {
             </span>
           )}
         </p>
-        {depot.sondes.length > 0 && (
+        {/* ⛔ LES DEUX SONDES NE SE CONFONDENT JAMAIS (`01-` §8.8), et elles vivent
+            dans le MÊME tableau — `sondes_retenues` —, distinguées par le seul
+            `sonde_montee`. Les mêler ici affichait « Cible : expression · Sondes :
+            expression », que personne ne peut lire. *Constaté au smoke de C4-L12,
+            le jour où la colonne s'est remplie.* */}
+        {depot.sondes.some((s) => s.sonde_montee !== true) && (
           <p className="font-ui text-xs text-muet">
-            Sondes : {depot.sondes.map((s) =>
+            Sondes : {depot.sondes.filter((s) => s.sonde_montee !== true).map((s) =>
               `${s.competence ?? '?'}${s.motif ? ` (${s.motif})` : ''}`).join(' · ')}
+            <span className="ml-1 text-[10px] text-encre-douce">
+              — mesurées en silence, sans retour
+            </span>
+          </p>
+        )}
+        {depot.sondes.some((s) => s.sonde_montee === true) && (
+          <p className="font-ui text-xs text-muet"
+            title="Une sonde de montée sert la CIBLE au-dessus de sa bande de crans : elle
+                   vérifie l’aisance, elle n’entraîne pas, et elle ne compte ni dans la fenêtre
+                   d’acquisition ni dans la stagnation (M-e). Elle reçoit un retour.">
+            Sonde de montée : {depot.sondes.filter((s) => s.sonde_montee === true)
+              .map((s) => s.competence ?? '?').join(' · ')}
+            <span className="ml-1 text-[10px] text-encre-douce">
+              — la cible servie au-dessus de sa bande
+            </span>
           </p>
         )}
         <p className="font-ui text-xs text-muet">

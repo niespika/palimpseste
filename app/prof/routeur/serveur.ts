@@ -10,7 +10,6 @@
 
 import 'server-only'
 import { createAdminClient } from '@/utils/supabase/admin'
-import { calculerGrilleSemaines } from '@/utils/calendrier-grille'
 import { lireFuseau } from '@/utils/fuseau-serveur'
 import { jourDansFuseau } from '@/utils/fuseau'
 import {
@@ -18,7 +17,8 @@ import {
   type LigneAssiduite,
 } from '@/utils/routeur/donnees'
 import { budgetDeLEleve, type BudgetDeLEleve } from '@/utils/routeur/budget'
-import { decouperEnSegments, type DecoupeEnSegments } from '@/utils/routeur/segments'
+import type { DecoupeEnSegments } from '@/utils/routeur/segments'
+import { lireLesSegments } from '@/utils/moteur/calendrier-serveur'
 import {
   assiduiteDeLEleve, inactiviteDeLaClasse, vueFine, type SeuilsAssiduite,
   type AssiduiteEleve, type SemaineEleve,
@@ -317,27 +317,10 @@ export async function chargerAssiduite(
 export async function chargerLesSegments(
   admin: Admin, dateDebut?: string,
 ): Promise<DecoupeEnSegments & { incidents: string[] }> {
-  const incidents: string[] = []
-  const { data: semestres, error } = await admin
-    .from('semesters').select('id, name, start_date, end_date')
-    .is('archived_at', null).order('start_date')
-  if (error) incidents.push(`semestres : ${error.message}`)
-
-  const { data: vacances } = await admin
-    .from('holidays').select('semester_id, label, start_date, end_date')
-
-  const semaines: Array<{ dateDebutLundi: string; dateFinDimanche: string }> = []
-  for (const s of (semestres ?? []) as Array<{ id: string; start_date: string; end_date: string }>) {
-    const h = ((vacances ?? []) as Array<{ semester_id: string; label: string
-      start_date: string; end_date: string }>)
-      .filter((v) => v.semester_id === s.id)
-      .map((v) => ({ label: v.label, start_date: v.start_date, end_date: v.end_date }))
-    for (const w of calculerGrilleSemaines(s, h)) {
-      if (w.isVacation) continue
-      if (dateDebut && w.start < dateDebut) continue
-      semaines.push({ dateDebutLundi: w.start, dateFinDimanche: w.end })
-    }
-  }
-
-  return { ...decouperEnSegments(semaines), incidents }
+  // ⭐ LA LECTURE A DÉMÉNAGÉ À `utils/moteur/calendrier-serveur.ts` (C4-L12), pour
+  //    que l'écran et le MOTEUR lisent le même calendrier : c'est de là que sort
+  //    le segment courant, donc la règle de calibration du §6, le démarrage des
+  //    compteurs d'escalade au segment 3 et la table de proportions. Deux
+  //    lectures d'un même calendrier finiraient par diverger.
+  return lireLesSegments(admin, dateDebut)
 }

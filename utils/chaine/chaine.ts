@@ -314,6 +314,30 @@ export async function traiterDepot(
       + `le chiffre de diagnostic ment, les gardes lisent la base et tiennent.`)
   }
 
+  // ⭐⭐ C4-L12 — LE MOTEUR PREND LA SUITE. « Tu écris des MESURES ; LE MOTEUR EN
+  //    FERA DES LETTRES » (`utils/chaine/mesures.ts`) : la chaîne ne touche
+  //    toujours ni `competences_niveaux`, ni `competences_escalade`, ni
+  //    `competences_montee` — elle DÉLÈGUE, ici, une fois les mesures écrites.
+  //    ⚠️ On appelle aussi en `vf` : elle n'écrit aucune mesure, mais elle
+  //    ATTACHE LE DELTA, qui est le signal de réceptivité de N2 (§8.4).
+  //    ⚠️ Un incident du moteur ne casse jamais le retour : il part en alerte.
+  const touchees = competencesFroides.filter((c) => ouvertes.has(c))
+  if (touchees.length) {
+    try {
+      const [{ ecrireLEtatApresMesure }, { lireFuseau }] = await Promise.all([
+        import('@/utils/moteur/etat-serveur'), import('@/utils/fuseau-serveur'),
+      ])
+      const bilanEtat = await ecrireLEtatApresMesure(
+        admin, ctx.eleveId, touchees, await lireFuseau())
+      alertes.push(...bilanEtat.erreurs.map((e) => `état après mesure : ${e}`))
+      for (const x of bilanEtat.ecartees) {
+        alertes.push(`état de ${x.competence} non réécrit — ${x.motif}`)
+      }
+    } catch (e) {
+      alertes.push(`état après mesure : ${(e as Error).message} — la lettre n'a pas bougé.`)
+    }
+  }
+
   const dureeMs = Date.now() - debut
   if (dureeMs > config.latenceCibleMs) {
     alertes.push(`contrat de latence dépassé : ${Math.round(dureeMs / 1000)} s pour une cible de `

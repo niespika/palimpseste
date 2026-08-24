@@ -42,9 +42,20 @@ import { createAdminClient } from '@/utils/supabase/admin'
 import { jourDansFuseau } from '@/utils/fuseau'
 import { lireFuseau } from '@/utils/fuseau-serveur'
 import { poserLaSemaineDAssiduite } from '@/utils/assiduite/collecte-serveur'
+import { poserLesSemainesDuRouteur } from '@/utils/moteur/cycle-serveur'
 
 export const maxDuration = 60
 
+// ⭐⭐ LE GREFFON DE `C4-L12`, ET L'ORDRE COMPTE — 24/08.
+// `C4-L12` « se greffe sur ce déclencheur » plutôt que d'en ouvrir un second
+// sur la même clé (élève × cycle). L'ordre des deux appels EST la règle :
+//   1. LA COLLECTE pose la ligne de la semaine ÉCOULÉE et ses deux agrégats ;
+//   2. LE ROUTEUR remplit les MINUTES de cette même ligne — celle qui vient
+//      d'être posée, jamais celle de la semaine qu'il pose —, puis il pose la
+//      semaine qui COMMENCE.
+// ⛔ Inverser les deux perdrait les minutes en silence : l'`update` du routeur
+//    ne trouverait aucune ligne. ⛔ Et le routeur n'en POSE jamais aucune :
+//    « il remplit la ligne qu'il trouve, il n'en ouvre pas » (`07-` §1.5).
 export async function GET(req: Request): Promise<Response> {
   const secret = process.env.CRON_SECRET
   if (!secret || req.headers.get('authorization') !== `Bearer ${secret}`) {
@@ -53,6 +64,15 @@ export async function GET(req: Request): Promise<Response> {
   const admin = createAdminClient()
   const fuseau = await lireFuseau()
   const aujourdHui = jourDansFuseau(new Date().toISOString(), fuseau)
-  const bilan = await poserLaSemaineDAssiduite(admin, fuseau, aujourdHui)
-  return Response.json(bilan)
+  const assiduite = await poserLaSemaineDAssiduite(admin, fuseau, aujourdHui)
+  // ⚠️ Un incident du routeur ne doit jamais faire échouer la collecte, dont le
+  //    coût est IRRÉVERSIBLE — « une semaine non comptée ne se rattrape pas ».
+  let routeur: unknown
+  try {
+    routeur = await poserLesSemainesDuRouteur(admin, fuseau, aujourdHui)
+  } catch (e) {
+    routeur = { erreur: (e as Error).message,
+      note: 'le routeur a échoué ; la collecte d\'assiduité, elle, est passée.' }
+  }
+  return Response.json({ assiduite, routeur })
 }

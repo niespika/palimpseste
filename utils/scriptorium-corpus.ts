@@ -69,6 +69,12 @@ export interface ElementCorpus {
   legendes: string[]                 // légendes d'images du contenu (images ignorées, légendes incluses — v1)
   livreCle?: string                  // livre_semaine : livre porteur (agrégation section [3])
   seance?: number                    // livre_semaine : ordinal de séance d'origine
+  contenuCle?: string                // contenu/section : le COURS porteur (scriptorium_contenus.id).
+                                     // Ajouté par C4-L12 : le filtre « cours vu » de la couche 4
+                                     // (01- §4) compare le rattachement d'un matériau à CE cours-ci,
+                                     // et « déjà vu ne s'invente pas — la fonction existe, c'est
+                                     // celle qui alimente le RAG ». Sans lui, il fallait une SECONDE
+                                     // règle de « vu », ce que l'en-tête de ce module interdit.
 }
 
 export interface InstanceCorpus {
@@ -95,7 +101,13 @@ export interface StatsCorpus {
   tronque: boolean
 }
 
-function statutDe(e: ElementCorpus, courante: number): StatutElement {
+/**
+ * Les trois statuts d'un élément d'instance — « une seule règle, un seul
+ * endroit ». Exportée par C4-L12, qui en fait le filtre « cours vu » de la
+ * couche 4 : est « en partie vu » un cours dont au moins un élément est `vu` ou
+ * `en_cours` — exactement la partition que l'assembleur du corpus sert à l'IA.
+ */
+export function statutDe(e: ElementCorpus, courante: number): StatutElement {
   if (e.vu) return 'vu'
   return e.semaine <= courante ? 'en_cours' : 'a_venir'
 }
@@ -451,6 +463,7 @@ export async function chargerMatiereClasse(
           libellePlan: sec?.titre ?? 'section retirée',
           libelleMatiere: `${libelleContenu} — ${sec?.titre ?? 'section retirée'}`,
           texte: sec?.texte ?? null, legendes: [],
+          contenuCle: cr.contenu_id ?? undefined,
         }
       } else {
         ec = {
@@ -459,6 +472,7 @@ export async function chargerMatiereClasse(
           libellePlan: libelleContenu, libelleMatiere: libelleContenu,
           texte: co?.texte ?? null,
           legendes: cr.contenu_id ? (legendesParContenu.get(cr.contenu_id) ?? []) : [],
+          contenuCle: cr.contenu_id ?? undefined,
         }
       }
     }

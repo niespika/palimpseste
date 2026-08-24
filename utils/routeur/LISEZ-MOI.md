@@ -22,13 +22,28 @@ D'où le partage, le même que celui de `utils/chaine/` :
 | `donnees.ts`, `acces.ts` | **LISENT** — les deux seuls de ce dossier qui parlent à la base, et **aucun des deux n'écrit** |
 
 ⚠️ **RIEN DANS CE DOSSIER N'ÉCRIT — c'est un état vérifié, pas une intention.** Aucun `insert`,
-`update`, `upsert` ni `rpc` dans tout `utils/routeur/` — vérifié le 23/08, `donnees.ts` et
-`acces.ts` compris. *Cette ligne annonçait autrefois un
+`update`, `upsert` ni `rpc` dans tout `utils/routeur/` — vérifié le 23/08 puis **re-vérifié le
+24/08**, `donnees.ts` et `acces.ts` compris. *Cette ligne annonçait autrefois un
 `moteur.ts` « qui lit et écrit » : **ce fichier n'a jamais existé** — aucun commit de l'historique
 ne le porte, et c'était sa seule occurrence dans le dépôt —, et `donnees.ts` n'écrit pas davantage.
 L'écrivain du routeur n'était pas absent de ce dossier par oubli : **il n'était écrit nulle part.**
-Il a désormais son lot — **`C4-L12`**, `07-` §2, échéance avant le segment 2. Constat de C4-L11,
-déposé à `C4L2-15` ; corrigé ici le 23/08.*
+Constat de C4-L11, déposé à `C4L2-15` ; corrigé ici le 23/08.*
+
+⭐⭐ **L'ÉCRIVAIN EXISTE DEPUIS LE 24/08, ET IL VIT AILLEURS — `utils/moteur/`.** `C4-L12` a gardé
+la phrase ci-dessus vraie exactement comme `C4-L13` l'avait fait pour l'assiduité : le dossier des
+règles n'écrit toujours rien, et le lot qui les fait tourner a son propre domicile.
+
+| Fichier de `utils/moteur/` | Ce qu'il fait |
+|---|---|
+| `vivier.ts` | **PUR** — la couche 4 : parcours, cours vu, non-spoiler, et `candidatsPour` |
+| `decision.ts` | **PUR** — la forme d'une ligne de `routeur_decisions`, les deux sondes, le tirage |
+| `minutes.ts` | **PUR** — le partage de la ligne d'assiduité avec `C4-L13`, et sa garde symétrique |
+| `etat.ts` | **PUR** — ce que porte `competences_niveaux.lettre`, le cold start, les deux clés |
+| `vivier-serveur.ts` · `cycle-serveur.ts` · `etat-serveur.ts` · `calendrier-serveur.ts` | **LISENT ET ÉCRIVENT** |
+
+**Il se greffe sur le déclencheur de `C4-L13`** — `/api/assiduite/hebdo` — et **n'ouvre aucun cron**.
+La chaîne froide, elle, appelle `ecrireLEtatApresMesure()` une fois ses mesures écrites : c'est là
+que « tu écris des MESURES ; le moteur en fera des lettres » se réalise.
 
 ⚠️ **Le glob de `npm test` est `utils/**/*.test.ts` et rien d'autre** : une règle
 posée sous `app/` ne serait jamais éprouvée, sans qu'aucun message ne le dise.
@@ -69,10 +84,11 @@ posée sous `app/` ne serait jamais éprouvée, sans qu'aucun message ne le dise
 - **le pull et le push sont C6-L3** : ici la *valeur* du budget optionnel se
   règle, sa *consommation* ne se construit pas ;
 - ⭐ **il ne FAIT TOURNER aucune de ces règles, et n'en persiste aucune sortie —
-  c'est `C4-L12`**, né le 23/08 *(`07-` §2, v2.42)*. Le vivier que `poserLaSemaine`
-  interroge, l'orchestrateur par élève, l'écriture de `routeur_decisions` et des
-  dépôts en `origine = 'routeur'`, et **l'écriture de la lettre** — que la chaîne
-  délègue nommément ici *(`utils/chaine/mesures.ts:10`)* et que personne ne fait ;
+  c'est `C4-L12`**, né le 23/08 *(`07-` §2, v2.42)* et **joué le 24/08**. Le vivier
+  que `poserLaSemaine` interroge, l'orchestrateur par élève, l'écriture de
+  `routeur_decisions` et des dépôts en `origine = 'routeur'`, et **l'écriture de la
+  lettre** — que la chaîne délègue nommément ici *(`utils/chaine/mesures.ts:10`)* —
+  vivent désormais à **`utils/moteur/`**, jamais ici ;
 - **les compteurs d'assiduité ne s'écrivent pas ici non plus — c'est `C4-L13`** :
   `assiduite.ts` calcule, et l'écrivain vit **ailleurs, à `utils/assiduite/`** —
   `collecte.ts` *(pur : la jonction dépôts → `(assignés, terminés)`)* et
@@ -100,11 +116,23 @@ posée sous `app/` ne serait jamais éprouvée, sans qu'aucun message ne le dise
 
 ## Ce qui reste décoché en recette, et pourquoi
 
-**L'escalade ne peut pas se prouver sur données réelles aujourd'hui.** Le taux de
-réussite d'un observable se lit contre le **seuil de la fiche**, que
-`derive-instruments.py` verse — et les six fiches sont *relues et validées*, pas
-*versées et bancées* : `MANIFESTE_INSTRUMENTS` porte `ouverte: false` sur les six.
-Sans instrument, `statutDeLaMesure` rend `sans_objet`, le taux vaut `null`, et
-« un observable sans taux ne se classe pas ». C'est **la clause granulaire du
-`07-` §2** : une fiche seulement déposée bloque *sa* compétence, pas le lot. Les
-règles sont écrites et éprouvées ; leur recette attend la première fiche bancée.
+⛔⛔ **CETTE SECTION AFFIRMAIT LE CONTRAIRE, ET ELLE ÉTAIT PÉRIMÉE — corrigée le
+24/08 par `C4-L12`.** Elle disait que « `MANIFESTE_INSTRUMENTS` porte `ouverte: false`
+sur les six », et en concluait que **l'escalade ne pouvait pas se prouver sur données
+réelles**. ⭐ **C'est faux depuis `C4-L10`** : les **six** compétences portent
+`"ouverte": true` dans `utils/chaine/derive/MANIFESTE.ts` — un fichier **DÉRIVÉ**,
+sortie de `scripts/derive-instruments.py --ecris`, qui ne s'édite jamais à la main.
+*L'obstacle que cette section nommait est tombé ; l'écrire encore, c'était décourager
+la seule recette qui vaille.*
+
+**Ce qui reste vrai, et qui n'est pas la même chose** : le taux de réussite d'un
+observable se lit contre le **seuil de la fiche**, et une compétence dont
+l'instrument n'est pas importé ou dont la chaîne n'est pas branchée reste écartée
+— `etatCompetence()` en sert le motif, et le bilan du moteur le RECOPIE plutôt que
+de se taire. C'est **la clause granulaire du `07-` §2** : une fiche qui manque
+bloque *sa* compétence, pas le lot.
+
+**Ce qui manque désormais pour prouver l'escalade sur données réelles n'est plus un
+instrument, c'est une FENÊTRE D'ÉVIDENCE REMPLIE** — quatre mesures d'une même
+compétence chez un même élève, au segment 3, hors `profil_provisoire`. C'est la
+condition de reprise nommée de `C4L2-11`.

@@ -2501,7 +2501,20 @@ retire)*.
 ### Ce qui reste à jouer en recette
 
 - [ ] ⚠️ **C4L2-11 · L'ESCALADE SUR DONNÉES RÉELLES — bloquée par la clause granulaire, pas par ce
-  lot.** Le « fait quand » demande qu'« une escalade se déclenche, s'applique et se désescalade sur
+  lot.**
+  > ⭐⭐ **AMENDÉ PAR `C4-L12` (24/08) — LE MOTIF A ENCORE CHANGÉ, ET DEUX OBSTACLES SUR TROIS SONT
+  > TOMBÉS.** *(1)* **`MANIFESTE_INSTRUMENTS` ne porte plus `ouverte: false` sur personne** : les
+  > **six** sont à `true` depuis `C4-L10` — vérifié par comptage sur le fichier dérivé, 6 `true`,
+  > 0 `false`. Le paragraphe ci-dessous est donc **périmé sur ce point**, et la section correspondante
+  > du `utils/routeur/LISEZ-MOI.md` a été corrigée. *(2)* **L'ÉCRIVAIN EXISTE** :
+  > `ecrireLEtatApresMesure()` appelle `degreAppele`, `desescalade`, les deux compteurs,
+  > `deplacementsDeMasse` et `reporterAuGrainSuperieur`, et écrit `competences_escalade` /
+  > `competences_montee` — la désescalade **retire** la ligne d'état, la trace vivant à
+  > `routeur_decisions.etat_escalade`. ⛔ **CE QUI RESTE EST EXACTEMENT CE QUE CETTE ENTRÉE DIT
+  > DÉJÀ, ET RIEN D'AUTRE : une fenêtre d'évidence remplie** — quatre mesures d'une même compétence
+  > chez un même élève —, **au segment 3** *(« les compteurs ne démarrent qu'au segment 3 »)* et
+  > **hors `profil_provisoire`**. `degreAppele` refuse tout seul avant cela, et il le DIT.
+  > *(= `C4L12-16`.)* Le « fait quand » demande qu'« une escalade se déclenche, s'applique et se désescalade sur
   des données réelles ». Elle **ne le peut pas aujourd'hui** : le taux de réussite d'un observable
   se lit contre le **seuil de sa fiche**, que `derive-instruments.py` verse — et
   `MANIFESTE_INSTRUMENTS` porte **`ouverte: false` sur les six**, faute de fiche *versée et bancée*.
@@ -2526,7 +2539,7 @@ retire)*.
   inchangée quant au fond, reformulée quant au motif : quatre mesures sur la même compétence pour le
   même élève — et la question de savoir si des mesures de recette y suffisent est une décision de
   Louis, pas de la session Code.**
-- [ ] **C4L2-12 · Une semaine réellement remplie par le moteur.** Aujourd'hui **zéro compétence est
+- [x] **C4L2-12 · Une semaine réellement remplie par le moteur.** Aujourd'hui **zéro compétence est
   `evaluee`** *(les deux qui existent sont `mesuree_silencieusement`)* : R0 n'en laisse passer
   aucune, et la semaine entière revient à la **voie mixte** — « un régime normal, pas un repli », et
   « une semaine pleine en voie mixte est une semaine conforme ». **Condition de reprise : un statut
@@ -2547,7 +2560,15 @@ retire)*.
   *Le second verrou tombe dans le même lot : `poserLaSemaine` n'a aucun appelant hors de ses tests
   et son `candidatsPour` aucun producteur.* ⛔ **Cette entrée n'est donc PAS cochée par C4-L7 : elle
   change de motif, pas d'état.** *(Voir `C4L7-2`.)*
-- [ ] ⚠️⚠️ **C4L2-15 · RIEN N'ÉCRIT LA DÉCISION DU ROUTEUR — constat déposé par C4-L11 (23/08),
+  ⭐⭐ **LEVÉE PAR `C4-L12` LE 24/08, ET MESURÉE — voir `C4L12-1`.** Le lot a écrit le vivier,
+  l'orchestrateur, la persistance **et la lettre** : la recette pose **6 exercices sur deux élèves
+  réels, 55 min sous un plafond de 60, au segment 2**, chacun avec sa cible `evaluee`, sa règle, sa
+  borne amont et son état d'escalade. ⛔ **La semaine n'est donc plus vide, et elle ne revient plus
+  entière à la voie mixte.** ⚠️ **Ce qui la borne désormais n'est ni le statut ni la lettre, mais LE
+  VIVIER** : la couche 4 ne sert que les instances rattachées à un cours **déjà vu**, dans le parcours
+  de l'élève, et sous sa position de lecture — et le bilan **nomme lequel des trois filtres a mordu**.
+  **Cochée.**
+- [x] ⚠️⚠️ **C4L2-15 · RIEN N'ÉCRIT LA DÉCISION DU ROUTEUR — constat déposé par C4-L11 (23/08),
   ET IL N'EST PAS TRANCHÉ QUE CE SOIT UN RESTE DE CE LOT.** Le moteur est écrit et éprouvé, en
   fonctions pures ; **rien ne le fait tourner et rien ne persiste ce qu'il rend** — 0 ligne de
   `routeur_decisions`, 0 dépôt sur 25 qui en porte une, et aucun appelant de `poserLaSemaine` hors
@@ -2571,7 +2592,15 @@ retire)*.
   `competences_niveaux.lettre` n'a aucun écrivain. **Ce second verrou est DANS `C4-L12`**, c'est son
   quatrième geste. *La condition de reprise de `C4L2-12` — « un statut `evaluee` posé à la
   fabrique » — est donc DATÉE D'AVANT le 23/08 au soir, et ce n'est plus elle qui bloque.* ⭐ **Ce qui reste ici** :
-  rien. *Les compteurs d'assiduité, qui souffraient du même défaut d'écrivain, partent à `C4-L13` —
+  rien.
+  ⭐⭐ **ET LE GESTE EST JOUÉ — `C4-L12`, 24/08.** L'écrivain vit à **`utils/moteur/`** — le dossier
+  `utils/routeur/` **n'écrit toujours rien**, et c'est vérifié —, il **se greffe sur le déclencheur de
+  `C4-L13`** sans en ouvrir un second, et la chaîne froide l'appelle une fois ses mesures écrites.
+  **`routeur_decisions` n'est plus vide**, `routeur_decision_id` **est écrit**, et la lettre a son
+  écrivain. ⚠️ **Les douze gestes recomptés le 23/08 sont faits, y compris celui qui n'existait à
+  aucun étage** : la **recombinaison en 2-3 propositions iso-durée** est construite et journalisée —
+  `choix_eleve` reste NULL, *« la place qu'y prend la préférence recueillie n'est pas tranchée »*, et
+  la main de l'élève demande un écran qui n'est pas de ce lot. **Cette entrée est close.** *Les compteurs d'assiduité, qui souffraient du même défaut d'écrivain, partent à `C4-L13` —
   échéance À LA RENTRÉE, parce qu'« un semestre ne se recompte pas après coup ».*
 - [ ] **C4L2-13 · Le smoke prof des quatre écrans, connecté comme professeur.** Les écrans ont été
   vus en session serveur ; le parcours complet *(régler un budget, noter un recueil, naviguer les
@@ -5162,7 +5191,7 @@ manifeste, mission, « fait quand » — sont **identiques au mot près** à ceu
   *(piège 15)*, tenu. ⭐ **Le repli alphabétique tombe AVEC son alerte** — *« argumentation sert par
   convention (ordre alphabétique), pas par intention »* — et **c'est le comportement ATTENDU sur un
   examen** *(piège 29)*, pas un défaut.
-- [ ] **C4L7-2 · ⛔ LE ROUTEUR — L'ABSENCE EST CONSTATÉE ET DÉCLARÉE, AVEC SON MOTIF NOMMÉ.**
+- [x] **C4L7-2 · ⛔ LE ROUTEUR — L'ABSENCE EST CONSTATÉE ET DÉCLARÉE, AVEC SON MOTIF NOMMÉ.**
   La clause requalifiée le 23/08 demande un routage **exercé, ou dont l'absence est posée AVEC son
   motif** — *« quelle compétence manquait, et quel geste manquait »*. **Constaté par requête, avant
   et après la traversée** : `routeur_decisions` porte **0 ligne**, et **0 dépôt sur 53** ne porte de
@@ -5184,6 +5213,14 @@ manifeste, mission, « fait quand » — sont **identiques au mot près** à ceu
   ⛔ **Décochée à dessein** : l'absence est déclarée, elle n'est pas levée. **Condition de reprise :
   `C4-L12`.** *La clause du « fait quand » est satisfaite par cette déclaration ; l'entrée reste
   ouverte parce que le routage, lui, ne l'est pas.*
+  ⭐⭐ **LA CONDITION DE REPRISE EST TOMBÉE LE 24/08 — `C4-L12` EST JOUÉ, ET LE ROUTAGE EST EXERCÉ.**
+  Le geste qui manquait — **l'écriture de la lettre** — est écrit *(cold start, médiane de classe,
+  `lettre_initiale`, et l'état après chaque mesure)*, et le moteur tourne : **6 exercices posés sur
+  deux élèves réels au segment 2**, avec sondes, borne amont, état d'escalade et minutes. ⭐ **Le
+  relevé PAR DIFFÉRENCE de cette entrée n'a plus d'objet** : les sondes secondaires sont posées, le
+  budget est décompté, PB1-PB6 et R0-R5 tournent, le §11 se journalise, et **l'historique des cibles
+  n'est plus vide** — `momentDeLaDemonstration` bascule enfin de `avant` à `en_retour`.
+  **Cochée. Détail : `C4L12-1` à `C4L12-15`.**
 - [x] **C4L7-3 · ⭐ LA REPRISE APRÈS EXPIRATION — UN JOB TUÉ APRÈS P1, ET RIEN N'EST ÉCRIT DEUX
   FOIS.** *(= `C4L5-3`, coché le même jour.)* Un seul squelette, une seule mesure, un seul job —
   sous **trois** passages complets de la chaîne. **Le détail est à `C4L5-3`.**
@@ -5839,3 +5876,177 @@ Tout ce qui suit est donc la face **professeur**, et **les smokes élève resten
   Mais `c4_l1_schema.sql` *(la table, ses gardes, sa RLS, sa vue)* et `c4_l2_routeur.sql` *(les
   seuils)* sont **joués en bac à sable seulement**. ⛔ **La collecte ne peut pas démarrer en prod
   tant qu'ils n'y sont pas.** **Condition de reprise : C11b (RUNBOOK).**
+
+---
+
+## C4 · L12 — Ce qui écrit ce que le routeur décide (⚠️ **AUCUNE MIGRATION** — aucune n'était attendue, aucune n'a été nécessaire)
+
+> **Séance du 24/08.** Le moteur de C4-L2 existait, éprouvé, et **rien ne le faisait tourner** :
+> `poserLaSemaine` n'avait aucun appelant hors de ses tests, son `candidatsPour` aucun producteur,
+> et il y avait **0 ligne de `routeur_decisions`**. Ce lot n'invente aucune règle : il écrit
+> **l'orchestration et la persistance**. ⭐ **Il porte aussi le SECOND VERROU** — `filtreR0` exige
+> `evaluee` **ET** `lettre !== null`, et `competences_niveaux.lettre` n'avait **aucun écrivain**.
+>
+> **Contrôles d'entrée** : `npm test` **1299 / 1299 / 0 fail** *(1401 après le lot — +102 tests
+> purs)* · `derive-doctrine.py --verifie` **FIXTURE : IDENTIQUE** · **0** `routeur_decisions` ·
+> **6** compétences `evaluee` · **0 lettre sur 102** lignes d'état · **0** dépôt portant
+> `routeur_decision_id` · **les six interrupteurs à OFF, et ce lot n'en a basculé aucun.**
+>
+> **Recette** : `node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --import
+> ./scripts/register-calibration-resolver.mjs scripts/recette/routeur-c4l12.mjs` — **64
+> vérifications, 0 échec**, base rendue à son état d'entrée par requête *(46 dépôts, 15 instances,
+> 3 mesures, 102 niveaux, 0 lettre, 0 décision, 0 ligne d'assiduité)*.
+
+### Ce qui est PROUVÉ, et par quoi
+
+- [x] **C4L12-1 · ⭐⭐ UNE SEMAINE RÉELLE SE POSE PAR ÉLÈVE, DANS SES BORNES.** Deux élèves d'un
+  parcours réel *(classe `T5`, `type_pedagogique = tc`, budget 45-60 min)*, cycle `2026-09-07`
+  **au segment 2** — celui de l'échéance du lot. **6 exercices posés, 6 décisions écrites, 6 dépôts**,
+  **55 min assignées** sous un plafond de 60. ⭐ **Et le bilan se compare à lui-même** :
+  `elevesAttendus = elevesServis + nonServis` *(2 = 2 + 0)*, `decisionsEcrites` annoncé **égal** au
+  décompte en base — « le chiffre ne ment pas ».
+- [x] **C4L12-2 · ⛔ LE SEGMENT 1 EST HORS ROUTAGE, ET LE BILAN LE DIT.** Appelé sur la semaine du
+  segment 1, le point d'entrée pose **0** et rend le motif nommé : *« il sert les deux examens
+  diagnostiques imposés en classe »*. Les cinq segments se dérivent du Calendrier réel
+  *(C = 37, R = 33 → 1/3/11/11/11 semaines)*.
+- [x] **C4L12-3 · ⛔ `routeur_actif` EST LU, JAMAIS OUVERT.** À OFF, le point d'entrée pose **0** et
+  dit pourquoi. La recette passe par `forcerHorsAllumage: true`, **un drapeau réservé à la recette**,
+  et le bilan porte `horsAllumage: true` : *« un lot lit LE SIEN, jamais celui d'un voisin »*.
+- [x] **C4L12-4 · ⭐⭐ LE SECOND VERROU TOMBE — des lettres s'écrivent.** Le **cold start** pose
+  **6 lettres** sur des mesures de diagnostic réelles. ⭐ **L'élève ABSENT reçoit la médiane de sa
+  classe** *(3 lettres)*, et ⛔ **cette médiane n'entre JAMAIS dans `derniere_ancre`** — vérifié par
+  requête, 0 ancre sur ses lignes. ⭐ **`lettre_initiale` est écrite DANS LE MÊME GESTE**, avec sa
+  date — son unique lecteur est `plafondApplicable()`, *« sans qui une compétence sans ancre
+  monterait sans borne »*.
+- [x] **C4L12-5 · ⛔ NI LA CONNAISSANCE NI LE QUESTIONNEMENT NE SORTENT DE LA SEMAINE 1 AVEC UNE
+  LETTRE.** Constaté sur ce que les passations mesurent RÉELLEMENT, jamais sur une liste recopiée du
+  `01-` §10 — qui périmerait au premier plan d'évaluation changé.
+- [x] **C4L12-6 · ⛔⛔ LA COLONNE PORTE LA VALEUR PLAFONNÉE, JAMAIS `verdict.lettre`.** Sous
+  `profil_provisoire`, `verdict.lettre` vaut `null` — **et la colonne porte `C`**. ⭐ Un test pur
+  *(`utils/moteur/etat.test.ts`)* joue les deux branches côte à côte : avec `verdict.lettre`, **R0
+  rend une liste VIDE** ; avec la valeur plafonnée, **il laisse passer**. *C'est le piège qui aurait
+  refermé le verrou au moment même de l'ouvrir, pendant tout le segment 2.*
+- [x] **C4L12-7 · ⭐⭐ `exercices_depots.routeur_decision_id` EST ÉCRIT** — la colonne que **cinq
+  modules** lisaient et que rien n'avait jamais remplie. **Un dépôt, une décision** : autant de
+  décisions distinctes que de dépôts, vérifié. Les dépôts portent `origine = 'routeur'`, et
+  `exercices.cible_primaire` **reste NULL** sur cette voie.
+- [x] **C4L12-8 · ⭐⭐ LA CHAÎNE LIT LA CIBLE SANS TOMBER SUR LE REPLI ALPHABÉTIQUE.** Sur un dépôt
+  routé réel, `lireContexte` rend la décision, `cibleDuRetour` rend **la cible de la décision**
+  *(premier cran de l'ordre de lecture du `07-` §1.1)*, et **`cibleIndeterminee()` rend `false`** —
+  la clause du « fait quand », **mesurée** et non déclarée. `alerteDeCoexistence()` reste `null`.
+- [x] **C4L12-9 · ⭐⭐ `sondes_retenues` PORTE LE BOOLÉEN QUI ALLUME M-e.** Les sondes secondaires
+  sont posées **la semaine entière en main** *(phase C)*, et une **sonde de montée** a été posée sur
+  une case au-dessus de la bande. ⭐⭐ **ET LES DEUX SONDES NE SE CONFONDENT PAS** :
+  `sondesDeLExercice()` écarte du retour la sonde **secondaire** — silencieuse par règle — et
+  **PAS** la sonde de **montée**, qui est la cible même de l'exercice et reçoit un retour
+  démonstratif *(§8.7)*. *Le partage a demandé un resserrement d'une ligne à `utils/chaine/
+  contexte.ts` — voir le relevé §3.*
+- [x] **C4L12-10 · ⭐⭐ LE PARTAGE DE LA LIGNE AVEC C4-L13 TIENT, DANS LES DEUX SENS.** *(Le seul
+  point où ce lot pouvait casser un lot déjà en production.)* La collecte pose la ligne de `W1` et
+  ses deux agrégats *(`0/3`)* ; le tour suivant, le routeur **remplit les minutes de `W1`** —
+  `minutes_assignees = 55`, budget `45-60` — **et les deux agrégats n'ont pas bougé**. Puis la
+  collecte repasse sur `W2` : **elle écrit toujours ses agrégats**. ⛔ **Et par l'échec** : sur un
+  cycle sans ligne, `.update()` touche **0 ligne** et **n'en ouvre aucune**.
+- [x] **C4L12-11 · ⭐⭐ `momentDeLaDemonstration` BASCULE de `avant` à `en_retour`** — un écran élève
+  que personne n'avait demandé de toucher, et qui était **figé à « avant » pour tout le monde**
+  faute d'historique des cibles. `compterLesCiblages()` rend désormais un nombre non nul.
+- [x] **C4L12-12 · ⭐⭐ UNE LETTRE S'ÉCRIT DEPUIS UNE MESURE.** Une mesure posée sur un dépôt routé,
+  puis `ecrireLEtatApresMesure()` : la ligne d'état est réécrite, `updated_at` bouge, la lettre reste
+  non nulle. Le bilan compare `reclamees` à `traitees + ecartees` — *« jamais un silence »*.
+- [x] **C4L12-13 · ⭐ LA CLÔTURE DE LA CALIBRATION EST UN ÉVÉNEMENT DE BORNE DE SEGMENT.**
+  `cloturerLaCalibrationDesEleves()` juge **chaque lettre une fois** *(6 jugées, 6 restées)* et fait
+  **basculer `profil_provisoire` à `false`**. ⛔ Elle **ne peut pas vivre dans la chaîne** : elle
+  appartient au passage hebdomadaire, au dernier lundi du segment 2.
+- [x] **C4L12-14 · ⭐⭐ LE VIVIER, ET SON VIDE EXPLIQUÉ.** Sur des données réelles, le vivier retient
+  ce qui est servable et **nomme chaque écart** : `lieu_classe` *(hors routage)*, `statut`,
+  `deja_deposee`, `aucun_materiau`. ⭐ **Chaque instance retenue porte SA BORNE AMONT**, écrite à la
+  décision. Les trois filtres sont éprouvés **cas par cas** sous `npm test` *(35 tests)*, y compris
+  ceux qu'aucune donnée réelle ne déclenche aujourd'hui.
+- [x] **C4L12-15 · ⭐⭐ `assigne_at` S'ANCRE DANS LE CYCLE POSÉ — DÉFAUT TROUVÉ PAR CETTE RECETTE.**
+  Laissé au `default now()`, un dépôt posé pour le cycle `W` mais écrit un autre jour tombait dans la
+  semaine d'assiduité **du jour d'écriture** — `exercices_assignes` restait à **0**, `completion()`
+  rendait `null` et la semaine se lisait **« faite par construction »**. *C'est exactement le mode de
+  panne que C4-L13 a passé son lot à fermer.* Le routeur pose désormais
+  `assigne_at = <lundi du cycle>T12:00:00Z` — **midi UTC, pas minuit** : à minuit UTC un lundi est
+  encore le **dimanche** à Toronto, et le dépôt ouvrirait la semaine précédente.
+
+### Ce qui RESTE À JOUER, avec sa condition de reprise NOMMÉE
+
+- [ ] **C4L12-16 · L'ESCALADE ET LA MONTÉE, SUR DONNÉES RÉELLES.** Le code est écrit et branché
+  *(`ecrireLEtatApresMesure` appelle `degreAppele`, `desescalade`, `compteurN1N2`, `compteurN3`,
+  `deplacementsDeMasse` et `reporterAuGrainSuperieur`)*, mais **0 ligne de `competences_escalade` et
+  0 de `competences_montee`** ont été écrites en recette : `degreAppele` refuse **avant le segment 3**
+  et sous `profil_provisoire`, et M-d demande **deux sondes de montée réussies à la même case**.
+  ⛔ **Condition de reprise NOMMÉE : une fenêtre d'évidence remplie — quatre mesures d'une même
+  compétence chez un même élève, au segment 3, hors `profil_provisoire`.** *(= la condition de
+  `C4L2-11`.)*
+- [ ] **C4L12-17 · LE NON-SPOILER, SUR UNE INSTANCE RÉELLEMENT BORNÉE.** Le filtre est éprouvé
+  **cas par cas** sous `npm test` — position inconnue, position sous la borne, position atteinte —,
+  mais aucun écart `non_spoiler` n'est tombé en base : **une seule instance porte un plan de lecture**
+  *(`exercices_textes.plan_semaine = 3`)*, et aucune n'était servable par ailleurs.
+  ⛔ **Condition de reprise : une instance dont le matériau porte un `plan_livre_id` ET dont le cours
+  rattaché a été vu**, chez un élève ayant terminé au moins une séance du livre.
+- [ ] **C4L12-18 · LE COURS VU, SUR UN MATÉRIAU `liste`.** Éprouvé sous `npm test` ; en base, le seul
+  matériau servable du décor est `generique`. ⛔ **Condition de reprise : un sujet ou un texte en
+  `cours_etat = 'liste'`, apparié à un cours du Scriptorium que le parcours d'une classe a marqué vu.**
+- [ ] **C4L12-19 · LE BUDGET QUE L'ÉCRAN ACCEPTE ET QUE LA BASE REFUSE.** `budgetDeLEleve` **avertit
+  sans refuser** quand le professeur règle un plafond sous le plancher, et `assiduite_budget_ordre_chk`
+  **refuse la ligne**. Le lot ne maquille rien : les deux colonnes de budget **ne partent pas**,
+  `minutes_assignees` part quand même, et **le bilan nomme l'élève** *(`budgetsRefuses`)*. Éprouvé
+  sous `npm test`, **jamais en base** — aucun élève n'a de budget inversé aujourd'hui.
+  ⛔ **Condition de reprise : un budget réglé à l'écran avec plafond < plancher.**
+- [x] **C4L12-20 · ⭐⭐ LE SMOKE PROF, JOUÉ — et il a trouvé un défaut d'affichage.** *(24/08, session
+  prof connectée, décor monté par `--garde-le-decor`.)* **Ce qui a été vu, écran par écran :**
+  · **`/prof/routeur?vue=assignation`** — les décisions s'affichent : *« Cible : expression ·
+  CALIBRATION · assigné · origine routeur · échéance 2026-09-13 »*, six dépôts sur deux élèves.
+  · **`/prof/routeur?vue=assiduite`** — la frise et le tableau lisent les agrégats de la collecte
+  *(0/3 par élève, deux semaines)*, et **cessent de lire un décor**.
+  · **`/prof/routeur?vue=budgets`** — *« 15 élèves ne reçoivent aucun exercice routé »* avec le motif
+  du piège de la vacuité, et **2 élèves servis** au défaut TC 45-60.
+  · **`/prof/allumage`** — l'avertissement réécrit de `routeur_actif` s'affiche, **les six sont
+  FERMÉS**. · **0 erreur console, 0 erreur serveur.**
+  ⛔⛔ **ET LE DÉFAUT QUE SEUL L'ÉCRAN POUVAIT MONTRER** : l'assignation affichait
+  *« Cible : expression … **Sondes : expression (sonde_montee)** »* — les deux sondes dans une seule
+  liste, sur la compétence qui est **la cible même**. Illisible, et c'est exactement la confusion que
+  le `01-` §8.8 interdit. ⭐ **Corrigé dans le même geste** *(`VueAssignation.tsx`)* : la sonde
+  **secondaire** se dit *« mesurée en silence, sans retour »*, la sonde de **montée** a sa propre
+  ligne — *« la cible servie au-dessus de sa bande »* — avec l'explication de M-e en `title`.
+  *C'est le troisième lecteur que ce lot rend juste, après `sondesDeLExercice()` et l'avertissement
+  d'allumage : une colonne qui se remplit rend faux tout ce qui la lisait vide.*
+- [x] **C4L12-24 · ⭐⭐ L'OVERRIDE SUR UN DÉPÔT ROUTÉ — une branche qui n'avait JAMAIS PU S'EXÉCUTER.**
+  `retirerLExercice()` a deux branches *(`actions.ts`)* : si le dépôt porte une décision, l'override
+  s'ajoute **à cette décision** ; sinon il **crée une ligne orpheline**. ⛔ **La première était
+  inatteignable** — aucun dépôt ne portait de `routeur_decision_id`. **Retrait joué à l'écran, avec
+  son motif**, et vérifié par requête : **1 décision porte l'override** *(`regle_declenchee =
+  calibration`, `cible_retenue = expression` — donc la ligne du routeur, pas une orpheline)*, et
+  **0 décision `override_prof` n'a été créée**. Le dépôt passe à `retire`, l'écran dit *« retiré par
+  vous »* et *« semaine en cours : le retrait sort du dénominateur »*. *C'est le piège 21 refermé sur
+  pièces : « la ligne qu'il crée naît orpheline ; la tienne doit pouvoir l'être » — la nôtre ne l'est
+  pas, parce qu'elle a une décision où se poser.*
+- [ ] **C4L12-21 · ⚠️ `chargerAssignation()` NE PAGINE PAS, et il lit désormais des lignes réelles.**
+  `app/prof/routeur/serveur.ts` borne `exercices_depots` à une semaine **sans `.range()` ni
+  décompte** — le contre-exemple que `donnees.ts` nomme déjà. Le risque était nul tant que rien
+  n'écrivait ; il devient réel le jour où le routeur pose. ⛔ **Il reste sous le seuil de 1000 pour un
+  effectif de professeur** *(25 élèves × ~4 exercices = ~100 lignes)*, et **aucun écran n'est de ce
+  lot**. **Condition de reprise : un lot qui touche l'écran d'assignation, ou un effectif qui approche
+  200 élèves.**
+- [ ] **C4L12-23 · ⚠️ DEUX ENTRÉES DE LA LISTE DE PRIORITÉ SONT PASSÉES À LEUR VALEUR NEUTRE, ET
+  JE LE DIS PLUTÔT QUE DE LES LAISSER PASSER.** L'orchestrateur passe `aProgresse: false` *(PA3 —
+  « une compétence EN PROGRESSION est inscrite une seconde fois, en fin de liste »)* et
+  `cyclesSansProgresExpression: 0` *(la borne d'`exception_expression`, `01-` §6)*. ⛔ **Les deux
+  demandent la MÊME chose** : l'historique des STATUTS d'observables, c'est-à-dire une **fenêtre
+  d'évidence** jouée d'un pas à l'autre *(`suiviDeLObservable`)*. ⭐ **Ce n'est pas un oubli, c'est
+  un refus d'affirmer** : `aProgresse: true` sans instrument ferait poser un exercice de plus au
+  nom d'un progrès que personne n'a mesuré, et un `cyclesSansProgres` inventé ferait tomber la part
+  de l'Expression d'un sur deux à un sur trois **sur un élève qui progresse peut-être**. ⚠️ **Ce que
+  la neutralité coûte, et c'est peu** : PA3 « ne joue que dans les cycles longs » — sa seconde
+  inscription n'est atteinte que si le budget épuise la liste — et la borne d'Expression **ne joue
+  qu'au palier D chez un élève marqué `exception_expression`, au-delà de six cycles**. ⛔ **Condition
+  de reprise : la même que `C4L12-16`** — une fenêtre d'évidence remplie, au segment 3, hors
+  `profil_provisoire`. *Le code qui les calcule existe déjà et est éprouvé
+  (`ilYAProgression`, `compteurN1N2`) : il ne manque que des mesures.*
+- [ ] **C4L12-22 · LA MIGRATION EN PROD.** ⚠️ **Sans objet pour ce lot — il n'écrit AUCUN SQL, et
+  aucune colonne ne manquait** *(vérifié colonne par colonne : `routeur_decisions.etat_escalade`,
+  les trois minutes d'`assiduite_hebdo`, `competences_niveaux.lettre_initiale`,
+  `exercices_depots.routeur_decision_id`)*. Mais `c4_l1_schema.sql` et `c4_l2_routeur.sql` sont joués
+  **en bac à sable seulement**. ⛔ **Condition de reprise : C11b (RUNBOOK).**

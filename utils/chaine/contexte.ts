@@ -326,11 +326,23 @@ export async function lireContexte(admin: Admin, depotId: string): Promise<Conte
       const sondes = Array.isArray(d.sondes_retenues)
         ? (d.sondes_retenues as Array<{ competence?: string; sonde_montee?: boolean }>)
         : []
+      // ⛔⛔ LES DEUX SONDES NE SE CONFONDENT JAMAIS (`01-` §8.8), et elles
+      //    vivent dans le MÊME tableau, distinguées par `sonde_montee` :
+      //    · la sonde SECONDAIRE mesure une compétence NON CIBLÉE, en silence —
+      //      « elle ne produit AUCUN RETOUR » (§1, principe 4) ; c'est celle-là,
+      //      et elle seule, que `sondesDeLExercice()` écarte du retour ;
+      //    · la sonde de MONTÉE est LA CASE CHOISIE EN PHASE A pour la
+      //      compétence CIBLE, au-dessus de sa bande (M-b). Elle REÇOIT un
+      //      retour — démonstratif chez E-D et C, interrogatif à B (§8.7) —, et
+      //      la mettre dans `sondes` SILENCERAIT LE RETOUR DE LA CIBLE MÊME.
+      //    *Narrowing posé par C4-L12, le lot qui remplit ces deux canaux.*
+      const deMontee = sondes.filter((s) => s.sonde_montee === true)
+        .map((s) => s.competence ?? '').filter(Boolean)
       decision = {
         cibleRetenue: d.cible_retenue ?? null,
-        sondes: sondes.map((s) => s.competence ?? '').filter(Boolean),
-        sondesMontee: sondes.filter((s) => s.sonde_montee === true)
+        sondes: sondes.filter((s) => s.sonde_montee !== true)
           .map((s) => s.competence ?? '').filter(Boolean),
+        sondesMontee: deMontee,
       }
     }
   }
