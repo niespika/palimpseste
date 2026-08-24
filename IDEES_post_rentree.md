@@ -524,3 +524,42 @@ paire sous escalade)* : c'est **le cran 3 seul** qui bascule.
 
 *(constat C4-L14, 24/08 — le lot a servi la correction au cran 3 comme son « fait quand » l'exige ; il
 n'a pas touché à l'escalade, qui n'est pas de son périmètre.)*
+
+---
+
+## Le bonus de vacances est FERMÉ, et son code reste dormant (24/08/2026)
+
+**Décision de Louis, 24/08, en clôture de C4-L13.** Le `06-Palimpseste.md` §5 accorde au travail fait
+pendant les vacances **« au plus une semaine »** ajoutée au numérateur d'assiduité, sur tout le
+semestre. **Le bonus ne sera pas construit.**
+
+**Pourquoi il ne coûtait rien de le fermer, et pourquoi il coûtait de l'ouvrir.** L'assiduité se
+calcule sur les lignes d'`assiduite_hebdo`, et le dénominateur est *le nombre de lignes qu'on passe,
+moins celles marquées « en vacances »*. Or **la table n'a aucune colonne pour ce marquage**, et
+`enVacances` est câblé en dur à `false` aux trois sites de lecture *(constat de C4-L13, piège 20)*.
+Sans colonne, on ne pouvait avoir qu'**une seule** des deux propriétés :
+
+| | Le dénominateur | Le bonus |
+|---|---|---|
+| poser les semaines de vacances | ⛔ **faux pour tout élève** *(elles y entreraient)* | ✅ possible |
+| ne pas les poser — **ce que C4-L13 a fait** | ✅ **juste** | ⛔ impossible |
+
+Le bonus vaut **au plus +1 semaine par semestre**, et seulement pour qui travaille pendant les
+vacances ; le dénominateur est dans le pourcentage de **chaque élève, chaque semaine**. ⭐ **Et le
+bonus n'a jamais été vivant** : avant C4-L13, rien n'écrivait `assiduite_hebdo`.
+
+**Ce que « fermé » veut dire, concrètement.**
+
+- ⛔ **Aucune colonne `en_vacances`, aucune migration.** C'était le prix de la réouverture.
+- ✅ **Le code du bonus n'est PAS supprimé.** `assiduiteDeLEleve()` porte toujours `bonusVacances`,
+  et ses tests *(`assiduite.test.ts` 47-80)* passent. Il est **dormant, pas faux** : il rend `0`
+  parce qu'aucune semaine de vacances ne lui est passée. Le supprimer serait toucher un fichier de
+  C4-L2 sans mandat, et rendrait la réouverture plus chère que la fermeture ne rapporte.
+- ⚠️ **`06-Palimpseste.md` §5 porte toujours la règle, et il est VALIDÉ ET GELÉ.** Ce fichier ne se
+  corrige pas depuis une session Code : sa modification demande l'accord explicite de Louis **et
+  remonte à `CONTEXTE.md`**. ⛔ **Aucun `[faux]` n'a été posé** — la règle n'est pas fausse, elle est
+  **retirée par décision**, ce qui n'est pas la même chose. **Reste dû : une passe de conception qui
+  retire la phrase du `06-` §5, ou l'y marque comme abandonnée.**
+
+*(Le `07-Implementation.md` §1.5, lui, est OUVERT À L'IMPLÉMENTATION : C4-L13 y a écrit la fermeture
+et sa raison — v2.46.)*

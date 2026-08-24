@@ -5769,13 +5769,23 @@ Tout ce qui suit est donc la face **professeur**, et **les smokes élève resten
   « pas de ligne » de « ligne à zéro » *(ce que la base permet, l'absence étant discernable)*, soit
   la frise borne son tableau aux élèves inscrits **à la date de la semaine**. *Relevé, non tranché.*
 
-- [ ] **C4L13-17 · LE BONUS DE VACANCES RESTE DU CODE SANS EMPLOI.** `06-` §5 accorde « au plus une
-  semaine » au travail fait pendant les vacances ; le code existe et il est testé *(`assiduite.ts`
-  106-125)*. ⛔ **Il ne servira jamais tant que la collecte ne pose que des semaines de travail** —
-  ce qui est précisément ce qui rend le dénominateur juste **sans colonne `en_vacances`**, laquelle
-  n'existe pas. `enVacances` reste donc **câblé à `false` aux quatre sites** *(les trois d'origine,
-  plus la construction de la ligne)*. **Condition de reprise : une décision de conception** — soit
-  le bonus est abandonné, soit il faut **une colonne**, donc une migration. *Relevé, non tranché.*
+- [x] **C4L13-17 · LE BONUS DE VACANCES — ⭐ TRANCHÉ : IL EST FERMÉ.** *(Décision de Louis, 24/08,
+  en clôture du lot. Il n'y a donc plus rien à jouer en recette.)* `06-` §5 accordait « au plus une
+  semaine » au travail fait pendant les vacances ; **le bonus ne sera pas construit.** Le motif est
+  chiffré : sans colonne `en_vacances` — et il n'y en a aucune —, poser les semaines de vacances les
+  ferait **entrer au dénominateur**, ce qui rendrait le pourcentage faux pour **tout élève, chaque
+  semaine**, quand le bonus ne vaut **au plus +1 semaine par semestre** et pour les seuls élèves qui
+  travaillent pendant les vacances. ⭐ **Et il n'a jamais été vivant** : avant C4-L13, rien n'écrivait
+  `assiduite_hebdo`. ✅ **Le code n'est pas supprimé** — `bonusVacances` et ses tests restent, dormants
+  et non faux *(il rend `0` faute de semaine de vacances à lire)* : le retirer toucherait un fichier
+  de C4-L2 sans mandat et rendrait une réouverture plus chère que la fermeture ne rapporte.
+  `enVacances` reste **câblé à `false` aux quatre sites**. **Détail et raisons :
+  `IDEES_post_rentree.md`.**
+  > ⚠️ **UN RESTE, ET IL N'EST PAS DE CE FICHIER** : `06-Palimpseste.md` §5 **porte toujours la
+  > règle**, et il est **VALIDÉ ET GELÉ** — sa modification demande l'accord explicite de Louis et
+  > **remonte à `CONTEXTE.md`**. ⛔ Aucun `[faux]` n'a été posé : la règle n'est pas fausse, elle est
+  > **retirée par décision**. **Dû : une passe de conception** qui l'en retire ou l'y marque
+  > abandonnée. *(Le `07-` §1.5, OUVERT À L'IMPLÉMENTATION, porte déjà la fermeture — v2.46.)*
 
 - [ ] **C4L13-18 · LA MIGRATION EN PROD.** ⚠️ **Sans objet pour ce lot — il n'écrit AUCUN SQL.**
   Mais `c4_l1_schema.sql` *(la table, ses gardes, sa RLS, sa vue)* et `c4_l2_routeur.sql` *(les
