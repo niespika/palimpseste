@@ -3745,6 +3745,15 @@ puis retirées._
   pas été retirée** — elle rend 409 **avant tout appel payé** ; ce qui a été ajouté, c'est un
   `console.error` qui remonte aux journaux de l'hébergeur là où le corps de la réponse ne remonte
   pas. **Le vérifier au premier déploiement.**
+  > ✅ **VU TOURNER LE 24/08 — aux journaux Vercel, en séance** *(constat de C4-L13, qui avait la
+  > même condition de reprise)*. `/api/chaine` part **à la minute, sans un trou** — 12:46:31,
+  > 12:47:31, 12:48:31 … 12:57:30 — et répond **200** à chaque fois. ⭐ **Et le 200 vaut preuve du
+  > secret** : la route rend **401** si l'en-tête ne vaut pas exactement `Bearer ${CRON_SECRET}`.
+  > La tâche est déclarée **Enabled** aux réglages du projet.
+  > ✅ **Et `verifierCoherence()` ne s'est PAS allumée** : sur la fenêtre observée, **0 Warning,
+  > 0 Error, 0 Fatal**, et aucun 409 — le `console.error` n'a donc jamais tiré. ⚠️ **Honnêteté de la
+  > mesure : la fenêtre était « Last 30 minutes »**, soit ~30 invocations. C'est un démenti franc
+  > du scénario « 1440 fois par jour », pas une observation au long cours.
 
 - [ ] **C4L11-D · SMOKE TEST PROFESSEUR — les trois écrans touchés.** Aucun n'a été ouvert dans un
   navigateur : *(a)* l'écran de conception, sur une instance **d'examen diagnostique** — l'en-tête
@@ -5721,7 +5730,23 @@ Tout ce qui suit est donc la face **professeur**, et **les smokes élève resten
 
 ### Ce qui reste à jouer en recette — chacun avec sa condition de reprise NOMMÉE
 
-- [ ] **C4L13-13 · LE CRON VU TOURNER CHEZ L'HÉBERGEUR.** La route a été appelée **par la recette
+- [x] **C4L13-13 · LE DÉCLENCHEUR EST ARMÉ CHEZ L'HÉBERGEUR — vérifié le 24/08, aux journaux et
+  aux réglages Vercel.** ⭐ **Les trois faits, constatés à l'écran** :
+  *(1)* **`CRON_SECRET` EXISTE** — *Sensitive, Production and Preview, ajoutée le 23/07*. Elle n'a
+  donc **jamais été à créer** : elle préexistait à ce lot. *(La valeur n'a pas été ouverte.)*
+  *(2)* **ELLE EST VALIDE** — `/api/chaine` part à la minute et répond **200** sans un trou
+  *(12:46:31 → 12:57:30)*. La route rendant **401** si l'en-tête ne vaut pas exactement
+  `Bearer ${CRON_SECRET}`, **un 200 prouve le secret**. Et **0 Warning, 0 Error, 0 Fatal**.
+  *(3)* **`/api/assiduite/hebdo` EST ENREGISTRÉ** — `30 9 * * 1`, *« At 09:30 AM, only on Monday »*,
+  aux Cron Jobs du projet, la fonctionnalité étant **Enabled**. Le déploiement du push de 12h52 est
+  passé.
+  ⚠️ **Ce qui n'est PAS prouvé, et c'est `C4L13-14`** : que Vercel invoque **cette route-ci**. Le
+  mécanisme est identique à celui de `/api/chaine`, qui tourne ; mais l'invocation propre à
+  l'assiduité est **hebdomadaire**, et la première tombe le **lundi 2026-09-07 à 09:30 UTC**.
+  *(Le bouton « Run » des réglages permettrait de la déclencher à la main : sur la semaine écoulée
+  d'aujourd'hui elle **ne poserait aucune ligne** — semaine hors calendrier —, donc l'essai serait
+  gratuit. Non joué : ce n'est pas à une session Code de presser un bouton de production.)*
+  > *Texte d'origine, pour mémoire :* La route a été appelée **par la recette
   elle-même** — cela prouve la route, **pas que Vercel l'appelle**. ⚠️ **Deux conditions, pas une** :
   *(a)* **le déploiement** — fait, `main` poussé le 24/08 *(`6c143a6`)* —, et *(b)* **`CRON_SECRET`
   présente dans Vercel** : elle n'est **pas** dans `.env.example`, elle ne vit que là, et **sans elle
