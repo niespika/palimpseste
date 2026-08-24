@@ -5723,9 +5723,24 @@ Tout ce qui suit est donc la face **professeur**, et **les smokes élève resten
 
 - [ ] **C4L13-13 · LE CRON VU TOURNER CHEZ L'HÉBERGEUR.** La route a été appelée **par la recette
   elle-même** — cela prouve la route, **pas que Vercel l'appelle**. ⚠️ **Deux conditions, pas une** :
-  *(a)* **le premier déploiement** après ce commit, et *(b)* **`CRON_SECRET` posée dans Vercel** —
-  elle n'est **pas** dans `.env.example`, elle ne vit que là, et **sans elle la route rend 401 à
-  tout le monde, cron compris**. *Même réserve que `C4L11-C`, dont c'est le jumeau.*
+  *(a)* **le déploiement** — fait, `main` poussé le 24/08 *(`6c143a6`)* —, et *(b)* **`CRON_SECRET`
+  présente dans Vercel** : elle n'est **pas** dans `.env.example`, elle ne vit que là, et **sans elle
+  la route rend 401 à tout le monde, cron compris**. *Même réserve que `C4L11-C`, dont c'est le
+  jumeau.*
+  > ⭐ **ELLE N'EST PAS À CRÉER — ELLE EST À VÉRIFIER, et un seul regard répond.** `CRON_SECRET`
+  > **préexiste à ce lot** : `/api/scriptorium/synthese-hebdo` s'en sert **depuis le 21/07**
+  > *(`63d2deb`)* et `/api/chaine` **depuis C4-L11** *(`fb3ee68`)*, **tous deux déployés avant le
+  > push du 24/08**. Ce lot n'ajoute donc **aucune variable** : il se branche sur celle qui existe.
+  > ⚠️ **Mais rien n'a jamais prouvé qu'elle soit posée** — c'est précisément ce que `C4L11-C` attend
+  > depuis C4-L11, et **un 401 de cron ne réveille personne** : les deux crons voisins sont des
+  > no-op quand leur porte est fermée, donc *« rien ne se passe »* et *« 401 »* sont
+  > **indiscernables de l'extérieur**.
+  > ⭐ **LE GESTE QUI TRANCHE, ET IL COCHE LES DEUX ENTRÉES** : aux journaux de l'hébergeur, filtrer
+  > sur **`/api/chaine`** — il part **toutes les minutes**, donc la réponse est immédiate.
+  > **200 `{"gate": …}`** → le secret est posé, **il n'y a rien à faire**, et la collecte
+  > d'assiduité partira d'elle-même au premier lundi. **401** → le secret manque, et alors **les
+  > deux crons voisins sont morts depuis des semaines**, ce qui est un constat bien plus large que
+  > ce lot.
 
 - [ ] **C4L13-14 · LE PREMIER LUNDI RÉEL DE LA RENTRÉE.** ⚠️ **C'est la seule vérification dont le
   coût soit irréversible.** **Condition de reprise : le lundi 2026-09-07 après 09:30 UTC** — le
