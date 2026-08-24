@@ -926,9 +926,9 @@ async function laCredenceEtLaPaire(d, porte) {
   await enregistrerLeTexte(admin, dep, 'v1',
     'Le lien entre la preuve et la conclusion me paraît manquer.', null, instant())
   vue = await charger()
-  dire(vue.etapePaire === 'credence_1' && vue.correctionDuPremierCas === null,
+  dire(vue.etapePaire === 'credence_1' && (vue.corrections?.[0] ?? null) === null,
     `le cas 1 est répondu mais non crédencé : étape « ${vue.etapePaire} », `
-    + `\`correctionDuPremierCas\` = ${JSON.stringify(vue.correctionDuPremierCas)} — sans quoi `
+    + `\`corrections[0]\` = ${JSON.stringify(vue.corrections?.[0] ?? null)} — sans quoi `
     + 'l’élève déclarerait sa sûreté en connaissant la réponse')
 
   // ── 3. La saisie, et LES DEUX CLÉS QUE LA CHAÎNE LIT ─────────────────────
@@ -960,9 +960,9 @@ async function laCredenceEtLaPaire(d, porte) {
 
   // ── 4 (après). La correction est servie une fois la crédence donnée ──────
   vue = await charger()
-  dire(vue.etapePaire === 'correction' && vue.correctionDuPremierCas === ATTENDUE_CAS_1,
+  dire(vue.etapePaire === 'correction' && vue.corrections?.[0]?.reponse === ATTENDUE_CAS_1,
     `après la crédence : étape « ${vue.etapePaire} », et la correction du cas 1 est servie — `
-    + `« ${String(vue.correctionDuPremierCas).slice(0, 48)}… »`)
+    + `« ${String(vue.corrections?.[0]?.reponse).slice(0, 48)}… »`)
 
   // Et l'écrasement se fait PAR CAS : redéposer le cas 2 n'efface pas le cas 1.
   const offre2 = vue.cas[1].credence

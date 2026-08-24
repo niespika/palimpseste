@@ -48,3 +48,6 @@ next-env.d.ts
 
 # Registre local du décor de recette C4-L6 (scripts/recette/decor-c4l6.mjs)
 .decor-c4l6.json
+
+# Registre local du décor de recette C4-L7 (scripts/recette/traversee-c4l7.mjs)
+scripts/recette/.traversee-c4l7-registre.json

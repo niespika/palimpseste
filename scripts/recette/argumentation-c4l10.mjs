@@ -410,7 +410,7 @@ try {
     // ⭐ Le tour de l'Expression n'a jamais pu le lire : sa copie de recette ne
     //    portait AUCUNE réussite citable, et la règle 2 du gabarit refusait le
     //    retour. Cette copie-ci en porte une — c'est la condition de reprise
-    //    nommée à C4L10-14 et à C4L5-1bis. On le SORT donc du décor avant de le
+    //    nommée à C4L10E-14 et à C4L5-1bis. On le SORT donc du décor avant de le
     //    retirer, plutôt que de le jeter sans l'avoir lu.
     if (bilan.retourEcrit) {
       // ⚠️ `registre_servi`, jamais `registre` : la colonne porte LA TRACE, pas

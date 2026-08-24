@@ -115,3 +115,49 @@ n'en demande qu'un.
 `a_concevoir` et se valide de même. Et son observable **vient de la route**, pas
 du fichier — celui-ci ne fait que le nommer, et le contrôle vérifie qu'il est
 routé.
+
+## C4-L7 — la traversée du flux, de bout en bout
+
+    node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON \
+         --import ./scripts/register-calibration-resolver.mjs \
+         scripts/recette/traversee-c4l7.mjs [--classe] [--maison] [--routeur] \
+                                            [--reprise] [--route] \
+                                            [--sans-appel] [--garde-le-decor] \
+                                            [--retire]
+
+**Ce n'est pas la recette d'un lot qui construit** : C4-L7 ne construit rien, il éprouve **la
+couture** — ce qu'aucun lot ne peut voir seul, parce que chacun s'arrête à sa frontière et que le
+trou est *entre* eux. Le script n'appelle **que le code des écrans**, avec le client admin.
+
+**Sans drapeau de section, seul l'état d'entrée est lu** — les six interrupteurs, les sept statuts
+de recette, `routeur_decisions`, et le compte des lettres. C'est un constat gratuit et sans effet.
+
+| Drapeau | Ce qu'il traverse |
+|---|---|
+| `--classe` | un **examen diagnostique conçu** → passation → transcription → lot → chaîne → **l'ANCRE** (`lieu = classe`, `forme = sommatif`) → correction → publication → **lecture** |
+| `--maison` | instance conçue → assignation → déroulé → **les trois gestes de la remise** → remise → chaîne → mesure et lettre-équivalente → version finale → **deux squelettes** → retour final → `delta_v1_vf` NULL **avec son alerte** |
+| `--routeur` | le constat **par différence** : ce que la voie du professeur ne produit pas, et le motif nommé en deux parts |
+| `--reprise` | un job **tué après P1**, réclamé au bail expiré, chaîne rejouée entière — *un* squelette, *une* mesure au bout (`C4L5-3`) |
+| `--route` | les **trois portes** de `/api/chaine` et son compteur `{reclames, traites, tuesEnVol}` (`C4L11-B`) |
+
+⚠️ **`--sans-appel` d'abord.** Il saute tout ce qui dépense : la structure, les gardes et les états
+s'éprouvent entièrement sans un appel de modèle. On ne dépense qu'ensuite.
+
+⭐ **`--garde-le-decor` ÉCRIT SON REGISTRE**, dans `.traversee-c4l7-registre.json`, et `--retire` le
+consomme. C'est la réponse à la règle du dossier — *« qui l'emploie tient son propre registre de ce
+qu'il laisse, et le retire à la clôture »* — et c'est la seule façon de retirer un décor gardé, qui
+par définition survit au processus qui l'a semé.
+
+⚠️ **Les interrupteurs sont ouverts NOMMÉMENT, un par un, pour la durée d'un contrôle**, et remis
+comme trouvés **y compris sur interruption** (`finally`). `chaine_actif` vit dans la base partagée
+où `/api/chaine` tourne à la minute : on l'ouvre pour un traitement, et on le referme.
+
+⚠️⚠️ **L'ORDRE DU NETTOYAGE, ET IL A COÛTÉ TROIS MESURES ORPHELINES.**
+`competences_mesures.depot_id` est en **`on delete set null`** : supprimer un dépôt **sans supprimer
+ses enfants d'abord** laisse des mesures sans dépôt, **invisibles à tout contrôle qui compte par
+dépôt**. Le script supprime donc, pour chaque dépôt : `competences_mesures`, `exercices_squelettes`,
+`exercices_retours`, `exercices_jobs`, `exercices_metacognition`, **puis** le dépôt.
+
+⭐ **Toute lecture passe par `lu(nom, { data, error })`, qui LÈVE sur `error`** — *« `supabase-js` ne
+lève pas : un `select` d'une colonne absente rend `{data: null, error}`, et `(data ?? []).length`
+rend alors zéro, qui ressemble à une mesure »*. Six contrôles ont déjà rougi pour l'avoir ignoré.
