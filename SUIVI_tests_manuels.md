@@ -6050,3 +6050,171 @@ Tout ce qui suit est donc la face **professeur**, et **les smokes élève resten
   les trois minutes d'`assiduite_hebdo`, `competences_niveaux.lettre_initiale`,
   `exercices_depots.routeur_decision_id`)*. Mais `c4_l1_schema.sql` et `c4_l2_routeur.sql` sont joués
   **en bac à sable seulement**. ⛔ **Condition de reprise : C11b (RUNBOOK).**
+
+
+---
+
+## C4 · L15 — Ce que l'écran montre du matériau, et ce qu'il cesse de montrer deux fois (séance du 24/08)
+
+**Le décor est EN PLACE en bac à sable** — `c4_l15_decor_recette.sql`, cinq instances `ex-c4l15-*` et
+un matériau `mat-c4l15-substitution`, toutes en `lieu = 'maison'`, assignées à l'élève qui porte déjà
+le décor de C4-L8 *(`108aaa3a-…`)*. **Retrait en un geste** : `c4_l15_decor_recette_rollback.sql`.
+
+⚠️ **POURQUOI IL A FALLU EN SEMER, ET CE QUE ÇA APPREND.** La sandbox portait des instances aux crans
+1, 2, 3, 4, 5 et 8 — **aucune au cran 6**, et les seules du cran 1 étaient en `lieu = 'classe'`, que
+le déroulé maison ne charge pas. Et **ses trois matériaux portaient tous un défaut d'ABSENCE** : leur
+`version_corrigee` AJOUTE une phrase, le diff y est donc vide, et le marquage des crans 3 et 5
+n'était **pas éprouvable** en base. *Un décor n'est pas un confort : sans lui, trois des cinq clauses
+du « fait quand » n'avaient aucun support.*
+
+### Prouvé en séance, avec sa preuve
+
+⭐ **La preuve est le CHEMIN SERVEUR RÉEL** : `chargerLeDeroule()` *(`utils/deroule/vue.ts`)* appelé
+contre la sandbox, sur des dépôts réels — donc le `select` neuf, la doctrine lue en base, le
+découpage et la charge utile, tels que l'écran les reçoit.
+
+- [x] **C4L15-1 · Au cran 1, les QUATRE candidats servis sont en évidence, la bonne réponse comprise.**
+  *`ex-c4l15-cran1`, dépôt `18eef5d2-…`, LES DEUX cas.* Cas 1 : marqués `["villes","interdit","donc","meilleure"]`
+  pour des candidats servis `["meilleure","donc","interdit","villes"]` — **les mêmes quatre, la
+  `reponse_attendue` `donc` comprise**, dans l'ordre DU TEXTE. Cas 2 : idem sur `mat-garant-a`.
+- [x] **C4L15-2 · Aux crans 3 et 5, le passage fautif et lui seul.** *`ex-c4l15-cran5`, dépôt
+  `a9d69b54-…`* : **un seul** segment marqué, `donc`, sur un matériau où la version corrigée le
+  remplace par `or`. ⭐ **Et le cran 5 n'a AUCUN distracteur** (`candidats servis : []`) : la preuve
+  que **le déclencheur est le CRAN**, jamais la présence d'un champ.
+- [x] **C4L15-3 · Au cran 4, AUCUNE marque — sur le MÊME matériau.** *`ex-c4l15-cran4`, dépôt
+  `fdca25c2-…`, les deux cas* : `0 marqué`, alors que le cran a une `reponse_attendue` et que le
+  matériau porte de quoi marquer. *« L'y trouver EST le travail. »*
+- [x] **C4L15-4 · Un cran 6 réel n'affiche plus le guide en bloc.** *`ex-c4l15-cran6`, dépôt
+  `5fba9470-…`* : `guide servi : AUCUN`, la consigne portant déjà le guide.
+- [x] **C4L15-5 · ⭐ ET LA GARDE MORD.** *`ex-c4l15-cran6-nu`, dépôt `b10f8be2-…`* — même cran 6, même
+  champ `guide`, mais la consigne ne le porte pas : **le bloc RESTE servi**, et un avertissement
+  serveur se lève *(« le replier retirerait l'étayage, et le cran 6 deviendrait un cran 8 en
+  silence »)*. **C'est le vecteur qui prouve que la garde n'est pas décorative.**
+- [x] **C4L15-6 · ⛔ `version_corrigee` n'entre JAMAIS dans la charge utile.** Vérifié sur les **six**
+  dépôts smokés, en cherchant la chaîne entière que la base porte dans le `JSON.stringify` de la vue :
+  **aucune occurrence**. *C'est LA RÉPONSE aux crans 3 et 5 — « la `reponse_attendue` est la version
+  corrigée à la transformation ».*
+- [x] **C4L15-7 · ⚠️ UN CRAN 3 RÉEL QUI NE MARQUE RIEN, ET C'EST JUSTE.** *Dépôt `dffe9ca9-…`,
+  instance préexistante* : le défaut injecté est une **ABSENCE** — la version corrigée AJOUTE une
+  phrase —, donc **rien dans le matériau n'est fautif**. L'avertissement serveur le dit, avec ses
+  trois causes légitimes. *Marquer l'endroit du manque donnerait la réponse.*
+- [x] **C4L15-8 · Le port de l'import rend le même verdict que le script sur la banque RÉELLE.**
+  `python3 generateur/verifie-import.py --banque generateur/banque/banque.json` → **`IMPORTABLE — 0
+  refus, 0 blocage, 0 signalement`** *(152 matériaux, 148 exercices)* ; le port TS, sur la même
+  banque, **0 signalement de longueur**. ⭐ **Et le contrôle n'est pas muet par accident** : il a
+  mesuré **100 cas réels** sur quatre crans, rapports **0,20 à 0,71** — tous sous le seuil de 0,90.
+
+### Ce qui reste à jouer en recette, avec sa condition de reprise
+
+- [x] **C4L15-R1 · ✅ LE RENDU, DANS UN NAVIGATEUR — JOUÉ LE 24/08, session élève réelle (`Elo`).**
+  ⚠️ **L'interrupteur `scriptorium_params.exercices_actif` a dû être ouvert quelques minutes** *(accord
+  de Louis, journalisé au `SUIVI_SQL.md`, valeur d'origine relevée puis restaurée et **vérifiée par
+  requête**)* : sans lui l'écran rend « Les exercices ne sont pas encore ouverts ». **Les cinq
+  dépôts, un par un, sur `localhost:3000` :**
+  - **cran 1** *(`d94d273f-…`)* — **QUATRE `<strong>` par cas**, sur les deux cas de la paire :
+    `villes · interdit · donc · meilleure`, puis `machines · remplacent · donc · travail`. **Les
+    quatre candidats servis, la `reponse_attendue` (`donc`) comprise.** Le DOM porte
+    `<span>Les </span><strong>villes</strong><span> du Nord ont </span>…` — **aucun HTML fabriqué**,
+    et le texte se recompose à l'identique.
+  - **cran 5** *(`819b7e30-…`)* — **UN SEUL gras, `donc`**, sur un matériau **sans aucun distracteur**.
+  - **cran 4** *(`28db4e9e-…`)* — **ZÉRO gras**, sur exactement le même matériau, les deux cas.
+  - **cran 6** *(`4877cd08-…`)* — **le bloc « De quoi t'aider » est ABSENT**, et la consigne porte le
+    guide : la phrase n'est lue **qu'une fois**.
+  - **cran 6 « nu »** *(`7e8ebc46-…`)* — **le bloc « ▸ DE QUOI T'AIDER » RESTE**, consigne sans guide.
+    **La garde tient à l'écran.**
+- [x] **C4L15-R1b · ✅ RÉPARÉ ET REVU À L'ÉCRAN LE 24/08 — le mot est ENTOURÉ, en plus d'être en gras.**
+  **Décision de Louis** : *« on entoure le mot en plus que de le rendre en gras »*. ⚠️ **Le gras
+  RESTE, et il le faut** — « les mots **en gras** dans le texte » (cran 1) et « le mot **en gras** »
+  (cran 3) sont écrits dans des consignes SERVIES À L'ÉLÈVE : entourer *à la place* ferait mentir la
+  consigne. **On entoure EN PLUS.** ⭐ Le cadre sépare deux marques contiguës parce que **l'espace
+  qui les sépare est un `<span>` HORS des deux boîtes**. Revu à l'écran : « Les [villes] du Nord ont
+  [interdit] les feux de bois. La qualite de l'air y est [donc] [meilleure]. » — **quatre cadres,
+  quatre mots**, comme la consigne l'annonce. Style vérifié en `getComputedStyle` : `font-weight 600`
+  *(le gras)*, `1px solid` *(le cadre)*, fond `rgb(220,230,223)` = le **pigment du module** — jamais
+  un hex en dur. `box-decoration-clone` referme la boîte de chaque côté d'un retour à la ligne.
+  ⭐ **Une seule classe, `MARQUE`, exportée et importée par les deux écrans** : deux listes qui
+  divergeraient feraient mentir « l'aperçu rend ce que l'élève verra ».
+- [x] **C4L15-R2 · ✅ L'APERÇU DU PROFESSEUR — JOUÉ LE 24/08, session prof réelle. QUATRE cas sur
+  cinq exacts, et le cinquième a trouvé autre chose.**
+  - **cran 5** — `donc`, un seul. ✅ · **cran 4** — zéro gras, les deux cas. ✅
+  - **cran 6** — pas de bloc « AVANT D'ÉCRIRE ». ✅ · **cran 6 « nu »** — le bloc **reste**. ✅
+    **La garde tient dans les DEUX voies.**
+  - ⚠️⚠️ **cran 1 — l'aperçu ne marque QU'UN mot (`donc`) là où l'élève en voit QUATRE**, et
+    **ce n'est pas le marquage qui est en cause** : voir C4L15-R2b, juste en dessous.
+- [x] **C4L15-R2b · ✅ RÉPARÉ ET REVU À L'ÉCRAN LE 24/08 — l'aperçu lit les DEUX formes.**
+  `page.tsx` passe désormais par **`lireLaBanque`** *(`utils/deroule/credence.ts`)*, le lecteur de
+  l'écran ÉLÈVE, déjà éprouvé : **les deux voies lisent par la MÊME fonction**. ⛔ **Et on ne
+  normalise toujours rien en base** — la forme stockée reste la question de `C4-L11`. Revu à l'écran,
+  session prof : l'aperçu liste **quatre candidats réels** *(`interdit · meilleure · villes · donc`,
+  fini les lignes blanches)* et **marque les quatre** dans le matériau, sur les deux cas — **identique
+  à l'écran élève**. Un test le garde *(`apercu-marquage.test.ts` : « les DEUX formes de distracteur
+  donnent le MÊME marquage »)*.
+- [x] **C4L15-R2c · ⛔⛔ ET LE MÊME DÉFAUT SUR UN SECOND SITE, CELUI-LÀ COÛTAIT DE LA DONNÉE — réparé.**
+  **Trouvé sur la capture d'écran de R2b**, au-dessus de l'aperçu : le **formulaire d'édition**
+  affichait un textarea de distracteurs **VIDE** sur une instance importée. Or `lireCas`
+  *(`app/prof/conception/actions.ts`)* écrit **`null` quand le textarea est vide** : **ouvrir
+  l'instance et l'enregistrer DÉTRUISAIT les trois distracteurs**, sans un mot. Le champ passe
+  désormais par `lireLaBanque` aussi — vérifié à l'écran : `interdit\nmeilleure\nvilles`.
+- [ ] **C4L15-R2d · ⚠️ CE QUI RESTE DE CE DÉFAUT, ET QUI EST UNE DÉCISION, PAS UN BOGUE.**
+  `lireCas` réécrit toujours des **CHAÎNES**. Enregistrer une instance importée garde donc les
+  textes mais **perd les `pourquoi_faux`** — une perte bien moindre que la précédente, mais réelle.
+  ⛔ **Non tranché ici, et délibérément** : choisir ce qu'on réécrit, **c'est trancher la FORME
+  STOCKÉE**, c'est-à-dire la normalisation. ⭐ La pièce existe déjà — `pourquoiFauxDuCandidat`
+  retrouve le motif **par le texte** — donc la réparation est courte une fois la forme choisie.
+  **Condition de reprise : `C4-L11`.**
+- [x] **C4L15-R3 · ✅ LA DÉFINITION EXISTAIT — trouvée le 24/08 sur remarque de Louis, et la source est amendée.**
+  ⭐ **Elle vit à DEUX endroits, et je ne les avais pas cherchés.** *(1)* **`01-routeur.md` §11**, la
+  définition canonique : *« `aide_consommee` : dépliages de la fiche et relectures (définition
+  provisoire, révisable selon les types) »* — ⛔ **VALIDÉ ET GELÉ, non touché.** *(2)* **`07-` §1.1**,
+  la lecture opérationnelle, **déjà amendée par C4-L3** : *« ce qu'elle compte à la maison : les
+  dépliages des aides que **cet écran sert** — la démonstration du temps 1 et le guide de l'appui —
+  plus les relectures du retour »*.
+  ⭐⭐ **ET C'EST CE SECOND TEXTE QUI DEVAIT BOUGER, PAS LE CODE.** Il énumère le guide **sans
+  condition** ; depuis C4-L15 il n'est plus servi au cran 6. **La DÉFINITION, elle, reste vraie** —
+  elle dit « les aides que cet écran **SERT** », et au cran 6 l'écran ne le sert pas : **c'est
+  l'ÉNUMÉRATION qui devait la nuance.** Le `07-` §1.1 étant **OUVERT À L'IMPLÉMENTATION**, l'amender
+  **était mon travail, pas une dette** — et je l'avais manqué. **Fait : `07-` v2.50 → v2.51**, avec
+  la conséquence de lecture écrite noir sur blanc — ⛔ **`aide_consommee` n'est PAS comparable d'un
+  cran à l'autre**, et la colonne étant un `integer` unique, **l'écart ne se rattrape pas après
+  coup**.
+- [ ] **C4L15-R3b · ⚠️ ET LA VRAIE QUESTION, QUI N'EST PAS D'UN LOT CODE : cette grandeur mesure-t-elle
+  encore quelque chose de comparable ?** ⭐ **C'est la SECONDE fois qu'elle perd un morceau de sa
+  définition.** La première : le `CONTEXTE.md` du **17/08** note que la SPEC C3 §478 faisait compter
+  à `aide_consommee` *« les dépliages de la fiche stratégique »* — et **la fiche du type a été
+  supprimée ce jour-là**, si bien que *« ce compteur perd la moitié de sa définition »*. La seconde
+  est C4-L15. ⚠️ Le `01-` §11 la déclare lui-même *« provisoire, révisable selon les types »*.
+  **Condition de reprise : le propriétaire du `01-` §11**, à qui appartient de dire si le compteur
+  se redéfinit, se stratifie par cran, ou se met à journaliser QUELLE aide.
+- [ ] **C4L15-R4 · LA MIGRATION EN PROD — ⛔ SANS CIBLE, et ⚠️ C11b N'EST DANS AUCUN PLAN.**
+  **La base de production n'existe pas.** Le `SUIVI_SQL.md` le pose en tête : *« elle naîtra au
+  chantier C11b d'un dump du schéma de la sandbox »* — **il n'y a qu'UNE base en usage**, et c'est
+  celle-ci. Ce n'est donc pas une tâche différée : c'est **une tâche sans cible**.
+  ⭐ **CE QU'EST C11b, puisque le nom ne dit rien tout seul** *(vérifié le 24/08, sur question de
+  Louis)* : c'est **le montage de la prod propre**, et son mode d'emploi est écrit —
+  **`RUNBOOK_prod_propre.md`** *(à la racine du dépôt, 30/06, « Chemin A »)*, dix étapes : créer une
+  **seconde base Supabase** *(la prod)*, y **cloner le SCHÉMA seul**, y recopier une **liste blanche**
+  de tables de config, recréer les **buckets Storage et leurs policies**, **séparer les variables
+  d'env Vercel** Production/Preview, puis compte prof, smoke test, et la discipline continue.
+  *« Les élèves, livres et classes ne vivent pas dans une branche git : ils vivent dans une base. »*
+  ⚠️⚠️ **ET C'EST LÀ LE CONSTAT QUI COMPTE : `C11b` N'EXISTE DANS AUCUN PLAN.**
+  `PLAN_DE_CHANTIER.md` ne connaît que **C3, C4, C5 et C6** — `grep -E "C1[0-9]"` y rend **zéro**,
+  et son §7 *(« ce qui ne relève d'aucun chantier »)* ne parle que de la lettre de la loi 25. Le nom
+  `C11b` ne vit que dans le **`SUIVI_SQL.md`** *(6 mentions)* et dans les **relevés** de C4-L12, L13,
+  L14 et L15. **Il vient d'une numérotation antérieure au plan de la rentrée, et rien ne le
+  planifie.** ⛔ **Conséquence : TOUTE la colonne « Prod » du `SUIVI_SQL.md` attend un chantier que
+  rien ne porte**, et la date que la note lui donne — *« ~mar-mer 18-19/08 »* — **est passée.**
+  ⭐ **Ce que C4-L15 doit à ce chantier, et qui est le vrai contenu de cette ligne** : le RUNBOOK
+  monte la prod en **`--schema-only`** puis recopie une liste blanche **où aucune table de C4 ne
+  figure** *(le RUNBOOK date du 30/06, avant que C4 existe)*. La prod naîtra donc **avec les deux
+  colonnes `marquage`/`longueur` et SANS leur contenu** — et **le marquage y sera muet, en
+  silence**, exactement comme le cas VIDE que le code sait tenir. ⛔ **Il faudra y rejouer
+  `derive-doctrine.py --sql`.**
+  **Condition de reprise : C11b — dès que quelqu'un le met à un plan.**
+- [x] **C4L15-R5 · ✅ LE DÉCOR EST RETIRÉ — 24/08, la recette close.** Répétition à blanc d'abord
+  *(le CORPS seul, règle 6 : 5 instances → 0, 1 matériau → 0, puis `rollback`, et **le décor est
+  revenu, vérifié par requête**)*, puis le retrait réel. ⛔ **Ce qui ne devait pas partir est intact,
+  vérifié nommément** : `mat-garant-a`, `mat-garant-b`, `mat-lien-codex-0001` — le décor de C4-L8 —
+  sont toujours là, et `exercices_depots` porte encore 46 lignes. **Elo ne voit plus les cinq
+  exercices de recette.** ⚠️ **Le fichier reste au dépôt** : il est idempotent et rejouable, et la
+  prochaine séance qui veut ces cinq crans le rejoue en un geste.
+

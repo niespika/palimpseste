@@ -46,6 +46,7 @@ import { echeanceDeLaVersionFinale, finDeSemaineDeTravail } from './echeance'
 import { lireReleveDeLangue, nombreDeFautes, ancrerLigneALigne, phraseDeLaChasse,
   type AncrageFaute } from './langue'
 import { baliser, type Jeton } from './balisage'
+import { marquerLeMateriau, type SegmentMateriau } from './marquage'
 import { attenteDuDepot, type AttenteLisible } from './mesure'
 import { pointsContestes, type PointDuRetour } from './contestation'
 import { gestesRestants, competencesQuiDemandentLaConfiance } from './gestes'
@@ -58,8 +59,23 @@ export interface CasServi {
   ordre: number
   /** La consigne, BALISÉE — « le gras est du SENS » (piège 36). */
   consigne: Jeton[]
-  /** Le matériau sur lequel il travaille, TEL QU'IL EST STOCKÉ (piège 33). */
-  materiau: string | null
+  /**
+   * Le matériau sur lequel il travaille, TEL QU'IL EST STOCKÉ (piège 33) —
+   * ⭐ C4-L15, découpé en SEGMENTS marqués et non marqués (`02-` §5).
+   *
+   * ⚠️ **LE TEXTE N'EST PAS RETOUCHÉ D'UN OCTET** : la concaténation des
+   * `texte`, dans l'ordre, EST le matériau. Marquer n'est pas baliser — aucun
+   * caractère n'est interprété, ajouté ni retiré ; ce qui est calculé, ce sont
+   * des BORNES, à partir d'ailleurs (les candidats servis, le diff).
+   *
+   * ⛔ **ET LA VERSION CORRIGÉE N'Y EST PAS.** Aux crans 3 et 5 elle sert à
+   * calculer le diff — CÔTÉ SERVEUR, dans ce fichier —, et **seules les
+   * positions descendent** : « la `reponse_attendue` est la version corrigée à
+   * la transformation » (`02-` §2.3.4), c'est-à-dire CE QUE L'ÉLÈVE DOIT
+   * PRODUIRE. `marquerLeMateriau` s'en protège par construction — il ne rend
+   * jamais que des tranches de `contenu`.
+   */
+  materiau: SegmentMateriau[] | null
   /** L'offre de crédence de CE cas — vide hors des six crans qui la demandent. */
   credence: OffreCredence | null
   /** La crédence déjà donnée, s'il y en a une. */
@@ -195,7 +211,11 @@ export async function chargerLeDeroule(
   const { data: cran } = ctx.cran == null
     ? { data: null }
     : await admin.from('exercices_crans')
-      .select('geste, regime_v1vf, guide').eq('cran', ctx.cran).maybeSingle()
+      // ⭐ C4-L15 — `marquage` entre ici, et `guide` cesse d'être chargé pour
+      //    rien : c'est LUI qui décide si le bloc « De quoi t'aider » se sert
+      //    (la doctrine y met `léger` au cran 6, et à lui seul — `02-` §2.2).
+      //    ⭐ On lit une CONDITION DÉRIVÉE, jamais un numéro de cran en dur.
+      .select('geste, regime_v1vf, guide, marquage').eq('cran', ctx.cran).maybeSingle()
   const geste = (cran?.geste as string | null) ?? null
 
   // ── L'escalade qui pèse sur CET exercice (`01-` §8.5) ──
@@ -219,8 +239,18 @@ export async function chargerLeDeroule(
   // pas, et le patron est le TRANSTYPAGE EXPLICITE (`utils/chaine/contexte.ts`,
   // `utils/acces.ts`). La forme ci-dessous dit CE QU'ON LIT, colonne par colonne.
   const { data: casLus } = await admin.from('exercices_cas')
+    // ⛔⛔ `version_corrigee` ENTRE ICI, ET ELLE N'EN SORT PAS. C4-L15 : aux
+    //    crans 3 et 5, le passage fautif est « celui, et celui-là seul, où la
+    //    `version_corrigee` du matériau diffère de son `contenu` » (`02-` §5).
+    //    Le diff se calcule DANS CE FICHIER, qui est `server-only`, et **seules
+    //    les positions descendent** — la version corrigée n'entre à AUCUN
+    //    moment dans `VueDuDeroule`. ⚠️ C'est LA RÉPONSE : « la
+    //    `reponse_attendue` est la version corrigée à la transformation »
+    //    (`02-` §2.3.4). Le même raisonnement que la crédence — « sans quoi
+    //    l'élève déclarerait sa sûreté en connaissant la réponse, et la porte 2
+    //    ne mesurerait plus rien ».
     .select('ordre, defaut, distracteurs, reponse_attendue, pourquoi_juste, '
-      + 'exercices_materiaux(contenu)')
+      + 'exercices_materiaux(contenu, version_corrigee)')
     .eq('exercice_id', depot.exercice_id).order('ordre')
   const casBruts = (casLus ?? []) as unknown as Array<{
     ordre: number
@@ -229,12 +259,79 @@ export async function chargerLeDeroule(
     reponse_attendue: string | null
     /** ⭐ C4-L14 — « pourquoi ce candidat-là est le bon » (`08-` §5.2). */
     pourquoi_juste: string | null
-    exercices_materiaux: { contenu?: string } | Array<{ contenu?: string }> | null
+    /** ⛔ `version_corrigee` : lue ici, JAMAIS servie (voir le `select`). */
+    exercices_materiaux:
+      | { contenu?: string; version_corrigee?: string | null }
+      | Array<{ contenu?: string; version_corrigee?: string | null }>
+      | null
   }>
 
   const consignes = Array.isArray(depot.exercice.consigne_instanciee)
     ? (depot.exercice.consigne_instanciee as unknown[]).map((x) => String(x ?? ''))
     : [String(depot.exercice.consigne_instanciee ?? '')]
+
+  // ── ⭐⭐ C4-L15 — LE GUIDE NE S'AFFICHE PLUS AU CRAN 6 ────────────────────
+  // `04-` §14.1 : « AU CRAN 6, LE GUIDE EST DANS LA CONSIGNE — ET NE S'AFFICHE
+  // DONC PAS DEUX FOIS. » Les cinq patrons du cran 6 finissent tous par
+  // `<les appuis nommés>` : ce que le §14.2 nomme EST DÉJÀ SERVI, comme seconde
+  // moitié de la consigne. **L'élève lisait la même phrase deux fois, à dix
+  // lignes d'écart.** Décision de Louis, 24/08 : « si le guide est dans la
+  // consigne à chaque fois, alors pas la peine d'afficher le guide ».
+  //
+  // ⭐ LA CONDITION EST DÉRIVÉE, PAS UN NUMÉRO DE CRAN. La doctrine met `guide`
+  //    à `complet` au cran 2, `léger` au cran 6, `null` aux sept autres (`02-`
+  //    §2.2) : **« léger » désigne le cran 6 et lui seul.** La colonne était
+  //    chargée depuis C4-L11 et n'était utilisée nulle part ; elle sert enfin.
+  // ⛔ LE CRAN 2 NE SUIT PAS CETTE RÈGLE : sa case est `<ce qui est servi>`, qui
+  //    NOMME le guide sans le contenir — la consigne annonce, le bloc montre.
+  //    **Le cran 8 n'a pas de guide.**
+  // ⛔ LE CHAMP RESTE OBLIGATOIRE AU CRAN 6, et on n'y touche pas : c'est LUI
+  //    qui remplit la case du patron. Le refus n° 12 (`verifie-import.ts`) et
+  //    son jumeau de l'écran de conception restent intacts. Ce geste retire un
+  //    BLOC DE L'ÉCRAN ; il ne touche pas un mot de la consigne.
+  //
+  // ⚠️⚠️ LA GARDE, ET POURQUOI ELLE EXISTE. Les deux voies ne se comportent pas
+  //    pareil. En conception EN LIGNE, `banqueDeConsignes` COMPOSE la consigne
+  //    du cran 6 — `patron.replace('<les appuis nommés>', …)` — : le guide y est
+  //    dans la consigne, prouvablement. Par IMPORT, l'écran sert la
+  //    `consigne_instanciee` TELLE QUE LE FICHIER L'A ÉCRITE, et **rien ne
+  //    contrôle qu'une consigne de cran 6 porte son guide** (`08-` §5.2 dit
+  //    seulement « le texte que l'élève lit »). Cacher le bloc
+  //    inconditionnellement ferait donc reposer la lisibilité de l'exercice sur
+  //    une propriété que rien ne garantit sur l'une des deux voies — et **un
+  //    cran 6 mal fait deviendrait un cran 8 sans que rien ne le dise** : le
+  //    patron du cran 8 est celui du cran 6 amputé de sa case, mot pour mot, et
+  //    la consigne resterait grammaticalement parfaite.
+  // ⭐ MESURÉ AVANT DE DÉCIDER, sur `generateur/banque/banque.json` (24/08,
+  //    148 exercices) : **7 exercices au cran 6, et 7 sur 7 portent leur guide
+  //    LITTÉRALEMENT dans leur consigne** — tous entrés par la voie `composer`.
+  //    La garde ne mord donc sur aucun exercice réel : elle ne se déclenche que
+  //    là où la règle serait FAUSSE.
+  // ⚠️ Les blancs se normalisent des deux côtés : la comparaison porte sur le
+  //    texte, pas sur sa mise en page.
+  const guideBrut = depot.exercice.guide
+  const memeSouffle = (x: string) => x.replace(/\s+/g, ' ').trim()
+  const guideDansLaConsigne = guideBrut !== null
+    && memeSouffle(String(guideBrut)) !== ''
+    && consignes.some((c) => memeSouffle(c).includes(memeSouffle(String(guideBrut))))
+  const guideReplie = cran?.guide === 'léger' && guideDansLaConsigne
+  if (cran?.guide === 'léger' && !guideDansLaConsigne) {
+    // ⚠️ Le professeur doit le savoir : la règle du `04-` §14.1 ne s'applique
+    //    pas à cet exercice, et le bloc reste donc servi.
+    avertissements.push(
+      'cran 6 : la consigne ne porte pas le guide — le bloc « De quoi t\'aider » '
+      + 'reste affiché. Le `04-` §14.1 veut que le patron du cran 6 finisse par '
+      + '`<les appuis nommés>` ; cette instance ne le fait pas. Le replier ici '
+      + "retirerait l'étayage, et le cran 6 deviendrait un cran 8 en silence.")
+  }
+  // ⚠️⚠️ CE QUE CE REPLI REND MUET, ET QUI DOIT SE DIRE. Le bloc « De quoi
+  //    t'aider » porte `aide="guide"`, et `AIDES_COMPTEES` (`./depot`) fait
+  //    incrémenter `exercices_depots.aide_consommee` à chaque dépliage — un
+  //    compteur que le `01-` §11 lit. **Au cran 6, ce compteur tombera
+  //    STRUCTURELLEMENT à zéro pour le guide**, et un compteur à zéro ressemble
+  //    à un élève autonome. Ce n'est pas un défaut : c'est une conséquence, et
+  //    elle est écrite ici pour ne pas se découvrir plus tard dans la télémétrie.
+  const guideServi = guideReplie ? null : guideBrut
 
   const { data: metacog } = await admin.from('exercices_metacognition')
     .select('credence, contestation_points').eq('depot_id', depotId).maybeSingle()
@@ -248,7 +345,7 @@ export async function chargerLeDeroule(
       ? (Array.isArray(brut.exercices_materiaux)
         ? brut.exercices_materiaux[0] : brut.exercices_materiaux)
       : null
-    const materiau = mat?.contenu ?? null
+    const materiauBrut = mat?.contenu ?? null
     // ⚠️ `offreDeCredence` prend un CODE de cran (`CodeCran`), et c'est juste :
     //    la doctrine de la crédence se dit en codes. Le CODE se lit sur
     //    `ctx.cranCode`, résolu depuis le numéro — jamais sur la colonne brute,
@@ -259,6 +356,49 @@ export async function chargerLeDeroule(
       })
       : null
     if (offre?.empechement) avertissements.push(offre.empechement)
+
+    // ⭐⭐ C4-L15 — CE QUE L'ÉCRAN MET EN ÉVIDENCE DANS LE MATÉRIAU (`02-` §5).
+    //    « Au grain du MOT, un exercice sans marquage mesure la RECHERCHE et
+    //    non le SENS. » La règle vient de la DOCTRINE (`cran.marquage`), pas
+    //    d'un numéro de cran écrit ici : le cran commande, jamais la présence
+    //    d'un champ — le cran 5 se marque SANS aucun distracteur, et le cran 4
+    //    ne se marque PAS malgré sa `reponse_attendue`.
+    // ⚠️ LES CANDIDATS SONT CEUX QUI ONT ÉTÉ RÉELLEMENT SERVIS — `offre.candidats`,
+    //    « dans l'ordre réellement mêlé » —, jamais la banque : elle en porte 10
+    //    à 15, l'écran en sert QUATRE. Et les quatre se marquent, **la bonne
+    //    réponse comprise** : sans elle, le marquage la désignerait.
+    // ⚠️ Là où l'offre ne se compose pas (`empechement` non nul, ou cran sans
+    //    crédence), il n'y a pas de « candidats servis » : on ne marque rien, et
+    //    on ne devine pas.
+    const materiau = marquerLeMateriau(materiauBrut, cran?.marquage as string | null, {
+      candidats: offre && !offre.empechement ? offre.candidats : [],
+      versionCorrigee: mat?.version_corrigee ?? null,
+    })
+
+    // ⚠️⚠️ UN CRAN QUI DEVAIT MARQUER ET QUI NE MARQUE RIEN SE DIT AU PROFESSEUR.
+    //    Trouvé au smoke du 24/08, sur une instance RÉELLE de cran 3 : le
+    //    matériau de la famille « le lien manque » a une `version_corrigee` qui
+    //    AJOUTE une phrase — le défaut injecté est une ABSENCE. Le diff est
+    //    alors légitimement vide : « UN MANQUE N'EST PAS UN DÉFAUT » (`02-`
+    //    §2.3.3), et il n'y a rien DANS le matériau à mettre en évidence.
+    // ⭐ Ne rien marquer est JUSTE — marquer l'endroit du manque donnerait la
+    //    réponse. Mais la consigne, elle, peut avoir promis « le mot en gras »
+    //    (`02-` §5) : le professeur doit savoir que cette instance-là ne le
+    //    tiendra pas. **On signale, on ne marque pas au hasard.**
+    // ⚠️ Trace SERVEUR, jamais l'élève — le même canal que l'empêchement de
+    //    crédence juste au-dessus.
+    if (materiau && materiau.length > 0 && !materiau.some((sg) => sg.marque)
+        && (cran?.marquage ?? '') !== '' && !/^rien/i.test(String(cran?.marquage))) {
+      avertissements.push(
+        `cas ${i + 1} : le \`02-\` §5 demande au cran ${ctx.cran} de mettre en évidence `
+        + `« ${String(cran?.marquage).slice(0, 60)}… », et RIEN n'a été trouvé dans le matériau. `
+        + 'Trois causes légitimes, et aucune n\'est une panne : le défaut injecté est une '
+        + 'ABSENCE (la version corrigée AJOUTE, et « un manque n\'est pas un défaut » — `02-` '
+        + '§2.3.3) · le matériau est calibré sur une RÉUSSITE (`02-` §2.3.1 a) · la '
+        + '`version_corrigee` est absente (elle est facultative — `08-` §4). ⚠️ Si la consigne '
+        + 'promet « le mot en gras », elle ne le tiendra pas sur cette instance.')
+    }
+
     cas.push({
       ordre: i + 1,
       consigne: baliser(consignes[i] ?? consignes[0] ?? ''),
@@ -382,7 +522,7 @@ export async function chargerLeDeroule(
     contenuDemonstration: demonstration.demonstration
       ? lireLeContenu(demonstration.demonstration.forme, demonstration.demonstration.contenu)
       : null,
-    guide: depot.exercice.guide,
+    guide: guideServi,
     cas, corrections,
 
     dureeIndicativeMin: dureeMin,

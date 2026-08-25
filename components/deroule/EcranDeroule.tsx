@@ -21,7 +21,7 @@
 
 import { useCallback, useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { TexteBalise, TexteBrut } from './TexteBalise'
+import { TexteBalise, TexteBrut, MateriauMarque } from './TexteBalise'
 import { ChampDeRedaction } from './ChampDeRedaction'
 import { CredenceSaisie } from './CredenceSaisie'
 import { GestesDeLaRemise } from './GestesDeLaRemise'
@@ -135,7 +135,10 @@ export function EcranDeroule({ vue }: { vue: VueDuDeroule }) {
       {/* ── TEMPS 2 — ÉCRIRE ───────────────────────────────────────────── */}
       {vue.cas.map((c, i) => (
         <div key={c.ordre} className="space-y-3">
-          {(vue.estUnePaire || c.materiau) && (
+          {/* ⚠️ C4-L15 — `c.materiau` est une LISTE DE SEGMENTS depuis ce lot, et
+              une liste vide est VRAIE en JavaScript : sans `?.length`, un cas
+              sans matériau ouvrirait une section vide. */}
+          {(vue.estUnePaire || c.materiau?.length) && (
             <section className="rounded-lg border border-bordure bg-surface p-4">
               {vue.estUnePaire && (
                 <h2 className="font-marque text-sm uppercase tracking-wide text-muet-clair">
@@ -145,9 +148,15 @@ export function EcranDeroule({ vue }: { vue: VueDuDeroule }) {
               <p className="mt-2 font-corps text-base leading-relaxed text-encre">
                 <TexteBalise jetons={c.consigne} />
               </p>
-              {c.materiau && (
-                <TexteBrut
-                  texte={c.materiau}
+              {/* ⭐⭐ C4-L15 — LE MATÉRIAU, ET CE QUE L'ÉCRAN Y MET EN ÉVIDENCE.
+                  Au cran 1 les QUATRE candidats servis, la bonne réponse
+                  comprise ; aux crans 3 et 5 le passage fautif, et lui seul ;
+                  aux crans 4, 7 et 9 RIEN — « l'y trouver EST le travail »
+                  (`02-` §5). ⚠️ Le découpage vient du serveur : le composant
+                  n'a AUCUNE règle, et n'a jamais vu la version corrigée. */}
+              {c.materiau && c.materiau.length > 0 && (
+                <MateriauMarque
+                  segments={c.materiau}
                   className="mt-3 rounded border border-bordure bg-parchemin-fonce p-3
                              font-corps text-sm text-encre"
                 />

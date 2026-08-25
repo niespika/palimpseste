@@ -829,7 +829,116 @@ export function controleImport(
     }
   }
 
+  // ── ⭐ C4-L15 — LA LONGUEUR DU MATÉRIAU SUIT LE CRAN (`02-` §2.3.3) ───────
+  signaleLesMateriauxTropLongs(v, d, materiaux, exercices)
+
   return rendre(v, ignores, racineRefusee)
+}
+
+/**
+ * ⭐ C4-L15 — LE MATÉRIAU ENTIER SERVI LÀ OÙ UNE PART SUFFISAIT.
+ * Port fidèle du bloc `entier` / `_fraction_du_cran` de
+ * `generateur/verifie-import.py` — mêmes verdicts sur les mêmes vecteurs.
+ *
+ * ⚠️⚠️ **LE CONTRÔLE EST RELATIF, ET IL DOIT L'ÊTRE.** Le `02-` §2.3.3 dit une
+ * FRACTION — « le quart », « la moitié » —, **jamais un compte de phrases** :
+ * « un `paragraphe` ne tient pas en deux phrases », et son seul exemple chiffré
+ * — « sur cinq phrases, le quart fait deux phrases et la moitié quatre » —
+ * n'est ni 5/4 ni 5/2. **Le mesurable est le RAPPORT, pas la fraction.** On
+ * compare donc le matériau servi au PLUS LONG DE SA PROPRE FAMILLE, ce qui vaut
+ * aux treize objets sans qu'aucun nombre soit écrit ici. ⛔ Une mesure absolue
+ * condamnerait les objets `macro` à tort.
+ *
+ * ⛔ **C'EST UN SIGNALEMENT, JAMAIS UN REFUS**, et il ne change pas le code de
+ * sortie : « `0` = importable (blocages et signalements possibles) » (`08-`
+ * §7.4). Une banque versée ne se bloque pas sur une mesure approchée. Il
+ * S'AJOUTE aux neuf autres, il n'en remplace aucun — la signature de
+ * `controleImport` ne bouge pas d'un caractère.
+ *
+ * ⚠️ **IL NE PORTE QUE SUR UN `materiau_cible` DE PROVENANCE `genere`**, et
+ * c'est STRUCTUREL, pas une garde à écrire : on n'entre que par `cas.materiau`,
+ * qui ne nomme qu'une entrée de `materiaux[]` — laquelle est `genere` par
+ * construction, « ni `provenance` : elle vaut `genere` » —, et `cas.materiau`
+ * n'est renseigné que « quand le `materiau_cible` est `genere` » (`08-` §4 et
+ * §5.2). Appliqué à un `materiau_source` ou à un `texte_auteur`, il crierait
+ * sur des textes que personne n'a fabriqués. *Et il ne concerne que les six
+ * crans qui isolent : les trois crans de production n'ont pas de cible.*
+ *
+ * ⚠️⚠️ **LE `08-` NE DÉCLARE PAS CE CONTRÔLE** — `grep -i "longueur|fraction|
+ * trop long"` y rend ZÉRO : ni au §4, ni dans les dix-huit refus, ni dans les
+ * signalements du §7.3. **C'est une dette de SOURCE, portée au registre, et pas
+ * un trou à boucher ici** : le `08-` est GELÉ, et il dit lui-même qu'« en cas de
+ * divergence entre ce document et l'un d'eux, l'autre a raison et celui-ci est
+ * en dette ». **La source de ce contrôle est le `02-` §2.3.3.**
+ */
+function signaleLesMateriauxTropLongs(
+  v: Verdict, d: Doctrine, materiaux: any[], exercices: any[],
+): void {
+  /** Au-delà, le matériau servi EST le matériau entier. */
+  const ENTIER = 0.90
+  /** Les deux mots que le `02-` §2.3.3 écrit — les deux seuls qui mordent. */
+  const FRACTIONS = ['quart', 'moitié'] as const
+
+  /**
+   * La fraction que le `02-` §2.3.3 admet à ce cran — `null` quand il admet le
+   * matériau ENTIER (crans 1 et 9), quand le cran n'a pas de cible (2, 6, 8),
+   * ou quand la doctrine en base ne porte pas encore la colonne.
+   *
+   * ⚠️ **On ne cherche PAS à vérifier la fraction elle-même** : « le plancher
+   * de l'objet l'emporte sur elle », et « une mesure au caractère près
+   * condamnerait les objets `macro` à tort ». Ce qu'on attrape est le vrai
+   * défaut, celui qui a duré : **le matériau ENTIER servi à un cran qui
+   * demandait une part.**
+   */
+  const fractionDuCran = (cran: unknown): string | null => {
+    const lg = (typeof cran === 'number' ? d.crans[cran]?.longueur : null) ?? ''
+    return FRACTIONS.find((mot) => lg.includes(mot)) ?? null
+  }
+
+  // Le plus long de chaque famille — la référence, et elle est RELATIVE.
+  // ⚠️ Une `famille` est un libellé LIBRE : il peut porter une barre verticale,
+  //    et deux familles distinctes se confondraient sous une même étiquette. On
+  //    sépare par un caractère qu'un libellé ne porte pas — comme le fait déjà
+  //    le signalement des familles à un seul membre, juste au-dessus.
+  const cleFamille = (m: any) => `${m?.objet}\u0000${m?.famille}`
+  const plein = new Map<string, number>()
+  const parId = new Map<string, any>()
+  for (const m of materiaux) {
+    if (!estObjet(m)) continue
+    if (nonVide(m.id)) parId.set(String(m.id), m)
+    const c = cleFamille(m)
+    plein.set(c, Math.max(plein.get(c) ?? 0, String(m.contenu ?? '').length))
+  }
+
+  for (const e of exercices) {
+    if (!estObjet(e)) continue
+    const part = fractionDuCran(e.cran)
+    if (!part) continue
+    v.entree = `exercices|${e.id}`
+    // ⚠️ PAS DE COERCION MUETTE : on n'itère que sur un vrai tableau. Un
+    //    `cas` malformé a déjà son refus ailleurs — ici, on ne mesure rien.
+    const cas0 = Array.isArray(e.cas) ? e.cas : []
+    for (const [i, cas] of cas0.entries()) {
+      if (!estObjet(cas)) continue
+      const m = parId.get(String(cas.materiau ?? ''))
+      // ⚠️ UN MATÉRIAU QUI N'EST PAS DANS LE FICHIER NE SE MESURE PAS. Le
+      //    contrôle est RELATIF à sa famille, et d'un dépôt antérieur on ne
+      //    connaît ici ni le contenu ni les frères de famille : mesurer sur ce
+      //    qu'on a signalerait le premier matériau d'une famille tronquée.
+      //    ⭐ Le script hors ligne fait exactement de même (`if not m: continue`),
+      //    et le renvoi mort, lui, a déjà son refus n° 4.
+      if (!m) continue
+      const ref = plein.get(cleFamille(m)) ?? 0
+      if (!ref) continue
+      if (String(m.contenu ?? '').length / ref >= ENTIER) {
+        v.signale(`exercice ${e.id}, cas ${i + 1}`,
+          `le \`02-\` §2.3.3 donne au cran ${e.cran} « ${d.crans[e.cran as number]?.longueur} » `
+          + `du matériau, et \`${m.id}\` est le plus long de sa famille — c'est le matériau `
+          + 'ENTIER qui est servi là où une part suffisait')
+      }
+    }
+    v.entree = null
+  }
 }
 
 function rendre(v: Verdict, ignores: Record<string, string[]>,

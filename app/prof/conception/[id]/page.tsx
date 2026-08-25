@@ -17,6 +17,7 @@ import { notFound } from 'next/navigation'
 import { garderProf } from '@/utils/fabrique/acces'
 import { chargerDoctrineDepuisBase } from '@/utils/fabrique/doctrine'
 import { composerApercu } from '@/utils/fabrique/conception'
+import { lireLaBanque } from '@/utils/deroule/credence'
 import { cranNumero } from '@/utils/cran'
 import Edition from './Edition'
 import Apercu from './Apercu'
@@ -63,7 +64,7 @@ export default async function EditionEtApercu({
   const d = await chargerDoctrineDepuisBase(admin as never)
 
   const { data: ex } = await admin.from('exercices')
-    .select('*, exercices_types(code, libelle, grain), exercices_cas(*, exercices_materiaux(contenu, defaut, famille))')
+    .select('*, exercices_types(code, libelle, grain), exercices_cas(*, exercices_materiaux(contenu, defaut, famille, version_corrigee))')
     .eq('id', id).maybeSingle()
   if (!ex) notFound()
   const e = ex as unknown as Ligne
@@ -123,10 +124,30 @@ export default async function EditionEtApercu({
     guide: e.guide === null ? null : txt(e.guide),
     cas: casTries.map((cs, i) => ({
       consigne: consignes[i] ?? '',
-      distracteurs: Array.isArray(cs.distracteurs) ? cs.distracteurs.map(txt) : null,
+      // ⭐⭐ C4-L15 / R2b — LES DEUX FORMES PHYSIQUES, ET C'EST `lireLaBanque` QUI
+      //    LES TIENT. `exercices_cas.distracteurs` porte DEUX formes en base,
+      //    aujourd'hui, côte à côte : des OBJETS `{texte, pourquoi_faux}` à
+      //    l'import (`08-` §5.2 — c'est celle que la banque réelle produit) et
+      //    des CHAÎNES sur une instance conçue à l'écran. ⛔ `txt()` ne rend une
+      //    chaîne que si la valeur EST une chaîne : sur la forme d'objet, il
+      //    rendait `''`, et l'aperçu servait `['', '', '', 'la réponse']` —
+      //    trois candidats VIDES, trois lignes blanches à l'écran.
+      // ⚠️ LE DÉFAUT ÉTAIT ANTÉRIEUR À C4-L15 ; ce lot l'a rendu VOYANT : depuis
+      //    que l'aperçu marque le matériau, il SOUS-MARQUAIT — un seul mot en
+      //    évidence côté professeur, quatre côté élève. *Or cet écran existe
+      //    pour que « le professeur voie ce que l'élève verra ».*
+      // ⭐ `lireLaBanque` est le lecteur de l'écran ÉLÈVE, déjà éprouvé : les
+      //    deux voies lisent désormais par la MÊME fonction. ⛔ Et **on ne
+      //    normalise toujours rien en base** — la normalisation reste à C4-L11.
+      distracteurs: Array.isArray(cs.distracteurs) ? lireLaBanque(cs.distracteurs) : null,
       reponseAttendue: cs.reponse_attendue === null ? null : txt(cs.reponse_attendue),
       pourquoiJuste: cs.pourquoi_juste === null ? null : txt(cs.pourquoi_juste),
       materiauContenu: txt(jointure(cs, 'exercices_materiaux').contenu) || null,
+      // ⭐ C4-L15 — le passage fautif des crans 3 et 5 se calcule ICI, sur le
+      //    serveur, et **seules les positions descendent** : `composerApercu`
+      //    ne rend que des tranches du `contenu`.
+      materiauVersionCorrigee:
+        txt(jointure(cs, 'exercices_materiaux').version_corrigee) || null,
     })),
   })
 
@@ -179,7 +200,20 @@ export default async function EditionEtApercu({
             ordre: Number(cs.ordre),
             consigne: consignes[i] ?? '',
             defaut: cs.defaut === null ? null : txt(cs.defaut),
-            distracteurs: Array.isArray(cs.distracteurs) ? cs.distracteurs.map(txt).join('\n') : '',
+            // ⭐⭐ LE MÊME DÉFAUT, UN SECOND SITE — ET CELUI-CI COÛTAIT DE LA DONNÉE.
+            //    Ce champ alimente le FORMULAIRE D'ÉDITION, pas l'aperçu. Avec
+            //    `txt()`, une instance dont les distracteurs sont des OBJETS
+            //    (la forme d'import, `08-` §5.2) affichait un textarea **VIDE** —
+            //    et `lireCas` (`../actions.ts`) écrit `null` quand le textarea
+            //    est vide : **ouvrir l'instance et l'enregistrer DÉTRUISAIT les
+            //    trois distracteurs**, sans un mot. Vu à l'écran le 24/08.
+            // ⚠️ CE QUI RESTE, ET QUI N'EST PAS DE CE LOT : `lireCas` réécrit
+            //    toujours des CHAÎNES. Enregistrer une instance importée garde
+            //    donc les textes mais **perd les `pourquoi_faux`**. C'est une
+            //    perte moindre — et surtout, la choisir, c'est trancher la FORME
+            //    STOCKÉE, qui est la normalisation confiée à `C4-L11`. On ne la
+            //    tranche pas ici ; elle est portée au registre.
+            distracteurs: Array.isArray(cs.distracteurs) ? lireLaBanque(cs.distracteurs).join('\n') : '',
             reponseAttendue: cs.reponse_attendue === null ? null : txt(cs.reponse_attendue),
             pourquoiJuste: cs.pourquoi_juste === null ? null : txt(cs.pourquoi_juste),
             materiau: mat.defaut

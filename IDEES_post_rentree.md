@@ -563,3 +563,86 @@ bonus n'a jamais été vivant** : avant C4-L13, rien n'écrivait `assiduite_hebd
 
 *(Le `07-Implementation.md` §1.5, lui, est OUVERT À L'IMPLÉMENTATION : C4-L13 y a écrit la fermeture
 et sa raison — v2.46.)*
+
+
+---
+
+## C4-L15 — ⛔ `banqueDeConsignes` sert au CONCEPTEUR ce qui est écrit POUR LE CONCEPTEUR
+
+*Trouvé le 24/08 par la séance C4-L15, **hors de son périmètre**, en jouant la re-dérivation : porté
+ici parce que la règle du dépôt est « toute découverte hors périmètre → une ligne, pas dans le
+code ». **Candidat pour `C4-L11`**, qui est le domicile des défauts trouvés hors périmètre.*
+
+**LE CONSTAT.** `banqueDeConsignes` *(`utils/fabrique/doctrine.ts`)* compose la consigne des trois
+crans de production en collant le patron du `04-` §14.1 et la cellule du §14.2 — **telle qu'elle est
+stockée**. Le générateur, lui, la passe d'abord par `noyau/materiau._pour_leleve` et `_denude`. Les
+deux voies ne rendent donc **pas le même texte**, et c'est mesuré :
+
+| | La voie du générateur *(banque réelle)* | La voie de conception en ligne *(`banqueDeConsignes`)* |
+|---|---|---|
+| cran 2 · `argument` | « Voici **la conclusion et la preuve.** Écris l'argument en t'appuyant dessus. » | « **«** Voici la conclusion et la preuve**, fournies — le garant reste entier**. Écris l'argument en t'appuyant dessus. **»** » |
+| cran 6 · `argument` | « Écris l'argument. Conclusion ? Preuve ? Quelle raison… ? » | « **«** Écris l'argument. **«** Conclusion ? Preuve ? Quelle raison… ? **»** **»** » |
+
+**QUATRE ÉCARTS, ET LE PREMIER EST LE SEUL QUI COMPTE VRAIMENT.**
+
+1. ⛔⛔ **« — le garant reste entier » EST SERVI À L'ÉLÈVE.** La queue après le tiret cadratin est une
+   **didascalie du concepteur** : elle dit ce qu'on ne sert PAS. `verifie-vocabulaire.py` le sait —
+   son en-tête l'écrit en toutes lettres — et **c'est pourquoi il ne crie pas** : il lit la cellule
+   *après* `_pour_leleve`. **Le contrôle ne peut donc pas voir ce défaut-ci : il est dans le port
+   TS, pas dans la source.** ⚠️ C'est **exactement le défaut des items 63, 70 et 71** — un mot de
+   grille servi à un élève de première —, trouvé une quatrième fois, et par un chemin neuf.
+2. **« , fournies » / « , fournie » restent** — le générateur les retire aussi.
+3. **Les guillemets du patron restent**, et **ceux du guide du cran 6 s'y emboîtent** : « … « … » ».
+4. Conséquence des trois : la consigne composée en ligne **n'est pas celle que la banque produit**,
+   pour le même objet, le même mode et le même cran.
+
+**CE QUE ÇA COÛTE AUJOURD'HUI, ET DEMAIN.** Aujourd'hui : **rien en base** — toutes les instances de
+production viennent de l'import, et aucun professeur n'a encore conçu de cran 2 ou 6 en ligne.
+Demain : dès qu'il le fait, la consigne part en `exercices.consigne_instanciee`, **qui est figée à
+l'import et qu'aucune dérivation ne réécrit** — l'élève lira la didascalie, et le vocabulaire servi
+ne sera plus celui de la fiche.
+
+**LA RÉPARATION, ET POURQUOI ELLE N'A PAS ÉTÉ FAITE ICI.** Elle est petite — porter l'équivalent de
+`_pour_leleve` / `_denude` dans la dérivation ou dans `banqueDeConsignes` — mais elle touche la
+composition des consignes, qui est le périmètre de `C4-L8`/`C4-L11`, pas celui de C4-L15 *(le repli
+du guide de C4-L15 retire un BLOC de l'écran ; il ne touche pas un mot de la consigne)*. ⚠️ **Et il y
+a une vraie question de domicile derrière** : faut-il que le **dériveur** verse deux formes de la
+cellule *(la stockée et la servie)*, ou que le **lecteur** la nettoie ? La première a l'avantage de
+mettre le nettoyage là où le générateur l'a déjà — **un seul endroit, une seule règle**.
+
+---
+
+## C4-L15 — ⛔ L'aperçu du professeur ne lit pas les distracteurs en forme d'OBJET
+
+*Trouvé le 24/08 à l'écran, en jouant la recette R2 de C4-L15. **Ce n'est pas une idée neuve** :
+c'est l'item que le prompt de C4-L15 retire nommément de son périmètre — « la normalisation des deux
+formes physiques de `exercices_cas.distracteurs` — objets à l'import, chaînes à l'écran de conception
+— est à **`C4-L11`** ». **Cette ligne ne le crée pas, elle le DATE et le mesure.***
+
+**LE CONSTAT, DIAGNOSTIQUÉ.** `app/prof/conception/[id]/page.tsx` lit
+`cs.distracteurs.map(txt)`, et `txt = (x) => typeof x === 'string' ? x : ''`. Or le `08-` §5.2
+déclare qu'un distracteur est un **objet** `{texte, pourquoi_faux}`. Sur cette forme, l'aperçu sert
+**`['', '', '', 'donc']`** — trois candidats vides.
+
+⭐ **LES DEUX FORMES COHABITENT EN BASE AUJOURD'HUI, ET C'EST MESURÉ.**
+`jsonb_typeof(distracteurs->0)` sur toutes les instances qui en portent : **`object` × 2**
+*(le décor de C4-L15, qui suit le format d'import)* · **`string` × 8** *(les instances conçues à
+l'écran)*. **La forme d'objet est celle que la banque réelle produira** — c'est celle du `08-`.
+
+⭐⭐ **CE QUE C4-L15 A CHANGÉ : LE DÉFAUT EST DEVENU VOYANT.** Avant ce lot, trois candidats vides
+s'affichaient comme **trois lignes blanches** dans une liste — facile à ne pas voir. Depuis que
+l'aperçu marque le matériau, **il SOUS-MARQUE** : au cran 1, **un seul gras côté professeur, quatre
+côté élève**. *Or l'aperçu existe précisément pour que « le professeur voie ce que l'élève verra » —
+et c'est le seul écran où le placement se vérifie.*
+
+⛔ **L'écran ÉLÈVE n'est PAS touché** : `utils/deroule/credence.ts` normalise déjà les deux formes
+*(`texteDuCandidat`, `lireLaBanque`)*, et le smoke élève du 24/08 rend bien quatre gras. **Le défaut
+est dans l'aperçu seul.**
+
+**LA RÉPARATION EST D'UNE LIGNE, ET ELLE EXISTE DÉJÀ.** Passer par `texteDuCandidat`
+*(`utils/deroule/credence.ts`)* au lieu de `txt` — la fonction est écrite, éprouvée, et elle traite
+exactement ce cas. ⚠️ **Et elle doit venir avec sa question de fond** : faut-il **normaliser à
+l'écriture** *(une seule forme en base, celle du `08-`)* plutôt que de faire normaliser chaque
+lecteur ? Deux formes physiques pour la même donnée, c'est deux lecteurs à tenir d'accord pour
+toujours.
+

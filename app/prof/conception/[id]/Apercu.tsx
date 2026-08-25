@@ -20,9 +20,23 @@
 //
 // ⚠️ « Les textes s'affichent TELS QU'ILS SONT STOCKÉS » — les retours à la ligne
 //    d'un matériau, d'une démonstration, d'un texte d'auteur sont CONSERVÉS.
+//
+// ⭐⭐ C4-L15 — ET CE QUE L'ÉCRAN MET EN ÉVIDENCE DANS LE MATÉRIAU S'Y VOIT.
+//    Le professeur doit voir CE QUE L'ÉLÈVE VERRA : au cran 1 les quatre
+//    candidats servis, la bonne réponse comprise ; aux crans 3 et 5 le passage
+//    fautif, et lui seul ; aux crans 4, 7 et 9 rien — « l'y trouver EST le
+//    travail » (`02-` §5). ⚠️ Le texte n'est PAS retouché : marquer n'est pas
+//    baliser, la concaténation des segments EST le matériau, et le
+//    `whitespace-pre-wrap` reste. ⚠️ Le TIRAGE des candidats n'a pas bougé — il
+//    reste déterministe, « pour qu'un rechargement ne change pas ce que le
+//    professeur relit ».
 // ============================================================================
 
 import type { Apercu as TypeApercu } from '@/utils/fabrique/conception'
+// ⭐ LA MÊME classe de marque que l'écran élève, IMPORTÉE et jamais recopiée :
+//    deux listes de classes qui divergeraient feraient mentir « l'aperçu rend ce
+//    que l'élève verra » dès le premier ajustement.
+import { MARQUE } from '@/components/deroule/TexteBalise'
 
 export default function Apercu({ apercu }: { apercu: TypeApercu }) {
   return (
@@ -67,13 +81,19 @@ export default function Apercu({ apercu }: { apercu: TypeApercu }) {
           {/* LA CONSIGNE. */}
           <p className="font-ui text-base text-encre">{cs.consigne}</p>
 
-          {/* CE SUR QUOI L'ÉLÈVE TRAVAILLE — le texte à corriger, la copie à juger. */}
+          {/* CE SUR QUOI L'ÉLÈVE TRAVAILLE — le texte à corriger, la copie à juger,
+              AVEC ce que l'écran y met en évidence (C4-L15). */}
           {cs.materiauCible && (
             <div className="rounded-md border border-bordure-bouton bg-parchemin-fonce p-3">
               <p className="font-ui text-xs uppercase tracking-wide text-muet-clair">
                 Ce sur quoi tu travailles
               </p>
-              <p className="whitespace-pre-wrap font-serif text-sm text-encre">{cs.materiauCible}</p>
+              <p className="whitespace-pre-wrap font-serif text-sm text-encre">
+                {(cs.materiauCibleMarque ?? [{ texte: cs.materiauCible, marque: false }])
+                  .map((seg, k) => (seg.marque
+                    ? <strong key={k} className={MARQUE}>{seg.texte}</strong>
+                    : <span key={k}>{seg.texte}</span>))}
+              </p>
             </div>
           )}
 

@@ -78,6 +78,23 @@ export interface LignesDoctrine {
     palier_vise: string; materiau_cible: string; defaut: string
     distracteurs: string; reponse_attendue: string; guide: string
     jugement: string; couverture_observables: string; regime_v1vf: string
+    /**
+     * ⭐ C4-L15 — CE QUE L'ÉCRAN MET EN ÉVIDENCE DANS LE MATÉRIAU (`02-` §5).
+     * La PHRASE de la source, mot pour mot, jamais un code : c'est elle que
+     * `regleDeMarquage` interprète, exactement comme l'aperçu élève du
+     * générateur. ⚠️ FACULTATIVE ICI, et à double titre : elle est `null` aux
+     * crans 2, 6 et 8 *(pas de `materiau_cible` — l'absence est une donnée)*,
+     * et elle est ABSENTE de toute base qui n'a pas encore reçu la
+     * re-dérivation. Absente, on ne marque RIEN : l'écran d'avant le lot.
+     */
+    marquage?: string | null
+    /**
+     * ⭐ C4-L15 — LA LONGUEUR DU MATÉRIAU `genere`, cran par cran (`02-`
+     * §2.3.3). ⚠️ **Une FRACTION de l'étendue du support, JAMAIS un compte
+     * absolu** — « le quart », « la moitié », « le matériau entier ».
+     * Facultative pour la même double raison que `marquage`.
+     */
+    longueur?: string | null
   }>
   exercices_durees: Array<{ geste: string; grain: string; borne_min: number; borne_max: number; duree_min: number }>
   competences_modes_admis: Array<{ competence: string; mode: string }>
@@ -144,6 +161,25 @@ export interface CranDoctrine {
   regimeV1vf: string
   /** `isole` aux six crans qui isolent, `exerce` aux trois de production. */
   isole: boolean
+  /**
+   * ⭐ C4-L15 — CE QUE L'ÉCRAN MET EN ÉVIDENCE DANS LE MATÉRIAU (`02-` §5).
+   *
+   * ⚠️ **`null` A DEUX SENS ICI, ET ILS NE SE CONFONDENT PAS.** Aux crans 2, 6
+   * et 8, `null` dit *« il n'y a pas de matériau »* — la table du `02-` §5 ne
+   * porte que SIX crans, et les trois absents ne sont ni en « marque » ni en
+   * « rien ». Sur une base qui n'a pas reçu la re-dérivation, `null` dit
+   * seulement *« la doctrine n'est pas encore descendue »*. **Les deux mènent
+   * au même comportement — ne rien marquer —, et c'est ce qui rend l'absence
+   * sûre** : l'écran d'avant le lot, jamais un marquage deviné.
+   */
+  marquage: string | null
+  /**
+   * ⭐ C4-L15 — LA LONGUEUR DU MATÉRIAU `genere` À CE CRAN (`02-` §2.3.3).
+   * ⚠️ **Une FRACTION de l'étendue du support, JAMAIS un compte absolu.**
+   * `null` aux trois crans de production, pour la même double raison que
+   * `marquage`.
+   */
+  longueur: string | null
 }
 
 export interface RouteDoctrine {
@@ -232,6 +268,13 @@ export function assemblerDoctrine(rows: LignesDoctrine): Doctrine {
       couverture: c.couverture_observables as CranDoctrine['couverture'],
       regimeV1vf: c.regime_v1vf,
       isole: c.couverture_observables === 'isole',
+      // ⭐ C4-L15 — ⚠️ `?? null` ET NON `?? ''` : une base qui n'a pas encore
+      //    reçu la re-dérivation rend `undefined`, une base à jour rend `null`
+      //    aux trois crans de production. **Les deux doivent se lire pareil**,
+      //    et la valeur qui dit « rien à en tirer » est `null` — une chaîne
+      //    vide serait une règle vide, donc une règle.
+      marquage: c.marquage ?? null,
+      longueur: c.longueur ?? null,
     }
   }
 

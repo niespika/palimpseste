@@ -15,6 +15,7 @@
 //    l'import » (`07-` §2). Ce module ne fait que BORNER une saisie.
 // ============================================================================
 
+import { marquerLeMateriau, type SegmentMateriau } from '../deroule/marquage'
 import type { Doctrine, RouteDoctrine } from './doctrine'
 import { banqueDeConsignes, competencesMesurables, dureeExercice, observablesIsoles } from './doctrine'
 
@@ -421,6 +422,20 @@ export interface ApercuCas {
   materiauSource: string | null
   /** Ce sur quoi l'élève travaille. */
   materiauCible: string | null
+  /**
+   * ⭐ C4-L15 — CE QUE L'ÉCRAN Y METTRA EN ÉVIDENCE, découpé en segments
+   * (`02-` §5) — **le professeur doit voir ce que l'élève verra**. `null` là où
+   * il n'y a pas de cible.
+   *
+   * ⚠️ **LE TIRAGE N'A PAS BOUGÉ D'UN CARACTÈRE** : `tirerTrois` reste
+   * délibérément déterministe, « pour qu'un rechargement ne change pas ce que le
+   * professeur relit ». Le marquage se POSE sur les candidats que l'aperçu tire
+   * déjà — il ne les retire pas.
+   *
+   * ⚠️ Le texte reste octet pour octet celui de `materiauCible` : la
+   * concaténation des segments le rend à l'identique.
+   */
+  materiauCibleMarque: SegmentMateriau[] | null
   /** QUATRE candidats, mêlés — jamais quinze. Vide hors des crans 1 et 3. */
   candidats: string[]
   /** Servie AVANT le cas 2, aux crans de diagnostic. */
@@ -467,7 +482,15 @@ export function composerApercu(d: Doctrine, instance: {
   guide: string | null
   cas: Array<{ consigne: string; distracteurs: string[] | null
     reponseAttendue: string | null; pourquoiJuste?: string | null
-    materiauContenu: string | null }>
+    materiauContenu: string | null
+    /**
+     * ⭐ C4-L15 — « le même matériau SANS le défaut » (`08-` §4). Elle sert
+     * UNIQUEMENT à calculer le passage fautif aux crans 3 et 5, et **elle ne
+     * ressort pas** : `marquerLeMateriau` ne rend que des tranches de
+     * `materiauContenu`. ⚠️ Côté élève c'est LA RÉPONSE ; côté professeur elle
+     * n'est pas secrète, mais on ne la fait pas voyager pour autant.
+     */
+    materiauVersionCorrigee?: string | null }>
 }): Apercu | null {
   const c = d.crans[instance.cran]
   if (!c) return null
@@ -481,11 +504,23 @@ export function composerApercu(d: Doctrine, instance: {
       ? [...tirerTrois(banque, `${instance.objet}|${instance.cran}|${i}`),
         ...(cs.reponseAttendue ? [cs.reponseAttendue] : [])]
       : []
+    const materiauCible = cible ? (cs.materiauContenu ?? instance.materiauCibleTexte) : null
     return {
       ordre: i + 1,
       consigne: cs.consigne,
       materiauSource: instance.materiauSourceTexte,
-      materiauCible: cible ? (cs.materiauContenu ?? instance.materiauCibleTexte) : null,
+      materiauCible,
+      // ⭐⭐ C4-L15 — LE PROFESSEUR VOIT CE QUE L'ÉLÈVE VERRA. « Une consigne
+      //    juste au mauvais endroit de l'écran est une consigne fausse, et
+      //    c'est le seul moment où cela se voit » — cela vaut aussi pour ce que
+      //    l'écran met en évidence dans le matériau.
+      // ⚠️ On passe LES CANDIDATS QUE CET APERÇU SERT, pas la banque : les
+      //    mêmes quatre que la ligne du dessus vient de tirer, pour que le
+      //    marquage colle à ce qui est affiché juste à côté.
+      // ⭐ Le tirage lui-même n'est pas touché : il reste déterministe.
+      materiauCibleMarque: marquerLeMateriau(
+        materiauCible, d.crans[instance.cran]?.marquage ?? null,
+        { candidats, versionCorrigee: cs.materiauVersionCorrigee ?? null }),
       candidats,
       // « La correction du premier cas est SERVIE AVANT LE SECOND — c'est elle
       // qui rend l'écart des deux crédences interprétable » (`02-` §2.3.1 a).
@@ -495,8 +530,26 @@ export function composerApercu(d: Doctrine, instance: {
       pourquoiJuste: c.distracteurs === 'présent' ? (cs.pourquoiJuste ?? null) : null,
     }
   })
+  // ── ⭐⭐ C4-L15 — LE GUIDE NE S'AFFICHE PLUS AU CRAN 6 ──────────────────────
+  // `04-` §14.1 : « AU CRAN 6, LE GUIDE EST DANS LA CONSIGNE — ET NE S'AFFICHE
+  // DONC PAS DEUX FOIS. » L'aperçu doit montrer CE QUE L'ÉLÈVE VERRA : s'il
+  // continuait d'afficher le bloc, il mentirait sur l'écran qu'il annonce.
+  // ⭐ La condition est DÉRIVÉE : la doctrine met `léger` au cran 6, et à lui
+  //    seul (`02-` §2.2) — pas de numéro de cran écrit ici.
+  // ⛔ Le CHAMP reste obligatoire au cran 6, et le contrôle de saisie qui
+  //    l'exige n'est pas touché : c'est lui qui remplit la case du patron.
+  // ⚠️ LA MÊME GARDE QU'AU DÉROULÉ (`utils/deroule/vue.ts`) : on ne replie que
+  //    là où la consigne porte EFFECTIVEMENT le guide. Par la voie de
+  //    conception en ligne, `banqueDeConsignes` l'y met — c'est prouvable ; par
+  //    la voie d'import, rien ne le garantit, et replier un guide que la
+  //    consigne ne porte pas ferait d'un cran 6 un cran 8 en silence.
+  const memeSouffle = (x: string) => x.replace(/\s+/g, ' ').trim()
+  const guideDansLaConsigne = instance.guide !== null
+    && memeSouffle(instance.guide) !== ''
+    && instance.cas.some((cs) => memeSouffle(cs.consigne).includes(memeSouffle(instance.guide!)))
   return {
-    guide: c.guide === 'null' ? null : instance.guide,
+    guide: c.guide === 'null' || (c.guide === 'léger' && guideDansLaConsigne)
+      ? null : instance.guide,
     dureeMin: dureeExercice(d, instance.objet, instance.cran),
     regimeV1vf: c.regimeV1vf,
     cas,

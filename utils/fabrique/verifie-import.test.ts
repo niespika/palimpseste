@@ -386,6 +386,85 @@ test('IMPORT — la même checklist au grain macro ne signale rien', () => {
   assert.ok(!contient(v.signalements, "le `06-` §2 l'attend"))
 })
 
+// ── ⭐ C4-L15 — LA LONGUEUR DU MATÉRIAU SUIT LE CRAN (`02-` §2.3.3) ─────────
+// LES QUATRE VECTEURS DU CONTRÔLE DE LONGUEUR, RECOPIÉS SANS ADAPTATION du
+// bloc « la longueur du matériau suit le cran » de l'autotest de
+// `generateur/verifie-import.py` (commit `d6a31f8`, 24/08) : « ce que tu
+// construis doit rendre LES MÊMES VERDICTS SUR LES MÊMES VECTEURS ».
+//
+// ⭐⭐ LES DEUX PENDANTS NÉGATIFS SONT LA MOITIÉ DE LA PREUVE : sans eux, un
+//    contrôle qui signalerait TOUJOURS passerait le premier vecteur.
+//
+// La fixture porte `mat-a` et `mat-b` dans la MÊME famille (« le garant
+// manque ») et de longueur voisine ; allonger `mat-a` en fait le plus long de
+// sa famille, et l'exercice est au cran 4 — qui n'en demande « que le quart ».
+const LONG = 'Une phrase. Une deuxième. Une troisième. Une quatrième. '
+  + 'Et une cinquième, pour faire bonne mesure.'
+const texteLong = (b: B) => { b.materiaux[0].contenu = LONG }
+
+test('IMPORT SIGNALEMENT — le matériau ENTIER servi au cran 4, qui n\'en demande qu\'un quart', () => {
+  const v = controleImport(casse(texteLong), doctrine)
+  assert.ok(contient(v.signalements, "c'est le matériau ENTIER qui est servi"),
+    `aucun signalement — rendus : ${JSON.stringify(v.signalements)}`)
+  assert.deepEqual(v.refus, [], "un signalement n'arrête rien")
+})
+
+test('IMPORT — le même matériau au cran 9 ne signale RIEN : la source y admet le matériau entier', () => {
+  // ⚠️ PENDANT NÉGATIF. Le `02-` §2.3.3 donne « le matériau entier » aux crans
+  //    1 et 9 : `_fraction_du_cran` y rend `null`, et le contrôle ne part pas.
+  const v = controleImport(casse((b) => {
+    texteLong(b); b.exercices[0].cran = 9
+  }), doctrine)
+  assert.ok(!contient(v.signalements, 'matériau ENTIER qui est servi'),
+    `il n'aurait rien dû signaler — rendus : ${JSON.stringify(v.signalements)}`)
+})
+
+test('IMPORT — une VERSION COURTE servie au cran 4 ne signale rien : c\'est ce que la source demande', () => {
+  // ⚠️ PENDANT NÉGATIF, ET C'EST LUI QUI PROUVE QUE LA MESURE EST RELATIVE :
+  //    le long reste en banque, mais le cas sert le COURT de la même famille.
+  const v = controleImport(casse((b) => {
+    texteLong(b)
+    b.materiaux[1].contenu = 'Deux phrases. Rien de plus.'
+    b.exercices[0].cas[0].materiau = 'mat-b'
+    b.exercices[0].cas[1].materiau = 'mat-a'
+  }), doctrine)
+  assert.ok(!contient(v.signalements, 'cas 1 : le `02-` §2.3.3'),
+    `le cas 1 n'aurait rien dû signaler — rendus : ${JSON.stringify(v.signalements)}`)
+})
+
+test('IMPORT — et le signalement ne REFUSE jamais, ni ne change le code de sortie', () => {
+  // « `0` = importable (blocages et signalements possibles) » (`08-` §7.4).
+  //   Une banque versée ne se bloque pas sur une mesure approchée.
+  const v = controleImport(casse(texteLong), doctrine)
+  assert.deepEqual(v.refus, [])
+  assert.deepEqual(v.blocages, [])
+  assert.equal(v.code, 0)
+})
+
+// ── Ce que la doctrine commande, et ce qui arrive quand elle se tait ────────
+
+test('LONGUEUR — la doctrine porte SIX longueurs, et les trois crans de production se taisent', () => {
+  // ⚠️ Les crans 2, 6 et 8 n'ont pas de `materiau_cible` : rien à mesurer.
+  const avec = Object.values(doctrine.crans).filter((c) => c.longueur).map((c) => c.n).sort((a, x) => a - x)
+  assert.deepEqual(avec, [1, 3, 4, 5, 7, 9])
+  for (const n of [2, 6, 8]) assert.equal(doctrine.crans[n].longueur, null)
+  // Et la FRACTION ne mord qu'aux quatre crans qui en demandent une part.
+  assert.equal(doctrine.crans[3].longueur, 'le quart')
+  assert.equal(doctrine.crans[7].longueur, 'la moitié')
+  assert.equal(doctrine.crans[1].longueur, 'le matériau entier')
+})
+
+test('⚠️ LONGUEUR — une doctrine SANS la colonne ne signale rien, et ne lève pas', () => {
+  // C'est l'état d'une base entre la migration et la re-dérivation. Le contrôle
+  // se tait plutôt que de mesurer contre une fraction qu'il n'a pas.
+  const brut = JSON.parse(fs.readFileSync(FIXTURE, 'utf-8')) as LignesDoctrine
+  for (const c of brut.exercices_crans) { delete c.marquage; delete c.longueur }
+  const sansColonne = assemblerDoctrine(brut)
+  const v = controleImport(casse(texteLong), sansColonne)
+  assert.ok(!contient(v.signalements, 'matériau ENTIER qui est servi'))
+  assert.deepEqual(v.refus, [])
+})
+
 // ── Ce que le contrôle hors ligne ne peut pas faire, et que celui-ci fait ────
 // « Les renvois se résolvent dans le fichier ET dans ce qui est déjà en base :
 //   le contrôle hors ligne ne voit que le fichier ; LE TIEN VOIT LES DEUX »

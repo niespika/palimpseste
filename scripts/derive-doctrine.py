@@ -19,6 +19,10 @@ Ce qu'il remplit :
   · `exercices_types_modes`        — les `modes[]` par compétence
   · `exercices_types_modes_source` — le `materiau_source` par objet × mode
   · `exercices_crans` · `exercices_durees` · `competences_modes_admis`
+      ⭐ C4-L15 — `exercices_crans` porte aussi `marquage` (`02-` §5, ce que
+      l'écran met en évidence dans le matériau) et `longueur` (`02-` §2.3.3,
+      la fraction de l'étendue du support). Les deux sont NULL aux crans 2, 6
+      et 8, qui n'ont pas de `materiau_cible`.
   · `exercices_routes`             — observable × objet × mode × cran
   · `exercices_consignes_isolees`  — les six crans qui isolent
   · `exercices_consignes_production` · `exercices_guides_production` — le §14
@@ -60,7 +64,12 @@ import sys
 # à défaut, le chemin du professeur tient lieu de défaut, comme avant.
 RACINE_DEFAUT = (os.environ.get("PALIMPSESTE_RACINE_CONCEPTION")
                  or "/Users/louissagnieres/Documents/GitTest/palimpseste-conception")
-OUTIL = "scripts/derive-doctrine.py 1.2"
+# ⭐ C4-L15 — 1.2 → 1.3 : le dériveur verse DEUX COLONNES DE PLUS sur
+# `exercices_crans` (`marquage` et `longueur`, `02-` §5 et §2.3.3). Le numéro
+# se relit sur le fichier VIVANT juste avant écriture — c'est un compteur
+# PARTAGÉ entre séances, et il part au journal `doctrine_derivation.outil` :
+# c'est lui qui dit, plus tard, quelle version du dériveur a écrit la base.
+OUTIL = "scripts/derive-doctrine.py 1.3"
 
 # Les six crans qui isolent, dans l'ordre où le `04-` §0 les nomme.
 CRANS_QUI_ISOLENT = (1, 3, 4, 5, 7, 9)
@@ -314,10 +323,25 @@ def lignes(d):
     """Toutes les lignes dérivées, table par table. Aucune valeur en dur."""
     L = {}
 
+    # ⭐ C4-L15 — DEUX COLONNES DE PLUS, DÉRIVÉES DU MÊME `02-`, ET RIEN
+    #    N'EST TAPÉ ICI. `d.marquage` vient du `02-` §5 (« ce que l'écran met
+    #    en évidence dans le matériau ») et `d.longueurs` du `02-` §2.3.3 (la
+    #    fraction de l'étendue du support). Le générateur les lisait déjà —
+    #    `noyau/doctrine.py`, qui refuse de se charger si la source a bougé —
+    #    et la plateforme ne les connaissait pas : « la doctrine est dérivée,
+    #    JAMAIS TAPÉE, et il n'y a qu'un dériveur ». Les écrire dans un `switch`
+    #    TypeScript, ce serait les redire, et deux domiciles finissent toujours
+    #    par diverger.
+    # ⚠️ LES DEUX SONT NULL AUX TROIS CRANS DE PRODUCTION (2, 6, 8), et
+    #    l'absence est une DONNÉE, pas un oubli : ces crans n'ont pas de
+    #    `materiau_cible` (`02-` §2.2), donc rien à marquer ET rien à mesurer.
+    #    Les deux tables des sources ne portent que SIX crans, chacune, et
+    #    `noyau/doctrine.py` s'arrête si elle en lit un autre nombre.
     L["exercices_crans"] = [
         (n, c.code, c.geste, c.appui, d.crans_fait[n], d.crans_palier[n],
          c.materiau_cible, c.defaut, c.distracteurs, c.reponse_attendue,
-         c.guide, c.jugement, c.couverture, c.regime_v1vf)
+         c.guide, c.jugement, c.couverture, c.regime_v1vf,
+         d.marquage.get(n), d.longueurs.get(n))
         for n, c in sorted(d.crans.items())]
 
     L["exercices_durees"] = [
@@ -456,7 +480,7 @@ def sql_remplissage(d, racine):
     w("-- ── Les neuf crans — `02-` §2.1 et §2.2 ──────────────────────────────────")
     w("insert into exercices_crans (cran,code,geste,appui,fait,palier_vise,"
       "materiau_cible,defaut,distracteurs,reponse_attendue,guide,jugement,"
-      "couverture_observables,regime_v1vf) values\n       %s;"
+      "couverture_observables,regime_v1vf,marquage,longueur) values\n       %s;"
       % _bloc_values(L["exercices_crans"]))
     w("")
 
@@ -588,7 +612,8 @@ def fixture(d, racine):
         "exercices_crans": ("cran", "code", "geste", "appui", "fait", "palier_vise",
                             "materiau_cible", "defaut", "distracteurs",
                             "reponse_attendue", "guide", "jugement",
-                            "couverture_observables", "regime_v1vf"),
+                            "couverture_observables", "regime_v1vf",
+                            "marquage", "longueur"),
         "exercices_durees": ("geste", "grain", "borne_min", "borne_max", "duree_min"),
         "competences_modes_admis": ("competence", "mode"),
         "exercices_consignes_production": ("mode", "cran", "patron"),
@@ -655,10 +680,19 @@ def empreinte_fixture(d, racine):
 
 # (table, colonnes comparées, colonnes de la clé lisible)
 COMPARAISONS = [
+    # ⭐ C4-L15 — `marquage` et `longueur` entrent à la COMPARAISON, pas
+    #    seulement à l'insert : une colonne dérivée qu'aucun contrôle ne relit
+    #    est une colonne qui peut prendre du retard sans que rien ne le dise.
+    #    ⚠️ Elles sont NULL aux crans 2, 6 et 8, et l'`except` les compare bien :
+    #    il départage par DISTINCTION, pas par égalité — `null` y vaut `null`.
+    #    (Les grandes tables ci-dessous, elles, comparent une CONCATÉNATION, où
+    #    un `null` annulerait la ligne entière : c'est pourquoi elles portent des
+    #    `coalesce` et pas celle-ci. Deux mécanismes, deux précautions.)
     ("exercices_crans",
      "cran,code,geste,appui,fait,palier_vise,materiau_cible,defaut,distracteurs,"
-     "reponse_attendue,guide,jugement,couverture_observables,regime_v1vf",
-     "int,text,text,text,text,text,text,text,text,text,text,text,text,text"),
+     "reponse_attendue,guide,jugement,couverture_observables,regime_v1vf,"
+     "marquage,longueur",
+     "int,text,text,text,text,text,text,text,text,text,text,text,text,text,text,text"),
     ("exercices_durees", "geste,grain,borne_min,borne_max,duree_min",
      "text,text,int,int,int"),
     ("competences_modes_admis", "competence,mode", "text,text"),
