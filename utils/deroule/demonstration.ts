@@ -119,6 +119,18 @@ export interface ChoixDeDemonstration {
  * deux notions, « Baudelaire » n'est pas « Baudelaire, Spleen » ; à l'inverse,
  * laisser passer un partage non déclaré coûte, au pire, un exemple trop proche,
  * que le professeur voit. On préfère donc le faux négatif au faux positif.
+ *
+ * ⛔⛔ NE PAS LA REMPLACER PAR `cleDAppariement()` DE `utils/fabrique/notions.ts`
+ * — AJOUTÉ PAR C4-L16, QUI A ÉCRIT L'AUTRE. Depuis le format 1.3, le dépôt porte
+ * un SECOND appariement sur `exercices_sujets.notions` : celui du rattachement
+ * au cours, qui replie les accents ET retire l'article initial. **Les deux
+ * doivent rester différentes, parce que l'asymétrie de risque y est INVERSE** :
+ * là-bas, ne pas apparier rend le sujet muet POUR TOUJOURS et rien ne le dit —
+ * le faux négatif est le défaut à éviter, on replie donc largement ; **ici,
+ * apparier à tort PRIVE L'ÉLÈVE, en silence** — le faux positif est le défaut à
+ * éviter, on replie donc au minimum. Deux règles opposées sur la même colonne,
+ * dans le même dépôt : c'est un choix, pas un oubli. *Le même avertissement est
+ * posé à l'autre bout.*
  */
 function replie(x: string): string {
   return x.trim().toLowerCase()

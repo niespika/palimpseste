@@ -121,6 +121,37 @@ describe('`01-` §4 — le cours vu, et le sens fort de l\'absence', () => {
       coursApparies: ['c9'], coursDeclares: 1 })
     assert.equal(filtreDuCoursVu([vue, pasVue], new Set(['c1'])).retenue, false)
   })
+
+  // ── ⭐⭐ C4-L16 — LE QUATRIÈME ÉTAT, ET UN MOTIF QUI CESSE DE MENTIR ───────
+  // « Le lot ne porte PAS le filtre » — la couche 4 en `notions` est le premier
+  // geste de C4-L12. **Mais un motif faux n'est pas "pas de filtre" : c'est un
+  // filtre qui ment.**
+  it('⛔ C4-L16 — `notions` n\'est PAS lu par la couche 4, et le motif le DIT', () => {
+    const r = filtreDuCoursVu(
+      [materiau({ coursEtat: 'notions', coursApparies: [], coursDeclares: 0 })],
+      new Set(['c1']))
+    assert.equal(r.retenue, false, 'le sujet reste écarté, exactement comme avant')
+    assert.equal(r.motif, 'cours_par_notions_non_lu')
+    assert.match(r.detail, /la couche 4 ne le lit pas encore/)
+  })
+
+  it('⛔ C4-L16 — et SURTOUT PAS `cours_non_apparie`, qui enverrait réparer un écran vide', () => {
+    // C'est le défaut exact que cette branche répare : avant elle, un `notions`
+    // tombait dans le `default` de la `liste` et ressortait en « N cours
+    // déclaré(s), AUCUN apparié » — alors qu'il n'y a AUCUN cours à apparier.
+    const r = filtreDuCoursVu(
+      [materiau({ coursEtat: 'notions', coursApparies: [], coursDeclares: 0 })], new Set())
+    assert.notEqual(r.motif, 'cours_non_apparie')
+    assert.doesNotMatch(r.detail, /AUCUN apparié/)
+  })
+
+  it('⚠️ C4-L16 — un `notions` écarte l\'instance ENTIÈRE, même si l\'autre matériau passe', () => {
+    const ok = materiau({ id: 'm1', coursEtat: 'generique' })
+    const parNotions = materiau({ id: 'm2', role: 'cible', coursEtat: 'notions' })
+    const r = filtreDuCoursVu([ok, parNotions], new Set(['c1']))
+    assert.equal(r.retenue, false)
+    assert.equal(r.motif, 'cours_par_notions_non_lu')
+  })
 })
 
 // ── FILTRE 3 — le non-spoiler ───────────────────────────────────────────────

@@ -12,10 +12,15 @@ export default function BibliothequeContenus({
   type,
   contenus,
   corbeille,
+  notionsConnues,
 }: {
   type: 'texte' | 'cours'
   contenus: ContenuBiblio[]
   corbeille: { id: string; titre: string }[]
+  /** ⭐ C4-L16 — les notions que la BANQUE déclare, pour que l'écran du cours
+   *  les propose : « on ne rattache pas en tapant, on rattache en choisissant ».
+   *  Vide sur l'onglet Textes. */
+  notionsConnues: string[]
 }) {
   const router = useRouter()
   const [q, setQ] = useState('')
@@ -59,7 +64,7 @@ export default function BibliothequeContenus({
 
   return (
     <div className="space-y-4">
-      <FormulaireContenuBiblio type={type} />
+      <FormulaireContenuBiblio type={type} notionsConnues={notionsConnues} />
 
       <div className="flex items-center justify-between gap-3 flex-wrap">
         <input
@@ -81,7 +86,7 @@ export default function BibliothequeContenus({
         </p>
       ) : (
         <div className="space-y-2">
-          {filtres.map(c => <LigneContenuBiblio key={c.id} item={c} />)}
+          {filtres.map(c => <LigneContenuBiblio key={c.id} item={c} notionsConnues={notionsConnues} />)}
         </div>
       )}
 

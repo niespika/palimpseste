@@ -37,11 +37,19 @@ export const FORMAT_IMPORT = 'palimpseste/import-exercices'
  * ⚠️ C4-L14 — LA MINEURE PASSE À 1.2, ET ELLE NE CHANGE AUCUN VERDICT. « Le
  * majeur SEUL décide si l'import sait lire le fichier, et le mineur n'est lu par
  * personne : il déclare l'intention du producteur » (`08-` §1). Ce qu'elle dit
- * ici, c'est le format que ce port PARLE — la 1.2, celle qui déclare
- * `pourquoi_juste` et la forme d'un distracteur. `generateur/noyau/banque.py`
- * porte la même valeur ; les deux bouts se lisent ensemble.
+ * ici, c'est le format que ce port PARLE — la **1.3** depuis C4-L16, celle qui
+ * ouvre le QUATRIÈME état du rattachement (`cours: "notions"`) et pose `notions`
+ * sur `textes[]`. `generateur/noyau/banque.py` porte la même valeur (`VERSION =
+ * "1.3"`, vérifié) ; les deux bouts se lisent ensemble.
+ *
+ * ⚠️ LA FAIRE BOUGER NE PROUVE RIEN, ET NE CHANGE AUCUN VERDICT : le contrôle
+ * ne lit que la MAJEURE (`majeure !== VERSION_IMPORT.split('.')[0]`). Elle ne se
+ * confond pas avec la preuve du port — **la preuve, ce sont les vecteurs**
+ * (`verifie-import.test.ts`). C4-L15 avait pour consigne de NE PAS y toucher :
+ * « le faire passer à 1.3 sans porter ce que la 1.3 ajoute serait mentir sur ce
+ * que le port sait faire ». C4-L16 porte ce que la 1.3 ajoute, donc il la bouge.
  */
-export const VERSION_IMPORT = '1.2'
+export const VERSION_IMPORT = '1.3'
 
 export const MODES = ['composer', 'restituer', 'expliquer', 'évaluer', 'interroger'] as const
 export const COMPETENCES = ['expression', 'argumentation', 'structure',

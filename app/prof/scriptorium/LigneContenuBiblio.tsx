@@ -9,6 +9,7 @@ import {
   ajouterImageContenu,
   supprimerImageContenu,
 } from './actions'
+import ChoixDesNotions from './ChoixDesNotions'
 import type { ImageItem } from './LigneContenu'
 
 // Item de bibliothèque (texte ou cours réutilisable). AUCUN lien classe/unité/semaine.
@@ -24,9 +25,20 @@ export interface ContenuBiblio {
   nbParcours: number
   /** Nombre de sections de la découpe (RAG L2) — toujours 0 pour un texte. */
   nbSections: number
+  /**
+   * ⭐ C4-L16 — CE QUE LE COURS DÉCLARE TRAITER (`scriptorium_contenus.notions`).
+   * Notions du programme au tronc commun, thèmes ou chapitres du semestre en
+   * HLP. Toujours vide pour un texte : son rattachement passe par le
+   * `plan_de_lecture` (`08-` §2).
+   */
+  notions: string[]
 }
 
-export default function LigneContenuBiblio({ item }: { item: ContenuBiblio }) {
+export default function LigneContenuBiblio({ item, notionsConnues }: {
+  item: ContenuBiblio
+  /** Les notions que la BANQUE déclare déjà — celles que l'écran propose. */
+  notionsConnues: string[]
+}) {
   const router = useRouter()
   const [edition, setEdition] = useState(false)
   const [chargement, setChargement] = useState(false)
@@ -109,6 +121,11 @@ export default function LigneContenuBiblio({ item }: { item: ContenuBiblio }) {
         <textarea name="texte" defaultValue={item.texte ?? ''} rows={5} placeholder="Corps du contenu (texte étudié, leçon…)"
           className="w-full px-2 py-1.5 border border-bordure rounded text-sm text-encre focus:outline-none focus:ring-2 focus:ring-pigment resize-y" />
 
+        {/* ⭐ C4-L16 — seul un COURS déclare ce qu'il traite. */}
+        {item.type === 'cours' && (
+          <ChoixDesNotions connues={notionsConnues} deja={item.notions} />
+        )}
+
         {item.images.length > 0 && (
           <div className="flex flex-wrap gap-2">
             {item.images.map(img => (
@@ -168,6 +185,25 @@ export default function LigneContenuBiblio({ item }: { item: ContenuBiblio }) {
               </span>
             )}
           </div>
+          {/* ⭐ C4-L16 — CE QUE CE COURS RÉCLAME, visible sans ouvrir l'édition :
+              c'est ce qui rend un sujet de la banque servable, et l'absence se
+              lit tout autant que la présence. */}
+          {item.type === 'cours' && (
+            item.notions.length > 0 ? (
+              <div className="flex flex-wrap items-center gap-1 mt-1">
+                <span className="text-[11px] text-muet">déclare :</span>
+                {item.notions.map(n => (
+                  <span key={n} className="text-[11px] bg-pigment-teinte text-encre px-1.5 py-0.5 rounded-full">
+                    {n}
+                  </span>
+                ))}
+              </div>
+            ) : (
+              <p className="text-[11px] text-muet italic mt-1">
+                Aucune notion déclarée — ce cours ne rend aucun sujet servable.
+              </p>
+            )
+          )}
           {item.texte && <p className="text-xs text-muet mt-1 line-clamp-2 whitespace-pre-wrap">{item.texte}</p>}
           {item.images.length > 0 && (
             <div className="flex flex-wrap gap-2 mt-2">

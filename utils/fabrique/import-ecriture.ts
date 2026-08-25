@@ -39,6 +39,37 @@ export function empreinteContenu(contenu: string): string {
   return createHash('sha256').update(Buffer.from(contenu, 'utf-8')).digest('hex')
 }
 
+/**
+ * ⭐⭐ C4-L16 — CE QUE LE CHAMP `cours` DU FICHIER DEVIENT EN BASE : les
+ * **QUATRE** états de `cours_etat` (`08-` §2, format 1.3 ; `01-` §4 couche 4).
+ *
+ * ⚠️⚠️ C'ÉTAIT LA MOITIÉ INVISIBLE DU LOT, ET ELLE ÉTAIT ÉCRITE DEUX FOIS.
+ *   Avant ce lot, les deux sites d'écriture — les textes et les sujets —
+ *   portaient chacun leur copie de la règle : `cours === 'generique' ?
+ *   'generique' : (Array.isArray(cours) && cours.length > 0) ? 'liste' :
+ *   'aucun'`. **Une chaîne `"notions"` n'est ni `'generique'` ni un tableau :
+ *   elle sortait en `'aucun'` — « JAMAIS SERVABLE » —, en silence.** Le contrôle
+ *   d'import aurait dit `IMPORTABLE`, l'écran aurait affiché quinze sujets, et
+ *   les quinze auraient été morts. ⛔ **Le `CHECK` élargi ne rattrape rien ici**
+ *   : une contrainte ne se déclenche que sur une valeur écrite, et le code
+ *   n'écrivait jamais celle-là.
+ *
+ * ⭐ D'où **UNE SEULE fonction, appelée aux deux sites** : deux copies d'une
+ *   règle à quatre branches divergeraient au premier amendement, et le défaut
+ *   qu'on répare ici est exactement celui-là, à trois branches.
+ *
+ * ⚠️ La forme, elle, a déjà été contrôlée (refus n° 5) : ce qui arrive ici est
+ *   bien formé. Le repli `'aucun'` couvre l'absence, le `null` et la liste vide
+ *   — « l'absence a un sens FORT : elle ne dit pas "pas encore rempli", elle dit
+ *   JAMAIS SERVI ».
+ */
+export function etatDuRattachement(cours: unknown): 'generique' | 'liste' | 'aucun' | 'notions' {
+  if (cours === 'generique') return 'generique'
+  if (cours === 'notions') return 'notions'
+  if (Array.isArray(cours) && cours.length > 0) return 'liste'
+  return 'aucun'
+}
+
 export interface ResultatImport {
   importId: string | null
   verdict: VerdictImport
@@ -242,9 +273,7 @@ export async function deposerFichierImport(
     }).select('id').single()
     if (eR) { await defaire(eR.message); continue }
 
-    const cours = t.cours
-    const coursEtat = cours === 'generique' ? 'generique'
-      : (Array.isArray(cours) && cours.length > 0) ? 'liste' : 'aucun'
+    const coursEtat = etatDuRattachement(t.cours)
     const plan = (t.plan_de_lecture && typeof t.plan_de_lecture === 'object')
       ? t.plan_de_lecture as Record<string, unknown> : null
 
@@ -254,6 +283,10 @@ export async function deposerFichierImport(
       auteur: String(t.auteur ?? ''), titre: String(t.titre ?? ''),
       reference: String(t.reference ?? ''), empreinte,
       cours_etat: coursEtat,
+      // ⭐ C4-L16 — `notions` sur un TEXTE : « même champ, même forme et même
+      //   rôle qu'au §3 » (`08-` §2). Il n'a d'effet que si `cours_etat` vaut
+      //   `'notions'`, mais il s'écrit toujours : c'est la donnée du fichier.
+      notions: Array.isArray(t.notions) ? t.notions : [],
       plan_livre_declare: plan ? String(plan.livre) : null,
       plan_semaine: plan ? Number(plan.semaine) : null,
       statut: 'a_valider', bloque: st.bloque, blocages: st.blocages,
@@ -268,7 +301,7 @@ export async function deposerFichierImport(
       // Les cours DÉCLARÉS par le fichier : sans eux, l'onglet du rattachement
       // n'a rien à apparier, et le texte reste « jamais servable » en silence.
       const { error: eC2 } = await admin.from('exercices_textes_cours').insert(
-        (cours as string[]).map((c) => ({ texte_id: texteRow.id, cours_declare: c })))
+        (t.cours as string[]).map((c) => ({ texte_id: texteRow.id, cours_declare: c })))
       if (eC2) {
         incidents.push(`texte ${id} : les cours déclarés n'ont pas été enregistrés `
           + `(${eC2.message}) — le rattachement est à refaire à la main.`)
@@ -293,9 +326,7 @@ export async function deposerFichierImport(
     if (ignore('sujets', id)) continue
     const st = etat('sujets', id)
     if (st.refuse) { refuses.sujets += 1; continue }
-    const cours = s.cours
-    const coursEtat = cours === 'generique' ? 'generique'
-      : (Array.isArray(cours) && cours.length > 0) ? 'liste' : 'aucun'
+    const coursEtat = etatDuRattachement(s.cours)
     const { data, error } = await admin.from('exercices_sujets').insert({
       id_import: id, import_id: importId,
       enonce: String(s.enonce ?? ''), forme: String(s.forme ?? ''),
@@ -308,7 +339,7 @@ export async function deposerFichierImport(
     idSujet.set(id, data.id as string)
     if (coursEtat === 'liste') {
       const { error: eC2 } = await admin.from('exercices_sujets_cours').insert(
-        (cours as string[]).map((c) => ({ sujet_id: data.id, cours_declare: c })))
+        (s.cours as string[]).map((c) => ({ sujet_id: data.id, cours_declare: c })))
       if (eC2) {
         incidents.push(`sujet ${id} : les cours déclarés n'ont pas été enregistrés `
           + `(${eC2.message}) — le rattachement est à refaire à la main.`)

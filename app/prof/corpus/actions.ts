@@ -203,7 +203,9 @@ export async function rattacherAuCours(
   const id = String(form.get('id') ?? '')
   const etat = String(form.get('cours_etat') ?? '')
   const coursIds = form.getAll('cours_id').map(String).filter(Boolean)
-  if (!['generique', 'liste', 'aucun'].includes(etat)) {
+  // ⭐ C4-L16 — QUATRE états depuis le format 1.3 (`08-` §2 ; `01-` §4 couche 4).
+  //   Sans `notions` ici, l'écran proposait un état que l'action refusait.
+  if (!['generique', 'liste', 'aucun', 'notions'].includes(etat)) {
     return { ok: false, message: 'État de rattachement inconnu.' }
   }
   const table = banque === 'textes' ? 'exercices_textes' : 'exercices_sujets'
@@ -234,6 +236,12 @@ export async function rattacherAuCours(
         + 'resterait « jamais servable ». Choisissez un cours, ou déclarez `generique`.' }
   }
 
+  // ⚠️⚠️ C4-L16 — EN « notions », ON NE TOUCHE À AUCUN COURS DÉCLARÉ.
+  //   L'état retourne le sens du tri : ce n'est plus l'entrée qui désigne ses
+  //   cours, ce sont les cours qui la réclament. ⛔ Mais on ne DÉTRUIT pas non
+  //   plus les lignes de `exercices_*_cours` : un aller-retour `liste` →
+  //   `notions` → `liste` doit rendre au professeur le travail d'appariement
+  //   qu'il avait fait. Elles restent, inertes, et le filtre ne les lit pas.
   const { data: maj, error } = await admin.from(table)
     .update({ cours_etat: etat, updated_at: new Date().toISOString() }).eq('id', id).select('id')
   if (error) return { ok: false, message: error.message }
@@ -279,8 +287,13 @@ export async function rattacherAuCours(
     ok: true,
     message: etat === 'generique' ? 'Servable en tout temps.'
       : etat === 'liste' ? 'Servable dès qu’au moins un de ces cours a été en partie vu.'
-        : 'Jamais servable — l’absence de rattachement ne dit pas « pas encore rempli », '
-          + 'elle dit « jamais servi ».',
+        // ⭐ C4-L16 — le message dit où se fait désormais le geste : ce n'est
+        //   plus ici, c'est à la bibliothèque des cours du Scriptorium.
+        : etat === 'notions'
+          ? 'Servable dès qu’un cours VU déclare l’une de ses notions — le rattachement se '
+            + 'déclare désormais SUR LE COURS (Scriptorium → Cours), pas sur cette entrée.'
+          : 'Jamais servable — l’absence de rattachement ne dit pas « pas encore rempli », '
+            + 'elle dit « jamais servi ».',
   }
 }
 

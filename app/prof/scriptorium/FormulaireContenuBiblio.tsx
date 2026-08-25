@@ -3,10 +3,16 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { creerContenu } from './actions'
+import ChoixDesNotions from './ChoixDesNotions'
 
 // Formulaire d'ajout d'un item de bibliothèque. Le `type` (texte|cours) est FIXÉ
 // par l'onglet (implicite, champ caché) : pas d'unité / semaine / classe ici.
-export default function FormulaireContenuBiblio({ type }: { type: 'texte' | 'cours' }) {
+export default function FormulaireContenuBiblio({ type, notionsConnues }: {
+  type: 'texte' | 'cours'
+  /** ⭐ C4-L16 — ce que la banque déclare déjà. Vide pour un texte : seul un
+   *  COURS déclare ce qu'il traite. */
+  notionsConnues: string[]
+}) {
   const router = useRouter()
   const [ouvert, setOuvert] = useState(false)
   const [chargement, setChargement] = useState(false)
@@ -89,6 +95,11 @@ export default function FormulaireContenuBiblio({ type }: { type: 'texte' | 'cou
           className="w-full px-3 py-2 border border-bordure rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-pigment resize-y text-encre"
         />
       </div>
+
+      {/* ⭐ C4-L16 — LE CHAMP NEUF, et il ne vaut que pour un COURS. Le
+          rattachement d'un texte passe par le `plan_de_lecture` (`08-` §2) : lui
+          poser ce champ ferait un second domicile pour la même relation. */}
+      {!estTexte && <ChoixDesNotions connues={notionsConnues} deja={[]} />}
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <div>

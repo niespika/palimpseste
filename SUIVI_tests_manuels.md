@@ -6218,3 +6218,93 @@ découpage et la charge utile, tels que l'écran les reçoit.
   exercices de recette.** ⚠️ **Le fichier reste au dépôt** : il est idempotent et rejouable, et la
   prochaine séance qui veut ces cinq crans le rejoue en un geste.
 
+
+---
+
+## C4 · L16 — Le cours déclare ce qu'il traite, et les sujets s'y rattachent seuls (séance du 24/08)
+
+**Migration jouée en bac à sable** — `c4_l16_notions.sql` *(deux `CHECK` élargis à quatre valeurs,
+`exercices_textes.notions` et `scriptorium_contenus.notions` posées)*. Rollback écrit :
+`c4_l16_notions_rollback.sql` ⛔ **il rétrécit deux `CHECK` et droppe deux colonnes — lire son
+en-tête.** Les **six interrupteurs restent à OFF**, vérifié à l'exécution.
+
+⭐ **LE SMOKE PROF A ÉTÉ JOUÉ EN SÉANCE**, dans le navigateur embarqué, sur un compte prof ouvert par
+Louis à ma demande. **Trois des cinq clauses du « fait quand » s'y sont prouvées à l'écran**, et
+elles seraient parties décochées sans lui. *Le décor semé pour l'occasion a été retiré le soir même
+— ligne au `SUIVI_SQL.md`.*
+
+### Prouvé en séance, avec sa preuve
+
+- ☑ **Un cours déclare ses notions à l'écran, EN LES CHOISISSANT dans celles que la banque connaît.**
+  `/prof/scriptorium?vue=cours` → *Modifier* : le formulaire propose en cases à cocher les notions
+  que la banque déclare *(« la connaissance », « la vérité », lues sur `exercices_sujets.notions` et
+  `exercices_textes.notions`)*. Coché « la vérité », enregistré → **`scriptorium_contenus.notions =
+  {"la vérité"}` en base**, et la ligne affiche la puce. ⭐ **Les deux écrivains sont éprouvés** :
+  l'édition en ligne *(ci-dessus)* **et la création** — un cours neuf créé par le formulaire, avec
+  notions choisies.
+- ☑ **Le dédoublonnage se fait sur la CLÉ, pas sur la chaîne.** À la création : case « la vérité »
+  cochée **et** « La Vérité » tapée dans la zone libre, plus « le temps ». Résultat en base :
+  **`{"la vérité","le temps"}`** — la majuscule a été reconnue comme la même notion. *C'est la
+  clause « la Vérité » / « la vérité » prouvée par le geste réel, pas seulement par un test.*
+- ☑ **Un sujet dont aucune notion n'est réclamée est compté à part, et sa notion nommée.**
+  `/prof/corpus?onglet=rattachement` : bannière **« 1 entrée(s) attendent une notion qu'aucun cours
+  ne déclare : `la vérité`, `la connaissance`. Elles paraissent rattachées et sont pourtant aussi
+  muettes qu'une entrée sans rattachement. »** ⭐ Et **elle disparaît dès qu'un cours déclare l'une
+  d'elles** — vérifié en déclarant « la vérité » sur un cours : le compte tombe à zéro et la notion
+  passe au vert, seule « la connaissance » restant marquée *orpheline*.
+- ☑ **Le quatrième état est saisissable, et l'action l'accepte.** Le `<select>` porte sa quatrième
+  option — *« notions — servable dès qu'un cours déclare l'une d'elles »* —, les `<select>`
+  d'appariement **disparaissent** en `notions` *(il n'y a aucun cours à apparier, et les montrer
+  ferait croire à un geste qui reste à faire)*, et « Rattacher » rend le message neuf : *« Servable
+  dès qu'un cours VU déclare l'une de ses notions — le rattachement se déclare désormais SUR LE
+  COURS (Scriptorium → Cours), pas sur cette entrée. »*
+- ☑ **L'écran vivant n'a pas été cassé** *(la garde du piège 14)*. `/prof/scriptorium` n'est derrière
+  **aucun** drapeau : création et modification d'un cours **marchent encore**, éprouvées l'une et
+  l'autre. Rien n'a été réordonné ni renommé.
+- ☑ **La chaîne, sur des lignes RÉELLES de la sandbox** *(sonde serveur)* : un sujet en
+  `cours_etat = 'notions'` déclarant `{la vérité, la connaissance}`, trois cours en base — l'un
+  déclarant `{La Vérité, le langage}`, deux n'en déclarant aucune. `notionsPartagees()` rend **un
+  cours, et un seul, le bon** ; `notionsOrphelines()` rend **`[la connaissance]`**.
+- ☑ **Le port rend le même verdict que le script sur la banque réelle** — `0 refus · 0 blocage ·
+  0 signalement` des deux côtés, sur `generateur/banque/banque.json` *(15 sujets, tous en
+  `"cours": "notions"`)*. ⭐⭐ **Et c'était FAUX avant ce lot** : le port de la plateforme rendait
+  **15 refus, code 1**, quand le script disait `IMPORTABLE`. *Mesuré des deux côtés, avant et après.*
+
+### Ce qui reste à jouer en recette, avec sa condition de reprise NOMMÉE
+
+- ☐ **« Un sujet devient SERVABLE dès qu'un cours déclare sa notion »** — la deuxième clause du
+  « fait quand », et **elle ne se prouve pas tant que la couche 4 ne lit pas l'état**.
+  ⚠️ *« Devient servable » est un fait de couche 4, et la couche 4 n'est pas de ce lot.* **Ce qui EST
+  prouvé** : l'état écrit en base, les notions déclarées des deux côtés, et l'intersection normalisée
+  qui rend le bon cours *(ci-dessus)* — c'est-à-dire **tout ce dont la couche 4 a besoin**.
+  **CONDITION DE REPRISE : quand `C4-L12` aura remplacé la branche `cours_par_notions_non_lu` de
+  `filtreDuCoursVu` par l'appel à `notionsPartagees()` sur les notions des cours VUS.** *Se rejoue
+  alors en une passe : un sujet en `notions`, un cours vu qui déclare la sienne, et il doit entrer
+  au vivier.*
+- ☐ **Le motif d'écart du vivier, LU PAR UN HUMAIN.** `cours_par_notions_non_lu` est fixé par trois
+  tests, mais **personne ne l'a encore vu s'afficher** : `routeur_actif` est à OFF et aucune décision
+  n'est posée. **CONDITION DE REPRISE : à la première semaine routée en bac à sable** — vérifier que
+  l'écart lu à l'écran dit *« la couche 4 ne le lit pas encore »* et **jamais** *« N cours déclaré(s),
+  AUCUN apparié »*.
+- ☐ **L'import d'un fichier en format 1.3, de bout en bout, PAR L'ÉCRAN DE DÉPÔT.** Le port est
+  éprouvé par ses vecteurs et par la banque réelle, et l'écriture en base est écrite — mais
+  **aucun fichier 1.3 n'a été déposé par `/prof/corpus?onglet=depot` en séance**.
+  ⚠️ **C'est là que se prouverait la moitié invisible du lot** : `import-ecriture.ts` faisait tomber
+  `"notions"` dans `'aucun'` **en silence**, et seul un dépôt réel montre que ce n'est plus le cas.
+  **CONDITION DE REPRISE : déposer `generateur/banque/banque.json` sur une sandbox propre**, puis
+  vérifier par requête que les **15 sujets** sortent en `cours_etat = 'notions'` — et **non** en
+  `'aucun'`. *Aucune autre vérification ne peut attraper ce défaut : le contrôle dirait `IMPORTABLE`
+  et l'écran montrerait quinze sujets, morts.*
+- ☐ **`notions` sur un TEXTE, déposé pour de vrai.** La colonne existe, le port l'accepte et
+  l'écriture est branchée — mais la banque réelle **ne porte aucun texte** *(0 texte mesuré)*, si
+  bien que ce chemin n'a jamais tourné sur une donnée. **CONDITION DE REPRISE : au premier dépôt qui
+  porte des `textes[]`** — vérifier que `exercices_textes.notions` se remplit.
+  ⚠️ **Et c'est le SEUL point où le port et `generateur/verifie-import.py` divergent** : le script
+  **refuse** la clé *(`✗ [R02] clé « notions » que le 08- ne déclare pas`)*, le port l'accepte parce
+  que le `08-` §2, gelé, la déclare. *Épinglé par un test, porté au registre en dette D7.*
+- ☐ **Le chemin de confirmation qui efface la découpe quand le texte d'un cours change**
+  *(`modifierContenuBiblio`, garde L2)*. **Non éprouvé en séance : aucun cours de la sandbox ne porte
+  de sections**, et en fabriquer une découpe dépassait le lot. ⭐ *Par construction, les notions y
+  survivent* — `handleSave` re-soumet **le même `FormData`**, cases comprises, en y ajoutant
+  `force=1`. **CONDITION DE REPRISE : au premier cours découpé dont on change le texte** — vérifier
+  que la confirmation s'affiche, que la découpe part, **et que les notions déclarées restent**.

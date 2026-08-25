@@ -47,8 +47,12 @@ export interface MateriauRattache {
   sorte: 'texte' | 'sujet'
   id: string
   role: 'source' | 'cible'
-  /** `generique` · `liste` · `aucun`. Le domaine est celui de la colonne. */
-  coursEtat: 'generique' | 'liste' | 'aucun'
+  /**
+   * `generique` · `liste` · `aucun` · **`notions`**. Le domaine est celui de la
+   * colonne — et il en compte QUATRE depuis C4-L16 (format 1.3).
+   * ⚠️ Le quatrième n'est pas encore LU par la couche 4 : voir `filtreDuCoursVu`.
+   */
+  coursEtat: 'generique' | 'liste' | 'aucun' | 'notions'
   /**
    * Les cours APPARIÉS — `exercices_textes_cours.cours_id` non nuls.
    * ⚠️ « `cours_id` NULL signifie DÉCLARÉ MAIS PAS ENCORE APPARIÉ » : la
@@ -124,6 +128,9 @@ export type MotifDEcart =
   | 'cours_jamais_servable'
   | 'cours_non_apparie'
   | 'cours_pas_encore_vu'
+  // ⭐ C4-L16 — le quatrième état existe en base et RIEN ICI NE LE LIT ENCORE.
+  //   Ce motif dit exactement cela, et rien de plus : voir `filtreDuCoursVu`.
+  | 'cours_par_notions_non_lu'
   | 'non_spoiler'
   | 'materiau_non_valide'
   | 'deja_deposee'
@@ -268,6 +275,31 @@ export function filtreDuCoursVu(
           + 'elle dit "JAMAIS SERVI" ».' }
     }
     if (m.coursEtat === 'generique') continue
+    // ⭐⭐ C4-L16 — LE QUATRIÈME ÉTAT EST NOMMÉ POUR CE QU'IL EST, ET RIEN DE
+    //   PLUS. Le rattachement par notions existe en base depuis le format 1.3 :
+    //   c'est le COURS qui déclare ce qu'il traite, et le matériau s'y rattache
+    //   seul (`01-` §4 couche 4 ; `08-` §3). **Le FILTRE qui le lit n'est pas
+    //   écrit** — c'est le premier geste de `C4-L12` —, et l'écrire ici en
+    //   ferait un second domicile : « deux filtres de service divergeraient au
+    //   premier amendement » (`07-` §2).
+    // ⛔ MAIS UN MOTIF FAUX N'EST PAS « PAS DE FILTRE » : C'EST UN FILTRE QUI
+    //   MENT. Sans cette branche, un `'notions'` tombait dans le `default` de la
+    //   `liste` juste dessous et ressortait en `cours_non_apparie` — « N cours
+    //   déclaré(s), AUCUN apparié » —, alors qu'il n'y a AUCUN cours déclaré à
+    //   apparier. Le motif envoyait chercher la réparation à l'écran du
+    //   rattachement, **où il n'y a rien à faire**.
+    // ⭐ Le sujet reste écarté, exactement comme avant ; c'est le motif qui
+    //   cesse de mentir. Le jour où `C4-L12` ouvre la troisième voie, cette
+    //   branche devient l'INTERSECTION — `notionsPartagees()` de
+    //   `utils/fabrique/notions.ts` en est la brique, déjà écrite et éprouvée —
+    //   confrontée aux notions des cours VUS.
+    if (m.coursEtat === 'notions') {
+      return { retenue: false, motif: 'cours_par_notions_non_lu',
+        detail: `${quoi} : rattachement par notions (format 1.3) — la couche 4 ne le lit pas `
+          + 'encore. Le matériau ne déclare AUCUN cours : ce sont les cours qui déclarent leurs '
+          + 'notions, et l’intersection est le premier geste de C4-L12. ⛔ Rien à réparer à '
+          + 'l’écran du rattachement.' }
+    }
     // `liste` — il faut un cours APPARIÉ, et vu.
     if (m.coursApparies.length === 0) {
       return { retenue: false, motif: 'cours_non_apparie',

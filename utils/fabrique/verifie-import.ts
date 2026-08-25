@@ -48,8 +48,24 @@ import { controleReference } from './verifie-reference'
 const CLES: Record<string, ReadonlySet<string>> = {
   racine: new Set(['format', 'version', 'genere_le', 'genere_par',
     'textes', 'sujets', 'materiaux', 'exercices', 'demonstrations']),
+  // ⚠️⚠️ C4-L16 — `notions` SUR `textes[]` : LA SOURCE LE DÉCLARE, ET LE SCRIPT
+  //   LE REFUSE. C'est le SEUL vecteur où ce port et `verifie-import.py` ne
+  //   rendent pas le même verdict, et le choix est délibéré.
+  //   · Le `08-` §2, **VALIDÉ ET GELÉ**, porte la ligne : « `notions` — les
+  //     notions du programme que ce texte met en jeu, MÊME CHAMP, MÊME FORME ET
+  //     MÊME RÔLE QU'AU §3 » ; et le `07-` §2 demande explicitement de le porter.
+  //   · Or `CLES["texte"]` du script ne contient PAS `notions` — vérifié en le
+  //     jouant : un texte qui le porte sort en `✗ [R02] clé « notions » que le
+  //     08- ne déclare pas`.
+  //   ⭐ **ET LE MÊME SCRIPT LIT `texte.notions` VINGT LIGNES PLUS LOIN**, dans
+  //     son propre signalement (`for nom, liste in (("sujet", sujets),
+  //     ("texte", textes))`) : le champ était VOULU, seule la déclaration manque.
+  //   ⛔ On ne modifie pas le script — c'est une pièce du manifeste. **La source
+  //     gelée fait foi, le port accepte, et l'écart est rapporté, pas recopié.**
+  //     Le choix est ÉPINGLÉ par un test (`verifie-import.test.ts`), et la ligne
+  //     est au registre des dettes (D7).
   texte: new Set(['id', 'auteur', 'titre', 'reference', 'contenu',
-    'decomposition', 'validee', 'cours', 'plan_de_lecture']),
+    'decomposition', 'validee', 'cours', 'plan_de_lecture', 'notions']),
   sujet: new Set(['id', 'enonce', 'forme', 'notions', 'texte', 'cours']),
   demonstration: new Set(['id', 'competence', 'grain', 'theme', 'forme', 'corps']),
   materiau: new Set(['id', 'objet', 'support', 'contenu', 'observable', 'defaut',
@@ -136,6 +152,32 @@ class Verdict {
   }
 }
 
+// ── ⭐ C4-L16 — LES DIX-SEPT NOTIONS DU PROGRAMME (B.O. 2019) ────────────────
+// Recopiées de `NOTIONS_TC` de `generateur/verifie-import.py`, AVEC LEURS
+// ARTICLES ET LEURS CAPITALES, parce que le contrôle est un `in` exact des deux
+// côtés et que « ce que tu construis doit rendre LES MÊMES VERDICTS SUR LES
+// MÊMES VECTEURS ».
+//
+// ⛔ CE N'EST PAS UNE DONNÉE DE DOCTRINE, ET LE SCRIPT LE DIT DE LUI-MÊME :
+//   « aucune source du chantier ne les porte, et le `08-` §3 dit que `notions`
+//   est "une liste de mots". Elles sont ici parce qu'un mot hors de cette liste
+//   ne se rattachera à AUCUN cours — le sujet entrerait en banque, passerait
+//   tout, et resterait muet pour toujours. »
+// ⛔ Elle n'entre donc PAS en base, elle ne se dérive PAS, et elle ne devient
+//   PAS une liste fermée à l'écran : le `07-` §2 retire explicitement à ce lot
+//   « la liste fermée des notions du programme ». **Le champ reste libre ; c'est
+//   l'écran qui guide, pas une contrainte.** Son seul emploi est le signalement
+//   ci-dessous, jumeau de celui du script.
+// ⚠️ ET C'EST LE SEUL ENDROIT DU PORT QUI NE REPLIE RIEN : l'appariement de la
+//   plateforme, lui, passe par `utils/fabrique/notions.ts`. Les deux règles ne
+//   se confondent pas, et la divergence est au relevé.
+const NOTIONS_TC: ReadonlySet<string> = new Set([
+  "l'art", 'le bonheur', 'la conscience', 'le devoir', "l'État",
+  "l'inconscient", 'la justice', 'le langage', 'la liberté', 'la nature',
+  'la raison', 'la religion', 'la science', 'la technique', 'le temps',
+  'le travail', 'la vérité',
+])
+
 const estObjet = (x: unknown): x is Record<string, any> =>
   typeof x === 'object' && x !== null && !Array.isArray(x)
 // ⚠️ PAS DE `liste()` COERCITIF ICI. Il y en avait un — `Array.isArray(x) ? x : []`
@@ -203,15 +245,31 @@ function corpsDemoMalForme(forme: string, c: unknown): boolean {
     && volets.length > 0 && volets.every((x: unknown) => estObjet(x)))
 }
 
-/** Le rattachement au cours (`08-` §2, refus n° 5). L'EXISTENCE d'un cours ne se
- *  vérifie pas ici : « les cours vivent dans la plateforme et ce fichier se
- *  fabrique dehors » — l'appariement se fait à l'écran du dépôt (piège 15). */
+/** Le rattachement au cours (`08-` §2, refus n° 5) — **QUATRE états depuis le
+ *  format 1.3** (C4-L16) : absent, `null` ou vide — jamais servable ; la chaîne
+ *  réservée `"generique"` ; une liste de chaînes non vides ; ou la chaîne
+ *  réservée **`"notions"`**, et l'entrée devient servable dès qu'un cours vu
+ *  déclare l'une de ses `notions` (`01-` §4 couche 4).
+ *
+ *  L'EXISTENCE d'un cours ne se vérifie pas ici : « les cours vivent dans la
+ *  plateforme et ce fichier se fabrique dehors » — l'appariement se fait à
+ *  l'écran du dépôt (piège 15).
+ *
+ *  ⚠️ LE `08-` §7.1, REFUS N° 5, EST EN RETARD SUR SES PROPRES §2 ET §3 : il
+ *  écrit encore « ni `"generique"`, ni une liste de chaînes ». Le §2 et le §3 du
+ *  même document déclarent QUATRE états, et `verifie-import.py` accepte
+ *  `"notions"`. On suit le §2/§3 et le script ; le `[faux]` est posé au point de
+ *  l'erreur et la ligne est au registre des dettes (D7). */
 function coursMalForme(v: Verdict, ou: string, entree: Record<string, any>) {
   const c = entree.cours
-  if (c === undefined || c === null || (Array.isArray(c) && c.length === 0) || c === 'generique') return
+  if (c === undefined || c === null || (Array.isArray(c) && c.length === 0)
+    || c === 'generique' || c === 'notions') return
   if (Array.isArray(c) && c.every((x) => nonVide(x))) return
+  // ⛔ Le message énumère les QUATRE états : c'est lui que le professeur lit au
+  //   rapport d'import, et « une autre chaîne réservée n'existe pas » — un
+  //   `cours: "notion"`, au singulier, doit refuser.
   v.refuse(ou, `\`cours\` mal formé : ${JSON.stringify(c)} — attendu « generique », `
-    + 'une liste de chaînes, ou rien', 5)
+    + '« notions », une liste de chaînes, ou rien', 5)
 }
 
 /** Le couple { livre, semaine }, JAMAIS la semaine seule (`08-` §2, refus n° 5).
@@ -420,6 +478,60 @@ export function controleImport(
   if (sansSujet || sansTexte) {
     v.signale('fichier', `${sansSujet} sujet(s) et ${sansTexte} texte(s) sans `
       + "rattachement au cours — aucun ne sera servi tant qu'il n'est pas déclaré")
+  }
+
+  // ── ⭐ C4-L16 — LES DEUX SIGNALEMENTS DU FORMAT 1.3 ────────────────────────
+  // ⚠️ ILS S'AJOUTENT À L'AGRÉGÉ CI-DESSUS, ILS NE LE REMPLACENT PAS. Un sujet
+  //   en `"notions"` A un `cours` : il n'entre pas dans ce compte-là, et c'est
+  //   juste. Ceux-ci sont d'une autre nature — **par entrée**, et non agrégés,
+  //   parce que c'est l'entrée qu'il faut aller corriger.
+  // ⛔ ILS SIGNALENT, ILS NE REFUSENT JAMAIS : « `0` = importable (blocages et
+  //   signalements possibles), `1` = au moins un refus » (`08-` §7.4). Une
+  //   mineure n'ajoute que des champs facultatifs, et un fichier ancien reste
+  //   importable.
+
+  // (a) L'ÉTAT « notions » SANS NOTIONS EST UN SILENCE, PAS UNE ERREUR DE FORME.
+  //   Le sujet passe tous les contrôles, entre en banque, et ne sera JAMAIS
+  //   servi — aucun cours ne pourra jamais déclarer l'une de ses notions,
+  //   puisqu'il n'en a pas. **C'est exactement le défaut que le rattachement
+  //   était fait pour éviter, retourné d'un cran** : il se signale, il ne se
+  //   refuse pas.
+  // ⚠️ `declare()`, ET SURTOUT PAS `Array.isArray()` : le script écrit
+  //   `not (e.get("notions") or [])`, la vérité de PYTHON. Un `notions` qui
+  //   serait une chaîne non vide est TRUTHY là-bas et ne signale pas ; un
+  //   `Array.isArray` le tiendrait pour vide et signalerait — deux verdicts sur
+  //   le même fichier, exactement ce que `declare()` existe pour empêcher.
+  for (const [nom, liste] of [['sujet', sujets], ['texte', textes]] as const) {
+    for (const e of liste) {
+      if (!estObjet(e)) continue
+      if (e.cours === 'notions' && !declare(e.notions)) {
+        v.signale(`${nom} ${e.id}`, '`cours` vaut « notions » et `notions` est vide — '
+          + 'il ne sera jamais servable, et rien ne le dira')
+      }
+    }
+  }
+
+  // (b) HORS PROGRAMME : le même silence, par l'autre bout. Une notion qui n'est
+  //   pas au programme ne se rattachera à AUCUN cours.
+  // ⚠️ UN SUJET HLP N'EST PAS REGARDÉ — son programme est en THÈMES de semestre,
+  //   que rien ne déclare aujourd'hui. Le parcours « se lit dans le nom »
+  //   (`08-` §3) : `_hlp`.
+  // ⚠️ LA COMPARAISON EST UN `in` EXACT, SANS AUCUNE NORMALISATION — et c'est
+  //   le comportement du script, recopié tel quel : « les mêmes verdicts sur les
+  //   mêmes vecteurs ». `NOTIONS_TC` porte ses articles et ses capitales, si
+  //   bien que « La Vérité » y serait signalée HORS PROGRAMME. ⭐ **Ce n'est pas
+  //   un défaut à réparer dans ce port** : le contrôle d'IMPORT et l'APPARIEMENT
+  //   de la plateforme (`utils/fabrique/notions.ts`) ne replient pas de la même
+  //   façon, et c'est le second que la source décrit. Le fait est au relevé.
+  for (const s of sujets) {
+    if (!estObjet(s) || String(s.forme ?? '').endsWith('_hlp')) continue
+    if (!Array.isArray(s.notions)) continue
+    for (const n of s.notions) {
+      if (!NOTIONS_TC.has(n as string)) {
+        v.signale(`sujet ${s.id}`, `« ${String(n)} » n'est pas une notion du programme de `
+          + 'terminale générale — aucun cours ne pourra la déclarer, et le sujet restera muet')
+      }
+    }
   }
 
   // ── Les matériaux ─────────────────────────────────────────────────────────

@@ -15,6 +15,7 @@ import { chargerInstanceDeClasse, type InstanceDeClasse } from './instance-serve
 import BoutonRegenererSynthese from './BoutonRegenererSynthese'
 import { createAdminClient } from '@/utils/supabase/admin'
 import { lireReglagesRag } from '@/utils/scriptorium-rag'
+import { cleDAppariement } from '@/utils/fabrique/notions'
 import type { ContenuSynthese } from '@/utils/scriptorium-synthese-rag'
 import AccueilParcoursPlans from './parcours/AccueilParcoursPlans'
 import GrilleParcours from './parcours/GrilleParcours'
@@ -119,10 +120,12 @@ export default async function ScriptoriumPage({
   const biblioType: 'texte' | 'cours' | null = vue === 'textes' ? 'texte' : vue === 'cours' ? 'cours' : null
   let biblioContenus: ContenuBiblio[] = []
   let biblioCorbeille: { id: string; titre: string }[] = []
+  // Le vocabulaire que la BANQUE connaît — ce que l'écran du cours propose.
+  const notionsConnues: string[] = []
   if (biblioType) {
     const [{ data: rowsC }, { data: imgsC }, { data: creneauxC }, { data: parcVivantsC }, { data: secsC }] = await Promise.all([
       supabase.from('scriptorium_contenus')
-        .select('id, type, titre, auteur, texte_extrait, chapitres, supprime_at')
+        .select('id, type, titre, auteur, texte_extrait, chapitres, notions, supprime_at')
         .eq('type', biblioType).order('titre'),
       supabase.from('scriptorium_contenu_images')
         .select('id, contenu_id, fichier_ref, legende, ordre').not('contenu_id', 'is', null).order('ordre'),
@@ -135,7 +138,8 @@ export default async function ScriptoriumPage({
     ])
     const rows = (rowsC ?? []) as {
       id: string; type: string; titre: string; auteur: string | null
-      texte_extrait: string | null; chapitres: string | null; supprime_at: string | null
+      texte_extrait: string | null; chapitres: string | null
+      notions: string[] | null; supprime_at: string | null
     }[]
     const vivants = rows.filter(r => r.supprime_at == null)
     const idsVivants = new Set(vivants.map(r => r.id))
@@ -176,11 +180,45 @@ export default async function ScriptoriumPage({
 
     biblioContenus = vivants.map(r => ({
       id: r.id, type: r.type as 'texte' | 'cours', titre: r.titre, auteur: r.auteur,
-      texte: r.texte_extrait, chapitres: r.chapitres,
+      texte: r.texte_extrait, chapitres: r.chapitres, notions: r.notions ?? [],
       images: imagesParContenu.get(r.id) ?? [], nbParcours: parcoursParContenu.get(r.id)?.size ?? 0,
       nbSections: sectionsParContenu.get(r.id) ?? 0,
     }))
     biblioCorbeille = rows.filter(r => r.supprime_at != null).map(r => ({ id: r.id, titre: r.titre }))
+
+    // ⭐⭐ C4-L16 — LA SECONDE GARDE, ET C'EST ELLE QUI COMPTE : « l'écran du
+    //   cours propose les notions DÉJÀ CONNUES — celles que les sujets en banque
+    //   déclarent. On ne rattache pas en tapant, on rattache en choisissant »
+    //   (`08-` §3 ; `01-` §4 couche 4). Sans elle, deux chaînes libres de part et
+    //   d'autre — « la vérité », « Vérité » — ne se rencontrent jamais, le sujet
+    //   reste muet, et RIEN À L'ÉCRAN NE DIT POURQUOI.
+    // ⛔ CE N'EST PAS UNE LISTE FERMÉE : le champ reste libre, et le formulaire
+    //   accepte une notion que la banque ne connaît pas encore. « C'est l'écran
+    //   qui guide, pas une contrainte » (`07-` §2, qui retire explicitement à ce
+    //   lot « la liste fermée des notions du programme »).
+    // ⚠️ On ne propose que pour un COURS : un texte de la bibliothèque ne
+    //   déclare rien — son rattachement passe par le `plan_de_lecture`.
+    if (biblioType === 'cours') {
+      // ⚠️ Les deux banques, pas une : le format 1.3 pose `notions` sur
+      //   `textes[]` autant que sur `sujets[]` (`08-` §2).
+      const [{ data: nS }, { data: nT }] = await Promise.all([
+        supabase.from('exercices_sujets').select('notions').neq('statut', 'retire'),
+        supabase.from('exercices_textes').select('notions').neq('statut', 'retire'),
+      ])
+      // Dédoublonnage sur la CLÉ D'APPARIEMENT, jamais sur la chaîne : « la
+      // vérité » et « La Vérité » sont UNE notion, et l'écran ne doit en
+      // proposer qu'une — celle qui a été écrite en premier.
+      const vues = new Set<string>()
+      for (const r of [...(nS ?? []), ...(nT ?? [])]) {
+        for (const n of ((r.notions as string[] | null) ?? [])) {
+          const cle = cleDAppariement(n)
+          if (cle === '' || vues.has(cle)) continue
+          vues.add(cle)
+          notionsConnues.push(String(n))
+        }
+      }
+      notionsConnues.sort((a, b) => a.localeCompare(b, 'fr'))
+    }
   }
 
   // ── Éditeur de sections d'un cours (?vue=cours&decouper=…) — RAG L2 ──────────
@@ -446,7 +484,7 @@ export default async function ScriptoriumPage({
           ) : (
             <>
               <Link href="/prof/scriptorium?vue=ressources" className="inline-block text-sm text-muet hover:text-encre">← Ressources</Link>
-              <BibliothequeContenus type={biblioType} contenus={biblioContenus} corbeille={biblioCorbeille} />
+              <BibliothequeContenus type={biblioType} contenus={biblioContenus} corbeille={biblioCorbeille} notionsConnues={notionsConnues} />
             </>
           )}
         </div>

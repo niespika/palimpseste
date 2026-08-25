@@ -103,8 +103,19 @@ export function phrasesDuTexte(texte: string): string[] {
  * l'eszett, le refus n° 10 se déclencherait à tort, et la validation d'une
  * référence corrigée serait GELÉE — cette fonction est en ligne, à l'écran du
  * `05-` §4.4. Le détail du repli, et les deux pièges, sont dans le corps.
+ *
+ * ⭐ EXPORTÉE PAR C4-L16, ET POUR UNE SEULE RAISON : ne pas écrire une TROISIÈME
+ * normalisation dans ce dépôt. L'appariement des notions du format 1.3
+ * (`utils/fabrique/notions.ts`) demande exactement ce repli-ci — « minuscules,
+ * sans accents » (`08-` §3) —, plus le retrait de l'article initial. Il
+ * l'IMPORTE plutôt que de le recopier : deux copies d'un repli écrit contre
+ * Python divergeraient au premier correctif.
+ * ⛔ NE PAS la confondre avec `replie()` de `utils/deroule/demonstration.ts`,
+ * qui fait `trim().toLowerCase()` **et rien d'autre, délibérément**. Les deux
+ * comparent des `exercices_sujets.notions` et **doivent rester différentes** :
+ * l'asymétrie de risque y est INVERSE (voir l'en-tête de `notions.ts`).
  */
-function plie(s: string): string {
+export function plie(s: string): string {
   // \u26a0\ufe0f LA SOURCE \u00c9CRIT : NFD \u2192 retrait des marques `Mn` \u2192 `casefold()`.
   //
   // 1. **NFKD n'est PAS NFD.** NFKD est une d\u00e9composition de COMPATIBILIT\u00c9 :

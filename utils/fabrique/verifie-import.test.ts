@@ -189,6 +189,12 @@ const REFUS: Array<[string, (b: B) => void, number]> = [
   }, 12],
   ['R05 un `cours` mal formé', (b) => { b.sujets[0].cours = ['c-0012', 7] }, 5],
   ["R05 un `cours` qui n'est pas la chaîne réservée", (b) => { b.textes[0].cours = 'toujours' }, 5],
+  // ⭐⭐ C4-L16 — LE FORMAT 1.3. Ce vecteur est LA MOITIÉ DE LA PREUVE du
+  //   quatrième état : sans lui, un port qui accepterait N'IMPORTE QUELLE chaîne
+  //   passerait « l'état bien formé » et « notions sans notions » sans rien
+  //   contrôler. `"notion"`, au SINGULIER — « une autre chaîne réservée n'existe
+  //   pas ».
+  ["R05 C4-L16 — une autre chaîne réservée n'existe pas", (b) => { b.sujets[0].cours = 'notion' }, 5],
   ['R05 une semaine de plan de lecture SANS son livre', (b) => { b.textes[0].plan_de_lecture = 7 }, 5],
   ["R05 un plan de lecture dont la semaine n'est pas un ordinal", (b) => {
     b.textes[0].plan_de_lecture = { livre: 'liv-0001', semaine: 'sept' }
@@ -260,6 +266,12 @@ for (const [nom, f, n] of REFUS) {
 const PASSENT: Array<[string, (b: B) => void]> = [
   ['le rattachement au cours, bien formé', (b) => {
     b.sujets[0].cours = 'generique'; b.textes[0].cours = ['c-0012', 'c-0031']
+  }],
+  // ⭐ C4-L16 — LE QUATRIÈME ÉTAT, BIEN FORMÉ. Recopié SANS ADAPTATION de
+  //   l'autotest du script (commit `87072d6`, 24/08).
+  ["C4-L16 — l'état « notions » du format 1.3 est bien formé", (b) => {
+    b.sujets[0].cours = 'notions'; b.sujets[0].notions = ['la vérité']
+    b.textes[0].cours = 'generique'
   }],
   ['le plan de lecture, bien formé', (b) => {
     b.textes[0].plan_de_lecture = { livre: 'liv-0001', semaine: 7 }
@@ -350,6 +362,18 @@ const SIGNALEMENTS: Array<[string, (b: B) => void, string]> = [
       cs.distracteurs[7].pourquoi_faux = '   '
     }
   }, '2 distracteur(s) sans'],
+  // ⭐⭐ C4-L16 — LES DEUX SIGNALEMENTS DU FORMAT 1.3, recopiés SANS ADAPTATION
+  //   des commits `87072d6` et `fd557a7` (24/08). Aucun des deux ne refuse : « il
+  //   se SIGNALE, il ne se refuse pas ».
+  //   ⚠️ ILS S'AJOUTENT À L'AGRÉGÉ « S9 », ils ne le remplacent pas : un sujet en
+  //   `"notions"` A un `cours`, il n'entre pas dans ce compte-là.
+  ['C4-L16 — « notions » sans notions ne sera JAMAIS servi, et on le dit', (b) => {
+    b.sujets[0].cours = 'notions'; b.sujets[0].notions = []
+    b.textes[0].cours = 'generique'
+  }, 'il ne sera jamais servable'],
+  ['C4-L16 — une notion hors du programme ne se rattachera à aucun cours', (b) => {
+    b.sujets[0].forme = 'dissertation_tc'; b.sujets[0].notions = ['la connaissance']
+  }, "n'est pas une notion du programme"],
 ]
 for (const [nom, f, motif] of SIGNALEMENTS) {
   test(`IMPORT SIGNALEMENT — ${nom}`, () => {
@@ -384,6 +408,81 @@ test('IMPORT — la même checklist au grain macro ne signale rien', () => {
       corps: { points: ['poser le problème'] } })]
   }), doctrine)
   assert.ok(!contient(v.signalements, "le `06-` §2 l'attend"))
+})
+
+// ════════════════════════════════════════════════════════════════════════════
+// ⭐ C4-L16 — LE FORMAT 1.3 : LES PENDANTS NÉGATIFS, ET L'ÉCART ÉPINGLÉ
+// ════════════════════════════════════════════════════════════════════════════
+
+// ⭐⭐ LE PENDANT NÉGATIF DU SIGNALEMENT « HORS PROGRAMME », recopié sans
+//   adaptation (commit `fd557a7`). Sans lui, un port qui signalerait TOUJOURS
+//   passerait le vecteur positif sans rien contrôler.
+//   ⚠️ Un sujet HLP n'est PAS regardé : son programme est en THÈMES de semestre,
+//   que rien ne déclare aujourd'hui. Le parcours « se lit dans le nom » (`08-`
+//   §3) : `_hlp`.
+test("IMPORT — C4-L16 : et un sujet HLP n'est pas regardé — son programme est en thèmes", () => {
+  const v = controleImport(casse((b) => {
+    b.sujets[0].forme = 'essai_hlp'; b.sujets[0].notions = ['la parole']
+  }), doctrine)
+  assert.ok(!contient(v.signalements, "n'est pas une notion du programme"),
+    `rien ne devait parler du programme — rendus : ${JSON.stringify(v.signalements)}`)
+})
+
+// ⭐ LE PENDANT NÉGATIF DE « notions SANS notions » : un sujet en `"notions"` QUI
+//   EN DÉCLARE ne se signale pas, et il n'entre pas non plus dans l'agrégé S9 —
+//   « il A un `cours` », et c'est juste.
+test('IMPORT — C4-L16 : un « notions » qui déclare ses notions ne signale RIEN', () => {
+  const v = controleImport(casse((b) => {
+    b.sujets[0].cours = 'notions'; b.sujets[0].notions = ['la vérité']
+    b.textes[0].cours = 'generique'
+  }), doctrine)
+  assert.ok(!contient(v.signalements, 'il ne sera jamais servable'),
+    `rendus : ${JSON.stringify(v.signalements)}`)
+  assert.ok(!contient(v.signalements, 'sans rattachement au cours'),
+    'un sujet en « notions » A un `cours` : il n’entre pas dans l’agrégé')
+  assert.deepEqual(v.refus, [], "un signalement n'arrête rien")
+})
+
+// ════════════════════════════════════════════════════════════════════════════
+// ⛔⛔ L'ÉCART ASSUMÉ AVEC LE SCRIPT — LE SEUL, ET IL EST ÉPINGLÉ ICI
+// ════════════════════════════════════════════════════════════════════════════
+// `notions` SUR `textes[]` : LA SOURCE LE DÉCLARE, ET LE SCRIPT LE REFUSE.
+//   · Le `08-` §2, **VALIDÉ ET GELÉ**, porte la ligne : « `notions` — les
+//     notions du programme que ce texte met en jeu, MÊME CHAMP, MÊME FORME ET
+//     MÊME RÔLE QU'AU §3 », et le `07-` §2 demande explicitement de le porter.
+//   · `CLES["texte"]` de `generateur/verifie-import.py` ne le contient PAS —
+//     vérifié EN LE JOUANT : un texte qui le porte sort en
+//     `✗ [R02] clé « notions » que le 08- ne déclare pas`.
+//   ⭐ Et **le même script LIT `texte.notions` vingt lignes plus loin**, dans son
+//     propre signalement (`for nom, liste in (("sujet", sujets), ("texte",
+//     textes))`) : **le champ était voulu, seule la déclaration manque.**
+//   ⛔ On ne modifie pas le script — c'est une pièce du manifeste. La source
+//     gelée fait foi, **ce port ACCEPTE**, et l'écart est rapporté (relevé) et
+//     porté au registre des dettes (D7), jamais recopié.
+// ⚠️ CE TEST EST LÀ POUR QU'UN JOUR ON SACHE QUE C'ÉTAIT UN CHOIX. Si le script
+//   est corrigé et que les deux se rejoignent, il continue de passer ; s'il
+//   tombe, c'est que quelqu'un a réaligné le port sur le script — et il devra
+//   lire ce commentaire avant de le faire.
+test("IMPORT — C4-L16 : `notions` sur un TEXTE passe ici, quand le script le REFUSE (écart assumé)", () => {
+  const v = controleImport(casse((b) => {
+    b.textes[0].cours = 'notions'; b.textes[0].notions = ['la vérité']
+    b.sujets[0].cours = 'generique'
+  }), doctrine)
+  assert.deepEqual(v.refus, [],
+    'le `08-` §2 déclare `notions` sur textes[] : ce port ne doit PAS refuser')
+  assert.ok(!contient(v.signalements, 'il ne sera jamais servable'),
+    'le texte déclare bien une notion')
+})
+
+test('IMPORT — C4-L16 : et un TEXTE en « notions » sans notions se signale, comme un sujet', () => {
+  // ⭐ Le signalement (a) porte sur les DEUX banques, exactement comme au script.
+  const v = controleImport(casse((b) => {
+    b.textes[0].cours = 'notions'; b.textes[0].notions = []
+    b.sujets[0].cours = 'generique'
+  }), doctrine)
+  assert.ok(contient(v.signalements, 'il ne sera jamais servable'),
+    `rendus : ${JSON.stringify(v.signalements)}`)
+  assert.deepEqual(v.refus, [], "un signalement n'arrête rien")
 })
 
 // ── ⭐ C4-L15 — LA LONGUEUR DU MATÉRIAU SUIT LE CRAN (`02-` §2.3.3) ─────────

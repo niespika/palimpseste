@@ -25,6 +25,7 @@ import {
 } from '@/utils/scriptorium-prompt-tuteur'
 import { genererSyntheseClasse, lundiSemaineEcoulee } from '@/utils/scriptorium-synthese-rag'
 import { jourDansFuseau } from '@/utils/fuseau'
+import { cleDAppariement } from '@/utils/fabrique/notions'
 import { lireFuseau } from '@/utils/fuseau-serveur'
 
 // ── Import PDF « découpé en semaines » : seuils & garde-fous (SPEC) ──────────
@@ -688,6 +689,41 @@ export async function supprimerContenu(id: string) {
 // L7/L8 qui retirera les unités. Après migration, l'ancien jeu ne servira plus
 // que pour les documents de livre (édités via modifierLivreComplet). Cf. SPEC §7.6.
 
+// ⭐⭐ C4-L16 — CE QUE LE COURS DÉCLARE TRAITER, lu du formulaire.
+//   Le champ neuf est `scriptorium_contenus.notions` : notions du programme au
+//   tronc commun, thèmes ou chapitres du semestre en HLP — UN SEUL champ, une
+//   liste de mots LIBRES, « parce que deux champs feraient deux domiciles pour
+//   la même relation » (`07-` §2, C4-L16 ; `08-` §3).
+//
+// ⚠️ LE FORMULAIRE POSTE DEUX CHOSES, ET C'EST VOULU : les `notion` cochées
+//   parmi celles que LA BANQUE CONNAÎT — « on ne rattache pas en tapant, on
+//   rattache en choisissant » —, et un `notions_libres` pour ce que la banque ne
+//   connaît pas encore. ⛔ Le champ reste LIBRE : le `07-` §2 retire
+//   explicitement à ce lot « la liste fermée des notions du programme », qui
+//   serait une donnée de référentiel et n'existe nulle part.
+//
+// ⭐ LE DÉDOUBLONNAGE SE FAIT SUR LA CLÉ D'APPARIEMENT, PAS SUR LA CHAÎNE : sans
+//   quoi cocher « la vérité » et taper « La Vérité » poserait DEUX notions qui
+//   n'en font qu'une pour le routeur. On garde le libellé ÉCRIT EN PREMIER —
+//   c'est lui que le professeur relira.
+function notionsDuFormulaire(formData: FormData): string[] {
+  const brutes = [
+    ...formData.getAll('notion').map(String),
+    // Une par ligne, ou séparées par des virgules / points-virgules.
+    ...String(formData.get('notions_libres') ?? '').split(/[\n,;]+/),
+  ]
+  const vues = new Set<string>()
+  const out: string[] = []
+  for (const b of brutes) {
+    const libelle = b.trim()
+    const cle = cleDAppariement(libelle)
+    if (cle === '' || vues.has(cle)) continue
+    vues.add(cle)
+    out.push(libelle)
+  }
+  return out
+}
+
 // Crée un texte ou un cours. `type` (caché) ∈ {texte, cours}. Un fichier image est
 // attaché (scriptorium_contenu_images) ; un document PDF/DOCX/TXT est extrait dans texte.
 // `aTexte` permet au client d'enchaîner sur l'éditeur de sections (RAG L2) quand un
@@ -716,9 +752,14 @@ export async function creerContenu(formData: FormData): Promise<{ id?: string; a
     }
   }
 
+  // ⭐ C4-L16 — seul un COURS déclare ce qu'il traite. Un texte de la
+  //   bibliothèque n'a pas ce rôle : son rattachement passe par le
+  //   `plan_de_lecture` (`08-` §2), et le champ resterait vide à l'écran.
+  const notions = type === 'cours' ? notionsDuFormulaire(formData) : []
+
   const { data: contenu, error } = await supabase
     .from('scriptorium_contenus')
-    .insert({ type, titre, auteur, texte_extrait: texte, chapitres, created_by: userId })
+    .insert({ type, titre, auteur, texte_extrait: texte, chapitres, notions, created_by: userId })
     .select('id')
     .single()
   if (error || !contenu) return { error: error?.message ?? 'Création impossible.' }
@@ -771,9 +812,17 @@ export async function modifierContenuBiblio(formData: FormData): Promise<{ succe
     }
   }
 
+  // ⭐ C4-L16 — les notions ne bougent QUE pour un cours. Sur un texte, on ne
+  //   touche pas la colonne : l'écran n'en montre pas, et écrire `[]` effacerait
+  //   silencieusement ce qu'un autre chemin y aurait mis.
+  const champs: Record<string, unknown> = {
+    titre, auteur, texte_extrait: texte, chapitres, updated_at: new Date().toISOString(),
+  }
+  if (actuel.type === 'cours') champs.notions = notionsDuFormulaire(formData)
+
   const { error } = await supabase
     .from('scriptorium_contenus')
-    .update({ titre, auteur, texte_extrait: texte, chapitres, updated_at: new Date().toISOString() })
+    .update(champs)
     .eq('id', id)
   if (error) return { error: error.message }
   if (effacerDecoupe) {

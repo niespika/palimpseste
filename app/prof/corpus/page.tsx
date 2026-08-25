@@ -87,8 +87,14 @@ export default async function DepotDuCorpus({
         .not('id_import', 'is', null).order('created_at')),
     lire<Ligne>('les démonstrations',
       admin.from('exercices_demonstrations').select('*').order('competence')),
+    // ⭐ C4-L16 — `notions` entre à CE `select`-là, et à aucun autre : l'écran
+    //   croisait déjà les deux banques ici (c'est lui qui peuple les `<select>`
+    //   d'appariement), et un second chargement aurait fait deux vérités.
+    //   ⚠️ Les cours en corbeille sont exclus : un cours retiré ne réclame plus
+    //   rien, et le compter ferait paraître rattaché ce qui ne l'est pas.
     lire<Ligne>('les cours du Scriptorium',
-      admin.from('scriptorium_contenus').select('id, titre').eq('type', 'cours').order('titre')),
+      admin.from('scriptorium_contenus').select('id, titre, notions')
+        .eq('type', 'cours').is('supprime_at', null).order('titre')),
     // Les LIVRES de la plateforme — `aletheia_livre_reference` pointe une UNITÉ
     // du Scriptorium de type `livre`, et c'est son `label` qui se lit.
     lire<Ligne>('les livres',
@@ -244,7 +250,7 @@ export default async function DepotDuCorpus({
         <Rattachement
           textes={(textes as unknown as Ligne[]).map((t) => ({
             id: txt(t.id), idImport: txt(t.id_import), libelle: `${txt(t.auteur)} — ${txt(t.titre)}`,
-            coursEtat: txt(t.cours_etat),
+            coursEtat: txt(t.cours_etat), notions: tab(t.notions).map(txt),
             declares: tab(t.exercices_textes_cours).map((c) => ({
               nom: txt(lig(c).cours_declare), coursId: lig(c).cours_id === null ? null : txt(lig(c).cours_id) })),
             planLivre: t.plan_livre_declare === null ? null : txt(t.plan_livre_declare),
@@ -253,11 +259,12 @@ export default async function DepotDuCorpus({
           }))}
           sujets={(sujets as unknown as Ligne[]).map((s) => ({
             id: txt(s.id), idImport: txt(s.id_import), libelle: txt(s.enonce),
-            coursEtat: txt(s.cours_etat),
+            coursEtat: txt(s.cours_etat), notions: tab(s.notions).map(txt),
             declares: tab(s.exercices_sujets_cours).map((c) => ({
               nom: txt(lig(c).cours_declare), coursId: lig(c).cours_id === null ? null : txt(lig(c).cours_id) })),
           }))}
-          cours={(cours as unknown as Ligne[]).map((c) => ({ id: txt(c.id), titre: txt(c.titre) }))}
+          cours={(cours as unknown as Ligne[]).map((c) => ({
+            id: txt(c.id), titre: txt(c.titre), notions: tab(c.notions).map(txt) }))}
           livres={(livres as unknown as Ligne[])
             .filter((l) => !jointure(l, 'scriptorium_unites').supprime_at)
             .map((l) => ({
