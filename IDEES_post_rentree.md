@@ -646,3 +646,63 @@ l'écriture** *(une seule forme en base, celle du `08-`)* plutôt que de faire n
 lecteur ? Deux formes physiques pour la même donnée, c'est deux lecteurs à tenir d'accord pour
 toujours.
 
+
+---
+
+## ⛔⛔ UN DÉFAUT, PAS UNE IDÉE — le CRLF des `<textarea>` fait mentir la garde de la découpe
+
+*Trouvé le **25/08** par la session Code **C4-L16**, en éprouvant la garde que son piège 14 lui
+demandait de vérifier. **Hors périmètre du lot — non corrigé.** Il est ici faute d'un meilleur
+registre : ce n'est pas une idée, c'est un défaut qui détruit du travail.*
+
+**CE QUI SE PASSE.** `app/prof/scriptorium/actions.ts` → `modifierContenuBiblio`, garde L2 :
+
+```ts
+if (actuel.type === 'cours' && (actuel.texte_extrait ?? '').trim() !== (texte ?? '')) { … }
+```
+
+**La soumission d'un formulaire HTML normalise les sauts de ligne d'un `<textarea>` en CRLF.** Le
+texte stocké porte des `\n` ; celui qui arrive porte des `\r\n`. **Les deux ne sont donc JAMAIS
+égaux dès que le corps compte une seule ligne**, et la garde se déclenche **à chaque
+enregistrement**, même si le professeur n'a touché qu'au titre.
+
+**MESURÉ SUR PIÈCE**, en instrumentant l'action *(sonde retirée depuis)*, sur le cours réel
+« NAture humaine » :
+
+```
+egaux: false · lenStocke: 9460 · lenSoumis: 9570 · premiereDivergence: 28
+  stocké : "t-ce que la nature ?\nEn gros, la nature "
+  soumis : "t-ce que la nature ?\r\nEn gros, la nature"
+```
+
+**9570 − 9460 = 110** — exactement un `\r` par saut de ligne.
+
+**CE QUE ÇA COÛTE, ET C'EST DE DEUX ORDRES.**
+
+1. ⛔ **Sur un cours DÉCOUPÉ** : le professeur reçoit *« sa découpe en N sections sera effacée »* à
+   chaque sauvegarde, **pour rien**. S'il confirme — et il finira par confirmer —, **la découpe est
+   réellement détruite** et les instances de parcours re-matérialisées en « cours entier ».
+   *Aujourd'hui, c'est aussi ce qui empêche de déclarer les notions de C4-L16 sur un cours découpé
+   sans passer par cette fausse alerte.*
+2. ⚠️ **Sur TOUT cours ou texte** : `texte_extrait` est réécrit **avec les CRLF** à chaque
+   enregistrement. Le corps stocké dérive donc dès la première édition — et c'est ce corps que le
+   **RAG** sert et que `scriptorium_contenu_sections` partitionne. *Vérifié en séance : « Cognitif »
+   est passé de **0** à **34** `\r` sur une simple sauvegarde. (Remis en état ensuite.)*
+
+⚠️⚠️ **ET VOICI POURQUOI IL NE SE VOIT PAS.** `new FormData(formulaire)` en JavaScript **ne fait PAS**
+la normalisation — la sonde côté navigateur rendait donc « identiques : true ». **Seule la
+soumission réelle** *(action serveur)* la fait. Aucun test unitaire, aucun `tsc`, aucun lint ne peut
+l'attraper : *il faut instrumenter le serveur pendant un vrai clic.*
+
+⭐ **LA CORRECTION EST D'UNE LIGNE, et elle a un précédent** : normaliser des deux côtés avant de
+comparer *(et avant d'écrire)*. Le dépôt connaît déjà ce piège — **C4-L4** l'a rencontré sur
+`blocs()`, où un `<textarea>` normalisé en CRLF faisait lire **UN SEUL BLOC**.
+
+```ts
+const norm = (s: string) => (s ?? '').replace(/\r\n/g, '\n').trim()
+if (actuel.type === 'cours' && norm(actuel.texte_extrait as string) !== norm(texte)) { … }
+```
+
+⚠️ **Et il faut aussi normaliser CE QUI S'ÉCRIT** (`texte_extrait: texte`), sans quoi le corps
+continue de dériver. ⛔ **Vérifier les autres écrivains de `<textarea>` du dépôt au passage** : la
+même normalisation s'applique partout où un corps collé est comparé ou haché.

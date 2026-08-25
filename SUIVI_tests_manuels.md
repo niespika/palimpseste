@@ -6286,25 +6286,56 @@ elles seraient parties décochées sans lui. *Le décor semé pour l'occasion a 
   n'est posée. **CONDITION DE REPRISE : à la première semaine routée en bac à sable** — vérifier que
   l'écart lu à l'écran dit *« la couche 4 ne le lit pas encore »* et **jamais** *« N cours déclaré(s),
   AUCUN apparié »*.
-- ☐ **L'import d'un fichier en format 1.3, de bout en bout, PAR L'ÉCRAN DE DÉPÔT.** Le port est
-  éprouvé par ses vecteurs et par la banque réelle, et l'écriture en base est écrite — mais
-  **aucun fichier 1.3 n'a été déposé par `/prof/corpus?onglet=depot` en séance**.
-  ⚠️ **C'est là que se prouverait la moitié invisible du lot** : `import-ecriture.ts` faisait tomber
-  `"notions"` dans `'aucun'` **en silence**, et seul un dépôt réel montre que ce n'est plus le cas.
-  **CONDITION DE REPRISE : déposer `generateur/banque/banque.json` sur une sandbox propre**, puis
-  vérifier par requête que les **15 sujets** sortent en `cours_etat = 'notions'` — et **non** en
-  `'aucun'`. *Aucune autre vérification ne peut attraper ce défaut : le contrôle dirait `IMPORTABLE`
-  et l'écran montrerait quinze sujets, morts.*
-- ☐ **`notions` sur un TEXTE, déposé pour de vrai.** La colonne existe, le port l'accepte et
-  l'écriture est branchée — mais la banque réelle **ne porte aucun texte** *(0 texte mesuré)*, si
-  bien que ce chemin n'a jamais tourné sur une donnée. **CONDITION DE REPRISE : au premier dépôt qui
-  porte des `textes[]`** — vérifier que `exercices_textes.notions` se remplit.
+- ☑ **L'import d'un fichier en format 1.3, de bout en bout, PAR L'ÉCRAN DE DÉPÔT — JOUÉ LE 25/08.**
+  ⭐⭐ **LA MOITIÉ INVISIBLE EST FERMÉE, SUR DONNÉE RÉELLE.** Louis a déposé `banque.json`
+  *(format 1.3, régénéré le 25/08 : **16 sujets**, 1 texte, 152 matériaux, 148 exercices)* par
+  `/prof/corpus?onglet=depot`. **Verdict : `importable`, 0 refus, 0 blocage.**
+  ⭐ **Les 15 sujets en `"cours": "notions"` sortent en `cours_etat = 'notions'`** — et non `'aucun'`,
+  ce qu'ils auraient tous fait avant ce lot — **avec leurs 31 déclarations de notions écrites**.
+  ⭐ **Le 16ᵉ sujet est le vecteur discriminant, et il est arrivé tout seul** : le sujet de
+  diagnostic *(« Est-ce une bonne chose de devoir suivre un cours de philosophie ? »)* porte des
+  `notions` **mais aucune clé `cours`** → il sort en **`'aucun'`**, ce qui est JUSTE : *« un sujet
+  qui déclare des `notions` sans déclarer `cours` n'est toujours PAS servable ; l'un aide à trouver,
+  l'autre autorise à servir »* (`08-` §3). **Le port n'écrit donc pas `'notions'` dès qu'il voit des
+  notions — il lit bien `cours`.**
+  ⭐ **Et les deux contrôles rendent le MÊME verdict sur ce fichier-là**, confronté chaîne par
+  chaîne : `0 refus · 0 blocage · 2 signalements`, les deux signalements identiques au mot près
+  *(l'agrégé « 1 sujet(s) et 1 texte(s) sans rattachement », et « servi par aucune instance »)*.
+- ☑ **« Un sujet devient RÉCLAMÉ dès qu'un cours déclare sa notion, sans re-import » — JOUÉ LE 25/08.**
+  Sur les 15 sujets réellement importés : la bannière annonçait **« 15 entrée(s) attendent une notion
+  qu'aucun cours ne déclare : la science, la nature, la vérité, la raison, le langage »**. Quatre
+  notions déclarées **sur un seul cours** *(« Cognitif »)*, par l'écran, en cochant → **la bannière
+  disparaît**, et la mesure en base donne **15 sujets réclamés, 0 muet**. ⛔ **Aucun re-import, et
+  aucun sujet touché.** ⚠️ *Ce qui reste non prouvé, c'est « SERVABLE » — un fait de couche 4 (ci-dessous).*
+- ☐ **`notions` sur un TEXTE, avec une VALEUR.** ⭐ **Le chemin a tourné le 25/08** : le fichier
+  déposé portait **un texte** *(Épicure, `Lettre à Ménécée`)* — il n'en portait aucun la veille —, et
+  il est entré proprement, `cours_etat = 'aucun'`, `notions = {}`. ⚠️ **Mais il ne DÉCLARE ni `cours`
+  ni `notions`** : la colonne a donc été écrite **vide**, et le chemin n'est pas éprouvé avec une
+  valeur. **CONDITION DE REPRISE : au premier texte déposé qui porte `"notions"`** — vérifier que
+  `exercices_textes.notions` se remplit.
   ⚠️ **Et c'est le SEUL point où le port et `generateur/verifie-import.py` divergent** : le script
   **refuse** la clé *(`✗ [R02] clé « notions » que le 08- ne déclare pas`)*, le port l'accepte parce
   que le `08-` §2, gelé, la déclare. *Épinglé par un test, porté au registre en dette D7.*
-- ☐ **Le chemin de confirmation qui efface la découpe quand le texte d'un cours change**
-  *(`modifierContenuBiblio`, garde L2)*. **Non éprouvé en séance : aucun cours de la sandbox ne porte
-  de sections**, et en fabriquer une découpe dépassait le lot. ⭐ *Par construction, les notions y
-  survivent* — `handleSave` re-soumet **le même `FormData`**, cases comprises, en y ajoutant
-  `force=1`. **CONDITION DE REPRISE : au premier cours découpé dont on change le texte** — vérifier
-  que la confirmation s'affiche, que la découpe part, **et que les notions déclarées restent**.
+- ⛔⛔ **Le chemin de confirmation de la garde L2 — ÉPROUVÉ LE 25/08, ET IL EST CASSÉ. Le défaut est
+  PRÉ-EXISTANT, hors périmètre de ce lot, et NON CORRIGÉ.**
+  **La garde se déclenche À TORT, à chaque enregistrement d'un cours découpé, même si le texte n'a
+  pas bougé.** Cause : **la soumission d'un formulaire HTML normalise les sauts de ligne d'un
+  `<textarea>` en CRLF**, quand le texte stocké porte des `\n` — les deux ne sont donc jamais égaux.
+  **Mesuré en instrumentant l'action** *(sonde retirée depuis)*, sur le cours réel « NAture
+  humaine » : `lenStocke: 9460 · lenSoumis: 9570 · premiereDivergence: 28` — **110 `\r` de plus,
+  un par saut de ligne.**
+  ⛔ **Ce que ça coûte** : *(1)* le professeur reçoit « votre découpe sera effacée » **pour rien**, à
+  chaque sauvegarde — et s'il confirme, **elle est réellement détruite** ; *(2)* `texte_extrait` est
+  **réécrit avec les CRLF** à chaque enregistrement, donc le corps que le RAG sert **dérive dès la
+  première édition** *(vérifié : « Cognitif » est passé de 0 à 34 `\r` sur une simple sauvegarde —
+  remis en état ensuite)*.
+  ⚠️⚠️ **ET IL EST STRUCTURELLEMENT INVISIBLE** : `new FormData(formulaire)` **ne fait pas** la
+  normalisation, si bien qu'une sonde côté navigateur rend « identiques : true ». **Seule la
+  soumission réelle la fait.** Aucun test, aucun `tsc`, aucun lint ne peut l'attraper.
+  ⭐ **La correction est d'une ligne**, et le dépôt connaît déjà ce piège *(C4-L4, `blocs()`)* : elle
+  est écrite au **`IDEES_post_rentree.md`**, avec sa mesure.
+  **CONDITION DE REPRISE : dès que la correction est prise en charge** — vérifier alors qu'un
+  enregistrement SANS changement de texte **ne demande plus rien**, et qu'un changement RÉEL du texte
+  demande toujours confirmation. ⭐ *Au passage, la conséquence pour C4-L16 : **on ne peut pas
+  déclarer de notions sur un cours DÉCOUPÉ** sans passer par cette fausse alerte. Sur un cours non
+  découpé, tout fonctionne — prouvé le 25/08.*
