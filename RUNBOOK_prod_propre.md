@@ -3,6 +3,16 @@
 Objectif : un site **propre** pour les élèves (zéro donnée de test) **et** un bac-à-sable
 où continuer à bricoler avec les livres pourris, **sans jamais polluer la prod**.
 
+> **ÉTAT RÉALISÉ LE 24/08/2026 — NE PAS REJOUER LES ÉTAPES HISTORIQUES CI-DESSOUS.**
+> La production est le projet Supabase `ucmngachkxvvlegntuwh` ; la sandbox reste
+> `aoakpxxlyvthzueaywna`. Vercel `Production` (`main`, `palimpseste.ink`) pointe sur
+> la première ; Vercel `Preview` et `.env.local` pointent sur la seconde. La prod a
+> reçu le schéma public sans données, `seed_prod.sql`, les cinq buckets privés et
+> `c11b_storage_prod.sql`. Elle contient seulement le compte/profil professeur de
+> Louis ; aucun élève, classe, parcours, livre ni fichier n'a été copié. Les
+> inscriptions publiques Auth y sont désactivées. Les étapes 0–9 sont conservées
+> comme **historique de préparation**, pas comme procédure encore à exécuter.
+
 ## Le principe (à garder en tête)
 
 Les élèves, livres et classes **ne vivent pas dans une branche git** : ils vivent dans

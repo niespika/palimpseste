@@ -1,52 +1,71 @@
--- ════════════════════════════════════════════════════════════════════════════
--- seed_prod.sql — CONFIG MINIMALE pour une base PROD neuve (Chemin A)
--- ════════════════════════════════════════════════════════════════════════════
--- À exécuter dans le SQL Editor de la NOUVELLE base de prod, APRÈS avoir importé
--- le schéma (structure) de la base actuelle (cf. RUNBOOK_prod_propre.md, étape 2).
+-- ============================================================================
+-- seed_prod.sql — configuration minimale d'une production neuve
+-- ============================================================================
+-- À exécuter après l'import du schéma public.
 --
--- Ce fichier ne contient AUCUNE donnée d'élève / de contenu. Il réinsère
--- uniquement les lignes de configuration « singleton » sans lesquelles l'app se
--- dégrade (fuseau horaire, paramètres modules) + le bucket Storage versionné.
+-- Ce seed ne copie rien depuis la sandbox : aucun compte, élève, classe,
+-- parcours, livre, document, rendu ni fichier Storage. Il crée seulement le
+-- catalogue technique des modules et les lignes de paramètres attendues par
+-- l'application.
 --
--- Tout est idempotent (on conflict do nothing) → ré-exécutable sans risque.
+-- Tous les modules et tous les gates fonctionnels restent fermés. L'intégrité
+-- reste active : c'est un garde-fou, pas un gate de fonctionnalité.
 --
--- ⚠️ Ce fichier est un FILET DE SÉCURITÉ (params 100 % par défaut). Pour copier
---    fidèlement ta config réelle (liste des modules, prompts que tu as édités,
---    semestre courant…), préfère le data-dump ciblé de l'étape 3 du runbook.
---    Les *_params laissés par défaut = « prompts par défaut calibrés du code ».
---
--- ⚠️ La table `modules` n'est PAS seedée ici (seuls codex/aletheia sont connus
---    du SQL ; scriptorium/quazian/fragments préexistent et ne sont versionnés
---    nulle part). → copie-la via le data-dump de l'étape 3, sinon l'app
---    n'affichera aucun module.
--- ════════════════════════════════════════════════════════════════════════════
+-- Idempotent : une configuration déjà modifiée n'est jamais écrasée.
+-- ============================================================================
 
 begin;
 
--- ── Fuseau horaire d'affichage (singleton id=1, défaut America/Toronto) ──────
-insert into calendrier_params (id) values (1) on conflict (id) do nothing;
+-- Catalogue technique des cinq modules. Les devises viennent de la source de
+-- vérité versionnée dans components/nav/configModules.ts.
+insert into public.modules (slug, nom, description, actif)
+values
+  ('quazian', 'Quazian', 'Ars Memoriae — Contre l''oubli', false),
+  ('aletheia', 'Aletheia', 'Ars Legendi — Dévoiler ce qui se cache', false),
+  ('fragments-erudition', 'Fragments d''Érudition', 'Ars Quaerendi — Que rien ne se perde', false),
+  ('codex', 'Codex', 'Ars Scribendi — Écrire pour penser', false),
+  ('scriptorium', 'Scriptorium', 'Ars Docendi — D''une main à l''autre', false)
+on conflict (slug) do nothing;
 
--- ── Paramètres Codex (singleton id=1 : durées, plafonds, seuils OCR…) ────────
-insert into codex_params (id) values (1) on conflict (id) do nothing;
-
--- ── Paramètres Aletheia (singleton id=1 : prompts NULL = défauts du code) ─────
-insert into aletheia_params (id) values (1) on conflict (id) do nothing;
-
--- ── Paramètres Intégrité (singleton id=1 : actif, seuil de strikes…) ─────────
-insert into integrite_params (id) values (1) on conflict (id) do nothing;
-
--- ── Bucket Storage versionné : codex (manuscrits V1/V-finale, privé) ─────────
--- Les AUTRES buckets (photos Fragments, oraux, imports/images Scriptorium) ont
--- été créés à la main dans le dashboard → à recréer côté dashboard de la prod
--- (cf. runbook étape 4). Leurs policies non plus ne sont pas versionnées.
-insert into storage.buckets (id, name, public)
-values ('codex', 'codex', false)
+-- Fuseau d'affichage. Le schéma fournit America/Toronto par défaut.
+insert into public.calendrier_params (id)
+values (1)
 on conflict (id) do nothing;
 
-commit;
+-- Réglages Codex et Aletheia. Les prompts NULL utilisent les valeurs du code ;
+-- les gates Aletheia sont OFF par défaut dans le schéma.
+insert into public.codex_params (id)
+values (1)
+on conflict (id) do nothing;
 
--- ── À faire ensuite, hors de ce fichier (cf. runbook) ────────────────────────
---   • copier la table `modules` + `fragments_semestres` (data-dump étape 3) ;
---   • recréer les buckets dashboard + leurs policies Storage (étape 4) ;
---   • créer ton compte prof puis : update profiles set role='prof' where id='<uuid>';
---   • vérifier le trigger auth.users → profiles (étape 7).
+insert into public.aletheia_params (id)
+values (1)
+on conflict (id) do nothing;
+
+-- Maison unique des gates Scriptorium/RAG/Fabrique/Chaîne/Exercices/Routeur :
+-- toutes les colonnes concernées ont false pour valeur par défaut.
+insert into public.scriptorium_params (id)
+values (1)
+on conflict (id) do nothing;
+
+-- Garde-fou d'intégrité : actif avec le seuil par défaut du schéma.
+insert into public.integrite_params (id)
+values (1)
+on conflict (id) do nothing;
+
+-- Fragments exige une ligne pour que l'écran puisse enregistrer ses réglages.
+-- Les chaînes vides déclenchent volontairement les valeurs de repli du code.
+insert into public.fragments_config (id, prompt_evaluation, bareme)
+values (1, '', '')
+on conflict (id) do nothing;
+
+-- Quazian sait fonctionner sans ligne grâce au repli du code, mais matérialiser
+-- ici ses valeurs canoniques rend l'écran de réglages immédiatement opérant.
+insert into public.quazian_parametres (cle, valeur)
+values (
+  'global',
+  '{"a":10,"b":1,"centre":14,"pente":3,"w":0.5,"retention_cible":0.9}'::jsonb
+)
+on conflict (cle) do nothing;
+
+commit;
