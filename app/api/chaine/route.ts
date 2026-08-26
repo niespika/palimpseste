@@ -55,7 +55,7 @@
 import { createAdminClient } from '@/utils/supabase/admin'
 import { chaineActive } from '@/utils/chaine/acces'
 import { lireConfig } from '@/utils/chaine/config'
-import { reclamerJobs, estUneMesure, type EtapeChaine } from '@/utils/chaine/file'
+import { reclamerJobs, estUneMesure, ETAPES_DE_MESURE, type EtapeChaine } from '@/utils/chaine/file'
 import { tourDeFile } from '@/utils/chaine/chaine'
 import { verifierCoherence } from '@/utils/chaine/instruments'
 import { passationOuverteAEleve } from '@/utils/passation/acces'
@@ -129,8 +129,14 @@ export async function GET(req: Request): Promise<Response> {
   // Les deux portes, lues UNE fois, avant la boucle.
   const mesureOuverte = await chaineActive(admin)
   const transcriptionOuverte = await passationOuverteAEleve(admin)
+  // ⛔ LA LISTE VIENT DE `ETAPES_DE_MESURE`, ELLE NE SE RECOPIE PAS. Elle était
+  //    écrite en dur ici — et le jour où `retour_v1` s'est ajoutée à la
+  //    constante, la route a continué de ne réclamer que les deux anciennes :
+  //    les jobs partaient en file et n'étaient JAMAIS pris, sans une erreur.
+  //    C'est exactement le motif du `cran` (`C4L11-F`) : une copie privée
+  //    survit à l'évolution de sa source, en silence. *Trouvé au smoke du 26/08.*
   const etapes: EtapeChaine[] = [
-    ...(mesureOuverte ? (['mesure_v1', 'mesure_vf'] as const) : []),
+    ...(mesureOuverte ? ETAPES_DE_MESURE : []),
     ...(transcriptionOuverte ? (['transcription_v1'] as const) : []),
   ]
   if (etapes.length === 0) {

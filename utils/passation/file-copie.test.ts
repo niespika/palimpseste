@@ -1,7 +1,7 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import {
-  etatChaineDeLaCopie, resumerLaFile, demandentUnGeste, ETAPE_MESURE_V1,
+  etatChaineDeLaCopie, resumerLaFile, demandentUnGeste, ETAPE_MESURE_V1, ETAPE_RETOUR_V1,
   type CopiePourFile, type JobLu,
 } from './file-copie'
 
@@ -91,4 +91,47 @@ test('un lot vide ne compte rien et ne réclame rien', () => {
   const r = resumerLaFile([])
   assert.equal(demandentUnGeste(r), 0)
   assert.equal(r.remises, 0)
+})
+
+// ── L'ÉTAPE « RETOUR SEUL » ─────────────────────────────────────────────────
+
+test('un `retour_v1` en file compte comme « en file », pas comme un échec', () => {
+  const e = etatChaineDeLaCopie(copie({
+    attente: [job(), job({ etape: ETAPE_RETOUR_V1, statut: 'en_attente' })],
+  }))
+  assert.equal(e.cle, 'en_file')
+  assert.equal(e.relancable, false)
+})
+
+test('le motif vient de la DERNIÈRE étape jouée, pas de la mesure d’avant', () => {
+  const e = etatChaineDeLaCopie(copie({
+    attente: [
+      job({ message: 'motif du tour de mesure, périmé' }),
+      job({ etape: ETAPE_RETOUR_V1, message: 'retour seul — retour refusé : RR4' }),
+    ],
+  }))
+  assert.equal(e.cle, 'sans_retour')
+  assert.match(e.motif ?? '', /RR4/)
+  // La phrase dit que c'est un SECOND refus — le professeur ne relance pas à l'aveugle.
+  assert.match(e.phrase, /de nouveau/)
+})
+
+test('un `retour_v1` en échec définitif reste un échec, et se relance', () => {
+  const e = etatChaineDeLaCopie(copie({
+    attente: [
+      job(),
+      job({ etape: ETAPE_RETOUR_V1, statut: 'echoue', echec_definitif: true,
+        message: 'a changé d’instrument depuis la mesure' }),
+    ],
+  }))
+  assert.equal(e.cle, 'echec')
+  assert.equal(e.relancable, true)
+  assert.match(e.motif ?? '', /instrument/)
+})
+
+test('un retour engendré par le raccourci clôt l’affaire', () => {
+  const e = etatChaineDeLaCopie(copie({
+    attente: [job(), job({ etape: ETAPE_RETOUR_V1 })], aUnRetour: true,
+  }))
+  assert.equal(e.cle, 'abouti')
 })

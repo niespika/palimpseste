@@ -29,6 +29,12 @@
 /** L'étape de la chaîne qui mesure et engendre le retour de la v1. */
 export const ETAPE_MESURE_V1 = 'mesure_v1'
 
+/**
+ * L'étape qui rejoue LE SEUL RETOUR, depuis les squelettes déjà écrits.
+ * Un appel au lieu de sept, et aucun squelette réécrit.
+ */
+export const ETAPE_RETOUR_V1 = 'retour_v1'
+
 /** Ce qu'une ligne de job dit d'elle-même — la forme servie par `etatDesJobs`. */
 export interface JobLu {
   etape: string
@@ -69,7 +75,12 @@ export interface EtatChaine {
  *    encore : un job en file finira peut-être par en écrire un.
  */
 export function etatChaineDeLaCopie(c: CopiePourFile): EtatChaine {
-  const mesure = c.attente.filter((j) => j.etape === ETAPE_MESURE_V1)
+  // ⚠️ DEUX ÉTAPES PEUVENT PORTER LE MOTIF, et c'est la DERNIÈRE qui parle : un
+  //    `retour_v1` rejoué après un `mesure_v1` raconte ce qui vient de se passer,
+  //    pendant que le message de la mesure décrit le tour d'avant. Prendre le
+  //    message de la mesure ferait lire un motif périmé comme s'il était frais.
+  const mesure = c.attente.filter(
+    (j) => j.etape === ETAPE_MESURE_V1 || j.etape === ETAPE_RETOUR_V1)
   const tous = c.attente
 
   const echoue = tous.find((j) => j.echec_definitif)
@@ -112,9 +123,15 @@ export function etatChaineDeLaCopie(c: CopiePourFile): EtatChaine {
   // ⭐ LE CAS QUI SE TAISAIT. La mesure a abouti, les mesures sont écrites et
   //    payées, et le retour a été refusé au contrôle (`controlerRetour`). Le job
   //    ne sera plus jamais réclamé : sans un geste, cette copie reste sans retour.
+  // ⭐ Le raccourci n'est offert que s'il est valide : un `retour_v1` qui a déjà
+  //    échoué définitivement (garde de version, squelette manquant) fait repartir
+  //    la relance sur l'étape complète — `relancerLaMesure` tient cette règle.
+  const parRetourSeul = mesure.some((j) => j.etape === ETAPE_RETOUR_V1)
   return {
     cle: 'sans_retour',
-    phrase: 'Mesuré, mais AUCUN RETOUR n’a été engendré — le retour a été refusé au contrôle.',
+    phrase: parRetourSeul
+      ? 'Le retour a de nouveau été refusé au contrôle. Les mesures, elles, sont intactes.'
+      : 'Mesuré, mais AUCUN RETOUR n’a été engendré — le retour a été refusé au contrôle.',
     motif: mesure[mesure.length - 1].message,
     relancable: true,
   }

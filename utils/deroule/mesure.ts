@@ -35,7 +35,7 @@ import 'server-only'
 
 import { createAdminClient } from '@/utils/supabase/admin'
 import {
-  mettreEnFile, reclamerJobs, terminerJob, reposerJob, etatDesJobs,
+  mettreEnFile, reclamerJobs, terminerJob, reposerJob, etatDesJobs, estUneMesure,
   type EtapeChaine, type EtatLisible,
 } from '../chaine/file'
 import {
@@ -76,7 +76,11 @@ export interface AttenteLisible {
 
 export async function attenteDuDepot(admin: Admin, depotId: string): Promise<AttenteLisible> {
   const jobs = await etatDesJobs(admin, depotId)
-  const mesures = jobs.filter((j) => j.etape === 'mesure_v1' || j.etape === 'mesure_vf')
+  // ⛔ MÊME SOURCE QUE LA FILE, jamais une liste recopiée : `retour_v1` s'est
+  //    ajoutée aux étapes de mesure, et deux listes en dur l'avaient déjà
+  //    manquée ailleurs — dont celle de `/api/chaine`, qui ne réclamait donc
+  //    jamais ces jobs (smoke du 26/08).
+  const mesures = jobs.filter((j) => estUneMesure(j.etape))
   const echec = mesures.find((j) => j.echec_definitif)
   return {
     jobs: mesures,

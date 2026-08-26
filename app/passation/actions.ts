@@ -112,8 +112,13 @@ export async function actionRelancerLaMesure(
   const r = await relancerLaMesure(admin, depotId)
   if (!r.ok) return echec(r.message)
   rafraichir()
-  return succes('Copie remise en file. Le traitement repart au prochain passage de la chaîne ; '
-    + 'les mesures déjà écrites ne seront pas réécrites.')
+  // ⭐ Dire CE QUI repart. Les deux chemins n'ont ni le même coût ni les mêmes
+  //    effets, et le professeur paie l'un des deux : il a le droit de le savoir.
+  return succes(r.data.etape === 'retour_v1'
+    ? 'Le RETOUR SEUL est remis en file — un appel, depuis les jugements déjà écrits. '
+      + 'Ni les mesures ni les jugements ne seront retouchés.'
+    : 'La MESURE COMPLÈTE est remise en file — la copie sera rejugée. '
+      + 'Les mesures déjà écrites ne seront pas réécrites.')
 }
 
 /** ÉTAPE 14 — il peut modifier le retour. */

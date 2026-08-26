@@ -28,7 +28,7 @@ import 'server-only'
 
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { mettreEnFile, etatDesJobs, relancerUnJob, type EtatLisible } from '@/utils/chaine/file'
-import { ETAPE_MESURE_V1 } from './file-copie'
+import { ETAPE_MESURE_V1, ETAPE_RETOUR_V1 } from './file-copie'
 import { cheminPage, prefixeDepot, BUCKET } from './chemins'
 import { refuserPhotos, renumeroter, type Photo } from './photos'
 import { lireConfigPassation } from './config'
@@ -442,20 +442,27 @@ export async function declencherLeLot(
 }
 
 /**
- * RELANCER LA MESURE D'UNE COPIE — le rattrapage que `declencherLeLot` ne fait pas.
+ * RELANCER LE TRAITEMENT D'UNE COPIE — et rejouer LE MOINS POSSIBLE.
  *
- * ⛔ ET IL NE PEUT PAS LE FAIRE, par construction : `mettreEnFile` est idempotent
- *    sur (dépôt, étape). Une copie dont la mesure a ABOUTI ressort de
- *    `declencherLeLot` en « déjà en file » — comptée, rassurante, et pas
- *    retouchée. Si son retour a été refusé, relancer le lot ne la répare JAMAIS.
- *    C'est arrivé en prod le 26/08 : une copie sur onze, et le lot n'y pouvait rien.
+ * ⛔ `declencherLeLot` NE PEUT PAS LE FAIRE, par construction : `mettreEnFile`
+ *    est idempotent sur (dépôt, étape). Une copie dont la mesure a ABOUTI
+ *    ressort du lot en « déjà en file » — comptée, rassurante, et pas
+ *    retouchée. Si son retour a été refusé, le lot ne la répare JAMAIS.
  *
- * ⚠️ C'est un geste par COPIE, jamais par lot : relancer onze copies dont dix
- *    vont bien, c'est repayer dix analyses pour en réparer une.
+ * ⭐⭐ ET ON NE REJOUE PAS TOUT POUR AUTANT. Quand les mesures sont écrites et
+ *    que seul le retour manque, c'est `retour_v1` qui part : UN appel au lieu de
+ *    sept, et surtout AUCUN squelette réécrit. Rejouer l'étape complète
+ *    réécrivait les squelettes sans réécrire les mesures — après quoi le
+ *    jugement stocké et la lettre stockée ne parlaient plus du même tirage.
+ *
+ * ⚠️ LA GARDE ANTI-BOUCLE. Si un `retour_v1` a déjà échoué DÉFINITIVEMENT — sa
+ *    garde de version l'a refusé, par exemple —, on ne le repropose pas : on
+ *    repart sur la mesure complète, qui rejugera. Sans cela, le professeur
+ *    cliquerait indéfiniment sur un raccourci que la chaîne refuse.
  */
 export async function relancerLaMesure(
   admin: Admin, depotId: string,
-): Promise<Issue<{ raison: string }>> {
+): Promise<Issue<{ etape: string; raison: string }>> {
   if (!depotId) return refus('Aucune copie désignée.')
   const { data: d, error } = await admin.from('exercices_depots')
     .select('id, v1_remis_at, transcription_v1, texte_v1, statut')
@@ -473,10 +480,33 @@ export async function relancerLaMesure(
     return refus('Cette copie est retirée : elle n’entre pas dans la chaîne.')
   }
 
+  const [{ count: nbMesures }, { count: nbRetours }, jobs] = await Promise.all([
+    admin.from('competences_mesures').select('id', { count: 'exact', head: true }).eq('depot_id', depotId),
+    admin.from('exercices_retours').select('id', { count: 'exact', head: true })
+      .eq('depot_id', depotId).eq('moment', 'chaud'),
+    etatDesJobs(admin, depotId),
+  ])
+
+  const retourDejaRefuse = jobs.some((j) => j.etape === ETAPE_RETOUR_V1 && j.echec_definitif)
+  const leRaccourciSuffit = (nbMesures ?? 0) > 0 && (nbRetours ?? 0) === 0 && !retourDejaRefuse
+
+  if (leRaccourciSuffit) {
+    const existe = jobs.some((j) => j.etape === ETAPE_RETOUR_V1)
+    if (!existe) {
+      const { job, erreur } = await mettreEnFile(admin, depotId, ETAPE_RETOUR_V1)
+      if (erreur || !job) return refus(`Mise en file impossible — ${erreur ?? 'aucun job'}.`)
+      return ok({ etape: ETAPE_RETOUR_V1, raison: 'mis en file' })
+    }
+    const r = await relancerUnJob(
+      admin, depotId, ETAPE_RETOUR_V1, 'remis en file à la main par le professeur')
+    if (!r.relance) return refus(`Remise en file impossible — ${r.raison}.`)
+    return ok({ etape: ETAPE_RETOUR_V1, raison: r.raison })
+  }
+
   const r = await relancerUnJob(
     admin, depotId, ETAPE_MESURE_V1, 'remis en file à la main par le professeur')
   if (!r.relance) return refus(`Remise en file impossible — ${r.raison}.`)
-  return ok({ raison: r.raison })
+  return ok({ etape: ETAPE_MESURE_V1, raison: r.raison })
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

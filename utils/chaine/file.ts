@@ -34,10 +34,22 @@ type Admin = SupabaseClient
  *    le bail, `echec_definitif`, la reprise — sans partager l'interrupteur
  *    `chaine_actif` ni le régime de modèle. Voir `utils/passation/`.
  */
-export type EtapeChaine = 'mesure_v1' | 'mesure_vf' | 'transcription_v1'
+/**
+ * ⭐ `retour_v1` — LE RETOUR SEUL, sans refaire P1 ni P2.
+ *
+ * Un retour refusé au contrôle laissait un dépôt mesuré sans commentaire, et le
+ * seul rattrapage était de rejouer toute l'étape : 7 appels pour en réparer 1,
+ * ET la réécriture des squelettes sous des mesures qui, elles, ne bougeaient pas
+ * (voir `rejouerLeRetour`). Cette étape relit les squelettes déjà écrits.
+ *
+ * ⚠️ ELLE EST UNE ÉTAPE DE MESURE au sens de la file : elle appelle le modèle,
+ *    donc `chaine_actif` la gouverne, le plafond de facture la coupe, et elle
+ *    prend le budget de latence de la chaîne — pas celui de la transcription.
+ */
+export type EtapeChaine = 'mesure_v1' | 'mesure_vf' | 'transcription_v1' | 'retour_v1'
 
 /** Les étapes qui relèvent de la chaîne de mesure — celles que `chaine_actif` gouverne. */
-export const ETAPES_DE_MESURE = ['mesure_v1', 'mesure_vf'] as const
+export const ETAPES_DE_MESURE = ['mesure_v1', 'mesure_vf', 'retour_v1'] as const
 
 export function estUneMesure(etape: EtapeChaine): boolean {
   return (ETAPES_DE_MESURE as readonly string[]).includes(etape)

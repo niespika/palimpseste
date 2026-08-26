@@ -1111,6 +1111,155 @@ function resumerTendance(
  * Traite les jobs réclamables. C'est ce que le déclencheur appelle ; il ne
  * connaît ni les compétences, ni les modèles, ni la facture.
  */
+/**
+ * Le squelette COMPLET d'une compétence — les deux artefacts ET la version de
+ * l'instrument qui les a produits. `lireSquelette` ne rend qu'une colonne ;
+ * ici on a besoin des trois d'un seul tenant, et de la version SURTOUT.
+ */
+async function lireLeSqueletteComplet(
+  admin: Admin, depotId: string, competence: Competence, version: Version,
+): Promise<{ extraction: unknown; jugement: unknown; instrumentVersion: string | null } | null> {
+  const { data, error } = await admin.from('exercices_squelettes')
+    .select('artefact_extraction, artefact_jugement, instrument_version')
+    .eq('depot_id', depotId).eq('competence', competence).eq('version', version)
+    .maybeSingle()
+  if (error) {
+    console.error(`[chaine] squelette illisible (${competence} ${version}) — ${error.code} ${error.message}`)
+    return null
+  }
+  if (!data) return null
+  const d = data as unknown as {
+    artefact_extraction: unknown; artefact_jugement: unknown; instrument_version: string | null
+  }
+  return { extraction: d.artefact_extraction, jugement: d.artefact_jugement, instrumentVersion: d.instrument_version }
+}
+
+/**
+ * REJOUER LE SEUL RETOUR — sans refaire P1 ni P2.
+ *
+ * ⭐⭐ POURQUOI CETTE ÉTAPE EXISTE. Un retour refusé par `controlerRetour` ne
+ *    faisait pas échouer le job : les mesures étaient écrites, le job aboutissait,
+ *    et rien ne retentait. Le seul rattrapage était de rejouer TOUTE l'étape —
+ *    7 appels pour en réparer 1. Le 26/08, une copie a coûté 16 appels au total,
+ *    dont 12 pour deux jugements dont un seul a servi.
+ *
+ * ⛔⛔ ET LE GASPILLAGE N'ÉTAIT PAS LE PIRE. Rejouer l'étape entière RÉÉCRIT les
+ *    squelettes (`upsertSquelette`) mais PAS les mesures (« déjà là »). Après un
+ *    tour complet, `exercices_squelettes` porte donc le jugement du SECOND
+ *    tirage pendant que `competences_mesures` garde la lettre du PREMIER — et le
+ *    modèle n'est pas déterministe, les deux ont bel et bien divergé. La lettre
+ *    servie à l'élève et le retour qu'il lit cessaient de parler du même
+ *    jugement. **Rejouer le seul retour ne touche à aucun squelette : c'est une
+ *    correction de justesse autant qu'une économie.**
+ *
+ * ⚠️⚠️ LA GARDE DE VERSION EST LA CONDITION DE VALIDITÉ. Servir un squelette
+ *    jugé par un instrument PÉRIMÉ ferait commenter la copie selon une fiche que
+ *    plus personne n'applique — en silence, et de façon indétectable à l'écran.
+ *    Les trois versions doivent coïncider : celle de l'instrument COURANT, celle
+ *    qui a produit le squelette, celle que porte la mesure. Sinon on refuse, et
+ *    on renvoie vers l'étape complète, qui rejugera.
+ *
+ * ⚠️ Aucun Monitoring ici : il se mesure avec la copie, pas avec son commentaire.
+ */
+export async function rejouerLeRetour(
+  admin: Admin, depotId: string,
+  options: { config?: ConfigChaine; registre?: Registre } = {},
+): Promise<BilanDepot> {
+  const debut = Date.now()
+  const config = options.config ?? lireConfig()
+  const alertes: string[] = []
+
+  // ── Les mêmes gardes que l'étape complète, et pour les mêmes raisons ──────
+  if (!(await chaineActive(admin))) {
+    throw new ChaineSuspendue('`chaine_actif` est à OFF — les dépôts restent en file.')
+  }
+  const facture = await controlerLaFacture(admin, config.plafondMensuelUsd)
+  if (facture.etat === 'coupure') {
+    throw new ChaineSuspendue(
+      `plafond mensuel atteint (${facture.depense.toFixed(4)} $ / ${facture.plafond} $) — `
+      + 'la chaîne est coupée, les dépôts restent en file.')
+  }
+  const avant = await appelsDuDepot(admin, depotId)
+  if (depotAAtteintSonPlafond(avant, config.plafondAppelsParDepot)) {
+    throw new DepotInexploitable(
+      `plafond d'appels par dépôt atteint (${avant} / ${config.plafondAppelsParDepot}).`)
+  }
+
+  const ctx = await lireContexte(admin, depotId)
+  const modele = modeleDeLaChaine(
+    { lieu: ctx.lieu, forme: ctx.forme, diagnostic: ctx.paireDiagnostic }, config)
+
+  // ── Ce dont le retour parle : LES MESURES DÉJÀ ÉCRITES ────────────────────
+  // Pas « les compétences de l'exercice » : une compétence écartée à la mesure
+  // n'a ni squelette ni lettre, et le retour n'aurait rien à en dire.
+  const { data, error } = await admin.from('competences_mesures')
+    .select('competence, instrument_version').eq('depot_id', depotId)
+  if (error) {
+    throw new DepotInexploitable(`les mesures du dépôt sont illisibles : ${error.message}`)
+  }
+  const mesures = (data ?? []) as unknown as Array<{
+    competence: Competence; instrument_version: string | null
+  }>
+  if (!mesures.length) {
+    throw new DepotInexploitable(
+      'aucune mesure écrite pour ce dépôt : il n’y a rien à commenter. '
+      + 'C’est l’étape de mesure qu’il faut rejouer, pas le retour.')
+  }
+
+  // ── Les squelettes, et LA GARDE DE VERSION ────────────────────────────────
+  const squelettes: SqueletteServi[] = []
+  for (const m of mesures) {
+    const sq = await lireLeSqueletteComplet(admin, depotId, m.competence, 'v1')
+    if (!sq || sq.extraction == null || sq.jugement == null) {
+      throw new DepotInexploitable(
+        `le squelette de « ${m.competence} » manque ou est incomplet : le retour ne peut pas `
+        + 'se rejouer seul. Rejouez l’étape de mesure, qui le reconstruira.')
+    }
+    const courante = etatCompetence(m.competence).instrument?.version ?? null
+    const versions = [courante, sq.instrumentVersion, m.instrument_version].filter((v): v is string => !!v)
+    if (new Set(versions).size > 1) {
+      throw new DepotInexploitable(
+        `« ${m.competence} » a changé d’instrument depuis la mesure (courant ${courante ?? '?'}, `
+        + `squelette ${sq.instrumentVersion ?? '?'}, mesure ${m.instrument_version ?? '?'}) : `
+        + 'rejouer le seul retour servirait un jugement périmé. Rejouez l’étape de mesure.')
+    }
+    squelettes.push({ competence: m.competence, extraction: sq.extraction, jugement: sq.jugement })
+  }
+
+  const mesurees = squelettes.map((s) => s.competence)
+  const cible = cibleDuRetour(ctx, mesurees)
+  if (cibleIndeterminee(ctx, mesurees)) {
+    alertes.push('cible du retour INDÉTERMINÉE : ni décision de routeur ni `cible_primaire` — '
+      + `« ${cible} » sert par convention (ordre alphabétique), pas par intention.`)
+  }
+  const coexistence = alerteDeCoexistence(ctx)
+  if (coexistence) alertes.push(coexistence)
+
+  const r = await engendrerLeRetour(admin, {
+    ctx, version: 'v1', modele, squelettes, registre: options.registre ?? null, cible,
+  })
+  alertes.push(...r.alertes)
+
+  const apres = await appelsDuDepot(admin, depotId)
+  const dureeMs = Date.now() - debut
+  return {
+    depotId,
+    version: 'v1',
+    competencesMesurees: mesurees,
+    competencesEcartees: [],
+    // Rien n'est mesuré ici : les mesures étaient déjà là, et le restent.
+    mesuresEcrites: 0,
+    mesuresDejaLa: mesures.length,
+    retourEcrit: r.ecrit,
+    monitoring: { mesures: 0, motifs: ['étape de retour seul : le Monitoring ne se rejoue pas'] },
+    appels: r.appels,
+    passages: 0,
+    appelsEnBase: apres - avant,
+    dureeMs,
+    alertes,
+  }
+}
+
 export async function tourDeFile(
   admin: Admin, jobs: Job[], config: ConfigChaine,
 ): Promise<Array<{ job: Job; bilan?: BilanDepot; erreur?: string }>> {
@@ -1118,8 +1267,16 @@ export async function tourDeFile(
   for (let i = 0; i < jobs.length; i++) {
     const job = jobs[i]
     try {
-      const bilan = await traiterDepot(admin, job.depot_id, job.etape === 'mesure_vf' ? 'vf' : 'v1', { config })
-      await terminerJob(admin, job, { statut: 'abouti', message: resumeBilan(bilan) })
+      // ⭐ `retour_v1` NE MESURE PAS : elle relit les squelettes et n'engendre
+      //    que le commentaire. La distinguer ici est tout ce qu'il faut — la
+      //    file, le bail, l'idempotence et la reprise ne changent pas.
+      const bilan = job.etape === 'retour_v1'
+        ? await rejouerLeRetour(admin, job.depot_id, { config })
+        : await traiterDepot(admin, job.depot_id, job.etape === 'mesure_vf' ? 'vf' : 'v1', { config })
+      const resume = job.etape === 'retour_v1'
+        ? `retour seul — ${resumeBilan(bilan)}`
+        : resumeBilan(bilan)
+      await terminerJob(admin, job, { statut: 'abouti', message: resume })
       sorties.push({ job, bilan })
     } catch (e) {
       if (e instanceof ChaineSuspendue) {
