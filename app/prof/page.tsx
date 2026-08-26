@@ -1,11 +1,10 @@
-import { revalidatePath } from 'next/cache'
 import Link from 'next/link'
 import { createClient } from '@/utils/supabase/server'
 import { createAdminClient } from '@/utils/supabase/admin'
 import { classesAvecRappel } from '@/utils/rappels'
 import { calculerSante, type SanteInscription } from '@/utils/sante'
 import { tachesDeriveesDuCalendrier } from '@/utils/calendrier-a-faire'
-import { retirerExercice } from './scriptorium/evaluations/actions'
+import BoutonRetirerDuPlan from './BoutonRetirerDuPlan'
 import Tuile, { type CouleurTuile } from '@/components/Tuile'
 import { type ModuleSceau } from '@/components/Pastille'
 import EnTeteMobileProf from '@/components/EnTeteMobileProf'
@@ -14,14 +13,6 @@ import RappelsClasses from './RappelsClasses'
 import CoutApi from './CoutApi'
 
 const fmtDate = (iso: string) => formatJour(iso, { day: 'numeric', month: 'short' })
-
-// Retire (annule) un exercice « en retard » depuis le tableau de bord — le prof
-// décide de ne PAS le conserver. Délègue à l'action du plan (garde prof+gate).
-async function actionRetirerEnRetard(formData: FormData): Promise<void> {
-  'use server'
-  await retirerExercice(formData)
-  revalidatePath('/prof')
-}
 
 export default async function ProfAccueil() {
   const supabase = await createClient()
@@ -242,12 +233,7 @@ export default async function ProfAccueil() {
                       </div>
                       <div className="flex items-center gap-3 mt-2 pl-[22px]">
                         <Link href={t.href} className="font-ui text-xs text-pigment hover:underline">{t.ctaLabel ?? 'Concevoir →'}</Link>
-                        {t.exerciceId && (
-                          <form action={actionRetirerEnRetard}>
-                            <input type="hidden" name="exercice_id" value={t.exerciceId} />
-                            <button type="submit" className="font-ui text-xs text-muet hover:text-retard">Retirer du plan</button>
-                          </form>
-                        )}
+                        {t.exerciceId && <BoutonRetirerDuPlan exerciceId={t.exerciceId} />}
                       </div>
                     </div>
                   ))}

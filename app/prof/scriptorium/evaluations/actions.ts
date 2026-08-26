@@ -221,6 +221,52 @@ export async function retirerExercice(formData: FormData): Promise<{ success?: b
       return { error: 'Cette synthèse a déjà été lancée en classe — elle ne peut plus être retirée.' }
     }
   }
+  // ── Un exercice CONÇU porte une INSTANCE, et il faut la traiter avec la ligne ──
+  //
+  // Avant ce correctif, la grille du plan masquait « Retirer » dès `statut = 'concu'`
+  // (`GrillePlan.tsx`, `{e.statut !== 'concu' && …}`) : un examen conçu par erreur
+  // était DÉFINITIF. Le bouton du tableau de bord, lui, s'affichait — et échouait en
+  // silence. Louis l'a rencontré sur 1HLP le 25/08, sur trois lignes d'un coup.
+  //
+  // ⛔ MAIS ON NE SUPPRIME PAS UNE INSTANCE À L'AVEUGLE. `exercices` cascade sur
+  //    `exercices_depots`, qui cascade lui-même sur `exercices_squelettes`,
+  //    `exercices_retours`, `exercices_metacognition` et `exercices_jobs`
+  //    (vérifié sur les FK en base le 25/08). Supprimer une instance qui porte du
+  //    travail détruirait donc les copies, les retours et les mesures qui vont avec.
+  //    ⭐ D'où la garde : le retrait n'est permis que si l'instance est VIERGE, et
+  //    le refus dit combien de dépôts l'en empêchent. C'est cette garde qui vérifie
+  //    « il n'y a pas eu de travail élève » — jamais l'œil de qui clique.
+  //
+  // ⚠️ `competences_mesures.depot_id` et `monitoring_mesures.depot_id` sont en NO
+  //    ACTION : la base refuserait de toute façon. On préfère un refus lisible ici
+  //    à une violation de contrainte remontée brute.
+  const { data: instance, error: eInst } = await supabase
+    .from('exercices').select('id').eq('exercice_planifie_id', exerciceId).maybeSingle()
+  if (eInst) return { error: `Instance illisible : ${eInst.message}` }
+  if (instance) {
+    const instanceId = (instance as { id: string }).id
+    // `count: 'exact'` et pas une liste : supabase-js plafonne toute réponse à
+    // 1000 lignes sans le dire, et un dénombrement tronqué dirait « vierge » à tort.
+    const { count: nbDepots, error: eDep } = await supabase
+      .from('exercices_depots').select('id', { count: 'exact', head: true }).eq('exercice_id', instanceId)
+    if (eDep) return { error: `Dépôts illisibles : ${eDep.message}` }
+    if ((nbDepots ?? 0) > 0) {
+      return { error: `Des élèves ont déjà travaillé sur cet exercice (${nbDepots} dépôt${nbDepots! > 1 ? 's' : ''}). `
+        + 'Il ne peut plus être retiré : le supprimer effacerait leurs copies, leurs retours et leurs mesures.' }
+    }
+    // `routeur_decisions.exercice_id` est en NO ACTION : une décision qui pointe
+    // l'instance ferait échouer la suppression sur une contrainte. On le dit avant.
+    const { count: nbDecisions, error: eDec } = await supabase
+      .from('routeur_decisions').select('id', { count: 'exact', head: true }).eq('exercice_id', instanceId)
+    if (eDec) return { error: `Décisions du routeur illisibles : ${eDec.message}` }
+    if ((nbDecisions ?? 0) > 0) {
+      return { error: 'Le routeur a déjà assigné cet exercice : il ne peut plus être retiré du plan.' }
+    }
+    // Instance vierge : la cascade n'a plus rien à détruire.
+    const { error: eSuppr } = await supabase.from('exercices').delete().eq('id', instanceId)
+    if (eSuppr) return { error: `Suppression de l’instance refusée : ${eSuppr.message}` }
+  }
+
   const { data: plan } = await supabase
     .from('scriptorium_plans_evaluation')
     .select('statut')

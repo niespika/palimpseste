@@ -133,9 +133,17 @@ function LigneExercice({ e, semaines, joursCours }: { e: ExerciceLigne; semaines
                 <button onClick={() => act(marquerConcu)} disabled={busy} className="font-ui text-[12px] text-encre-douce hover:text-encre disabled:opacity-50">Conçu</button>
               )
             )}
-            <button onClick={() => act(retirerExercice)} disabled={busy} className="font-ui text-[12px] text-muet hover:text-retard disabled:opacity-50">Retirer</button>
           </>
         )}
+        {/* « Retirer » vit HORS du bloc ci-dessus, et c'est le correctif : il y était
+            enfermé, donc un exercice CONÇU ne pouvait plus jamais quitter le plan —
+            même conçu par erreur le matin même, sans qu'aucun élève ait rien fait.
+            ⭐ La permission ne se décide pas ici : `retirerExercice` refuse dès que
+            l'instance porte un dépôt ou qu'une décision du routeur la vise, et dit
+            pourquoi (l'erreur s'affiche sous la ligne). L'écran propose, la garde
+            serveur dispose. ⛔ « Déplacer » reste réservé au non-conçu : déplacer un
+            exercice déjà conçu est une autre question, que ce correctif ne tranche pas. */}
+        <button onClick={() => act(retirerExercice)} disabled={busy} className="font-ui text-[12px] text-muet hover:text-retard disabled:opacity-50">Retirer</button>
       </span>
       {err && <span className="text-retard text-xs w-full">{err}</span>}
     </div>
