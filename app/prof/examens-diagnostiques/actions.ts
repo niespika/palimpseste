@@ -20,6 +20,7 @@ import { revalidatePath } from 'next/cache'
 import { garderProf } from '@/utils/fabrique/acces'
 import { concevoirExamenDiagnostique } from '@/utils/examens/conception'
 import { MODULES_EXAMEN, type ModuleExamen } from '@/utils/examens/types'
+import { CHAMPS_IDENTITE, ecartsDIdentite, tracesPresentes } from '@/utils/examens/deplacement'
 
 export interface RetourExamen {
   ok: boolean
@@ -67,4 +68,108 @@ export async function concevoirExamen(
       + 'est passée « conçue ». Assignez-la à sa classe pour que les dépôts naissent, '
       + 'puis ouvrez-les le jour de l’épreuve.',
   }
+}
+
+// ============================================================================
+// RÉUNIR DEUX CONCEPTIONS DU MÊME EXAMEN — le déplacement d'un dépôt.
+// ----------------------------------------------------------------------------
+// Il arrive qu'un même examen soit conçu DEUX FOIS pour une classe et que les
+// copies se répartissent entre les deux instances (constaté sur 1HLP le 25/08 :
+// seize d'un côté, une de l'autre). Les réunir suppose de faire changer un
+// dépôt d'exercice.
+//
+// ⛔ CE N'EST PAS UN COPIER-COLLER DE CELLULE. Le texte a été écrit CONTRE un
+//    sujet, et la chaîne juge la copie contre la référence de SON exercice.
+//    Rattacher une copie à un exercice d'un autre énoncé ne planterait rien :
+//    la chaîne mesurerait une dissertation contre la mauvaise référence, et
+//    l'élève recevrait un retour qui parle d'autre chose. La faute ne se verrait
+//    qu'à la lecture du retour, des semaines plus tard. D'où trois refus.
+// ============================================================================
+
+export interface RetourDeplacement { ok: boolean; message: string; details?: string[] }
+
+export async function deplacerDepotVersExercice(
+  _prec: RetourDeplacement | null, form: FormData,
+): Promise<RetourDeplacement> {
+  const { admin } = await garderProf(false)
+  const depotId = String(form.get('depot_id') ?? '')
+  const cibleId = String(form.get('exercice_cible_id') ?? '')
+  if (!depotId || !cibleId) return { ok: false, message: 'Dépôt ou exercice cible manquant.' }
+
+  const { data: depot, error: eDepot } = await admin
+    .from('exercices_depots').select('id, eleve_id, exercice_id, statut').eq('id', depotId).maybeSingle()
+  if (eDepot) return { ok: false, message: `Dépôt illisible : ${eDepot.message}` }
+  if (!depot) return { ok: false, message: 'Ce dépôt n’existe pas.' }
+  const d = depot as unknown as { id: string; eleve_id: string; exercice_id: string; statut: string }
+  if (d.exercice_id === cibleId) return { ok: false, message: 'Ce dépôt est déjà sur cet exercice.' }
+
+  // ── Refus 1 — les deux exercices ne sont pas le même pour la MESURE ────────
+  const champs = ['id', ...CHAMPS_IDENTITE].join(', ')
+  const { data: exos, error: eExos } = await admin
+    .from('exercices').select(champs).in('id', [d.exercice_id, cibleId])
+  if (eExos) return { ok: false, message: `Exercices illisibles : ${eExos.message}` }
+  const paire = (exos ?? []) as unknown as Array<Record<string, unknown>>
+  const source = paire.find((e) => e.id === d.exercice_id)
+  const cible = paire.find((e) => e.id === cibleId)
+  if (!source || !cible) return { ok: false, message: 'Exercice source ou cible introuvable.' }
+
+  const ecarts = ecartsDIdentite(source, cible)
+  if (ecarts.length > 0) {
+    return {
+      ok: false,
+      message: 'Ces deux exercices ne sont pas le même pour la mesure — déplacer la copie la ferait '
+        + 'juger contre une autre référence que celle qu’elle visait.',
+      details: ecarts.map((c) => `diffère : ${c}`),
+    }
+  }
+
+  // ── Refus 2 — la chaîne a déjà tourné sur ce dépôt ─────────────────────────
+  // Un squelette, une mesure ou un retour sont RATTACHÉS AU DÉPÔT : les laisser
+  // suivre un dépôt qui change d'exercice les rendrait incohérents avec lui.
+  const compter = async (table: string): Promise<number | { erreur: string }> => {
+    const { count, error } = await admin
+      .from(table).select('id', { count: 'exact', head: true }).eq('depot_id', depotId)
+    if (error) return { erreur: `${table} illisible : ${error.message}` }
+    return count ?? 0
+  }
+  const [sq, me, mo, re, jo] = await Promise.all([
+    compter('exercices_squelettes'), compter('competences_mesures'), compter('monitoring_mesures'),
+    compter('exercices_retours'), compter('exercices_jobs'),
+  ])
+  for (const r of [sq, me, mo, re, jo]) {
+    if (typeof r !== 'number') return { ok: false, message: r.erreur }
+  }
+  const traces = tracesPresentes({
+    squelettes: sq as number, mesures: me as number, monitoring: mo as number,
+    retours: re as number, jobs: jo as number,
+  })
+  if (traces.length > 0) {
+    return {
+      ok: false,
+      message: 'La chaîne a déjà tourné sur ce dépôt : il ne peut plus changer d’exercice.',
+      details: traces.map((t) => `il porte ${t}`),
+    }
+  }
+
+  // ── Refus 3 — l'élève a déjà un dépôt sur l'exercice cible ─────────────────
+  // `uk_depots_eleve_exercice` l'interdit de toute façon ; on le dit en clair
+  // plutôt que de remonter une violation de contrainte.
+  const { count: dejaLa, error: eDeja } = await admin
+    .from('exercices_depots').select('id', { count: 'exact', head: true })
+    .eq('exercice_id', cibleId).eq('eleve_id', d.eleve_id)
+  if (eDeja) return { ok: false, message: `Vérification impossible : ${eDeja.message}` }
+  if ((dejaLa ?? 0) > 0) {
+    return { ok: false, message: 'Cet élève a déjà un dépôt sur l’exercice cible — les deux copies '
+      + 'ne peuvent pas fusionner toutes seules.' }
+  }
+
+  // ── Le geste ───────────────────────────────────────────────────────────────
+  const { error } = await admin
+    .from('exercices_depots').update({ exercice_id: cibleId }).eq('id', depotId)
+  if (error) return { ok: false, message: `Déplacement refusé : ${error.message}` }
+
+  revalidatePath('/prof/codex')
+  revalidatePath(`/prof/codex/passation/${d.exercice_id}`)
+  revalidatePath(`/prof/codex/passation/${cibleId}`)
+  return { ok: true, message: 'Dépôt déplacé. L’exercice d’origine peut maintenant être retiré du plan s’il est vide.' }
 }

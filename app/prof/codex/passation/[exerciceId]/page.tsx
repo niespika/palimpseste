@@ -14,6 +14,38 @@ import { notFound } from 'next/navigation'
 import { garderProf } from '@/utils/passation/garde'
 import { chargerVueProf } from '@/utils/passation/vues'
 import { EcranProf } from '@/components/passation/EcranProf'
+import { CHAMPS_IDENTITE, memeIdentiteDeMesure } from '@/utils/examens/deplacement'
+import ReunirCopies from './ReunirCopies'
+
+/**
+ * L'autre conception du MÊME examen pour la même classe, s'il y en a une.
+ *
+ * Un examen conçu deux fois éparpille les copies entre les deux instances. On
+ * ne propose de les réunir que si les deux exercices sont identiques POUR LA
+ * MESURE — la comparaison porte sur tous les champs qui entrent dans le
+ * jugement (`utils/examens/deplacement.ts`), jamais sur le seul titre affiché.
+ *
+ * ⚠️ La proposition est un CONFORT D'ÉCRAN : c'est l'action serveur qui refuse
+ *    ou non, et elle recompare. Un bandeau affiché à tort ne peut donc rien
+ *    déplacer d'illicite.
+ */
+async function jumelleIdentique(
+  admin: Awaited<ReturnType<typeof garderProf>>['admin'],
+  exerciceId: string,
+): Promise<string | null> {
+  const champs = ['id', ...CHAMPS_IDENTITE].join(', ')
+  const { data: moi } = await admin.from('exercices').select(champs).eq('id', exerciceId).maybeSingle()
+  if (!moi) return null
+  const source = moi as unknown as Record<string, unknown>
+  const classeId = source.classe_id as string | null
+  if (!classeId) return null
+
+  const { data: voisines } = await admin
+    .from('exercices').select(champs).eq('classe_id', classeId).neq('id', exerciceId)
+  const jumelle = ((voisines ?? []) as unknown as Array<Record<string, unknown>>)
+    .find((e) => memeIdentiteDeMesure(source, e))
+  return jumelle ? (jumelle.id as string) : null
+}
 
 export default async function PassationCodexProf(
   { params }: { params: Promise<{ exerciceId: string }> },
@@ -22,11 +54,18 @@ export default async function PassationCodexProf(
   const { admin, actif } = await garderProf()
   const vue = await chargerVueProf(admin, exerciceId, actif)
   if (!vue) notFound()
+  const cibleId = await jumelleIdentique(admin, exerciceId)
   return (
     <main className="mx-auto max-w-4xl p-4">
       <h1 className="font-cinzel text-xl text-encre">Passation en classe</h1>
       <p className="mt-1 text-sm text-muet">Codex — l’écriture diagnostique</p>
       <div className="mt-6">
+        {cibleId && (
+          <ReunirCopies
+            cibleId={cibleId}
+            copies={vue.copies.map((c) => ({ depotId: c.depotId, nom: c.eleve }))}
+          />
+        )}
         <EcranProf vue={vue} />
       </div>
     </main>
