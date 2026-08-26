@@ -22,6 +22,7 @@ import { concevoirExamenDiagnostique } from '@/utils/examens/conception'
 import { MODULES_EXAMEN, type ModuleExamen } from '@/utils/examens/types'
 import { CHAMPS_IDENTITE, ecartsDIdentite, tracesPresentes } from '@/utils/examens/deplacement'
 import { depotPorteDuContenu, type DepotPourRetrait } from '@/utils/examens/retrait'
+import { ETAPES_DE_MESURE } from '@/utils/chaine/file'
 
 export interface RetourExamen {
   ok: boolean
@@ -133,9 +134,25 @@ export async function deplacerDepotVersExercice(
     if (error) return { erreur: `${table} illisible : ${error.message}` }
     return count ?? 0
   }
+  // ⚠️⚠️ LES JOBS SE COMPTENT PAR ÉTAPE, PAS EN BLOC — et `utils/chaine/file.ts`
+  //    le dit depuis toujours, en tête de fichier : « LA TRANSCRIPTION N'EST PAS
+  //    UN ÉTAGE DE LA CHAÎNE ». Elle partage la file (idempotence, bail, reprise)
+  //    sans partager `chaine_actif` ni le régime de modèle.
+  //    ⭐ Et la distinction est DÉCISIVE ICI : l'OCR transforme les photos de
+  //    l'élève en texte — il porte sur la COPIE, jamais sur la référence de
+  //    l'exercice. Une copie transcrite reste transcrite après le déplacement.
+  //    Compter le job de transcription bloquait donc toute copie manuscrite,
+  //    c'est-à-dire toutes celles d'une passation en classe (constaté sur 1HLP).
+  const compterJobsDeMesure = async (): Promise<number | { erreur: string }> => {
+    const { count, error } = await admin
+      .from('exercices_jobs').select('id', { count: 'exact', head: true })
+      .eq('depot_id', depotId).in('etape', ETAPES_DE_MESURE as unknown as string[])
+    if (error) return { erreur: `exercices_jobs illisible : ${error.message}` }
+    return count ?? 0
+  }
   const [sq, me, mo, re, jo] = await Promise.all([
     compter('exercices_squelettes'), compter('competences_mesures'), compter('monitoring_mesures'),
-    compter('exercices_retours'), compter('exercices_jobs'),
+    compter('exercices_retours'), compterJobsDeMesure(),
   ])
   for (const r of [sq, me, mo, re, jo]) {
     if (typeof r !== 'number') return { ok: false, message: r.erreur }

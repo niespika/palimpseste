@@ -102,6 +102,13 @@ export interface TracesDeChaine {
   mesures: number
   monitoring: number
   retours: number
+  /**
+   * Les jobs d'ÉTAPE DE MESURE seulement (`mesure_v1`, `mesure_vf`).
+   * ⛔ JAMAIS la transcription : `utils/chaine/file.ts` écrit en tête que « la
+   *    transcription n'est pas un étage de la chaîne ». L'OCR porte sur la COPIE,
+   *    pas sur la référence de l'exercice — une copie transcrite le reste après
+   *    le déplacement. Les compter bloquait toute copie manuscrite.
+   */
   jobs: number
 }
 
@@ -112,7 +119,7 @@ export function tracesPresentes(t: TracesDeChaine): string[] {
     ['mesures', 'des mesures de compétence'],
     ['monitoring', 'des mesures de monitoring'],
     ['retours', 'un retour'],
-    ['jobs', 'un traitement en file'],
+    ['jobs', 'un traitement de mesure en file'],
   ]
   return noms.filter(([k]) => (t[k] ?? 0) > 0).map(([, libelle]) => libelle)
 }
