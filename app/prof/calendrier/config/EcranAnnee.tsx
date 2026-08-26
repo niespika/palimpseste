@@ -161,11 +161,17 @@ function CarteSemestre({
             <option key={n} value={n}>{n}</option>
           ))}
         </select>
+        {/* Le singulier n'est pas le pluriel amputé d'un « s » : il change le
+            déterminant ET demande l'élision (« la première semaine n'est pas »),
+            là où le pluriel garde « les … ne sont pas ». Écrire les deux phrases
+            en entier coûte moins qu'une accumulation de ternaires — et le premier
+            jet, qui les accumulait, affichait « les 1 première semaine ne est
+            pas réclamée » au Semestre 2. */}
         {s.premiereSemaine > 1 && (
           <span className="text-[12.5px] text-muet-clair italic">
-            les {s.premiereSemaine - 1} première{s.premiereSemaine > 2 ? 's' : ''} semaine
-            {s.premiereSemaine > 2 ? 's' : ''} ne {s.premiereSemaine > 2 ? 'sont' : 'est'} pas
-            réclamée{s.premiereSemaine > 2 ? 's' : ''}
+            {s.premiereSemaine === 2
+              ? 'la première semaine n’est pas réclamée'
+              : `les ${s.premiereSemaine - 1} premières semaines ne sont pas réclamées`}
           </span>
         )}
       </div>
