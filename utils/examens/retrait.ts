@@ -25,16 +25,6 @@
 // ============================================================================
 
 /**
- * Les seuls statuts qui n'ont, par eux-mêmes, jamais rien produit.
- * - `assigne` : posé à la création du dépôt, l'élève n'a pas ouvert l'exercice.
- * - `retire`  : le professeur l'a déjà sorti du dénominateur (`07-` §1.1) ;
- *               il ne redeviendra pas du travail.
- * ⚠️ `ouvert` n'en est PAS : l'élève a ouvert l'exercice, et la télémétrie de
- *    saisie comme le compteur d'aide ont pu commencer à s'écrire.
- */
-const STATUTS_SANS_TRAVAIL: ReadonlySet<string> = new Set(['assigne', 'retire'])
-
-/**
  * Ce qu'on lit d'un dépôt pour savoir s'il porte quelque chose.
  * ⚠️ Les champs de contenu sont énumérés ICI et pas ailleurs : en ajouter un à
  * la table sans l'ajouter ici rendrait la garde aveugle à lui.
@@ -58,21 +48,27 @@ function porteQuelqueChose(v: unknown): boolean {
 }
 
 /**
- * Ce dépôt porte-t-il quelque chose que l'élève a ÉCRIT ?
+ * ⭐ LA QUESTION, ET IL N'Y EN A QU'UNE : ce dépôt porte-t-il quelque chose que
+ * l'élève a ÉCRIT ? Un texte, une transcription, une photo. Rien d'autre.
  *
- * Le contenu seul — sans regarder le statut. C'est la question la plus étroite,
- * et elle a son emploi propre : quand un dépôt doit CÉDER SA PLACE à un autre
- * (réunion de deux conceptions du même examen, `deplacement.ts`), ce qui
- * compte est ce qu'on détruirait, pas l'étape où il en était.
+ * ⛔ LE STATUT NE DIT RIEN DU TRAVAIL, et c'est ce que j'ai mis cinq essais à
+ *    comprendre. La preuve est dans `utils/passation/depots.ts` :
  *
- * ⭐ Décision de Louis, 25/08 : un dépôt qu'un élève a seulement OUVERT sans
- *    rien y écrire cède la place. Ce qu'on perd alors — la trace qu'il a ouvert
- *    un exercice en double — est du bruit, pas du travail. Sans cela la réunion
- *    serait structurellement inutile : dans une classe, presque tous les élèves
- *    auront ouvert le doublon, donc presque aucune copie ne pourrait rejoindre
- *    l'autre conception.
+ *      // « Ouvrir le dépôt » — LE GESTE DU PROFESSEUR
+ *      .update({ statut: 'ouvert', ouvert_at, ouvert_par_prof_at })
+ *      .eq('exercice_id', exerciceId).eq('statut', 'assigne')
+ *
+ *    Ouvrir une passation bascule d'un coup TOUS les dépôts de la classe à
+ *    `ouvert`. Ce statut est donc le geste DU PROFESSEUR, jamais celui de
+ *    l'élève — j'avais écrit ici l'inverse, en toutes lettres, et deux refus
+ *    d'affilée en sont venus. *(Décision de Louis, 25/08 : on juge sur le
+ *    contenu. « Les élèves n'ont en fait pas ouvert, car pas cliqué sur la
+ *    tuile qui le permettait. »)*
+ *
+ * ⚠️ Une chaîne blanche et un tableau vide ne sont PAS du contenu ; un
+ *    brouillon, si — même sous un statut resté `assigne`.
  */
-export function depotPorteDuContenu(d: DepotPourRetrait): boolean {
+export function depotPorteDuTravail(d: DepotPourRetrait): boolean {
   return (
     porteQuelqueChose(d.texte_v1) ||
     porteQuelqueChose(d.texte_vf) ||
@@ -81,24 +77,6 @@ export function depotPorteDuContenu(d: DepotPourRetrait): boolean {
     porteQuelqueChose(d.photos_v1) ||
     porteQuelqueChose(d.photos_vf)
   )
-}
-
-/**
- * Ce dépôt porte-t-il du travail d'élève ?
- *
- * Vrai dès que l'une des deux conditions tient — le statut a dépassé
- * l'assignation, OU un champ de contenu n'est pas vide. Les deux sont
- * nécessaires : un statut peut rester `assigne` alors qu'un brouillon est là,
- * et un statut avancé peut précéder l'écriture.
- *
- * ⚠️ PLUS LARGE que `depotPorteDuContenu`, et à dessein : ici on décide de
- *    SUPPRIMER L'EXERCICE ENTIER, pas de libérer une place. Le statut compte
- *    alors, parce que la télémétrie de saisie et le compteur d'aide pendent au
- *    dépôt et disparaîtraient avec lui.
- */
-export function depotPorteDuTravail(d: DepotPourRetrait): boolean {
-  if (!STATUTS_SANS_TRAVAIL.has(d.statut)) return true
-  return depotPorteDuContenu(d)
 }
 
 /** Combien de dépôts empêchent le retrait. `0` = l'instance est vierge. */

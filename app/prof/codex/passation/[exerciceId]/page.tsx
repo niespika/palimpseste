@@ -16,6 +16,7 @@ import { chargerVueProf } from '@/utils/passation/vues'
 import { EcranProf } from '@/components/passation/EcranProf'
 import { CHAMPS_IDENTITE, memeIdentiteDeMesure } from '@/utils/examens/deplacement'
 import ReunirCopies from './ReunirCopies'
+import SupprimerConception from './SupprimerConception'
 
 /**
  * L'autre conception du MÊME examen pour la même classe, s'il y en a une.
@@ -55,6 +56,12 @@ export default async function PassationCodexProf(
   const vue = await chargerVueProf(admin, exerciceId, actif)
   if (!vue) notFound()
   const cibleId = await jumelleIdentique(admin, exerciceId)
+  // Une conception HORS PLAN et sans copie écrite est un résidu : elle n'a
+  // aucune sortie par « Retirer du plan », qui suppose une ligne de plan.
+  const { data: rattachement } = await admin
+    .from('exercices').select('exercice_planifie_id').eq('id', exerciceId).maybeSingle()
+  const horsPlan = !(rattachement as { exercice_planifie_id: string | null } | null)?.exercice_planifie_id
+  const aucuneCopie = vue.copies.every((c) => !c.copie && !c.aDeposé)
   return (
     <main className="mx-auto max-w-4xl p-4">
       <h1 className="font-cinzel text-xl text-encre">Passation en classe</h1>
@@ -66,6 +73,7 @@ export default async function PassationCodexProf(
             copies={vue.copies.map((c) => ({ depotId: c.depotId, nom: c.eleve, remise: !!c.copie || c.aDeposé }))}
           />
         )}
+        {horsPlan && aucuneCopie && <SupprimerConception exerciceId={exerciceId} />}
         <EcranProf vue={vue} />
       </div>
     </main>

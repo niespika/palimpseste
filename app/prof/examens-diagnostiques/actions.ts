@@ -21,7 +21,7 @@ import { garderProf } from '@/utils/fabrique/acces'
 import { concevoirExamenDiagnostique } from '@/utils/examens/conception'
 import { MODULES_EXAMEN, type ModuleExamen } from '@/utils/examens/types'
 import { CHAMPS_IDENTITE, ecartsDIdentite, tracesPresentes } from '@/utils/examens/deplacement'
-import { depotPorteDuContenu, type DepotPourRetrait } from '@/utils/examens/retrait'
+import { depotPorteDuTravail, depotsQuiBloquent, type DepotPourRetrait } from '@/utils/examens/retrait'
 import { ETAPES_DE_MESURE } from '@/utils/chaine/file'
 
 export interface RetourExamen {
@@ -196,7 +196,7 @@ export async function deplacerDepotVersExercice(
     //    y écrire — cède la place. Bloquer là-dessus rendait la réunion
     //    structurellement inutile : dans une classe, presque tous auront ouvert le
     //    doublon. Un BROUILLON, lui, bloque toujours : il porte du contenu.
-    if (depotPorteDuContenu(occupant)) {
+    if (depotPorteDuTravail(occupant)) {
       return { ok: false, message: 'Cet élève a DÉJÀ écrit quelque chose sur l’exercice cible. '
         + 'Les deux ne peuvent pas fusionner toutes seules — c’est à toi de choisir laquelle garder.' }
     }
@@ -216,4 +216,78 @@ export async function deplacerDepotVersExercice(
   revalidatePath(`/prof/codex/passation/${d.exercice_id}`)
   revalidatePath(`/prof/codex/passation/${cibleId}`)
   return { ok: true, message: 'Dépôt déplacé. L’exercice d’origine peut maintenant être retiré du plan s’il est vide.' }
+}
+
+// ============================================================================
+// SUPPRIMER UNE CONCEPTION ORPHELINE — celle qui n'est dans aucun plan.
+// ----------------------------------------------------------------------------
+// Un examen conçu DEUX FOIS laisse une instance HORS PLAN : l'index unique
+// `uk_exercices_planifie` n'en attache qu'une à la ligne, l'autre n'a pas de
+// `exercice_planifie_id`. « Retirer du plan » ne peut donc pas l'atteindre — il
+// n'y a rien à retirer d'un plan — et elle encombre la liste des passations
+// pour toujours. C'est le trou trouvé sur 1HLP le 25/08, après que la copie
+// esseulée a rejoint sa jumelle : l'exercice vidé n'avait aucune sortie.
+//
+// ⛔ MÊME GARDE QUE PARTOUT : rien ne part si un élève a ÉCRIT quelque chose.
+//    `exercices` cascade sur `exercices_depots` et de là sur les squelettes,
+//    retours, métacognition et jobs.
+// ============================================================================
+
+export async function supprimerConceptionOrpheline(
+  _prec: RetourDeplacement | null, form: FormData,
+): Promise<RetourDeplacement> {
+  const { admin } = await garderProf(false)
+  const exerciceId = String(form.get('exercice_id') ?? '')
+  if (!exerciceId) return { ok: false, message: 'Exercice manquant.' }
+
+  const { data: exo, error: eExo } = await admin
+    .from('exercices').select('id, exercice_planifie_id').eq('id', exerciceId).maybeSingle()
+  if (eExo) return { ok: false, message: `Exercice illisible : ${eExo.message}` }
+  if (!exo) return { ok: false, message: 'Cet exercice n’existe pas.' }
+
+  // ── Refus 1 — elle EST au plan : ce n'est pas la bonne porte ───────────────
+  if ((exo as { exercice_planifie_id: string | null }).exercice_planifie_id) {
+    return { ok: false, message: 'Cette conception est rattachée au plan d’évaluation. '
+      + 'Elle se retire depuis le plan de la classe, pas ici.' }
+  }
+
+  // ── Refus 2 — un élève a écrit quelque chose ───────────────────────────────
+  // On LIT et on confronte au `count` exact : supabase-js plafonne à 1000 lignes
+  // sans rien dire, et une lecture tronquée conclurait « vierge » à tort.
+  const { count: nbDepots, error: eCount } = await admin
+    .from('exercices_depots').select('id', { count: 'exact', head: true }).eq('exercice_id', exerciceId)
+  if (eCount) return { ok: false, message: `Dépôts illisibles : ${eCount.message}` }
+  if ((nbDepots ?? 0) > 0) {
+    const { data: depots, error: eDep } = await admin
+      .from('exercices_depots')
+      .select('statut, texte_v1, texte_vf, transcription_v1, transcription_vf, photos_v1, photos_vf')
+      .eq('exercice_id', exerciceId).limit(2000)
+    if (eDep) return { ok: false, message: `Dépôts illisibles : ${eDep.message}` }
+    const lignes = (depots ?? []) as unknown as DepotPourRetrait[]
+    if (lignes.length !== nbDepots) {
+      return { ok: false, message: 'Vérification impossible : la lecture des dépôts est '
+        + 'incomplète. La suppression est refusée par prudence.' }
+    }
+    const bloquants = depotsQuiBloquent(lignes)
+    if (bloquants > 0) {
+      return { ok: false, message: `${bloquants} élève${bloquants > 1 ? 's ont' : ' a'} écrit `
+        + 'quelque chose sur cette conception. Elle ne peut pas être supprimée : ce serait '
+        + 'effacer leurs copies, leurs retours et leurs mesures.' }
+    }
+  }
+
+  // ── Refus 3 — le routeur l'a assignée (`NO ACTION` : la base refuserait) ───
+  const { count: nbDecisions, error: eDec } = await admin
+    .from('routeur_decisions').select('id', { count: 'exact', head: true }).eq('exercice_id', exerciceId)
+  if (eDec) return { ok: false, message: `Décisions du routeur illisibles : ${eDec.message}` }
+  if ((nbDecisions ?? 0) > 0) {
+    return { ok: false, message: 'Le routeur a déjà assigné cet exercice : il ne peut plus être supprimé.' }
+  }
+
+  const { error } = await admin.from('exercices').delete().eq('id', exerciceId)
+  if (error) return { ok: false, message: `Suppression refusée : ${error.message}` }
+
+  revalidatePath('/prof/codex')
+  revalidatePath('/prof/aletheia')
+  return { ok: true, message: 'Conception supprimée.' }
 }

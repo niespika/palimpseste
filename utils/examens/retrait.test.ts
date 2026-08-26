@@ -1,20 +1,20 @@
-// Tests de la RÈGLE « qu'est-ce qui empêche de retirer un exercice du plan »
-// (fonctions PURES). Exécution : `npm test`. Encode ce que le correctif décide :
-//  (1) une ASSIGNATION nue ne bloque rien — c'est le cas réel de 1HLP (25 dépôts
-//      à `assigne`, aucune copie), et le compter rendait toute assignation
-//      irréversible ;
-//  (2) tout statut qui a dépassé l'assignation bloque, même sans contenu ;
-//  (3) tout contenu bloque, même sous un statut resté `assigne` (brouillon) ;
-//  (4) `retire` ne bloque pas — le professeur l'a déjà sorti ;
-//  (5) ⚠️ `ouvert` BLOQUE : l'élève a ouvert l'exercice, télémétrie comprise ;
-//  (6) une chaîne vide ou un tableau vide ne sont pas du contenu.
+// Tests de la RÈGLE « qu'est-ce qu'un dépôt porte » (fonctions PURES).
+// Exécution : `npm test`.
+//
+// ⭐ IL N'Y A QU'UNE QUESTION, ET C'EST LE CONTENU. Cinq refus successifs en
+//    production ont été nécessaires pour y arriver, tous nés de la même
+//    confusion : prendre une trace technique pour du travail d'élève.
+//      · une ASSIGNATION nue n'est pas du travail (25 dépôts créés d'un coup) ;
+//      · un dépôt EXISTANT sur la cible n'est pas du travail ;
+//      · ⛔ le statut `ouvert` n'est pas du travail — `utils/passation/depots.ts`
+//        montre que c'est le geste DU PROFESSEUR : ouvrir une passation bascule
+//        TOUS les dépôts de la classe à `ouvert` d'un coup ;
+//      · un job d'OCR n'est pas la chaîne de mesure (`utils/chaine/file.ts`).
+//    *(Décision de Louis, 25/08 : « juger sur le contenu ».)*
 
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import {
-  depotPorteDuContenu, depotPorteDuTravail, depotsQuiBloquent,
-  type DepotPourRetrait,
-} from './retrait'
+import { depotPorteDuTravail, depotsQuiBloquent, type DepotPourRetrait } from './retrait'
 
 /** Un dépôt tel qu'il naît à l'assignation : statut par défaut, tout à null. */
 const nu = (statut = 'assigne'): DepotPourRetrait => ({
@@ -24,38 +24,28 @@ const nu = (statut = 'assigne'): DepotPourRetrait => ({
   photos_v1: null, photos_vf: null,
 })
 
-// ── (1) et (4) Ce qui ne bloque pas ─────────────────────────────────────────
+// ── Aucun statut ne fait, à lui seul, du travail ────────────────────────────
 
-test('une assignation nue ne bloque pas le retrait', () => {
-  assert.equal(depotPorteDuTravail(nu('assigne')), false)
-})
-
-test('un dépôt déjà retiré par le professeur ne bloque pas', () => {
-  assert.equal(depotPorteDuTravail(nu('retire')), false)
-})
-
-test('⭐ le cas réel de 1HLP : 25 assignations nues, rien ne bloque', () => {
-  const classe = Array.from({ length: 25 }, () => nu())
-  assert.equal(depotsQuiBloquent(classe), 0)
-})
-
-// ── (2) et (5) Les statuts qui bloquent ─────────────────────────────────────
-
-test('tout statut au-delà de l’assignation bloque, même sans contenu', () => {
-  for (const s of ['ouvert', 'v1_remis', 'retour_publie', 'vf_remis', 'clos', 'abandonne']) {
-    assert.equal(depotPorteDuTravail(nu(s)), true, `statut ${s}`)
+test('⭐ AUCUN statut ne bloque à lui seul — pas même `vf_remis`', () => {
+  for (const s of [
+    'assigne', 'ouvert', 'v1_remis', 'retour_publie', 'vf_remis', 'clos', 'abandonne', 'retire',
+  ]) {
+    assert.equal(depotPorteDuTravail(nu(s)), false, `statut ${s} sans contenu`)
   }
 })
 
-test('⚠️ `ouvert` bloque — l’élève a ouvert l’exercice, la télémétrie court', () => {
-  assert.equal(depotPorteDuTravail(nu('ouvert')), true)
+test('⛔ `ouvert` en particulier : c’est le geste du PROFESSEUR', () => {
+  // `ouvrirDepots()` bascule tous les dépôts `assigne` de l'exercice à `ouvert`
+  // et stampe `ouvert_par_prof_at`. L'élève n'a rien fait.
+  assert.equal(depotPorteDuTravail(nu('ouvert')), false)
 })
 
-// ── (3) Le contenu bloque, quel que soit le statut ──────────────────────────
-
-test('un brouillon sous un statut resté `assigne` bloque quand même', () => {
-  assert.equal(depotPorteDuTravail({ ...nu(), texte_v1: 'trois mots écrits' }), true)
+test('⭐ le cas réel de 1HLP : 24 dépôts ouverts PAR LE PROF, rien ne bloque', () => {
+  const classe = Array.from({ length: 24 }, () => nu('ouvert'))
+  assert.equal(depotsQuiBloquent(classe), 0)
 })
+
+// ── Le contenu, et lui seul, bloque ─────────────────────────────────────────
 
 test('chaque champ de contenu bloque à lui seul', () => {
   const champs: (keyof DepotPourRetrait)[] = [
@@ -68,7 +58,15 @@ test('chaque champ de contenu bloque à lui seul', () => {
   assert.equal(depotPorteDuTravail({ ...nu(), photos_vf: [{ chemin: 'b.jpg' }] }), true)
 })
 
-// ── (6) Ce qui ressemble à du contenu et n'en est pas ───────────────────────
+test('un brouillon bloque, même sous un statut resté `assigne`', () => {
+  assert.equal(depotPorteDuTravail({ ...nu('assigne'), texte_v1: 'trois mots écrits' }), true)
+})
+
+test('une copie transcrite bloque — c’est le travail de l’élève, pas une trace', () => {
+  assert.equal(depotPorteDuTravail({ ...nu('ouvert'), transcription_v1: 'la copie lue' }), true)
+})
+
+// ── Ce qui ressemble à du contenu et n'en est pas ───────────────────────────
 
 test('une chaîne vide ou blanche n’est pas du contenu', () => {
   assert.equal(depotPorteDuTravail({ ...nu(), texte_v1: '' }), false)
@@ -83,41 +81,11 @@ test('un tableau de photos VIDE n’est pas du contenu', () => {
 
 test('le compte ne retient que les dépôts qui portent quelque chose', () => {
   const lot: DepotPourRetrait[] = [
-    nu(), nu(), nu('retire'),
-    nu('v1_remis'),
-    { ...nu(), texte_v1: 'une copie' },
-    { ...nu(), photos_v1: [] },
+    nu('assigne'), nu('ouvert'), nu('retire'),
+    nu('v1_remis'),                                   // statut avancé, rien d'écrit → ne bloque pas
+    { ...nu(), texte_v1: 'une copie' },               // bloque
+    { ...nu('ouvert'), photos_v1: [{ c: 'a.jpg' }] }, // bloque
+    { ...nu(), photos_v1: [] },                       // tableau vide → ne bloque pas
   ]
   assert.equal(depotsQuiBloquent(lot), 2)
-})
-
-// ── Le CONTENU seul — la question de la place à céder (décision de Louis, 25/08) ──
-//  ⭐ Deux questions distinctes, et c'est le cœur de l'affaire :
-//     · SUPPRIMER L'EXERCICE → `depotPorteDuTravail` (le statut compte : la
-//       télémétrie pend au dépôt et disparaîtrait avec lui) ;
-//     · LIBÉRER UNE PLACE pour une copie qui arrive → `depotPorteDuContenu`
-//       (seul compte ce qu'on détruirait d'ÉCRIT).
-//     Les confondre bloquait la réunion dans le cas même qu'elle vise : dans une
-//     classe, presque tous les élèves auront OUVERT le doublon sans y écrire.
-
-test('⭐ un dépôt seulement OUVERT ne porte aucun contenu — il cède la place', () => {
-  assert.equal(depotPorteDuContenu(nu('ouvert')), false)
-  // …alors qu'il empêche toujours de SUPPRIMER l'exercice entier.
-  assert.equal(depotPorteDuTravail(nu('ouvert')), true)
-})
-
-test('⚠️ mais un BROUILLON bloque la place, quel que soit son statut', () => {
-  assert.equal(depotPorteDuContenu({ ...nu('ouvert'), texte_v1: 'un début de copie' }), true)
-  assert.equal(depotPorteDuContenu({ ...nu('assigne'), photos_v1: [{ chemin: 'a.jpg' }] }), true)
-})
-
-test('une copie remise bloque la place — les deux ne fusionnent pas seules', () => {
-  assert.equal(depotPorteDuContenu({ ...nu('v1_remis'), texte_v1: 'la copie' }), true)
-})
-
-test('le contenu ignore le statut, dans les DEUX sens', () => {
-  // Statut avancé mais rien d'écrit → la place se libère.
-  assert.equal(depotPorteDuContenu(nu('vf_remis')), false)
-  // Statut nu mais quelque chose d'écrit → la place ne se libère pas.
-  assert.equal(depotPorteDuContenu({ ...nu('assigne'), transcription_v1: 'lu' }), true)
 })
