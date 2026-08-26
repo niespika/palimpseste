@@ -4,11 +4,13 @@ export type StatutPiste = 'proposee' | 'suivie' | 'partiellement_suivie' | 'aban
 
 export interface FragmentSemaine {
   id: string
-  numero: number
+  /** C8-L4 — `null` sur une semaine de vacances : elle n'a pas de numéro. */
+  numero: number | null
   titre: string | null
   date_debut: string
   date_limite: string
   ouverte: boolean
+  is_vacation: boolean
   semestre_id: string | null
   created_at: string
 }

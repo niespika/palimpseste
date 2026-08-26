@@ -5,6 +5,7 @@ import { moduleIdsDesClasses, slugsModulesParClasse } from '@/utils/acces'
 import { lireReglagesRag } from '@/utils/scriptorium-rag'
 import { contexteClasseEleve } from './contexte-classe'
 import { noteVersLettre, type LettreSection } from '@/utils/notation'
+import { estSemaineComptee } from '@/utils/fragments-semaines'
 import { calculerGrilleSemaines } from '@/utils/calendrier-grille'
 import { jourDansFuseau, formatJour, formatInstant } from '@/utils/fuseau'
 import { lireFuseau } from '@/utils/fuseau-serveur'
@@ -103,13 +104,14 @@ export default async function TableauDeBordEleve() {
   if (enContexte.length > 0) {
     // Semaine ouverte scopée au semestre actif (évite une semaine restée ouverte
     // d'un semestre précédent). Globale au semestre : une seule lecture.
-    const { data: semActif } = await supabase.from('semesters').select('id').eq('is_active', true).maybeSingle()
+    const { data: semActif } = await supabase
+      .from('semesters').select('id, fragments_premiere_semaine').eq('is_active', true).maybeSingle()
     // C8-L4 — `is_vacation = false` explicitement : une semaine ouverte AVANT de
     // devenir vacance gardait son drapeau, et `order by numero desc` classe les
     // `NULL` EN PREMIER sous PostgreSQL — elle gagnerait donc la sélection.
     let reqSemaine = supabase
       .from('fragments_semaines')
-      .select('id, numero, date_limite')
+      .select('id, numero, date_limite, is_vacation')
       .eq('ouverte', true)
       .eq('is_vacation', false)
     if (semActif?.id) reqSemaine = reqSemaine.eq('semestre_id', semActif.id)
@@ -129,10 +131,16 @@ export default async function TableauDeBordEleve() {
         // date_limite est un INSTANT (fin de journée dans le fuseau de l'école) : on
         // nomme le JOUR dans ce fuseau — en UTC, l'échéance du dimanche dirait lundi.
         const limite = formatInstant(semaine.date_limite as string, await lireFuseau(), { weekday: 'long', day: 'numeric', month: 'long' })
-        const enRetard = !depot && new Date(semaine.date_limite) < new Date()
+        // C8-L4 — une semaine que Fragments ne réclame pas ne met personne en
+        // retard, et ne s'annonce pas comme un travail dû. Le professeur peut
+        // l'avoir ouverte à dessein : le dépôt reste offert, jamais exigé.
+        const reclamee = estSemaineComptee(semaine, semActif?.fragments_premiere_semaine ?? 1)
+        const enRetard = reclamee && !depot && new Date(semaine.date_limite) < new Date()
         const texte = depot
           ? depot.statut === 'en_retard' ? `Semaine ${semaine.numero} — déposé en retard` : `Semaine ${semaine.numero} — déposé ✓`
-          : `Semaine ${semaine.numero} — à déposer avant ${limite}`
+          : reclamee
+            ? `Semaine ${semaine.numero} — à déposer avant ${limite}`
+            : `Semaine ${semaine.numero} — dépôt libre, rien n’est réclamé`
         fragmentTaches.push({ texte, depose: !!depot, enRetard, pistes: [], classe: insc.classe_nom, inscriptionId: insc.id })
       }
 

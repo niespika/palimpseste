@@ -3,7 +3,7 @@ import Link from 'next/link'
 import { createClient } from '@/utils/supabase/server'
 import { createAdminClient } from '@/utils/supabase/admin'
 import { inscriptionsModuleEleve } from '@/utils/acces'
-import { semainesComptees } from '@/utils/fragments-semaines'
+import { semainesComptees, estSemaineComptee } from '@/utils/fragments-semaines'
 import { contexteClasseEleve } from '../../contexte-classe'
 import ChoixClasseModule from '../../ChoixClasseModule'
 import ModuleHorsClasse from '../../ModuleHorsClasse'
@@ -123,6 +123,13 @@ export default async function PageFragments({ searchParams }: { searchParams: Pr
     .order('numero', { ascending: false })
     .limit(1)
     .maybeSingle()
+
+  // C8-L4 — le professeur peut ouvrir une semaine que Fragments ne réclame pas
+  // (présentation, choix des sujets). L'élève ne doit alors pas lire « à rendre » :
+  // le dépôt reste possible, il n'est simplement pas dû.
+  const semaineReclamee = semaine
+    ? estSemaineComptee(semaine, semCourant?.fragments_premiere_semaine ?? 1)
+    : true
 
   // Dépôt de la semaine en cours
   const { data: depotActuel } = semaine
@@ -537,14 +544,22 @@ export default async function PageFragments({ searchParams }: { searchParams: Pr
                 <div>
                   <p className="text-xs text-muet mb-0.5">Semaine en cours</p>
                   <p className="font-medium text-encre">Semaine {semaine.numero}{semaine.titre ? ` — ${semaine.titre}` : ''}</p>
-                  <p className="text-xs text-muet mt-0.5">À rendre avant la fin du {formatDateLimite(semaine.date_limite, tz)}</p>
+                  {semaineReclamee ? (
+                    <p className="text-xs text-muet mt-0.5">À rendre avant la fin du {formatDateLimite(semaine.date_limite, tz)}</p>
+                  ) : (
+                    <p className="text-xs text-muet-clair italic mt-0.5">
+                      Pas de fragment réclamé cette semaine — tu peux déposer si tu veux.
+                    </p>
+                  )}
                 </div>
                 {depotActuel ? (
                   <span className={`flex-shrink-0 text-xs px-2 py-1 rounded-full ${depotEnRetard ? 'bg-retard-teinte text-retard' : 'bg-ok-teinte text-ok'}`}>
                     {depotEnRetard ? '⚠ En retard' : '✓ Déposé'}
                   </span>
                 ) : (
-                  <span className="flex-shrink-0 text-xs bg-attention-teinte text-attention px-2 py-1 rounded-full">À déposer</span>
+                  <span className={`flex-shrink-0 text-xs px-2 py-1 rounded-full ${
+                    semaineReclamee ? 'bg-attention-teinte text-attention' : 'bg-parchemin-fonce text-muet'
+                  }`}>{semaineReclamee ? 'À déposer' : 'Facultatif'}</span>
                 )}
               </div>
             </div>

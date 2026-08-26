@@ -3,6 +3,7 @@ import { createClient } from '@/utils/supabase/server'
 import { formatInstant } from '@/utils/fuseau'
 import { lireFuseau } from '@/utils/fuseau-serveur'
 import { semestreFragmentsActif } from './contexte-semestre'
+import { estSemaineComptee } from '@/utils/fragments-semaines'
 import { toggleSemaineOuverte } from './actions'
 import type { FragmentSemaine } from '@/types/fragments'
 
@@ -63,10 +64,21 @@ export default async function PageFragmentsPof() {
         </div>
       ) : (
         <div className="space-y-3">
-          {(semaines as FragmentSemaine[]).map(semaine => (
+          {(semaines as FragmentSemaine[]).map(semaine => {
+            // C8-L4 — le professeur voit TOUTES les semaines de l'école ; l'élève
+            // ne voit que celle qu'on lui a ouverte. Les deux vues diffèrent à bon
+            // droit — mais rien ici ne disait que les premières ne sont pas
+            // réclamées, et la liste s'ouvrait donc toujours sur « Semaine 1 ».
+            // On les MARQUE plutôt que de les cacher : les masquer ferait de la
+            // semaine 3 la première tuile — exactement la confusion que le lot
+            // corrige — et retirerait la possibilité d'en ouvrir une à dessein.
+            const reclamee = estSemaineComptee(semaine, semestre?.premiereSemaine ?? 1)
+            return (
             <div
               key={semaine.id}
-              className="bg-surface border border-bordure border-l-4 border-l-liseret rounded-xl px-5 py-4 flex items-center justify-between gap-3 transition-colors hover:border-pigment hover:shadow-sm"
+              className={`bg-surface border border-bordure border-l-4 rounded-xl px-5 py-4 flex items-center justify-between gap-3 transition-colors hover:border-pigment hover:shadow-sm ${
+                reclamee ? 'border-l-liseret' : 'border-l-bordure opacity-70'
+              }`}
             >
               <Link
                 href={`/prof/fragments-erudition/semaine/${semaine.id}`}
@@ -75,7 +87,14 @@ export default async function PageFragmentsPof() {
                 <p className="font-medium text-encre group-hover:text-encre-douce">
                   Semaine {semaine.numero}{semaine.titre ? ` — ${semaine.titre}` : ''}
                 </p>
-                <p className="text-sm text-muet mt-0.5">Limite : fin du {formatDate(semaine.date_limite, tz)}</p>
+                {reclamee ? (
+                  <p className="text-sm text-muet mt-0.5">Limite : fin du {formatDate(semaine.date_limite, tz)}</p>
+                ) : (
+                  <p className="text-sm text-muet-clair italic mt-0.5">
+                    Pas de dépôt cette semaine — Fragments compte à partir de la semaine{' '}
+                    {semestre?.premiereSemaine ?? 1}
+                  </p>
+                )}
               </Link>
               <div className="flex items-center gap-3 flex-shrink-0">
                 <span className={`text-xs px-2 py-1 rounded-full ${
@@ -93,7 +112,8 @@ export default async function PageFragmentsPof() {
                 <Link href={`/prof/fragments-erudition/semaine/${semaine.id}`} className="text-muet hover:text-encre-douce">→</Link>
               </div>
             </div>
-          ))}
+            )
+          })}
         </div>
       )}
     </div>
