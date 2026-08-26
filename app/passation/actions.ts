@@ -24,7 +24,7 @@ import {
   ouvrirLesDepots, preparerDepotDesPhotos, enregistrerLesPhotos,
   mettreLaTranscriptionEnFile, validerLaTranscription, enregistrerLaTranscription,
   validerLaSaisieClavier, declencherLeLot, ecrireLeCommentaireGeneral,
-  poserLeMessageReporte, journaliserCollageBloque, lireDepot,
+  poserLeMessageReporte, journaliserCollageBloque, lireDepot, relancerLaMesure,
 } from '@/utils/passation/depots'
 import { transcrireMaintenant } from '@/utils/passation/ouvrier'
 import { leverLesDrapeaux, offreSeJuger, enregistrerSeJuger,
@@ -95,6 +95,25 @@ export async function actionDeclencherLeLot(
   if (r.data.dejaEnFile) bouts.push(`${r.data.dejaEnFile} y étaient déjà`)
   if (r.data.sansCopie) bouts.push(`${r.data.sansCopie} sans copie remise, écartée(s)`)
   return succes(`${bouts.join(', ')}. Le traitement est différé : il tourne au fil de la file.`)
+}
+
+/**
+ * LE RATTRAPAGE — remettre en file la mesure d'UNE copie.
+ *
+ * ⚠️ Ce n'est pas « déclencher le lot » en plus petit. Le lot ne peut rien pour
+ *    une copie dont le job a ABOUTI sans écrire de retour : il la compte « déjà
+ *    en file » et passe. Sans ce geste, cette copie n'a plus jamais de retour.
+ */
+export async function actionRelancerLaMesure(
+  _prec: Reponse | null, form: FormData,
+): Promise<Reponse> {
+  const { admin } = await garderProf(false)
+  const depotId = String(form.get('depot_id') ?? '')
+  const r = await relancerLaMesure(admin, depotId)
+  if (!r.ok) return echec(r.message)
+  rafraichir()
+  return succes('Copie remise en file. Le traitement repart au prochain passage de la chaîne ; '
+    + 'les mesures déjà écrites ne seront pas réécrites.')
 }
 
 /** ÉTAPE 14 — il peut modifier le retour. */

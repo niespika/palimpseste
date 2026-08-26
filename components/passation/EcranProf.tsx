@@ -25,8 +25,12 @@ import { useState, useActionState } from 'react'
 import {
   actionLeverLesDrapeaux, actionOuvrirLesDepots, actionDeclencherLeLot,
   actionEditerLeRetour, actionCommentaireGeneral, actionMessageReporte,
-  actionValiderLesCorrections, actionPublier, actionDepublier, type Reponse,
+  actionValiderLesCorrections, actionPublier, actionDepublier, actionRelancerLaMesure,
+  type Reponse,
 } from '@/app/passation/actions'
+import {
+  etatChaineDeLaCopie, resumerLaFile, demandentUnGeste, type CopiePourFile,
+} from '@/utils/passation/file-copie'
 import {
   CRANS_DE_REVELATION, CRAN_INITIAL, auCran, sommaireDuRetour, accompagnementVisible,
   type CranRevelation,
@@ -212,6 +216,20 @@ function Ouverture({ vue }: { vue: VueProf }) {
   )
 }
 
+/**
+ * Ce que le module de file a besoin de savoir d'une copie.
+ *
+ * ⚠️ « A une copie » se juge sur le TEXTE, pas sur `aDeposé` : une copie tapée
+ *    au clavier par un élève exempté n'a aucune photo et se lit très bien.
+ */
+function pourLaFile(c: LigneCopie): CopiePourFile {
+  return {
+    attente: c.attente,
+    aUnRetour: c.retour != null,
+    aUneCopie: (c.copie ?? '').trim().length > 0,
+  }
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 // ÉTAPE 12 — LE TRAITEMENT EN LOT
 // ─────────────────────────────────────────────────────────────────────────────
@@ -242,7 +260,56 @@ function Lot({ vue }: { vue: VueProf }) {
         </button>
         {etat && <p className={`mt-2 text-sm ${etat.ok ? 'text-ok' : 'text-retard'}`}>{etat.message}</p>}
       </form>
+
+      <EtatDeLaFile vue={vue} />
     </section>
+  )
+}
+
+/**
+ * OÙ EN EST LA FILE — et combien de copies attendent un GESTE.
+ *
+ * ⭐ Avant, cet écran ne disait qu'une chose : combien de copies étaient remises.
+ *    Le sort de chacune dans la chaîne n'apparaissait qu'en dépliant les copies
+ *    une par une, et deux états s'y confondaient sous « En file. ». Un lot de
+ *    seize copies pouvait donc en cacher deux qui n'aboutiraient jamais.
+ *
+ * ⚠️ LES SIX COMPTES SONT DISJOINTS ET COUVRENT TOUT : leur somme vaut le nombre
+ *    de copies (`resumerLaFile` le tient, un test l'assère). Une catégorie qui
+ *    manquerait serait une copie qu'on cesserait de chercher.
+ */
+function EtatDeLaFile({ vue }: { vue: VueProf }) {
+  const r = resumerLaFile(vue.copies.map(pourLaFile))
+  const aGeste = demandentUnGeste(r)
+  // ⚠️ LE PLURIEL SE DÉCLARE, IL NE SE DEVINE PAS. Une règle « ça finit par un e,
+  //    donc ça prend un s » écrivait « 5 sans copies » et aurait écrit « 2 pas
+  //    encore en files ». La plupart de ces libellés sont des locutions
+  //    INVARIABLES ; une seule s'accorde. *Smoke du 26/08.*
+  const comptes: Array<{ n: number; mot: string; ton: string; titre: string }> = [
+    { n: r.abouties, mot: r.abouties > 1 ? 'terminées' : 'terminée', ton: 'text-ok', titre: 'Mesurée, retour engendré.' },
+    { n: r.enFile, mot: 'en file', ton: 'text-encre-douce', titre: 'La chaîne les prendra au prochain passage — rien à faire.' },
+    { n: r.horsFile, mot: 'pas encore en file', ton: 'text-attention', titre: 'Copie remise qu’aucun déclenchement n’a mise en file.' },
+    { n: r.sansRetour, mot: 'sans retour', ton: 'text-retard', titre: 'Mesurée, mais le retour a été refusé au contrôle. À relancer copie par copie.' },
+    { n: r.enEchec, mot: 'en échec', ton: 'text-retard', titre: 'La chaîne a renoncé. À relancer copie par copie.' },
+    { n: r.sansCopie, mot: 'sans copie', ton: 'text-muet', titre: 'L’élève n’a rien remis — la chaîne n’a rien à lire.' },
+  ]
+  return (
+    <div className="mt-4 border-t border-bordure pt-3">
+      <h3 className="text-xs uppercase tracking-wide text-muet-clair">La file</h3>
+      <ul className="mt-1.5 flex flex-wrap gap-x-4 gap-y-1 text-sm">
+        {comptes.map((c) => (
+          <li key={c.titre} className={c.n === 0 ? 'text-muet' : c.ton} title={c.titre}>
+            <span className="tabular-nums font-semibold">{c.n}</span> {c.mot}
+          </li>
+        ))}
+      </ul>
+      <p className="mt-1.5 text-xs text-muet">
+        {aGeste === 0
+          ? 'Rien n’attend de geste de votre part.'
+          : `${aGeste} copie${aGeste > 1 ? 's' : ''} attend${aGeste > 1 ? 'ent' : ''} un geste `
+            + '— dépliez-la ci-dessous pour voir laquelle et pourquoi.'}
+      </p>
+    </div>
   )
 }
 
@@ -356,6 +423,7 @@ function Copie({
       )}
 
       <Collages copie={copie} />
+      <TraitementDeLaCopie copie={copie} />
 
       {copie.retour ? (
         <div className="mt-3 rounded border border-bordure p-3">
@@ -435,18 +503,63 @@ function Copie({
             {copie.retour.edite ? ' · retour modifié' : ''}
           </p>
         </div>
-      ) : (
-        <p className="mt-2 text-sm italic text-muet">
-          {copie.attente.some((a) => a.echec_definitif)
-            ? `Traitement en échec définitif — ${copie.attente.find((a) => a.echec_definitif)?.message ?? ''}`
-            : copie.attente.length
-              ? 'En file.'
-              : 'Aucun retour engendré.'}
-        </p>
-      )}
+      ) : null}
 
       <CommentaireEtMessage copie={copie} />
     </li>
+  )
+}
+
+/**
+ * L'ÉTAT DU TRAITEMENT D'UNE COPIE — et le bouton quand il faut agir.
+ *
+ * ⛔ CE QU'IL REMPLACE, ET POURQUOI C'ÉTAIT GRAVE. Cet endroit affichait :
+ *      échec définitif ? le message : (des jobs ? « En file. » : « Aucun retour »)
+ *    Un dépôt dont la mesure avait ABOUTI SANS ÉCRIRE DE RETOUR tombait donc sur
+ *    « En file. » — pour toujours, car son job ne serait plus jamais réclamé.
+ *    C'est arrivé en prod le 26/08 sur une copie de seize : le professeur a
+ *    attendu un retour qui ne pouvait pas venir, et rien ne le lui a dit.
+ *
+ * ⭐ TROIS CHOSES, DANS CET ORDRE : ce qui s'est passé, POURQUOI, et le geste.
+ *    Un état sans motif oblige à deviner ; un motif sans geste oblige à appeler
+ *    quelqu'un.
+ *
+ * ⚠️ Rien ne s'affiche quand tout va bien : le retour, juste en dessous, parle
+ *    de lui-même. Un bandeau « tout va bien » sur seize copies ferait du bruit
+ *    au milieu duquel la copie en peine se perdrait.
+ */
+function TraitementDeLaCopie({ copie }: { copie: LigneCopie }) {
+  const [etat, action, enCours] = useActionState(actionRelancerLaMesure, null as Reponse | null)
+  const e = etatChaineDeLaCopie(pourLaFile(copie))
+  if (e.cle === 'abouti') return null
+
+  const grave = e.cle === 'sans_retour' || e.cle === 'echec'
+  return (
+    <div className={`mt-3 rounded border p-3 ${
+      grave ? 'border-retard/40 bg-retard-teinte' : 'border-bordure bg-parchemin/40'}`}
+    >
+      <p className={`text-sm ${grave ? 'text-retard' : 'text-encre-douce'}`}>{e.phrase}</p>
+      {/* Le MOTIF, tel que la chaîne l'a écrit. Il n'est pas paraphrasé : le
+          professeur le lira peut-être pour nous le rapporter. */}
+      {e.motif && (
+        <p className="mt-1 font-mono text-xs leading-snug text-muet break-words">{e.motif}</p>
+      )}
+      {e.relancable && (
+        <form action={action} className="mt-2">
+          <input type="hidden" name="depot_id" value={copie.depotId} />
+          <button type="submit" disabled={enCours}
+            className="rounded border border-bordure-bouton px-3 py-1 text-xs text-encre-douce disabled:opacity-40">
+            {enCours ? '…' : 'Relancer cette copie'}
+          </button>
+          <span className="ml-2 text-xs text-muet">
+            Les mesures déjà écrites ne seront pas réécrites.
+          </span>
+          {etat && (
+            <p className={`mt-1.5 text-xs ${etat.ok ? 'text-ok' : 'text-retard'}`}>{etat.message}</p>
+          )}
+        </form>
+      )}
+    </div>
   )
 }
 

@@ -272,6 +272,61 @@ export async function reposerJob(admin: Admin, job: Job, motif: string): Promise
   if (error) console.error(`[chaine] job non reposé — ${error.code} ${error.message}`)
 }
 
+/**
+ * REMETTRE UN JOB EN FILE, À LA MAIN — le geste du professeur, pas celui de la
+ * chaîne.
+ *
+ * ⭐ POURQUOI IL FALLAIT L'ÉCRIRE. Un job `abouti` n'est plus réclamable, et
+ *    `mettreEnFile` est idempotent : sa clé refuse un second job pour le même
+ *    couple (dépôt, étape). Un dépôt dont la mesure a abouti SANS ÉCRIRE DE
+ *    RETOUR était donc **définitivement sans retour** — relancer le lot le
+ *    signalait « déjà en file » et ne le retouchait pas. C'est arrivé en prod le
+ *    26/08 : une copie sur onze, mesurée, sans retour, et l'écran du professeur
+ *    affichait « En file. » indéfiniment.
+ *
+ * ⚠️ LA TENTATIVE REPART À ZÉRO, et c'est voulu : ce n'est pas une reprise
+ *    automatique après panne, c'est une DEMANDE HUMAINE. `reposerJob` rend une
+ *    tentative parce que la chaîne n'a pas eu le droit de tourner ; ici elle a
+ *    tourné, et le professeur en redemande un tour en connaissance de cause.
+ *
+ * ⚠️ ON NE RELANCE PAS CE QUI TOURNE. Un job `en_attente` ou `en_cours` est déjà
+ *    pris en charge — le relancer lui volerait son bail et ferait travailler
+ *    deux ouvriers sur le même dépôt.
+ *
+ * ⭐ La sûreté ne tient pas à cette fonction mais à l'IDEMPOTENCE DE L'ÉTAPE :
+ *    une reprise n'écrit jamais une seconde mesure (elle les compte « déjà là »).
+ *    C'est ce qui rend le geste rejouable sans dégât.
+ */
+export async function relancerUnJob(
+  admin: Admin, depotId: string, etape: EtapeChaine, motif: string,
+): Promise<{ relance: boolean; raison: string }> {
+  const { data, error } = await admin
+    .from('exercices_jobs').select(CHAMPS)
+    .eq('cle_idempotence', cleIdempotence(depotId, etape)).maybeSingle()
+  if (error) return { relance: false, raison: `file illisible — ${error.code} ${error.message}` }
+  const job = (data as unknown as Job | null) ?? null
+  if (!job) return { relance: false, raison: "aucun travail de ce type n'est en file pour cette copie" }
+  if (job.statut === 'en_attente' || job.statut === 'en_cours') {
+    return { relance: false, raison: 'ce travail est déjà en file — il tourne au prochain passage' }
+  }
+
+  const { data: maj, error: eMaj } = await admin.from('exercices_jobs').update({
+    statut: 'en_attente',
+    tentatives: 0,
+    echec_definitif: false,
+    bail_expire_at: null,
+    dernier_message: motif,
+    updated_at: new Date().toISOString(),
+    // Le jeton de bail : si un autre a repris le job entre la lecture et
+    // l'écriture, on ne lui vole pas son travail.
+  }).eq('id', job.id).eq('tentatives', job.tentatives).select('id')
+  if (eMaj) return { relance: false, raison: `remise en file refusée — ${eMaj.code} ${eMaj.message}` }
+  if (!maj || maj.length === 0) {
+    return { relance: false, raison: 'le travail a été repris entre-temps — rien n\'a été touché' }
+  }
+  return { relance: true, raison: 'remis en file' }
+}
+
 /** L'état de job LISIBLE — la part de ce lot dans l'état d'attente de C4-L3. */
 export interface EtatLisible {
   etape: EtapeChaine

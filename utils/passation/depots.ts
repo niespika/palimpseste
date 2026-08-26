@@ -27,7 +27,8 @@ import 'server-only'
 // ============================================================================
 
 import type { SupabaseClient } from '@supabase/supabase-js'
-import { mettreEnFile, etatDesJobs, type EtatLisible } from '@/utils/chaine/file'
+import { mettreEnFile, etatDesJobs, relancerUnJob, type EtatLisible } from '@/utils/chaine/file'
+import { ETAPE_MESURE_V1 } from './file-copie'
 import { cheminPage, prefixeDepot, BUCKET } from './chemins'
 import { refuserPhotos, renumeroter, type Photo } from './photos'
 import { lireConfigPassation } from './config'
@@ -438,6 +439,44 @@ export async function declencherLeLot(
     else misEnFile++
   }
   return ok({ misEnFile, dejaEnFile, sansCopie })
+}
+
+/**
+ * RELANCER LA MESURE D'UNE COPIE — le rattrapage que `declencherLeLot` ne fait pas.
+ *
+ * ⛔ ET IL NE PEUT PAS LE FAIRE, par construction : `mettreEnFile` est idempotent
+ *    sur (dépôt, étape). Une copie dont la mesure a ABOUTI ressort de
+ *    `declencherLeLot` en « déjà en file » — comptée, rassurante, et pas
+ *    retouchée. Si son retour a été refusé, relancer le lot ne la répare JAMAIS.
+ *    C'est arrivé en prod le 26/08 : une copie sur onze, et le lot n'y pouvait rien.
+ *
+ * ⚠️ C'est un geste par COPIE, jamais par lot : relancer onze copies dont dix
+ *    vont bien, c'est repayer dix analyses pour en réparer une.
+ */
+export async function relancerLaMesure(
+  admin: Admin, depotId: string,
+): Promise<Issue<{ raison: string }>> {
+  if (!depotId) return refus('Aucune copie désignée.')
+  const { data: d, error } = await admin.from('exercices_depots')
+    .select('id, v1_remis_at, transcription_v1, texte_v1, statut')
+    .eq('id', depotId).maybeSingle()
+  if (error) return refus(`La copie n’a pas pu être lue : ${error.message}`)
+  if (!d) return refus('Cette copie n’existe pas.')
+
+  // Les mêmes gardes que le lot, et pour la même raison : une copie sans
+  // production ferait brûler une tentative pour un refus certain.
+  const production = ((d.transcription_v1 as string | null) ?? (d.texte_v1 as string | null) ?? '').trim()
+  if (!d.v1_remis_at || !production) {
+    return refus('Cette copie n’a rien de lisible : la chaîne la refuserait aussitôt.')
+  }
+  if (d.statut === 'retire' || d.statut === 'abandonne') {
+    return refus('Cette copie est retirée : elle n’entre pas dans la chaîne.')
+  }
+
+  const r = await relancerUnJob(
+    admin, depotId, ETAPE_MESURE_V1, 'remis en file à la main par le professeur')
+  if (!r.relance) return refus(`Remise en file impossible — ${r.raison}.`)
+  return ok({ raison: r.raison })
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

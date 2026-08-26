@@ -1156,8 +1156,33 @@ async function instrumentDeLaMesure(
   return (data as unknown as { instrument_version: string | null } | null)?.instrument_version ?? null
 }
 
+/**
+ * LE MOTIF D'UN RETOUR NON ÉCRIT, RETENU DANS LE MESSAGE DU JOB.
+ *
+ * ⭐⭐ SANS CECI, LA RAISON N'EXISTE NULLE PART. Les `alertes` d'un bilan ne
+ *    voyagent que dans la réponse HTTP de `/api/chaine` — et le cron, qui appelle
+ *    cette route à la minute, jette cette réponse. Le 26/08, une copie sur onze
+ *    est sortie « retour non écrit » : le fait était là, le POURQUOI était perdu,
+ *    et il n'y avait aucun moyen de le retrouver après coup.
+ *
+ * ⚠️ Le job ABOUTIT quand même quand le retour est refusé — les mesures, elles,
+ *    sont écrites et payées. Le message est donc le SEUL témoin durable.
+ *
+ * On ne retient que les alertes qui parlent du retour : le reste (latence,
+ * cible indéterminée) a sa place ailleurs et noierait le motif.
+ */
+function motifDuRetourManquant(alertes: readonly string[]): string {
+  const siennes = alertes.filter((a) => a.toLowerCase().includes('retour'))
+  if (!siennes.length) return ''
+  const texte = siennes.join(' | ')
+  // Borné : `dernier_message` est lu à l'écran, pas archivé. Un refus qui cite
+  // vingt observables tiendrait sur trois écrans et cacherait le reste du bilan.
+  return ` — ${texte.length > 400 ? `${texte.slice(0, 400)}…` : texte}`
+}
+
 function resumeBilan(b: BilanDepot): string {
+  const motif = b.retourEcrit ? '' : motifDuRetourManquant(b.alertes)
   return `${b.competencesMesurees.length} mesurée(s), ${b.mesuresEcrites} écrite(s), `
-    + `${b.mesuresDejaLa} déjà là, retour ${b.retourEcrit ? 'écrit' : 'non écrit'}, `
+    + `${b.mesuresDejaLa} déjà là, retour ${b.retourEcrit ? 'écrit' : 'non écrit'}${motif}, `
     + `${b.appels} appel(s), ${Math.round(b.dureeMs / 1000)} s`
 }

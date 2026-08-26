@@ -264,7 +264,18 @@ function resume(b: BilanDepot): string {
   const temoin = b.appelsEnBase !== null && b.appelsEnBase !== b.appels
     ? ` ⚠️ ÉCART : ${b.appelsEnBase} en base (${b.passages} passage(s))`
     : ''
+  // Le MOTIF du retour manquant voyage avec le fait — même raison qu'à
+  // `resumeBilan` (`utils/chaine/chaine.ts`) : les alertes ne survivent pas à la
+  // réponse HTTP, et le job aboutit quand même.
+  const motif = b.retourEcrit
+    ? ''
+    : (() => {
+      const siennes = b.alertes.filter((a) => a.toLowerCase().includes('retour'))
+      if (!siennes.length) return ''
+      const t = siennes.join(' | ')
+      return ` — ${t.length > 400 ? `${t.slice(0, 400)}…` : t}`
+    })()
   return `${b.competencesMesurees.length} mesurée(s), ${b.mesuresEcrites} écrite(s), `
-    + `retour ${b.retourEcrit ? 'écrit' : 'non écrit'}, ${b.appels} appel(s), `
+    + `retour ${b.retourEcrit ? 'écrit' : 'non écrit'}${motif}, ${b.appels} appel(s), `
     + `${Math.round(b.dureeMs / 1000)} s${temoin}`
 }
