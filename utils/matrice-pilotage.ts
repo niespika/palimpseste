@@ -2,6 +2,7 @@ import 'server-only'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import type { ModuleSceau } from '@/components/Pastille'
 import { motifsSante, type SanteInscription } from '@/utils/sante'
+import { semainesComptees } from '@/utils/fragments-semaines'
 import { inscriptionsClasse } from '@/utils/acces'
 import {
   livresDeClasse,
@@ -119,12 +120,17 @@ async function aggregerFragments(
 
   const maintenant = new Date()
   const { data: semestreCourant } = await admin
-    .from('semesters').select('id').eq('is_active', true).maybeSingle()
-  let reqSemaines = admin.from('fragments_semaines').select('id, date_limite')
+    .from('semesters').select('id, fragments_premiere_semaine').eq('is_active', true).maybeSingle()
+  let reqSemaines = admin.from('fragments_semaines').select('id, date_limite, numero, is_vacation')
   if (semestreCourant) reqSemaines = reqSemaines.eq('semestre_id', semestreCourant.id)
   const { data: semaines } = await reqSemaines
+  // C8-L4 — même règle qu'à `utils/sante.ts`, et pour la même raison : la matrice
+  // de pilotage affiche « déposés / semaines échues ». Ni les vacances ni les
+  // semaines d'avant le seuil du semestre n'ont été réclamées à l'élève.
   const idsPassees = new Set(
-    (semaines ?? []).filter((s) => new Date(s.date_limite as string) < maintenant).map((s) => s.id as string),
+    semainesComptees(semaines ?? [], semestreCourant?.fragments_premiere_semaine ?? 1)
+      .filter((s) => new Date(s.date_limite as string) < maintenant)
+      .map((s) => s.id as string),
   )
   const nbSemainesPassees = idsPassees.size
 

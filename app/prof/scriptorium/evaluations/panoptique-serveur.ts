@@ -16,6 +16,7 @@ import 'server-only'
 import { createAdminClient } from '@/utils/supabase/admin'
 import { lundiOnOrBefore, toISODate, addDaysUTC } from '@/utils/calendrier-grille'
 import { jourDansFuseau } from '@/utils/fuseau'
+import { estSemaineComptee } from '@/utils/fragments-semaines'
 import { lireFuseau } from '@/utils/fuseau-serveur'
 import { lireGatePlanActif } from '@/utils/plan-exercices'
 import {
@@ -435,18 +436,29 @@ async function ajouterReflets(
   // Échéances hebdomadaires des semestres de l'AY (l'échéancier couvre les 2 semestres —
   // le patron élève ne lit QUE l'actif, ce qui perdrait la moitié de l'année ici).
   const { data: sems } = await admin.from('semesters')
-    .select('id').is('archived_at', null)
+    .select('id, fragments_premiere_semaine').is('archived_at', null)
     .gte('start_date', `${ay}-08-01`).lte('start_date', `${ay + 1}-07-31`)
   const semIds = (sems ?? []).map((s) => s.id as string)
   if (semIds.length === 0) return lundisFragment
+  // C8-L4 — le seuil est PAR SEMESTRE, et cette lecture en couvre DEUX : d'où une
+  // table, jamais une valeur unique. Le S1 saute la présentation et le choix des
+  // sujets, le S2 la seule semaine du changement — un seuil commun serait faux
+  // pour l'un des deux, et fausserait le budget de charge de tout un semestre.
+  const seuilParSemestre = new Map(
+    (sems ?? []).map((s) => [s.id as string, (s.fragments_premiere_semaine as number) ?? 1]),
+  )
   const { data: fs } = await admin.from('fragments_semaines')
-    .select('numero, date_limite').in('semestre_id', semIds).eq('is_vacation', false).not('date_limite', 'is', null)
+    .select('numero, date_limite, semestre_id, is_vacation')
+    .in('semestre_id', semIds).eq('is_vacation', false).not('date_limite', 'is', null)
   // `date_limite` est un INSTANT (fin de journée dans le fuseau de l'école) : le jour se
   // lit dans ce fuseau. Le tronquer donnerait le jour UTC, soit le LUNDI suivant à
   // Toronto — l'échéance basculerait d'une semaine dans le budget.
   const tz = await lireFuseau()
   for (const f of fs ?? []) {
     const numero = f.numero as number
+    // Aucun fragment n'est attendu avant que Fragments en réclame : ces semaines-là
+    // sortent du budget comme elles sortent du taux de dépôt.
+    if (!estSemaineComptee(f, seuilParSemestre.get(f.semestre_id as string) ?? 1)) continue
     // 'quinzaine' : une échéance sur deux comptée (parité du numéro) — la part Fragments
     // ne sature plus la chip pour le prof qui alterne réellement (§7.3).
     if (compter === 'quinzaine' && numero % 2 === 0) continue

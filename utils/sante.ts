@@ -1,4 +1,5 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
+import { semainesComptees } from './fragments-semaines'
 import { noteVersLettre } from './notation'
 
 // ----------------------------------------------------------------------------
@@ -93,12 +94,20 @@ export async function calculerSante(admin: SupabaseClient): Promise<Map<string, 
   // semaines des semestres précédents comptent à tort comme « dépôts manquants ».
   const maintenant = new Date()
   const { data: semestreCourant } = await admin
-    .from('semesters').select('id').eq('is_active', true).maybeSingle()
-  let reqSemaines = admin.from('fragments_semaines').select('id, date_limite')
+    .from('semesters').select('id, fragments_premiere_semaine').eq('is_active', true).maybeSingle()
+  let reqSemaines = admin.from('fragments_semaines').select('id, date_limite, numero, is_vacation')
   if (semestreCourant) reqSemaines = reqSemaines.eq('semestre_id', semestreCourant.id)
   const { data: semaines } = await reqSemaines
+  // C8-L4 — deux filtres, et AUCUN des deux n'était là. Cet écran fabrique le
+  // signal « élève à risque » : il ne doit réclamer que ce que Fragments réclame.
+  //  • les VACANCES sortent — sans ce filtre, chaque période passée ajoutait un
+  //    « dépôt manquant » à tout le monde, et pouvait franchir le seuil à elle seule ;
+  //  • les semaines d'avant le seuil du semestre sortent — présentation du
+  //    dispositif, choix des sujets : l'élève n'avait pas encore de thème.
   const idsSemainesPassees = new Set(
-    (semaines ?? []).filter((s) => new Date(s.date_limite) < maintenant).map((s) => s.id)
+    semainesComptees(semaines ?? [], semestreCourant?.fragments_premiere_semaine ?? 1)
+      .filter((s) => new Date(s.date_limite as string) < maintenant)
+      .map((s) => s.id)
   )
   const nbSemainesPassees = idsSemainesPassees.size
 

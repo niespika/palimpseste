@@ -3,6 +3,7 @@ import { createClient } from '@/utils/supabase/server'
 import { createAdminClient } from '@/utils/supabase/admin'
 import { contexteClasseEleve } from '../contexte-classe'
 import { slugsModulesAccessibles } from '@/utils/acces'
+import { semainesComptees } from '@/utils/fragments-semaines'
 import { calculerGrilleSemaines, lundiOnOrBefore, addDaysUTC, toISODate } from '@/utils/calendrier-grille'
 import { jourDansFuseau, formatJour } from '@/utils/fuseau'
 import { lireFuseau } from '@/utils/fuseau-serveur'
@@ -63,7 +64,7 @@ export default async function CalendrierEleve({
   const slugs = await slugsModulesAccessibles(supabase, user!.id)
 
   const admin = createAdminClient()
-  const { data: sem } = await admin.from('semesters').select('id, name, start_date, end_date').eq('is_active', true).maybeSingle()
+  const { data: sem } = await admin.from('semesters').select('id, name, start_date, end_date, fragments_premiere_semaine').eq('is_active', true).maybeSingle()
   const { data: hols } = sem ? await admin.from('holidays').select('label, start_date, end_date').eq('semester_id', sem.id) : { data: [] }
   const holidays = hols ?? []
   const grille = sem ? calculerGrilleSemaines(sem, holidays) : []
@@ -110,10 +111,14 @@ export default async function CalendrierEleve({
 
   // 2. Échéances hebdomadaires des Fragments (à rendre) du semestre, dans la fenêtre.
   //    Seulement si l'élève a accès à Fragments (la table est globale au semestre).
+  //    C8-L4 — et seulement à partir de la semaine où Fragments réclame vraiment.
+  //    Annoncer « Fragment S1 — à rendre » pendant qu'on présente le dispositif et
+  //    que l'élève n'a pas encore de sujet contredit le professeur dans son propre
+  //    calendrier : c'est l'endroit où le décalage se voit le plus vite.
   const { data: semaines } = sem && slugs.has('fragments-erudition')
-    ? await admin.from('fragments_semaines').select('numero, date_limite').eq('semestre_id', sem.id).eq('is_vacation', false).not('date_limite', 'is', null)
+    ? await admin.from('fragments_semaines').select('numero, date_limite, is_vacation').eq('semestre_id', sem.id).eq('is_vacation', false).not('date_limite', 'is', null)
     : { data: [] }
-  const fragments = (semaines ?? [])
+  const fragments = semainesComptees(semaines ?? [], sem?.fragments_premiere_semaine ?? 1)
     // date_limite est un INSTANT (fin de journée dans le fuseau de l'école) : le jour
     // se lit dans ce fuseau. Le tronquer à 10 caractères donnerait le jour UTC, donc
     // le LENDEMAIN à Toronto — l'échéance du dimanche s'afficherait le lundi.

@@ -3,6 +3,7 @@ import Link from 'next/link'
 import { createClient } from '@/utils/supabase/server'
 import { createAdminClient } from '@/utils/supabase/admin'
 import { inscriptionsModuleEleve } from '@/utils/acces'
+import { semainesComptees } from '@/utils/fragments-semaines'
 import { contexteClasseEleve } from '../../contexte-classe'
 import ChoixClasseModule from '../../ChoixClasseModule'
 import ModuleHorsClasse from '../../ModuleHorsClasse'
@@ -98,7 +99,7 @@ export default async function PageFragments({ searchParams }: { searchParams: Pr
   // n'a pas de sélecteur : il voit toujours le semestre marqué « courant ».
   const { data: semCourant } = await admin
     .from('semesters')
-    .select('id')
+    .select('id, fragments_premiere_semaine')
     .eq('is_active', true)
     .maybeSingle()
   let themeQuery = supabase
@@ -110,10 +111,13 @@ export default async function PageFragments({ searchParams }: { searchParams: Pr
 
   // Semaine ouverte (scopée au semestre actif : sinon une semaine restée ouverte
   // d'un semestre précédent pourrait s'afficher / être déposable).
+  // C8-L4 — `is_vacation = false` explicitement : cf. `app/eleve/page.tsx`, une
+  // semaine ouverte puis passée en vacances gagnerait le tri (`NULL` d'abord).
   let reqSemaine = supabase
     .from('fragments_semaines')
     .select('*')
     .eq('ouverte', true)
+    .eq('is_vacation', false)
   if (semCourant?.id) reqSemaine = reqSemaine.eq('semestre_id', semCourant.id)
   const { data: semaine } = await reqSemaine
     .order('numero', { ascending: false })
@@ -311,11 +315,18 @@ export default async function PageFragments({ searchParams }: { searchParams: Pr
     .maybeSingle()
 
   // ---- Données pour "Ton parcours" ----
-  // Toutes les semaines
-  const { data: toutesLessemaines } = await admin
+  // C8-L4 — les semaines DU SEMESTRE ACTIF, pas toutes celles de la base.
+  // Avant ce lot, cette lecture n'était scopée ni au semestre ni aux vacances :
+  // le parcours de l'élève et son pourcentage de dépôt se calculaient sur les
+  // semaines de TOUS les semestres jamais créés (71 lignes / 4 semestres au
+  // 25/08), semestres de test compris. Le pourcentage affiché était donc faux
+  // pour tout le monde, et d'autant plus faux que l'année avançait.
+  let reqToutes = admin
     .from('fragments_semaines')
-    .select('id, numero')
+    .select('id, numero, is_vacation')
     .order('numero')
+  if (semCourant?.id) reqToutes = reqToutes.eq('semestre_id', semCourant.id)
+  const { data: toutesLessemaines } = await reqToutes
 
   // Tous les dépôts de cet élève
   const { data: tousDepots } = await admin
@@ -353,7 +364,8 @@ export default async function PageFragments({ searchParams }: { searchParams: Pr
     : { data: [] }
 
   // Construire les points du graphique élève
-  const pointsParcours: PointSemaine[] = (toutesLessemaines ?? []).map(s => {
+  // C8-L4 — idem fiche prof : pas de point pour une semaine de vacances.
+  const pointsParcours: PointSemaine[] = (toutesLessemaines ?? []).filter(s => !s.is_vacation).map(s => {
     const depot = tousDepotParSemaine[s.id]
     const analyse = depot ? toutesAnalyseParDepot[depot.id] : null
     const oralData = oralParSemaine[s.id]
@@ -379,8 +391,15 @@ export default async function PageFragments({ searchParams }: { searchParams: Pr
   })
 
   // Stats parcours
-  const nbSemainesTotal = (toutesLessemaines ?? []).length
-  const nbDeposesTotal = (tousDepots ?? []).length
+  // Numérateur et dénominateur sur le MÊME ensemble — les semaines réclamées.
+  // Un fragment déposé avant qu'on en demande garde son retour et sa place sur la
+  // courbe ci-dessus ; il ne compte pas dans le pourcentage.
+  const idsComptees = new Set(
+    semainesComptees(toutesLessemaines ?? [], semCourant?.fragments_premiere_semaine ?? 1)
+      .map(s => s.id as string),
+  )
+  const nbSemainesTotal = idsComptees.size
+  const nbDeposesTotal = (tousDepots ?? []).filter(d => idsComptees.has(d.semaine_id as string)).length
   const analysesAvecNotes = (toutesAnalyses ?? []).filter(a =>
     a.note_decouvertes !== null && a.note_sources !== null && a.note_reflexions !== null
   )

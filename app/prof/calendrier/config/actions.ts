@@ -313,6 +313,47 @@ export async function archiverSemestre(id: string): Promise<{ error?: string }> 
   return {}
 }
 
+/**
+ * C8-L4 — pose la première semaine où Fragments réclame un fragment, sur UN
+ * semestre. `1` = aucun décalage (état neutre, défaut de la colonne).
+ *
+ * Le réglage vit sur le semestre et pas dans `fragments_config` parce qu'il n'est
+ * pas le même des deux côtés de l'année : au S1 on présente le dispositif PUIS on
+ * choisit les sujets (deux semaines), au S2 les sujets existent déjà et seule la
+ * semaine du changement saute. Un réglage global serait faux pour l'un des deux.
+ *
+ * ⚠️ Aucune donnée n'est réécrite : les dépôts déjà faits dans une semaine qui
+ * sort du comptage gardent leur retour, leurs notes et leur place sur la courbe.
+ * Seuls les RATIOS bougent, et ils se recalculent à la lecture.
+ */
+export async function poserPremiereSemaineFragments(
+  semestreId: string,
+  premiereSemaine: number,
+): Promise<{ error?: string }> {
+  const { supabase } = await verifierProf()
+  if (!Number.isInteger(premiereSemaine) || premiereSemaine < 1 || premiereSemaine > 52) {
+    return { error: 'La première semaine comptée doit être un entier entre 1 et 52.' }
+  }
+  const { data: sem } = await supabase
+    .from('semesters').select('id').eq('id', semestreId).maybeSingle()
+  if (!sem) return { error: 'Semestre introuvable.' }
+  const { error } = await supabase
+    .from('semesters')
+    .update({ fragments_premiere_semaine: premiereSemaine })
+    .eq('id', semestreId)
+  // La colonne peut manquer si la migration n'est pas jouée : le dire en clair
+  // plutôt que de laisser un bouton qui ne fait rien.
+  if (error) {
+    return {
+      error: /fragments_premiere_semaine/.test(error.message)
+        ? 'Colonne absente — la migration c8_l4_premiere_semaine.sql n’est pas encore jouée sur cette base.'
+        : error.message,
+    }
+  }
+  revaliderSemaines()
+  return {}
+}
+
 /** Archive les DEUX semestres d'une année d'un coup (l'archivage porte sur l'année). */
 export async function archiverAnnee(ay: number): Promise<{ error?: string }> {
   const { supabase } = await verifierProf()
@@ -592,11 +633,12 @@ async function synchroniserSemaines(
   // pas coûter un aller-retour d'écriture (une vingtaine par semestre, sinon).
   const { data: existing } = await supabase
     .from('fragments_semaines')
-    .select('id, date_debut, end_date, date_limite, numero, pedagogical_number, is_vacation')
+    .select('id, date_debut, end_date, date_limite, numero, pedagogical_number, is_vacation, ouverte')
     .eq('semestre_id', semestreId)
   type Ligne = {
     id: string; date_debut: string; end_date: string | null; date_limite: string | null
     numero: number | null; pedagogical_number: number | null; is_vacation: boolean
+    ouverte: boolean
   }
   const lignes = (existing ?? []) as unknown as Ligne[]
   const parDebut = new Map(lignes.map((w) => [w.date_debut, w]))
@@ -614,10 +656,26 @@ async function synchroniserSemaines(
       // Une semaine de travail déjà stockée qui passe en vacances (ajout/extension
       // d'une période) : la marquer vacance + retirer son numéro pédagogique, sans
       // la supprimer (d'éventuels dépôts restent rattachés). Pas de création.
-      if (ligne && !(ligne.is_vacation && ligne.pedagogical_number === null)) {
+      //
+      // ⭐ C8-L4 — TROIS clés retirées, pas une. Ce bloc ne remettait à `null` que
+      // `pedagogical_number` et laissait DEUX mensonges derrière lui :
+      //  • `numero` gardait sa valeur d'avant — or les deux colonnes portent la
+      //    MÊME grandeur (voir plus bas : le sync leur écrit la même). Résultat
+      //    constaté en base le 25/08 : les numéros 10, 13, 14 et 17 du semestre
+      //    actif existaient EN DOUBLE, et l'axe du graphique de progression d'un
+      //    élève affichait « S10 S10 … S13 S13 ». `numero` est devenu nullable
+      //    pour pouvoir dire la vérité (`c8_l4_numero_vacances.sql`).
+      //  • `ouverte` restait à `true` si le professeur avait déjà ouvert la
+      //    semaine — une semaine de vacances OUVERTE au dépôt. Et comme
+      //    PostgreSQL classe les `NULL` EN PREMIER en `order by … desc`, elle
+      //    aurait de surcroît gagné la sélection de « la semaine courante ».
+      const dejaPropre =
+        ligne?.is_vacation && ligne.pedagogical_number === null &&
+        ligne.numero === null && ligne.ouverte === false
+      if (ligne && !dejaPropre) {
         const { error } = await supabase
           .from('fragments_semaines')
-          .update({ is_vacation: true, pedagogical_number: null })
+          .update({ is_vacation: true, pedagogical_number: null, numero: null, ouverte: false })
           .eq('id', ligne.id)
         if (error) return { error: error.message }
         revues++

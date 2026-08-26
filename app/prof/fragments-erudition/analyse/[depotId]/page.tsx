@@ -94,7 +94,8 @@ export default async function PageAnalyse({
   const depotSuivant = indexActuel < depotIds.length - 1 ? depotIds[indexActuel + 1] : null
 
   const titreSemaine = semaine
-    ? `Semaine ${semaine.numero}${semaine.titre ? ` — ${semaine.titre}` : ''}`
+    // C8-L4 — `numero` est nullable : une semaine de vacances n'en a pas.
+    ? `Semaine ${semaine.numero ?? '?'}${semaine.titre ? ` — ${semaine.titre}` : ''}`
     : 'Analyse'
 
   return (

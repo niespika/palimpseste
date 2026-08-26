@@ -104,10 +104,14 @@ export default async function TableauDeBordEleve() {
     // Semaine ouverte scopée au semestre actif (évite une semaine restée ouverte
     // d'un semestre précédent). Globale au semestre : une seule lecture.
     const { data: semActif } = await supabase.from('semesters').select('id').eq('is_active', true).maybeSingle()
+    // C8-L4 — `is_vacation = false` explicitement : une semaine ouverte AVANT de
+    // devenir vacance gardait son drapeau, et `order by numero desc` classe les
+    // `NULL` EN PREMIER sous PostgreSQL — elle gagnerait donc la sélection.
     let reqSemaine = supabase
       .from('fragments_semaines')
       .select('id, numero, date_limite')
       .eq('ouverte', true)
+      .eq('is_vacation', false)
     if (semActif?.id) reqSemaine = reqSemaine.eq('semestre_id', semActif.id)
     const { data: semaine } = await reqSemaine
       .order('numero', { ascending: false })

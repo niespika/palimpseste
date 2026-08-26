@@ -112,7 +112,7 @@ export default async function PageVueSemaine({
       <div className="bg-surface border border-bordure rounded-xl px-5 py-4 flex items-center justify-between">
         <div>
           <p className="font-medium text-encre">
-            Semaine {semaine.numero}{semaine.titre ? ` — ${semaine.titre}` : ''}
+            Semaine {semaine.numero ?? '?'}{semaine.titre ? ` — ${semaine.titre}` : ''}
           </p>
           <p className="text-sm text-muet mt-0.5">Date limite : fin du {formatDate(semaine.date_limite, tz)}</p>
         </div>

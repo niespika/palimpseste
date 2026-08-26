@@ -11,6 +11,7 @@ import {
   restaurerAnnee,
   supprimerAnnee,
   regenererSemaines,
+  poserPremiereSemaineFragments,
 } from './actions'
 import ChampDate from './ChampDate'
 
@@ -34,6 +35,12 @@ export interface SemestreAnnee {
   nbVacances: number
   semaineCourante: number
   termine: boolean
+  /**
+   * C8-L4 — première semaine pédagogique où Fragments réclame un fragment.
+   * 1 = aucun décalage. Le S1 saute la présentation ET le choix des sujets ;
+   * le S2 la seule semaine du changement de sujet.
+   */
+  premiereSemaine: number
 }
 
 export interface AnneeArchivee {
@@ -51,12 +58,15 @@ function CarteSemestre({
   rang,
   busy,
   onGenerer,
+  onPremiereSemaine,
   onArchiver,
 }: {
   s: SemestreAnnee
   rang: number
   busy: boolean
   onGenerer: () => void
+  /** C8-L4 — pose la première semaine comptée par Fragments sur CE semestre. */
+  onPremiereSemaine: (n: number) => void
   /** Uniquement dans la branche « trois semestres ou plus » : archiver un surnuméraire. */
   onArchiver?: () => void
 }) {
@@ -128,6 +138,37 @@ function CarteSemestre({
           Porte le drapeau actif — c’est ce semestre que lisent Fragments et Quazian.
         </div>
       )}
+
+      {/* C8-L4 — Fragments ne réclame pas dès la première semaine : on présente le
+          dispositif, puis chacun choisit son sujet. Les semaines d'avant ce numéro
+          sortent du taux de dépôt, des « dépôts manquants » et du budget de charge —
+          elles gardent en revanche leurs dépôts, leurs retours et leurs notes. */}
+      <div className="flex items-center gap-2 flex-wrap mt-2">
+        <label
+          htmlFor={`premsem-${s.id}`}
+          className="font-ui text-[12.5px] text-muet"
+        >
+          Fragments compte à partir de la semaine
+        </label>
+        <select
+          id={`premsem-${s.id}`}
+          value={s.premiereSemaine}
+          disabled={busy}
+          onChange={(e) => onPremiereSemaine(Number(e.target.value))}
+          className="font-ui text-[13px] text-encre bg-surface border border-bordure-bouton rounded-md px-2 py-1 disabled:opacity-50"
+        >
+          {[1, 2, 3, 4, 5, 6].map((n) => (
+            <option key={n} value={n}>{n}</option>
+          ))}
+        </select>
+        {s.premiereSemaine > 1 && (
+          <span className="text-[12.5px] text-muet-clair italic">
+            les {s.premiereSemaine - 1} première{s.premiereSemaine > 2 ? 's' : ''} semaine
+            {s.premiereSemaine > 2 ? 's' : ''} ne {s.premiereSemaine > 2 ? 'sont' : 'est'} pas
+            réclamée{s.premiereSemaine > 2 ? 's' : ''}
+          </span>
+        )}
+      </div>
 
       {aGenerer && (
         <div className="flex items-center gap-2.5 flex-wrap mt-2">
@@ -484,6 +525,14 @@ export default function EcranAnnee({
                 rang={i}
                 busy={busy}
                 onGenerer={() => agir(() => regenererSemaines(s.id), 'Semaines générées.')}
+                onPremiereSemaine={(n) =>
+                  agir(
+                    () => poserPremiereSemaineFragments(s.id, n),
+                    n === 1
+                      ? `« ${s.name} » : Fragments compte toutes les semaines.`
+                      : `« ${s.name} » : Fragments compte à partir de la semaine ${n}.`,
+                  )
+                }
                 onArchiver={() =>
                   agir(() => archiverSemestre(s.id), `« ${s.name} » archivé.`)
                 }
@@ -643,6 +692,14 @@ export default function EcranAnnee({
                   rang={i}
                   busy={busy}
                   onGenerer={() => agir(() => regenererSemaines(s.id), 'Semaines générées.')}
+                  onPremiereSemaine={(n) =>
+                    agir(
+                      () => poserPremiereSemaineFragments(s.id, n),
+                      n === 1
+                        ? `« ${s.name} » : Fragments compte toutes les semaines.`
+                        : `« ${s.name} » : Fragments compte à partir de la semaine ${n}.`,
+                    )
+                  }
                 />
               ))}
               <p className="italic text-[12.5px] text-muet-clair px-1 m-0">

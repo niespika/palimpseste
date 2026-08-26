@@ -71,7 +71,9 @@ export async function etatOngletsFragmentsEleve(
     .from('semesters').select('id').eq('is_active', true).maybeSingle()
 
   // ── Écrit : semaine ouverte, dépôt de l'élève, dernier retour lu ou non ──
-  let reqSemaine = supabase.from('fragments_semaines').select('id').eq('ouverte', true)
+  // C8-L4 — `is_vacation = false` explicitement : cf. `app/eleve/page.tsx`.
+  let reqSemaine = supabase
+    .from('fragments_semaines').select('id').eq('ouverte', true).eq('is_vacation', false)
   if (semCourant?.id) reqSemaine = reqSemaine.eq('semestre_id', semCourant.id)
   const { data: semaine } = await reqSemaine.order('numero', { ascending: false }).limit(1).maybeSingle()
 

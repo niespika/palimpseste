@@ -13,6 +13,13 @@ export interface SemestreRef {
   id: string
   label: string
   courant: boolean
+  /**
+   * C8-L4 — numéro de la première semaine pédagogique où Fragments réclame un
+   * fragment (1 = aucun décalage). Porté par le semestre, jamais global : le S1
+   * saute la présentation ET le choix des sujets, le S2 la seule semaine du
+   * changement de sujet.
+   */
+  premiereSemaine: number
 }
 
 export interface ContexteSemestre {
@@ -25,7 +32,7 @@ export async function semestreFragmentsActif(
 ): Promise<ContexteSemestre> {
   const { data } = await supabase
     .from('semesters')
-    .select('id, label:name, courant:is_active')
+    .select('id, label:name, courant:is_active, premiereSemaine:fragments_premiere_semaine')
     .order('start_date', { ascending: false })
 
   const semestres = (data ?? []) as SemestreRef[]

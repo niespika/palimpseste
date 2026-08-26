@@ -14,6 +14,11 @@ export interface Semestre {
   // Archivage (migration calendrier_config_archivage.sql). `null` = vivant.
   // Optionnel tant que la migration n'est pas appliquée (le code dégrade en null).
   archived_at?: string | null
+  // C8-L4 — numéro de la première semaine pédagogique où Fragments réclame un
+  // fragment (migration c8_l4_premiere_semaine.sql). 1 = aucun décalage.
+  // Optionnel au même titre qu'`archived_at` : absent, le code dégrade vers 1,
+  // c'est-à-dire le comportement d'avant le lot.
+  fragments_premiere_semaine?: number
 }
 
 export interface Holiday {

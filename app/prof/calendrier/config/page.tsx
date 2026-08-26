@@ -4,6 +4,7 @@ import type { Semestre, Holiday } from '@/types/calendrier'
 import { lireFuseau } from '@/utils/fuseau-serveur'
 import { FUSEAUX, jourDansFuseau } from '@/utils/fuseau'
 import { calculerGrilleSemaines, semestreActifAttendu } from '@/utils/calendrier-grille'
+import { premiereSemaineComptee } from '@/utils/fragments-semaines'
 import { anneeScolaireDe, libelleAnneeScolaire } from '@/utils/frise-enseignement'
 import RailConfig from './RailConfig'
 import EcranAnnee, { type SemestreAnnee, type AnneeArchivee } from './EcranAnnee'
@@ -41,7 +42,7 @@ export default async function CalendrierConfigPage({
   // on dégrade en traitant tous les semestres comme non archivés (page fonctionnelle).
   const semRes = await supabase
     .from('semesters')
-    .select('id, name, start_date, end_date, is_active, created_at, archived_at')
+    .select('id, name, start_date, end_date, is_active, created_at, archived_at, fragments_premiere_semaine')
     .order('start_date', { ascending: false })
   let semestres: Semestre[]
   if (semRes.error) {
@@ -231,6 +232,9 @@ export default async function CalendrierConfigPage({
     start_date: s.start_date,
     end_date: s.end_date,
     actif: s.id === actifId,
+    // C8-L4 — repli sur 1 (état neutre) quand la migration n'est pas encore jouée :
+    // même tolérance qu'`archived_at`, le fallback de la requête ne lit pas la colonne.
+    premiereSemaine: premiereSemaineComptee(s.fragments_premiere_semaine),
     ...infosParSem.get(s.id)!,
   }))
 

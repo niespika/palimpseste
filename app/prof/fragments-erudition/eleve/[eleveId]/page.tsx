@@ -4,6 +4,7 @@ import { createAdminClient } from '@/utils/supabase/admin'
 import { createClient } from '@/utils/supabase/server'
 import { inscriptionEleveClasse, classesAvecModule } from '@/utils/acces'
 import { semestreFragmentsActif } from '../../contexte-semestre'
+import { semainesComptees } from '@/utils/fragments-semaines'
 import { noteVersLettre } from '@/utils/notation'
 import GraphiqueProgression from '@/components/fragments/GraphiqueProgression'
 import type { PointSemaine } from '@/components/fragments/GraphiqueProgression'
@@ -68,11 +69,17 @@ export default async function PageEleveDetail({
   // avec la vue d'ensemble qui est, elle, scopée au semestre).
   let semainesQuery = admin
     .from('fragments_semaines')
-    .select('id, numero, titre, date_debut, date_limite')
+    .select('id, numero, titre, date_debut, date_limite, is_vacation')
     .order('numero')
   if (semestre) semainesQuery = semainesQuery.eq('semestre_id', semestre.id)
   const { data: semaines } = await semainesQuery
   const semaineIdsSemestre = new Set((semaines ?? []).map(s => s.id as string))
+  // C8-L4 — le TAUX ne se calcule que sur les semaines que Fragments a réclamées.
+  // Avant ce lot, le dénominateur prenait toutes les lignes du semestre, VACANCES
+  // COMPRISES : chaque période de vacances faisait baisser le taux de tout le monde.
+  const idsComptees = new Set(
+    semainesComptees(semaines ?? [], semestre?.premiereSemaine ?? 1).map(s => s.id as string),
+  )
 
   // Dépôts de cette inscription, restreints aux semaines du semestre consulté.
   const { data: depotsTous } = await admin
@@ -155,7 +162,9 @@ export default async function PageEleveDetail({
   const nbPresentations = (presentationsEleve ?? []).filter(p => p.statut === 'presente').length
 
   // Construire les points du graphique
-  const points: PointSemaine[] = (semaines ?? []).map(s => {
+  // C8-L4 — les semaines de vacances sortent de la courbe. Elles y traçaient un
+  // point vide, et depuis que `numero` y est `null` elles n'ont plus d'abscisse.
+  const points: PointSemaine[] = (semaines ?? []).filter(s => !s.is_vacation).map(s => {
     const depot = depotParSemaine[s.id]
     const analyse = depot ? analyseParDepot[depot.id] : null
     const oralData = oralParSemaine[s.id]
@@ -181,8 +190,11 @@ export default async function PageEleveDetail({
 
   // Statistiques
   const analysesPubliees = (analyses ?? [])
-  const nbSemaines = (semaines ?? []).length
-  const nbDeposes = (depots ?? []).length
+  // Numérateur et dénominateur sur le MÊME ensemble : un fragment déposé hors des
+  // semaines réclamées garde son retour et ses notes (il reste dans `depots`), mais
+  // il ne fait pas monter un taux au-dessus de 100 %.
+  const nbSemaines = idsComptees.size
+  const nbDeposes = (depots ?? []).filter(d => idsComptees.has(d.semaine_id as string)).length
   const tauxDepot = nbSemaines > 0 ? Math.round((nbDeposes / nbSemaines) * 100) : 0
   const nbEnRetard = (depots ?? []).filter(d => d.statut === 'en_retard').length
 

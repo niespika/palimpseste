@@ -8,6 +8,7 @@ import DetailClasse, { type LigneEleve } from '@/components/classes/DetailClasse
 import CourbeEvolution, { type PointCourbe } from '@/components/CourbeEvolution'
 import { noteVersLettre, COULEUR_LETTRE } from '@/utils/notation'
 import LigneThemeEleve, { type ThemeEleve } from './LigneThemeEleve'
+import { semainesComptees } from '@/utils/fragments-semaines'
 import BoutonActiverClasse from './BoutonActiverClasse'
 
 // ---------------------------------------------------------------------------
@@ -54,11 +55,21 @@ export default async function PageSuivi({ searchParams }: { searchParams: Promis
   const { data: moduleData } = await admin.from('modules').select('id').eq('slug', 'fragments-erudition').maybeSingle()
   const classes = (moduleData && semestre) ? await classesAvecModule(admin, moduleData.id) : []
 
+  // C8-L4 — DEUX ensembles, et c'est volontaire (patron `utils/synthese-semestre.ts`) :
+  //  • `semaineIds` — l'APPARTENANCE, inchangée : les semaines de travail du
+  //    semestre. C'est elle qui borne les dépôts dont on lit les NOTES et qui
+  //    nourrit la courbe — un fragment déposé en semaine 2 garde son retour et
+  //    pèse dans les moyennes, exactement comme avant le lot.
+  //  • `semaineIdsComptees` — ce que Fragments A RÉCLAMÉ : le dénominateur ET le
+  //    numérateur du taux de dépôt, et rien d'autre.
   const { data: semaines } = semestre
-    ? await admin.from('fragments_semaines').select('id, numero').eq('semestre_id', semestre.id).eq('is_vacation', false)
+    ? await admin.from('fragments_semaines').select('id, numero, is_vacation').eq('semestre_id', semestre.id)
     : { data: [] }
-  const nbSemaines = (semaines ?? []).length
-  const semaineIds = new Set((semaines ?? []).map(s => s.id as string))
+  const semainesTravail = (semaines ?? []).filter(s => !s.is_vacation)
+  const comptees = semainesComptees(semaines ?? [], semestre?.premiereSemaine ?? 1)
+  const nbSemaines = comptees.length
+  const semaineIds = new Set(semainesTravail.map(s => s.id as string))
+  const semaineIdsComptees = new Set(comptees.map(s => s.id as string))
   const numeroParSemaine = new Map((semaines ?? []).map(s => [s.id as string, s.numero as number]))
 
   if (!semestre || classes.length === 0) {
@@ -105,11 +116,19 @@ export default async function PageSuivi({ searchParams }: { searchParams: Promis
       ? await admin.from('fragments_depots').select('id, inscription_id, semaine_id').in('inscription_id', inscriptionIds)
       : { data: [] }
     const depotsSemestre = (depots ?? []).filter(d => semaineIds.has(d.semaine_id as string))
-    const depotParInsc = new Map<string, string[]>() // inscription → depotIds
+    const depotParInsc = new Map<string, string[]>() // inscription → depotIds (NOTES)
+    // C8-L4 — le NUMÉRATEUR du taux se compte à part : il ne retient que les
+    // dépôts tombant dans une semaine réclamée. Les compter tous donnerait un
+    // taux au-dessus de 100 % pour l'élève qui a déposé avant qu'on demande.
+    const depotsComptesParInsc = new Map<string, number>()
     for (const d of depotsSemestre) {
-      const arr = depotParInsc.get(d.inscription_id as string) ?? []
+      const insc = d.inscription_id as string
+      const arr = depotParInsc.get(insc) ?? []
       arr.push(d.id as string)
-      depotParInsc.set(d.inscription_id as string, arr)
+      depotParInsc.set(insc, arr)
+      if (semaineIdsComptees.has(d.semaine_id as string)) {
+        depotsComptesParInsc.set(insc, (depotsComptesParInsc.get(insc) ?? 0) + 1)
+      }
     }
     const depotIds = depotsSemestre.map(d => d.id as string)
     const { data: analyses } = depotIds.length > 0
@@ -138,7 +157,9 @@ export default async function PageSuivi({ searchParams }: { searchParams: Promis
         inscriptionId,
         theme: t ? { theme: t.theme, description: t.description, essai_actif: t.essai_actif } : null,
         moy: { decouvertes: moyenne(ds), sources: moyenne(ss), reflexions: moyenne(rs) },
-        tauxDepot: nbSemaines > 0 ? Math.round((dIds.length / nbSemaines) * 100) : 0,
+        tauxDepot: nbSemaines > 0
+          ? Math.round(((depotsComptesParInsc.get(inscriptionId) ?? 0) / nbSemaines) * 100)
+          : 0,
       }
     })
 

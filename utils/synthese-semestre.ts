@@ -1,6 +1,7 @@
 import Anthropic from '@anthropic-ai/sdk'
 import { createAdminClient } from '@/utils/supabase/admin'
 import { RUBRIQUE_DEFAUT } from '@/utils/rubrique'
+import { semainesComptees } from '@/utils/fragments-semaines'
 import { formatJour } from '@/utils/fuseau'
 
 export const PROMPT_SYNTHESE_DEFAUT = `Tu es l'assistant pédagogique d'un professeur de philosophie et d'humanités dans un lycée français. Tu rédiges le bilan de fin de semestre du travail de « fragments d'érudition » d'un élève : son travail écrit hebdomadaire ET, le cas échéant, sa présentation orale. Tu disposes de toutes les analyses du semestre.
@@ -59,7 +60,7 @@ export async function genererSynthesePourEleve(inscriptionId: string, semestreId
 
   const { data: semestre } = await admin
     .from('semesters')
-    .select('id, label:name, date_debut:start_date, date_fin:end_date')
+    .select('id, label:name, date_debut:start_date, date_fin:end_date, premiereSemaine:fragments_premiere_semaine')
     .eq('id', semestreId)
     .single()
 
@@ -127,8 +128,13 @@ export async function genererSynthesePourEleve(inscriptionId: string, semestreId
     //    travail. Sans ce filtre, chaque période de vacances saisie après la
     //    génération gonflait le dénominateur et faisait baisser le taux de tous les
     //    élèves. Même filtre que vue-ensemble, panoptique-serveur et l'écran prof.
+    //  ⭐ C8-L4 — le dénominateur se resserre d'un cran de plus : les semaines
+    //    d'avant le seuil du semestre n'ont jamais été réclamées. Ce taux ne reste
+    //    pas à l'écran, il part dans le DOSSIER envoyé au modèle : un « 4/6 » là où
+    //    la vérité est « 4/4 » fait écrire au bilan une assiduité en défaut.
     const semaineIdsSemestre = new Set((semainesSemestre ?? []).map(s => s.id as string))
-    const semainesTravail = (semainesSemestre ?? []).filter(s => !s.is_vacation)
+    const semainesTravail = semainesComptees(semainesSemestre ?? [], semestre.premiereSemaine)
+    const semaineIdsComptees = new Set(semainesTravail.map(s => s.id as string))
 
     // Dépôts de cette inscription restreints aux semaines du semestre.
     const { data: depotsTous } = await admin
@@ -137,9 +143,14 @@ export async function genererSynthesePourEleve(inscriptionId: string, semestreId
       .eq('inscription_id', inscriptionId)
     const depotsInterval = (depotsTous ?? []).filter(d => semaineIdsSemestre.has(d.semaine_id as string))
 
+    // Numérateur et dénominateur sur le MÊME ensemble. `depotsInterval` reste
+    // large — c'est lui qui porte les analyses, les notes et le dossier de l'élève ;
+    // seul le ratio se resserre. Et un fragment qu'on n'a pas demandé ne peut pas
+    // être « en retard » : le décompte des retards se resserre avec lui.
+    const depotsComptes = depotsInterval.filter(d => semaineIdsComptees.has(d.semaine_id as string))
     const nbSemainesAttendues = semainesTravail.length
-    const nbDeposes = depotsInterval.length
-    const nbRetards = depotsInterval.filter(d => d.statut === 'en_retard').length
+    const nbDeposes = depotsComptes.length
+    const nbRetards = depotsComptes.filter(d => d.statut === 'en_retard').length
     const tauxDepot = nbSemainesAttendues > 0
       ? `${nbDeposes}/${nbSemainesAttendues} (${Math.round((nbDeposes / nbSemainesAttendues) * 100)}%)`
       : '0/0'
