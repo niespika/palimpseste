@@ -21,7 +21,7 @@ import { garderProf } from '@/utils/fabrique/acces'
 import { concevoirExamenDiagnostique } from '@/utils/examens/conception'
 import { MODULES_EXAMEN, type ModuleExamen } from '@/utils/examens/types'
 import { CHAMPS_IDENTITE, ecartsDIdentite, tracesPresentes } from '@/utils/examens/deplacement'
-import { depotPorteDuTravail, type DepotPourRetrait } from '@/utils/examens/retrait'
+import { depotPorteDuContenu, type DepotPourRetrait } from '@/utils/examens/retrait'
 
 export interface RetourExamen {
   ok: boolean
@@ -174,12 +174,18 @@ export async function deplacerDepotVersExercice(
   if (eDeja) return { ok: false, message: `Vérification impossible : ${eDeja.message}` }
   if (surLaCible) {
     const occupant = surLaCible as unknown as DepotPourRetrait & { id: string }
-    if (depotPorteDuTravail(occupant)) {
-      return { ok: false, message: 'Cet élève a DÉJÀ une copie sur l’exercice cible. Les deux ne '
-        + 'peuvent pas fusionner toutes seules — c’est à toi de choisir laquelle garder.' }
+    // ⭐ L'occupant se juge SUR SON CONTENU, pas sur son statut (décision de Louis,
+    //    25/08). Un dépôt seulement OUVERT — l'élève a regardé le doublon sans rien
+    //    y écrire — cède la place. Bloquer là-dessus rendait la réunion
+    //    structurellement inutile : dans une classe, presque tous auront ouvert le
+    //    doublon. Un BROUILLON, lui, bloque toujours : il porte du contenu.
+    if (depotPorteDuContenu(occupant)) {
+      return { ok: false, message: 'Cet élève a DÉJÀ écrit quelque chose sur l’exercice cible. '
+        + 'Les deux ne peuvent pas fusionner toutes seules — c’est à toi de choisir laquelle garder.' }
     }
-    // Vierge : la place est libérée. Rien ne pend dessous (mêmes cascades qu'au
-    // retrait, et les mesures sont en NO ACTION : la base refuserait sinon).
+    // Sans contenu : la place est libérée. Rien d'écrit ne disparaît (mêmes
+    // cascades qu'au retrait, et les mesures sont en NO ACTION : la base
+    // refuserait si une mesure pendait à ce dépôt).
     const { error: eLib } = await admin.from('exercices_depots').delete().eq('id', occupant.id)
     if (eLib) return { ok: false, message: `Place non libérable sur la cible : ${eLib.message}` }
   }

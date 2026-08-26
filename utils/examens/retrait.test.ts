@@ -11,7 +11,10 @@
 
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { depotPorteDuTravail, depotsQuiBloquent, type DepotPourRetrait } from './retrait'
+import {
+  depotPorteDuContenu, depotPorteDuTravail, depotsQuiBloquent,
+  type DepotPourRetrait,
+} from './retrait'
 
 /** Un dépôt tel qu'il naît à l'assignation : statut par défaut, tout à null. */
 const nu = (statut = 'assigne'): DepotPourRetrait => ({
@@ -86,4 +89,35 @@ test('le compte ne retient que les dépôts qui portent quelque chose', () => {
     { ...nu(), photos_v1: [] },
   ]
   assert.equal(depotsQuiBloquent(lot), 2)
+})
+
+// ── Le CONTENU seul — la question de la place à céder (décision de Louis, 25/08) ──
+//  ⭐ Deux questions distinctes, et c'est le cœur de l'affaire :
+//     · SUPPRIMER L'EXERCICE → `depotPorteDuTravail` (le statut compte : la
+//       télémétrie pend au dépôt et disparaîtrait avec lui) ;
+//     · LIBÉRER UNE PLACE pour une copie qui arrive → `depotPorteDuContenu`
+//       (seul compte ce qu'on détruirait d'ÉCRIT).
+//     Les confondre bloquait la réunion dans le cas même qu'elle vise : dans une
+//     classe, presque tous les élèves auront OUVERT le doublon sans y écrire.
+
+test('⭐ un dépôt seulement OUVERT ne porte aucun contenu — il cède la place', () => {
+  assert.equal(depotPorteDuContenu(nu('ouvert')), false)
+  // …alors qu'il empêche toujours de SUPPRIMER l'exercice entier.
+  assert.equal(depotPorteDuTravail(nu('ouvert')), true)
+})
+
+test('⚠️ mais un BROUILLON bloque la place, quel que soit son statut', () => {
+  assert.equal(depotPorteDuContenu({ ...nu('ouvert'), texte_v1: 'un début de copie' }), true)
+  assert.equal(depotPorteDuContenu({ ...nu('assigne'), photos_v1: [{ chemin: 'a.jpg' }] }), true)
+})
+
+test('une copie remise bloque la place — les deux ne fusionnent pas seules', () => {
+  assert.equal(depotPorteDuContenu({ ...nu('v1_remis'), texte_v1: 'la copie' }), true)
+})
+
+test('le contenu ignore le statut, dans les DEUX sens', () => {
+  // Statut avancé mais rien d'écrit → la place se libère.
+  assert.equal(depotPorteDuContenu(nu('vf_remis')), false)
+  // Statut nu mais quelque chose d'écrit → la place ne se libère pas.
+  assert.equal(depotPorteDuContenu({ ...nu('assigne'), transcription_v1: 'lu' }), true)
 })

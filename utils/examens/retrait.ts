@@ -58,15 +58,21 @@ function porteQuelqueChose(v: unknown): boolean {
 }
 
 /**
- * Ce dépôt porte-t-il du travail d'élève ?
+ * Ce dépôt porte-t-il quelque chose que l'élève a ÉCRIT ?
  *
- * Vrai dès que l'une des deux conditions tient — le statut a dépassé
- * l'assignation, OU un champ de contenu n'est pas vide. Les deux sont
- * nécessaires : un statut peut rester `assigne` alors qu'un brouillon est là,
- * et un statut avancé peut précéder l'écriture.
+ * Le contenu seul — sans regarder le statut. C'est la question la plus étroite,
+ * et elle a son emploi propre : quand un dépôt doit CÉDER SA PLACE à un autre
+ * (réunion de deux conceptions du même examen, `deplacement.ts`), ce qui
+ * compte est ce qu'on détruirait, pas l'étape où il en était.
+ *
+ * ⭐ Décision de Louis, 25/08 : un dépôt qu'un élève a seulement OUVERT sans
+ *    rien y écrire cède la place. Ce qu'on perd alors — la trace qu'il a ouvert
+ *    un exercice en double — est du bruit, pas du travail. Sans cela la réunion
+ *    serait structurellement inutile : dans une classe, presque tous les élèves
+ *    auront ouvert le doublon, donc presque aucune copie ne pourrait rejoindre
+ *    l'autre conception.
  */
-export function depotPorteDuTravail(d: DepotPourRetrait): boolean {
-  if (!STATUTS_SANS_TRAVAIL.has(d.statut)) return true
+export function depotPorteDuContenu(d: DepotPourRetrait): boolean {
   return (
     porteQuelqueChose(d.texte_v1) ||
     porteQuelqueChose(d.texte_vf) ||
@@ -75,6 +81,24 @@ export function depotPorteDuTravail(d: DepotPourRetrait): boolean {
     porteQuelqueChose(d.photos_v1) ||
     porteQuelqueChose(d.photos_vf)
   )
+}
+
+/**
+ * Ce dépôt porte-t-il du travail d'élève ?
+ *
+ * Vrai dès que l'une des deux conditions tient — le statut a dépassé
+ * l'assignation, OU un champ de contenu n'est pas vide. Les deux sont
+ * nécessaires : un statut peut rester `assigne` alors qu'un brouillon est là,
+ * et un statut avancé peut précéder l'écriture.
+ *
+ * ⚠️ PLUS LARGE que `depotPorteDuContenu`, et à dessein : ici on décide de
+ *    SUPPRIMER L'EXERCICE ENTIER, pas de libérer une place. Le statut compte
+ *    alors, parce que la télémétrie de saisie et le compteur d'aide pendent au
+ *    dépôt et disparaîtraient avec lui.
+ */
+export function depotPorteDuTravail(d: DepotPourRetrait): boolean {
+  if (!STATUTS_SANS_TRAVAIL.has(d.statut)) return true
+  return depotPorteDuContenu(d)
 }
 
 /** Combien de dépôts empêchent le retrait. `0` = l'instance est vierge. */
