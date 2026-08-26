@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { supprimerConceptionOrpheline } from '@/app/prof/examens-diagnostiques/actions'
+import { phraseEtat, type EtatDeConception } from '@/utils/examens/residu'
 
 // ---------------------------------------------------------------------------
 // SUPPRIMER UNE CONCEPTION HORS PLAN.
@@ -18,7 +19,7 @@ import { supprimerConceptionOrpheline } from '@/app/prof/examens-diagnostiques/a
 // ---------------------------------------------------------------------------
 
 export default function SupprimerConception(
-  { exerciceId, horsPlan }: { exerciceId: string; horsPlan: boolean },
+  { exerciceId, etat }: { exerciceId: string; etat: EtatDeConception },
 ) {
   const router = useRouter()
   const [busy, setBusy] = useState(false)
@@ -50,12 +51,9 @@ export default function SupprimerConception(
           ne pouvait que deviner entre « pas déployé », « rattachée au plan » et
           « une copie traîne ». Une phrase coûte moins qu'une déduction fausse. */}
       <p className="font-corps text-sm text-encre">
-        Cette conception ne porte <strong>aucune copie écrite</strong>.{' '}
-        {horsPlan
-          ? 'Elle n’appartient à aucun plan d’évaluation — c’est le résidu d’un examen conçu deux fois.'
-          : 'Mais elle est RATTACHÉE au plan d’évaluation de la classe.'}
+        Cette conception ne porte <strong>aucune copie écrite</strong>. {phraseEtat(etat)}
       </p>
-      {!horsPlan ? (
+      {!etat.residu ? (
         <p className="font-ui text-[12.5px] text-muet mt-1.5">
           Une conception au plan ne se supprime pas ici : elle se retire depuis le plan de la
           classe (Scriptorium → Classes → Plan d’évaluation), qui emporte la ligne avec elle.

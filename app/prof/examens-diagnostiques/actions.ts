@@ -23,6 +23,7 @@ import { MODULES_EXAMEN, type ModuleExamen } from '@/utils/examens/types'
 import { CHAMPS_IDENTITE, ecartsDIdentite, tracesPresentes } from '@/utils/examens/deplacement'
 import { depotPorteDuTravail, depotsQuiBloquent, type DepotPourRetrait } from '@/utils/examens/retrait'
 import { ETAPES_DE_MESURE } from '@/utils/chaine/file'
+import { lireEtatDeConception } from '@/utils/examens/residu-serveur'
 
 export interface RetourExamen {
   ok: boolean
@@ -245,10 +246,15 @@ export async function supprimerConceptionOrpheline(
   if (eExo) return { ok: false, message: `Exercice illisible : ${eExo.message}` }
   if (!exo) return { ok: false, message: 'Cet exercice n’existe pas.' }
 
-  // ── Refus 1 — elle EST au plan : ce n'est pas la bonne porte ───────────────
-  if ((exo as { exercice_planifie_id: string | null }).exercice_planifie_id) {
-    return { ok: false, message: 'Cette conception est rattachée au plan d’évaluation. '
-      + 'Elle se retire depuis le plan de la classe, pas ici.' }
+  // ── Refus 1 — elle est rattachée à une ligne VIVANTE : mauvaise porte ──────
+  // ⚠️ « Rattachée » ne veut pas dire « la colonne est remplie ». Un résidu porte
+  //    l'identifiant d'une ligne ANNULÉE — c'est l'état que « Retirer du plan »
+  //    laissait avant le correctif du 25/08. Tester la colonne refusait donc le
+  //    résidu même. La règle vit à `utils/examens/residu.ts`.
+  const etat = await lireEtatDeConception(admin, exerciceId)
+  if (!etat.residu) {
+    return { ok: false, message: 'Cette conception est rattachée à une ligne vivante du plan '
+      + 'd’évaluation. Elle se retire depuis le plan de la classe, pas ici.' }
   }
 
   // ── Refus 2 — un élève a écrit quelque chose ───────────────────────────────
