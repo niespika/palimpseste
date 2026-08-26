@@ -41,7 +41,7 @@ export default function ReunirCopies({
     setRapport(null)
     const lignes: string[] = []
     let deplacees = 0
-    for (const c of copies) {
+    for (const c of copies.filter((x) => x.remise)) {
       const fd = new FormData()
       fd.set('depot_id', c.depotId)
       fd.set('exercice_cible_id', cibleId)
@@ -59,7 +59,7 @@ export default function ReunirCopies({
     if (deplacees > 0) router.refresh()
   }
 
-  if (copies.length === 0) return null
+  if (remises === 0) return null
 
   return (
     <div className="rounded-xl border border-bordure bg-parchemin-fonce px-4 py-3 mb-4">
@@ -74,8 +74,9 @@ export default function ReunirCopies({
       <p className="font-ui text-[12.5px] text-muet mt-1">
         <strong>{copies.length}</strong> dépôt{copies.length > 1 ? 's' : ''} rattaché
         {copies.length > 1 ? 's' : ''} à cet exercice, dont <strong>{remises}</strong> copie
-        {remises > 1 ? 's' : ''} remise{remises > 1 ? 's' : ''}. Tout partirait vers l’autre
-        conception ; une copie déjà mesurée par la chaîne ne bouge pas.
+        {remises > 1 ? 's' : ''} remise{remises > 1 ? 's' : ''}. Seules les copies remises
+        partent — déplacer des assignations vides n’accomplirait rien. Une copie déjà mesurée
+        par la chaîne ne bouge pas.
       </p>
       {/* Confirmation EN PAGE, jamais `confirm()` (patron `TableauLive.tsx`) : le
           dialogue natif est muet dans un aperçu embarqué, et le bouton paraît mort.
@@ -92,8 +93,8 @@ export default function ReunirCopies({
       ) : (
         <div className="mt-2.5 flex items-center gap-3 flex-wrap">
           <span className="font-ui text-[12.5px] text-retard">
-            Déplacer {copies.length} dépôt{copies.length > 1 ? 's' : ''} ({remises} copie
-            {remises > 1 ? 's' : ''} remise{remises > 1 ? 's' : ''}) ?
+            Déplacer {remises} copie{remises > 1 ? 's' : ''} remise{remises > 1 ? 's' : ''} vers
+            l’autre conception ?
           </span>
           <button
             type="button"

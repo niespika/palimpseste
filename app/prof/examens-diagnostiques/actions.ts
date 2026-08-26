@@ -21,6 +21,7 @@ import { garderProf } from '@/utils/fabrique/acces'
 import { concevoirExamenDiagnostique } from '@/utils/examens/conception'
 import { MODULES_EXAMEN, type ModuleExamen } from '@/utils/examens/types'
 import { CHAMPS_IDENTITE, ecartsDIdentite, tracesPresentes } from '@/utils/examens/deplacement'
+import { depotPorteDuTravail, type DepotPourRetrait } from '@/utils/examens/retrait'
 
 export interface RetourExamen {
   ok: boolean
@@ -152,15 +153,35 @@ export async function deplacerDepotVersExercice(
   }
 
   // ── Refus 3 — l'élève a déjà un dépôt sur l'exercice cible ─────────────────
-  // `uk_depots_eleve_exercice` l'interdit de toute façon ; on le dit en clair
-  // plutôt que de remonter une violation de contrainte.
-  const { count: dejaLa, error: eDeja } = await admin
-    .from('exercices_depots').select('id', { count: 'exact', head: true })
-    .eq('exercice_id', cibleId).eq('eleve_id', d.eleve_id)
+  // `uk_depots_eleve_exercice` (UNIQUE eleve_id, exercice_id) l'interdit ; on le
+  // traite en clair plutôt que de remonter une violation de contrainte.
+  //
+  // ⚠️ ET C'EST LE CAS ORDINAIRE, PAS L'EXCEPTION. Un examen conçu deux fois est
+  //    ASSIGNÉ deux fois : chaque élève a un dépôt de part et d'autre, presque
+  //    toujours nu d'un côté. Refuser sec rendrait la réunion impossible dans
+  //    exactement la situation qu'elle vise (constaté sur 1HLP : 25 dépôts ici,
+  //    25 là, une seule copie remise en tout).
+  //
+  // ⭐ Donc : si le dépôt de la cible est VIERGE, il cède la place — il ne porte
+  //    rien, et la même règle que le retrait le dit (`depotPorteDuTravail`).
+  //    S'il porte du travail, on refuse : deux vraies copies d'un même élève ne
+  //    fusionnent pas toutes seules, et choisir laquelle survit n'est pas à une
+  //    machine de le faire.
+  const { data: surLaCible, error: eDeja } = await admin
+    .from('exercices_depots')
+    .select('id, statut, texte_v1, texte_vf, transcription_v1, transcription_vf, photos_v1, photos_vf')
+    .eq('exercice_id', cibleId).eq('eleve_id', d.eleve_id).maybeSingle()
   if (eDeja) return { ok: false, message: `Vérification impossible : ${eDeja.message}` }
-  if ((dejaLa ?? 0) > 0) {
-    return { ok: false, message: 'Cet élève a déjà un dépôt sur l’exercice cible — les deux copies '
-      + 'ne peuvent pas fusionner toutes seules.' }
+  if (surLaCible) {
+    const occupant = surLaCible as unknown as DepotPourRetrait & { id: string }
+    if (depotPorteDuTravail(occupant)) {
+      return { ok: false, message: 'Cet élève a DÉJÀ une copie sur l’exercice cible. Les deux ne '
+        + 'peuvent pas fusionner toutes seules — c’est à toi de choisir laquelle garder.' }
+    }
+    // Vierge : la place est libérée. Rien ne pend dessous (mêmes cascades qu'au
+    // retrait, et les mesures sont en NO ACTION : la base refuserait sinon).
+    const { error: eLib } = await admin.from('exercices_depots').delete().eq('id', occupant.id)
+    if (eLib) return { ok: false, message: `Place non libérable sur la cible : ${eLib.message}` }
   }
 
   // ── Le geste ───────────────────────────────────────────────────────────────
