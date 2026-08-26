@@ -14,6 +14,7 @@ import { coursParJour } from '@/utils/calendrier-cours'
 import { resoudreSemestrePourSemaine } from '@/utils/plan-exercices'
 import { jourDansFuseau } from '@/utils/fuseau'
 import { lireFuseau } from '@/utils/fuseau-serveur'
+import { depotsQuiBloquent, type DepotPourRetrait } from '@/utils/examens/retrait'
 import { semainesCouvertes } from './plan-serveur'
 import { classeAModule } from '@/utils/acces'
 
@@ -245,14 +246,38 @@ export async function retirerExercice(formData: FormData): Promise<{ success?: b
   if (eInst) return { error: `Instance illisible : ${eInst.message}` }
   if (instance) {
     const instanceId = (instance as { id: string }).id
-    // `count: 'exact'` et pas une liste : supabase-js plafonne toute réponse à
-    // 1000 lignes sans le dire, et un dénombrement tronqué dirait « vierge » à tort.
-    const { count: nbDepots, error: eDep } = await supabase
+    // ⚠️ « UN DÉPÔT EXISTE » N'EST PAS « UN ÉLÈVE A TRAVAILLÉ ». Un dépôt naît à
+    //    l'ASSIGNATION (`statut = 'assigne'` par défaut, contenu à `null`) :
+    //    assigner à une classe de 25 en crée 25 avant que personne n'ait rien
+    //    ouvert. Compter les dépôts rendait donc toute assignation IRRÉVERSIBLE.
+    //    La règle qui tranche vit à `utils/examens/retrait.ts`, pure et éprouvée.
+    //
+    // ⭐ On LIT les lignes au lieu de les compter, et on confronte au `count`
+    //    exact : supabase-js plafonne toute réponse à 1000 lignes SANS RIEN DIRE,
+    //    et une lecture tronquée conclurait « vierge » sur une instance qui ne
+    //    l'est pas. Si les deux ne s'accordent pas, on refuse — le doute bloque.
+    const { count: nbDepots, error: eCount } = await supabase
       .from('exercices_depots').select('id', { count: 'exact', head: true }).eq('exercice_id', instanceId)
-    if (eDep) return { error: `Dépôts illisibles : ${eDep.message}` }
+    if (eCount) return { error: `Dépôts illisibles : ${eCount.message}` }
     if ((nbDepots ?? 0) > 0) {
-      return { error: `Des élèves ont déjà travaillé sur cet exercice (${nbDepots} dépôt${nbDepots! > 1 ? 's' : ''}). `
-        + 'Il ne peut plus être retiré : le supprimer effacerait leurs copies, leurs retours et leurs mesures.' }
+      const { data: depots, error: eDep } = await supabase
+        .from('exercices_depots')
+        .select('statut, texte_v1, texte_vf, transcription_v1, transcription_vf, photos_v1, photos_vf')
+        .eq('exercice_id', instanceId)
+        .limit(2000)
+      if (eDep) return { error: `Dépôts illisibles : ${eDep.message}` }
+      const lignes = (depots ?? []) as unknown as DepotPourRetrait[]
+      if (lignes.length !== nbDepots) {
+        return { error: 'Vérification impossible : la lecture des dépôts est incomplète. '
+          + 'Le retrait est refusé par prudence.' }
+      }
+      const bloquants = depotsQuiBloquent(lignes)
+      if (bloquants > 0) {
+        return { error: `${bloquants} élève${bloquants > 1 ? 's ont' : ' a'} déjà travaillé sur cet exercice. `
+          + 'Il ne peut plus être retiré : le supprimer effacerait leurs copies, leurs retours et leurs mesures.' }
+      }
+      // Que des assignations nues : elles partent avec l'instance (cascade), et
+      // il n'y a rien dessous à détruire.
     }
     // `routeur_decisions.exercice_id` est en NO ACTION : une décision qui pointe
     // l'instance ferait échouer la suppression sur une contrainte. On le dit avant.
