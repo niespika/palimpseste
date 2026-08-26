@@ -12,6 +12,9 @@ import EnTeteMobileProf from '@/components/EnTeteMobileProf'
 import BasculeVue, { type Vue } from '@/components/pilotage/BasculeVue'
 import MatricePilotage from '@/components/pilotage/MatricePilotage'
 import MatriceCompetences from '@/components/pilotage/MatriceCompetences'
+import { chargerGrilleCompetences, type GrilleCompetencesClasse } from '@/utils/competences-classe'
+import { lireFuseau } from '@/utils/fuseau-serveur'
+import { FUSEAU_DEFAUT } from '@/utils/fuseau'
 import AccesModules, { type ModuleAcces } from '@/components/pilotage/AccesModules'
 import GestionEleves from '@/components/pilotage/GestionEleves'
 
@@ -86,6 +89,23 @@ export default async function PilotageClasse({
   const { data: tousEleves } = await admin
     .from('profiles').select('id, display_name').eq('role', 'eleve').order('display_name')
 
+  // ── La grille des lettres — seulement pour l'onglet qui la montre ────────
+  // Elle réutilise les inscrits de la matrice : aucune seconde lecture de
+  // `inscriptions`. Et elle ne part pas du tout quand l'affichage est fermé —
+  // un interrupteur à OFF ne doit pas coûter cinq requêtes par affichage.
+  // ⚠️ `mesure_at` est un INSTANT : il se formate dans le fuseau de l'école, que
+  //    le serveur lit UNE FOIS et passe en prop (`utils/fuseau` en-tête).
+  let grille: GrilleCompetencesClasse | null = null
+  let tz = FUSEAU_DEFAUT
+  if (vue === 'competences' && affichageActif) {
+    const [g, f] = await Promise.all([
+      chargerGrilleCompetences(admin, classeId, matrice.lignes.map((l) => l.eleveId), optOut),
+      lireFuseau(),
+    ])
+    grille = g
+    tz = f
+  }
+
   const sousTitre = sousTitreClasse(classe)
   const metaMobile = `${nbEleves} élève${nbEleves > 1 ? 's' : ''}${matrice.nbARisque > 0 ? ` · ${matrice.nbARisque} à risque` : ''}`
 
@@ -134,6 +154,8 @@ export default async function PilotageClasse({
           classeNom={[classe.nom, classe.niveau, classe.filiere].filter(Boolean).join(' · ')}
           optOut={optOut}
           affichageActif={affichageActif}
+          grille={grille}
+          tz={tz}
         />
       )}
 

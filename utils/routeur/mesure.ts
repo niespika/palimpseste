@@ -124,9 +124,9 @@ export function medianeBasse(rangs: readonly number[]): number | null {
  * La borne de recette est `competences_niveaux.statut_recette_pose_le`, écrite
  * par la fabrique : « `updated_at` ne peut pas en tenir lieu » (`07-` §1.3).
  */
-export function mesuresQuiComptent(
-  mesures: readonly Mesure[], statutRecettePoseLe: string | null,
-): Mesure[] {
+export function mesuresQuiComptent<M extends Pick<Mesure, 'sondeMontee' | 'mesureAt'>>(
+  mesures: readonly M[], statutRecettePoseLe: string | null,
+): M[] {
   return mesures.filter((m) => {
     if (m.sondeMontee) return false
     if (statutRecettePoseLe && m.mesureAt < statutRecettePoseLe) return false
@@ -134,7 +134,18 @@ export function mesuresQuiComptent(
   })
 }
 
-/** Les mesures d'une compétence, de la plus ancienne à la plus récente. */
-export function parDate(mesures: readonly Mesure[]): Mesure[] {
+/**
+ * Les mesures d'une compétence, de la plus ancienne à la plus récente.
+ *
+ * ⚠️ GÉNÉRIQUE SUR LE STRICT NÉCESSAIRE, et c'est délibéré : la règle « ce qui
+ *    compte » (`01-` §8.8 M-e + la borne de recette) ne lit que `sondeMontee` et
+ *    `mesureAt`. L'écran des compétences (`utils/competences-classe.ts`) a besoin
+ *    d'appliquer EXACTEMENT cette règle sans avoir à lire les vingt colonnes
+ *    d'une `Mesure` complète. L'élargissement laisse les appelants existants
+ *    inférer `M = Mesure` et rendre `Mesure[]` — rien ne change pour eux.
+ *    ⛔ L'alternative — une copie privée de la règle dans l'écran — est celle qui
+ *    a déjà coûté un écran entier avec le `cran` (`C4L11-F`).
+ */
+export function parDate<M extends Pick<Mesure, 'mesureAt'>>(mesures: readonly M[]): M[] {
   return [...mesures].sort((a, b) => (a.mesureAt < b.mesureAt ? -1 : a.mesureAt > b.mesureAt ? 1 : 0))
 }

@@ -30,7 +30,9 @@ import { palierDeRang, type Competence, type Lettre } from './types'
  * compétence ». Les sondes de MONTÉE en sont exclues (M-e) — `mesuresQuiComptent`
  * les a déjà retirées.
  */
-export function fenetreDEvidence(mesuresQuiComptentDeja: readonly Mesure[]): Mesure[] {
+export function fenetreDEvidence<M extends Pick<Mesure, 'mesureAt'>>(
+  mesuresQuiComptentDeja: readonly M[],
+): M[] {
   return parDate(mesuresQuiComptentDeja).slice(-FENETRE_EVIDENCE)
 }
 

@@ -20,6 +20,17 @@
 // attend. La grille des lettres reviendra quand elle aura de quoi se remplir —
 // `competences_niveaux` (`07-` §1.3), derrière `competences_affichage_actif`.
 //
+// ⭐ ELLE A DE QUOI, ET LA VOICI. Le 26/08/2026, la chaîne a écrit ses premières
+//    mesures réelles (11 élèves × 3 compétences). La grille rend LES SIX du
+//    référentiel — pas les cinq inventées — derrière le MÊME interrupteur, qui
+//    n'a donc pas eu à être créé : `competences_affichage_actif` a toujours été
+//    l'interrupteur de cet écran-là.
+//
+// ⚠️ LE VIDE RESTE EXPLIQUÉ, et il a maintenant DEUX raisons distinctes qu'un
+//    seul message confondait : l'interrupteur est fermé, OU aucune mesure n'est
+//    encore écrite. Le texte qui disait « aucune lettre n'est encore posée »
+//    aurait MENTI dès la première mesure — il ne se déduisait de rien.
+//
 // ⚠️ L'écran est ANTÉRIEUR à C4 : le corriger n'est pas le refaire. La bascule
 //    d'onglet, la liste d'élèves et le tri ne bougent pas.
 //
@@ -30,7 +41,9 @@
 // ============================================================================
 
 import OptOutClasses from './OptOutClasses'
+import GrilleCompetences from './GrilleCompetences'
 import type { RowPilotage } from '@/utils/matrice-pilotage'
+import type { GrilleCompetencesClasse } from '@/utils/competences-classe'
 
 /** Les six du référentiel, dans l'ordre du `07-` §1.2 — jamais une liste inventée. */
 export const LES_SIX_COMPETENCES: ReadonlyArray<{ code: string; nom: string }> = [
@@ -43,7 +56,7 @@ export const LES_SIX_COMPETENCES: ReadonlyArray<{ code: string; nom: string }> =
 ]
 
 export default function MatriceCompetences({
-  lignes, classeId, classeNom, optOut, affichageActif,
+  lignes, classeId, classeNom, optOut, affichageActif, grille, tz,
 }: {
   lignes: RowPilotage[]
   classeId: string
@@ -52,6 +65,10 @@ export default function MatriceCompetences({
   optOut: Record<string, boolean>
   /** `scriptorium_params.competences_affichage_actif` — l'un des trois du `07-` §5. */
   affichageActif: boolean
+  /** Les six colonnes et leurs cellules. `null` quand l'affichage est fermé. */
+  grille: GrilleCompetencesClasse | null
+  /** Le fuseau de l'école (`lireFuseau`) — `mesure_at` est un instant. */
+  tz: string
 }) {
   const nbOptOut = LES_SIX_COMPETENCES.filter((c) => optOut[c.code] === false).length
   return (
@@ -75,25 +92,55 @@ export default function MatriceCompetences({
         />
       </section>
 
-      {/* ── Les niveaux : UN VIDE EXPLIQUÉ, jamais des colonnes inventées ──── */}
-      <section className="rounded-xl border border-dashed border-bordure bg-surface p-4 space-y-2">
-        <h2 className="font-titre text-lg text-encre">Les niveaux de la classe</h2>
-        <p className="font-corps text-sm text-encre-douce max-w-3xl">
-          {affichageActif
-            ? <>Aucune lettre n&apos;est encore posée pour cette classe : une compétence n&apos;en
-              reçoit une qu&apos;à sa première mesure exploitable. La grille apparaîtra quand les
-              premières mesures seront écrites.</>
-            : <>L&apos;affichage des lettres est <strong>fermé</strong>{' '}
-              (<code>competences_affichage_actif</code>). Cet onglet reste ouvert, et il est vide
-              pour cette raison-là — pas parce que la classe n&apos;a rien fait.</>}
-        </p>
-        <p className="font-ui text-xs text-muet max-w-3xl">
-          {lignes.length === 0
-            ? 'Aucun élève inscrit dans cette classe.'
-            : `${lignes.length} élève${lignes.length > 1 ? 's' : ''} inscrit${lignes.length > 1 ? 's' : ''}`}
-          {nbOptOut > 0 && ` · ${nbOptOut} compétence${nbOptOut > 1 ? 's' : ''} en opt-out`}
-        </p>
-      </section>
+      {/* ── Les niveaux : LA GRILLE, ou un vide qui dit LAQUELLE de ses deux
+          raisons s'applique — jamais un message qui vaut pour les deux ──── */}
+      {affichageActif && grille && (grille.nbMesures > 0 || grille.nbLettres > 0) ? (
+        <GrilleCompetences
+          eleves={lignes.map((l) => ({ eleveId: l.eleveId, nom: l.nom }))}
+          colonnes={grille.colonnes}
+          cellules={grille.cellules}
+          tz={tz}
+        />
+      ) : (
+        <section className="rounded-xl border border-dashed border-bordure bg-surface p-4 space-y-2">
+          <h2 className="font-titre text-lg text-encre">Les niveaux de la classe</h2>
+          <p className="font-corps text-sm text-encre-douce max-w-3xl">
+            {!affichageActif
+              ? <>L&apos;affichage des lettres est <strong>fermé</strong>{' '}
+                (<code>competences_affichage_actif</code>). Cet onglet reste ouvert, et il est vide
+                pour cette raison-là — pas parce que la classe n&apos;a rien fait.</>
+              : (grille?.incidents.length ?? 0) > 0
+                ? <>La grille n&apos;a rien à montrer, <strong>et une lecture a échoué</strong> :
+                  on ne peut pas dire si la classe n&apos;a rien, ou si la base n&apos;a rien
+                  rendu. Le détail est en dessous.</>
+                : <>Aucune lettre, aucune mesure pour les élèves de cette classe : une compétence
+                  ne reçoit sa lettre qu&apos;à sa première mesure exploitable. La grille
+                  apparaîtra dès le premier dépôt passé à la chaîne.</>}
+          </p>
+          <p className="font-ui text-xs text-muet max-w-3xl">
+            {lignes.length === 0
+              ? 'Aucun élève inscrit dans cette classe.'
+              : `${lignes.length} élève${lignes.length > 1 ? 's' : ''} inscrit${lignes.length > 1 ? 's' : ''}`}
+            {nbOptOut > 0 && ` · ${nbOptOut} compétence${nbOptOut > 1 ? 's' : ''} en opt-out`}
+          </p>
+        </section>
+      )}
+
+      {/* Une lecture ratée n'est pas une base vide — l'écran le dit plutôt que
+          d'afficher une grille amputée sans un symptôme. */}
+      {(grille?.incidents.length ?? 0) > 0 && (
+        <section className="rounded-xl border border-retard/40 bg-retard-teinte p-3">
+          <p className="font-ui text-xs text-retard">
+            Lecture incomplète — la grille ci-dessus peut être partielle :
+          </p>
+          <ul className="mt-1 space-y-0.5">
+            {grille!.incidents.map((i) => (
+              <li key={i} className="font-corps text-xs text-retard">· {i}</li>
+            ))}
+          </ul>
+        </section>
+      )}
+
     </div>
   )
 }
