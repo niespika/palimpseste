@@ -63,7 +63,7 @@ export default async function PassationCodexProf(
         {cibleId && (
           <ReunirCopies
             cibleId={cibleId}
-            copies={vue.copies.map((c) => ({ depotId: c.depotId, nom: c.eleve }))}
+            copies={vue.copies.map((c) => ({ depotId: c.depotId, nom: c.eleve, remise: !!c.copie || c.aDeposé }))}
           />
         )}
         <EcranProf vue={vue} />

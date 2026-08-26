@@ -21,7 +21,7 @@ import { deplacerDepotVersExercice } from '@/app/prof/examens-diagnostiques/acti
 //    sans dire lequel.
 // ---------------------------------------------------------------------------
 
-export interface CopieADeplacer { depotId: string; nom: string }
+export interface CopieADeplacer { depotId: string; nom: string; remise: boolean }
 
 export default function ReunirCopies({
   copies,
@@ -32,7 +32,9 @@ export default function ReunirCopies({
 }) {
   const router = useRouter()
   const [busy, setBusy] = useState(false)
+  const [confirme, setConfirme] = useState(false)
   const [rapport, setRapport] = useState<string[] | null>(null)
+  const remises = copies.filter((c) => c.remise).length
 
   async function reunir() {
     setBusy(true)
@@ -52,6 +54,7 @@ export default function ReunirCopies({
       }
     }
     setBusy(false)
+    setConfirme(false)
     setRapport(lignes)
     if (deplacees > 0) router.refresh()
   }
@@ -62,20 +65,54 @@ export default function ReunirCopies({
     <div className="rounded-xl border border-bordure bg-parchemin-fonce px-4 py-3 mb-4">
       <p className="font-corps text-sm text-encre">
         Une autre conception <strong>identique</strong> de cet examen existe pour cette classe.
-        Les copies déposées ici peuvent la rejoindre.
+        Ce qui est déposé ici peut la rejoindre.
       </p>
+      {/* ⚠️ On dit DEUX nombres, et c'est le correctif : `copies` porte TOUS les
+          dépôts de la classe, assignations nues comprises. Annoncer « 25 copies »
+          là où deux élèves seulement ont remis quelque chose faisait croire à un
+          geste anodin sur une poignée de lignes. */}
       <p className="font-ui text-[12.5px] text-muet mt-1">
-        {copies.length} copie{copies.length > 1 ? 's' : ''} déplaçable
-        {copies.length > 1 ? 's' : ''}. Une copie déjà mesurée par la chaîne ne bouge plus.
+        <strong>{copies.length}</strong> dépôt{copies.length > 1 ? 's' : ''} rattaché
+        {copies.length > 1 ? 's' : ''} à cet exercice, dont <strong>{remises}</strong> copie
+        {remises > 1 ? 's' : ''} remise{remises > 1 ? 's' : ''}. Tout partirait vers l’autre
+        conception ; une copie déjà mesurée par la chaîne ne bouge pas.
       </p>
-      <button
-        type="button"
-        onClick={reunir}
-        disabled={busy}
-        className="mt-2.5 font-ui text-[13px] font-semibold text-encre-douce bg-surface border border-puce rounded-lg px-3 py-1.5 hover:bg-parchemin disabled:opacity-50"
-      >
-        {busy ? 'Déplacement…' : `Déplacer vers l’autre conception`}
-      </button>
+      {/* Confirmation EN PAGE, jamais `confirm()` (patron `TableauLive.tsx`) : le
+          dialogue natif est muet dans un aperçu embarqué, et le bouton paraît mort.
+          Deux temps parce qu'un seul clic déplacerait ici vingt-cinq lignes. */}
+      {!confirme ? (
+        <button
+          type="button"
+          onClick={() => setConfirme(true)}
+          disabled={busy}
+          className="mt-2.5 font-ui text-[13px] font-semibold text-encre-douce bg-surface border border-puce rounded-lg px-3 py-1.5 hover:bg-parchemin disabled:opacity-50"
+        >
+          Déplacer vers l’autre conception…
+        </button>
+      ) : (
+        <div className="mt-2.5 flex items-center gap-3 flex-wrap">
+          <span className="font-ui text-[12.5px] text-retard">
+            Déplacer {copies.length} dépôt{copies.length > 1 ? 's' : ''} ({remises} copie
+            {remises > 1 ? 's' : ''} remise{remises > 1 ? 's' : ''}) ?
+          </span>
+          <button
+            type="button"
+            onClick={reunir}
+            disabled={busy}
+            className="font-ui text-[13px] font-semibold bg-retard-teinte text-retard px-3.5 py-1.5 rounded-lg hover:opacity-90 disabled:opacity-50"
+          >
+            {busy ? 'Déplacement…' : 'Oui, déplacer'}
+          </button>
+          <button
+            type="button"
+            onClick={() => setConfirme(false)}
+            disabled={busy}
+            className="font-ui text-[13px] text-muet hover:text-encre disabled:opacity-50"
+          >
+            Annuler
+          </button>
+        </div>
+      )}
       {rapport && (
         <ul className="mt-2.5 space-y-0.5">
           {rapport.map((l, i) => (
