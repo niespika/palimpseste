@@ -73,7 +73,7 @@ export default async function PassationCodexProf(
             copies={vue.copies.map((c) => ({ depotId: c.depotId, nom: c.eleve, remise: !!c.copie || c.aDeposé }))}
           />
         )}
-        {horsPlan && aucuneCopie && <SupprimerConception exerciceId={exerciceId} />}
+        {aucuneCopie && <SupprimerConception exerciceId={exerciceId} horsPlan={horsPlan} />}
         <EcranProf vue={vue} />
       </div>
     </main>

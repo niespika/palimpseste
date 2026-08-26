@@ -17,7 +17,9 @@ import { supprimerConceptionOrpheline } from '@/app/prof/examens-diagnostiques/a
 //    revérifie tout — l'écran ne fait que proposer.
 // ---------------------------------------------------------------------------
 
-export default function SupprimerConception({ exerciceId }: { exerciceId: string }) {
+export default function SupprimerConception(
+  { exerciceId, horsPlan }: { exerciceId: string; horsPlan: boolean },
+) {
   const router = useRouter()
   const [busy, setBusy] = useState(false)
   const [confirme, setConfirme] = useState(false)
@@ -42,11 +44,23 @@ export default function SupprimerConception({ exerciceId }: { exerciceId: string
 
   return (
     <div className="rounded-xl border border-bordure bg-parchemin-fonce px-4 py-3 mb-4">
+      {/* ⚠️ LE BLOC S'AFFICHE DÈS QU'IL N'Y A AUCUNE COPIE, et il DIT son état —
+          il ne se cache plus quand la suppression est impossible. Un bouton
+          absent n'explique rien : cherchant pourquoi il ne s'affichait pas, on
+          ne pouvait que deviner entre « pas déployé », « rattachée au plan » et
+          « une copie traîne ». Une phrase coûte moins qu'une déduction fausse. */}
       <p className="font-corps text-sm text-encre">
-        Cette conception n’appartient à <strong>aucun plan d’évaluation</strong> et ne porte
-        aucune copie écrite — c’est le résidu d’un examen conçu deux fois.
+        Cette conception ne porte <strong>aucune copie écrite</strong>.{' '}
+        {horsPlan
+          ? 'Elle n’appartient à aucun plan d’évaluation — c’est le résidu d’un examen conçu deux fois.'
+          : 'Mais elle est RATTACHÉE au plan d’évaluation de la classe.'}
       </p>
-      {!confirme ? (
+      {!horsPlan ? (
+        <p className="font-ui text-[12.5px] text-muet mt-1.5">
+          Une conception au plan ne se supprime pas ici : elle se retire depuis le plan de la
+          classe (Scriptorium → Classes → Plan d’évaluation), qui emporte la ligne avec elle.
+        </p>
+      ) : !confirme ? (
         <button
           type="button" onClick={() => setConfirme(true)} disabled={busy}
           className="mt-2.5 font-ui text-[13px] font-semibold text-encre-douce bg-surface border border-puce rounded-lg px-3 py-1.5 hover:bg-parchemin disabled:opacity-50"
