@@ -6724,11 +6724,26 @@ prose portait bien une citation de plus que l'ancrage.*
 
 ### 2 · Le rejeu automatique du retour refusé, et son garde-fou
 
-**Le constat qui l'a rendu nécessaire, et il est en PROD.** Un retour refusé laissait un dépôt mesuré
+**Le constat qui l'a rendu nécessaire, et il est en PROD.** Un retour refusé laisse un dépôt mesuré
 **sans commentaire**, et le seul rattrapage était un geste humain qu'il fallait penser à faire.
-⛔ **Personne ne le pensait** : **TROIS copies en prod**, mesurées le 26/08, sans retour, toutes
-refusées sur *« règle 2 : le retour commence par une réussite réelle, citée »* — dont une **déjà
-rejouée en vain**. Rien nulle part ne le disait à personne.
+
+> ⚠️⚠️ **RECTIFICATION DU 27/08, APRÈS TIR À BLANC — J'AI DIT « TROIS COPIES », IL Y EN A UNE.**
+> J'avais lu le champ `dernier_message` d'un job comme s'il décrivait **l'état du dépôt**. Il décrit
+> **le dernier passage de CE JOB-LÀ** : un `mesure_v1` qui a dit « retour non écrit » le garde pour
+> toujours, **même quand un `retour_v1` a réussi vingt minutes plus tard**. ⭐ *Une trace n'est pas
+> un état* — la même leçon que le retrait d'un exercice conçu, et je viens de la repayer.
+> **L'état réel, vérifié par requête :** deux des trois copies ont bien leur retour *(écrit le 26/08
+> à 19 h 23, par un rejeu manuel)* ; **une seule reste sans retour**, `b946541a`, déjà rejouée une
+> fois en vain.
+>
+> ⭐⭐ **ET LE REFUS N'EST DONC PAS DÉTERMINISTE.** Les deux copies débloquées l'ont été **au second
+> tirage**, sur la même copie et le même motif. *C'est la leçon déjà écrite ailleurs : « relancer
+> d'abord, enquêter ensuite ».* **Le rejeu automatique va donc très probablement suffire** ; le
+> garde-fou de la 3ᵉ tentative est là pour le cas où il ne suffit pas.
+>
+> ⚠️ **Et « non publié » n'est pas « manquant ».** Les 35 retours non publiés de la prod sont **tous
+> en CLASSE**, où `published_at` **est la case que coche le professeur** — c'est le comportement
+> voulu. **Aucun retour de MAISON n'est non publié.**
 
 ⭐ **Décision de Louis, 27/08** : *« après 3 retours refusés, on arrête et on accepte le retour tel
 quel, mais le prof doit relire »*. ⚠️ **Et la règle 2 PEUT être insatisfaisable** : le gabarit exige
@@ -6742,6 +6757,13 @@ quel, mais le prof doit relire »*. ⚠️ **Et la règle 2 PEUT être insatisfa
 - [x] **C5L2b-4 · Le schéma ne se tolère JAMAIS.** Une sortie non conforme au schéma est refusée quelle
   que soit la tentative : c'est la défense 2 du `01-` §12, `appeler()` a déjà relancé, et le champ
   `points` pourrait ne même pas exister. _(Le partage est explicite dans le code, en deux temps.)_
+- [x] **C5L2b-8 · ⭐ LE GESTE DE RATTRAPAGE — écrit, tiré à blanc sur la PROD, PAS JOUÉ.**
+  `scripts/recette/rattraper-retours-refuses.mjs` : sans `--prod` il vise le bac à sable, sans
+  `--joue` il ne fait que dire. ⛔ **Il ne lit pas le message d'un job comme un état** — c'est ce
+  qui a corrigé mon compte — et **il distingue le `lieu`** : en classe, un retour rejoué **ne sera
+  pas publié**, il ira au professeur. *Le garde-fou de la 3ᵉ tentative y est donc structurellement
+  tenu ; à la maison, c'est le message « à relire » qui le porte.*
+  _Reste à jouer : `--prod --joue` sur l'unique copie, après le déploiement._
 - [x] **C5L2b-5 · ⭐⭐ LE GARDE-FOU, ÉPROUVÉ EN BASE** — `scripts/recette/rejeu-retour.mjs`,
   **12 vérifications, 0 échec, aucun appel de modèle, aucun coût**. Le compteur **monte** à chaque
   tour *(1 → 2 → 3)*, la remise en file **le préserve**, et au plafond **le rejeu s'arrête**.
