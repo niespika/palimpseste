@@ -6684,11 +6684,12 @@ _(Détail : `RELEVE_C5_L2_2026-08-27.md` §6.)_
   plus « CE QUE TU AS À REPRENDRE », l'échéance de la version finale *(« avant le dimanche 30 août »)*
   et la validation « J'ai lu mon retour ». ⭐⭐ **`controlerRR3` rejoué sur ce retour RÉEL : 0 refus,
   0 alerte** — *« aucune citation n'attribue à l'élève une phrase de l'auteur »* : **VRAI, à l'écran.**
-- [ ] **C5L2-5 · Un retour de lecture relu par un humain.** Le contrôle RR3 n'a **jamais refusé en
-  production** : on ne sait donc pas encore s'il crie faux. ⭐ **Trois retours réels sont passés sans
-  qu'il bronche** *(deux en recette, un au smoke)* ; ce qui reste est le jugement d'un lecteur sur la
-  QUALITÉ du retour de lecture, pas sur la mécanique.
-  _Condition de reprise : le premier dépôt de lecture d'un élève réel._
+- [x] **C5L2-5 · Un retour de lecture relu par un humain — COCHÉ le 27/08 par Louis.** Il a lu les
+  retours des examens diagnostiques : *« ils sont excellents »*. ⭐ **La mécanique était déjà passée**
+  — quatre retours réels engendrés dans la journée, **aucun refus RR3**, et les citations du texte
+  pertinentes quand elles apparaissent *(cf. `C5L2b-7`)*. **Ce qui manquait était le jugement d'un
+  lecteur sur la QUALITÉ, et il est rendu.** ⚠️ La publication à l'élève reste un geste de Louis :
+  en classe, `published_at` est sa case.
 
 ### ⚠️ Les renvois de périmètre — constatés, non réparés (la liste complète est au relevé, §7)
 
