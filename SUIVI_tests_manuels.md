@@ -6963,8 +6963,19 @@ interruption. Le décor se reconnaît à sa classe, `nom LIKE 'RECETTE-C5L3%'`. 
   ancrage **15 % au texte support** (8/54). ⭐ **Effet de bord bienvenu** : `cible_primaire` étant
   `NULL`, le repli alphabétique élisait **`argumentation`** — celle sans instrument réceptif (piège 13) ;
   il élit désormais **l'Expression**.
-- [ ] **C5L3-20 · ⛔⛔ HUIT LIGNES DE `monitoring_mesures` EN PROD PORTENT LES DEUX ÉCARTÉES dans
-  `competences_couvertes[]`.** Écrites **avant** le correctif du 27/08 : elles listent quatre
+- [x] **C5L3-20 · ✅ LES HUIT LIGNES DE PROD SONT RÉPARÉES, le 27/08, sur mandat explicite de Louis.**
+  `competences_couvertes` passe de `["synthese","structure","expression","argumentation"]` à
+  **`["synthese","expression"]`** sur les 8 ; `observables.confiance_de_remise` est ramené à ses deux
+  compétences réelles sur ses **trois** volets — `niveaux`, `confiances` et `par_competence` *(4 → 2
+  entrées, les deux `indetermine` « l'instrument n'a rendu aucun niveau » disparaissent)*.
+  ⭐ **Le script ne devine rien** : il lit les mesures RÉELLEMENT écrites dans `competences_mesures`
+  et retranche ce qui n'y figure pas — *la base fait foi contre elle-même*. **Idempotent** (seconde
+  passe : « 0 à réparer, 8 déjà conformes »), sauvegarde avant écriture hors du dépôt.
+  ⛔ **`monitoring_niveaux` n'était PAS concernée** : son `n` compte les LIGNES de monitoring, pas les
+  compétences — vérifié avant d'écrire. ⭐ Script laissé au dépôt :
+  `scripts/recette/reparer-competences-couvertes.mjs`. ⚠️ *Il ne devrait plus jamais rien trouver ;
+  s'il trouve quelque chose après le 27/08, c'est que le correctif a régressé.*
+  ~~⛔⛔ HUIT LIGNES DE `monitoring_mesures` EN PROD PORTENT LES DEUX ÉCARTÉES.~~ Écrites **avant** le correctif du 27/08 : elles listent quatre
   compétences quand **deux** ont compté, avec un `niveau` à `null` pour les deux autres. ⭐ **Le code
   est corrigé** *(`competencesQuiComptent()` écarte ce que la chaîne n'a pas mesuré)* — **les lignes
   déjà écrites, non.** ⛔ **Réparer demande une écriture sur des données de prod : décision de Louis.**
