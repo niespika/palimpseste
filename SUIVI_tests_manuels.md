@@ -6570,31 +6570,79 @@ m'appartenait, **l'assemblage**, a été renforcé *(le bloc balisé dit quelle 
 citation qui en vient)*, **et ça n'a pas suffi sur deux tirages**. **La décision est de source.**
 _(Détail : `RELEVE_C5_L2_2026-08-27.md` §6.)_
 
+### ⭐⭐ LE SMOKE ÉLÈVE DU 27/08 — joué dans l'aperçu embarqué, session ouverte par Louis
+
+> **Louis s'est connecté en élève (Elo · T5) et m'a passé la main.** ⚠️ **La session élève vivait
+> dans l'APERÇU EMBARQUÉ**, pas dans le vrai Chrome — celui-là portait la session PROF. La règle
+> d'or de ce fichier veut l'inverse ; ici elle ne mord pas *(aucun de ces écrans n'ouvre de
+> `confirm()`)*, **mais elle est la raison pour laquelle deux lignes restent décochées ci-dessous.**
+> Décor : `scripts/recette/lecture-c5l2.mjs --decor-smoke <eleveId> <classeId>` — deux instances
+> dans une classe RÉELLE *(la liste de l'élève est bornée par sa classe en contexte)*.
+
+- [x] **C5L2-1 · La porte, cliquée.** Sous `/eleve/modules/aletheia`, en **vue mobile** : le bloc
+  « **Mes exercices de lecture** » apparaît, avec sa ligne et sa pastille « à faire » ; **le clic
+  entre dans le déroulé**, qui affiche la frise des six temps. Et les deux URL croisées, tapées à la
+  main, **rendent 404 toutes les deux** — avec, au serveur, le motif exact : *« dépôt … refusé à la
+  porte « codex » : son instance relève de « aletheia » »*, et son symétrique. ⭐ **Contre-épreuve
+  faite** : le dépôt d'ÉCRITURE, lui, **s'ouvre bien sous Codex** — les 404 sont la borne, pas une
+  panne. *(27/08.)*
+- [x] **C5L2-2 · Le rendu du texte.** Le bloc « **LE TEXTE** » s'affiche **avant** la consigne des
+  cas, avec son identité *(Kant · Qu'est-ce que les Lumières ? · Berlinische Monatsschrift, 1784,
+  trad. Barni, ouverture)*. ⭐⭐ **Sondé dans le DOM, contre la base** : `textContent` = **411
+  caractères, identiques octet pour octet** à `texte_extrait[101:512]` ; **un seul `<strong>`**, et
+  il vaut exactement `texte_extrait[413:482]` — *« Sapere aude ! Aie le courage de te servir de ton
+  propre entendement ! »*. Le gras **et** le cadre au pigment d'Aletheia sont là, et le cadre **se
+  referme de chaque côté du retour à la ligne** *(le `box-decoration-clone` de C4-L15)*. ⛔ **RR4
+  vérifié dans le HTML entier** : ni `armature`, ni `moments`, ni `lectures_defendables`, ni
+  `question_directrice`. *(27/08, vue mobile 501×714.)*
+- [x] **C5L2-6 · Le vide expliqué.** `exercices_actif` basculé à OFF : la page rend *« Les exercices
+  de lecture ne sont pas encore ouverts. Ton professeur t'indiquera quand ils commencent. »*, et
+  **aucun onglet n'apparaît ni ne disparaît**. ⚠️ L'interrupteur a été **remis à ON dans la foulée**,
+  et les six ont été re-constatés à leur état d'origine. *(27/08.)*
+
+### ⚠️ CE QUE LE SMOKE A TROUVÉ — deux constats, aucun n'est de ce lot
+
+1. ⭐⭐ **LA GARDE DE LECTURE DES RETOURS BLOQUE LE DÉROULÉ DE LECTURE, ET ELLE LE DIT.** L'écran a
+   rendu *« Tu as un retour à lire avant de pouvoir rendre : Fragments — … »*, et **c'est pour cela
+   que rien ne s'écrivait en base** : `portier` (`app/deroule/actions.ts`) passe
+   `messageSiRetoursNonLus` **avant toute écriture**, donc l'ouverture du dépôt, l'enregistrement du
+   brouillon et la remise étaient tous refusés — le dépôt est resté `assigne`, `texte_v1` vide.
+   ⭐ **C'est le comportement voulu** *(« 1 retour non lu bloque tous les rendus »)*, il vaut pour la
+   lecture comme pour l'écriture, et **l'écran le dit en toutes lettres**. ⛔ **Le retour non lu est
+   un vrai retour Fragments d'Elo** : je n'y ai pas touché. *C'est ce qui laisse `C5L2-3` décoché.*
+2. ⚠️ **DOUBLE « ← Retour » sur la page élève d'Aletheia**, quand aucun livre n'est assigné :
+   `CarteMessage` (`app/eleve/modules/aletheia/page.tsx`) porte **son propre** lien de retour, en
+   plus de celui du haut de page. **Le défaut PRÉEXISTE à ce lot** — il vient de C7-L2 —, mais ma
+   section « Mes exercices de lecture » s'insère entre les deux et le rend voyant. **Constaté, non
+   réparé** *(hors périmètre : ce n'est ni la porte, ni le texte, ni la référence)*.
+
 ### Ce qui reste à jouer en recette — chacun avec sa condition de reprise NOMMÉE
 
-> **Le motif est le même pour les cinq, et il ne s'améliore pas en le répétant : une session Code ne
-> s'authentifie pas.** Tout ce qui suit demande une session ouverte par Louis, **dans un vrai
-> Chrome**, jamais l'aperçu embarqué.
+> ⚠️ **Trois lignes seulement restent, et le motif de chacune est écrit.** Les deux premières ne
+> demandent plus une session — elles demandent de **lever d'abord la garde de lecture des retours**
+> pour l'élève de test ; la troisième demande le **vrai Chrome**, parce que le presse-papier de
+> l'aperçu embarqué est inaccessible dans les deux sens.
 
-- [ ] **C5L2-1 · La porte, cliquée.** Sous `/eleve/modules/aletheia` : le bloc « Mes exercices de
-  lecture » apparaît, la ligne porte son état, le clic entre dans le déroulé. Et coller à la main
-  `/eleve/modules/codex/exercice/<le même dépôt>` → **« introuvable »**.
-  _Condition de reprise : une instance de LECTURE conçue et assignée à l'élève de test
-  (`/prof/conception/nouvelle?porte=aletheia`), et `exercices_actif` à ON._
-- [ ] **C5L2-2 · Le rendu du texte.** Le bloc « Le texte » s'affiche **avant** la consigne des cas,
-  avec l'auteur et la référence ; la sélection est **en gras ET entourée** au pigment d'Aletheia ; le
-  texte garde ses retours à la ligne. ⚠️ **Sur téléphone aussi** — l'écran est souvent un téléphone.
-  _Condition de reprise : la même instance, ouverte à l'écran._
 - [ ] **C5L2-3 · Le CRLF sur une ANALYSE LONGUE.** Le `06-` §1 range « les analyses longues » dans la
   lecture : c'est le champ le plus sollicité de cet écran. Sonde serveur pendant un **vrai clic** —
   ⚠️ **`new FormData()` NE LE MONTRE PAS**, et le piège a mordu **trois fois** (C4-L4, C4-L16, C5-L1,
   ce dernier **sur le chemin des server actions React**).
-  _Condition de reprise : une copie de plusieurs paragraphes tapée à l'écran, puis
-  `select length(texte_v1) - length(replace(texte_v1, E'\r', '')) from exercices_depots …`._
-- [ ] **C5L2-4 · Le collage refusé, sur ses trois vecteurs.** Raccourci, glisser-déposer, menu
-  contextuel — et **chaque tentative journalisée** (`collages_bloques`). `ChampDeRedaction` le porte
-  déjà ; ce qui reste à voir, c'est qu'il n'a pas été affaibli pour un texte long.
-  _Condition de reprise : la même session élève._
+  ⭐ **À MOITIÉ FAIT LE 27/08** : une analyse de trois paragraphes a été **tapée à la main** dans le
+  champ ; l'écran a compté *« **3 paragraphes** — une ligne vide sépare deux paragraphes »*, et
+  `textarea.value` portait **649 caractères, 0 CR, 4 LF** — *la mesure de C5-L1, retrouvée : côté
+  navigateur il n'y a pas de CR*. ⛔ **Ce qui manque est la moitié qui compte : ce qui ARRIVE EN
+  BASE**, et la garde de lecture des retours l'a empêché.
+  _Condition de reprise : **lever d'abord la garde** — l'élève de test lit son retour Fragments en
+  attente —, puis remettre la v1 et sonder
+  `select length(texte_v1) - length(replace(texte_v1, E'\r', '')), texte_v1 from exercices_depots …`._
+- [ ] **C5L2-4 · Le collage refusé, sur ses trois vecteurs.** ⭐ **UN DES TROIS EST FAIT LE 27/08, ET
+  PAR LA MAUVAISE PORTE** : un événement `paste` **synthétisé** a été **annulé** *(la valeur du champ
+  n'a pas bougé)* et **journalisé en base** — `collages_bloques` porte
+  `[{"moyen": "raccourci", "at": …}]`. ⚠️ **Ce n'est pas le geste physique** : dans l'aperçu embarqué,
+  le presse-papier refuse l'écriture **par l'API comme par `execCommand`**, donc un vrai `Cmd+V` ne
+  colle rien et ne prouve rien. **C'est exactement ce que la règle d'or de ce fichier protège.**
+  _Condition de reprise : le **vrai Chrome**, session élève, avec du texte réellement dans le
+  presse-papier — puis les deux autres vecteurs (glisser-déposer, menu contextuel)._
 - [ ] **C5L2-5 · Un retour de lecture relu par un humain.** Le contrôle RR3 n'a **jamais refusé en
   production** : on ne sait donc pas encore s'il crie faux. À relire à la première vraie copie —
   et **si un refus tombe, l'étape `retour_v1` le rejoue seule** (C4-L7-bis), sans réécrire un

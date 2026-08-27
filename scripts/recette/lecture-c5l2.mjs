@@ -33,6 +33,19 @@
 // ⛔ `--garde-le-decor` SAUTE LE NETTOYAGE ; qui l'emploie tient son propre
 //    registre de ce qu'il laisse.
 //
+// ⭐ DEUX MODES À PART, POUR LE SMOKE À L'ÉCRAN — ils ne jouent AUCUNE
+//    vérification : ils posent le décor dans une classe RÉELLE, pour un élève
+//    RÉEL, parce que la liste de l'élève est bornée par sa classe en contexte
+//    (`01-` §2) et qu'une classe de recette n'y apparaîtrait jamais.
+//
+//   --decor-smoke <eleveId> <classeId>   sème deux instances (une de LECTURE,
+//                                        une d'ÉCRITURE) et leurs dépôts, et
+//                                        imprime les quatre URL à éprouver ;
+//   --retirer-smoke <classeId>           les retire, elles et tout ce qui en
+//                                        dépend.
+//
+//   ⛔ Ce décor NE SE NETTOIE PAS TOUT SEUL : qui le sème tient son registre.
+//
 // ⚠️ LA BASE EST LA SANDBOX, ET UN ÉLÈVE RÉEL Y TRAVAILLE. La recette ne touche
 //    QUE ce qu'elle a semé — sauf `scriptorium_params.exercices_actif`, remis à
 //    l'identique en fin de course et sur interruption. Le TEXTE et sa RÉFÉRENCE
@@ -85,6 +98,93 @@ const { mettreEnFile, cleIdempotence } = await import(`${RACINE}/utils/chaine/fi
 const admin = createClient(env.NEXT_PUBLIC_SUPABASE_URL, env.SUPABASE_SERVICE_ROLE_KEY,
   { auth: { autoRefreshToken: false, persistSession: false } })
 
+// ── LE TEXTE RÉEL, ET LA SÉLECTION QUE C5-L1 A CAPTÉE À LA SOURIS ───────────
+// `Qu'est-ce que les Lumières ?`, déposé et décomposé le 26/08, référence
+// VALIDÉE. ⭐ 413–482 est exactement la borne que le smoke prof de C5-L1 a
+// posée à la souris — on la rejoue, côté élève.
+const TEXTE_ID = '886d790d-87f2-4f2b-9ad3-67c703fa0645'
+const ENGLOBANT = [101, 512]
+const LOCALISATION = [413, 482]
+
+// ── Les deux modes du SMOKE À L'ÉCRAN, avant toute autre chose ──────────────
+const iDecor = process.argv.indexOf('--decor-smoke')
+const iRetrait = process.argv.indexOf('--retirer-smoke')
+const MARQUE_SMOKE = 'SMOKE-C5L2'
+
+if (iRetrait >= 0) {
+  const classeId = process.argv[iRetrait + 1]
+  if (!classeId) { console.error('usage : --retirer-smoke <classeId>'); process.exit(2) }
+  const { data: exs } = await admin.from('exercices')
+    .select('id, consigne_instanciee').eq('classe_id', classeId)
+  const ids = (exs ?? [])
+    .filter((e) => JSON.stringify(e.consigne_instanciee ?? '').includes(MARQUE_SMOKE))
+    .map((e) => e.id)
+  if (!ids.length) { console.log('rien à retirer'); process.exit(0) }
+  const { data: deps } = await admin.from('exercices_depots').select('id').in('exercice_id', ids)
+  const dep = (deps ?? []).map((d) => d.id)
+  for (const t of ['exercices_jobs', 'exercices_retours', 'exercices_squelettes',
+    'exercices_metacognition', 'competences_mesures', 'monitoring_mesures']) {
+    if (dep.length) await admin.from(t).delete().in('depot_id', dep)
+  }
+  if (dep.length) await admin.from('exercices_depots').delete().in('id', dep)
+  await admin.from('exercices_cas').delete().in('exercice_id', ids)
+  const { error } = await admin.from('exercices').delete().in('id', ids)
+  console.log(error ? `⚠️ ${error.message}`
+    : `retiré : ${ids.length} instance(s), ${dep.length} dépôt(s)`)
+  process.exit(error ? 1 : 0)
+}
+
+if (iDecor >= 0) {
+  const [eleveId, classeId] = [process.argv[iDecor + 1], process.argv[iDecor + 2]]
+  if (!eleveId || !classeId) {
+    console.error('usage : --decor-smoke <eleveId> <classeId>'); process.exit(2)
+  }
+  const { data: type } = await admin.from('exercices_types')
+    .select('id').eq('code', 'phrase').maybeSingle()
+  const { data: tx } = await admin.from('exercices_textes')
+    .select('reference_id').eq('id', TEXTE_ID).maybeSingle()
+  if (!type || !tx?.reference_id) {
+    console.error('le type `phrase` ou le texte de C5-L1 manque.'); process.exit(2)
+  }
+  const poser = async (champs) => {
+    const { data, error } = await admin.from('exercices').insert({
+      type_id: type.id, classe_id: classeId, statut: 'assigne', lieu: 'maison', cran: '8', ...champs,
+    }).select('id').single()
+    if (error) throw new Error(error.message)
+    const { data: d, error: e2 } = await admin.from('exercices_depots').insert({
+      eleve_id: eleveId, exercice_id: data.id, origine: 'prof', statut: 'assigne',
+      assigne_at: new Date().toISOString(),
+    }).select('id').single()
+    if (e2) throw new Error(e2.message)
+    return d.id
+  }
+  const lecture = await poser({
+    consigne_instanciee: `${MARQUE_SMOKE} — Explique ce que Kant appelle « l'état de tutelle », `
+      + 'puis montre pourquoi la devise **Sapere aude** y répond. Appuie-toi sur les mots du texte.',
+    modes_par_competence: { structure: ['expliquer'] },
+    cible_primaire: 'structure',
+    materiau_source_provenance: 'texte_auteur',
+    materiau_source_support: 'extrait',
+    materiau_source_texte_id: TEXTE_ID,
+    materiau_source_englobant: ENGLOBANT,
+    materiau_source_localisation: LOCALISATION,
+    reference_id: tx.reference_id,
+  })
+  const ecriture = await poser({
+    consigne_instanciee: `${MARQUE_SMOKE} — Rédige un paragraphe qui pose une **thèse** `
+      + "et l'appuie sur une raison.",
+    modes_par_competence: { expression: ['composer'] },
+    cible_primaire: 'expression',
+  })
+  const base = 'http://localhost:3000/eleve/modules'
+  console.log(`LECTURE  → ${base}/aletheia/exercice/${lecture}`)
+  console.log(`         ⛔ ${base}/codex/exercice/${lecture}    (doit rendre 404)`)
+  console.log(`ÉCRITURE → ${base}/codex/exercice/${ecriture}`)
+  console.log(`         ⛔ ${base}/aletheia/exercice/${ecriture} (doit rendre 404)`)
+  console.log(`\nretrait : node … scripts/recette/lecture-c5l2.mjs --retirer-smoke ${classeId}`)
+  process.exit(0)
+}
+
 const AVEC_CHAINE = process.argv.includes('--avec-chaine')
 const GARDE_LE_DECOR = process.argv.includes('--garde-le-decor')
 const MARQUE = 'RECETTE-C5L2'
@@ -97,14 +197,6 @@ const titre = (t) => console.log(`\n── ${t} ${'─'.repeat(Math.max(0, 72 - 
 
 const seme = { classes: [], exercices: [], depots: [] }
 let porteInitiale = null
-
-// ── LE TEXTE RÉEL, ET LA SÉLECTION QUE C5-L1 A CAPTÉE À LA SOURIS ───────────
-// `Qu'est-ce que les Lumières ?`, déposé et décomposé le 26/08, référence
-// VALIDÉE. ⭐ 413–482 est exactement la borne que le smoke prof de C5-L1 a
-// posée à la souris — on la rejoue, côté élève.
-const TEXTE_ID = '886d790d-87f2-4f2b-9ad3-67c703fa0645'
-const ENGLOBANT = [101, 512]
-const LOCALISATION = [413, 482]
 
 async function semer() {
   titre('A. Le décor — un texte RÉEL, une instance de LECTURE, un dépôt')
