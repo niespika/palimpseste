@@ -6482,11 +6482,17 @@ rendre, c'est une dette du `07-` à écrire. »*
 - ☑ **Ce qui fait le travail est nommé** : la banque `exercices_routes`, **3264 lignes** dérivées,
   servie par le pipeline à son étage 4. *« Les questions engendrées depuis la consigne-gabarit du
   type » le sont, correctement, depuis la ROUTE.*
-- ☐ **La MIGRATION DE RETRAIT est écrite et NON JOUÉE** —
+- ☑ **La MIGRATION DE RETRAIT — ✅ JOUÉE LE 26/08, EN SANDBOX ET EN PROD.**
   `c5_l1_retrait_consigne_gabarit.sql` + son rollback. Elle porte un bloc qui **refuse de jouer** si
-  une seule ligne porte une valeur, et **aucun lecteur applicatif n'est à retirer d'abord**.
-  **CONDITION DE REPRISE : le go de Louis** — c'est un `drop column`, en bac à sable d'abord puis en
-  prod, et **sa ligne au `SUIVI_SQL.md` s'écrit AVANT l'exécution**.
+  une seule ligne porte une valeur, et **aucun lecteur applicatif n'était à retirer d'abord**.
+  Sa condition de reprise — *le go de Louis* — a été remplie le jour même, et le `SUIVI_SQL.md` la
+  porte **☑ sandbox (26/08) · ☑ prod (26/08)**, sa ligne écrite avant l'exécution comme la règle 1
+  l'exige.
+  ⚠️ **Case corrigée au check-in du 27/08 : elle est restée `☐` un jour après le geste.** *Le texte
+  d'origine disait « écrite et NON JOUÉE ».* C'est le même défaut de tenue que les six cases `Prod`
+  du `SUIVI_SQL.md` reprises le même jour — **le journal a pris du retard sur la base au moment
+  précis où la base est devenue une production**. Un reste qui traîne après coup ne se contente pas
+  de mentir : il appelle un rejeu, et ici le rejeu était un `drop column`.
 
 ### ⚠️ Et « la tranche » est tranchée aussi — c'est la lecture (b)
 
