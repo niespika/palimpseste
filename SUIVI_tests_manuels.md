@@ -6610,11 +6610,26 @@ _(Détail : `RELEVE_C5_L2_2026-08-27.md` §6.)_
    ⭐ **C'est le comportement voulu** *(« 1 retour non lu bloque tous les rendus »)*, il vaut pour la
    lecture comme pour l'écriture, et **l'écran le dit en toutes lettres**. ⛔ **Le retour non lu est
    un vrai retour Fragments d'Elo** : je n'y ai pas touché. *C'est ce qui laisse `C5L2-3` décoché.*
-2. ⚠️ **DOUBLE « ← Retour » sur la page élève d'Aletheia**, quand aucun livre n'est assigné :
-   `CarteMessage` (`app/eleve/modules/aletheia/page.tsx`) porte **son propre** lien de retour, en
-   plus de celui du haut de page. **Le défaut PRÉEXISTE à ce lot** — il vient de C7-L2 —, mais ma
-   section « Mes exercices de lecture » s'insère entre les deux et le rend voyant. **Constaté, non
-   réparé** *(hors périmètre : ce n'est ni la porte, ni le texte, ni la référence)*.
+2. ✅ **DOUBLE « ← Retour » sur la page élève d'Aletheia — TROUVÉ PUIS CORRIGÉ le 27/08.**
+   `CarteMessage` (`app/eleve/modules/aletheia/page.tsx`) portait **son propre** lien de retour, en
+   plus de celui du haut de page : quand aucun livre n'était assigné, **les deux s'affichaient**.
+   **Le défaut PRÉEXISTAIT à ce lot** — il vient de C7-L2 — et il ne se voyait pas, les deux liens
+   se touchant presque ; la section « Mes exercices de lecture » s'est insérée entre eux et l'a rendu
+   voyant. ⛔ **Le retirer du composant aurait cassé les DEUX retours anticipés**, où il est la seule
+   issue : c'est donc l'appelant qui déclare s'il en porte déjà un (`avecRetour`).
+   ⭐ **Aucun test ne compte les liens d'une page** — c'est le smoke, et lui seul, qui pouvait le voir.
+
+- [x] **C5L2-7 · Les quatre chemins de la page élève d'Aletheia, après correction.** Vérifiés **un à
+  un à l'écran**, tous à **UN SEUL « ← Retour »** *(compté dans le DOM, sur les `<a>` du `<main>`)* :
+  **module inactif** → « Ce module n'est pas encore activé. », le Retour est **présent et seul** ·
+  **module indisponible** → « Ce module n'est pas disponible pour ton compte. », idem ·
+  **aucun livre** → la carte, sans Retour propre, sous celui du haut de page ·
+  **au moins un livre** → la liste des séances. ⚠️ Les deux premiers chemins ont demandé de basculer
+  `modules.actif` puis de retirer `classe_modules` pour les deux classes de l'élève : **les deux
+  bascules ont été restaurées à l'identique** *(mêmes `id`, `classe_id`, `module_id`, `created_at` —
+  re-constatés par requête)*. ⭐ **Bonus vérifié au passage** : sous la classe **Test**, la section
+  « Mes exercices de lecture » **disparaît** — la borne par classe en contexte (`01-` §2), à
+  l'écran. *(27/08.)*
 
 ### Ce qui reste à jouer en recette — chacun avec sa condition de reprise NOMMÉE
 
