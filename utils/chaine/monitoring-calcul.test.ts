@@ -108,3 +108,61 @@ test('le score de la porte 2 est sur la MÊME échelle que celui de Quazian', ()
   assert.equal(accordCredenceReussite({ forme: 'pourcentage', pourcentage: 100, reussi: true }).score, 10)
   assert.equal(accordCredenceReussite({ forme: 'pourcentage', pourcentage: 100, reussi: false }).score, -10)
 })
+
+// ════════════════════════════════════════════════════════════════════════════
+// C5 · L3 — UNE COMPÉTENCE ÉCARTÉE N'ENTRE PAS DANS `competences_couvertes[]`.
+//
+// ⚠️⚠️ CES VECTEURS SONT NÉS D'UN DÉFAUT TROUVÉ EN PRODUCTION, sur treize copies
+//    réelles, APRÈS qu'un contrôle de recette l'eut déclaré vert. Ce contrôle
+//    portait sur les lignes de `monitoring_mesures` du dépôt — et il n'y en
+//    avait AUCUNE en bac à sable : `.every()` sur une liste vide est vrai.
+//    ⭐ **Prouver une négation sur un ensemble vide ne prouve rien.** Ces
+//    vecteurs-ci portent donc sur la FONCTION, où l'ensemble n'est jamais vide.
+// ════════════════════════════════════════════════════════════════════════════
+
+test('C5-L3 — une compétence que la chaîne n’a PAS mesurée est écartée de la calibration', () => {
+  const entrees = [
+    { competence: 'expression' as const, confiance: 'elevee' as const, niveau: 'B' as const },
+    { competence: 'synthese' as const, confiance: 'elevee' as const, niveau: 'C' as const },
+    // ⛔ Écartées par la PORTE DE MODE : elles n'ont ni squelette, ni mesure, ni
+    //    appel payé — mais l'élève avait déclaré sa confiance sur elles, parce
+    //    que sa remise est ANTÉRIEURE au filtre de l'écran.
+    { competence: 'argumentation' as const, confiance: 'elevee' as const, niveau: null },
+    { competence: 'structure' as const, confiance: 'faible' as const, niveau: null },
+  ]
+  const statuts = {
+    expression: 'evaluee', synthese: 'evaluee', argumentation: 'evaluee', structure: 'evaluee',
+  }
+  // `niveauxObtenus` — une clé par compétence MESURÉE, et aucune pour les écartées.
+  const mesurees = { expression: 'B', synthese: 'C' }
+
+  const { retenues, ecartees } = competencesQuiComptent(entrees, statuts, mesurees)
+  assert.deepEqual(retenues.map((r) => r.competence), ['expression', 'synthese'])
+  assert.deepEqual(ecartees.map((e) => e.competence), ['argumentation', 'structure'])
+  for (const e of ecartees) assert.match(e.motif, /ne l'a pas mesurée/)
+})
+
+test('C5-L3 — « mesurée SANS LETTRE » n’est pas « jamais mesurée » : la CLÉ décide', () => {
+  // ⭐ Le discriminant est la PRÉSENCE DE LA CLÉ, jamais sa valeur : une
+  //    compétence mesurée dont le branchement n'a rendu aucune lettre porte sa
+  //    clé à `null` et DOIT compter — elle a mesuré.
+  const entrees = [{ competence: 'expression' as const, confiance: 'elevee' as const, niveau: null }]
+  const statuts = { expression: 'evaluee' }
+  const { retenues, ecartees } = competencesQuiComptent(entrees, statuts, { expression: null })
+  assert.deepEqual(retenues.map((r) => r.competence), ['expression'])
+  assert.deepEqual(ecartees, [])
+})
+
+test('C5-L3 — le statut de recette reste le PREMIER filtre, et son motif ne change pas', () => {
+  const entrees = [{ competence: 'connaissance' as const, confiance: 'elevee' as const, niveau: null }]
+  const { retenues, ecartees } = competencesQuiComptent(
+    entrees, { connaissance: 'differee' }, { connaissance: null })
+  assert.equal(retenues.length, 0)
+  assert.match(ecartees[0].motif, /statut de recette/)
+})
+
+test('C5-L3 — sans `mesurees`, le contrôle ne s’applique pas : c’est le comportement d’avant', () => {
+  const entrees = [{ competence: 'argumentation' as const, confiance: 'elevee' as const, niveau: null }]
+  const { retenues } = competencesQuiComptent(entrees, { argumentation: 'evaluee' })
+  assert.deepEqual(retenues.map((r) => r.competence), ['argumentation'])
+})

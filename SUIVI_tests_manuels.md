@@ -6956,7 +6956,21 @@ interruption. Le décor se reconnaît à sa classe, `nom LIKE 'RECETTE-C5L3%'`. 
   écran ».** **Condition de reprise : `C5-L4`** — un état `abouti` qui porte son motif quand il y a des
   écartées, ou un sixième compteur à « LA FILE ». *Le motif est déjà en base : il n'y a rien à
   recalculer.*
-- [ ] **C5L3-11-ter · ⛔ LE SMOKE PROF SUR LA **PROD** RESTE À JOUER.** Le smoke ci-dessus est en bac à
+- [x] **C5L3-11-ter · ✅ LE SMOKE PROF SUR LA PROD, JOUÉ LE 27/08 — LA PORTE TIENT SUR 13 COPIES
+  RÉELLES.** 26 mesures (**2 par copie** : `expression×composer` et `synthese×restituer`, avec leurs
+  lettres) · **0 mesure** et **0 appel payé** sur `argumentation`/`structure` · **13/13** jobs dont
+  `dernier_message` nomme les deux écartées avec le motif entier · 13 retours engendrés (non publiés) ·
+  ancrage **15 % au texte support** (8/54). ⭐ **Effet de bord bienvenu** : `cible_primaire` étant
+  `NULL`, le repli alphabétique élisait **`argumentation`** — celle sans instrument réceptif (piège 13) ;
+  il élit désormais **l'Expression**.
+- [ ] **C5L3-20 · ⛔⛔ HUIT LIGNES DE `monitoring_mesures` EN PROD PORTENT LES DEUX ÉCARTÉES dans
+  `competences_couvertes[]`.** Écrites **avant** le correctif du 27/08 : elles listent quatre
+  compétences quand **deux** ont compté, avec un `niveau` à `null` pour les deux autres. ⭐ **Le code
+  est corrigé** *(`competencesQuiComptent()` écarte ce que la chaîne n'a pas mesuré)* — **les lignes
+  déjà écrites, non.** ⛔ **Réparer demande une écriture sur des données de prod : décision de Louis.**
+  *Rien d'aval ne les lit encore : la table de conversion n'est pas écrite, et le principe est
+  « collecter d'abord, convertir ensuite ».* **Condition de reprise : décision de Louis.**
+- [ ] **C5L3-11-quater · ⛔ ANCIENNE FORMULATION — le smoke prod avant qu'il soit joué.** Le smoke ci-dessus est en bac à
   sable. **L'exercice qui attend en prod porte 13 dépôts remis**, et le code de la porte **n'y est pas
   encore déployé**. **Condition de reprise : pousser le lot**, puis déclencher l'analyse en lot et
   relire la file. *⚠️ Ce geste PAIE — 13 dépôts × 2 compétences mesurables.*

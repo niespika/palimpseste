@@ -518,10 +518,24 @@ async function laCouture(d) {
   for (const m of mon ?? []) {
     note(`monitoring — ${m.sous_dimension} · couvertes=${JSON.stringify(m.competences_couvertes)}`)
   }
-  dire((mon ?? []).every((m) => !(m.competences_couvertes ?? [])
-    .some((c) => ['argumentation', 'structure'].includes(c))),
-    '⭐ et une compétence écartée POUR CAUSE DE MODE n\'entre pas dans `competences_couvertes[]` '
-    + '— « faute de quoi on ne saura jamais relire la mesure » (`07-` §1.4)')
+  // ⚠️⚠️ CE CONTRÔLE PASSAIT À VIDE, ET IL M'A TROMPÉ. En bac à sable le
+  //    Monitoring ne produit AUCUNE ligne — les deux drapeaux (`optin_se_juger`,
+  //    `optin_confiance_remise`) sont des gestes de la PASSATION EN CLASSE —, et
+  //    `.every()` sur une liste vide est vrai. Il a donc été déclaré vert, et
+  //    **la production a montré le contraire sur treize copies réelles**.
+  //    ⭐ **Prouver une négation sur un ensemble vide ne prouve rien** : on exige
+  //    donc que l'ensemble soit NON VIDE, ou on dit que le cas n'est pas couvert.
+  if (!(mon ?? []).length) {
+    note('⊘ AUCUNE ligne de Monitoring sur ce dépôt — le contrôle de '
+      + '`competences_couvertes[]` NE S\'APPLIQUE PAS ici, et il ne doit pas se déclarer vert. '
+      + 'Ses deux drapeaux sont des gestes de la passation EN CLASSE ; ce décor est à la maison. '
+      + 'La règle est éprouvée à la place par `utils/chaine/monitoring-calcul.test.ts`.')
+  } else {
+    dire((mon ?? []).every((m) => !(m.competences_couvertes ?? [])
+      .some((c) => ['argumentation', 'structure'].includes(c))),
+      '⭐ et une compétence écartée POUR CAUSE DE MODE n\'entre pas dans `competences_couvertes[]` '
+      + '— « faute de quoi on ne saura jamais relire la mesure » (`07-` §1.4)')
+  }
 
   // ── ⭐⭐⭐ LE MOTIF ATTEINT-IL LA BASE ? — le défaut trouvé au smoke prof.
   //    `competencesDeLExercice` prétendait que « le bilan d'un dépôt affiche »

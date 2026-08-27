@@ -108,7 +108,11 @@ export async function traiterLeMonitoring(
       niveau: (a.niveauxObtenus[competence] as Palier | null) ?? null,
     }))
     if (entrees.length) {
-      const { retenues, ecartees } = competencesQuiComptent(entrees, ctx.statutsRecette)
+      // ⭐ C5-L3 — `a.niveauxObtenus` porte UNE CLÉ PAR COMPÉTENCE MESURÉE, et
+      //    aucune pour les écartées : c'est le seul discriminant fiable entre
+      //    « mesurée sans lettre » et « jamais mesurée ».
+      const { retenues, ecartees } = competencesQuiComptent(
+        entrees, ctx.statutsRecette, a.niveauxObtenus)
       motifs.push(...ecartees.map((e) => `calibration : ${e.competence} écartée — ${e.motif}`))
       if (retenues.length) {
         const verdicts = retenues.map((e) => ({ competence: e.competence, ...calibrationDe(e) }))

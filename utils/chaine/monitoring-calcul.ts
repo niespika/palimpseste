@@ -99,12 +99,53 @@ export function calibrationDe(e: EntreeCalibration): ResultatCalibration {
 export function competencesQuiComptent(
   entrees: readonly EntreeCalibration[],
   statutRecette: Readonly<Record<string, string>>,
+  /**
+   * ⭐⭐ C5-L3 — LES COMPÉTENCES QUI ONT RÉELLEMENT MESURÉ, par leur seule marque
+   *    fiable : **la présence de la CLÉ** dans `niveauxObtenus`. Une compétence
+   *    mesurée sans lettre y a sa clé avec `null` ; une compétence **écartée**
+   *    n'y est **pas du tout**. *Distinguer « mesurée sans lettre » de « jamais
+   *    mesurée » ne se fait qu'ainsi — comparer la valeur les confondrait.*
+   *
+   * ⚠️ Omis, le contrôle ne s'applique pas : c'est le comportement d'avant, et
+   *    il vaut pour tout appelant qui n'a pas de chaîne derrière lui.
+   */
+  mesurees?: Readonly<Record<string, unknown>>,
 ): { retenues: EntreeCalibration[]; ecartees: Array<{ competence: Competence; motif: string }> } {
   const retenues: EntreeCalibration[] = []
   const ecartees: Array<{ competence: Competence; motif: string }> = []
   for (const e of entrees) {
-    if (statutRecette[e.competence] === 'evaluee') retenues.push(e)
-    else ecartees.push({ competence: e.competence, motif: `statut de recette « ${statutRecette[e.competence] ?? 'inconnu'} », pas evaluee` })
+    if (statutRecette[e.competence] !== 'evaluee') {
+      ecartees.push({ competence: e.competence, motif: `statut de recette « ${statutRecette[e.competence] ?? 'inconnu'} », pas evaluee` })
+      continue
+    }
+    // ⛔⛔ C5-L3 — ET LA COMPÉTENCE DOIT AVOIR MESURÉ. « Sa validité est plafonnée
+    //    par celle des compétences couvertes […] `competences_couvertes[]`
+    //    enregistre LESQUELLES ONT COMPTÉ — faute de quoi on ne saura jamais
+    //    relire la mesure » (`07-` §1.4).
+    //
+    // ⚠️⚠️ TROUVÉ EN PRODUCTION LE 27/08, SUR TREIZE COPIES RÉELLES, et c'est un
+    //    défaut que le bac à sable NE POUVAIT PAS montrer : là-bas le Monitoring
+    //    ne produisait aucune ligne, et le contrôle qui l'affirmait passait donc
+    //    **à vide**. En prod, `argumentation` et `structure` — écartées par la
+    //    porte de mode, ni squelette ni mesure ni appel payé — **figuraient quand
+    //    même dans `competences_couvertes`**, avec un `niveau` à `null` : la
+    //    calibration comparait une confiance déclarée à un niveau qui n'existait
+    //    pas, et la ligne prétendait couvrir ce qu'elle n'avait pas mesuré.
+    //
+    // ⭐ La cause est plus large que la porte, et le correctif aussi : les
+    //    entrées viennent de `ctx.confianceDeclaree` — ce que l'ÉLÈVE a déclaré à
+    //    la remise —, et rien ne garantit que la chaîne ait mesuré ce qu'il a
+    //    déclaré. *L'écran filtre désormais, mais une remise ANTÉRIEURE à ce
+    //    filtre porte quatre déclarations pour deux mesures.*
+    if (mesurees !== undefined && !(e.competence in mesurees)) {
+      ecartees.push({
+        competence: e.competence,
+        motif: 'la chaîne ne l\'a pas mesurée sur ce dépôt — elle ne peut pas compter dans la '
+          + 'calibration, ni entrer dans `competences_couvertes[]` (07- §1.4)',
+      })
+      continue
+    }
+    retenues.push(e)
   }
   return { retenues, ecartees }
 }
