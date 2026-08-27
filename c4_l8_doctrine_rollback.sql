@@ -56,5 +56,13 @@ commit;
 -- delete from exercices_types_crans;
 -- delete from exercices_types_modes;
 -- update exercices_types set crans_admis = '{}', exclusions_parcours = '{}',
---        mode_saisie = null, consigne_gabarit = null;
+--        mode_saisie = null;
+--
+-- ⚠️ AMENDÉ PAR C5-L1 (26/08) : la recette ci-dessus portait aussi
+--    `consigne_gabarit = null`. **La colonne est retirée** — `07-` §1.1 v2.55,
+--    décision de Louis : c'était un RELIQUAT d'un modèle « une consigne par
+--    objet » remplacé par la banque `exercices_routes` (objet × mode × cran).
+--    Laissée telle quelle, cette recette AURAIT ÉCHOUÉ après le passage de
+--    `c5_l1_retrait_consigne_gabarit.sql`. Même geste que C4-L11, qui avait dû
+--    amender le rollback de C4-L9 pour la même raison.
 -- commit;

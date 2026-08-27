@@ -30,9 +30,10 @@
 //    AFFICHE, il ne les demande jamais.
 // ============================================================================
 
-import { useActionState, useMemo, useState } from 'react'
+import { useActionState, useMemo, useRef, useState } from 'react'
 import { concevoirInstance, type RetourConception } from '../actions'
 import { ciblePrimaireDeLInstance } from '@/utils/fabrique/conception'
+import { etendueDe, empechementsDeLaSelection } from '@/utils/fabrique/selection'
 
 export interface CarteDoctrine {
   objets: Record<string, {
@@ -66,7 +67,7 @@ const CHAMP = 'rounded-md border border-bordure-bouton bg-parchemin px-2 py-1 fo
 export default function Pipeline({ porte, carte, textes, sujets, materiaux }: {
   porte: 'aletheia' | 'codex'
   carte: CarteDoctrine
-  textes: Array<{ id: string; libelle: string; contenu: string }>
+  textes: Array<{ id: string; libelle: string; contenu: string; borne: string }>
   sujets: Array<{ id: string; libelle: string }>
   materiaux: Array<{
     id: string; objet: string; mode: string; support: string; famille: string | null
@@ -83,6 +84,8 @@ export default function Pipeline({ porte, carte, textes, sujets, materiaux }: {
   const [engDebut, setEngDebut] = useState('')
   const [engFin, setEngFin] = useState('')
   const [supportEnglobant, setSupportEnglobant] = useState('extrait')
+  /** ⭐ C5-L1 — LA SÉLECTION SE FAIT DANS LE TEXTE, pas en quatre nombres tapés. */
+  const boite = useRef<HTMLDivElement>(null)
 
   // ── 4-5. L'objet, le mode, le cran ────────────────────────────────────────
   const [objet, setObjet] = useState('')
@@ -104,6 +107,56 @@ export default function Pipeline({ porte, carte, textes, sujets, materiaux }: {
   const [materiauxCas, setMateriauxCas] = useState<string[]>(['', ''])
 
   const texte = textes.find((t) => t.id === texteId)
+
+  /**
+   * Ce que le professeur vient de sélectionner À LA SOURIS, en caractères du
+   * texte d'origine — base 0, fin exclue, le système de coordonnées de la base.
+   *
+   * ⚠️ ON MESURE CONTRE LE CONTENU DU CONTENEUR, jamais contre le nœud de texte
+   *    seul : un retour à la ligne, une césure ou un futur surlignage
+   *    couperaient le texte en plusieurs nœuds, et `anchorOffset` ne vaudrait
+   *    plus que dans l'un d'eux. Le `Range` qui va du début du conteneur au
+   *    début de la sélection donne le décalage vrai, quel que soit le découpage.
+   */
+  const capter = (): [number, number] | null => {
+    const sel = typeof window === 'undefined' ? null : window.getSelection()
+    const el = boite.current
+    if (!sel || sel.rangeCount === 0 || sel.isCollapsed || !el) return null
+    const r = sel.getRangeAt(0)
+    if (!el.contains(r.commonAncestorContainer)) return null
+    const avant = document.createRange()
+    avant.selectNodeContents(el)
+    avant.setEnd(r.startContainer, r.startOffset)
+    const debut = avant.toString().length
+    const fin = debut + r.toString().length
+    return fin > debut ? [debut, fin] : null
+  }
+  const prendreComme = (quoi: 'selection' | 'englobant') => {
+    const i = capter()
+    if (!i) return
+    if (quoi === 'selection') { setLocDebut(String(i[0])); setLocFin(String(i[1])) }
+    else {
+      setEngDebut(String(i[0])); setEngFin(String(i[1]))
+      // « La sélection donne le `support` » ; l'étendue de l'ENGLOBANT est ce que
+      // la plage admise de `support_source` borne (`02-` §6 B.1, point 4). On la
+      // PROPOSE, dérivée de la segmentation qui fait foi ; le professeur tranche.
+      const e = texte ? etendueDe(texte.contenu, i) : null
+      if (e && e !== 'mot') { setSupportEnglobant(e); setObjet('') }
+    }
+  }
+  const nombre = (x: string): number | null => (x === '' ? null : Number(x))
+  const intervalle = (a: string, b: string): [number, number] | null => {
+    const d = nombre(a); const f = nombre(b)
+    return d === null || f === null ? null : [d, f]
+  }
+  const selectionPrise = intervalle(locDebut, locFin)
+  const englobantPris = intervalle(engDebut, engFin)
+  const etendueSelection = texte ? etendueDe(texte.contenu, selectionPrise) : null
+  const etendueEnglobant = texte ? etendueDe(texte.contenu, englobantPris) : null
+  const empechementsSelection = texte
+    ? empechementsDeLaSelection(texte.contenu, selectionPrise, englobantPris, objet || null)
+    : []
+
   const objetsPourEnglobant = useMemo(() => Object.values(carte.objets)
     .filter((o) => porte === 'codex' || o.supportSource.includes(supportEnglobant))
     .filter((o) => o.modes.some((m) => porte === 'codex' ? m === 'composer' : m !== 'composer'))
@@ -197,39 +250,94 @@ export default function Pipeline({ porte, carte, textes, sujets, materiaux }: {
           </select>
           {texte && (
             <>
-              <p className="max-h-40 overflow-y-auto whitespace-pre-wrap rounded-md border
-                            border-bordure bg-parchemin p-2 font-serif text-sm text-encre">
-                {texte.contenu}
+              {/* ⚠️ LE NON-SPOILER : QUELLE BORNE S'APPLIQUE. La règle est celle du
+                  routeur (`filtreDuNonSpoiler`), elle est PER-ÉLÈVE, et cet écran
+                  ne connaît aucun élève : on dit la borne, on ne fabrique pas une
+                  « position de la classe ». */}
+              <p className="rounded-md border border-bordure bg-parchemin px-2 py-1.5
+                            font-ui text-xs text-encre-douce">
+                <strong>Non-spoiler.</strong> {texte.borne}
               </p>
+
+              {/* ⭐ C5-L1 — LA SÉLECTION SE FAIT ICI, DANS LE TEXTE. Elle se
+                  saisissait en quatre nombres tapés à la main : c'était le
+                  deuxième des sept temps du `02-` §6 B.1, et le seul qui manquait. */}
+              <div ref={boite}
+                className="max-h-64 select-text overflow-y-auto whitespace-pre-wrap rounded-md
+                           border border-bordure bg-parchemin p-2 font-serif text-sm text-encre">
+                {texte.contenu}
+              </div>
+              <div className="flex flex-wrap items-center gap-2 font-ui text-sm">
+                <span className="text-xs text-muet">
+                  Sélectionnez dans le texte, puis :
+                </span>
+                <button type="button" onClick={() => prendreComme('selection')}
+                  className="rounded-md border border-bordure-bouton px-3 py-1 text-encre">
+                  c&apos;est la <strong>sélection</strong>
+                </button>
+                <button type="button" onClick={() => prendreComme('englobant')}
+                  className="rounded-md border border-bordure-bouton px-3 py-1 text-encre">
+                  c&apos;est l&apos;<strong>englobant</strong>
+                </button>
+                <button type="button"
+                  onClick={() => {
+                    setEngDebut('0'); setEngFin(String(texte.contenu.length))
+                    const e = etendueDe(texte.contenu, [0, texte.contenu.length])
+                    if (e && e !== 'mot') { setSupportEnglobant(e); setObjet('') }
+                  }}
+                  className="rounded-md border border-bordure-bouton px-3 py-1 text-encre-douce">
+                  englobant = le texte complet
+                </button>
+                <button type="button"
+                  onClick={() => { setLocDebut(''); setLocFin(''); setEngDebut(''); setEngFin('') }}
+                  className="rounded-md px-2 py-1 text-xs text-muet underline">
+                  effacer
+                </button>
+              </div>
+
+              <dl className="grid gap-x-6 gap-y-1 rounded-md border border-bordure bg-parchemin
+                             p-2 font-ui text-xs text-encre-douce sm:grid-cols-2">
+                <div>
+                  <dt className="text-muet">la sélection — <code>localisation</code></dt>
+                  <dd>
+                    {selectionPrise
+                      ? <>caractères {selectionPrise[0]}–{selectionPrise[1]} · <em>{etendueSelection}</em>
+                        {' '}— «&nbsp;{texte.contenu.slice(selectionPrise[0], selectionPrise[1]).slice(0, 90)}
+                        {selectionPrise[1] - selectionPrise[0] > 90 ? '…' : ''}&nbsp;»</>
+                      : <em>rien de sélectionné</em>}
+                  </dd>
+                </div>
+                <div>
+                  <dt className="text-muet">l&apos;englobant — <em>l&apos;étendue réellement lue</em></dt>
+                  <dd>
+                    {englobantPris
+                      ? <>caractères {englobantPris[0]}–{englobantPris[1]} · <em>{etendueEnglobant}</em></>
+                      : <em>rien de déclaré</em>}
+                  </dd>
+                </div>
+              </dl>
+
               <div className="flex flex-wrap items-end gap-3 font-ui text-sm">
                 <label className="space-y-0.5">
-                  <span className="block text-xs text-muet">sélection — début</span>
-                  <input type="number" min={0} value={locDebut}
-                    onChange={(e) => setLocDebut(e.target.value)} className={`${CHAMP} w-24`} />
-                </label>
-                <label className="space-y-0.5">
-                  <span className="block text-xs text-muet">fin (exclue)</span>
-                  <input type="number" min={0} value={locFin}
-                    onChange={(e) => setLocFin(e.target.value)} className={`${CHAMP} w-24`} />
-                </label>
-                <label className="space-y-0.5">
-                  <span className="block text-xs text-muet">englobant — début</span>
-                  <input type="number" min={0} value={engDebut}
-                    onChange={(e) => setEngDebut(e.target.value)} className={`${CHAMP} w-24`} />
-                </label>
-                <label className="space-y-0.5">
-                  <span className="block text-xs text-muet">fin (exclue)</span>
-                  <input type="number" min={0} value={engFin}
-                    onChange={(e) => setEngFin(e.target.value)} className={`${CHAMP} w-24`} />
-                </label>
-                <label className="space-y-0.5">
-                  <span className="block text-xs text-muet">étendue de l&apos;englobant</span>
-                  <select value={supportEnglobant} onChange={(e) => { setSupportEnglobant(e.target.value); setObjet('') }}
+                  <span className="block text-xs text-muet">
+                    étendue de l&apos;englobant — <em>proposée, vous tranchez</em>
+                  </span>
+                  <select value={supportEnglobant}
+                    onChange={(e) => { setSupportEnglobant(e.target.value); setObjet('') }}
                     className={CHAMP}>
                     {SUPPORTS.filter((s) => s !== 'mot').map((s) => <option key={s} value={s}>{s}</option>)}
                   </select>
                 </label>
               </div>
+
+              {empechementsSelection.length > 0 && (
+                <div className="rounded-md border border-attention bg-attention-teinte px-2 py-1.5">
+                  {empechementsSelection.map((x, i) => (
+                    <p key={i} className="font-ui text-xs text-encre">⊘ {x}</p>
+                  ))}
+                </div>
+              )}
+
               <p className="font-ui text-xs text-muet">
                 C&apos;est l&apos;<strong>englobant</strong> que la règle de non-emboîtement lit —
                 l&apos;étendue réellement lue — et c&apos;est lui, jamais la sélection, que la plage
@@ -612,7 +720,8 @@ export default function Pipeline({ porte, carte, textes, sujets, materiaux }: {
       )}
 
       <div className="flex flex-wrap items-center gap-3">
-        <button type="submit" disabled={enCours || !objet || !mode || cran === ''}
+        <button type="submit"
+          disabled={enCours || !objet || !mode || cran === '' || empechementsSelection.length > 0}
           className="rounded-md bg-bouton px-4 py-2 font-ui text-sm text-surface disabled:opacity-50">
           {enCours ? 'Écriture…' : 'Concevoir l’instance'}
         </button>

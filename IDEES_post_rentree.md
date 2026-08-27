@@ -706,3 +706,37 @@ if (actuel.type === 'cours' && norm(actuel.texte_extrait as string) !== norm(tex
 ⚠️ **Et il faut aussi normaliser CE QUI S'ÉCRIT** (`texte_extrait: texte`), sans quoi le corps
 continue de dériver. ⛔ **Vérifier les autres écrivains de `<textarea>` du dépôt au passage** : la
 même normalisation s'applique partout où un corps collé est comparé ou haché.
+
+---
+
+## ⭐ Le CRLF, TROISIÈME morsure — et cette fois il est MESURÉ des deux côtés (smoke C5-L1, 26/08)
+
+**Le doute que l'entrée ci-dessus laissait est levé, et dans le mauvais sens : la normalisation en
+CRLF a bien lieu sur le chemin des SERVER ACTIONS React.** Mesuré en séance, en tapant vraiment dans
+un `<textarea>` puis en lisant la base :
+
+| Où | CR |
+|---|---|
+| `textarea.value` *(l'« API value »)* | **0** |
+| `new FormData(formulaire).get(...)` *(côté navigateur, avant envoi)* | **0** |
+| **ce qui arrive en base**, sur un champ qu'aucun code ne normalise — `exercices.consigne_instanciee` | **1** ⚠️ |
+
+⭐ **C'est la confirmation exacte de l'avertissement ci-dessus** — *« `new FormData()` ne le montre
+pas, seule la soumission réelle la fait »* — **et elle vaut donc AUSSI pour une action serveur
+React**, ce qu'on pouvait espérer différent puisque React sérialise en JavaScript. **Ce n'est pas
+différent.**
+
+⛔ **CONSÉQUENCE CONCRÈTE, HORS PÉRIMÈTRE DE C5-L1, ET NON CORRIGÉE** : `concevoirInstance`
+*(`app/prof/conception/actions.ts`, C4-L8)* et `editerInstance` écrivent la **`consigne_instanciee`**
+et les champs de l'appui *(`defaut`, `reponse_attendue`, `pourquoi_juste`, la banque de
+`distracteurs`)* **sans normaliser**. Or *« c'est le texte qu'il arrête que l'élève lit »* : toute
+consigne saisie sur plusieurs lignes est stockée avec des `\r` invisibles.
+⚠️ **Le rendu HTML n'en souffre pas** — c'est pourquoi personne ne l'a vu — **mais toute comparaison,
+tout comptage de lignes et toute empreinte sur ces chaînes dérivent.** ⚠️ Et
+`distracteurs: brut.split('\n')` laisse un `\r` **en queue de chaque distracteur**, qui part ensuite
+à l'écran de l'élève et dans la crédence.
+
+⭐ **La correction est la même qu'ici, et elle est d'une ligne par site** : normaliser à l'entrée de
+`lireCas()` et de l'écriture de la consigne. **C5-L1 l'a fait chez lui** — `deposerTexte` et
+`corrigerReference` normalisent, et leurs champs sont **mesurés à 0 CR** dans la même séance, face
+aux 1 CR de la consigne : *les deux régimes cohabitent aujourd'hui dans la même base.*

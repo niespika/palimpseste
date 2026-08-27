@@ -24,6 +24,7 @@ import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { garderProf } from '@/utils/fabrique/acces'
 import { controleReference, phrasesDuTexte } from '@/utils/fabrique/verifie-reference'
+import { intervallesDesMoments, occurrencesDesConcepts } from '@/utils/generateur/lecture'
 import LectureAnnotee from './LectureAnnotee'
 
 export const dynamic = 'force-dynamic'
@@ -57,6 +58,18 @@ export default async function ValidationReference({
   const v = controleReference(r.contenu, texte)
   const phrases = phrasesDuTexte(texte)
 
+  // ⭐ C5-L1 — LES INTERVALLES SE DÉRIVENT ICI, À LA LECTURE, ET NE SE STOCKENT
+  //    JAMAIS. Le `02-` §6 A veut « trois unités, toutes localisées en
+  //    intervalles » et le `05-` §1 en confie la production au code — mais le
+  //    format déclaré ne connaît que des NUMÉROS DE PHRASE, et une clé de plus
+  //    déclencherait le refus n° 11. Ils se calculent donc à chaque lecture,
+  //    depuis `de`/`a` et la segmentation qui fait foi : un second domicile de
+  //    ce que `de`/`a` disent déjà finirait par diverger.
+  const moments = lig(r.contenu).moments
+  const concepts = lig(r.contenu).concepts
+  const intervalles = intervallesDesMoments(texte, Array.isArray(moments) ? moments : [])
+  const occurrences = occurrencesDesConcepts(texte, Array.isArray(concepts) ? concepts : [])
+
   return (
     <div className="space-y-5 pb-12">
       <header className="space-y-1">
@@ -80,6 +93,14 @@ export default async function ValidationReference({
         phrases={phrases}
         reference={lig(r.contenu)}
         verdict={v}
+        intervalles={intervalles.map((x) => ({
+          m: txt(x.m),
+          intervalle: x.intervalle === null ? null : [x.intervalle[0], x.intervalle[1]],
+        }))}
+        occurrences={occurrences.map((x) => ({
+          concept: txt(x.concept),
+          intervalles: x.occurrences.map((o) => [o[0], o[1]] as [number, number]),
+        }))}
       />
     </div>
   )

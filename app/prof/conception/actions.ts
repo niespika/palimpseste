@@ -494,6 +494,85 @@ export async function validerReference(
   return { ok: true, message: 'Référence validée — un seul geste, pour toute la référence.' }
 }
 
+/**
+ * ⭐ C5-L1 — LA CORRECTION D'UNE RÉFÉRENCE NON VALIDÉE.
+ *
+ * « Le professeur CORRIGE CE QUI EST FAUX, puis valide l'ensemble. […] TOUTE
+ *   CORRECTION REPASSE LE CONTRÔLE DU §4.1 AVANT QUE LA VALIDATION REDEVIENNE
+ *   POSSIBLE — déplacer une frontière de moment peut ouvrir un trou de
+ *   couverture, et un trou ne passe jamais en silence. »        — `05-` §4.5
+ *
+ * ⚠️ SANS CE GESTE, LES DEUX BLOCAGES N'AVAIENT PAS D'ISSUE. Le §4.2 dit « le
+ *    professeur tranche » — un moment relationnel sans cible, une phrase porteuse
+ *    que l'auteur n'affirme pas —, et l'écran n'offrait que « valider », désactivé
+ *    tant qu'un blocage restait. Le lot ferme ce bout : c'est la clause 3 du
+ *    « fait quand », « blocages tranchés ».
+ *
+ * ⚠️ ELLE NE TOUCHE JAMAIS UNE RÉFÉRENCE VALIDÉE. Le trigger
+ *    `garde_reference_immuable` refuse la modification du `contenu` dès que
+ *    `validee_at` est posé ; on refuse AVANT lui, en le disant : corriger après
+ *    validation passe par une DÉVALIDATION EXPLICITE, jamais par un `update`
+ *    silencieux.
+ *
+ * ⚠️ ET LE CONTRÔLE EST REJOUÉ ICI, PAS SEULEMENT À L'AFFICHAGE : un écran n'est
+ *    pas une garde. Le refus n'écrit rien ; le blocage, lui, s'écrit — le
+ *    professeur peut corriger en plusieurs fois.
+ */
+export async function corrigerReference(
+  _prec: RetourConception | null, form: FormData,
+): Promise<RetourConception> {
+  const { admin } = await garderProf(false)
+  const id = String(form.get('reference_id') ?? '')
+  const { data: ref, error: eLecture } = await admin.from('exercices_references')
+    .select('id, validee_at, scriptorium_contenus(texte_extrait)')
+    .eq('id', id).maybeSingle()
+  if (eLecture) return { ok: false, message: `Lecture impossible : ${eLecture.message}` }
+  if (!ref) return { ok: false, message: 'Référence inconnue.' }
+  if (ref.validee_at) {
+    return { ok: false,
+      message: 'Cette référence est VALIDÉE : elle ne se modifie plus en silence. '
+        + 'Dévalidez-la explicitement d’abord.' }
+  }
+
+  // ⚠️⚠️ UN `<textarea>` SOUMET EN CRLF, ET LE STOCKÉ EST EN LF. Ça a mordu deux
+  //    fois (C4-L4, puis la garde de découpe de C4-L16), et `new FormData()` ne
+  //    le montre pas : seule une soumission réelle le fait. Ici, un `\r` par
+  //    ligne rendrait le JSON stocké différent de celui que le professeur a lu.
+  const brut = String(form.get('contenu') ?? '').replace(/\r\n/g, '\n')
+  let contenu: unknown
+  try {
+    contenu = JSON.parse(brut)
+  } catch (e) {
+    return { ok: false,
+      message: 'Ce n’est pas du JSON lisible — rien n’a été écrit.',
+      empechements: [(e as Error).message] }
+  }
+
+  const texte = String(jointure(ref, 'scriptorium_contenus').texte_extrait ?? '')
+  const v = controleReference(contenu, texte)
+  if (v.refus.length > 0) {
+    return { ok: false,
+      message: 'La correction est REFUSÉE par le contrôle : elle n’a pas été écrite. '
+        + '« Un trou ne passe jamais en silence. »',
+      empechements: v.refus }
+  }
+
+  const { data: maj, error } = await admin.from('exercices_references')
+    .update({ contenu, updated_at: new Date().toISOString() }).eq('id', id).select('id')
+  if (error) return { ok: false, message: error.message }
+  if ((maj ?? []).length === 0) return { ok: false, message: 'Aucune référence corrigée.' }
+  revalidatePath(`/prof/conception/reference/${id}`)
+  revalidatePath('/prof/conception')
+  return {
+    ok: v.blocages.length === 0,
+    message: v.blocages.length === 0
+      ? 'Correction écrite, et le contrôle repasse : la validation est possible.'
+      : `Correction écrite, mais ${v.blocages.length} blocage(s) restent : `
+        + 'la validation attend que vous les tranchiez.',
+    empechements: v.blocages,
+  }
+}
+
 /** La DÉVALIDATION explicite. « Une fois `validee_at` renseigné, ni le
  *  `contenu`, ni l'`empreinte`, ni la source ne changent : corriger après
  *  validation passe donc par une dévalidation EXPLICITE, jamais par un `update`

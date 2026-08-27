@@ -15,6 +15,7 @@
 import Link from 'next/link'
 import { garderProf } from '@/utils/fabrique/acces'
 import { chargerDoctrineDepuisBase } from '@/utils/fabrique/doctrine'
+import { borneDeConception, phraseDeLaBorne } from '@/utils/fabrique/non-spoiler-conception'
 import Pipeline, { type CarteDoctrine } from './Pipeline'
 
 export const dynamic = 'force-dynamic'
@@ -43,7 +44,8 @@ export default async function NouvelleInstance({
     // ⚠️ « Une référence NON VALIDÉE n'entre jamais en Phase 2 » : seuls les
     // textes dont la décomposition est validée entrent au pipeline (piège 25).
     admin.from('exercices_textes')
-      .select('id, id_import, auteur, titre, reference, cours_etat, plan_livre_id, plan_semaine,'
+      .select('id, id_import, auteur, titre, reference, cours_etat, plan_livre_id,'
+        + ' plan_livre_declare, plan_semaine,'
         + ' exercices_references!inner(validee_at), scriptorium_contenus(texte_extrait)')
       .eq('statut', 'valide').not('exercices_references.validee_at', 'is', null),
     admin.from('exercices_sujets').select('id, id_import, enonce, forme, cours_etat')
@@ -124,6 +126,19 @@ export default async function NouvelleInstance({
         textes={((textes ?? []) as unknown as Ligne[]).map((t) => ({
           id: txt(t.id), libelle: `${txt(t.auteur)} — ${txt(t.titre)} (${txt(t.reference)})`,
           contenu: txt(jointure(t, 'scriptorium_contenus').texte_extrait),
+          // ⚠️ « NON-SPOILER : SEUL L'AMONT EXPOSÉ EST SERVI » (`07-` §2, C5-L1).
+          //    La règle est celle du routeur et elle est PER-ÉLÈVE ; cet écran
+          //    n'en connaît aucun. On DIT donc quelle borne l'instance portera —
+          //    le couple { livre, séance } que le texte déclare — sans jamais
+          //    fabriquer une « position de la classe », qui serait une seconde
+          //    échelle prise à une source hors manifeste.
+          borne: phraseDeLaBorne(
+            borneDeConception({
+              id: txt(t.id),
+              planLivreReferenceId: t.plan_livre_id === null ? null : txt(t.plan_livre_id),
+              planSeance: typeof t.plan_semaine === 'number' ? t.plan_semaine : null,
+            }),
+            t.plan_livre_declare === null ? null : txt(t.plan_livre_declare)),
         }))}
         sujets={((sujets ?? []) as unknown as Ligne[]).map((s) => ({
           id: txt(s.id), libelle: `${txt(s.enonce)} · ${txt(s.forme)}`,

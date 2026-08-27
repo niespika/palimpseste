@@ -6339,3 +6339,161 @@ elles seraient parties décochées sans lui. *Le décor semé pour l'occasion a 
   demande toujours confirmation. ⭐ *Au passage, la conséquence pour C4-L16 : **on ne peut pas
   déclarer de notions sur un cours DÉCOUPÉ** sans passer par cette fausse alerte. Sur un cours non
   découpé, tout fonctionne — prouvé le 25/08.*
+
+---
+
+## C5 · L1 — La conception, côté professeur : un texte se dépose, se décompose, se valide (séance du 26/08)
+
+**⚠️ AUCUNE MIGRATION — aucune n'était attendue, aucune n'a été nécessaire.** Le piège 19 du prompt
+en autorisait une *(rendre `exercices_textes.id_import` nullable)* ; elle a été **évitée** en
+fabriquant un `id_import` qui **dit d'où il vient** — `depot-en-ligne:<uuid>`, `import_id` NULL.
+**Aucun interrupteur neuf** : le lot lit `fabrique_actif`, qui existe depuis C4-L8.
+
+**⭐ LE SMOKE PROF A ÉTÉ JOUÉ EN SÉANCE**, sur un compte prof ouvert par Louis à ma demande — une
+session Code ne s'authentifie pas. **Les CINQ clauses du « fait quand » sont donc prouvées à
+l'écran**, et elles seraient parties décochées sans lui. Tout ce qui pouvait se prouver **par
+requête et sur pièce** l'avait été auparavant — `scripts/recette/generateur-c5l1.mjs`,
+**27 vérifications, 0 échec**, décor semé et retiré, sandbox revenue à son état d'avant.
+⭐ **Et le smoke a trouvé ce qu'aucun test ne pouvait trouver** : la troisième morsure du CRLF,
+mesurée des deux côtés *(plus bas)*.
+
+### Prouvé en séance, avec sa preuve — EN BASE, pas à l'écran
+
+- ☑ **Un texte se dépose hors fichier d'import.** `deposerUnTexteNeuf()` — *le même code que
+  l'action de `/prof/conception/textes`, qui ne l'enveloppe que d'une garde d'accès*. En base :
+  `id_import = depot-en-ligne:<uuid>`, `import_id` **NULL**, `contenu_id` pointant l'unique ligne de
+  `scriptorium_contenus` créée *(7 → 8, aucune seconde table)*, `reference_id` **NULL** — le dépôt
+  et la décomposition sont **deux gestes**.
+- ☑ **Il se décompose — G1, puis G2, puis G3, sur un texte RÉEL.** Le texte du `05-` §4.7
+  *(220 mots, 17 phrases)*. **Deux passages complets, les 26/08 à 16 h 47 et 16 h 52** : `CONFORME`
+  les deux fois, **0 refus, 0 blocage** — 4 moments, 17 phrases, 8 lectures sur 6 phrases-thèses,
+  4 concepts, **~75 valeurs déclarées**. **Trois lignes à `api_couts`** à chaque fois, module
+  `exercices-generateur`, **`phase` NULL sur les trois**. **0,0897 $** puis **0,0584 $**
+  *(−35 % : 5 756 jetons lus au cache — le préfixe stable travaille d'un texte à l'autre)*, en
+  ~47 s et ~50 s.
+- ☑ **Un signalement s'affiche et n'arrête rien.** Au second passage : *« lectures, phrase 10 : une
+  lecture de 35 mots (au-delà de 30) »* — la référence reste `CONFORME` et elle est écrite.
+- ☑ **Les intervalles se dérivent, et les STOCKER fait refuser.** Les 4 moments localisés en
+  caractères par dérivation, les 4 concepts retrouvés par leurs formes, l'union du statut du moment
+  rendue à sa phrase. **Et y ajouter une clé `intervalle` déclenche le refus n° 11**, éprouvé sur la
+  référence réellement écrite.
+- ☑ **⭐ Une référence non validée n'entre jamais dans une phase de jugement — PROUVÉ PAR
+  L'ÉCHEC.** Insertion d'un `exercices_squelettes` portant un `artefact_jugement`, sur un dépôt dont
+  l'exercice vise la référence non validée → **la base refuse** : *« Garde 07- §1.1 : une référence
+  non validée n'entre jamais dans une phase de jugement »*. **L'extraction seule passe** — la garde
+  porte sur le jugement, pas sur tout —, et **le jugement passe une fois la référence validée** : la
+  garde est une condition, pas un mur.
+- ☑ **Une référence validée devient immuable.** `update` du `contenu` après validation → **la base
+  refuse** : *« une référence validée ne se modifie plus en silence »*.
+- ☑ **Le texte n'entre au pipeline Aletheia qu'une fois sa référence validée.** La requête **même**
+  de `/prof/conception/nouvelle` ne le rend pas avant, le rend après ; et le prédicat unique
+  (`utils/reference-validee.ts`) bascule dans le même sens.
+- ☑ **Les quatre écrans touchés EXISTENT, COMPILENT et sont GARDÉS.** `npx next build` les liste et
+  les compile *(`ƒ /prof/conception/textes` au manifeste)* — **c'est lui qui aurait attrapé un export
+  illégal depuis un `'use server'`**, le défaut que ni `tsc` ni `npm test` ne voient. Et sur le
+  serveur de développement, `/prof/conception`, `/prof/conception/textes`,
+  `/prof/conception/nouvelle` et `/prof/corpus` rendent tous **307 → `/login`** : le proxy les garde,
+  et aucune erreur n'apparaît au journal du serveur. ⚠️ *Cela prouve que les modules sont valides et
+  que la porte est fermée — **pas** que les écrans se comportent bien derrière elle. C'est ce que le
+  smoke ci-dessous a prouvé ensuite, session prof ouverte.*
+
+### ⭐ SMOKE PROF JOUÉ LE 26/08 — les cinq lignes sont COCHÉES
+
+**Louis a ouvert une session prof en séance.** Les cinq gestes ont été joués à l'écran, dans
+l'ordre, sur un texte réel déposé pour l'occasion — **Kant, *Qu'est-ce que les Lumières ?*, 131 mots,
+8 phrases**. *Le décor a été retiré le soir même ; seul le texte Kant reste au corpus, décomposé et
+validé, parce que c'est une entrée légitime qui a coûté un appel réel.*
+
+- ☑ **C5L1-1 · La décomposition depuis l'écran.** Texte déposé au formulaire, puis
+  **« Décomposer ce texte »**. Le bouton a bien affiché **« G1, puis G2, puis G3… »** pendant
+  **37 s**, et le retour a porté : `G1 : 1 appel(s)` · `G2 : 1 appel(s)` · `G3 : 1 appel(s)` ·
+  *« 3 ligne(s) attendue(s) à `api_couts` — module `exercices-generateur`, modèle
+  `claude-sonnet-4-6`, `phase` NULL »* · `8 phrase(s), 131 mot(s)` · `3 moment(s) · 8 phrase(s) ·
+  4 lecture(s) sur 3 phrase(s)-thèses · 5 concept(s)` · `~45 valeurs déclarées`.
+  **Verdict : CONFORME.** ⭐ Et le dépôt en base porte `id_import = depot-en-ligne:d23f8081…`,
+  `import_id` **NULL**, une **seule** ligne de `scriptorium_contenus`.
+- ☑ **C5L1-2 · La validation, D'UN SEUL GESTE.** Bandeau à quatre chiffres, armature en tête,
+  moments en filet de marge avec leur étiquette et leur flèche de cible (`conclut → M1`,
+  `precise → M1`), lectures défendables en clair avec leur drapeau, concepts en pied de page **avec
+  le nombre d'occurrences retrouvées**. ⭐ **Et les intervalles dérivés s'affichent** :
+  `phrases 1–3 · car. 0–412`, `phrases 4–6 · car. 413–512`, `phrases 7–8 · car. 513–745`.
+  *« Référence validée — un seul geste, pour toute la référence. »* ⭐ **L'onglet « Corriger »
+  DISPARAÎT alors**, remplacé par « Dévalider — explicitement ».
+- ☑ **C5L1-3 · ⭐ TRANCHER UN BLOCAGE — les trois temps, joués.**
+  *(a)* **Un REFUS n'écrit rien** : `M2.de` porté de 4 à 5 *(trou sur la phrase 4)* →
+  *« La correction est REFUSÉE par le contrôle : elle n'a pas été écrite. "Un trou ne passe jamais
+  en silence." · trou entre M1 (finit en 3) et M2 (commence en 5) »*, **et la base n'a pas bougé**
+  *(vérifié : `M2.de = 4`)*.
+  *(b)* **Un BLOCAGE s'écrit et bloque** : cible de M2 retirée *(`conclut` sans cible)* →
+  *« Correction écrite, mais 1 blocage(s) restent »*, et **à la recharge le bandeau dit
+  « À TRANCHER »**, avec sa raison, **bouton de validation désactivé**.
+  *(c)* **La correction qui tranche rouvre la validation** : cible remise → *« Correction écrite,
+  et le contrôle repasse : la validation est possible. »*
+- ☑ **C5L1-4 · La sélection DANS le texte, et le pipeline jusqu'au bout.** Le texte décomposé
+  **n'apparaissait pas** au pipeline avant validation, et y est **apparu après**. Sélection à la
+  souris de *« Sapere aude ! Aie le courage… »* → **`caractères 413–482 · extrait`**, avec le
+  passage cité en regard. ⭐⭐ **413 est EXACTEMENT la borne de M2 affichée à l'écran de la
+  référence** : la dérivation depuis les numéros de phrase et la capture à la souris tombent sur le
+  même caractère. La garde mord : un englobant `0–100` qui ne contient pas la sélection →
+  *« L'englobant est la portion AFFICHÉE AUTOUR de la sélection : il doit la contenir
+  entièrement. »*, **bouton désactivé** ; englobant `300–600` → alerte levée. Instance conçue, et
+  **en base** : `materiau_source_localisation = [413,482]`, `englobant = [300,600]`,
+  `provenance = texte_auteur`, `support = extrait`, `cran = 8`.
+- ☑ **C5L1-5 · La dévalidation, et ce qu'elle ne défait pas.** *« Référence dévalidée : aucune
+  instance NEUVE ne peut plus se concevoir dessus. **1 instance(s)** déjà bâtie(s) sur ce texte ne
+  sont pas défaites — retirez-les une à une si c'est ce que vous voulez. »* **Le compte est juste**,
+  et le texte **sort** aussitôt de la liste du pipeline.
+- ☑ **La doctrine refuse ce qu'elle doit refuser.** Au passage, en Codex : un cran 8 avec le
+  matériau en cible → *« le cran 8 veut `materiau_cible` nul »*. `empechementsDeConception` (C4-L8)
+  mord toujours.
+
+### ⚠️⚠️ CE QUE LE SMOKE A TROUVÉ, ET QUI N'EST PAS DE CE LOT — le CRLF, TROISIÈME morsure
+
+**Mesuré en tapant vraiment dans un `<textarea>`, puis lu en base :**
+
+| Où | CR |
+|---|---|
+| `textarea.value` | **0** |
+| `new FormData(formulaire)` *(côté navigateur)* | **0** |
+| **en base**, sur un champ qu'aucun code ne normalise — `exercices.consigne_instanciee` | **1** ⚠️ |
+
+⭐ **La normalisation en CRLF a donc bien lieu SUR LE CHEMIN DES SERVER ACTIONS REACT** — ce qu'on
+pouvait espérer différent, puisque React sérialise en JavaScript. **Ce n'est pas différent.**
+⭐ **Et la normalisation défensive de C5-L1 a fait son travail** : dans la MÊME séance, le texte
+déposé et le JSON corrigé sont mesurés à **0 CR**, face au **1 CR** de la consigne.
+⛔ **Le défaut est PRÉ-EXISTANT, hors périmètre, et NON CORRIGÉ** : `concevoirInstance` et
+`editerInstance` (C4-L8) écrivent la `consigne_instanciee` et l'appui sans normaliser, et
+`distracteurs: brut.split('\n')` laisse un `\r` **en queue de chaque distracteur**.
+**Porté au `IDEES_post_rentree.md`**, avec sa mesure et la correction d'une ligne par site.
+**CONDITION DE REPRISE : dès que la correction est prise en charge** — vérifier alors qu'une
+consigne saisie sur deux lignes revient à `0 CR`, et qu'un distracteur ne porte plus de `\r` en queue.
+
+### ⭐ CE QUI A ÉTÉ TRANCHÉ EN CLÔTURE — `consigne_gabarit` est RETIRÉE
+
+**La troisième pièce de la mission de C5-L1 ne se construira pas, et elle n'a plus à se construire :
+`consigne_gabarit` était un RELIQUAT.** Décision de Louis du 26/08, sur l'archéologie faite en fin
+de séance — **et la réponse était déjà écrite au `CONTEXTE.md` du 16/08** : *« le schéma sait déjà
+déclarer par cran ; `consigne_gabarit` est restée à plat PAR OUBLI. Ce n'est pas un arbitrage à
+rendre, c'est une dette du `07-` à écrire. »*
+
+- ☑ **La colonne sort de la déclaration du `07-` §1.1**, avec ses trois écarts mesurés
+  *(cardinalité 13 contre ~400 · la consigne ne varierait ni avec le mode ni avec le cran · 324
+  consignes existantes qui ne rentrent pas)* et sa généalogie. **`07-` v2.55.**
+- ☑ **Ce qui fait le travail est nommé** : la banque `exercices_routes`, **3264 lignes** dérivées,
+  servie par le pipeline à son étage 4. *« Les questions engendrées depuis la consigne-gabarit du
+  type » le sont, correctement, depuis la ROUTE.*
+- ☐ **La MIGRATION DE RETRAIT est écrite et NON JOUÉE** —
+  `c5_l1_retrait_consigne_gabarit.sql` + son rollback. Elle porte un bloc qui **refuse de jouer** si
+  une seule ligne porte une valeur, et **aucun lecteur applicatif n'est à retirer d'abord**.
+  **CONDITION DE REPRISE : le go de Louis** — c'est un `drop column`, en bac à sable d'abord puis en
+  prod, et **sa ligne au `SUIVI_SQL.md` s'écrit AVANT l'exécution**.
+
+### ⚠️ Et « la tranche » est tranchée aussi — c'est la lecture (b)
+
+**Décision de Louis du 26/08** : « la tranche » est **la part de la RÉFÉRENCE servie à la Phase 2**
+*(ce que le `02-` §6 A dit littéralement)*, **jamais un segment du livre**. Ce n'est donc **pas une
+seconde échelle de sélection**, et l'entrée de C5-L1 ne demandait qu'un geste — le choix de
+l'extrait, qui est construit et prouvé. ⭐ **Ce que (b) désigne appartient à `C5-L3`**, dont l'entrée
+du `07-` §2 le porte désormais ; la brique existe *(`valeursServies()`)*.
+⚠️ *Ce qui a fait écarter (a), pour qui voudrait rouvrir : elle exigerait de savoir quelle plage est
+« exposée » pour une CLASSE, quand la position de lecture est par élève.*

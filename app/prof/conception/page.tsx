@@ -52,10 +52,18 @@ export default async function Conception() {
           Pilotage · La fabrique
         </p>
         <h1 className="font-titre text-2xl text-encre">La conception</h1>
+        {/* ⭐ C5-L1 A RENDU L'ANCIENNE PHRASE FAUSSE, ET ELLE EST CORRIGÉE ICI.
+            Elle disait : « Aucun appel de modèle ici : ce qui s'engendre —
+            matériaux, appuis, références — s'engendre au générateur, HORS
+            PLATEFORME, et arrive par l'import. » Le générateur de la RÉFÉRENCE
+            DÉCOMPOSÉE vit désormais en plateforme (`utils/generateur/`, `05-`
+            §1 à §3). Les matériaux et les appuis, eux, n'ont pas bougé. */}
         <p className="font-ui text-sm text-encre-douce max-w-3xl">
-          <strong>Aucun appel de modèle ici</strong>{' '}: ce qui s&apos;engendre — matériaux, appuis,
-          références — s&apos;engendre au générateur, hors plateforme, et arrive par l&apos;import.
-          {' '}Cet écran ne fait que <em>borner une saisie</em>.
+          <strong>Un seul appel de modèle part d&apos;ici</strong>{' '}: celui du
+          {' '}<Link href="/prof/conception/textes" className="underline">générateur de la
+          référence décomposée</Link>, en trois passages, sur un texte d&apos;auteur. Tout le
+          reste — matériaux, appuis, exercices — s&apos;engendre hors plateforme et arrive par
+          l&apos;import ; pour ceux-là, cet écran ne fait que <em>borner une saisie</em>.
         </p>
       </header>
 
@@ -80,9 +88,12 @@ export default async function Conception() {
           </Link>
         </div>
         <p className="font-ui text-xs text-muet">
-          Les textes d&apos;auteur, les références décomposées et le corpus vivent au
+          Les textes d&apos;auteur et le corpus vivent au
           {' '}<Link href="/prof/corpus" className="underline">Scriptorium</Link> : le professeur y
-          dépose, il ne conçoit pas là.
+          dépose, il ne conçoit pas là. <strong>Un texte se dépose, se décompose et se valide</strong>
+          {' '}à l&apos;écran des{' '}
+          <Link href="/prof/conception/textes" className="underline">textes</Link> — c&apos;est un
+          geste séparé de la conception d&apos;un exercice, et il se fait une fois par texte.
         </p>
       </section>
 

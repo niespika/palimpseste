@@ -10,7 +10,9 @@
 // ============================================================================
 
 import { useActionState, useState } from 'react'
-import { validerReference, devaliderReference, type RetourConception } from '../../actions'
+import {
+  validerReference, devaliderReference, corrigerReference, type RetourConception,
+} from '../../actions'
 import type { VerdictReference } from '@/utils/fabrique/verifie-reference'
 
 interface Moment {
@@ -23,19 +25,25 @@ interface Concept { concept: string; formes: string[] }
 interface Armature { question_directrice?: string; these?: string; these_phrases?: number[] }
 
 export default function LectureAnnotee({
-  referenceId, dejaValidee, phrases, reference, verdict,
+  referenceId, dejaValidee, phrases, reference, verdict, intervalles, occurrences,
 }: {
   referenceId: string; dejaValidee: boolean
   /** Les phrases DÉJÀ SEGMENTÉES par la segmentation qui fait foi (`05-` §4.7). */
   phrases: string[]
   reference: Record<string, unknown>
   verdict: VerdictReference
+  /** ⭐ DÉRIVÉS À LA LECTURE, jamais stockés — voir `utils/generateur/lecture.ts`. */
+  intervalles: Array<{ m: string; intervalle: [number, number] | null }>
+  occurrences: Array<{ concept: string; intervalles: Array<[number, number]> }>
 }) {
-  const [vue, setVue] = useState<'annotee' | 'formulaire'>('annotee')
+  const [vue, setVue] = useState<'annotee' | 'formulaire' | 'correction'>('annotee')
   const [retour, action, enCours] = useActionState<RetourConception | null, FormData>(
     validerReference, null)
   const [retourDev, actionDev] = useActionState<RetourConception | null, FormData>(
     devaliderReference, null)
+  const [retourCorr, actionCorr, corrEnCours] = useActionState<RetourConception | null, FormData>(
+    corrigerReference, null)
+  const bornesDuMoment = new Map(intervalles.map((x) => [x.m, x.intervalle]))
 
   const moments = (reference.moments ?? []) as Moment[]
   const parPhrase = new Map<number, Phrase>()
@@ -95,13 +103,18 @@ export default function LectureAnnotee({
         </p>
       </section>
 
-      <div className="inline-flex rounded-lg border border-bordure bg-surface p-0.5 font-ui text-sm">
-        {(['annotee', 'formulaire'] as const).map((x) => (
+      <div className="inline-flex flex-wrap rounded-lg border border-bordure bg-surface p-0.5 font-ui text-sm">
+        {(dejaValidee
+          ? (['annotee', 'formulaire'] as const)
+          : (['annotee', 'formulaire', 'correction'] as const)
+        ).map((x) => (
           <button key={x} type="button" onClick={() => setVue(x)}
             aria-current={vue === x ? 'true' : undefined}
             className={`rounded-md px-3.5 py-1.5 ${
               vue === x ? 'bg-bouton text-surface' : 'text-encre-douce hover:bg-parchemin-fonce'}`}>
-            {x === 'annotee' ? 'Lecture annotée' : 'Formulaire — toutes les valeurs'}
+            {x === 'annotee' ? 'Lecture annotée'
+              : x === 'formulaire' ? 'Formulaire — toutes les valeurs'
+                : 'Corriger'}
           </button>
         ))}
       </div>
@@ -123,6 +136,15 @@ export default function LectureAnnotee({
                 {(m.statuts ?? []).filter((s) => s !== 'affirme').map((s) => (
                   <p key={s} className="text-attention">{s}</p>
                 ))}
+                {/* ⭐ L'INTERVALLE, DÉRIVÉ À LA LECTURE. Il ne vit nulle part en
+                    base : le format ne déclare que `de`/`a`, et une clé de plus
+                    déclencherait le refus n° 11. */}
+                <p className="text-muet-clair" title="dérivé des numéros de phrase — jamais stocké">
+                  {(() => {
+                    const b = bornesDuMoment.get(m.m)
+                    return b ? `phrases ${m.de}–${m.a} · car. ${b[0]}–${b[1]}` : `phrases ${m.de}–${m.a}`
+                  })()}
+                </p>
               </aside>
               <div className="min-w-0 flex-1 space-y-1">
                 {phrases.slice(m.de - 1, m.a).map((p, k) => {
@@ -152,14 +174,20 @@ export default function LectureAnnotee({
               </div>
             </div>
           ))}
-          {/* les concepts en pied de page */}
+          {/* les concepts en pied de page — avec leurs OCCURRENCES, retrouvées
+              par le code à partir des formes citées : « le modèle ne localise ni
+              ne compte rien » (`05-` §1), et elles ne se stockent pas non plus. */}
           {concepts.length > 0 && (
             <p className="mt-3 border-t border-bordure pt-2 font-ui text-xs text-muet">
-              concepts : {concepts.map((c) => `${c.concept} (${c.formes.join(', ')})`).join(' · ')}
+              concepts : {concepts.map((c) => {
+                const o = occurrences.find((x) => x.concept === c.concept)
+                return `${c.concept} (${c.formes.join(', ')}${
+                  o ? ` — ${o.intervalles.length} occurrence(s) retrouvée(s)` : ''})`
+              }).join(' · ')}
             </p>
           )}
         </section>
-      ) : (
+      ) : vue === 'formulaire' ? (
         <section className="rounded-xl border border-bordure bg-surface p-4">
           <p className="mb-2 font-ui text-xs text-muet">
             Le détail complet, toutes les valeurs déclarées. <strong>Cette vue ne disparaît
@@ -170,6 +198,61 @@ export default function LectureAnnotee({
                           p-3 font-mono text-xs text-encre">
             {JSON.stringify(reference, null, 2)}
           </pre>
+          <p className="mt-2 font-ui text-xs text-muet">
+            <strong>Ce que le format ne porte pas, et qui se dérive à la lecture</strong> : les
+            intervalles des moments et les occurrences des concepts. Le format ne déclare que des
+            numéros de phrase et des formes citées ; les bornes, elles, se recalculent à chaque
+            lecture depuis la segmentation qui fait foi — <em>un second domicile de ce que
+            {' '}<code>de</code>/<code>a</code> disent déjà finirait par diverger</em>.
+          </p>
+          <ul className="mt-1 font-ui text-xs text-muet-clair">
+            {intervalles.map((x) => (
+              <li key={x.m}>
+                {x.m} → {x.intervalle
+                  ? `caractères ${x.intervalle[0]}–${x.intervalle[1]} (fin exclue)`
+                  : 'bornes introuvables — rien ne se devine'}
+              </li>
+            ))}
+            {occurrences.map((x) => (
+              <li key={x.concept}>
+                « {x.concept} » → {x.intervalles.map((o) => `${o[0]}–${o[1]}`).join(', ') || 'aucune'}
+              </li>
+            ))}
+          </ul>
+        </section>
+      ) : (
+        /* ── LA CORRECTION — « le professeur corrige ce qui est faux, PUIS
+              valide l'ensemble » (`05-` §4.5). Sans elle, les deux BLOCAGES du
+              §4.2 n'avaient aucune issue : le bouton de validation restait
+              désactivé, et rien ne permettait de trancher. ── */
+        <section className="rounded-xl border border-bordure bg-surface p-4 space-y-2">
+          <p className="font-ui text-xs text-encre-douce">
+            <strong>Corrigez ce qui est faux, puis validez l&apos;ensemble.</strong>{' '}
+            <strong>Toute correction repasse le contrôle</strong> avant que la validation
+            redevienne possible — <em>déplacer une frontière de moment peut ouvrir un trou de
+            couverture, et un trou ne passe jamais en silence</em>. Un refus n&apos;écrit rien ;
+            un blocage restant s&apos;écrit, et vous pouvez reprendre.
+          </p>
+          <form action={actionCorr} className="space-y-2">
+            <input type="hidden" name="reference_id" value={referenceId} />
+            <textarea name="contenu" rows={22} spellCheck={false}
+              defaultValue={JSON.stringify(reference, null, 2)}
+              className="w-full rounded-md border border-bordure bg-parchemin p-3 font-mono
+                         text-xs text-encre" />
+            <button type="submit" disabled={corrEnCours}
+              className="rounded-md bg-bouton px-4 py-2 font-ui text-sm text-surface disabled:opacity-50">
+              {corrEnCours ? 'Contrôle…' : 'Corriger et repasser le contrôle'}
+            </button>
+          </form>
+          {retourCorr && (
+            <div className={`rounded-lg border px-3 py-2 space-y-1 ${
+              retourCorr.ok ? 'border-ok bg-ok-teinte' : 'border-retard bg-retard-teinte'}`}>
+              <p className="font-ui text-sm text-encre">{retourCorr.message}</p>
+              {(retourCorr.empechements ?? []).map((e, i) => (
+                <p key={i} className="font-ui text-xs text-encre-douce">· {e}</p>
+              ))}
+            </div>
+          )}
         </section>
       )}
 

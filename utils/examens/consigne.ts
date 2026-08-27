@@ -6,8 +6,14 @@
 //
 // ⚠️ CE FICHIER NE DÉCIDE D'AUCUNE FORMULATION PÉDAGOGIQUE, et c'est voulu :
 //    « une donnée que RIEN ne nomme se signale, elle ne s'invente pas ». Aucune
-//    source n'arrête le texte d'une consigne d'examen diagnostique — le
-//    `consigne_gabarit` des deux types est NULL et le reste. Ce qui est composé
+//    source n'arrête le texte d'une consigne d'examen diagnostique.
+//    ⭐ C5-L1, 26/08 — ET LA RAISON EST DÉSORMAIS CONNUE : `consigne_gabarit`
+//    n'était pas une donnée manquante, c'était UN RELIQUAT d'un modèle « une
+//    consigne par objet » remplacé par « une banque par objet × mode × cran »
+//    (`exercices_routes`, dérivée depuis C4-L8). Elle est RETIRÉE de la
+//    déclaration du `07-` §1.1 sur décision de Louis. Ce commentaire disait
+//    « NULL et le reste » : il aurait fallu dire « elle n'a jamais eu de
+//    contenu à porter ». Ce qui est composé
 //    ici n'est donc qu'un POINT DE DÉPART : il nomme l'exercice (avec le libellé
 //    du type, tiré du `01-` §10) et sert le matériau. **C'est le professeur qui
 //    l'arrête à l'écran, et c'est le texte qu'il arrête que l'élève lit**
