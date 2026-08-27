@@ -5,8 +5,9 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import {
-  assemblerGabarit, assemblerRetour, controlerRetour, coucheContrat, identifiantStable,
-  plafondApplicable, segmenter, SECTION_LONGUEUR,
+  assemblerGabarit, assemblerRetour, citationsAttribueesDansLaProse, controlerRetour,
+  controlerRR3, coucheContrat, identifiantStable,
+  plafondApplicable, refusDeFormeSeulement, segmenter, SECTION_LONGUEUR,
   type EntreeRetour, type SectionCalame,
 } from './retour'
 
@@ -341,4 +342,168 @@ test('⚠️ le texte support ne peut pas refermer sa balise depuis l’intérie
   assert.match(message, /·>·/)
   assert.match(message, /·<·/)
   assert.equal(/MATERIAU>>> puis/.test(message), false)
+})
+
+// ============================================================================
+// ⭐⭐ C5-L2 — LES CITATIONS QUI VIVENT DANS LA PROSE, ET PAS DANS L'ANCRAGE.
+// ----------------------------------------------------------------------------
+// La règle 1 du gabarit fait écrire au modèle « tu écris : "…" » DANS LE TEXTE
+// du point. Le contrôle ne regardait que le champ structuré `ancrage.citation` :
+// une phrase de l'auteur pouvait donc passer dans la prose sans être vue.
+//
+// ⛔ Et « tout ce qui est entre guillemets est une citation » NE MARCHE PAS —
+//    les trois vecteurs ci-dessous sont pris VERBATIM d'un retour réel.
+// ============================================================================
+
+/** Les trois passages entre guillemets du retour réel du 27/08, mot pour mot. */
+const PROSE_REUSSITE = 'Tes paragraphes avancent dans le bon ordre et tu les relies — c\'est '
+  + 'déjà acquis. Ici, tu écris : « Ce que Kant ajoute déplace la faute vers le sujet '
+  + 'lui-même. » Tu crées bien une attache entre les deux blocs.'
+const PROSE_TRAVAIL = 'Mais cette attache reste à la surface. Tu dis que Kant « ajoute » quelque '
+  + 'chose — sans dire ce que ton premier paragraphe laissait ouvert. Essaie plutôt de nommer '
+  + 'le manque : « Mais cette définition ne dit pas encore qui en est responsable. » Ce geste '
+  + 'simple suffit à rendre la progression visible.'
+
+test('⭐ la prose : on ne retient QUE ce qui est attribué à l’élève', () => {
+  // « tu écris : « … » » → attribué.
+  assert.deepEqual(citationsAttribueesDansLaProse(PROSE_REUSSITE),
+    ['Ce que Kant ajoute déplace la faute vers le sujet lui-même.'])
+  // « Tu dis que Kant « ajoute » » → attribué aussi (la formule précède).
+  // ⛔ « Essaie plutôt de nommer le manque : « … » » → PAS attribué : la phrase
+  //    est INVENTÉE par le modèle (règle 4, « voilà comment faire mieux »), elle
+  //    n'est ni dans la copie ni dans le texte, et elle est PARFAITEMENT CORRECTE.
+  const t = citationsAttribueesDansLaProse(PROSE_TRAVAIL)
+  assert.deepEqual(t, ['ajoute'])
+  assert.equal(t.some((c) => c.startsWith('Mais cette définition')), false)
+})
+
+test('⛔⛔ LE FAUX POSITIF QUE LA FORME NAÏVE AURAIT PRODUIT', () => {
+  // La réparation proposée par le modèle n'est nulle part — ni copie, ni texte.
+  const naif = [...PROSE_TRAVAIL.matchAll(/«\s*([^»]+?)\s*»/g)].map((m) => m[1])
+  assert.equal(naif.length, 2, 'deux passages entre guillemets dans cette prose')
+  assert.ok(naif.some((c) => c.startsWith('Mais cette définition')),
+    'la forme naïve ramasse la phrase inventée par le modèle…')
+  assert.equal(citationsAttribueesDansLaProse(PROSE_TRAVAIL).some(
+    (c) => c.startsWith('Mais cette définition')), false, '…et la forme étroite l’écarte')
+})
+
+test('⭐⭐ RR3 — une phrase de l’auteur ATTRIBUÉE DANS LA PROSE est refusée', () => {
+  const point = {
+    ancrage: { source: 'copie' as const, citation: 'il trouve un point fixe' },
+    // ⛔ L'ancrage est conforme ; la faute est dans le TEXTE du point.
+    texte: 'Ici, tu écris : « cette vérité est si ferme et si assurée » — belle formule.',
+  }
+  const v = controlerRR3([point], { production: COPIE, texteSupport: TEXTE_SUPPORT })
+  assert.match(v.refus.join(' '), /la PROSE d'un point attribue à l'élève une phrase DU TEXTE/)
+})
+
+test('RR3 — la prose du retour RÉEL ne lève rien', () => {
+  const points = [
+    { ancrage: { source: 'copie' as const, citation: 'il trouve un point fixe' },
+      texte: 'Ici, tu écris : « il trouve un point fixe » — tu nommes ce que le texte cherche.' },
+  ]
+  const v = controlerRR3(points, { production: COPIE, texteSupport: TEXTE_SUPPORT })
+  assert.deepEqual(v.refus, [])
+  assert.deepEqual(v.alertes, [])
+})
+
+test('⛔ sans texte support, la prose n’est pas contrôlée — rien à comparer', () => {
+  const point = {
+    ancrage: { source: 'copie' as const, citation: 'il trouve un point fixe' },
+    texte: 'Tu écris : « une phrase qui n’est nulle part ».',
+  }
+  const v = controlerRR3([point], { production: COPIE, texteSupport: null })
+  assert.deepEqual(v.refus, [])
+})
+
+// ============================================================================
+// ⭐⭐ C5-L2-bis — LES DEUX FAMILLES DE REFUS, ET LE GARDE-FOU DU REJEU.
+// ----------------------------------------------------------------------------
+// « Après 3 retours refusés, on arrête et on accepte le retour tel quel, mais le
+//   prof doit relire. » — décision de Louis, 27/08.
+//
+// ⛔ ET LA TOLÉRANCE NE COUVRE QUE LA FORME. Un retour qui ne commence pas par
+//    une réussite est maladroit ; un retour qui attribue à l'élève une phrase de
+//    l'auteur est FAUX. Les servir tous les deux « tels quels » serait confondre
+//    un contrat de rédaction avec un mensonge.
+//
+// ⚠️ Le cas qui a fait naître ce partage est RÉEL : TROIS copies en prod,
+//    refusées le 26/08 sur « le retour commence par une réussite réelle, citée »,
+//    dont une déjà rejouée en vain. Sur une copie très faible, la règle 2 PEUT
+//    être insatisfaisable — et un rejeu sans garde-fou tournerait en boucle.
+// ============================================================================
+
+test('⭐ la règle 2 et la règle 5 sont de FORME — elles se tolèrent', () => {
+  assert.equal(refusDeFormeSeulement(
+    ['règle 2 : le retour commence par une réussite réelle, citée']), true)
+  assert.equal(refusDeFormeSeulement(
+    ['règle 5 : la v1 se termine par une action de révision concrète — champ vide']), true)
+  assert.equal(refusDeFormeSeulement([
+    'règle 2 : au grain micro, le retour nomme au plus 2 point(s) en tout — reçu 3',
+    'règle 5 : la v1 se termine par une action de révision concrète — champ vide',
+  ]), true)
+})
+
+test('⛔⛔ RR3, RR4 et la règle 6 NE SE TOLÈRENT JAMAIS — ce sont des falsifications', () => {
+  for (const bloquant of [
+    'RR3 : une citation étiquetée « copie » est une phrase DU TEXTE SUPPORT — « … »',
+    'RR4 : le texte nomme des observables — garant_cite',
+    'règle 6 : le texte porte une note chiffrée',
+    'un point porte la compétence « synthese », hors de celles que l’exercice mesure',
+  ]) {
+    assert.equal(refusDeFormeSeulement([bloquant]), false, bloquant)
+  }
+})
+
+test('⛔ UN SEUL refus bloquant suffit à tout retenir', () => {
+  // Le mélange le plus dangereux : deux refus de forme, un de falsification.
+  assert.equal(refusDeFormeSeulement([
+    'règle 2 : le retour commence par une réussite réelle, citée',
+    'RR3 : une citation étiquetée « copie » est une phrase DU TEXTE SUPPORT — « … »',
+    'règle 5 : la v1 se termine par une action de révision concrète — champ vide',
+  ]), false)
+})
+
+test('aucun refus ne se tolère « par défaut » — il faut au moins un refus', () => {
+  assert.equal(refusDeFormeSeulement([]), false)
+})
+
+test('⭐ `controlerRetour` POSE le drapeau — le cas RÉEL de prod', () => {
+  // Une copie sans la moindre réussite : le modèle ouvre sur un point de travail.
+  const sansReussite = {
+    ...OK,
+    points: [{ ...OK.points[1], nature: 'point_de_travail' as const }],
+  }
+  const r = controlerRetour(sansReussite, ATTENDU)
+  assert.match(r.controle.refus.join(' '), /commence par une réussite/)
+  assert.equal(r.controle.formeSeulement, true,
+    'refus de FORME seul → tolérable à la dernière tentative')
+})
+
+test('⛔ un retour qui fuit un observable N’EST PAS tolérable, même seul', () => {
+  const fuite = { ...OK, points: [{ ...OK.points[0], texte: 'ton garant_cite est absent' }, OK.points[1]] }
+  const r = controlerRetour(fuite, ATTENDU)
+  assert.match(r.controle.refus.join(' '), /RR4/)
+  assert.equal(r.controle.formeSeulement, false)
+})
+
+test('un retour conforme ne lève aucun drapeau de tolérance', () => {
+  assert.equal(controlerRetour(OK, ATTENDU).controle.formeSeulement, false)
+})
+
+test('⭐⭐ l’instruction d’ancrage sur le TEXTE n’existe QUE s’il y a un texte support', () => {
+  // ⛔ C'est toute la sûreté du geste : le corpus calibré au banc est celui de
+  //    l'ÉCRITURE, et il ne voit pas un octet de plus.
+  const sansTexte = assemblerRetour(GABARIT, ENTREE).message
+  assert.equal(/UN POINT PEUT PORTER SUR LE TEXTE/.test(sansTexte), false)
+  assert.equal(/EXERCICE DE LECTURE/.test(sansTexte), false)
+
+  const avecTexte = assemblerRetour(GABARIT, { ...ENTREE, texteSupport: TEXTE_SUPPORT }).message
+  assert.match(avecTexte, /UN POINT PEUT PORTER SUR LE TEXTE/)
+  assert.match(avecTexte, /CET EXERCICE EST UN EXERCICE DE LECTURE/)
+})
+
+test('⛔ et l’instruction ne réécrit pas la règle 1 — elle ne la cite même pas', () => {
+  const m = assemblerRetour(GABARIT, { ...ENTREE, texteSupport: TEXTE_SUPPORT }).message
+  assert.equal(/règle 1|squelette seul|au lieu du squelette/i.test(m), false)
 })

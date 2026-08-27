@@ -339,6 +339,53 @@ export async function relancerUnJob(
   return { relance: true, raison: 'remis en file' }
 }
 
+/**
+ * ⭐⭐ REMETTRE UN JOB EN FILE **SANS LUI RENDRE SES TENTATIVES** — le rejeu de
+ * la MACHINE, par opposition à `relancerUnJob`, qui est celui de l'HUMAIN.
+ *
+ * ⚠️⚠️ **LA DIFFÉRENCE EST TOUT LE GARDE-FOU, ET ELLE EST FACILE À MANQUER.**
+ *    `relancerUnJob` remet `tentatives: 0` **exprès** — « ce n'est pas une
+ *    reprise automatique après panne, c'est une DEMANDE HUMAINE ». Un rejeu
+ *    automatique bâti dessus ne verrait donc **jamais** son compteur monter :
+ *    sur un refus DÉTERMINISTE — et celui de la règle 2 sur une copie sans
+ *    réussite en est un —, il brûlerait **un appel par tour, à la minute,
+ *    indéfiniment**. *Le plafond n'est pas une précaution : c'est ce qui
+ *    distingue un rejeu d'une boucle.*
+ *
+ * ⭐ **ET LE PLAFOND EXISTE DÉJÀ** : `reclamerJobs` clôt tout job dont
+ *    `tentatives >= tentatives_max` et le rend `echec_definitif` — donc VISIBLE
+ *    à l'élève (`attenteDuDepot`), au lieu d'une attente muette. On préserve le
+ *    compteur, et la file s'arrête d'elle-même.
+ *
+ * ⛔ On ne remet pas en file ce qui tourne déjà : ce serait lui voler son bail.
+ */
+export async function remettreEnFile(
+  admin: Admin, depotId: string, etape: EtapeChaine, motif: string,
+): Promise<{ remis: boolean; raison: string }> {
+  const { data, error } = await admin
+    .from('exercices_jobs').select(CHAMPS)
+    .eq('cle_idempotence', cleIdempotence(depotId, etape)).maybeSingle()
+  if (error) return { remis: false, raison: `file illisible — ${error.code} ${error.message}` }
+  const job = (data as unknown as Job | null) ?? null
+  if (!job) return { remis: false, raison: 'aucun job de ce type en file' }
+  if (job.statut === 'en_attente' || job.statut === 'en_cours') {
+    return { remis: false, raison: 'déjà en file' }
+  }
+  if (job.tentatives >= job.tentatives_max) {
+    return { remis: false, raison: `plafond de tentatives atteint (${job.tentatives}/${job.tentatives_max})` }
+  }
+  const { data: maj, error: eMaj } = await admin.from('exercices_jobs').update({
+    statut: 'en_attente',
+    bail_expire_at: null,
+    dernier_message: motif,
+    updated_at: new Date().toISOString(),
+    // ⛔ `tentatives` N'EST PAS TOUCHÉ — voir l'en-tête.
+  }).eq('id', job.id).eq('tentatives', job.tentatives).select('id')
+  if (eMaj) return { remis: false, raison: `${eMaj.code} ${eMaj.message}` }
+  if (!maj || maj.length === 0) return { remis: false, raison: 'repris entre-temps' }
+  return { remis: true, raison: `remis en file (tentative ${job.tentatives}/${job.tentatives_max})` }
+}
+
 /** L'état de job LISIBLE — la part de ce lot dans l'état d'attente de C4-L3. */
 export interface EtatLisible {
   etape: EtapeChaine

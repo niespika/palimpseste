@@ -51,7 +51,7 @@ import {
 // recopiés (`07-` §4). ⚠️ `REGISTRE` est ici le registre de LANGUE : il ne
 // touche jamais `{{REGISTRE}}`, qui est le registre de RETOUR du `01-` §8.7.
 import { IDENTITE, REGISTRE as TON_PARTAGE } from '@/utils/ia-commun'
-import { reposerJob, terminerJob, type Job } from './file'
+import { mettreEnFile, remettreEnFile, reposerJob, terminerJob, type Job } from './file'
 import type { Lieu,Competence, Registre, RetourSegmente, Version } from './types'
 
 type Admin = ReturnType<typeof createAdminClient>
@@ -896,6 +896,21 @@ async function engendrerLeRetour(
     squelettes: SqueletteServi[]
     squelettesVf?: SqueletteServi[]
     registre: Registre | null; cible: Competence | null
+    /**
+     * ⭐⭐ LE GARDE-FOU DU REJEU — décision de Louis, 27/08.
+     *
+     * Vrai à la DERNIÈRE tentative seulement. Il ne tolère QUE les refus de
+     * FORME (`ControleRetour.formeSeulement`) : *« au bout de trois tentatives,
+     * on sert le retour et le professeur relit »*. ⛔ **Un refus de
+     * FALSIFICATION n'est jamais toléré, à aucune tentative** — RR3, RR4, la
+     * règle 6 et les compétences hors périmètre font lire à l'élève quelque
+     * chose de faux, ou lui montrent la grille.
+     *
+     * ⚠️ Sans lui, le rejeu automatique tournerait EN BOUCLE sur les trois
+     *    copies de prod que la règle 2 refuse — un appel brûlé à chaque tour,
+     *    pour un retour qui ne viendrait jamais.
+     */
+    tolererLaForme?: boolean
   },
 ): Promise<{ ecrit: boolean; appels: number; alertes: string[] }> {
   const { ctx, version, modele, squelettes, cible } = a
@@ -1023,15 +1038,36 @@ async function engendrerLeRetour(
     //    et elles ne remontaient nulle part avant C5-L2 : le champ existait,
     //    personne ne le remplissait, et personne ne le lisait.
     alertes.push(...controle.controle.alertes)
-    if (!controle.verdict.ok || controle.controle.refus.length) {
-      const motifs = controle.verdict.ok
-        ? controle.controle.refus
-        : controle.verdict.refus.map((x) => `${x.chemin} ${x.motif}`)
-      alertes.push(`retour refusé : ${motifs.join(' | ')}`)
+
+    // ⛔⛔ PREMIER PARTAGE — LE SCHÉMA. Une sortie non conforme ne se tolère
+    //    JAMAIS : c'est la défense 2 du `01-` §12, `appeler()` a déjà relancé,
+    //    et le champ `points` pourrait ne même pas exister. Rien à servir.
+    const verdict = controle.verdict
+    if (!verdict.ok) {
+      alertes.push(`retour refusé : ${verdict.refus.map((x) => `${x.chemin} ${x.motif}`).join(' | ')}`)
       return { ecrit: false, appels: r.appels, alertes }
     }
 
-    const segmente = segmenter(controle.verdict.valeur, ctx.depotId, version)
+    // ⭐⭐ SECOND PARTAGE — LE CONTENU, et il a DEUX familles (voir
+    //    `ControleRetour.formeSeulement`). La FALSIFICATION ne se tolère à
+    //    aucune tentative ; la FORME se tolère à la dernière, plutôt que de
+    //    laisser l'élève sans retour.
+    if (controle.controle.refus.length) {
+      const motifs = controle.controle.refus
+      if (!(a.tolererLaForme === true && controle.controle.formeSeulement)) {
+        alertes.push(`retour refusé : ${motifs.join(' | ')}`)
+        return { ecrit: false, appels: r.appels, alertes }
+      }
+      // ⚠️ LE MOTIF SURVIT, ET C'EST TOUT CE QUI RESTE AU PROFESSEUR AUJOURD'HUI.
+      //    Il part au message du job (`motifDuRetourNonEcrit` le retient), seul
+      //    domicile de ce genre de trace tant que la page du professeur n'existe
+      //    pas — **elle est à C6-L1**. C'est le patron de `C4L3-19` : « le lot
+      //    détecte, marque, et laisse une trace ; il n'invente aucune file ».
+      alertes.push(
+        `⚠️ RETOUR SERVI SANS QUE LE CONTRAT DE FORME SOIT TENU — À RELIRE : ${motifs.join(' | ')}`)
+    }
+
+    const segmente = segmenter(verdict.valeur, ctx.depotId, version)
     const ecriture = await ecrireRetour(
       admin, ctx.depotId, version, registreServi, segmente, ctx.lieu)
     if (!ecriture.ecrit) alertes.push(`retour NON écrit en base : ${ecriture.erreur}`)
@@ -1200,7 +1236,7 @@ async function lireLeSqueletteComplet(
  */
 export async function rejouerLeRetour(
   admin: Admin, depotId: string,
-  options: { config?: ConfigChaine; registre?: Registre } = {},
+  options: { config?: ConfigChaine; registre?: Registre; tolererLaForme?: boolean } = {},
 ): Promise<BilanDepot> {
   const debut = Date.now()
   const config = options.config ?? lireConfig()
@@ -1274,6 +1310,7 @@ export async function rejouerLeRetour(
 
   const r = await engendrerLeRetour(admin, {
     ctx, version: 'v1', modele, squelettes, registre: options.registre ?? null, cible,
+    tolererLaForme: options.tolererLaForme === true,
   })
   alertes.push(...r.alertes)
 
@@ -1297,6 +1334,60 @@ export async function rejouerLeRetour(
   }
 }
 
+/**
+ * ⭐⭐ COMBIEN DE FOIS ON REJOUE UN RETOUR REFUSÉ, ET CE QUI SE PASSE APRÈS.
+ *
+ * *« Après 3 retours refusés, on arrête et on accepte le retour tel quel, mais
+ *   le prof doit relire »* — décision de Louis, 27/08.
+ *
+ * ⚠️ **Le chiffre est le même que `tentatives_max` de la file**, et ce n'est pas
+ *    une coïncidence : au-delà, `reclamerJobs` ne réclamerait plus le job.
+ */
+export const TENTATIVES_AVANT_TOLERANCE = 3
+
+/**
+ * ⭐⭐ LE REJEU AUTOMATIQUE D'UN RETOUR REFUSÉ.
+ *
+ * **Ce qui l'a rendu nécessaire.** Un retour refusé au contrôle laissait un
+ * dépôt mesuré SANS COMMENTAIRE, et le seul rattrapage était un geste HUMAIN —
+ * `relancerUnJob`, qu'il fallait penser à faire. ⛔ **Personne ne le pensait** :
+ * constaté en prod le 27/08, **trois copies mesurées sans retour depuis la
+ * veille**, chacune refusée sur le même motif, et rien nulle part qui le disait
+ * à qui que ce soit.
+ *
+ * ⚠️ **CE N'EST PAS « LE REJET ET LA RELANCE » DE LA DÉFENSE 2** (`01-` §12),
+ *    qui vit dans `appeler()` et relance l'APPEL sur une sortie non conforme au
+ *    schéma. Ici c'est **la FILE qui refait un tour** — le même geste que la
+ *    reprise après bail expiré, avec le même compteur et le même plafond.
+ *
+ * ⛔ **ET IL S'ARRÊTE.** `mettreEnFile` est idempotent et `relancerUnJob` refuse
+ *    un job qui tourne ; le plafond de tentatives de la file fait le reste. Sans
+ *    ces deux gardes, un refus déterministe — et celui de la règle 2 EST
+ *    déterministe sur une copie sans réussite — brûlerait un appel par tour, à
+ *    la minute, indéfiniment.
+ */
+async function programmerLeRejeuDuRetour(
+  admin: Admin, job: Job, bilan: BilanDepot,
+): Promise<void> {
+  if (bilan.retourEcrit) return
+  const refus = (bilan.alertes ?? []).find((x) => x.startsWith('retour refusé'))
+  if (!refus) return   // pas de retour à écrire (sonde, aucune compétence) : rien à rejouer
+
+  const { deja, erreur } = await mettreEnFile(admin, job.depot_id, 'retour_v1')
+  if (erreur) { console.error(`[chaine] rejeu du retour NON programmé — ${erreur}`); return }
+  if (!deja) return    // le job vient d'être créé : il partira au prochain tour
+
+  // ⛔ `remettreEnFile`, JAMAIS `relancerUnJob` : celui-ci rend ses tentatives au
+  //    job — c'est le geste de l'HUMAIN —, et le compteur ne monterait jamais.
+  const { remis, raison } = await remettreEnFile(
+    admin, job.depot_id, 'retour_v1', `rejeu automatique — ${refus}`)
+  if (!remis) {
+    console.warn(`[chaine] retour NON écrit et rejeu arrêté — dépôt ${job.depot_id} : ${raison}. `
+      + `Motif du refus : ${refus}. ⚠️ Il reste au message du job ; l'écran du professeur qui le `
+      + 'servira est à C6-L1.')
+  }
+}
+
 export async function tourDeFile(
   admin: Admin, jobs: Job[], config: ConfigChaine,
 ): Promise<Array<{ job: Job; bilan?: BilanDepot; erreur?: string }>> {
@@ -1307,13 +1398,21 @@ export async function tourDeFile(
       // ⭐ `retour_v1` NE MESURE PAS : elle relit les squelettes et n'engendre
       //    que le commentaire. La distinguer ici est tout ce qu'il faut — la
       //    file, le bail, l'idempotence et la reprise ne changent pas.
+      // ⚠️ `reclamerJobs` INCRÉMENTE `tentatives` à la prise : à la troisième
+      //    prise, `job.tentatives` vaut 3, et c'est la dernière — on tolère
+      //    alors les refus de FORME plutôt que de laisser l'élève sans retour.
       const bilan = job.etape === 'retour_v1'
-        ? await rejouerLeRetour(admin, job.depot_id, { config })
+        ? await rejouerLeRetour(admin, job.depot_id,
+          { config, tolererLaForme: job.tentatives >= TENTATIVES_AVANT_TOLERANCE })
         : await traiterDepot(admin, job.depot_id, job.etape === 'mesure_vf' ? 'vf' : 'v1', { config })
       const resume = job.etape === 'retour_v1'
         ? `retour seul — ${resumeBilan(bilan)}`
         : resumeBilan(bilan)
       await terminerJob(admin, job, { statut: 'abouti', message: resume })
+      // ⭐⭐ LE REJEU DU RETOUR REFUSÉ, AUTOMATIQUE — décision de Louis, 27/08.
+      //    Il devait se demander à la main ; trois copies de prod l'attendaient
+      //    depuis le 26/08 sans que personne le sache.
+      await programmerLeRejeuDuRetour(admin, job, bilan)
       sorties.push({ job, bilan })
     } catch (e) {
       if (e instanceof ChaineSuspendue) {

@@ -312,7 +312,13 @@ export function assemblerRetour(gabarit: string, e: EntreeRetour): { systeme: st
       'RR3 — CE BLOC EST « LE TEXTE SUPPORT ». Toute citation que tu en tires porte\n'
       + '`ancrage.source = "texte_support"`. Une citation des mots de l\'élève porte\n'
       + '`"copie"`, et elle se trouve dans le squelette ci-dessous. ⛔ Ne jamais\n'
-      + 'attribuer à l\'élève une phrase de l\'auteur.',
+      + 'attribuer à l\'élève une phrase de l\'auteur.\n'
+      + '\n'
+      + "CET EXERCICE EST UN EXERCICE DE LECTURE : l'élève travaille SUR CE TEXTE.\n"
+      + 'Un point peut donc porter sur ce que LE TEXTE dit — un mot de l\'auteur\n'
+      + "qu'il a manqué, déplacé ou mal rendu. Un tel point s'ancre sur\n"
+      + '`"texte_support"` et cite LE TEXTE ; un point qui porte sur ce que\n'
+      + "l'élève a écrit s'ancre sur `\"copie\"` et cite ses mots.",
     ))
   }
 
@@ -355,6 +361,17 @@ export function assemblerRetour(gabarit: string, e: EntreeRetour): { systeme: st
       : `PLAFOND : au plus ${plafond} RÉUSSITE(S) ; ce qui n'a pas bougé se dit plus largement, jamais complètement.`,
     'ANCRAGE : chaque citation porte sa source — "copie" pour les mots de l\'élève,',
     '"texte_support" pour le texte d\'auteur. Ne jamais attribuer à l\'élève une phrase de l\'auteur.',
+    // ⭐⭐ C5-L2-bis — CETTE LIGNE N'EXISTE QUE S'IL Y A UN TEXTE SUPPORT, ET
+    //    C'EST TOUTE SA SÛRETÉ : le corpus calibré au banc est celui de
+    //    l'ÉCRITURE, qui n'en a pas — il ne voit donc pas un octet de plus.
+    //    ⛔ Elle ne commente ni ne réécrit la règle 1 du gabarit (§4, GELÉ) :
+    //    elle dit ce que chaque étiquette DÉSIGNE, ce qui est le propre de
+    //    l'assemblage — « ce qui t'appartient est l'ASSEMBLAGE, et c'est là que
+    //    RR3 se renforce ».
+    e.texteSupport && e.texteSupport.trim() !== ''
+      ? 'UN POINT PEUT PORTER SUR LE TEXTE autant que sur la copie : ce que l\'auteur '
+        + 'dit et que l\'élève a manqué s\'ancre sur "texte_support".'
+      : '',
     'INTERDIT : le nom des observables, les seuils, ce qui fait basculer un palier,',
     'et toute note, lettre ou moyenne. Les DIMENSIONS se disent, en langue élève.',
     e.palierAttribue
@@ -417,6 +434,96 @@ export interface ControleRetour {
   refus: string[]
   /** Ce qui se journalise sans arrêter — le contrôle des citations, par exemple. */
   alertes: string[]
+  /**
+   * ⭐⭐ VRAI quand il y a des refus ET QUE TOUS SONT DE FORME.
+   *
+   * **Les refus n'ont pas tous la même nature, et le confondre coûte cher dans
+   * les deux sens.** Deux familles :
+   *
+   *  · **FALSIFICATION** — RR3 *(une phrase de l'auteur donnée pour celle de
+   *    l'élève)*, RR4 *(le nom d'un observable : c'est la grille qui fuit)*, la
+   *    règle 6 *(une note, une lettre)*, une compétence hors de ce que
+   *    l'exercice mesure. **Publier ça, c'est faire lire à l'élève quelque chose
+   *    de FAUX, ou lui montrer le barème.** ⛔ Jamais toléré, à aucune tentative.
+   *
+   *  · **FORME** — la règle 2 *(commencer par une réussite ; le plafond du
+   *    grain)* et la règle 5 *(l'action de révision, le pont)*. Ce sont des
+   *    contrats de RÉDACTION. Un retour qui ne commence pas par une réussite
+   *    est maladroit ; il n'est pas mensonger.
+   *
+   * ⚠️⚠️ **ET LA RÈGLE 2 PEUT ÊTRE INSATISFAISABLE.** Le gabarit exige
+   *    *« COMMENCE PAR UNE RÉUSSITE **réelle**, citée »* : sur une copie très
+   *    faible, il se peut qu'il n'y en ait pas. **Constaté en PROD le 27/08 :
+   *    TROIS copies refusées pour ce seul motif, dont une déjà rejouée en vain.**
+   *    Sans ce partage, un rejeu automatique tournerait en boucle sur elles et
+   *    brûlerait un appel à chaque tour — pour un retour qui ne viendrait jamais.
+   *    *« Si ça se trouve, il n'y a pas de réussite »* — décision de Louis,
+   *    27/08 : au bout de trois tentatives, **on sert le retour et le professeur
+   *    relit**.
+   */
+  formeSeulement: boolean
+}
+
+/**
+ * Les refus qui sont des contrats de RÉDACTION, et eux seuls. La liste est
+ * fermée et se lit sur le PRÉFIXE du motif, que `controlerRetour` écrit.
+ * ⛔ Tout ce qui n'y est pas est bloquant — le défaut est le refus.
+ */
+const REFUS_DE_FORME = [/^règle 2 : /, /^règle 5 : /]
+
+export function refusDeFormeSeulement(refus: readonly string[]): boolean {
+  return refus.length > 0 && refus.every((r) => REFUS_DE_FORME.some((m) => m.test(r)))
+}
+
+/**
+ * ⭐⭐ LES CITATIONS QUI VIVENT DANS LA PROSE DU POINT — et pas dans son `ancrage`.
+ *
+ * **Le trou que ceci ferme.** `controlerRR3` ne regardait que le champ STRUCTURÉ
+ * `ancrage.citation`. Or la **règle 1 du gabarit** fait écrire au modèle
+ * *« tu écris : "…" »* **DANS LE TEXTE du point** : un point peut donc porter,
+ * dans sa prose, une citation qui n'est pas son ancrage. **Mesuré sur un retour
+ * réel** *(smoke du 27/08)* : la prose portait bien une citation de plus.
+ * ⛔ Si l'ancrage pointait ailleurs, **une phrase de l'auteur pouvait passer dans
+ * la prose sans être vue**.
+ *
+ * ⚠️⚠️ **ET « TOUT CE QUI EST ENTRE GUILLEMETS » NE MARCHE PAS — mesuré, sur le
+ *    même retour.** Trois passages entre guillemets, trois natures différentes :
+ *      · *« Ce que Kant ajoute déplace la faute… »* — une citation de la copie ;
+ *      · *« ajoute »* — **la MENTION d'un mot**, pas une citation ;
+ *      · *« Mais cette définition ne dit pas encore qui en est responsable. »* —
+ *        **une phrase que le MODÈLE INVENTE**, la réparation que la règle 4 lui
+ *        commande de proposer *(« voilà comment faire mieux »)*. Elle n'est ni
+ *        dans la copie, ni dans le texte, et **c'est parfaitement correct**.
+ *    ⛔ **Un contrôle naïf refuserait ce retour-là**, et l'élève perdrait son
+ *    retour à cause d'une phrase juste. *Un contrôle qui crie faux entraîne à
+ *    l'ignorer — et ici il coûterait un retour.*
+ *
+ * ⭐ **D'OÙ LA FORME ÉTROITE : on ne retient qu'un passage cité QUI EST ATTRIBUÉ
+ *    À L'ÉLÈVE.** La formule d'attribution doit précéder immédiatement le
+ *    guillemet ouvrant — *« tu écris »*, *« tu dis »*, *« ta phrase »*,
+ *    *« tu affirmes »*, *« tu écrivais »*… — au plus quelques caractères avant.
+ *    C'est exactement le patron que la règle 1 impose au modèle, et c'est le
+ *    seul qui porte une AFFIRMATION sur l'auteur des mots.
+ *    *« Essaie plutôt de nommer le manque : « … » » n'attribue rien : elle sort.*
+ */
+const ATTRIBUTIONS = [
+  'tu écris', 'tu écrivais', 'tu dis', 'tu disais', 'tu affirmes', 'tu notes',
+  'ta phrase', 'ta formule', 'tes mots', 'ton texte dit', 'tu poses',
+]
+
+/** Les guillemets ouvrants et fermants que le modèle emploie, français et droits. */
+const CITE = /[«"“]\s*([^»"”]{4,400}?)\s*[»"”]/g
+
+export function citationsAttribueesDansLaProse(prose: string): string[] {
+  const t = prose ?? ''
+  const out: string[] = []
+  for (const m of t.matchAll(CITE)) {
+    // Ce qui précède immédiatement le guillemet ouvrant — la fenêtre est courte
+    // exprès : « tu écris : « … » » oui, un paragraphe plus haut non.
+    const avant = t.slice(Math.max(0, m.index - 40), m.index).toLowerCase()
+    if (ATTRIBUTIONS.some((f) => avant.includes(f))) out.push(m[1])
+  }
+  return out
 }
 
 /**
@@ -478,10 +585,14 @@ export interface ControleRetour {
  *    DIT (alerte de non-exécution) au lieu de se taire, mais il ne refuse rien.
  */
 export function controlerRR3(
-  points: ReadonlyArray<{ ancrage: { source: 'copie' | 'texte_support'; citation: string } }>,
+  points: ReadonlyArray<{
+    ancrage: { source: 'copie' | 'texte_support'; citation: string }
+    /** ⭐ La prose du point : la règle 1 y fait écrire « tu écris : "…" ». */
+    texte?: string
+  }>,
   a: { production: string | null; texteSupport: string | null },
 ): ControleRetour {
-  const out: ControleRetour = { refus: [], alertes: [] }
+  const out: ControleRetour = { refus: [], alertes: [], formeSeulement: false }
   const court = (c: string) => (c.length > 60 ? `${c.slice(0, 60)}…` : c)
 
   const copie = points.filter((p) => p.ancrage.source === 'copie').map((p) => p.ancrage.citation)
@@ -524,6 +635,27 @@ export function controlerRR3(
       for (const c of dansLeTexte.introuvables) {
         out.alertes.push(
           `RR3 : citation « texte_support » introuvable dans le texte servi — « ${court(c)} »`)
+      }
+    }
+  }
+
+  // ── ⭐⭐ LA PROSE — le second domicile des citations (voir ci-dessus) ───────
+  // Même partage que pour l'ancrage, et même effet : la faute IDENTIFIÉE refuse,
+  // le reste alerte. ⛔ On ne contrôle QUE ce que le modèle attribue à l'élève.
+  if (a.texteSupport != null) {
+    for (const p of points) {
+      for (const c of citationsAttribueesDansLaProse(p.texte ?? '')) {
+        if (citationsIntrouvables(a.production, [c]).introuvables.length === 0) continue
+        if (citationsIntrouvables(a.texteSupport, [c]).introuvables.length === 0) {
+          out.refus.push(
+            `RR3 : la PROSE d'un point attribue à l'élève une phrase DU TEXTE SUPPORT — `
+            + `« ${court(c)} ». L'ancrage était pourtant conforme : la faute vivait dans le texte `
+            + 'du point, que le contrôle ne regardait pas.')
+        } else {
+          out.alertes.push(
+            `RR3 : la prose attribue à l'élève une citation introuvable dans sa copie — `
+            + `« ${court(c)} » (ni dans le texte support)`)
+        }
       }
     }
   }
@@ -570,7 +702,7 @@ export function controlerRetour(
   },
 ): { verdict: Verdict<RetourBrut>; controle: ControleRetour } {
   const verdict = valider<RetourBrut>(brut, FORME_RETOUR)
-  const controle: ControleRetour = { refus: [], alertes: [] }
+  const controle: ControleRetour = { refus: [], alertes: [], formeSeulement: false }
   if (!verdict.ok) return { verdict, controle }
 
   const r = verdict.valeur
@@ -621,6 +753,7 @@ export function controlerRetour(
   controle.refus.push(...rr3.refus)
   controle.alertes.push(...rr3.alertes)
 
+  controle.formeSeulement = refusDeFormeSeulement(controle.refus)
   return { verdict, controle }
 }
 

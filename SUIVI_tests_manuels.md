@@ -6693,3 +6693,74 @@ _(Détail : `RELEVE_C5_L2_2026-08-27.md` §6.)_
 - `C4L3-16`, `C4L3-18` et `C4L3-19` **se rejouent à l'identique en lecture** ; `notionsDeLExercice`
   reste asymétrique *(elle ne lit que les notions des SUJETS — et un exercice de lecture n'a pas de
   sujet)*.
+
+---
+
+## C5 · L2-bis — Trois correctifs du retour, demandés par Louis le 27/08 (⚠️ **AUCUNE MIGRATION**)
+
+> ⚠️ **CE N'EST PAS C5-L2.** Ces trois gestes sont nés d'une question de Louis en clôture de
+> séance ; ils touchent le RETOUR, pas la passation de lecture. Ils sont consignés ici parce
+> qu'ils partent dans le même push, et parce que le troisième répond à **trois copies bloquées
+> en PROD**.
+
+### 1 · Le contrôle des citations DE LA PROSE
+
+**Le trou.** `controlerRR3` ne regardait que le champ structuré `ancrage.citation`. Or la **règle 1
+du gabarit** fait écrire au modèle *« tu écris : "…" »* **DANS LE TEXTE du point** : une phrase de
+l'auteur pouvait donc passer par la prose sans être vue. *Mesuré sur le retour réel du smoke : la
+prose portait bien une citation de plus que l'ancrage.*
+
+- [x] **C5L2b-1 · La forme naïve produit un faux positif, et c'est mesuré.** « Tout ce qui est entre
+  guillemets est une citation » ramasse, sur le retour réel : *« Ce que Kant ajoute… »* (la copie ✓),
+  *« ajoute »* (**une mention d'un mot**), et *« Mais cette définition ne dit pas encore qui en est
+  responsable. »* — **une phrase que le MODÈLE INVENTE**, la réparation que la règle 4 lui commande
+  de proposer, **qui n'est ni dans la copie ni dans le texte, et qui est parfaitement correcte**.
+  ⛔ Un contrôle naïf **refuserait ce retour**, et l'élève le perdrait à cause d'une phrase juste.
+  _(5 vecteurs, sur la prose RÉELLE, verbatim.)_
+- [x] **C5L2b-2 · La forme étroite tient.** On ne retient qu'un passage cité **attribué à l'élève** —
+  une formule d'attribution (*« tu écris »*, *« tu dis »*, *« ta phrase »*…) dans les 40 caractères
+  qui précèdent le guillemet ouvrant. La réparation proposée sort ; « tu écris : « … » » entre. Même
+  partage qu'à l'ancrage : la faute identifiée **refuse**, le reste **alerte**.
+
+### 2 · Le rejeu automatique du retour refusé, et son garde-fou
+
+**Le constat qui l'a rendu nécessaire, et il est en PROD.** Un retour refusé laissait un dépôt mesuré
+**sans commentaire**, et le seul rattrapage était un geste humain qu'il fallait penser à faire.
+⛔ **Personne ne le pensait** : **TROIS copies en prod**, mesurées le 26/08, sans retour, toutes
+refusées sur *« règle 2 : le retour commence par une réussite réelle, citée »* — dont une **déjà
+rejouée en vain**. Rien nulle part ne le disait à personne.
+
+⭐ **Décision de Louis, 27/08** : *« après 3 retours refusés, on arrête et on accepte le retour tel
+quel, mais le prof doit relire »*. ⚠️ **Et la règle 2 PEUT être insatisfaisable** : le gabarit exige
+« une réussite **réelle** » — sur une copie très faible, il se peut qu'il n'y en ait pas.
+
+- [x] **C5L2b-3 · Les deux familles de refus.** **FALSIFICATION** *(RR3, RR4, règle 6, compétence hors
+  périmètre)* : jamais tolérée, à aucune tentative — publier ça fait lire à l'élève quelque chose de
+  faux, ou lui montre la grille. **FORME** *(règle 2, règle 5)* : tolérée à la **dernière** tentative,
+  parce qu'un retour maladroit vaut mieux que pas de retour. ⛔ **Un seul refus bloquant retient
+  tout.** _(7 vecteurs ; le cas RÉEL de prod — une copie sans aucune réussite — en fait partie.)_
+- [x] **C5L2b-4 · Le schéma ne se tolère JAMAIS.** Une sortie non conforme au schéma est refusée quelle
+  que soit la tentative : c'est la défense 2 du `01-` §12, `appeler()` a déjà relancé, et le champ
+  `points` pourrait ne même pas exister. _(Le partage est explicite dans le code, en deux temps.)_
+- [x] **C5L2b-5 · ⭐⭐ LE GARDE-FOU, ÉPROUVÉ EN BASE** — `scripts/recette/rejeu-retour.mjs`,
+  **12 vérifications, 0 échec, aucun appel de modèle, aucun coût**. Le compteur **monte** à chaque
+  tour *(1 → 2 → 3)*, la remise en file **le préserve**, et au plafond **le rejeu s'arrête**.
+  ⚠️⚠️ **Et la recette épingle le piège qui a failli me coûter une boucle infinie** :
+  `relancerUnJob` **rend ses tentatives au job** — c'est voulu, c'est le geste de l'HUMAIN — et un
+  rejeu automatique bâti dessus n'aurait **jamais** vu son compteur monter : sur un refus
+  déterministe, **un appel brûlé par tour, à la minute, indéfiniment**. D'où `remettreEnFile`, le
+  geste de la MACHINE, qui ne rend rien. *`file.ts` porte `import 'server-only'` : il est intestable
+  sous `npm test` — cette mécanique ne pouvait s'éprouver qu'en base.*
+
+### 3 · L'instruction d'ancrage sur le texte — conditionnée au texte support
+
+- [x] **C5L2b-6 · Le bloc n'existe QUE s'il y a un texte support, et c'est toute sa sûreté.** Le
+  corpus calibré au banc est celui de l'**écriture**, qui n'en a pas : il **ne voit pas un octet de
+  plus**. ⛔ L'instruction **ne commente ni ne réécrit la règle 1** du gabarit *(§4, GELÉ)* — elle dit
+  ce que chaque étiquette DÉSIGNE, ce qui est le propre de l'assemblage. _(2 vecteurs.)_
+- [ ] **C5L2b-7 · EST-CE QUE ÇA MARCHE ? — NON MESURÉ.** *L'instruction ne coûte rien par appel ; en
+  revanche **savoir si elle change quelque chose coûte des tirages** (~0,09 $ chacun), et six points
+  ancrés sur trois tirages se sont tous ancrés sur « copie » AVANT elle.*
+  _Condition de reprise : deux ou trois traversées de lecture après le push, et compter les
+  `texte_support`. Si le compte reste à zéro, **la règle 1 domine** et la question redevient une
+  décision de source (relevé §6)._
