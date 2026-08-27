@@ -6788,9 +6788,33 @@ quel, mais le prof doit relire »*. ⚠️ **Et la règle 2 PEUT être insatisfa
   corpus calibré au banc est celui de l'**écriture**, qui n'en a pas : il **ne voit pas un octet de
   plus**. ⛔ L'instruction **ne commente ni ne réécrit la règle 1** du gabarit *(§4, GELÉ)* — elle dit
   ce que chaque étiquette DÉSIGNE, ce qui est le propre de l'assemblage. _(2 vecteurs.)_
-- [ ] **C5L2b-7 · EST-CE QUE ÇA MARCHE ? — NON MESURÉ.** *L'instruction ne coûte rien par appel ; en
-  revanche **savoir si elle change quelque chose coûte des tirages** (~0,09 $ chacun), et six points
-  ancrés sur trois tirages se sont tous ancrés sur « copie » AVANT elle.*
-  _Condition de reprise : deux ou trois traversées de lecture après le push, et compter les
-  `texte_support`. Si le compte reste à zéro, **la règle 1 domine** et la question redevient une
-  décision de source (relevé §6)._
+- [x] **C5L2b-7 · ⭐⭐⭐ MESURÉ LE 27/08 — L'INSTRUCTION MORD, ET LA QUESTION DE SOURCE TOMBE.**
+  `scripts/recette/lecture-c5l2.mjs --mesure-ancrage 4`, **8 appels, 0,1717 $**, décor semé et retiré.
+  ⭐ **Le décor est choisi pour INVITER la citation du texte** : la copie **contredit l'auteur** sur
+  le point central — elle dit que la tutelle vient d'un manque d'intelligence, quand le texte dit
+  *« non pas à une insuffisance de l'entendement, mais à une insuffisance de la résolution et du
+  courage »*. *Si le modèle doit citer le texte un jour, c'est là.*
+
+  | | avant l'instruction | après |
+  |---|---|---|
+  | tirages | 3 | 4 *(dont 1 sans retour)* |
+  | points ancrés | 6 | 6 |
+  | ⭐ sur `texte_support` | **0** | **3** |
+  | tirages avec un point sur le texte | 0 / 3 | **3 / 3** *(des tirages qui ont produit un retour)* |
+  | RR3 | 0 refus | **0 refus** |
+
+  **Les trois citations du texte sont pertinentes**, et c'est ce qui compte : *« la cause tient non
+  pas à une insuffisance de l'entendement… »* et *« On est soi-même responsable de cet état de
+  tutelle quand… »* — **exactement ce que la copie contredisait**. ⭐⭐ **Le retour de lecture peut
+  donc pointer ce que l'auteur dit et que l'élève a manqué** : c'était la seule chose que le lot ne
+  savait pas faire.
+
+> ⚠️ **UN FAUX POSITIF DE MON CONTRÔLE DE LA PROSE, RELEVÉ ET NON CORRIGÉ.** Un tirage a levé
+> *« la prose attribue à l'élève une citation introuvable dans sa copie — « Kant appelle 'état de
+> tutelle' le… » »*. **La citation EST dans la copie** : le modèle l'a re-citée avec des
+> **apostrophes droites** là où la copie porte des **guillemets français**. `aplatir`
+> (`utils/chaine/anti-injection.ts`) fait tomber `« » " " “ ”` mais **pas l'apostrophe droite
+> employée comme guillemet**. ⛔ **Je ne l'ai pas corrigé, et c'est délibéré** : `aplatir` est
+> l'outil PARTAGÉ du contrôle des citations — il sert P1 et la contestation —, et le toucher change
+> un comportement calibré ailleurs. ⭐ **La conséquence est nulle pour l'élève** : c'est une ALERTE,
+> jamais un refus. *1 alerte sur 6 points ; à surveiller, pas à réparer en passant.*

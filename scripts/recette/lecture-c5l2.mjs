@@ -92,7 +92,7 @@ const { controlerRetour, controlerRR3, assemblerRetour } =
   await import(`${RACINE}/utils/chaine/retour.ts`)
 const { referenceValidee } = await import(`${RACINE}/utils/reference-validee.ts`)
 const { servirLeTexteSupport } = await import(`${RACINE}/utils/lecture/texte-support.ts`)
-const { traiterDepot } = await import(`${RACINE}/utils/chaine/chaine.ts`)
+const { traiterDepot, rejouerLeRetour } = await import(`${RACINE}/utils/chaine/chaine.ts`)
 const { mettreEnFile, cleIdempotence } = await import(`${RACINE}/utils/chaine/file.ts`)
 
 const admin = createClient(env.NEXT_PUBLIC_SUPABASE_URL, env.SUPABASE_SERVICE_ROLE_KEY,
@@ -184,6 +184,26 @@ if (iDecor >= 0) {
   console.log(`\nretrait : node … scripts/recette/lecture-c5l2.mjs --retirer-smoke ${classeId}`)
   process.exit(0)
 }
+
+// ── ⭐⭐ LE MODE DE MESURE DE L'ANCRAGE (`C5L2b-7`) ─────────────────────────
+//
+// **La question, et elle est ouverte.** Le `01-` §12 (RR3) suppose qu'un point
+// puisse citer LE TEXTE ; la **règle 1 du gabarit** (§4, GELÉ) fait ancrer
+// « sur une citation DU SQUELETTE », et le squelette est fait de LA COPIE.
+// **Six points sur trois tirages s'étaient tous ancrés sur « copie ».**
+// C5-L2-bis ajoute une instruction — CONDITIONNÉE au texte support — qui dit ce
+// que chaque étiquette désigne. ⚠️ **Savoir si elle change quelque chose ne se
+// lit pas : ça se tire.**
+//
+// ⭐ **LE DÉCOR EST CHOISI POUR INVITER LA CITATION DU TEXTE** : la copie
+//    CONTREDIT l'auteur sur le point central — elle dit que la tutelle vient
+//    d'un manque d'intelligence, quand le texte dit « NON PAS à une insuffisance
+//    de l'entendement, MAIS à une insuffisance de la résolution et du courage ».
+//    *Si le modèle doit citer le texte un jour, c'est là.*
+//
+// ⚠️ **PAYANT** : un `traiterDepot` (3 appels) puis N−1 `rejouerLeRetour`
+//    (1 appel chacun, ~0,023 $) — le rejeu ne refait ni P1 ni P2.
+const iMesure = process.argv.indexOf('--mesure-ancrage')
 
 const AVEC_CHAINE = process.argv.includes('--avec-chaine')
 const GARDE_LE_DECOR = process.argv.includes('--garde-le-decor')
@@ -723,8 +743,106 @@ async function nettoyer() {
     `le texte de C5-L1 est intact (statut ${t?.statut}, référence ${t?.reference_id})`)
 }
 
+// ── ⭐⭐ LA MESURE DE L'ANCRAGE ──────────────────────────────────────────────
+async function mesurerLAncrage(tirages) {
+  titre(`H. ⭐⭐ L'ANCRAGE, MESURÉ — ${tirages} tirage(s) sur une copie qui CONTREDIT l'auteur`)
+
+  const { data: type } = await admin.from('exercices_types').select('id').eq('code', 'phrase').single()
+  const { data: tx } = await admin.from('exercices_textes')
+    .select('reference_id').eq('id', TEXTE_ID).single()
+  const { data: eleves } = await admin.from('profiles').select('id').eq('role', 'eleve').limit(1)
+  const { data: classe } = await admin.from('classes')
+    .insert({ nom: `${MARQUE}-ancrage`, annee_scolaire: '2026-2027' }).select('id').single()
+  seme.classes.push(classe.id)
+
+  // ⛔ LA COPIE DIT LE CONTRAIRE DU TEXTE, sur le point central. C'est
+  //    exactement l'endroit où un retour de lecture DEVRAIT citer l'auteur.
+  const COPIE = 'Kant appelle « état de tutelle » le fait de ne pas se servir de son entendement '
+    + "sans la conduite d'un autre. C'est donc une forme d'incapacité intellectuelle.\n\n"
+    + 'Si tant de gens restent mineurs, c\'est parce qu\'ils ne sont pas assez intelligents pour '
+    + 'penser seuls : leur entendement ne suffit pas, et il leur faut un guide.\n\n'
+    + 'La devise des Lumières leur demande donc de s\'instruire davantage.'
+
+  const { data: ex } = await admin.from('exercices').insert({
+    type_id: type.id, classe_id: classe.id, statut: 'assigne', lieu: 'maison', cran: '8',
+    consigne_instanciee: `${MARQUE} — Explique ce que Kant appelle « l'état de tutelle » et d'où `
+      + 'elle vient, en t\'appuyant sur les mots du texte.',
+    modes_par_competence: { structure: ['expliquer'] }, cible_primaire: 'structure',
+    materiau_source_provenance: 'texte_auteur', materiau_source_support: 'extrait',
+    materiau_source_texte_id: TEXTE_ID,
+    materiau_source_englobant: ENGLOBANT, materiau_source_localisation: LOCALISATION,
+    reference_id: tx.reference_id,
+  }).select('id').single()
+  seme.exercices.push(ex.id)
+  const { data: dep } = await admin.from('exercices_depots').insert({
+    eleve_id: eleves[0].id, exercice_id: ex.id, origine: 'prof', statut: 'v1_remis',
+    assigne_at: new Date().toISOString(), v1_remis_at: new Date().toISOString(),
+    texte_v1: COPIE,
+  }).select('id').single()
+  seme.depots.push(dep.id)
+  note(`copie semée : ${COPIE.length} caractères, 3 paragraphes, et elle CONTREDIT le texte`)
+
+  const ctx = await lireContexte(admin, dep.id)
+  dire(ctx.texteSupport !== null, 'le texte support descend bien jusqu\'à la chaîne')
+
+  const lignes = []
+  for (let t = 1; t <= tirages; t++) {
+    const avant = (await admin.from('api_couts').select('id', { count: 'exact', head: true })
+      .eq('depot_id', dep.id)).count ?? 0
+    let bilan
+    try {
+      bilan = t === 1
+        ? await traiterDepot(admin, dep.id, 'v1')
+        : await rejouerLeRetour(admin, dep.id, {})
+    } catch (e) { note(`tirage ${t} : la chaîne a levé — ${e.message}`); continue }
+    const apres = (await admin.from('api_couts').select('id', { count: 'exact', head: true })
+      .eq('depot_id', dep.id)).count ?? 0
+
+    const { data: r } = await admin.from('exercices_retours')
+      .select('texte').eq('depot_id', dep.id).eq('moment', 'chaud').maybeSingle()
+    const pts = Array.isArray(r?.texte) ? r.texte : []
+    const surTexte = pts.filter((p) => p.ancrage?.source === 'texte_support')
+    const v = controlerRR3(pts, { production: COPIE, texteSupport: ctx.texteSupport.texte })
+    lignes.push({ t, pts: pts.length, surTexte: surTexte.length, appels: apres - avant,
+      ecrit: bilan?.retourEcrit, refus: v.refus.length, alertes: v.alertes.length })
+    console.log(`  tirage ${t} : ${pts.length} point(s) · ${surTexte.length} « texte_support » · `
+      + `${apres - avant} appel(s) · RR3 ${v.refus.length ? '✗ REFUS' : '✓'}`)
+    for (const p of pts) {
+      console.log(`      [${p.ancrage?.source}] ${p.nature} — « ${String(p.ancrage?.citation).slice(0, 58)} »`)
+    }
+    for (const a of v.alertes) note(`  alerte RR3 : ${a.slice(0, 110)}`)
+  }
+
+  const total = lignes.reduce((n, l) => n + l.pts, 0)
+  const surTexte = lignes.reduce((n, l) => n + l.surTexte, 0)
+  const appels = lignes.reduce((n, l) => n + l.appels, 0)
+  console.log(`\n  ┌${'─'.repeat(64)}`)
+  console.log(`  │ ${lignes.length} tirage(s) · ${total} point(s) ancré(s) · ${appels} appel(s)`)
+  console.log(`  │ ⭐ ancrés sur « texte_support » : ${surTexte} / ${total}`)
+  console.log(`  │ RR3 : ${lignes.reduce((n, l) => n + l.refus, 0)} refus, `
+    + `${lignes.reduce((n, l) => n + l.alertes, 0)} alerte(s)`)
+  console.log(`  └${'─'.repeat(64)}`)
+  dire(lignes.every((l) => l.refus === 0),
+    'AUCUN refus RR3 sur les tirages — le contrôle ne crie pas faux')
+  if (surTexte === 0) {
+    console.log('\n  ⛔ ZÉRO point ancré sur le texte : L\'INSTRUCTION NE SUFFIT PAS.')
+    console.log('     La règle 1 du gabarit domine, et la question redevient une DÉCISION DE')
+    console.log('     SOURCE (`07-` §4 est GELÉ — relevé C5-L2 §6).')
+  } else {
+    console.log(`\n  ⭐⭐ ${surTexte} point(s) ancré(s) SUR LE TEXTE : l'instruction MORD.`)
+  }
+}
+
 // ── LA COURSE ───────────────────────────────────────────────────────────────
 process.on('SIGINT', async () => { await nettoyer(); process.exit(130) })
+
+if (iMesure >= 0) {
+  const n = Number(process.argv[iMesure + 1]) || 3
+  try { await mesurerLAncrage(n) } catch (e) { ko++; console.error(`✗ ${e.message}\n${e.stack}`) }
+  finally { await nettoyer() }
+  console.log(`\nMESURE — ${ok} OK, ${ko} échec(s).`)
+  process.exit(ko === 0 ? 0 : 1)
+}
 
 try {
   const d = await semer()
