@@ -6562,6 +6562,11 @@ les quatre dérivations **IDENTIQUE** · `npx next build` **compilé**.
 sur 4**, y compris au tirage où la copie de l'élève **citait Kant entre guillemets**. Le canal
 `texte_support` est **servi, balisé et contrôlé** ; il n'a simplement **pas été employé**.
 
+⚠️ **UN TROISIÈME TIRAGE, AU SMOKE DU 27/08, A DONNÉ LE MÊME RÉSULTAT** — 2 points, **2 « copie »,
+0 « texte_support »** —, sur une copie qui citait pourtant l'auteur entre guillemets **et** sur un
+exercice dont la consigne dit *« Appuie-toi sur les mots du texte »*. **Six points ancrés, six fois
+« copie ».**
+
 **La cause est structurelle, et elle est dans une section GELÉE** : la **règle 1** du gabarit de
 Calame *(`07-` §4)* dit *« chaque point s'ancre sur une citation **du squelette** »*, et le squelette
 est fait de **la copie** ; **RR3** *(`01-` §12)* suppose au contraire qu'un point puisse citer
@@ -6638,18 +6643,16 @@ _(Détail : `RELEVE_C5_L2_2026-08-27.md` §6.)_
 > pour l'élève de test ; la troisième demande le **vrai Chrome**, parce que le presse-papier de
 > l'aperçu embarqué est inaccessible dans les deux sens.
 
-- [ ] **C5L2-3 · Le CRLF sur une ANALYSE LONGUE.** Le `06-` §1 range « les analyses longues » dans la
+- [x] **C5L2-3 · Le CRLF sur une ANALYSE LONGUE — COCHÉ le 27/08, une fois la garde levée.** Le `06-` §1 range « les analyses longues » dans la
   lecture : c'est le champ le plus sollicité de cet écran. Sonde serveur pendant un **vrai clic** —
   ⚠️ **`new FormData()` NE LE MONTRE PAS**, et le piège a mordu **trois fois** (C4-L4, C4-L16, C5-L1,
   ce dernier **sur le chemin des server actions React**).
-  ⭐ **À MOITIÉ FAIT LE 27/08** : une analyse de trois paragraphes a été **tapée à la main** dans le
-  champ ; l'écran a compté *« **3 paragraphes** — une ligne vide sépare deux paragraphes »*, et
-  `textarea.value` portait **649 caractères, 0 CR, 4 LF** — *la mesure de C5-L1, retrouvée : côté
-  navigateur il n'y a pas de CR*. ⛔ **Ce qui manque est la moitié qui compte : ce qui ARRIVE EN
-  BASE**, et la garde de lecture des retours l'a empêché.
-  _Condition de reprise : **lever d'abord la garde** — l'élève de test lit son retour Fragments en
-  attente —, puis remettre la v1 et sonder
-  `select length(texte_v1) - length(replace(texte_v1, E'\r', '')), texte_v1 from exercices_depots …`._
+  Louis a lu le retour Fragments en attente, la garde est tombée, et **la traversée est allée
+  jusqu'au bout**. Une analyse de **trois paragraphes** tapée **à la main** dans le champ :
+  `textarea.value` portait **750 caractères, 0 CR, 4 LF** ; **et EN BASE, après le vrai clic sur
+  « Rendre ma v1 » : 750 caractères, 0 CR, 4 LF, et `blocs()` en compte TROIS** — le découpage
+  survit de la frappe à la mesure. ⭐ *C'est la quatrième fois qu'on éprouve ce piège, et la première
+  fois sur le chemin de la lecture.*
 - [ ] **C5L2-4 · Le collage refusé, sur ses trois vecteurs.** ⭐ **UN DES TROIS EST FAIT LE 27/08, ET
   PAR LA MAUVAISE PORTE** : un événement `paste` **synthétisé** a été **annulé** *(la valeur du champ
   n'a pas bougé)* et **journalisé en base** — `collages_bloques` porte
@@ -6658,10 +6661,22 @@ _(Détail : `RELEVE_C5_L2_2026-08-27.md` §6.)_
   colle rien et ne prouve rien. **C'est exactement ce que la règle d'or de ce fichier protège.**
   _Condition de reprise : le **vrai Chrome**, session élève, avec du texte réellement dans le
   presse-papier — puis les deux autres vecteurs (glisser-déposer, menu contextuel)._
+- [x] **C5L2-8 · LA TRAVERSÉE ENTIÈRE, À L'ÉCRAN — COCHÉ le 27/08.** Les **trois gestes dans
+  l'ordre** *(confiance par compétence → conditions → « ta thèse en une phrase ? », et l'écran refuse
+  de rendre tant qu'il en manque un : « Tu peux rendre ta copie. » n'apparaît qu'au bout)*, puis
+  **« Rendre ma v1 » cliqué pour de vrai**. La chaîne est partie : `mesure_v1` **abouti**, *« 1
+  mesurée, 1 écrite, retour écrit, 3 appels, 40 s »*, **trois lignes à `api_couts`** *(p1 0,0381 $ ·
+  p2 0,0247 $ · retour 0,0233 $ — `claude-sonnet-4-6`)*. Et **l'écran de l'élève a montré le
+  retour** : « TON RETOUR — reçu le 27 août à 11 h 42 », une **réussite** et un **point de travail**,
+  chacun sous « **TU ÉCRIS** » avec sa citation, chacun avec son bouton « Je ne suis pas d'accord » ;
+  plus « CE QUE TU AS À REPRENDRE », l'échéance de la version finale *(« avant le dimanche 30 août »)*
+  et la validation « J'ai lu mon retour ». ⭐⭐ **`controlerRR3` rejoué sur ce retour RÉEL : 0 refus,
+  0 alerte** — *« aucune citation n'attribue à l'élève une phrase de l'auteur »* : **VRAI, à l'écran.**
 - [ ] **C5L2-5 · Un retour de lecture relu par un humain.** Le contrôle RR3 n'a **jamais refusé en
-  production** : on ne sait donc pas encore s'il crie faux. À relire à la première vraie copie —
-  et **si un refus tombe, l'étape `retour_v1` le rejoue seule** (C4-L7-bis), sans réécrire un
-  squelette. _Condition de reprise : le premier dépôt de lecture d'un élève réel._
+  production** : on ne sait donc pas encore s'il crie faux. ⭐ **Trois retours réels sont passés sans
+  qu'il bronche** *(deux en recette, un au smoke)* ; ce qui reste est le jugement d'un lecteur sur la
+  QUALITÉ du retour de lecture, pas sur la mécanique.
+  _Condition de reprise : le premier dépôt de lecture d'un élève réel._
 
 ### ⚠️ Les renvois de périmètre — constatés, non réparés (la liste complète est au relevé, §7)
 
