@@ -45,7 +45,7 @@ import { BRANCHEMENT_QUESTIONNEMENT } from './branchements/questionnement'
 import { INSTRUMENT_SYNTHESE } from './derive/competences/synthese'
 import { BRANCHEMENT_SYNTHESE } from './branchements/synthese'
 import { refusSlotsExtraction, refusSlotsJugement } from './slots'
-import { COMPETENCES, type Competence } from './types'
+import { COMPETENCES, MODES, type Competence, type Mode } from './types'
 
 /** Le volet `notation.observables_mesure` d'une fiche — vocabulaire du `03-` §1. */
 export interface EntreeObservableMesure {
@@ -190,6 +190,36 @@ export interface SortieCode2 {
 }
 
 export interface BranchementCompetence {
+  /**
+   * ⭐⭐ C5-L3 — LES MODES QUE CET INSTRUMENT COUVRE. « L'extraction et le
+   *    jugement DES COMPÉTENCES DONT LA GRILLE RÉCEPTIVE EXISTE » (`07-` §2) :
+   *    ces cinq mots sont une garde, et c'est ici qu'elle se déclare.
+   *
+   * ⛔ CE N'EST PAS `competences_modes_admis`, ET LA CONFUSION COÛTERAIT UNE
+   *    MESURE FAUSSE. La table dérivée dit ce qu'une compétence PEUT
+   *    INSTANCIER — une propriété de la compétence (`02-` §3), treize couples.
+   *    Ceci dit ce que son INSTRUMENT SAIT MESURER — une propriété du
+   *    branchement. Les deux ne coïncident pas : l'Argumentation est admise en
+   *    `expliquer` et en `évaluer`, la Structure en `expliquer`, et **aucune des
+   *    deux n'a d'instrument réceptif** — leur grille réceptive vit en prose à
+   *    leur fiche §3, sans marqueur de prompt, sans enum au bloc machine, et
+   *    leur cascade réceptive lit des champs que leur P1 de composition ne
+   *    produit pas (`03-` §4 et §5). *L'écart entre les deux listes est
+   *    exactement ce que la porte de mode ferme.*
+   *
+   * ⚠️ POURQUOI ICI, ET PAS AILLEURS. C'est le seul endroit du dépôt où « ce que
+   *    cet instrument couvre » a un sens : la dérivation ne connaît que les
+   *    phases `P1`/`P2` et ne sait rien des modes ; la table dérivée parle de la
+   *    compétence, pas de son outil. Le voisinage est voulu — `slotsFournis` dit
+   *    ce que le branchement SAIT REMPLIR, ceci dit ce qu'il SAIT MESURER, et
+   *    les deux se contrôlent AU CHARGEMENT (`verifierCoherence`).
+   *
+   * ⭐ Le refus, lui, tombe ailleurs : sur l'exercice réel, dans
+   *    `competencesDeLExercice` — un mode est une donnée d'exercice, pas une
+   *    donnée de chargement, et `verifierCoherence()` ne peut pas le voir.
+   *    **Deux endroits, deux rôles.**
+   */
+  modesCouverts: readonly Mode[]
   /**
    * `prepare_copie` — le texte donné à la chaîne, quand la grille en veut un
    * autre que le brut. Structure le définit, et le contrat dit pourquoi : « les
@@ -441,16 +471,20 @@ const INSTRUMENTS: Partial<Record<Competence, InstrumentCompetence>> = {
   //    dossier vide sauf prompts et module), et ses constantes de test ne portent
   //    PAS les noms du contrat : ni `TESTS_P2_PARFAIT` ni `TESTS_CODE1_PARFAIT`,
   //    mais `VECTEURS` (30), `ALERTES_ATTENDUES` (7) et `VECTEURS_REFERENT` (7).
-  // ⚠️⚠️ ET IL NE MESURERA RIEN DANS LES QUATRE MODES RÉCEPTIFS tant que la
-  //    chaîne ne descendra pas la RÉFÉRENCE DÉCOMPOSÉE. Son `pre_p2` lit
-  //    `armature.question_directrice`, « et le module n'en lit aucun autre »
-  //    (fiche §4) ; le contexte de l'exercice porte quatre noms, et
-  //    `contexte.ts` ne lit `reference_id` que pour en déduire un référent
-  //    `texte | cours | null`. Servi à `null`, le slot ARRÊTE la mesure en le
-  //    nommant — le comportement voulu. ⚠️ La différence d'avec le corpus de
-  //    cours de la Connaissance : ici la SOURCE déclare la référence, l'écran de
-  //    conception la valide et `exercices_references` la porte — c'est la chaîne
-  //    qui ne la sert pas. *Relevé, non tranché : décision de Louis.*
+  // ⭐⭐ C5-L3 (27/08) — IL MESURE DANS LES QUATRE MODES RÉCEPTIFS, ET CE
+  //    COMMENTAIRE DISAIT LE CONTRAIRE. Il affirmait que « le contexte de
+  //    l'exercice porte quatre noms » : il en porte SIX depuis le 23/08
+  //    (`FOURNISSEURS_NATIFS`, commit `4e865b5`), `reference` comprise. Son
+  //    `pre_p2` lit `armature.question_directrice`, « et le module n'en lit aucun
+  //    autre » (fiche §4), et il la reçoit. ⛔ Le slot n'est servi à `null` que
+  //    dans les deux cas qui sont des GARDES — référence absente, ou non validée
+  //    —, et la mesure s'arrête alors EN LE NOMMANT : le comportement voulu.
+  //    ⚠️ La différence d'avec le corpus de cours de la Connaissance tient
+  //    toujours, et elle s'est résolue dans le bon sens : ici la SOURCE déclarait
+  //    la référence, et le canal a été posé ; là, aucune source ne la déclare.
+  // ⭐ C'EST LA SEULE DES SIX QUI COUVRE LES CINQ MODES — « une seule grille pour
+  //    les cinq, et la cascade est INCHANGÉE » (fiche §4). Voir `modesCouverts`
+  //    à son branchement.
   questionnement: INSTRUMENT_QUESTIONNEMENT as unknown as InstrumentCompetence,
   // C4-L10, 23/08/2026 — la Synthèse est LA SIXIÈME ET DERNIÈRE, et elle est la
   // seule des six dont LA CHAÎNE A UNE AUTRE FORME : TROIS appels — relevé
@@ -471,14 +505,17 @@ const INSTRUMENTS: Partial<Record<Competence, InstrumentCompetence>> = {
   //    (`VERSION_GOLDS_TESTEE = None`, `TESTS_P2_PARFAIT` vide, dossier vide sauf
   //    prompts et module) : son portage se prouve aux vecteurs embarqués, au
   //    BALAYAGE et à l'épreuve négative.
-  // ⚠️⚠️ ET ELLE NE MESURERA QUE SUR LE RÉFÉRENT COURS tant que la chaîne ne
-  //    descendra pas la RÉFÉRENCE DÉCOMPOSÉE : son aligneur réclame
-  //    `{reference_decomposee}`, `contexteExercice` porte quatre noms, et servi à
-  //    `null` le slot arrête la mesure EN LE NOMMANT — le comportement voulu.
-  //    ⭐ C'est LE MÊME CANAL que celui du Questionnement, et `exercices_references`
-  //    porte les DEUX choses qui manquent : la référence (`contenu`) et le
-  //    matériau (`source_contenu_id → scriptorium_contenus.texte_extrait`, dont le
-  //    pré-relevé a besoin pour la compression). *Une décision de code, relevée.*
+  // ⭐⭐ C5-L3 (27/08) — ELLE MESURE SUR SES DEUX RÉFÉRENTS, ET CE COMMENTAIRE
+  //    DISAIT LE CONTRAIRE. Il affirmait qu'elle ne mesurerait que sur le cours,
+  //    « `contexteExercice` portant quatre noms » : il en porte SIX depuis le
+  //    23/08 (commit `4e865b5`). Son aligneur reçoit `{reference_decomposee}`, et
+  //    le pré-relevé reçoit le matériau — la MÊME jointure a fermé les deux.
+  //    ⛔ Le slot n'est servi à `null` que sur les deux GARDES — référence
+  //    absente, ou non validée —, et la mesure s'arrête alors en le nommant.
+  // ⭐⭐ ET C'EST LA SEULE DES SIX DONT L'UNIQUE MODE COUVERT EST RÉCEPTIF :
+  //    mono-mode `restituer`, « sa grille réceptive EST son instrument unique »
+  //    (`03-` §4). *Elle mesure en réception depuis C4-L10, et la porte de mode
+  //    de C5-L3 ne lui retire rien.*
   synthese: INSTRUMENT_SYNTHESE as unknown as InstrumentCompetence,
 }
 
@@ -608,9 +645,120 @@ export function verifierCoherence(): string[] {
     //    des trous est un appel perdu, et la mesure qui en sort est fausse.
     if (branchee && BRANCHEMENTS[c] != null) {
       ecarts.push(...refusDeSlots(c, INSTRUMENTS[c]!, BRANCHEMENTS[c]!))
+      // ⭐⭐ C5-L3 — LES MODES COUVERTS, CONTRÔLÉS AU MÊME ENDROIT ET POUR LA
+      //    MÊME RAISON : « un appel dépensé sur une chaîne qui produirait des
+      //    trous est un appel perdu, et la mesure qui en sort est fausse ». Ici
+      //    on ne contrôle que la DÉCLARATION — qu'elle existe et qu'elle nomme
+      //    des modes réels. Le mode ÉLU, lui, est une donnée d'exercice, et son
+      //    refus tombe dans `competencesDeLExercice`.
+      ecarts.push(...refusDeModes(c, BRANCHEMENTS[c]!))
     }
   }
   return ecarts
+}
+
+/**
+ * ⭐⭐⭐ C5-L3 — LE MODE ÉLU EST-IL COUVERT PAR L'INSTRUMENT ?
+ *
+ * Rend le MOTIF du refus, ou `null` quand la compétence peut mesurer.
+ *
+ * ⛔⛔ POURQUOI CETTE PORTE EXISTE. Jusqu'ici la chaîne n'écartait que sur deux
+ *    motifs — statut `differee`, compétence non branchée — et **le mode n'entrait
+ *    nulle part**. Sur une copie de LECTURE, elle faisait donc tourner le prompt
+ *    de COMPOSITION : « Tu lis la copie d'un élève » pour en extraire un
+ *    squelette d'argumentation composée, sur une explication de texte. Le dégât
+ *    est DOUBLE, et la seconde moitié est invisible :
+ *      *(a)* la LETTRE — `competences_mesures.lettre_equivalente` s'écrit avec
+ *        `modes: ['expliquer']`, calculée par la cascade de composition ;
+ *      *(b)* le SIGNAL DE CIBLAGE — le `01-` §3 déclare un signal **par groupe de
+ *        modes**, « dérivé, jamais stocké », et « une mesure appartient à un
+ *        groupe dès qu'elle PORTE UN MODE DU GROUPE » (`utils/routeur/proportions.ts`,
+ *        `utils/routeur/ciblage.ts`). Une mesure fausse étiquetée `expliquer`
+ *        devient **la première mesure du groupe réceptif de cette compétence**,
+ *        et le routeur élit dessus.
+ *
+ * ⚠️ LA LECTURE EST PRUDENTE, ET ELLE SE DIT. `modes_par_competence[c]` est une
+ *    LISTE (`07-` §1.2 : « une LISTE, jamais une valeur ») ; la chaîne la sert
+ *    jointe, et le module lit UN mode. **On refuse dès qu'UN SEUL mode élu n'est
+ *    pas couvert**, et non « dès qu'aucun ne l'est » : la mesure porterait le
+ *    mode non couvert dans sa colonne `modes`, donc entrerait dans le groupe de
+ *    ciblage correspondant — c'est exactement le dégât *(b)*. C'est la même
+ *    prudence que `prePhase2` du Questionnement, qui se déclare réceptif dès que
+ *    l'un des modes l'est (`C4L10Q-18`).
+ *    *Mesuré à la fabrication : **504 couples (exercice × compétence) en bac à
+ *    sable, 488 en prod, et AUCUN ne porte plus d'un mode** — l'arbitrage est
+ *    donc inerte aujourd'hui, et il est écrit pour le jour où il ne le sera plus.*
+ *
+ * ⚠️ UNE LISTE VIDE NE REFUSE RIEN. *Mesuré : zéro couple à liste vide dans les
+ *    deux bases.* Il n'y a donc aucun mode élu à confronter, et inventer un
+ *    `composer` implicite serait décider à la place de la donnée. La chaîne se
+ *    comporte alors comme avant cette porte.
+ *
+ * ⭐ LE MOTIF EST SERVI, ET IL EST LU COMME UNE VÉRITÉ — le bilan d'un dépôt
+ *    l'affiche. Il nomme donc les trois choses : la compétence, le mode élu, et
+ *    le fait que l'instrument ne le couvre pas.
+ */
+export function modeNonCouvert(
+  competence: Competence,
+  modesElus: readonly string[],
+  branchement: BranchementCompetence | null,
+): string | null {
+  if (!branchement) return null
+  const couverts = branchement.modesCouverts ?? []
+  // « La forme accentuée est celle de la source ; la forme sans accent est
+  //   acceptée en entrée » — le précédent est `MODES_RECEPTIFS` du Questionnement.
+  const pareil = (a: string, b: string) => a.normalize('NFD').replace(/\p{Diacritic}/gu, '').toLowerCase()
+    === b.normalize('NFD').replace(/\p{Diacritic}/gu, '').toLowerCase()
+  const nonCouverts = modesElus
+    .map((m) => m.trim())
+    .filter((m) => m !== '')
+    .filter((m) => !couverts.some((c) => pareil(c, m)))
+  if (nonCouverts.length === 0) return null
+  const pluriel = nonCouverts.length > 1
+  // ⛔ FERMÉ PAR DÉFAUT. Une déclaration VIDE refuse TOUT, elle ne laisse pas
+  //    tout passer : une garde qui existe contre un silence ne doit pas se taire
+  //    quand sa propre déclaration manque. `verifierCoherence()` l'attrape au
+  //    chargement ; si elle passait quand même, le refus tient ici.
+  const quoiCouvert = couverts.length
+    ? `qui ne couvre que « ${couverts.join(' », « ')} »`
+    : 'qui ne déclare AUCUN mode couvert (`modesCouverts` vide — voir `verifierCoherence`)'
+  return `mode${pluriel ? 's' : ''} « ${nonCouverts.join(' », « ')} » non couvert${pluriel ? 's' : ''} `
+    + `par l'instrument de ${competence}, ${quoiCouvert} — `
+    + 'sa grille pour ce mode n\'a rien de machine (ni prompt marqué, ni enum au bloc machine, '
+    + 'ni cascade), et mesurer ici produirait un squelette de COMPOSITION sur une copie de '
+    + 'lecture, rangé dans le signal de ciblage réceptif (`03-` §4 ; `01-` §3). '
+    + 'La couverture se déclare au branchement (`modesCouverts`), quand le banc lecture '
+    + 'aura validé l\'étape de notation réceptive de la fiche.'
+}
+
+/**
+ * ⭐⭐ C5-L3 — LES REFUS DE DÉCLARATION DE MODES, au chargement.
+ *
+ * Deux cas, et un seul principe : **une déclaration vide ou fausse rendrait la
+ * porte de mode inopérante en silence** — le pire des états, puisque la porte
+ * existe précisément pour empêcher un silence.
+ *
+ * ⛔ *Une liste VIDE n'est pas « il couvre tout »* : ce serait rouvrir la porte
+ *    par le bas. Une compétence qui ne couvrirait aucun mode ne mesurerait rien,
+ *    et c'est un état qu'il faut dire, pas déduire.
+ */
+function refusDeModes(c: Competence, branchement: BranchementCompetence): string[] {
+  const refus: string[] = []
+  const declares = branchement.modesCouverts
+  if (!Array.isArray(declares) || declares.length === 0) {
+    refus.push(`${c} : le branchement ne déclare AUCUN mode couvert — « des compétences dont la `
+      + 'grille réceptive existe » (`07-` §2) ne peut alors rien vouloir dire, et la porte de '
+      + 'mode laisserait tout passer. `modesCouverts` se déclare au branchement, la fiche §4 '
+      + 'sous les yeux.')
+    return refus
+  }
+  for (const m of declares) {
+    if (!(MODES as readonly string[]).includes(m)) {
+      refus.push(`${c} : « ${m} » n'est pas un mode — les cinq sont `
+        + `${MODES.join(', ')} (\`02-\` §3, table dérivée \`competences_modes_admis\`)`)
+    }
+  }
+  return refus
 }
 
 /**

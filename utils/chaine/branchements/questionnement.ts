@@ -74,24 +74,39 @@
 //    caractères. C'est la sémantique du module, pas un défaut : `itere()` la
 //    porte (`../python`).
 //
-// ⚠️⚠️ CE QUE CE BRANCHEMENT NE PEUT PAS FAIRE TOURNER AUJOURD'HUI DANS LES
-//    MODES RÉCEPTIFS, et il le DIT plutôt que d'inventer. `pre_p2` sert le
-//    référent : en `composer` c'est le sujet — natif, la chaîne l'a ; dans les
-//    quatre modes réceptifs c'est « le problème réel du texte, tel que la
-//    référence décomposée le porte — c'est son champ `armature.question_directrice`
+// ⭐⭐ CE QUE CE BRANCHEMENT FAIT TOURNER DANS LES MODES RÉCEPTIFS — ET IL LE
+//    FAIT DEPUIS LE 23/08. `pre_p2` sert le référent : en `composer` c'est le
+//    sujet — natif, la chaîne l'a ; dans les quatre modes réceptifs c'est « le
+//    problème réel du texte, tel que la référence décomposée le porte — c'est
+//    son champ `armature.question_directrice`
 //    (`05-GENERATEUR_Reference_Decomposee.md` §3), et le module n'en lit aucun
-//    autre » (fiche §4). ⛔ LA CHAÎNE NE SERT PAS LA RÉFÉRENCE DÉCOMPOSÉE : son
-//    contexte porte QUATRE noms — `sujet`, `consigne`, `copie`, `mode` —, et
-//    `contexte.ts` ne lit `exercices.reference_id` que pour en déduire un
-//    référent `texte | cours | null`, jamais le contenu de la référence. Servi à
-//    `null`, le slot arrête la mesure EN LE NOMMANT — le comportement voulu
-//    (`CONTRAT` §2). ⚠️ Ce n'est PAS le cas de la Connaissance : là, aucune
-//    source ne déclarait le corpus de cours ; ici la source déclare la référence,
-//    l'écran de conception la valide, et la table `exercices_references` la
-//    porte — c'est la CHAÎNE qui ne la descend pas. *Relevé, non tranché ici :
-//    poser ce fournisseur natif touche `contexte.ts` et `chaine.ts`, hors du
-//    périmètre d'un lot dont « la réussite se mesure à un diff quasi nul ».*
-//    ⚠️ Et il mord chez les HLP, où le Questionnement n'est ciblé QU'en modes
+//    autre » (fiche §4).
+//
+// ⭐⭐ AMENDÉ PAR C5-L3 (27/08) — CET EN-TÊTE DISAIT LE CONTRAIRE, ET IL ÉTAIT
+//    FAUX DEPUIS LE 23/08. Il affirmait que « la chaîne ne sert pas la référence
+//    décomposée : son contexte porte QUATRE noms ». **`FOURNISSEURS_NATIFS` en
+//    porte SIX** — `sujet`, `copie`, `consigne`, `mode`, **`reference`** et
+//    **`source`** (`instruments.ts`) —, `lireContexte` joint
+//    `exercices_references` (`contenu` → la référence ; `source_contenu_id →
+//    scriptorium_contenus.texte_extrait` → le matériau), et `chaine.ts` les sert
+//    SÉRIALISÉS. Le geste hors périmètre que cet en-tête relevait a été fait au
+//    commit `4e865b5` ; c'était la condition de reprise de `C4L10Q-15`, levée.
+//
+// ⛔ CE QUI RESTE VRAI, ET QUI EST UNE GARDE : la référence n'est servie que
+//    **VALIDÉE** — `contexte.ts` la laisse à `null` sinon, et la rend ABSENTE
+//    plutôt que vide. Servi à `null`, le slot arrête alors la mesure EN LE
+//    NOMMANT : c'est le comportement voulu (`CONTRAT` §2), pas une panne.
+//    ⚠️ Ce n'est toujours PAS le cas de la Connaissance : là, aucune source ne
+//    déclare le corpus de cours — ici la source déclare la référence, l'écran de
+//    conception la valide, et la table la porte.
+//
+// ⭐ ET DEPUIS C5-L3, LA RÉFÉRENCE QUI ARRIVE ICI EST UNE **TRANCHE** : « on ne
+//    passe à un consommateur que ce que sa règle lit » (`05-` §1). La règle du
+//    Questionnement ne lit **aucune** fonction ni **aucun** statut d'unité — il
+//    n'en lit qu'`armature.question_directrice`, qui descend intacte
+//    (`utils/chaine/tranche.ts`).
+//
+// ⚠️ Et il mord chez les HLP, où le Questionnement n'est ciblé QU'en modes
 //    autres que `composer` (`01-` §3, R2).
 // ============================================================================
 
@@ -262,11 +277,13 @@ function contient(aiguille: string, botte: unknown): boolean | null {
  * et le module n'en lit AUCUN AUTRE ; « ni son nom ni son niveau d'imbrication
  * ne se devinent ».
  *
- * ⚠️ La chaîne ne descend PAS la référence décomposée (voir l'en-tête) : en mode
- *    réceptif, `referent` sort donc à `null` aujourd'hui, et la mesure s'arrête
- *    en nommant le slot. C'est le comportement voulu, pas une panne — « une
- *    valeur `None` dit au banc que le contexte ne porte pas de quoi servir ce
- *    slot : il refuse en le nommant. Le module n'invente rien ».
+ * ⭐ La chaîne DESCEND la référence décomposée depuis le 23/08 (voir l'en-tête,
+ *    amendé par C5-L3) : en mode réceptif, `referent` porte donc la question
+ *    directrice pour de bon. ⚠️ Il sort encore à `null` dans les deux cas qui
+ *    sont des GARDES — référence absente, ou non validée —, et la mesure
+ *    s'arrête alors en nommant le slot : « une valeur `None` dit au banc que le
+ *    contexte ne porte pas de quoi servir ce slot : il refuse en le nommant. Le
+ *    module n'invente rien ».
  *
  * ⭐ IL TOURNE AVANT P1, et ses slots se vérifient AU CHARGEMENT — d'où les
  *    `slotsFournis` déclarés au branchement.
@@ -895,6 +912,34 @@ function conformite(
 // ════════════════════════════════════════════════════════════════════════════
 
 export const BRANCHEMENT_QUESTIONNEMENT: BranchementCompetence = {
+  /**
+   * ⭐⭐⭐ C5-L3 — LES CINQ MODES, ET C'EST LA SEULE DES SIX. « Une seule grille
+   *    pour les cinq modes », et la fiche §4 le fonde : « **la cascade est celle
+   *    ci-dessus, inchangée — c'est la conséquence d'avoir une seule grille**
+   *    (acté). Trois choses changent, et aucune n'est une règle de plus. »
+   *
+   * ⭐ LES TROIS CHOSES QUI CHANGENT, ET AUCUNE N'EST UN INSTRUMENT NEUF :
+   *      · le RÉFÉRENT de `question_specifique` — les termes du sujet en
+   *        `composer`, le problème réel du texte en réception, « c'est son champ
+   *        `armature.question_directrice`, et le module n'en lit aucun autre » ;
+   *      · `question_propre = reprise_enonce` s'y lit **comme la paraphrase**,
+   *        la faute cardinale de la lecture ;
+   *      · le seuil **change d'objet, pas de nature** — `question_deplacee` y est
+   *        « le geste de lecture le plus haut ».
+   *    *C'est le même instrument, avec un autre référent* — et `prePhase2`
+   *    dispatche déjà sur le mode depuis le 23/08.
+   *
+   * ⭐⭐ ET LE CANAL EST OUVERT DEPUIS `4e865b5` : `FOURNISSEURS_NATIFS` porte
+   *    `reference`, `lireContexte` joint `exercices_references`, et `armatureDe`
+   *    « tient le nom ET le niveau d'imbrication ». *C'était la condition de
+   *    reprise de `C4L10Q-15`, et elle est levée.*
+   *
+   * ⚠️ `évaluer` s'écrit ICI SOUS SA FORME ACCENTUÉE, qui est celle de la source
+   *    et celle de la base. La forme sans accent est acceptée EN ENTRÉE par la
+   *    porte de mode, comme `MODES_RECEPTIFS` l'accepte ci-dessus — jamais en
+   *    déclaration : `Mode` ne connaît que la forme accentuée.
+   */
+  modesCouverts: ['composer', 'restituer', 'expliquer', 'évaluer', 'interroger'],
   /**
    * ⭐ LES DEUX SLOTS DE P1 SONT NATIFS, ET C'EST LE CAS LE PLUS SIMPLE DES SIX :
    *    `{copie}` et `{sujet}` viennent du contexte de l'exercice, le module ne

@@ -27,7 +27,7 @@ import { lireContexte, type ContexteDepot } from './contexte'
 import { appelsDuDepot, controlerLaFacture } from './couts-serveur'
 import { appelsDeLErreur, depotAAtteintSonPlafond } from './couts'
 import {
-  competencesOuvertes, etatCompetence, refusFormeCode2, valeursDesParametres,
+  competencesOuvertes, etatCompetence, modeNonCouvert, refusFormeCode2, valeursDesParametres,
   CALAME, FOURNISSEURS_NATIFS,
   type BranchementCompetence, type ContexteBranchement, type InstrumentCompetence,
   type SpecExtraction,
@@ -43,6 +43,7 @@ import {
   type LigneMesure,
 } from './mesures'
 import { traiterLeMonitoring } from './monitoring'
+import { trancheDeReference } from './tranche'
 import {
   assemblerGabarit, assemblerRetour, controlerRetour, segmenter,
   type CoucheCompetence,
@@ -383,6 +384,14 @@ export function competencesDeLExercice(ctx: ContexteDepot): {
       ecartees.push({ competence: nom, motif: etat.motif ?? 'compétence non branchée à la chaîne' })
       continue
     }
+    // ⭐⭐⭐ C5-L3 — LA PORTE DE MODE. C'est ici, et nulle part ailleurs, que
+    //    « des compétences dont la grille réceptive existe » cesse d'être une
+    //    phrase de mission pour devenir une garde.
+    const refus = modeNonCouvert(c, ctx.modesParCompetence[nom] ?? [], etat.branchement)
+    if (refus) {
+      ecartees.push({ competence: nom, motif: refus })
+      continue
+    }
     mesurees.push(c)
   }
   return { mesurees, ecartees }
@@ -581,6 +590,21 @@ async function chaineDUneCompetence(
     ? branchement.prepareCopie(production, ctxAvantPreparation)
     : production
 
+  // ⭐⭐ C5-L3 — LA TRANCHE DE RÉFÉRENCE, calculée une fois par compétence.
+  //    ⚠️ Ses alertes sont celles de l'ASYMÉTRIE : une valeur que le `02-` §6 A
+  //       ne déclare pas atteint quand même le consommateur, et « c'est un vrai
+  //       défaut, et il doit se voir ». Elles remontent au bilan du dépôt.
+  //    ⭐ Ce qu'elle ÉCARTE, en revanche, ne part pas en alerte : une exclusion
+  //       par règle est le fonctionnement normal. Elle se journalise en trace, où
+  //       la recette la lit.
+  const tranche = trancheDeReference(ctx.reference, competence, instrument)
+  alertes.push(...tranche.alertes)
+  if (tranche.ecarte.length) {
+    console.info(`[chaine] tranche de référence — ${competence} : `
+      + `${tranche.ecarte.length} unité(s) restreinte(s) par sa règle de lecture — `
+      + tranche.ecarte.map((e) => `${e.ou} (${e.valeurs.join(', ')})`).join(' · '))
+  }
+
   // LES FOURNISSEURS NATIFS DES SLOTS. `sujet` EST la consigne instanciée : la
   // table `exercices` porte la consigne et la PROVENANCE de ses matériaux, jamais
   // le texte d'un sujet distinct (`07-` §1.1) — c'est tout ce que la chaîne a, et
@@ -601,7 +625,13 @@ async function chaineDUneCompetence(
       //    porte pas : le crochet sert alors son slot à `null`, et la mesure
       //    s'arrête EN LE NOMMANT. *Une clé absente et une clé vide ne disent pas
       //    la même chose — on n'écrit donc pas `''`.*
-      ...(ctx.reference != null ? { reference: JSON.stringify(ctx.reference) } : {}),
+      // ⭐⭐⭐ C5-L3 — LA TRANCHE. « On ne passe à un consommateur que ce que sa
+      //    règle lit » (`05-` §1) : la référence ne part pas entière, elle part
+      //    RESTREINTE à ce que la règle de CETTE compétence déclare lire, et
+      //    c'est ici — avant la sérialisation, donc avant tout prompt — que la
+      //    restriction s'applique. *`valeursServies()` avait la règle et aucun
+      //    consommateur ; le voici.*
+      ...(ctx.reference != null ? { reference: JSON.stringify(tranche.reference) } : {}),
       ...(ctx.materiau ? { source: ctx.materiau } : {}),
     },
     prives: {},

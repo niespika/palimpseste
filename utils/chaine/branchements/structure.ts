@@ -1347,6 +1347,33 @@ function conformite(
 
 export const BRANCHEMENT_STRUCTURE: BranchementCompetence = {
   /**
+   * ⛔⛔ C5-L3 — `composer` SEUL, ET C'EST CE COUPLE-CI QUI A ÉTÉ EXERCÉ POUR DE
+   *    VRAI. `competences_modes_admis` admet la Structure en `composer` et en
+   *    `expliquer` ; **son instrument ne couvre que le premier.** La traversée
+   *    de recette de `C5-L2`, le 27/08, a fait mesurer `structure` en
+   *    `expliquer` **par l'instrument de COMPOSITION**, jusqu'à la mesure écrite
+   *    en base — décor retiré depuis. *Le défaut n'est pas déduit : il a une
+   *    trace, une date et un témoin.*
+   *
+   * ⛔ RIEN DE MACHINE NE PORTE SA GRILLE RÉCEPTIVE. Aucun marqueur de prompt
+   *    réceptif ; le volet `squelette.catalogue` ne déclare que `roles`,
+   *    `gestes`, `probleme_forme`, `statuts_composes`, `natures_couture` —
+   *    **tous de composition** — et ni `decoupage_present`, ni
+   *    `decoupage_conforme`, ni `fonction_moments` n'y figurent ; l'étape de
+   *    notation réceptive est déclarée inactive.
+   *
+   * ⚠️ ET SA FICHE DIT LE CONTRAIRE — c'est la dette `D9`. Le §3, sous « La
+   *    grille réceptive — mode `expliquer` », affirme que « le bloc machine — le
+   *    volet `squelette` déclare les listes fermées de cette grille ». **Il ne
+   *    les déclare pas.** La formulation juste est celle de l'Argumentation, qui
+   *    dit exactement l'inverse pour la même situation. *Marquée `[faux]`, non
+   *    corrigée : le `03-` et les fiches sont GELÉS.*
+   *
+   * ⭐ Cette ligne passera à `['composer', 'expliquer']` quand le banc lecture
+   *    aura validé l'étape de notation réceptive, et pas avant.
+   */
+  modesCouverts: ['composer'],
+  /**
    * ⭐ LA STRUCTURE EST LA SEULE DES SIX À DÉFINIR `prepare_copie`, et le contrat
    *    dit pourquoi : « les lignes vides sont des frontières de blocs ». C'est
    *    ce texte-là — numéroté `[¶1]`, `[¶2]`… — que le slot `{copie}` reçoit, et

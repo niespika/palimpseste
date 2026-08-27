@@ -305,21 +305,31 @@ function contexteDuReferent(ctx: Objet): Record<string, string> {
   return sortie
 }
 
-test('⚠️ LA CHAÎNE NE SERT AUCUNE RÉFÉRENCE — le mode réceptif ARRÊTE la mesure, en la nommant', () => {
-  // Ce que la chaîne sert vraiment tient en QUATRE noms.
+test('⛔ SANS RÉFÉRENCE SERVIE, le mode réceptif ARRÊTE la mesure en la nommant — c’est la GARDE', () => {
+  // ⭐ AMENDÉ PAR C5-L3 (27/08). Ce test s'appelait « LA CHAÎNE NE SERT AUCUNE
+  //    RÉFÉRENCE » et son commentaire disait « ce que la chaîne sert tient en
+  //    QUATRE noms » : c'était faux depuis le 23/08 — `FOURNISSEURS_NATIFS` en
+  //    porte SIX, `reference` et `source` comprises. **Ce qu'il éprouve
+  //    réellement n'a pas changé, et c'est une GARDE, pas un manque** : quand le
+  //    contexte ne porte PAS de référence — parce que l'exercice n'en a pas, ou
+  //    parce qu'elle n'est pas VALIDÉE, auquel cas `contexte.ts` la rend absente
+  //    plutôt que vide —, le référent sort à `null` et la mesure s'arrête en
+  //    nommant le slot. Le comportement voulu.
   const reel = ctxDe({}, { sujet: 'La liberté est-elle une illusion ?', consigne: 'c', copie: 'x', mode: 'interroger' })
   const rendu = BRANCHEMENT_QUESTIONNEMENT.jugement(reel).preP2!(reel)
   assert.equal(rendu.nature_referent, 'texte')
   assert.equal(rendu.referent, null,
-    'en mode réceptif, le référent est `null` tant que la chaîne ne descend pas la référence décomposée')
+    'sans référence au contexte, le référent est `null` — et le slot arrête la mesure')
 
   // ⭐ Et en `composer`, il mesure — le sujet est NATIF.
   const composer = ctxDe({}, { sujet: 'La liberté est-elle une illusion ?', mode: 'composer' })
   assert.deepEqual(BRANCHEMENT_QUESTIONNEMENT.jugement(composer).preP2!(composer),
     { nature_referent: 'sujet', referent: 'La liberté est-elle une illusion ?' })
 
-  // ⛔ ET LE JOUR OÙ ELLE LA SERVIRA, le portage la lit — sous le SEUL champ que
-  //    le module lit, et à son niveau d'imbrication.
+  // ⭐⭐ ET QUAND ELLE LA SERT — ce qui est le cas depuis le 23/08 —, le portage
+  //    la lit, sous le SEUL champ que le module lit et à son niveau
+  //    d'imbrication. *C'est ce vecteur-ci que C5-L3 a mené jusqu'à une mesure
+  //    réelle en base, sur un dépôt de lecture.*
   const avecRef = ctxDe({}, {
     mode: 'interroger',
     reference: JSON.stringify({ armature: { question_directrice: 'ce que le doute laisse intact' } }),

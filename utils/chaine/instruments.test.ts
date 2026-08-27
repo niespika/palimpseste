@@ -16,9 +16,9 @@ import { spawnSync } from 'node:child_process'
 import { existsSync } from 'node:fs'
 import {
   CALAME, MANIFESTE_LU, MONITORING, competencesEnAttenteDeBranchement, competencesOuvertes,
-  etatCompetence, valeursDesParametres, verifierCoherence,
+  etatCompetence, modeNonCouvert, valeursDesParametres, verifierCoherence,
 } from './instruments'
-import { COMPETENCES } from './types'
+import { COMPETENCES, MODES } from './types'
 
 test('l\'instrument dérivé et son branchement sont COHÉRENTS', () => {
   assert.deepEqual(verifierCoherence(), [])
@@ -216,4 +216,148 @@ test('les dérivés sont IDENTIQUES à leurs sources (derive-instruments.py --ve
   assert.equal(r.status, 0,
     'les dérivés ont divergé de leurs sources — rejouer `derive-instruments.py --ecris`\n'
     + `${r.stdout}${r.stderr}`)
+})
+
+// ════════════════════════════════════════════════════════════════════════════
+// C5 · L3 — LA PORTE DE MODE. « Des compétences dont la grille réceptive
+// existe » (`07-` §2) : ces cinq mots sont une garde, et la voici éprouvée.
+//
+// ⭐ La preuve se fait DANS LES DEUX SENS : par le succès (les deux instruments
+//    qui couvrent un mode réceptif le déclarent) et PAR L'ÉCHEC (les deux qui
+//    ne le couvrent pas refusent, avec un motif qui nomme ce qui manque).
+// ════════════════════════════════════════════════════════════════════════════
+
+test('LES SIX BRANCHEMENTS DÉCLARENT LEURS MODES COUVERTS, et aucun n’est vide', () => {
+  // ⛔ Une liste vide n'est pas « il couvre tout » : ce serait rouvrir la porte
+  //    par le bas. `verifierCoherence()` le refuse AU CHARGEMENT.
+  for (const c of COMPETENCES) {
+    const b = etatCompetence(c).branchement
+    assert.ok(b, c)
+    assert.ok(Array.isArray(b!.modesCouverts), `${c} : modesCouverts absent`)
+    assert.ok(b!.modesCouverts.length > 0, `${c} : modesCouverts VIDE`)
+    for (const m of b!.modesCouverts) {
+      assert.ok((MODES as readonly string[]).includes(m), `${c} : « ${m} » n'est pas un mode`)
+    }
+  }
+})
+
+test('LA COUVERTURE, COMPÉTENCE PAR COMPÉTENCE — la fiche §4 fait foi', () => {
+  const attendu: Record<string, string[]> = {
+    // Les quatre mono-mode de composition — admis et couvert coïncident.
+    expression: ['composer'],
+    connaissance: ['composer'],
+    // ⛔ LES DEUX QUI FERMENT. La table dérivée `competences_modes_admis` admet
+    //    l'Argumentation en `composer · expliquer · évaluer` et la Structure en
+    //    `composer · expliquer` — vérifié en base, dans les DEUX bases. Leurs
+    //    instruments ne couvrent que `composer` : leur grille réceptive vit en
+    //    prose à leur fiche §3, sans prompt marqué ni enum au bloc machine.
+    argumentation: ['composer'],
+    structure: ['composer'],
+    // ⭐ LES DEUX QUI EXISTENT. La Synthèse est mono-mode `restituer`, qui EST un
+    //    mode réceptif : sa grille réceptive est son instrument unique. Le
+    //    Questionnement a UNE SEULE grille pour les cinq modes, « la cascade est
+    //    celle ci-dessus, INCHANGÉE » (fiche §4).
+    synthese: ['restituer'],
+    questionnement: ['composer', 'restituer', 'expliquer', 'évaluer', 'interroger'],
+  }
+  for (const c of COMPETENCES) {
+    assert.deepEqual([...etatCompetence(c).branchement!.modesCouverts], attendu[c], c)
+  }
+})
+
+test('L’ÉCART ADMIS / COUVERT VAUT EXACTEMENT TROIS COUPLES, et ce sont eux que la porte ferme', () => {
+  // ⭐ « Admis » n'est pas « couvert » : la table dérivée dit ce qu'une
+  //    compétence PEUT INSTANCIER (`02-` §3), le branchement dit ce que son
+  //    INSTRUMENT SAIT MESURER. *Les 13 couples admis sont vérifiés en base ;
+  //    ils sont recopiés ici comme ATTENDU DE TEST, jamais comme source.*
+  const admis: Record<string, string[]> = {
+    expression: ['composer'],
+    connaissance: ['composer'],
+    argumentation: ['composer', 'expliquer', 'évaluer'],
+    structure: ['composer', 'expliquer'],
+    synthese: ['restituer'],
+    questionnement: ['composer', 'restituer', 'expliquer', 'évaluer', 'interroger'],
+  }
+  assert.equal(Object.values(admis).flat().length, 13, 'la table dérivée porte 13 couples')
+  const ecart: string[] = []
+  for (const c of COMPETENCES) {
+    const couverts = etatCompetence(c).branchement!.modesCouverts as readonly string[]
+    for (const m of admis[c]) if (!couverts.includes(m)) ecart.push(`${c}×${m}`)
+  }
+  assert.deepEqual(ecart.sort(),
+    ['argumentation×expliquer', 'argumentation×évaluer', 'structure×expliquer'])
+})
+
+test('LA PORTE REFUSE — et son motif nomme la compétence, le mode et ce qui manque', () => {
+  const b = etatCompetence('argumentation').branchement
+  const motif = modeNonCouvert('argumentation', ['expliquer'], b)
+  assert.ok(motif, 'argumentation × expliquer doit être refusée')
+  // ⭐ Ce motif est SERVI : le bilan d'un dépôt l'affiche. « Un motif faux ne se
+  //    lit pas comme un commentaire faux — il se croit. »
+  assert.match(motif!, /expliquer/)
+  assert.match(motif!, /argumentation/)
+  assert.match(motif!, /composer/)
+  assert.match(motif!, /COMPOSITION/)
+  assert.match(motif!, /modesCouverts/)
+})
+
+test('LA PORTE LAISSE PASSER ce que l’instrument couvre — elle n’ouvre rien, elle ferme', () => {
+  // ⭐ Les deux grilles réceptives qui EXISTENT passent, et c'est tout l'objet.
+  assert.equal(modeNonCouvert('synthese', ['restituer'], etatCompetence('synthese').branchement), null)
+  for (const m of ['composer', 'restituer', 'expliquer', 'évaluer', 'interroger']) {
+    assert.equal(
+      modeNonCouvert('questionnement', [m], etatCompetence('questionnement').branchement), null, m)
+  }
+  // ⛔ Et elle ne retire RIEN à ce qui mesurait déjà : les six en `composer`,
+  //    sauf la Synthèse, que la table n'admet pas en `composer`.
+  for (const c of ['expression', 'argumentation', 'structure', 'connaissance', 'questionnement'] as const) {
+    assert.equal(modeNonCouvert(c, ['composer'], etatCompetence(c).branchement), null, c)
+  }
+})
+
+test('LA LECTURE EST PRUDENTE : un seul mode non couvert suffit à refuser', () => {
+  // ⚠️ `modes_par_competence[c]` est une LISTE (`07-` §1.2). On refuse dès qu'UN
+  //    mode élu n'est pas couvert, et non « dès qu'aucun ne l'est » : la mesure
+  //    porterait le mode non couvert dans sa colonne `modes`, donc entrerait
+  //    dans le groupe de ciblage réceptif (`01-` §3).
+  //    *Mesuré : 504 couples en bac à sable, 488 en prod, AUCUN à plus d'un mode.*
+  const b = etatCompetence('structure').branchement
+  const motif = modeNonCouvert('structure', ['composer', 'expliquer'], b)
+  assert.ok(motif, 'un mode couvert ne rachète pas un mode non couvert')
+  assert.match(motif!, /expliquer/)
+  assert.doesNotMatch(motif!, /« composer » non couvert/)
+})
+
+test('UNE LISTE VIDE NE REFUSE RIEN — inventer un `composer` implicite serait décider', () => {
+  // ⚠️ Mesuré : zéro couple à liste vide dans les deux bases. La chaîne se
+  //    comporte alors comme avant cette porte.
+  assert.equal(modeNonCouvert('argumentation', [], etatCompetence('argumentation').branchement), null)
+  assert.equal(modeNonCouvert('argumentation', ['  '], etatCompetence('argumentation').branchement), null)
+})
+
+test('`évaluer` SANS ACCENT est accepté EN ENTRÉE — le précédent est MODES_RECEPTIFS', () => {
+  // « La forme accentuée est celle de la source ; la forme sans accent est
+  //   acceptée en entrée » (`questionnement.ts`). La déclaration, elle, ne
+  //   connaît que la forme accentuée : `Mode` la type.
+  assert.equal(
+    modeNonCouvert('questionnement', ['evaluer'], etatCompetence('questionnement').branchement), null)
+  assert.ok(modeNonCouvert('argumentation', ['evaluer'], etatCompetence('argumentation').branchement))
+})
+
+test('UN BRANCHEMENT SANS MODE DÉCLARÉ EST REFUSÉ AU CHARGEMENT — et FERMÉ PAR DÉFAUT en aval', () => {
+  // ⭐ Le patron est celui des slots : « un appel dépensé sur une chaîne qui
+  //    produirait des trous est un appel perdu, et la mesure qui en sort est
+  //    fausse. » `verifierCoherence()` attrape la déclaration vide AU CHARGEMENT
+  //    — c'est là que le refus doit tomber.
+  // ⛔ ET SI ELLE PASSAIT QUAND MÊME, LA PORTE REFUSE TOUT plutôt que de tout
+  //    laisser passer. *Une garde qui existe contre un silence ne doit pas se
+  //    taire quand sa propre déclaration manque.*
+  const vrai = etatCompetence('argumentation').branchement!
+  const sansModes = { ...vrai, modesCouverts: [] as never[] }
+  const motif = modeNonCouvert('argumentation', ['expliquer'], sansModes)
+  assert.ok(motif, 'une déclaration vide refuse, elle n’ouvre pas')
+  assert.match(motif!, /AUCUN mode couvert/)
+  assert.match(motif!, /verifierCoherence/)
+  // Et aucun des six n'est dans ce cas aujourd'hui.
+  assert.deepEqual(verifierCoherence(), [])
 })

@@ -972,6 +972,17 @@ function texteVrai(v: unknown): string | null {
 
 export const BRANCHEMENT_CONNAISSANCE: BranchementCompetence = {
   /**
+   * ⭐ C5-L3 — `composer` SEUL. La Connaissance est mono-mode, la table dérivée
+   *    ne lui admet que `composer`, et le `03-` §4 ne la compte pas parmi les
+   *    quatre qui peuvent avoir une grille réceptive. **Admis et couvert
+   *    coïncident.**
+   *
+   * ⚠️ Sa mutité, elle, est d'une AUTRE nature et cette porte n'y change rien :
+   *    il lui manque le CORPUS DU COURS, « qu'aucune source qui fait foi ne
+   *    déclare » (fiche §8). Un mode couvert n'est pas un instrument qui mesure.
+   */
+  modesCouverts: ['composer'],
+  /**
    * ⭐ LA CONNAISSANCE EST LA COMPÉTENCE LA PLUS EXIGEANTE EN SLOTS — SEPT, et
    *    deux crochets les servent. Trois en P1, et un seul est natif :
    *    `{consigne}` vient du contexte de l'exercice ; `{production}` et

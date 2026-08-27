@@ -719,6 +719,36 @@ function conformite(
 
 export const BRANCHEMENT_ARGUMENTATION: BranchementCompetence = {
   /**
+   * ⛔⛔ C5-L3 — `composer` SEUL, ET L'ÉCART AVEC L'ADMIS EST LE CŒUR DE LA
+   *    PORTE DE MODE. `competences_modes_admis` admet l'Argumentation en
+   *    `composer`, `expliquer` ET `évaluer` — trois couples, vérifiés en base
+   *    dans les deux bases. **Son instrument n'en couvre qu'un.**
+   *
+   * ⛔ CE QUI MANQUE N'EST PAS UN RÉGLAGE, C'EST UN INSTRUMENT ENTIER. Sa grille
+   *    réceptive est écrite EN PROSE à sa fiche §3, et rien de machine ne la
+   *    porte : aucun marqueur `<!-- DEBUT-PROMPT-… -->` réceptif sur les sept
+   *    fiches (la dérivation ne connaît que `P1` et `P2`), aucun de ses enums au
+   *    volet `squelette.catalogue` du bloc machine — qui ne déclare que
+   *    `statuts_lien`, `statuts_apres_crible`, `traitements_objection`,
+   *    `tests_crible`, `marques_termes`, **tous de composition** —, et son étape
+   *    de notation réceptive est déclarée INACTIVE par la fiche elle-même.
+   *
+   * ⛔ ET SA CASCADE RÉCEPTIVE NE RECOUVRE PAS CELLE DE COMPOSITION. La §4
+   *    réceptive part de `garant` × `mode_discursif` × `garant_valide` en
+   *    `expliquer`, et de `objection_presente` × `objection_cible` × `charite`
+   *    en `évaluer` ; la composition part de `statut_du_lien` sur `unites[]`.
+   *    **Rien ne se recouvre** — c'est ce qui la sépare du Questionnement et de
+   *    la Synthèse, où « le même branchement » a un sens littéral.
+   *
+   * ⭐ La fiche §3 dit elle-même la condition de reprise : « les enums de cette
+   *    grille n'y entreront qu'avec l'étape de notation réceptive, **quand le
+   *    banc lecture l'aura validée** ». *Aucune session ne construit un
+   *    instrument manquant* (`07-` §2) : cette ligne passe de `['composer']` à
+   *    `['composer', 'expliquer', 'évaluer']` le jour où le banc l'aura dit, et
+   *    pas avant.
+   */
+  modesCouverts: ['composer'],
+  /**
    * UN SEUL APPEL D'EXTRACTION. Ses deux slots — `{sujet}` et `{copie}` — sont
    * NATIFS : ils viennent du contexte de l'exercice, aucun crochet pré-phase ne
    * les sert. ⭐ `{sujet}` EST LA CONSIGNE INSTANCIÉE : la table `exercices`

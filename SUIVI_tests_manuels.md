@@ -4645,8 +4645,20 @@ de Louis.** Tout le reste du lot est fait, prouvé et vert.
 
 ### Ce qui reste à jouer en recette
 
-- [ ] **C4L10Q-15 · ⚠️⚠️ LE QUESTIONNEMENT SE TAIT DANS LES QUATRE MODES RÉCEPTIFS, ET C'EST UNE
-  QUESTION DE CODE — LA SEULE DÉCISION QUE CE LOT LAISSE À LOUIS.** Constaté **en base**, sur un
+- [x] **C4L10Q-15 · ✅ LEVÉ ET ÉPROUVÉ PAR C5-L3, LE 27/08 — le Questionnement MESURE en mode
+  réceptif.** ⭐⭐ *Sa condition de reprise était satisfaite depuis le 23/08* (commit `4e865b5` :
+  `FOURNISSEURS_NATIFS` porte six noms, `reference` et `source` compris), **et personne ne l'avait
+  relue** — son jumeau `C4L10SY-14` avait été coché, pas lui, et **aucune mesure hors `composer`
+  n'existait dans les deux bases**. ⭐ **PREUVE PAR EXÉCUTION**, sur un dépôt réel de lecture, en bac
+  à sable *(`scripts/recette/reception-c5l3.mjs --avec-chaine`)* : `questionnement × expliquer` →
+  squelette d'extraction, **verdict**, et **`lettre_equivalente = E`** avec `modes: ["expliquer"]` en
+  base, instrument 2.2 ; `armature.question_directrice` servie pour de bon *(« Le doute porté sur
+  toute chose laisse-t-il subsister une certitude… »)*. 3 lignes d'`api_couts`, 56,4 s pour deux
+  chaînes. ⚠️ **RR4 n'a pas refusé à ce tirage** — voir `C4L10Q-16`, qui reste ouvert. *L'énoncé
+  ci-dessous est conservé tel qu'il était, pour mémoire du diagnostic.*
+
+  ~~**⚠️⚠️ LE QUESTIONNEMENT SE TAIT DANS LES QUATRE MODES RÉCEPTIFS, ET C'EST UNE
+  QUESTION DE CODE — LA SEULE DÉCISION QUE CE LOT LAISSE À LOUIS.**~~ Constaté **en base**, sur un
   dépôt réel en `interroger` : `pre_p2` sert `referent` à **`null`**, la chaîne **arrête la mesure en
   nommant le slot** — *« REFUS : `preP2` ne peut pas servir « referent » — le contexte de l'exercice
   ne le porte pas »* —, aucune mesure de questionnement n'est écrite, et **les autres compétences du
@@ -6831,3 +6843,116 @@ quel, mais le prof doit relire »*. ⚠️ **Et la règle 2 PEUT être insatisfa
 > l'outil PARTAGÉ du contrôle des citations — il sert P1 et la contestation —, et le toucher change
 > un comportement calibré ailleurs. ⭐ **La conséquence est nulle pour l'élève** : c'est une ALERTE,
 > jamais un refus. *1 alerte sur 6 points ; à surveiller, pas à réparer en passant.*
+
+
+## C5 · L3 — Les mesures en réception : la porte de mode, les deux grilles qui existent, la tranche
+
+**Clos le 27/08/2026.** Aucune migration, aucun interrupteur neuf, **aucune ligne au `SUIVI_SQL.md`**.
+Relevé : `RELEVE_C5_L3_2026-08-27.md`.
+
+> ⭐⭐ **CE QUE LE LOT A EMPÊCHÉ, ET ÇA SE COMPTE EN ÉLÈVES.** En **production**, un exercice
+> `assigne` × `classe` à référence validée élit `argumentation: [expliquer]` et
+> `structure: [expliquer]` — **les deux compétences sans instrument réceptif** — et porte **23 dépôts,
+> dont 13 au statut `v1_remis`**, 0 squelette, 0 mesure. Les six interrupteurs sont à `ON`, et le geste
+> qui déclenche tout est **un clic** (l'analyse en lot de la passation en classe). Le jour où la chaîne
+> les traite, elle écrivait **vingt-six lettres calculées par l'instrument de COMPOSITION sur des
+> copies de lecture**, les rangeait dans le signal de ciblage réceptif du routeur, et **rien ne le
+> disait**. ⭐ **Ces 26 lettres ne peuvent plus s'écrire** : la chaîne refuse, et elle nomme le motif.
+
+### Ce qui est PROUVÉ en séance — pour ne pas le rejouer
+
+Tout ci-dessous est éprouvé par `scripts/recette/reception-c5l3.mjs` *(bac à sable, **27 verts, 0
+rouge**)*, ou par les tests unitaires. **Le script se rejoue à la prochaine revue** :
+
+```
+node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON \
+     --import ./scripts/register-calibration-resolver.mjs \
+     scripts/recette/reception-c5l3.mjs [--avec-chaine]
+```
+
+⛔ **Mode de retrait** : sans `--garde-le-decor`, le script retire tout ce qu'il a semé, y compris sur
+interruption. Le décor se reconnaît à sa classe, `nom LIKE 'RECETTE-C5L3%'`. ⚠️ `--avec-chaine`
+**paie 6 appels** (~56 s).
+
+- [x] **C5L3-1 · LA PORTE DE MODE REFUSE, ET SON MOTIF EST SERVI.** Sur un dépôt réel de lecture qui
+  élit quatre compétences, `competencesDeLExercice` écarte `argumentation × expliquer` et
+  `structure × expliquer` avec un motif qui nomme **la compétence, le mode élu, et le fait que
+  l'instrument ne le couvre pas**. *Preuve : section B du script ; `utils/chaine/instruments.test.ts`
+  (9 vecteurs neufs).* ⭐ **Les quatre compétences sont `evaluee` ET ouvertes : seul LE MODE les
+  sépare.**
+- [x] **C5L3-2 · LA PREUVE PAR L'ÉCHEC — ZÉRO APPEL PAYÉ sur les compétences écartées.** `api_couts`
+  porte **6 lignes** sur le dépôt : 3 `questionnement`, 3 `synthese`, **0 `argumentation`, 0
+  `structure`**. *« Un appel dépensé sur une chaîne qui produirait des trous est un appel perdu. »*
+  ⭐ Le nombre d'appels se lit **au nombre de lignes**, jamais à un compteur.
+- [x] **C5L3-3 · LE « FAIT QUAND » — squelette, verdict ET LETTRE sur une copie de LECTURE.**
+  `questionnement × expliquer` → **lettre E**, `modes: ["expliquer"]`, instrument 2.2 ;
+  `synthese × restituer` → **lettre D**, `modes: ["restituer"]`, instrument 3.4. **Constaté en base**,
+  après nettoyage du décor. ⚠️ *La clause « bancée en réception » a été levée par décision de Louis —
+  le banc de réception n'existe pas.*
+- [x] **C5L3-4 · AUCUNE MESURE FAUSSE N'ENTRE DANS LE SIGNAL DE CIBLAGE RÉCEPTIF.** Aucune ligne de
+  `competences_mesures` ne porte `argumentation` ni `structure` sur ce dépôt — donc rien n'entre dans
+  le groupe de modes réceptif du routeur (`01-` §3). *Et aucun squelette de composition n'a été écrit
+  sur une copie de lecture.*
+- [x] **C5L3-5 · UNE COMPÉTENCE ÉCARTÉE POUR CAUSE DE MODE N'ENTRE PAS DANS `competences_couvertes[]`.**
+  *« Faute de quoi on ne saura jamais relire la mesure »* (`07-` §1.4). **Vérifié en base**, pas déduit.
+- [x] **C5L3-6 · LA TRANCHE MORD SUR UNE VRAIE RÉFÉRENCE.** Sur la référence validée de Descartes
+  (17 phrases, 4 moments), les **4 phrases dont `relance` est la seule fonction** (5, 11, 14, 16) sont
+  écartées **EN SILENCE** pour la Synthèse — parce qu'une valeur *déclarée au `02-` que la règle ne
+  lit pas* est **inerte, pas inconnue**. ⭐ La règle se **lit sur la fiche**
+  (`bloc_machine.squelette.catalogue.fonctions_reference`), elle n'y est pas recopiée. ⛔ **Aucune
+  unité n'est retirée** — la retirer ferait mentir les moments.
+- [x] **C5L3-7 · LE QUESTIONNEMENT NE REÇOIT QUE CE QU'IL LIT.** Toutes les fonctions et tous les
+  statuts d'unité lui sont retranchés ; **`armature.question_directrice` descend intacte**, et c'est
+  son seul référent en réception. *`utils/chaine/tranche.test.ts` (9 vecteurs).*
+- [x] **C5L3-8 · LA PORTE NE RETIRE RIEN À CE QUI MESURAIT DÉJÀ.** Contre-épreuve : les cinq
+  compétences admises en `composer` y passent toutes, exactement comme avant le lot. *`npm test` :
+  **1643 / 1643**, contre 1625 à l'ouverture.*
+- [x] **C5L3-9 · `C4L10Q-15` EST LEVÉ ET COCHÉ** — voir son entrée, plus haut dans ce fichier.
+- [x] **C5L3-10 · LA COUTURE AVEC `C4-L5`, ÉPROUVÉE PAR EXÉCUTION** *(convention du
+  `PLAN_DE_CHANTIER.md` §5)*. *« La chaîne sait-elle servir un instrument RÉCEPTIF de bout en bout,
+  sur un dépôt réel, et écrire sa mesure ? »* — **oui**, quatre coutures nommées et traversées
+  (`modes_par_competence` · `reference_id → contenu` · `exercices_squelettes` ·
+  `competences_mesures.modes`). Latence **56,4 s < 180 s**.
+
+### Ce qui RESTE à jouer — avec sa condition de reprise
+
+- [ ] **C5L3-11 · ⛔ LE SMOKE PROF DE LA FILE, sur l'exercice de PRODUCTION.** Le refus de la porte
+  **n'a jamais été vu à l'écran** : le motif est servi au **bilan d'un dépôt**, que le professeur lit,
+  et une session Code ne s'authentifie pas. ⚠️ **L'exercice qui attend en prod porte 13 dépôts remis** :
+  le geste à jouer est l'analyse en lot de la passation en classe (C4-L4), puis **relire le bilan** et
+  vérifier que les deux motifs s'y affichent en toutes lettres. **Condition de reprise : une session
+  prof authentifiée, sur la prod.** *⚠️ Ce geste PAIE — 13 dépôts × 2 compétences mesurables.*
+- [ ] **C5L3-12 · ⚠️ RR4 N'A PAS REFUSÉ À CE TIRAGE, ET LE COMPTE EST DE 1 SUR 1.** `C4L10Q-16`
+  observait un refus *« une fois sur deux tours »* quand le retour emploie « recadrage » ou « enjeu ».
+  La traversée de réception **n'a pas été refusée** — le retour a été écrit et publié. ⛔ **Un tirage
+  ne fait pas une fréquence** : `C4L10Q-16` reste ouvert, et le compte demande des tours.
+  **Condition de reprise : rejouer le script `--avec-chaine` plusieurs fois et compter.**
+- [ ] **C5L3-13 · ⭐ LA DONNÉE QUE LA QUESTION DE SOURCE DE `C5-L2` ATTEND — premier point.** Sur la
+  première traversée d'un retour de **RÉCEPTION**, l'ancrage s'est réparti **1 point « copie », 1 point
+  « texte_support »** sur 2. ⭐ **C'est la première fois que le canal `texte_support` est employé** :
+  C5-L2 mesurait quatre points sur quatre ancrés sur la copie. ⚠️ **Un tirage ne tranche pas une
+  question de source** — la règle 1 du gabarit (§4, **GELÉ**) fait ancrer « sur une citation du
+  squelette », et le squelette est fait de la copie. **Condition de reprise : accumuler des tirages de
+  RÉCEPTION, et porter le compte à Louis.** *La décision est de source, et le §4 est gelé.*
+- [ ] **C5L3-14 · ⛔ LES DEUX INSTRUMENTS RÉCEPTIFS ABSENTS — Argumentation et Structure.**
+  *« Aucune session ne construit un instrument manquant. »* Leur grille vit **en prose** à leur fiche
+  §3 : ni marqueur de prompt réceptif, ni enum au volet `squelette.catalogue`, ni cascade active — et
+  leur cascade réceptive lit des champs que leur P1 de composition ne produit pas. **Ce que ça coûte
+  aujourd'hui** : `argumentation × expliquer`, `argumentation × évaluer` et `structure × expliquer`
+  sont **admis et non mesurables**. **Condition de reprise : le banc lecture valide l'étape de notation
+  réceptive de la fiche** → la fiche reçoit ses enums → `modesCouverts` passe de `['composer']` à sa
+  liste complète, à `utils/chaine/branchements/{argumentation,structure}.ts`.
+- [ ] **C5L3-15 · ⛔ LE BANC DE CALIBRATION LECTURE N'EXISTE PAS.** `03-` §7 : *« Protocole du banc de
+  réception : **reste à écrire** »*, et `copies-tests/lecture/` est **à créer** *(vérifié : absent)*.
+  ⚠️ **C'est la clause du « fait quand » que Louis a levée le 27/08** pour ne pas bloquer le lot ; elle
+  ne se lève qu'une fois. **Condition de reprise : une séance de conception.**
+- [ ] **C5L3-16 · ⚠️ LE QUESTIONNEMENT EST `evaluee` SANS SON BANC, DANS LES DEUX BASES.** Le `03-` §9
+  lui impose, **à lui seul**, quatre lots de banc — deux en `composer`, deux en modes réceptifs —
+  avant cette bascule. Il est à `evaluee` depuis le 23/08. *« Une contrainte de protocole n'est
+  appliquée par aucun code. »* ⛔ **Relevé, pas réparé : le statut appartient au professeur.**
+  **Condition de reprise : décision de Louis.**
+- [ ] **C5L3-17 · ⚠️ `competences_statut_recette` — SEPT lignes en bac à sable, CINQ en prod.**
+  `connaissance` et `monitoring` **n'ont pas de ligne du tout** en production. *« Pas de ligne » n'est
+  pas « pas d'objet »* — c'est la leçon exacte du déménagement du statut de recette. ⛔ **Relevé, pas
+  réparé : c'est une donnée, pas un défaut de code.** **Condition de reprise : l'écran de la fabrique
+  (C4-L8), où le professeur pose le statut.**

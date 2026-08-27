@@ -1500,6 +1500,13 @@ function conformite(
 
 export const BRANCHEMENT_EXPRESSION: BranchementCompetence = {
   /**
+   * ⭐ C5-L3 — `composer` SEUL. L'Expression est mono-mode (fiche §6), la table
+   *    dérivée `competences_modes_admis` ne lui admet que `composer`, et elle
+   *    n'est pas de celles à qui le `03-` §4 permet une grille réceptive. **Ici
+   *    l'admis et le couvert coïncident**, et c'est le cas le plus simple des six.
+   */
+  modesCouverts: ['composer'],
+  /**
    * UN SEUL APPEL D'EXTRACTION, TOUJOURS. L'Expression est mono-mode
    * (`composer` seul, fiche §6) et n'a ni référent ni aligneur : la Synthèse est
    * la seule des six à en avoir deux.

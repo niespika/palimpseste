@@ -269,7 +269,7 @@ export const INSTRUMENT_STRUCTURE = {
   },
   "competence": "structure",
   "degre_statut": 2,
-  "empreinte_source": "2ebc4879cf11a22936a65f86b67080bae4e8404545ccde1c2978b2ce93178649",
+  "empreinte_source": "a452377126d4aaabf6a4857a2fa1913724be1eef497abe3abf5d8c6b7b23206a",
   "observables_mesure": {
     "bloc_relie": {
       "famille": "proportion",

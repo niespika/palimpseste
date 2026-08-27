@@ -83,21 +83,36 @@
 //    valeur par défaut ». Chaque durcissement est marqué ⚠️ PORTAGE, ne se
 //    déclenche sur AUCUN vecteur, et rend une alerte nommée.
 //
-// ⚠️⚠️ CE QUE CE BRANCHEMENT NE PEUT PAS FAIRE TOURNER AUJOURD'HUI SUR LE
-//    RÉFÉRENT TEXTE, et il le DIT plutôt que d'inventer. L'aligneur réclame
-//    `{reference_decomposee}` ; ⛔ LA CHAÎNE NE SERT PAS LA RÉFÉRENCE
-//    DÉCOMPOSÉE : son contexte porte QUATRE noms — `sujet`, `consigne`, `copie`,
-//    `mode` —, et `contexte.ts` ne lit `exercices.reference_id` que pour en
-//    déduire un référent `texte | cours | null`. Servi à `null`, le slot arrête
-//    la mesure EN LE NOMMANT (`CONTRAT` §2). ⭐ C'est LE MÊME CANAL MANQUANT que
-//    celui du Questionnement, et un seul geste ferme les deux :
-//    `exercices_references` porte `contenu` (la référence) ET
+// ⭐⭐ CE BRANCHEMENT TOURNE SUR SES DEUX RÉFÉRENTS — ET C'EST VRAI DEPUIS LE
+//    23/08. L'aligneur réclame `{reference_decomposee}`, et la chaîne le sert.
+//
+// ⭐⭐ AMENDÉ PAR C5-L3 (27/08) — CET EN-TÊTE DISAIT LE CONTRAIRE, ET IL ÉTAIT
+//    FAUX. Il affirmait que « la chaîne ne sert pas la référence décomposée :
+//    son contexte porte QUATRE noms ». **`FOURNISSEURS_NATIFS` en porte SIX** —
+//    `reference` et `source` compris (`instruments.ts`) —, et **une seule
+//    jointure a fermé les deux manques** : `exercices_references` porte `contenu`
+//    (la référence, pour l'aligneur et pour le document du juge) ET
 //    `source_contenu_id → scriptorium_contenus.texte_extrait` (le matériau, dont
-//    le pré-relevé a besoin pour la compression et les recouvrements).
-//    *Relevé, non tranché ici : poser ce fournisseur natif touche `contexte.ts`
-//    et `chaine.ts`, hors du périmètre d'un lot dont « la réussite se mesure à
-//    un diff quasi nul ».* ⭐ La Synthèse mesure donc AUJOURD'HUI sur le
-//    référent COURS — la synthèse en classe (`01-` §10) —, et là seulement.
+//    le pré-relevé a besoin pour la compression et les recouvrements). Le geste
+//    hors périmètre que cet en-tête relevait a été fait au commit `4e865b5` ;
+//    son entrée jumelle `C4L10SY-14` a été cochée.
+//    ⛔ **La Synthèse mesure donc sur SES DEUX RÉFÉRENTS**, et plus seulement sur
+//    le cours. *Le nombre d'appels de P1 en dépend — deux sur le texte, un seul
+//    sur le cours (`07-` §1.2).*
+//
+// ⛔ CE QUI RESTE VRAI, ET QUI EST UNE GARDE : la référence n'est servie que
+//    **VALIDÉE**, et `contexte.ts` la rend ABSENTE plutôt que vide sinon. Servi
+//    à `null`, le slot arrête la mesure EN LE NOMMANT (`CONTRAT` §2).
+//    ⚠️ Et depuis C5-L2, `exercices.reference_id` a un écrivain de production :
+//    `garde_reference_validee` **mord désormais pour de vrai** sur une référence
+//    dévalidée après coup, et l'échec remonte en alerte du bilan.
+//
+// ⭐ ET DEPUIS C5-L3, LA RÉFÉRENCE QUI ARRIVE ICI EST UNE **TRANCHE** : « on ne
+//    passe à un consommateur que ce que sa règle lit » (`05-` §1). La règle de la
+//    Synthèse est celle que SA PROPRE FICHE déclare —
+//    `bloc_machine.squelette.catalogue.fonctions_reference` —, et elle écarte
+//    `relance` **en silence**, parce qu'une valeur déclarée au `02-` que la règle
+//    ne lit pas est inerte, pas inconnue (`utils/chaine/tranche.ts`).
 // ============================================================================
 
 import {
@@ -508,10 +523,12 @@ function prePhase1a(ctx: ContexteBranchement): Record<string, unknown> {
  * ⚠️ `{reference_decomposee}` SERVI À `null` ARRÊTE LA MESURE, EN LE NOMMANT, et
  *    c'est voulu : « c'est ainsi qu'un module dit "le contexte ne porte pas ce
  *    qu'il me faut" sans jamais lever d'exception ni inventer une valeur »
- *    (`CONTRAT` §2). La chaîne ne descend pas la référence décomposée
- *    aujourd'hui — voir l'en-tête. Le référent `cours` n'en a pas et n'en aura
- *    pas (« le cours n'a pas de référence décomposée, et ne doit pas en avoir »,
- *    fiche §1) : là, cette phase ne tourne simplement pas.
+ *    (`CONTRAT` §2). ⭐ C5-L3 : la chaîne DESCEND la référence décomposée depuis
+ *    le 23/08 — voir l'en-tête, amendé —, et le `null` ne survient donc plus que
+ *    sur les deux GARDES : référence absente, ou non validée. Le référent `cours`,
+ *    lui, n'en a pas et n'en aura pas (« le cours n'a pas de référence
+ *    décomposée, et ne doit pas en avoir », fiche §1) : là, cette phase ne tourne
+ *    simplement pas.
  */
 function prePhase1b(ctx: ContexteBranchement): Record<string, unknown> {
   const p1a = ctx.sorties?.p1a
@@ -1386,6 +1403,24 @@ function conformite(
 // ════════════════════════════════════════════════════════════════════════════
 
 export const BRANCHEMENT_SYNTHESE: BranchementCompetence = {
+  /**
+   * ⭐⭐ C5-L3 — `restituer` SEUL, ET C'EST UN MODE RÉCEPTIF. La Synthèse est
+   *    mono-mode : « à l'inverse la Synthèse, mono-mode `restituer`, n'a QUE
+   *    celle-là » (`03-` §4) — **sa grille réceptive EST son instrument
+   *    unique**. Elle ne couvre donc pas `composer`, et ce n'est pas un manque :
+   *    la table dérivée ne le lui admet pas non plus. **Admis et couvert
+   *    coïncident, et les deux sont réceptifs.**
+   *
+   * ⭐ CONSÉQUENCE : la Synthèse MESURE DÉJÀ EN RÉCEPTION, et depuis C4-L10.
+   *    Ce que la porte de mode change pour elle est donc nul — et c'est le
+   *    résultat voulu : *la porte n'ouvre aucune compétence, elle en ferme deux.*
+   *
+   * ⚠️ Ses DEUX RÉFÉRENTS ne sont pas deux modes. « Un texte, avec sa référence
+   *    décomposée, ou le COURS, qui n'en a pas et ne doit pas en avoir »
+   *    (`03-` §5) : le référent change le nombre d'appels de P1 — deux sur le
+   *    texte, un seul sur le cours —, jamais le mode, qui reste `restituer`.
+   */
+  modesCouverts: ['restituer'],
   /**
    * ⭐⭐ DEUX ÉTAGES D'EXTRACTION, ET UN SEUL QUAND LE RÉFÉRENT EST LE COURS.
    *
