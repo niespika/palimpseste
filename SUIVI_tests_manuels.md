@@ -6653,14 +6653,26 @@ _(Détail : `RELEVE_C5_L2_2026-08-27.md` §6.)_
   « Rendre ma v1 » : 750 caractères, 0 CR, 4 LF, et `blocs()` en compte TROIS** — le découpage
   survit de la frappe à la mesure. ⭐ *C'est la quatrième fois qu'on éprouve ce piège, et la première
   fois sur le chemin de la lecture.*
-- [ ] **C5L2-4 · Le collage refusé, sur ses trois vecteurs.** ⭐ **UN DES TROIS EST FAIT LE 27/08, ET
-  PAR LA MAUVAISE PORTE** : un événement `paste` **synthétisé** a été **annulé** *(la valeur du champ
-  n'a pas bougé)* et **journalisé en base** — `collages_bloques` porte
-  `[{"moyen": "raccourci", "at": …}]`. ⚠️ **Ce n'est pas le geste physique** : dans l'aperçu embarqué,
-  le presse-papier refuse l'écriture **par l'API comme par `execCommand`**, donc un vrai `Cmd+V` ne
-  colle rien et ne prouve rien. **C'est exactement ce que la règle d'or de ce fichier protège.**
-  _Condition de reprise : le **vrai Chrome**, session élève, avec du texte réellement dans le
-  presse-papier — puis les deux autres vecteurs (glisser-déposer, menu contextuel)._
+- [x] **C5L2-4 · Le collage refusé, sur ses TROIS vecteurs — COCHÉ le 27/08, DANS LE VRAI CHROME.**
+  Session élève ouverte par Louis dans son **vrai Chrome** *(la règle d'or de ce fichier, tenue)*, sur
+  le serveur de dev. **Trois gestes PHYSIQUES, trois handlers distincts** — `onPaste`, `onDrop`,
+  `onContextMenu` — et **les trois journalisés en base** :
+
+  | Geste réel | Ce qui s'est passé | `collages_bloques` |
+  |---|---|---|
+  | **Cmd+V** dans le champ | rien ne se colle | `raccourci` · 19:01:02 |
+  | **clic droit** sur le champ | **aucun menu contextuel n'apparaît** | `menu-contextuel` · 19:01:24 |
+  | **glisser-déposer** dans le champ | rien ne se dépose | `glisser-deposer` · 19:01:50 |
+
+  ⭐⭐ **ET LA CONTRE-ÉPREUVE EST CE QUI REND LE TEST CONCLUANT.** Un `Cmd+V` qui ne colle rien ne
+  prouve rien **si le presse-papier est vide**. Il a donc été rempli par un **vrai `Cmd+C`**, puis
+  **collé avec succès dans un champ témoin de la MÊME page** *(64 caractères reçus)* — avant d'être
+  refusé par le champ de rédaction. *C'est précisément ce qui était impossible dans l'aperçu
+  embarqué, où le presse-papier refuse l'écriture par l'API comme par `execCommand`. La règle d'or
+  existe pour ça, et on peut enfin dire pourquoi pour ce vecteur-là.*
+
+  ✓ `texte_v1` en base : **0 caractère** — rien n'est entré. ✓ `integrite_signalements` : **0** —
+  *« tous tagués, aucun bloquant »* (`06-` §6). ✓ Décor retiré *(164 instances, comme avant)*.
 - [x] **C5L2-8 · LA TRAVERSÉE ENTIÈRE, À L'ÉCRAN — COCHÉ le 27/08.** Les **trois gestes dans
   l'ordre** *(confiance par compétence → conditions → « ta thèse en une phrase ? », et l'écran refuse
   de rendre tant qu'il en manque un : « Tu peux rendre ta copie. » n'apparaît qu'au bout)*, puis
