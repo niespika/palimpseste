@@ -6763,7 +6763,15 @@ quel, mais le prof doit relire »*. ⚠️ **Et la règle 2 PEUT être insatisfa
   qui a corrigé mon compte — et **il distingue le `lieu`** : en classe, un retour rejoué **ne sera
   pas publié**, il ira au professeur. *Le garde-fou de la 3ᵉ tentative y est donc structurellement
   tenu ; à la maison, c'est le message « à relire » qui le porte.*
-  _Reste à jouer : `--prod --joue` sur l'unique copie, après le déploiement._
+  ⭐⭐ **JOUÉ EN PROD LE 27/08, ET LA COPIE EST DÉBLOQUÉE.** Déploiement vérifié d'abord par une
+  sonde : `/eleve/modules/aletheia/exercice/<faux>` rend **307** *(redirection vers `/login`)* comme
+  la route de Codex, là où une route inexistante rend **404** — la route neuve est donc bien en
+  ligne. Puis le geste : **remise en file, et le retour est écrit AU PREMIER TIRAGE** — **un seul
+  appel**, 25 s, `11 → 12` lignes à `api_couts`. ⭐ Le retour porte **4 points et commence bien par
+  une réussite** : *le refus de la règle 2 n'était pas déterministe, et la tolérance de la 3ᵉ
+  tentative n'a même pas eu à servir.* ⛔ **`published_at` reste NULL** — c'est un exercice EN
+  CLASSE : la case appartient au professeur. ✓ Tir à blanc final : **0 copie à rattraper**, et la
+  file ne porte **aucune boucle** *(les trois jobs à `t=1`, `echec_definitif` faux)*.
 - [x] **C5L2b-5 · ⭐⭐ LE GARDE-FOU, ÉPROUVÉ EN BASE** — `scripts/recette/rejeu-retour.mjs`,
   **12 vérifications, 0 échec, aucun appel de modèle, aucun coût**. Le compteur **monte** à chaque
   tour *(1 → 2 → 3)*, la remise en file **le préserve**, et au plafond **le rejeu s'arrête**.
