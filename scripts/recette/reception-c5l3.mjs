@@ -146,6 +146,15 @@ const LOCALISATION = [334, 434]
 
 const AVEC_CHAINE = process.argv.includes('--avec-chaine')
 const GARDE_LE_DECOR = process.argv.includes('--garde-le-decor')
+// ⭐ `--tours N` — N traversées PAYANTES de plus, sur des dépôts frais, pour
+//    COMPTER ce qu'un seul tirage ne dit pas : la fréquence du refus RR4 et la
+//    répartition de l'ancrage du retour. *Un tirage ne fait pas une fréquence.*
+// ⛔ `--tours-seuls` saute les sections PAYANTES déjà prouvées (la couture et
+//    la vf) pour ne jouer que le comptage : rejouer une preuve acquise coûte
+//    des appels et n'apprend rien.
+const TOURS_SEULS = process.argv.includes('--tours-seuls')
+const iTours = process.argv.indexOf('--tours')
+const TOURS = iTours >= 0 ? Number(process.argv[iTours + 1] || 0) : 0
 const MARQUE = 'RECETTE-C5L3'
 
 let ok = 0
@@ -271,7 +280,7 @@ async function semer() {
 
   note(`décor : classe ${classe.id} · 2 instances · 2 dépôts`)
   return {
-    eleve, classeId: classe.id, exercice: ex.id, depot: depot.id,
+    eleve, classeId: classe.id, exercice: ex.id, depot: depot.id, typeId: type.id,
     exerciceVide: exVide.id, depotVide: depotVide.id, referenceId: verdict.referenceId,
   }
 }
@@ -621,6 +630,180 @@ async function toutEcarte(d) {
     + 'cette copie n\'a pas de retour')
 }
 
+// ── D-ter. LA VERSION FINALE — la porte tient-elle en `vf` ? ────────────────
+async function laVersionFinale(d) {
+  titre('D-ter. LA `vf` — la porte tient-elle quand la chaîne ne rejoue QUE la cible ?')
+
+  // ⚠️ EN `vf`, LA CHAÎNE NE REJOUE QUE LA COMPÉTENCE VISÉE PAR LE RETOUR
+  //    (`01-` §11) : `competencesFroides = [cible]`. La cible vient de
+  //    `cibleDuRetour(ctx, mesurees)` — et `mesurees` EXCLUT DÉJÀ les écartées,
+  //    donc une compétence non couverte ne peut structurellement pas devenir la
+  //    cible. **Structurellement n'est pas éprouvé** : on l'éprouve.
+  const frais = await lireDepotMaison(admin, d.depot, d.eleve)
+  if (!frais) { dire(false, 'le dépôt n\'est pas relisible pour la vf'); return }
+  const remis = await remettre(admin, frais, 'vf',
+    { texte: 'Descartes suppose d\'abord que tout ce qu\'il perçoit est faux, jusqu\'à son corps.\n\n'
+      + 'Il introduit un trompeur tout-puissant : mais être trompé suppose être. « Je suis, j\'existe » '
+      + 'est donc nécessairement vrai chaque fois qu\'il le prononce, et la tromperie sert la preuve '
+      + 'au lieu de la ruiner.\n\n'
+      + 'Cette certitude ne vaut qu\'aussi longtemps qu\'il pense : c\'est une certitude d\'existence, '
+      + 'non de nature — et c\'est ce qui en borne la portée.',
+      tagDuree: null, telemetrie: null }, new Date().toISOString())
+  dire(remis.ok, `la vf est remise : ${remis.ok ? 'oui' : remis.message}`)
+  if (!remis.ok) return
+
+  const avant = (await lire('api_couts', admin.from('api_couts')
+    .select('id').eq('depot_id', d.depot).limit(1000)) ?? []).length
+  let bilan = null
+  try {
+    const config = lireConfig()
+    await mettreEnFile(admin, d.depot, 'mesure_vf')
+    const jobs = await reclamerJobs(admin, { limite: 5, bailMs: config.bailMs, depotId: d.depot })
+    const miens = jobs.filter((j) => j.depot_id === d.depot && j.etape === 'mesure_vf')
+    const sorties = await tourDeFile(admin, miens, config)
+    bilan = sorties[0]?.bilan ?? null
+    dire(!!bilan, `la chaîne vf rend un bilan : ${bilan ? 'oui' : sorties[0]?.erreur ?? '—'}`)
+  } catch (e) { dire(false, `la chaîne vf a levé : ${e.message}`); return }
+  if (!bilan) return
+
+  note(`vf : ${bilan.competencesMesurees.join(', ') || 'aucune'} · ${bilan.appels} appel(s)`)
+  for (const a of bilan.alertes ?? []) note(`alerte vf : ${a}`)
+
+  // ⭐⭐ LA CIBLE N'EST JAMAIS UNE ÉCARTÉE — et la porte a tourné en vf aussi.
+  dire(!bilan.competencesMesurees.some((c) => ['argumentation', 'structure'].includes(c)),
+    `⭐⭐ EN vf, LA CIBLE N'EST JAMAIS UNE COMPÉTENCE ÉCARTÉE : ${bilan.competencesMesurees.join(', ')} `
+    + '— `cibleDuRetour` lit `mesurees`, qui exclut déjà les non couvertes')
+  dire(bilan.competencesEcartees.some((e) => /non couvert/.test(e.motif)),
+    `⭐ et la porte a bien tourné en vf : ${bilan.competencesEcartees.length} écartée(s) `
+    + `— ${bilan.competencesEcartees.map((e) => e.competence).join(', ')}`)
+  dire(bilan.competencesMesurees.length <= 1,
+    `⚠️ la vf ne rejoue QUE la cible : ${bilan.competencesMesurees.length} compétence(s) (01- §11)`)
+
+  // ⛔ LA vf N'ÉCRIT AUCUNE MESURE — elle attache son delta à celle de la v1.
+  const mes = await lire('competences_mesures', admin.from('competences_mesures')
+    .select('competence, delta_v1_vf').eq('depot_id', d.depot))
+  dire((mes ?? []).length === 2,
+    `⛔ la vf N'A ÉCRIT AUCUNE MESURE de plus : toujours ${(mes ?? []).length} (07- §1.2)`)
+  dire((mes ?? []).every((m) => !['argumentation', 'structure'].includes(m.competence)),
+    'et toujours aucune mesure de composition sur cette copie de lecture')
+  for (const m of mes ?? []) note(`  ${m.competence} · delta_v1_vf = ${m.delta_v1_vf ?? 'NULL'}`)
+
+  const apres = (await lire('api_couts', admin.from('api_couts')
+    .select('id, competence').eq('depot_id', d.depot).limit(1000)) ?? [])
+  const vfCouts = apres.length - avant
+  const surEcartees = apres.filter((c) => ['argumentation', 'structure'].includes(c.competence)).length
+  dire(surEcartees === 0,
+    `⭐⭐⭐ ET TOUJOURS ZÉRO APPEL PAYÉ sur les écartées, vf comprise — ${vfCouts} appel(s) à la vf, `
+    + `${surEcartees} sur argumentation/structure`)
+}
+
+// ── D-quater. LES FRÉQUENCES — ce qu'un tirage ne dit pas ───────────────────
+async function lesFrequences(d, tours) {
+  titre(`D-quater. ${tours} tour(s) de plus — RR4 et l'ancrage se COMPTENT, ils ne se devinent pas`)
+
+  const tally = { tours: 0, rr4: 0, retoursEcrits: 0, copie: 0, texteSupport: 0, points: 0, motifs: [] }
+  for (let i = 1; i <= tours; i++) {
+    // ⚠️ UNE INSTANCE PAR TOUR, ET C'EST LA BASE QUI L'IMPOSE :
+    //    `uk_depots_eleve_exercice` n'admet **qu'un dépôt par (élève, exercice)**.
+    //    Semer quatre dépôts sur la même instance rend `23505` quatre fois — et
+    //    c'est une garde juste : un élève ne rend pas deux fois le même exercice.
+    const { data: exTour, error: eTour } = await admin.from('exercices').insert({
+      type_id: d.typeId, classe_id: d.classeId, statut: 'assigne',
+      lieu: 'maison', cran: '8',
+      consigne_instanciee: `${MARQUE} — tour ${i} : explique comment le doute conduit à une certitude.`,
+      modes_par_competence: {
+        questionnement: ['expliquer'], synthese: ['restituer'],
+        argumentation: ['expliquer'], structure: ['expliquer'],
+      },
+      cible_primaire: 'questionnement',
+      materiau_source_provenance: 'texte_auteur',
+      materiau_source_support: 'extrait',
+      materiau_source_texte_id: TEXTE_ID,
+      materiau_source_englobant: ENGLOBANT,
+      materiau_source_localisation: LOCALISATION,
+      reference_id: d.referenceId,
+    }).select('id').single()
+    if (eTour) { dire(false, `tour ${i} : instance — ${eTour.message}`); continue }
+    seme.exercices.push(exTour.id)
+    const { data: dep, error } = await admin.from('exercices_depots').insert({
+      eleve_id: d.eleve, exercice_id: exTour.id, origine: 'prof', statut: 'assigne',
+      assigne_at: new Date().toISOString(),
+    }).select('id').single()
+    if (error) { dire(false, `tour ${i} : dépôt — ${error.message}`); continue }
+    seme.depots.push(dep.id)
+
+    const frais = await lireDepotMaison(admin, dep.id, d.eleve)
+    await enregistrerLaRestitution(admin, frais, 'Le doute mène à une certitude.', new Date().toISOString())
+    const ap = await lireDepotMaison(admin, dep.id, d.eleve)
+    await enregistrerLesConditions(admin, ap, 'temps_mis', new Date().toISOString())
+    const vue = await chargerLeDeroule(admin, dep.id, d.eleve,
+      { ouvert: true, delaiVfJours: 3, atelier: 'aletheia' })
+    if (vue?.competencesDeLaConfiance?.length) {
+      await enregistrerLaConfiance(admin, ap,
+        Object.fromEntries(vue.competencesDeLaConfiance.map((c) => [c, 'moyennement_sur'])),
+        vue.competencesDeLaConfiance, new Date().toISOString())
+    }
+    const avantRemise = await lireDepotMaison(admin, dep.id, d.eleve)
+    // ⚠️ Une copie DIFFÉRENTE à chaque tour : rejouer la même mesurerait la
+    //    variance du modèle sur un seul texte, pas la fréquence du refus.
+    const r = await remettre(admin, avantRemise, 'v1', {
+      texte: `Descartes écarte d'abord tout ce qui peut être douteux, y compris son corps.\n\n`
+        + `Le trompeur ne peut pourtant pas faire qu'il ne soit rien tant qu'il pense : « je suis, `
+        + `j'existe » résiste. Tour ${i} — la certitude naît donc du doute lui-même.\n\n`
+        + `Reste à savoir combien de temps elle dure : autant que la pensée, et pas plus.`,
+      tagDuree: null, telemetrie: null }, new Date().toISOString())
+    if (!r.ok) { dire(false, `tour ${i} : remise — ${r.message}`); continue }
+
+    let bilan = null
+    try {
+      const config = lireConfig()
+      await mettreEnFile(admin, dep.id, 'mesure_v1')
+      const jobs = await reclamerJobs(admin, { limite: 5, bailMs: config.bailMs, depotId: dep.id })
+      const sorties = await tourDeFile(admin, jobs.filter((j) => j.depot_id === dep.id), config)
+      bilan = sorties[0]?.bilan ?? null
+    } catch (e) { dire(false, `tour ${i} : la chaîne a levé — ${e.message}`); continue }
+    if (!bilan) { dire(false, `tour ${i} : aucun bilan`); continue }
+
+    tally.tours += 1
+    const alertes = (bilan.alertes ?? []).join(' | ')
+    const refuseRR4 = /RR4/.test(alertes)
+    if (refuseRR4) tally.rr4 += 1
+    if (bilan.retourEcrit) tally.retoursEcrits += 1
+
+    const retour = await lire('exercices_retours', admin.from('exercices_retours')
+      .select('texte').eq('depot_id', dep.id).eq('moment', 'chaud').maybeSingle())
+    const points = Array.isArray(retour?.texte) ? retour.texte : []
+    const c = points.filter((p) => p.ancrage?.source === 'copie').length
+    const t = points.filter((p) => p.ancrage?.source === 'texte_support').length
+    tally.copie += c; tally.texteSupport += t; tally.points += points.length
+    // ⚠️ LE MOTIF SE DIT TOUJOURS, PAS SEULEMENT QUAND C'EST RR4. La première
+    //    version ne l'imprimait que sur RR4 : deux refus sur cinq sont passés
+    //    sans qu'on sache pourquoi. *Compter les refus d'UNE règle fait manquer
+    //    ceux de toutes les autres.*
+    const motifRefus = bilan.retourEcrit
+      ? ''
+      : (alertes.split(' | ').find((a) => /retour/i.test(a)) ?? alertes).slice(0, 200)
+    if (!bilan.retourEcrit) tally.motifs.push(motifRefus)
+    note(`tour ${i} : retour ${bilan.retourEcrit ? 'écrit' : 'REFUSÉ'}`
+      + `${refuseRR4 ? ' (RR4)' : ''} · ancrage ${c} copie / ${t} texte_support`
+      + `${bilan.retourEcrit ? '' : ` — ${motifRefus}`}`)
+  }
+
+  console.log(`\n  ── LE COMPTE, sur ${tally.tours} tour(s) ${'─'.repeat(40)}`)
+  dire(true, `⭐ RR4 : ${tally.rr4} refus sur ${tally.tours} tour(s)`
+    + ` — retours écrits ${tally.retoursEcrits}/${tally.tours}`)
+  dire(true, `⭐ ANCRAGE : ${tally.copie} « copie » et ${tally.texteSupport} « texte_support » `
+    + `sur ${tally.points} point(s) — `
+    + `${tally.points ? Math.round((tally.texteSupport / tally.points) * 100) : 0} % au texte`)
+  // ⭐⭐ LES REFUS QUI NE SONT PAS RR4 — et il y en a. Les compter à part est la
+  //    seule façon de ne pas les attribuer à la règle qu'on surveillait.
+  if (tally.motifs.length) {
+    dire(true, `⚠️ ${tally.motifs.length} retour(s) refusé(s) pour une AUTRE raison que RR4 :`)
+    for (const m of tally.motifs) note(`  ${m}`)
+  }
+  return tally
+}
+
 // ── E. LE NETTOYAGE ─────────────────────────────────────────────────────────
 async function nettoyer() {
   titre('E. Le nettoyage — tout ce que la recette a semé est retiré')
@@ -676,8 +859,12 @@ try {
   decor = await semer()
   const { ctx } = await laPorte(decor)
   await laTranche(decor, ctx)
-  await laCouture(decor)
-  await toutEcarte(decor)
+  if (!TOURS_SEULS) {
+    await laCouture(decor)
+    await laVersionFinale(decor)
+    await toutEcarte(decor)
+  }
+  if (AVEC_CHAINE && TOURS > 0) await lesFrequences(decor, TOURS)
 } catch (e) {
   dire(false, `INTERROMPU : ${e.message}`)
   console.error(e)

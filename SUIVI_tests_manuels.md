@@ -6924,6 +6924,14 @@ interruption. Le décor se reconnaît à sa classe, `nom LIKE 'RECETTE-C5L3%'`. 
   `sans_retour`, qui sert `motif` — les deux compétences écartées sont nommées. *C'est le cas MIXTE
   (celui de la prod) qui se tait — voir `C5L3-11-bis`.*
 
+- [x] **C5L3-19 · ⭐⭐ LA PORTE TIENT EN `vf`, ÉPROUVÉE LE 27/08.** *Je ne l'avais éprouvée qu'en
+  `v1`.* En `vf` la chaîne ne rejoue que la cible (`01-` §11), et `cibleDuRetour` lit `mesurees` — qui
+  exclut déjà les écartées. **Constaté** *(section D-ter)* : cible = `questionnement` **jamais une
+  écartée** · la porte tourne aussi en `vf` (**2 écartées**) · **1** seule compétence rejouée ·
+  **0 mesure de plus** écrite *(`07-` §1.2)* · **0 appel payé sur les écartées, `vf` comprise**.
+  ⚠️ `delta_v1_vf` sort **NULL** avec son alerte nommée — dette assumée du `07-` §2 v2.41
+  *(registre des ouverts, item 47)*, **pas un défaut de ce lot**.
+
 ### Ce qui RESTE à jouer — avec sa condition de reprise
 
 - [x] **C5L3-11 · ⭐⭐ LE SMOKE PROF, JOUÉ LE 27/08 — ET IL A TROUVÉ QUE MON MOTIF N'ALLAIT NULLE PART.**
@@ -6952,12 +6960,31 @@ interruption. Le décor se reconnaît à sa classe, `nom LIKE 'RECETTE-C5L3%'`. 
   sable. **L'exercice qui attend en prod porte 13 dépôts remis**, et le code de la porte **n'y est pas
   encore déployé**. **Condition de reprise : pousser le lot**, puis déclencher l'analyse en lot et
   relire la file. *⚠️ Ce geste PAIE — 13 dépôts × 2 compétences mesurables.*
-- [ ] **C5L3-12 · ⚠️ RR4 N'A PAS REFUSÉ À CE TIRAGE, ET LE COMPTE EST DE 1 SUR 1.** `C4L10Q-16`
+- [x] **C5L3-12 · ✅ RR4 COMPTÉ LE 27/08 — 0 refus sur 10 tours en RÉCEPTION** *(13 traversées en
+  tout, à copie différente à chaque tour)*. `C4L10Q-16` en observait un *« une fois sur deux tours »*
+  en **composition** ; en réception, **zéro**. ⭐ *Explication plausible, non tranchée : le retour de
+  lecture parle du texte et de la question directrice, pas du « recadrage » ni de l'« enjeu » — le
+  vocabulaire qui déclenche RR4 est celui de la problématisation.* ⛔ **`C4L10Q-16` RESTE OUVERT** : 10
+  tours en réception ne disent rien de la composition, où le défaut a été vu.
+  ⚠️⚠️ **MAIS TROIS RETOURS ONT ÉTÉ REFUSÉS POUR UNE AUTRE RAISON** — *« `points[1].ancrage.citation`
+  texte trop court (0 < 1) »*, une **citation VIDE**, donc un refus de **forme**. ⭐ **Et ma première
+  instrumentation ne l'a pas vu, parce qu'elle ne comptait que RR4** : deux refus sur cinq sont passés
+  sans motif. *Compter les refus d'UNE règle fait manquer ceux de toutes les autres.* Le script imprime
+  désormais le motif de tout refus. **Reste à savoir si ce refus de forme a une fréquence** — condition
+  de reprise : `--tours` sur plus de tours, et regarder les motifs.
+  ~~⚠️ RR4 N'A PAS REFUSÉ À CE TIRAGE, ET LE COMPTE EST DE 1 SUR 1.~~ `C4L10Q-16`
   observait un refus *« une fois sur deux tours »* quand le retour emploie « recadrage » ou « enjeu ».
   La traversée de réception **n'a pas été refusée** — le retour a été écrit et publié. ⛔ **Un tirage
   ne fait pas une fréquence** : `C4L10Q-16` reste ouvert, et le compte demande des tours.
   **Condition de reprise : rejouer le script `--avec-chaine` plusieurs fois et compter.**
-- [ ] **C5L3-13 · ⭐ LA DONNÉE QUE LA QUESTION DE SOURCE DE `C5-L2` ATTEND — premier point.** Sur la
+- [x] **C5L3-13 · ✅ L'ANCRAGE COMPTÉ LE 27/08 — 32 % AU TEXTE SUPPORT, sur 13 traversées.**
+  **15 points « copie » et 7 points « texte_support » sur 22.** *C5-L2 mesurait **0 sur 4** en
+  composition.* ⭐⭐ **Le canal `texte_support` n'est donc PAS mort** : `ancrage.source` cessait d'être
+  « un enum à deux valeurs dont une seule est employée » **dès qu'on mesure en réception**.
+  ⚠️ **Très variable** : deux séries de cinq tours ont donné **17 %** puis **40 %**.
+  ⛔ **La décision reste de source, et le §4 est GELÉ** — j'apporte le compte, je ne tranche pas.
+  **Condition de reprise : décision de Louis, sur ce compte.**
+  ~~⭐ LA DONNÉE QUE LA QUESTION DE SOURCE DE `C5-L2` ATTEND — premier point.~~ Sur la
   première traversée d'un retour de **RÉCEPTION**, l'ancrage s'est réparti **1 point « copie », 1 point
   « texte_support »** sur 2. ⭐ **C'est la première fois que le canal `texte_support` est employé** :
   C5-L2 mesurait quatre points sur quatre ancrés sur la copie. ⚠️ **Un tirage ne tranche pas une
