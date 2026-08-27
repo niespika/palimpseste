@@ -6861,7 +6861,7 @@ Relevé : `RELEVE_C5_L3_2026-08-27.md`.
 
 ### Ce qui est PROUVÉ en séance — pour ne pas le rejouer
 
-Tout ci-dessous est éprouvé par `scripts/recette/reception-c5l3.mjs` *(bac à sable, **27 verts, 0
+Tout ci-dessous est éprouvé par `scripts/recette/reception-c5l3.mjs` *(bac à sable, **30 verts, 0
 rouge**)*, ou par les tests unitaires. **Le script se rejoue à la prochaine revue** :
 
 ```
@@ -6916,12 +6916,32 @@ interruption. Le décor se reconnaît à sa classe, `nom LIKE 'RECETTE-C5L3%'`. 
 
 ### Ce qui RESTE à jouer — avec sa condition de reprise
 
-- [ ] **C5L3-11 · ⛔ LE SMOKE PROF DE LA FILE, sur l'exercice de PRODUCTION.** Le refus de la porte
-  **n'a jamais été vu à l'écran** : le motif est servi au **bilan d'un dépôt**, que le professeur lit,
-  et une session Code ne s'authentifie pas. ⚠️ **L'exercice qui attend en prod porte 13 dépôts remis** :
-  le geste à jouer est l'analyse en lot de la passation en classe (C4-L4), puis **relire le bilan** et
-  vérifier que les deux motifs s'y affichent en toutes lettres. **Condition de reprise : une session
-  prof authentifiée, sur la prod.** *⚠️ Ce geste PAIE — 13 dépôts × 2 compétences mesurables.*
+- [x] **C5L3-11 · ⭐⭐ LE SMOKE PROF, JOUÉ LE 27/08 — ET IL A TROUVÉ QUE MON MOTIF N'ALLAIT NULLE PART.**
+  *Joué sur session prof authentifiée, bac à sable, `/prof/aletheia/passation/<exerciceId>`.*
+  ⛔ **Le défaut trouvé** : `competencesDeLExercice` porte depuis toujours la note *« ce motif-là est
+  SERVI : le bilan d'un dépôt l'affiche »* — **c'était FAUX**. `competencesEcartees` ne vivait que dans
+  la valeur de retour **EN MÉMOIRE** de `traiterDepot` ; les deux seuls résumés qui persistent
+  (`resume()` de `utils/deroule/mesure.ts` et `resumeBilan()` de `utils/chaine/chaine.ts`) ne le
+  mentionnaient pas, et `exercices_jobs.dernier_message` est le seul canal durable.
+  **La porte refusait juste, et EN SILENCE.** ⭐ **Corrigé** (`motifDesEcartees()`), et **éprouvé en
+  base par la file réelle** — pas par un appel direct : *« 2 écartée(s) — structure, argumentation :
+  mode « expliquer » non couvert par l'instrument de structure… »* dans `dernier_message`.
+  ⚠️ **Leçon de recette** : la première version du script appelait `traiterDepot` **en direct** et
+  court-circuitait donc la file — *une recette qui court-circuite le chemin de production ne prouve pas
+  le chemin de production.* Le script passe désormais par `mettreEnFile` + `reclamerJobs` + `tourDeFile`.
+- [ ] **C5L3-11-bis · ⛔ L'ÉCRAN NE MONTRE PAS LE MOTIF QUAND TOUT VA BIEN — déposé à `C5-L4`.**
+  `etatChaineDeLaCopie()` *(`utils/passation/file-copie.ts:118`)* ne sert `motif` que sur **deux**
+  états — `echec` et `sans_retour` ; sur **`abouti`** il rend `phrase: 'Traitement terminé.'` et
+  **`motif: null`**. ⚠️ **Sur l'exercice de PROD** *(13 dépôts remis, deux compétences écartées
+  chacun)*, le professeur lira **treize fois « Traitement terminé. »** et **n'apprendra jamais que la
+  moitié des compétences élues n'a pas été mesurée**. ⛔ **Non réparé : mon entrée exclut « tout
+  écran ».** **Condition de reprise : `C5-L4`** — un état `abouti` qui porte son motif quand il y a des
+  écartées, ou un sixième compteur à « LA FILE ». *Le motif est déjà en base : il n'y a rien à
+  recalculer.*
+- [ ] **C5L3-11-ter · ⛔ LE SMOKE PROF SUR LA **PROD** RESTE À JOUER.** Le smoke ci-dessus est en bac à
+  sable. **L'exercice qui attend en prod porte 13 dépôts remis**, et le code de la porte **n'y est pas
+  encore déployé**. **Condition de reprise : pousser le lot**, puis déclencher l'analyse en lot et
+  relire la file. *⚠️ Ce geste PAIE — 13 dépôts × 2 compétences mesurables.*
 - [ ] **C5L3-12 · ⚠️ RR4 N'A PAS REFUSÉ À CE TIRAGE, ET LE COMPTE EST DE 1 SUR 1.** `C4L10Q-16`
   observait un refus *« une fois sur deux tours »* quand le retour emploie « recadrage » ou « enjeu ».
   La traversée de réception **n'a pas été refusée** — le retour a été écrit et publié. ⛔ **Un tirage

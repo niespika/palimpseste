@@ -39,7 +39,7 @@ import {
   type EtapeChaine, type EtatLisible,
 } from '../chaine/file'
 import {
-  traiterDepot, ChaineSuspendue, DepotInexploitable, type BilanDepot,
+  traiterDepot, motifDesEcartees, ChaineSuspendue, DepotInexploitable, type BilanDepot,
 } from '../chaine/chaine'
 import { lireConfig } from '../chaine/config'
 import { elireLeRegistre, receptiviteRetrouvee, type SignauxRegistre } from '../routeur/escalade'
@@ -279,7 +279,11 @@ function resume(b: BilanDepot): string {
       const t = siennes.join(' | ')
       return ` — ${t.length > 400 ? `${t.slice(0, 400)}…` : t}`
     })()
+  // ⭐⭐ C5-L3 — LES ÉCARTÉES VOYAGENT AVEC LE BILAN, ici comme à `resumeBilan`.
+  //    Elles n'y étaient pas, et `competencesDeLExercice` prétendait pourtant
+  //    que « le bilan d'un dépôt l'affiche » : la porte de mode refusait juste,
+  //    et EN SILENCE. `dernier_message` est le seul canal que l'écran prof lise.
   return `${b.competencesMesurees.length} mesurée(s), ${b.mesuresEcrites} écrite(s), `
     + `retour ${b.retourEcrit ? 'écrit' : 'non écrit'}${motif}, ${b.appels} appel(s), `
-    + `${Math.round(b.dureeMs / 1000)} s${temoin}`
+    + `${Math.round(b.dureeMs / 1000)} s${temoin}${motifDesEcartees(b)}`
 }

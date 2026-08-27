@@ -379,8 +379,14 @@ export function competencesDeLExercice(ctx: ContexteDepot): {
     }
     const etat = etatCompetence(c)
     if (!etat.ouverte) {
-      // Ce motif-là est SERVI : le bilan d'un dépôt l'affiche. Un motif faux ne
-      // se lit pas comme un commentaire faux — il se croit.
+      // ⭐ Ce motif-là est SERVI : il part dans `exercices_jobs.dernier_message`
+      //    par `motifDesEcartees()`, et l'écran prof de la passation le lit
+      //    (`etatDesJobs` → `utils/passation/depots.ts`). Un motif faux ne se lit
+      //    pas comme un commentaire faux — il se croit.
+      // ⚠️ C5-L3, 27/08 — CETTE PHRASE ÉTAIT FAUSSE JUSQU'À CE JOUR, et c'est le
+      //    smoke prof qui l'a trouvée : `competencesEcartees` ne vivait que dans
+      //    la valeur de retour EN MÉMOIRE de `traiterDepot`, et **aucun des deux
+      //    résumés persistés ne la mentionnait**. Le refus était juste, et muet.
       ecartees.push({ competence: nom, motif: etat.motif ?? 'compétence non branchée à la chaîne' })
       continue
     }
@@ -1503,9 +1509,45 @@ function motifDuRetourManquant(alertes: readonly string[]): string {
   return ` — ${texte.length > 400 ? `${texte.slice(0, 400)}…` : texte}`
 }
 
+/**
+ * ⭐⭐⭐ C5-L3 — LES COMPÉTENCES ÉCARTÉES, DANS LE MESSAGE PERSISTÉ.
+ *
+ * ⛔⛔ CE COMMENTAIRE DISAIT LE CONTRAIRE, ET IL ÉTAIT FAUX. `competencesDeLExercice`
+ *    porte depuis toujours la note *« ce motif-là est SERVI : le bilan d'un dépôt
+ *    l'affiche »* — **il ne l'affichait nulle part.** `competencesEcartees` ne
+ *    vivait que dans la valeur de retour EN MÉMOIRE de `traiterDepot` ; les deux
+ *    seuls résumés qui atteignent une durée — celui-ci et `resume()` de
+ *    `utils/deroule/mesure.ts` — ne le mentionnaient pas, et
+ *    `exercices_jobs.dernier_message` est **le seul canal que l'écran prof lise**
+ *    (`etatDesJobs` → `utils/passation/depots.ts`).
+ *
+ * ⚠️ **Trouvé par le smoke prof de C5-L3**, en cherchant à quel écran regarder :
+ *    la porte de mode refusait **juste, et en silence**. *Un motif que personne
+ *    ne peut lire n'est pas un motif — c'est la même leçon que « une trace n'est
+ *    pas un état », prise par l'autre bout.*
+ *
+ * ⚠️ Borné comme le motif du retour, et pour la même raison : `dernier_message`
+ *    est **lu à l'écran, pas archivé**. Quatre compétences écartées avec leur
+ *    motif entier tiendraient sur trois écrans et cacheraient le reste du bilan.
+ *    ⭐ La compétence et le début du motif suffisent à savoir **où regarder** ;
+ *    le motif entier reste dans le bilan, pour qui l'appelle.
+ */
+export function motifDesEcartees(b: BilanDepot): string {
+  if (!b.competencesEcartees.length) return ''
+  // ⭐⭐ LES NOMS D'ABORD, ET TOUJOURS EN ENTIER ; LE DÉTAIL ENSUITE, BORNÉ.
+  //    L'ordre compte, et il a été trouvé par l'épreuve : en bornant la liste
+  //    « nom — motif | nom — motif », **la troncature mangeait le SECOND NOM** —
+  //    le professeur lisait « 2 écartée(s) » et n'en voyait qu'une. *Savoir
+  //    LESQUELLES coûte trois mots ; savoir POURQUOI peut coûter trois écrans.*
+  const noms = b.competencesEcartees.map((e) => e.competence).join(', ')
+  const motifs = b.competencesEcartees.map((e) => e.motif).join(' | ')
+  return `, ${b.competencesEcartees.length} écartée(s) — ${noms} : `
+    + (motifs.length > 400 ? `${motifs.slice(0, 400)}…` : motifs)
+}
+
 function resumeBilan(b: BilanDepot): string {
   const motif = b.retourEcrit ? '' : motifDuRetourManquant(b.alertes)
   return `${b.competencesMesurees.length} mesurée(s), ${b.mesuresEcrites} écrite(s), `
     + `${b.mesuresDejaLa} déjà là, retour ${b.retourEcrit ? 'écrit' : 'non écrit'}${motif}, `
-    + `${b.appels} appel(s), ${Math.round(b.dureeMs / 1000)} s`
+    + `${b.appels} appel(s), ${Math.round(b.dureeMs / 1000)} s${motifDesEcartees(b)}`
 }

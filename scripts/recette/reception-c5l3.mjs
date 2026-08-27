@@ -113,7 +113,9 @@ for (const [k, v] of Object.entries(env)) process.env[k] ??= v
 const RACINE = process.cwd()
 
 const { lireContexte } = await import(`${RACINE}/utils/chaine/contexte.ts`)
-const { competencesDeLExercice, traiterDepot } = await import(`${RACINE}/utils/chaine/chaine.ts`)
+const { competencesDeLExercice, tourDeFile } = await import(`${RACINE}/utils/chaine/chaine.ts`)
+const { mettreEnFile, reclamerJobs } = await import(`${RACINE}/utils/chaine/file.ts`)
+const { lireConfig } = await import(`${RACINE}/utils/chaine/config.ts`)
 const { etatCompetence, modeNonCouvert } = await import(`${RACINE}/utils/chaine/instruments.ts`)
 const { regleDeLecture, trancheDeReference } = await import(`${RACINE}/utils/chaine/tranche.ts`)
 const { referenceValidee } = await import(`${RACINE}/utils/reference-validee.ts`)
@@ -389,10 +391,27 @@ async function laCouture(d) {
     return
   }
 
+  // ⭐⭐ ON PASSE PAR LA FILE, PAS PAR `traiterDepot` EN DIRECT — et c'est ce qui
+  //    a fait la différence. Les deux résumés qui persistent le bilan
+  //    (`resume()` et `resumeBilan()`) ne sont appelés QUE par la file ; un
+  //    appel direct court-circuite `exercices_jobs.dernier_message`, donc le
+  //    SEUL canal que l'écran prof lise. *Une recette qui court-circuite le
+  //    chemin de production ne prouve pas le chemin de production.*
   const debut = Date.now()
   let bilan = null
   try {
-    bilan = await traiterDepot(admin, d.depot, 'v1')
+    // Le patron est celui de la production — `app/api/chaine/route.ts` :
+    // `lireConfig()` est SYNCHRONE, et `reclamerJobs` prend un objet d'options.
+    const config = lireConfig()
+    await mettreEnFile(admin, d.depot, 'mesure_v1')
+    const jobs = await reclamerJobs(admin, {
+      limite: 5, bailMs: config.bailMs, depotId: d.depot,
+    })
+    const miens = jobs.filter((j) => j.depot_id === d.depot)
+    dire(miens.length === 1, `la file porte ${miens.length} job(s) pour ce dépôt`)
+    const sorties = await tourDeFile(admin, miens, config)
+    bilan = sorties[0]?.bilan ?? null
+    if (!bilan) { dire(false, `la file n'a rendu aucun bilan : ${sorties[0]?.erreur ?? '—'}`); return }
   } catch (e) {
     dire(false, `la chaîne a levé : ${e.message}`)
     return
@@ -463,6 +482,25 @@ async function laCouture(d) {
     .some((c) => ['argumentation', 'structure'].includes(c))),
     '⭐ et une compétence écartée POUR CAUSE DE MODE n\'entre pas dans `competences_couvertes[]` '
     + '— « faute de quoi on ne saura jamais relire la mesure » (`07-` §1.4)')
+
+  // ── ⭐⭐⭐ LE MOTIF ATTEINT-IL LA BASE ? — le défaut trouvé au smoke prof.
+  //    `competencesDeLExercice` prétendait que « le bilan d'un dépôt affiche »
+  //    son motif ; il ne vivait que dans la valeur de retour EN MÉMOIRE.
+  //    `exercices_jobs.dernier_message` est le SEUL canal que l'écran prof lise
+  //    (`etatDesJobs` → `utils/passation/depots.ts`). *Un motif que personne ne
+  //    peut lire n'est pas un motif.*
+  const jobs = await lire('exercices_jobs', admin.from('exercices_jobs')
+    .select('etape, statut, dernier_message').eq('depot_id', d.depot)
+    .order('created_at', { ascending: true }))
+  for (const j of jobs ?? []) {
+    note(`job ${j.etape} · ${j.statut} · ${String(j.dernier_message ?? '—').slice(0, 200)}`)
+  }
+  const messages = (jobs ?? []).map((j) => j.dernier_message ?? '').join(' ')
+  dire(/écartée\(s\)/.test(messages) && /argumentation/.test(messages) && /structure/.test(messages),
+    '⭐⭐⭐ LE MOTIF DE LA PORTE ATTEINT LA BASE — `exercices_jobs.dernier_message` porte les deux '
+    + 'compétences écartées, et c\'est ce que l\'écran prof lit')
+  dire(/non couvert/.test(messages),
+    'et il porte le MOTIF, pas seulement le nombre — « non couvert » y est en toutes lettres')
 
   // ── LE RETOUR — et l'ancrage, dont C5-L2 demande le compte.
   const retour = await lire('exercices_retours', admin.from('exercices_retours')
