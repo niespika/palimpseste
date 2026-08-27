@@ -50,6 +50,8 @@ import { marquerLeMateriau, type SegmentMateriau } from './marquage'
 import { attenteDuDepot, type AttenteLisible } from './mesure'
 import { pointsContestes, type PointDuRetour } from './contestation'
 import { gestesRestants, competencesQuiDemandentLaConfiance } from './gestes'
+import type { Atelier } from '../codex-onglets/regles'
+import type { TexteSupportServi } from '../chaine/contexte'
 import type { ActeContestation, Competence, Grain, Palier, RegimeV1vf, Temps } from './types'
 
 type Admin = ReturnType<typeof createAdminClient>
@@ -116,6 +118,26 @@ export interface VueDuDeroule {
   contenuDemonstration: ReturnType<typeof lireLeContenu>
   /** ⚠️ Le GUIDE de l'appui — deux objets, deux mécanismes (`02-` §2.3.4). */
   guide: string | null
+  /**
+   * ⭐⭐ C5-L2 — LE TEXTE D'AUTEUR, ET LE PLUS GROS MANQUE QUE CE LOT FERME.
+   *
+   * L'écran servait un matériau, et il allait TOUJOURS le chercher au même
+   * endroit : `exercices_cas` → `exercices_materiaux`, « la banque de matériaux
+   * FABRIQUÉS ». **Le texte d'auteur n'y est pas** — il est désigné par
+   * l'INSTANCE (`materiau_source_texte_id`) — et sur une instance de lecture
+   * `exercices_cas.materiau_id` est de surcroît NULL. *L'élève lisait la
+   * consigne, et rien d'autre.*
+   *
+   * ⭐ Ce qui s'affiche est **l'englobant** — « l'étendue réellement lue »
+   *    (`02-` §6 B.1) — et la **sélection** se marque dedans, du même geste que
+   *    les candidats du cran 1 (C4-L15) : **pas un octet retouché**.
+   *
+   * ⛔ **RIEN DE LA RÉFÉRENCE DÉCOMPOSÉE N'Y ENTRE** — ni ses moments, ni ses
+   *    lectures défendables, ni son armature : *elles sont la grille de la
+   *    réception ET la réponse* (RR4). **Le texte source, lui, est exactement ce
+   *    que l'élève doit lire : ne pas confondre les deux.**
+   */
+  texteSupport: TexteSupportServi | null
   cas: CasServi[]
   /**
    * ⭐ C4-L14 — LA CORRECTION, PAR CAS. Indexée comme `cas` : `corrections[i]`
@@ -180,9 +202,13 @@ export interface VueDuDeroule {
  */
 export async function chargerLeDeroule(
   admin: Admin, depotId: string, eleveId: string,
-  a: { ouvert: boolean; delaiVfJours: number },
+  a: { ouvert: boolean; delaiVfJours: number; atelier?: Atelier },
 ): Promise<VueDuDeroule | null> {
-  const depot = await lireDepotMaison(admin, depotId, eleveId)
+  // ⭐ C5-L2 — LA PORTE BORNE, PAS LE CHARGEUR. Les deux ROUTES nomment leur
+  //    atelier ; les ACTIONS partagées ne le font pas, et ne le peuvent pas :
+  //    « un dossier sans `page.tsx` […] le jeu d'actions PARTAGÉ par les écrans
+  //    du déroulé, où qu'ils vivent ».
+  const depot = await lireDepotMaison(admin, depotId, eleveId, { atelier: a.atelier })
   if (!depot) return null
 
   let ctx: ContexteDepot
@@ -523,6 +549,11 @@ export async function chargerLeDeroule(
       ? lireLeContenu(demonstration.demonstration.forme, demonstration.demonstration.contenu)
       : null,
     guide: guideServi,
+    // ⭐ C5-L2 — SERVI PAR `lireContexte`, DONC SANS UNE LECTURE DE PLUS. La
+    //    tranche et sa découpe se calculent une fois, au même endroit, et la
+    //    chaîne et l'écran lisent le même objet : deux lectures auraient fini
+    //    par servir au modèle un texte que l'élève n'avait pas eu sous les yeux.
+    texteSupport: ctx.texteSupport,
     cas, corrections,
 
     dureeIndicativeMin: dureeMin,

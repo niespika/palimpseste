@@ -3,6 +3,7 @@ import assert from 'node:assert/strict'
 import {
   MODULES, ongletActifParRoute, sousOngletsPour, type SousOnglet,
 } from '../../components/nav/configModules'
+import { atelierDUnFormatif, hrefDuDeroule } from './regles'
 
 // ============================================================================
 // C4 · L6 — LES DEUX BARRES D'ONGLETS DE CODEX, TENUES PAR UN TEST.
@@ -113,5 +114,50 @@ describe("ce que le lot ne touche pas", () => {
     assert.deepEqual(compte, {
       aletheia: [2, 0], codex: [2, 2], fragments: [4, 3], quazian: [3, 2], scriptorium: [4, 2],
     })
+  })
+})
+
+// ============================================================================
+// ⭐⭐ C5-L2 — LES DEUX PORTES DU DÉROULÉ, ET CE QUI LES BORNE.
+// ----------------------------------------------------------------------------
+// « Un écran sans porte n'existe pas. » Avant ce lot, un exercice de LECTURE
+// assigné n'avait ni lien, ni liste, ni adresse : le déroulé n'était routé que
+// sous Codex, et `exercicesMaisonDeLEleve` filtrait sur `=== 'codex'`.
+//
+// ⛔ ET CE N'EST PAS UN ONGLET : les onglets de la lecture sont `C5-L4`. Le test
+//    ci-dessus, « Aletheia n'en gagne aucun côté élève », reste vrai et vert.
+// ============================================================================
+
+describe('C5-L2 — deux ateliers, deux portes, un seul prédicat', () => {
+  test('⭐ chaque atelier a SA route, et elles ne se recouvrent pas', () => {
+    assert.equal(hrefDuDeroule('codex', 'dep-1'), '/eleve/modules/codex/exercice/dep-1')
+    assert.equal(hrefDuDeroule('aletheia', 'dep-1'), '/eleve/modules/aletheia/exercice/dep-1')
+    assert.notEqual(hrefDuDeroule('codex', 'x'), hrefDuDeroule('aletheia', 'x'))
+  })
+
+  test('la route se déduit du MODE, jamais d’un choix d’écran (`01-` §2)', () => {
+    // « Codex s'il porte `composer`, Aletheia sinon » — le href suit.
+    const ecriture = { expression: ['composer'] }
+    const lecture = { argumentation: ['expliquer'], synthese: ['restituer'] }
+    assert.equal(hrefDuDeroule(atelierDUnFormatif(ecriture), 'd'),
+      '/eleve/modules/codex/exercice/d')
+    assert.equal(hrefDuDeroule(atelierDUnFormatif(lecture), 'd'),
+      '/eleve/modules/aletheia/exercice/d')
+  })
+
+  test('⚠️ LA BORNE JOUE DANS LES DEUX SENS — le module n’est pas un attribut d’URL', () => {
+    // Le prédicat que les DEUX portes appliquent (`lireDepotMaison`, option
+    // `atelier`) : la porte de Codex refuse un dépôt de lecture, celle
+    // d'Aletheia refuse un dépôt d'écriture.
+    const lecture = { argumentation: ['expliquer'] }
+    const ecriture = { expression: ['composer'] }
+    assert.notEqual(atelierDUnFormatif(lecture), 'codex')
+    assert.notEqual(atelierDUnFormatif(ecriture), 'aletheia')
+  })
+
+  test('⛔ aucune des deux routes ne porte de paramètre de requête', () => {
+    for (const a of ['codex', 'aletheia'] as const) {
+      assert.equal(hrefDuDeroule(a, 'dep').includes('?'), false)
+    }
   })
 })

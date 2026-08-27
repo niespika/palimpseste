@@ -6503,3 +6503,115 @@ l'extrait, qui est construit et prouvé. ⭐ **Ce que (b) désigne appartient à
 du `07-` §2 le porte désormais ; la brique existe *(`valeursServies()`)*.
 ⚠️ *Ce qui a fait écarter (a), pour qui voudrait rouvrir : elle exigerait de savoir quelle plage est
 « exposée » pour une CLASSE, quand la position de lecture est par élève.*
+
+---
+
+## C5 · L2 — La passation de lecture, côté élève (⚠️ **AUCUNE MIGRATION** — aucune n'était attendue, aucune n'a été nécessaire)
+
+**Séance du 27/08.** Relevé : `RELEVE_C5_L2_2026-08-27.md`. Recette :
+`scripts/recette/lecture-c5l2.mjs` — **42 vérifications, 0 échec**, décor semé et retiré.
+`npm test` **1611 / 1611** *(1581 avant)* · les deux étalons **44 / 44** *(30 avant)* ·
+les quatre dérivations **IDENTIQUE** · `npx next build` **compilé**.
+
+> ⭐⭐⭐ **LES TROIS CHOSES SONT FERMÉES.** ① la porte *(une route, une liste, le prédicat de C4-L6
+> appliqué **des deux côtés**)* · ② le texte *(l'englobant servi, la sélection marquée, **pas un
+> octet retouché**)* · ③ la référence *(`exercices.reference_id` a enfin un écrivain de production,
+> et **la garde en base mord** — prouvé par l'échec)*.
+
+### Prouvé en séance, avec sa preuve — EN BASE et PAR APPEL
+
+- [x] **C5L2-A · La porte, dans les deux sens.** `/eleve/modules/codex/exercice/<dépôt de LECTURE>`
+  est **refusé** *(il était servi avant ce lot, à qui connaissait l'identifiant)* ;
+  `/eleve/modules/aletheia/exercice/<dépôt d'ÉCRITURE>` est refusé aussi. Et les deux listes se
+  départagent : Aletheia porte le dépôt de lecture, jamais celui d'écriture ; Codex l'inverse.
+  _(Recette, section B — 7 vérifications ; `utils/codex-onglets/onglets.test.ts`, 4 vecteurs neufs.)_
+- [x] **C5L2-B · La porte est `exercices_actif`, et lui seul.** À OFF, la liste de lecture est
+  **vide** ; l'interrupteur est remis **exactement comme trouvé** en fin de course. **Aucun septième
+  interrupteur n'est né, et `configModules.ts` n'est pas touché** *(les onglets sont C5-L4 — le test
+  « Aletheia n'en gagne aucun côté élève » reste vert)*. _(Recette, section B.)_
+- [x] **C5L2-C · Le texte d'auteur s'affiche.** Sur le texte réel de C5-L1 *(Kant, référence validée
+  le 26/08)* : l'englobant `[101, 512]` rend **411 caractères sur 745**, identiques à la base ; la
+  sélection `[413, 482]` — **la borne même que le smoke prof de C5-L1 a captée à la souris** — est
+  marquée dedans ; et **la concaténation des segments REND la tranche à l'octet près**.
+  _(Recette, section C — 9 vérifications ; `utils/lecture/texte-support.test.ts` 11 vecteurs,
+  `utils/deroule/marquage.test.ts` 5 vecteurs neufs.)_
+- [x] **C5L2-D · La chaîne a enfin le texte, et la garde en base MORD.** Avec `reference_id` posée :
+  `referent = texte`, `reference` et `materiau` non nuls. Sans elle : **les trois nuls**. Et la garde
+  `garde_reference_validee` **refuse** un `artefact_jugement` sur une référence non validée
+  *(`check_violation`)* — puis **laisse passer** dès que `reference_id` retombe à NULL, ce qui était
+  l'état de toute instance conçue en ligne. _(Recette, section D — 6 vérifications, dont deux **par
+  l'échec**.)_
+- [x] **C5L2-E · RR3 — la preuve PAR L'ÉCHEC.** Une sortie de modèle **fabriquée**, **conforme au
+  schéma**, où « Aie le courage de te servir de ton propre entendement » *(Kant)* porte l'étiquette
+  `copie` : le contrôle la **REFUSE**, et elle ne glisse pas jusqu'à l'écran pour y devenir une
+  contestation. Le sens inverse ne lève ni refus ni alerte — **y compris quand la copie cite
+  l'auteur**. _(Recette, section E ; `utils/chaine/retour.test.ts`, 10 vecteurs neufs.)_
+- [x] **C5L2-F · Le texte part au modèle, BALISÉ.** `messageAvecMateriau` — déclaration, bloc
+  `<<<MATERIAU nom="le texte support…"`, demande RR3 — et la neutralisation empêche de refermer la
+  balise depuis l'intérieur. **L'appel du retour était le seul de la chaîne à concaténer ses morceaux
+  à la main.** _(Recette, section E ; tests.)_
+- [x] **C5L2-G · La traversée, jusqu'au retour publié.** Cran 8 → **les six temps** ; les trois
+  gestes dans l'ordre ; **copie soumise en CRLF → 0 CR en base et 3 blocs** ; la chaîne tourne,
+  **3 lignes à `api_couts`** *(`p1`, `p2`, `retour`)*, **40,5 s** puis **41,0 s** contre 180 s de
+  contrat ; **retour écrit ET publié**. **Aucune citation n'attribue à l'élève une phrase de
+  l'auteur.** *(Deux traversées payantes, **0,1333 $** au total, en bac à sable.)*
+
+### ⚠️⚠️ Ce que les deux traversées ont montré, et qui est une QUESTION POUR LOUIS
+
+**Sur 4 points ancrés — deux tirages, deux points chacun —, `ancrage.source` valait `copie` 4 fois
+sur 4**, y compris au tirage où la copie de l'élève **citait Kant entre guillemets**. Le canal
+`texte_support` est **servi, balisé et contrôlé** ; il n'a simplement **pas été employé**.
+
+**La cause est structurelle, et elle est dans une section GELÉE** : la **règle 1** du gabarit de
+Calame *(`07-` §4)* dit *« chaque point s'ancre sur une citation **du squelette** »*, et le squelette
+est fait de **la copie** ; **RR3** *(`01-` §12)* suppose au contraire qu'un point puisse citer
+**le texte support**. ⛔ **Le gabarit n'a pas été touché** — il est gelé et dérivé ; ⭐ ce qui
+m'appartenait, **l'assemblage**, a été renforcé *(le bloc balisé dit quelle étiquette porte une
+citation qui en vient)*, **et ça n'a pas suffi sur deux tirages**. **La décision est de source.**
+_(Détail : `RELEVE_C5_L2_2026-08-27.md` §6.)_
+
+### Ce qui reste à jouer en recette — chacun avec sa condition de reprise NOMMÉE
+
+> **Le motif est le même pour les cinq, et il ne s'améliore pas en le répétant : une session Code ne
+> s'authentifie pas.** Tout ce qui suit demande une session ouverte par Louis, **dans un vrai
+> Chrome**, jamais l'aperçu embarqué.
+
+- [ ] **C5L2-1 · La porte, cliquée.** Sous `/eleve/modules/aletheia` : le bloc « Mes exercices de
+  lecture » apparaît, la ligne porte son état, le clic entre dans le déroulé. Et coller à la main
+  `/eleve/modules/codex/exercice/<le même dépôt>` → **« introuvable »**.
+  _Condition de reprise : une instance de LECTURE conçue et assignée à l'élève de test
+  (`/prof/conception/nouvelle?porte=aletheia`), et `exercices_actif` à ON._
+- [ ] **C5L2-2 · Le rendu du texte.** Le bloc « Le texte » s'affiche **avant** la consigne des cas,
+  avec l'auteur et la référence ; la sélection est **en gras ET entourée** au pigment d'Aletheia ; le
+  texte garde ses retours à la ligne. ⚠️ **Sur téléphone aussi** — l'écran est souvent un téléphone.
+  _Condition de reprise : la même instance, ouverte à l'écran._
+- [ ] **C5L2-3 · Le CRLF sur une ANALYSE LONGUE.** Le `06-` §1 range « les analyses longues » dans la
+  lecture : c'est le champ le plus sollicité de cet écran. Sonde serveur pendant un **vrai clic** —
+  ⚠️ **`new FormData()` NE LE MONTRE PAS**, et le piège a mordu **trois fois** (C4-L4, C4-L16, C5-L1,
+  ce dernier **sur le chemin des server actions React**).
+  _Condition de reprise : une copie de plusieurs paragraphes tapée à l'écran, puis
+  `select length(texte_v1) - length(replace(texte_v1, E'\r', '')) from exercices_depots …`._
+- [ ] **C5L2-4 · Le collage refusé, sur ses trois vecteurs.** Raccourci, glisser-déposer, menu
+  contextuel — et **chaque tentative journalisée** (`collages_bloques`). `ChampDeRedaction` le porte
+  déjà ; ce qui reste à voir, c'est qu'il n'a pas été affaibli pour un texte long.
+  _Condition de reprise : la même session élève._
+- [ ] **C5L2-5 · Un retour de lecture relu par un humain.** Le contrôle RR3 n'a **jamais refusé en
+  production** : on ne sait donc pas encore s'il crie faux. À relire à la première vraie copie —
+  et **si un refus tombe, l'étape `retour_v1` le rejoue seule** (C4-L7-bis), sans réécrire un
+  squelette. _Condition de reprise : le premier dépôt de lecture d'un élève réel._
+
+### ⚠️ Les renvois de périmètre — constatés, non réparés (la liste complète est au relevé, §7)
+
+- **L'import écrit toujours `reference_id: null`** — `utils/fabrique/import-ecriture.ts:437`. Une
+  instance de lecture **importée** naît sans référence sur l'instance. **Destinataire : C4-L8.**
+- **Le non-spoiler ne s'applique à personne sur la voie du professeur** — `filtreDuNonSpoiler` est
+  appelé par l'écran de conception avec une carte de positions **vide**. **Un élève en retard peut
+  recevoir un texte au-delà de sa position.** ⛔ Relevé, **pas réparé** : la règle est au `01-` §4, et
+  C5-L1 a refusé nommément de fabriquer une « position de classe ». **Question de source.**
+- **La chaîne n'a aucune porte de MODE** : la traversée a mesuré `structure` en `expliquer` **par
+  l'instrument de composition**. **Destinataire : `C5-L3`.**
+- **Les six interrupteurs sont à ON en bac à sable ET EN PROD** *(constaté par requête le 27/08)*,
+  quand le `07-` §5 les dit « à OFF jusqu'à la recette ». **Constat d'état, pour Louis.**
+- `C4L3-16`, `C4L3-18` et `C4L3-19` **se rejouent à l'identique en lecture** ; `notionsDeLExercice`
+  reste asymétrique *(elle ne lit que les notions des SUJETS — et un exercice de lecture n'a pas de
+  sujet)*.

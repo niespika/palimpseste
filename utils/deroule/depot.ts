@@ -33,6 +33,7 @@ import 'server-only'
 // ============================================================================
 
 import { createAdminClient } from '@/utils/supabase/admin'
+import { atelierDUnFormatif, type Atelier } from '../codex-onglets/regles'
 import { normaliserRetours, blocs } from '../passation/transcription-calcul'
 import { lireLesCollages, type CollageBloque } from '../passation/collage'
 import { lireTelemetrie, aVerser } from './telemetrie'
@@ -89,6 +90,11 @@ export interface DepotMaison {
     materiau_source_texte_id: string | null
     materiau_cible_sujet_id: string | null
     materiau_cible_texte_id: string | null
+    /**
+     * ⭐ C5-L2 — LES MODES ÉLUS, PAR COMPÉTENCE. C'est le seul opérande de
+     * `atelierDUnFormatif`, et donc de la borne d'atelier ci-dessous.
+     */
+    modes_par_competence: Record<string, string[]> | null
   }
 }
 
@@ -111,7 +117,13 @@ const CHAMPS =
   //    SQL sur ce point précis, et le protocole du `SUIVI_SQL.md` le dit.
   + 'cible_primaire, paire_diagnostic, guide, statut, observable_isole_code, '
   + 'observable_isole_competence, materiau_source_sujet_id, materiau_source_texte_id, '
-  + 'materiau_cible_sujet_id, materiau_cible_texte_id)'
+  // ⭐ C5-L2 — `modes_par_competence` entre ici, et pour une seule raison :
+  //    BORNER LES DEUX PORTES L'UNE PAR L'AUTRE. Sans elle, l'atelier serait un
+  //    attribut d'URL. ⚠️ La garde de C4-L11 vaut toujours dans l'autre sens :
+  //    une colonne absente ferait échouer la requête ENTIÈRE (`42703`), donc
+  //    « exercice introuvable » pour tous les élèves — la colonne a été
+  //    constatée en bac à sable ET en prod avant d'entrer dans ce `select`.
+  + 'modes_par_competence, materiau_cible_sujet_id, materiau_cible_texte_id)'
 
 function normaliser(brut: unknown): DepotMaison | null {
   if (!brut || typeof brut !== 'object') return null
@@ -129,9 +141,34 @@ function normaliser(brut: unknown): DepotMaison | null {
  *   2. son exercice est à la MAISON — le déroulé en six temps n'est pas celui
  *      d'une passation en classe (`06-` §2) ;
  *   3. il n'est pas `retire` (piège 41).
+ *
+ * ⭐⭐ C5-L2 — ET UNE QUATRIÈME, FACULTATIVE : L'ATELIER.
+ *
+ *   4. quand l'appelant en nomme un, l'instance en relève — *« tout exercice qui
+ *      a demandé une production se consulte dans son atelier : **Codex s'il
+ *      porte `composer`, Aletheia sinon** »* (`01-` §2), c'est-à-dire
+ *      `atelierDUnFormatif`, la fonction que C4-L6 a écrite et testée.
+ *
+ * ⚠️⚠️ **AVANT CE LOT, ELLE NE REGARDAIT JAMAIS L'ATELIER**, et la conséquence
+ *    était vérifiable : `/eleve/modules/codex/exercice/<id>` **servait un dépôt
+ *    de LECTURE** à qui connaissait son identifiant. Deux ateliers, deux portes,
+ *    **un seul prédicat, appliqué des deux côtés** — sans quoi le module devient
+ *    un attribut d'URL, quand le `01-` §2 en fait « une couleur et une voix ».
+ *
+ * ⚠️ **ELLE EST FACULTATIVE, ET CE N'EST PAS UN RELÂCHEMENT.** `app/deroule/actions.ts`
+ *    porte « le jeu d'actions **PARTAGÉ par les écrans du déroulé, où qu'ils
+ *    vivent** » : une action ne sait pas — et n'a pas à savoir — depuis quel
+ *    atelier elle est appelée. Ce qui la garde est la propriété du dépôt, qui
+ *    est la garde 1. **La borne d'atelier est une règle de RANGEMENT, pas
+ *    d'accès** : elle appartient aux deux ROUTES, et à elles seules.
+ *
+ * ⚠️ Le refus reste indistinct à l'écran — « introuvable » ne dit pas lequel des
+ *    quatre —, mais il se DIT au serveur : un dépôt qui n'apparaît nulle part
+ *    n'a pas à être un mystère pour le professeur.
  */
 export async function lireDepotMaison(
   admin: Admin, depotId: string, eleveId: string,
+  options: { atelier?: Atelier } = {},
 ): Promise<DepotMaison | null> {
   const { data, error } = await admin
     .from('exercices_depots').select(CHAMPS)
@@ -151,6 +188,15 @@ export async function lireDepotMaison(
       + 'Le déroulé en six temps est celui de la MAISON ; une passation en classe a son '
       + 'flux propre (C4-L4).')
     return null
+  }
+  if (options.atelier) {
+    const atelier = atelierDUnFormatif(d.exercice.modes_par_competence)
+    if (atelier !== options.atelier) {
+      console.warn(`[deroule] dépôt ${depotId} refusé à la porte « ${options.atelier} » : `
+        + `son instance relève de « ${atelier} » (\`01-\` §2 — Codex s'il porte \`composer\`, `
+        + 'Aletheia sinon). L’élève le trouve sous l’autre atelier.')
+      return null
+    }
   }
   return d
 }

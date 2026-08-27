@@ -90,21 +90,49 @@ export function motifDeRefusDeLaReference(ligne: unknown, nom: string): string |
  *
  * ⚠️ supabase-js NE LÈVE PAS : il rend `{ error }`. Une erreur de lecture ne
  *    doit surtout pas passer pour un texte valide — on refuse, en le disant.
+ *
+ * ⭐⭐ C5-L2 — LE VERDICT REND AUSSI **L'IDENTIFIANT DE LA RÉFÉRENCE**, et c'est
+ *    ce qui ferme un manque transverse. `exercices.reference_id` — que le `07-`
+ *    §1.1 déclare, « la référence quand il y en a une » — **n'avait aucun
+ *    écrivain de production** : l'import y écrit littéralement `null`, l'écran
+ *    de conception ne l'écrivait pas du tout, et seuls l'examen diagnostique de
+ *    C4-L9 et les décors de recette la posaient. Or c'est cette colonne-là, et
+ *    elle seule, que lisent **la chaîne** (pour descendre la référence ET le
+ *    texte source jusqu'au retour) et **le trigger en base**
+ *    `garde_reference_validee`.
+ *
+ * ⚠️ **LA RÉFÉRENCE APPARTIENT AU TEXTE** — `exercices_textes.reference_id` —,
+ *    et `exercices.reference_id` en est **la copie que la garde en base exige** :
+ *    le trigger fait `select e.reference_id …` sur l'INSTANCE, et sort sans rien
+ *    contrôler quand elle est NULL. La dériver à la lecture laisserait le
+ *    trigger aveugle ; la poser à la conception ferme les deux. ⛔ Ce n'est donc
+ *    **pas un second domicile** : c'est la même valeur, recopiée au moment où
+ *    elle est vérifiée, par la fonction qui la vérifie — **il n'y a pas deux
+ *    endroits où la règle s'écrit**.
+ *
+ * ⚠️ `referenceId` n'est rendu **que sur un verdict `ok`** : une référence
+ *    absente ou non validée ne se recopie jamais sur une instance.
  */
 export async function referenceValidee(
   admin: SupabaseClient, texteId: string,
-): Promise<{ ok: boolean; motif: string | null }> {
+): Promise<{ ok: boolean; motif: string | null; referenceId: string | null }> {
   const { data, error } = await admin.from('exercices_textes')
     .select(`auteur, titre, reference, bloque, ${SELECT_REFERENCE_VALIDEE}`)
     .eq('id', texteId).maybeSingle()
   if (error) {
-    return { ok: false, motif: `Le texte visé n’a pas pu être lu : ${error.message}` }
+    return { ok: false, motif: `Le texte visé n’a pas pu être lu : ${error.message}`,
+      referenceId: null }
   }
   if (!data) {
-    return { ok: false, motif: 'Le texte visé est introuvable : aucune instance ne tourne dessus.' }
+    return { ok: false, referenceId: null,
+      motif: 'Le texte visé est introuvable : aucune instance ne tourne dessus.' }
   }
   const l = data as unknown as Ligne
   const nom = nomDuTexte(txt(l.auteur), txt(l.titre), txt(l.reference))
   const motif = motifDeRefusDeLaReference(l, nom)
-  return { ok: motif === null, motif }
+  return {
+    ok: motif === null,
+    motif,
+    referenceId: motif === null ? (txt(l.reference_id) || null) : null,
+  }
 }

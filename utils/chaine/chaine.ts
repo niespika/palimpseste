@@ -669,10 +669,11 @@ async function chaineDUneCompetence(
   //    « deux copies du même chiffre finissent par diverger » (`07-` §1.2).
   //    ⭐ `instrument_version` RESTE, et c'est l'erreur symétrique à ne pas
   //    faire : c'est LE versionnage, « sur la mesure ET sur le squelette ».
-  await upsertSquelette(admin, ctx.depotId, competence, version, {
+  const echecP1 = await upsertSquelette(admin, ctx.depotId, competence, version, {
     artefact_extraction: artefactsP1, modele,
     instrument_version: instrument.version,
   })
+  if (echecP1) alertes.push(echecP1)
 
   // ── Temps 3 — P2, observable par observable ───────────────────────────────
   const specP2 = branchement.jugement(ctxEnrichi)
@@ -734,10 +735,11 @@ async function chaineDUneCompetence(
   // ⛔ La SECONDE écriture de `prompt_version` — retirée avec la première : une
   //    colonne, DEUX écritures (C4-L11 ; `01-` §11, « rien n'est versionné par
   //    phase »).
-  await upsertSquelette(admin, ctx.depotId, competence, version, {
+  const echecP2 = await upsertSquelette(admin, ctx.depotId, competence, version, {
     artefact_jugement: jugement.valeur, modele,
     instrument_version: instrument.version,
   })
+  if (echecP2) alertes.push(echecP2)
 
   // ── Temps 4 — CODE2. « Du code agrège » : le palier DE LA MESURE. ─────────
   // ⭐ IL REÇOIT LA SORTIE DE CODE1, et c'est ce que le contrat écrit deux fois :
@@ -845,11 +847,28 @@ async function chaineDUneCompetence(
 async function upsertSquelette(
   admin: Admin, depotId: string, competence: Competence, version: Version,
   champs: Record<string, unknown>,
-): Promise<void> {
+): Promise<string | null> {
   const { error } = await admin.from('exercices_squelettes')
     .upsert({ depot_id: depotId, competence, version, ...champs, updated_at: new Date().toISOString() },
       { onConflict: 'depot_id,competence,version' })
-  if (error) console.error(`[chaine] squelette non écrit — ${error.code} ${error.message}`)
+  if (!error) return null
+  console.error(`[chaine] squelette non écrit — ${error.code} ${error.message}`)
+  // ⭐⭐ C5-L2 — ET LE MOTIF REMONTE, au lieu de finir dans une trace serveur.
+  //
+  // ⚠️ **UNE GARDE QUI N'AVAIT JAMAIS TIRÉ PEUT DÉSORMAIS TIRER ICI.**
+  //    `garde_reference_validee` (en base) LÈVE dès qu'un `artefact_jugement`
+  //    s'écrit sur un dépôt dont l'exercice porte une référence NON VALIDÉE —
+  //    et elle sortait toujours en silence, parce que `exercices.reference_id`
+  //    n'avait aucun écrivain de production. Depuis que la conception la pose,
+  //    la garde contrôle vraiment. **Le cas où elle mord est étroit et il est
+  //    assumé par les sources** : une référence DÉVALIDÉE APRÈS la conception,
+  //    « qui ne défait pas les instances déjà assignées ».
+  //
+  // ⛔ **CE QU'IL NE FAUT SURTOUT PAS LAISSER SILENCIEUX** : supabase-js ne lève
+  //    pas, la chaîne CONTINUE, et la mesure s'écrit quand même — un état où
+  //    « la mesure existe, le squelette non » ne se voit alors nulle part.
+  //    L'appelant en fait une alerte du bilan.
+  return `squelette « ${competence} / ${version} » NON écrit — ${error.code} ${error.message}`
 }
 
 /** Le squelette d'une version — ce que la version finale compare à la sienne. */
@@ -960,6 +979,12 @@ async function engendrerLeRetour(
     squelettesVf: a.squelettesVf,
     retourV1: version === 'vf' ? await lireRetourV1(admin, ctx.depotId) : null,
     etatAnterieur,
+    // ⭐⭐ C5-L2 — LE TEXTE D'AUTEUR ARRIVE ENFIN AU MODÈLE. Il est lu par
+    //    `lireContexte` (une jointure, sur le chemin chaud), borné à
+    //    L'ENGLOBANT — « l'étendue réellement lue » — et il part BALISÉ.
+    //    ⛔ Sans lui, RR3 est intenable : on demandait de citer l'auteur sans
+    //    donner l'auteur, et le seul texte sous la main était LA COPIE.
+    texteSupport: ctx.texteSupport?.texte ?? null,
   })
 
   try {
@@ -985,7 +1010,19 @@ async function engendrerLeRetour(
 
     const controle = controlerRetour(r.valeur, {
       moment: version, grain: ctx.grain, codesObservables, competencesAdmises,
+      // ⭐ RR3 se contrôle contre LES DEUX CÔTÉS. En version finale le retour
+      //    cite la v1 ET la version finale (« la comparaison des deux ») : ne
+      //    passer que la vf ferait déclarer introuvable une citation légitime
+      //    de la v1, et le contrôle crierait faux.
+      production: version === 'v1'
+        ? ctx.productionV1
+        : [ctx.productionV1, ctx.productionVf].filter(Boolean).join('\n\n') || null,
+      texteSupport: ctx.texteSupport?.texte ?? null,
     })
+    // ⚠️ LES ALERTES SE JOURNALISENT SANS ARRÊTER — c'est ce que leur nom dit,
+    //    et elles ne remontaient nulle part avant C5-L2 : le champ existait,
+    //    personne ne le remplissait, et personne ne le lisait.
+    alertes.push(...controle.controle.alertes)
     if (!controle.verdict.ok || controle.controle.refus.length) {
       const motifs = controle.verdict.ok
         ? controle.controle.refus

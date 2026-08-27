@@ -1,6 +1,7 @@
 import 'server-only'
 // ============================================================================
 // C4 · L6 — CE QUE LES DEUX ONGLETS LISENT. Une porte par côté.
+// (⭐ C5-L2 — et la liste de l'élève sert désormais LES DEUX ATELIERS.)
 // ----------------------------------------------------------------------------
 // « Un écran sans porte n'existe pas. » — `07-` §2, C4-L6
 //
@@ -30,8 +31,8 @@ import 'server-only'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { lireLaPorte } from '@/utils/deroule/acces'
 import {
-  atelierDUnFormatif, comparerLignes, etatDeLExercice, titreDeLaConsigne,
-  visibleDansLaClasse, type EtatDeLigne,
+  atelierDUnFormatif, comparerLignes, etatDeLExercice, hrefDuDeroule, titreDeLaConsigne,
+  visibleDansLaClasse, type Atelier, type EtatDeLigne,
 } from './regles'
 
 type Admin = SupabaseClient
@@ -65,7 +66,14 @@ export interface ExerciceMaison {
  *   3. le dépôt n'est pas `retire` — c'est le filtre que `lireDepotMaison`
  *      applique aussi : un lien vers un dépôt retiré mènerait à `notFound()`,
  *      c'est-à-dire à une porte cassée ;
- *   4. l'instance relève de CODEX — l'atelier suit le mode (`01-` §2).
+ *   4. l'instance relève de L'ATELIER DEMANDÉ — l'atelier suit le mode (`01-` §2).
+ *
+ * ⭐⭐ C5-L2 — LA CLAUSE 4 EST DEVENUE UN PARAMÈTRE, ET C'EST TOUT LE GESTE.
+ *    Elle disait `=== 'codex'` en dur : **tout ce qui n'est pas `composer` était
+ *    écarté de la seule liste d'exercices maison, et rien ne le reprenait
+ *    ailleurs** — un exercice de lecture assigné n'avait NI LIEN, NI LISTE, NI
+ *    ADRESSE. Le prédicat ne change pas d'un caractère ; c'est sa CIBLE qui se
+ *    déclare. *« Deux ateliers, deux portes, un seul prédicat. »*
  *
  * ⚠️ LA CLASSE EN CONTEXTE BORNE LA LISTE (`01-` §2, « dans les modules on reste
  *    par classe ») : un élève bi-classe ne voit jamais ici le travail de l'autre
@@ -87,7 +95,7 @@ export interface ExerciceMaison {
  *    affiché, c'est son CONTENU qui est vide, et l'écran dit pourquoi.
  */
 export async function exercicesMaisonDeLEleve(
-  admin: Admin, eleveId: string, classeEnContexte: string,
+  admin: Admin, eleveId: string, classeEnContexte: string, atelier: Atelier = 'codex',
 ): Promise<ExerciceMaison[]> {
   if (!(await lireLaPorte(admin)).exercicesActifs) return []
 
@@ -99,7 +107,7 @@ export async function exercicesMaisonDeLEleve(
     .neq('statut', 'retire')
     .eq('exercices.lieu', 'maison')
   if (error) {
-    console.error('[codex-onglets] exercices maison illisibles — '
+    console.error(`[codex-onglets] exercices maison (${atelier}) illisibles — `
       + `${error.code} ${error.message}`)
     return []
   }
@@ -109,7 +117,7 @@ export async function exercicesMaisonDeLEleve(
   const retenus = rows.filter((d) => {
     const ex = lig(un(d.exercices))
     if (!visibleDansLaClasse((ex.classe_id as string | null) ?? null, classeEnContexte)) return false
-    return atelierDUnFormatif(ex.modes_par_competence) === 'codex'
+    return atelierDUnFormatif(ex.modes_par_competence) === atelier
   })
   if (retenus.length === 0) return []
 
@@ -123,7 +131,7 @@ export async function exercicesMaisonDeLEleve(
         titre: titreDeLaConsigne(ex.consigne_instanciee),
         echeance: (d.echeance as string | null) ?? null,
         etat: etatDeLExercice(txt(d.statut), retours.get(txt(d.id)) ?? null),
-        href: `/eleve/modules/codex/exercice/${txt(d.id)}`,
+        href: hrefDuDeroule(atelier, txt(d.id)),
       }
     })
     .sort((a, b) => comparerLignes(

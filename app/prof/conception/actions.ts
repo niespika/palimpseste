@@ -162,6 +162,35 @@ export async function concevoirInstance(
   //    — source ou cible — reste dit ici : lui seul est propre à cet écran.
   const texteSourceId = (String(form.get('texte_source') ?? '').trim() || null)
   const texteCibleId = (String(form.get('texte_cible') ?? '').trim() || null)
+  // ⭐⭐ C5-L2 — ET C'EST ICI QUE `exercices.reference_id` REÇOIT ENFIN UN
+  //    ÉCRIVAIN DE PRODUCTION. Elle est déclarée au `07-` §1.1 — « la référence
+  //    quand il y en a une » — et PERSONNE ne l'écrivait : l'import y met
+  //    littéralement `null`, cet écran ne l'écrivait pas, et seuls l'examen
+  //    diagnostique de C4-L9 et les décors de recette la posaient. Trois
+  //    conséquences, toutes silencieuses :
+  //      (a) `utils/chaine/contexte.ts` ne lit QUE cette colonne : sans elle,
+  //          `reference` ET `materiau` restent nuls, et **le modèle à qui l'on
+  //          demande de citer l'auteur n'a jamais l'auteur sous la main** — il
+  //          ne peut alors citer que ce qu'il trouve, LA COPIE DE L'ÉLÈVE
+  //          (`01-` §12, RR3) ;
+  //      (b) le trigger `garde_reference_validee` fait `select e.reference_id …`
+  //          puis `if v_ref is null then return new` : **il sortait avant de
+  //          contrôler quoi que ce soit**. L'écran, lui, mordait déjà — il lit
+  //          l'AUTRE colonne, celle du texte. Deux lecteurs, deux colonnes ;
+  //      (c) et le canal du texte support ne partait de nulle part.
+  //
+  // ⛔ AUCUN SECOND DOMICILE. La référence appartient au TEXTE
+  //    (`exercices_textes.reference_id`) ; cette colonne en est LA COPIE QUE LA
+  //    GARDE EN BASE EXIGE, recopiée au moment exact où le verdict la vérifie,
+  //    par la fonction qui la vérifie (`referenceValidee`). Pas une lecture de
+  //    plus, pas une règle de plus.
+  //
+  // ⚠️ C'EST LA SOURCE QUI LA PORTE, JAMAIS LA CIBLE. Le `07-` §1.1 dit « la
+  //    référence » au singulier, et la chaîne en descend le TEXTE SOURCE de la
+  //    référence (`materiau`) : deux références sur une instance n'auraient pas
+  //    de départage. La cible reste contrôlée — le refus vaut pour les deux —,
+  //    elle ne se recopie simplement pas.
+  let referenceDeLaSource: string | null = null
   for (const [id, role] of [[texteSourceId, 'source'], [texteCibleId, 'cible']] as Array<[string | null, string]>) {
     if (!id) continue
     const verdict = await referenceValidee(admin, id)
@@ -170,6 +199,7 @@ export async function concevoirInstance(
         message: `Le matériau ${role} vise une référence NON VALIDÉE — aucune instance ne tourne dessus.`,
         empechements: [verdict.motif ?? 'valider la référence avant de concevoir (02- §6 A ; 05- §4.4)'] }
     }
+    if (role === 'source') referenceDeLaSource = verdict.referenceId
   }
 
   const { data: type } = await admin.from('exercices_types')
@@ -194,6 +224,11 @@ export async function concevoirInstance(
     materiau_cible_provenance: provenanceCible,
     materiau_cible_support: saisie.supportCible,
     materiau_source_texte_id: texteSourceId,
+    // ⭐ La copie que la garde en base exige (voir le bloc ci-dessus). NULL dès
+    //    que la source n'est pas un texte d'auteur : un exercice d'écriture n'a
+    //    pas de référence, et un `reference_id` inventé ferait tirer le trigger
+    //    sur une instance qui n'a rien à contrôler.
+    reference_id: referenceDeLaSource,
     materiau_source_sujet_id: (String(form.get('sujet_source') ?? '').trim() || null),
     materiau_source_localisation: lireIntervalle('localisation'),
     materiau_source_englobant: saisie.englobant,

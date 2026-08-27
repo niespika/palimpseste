@@ -247,9 +247,42 @@ export function segmenterMateriau(
   texte: string, suites: readonly (readonly string[])[],
 ): SegmentMateriau[] {
   if (!texte) return []
-  const trouves = bornes(texte, suites).sort((x, y) => x[0] - y[0] || x[1] - y[1])
+  return segmenterParIntervalles(texte, bornes(texte, suites))
+}
+
+/**
+ * ⭐ C5-L2 — LA MÊME DÉCOUPE, À PARTIR DE BORNES DÉJÀ CONNUES.
+ *
+ * `segmenterMateriau` CALCULE ses bornes (les candidats servis, le diff) ; la
+ * lecture, elle, les A DÉJÀ : `exercices.materiau_source_localisation` porte la
+ * sélection que le professeur a faite dans le texte, **en caractères, base 0,
+ * fin exclue** (`02-` §6 B.1 ; C5-L1). Il n'y a donc rien à chercher — il n'y a
+ * qu'à découper.
+ *
+ * ⛔ **CE N'EST PAS UN SECOND SEGMENTEUR** : c'est celui-ci que
+ * `segmenterMateriau` appelle depuis C5-L2, et la garantie de partition est
+ * écrite une seule fois — la concaténation des `texte`, dans l'ordre, rend
+ * `texte` à l'octet près. *Deux découpes d'un même texte seraient deux
+ * domiciles, et la promesse « pas un octet retouché » n'en aurait plus qu'un
+ * demi.*
+ *
+ * Les intervalles se trient, se BORNENT au texte et FUSIONNENT quand ils se
+ * chevauchent ou se touchent. Un intervalle vide ou hors du texte est ignoré :
+ * on ne devine pas, et on ne lève pas — un englobant mal saisi doit rendre le
+ * texte entier NON marqué, jamais un écran mort.
+ */
+export function segmenterParIntervalles(
+  texte: string, intervalles: readonly (readonly [number, number])[],
+): SegmentMateriau[] {
+  if (!texte) return []
+  const propres = intervalles
+    .map(([d, f]) => [Math.max(0, Math.min(d, texte.length)),
+      Math.max(0, Math.min(f, texte.length))] as [number, number])
+    .filter(([d, f]) => f > d)
+    .sort((x, y) => x[0] - y[0] || x[1] - y[1])
+
   const fusion: Array<[number, number]> = []
-  for (const [d, f] of trouves) {
+  for (const [d, f] of propres) {
     const dernier = fusion[fusion.length - 1]
     if (dernier && d <= dernier[1]) dernier[1] = Math.max(dernier[1], f)
     else fusion.push([d, f])

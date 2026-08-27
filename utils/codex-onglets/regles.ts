@@ -42,6 +42,29 @@ export function atelierDUnFormatif(modesParCompetence: unknown): Atelier {
 }
 
 /**
+ * ⭐⭐ C5-L2 — OÙ L'ÉLÈVE ENTRE, SELON L'ATELIER. Une fonction, deux routes.
+ *
+ * Le déroulé à six temps est GÉNÉRIQUE — sept composants, dix-neuf modules, un
+ * jeu d'actions partagé, et **rien de tout cela ne nomme Codex**. Ce qui le
+ * rangeait sous Codex était **la seule route**, et son en-tête le disait :
+ * *« la lecture — même déroulé, retour ancré au texte — est C5-L2 […] le lot
+ * qui en aura besoin le fera sien. »*
+ *
+ * ⚠️ **L'ATELIER N'EST PAS UN ATTRIBUT D'URL.** Les deux routes servent le même
+ *    écran, mais chacune ne sert QUE les dépôts de son atelier
+ *    (`lireDepotMaison`, option `atelier`) : sans cette borne, le module
+ *    deviendrait un paramètre d'adresse, quand le `01-` §2 en fait « une couleur
+ *    et une voix ». *Avant ce lot, `/eleve/modules/codex/exercice/<id>` servait
+ *    déjà un dépôt de LECTURE à qui connaissait son identifiant.*
+ *
+ * ⛔ **CE N'EST PAS UN ONGLET** — les onglets de la lecture sont `C5-L4`, et
+ *    `components/nav/configModules.ts` n'est pas touché.
+ */
+export function hrefDuDeroule(atelier: Atelier, depotId: string): string {
+  return `/eleve/modules/${atelier}/exercice/${depotId}`
+}
+
+/**
  * ⭐ LA CLASSE EN CONTEXTE BORNE CE QUI S'AFFICHE.
  *
  * *« Dans les modules on reste PAR CLASSE »* — un élève bi-classe ne doit jamais

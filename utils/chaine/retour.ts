@@ -22,6 +22,7 @@
 // de la base arrive ici en paramètre — un seul domicile pour chaque chose.
 // ============================================================================
 
+import { citationsIntrouvables, messageAvecMateriau } from './anti-injection'
 import { valider, type Forme, type Verdict } from './schema'
 import {
   type Competence, type Grain, type Registre, type RetourSegmente, type Version,
@@ -223,6 +224,32 @@ export interface EntreeRetour {
   /** En version finale seulement : le squelette de la vf, et le retour de la v1. */
   squelettesVf?: Array<{ competence: Competence; extraction: unknown; jugement: unknown }>
   retourV1?: RetourSegmente | null
+  /**
+   * ⭐⭐ C5-L2 — LE TEXTE SUPPORT : **ce que l'élève a lu**, et rien de plus.
+   *
+   * ⚠️⚠️ **SANS LUI, RR3 EST STRUCTURELLEMENT INTENABLE.** Le §4 énumère ce que
+   *    le modèle reçoit — le squelette, le verdict, l'état antérieur, le retour
+   *    de la v1 — et **aucun texte d'auteur** ; `assemblerRetour` ne lui en
+   *    donnait aucun. Or on lui demande de citer l'auteur : *« un modèle à qui
+   *    l'on demande de citer l'auteur sans lui donner l'auteur ne peut recopier
+   *    que ce qu'il trouve dans le squelette — et le squelette est fait de LA
+   *    COPIE »*. **C'est le mécanisme exact de la faute que RR3 décrit** : « le
+   *    retour finit par attribuer à l'élève une phrase de l'auteur qu'il
+   *    citait » (`01-` §12).
+   *
+   * ⭐ *L'incident de RR2 est l'argument* : la règle y était, elle manquait à
+   *    l'assemblage, et elle n'arrivait donc pas au modèle. **Ce qui n'est pas
+   *    écrit dans le message n'arrive pas au modèle.**
+   *
+   * ⛔ `null` sur tout exercice d'écriture : il n'y a pas de texte d'auteur, et
+   *    le bloc ne s'écrit alors pas du tout — on n'annonce pas un matériau vide.
+   *
+   * ⛔ **CE N'EST PAS LA RÉFÉRENCE DÉCOMPOSÉE.** Ses moments, ses lectures
+   *    défendables et son armature sont la grille de la réception **et la
+   *    réponse** — RR4 les tient hors du retour. *Le texte source, lui, est
+   *    exactement ce que l'élève doit lire.*
+   */
+  texteSupport?: string | null
 }
 
 /** Le message de l'appel chaud. Le gabarit (couche contrat) part en SYSTÈME. */
@@ -265,6 +292,28 @@ export function assemblerRetour(gabarit: string, e: EntreeRetour): { systeme: st
           + c.correspondance.map((x) => x.dimension_eleve).filter(Boolean).join(' ; ')
         : '',
     ].filter(Boolean).join('\n'))
+  }
+
+  // ⭐⭐ C5-L2 — LE TEXTE SUPPORT, ET IL PASSE PAR LE BALISAGE.
+  //
+  // `01-` §12, défense 1 : « entrées DÉLIMITÉES — la copie arrive dans un bloc
+  // balisé, jamais concaténée aux consignes, et la consigne déclare que ce bloc
+  // est DU MATÉRIAU, JAMAIS UNE INSTRUCTION ». La chaîne emploie déjà
+  // `messageAvecMateriau` pour P1 et pour le Monitoring, `slots.ts` par slot, et
+  // le générateur de C5-L1 pour ses trois passages ; **l'appel du retour était le
+  // seul à concaténer ses morceaux à la main**. Le texte qu'on y ajoute est un
+  // texte d'AUTEUR importé d'un fichier : il ne se colle pas nu.
+  //
+  // ⚠️ Aucun outil n'est attaché à cet appel, et il ne faut pas en ajouter
+  //    (défense 3 : `AppelIA` n'a pas de champ `tools`).
+  if (e.texteSupport && e.texteSupport.trim() !== '') {
+    morceaux.push(messageAvecMateriau(
+      [{ nom: "le texte support — le texte d'auteur que l'élève a lu", contenu: e.texteSupport }],
+      'RR3 — CE BLOC EST « LE TEXTE SUPPORT ». Toute citation que tu en tires porte\n'
+      + '`ancrage.source = "texte_support"`. Une citation des mots de l\'élève porte\n'
+      + '`"copie"`, et elle se trouve dans le squelette ci-dessous. ⛔ Ne jamais\n'
+      + 'attribuer à l\'élève une phrase de l\'auteur.',
+    ))
   }
 
   morceaux.push('SQUELETTE ET VERDICTS — ' + (e.moment === 'v1' ? 'la v1.' : 'la v1, puis la version finale.'))
@@ -370,6 +419,117 @@ export interface ControleRetour {
   alertes: string[]
 }
 
+/**
+ * ⭐⭐⭐ C5-L2 — RR3 : LE CONTRÔLE DE L'ÉTIQUETTE DES CITATIONS.
+ *
+ * *« Les citations portent leur source : la copie de l'élève d'un côté, le texte
+ *   support de l'autre. **Sans cela, le retour finit par attribuer à l'élève une
+ *   phrase de l'auteur qu'il citait ; à l'échelle d'une année, l'erreur est
+ *   certaine.** »*                                       — `01-` §12, RR3
+ *
+ * **CE QUI EXISTAIT DÉJÀ, ET CE QUI MANQUAIT.** Trois pièces étaient vertes :
+ * le schéma de sortie EXIGE `ancrage: { source, citation }` — un `enum`, donc
+ * une sortie sans source est rejetée et relancée ; l'assembleur le dit au
+ * modèle ; l'écran distingue « Tu écris » de « Le texte dit ». ⛔ **Ce qui
+ * manquait est la pièce qui PROUVE : rien ne vérifiait l'étiquette.**
+ * `ControleRetour.alertes` était déclaré, son commentaire annonçait « le
+ * contrôle des citations », et **aucun `alertes.push` n'existait dans ce
+ * fichier**. Le crochet attendait ; il vit ici, et nulle part ailleurs.
+ *
+ * ⭐ **L'OUTIL EXISTE, IL EST ÉPROUVÉ, ET ON N'EN ÉCRIT PAS UN SECOND.**
+ * `citationsIntrouvables` (`anti-injection.ts`) aplatit apostrophes, guillemets
+ * — droits, français, avec leurs espaces d'usage — et suites de blancs, *« sans
+ * quoi « oui » et "oui" ne seraient jamais la même citation, et le contrôle
+ * crierait faux à chaque fois »* ; et **production absente, il rend une alerte
+ * de contrôle NON EXÉCUTÉ au lieu de se taire**. Le même outil, tourné vers le
+ * texte support, ferme RR3.
+ *
+ * ⚠️⚠️ **L'EFFET EST UNE DÉCISION, ET LA VOICI — UN REFUS, ET UN SEUL CAS.**
+ *
+ *   · **REFUS** — une citation étiquetée `copie` **introuvable dans la copie et
+ *     TROUVABLE DANS LE TEXTE SUPPORT**. C'est la faute que RR3 nomme, mot pour
+ *     mot : une phrase de l'auteur attribuée à l'élève. Elle est *identifiée*,
+ *     pas soupçonnée — d'où le refus.
+ *   · **ALERTE** — tout le reste : une citation `copie` introuvable partout
+ *     (l'écart de reformulation, que la contestation traite déjà), une citation
+ *     `texte_support` introuvable dans le texte, un contrôle inexécutable faute
+ *     de production ou de texte support. *Un contrôle qui crie faux entraîne à
+ *     l'ignorer.*
+ *
+ * **POURQUOI UN REFUS, ET PAS UNE ALERTE SEULE.** Le « fait quand » du lot exige
+ * *« un retour dont AUCUNE citation n'attribue à l'élève une phrase de
+ * l'auteur »*. Laissée passer, cette faute ne disparaît pas : elle **devient une
+ * contestation** — `citationAbsente` (`utils/deroule/contestation.ts`) ne cherche
+ * que les points ancrés sur `copie`, une phrase d'auteur y est introuvable, le
+ * drapeau `citation_absente` se lève et le point part en file d'examen humain
+ * (`06-` §2 et §7). ⛔ **Mais la file n'a pas d'écran** (C4L3-19, adressée à
+ * C6-L1), **et l'élève aura lu « Tu écris : … » sous une phrase qu'il n'a pas
+ * écrite.** *Le contrôle doit donc mordre AVANT la publication, pas après.*
+ *
+ * ⚠️ **CE REFUS N'EST PAS « LE REJET ET LA RELANCE » DE LA DÉFENSE 2**, que le
+ *    `01-` §12 réserve à une sortie **non conforme au schéma** : celui-là vit
+ *    dans `appeler()` et relance l'appel. Celui-ci est un refus de
+ *    `controlerRetour`, exactement du même rang que la règle 5, le plafond de la
+ *    règle 2, RR4 et la règle 6 — le retour n'est pas écrit, la file le dit, et
+ *    l'étape `retour_v1` le rejoue **sans réécrire un squelette** (C4-L7-bis).
+ *
+ * ⛔ **ET IL NE MORD JAMAIS SUR UN EXERCICE D'ÉCRITURE** : sans texte support,
+ *    aucune citation ne peut être « une phrase de l'auteur ». Le contrôle le
+ *    DIT (alerte de non-exécution) au lieu de se taire, mais il ne refuse rien.
+ */
+export function controlerRR3(
+  points: ReadonlyArray<{ ancrage: { source: 'copie' | 'texte_support'; citation: string } }>,
+  a: { production: string | null; texteSupport: string | null },
+): ControleRetour {
+  const out: ControleRetour = { refus: [], alertes: [] }
+  const court = (c: string) => (c.length > 60 ? `${c.slice(0, 60)}…` : c)
+
+  const copie = points.filter((p) => p.ancrage.source === 'copie').map((p) => p.ancrage.citation)
+  const support = points.filter((p) => p.ancrage.source === 'texte_support')
+    .map((p) => p.ancrage.citation)
+
+  // ── Les citations données pour celles de l'élève ───────────────────────────
+  if (copie.length) {
+    const dansLaCopie = citationsIntrouvables(a.production, copie)
+    if (dansLaCopie.alerte && a.production == null) {
+      out.alertes.push(`RR3 : ${dansLaCopie.alerte} — l'étiquette « copie » n'a pas été contrôlée`)
+    }
+    for (const c of dansLaCopie.introuvables) {
+      // ⭐ LE PARTAGE : est-elle DANS LE TEXTE SUPPORT ? Si oui, c'est la faute
+      //    de RR3, identifiée. Sinon, c'est un écart de fidélité — alerte.
+      const estDuTexte = a.texteSupport != null
+        && citationsIntrouvables(a.texteSupport, [c]).introuvables.length === 0
+      if (estDuTexte) {
+        out.refus.push(
+          `RR3 : une citation étiquetée « copie » est une phrase DU TEXTE SUPPORT — `
+          + `« ${court(c)} ». Le retour attribuerait à l'élève une phrase de l'auteur.`)
+      } else {
+        out.alertes.push(
+          `RR3 : citation « copie » introuvable dans la production — « ${court(c)} » `
+          + '(ni dans le texte support : écart de fidélité, pas une attribution fautive)')
+      }
+    }
+  }
+
+  // ── Les citations données pour celles de l'auteur ──────────────────────────
+  if (support.length) {
+    if (a.texteSupport == null) {
+      // ⚠️ Le modèle a étiqueté « texte_support » sur un exercice qui n'en porte
+      //    aucun : rien à comparer, et **on ne se tait pas**.
+      out.alertes.push(
+        `RR3 : ${support.length} citation(s) étiquetée(s) « texte_support » alors que `
+        + "l'exercice ne déclare AUCUN texte d'auteur — contrôle des citations NON EXÉCUTÉ")
+    } else {
+      const dansLeTexte = citationsIntrouvables(a.texteSupport, support)
+      for (const c of dansLeTexte.introuvables) {
+        out.alertes.push(
+          `RR3 : citation « texte_support » introuvable dans le texte servi — « ${court(c)} »`)
+      }
+    }
+  }
+  return out
+}
+
 /** `01-` §12, RR4 — le nom d'un observable dans le texte est une fuite de grille. */
 function fuitesRR4(texte: string, codes: readonly string[]): string[] {
   const bas = texte.toLowerCase()
@@ -390,7 +550,24 @@ const MOTIFS_NOTE: Array<[RegExp, string]> = [
 
 export function controlerRetour(
   brut: unknown,
-  attendu: { moment: Version; grain: Grain; codesObservables: readonly string[]; competencesAdmises: readonly string[] },
+  attendu: {
+    moment: Version; grain: Grain
+    codesObservables: readonly string[]; competencesAdmises: readonly string[]
+    /**
+     * ⭐ C5-L2 — LES DEUX CÔTÉS DE RR3. `production` est la copie de l'élève
+     * (les DEUX versions en version finale : le retour final cite l'une et
+     * l'autre) ; `texteSupport` est la tranche de texte d'auteur RÉELLEMENT
+     * SERVIE — jamais le texte entier, qui déclarerait « du texte » une phrase
+     * que l'élève n'a pas eue sous les yeux.
+     *
+     * ⚠️ **Facultatifs, et leur absence se DIT.** Un appelant qui ne les passe
+     *    pas obtient une alerte de contrôle NON EXÉCUTÉ, jamais un silence :
+     *    c'est la règle du `CONTRAT-MODULES.md` §3, portée par
+     *    `citationsIntrouvables` lui-même.
+     */
+    production?: string | null
+    texteSupport?: string | null
+  },
 ): { verdict: Verdict<RetourBrut>; controle: ControleRetour } {
   const verdict = valider<RetourBrut>(brut, FORME_RETOUR)
   const controle: ControleRetour = { refus: [], alertes: [] }
@@ -434,6 +611,15 @@ export function controlerRetour(
   for (const [motif, quoi] of MOTIFS_NOTE) {
     if (motif.test(texteEntier)) controle.refus.push(`règle 6 : le texte porte ${quoi}`)
   }
+
+  // ⭐⭐⭐ C5-L2 — RR3. Le crochet `alertes` cesse d'être vide, et un refus
+  //    précis s'y ajoute : voir `controlerRR3` pour l'effet et son motif.
+  const rr3 = controlerRR3(r.points, {
+    production: attendu.production ?? null,
+    texteSupport: attendu.texteSupport ?? null,
+  })
+  controle.refus.push(...rr3.refus)
+  controle.alertes.push(...rr3.alertes)
 
   return { verdict, controle }
 }

@@ -18,11 +18,36 @@ import { createAdminClient } from '@/utils/supabase/admin'
 import { cranEstUnCode, cranNumero } from '@/utils/cran'
 import { lireLesStatutsDeRecette } from '@/utils/statut-recette'
 import { formeDepuisLePlan } from './modele'
+import { bornesLues, servirLeTexteSupport } from '@/utils/lecture/texte-support'
+import type { SegmentMateriau } from '@/utils/deroule/marquage'
 import { enTexte } from './consigne'
 import type { Competence, Forme, Grain, Lieu, StatutRecette } from './types'
 import { COMPETENCES } from './types'
 
 type Admin = ReturnType<typeof createAdminClient>
+
+/**
+ * ⭐ C5-L2 — LE TEXTE D'AUTEUR TEL QU'IL EST SERVI : une tranche, et ce qu'on y
+ * marque. La découpe et les bornes viennent de `utils/lecture/texte-support.ts`,
+ * qui est PUR ; ici on ne fait que joindre l'identité du texte.
+ */
+export interface TexteSupportServi {
+  /** La tranche servie — l'englobant, ou le texte entier quand il n'y en a pas. */
+  texte: string
+  /** Ses bornes dans le texte entier — caractères, base 0, fin exclue. */
+  bornes: readonly [number, number]
+  /**
+   * La tranche découpée en segments marqués et non marqués (C4-L15). ⛔ **La
+   * concaténation des `texte`, dans l'ordre, REND LA TRANCHE À L'OCTET PRÈS.**
+   */
+  segments: SegmentMateriau[]
+  /** Faux quand la localisation tombe hors de l'englobant : on ne marque pas au hasard. */
+  selectionMarquee: boolean
+  /** L'identité du texte, telle qu'elle se dit à l'élève. */
+  auteur: string | null
+  titre: string | null
+  reference: string | null
+}
 
 export interface ContexteDepot {
   depotId: string
@@ -133,6 +158,32 @@ export interface ContexteDepot {
    */
   materiau: string | null
   /**
+   * ⭐⭐ C5-L2 — LE TEXTE SUPPORT : ce que l'élève A SOUS LES YEUX, et rien de plus.
+   *
+   * ⚠️ **IL NE SE CONFOND PAS AVEC `materiau` CI-DESSUS**, et les deux ne
+   *    viennent pas du même endroit :
+   *      · `materiau` est le texte source de la RÉFÉRENCE
+   *        (`exercices_references.source_contenu_id`), **entier**, et il sert le
+   *        pré-relevé mécanique de la Synthèse ;
+   *      · `texteSupport` est le texte que l'INSTANCE désigne
+   *        (`materiau_source_texte_id`), **borné par l'englobant** — « la portion
+   *        du texte AFFICHÉE AUTOUR de la sélection […] l'étendue réellement
+   *        lue » (`02-` §6 B.1).
+   *    ⭐ **C'est le second qui ferme RR3** : « les citations portent leur source
+   *    — la copie de l'élève d'un côté, LE TEXTE SUPPORT de l'autre » (`01-` §12).
+   *    Contrôler l'étiquette contre le texte ENTIER déclarerait « du texte » une
+   *    phrase que l'élève n'a jamais vue.
+   *
+   * ⛔ `null` sur tout exercice d'écriture — il n'y a pas de texte d'auteur, et
+   *    le contrôle RR3 ne peut alors rien affirmer : il le DIT, il ne se tait pas.
+   *
+   * ⭐ **UN SEUL DOMICILE POUR DEUX LECTEURS.** La chaîne n'en lit que `texte`
+   *    (ce qu'elle balise et ce contre quoi elle contrôle) ; l'écran n'en lit
+   *    que `segments` (la tranche, la sélection marquée dedans). Deux lectures
+   *    séparées auraient fait deux requêtes et, un jour, deux tranches.
+   */
+  texteSupport: TexteSupportServi | null
+  /**
    * LE SITE UNIQUE des deux observables de lucidité — « la synthèse en classe »,
    * et pas un autre (`01-` §10 ; `competences/monitoring.md` §4 et §6).
    * Elle se reconnaît à sa ligne de plan : `type_exercice = 'synthese'`, que la
@@ -160,6 +211,10 @@ interface LigneExercice {
   cible_primaire: string | null
   genre: string | null; modes_par_competence: Record<string, string[]> | null
   bonus: boolean; exercice_planifie_id: string | null; reference_id: string | null
+  /** ⭐ C5-L2 — le texte d'auteur DÉSIGNÉ PAR L'INSTANCE, et ses deux bornes. */
+  materiau_source_texte_id: string | null
+  materiau_source_englobant: unknown
+  materiau_source_localisation: unknown
 }
 
 export class DepotIllisible extends Error {}
@@ -178,8 +233,14 @@ export async function lireContexte(admin: Admin, depotId: string): Promise<Conte
     .from('exercices')
     // ⭐ C4-L11 — `cible_primaire` DESCEND JUSQU'ICI. Sans elle dans ce select,
     //    la colonne existerait et ne commanderait rien.
+    // ⭐ C5-L2 — les trois colonnes du TEXTE SUPPORT descendent ici aussi. Sans
+    //    elles dans ce `select`, la lecture ne servirait rien au retour ancré au
+    //    texte. ⚠️ Elles existent en bac à sable ET en prod — vérifié avant
+    //    d'écrire : sélectionner une colonne absente fait échouer la requête
+    //    ENTIÈRE (`42703`), donc « exercice introuvable » pour tout le monde.
     .select('id, type_id, classe_id, lieu, consigne_instanciee, paire_diagnostic, cran, genre, '
-      + 'cible_primaire, modes_par_competence, bonus, exercice_planifie_id, reference_id')
+      + 'cible_primaire, modes_par_competence, bonus, exercice_planifie_id, reference_id, '
+      + 'materiau_source_texte_id, materiau_source_englobant, materiau_source_localisation')
     .eq('id', depot.exercice_id).maybeSingle()
   if (eEx || !exerciceBrut) throw new DepotIllisible(`exercice de ${depotId} : ${eEx?.message ?? NUL}`)
   const exercice = exerciceBrut as unknown as LigneExercice
@@ -257,6 +318,54 @@ export async function lireContexte(admin: Admin, depotId: string): Promise<Conte
           .eq('id', ref.source_contenu_id).maybeSingle()
         const src = srcBrut as unknown as { texte_extrait: string | null } | null
         materiau = src?.texte_extrait ?? null
+      }
+    }
+  }
+
+  // ── ⭐⭐ C5-L2 — LE TEXTE SUPPORT : LA TRANCHE QUE L'ÉLÈVE LIT ─────────────
+  //
+  // UNE SEULE LECTURE, et c'est une JOINTURE : `exercices_textes.contenu_id` →
+  // `scriptorium_contenus.texte_extrait`. Deux requêtes en série auraient doublé
+  // le coût d'un chemin qui est CHAUD — le contrat de latence est de moins de
+  // trois minutes (`01-` §12), et cette lecture est sur le trajet du retour.
+  // ⚠️ Elle n'est PAS sur le trajet de l'attente : `attenteDuDepot`
+  //    (`utils/deroule/mesure.ts`) ne lit que la file, et n'a pas été touchée.
+  //
+  // ⛔ ON NE RECOPIE PAS LE TEXTE SUR L'INSTANCE. `scriptorium_contenus` en est
+  //    le domicile ; l'instance ne porte que des BORNES.
+  //
+  // ⚠️ L'ENGLOBANT, PAS LE TEXTE ENTIER — « c'est l'étendue réellement lue »
+  //    (`02-` §6 B.1). Absent, le texte entier : c'est ce que déclarent les
+  //    instances qui n'en posent pas (« il n'y a pas d'explication de texte sans
+  //    le texte entier », C4-L9).
+  let texteSupport: TexteSupportServi | null = null
+  if (exercice.materiau_source_texte_id) {
+    const { data: txBrut, error: eTx } = await admin
+      .from('exercices_textes')
+      .select('id, auteur, titre, reference, scriptorium_contenus(texte_extrait)')
+      .eq('id', exercice.materiau_source_texte_id).maybeSingle()
+    if (eTx) {
+      // supabase-js NE LÈVE PAS : sans ce test, un texte illisible passerait pour
+      // un exercice sans texte — et le contrôle RR3 se croirait sans objet.
+      console.error(`[chaine] texte support illisible (${exercice.materiau_source_texte_id}) — `
+        + `${eTx.code} ${eTx.message}`)
+    } else {
+      const tx = (txBrut ?? {}) as unknown as Record<string, unknown>
+      const jointe = tx.scriptorium_contenus
+      const contenu = (Array.isArray(jointe) ? jointe[0] : jointe) as
+        { texte_extrait?: string | null } | null | undefined
+      const servi = servirLeTexteSupport(
+        contenu?.texte_extrait ?? null,
+        bornesLues(exercice.materiau_source_englobant),
+        bornesLues(exercice.materiau_source_localisation),
+      )
+      if (servi) {
+        texteSupport = {
+          ...servi,
+          auteur: typeof tx.auteur === 'string' ? tx.auteur : null,
+          titre: typeof tx.titre === 'string' ? tx.titre : null,
+          reference: typeof tx.reference === 'string' ? tx.reference : null,
+        }
       }
     }
   }
@@ -383,6 +492,7 @@ export async function lireContexte(admin: Admin, depotId: string): Promise<Conte
       : (exercice.reference_id ? 'texte' : null),
     reference,
     materiau,
+    texteSupport,
   }
 }
 

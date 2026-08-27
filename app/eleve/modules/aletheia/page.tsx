@@ -10,6 +10,9 @@ import Pastille from '@/components/Pastille'
 import type { StatutAletheia } from './types'
 import { signauxDeLancement } from '@/utils/examens/signal'
 import SignalDeLancement from '@/components/examens/SignalDeLancement'
+import { lireLaPorte } from '@/utils/deroule/acces'
+import { exercicesMaisonDeLEleve } from '@/utils/codex-onglets/liste'
+import type { TonEtat } from '@/utils/codex-onglets/regles'
 
 const BADGE: Record<StatutAletheia, { texte: string; classe: string }> = {
   DRAFT: { texte: 'À commencer', classe: 'bg-parchemin-fonce text-muet' },
@@ -18,6 +21,30 @@ const BADGE: Record<StatutAletheia, { texte: string; classe: string }> = {
   VF_SUBMITTED: { texte: 'Version finale soumise', classe: 'bg-attention-teinte text-attention' },
   FEEDBACK2_READY: { texte: 'Retour final à valider', classe: 'bg-attention-teinte text-attention' },
   DONE: { texte: 'Terminée', classe: 'bg-pigment-teinte text-pigment' },
+}
+
+/**
+ * ⭐⭐ C5-L2 — LES EXERCICES DE LECTURE À FAIRE À LA MAISON.
+ *
+ * ⚠️ **AVANT CE LOT, ILS N'APPARAISSAIENT NULLE PART.** Cette page ne rendait,
+ *    du moteur, que `signauxDeLancement(admin, user.id, 'aletheia')` — les
+ *    passations de CLASSE déjà ouvertes par le professeur —, et la seule liste
+ *    d'exercices maison, celle de Codex, écartait délibérément tout ce qui n'est
+ *    pas `composer` (C4-L6). *Un exercice conçu et assigné était invisible.*
+ *
+ * ⛔ **CE N'EST PAS UN ONGLET** : les onglets de la lecture sont `C5-L4`, et
+ *    `configModules.ts` n'est pas touché. C'est une LISTE, à un endroit qui
+ *    existe déjà, et un `href`.
+ *
+ * ⭐ La lecture, sa porte (`exercices_actif`) et le tri vivent dans le module
+ *    partagé : cet écran n'a AUCUNE règle. Les jetons sont ceux de `globals.css`.
+ */
+const PASTILLE: Record<TonEtat, string> = {
+  a_lire:   'bg-attention-teinte text-attention',
+  a_faire:  'bg-info-teinte text-info',
+  en_cours: 'bg-info-teinte text-info',
+  attente:  'bg-parchemin-fonce text-muet',
+  clos:     'bg-parchemin-fonce text-muet',
 }
 
 function fmtJourMois(iso: string | null | undefined): string {
@@ -71,12 +98,60 @@ export default async function PageAletheia() {
   // C4-L9 — le signal du LANCEMENT (jamais celui de l'assignation, qui est
   // C6-L2). Lecture par le SERVEUR, filtrée sur `eleve_id`.
   const signaux = await signauxDeLancement(admin, user.id, 'aletheia')
+  // ⭐ C5-L2 — la maison, enfin. ⚠️ La classe en contexte borne la liste
+  //    (« dans les modules on reste par classe », `01-` §2) ; la porte, elle,
+  //    est `exercices_actif` et se lit DANS le module, jamais ici.
+  const [porteExercices, exercices] = await Promise.all([
+    lireLaPorte(admin),
+    exercicesMaisonDeLEleve(admin, user.id, active.classe_id, 'aletheia'),
+  ])
 
   return (
     <div className="space-y-8 pb-8">
       <Link href="/eleve" className="text-sm text-muet hover:text-encre-douce">← Retour</Link>
 
       <SignalDeLancement signaux={signaux} />
+
+      {/* ── ⭐⭐ C5-L2 — CE QUI SE FAIT À LA MAISON, À L'ÉCRAN ──────────────
+          « Lecture formative, à la maison — Aletheia — ÉCRAN, y compris les
+          analyses longues » (`06-` §1). ⛔ Le bloc ne s'affiche que s'il y a
+          quelque chose : cette page porte d'abord les LIVRES, et un encart vide
+          au-dessus d'eux ferait croire à une panne. Le vide s'explique là où il
+          se remarque — sous les livres, quand la porte est fermée. */}
+      {exercices.length > 0 && (
+        <section className="space-y-3">
+          <h2 className="font-titre text-xl text-encre">Mes exercices de lecture</h2>
+          <p className="font-corps text-sm text-muet">
+            Ce que tu travailles <strong>à la maison</strong>, à l&apos;écran.
+          </p>
+          <div className="space-y-2">
+            {exercices.map((e) => (
+              <Link
+                key={e.depotId}
+                href={e.href}
+                className="flex items-center justify-between gap-3 bg-surface border border-bordure rounded-xl px-4 py-3 hover:border-pigment transition-colors"
+              >
+                <p className="text-sm font-medium text-encre truncate min-w-0">{e.titre}</p>
+                <span className={`text-xs px-2 py-0.5 rounded-full shrink-0 ${PASTILLE[e.etat.ton]}`}>
+                  {e.etat.libelle}
+                </span>
+              </Link>
+            ))}
+          </div>
+        </section>
+      )}
+
+      {/* ⭐ UN VIDE EXPLIQUÉ, JAMAIS UN ÉCRAN QUI SE TAIT (`07-` §5 ; `06-` §5).
+          ⚠️ Seulement quand la PORTE est fermée : « aucun exercice » n'est pas
+          une nouvelle sur une page qui porte d'abord des livres, mais « ils ne
+          sont pas encore ouverts » en est une — et l'élève n'a pas à connaître
+          le nom d'un interrupteur pour comprendre pourquoi son écran est vide. */}
+      {exercices.length === 0 && !porteExercices.exercicesActifs && (
+        <p className="font-corps text-sm text-muet">
+          Les exercices de lecture ne sont pas encore ouverts. Ton professeur
+          t&apos;indiquera quand ils commencent.
+        </p>
+      )}
 
       {livres.length === 0 ? (
         <CarteMessage>Aucun livre ne t&apos;est assigné pour le moment.</CarteMessage>

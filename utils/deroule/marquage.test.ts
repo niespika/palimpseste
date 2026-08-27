@@ -18,7 +18,7 @@ import fs from 'node:fs'
 import path from 'node:path'
 import {
   regimeDeMarquage, motsAMarquer, segmenterMateriau, marquerLeMateriau,
-  MOTS_MAX_PAR_CANDIDAT,
+  segmenterParIntervalles, MOTS_MAX_PAR_CANDIDAT,
 } from './marquage'
 
 // ── Les règles TELLES QUE LA SOURCE LES ÉCRIT ───────────────────────────────
@@ -298,4 +298,50 @@ test('SEGMENTS — le `**` du matériau n\'est PAS du balisage : marquer n\'est 
   const seg = marquerLeMateriau(brut, regle(1), { candidats: ['manque'] })!
   assert.equal(seg.map((s) => s.texte).join(''), brut)
   assert.deepEqual(seg.filter((s) => s.marque).map((s) => s.texte), ['manque'])
+})
+
+// ============================================================================
+// ⭐ C5-L2 — LA MÊME DÉCOUPE, À PARTIR DE BORNES DÉJÀ CONNUES.
+// ----------------------------------------------------------------------------
+// La lecture n'a rien à chercher : `exercices.materiau_source_localisation`
+// porte la sélection, en caractères. ⛔ Ce n'est PAS un second segmenteur —
+// `segmenterMateriau` l'appelle, et la garantie de partition s'écrit une fois.
+// ============================================================================
+
+const PROSE = 'Le garant manque ici, alors que la conclusion, elle, tient.\nEt la suite.'
+
+test('⛔ C5-L2 — la partition tient : la concaténation REND le texte à l’octet près', () => {
+  for (const iv of [
+    [], [[0, 3]], [[3, 10], [20, 30]], [[0, PROSE.length]],
+    [[5, 12], [10, 18]],            // chevauchement
+    [[12, 20], [3, 9]],             // désordre
+    [[-5, 4]], [[60, 999]],         // débordements
+  ] as Array<Array<[number, number]>>) {
+    const segs = segmenterParIntervalles(PROSE, iv)
+    assert.equal(segs.map((s) => s.texte).join(''), PROSE, JSON.stringify(iv))
+  }
+})
+
+test('deux intervalles qui se touchent font UN seul segment marqué', () => {
+  const segs = segmenterParIntervalles('abcdef', [[1, 3], [3, 5]])
+  assert.deepEqual(segs, [
+    { texte: 'a', marque: false },
+    { texte: 'bcde', marque: true },
+    { texte: 'f', marque: false },
+  ])
+})
+
+test('un intervalle vide ou inversé est ignoré — on ne devine pas', () => {
+  assert.deepEqual(segmenterParIntervalles('abc', [[2, 2]]), [{ texte: 'abc', marque: false }])
+  assert.deepEqual(segmenterParIntervalles('abc', [[3, 1]]), [{ texte: 'abc', marque: false }])
+})
+
+test('un texte vide ne rend AUCUN segment', () => {
+  assert.deepEqual(segmenterParIntervalles('', [[0, 2]]), [])
+})
+
+test('⭐ `segmenterMateriau` PASSE PAR LUI — le comportement de C4-L15 est intact', () => {
+  const parSuites = segmenterMateriau(PROSE, [['garant']])
+  assert.equal(parSuites.map((s) => s.texte).join(''), PROSE)
+  assert.deepEqual(parSuites.filter((s) => s.marque).map((s) => s.texte), ['garant'])
 })

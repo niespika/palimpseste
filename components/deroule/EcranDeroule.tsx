@@ -132,6 +132,38 @@ export function EcranDeroule({ vue }: { vue: VueDuDeroule }) {
         </Depliable>
       )}
 
+      {/* ── ⭐⭐ C5-L2 — LE TEXTE D'AUTEUR, QUAND L'EXERCICE EN PORTE UN ────
+          « Lecture formative, à la maison — Aletheia — ÉCRAN, y compris les
+          analyses longues » (`06-` §1). Avant ce lot, l'élève lisait « explique
+          cette phrase de Descartes » et ne voyait AUCUNE phrase de Descartes :
+          l'écran servait le matériau de la BANQUE, jamais celui de l'instance.
+
+          ⭐ Ce qui s'affiche est l'ENGLOBANT — « l'étendue réellement lue »
+          (`02-` §6 B.1) — et la SÉLECTION du professeur est marquée dedans, du
+          même geste que les candidats du cran 1 : ⛔ le texte n'est pas retouché
+          d'un octet, la concaténation des segments EST la tranche.
+
+          ⚠️ IL SE PLACE AVANT LES CAS, ET C'EST L'ORDRE DE LA LECTURE : on lit
+          le texte, puis on répond à ce qu'on en demande. */}
+      {vue.texteSupport && (
+        <section className="rounded-lg border border-bordure bg-surface p-4">
+          <h2 className="font-marque text-sm uppercase tracking-wide text-muet-clair">
+            Le texte
+          </h2>
+          {(vue.texteSupport.auteur || vue.texteSupport.titre || vue.texteSupport.reference) && (
+            <p className="mt-1 font-corps text-sm italic text-muet">
+              {[vue.texteSupport.auteur, vue.texteSupport.titre, vue.texteSupport.reference]
+                .filter(Boolean).join(' · ')}
+            </p>
+          )}
+          <MateriauMarque
+            segments={vue.texteSupport.segments}
+            className="mt-3 rounded border border-bordure bg-parchemin-fonce p-3
+                       font-corps text-base leading-relaxed text-encre"
+          />
+        </section>
+      )}
+
       {/* ── TEMPS 2 — ÉCRIRE ───────────────────────────────────────────── */}
       {vue.cas.map((c, i) => (
         <div key={c.ordre} className="space-y-3">
