@@ -241,8 +241,39 @@ async function semer() {
   if (eDepot) throw new Error(`dépôt : ${eDepot.message}`)
   seme.depots.push(depot.id)
 
-  note(`décor : classe ${classe.id} · instance ${ex.id} · dépôt ${depot.id}`)
-  return { eleve, classeId: classe.id, exercice: ex.id, depot: depot.id, referenceId: verdict.referenceId }
+  // ⭐⭐ UNE SECONDE INSTANCE — CELLE OÙ LA PORTE ÉCARTE **TOUT**. Elle n'est pas
+  //    théorique : `473b2c25` en bac à sable élit exactement ces deux couples et
+  //    rien d'autre. Quand la porte les refuse tous les deux, il ne reste AUCUNE
+  //    compétence à mesurer — et il faut que la chaîne le dise proprement plutôt
+  //    que de lever. *Le cas ne coûte AUCUN appel, par construction.*
+  const { data: exVide, error: eVide } = await admin.from('exercices').insert({
+    type_id: type.id, classe_id: classe.id, statut: 'assigne',
+    lieu: 'maison', cran: '8',
+    consigne_instanciee: `${MARQUE} — la même, mais qui n'élit QUE les deux compétences `
+      + 'dont l\'instrument réceptif n\'existe pas.',
+    modes_par_competence: { argumentation: ['expliquer'], structure: ['expliquer'] },
+    cible_primaire: 'argumentation',
+    materiau_source_provenance: 'texte_auteur',
+    materiau_source_support: 'extrait',
+    materiau_source_texte_id: TEXTE_ID,
+    materiau_source_englobant: ENGLOBANT,
+    materiau_source_localisation: LOCALISATION,
+    reference_id: verdict.referenceId,
+  }).select('id').single()
+  if (eVide) throw new Error(`instance « tout écarté » : ${eVide.message}`)
+  seme.exercices.push(exVide.id)
+  const { data: depotVide, error: eDepotVide } = await admin.from('exercices_depots').insert({
+    eleve_id: eleve, exercice_id: exVide.id, origine: 'prof', statut: 'assigne',
+    assigne_at: new Date().toISOString(),
+  }).select('id').single()
+  if (eDepotVide) throw new Error(`dépôt « tout écarté » : ${eDepotVide.message}`)
+  seme.depots.push(depotVide.id)
+
+  note(`décor : classe ${classe.id} · 2 instances · 2 dépôts`)
+  return {
+    eleve, classeId: classe.id, exercice: ex.id, depot: depot.id,
+    exerciceVide: exVide.id, depotVide: depotVide.id, referenceId: verdict.referenceId,
+  }
 }
 
 // ── B. ② LA PORTE DE MODE ───────────────────────────────────────────────────
@@ -522,6 +553,74 @@ async function laCouture(d) {
   }
 }
 
+// ── D-bis. QUAND LA PORTE ÉCARTE TOUT ───────────────────────────────────────
+async function toutEcarte(d) {
+  titre('D-bis. Quand la porte écarte TOUT — la chaîne dégrade-t-elle proprement ?')
+
+  // ⚠️ CE CAS EXISTE EN BASE, il n'est pas construit pour la démonstration :
+  //    l'exercice `473b2c25` du bac à sable élit exactement ces deux couples.
+  const ctx = await lireContexte(admin, d.depotVide)
+  const { mesurees, ecartees } = competencesDeLExercice(ctx)
+  dire(mesurees.length === 0,
+    `⭐ AUCUNE compétence ne passe la porte : ${mesurees.length} mesurée(s), ${ecartees.length} écartée(s)`)
+
+  const frais = await lireDepotMaison(admin, d.depotVide, d.eleve)
+  if (!frais) { dire(false, 'le dépôt « tout écarté » n\'est pas lisible'); return }
+  await enregistrerLaRestitution(admin, frais, 'Une restitution quelconque.', new Date().toISOString())
+  const apres = await lireDepotMaison(admin, d.depotVide, d.eleve)
+  await enregistrerLesConditions(admin, apres, 'temps_mis', new Date().toISOString())
+  const vue = await chargerLeDeroule(admin, d.depotVide, d.eleve,
+    { ouvert: true, delaiVfJours: 3, atelier: 'aletheia' })
+  // ⭐ CE QUE L'ÉCRAN DEMANDE À L'ÉLÈVE quand rien ne sera mesuré.
+  note(`l'écran demande la confiance sur : ${(vue?.competencesDeLaConfiance ?? []).join(', ') || '(rien)'}`)
+  if (vue?.competencesDeLaConfiance?.length) {
+    await enregistrerLaConfiance(admin, apres,
+      Object.fromEntries(vue.competencesDeLaConfiance.map((c) => [c, 'moyennement_sur'])),
+      vue.competencesDeLaConfiance, new Date().toISOString())
+  }
+  const avant = await lireDepotMaison(admin, d.depotVide, d.eleve)
+  const remis = await remettre(admin, avant, 'v1',
+    { texte: 'Descartes doute, puis trouve une certitude.\n\nElle tient tant qu\'il pense.',
+      tagDuree: null, telemetrie: null }, new Date().toISOString())
+  dire(remis.ok, `la v1 est remise : ${remis.ok ? 'oui' : remis.message}`)
+
+  if (!AVEC_CHAINE) { note('⊘ `--avec-chaine` absent : la chaîne ne part pas sur ce cas non plus.'); return }
+
+  let bilan = null
+  try {
+    const config = lireConfig()
+    await mettreEnFile(admin, d.depotVide, 'mesure_v1')
+    const jobs = await reclamerJobs(admin, { limite: 5, bailMs: config.bailMs, depotId: d.depotVide })
+    const sorties = await tourDeFile(admin, jobs.filter((j) => j.depot_id === d.depotVide), config)
+    bilan = sorties[0]?.bilan ?? null
+    dire(!!bilan, `⭐⭐ LA CHAÎNE NE LÈVE PAS quand il ne reste rien à mesurer : ${bilan ? 'bilan rendu' : sorties[0]?.erreur}`)
+  } catch (e) {
+    dire(false, `⛔ LA CHAÎNE A LEVÉ sur un dépôt dont tout est écarté : ${e.message}`)
+    return
+  }
+  if (!bilan) return
+
+  const couts = await lire('api_couts', admin.from('api_couts')
+    .select('id', { count: 'exact', head: false }).eq('depot_id', d.depotVide).limit(100))
+  dire((couts ?? []).length === 0,
+    `⭐⭐⭐ ZÉRO APPEL PAYÉ SUR TOUT LE DÉPÔT — ${(couts ?? []).length} ligne(s) d'\`api_couts\` : `
+    + 'un exercice de lecture qui n\'élit que des couples non couverts ne coûte plus rien')
+  const mes = await lire('competences_mesures', admin.from('competences_mesures')
+    .select('competence').eq('depot_id', d.depotVide))
+  dire((mes ?? []).length === 0, `et AUCUNE mesure : ${(mes ?? []).length}`)
+  dire(bilan.alertes.some((a) => /aucun squelette|aucune compétence/i.test(a)),
+    '⭐ et la chaîne LE DIT plutôt que de se taire : ' 
+    + (bilan.alertes.find((a) => /aucun squelette|aucune compétence/i.test(a)) ?? '(aucune alerte)'))
+
+  const jobs2 = await lire('exercices_jobs', admin.from('exercices_jobs')
+    .select('etape, statut, dernier_message').eq('depot_id', d.depotVide))
+  for (const j of jobs2 ?? []) note(`job ${j.etape} · ${j.statut} · ${String(j.dernier_message ?? '—').slice(0, 220)}`)
+  const m2 = (jobs2 ?? []).map((j) => j.dernier_message ?? '').join(' ')
+  dire(/2 écartée\(s\)/.test(m2) && /argumentation/.test(m2) && /structure/.test(m2),
+    '⭐⭐ et le message persisté nomme LES DEUX compétences écartées — le professeur sait pourquoi '
+    + 'cette copie n\'a pas de retour')
+}
+
 // ── E. LE NETTOYAGE ─────────────────────────────────────────────────────────
 async function nettoyer() {
   titre('E. Le nettoyage — tout ce que la recette a semé est retiré')
@@ -578,6 +677,7 @@ try {
   const { ctx } = await laPorte(decor)
   await laTranche(decor, ctx)
   await laCouture(decor)
+  await toutEcarte(decor)
 } catch (e) {
   dire(false, `INTERROMPU : ${e.message}`)
   console.error(e)

@@ -6861,7 +6861,7 @@ Relevé : `RELEVE_C5_L3_2026-08-27.md`.
 
 ### Ce qui est PROUVÉ en séance — pour ne pas le rejouer
 
-Tout ci-dessous est éprouvé par `scripts/recette/reception-c5l3.mjs` *(bac à sable, **30 verts, 0
+Tout ci-dessous est éprouvé par `scripts/recette/reception-c5l3.mjs` *(bac à sable, **37 verts, 0
 rouge**)*, ou par les tests unitaires. **Le script se rejoue à la prochaine revue** :
 
 ```
@@ -6913,6 +6913,16 @@ interruption. Le décor se reconnaît à sa classe, `nom LIKE 'RECETTE-C5L3%'`. 
   sur un dépôt réel, et écrire sa mesure ? »* — **oui**, quatre coutures nommées et traversées
   (`modes_par_competence` · `reference_id → contenu` · `exercices_squelettes` ·
   `competences_mesures.modes`). Latence **56,4 s < 180 s**.
+
+- [x] **C5L3-18 · ⭐⭐ QUAND LA PORTE ÉCARTE TOUT, LA CHAÎNE DÉGRADE PROPREMENT.** *Le cas n'est pas
+  théorique : `473b2c25` en bac à sable n'élit QUE `argumentation:[expliquer]` et
+  `structure:[expliquer]`.* Éprouvé sur un dépôt réel *(section D-bis du script)* : **0 compétence
+  passe**, la chaîne **ne lève pas**, **0 ligne d'`api_couts` sur tout le dépôt**, 0 mesure, et elle
+  **le dit** — *« aucun squelette : aucune compétence n'est entrée dans la chaîne — pas de retour
+  engendré (clause granulaire) »*. ⭐ **L'écran ne demande la confiance de l'élève sur RIEN**, ce qui
+  est juste. ⭐⭐ **Et sur CE chemin-là le professeur VOIT le motif** : sans retour, l'état est
+  `sans_retour`, qui sert `motif` — les deux compétences écartées sont nommées. *C'est le cas MIXTE
+  (celui de la prod) qui se tait — voir `C5L3-11-bis`.*
 
 ### Ce qui RESTE à jouer — avec sa condition de reprise
 
