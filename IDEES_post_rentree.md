@@ -787,3 +787,27 @@ portent le même défaut, et C4-L6 est clos** : `app/eleve/modules/codex/passati
 de tout le sous-arbre : deux repères « principal » dans une page qui n'en a qu'un **s'entendent** au
 lecteur d'écran, et les deux largeurs de colonne se concurrencent.* **La correction est d'un
 caractère par balise, et elle est la même que celle qui vient d'être jouée à côté.**
+
+---
+
+## 28/08 — deux restes laissés par la réparation de la porte du retour d'examen
+
+**1. La règle « atelier d'une instance de classe » existe en TROIS exemplaires.** La version PURE et
+testée est désormais `atelierDUneInstanceDeClasse` (`utils/codex-onglets/regles.ts`) — *la ligne de
+plan d'abord, le mode ensuite*. Les deux autres n'ont pas été repris, délibérément :
+`moduleDeLInstance` (`utils/examens/signal.ts`, cœur testé de C4-L9) et le filtre en ligne de
+`passationsDeClasse` (`utils/codex-onglets/liste.ts`, autre côté). ⚠️ *« Un second exemplaire
+divergerait au premier correctif »* — et cette règle-ci est précisément celle qu'il ne faut pas
+laisser diverger : l'inverser range l'explication de texte dans Codex.
+
+**2. ⛔ `etatDeLExercice` dit encore « retour à lire » sur un retour DÉJÀ LU — côté MAISON.** Son
+`case 'retour_publie'` rend `a_lire` **sans regarder `lu`** ; la première clause
+(`retour?.publie && !retour.lu`) ne le rattrape pas. Un exercice formatif dont l'élève a validé sa
+lecture garde donc son étiquette « retour à lire » sous l'onglet Exercices **jusqu'à la remise de la
+version finale** — un dépôt maison reste à `retour_publie` jusqu'à `vf_remis`.
+⭐ *Le défaut a été trouvé au smoke du 27/08 sur le versant CLASSE, où il a été fermé par une règle
+propre (`etatDExamenDeClasse`) : la séquence de classe s'arrête à `retour_publie`, lire est le
+dernier geste, donc `clos`.* ⚠️ **Côté maison la réponse n'est pas la même et c'est une décision :**
+après lecture, il reste une version finale à écrire — l'étiquette juste est sans doute
+« version finale à écrire » (ton `a_faire`), pas « terminé ». La corriger demande de faire entrer le
+`lieu` dans la fonction, ou de lui donner sa jumelle. **Non fait : hors du geste demandé.**

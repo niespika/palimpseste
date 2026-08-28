@@ -39,8 +39,10 @@ import 'server-only'
 
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { lireLaPorte } from '@/utils/deroule/acces'
+import { passationOuverteAEleve } from '@/utils/passation/acces'
 import {
-  atelierDUnFormatif, comparerLignes, etatDeLExercice, hrefDeLaPassationProf, hrefDuDeroule,
+  atelierDUneInstanceDeClasse, atelierDUnFormatif, comparerLignes, etatDeLExercice,
+  etatDExamenDeClasse, hrefDeLaPassationEleve, hrefDeLaPassationProf, hrefDuDeroule,
   titreDeLaConsigne, visibleDansLaClasse, type Atelier, type EtatDeLigne,
 } from './regles'
 
@@ -183,6 +185,194 @@ async function retoursDesDepots(
     })
   }
   return out
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// CÔTÉ ÉLÈVE — l'onglet Examens : ce qu'il a PASSÉ en classe, et son retour.
+// ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * ⭐⭐ LE TROU QUE CETTE SECTION BOUCHE, ET IL A ÉTÉ MESURÉ EN PRODUCTION.
+ *
+ * `app/eleve/modules/{codex,aletheia}/passation/[depotId]` — l'écran qui rend
+ * le bloc « Ton retour » et le bouton « J'ai lu mon retour » — **n'était lié
+ * depuis nulle part une fois la copie remise** :
+ *
+ *   · l'onglet EXERCICES filtre `lieu = 'maison'` en dur : un examen de classe
+ *     en est exclu par construction (`exercicesMaisonDeLEleve`, ci-dessus) ;
+ *   · l'onglet EXAMENS ne portait que `SignalDeLancement`, qui exige
+ *     `statut = 'ouvert'` et **s'éteint à la remise** (`utils/examens/signal.ts`
+ *     le dit en toutes lettres : « il ouvre l'entrée, il ne suit pas le
+ *     déroulé ») — plus la synthèse en classe, qui est autre chose ;
+ *   · `utils/retours-lus.ts` ne lit QUE `codex_travaux` : la passation n'y a
+ *     jamais eu de source.
+ *
+ * ⭐ MESURE DU 27/08, EN PROD : quatorze retours publiés, `lu_at` NULL sur les
+ *    quatorze. **Aucun élève n'avait lu, parce qu'il n'y avait rien à cliquer.**
+ *    « Un écran sans porte n'existe pas » (`07-` §2, C4-L6) — celui-ci en avait
+ *    une pour le LANCEMENT, aucune pour le RETOUR.
+ *
+ * ⚠️ CE N'EST PAS UN TROISIÈME SIGNAL. `SignalDeLancement` reste seul maître du
+ *    MOMENT (`ouvert`) ; cette liste est l'INVENTAIRE de ce qui est passé. Les
+ *    deux ne se recouvrent jamais — voir `STATUTS_APRES_REMISE`.
+ */
+
+/**
+ * ⚠️ NI `assigne` NI `ouvert`, ET LES DEUX MOTIFS SONT DIFFÉRENTS.
+ *
+ *   · `ouvert` est le domaine de `SignalDeLancement` : l'y remettre afficherait
+ *     la MÊME passation DEUX FOIS sur la MÊME page, une fois en signal vert et
+ *     une fois en ligne de liste.
+ *   · `assigne` n'a pas encore été ouvert par le professeur, et « rien n'est
+ *     relisible avant que le professeur ait ouvert le dépôt » (`02-` §6.D) :
+ *     le lister révélerait à l'élève un examen que son professeur n'a pas
+ *     lancé.
+ *
+ * ⚠️ `retire` EST ABSENT COMME PARTOUT AILLEURS : un lien vers un dépôt retiré
+ *    mène à `notFound()`, c'est-à-dire à une porte cassée.
+ *
+ * ⚠️ `abandonne` EST PRÉSENT, ET C'EST VOULU : « `retire` est une DÉCISION DU
+ *    PROFESSEUR, `abandonne` un NON-GESTE DE L'ÉLÈVE, et les deux ne se
+ *    confondent pas » (§1.1). L'élève a le droit de lire que sa copie est
+ *    restée sans suite.
+ */
+const STATUTS_APRES_REMISE = ['v1_remis', 'retour_publie', 'vf_remis', 'clos', 'abandonne'] as const
+
+export interface ExamenDeClasse {
+  depotId: string
+  titre: string
+  etat: EtatDeLigne
+  atelier: Atelier
+  /** La classe de l'instance — NULLABLE en base, et servie telle quelle. */
+  classeId: string | null
+  /** Où l'élève entre — l'écran de C4-L4, et son bloc « Ton retour ». */
+  href: string
+}
+
+/**
+ * Les passations en classe DÉJÀ REMISES de cet élève, avec l'état de leur
+ * retour. Lecture unique, partagée par l'onglet Examens et par le tableau de
+ * bord — « un second exemplaire divergerait au premier correctif ».
+ *
+ * ⛔ LES DEUX TABLES INTERDITES NE SONT PAS JOINTES : ni les SQUELETTES, ni la
+ *    MÉTACOGNITION (`07-` §1). Les seuls voisins lus sont `exercices` (la
+ *    consigne), `scriptorium_exercices_planifies` (l'atelier) et
+ *    `exercices_retours` (publié / lu).
+ *
+ * ⚠️ LECTURE PAR LE CLIENT ADMIN, FILTRÉE SUR `eleve_id` DANS LE CODE : le
+ *    moteur ne porte AUCUNE policy élève, et ce correctif n'en ouvre pas.
+ */
+async function passationsRemisesDeLEleve(
+  admin: Admin, eleveId: string,
+): Promise<ExamenDeClasse[]> {
+  const { data, error } = await admin
+    .from('exercices_depots')
+    .select('id, statut, exercices!inner(id, lieu, classe_id, consigne_instanciee, '
+      + 'modes_par_competence, exercice_planifie_id)')
+    .eq('eleve_id', eleveId)
+    .eq('exercices.lieu', 'classe')
+    .in('statut', STATUTS_APRES_REMISE as unknown as string[])
+  if (error) {
+    // supabase-js NE LÈVE PAS. Une lecture ratée n'est pas « aucun examen ».
+    console.error(`[codex-onglets] passations remises illisibles — `
+      + `${error.code} ${error.message}`)
+    return []
+  }
+  const rows = (data ?? []) as unknown as Ligne[]
+  if (rows.length === 0) return []
+
+  // L'atelier : la ligne de plan d'abord, le mode ensuite (`regles.ts`).
+  const planifieIds = [...new Set(rows
+    .map((d) => txt(lig(un(d.exercices)).exercice_planifie_id)).filter(Boolean))]
+  const typeParLigne = new Map<string, string>()
+  if (planifieIds.length > 0) {
+    const { data: lignes, error: e2 } = await admin
+      .from('scriptorium_exercices_planifies').select('id, type_exercice').in('id', planifieIds)
+    if (e2) {
+      console.error(`[codex-onglets] lignes de plan (examens élève) illisibles — `
+        + `${e2.code} ${e2.message}`)
+    }
+    for (const l of (lignes ?? []) as unknown as Ligne[]) typeParLigne.set(txt(l.id), txt(l.type_exercice))
+  }
+
+  const retours = await retoursDesDepots(admin, rows.map((d) => txt(d.id)))
+
+  return rows.map((d) => {
+    const ex = lig(un(d.exercices))
+    const atelier = atelierDUneInstanceDeClasse(
+      typeParLigne.get(txt(ex.exercice_planifie_id)) ?? null, ex.modes_par_competence,
+    )
+    return {
+      depotId: txt(d.id),
+      titre: titreDeLaConsigne(ex.consigne_instanciee, 'Passation en classe'),
+      // ⚠️ PAS `etatDeLExercice` : la séquence de classe s'arrête à
+      //    `retour_publie`, et son `case` rend `a_lire` sans regarder `lu`.
+      etat: etatDExamenDeClasse(txt(d.statut), retours.get(txt(d.id)) ?? null),
+      atelier,
+      classeId: (ex.classe_id as string | null) ?? null,
+      href: hrefDeLaPassationEleve(atelier, txt(d.id)),
+    }
+  })
+}
+
+/**
+ * L'onglet EXAMENS de l'élève, dans l'atelier demandé et pour la classe en
+ * contexte.
+ *
+ * ⭐ LA LISTE NAÎT DERRIÈRE LES **DEUX** PORTES, LE PLUS FERMÉ GAGNANT —
+ *    `passationOuverteAEleve`, exactement celle que `garderEleve` applique à
+ *    l'écran de passation lui-même. **Un lien qui mènerait à une page fermée
+ *    est un lien qui promet une porte close** : l'écran répondrait « Cet écran
+ *    n'est pas encore ouvert ».
+ *    ⚠️ CONSÉQUENCE POUR LE PROFESSEUR, ET ELLE EST RÉELLE : éteindre
+ *    `passation_classe_actif` après un examen retire aussi aux élèves l'accès
+ *    à leur retour. C'est le comportement de l'écran depuis C4-L4 ; cette liste
+ *    ne fait que ne pas mentir sur lui.
+ *
+ * ⚠️ LA LECTURE SE FAIT ICI, PAS AU SITE D'APPEL : « une garde qu'on peut
+ *    oublier en écrivant un second écran n'est pas une garde. »
+ */
+export async function examensEnClasseDeLEleve(
+  admin: Admin, eleveId: string, classeEnContexte: string, atelier: Atelier = 'codex',
+): Promise<ExamenDeClasse[]> {
+  if (!(await passationOuverteAEleve(admin))) return []
+  const tous = await passationsRemisesDeLEleve(admin, eleveId)
+  return tous
+    .filter((e) => e.atelier === atelier && visibleDansLaClasse(e.classeId, classeEnContexte))
+    // ⚠️ DÉPARTAGE SUR UNE CLÉ UNIQUE : `comparerLignes` seul rend 0 pour deux
+    //    lignes de même ton (l'échéance d'une passation de classe est toujours
+    //    absente ici), et l'ordre deviendrait celui que la base a bien voulu
+    //    servir — il changerait d'un rechargement à l'autre. Leçon de
+    //    `passationsDeClasse`, ci-dessous.
+    .sort((a, b) => comparerLignes(
+      { ton: a.etat.ton, echeance: null }, { ton: b.etat.ton, echeance: null },
+    ) || a.depotId.localeCompare(b.depotId))
+}
+
+/**
+ * ⭐ CE QUE LA TUILE « À FAIRE » DU TABLEAU DE BORD DOIT ALLUMER : les retours
+ *    d'examen PUBLIÉS et NON LUS, toutes classes confondues.
+ *
+ * « Le retour devient visible quand il coche la case de publication, AVEC
+ * OBLIGATION POUR L'ÉLÈVE DE VALIDER SA LECTURE » (`02-` §6.D, étape 17) — une
+ * obligation que rien ne rappelait à l'élève.
+ *
+ * ⚠️ LE FILTRE EST L'ÉTAT, PAS LE STATUT DU DÉPÔT. `etatDeLExercice` fait
+ *    passer l'obligation de lecture DEVANT le statut : un retour publié non lu
+ *    se dit `a_lire` même si la version finale est déjà partie. Filtrer sur
+ *    `statut === 'retour_publie'` raterait ce cas.
+ *
+ * ⚠️ LA MÊME PORTE QUE LA LISTE, et pour la même raison : la tuile porte un
+ *    lien, et un lien vers une porte close est une promesse cassée.
+ */
+export async function retoursDExamenALire(
+  admin: Admin, eleveId: string,
+): Promise<ExamenDeClasse[]> {
+  if (!(await passationOuverteAEleve(admin))) return []
+  const tous = await passationsRemisesDeLEleve(admin, eleveId)
+  return tous
+    .filter((e) => e.etat.ton === 'a_lire')
+    .sort((a, b) => a.depotId.localeCompare(b.depotId))
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

@@ -11,6 +11,7 @@ import { jourDansFuseau, formatJour, formatInstant } from '@/utils/fuseau'
 import { lireFuseau } from '@/utils/fuseau-serveur'
 import { chargerStatsRevision } from './modules/quazian/actions'
 import { livresPourClasse, toutesSemainesDone } from './modules/aletheia/data'
+import { retoursDExamenALire } from '@/utils/codex-onglets/liste'
 import Pastille, { type ModuleSceau } from '@/components/Pastille'
 
 // Dates PURES (bornes de semaine) → UTC, agnostique au fuseau.
@@ -243,6 +244,21 @@ export default async function TableauDeBordEleve() {
     }
   }
 
+  // ── Retours d'examen à lire (passation en classe) ───────────────────────────
+  // ⭐⭐ CE QUE CETTE LECTURE RÉPARE, ET IL A ÉTÉ MESURÉ EN PROD LE 27/08 :
+  //    quatorze retours d'examen diagnostique PUBLIÉS, `lu_at` NULL sur les
+  //    quatorze. « Le retour devient visible quand il coche la case de
+  //    publication, AVEC OBLIGATION POUR L'ÉLÈVE DE VALIDER SA LECTURE »
+  //    (`02-` §6.D, étape 17) — et RIEN ne rappelait cette obligation à l'élève :
+  //    `utils/retours-lus.ts` ne lit que `codex_travaux` (la synthèse en classe),
+  //    jamais `exercices_retours`. La tuile « à faire » ne s'allumait donc jamais.
+  //
+  // ⚠️ LA PORTE EST LUE DANS `retoursDExamenALire`, pas ici : la tuile porte un
+  //    lien, et un lien vers un écran fermé est une promesse cassée.
+  const examensALire = enContexte.length > 0
+    ? await retoursDExamenALire(admin, user!.id)
+    : []
+
   // ── Modules accessibles (pour « Mes mondes ») ───────────────────────────────
   // Accès & classes · L1 — les modules DES CLASSES EN CONTEXTE : en état classe,
   // seuls ceux de CETTE classe ; en état « Toutes », `enContexte` porte toutes
@@ -278,6 +294,31 @@ export default async function TableauDeBordEleve() {
     badge: f.enRetard ? { texte: 'en retard', ton: 'retard' } : { texte: 'à rendre', ton: 'attention' },
     pistes: f.pistes, classe: f.classe,
   })
+  for (const e of examensALire) {
+    // Accès & classes · L1 — on ne dérive AUCUNE tâche d'un module hors
+    // périmètre. ⚠️ `exercices.classe_id` est NULLABLE (`c4_l1_schema.sql`) :
+    // une instance sans classe n'est pas « l'autre classe », elle passe dès
+    // qu'UNE classe en contexte a le module — même règle que
+    // `visibleDansLaClasse`, qui la sert déjà côté onglet.
+    const accessible = e.classeId == null
+      ? uneClasseA(e.atelier)
+      : enContexte.some((i) => i.classe_id === e.classeId) && aModule(e.classeId, e.atelier)
+    if (!accessible) continue
+    taches.push({
+      cle: `examen-retour-${e.depotId}`,
+      module: e.atelier,
+      titre: 'Retour d’examen à lire',
+      detail: e.titre,
+      href: e.href,
+      cta: 'Lire mon retour',
+      // Au-dessus d'un fragment en retard (90) : c'est une OBLIGATION, pas une
+      // échéance — et elle reste sous les deux séances « en direct » (100, 95),
+      // qui se passent, elles, à la minute.
+      urgence: 92,
+      badge: { texte: 'à lire', ton: 'attention' },
+      classe: enContexte.find((i) => i.classe_id === e.classeId)?.classe_nom,
+    })
+  }
   if (cartesDues > 0) taches.push({
     cle: 'cartes', module: 'quazian', titre: 'Flashcards à réviser',
     detail: `${cartesDues} carte${cartesDues > 1 ? 's' : ''} à revoir aujourd'hui.`,

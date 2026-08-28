@@ -1,8 +1,8 @@
 import { test, describe } from 'node:test'
 import assert from 'node:assert/strict'
 import {
-  atelierDUnFormatif, comparerLignes, etatDeLExercice, titreDeLaConsigne,
-  visibleDansLaClasse,
+  atelierDUneInstanceDeClasse, atelierDUnFormatif, comparerLignes, etatDeLExercice,
+  etatDExamenDeClasse, hrefDeLaPassationEleve, titreDeLaConsigne, visibleDansLaClasse,
 } from './regles'
 
 // ============================================================================
@@ -134,5 +134,92 @@ describe('le titre de la consigne', () => {
     assert.equal(titreDeLaConsigne({}), 'Exercice')
     assert.equal(titreDeLaConsigne('   \n  '), 'Exercice')
     assert.equal(titreDeLaConsigne([], 'Passation en classe'), 'Passation en classe')
+  })
+})
+
+// ============================================================================
+// LA PORTE DU RETOUR D'EXAMEN — le trou mesuré en prod le 27/08.
+// ----------------------------------------------------------------------------
+// Quatorze retours publiés, `lu_at` NULL sur les quatorze : l'écran existait,
+// aucun lien n'y menait. Ces tests tiennent les deux règles qui le rouvrent.
+// ============================================================================
+
+describe("où l'élève entre dans sa propre passation en classe", () => {
+  test('chaque atelier a sa route, et ce n’est PAS celle du déroulé', () => {
+    assert.equal(hrefDeLaPassationEleve('codex', 'd1'), '/eleve/modules/codex/passation/d1')
+    assert.equal(hrefDeLaPassationEleve('aletheia', 'd1'), '/eleve/modules/aletheia/passation/d1')
+  })
+
+  test('⚠️ la confondre avec le déroulé enverrait sur un notFound()', () => {
+    // `lireDepotMaison` refuse un dépôt dont l'instance a `lieu = classe`.
+    assert.notEqual(hrefDeLaPassationEleve('codex', 'd1'), '/eleve/modules/codex/exercice/d1')
+  })
+})
+
+describe("l'atelier d'une instance DE CLASSE — la ligne de plan d'abord", () => {
+  test('la typologie du plan tranche : `ecriture` ⇒ Codex, `lecture` ⇒ Aletheia', () => {
+    assert.equal(atelierDUneInstanceDeClasse('ecriture', null), 'codex')
+    assert.equal(atelierDUneInstanceDeClasse('lecture', null), 'aletheia')
+  })
+
+  test('⭐⭐ LE CAS QUI JUSTIFIE L’ORDRE : l’explication de texte mesure l’Expression EN `composer`', () => {
+    // Le vrai `modes_par_competence` d'un examen diagnostique d'explication
+    // (`MODES_MESURES.aletheia`, `utils/examens/types.ts`). La règle des modes
+    // seule l'enverrait dans CODEX ; le `06-` §1 la range en LECTURE.
+    const explication = {
+      expression: ['composer'], argumentation: ['expliquer'],
+      structure: ['expliquer'], synthese: ['restituer'],
+    }
+    assert.equal(atelierDUnFormatif(explication), 'codex')            // le piège…
+    assert.equal(atelierDUneInstanceDeClasse('lecture', explication), 'aletheia')  // …évité
+  })
+
+  test('à défaut de ligne de plan, le REPLI est la règle des modes', () => {
+    assert.equal(atelierDUneInstanceDeClasse(null, { expression: ['composer'] }), 'codex')
+    assert.equal(atelierDUneInstanceDeClasse(null, { argumentation: ['expliquer'] }), 'aletheia')
+  })
+
+  test('une typologie inconnue ne devient pas Codex par défaut : elle tombe sur le repli', () => {
+    assert.equal(atelierDUneInstanceDeClasse('', null), 'aletheia')
+    assert.equal(atelierDUneInstanceDeClasse('oral', { expression: ['composer'] }), 'codex')
+    assert.equal(atelierDUneInstanceDeClasse('oral', null), 'aletheia')
+  })
+})
+
+describe("l'état d'un examen DE CLASSE — ce que la tuile « à faire » filtre", () => {
+  test('⭐ un retour publié non lu se dit `a_lire`, quel que soit le statut du dépôt', () => {
+    // Le filtre de `retoursDExamenALire` porte sur l'ÉTAT, pas sur le statut.
+    assert.equal(etatDExamenDeClasse('retour_publie', { publie: true, lu: false }).ton, 'a_lire')
+    assert.equal(etatDExamenDeClasse('vf_remis', { publie: true, lu: false }).ton, 'a_lire')
+    assert.equal(etatDExamenDeClasse('clos', { publie: true, lu: false }).ton, 'a_lire')
+  })
+
+  test('⛔⛔ LU, LA TUILE S’ÉTEINT — le défaut trouvé au smoke du 27/08', () => {
+    // `etatDeLExercice` retombait sur `case retour_publie` et rendait `a_lire`
+    // SANS regarder `lu` : la tuile ne se serait jamais éteinte. Mesuré en bac
+    // à sable sur un retour publié le 22/08 ET LU le 22/08.
+    assert.equal(etatDeLExercice('retour_publie', { publie: true, lu: true }).ton, 'a_lire')  // le piège…
+    assert.equal(etatDExamenDeClasse('retour_publie', { publie: true, lu: true }).ton, 'clos')  // …évité
+    assert.equal(etatDExamenDeClasse('retour_publie', { publie: true, lu: true }).libelle, 'retour lu')
+  })
+
+  test('⚠️ une copie remise SANS retour publié n’appelle aucune lecture', () => {
+    assert.equal(etatDExamenDeClasse('v1_remis', null).ton, 'attente')
+    assert.equal(etatDExamenDeClasse('v1_remis', { publie: false, lu: false }).ton, 'attente')
+  })
+
+  test('⚠️ `retour_publie` SANS retour publié ne promet pas un retour', () => {
+    // L'écran ne rend rien sans `published_at` : annoncer « retour à lire » sur
+    // la foi du seul statut enverrait l'élève sur une page qui se tait.
+    assert.equal(etatDExamenDeClasse('retour_publie', null).ton, 'attente')
+    assert.equal(etatDExamenDeClasse('retour_publie', null).libelle, 'rendu — retour en préparation')
+  })
+
+  test('⭐ la séquence de classe s’arrête à `retour_publie` : lire est le DERNIER geste', () => {
+    // ⚠️ Et c'est pourquoi la règle de la MAISON ne peut pas servir ici : là-bas
+    //    une version finale reste à écrire, et `clos` mentirait.
+    const lu = { publie: true, lu: true }
+    assert.equal(etatDExamenDeClasse('retour_publie', lu).ton, 'clos')
+    assert.equal(etatDExamenDeClasse('abandonne', null).libelle, 'abandonné')
   })
 })

@@ -26,6 +26,8 @@ import { chargerSyntheseActive, chargerHistorique } from '../actions'
 import { createAdminClient } from '@/utils/supabase/admin'
 import { signauxDeLancement } from '@/utils/examens/signal'
 import SignalDeLancement from '@/components/examens/SignalDeLancement'
+import { examensEnClasseDeLEleve } from '@/utils/codex-onglets/liste'
+import MesExamensPasses from '@/components/examens/MesExamensPasses'
 
 export default async function ExamensCodexElevePage() {
   const supabase = await createClient()
@@ -53,9 +55,16 @@ export default async function ExamensCodexElevePage() {
   // C4-L9 — le signal du LANCEMENT (jamais celui de l'assignation, qui est
   // C6-L2). Lecture par le SERVEUR, filtrée sur `eleve_id` : le moteur ne
   // porte AUCUNE policy élève, et ce lot n'en ouvre pas.
-  const [synthese, historique, signaux] = await Promise.all([
+  // ⭐ LE TROU DU 27/08 : `examensEnClasseDeLEleve` est la SEULE porte vers le
+  //    retour d'un examen une fois la copie remise. Le signal ci-dessus s'éteint
+  //    à la remise (« il ouvre l'entrée, il ne suit pas le déroulé », C4-L9), et
+  //    l'onglet Exercices filtre `lieu = 'maison'` : quatorze retours publiés
+  //    étaient lisibles PAR PERSONNE, faute de lien. La liste naît derrière ses
+  //    DEUX portes, lues dans `liste.ts` et non ici.
+  const [synthese, historique, signaux, examens] = await Promise.all([
     chargerSyntheseActive(), chargerHistorique(),
     signauxDeLancement(createAdminClient(), user.id, 'codex'),
+    examensEnClasseDeLEleve(createAdminClient(), user.id, seuil.inscription.classe_id, 'codex'),
   ])
   const live = synthese && (synthese.statut === 'phase_1' || synthese.statut === 'phase_2') ? synthese : null
 
@@ -106,6 +115,12 @@ export default async function ExamensCodexElevePage() {
         </Link>
       )}
 
+      {/* Les examens diagnostiques passés, et la porte de leur retour. ⚠️ AVANT
+          les synthèses : c'est là que vit l'obligation de lecture du `02-` §6.D. */}
+      <div className="mb-6">
+        <MesExamensPasses examens={examens} />
+      </div>
+
       {historique.length > 0 && (
         <section>
           <h3 className="text-sm font-medium text-muet mb-3">Mes synthèses en classe</h3>
@@ -130,7 +145,7 @@ export default async function ExamensCodexElevePage() {
         </section>
       )}
 
-      {!live && signaux.length === 0 && historique.length === 0 && (
+      {!live && signaux.length === 0 && historique.length === 0 && examens.length === 0 && (
         <div className="bg-surface border border-bordure rounded-xl p-8 text-center">
           <p className="text-muet text-sm">
             Rien en classe pour le moment. Ton professeur t&apos;indiquera quand une synthèse

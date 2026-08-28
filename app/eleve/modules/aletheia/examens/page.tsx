@@ -32,6 +32,8 @@ import Link from 'next/link'
 import { createAdminClient } from '@/utils/supabase/admin'
 import { signauxDeLancement } from '@/utils/examens/signal'
 import SignalDeLancement from '@/components/examens/SignalDeLancement'
+import { examensEnClasseDeLEleve } from '@/utils/codex-onglets/liste'
+import MesExamensPasses from '@/components/examens/MesExamensPasses'
 import { seuilAletheia } from '../gardes'
 
 export default async function ExamensAletheiaElevePage() {
@@ -42,7 +44,14 @@ export default async function ExamensAletheiaElevePage() {
   // C4-L9 — le signal du LANCEMENT (jamais celui de l'assignation, qui est
   // C6-L2). Lecture par le SERVEUR, filtrée sur `eleve_id` dans le code : le
   // moteur ne porte AUCUNE policy élève, et ce lot n'en ouvre pas.
-  const signaux = await signauxDeLancement(createAdminClient(), seuil.userId, 'aletheia')
+  // ⭐ ET L'INVENTAIRE DE CE QUI EST PASSÉ — le signal ci-dessus s'éteint à la
+  //    remise, il ne suit pas le déroulé. Sans cette liste, le retour d'un
+  //    examen de lecture n'a AUCUNE porte une fois la copie déposée : c'est le
+  //    trou mesuré côté Codex le 27/08, et Aletheia porte exactement le même.
+  const [signaux, examens] = await Promise.all([
+    signauxDeLancement(createAdminClient(), seuil.userId, 'aletheia'),
+    examensEnClasseDeLEleve(createAdminClient(), seuil.userId, seuil.active.classe_id, 'aletheia'),
+  ])
 
   return (
     <div className="space-y-6 pb-8">
@@ -58,7 +67,9 @@ export default async function ExamensAletheiaElevePage() {
 
       <SignalDeLancement signaux={signaux} />
 
-      {signaux.length === 0 && (
+      <MesExamensPasses examens={examens} />
+
+      {signaux.length === 0 && examens.length === 0 && (
         // ⭐ UN VIDE EXPLIQUÉ, JAMAIS UN ÉCRAN QUI SE TAIT (`07-` §5). ⚠️ Ici il
         //    n'y a QU'UN vide à dire, et c'est voulu : `SignalDeLancement` est
         //    un signal de MOMENT — il s'allume à l'ouverture du dépôt et s'éteint

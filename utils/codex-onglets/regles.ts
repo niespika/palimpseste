@@ -84,6 +84,59 @@ export function hrefDeLaPassationProf(atelier: Atelier, exerciceId: string): str
 }
 
 /**
+ * ⭐ OÙ L'ÉLÈVE ENTRE DANS SA PROPRE PASSATION EN CLASSE, selon l'atelier.
+ *
+ * Le pendant élève de `hrefDeLaPassationProf`, et la SEULE adresse où vit son
+ * retour d'examen : `app/eleve/modules/{codex,aletheia}/passation/[depotId]`
+ * sert `EcranEleve`, qui rend le bloc « Ton retour » et le bouton « J'ai lu mon
+ * retour » (`02-` §6.D, étape 17).
+ *
+ * ⚠️ CE N'EST PAS `hrefDuDeroule`. Le déroulé à six temps est celui de la
+ *    MAISON ; la passation en classe a son propre écran, sa propre garde
+ *    (`garderEleve`) et son propre flux (photos → transcription → retour).
+ *    Les confondre enverrait l'élève sur un `notFound()` : `lireDepotMaison`
+ *    refuse un dépôt dont l'instance a `lieu = 'classe'`.
+ *
+ * ⚠️ L'ONGLET QUI S'ALLUME EST *EXAMENS*, et il l'était déjà : c'est
+ *    `components/nav/configModules.ts` qui le déclare par `prefixes[]`
+ *    (`/eleve/modules/{codex,aletheia}/passation`). Rien à y ajouter.
+ */
+export function hrefDeLaPassationEleve(atelier: Atelier, depotId: string): string {
+  return `/eleve/modules/${atelier}/passation/${depotId}`
+}
+
+/**
+ * ⭐ L'ATELIER D'UNE INSTANCE **DE CLASSE** — la ligne de plan D'ABORD, le mode
+ *    ENSUITE et seulement à défaut.
+ *
+ * ⚠️ CETTE RÈGLE N'EST PAS `atelierDUnFormatif`, ET L'ORDRE NE S'INVERSE PAS.
+ *    L'explication de texte mesure l'Expression EN `composer` (`01-` §10) : la
+ *    règle des modes l'enverrait dans CODEX, quand le `06-` §1 la range en
+ *    LECTURE diagnostique, dans ALETHEIA. « Les sommatifs se conçoivent CHACUN
+ *    DANS SON MODULE » (`02-` §6 B, citant le `01-` §2), et leur module est au
+ *    plan. La règle des modes est le REPLI d'une passation de classe hors plan.
+ *
+ * ⚠️ `typeExerciceDeLaLigne` est le `type_exercice` de
+ *    `scriptorium_exercices_planifies` — une LISTE FERMÉE DE COUPLES
+ *    (`exercices_typologie_chk`) : `ecriture` ⇒ Codex, `lecture` ⇒ Aletheia.
+ *    Toute autre valeur, `null` compris, tombe sur le repli.
+ *
+ * ⚠️ DEUX AUTRES EXEMPLAIRES DE CETTE RÈGLE VIVENT ENCORE AILLEURS —
+ *    `moduleDeLInstance` (`utils/examens/signal.ts`) et le filtre en ligne de
+ *    `passationsDeClasse` (`liste.ts`). Ils ne sont pas repris ici : le premier
+ *    est le cœur testé de C4-L9, le second sert un autre côté. **La fusion est
+ *    portée à `IDEES_post_rentree.md`** — ce fichier est la version PURE, et
+ *    c'est elle que tout nouveau lecteur doit appeler.
+ */
+export function atelierDUneInstanceDeClasse(
+  typeExerciceDeLaLigne: string | null, modesParCompetence: unknown,
+): Atelier {
+  if (typeExerciceDeLaLigne === 'ecriture') return 'codex'
+  if (typeExerciceDeLaLigne === 'lecture') return 'aletheia'
+  return atelierDUnFormatif(modesParCompetence)
+}
+
+/**
  * ⭐ LA CLASSE EN CONTEXTE BORNE CE QUI S'AFFICHE.
  *
  * *« Dans les modules on reste PAR CLASSE »* — un élève bi-classe ne doit jamais
@@ -128,6 +181,54 @@ export function etatDeLExercice(
     case 'ouvert':        return { ton: 'en_cours', libelle: 'commencé' }
     case 'v1_remis':      return { ton: 'attente', libelle: 'rendu — retour en préparation' }
     case 'retour_publie': return { ton: 'a_lire', libelle: 'retour à lire' }
+    case 'vf_remis':      return { ton: 'attente', libelle: 'version finale rendue' }
+    case 'clos':          return { ton: 'clos', libelle: 'terminé' }
+    case 'abandonne':     return { ton: 'clos', libelle: 'abandonné' }
+    default:              return { ton: 'attente', libelle: statutDepot }
+  }
+}
+
+/**
+ * ⭐⭐ L'ÉTAT D'UN EXAMEN **DE CLASSE** — et pourquoi ce n'est PAS
+ *     `etatDeLExercice`.
+ *
+ * ⛔ LE DÉFAUT QUE CETTE FONCTION ÉVITE, TROUVÉ AU SMOKE DU 27/08.
+ *    `etatDeLExercice` retombe sur le statut du dépôt quand la première clause
+ *    ne mord pas, et `case 'retour_publie'` rend `a_lire` **SANS REGARDER
+ *    `lu`**. Un retour publié PUIS LU s'affichait donc encore « retour à
+ *    lire » — mesuré en bac à sable sur un retour lu le 22/08. La tuile
+ *    « à faire » du tableau de bord, qui filtre sur cet état, **ne se serait
+ *    jamais éteinte** : l'élève valide sa lecture et le rappel reste.
+ *
+ * ⭐ LA SÉQUENCE DE CLASSE S'ARRÊTE À `retour_publie` (`SEQUENCE_CLASSE`,
+ *    `utils/passation/depots.ts` ; piège 4) : **il n'y a PAS de version
+ *    finale**. Lire son retour est donc le DERNIER geste — d'où `clos` une fois
+ *    `lu_at` posé. À la maison la suite existe (`vf_remis`), et c'est
+ *    exactement pourquoi les deux règles ne se confondent pas : rendre `clos`
+ *    sur un formatif dirait « terminé » à un élève qui doit encore écrire sa
+ *    version finale.
+ *
+ * ⚠️ LE RETOUR PASSE DEVANT LE STATUT, et il le tranche seul quand il existe :
+ *    c'est le FAIT (`published_at`, `lu_at`), quand le statut n'en est que la
+ *    trace. « Une trace n'est pas la chose. »
+ *
+ * ⚠️ `retour_publie` SANS RETOUR PUBLIÉ NE PROMET PAS UN RETOUR. L'écran
+ *    (`retourPublie`, `utils/passation/vues.ts`) ne rend rien sans
+ *    `published_at` : annoncer « retour à lire » sur la foi du seul statut
+ *    enverrait l'élève sur une page qui se tait. On dit ce qu'il va voir.
+ */
+export function etatDExamenDeClasse(
+  statutDepot: string,
+  retour: { publie: boolean; lu: boolean } | null,
+): EtatDeLigne {
+  if (retour?.publie) {
+    return retour.lu
+      ? { ton: 'clos', libelle: 'retour lu' }
+      : { ton: 'a_lire', libelle: 'retour à lire' }
+  }
+  switch (statutDepot) {
+    case 'v1_remis':
+    case 'retour_publie': return { ton: 'attente', libelle: 'rendu — retour en préparation' }
     case 'vf_remis':      return { ton: 'attente', libelle: 'version finale rendue' }
     case 'clos':          return { ton: 'clos', libelle: 'terminé' }
     case 'abandonne':     return { ton: 'clos', libelle: 'abandonné' }
