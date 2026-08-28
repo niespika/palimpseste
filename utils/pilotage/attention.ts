@@ -295,3 +295,39 @@ export function fileDExamenHumain(actes: readonly ActeLu[]): ActeLu[] {
     .filter((a) => a.citationAbsente && !a.traiteAt)
     .sort((a, b) => (a.at < b.at ? -1 : a.at > b.at ? 1 : a.pointId.localeCompare(b.pointId)))
 }
+
+/**
+ * ⭐ LIRE LES ACTES D'UN `contestation_points`, ET C'EST LE SEUL ENDROIT.
+ *
+ * Deux écrans lisent cette colonne — la page du professeur *(bornée à une
+ * classe)* et son tableau de bord *(toutes classes)*. ⛔ **Deux analyses d'un
+ * même JSONB finiraient par diverger**, et celle qui diverge fait sortir une
+ * contestation de la file d'examen humain — c'est-à-dire de l'exigence de la
+ * loi. Une seule fonction, donc.
+ *
+ * ⚠️ TOLÉRANT À LA LECTURE : une entrée mal formée est écartée, elle n'emporte
+ *    pas ses voisines — patron de `lireTelemetrie` et de `lireLesCollages`.
+ * ⚠️ `traite_at` ABSENT vaut « en file », jamais « traité » : l'erreur doit aller
+ *    dans le sens qui MONTRE la contestation, jamais dans celui qui la cache.
+ */
+export function lireLesActes(
+  brut: unknown, depotId: string, eleveId: string,
+): ActeLu[] {
+  if (!Array.isArray(brut)) return []
+  const out: ActeLu[] = []
+  for (const x of brut) {
+    if (!x || typeof x !== 'object') continue
+    const o = x as Record<string, unknown>
+    if (typeof o.point_id !== 'string' || typeof o.texte !== 'string') continue
+    out.push({
+      depotId,
+      eleveId,
+      pointId: o.point_id,
+      texte: o.texte,
+      at: typeof o.at === 'string' ? o.at : '',
+      citationAbsente: o.citation_absente === true,
+      traiteAt: typeof o.traite_at === 'string' && o.traite_at !== '' ? o.traite_at : null,
+    })
+  }
+  return out
+}

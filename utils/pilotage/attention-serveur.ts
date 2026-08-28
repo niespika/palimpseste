@@ -74,7 +74,7 @@ import {
 import { signalerEnAttenteIA, lireParamsIntegrite, TYPE_FAISCEAU } from '@/utils/integrite'
 import {
   cyclesEcoules, distributionDesContestations, elevesQuiRepetent, fileDExamenHumain,
-  ordonnerLesDrapeaux, type ActeLu, type CycleDuCalendrier, type Drapeau,
+  lireLesActes, ordonnerLesDrapeaux, type ActeLu, type CycleDuCalendrier, type Drapeau,
   type DistributionContestations,
 } from './attention'
 
@@ -537,25 +537,10 @@ async function lireLesContestations(
     brutes.push(...((data ?? []) as Array<{ depot_id: string; contestation_points: unknown }>))
   }
 
-  const actes: ActeLu[] = []
-  for (const b of brutes) {
-    if (!Array.isArray(b.contestation_points)) continue
-    for (const x of b.contestation_points as unknown[]) {
-      if (!x || typeof x !== 'object') continue
-      const o = x as Record<string, unknown>
-      if (typeof o.point_id !== 'string' || typeof o.texte !== 'string') continue
-      actes.push({
-        depotId: b.depot_id,
-        eleveId: eleveDuDepot.get(b.depot_id) ?? '?',
-        pointId: o.point_id,
-        texte: o.texte,
-        at: typeof o.at === 'string' ? o.at : '',
-        citationAbsente: o.citation_absente === true,
-        // ⭐ La marque de ce lot. Une clé absente vaut « en file », jamais traitée.
-        traiteAt: typeof o.traite_at === 'string' && o.traite_at !== '' ? o.traite_at : null,
-      })
-    }
-  }
+  // ⛔ L'analyse du JSONB a UN SEUL domicile — `lireLesActes` : le tableau de
+  //    bord lit la même colonne, et deux analyses finiraient par diverger.
+  const actes: ActeLu[] = brutes.flatMap((b) =>
+    lireLesActes(b.contestation_points, b.depot_id, eleveDuDepot.get(b.depot_id) ?? '?'))
   if (actes.length === 0) return vide
 
   // Le texte des points contestés, depuis le retour PUBLIÉ de leurs dépôts.

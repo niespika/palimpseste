@@ -11,6 +11,9 @@ import EnTeteMobileProf from '@/components/EnTeteMobileProf'
 import { formatJour } from '@/utils/fuseau'
 import RappelsClasses from './RappelsClasses'
 import CoutApi from './CoutApi'
+import {
+  chargerLaFileDExamenHumain, joursDAttente,
+} from '@/utils/pilotage/examen-humain-serveur'
 
 const fmtDate = (iso: string) => formatJour(iso, { day: 'numeric', month: 'short' })
 
@@ -18,13 +21,21 @@ export default async function ProfAccueil() {
   const supabase = await createClient()
   const admin = createAdminClient()
 
-  const [{ data: classes }, { data: inscriptionsActives }, rappels, sante, tachesCal] = await Promise.all([
-    admin.from('classes').select('id, nom, niveau, filiere, annee_scolaire').order('nom'),
-    admin.from('inscriptions').select('id, eleve_id, classe_id').eq('statut', 'active'),
-    classesAvecRappel(supabase),
-    calculerSante(admin),
-    tachesDeriveesDuCalendrier(),
-  ])
+  const [{ data: classes }, { data: inscriptionsActives }, rappels, sante, tachesCal, examen] =
+    await Promise.all([
+      admin.from('classes').select('id, nom, niveau, filiere, annee_scolaire').order('nom'),
+      admin.from('inscriptions').select('id, eleve_id, classe_id').eq('statut', 'active'),
+      classesAvecRappel(supabase),
+      calculerSante(admin),
+      tachesDeriveesDuCalendrier(),
+      // ⭐ C6-L1 — LA FILE D'EXAMEN HUMAIN, demandée par Louis le 28/08 :
+      //    « il faut me prévenir régulièrement de regarder. Sinon je vais oublier. »
+      chargerLaFileDExamenHumain(admin),
+    ])
+  const examenJours = joursDAttente(examen.plusAncien, new Date().toISOString())
+  const hrefExamen = examen.parClasse.length > 0
+    ? `/prof/classes/${examen.parClasse[0].classeId}?vue=competences`
+    : '/prof/classes'
 
   const toutesClasses = classes ?? []
   const inscrits = inscriptionsActives ?? []
@@ -111,7 +122,34 @@ export default async function ProfAccueil() {
   let hero: Hero | null = null
   let heroTacheId: string | null = null
   let heroIntegrite = false
-  if (aValider.length > 0) {
+  let heroExamen = false
+  // ⭐⭐ L'EXAMEN HUMAIN PASSE EN TÊTE DE LA CASCADE, ET LE MOTIF N'EST PAS LE
+  //    CONFORT. C'est le seul item de cette liste qui soit une OBLIGATION
+  //    LÉGALE : « toute contestation portant sur une citation absente part
+  //    directement en file professeur — ce qui satisfait aussi l'exigence
+  //    d'examen humain de la loi », et cette exigence dit qu'elle aboutit « au
+  //    professeur — JAMAIS à une file qui s'auto-résout » (`06-` §2 et §7).
+  //    ⚠️ Et le coût de l'oubli n'est pas symétrique : un fragment à valider
+  //       attend sans dommage, tandis qu'une contestation non examinée laisse un
+  //       élève devant un « Tu écris : … » sous une phrase qu'il n'a pas écrite.
+  //    ⛔ Si ce rang doit changer, c'est une décision de Louis — pas un réglage.
+  if (examen.actes.length > 0) {
+    const n = examen.actes.length
+    hero = {
+      titre: `${n} contestation${n > 1 ? 's' : ''} attend${n > 1 ? 'ent' : ''} un examen humain`,
+      sousTitre: [
+        examenJours !== null
+          ? `la plus ancienne depuis ${examenJours} jour${examenJours > 1 ? 's' : ''}`
+          : null,
+        examen.parClasse.map((c) => `${c.classeNom} (${c.actes})`).join(' · ') || null,
+        'citation absente de la copie — exigence de la loi',
+      ].filter(Boolean).join(' · '),
+      ctaLabel: 'Ouvrir la file →',
+      ctaHref: hrefExamen,
+      danger: true,
+    }
+    heroExamen = true
+  } else if (aValider.length > 0) {
     const noms = [...new Set(aValider.slice(0, 2).map((v) => v.eleveNom))].filter((n) => n && n !== '?')
     hero = {
       titre: `${aValider.length} fragment${aValider.length > 1 ? 's' : ''} à valider`,
@@ -139,6 +177,9 @@ export default async function ProfAccueil() {
   }
   // « À préparer » = les autres tâches À FAIRE (l'item promu en héros est retiré du fil).
   const integriteEnPreparer = integriteAlerte && !heroIntegrite
+  // ⭐ Elle reste dans « À préparer » quand un item plus urgent l'a précédée au
+  //    héros — elle ne disparaît jamais de l'écran tant qu'elle n'est pas vide.
+  const examenEnPreparer = examen.actes.length > 0 && !heroExamen
   const tachesEnPreparer = tachesAFaire.filter((t) => t.id !== heroTacheId)
 
   const labelClasse = (n: number) => `${n} élève${n > 1 ? 's' : ''}`
@@ -181,6 +222,19 @@ export default async function ProfAccueil() {
             <div>
               <h3 className="font-ui text-[11px] font-medium uppercase tracking-[0.12em] text-muet mb-2">À préparer</h3>
               <div className="space-y-2">
+                {examenEnPreparer && (
+                  <Link href={hrefExamen} className="block bg-surface border border-bordure rounded-xl px-4 py-3 hover:shadow-sm transition-shadow">
+                    <div className="flex items-center gap-3">
+                      <span className="w-2.5 h-2.5 rounded-full bg-retard flex-shrink-0" aria-hidden />
+                      <span className="font-corps text-base text-encre flex-1">
+                        {examen.actes.length} contestation{examen.actes.length > 1 ? 's' : ''}
+                        {examenJours !== null && ` · la plus ancienne depuis ${examenJours} jour${examenJours > 1 ? 's' : ''}`}
+                        <span className="text-muet"> — examen humain</span>
+                      </span>
+                      <span className="font-ui text-xs text-retard bg-retard-teinte px-2 py-0.5 rounded-full flex-shrink-0">exigence de la loi</span>
+                    </div>
+                  </Link>
+                )}
                 {integriteEnPreparer && (
                   <Link href={hrefIntegrite} className="block bg-surface border border-bordure rounded-xl px-4 py-3 hover:shadow-sm transition-shadow">
                     <div className="flex items-center gap-3">
