@@ -7159,26 +7159,72 @@ interruption. Le décor se reconnaît à sa classe, `nom LIKE 'RECETTE-C5L3%'`. 
   IDENTIQUE (10 fichier(s))`**. ⭐ **La leçon, pour le prochain lot qui amende le `07-`** : *amender
   une section ouverte du `07-` fait mécaniquement diverger les dérivés — le geste de clôture est de
   rejouer `derive-instruments.py --ecris`, et il ne touche que la métadonnée de version.*
-- [ ] **C5L4-A · LE SMOKE PROF, CONNECTÉ.** Les trois onglets s'affichent et s'allument ; l'onglet
-  Exercices porte ses trois renvois, l'encart et la liste ; une passation s'ouvre depuis la liste ;
-  la fiche d'un élève garde « Livres » allumé. ⚠️ **Une session Code ne s'authentifie pas.**
-  **Condition de reprise : une session que Louis ouvre.** Le décor est prêt :
-  `couture-c5l4.mjs --garde-le-decor`, puis `--retire`.
+- [x] **C5L4-A · ✅ LE SMOKE PROF, JOUÉ À L'ÉCRAN LE 27/08, dans une session que Louis a ouverte.**
+  **Barre 2 desktop ET barre mobile** rendues toutes les deux — la mobile d'abord *(le pane était
+  étroit)*, ce qui éprouve `SousNavModuleMobile` **en vrai**, et pas seulement la mesure de
+  `C5L4-14`. **Les allumages, relevés par `aria-current="page"` sur la config réelle :**
+  `/prof/aletheia` → **Livres** · `/prof/aletheia/eleve/<id>` → **Livres** *(sans préfixe déclaré :
+  l'onglet racine l'attrape, comme prévu)* · `/prof/aletheia/exercices` → **Exercices** ·
+  `/prof/aletheia/passation/<id>` → **Exercices** · `/prof/aletheia/examen-diagnostique/<id>` →
+  **Exercices** *(titre servi : « Examen diagnostique — l'explication de texte »)* ·
+  `/prof/aletheia/parametres` → **Paramètres**. ⭐ **L'onglet Exercices porte bien ses TROIS renvois**
+  *(`/prof/conception/nouvelle?porte=aletheia`, `/prof/conception/textes`, `/prof/conception`)* **et
+  sa liste : « PASSATIONS EN CLASSE · 4 »**. ⭐⭐ **DEUX de ces quatre sont de VRAIES passations de
+  lecture du bac à sable** — « Examen diagnostique — l'explication de texte », pour T5 et pour Test —
+  **qui n'avaient jusqu'ici qu'UNE SEULE porte dans tout le dépôt** : c'est le 🔴 du piège 21,
+  constaté en vrai et fermé. ⚠️ **L'encart des examens à concevoir est ABSENT en bac à sable**, et
+  c'est juste : ses deux lignes `lecture` y sont `concu`, pas `a_concevoir` — *une page nue n'est pas
+  la preuve qu'il est cassé*. **En PRODUCTION, la même capture montre l'encart avec ses DEUX lignes**
+  *(T5, 12 oct. et 4 janv.)*, sous l'ancienne barre « Classe · Paramètres » : c'est l'état AVANT,
+  photographié.
 - [ ] **C5L4-B · LE SMOKE ÉLÈVE, CONNECTÉ**, sur téléphone ou à 375 px : les trois onglets ; la
   séance allume Livres, l'exercice allume Exercices, la passation allume Examens ; **et UN SEUL
   « ← Retour » par écran** *(le défaut du double retour n'est visible qu'à l'œil — aucun test ne
-  compte les liens d'une page)*. **Condition de reprise : idem.**
+  compte les liens d'une page)*. ⚠️ **Le smoke PROF a été joué le 27/08 ; celui-ci ne l'a pas été,
+  faute de session élève.** **Condition de reprise : une session ÉLÈVE**, qui lèverait `C5L4-B` et
+  `C5L4-C` d'un seul passage.
 - [ ] **C5L4-C · LES DEUX VIDES DE L'ONGLET EXERCICES ÉLÈVE**, distingués à l'écran : porte fermée
   *(« pas encore ouverts »)* vs rien à faire *(« aucun exercice pour le moment »)*.
-  ⚠️ **Demande d'ÉTEINDRE `exercices_actif`**, un geste du professeur à `/prof/allumage`.
-  **Condition de reprise : ce geste — ce lot ne bascule aucun interrupteur.**
-- [ ] **C5L4-D · LE MOTIF DE LA COPIE ABOUTIE, VU À L'ÉCRAN**, sur
-  `/prof/aletheia/passation/<exerciceId>` — section « LA FILE » et les lignes par élève, dépliées.
-  ⚠️ **Prouvé par exécution sur les 13 copies de PROD, jamais vu à l'écran** : c'est là que C5-L3
-  avait constaté le silence. **Condition de reprise : le smoke prof.**
-- [ ] **C5L4-E · LA SECTION C4-L4 REJOUÉE À L'ÉCRAN** — l'écran de la file est **partagé avec
-  Codex**, et ce lot l'a touché. Le script est vert ; l'écran ne l'a pas été.
-  **Condition de reprise : le smoke prof, des deux côtés.**
+  ⚠️⚠️ **CE RESTE N'EST PAS BLOQUÉ PAR L'INTERRUPTEUR, IL EST BLOQUÉ PAR LE RÔLE.** Louis a autorisé
+  la bascule de `exercices_actif` en bac à sable le 27/08 ; **elle n'a pas été jouée, et c'eût été un
+  geste pour rien** : les deux vides sont sur un écran **ÉLÈVE**, et la session ouverte était une
+  session **PROFESSEUR** — aucun écran prof ne change quand la porte se ferme. *Basculer un
+  interrupteur sans pouvoir en observer l'effet n'aurait rien prouvé et aurait touché la base.*
+  **Condition de reprise : une session ÉLÈVE** — et alors la bascule prend une seconde, dans le même
+  passage que `C5L4-B`.
+- [x] **C5L4-D · ✅⭐⭐ LE MOTIF VU À L'ŒIL LE 27/08 — ET SON TÉMOIN MUET À CÔTÉ.** C'est là que
+  C5-L3 avait constaté le silence, et c'est là qu'il parle. ⚠️ **Le bac à sable n'a AUCUN job mixte**
+  *(son seul exercice de porte de mode n'élit que des couples non couverts → `sans_retour`, qui
+  servait déjà son motif)* : un mode `--decor-ecran` a donc été ajouté au script de couture, qui sème
+  **deux copies abouties sur la même passation** — l'une dont le job porte les écartées, l'autre non.
+  **CE QUE L'ÉCRAN A RENDU :**
+  · section **« LA FILE »** — *2 terminées · 0 en file · 0 pas encore en file · 0 sans retour ·
+    0 en échec · 0 sans copie*, et **« Rien n'attend de geste de votre part. »** ⭐ *Les six comptes
+    restent disjoints et rien n'est réclamé au professeur : c'est bien la MÊME aboutie qui parle, pas
+    un septième état.*
+  · **Nina Panaitescot** → « **Traitement terminé.** » **+ le motif** : *« 2 écartée(s) — structure,
+    argumentation : mode « expliquer » non couvert par l'instrument de structure, qui ne couvre que
+    « composer »… »* — **et AUCUN bouton « Relancer »** *(relevé au DOM : `boutonRelancer: false`)*.
+  · **Eléonore Delprat** → **RIEN** : le composant rend `null` *(relevé au DOM :
+    `blocDeTraitement: false`)*. ⛔ **Le silence reste la règle ; ce lot n'y a ouvert qu'une
+    exception nommée**, et les deux se voient côte à côte sur le même écran.
+  ⭐ **Le décor a été RETIRÉ** *(deux tours de `--retire`, zéro trace, six interrupteurs identiques)*
+  ; une commande le resème : `couture-c5l4.mjs --decor-ecran`.
+- [x] **C5L4-E · ✅ L'ÉCRAN PARTAGÉ AVEC CODEX, VU À L'ÉCRAN LE 27/08.**
+  `/prof/codex/passation/<exerciceId>` : ses **deux** onglets intacts, **Exercices** allumé, et la
+  file rend ses six comptes sur des données réelles — *1 terminée · 0 en file · **1 pas encore en
+  file** · 0 sans retour · 0 en échec · **5 sans copie***, avec leurs phrases par élève *(« Copie
+  remise, mais pas encore mise en file : déclenchez l'analyse en lot. », « Aucune copie remise — la
+  chaîne n'a rien à lire. »)*. ⭐⭐ **ET LA RÈGLE DU SILENCE TIENT CHEZ CODEX** : la copie d'Elo est
+  `abouti` **sans écartées**, et son bloc de traitement ne s'affiche pas. *La correction profite à
+  Codex sans y ajouter de bruit.*
+- [x] **C5L4-E-bis · ⚠️ LES `<main>` IMBRIQUÉS, MESURÉS À L'ÉCRAN — MES TROIS SONT À 1, LES JUMEAUX
+  DE CODEX SONT À 2.** Relevé par `document.querySelectorAll('main').length` :
+  `/prof/aletheia/passation/<id>` → **1** · `/prof/aletheia/examen-diagnostique/<id>` → **1** ·
+  `/prof/codex/passation/<id>` → **2** · `/prof/codex/examen-diagnostique/<id>` → **2**.
+  ⭐ *Le correctif est vérifié par la mesure, et le renvoi de périmètre l'est aussi : les jumelles de
+  Codex portent bien le défaut, et il se compte.* **Elles restent hors de ce lot**, nommées à
+  `IDEES_post_rentree.md`.
 - [ ] **C5L4-F · `examens-c4l9.mjs` À REJOUER, une fois son résidu retiré.** Une ligne de plan
   `codex` / `ecriture` / `septembre` / `concu`, `note: "RECETTE C4-L9"`, créée le **2026-08-24T01:38**
   sur le plan de la classe `Test` *(`6ff2d56b-0fbf-4d53-b187-464dd4233852`)*, fait échouer le décor

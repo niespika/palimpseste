@@ -40,7 +40,16 @@
 //        scripts/recette/couture-c5l4.mjs [--seme] [--garde-le-decor]
 //   node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON \
 //        --import ./scripts/register-calibration-resolver.mjs \
+//        scripts/recette/couture-c5l4.mjs --decor-ecran
+//   node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON \
+//        --import ./scripts/register-calibration-resolver.mjs \
 //        scripts/recette/couture-c5l4.mjs --retire
+//
+// ⭐ `--decor-ecran` sème de quoi VOIR le motif à l'écran de la passation, avec
+//    son TÉMOIN MUET à côté : le bac à sable n'a aucun job mixte (son seul
+//    exercice de porte de mode tombe en `sans_retour`, qui servait déjà son
+//    motif). Il ne vérifie rien de plus que la couture — il rend VISIBLE ce
+//    qu'elle a prouvé. ⛔ Il NE SE NETTOIE PAS TOUT SEUL : `--retire`.
 //
 // ⚠️ LE RÉSOLVEUR DE CALIBRATION EST OBLIGATOIRE : les lectures des onglets
 //    portent `import 'server-only'` et tirent `next/navigation`.
@@ -645,6 +654,8 @@ async function retirer() {
     const deps = verifie('dépôts', await admin.from('exercices_depots')
       .select('id').in('exercice_id', ids))
     const dep = deps.map((x) => x.id)
+    // ⚠️ Les traces d'abord, les dépôts ensuite : chacune les référence.
+    //    `exercices_retours` en fait partie — le décor d'écran en sème.
     for (const t of ['exercices_jobs', 'exercices_retours', 'exercices_squelettes',
       'exercices_metacognition', 'competences_mesures', 'monitoring_mesures']) {
       if (dep.length) await admin.from(t).delete().in('depot_id', dep)
@@ -681,6 +692,150 @@ async function retirer() {
 }
 
 // ════════════════════════════════════════════════════════════════════════════
+// H. ⭐ LE DÉCOR D'ÉCRAN — pour VOIR le motif, pas seulement le prouver
+// ════════════════════════════════════════════════════════════════════════════
+//
+// ⭐⭐ CE QUE CE MODE EXISTE POUR RÉGLER. La couture prouve par EXÉCUTION que la
+//    copie aboutie sert son motif — sur les 13 copies de PRODUCTION, et par un
+//    aller-retour en base. **Mais le bac à sable n'a AUCUN job mixte** : son seul
+//    exercice de porte de mode n'élit que des couples non couverts, et tombe donc
+//    en `sans_retour`, qui servait déjà son motif. *Sans décor, l'écran du bac à
+//    sable ne peut PAS montrer le cas qui se taisait.*
+//
+// Il sème donc, sur une classe réelle, exactement ce que l'écran de la passation
+// lit pour rendre ce cas-là : une instance de CLASSE · un dépôt avec sa
+// TRANSCRIPTION (c'est `aUneCopie`) · un RETOUR (c'est `aUnRetour`) · et un job
+// `mesure_v1` `abouti` dont le `dernier_message` est écrit par LE VRAI ÉCRIVAIN
+// (`motifDesEcartees`). ⛔ Aucun appel de modèle, aucune mesure, aucune écriture
+// dans `competences_mesures` : le décor imite ce que la chaîne a LAISSÉ, il ne
+// rejoue pas la chaîne.
+//
+// ⚠️ IL SÈME AUSSI SA CONTRE-ÉPREUVE, sur le même écran : une SECONDE copie
+//    aboutie SANS écartées, qui doit rester MUETTE. *Le silence est la règle ; ce
+//    lot n'a fait qu'y ouvrir une exception nommée, et les deux doivent se voir
+//    côte à côte.*
+async function decorEcran() {
+  titre('H. Le décor d’écran — une passation où l’on VOIT le motif, et son témoin muet')
+
+  const type = verifie('type `phrase`', await admin.from('exercices_types')
+    .select('id').eq('code', 'phrase').maybeSingle())
+  if (!type) throw new Error('type `phrase` introuvable.')
+
+  const insc = verifie('inscriptions', await admin.from('inscriptions')
+    .select('eleve_id, classe_id, classes(nom)').eq('statut', 'active').order('eleve_id'))
+  if (insc.length < 2) throw new Error('il faut au moins deux inscriptions actives.')
+  const classeId = insc[0].classe_id
+  const deux = insc.filter((i) => i.classe_id === classeId).slice(0, 2)
+  if (deux.length < 2) throw new Error('il faut deux élèves dans la même classe.')
+  const noms = new Map(verifie('noms', await admin.from('profiles')
+    .select('id, display_name').in('id', deux.map((d) => d.eleve_id)))
+    .map((p) => [p.id, p.display_name]))
+  note(`classe « ${insc[0].classes?.nom ?? classeId} » · ${deux.map((d) => noms.get(d.eleve_id)).join(' + ')}`)
+
+  const registre = fs.existsSync(REGISTRE)
+    ? JSON.parse(fs.readFileSync(REGISTRE, 'utf-8'))
+    : { exercices: [], depots: [], lignesPlan: [], jobs: [] }
+
+  const ex = verifie('instance de classe', await admin.from('exercices').insert({
+    type_id: type.id, classe_id: classeId, lieu: 'classe', statut: 'assigne', cran: '8',
+    consigne_instanciee: `${MARQUE} — Explication de texte : expliquez le mouvement de l’extrait, `
+      + 'puis dites ce que l’auteur cherche à établir.',
+    // ⭐ Le couple exact de la PRODUCTION : deux compétences en `expliquer`, que
+    //    la porte de mode de C5-L3 écarte faute d'instrument réceptif.
+    modes_par_competence: { structure: ['expliquer'], argumentation: ['expliquer'] },
+    cible_primaire: 'structure',
+  }).select('id').single())
+  registre.exercices.push(ex.id)
+
+  const COPIE = 'Dans cet extrait, l’auteur commence par poser une difficulté, puis il l’écarte en '
+    + 'montrant qu’elle repose sur une confusion. Il en tire ensuite une définition, qu’il applique '
+    + 'à un cas. Le mouvement est donc : objection, réfutation, définition, application.'
+
+  const poser = async (eleveId, avecEcartees) => {
+    const d = verifie('dépôt', await admin.from('exercices_depots').insert({
+      eleve_id: eleveId, exercice_id: ex.id, origine: 'prof', statut: 'retour_publie',
+      assigne_at: instant(), ouvert_at: instant(), ouvert_par_prof_at: instant(),
+      v1_remis_at: instant(), transcription_v1: COPIE,
+    }).select('id').single())
+    registre.depots.push(d.id)
+
+    // Le RETOUR — c'est lui qui fait `aUnRetour`, donc l'état `abouti`.
+    // ⚠️ SA FORME N'EST PAS LIBRE : `retours_texte_segmente_chk` exige, sur le
+    //    texte ENGENDRÉ, un `id` STABLE et UNIQUE, un `texte` non vide, et un
+    //    `ancrage` objet dont la `source` vaut `copie` ou `texte_support` avec
+    //    une `citation` non vide (RR3, `01-` §12). Un décor qui s'en écarte est
+    //    refusé en `23514` — et c'est la garde qui parle, pas une panne.
+    verifie('retour', await admin.from('exercices_retours').insert({
+      depot_id: d.id, moment: 'chaud',
+      texte: [
+        { id: `${d.id}:v1:01`, competence: 'structure', nature: 'reussite',
+          ancrage: { source: 'copie', citation: 'objection, réfutation, définition, application' },
+          texte: `${MARQUE} — tu nommes les quatre temps du mouvement, et dans le bon ordre : `
+            + 'c\'est exactement ce que « expliquer le mouvement » demande.' },
+        { id: `${d.id}:v1:02`, competence: 'structure', nature: 'point_de_travail',
+          ancrage: { source: 'copie', citation: 'il l\'écarte en montrant qu\'elle repose sur une confusion' },
+          texte: `${MARQUE} — tu dis QUE l\'auteur écarte la difficulté, jamais CE QU\'IL ÉCARTE. `
+            + 'Nomme la confusion : c\'est elle qui fait tenir le deuxième temps.' },
+      ],
+      action_revision: 'Reprends le troisième temps et dis ce que la définition écarte.',
+      feed_forward: 'La prochaine fois : nomme le mouvement avant de le détailler.',
+    }).select('id').single())
+
+    // ⭐ LE MESSAGE EST ÉCRIT PAR LE VRAI ÉCRIVAIN, jamais tapé à la main.
+    const fragment = avecEcartees ? motifDesEcartees({
+      competencesEcartees: [
+        { competence: 'structure',
+          motif: 'mode « expliquer » non couvert par l’instrument de structure, qui ne couvre que '
+            + '« composer » — sa grille pour ce mode n’a rien de machine (ni prompt marqué, ni enum '
+            + 'au bloc machine, ni cascade)' },
+        { competence: 'argumentation',
+          motif: 'mode « expliquer » non couvert par l’instrument d’argumentation' },
+      ],
+    }) : ''
+    verifie('job', await admin.from('exercices_jobs').insert({
+      depot_id: d.id, etape: ETAPE_MESURE_V1, statut: 'abouti', echec_definitif: false,
+      cle_idempotence: cleIdempotence(d.id, ETAPE_MESURE_V1),
+      dernier_message: `${avecEcartees ? 2 : 4} mesurée(s), ${avecEcartees ? 2 : 4} écrite(s), `
+        + `0 déjà là, retour écrit, 6 appel(s), 58 s${fragment}`,
+    }).select('id').single())
+    return d.id
+  }
+
+  const avec = await poser(deux[0].eleve_id, true)
+  const sans = await poser(deux[1].eleve_id, false)
+  fs.writeFileSync(REGISTRE, JSON.stringify(registre, null, 2))
+
+  // ⭐ On CONSTATE avant d'envoyer quelqu'un regarder : ce que l'écran rendra.
+  for (const [id, qui, attendu] of [[avec, noms.get(deux[0].eleve_id), true],
+                                    [sans, noms.get(deux[1].eleve_id), false]]) {
+    const lus = await etatDesJobs(admin, id)
+    const e = etatChaineDeLaCopie({
+      attente: lus.map((j) => ({ etape: j.etape, statut: j.statut,
+        echec_definitif: j.echec_definitif, message: j.message })),
+      aUnRetour: true, aUneCopie: true,
+    })
+    dire(e.cle === 'abouti' && (!!e.motif === attendu),
+      `${qui} → \`${e.cle}\` · « ${e.phrase} »`
+      + (e.motif ? ` + MOTIF : « ${e.motif.slice(0, 58)}… »` : ' + AUCUN motif (témoin muet)'))
+  }
+
+  dire(true, '')
+  console.log(`  ⭐ À VOIR À L'ÉCRAN, connecté en professeur :`)
+  console.log(`     1. /prof/aletheia            → onglet « Exercices »`)
+  console.log(`     2. la ligne « ${MARQUE} — Explication de texte… » → « Ouvrir → »`)
+  console.log(`     3. http://localhost:3000/prof/aletheia/passation/${ex.id}`)
+  console.log(`        · section « LA FILE » : 2 terminées, et « Rien n'attend de geste »`)
+  console.log(`        · dépliez ${noms.get(deux[0].eleve_id)} → « Traitement terminé. » + LE MOTIF`)
+  console.log(`        · dépliez ${noms.get(deux[1].eleve_id)} → RIEN (le silence est la règle)`)
+  console.log(`\n  retrait : node … scripts/recette/couture-c5l4.mjs --retire`)
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+if (a('decor-ecran')) {
+  try { await decorEcran() } catch (e) { console.error(`\n✗ ${e.message}`); process.exit(1) }
+  process.exit(0)
+}
+
 if (a('retire')) {
   try { await retirer() } catch (e) { console.error(`\n✗ ${e.message}`); process.exit(1) }
   process.exit(0)
