@@ -4,7 +4,6 @@ import { createAdminClient } from '@/utils/supabase/admin'
 import { moduleIdsDesClasses, slugsModulesParClasse } from '@/utils/acces'
 import { lireReglagesRag } from '@/utils/scriptorium-rag'
 import { contexteClasseEleve } from './contexte-classe'
-import { noteVersLettre, type LettreSection } from '@/utils/notation'
 import { estSemaineComptee } from '@/utils/fragments-semaines'
 import { calculerGrilleSemaines } from '@/utils/calendrier-grille'
 import { jourDansFuseau, formatJour, formatInstant } from '@/utils/fuseau'
@@ -12,6 +11,9 @@ import { lireFuseau } from '@/utils/fuseau-serveur'
 import { chargerStatsRevision } from './modules/quazian/actions'
 import { livresPourClasse, toutesSemainesDone } from './modules/aletheia/data'
 import { retoursDExamenALire } from '@/utils/codex-onglets/liste'
+import { signalDeLaSemaine } from '@/utils/eleve/semaine-serveur'
+import { fichesDejaServies } from '@/utils/eleve/fiche-serveur'
+import { lundiOnOrBefore, toISODate } from '@/utils/calendrier-grille'
 import Pastille, { type ModuleSceau } from '@/components/Pastille'
 
 // Dates PURES (bornes de semaine) → UTC, agnostique au fuseau.
@@ -51,10 +53,6 @@ const TON_BADGE: Record<Ton, string> = {
   info: 'bg-info-teinte text-info',
   ok: 'bg-ok-teinte text-ok',
   muet: 'bg-parchemin-fonce text-muet',
-}
-
-const TEXTE_LETTRE: Record<LettreSection, string> = {
-  A: 'text-ok', B: 'text-info', C: 'text-attention', D: 'text-attention', E: 'text-retard',
 }
 
 function Badge({ texte, ton, pulse }: { texte: string; ton: Ton; pulse?: boolean }) {
@@ -208,41 +206,53 @@ export default async function TableauDeBordEleve() {
     }
   }
 
-  // ── Progression : moyenne par section (Fragments) → lettre, en une bande ────
-  const sectionsProg: { label: string; lettre: LettreSection }[] = []
-  // Périmètre : les inscriptions dont la classe A Fragments (Accès & classes · L1).
-  const inscriptionsFragments = enContexte.filter((i) => aModule(i.classe_id, 'fragments-erudition'))
-  if (inscriptionsFragments.length > 0) {
-    // En état « Toutes », la progression moyenne se calcule sur les dépôts des
-    // deux classes réunis — c'est la même question posée à tout le travail.
-    const { data: depots } = await admin
-      .from('fragments_depots')
-      .select('id, fragments_semaines(numero)')
-      .in('inscription_id', inscriptionsFragments.map((i) => i.id))
-    const numParDepot = new Map((depots ?? []).map((d) => [d.id as string, (d.fragments_semaines as unknown as { numero: number } | null)?.numero ?? 0]))
-    const depotIds = (depots ?? []).map((d) => d.id as string)
-    const { data: analyses } = depotIds.length > 0
-      ? await admin.from('fragments_analyses').select('depot_id, note_decouvertes, note_sources, note_reflexions').eq('statut', 'publiee').in('depot_id', depotIds)
-      : { data: [] }
-    const triees = (analyses ?? [])
-      .map((a) => ({ ...a, num: numParDepot.get(a.depot_id as string) ?? 0 }))
-      .sort((a, b) => a.num - b.num)
+  // ── ⭐⭐ LE « À FAIRE » DE LA SEMAINE — LA TUILE QUI NAÎT DE L'ASSIGNATION ───
+  // C6-L2. « Sur son tableau de bord, l'élève voit un "à faire" DÈS QU'IL A DES
+  // EXERCICES ASSIGNÉS. Il clique, et arrive sur l'écran de sa semaine. » (`07-` §2)
+  //
+  // ⛔⛔ LE TROU QUE CETTE LECTURE BOUCHE, ET IL SE CONSTATAIT EN UNE LECTURE :
+  //    AUCUNE des six tuiles de ce tableau ne naissait d'un exercice assigné.
+  //    Ce fichier n'importait ni `exercices_depots`, ni `exercicesMaisonDeLEleve`.
+  //    L'élève découvrait donc son travail exercice par exercice, sans jamais
+  //    voir le volume de sa semaine.
+  //
+  // ⚠️ CE N'EST PAS LE SIGNAL DE LANCEMENT (`utils/examens/signal.ts`, C4-L9) :
+  //    celui-là naît du LANCEMENT par le professeur, celui-ci de l'ASSIGNATION.
+  //    Deux événements, deux signaux — on n'en fabrique pas un seul pour les deux.
+  //
+  // ⚠️ LA PORTE EST LUE DANS `exercicesMaisonDeLEleve`, pas ici : la tuile porte
+  //    un lien, et un lien vers un écran fermé est une promesse cassée.
+  // `lireFuseau` est mémoïsé (`cache`) : l'appeler ici ne coûte pas une lecture de plus.
+  const fuseauEcole = await lireFuseau()
+  const cycleLundi = toISODate(lundiOnOrBefore(jourDansFuseau(new Date(), fuseauEcole)))
+  const semaines = enContexte.length > 0
+    ? await Promise.all(enContexte.map(async (i) => ({
+      classe: i.classe_nom,
+      signal: await signalDeLaSemaine(admin, user!.id, i.classe_id, cycleLundi, fuseauEcole, new Date()),
+    })))
+    : []
 
-    if (triees.length > 0) {
-      const sections = [
-        { key: 'note_decouvertes', label: 'Découvertes' },
-        { key: 'note_sources', label: 'Sources' },
-        { key: 'note_reflexions', label: 'Réflexions' },
-      ] as const
-      for (const s of sections) {
-        const vals = triees.map((a) => a[s.key] as number | null).filter((v): v is number => v != null)
-        if (vals.length === 0) continue
-        const avg = vals.reduce((x, y) => x + y, 0) / vals.length
-        const lettre = noteVersLettre(Math.round(avg)) ?? 'C'
-        sectionsProg.push({ label: s.label, lettre })
-      }
-    }
-  }
+  // ── ⭐ LA FICHE « SERVIE UNE FOIS — À LA RENTRÉE » (`06-` §5) ───────────────
+  // *Consultable* est une page ; *servie une fois* est une POUSSÉE, au premier
+  // passage. Le tableau de bord est la seule surface de poussée de l'élève.
+  // ⚠️ La marque vit sur `profiles` (`c6_l2_marques_eleve.sql`) ; NULL = jamais
+  //    servie. La tuile s'éteint dès qu'il a ouvert ses fiches.
+  const fichesVues = enContexte.length > 0 ? await fichesDejaServies(admin, user!.id) : true
+
+  // ⛔⛔ ARBITRAGE ④ DE LOUIS, 28/08 — LES LETTRES DE FRAGMENTS ONT QUITTÉ CE
+  //    TABLEAU DE BORD, ET ELLES RESTENT DANS LEUR MODULE.
+  //    « C'est normal, c'est voulu, mais dans le module Fragments seulement —
+  //      si on les met au tableau de bord, on risque de les faire se mélanger. »
+  //    Le bloc « Ta progression » affichait ici trois lettres A→E (Découvertes ·
+  //    Sources · Réflexions), converties par `utils/notation.ts`, SANS OPT-IN —
+  //    quand le `06-` §5 dit « côté élève, par défaut : PAS DE LETTRE », et que
+  //    « une lettre affichée par défaut serait lue comme une note ».
+  //    ⚠️ LE MOTIF EXACT EST LE MÉLANGE : le profil de compétences porte lui
+  //       aussi des lettres, sous trois conditions (C6-L2). Deux systèmes de
+  //       lettres côte à côte sur le même écran se seraient confondus.
+  //    ⭐ Elles vivent toujours à « Ton parcours »
+  //       (`app/eleve/modules/fragments-erudition/page.tsx`) : rien n'y a été
+  //       touché — ce lot RETIRE d'ici, il ne déplace rien.
 
   // ── Retours d'examen à lire (passation en classe) ───────────────────────────
   // ⭐⭐ CE QUE CETTE LECTURE RÉPARE, ET IL A ÉTÉ MESURÉ EN PROD LE 27/08 :
@@ -319,6 +329,53 @@ export default async function TableauDeBordEleve() {
       classe: enContexte.find((i) => i.classe_id === e.classeId)?.classe_nom,
     })
   }
+  for (const { classe, signal } of semaines) {
+    if (signal.aFaire === 0) continue
+    taches.push({
+      cle: `semaine-${classe}`,
+      // ⭐ La semaine couvre LES DEUX ateliers : sa tuile ne porte donc le sceau
+      //    d'aucun des deux. Codex est le pigment du travail écrit, et c'est là
+      //    que mène la majorité des dépôts maison ; l'atelier de CHAQUE exercice
+      //    se montre, lui, sur l'écran de la semaine (`01-` §2 : « pendant le
+      //    cycle, l'atelier est un attribut visuel, jamais un lieu »).
+      module: 'codex',
+      titre: 'Mes exercices de la semaine',
+      detail: signal.total === signal.aFaire
+        ? `${signal.total} exercice${signal.total > 1 ? 's' : ''} à faire cette semaine.`
+        : `${signal.aFaire} exercice${signal.aFaire > 1 ? 's' : ''} sur ${signal.total} te reste${signal.aFaire > 1 ? 'nt' : ''} à faire.`,
+      href: '/eleve/semaine',
+      cta: 'Voir ma semaine',
+      // ⚠️ OÙ CETTE TUILE SE PLACE, ET POURQUOI. Le barème du tableau est :
+      //    quizz en direct 100 · synthèse en direct 95 · retour d'examen à lire
+      //    92 · fragment en retard 90 · fragment dû 70 · flashcards 50 · lecture
+      //    40. Elle reste SOUS les deux séances « en direct », qui se passent à
+      //    la minute, et SOUS l'obligation de lecture d'un retour, qui est une
+      //    obligation et non une échéance. Elle passe JUSTE AU-DESSUS de
+      //    Fragments parce que le cycle d'exercices est le travail hebdomadaire
+      //    que le routeur compose, et que cette tuile est LE SEUL endroit d'où
+      //    son volume se voit — « sans lui, l'élève découvre son travail
+      //    exercice par exercice » (`07-` §2).
+      urgence: signal.enRetard ? 91 : 75,
+      badge: signal.enRetard
+        ? { texte: 'en retard', ton: 'retard' }
+        : { texte: `${signal.aFaire} à faire`, ton: 'attention' },
+      classe,
+    })
+  }
+  // ⭐ « Servie une fois, à la rentrée » — la poussée, et elle s'éteint seule.
+  // ⚠️ L'URGENCE LA PLUS BASSE DU TABLEAU (30, sous la lecture Aletheia à 40) :
+  //    découvrir ses compétences n'est jamais urgent, et cette tuile ne doit
+  //    jamais passer devant un travail à rendre.
+  if (!fichesVues) taches.push({
+    cle: 'fiches-competences',
+    module: 'codex',
+    titre: 'Les six compétences',
+    detail: 'Ce qu’on regarde dans ton travail, expliqué en une page par compétence.',
+    href: '/eleve/moi/competences',
+    cta: 'Les découvrir',
+    urgence: 30,
+    badge: { texte: 'à lire une fois', ton: 'muet' },
+  })
   if (cartesDues > 0) taches.push({
     cle: 'cartes', module: 'quazian', titre: 'Flashcards à réviser',
     detail: `${cartesDues} carte${cartesDues > 1 ? 's' : ''} à revoir aujourd'hui.`,
@@ -458,19 +515,6 @@ export default async function TableauDeBordEleve() {
               </section>
             )}
 
-            {sectionsProg.length > 0 && (
-              <section>
-                <h3 className="font-ui text-xs tracking-[0.1em] text-muet uppercase mb-2">Ta progression</h3>
-                <div className="bg-surface border border-bordure rounded-xl p-4 grid grid-cols-3 gap-2 text-center">
-                  {sectionsProg.map((s) => (
-                    <div key={s.label}>
-                      <p className={`font-titre text-2xl leading-none ${TEXTE_LETTRE[s.lettre]}`}>{s.lettre}</p>
-                      <p className="text-xs text-muet mt-1.5">{s.label}</p>
-                    </div>
-                  ))}
-                </div>
-              </section>
-            )}
           </aside>
         </div>
       )}

@@ -68,6 +68,23 @@ export const NAV_ELEVE: NavTab[] = [
   { label: 'Tableau de bord', href: '/eleve', exact: true },
   { label: 'Calendrier', href: '/eleve/calendrier' },
   { label: 'Intégrité', href: '/eleve/integrite' },
+  // ⭐⭐ C6-L2 — « Moi » ENTRE DANS LA NAV DESKTOP, ET C'EST UNE RÉPARATION,
+  //    PAS UN ONGLET NEUF.
+  //    L'arbitrage ③ de Louis (28/08) loge le PROFIL de compétences et la FICHE
+  //    sous l'onglet « Moi », et interdit tout onglet neuf. Or `/eleve/moi`
+  //    n'était listé QUE par `BarreOngletsMobile` (`sm:hidden`) : sur desktop,
+  //    la page existait SANS AUCUN LIEN VERS ELLE — la seule commande de compte
+  //    y était le bouton « Se déconnecter » de `EnTeteSite`.
+  //    ⛔ Le profil et les six fiches auraient donc été INATTEIGNABLES sur
+  //       desktop, et le « fait quand » du lot — « atteignable toute l'année »,
+  //       « un geste cliquable prouvé PAR LE CLIC » — n'aurait pas pu se lever.
+  //    ⚠️ La destination ne change pas : c'est la MÊME page, au MÊME chemin, déjà
+  //       le cinquième onglet de la barre tactile. Ce qui change est qu'elle se
+  //       voit des deux côtés. **Aucune destination n'est créée.**
+  //    ⚠️ Question posée à Louis au relevé : si l'arbitrage ③ voulait dire « pas
+  //       de cinquième entrée dans la nav desktop non plus », cette ligne se
+  //       retire seule — et il faudra alors un autre chemin vers le profil.
+  { label: 'Moi', href: '/eleve/moi' },
   {
     label: 'Modules',
     items: [

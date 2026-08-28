@@ -7500,3 +7500,198 @@ interruption. Le décor se reconnaît à sa classe, `nom LIKE 'RECETTE-C5L3%'`. 
   qu'elle **ne dépend pas de la maison** : elle se lève quand une ANCRE arrive. ⛔ Les deux autres
   attendent les exercices maison — elles portent **zéro ligne en base des deux côtés**.
   **Condition de reprise de (a) et (b) : un premier exercice maison remis.**
+
+---
+
+## C6 · L2 — Ce que l'élève voit : trois écrans, cinq canaux, et une migration (séance du 28/08, migration `c6_l2_marques_eleve.sql`)
+
+> ⭐⭐ **CE LOT EST LE SYMÉTRIQUE DE `C6-L1`, ET IL EN PARTAGE LA NATURE : un lot de COUTURE.**
+> `C6-L1` a trouvé la matrice du professeur déjà écrite et les canaux coupés ; ici c'est l'inverse
+> — **les trois écrans de l'élève n'existaient pas**, mais les trois mots de la première phrase
+> avaient chacun leur producteur, et **deux n'étaient lus par personne**.
+>
+> **Tout ce qui est coché a été prouvé PAR EXÉCUTION**, par `scripts/recette/couture-c6l2.mjs`
+> *(**51 contrôles verts, 0 rouge**, décor semé et retiré, base revenue au caractère près)* —
+> jamais par lecture de code.
+>
+> ⚠️⚠️ **UNE SESSION CODE NE S'AUTHENTIFIE PAS, ET C'EST LA LIGNE DE PARTAGE DE CETTE SECTION.**
+> Le script appelle **les lectures que les trois écrans appellent** et constate en base ; il
+> **n'exerce aucun JSX, aucune server action, aucune redirection**. *Le layout élève redirige un
+> visiteur non-élève avant même de charger le module de la page : les trois écrans n'ont donc
+> **jamais été rendus**.* **Tout ce qui demande un ŒIL D'ÉLÈVE DEVANT L'ÉCRAN reste décoché.**
+
+### Ce qui est prouvé, avec sa preuve
+
+- [x] **C6L2-1 · Le constat d'entrée, chiffres en main.** Le tableau de bord savait produire
+  **six** tuiles — quizz 100 · synthèse 95 · retour d'examen 92 · fragment 90/70 · flashcards 50 ·
+  lecture 40 — et **aucune ne naissait d'un exercice assigné** : `app/eleve/page.tsx` n'importait
+  ni `exercices_depots`, ni `exercicesMaisonDeLEleve`. *Preuve : lecture intégrale du fichier au
+  contrôle machine 6, avant toute écriture.*
+- [x] **C6L2-2 · Canal ④ — une tuile naît de l'ASSIGNATION.** `signalDeLaSemaine` voit les dépôts
+  du cycle et allume la tuile. *Preuve : couture §B ④ — 2 exercices vus, 2 attendant un geste.*
+  ⭐ **Et ce n'est pas le signal de lancement de `C4-L9`** : celui-là naît du LANCEMENT par le
+  professeur, celui-ci de l'ASSIGNATION. Deux événements, deux signaux.
+- [x] **C6L2-3 · Canal ⑤ — l'écran de la semaine sert LES DEUX ATELIERS.** *Preuve : couture §B ⑤
+  — `aletheia + codex` sur un décor qui pose une instance de chaque ; une liste par atelier en
+  aurait manqué un.* ⭐ `exercicesMaisonDeLEleve` est appelée **deux fois**, jamais élargie.
+- [x] **C6L2-4 · Chaque ligne de la semaine mène au déroulé à six temps.** *Preuve : couture §B ⑤ —
+  tous les `href` portent `/exercice/`.* ⛔ « Un lien qui mène à `notFound()` n'est pas un geste. »
+- [x] **C6L2-5 · Le récapitulatif nomme les FORCES et AUCUNE faiblesse.** *Preuve : couture §B ⑤bis
+  — forces rendues par `dimension_eleve` ; le rendu complet passé au crible de
+  `/faible|faiblesse|tu rates|échou|à revoir/i`, aucun résultat.* ⭐ **Le motif est mécanique** :
+  nommer la faiblesse d'entrée donnerait à l'élève la réponse à « se juger », et détruirait la
+  mesure du Monitoring en silence.
+- [x] **C6L2-6 · Les deux temps ne s'affichent JAMAIS ensemble.** *Preuve : couture §B ⑤bis
+  (bilan vide) puis §C (récapitulatif vide) — c'est le type `MomentDeLaSemaine` qui l'interdit.*
+- [x] **C6L2-7 · ⭐⭐ Un retour PUBLIÉ NON LU retient le bilan.** *Preuve : couture §C — l'écran
+  reste au récapitulatif tant que `lu_at` est nul, et bascule dès qu'il est posé.* ⭐ **Trouvé en
+  jouant la recette, pas en la concevant** : `etatDeLExercice` met l'obligation de lecture DEVANT
+  le statut du dépôt *(`02-` §6.D, étape 17)*, et c'est ce qui garantit que la semaine ne se
+  referme pas sur un retour que l'élève n'a pas ouvert.
+- [x] **C6L2-8 · ⭐⭐ Canal ② — « en progrès » a enfin un appelant de PRODUCTION.**
+  `progressionALaLecture` calcule la progression **à la lecture**, pour le seul écran de l'élève.
+  *Preuve : couture §D — `progres` sur un décor où `lien_explicite` passe à acquis d'une fenêtre à
+  la suivante (2/4 → 3/4).* ⛔ **Cela ne lève PAS `C4L12-23`**, qui reste un refus d'affirmer côté
+  moteur : un `aProgresse` faux **fait poser un exercice de plus**, un mot à l'écran non.
+- [x] **C6L2-9 · Et il se tait quand il ne sait pas.** *Preuve : couture §D — une compétence sous
+  la fenêtre de quatre rend `pas_assez_de_mesures`, jamais « en progrès ».* ⭐ **C'est l'état de
+  TOUS les élèves réels aujourd'hui** *(production : 162 paires, zéro à quatre mesures)*, et
+  l'écran **dit pourquoi** au lieu de disparaître.
+- [x] **C6L2-10 · ⭐⭐ Canal ③ — un écran de PROFIL lit `exercices_retours.action_revision`.**
+  *Preuve : couture §D — le geste rendu est mot pour mot celui que la chaîne a écrit, avec sa date
+  de publication et le lien du déroulé.*
+- [x] **C6L2-11 · `published_at` est la porte, et elle tient.** *Preuve : couture §D — un second
+  retour, PLUS RÉCENT et NON publié, portant un texte sentinelle, n'est jamais sorti.*
+- [x] **C6L2-12 · Le geste ne nomme AUCUNE compétence, et c'est juste.** *Preuve : couture §D —
+  `competence === null`.* ⚠️ **Le seul rattachement écrit est la cible primaire**
+  *(`routeur_decisions.cible_retenue`, à défaut `exercices.cible_primaire`)*, et **les deux sont
+  vides** : 0 ligne de `routeur_decisions` des deux côtés, `cible_primaire` NULL sur **251/251** en
+  production. ⛔ **Et `competences_mesures.depot_id` ne peut pas y suppléer** : les **14** retours
+  publiés de production portent tous un dépôt qui mesure **DEUX OU TROIS** compétences — *aucun
+  n'en mesure une seule*. « Le dernier conseil que Calame t'a donné » est honnête ; « ton geste
+  pour l'Argumentation » ne le serait pas.
+- [x] **C6L2-13 · Les TROIS conditions d'une lettre, éprouvées une par une.** *Preuve : couture §D
+  — sans le choix, aucune lettre et la raison est `choix_de_l_eleve` ; avec les trois réunies, la
+  lettre « C » s'affiche.* ⭐ **Les deux sens sont éprouvés** : « une bascule qui ne montre jamais
+  rien n'est pas un choix ».
+- [x] **C6L2-14 · Le choix de l'élève se persiste et se relit.** *Preuve : couture §D —
+  `ecrireLeChoixDesLettres` puis `lireLeChoixDesLettres` rendent `true`.* ⚠️ Migration
+  `c6_l2_marques_eleve.sql`, **sandbox le 28/08**.
+- [x] **C6L2-15 · ⭐⭐ RR4 — aucun champ interdit d'`ObservableEleve` n'atteint l'écran.**
+  *Preuve : couture §D et §C — le JSON de ce que reçoivent le profil et le bilan est passé au
+  crible de `code`, `sens`, `taux`, `tauxFenetre`, `reussies`, `denominateur`, `reussiesFenetre`,
+  `denominateurFenetre`, `serie` : **aucun**.* ⭐ **La coupure est dans le TYPE, pas dans le JSX** —
+  un écran qui oublierait un champ ne pourrait pas le trouver.
+- [x] **C6L2-16 · ⭐⭐ Le bilan nomme LES DEUX ÉCARTS QUI INSTRUISENT, un de chaque sens.**
+  *Preuve : couture §C, sur un cas semé de chaque sens — `bonneSurprise` (bien réussi là où il
+  était faible : `objection_traitee`, 0,5 → 1) et `angleMort` (moins bien réussi là où il avait
+  une force : `garant_present`, 1 → 0).*
+- [x] **C6L2-17 · Le bilan dit ce qui manque.** *Preuve : couture §C — une copie rendue sans mesure
+  écrite, et le bilan l'annonce.* ⭐ *« Une mesure qui n'a pas eu lieu ne se voit pas » — la leçon
+  payée par `C5-L4`.*
+- [x] **C6L2-18 · SIX fiches, et six exactement.** *Preuve : couture §E — 6 rendues, la septième
+  (`monitoring`) écartée AVEC SON MOTIF.* ⚠️ `competences_fiches` porte **7 lignes** dans les deux
+  bases ; `monitoring` **n'a pas de `### 1.1`** et n'est pas une compétence du référentiel.
+- [x] **C6L2-19 · La fiche est GÉNÉRIQUE, et son texte est servi tel quel.** *Preuve : couture §E —
+  aucun code d'observable, aucun « travaillé N fois », et la ligne de fabrication en italique
+  (« Ni observable, ni seuil, ni décompte ») **ne sort pas** : c'est une consigne, pas le texte.*
+- [x] **C6L2-20 · « Servie une fois » est posée et idempotente.** *Preuve : couture §E — la marque
+  s'écrit au premier passage, et un second passage ne réécrit pas la date du premier.*
+- [x] **C6L2-21 · Les lettres de Fragments ont quitté le tableau de bord.** Le bloc « Ta
+  progression » — calcul, rendu, l'import `noteVersLettre` et la table `TEXTE_LETTRE` — est retiré
+  de `app/eleve/page.tsx`. *Preuve : `npx tsc --noEmit` propre (aucun orphelin) et `npm run lint`
+  sans avertissement sur le fichier.* ⛔ **Rien n'a été touché dans
+  `app/eleve/modules/fragments-erudition/` : elles y restent, à « Ton parcours ».**
+- [x] **C6L2-22 · La base revient EXACTEMENT à son point de départ.** *Preuve : après le dernier
+  jeu — 3 mesures · 261 exercices · 46 dépôts · 3 retours · 102 niveaux tous provisoires · 0 lettre
+  · 0 marque écrite, et « balayage : aucun reste marqué ».*
+
+### Ce qui reste à jouer en recette, avec sa condition de reprise
+
+- [x] **C6L2-23 · ⭐⭐ LE SMOKE ÉLÈVE — JOUÉ LE 28/08, ET IL A TROUVÉ QUATRE DÉFAUTS D'ÉCRAN.**
+  *Preuve : parcours complet en session ÉLÈVE réelle (`test@test.com`, « Elo », bi-classe), décor
+  semé par `--eleve test@test.com --decor-ecran`, puis `--retire`.*
+  ⚠️ **La session a été MINTÉE PAR L'API ADMIN** — `auth.admin.generateLink({ type: 'magiclink' })`
+  puis la route `/auth/confirm` du dépôt, qui pose les cookies par `verifyOtp`. ⛔ **Aucun mot de
+  passe n'a été saisi nulle part.** *Le patron est réutilisable pour tout smoke élève à venir.*
+  **Ce qui a été vu et cliqué**, écran par écran :
+  · `/eleve` — **la tuile « Mes exercices de la semaine » est le HÉROS** *(« À FAIRE MAINTENANT ·
+    2 à faire »)*, la tuile « Les six compétences · à lire une fois » est en second, ⛔ **et le bloc
+    de lettres A→E a bien disparu** ;
+  · **la nav desktop porte « Moi »** *(Tableau de bord · Calendrier · Intégrité · **Moi** ·
+    Modules)* — ✅ *décision de Louis du 28/08 : la ligne reste* ;
+  · `/eleve/semaine` — frise « 0 exercice fait sur 2 », récapitulatif *(forces + dimensions)*, la
+    liste **avec ses deux pastilles d'atelier** ;
+  · ⭐ **LE CLIC DE BOUT EN BOUT** : tuile → `/eleve/semaine` → exercice → **le déroulé à six temps
+    s'ouvre** *(« Préparer · Écrire · Se juger · Retour », la consigne, « Durée indicative :
+    4 minutes », le champ de rédaction, la confiance déclarée)*. ⭐ *Et le clic a réellement fait
+    passer le dépôt de `assigne` à `ouvert` en base — la chaîne est vraie.* ;
+  · ⭐ **LE BILAN À L'ÉCRAN** *(après clôture des deux dépôts et validation de la lecture)* :
+    « 2 exercices faits sur 2 », l'avertissement de la copie non corrigée, puis **les deux écarts**
+    — *« Tu as réussi … — là où tu avais du mal jusqu'ici »* et *« À reprendre : … — c'était
+    pourtant un de tes points forts »*. **Le récapitulatif avait disparu** : les deux temps ne
+    coexistent jamais ;
+  · `/eleve/moi` — « travaillé 6 fois · en progrès », la lettre **C**, « Le dernier conseil que
+    Calame t'a donné : … », le lien « Revoir ce retour » ;
+  · ⭐ **LA BASCULE DES LETTRES, LES DEUX SENS, PAR LE VRAI CLIC** : « Masquer » → le **C**
+    disparaît et la base passe à `false` ; « Afficher » → le **C** revient. *La server action est
+    donc exercée pour de vrai, enveloppe `'use server'` et `revalidatePath` compris.* ;
+  · `/eleve/moi/competences` — les **six** fiches, chacune avec son paragraphe et ses dimensions ;
+    ⭐ **la marque de service a été posée par la VISITE** *(effet client)*, et **la tuile de
+    découverte s'est éteinte** au retour sur `/eleve` ;
+  · ⛔ `/eleve/modules/fragments-erudition` — **« TON PARCOURS » et son axe E/D/C/B/A sont
+    toujours là**. *L'arbitrage ④ est tenu des deux côtés.* ;
+  · **la semaine passée** *(2026-08-17)* rend le vrai dépôt d'Elo, et **une semaine sans exercice**
+    *(2026-09-07)* rend « Aucun exercice ne t'a été donné cette semaine-là. » ;
+  · **l'état « Toutes les classes »** agrège et l'en-tête le dit *(« · toutes les classes »)*.
+- [x] **C6L2-29 · ⭐⭐ QUATRE DÉFAUTS D'ÉCRAN TROUVÉS PAR L'ŒIL, ET CORRIGÉS** — *aucun n'était
+  visible autrement : `tsc`, les 60 tests et les 51 contrôles de couture passaient tous.*
+  **(1)** `/eleve/moi` répétait **cinq fois** « Ton profil se stabilise encore… », une fois par
+  compétence provisoire → **les motifs sont dédoublonnés et dits une seule fois**, sous le bloc.
+  **(2)** `/eleve/moi` disait « **jamais travaillé · pas encore travaillé** » — deux fois la même
+  chose → à zéro mesure, **le décompte seul**. **(3)** `/eleve/semaine` alignait **huit dimensions
+  d'affilée séparées par des virgules**, illisibles → **une liste, une par ligne**, et ⛔ **aucune
+  n'est coupée**. **(4)** `/eleve/moi/competences` collait « CE QU'ON Y REGARDE » au dernier mot du
+  paragraphe — `Balise` rend un `<span>` **inline**, que `space-y-4` ne sépare pas → **enveloppé
+  dans un `<p>`**. *Les quatre re-vérifiés à l'écran après correction.*
+- [ ] **C6L2-30 · ⚠️ LE SEUL ÉTAT D'ÉCRAN NON ATTEINT : LA PORTE FERMÉE.** Le `07-` §5 est formel —
+  *« aucune recette ne peut prétendre avoir éprouvé un comportement "porte fermée" sans avoir
+  éteint l'interrupteur exprès — puis l'avoir remis »*. **La tentative a été faite et REFUSÉE** :
+  écrire `scriptorium_params.exercices_actif` est une bascule d'un des six interrupteurs, et elle
+  a été bloquée. ⭐ **Les six ont été re-constatés à ON après coup, inchangés.** Le message existe
+  et il est écrit *(« Les exercices ne sont pas encore ouverts. Ton professeur te préviendra quand
+  ils le seront. »)*, mais **il n'a jamais été affiché**.
+  **Condition de reprise : Louis ferme `exercices_actif` à `/prof/allumage`, regarde
+  `/eleve/semaine`, et le rouvre.** *C'est un geste de quelques secondes, et c'est le sien.*
+- [ ] **C6L2-24 · ⚠️ LA TUILE ET LA FRISE NE SE PROUVENT QU'EN BAC À SABLE.** **La production ne
+  porte AUCUN dépôt maison** — mesuré le 28/08 : 86 dépôts, `lieu = 'classe'` sur les 86, **zéro
+  maison** *(le bac à sable en porte 21)*. ⛔ **Un écran vide en production n'est donc pas un
+  échec** : les 247 instances maison de production sont non servables, et le routeur n'a jamais
+  tourné. **Condition de reprise : le premier exercice maison assigné en production** — c'est-à-dire
+  `C4-L12` joué, ou une assignation manuelle par le professeur.
+- [ ] **C6L2-25 · ⚠️ LA LETTRE DU PROFIL NE SE PROUVE À L'ÉCRAN QU'APRÈS LA BASCULE DE
+  `profil_provisoire`.** Mesuré le 28/08 : **VRAI sur les 149 lignes de production et les 102 du
+  bac à sable**. La couture l'a éprouvée **en semant la bascule et en la reposant** ; en vrai, elle
+  tombe **à la clôture du segment 2** — `SEMAINES_SEGMENT_1 = 1` + `SEMAINES_SEGMENT_2 = 2` *(lus
+  au fichier le 28/08)*, soit la **quatrième semaine d'enseignement**, le **lundi 2026-09-14** pour
+  un semestre ouvert le 24/08. ⛔ **Et la bascule n'a AUCUN écrivain de production** —
+  `cloturerLaCalibrationDesEleves` n'est appelée que par `scripts/recette/routeur-c4l12.mjs`.
+  **Condition de reprise : `C4-L12` pose l'écrivain, puis la quatrième semaine arrive.**
+- [ ] **C6L2-26 · ⚠️ LA MIGRATION N'EST PAS JOUÉE EN PRODUCTION, ET C'EST DÉLIBÉRÉ.**
+  `c6_l2_marques_eleve.sql` est **sandbox le 28/08**, prod décochée : **le code de C6-L2 n'est pas
+  poussé** *(un push est un déploiement, et ce lot ne déploie pas de lui-même)*. La migration est
+  inerte pour l'existant, mais la jouer avant le code poserait en prod deux colonnes que rien ne
+  lit. **Condition de reprise : au déploiement, dans cet ordre — code, puis SQL**, avec le
+  protocole renforcé de la règle R6 *(`profiles` est une table vivante)*.
+- [ ] **C6L2-27 · ⚠️ « EN PROGRÈS » SERA MUET POUR TOUT LE MONDE À LA RENTRÉE.** Mesuré le 28/08 :
+  **aucune paire (élève × compétence) n'atteint la fenêtre de quatre**, dans aucune des deux bases
+  *(production : 162 paires — 147 à une mesure, 14 à deux, 1 à trois, **zéro à quatre** ; bac à
+  sable : 3 paires à une)*. L'écran dira donc « pas encore assez d'exercices pour le dire », avec
+  son décompte. ⭐ **Ce n'est pas une panne, et c'est le même mur que `C4L12-23`.**
+  **Condition de reprise : une quatrième mesure sur une même paire — soit quatre exercices d'une
+  même compétence remis et mesurés par un même élève.**
+- [ ] **C6L2-28 · ⚠️ LE RATTACHEMENT DU GESTE À UNE COMPÉTENCE N'A JAMAIS ÉTÉ VU EN VRAI.** Le code
+  lit `routeur_decisions.cible_retenue` puis `exercices.cible_primaire` *(l'ordre du `07-` §1.1)*,
+  et **la couture n'a éprouvé que la branche « aucune des deux »** — les seules données qui
+  existent. **Condition de reprise : une décision de routeur écrite (`C4-L12`) ou une instance
+  conçue avec sa cible primaire ; alors l'écran doit dire « Ta prochaine étape, sur … ».**

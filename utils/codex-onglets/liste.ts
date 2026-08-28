@@ -63,6 +63,28 @@ export interface ExerciceMaison {
   etat: EtatDeLigne
   /** Où l'élève entre — le déroulé à six temps de C4-L3. */
   href: string
+  /**
+   * ⭐ C6-L2 — L'INSTANT DE L'ASSIGNATION, et c'est le SEUL chemin TOTAL vers la
+   *    semaine d'un dépôt. `exercices_depots` ne porte AUCUNE colonne de cycle :
+   *    « le rattachement se dérive d'`assigne_at` » (`07-` §1.1 ; relevé C4-L13
+   *    §1), qui est `not null` et n'est JAMAIS réécrit à la ré-assignation. Les
+   *    deux autres chemins sont morts sur la voie du professeur —
+   *    `routeur_decisions.cycle_lundi` est NULL, `exercices_planifies` demande
+   *    deux sauts et deux NULL possibles.
+   *    ⚠️ Il se lit par `lundiDuCycle(instant, fuseau)`, JAMAIS en UTC : « un
+   *       dépôt du dimanche 20 h 30 à Toronto est le lundi 00 h 30 UTC ».
+   */
+  assigneAt: string
+  /**
+   * ⭐ C6-L2 — LES COMPÉTENCES QUE L'INSTANCE PEUT PORTER, telles
+   *    qu'`exercices.modes_par_competence` les déclare (`07-` §1.1). Déjà lues
+   *    par cette requête pour élire l'atelier ; elles sont désormais RENDUES,
+   *    parce que « les compétences que la semaine travaille en priorité » se
+   *    lisent SUR LES EXERCICES POSÉS et non sur une liste de priorité
+   *    recalculée — la rejouer inventerait une semaine que le moteur n'a pas
+   *    composée (`02-` §6.C ; `utils/eleve/semaine.ts`).
+   */
+  competences: string[]
 }
 
 /**
@@ -112,7 +134,7 @@ export async function exercicesMaisonDeLEleve(
 
   const { data, error } = await admin
     .from('exercices_depots')
-    .select('id, statut, echeance, '
+    .select('id, statut, echeance, assigne_at, '
       + 'exercices!inner(id, lieu, classe_id, consigne_instanciee, modes_par_competence)')
     .eq('eleve_id', eleveId)
     .neq('statut', 'retire')
@@ -143,12 +165,28 @@ export async function exercicesMaisonDeLEleve(
         echeance: (d.echeance as string | null) ?? null,
         etat: etatDeLExercice(txt(d.statut), retours.get(txt(d.id)) ?? null),
         href: hrefDuDeroule(atelier, txt(d.id)),
+        assigneAt: txt(d.assigne_at),
+        competences: competencesDeclarees(ex.modes_par_competence),
       }
     })
     .sort((a, b) => comparerLignes(
       { ton: a.etat.ton, echeance: a.echeance },
       { ton: b.etat.ton, echeance: b.echeance },
     ))
+}
+
+/**
+ * ⭐ C6-L2 — LES CLÉS de `modes_par_competence`, et rien de plus.
+ *
+ * ⚠️ CE SONT LES COMPÉTENCES QUE L'INSTANCE PEUT PORTER, pas celles qu'elle a
+ *    MESURÉES : « combien de compétences un exercice porte ne se déclare pas :
+ *    cela se dérive » (`02-` §6.B), et la mesure vit à `competences_mesures`.
+ *    Un écran qui les présenterait comme mesurées mentirait sur une semaine
+ *    dont la chaîne n'a encore rien tiré.
+ */
+function competencesDeclarees(modesParCompetence: unknown): string[] {
+  if (typeof modesParCompetence !== 'object' || modesParCompetence === null) return []
+  return Object.keys(modesParCompetence as Record<string, unknown>)
 }
 
 /**
