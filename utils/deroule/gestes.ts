@@ -177,20 +177,81 @@ export async function enregistrerLaCredence(
   if (depot.v1_remis_at) {
     return refus('La crédence se déclare pendant l’exercice, avant de savoir si tu as raison.')
   }
+  return fusionnerDansLaCredence(admin, depot, cas, valeur, maintenant,
+    (m) => `La crédence n’a pas été enregistrée : ${m}`)
+}
+
+/**
+ * ⭐⭐ LA FUSION PAR CAS — et c'est une FUSION, plus un remplacement.
+ *
+ * ⛔⛔ **CE N'EST PAS UNE GÉNÉRALISATION GRATUITE : SANS ELLE, L'ORDRE DES DEUX
+ * SAISIES DÉCIDE DE CE QUI SURVIT.** Depuis la désignation (`02-` §5), l'entrée
+ * d'un cas se remplit en **deux gestes séparés** — la ZONE que l'élève
+ * sélectionne dans le matériau, puis la CRÉDENCE qu'il déclare —, et ils
+ * n'arrivent pas dans un ordre garanti : *l'élève peut resserrer sa sélection
+ * après avoir donné son pourcentage.* Une écriture qui remplaçait l'entrée
+ * faisait alors disparaître l'autre moitié **en silence**, et le Monitoring
+ * lisait un `index_correct` sans zone, ou une zone sans crédence.
+ *
+ * ⚠️ **L'ÉCRASEMENT RESTE PAR CAS, JAMAIS EN BLOC** : redéposer le cas 2
+ * n'efface pas le cas 1, qui a été donné AVANT la correction — « c'est l'écart
+ * entre les deux que le Monitoring lit ».
+ */
+async function fusionnerDansLaCredence(
+  admin: Admin, depot: DepotMaison, cas: number, apport: Record<string, unknown>,
+  maintenant: string, message: (m: string) => string,
+): Promise<Issue<null>> {
   const { data } = await admin.from('exercices_metacognition')
     .select('credence').eq('depot_id', depot.id).maybeSingle()
   const courant = Array.isArray(data?.credence) ? (data.credence as unknown[]) : []
-  const autres = courant.filter(
-    (c) => !(c && typeof c === 'object' && (c as Record<string, unknown>).cas === cas))
-  const suite = [...autres, valeur].sort(
+  const estCeCas = (c: unknown) =>
+    !!c && typeof c === 'object' && (c as Record<string, unknown>).cas === cas
+  const ancien = (courant.find(estCeCas) ?? {}) as Record<string, unknown>
+  const autres = courant.filter((c) => !estCeCas(c))
+  const suite = [...autres, { ...ancien, ...apport, cas }].sort(
     (a, b) => Number((a as Record<string, unknown>).cas ?? 0)
             - Number((b as Record<string, unknown>).cas ?? 0))
 
   const { error } = await admin.from('exercices_metacognition')
     .upsert({ depot_id: depot.id, credence: suite, updated_at: maintenant },
       { onConflict: 'depot_id' })
-  if (error) return refus(`La crédence n’a pas été enregistrée : ${error.message}`)
+  if (error) return refus(message(error.message))
   return ok(null)
+}
+
+/**
+ * ⭐ LA DÉSIGNATION DANS LE MATÉRIAU (`02-` §5) — la zone que l'élève a
+ * sélectionnée, ou **`null` pour « rien à signaler »**.
+ *
+ * ⛔⛔ **« RIEN À SIGNALER » EST UNE RÉPONSE, PAS UNE ABSENCE DE RÉPONSE**, et
+ * c'est pourquoi elle s'écrit : *« les élèves peuvent se sentir obligés de
+ * surligner »* — un élève qui ne trouve rien doit pouvoir le DIRE aussi
+ * facilement qu'il sélectionne, et le dispositif doit savoir qu'il l'a dit.
+ * `zone: null` avec un `zone_at` est donc une saisie ; **pas de `zone_at` du
+ * tout** est l'élève qui n'a pas encore répondu. *Les deux se distinguent, et
+ * il le faut : sans quoi on ne pourrait pas dire si l'écran a été rempli.*
+ *
+ * ⚠️ **AUCUNE MIGRATION** : `exercices_metacognition.credence` est un tableau
+ * jsonb dont le seul CHECK porte sur le type, et les trois crans qui désignent
+ * y écrivent déjà une entrée par cas.
+ *
+ * ⚠️ **ON N'ÉCRIT QUE DES BORNES.** La cible, elle, ne descend jamais à
+ * l'écran : elle se dérive au serveur de la `version_corrigee`, qui EST la
+ * réponse aux crans 7 et 9 (`02-` §2.3.4).
+ */
+export async function enregistrerLaDesignation(
+  admin: Admin, depot: DepotMaison, cas: number, zone: readonly [number, number] | null,
+  maintenant: string,
+): Promise<Issue<null>> {
+  if (depot.v1_remis_at) {
+    return refus('La désignation se fait pendant l’exercice, avant de remettre.')
+  }
+  if (zone && (!Number.isInteger(zone[0]) || !Number.isInteger(zone[1]) || zone[1] <= zone[0])) {
+    return refus('La sélection n’est pas lisible. Recommence, ou dis qu’il n’y a rien à signaler.')
+  }
+  return fusionnerDansLaCredence(admin, depot, cas,
+    { zone: zone ? [zone[0], zone[1]] : null, zone_at: maintenant }, maintenant,
+    (m) => `La désignation n’a pas été enregistrée : ${m}`)
 }
 
 // ── Le temps 3 — « SE JUGER » ───────────────────────────────────────────────

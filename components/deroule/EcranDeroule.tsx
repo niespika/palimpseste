@@ -24,6 +24,7 @@ import { useRouter } from 'next/navigation'
 import { TexteBalise, TexteBrut, MateriauMarque } from './TexteBalise'
 import { ChampDeRedaction } from './ChampDeRedaction'
 import { CredenceSaisie } from './CredenceSaisie'
+import { DesignationDansLeMateriau } from './DesignationDansLeMateriau'
 import { GestesDeLaRemise } from './GestesDeLaRemise'
 import { SeJuger } from './SeJuger'
 import { RetourSegmente } from './RetourSegmente'
@@ -31,7 +32,7 @@ import type { VueDuDeroule } from '@/utils/deroule/vue'
 import type { TelemetrieSaisie } from '@/utils/deroule/types'
 import {
   actionOuvrir, actionEnregistrerBrouillon, actionRemettre, actionMicroQuestion,
-  actionCompterUneAide, actionEtatDeLAttente,
+  actionCompterUneAide, actionEtatDeLAttente, actionDesignation,
 } from '@/app/deroule/actions'
 
 /** Le sondage de l'attente — « jamais un écran muet » (`01-` §12). */
@@ -187,11 +188,36 @@ export function EcranDeroule({ vue }: { vue: VueDuDeroule }) {
                   (`02-` §5). ⚠️ Le découpage vient du serveur : le composant
                   n'a AUCUNE règle, et n'a jamais vu la version corrigée. */}
               {c.materiau && c.materiau.length > 0 && (
-                <MateriauMarque
-                  segments={c.materiau}
-                  className="mt-3 rounded border border-bordure bg-parchemin-fonce p-3
-                             font-corps text-sm text-encre"
-                />
+                c.designationDemandee ? (
+                  /* ⭐ ITEM 77 — AUX CRANS 4, 7 ET 9, LE MATÉRIAU SE DÉSIGNE.
+                     Il remplace l'affichage nu : le même texte, octet pour
+                     octet, mais sélectionnable. ⛔ Le composant ne reçoit
+                     AUCUNE cible — « l'écran ne bascule pas, le jugement
+                     bascule » (`02-` §5) : il est le même sur les 320 cas, y
+                     compris les 30 où il n'y a rien à trouver.
+                     ⚠️ La `key` porte la zone stockée : c'est elle qui
+                     réinitialise l'état quand le serveur change sous nous, et
+                     c'est pourquoi le composant n'a pas d'effet de synchro.
+                     ⭐ Il reste APRÈS la remise, gelé : l'élève relit sa
+                     correction en voyant ce QU'IL avait désigné. Ce n'est pas
+                     une fuite — c'est sa propre réponse. */
+                  <div className="mt-3 rounded border border-bordure bg-parchemin-fonce p-3">
+                    <DesignationDansLeMateriau
+                      key={`${c.ordre}-${c.zoneDonnee?.join(':') ?? (c.designationDonnee ? 'rien' : 'vide')}`}
+                      contenu={c.materiau.map((sg) => sg.texte).join('')}
+                      zoneDonnee={c.zoneDonnee}
+                      repondu={c.designationDonnee}
+                      enregistrer={(zone) => actionDesignation(vue.depotId, c.ordre, zone)}
+                      gele={!enRedactionV1}
+                    />
+                  </div>
+                ) : (
+                  <MateriauMarque
+                    segments={c.materiau}
+                    className="mt-3 rounded border border-bordure bg-parchemin-fonce p-3
+                               font-corps text-sm text-encre"
+                  />
+                )
               )}
             </section>
           )}

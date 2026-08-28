@@ -26,7 +26,7 @@ import {
 } from '@/utils/deroule/depot'
 import {
   enregistrerLaConfiance, enregistrerLesConditions, enregistrerLaRestitution,
-  enregistrerLaCredence, ouvrirSeJuger, enregistrerSeJuger,
+  enregistrerLaCredence, enregistrerLaDesignation, ouvrirSeJuger, enregistrerSeJuger,
 } from '@/utils/deroule/gestes'
 import { contester, validerLaLecture, pointsContestes } from '@/utils/deroule/contestation'
 import { mesurerMaintenant, attenteDuDepot } from '@/utils/deroule/mesure'
@@ -221,6 +221,46 @@ export async function actionCredence(
   const { valeur, refus: motif } = saisieARegistrer(cas, offre, saisie, new Date().toISOString())
   if (!valeur) return echec(motif ?? 'Saisie refusée.')
   const r = await enregistrerLaCredence(p.admin, p.depot, cas, valeur, new Date().toISOString())
+  rafraichir()
+  return r.ok ? succes('') : echec(r.message)
+}
+
+// ── La désignation dans le matériau (`02-` §5) ──────────────────────────────
+
+/**
+ * ⭐ LA ZONE QUE L'ÉLÈVE A SÉLECTIONNÉE — ou **`null` pour « rien à
+ * surligner », qui EST une réponse** (`02-` §5, exigence de Louis du 27/08).
+ *
+ * ⛔⛔ **LA CIBLE NE DESCEND JAMAIS À L'ÉCRAN, ET NE REMONTE DONC PAS D'ICI.**
+ * Le client envoie des bornes, rien d'autre ; la cible se dérive au serveur de
+ * la `version_corrigee`, **qui est la réponse** aux crans 7 et 9 (`02-`
+ * §2.3.4). *Une action qui renverrait le verdict à l'élève lui dirait, coup par
+ * coup, où est le passage — il lui suffirait de balayer le matériau.*
+ *
+ * ⚠️ **ET ELLE NE REFUSE PAS UNE DÉSIGNATION HORS SUJET** : le cas 1 de la
+ * table est un VERDICT, pas une erreur de saisie. On enregistre ce que l'élève
+ * a désigné, et le jugement se fait ailleurs.
+ */
+export async function actionDesignation(
+  depotId: string, cas: number, zone: [number, number] | null,
+): Promise<Reponse> {
+  const p = await portier(depotId)
+  if ('erreur' in p) return p.erreur
+  const vue = await chargerLeDeroule(p.admin, depotId, p.userId,
+    { ouvert: true, delaiVfJours: p.delaiVfJours })
+  const leCas = vue?.cas.find((c) => c.ordre === cas)
+  if (!leCas?.designationDemandee) {
+    return echec('Cet exercice ne demande pas de désigner dans le matériau.')
+  }
+  // ⚠️ Les bornes doivent tomber DANS le matériau servi : un offset calculé sur
+  //    un autre texte ne désigne rien. Le matériau est la concaténation des
+  //    segments — « pas un octet retouché » —, donc sa longueur fait foi.
+  const taille = (leCas.materiau ?? []).reduce((n, sg) => n + sg.texte.length, 0)
+  if (zone && (zone[0] < 0 || zone[1] > taille)) {
+    return echec('La sélection ne tombe pas dans le matériau. Recommence.')
+  }
+  const r = await enregistrerLaDesignation(p.admin, p.depot, cas, zone,
+    new Date().toISOString())
   rafraichir()
   return r.ok ? succes('') : echec(r.message)
 }

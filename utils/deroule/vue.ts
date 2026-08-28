@@ -46,7 +46,8 @@ import { echeanceDeLaVersionFinale, finDeSemaineDeTravail } from './echeance'
 import { lireReleveDeLangue, nombreDeFautes, ancrerLigneALigne, phraseDeLaChasse,
   type AncrageFaute } from './langue'
 import { baliser, type Jeton } from './balisage'
-import { marquerLeMateriau, type SegmentMateriau } from './marquage'
+import { demandeUneDesignation } from './designation'
+import { marquerLeMateriau, regimeDeMarquage, type SegmentMateriau } from './marquage'
 import { attenteDuDepot, type AttenteLisible } from './mesure'
 import { pointsContestes, type PointDuRetour } from './contestation'
 import { gestesRestants, competencesQuiDemandentLaConfiance } from './gestes'
@@ -82,6 +83,25 @@ export interface CasServi {
   credence: OffreCredence | null
   /** La crédence déjà donnée, s'il y en a une. */
   credenceDonnee: unknown | null
+  /**
+   * ⭐ ITEM 77 — CE CAS DEMANDE-T-IL UNE DÉSIGNATION DANS LE MATÉRIAU ?
+   *
+   * Vrai aux crans 4, 7 et 9, **et à tous leurs cas** (`02-` §5). ⛔⛔ **Ce
+   * drapeau ne dit PAS s'il y a quelque chose à trouver**, et c'est délibéré :
+   * « c'est le jugement qui bascule, pas l'écran ». Un drapeau qui suivrait la
+   * cible **répondrait à la place de l'élève** — il lui apprendrait, par la
+   * seule forme de la page, que le défaut est une absence.
+   */
+  designationDemandee: boolean
+  /**
+   * La zone déjà sélectionnée — `[début, fin[` en caractères du matériau. ⚠️
+   * **`null` est ambigu et il ne faut pas le lire seul** : c'est « rien à
+   * signaler », qui EST une réponse, ou « pas encore répondu ». C'est
+   * `designationDonnee` qui les sépare.
+   */
+  zoneDonnee: [number, number] | null
+  /** L'élève a-t-il répondu à la désignation — sélection OU « rien à signaler » ? */
+  designationDonnee: boolean
 }
 
 /** Le retour, tel que la chaîne l'a écrit — SEGMENTÉ. On ne le découpe pas. */
@@ -92,6 +112,28 @@ export interface RetourServi {
   feedForward: string | null
   publieLe: string | null
   luLe: string | null
+}
+
+/**
+ * ⭐ CE QUE L'ÉLÈVE A DÉJÀ DÉSIGNÉ, relu de son entrée de crédence.
+ *
+ * ⚠️⚠️ **`zone: null` ET « pas de zone du tout » NE SONT PAS LA MÊME CHOSE.**
+ * `zone_at` est ce qui les sépare : avec lui, l'élève a répondu « rien à
+ * signaler » — *« le dire est une réponse »* ; sans lui, il n'a pas encore
+ * répondu. Confondre les deux ferait relancer un élève qui a fini, ou
+ * compter fini un élève qui n'a rien fait.
+ */
+function lireLaDesignation(
+  entree: Record<string, unknown> | undefined,
+): { zoneDonnee: [number, number] | null; designationDonnee: boolean } {
+  if (!entree || entree.zone_at === undefined) {
+    return { zoneDonnee: null, designationDonnee: false }
+  }
+  const z = entree.zone
+  const bornes = Array.isArray(z) && z.length === 2
+    && typeof z[0] === 'number' && typeof z[1] === 'number'
+    ? ([z[0], z[1]] as [number, number]) : null
+  return { zoneDonnee: bornes, designationDonnee: true }
 }
 
 export interface VueDuDeroule {
@@ -431,6 +473,11 @@ export async function chargerLeDeroule(
       materiau,
       credence: offre,
       credenceDonnee: credencesDonnees.find((c) => c.cas === i + 1) ?? null,
+      // ⭐ ITEM 77 — la désignation. Le drapeau suit LE CRAN, jamais la cible :
+      //    voir `CasServi.designationDemandee`.
+      designationDemandee: demandeUneDesignation(regimeDeMarquage(
+        cran?.marquage as string | null)),
+      ...lireLaDesignation(credencesDonnees.find((c) => c.cas === i + 1)),
     })
   }
 

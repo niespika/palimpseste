@@ -229,15 +229,73 @@ export function motsAMarquer(
   const b = mots(versionCorrigee ?? '')
   if (!a.length || !b.length) return out
 
-  // Le préfixe commun, puis le suffixe commun ; le milieu EST le passage.
-  // « celui, et celui-là seul » : UN SEUL passage, jamais deux — c'est
-  // exactement ce que la source exige, et c'est ce que cette forme garantit.
+  const t = tranchesDuDiff(a, b)
+  if (t) out.push(a.slice(t.debut, t.fin))
+  return out
+}
+
+/**
+ * ⭐ LE DIFF, EN RANGS DE MOTS — le préfixe commun, puis le suffixe commun ; le
+ * milieu EST le passage. **« Celui, et celui-là seul » : un seul passage,
+ * jamais deux**, et c'est cette forme qui le garantit.
+ *
+ * ⛔ **UN SEUL DOMICILE.** `motsAMarquer` en tire les MOTS à marquer,
+ * `intervalleDuPassageFautif` en tire la POSITION. *Deux calculs qui se
+ * ressemblent finiraient par diverger, et le marquage désignerait alors un
+ * autre endroit que la cible de la désignation.*
+ *
+ * @returns `null` quand le diff est vide — la correction AJOUTE au lieu de
+ *   remplacer, « un manque n'est pas un défaut » (`02-` §2.3.3).
+ */
+function tranchesDuDiff(
+  a: readonly string[], b: readonly string[],
+): { debut: number; fin: number } | null {
   let d = 0
   while (d < a.length && d < b.length && a[d] === b[d]) d++
   let f = 0
   while (f < a.length - d && f < b.length - d && a[a.length - 1 - f] === b[b.length - 1 - f]) f++
-  if (d < a.length - f) out.push(a.slice(d, a.length - f))
+  return d < a.length - f ? { debut: d, fin: a.length - f } : null
+}
+
+/** Les mots d'un texte AVEC leurs bornes — même découpe que `mots()`. */
+function motsSitues(texte: string): Array<{ debut: number; fin: number }> {
+  const out: Array<{ debut: number; fin: number }> = []
+  const re = /\S+/gu
+  let m: RegExpExecArray | null
+  while ((m = re.exec(texte)) !== null) out.push({ debut: m.index, fin: m.index + m[0].length })
   return out
+}
+
+/**
+ * ⭐⭐ LE PASSAGE FAUTIF, EN INTERVALLE DE CARACTÈRES — la CIBLE de la
+ * désignation (`02-` §5, « L'élève DÉSIGNE dans le matériau »).
+ *
+ * ⛔⛔ **IL SE SITUE, IL NE SE CHERCHE PAS — ET C'EST TOUTE LA DIFFÉRENCE.**
+ * Le marquage, lui, CHERCHE : « chacun là où il apparaît », et un candidat qui
+ * revient trois fois se marque trois fois. La cible est l'inverse : **un
+ * endroit**, celui que le diff désigne. *Éprouvé sur la banque du 28/08 : le
+ * passage fautif d'`ex-exemple-composer-04-densite-friction-1` est le mot « il »
+ * — qui apparaît deux fois. Chercher rendait l'englobant des deux occurrences,
+ * **29 mots au lieu d'un**, et la désignation devenait injugeable : plus aucune
+ * zone ne pouvait manquer une cible aussi large.* Deux cas sur 290, et ils
+ * suffisaient.
+ *
+ * Base 0, fin exclue.
+ */
+export function intervalleDuPassageFautif(
+  contenu: string | null | undefined, versionCorrigee: string | null | undefined,
+): [number, number] | null {
+  const texte = contenu ?? ''
+  const a = mots(texte)
+  const b = mots(versionCorrigee ?? '')
+  if (!a.length || !b.length) return null
+  const t = tranchesDuDiff(a, b)
+  if (!t) return null
+  const situes = motsSitues(texte)
+  const premier = situes[t.debut]
+  const dernier = situes[t.fin - 1]
+  if (!premier || !dernier) return null
+  return [premier.debut, dernier.fin]
 }
 
 /**
