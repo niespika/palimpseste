@@ -145,6 +145,26 @@ export const BANDES_CRANS: Record<Palier, BandeCrans> = {
   },
 }
 
+/**
+ * `01-` §4, couche 3 — **« TOUT CRAN ABSENT D'UNE LIGNE VAUT 0 % »**, et les deux
+ * bornes que la source en tire sans les écrire : « `diagnostic_fin` n'est servi
+ * qu'à partir de B », « `diagnostic_guide`, `production_guidee` et
+ * `transformation_guidee` ne sortent pas d'E-D ».
+ *
+ * ⭐ C'est la SEULE part de la table qui soit une borne DURE. Le reste — 80/20
+ *   chez E-D, 20/60/20 chez C — est une DISTRIBUTION sous contrôle de
+ *   trajectoire (§7), qui se compte « en exercices sur l'ANNÉE dès le segment
+ *   3 » : elle n'a donc pas sa place dans un filtre de sélection, et ce module
+ *   ne la pose pas.
+ * ⚠️ Le palier qui indexe est celui de LA COMPÉTENCE CIBLE, jamais « le palier
+ *    de l'élève », qui n'existe pas : un élève est à B en Structure et à E en
+ *    Questionnement, et reçoit les deux bandes la même semaine.
+ */
+export function cransDuPalier(palier: Palier): CodeCran[] {
+  const b = BANDES_CRANS[palier]
+  return [...b.sous_la_bande.crans, ...b.centre.crans, ...b.au_dessus.crans]
+}
+
 /** La zone d'un cran dans la bande d'un palier — `null` quand la ligne ne le porte pas (0 %). */
 export function zoneDuCran(palier: Palier, cran: CodeCran): ZoneCran | null {
   const b = BANDES_CRANS[palier]

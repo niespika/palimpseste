@@ -25,10 +25,24 @@
 
 import type { Segment } from './types'
 
-/** `01-` §4 — les segments 1 et 2 prennent quatre semaines à eux deux. */
+/**
+ * `01-` §4 — les segments 1 et 2 prennent la TÊTE de l'année à eux deux.
+ *
+ * ⭐ LE SEGMENT 2 EST PASSÉ DE 3 À 2 SEMAINES — décision de Louis, 28/08. La
+ *   durée du segment 2 est la SEULE des cinq qui soit écrite en dur ; les autres
+ *   se dérivent. C'est ce qui masquait qu'elle était surdimensionnée : la
+ *   calibration ne dure pas un nombre de semaines, elle dure LE TEMPS QU'IL Y A
+ *   À CALIBRER — « au moins trois mesures chacune » (§6) — et la simulation la
+ *   donne close en deux cycles pour les trois populations. La troisième semaine
+ *   ne posait plus rien : `ciblesDeCalibration` rendait une liste vide.
+ * ⭐ Ce que la semaine rendue devient : `R = C − 3` au lieu de `C − 4`, et le
+ *   partage en tiers la donne au segment 4. Sur le calendrier 2026-2027 (32
+ *   semaines de cours, C = 30), les segments 3, 4 et 5 passent de 9/8/9 à
+ *   **9/9/9**.
+ */
 export const SEMAINES_SEGMENT_1 = 1
-export const SEMAINES_SEGMENT_2 = 3
-const TETE = SEMAINES_SEGMENT_1 + SEMAINES_SEGMENT_2 // 4
+export const SEMAINES_SEGMENT_2 = 2
+const TETE = SEMAINES_SEGMENT_1 + SEMAINES_SEGMENT_2 // 3
 
 /** `01-` §1, principe 2 — « la première est celle du diagnostic, la dernière est perdue ». */
 export const SEMAINES_RETRANCHEES = 2
@@ -116,7 +130,9 @@ export function decouperEnSegments<S extends SemaineDeCours>(
       'Le Calendrier ne rend aucune semaine de cours : aucun segment ne se borne. '
       + 'Renseigne l\'année et les vacances avant de concevoir le plan.')
   } else if (R <= 0) {
-    // La clause que la source nomme : « en dessous de C = 5 ».
+    // ⚠️ La source nomme la clause « en dessous de C = 5 », mais elle la chiffrait
+    //    sur une tête de QUATRE semaines. La tête vaut 3 depuis le 28/08 : le
+    //    seuil est descendu à C = 4. Le message donne `C`, il ne le suppose pas.
     signaux.push(
       `Calendrier trop court : ${total} semaine(s) de cours, donc C = ${C} — les segments 3, 4 et 5 `
       + 'n\'ont aucune semaine. Le routeur n\'invente aucune borne ; rien n\'est bloqué.')

@@ -31,7 +31,7 @@ const ctxVivier: ContexteDuVivier = { parcours: ['tc'], coursVus: new Set(),
 const pose = (exerciceId: string, over: Partial<ExercicePose['candidat']> = {}): ExercicePose => ({
   candidat: { exerciceId, competence: 'argumentation', grain: 'meso', geste: 'produire',
     cran: 'production_etayee', mode: 'composer', dureeMin: 20, ciblesSecondaires: [], ...over },
-  regle: 'R2', departageParPB3: false, tour: 0,
+  regle: 'R2', departageParPB3: false, tirage: false, tour: 0,
 })
 
 // ── LE TIRAGE ───────────────────────────────────────────────────────────────

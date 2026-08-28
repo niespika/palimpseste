@@ -232,6 +232,45 @@ test('PA2 au segment 2 : la calibration écarte R1, R2 et R3', () => {
   assert.deepEqual(journal.ecartees, ['R1', 'R2', 'R3'])
 })
 
+test('⭐ PA2 au segment 2 : la liste PORTE le grain de calibration — il ne se jette plus', () => {
+  const { liste } = listeDePriorite(
+    [et('expression'), et('argumentation')], ctx({ segment: 2 }))
+  const expr = liste.find((e) => e.competence === 'expression')
+  const argu = liste.find((e) => e.competence === 'argumentation')
+  assert.deepEqual(expr?.grains, ['meso'], 'méso SEUL pour l\'Expression')
+  assert.deepEqual(argu?.grains, ['micro', 'meso'])
+})
+
+test('⭐ chaque entrée porte la BANDE DE CRANS du palier de SA cible', () => {
+  const { liste } = listeDePriorite(
+    [et('structure', { lettre: 'A' }), et('argumentation', { lettre: 'E' })],
+    ctx({ segment: 2 }))
+  const a = liste.find((e) => e.competence === 'structure')
+  const e = liste.find((e) => e.competence === 'argumentation')
+  assert.deepEqual(a?.crans, ['production_autonome', 'diagnostic_fin'],
+    'à A, la ligne ne porte que ces deux crans — le reste vaut 0 %')
+  assert.ok(e?.crans?.includes('diagnostic_guide'), 'à E, le diagnostic guidé est servi')
+  assert.ok(!e?.crans?.includes('diagnostic_fin'),
+    '« `diagnostic_fin` n\'est servi qu\'à partir de B »')
+})
+
+test('la bande de crans s\'attache AUSSI hors calibration, quelle que soit la règle', () => {
+  const { liste } = listeDePriorite([et('structure', { lettre: 'B' })], ctx({ segment: 4 }))
+  assert.ok(liste.length > 0)
+  assert.deepEqual(liste[0].crans,
+    ['transformation_aveugle', 'production_autonome', 'diagnostic_fin'])
+  assert.equal(liste[0].grains, undefined, 'le grain n\'est borné qu\'à la calibration')
+})
+
+test('PA3 RECOPIE les bornes de l\'entrée qu\'elle redouble', () => {
+  const { liste } = listeDePriorite(
+    [et('expression', { aProgresse: true })], ctx({ segment: 2 }))
+  const pa3 = secondeInscriptionPA3(liste, [et('expression', { aProgresse: true })])
+  assert.deepEqual(pa3?.grains, ['meso'], 'même cible, mêmes bornes')
+  assert.ok(pa3?.crans?.length)
+  assert.equal(pa3?.regle, 'PA3')
+})
+
 test('PA2 : R1 en tête — et il SUSPEND R3, même à la certitude de 2C', () => {
   const etats = [et('expression', { lettre: 'D' }), et('argumentation', { signal: 'D' }),
     et('structure', { signal: 'B' }), et('synthese')]

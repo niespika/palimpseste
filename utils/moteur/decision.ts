@@ -333,6 +333,9 @@ export function lignesDeDecision(
         priorite: ctx.alternatives,
         cibles_secondaires: p.candidat.ciblesSecondaires,
         departage_par_pb3: p.departageParPB3,
+        // `01-` §11, point 5 — quand ni PB1 ni PB3 n'ont tranché, c'est le
+        // tirage qui a choisi ; l'ensemble des ex æquo est dans `tirage_aleatoire`.
+        tirage_a_la_pose: p.tirage,
         tour_de_pb5: p.tour,
       },
       sondes_retenues: sondesDeLExercicePose(

@@ -21,11 +21,13 @@
 import {
   CADENCE_R3, CYCLES_DU_PLANCHER_DE_MESURE, CYCLES_SANS_PROGRES_EXCEPTION,
   GARDIENS_DU_QUESTIONNEMENT, MESURES_DE_CALIBRATION, ORDRE_LEVIER, ORDRE_LEVIER_INVERSE,
-  PART_R1, PART_R1_EXCEPTION, SEUIL_ENTREE_QUESTIONNEMENT,
+  PART_R1, PART_R1_EXCEPTION, SEUIL_ENTREE_QUESTIONNEMENT, cransDuPalier,
 } from './config'
 import { moinsRecemmentCiblee } from './profil'
-import { rangPalier, type Competence, type Lettre, type Palier, type Parcours, type RegleCiblage }
-  from './types'
+import {
+  rangPalier, type Competence, type Grain, type Lettre, type Palier, type Parcours,
+  type RegleCiblage,
+} from './types'
 
 /** Ce que le ciblage lit d'une compétence — déjà dérivé (§3). */
 export interface EtatPourCiblage {
@@ -441,6 +443,24 @@ export interface EntreeDePriorite {
   competence: Competence
   regle: RegleCiblage
   motif: string
+  /**
+   * ⭐ `01-` §6 — LE GRAIN DE LA CALIBRATION, au segment 2 SEULEMENT : « micro et
+   * méso pour l'Argumentation, la Structure et le Questionnement · MÉSO SEUL pour
+   * l'Expression et la Synthèse ».
+   *
+   * ⛔ `ciblesDeCalibration` le calculait déjà, et `listeDePriorite` LE JETAIT :
+   *   la borne n'a jamais mordu. Sans elle, PB1 prenant toujours le plus petit
+   *   grain, la première semaine servait 14 à 19 micro-exercices de 2 à 8 minutes.
+   * `undefined` hors calibration : le grain y relève des proportions du §7, qui
+   * sont une préférence, jamais un filtre.
+   */
+  grains?: readonly Grain[]
+  /**
+   * ⭐ `01-` §4, couche 3 — les crans que le palier de CETTE cible peut recevoir.
+   * C'est le seul volet DUR de la table (`cransDuPalier`) : « tout cran absent
+   * d'une ligne vaut 0 % ». La distribution 80/20 qui l'accompagne n'est pas ici.
+   */
+  crans?: readonly string[]
 }
 
 export interface ContextePriorite {
@@ -469,12 +489,23 @@ export function listeDePriorite(
 ): { liste: EntreeDePriorite[]; journal: Record<string, unknown> } {
   const apresR0 = filtreR0(etats)
 
+  // ⭐ LES BORNES DE COUCHE 3 — le palier de LA CIBLE, jamais celui de l'élève.
+  //   R0 garantit `lettre !== null` sur tout ce qui sort d'ici, donc la bande
+  //   est toujours calculable.
+  const cransDe = (c: Competence): readonly string[] | undefined => {
+    const l = apresR0.find((e) => e.competence === c)?.lettre
+    return l ? cransDuPalier(l) : undefined
+  }
+
   // Le segment 2 a sa règle à lui, et elle écarte R1, R2 et R3.
   if (ctx.segment === 2) {
     const cibles = ciblesDeCalibration(apresR0, ctx.nombreDeMesures)
     return {
       liste: cibles.map((c) => ({ competence: c.competence, regle: 'calibration' as const,
-        motif: `calibration : ${c.mesures} mesure(s), on vise ${MESURES_DE_CALIBRATION}.` })),
+        motif: `calibration : ${c.mesures} mesure(s), on vise ${MESURES_DE_CALIBRATION}.`,
+        // ⭐ LA BORNE QUI SE PERDAIT : `ciblesDeCalibration` la rend, on la GARDE.
+        grains: c.grains,
+        crans: cransDe(c.competence) })),
       journal: { regle: 'calibration', ecartees: ['R1', 'R2', 'R3'] },
     }
   }
@@ -516,7 +547,9 @@ export function listeDePriorite(
         ? 'jamais ciblée' : `${d.ancienneteEnExercices} exercices`} sans être ciblée, K = ${ctx.K}.` })
   }
 
-  return { liste, journal }
+  // ⭐ La bande de crans s'attache à CHAQUE entrée, quelle que soit la règle qui
+  //   l'a inscrite : elle dépend de la cible, pas de la règle.
+  return { liste: liste.map((e) => ({ ...e, crans: cransDe(e.competence) })), journal }
 }
 
 /**
@@ -531,7 +564,10 @@ export function secondeInscriptionPA3(
   for (const e of liste) {
     const etat = etats.find((x) => x.competence === e.competence)
     if (etat?.aProgresse) {
-      return { competence: e.competence, regle: 'PA3',
+      // ⚠️ On RECOPIE l'entrée : la seconde inscription vise la même cible, donc
+      //    les mêmes bornes de grain et de cran. Les reconstruire ici en ferait
+      //    un second domicile.
+      return { ...e, regle: 'PA3',
         motif: 'seconde inscription : au moins un observable est passé à acquis.' }
     }
   }

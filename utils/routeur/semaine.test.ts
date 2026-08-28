@@ -115,6 +115,99 @@ test('PB3 : à grain égal, on préfère l\'exercice QUI CHANGE de cran, de mode
   assert.equal(s.exercices[1].departageParPB3, true, 'et le départage se journalise')
 })
 
+// ── Les bornes de l'entrée : le grain de calibration et la bande de crans ──
+
+test('`01-` §6 — le GRAIN DE CALIBRATION borne : méso seul pour l\'Expression', () => {
+  const s = poserLaSemaine(
+    [{ competence: 'expression', regle: 'calibration', motif: '', grains: ['meso'] }],
+    budget,
+    (c, dejaPoses) => (dejaPoses.length ? [] : [
+      cand(c, { exerciceId: 'mi', grain: 'micro', dureeMin: 3 }),
+      cand(c, { exerciceId: 'me', grain: 'meso', dureeMin: 17 }),
+    ]))
+  assert.equal(s.exercices.length, 1)
+  assert.equal(s.exercices[0].candidat.exerciceId, 'me',
+    'PB1 aurait pris le micro ; la borne du §6 le lui interdit')
+})
+
+test('`01-` §4 couche 3 — un cran HORS BANDE ne se sert jamais (0 % est dur)', () => {
+  const s = poserLaSemaine(
+    [{ competence: 'structure', regle: 'R2', motif: '',
+      crans: ['production_autonome', 'diagnostic_fin'] }],   // la bande du palier A
+    budget,
+    (c, dejaPoses) => (dejaPoses.length ? [] : [
+      cand(c, { exerciceId: 'guide', cran: 'diagnostic_guide', dureeMin: 10 }),
+      cand(c, { exerciceId: 'auto', cran: 'production_autonome', dureeMin: 20 }),
+    ]))
+  assert.equal(s.exercices.length, 1)
+  assert.equal(s.exercices[0].candidat.cran, 'production_autonome',
+    '`diagnostic_guide` ne sort pas d\'E-D')
+})
+
+test('bornes absentes : rien n\'est borné — hors calibration, le grain est une préférence', () => {
+  const s = poserLaSemaine([entree('structure')], budget,
+    (c, dejaPoses) => (dejaPoses.length ? [] : [
+      cand(c, { exerciceId: 'mi', grain: 'micro', cran: 'diagnostic_guide', dureeMin: 3 }),
+    ]))
+  assert.equal(s.exercices.length, 1, 'sans `grains` ni `crans`, le candidat passe')
+})
+
+test('une entrée dont AUCUN candidat ne tient la borne ne pose rien, sans bloquer la suite', () => {
+  const s = poserLaSemaine(
+    [{ competence: 'expression', regle: 'calibration', motif: '', grains: ['meso'] },
+      entree('structure')],
+    budget,
+    (c, dejaPoses) => (dejaPoses.length ? [] : [cand(c, { grain: 'micro', dureeMin: 5 })]))
+  assert.equal(s.exercices.length, 1, 'l\'Expression est bornée, la Structure passe')
+  assert.equal(s.exercices[0].candidat.competence, 'structure')
+})
+
+// ── PB3 : ce qu'elle NE tranche pas, et le tirage qui le tranche ──────────
+
+test('PB3 n\'a PAS départagé quand les ex æquo gardent le même `change`', () => {
+  const s = poserLaSemaine([entree('structure'), entree('argumentation')], budget, (c) => [
+    cand(c, { dureeMin: 10, cran: 'production_etayee', mode: 'composer' }),
+    cand(c, { dureeMin: 10, cran: 'production_etayee', mode: 'composer' }),
+  ])
+  assert.equal(s.exercices[1].departageParPB3, false,
+    'même grain ET même `change` : PB3 n\'a rien tranché, le journal ne doit pas le prétendre')
+  assert.equal(s.exercices[1].tirage, true, 'c\'est le tirage qui a choisi')
+})
+
+test('`01-` §11 pt 5 — à égalité persistante, LE TIRAGE choisit, et il reçoit TOUS les ex æquo', () => {
+  const vus: string[][] = []
+  const s = poserLaSemaine([entree('structure')], budget,
+    (c, dejaPoses) => (dejaPoses.length ? [] : [
+      cand(c, { exerciceId: 'a', dureeMin: 10 }),
+      cand(c, { exerciceId: 'b', dureeMin: 10 }),
+      cand(c, { exerciceId: 'c', dureeMin: 10 }),
+    ]),
+    (exAequo) => { vus.push([...exAequo]); return exAequo[exAequo.length - 1] })
+  assert.deepEqual(vus[0], ['a', 'b', 'c'], 'L\'ENSEMBLE des ex æquo, pas seulement le choisi')
+  assert.equal(s.exercices[0].candidat.exerciceId, 'c', 'le tirage a bien la main')
+})
+
+test('⭐ ANTI-COLLISION : deux tirages différents donnent deux exercices différents', () => {
+  const trois = (c: Competence, dejaPoses: readonly { candidat: Candidat }[]) =>
+    (dejaPoses.length ? [] : [
+      cand(c, { exerciceId: 'a', dureeMin: 10 }),
+      cand(c, { exerciceId: 'b', dureeMin: 10 }),
+      cand(c, { exerciceId: 'c', dureeMin: 10 }),
+    ])
+  const eleve1 = poserLaSemaine([entree('structure')], budget, trois, (ex) => ex[0])
+  const eleve2 = poserLaSemaine([entree('structure')], budget, trois, (ex) => ex[2])
+  assert.notEqual(eleve1.exercices[0].candidat.exerciceId,
+    eleve2.exercices[0].candidat.exerciceId,
+    'sans tirage, deux élèves de même profil recevaient LE MÊME exercice')
+})
+
+test('un seul candidat : aucun tirage, et le journal le dit', () => {
+  const s = poserLaSemaine([entree('structure')], budget,
+    (c, dejaPoses) => (dejaPoses.length ? [] : [cand(c, { dureeMin: 10 })]))
+  assert.equal(s.exercices[0].tirage, false)
+  assert.equal(s.exercices[0].departageParPB3, false)
+})
+
 // ── « Le plafond borne, le plancher signale » ──────────────────────────────
 
 test('sous le plancher : l\'écart SE JOURNALISE et le solde revient À LA VOIE MIXTE', () => {
