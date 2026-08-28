@@ -7051,9 +7051,9 @@ interruption. Le décor se reconnaît à sa classe, `nom LIKE 'RECETTE-C5L3%'`. 
 
 ## C5 · L4 — Les onglets de la lecture (⚠️ **AUCUNE MIGRATION** — aucune n'était attendue, aucune n'a été nécessaire)
 
-> **Séance du 27/08.** `npx tsc --noEmit` vert · `npm test` **1672 / 1673** *(le seul rouge est
-> ANTÉRIEUR au lot : `utils/chaine/instruments.test.ts` — la version du `07-` passée en 2.58 par la
-> séance de fabrication du prompt ; voir `C5L4-0`)* · `npx eslint` **0 erreur**.
+> **Séance du 27/08.** `npx tsc --noEmit` vert · `npm test` **1673 / 1673, 0 échec** *(le seul rouge
+> — antérieur au lot — a été levé en fin de séance sur décision de Louis : `derive-instruments.py
+> --ecris` rejoué pour reprendre la version 2.59 du `07-` ; voir `C5L4-0`)* · `npx eslint` **0 erreur**.
 > Relevé : `RELEVE_C5_L4_2026-08-27.md`.
 > ⛔ **Aucun interrupteur posé, allumé ni éteint. Aucune migration. Aucune dette.**
 
@@ -7141,19 +7141,24 @@ interruption. Le décor se reconnaît à sa classe, `nom LIKE 'RECETTE-C5L3%'`. 
 
 ### Reste à jouer en recette
 
-- [ ] **C5L4-0 · ⚠️⚠️ `npm test` ÉTAIT ROUGE AVANT CE LOT, ET LE PROMPT INTERDIT LE GESTE QUI LE
-  RÉPARE.** `utils/chaine/instruments.test.ts:207` — *« les dérivés ont divergé de leurs sources »*.
-  **La divergence entière tient en QUATRE valeurs, et ne touche AUCUNE compétence** : la `version` et
-  l'`empreinte` du `07-` dans `MANIFESTE.ts` et `calame-retour.ts` ; le gabarit Calame est
-  **identique à l'octet** *(3422 octets, comparés)*, et un `diff -ru` des dix dérivés ne montre rien
-  d'autre. **Le rouge est né AVANT le lot** — la complétion de l'entrée `C5-L4` au `07-` §2, en
-  séance de fabrication du prompt, a porté le `07-` de **2.57 à 2.58** — **et il a bougé AVEC lui** :
-  les deux amendements aux sections ouvertes le portent en **2.59**. ⭐ **Le dépôt montre que le geste
-  normal après un amendement du `07-` est de rejouer `--ecris`** : les dérivés étaient à jour en 2.57.
-  ⛔ **Non réparé : le prompt écrit « Ne joue pas `derive-instruments.py --ecris` » et exige par
-  ailleurs un test vert avant d'écrire — les deux ne peuvent pas être satisfaits ensemble, et
-  l'option qui ne change rien a été prise.** **Condition de reprise : décision de Louis** — rejouer
-  `python3 scripts/derive-instruments.py --ecris` pour reprendre la 2.59, ou pas.
+- [x] **C5L4-0 · ✅ `npm test` EST VERT — 1673 / 1673, LE 27/08, SUR DÉCISION DE LOUIS EN FIN DE
+  SÉANCE.** `utils/chaine/instruments.test.ts:207` disait *« les dérivés ont divergé de leurs
+  sources »*. **Le rouge était né AVANT le lot** — la complétion de l'entrée `C5-L4` au `07-` §2, en
+  séance de fabrication du prompt, avait porté le `07-` de **2.57 à 2.58** — **et il avait bougé AVEC
+  lui** : les deux amendements aux sections ouvertes l'ont porté en **2.59**. ⛔ **La session ne l'a
+  pas tranché** : le prompt écrit *« Ne joue pas `derive-instruments.py --ecris` »* **et** exige par
+  ailleurs un test vert avant d'écrire — inconciliable. **Elle a caractérisé l'écart sans rien
+  écrire, et posé la question.** ⭐ **Louis a dit de rejouer, et `--ecris` a été joué.**
+  ⭐⭐ **CE QUI A CHANGÉ SUR DISQUE — EXACTEMENT LES QUATRE VALEURS ANNONCÉES, ET RIEN D'AUTRE** :
+  `version`/`empreinte` du `07-` dans `MANIFESTE.ts`, `version_source`/`empreinte_source` dans
+  `calame-retour.ts` — `2.57` → `2.59`, `b078bae…` → `fbecf94…`. **Les HUIT autres dérivés ont été
+  réécrits À L'IDENTIQUE** *(`git status` ne les voit pas)*, le **gabarit Calame est inchangé à
+  l'octet** *(3347 caractères)*, et **les six compétences gardent leur version et leur compte
+  d'observables** *(expression v3.2/9 · argumentation v4.3/9 · structure v3.3/8 · connaissance v2.2/8
+  · synthese v3.4/13 · questionnement v2.2/9)*. `--verifie` rend désormais **`INSTRUMENTS :
+  IDENTIQUE (10 fichier(s))`**. ⭐ **La leçon, pour le prochain lot qui amende le `07-`** : *amender
+  une section ouverte du `07-` fait mécaniquement diverger les dérivés — le geste de clôture est de
+  rejouer `derive-instruments.py --ecris`, et il ne touche que la métadonnée de version.*
 - [ ] **C5L4-A · LE SMOKE PROF, CONNECTÉ.** Les trois onglets s'affichent et s'allument ; l'onglet
   Exercices porte ses trois renvois, l'encart et la liste ; une passation s'ouvre depuis la liste ;
   la fiche d'un élève garde « Livres » allumé. ⚠️ **Une session Code ne s'authentifie pas.**
