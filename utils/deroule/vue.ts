@@ -327,7 +327,9 @@ export async function chargerLeDeroule(
     reponse_attendue: string | null
     /** ⭐ C4-L14 — « pourquoi ce candidat-là est le bon » (`08-` §5.2). */
     pourquoi_juste: string | null
-    /** ⛔ `version_corrigee` : lue ici, JAMAIS servie (voir le `select`). */
+    /** ⛔ `version_corrigee` : lue ici, et servie AU SEUL CRAN 9 — voir le
+     *  `select` et l'appel à `composerLaCorrection`. Partout ailleurs elle
+     *  reste au serveur : elle EST la réponse. */
     exercices_materiaux:
       | { contenu?: string; version_corrigee?: string | null }
       | Array<{ contenu?: string; version_corrigee?: string | null }>
@@ -518,9 +520,24 @@ export async function chargerLeDeroule(
     }
     const brut = casBruts.find((x) => x.ordre === c.ordre)
     if (!brut) return null
+    // ⭐⭐ ITEM 78 — AU CRAN 9, LA RÉPONSE SE DÉRIVE DU MATÉRIAU. La table des
+    //    crans y met `reponse_attendue` à `null` (`02-` §2.2), et la correction
+    //    était donc VIDE entre les deux cas de la paire — alors que le `02-`
+    //    §2.3.1 a la veut servie. Elle EST la `version_corrigee` (`02-` §2.3.4).
+    // ⛔ ET SEULEMENT AU CRAN 9. Aux crans 5 et 7 le régime est « pas de vf,
+    //    sauf escalade » : servir la version corrigée donnerait la réponse
+    //    AVANT la version finale, et `delta_v1_vf` ne mesurerait plus rien. Le
+    //    cran 9 est « par paires », il n'a pas de vf à protéger, et le second
+    //    cas porte un AUTRE matériau. `correctionDue` garantit par ailleurs
+    //    qu'on ne sert jamais avant la crédence — c'est le motif même de la
+    //    garde du `select` ci-dessus.
+    const mat = Array.isArray(brut.exercices_materiaux)
+      ? brut.exercices_materiaux[0] : brut.exercices_materiaux
+    const versionCorrigee = ctx.cranCode === 'diagnostic_fin'
+      ? (mat?.version_corrigee ?? null) : null
     return composerLaCorrection(
       { reponseAttendue: brut.reponse_attendue, pourquoiJuste: brut.pourquoi_juste,
-        distracteurs: brut.distracteurs },
+        distracteurs: brut.distracteurs, versionCorrigee },
       c.credenceDonnee, surDesCandidats)
   })
 

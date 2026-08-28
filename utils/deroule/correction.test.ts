@@ -207,3 +207,35 @@ test('hors paire — au cran 3 —, la crédence du cas suffit : il n’y a pas 
   assert.equal(correctionDue(1, seul(null)), false)
   assert.equal(correctionDue(1, seul({ cas: 1, forme: 'repartition' })), true)
 })
+
+// ════════════════════════════════════════════════════════════════════════════
+// ITEM 78 — AU CRAN 9, LA RÉPONSE SE DÉRIVE DU MATÉRIAU
+// ════════════════════════════════════════════════════════════════════════════
+
+test('⭐⭐ cran 9 : la correction était VIDE — elle sert la version corrigée', () => {
+  // `correctionServieAuCran` la sert à tous les crans de diagnostic, 9 compris,
+  // mais la table des crans y met `reponse_attendue` à `null` (`02-` §2.2).
+  // L'élève ne voyait donc rien entre les deux cas de la paire.
+  const c = composerLaCorrection(
+    { reponseAttendue: null, pourquoiJuste: null, distracteurs: null,
+      versionCorrigee: 'La phrase, réparée.' }, null, false)
+  assert.equal(c?.reponse, 'La phrase, réparée.')
+  assert.equal(c?.derivee, true, 'elle est DÉRIVÉE, et l’écran doit pouvoir le dire')
+})
+
+test('une réponse DÉCLARÉE l’emporte, et la version corrigée est ignorée', () => {
+  const c = composerLaCorrection(
+    { reponseAttendue: 'ce qu’il fallait voir', pourquoiJuste: null,
+      distracteurs: null, versionCorrigee: 'la version réparée' }, null, false)
+  assert.equal(c?.reponse, 'ce qu’il fallait voir')
+  assert.equal(c?.derivee, false)
+})
+
+test('⛔ sans réponse déclarée NI version corrigée, on ne sert rien', () => {
+  // Le module n'invente jamais : c'est la règle du silence, déjà tenue ailleurs.
+  assert.equal(composerLaCorrection(
+    { reponseAttendue: null, pourquoiJuste: null, distracteurs: null,
+      versionCorrigee: null }, null, false), null)
+  assert.equal(composerLaCorrection(
+    { reponseAttendue: '  ', pourquoiJuste: null, distracteurs: null }, null, false), null)
+})

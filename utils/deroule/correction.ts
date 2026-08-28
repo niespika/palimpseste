@@ -112,6 +112,11 @@ export interface CorrectionServie {
   silence: MotifDeSilence | null
   /** Le cran sert-il quatre candidats ? Vrai aux crans 1 et 3, faux ailleurs. */
   surDesCandidats: boolean
+  /** La réponse a-t-elle été DÉRIVÉE du matériau, faute d'être déclarée ?
+   *  Vrai au cran 9, où la table des crans met `reponse_attendue` à `null`.
+   *  L'écran s'en sert pour titrer : « Ce que tu aurais pu écrire », et non
+   *  « Ce qu'il fallait voir » — ce n'est pas le même objet. */
+  derivee: boolean
 }
 
 /**
@@ -171,23 +176,44 @@ export function correctionDue(
  *          au cran 9 par exemple, où elle vaut `null` par la table des crans.
  */
 export function composerLaCorrection(
-  appui: { reponseAttendue: string | null; pourquoiJuste: string | null; distracteurs: unknown },
+  appui: { reponseAttendue: string | null; pourquoiJuste: string | null;
+           distracteurs: unknown; versionCorrigee?: string | null },
   credence: unknown,
   surDesCandidats: boolean,
 ): CorrectionServie | null {
-  const reponse = (appui.reponseAttendue ?? '').trim()
+  // ⭐⭐ ITEM 78 — AU CRAN 9, LA CORRECTION EST DUE ET ELLE ÉTAIT VIDE.
+  //    `correctionServieAuCran` la sert à tous les crans de diagnostic, 9
+  //    compris ; mais la table des crans y met `reponse_attendue` à `null`
+  //    (`02-` §2.2), si bien que ce module rendait `null` et que l'élève ne
+  //    voyait RIEN entre les deux cas de la paire — alors que le `02-` §2.3.1 a
+  //    veut que « la correction du premier cas soit servie AVANT le second ».
+  // ⭐ LA RÉPONSE NE S'ÉCRIT PAS, ELLE SE DÉRIVE : elle EST la
+  //    `version_corrigee` du matériau (`02-` §2.3.4). L'ajouter en base ferait
+  //    un SECOND DOMICILE de ce que le matériau porte déjà, et les deux
+  //    finiraient par diverger.
+  // ⛔ ET SEULEMENT LÀ OÙ LA CORRECTION EST DUE. Aux crans 5 et 7, la version
+  //    corrigée ne descend jamais : leur régime est « pas de vf, sauf
+  //    escalade », et la servir donnerait la réponse AVANT la version finale —
+  //    `delta_v1_vf` ne mesurerait plus rien. Le cran 9, lui, est « par
+  //    paires » : il n'a pas de vf à protéger, et le second cas porte un AUTRE
+  //    matériau. La garde de `vue.ts` — « `version_corrigee` n'en sort pas » —
+  //    a pour motif la crédence, et `correctionDue` l'exige déjà.
+  const declaree = (appui.reponseAttendue ?? '').trim()
+  const derivee = declaree === ''
+  const reponse = derivee ? (appui.versionCorrigee ?? '').trim() : declaree
   if (reponse === '') return null
 
   // Aux crans 4 et 5, la réponse attendue EST le pourquoi : elle se sert seule,
   // exactement comme avant ce lot. Rien à réfuter, rien à taire.
   if (!surDesCandidats) {
     return { reponse, pourquoiJuste: null, refutation: null, silence: null,
-      surDesCandidats: false }
+      surDesCandidats: false, derivee }
   }
 
   const pourquoiJuste = (appui.pourquoiJuste ?? '').trim() || null
   const muette = (silence: MotifDeSilence): CorrectionServie =>
-    ({ reponse, pourquoiJuste, refutation: null, silence, surDesCandidats: true })
+    ({ reponse, pourquoiJuste, refutation: null, silence, surDesCandidats: true,
+       derivee })
 
   if (!credence || typeof credence !== 'object') return muette('credence_illisible')
   const c = credence as Record<string, unknown>
@@ -211,5 +237,5 @@ export function composerLaCorrection(
   if (pourquoiFaux === null) return muette('candidat_muet')
 
   return { reponse, pourquoiJuste, refutation: { candidat, pourquoiFaux },
-    silence: null, surDesCandidats: true }
+    silence: null, surDesCandidats: true, derivee }
 }
