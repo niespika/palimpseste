@@ -4,12 +4,15 @@
 //     liste de numéros écrite ici ;
 //   · ⛔⛔ la BASCULE : diff vide ⇒ pas de cible ⇒ texte libre. C'est la garde
 //     qui empêche de compter faux un élève qui a raison ;
-//   · les SIX CAS de la table du `02-` §5, dans leur ordre — l'égalité avant
-//     l'inclusion, le débordement toléré avant la couverture ;
+//   · les SEPT CAS de la table du `02-` §5, dans leur ordre — le RATISSAGE en
+//     premier, puis l'égalité avant l'inclusion, puis le débordement toléré ;
 //   · ⭐ que la tolérance ne resserre JAMAIS en deçà d'un mot, cible longue
 //     comprise — c'est le défaut que la règle en mots corrige ;
-//   · ⛔ les TROIS conditions du petit malin, et son troisième état `null` —
-//     « on ne sait pas encore » n'est pas « ce n'en est pas un » ;
+//   · ⛔⛔ que le RATISSAGE demande SES DEUX TERMES — la part du matériau seule
+//     accuserait un élève parfait, le rapport à la cible seul laisserait
+//     passer un quart des cas ;
+//   · ⛔ que les DEUX portes fermées avant l'IA ne sont pas de même nature :
+//     le cas 1 est une réponse FAUSSE, le cas 0 une NON-RÉPONSE ;
 //   · ⛔ que la `version_corrigee` ne ressort JAMAIS : on ne rend que des
 //     positions.
 // ============================================================================
@@ -20,8 +23,9 @@ import fs from 'node:fs'
 import path from 'node:path'
 import {
   demandeUneDesignation, cibleDansLeMateriau, bornesTolerees, verdictDeLaZone,
-  couvertureSuspecte, credenceEstHaute,
+  estUnRatissage, credenceEstHaute,
   CIBLE_LONGUE_MOTS, TOLERANCE_CIBLE_LONGUE, CREDENCE_HAUTE_SEUIL,
+  RATISSAGE_PART_MATERIAU, RATISSAGE_FOIS_LA_CIBLE,
 } from './designation'
 import { regimeDeMarquage } from './marquage'
 
@@ -89,6 +93,15 @@ test('⛔ LA `version_corrigee` NE RESSORT PAS — on ne rend que des positions'
   }
 })
 
+// ── Les vecteurs ───────────────────────────────────────────────────────────
+
+// Un matériau où la cible est petite : 4 mots sur ~60. C'est le terrain du
+// ratisseur — il y a de la place pour prendre tout le reste.
+const LONG = 'alpha beta gamma delta epsilon zeta eta theta iota kappa lambda mu '
+  + 'nu xi omicron pi rho sigma tau upsilon phi chi psi omega et encore des mots '
+  + 'pour faire un materiau qui ressemble a un vrai paragraphe de copie'
+const CIBLE_LONG = [LONG.indexOf('gamma'), LONG.indexOf('delta') + 'delta'.length] as const
+
 // ── Les six cas de la table ────────────────────────────────────────────────
 
 const T = 'alpha beta gamma delta epsilon zeta'
@@ -101,7 +114,7 @@ test('CAS 1 — la zone NE TOUCHE PAS la cible : faux, et on ne lit RIEN', () =>
   // ⭐ « Le seul cas où le jugement se règle sans rien lire, et c'est ce qui
   //    fait tout l'intérêt de la désignation. »
   const v = verdictDeLaZone(T, CIBLE, bornesDe('alpha'))
-  assert.deepEqual(v, { cas: '1', verdict: 'faux', litLeTexte: false })
+  assert.deepEqual(v, { cas: '1', verdict: 'faux', litLeTexte: false, nonFait: false })
 })
 
 test('CAS 1 — une zone VIDE est un cas 1 : ne rien désigner, c’est ne pas désigner', () => {
@@ -111,27 +124,37 @@ test('CAS 1 — une zone VIDE est un cas 1 : ne rien désigner, c’est ne pas d
 
 test('CAS 3 — la zone EST la cible : juste, et proprement', () => {
   const v = verdictDeLaZone(T, CIBLE, CIBLE)
-  assert.deepEqual(v, { cas: '3', verdict: 'juste', litLeTexte: true })
+  assert.deepEqual(v, { cas: '3', verdict: 'juste', litLeTexte: true, nonFait: false })
 })
 
 test('CAS 2 — elle contient la cible et déborde D’UN MOT de chaque côté : juste', () => {
   const v = verdictDeLaZone(T, CIBLE, bornesDe('beta', 'delta'))
-  assert.deepEqual(v, { cas: '2', verdict: 'juste', litLeTexte: true })
+  assert.deepEqual(v, { cas: '2', verdict: 'juste', litLeTexte: true, nonFait: false })
 })
 
-test('CAS 2′ — elle déborde AU-DELÀ de la tolérance : le surlignage de couverture', () => {
-  const v = verdictDeLaZone(T, CIBLE, bornesDe('alpha', 'zeta'))
-  assert.deepEqual(v, { cas: '2prime', verdict: 'couverture', litLeTexte: true })
+test('CAS 2′ — elle déborde au-delà de la tolérance SANS couvrir : cible mal bornée', () => {
+  // ⚠️ Ce cas s'appelait « le surlignage de couverture » le matin du 28/08. Il
+  //    ne l'est plus : la barre du ratissage a été relevée le soir même, et
+  //    déborder n'est pas ratisser — « c'est une cible mal bornée, et ça se
+  //    corrige autrement » (Louis, 27/08). Le cas 0 porte désormais la triche.
+  // ⛔⛔ ET LE VECTEUR A DÛ CHANGER DE MATÉRIAU, CE QUI EST LA RÈGLE EN ACTION :
+  //    sur un matériau de 35 signes, prendre « alpha…zeta » c'est tout prendre,
+  //    et tout prendre EST un ratissage. Une cible mal bornée n'existe que là où
+  //    il reste du texte autour — d'où le matériau long.
+  const zone = [LONG.indexOf('beta'), LONG.indexOf('theta') + 'theta'.length] as [number, number]
+  const v = verdictDeLaZone(LONG, CIBLE_LONG, zone)
+  assert.deepEqual(v, { cas: '2prime', verdict: 'mal_bornee', litLeTexte: true, nonFait: false })
+  assert.equal(estUnRatissage(LONG, CIBLE_LONG, zone), false, '39 signes sur 209 ne couvrent rien')
 })
 
 test('CAS 4b — incluse dans la cible, plus courte : à voir, et le texte tranche', () => {
   const v = verdictDeLaZone(T, CIBLE, [CIBLE[0], CIBLE[1] - 2])
-  assert.deepEqual(v, { cas: '4b', verdict: 'a_voir', litLeTexte: true })
+  assert.deepEqual(v, { cas: '4b', verdict: 'a_voir', litLeTexte: true, nonFait: false })
 })
 
 test('CAS 4a — elle CHEVAUCHE : une part de la cible, et du texte en dehors', () => {
   const v = verdictDeLaZone(T, CIBLE, [CIBLE[0] + 2, T.indexOf('delta') + 3])
-  assert.deepEqual(v, { cas: '4a', verdict: 'probablement_faux', litLeTexte: true })
+  assert.deepEqual(v, { cas: '4a', verdict: 'probablement_faux', litLeTexte: true, nonFait: false })
 })
 
 test('⚠️ L’ORDRE DES TESTS EST LA TABLE — l’égalité avant l’inclusion', () => {
@@ -192,33 +215,70 @@ function versLaDroiteAttendue(t: string, i: number): number {
   return p
 }
 
-// ── Le petit malin ─────────────────────────────────────────────────────────
+// ── Le ratissage ───────────────────────────────────────────────────────────
 
-const COUVERTURE = verdictDeLaZone(T, CIBLE, bornesDe('alpha', 'zeta'))
-const JUSTE = verdictDeLaZone(T, CIBLE, CIBLE)
-
-test('⛔⛔ LES TROIS CONDITIONS, ET IL LES FAUT TOUTES LES TROIS', () => {
-  assert.equal(couvertureSuspecte(COUVERTURE, false, true), true, 'les trois se rencontrent')
-  assert.equal(couvertureSuspecte(COUVERTURE, true, true), false,
-    'nommer précisément ce qui cloche n’est pas de la triche : c’est une cible mal bornée')
-  assert.equal(couvertureSuspecte(COUVERTURE, false, false), false,
-    '⛔ sans la crédence haute on punirait l’honnêteté — « je ne suis pas sûr, je ratisse »')
-  assert.equal(couvertureSuspecte(JUSTE, false, true), false,
-    'hors du cas 2′, la question ne se pose pas')
+test('⛔⛔ CAS 0 — tout surligner est un RATISSAGE : pas d’IA, exercice NON FAIT', () => {
+  const v = verdictDeLaZone(LONG, CIBLE_LONG, [0, LONG.length])
+  assert.equal(v.cas, '0')
+  assert.equal(v.verdict, 'ratissage')
+  assert.equal(v.litLeTexte, false, '⛔ rien ne part au modèle')
+  assert.equal(v.nonFait, true)
 })
 
-test('⚠️ LE TROISIÈME ÉTAT — `null` est « on ne sait pas encore », jamais « ce n’en est pas un »', () => {
-  // « Une justification qui ne nomme rien de précis » est un jugement IA
-  //   (`02-` §2.2), pas une mesure sur des bornes : tant qu'il n'est pas
-  //   revenu, ce module ne conclut pas. Même discipline que les signaux du
-  //   faisceau, qui ont trois états et non deux.
-  assert.equal(couvertureSuspecte(COUVERTURE, null, true), null)
-  assert.equal(couvertureSuspecte(COUVERTURE, false, null), null)
-  // ⚠️ Mais hors du cas 2′, `false` est SÛR : aucune IA ne le changera.
-  assert.equal(couvertureSuspecte(JUSTE, null, null), false)
+test('⭐ LE RATISSAGE SE LIT EN PREMIER — même quand la zone RATE la cible', () => {
+  // Une zone qui prend tout le matériau SAUF la cible : elle ne la touche pas,
+  // donc le cas 1 la réclamerait. Mais elle couvre, et couvrir prime — sans
+  // quoi il suffirait d'éviter la cible pour ratisser impunément.
+  const apres = LONG.indexOf('epsilon')
+  const v = verdictDeLaZone(LONG, CIBLE_LONG, [apres, LONG.length])
+  assert.equal(estUnRatissage(LONG, CIBLE_LONG, [apres, LONG.length]), true)
+  assert.equal(v.cas, '0')
 })
 
-test('la crédence haute se lit sur le POURCENTAGE — les trois crans n’ont que lui', () => {
+test('⭐⭐ LES DEUX TERMES SONT NÉCESSAIRES — et chacun rattrape le trou de l’autre', () => {
+  // (a) LA PART DU MATÉRIAU SEULE accuserait un élève parfait : là où la cible
+  //     couvre déjà tout, la bonne réponse EST de tout surligner.
+  const cibleEnorme = [0, LONG.length] as const
+  assert.equal(estUnRatissage(LONG, cibleEnorme, [0, LONG.length]), false,
+    'la cible couvre tout : on ne peut pas ratisser')
+  assert.equal(verdictDeLaZone(LONG, cibleEnorme, [0, LONG.length]).cas, '3',
+    'et c’est même la réponse EXACTE')
+
+  // (b) LE RAPPORT À LA CIBLE SEUL laisserait passer : ici la zone fait plus de
+  //     4× la cible, mais ne couvre pas 70 % du matériau.
+  const debut = CIBLE_LONG[0]
+  const zone = [debut, debut + (CIBLE_LONG[1] - CIBLE_LONG[0]) * 5] as [number, number]
+  assert.ok(zone[1] - zone[0] >= RATISSAGE_FOIS_LA_CIBLE * (CIBLE_LONG[1] - CIBLE_LONG[0]))
+  assert.ok(zone[1] - zone[0] < RATISSAGE_PART_MATERIAU * LONG.length)
+  assert.equal(estUnRatissage(LONG, CIBLE_LONG, zone), false,
+    'elle déborde beaucoup, mais elle ne couvre pas : c’est une cible mal bornée')
+})
+
+test('⭐ LA CIBLE MAL BORNÉE VA À L’IA — déborder n’est pas ratisser', () => {
+  const zone = [LONG.indexOf('beta'), LONG.indexOf('kappa') + 'kappa'.length] as [number, number]
+  const v = verdictDeLaZone(LONG, CIBLE_LONG, zone)
+  assert.equal(v.cas, '2prime')
+  assert.equal(v.litLeTexte, true, 'le texte libre tranche')
+  assert.equal(v.nonFait, false, '⛔ 50 signes sur 209 : c’est une imprécision, pas une triche')
+})
+
+test('⛔ LES DEUX PORTES QUI FERMENT AVANT L’IA NE SONT PAS DE MÊME NATURE', () => {
+  // Le cas 1 est une réponse FAUSSE ; le cas 0 est une NON-RÉPONSE. Les
+  // confondre punirait l'élève qui s'est trompé d'endroit.
+  const rate = verdictDeLaZone(T, CIBLE, bornesDe('alpha'))
+  assert.equal(rate.litLeTexte, false)
+  assert.equal(rate.nonFait, false, 'se tromper d’endroit n’est pas ne pas répondre')
+})
+
+test('une zone vide, ou une cible vide, ne ratisse rien', () => {
+  assert.equal(estUnRatissage(LONG, CIBLE_LONG, [5, 5]), false)
+  assert.equal(estUnRatissage(LONG, [3, 3], [0, LONG.length]), false)
+  assert.equal(estUnRatissage('', [0, 0], [0, 0]), false)
+})
+
+test('la crédence n’est plus une condition — elle reste lisible pour le motif', () => {
+  // ⚠️ Elle a cessé d'être la troisième condition de la triche le 28/08 : on ne
+  //    peut pas être honnêtement incertain d'une non-réponse.
   assert.equal(credenceEstHaute(CREDENCE_HAUTE_SEUIL), true)
   assert.equal(credenceEstHaute(CREDENCE_HAUTE_SEUIL - 1), false)
   assert.equal(credenceEstHaute(null), null, 'pas de crédence donnée : on ne conclut pas')

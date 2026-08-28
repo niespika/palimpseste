@@ -31,6 +31,9 @@ import {
 import { contester, validerLaLecture, pointsContestes } from '@/utils/deroule/contestation'
 import { mesurerMaintenant, attenteDuDepot } from '@/utils/deroule/mesure'
 import { saisieARegistrer } from '@/utils/deroule/credence'
+import { leRatissageDuDepot } from '@/utils/deroule/ratissage-serveur'
+import { cranNumero } from '@/utils/cran'
+import { signalerEnAttenteIA, TYPE_FAISCEAU } from '@/utils/integrite'
 import { comparerAuSquelette, gardeIndetermine } from '@/utils/deroule/juger'
 import { estMotifLicite } from '@/utils/deroule/duree'
 import { journaliserCollageBloque } from '@/utils/passation/depots'
@@ -360,9 +363,46 @@ export async function actionRemettre(
     ? maintenant.getTime() - new Date(p.depot.ouvert_at).getTime() : null
   const tag = version === 'v1' ? tagALaRemise(vue.dureeIndicativeMin, reelMs) : null
 
+  // ⛔⛔ LA PORTE DU RATISSAGE — ELLE SE LIT AVANT L'ÉCRITURE, ET AVANT L'IA.
+  //    « Je ne vais pas gaspiller des crédits pour un élève qui veut tricher »
+  //    (Louis, 28/08). La zone seule le dit : ni crédence, ni modèle, ni
+  //    attente. *Une absence de réponse ne se fait pas juger, elle se constate.*
+  // ⚠️ Sur la version finale, la question ne se pose pas : la désignation
+  //    appartient à la v1, et `regime_v1vf` ne donne pas de vf à ces crans.
+  const ratissage = version === 'v1'
+    ? await leRatissageDuDepot(p.admin, depotId, p.depot.exercice.id, cranNumero(p.depot.exercice.cran))
+    : null
+
   const r = await remettre(p.admin, p.depot, version,
-    { texte, tagDuree: tag, telemetrie }, maintenant.toISOString())
+    { texte, tagDuree: tag, telemetrie, ratissage: ratissage !== null },
+    maintenant.toISOString())
   if (!r.ok) return echec(r.message)
+
+  if (ratissage !== null) {
+    // ⭐ LE STATUT PORTE L'ÉTAT, LE SIGNALEMENT PORTE LA CAUSE — et la crédence
+    //    voyage avec, pour que le professeur tranche d'un coup d'œil.
+    // ⚠️ `compte_strike: false` : c'est LUI qui confirme, jamais l'algorithme.
+    await signalerEnAttenteIA(p.admin, {
+      eleveId: p.userId, module: 'exercices', renduRef: depotId,
+      type: TYPE_FAISCEAU,
+      motif: `Désignation qui couvre le matériau au cas ${ratissage.cas} : la zone prend `
+        + `${ratissage.partMateriau} % du texte, soit ${ratissage.foisLaCible} fois le passage `
+        + `visé. ${ratissage.credence === null ? 'Aucune crédence déclarée.'
+          : `Crédence déclarée : ${ratissage.credence} %.`} `
+        + 'Exercice porté à `non_fait` — rien n’a été envoyé au modèle.',
+    })
+    rafraichir()
+    // ⭐ CE QUE L'ÉLÈVE EN APPREND — une remarque, pas un relevé (Louis, 28/08).
+    //    ⛔ On ne lui sert AUCUN chiffre : lui dire « ta zone couvrait 74 % »
+    //    lui donnerait la barre à contourner. Il a été prévenu AVANT, à la
+    //    saisie, en clair — « ne surligne pas tout, cela ne sert à rien ».
+    return {
+      ok: true,
+      enAttente: false,
+      message: 'Bien tenté. Surligner presque tout le texte, ce n’est pas répondre — '
+        + 'cet exercice ne comptera pas, et ton professeur est prévenu.',
+    }
+  }
 
   // Le dépôt est écrit : on relit pour que le déclencheur voie l'état à jour
   // (le `aide_consommee` qu'il passe à la chaîne, notamment).

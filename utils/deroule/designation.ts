@@ -158,18 +158,31 @@ export function bornesTolerees(texte: string, cible: Intervalle): Intervalle {
 
 // ── LE VERDICT DE LA ZONE ───────────────────────────────────────────────────
 
-/** Les six cas de la table du `02-` §5 — leurs noms sont ceux de la source. */
-export type CasDeZone = '1' | '2' | '2prime' | '3' | '4a' | '4b'
+/** Les sept cas de la table du `02-` §5 — leurs noms sont ceux de la source. */
+export type CasDeZone = '0' | '1' | '2' | '2prime' | '3' | '4a' | '4b'
 
 export interface VerdictZone {
   cas: CasDeZone
   /**
-   * ⚠️ `couverture` N'EST PAS UN VERDICT SUR LA RÉPONSE : c'est le seul cas où
-   * la zone déclenche un second test (`02-` §5). L'élève peut avoir raison.
+   * ⚠️ `mal_bornee` N'EST PAS UN VERDICT SUR LA RÉPONSE : la zone déborde, et
+   * c'est le texte qui tranche. ⛔ `ratissage`, lui, EN EST UN — et c'est le
+   * seul que la zone rende seule.
    */
-  verdict: 'faux' | 'juste' | 'probablement_faux' | 'a_voir' | 'couverture'
-  /** ⛔ Faux au seul cas 1 — « le jugement se règle sans rien lire ». */
+  verdict: 'faux' | 'juste' | 'probablement_faux' | 'a_voir' | 'mal_bornee' | 'ratissage'
+  /**
+   * ⛔⛔ FAUX AUX DEUX CAS QUI FERMENT LA PORTE AVANT L'IA — et ils ne sont pas
+   * de même nature. Le **cas 1** est une réponse FAUSSE : « le jugement se règle
+   * sans rien lire », et rien d'autre ne s'ensuit. Le **cas 0** est une
+   * NON-RÉPONSE : l'exercice est non fait, et le professeur reçoit un signal.
+   * *Les confondre punirait l'élève qui s'est simplement trompé d'endroit.*
+   */
   litLeTexte: boolean
+  /**
+   * ⭐ L'EXERCICE EST-IL NON FAIT ? Vrai au seul cas 0. *« Surligner tout n'est
+   * pas une mauvaise réponse : c'est une absence de réponse, et une absence de
+   * réponse ne se fait pas juger — elle se constate »* (Louis, 28/08).
+   */
+  nonFait: boolean
 }
 
 /**
@@ -192,66 +205,83 @@ export function verdictDeLaZone(
   const [zd, zf] = [Math.max(0, zone[0]), Math.min(texte.length, zone[1])]
   const [cd, cf] = cible
 
+  // ⛔⛔ CAS 0 — LE RATISSAGE, ET IL SE LIT EN PREMIER. Il ne dépend pas de la
+  //    position de la zone par rapport à la cible : une zone qui couvre le
+  //    matériau le couvre, qu'elle contienne la cible ou non. Le lire après
+  //    l'inclusion le ferait manquer sur une zone qui rate la cible tout en
+  //    prenant tout le reste.
+  if (estUnRatissage(texte, cible, [zd, zf])) {
+    return { cas: '0', verdict: 'ratissage', litLeTexte: false, nonFait: true }
+  }
   // Cas 1 — elle ne touche pas la cible. Une zone vide en fait partie.
   if (zf <= zd || zf <= cd || zd >= cf) {
-    return { cas: '1', verdict: 'faux', litLeTexte: false }
+    return { cas: '1', verdict: 'faux', litLeTexte: false, nonFait: false }
   }
   // Cas 3 — elle EST la cible.
-  if (zd === cd && zf === cf) return { cas: '3', verdict: 'juste', litLeTexte: true }
-
+  if (zd === cd && zf === cf) {
+    return { cas: '3', verdict: 'juste', litLeTexte: true, nonFait: false }
+  }
   // Elle contient la cible : reste à savoir si le débordement est toléré.
   if (zd <= cd && zf >= cf) {
     const [td, tf] = bornesTolerees(texte, cible)
     return zd >= td && zf <= tf
-      ? { cas: '2', verdict: 'juste', litLeTexte: true }
-      : { cas: '2prime', verdict: 'couverture', litLeTexte: true }
+      ? { cas: '2', verdict: 'juste', litLeTexte: true, nonFait: false }
+      : { cas: '2prime', verdict: 'mal_bornee', litLeTexte: true, nonFait: false }
   }
   // Cas 4b — incluse dans la cible, plus courte.
-  if (zd >= cd && zf <= cf) return { cas: '4b', verdict: 'a_voir', litLeTexte: true }
-
+  if (zd >= cd && zf <= cf) {
+    return { cas: '4b', verdict: 'a_voir', litLeTexte: true, nonFait: false }
+  }
   // Cas 4a — elle chevauche : une part de la cible, et du texte en dehors.
-  return { cas: '4a', verdict: 'probablement_faux', litLeTexte: true }
+  return { cas: '4a', verdict: 'probablement_faux', litLeTexte: true, nonFait: false }
 }
 
-// ── LE SURLIGNAGE DE COUVERTURE ─────────────────────────────────────────────
+// ── LE RATISSAGE ────────────────────────────────────────────────────────────
 
 /**
- * ⭐⭐ « QUE LE PETIT MALIN ENVOIE UN SIGNAL » — Louis, 27/08 — ET IL FAUT LES
- * TROIS CONDITIONS.
+ * ⛔⛔ LA BARRE DU RATISSAGE — **70 % du matériau ET 4 fois la cible**
+ * *(décision de Louis, 28/08)*. ⚠️ **PROVISOIRES comme les autres seuils**, et
+ * ici et ici seulement.
  *
- * *« Le petit malin qui surligne presque tout le texte juste pour espérer
- * trouver, et qui écrit un truc flou pour essayer d'avoir raison. »*
- *   1. une zone au-delà de la tolérance — le cas **2′** ;
- *   2. une justification **qui ne nomme rien de précis** ;
- *   3. une **crédence haute**.
+ * ⭐⭐ **IL FAUT LES DEUX TERMES, ET LA MESURE L'IMPOSE — aucun ne tient seul.**
+ *   · **La part du matériau seule accuserait des élèves parfaits** : sur les
+ *     290 cibles de la banque du 28/08, **six couvrent déjà 90 à 100 % de leur
+ *     matériau** — la bonne réponse y EST de tout surligner.
+ *   · **Le rapport à la cible seul laisserait passer un quart des cas** : à
+ *     quatre fois, **72 cas sur 290 ne peuvent pas l'atteindre**, même en
+ *     surlignant tout, parce que la cible occupe déjà une grande part d'un
+ *     matériau court.
  *
- * ⛔⛔ **SANS LA TROISIÈME, ON PUNIRAIT L'HONNÊTETÉ.** Une zone large déclarée
- * avec une crédence BASSE est un élève qui dit « je ne suis pas sûr, je
- * ratisse » — et il a raison de le dire.
- *
- * ⚠️⚠️ **LA DEUXIÈME CONDITION N'EST PAS ALGORITHMIQUE, ET CE MODULE NE LA
- * FABRIQUE PAS.** Aux crans 4, 7 et 9 le jugement est **IA** (`02-` §2.2) :
- * « une justification qui ne nomme rien de précis » est un jugement sur le
- * texte, pas une mesure sur des bornes. Elle entre donc ici **en paramètre**,
- * et cette fonction rend `null` tant qu'elle n'est pas connue — *un `null` est
- * « on ne sait pas encore », jamais « ce n'est pas un petit malin ».* C'est la
- * même discipline que le troisième état des signaux du faisceau.
- *
- * ⛔ **ET CE QUI EN SORT NE PASSE PAS PAR LE FAISCEAU** (`02-` §5, décision de
- * Louis du 28/08) : ni huitième signal, ni entrée du cinquième — celui-ci se
- * glose au `06-` §6 par « un texte excellent, et un élève incapable de dire
- * pourquoi », c'est le **sous-confiant**, et le petit malin est **l'exact pôle
- * opposé**. Le canal est le signalement direct, sans strike, que le professeur
- * confirme.
+ * **La conjonction protège les deux bords** : là où la cible est déjà large on
+ * ne peut pas ratisser, et là où le matériau est court il n'y a rien d'autre à
+ * prendre. *218 cas sur 290 peuvent la déclencher.*
  */
-export function couvertureSuspecte(
-  verdict: VerdictZone,
-  justificationNommeQuelqueChose: boolean | null,
-  credenceHaute: boolean | null,
-): boolean | null {
-  if (verdict.cas !== '2prime') return false
-  if (justificationNommeQuelqueChose === null || credenceHaute === null) return null
-  return !justificationNommeQuelqueChose && credenceHaute
+export const RATISSAGE_PART_MATERIAU = 0.70
+export const RATISSAGE_FOIS_LA_CIBLE = 4
+
+/**
+ * ⭐ « TOUT OU PRESQUE TOUT » — le seul verdict que la zone rende SEULE.
+ *
+ * ⛔⛔ **ET C'EST TOUT L'INTÉRÊT : IL NE COÛTE PAS UN APPEL D'IA.** *« Je ne
+ * vais pas gaspiller des crédits pour un élève qui veut tricher »* — Louis,
+ * 28/08. **Surligner tout n'est pas une mauvaise réponse : c'est une ABSENCE de
+ * réponse**, et une absence de réponse ne se fait pas juger, elle se constate.
+ *
+ * ⚠️⚠️ **LA CRÉDENCE N'ENTRE PAS ICI, ET C'EST UN RENVERSEMENT.** Une première
+ * rédaction en faisait une condition — « une zone large déclarée avec une
+ * crédence basse est un élève qui dit : je ne suis pas sûr, je ratisse ».
+ * ⭐ **L'argument tombe avec le relèvement de la barre** : on ne peut pas être
+ * honnêtement incertain d'une NON-RÉPONSE. La crédence accompagne désormais les
+ * cas que l'IA lit, et voyage dans le motif du signal — **information, plus
+ * condition**.
+ */
+export function estUnRatissage(texte: string, cible: Intervalle, zone: Intervalle): boolean {
+  const large = zone[1] - zone[0]
+  if (large <= 0 || !texte.length) return false
+  const cibleLarge = cible[1] - cible[0]
+  if (cibleLarge <= 0) return false
+  return large >= RATISSAGE_PART_MATERIAU * texte.length
+    && large >= RATISSAGE_FOIS_LA_CIBLE * cibleLarge
 }
 
 /**
@@ -260,9 +290,14 @@ export function couvertureSuspecte(
  * Ils servent un **pourcentage unique** sur la propre réponse de l'élève
  * (`02-` §5) : le seuil se lit donc sur ce pourcentage, et sur rien d'autre.
  *
- * ⚠️ **PROVISOIRE, comme les deux seuils de tolérance** — il vit ici et ici
- * seulement. *Un élève qui se déclare sûr à 70 % sur une zone qui couvre tout
- * le matériau dit déjà quelque chose ; le chiffre exact se règle sur copies.*
+ * ⚠️⚠️ **CE N'EST PLUS UNE CONDITION DE QUOI QUE CE SOIT — c'est une
+ * INFORMATION.** Elle accompagne les cas que l'IA lit (2, 2′, 4a, 4b) et voyage
+ * dans le motif du signalement, **pour que le professeur tranche d'un coup
+ * d'œil** : « zone qui déborde, crédence 92 % » et « zone qui déborde, crédence
+ * 15 % » ne se confirment pas de la même façon. *Le ratissage, lui, se voit
+ * sans elle.*
+ *
+ * ⚠️ **PROVISOIRE, comme les seuils de tolérance** — il vit ici et ici seulement.
  */
 export const CREDENCE_HAUTE_SEUIL = 70
 

@@ -268,7 +268,15 @@ function fusionnerEnBase(
  */
 export async function remettre(
   admin: Admin, depot: DepotMaison, version: Version,
-  a: { texte: string; tagDuree: string | null; telemetrie: TelemetrieSaisie | null },
+  a: {
+    texte: string; tagDuree: string | null; telemetrie: TelemetrieSaisie | null
+    /**
+     * ⭐ La désignation couvrait le matériau (`02-` §5) — l'exercice est NON
+     * FAIT. ⚠️ **Le statut porte l'ÉTAT, jamais la CAUSE** : le ratissage vit
+     * au signalement d'intégrité, que l'appelant pose.
+     */
+    ratissage?: boolean
+  },
   maintenant: string,
 ): Promise<Issue<{ statut: string; blocs: number }>> {
   const propre = normaliserRetours(a.texte).replace(/\n+$/, '')
@@ -294,7 +302,18 @@ export async function remettre(
 
   const champ = version === 'v1' ? 'texte_v1' : 'texte_vf'
   const horodatage = version === 'v1' ? 'v1_remis_at' : 'vf_remis_at'
-  const statut = version === 'v1' ? 'v1_remis' : 'vf_remis'
+  // ⭐⭐ LE RATISSAGE ÉCRIT SON STATUT ICI, EN UNE SEULE ÉCRITURE (`02-` §5).
+  //    « Surligner tout n'est pas une mauvaise réponse : c'est une absence de
+  //    réponse » — l'exercice est NON FAIT, et rien ne part au modèle.
+  // ⚠️ **Une seule écriture, et c'est la raison de ce paramètre** : passer par
+  //    `v1_remis` puis corriger laisserait une fenêtre où le déclencheur de la
+  //    chaîne verrait un dépôt à mesurer. *La chaîne est déclenchée juste après
+  //    la remise, et elle relit le dépôt : la fenêtre est réelle.*
+  // ⛔ Le `v1_remis_at` est POSÉ QUAND MÊME : l'élève a déposé, et l'assiduité
+  //    doit distinguer « rendu qui ne compte pas » de « jamais rendu ».
+  const statut = version === 'v1'
+    ? (a.ratissage ? 'non_fait' : 'v1_remis')
+    : 'vf_remis'
 
   const maj: Record<string, unknown> = {
     [champ]: propre,

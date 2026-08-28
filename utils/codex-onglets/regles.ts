@@ -184,6 +184,11 @@ export function etatDeLExercice(
     case 'vf_remis':      return { ton: 'attente', libelle: 'version finale rendue' }
     case 'clos':          return { ton: 'clos', libelle: 'terminé' }
     case 'abandonne':     return { ton: 'clos', libelle: 'abandonné' }
+    // ⛔ `non_fait` SANS CE CAS TOMBERAIT AU `default`, qui rend `ton:
+    //    'attente'` et affiche la CHAÎNE BRUTE. Deux mensonges d'un coup : rien
+    //    n'est en attente — aucun retour ne viendra —, et « non_fait » n'est pas
+    //    une phrase qu'on montre à quelqu'un.
+    case 'non_fait':      return { ton: 'clos', libelle: 'non fait' }
     default:              return { ton: 'attente', libelle: statutDepot }
   }
 }
@@ -232,6 +237,11 @@ export function etatDExamenDeClasse(
     case 'vf_remis':      return { ton: 'attente', libelle: 'version finale rendue' }
     case 'clos':          return { ton: 'clos', libelle: 'terminé' }
     case 'abandonne':     return { ton: 'clos', libelle: 'abandonné' }
+    // ⛔ `non_fait` SANS CE CAS TOMBERAIT AU `default`, qui rend `ton:
+    //    'attente'` et affiche la CHAÎNE BRUTE. Deux mensonges d'un coup : rien
+    //    n'est en attente — aucun retour ne viendra —, et « non_fait » n'est pas
+    //    une phrase qu'on montre à quelqu'un.
+    case 'non_fait':      return { ton: 'clos', libelle: 'non fait' }
     default:              return { ton: 'attente', libelle: statutDepot }
   }
 }

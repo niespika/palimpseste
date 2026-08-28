@@ -689,6 +689,14 @@ async function drapeauxDuFaisceau(
       .in('eleve_id', eleveIds)
       .not('v1_remis_at', 'is', null)
       .neq('statut', 'abandonne')
+      // ⛔⛔ ET `non_fait` NON PLUS — il PORTE un `v1_remis_at`, donc il entrait
+      //    ici sans rien demander. Deux raisons de l'écarter : *(1)* il a DÉJÀ
+      //    son signalement, posé au dépôt, et le faire converger une seconde
+      //    fois compterait deux fois le même fait ; *(2)* « les sept signaux
+      //    disent tous la même chose — quelqu'un d'autre a fait le travail »
+      //    (`06-` §6), et **le ratisseur ne délègue rien, il ratisse**. C'est
+      //    exactement la raison pour laquelle il n'est pas un huitième signal.
+      .neq('statut', 'non_fait')
       .order('id', { ascending: true })
       .range(debut, debut + PAGE - 1)
     if (error) {

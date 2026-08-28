@@ -183,6 +183,21 @@ test('`retire` sort du dénominateur ; `abandonne` Y RESTE — l\'assiduité mes
   assert.equal(entreAuDenominateur('assigne'), true)
 })
 
+test('⭐⭐ `non_fait` NE COMPTE PAS COMME RENDU, ET RESTE AU DÉNOMINATEUR', () => {
+  // ⛔ C'est TOUT le dessin de l'item 77, et il tient sur ces deux lignes.
+  //    « L'exercice est considéré comme non fait » (Louis, 28/08) : le dépôt a
+  //    eu lieu — la désignation couvrait le matériau —, il ne se juge pas, et il
+  //    ne se compte pas. Si `non_fait` entrait dans `STATUTS_RENDUS`, le
+  //    ratisseur aurait fait sa semaine ; s'il sortait du dénominateur, il
+  //    n'aurait rien eu à faire du tout. Ni l'un ni l'autre.
+  assert.equal(estRendu('non_fait'), false, 'un ratissage n\'est pas un rendu')
+  assert.equal(entreAuDenominateur('non_fait'), true, 'et il ne s\'efface pas de la semaine')
+  // ⚠️ Il ne se confond pas avec `abandonne` : celui-là dit « jamais ouvert ».
+  //    Ils tombent au même endroit pour l'assiduité, et c'est un hasard — leurs
+  //    libellés d'écran, eux, disent deux choses différentes.
+  assert.equal(estRendu('abandonne'), false)
+})
+
 test('ce qui compte comme RENDU s\'arrête au dépôt de la v1', () => {
   assert.equal(estRendu('v1_remis'), true)
   assert.equal(estRendu('clos'), true)

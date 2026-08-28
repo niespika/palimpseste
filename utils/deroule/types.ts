@@ -55,10 +55,22 @@ export type RegimeV1vf = 'plein' | 'par_paires' | 'sans_vf'
 export const TEMPS = ['preparer', 'ecrire', 'se_juger', 'retour', 'reviser', 'retour_final'] as const
 export type Temps = (typeof TEMPS)[number]
 
-/** Le fil du statut d'un dépôt (`07-` §1.1). */
+/**
+ * Le fil du statut d'un dépôt (`07-` §1.1).
+ *
+ * ⭐ `non_fait` — **le dépôt a EU LIEU et il ne compte pas.** La désignation
+ * couvrait le matériau (`02-` §5) : *« surligner tout n'est pas une mauvaise
+ * réponse, c'est une absence de réponse »*. Rien ne part au modèle.
+ *
+ * ⛔⛔ **IL NE SE CONFOND PAS AVEC `abandonne`**, qui dit « NON-GESTE DE
+ * L'ÉLÈVE », s'affiche « abandonné » et désigne un exercice jamais ouvert —
+ * *or l'élève a déposé*. ⚠️ **Et il ne porte pas la CAUSE** : le ratissage vit
+ * à `integrite_signalements`, jamais dans un statut. *Un statut qui nommerait
+ * le ratissage serait une trace déguisée en état.*
+ */
 export type StatutDepot =
   | 'assigne' | 'ouvert' | 'v1_remis' | 'retour_publie' | 'vf_remis' | 'clos'
-  | 'abandonne' | 'retire'
+  | 'abandonne' | 'retire' | 'non_fait'
 
 // ── Les gestes de la remise (`06-` §3) ──────────────────────────────────────
 

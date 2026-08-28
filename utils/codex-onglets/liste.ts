@@ -236,7 +236,11 @@ async function retoursDesDepots(
  *    confondent pas » (§1.1). L'élève a le droit de lire que sa copie est
  *    restée sans suite.
  */
-const STATUTS_APRES_REMISE = ['v1_remis', 'retour_publie', 'vf_remis', 'clos', 'abandonne'] as const
+// ⭐ `non_fait` EST APRÈS LA REMISE — l'élève A déposé. L'omettre le ferait
+//    reparaître dans « à faire », c'est-à-dire l'inviter à recommencer.
+const STATUTS_APRES_REMISE = [
+  'v1_remis', 'retour_publie', 'vf_remis', 'clos', 'abandonne', 'non_fait',
+] as const
 
 export interface ExamenDeClasse {
   depotId: string
