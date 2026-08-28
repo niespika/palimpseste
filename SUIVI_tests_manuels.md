@@ -7054,6 +7054,10 @@ interruption. Le décor se reconnaît à sa classe, `nom LIKE 'RECETTE-C5L3%'`. 
 > **Séance du 27/08.** `npx tsc --noEmit` vert · `npm test` **1673 / 1673, 0 échec** *(le seul rouge
 > — antérieur au lot — a été levé en fin de séance sur décision de Louis : `derive-instruments.py
 > --ecris` rejoué pour reprendre la version 2.59 du `07-` ; voir `C5L4-0`)* · `npx eslint` **0 erreur**.
+> ⭐⭐ **LES DEUX SMOKES ONT ÉTÉ JOUÉS À L'ÉCRAN LE 27/08**, dans des sessions que Louis a ouvertes —
+> **professeur** puis **élève** : `C5L4-A`, `C5L4-B`, `C5L4-C`, `C5L4-D`, `C5L4-E` et `C5L4-E-bis`
+> sont cochés. **Il ne reste que `C5L4-F`**, bloqué par un résidu de recette du 24/08 qui n'est pas
+> de ce lot, **et `C5L4-G`**, qui est une décision de Louis.
 > Relevé : `RELEVE_C5_L4_2026-08-27.md`.
 > ⛔ **Aucun interrupteur posé, allumé ni éteint. Aucune migration. Aucune dette.**
 
@@ -7177,21 +7181,42 @@ interruption. Le décor se reconnaît à sa classe, `nom LIKE 'RECETTE-C5L3%'`. 
   la preuve qu'il est cassé*. **En PRODUCTION, la même capture montre l'encart avec ses DEUX lignes**
   *(T5, 12 oct. et 4 janv.)*, sous l'ancienne barre « Classe · Paramètres » : c'est l'état AVANT,
   photographié.
-- [ ] **C5L4-B · LE SMOKE ÉLÈVE, CONNECTÉ**, sur téléphone ou à 375 px : les trois onglets ; la
-  séance allume Livres, l'exercice allume Exercices, la passation allume Examens ; **et UN SEUL
-  « ← Retour » par écran** *(le défaut du double retour n'est visible qu'à l'œil — aucun test ne
-  compte les liens d'une page)*. ⚠️ **Le smoke PROF a été joué le 27/08 ; celui-ci ne l'a pas été,
-  faute de session élève.** **Condition de reprise : une session ÉLÈVE**, qui lèverait `C5L4-B` et
-  `C5L4-C` d'un seul passage.
-- [ ] **C5L4-C · LES DEUX VIDES DE L'ONGLET EXERCICES ÉLÈVE**, distingués à l'écran : porte fermée
-  *(« pas encore ouverts »)* vs rien à faire *(« aucun exercice pour le moment »)*.
-  ⚠️⚠️ **CE RESTE N'EST PAS BLOQUÉ PAR L'INTERRUPTEUR, IL EST BLOQUÉ PAR LE RÔLE.** Louis a autorisé
-  la bascule de `exercices_actif` en bac à sable le 27/08 ; **elle n'a pas été jouée, et c'eût été un
-  geste pour rien** : les deux vides sont sur un écran **ÉLÈVE**, et la session ouverte était une
-  session **PROFESSEUR** — aucun écran prof ne change quand la porte se ferme. *Basculer un
-  interrupteur sans pouvoir en observer l'effet n'aurait rien prouvé et aurait touché la base.*
-  **Condition de reprise : une session ÉLÈVE** — et alors la bascule prend une seconde, dans le même
-  passage que `C5L4-B`.
+- [x] **C5L4-B · ✅ LE SMOKE ÉLÈVE, JOUÉ À L'ÉCRAN LE 27/08** *(session ouverte par Louis, élève
+  **Elo**, classe **Test**)*. **Les six allumages, relevés par `aria-current="page"` :**
+  `/eleve/modules/aletheia` → **Livres** · `…/<livreId>/2` → **Livres** ⭐⭐ *(le piège 18 levé EN
+  PAGE VIVANTE : aucun préfixe statique ne décrit un UUID, seule la racine la sert)* ·
+  `…/exercices` → **Exercices** · `…/exercice/<depotId>` → **Exercices** ⭐⭐ *(le piège du
+  singulier / pluriel tenu en page vivante : le déroulé de C5-L2 allume l'onglet, PAS la racine)* ·
+  `…/examens` → **Examens** · `…/passation/<depotId>` → **Examens**.
+  ⭐ **UN SEUL « ← Retour » PAR ÉCRAN**, compté au DOM sur les cinq écrans qui en portent un
+  *(`nbRetours: 1` partout)* : le défaut trouvé par le smoke du 27/08 ne s'est pas rouvert en
+  déménageant les blocs. ⭐ **`<main>` unique** sur `…/exercice/<id>` et `…/passation/<id>`
+  *(`mains: 1`)* — le correctif tient côté élève aussi.
+  ⭐⭐ **CE QUE L'ONGLET EXAMENS A RÉVÉLÉ** : il sert **DEUX passations en classe réellement
+  OUVERTES** pour cet élève — *« Passation en classe ouverte — Examen diagnostique — l'explication
+  de texte »*. **Elles n'étaient atteignables que par le signal noyé sur la racine, sous les
+  livres.** C'est le 🔴 du piège 23, constaté sur des données réelles et fermé.
+  ⭐ **La barre MOBILE à 375 px, en page vivante** : `Livres 63 · Exercices 82 · Examens 81` px,
+  **44 px de haut les trois**, `scrollWidth = clientWidth = 375` → **aucun débordement**. *La mesure
+  isolée de `C5L4-14` (64/81/81) est confirmée à un pixel près.*
+- [x] **C5L4-C · ✅⭐ LES DEUX VIDES, VUS ET DISTINCTS — LE 27/08, sur autorisation explicite de
+  Louis.** `exercices_actif` a été **éteint puis remis** en bac à sable *(et NULLEMENT en prod,
+  revérifiée après coup)*, **par l'écrivain du lot** `poserExercicesActifs`, jamais par un `update`
+  écrit pour l'occasion. **Les TROIS états de l'onglet, vus à l'écran :**
+
+  | La porte | Ce que l'onglet dit |
+  |---|---|
+  | **ON**, aucun exercice | *« Aucun exercice de lecture pour le moment. Ceux que ton professeur te donne apparaîtront ici. »* |
+  | **ON**, un exercice | la ligne, avec son état *(« à faire », puis « commencé »)* |
+  | **OFF** | *« Les exercices de lecture ne sont pas encore ouverts. Ton professeur t'indiquera quand ils commencent. »* |
+
+  ⭐⭐ **ET LE LIEN DISPARAÎT ALORS QUE LE DÉPÔT EXISTE** *(relevé au DOM : `liens: []`)* : la porte
+  ferme **la liste**, pas l'onglet — *un lien qui mènerait à une page fermée est un lien qui promet
+  une porte close*. ⭐ **Les trois onglets restent affichés** dans les trois cas : *« un vide
+  expliqué, jamais un onglet qui clignote »*, vérifié plutôt que supposé.
+  ⭐ **C'est la règle du §5 du `07-` prise en flagrant délit d'être JUSTE** : sur la racine, ce bloc
+  se cachait *(C5-L2)* ; sous un onglet dédié, il parle — et il dit **deux choses différentes**.
+  ⚠️ **Les six interrupteurs ont été relus après coup, des deux côtés : identiques.**
 - [x] **C5L4-D · ✅⭐⭐ LE MOTIF VU À L'ŒIL LE 27/08 — ET SON TÉMOIN MUET À CÔTÉ.** C'est là que
   C5-L3 avait constaté le silence, et c'est là qu'il parle. ⚠️ **Le bac à sable n'a AUCUN job mixte**
   *(son seul exercice de porte de mode n'élit que des couples non couverts → `sans_retour`, qui
