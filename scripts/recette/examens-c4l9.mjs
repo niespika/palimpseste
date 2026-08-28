@@ -53,17 +53,46 @@ const { lireContexte } = await import(`${RACINE}/utils/chaine/contexte.ts`)
 const admin = createClient(env.NEXT_PUBLIC_SUPABASE_URL, env.SUPABASE_SERVICE_ROLE_KEY,
   { auth: { autoRefreshToken: false, persistSession: false } })
 
+// ⭐ CORRIGÉ LE 27/08, EN CLÔTURE DE C5-L4, SUR MANDAT DE LOUIS — deux défauts
+//    que le rejeu a révélés, et qui ne se voyaient pas tant que les six
+//    interrupteurs étaient à OFF :
+//      1. la recette FORÇAIT les deux portes élève à OFF en fin de course, au
+//         lieu de les remettre comme elle les avait trouvées ;
+//      2. son bloc final ASSERTAIT les six à OFF, transformant le régime du
+//         `07-` §5 en critère de réussite de C4-L9.
+//    Le patron appliqué est celui de `decor-c4l6.mjs` et de `lecture-c5l2.mjs`.
 const GARDE_LE_DECOR = process.argv.includes('--garde-le-decor')
 const MARQUE = 'RECETTE C4-L9'
 
-// ⚠️ LES INTERRUPTEURS RESTENT À OFF — la recette les bascule le temps d'une
-//    vérification, et les REMET, ce qu'elle re-constate par requête à la fin.
-//    Sans cela, un lot laisserait une porte ouverte derrière lui.
+// ⚠️⚠️ CE COMMENTAIRE DISAIT LE CONTRAIRE DU CODE, ET LE CODE AVAIT TORT.
+//    Il annonçait « la recette les bascule le temps d'une vérification, et les
+//    REMET » ; le code écrivait `poserPortes(false, false)` À LA FIN — une
+//    VALEUR EN DUR, pas l'état d'avant. Tant que les six interrupteurs étaient
+//    à OFF, la différence ne se voyait pas. **Depuis qu'ils sont à ON en bac à
+//    sable, chaque rejeu FERMAIT DEUX PORTES AUX ÉLÈVES, en silence** —
+//    constaté deux fois par requête le 27/08, et remis à la main.
+//
+// ⭐ LE PATRON EST CELUI DE `decor-c4l6.mjs` ET DE `lecture-c5l2.mjs` : on
+//    MÉMORISE ce qu'on a trouvé, on bascule, et on RESTITUE — jamais une
+//    constante. Corollaire : ce qu'on veut éprouver FERMÉ, on le ferme
+//    soi-même, on ne le suppose pas fermé.
 const poserPortes = async (exercices, passation) => {
   const { data } = await admin.from('scriptorium_params').select('id').limit(1).maybeSingle()
   await admin.from('scriptorium_params')
     .update({ exercices_actif: exercices, passation_classe_actif: passation }).eq('id', data.id)
 }
+
+/** Les deux portes TELLES QU'ON LES A TROUVÉES — c'est à elles qu'on revient. */
+const PORTES_TROUVEES = await lireLesPortes(admin)
+
+/** Restituer, et le DIRE. Appelée en fin de course ET sur interruption. */
+const restituerLesPortes = async () => {
+  await poserPortes(PORTES_TROUVEES.exercicesActifs, PORTES_TROUVEES.passationActive)
+}
+
+// ⚠️ SUR INTERRUPTION AUSSI (patron de `lecture-c5l2.mjs`) : un Ctrl-C entre
+//    l'ouverture et la restitution laisserait deux portes ouvertes derrière lui.
+process.on('SIGINT', async () => { await restituerLesPortes(); process.exit(130) })
 
 let ok = 0, ko = 0
 const dit = (v, quoi, detail = '') => {
@@ -449,6 +478,13 @@ dit(JSON.stringify(statutsApres) === JSON.stringify(statutsGlobaux),
 titre('I. « au lancement, l’élève voit son signal, et entre par son module »')
 
 // ⭐ D'ABORD PORTES FERMÉES : le signal est INERTE, jamais à moitié.
+// ⚠️ ON LES FERME, ON NE LES SUPPOSE PAS FERMÉES. Ce contrôle affirmait un état
+//    au lieu de l'établir : quand les six interrupteurs sont à ON — ce qu'ils
+//    sont en bac à sable et en prod depuis le 27/08 —, il échouait sans que rien
+//    ne soit cassé. Le contrôle vaut maintenant dans les deux régimes.
+console.log(`  (portes trouvées à exercices=${PORTES_TROUVEES.exercicesActifs ? 'ON' : 'OFF'}, `
+  + `passation=${PORTES_TROUVEES.passationActive ? 'ON' : 'OFF'} — elles seront remises telles quelles)`)
+await poserPortes(false, false)
 for (const d of deposes) {
   const rien = await signauxDeLancement(admin, d.depots[0].eleve_id, d.module)
   dit(rien.length === 0,
@@ -483,11 +519,15 @@ if (deposes.length > 0) {
   await admin.from('exercices_depots').update({ statut: 'ouvert' }).eq('id', d.depots[0].id)
 }
 
-// ⭐ ET ON REFERME — puis on le CONSTATE, on ne le suppose pas.
-await poserPortes(false, false)
+// ⭐ ET ON RESTITUE CE QU'ON A TROUVÉ — puis on le CONSTATE, on ne le suppose pas.
+// ⛔ Surtout PAS `poserPortes(false, false)` : voir la note en tête de fichier.
+await restituerLesPortes()
 const portes = await lireLesPortes(admin)
-dit(!portes.exercicesActifs && !portes.passationActive,
-  '⭐ les deux portes élève sont REFERMÉES, re-constatées par requête')
+dit(portes.exercicesActifs === PORTES_TROUVEES.exercicesActifs
+  && portes.passationActive === PORTES_TROUVEES.passationActive,
+  '⭐ les deux portes élève sont REMISES COMME TROUVÉES, re-constatées par requête',
+  `exercices=${portes.exercicesActifs ? 'ON' : 'OFF'}, `
+  + `passation=${portes.passationActive ? 'ON' : 'OFF'}`)
 
 // ═══════════════════════════════════════════════════════════════════════════
 // J. LES DEUX EXAMENS DE LA SEMAINE 1 — un par module, et la garde du plan
@@ -551,11 +591,33 @@ if (GARDE_LE_DECOR) {
   dit((resteEx ?? 0) === 0, '⭐ AUCUNE instance de la recette ne reste')
 }
 
-titre('les six interrupteurs, re-constatés — comme les quatre lots joués avant')
+titre('les six interrupteurs — ce que la recette DOIT prouver, et ce qu’elle CONSTATE')
 const { data: gates } = await admin.from('scriptorium_params')
   .select('exercices_actif, routeur_actif, competences_affichage_actif, fabrique_actif, '
     + 'chaine_actif, passation_classe_actif').eq('id', 1).single()
-for (const [nom, v] of Object.entries(gates)) dit(v === false, `\`${nom}\` est à OFF`)
+
+// ⭐ CE QUE LA RECETTE DOIT PROUVER : elle n'a rien laissé derrière elle. Les
+//    deux portes qu'elle bascule sont les SEULES dont elle réponde.
+dit(gates.exercices_actif === PORTES_TROUVEES.exercicesActifs,
+  '⭐ `exercices_actif` est remis COMME TROUVÉ',
+  PORTES_TROUVEES.exercicesActifs ? 'ON' : 'OFF')
+dit(gates.passation_classe_actif === PORTES_TROUVEES.passationActive,
+  '⭐ `passation_classe_actif` est remis COMME TROUVÉ',
+  PORTES_TROUVEES.passationActive ? 'ON' : 'OFF')
+
+// ⚠️ LE RESTE EST UN CONSTAT, PAS UNE ASSERTION — et c'est une correction.
+//    Ce bloc affirmait `v === false` sur les six : il transformait LE RÉGIME du
+//    `07-` §5 en critère de réussite de C4-L9. Or ce que la base fait des
+//    interrupteurs n'est pas ce que ce lot construit : les six sont à ON en bac
+//    à sable ET EN PROD depuis le 27/08, et quatre échecs rouges le disaient
+//    comme si la recette avait trouvé un défaut. **Un écran qui compte autre
+//    chose que ce qu'il dit est un écran qui ment ; un compteur de recette
+//    aussi.**
+for (const [nom, v] of Object.entries(gates)) console.log(`  · \`${nom}\` : ${v ? 'ON' : 'OFF'}`)
+if (Object.values(gates).some(Boolean)) {
+  console.log('  ⚠️ le `07-` §5 les dit « à OFF jusqu\'à la recette » — l\'écart est un ÉTAT DE LA')
+  console.log('     BASE, pas un défaut de ce lot. Il se répare à `/prof/allumage`, jamais ici.')
+}
 
 console.log(`\n${'═'.repeat(72)}`)
 console.log(`RECETTE C4-L9 — ${ok} vérification(s) passée(s), ${ko} en échec.`)

@@ -7275,25 +7275,36 @@ interruption. Le décor se reconnaît à sa classe, `nom LIKE 'RECETTE-C5L3%'`. 
   résidu. **Le fond tient** *(la vraie passation n'avait, elle aussi, qu'une seule porte avant ce
   lot ; et elle est intacte, ses sept dépôts avec)* — **mais le compte était faux, et il est
   rectifié ici.**
-- [ ] **C5L4-F-bis · ⚠️⚠️ `examens-c4l9.mjs` NE REMET PAS LES INTERRUPTEURS COMME IL LES TROUVE — IL
-  LES FORCE À OFF.** Trouvé en le rejouant, le 27/08. À sa section I, le script ouvre les deux portes
-  élève pour sa vérification, puis exécute **`await poserPortes(false, false)`** — *une valeur en
-  dur, pas l'état d'avant*. **Constaté deux fois par requête** : `exercices_actif` et
-  `passation_classe_actif` sont passés de **ON à OFF** à chaque rejeu, et ont dû être remis à la
-  main. ⭐ **Le patron correct existe dans le dépôt** : `decor-c4l6.mjs` garde `porteAvant` et
-  restitue ce qu'il a trouvé. ⛔ **Non corrigé : `examens-c4l9.mjs` appartient à C4-L9, clos, et le
-  périmètre de C5-L4 est fermé.** ⚠️ **Tant que ce n'est pas fait, rejouer cette recette FERME DEUX
-  PORTES aux élèves du bac à sable, en silence.** **Condition de reprise : une décision de Louis** —
-  le geste est de mémoriser les deux valeurs à l'entrée et de les restituer à la sortie, plutôt que
-  d'écrire `false`.
-- [ ] **C5L4-F-ter · ⚠️ LES SIX ROUGES DE `examens-c4l9.mjs` SONT LE MÊME FAIT, ET C'EST `C5L4-G`.**
-  Le script **encode le régime du `07-` §5 en assertion** : deux contrôles attendent les portes élève
-  **fermées** *(« portes FERMÉES, AUCUN signal — un lien vers une page close serait un piège »)*, et
-  quatre contrôles finaux affirment `routeur_actif`, `competences_affichage_actif`, `fabrique_actif`
-  et `chaine_actif` **à OFF**. **Les six sont à ON.** ⛔ **Ce n'est pas un défaut de ce que C4-L9
-  construit** — ses 126 autres contrôles sont verts, y compris la garde `uk_exercices_diagnostic` et
-  les deux signaux qui entrent chacun par leur module. **C'est la divergence base / source de
-  `C5L4-G`, vue par un autre bout.** **Condition de reprise : la même que `C5L4-G`.**
+- [x] **C5L4-F-bis · ✅⭐ `examens-c4l9.mjs` REMET DÉSORMAIS LES INTERRUPTEURS COMME IL LES TROUVE —
+  corrigé le 27/08 sur mandat de Louis, au patron de `decor-c4l6.mjs`.** ~~À sa section I, le script
+  ouvrait les deux portes élève pour sa vérification, puis exécutait `poserPortes(false, false)` —
+  une valeur en dur, pas l'état d'avant.~~ ⚠️ **Le commentaire de `poserPortes` annonçait pourtant
+  déjà le bon geste** — *« la recette les bascule le temps d'une vérification, et les REMET »* :
+  **le commentaire était juste et le code avait tort**, et la différence ne se voyait pas tant que
+  les six étaient à OFF. **Quatre gestes :**
+  · `PORTES_TROUVEES` est lu **au démarrage**, et `restituerLesPortes()` y revient ;
+  · ⭐ **le contrôle « portes FERMÉES, AUCUN signal » LES FERME LUI-MÊME** au lieu de le supposer —
+    *un contrôle qui affirme un état au lieu de l'établir échoue quand le régime change, sans que
+    rien ne soit cassé* ;
+  · la fin de section I **restitue** au lieu de forcer ;
+  · ⚠️ **`process.on('SIGINT')` restitue aussi sur interruption** *(patron de `lecture-c5l2.mjs`)* —
+    un Ctrl-C entre l'ouverture et la restitution laissait deux portes ouvertes.
+  ⭐⭐ **ÉPROUVÉ DANS LES DEUX RÉGIMES, ce qu'un seul tour n'aurait pas prouvé** : portes trouvées à
+  **ON** → rendues **ON** ; portes trouvées à **OFF** → rendues **OFF**. *C'est la différence entre
+  une restitution et une constante.*
+- [x] **C5L4-F-ter · ✅ LE RÉGIME DU `07-` §5 N'EST PLUS UN CRITÈRE DE RÉUSSITE DE C4-L9 — corrigé
+  le 27/08.** ~~Le bloc final affirmait `v === false` sur les six interrupteurs~~ : il transformait
+  **un état de la base** en **échec de la recette**, et rendait quatre rouges qui ne disaient rien de
+  ce que C4-L9 construit. **Il fait désormais la part des deux :**
+  · **une ASSERTION** sur ce dont la recette répond — *« `exercices_actif` est remis COMME TROUVÉ »*,
+    idem pour `passation_classe_actif` : les deux seules portes qu'elle bascule ;
+  · **un CONSTAT** sur les six, avec un avertissement nommé quand l'un est à ON — *« le `07-` §5 les
+    dit à OFF ; l'écart est un ÉTAT DE LA BASE, pas un défaut de ce lot ; il se répare à
+    `/prof/allumage`, jamais ici »*.
+  ⭐ *« Un écran qui compte autre chose que ce qu'il dit est un écran qui ment » — un compteur de
+  recette aussi.*
+  ⭐⭐ **RÉSULTAT : `examens-c4l9.mjs` rend 128 vérifications passées, 0 en échec**, dans les deux
+  régimes — contre 126/6 avant la correction, dont **aucun des six rouges n'était un défaut**.
 - [ ] **C5L4-G · ⚠️ LES SIX INTERRUPTEURS SONT À ON EN BAC À SABLE ET EN PROD**, reconstaté par
   requête au début et à la fin de la séance ; le `07-` §5 les dit « à OFF jusqu'à la recette ».
   **Constat d'état, déjà déposé par C5-L2, non réparé ici.** *Conséquence : les six onglets seront
