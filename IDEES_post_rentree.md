@@ -838,3 +838,71 @@ après lecture, il reste une version finale à écrire — l'étiquette juste es
 - ⚠️ **Le domaine du compteur `aide_consommee` refuse `fiche_de_competence`, et la fiche a désormais un écran.** `C4-L3` a fermé le domaine le 22/08 **précisément parce que la fiche n'avait pas d'écran** *(`utils/deroule/depot.ts`, éprouvé par `scripts/recette/deroule-c4l3.mjs`)*, alors que le `01-routeur.md` §11 compte pourtant *« les dépliages de **la fiche** et les relectures »*. ⭐ **C6-L2 lui en a donné un** — `/eleve/moi/competences` —, **mais elle s'y consulte HORS DÉPÔT** : il n'y a rien à quoi rattacher un compte, et le §11 déclare lui-même sa définition *« provisoire »*. ⛔ **C6-L2 a constaté sans rouvrir.** *La question est de source, pas de code : le §11 veut-il compter une consultation qui n'appartient à aucun exercice ?*
 
 - ⭐ **PERSONNE NE PEUT CHANGER SON MOT DE PASSE — ni le professeur, ni les élèves.** *(Demandé par Louis le 28/08.)* Le dépôt porte la connexion *(`app/login/`)*, l'invitation par lien *(`app/auth/confirm/route.ts` + Resend)* et la finalisation d'inscription *(`/finaliser-inscription`)* — **mais aucun écran ne permet de CHANGER un mot de passe une fois le compte ouvert**, et aucun ne permet d'en demander un nouveau quand il est oublié. ⚠️ **Deux besoins distincts, et ils n'ont pas la même urgence** : *(a)* **le changer quand on le connaît** — un écran sous « Moi » côté élève et dans l'en-tête côté professeur, `supabase.auth.updateUser({ password })`, qui exige une session valide ; *(b)* **le récupérer quand on l'a perdu** — `resetPasswordForEmail`, un courriel Resend, et une cible qui peut réutiliser `/auth/confirm` *(le type `recovery` est déjà accepté par la route, qui prend un `EmailOtpType`)*. ⛔ **Sans (b), un élève qui oublie son mot de passe n'a d'autre recours que le professeur** — et à quatorze comptes en production, cela arrivera. ⭐ *La brique existe côté Supabase ; ce qui manque est l'écran, le courriel et la cible.* ⚠️ **Et la policy self-service de `profiles` reste morte** *(`07-` §1.3)* : changer un mot de passe passe par `auth.users`, jamais par `profiles` — les deux ne se confondent pas.
+
+## ⭐⭐ CANDIDAT DE LOT — « ce que le routeur a laissé derrière lui » (relevé le 28/08 par C6-L2)
+
+> **Un lot complet, pas la réouverture d'un ancien** *(décision de Louis, 28/08)*. Les cinq items
+> ci-dessous ne sont pas cinq oublis épars : **ils sont tous du même côté du même mur** — le moteur
+> a été écrit et branché, et ce qui manque est **ce qui le rend PRODUCTIF et ce qui rend son état
+> LISIBLE**. ⚠️ **Le premier est daté : il tombe le lundi 2026-09-14.**
+
+1. ⛔⛔ **LA BASCULE DE `profil_provisoire` N'A AUCUN ÉCRIVAIN DE PRODUCTION, ET AUCUN LOT NE LA PORTE.**
+   `cloturerLaCalibrationDesEleves` *(`utils/moteur/etat-serveur.ts`)* existe — `C4-L12` a écrit la
+   fonction — mais **son seul appelant est `scripts/recette/routeur-c4l12.mjs`**. ⚠️⚠️ **Et « clôture
+   de la calibration » n'apparaît NULLE PART dans le `07-Implementation.md`** *(vérifié le 28/08 :
+   le mot vit au `01-routeur.md` §4 et §9, à l'`Annexe-routeur`, au `CONTEXTE` et à deux prompts de
+   session — **jamais dans le document qui distribue le travail**)*. **La règle est écrite en
+   entier, personne n'est chargé de l'exécuter.**
+   ⛔ **Conséquence, et elle est totale** : `profil_provisoire` est **VRAI sur les 149 lignes de
+   production**, et le `01-` §9 lie deux choses à ce drapeau — *« tant qu'il est vrai, **aucune
+   lettre ne s'affiche ET aucune escalade ne se déclenche** »*. Sans écrivain, **aucun élève ne
+   verra jamais de lettre, et l'escalade ne partira jamais**, quels que soient les interrupteurs.
+   ⚠️ **L'ÉCHÉANCE EST CALCULABLE** : `SEMAINES_SEGMENT_1 = 1` + `SEMAINES_SEGMENT_2 = 2`, semestre
+   ouvert le 24/08 → **la clôture tombe le lundi 2026-09-14**.
+   ⭐ **Et le §9 dit tout ce qu'il faut faire ce jour-là** : chaque lettre jugée UNE fois, elle
+   reste par défaut, 2 confirmations sous → −1 palier, 2 au-dessus → +1, jamais plus d'un palier,
+   l'asymétrie des sondes tient, la compétence sans ancre garde son régime, la compétence sans
+   lettre n'en reçoit pas ici. **Rien n'est à décider : tout est à brancher.**
+   ⭐ *Piste de forme* : **se greffer sur le cron du lundi** *(`/api/assiduite/hebdo`, 9 h 30)*,
+   comme `C4-L12` l'a fait — le `07-` §2 interdit déjà un second déclencheur sur la clé
+   (élève × cycle), et celui-là tourne déjà le bon jour.
+
+2. ⛔⛔ **LE FILTRE DES NOTIONS N'EST PAS ÉCRIT, ET C'EST LUI QUI TIENT TOUT LE ROUTEUR FERMÉ.**
+   `utils/moteur/vivier.ts` le dit en toutes lettres : un matériau `cours_etat = 'notions'` est
+   **écarté** avec le motif `cours_par_notions_non_lu` — *« la couche 4 ne le lit pas encore […]
+   l'intersection est **le premier geste de C4-L12** »*. **`C4-L12` a été joué et n'a pas écrit ce
+   geste.** ⚠️ **Mesuré en PRODUCTION le 28/08** : `exercices_sujets` porte **91 lignes — 89 en
+   `notions`, 2 en `aucun`** —, `exercices_textes` **2 lignes en `aucun`**, et
+   `exercices_sujets_cours` / `exercices_textes_cours` **0 rattachement**.
+   ⛔ **Donc le cron du lundi tournera et ne posera RIEN** : le vivier rejette 89 sujets sur 91, et
+   les deux autres ne sont servables à aucune condition. ⭐ **La brique existe déjà** —
+   `notionsPartagees()` *(`utils/fabrique/notions.ts`)*, écrite et éprouvée ; il manque
+   l'intersection avec les notions des **cours VUS**.
+   ⭐ **Et il y a une voie rapide qui ne demande pas ce filtre** : la vague `vgen1` porte
+   **17 sujets `cours: generique`** dans `generateur/banque/banque.json` *(dépôt de conception,
+   438 exercices)*, et `generique` **passe le vivier sans condition**
+   *(`if (m.coursEtat === 'generique') continue`)*. ⛔ **Ils ne sont pas importés en base.**
+   *Les importer rendrait le routeur productif immédiatement, sans écrire une ligne de filtre.*
+
+3. ⛔ **`ilYAStagnation` N'A TOUJOURS AUCUN APPELANT** *(`utils/routeur/observables.ts`)*, et le
+   motif est structurel : sa **seconde** condition est la **valeur de ciblage NON PLAFONNÉE
+   immobile**, qui *« ne se stocke jamais »* *(`07-` §1.3)* et **se recalcule au cycle**. Tant que
+   le moteur ne l'écrit pas quelque part, aucun lecteur ne peut la comparer d'un cycle à l'autre.
+   *`C6-L2` lui passe `false` en dur, ce qui la rend toujours fausse : son écran ne dira jamais
+   « stagnation » à tort, il dira « en cours de travail ».*
+
+4. ⚠️ **`aProgresse: false` RESTE UN REFUS D'AFFIRMER, ET IL EST BIEN DÉPOSÉ** *(`C4L12-23`,
+   décoché)*. ⛔ **Ne pas le redéposer.** ⭐ Mais sa condition de reprise est **la même que celle du
+   point 2** : une fenêtre d'évidence remplie suppose que le routeur ait posé quatre exercices
+   d'une même compétence chez un même élève. **Il tombe avec le filtre, pas avant.**
+
+5. ⚠️ **UN COMMENTAIRE PÉRIMÉ, D'UNE LIGNE** : `utils/moteur/cycle-serveur.ts` accompagne
+   `aProgresse: false` de *« Sans instrument branché, on ne l'affirme pas »* — **faux depuis que
+   `C4-L10` a ouvert les six compétences le 23/08**. Le blocage n'est pas l'instrument, **c'est la
+   mesure**. *(`C6-L2` ne l'a pas corrigé : le fichier était sous la main d'une autre séance.)*
+
+> ⭐ **CE QUI LIE LES CINQ, ET POURQUOI ILS FONT UN LOT** : le point 2 débloque les points 3 et 4
+> *(il faut des mesures pour qu'une fenêtre se remplisse)*, et le point 1 débloque l'affichage de
+> tout ce que les autres produisent. **Joué dans l'ordre 2 → 1 → 3, le lot rend le dispositif
+> visible d'un coup.** ⚠️ Et il lève **trois restes de recette de `C6-L2`** au passage —
+> `C6L2-24`, `-27` et `-28` —, qui attendent tous que le routeur pose sa première semaine.
