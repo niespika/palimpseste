@@ -29,9 +29,21 @@ export default function GestionIntegrite({
       <div className="flex items-end justify-between gap-3 flex-wrap">
         <div>
           <h2 className="font-titre text-2xl text-encre leading-tight">Intégrité — petits malins</h2>
+          {/* ⚠️ C6-L1 — CE LIBELLÉ ÉTAIT PÉRIMÉ DÈS QUE `exercices` EST ENTRÉ DANS
+              LA LISTE. Il nommait trois modules et promettait un gel au seuil ;
+              or le FAISCEAU d'intégrité arrive d'un quatrième module ET NE COMPTE
+              AUCUN STRIKE — « le professeur voit, il confirme, et rien ne se
+              bloque » (`06-` §6 ; arbitrage ③ de Louis, 27/08). Un écran qui
+              promet un gel sur un signal qui n'en produit aucun ment. */}
           <p className="font-ui text-xs text-muet mt-1 max-w-2xl">
-            Rendus vides, aveux &amp; hors-sujet repérés dans Aletheia · Codex · Fragments.
-            À <span className="text-encre">{params.seuil} strikes</span>, rendus &amp; révision gelés (le quizz reste ouvert).
+            Rendus vides, aveux &amp; hors-sujet repérés dans Aletheia · Codex · Fragments —
+            à <span className="text-encre">{params.seuil} strikes</span>, rendus &amp; révision
+            gelés (le quizz reste ouvert).
+          </p>
+          <p className="font-ui text-xs text-muet mt-1 max-w-2xl">
+            Plus le <span className="text-encre">faisceau d’intégrité</span> des Exercices, qui dit
+            autre chose : <em>quelqu’un d’autre a fait le travail</em>. Il exige votre confirmation,
+            et <strong>il ne compte aucun strike</strong> — rien ne se bloque.
           </p>
         </div>
         <button

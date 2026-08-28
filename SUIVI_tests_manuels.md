@@ -7407,13 +7407,37 @@ interruption. Le décor se reconnaît à sa classe, `nom LIKE 'RECETTE-C5L3%'`. 
 
 ### Ce qui reste à jouer en recette, avec sa condition de reprise
 
-- [ ] **C6L1-A · LE SMOKE PROF, À L'ÉCRAN.** Une session Code ne s'authentifie pas. **À faire avec
-  Louis** : `/prof/classes/<uuid>?vue=competences` → le bloc **« Ce qui demande votre attention »**
-  au-dessus de la grille, la grille inchangée, et le **diagnostic de rétention** en dessous avec
-  son lien. Vérifier **les trois vides** *(rien à signaler · calendrier muet · lecture ratée)* et
-  que les **boutons** rendent leur phrase. **Condition de reprise : une session que Louis ouvre.**
-  *(Ce qui est déjà acquis sans écran : la route compile, et le bundle NAVIGATEUR ne porte que les
-  RÉFÉRENCES d'action — `createServerReference` ×9 —, jamais les corps serveur.)*
+- [x] ⭐ **C6L1-A · LE SMOKE PROF, À L'ÉCRAN — JOUÉ LE 28/08, EN SANDBOX ET EN PRODUCTION.**
+  *(Session ouverte par Louis ; sandbox dans le panneau navigateur sur `localhost:3000`, production
+  dans son Chrome sur `palimpseste.ink`.)*
+  ⭐⭐ **PRODUCTION — LA MATRICE MONTRE DES LETTRES RÉELLES, À L'ÉCRAN.** `THLP`, **16 élèves** :
+  Expression **16 mesures**, Argumentation **15**, Structure **14**, Synthèse **1**, Questionnement
+  **0**, Connaissance **« mesurée en silence »**. Les lettres **C, D, B, E** sont posées et lisibles
+  élève par élève. ⭐ **Et la distinction que la grille tenait déjà se voit** : *« Victoria Lell
+  Fotso · Synthèse · **aucune lettre posée** · 1 mesure »* — « aucune lettre » n'est pas « aucune
+  mesure ». ⭐ **Toutes portent `provisoire`, et le professeur les voit quand même** : « côté
+  professeur, les lettres, toujours » (`06-` §5) — la règle de masquage est une règle d'élève.
+  ⭐ **L'ORDRE DE LA PAGE EST CELUI VOULU**, des deux côtés : « Ce qui demande votre attention »
+  **au-dessus** de la grille · l'opt-out et la grille **inchangés** · le diagnostic de rétention
+  **en dessous**, avec son lien. **Aucun troisième onglet, aucune entrée neuve au Pilotage.**
+  ⭐ **LE VIDE DIT LA BONNE DE SES TROIS RAISONS** : *« Rien ne demande votre attention sur cette
+  classe. Une file vide en début d'année est le régime normal… »* — et non « une lecture a échoué ».
+  ⭐ **LA PORTE DU DIAGNOSTIC EST RÉELLE, DES DEUX CÔTÉS** : le lien porte déjà la classe, l'écran
+  d'arrivée porte son **retour** vers l'onglet Compétences, et **il n'est plus muet** — sandbox
+  **8 tuiles** dont *« Cognitif · 1 élève évalué »* avec ses **5 concepts** ; production **2 tuiles**
+  *(« Pas encore de quizz » : la prod n'en porte aucun — c'est honnête, pas muet)*.
+  ⭐ **LA DISTRIBUTION DU FAISCEAU PARLE** *(sandbox, classe `Test`)* : *« 1 dépôt maison regardé ·
+  0 → 1 »*, et **par signal : 6 des 7 sont NON MESURÉS**, seuls les collages le sont *(0/1)*.
+  **C'est le vrai état du faisceau aujourd'hui, et il fallait pouvoir le lire.**
+  ⚠️ **La production tourne encore sans ce bloc** — il est au commit suivant, non poussé au moment
+  du smoke.
+- [x] ⭐ **C6L1-A-bis · AUCUNE RÉGRESSION À L'ATELIER D'INTÉGRITÉ**, dont j'ai touché deux
+  composants *(`PanneauPreuve`, `HistoriqueEleve`)*. Les deux vues rendent en production.
+  ⚠️ **MAIS LE SMOKE A TROUVÉ UN DÉFAUT QUE J'AVAIS INTRODUIT** : l'en-tête annonçait couvrir
+  *« Aletheia · Codex · Fragments »* et promettait un **gel au seuil** — or l'atelier montrera
+  désormais des signalements du module **Exercices**, dont le faisceau **ne compte aucun strike**.
+  **Un écran qui promet un gel sur un signal qui n'en produit aucun ment.** Corrigé : le quatrième
+  module est nommé, avec ce qui le distingue.
 - [ ] **C6L1-B · LES DEUX DRAPEAUX COMPTÉS EN CYCLES, SUR LE CALENDRIER RÉEL.** ⚠️ Au 28/08/2026,
   la sandbox ne porte **qu'UNE SEULE semaine d'enseignement commencée** : ni la cadence d'ancre
   *(6 cycles)* ni le re-signalement N3 *(3 cycles)* ne peuvent se lever. Le script les prouve en
