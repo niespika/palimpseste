@@ -33,6 +33,27 @@
 //    la bonne réponse ; ce qui ne varie pas, c'est l'ordre à l'intérieur d'un
 //    même cas.
 //
+// ⛔⛔ ET LE TIRAGE N'EST PAS AVEUGLE : IL ENCADRE LA RÉPONSE (`02-` §5).
+//    « L'instance y tire » ne disait pas COMMENT, et un tirage au hasard rend
+//    l'exercice **répondable sans lecture** : sur une banque dont la plupart des
+//    candidats tombent du même côté, la `reponse_attendue` est la plus longue —
+//    ou la plus courte — des QUATRE affichés dans la quasi-totalité des
+//    tirages, et l'élève la reconnaît à sa taille. ⭐ **La mesure juste est
+//    P(la réponse soit l'extrême des quatre SERVIS), pas son rapport au
+//    vivier** : une réponse honnête à une banque de douze — rapport 1,04 — est
+//    la plus longue des quatre dans 75 % des tirages dès que onze distracteurs
+//    sur douze sont plus courts qu'elle.
+//
+// ⛔ LA RÈGLE : parmi les trois distracteurs tirés, **au moins un plus long et
+//    au moins un plus court** que la réponse, chaque fois que la banque en porte
+//    des deux côtés. *C'est un tirage CONTRAINT, pas un tirage arrangé : rien ne
+//    dit lequel des encadrants sort, et le hasard fait tout le reste.*
+//
+// ⚠️ LÀ OÙ LA BANQUE N'EN PORTE QUE D'UN CÔTÉ, LE TIRAGE NE PEUT RIEN — et il
+//    ne se plaint pas : « c'est un défaut de banque, et il se signale à
+//    l'import » (`allure_trahit`, côté fabrique). **On sert quand même** :
+//    refuser l'écran punirait l'élève d'un défaut de conception.
+//
 // ⚠️ L'ÉCRAN SAISIT, IL NE CALCULE RIEN : « le Monitoring ne reçoit que
 //    l'accord crédence ↔ réussite, calculé EN AVAL » (`07-` §1.4 ; piège 23).
 // ============================================================================
@@ -148,6 +169,58 @@ export function melerAvecGraine<T>(items: readonly T[], semence: string): T[] {
   return out
 }
 
+/**
+ * ⭐⭐ LES TROIS DISTRACTEURS, TIRÉS DE FAÇON À ENCADRER LA RÉPONSE (`02-` §5).
+ * Port de `tirageEncadrant` (`generateur/web/index.html`), qui est la
+ * spécification exécutable de la règle : elle est écrite, et elle est jouée.
+ *
+ * ⭐ **On prend d'abord UN plus court et UN plus long**, chacun au hasard parmi
+ * les siens, puis on complète au hasard dans tout le reste, puis on mêle. *Ce
+ * qui est contraint, c'est qu'il y ait un encadrant de chaque côté ; LEQUEL
+ * sort ne l'est pas.*
+ *
+ * ⚠️ **ON TIRE SUR LES RANGS, PAS SUR LES TEXTES.** Une banque peut porter deux
+ * fois la même chaîne — rien ne l'interdit —, et un tirage par texte en
+ * perdrait un exemplaire en silence.
+ *
+ * ⚠️ **CHAQUE SOUS-TIRAGE A SA PROPRE SEMENCE.** Le mêlage de ce module est
+ * « mêlé mais STABLE » : un rechargement doit rendre le même écran, sans quoi
+ * les jetons déjà posés ne voudraient plus rien dire. Trois semences dérivées
+ * d'une seule gardent cette promesse tout en évitant que les trois listes se
+ * mêlent de la même manière.
+ *
+ * ⛔ **LA LONGUEUR SE COMPTE EN CARACTÈRES**, comme la fabrique et comme
+ * `allure_trahit` : c'est l'allure à l'écran qui trahit, pas un compte de mots.
+ *
+ * @param banque   les candidats lisibles, dans l'ordre de la base.
+ * @param attendue la `reponse_attendue`, déjà écartée du vide par l'appelant.
+ * @param semence  le dépôt × cas — stable au rechargement.
+ */
+export function tirageEncadrant(
+  banque: readonly string[], attendue: string, semence: string,
+): string[] {
+  const n = attendue.length
+  const rangs = banque.map((_, i) => i)
+  const courts = melerAvecGraine(rangs.filter((i) => banque[i].length < n), `${semence}|courts`)
+  const longs = melerAvecGraine(rangs.filter((i) => banque[i].length > n), `${semence}|longs`)
+
+  const pris: number[] = []
+  if (courts.length) pris.push(courts[0])
+  if (longs.length) pris.push(longs[0])
+
+  // Le reste au hasard — y compris les candidats de MÊME longueur que la
+  // réponse, qui n'encadrent ni d'un côté ni de l'autre mais restent des
+  // distracteurs conçus.
+  const reste = melerAvecGraine(rangs.filter((i) => !pris.includes(i)), `${semence}|reste`)
+  for (const i of reste) {
+    if (pris.length >= PLANCHER_DISTRACTEURS) break
+    pris.push(i)
+  }
+
+  return melerAvecGraine(pris, `${semence}|tirage`)
+    .slice(0, PLANCHER_DISTRACTEURS).map((i) => banque[i])
+}
+
 /** Ce que l'écran doit servir pour une saisie de crédence. */
 export interface OffreCredence {
   forme: FormeCredence
@@ -218,8 +291,12 @@ export function offreDeCredence(
 
   // Le TIRAGE : trois distracteurs parmi la banque (« elle n'en affiche jamais
   // quinze »), puis la réponse attendue, PUIS LE MÊLAGE DES QUATRE.
+  // ⛔ Le tirage ENCADRE la réponse — il ne mêle plus la banque pour en prendre
+  //    les trois premiers. Voir `tirageEncadrant` et l'en-tête : le mêlage
+  //    protégeait du « la dernière est la bonne », il ne protégeait pas du
+  //    « la plus longue est la bonne ».
   const semence = `${depotId}|${cas}`
-  const trois = melerAvecGraine(banque, `${semence}|tirage`).slice(0, PLANCHER_DISTRACTEURS)
+  const trois = tirageEncadrant(banque, attendue, semence)
   const candidats = melerAvecGraine([...trois, attendue], `${semence}|melange`)
 
   return { forme, candidats, indexAttendue: candidats.indexOf(attendue), empechement: null }

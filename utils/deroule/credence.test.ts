@@ -11,7 +11,7 @@ import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import {
   formeDeLaCredence, lireLaBanque, texteDuCandidat, melerAvecGraine,
-  offreDeCredence, saisieARegistrer, credencesAttendues,
+  offreDeCredence, saisieARegistrer, credencesAttendues, tirageEncadrant,
   PLANCHER_DISTRACTEURS, CANDIDATS_SERVIS,
 } from './credence'
 
@@ -104,6 +104,50 @@ test('aux quatre crans qui isolent, AUCUN candidat n’est servi', () => {
   assert.equal(o.forme, 'pourcentage')
   assert.deepEqual(o.candidats, [])
   assert.equal(o.empechement, null, 'ne rien servir n’est pas un empêchement, c’est la règle')
+})
+
+// ── ⭐⭐ LE TIRAGE ENCADRE LA RÉPONSE (`02-` §5) ────────────────────────────
+// Le vivier qui rendait l'exercice répondable SANS LECTURE : onze distracteurs
+// plus courts que la réponse, un seul plus long. Le mêlage ne protégeait que du
+// « la dernière est la bonne » ; il ne protégeait pas du « la plus longue est
+// la bonne », et la réponse était l'extrême des quatre servis 75 % du temps.
+const REPONSE_LONGUE = 'la réponse attendue, honnête et développée'
+const BANQUE_DESEQUILIBREE = [
+  ...Array.from({ length: 11 }, (_, i) => `un distracteur court ${i}`),
+  'un distracteur plus long encore que la réponse attendue, et de loin',
+]
+
+test('⭐⭐ LA RÉPONSE N\'EST PLUS L\'EXTRÊME DES QUATRE SERVIS — sur quarante dépôts', () => {
+  const n = REPONSE_LONGUE.length
+  for (let i = 0; i < 40; i++) {
+    const o = offreDeCredence('diagnostic_guide', 1, `depot-${i}`,
+      { distracteurs: BANQUE_DESEQUILIBREE, reponseAttendue: REPONSE_LONGUE })
+    const tailles = o.candidats.map((c) => c.length)
+    assert.ok(Math.max(...tailles) > n, `dépôt ${i} : la réponse est la plus LONGUE des quatre`)
+    assert.ok(Math.min(...tailles) < n, `dépôt ${i} : la réponse est la plus COURTE des quatre`)
+  }
+})
+
+test('⚠️ une banque d\'UN SEUL CÔTÉ ne bloque pas l\'écran — c\'est un défaut de BANQUE', () => {
+  // « Là où la banque ne porte de candidats que d'un seul côté, le tirage ne
+  //   peut rien : c'est un défaut de banque, et il se signale à l'import. »
+  //   Refuser l'écran punirait l'élève d'un défaut de conception.
+  const o = offreDeCredence('diagnostic_guide', 1, 'depot-1',
+    { distracteurs: ['a', 'bb', 'ccc', 'dddd'], reponseAttendue: REPONSE_LONGUE })
+  assert.equal(o.empechement, null)
+  assert.equal(o.candidats.length, CANDIDATS_SERVIS)
+})
+
+test('le tirage porte sur les RANGS : une banque à doublons n\'en perd pas un exemplaire', () => {
+  const trois = tirageEncadrant(['x', 'x', 'zzzzzzzz'], 'yyyy', 'graine')
+  assert.equal(trois.length, PLANCHER_DISTRACTEURS)
+  assert.deepEqual([...trois].sort(), ['x', 'x', 'zzzzzzzz'])
+})
+
+test('le tirage encadrant est STABLE : deux appels de même semence rendent le même ordre', () => {
+  const a = tirageEncadrant(BANQUE_DESEQUILIBREE, REPONSE_LONGUE, 'depot-7|1')
+  const b = tirageEncadrant(BANQUE_DESEQUILIBREE, REPONSE_LONGUE, 'depot-7|1')
+  assert.deepEqual(a, b)
 })
 
 test('le mêlage semé rend une PERMUTATION — rien ne se perd, rien ne se duplique', () => {

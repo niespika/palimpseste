@@ -18,7 +18,7 @@ import fs from 'node:fs'
 import path from 'node:path'
 import {
   regimeDeMarquage, motsAMarquer, segmenterMateriau, marquerLeMateriau,
-  segmenterParIntervalles, MOTS_MAX_PAR_CANDIDAT,
+  segmenterParIntervalles,
 } from './marquage'
 
 // ── Les règles TELLES QUE LA SOURCE LES ÉCRIT ───────────────────────────────
@@ -91,14 +91,35 @@ test('CRAN 1 — un candidat de DEUX mots se reconnaît par-dessus un retour à 
   assert.equal(seg.map((s) => s.texte).join(''), t)
 })
 
-test('CRAN 1 — un candidat de TROIS mots ne se marque pas : c\'est un remplacement', () => {
-  // ⛔ « Un candidat qui n'est pas un fragment du matériau ne se marque pas. »
-  //    Le seuil est celui de l'aperçu du générateur : un ou deux mots.
-  assert.equal(MOTS_MAX_PAR_CANDIDAT, 2)
-  const trois = motsAMarquer('candidats', { candidats: ['le garant tient'] })
-  assert.deepEqual(trois, [])
-  const deux = motsAMarquer('candidats', { candidats: ['le garant'] })
-  assert.deepEqual(deux, [['le', 'garant']])
+test('CRAN 1 — ce qui départage n\'est pas la LONGUEUR, c\'est d\'être un FRAGMENT', () => {
+  // ⛔ « Un candidat qui n'est pas un fragment du matériau ne se marque pas —
+  //    au cran 3 les candidats sont des REMPLACEMENTS, ils n'y figurent pas. »
+  // ⛔⛔ Ce module portait un SEUIL DE DEUX MOTS, et il était faux : 37
+  //    candidats-phrases restaient nus. Une phrase entière se marque dès
+  //    qu'elle est dans le matériau...
+  assert.deepEqual(
+    motsAMarquer('candidats', { candidats: ['Mais qui doute existe'], contenu: TEXTE_1 }),
+    [['Mais', 'qui', 'doute', 'existe']])
+  // ...et un candidat de DEUX mots qui n'y est pas ne se marque pas.
+  assert.deepEqual(
+    motsAMarquer('candidats', { candidats: ['le remplacement'], contenu: TEXTE_1 }), [])
+})
+
+test('⭐⭐ CRAN 1 — LES QUATRE, OU AUCUN : un seul remplacement, et rien n\'est marqué', () => {
+  // « Et eux seuls, la `reponse_attendue` comprise, sans quoi le marquage la
+  //   désignerait » : n'en marquer que trois DÉSIGNE le quatrième tout autant.
+  const fragments = ['doute', 'résiste', 'existe']
+  assert.equal(motsAMarquer('candidats', { candidats: fragments, contenu: TEXTE_1 }).length, 3)
+  assert.deepEqual(
+    motsAMarquer('candidats',
+      { candidats: [...fragments, 'le garant tient bon'], contenu: TEXTE_1 }), [],
+    'trois marqués sur quatre montreraient du doigt le quatrième')
+})
+
+test('CRAN 1 — SANS matériau, aucun candidat n\'est un fragment : on ne marque rien', () => {
+  // Un fragment ne se reconnaît que contre le matériau qui le porte. C'est la
+  // bonne réponse, pas un repli.
+  assert.deepEqual(motsAMarquer('candidats', { candidats: ['doute'] }), [])
 })
 
 test('CRAN 1 — SANS candidat servi, on ne marque RIEN et on ne devine pas', () => {

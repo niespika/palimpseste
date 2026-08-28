@@ -115,17 +115,51 @@ export function regimeDeMarquage(regle: string | null | undefined): RegimeMarqua
 }
 
 /**
- * ⭐ LE SEUIL DU CANDIDAT MARQUABLE — UN OU DEUX MOTS, PAS PLUS.
+ * ⭐ L'EXPRESSION QUI RECONNAÎT UNE SUITE DE MOTS DANS LE MATÉRIAU — écrite
+ * **UNE SEULE FOIS**, et employée aux deux bouts : par `estFragment`, qui décide
+ * si un candidat se marque, et par `bornes`, qui le marque. ⛔ **C'est la
+ * condition de la règle, pas une commodité** — « avec la MÊME expression que le
+ * marquage emploiera ensuite, pour qu'aucun candidat retenu ici n'échoue
+ * là-bas » (`generateur/web/index.html`, `motifDe`). *Deux expressions qui se
+ * ressemblent finiraient par diverger, et le désaccord serait invisible : un
+ * candidat déclaré marquable qui ne se marque pas.*
+ *
+ * Le détail de chaque garde — l'espace rebâti, les bornes de lettres unicode —
+ * est à `bornes`, qui s'en sert.
+ */
+function motifDe(suite: readonly string[], global: boolean): RegExp {
+  const echappe = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+  return new RegExp(`(^|[^\\p{L}])(${suite.map(echappe).join('\\s+')})(?![\\p{L}])`,
+    global ? 'gu' : 'u')
+}
+
+/**
+ * ⭐⭐ CE QUI DÉPARTAGE UN CANDIDAT MARQUABLE D'UN REMPLACEMENT.
  *
  * ⛔ « Un candidat qui n'est pas un fragment du matériau ne se marque pas » —
  * « au cran 3 les candidats sont des REMPLACEMENTS, ils n'y figurent pas »
- * (`02-` §5). La source pose la règle ; elle ne dit pas comment on distingue un
- * fragment d'un remplacement. **L'aperçu du générateur l'opérationnalise, et ce
- * seuil est SON chiffre** : `j.length && j.length <= 2` dans `motsAMarquer`.
- * On le recopie, on ne l'invente pas — le porter à trois ferait marquer des
- * bouts de phrase, le ramener à un raterait « le garant » et « en effet ».
+ * (`02-` §5). **La source pose la règle sans dire comment on reconnaît un
+ * fragment : on la lui demande LITTÉRALEMENT** — le candidat se retrouve-t-il,
+ * mot pour mot, dans le matériau ? *La règle est muette là où elle ne s'applique
+ * pas : elle ne peut donc pas mal se comporter.*
+ *
+ * ⛔⛔ **CE MODULE PORTAIT UN SEUIL DE DEUX MOTS, ET IL ÉTAIT FAUX.**
+ * `MOTS_MAX_PAR_CANDIDAT = 2` recopiait un chiffre de l'aperçu du générateur —
+ * qui l'a lui-même abandonné le 27/08, après avoir mesuré que **37
+ * candidats-phrases restaient nus** des deux côtés. ⭐ **La longueur n'a jamais
+ * été ce que la règle demande** : un mot de deux lettres et une phrase de
+ * quarante se marquent pareil ; ce qui les départage est d'être, ou non, un
+ * fragment du matériau. *Le seuil se déclarait « port fidèle » ; la fidélité
+ * était rompue depuis le 27/08.*
+ *
+ * ⚠️ La fabrique teste sur le corps ÉCHAPPÉ, parce qu'elle fabrique du HTML ;
+ * ici rien n'est échappé nulle part — ni le corps, ni le candidat, ni à
+ * `bornes`. **Les deux voies restent comparables** : c'est la même expression
+ * sur le même texte, et c'est la seule adaptation, déjà annoncée en tête.
  */
-export const MOTS_MAX_PAR_CANDIDAT = 2
+function estFragment(corps: string, suite: readonly string[]): boolean {
+  return suite.length > 0 && motifDe(suite, false).test(corps)
+}
 
 /** Les mots d'une chaîne, blancs normalisés — la découpe du générateur. */
 function mots(x: string): string[] {
@@ -163,10 +197,20 @@ export function motsAMarquer(
   if (regime === null || regime === 'rien') return out
 
   if (regime === 'candidats') {
-    for (const c of candidats ?? []) {
-      const j = mots(c ?? '')
-      if (j.length && j.length <= MOTS_MAX_PAR_CANDIDAT) out.push(j)
-    }
+    // ⭐⭐ LES QUATRE, OU AUCUN — la garde que la fabrique a posée le 27/08.
+    //    « Et eux seuls, la `reponse_attendue` comprise, sans quoi le marquage
+    //    la désignerait » : ce que le marquage ne doit pas faire, c'est
+    //    DÉSIGNER. ⛔ Or **n'en marquer que trois désigne le quatrième tout
+    //    autant** — et c'est pire que de n'en marquer aucun, puisque le seul
+    //    candidat nu serait montré du doigt. Le test porte donc sur les QUATRE
+    //    ENSEMBLE : un seul remplacement parmi eux, et on ne marque plus rien.
+    // ⚠️ `contenu` devient nécessaire ICI, là où le seuil de mots s'en passait :
+    //    un fragment ne se reconnaît que contre le matériau qui le porte. Sans
+    //    matériau, aucun candidat n'est un fragment, et on ne marque rien — ce
+    //    qui est la bonne réponse, pas un repli.
+    const corps = contenu ?? ''
+    const suites = (candidats ?? []).map((c) => mots(c ?? ''))
+    if (suites.length && suites.every((j) => estFragment(corps, j))) out.push(...suites)
     return out
   }
 
@@ -214,12 +258,13 @@ export function motsAMarquer(
  * marque deux fois — « chacun là où il apparaît » le demande.
  */
 function bornes(texte: string, suites: readonly (readonly string[])[]): Array<[number, number]> {
-  const echappe = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
   const trouves: Array<[number, number]> = []
   for (const suite of suites) {
     if (!suite.length) continue
-    const motif = suite.map(echappe).join('\\s+')
-    const re = new RegExp(`(^|[^\\p{L}])(${motif})(?![\\p{L}])`, 'gu')
+    // ⭐ L'EXPRESSION VIENT DE `motifDe`, celle-là même dont `estFragment` s'est
+    //    servi pour décider que ce candidat se marquait : c'est ce qui garantit
+    //    qu'aucun candidat retenu là-bas n'échoue ici.
+    const re = motifDe(suite, true)
     let m: RegExpExecArray | null
     while ((m = re.exec(texte)) !== null) {
       const debut = m.index + m[1].length
