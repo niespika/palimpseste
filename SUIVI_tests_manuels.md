@@ -7055,9 +7055,12 @@ interruption. Le décor se reconnaît à sa classe, `nom LIKE 'RECETTE-C5L3%'`. 
 > — antérieur au lot — a été levé en fin de séance sur décision de Louis : `derive-instruments.py
 > --ecris` rejoué pour reprendre la version 2.59 du `07-` ; voir `C5L4-0`)* · `npx eslint` **0 erreur**.
 > ⭐⭐ **LES DEUX SMOKES ONT ÉTÉ JOUÉS À L'ÉCRAN LE 27/08**, dans des sessions que Louis a ouvertes —
-> **professeur** puis **élève** : `C5L4-A`, `C5L4-B`, `C5L4-C`, `C5L4-D`, `C5L4-E` et `C5L4-E-bis`
-> sont cochés. **Il ne reste que `C5L4-F`**, bloqué par un résidu de recette du 24/08 qui n'est pas
-> de ce lot, **et `C5L4-G`**, qui est une décision de Louis.
+> **professeur** puis **élève**. ⭐ **SEPT RESTES SUR HUIT SONT LEVÉS** : `C5L4-0`, `A`, `B`, `C`,
+> `D`, `E`, `E-bis`, `F`, `F-bis`, `F-ter` et `G`. **Il ne reste que `C5L4-H`** — le déménagement de
+> `app/prof/conception/`, que Louis a reporté.
+> ⚠️⚠️ **ET LE LOT EST POUSSÉ, DONC DÉPLOYÉ EN VRAIE PRODUCTION** — `57fa854..7300624`, 6 commits,
+> 25 fichiers, le 27/08. **Les six interrupteurs étant à ON, les onglets sont pleins immédiatement**,
+> et **les 13 copies de production disent désormais leurs compétences écartées**.
 > Relevé : `RELEVE_C5_L4_2026-08-27.md`.
 > ⛔ **Aucun interrupteur posé, allumé ni éteint. Aucune migration. Aucune dette.**
 
@@ -7305,11 +7308,28 @@ interruption. Le décor se reconnaît à sa classe, `nom LIKE 'RECETTE-C5L3%'`. 
   recette aussi.*
   ⭐⭐ **RÉSULTAT : `examens-c4l9.mjs` rend 128 vérifications passées, 0 en échec**, dans les deux
   régimes — contre 126/6 avant la correction, dont **aucun des six rouges n'était un défaut**.
-- [ ] **C5L4-G · ⚠️ LES SIX INTERRUPTEURS SONT À ON EN BAC À SABLE ET EN PROD**, reconstaté par
-  requête au début et à la fin de la séance ; le `07-` §5 les dit « à OFF jusqu'à la recette ».
-  **Constat d'état, déjà déposé par C5-L2, non réparé ici.** *Conséquence : les six onglets seront
-  visibles et pleins dès la première seconde.* **Condition de reprise : décision de Louis, à
-  `/prof/allumage`.**
+- [x] **C5L4-G · ✅⭐ TRANCHÉ PAR LOUIS LE 27/08 — LES SIX SONT À ON, ET C'EST VOULU.**
+  ~~Le `07-` §5 les disait « à OFF jusqu'à la recette », la base disait le contraire depuis une date
+  que personne n'avait écrite.~~ `C5-L2` puis `C5-L4` l'avaient constaté le même jour et **relevé
+  sans le changer** — *un lot ne décide pas d'un allumage*. ⭐ **Ce n'était donc pas une dérive à
+  réparer : c'était une décision qui n'avait pas encore été écrite.** Elle l'est désormais, au
+  **`07-` §5, section « Ce que l'allumage est devenu »** *(v2.60)*, avec ce qu'elle change pour
+  chacune des deux familles :
+  · **les trois du professeur** *(`exercices_actif`, `routeur_actif`, `competences_affichage_actif`)*
+    sont **ouverts** — la période « avant la recette » est close ; ⚠️ **le geste reste le sien**, à
+    `/prof/allumage`, et **aucun lot n'en bascule un** ;
+  · **les trois de chantier** *(`fabrique_actif`, `chaine_actif`, `passation_classe_actif`)*
+    répondent *« ce lot est-il construit et éprouvé ? »* — **oui pour les trois**. ⭐ `chaine_actif`
+    reste **le seul des six qu'une MACHINE bascule** : le retrouver à OFF un 12 du mois ne sera pas
+    une décision mais **une facture**.
+  ⚠️ **Et le §5 porte maintenant ce que toute recette doit en tirer**, appris à ses dépens le même
+  jour : *un contrôle qui AFFIRME une porte fermée au lieu de la FERMER échoue dès que le régime
+  change* · *une recette qui « remet » un interrupteur en écrivant une constante ne le remet pas,
+  elle l'impose* · ⛔ *le régime ne se compte jamais comme un échec de lot*.
+  ⚠️ **Ce qui reste vrai pour la recette** : les six onglets d'Aletheia et les quatre de Codex sont
+  **visibles et pleins dès la première seconde**, et **aucune recette ne peut prétendre avoir
+  éprouvé un comportement « porte fermée » sans avoir éteint l'interrupteur exprès — puis l'avoir
+  remis** *(c'est exactement ce que `C5L4-C` a fait)*.
 - [ ] **C5L4-H · ⛔ LE DÉMÉNAGEMENT DE `app/prof/conception/` EST REPORTÉ** — décision de Louis, 27/08 :
   *« ça va me demander un peu plus de réflexion, donc pour le moment on fait juste un renvoi »*.
   **Son coût est listé, fichier par fichier et ligne par ligne, au §6.1 du relevé** *(dix

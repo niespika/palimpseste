@@ -59,7 +59,9 @@ const admin = createClient(env.NEXT_PUBLIC_SUPABASE_URL, env.SUPABASE_SERVICE_RO
 //      1. la recette FORÇAIT les deux portes élève à OFF en fin de course, au
 //         lieu de les remettre comme elle les avait trouvées ;
 //      2. son bloc final ASSERTAIT les six à OFF, transformant le régime du
-//         `07-` §5 en critère de réussite de C4-L9.
+//         `07-` §5 en critère de réussite de C4-L9. ⭐ Louis a depuis TRANCHÉ
+//         que les six sont à ON (`07-` §5, « Ce que l'allumage est devenu ») :
+//         raison de plus pour que ce bloc CONSTATE au lieu d'asserter.
 //    Le patron appliqué est celui de `decor-c4l6.mjs` et de `lecture-c5l2.mjs`.
 const GARDE_LE_DECOR = process.argv.includes('--garde-le-decor')
 const MARQUE = 'RECETTE C4-L9'
@@ -614,9 +616,16 @@ dit(gates.passation_classe_actif === PORTES_TROUVEES.passationActive,
 //    chose que ce qu'il dit est un écran qui ment ; un compteur de recette
 //    aussi.**
 for (const [nom, v] of Object.entries(gates)) console.log(`  · \`${nom}\` : ${v ? 'ON' : 'OFF'}`)
-if (Object.values(gates).some(Boolean)) {
-  console.log('  ⚠️ le `07-` §5 les dit « à OFF jusqu\'à la recette » — l\'écart est un ÉTAT DE LA')
-  console.log('     BASE, pas un défaut de ce lot. Il se répare à `/prof/allumage`, jamais ici.')
+if (Object.values(gates).every(Boolean)) {
+  console.log('  ⭐ les six sont à ON — le régime VOULU depuis la décision de Louis du 27/08')
+  console.log('     (`07-` §5, « Ce que l\'allumage est devenu »). Ce n\'est pas un écart.')
+} else if (Object.values(gates).some((v) => !v)) {
+  const fermes = Object.entries(gates).filter(([, v]) => !v).map(([n]) => n)
+  console.log(`  ⚠️ ${fermes.length} interrupteur(s) à OFF : ${fermes.join(', ')}.`)
+  console.log('     Le `07-` §5 les dit tous à ON depuis le 27/08 — mais c\'est un ÉTAT DE LA BASE,')
+  console.log('     pas un défaut de ce lot, et il se règle à `/prof/allumage`, jamais ici.')
+  console.log('     (`chaine_actif` à OFF peut n\'être ni une décision ni une panne : la coupure')
+  console.log('      automatique de coût l\'éteint au plafond mensuel.)')
 }
 
 console.log(`\n${'═'.repeat(72)}`)
