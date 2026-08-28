@@ -7728,3 +7728,152 @@ interruption. Le décor se reconnaît à sa classe, `nom LIKE 'RECETTE-C5L3%'`. 
   et **la couture n'a éprouvé que la branche « aucune des deux »** — les seules données qui
   existent. **Condition de reprise : une décision de routeur écrite (`C4-L12`) ou une instance
   conçue avec sa cible primaire ; alors l'écran doit dire « Ta prochaine étape, sur … ».**
+
+---
+
+## C6 · L3 — « En faire plus » : le pull, le push, et la marque qui les distingue (séance du 28/08, migration `c6_l3_bonus_au_journal.sql`)
+
+> ⭐⭐ **CE LOT N'AJOUTE PAS UN CANAL : IL EN BRANCHE UN QUE TROIS LOTS AVAIENT POSÉ SANS JAMAIS LE
+> RELIER.** L'emplacement de l'offre existait *(`C6-L2` s'était arrêté sur la phrase qui la
+> précède)*, la règle du pull existait *(`01-` §5, gelée)*, le quota existait en base *(défaut 30
+> min, commentaire de colonne nommant ce lot)*, et **la marque `bonus` avait un LECTEUR DE
+> PRODUCTION et AUCUN ÉCRIVAIN**. *Mesuré à l'entrée : 0 instance et 0 mesure marquées, dans les
+> deux bases.*
+>
+> **Tout ce qui est coché a été prouvé PAR EXÉCUTION**, par `scripts/recette/couture-c6l3.mjs`
+> *(**43 contrôles verts, 0 rouge**, décor semé et retiré, base revenue à son état d'entrée et
+> **vérifiée par requête** : 0 décision · 0 marque · 3 mesures · 46 dépôts · 261 instances ·
+> `exercices_actif = true`)* — ou **PAR L'ŒIL**, en session élève réelle *(session mintée par l'API
+> admin, `generateLink` + `/auth/confirm` : aucun mot de passe saisi)*.
+>
+> ⭐ **Le décor d'écran a son mode** : `--decor-ecran` sème sur le cycle COURANT et s'arrête là.
+> C'est le seul moyen d'exercer **la server action elle-même** — la couture l'appelle en dessous, et
+> *« `export type` dans un module `'use server'` tue tout le module à l'exécution »* sans que `tsc`,
+> `npm test` ni une recette ne le disent. **`--retire` pour le retirer.**
+
+### Ce qui est prouvé, avec sa preuve
+
+- [x] **C6L3-1 · Le point de départ, mesuré et non recopié.** Les six interrupteurs lus **par
+  requête dans les deux bases** — tous à ON, `rag_actif` compris — et l'état de la marque : 0
+  décision, 0 instance, 0 mesure marquées des deux côtés. *`updated_at` n'a pas été utilisé pour
+  dater quoi que ce soit : il ne date rien.*
+- [x] **C6L3-2 · Canal ① — le quota se LIT, et il est unifié PAR ÉLÈVE.** `lireLeQuotaDuCycle` rend
+  `optionnel / consommé / restant` depuis `budgetDeLEleve` ; **aucun réglage en base**, donc le
+  défaut de situation *(30 min)* sert. *Preuve : couture §D — « optionnel 30 min · consommé 0 ·
+  restant 30 ».* ⭐ **Il ne se compte jamais par classe** : la page l'appelle **une fois**, hors de
+  la boucle par inscription.
+- [x] **C6L3-3 · Canal ② — le pull POSE UN DÉPÔT RÉEL.** *Preuve : couture §D — 9 → 10 dépôts en
+  base, `origine = routeur`, `statut = assigne`, `routeur_decision_id` écrit.* ⛔ **Prouvé par la
+  ligne, jamais par un message de succès.**
+- [x] **C6L3-4 · `assigne_at` est ancré à MIDI UTC DU LUNDI DU CYCLE, pas à l'instant du clic.**
+  *Preuve : couture §D — `2026-08-31T12:00:00+00:00` pour un clic du 28/08.* ⛔ Laissé au
+  `default now()`, un bonus demandé le dimanche soir à l'école tomberait dans la semaine SUIVANTE
+  et sortirait du quota qu'il consomme.
+- [x] **C6L3-5 · Canal ③ amont — la marque se pose AU JOURNAL.** `routeur_decisions.bonus = true`.
+  *Preuve : couture §D bis.*
+- [x] **C6L3-6 · « Servi par les mêmes règles » — la ligne de journal, champ par champ.** Le script
+  imprime la ligne du bonus **à côté d'une ligne de semaine ordinaire** : mêmes `cycle_lundi`,
+  `cible_retenue`, `regle_declenchee`, `borne_amont`, `etat_escalade`, `tirage_aleatoire` ; seuls
+  `bonus` et `sondes_retenues` diffèrent. *Preuve : couture §D bis.*
+- [x] **C6L3-7 · ⛔ AUCUNE SONDE SECONDAIRE sur un bonus.** *Preuve : couture §D bis — les seules
+  sondes de la ligne sont des sondes de MONTÉE, qui vivent sur l'exercice et restent.*
+- [x] **C6L3-8 · « Jamais au-delà » — prouvé PAR L'ABUS.** Demandes répétées jusqu'à l'arrêt : le
+  quota consommé ne dépasse jamais l'autorisé, le compte s'arrête, **et l'écran dit pourquoi**.
+  *Preuve : couture §E — « 20 min consommées sur 30 », motif `ne_tient_pas`, phrase rendue.*
+- [x] **C6L3-9 · ⛔ LE QUOTA NE SE REPORTE PAS.** *Preuve : couture §E — le cycle suivant repart à
+  30/30, sur la même base et le même élève.*
+- [x] **C6L3-10 · ⛔⛔ LE DOUBLE CLIC NE SERT QU'UN EXERCICE.** Deux appels **concurrents**
+  *(`Promise.all`)* → **un seul dépôt neuf**, le perdant rend `un_a_la_fois`, **et aucune décision
+  orpheline ne reste**. *Preuve : couture §F.* ⭐ La garde est `uk_depots_eleve_exercice` +
+  le **tirage déterministe par (élève × cycle × rang)** + l'ordre « décision PUIS dépôt ».
+- [x] **C6L3-11 · Canal ③ aval — `lireContexte` RELIT la marque au journal.** *Preuve : couture §G —
+  `ctx.bonus = true`, et `ctx.decision.bonus = true`.*
+- [x] **C6L3-12 · ⛔⛔ LA MÊME INSTANCE, IMPOSÉE À UN AUTRE ÉLÈVE, RESTE `bonus = false`.** *Preuve :
+  couture §G — un témoin choisi **sans aucun dépôt** sur cette instance.* ⭐ **C'est exactement ce
+  qu'`exercices.bonus` n'aurait pas su dire**, et c'est le constat central du lot.
+- [x] **C6L3-13 · `competences_mesures.bonus` porte la bonne valeur des deux côtés.** Écrit par le
+  **vrai** `ecrireMesure`, depuis le **vrai** `lireContexte`. *Preuve : couture §G — `true` sur le
+  dépôt demandé, `false` sur le dépôt imposé de la même instance.*
+- [x] **C6L3-14 · Canal ④ — la frise DISTINGUE.** *Preuve : couture §H, et **l'œil** : « 2 exercices
+  faits sur 2 » + « Et 1 exercice que tu as demandé en plus, fait. »* ⛔ Le demandé ne rejoint jamais
+  la fraction.
+- [x] **C6L3-15 · Un bonus non fait ne se lit PAS comme un retard.** *Preuve : à l'écran, le bonus
+  repassé à « à faire » — la frise dit toujours « 2 exercices faits sur 2 », et la ligne porte
+  « à faire · demandé en plus ».*
+- [x] **C6L3-16 · Canal ⑤ — le push SUGGÈRE.** Une compétence `evaluee`, à E, sans aucune mesure :
+  la tuile naît. *Preuve : couture §I, et **l'œil** : « Un exercice en plus ? · si tu veux » sur le
+  tableau de bord.*
+- [x] **C6L3-17 · ⛔⛔ ET IL N'ASSIGNE RIEN — prouvé PAR LA NÉGATIVE.** *Preuve : couture §I — 10 →
+  10 dépôts après l'affichage de la suggestion.* ⭐ *« La clause la plus facile à croire tenue. »*
+- [x] **C6L3-18 · Aucune compétence au-dessus de C n'est suggérée, et `NULL` n'est pas « E ».**
+  *Preuve : couture §I + `utils/routeur/bonus.test.ts`.*
+- [x] **C6L3-19 · Le bonus SORT du dénominateur d'assiduité, et l'écart est MESURÉ.** *Preuve :
+  couture §J — avec la règle 0/3, sans elle 0/4.* ⛔ Sans elle, un élève à 3/3 qui demande un
+  exercice de plus et ne le finit pas tombe **sous le seuil des trois quarts** : le dispositif
+  punirait le geste qu'il offre. ⭐ **C'est le `06-` §5 APPLIQUÉ** — *« ses exercices ASSIGNÉS »* —,
+  jamais amendé.
+- [x] **C6L3-20 · La PORTE FERMÉE refuse, et elle le dit sans nommer un interrupteur.** *Preuve :
+  couture §K — `exercices_actif` **emprunté le temps d'un appel**, valeur écrite au registre AVANT
+  la bascule, **remise et vérifiée par requête**.* ⭐ Et **la tuile du push ne naît pas** non plus :
+  elle porte un lien, donc elle lit sa porte — dans le module partagé, jamais au site d'appel.
+- [x] **C6L3-21 · ⭐ LA SERVER ACTION EST VIVANTE — prouvé PAR UN CLIC dans un navigateur.** Session
+  élève mintée, clic sur « Demander un exercice de plus », réponse rendue à l'écran. ⛔ *C'est le
+  seul chemin que la couture contourne, et c'est celui où `export type` dans un `'use server'`
+  tuerait tout le module en silence.*
+- [x] **C6L3-22 · Les quatre états de l'offre, VUS À L'ÉCRAN.** *(a)* ouverte au bilan · *(b)*
+  `semaine_en_cours` — « Quand tu auras fini les exercices de ta semaine… » · *(c)* `un_a_la_fois`
+  — « Tu as déjà un exercice en plus à faire… » · *(d)* le refus après le clic. ⛔ **Aucun état ne
+  se tait.**
+- [x] **C6L3-23 · ⭐ UN DÉFAUT TROUVÉ À L'ŒIL, ET PAR RIEN D'AUTRE.** Le récapitulatif annonçait
+  **« Argumentation · 3 exercices »** quand la frise, deux blocs plus haut, disait **« 1 exercice
+  fait SUR 2 »** — *deux nombres, même écran, même ensemble, et pas d'accord.* Les deux fonctions
+  étaient justes séparément ; `tsc`, 1888 tests et 43 contrôles de couture passaient. **Corrigé et
+  re-vérifié à l'écran** *(`competencesDeLaSemaine` ne compte plus le bonus ; la compétence reste
+  dans la liste pour le BILAN, qui, lui, compte le bonus comme n'importe quel exercice)*.
+- [x] **C6L3-24 · La tuile du push tient à largeur MOBILE.** *Preuve : à l'écran, 375 px — « Un
+  exercice en plus ? » n'est pas tronqué.* ⭐ Le nom a été choisi COURT exprès : le mécanisme de
+  troncature est celui de `C7-L2`, partagé par toutes les tuiles, et le corriger n'était pas de ce
+  lot.
+- [x] **C6L3-25 · La migration, sandbox PUIS prod, avec sa répétition à blanc des deux côtés.**
+  *Preuve : `SUIVI_SQL.md` — corps extrait du fichier (2554 octets, sans `begin;` ni `commit;`),
+  transaction annulée, quatre drapeaux à `t`, **retour vérifié par requête** et non sur le mot
+  `ROLLBACK`.*
+
+### Ce qui reste à jouer en recette, avec sa condition de reprise
+
+- [ ] **C6L3-26 · ⛔⛔ LE CLIC QUI SERT VRAIMENT UN EXERCICE, DANS UN NAVIGATEUR.** Le clic a été
+  fait et l'action a répondu — mais **par un refus** : le bac à sable met la **semaine courante au
+  segment 1** *(Semestre 1 ouvert le 2026-08-24)*, qui est **hors routage**, et l'offre ne
+  s'affiche que sur la semaine **EN COURS**. *La voie serveur, elle, est prouvée par la couture, qui
+  a joué sur un cycle du segment 2.* **Condition de reprise : dès le lundi 2026-08-31, la semaine
+  courante passe au segment 2 — refaire le décor d'écran et cliquer.**
+- [ ] **C6L3-27 · ⚠️ `competences_mesures.bonus` ÉCRIT PAR LA CHAÎNE ELLE-MÊME.** La recette a
+  exercé le **vrai** `lireContexte` et le **vrai** `ecrireMesure`, et **reproduit à l'identique**
+  la ligne qui les relie *(`bonus: ctx.bonus`, `chaine.ts`)* — mais cette ligne vit dans un étage à
+  **deux appels froids**, et **aucun appel de modèle n'a été payé**. **Condition de reprise : une
+  copie réelle passée en file avec `chaine_actif` à ON ; la mesure écrite doit porter `bonus =
+  true` si son dépôt vient du pull.**
+- [ ] **C6L3-28 · ⚠️ LE PUSH EN PRODUCTION — il est muet en recette et parlant en prod.** Le bac à
+  sable porte **102 niveaux dont la lettre est NULLE** *(0 lettre réelle)* ; la production en porte
+  **149 réelles**. *« Une compétence sans lettre n'est ni ciblable ni sondable »* — le décor a donc
+  dû **emprunter une lettre** pour faire naître la tuile. **Condition de reprise : ouvrir le
+  tableau de bord d'un élève de production dont une compétence `evaluee` est à C ou moins et sans
+  mesure depuis trois cycles ; la tuile doit naître seule.**
+- [ ] **C6L3-29 · ⚠️ LE DÉROULÉ À SIX TEMPS OUVERT DEPUIS UN DÉPÔT BONUS.** La couture prouve que le
+  dépôt est posé, `assigne`, et lié à sa décision ; **le clic sur la ligne n'a pas été fait sur un
+  bonus servi par le pull** *(le décor d'écran pose des dépôts `clos`)*. **Condition de reprise :
+  après C6L3-26, cliquer la ligne « demandé en plus » et vérifier que le temps 1 s'ouvre comme pour
+  n'importe quel exercice.**
+- [ ] **C6L3-30 · ⛔⛔ CE QUE LA COUTURE A RÉVÉLÉ, ET QUI N'EST PAS DE CE LOT.**
+  `constituerLeVivier` **ne filtre pas par `classe_id`**, quand `exercicesMaisonDeLEleve` filtre par
+  `visibleDansLaClasse` : le routeur peut assigner à un élève une instance d'une classe **où il
+  n'est pas inscrit**, et **le dépôt n'apparaît sur aucun de ses écrans** — tout en comptant au
+  dénominateur d'assiduité. ⚠️ **Le défaut vaut pour la POSE HEBDOMADAIRE de `C4-L12` autant que
+  pour le bonus.** *Mesuré : 1 dépôt invisible sur 4 chez l'élève de recette ; le script le
+  recompte sur toute la base à chaque passage (section L).* **Déposé à la boîte de `C4-L12`
+  (`PLAN_DE_CHANTIER.md` §5). Condition de reprise : ce lot-là, qui doit choisir entre borner le
+  vivier et retirer la garde de classe sur les dépôts d'origine `routeur`.**
+- [ ] **C6L3-31 · ⚠️ LE BILAN REND UN TITRE DE COMPÉTENCE NU quand rien n'est mesuré.** Vu à l'œil :
+  « Argumentation » seul dans sa carte. ⛔ **Le bilan est de `C6-L2`**, clos, et le prompt
+  interdisait d'y toucher. **Déposé à `IDEES_post_rentree.md`. Condition de reprise : n'importe quel
+  passage sur l'écran de la semaine avec une copie non encore mesurée.**

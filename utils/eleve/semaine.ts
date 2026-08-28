@@ -34,6 +34,7 @@
 //    `semaine-serveur.ts`.
 // ============================================================================
 
+import { phraseDuRefus, type MotifDuRefus } from '../routeur/bonus'
 import type { Atelier, TonEtat } from '../codex-onglets/regles'
 import type { EtatObservable } from '../routeur/observables'
 import type { DimensionDite } from './profil'
@@ -56,6 +57,13 @@ export interface ExerciceDeLaSemaine {
   ton: TonEtat
   libelle: string
   competences: string[]
+  /**
+   * ⭐⭐ C6 · L3 — CE QUE L'ÉLÈVE A **DEMANDÉ**, jamais ce qu'on lui a imposé. Il
+   *    se lit au JOURNAL (`routeur_decisions.bonus`), jamais sur l'instance :
+   *    « entre élèves, une instance se ressert », et le fait est par
+   *    (élève × exercice).
+   */
+  bonus: boolean
 }
 
 // ⛔ AUCUNE DURÉE PAR EXERCICE SUR CET ÉCRAN, ET C'EST UN CHOIX MOTIVÉ.
@@ -99,11 +107,30 @@ export type MomentDeLaSemaine = 'vide' | 'recapitulatif' | 'bilan'
 /** Les tons qui appellent encore un geste de l'élève. */
 const APPELLE_UN_GESTE: readonly TonEtat[] = ['a_lire', 'a_faire', 'en_cours']
 
+/**
+ * ⚠️⚠️ C6 · L3 — LE MOMENT SE LIT SUR LA SEMAINE **IMPOSÉE**, ET LE BONUS EN EST
+ *    EXCLU. La séquence du `02-` §6.C est celle de LA SEMAINE : « avant de
+ *    commencer, le récapitulatif […] il passe ensuite ses exercices […] à la
+ *    fin, un bilan court. PUIS on lui offre d'en faire plus ». L'offre vient
+ *    APRÈS le bilan — donc un exercice pris SUR l'offre ne peut pas, en
+ *    revenant, faire retomber l'écran au récapitulatif et retirer à l'élève le
+ *    bilan qu'il venait de lire.
+ *
+ * ⭐ Ce que le bonus fait à la place : il SUSPEND l'offre tant qu'il n'est pas
+ *    fait (`offreDEnFairePlus`, motif `un_a_la_fois`). « Un exercice à la fois »
+ *    devient alors structurel — on ne peut pas en demander un second avant
+ *    d'avoir fait le premier — au lieu d'être un contrôle de plus quelque part.
+ *
+ * ⛔ Et le BILAN, lui, compte le bonus comme n'importe quel exercice : il se
+ *    calcule sur les MESURES du cycle, pas sur cette liste — « le bonus est un
+ *    exercice normal, MESURES COMPRISES » (`01-` §5).
+ */
 export function momentDeLaSemaine(
   exercices: readonly ExerciceDeLaSemaine[],
 ): MomentDeLaSemaine {
-  if (exercices.length === 0) return 'vide'
-  return exercices.some((e) => APPELLE_UN_GESTE.includes(e.ton)) ? 'recapitulatif' : 'bilan'
+  const imposes = exercices.filter((e) => !e.bonus)
+  if (imposes.length === 0) return 'vide'
+  return imposes.some((e) => APPELLE_UN_GESTE.includes(e.ton)) ? 'recapitulatif' : 'bilan'
 }
 
 // ════════════════════════════════════════════════════════════════════════════
@@ -111,12 +138,24 @@ export function momentDeLaSemaine(
 // ════════════════════════════════════════════════════════════════════════════
 
 export interface Frise {
-  /** Une case par exercice, dans l'ordre de la liste. `true` = le geste est fait. */
+  /** Une case par exercice IMPOSÉ, dans l'ordre de la liste. `true` = le geste est fait. */
   cases: boolean[]
   /** Un décompte réel (`06-` §5). */
   faits: number
   /** Un décompte réel. */
   total: number
+  /**
+   * ⭐⭐ C6 · L3 — CE QUE L'ÉLÈVE A DEMANDÉ EN PLUS, COMPTÉ À PART. La frise
+   *    comptait TOUS les dépôts maison du cycle, `bonus` compris — elle était
+   *    juste tant qu'aucun dépôt ne l'était, et le jour où le pull en pose,
+   *    **« 3 sur 5 » mélangerait l'assigné et le demandé : l'élève lirait comme
+   *    un retard ce qu'il a choisi en plus.** *Déposé nommément par `C6-L2`.*
+   *
+   * ⛔ Il ne rejoint JAMAIS `faits`/`total` : « faits sur total » dit la semaine
+   *    qu'on lui a donnée, et ajouter au numérateur ce qui n'est pas au
+   *    dénominateur — ou l'inverse — dirait faux dans les deux sens.
+   */
+  enPlus: { faits: number; total: number }
 }
 
 /**
@@ -132,8 +171,15 @@ export interface Frise {
  *    ici ferait de l'écran de l'élève un tableau de bord de conformité.
  */
 export function friseDeLaSemaine(exercices: readonly ExerciceDeLaSemaine[]): Frise {
-  const cases = exercices.map((e) => !APPELLE_UN_GESTE.includes(e.ton))
-  return { cases, faits: cases.filter(Boolean).length, total: cases.length }
+  const fait = (e: ExerciceDeLaSemaine) => !APPELLE_UN_GESTE.includes(e.ton)
+  const cases = exercices.filter((e) => !e.bonus).map(fait)
+  const enPlus = exercices.filter((e) => e.bonus).map(fait)
+  return {
+    cases,
+    faits: cases.filter(Boolean).length,
+    total: cases.length,
+    enPlus: { faits: enPlus.filter(Boolean).length, total: enPlus.length },
+  }
 }
 
 // ════════════════════════════════════════════════════════════════════════════
@@ -142,8 +188,25 @@ export function friseDeLaSemaine(exercices: readonly ExerciceDeLaSemaine[]): Fri
 
 export interface CompetencePrioritaire {
   competence: string
-  /** Combien d'exercices de la semaine peuvent la porter. Un décompte réel. */
+  /**
+   * Combien d'exercices IMPOSÉS de la semaine peuvent la porter. Un décompte réel.
+   *
+   * ⛔⛔ C6 · L3 — IL NE COMPTE PLUS LE BONUS, ET C'EST UN DÉFAUT TROUVÉ À L'ŒIL.
+   *    Le récapitulatif annonçait « Argumentation · 3 exercices » pendant que la
+   *    frise, deux blocs plus haut, disait « 1 exercice fait SUR 2 ». **Deux
+   *    nombres, sur le même écran, comptant le même ensemble et ne tombant pas
+   *    d'accord** — et rien ne disait lequel comptait quoi. Le récapitulatif est
+   *    le PREMIER temps, celui de la semaine qu'on lui donne ; le demandé est le
+   *    TROISIÈME. *Aucun test ne le voyait : les deux fonctions étaient justes
+   *    séparément.*
+   */
   nbExercices: number
+  /**
+   * ⭐ Et ce que le bonus y ajoute, compté à part — pour que l'appelant puisse
+   *   décider sans recompter. ⛔ Il ne se montre pas au récapitulatif : « en
+   *   faire plus » a son propre temps, et son propre décompte à la frise.
+   */
+  nbEnPlus: number
 }
 
 /**
@@ -165,15 +228,27 @@ export interface CompetencePrioritaire {
 export function competencesDeLaSemaine(
   exercices: readonly ExerciceDeLaSemaine[],
 ): CompetencePrioritaire[] {
-  const compte = new Map<string, number>()
+  const compte = new Map<string, { nbExercices: number; nbEnPlus: number }>()
   for (const e of exercices) {
-    for (const c of new Set(e.competences)) compte.set(c, (compte.get(c) ?? 0) + 1)
+    for (const c of new Set(e.competences)) {
+      const v = compte.get(c) ?? { nbExercices: 0, nbEnPlus: 0 }
+      if (e.bonus) v.nbEnPlus += 1
+      else v.nbExercices += 1
+      compte.set(c, v)
+    }
   }
   return [...compte.entries()]
-    .map(([competence, nbExercices]) => ({ competence, nbExercices }))
+    .map(([competence, v]) => ({ competence, ...v }))
+    // ⚠️ LE TRI PORTE SUR LE TOTAL, pas sur le seul imposé : « les trois
+    //    compétences que la semaine travaille en priorité » se lisent sur tout ce
+    //    qui a été servi. ⭐ Et une compétence que SEUL un bonus porte reste dans
+    //    la liste — c'est le BILAN qui en a besoin, « le bonus est un exercice
+    //    normal, MESURES COMPRISES ». L'appelant écarte du RÉCAPITULATIF celles
+    //    dont l'imposé est nul : « jamais 0, qui se lirait comme un score ».
     // À égalité, l'ordre alphabétique : un tri instable rendrait deux écrans
     // différents sur la même semaine.
-    .sort((a, b) => b.nbExercices - a.nbExercices || a.competence.localeCompare(b.competence))
+    .sort((a, b) => (b.nbExercices + b.nbEnPlus) - (a.nbExercices + a.nbEnPlus)
+      || a.competence.localeCompare(b.competence))
 }
 
 /** Ce que le premier temps rend, par compétence prioritaire. */
@@ -315,4 +390,95 @@ export function ceQuiManqueAuBilan(
   const rendus = exercices.filter((e) => !APPELLE_UN_GESTE.includes(e.ton))
   const nonMesurees = rendus.filter((e) => !depotsMesures.has(e.depotId)).length
   return { copiesNonMesurees: nonMesurees, incomplet: nonMesurees > 0 }
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+// LE TROISIÈME TEMPS — « PUIS on lui offre d'en faire plus s'il le veut »
+// ════════════════════════════════════════════════════════════════════════════
+
+/**
+ * ⭐⭐ C6 · L3 — L'OFFRE, ET ELLE EST LE TROISIÈME TEMPS D'UN ÉCRAN QUI EXISTE.
+ *
+ * `02-` §6.C décrit UNE SEULE SÉQUENCE, et elle se termine sur cette phrase :
+ * « Avant de commencer, l'élève reçoit le récapitulatif […] IL PASSE ENSUITE SES
+ *   EXERCICES […] À LA FIN, un bilan court […] **PUIS ON LUI OFFRE D'EN FAIRE
+ *   PLUS S'IL LE VEUT.** C'est le budget optionnel du routeur : un pull, UN
+ *   EXERCICE DEMANDÉ À LA FOIS, jamais imposé, et jamais reporté d'une semaine
+ *   sur l'autre. »
+ *
+ * ⚠️⚠️ CE QUE LA SOURCE NE TRANCHE PAS, ET CE QUI EST RETENU ICI. Elle place
+ *    l'offre APRÈS le bilan dans sa séquence ; elle ne dit pas si un élève qui a
+ *    fini mardi doit attendre le dimanche. **L'OFFRE PARAÎT AU MOMENT `bilan`,
+ *    ET SEULEMENT LÀ** — et cela répond déjà à l'élève de mardi, parce que
+ *    `momentDeLaSemaine` rend `bilan` dès que **plus rien n'attend un geste**,
+ *    pas quand la semaine est écoulée. Trois raisons de ne pas l'ouvrir plus tôt :
+ *
+ *    *(1)* **« En faire PLUS » présuppose d'avoir fait.** Le quota s'ajoute au
+ *      plafond de la semaine ; l'offrir à un élève qui n'a pas commencé lui
+ *      proposerait de contourner ce qu'on lui a donné.
+ *    *(2)* **Le bonus compte dans la couverture R5 et les compteurs d'escalade**
+ *      (`01-` §5). Le servir pendant que la semaine imposée est en cours
+ *      brouillerait les deux, sur un cycle qui « se décide à la construction ».
+ *    *(3)* **« UN exercice à la fois » devient alors structurel** : l'offre se
+ *      suspend tant qu'un bonus attend un geste, donc on ne peut pas en demander
+ *      un second avant d'avoir fait le premier.
+ *
+ * ⛔ ET AUCUN MOMENT NE SE TAIT. Le `vide` dit qu'il n'y a rien à faire de plus,
+ *    le `recapitulatif` dit quand l'offre viendra, et la porte fermée le dit
+ *    déjà pour tout l'écran : « le silence est un mensonge » — c'est la leçon que
+ *    `C6-L2` a écrite phrase par phrase.
+ */
+export interface OffreDEnFairePlus {
+  /** Vrai quand le bouton s'affiche. Faux = il y a une PHRASE à la place. */
+  offerte: boolean
+  /** Pourquoi elle ne s'offre pas. `null` quand elle s'offre. */
+  motif: MotifDuRefus | null
+  /** Ce que l'écran rend — en langue élève, sans nombre, sans nom d'interrupteur. */
+  phrase: string
+}
+
+/**
+ * ⚠️ `quota` VAUT `null` QUAND L'ÉLÈVE N'A AUCUN BUDGET — le piège de la
+ *    vacuité : « un élève sans parcours ne reçoit RIEN, et le professeur en est
+ *    averti » (`07-` §1.3). Ce n'est pas « quota épuisé », et cela ne se dit pas
+ *    pareil.
+ *
+ * ⚠️ Le quota est le SEUL refus serveur pré-calculé ici, et c'est un arbitrage :
+ *    il coûte deux requêtes, quand savoir d'avance que le vivier est vide
+ *    coûterait de charger la doctrine et toutes les instances À CHAQUE
+ *    AFFICHAGE. Les trois vides du pull — quota, vivier, liste — se disent tous,
+ *    mais le premier AVANT le clic et les deux autres APRÈS.
+ *
+ * ⛔ ET LE QUOTA NE SE COMPTE JAMAIS PAR CLASSE. « Un élève inscrit dans deux
+ *    classes a UN SEUL budget » (`01-` §4) : l'appelant le calcule UNE FOIS par
+ *    élève, sur la liste fusionnée de ses inscriptions.
+ */
+export function offreDEnFairePlus(
+  porteOuverte: boolean,
+  moment: MomentDeLaSemaine,
+  exercices: readonly ExerciceDeLaSemaine[],
+  quota: { epuise: boolean } | null,
+): OffreDEnFairePlus {
+  const dire = (motif: MotifDuRefus): OffreDEnFairePlus =>
+    ({ offerte: false, motif, phrase: phraseDuRefus(motif) })
+
+  if (!porteOuverte) return dire('porte_fermee')
+  if (moment === 'vide') return dire('semaine_vide')
+  if (moment === 'recapitulatif') return dire('semaine_en_cours')
+  // ⛔ « L'élève demande UN exercice à la fois » — un bonus qui attend encore un
+  //    geste tient la place, et l'écran le DIT plutôt que de rester muet.
+  if (exercices.some((e) => e.bonus && APPELLE_UN_GESTE.includes(e.ton))) {
+    return dire('un_a_la_fois')
+  }
+  if (quota === null) return dire('aucun_budget')
+  if (quota.epuise) return dire('quota_epuise')
+
+  return {
+    offerte: true,
+    motif: null,
+    // ⛔ AUCUN NOMBRE : ni minutes, ni « il t'en reste 2 ». « Le pull se compte en
+    //    minutes CÔTÉ SERVEUR ; côté élève, il se dit en exercices, ou il ne se
+    //    dit pas » — et ici, il ne se dit pas.
+    phrase: 'Tu as fini ta semaine. Si tu veux, tu peux demander un exercice de plus.',
+  }
 }

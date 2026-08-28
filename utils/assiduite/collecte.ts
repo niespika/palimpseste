@@ -46,6 +46,13 @@ export interface DepotACompter {
   statut: string
   /** Un INSTANT (`timestamptz`) — `assigne_at`, `not null default now()`. */
   assigneAt: string
+  /**
+   * ⭐⭐ C6 · L3 — VRAI QUAND L'ÉLÈVE A **DEMANDÉ** CET EXERCICE. Il se lit au
+   *    journal (`routeur_decisions.bonus`), et il fait SORTIR le dépôt du
+   *    dénominateur. **Quatrième champ, et il en fallait un quatrième :**
+   *    `exercices_depots` n'a rien qui distingue le demandé de l'imposé.
+   */
+  bonus: boolean
 }
 
 /** Ce que l'écrivain pose sur la ligne, et ce que l'écran relit. */
@@ -61,6 +68,12 @@ export interface TriDesDepots {
   retenus: number
   /** Les dépôts de la semaine visée SORTIS du dénominateur — `statut = 'retire'`. */
   retires: number
+  /**
+   * ⭐ Les dépôts de la semaine visée sortis du dénominateur PARCE QUE L'ÉLÈVE
+   *   LES A DEMANDÉS. ⛔ Il est compté, jamais tu : « un vide expliqué » — sans
+   *   ce chiffre, un dénominateur qui rétrécit n'aurait aucune explication.
+   */
+  bonus: number
   /** Les dépôts passés qui ne tombent pas dans la semaine visée. */
   horsSemaine: number
 }
@@ -85,6 +98,24 @@ export interface TriDesDepots {
  * ⚠️ **`retire` sort du dénominateur, `abandonne` y reste** : « l'un est une
  * décision du professeur, l'autre un non-geste de l'élève, ET L'ASSIDUITÉ MESURE
  * L'ÉLÈVE » (`07-` §1.1). La règle est `entreAuDenominateur`, on ne la recopie pas.
+ *
+ * ⭐⭐ C6 · L3 — **UN BONUS NE COMPTE NI AU NUMÉRATEUR NI AU DÉNOMINATEUR, ET
+ *    C'EST LE `06-` §5 APPLIQUÉ, PAS AMENDÉ.** La règle gelée dit : « une semaine
+ *    est FAITE quand l'élève a rendu au moins trois quarts de ses **exercices
+ *    ASSIGNÉS** ». Or un bonus n'est précisément **pas** assigné : il est
+ *    DEMANDÉ — « c'est une suggestion, JAMAIS UNE ASSIGNATION […] un pull, un
+ *    exercice demandé à la fois, JAMAIS IMPOSÉ » (`01-` §5 ; `02-` §6.C).
+ *
+ *    ⛔ **Ce que l'oubli coûtait, et il va dans le mauvais sens** : un bonus NON
+ *    RENDU entre au dénominateur seul et **abaisse l'assiduité d'un élève qui en
+ *    a fait PLUS que les autres**. Un élève à 3/3 qui demande un exercice de plus
+ *    et ne le finit pas tombe à 3/4 — sous le seuil des trois quarts —, et sa
+ *    semaine cesse d'être « faite » **pour avoir travaillé davantage**. *Le
+ *    dispositif punirait exactement le geste qu'il offre.*
+ *
+ *    ⚠️ **À NE PAS CONFONDRE AVEC LE BONUS DE VACANCES** d'`utils/routeur/assiduite.ts`
+ *    (« le bonus peut pousser au-delà de 100 % : on borne l'affichage, pas le
+ *    compte »), qui est **fermé depuis le 24/08** (`07-` §1.5) et n'a rien à voir.
  */
 export function comptesDeLaSemaine(
   depots: readonly DepotACompter[], cycleLundi: string, fuseau: string,
@@ -92,6 +123,7 @@ export function comptesDeLaSemaine(
   const parEleve = new Map<string, CompteDeSemaine>()
   let retenus = 0
   let retires = 0
+  let bonus = 0
   let horsSemaine = 0
 
   for (const d of depots) {
@@ -103,6 +135,12 @@ export function comptesDeLaSemaine(
       retires++
       continue
     }
+    // ⭐ « Trois quarts de ses exercices ASSIGNÉS » — et un bonus n'est pas
+    //    assigné, il est demandé. Il sort des DEUX côtés de la fraction.
+    if (d.bonus) {
+      bonus++
+      continue
+    }
     retenus++
     const c = parEleve.get(d.eleveId) ?? { assignes: 0, termines: 0 }
     c.assignes++
@@ -110,7 +148,7 @@ export function comptesDeLaSemaine(
     parEleve.set(d.eleveId, c)
   }
 
-  return { parEleve, retenus, retires, horsSemaine }
+  return { parEleve, retenus, retires, bonus, horsSemaine }
 }
 
 // ════════════════════════════════════════════════════════════════════════════

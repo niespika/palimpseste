@@ -104,6 +104,14 @@ export interface ContexteDepot {
    */
   decision: {
     cibleRetenue: string | null
+    /**
+     * ⭐⭐ C6 · L3 — LA MARQUE `bonus`, ET ELLE VIENT D'ICI, PAS DE L'INSTANCE.
+     * « Un exercice servi sur ce quota porte la marque `bonus` AU JOURNAL
+     * (§11) » (`01-` §5). C'est le même canal que `sonde_montee` juste
+     * au-dessous, et pour le même motif : le drapeau vient de la DÉCISION
+     * D'ASSIGNATION, la chaîne LE RECOPIE, elle ne le devine pas.
+     */
+    bonus: boolean
     /** Les compétences SONDÉES — silencieuses : elles ne produisent aucun retour. */
     sondes: string[]
     /**
@@ -210,7 +218,11 @@ interface LigneExercice {
   consigne_instanciee: unknown; paire_diagnostic: boolean; cran: string | number | null
   cible_primaire: string | null
   genre: string | null; modes_par_competence: Record<string, string[]> | null
-  bonus: boolean; exercice_planifie_id: string | null; reference_id: string | null
+  // ⛔ `exercices.bonus` N'EST PLUS SÉLECTIONNÉ — C6-L3. La colonne existe
+  //    toujours (`07-` §1.1) et l'import la signale (`08-` §7.3), mais elle ne
+  //    peut pas porter un fait par (élève × exercice) : la marque vit désormais
+  //    sur `routeur_decisions`. La sélectionner ici ferait croire qu'elle sert.
+  exercice_planifie_id: string | null; reference_id: string | null
   /** ⭐ C5-L2 — le texte d'auteur DÉSIGNÉ PAR L'INSTANCE, et ses deux bornes. */
   materiau_source_texte_id: string | null
   materiau_source_englobant: unknown
@@ -239,7 +251,7 @@ export async function lireContexte(admin: Admin, depotId: string): Promise<Conte
     //    d'écrire : sélectionner une colonne absente fait échouer la requête
     //    ENTIÈRE (`42703`), donc « exercice introuvable » pour tout le monde.
     .select('id, type_id, classe_id, lieu, consigne_instanciee, paire_diagnostic, cran, genre, '
-      + 'cible_primaire, modes_par_competence, bonus, exercice_planifie_id, reference_id, '
+      + 'cible_primaire, modes_par_competence, exercice_planifie_id, reference_id, '
       + 'materiau_source_texte_id, materiau_source_englobant, materiau_source_localisation')
     .eq('id', depot.exercice_id).maybeSingle()
   if (eEx || !exerciceBrut) throw new DepotIllisible(`exercice de ${depotId} : ${eEx?.message ?? NUL}`)
@@ -428,9 +440,11 @@ export async function lireContexte(admin: Admin, depotId: string): Promise<Conte
   let decision: ContexteDepot['decision'] = null
   if (depot.routeur_decision_id) {
     const { data: dBrut } = await admin
-      .from('routeur_decisions').select('cible_retenue, sondes_retenues')
+      .from('routeur_decisions').select('cible_retenue, sondes_retenues, bonus')
       .eq('id', depot.routeur_decision_id).maybeSingle()
-    const d = dBrut as unknown as { cible_retenue: string | null; sondes_retenues: unknown } | null
+    const d = dBrut as unknown as {
+      cible_retenue: string | null; sondes_retenues: unknown; bonus: boolean | null
+    } | null
     if (d) {
       const sondes = Array.isArray(d.sondes_retenues)
         ? (d.sondes_retenues as Array<{ competence?: string; sonde_montee?: boolean }>)
@@ -449,6 +463,7 @@ export async function lireContexte(admin: Admin, depotId: string): Promise<Conte
         .map((s) => s.competence ?? '').filter(Boolean)
       decision = {
         cibleRetenue: d.cible_retenue ?? null,
+        bonus: d.bonus === true,
         sondes: sondes.filter((s) => s.sonde_montee !== true)
           .map((s) => s.competence ?? '').filter(Boolean),
         sondesMontee: deMontee,
@@ -471,7 +486,19 @@ export async function lireContexte(admin: Admin, depotId: string): Promise<Conte
       ? exercice.cible_primaire as Competence : null,
     regimeV1vf,
     genre: exercice.genre ?? null,
-    bonus: !!exercice.bonus,
+    // ⛔⛔ LA MARQUE NE VIENT PLUS DE L'INSTANCE — C6-L3, et c'est le cœur du
+    //    lot. `exercices` est LA BANQUE : « entre élèves, une instance se
+    //    ressert — une instance, plusieurs dépôts » (`utils/moteur/vivier.ts`),
+    //    quand le fait, lui, est par (ÉLÈVE × EXERCICE). Un `true` sur
+    //    l'instance que Léa a DEMANDÉE marquerait aussi la mesure de Tom, à qui
+    //    la même instance aura été IMPOSÉE — et le journal de fin d'année dirait
+    //    l'inverse de ce que le `01-` §5 lui demande de dire.
+    // ⛔ ET PAS DE `||` AVEC `exercice.bonus` : un repli ressusciterait
+    //    exactement ce défaut. Sans décision — la voie du professeur —, il n'y a
+    //    pas de bonus, et c'est vrai par construction : le professeur n'en sert
+    //    aucun. *Constaté avant la bascule : 0 instance marquée dans les deux
+    //    bases, donc le changement est un no-op sur les données existantes.*
+    bonus: decision?.bonus === true,
     paireDiagnostic: !!exercice.paire_diagnostic,
     modesParCompetence,
     consigne: enTexte(exercice.consigne_instanciee),

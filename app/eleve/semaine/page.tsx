@@ -7,6 +7,9 @@ import { lireFuseau } from '@/utils/fuseau-serveur'
 import { jourDansFuseau, formatJour } from '@/utils/fuseau'
 import { lundiOnOrBefore, addDaysUTC, toISODate } from '@/utils/calendrier-grille'
 import { chargerLaSemaineDeLEleve } from '@/utils/eleve/semaine-serveur'
+import { offreDEnFairePlus, momentDeLaSemaine } from '@/utils/eleve/semaine'
+import { lireLeQuotaDuCycle } from '@/utils/moteur/bonus-serveur'
+import OffreDEnFairePlus from './OffreDEnFairePlus'
 import Pastille from '@/components/Pastille'
 
 // ============================================================================
@@ -17,6 +20,11 @@ import Pastille from '@/components/Pastille'
 //
 // ⭐ « C'est le SEUL endroit où le volume de la semaine se voit d'un coup d'œil ;
 //    sans lui, l'élève découvre son travail exercice par exercice. » (`07-` §2)
+//
+// ⭐⭐ C6 · L3 — LE TROISIÈME TEMPS EST ARRIVÉ. Le §6.C décrit UNE séquence, et
+//    elle se termine sur « PUIS ON LUI OFFRE D'EN FAIRE PLUS S'IL LE VEUT ».
+//    `C6-L2` s'est arrêté juste avant, volontairement ; l'offre est ici, et
+//    elle n'est pas une page de plus : c'est le troisième temps du même écran.
 //
 // ⛔ CE N'EST PAS UNE « PAGE UNIQUE DU CYCLE ». Le déroulé à six temps de C4-L3
 //    existe, par dépôt, sous deux routes — cet écran est une VUE D'ENSEMBLE QUI
@@ -69,6 +77,19 @@ export default async function SemaineDeLEleve({
   const semaines = await Promise.all(enContexte.map((i) =>
     chargerLaSemaineDeLEleve(admin, user.id, i.classe_id, cycleLundi, fuseau)))
 
+  // ⛔⛔ LE QUOTA EST UNIFIÉ PAR ÉLÈVE, ET IL SE LIT **UNE SEULE FOIS**. « Un
+  //    élève inscrit dans DEUX CLASSES a UN SEUL budget » (`01-` §4) — c'est une
+  //    asymétrie réelle avec la liste au-dessus, qui, elle, agrège PAR
+  //    INSCRIPTION. Le lire dans `chargerLaSemaineDeLEleve` l'aurait compté deux
+  //    fois pour un bi-classe, et lui aurait offert deux quotas.
+  // ⚠️ Et il ne se lit QUE sur la semaine EN COURS : « les minutes non utilisées
+  //    sont perdues, sans report » — une semaine passée n'a plus de quota à
+  //    offrir, et le pull, lui, écrit toujours sur le cycle courant.
+  const incidentsDuQuota: string[] = []
+  const quota = enContexte.length > 0 && estLaSemaineEnCours
+    ? await lireLeQuotaDuCycle(admin, user.id, cycleLundi, incidentsDuQuota)
+    : null
+
   // ⛔ DEUX VIDES À DISTINGUER, PAS UN (`07-` §5). La porte fermée n'est pas
   //    « tu n'as rien à faire », et l'élève n'a JAMAIS à connaître le nom d'un
   //    interrupteur pour comprendre son écran.
@@ -78,6 +99,12 @@ export default async function SemaineDeLEleve({
     faits: semaines.reduce((n, s) => n + s.frise.faits, 0),
     total: semaines.reduce((n, s) => n + s.frise.total, 0),
     cases: semaines.flatMap((s) => s.frise.cases),
+    // ⭐ C6-L3 — ce qu'il a demandé en plus, agrégé comme le reste et compté À
+    //   PART : il ne rejoint jamais `faits`/`total`.
+    enPlus: {
+      faits: semaines.reduce((n, s) => n + s.frise.enPlus.faits, 0),
+      total: semaines.reduce((n, s) => n + s.frise.enPlus.total, 0),
+    },
   }
   const recapitulatif = semaines.flatMap((s) => s.recapitulatif)
   const bilan = semaines.flatMap((s) => s.bilan)
@@ -85,8 +112,17 @@ export default async function SemaineDeLEleve({
     copiesNonMesurees: semaines.reduce((n, s) => n + s.manque.copiesNonMesurees, 0),
     incomplet: semaines.some((s) => s.manque.incomplet),
   }
-  const incidents = semaines.flatMap((s) => s.incidents)
+  const incidents = [...semaines.flatMap((s) => s.incidents), ...incidentsDuQuota]
   const auBilan = bilan.length > 0 || (exercices.length > 0 && recapitulatif.length === 0)
+
+  // ⭐ L'OFFRE SE LIT SUR LA LISTE FUSIONNÉE, pas par inscription : le moment de
+  //   l'élève est celui de TOUT son travail, et son quota est unique.
+  // ⚠️ `estLaSemaineEnCours` est une condition de plus, et elle est à l'écran :
+  //   on ne propose pas d'en faire plus sur une semaine passée, dont le quota est
+  //   perdu (`01-` §5) — l'action, elle, refuserait de toute façon.
+  const offre = estLaSemaineEnCours
+    ? offreDEnFairePlus(porteOuverte, momentDeLaSemaine(exercices), exercices, quota)
+    : { offerte: false, motif: null, phrase: '' }
 
   return (
     <div className="space-y-8 max-w-3xl">
@@ -163,6 +199,20 @@ export default async function SemaineDeLEleve({
                     className={`h-2.5 flex-1 rounded-full ${fait ? 'bg-ok' : 'bg-parchemin-fonce'}`} />
                 ))}
               </div>
+              {/* ⭐⭐ C6-L3 — CE QU'IL A DEMANDÉ EN PLUS, DIT À PART ET JAMAIS
+                  DANS LA FRACTION. Sans cette ligne, « 3 sur 5 » mélangerait
+                  l'assigné et le demandé, et l'élève lirait COMME UN RETARD ce
+                  qu'il a choisi en plus. ⛔ Deux décomptes réels, aucun taux. */}
+              {frise.enPlus.total > 0 && (
+                <p className="text-sm text-encre-douce">
+                  {frise.enPlus.faits === frise.enPlus.total
+                    ? <>Et {frise.enPlus.total} exercice{frise.enPlus.total > 1 ? 's' : ''} que
+                      tu as demandé{frise.enPlus.total > 1 ? 's' : ''} en plus,
+                      fait{frise.enPlus.total > 1 ? 's' : ''}.</>
+                    : <>Et {frise.enPlus.total} exercice{frise.enPlus.total > 1 ? 's' : ''} que
+                      tu as demandé{frise.enPlus.total > 1 ? 's' : ''} en plus.</>}
+                </p>
+              )}
             </div>
           </section>
 
@@ -290,7 +340,12 @@ export default async function SemaineDeLEleve({
                   <Pastille module={e.atelier} size={28} />
                   <span className="flex-1 min-w-0">
                     <span className="block text-sm text-encre truncate">{e.titre}</span>
-                    <span className="block text-xs text-muet">{e.libelle}</span>
+                    <span className="block text-xs text-muet">
+                      {e.libelle}
+                      {/* ⭐ La marque se VOIT sur la ligne : sans elle, l'élève
+                          ne saurait pas lequel de ses exercices il a demandé. */}
+                      {e.bonus && <span className="text-encre-douce"> · demandé en plus</span>}
+                    </span>
                   </span>
                   {e.echeance && (
                     <span className="text-xs text-muet whitespace-nowrap">
@@ -301,6 +356,23 @@ export default async function SemaineDeLEleve({
               ))}
             </div>
           </section>
+
+          {/* ── TEMPS 3 — L'OFFRE D'EN FAIRE PLUS ────────────────────────── */}
+          {/* ⛔ AUCUN MOMENT NE SE TAIT : quand l'offre ne s'ouvre pas, sa
+              PHRASE prend sa place — « le silence est un mensonge », et
+              « quand tu auras fini » n'est pas « tu as tout pris ». */}
+          {offre.offerte ? (
+            <OffreDEnFairePlus invite={offre.phrase} />
+          ) : offre.phrase ? (
+            <section>
+              <h3 className="font-ui text-xs tracking-[0.1em] text-muet uppercase mb-2">
+                En faire plus
+              </h3>
+              <div className="bg-surface border border-bordure rounded-xl p-5">
+                <p className="text-sm text-encre-douce">{offre.phrase}</p>
+              </div>
+            </section>
+          ) : null}
         </>
       )}
     </div>

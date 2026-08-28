@@ -89,7 +89,8 @@ export async function chargerLaSemaineDeLEleve(
   const incidents: string[] = []
   const vide: SemaineDeLEleve = {
     cycleLundi, porteOuverte: false, moment: 'vide', exercices: [],
-    frise: { cases: [], faits: 0, total: 0 }, recapitulatif: [], bilan: [],
+    frise: { cases: [], faits: 0, total: 0, enPlus: { faits: 0, total: 0 } },
+    recapitulatif: [], bilan: [],
     manque: { copiesNonMesurees: 0, incomplet: false }, ecartAuTroisDuSixC: 0, incidents,
   }
 
@@ -118,6 +119,8 @@ export async function chargerLaSemaineDeLEleve(
       depotId: e.depotId, titre: e.titre, echeance: e.echeance, assigneAt: e.assigneAt,
       atelier: e.atelier, href: e.href, ton: e.etat.ton, libelle: e.etat.libelle,
       competences: e.competences,
+      // ⭐ C6-L3 — la marque, lue au JOURNAL par `exercicesMaisonDeLEleve`.
+      bonus: e.bonus,
     }))
 
   // ⭐ LE TRI EST DÉJÀ ÉCRIT (`comparerLignes`) et `exercicesMaisonDeLEleve` l'a
@@ -131,7 +134,12 @@ export async function chargerLaSemaineDeLEleve(
   const prioritaires = competencesDeLaSemaine(deLaSemaine)
 
   if (moment === 'vide') {
-    return { ...vide, porteOuverte: true, moment: 'vide' }
+    // ⚠️ C6-L3 — ON GARDE LA LISTE ET LA FRISE, ET CE N'EST PAS UN DÉTAIL. Le
+    //    moment se lit sur la semaine IMPOSÉE : un élève dont l'unique exercice
+    //    imposé a été RETIRÉ par son professeur peut porter un bonus et rien
+    //    d'autre. Vider la liste ici lui dirait « tu n'as aucun exercice cette
+    //    semaine » avec un exercice à faire sous les yeux.
+    return { ...vide, porteOuverte: true, moment: 'vide', exercices: deLaSemaine, frise }
   }
 
   // ── Ce que les deux temps partagent : les mesures, et les noms ─────────────
@@ -163,6 +171,11 @@ export async function chargerLaSemaineDeLEleve(
       mesures.filter((m) => m.competence === c), borneDe.get(c) ?? null)
 
     if (moment === 'recapitulatif') {
+      // ⛔ UNE COMPÉTENCE QUE SEUL UN BONUS PORTE N'ENTRE PAS AU RÉCAPITULATIF :
+      //    il annonce LA SEMAINE QU'ON LUI DONNE, et « 0 exercice » se lirait
+      //    comme un score. Elle reste dans `prioritaires` pour le BILAN, qui,
+      //    lui, compte le bonus comme n'importe quel exercice.
+      if (p.nbExercices === 0) continue
       // ⛔ LE RÉCAPITULATIF NE NOMME AUCUNE FAIBLESSE. Seules les FORCES sortent
       //    d'ici — `manquesDeLaCompetence` n'est PAS appelée, et ce n'est pas un
       //    oubli : la nommer ici donnerait à l'élève la réponse à « se juger ».
@@ -201,7 +214,10 @@ export async function chargerLaSemaineDeLEleve(
   return {
     cycleLundi, porteOuverte: true, moment, exercices: deLaSemaine, frise,
     recapitulatif, bilan, manque,
-    ecartAuTroisDuSixC: Math.max(0, prioritaires.length - 3),
+    // ⚠️ L'écart se compte sur ce que le RÉCAPITULATIF annonce — donc sur les
+    //    compétences que la semaine IMPOSE : le `02-` §6.C en annonce trois, et
+    //    c'est de celles-là qu'il parle.
+    ecartAuTroisDuSixC: Math.max(0, prioritaires.filter((p) => p.nbExercices > 0).length - 3),
     incidents,
   }
 }

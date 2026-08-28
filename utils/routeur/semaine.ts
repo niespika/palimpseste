@@ -80,14 +80,35 @@ export interface ExercicePose {
   candidat: Candidat
   /** La règle qui l'a fait entrer dans la liste de priorité. */
   regle: EntreeDePriorite['regle']
-  /** Vrai quand PB3 a départagé — pour le journal. */
+  /**
+   * Vrai quand PB3 a **réellement** départagé — c'est-à-dire quand, à grain
+   * égal, la valeur de `change` a séparé les candidats.
+   *
+   * ⛔ Il valait `true` dès que les deux premiers triés partageaient leur grain,
+   *    donc AUSSI quand PB3 n'avait rien tranché du tout : le journal désignait
+   *    PB3 comme l'auteur d'un choix que personne n'avait fait. C'est exactement
+   *    le cas où le tirage doit avoir lieu, et le confondre le cachait.
+   */
   departageParPB3: boolean
+  /**
+   * `01-` §11, point 5 — vrai quand le choix s'est fait AU TIRAGE, PB1 et PB3
+   * ayant laissé plusieurs ex æquo. Même champ que `SondePosee.tirage`, et la
+   * même raison : « un départage non journalisé rend le routeur irreproductible ».
+   */
+  tirage: boolean
   /** Le tour de PB5 : 0 au premier parcours de la liste, 1 au second, etc. */
   tour: number
 }
 
 export interface SemainePosee {
+  /** ⚠️ À la reprise, les DÉJÀ-POSÉS y sont aussi, en tête et dans leur ordre. */
   exercices: ExercicePose[]
+  /**
+   * ⭐ Ce que CETTE passe a ajouté, et rien d'autre. Sans reprise, c'est
+   *   `exercices` à l'identique. ⛔ Il existe pour qu'aucun appelant n'ait à
+   *   faire un `slice()` sur une longueur qu'il aurait recalculée de son côté.
+   */
+  posesDeCettePasse: ExercicePose[]
   minutesAssignees: number
   ecart: ReturnType<typeof ecartAuPlancher>
   /** `01-` §5 — ce qui n'a pas tenu, et pourquoi. */
@@ -97,6 +118,47 @@ export interface SemainePosee {
     voieMixte: boolean
     motifArret: string
   }
+}
+
+/**
+ * ⭐⭐ C6 · L3 — LE PARAMÈTRE QUI MANQUAIT À LA PHASE B, ET RIEN DE PLUS.
+ *
+ * `01-` §5, LE BUDGET OPTIONNEL : « PB5 s'y applique EXERCICE PAR EXERCICE —
+ * chaque demande sert LE SUIVANT DANS L'ORDRE QUE LA PHASE B AURAIT PRODUIT. »
+ *
+ * ⛔ Une seconde fonction aurait été une seconde phase B, donc une seconde
+ *    lecture de PB1 à PB6 — et deux lectures d'une même règle finissent par
+ *    diverger. Ce que le pull demandait n'était pas un algorithme : c'était de
+ *    pouvoir REPRENDRE la pose là où le budget l'avait arrêtée, et de s'arrêter
+ *    au premier posé.
+ *
+ * ⚠️ CE QUE LA REPRISE FAIT EXACTEMENT :
+ *   · les exercices déjà posés entrent dans `exercices` AVANT la boucle — donc
+ *     **PB2 voit la dernière compétence de la semaine** et ne la redonne pas de
+ *     suite, et **PB3 compare au dernier exercice réellement servi** ;
+ *   · leurs minutes entrent dans le compteur — donc **PB6 borne sur le total**,
+ *     et l'appelant élargit le plafond du quota : « jamais au-delà » devient
+ *     mécanique, il ne se re-vérifie pas ailleurs ;
+ *   · la marche reprend à un **TOUR DE PLUS**, au début de la liste. C'est PB5
+ *     en toutes lettres — « quand la liste est épuisée et qu'il reste du budget,
+ *     ON LA REPARCOURT DANS LE MÊME ORDRE ». *La position exacte où la semaine
+ *     s'était arrêtée n'est journalisée nulle part (`routeur_decisions` porte le
+ *     tour, pas l'index) ; reprendre au début du tour suivant est la lecture que
+ *     PB5 sanctionne, et c'est celle-ci qui est retenue.*
+ *
+ * ⛔ Les instances déjà servies ne peuvent pas revenir : elles sont sorties du
+ *    vivier par `instancesDejaDeposees` — « resservir la même instance au MÊME
+ *    élève serait un défaut silencieux ». La reprise ne relâche AUCUN filtre.
+ */
+export interface RepriseDeLaPose {
+  /** Ce que la semaine a déjà posé, DANS L'ORDRE où elle l'a posé. */
+  dejaPoses: readonly ExercicePose[]
+  /**
+   * Combien d'exercices AU PLUS cette passe ajoute. ⛔ Le pull en pose **UN** :
+   * « l'élève demande UN exercice à la fois » — pas une liste, pas un choix
+   * entre trois, pas un lot de deux.
+   */
+  maxAPoser: number
 }
 
 /**
@@ -124,27 +186,60 @@ export function poserLaSemaine(
   liste: readonly EntreeDePriorite[],
   budget: BudgetMinutes,
   candidatsPour: (c: Competence, dejaPoses: readonly ExercicePose[]) => Candidat[],
+  /**
+   * `01-` §11, point 5 — le départage des ex æquo que PB1 et PB3 laissent.
+   * ⭐ Il se reçoit EN PARAMÈTRE, comme celui de `poserLesSondes` et pour la
+   *   même raison : « pour que le tirage soit REPRODUCTIBLE et JOURNALISABLE,
+   *   le module ne tire pas seul ».
+   * ⚠️ Le défaut prend le premier — c'est l'ancien comportement, DÉTERMINISTE,
+   *    et il ne convient qu'aux tests unitaires : en production, la pose reçoit
+   *    `journalDuTirage().tirer('phase_b')`. Le défaut sert la lisibilité des
+   *    tests, jamais un appel réel.
+   */
+  tirer: (exAequo: readonly string[]) => string = (exAequo) => exAequo[0],
+  /**
+   * ⭐ C6 · L3 — la reprise du budget optionnel. Absente, la pose est celle de
+   *   la semaine, à l'identique : ce paramètre n'a AUCUN effet sur l'appel
+   *   hebdomadaire, qui ne le passe pas.
+   */
+  reprise?: RepriseDeLaPose,
 ): SemainePosee {
-  const exercices: ExercicePose[] = []
-  let minutes = 0
+  // ⭐ Les déjà-posés entrent AVANT la boucle : PB2 voit la dernière compétence
+  //   servie, PB3 compare au dernier exercice réel, et PB6 borne sur le total.
+  const exercices: ExercicePose[] = reprise ? [...reprise.dejaPoses] : []
+  const posesAvant = exercices.length
+  let minutes = exercices.reduce((n, e) => n + e.candidat.dureeMin, 0)
   let permutations = 0
   let motifArret = 'liste et budget épuisés.'
 
   if (liste.length === 0) {
     return {
-      exercices, minutesAssignees: 0, ecart: ecartAuPlancher(0, budget),
-      journal: { permutationsALaCouture: 0, reliquatPerdu: budget.plafond, voieMixte: true,
+      exercices, posesDeCettePasse: [], minutesAssignees: minutes,
+      ecart: ecartAuPlancher(minutes, budget),
+      journal: { permutationsALaCouture: 0, reliquatPerdu: budget.plafond - minutes,
+        voieMixte: true,
         motifArret: 'aucune compétence ciblable : la semaine entière revient à la voie mixte.' },
     }
   }
 
   // PB5 — on reparcourt la liste dans le MÊME ORDRE, tour après tour.
-  let tour = 0
+  // ⭐ À la reprise, on repart AU TOUR SUIVANT et au début de la liste : « quand
+  //   la liste est épuisée et qu'il reste du budget, on la reparcourt dans le
+  //   même ordre ».
+  let tour = reprise && posesAvant > 0
+    ? Math.max(...reprise.dejaPoses.map((e) => e.tour)) + 1
+    : 0
   let i = 0
   let garde = 0
   const GARDE = 500 // filet : jamais une boucle infinie sur un budget non consommé
 
   while (garde++ < GARDE) {
+    // ⛔ « L'élève demande UN exercice à la fois » — la passe s'arrête au
+    //    plafond qu'on lui a fixé, avant même de regarder le budget.
+    if (reprise && exercices.length - posesAvant >= reprise.maxAPoser) {
+      motifArret = `${reprise.maxAPoser} exercice(s) posé(s) : c'est le plafond de cette passe.`
+      break
+    }
     if (i >= liste.length) {
       // La couture entre deux tours.
       tour += 1
@@ -166,6 +261,15 @@ export function poserLaSemaine(
     const candidats = candidatsPour(entree.competence, exercices)
       // PB2, encore : un candidat qui redonnerait la même compétence de suite est écarté.
       .filter((c) => c.competence !== derniere || liste.length === 1)
+      // ⭐ LES BORNES DE L'ENTRÉE — le grain de calibration (`01-` §6, segment 2)
+      //   et la bande de crans du palier de la cible (`01-` §4, couche 3, la part
+      //   DURE : « tout cran absent d'une ligne vaut 0 % »). Elles se lisent SUR
+      //   L'ENTRÉE parce qu'elles dépendent de la CIBLE, jamais du vivier : la
+      //   couche 4 rend ce qui existe, la couche 2-3 dit ce qui a le droit.
+      // ⚠️ Absentes, elles ne bornent rien — hors calibration, le grain relève des
+      //    proportions du §7, qui sont une préférence et jamais un filtre.
+      .filter((c) => !entree.grains || entree.grains.includes(c.grain))
+      .filter((c) => !entree.crans || entree.crans.includes(c.cran))
       // PB6 — il doit TENIR SOUS LE PLAFOND.
       .filter((c) => minutes + c.dureeMin <= budget.plafond)
 
@@ -180,10 +284,30 @@ export function poserLaSemaine(
         : 0
       const tries = [...candidats].sort((a, b) =>
         rangGrain[a.grain] - rangGrain[b.grain] || change(b) - change(a))
-      const elu = tries[0]
-      const aDepartage = tries.length > 1 && rangGrain[tries[0].grain] === rangGrain[tries[1].grain]
 
-      exercices.push({ candidat: elu, regle: entree.regle, departageParPB3: aDepartage, tour })
+      // ⭐ CE QUE CHAQUE RÈGLE LAISSE DERRIÈRE ELLE. `memeGrain` est ce que PB1
+      //   n'a pas tranché ; `exAequo` est ce que PB3 ne tranche pas NON PLUS —
+      //   même grain ET même valeur de `change`. PB3 n'a donc départagé que si
+      //   le second ensemble est STRICTEMENT PLUS PETIT que le premier.
+      const meilleurGrain = rangGrain[tries[0].grain]
+      const meilleurChange = change(tries[0])
+      const memeGrain = tries.filter((c) => rangGrain[c.grain] === meilleurGrain)
+      const exAequo = memeGrain.filter((c) => change(c) === meilleurChange)
+      const aDepartage = memeGrain.length > exAequo.length
+
+      // ⛔⛔ `01-` §11, point 5 — « TRANCHER AU HASARD **ET LOGGUER LE TIRAGE** ».
+      //   PB3 était LA SEULE des cinq règles de départage du corpus à ne pas le
+      //   prescrire, et le silence coûtait cher : `tries[0]` sortait de l'ordre
+      //   du vivier, IDENTIQUE d'un élève à l'autre. Deux élèves de même profil
+      //   recevaient donc le MÊME exercice, la même semaine, toute l'année.
+      // ⚠️ C'est un DÉPARTAGE, jamais un filtre : « entre élèves, une instance
+      //    se ressert » — le tirage disperse, il n'interdit rien.
+      const tirage = exAequo.length > 1
+      const idElu = tirage ? tirer(exAequo.map((c) => c.exerciceId)) : exAequo[0].exerciceId
+      const elu = exAequo.find((c) => c.exerciceId === idElu) ?? exAequo[0]
+
+      exercices.push({ candidat: elu, regle: entree.regle, departageParPB3: aDepartage,
+        tirage, tour })
       minutes += elu.dureeMin
     }
 
@@ -205,6 +329,7 @@ export function poserLaSemaine(
   const ecart = ecartAuPlancher(minutes, budget)
   return {
     exercices,
+    posesDeCettePasse: exercices.slice(posesAvant),
     minutesAssignees: minutes,
     ecart,
     journal: {

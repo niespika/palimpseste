@@ -328,11 +328,24 @@ async function lireLesDepots(admin: Admin, semaineLundi: string): Promise<DepotA
   const ancre = new Date(`${semaineLundi}T00:00:00Z`)
   const gte = `${toISODate(addDaysUTC(ancre, -1))}T00:00:00Z`
   const lt = `${toISODate(addDaysUTC(ancre, 8))}T00:00:00Z`
-  const lignes = await lirePagine<{ id: string; eleve_id: string; statut: string; assigne_at: string }>(
-    admin, 'exercices_depots', 'id, eleve_id, statut, assigne_at', ['assigne_at', 'id'],
+  // ⭐ C6-L3 — LA MARQUE SE JOINT AU JOURNAL, par `routeur_decision_id`. Elle est
+  //   NULLABLE des deux côtés : pas de décision (voie du professeur) ou une
+  //   décision d'avant C6-L3 valent `false`, et c'est juste — un exercice du
+  //   professeur n'est jamais un bonus.
+  const lignes = await lirePagine<{
+    id: string; eleve_id: string; statut: string; assigne_at: string
+    routeur_decisions: { bonus?: boolean } | Array<{ bonus?: boolean }> | null
+  }>(
+    admin, 'exercices_depots', 'id, eleve_id, statut, assigne_at, routeur_decisions(bonus)',
+    ['assigne_at', 'id'],
     (q) => (q as never as { gte: (a: string, b: string) => { lt: (a: string, b: string) => unknown } })
       .gte('assigne_at', gte).lt('assigne_at', lt))
-  return lignes.map((l) => ({ eleveId: l.eleve_id, statut: l.statut, assigneAt: l.assigne_at }))
+  return lignes.map((l) => {
+    const d = Array.isArray(l.routeur_decisions) ? l.routeur_decisions[0] : l.routeur_decisions
+    return {
+      eleveId: l.eleve_id, statut: l.statut, assigneAt: l.assigne_at, bonus: d?.bonus === true,
+    }
+  })
 }
 
 /** Le décompte des dépôts d'une semaine hors calendrier — pour ne pas se taire. */

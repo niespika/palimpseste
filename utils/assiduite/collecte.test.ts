@@ -18,8 +18,8 @@ import { SEUILS_DE_DEMARRAGE, assiduiteDeLEleve, type SemaineEleve } from '../ro
 const TZ = 'America/Toronto'
 const SEUILS = { ...SEUILS_DE_DEMARRAGE }
 
-const d = (eleveId: string, statut: string, assigneAt: string): DepotACompter =>
-  ({ eleveId, statut, assigneAt })
+const d = (eleveId: string, statut: string, assigneAt: string, bonus = false): DepotACompter =>
+  ({ eleveId, statut, assigneAt, bonus })
 
 // ════════════════════════════════════════════════════════════════════════════
 describe('C4-L13 · la jonction — d’une liste de dépôts à (assignés, terminés)', () => {
@@ -268,5 +268,61 @@ describe('C4-L13 · le lotissement — le plafond de 1000 lignes ne signale rien
 
   test('une taille de lot absurde LÈVE plutôt que de boucler', () => {
     assert.throws(() => lotir([1, 2, 3], 0), ChargeUtileInvalide)
+  })
+})
+
+// ════════════════════════════════════════════════════════════════════════════
+describe('C6-L3 · le bonus et l’assiduité — « trois quarts de ses exercices ASSIGNÉS »', () => {
+  test('⛔⛔ UN BONUS NON RENDU N’ABAISSE PLUS L’ASSIDUITÉ D’UN ÉLÈVE QUI EN A FAIT PLUS', () => {
+    // Le défaut exact que le lot ferme : un élève à 3/3 qui demande un exercice
+    // de plus et ne le finit pas tomberait à 3/4 — SOUS le seuil des trois
+    // quarts —, et sa semaine cesserait d’être « faite » POUR AVOIR TRAVAILLÉ
+    // DAVANTAGE. Le dispositif punirait le geste qu’il offre.
+    const tri = comptesDeLaSemaine([
+      d('a', 'clos', '2026-09-01T14:00:00Z'),
+      d('a', 'clos', '2026-09-01T14:00:00Z'),
+      d('a', 'clos', '2026-09-01T14:00:00Z'),
+      d('a', 'assigne', '2026-09-02T14:00:00Z', true), // le bonus, pas fait
+    ], '2026-08-31', TZ)
+    assert.deepEqual(tri.parEleve.get('a'), { assignes: 3, termines: 3 })
+    assert.equal(tri.bonus, 1, 'il est COMPTÉ à part — « un vide expliqué »')
+  })
+
+  test('⭐ UN BONUS RENDU N’AJOUTE RIEN NON PLUS : il sort des DEUX côtés de la fraction', () => {
+    const tri = comptesDeLaSemaine([
+      d('a', 'clos', '2026-09-01T14:00:00Z'),
+      d('a', 'clos', '2026-09-02T14:00:00Z', true),
+    ], '2026-08-31', TZ)
+    assert.deepEqual(tri.parEleve.get('a'), { assignes: 1, termines: 1 })
+    assert.equal(tri.bonus, 1)
+  })
+
+  test('⚠️ UN ÉLÈVE QUI N’A QUE DES BONUS N’A AUCUNE LIGNE — il n’a rien d’ASSIGNÉ', () => {
+    // « Une semaine sans aucun exercice assigné est FAITE par construction » :
+    // c’est la règle existante, et elle vaut ici sans changement.
+    const tri = comptesDeLaSemaine([
+      d('a', 'assigne', '2026-09-01T14:00:00Z', true),
+    ], '2026-08-31', TZ)
+    assert.equal(tri.parEleve.has('a'), false)
+    assert.equal(tri.retenus, 0)
+    assert.equal(tri.bonus, 1)
+  })
+
+  test('⛔ UN BONUS `retire` COMPTE COMME RETIRÉ, pas comme bonus — l’ordre des gardes tient', () => {
+    // `retire` est une décision du professeur, et elle se journalise comme telle.
+    const tri = comptesDeLaSemaine([
+      d('a', 'retire', '2026-09-01T14:00:00Z', true),
+    ], '2026-08-31', TZ)
+    assert.equal(tri.retires, 1)
+    assert.equal(tri.bonus, 0)
+  })
+
+  test('⚠️ SANS AUCUN BONUS, le compte est EXACTEMENT celui d’avant C6-L3', () => {
+    const tri = comptesDeLaSemaine([
+      d('a', 'clos', '2026-09-01T14:00:00Z'),
+      d('a', 'assigne', '2026-09-01T14:00:00Z'),
+    ], '2026-08-31', TZ)
+    assert.deepEqual(tri.parEleve.get('a'), { assignes: 2, termines: 1 })
+    assert.equal(tri.bonus, 0)
   })
 })

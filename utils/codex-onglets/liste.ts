@@ -85,6 +85,24 @@ export interface ExerciceMaison {
    *    composée (`02-` §6.C ; `utils/eleve/semaine.ts`).
    */
   competences: string[]
+  /**
+   * ⭐⭐ C6 · L3 — CE QUE L'ÉLÈVE A **DEMANDÉ**, par opposition à ce qu'on lui a
+   *    IMPOSÉ. Sans lui, la frise de la semaine compte « 3 sur 5 » en mélangeant
+   *    l'assigné et le demandé — **et l'élève lit comme un retard ce qu'il a
+   *    choisi en plus**. *Le défaut a été déposé nommément par `C6-L2`, qui l'a
+   *    vu venir : la frise était juste tant qu'aucun dépôt n'était bonus.*
+   *
+   * ⚠️ IL SE LIT AU JOURNAL, JAMAIS SUR L'INSTANCE. « Un exercice servi sur ce
+   *    quota porte la marque `bonus` AU JOURNAL (§11) » (`01-` §5) : la jointure
+   *    passe par `exercices_depots.routeur_decision_id`, qui est NULL sur toute
+   *    la voie du professeur — et un exercice du professeur n'est jamais un
+   *    bonus, donc `false` y est la bonne valeur, pas un repli.
+   *
+   * ⛔ C'est un ÉLARGISSEMENT de ce que cette lecture REND, jamais une seconde
+   *    liste : le patron est celui d'`assigneAt` et de `competences`, que
+   *    `C6-L2` a ajoutés ici pour la même raison.
+   */
+  bonus: boolean
 }
 
 /**
@@ -134,7 +152,7 @@ export async function exercicesMaisonDeLEleve(
 
   const { data, error } = await admin
     .from('exercices_depots')
-    .select('id, statut, echeance, assigne_at, '
+    .select('id, statut, echeance, assigne_at, routeur_decisions(bonus), '
       + 'exercices!inner(id, lieu, classe_id, consigne_instanciee, modes_par_competence)')
     .eq('eleve_id', eleveId)
     .neq('statut', 'retire')
@@ -167,6 +185,11 @@ export async function exercicesMaisonDeLEleve(
         href: hrefDuDeroule(atelier, txt(d.id)),
         assigneAt: txt(d.assigne_at),
         competences: competencesDeclarees(ex.modes_par_competence),
+        // ⚠️ La jointure est NULLABLE des deux côtés — pas de décision (voie du
+        //    professeur), ou une décision d'avant C6-L3 : les deux valent `false`,
+        //    et c'est juste. Le `un()` déplie l'embed, que PostgREST rend tantôt
+        //    objet tantôt tableau selon la cardinalité qu'il déduit.
+        bonus: lig(un(d.routeur_decisions)).bonus === true,
       }
     })
     .sort((a, b) => comparerLignes(

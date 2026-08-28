@@ -47,6 +47,7 @@ import { COMPETENCES } from '@/utils/chaine/types'
 import { chargerDoctrineDepuisBase } from '@/utils/fabrique/doctrine'
 import type { Competence, Lettre, Segment } from '@/utils/routeur/types'
 import { lireLesSegments, segmentDuCycle } from './calendrier-serveur'
+import { poserLeColdStart, type BilanDuColdStart } from './etat-serveur'
 import type { DecoupeEnSegments } from '@/utils/routeur/segments'
 import {
   candidatsPour, constituerLeVivier, substratsDeLaSemaine,
@@ -104,6 +105,11 @@ export interface BilanDuRouteur {
   /** ⚠️ Les `update` qui n'ont touché AUCUNE ligne : « la ligne qu'il trouve ». */
   minutesSansLigne: number
   budgetsRefuses: Array<{ eleveId: string; motif: string }>
+  /**
+   * ⭐ `01-` §10 — ce que le COLD START a posé avant la pose de la semaine.
+   * `null` quand il n'avait rien à faire.
+   */
+  coldStart: BilanDuColdStart | null
   erreurs: string[]
 }
 
@@ -117,7 +123,7 @@ function bilanVide(
     elevesAttendus: 0, elevesServis: 0, nonServis: [], sansCibleCiblable: 0, viviersVides: 0,
     exercicesPoses: 0, decisionsEcrites: 0, depotsPoses: 0, sondesPosees: 0,
     ecartsAuPlancher: [], ecartsDuVivier: {}, minutesRemplies: 0, minutesSansLigne: 0,
-    budgetsRefuses: [], erreurs: [],
+    budgetsRefuses: [], coldStart: null, erreurs: [],
   }
 }
 
@@ -216,6 +222,33 @@ export async function poserLesSemainesDuRouteur(
   const coursVus = await lireLesCoursVus(admin, toutesLesClasses, aujourdHui)
   bilan.erreurs.push(...coursVus.incidents)
 
+  // ── LE COLD START — AVANT LA POSE, ET C'EST TOUT L'ENJEU ─────────────────
+  // ⛔⛔ `poserLeColdStart` était écrit, testé, et N'AVAIT AUCUN APPELANT : la
+  //   médiane de classe du `01-` §10 n'a jamais été posée une seule fois. Le
+  //   coût était invisible et total — R0 exige « `evaluee` **et** une lettre »,
+  //   et un élève absent au diagnostic n'a pas de lettre : sa liste de priorité
+  //   sortait VIDE, et le routeur ne lui posait RIEN, toute l'année.
+  // ⭐ Il est idempotent par construction — « il POSE la première lettre, il
+  //   n'écrase jamais » — donc le rejouer chaque lundi ne coûte rien et
+  //   rattrape l'élève inscrit en cours d'année.
+  // ⚠️ Il vient APRÈS la lecture de la population et AVANT la boucle de pose :
+  //   les lettres qu'il écrit doivent être lisibles par `lireLesNiveaux` du
+  //   même cycle, sinon il ne servirait qu'à la semaine suivante.
+  const elevesParClasse = new Map<string, string[]>()
+  for (const [eleveId, classes] of classesDesEleves) {
+    for (const classeId of classes) {
+      elevesParClasse.set(classeId, [...(elevesParClasse.get(classeId) ?? []), eleveId])
+    }
+  }
+  try {
+    bilan.coldStart = await poserLeColdStart(admin, elevesParClasse, fuseau)
+    bilan.erreurs.push(...bilan.coldStart.erreurs)
+  } catch (e) {
+    // Même règle que pour la collecte : un cold start en échec ne doit pas
+    // emporter la pose de la semaine pour les élèves qui, eux, ont leur lettre.
+    bilan.erreurs.push(`cold start : ${(e as Error).message} — la pose continue.`)
+  }
+
   const maintenant = new Date().toISOString()
   const echeance = toISODate(addDaysUTC(new Date(`${cycleLundi}T00:00:00Z`),
     options.joursDEcheance ?? 6))
@@ -306,7 +339,7 @@ async function lirePopulation(admin: Admin, erreurs: string[]): Promise<string[]
 // UNE SEMAINE, UN ÉLÈVE
 // ════════════════════════════════════════════════════════════════════════════
 
-interface ContextePose {
+export interface ContextePose {
   eleveId: string
   cycleLundi: string
   segment: Segment
@@ -337,13 +370,52 @@ interface PoseDUnEleve {
   erreurs: string[]
 }
 
-async function poserLaSemaineDUnEleve(admin: Admin, c: ContextePose): Promise<PoseDUnEleve> {
-  const out: PoseDUnEleve = {
-    motifNonServi: null, listeVide: false, vivierVide: false, exercicesPoses: 0,
-    decisionsEcrites: 0, depotsPoses: 0, sondesPosees: 0, ecart: null, ecartsDuVivier: [],
-    erreurs: [],
-  }
+// ════════════════════════════════════════════════════════════════════════════
+// LA COMPOSITION D'UN ÉLÈVE — l'état, le vivier et la liste de priorité
+// ════════════════════════════════════════════════════════════════════════════
 
+/**
+ * ⭐⭐ CE QUE LA POSE HEBDOMADAIRE ET LE PULL DE C6-L3 PARTAGENT, MOT POUR MOT.
+ *
+ * La phase A (le pool) et la couche 4 (le vivier) ne dépendent d'AUCUN des deux
+ * appelants : « tout se décide à la construction du cycle » (`01-` §5), et le
+ * pull sert « le suivant dans l'ordre que LA PHASE B AURAIT PRODUIT » — donc
+ * depuis la MÊME liste de priorité, le MÊME vivier et le MÊME état.
+ *
+ * ⛔ Extrait de `poserLaSemaineDUnEleve` par C6-L3, et pour une raison précise :
+ *    le pull avait besoin de ces quatre-vingts lignes, et les recopier en aurait
+ *    fait un SECOND DOMICILE de l'ordre des phases. « Si une règle est réécrite
+ *    ici, le lot a échoué » vaut aussi pour l'orchestration qui les appelle.
+ *
+ * ⚠️ `hasard` SE REÇOIT EN PARAMÈTRE, et ce n'est pas un confort de test. La pose
+ *    hebdomadaire prend `Math.random` ; le pull prend un hasard DÉTERMINISTE par
+ *    (élève × cycle × rang) — c'est ce qui fait que deux clics concurrents
+ *    élisent LE MÊME exercice, et que `uk_depots_eleve_exercice` devient la garde
+ *    mécanique du double clic (`utils/routeur/bonus.ts`).
+ */
+export interface CompositionDUnEleve {
+  budget: ReturnType<typeof budgetDeLEleve>
+  /** ⛔ Le piège de la vacuité : non nul = cet élève ne reçoit RIEN, et on le DIT. */
+  motifNonServi: string | null
+  vivier: { retenus: InstanceRetenue[]; ecartes: EcartDuVivier[] }
+  listeComplete: EntreeDePriorite[]
+  /** Ce que la liste de priorité a écarté — journalisé sur la décision. */
+  journalPriorite: unknown
+  /** `01-` §6, R1 — l'Expression prend EN PLUS une secondaire à C, sur `produire`. */
+  expressionEnSecondaire: boolean
+  /** Le palier de chaque compétence, tel que LA COLONNE le porte (l'état, pas l'affichage). */
+  paliers: Map<Competence, Lettre>
+  /** Ce que la phase A a construit par compétence — la phase C s'en sert pour ses sondes. */
+  etats: EtatPourCiblage[]
+  escalades: Awaited<ReturnType<typeof lireLesEscalades>>
+  mesures: Awaited<ReturnType<typeof lireLesMesures>>
+  /** Le journal du tirage, à passer tel quel à `lignesDeDecision`. */
+  journal: ReturnType<typeof journalDuTirage>
+}
+
+export async function composerPourUnEleve(
+  admin: Admin, c: ContextePose, hasard: () => number = Math.random,
+): Promise<CompositionDUnEleve> {
   const profil = await lireLeProfil(admin, c.eleveId)
   const budget = budgetDeLEleve(c.inscriptions, profil.reglage)
   if (!budget.budget) {
@@ -351,9 +423,15 @@ async function poserLaSemaineDUnEleve(admin: Admin, c: ContextePose): Promise<Po
     //    dont aucune inscription active ne porte de parcours ne reçoit AUCUN
     //    exercice routé, ET LE PROFESSEUR EN EST AVERTI ». Jamais un service
     //    silencieusement réduit aux seuls types génériques.
-    out.motifNonServi = budget.avertissements.join(' ')
-      || `non servi (${budget.motifNonServi ?? 'motif inconnu'}).`
-    return out
+    return {
+      budget,
+      motifNonServi: budget.avertissements.join(' ')
+        || `non servi (${budget.motifNonServi ?? 'motif inconnu'}).`,
+      vivier: { retenus: [], ecartes: [] },
+      listeComplete: [], journalPriorite: null, expressionEnSecondaire: false,
+      paliers: new Map(), etats: [], escalades: new Map(), mesures: [],
+      journal: journalDuTirage(hasard),
+    }
   }
 
   // ── L'ÉTAT, LU UNE FOIS ──────────────────────────────────────────────────
@@ -365,7 +443,7 @@ async function poserLaSemaineDUnEleve(admin: Admin, c: ContextePose): Promise<Po
   ])
   const optOut = await lireLOptOut(admin, c.inscriptions.map((i) => i.classeId))
   const historique = historiqueDesCibles(decisions)
-  const journal = journalDuTirage()
+  const journal = journalDuTirage(hasard)
 
   // ── PA1 — la proportion des modes, EN TÊTE, parce qu'elle est une ENTRÉE ──
   //    des règles de ciblage : « R2 lit le groupe qu'elle réclame pour choisir
@@ -408,8 +486,6 @@ async function poserLaSemaineDUnEleve(admin: Admin, c: ContextePose): Promise<Po
     positionsDeLecture: c.positions,
     instancesDejaDeposees: c.dejaDeposees,
   })
-  out.ecartsDuVivier = vivier.ecartes
-  out.vivierVide = vivier.retenus.length === 0
 
   // ── PA2 et PA3 — la liste de priorité, construite UNE SEULE FOIS ─────────
   const nombreDeMesures = (comp: Competence) =>
@@ -431,13 +507,54 @@ async function poserLaSemaineDUnEleve(admin: Admin, c: ContextePose): Promise<Po
   const listeComplete: EntreeDePriorite[] = [...liste]
   const pa3 = secondeInscriptionPA3(liste, etats)
   if (pa3) listeComplete.push(pa3)
+
+  return {
+    budget,
+    motifNonServi: null,
+    vivier,
+    listeComplete,
+    journalPriorite,
+    expressionEnSecondaire: (journalPriorite.R1 as { secondaireSurProduire?: boolean })
+      ?.secondaireSurProduire === true,
+    paliers,
+    etats,
+    escalades,
+    mesures,
+    journal,
+  }
+}
+
+async function poserLaSemaineDUnEleve(admin: Admin, c: ContextePose): Promise<PoseDUnEleve> {
+  const out: PoseDUnEleve = {
+    motifNonServi: null, listeVide: false, vivierVide: false, exercicesPoses: 0,
+    decisionsEcrites: 0, depotsPoses: 0, sondesPosees: 0, ecart: null, ecartsDuVivier: [],
+    erreurs: [],
+  }
+
+  // ⭐ L'ÉTAT, LE VIVIER ET LA LISTE — partagés avec le pull de C6-L3, et lus
+  //   par la MÊME fonction : « le suivant dans l'ordre que la phase B aurait
+  //   produit » n'a de sens que si les deux partent du même pool.
+  const compo = await composerPourUnEleve(admin, c)
+  const { budget, vivier, listeComplete, journalPriorite, expressionEnSecondaire,
+    paliers, etats, escalades, mesures, journal } = compo
+  out.ecartsDuVivier = vivier.ecartes
+  out.vivierVide = vivier.retenus.length === 0
+  if (compo.motifNonServi || !budget.budget) {
+    // ⛔ LE PIÈGE DE LA VACUITÉ, condition de recette du `07-` §1.3 : « un élève
+    //    dont aucune inscription active ne porte de parcours ne reçoit AUCUN
+    //    exercice routé, ET LE PROFESSEUR EN EST AVERTI ».
+    out.motifNonServi = compo.motifNonServi
+    return out
+  }
   out.listeVide = listeComplete.length === 0
 
   // ── PHASE B — la pose ────────────────────────────────────────────────────
-  const expressionEnSecondaire = (journalPriorite.R1 as { secondaireSurProduire?: boolean })
-    ?.secondaireSurProduire === true
+  // ⭐ LE QUATRIÈME CANAL DE TIRAGE. Les trois autres — `R3`, `sondes`,
+  //   `phase_c` — étaient branchés depuis C4-L12 ; `phase_b` manquait, et c'est
+  //   lui qui disperse les exercices entre deux élèves de même profil.
   const semaine = poserLaSemaine(listeComplete, budget.budget,
-    (comp, dejaPoses) => candidatsPour(vivier.retenus, comp, dejaPoses, expressionEnSecondaire))
+    (comp, dejaPoses) => candidatsPour(vivier.retenus, comp, dejaPoses, expressionEnSecondaire),
+    journal.tirer<string>('phase_b'))
   out.exercicesPoses = semaine.exercices.length
   if (semaine.ecart.souSLePlancher) {
     out.ecart = { manque: semaine.ecart.manque, assignees: semaine.minutesAssignees,
@@ -636,7 +753,7 @@ async function remplirLesMinutes(
   return { remplies, sansLigne, budgetsRefuses, erreurs }
 }
 
-async function dureesDesExercices(
+export async function dureesDesExercices(
   admin: Admin, exerciceIds: readonly string[],
 ): Promise<Map<string, number | null>> {
   const out = new Map<string, number | null>()

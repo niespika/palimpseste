@@ -12,6 +12,7 @@ import { chargerStatsRevision } from './modules/quazian/actions'
 import { livresPourClasse, toutesSemainesDone } from './modules/aletheia/data'
 import { retoursDExamenALire } from '@/utils/codex-onglets/liste'
 import { signalDeLaSemaine } from '@/utils/eleve/semaine-serveur'
+import { signalDuPush } from '@/utils/eleve/bonus-serveur'
 import { fichesDejaServies } from '@/utils/eleve/fiche-serveur'
 import { lundiOnOrBefore, toISODate } from '@/utils/calendrier-grille'
 import Pastille, { type ModuleSceau } from '@/components/Pastille'
@@ -232,6 +233,29 @@ export default async function TableauDeBordEleve() {
     })))
     : []
 
+  // ── ⭐⭐ C6 · L3 — LE PUSH : « une SUGGESTION, JAMAIS une assignation » ──────
+  // `01-` §5 : « une compétence SANS MESURE DEPUIS LA PÉRIODE DU PLANCHER DE
+  // MESURE (§9), chez un élève À C OU MOINS, apparaît en SUGGESTION sur son
+  // tableau de bord. C'est une suggestion, jamais une assignation — L'ÉLÈVE LA
+  // PREND PAR LE MÊME PULL, ou l'ignore. »
+  //
+  // ⛔⛔ ELLE N'ÉCRIT RIEN. `signalDuPush` est une LECTURE : aucune ligne
+  //    n'apparaît dans `exercices_depots` tant que l'élève n'a pas cliqué, et le
+  //    clic passe par l'offre de `/eleve/semaine` — le même pull, jamais un
+  //    second chemin.
+  //
+  // ⛔ LE PROFIL EST UNIFIÉ PAR ÉLÈVE : un seul appel, même en état « Toutes »,
+  //    quand la tuile de la semaine, elle, naît PAR INSCRIPTION. Les classes ne
+  //    servent qu'à l'opt-out.
+  //
+  // ⚠️ LA PORTE EST LUE DANS `signalDuPush`, pas ici — « une garde qu'on peut
+  //    oublier en écrivant un second écran n'est pas une garde », et la tuile
+  //    porte un lien.
+  const push = enContexte.length > 0
+    ? await signalDuPush(admin, user!.id, enContexte.map((i) => i.classe_id),
+      cycleLundi, fuseauEcole)
+    : null
+
   // ── ⭐ LA FICHE « SERVIE UNE FOIS — À LA RENTRÉE » (`06-` §5) ───────────────
   // *Consultable* est une page ; *servie une fois* est une POUSSÉE, au premier
   // passage. Le tableau de bord est la seule surface de poussée de l'élève.
@@ -362,6 +386,30 @@ export default async function TableauDeBordEleve() {
       classe,
     })
   }
+  // ⭐⭐ C6 · L3 — LA SUGGESTION. ⛔ ELLE EST L'URGENCE LA PLUS BASSE DU TABLEAU
+  //    (25, sous les fiches à 30), et c'est la règle qui le veut : « c'est une
+  //    SUGGESTION, jamais une assignation ». Elle ne doit JAMAIS passer devant un
+  //    travail à rendre — ni devant une lecture, ni même devant les fiches.
+  // ⚠️ ELLE PORTE UN NOM COURT, ET C'EST DÉLIBÉRÉ : à largeur mobile, les titres
+  //    de tuiles se tronquent (`truncate`, mécanisme partagé de C7-L2 — « Les six
+  //    com… »). Le corriger n'est pas de ce lot ; nommer court, si.
+  // ⛔ ET AUCUN NOMBRE DANS LE DÉTAIL : ni minutes, ni « depuis 4 cycles ». « Un
+  //    écran n'affiche un nombre que si ce nombre compte quelque chose » (`06-`
+  //    §5), et le décompte de cycles ne compte rien POUR L'ÉLÈVE.
+  if (push?.aSuggerer && push.competenceDite) taches.push({
+    cle: 'bonus-suggestion',
+    // ⭐ Comme la tuile de la semaine, elle ne porte le sceau d'aucun atelier :
+    //   l'exercice servi peut relever de l'un ou de l'autre, et « l'atelier est
+    //   un attribut visuel, jamais un lieu » — il se montrera sur l'exercice.
+    module: 'codex',
+    titre: 'Un exercice en plus ?',
+    detail: `On n’a pas regardé ${push.competenceDite.toLowerCase()} depuis un moment. `
+      + 'Si tu veux, tu peux demander un exercice là-dessus.',
+    href: '/eleve/semaine',
+    cta: 'Voir ma semaine',
+    urgence: 25,
+    badge: { texte: 'si tu veux', ton: 'muet' },
+  })
   // ⭐ « Servie une fois, à la rentrée » — la poussée, et elle s'éteint seule.
   // ⚠️ L'URGENCE LA PLUS BASSE DU TABLEAU (30, sous la lecture Aletheia à 40) :
   //    découvrir ses compétences n'est jamais urgent, et cette tuile ne doit

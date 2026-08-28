@@ -930,3 +930,26 @@ après lecture, il reste une version finale à écrire — l'étiquette juste es
 > `C6L2-24`, `-27` et `-28` —, qui attendent tous que le routeur pose sa première semaine.
 
 - ⭐ **LES DIMENSIONS DITES À L'ÉLÈVE SONT « CLUNKY », ET LE DÉFAUT EST DE FORME, PAS DE FOND** *(constaté par Louis le 28/08, en regardant les écrans de `C6-L2` — c'est un défaut que seul l'œil pose, sur une liste servie d'un coup)*. Les **51** `competences_correspondance.dimension_eleve` sont justes une par une ; **c'est LUES EN LISTE qu'elles se cassent** — et `C6-L2` les sert désormais en liste à trois endroits *(le récapitulatif de la semaine, le bilan, la fiche de compétence)*, là où le retour n'en citait qu'une à la fois. ⚠️ **Trois patrons se mélangent, et c'est le mélange qui accroche l'œil, pas la longueur :** ⭐ *(a)* **des GROUPES NOMINAUX**, qui sont la bonne forme — « la clarté de tes phrases », « le cap du devoir », « les mots savants » ; ⛔ *(b)* **des QUESTIONS ou des ALTERNATIVES**, qui sont en réalité **la colonne d'à côté** — « ta problématique, ou celle du sujet ? », « rassembler, ou ajouter », « recopier, ou reformuler », « fondre, plutôt qu'aligner », « tes concepts : au travail, ou posés là », « tes références : au travail, ou posées là » : *le §5 des fiches porte TROIS colonnes — la dimension, **la question**, les réponses fermées — et dans ces six cas c'est la QUESTION qui a été recopiée dans la case de la dimension* ; ⛔ *(c)* **des VERBES À L'INFINITIF** — « interroger ta problématique », « tenir ta nouvelle problématique », « dire ce que le texte dit » —, qui cassent le parallélisme dès qu'une puce les suit. ⚠️ **Et six dépassent 45 caractères**, dont une à **66** — « les liens entre justification et conclusion, écrits noir sur blanc » —, dans une puce qui en attend une ligne. ⭐⭐ **OÙ ÇA SE CORRIGE, ET CE N'EST NI LA BASE NI LE DÉRIVEUR** *(vérifié : `dimension_eleve` n'apparaît **zéro fois** dans `derive-instruments.py` et `derive-doctrine.py`)* : la source est la **colonne « la dimension, dite à l'élève » du §5 de `competences/<nom>.md`**, lue par `utils/fabrique/fiche-competence.ts` et versée en base **par la fabrique** *(C4-L8)*. **On corrige la fiche, on redépose ; on ne touche jamais la table.** ⚠️ **Trois conséquences à peser avant de le faire.** *(1)* **Redéposer MONTE la version de la fiche**, et les versions de prod sont déjà en avance sur celles du bac à sable *(expression 3.2/3.1, argumentation 4.3/4.1…)* : la correction doit se jouer **des deux côtés**, ou l'écart se creuse. *(2)* **QUATRE écrans lisent cette colonne** — « se juger », le rappel du temps 1, le retour du temps 4, et les trois écrans de `C6-L2` : *une seule source, donc une seule correction, mais elle se voit partout à la fois.* *(3)* ⛔ **RR4 ne bouge pas** : ce sont des dimensions **en langue élève**, jamais un code d'observable, jamais un seuil — *« la coupure passe entre le barème et ce qui doit se trouver dans une copie »* *(`01-` §12)*. ⭐ *Une règle de rédaction en une ligne suffirait à tenir les trois patrons ensemble : **un groupe nominal, commençant par un déterminant, sous quarante-cinq caractères, sans virgule** — et la question va dans la colonne de la question.*
+
+- ⚠️ **LE BILAN DE LA SEMAINE REND UN TITRE DE COMPÉTENCE **NU** QUAND RIEN N'A ÉTÉ MESURÉ**
+  *(vu à l'œil au smoke élève de `C6-L3`, 28/08)*. Sur l'écran `/eleve/semaine`, au second temps,
+  la carte du bilan affichait **« Argumentation »** seul, sans une ligne dessous : les quatre listes
+  de `bilanDeLaCompetence` — `bonneSurprise`, `angleMort`, `confirme`, `connu` — étaient vides,
+  et `app/eleve/semaine/page.tsx` rend le nom de la compétence **avant** ses conditionnelles.
+  ⭐ **Le bandeau du dessus dit bien ce qui manque** *(« 3 de tes copies n'ont pas encore été
+  corrigées »)*, donc l'écran ne ment pas — **mais un titre suivi de rien est un moignon**, et il se
+  lit comme une phrase qu'on aurait coupée. ⛔ **Ce n'est pas de `C6-L3`** : le bilan est de
+  `C6-L2`, clos, et le prompt de `C6-L3` interdit d'y toucher *(« tu ne touches pas au
+  récapitulatif ni au bilan »)*. ⭐ **La réparation tient en une condition** : ne rendre le bloc
+  d'une compétence que si l'une des quatre listes porte quelque chose — ou lui donner sa phrase,
+  comme `C6-L2` l'a fait partout ailleurs. **Condition de reprise : n'importe quel passage sur
+  l'écran de la semaine ; le cas se reproduit dès qu'une copie du cycle n'est pas encore mesurée.**
+
+- ⚠️ **`exercices.bonus` N'A PLUS AUCUN LECTEUR, ET C'EST UNE DÉCISION DE CONCEPTION QUI RESTE À
+  PRENDRE** *(depuis `C6-L3`, 28/08)*. La marque du `01-` §5 vit désormais au **journal**
+  *(`routeur_decisions.bonus`)* — le grain du fait est (élève × exercice), et `exercices` est la
+  banque, qui se ressert entre élèves. La colonne de l'instance reste : le **format d'import** la
+  connaît et la **signale** *(`08-` §7.3)*, mais **plus rien ne la lit** — la chaîne lit la
+  décision. ⛔ **Ni le retrait de la colonne ni celui de son contrôle d'import ne sont un geste de
+  lot** : le `07-` §1.1 la déclare, et son sort se tranche à la conception. *La phrase qui dit ce
+  qu'elle ne peut pas porter est écrite au `07-` §1.1 depuis le 28/08.*
