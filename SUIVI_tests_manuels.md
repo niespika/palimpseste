@@ -7663,9 +7663,37 @@ interruption. Le décor se reconnaît à sa classe, `nom LIKE 'RECETTE-C5L3%'`. 
   ils le seront. »)*, mais **il n'a jamais été affiché**.
   **Condition de reprise : Louis ferme `exercices_actif` à `/prof/allumage`, regarde
   `/eleve/semaine`, et le rouvre.** *C'est un geste de quelques secondes, et c'est le sien.*
-- [ ] **C6L2-24 · ⚠️ LA TUILE ET LA FRISE NE SE PROUVENT QU'EN BAC À SABLE.** **La production ne
-  porte AUCUN dépôt maison** — mesuré le 28/08 : 86 dépôts, `lieu = 'classe'` sur les 86, **zéro
-  maison** *(le bac à sable en porte 21)*. ⛔ **Un écran vide en production n'est donc pas un
+- [x] **C6L2-31 · ⭐⭐ LE SMOKE DE PRODUCTION, APRÈS DÉPLOIEMENT — 28/08.** Le code est poussé
+  *(`origin/main` = `bad15b2` ; mes deux commits `1e635c0` et `fdd67a5` y sont)* et le schéma de
+  prod portait déjà ses deux colonnes. **Vérifié, en LECTURE SEULE, sur la production :**
+  · ⭐ **les deux routes neuves EXISTENT dans le build déployé** — `/eleve/semaine` et
+    `/eleve/moi/competences` rendent **307** *(la redirection d'authentification)*, quand
+    `/eleve/nimporte-quoi` et `/eleve/moi/inexistant` rendent **404**. *Le contraste est la preuve :
+    un 307 sur une route inexistante serait impossible.*
+  · ⭐ **LES SIX FICHES SE SERVENT EN PRODUCTION** — 6 rendues, `monitoring` écarté, **aucun
+    incident** ; chacune avec son texte *(726 à 824 caractères)* et ses dimensions *(7 à 11)*.
+    ⚠️ Ce sont les versions de PROD *(expression 3.2 · argumentation 4.3 · structure 3.3 ·
+    connaissance 2.2 · synthèse 3.4 · questionnement 2.2)*, en avance sur le bac à sable.
+  · ⭐⭐ **LE CANAL ③ EST OUVERT POUR DE VRAI : 12 élèves sur 62 ont désormais une « prochaine
+    étape »** — l'`action_revision` de leurs retours publiés, que **seul le professeur voyait**
+    jusqu'à aujourd'hui. *C'est le canal coupé qui se referme, sur des données réelles.*
+  · ⛔ **AUCUNE LETTRE N'EST VISIBLE POUR PERSONNE** — 0 sur 62 élèves × 6 compétences.
+    *`profil_provisoire` est vrai partout, et aucun élève n'a demandé ses lettres.*
+  · ⚠️ **« EN PROGRÈS » EST MUET POUR TOUT LE MONDE, ET L'ÉCRAN DIT POURQUOI** — sur 360 lignes
+    de profil lues : **141** disent « travaillé 1 fois · pas encore assez d'exercices pour le dire
+    (1 sur 4) », **14** en disent 2, **une** en dit 3, et le reste « jamais travaillé ».
+    **Zéro paire n'atteint la fenêtre de quatre.** *C'est exactement ce qui était prédit.*
+  · ⭐ **L'ÉCRAN DE LA SEMAINE : 62/62 élèves en « porte ouverte · vide · 0 exercice »**, donc
+    « Tu n'as aucun exercice cette semaine. » — l'état honnête, et **0 tuile allumée**.
+  · ⭐⭐ **ET ZÉRO INCIDENT DE LECTURE sur les 62**, sur le profil comme sur la semaine : les deux
+    colonnes neuves se lisent, et rien n'a régressé pour les comptes réels.
+  ⚠️ *`profiles` porte **63 comptes** et **62 élèves ont une inscription active**.*
+
+- [ ] **C6L2-24 · ⚠️ LA TUILE ET LA FRISE NE SE PROUVENT QU'EN BAC À SABLE — RECONFIRMÉ APRÈS
+  DÉPLOIEMENT.** **La production ne porte AUCUN dépôt maison** — mesuré le 28/08 : 86 dépôts,
+  `lieu = 'classe'` sur les 86, **zéro maison** *(le bac à sable en porte 21)*. ⭐ **Et le code
+  déployé le confirme sur les 62 élèves réels** : tous en « porte ouverte · vide · 0 exercice »,
+  **0 tuile allumée, 0 incident** *(`C6L2-31`)*. ⛔ **Un écran vide en production n'est donc pas un
   échec** : les 247 instances maison de production sont non servables, et le routeur n'a jamais
   tourné. **Condition de reprise : le premier exercice maison assigné en production** — c'est-à-dire
   `C4-L12` joué, ou une assignation manuelle par le professeur.
