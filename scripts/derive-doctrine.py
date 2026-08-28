@@ -403,7 +403,23 @@ def lignes(d):
     for code, o in sorted(d.objets.items()):
         for cran in sorted(o.crans):
             c = d.crans[cran]
+            # ⭐ LES DEUX CORRECTIONS DU `02-` §2.4, dans l'ordre que la source
+            #    écrit — le quart d'abord, le doublement ensuite.
+            #    (1) un `élément` de grain `micro` — le mot, la phrase — vaut le
+            #        QUART de sa cellule, plancher 2 : au `micro`, un moment est
+            #        une problématisation entière quand un élément est UN MOT.
+            #    (2) un cran à paire fait DEUX cas (`02-` §2.3.1 a) : sa durée
+            #        DOUBLE. C'est le budget du cycle qui payait l'écart —
+            #        `duree_exercice_min` est « la seule valeur que le budget
+            #        décompte » (`01-` §5).
+            # ⛔ La table `exercices_durees` reste la table BRUTE, à neuf
+            #    cellules : les corrections portent sur la valeur SERVIE par
+            #    type × cran, pas sur la dérivation du geste et du grain.
             duree = d.durees[(c.geste, o.grain)]
+            if o.nature.startswith("élément") and o.grain == "micro":
+                duree = max(2, duree // 4)
+            if c.geste == "diagnostiquer":
+                duree *= 2
             cible = [] if c.materiau_cible == "null" else list(d.cible_provenances)
             if cran in CRANS_QUI_ISOLENT:
                 obs = sorted({(r.competence, r.code, r.observable, mode)
