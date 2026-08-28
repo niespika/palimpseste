@@ -7482,13 +7482,21 @@ interruption. Le décor se reconnaît à sa classe, `nom LIKE 'RECETTE-C5L3%'`. 
   s'affiche même à `null`** — répartition des dépôts par nombre de signaux levés, ce que chaque
   seuil possible attraperait, et le compte par signal. **C'est sur elle que le seuil se réglera.**
 - [ ] **C6L1-E · LE SEPTIÈME SIGNAL — le style discordant — N'A AUCUN PRODUCTEUR.** Il rend
-  **« non mesuré »**, jamais « concordant ». **Condition de reprise : une décision de conception
-  sur ce qu'est un « style discordant » et sur qui le produit.** *(Renvoi, ligne posée à
-  `IDEES_post_rentree.md`.)*
+  **« non mesuré »**, jamais « concordant ». ⭐ **DÉCIDÉ LE 28/08 (Louis) : il se construira PAR
+  DÉRIVATION** des **neuf observables stylistiques que l'instrument d'Expression mesure déjà**
+  *(`densite_friction`, `mot_impropre`, `repetition_pauvre`, `savant_plaque`, `taux_sens_passe`,
+  `orthographe`…)* — **aucun NLP à écrire, aucune colonne à poser**. ⚠️ **Mais pas avant qu'un
+  historique existe** : c'est le signal au pire profil de faux positifs, et *un élève dont
+  l'Expression bondit, c'est à quoi ressemble le progrès*. **Condition de reprise : un historique
+  de mesures maison par élève.**
 - [ ] **C6L1-F · LES TROIS DRAPEAUX QUE CE LOT NE POSE PAS.** *(a)* trois `pas_pu` d'affilée
   *(`06-` §3 ; `exercices_depots.conditions_declarees`)* · *(b)* l'incohérence répétée de la
   restitution à chaud *(`06-` §3 ; `01-` §9 ; `ContexteLettre.incoherenceRepetee`,
   `utils/routeur/lettres.ts:145`, jamais passé)* · *(c)* la discordance de deux paliers
   *(`utils/routeur/lettres.ts:203`)*. ⭐ **Le canal les accueille sans code neuf pour (a) et (b)** ;
   **(c) est TRANSITOIRE** — elle ne se lève qu'à l'arrivée d'une ancre, donc **à l'écriture**, chez
-  `utils/moteur/etat-serveur.ts:215`. **Condition de reprise : un lot de correctifs.**
+  `utils/moteur/etat-serveur.ts:215`. ⭐ **DÉCIDÉ LE 28/08 (Louis) : la DISCORDANCE d'abord, en
+  petit lot, AVANT le prochain examen en classe** — c'est la seule des trois qui soit mûre, parce
+  qu'elle **ne dépend pas de la maison** : elle se lève quand une ANCRE arrive. ⛔ Les deux autres
+  attendent les exercices maison — elles portent **zéro ligne en base des deux côtés**.
+  **Condition de reprise de (a) et (b) : un premier exercice maison remis.**
