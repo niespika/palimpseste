@@ -622,8 +622,15 @@ function drapeauxDeContestation(
       eleveId: e.eleveId,
       eleveNom: nomDe.get(e.eleveId) ?? '?',
       cle: `repetition|${e.eleveId}`,
-      phrase: `${e.actes.length} contestations distinctes non traitées — au-delà du seuil réglé `
-        + `(${seuil}). « La contestation remonte au professeur en drapeau si elle se répète. »`,
+      // ⚠️ DEUX DÉFAUTS DE LANGUE TROUVÉS AU SMOKE DU 28/08, sur le décor de
+      //    recette. (1) « 1 contestationS » — l'accord ne se faisait pas.
+      //    (2) « AU-DELÀ du seuil » était FAUX au seuil exact : la comparaison
+      //    est `>=`, donc un élève qui l'ATTEINT n'est pas au-delà. Un écran qui
+      //    décrit mal sa propre règle apprend une règle fausse à qui le lit.
+      phrase: `${e.actes.length} contestation${e.actes.length > 1 ? 's' : ''} distincte`
+        + `${e.actes.length > 1 ? 's' : ''} non traitée${e.actes.length > 1 ? 's' : ''} — `
+        + `le seuil réglé (${seuil}) est atteint. « La contestation remonte au professeur en `
+        + 'drapeau si elle se répète. »',
       detail: [
         ...e.actes.slice(0, 8).map((a) => {
           const point = lot.texteDuPoint.get(a.pointId)

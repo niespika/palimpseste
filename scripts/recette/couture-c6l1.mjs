@@ -53,7 +53,17 @@
 //   node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON \
 //        --import ./scripts/register-calibration-resolver.mjs \
 //        scripts/recette/couture-c6l1.mjs [--garde-le-decor]
+//   node … scripts/recette/couture-c6l1.mjs --decor-ecran
 //   node … scripts/recette/couture-c6l1.mjs --retire
+//
+// ⭐ `--decor-ecran` sème le décor ET S'ARRÊTE LÀ — sans jouer les gestes. C'est
+//    le seul moyen de VOIR les quatre drapeaux à l'écran, et surtout d'exercer
+//    ce que la couture NE PEUT PAS exercer : les server actions elles-mêmes.
+//    ⚠️ Le script appelle `utils/pilotage/gestes-serveur.ts` — il contourne donc
+//       l'enveloppe `'use server'`, la garde de rôle et `revalidatePath`. **Seul
+//       un clic dans un navigateur teste ce chemin-là.**
+//    ⛔ IL NE SE NETTOIE PAS TOUT SEUL : `--retire`, et il repose alors les deux
+//       seuils ET le semestre emprunté.
 //
 // ⚠️ LE RÉSOLVEUR DE CALIBRATION EST OBLIGATOIRE : les lectures de la page
 //    portent `import 'server-only'`.
@@ -723,6 +733,22 @@ async function retirer() {
 }
 
 // ════════════════════════════════════════════════════════════════════════════
+if (a('decor-ecran')) {
+  try {
+    const d = await semer()
+    console.log(`\n${'═'.repeat(78)}`)
+    console.log('⭐ DÉCOR SEMÉ ET NON CONSOMMÉ — à voir à l\'écran, connecté en professeur :')
+    console.log(`   1. http://localhost:3000/prof/classes/${d.classeId}?vue=competences`)
+    console.log('   2. bloc « Ce qui demande votre attention » — les QUATRE drapeaux y sont,')
+    console.log('      le dossier N3 EN TÊTE (re-signalé), et chacun porte son geste')
+    console.log('   3. cliquez les trois boutons : la file doit se vider sous vos yeux')
+    console.log(`   4. http://localhost:3000/prof/integrite?vue=atelier — le faisceau y est aussi,`)
+    console.log('      avec sa PREUVE (4ᵉ branche de `chargerPreuve`)')
+    console.log(`\n   retrait : node … scripts/recette/couture-c6l1.mjs --retire`)
+  } catch (e) { console.error(`\n✗ ${e.message}`); process.exit(1) }
+  process.exit(0)
+}
+
 if (a('retire')) {
   try { await retirer() } catch (e) { console.error(`\n✗ ${e.message}`); process.exit(1) }
   process.exit(0)

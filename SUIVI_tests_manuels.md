@@ -7438,6 +7438,32 @@ interruption. Le décor se reconnaît à sa classe, `nom LIKE 'RECETTE-C5L3%'`. 
   désormais des signalements du module **Exercices**, dont le faisceau **ne compte aucun strike**.
   **Un écran qui promet un gel sur un signal qui n'en produit aucun ment.** Corrigé : le quatrième
   module est nommé, avec ce qui le distingue.
+- [x] ⭐⭐ **C6L1-A-ter · LES QUATRE DRAPEAUX VUS À L'ÉCRAN, ET LES TROIS GESTES CLIQUÉS — 28/08,
+  sandbox.** ⚠️ **C'est le test que la couture NE PEUT PAS faire** : le script appelle
+  `utils/pilotage/gestes-serveur.ts` et **contourne donc l'enveloppe `'use server'`, la garde de
+  rôle et `revalidatePath`**. Seul un clic dans un navigateur exerce ce chemin. Décor semé par
+  `couture-c6l1.mjs --decor-ecran` *(mode ajouté pour ça)*, puis retiré.
+  ⭐ **LES CINQ DRAPEAUX S'AFFICHENT, DANS L'ORDRE VOULU** : `DOSSIER N3 · RE-SIGNALÉ` **en tête**,
+  puis le faisceau, la file d'examen humain, la répétition, la fraîcheur d'ancre. Compteur :
+  *« 1 dossier N3 ouvert **chez 1 élève** »* — les dossiers ET les élèves, lisibles tous les deux.
+  ⭐ **Les trois qui ont un geste le portent ; les deux qui n'en ont pas n'en portent pas** — la
+  répétition se traite acte par acte, et la cadence d'ancre est **non bloquante**.
+  ⭐ **LE DOSSIER N3 REND SES CINQ PIÈCES**, et **dit honnêtement ce qu'il ne peut pas calculer**
+  *(« l'instrument de cette compétence n'est pas lisible… le dossier reste, il n'est pas moins
+  réel »)* — l'observable semé n'est pas un observable de l'instrument.
+  ⭐ **LES TROIS CLICS DESCENDENT JUSQU'À LA BASE**, et la file se vide sous les yeux : le N3
+  disparaît et le compteur passe à 0 · `dossier_n3_traite_at` posé **et `degre` toujours `N3`** ·
+  le faisceau `confirme` + `acquitte_at` **et `compte_strike` toujours `false`** · **Nina
+  Panaitescot : 0 strike, non bloquée** *(c'est l'arbitrage ③, vérifié sur une vraie élève)* ·
+  `traite_at` posé sur l'acte, `citation_absente` / `texte` / `point_id` **intacts**.
+  ⭐ **LA 4ᵉ BRANCHE DE `chargerPreuve` REND** : `/prof/integrite` montre
+  *« EXERCICES · exercice à la maison · version finale rendue »*, **LA PREUVE = la production de
+  l'élève** *(899 caractères utiles)*, et **le MOTIF journalisé en entier** — les 6 signaux nommés,
+  plus le 7ᵉ *« non mesuré »*.
+  ⚠️ **ET LE DÉCOR A RÉVÉLÉ DEUX DÉFAUTS DE LANGUE, corrigés** : *« 1 contestation**s**
+  distinctes »* *(accord)*, et *« **au-delà** du seuil réglé (1) »* — **faux au seuil exact**, la
+  comparaison étant `>=`. *Un écran qui décrit mal sa propre règle apprend une règle fausse à qui
+  le lit.*
 - [ ] **C6L1-B · LES DEUX DRAPEAUX COMPTÉS EN CYCLES, SUR LE CALENDRIER RÉEL.** ⚠️ Au 28/08/2026,
   la sandbox ne porte **qu'UNE SEULE semaine d'enseignement commencée** : ni la cadence d'ancre
   *(6 cycles)* ni le re-signalement N3 *(3 cycles)* ne peuvent se lever. Le script les prouve en
