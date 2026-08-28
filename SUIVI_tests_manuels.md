@@ -7250,12 +7250,50 @@ interruption. Le décor se reconnaît à sa classe, `nom LIKE 'RECETTE-C5L3%'`. 
   ⭐ *Le correctif est vérifié par la mesure, et le renvoi de périmètre l'est aussi : les jumelles de
   Codex portent bien le défaut, et il se compte.* **Elles restent hors de ce lot**, nommées à
   `IDEES_post_rentree.md`.
-- [ ] **C5L4-F · `examens-c4l9.mjs` À REJOUER, une fois son résidu retiré.** Une ligne de plan
-  `codex` / `ecriture` / `septembre` / `concu`, `note: "RECETTE C4-L9"`, créée le **2026-08-24T01:38**
-  sur le plan de la classe `Test` *(`6ff2d56b-0fbf-4d53-b187-464dd4233852`)*, fait échouer le décor
-  de sa propre recette sur `uk_exercices_diagnostic` **dès sa section A** : le script s'arrête avant
-  toute vérification, il n'a **rien** dit ni en bien ni en mal. ⛔ **Rien de C5-L4 ne la touche.**
-  **Condition de reprise : retirer le résidu, rejouer.**
+- [x] **C5L4-F · ✅ LE RÉSIDU EST RETIRÉ ET `examens-c4l9.mjs` REJOUÉ — 126 verts, 6 rouges**, le
+  27/08, **sur mandat explicite de Louis** *(« retire le résidu du 24/08 et rejoue examens-c4l9, mais
+  assure-toi que le résidu ne sert vraiment à rien »)*.
+  ⚠️⚠️ **LE RÉSIDU N'ÉTAIT PAS UNE LIGNE, C'ÉTAIT DEUX** — les jumeaux d'un même run
+  `--garde-le-decor` du 24/08 à 01:38, à une seconde d'intervalle :
+  `6ff2d56b…` *(codex/ecriture)* et **`12c914c5…`** *(aletheia/lecture)*. **La seconde n'a été
+  trouvée que par le contrôle final du retrait**, qui compte les lignes restant à la marque — *une
+  vérification qui se fie au retour de la suppression n'aurait rien vu.*
+  ⭐ **CHACUNE PORTAIT UNE INSTANCE `assigne` ET SEPT DÉPÔTS `ouvert`**, soit **quatorze signaux de
+  lancement vivants** pour sept élèves réels du bac à sable. ⛔ **Et AUCUN travail** : pré-vol par
+  requête sur `transcription_v1`/`texte_v1`/`photos_v1`/`v1_remis_at`, puis sur `exercices_jobs`,
+  `exercices_retours`, `exercices_squelettes`, `exercices_metacognition`, `competences_mesures`,
+  `monitoring_mesures`, `api_couts` et `routeur_decisions` — **zéro partout**. Le script de retrait
+  **refusait de jouer** si l'un de ces comptes avait été non nul, et une sauvegarde JSON a été écrite
+  hors du dépôt avant toute écriture.
+  ⭐ **LE RETRAIT EST PASSÉ PAR LA FONCTION DE PRODUCTION** `retirerExamenDiagnostique`, dans l'ordre
+  que le script dit lui-même *(dépôts → statut `concu` → retrait → ligne de plan)* — jamais par un
+  `delete` brut : c'est elle qui fait **revenir la ligne de plan à `a_concevoir`** avant d'effacer
+  l'instance, sans quoi la ligne resterait `concu` sans instance.
+  ⚠️ **UNE CORRECTION À CE QUE C5L4-A ET C5L4-B AVAIENT CONCLU** : sur les **deux** « vraies
+  passations de lecture » que les smokes avaient célébrées, **une seule l'était** — `41e66a82…`,
+  ligne de plan **sans note**, conçue le **26/08**. L'autre, `97eb21da…`, était le jumeau Aletheia du
+  résidu. **Le fond tient** *(la vraie passation n'avait, elle aussi, qu'une seule porte avant ce
+  lot ; et elle est intacte, ses sept dépôts avec)* — **mais le compte était faux, et il est
+  rectifié ici.**
+- [ ] **C5L4-F-bis · ⚠️⚠️ `examens-c4l9.mjs` NE REMET PAS LES INTERRUPTEURS COMME IL LES TROUVE — IL
+  LES FORCE À OFF.** Trouvé en le rejouant, le 27/08. À sa section I, le script ouvre les deux portes
+  élève pour sa vérification, puis exécute **`await poserPortes(false, false)`** — *une valeur en
+  dur, pas l'état d'avant*. **Constaté deux fois par requête** : `exercices_actif` et
+  `passation_classe_actif` sont passés de **ON à OFF** à chaque rejeu, et ont dû être remis à la
+  main. ⭐ **Le patron correct existe dans le dépôt** : `decor-c4l6.mjs` garde `porteAvant` et
+  restitue ce qu'il a trouvé. ⛔ **Non corrigé : `examens-c4l9.mjs` appartient à C4-L9, clos, et le
+  périmètre de C5-L4 est fermé.** ⚠️ **Tant que ce n'est pas fait, rejouer cette recette FERME DEUX
+  PORTES aux élèves du bac à sable, en silence.** **Condition de reprise : une décision de Louis** —
+  le geste est de mémoriser les deux valeurs à l'entrée et de les restituer à la sortie, plutôt que
+  d'écrire `false`.
+- [ ] **C5L4-F-ter · ⚠️ LES SIX ROUGES DE `examens-c4l9.mjs` SONT LE MÊME FAIT, ET C'EST `C5L4-G`.**
+  Le script **encode le régime du `07-` §5 en assertion** : deux contrôles attendent les portes élève
+  **fermées** *(« portes FERMÉES, AUCUN signal — un lien vers une page close serait un piège »)*, et
+  quatre contrôles finaux affirment `routeur_actif`, `competences_affichage_actif`, `fabrique_actif`
+  et `chaine_actif` **à OFF**. **Les six sont à ON.** ⛔ **Ce n'est pas un défaut de ce que C4-L9
+  construit** — ses 126 autres contrôles sont verts, y compris la garde `uk_exercices_diagnostic` et
+  les deux signaux qui entrent chacun par leur module. **C'est la divergence base / source de
+  `C5L4-G`, vue par un autre bout.** **Condition de reprise : la même que `C5L4-G`.**
 - [ ] **C5L4-G · ⚠️ LES SIX INTERRUPTEURS SONT À ON EN BAC À SABLE ET EN PROD**, reconstaté par
   requête au début et à la fin de la séance ; le `07-` §5 les dit « à OFF jusqu'à la recette ».
   **Constat d'état, déjà déposé par C5-L2, non réparé ici.** *Conséquence : les six onglets seront
