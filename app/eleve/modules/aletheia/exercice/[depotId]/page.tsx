@@ -11,8 +11,14 @@
 //    du moteur, que les passations de CLASSE. *« Un écran sans porte n'existe
 //    pas »* (`07-` §2).
 //
-// ⛔ **CE N'EST PAS UN ONGLET** — Aletheia n'a toujours aucun `sousOngletsEleve`,
-//    et c'est `C5-L4` qui les pose. Une route et une liste, rien de plus.
+// ⭐ **C5-L4 A POSÉ L'ONGLET, ET CETTE ROUTE N'EN EST TOUJOURS PAS UN.** La
+//    liste que C5-L2 avait posée sur la racine élève vit désormais sous l'onglet
+//    EXERCICES (`app/eleve/modules/aletheia/exercices/page.tsx`) ; c'est lui qui
+//    mène ici, et c'est son `prefixes[0]` — `/eleve/modules/aletheia/exercice`,
+//    AU SINGULIER — qui garde l'onglet allumé quand on y entre.
+//    ⚠️ L'onglet est `…/exercices`, AU PLURIEL : les deux chaînes sont à une
+//       lettre l'une de l'autre, et `ongletActifParRoute` les sépare sans
+//       ambiguïté (`utils/codex-onglets/onglets-aletheia.test.ts` le tient).
 //
 // ⚠️ Le layout d'Aletheia est symétrique de celui de Codex
 //    (`<div data-module="aletheia"><TuileAccentModule>`) : rien n'y bloque une

@@ -57,11 +57,30 @@ export function atelierDUnFormatif(modesParCompetence: unknown): Atelier {
  *    et une voix ». *Avant ce lot, `/eleve/modules/codex/exercice/<id>` servait
  *    déjà un dépôt de LECTURE à qui connaissait son identifiant.*
  *
- * ⛔ **CE N'EST PAS UN ONGLET** — les onglets de la lecture sont `C5-L4`, et
- *    `components/nav/configModules.ts` n'est pas touché.
+ * ⭐ **C5-L4 A POSÉ LES ONGLETS DE LA LECTURE, ET CETTE FONCTION N'EN EST PAS
+ *    UN.** Ce qu'elle rend est ce que la liste de l'onglet EXERCICES affiche,
+ *    de chaque côté ; c'est `components/nav/configModules.ts` qui déclare, par
+ *    `prefixes[]`, que ces deux routes allument bien cet onglet-là.
  */
 export function hrefDuDeroule(atelier: Atelier, depotId: string): string {
   return `/eleve/modules/${atelier}/exercice/${depotId}`
+}
+
+/**
+ * ⭐ C5-L4 — OÙ LE PROFESSEUR ENTRE DANS UNE PASSATION EN CLASSE, selon l'atelier.
+ *
+ * Le même geste que `hrefDuDeroule`, de l'autre côté : `app/prof/codex/passation/[exerciceId]`
+ * et `app/prof/aletheia/passation/[exerciceId]` servent LE MÊME écran (`EcranProf`,
+ * `chargerVueProf`), et chacun ne s'atteint que depuis son module — « c'est le
+ * MÊME FLUX dans deux modules » (C4-L4).
+ *
+ * ⚠️ CE N'EST PAS UNE ROUTE NEUVE : les deux existent depuis C4-L4. Ce qui
+ *    manquait, c'est la LISTE qui les nomme — et côté lecture, elle n'existait
+ *    nulle part : `app/prof/aletheia/passation/[exerciceId]` n'avait qu'UN SEUL
+ *    lien dans tout le dépôt, depuis `app/prof/conception/[id]`.
+ */
+export function hrefDeLaPassationProf(atelier: Atelier, exerciceId: string): string {
+  return `/prof/${atelier}/passation/${exerciceId}`
 }
 
 /**

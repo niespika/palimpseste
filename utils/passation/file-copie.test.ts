@@ -135,3 +135,118 @@ test('un retour engendré par le raccourci clôt l’affaire', () => {
   }))
   assert.equal(e.cle, 'abouti')
 })
+
+// ── ⭐⭐ C5-L4 — LA COPIE ABOUTIE QUI DIT SES COMPÉTENCES ÉCARTÉES ───────────
+//
+// « Une copie dont le traitement a ABOUTI dit ses compétences écartées quand il
+//   y en a. »                                                — `07-` §2, C5-L4
+//
+// ⚠️ LE MESSAGE DE RÉFÉRENCE EST CELUI DE LA PRODUCTION, pas une invention : il
+//    a été lu en base le 27/08 par la file réelle de C5-L3, sur les 13/13 jobs
+//    de l'exercice de prod. La forme vient de `motifDesEcartees()`
+//    (`utils/chaine/chaine.ts`) — que ce fichier NE PEUT PAS IMPORTER (`chaine.ts`
+//    porte `import 'server-only'`, ce qui le rend intestable sous `npm test`).
+//    ⭐ C'est le script de couture (`scripts/recette/couture-c5l4.mjs`) qui
+//       éprouve le contrat de format PAR EXÉCUTION, contre un vrai job : ces
+//       tests-ci tiennent la règle, lui tient l'accord entre l'écrivain et le
+//       lecteur.
+const MESSAGE_PROD =
+  '2 mesurée(s), 2 écrite(s), 0 déjà là, retour écrit, 3 appel(s), 41 s, '
+  + '2 écartée(s) — structure, argumentation : mode « expliquer » non couvert par '
+  + 'l’instrument de structure (v3.3) | mode « expliquer » non couvert par '
+  + 'l’instrument d’argumentation (v4.3)'
+
+test('⭐⭐ abouti AVEC écartées : la phrase ne change pas, le MOTIF apparaît', () => {
+  const e = etatChaineDeLaCopie(copie({
+    attente: [job({ message: MESSAGE_PROD })], aUnRetour: true,
+  }))
+  assert.equal(e.cle, 'abouti')
+  assert.equal(e.phrase, 'Traitement terminé.')
+  // ⛔ Rien n'attend le professeur : une trace n'est pas un état.
+  assert.equal(e.relancable, false)
+  // Le motif nomme LES DEUX compétences, et il commence au compte.
+  assert.match(e.motif ?? '', /^2 écartée\(s\) — structure, argumentation/)
+  assert.match(e.motif ?? '', /argumentation/)
+  // ⚠️ Il ne recopie PAS le bilan qui le précède : « 2 mesurée(s) » n'est pas
+  //    une nouvelle, et le noyer dedans ferait perdre ce qui compte.
+  assert.equal((e.motif ?? '').includes('mesurée(s)'), false)
+  assert.equal((e.motif ?? '').includes('appel(s)'), false)
+})
+
+test('⛔ abouti SANS écartées : le silence est conservé — c’est la règle', () => {
+  const sansRien = etatChaineDeLaCopie(copie({
+    attente: [job({ message: '2 mesurée(s), 2 écrite(s), 0 déjà là, retour écrit, 3 appel(s), 12 s' })],
+    aUnRetour: true,
+  }))
+  assert.equal(sansRien.cle, 'abouti')
+  assert.equal(sansRien.motif, null)
+  // Et sans message du tout non plus.
+  assert.equal(etatChaineDeLaCopie(copie({ attente: [job()], aUnRetour: true })).motif, null)
+})
+
+test('⚠️ deux autres textes du dépôt disent « écartée(s) » — ni l’un ni l’autre ne matche', () => {
+  // `chaine.ts` : « N compétence(s) sondée(s) écartée(s) DU RETOUR — une sonde
+  // est silencieuse » ; `app/passation/actions.ts` : « N sans copie remise,
+  // écartée(s) ». Aucun n'a le tiret cadratin qui suit le compte.
+  for (const faux of [
+    'retour écrit, 3 appel(s), 12 s | 2 compétence(s) sondée(s) écartée(s) du retour — une sonde est silencieuse',
+    '5 sans copie remise, écartée(s)',
+  ]) {
+    const e = etatChaineDeLaCopie(copie({ attente: [job({ message: faux })], aUnRetour: true }))
+    assert.equal(e.motif, null, faux)
+  }
+})
+
+test('⭐ c’est la DERNIÈRE étape qui parle, ici comme pour `sans_retour`', () => {
+  // Un `retour_v1` rejoué après un `mesure_v1` raconte le tour courant ; le
+  // message de la mesure décrit celui d'avant.
+  const e = etatChaineDeLaCopie(copie({
+    attente: [
+      job({ message: 'retour écrit, 3 appel(s), 12 s, 4 écartée(s) — a, b, c, d : périmé' }),
+      job({ etape: ETAPE_RETOUR_V1, message: MESSAGE_PROD }),
+    ],
+    aUnRetour: true,
+  }))
+  assert.equal(e.cle, 'abouti')
+  assert.match(e.motif ?? '', /^2 écartée\(s\)/)
+  assert.equal((e.motif ?? '').includes('périmé'), false)
+})
+
+test('⛔ le chemin où TOUT est écarté ne bouge pas — il servait déjà son motif', () => {
+  // Aucun squelette → aucun retour → `sans_retour`, qui sert le message ENTIER
+  // (pas seulement sa part « écartées »). Ce test est la non-régression du
+  // chemin que C5-L3 a laissé juste.
+  const e = etatChaineDeLaCopie(copie({
+    attente: [job({ message: '0 mesurée(s), 0 écrite(s), retour non écrit, 2 écartée(s) — structure, argumentation : mode non couvert' })],
+    aUnRetour: false,
+  }))
+  assert.equal(e.cle, 'sans_retour')
+  assert.equal(e.relancable, true)
+  // ⚠️ Le motif d'un `sans_retour` est le message ENTIER — on n'y touche pas.
+  assert.match(e.motif ?? '', /^0 mesurée\(s\)/)
+})
+
+test('⚠️ un échec définitif prime toujours — même avec des écartées au message', () => {
+  const e = etatChaineDeLaCopie(copie({
+    attente: [job({ echec_definitif: true, statut: 'echoue', message: MESSAGE_PROD })],
+    aUnRetour: true,
+  }))
+  assert.equal(e.cle, 'echec')
+  assert.equal(e.relancable, true)
+  // Et son motif reste le message ENTIER : le professeur doit tout lire.
+  assert.match(e.motif ?? '', /^2 mesurée\(s\)/)
+})
+
+test('⛔ les six comptes restent DISJOINTS : une aboutie à motif reste « aboutie »', () => {
+  const r = resumerLaFile([
+    copie({ attente: [job({ message: MESSAGE_PROD })], aUnRetour: true }),
+    copie({ attente: [job()], aUnRetour: true }),
+  ])
+  assert.equal(r.abouties, 2)
+  assert.equal(r.sansRetour, 0)
+  // ⭐ ET RIEN N'ATTEND DE GESTE : c'est pourquoi ce lot n'a PAS ajouté un
+  //    septième compteur à « LA FILE ». Les six sont disjoints et leur somme
+  //    vaut le nombre de copies ; « aboutie avec écartées » n'est pas un état
+  //    de plus, c'est la MÊME aboutie qui a quelque chose à dire.
+  assert.equal(demandentUnGeste(r), 0)
+})

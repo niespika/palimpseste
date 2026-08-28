@@ -1,3 +1,32 @@
+// ============================================================================
+// C5 · L4 — L'ONGLET LIVRES DU PROFESSEUR : les classes et leur lecture.
+// ----------------------------------------------------------------------------
+// « Côté professeur : LIVRES — ce que l'onglet « Classe » portait : les
+//   classes, l'avancée par livre, la trajectoire diagnostique, le détail d'un
+//   élève. »                                                 — `07-` §2, C5-L4
+//
+// ⭐ CETTE PAGE NE BOUGE PAS, ET C'EST LE POINT. L'onglet qui GARDE LA RACINE
+//    vient en tête (décision de Louis, 27/08) : `/prof/aletheia` reste la cible
+//    de « Modules → Aletheia » (`configNavigation.ts`), de ses propres tuiles
+//    `?classe=<id>`, et de six des dix `revalidatePath` du dépôt. Ce qui en SORT
+//    est UNE SEULE chose : l'encart des examens diagnostiques à concevoir, qui
+//    va sous l'onglet Exercices avec le reste de ce qui touche un exercice.
+//
+// ⚠️ LE MOT « CLASSE » A CESSÉ D'ÊTRE LE NOM DE CET ÉCRAN : l'onglet dit
+//    « Livres », et les libellés de la page nomment donc ce qu'ils montrent
+//    (une classe sélectionnée, ses livres), jamais « la classe » comme titre.
+//
+// ⛔ LE DIAGNOSTIC DE COMPRÉHENSION EST PROF-ONLY et il reste ici, avec ce qu'il
+//    décrit. Il ne traverse JAMAIS vers un onglet élève, sous aucun prétexte de
+//    symétrie — la page le dit à l'écran : « usage prof, jamais montré à l'élève ».
+//
+// ⚠️ LE SÉLECTEUR NE PROPOSE QUE LES CLASSES AYANT ALETHEIA
+//    (`classesAvecModule`) : un livre peut être assigné à une classe sans le
+//    module, et la tuile promettait alors un parcours que l'élève ne verrait
+//    jamais. La réorganisation ne le remplace pas par une lecture de toutes
+//    les classes.
+// ============================================================================
+
 import Link from 'next/link'
 import { createAdminClient } from '@/utils/supabase/admin'
 import { classesAvecModule, inscriptionsClasse } from '@/utils/acces'
@@ -10,8 +39,6 @@ import {
   STATUT_LABEL, type LivreProf,
 } from './donnees'
 import type { TravailAletheia, DiagnosticTravail } from '@/app/eleve/modules/aletheia/types'
-import { examensAConcevoir } from '@/utils/examens/plan'
-import EncartAConcevoir from '@/components/examens/EncartAConcevoir'
 
 function Barre({ done, total }: { done: number; total: number }) {
   const pct = total > 0 ? Math.round((done / total) * 100) : 0
@@ -70,11 +97,6 @@ export default async function ClasseAletheiaPage({ searchParams }: { searchParam
     admin.from('scriptorium_unite_classes').select('unite_id, classe_id'),
   ])
   const livreIds = new Set((livreUnites ?? []).map(u => u.id as string))
-
-  // C4-L9 — « le professeur voit ce qu'il a à concevoir, DANS SON MODULE ».
-  // Lecture admin : les tables du plan sont en RLS prof-only. Gate du plan
-  // OFF/absent → liste vide → encart absent, page inchangée.
-  const examens = await examensAConcevoir(admin, 'aletheia')
 
   const nbLivresParClasse = new Map<string, number>()
   for (const l of liens ?? []) {
@@ -144,7 +166,22 @@ export default async function ClasseAletheiaPage({ searchParams }: { searchParam
 
   return (
     <div className="space-y-6">
-      <EncartAConcevoir module="aletheia" examens={examens} />
+      {/* ⭐ C5-L4 — L'ENCART DES EXAMENS DIAGNOSTIQUES A DÉMÉNAGÉ SOUS L'ONGLET
+          EXERCICES (`app/prof/aletheia/exercices/page.tsx`). Il était en tête de
+          cette page, et c'était sa SEULE porte vers
+          `app/prof/aletheia/examen-diagnostique/[planifieId]` — il n'y en a
+          toujours qu'une, elle a simplement changé d'onglet. */}
+      {/* ⭐ L'onglet dit « Livres » : l'écran nomme donc ce qu'il montre. Sans
+          cette ligne, un onglet nommé Livres s'ouvrait sur une grille de
+          classes sans un mot — et « Classe », le nom qu'il portait, avait
+          disparu de la barre (piège 52). */}
+      <div>
+        <h2 className="font-titre text-xl text-encre">Les livres, classe par classe</h2>
+        <p className="font-corps text-sm text-muet mt-1">
+          Choisis une classe pour voir l&apos;avancée de chaque élève dans ses livres et sa
+          trajectoire diagnostique.
+        </p>
+      </div>
 
       {classesList.length === 0 ? (
         <p className="text-center text-muet text-sm py-8">Aucune classe pour le moment.</p>

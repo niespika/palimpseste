@@ -101,18 +101,34 @@ describe('les deux mécaniques ne se mélangent pas', () => {
 })
 
 describe("ce que le lot ne touche pas", () => {
-  test("⛔ Aletheia garde ses deux onglets prof et n'en gagne aucun côté élève (C5-L4)", () => {
-    const aletheia = MODULES.find((m) => m.cle === 'aletheia')!
-    assert.deepEqual(sousOngletsPour(aletheia, 'prof').map((o) => o.label), ['Classe', 'Paramètres'])
-    assert.deepEqual(sousOngletsPour(aletheia, 'eleve'), [])
+  // ⭐ C5-L4 A JOUÉ, ET CE TEST-CI DISAIT LE CONTRAIRE. Il tenait l'attente de
+  //    C4-L6 — « Aletheia garde ses deux onglets prof et n'en gagne aucun côté
+  //    élève » —, avec `['Classe', 'Paramètres']` et `[]`. C'était une garde de
+  //    NON-DÉBORDEMENT, pas une règle : Aletheia porte désormais TROIS onglets de
+  //    chaque côté (`onglets-aletheia.test.ts` les tient). Ce qui reste vrai, et
+  //    ce que ce fichier doit continuer d'asserter, c'est que C5-L4 N'A TOUCHÉ
+  //    AUCUN ONGLET DE CODEX.
+  test("⛔ C5-L4 n'a touché AUCUN onglet de Codex — ni les libellés, ni les préfixes", () => {
+    assert.deepEqual(prof.map((o) => o.label), ['Exercices', 'Paramètres'])
+    assert.deepEqual(eleve.map((o) => o.label), ['Exercices', 'Examens'])
+    assert.deepEqual(prof[0].prefixes, [
+      '/prof/codex/synthese', '/prof/codex/validation', '/prof/codex/travail',
+      '/prof/codex/passation', '/prof/codex/examen-diagnostique',
+    ])
+    assert.deepEqual(eleve[0].prefixes, ['/eleve/modules/codex/exercice'])
+    assert.deepEqual(eleve[1].prefixes,
+      ['/eleve/modules/codex/passation', '/eleve/modules/codex/synthese'])
   })
 
-  test("les quatre autres modules gardent leur compte d'onglets", () => {
+  test("les cinq modules gardent leur compte d'onglets", () => {
     const compte = Object.fromEntries(MODULES.map((m) => [
       m.cle, [sousOngletsPour(m, 'prof').length, sousOngletsPour(m, 'eleve').length],
     ]))
+    // ⚠️ « Un module = 2-3 onglets » (`AGENTS.md`) : Aletheia est passé de [2, 0]
+    //    à [3, 3] avec C5-L4, et c'est LE PLAFOND — il n'y a pas de place pour un
+    //    quatrième. Fragments (4) est l'exception documentée de C8·L3.
     assert.deepEqual(compte, {
-      aletheia: [2, 0], codex: [2, 2], fragments: [4, 3], quazian: [3, 2], scriptorium: [4, 2],
+      aletheia: [3, 3], codex: [2, 2], fragments: [4, 3], quazian: [3, 2], scriptorium: [4, 2],
     })
   })
 })

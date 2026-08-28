@@ -73,8 +73,10 @@ export interface ModuleConfig {
   sousOngletsProf: SousOnglet[]
   /** Sous-onglets élève (Barre 2). Absent = aucun sous-onglet côté élève.
    *  ⚠️ Ce n'est plus « le cas de tous les modules sauf Scriptorium » : Quazian
-   *  (C7·L2), Fragments (C8·L3) et Codex (C4-L6) en portent aussi. Aujourd'hui,
-   *  seul ALETHEIA n'en a pas — ses onglets sont C5-L4. */
+   *  (C7·L2), Fragments (C8·L3), Codex (C4-L6) et ALETHEIA (C5-L4) en portent
+   *  tous. ⭐ Depuis C5-L4, SCRIPTORIUM EST LE SEUL MODULE dont la face élève
+   *  n'a pas de sous-onglets pilotés par la route — les siens le sont par
+   *  `?vue=`, et il ne reste donc AUCUN module sans barre côté élève. */
   sousOngletsEleve?: SousOnglet[]
 }
 
@@ -96,9 +98,81 @@ export const MODULES: readonly ModuleConfig[] = [
       ombreAnneauRgb: '44,74,124',
     },
     devise: { latin: 'Ars Legendi', francais: 'Dévoiler ce qui se cache' },
+    // C5-L4 — « Aletheia prend TROIS onglets de chaque côté, et ce ne sont pas
+    // les mêmes » (`07-` §2). Côté professeur : LIVRES — ce que l'onglet
+    // « Classe » portait : les classes, l'avancée par livre, la trajectoire
+    // diagnostique, le détail d'un élève —, EXERCICES — « tout ce qui touche un
+    // exercice de lecture vit sous un seul onglet » —, et PARAMÈTRES, tel quel.
+    //
+    // ⭐ L'ONGLET QUI GARDE LA RACINE VIENT EN TÊTE, DES DEUX CÔTÉS (décision de
+    //    Louis, 27/08). La racine `/prof/aletheia` EST la page des classes et
+    //    des livres : elle est la cible de `configNavigation.ts` (« Modules →
+    //    Aletheia »), de ses propres `Tuile href={/prof/aletheia?classe=<id>}`,
+    //    et de six des dix `revalidatePath` du dépôt. Arriver par « Modules →
+    //    Aletheia » allume donc le PREMIER onglet, comme chez Codex et Quazian.
+    //    ⛔ La phrase d'ouverture de l'entrée du `07-` §2 — « Exercices, Livres
+    //       et Paramètres » — nomme l'INVENTAIRE, pas l'ordre.
+    //
+    // ⚠️ `/prof/aletheia/eleve/<id>` N'A PAS DE PRÉFIXE, ET C'EST VOULU : la
+    //    fiche d'un élève est ce que l'onglet Livres décrit (son avancée, sa
+    //    trajectoire diagnostique), et l'onglet racine l'attrape par défaut —
+    //    le plus long préfixe qui matche est `/prof/aletheia` lui-même. Un
+    //    préfixe explicite n'ajouterait rien qu'une ligne à maintenir.
     sousOngletsProf: [
-      { href: '/prof/aletheia', label: 'Classe' },
+      { href: '/prof/aletheia', label: 'Livres' },
+      {
+        href: '/prof/aletheia/exercices',
+        label: 'Exercices',
+        // Les deux écrans de détail que l'onglet Exercices sert : sans eux, ils
+        // tomberaient sur Livres — l'onglet racine matche tout par préfixe.
+        prefixes: [
+          '/prof/aletheia/passation',
+          '/prof/aletheia/examen-diagnostique',
+        ],
+      },
       { href: '/prof/aletheia/parametres', label: 'Paramètres' },
+    ],
+    // C5-L4 — côté élève : LIVRES, sa séance de lecture ; EXERCICES, ce qu'il
+    // travaille à la maison ; EXAMENS, où vit la passation en classe.
+    // ⭐ Le partage est celui du `06-` §1 — « lecture formative, à la maison »
+    //    d'un côté, « lecture diagnostique, en classe » de l'autre —, et
+    //    l'onglet Livres est ce que le `01-` §2 appelle, côté élève, « un lieu,
+    //    hors du cycle ».
+    //
+    // ⚠️⚠️ LE PIÈGE PROPRE À ALETHEIA : `app/eleve/modules/aletheia/[livreId]/`
+    //    est un SEGMENT DYNAMIQUE À LA RACINE du module, au même niveau que
+    //    `exercice/`, `passation/`, `exercices/` et `examens/`. Codex n'a pas ce
+    //    problème — ses routes filles sont toutes des dossiers nommés. Une
+    //    séance de lecture est `/eleve/modules/aletheia/<uuid>/<n>` : AUCUN
+    //    préfixe statique ne la décrit, elle ne peut être servie que par le plus
+    //    COURT, celui de la racine. C'est ce qui rend l'ordre de Louis (Livres
+    //    en tête, gardant la racine) techniquement le plus sûr : Livres attrape
+    //    par défaut, et les deux autres onglets se déclarent par leurs préfixes.
+    //
+    // ⚠️ SINGULIER / PLURIEL À UN CARACTÈRE PRÈS, et il faut le lire deux fois.
+    //    Le déroulé posé par C5-L2 est `…/aletheia/exercice/<depotId>` — AU
+    //    SINGULIER, et il ne bouge pas. L'onglet, lui, est `…/aletheia/exercices`
+    //    — AU PLURIEL. `ongletActifParRoute` s'en sort (`===` est faux, et
+    //    `startsWith(base + '/')` aussi, dans les deux sens : le caractère qui
+    //    suit `…/exercice` est `s`, pas `/`), mais un humain qui relit ce
+    //    fichier, lui, peut s'y tromper — d'où cette note.
+    //
+    // ⚠️ Pilotés par la ROUTE, jamais par `?vue=` : `?vue=` est absent d'une
+    //    route de détail, et `vueDefaut` allumerait « Livres » au-dessus d'une
+    //    passation en classe. Les deux mécaniques ne se mélangent pas dans un
+    //    même module (`SousNavModuleMobile` choisit par `onglets.some(o => !!o.vue)`).
+    sousOngletsEleve: [
+      { href: '/eleve/modules/aletheia', label: 'Livres' },
+      {
+        href: '/eleve/modules/aletheia/exercices',
+        label: 'Exercices',
+        prefixes: ['/eleve/modules/aletheia/exercice'],
+      },
+      {
+        href: '/eleve/modules/aletheia/examens',
+        label: 'Examens',
+        prefixes: ['/eleve/modules/aletheia/passation'],
+      },
     ],
   },
   {

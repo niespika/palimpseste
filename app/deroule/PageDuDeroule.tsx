@@ -16,12 +16,17 @@
 //
 // ⚠️ **PAS DE `<main>` IMBRIQUÉ.** Le layout élève en fournit déjà un, avec sa
 //    colonne (`app/eleve/layout.tsx` : `max-w-[1040px]`). Les pages de passation
-//    de C4-L4 en rouvrent un second, avec une autre largeur — **y compris
-//    `app/eleve/modules/aletheia/passation/[depotId]/page.tsx`** : on ne
-//    reproduit pas cet écart, et on ne la prend pas pour modèle.
+//    de C4-L4 en rouvraient un second, avec une autre largeur — on ne reproduit
+//    pas cet écart, et on ne les prend pas pour modèle.
+//    ⭐ **C5-L4 a corrigé les TROIS pages d'Aletheia** (`passation/[depotId]`
+//       côté élève, `passation/[exerciceId]` et `examen-diagnostique/[planifieId]`
+//       côté professeur) : elles rendent un `<div>`, aux classes inchangées.
+//       ⚠️ **Les trois jumelles de CODEX portent encore le défaut** — elles sont
+//          hors du périmètre de C5-L4, et nommées à son relevé.
 //
-// ⚠️ **LES ONGLETS SONT C5-L4** : cet écran n'en déclare aucun, et il ne touche
-//    pas `components/nav/configModules.ts`.
+// ⭐ **LES ONGLETS SONT C5-L4, ET ILS SONT POSÉS** : cet écran n'en déclare
+//    toujours aucun et ne touche pas `components/nav/configModules.ts` — c'est
+//    le `prefixes[]` de l'onglet Exercices, de chaque côté, qui le range.
 // ============================================================================
 
 import Link from 'next/link'

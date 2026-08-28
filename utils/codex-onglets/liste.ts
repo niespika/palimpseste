@@ -1,7 +1,16 @@
 import 'server-only'
 // ============================================================================
-// C4 · L6 — CE QUE LES DEUX ONGLETS LISENT. Une porte par côté.
-// (⭐ C5-L2 — et la liste de l'élève sert désormais LES DEUX ATELIERS.)
+// C4 · L6 — CE QUE LES ONGLETS LISENT. Une porte par côté.
+// (⭐ C5-L2 — la liste de l'ÉLÈVE sert les deux ateliers.
+//  ⭐ C5-L4 — celle du PROFESSEUR aussi : ce fichier porte les DEUX modules.)
+//
+// ⚠️ LE DOSSIER S'APPELLE `codex-onglets` PARCE QUE C4-L6 L'A ÉCRIT ; SON
+//    CONTENU N'EST PLUS PROPRE À CODEX. Deux lectures sur trois prennent
+//    désormais leur atelier en paramètre, et le renommer coûterait plus de
+//    churn qu'il n'apporte de clarté — la note vaut mieux que le déménagement.
+//    Seul `nombreAValiderCodex` reste ATTACHÉ à Codex, et le motif est réel :
+//    il lit `codex_travaux`, la synthèse en classe, dont il n'y a AUCUN
+//    équivalent côté lecture. On ne fabrique pas une file qui n'existe pas.
 // ----------------------------------------------------------------------------
 // « Un écran sans porte n'existe pas. » — `07-` §2, C4-L6
 //
@@ -31,8 +40,8 @@ import 'server-only'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { lireLaPorte } from '@/utils/deroule/acces'
 import {
-  atelierDUnFormatif, comparerLignes, etatDeLExercice, hrefDuDeroule, titreDeLaConsigne,
-  visibleDansLaClasse, type Atelier, type EtatDeLigne,
+  atelierDUnFormatif, comparerLignes, etatDeLExercice, hrefDeLaPassationProf, hrefDuDeroule,
+  titreDeLaConsigne, visibleDansLaClasse, type Atelier, type EtatDeLigne,
 } from './regles'
 
 type Admin = SupabaseClient
@@ -191,7 +200,16 @@ export interface PassationDeClasse {
 }
 
 /**
- * Les passations en classe de CODEX, pour l'accès depuis l'onglet Exercices.
+ * Les passations en classe DE L'ATELIER DEMANDÉ, pour l'accès depuis son onglet
+ * Exercices.
+ *
+ * ⭐⭐ C5-L4 — LA CIBLE EST DEVENUE UN PARAMÈTRE, ET C'EST TOUT LE GESTE. C'est
+ *    exactement ce que `C5-L2` a fait sur `exercicesMaisonDeLEleve` : le nom
+ *    disait `Codex`, le filtre disait `=== 'codex'` en dur, et **le prédicat ne
+ *    change pas d'un caractère**. *« Deux ateliers, deux portes, un seul
+ *    prédicat. »* ⛔ **Un second exemplaire divergerait au premier correctif** —
+ *    et la règle qu'il porte (la ligne de plan d'abord, le mode ensuite) est
+ *    précisément celle qu'il ne faut jamais laisser diverger.
  *
  * ⭐ DEUX PORTES VERS LE MÊME ÉCRAN NE SONT PAS UN DOUBLON. `app/prof/codex/passation/[exerciceId]`
  *    ne s'atteignait que depuis `app/prof/conception/[id]`, « là où le professeur
@@ -211,7 +229,9 @@ export interface PassationDeClasse {
  *    pourquoi il est fermé ; un onglet qui clignote selon un drapeau apprendrait
  *    au professeur une navigation qui changera sous lui à l'allumage (piège 41).
  */
-export async function passationsDeClasseCodex(admin: Admin): Promise<PassationDeClasse[]> {
+export async function passationsDeClasse(
+  admin: Admin, atelier: Atelier = 'codex',
+): Promise<PassationDeClasse[]> {
   const { data, error } = await admin
     .from('exercices')
     .select('id, lieu, classe_id, consigne_instanciee, modes_par_competence, '
@@ -219,7 +239,8 @@ export async function passationsDeClasseCodex(admin: Admin): Promise<PassationDe
     .eq('lieu', 'classe')
     .neq('statut', 'a_concevoir')
   if (error) {
-    console.error(`[codex-onglets] passations illisibles — ${error.code} ${error.message}`)
+    console.error(`[codex-onglets] passations (${atelier}) illisibles — `
+      + `${error.code} ${error.message}`)
     return []
   }
   const rows = (data ?? []) as unknown as Ligne[]
@@ -233,17 +254,23 @@ export async function passationsDeClasseCodex(admin: Admin): Promise<PassationDe
     const { data: lignes, error: e2 } = await admin
       .from('scriptorium_exercices_planifies').select('id, type_exercice').in('id', planifieIds)
     if (e2) {
-      console.error(`[codex-onglets] lignes de plan illisibles — ${e2.code} ${e2.message}`)
+      console.error(`[codex-onglets] lignes de plan (${atelier}) illisibles — `
+        + `${e2.code} ${e2.message}`)
     }
     for (const l of (lignes ?? []) as unknown as Ligne[]) typeParLigne.set(txt(l.id), txt(l.type_exercice))
   }
 
   return rows
     .filter((e) => {
+      // ⚠️ L'ORDRE NE S'INVERSE PAS : la ligne de plan D'ABORD, le mode ENSUITE
+      //    et seulement à défaut de ligne de plan. Le motif est mesurable —
+      //    l'explication de texte mesure l'Expression EN `composer`, et la règle
+      //    des modes l'enverrait dans Codex quand le `06-` §1 la range en
+      //    LECTURE. C'est l'ordre exact de `utils/examens/signal.ts`.
       const parPlan = typeParLigne.get(txt(e.exercice_planifie_id))
-      if (parPlan === 'ecriture') return true
-      if (parPlan === 'lecture') return false
-      return atelierDUnFormatif(e.modes_par_competence) === 'codex'
+      if (parPlan === 'ecriture') return atelier === 'codex'
+      if (parPlan === 'lecture') return atelier === 'aletheia'
+      return atelierDUnFormatif(e.modes_par_competence) === atelier
     })
     .map((e) => {
       const c = lig(un(e.classes))
@@ -252,7 +279,7 @@ export async function passationsDeClasseCodex(admin: Admin): Promise<PassationDe
         titre: titreDeLaConsigne(e.consigne_instanciee, 'Passation en classe'),
         classeNom: txt(c.nom) || null,
         quand: (e.fenetre_debut as string | null) ?? null,
-        href: `/prof/codex/passation/${txt(e.id)}`,
+        href: hrefDeLaPassationProf(atelier, txt(e.id)),
       }
     })
     // ⚠️ DÉPARTAGE SUR UNE CLÉ UNIQUE, ET IL N'EST PAS DÉCORATIF : `fenetre_debut`

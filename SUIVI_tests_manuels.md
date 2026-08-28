@@ -6947,15 +6947,24 @@ interruption. Le décor se reconnaît à sa classe, `nom LIKE 'RECETTE-C5L3%'`. 
   ⚠️ **Leçon de recette** : la première version du script appelait `traiterDepot` **en direct** et
   court-circuitait donc la file — *une recette qui court-circuite le chemin de production ne prouve pas
   le chemin de production.* Le script passe désormais par `mettreEnFile` + `reclamerJobs` + `tourDeFile`.
-- [ ] **C5L3-11-bis · ⛔ L'ÉCRAN NE MONTRE PAS LE MOTIF QUAND TOUT VA BIEN — déposé à `C5-L4`.**
-  `etatChaineDeLaCopie()` *(`utils/passation/file-copie.ts:118`)* ne sert `motif` que sur **deux**
-  états — `echec` et `sans_retour` ; sur **`abouti`** il rend `phrase: 'Traitement terminé.'` et
-  **`motif: null`**. ⚠️ **Sur l'exercice de PROD** *(13 dépôts remis, deux compétences écartées
-  chacun)*, le professeur lira **treize fois « Traitement terminé. »** et **n'apprendra jamais que la
-  moitié des compétences élues n'a pas été mesurée**. ⛔ **Non réparé : mon entrée exclut « tout
-  écran ».** **Condition de reprise : `C5-L4`** — un état `abouti` qui porte son motif quand il y a des
-  écartées, ou un sixième compteur à « LA FILE ». *Le motif est déjà en base : il n'y a rien à
-  recalculer.*
+- [x] **C5L3-11-bis · ✅ LEVÉE PAR `C5-L4` LE 27/08 — L'ÉCRAN MONTRE LE MOTIF QUAND TOUT VA BIEN.**
+  ~~`etatChaineDeLaCopie()` ne sert `motif` que sur `echec` et `sans_retour` ; sur `abouti` il rend
+  `motif: null`.~~ **La branche `if (c.aUnRetour)` sert désormais son motif** quand la porte de mode
+  a écarté des compétences *(`utils/passation/file-copie.ts`)*, et `TraitementDeLaCopie` ne rend plus
+  `null` que sur **`abouti` SANS motif** *(`components/passation/EcranProf.tsx`)*.
+  ⭐ **FORME CHOISIE : l'état `abouti` porte son motif — PAS un sixième compteur.** Motif du choix :
+  les six comptes de « LA FILE » sont **disjoints et couvrent tout** *(leur somme vaut le nombre de
+  copies, un test l'assère)*, et *« aboutie avec écartées » n'est pas un septième état — c'est la
+  MÊME aboutie qui a quelque chose à dire*. Un test neuf tient ce choix avec son motif.
+  ⭐⭐ **PREUVE SUR LA PRODUCTION, PAS SUR UNE FIXTURE** *(le bac à sable n'a que le cas « tout
+  écarté », qui servait déjà son motif)* : `scripts/recette/couture-c5l4.mjs` section E lit les
+  **13 jobs de PROD** en lecture seule, reconstitue ce que l'écran reçoit *(jobs + retour + copie)*
+  et constate **13/13 `abouti` qui servent leur motif, 0 qui se taisent**.
+  ⛔ **La clé reste `abouti`, la phrase reste « Traitement terminé. », `relancable` reste `false`** —
+  *une trace n'est pas un état* : on LIT `dernier_message` pour l'AFFICHER, on n'en DÉDUIT rien.
+  ⛔ **Le silence reste la règle sans écartées** *(un bandeau « tout va bien » ferait du bruit)*, et
+  le chemin `sans_retour` n'a pas bougé. ⚠️ **CODEX EN PROFITE AUSSI** — l'écran est partagé.
+  ⚠️ **Reste à VOIR à l'écran** : `C5L4-D` ci-dessous.
 - [x] **C5L3-11-ter · ✅ LE SMOKE PROF SUR LA PROD, JOUÉ LE 27/08 — LA PORTE TIENT SUR 13 COPIES
   RÉELLES.** 26 mesures (**2 par copie** : `expression×composer` et `synthese×restituer`, avec leurs
   lettres) · **0 mesure** et **0 appel payé** sur `argumentation`/`structure` · **13/13** jobs dont
@@ -7038,3 +7047,147 @@ interruption. Le décor se reconnaît à sa classe, `nom LIKE 'RECETTE-C5L3%'`. 
   pas « pas d'objet »* — c'est la leçon exacte du déménagement du statut de recette. ⛔ **Relevé, pas
   réparé : c'est une donnée, pas un défaut de code.** **Condition de reprise : l'écran de la fabrique
   (C4-L8), où le professeur pose le statut.**
+
+
+## C5 · L4 — Les onglets de la lecture (⚠️ **AUCUNE MIGRATION** — aucune n'était attendue, aucune n'a été nécessaire)
+
+> **Séance du 27/08.** `npx tsc --noEmit` vert · `npm test` **1672 / 1673** *(le seul rouge est
+> ANTÉRIEUR au lot : `utils/chaine/instruments.test.ts` — la version du `07-` passée en 2.58 par la
+> séance de fabrication du prompt ; voir `C5L4-0`)* · `npx eslint` **0 erreur**.
+> Relevé : `RELEVE_C5_L4_2026-08-27.md`.
+> ⛔ **Aucun interrupteur posé, allumé ni éteint. Aucune migration. Aucune dette.**
+
+### Prouvé en séance
+
+- [x] **C5L4-1 · ⭐ LES TROIS ONGLETS DU PROFESSEUR — Livres · Exercices · Paramètres.**
+  `components/nav/configModules.ts`. **L'onglet qui garde la RACINE vient en tête** *(décision de
+  Louis, 27/08)* : `/prof/aletheia` reste la cible de « Modules → Aletheia », de ses propres tuiles
+  `?classe=<id>` et de six des dix `revalidatePath`. **« Classe » a disparu de la barre**, et l'écran
+  nomme désormais ce qu'il montre *(« Les livres, classe par classe »)*. **L'onglet Exercices est une
+  route NEUVE** ; `passation` et `examen-diagnostique` y sont rattachés par `prefixes[]`.
+- [x] **C5L4-2 · ⭐ LES TROIS ONGLETS DE L'ÉLÈVE — Livres · Exercices · Examens.** Même règle, même
+  ordre. ⛔ Pas de « Paramètres » côté élève, pas de quatrième onglet « Diagnostic » — la trajectoire
+  E→A vit **sous Livres**, avec ce qu'elle décrit *(`AGENTS.md` : « un module = 2-3 onglets »)*.
+- [x] **C5L4-3 · ⚠️⚠️ LE PIÈGE DU SEGMENT DYNAMIQUE À LA RACINE, LEVÉ AU NAVIGATEUR.**
+  `app/eleve/modules/aletheia/[livreId]/` est au même niveau que mes deux dossiers neufs. **Sondes au
+  serveur de dev** : `/eleve/modules/aletheia/exercices` et `…/examens` rendent **307** *(elles
+  existent)*, `…/exercice/abc` et `…/uuid-x/3` rendent **307** *(intactes)*, et
+  `…/nexistepas` rend **404** — ⭐ **rien ne l'avale**, il n'y a pas de `[livreId]/page.tsx`. Côté
+  prof, `/prof/aletheia/exercices` **307** et `/prof/aletheia/nexistepas` **404**.
+- [x] **C5L4-4 · ⭐ UNE SÉANCE DE LECTURE ALLUME BIEN « LIVRES ».** `/eleve/modules/aletheia/<uuid>/<n>`
+  et `…/<uuid>/capstone` : **aucun préfixe statique ne peut décrire un UUID**, seule la racine les
+  sert. *C'est ce qui rend l'ordre de Louis techniquement le plus sûr.* Tenu par un test nommé.
+- [x] **C5L4-5 · ⚠️ SINGULIER / PLURIEL À UN CARACTÈRE PRÈS.** `…/aletheia/exercice/<id>` *(le
+  déroulé de C5-L2, **il ne bouge pas**)* et `…/aletheia/exercices` *(l'onglet)*. `ongletActifParRoute`
+  les sépare *(le caractère qui suit `…/exercice` est `s`, pas `/`)* — **un test l'assère dans les
+  deux sens**, et vérifie que le pluriel ne tombe pas sur la racine par accident. Le commentaire est
+  à trois endroits : la config, `regles.ts`, la page du déroulé.
+- [x] **C5L4-6 · ⭐ LES TROIS ROUTES SANS PORTE SONT FERMÉES.**
+  `app/prof/aletheia/passation/[exerciceId]` *(un seul lien dans tout le dépôt)*,
+  `app/prof/aletheia/examen-diagnostique/[planifieId]` *(atteignable uniquement par un encart en tête
+  de la racine)* et `app/eleve/modules/aletheia/passation/[depotId]` *(un signal noyé sous les
+  livres)*. **Les treize routes du module ont chacune leur clic depuis un onglet** — l'inventaire
+  AVANT / APRÈS est au §1 du relevé, et le script de couture le vérifie **par exécution**.
+- [x] **C5L4-7 · ⭐⭐ LA LISTE DES PASSATIONS EST PARAMÉTRÉE, JAMAIS DUPLIQUÉE.**
+  `passationsDeClasseCodex(admin)` → `passationsDeClasse(admin, atelier = 'codex')` ; le `href` suit
+  par `hrefDeLaPassationProf(atelier, id)`, le pendant de `hrefDuDeroule`. *« Deux ateliers, deux
+  portes, un seul prédicat. »* ⛔ Aucun second exemplaire.
+- [x] **C5L4-8 · ⭐⭐ L'ORDRE LIGNE-DE-PLAN-PUIS-MODE, PROUVÉ PAR CONTRE-ÉPREUVE.** Le décor sème une
+  passation qui **porte `composer`** et dont la **ligne de plan dit `lecture`** — c'est l'explication
+  de texte. Constaté : elle **n'apparaît PAS** chez Codex, ni dans la liste ni dans les signaux, et
+  elle apparaît chez Aletheia. **Si quelqu'un inverse les deux règles, ce décor le fait tomber.**
+- [x] **C5L4-9 · ⛔⛔ LES QUATRE GARDES DU MODULE SE REJOUENT SUR LES TROIS ONGLETS.**
+  `contexteAletheia` est **réutilisée, pas dupliquée** : ses quatre sorties anticipées vivent
+  désormais dans `app/eleve/modules/aletheia/gardes.tsx`, que les trois onglets appellent. *« Un
+  onglet qu'on clique doit dire POURQUOI il refuse, jamais rendre une page vide. »* `CarteMessage` a
+  été extraite dans son fichier, avec `avecRetour` intact.
+- [x] **C5L4-10 · ⭐ LE VIDE DE L'ONGLET EXERCICES A CHANGÉ DE FORME, ET C'EST VOULU.** Sur la racine,
+  le bloc ne s'affichait **que s'il y avait quelque chose** *(la page porte d'abord des livres)*.
+  **Sous un onglet dédié, on vient de cliquer exprès : il doit dire quelque chose** — et les deux
+  vides sont **distingués** *(« pas encore ouverts » ≠ « aucun exercice pour le moment »)*.
+- [x] **C5L4-11 · ⭐⭐ LA COPIE `abouti` DIT SES ÉCARTÉES — PROUVÉ SUR LA PRODUCTION.** Voir
+  `C5L3-11-bis`, levée. **13/13 des copies de prod servent leur motif ; 0 se taisent.**
+- [x] **C5L4-12 · ⭐⭐ LA COUTURE, ÉPROUVÉE PAR EXÉCUTION — 41 verts, 0 rouge.**
+  `scripts/recette/couture-c5l4.mjs`, avec son `--retire` et son `--garde-le-decor`. **Cinq coutures
+  nommées** *(qui écrit · qui lit · quel chemin réel y mène)*, et pour chaque `href` **rendu par une
+  lecture** — jamais tapé — **deux vérifications que rien d'autre ne fait ensemble** : que la ROUTE
+  SERT *(`chargerVueProf` / `chargerVueEleve` / `chargerConception` / `lireDepotMaison`)* et que
+  l'ONGLET S'ALLUME *(`ongletActifParRoute` sur la config réelle)*. ⛔ **Aucun appel de modèle payé.**
+  Décor semé et retiré, **idempotent sur deux tours**, six interrupteurs identiques avant / après.
+- [x] **C5L4-13 · ⚠️ LES TROIS `<main>` IMBRIQUÉS D'ALETHEIA SONT CORRIGÉS.**
+  `app/eleve/modules/aletheia/passation/[depotId]`, `app/prof/aletheia/passation/[exerciceId]`,
+  `app/prof/aletheia/examen-diagnostique/[planifieId]` : `<main>` → `<div>`, **classes inchangées**.
+  *La coquille du rôle rend déjà un `<main>` : deux repères « principal » s'entendent au lecteur
+  d'écran.* ⚠️ **Les trois jumelles de CODEX portent encore le défaut** — hors périmètre, nommées au
+  §6.2 du relevé.
+- [x] **C5L4-14 · ⭐ LA BARRE MOBILE À 375 px, MESURÉE.** Markup réel de `SousNavModuleMobile`,
+  police réelle *(Alegreya Sans)*, couleurs réelles d'Aletheia : **64 + 81 + 81 px**, `scrollWidth`
+  = `clientWidth` = 375 → **aucun débordement**, et **44 px de haut les trois** *(la cible tactile
+  que le composant impose)*. ⚠️ *Mesuré dans le navigateur, hors session authentifiée — la page
+  vivante va en `C5L4-B`.*
+- [x] **C5L4-15 · ⛔ CE QUI N'A PAS BOUGÉ, ET C'EST LA MOITIÉ DE LA RÉUSSITE.**
+  `utils/deroule/`, `utils/chaine/`, `utils/examens/`, `utils/generateur/` et **tout le chemin du
+  livre** sortent du lot **inchangés** *(`git diff --stat` par dossier)*. Aucun onglet de Codex n'a
+  bougé *(un test l'assère : libellés ET les quatre listes de préfixes)*. `app/prof/conception/`
+  **n'a pas déménagé** — un renvoi, décision de Louis. Le sélecteur `classesAvecModule` est intact ;
+  les deux écrans de paramètres qui écrivent dans `aletheia_params` **n'ont pas été réunis**.
+- [x] **C5L4-16 · ⚠️ LES SCRIPTS QUI TRAVERSENT ALETHEIA, REJOUÉS.** `lecture-c5l2` **38/0** ·
+  `generateur-c5l1` **27/0** · `passation-c4l4` **56/1** *(le rouge est la **latence connue**,
+  22,8 s, déjà relevée le 22/08 — sans rapport)* · `reception-c5l3` **26/1** *(le rouge —
+  `la vf N'A ÉCRIT AUCUNE MESURE de plus` — ne peut pas venir d'ici : `git diff utils/chaine/` est
+  **vide** et ce script n'importe **aucun** de mes fichiers ; le tour porte un `RR4` refusé, et **le
+  refus n'est pas déterministe** — relancer d'abord)*. **Coût des rejeux payants : 108 appels,
+  1,66 USD**, bac à sable.
+
+### Reste à jouer en recette
+
+- [ ] **C5L4-0 · ⚠️⚠️ `npm test` ÉTAIT ROUGE AVANT CE LOT, ET LE PROMPT INTERDIT LE GESTE QUI LE
+  RÉPARE.** `utils/chaine/instruments.test.ts:207` — *« les dérivés ont divergé de leurs sources »*.
+  **La divergence entière tient en QUATRE valeurs, et ne touche AUCUNE compétence** : la `version` et
+  l'`empreinte` du `07-` dans `MANIFESTE.ts` et `calame-retour.ts` ; le gabarit Calame est
+  **identique à l'octet** *(3422 octets, comparés)*, et un `diff -ru` des dix dérivés ne montre rien
+  d'autre. **Le rouge est né AVANT le lot** — la complétion de l'entrée `C5-L4` au `07-` §2, en
+  séance de fabrication du prompt, a porté le `07-` de **2.57 à 2.58** — **et il a bougé AVEC lui** :
+  les deux amendements aux sections ouvertes le portent en **2.59**. ⭐ **Le dépôt montre que le geste
+  normal après un amendement du `07-` est de rejouer `--ecris`** : les dérivés étaient à jour en 2.57.
+  ⛔ **Non réparé : le prompt écrit « Ne joue pas `derive-instruments.py --ecris` » et exige par
+  ailleurs un test vert avant d'écrire — les deux ne peuvent pas être satisfaits ensemble, et
+  l'option qui ne change rien a été prise.** **Condition de reprise : décision de Louis** — rejouer
+  `python3 scripts/derive-instruments.py --ecris` pour reprendre la 2.59, ou pas.
+- [ ] **C5L4-A · LE SMOKE PROF, CONNECTÉ.** Les trois onglets s'affichent et s'allument ; l'onglet
+  Exercices porte ses trois renvois, l'encart et la liste ; une passation s'ouvre depuis la liste ;
+  la fiche d'un élève garde « Livres » allumé. ⚠️ **Une session Code ne s'authentifie pas.**
+  **Condition de reprise : une session que Louis ouvre.** Le décor est prêt :
+  `couture-c5l4.mjs --garde-le-decor`, puis `--retire`.
+- [ ] **C5L4-B · LE SMOKE ÉLÈVE, CONNECTÉ**, sur téléphone ou à 375 px : les trois onglets ; la
+  séance allume Livres, l'exercice allume Exercices, la passation allume Examens ; **et UN SEUL
+  « ← Retour » par écran** *(le défaut du double retour n'est visible qu'à l'œil — aucun test ne
+  compte les liens d'une page)*. **Condition de reprise : idem.**
+- [ ] **C5L4-C · LES DEUX VIDES DE L'ONGLET EXERCICES ÉLÈVE**, distingués à l'écran : porte fermée
+  *(« pas encore ouverts »)* vs rien à faire *(« aucun exercice pour le moment »)*.
+  ⚠️ **Demande d'ÉTEINDRE `exercices_actif`**, un geste du professeur à `/prof/allumage`.
+  **Condition de reprise : ce geste — ce lot ne bascule aucun interrupteur.**
+- [ ] **C5L4-D · LE MOTIF DE LA COPIE ABOUTIE, VU À L'ÉCRAN**, sur
+  `/prof/aletheia/passation/<exerciceId>` — section « LA FILE » et les lignes par élève, dépliées.
+  ⚠️ **Prouvé par exécution sur les 13 copies de PROD, jamais vu à l'écran** : c'est là que C5-L3
+  avait constaté le silence. **Condition de reprise : le smoke prof.**
+- [ ] **C5L4-E · LA SECTION C4-L4 REJOUÉE À L'ÉCRAN** — l'écran de la file est **partagé avec
+  Codex**, et ce lot l'a touché. Le script est vert ; l'écran ne l'a pas été.
+  **Condition de reprise : le smoke prof, des deux côtés.**
+- [ ] **C5L4-F · `examens-c4l9.mjs` À REJOUER, une fois son résidu retiré.** Une ligne de plan
+  `codex` / `ecriture` / `septembre` / `concu`, `note: "RECETTE C4-L9"`, créée le **2026-08-24T01:38**
+  sur le plan de la classe `Test` *(`6ff2d56b-0fbf-4d53-b187-464dd4233852`)*, fait échouer le décor
+  de sa propre recette sur `uk_exercices_diagnostic` **dès sa section A** : le script s'arrête avant
+  toute vérification, il n'a **rien** dit ni en bien ni en mal. ⛔ **Rien de C5-L4 ne la touche.**
+  **Condition de reprise : retirer le résidu, rejouer.**
+- [ ] **C5L4-G · ⚠️ LES SIX INTERRUPTEURS SONT À ON EN BAC À SABLE ET EN PROD**, reconstaté par
+  requête au début et à la fin de la séance ; le `07-` §5 les dit « à OFF jusqu'à la recette ».
+  **Constat d'état, déjà déposé par C5-L2, non réparé ici.** *Conséquence : les six onglets seront
+  visibles et pleins dès la première seconde.* **Condition de reprise : décision de Louis, à
+  `/prof/allumage`.**
+- [ ] **C5L4-H · ⛔ LE DÉMÉNAGEMENT DE `app/prof/conception/` EST REPORTÉ** — décision de Louis, 27/08 :
+  *« ça va me demander un peu plus de réflexion, donc pour le moment on fait juste un renvoi »*.
+  **Son coût est listé, fichier par fichier et ligne par ligne, au §6.1 du relevé** *(dix
+  `revalidatePath` dans six fichiers, plus quatre autres sites et l'entrée de nav)*. ⚠️ **Un
+  `revalidatePath` sur un chemin mort ne lève aucune erreur.** **Condition de reprise : une décision
+  de Louis sur l'organisation de la conception.** *(Ligne posée à `IDEES_post_rentree.md`.)*

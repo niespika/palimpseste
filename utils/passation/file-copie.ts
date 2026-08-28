@@ -15,7 +15,9 @@
 //      · pas de copie remise    → la chaîne n'a rien à lire, et c'est normal ;
 //      · copie remise, HORS FILE → il manque un déclenchement du lot ;
 //      · en file                → il faut attendre, et seulement attendre ;
-//      · abouti AVEC retour     → rien à faire ;
+//      · abouti AVEC retour     → rien à faire — ⭐ mais PAS forcément rien à
+//                                 DIRE : depuis C5-L4 il porte son motif quand
+//                                 la porte de mode a écarté des compétences ;
 //      · abouti SANS retour     → le retour a été REFUSÉ ; il faut relancer ;
 //      · échec définitif        → la chaîne a renoncé ; il faut relancer.
 //    Les deux derniers appellent un GESTE. Les confondre avec « en file », c'est
@@ -64,6 +66,53 @@ export interface EtatChaine {
   motif: string | null
   /** Le professeur peut-il agir d'un clic ? */
   relancable: boolean
+}
+
+/**
+ * ⭐⭐ C5-L4 — LA MARQUE QUE LA CHAÎNE POSE QUAND ELLE ÉCARTE UNE COMPÉTENCE.
+ *
+ * `motifDesEcartees()` (`utils/chaine/chaine.ts`) l'écrit dans
+ * `exercices_jobs.dernier_message`, à la fin du bilan, sous cette forme exacte :
+ *
+ *     …, 3 appel(s), 42 s, 2 écartée(s) — structure, argumentation : mode
+ *     « expliquer » non couvert par l'instrument de structure…
+ *
+ * ⚠️ ELLE EST DISCRIMINANTE, ET C'EST POURQUOI ELLE PORTE LE TIRET CADRATIN. Le
+ *    dépôt écrit « écartée(s) » à deux autres endroits, et aucun ne matche :
+ *    l'alerte « N compétence(s) sondée(s) écartée(s) DU RETOUR »
+ *    (`chaine.ts`) et le compte « N sans copie remise, écartée(s) »
+ *    (`app/passation/actions.ts`) — ni l'un ni l'autre n'a ` — ` après.
+ */
+const MARQUE_ECARTEES = /\d+\s+écartée\(s\)\s+—\s+\S[\s\S]*$/u
+
+/**
+ * ⭐⭐ C5-L4 — CE QU'UNE COPIE ABOUTIE A ENCORE À DIRE.
+ *
+ * ⛔ LE DÉFAUT QU'ELLE RÉPARE, ET IL A ÉTÉ MESURÉ EN PRODUCTION LE 27/08. Sur
+ *    l'exercice de prod — 23 dépôts, 13 remis, `argumentation:[expliquer]` +
+ *    `structure:[expliquer]` écartées par la porte de mode de C5-L3 —, le
+ *    professeur lisait TREIZE FOIS « Traitement terminé. » et n'apprenait JAMAIS
+ *    que la moitié des compétences élues n'avait pas été mesurée. *Une mesure
+ *    qui n'a pas eu lieu ne se voit pas — c'est précisément ce que la porte de
+ *    mode existait pour dire.*
+ *
+ * ⭐ LE MOTIF EST DÉJÀ EN BASE, ET IL N'Y A RIEN À RECALCULER : C5-L3 a fait sa
+ *    moitié. On LIT la trace, on ne la refabrique pas.
+ *
+ * ⚠️⚠️ UNE TRACE N'EST PAS UN ÉTAT (leçon de C5-L2-bis). `dernier_message` d'un
+ *    job N'EST PAS l'état du dépôt : la clé reste `abouti`, dérivée des jobs et
+ *    du retour exactement comme avant, `relancable` reste `false`, et le
+ *    professeur n'a RIEN à faire. Ce qui change est le `motif` — un texte
+ *    AFFICHÉ, jamais un état DÉDUIT.
+ *
+ * ⚠️ LE CHEMIN OÙ TOUT EST ÉCARTÉ FONCTIONNE DÉJÀ, et cette réparation ne le
+ *    touche pas : un exercice qui n'élit que des couples non couverts ne produit
+ *    aucun squelette, donc aucun retour → l'état est `sans_retour`, QUI SERT
+ *    DÉJÀ SON MOTIF. C'est le cas MIXTE qui se taisait, et c'est celui de la prod.
+ */
+function ecarteesDuMessage(message: string | null): string | null {
+  const m = (message ?? '').match(MARQUE_ECARTEES)
+  return m ? m[0] : null
 }
 
 /**
@@ -117,7 +166,20 @@ export function etatChaineDeLaCopie(c: CopiePourFile): EtatChaine {
   }
 
   if (c.aUnRetour) {
-    return { cle: 'abouti', phrase: 'Traitement terminé.', motif: null, relancable: false }
+    // ⭐⭐ C5-L4 — « UNE COPIE DONT LE TRAITEMENT A ABOUTI DIT SES COMPÉTENCES
+    //    ÉCARTÉES » (`07-` §2). La phrase ne change pas — le traitement EST
+    //    terminé, et rien n'attend le professeur — mais le motif, lui, cesse
+    //    d'être `null` quand la porte de mode en a écarté.
+    // ⚠️ MÊME RÈGLE QUE POUR `sans_retour` : c'est la DERNIÈRE étape qui parle.
+    //    Un `retour_v1` rejoué après un `mesure_v1` raconte le tour courant ; le
+    //    message de la mesure décrit celui d'avant, et servirait un motif périmé.
+    const dernier = mesure.length > 0 ? mesure[mesure.length - 1].message : null
+    return {
+      cle: 'abouti',
+      phrase: 'Traitement terminé.',
+      motif: ecarteesDuMessage(dernier),
+      relancable: false,
+    }
   }
 
   // ⭐ LE CAS QUI SE TAISAIT. La mesure a abouti, les mesures sont écrites et

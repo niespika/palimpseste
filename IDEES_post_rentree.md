@@ -740,3 +740,50 @@ tout comptage de lignes et toute empreinte sur ces chaînes dérivent.** ⚠️ 
 `lireCas()` et de l'écriture de la consigne. **C5-L1 l'a fait chez lui** — `deposerTexte` et
 `corrigerReference` normalisent, et leurs champs sont **mesurés à 0 CR** dans la même séance, face
 aux 1 CR de la consigne : *les deux régimes cohabitent aujourd'hui dans la même base.*
+
+
+## C5-L4 · Les onglets de la lecture — deux renvois de périmètre (27/08/2026)
+
+**Ce lot était une réorganisation de navigation, l'ouverture des portes qu'elle rend possible, et une
+phrase d'écran qui manquait.** Les deux points ci-dessous ont été **vus, nommés, et laissés là**.
+
+**1. Le déménagement de `app/prof/conception/` dans l'atelier de son mode — REPORTÉ UNE SECONDE FOIS,
+et cette fois par une décision, pas par une dépendance.** C4-L6 l'avait déposé à C5-L4 *(entrée
+ci-dessus, point 1)* parce qu'Aletheia n'avait pas d'onglets. **Aletheia les a maintenant, et le
+déménagement ne se fait toujours pas** — **décision de Louis, 27/08** : *« ça va me demander un peu
+plus de réflexion, donc pour le moment on fait juste un renvoi. Je verrai plus tard comment je veux
+vraiment organiser tout ça. »* **L'onglet Exercices d'Aletheia y renvoie par trois liens**
+*(`/prof/conception/nouvelle?porte=aletheia`, `/prof/conception/textes`, `/prof/conception`)*,
+exactement comme celui de Codex.
+
+⭐ *Le motif du déménagement à terme n'a pas changé* : le `01-routeur.md` §2 veut que l'exercice se
+conçoive **dans l'atelier de son mode** — Codex pour `composer`, Aletheia pour `restituer`,
+`expliquer`, `évaluer` et `interroger` *(repris au `02-exercices.md` §6 B)*.
+
+⚠️⚠️ **CE QU'IL COÛTERA, MESURÉ LE 27/08 — la liste existe pour que personne ne le retente en
+passant :**
+
+- **DIX `revalidatePath` sur des chemins Aletheia, dans SIX fichiers** — `app/passation/actions.ts:47`
+  et `:49` *(en `'layout'`)* · `app/deroule/actions.ts:48` *(`'layout'`)* ·
+  `app/eleve/modules/aletheia/actions.ts:49` et `:50` · `app/prof/aletheia/actions.ts:123` et `:203` ·
+  `app/prof/examens-diagnostiques/actions.ts:297` · `app/prof/scriptorium/actions.ts:1200` et `:1452`.
+- **Quatre autres sites qui fabriquent une adresse à la main** — `utils/integrite-preuve.ts:154`
+  *(`lienAnalyse` : **si cette route bouge, l'écran d'intégrité ment sans le dire**)* ·
+  `app/prof/corpus/page.tsx:237` · `components/examens/EcranConceptionExamen.tsx:102` et `:114`.
+- **L'entrée « Conception » du Pilotage** — `components/nav/configNavigation.ts:37`.
+
+⛔ **Un `revalidatePath` sur un chemin mort NE LÈVE AUCUNE ERREUR** : l'écran reste périmé, et
+personne ne sait pourquoi. ⭐ **C5-L4 a laissé les dix justes en gardant les racines aux onglets
+Livres** *(aucune route n'a été déplacée ; les trois `'layout'` couvrent le sous-arbre entier)* —
+**toute route qu'un déménagement déplacera devra être suivie là aussi.**
+
+**2. Les trois `<main>` imbriqués de CODEX restent à corriger.** C5-L4 a corrigé **les trois
+d'Aletheia** — `app/eleve/modules/aletheia/passation/[depotId]`,
+`app/prof/aletheia/passation/[exerciceId]`, `app/prof/aletheia/examen-diagnostique/[planifieId]` :
+`<main>` → `<div>`, **classes inchangées**, seule la balise change. **Les trois jumelles de Codex
+portent le même défaut, et C4-L6 est clos** : `app/eleve/modules/codex/passation/[depotId]`,
+`app/prof/codex/passation/[exerciceId]`, `app/prof/codex/examen-diagnostique/[planifieId]`.
+⚠️ *La coquille du rôle (`app/eleve/layout.tsx`, `app/prof/layout.tsx`) rend déjà un `<main>` autour
+de tout le sous-arbre : deux repères « principal » dans une page qui n'en a qu'un **s'entendent** au
+lecteur d'écran, et les deux largeurs de colonne se concurrencent.* **La correction est d'un
+caractère par balise, et elle est la même que celle qui vient d'être jouée à côté.**

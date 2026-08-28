@@ -41,7 +41,7 @@ import { titresCoursParSession } from '@/utils/codex-titre'
 import { formatJour, formatInstant } from '@/utils/fuseau'
 import { lireFuseau } from '@/utils/fuseau-serveur'
 import Tuile from '@/components/Tuile'
-import { nombreAValiderCodex, passationsDeClasseCodex } from '@/utils/codex-onglets/liste'
+import { nombreAValiderCodex, passationsDeClasse } from '@/utils/codex-onglets/liste'
 
 // Accès & classes · L1 — l'échec ne peut plus être MUET. Cette action jetait le
 // `error` de `preparerSynthese` : le prof pressait « Préparer → » et il ne se
@@ -110,7 +110,10 @@ export default async function CodexProfPage({ searchParams }: { searchParams: Pr
     // C4-L6 — la seconde porte vers la passation en classe. La première, posée
     // par C4-L4 depuis `app/prof/conception/[id]`, RESTE : deux portes vers le
     // même écran ne sont pas un doublon, ce sont deux moments du professeur.
-    passationsDeClasseCodex(admin),
+    // ⭐ C5-L4 a fait de l'atelier un PARAMÈTRE (il valait `codex` en dur) : la
+    //    même lecture sert l'onglet Exercices d'Aletheia. Rien du prédicat n'a
+    //    changé — un second exemplaire aurait divergé au premier correctif.
+    passationsDeClasse(admin, 'codex'),
     // ⚠️ `fenetre_debut` est un INSTANT (`timestamptz`), pas une date pure : il
     //    se formate DANS LE FUSEAU (`formatJour` est réservé aux colonnes
     //    `date`, qu'il rend en UTC — la règle du module Calendrier).

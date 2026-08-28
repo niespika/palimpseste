@@ -1,18 +1,10 @@
-import { notFound } from 'next/navigation'
 import Link from 'next/link'
-import { createClient } from '@/utils/supabase/server'
 import { createAdminClient } from '@/utils/supabase/admin'
-import { chargerCapstoneLivre, contexteAletheia, estSemaineDebloquee, lireReglages, livresPourClasse, travauxParSemaine } from './data'
-import ModuleHorsClasse from '../../ModuleHorsClasse'
-import ChoixClasseModule from '../../ChoixClasseModule'
+import { chargerCapstoneLivre, estSemaineDebloquee, lireReglages, livresPourClasse, travauxParSemaine } from './data'
 import { MicroStepper } from '@/components/aletheia/Steppers'
-import Pastille from '@/components/Pastille'
 import type { StatutAletheia } from './types'
-import { signauxDeLancement } from '@/utils/examens/signal'
-import SignalDeLancement from '@/components/examens/SignalDeLancement'
-import { lireLaPorte } from '@/utils/deroule/acces'
-import { exercicesMaisonDeLEleve } from '@/utils/codex-onglets/liste'
-import type { TonEtat } from '@/utils/codex-onglets/regles'
+import CarteMessage from './CarteMessage'
+import { seuilAletheia } from './gardes'
 
 const BADGE: Record<StatutAletheia, { texte: string; classe: string }> = {
   DRAFT: { texte: 'À commencer', classe: 'bg-parchemin-fonce text-muet' },
@@ -23,30 +15,6 @@ const BADGE: Record<StatutAletheia, { texte: string; classe: string }> = {
   DONE: { texte: 'Terminée', classe: 'bg-pigment-teinte text-pigment' },
 }
 
-/**
- * ⭐⭐ C5-L2 — LES EXERCICES DE LECTURE À FAIRE À LA MAISON.
- *
- * ⚠️ **AVANT CE LOT, ILS N'APPARAISSAIENT NULLE PART.** Cette page ne rendait,
- *    du moteur, que `signauxDeLancement(admin, user.id, 'aletheia')` — les
- *    passations de CLASSE déjà ouvertes par le professeur —, et la seule liste
- *    d'exercices maison, celle de Codex, écartait délibérément tout ce qui n'est
- *    pas `composer` (C4-L6). *Un exercice conçu et assigné était invisible.*
- *
- * ⛔ **CE N'EST PAS UN ONGLET** : les onglets de la lecture sont `C5-L4`, et
- *    `configModules.ts` n'est pas touché. C'est une LISTE, à un endroit qui
- *    existe déjà, et un `href`.
- *
- * ⭐ La lecture, sa porte (`exercices_actif`) et le tri vivent dans le module
- *    partagé : cet écran n'a AUCUNE règle. Les jetons sont ceux de `globals.css`.
- */
-const PASTILLE: Record<TonEtat, string> = {
-  a_lire:   'bg-attention-teinte text-attention',
-  a_faire:  'bg-info-teinte text-info',
-  en_cours: 'bg-info-teinte text-info',
-  attente:  'bg-parchemin-fonce text-muet',
-  clos:     'bg-parchemin-fonce text-muet',
-}
-
 function fmtJourMois(iso: string | null | undefined): string {
   if (!iso) return ''
   const d = new Date(iso)
@@ -54,68 +22,19 @@ function fmtJourMois(iso: string | null | undefined): string {
   return `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}`
 }
 
-/**
- * La carte qui explique un écran vide.
- *
- * ⚠️ **ELLE SERT À DEUX ENDROITS QUI N'ONT PAS LE MÊME BESOIN, ET C'EST TOUT LE
- *    POINT DE `avecRetour`.**
- *
- *  · aux **retours ANTICIPÉS** (module non activé, module indisponible), elle
- *    EST la page : son « ← Retour » est **le seul**, et il doit rester — sans
- *    lui, l'élève arrive sur une carte sans issue ;
- *  · **DANS** la page, en revanche, le corps principal en rend déjà un en tête.
- *    Elle affichait alors **DEUX « ← Retour »**, l'un sous l'autre.
- *
- * ⭐ Le défaut est ANCIEN — il date de C7·L2 — et il ne se voyait pas : les deux
- *    liens se touchaient presque. Il est devenu visible quand C5-L2 a inséré la
- *    liste des exercices de lecture entre eux, et c'est **le smoke élève du
- *    27/08 qui l'a trouvé** : aucun test ne compte les liens d'une page.
- *
- * ⛔ Le retirer du composant aurait cassé les deux retours anticipés, où il est
- *    la seule issue. C'est donc l'APPELANT qui déclare s'il en porte déjà un.
- */
-function CarteMessage(
-  { children, avecRetour = true }: { children: React.ReactNode; avecRetour?: boolean },
-) {
-  const carte = (
-    <div className="bg-surface border border-bordure rounded-xl p-8 flex flex-col items-center text-center">
-      <span className="opacity-70"><Pastille module="aletheia" size={56} /></span>
-      <p className="font-marque text-sm font-semibold tracking-[0.2em] text-pigment mt-3">ALETHEIA</p>
-      <p className="font-corps text-sm text-encre-douce mt-2 max-w-sm">{children}</p>
-    </div>
-  )
-  // Sans le retour, la carte est un bloc DANS une page qui a déjà sa colonne :
-  // l'enveloppe `space-y-6 pb-8` est celle d'une page entière, pas d'un bloc.
-  if (!avecRetour) return carte
-  return (
-    <div className="space-y-6 pb-8">
-      <Link href="/eleve" className="text-sm text-muet hover:text-encre-douce">← Retour</Link>
-      {carte}
-    </div>
-  )
-}
-
 export default async function PageAletheia() {
-  const supabase = await createClient()
+  // ⭐ C5-L4 — LES QUATRE GARDES SONT PARTIES DANS `gardes.tsx`, TELLES QUELLES.
+  //    Ce n'est pas un raffinement : les trois onglets les rejouent, et trois
+  //    exemplaires auraient divergé au premier correctif. `contexteAletheia`
+  //    n'a PAS de variante — c'est elle qu'on réutilise.
+  const seuil = await seuilAletheia()
+  if (seuil.type === 'ecran') return seuil.noeud
+  const { userId, active } = seuil
   const admin = createAdminClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) notFound()
-
-  const { moduleActif, inscriptions, active, toutes, horsClasse } = await contexteAletheia(supabase, user.id)
-  if (!moduleActif) return <CarteMessage>Ce module n&apos;est pas encore activé.</CarteMessage>
-  if (!active) return <CarteMessage>Ce module n&apos;est pas disponible pour ton compte.</CarteMessage>
-  // C7·L2 — les livres se lisent par classe : en état « Toutes », on la demande.
-  if (toutes) return <ChoixClasseModule inscriptions={inscriptions} nomModule="Aletheia" />
-  // Accès & classes · L1 — la classe au commutateur n'a pas Aletheia : le repli
-  // silencieux sur une autre inscription montrait les livres d'une classe sous
-  // le nom d'une autre. On le dit, et on renvoie au commutateur.
-  if (horsClasse) {
-    return <ModuleHorsClasse nomModule="Aletheia" classeContexte={horsClasse} ailleurs={inscriptions.map(i => i.classe_nom)} />
-  }
 
   const livres = await livresPourClasse(admin, active.classe_id)
   const travauxParLivre = new Map(
-    await Promise.all(livres.map(async l => [l.id, await travauxParSemaine(admin, user.id, l.id)] as const)),
+    await Promise.all(livres.map(async l => [l.id, await travauxParSemaine(admin, userId, l.id)] as const)),
   )
   // Capstone = carte du LIVRE, partagée. L'élève ne la voit qu'après avoir lui-même
   // tout terminé (bloc rendu sous `toutesDone`) → pas de spoiler de l'aval.
@@ -123,63 +42,22 @@ export default async function PageAletheia() {
     await Promise.all(livres.map(async l => [l.id, await chargerCapstoneLivre(admin, l.id)] as const)),
   )
   const { deblocageSequentiel } = await lireReglages(admin)
-  // C4-L9 — le signal du LANCEMENT (jamais celui de l'assignation, qui est
-  // C6-L2). Lecture par le SERVEUR, filtrée sur `eleve_id`.
-  const signaux = await signauxDeLancement(admin, user.id, 'aletheia')
-  // ⭐ C5-L2 — la maison, enfin. ⚠️ La classe en contexte borne la liste
-  //    (« dans les modules on reste par classe », `01-` §2) ; la porte, elle,
-  //    est `exercices_actif` et se lit DANS le module, jamais ici.
-  const [porteExercices, exercices] = await Promise.all([
-    lireLaPorte(admin),
-    exercicesMaisonDeLEleve(admin, user.id, active.classe_id, 'aletheia'),
-  ])
 
   return (
     <div className="space-y-8 pb-8">
       <Link href="/eleve" className="text-sm text-muet hover:text-encre-douce">← Retour</Link>
 
-      <SignalDeLancement signaux={signaux} />
-
-      {/* ── ⭐⭐ C5-L2 — CE QUI SE FAIT À LA MAISON, À L'ÉCRAN ──────────────
-          « Lecture formative, à la maison — Aletheia — ÉCRAN, y compris les
-          analyses longues » (`06-` §1). ⛔ Le bloc ne s'affiche que s'il y a
-          quelque chose : cette page porte d'abord les LIVRES, et un encart vide
-          au-dessus d'eux ferait croire à une panne. Le vide s'explique là où il
-          se remarque — sous les livres, quand la porte est fermée. */}
-      {exercices.length > 0 && (
-        <section className="space-y-3">
-          <h2 className="font-titre text-xl text-encre">Mes exercices de lecture</h2>
-          <p className="font-corps text-sm text-muet">
-            Ce que tu travailles <strong>à la maison</strong>, à l&apos;écran.
-          </p>
-          <div className="space-y-2">
-            {exercices.map((e) => (
-              <Link
-                key={e.depotId}
-                href={e.href}
-                className="flex items-center justify-between gap-3 bg-surface border border-bordure rounded-xl px-4 py-3 hover:border-pigment transition-colors"
-              >
-                <p className="text-sm font-medium text-encre truncate min-w-0">{e.titre}</p>
-                <span className={`text-xs px-2 py-0.5 rounded-full shrink-0 ${PASTILLE[e.etat.ton]}`}>
-                  {e.etat.libelle}
-                </span>
-              </Link>
-            ))}
-          </div>
-        </section>
-      )}
-
-      {/* ⭐ UN VIDE EXPLIQUÉ, JAMAIS UN ÉCRAN QUI SE TAIT (`07-` §5 ; `06-` §5).
-          ⚠️ Seulement quand la PORTE est fermée : « aucun exercice » n'est pas
-          une nouvelle sur une page qui porte d'abord des livres, mais « ils ne
-          sont pas encore ouverts » en est une — et l'élève n'a pas à connaître
-          le nom d'un interrupteur pour comprendre pourquoi son écran est vide. */}
-      {exercices.length === 0 && !porteExercices.exercicesActifs && (
-        <p className="font-corps text-sm text-muet">
-          Les exercices de lecture ne sont pas encore ouverts. Ton professeur
-          t&apos;indiquera quand ils commencent.
-        </p>
-      )}
+      {/* ⭐ C5-L4 — DEUX BLOCS ONT QUITTÉ CETTE PAGE, ET DEUX SEULEMENT :
+          · la `<section>` « Mes exercices de lecture » de C5-L2, avec son
+            message de vide, ses appels à `lireLaPorte` / `exercicesMaisonDeLEleve`
+            et sa pastille d'état → onglet EXERCICES (`./exercices/page.tsx`) ;
+          · le `SignalDeLancement` de C4-L9 → onglet EXAMENS (`./examens/page.tsx`).
+          ⛔ Tout le reste — les livres, les séances, le stepper, le capstone —
+             RESTE ICI : « Livres garde la racine, la page existante ne bouge pas ».
+          ⚠️ Et le vide de l'onglet Exercices a CHANGÉ DE FORME en déménageant :
+             ici le bloc ne s'affichait que s'il y avait quelque chose (la page
+             porte d'abord des livres) ; sous un onglet dédié, on vient de
+             cliquer exprès, et il doit dire quelque chose. */}
 
       {livres.length === 0 ? (
         // ⚠️ `avecRetour={false}` — le corps de cette page rend déjà son « ← Retour »

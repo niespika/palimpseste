@@ -527,11 +527,27 @@ function Copie({
  * ⚠️ Rien ne s'affiche quand tout va bien : le retour, juste en dessous, parle
  *    de lui-même. Un bandeau « tout va bien » sur seize copies ferait du bruit
  *    au milieu duquel la copie en peine se perdrait.
+ *
+ * ⭐⭐ C5-L4 — ET « TOUT VA BIEN » AVAIT UNE EXCEPTION, MESURÉE EN PROD LE 27/08.
+ *    Sur un exercice dont la porte de mode (C5-L3) écarte une partie des
+ *    compétences élues, l'état est `abouti` — le retour EST écrit, il n'y a rien
+ *    à relancer — et cet endroit rendait `null` : le professeur lisait treize
+ *    fois « Traitement terminé. » et n'apprenait jamais que la moitié des
+ *    compétences n'avait pas été mesurée. *Une mesure qui n'a pas eu lieu ne se
+ *    voit pas.*
+ *    ⛔ La règle du silence NE CHANGE PAS : sans écartées, `motif` est `null` et
+ *       cet endroit rend toujours `null`. Ce qui s'affiche désormais est le seul
+ *       cas où une copie aboutie a encore quelque chose à dire.
+ *    ⚠️ Le ton reste NEUTRE (`grave` est faux) : rien n'attend le professeur, et
+ *       le bouton de relance ne s'affiche pas — `relancable` vaut `false`.
+ *    ⚠️ CET ÉCRAN EST PARTAGÉ AVEC CODEX (`utils/passation/file-copie.ts` et ce
+ *       composant servent les deux modules) : la correction profite aux deux, et
+ *       la porte de mode vaut pour les deux.
  */
 function TraitementDeLaCopie({ copie }: { copie: LigneCopie }) {
   const [etat, action, enCours] = useActionState(actionRelancerLaMesure, null as Reponse | null)
   const e = etatChaineDeLaCopie(pourLaFile(copie))
-  if (e.cle === 'abouti') return null
+  if (e.cle === 'abouti' && !e.motif) return null
 
   const grave = e.cle === 'sans_retour' || e.cle === 'echec'
   return (
