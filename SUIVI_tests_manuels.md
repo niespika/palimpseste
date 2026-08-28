@@ -7677,12 +7677,17 @@ interruption. Le décor se reconnaît à sa classe, `nom LIKE 'RECETTE-C5L3%'`. 
   un semestre ouvert le 24/08. ⛔ **Et la bascule n'a AUCUN écrivain de production** —
   `cloturerLaCalibrationDesEleves` n'est appelée que par `scripts/recette/routeur-c4l12.mjs`.
   **Condition de reprise : `C4-L12` pose l'écrivain, puis la quatrième semaine arrive.**
-- [ ] **C6L2-26 · ⚠️ LA MIGRATION N'EST PAS JOUÉE EN PRODUCTION, ET C'EST DÉLIBÉRÉ.**
-  `c6_l2_marques_eleve.sql` est **sandbox le 28/08**, prod décochée : **le code de C6-L2 n'est pas
-  poussé** *(un push est un déploiement, et ce lot ne déploie pas de lui-même)*. La migration est
-  inerte pour l'existant, mais la jouer avant le code poserait en prod deux colonnes que rien ne
-  lit. **Condition de reprise : au déploiement, dans cet ordre — code, puis SQL**, avec le
-  protocole renforcé de la règle R6 *(`profiles` est une table vivante)*.
+- [x] **C6L2-26 · ✅ LA MIGRATION EST JOUÉE — SANDBOX ET PRODUCTION, LE 28/08.**
+  *Preuve : constat de tête en prod (63 comptes, 16 colonnes, 0 déjà posée, 4 policies), puis les
+  **cinq drapeaux à `t`** et `comptes_intacts = 63` ; vérification indépendante **par les deux
+  chemins** — psql (18 colonnes, les deux nullables sans défaut, 4 policies inchangées, 0 ligne
+  écrite) et PostgREST (18 colonnes).*
+  ⭐ **Jouée AVANT le push, sur décision de Louis, et c'est le protocole renforcé BIEN LU** — le
+  même raisonnement que `c6_l1_attention.sql` le même jour : la migration est **inerte pour le code
+  DÉPLOYÉ** *(vérifié sur `origin/main` : aucun lecteur de `profiles` ne fait `select('*')`, aucun
+  ne nomme les deux colonnes)*, tandis que **le code NEUF exige le schéma neuf**. ⛔ L'ordre inverse
+  aurait laissé, le temps de l'écart, un `/eleve/moi` dégradé pour TOUS les élèves.
+  ⚠️ **`profiles` porte 63 comptes en production**, pas 14 — le 14 était le nombre d'ÉLÈVES.
 - [ ] **C6L2-27 · ⚠️ « EN PROGRÈS » SERA MUET POUR TOUT LE MONDE À LA RENTRÉE.** Mesuré le 28/08 :
   **aucune paire (élève × compétence) n'atteint la fenêtre de quatre**, dans aucune des deux bases
   *(production : 162 paires — 147 à une mesure, 14 à deux, 1 à trois, **zéro à quatre** ; bac à
