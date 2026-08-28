@@ -1,10 +1,27 @@
 import type { ModuleIntegrite } from '@/utils/integrite'
+import type { ModuleSceau } from '@/components/Pastille'
 
 // Types de vue partagés par la page Intégrité, le volet (fiche élève) et la modale
 // (dashboard). Module neutre (sans 'server-only') : importable depuis un composant
 // client. `Preuve` est produite côté serveur par utils/integrite-preuve.ts.
 
 export type { ModuleIntegrite }
+
+/**
+ * ⭐ C6-L1 — LE SCEAU D'UN MODULE DE SIGNALEMENT, ET `exercices` N'EN A PAS.
+ *
+ * `Pastille` porte les SIX sceaux de la plateforme, et « les cinq modules » du
+ * `01-` §2 n'incluent pas les exercices : un exercice fait à la maison
+ * n'appartient à aucun atelier — « l'atelier est un attribut visuel, jamais un
+ * interlocuteur différent » (`07-` §4). Il prend donc le sceau de la plateforme
+ * elle-même. ⛔ Aucun septième PNG n'est créé pour ça.
+ */
+export const SCEAU_DU_MODULE: Record<ModuleIntegrite, ModuleSceau> = {
+  aletheia: 'aletheia',
+  codex: 'codex',
+  fragments: 'fragments',
+  exercices: 'palimpseste',
+}
 
 export interface Preuve {
   photos: string[]            // URLs signées (storage) ; [] si pas de photo

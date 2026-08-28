@@ -14,7 +14,15 @@ import MatricePilotage from '@/components/pilotage/MatricePilotage'
 import MatriceCompetences from '@/components/pilotage/MatriceCompetences'
 import { chargerGrilleCompetences, type GrilleCompetencesClasse } from '@/utils/competences-classe'
 import { lireFuseau } from '@/utils/fuseau-serveur'
-import { FUSEAU_DEFAUT } from '@/utils/fuseau'
+import { FUSEAU_DEFAUT, jourDansFuseau } from '@/utils/fuseau'
+import {
+  chargerLAttentionDeLaClasse, type AttentionDeLaClasse,
+} from '@/utils/pilotage/attention-serveur'
+import {
+  chargerLaRetentionDeLaClasse, type RetentionDeLaClasse,
+} from '@/utils/pilotage/retention-serveur'
+import BlocAttention from '@/components/pilotage/BlocAttention'
+import BlocRetention from '@/components/pilotage/BlocRetention'
 import AccesModules, { type ModuleAcces } from '@/components/pilotage/AccesModules'
 import GestionEleves from '@/components/pilotage/GestionEleves'
 
@@ -106,6 +114,34 @@ export default async function PilotageClasse({
     tz = f
   }
 
+  // ── C6-L1 — CE QUI DEMANDE L'ATTENTION, ET LE DIAGNOSTIC DE RÉTENTION ─────
+  // ⭐ « La page de C6-L1 EST cet onglet-là » (arbitrage ① de Louis, 27/08) : on
+  //    n'y refait pas la matrice, on y ajoute LES QUATRE DRAPEAUX, bornés à la
+  //    classe regardée, et le diagnostic de rétention.
+  // ⛔ Les deux lectures ne partent QUE pour cet onglet, et seulement quand
+  //    l'interrupteur de CET écran est ouvert — le même patron que la grille :
+  //    « un interrupteur à OFF ne doit pas coûter cinq requêtes par affichage ».
+  //    ⛔ Et c'est bien LE SIEN : `competences_affichage_actif` (`07-` §5).
+  //       Le canal d'intégrité, lui, a son propre interrupteur, qu'on ne touche pas.
+  // ⚠️ `aujourd'hui` est un JOUR, lu dans le fuseau de l'école : les comptes en
+  //    cycles se font sur des dates pures, jamais sur des instants.
+  let attention: AttentionDeLaClasse | null = null
+  let retention: RetentionDeLaClasse | null = null
+  if (vue === 'competences' && affichageActif) {
+    const nomDe = new Map(matrice.lignes.map((l) => [l.eleveId, l.nom]))
+    const [a, r] = await Promise.all([
+      chargerLAttentionDeLaClasse(
+        admin, matrice.lignes.map((l) => l.eleveId), nomDe, tz,
+        jourDansFuseau(new Date().toISOString(), tz),
+        // ⚠️ L'OPT-OUT : un drapeau sur une compétence que ce cours ne travaille
+        //    pas se SIGNALE — il ne se cache pas (voir l'en-tête du chargeur).
+        optOut),
+      chargerLaRetentionDeLaClasse(admin, classeId),
+    ])
+    attention = a
+    retention = r
+  }
+
   const sousTitre = sousTitreClasse(classe)
   const metaMobile = `${nbEleves} élève${nbEleves > 1 ? 's' : ''}${matrice.nbARisque > 0 ? ` · ${matrice.nbARisque} à risque` : ''}`
 
@@ -148,15 +184,35 @@ export default async function PilotageClasse({
           <MatricePilotage colonnes={matrice.colonnes} lignes={lignesTriees} tri={tri} base={base} />
         </div>
       ) : (
-        <MatriceCompetences
-          lignes={lignesTriees}
-          classeId={classeId}
-          classeNom={[classe.nom, classe.niveau, classe.filiere].filter(Boolean).join(' · ')}
-          optOut={optOut}
-          affichageActif={affichageActif}
-          grille={grille}
-          tz={tz}
-        />
+        <div className="space-y-3">
+          {/* ⭐ L'ATTENTION D'ABORD, L'ÉTAT ENSUITE : c'est « la page où le
+              professeur voit ce qui demande son attention ». */}
+          {attention && (
+            <BlocAttention
+              classeId={classeId}
+              drapeaux={attention.drapeaux}
+              distribution={attention.distribution}
+              reglages={attention.reglages}
+              cyclesConnus={attention.cyclesConnus}
+              incidents={attention.incidents}
+              regarde={attention.regarde}
+            />
+          )}
+
+          <MatriceCompetences
+            lignes={lignesTriees}
+            classeId={classeId}
+            classeNom={[classe.nom, classe.niveau, classe.filiere].filter(Boolean).join(' · ')}
+            optOut={optOut}
+            affichageActif={affichageActif}
+            grille={grille}
+            tz={tz}
+          />
+
+          {/* ⭐ Le diagnostic de rétention SE RANGE À CÔTÉ de la matrice —
+              jamais dedans : Quazian n'écrit pas dans le profil (`01-` §6, R4). */}
+          {retention && <BlocRetention r={retention} />}
+        </div>
       )}
 
       <div className="sm:hidden">

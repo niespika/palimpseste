@@ -3,6 +3,9 @@
 import { createClient } from '@/utils/supabase/server'
 import Anthropic from '@anthropic-ai/sdk'
 import { diagnostiquerEleve, type DiagnosticConcept } from '@/utils/diagnostic'
+import {
+  chargerLeDiagnosticParCible, type DiagnosticParCible,
+} from '@/utils/quazian-diagnostic-serveur'
 import { coutMessage, enregistrerCoutApi, normaliserUsage } from '@/utils/cout-api'
 
 const MODELE = 'claude-sonnet-4-6'
@@ -88,59 +91,13 @@ export async function chargerDiagnosticClasse(classeId?: string) {
   return { diagnostics, profilesMap, conceptsClasse, eleveIds }
 }
 
-// Fragilités agrégées PAR UNITÉ (cours + texte). Un quizz couvre des unités
-// (scope_unites) ; on rattache chaque réponse aux unités de son quizz, puis on
-// diagnostique chaque (unité × élève) pour compter idées fausses / lacunes.
-export async function chargerDiagnosticParUnite() {
+// ⭐⭐ C6-L1 — LES DEUX FILS CASSÉS DU DIAGNOSTIC SONT RÉPARÉS, et le corps de
+//    la lecture vit désormais à `utils/quazian-diagnostic-serveur.ts` — pour que
+//    la couture puisse l'éprouver PAR EXÉCUTION. Ici, la garde de rôle, et rien
+//    d'autre.
+export async function chargerDiagnosticParUnite(): Promise<DiagnosticParCible> {
   const { supabase } = await verifierProf()
-
-  const [{ data: unites }, { data: quizzes }, { data: reponses }] = await Promise.all([
-    supabase.from('scriptorium_unites').select('id, label').eq('type', 'unite').is('supprime_at', null).order('ordre', { ascending: true }),
-    supabase.from('quazian_quizzes').select('id, scope_unites'),
-    supabase
-      .from('quazian_answers')
-      .select(`
-        score,
-        quazian_sessions!inner(eleve_id, quiz_id),
-        quazian_questions!inner(concept_tag)
-      `)
-      .not('score', 'is', null),
-  ])
-
-  const scopeByQuiz = new Map<string, string[]>()
-  for (const q of quizzes ?? []) scopeByQuiz.set(q.id as string, (q.scope_unites ?? []) as string[])
-
-  // (unité → élève → [{concept, score}])
-  const parUniteEleve = new Map<string, Map<string, Array<{ concept_tag: string; score: number }>>>()
-  for (const r of reponses ?? []) {
-    const s = r.quazian_sessions as unknown as { eleve_id: string; quiz_id: string }
-    const qst = r.quazian_questions as unknown as { concept_tag: string }
-    for (const u of scopeByQuiz.get(s.quiz_id) ?? []) {
-      let parEleve = parUniteEleve.get(u)
-      if (!parEleve) { parEleve = new Map(); parUniteEleve.set(u, parEleve) }
-      const arr = parEleve.get(s.eleve_id) ?? []
-      arr.push({ concept_tag: qst.concept_tag, score: r.score })
-      parEleve.set(s.eleve_id, arr)
-    }
-  }
-
-  type ConceptStat = { idee_fausse: number; lacune: number; maitrise: number }
-  type AggUnite = { concepts: Record<string, ConceptStat>; nbEleves: number }
-  const parUnite: Record<string, AggUnite> = {}
-  for (const [uniteId, parEleve] of parUniteEleve) {
-    const concepts: Record<string, ConceptStat> = {}
-    for (const reps of parEleve.values()) {
-      for (const d of diagnostiquerEleve(reps)) {
-        if (!concepts[d.concept_tag]) concepts[d.concept_tag] = { idee_fausse: 0, lacune: 0, maitrise: 0 }
-        if (d.profil === 'idee_fausse') concepts[d.concept_tag].idee_fausse++
-        else if (d.profil === 'lacune') concepts[d.concept_tag].lacune++
-        else if (d.profil === 'maitrise') concepts[d.concept_tag].maitrise++
-      }
-    }
-    parUnite[uniteId] = { concepts, nbEleves: parEleve.size }
-  }
-
-  return { unites: (unites ?? []) as { id: string; label: string }[], parUnite }
+  return chargerLeDiagnosticParCible(supabase)
 }
 
 // Diagnostic d'un élève spécifique + retrievability FSRS

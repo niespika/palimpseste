@@ -10,6 +10,7 @@ import {
   actionBloquerEleve, actionDebloquerEleve,
 } from '@/app/prof/integrite/actions'
 import type { SelectionVue } from './types'
+import { SCEAU_DU_MODULE } from './types'
 
 // ════════════════════════════════════════════════════════════════════════════
 // Panneau de PREUVE réutilisable : photo déposée + retranscription (passage
@@ -101,7 +102,7 @@ export default function PanneauPreuve({
       {/* 2 — en-tête : pastille + nom + module·contexte / type + source·date */}
       <div className="bg-parchemin border-b border-bordure px-4 sm:px-5 py-3.5 flex items-start justify-between gap-3">
         <div className="flex items-center gap-3 min-w-0">
-          <Pastille module={s.moduleSlug} size={40} className="shrink-0" />
+          <Pastille module={SCEAU_DU_MODULE[s.moduleSlug]} size={40} className="shrink-0" />
           <div className="min-w-0">
             <p className="font-titre text-xl text-encre leading-none truncate">{s.eleveNom}</p>
             <p className="font-ui text-xs text-muet mt-1 truncate">

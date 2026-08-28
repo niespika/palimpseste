@@ -10,13 +10,27 @@ import { RapportIA } from './RapportIA'
 import Tuile from '@/components/Tuile'
 import DetailClasse, { type LigneEleve } from '@/components/classes/DetailClasse'
 
-function Entrees({ vue }: { vue: string }) {
+// ⭐ C6-L1 — CET ÉCRAN A DÉSORMAIS UNE PORTE, et elle vient de l'onglet
+//    Compétences du profil de classe (`/prof/classes/[classeId]?vue=competences`).
+//    « Un écran sans porte n'existe pas » : au 27/08, AUCUN lien du dépôt ne
+//    menait ici — seule sa variante par élève était atteignable. Le lien de
+//    retour ci-dessous dit d'où l'on vient.
+function Entrees({ vue, retourClasse }: { vue: string; retourClasse?: string }) {
   return (
+    <>
+    {retourClasse && (
+      <p className="font-ui text-xs text-muet mb-3">
+        <Link href={`/prof/classes/${retourClasse}?vue=competences`} className="hover:text-encre">
+          ← Retour au profil de la classe · Compétences
+        </Link>
+      </p>
+    )}
     <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-6">
       <Tuile nom="Par classe" sousTitre="Fragilités par concept (quizz) → élève" href="/prof/quazian/diagnostic?vue=classe" selectionnee={vue === 'classe'} />
-      <Tuile nom="Par unité" sousTitre="Fragilités par unité (cours + texte)" href="/prof/quazian/diagnostic?vue=unite" selectionnee={vue === 'unite'} />
+      <Tuile nom="Par cours ou texte" sousTitre="Fragilités par cible de quizz (bibliothèque)" href="/prof/quazian/diagnostic?vue=unite" selectionnee={vue === 'unite'} />
       <Tuile nom="Flashcards" sousTitre="Révision & activité par élève" href="/prof/quazian/diagnostic?vue=flashcards" selectionnee={vue === 'flashcards'} />
     </div>
+    </>
   )
 }
 
@@ -119,6 +133,8 @@ function MatriceClasse({
 
 export default async function DiagnosticPage({ searchParams }: { searchParams: Promise<{ vue?: string; classe?: string; unite?: string }> }) {
   const { vue = 'classe', classe: classeSel, unite: uniteSel } = await searchParams
+  // ⭐ D'où l'on vient : la classe passée en `?classe=` sert AUSSI de retour.
+  const retourClasse = classeSel
 
   // ── Diagnostic flashcards (révision par élève, par classe) ────────────────
   if (vue === 'flashcards') {
@@ -169,7 +185,7 @@ export default async function DiagnosticPage({ searchParams }: { searchParams: P
 
     return (
       <div>
-        <Entrees vue={vue} />
+        <Entrees vue={vue} retourClasse={retourClasse} />
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 mb-6">
           {classesList.map(c => (
             <Tuile key={c.id} nom={c.nom} href={`/prof/quazian/diagnostic?vue=flashcards&classe=${c.id}`} selectionnee={classeSel === c.id} />
@@ -195,9 +211,12 @@ export default async function DiagnosticPage({ searchParams }: { searchParams: P
 
     return (
       <div>
-        <Entrees vue={vue} />
+        <Entrees vue={vue} retourClasse={retourClasse} />
         {unites.length === 0 ? (
-          <div className="text-center py-12 text-muet text-sm">Aucune unité de cours dans le Scriptorium.</div>
+          <div className="text-center py-12 text-muet text-sm">
+            Aucun cours ni texte dans la bibliothèque du Scriptorium — un quizz s’ancre sur l’un
+            ou sur l’autre, il n’y a donc rien à agréger.
+          </div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 mb-6">
             {unites.map(u => {
@@ -224,9 +243,9 @@ export default async function DiagnosticPage({ searchParams }: { searchParams: P
         {uniteChoisie && (
           <div className="bg-surface border border-bordure rounded-xl p-5">
             <h3 className="text-sm font-medium text-encre-douce mb-1">{uniteChoisie.label}</h3>
-            <p className="text-xs text-muet mb-4">Concepts les plus fragiles sur cette unité (cours + texte), tous quizz confondus.</p>
+            <p className="text-xs text-muet mb-4">Concepts les plus fragiles sur cette cible, tous quizz confondus. ⛔ Rien de ceci n’entre dans le profil de compétences : Quazian mesure la rétention, jamais une lettre.</p>
             {conceptsTries.length === 0 ? (
-              <p className="text-sm text-muet">Aucun quizz n&apos;a encore couvert cette unité.</p>
+              <p className="text-sm text-muet">Aucun quizz n&apos;a encore couvert cette cible.</p>
             ) : (
               <ul className="space-y-1.5">
                 {conceptsTries.slice(0, 20).map(([concept, c]) => (
@@ -257,7 +276,7 @@ export default async function DiagnosticPage({ searchParams }: { searchParams: P
 
   return (
     <div>
-      <Entrees vue={vue} />
+      <Entrees vue={vue} retourClasse={retourClasse} />
 
       {/* Synthèse IA — vue d'ensemble toutes classes */}
       <RapportIA />

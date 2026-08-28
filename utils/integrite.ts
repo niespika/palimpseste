@@ -11,13 +11,52 @@ import { createAdminClient } from '@/utils/supabase/admin'
 
 type Admin = ReturnType<typeof createAdminClient>
 
-export type ModuleIntegrite = 'aletheia' | 'codex' | 'fragments'
-export type TypeStrike = 'vide' | 'aveu_non_travail' | 'hors_sujet' | 'section_na' | 'bacle'
+// ⭐⭐ C6-L1 — LE MODULE `exercices` ENTRE DANS LA LISTE, ET AVEC UN TYPE QUI NE
+//    COMPTE AUCUN STRIKE. Décision de Louis du 27/08 (`07-` §1.2 et §2) :
+//    « le module `exercices`, lui, rejoindra la liste — mais avec le FAISCEAU ».
+//    ⚠️ La liste du MODULE est fermée DES DEUX CÔTÉS : ici, et par le `CHECK`
+//       INLINE en base (`c6_l1_attention.sql` l'a droppé et recréé à quatre
+//       valeurs — un `CHECK` inline ne s'étend pas).
+export type ModuleIntegrite = 'aletheia' | 'codex' | 'fragments' | 'exercices'
+
+/**
+ * ⛔⛔ DEUX FAMILLES DE TYPES, ET ELLES N'ONT PAS LES MÊMES CONSÉQUENCES.
+ *
+ * Les CINQ premiers parlent tous d'EFFORT — `vide`, `aveu_non_travail`,
+ * `hors_sujet`, `section_na`, `bacle` — et « un type de signalement n'est pas un
+ * signal du faisceau mais **un strike**, dont le mécanisme parle d'effort et
+ * **bloque les dépôts au seuil** » (`07-` §1.2).
+ *
+ * ⭐ Le SIXIÈME dit autre chose : *quelqu'un d'autre a fait le travail*. C'est le
+ *    faisceau du `06-` §6, et **il ne s'escompte JAMAIS en strike** : « le
+ *    professeur voit, il confirme, et RIEN NE SE BLOQUE », ce qui est la lettre
+ *    du §6 — « une confirmation humaine… aucun signal, aucune convergence, ne
+ *    produit de verdict ».
+ *
+ * ⚠️ La colonne `type` n'a AUCUN `CHECK` en base (vérifié le 28/08) : cette
+ *    liste est le seul endroit qui la borne.
+ */
+export const TYPE_FAISCEAU = 'faisceau_integrite' as const
+export type TypeStrike =
+  | 'vide' | 'aveu_non_travail' | 'hors_sujet' | 'section_na' | 'bacle'
+  | typeof TYPE_FAISCEAU
+
+/**
+ * ⛔ LES TYPES QUI NE COMPTENT AUCUN STRIKE. Un ensemble, et non un `!==`
+ *    disséminé : le jour où un second type de faisceau naît, il entre ici et
+ *    nulle part ailleurs.
+ */
+export const TYPES_SANS_STRIKE: ReadonlySet<string> = new Set<string>([TYPE_FAISCEAU])
+
+export function compteUnStrike(type: string): boolean {
+  return !TYPES_SANS_STRIKE.has(type)
+}
 
 export const LABEL_MODULE: Record<ModuleIntegrite, string> = {
   aletheia: 'Aletheia',
   codex: 'Codex',
   fragments: 'Fragments',
+  exercices: 'Exercices',
 }
 
 export const LABEL_TYPE_STRIKE: Record<TypeStrike, string> = {
@@ -26,6 +65,7 @@ export const LABEL_TYPE_STRIKE: Record<TypeStrike, string> = {
   hors_sujet: 'Hors-sujet',
   section_na: 'Section déclarée non applicable',
   bacle: 'Rendu bâclé',
+  faisceau_integrite: 'Faisceau d’intégrité (aucun strike)',
 }
 
 // Messages par défaut (éditables par le prof via integrite_params). Ton « cheeky »
@@ -195,14 +235,42 @@ export async function signalerEnAttenteIA(
 
 // Prof CONFIRME un signal IA → +1 strike (idempotent : un signal déjà comptabilisé
 // est simplement acquitté). Sort de la file « à faire ».
+//
+// ⛔⛔ C6-L1 — DEUX IDEMPOTENCES, PARCE QU'IL Y A DEUX FAMILLES DE TYPES.
+//    Celle des types à strike repose sur le PASSAGE DE `compte_strike` À VRAI :
+//    c'est le compare-and-set ci-dessous. ⚠️ « Un type qui ne compte pas doit
+//    fermer la sienne AUTREMENT, faute de quoi la confirmation redevient
+//    rejouable » (`07-` §1.2, conséquence écrite de l'arbitrage ③ du 27/08) —
+//    laisser `compte_strike` à `false` rendrait le `.eq('compte_strike', false)`
+//    toujours vrai, et chaque clic re-jouerait la confirmation.
+//    ⭐ Pour eux, l'idempotence se ferme sur **`acquitte_at`**, qui est déjà le
+//       candidat du dépôt (`acquitterSignalement` s'en sert). Le compare-and-set
+//       porte donc sur `acquitte_at is null`, et AUCUN strike n'est incrémenté.
+//    ⛔ Cette fonction est appelée par `/prof/integrite` comme par la page du
+//       professeur : un type de faisceau confirmé de l'atelier ne doit pas
+//       striker davantage que confirmé d'ici.
 export async function confirmerSignalement(admin: Admin, signalementId: string, acteurId?: string | null): Promise<void> {
   const { data: sig } = await admin
     .from('integrite_signalements')
-    .select('id, eleve_id, module, motif')
+    .select('id, eleve_id, module, motif, type')
     .eq('id', signalementId)
     .maybeSingle()
   if (!sig) return
   const maintenant = new Date().toISOString()
+
+  // ── LE FAISCEAU : on confirme, on acquitte, ET RIEN NE SE BLOQUE ──────────
+  if (!compteUnStrike(sig.type as string)) {
+    // Compare-and-set sur `acquitte_at` : une seule confirmation passe, les
+    // suivantes ne touchent rien. `compte_strike` reste `false` À DESSEIN.
+    await admin
+      .from('integrite_signalements')
+      .update({ statut: 'confirme', acquitte_at: maintenant })
+      .eq('id', signalementId)
+      .is('acquitte_at', null)
+      .select('id')
+    return
+  }
+
   // Compare-and-set : on ne compte le strike que si CETTE confirmation fait passer
   // compte_strike de false→true (idempotent, anti double-clic / double-onglet).
   const { data: maj } = await admin

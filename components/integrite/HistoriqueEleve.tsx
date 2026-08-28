@@ -1,6 +1,7 @@
 import Pastille from '@/components/Pastille'
 import BanniereIntegrite from '@/components/BanniereIntegrite'
 import type { AvisEleve, EvenementVue } from '@/components/integrite/types'
+import { SCEAU_DU_MODULE } from '@/components/integrite/types'
 
 // ════════════════════════════════════════════════════════════════════════════
 // Page élève /eleve/integrite (lecture seule) : état actuel, SES avis RETENUS
@@ -69,7 +70,7 @@ export default function HistoriqueEleve({
             {avis.map(({ signalement: s, contexte }) => (
               <li key={s.id} data-module={s.moduleSlug} className="bg-surface border border-bordure border-l-4 border-l-pigment rounded-xl px-4 py-3.5">
                 <div className="flex items-center gap-2.5">
-                  <Pastille module={s.moduleSlug} size={32} className="shrink-0" />
+                  <Pastille module={SCEAU_DU_MODULE[s.moduleSlug]} size={32} className="shrink-0" />
                   <div className="min-w-0">
                     <p className="font-marque text-[11px] font-semibold tracking-[0.06em] text-pigment">
                       {s.moduleLabel.toUpperCase()}

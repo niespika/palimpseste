@@ -2762,10 +2762,17 @@ qui diverge. La re-dérivation appartient à qui a fait bouger la source.
   'forme','corps'])`)*. Les **deux** démonstrations en base sont donc non déclarées : elles sont
   **servies, et le professeur est averti** *(décision du PO, 22/08)*. **Adressé à C4-L8** : deux
   clés au `08-FORMAT_IMPORT.md` §5 bis et à son contrôle.
-- [ ] **C4L3-19 · La file professeur des contestations sur citation absente n'a pas d'écran.**
+- [x] ⭐ **C4L3-19 · La file professeur des contestations sur citation absente n'a pas d'écran.**
   Le lot **détecte**, **marque en base** (`citation_absente`) et laisse une **trace serveur** ; il
   **n'invente aucune file**. ⚠️ C'est **l'exigence d'examen humain de la loi** *(`06-` §2 et §7)*,
-  pas un confort. **Adressé à C6-L1.**
+  pas un confort. **Adressé à C6-L1.** ➜ ✅ **LEVÉE PAR C6-L1 LE 28/08.** L'écran est le **bloc
+  « Ce qui demande votre attention »** de l'onglet Compétences du profil de classe. La file
+  n'attend **aucune répétition** *(elle est distincte du drapeau des contestations répétées,
+  qui, lui, a son seuil réglable)*, elle montre **le point du retour PUBLIÉ** — jamais le
+  squelette —, et elle **se traite** : `marquer_contestation_traitee()` pose `traite_at` dans
+  l'acte, **en une instruction**, et l'acte quitte la file au rechargement. **Éprouvé par
+  exécution** — `scripts/recette/couture-c6l1.mjs`, section C : acte semé, vu en file, examiné,
+  constaté en base, **rejeu idempotent**, absent au rechargement.
 - [x] ⚠️ **C4L3-20 · `exercices.cran` porte DEUX formes en base — 6 lignes au CODE, 5 au NUMÉRO.**
   La colonne est un `text` **sans CHECK**. `utils/deroule/vue.ts` lit par le **code** ;
   `utils/chaine/contexte.ts` fait `Number(cran)` et lit par le **numéro** — sur une instance au code,
@@ -7336,3 +7343,100 @@ interruption. Le décor se reconnaît à sa classe, `nom LIKE 'RECETTE-C5L3%'`. 
   `revalidatePath` dans six fichiers, plus quatre autres sites et l'entrée de nav)*. ⚠️ **Un
   `revalidatePath` sur un chemin mort ne lève aucune erreur.** **Condition de reprise : une décision
   de Louis sur l'organisation de la conception.** *(Ligne posée à `IDEES_post_rentree.md`.)*
+
+---
+
+## C6 · L1 — La page du professeur : quatre drapeaux, deux files qui se vident, et un diagnostic rangé (séance du 28/08, migration `c6_l1_attention.sql`)
+
+> ⭐⭐ **CE LOT EST UN LOT DE COUTURE, pas un lot d'écran.** La matrice existait et elle est en
+> production ; ce qui restait, c'est la seconde moitié de l'entrée — **quatre canaux écrits d'un
+> côté et lus de personne**. **Tout ce qui est coché ci-dessous a été prouvé PAR EXÉCUTION**, par
+> `scripts/recette/couture-c6l1.mjs` *(41 contrôles verts, décor semé et retiré)* — jamais par
+> lecture de code.
+>
+> ⚠️ **Une session Code ne s'authentifie pas** : tout ce qui demande un ŒIL DE PROFESSEUR DEVANT
+> L'ÉCRAN reste décoché, avec sa condition de reprise.
+
+### Ce qui est prouvé, avec sa preuve
+
+- [x] **C6L1-1 · Le constat d'entrée, chiffres en main.** La matrice montrait **149 lettres
+  réelles en PRODUCTION** *(D 72 · C 59 · E 14 · B 4)*, sur **178 mesures** et **trois
+  compétences** *(structure, expression, argumentation)* ; en **bac à sable**, **102 niveaux dont
+  la lettre est NULLE** sur 3 mesures. *Preuve : requêtes PostgREST des deux côtés, 28/08.*
+  ⭐ **La première phrase de la mission était donc tenue avant le lot** — et « aucune lettre »
+  n'est pas « aucune mesure ».
+- [x] **C6L1-2 · Canal ② — `jugerLaLettre` rend `drapeaux[]`, et il a enfin un lecteur.**
+  *Preuve : couture §B, « ② fraîcheur d'ancre : 1 drapeau — Cadence d'ancre manquée : 8 cycles… »,
+  et le contrôle que **la phrase vient de `lettres.ts`**, jamais de l'écran.*
+  ⚠️ **Deux appelants droppaient le tableau, pas un** : `utils/moteur/etat-serveur.ts:215` **et**
+  `utils/moteur/cycle-serveur.ts:379` — le second n'était pas nommé au prompt.
+- [x] **C6L1-3 · Canal ③ — la file N3 apparaît, se traite, et disparaît.** *Preuve : couture §C —
+  dossier semé ouvert depuis 5 cycles, vu en file **et en tête** (re-signalé), traité par
+  `prendreLeDossierN3`, **`dossier_n3_traite_at` constaté en base**, **rejeu idempotent**
+  (la date ne bouge pas), **absent de la file au rechargement**.*
+  ⛔ **Et il ne désescalade pas** : le `degre` est resté `N3`, constaté en base.
+- [x] **C6L1-4 · Le dossier N3 est un DOSSIER, pas une ligne.** Cinq pièces : observable en échec
+  **au sens de l'ACQUISITION** *(fenêtre d'évidence, seuil > 2/3 — pas la réussite d'une mesure)*,
+  interventions tentées *(degré + entrée en N1 + cycles)*, productions *(les 4 dernières, et le
+  compte total est dit)*, plus le re-signalement et l'opt-out quand ils s'appliquent.
+- [x] **C6L1-5 · Canal ④ — la file d'examen humain se vide.** *Preuve : couture §B et §C — acte
+  semé `citation_absente: true`, vu en file, **la preuve montre le point du RETOUR PUBLIÉ**,
+  examiné, **`traite_at` constaté en base**, **rejeu idempotent**, absent au rechargement, et
+  **rien d'autre n'a bougé** (texte et drapeau de l'acte intacts).*
+- [x] **C6L1-6 · La file et le drapeau des répétitions sont DEUX choses.** La première n'attend
+  aucune répétition *(loi 25)* ; le second n'existe que si un seuil est réglé, et **NULL vaut
+  « aucun drapeau »**. **La distribution observée s'affiche même sans seuil.** *Preuve : couture §B
+  (« la DISTRIBUTION est montrée : 1 élève, 1 acte, 1 sur citation absente ») + tests unitaires.*
+- [x] **C6L1-7 · Canal ⑤ — le faisceau part par le canal existant, ET NE COMPTE AUCUN STRIKE.**
+  *Preuve : couture §B et §C — dépôt maison semé, **6 signaux sur 7** convergent, ligne
+  `module='exercices'` **en base**, type `faisceau_integrite`, **`compte_strike = false`**,
+  `rendu_ref` = l'id du dépôt ; confirmé → `statut='confirme'`, `acquitte_at` posé,
+  **`compte_strike` toujours `false`**, **strikes 0 → 0 et bloqué false → false**, et **rejeu
+  idempotent par `acquitte_at`**.*
+- [x] **C6L1-8 · La migration porte exactement les quatre valeurs.** *Preuve : répétition à blanc
+  sur le CORPS du fichier, retour **vérifié par requête**, puis exécution **sandbox puis prod** —
+  `les_quatre_valeurs` à `t` des deux côtés, et la définition rendue en toutes lettres.*
+- [x] **C6L1-9 · Le diagnostic de rétention a une porte, et ses deux fils sont réparés.**
+  *Preuve : couture §D — la lecture réparée rend **8 cibles** là où elle en rendait **0**
+  (`type='unite'` : 0 ligne en base), et elle **agrège** : 1 cible couverte, 5 concepts,
+  **par `scope_contenus`** — le bras que l'écran ignorait.*
+- [x] **C6L1-10 · Le décor se retire, et les états partagés reviennent comme trouvés.**
+  Les **deux seuils** et le **semestre emprunté** sont mémorisés au registre et **reposés tels
+  quels, `null` compris**. ⛔ **Aucun des six interrupteurs n'a été touché** — reconstatés à ON
+  des deux côtés au début de la séance.
+
+### Ce qui reste à jouer en recette, avec sa condition de reprise
+
+- [ ] **C6L1-A · LE SMOKE PROF, À L'ÉCRAN.** Une session Code ne s'authentifie pas. **À faire avec
+  Louis** : `/prof/classes/<uuid>?vue=competences` → le bloc **« Ce qui demande votre attention »**
+  au-dessus de la grille, la grille inchangée, et le **diagnostic de rétention** en dessous avec
+  son lien. Vérifier **les trois vides** *(rien à signaler · calendrier muet · lecture ratée)* et
+  que les **boutons** rendent leur phrase. **Condition de reprise : une session que Louis ouvre.**
+  *(Ce qui est déjà acquis sans écran : la route compile, et le bundle NAVIGATEUR ne porte que les
+  RÉFÉRENCES d'action — `createServerReference` ×9 —, jamais les corps serveur.)*
+- [ ] **C6L1-B · LES DEUX DRAPEAUX COMPTÉS EN CYCLES, SUR LE CALENDRIER RÉEL.** ⚠️ Au 28/08/2026,
+  la sandbox ne porte **qu'UNE SEULE semaine d'enseignement commencée** : ni la cadence d'ancre
+  *(6 cycles)* ni le re-signalement N3 *(3 cycles)* ne peuvent se lever. Le script les prouve en
+  **empruntant un semestre archivé passé**. **Condition de reprise : à rejouer sans emprunt vers
+  la mi-octobre**, quand 7 semaines d'enseignement auront réellement passé.
+- [ ] **C6L1-C · « DES FRAGILITÉS RÉELLES » — la base n'en porte aucune.** L'écran **montre bien
+  quelque chose** *(1 élève, 5 réponses notées, 8 cibles, 1 couverte)*, mais **0 concept fragile**,
+  et c'est un fait de la donnée, pas un écran muet : les 5 réponses portent sur **5 concepts
+  distincts, une question chacun** — `classerConcept` rend `insuffisant` sous 2 questions — et
+  **les scores sont hauts** *(7,15 à 10)*. **Condition de reprise : un quizz de plusieurs questions
+  sur un même concept, réellement passé et fermé.**
+- [ ] **C6L1-D · LE FAISCEAU SUR UN DÉPÔT RÉEL, NON SEMÉ.** La convergence a été prouvée sur un
+  dépôt fabriqué. ⚠️ **Aucun dépôt maison réel ne porte encore de télémétrie de saisie** en base.
+  **Condition de reprise : un premier exercice fait à la maison au clavier**, une fois la rentrée
+  passée — et **le seuil de convergence réglé** *(il naît `null`, donc muet)*.
+- [ ] **C6L1-E · LE SEPTIÈME SIGNAL — le style discordant — N'A AUCUN PRODUCTEUR.** Il rend
+  **« non mesuré »**, jamais « concordant ». **Condition de reprise : une décision de conception
+  sur ce qu'est un « style discordant » et sur qui le produit.** *(Renvoi, ligne posée à
+  `IDEES_post_rentree.md`.)*
+- [ ] **C6L1-F · LES TROIS DRAPEAUX QUE CE LOT NE POSE PAS.** *(a)* trois `pas_pu` d'affilée
+  *(`06-` §3 ; `exercices_depots.conditions_declarees`)* · *(b)* l'incohérence répétée de la
+  restitution à chaud *(`06-` §3 ; `01-` §9 ; `ContexteLettre.incoherenceRepetee`,
+  `utils/routeur/lettres.ts:145`, jamais passé)* · *(c)* la discordance de deux paliers
+  *(`utils/routeur/lettres.ts:203`)*. ⭐ **Le canal les accueille sans code neuf pour (a) et (b)** ;
+  **(c) est TRANSITOIRE** — elle ne se lève qu'à l'arrivée d'une ancre, donc **à l'écriture**, chez
+  `utils/moteur/etat-serveur.ts:215`. **Condition de reprise : un lot de correctifs.**

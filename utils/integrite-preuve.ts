@@ -16,6 +16,11 @@ export type { Preuve }
 // signalerEnAttenteIA) :
 //   • fragments : `${inscriptionId}:${semaineId}` (deux UUID) → résoudre le dépôt
 //   • aletheia / codex : `${travailId}` ou `${travailId}:vf` (suffixe optionnel)
+//   • exercices  : `${depotId}` — UN SEUL UUID, ET C'EST LE DÉPÔT, jamais une
+//     version (C6-L1). « Un dépôt porte deux versions ; un faisceau par version
+//     et un faisceau par dépôt ne comptent pas la même chose » : le faisceau se
+//     lit sur LE DÉPÔT, parce que le `delta_v1_vf` a besoin des DEUX versions
+//     pour exister. Aucun suffixe, donc aucun split.
 // On ne fait donc JAMAIS un split(':') global : le parsing est conditionné au module.
 // ════════════════════════════════════════════════════════════════════════════
 
@@ -72,6 +77,7 @@ export async function chargerPreuve(
     if (module === 'fragments') return await preuveFragments(admin, renduRef, opts)
     if (module === 'aletheia') return await preuveAletheia(admin, renduRef, opts)
     if (module === 'codex') return await preuveCodex(admin, renduRef, opts)
+    if (module === 'exercices') return await preuveExercices(admin, renduRef, opts)
     return PREUVE_VIDE
   } catch (e) {
     console.error('[integrite-preuve] chargerPreuve :', e)
@@ -183,5 +189,61 @@ async function preuveCodex(admin: Admin, renduRef: string, opts?: OptsPreuve): P
     saisieClavier: false,
     contexte,
     meta: { priseAt: null, nbCaracteres: nbUtiles(texte) },
+  }
+}
+
+// ── Exercices : rendu_ref = `${depotId}` ; le FAISCEAU d'intégrité (C6-L1) ────
+/**
+ * ⭐ C6-L1 — LA QUATRIÈME BRANCHE. Le module `exercices` est entré dans le canal
+ *    de signalement avec le faisceau : l'atelier d'intégrité montre désormais ses
+ *    lignes, et sans cette branche il rendrait « rendu indisponible » sur un
+ *    dépôt qui existe.
+ *
+ * ⛔⛔ CE QU'ELLE MONTRE, ET CE QU'ELLE NE MONTRERA JAMAIS. « N'expose jamais à un
+ *    client ce que `exercices_squelettes` et `exercices_metacognition` portent :
+ *    c'est la garde la plus facile à casser et la plus coûteuse — elle donne LA
+ *    GRILLE ET LES RÉPONSES » (`07-` §1). Cette branche ne lit **que la
+ *    production de l'élève** — son texte saisi, ou sa transcription —, exactement
+ *    comme les trois autres. ⛔ Ni squelette, ni verdict, ni métacognition, ni
+ *    retour.
+ *
+ * ⛔ ET AUCUN DEEP-LINK. Il n'existe pas d'écran professeur pour un dépôt fait à
+ *    la maison, et c'est délibéré : « le professeur ne valide rien au fil de
+ *    l'eau ; il voit ce que le routeur a assigné, EN LECTURE SEULE » (`07-`
+ *    §1.2). `lienAnalyse` reste donc `null` — on n'invente pas une route.
+ *
+ * ⚠️ Le surlignage est celui des autres branches, et il ne mordra le plus souvent
+ *    sur rien : le motif d'un faisceau ÉNUMÈRE DES SIGNAUX, il ne cite aucune
+ *    phrase. C'est voulu — le faisceau n'accuse pas une phrase, il converge.
+ */
+async function preuveExercices(
+  admin: Admin, renduRef: string, opts?: OptsPreuve,
+): Promise<Preuve> {
+  // ⛔ Aucun `split(':')` : `rendu_ref` est l'identifiant du dépôt, nu.
+  const { data: d } = await admin
+    .from('exercices_depots')
+    .select('id, texte_v1, transcription_v1, v1_remis_at, vf_remis_at, exercices(lieu)')
+    .eq('id', renduRef)
+    .maybeSingle()
+  if (!d) return { ...PREUVE_VIDE, saisieClavier: true }
+
+  const rel = d.exercices as { lieu?: string | null } | Array<{ lieu?: string | null }> | null
+  const lieu = (Array.isArray(rel) ? rel[0]?.lieu : rel?.lieu) ?? null
+  const contexte = `exercice ${lieu === 'classe' ? 'en classe' : 'à la maison'}`
+    + (d.vf_remis_at ? ' · version finale rendue' : '')
+  if (opts?.slim) return { ...PREUVE_VIDE, saisieClavier: true, contexte }
+
+  // La production de l'élève : ce qu'il a saisi, ou ce que la transcription a lu.
+  const texte = ((d.texte_v1 as string | null)?.trim()
+    || (d.transcription_v1 as string | null)?.trim() || null)
+
+  return {
+    photos: [],
+    texte,
+    surligner: surlignage(texte, opts),
+    lienAnalyse: null,
+    saisieClavier: !!(d.texte_v1 as string | null)?.trim(),
+    contexte,
+    meta: { priseAt: (d.v1_remis_at as string | null) ?? null, nbCaracteres: nbUtiles(texte) },
   }
 }

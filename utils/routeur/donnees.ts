@@ -132,6 +132,48 @@ export async function lireLesMesures(admin: Admin, eleveId: string): Promise<Mes
   return lignes.map(versMesure)
 }
 
+/**
+ * ⭐ C6-L1 — LES MESURES D'UNE POPULATION D'ÉLÈVES, en UNE lecture paginée.
+ *
+ * Le pendant PLURIEL de `lireLesMesures`, sur exactement les mêmes colonnes et
+ * exactement la même conversion. ⛔ **Aucune règle n'est écrite ici** : ce n'est
+ * qu'un accès en lecture — la seule alternative était de recopier `versMesure`
+ * dans l'écran, et « une copie privée de la règle a déjà coûté un écran entier »
+ * (`C4L11-F`). *Ajout justifié au relevé de C6-L1.*
+ *
+ * ⚠️ La borne est la POPULATION D'ÉLÈVES, jamais un `classe_id` sur la mesure,
+ *    « qui est NULL la plupart du temps » (`07-` §1.2). C'est ainsi que la
+ *    matrice se borne déjà, et pour la même raison.
+ * ⚠️ Comme sa sœur, elle LÈVE `LectureTronquee` : une lecture plafonnée à 1000
+ *    lignes n'est pas une base vide, et l'appelant doit le dire.
+ */
+export async function lireLesMesuresDesEleves(
+  admin: Admin, eleveIds: readonly string[],
+): Promise<Mesure[]> {
+  if (eleveIds.length === 0) return []
+  const lignes = await lirePagine<LigneMesure>(admin, 'competences_mesures', COLONNES_MESURE,
+    ['mesure_at', 'id'], (q) => (q as never as { in: (a: string, b: readonly string[]) => unknown })
+      .in('eleve_id', eleveIds))
+  return lignes.map(versMesure)
+}
+
+/**
+ * ⭐ C6-L1 — À QUEL ÉLÈVE APPARTIENT CHAQUE MESURE. `Mesure` ne porte pas
+ * `eleve_id` (elle est toujours lue POUR un élève), et la lecture plurielle en a
+ * besoin. Une seconde lecture, minuscule, plutôt qu'un champ de plus sur un type
+ * que quinze modules consomment.
+ */
+export async function lireLElevesDesMesures(
+  admin: Admin, eleveIds: readonly string[],
+): Promise<Map<string, string>> {
+  if (eleveIds.length === 0) return new Map()
+  const lignes = await lirePagine<{ id: string; eleve_id: string }>(
+    admin, 'competences_mesures', 'id, eleve_id', ['id'],
+    (q) => (q as never as { in: (a: string, b: readonly string[]) => unknown })
+      .in('eleve_id', eleveIds))
+  return new Map(lignes.map((l) => [l.id, l.eleve_id]))
+}
+
 // ════════════════════════════════════════════════════════════════════════════
 // L'ÉTAT
 // ════════════════════════════════════════════════════════════════════════════

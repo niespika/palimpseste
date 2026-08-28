@@ -4,6 +4,9 @@ import { revalidatePath } from 'next/cache'
 import { createClient } from '@/utils/supabase/server'
 import { createAdminClient } from '@/utils/supabase/admin'
 import { collecterCheminsInscriptions, retirerFichiers } from '@/utils/effacement'
+import {
+  prendreLeDossierN3, examinerLaContestation, confirmerLeFaisceau, type Issue,
+} from '@/utils/pilotage/gestes-serveur'
 
 async function verifierProf() {
   const supabase = await createClient()
@@ -16,6 +19,16 @@ async function verifierProf() {
     .single()
   if (profile?.role !== 'prof') throw new Error('Accès refusé')
   return supabase
+}
+
+/** ⭐ C6-L1 — la même garde, mais elle rend l'ACTEUR : le prof qui agit. */
+async function verifierProfEtRendreLId(): Promise<string> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) throw new Error('Non authentifié')
+  const { data: profile } = await supabase.from('profiles').select('role').eq('id', user.id).single()
+  if (profile?.role !== 'prof') throw new Error('Accès refusé')
+  return user.id
 }
 
 export async function creerClasse(formData: FormData) {
@@ -283,4 +296,74 @@ export async function definirModulesClasse(formData: FormData) {
   revalidatePath('/prof/classes/[classeId]', 'page')
   revalidatePath('/prof/modules')
   return { success: true }
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+// C6 · L1 — LES GESTES DU PROFESSEUR SUR LA PAGE D'ATTENTION
+// ----------------------------------------------------------------------------
+// ⭐⭐ C'EST LA MOITIÉ DESCENDANTE DE LA COUTURE : « un signal levé par le moteur
+//    atteint-il l'œil du professeur — ET SON GESTE REDESCEND-IL JUSQU'À LA
+//    BASE ? » Sans ces trois actions, la file ne se vide jamais, et « une file
+//    qu'on n'a jamais vue se vider n'est pas une file ».
+//
+// ⛔ TROIS GESTES, ET AUCUN NE CORRIGE UNE MESURE. « Contester n'est pas
+//    corriger ; regarder n'est pas corriger non plus » (`06-` §2) : aucune de
+//    ces actions ne touche une lettre, une mesure, un retour ou un statut de
+//    dépôt. Elles marquent QU'UN HUMAIN A REGARDÉ, et rien d'autre.
+//
+// ⛔ TOUTES LES ÉCRITURES PASSENT PAR LE SERVEUR (`07-` §1), avec le client
+//    admin, derrière la garde de rôle. Aucune policy n'a été ouverte.
+//
+// ⚠️ AUCUN TEXTE LIBRE N'EST ÉCRIT ICI, et c'est délibéré : « un formulaire HTML
+//    soumet en CRLF, le stocké est en LF, et cela vaut aussi pour les server
+//    actions React » — le piège a mordu trois fois. Ces trois gestes n'écrivent
+//    que des HORODATAGES et des identifiants.
+//
+// ⭐ ILS VIVENT ICI, ET PAS SOUS `[classeId]/`, pour la même raison que
+//    `inscrireEleve` : un composant client les importe, et le patron du dépôt
+//    (`GestionEleves.tsx` → `@/app/prof/classes/actions`) évite un chemin
+//    d'import à segment dynamique.
+// ════════════════════════════════════════════════════════════════════════════
+
+function revalider(classeId: string) {
+  revalidatePath(`/prof/classes/${classeId}`)
+}
+
+/**
+ * ⭐ LES TROIS GESTES — ET CE SONT DES ENVELOPPES, DÉLIBÉRÉMENT MINCES.
+ *
+ * L'ÉCRITURE vit à `utils/pilotage/gestes-serveur.ts` ; ici, **la garde de rôle
+ * et la revalidation**, rien d'autre. Le motif est la convention de couture :
+ * une server action lit les cookies de la requête et **n'est pas appelable
+ * depuis un script de recette**, qui doit pourtant éprouver le canal PAR
+ * EXÉCUTION. Le script appelle donc la même ligne de code que cet écran.
+ * ⛔ Rien de ces trois écritures n'est atteignable depuis le web sans passer ici.
+ */
+export async function actionTraiterDossierN3(
+  classeId: string, eleveId: string, competence: string, observable: string,
+): Promise<Issue> {
+  await verifierProfEtRendreLId()
+  const r = await prendreLeDossierN3(createAdminClient(), eleveId, competence, observable)
+  if (r.ok) revalider(classeId)
+  return r
+}
+
+export async function actionExaminerContestation(
+  classeId: string, depotId: string, pointId: string,
+): Promise<Issue> {
+  await verifierProfEtRendreLId()
+  const r = await examinerLaContestation(createAdminClient(), depotId, pointId)
+  if (r.ok) revalider(classeId)
+  return r
+}
+
+export async function actionConfirmerFaisceau(
+  classeId: string, signalementId: string,
+): Promise<Issue> {
+  const acteurId = await verifierProfEtRendreLId()
+  const r = await confirmerLeFaisceau(createAdminClient(), signalementId, acteurId)
+  revalider(classeId)
+  // L'atelier d'intégrité montre la même ligne : il doit la voir partir aussi.
+  revalidatePath('/prof/integrite')
+  return r
 }
