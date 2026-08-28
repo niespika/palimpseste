@@ -69,7 +69,7 @@ import { lireTelemetrie } from '@/utils/deroule/telemetrie'
 import { lireLesCollages } from '@/utils/passation/collage'
 import {
   convergence, faisceauDuDepot, estRegardable, motifDuFaisceau, PHRASE_SIGNAL,
-  type DepotAuFaisceau,
+  distributionDuFaisceau, type DepotAuFaisceau, type DistributionFaisceau,
 } from '@/utils/integrite-faisceau'
 import { signalerEnAttenteIA, lireParamsIntegrite, TYPE_FAISCEAU } from '@/utils/integrite'
 import {
@@ -110,6 +110,13 @@ export interface AttentionDeLaClasse {
   drapeaux: Drapeau[]
   /** La distribution des contestations — montrée MÊME sans seuil réglé. */
   distribution: DistributionContestations
+  /**
+   * ⭐⭐ LA DISTRIBUTION DU FAISCEAU — montrée MÊME sans seuil réglé, et pour la
+   * même raison. Le seuil « se lira sur la distribution observée » : sans elle,
+   * le refus de chiffrer d'avance se mordrait la queue — rien à lire, donc rien
+   * à régler, donc un faisceau muet pour toujours.
+   */
+  distributionFaisceau: DistributionFaisceau
   /** Les deux seuils lus de `scriptorium_params`. `null` = aucun drapeau. */
   reglages: { contestations: number | null; faisceau: number | null }
   /**
@@ -675,8 +682,9 @@ function drapeauxDeContestation(
 async function drapeauxDuFaisceau(
   admin: Admin, eleveIds: string[], nomDe: Map<string, string>,
   mesures: readonly MesureDeClasse[], seuil: number | null, incidents: string[],
-): Promise<{ drapeaux: Drapeau[]; depotsMaison: number }> {
-  if (eleveIds.length === 0) return { drapeaux: [], depotsMaison: 0 }
+): Promise<{ drapeaux: Drapeau[]; depotsMaison: number; distribution: DistributionFaisceau }> {
+  const vide = { drapeaux: [], depotsMaison: 0, distribution: distributionDuFaisceau([]) }
+  if (eleveIds.length === 0) return vide
 
   // ── Les dépôts dont il y a quelque chose à juger ────────────────────────
   // ⛔ `abandonne` est EXCLU : « un exercice jamais ouvert n'est pas une preuve »
@@ -693,13 +701,13 @@ async function drapeauxDuFaisceau(
       .range(debut, debut + PAGE - 1)
     if (error) {
       incidents.push(`les dépôts du faisceau : ${error.message}`)
-      return { drapeaux: [], depotsMaison: 0 }
+      return vide
     }
     const page = (data ?? []) as unknown as Array<Record<string, unknown>>
     brutes.push(...page)
     if (page.length < PAGE) break
   }
-  if (brutes.length === 0) return { drapeaux: [], depotsMaison: 0 }
+  if (brutes.length === 0) return vide
 
   // La `forme` et les deltas viennent des MESURES du dépôt (`07-` §1.2).
   const parDepot = new Map<string, MesureDeClasse[]>()
@@ -737,7 +745,7 @@ async function drapeauxDuFaisceau(
   // ⛔ LA PREMIÈRE GARDE, AVANT TOUTE AUTRE LECTURE : « le faisceau ne regarde
   //    QUE le formatif fait à la maison » (`06-` §6).
   const regardables = candidats.filter(estRegardable)
-  if (regardables.length === 0) return { drapeaux: [], depotsMaison: 0 }
+  if (regardables.length === 0) return vide
 
   // La calibration, pour ceux-là seulement.
   const idsRegardables = regardables.map((d) => d.depotId)
@@ -755,8 +763,12 @@ async function drapeauxDuFaisceau(
 
   // ── La convergence, et le drapeau qui en part ──────────────────────────
   const params = await lireParamsIntegrite(admin)
-  const converges = regardables
-    .map((d) => ({ d, c: convergence(faisceauDuDepot(d), { seuil }) }))
+  const juges = regardables.map((d) => ({ d, f: faisceauDuDepot(d) }))
+  // ⭐⭐ LA DISTRIBUTION SE CALCULE SUR TOUS LES DÉPÔTS REGARDABLES, ET
+  //    INDÉPENDAMMENT DU SEUIL — c'est elle qui rend le seuil réglable.
+  const distribution = distributionDuFaisceau(juges.map((x) => x.f))
+  const converges = juges
+    .map(({ d, f }) => ({ d, c: convergence(f, { seuil }) }))
     .filter((x) => x.c.converge)
 
   if (converges.length > 0 && params.actif) {
@@ -784,7 +796,7 @@ async function drapeauxDuFaisceau(
     .order('created_at', { ascending: true })
   if (eSig) {
     incidents.push(`les signalements du faisceau : ${eSig.message}`)
-    return { drapeaux: [], depotsMaison: regardables.length }
+    return { drapeaux: [], depotsMaison: regardables.length, distribution }
   }
 
   const parCandidat = new Map(regardables.map((d) => [d.depotId, d]))
@@ -816,7 +828,7 @@ async function drapeauxDuFaisceau(
       },
     }
   })
-  return { drapeaux, depotsMaison: regardables.length }
+  return { drapeaux, depotsMaison: regardables.length, distribution }
 }
 
 // ════════════════════════════════════════════════════════════════════════════
@@ -877,6 +889,7 @@ export async function chargerLAttentionDeLaClasse(
   return {
     drapeaux,
     distribution: distributionDesContestations(contestations.actes),
+    distributionFaisceau: faisceau.distribution,
     reglages,
     cyclesConnus: cycles.length > 0,
     incidents,

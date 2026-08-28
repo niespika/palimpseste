@@ -8,7 +8,7 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import {
-  estRegardable, signalDuree, signalRythme, signalSessions, signalCollages,
+  distributionDuFaisceau, estRegardable, signalDuree, signalRythme, signalSessions, signalCollages,
   signalAutojugement, signalDeltaNul, signalStyle, faisceauDuDepot, convergence,
   motifDuFaisceau, SIGNAUX_FAISCEAU, SIGNES_MINIMUM_POUR_JUGER, SIGNES_PAR_MINUTE_SUSPECTS,
   type DepotAuFaisceau,
@@ -141,4 +141,45 @@ test('le motif JOURNALISE ce qui a été compté — nommé, jamais un score', (
   assert.match(m, /collage/)
   assert.match(m, /non mesuré/, 'ce qu’on n’a pas pu mesurer se dit aussi')
   assert.doesNotMatch(m, /\b\d{1,3}\s?%/, '⛔ aucun pourcentage de « confiance »')
+})
+
+// ── La distribution observée — ce sur quoi le seuil se règle ───────────────
+
+test('⭐⭐ la distribution se calcule SANS SEUIL — sinon le seuil est inréglable', () => {
+  const propre = faisceauDuDepot(depot())
+  const charge = faisceauDuDepot(depot({
+    dureeTaguee: 'tres_courte', collagesBloques: 2, calibration: 'sous_confiant', deltas: [0],
+  }))
+  const d = distributionDuFaisceau([propre, charge])
+  assert.equal(d.depotsRegardes, 2)
+  // Le propre lève 0 signal ; le chargé en lève 4 (durée, collages, autojugement, delta).
+  assert.equal(d.parNombreDeSignaux[0], 1)
+  assert.equal(d.parNombreDeSignaux[4], 1)
+})
+
+test('la simulation dit ce que CHAQUE seuil possible attraperait', () => {
+  const charge = faisceauDuDepot(depot({
+    dureeTaguee: 'tres_courte', collagesBloques: 2, calibration: 'sous_confiant', deltas: [0],
+  }))
+  const d = distributionDuFaisceau([faisceauDuDepot(depot()), charge])
+  const a = (seuil: number) => d.simulation.find((x) => x.seuil === seuil)?.depots
+  assert.equal(a(1), 1, 'un seuil à 1 attraperait le seul dépôt qui lève quelque chose')
+  assert.equal(a(4), 1)
+  assert.equal(a(5), 0, 'au-delà de ce qu’il lève, plus rien')
+  assert.equal(d.simulation.length, SIGNAUX_FAISCEAU.length, 'un point par seuil possible')
+})
+
+test('le compte par signal distingue les TROIS états, jamais deux', () => {
+  const d = distributionDuFaisceau([faisceauDuDepot(depot({ dureeTaguee: null }))])
+  const duree = d.parSignal.find((s) => s.signal === 'duree')!
+  assert.deepEqual(duree, { signal: 'duree', leve: 0, eteint: 0, nonMesure: 1 },
+    'pas de tag n’est ni levé ni éteint — c’est NON MESURÉ')
+  const style = d.parSignal.find((s) => s.signal === 'style')!
+  assert.equal(style.nonMesure, 1, 'le style n’a aucun producteur : toujours non mesuré')
+})
+
+test('⛔ la distribution ne nomme AUCUN dépôt ni AUCUN élève — ce sont des décomptes', () => {
+  const d = distributionDuFaisceau([faisceauDuDepot(depot())])
+  assert.equal(JSON.stringify(d).includes('d1'), false)
+  assert.equal(JSON.stringify(d).includes('e1'), false)
 })

@@ -192,6 +192,7 @@ export default async function PilotageClasse({
               classeId={classeId}
               drapeaux={attention.drapeaux}
               distribution={attention.distribution}
+              distributionFaisceau={attention.distributionFaisceau}
               reglages={attention.reglages}
               cyclesConnus={attention.cyclesConnus}
               incidents={attention.incidents}

@@ -35,6 +35,7 @@ import { useState, useTransition } from 'react'
 import Link from 'next/link'
 import { LIBELLE_NATURE, type Drapeau, type NatureDrapeau } from '@/utils/pilotage/attention'
 import type { DistributionContestations } from '@/utils/pilotage/attention'
+import { PHRASE_SIGNAL, type DistributionFaisceau } from '@/utils/integrite-faisceau'
 // ⭐ LE PATRON DE NEXT 16.2, ET C'EST CELUI QUE LA DOC EMBARQUÉE PRESCRIT :
 //    « To use Server Functions in Client Components you need to create your
 //    Server Functions in a DEDICATED FILE with the `use server` directive at the
@@ -125,11 +126,13 @@ function LigneDrapeau({ d, classeId }: { d: Drapeau; classeId: string }) {
 }
 
 export default function BlocAttention({
-  classeId, drapeaux, distribution, reglages, cyclesConnus, incidents, regarde,
+  classeId, drapeaux, distribution, distributionFaisceau, reglages, cyclesConnus, incidents,
+  regarde,
 }: {
   classeId: string
   drapeaux: Drapeau[]
   distribution: DistributionContestations
+  distributionFaisceau: DistributionFaisceau
   reglages: { contestations: number | null; faisceau: number | null }
   cyclesConnus: boolean
   incidents: string[]
@@ -207,11 +210,56 @@ export default function BlocAttention({
             : <>Seuil de répétition réglé à {reglages.contestations} acte
               {reglages.contestations > 1 ? 's' : ''} non traité
               {reglages.contestations > 1 ? 's' : ''}.</>}
-          {' '}
+        </p>
+      </div>
+
+      {/* ── La distribution du FAISCEAU — montrée MÊME sans seuil réglé, et pour
+          la même raison. Le seuil « se lira sur la distribution observée » :
+          sans elle, le refus de chiffrer d'avance se mordrait la queue — rien à
+          lire, donc rien à régler, donc un faisceau muet pour toujours. ───── */}
+      <div className="rounded-lg border border-dashed border-bordure px-3 py-2 space-y-1">
+        <p className="font-ui text-[11px] uppercase tracking-[0.12em] text-muet">
+          Le faisceau d’intégrité — ce qui a été observé
+        </p>
+        {distributionFaisceau.depotsRegardes === 0 ? (
+          <p className="font-corps text-xs text-encre-douce max-w-3xl">
+            Aucun dépôt à regarder. <strong>Le faisceau ne regarde que le formatif fait à la
+            maison</strong> : les passations en classe n’y entrent jamais.
+          </p>
+        ) : (
+          <>
+            <p className="font-corps text-xs text-encre-douce max-w-3xl">
+              {distributionFaisceau.depotsRegardes} dépôt
+              {distributionFaisceau.depotsRegardes > 1 ? 's' : ''} maison regardé
+              {distributionFaisceau.depotsRegardes > 1 ? 's' : ''} · combien lèvent N signaux
+              sur 7 :{' '}
+              {distributionFaisceau.parNombreDeSignaux
+                .map((n, i) => (n > 0 ? `${i} → ${n}` : null))
+                .filter(Boolean).join(' · ')}
+            </p>
+            {/* ⭐ CE QUE CHAQUE SEUIL POSSIBLE ATTRAPERAIT — la lecture la plus
+                directe de la distribution, et elle se lit sans avoir rien réglé. */}
+            <p className="font-ui text-[11px] text-muet max-w-3xl">
+              Ce qu’un seuil attraperait :{' '}
+              {distributionFaisceau.simulation
+                .filter((x) => x.depots > 0)
+                .map((x) => `${x.seuil}+ → ${x.depots}`)
+                .join(' · ') || 'aucun dépôt, quel que soit le seuil'}
+            </p>
+            <p className="font-ui text-[11px] text-muet max-w-3xl">
+              Par signal :{' '}
+              {distributionFaisceau.parSignal
+                .map((s) => `${PHRASE_SIGNAL[s.signal]} ${s.leve}/${s.leve + s.eteint}`
+                  + (s.nonMesure > 0 ? ` (${s.nonMesure} non mesuré${s.nonMesure > 1 ? 's' : ''})` : ''))
+                .join(' · ')}
+            </p>
+          </>
+        )}
+        <p className="font-ui text-[11px] text-muet max-w-3xl">
           {reglages.faisceau === null
-            ? <>Aucun seuil de convergence n’est réglé pour le faisceau d’intégrité :{' '}
-              <strong>aucun drapeau d’intégrité ne part</strong>.</>
-            : <>Faisceau : {reglages.faisceau} signal(aux) sur 7 font converger.</>}
+            ? <>Aucun seuil de convergence n’est réglé : <strong>aucun drapeau d’intégrité ne
+              part</strong>, et c’est voulu — il se lira sur la distribution ci-dessus.</>
+            : <>Seuil réglé à {reglages.faisceau} signal(aux) sur 7.</>}
         </p>
       </div>
 

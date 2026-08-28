@@ -7428,7 +7428,9 @@ interruption. Le décor se reconnaît à sa classe, `nom LIKE 'RECETTE-C5L3%'`. 
 - [ ] **C6L1-D · LE FAISCEAU SUR UN DÉPÔT RÉEL, NON SEMÉ.** La convergence a été prouvée sur un
   dépôt fabriqué. ⚠️ **Aucun dépôt maison réel ne porte encore de télémétrie de saisie** en base.
   **Condition de reprise : un premier exercice fait à la maison au clavier**, une fois la rentrée
-  passée — et **le seuil de convergence réglé** *(il naît `null`, donc muet)*.
+  passée. ⭐ **Le seuil, lui, n'est plus un préalable pour VOIR** : la **distribution du faisceau
+  s'affiche même à `null`** — répartition des dépôts par nombre de signaux levés, ce que chaque
+  seuil possible attraperait, et le compte par signal. **C'est sur elle que le seuil se réglera.**
 - [ ] **C6L1-E · LE SEPTIÈME SIGNAL — le style discordant — N'A AUCUN PRODUCTEUR.** Il rend
   **« non mesuré »**, jamais « concordant ». **Condition de reprise : une décision de conception
   sur ce qu'est un « style discordant » et sur qui le produit.** *(Renvoi, ligne posée à

@@ -352,3 +352,75 @@ export function motifDuFaisceau(c: Convergence): string {
     : ''
   return `${c.leves.length} signal(aux) sur ${SIGNAUX_FAISCEAU.length} : ${liste}${reste}`
 }
+
+// ════════════════════════════════════════════════════════════════════════════
+// LA DISTRIBUTION OBSERVÉE — ce sur quoi le seuil se réglera
+// ════════════════════════════════════════════════════════════════════════════
+
+/**
+ * ⭐⭐ SANS ELLE, LE SEUIL EST INRÉGLABLE, ET LA DOCTRINE SE MORD LA QUEUE.
+ *
+ * Le seuil de convergence naît `null`, et NULL vaut « aucun drapeau » — c'est
+ * voulu : *« un seuil posé d'avance deviendrait la cible que le dispositif
+ * apprend à viser »*. Mais la contrepartie de ce refus est une PROMESSE : le
+ * seuil *« se lira sur la distribution observée »*. ⛔ **Si l'écran ne montre
+ * rien tant qu'aucun seuil n'est réglé, il n'y a rien à lire, et le seuil ne se
+ * règle jamais.** *Personne ne peut régler ce qu'il ne voit pas.*
+ *
+ * D'où ce relevé : il se calcule **sur tous les dépôts regardables**, et
+ * **indépendamment du seuil**. C'est le pendant exact de
+ * `distributionDesContestations`.
+ *
+ * ⛔ CE N'EST PAS UN DRAPEAU, ET ÇA N'EN DEVIENT JAMAIS UN. Aucun dépôt n'est
+ *    nommé, aucun élève n'est désigné : ce sont des DÉCOMPTES, et « un écran
+ *    n'affiche un nombre que si ce nombre compte quelque chose » (`06-` §5).
+ */
+export interface DistributionFaisceau {
+  /** Combien de dépôts ont passé la première garde (maison + formatif). */
+  depotsRegardes: number
+  /**
+   * Combien de dépôts lèvent exactement N signaux, pour N de 0 à 7.
+   * ⭐ C'est CETTE courbe qui dit où poser le seuil.
+   */
+  parNombreDeSignaux: number[]
+  /** Combien de fois chaque signal se lève, tous dépôts confondus. */
+  parSignal: Array<{ signal: SignalFaisceau; leve: number; eteint: number; nonMesure: number }>
+  /** Ce que le seuil réglé attraperait — ou attraperait, s'il était réglé. */
+  simulation: Array<{ seuil: number; depots: number }>
+}
+
+export function distributionDuFaisceau(
+  faisceaux: readonly Faisceau[],
+): DistributionFaisceau {
+  const parNombreDeSignaux = new Array(SIGNAUX_FAISCEAU.length + 1).fill(0)
+  const compte = new Map<SignalFaisceau, { leve: number; eteint: number; nonMesure: number }>(
+    SIGNAUX_FAISCEAU.map((s) => [s, { leve: 0, eteint: 0, nonMesure: 0 }]))
+
+  for (const f of faisceaux) {
+    let leves = 0
+    for (const s of SIGNAUX_FAISCEAU) {
+      const c = compte.get(s)!
+      if (f[s] === true) { c.leve += 1; leves += 1 }
+      else if (f[s] === false) c.eteint += 1
+      else c.nonMesure += 1
+    }
+    parNombreDeSignaux[leves] += 1
+  }
+
+  // ⭐ La simulation : combien de dépôts CHAQUE seuil possible attraperait.
+  //    C'est la lecture la plus directe de la distribution — et elle se lit sans
+  //    avoir rien réglé.
+  const simulation = []
+  for (let seuil = 1; seuil <= SIGNAUX_FAISCEAU.length; seuil += 1) {
+    let depots = 0
+    for (let n = seuil; n < parNombreDeSignaux.length; n += 1) depots += parNombreDeSignaux[n]
+    simulation.push({ seuil, depots })
+  }
+
+  return {
+    depotsRegardes: faisceaux.length,
+    parNombreDeSignaux,
+    parSignal: SIGNAUX_FAISCEAU.map((signal) => ({ signal, ...compte.get(signal)! })),
+    simulation,
+  }
+}

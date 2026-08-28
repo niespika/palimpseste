@@ -336,6 +336,26 @@ async function semer() {
   const p = verifie('params', await admin.from('scriptorium_params')
     .select('id, contestations_repetees_seuil, faisceau_convergence_seuil')
     .limit(1).maybeSingle())
+  // ⭐⭐ LE CONTRÔLE QUI MANQUAIT : la distribution du faisceau doit se lire
+  //    AVANT qu'un seuil soit posé — sans quoi « le seuil se lira sur la
+  //    distribution observée » est une promesse vide, et le seuil, inréglable.
+  {
+    const nomDe = new Map(dansLaClasse.map((i) => [i.eleve_id, i.eleve_id]))
+    const avant = await chargerLAttentionDeLaClasse(
+      admin, dansLaClasse.map((i) => i.eleve_id), nomDe, FUSEAU, AUJOURDHUI)
+    dire(avant.reglages.faisceau === null
+      ? avant.distributionFaisceau.depotsRegardes >= 1 : true,
+      `⭐⭐ SEUIL À ${avant.reglages.faisceau ?? 'null'} — la DISTRIBUTION du faisceau se lit `
+      + `quand même : ${avant.distributionFaisceau.depotsRegardes} dépôt(s) maison regardé(s), `
+      + `répartition ${avant.distributionFaisceau.parNombreDeSignaux
+        .map((n, i) => (n > 0 ? `${i}→${n}` : null)).filter(Boolean).join(' ')}`)
+    dire(avant.reglages.faisceau !== null || avant.drapeaux.every((d) => d.nature !== 'faisceau_integrite'),
+      '   ⛔ et AUCUN drapeau ne part sans seuil — le refus de chiffrer d’avance tient')
+    const utile = avant.distributionFaisceau.simulation.filter((x) => x.depots > 0)
+    dire(utile.length > 0,
+      `   ⭐ ce qu’un seuil attraperait : ${utile.map((x) => `${x.seuil}+ → ${x.depots}`).join(' · ')}`
+      + ' — c’est CELA qui rend le seuil réglable')
+  }
   registre.params = {
     id: p.id,
     contestations_repetees_seuil: p.contestations_repetees_seuil,
