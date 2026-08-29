@@ -249,10 +249,13 @@ input, textarea, select {
    horloge que `plume-glisse`. Italique de Cormorant : la police est déjà
    chargée par le site (coût nul), et c'est la plus proche d'une main parmi les
    quatre de la charte.
-   ⚠️ Le bec du masque est au coin BAS-GAUCHE de l'image, donc `bottom: .2em`
-   (la profondeur des jambages) pose la POINTE sur la ligne d'écriture et laisse
-   la plume monter à droite, dégagée du texte. Plus bas, elle mordait la
-   dernière lettre et le mot semblait posé À CÔTÉ d'elle au lieu d'en sortir.
+   ⚠️ Le bec du masque est au coin BAS-GAUCHE de l'image, donc `bottom` mesure de
+   combien la POINTE remonte au-dessus du bas de la ligne. .28em = la profondeur
+   réelle des jambages de Cormorant : la pointe se pose alors PILE sur la ligne
+   d'écriture et la plume monte à droite, dégagée du texte. Deux erreurs mesurées
+   à l'écran avant d'y arriver : à -.18em elle passait sous la ligne et mordait
+   la dernière lettre (le mot semblait posé À CÔTÉ d'elle) ; au-delà de .36em
+   elle décolle et le mot ne sort plus de la pointe.
    ÉTAT DE REPOS (animations gelées) : mot entier, bec au bout. Cf. la note de
    `.attente-differee` — le repos doit être un état correct. */
 .attente-ecriture {
@@ -271,7 +274,7 @@ input, textarea, select {
 .attente-bec {
   position: absolute;
   left: 100%;                       /* repos : au bout du mot */
-  bottom: .2em;
+  bottom: .28em;
   margin-left: -.03em;
   width: .82em;                     /* = .82 / 1.25, le rapport du dessin */
   height: 1.25em;
