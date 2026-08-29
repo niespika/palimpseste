@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { useState } from 'react'
 import { NAV_PROF, type NavTab } from './configNavigation'
+import IndiceDeNavigation from './IndiceDeNavigation'
 import { deconnexion } from '@/app/prof/actions'
 
 // ----------------------------------------------------------------------------
@@ -143,6 +144,9 @@ export default function BarreOngletsMobileProf({ nom }: { nom?: string }) {
                         }`}
                       >
                         {it.label}
+                        {/* Place réservée en permanence (l'indice est monté,
+                            invisible) : la ligne ne bouge pas quand il paraît. */}
+                        <IndiceDeNavigation taille={18} className="ml-auto w-[18px] h-[18px] text-pigment" />
                       </Link>
                     </li>
                   )
@@ -174,9 +178,15 @@ export default function BarreOngletsMobileProf({ nom }: { nom?: string }) {
       >
         <ul className="flex items-stretch">
           {onglets.map(({ cle, label, Icone, actif, href, ouvre }) => {
-            const contenu = (
+            // `avecIndice` n'est vrai que pour les onglets qui sont de VRAIS liens :
+            // useLinkStatus doit être appelé sous un <Link>, et les onglets à
+            // feuille (Pilotage/Modules/Moi) sont des <button> qui n'attendent rien.
+            const contenu = (avecIndice: boolean) => (
               <>
-                <Icone actif={actif} />
+                <span className="relative inline-flex">
+                  <Icone actif={actif} />
+                  {avecIndice && <IndiceDeNavigation taille={24} className="absolute inset-0 bg-surface" />}
+                </span>
                 <span className={`font-ui text-[11px] leading-none ${actif ? 'font-medium' : ''}`}>{label}</span>
               </>
             )
@@ -187,7 +197,7 @@ export default function BarreOngletsMobileProf({ nom }: { nom?: string }) {
               <li key={cle} className="flex-1">
                 {href ? (
                   <Link href={href} aria-current={actif ? 'page' : undefined} className={classe}>
-                    {contenu}
+                    {contenu(true)}
                   </Link>
                 ) : (
                   <button
@@ -197,7 +207,7 @@ export default function BarreOngletsMobileProf({ nom }: { nom?: string }) {
                     onClick={() => setFeuille(feuille === ouvre ? null : (ouvre ?? null))}
                     className={classe}
                   >
-                    {contenu}
+                    {contenu(false)}
                   </button>
                 )}
               </li>

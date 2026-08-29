@@ -2,6 +2,7 @@
 
 import Link from 'next/link'
 import Pastille, { type ModuleSceau } from './Pastille'
+import IndiceDeNavigation from './nav/IndiceDeNavigation'
 import { useTuileAccent } from './TuileAccent'
 
 // ----------------------------------------------------------------------------
@@ -89,7 +90,20 @@ export default function Tuile({
             )}
           </div>
         </div>
-        {href && <span className={`flex-shrink-0 ${plein ? 'text-surface/70' : 'text-bordure'}`}>→</span>}
+        {href && (
+          // La flèche garde sa place ; la plume vient PAR-DESSUS pendant la
+          // navigation (position absolue → la mise en page ne bouge pas), sur le
+          // fond de la carte pour couvrir la flèche.
+          <span className={`relative flex-shrink-0 ${plein ? 'text-surface/70' : 'text-bordure'}`}>
+            →
+            <IndiceDeNavigation
+              taille={18}
+              className={`absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-6 h-6 rounded ${
+                plein ? 'bg-pigment text-surface' : 'bg-surface text-pigment'
+              }`}
+            />
+          </span>
+        )}
       </div>
       {resume && <div className="mt-2">{resume}</div>}
     </div>

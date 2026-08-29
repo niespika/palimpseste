@@ -134,3 +134,107 @@ input, textarea, select {
   color: var(--encre);
   color-scheme: light;
 }
+
+/* =========================================================================
+   Plume qui écrit — la marque d'attente
+   -------------------------------------------------------------------------
+   Les pages sont rendues côté serveur : entre le doigt de l'élève et l'écran,
+   il y a un aller-retour réseau pendant lequel RIEN ne bougeait. Cette plume
+   est ce qui bouge. Même dessin et même rythme à trois endroits :
+     • l'écran d'attente d'un `loading.tsx`   → <EcranDAttente>
+     • l'indice posé DANS le lien tapé        → <IndiceDeNavigation>
+     • (plus tard) les boutons qui envoient.
+   Aucune couleur en dur : le tracé prend `currentColor`. Posée sous un
+   [data-module], la plume écrit donc à l'encre du module.
+   ========================================================================= */
+
+/* Durée d'un cycle d'écriture ; surchargeable localement (--plume-duree). */
+.plume { --plume-duree: 1.9s; }
+
+.plume-hampe {
+  transform-box: view-box;
+  transform-origin: 0 0;          /* le pivot est le BEC (origine du groupe) */
+  /* Position de REPOS, celle qu'on voit si l'animation ne tourne pas. Sans elle,
+     la plume se dessinerait à l'origine du viewBox, donc HORS CADRE : le repos
+     d'une marque animée doit être un état correct, jamais un état par défaut. */
+  transform: translate(9.5px, 18px) rotate(-4deg);
+  animation:
+    plume-glisse  var(--plume-duree) cubic-bezier(.4, 0, .4, 1) infinite,
+    plume-souffle var(--plume-duree) linear infinite;
+}
+
+.plume-encre {
+  stroke-dasharray: 11.5;         /* = longueur EXACTE du trait (M3.5 18H15) */
+  animation:
+    plume-trace   var(--plume-duree) cubic-bezier(.4, 0, .4, 1) infinite,
+    plume-souffle var(--plume-duree) linear infinite;
+}
+
+/* La plume descend le trait, marque un temps, puis revient — le retour a lieu
+   pendant que `plume-souffle` la tient à opacité 0, donc on ne le voit pas. */
+@keyframes plume-glisse {
+  0%   { transform: translate(3.5px, 18px) rotate(0deg); }
+  62%  { transform: translate(15px, 18px)  rotate(-7deg); }
+  88%  { transform: translate(15px, 18px)  rotate(-7deg); }
+  100% { transform: translate(3.5px, 18px) rotate(0deg); }
+}
+@keyframes plume-trace {
+  0%     { stroke-dashoffset: 11.5; }
+  62%    { stroke-dashoffset: 0; }
+  88%    { stroke-dashoffset: 0; }
+  88.01% { stroke-dashoffset: 11.5; }  /* remise à zéro, invisible (opacité 0) */
+  100%   { stroke-dashoffset: 11.5; }
+}
+@keyframes plume-souffle {
+  0%   { opacity: 0; }
+  10%  { opacity: 1; }
+  78%  { opacity: 1; }
+  88%  { opacity: 0; }
+  100% { opacity: 0; }
+}
+
+/* Mouvement réduit : ni course ni tracé. La plume se pose, le trait reste
+   écrit, l'ensemble respire — assez pour dire « ça travaille » sans aucun
+   déplacement à l'écran. */
+@media (prefers-reduced-motion: reduce) {
+  .plume-hampe { animation: none; }   /* retombe sur la position de repos */
+  .plume-encre { animation: none; stroke-dashoffset: 0; }
+  .plume       { animation: plume-respire 2.4s ease-in-out infinite; }
+}
+@keyframes plume-respire {
+  0%, 100% { opacity: 1; }
+  50%      { opacity: .38; }
+}
+
+/* --- Apparition différée --------------------------------------------------
+   Une navigation rapide ne doit pas produire un clignotement : la marque
+   n'apparaît qu'au bout de ~140 ms. En dessous, l'élève n'a rien vu passer —
+   et c'est exactement ce qu'on veut.
+   L'état de REPOS est « visible » : le fondu ne fait que RETARDER l'apparition,
+   il ne la conditionne pas. C'est délibéré — si les animations ne tournent pas
+   (onglet en arrière-plan, navigateur qui les gèle pour économiser la batterie),
+   une marque qui compte sur `forwards` pour atteindre l'opacité 1 reste
+   invisible POUR TOUJOURS. Mesuré : la plume ne s'affichait pas du tout dans un
+   onglet caché. Ici, pas d'animation = marque simplement visible tout de suite. */
+.attente-differee {
+  animation: attente-fondu 340ms ease both;
+}
+@keyframes attente-fondu {
+  0%, 41% { opacity: 0; }   /* ≈ 140 ms de silence sur 340 ms */
+  100%    { opacity: 1; }
+}
+
+/* --- Indice posé dans un lien (useLinkStatus) -----------------------------
+   Toujours monté, invisible et sans effet de mise en page tant que la
+   navigation n'est pas engagée (doc Next : « prefer a fixed-size,
+   always-rendered hint element »). Les animations sont mises en pause tant
+   qu'il est caché — l'élève est sur batterie. */
+.indice-nav { opacity: 0; visibility: hidden; pointer-events: none; }
+.indice-nav :is(.plume, .plume-hampe, .plume-encre) { animation-play-state: paused; }
+
+.indice-nav.est-en-attente {
+  visibility: visible;
+  opacity: 1;                       /* repos visible — cf. `.attente-differee` */
+  animation: attente-fondu 320ms ease both;
+}
+.indice-nav.est-en-attente :is(.plume, .plume-hampe, .plume-encre) { animation-play-state: running; }

@@ -2,6 +2,7 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
+import IndiceDeNavigation from './IndiceDeNavigation'
 
 // ----------------------------------------------------------------------------
 // Barre d'onglets fixe en bas — navigation tactile de l'espace élève (Piste A).
@@ -10,6 +11,9 @@ import { usePathname } from 'next/navigation'
 //   • 5 onglets : Aujourd'hui · Modules · Agenda · Intégrité · Moi.
 //   • Onglet actif : text-encre + pictogramme plein. Inactif : text-muet, trait.
 //   • Cibles tactiles ≥ 44 px ; safe-area iOS ; print:hidden.
+//   • Pendant la navigation, la PLUME prend la place du pictogramme de l'onglet
+//     tapé (IndiceDeNavigation) : l'élève est sur téléphone, souvent en 4G, et
+//     c'est l'élément qu'il vient de toucher qui doit accuser réception.
 //   • Icônes : SVG inline (pas de dépendance, pas d'emoji). Le même path sert au
 //     plein (fill) et au trait (stroke) selon l'état actif.
 // ----------------------------------------------------------------------------
@@ -115,7 +119,13 @@ export default function BarreOngletsMobile() {
                   estActif ? 'text-encre' : 'text-muet'
                 }`}
               >
-                <Icone actif={estActif} />
+                {/* Boîte 24x24 : la plume se superpose EXACTEMENT au pictogramme,
+                    fond `bg-surface` (celui de la barre) pour le masquer. Aucune
+                    place réservée, donc aucun saut de mise en page. */}
+                <span className="relative inline-flex">
+                  <Icone actif={estActif} />
+                  <IndiceDeNavigation taille={24} className="absolute inset-0 bg-surface" />
+                </span>
                 <span className={`font-ui text-[11px] leading-none ${estActif ? 'font-medium' : ''}`}>{label}</span>
               </Link>
             </li>
