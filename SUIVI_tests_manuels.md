@@ -6164,7 +6164,7 @@ Tout ce qui suit est donc la face **professeur**, et **les smokes élève resten
   > ⭐ **Le schéma de C4-L1 et de C4-L2 a voyagé avec le dump `--schema-only` du 25/08**, et c'est
   > ce que la colonne « Prod » du `SUIVI_SQL.md` ne dit pas encore.
 
-- [ ] **C4L12-24 · ⛔⛔ `ecrireLEtatApresMesure` PERD TOUT UN LOT DE LETTRES, EN SILENCE — ET LE
+- [x] **C4L12-24 · ⛔⛔ `ecrireLEtatApresMesure` PERD TOUT UN LOT DE LETTRES, EN SILENCE — ET LE
   DÉFAUT EST EN PRODUCTION.** *Trouvé le 29/08 par la séance voisine, au peuplement du profil d'Élo ;
   **revérifié ici par requête, en lecture seule, avant d'être rangé**.*
   **Ce qui se passe** : `utils/moteur/etat-serveur.ts:313` envoie `lignesNiveau` en **UN SEUL
@@ -6188,6 +6188,37 @@ Tout ce qui suit est donc la face **professeur**, et **les smokes élève resten
   `IDEES_post_rentree.md`. **Condition de reprise : le correctif applicatif, qui est de grouper
   `parForme` comme les deux voisines.** ⚠️ *Le décor d'écran le contourne en écrivant
   `competences_niveaux` une compétence à la fois ; le défaut applicatif reste entier.*
+  > ✅ **CORRIGÉ LE 29/08, HORS LOT.** ⭐ **Le geste n'est pas de recopier la parade une troisième
+  > fois : c'est de lui donner UN DOMICILE.** `grouperParForme()` est désormais une **fonction pure**
+  > d'`utils/moteur/etat.ts`, et **les TROIS écrivains de `competences_niveaux` l'appellent** —
+  > `ecrireLEtatApresMesure`, `poserLeColdStart`, `cloturerLaCalibrationDesEleves`. *Deux la
+  > portaient recopiée, le troisième l'avait oubliée : c'est le mode de panne d'une règle à trois
+  > domiciles.*
+  > ⭐ **Et le compte du bilan se défait LOT PAR LOT**, jamais en bloc : un lot perdu n'efface plus
+  > les lettres qu'un autre a bien écrites — sans quoi le bilan mentirait dans l'autre sens. Le
+  > `console.error` nomme désormais **les compétences du lot**, pas seulement leur nombre.
+  > ⚠️⚠️ **LE RAYON EXACT, MESURÉ EN PRODUCTION LE 29/08 — 13 ÉLÈVES × 2 COMPÉTENCES = 26 ÉTATS
+  > FAUX**, et c'est la signature du lot perdu : les **13 lignes `synthese` manquent**, et les **13
+  > lignes `expression` des MÊMES élèves sont figées au 26/08 ~20h50** alors que leur dernière
+  > mesure date du **27/08 ~21h30**. *Le dépôt du 27/08 touchait `expression` (déjà lettrée) et
+  > `synthese` (neuve) : charge hétérogène, tout perdu, les deux à la fois.*
+  > **Preuves** : `npm test` **1904 / 1904** *(+5 vecteurs purs, dont le CAS RÉEL — une compétence
+  > déjà lettrée n'envoie pas `lettre_initiale`, une neuve l'envoie, et c'est là qu'est l'écart)* ·
+  > `tsc` et `eslint` silencieux · **aucune migration**.
+  > ⛔ **CE QUI RESTE, ET C'EST UNE DÉCISION DE LOUIS : LA RÉPARATION DE LA DONNÉE.** Le correctif
+  > empêche la prochaine perte ; il ne refait pas les 26 états. **Les mesures, elles, sont toutes en
+  > base** — l'état est donc recalculable sans rien inventer, en rejouant
+  > `ecrireLEtatApresMesure(admin, eleve, ['expression','synthese'], fuseau)` sur les treize.
+  > ⚠️ **C'est une écriture en production**, et elle n'a pas été faite. → **`C4L12-25`.**
+
+- [ ] **C4L12-25 · ⚠️ LA RÉPARATION DES 26 ÉTATS FAUX EN PRODUCTION — non jouée, décision de
+  Louis.** Le correctif de `C4L12-24` ferme la fuite ; **les 26 états écrits faux avant lui restent
+  faux**. ⭐ **Rien n'est à inventer** : les 13 mesures de `synthese` et celles d'`expression` sont
+  en base, et `ecrireLEtatApresMesure` — désormais corrigée — recalcule l'état depuis elles.
+  ⚠️ **Ce que ça change pour l'élève** : sans réparation, ces treize n'auront **jamais** de lettre de
+  Synthèse *(la clôture du 14/09 les sautera en `sans_lettre`)*, et leur lettre d'Expression restera
+  celle d'avant leur dernière copie. **Condition de reprise : une décision de Louis, puis un
+  passage sur les treize.**
 
 
 ---

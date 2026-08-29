@@ -51,7 +51,7 @@ import { CRANS, type Competence, type Grain, type Lettre, type Palier }
   from '@/utils/routeur/types'
 import {
   lettreAEcrire, ligneDEscalade, ligneDeMontee, ligneDeNiveau, medianeDeLaClasse,
-  premiereLettre, verifierLesLignesDeNiveau, type LigneDeNiveau,
+  premiereLettre, verifierLesLignesDeNiveau, grouperParForme, type LigneDeNiveau,
 } from './etat'
 
 type Admin = ReturnType<typeof createAdminClient>
@@ -307,20 +307,45 @@ export async function ecrireLEtatApresMesure(
   }
 
   // ── LES ÉCRITURES — dont on LIT le `{ error }` ────────────────────────────
+  //
+  // ⛔⛔ ON GROUPE PAR FORME AVANT D'ÉCRIRE, ET CE N'EST PAS UNE PRÉCAUTION.
+  //   `ligneDeNiveau` émet DEUX paires de clés OPTIONNELLES — `ancre_derniere_*`
+  //   quand une ancre arrive, `lettre_initiale*` quand la compétence n'en avait
+  //   pas — donc jusqu'à QUATRE formes d'objet dans un même lot. PostgREST exige
+  //   des clés identiques sur tout un `upsert` en lot : dès qu'un dépôt touche
+  //   une compétence DÉJÀ LETTRÉE et une compétence NEUVE, la charge est
+  //   hétérogène, la garde lève, et TOUT LE LOT EST PERDU.
+  //
+  //   ⚠️ Ce n'était pas une hypothèse : mesuré en PRODUCTION le 29/08 — 13
+  //   mesures de `synthese` pour ZÉRO ligne de niveau `synthese`, quand les trois
+  //   autres compétences avaient la leur. Treize élèves sur treize, en silence.
+  //
+  //   ⭐ Et la parade était déjà écrite DEUX FOIS dans ce fichier :
+  //   `poserLeColdStart` et `cloturerLaCalibrationDesEleves` groupent `parForme`.
+  //   Cette fonction-ci était la seule à ne pas le faire. (`C4L12-24`.)
   if (lignesNiveau.length) {
-    try {
-      verifierLesLignesDeNiveau(lignesNiveau)
-      const { error } = await admin.from('competences_niveaux')
-        .upsert(lignesNiveau, { onConflict: CONFLIT_NIVEAU })
-      if (error) {
-        console.error(`[moteur] ÉTAT PERDU — élève=${eleveId} lignes=${lignesNiveau.length}`,
+    for (const lot of grouperParForme(lignesNiveau)) {
+      // ⭐ Le compte se défait LOT PAR LOT, jamais en bloc : un lot perdu ne doit
+      //   pas effacer les lettres qu'un autre a bien écrites — sans quoi le bilan
+      //   mentirait dans l'autre sens.
+      const ecritesDuLot = lot.filter((l) => l.lettre !== null).length
+      try {
+        verifierLesLignesDeNiveau(lot)
+        const { error } = await admin.from('competences_niveaux')
+          .upsert(lot, { onConflict: CONFLIT_NIVEAU })
+        if (error) {
+          console.error(`[moteur] ÉTAT PERDU — élève=${eleveId} lignes=${lot.length}`
+            + ` compétences=${lot.map((l) => l.competence).join(',')}`,
           { code: error.code, message: error.message, details: error.details })
-        bilan.erreurs.push(`écriture des niveaux : ${error.message}`)
-        bilan.lettresEcrites = 0
+          bilan.erreurs.push(`écriture des niveaux (${lot.map((l) => l.competence).join(', ')}) : `
+            + error.message)
+          bilan.lettresEcrites -= ecritesDuLot
+        }
+      } catch (e) {
+        bilan.erreurs.push(`charge de niveaux refusée (${lot.map((l) => l.competence).join(', ')}) : `
+          + (e as Error).message)
+        bilan.lettresEcrites -= ecritesDuLot
       }
-    } catch (e) {
-      bilan.erreurs.push(`charge de niveaux refusée : ${(e as Error).message}`)
-      bilan.lettresEcrites = 0
     }
   }
   for (const l of lignesEscalade) {
@@ -455,12 +480,7 @@ export async function poserLeColdStart(
 
   // ⚠️ Jeux de clés HOMOGÈNES : `lettre_initiale` et l'ancre ne partent pas sur
   //    toutes les lignes → on envoie par FORME DE CLÉ, jamais en un seul lot.
-  const parForme = new Map<string, LigneDeNiveau[]>()
-  for (const l of lignes) {
-    const cle = Object.keys(l).sort().join('|')
-    parForme.set(cle, [...(parForme.get(cle) ?? []), l])
-  }
-  for (const lot of parForme.values()) {
+  for (const lot of grouperParForme(lignes)) {
     try {
       verifierLesLignesDeNiveau(lot)
       const { error } = await admin.from('competences_niveaux')
@@ -570,12 +590,7 @@ export async function cloturerLaCalibrationDesEleves(
     }
   }
 
-  const parForme = new Map<string, LigneDeNiveau[]>()
-  for (const l of lignes) {
-    const cle = Object.keys(l).sort().join('|')
-    parForme.set(cle, [...(parForme.get(cle) ?? []), l])
-  }
-  for (const lot of parForme.values()) {
+  for (const lot of grouperParForme(lignes)) {
     try {
       verifierLesLignesDeNiveau(lot)
       const { error } = await admin.from('competences_niveaux')

@@ -6,7 +6,8 @@ import { describe, it } from 'node:test'
 import assert from 'node:assert/strict'
 import {
   CLES_RETIREES_DU_NIVEAU, LigneDeNiveauInvalide, lettreAEcrire, ligneDEscalade,
-  ligneDeMontee, ligneDeNiveau, medianeDeLaClasse, plafonner, premiereLettre,
+  grouperParForme, ligneDeMontee, ligneDeNiveau, medianeDeLaClasse, plafonner,
+  premiereLettre,
   reduireLesLettresEquivalentes, verifierLesLignesDeNiveau, type LigneDeNiveau,
 } from './etat'
 import { filtreR0, type EtatPourCiblage } from '../routeur/ciblage'
@@ -232,5 +233,50 @@ describe('`07-` §1.3 — les deux clés que personne n\'avait écrites', () => 
     const l = ligneDeMontee('E', 'argumentation', 'meso', 6, 'T')
     assert.deepEqual(Object.keys(l).sort(),
       ['competence', 'cran_atteint', 'eleve_id', 'grain', 'updated_at'])
+  })
+})
+
+
+// ── LA CHARGE D'`upsert`, GROUPÉE PAR FORME — `C4L12-24` ────────────────────
+
+describe('`grouperParForme` — PostgREST refuse une charge hétérogène EN ENTIER', () => {
+  it('une charge homogène ne se coupe pas', () => {
+    const a = ligneDeNiveau('E', 'argumentation', 'C', etat({ lettreInitiale: 'C' }), null, 'T')
+    const b = ligneDeNiveau('E', 'expression', 'B', etat({ lettreInitiale: 'B' }), null, 'T')
+    const lots = grouperParForme([a, b])
+    assert.equal(lots.length, 1)
+    assert.equal(lots[0].length, 2)
+  })
+
+  it('⛔⛔ LE CAS RÉEL — une compétence DÉJÀ LETTRÉE et une NEUVE font DEUX formes', () => {
+    // C'est exactement la charge que `ecrireLEtatApresMesure` envoyait en un seul
+    // lot, et que la base refusait en entier : 13 mesures de `synthese`, ZÉRO
+    // ligne de niveau, en production, le 29/08/2026.
+    const deja = ligneDeNiveau('E', 'argumentation', 'B', etat({ lettreInitiale: 'C' }), null, 'T')
+    const neuve = ligneDeNiveau('E', 'synthese', 'C', etat({ lettreInitiale: null }), null, 'T')
+    assert.ok(!('lettre_initiale' in deja), 'la déjà lettrée n\'envoie pas la clé')
+    assert.ok('lettre_initiale' in neuve, 'la neuve l\'envoie — c\'est là qu\'est l\'écart')
+    const lots = grouperParForme([deja, neuve])
+    assert.equal(lots.length, 2, 'deux formes, donc deux lots')
+    assert.equal(lots.flat().length, 2, '⭐ et AUCUNE ligne n\'est perdue au passage')
+  })
+
+  it('⭐ l\'ANCRE est la seconde paire optionnelle — quatre formes sont possibles', () => {
+    const e = etat({ lettreInitiale: 'C' })
+    const rien = ligneDeNiveau('E', 'argumentation', 'C', e, null, 'T')
+    const ancre = ligneDeNiveau('E', 'expression', 'C', e,
+      { date: '2026-09-01', valeur: 'B' }, 'T')
+    const neuveEtAncre = ligneDeNiveau('E', 'synthese', 'C', etat({ lettreInitiale: null }),
+      { date: '2026-09-01', valeur: 'B' }, 'T')
+    const neuve = ligneDeNiveau('E', 'structure', 'C', etat({ lettreInitiale: null }), null, 'T')
+    assert.equal(grouperParForme([rien, ancre, neuveEtAncre, neuve]).length, 4)
+  })
+
+  it('l\'ORDRE des clés ne fait pas une forme de plus', () => {
+    assert.equal(grouperParForme([{ a: 1, b: 2 }, { b: 3, a: 4 }]).length, 1)
+  })
+
+  it('une charge vide ne rend aucun lot — et rien à écrire n\'est pas une erreur', () => {
+    assert.deepEqual(grouperParForme([]), [])
   })
 })

@@ -281,6 +281,35 @@ export function ligneDeNiveau(
   }
 }
 
+/**
+ * ⛔⛔ GROUPER UNE CHARGE D'`upsert` PAR FORME D'OBJET — et c'est une CONDITION,
+ * pas une élégance.
+ *
+ * PostgREST exige des clés IDENTIQUES sur tous les objets d'un `upsert` en lot :
+ * une charge hétérogène est refusée **en entier**. Or `ligneDeNiveau` émet deux
+ * paires de clés OPTIONNELLES — `ancre_derniere_*` quand une ancre arrive,
+ * `lettre_initiale*` quand la compétence n'en avait pas —, donc jusqu'à QUATRE
+ * formes dans un même lot dès qu'un dépôt touche une compétence déjà lettrée et
+ * une compétence neuve.
+ *
+ * ⚠️ **Ce que l'oubli coûte est mesuré, pas supposé** : en production, le
+ * 29/08/2026, `ecrireLEtatApresMesure` écrivait en un seul lot et perdait la
+ * charge entière — **13 mesures de `synthese` pour ZÉRO ligne de niveau**, sur
+ * treize élèves, sans qu'aucun écran ne le dise (`C4L12-24`).
+ *
+ * ⭐ Elle est ICI, et pure, parce que les trois écrivains de `competences_niveaux`
+ * en ont besoin et qu'ils l'avaient recopiée : deux la portaient, le troisième
+ * l'avait oubliée. **Un domicile, une règle.**
+ */
+export function grouperParForme<T extends object>(lignes: readonly T[]): T[][] {
+  const parForme = new Map<string, T[]>()
+  for (const l of lignes) {
+    const cle = Object.keys(l).sort().join('|')
+    parForme.set(cle, [...(parForme.get(cle) ?? []), l])
+  }
+  return [...parForme.values()]
+}
+
 /** Le plafond effectif d'une compétence — pour le journal et pour les écrans. */
 export function plafondDe(etat: EtatNiveau): { plafond: Palier | null; sansAncre: boolean } {
   return plafondApplicable(etat)
