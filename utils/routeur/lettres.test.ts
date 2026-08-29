@@ -244,6 +244,38 @@ test('clôture : une compétence SANS ANCRE garde son régime — la montée res
   assert.equal(c.lettre, 'C', 'D + 1, et pas au-delà')
 })
 
+test('⚠️⚠️ clôture : la RÈGLE N\'EST PAS IDEMPOTENTE, et c\'est pour ça que la garde est chez l\'appelant',
+  () => {
+    // « À la bascule, chaque lettre est jugée UNE FOIS » (`01-` §9). Ce test dit
+    // POURQUOI cette phrase est une contrainte et pas une élégance : rejouée sur
+    // les MÊMES mesures, la règle bouge une SECONDE fois, parce que `auDessus`
+    // se recompte contre le NOUVEAU rang.
+    // ⭐ LA DESCENTE N'EST PLAFONNÉE PAR RIEN — c'est le sens le plus net.
+    const basses = [m({ lettreEquivalente: 'E' }), m({ lettreEquivalente: 'E' })]
+    const un = cloturerLaCalibration(etat({ lettre: 'B' }), basses, jamaisSonde)
+    assert.equal(un.lettre, 'C', 'B − 1')
+    const deux = cloturerLaCalibration(
+      etat({ lettre: un.lettre, lettreInitiale: un.lettreInitiale }), basses, jamaisSonde)
+    assert.equal(deux.lettre, 'D', 'C − 1 — les MÊMES mesures ont fait descendre DEUX fois')
+
+    // ⚠️ À LA MONTÉE, le plafond amortit — mais il n'a jamais été écrit pour ça,
+    //    et il ne tient que TANT QU'AUCUNE ANCRE RÉELLE N'EXISTE. Dès qu'une
+    //    ancre est posée, le plafond se recalcule sur ELLE et le second tour
+    //    remonte : ce n'est pas une garde, c'est une coïncidence de régime.
+    const hautes = [m({ lettreEquivalente: 'A' }), m({ lettreEquivalente: 'A' })]
+    const monteUn = cloturerLaCalibration(
+      etat({ lettre: 'D', ancreDerniereValeur: 'B' }), hautes, jamaisSonde)
+    assert.equal(monteUn.lettre, 'C', 'D + 1, sous le plafond de l\'ancre')
+    const monteDeux = cloturerLaCalibration(
+      etat({ lettre: monteUn.lettre, lettreInitiale: monteUn.lettreInitiale,
+        ancreDerniereValeur: 'B' }), hautes, jamaisSonde)
+    assert.equal(monteDeux.lettre, 'B', 'C + 1 — la même copie a fait monter DEUX fois')
+    // ⛔ D'où la garde de `cloturerLaCalibrationDesEleves` : elle saute tout
+    //    niveau dont `profil_provisoire` est déjà `false`. C'est elle qui rend
+    //    le passage hebdomadaire rejouable — donc réparable s'il a manqué son
+    //    tour — sans juger deux fois.
+  })
+
 test('clôture : une compétence SANS LETTRE n\'en reçoit pas ici', () => {
   const c = cloturerLaCalibration(etat({ lettre: null }),
     [m({ lettreEquivalente: 'B' }), m({ lettreEquivalente: 'B' })], jamaisSonde)

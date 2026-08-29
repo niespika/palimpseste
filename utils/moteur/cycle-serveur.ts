@@ -47,7 +47,8 @@ import { COMPETENCES } from '@/utils/chaine/types'
 import { chargerDoctrineDepuisBase } from '@/utils/fabrique/doctrine'
 import type { Competence, Lettre, Segment } from '@/utils/routeur/types'
 import { lireLesSegments, segmentDuCycle } from './calendrier-serveur'
-import { poserLeColdStart, type BilanDuColdStart } from './etat-serveur'
+import { poserLeColdStart, cloturerLaCalibrationDesEleves,
+  type BilanDuColdStart, type BilanDeLaCloture } from './etat-serveur'
 import type { DecoupeEnSegments } from '@/utils/routeur/segments'
 import {
   candidatsPour, constituerLeVivier, substratsDeLaSemaine,
@@ -110,6 +111,13 @@ export interface BilanDuRouteur {
    * `null` quand il n'avait rien à faire.
    */
   coldStart: BilanDuColdStart | null
+  /**
+   * `01-` §9 — la CLÔTURE DE LA CALIBRATION, jouée au premier passage qui trouve
+   * le cycle au segment 3 ou au-delà. `null` avant le segment 3, et **au second
+   * passage son `dejaCloturees` porte tout le compte** : la clôture est
+   * idempotente, et c'est ce qui la rend rejouable.
+   */
+  cloture: BilanDeLaCloture | null
   erreurs: string[]
 }
 
@@ -123,7 +131,7 @@ function bilanVide(
     elevesAttendus: 0, elevesServis: 0, nonServis: [], sansCibleCiblable: 0, viviersVides: 0,
     exercicesPoses: 0, decisionsEcrites: 0, depotsPoses: 0, sondesPosees: 0,
     ecartsAuPlancher: [], ecartsDuVivier: {}, minutesRemplies: 0, minutesSansLigne: 0,
-    budgetsRefuses: [], coldStart: null, erreurs: [],
+    budgetsRefuses: [], coldStart: null, cloture: null, erreurs: [],
   }
 }
 
@@ -252,6 +260,48 @@ export async function poserLesSemainesDuRouteur(
   const maintenant = new Date().toISOString()
   const echeance = toISODate(addDaysUTC(new Date(`${cycleLundi}T00:00:00Z`),
     options.joursDEcheance ?? 6))
+
+  // ── LA CLÔTURE DE LA CALIBRATION — avant la pose, jamais après ───────────
+  // `01-` §9 — « CLÔTURE DE LA CALIBRATION, SEGMENT 2 SEULEMENT, L'EXCEPTION
+  //   MEURT À LA BASCULE », et c'est ici que `profil_provisoire` passe à `false`.
+  //
+  // ⭐⭐ ELLE SE DÉCLENCHE SUR L'ÉTAT, PAS SUR UNE DATE — « segment 3 ou
+  //   au-delà », et non « le premier lundi du segment 3 ». Les deux disent la
+  //   même chose le jour J ; ils ne disent PAS la même chose le jour où le
+  //   passage hebdomadaire manque son tour. Un déclenchement à la date laisse
+  //   `profil_provisoire` à `true` POUR TOUJOURS si le cron a sauté ce lundi-là
+  //   — aucune lettre ne s'afficherait jamais à aucun élève, et rien ne le
+  //   dirait. Sur l'état, le passage suivant répare de lui-même.
+  //   ⛔ Ce n'est pas « juger deux fois » : la garde d'idempotence est dans
+  //   `cloturerLaCalibrationDesEleves`, qui saute tout niveau déjà clos.
+  //
+  // ⭐ ET LA BORNE HAUTE REND LE VERDICT INDÉPENDANT DE L'HEURE : les mesures
+  //   comptées sont celles du segment 2, `[premierLundi(2), premierLundi(3)[`,
+  //   qu'on tourne à l'heure ou trois semaines plus tard.
+  //
+  // ⚠️ Elle vit DERRIÈRE `routeur_actif`, comme tout ce point d'entrée. C'est
+  //   assumé et cohérent — le §9 range ce geste dans « le passage hebdomadaire »
+  //   — mais il faut le savoir : routeur fermé, aucune lettre ne se fige, donc
+  //   aucune ne s'affiche à un élève. *Constat déposé au relevé.*
+  if (s.segment >= 3) {
+    const lundiDe = (n: Segment) =>
+      decoupe.segments.find((b) => b.segment === n)?.premierLundi ?? null
+    const debut2 = lundiDe(2)
+    const debut3 = lundiDe(3)
+    if (debut2 === null) {
+      bilan.erreurs.push('clôture de la calibration : le segment 2 n\'a aucune semaine au '
+        + 'calendrier — rien à borner, et on ne fabrique pas une date. Non jouée.')
+    } else {
+      try {
+        bilan.cloture = await cloturerLaCalibrationDesEleves(admin, eleves, debut2, debut3)
+        bilan.erreurs.push(...bilan.cloture.erreurs)
+      } catch (e) {
+        // Même règle que le cold start : un échec ici n'emporte pas la pose de
+        // la semaine pour les élèves dont la lettre, elle, est déjà arrêtée.
+        bilan.erreurs.push(`clôture de la calibration : ${(e as Error).message} — la pose continue.`)
+      }
+    }
+  }
 
   // ── ÉLÈVE PAR ÉLÈVE, ET JAMAIS PAR CLASSE ────────────────────────────────
   // « La voie du professeur assigne à la classe entière, et c'est SA définition. »

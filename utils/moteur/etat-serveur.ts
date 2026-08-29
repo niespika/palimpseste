@@ -490,6 +490,13 @@ export interface BilanDeLaCloture {
   descentes: number
   restees: number
   sansLettre: number
+  /**
+   * ⭐ Les niveaux DÉJÀ clos — `profil_provisoire` à `false` — et donc sautés.
+   * C'est le compteur de l'idempotence : « à la bascule, chaque lettre est jugée
+   * UNE FOIS ». Au second passage, il vaut ce que `lettresJugees` valait au
+   * premier, et tout le reste est à zéro.
+   */
+  dejaCloturees: number
   erreurs: string[]
 }
 
@@ -504,10 +511,18 @@ export interface BilanDeLaCloture {
  */
 export async function cloturerLaCalibrationDesEleves(
   admin: Admin, eleves: readonly string[], debutDuSegment2: string,
+  /**
+   * ⭐ LA BORNE HAUTE — le premier lundi du segment 3. Elle rend le verdict
+   * INDÉPENDANT DU MOMENT OÙ LA CLÔTURE TOURNE : jouée à l'heure ou trois
+   * semaines plus tard, elle compte exactement les mêmes mesures, celles « du
+   * segment 2 ». Sans elle, une clôture en retard jugerait sur des mesures que
+   * le §9 n'y range pas. `null` = pas de borne (le comportement d'avant).
+   */
+  finDuSegment2: string | null = null,
   maintenant: string = new Date().toISOString(),
 ): Promise<BilanDeLaCloture> {
   const bilan: BilanDeLaCloture = { elevesAttendus: eleves.length, lettresJugees: 0, montees: 0,
-    descentes: 0, restees: 0, sansLettre: 0, erreurs: [] }
+    descentes: 0, restees: 0, sansLettre: 0, dejaCloturees: 0, erreurs: [] }
   const lignes: LigneDeNiveau[] = []
 
   for (const id of eleves) {
@@ -520,8 +535,17 @@ export async function cloturerLaCalibrationDesEleves(
       continue
     }
     for (const niveau of niveaux) {
+      // ⭐⭐ « À LA BASCULE, CHAQUE LETTRE EST JUGÉE UNE FOIS » (`01-` §9), et
+      //    c'est ce drapeau qui le tient. Sans cette garde, un second passage
+      //    RE-JUGERAIT depuis la lettre déjà bougée : un élève monté de C à B
+      //    pourrait monter à A sur les MÊMES mesures, parce que le décompte
+      //    `auDessus` se refait contre le nouveau rang. ⛔ Ce n'est pas une
+      //    précaution, c'est la règle — et c'est elle qui rend la clôture
+      //    REJOUABLE, donc réparable si le passage hebdomadaire l'a manquée.
+      if (!niveau.profilProvisoire) { bilan.dejaCloturees += 1; continue }
       const duSegment = mesures.filter((m) => m.competence === niveau.competence
-        && m.mesureAt >= debutDuSegment2)
+        && m.mesureAt >= debutDuSegment2
+        && (finDuSegment2 === null || m.mesureAt < finDuSegment2))
       const c = cloturerLaCalibration(niveau, duSegment,
         // « Une sonde ÉCHOUÉE ne compte pas pour la descente » — une sonde de
         // montée est marquée, et elle est ratée quand sa lettre est sous celle

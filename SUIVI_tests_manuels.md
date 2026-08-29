@@ -7705,6 +7705,42 @@ interruption. Le décor se reconnaît à sa classe, `nom LIKE 'RECETTE-C5L3%'`. 
   un semestre ouvert le 24/08. ⛔ **Et la bascule n'a AUCUN écrivain de production** —
   `cloturerLaCalibrationDesEleves` n'est appelée que par `scripts/recette/routeur-c4l12.mjs`.
   **Condition de reprise : `C4-L12` pose l'écrivain, puis la quatrième semaine arrive.**
+  > ✅ **L'ÉCRIVAIN EST POSÉ — 28/08, hors lot.** `poserLesSemainesDuRouteur` appelle la clôture
+  > **avant la pose**, dans le passage hebdomadaire qui existe déjà *(`01-` §9 : « il appartient au
+  > passage hebdomadaire, pas à la chaîne »)*. **Aucun cron neuf** — deux déclencheurs sur la même
+  > clé fabriquent deux lignes.
+  > ⭐⭐ **Il se déclenche sur L'ÉTAT — « segment ≥ 3 » —, pas sur une date.** Les deux disent la
+  > même chose le jour J ; ils ne disent pas la même chose le jour où le passage manque son tour.
+  > Sur une date, un lundi sauté laisserait `profil_provisoire` à `true` **pour toujours** — aucune
+  > lettre ne s'afficherait jamais à personne, et **rien ne le dirait**. Sur l'état, le passage
+  > suivant répare de lui-même.
+  > ⭐ **Et ce qui rend cela possible est une garde d'idempotence** : la clôture saute désormais tout
+  > niveau déjà clos (`dejaCloturees` au bilan). Sans elle, repasser chaque lundi **re-jugerait
+  > depuis la lettre déjà bougée** — la règle n'est pas idempotente, et un test le démontre
+  > maintenant dans le sens **non plafonné**, la descente : les mêmes deux mesures font descendre
+  > B → C, puis C → D. *À la montée, le plafond amortit — mais seulement tant qu'aucune ancre réelle
+  > n'existe : c'est une coïncidence de régime, pas une garde.*
+  > ⭐ **La borne HAUTE rend le verdict indépendant de l'heure** : les mesures comptées sont celles
+  > de `[premier lundi du segment 2, premier lundi du segment 3[`, qu'on tourne à l'heure ou trois
+  > semaines plus tard. Une clôture en retard rend **exactement** le même verdict qu'à l'heure.
+  > **Preuves** : `npm test` **1894 / 1894** *(+1 vecteur : la non-idempotence de la règle pure)* ·
+  > `tsc` et `eslint` silencieux · **aucune migration** · et la recette `routeur-c4l12.mjs` §N
+  > gagne **le rejeu** — second passage à `lettresJugees = 0`, `dejaCloturees` égal au compte du
+  > premier, **et les lettres relues en base, identiques**.
+  > ⚠️ **UNE COUPLURE À CONNAÎTRE, ET ELLE EST ASSUMÉE** : la clôture vit derrière `routeur_actif`,
+  > comme tout ce point d'entrée. **Routeur fermé un lundi de segment 3, aucune lettre ne se fige,
+  > donc aucune ne s'affiche à un élève.** Le déclenchement sur l'état fait que le lundi suivant
+  > rattrape — mais si l'interrupteur reste fermé, rien ne bascule. *`routeur_actif` est à ON dans
+  > les deux bases.*
+  > ⭐⭐ **ET LA DATE EST VÉRIFIÉE SUR LE CALENDRIER RÉEL DE PRODUCTION**, en lecture seule, en
+  > rejouant `lireLesSegments` sur ses `semesters` et ses `holidays` — **32 semaines de cours** :
+  > segment 1 *(diagnostic)* **2026-08-24**, 1 semaine · segment 2 *(calibration)* **2026-08-31**,
+  > 2 semaines · **segment 3 *(amorce)* : premier lundi 2026-09-14**, 9 semaines · segment 4
+  > 2026-11-23 · segment 5 2027-02-08. **La clôture tombera donc au cron du lundi 2026-09-14,
+  > 09:30 UTC**, avec `debut2 = 2026-08-31` et `debut3 = 2026-09-14` — les mesures comptées seront
+  > exactement celles des deux semaines de calibration.
+  > **Ce qui reste sur cette ligne, et rien d'autre : la lettre VUE À L'ÉCRAN, le lundi
+  > 2026-09-14.**
 - [x] **C6L2-26 · ✅ LA MIGRATION EST JOUÉE — SANDBOX ET PRODUCTION, LE 28/08.**
   *Preuve : constat de tête en prod (63 comptes, 16 colonnes, 0 déjà posée, 4 policies), puis les
   **cinq drapeaux à `t`** et `comptes_intacts = 63` ; vérification indépendante **par les deux

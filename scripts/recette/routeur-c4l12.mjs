@@ -554,6 +554,32 @@ async function main() {
   dit(apresCloture.every((l) => l.profil_provisoire === false),
     '⭐⭐ `profil_provisoire` BASCULE — « l’exception meurt à la bascule », et c’est ici, '
     + 'jamais dans la chaîne')
+
+  // ⭐⭐ L'IDEMPOTENCE — « à la bascule, chaque lettre est jugée UNE FOIS », et
+  //    c'est ce qui rend la clôture REJOUABLE. Le passage hebdomadaire la
+  //    déclenche sur l'ÉTAT (segment ≥ 3), pas sur une date : elle repasse donc
+  //    chaque lundi jusqu'à la fin de l'année, et elle doit être MUETTE.
+  const lettresAvantRejeu = lu('lettres avant rejeu', await admin
+    .from('competences_niveaux').select('eleve_id, competence, lettre')
+    .in('eleve_id', POP).not('lettre', 'is', null))
+  const rejeu = await cloturerLaCalibrationDesEleves(admin, POP, W1)
+  note(`bilan du rejeu : ${JSON.stringify(rejeu)}`)
+  dit(rejeu.lettresJugees === 0 && rejeu.montees === 0 && rejeu.descentes === 0,
+    '⭐⭐ LE SECOND PASSAGE NE JUGE RIEN — sans cette garde, un élève monté de C à B '
+    + 'remonterait à A sur LES MÊMES mesures, le décompte se refaisant contre le nouveau rang',
+    `jugées ${rejeu.lettresJugees}, montées ${rejeu.montees}, descentes ${rejeu.descentes}`)
+  dit(rejeu.dejaCloturees === cloture.lettresJugees,
+    '⭐ et il DIT ce qu\'il a sauté — `dejaCloturees` porte exactement ce que le premier '
+    + 'passage avait jugé',
+    `${rejeu.dejaCloturees} sautée(s) contre ${cloture.lettresJugees} jugée(s) au premier tour`)
+  const lettresApresRejeu = lu('lettres après rejeu', await admin
+    .from('competences_niveaux').select('eleve_id, competence, lettre')
+    .in('eleve_id', POP).not('lettre', 'is', null))
+  const cle = (l) => `${l.eleve_id}|${l.competence}|${l.lettre}`
+  dit(lettresAvantRejeu.length === lettresApresRejeu.length
+    && lettresAvantRejeu.map(cle).sort().join() === lettresApresRejeu.map(cle).sort().join(),
+    '⭐⭐ ET AUCUNE LETTRE N\'A BOUGÉ EN BASE — la preuve par la donnée, pas par le bilan',
+    `${lettresApresRejeu.length} lettre(s), identiques`)
 }
 
 async function nettoyer() {
