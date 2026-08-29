@@ -155,9 +155,11 @@ d'après. ⭐ **Le canal a changé, pas le calcul** — sortie identique octet p
 inchangée. ⛔ *Le dépôt de conception n'a PAS été commité.*
 
 ⛔ **Les trois qui restent ne se jouent pas depuis une séance Code** — c'est leur point commun, et
-c'est ce qui les distingue de D4 : · `C4L10A-14` **D2** — le bloc
-`# SORTIE` de P2 de l'Argumentation ne déclare que **2 des 4 tests**, donc deux observables valent
-structurellement 0 et Acquis ne se ferme jamais · `C4L10S-19` — quatre valeurs illisibles du
+c'est ce qui les distingue de D4 :
+
+✅ ~~`C4L10A-14` **D2**~~ — **PAYÉ LE 29/08, fiche en 4.4.** ⛔⛔ **Et il avait déjà TIRÉ en production** : `garant_ambigu` et `garant_vague` à **0 sur 53 mesures / 53**, 52 élèves, zéro variance. ⚠️⚠️ **C'est Louis qui l'a signalé** — j'avais conclu « aucun run » en ne mesurant que le BANC, pas la PLATEFORME. **Mesurer les deux.** ⭐ Rattrapé sans réparation : fenêtre d'évidence de **4**, une seule mesure par élève, corrigé avant l'ouverture du segment 2. ⭐ Le code n'était pas en cause — **aucun test ne peut vérifier ce qu'un modèle choisit d'émettre**. ⭐ Variante propre (champ `marque`) portée à **2027**.
+
+⛔ **Les deux qui restent, tous deux sur la Structure** : · `C4L10S-19` — quatre valeurs illisibles du
 squelette Structure ne lèvent **aucune alerte** *(68 cas sur 112)* · `C4L10S-18` — `bloc_relie` :
 le §5 et le §4 ne comptent pas la même population.
 

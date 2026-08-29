@@ -1117,3 +1117,61 @@ ne découvre qu'en comptant les lignes, des semaines plus tard.
 ⛔ **Le décor d'Élo contourne le défaut, il ne le corrige pas** : `scripts/recette/decor-eleve-elo.mjs`
 écrit `competences_niveaux` **une compétence à la fois** et vérifie par requête. Le correctif
 applicatif reste entier.
+
+---
+
+## ⭐ RENTRÉE 2027 — séparer `vers` de la MARQUE, dans le crible de l'Argumentation
+
+*Variante écartée sciemment le **29/08/2026**, au moment de payer la dette D2. Elle est meilleure ;
+elle n'était simplement pas payable dans la fenêtre qui restait. **Décision de Louis : rentrée 2027.***
+
+**CE QUI A ÉTÉ FAIT À LA PLACE (option A, jouée)** — la fiche `competences/argumentation.md` passe en
+**4.4** et son bloc `# SORTIE` de P2 déclare enfin les quatre tests :
+
+```diff
+-        "test": "distinction | source",
+-        "vers": "implicite | cosmetique",
++        "test": "distinction | source | sens | contour",
++        "vers": "implicite | cosmetique | ambigu | vague",
+```
+
+**CE QUE ÇA LAISSE DE BANCAL, ET C'EST L'IDÉE.** Le champ `vers` veut désormais dire **deux choses
+différentes** selon le test :
+
+| test | ce que `vers` signifie | le statut de l'unité |
+|---|---|---|
+| `distinction`, `source` | **vers quel statut** l'unité descend | il **change** |
+| `sens`, `contour` | **quelle marque** l'unité reçoit | il **ne change pas** |
+
+Le prompt le dit lui-même — *« explicite marquée "ambigu" (test 3 — le statut ne change pas) »* — et
+le code le sait : `TESTS_TERMES` d'un côté, `TESTS_CRIBLE` de l'autre, et `cible.marques.push(vers)`
+au lieu de `cible.statut = vers`. **Un nom de champ qui ment sur la moitié de ses valeurs.**
+
+**LA FORME PROPRE (option B)** — un champ à part, et `vers` retrouve son seul sens :
+
+```diff
+         "test": "distinction | source | sens | contour",
+         "vers": "implicite | cosmetique",
++        "marque": "ambigu | vague",
+```
+
+⛔ **CE QUE ÇA COÛTE, ET POURQUOI CE N'ÉTAIT PAS POUR AOÛT 2026.** Trois fichiers, pas un :
+`competences/argumentation.md` · `copies-tests/argumentation/code.py` *(la table `TOUS_TESTS`, le
+repli `TEST_PAR_VERS`, le garde-fou de contradiction `vers` ↔ `test`, et **trois autotests** qui
+écrivent aujourd'hui `{"test": "sens", "vers": "ambigu"}`)* · et
+`utils/chaine/branchements/argumentation.ts`, **qui doit rester identique au module** — c'est son
+« fait quand ». **Donc une modification du CALCUL, donc un acte de calibration**, quand l'option A
+n'était qu'une omission de schéma que le code savait déjà lire.
+
+⚠️ **ET LA FENÊTRE ÉTAIT DE DEUX JOURS.** Le 29/08, la mesure a montré le défaut **déjà tiré en
+production** — `garant_ambigu` et `garant_vague` à **0 sur 53 mesures / 53**, 52 élèves, zéro
+variance — et le segment 2 de calibration ouvrait le **lundi 31/08**. Avec une fenêtre d'évidence de
+**4** et une seule mesure par élève, corriger avant lundi suffisait à ce que les mesures fautives
+**sortent d'elles-mêmes** de la fenêtre. Une refonte à trois fichiers ne tenait pas dans ce délai.
+
+⭐ **CONDITION DE REPRISE : hors année scolaire**, quand aucune calibration ne court — donc **été
+2027**. Le geste est mécanique et entièrement écrit ci-dessus ; ce qu'il faut, c'est le droit de
+bouger `version_calcul` sans invalider un corpus.
+
+⚠️ **Et si la même question se pose ailleurs** : c'est un patron, pas un cas isolé. Tout crible qui
+mélange « requalifier » et « marquer » dans un seul champ de sortie aura le même défaut de nom.

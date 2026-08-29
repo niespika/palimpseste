@@ -3995,8 +3995,51 @@ et **cinq vrais appels de modèle**, décor semé puis **retiré** (aucun reste,
   qui précède est prouvé **par requête et sur pièce**, jamais à l'œil. À voir : la tuile de la
   fabrique, qui doit maintenant dire **deux** compétences ouvertes. **Condition de reprise :
   `fabrique_actif` ouvert le temps du smoke, et refermé après.** *Le même reste que C4L10E-13.*
-- [ ] **C4L10A-14 · ⚠️ LE BLOC `# SORTIE` DE P2 NE DÉCLARE QUE DEUX DES QUATRE TESTS — À CORRIGER
-  AVANT LE RUN 1.** Le schéma de sortie du prompt de jugement écrit `"test": "distinction | source"`
+- [x] **C4L10A-14 · ✅ LE BLOC `# SORTIE` DE P2 DÉCLARE ENFIN SES QUATRE TESTS — CORRIGÉ LE 29/08,
+  FICHE EN 4.4, ET IL ÉTAIT MOINS UNE.**
+  ⛔⛔ **LE DÉFAUT AVAIT DÉJÀ TIRÉ EN PRODUCTION, et c'est Louis qui l'a signalé** — j'avais conclu
+  « aucun run n'existe » en ne mesurant que le BANC de calibration *(7 manifestes, tous de juillet)*,
+  sans mesurer la PLATEFORME. Lu en prod avant de corriger :
+  `garant_ambigu` **0 sur 53 mesures / 53** · `garant_vague` **0 sur 53 / 53**, sur **52 élèves**,
+  **zéro variance** — quand `bloc_relie` de la Structure variait normalement à côté
+  *(`{"0":37,"1":4,"n/a":10,"0.5":1}`)*. **C'est le contraste qui fait la preuve** : la chaîne SAIT
+  écrire des valeurs variées ; ces deux-là ne pouvaient structurellement pas en prendre.
+  ⭐ **Aucun élève n'en a vu** : les **168 lignes de niveau sont toutes en `profil_provisoire`**, et
+  sous ce drapeau la lettre est tue *(`utils/moteur/etat.ts`, `app/eleve/moi/page.tsx:111`)*.
+  ⭐⭐ **CE N'ÉTAIT PAS UN ARBITRAGE — LE CODE AVAIT DÉJÀ TRANCHÉ**, et je l'avais présenté à tort
+  comme une décision de conception. Le module *(`TESTS_TERMES = {sens → ambigu, contour → vague}`)*,
+  le portage TypeScript, **et les autotests du module lui-même** *(`{"test": "sens", "vers":
+  "ambigu"}`)* portaient déjà la forme. Pour les tests 3 et 4, `vers` porte **la marque** et le
+  statut ne change pas. **Seul le schéma était plus étroit que le contrat** — et il contredisait le
+  corps du même prompt, dont les sections « Test 3 — LE SENS » et « Test 4 — LE CONTOUR » sont
+  écrites en entier, et dont la liste des cinq mouvements permis nomme « marquée ambigu » et
+  « marquée vague ».
+  ⭐ **Le geste** : `"test": "distinction | source | sens | contour"` et
+  `"vers": "implicite | cosmetique | ambigu | vague"`, `competences/argumentation.md` **4.3 → 4.4**,
+  puis `derive-instruments.py --ecris` **joué EN DERNIER** — deux dérivés touchés, `MANIFESTE.ts` et
+  `competences/argumentation.ts`, puis **IDENTIQUE**.
+  ⭐ **La chaîne de bout en bout est vérifiée** : l'artefact dérivé porte les quatre valeurs et
+  `"version": "4.4"` · `utils/chaine/instruments.ts:37` importe cet artefact-là *(pas la fiche)* ·
+  et le code transforme bien `test: sens` en `garant_ambigu` — c'est le **BALAYAGE « les 4 tests du
+  crible × les 4 statuts déclarables »**, 16 cas, **qui existait déjà et qui passait**.
+  ⚠️⚠️ **ET C'EST LA LEÇON** : le code n'a JAMAIS été en cause, ses tests non plus. **Aucun test ne
+  peut vérifier ce qu'un modèle CHOISIT d'émettre** — seul un schéma trop étroit le lui interdit, en
+  silence. `npm test` **1921/1921** ici comme avant la correction.
+  ⭐ **POURQUOI ÇA SE RATTRAPE SANS RÉPARATION** : la fenêtre d'évidence est de **4**
+  *(`FENETRE_EVIDENCE`)* et il n'y a **qu'une mesure par élève** (53 pour 52). Corrigé **avant
+  l'ouverture du segment 2, lundi 31/08**, la quinzaine de calibration remplit la fenêtre de mesures
+  justes et **les 53 fautives en sortent d'elles-mêmes** avant la bascule du 14/09. ⭐ **Filet si
+  besoin** : re-poser `competences_statut_recette.statut_recette_pose_le` *(posé au 25/08 16:50 pour
+  l'Argumentation, donc antérieur aux mesures)* écarte d'un coup tout ce qui précède —
+  `utils/routeur/mesure.ts:132`, mécanisme prévu, pas un bricolage.
+  ⭐ **La bascule 4.3 → 4.4 rend les mesures d'avant identifiables à la requête**, par
+  `competences_mesures.instrument_version`.
+  ⚠️ **Une variante plus propre a été ÉCARTÉE, sur décision de Louis : rentrée 2027.** Un champ
+  `marque` distinct de `vers` — `vers` veut aujourd'hui dire deux choses selon le test. Elle coûte le
+  module, ses trois autotests et le portage, donc un **acte de calibration**, pour un résultat que le
+  code produit déjà. *Écrite en entier au `IDEES_post_rentree.md`.* **Dette D2 fermée au registre
+  (le compte passe de 7 à 6).**
+  **Énoncé d'origine :** Le schéma de sortie du prompt de jugement écrit `"test": "distinction | source"`
   et `"vers": "implicite | cosmetique"`, quand le §4 en pose **quatre** et que le module lit les
   quatre dans la même liste. **Un juge fidèle à son schéma n'émettra jamais de `sens` ni de
   `contour`** → `garant_ambigu` et `garant_vague` valent **structurellement 0**, toujours réussis, et
