@@ -238,3 +238,13 @@ input, textarea, select {
   animation: attente-fondu 320ms ease both;
 }
 .indice-nav.est-en-attente :is(.plume, .plume-hampe, .plume-encre) { animation-play-state: running; }
+
+/* Le libellé d'un onglet s'efface pendant que la plume paraît — MÊME horloge que
+   `attente-fondu`, sinon l'onglet se viderait 140 ms avant que la plume arrive.
+   Repos = visible : si les animations ne tournent pas, le libellé reste (le bon
+   défaut), cf. la note sur `.attente-differee`. */
+.libelle-efface { animation: libelle-efface 340ms ease both; }
+@keyframes libelle-efface {
+  0%, 41% { opacity: 1; }
+  100%    { opacity: 0; }
+}
