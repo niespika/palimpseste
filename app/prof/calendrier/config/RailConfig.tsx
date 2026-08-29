@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import LibelleSuivi from '@/components/nav/LibelleSuivi'
 
 // Rail des catégories de configuration (colonne gauche du maître-détail).
 // Rendu serveur : chaque item est un lien ?section= (linkable, rechargeable),
@@ -24,12 +25,13 @@ export default function RailConfig({ active, items }: { active: string; items: R
             key={it.key}
             href={`/prof/calendrier/config?section=${it.key}`}
             aria-current={on ? 'page' : undefined}
-            className={`flex flex-col gap-[3px] px-3.5 py-[11px] rounded-[10px] border border-l-[3px] transition-colors ${
+            className={`relative flex flex-col gap-[3px] px-3.5 py-[11px] rounded-[10px] border border-l-[3px] transition-colors ${
               on
                 ? 'bg-parchemin-fonce border-bordure border-l-liseret'
                 : 'border-transparent hover:bg-parchemin-fonce/50'
             }`}
           >
+            <LibelleSuivi enveloppe="flex flex-col gap-[3px] flex-1 min-w-0">
             <span className="text-base font-semibold text-encre leading-tight">{it.label}</span>
             <span className="flex items-center gap-2 flex-wrap">
               <span className="font-ui text-[13px] text-muet">{it.sub}</span>
@@ -39,6 +41,7 @@ export default function RailConfig({ active, items }: { active: string; items: R
                 </span>
               )}
             </span>
+          </LibelleSuivi>
           </Link>
         )
       })}

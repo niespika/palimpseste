@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { useEffect, useRef, useState } from 'react'
 import type { NavTab } from './configNavigation'
+import LibelleSuivi from './LibelleSuivi'
 
 function correspond(href: string, pathname: string, exact?: boolean) {
   return exact ? pathname === href : pathname === href || pathname.startsWith(href + '/')
@@ -40,7 +41,7 @@ export default function BarreNavigation({ tabs }: { tabs: NavTab[] }) {
   // handoff (blocs 4A–4L) transcrites au pixel : padding 7×14, radius 8, gap 6,
   // actif #ECE4D6/#221C16, inactif #6E5A3E (hex exacts, ≠ tokens globals).
   const classeOnglet = (actif: boolean) =>
-    `font-ui text-[14px] rounded-[8px] px-[14px] py-[7px] transition-colors whitespace-nowrap ${
+    `relative font-ui text-[14px] rounded-[8px] px-[14px] py-[7px] transition-colors whitespace-nowrap ${
       actif
         ? 'bg-[#ECE4D6] text-[#221C16] font-medium'
         : 'text-[#6E5A3E] hover:bg-[#ECE4D6]/50'
@@ -54,7 +55,7 @@ export default function BarreNavigation({ tabs }: { tabs: NavTab[] }) {
         if (!tab.items?.length) {
           return (
             <Link key={tab.label} href={tab.href ?? '#'} aria-current={actif ? 'page' : undefined} className={classeOnglet(actif)}>
-              {tab.label}
+              <LibelleSuivi>{tab.label}</LibelleSuivi>
             </Link>
           )
         }

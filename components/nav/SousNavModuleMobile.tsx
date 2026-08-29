@@ -25,6 +25,7 @@ import {
   type SousOnglet,
 } from './configModules'
 import OngletsFragmentsEleve, { classePastille, type PastilleOnglet } from './OngletsFragmentsEleve'
+import LibelleSuivi from './LibelleSuivi'
 
 interface BarreProps {
   mod: ModuleConfig
@@ -46,7 +47,7 @@ function Barre({ mod, onglets, actif, pastille }: BarreProps) {
             href={o.href}
             aria-current={est ? 'page' : undefined}
             // min-h 44px : cible tactile (l'élève est sur téléphone).
-            className="font-ui whitespace-nowrap rounded-t-lg px-4 min-h-[44px] inline-flex items-center gap-1.5 text-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pigment"
+            className="relative font-ui whitespace-nowrap rounded-t-lg px-4 min-h-[44px] inline-flex items-center gap-1.5 text-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pigment"
             style={{
               fontWeight: est ? 500 : 400,
               background: est ? c.ongletActifFond : 'transparent',
@@ -54,13 +55,15 @@ function Barre({ mod, onglets, actif, pastille }: BarreProps) {
               borderBottom: `2px solid ${est ? c.ongletActifTexte : 'transparent'}`,
             }}
           >
-            {o.label}
-            {p && (
-              <>
-                <span aria-hidden className={`w-1.5 h-1.5 rounded-full ${classePastille(p.couleur)}`} />
-                <span className="sr-only">— {p.libelle}</span>
-              </>
-            )}
+            <LibelleSuivi enveloppe="inline-flex items-center gap-1.5">
+              {o.label}
+              {p && (
+                <>
+                  <span aria-hidden className={`w-1.5 h-1.5 rounded-full ${classePastille(p.couleur)}`} />
+                  <span className="sr-only">— {p.libelle}</span>
+                </>
+              )}
+            </LibelleSuivi>
           </Link>
         )
       })}

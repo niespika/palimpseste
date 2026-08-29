@@ -30,6 +30,7 @@ import {
   type SousOnglet,
 } from './configModules'
 import OngletsFragmentsEleve, { classePastille, type PastilleOnglet } from './OngletsFragmentsEleve'
+import LibelleSuivi from './LibelleSuivi'
 import type { NavTab } from './configNavigation'
 import SelecteurClasseEleve from '@/app/eleve/SelecteurClasseEleve'
 import SelecteurSemestre from '@/app/prof/fragments-erudition/SelecteurSemestre'
@@ -109,7 +110,7 @@ function SousOngletsListe({
             key={o.href}
             href={o.href}
             aria-current={est ? 'page' : undefined}
-            className="font-ui rounded-[8px] whitespace-nowrap transition-colors inline-flex items-center gap-1.5"
+            className="relative font-ui rounded-[8px] whitespace-nowrap transition-colors inline-flex items-center gap-1.5"
             style={{
               fontSize: compact ? 13.5 : 14,
               fontWeight: est ? 500 : 400,
@@ -118,13 +119,15 @@ function SousOngletsListe({
               color: est ? c.ongletActifTexte : c.ongletInactif,
             }}
           >
-            {o.label}
-            {p && (
-              <>
-                <span aria-hidden className={`w-1.5 h-1.5 rounded-full ${classePastille(p.couleur)}`} />
-                <span className="sr-only">— {p.libelle}</span>
-              </>
-            )}
+            <LibelleSuivi enveloppe="inline-flex items-center gap-1.5">
+              {o.label}
+              {p && (
+                <>
+                  <span aria-hidden className={`w-1.5 h-1.5 rounded-full ${classePastille(p.couleur)}`} />
+                  <span className="sr-only">— {p.libelle}</span>
+                </>
+              )}
+            </LibelleSuivi>
           </Link>
         )
       })}

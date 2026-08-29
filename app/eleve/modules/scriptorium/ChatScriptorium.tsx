@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import Image from 'next/image'
 import { renommerConversation, supprimerConversation } from './actions'
+import LibelleSuivi from '@/components/nav/LibelleSuivi'
 
 // Onglet « Discussion » de la face élève (RAG L5+L6, §7.1 — surface refondue en
 // C2.2) : rail des conversations + fil + écritoire. Le PLAN DU COURS est parti
@@ -280,11 +281,11 @@ export default function ChatScriptorium({
                   <Link
                     href={`/eleve/modules/scriptorium?conv=${c.id}`}
                     aria-current={actif ? 'page' : undefined}
-                    className={`block font-corps text-[15px] truncate focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pigment rounded-sm ${
+                    className={`relative block font-corps text-[15px] truncate focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pigment rounded-sm ${
                       actif ? 'font-medium text-encre' : 'text-encre-douce hover:text-encre'
                     }`}
                   >
-                    {c.titre}
+                    <LibelleSuivi enveloppe="block truncate">{c.titre}</LibelleSuivi>
                   </Link>
                   <div className="flex items-center gap-2.5 mt-0.5">
                     <span className="font-ui text-[11.5px] flex-1 truncate" style={{ color: ENCRE_META }}>{c.recence}</span>

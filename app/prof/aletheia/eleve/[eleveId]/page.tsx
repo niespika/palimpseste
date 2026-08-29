@@ -12,6 +12,7 @@ import { chargerCapstoneLivre } from '@/app/eleve/modules/aletheia/data'
 import type { CapstoneRow, TravailAletheia, DiagnosticTravail, StatutAletheia } from '@/app/eleve/modules/aletheia/types'
 import GrapheProgression, { type LivreGraphe } from './GrapheProgression'
 import AvantApres from './AvantApres'
+import LibelleSuivi from '@/components/nav/LibelleSuivi'
 
 // ── Petits champs de saisie (réutilisés dans le panneau « saisie complète ») ──
 function Champ({ label, valeur }: { label: string; valeur: string | null | undefined }) {
@@ -67,8 +68,9 @@ function LigneSemaine({ livre, semaine, titre, chapitres, statut, actif, basePat
       href={`${basePath}?l=${livre}&s=${semaine}`}
       scroll={false}
       aria-current={actif ? 'true' : undefined}
-      className={`flex items-center gap-3 px-4 py-3 min-h-[44px] transition-colors ${actif ? 'bg-pigment-teinte border-l-2 border-l-liseret' : 'border-l-2 border-l-transparent hover:bg-parchemin-fonce/40'}`}
+      className={`relative flex items-center gap-3 px-4 py-3 min-h-[44px] transition-colors ${actif ? 'bg-pigment-teinte border-l-2 border-l-liseret' : 'border-l-2 border-l-transparent hover:bg-parchemin-fonce/40'}`}
     >
+      <LibelleSuivi enveloppe="flex items-center gap-3 flex-1 min-w-0">
       <span className="font-titre text-sm text-muet w-6 shrink-0 text-center">{semaine}</span>
       <div className="min-w-0 flex-1">
         <p className="text-sm text-encre truncate">
@@ -77,6 +79,7 @@ function LigneSemaine({ livre, semaine, titre, chapitres, statut, actif, basePat
         <div className="mt-1"><MicroStepper statut={statut} taille="petit" /></div>
       </div>
       <span className="text-[11px] text-muet whitespace-nowrap shrink-0 hidden sm:block">{STATUT_LABEL[statut]}</span>
+    </LibelleSuivi>
     </Link>
   )
 }

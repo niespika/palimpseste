@@ -13,6 +13,7 @@ import { lireFuseau } from '@/utils/fuseau-serveur'
 import GestionIntegrite from './GestionIntegrite'
 import HistoriqueIntegrite from '@/components/integrite/HistoriqueIntegrite'
 import type { SignalementVue, BloqueVue, SelectionVue } from '@/components/integrite/types'
+import LibelleSuivi from '@/components/nav/LibelleSuivi'
 
 export default async function ProfIntegritePage({
   searchParams,
@@ -39,16 +40,16 @@ export default async function ProfIntegritePage({
         <Link
           href="/prof/integrite?vue=atelier"
           aria-current={vue === 'atelier' ? 'true' : undefined}
-          className={`px-3.5 py-1.5 rounded-md transition-colors ${vue === 'atelier' ? 'bg-bouton text-surface' : 'text-encre-douce hover:bg-parchemin-fonce'}`}
+          className={`relative px-3.5 py-1.5 rounded-md transition-colors ${vue === 'atelier' ? 'bg-bouton text-surface' : 'text-encre-douce hover:bg-parchemin-fonce'}`}
         >
-          Atelier
+          <LibelleSuivi>Atelier</LibelleSuivi>
         </Link>
         <Link
           href="/prof/integrite?vue=historique"
           aria-current={vue === 'historique' ? 'true' : undefined}
-          className={`px-3.5 py-1.5 rounded-md transition-colors ${vue === 'historique' ? 'bg-bouton text-surface' : 'text-encre-douce hover:bg-parchemin-fonce'}`}
+          className={`relative px-3.5 py-1.5 rounded-md transition-colors ${vue === 'historique' ? 'bg-bouton text-surface' : 'text-encre-douce hover:bg-parchemin-fonce'}`}
         >
-          Historique
+          <LibelleSuivi>Historique</LibelleSuivi>
         </Link>
       </div>
 

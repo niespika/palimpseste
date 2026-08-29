@@ -6,6 +6,7 @@ import FeuillePanneau from '@/components/pilotage/FeuillePanneau'
 import PanneauPreuve from '@/components/integrite/PanneauPreuve'
 import type { SignalementVue, BloqueVue, ParamsVue, SelectionVue } from '@/components/integrite/types'
 import { actionDebloquerEleve, sauvegarderParamsIntegrite } from './actions'
+import LibelleSuivi from '@/components/nav/LibelleSuivi'
 
 const champ = 'w-full px-3 py-2 border border-bordure rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-pigment text-encre'
 
@@ -158,10 +159,11 @@ function LigneSignalement({ s, actif }: { s: SignalementVue; actif: boolean }) {
         href={`/prof/integrite?sel=${s.id}`}
         scroll={false}
         aria-current={actif ? 'true' : undefined}
-        className={`block rounded-lg px-3 py-2.5 border transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pigment ${
+        className={`relative block rounded-lg px-3 py-2.5 border transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pigment ${
           actif ? 'bg-surface border-bordure border-l-4 border-l-pigment shadow-sm' : 'bg-surface border-bordure hover:bg-parchemin-fonce'
         }`}
       >
+        <LibelleSuivi balise="div">
         <div className="flex items-center justify-between gap-2">
           <span className="font-corps text-[15px] text-encre truncate">{s.eleveNom}</span>
           <span className="font-ui text-[11px] text-muet shrink-0">{s.dateCourt}</span>
@@ -176,6 +178,7 @@ function LigneSignalement({ s, actif }: { s: SignalementVue; actif: boolean }) {
         <p className={`font-ui text-[11px] mt-1.5 ${s.source === 'ia' ? 'text-attention' : 'text-muet'}`}>
           {s.source === 'ia' ? 'détecté par l’IA · à confirmer' : 'détecté au rendu · strike déjà compté'}
         </p>
+      </LibelleSuivi>
       </Link>
     </li>
   )

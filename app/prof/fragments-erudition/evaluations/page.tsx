@@ -8,6 +8,7 @@ import Tuile from '@/components/Tuile'
 import FormulaireNouvelEssai from './FormulaireNouvelEssai'
 import GestionEssaisClasse from './GestionEssaisClasse'
 import GestionSyntheses from './GestionSyntheses'
+import LibelleSuivi from '@/components/nav/LibelleSuivi'
 
 // ---------------------------------------------------------------------------
 // C8·L3 — ÉVALUATIONS : les anciens onglets « Essais » et « Synthèses » se rangent
@@ -30,11 +31,11 @@ function Toggle({ vue, classeSel }: { vue: Vue; classeSel?: string }) {
       key={v}
       href={lien(v)}
       aria-current={vue === v ? 'page' : undefined}
-      className={`font-ui text-sm px-4 py-1.5 rounded-md transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pigment ${
+      className={`relative font-ui text-sm px-4 py-1.5 rounded-md transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pigment ${
         vue === v ? 'bg-pigment text-surface font-medium' : 'text-muet hover:text-encre'
       }`}
     >
-      {label}
+      <LibelleSuivi>{label}</LibelleSuivi>
     </Link>
   )
   return (

@@ -2,6 +2,7 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
+import LibelleSuivi from './nav/LibelleSuivi'
 
 export interface Onglet {
   href: string
@@ -30,13 +31,13 @@ export default function SousNavModule({ onglets }: { onglets: Onglet[] }) {
             key={href}
             href={href}
             aria-current={actif ? 'page' : undefined}
-            className={`font-ui px-4 py-2 text-sm rounded-t-lg border-b-2 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pigment ${
+            className={`relative font-ui px-4 py-2 text-sm rounded-t-lg border-b-2 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pigment ${
               actif
                 ? 'bg-pigment-teinte text-encre border-liseret font-medium'
                 : 'text-encre-douce hover:text-encre hover:bg-pigment-teinte border-transparent'
             }`}
           >
-            {label}
+            <LibelleSuivi>{label}</LibelleSuivi>
           </Link>
         )
       })}

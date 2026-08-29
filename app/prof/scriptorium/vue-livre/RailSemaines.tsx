@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import type { EtatFiche } from './utils'
 import { INTITULE } from './ui'
+import LibelleSuivi from '@/components/nav/LibelleSuivi'
 
 const PASTILLE: Record<EtatFiche, string> = {
   prete: 'bg-ok',
@@ -27,13 +28,15 @@ export default function RailSemaines({ semaines, semaineSel, hrefBase }: {
               href={`${hrefBase}&semaine=${s.semaine}`}
               scroll={false}
               aria-current={sel ? 'page' : undefined}
-              className={`flex items-center gap-2 py-[6.5px] pl-[13px] pr-4 border-l-[3px] transition-colors ${
+              className={`relative flex items-center gap-2 py-[6.5px] pl-[13px] pr-4 border-l-[3px] transition-colors ${
                 sel ? 'bg-pigment-teinte border-l-pigment' : 'border-l-transparent hover:bg-parchemin-fonce'
               }`}
             >
-              <span className={`font-ui font-semibold text-[11px] w-[25px] flex-none ${sel ? 'text-pigment' : 'text-muet-clair'}`}>S{s.semaine}</span>
-              <span className={`font-corps text-[15px] truncate flex-1 ${sel ? 'font-semibold text-encre' : 'text-encre-douce'}`}>{s.titre}</span>
-              <span className={`w-[7px] h-[7px] rounded-full flex-none box-border ${PASTILLE[s.etat]}`} />
+              <LibelleSuivi enveloppe="flex items-center gap-2 flex-1 min-w-0">
+                <span className={`font-ui font-semibold text-[11px] w-[25px] flex-none ${sel ? 'text-pigment' : 'text-muet-clair'}`}>S{s.semaine}</span>
+                <span className={`font-corps text-[15px] truncate flex-1 ${sel ? 'font-semibold text-encre' : 'text-encre-douce'}`}>{s.titre}</span>
+                <span className={`w-[7px] h-[7px] rounded-full flex-none box-border ${PASTILLE[s.etat]}`} />
+              </LibelleSuivi>
             </Link>
           )
         })}

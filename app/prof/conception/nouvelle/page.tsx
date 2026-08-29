@@ -17,6 +17,7 @@ import { garderProf } from '@/utils/fabrique/acces'
 import { chargerDoctrineDepuisBase } from '@/utils/fabrique/doctrine'
 import { borneDeConception, phraseDeLaBorne } from '@/utils/fabrique/non-spoiler-conception'
 import Pipeline, { type CarteDoctrine } from './Pipeline'
+import LibelleSuivi from '@/components/nav/LibelleSuivi'
 
 export const dynamic = 'force-dynamic'
 
@@ -112,10 +113,12 @@ export default async function NouvelleInstance({
           <Link
             key={p} href={`/prof/conception/nouvelle?porte=${p}`}
             aria-current={porte === p ? 'true' : undefined}
-            className={`rounded-md px-3.5 py-1.5 transition-colors ${
+            className={`relative rounded-md px-3.5 py-1.5 transition-colors ${
               porte === p ? 'bg-bouton text-surface' : 'text-encre-douce hover:bg-parchemin-fonce'}`}
           >
-            {p === 'aletheia' ? 'Aletheia — restituer · expliquer · évaluer · interroger' : 'Codex — composer'}
+            <LibelleSuivi>
+              {p === 'aletheia' ? 'Aletheia — restituer · expliquer · évaluer · interroger' : 'Codex — composer'}
+            </LibelleSuivi>
           </Link>
         ))}
       </nav>

@@ -3,6 +3,7 @@
 import Link from 'next/link'
 import DossierIntegriteEleve from './DossierIntegriteEleve'
 import type { HistoriqueLigne, DossierVue } from './types'
+import LibelleSuivi from '@/components/nav/LibelleSuivi'
 
 // ════════════════════════════════════════════════════════════════════════════
 // Onglet « Historique » de /prof/integrite : tableau récapitulatif par élève
@@ -50,8 +51,9 @@ export default function HistoriqueIntegrite({
                           href={`/prof/integrite?vue=historique&eleve=${l.eleveId}`}
                           scroll={false}
                           aria-current={actif ? 'true' : undefined}
-                          className={`flex items-center gap-2 px-4 py-2.5 hover:bg-parchemin-fonce/50 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pigment ${actif ? 'border-l-4 border-l-pigment' : ''}`}
+                          className={`relative flex items-center gap-2 px-4 py-2.5 hover:bg-parchemin-fonce/50 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pigment ${actif ? 'border-l-4 border-l-pigment' : ''}`}
                         >
+                          <LibelleSuivi enveloppe="flex items-center gap-2 flex-1 min-w-0">
                           {l.bloque ? (
                             <span className="w-[18px] h-[18px] shrink-0 rounded-full bg-retard text-surface font-ui text-[11px] font-bold flex items-center justify-center" aria-label="bloqué">!</span>
                           ) : (
@@ -61,6 +63,7 @@ export default function HistoriqueIntegrite({
                             <span className="block font-corps text-[15px] text-encre truncate">{l.nom}</span>
                             <span className="block font-ui text-[11px] text-muet truncate">{l.classes}</span>
                           </span>
+                        </LibelleSuivi>
                         </Link>
                       </th>
                       <td className="px-2 py-2.5 border-l border-bordure align-middle">

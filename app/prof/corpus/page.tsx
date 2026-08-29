@@ -26,6 +26,7 @@ import FileDeValidation from './FileDeValidation'
 import Rattachement from './Rattachement'
 import Demonstrations from './Demonstrations'
 import { cranNumero } from '@/utils/cran'
+import LibelleSuivi from '@/components/nav/LibelleSuivi'
 
 export const dynamic = 'force-dynamic'
 
@@ -160,10 +161,10 @@ export default async function DepotDuCorpus({
           <Link
             key={v} href={`/prof/corpus?onglet=${v}`}
             aria-current={onglet === v ? 'true' : undefined}
-            className={`rounded-md px-3.5 py-1.5 transition-colors ${
+            className={`relative rounded-md px-3.5 py-1.5 transition-colors ${
               onglet === v ? 'bg-bouton text-surface' : 'text-encre-douce hover:bg-parchemin-fonce'}`}
           >
-            {libelle}
+            <LibelleSuivi>{libelle}</LibelleSuivi>
           </Link>
         ))}
       </nav>
