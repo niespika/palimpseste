@@ -1,4 +1,5 @@
 import 'server-only'
+import { PREFIXE_ETAT_PERDU, motifDesEtatsPerdus } from './bilan-motifs'
 // ============================================================================
 // C4 · L5 — LA CHAÎNE FROIDE, ET LES DEUX TEMPS DE CODE QUI LUI APPARTIENNENT.
 // ----------------------------------------------------------------------------
@@ -330,12 +331,12 @@ export async function traiterDepot(
       ])
       const bilanEtat = await ecrireLEtatApresMesure(
         admin, ctx.eleveId, touchees, await lireFuseau())
-      alertes.push(...bilanEtat.erreurs.map((e) => `état après mesure : ${e}`))
+      alertes.push(...bilanEtat.erreurs.map((e) => `${PREFIXE_ETAT_PERDU}${e}`))
       for (const x of bilanEtat.ecartees) {
         alertes.push(`état de ${x.competence} non réécrit — ${x.motif}`)
       }
     } catch (e) {
-      alertes.push(`état après mesure : ${(e as Error).message} — la lettre n'a pas bougé.`)
+      alertes.push(`${PREFIXE_ETAT_PERDU}${(e as Error).message} — la lettre n'a pas bougé.`)
     }
   }
 
@@ -1550,4 +1551,7 @@ function resumeBilan(b: BilanDepot): string {
   return `${b.competencesMesurees.length} mesurée(s), ${b.mesuresEcrites} écrite(s), `
     + `${b.mesuresDejaLa} déjà là, retour ${b.retourEcrit ? 'écrit' : 'non écrit'}${motif}, `
     + `${b.appels} appel(s), ${Math.round(b.dureeMs / 1000)} s${motifDesEcartees(b)}`
+    // ⛔ SANS CONDITION, et c'est tout le correctif : une perte d'écriture ne
+    //   dépend pas de ce qu'un retour a fait ou non.
+    + motifDesEtatsPerdus(b.alertes)
 }

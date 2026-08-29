@@ -6288,6 +6288,25 @@ Tout ce qui suit est donc la face **professeur**, et **les smokes élève resten
   > **avant** que la base soit sollicitée. ⭐ **Elle a raison de lever** : un `upsert` en lot
   > **unifie les clés**, donc la `lettre_initiale` de la compétence déjà lettrée serait partie à
   > **NULL** — et son plafond avec elle. *Ce qu'elle empêche est pire que ce qu'elle coûte.*
+  > ⭐⭐ **ET LE TROISIÈME VOLET — LE SILENCE — EST FERMÉ LE 29/08.** Le registre des ouverts
+  > *(item 85)* nommait un défaut de plus que le mien : **rien ne DISAIT la perte**.
+  > `bilanEtat.erreurs` entrait bien dans `alertes`, mais `resumeBilan` ne les retrouvait que par
+  > `motifDuRetourManquant`, **qui ne s'exécute que si le retour MANQUE** — une perte survenue alors
+  > qu'un retour avait été écrit restait invisible au `dernier_message` du job, **seul canal durable
+  > qu'un écran lise**. *Le 27/08, le job a affiché « … retour écrit, 6 appel(s), 64 s » pendant que
+  > treize élèves perdaient deux lettres chacun.*
+  > ✅ **`motifDesEtatsPerdus()`** retrouve les alertes par leur préfixe et les dit **SANS
+  > CONDITION** : le job porte désormais *« ⚠️ N ÉCRITURE(S) D'ÉTAT PERDUE(S) — »* avec **les
+  > compétences nommées**. ⛔ Et il **ne dit que les pertes** : un écartement légitime porte
+  > `état de X non réécrit` et relève de `motifDesEcartees` — le préfixe les sépare, et c'est pour
+  > ça qu'il a **un domicile unique**, partagé par celui qui pousse l'alerte et celui qui la retrouve.
+  > ⭐⭐ **La fonction vit dans un module PUR** — `utils/chaine/bilan-motifs.ts` — **et c'est le
+  > point** : `chaine.ts` porte `import 'server-only'`, ce qui le rend **intestable sous `npm
+  > test`**, et c'est la raison pour laquelle son voisin `motifDesEcartees` n'a jamais eu de vecteur.
+  > **Cinq vecteurs neufs**, dont le cas réel du 27/08, la non-confusion avec un écartement, et
+  > **le compte qui survit à la troncature** *(la leçon de `motifDesEcartees`, appliquée)*.
+  > `npm test` **1914 / 1914** · `tsc` silencieux · `eslint` inchangé *(l'unique avertissement de
+  > `chaine.ts` est préexistant — vérifié par `git stash`)*.
   > ─────────────────────────────────────────────────────────────────────────────
   > ✅ **JOUÉE EN PRODUCTION LE 29/08 — 13 ÉLÈVES, 26 LETTRES, 0 ERREUR.**
   > `--base=prod --repare --oui-la-prod`. **Treize appels, un par élève, chacun portant SES DEUX
