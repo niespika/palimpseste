@@ -23,8 +23,9 @@ les six interrupteurs sont à **ON dans les deux bases**, par **décision écrit
 | prod | `ucmngachkxvvlegntuwh` · **62 élèves**, 4 classes actives, toutes avec `type_pedagogique` |
 | bac à sable | `aoakpxxlyvthzueaywna` |
 | prod, au 29/08 | 184 mesures · 168 lignes de niveau · 86 dépôts · **0 `routeur_decisions`** |
-| `origin/main` | `2363e4b` — tout est poussé *(re-fetché le 29/08 en fin de journée ; le
-  `340abd7` de la première rédaction avait **12 commits de retard** au bout de quelques heures)* |
+| `origin/main` | ⛔ **aucun numéro ici : il se périme en heures.** `git fetch && git log --oneline -5 origin/main`.
+  *Deux mesures le 29/08 : `340abd7` avait **12 commits** de retard le soir même, et le `2363e4b`
+  qui l'a remplacé était faux **vingt minutes** plus tard — une séance voisine écrit le même arbre.* |
 
 **Les segments de l'année, lus au calendrier réel de prod** *(32 semaines de cours)* :
 S1 `2026-08-24` *(diagnostic, hors routage)* · **S2 `2026-08-31`** *(calibration, 2 sem.)* ·
