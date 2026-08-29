@@ -333,6 +333,37 @@ export function EcranDeroule({ vue }: { vue: VueDuDeroule }) {
           depotId={vue.depotId} retour={vue.retourFinal} vue={vue} titre="Ce qui a bougé"
         />
       )}
+
+      {/* ── ⭐⭐ L'ÉTALON DES CRANS DE PRODUCTION — item 86 ──────────────────
+          `02-` 6.0 §2.3.4 : « une production modèle : à quoi peut ressembler
+          une bonne réponse ». ⛔ **La vue ne le rend qu'après la version
+          finale** — servi plus tôt, il donnerait une réponse à recopier et le
+          `delta_v1_vf` ne mesurerait plus rien. La garde est côté serveur
+          (`etalonServi`, module pur, éprouvé) : ici on affiche, on ne décide pas.
+
+          ⭐ Deux formes, une seule pièce. Au cran 2 `deplie` vaut `true` et le
+          bloc est OUVERT — l'élève ne l'a pas demandé, il n'y a rien à compter.
+          Au cran 6 il est REPLIÉ, et `aide="etalon"` fait compter le déroulé
+          (`AIDES_COMPTEES`, `utils/deroule/depot`). Au cran 8 la vue rend
+          `null` et rien ne s'affiche.
+
+          ⚠️ Le titre ne dit pas « la bonne réponse » — « une production a
+          plusieurs bonnes formes, et l'étalon en donne UNE, jamais la seule ».
+          La phrase sous le texte le redit à l'élève, parce qu'un modèle posé nu
+          se lit comme un corrigé. */}
+      {vue.etalon && (
+        <Depliable
+          titre="Un exemple de ce qui était attendu"
+          depotId={vue.depotId} aide="etalon" ouvertParDefaut={vue.etalon.deplie}
+        >
+          <TexteBrut texte={vue.etalon.texte} className="text-sm text-encre" />
+          <p className="mt-2 text-xs text-encre/60">
+            Ce n’est pas la seule bonne réponse : un devoir peut être réussi
+            autrement. Sers-t’en pour voir ce qui était attendu, pas pour
+            comparer mot à mot.
+          </p>
+        </Depliable>
+      )}
     </div>
   )
 }
@@ -441,11 +472,20 @@ function MicroQuestion({ depotId }: { depotId: string }) {
  * mais **une seule fois** : rouvrir un panneau qu'on vient de fermer n'est pas
  * une seconde consultation.
  */
+/**
+ * ⚠️ `ouvertParDefaut` OUVRE **ET** DÉSARME LE COMPTEUR, et les deux vont
+ *    ensemble. Un bloc servi ouvert n'a pas été demandé : le compter ferait
+ *    passer pour « aide consommée » ce que le dispositif a donné de lui-même,
+ *    et `aide_consommee` (`01-` §11) cesserait de dire ce qu'il dit.
+ * ⭐ C'est le cas de l'étalon au cran 2 — toujours montré — contre le cran 6,
+ *    où l'élève le déroule et où ce geste, lui, compte (`02-` 6.0 §2.3.4).
+ */
 function Depliable({
-  titre, depotId, aide, children,
-}: { titre: string; depotId: string; aide: string; children: React.ReactNode }) {
-  const [ouvert, setOuvert] = useState(false)
-  const [compte, setCompte] = useState(false)
+  titre, depotId, aide, children, ouvertParDefaut = false,
+}: { titre: string; depotId: string; aide: string; children: React.ReactNode
+  ouvertParDefaut?: boolean }) {
+  const [ouvert, setOuvert] = useState(ouvertParDefaut)
+  const [compte, setCompte] = useState(ouvertParDefaut)
   return (
     <section className="rounded-lg border border-bordure bg-surface p-4">
       <button

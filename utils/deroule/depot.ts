@@ -361,7 +361,14 @@ export async function repondreALaMicroQuestion(
  *    journal des collages, lui, est atomique — parce que là on compte des
  *    tentatives, et qu'en perdre une est exactement ce qu'on cherchait à voir.*
  */
-export const AIDES_COMPTEES = ['demonstration', 'guide', 'relecture_retour'] as const
+// ⭐⭐ `etalon` — item 86, 29/08. Le `02-` 6.0 §2.3.4 : l'étalon des crans de
+//    production « se montre à l'élève APRÈS SA VERSION FINALE » — toujours au
+//    cran 2, **au cran 6 s'il le déroule, et ce déroulé COMPTE comme une aide**,
+//    jamais au cran 8. C'est ce dernier point qui l'inscrit ici : sans entrée
+//    dans cette liste, `compterUneAide` refuse, et le déroulé ne se mesurerait
+//    pas. ⚠️ Au cran 2 il est servi DÉPLIÉ : rien n'est à compter, l'élève ne l'a
+//    pas demandé.
+export const AIDES_COMPTEES = ['demonstration', 'guide', 'relecture_retour', 'etalon'] as const
 export type AideDepliee = (typeof AIDES_COMPTEES)[number]
 
 export async function compterUneAide(

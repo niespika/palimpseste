@@ -147,6 +147,13 @@ export interface CoucheType {
    * fait passer une règle de doctrine pour une donnée manquante.
    */
   patronProduction?: string | null
+  /**
+   * ⭐⭐ L'ÉTALON — item 86. `02-` 6.0 §2.3.4 : « une production modèle : à quoi
+   * peut ressembler une bonne réponse ». Il est là pour BORNER ce retour, pas
+   * pour être comparé : « rien ne se compare mot à mot », et « une production a
+   * plusieurs bonnes formes ». Aux trois crans de production seulement.
+   */
+  etalonProduction?: string | null
 }
 
 // ── Le plafond de la règle 2 ────────────────────────────────────────────────
@@ -281,6 +288,24 @@ export function assemblerRetour(gabarit: string, e: EntreeRetour): { systeme: st
         ? `Ce cran est un cran de PRODUCTION : l'exercice ne cherche pas à isoler un observable, `
           + `il fait produire l'objet entier. Patron de la consigne : ${e.coucheType.patronProduction}`
         : "Ce qui est servable ici : la doctrine n'en déclare rien pour ce couple."),
+    // ⭐⭐ L'ÉTALON — item 86. Il vient APRÈS le patron, et il est nommé pour ce
+    //    qu'il est : un repère, jamais une réponse. Le `02-` 6.0 §2.3.4 fixe les
+    //    deux moitiés de sa raison d'être — « elle guide son retour autant
+    //    qu'elle le borne » —, et sa limite : « une production a plusieurs
+    //    bonnes formes, et l'étalon en donne UNE, jamais la seule ».
+    // ⛔ La phrase qui suit est écrite POUR ÊTRE LUE PAR LE MODÈLE : sans elle,
+    //    un étalon posé nu se lit comme le corrigé, et l'écart à sa lettre
+    //    deviendrait la note. C'est exactement ce qu'on veut empêcher.
+    ...(e.coucheType.etalonProduction ? [
+      'ÉTALON — une production que le professeur tient pour bonne à ce cran :',
+      e.coucheType.etalonProduction,
+      "⚠️ Ce n'est PAS la réponse attendue, et l'élève n'avait pas à l'écrire. "
+      + "Une production a plusieurs bonnes formes ; celle-ci en est une. "
+      + "Sers-t'en pour situer le NIVEAU exigé — l'ampleur, la précision, ce qui "
+      + "doit y figurer — jamais pour comparer mot à mot, ni pour reprocher un "
+      + "écart de contenu, de plan ou d'exemple. Une copie qui atteint le même "
+      + "niveau par un autre chemin vaut celle-ci.",
+    ] : []),
   ].join('\n'))
 
   for (const c of e.couchesCompetence) {

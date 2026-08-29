@@ -144,6 +144,37 @@ export function correctionServieAuCran(
 }
 
 /**
+ * ⭐⭐ L'ÉTALON DES CRANS DE PRODUCTION EST-IL SERVI, ET DÉPLIÉ ? — item 86.
+ *
+ * `02-` 6.0 §2.3.4 : « une production modèle : à quoi peut ressembler une bonne
+ * réponse. […] Elle se montre à l'élève APRÈS SA VERSION FINALE, jamais avant. »
+ *
+ * ⛔ **`vfRemise` EST LA GARDE, et c'est elle qui protège une MESURE.** « Servie
+ *    avec le retour de v1, elle donnerait une réponse à recopier et le
+ *    `delta_v1_vf` ne mesurerait plus rien » — le motif même qui ferme le cran 7.
+ *    Un étalon servi trop tôt ne casse rien de visible : il vide une mesure, en
+ *    silence. C'est pourquoi la garde est ici, dans un module pur qu'on éprouve,
+ *    et non au fil de l'assemblage.
+ *
+ * ⭐ **Le gradient suit celui du `guide`** : cran 2 **toujours déplié** · cran 6
+ *    **replié**, l'élève le déroule et ce déroulé COMPTE comme une aide · cran 8
+ *    **jamais servi** — il n'y borne que l'IA.
+ *
+ * ⚠️ Les sept autres crans rendent `null` : aux quatre qui isolent, la
+ *    `reponse_attendue` est LA réponse et passe par la correction ; aux deux à
+ *    l'aveugle, elle n'existe pas.
+ */
+export function etalonServi(
+  cran: number | null, vfRemise: boolean, reponseAttendue: unknown,
+): { texte: string; deplie: boolean } | null {
+  if (!vfRemise) return null
+  if (cran !== 2 && cran !== 6) return null
+  const t = typeof reponseAttendue === 'string' ? reponseAttendue.trim() : ''
+  if (t === '') return null
+  return { texte: t, deplie: cran === 2 }
+}
+
+/**
  * ⭐ LA CORRECTION DE CE CAS EST-ELLE DUE ?
  *
  * ⚠️ **La correction ne se sert qu'APRÈS la crédence DE SON CAS.** Sans quoi

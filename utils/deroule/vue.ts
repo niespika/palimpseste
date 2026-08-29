@@ -35,7 +35,7 @@ import { regimeDuDeroule, tempsServis, nombreDeCas, credenceDemandee, etapeDeLaP
   type EscaladePesante, type EtapePaire } from './regime'
 import { rappelDuTemps1, momentDeLaDemonstration, type Rappel } from './rappel'
 import { offreDeCredence, CRANS_GUIDES, type OffreCredence } from './credence'
-import { composerLaCorrection, correctionDue, correctionServieAuCran,
+import { composerLaCorrection, correctionDue, correctionServieAuCran, etalonServi,
   type CorrectionServie } from './correction'
 import { phaseServie, candidates, offreSeJugerMaison, verdictDeCalibration,
   type CouvertureTestee, type LigneDeVerdict, type OffreSeJuger } from './juger'
@@ -160,6 +160,23 @@ export interface VueDuDeroule {
   contenuDemonstration: ReturnType<typeof lireLeContenu>
   /** ⚠️ Le GUIDE de l'appui — deux objets, deux mécanismes (`02-` §2.3.4). */
   guide: string | null
+  /**
+   * ⭐⭐ L'ÉTALON DES CRANS DE PRODUCTION — item 86, `02-` 6.0 §2.3.4.
+   *
+   * « Une production modèle : à quoi peut ressembler une bonne réponse. » Il
+   * **se montre à l'élève APRÈS SA VERSION FINALE, jamais avant** : servi avec
+   * le retour de v1, il donnerait une réponse à recopier et le `delta_v1_vf` ne
+   * mesurerait plus rien — c'est le motif même qui ferme le cran 7.
+   *
+   * ⭐ Le gradient suit celui du `guide` : **cran 2, toujours déplié** ; **cran
+   *    6, replié — l'élève le déroule s'il le veut, et ce déroulé COMPTE**
+   *    (`AIDES_COMPTEES`) ; **cran 8, jamais servi** — il n'y borne que l'IA.
+   *
+   * ⚠️ `null` partout ailleurs. Aux quatre crans qui isolent, la
+   *    `reponse_attendue` est LA réponse et passe par `corrections` : la servir
+   *    ici la ferait lire comme un modèle à imiter.
+   */
+  etalon: { texte: string; deplie: boolean } | null
   /**
    * ⭐⭐ C5-L2 — LE TEXTE D'AUTEUR, ET LE PLUS GROS MANQUE QUE CE LOT FERME.
    *
@@ -384,24 +401,47 @@ export async function chargerLeDeroule(
   const guideDansLaConsigne = guideBrut !== null
     && memeSouffle(String(guideBrut)) !== ''
     && consignes.some((c) => memeSouffle(c).includes(memeSouffle(String(guideBrut))))
+  // ⭐⭐ 29/08 — LE SENS DE CETTE GARDE S'EST INVERSÉ, ET C'EST UN AMENDEMENT DE
+  //    SOURCE QUI L'A FAIT. Le `04-` §14.1 plaçait un gabarit
+  //    `<les appuis nommés>` au patron du cran 6, que la fabrique remplissait
+  //    AVEC LE GUIDE : les 14 exercices de cran 6 recopiaient donc 100 % de leur
+  //    guide dans leur consigne, et ce repli existait pour ne pas le servir deux
+  //    fois. **Le gabarit est RETIRÉ des cinq modes** — l'appui vit dans le
+  //    `guide`, et là seulement.
+  // ⛔ POURQUOI IL A FALLU LE RETIRER, ET CE N'ÉTAIT PAS DU CONFORT. Le `02-`
+  //    6.0 §2.3.4 veut que l'aide du cran 6 se déroule À LA DEMANDE et que **ce
+  //    déroulé COMPTE comme une aide** — or on ne compte pas une aide que
+  //    l'élève a déjà reçue sans l'avoir demandée. Le commentaire qui vivait ici
+  //    l'avait vu et s'y résignait : « au cran 6, ce compteur tombera
+  //    STRUCTURELLEMENT à zéro pour le guide, et un compteur à zéro ressemble à
+  //    un élève autonome ». **Il ne tombe plus : le bloc est servi, et le
+  //    dépliage s'inscrit dans `exercices_depots.aide_consommee`** (`AIDES_COMPTEES`,
+  //    `./depot` ; compteur lu par le `01-` §11).
+  // ⚠️ LA GARDE RESTE, RETOURNÉE : c'est désormais une consigne QUI PORTE ENCORE
+  //    son guide qui est l'anomalie — une instance d'avant l'amendement, non
+  //    ré-importée. On la replie alors, pour ne pas la servir deux fois, et on
+  //    le DIT au professeur au lieu de le taire.
   const guideReplie = cran?.guide === 'léger' && guideDansLaConsigne
-  if (cran?.guide === 'léger' && !guideDansLaConsigne) {
-    // ⚠️ Le professeur doit le savoir : la règle du `04-` §14.1 ne s'applique
-    //    pas à cet exercice, et le bloc reste donc servi.
+  if (guideReplie) {
     avertissements.push(
-      'cran 6 : la consigne ne porte pas le guide — le bloc « De quoi t\'aider » '
-      + 'reste affiché. Le `04-` §14.1 veut que le patron du cran 6 finisse par '
-      + '`<les appuis nommés>` ; cette instance ne le fait pas. Le replier ici '
-      + "retirerait l'étayage, et le cran 6 deviendrait un cran 8 en silence.")
+      'cran 6 : cette consigne porte encore son guide en toutes lettres — une '
+      + "instance d'avant l'amendement du `04-` §14.1 (29/08), non ré-importée. "
+      + 'Le bloc « De quoi t\'aider » est REPLIÉ pour ne pas servir deux fois la '
+      + "même ligne. ⚠️ Tant qu'elle n'est pas ré-importée, son dépliage ne "
+      + "s'inscrit pas dans `aide_consommee`, et l'élève y paraîtra plus "
+      + 'autonome qu\'il ne l\'est.')
   }
-  // ⚠️⚠️ CE QUE CE REPLI REND MUET, ET QUI DOIT SE DIRE. Le bloc « De quoi
-  //    t'aider » porte `aide="guide"`, et `AIDES_COMPTEES` (`./depot`) fait
-  //    incrémenter `exercices_depots.aide_consommee` à chaque dépliage — un
-  //    compteur que le `01-` §11 lit. **Au cran 6, ce compteur tombera
-  //    STRUCTURELLEMENT à zéro pour le guide**, et un compteur à zéro ressemble
-  //    à un élève autonome. Ce n'est pas un défaut : c'est une conséquence, et
-  //    elle est écrite ici pour ne pas se découvrir plus tard dans la télémétrie.
   const guideServi = guideReplie ? null : guideBrut
+
+  // ⭐⭐ L'ÉTALON — item 86. La RÈGLE vit dans `./correction`, module pur :
+  //    ce fichier ne décide rien, il lit le premier cas et appelle.
+  // ⚠️ On lit le PREMIER cas : le régime des crans de production est `plein`,
+  //    il n'a pas de paire, et un second cas n'y existe pas.
+  // ⛔ `ctx.cran`, JAMAIS `depot.exercice.cran` : la colonne brute porte tantôt
+  //    un nombre tantôt une chaîne (C4-L11), et `tsc` l'a rappelé ici même.
+  const etalonServiIci = etalonServi(
+    ctx.cran, !!depot.vf_remis_at,
+    casBruts.find((c) => c.ordre === 1)?.reponse_attendue)
 
   const { data: metacog } = await admin.from('exercices_metacognition')
     .select('credence, contestation_points').eq('depot_id', depotId).maybeSingle()
@@ -613,6 +653,7 @@ export async function chargerLeDeroule(
       ? lireLeContenu(demonstration.demonstration.forme, demonstration.demonstration.contenu)
       : null,
     guide: guideServi,
+    etalon: etalonServiIci,
     // ⭐ C5-L2 — SERVI PAR `lireContexte`, DONC SANS UNE LECTURE DE PLUS. La
     //    tranche et sa découpe se calculent une fois, au même endroit, et la
     //    chaîne et l'écran lisent le même objet : deux lectures auraient fini

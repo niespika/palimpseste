@@ -98,6 +98,24 @@ export interface ContexteDepot {
    */
   patronProduction: string | null
   /**
+   * ⭐⭐ C6 · ITEM 86 — L'ÉTALON DES CRANS DE PRODUCTION, ET IL EST LÀ POUR
+   * CONTRAINDRE CE MODÈLE. Le `02-` 6.0 §2.3.4 : « une production modèle : à
+   * quoi peut ressembler une bonne réponse. […] Sans étalon, le modèle fabrique
+   * son propre barème à chaque copie, et deux élèves qui écrivent la même chose
+   * ne sont pas jugés pareil. Elle guide son retour autant qu'elle le borne. »
+   *
+   * ⛔ **CE N'EST PAS UNE RÉPONSE À COMPARER.** « Rien ne se compare mot à mot.
+   *    Une production a plusieurs bonnes formes, et l'étalon en donne UNE,
+   *    jamais la seule. » Le jugement reste celui du modèle ; l'étalon lui donne
+   *    son repère, il ne le remplace pas. Le prompt le dit en ces termes.
+   *
+   * ⚠️ **AUX TROIS CRANS DE PRODUCTION SEULEMENT**, et `null` partout ailleurs.
+   *    Aux quatre crans qui isolent, la `reponse_attendue` est LA réponse — la
+   *    servir ici la ferait lire comme un modèle, et le jugement s'y appuierait
+   *    à faux. C'est le cran qui décide, jamais la présence du champ.
+   */
+  etalonProduction: string | null
+  /**
    * Ce que la DÉCISION D'ASSIGNATION porte. « Le drapeau [de sonde de montée]
    * vient de la décision d'assignation ; la chaîne LE RECOPIE sur la mesure,
    * ELLE NE LE DEVINE PAS » (piège 20).
@@ -511,6 +529,7 @@ export async function lireContexte(admin: Admin, depotId: string): Promise<Conte
     patronProduction: cran != null && Number.isFinite(cran)
       ? await patronDeProduction(admin, tousLesModes, cran)
       : null,
+    etalonProduction: await etalonDeProduction(admin, exercice.id, cran),
     decision,
     confianceDeclaree: (depot.confiance_declaree ?? {}) as Record<string, string>,
     estSyntheseEnClasse: typeExercice === 'synthese' && exercice.lieu === 'classe',
@@ -613,6 +632,36 @@ async function patronDeProduction(
   if (!lignes.length) return null
   return lignes.map((l) => `${l.mode} : ${l.patron}`).join(' · ')
 }
+
+/**
+ * ⭐ L'ÉTALON DU CAS, aux TROIS CRANS DE PRODUCTION et nulle part ailleurs.
+ *
+ * ⛔ **C'est le CRAN qui décide, pas la présence du champ.** La table des crans
+ *    déclare `reponse_attendue` présente à SEPT crans sur neuf (`02-` 6.0
+ *    §2.2) — mais aux quatre qui isolent, elle est LA réponse, servie comme
+ *    candidat à l'écran. La servir au correcteur comme un « modèle » l'y ferait
+ *    lire de travers. D'où le filtre en dur sur 2, 6 et 8.
+ *
+ * ⚠️ Un cran de production ne porte qu'UN cas (`ordre = 1`) : le régime `plein`
+ *    n'a pas de paire. On prend le premier et on ne suppose rien de plus.
+ */
+async function etalonDeProduction(
+  admin: Admin, exerciceId: string, cran: number | null,
+): Promise<string | null> {
+  if (cran !== 2 && cran !== 6 && cran !== 8) return null
+  const { data, error } = await admin
+    .from('exercices_cas').select('reponse_attendue')
+    .eq('exercice_id', exerciceId).order('ordre').limit(1)
+  if (error) {
+    // ⚠️ supabase-js NE LÈVE PAS : sans cette branche, l'erreur passerait pour
+    //    une absence d'étalon, et le modèle jugerait sans repère en silence.
+    console.error(`[chaine] étalon illisible — ${error.code} ${error.message}`)
+    return null
+  }
+  const r = (data ?? [])[0]?.reponse_attendue
+  return typeof r === 'string' && r.trim() !== '' ? r.trim() : null
+}
+
 
 /** Le texte saisi d'abord, la transcription CORRIGÉE ensuite — jamais les deux. */
 function production(texte: unknown, transcription: unknown): string | null {

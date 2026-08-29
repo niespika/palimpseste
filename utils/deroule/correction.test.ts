@@ -12,8 +12,7 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import {
-  leCandidatLePlusCharge, composerLaCorrection, correctionDue, correctionServieAuCran,
-} from './correction'
+  leCandidatLePlusCharge, composerLaCorrection, correctionDue, correctionServieAuCran, etalonServi } from './correction'
 
 // La banque telle que l'IMPORT l'écrit : des objets `{texte, pourquoi_faux}`.
 const BANQUE = [
@@ -238,4 +237,46 @@ test('⛔ sans réponse déclarée NI version corrigée, on ne sert rien', () =>
       versionCorrigee: null }, null, false), null)
   assert.equal(composerLaCorrection(
     { reponseAttendue: '  ', pourquoiJuste: null, distracteurs: null }, null, false), null)
+})
+
+// ── L'ÉTALON DES CRANS DE PRODUCTION — item 86 ──────────────────────────────
+// ⛔ La garde qu'on éprouve ici protège une MESURE, pas un affichage : un étalon
+//    servi avant la vf donne une réponse à recopier, et le `delta_v1_vf` ne
+//    mesure plus rien. Un chemin non couvert qui « passe » est pire qu'un échec.
+
+test('ÉTALON — AVANT la vf, rien n\'est servi, même au cran 2', () => {
+  assert.equal(etalonServi(2, false, 'une production modèle'), null)
+  assert.equal(etalonServi(6, false, 'une production modèle'), null)
+})
+
+test('ÉTALON — au cran 2, servi DÉPLIÉ : l\'élève ne l\'a pas demandé', () => {
+  assert.deepEqual(etalonServi(2, true, '  un modèle  '),
+    { texte: 'un modèle', deplie: true })
+})
+
+test('ÉTALON — au cran 6, servi REPLIÉ : le dérouler est un geste, et il compte', () => {
+  assert.deepEqual(etalonServi(6, true, 'un modèle'),
+    { texte: 'un modèle', deplie: false })
+})
+
+test('⛔ ÉTALON — au cran 8, JAMAIS servi : il n\'y borne que l\'IA', () => {
+  assert.equal(etalonServi(8, true, 'un modèle'), null)
+})
+
+test('ÉTALON — aux quatre crans qui isolent, rien : la réponse passe par la correction', () => {
+  for (const c of [1, 3, 4, 5]) {
+    assert.equal(etalonServi(c, true, 'une réponse'), null, `cran ${c}`)
+  }
+})
+
+test('ÉTALON — aux deux crans à l\'aveugle, rien non plus', () => {
+  assert.equal(etalonServi(7, true, 'x'), null)
+  assert.equal(etalonServi(9, true, 'x'), null)
+})
+
+test('ÉTALON — un texte vide ou blanc ne se sert pas, et un cran nul non plus', () => {
+  assert.equal(etalonServi(2, true, '   '), null)
+  assert.equal(etalonServi(2, true, null), null)
+  assert.equal(etalonServi(2, true, 42), null, 'un non-texte ne passe pas')
+  assert.equal(etalonServi(null, true, 'un modèle'), null)
 })

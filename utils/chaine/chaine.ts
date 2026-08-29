@@ -1026,6 +1026,7 @@ async function engendrerLeRetour(
     coucheType: {
       consigne: ctx.consigne, grain: ctx.grain, servable: ctx.servable,
       patronProduction: ctx.patronProduction,
+      etalonProduction: ctx.etalonProduction,
     },
     squelettes,
     squelettesVf: a.squelettesVf,
