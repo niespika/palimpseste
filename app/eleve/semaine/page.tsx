@@ -75,8 +75,15 @@ export default async function SemaineDeLEleve({
   //    sans classe : on parcourt alors toutes ses inscriptions.
   const enContexte = toutes ? inscriptions : active ? [active] : []
 
-  const semaines = await Promise.all(enContexte.map((i) =>
-    chargerLaSemaineDeLEleve(admin, user.id, i.classe_id, cycleLundi, fuseau)))
+  // ⭐⭐ UN SEUL APPEL, POUR TOUTES SES CLASSES — `C6L2-31`, 29/08. L'écran
+  //    appelait le chargeur UNE FOIS PAR INSCRIPTION et sommait : une instance
+  //    sans classe passant le filtre de CHACUNE, un bi-classe lisait sa semaine
+  //    EN DOUBLE — « 0 sur 8 » pour quatre exercices, et le bloc des compétences
+  //    rendu deux fois. Le dédoublonnage se fait par `depotId`, dans le
+  //    chargeur, AVANT que la frise, le récapitulatif et le bilan soient comptés.
+  //    ⭐ C'est le geste que le quota avait déjà reçu, deux lignes plus bas.
+  const semaine = await chargerLaSemaineDeLEleve(
+    admin, user.id, enContexte.map((i) => i.classe_id), cycleLundi, fuseau)
 
   // ⛔⛔ LE QUOTA EST UNIFIÉ PAR ÉLÈVE, ET IL SE LIT **UNE SEULE FOIS**. « Un
   //    élève inscrit dans DEUX CLASSES a UN SEUL budget » (`01-` §4) — c'est une
@@ -94,26 +101,10 @@ export default async function SemaineDeLEleve({
   // ⛔ DEUX VIDES À DISTINGUER, PAS UN (`07-` §5). La porte fermée n'est pas
   //    « tu n'as rien à faire », et l'élève n'a JAMAIS à connaître le nom d'un
   //    interrupteur pour comprendre son écran.
-  const porteOuverte = semaines.some((s) => s.porteOuverte)
-  const exercices = semaines.flatMap((s) => s.exercices)
-  const frise = {
-    faits: semaines.reduce((n, s) => n + s.frise.faits, 0),
-    total: semaines.reduce((n, s) => n + s.frise.total, 0),
-    cases: semaines.flatMap((s) => s.frise.cases),
-    // ⭐ C6-L3 — ce qu'il a demandé en plus, agrégé comme le reste et compté À
-    //   PART : il ne rejoint jamais `faits`/`total`.
-    enPlus: {
-      faits: semaines.reduce((n, s) => n + s.frise.enPlus.faits, 0),
-      total: semaines.reduce((n, s) => n + s.frise.enPlus.total, 0),
-    },
-  }
-  const recapitulatif = semaines.flatMap((s) => s.recapitulatif)
-  const bilan = semaines.flatMap((s) => s.bilan)
-  const manque = {
-    copiesNonMesurees: semaines.reduce((n, s) => n + s.manque.copiesNonMesurees, 0),
-    incomplet: semaines.some((s) => s.manque.incomplet),
-  }
-  const incidents = [...semaines.flatMap((s) => s.incidents), ...incidentsDuQuota]
+  // ⛔ PLUS AUCUNE AGRÉGATION ICI : tout est compté une fois, dans le chargeur,
+  //    sur la liste dédoublonnée. Sommer par inscription était le défaut.
+  const { porteOuverte, exercices, frise, recapitulatif, bilan, manque } = semaine
+  const incidents = [...semaine.incidents, ...incidentsDuQuota]
   const auBilan = bilan.length > 0 || (exercices.length > 0 && recapitulatif.length === 0)
 
   // ⭐ L'OFFRE SE LIT SUR LA LISTE FUSIONNÉE, pas par inscription : le moment de

@@ -252,6 +252,34 @@ export function competencesDeLaSemaine(
 }
 
 /** Ce que le premier temps rend, par compétence prioritaire. */
+/**
+ * ⛔⛔ UN DÉPÔT NE SE COMPTE QU'UNE FOIS, MÊME CHEZ UN BI-CLASSE.
+ *
+ * `exercicesMaisonDeLEleve` borne sa liste à la classe en contexte
+ * (`visibleDansLaClasse`, `01-` §2), **mais une instance sans classe
+ * (`classe_id = NULL`) passe pour CHACUNE des inscriptions** — c'est le cas
+ * ORDINAIRE, seule `assignerALaClasse` écrit la colonne.
+ *
+ * ⚠️ **Ce que l'oubli coûtait est mesuré** : en état « Toutes les classes », un
+ * élève bi-classe lisait **« 0 exercice fait sur 8 » pour QUATRE exercices**, et
+ * le bloc des compétences était rendu deux fois (`C6L2-31`, 29/08).
+ *
+ * ⭐ Le `depotId` est l'identité : un dépôt appartient à UN élève et à UNE
+ * instance. Le premier gagne — les copies sont identiques par construction.
+ */
+export function dedoublonnerParDepot(
+  exercices: readonly ExerciceDeLaSemaine[],
+): ExerciceDeLaSemaine[] {
+  const vus = new Set<string>()
+  const out: ExerciceDeLaSemaine[] = []
+  for (const e of exercices) {
+    if (vus.has(e.depotId)) continue
+    vus.add(e.depotId)
+    out.push(e)
+  }
+  return out
+}
+
 export interface BlocRecapitulatif {
   competence: string
   nbExercices: number

@@ -11,7 +11,7 @@ import assert from 'node:assert/strict'
 import {
   bilanDeLaCompetence, ceQuiManqueAuBilan, competencesDeLaSemaine, friseDeLaSemaine,
   momentDeLaSemaine, offreDEnFairePlus, type ExerciceDeLaSemaine,
-} from './semaine'
+  dedoublonnerParDepot,} from './semaine'
 import type { TonEtat } from '../codex-onglets/regles'
 import type { EtatObservable } from '../routeur/observables'
 import type { DimensionDite } from './profil'
@@ -361,5 +361,46 @@ describe('C6-L3 · le récapitulatif — deux nombres sur un écran doivent s’
       ex('b2', 'clos', ['structure'], true),
     ])
     assert.equal(c[0].competence, 'structure', '2 au total devance 1')
+  })
+})
+
+
+// ── UN DÉPÔT NE SE COMPTE QU'UNE FOIS — `C6L2-31` ───────────────────────────
+
+describe('`dedoublonnerParDepot` — le bi-classe n\'a qu\'une semaine', () => {
+  const ex = (depotId: string, p: Record<string, unknown> = {}) => ({
+    depotId, titre: 't', echeance: null, assigneAt: '2026-08-31T12:00:00Z',
+    atelier: 'codex' as const, href: '/x', ton: 'a_faire' as const, libelle: 'l',
+    competences: ['expression'], bonus: false, ...p,
+  })
+
+  test('⛔ LE CAS RÉEL — une instance SANS CLASSE revenait une fois PAR INSCRIPTION', () => {
+    // `visibleDansLaClasse` laisse passer un `classe_id` NULL pour chacune : le
+    // même dépôt arrivait donc deux fois chez un bi-classe, et la frise lisait
+    // « 0 sur 8 » pour quatre exercices.
+    const uniques = dedoublonnerParDepot([ex('d1'), ex('d2'), ex('d1'), ex('d2')])
+    assert.equal(uniques.length, 2)
+    assert.deepEqual(uniques.map((e) => e.depotId), ['d1', 'd2'])
+  })
+
+  test('⭐ et la FRISE compte juste une fois dédoublonnée — c\'est ce qui était faux', () => {
+    const doublons = [ex('d1'), ex('d2'), ex('d1'), ex('d2')]
+    assert.equal(friseDeLaSemaine(doublons).total, 4, 'le défaut : quatre pour deux dépôts')
+    assert.equal(friseDeLaSemaine(dedoublonnerParDepot(doublons)).total, 2, 'et le correctif')
+  })
+
+  test('deux dépôts DISTINCTS ne se confondent pas, même titre compris', () => {
+    assert.equal(dedoublonnerParDepot([ex('a', { titre: 'même' }), ex('b', { titre: 'même' })])
+      .length, 2)
+  })
+
+  test('l\'ORDRE est préservé, et le premier gagne', () => {
+    const r = dedoublonnerParDepot([ex('a', { titre: 'premier' }), ex('a', { titre: 'second' })])
+    assert.equal(r.length, 1)
+    assert.equal(r[0].titre, 'premier')
+  })
+
+  test('une liste vide reste vide', () => {
+    assert.deepEqual(dedoublonnerParDepot([]), [])
   })
 })

@@ -39,7 +39,8 @@ import { etatDesObservables, type EtatObservable } from '@/utils/routeur/observa
 import { lireLesStatutsAvecDate } from '@/utils/statut-recette'
 import { dimensionsRegardees, forcesDeLaCompetence, type DimensionDite } from './profil'
 import {
-  bilanDeLaCompetence, ceQuiManqueAuBilan, competencesDeLaSemaine, friseDeLaSemaine,
+  bilanDeLaCompetence, ceQuiManqueAuBilan, competencesDeLaSemaine, dedoublonnerParDepot,
+  friseDeLaSemaine,
   momentDeLaSemaine,
   type Bilan, type BlocRecapitulatif, type CeQuiManqueAuBilan, type ExerciceDeLaSemaine,
   type Frise, type MomentDeLaSemaine,
@@ -84,7 +85,22 @@ export interface SemaineDeLEleve {
  *    `classe_id` : les deux ne s'alignent pas par confort (`07-` §1.3).
  */
 export async function chargerLaSemaineDeLEleve(
-  admin: Admin, eleveId: string, classeEnContexte: string, cycleLundi: string, fuseau: string,
+  admin: Admin, eleveId: string,
+  /**
+   * ⛔⛔ LES CLASSES EN CONTEXTE, ET C'EST UNE LISTE — jamais une par appel.
+   *
+   * L'écran appelait cette fonction UNE FOIS PAR INSCRIPTION et sommait les
+   * résultats. Or une instance sans classe passe le filtre de CHACUNE : un
+   * bi-classe voyait donc sa semaine comptée deux fois — « 0 sur 8 » pour quatre
+   * exercices, et le bloc des compétences rendu deux fois (`C6L2-31`).
+   *
+   * ⭐ La liste entre ici, le dédoublonnage se fait sur `depotId` AVANT tout
+   * calcul, et la frise, le récapitulatif, le bilan et « ce qui manque » sont
+   * donc comptés UNE SEULE FOIS. *C'est le geste que le quota avait déjà reçu :
+   * « un élève inscrit dans DEUX CLASSES a UN SEUL budget ».*
+   */
+  classesEnContexte: readonly string[],
+  cycleLundi: string, fuseau: string,
 ): Promise<SemaineDeLEleve> {
   const incidents: string[] = []
   const vide: SemaineDeLEleve = {
@@ -100,16 +116,16 @@ export async function chargerLaSemaineDeLEleve(
   const porte = await lireLaPorte(admin)
   if (!porte.exercicesActifs) return vide
 
-  // ⚠️ Les deux ateliers, parce que la semaine de l'élève les couvre tous deux.
-  const [codex, aletheia] = await Promise.all([
-    exercicesMaisonDeLEleve(admin, eleveId, classeEnContexte, 'codex'),
-    exercicesMaisonDeLEleve(admin, eleveId, classeEnContexte, 'aletheia'),
-  ])
+  // ⚠️ Les deux ateliers, parce que la semaine de l'élève les couvre tous deux —
+  //    et TOUTES ses classes, parce qu'un bi-classe n'a qu'une semaine.
+  const listes = await Promise.all(classesEnContexte.flatMap((classe) => [
+    exercicesMaisonDeLEleve(admin, eleveId, classe, 'codex')
+      .then((l) => l.map((e) => ({ ...e, atelier: 'codex' as const }))),
+    exercicesMaisonDeLEleve(admin, eleveId, classe, 'aletheia')
+      .then((l) => l.map((e) => ({ ...e, atelier: 'aletheia' as const }))),
+  ]))
 
-  const deLaSemaine: ExerciceDeLaSemaine[] = [
-    ...codex.map((e) => ({ ...e, atelier: 'codex' as const })),
-    ...aletheia.map((e) => ({ ...e, atelier: 'aletheia' as const })),
-  ]
+  const deLaSemaine: ExerciceDeLaSemaine[] = dedoublonnerParDepot(listes.flat()
     // ⚠️ LE RATTACHEMENT AU CYCLE PASSE PAR `assigne_at`, LU DANS LE FUSEAU DE
     //    L'ÉCOLE — la même règle que `comptesDeLaSemaine` (C4-L13). Un dépôt
     //    sans `assigne_at` lisible sort : on ne le range pas dans une semaine au
@@ -121,7 +137,10 @@ export async function chargerLaSemaineDeLEleve(
       competences: e.competences,
       // ⭐ C6-L3 — la marque, lue au JOURNAL par `exercicesMaisonDeLEleve`.
       bonus: e.bonus,
-    }))
+    })))
+  // ⛔ LE DÉDOUBLONNAGE ENVELOPPE LA CHAÎNE, DONC IL PRÉCÈDE TOUT CALCUL — la
+  //    frise, le récapitulatif, le bilan et « ce qui manque » comptent tous sur
+  //    `deLaSemaine`. Voir `dedoublonnerParDepot`.
 
   // ⭐ LE TRI EST DÉJÀ ÉCRIT (`comparerLignes`) et `exercicesMaisonDeLEleve` l'a
   //    appliqué. La fusion des deux ateliers le refait sur l'ensemble, avec la

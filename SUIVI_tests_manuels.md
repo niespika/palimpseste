@@ -8003,7 +8003,7 @@ interruption. Le décor se reconnaît à sa classe, `nom LIKE 'RECETTE-C5L3%'`. 
   > trois**, et **ZÉRO n'atteint la fenêtre de quatre**. *(Le 28/08 au matin : 141 · 14 · 1.)*
   > **La condition tient, et c'est la même qui tient `C4L2-11`, `C4L12-16` et `C4L12-23`.**
 
-- [ ] **C6L2-31 · ⚠️⚠️ EN « TOUTES LES CLASSES », LA SEMAINE COMPTE DOUBLE POUR UN BI-CLASSE.**
+- [x] **C6L2-31 · ✅ EN « TOUTES LES CLASSES », LA SEMAINE COMPTAIT DOUBLE — CORRIGÉ LE 29/08.**
   *Trouvé le 29/08 par la séance voisine, sur le profil d'Élo ; chemin revérifié ici sur pièce.*
   `app/eleve/semaine/page.tsx:77` appelle **`chargerLaSemaineDeLEleve` UNE FOIS PAR INSCRIPTION**
   *(`Promise.all(enContexte.map(...))`)*, et les instances de la vague `vgen1` portent
@@ -8021,6 +8021,17 @@ interruption. Le décor se reconnaît à sa classe, `nom LIKE 'RECETTE-C5L3%'`. 
   **Condition de reprise : le correctif — dédoublonner par `exerciceId` avant de compter, ou sortir
   la liste de la boucle comme le quota l'a été.** *L'écran est en production, et deux élèves sont
   inscrits dans deux classes.*
+  > ✅ **CORRIGÉ À LA SOURCE, ET NON PAR UN DÉDOUBLONNAGE D'AFFICHAGE.** `chargerLaSemaineDeLEleve`
+  > prend désormais **la LISTE des classes** et n'est appelée **qu'une fois** — c'est exactement le
+  > geste que le quota avait déjà reçu deux lignes plus bas *(« un élève inscrit dans DEUX CLASSES a
+  > UN SEUL budget »)*. ⭐ **Le dédoublonnage se fait sur `depotId`, dans le chargeur, AVANT tout
+  > calcul** : la frise, le récapitulatif, le bilan et « ce qui manque » sont donc comptés une seule
+  > fois. ⛔ **La page ne somme plus rien** — sommer par inscription ÉTAIT le défaut.
+  > **Preuves** : `npm test` **1909 / 1909** *(+5 vecteurs, dont celui qui montre le défaut : la
+  > frise rend **4** sur deux dépôts doublés, et **2** une fois dédoublonnée)* · `tsc` et `eslint`
+  > silencieux · **aucune migration**.
+  > ⚠️ **Reste à voir à l'écran** : un bi-classe réel, en état « Toutes les classes », sur
+  > `/eleve/semaine`. *Deux élèves sont inscrits dans deux classes.*
 - [ ] **C6L2-28 · ⚠️ LE RATTACHEMENT DU GESTE À UNE COMPÉTENCE N'A JAMAIS ÉTÉ VU EN VRAI.** Le code
   lit `routeur_decisions.cible_retenue` puis `exercices.cible_primaire` *(l'ordre du `07-` §1.1)*,
   et **la couture n'a éprouvé que la branche « aucune des deux »** — les seules données qui

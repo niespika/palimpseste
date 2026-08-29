@@ -200,3 +200,62 @@ deux examens décorés**, et imprime la liste exacte des colonnes à remettre.
 trois nécessaires *(`exercices_actif`, `passation_classe_actif`,
 `competences_affichage_actif`)* est fermé. Un décor destiné à rester à l'écran
 ne peut pas emprunter une porte : il la rendrait fermée en partant.
+
+---
+
+## `reparation-etats-c4l12-24.mjs` — la réparation des états perdus (`C4L12-25`)
+
+⛔ **Ce n'est pas une recette** : il ne sème rien, ne monte aucun décor, n'a rien
+à retirer. Il **rejoue `ecrireLEtatApresMesure`**, le chemin de production, sur
+des mesures **déjà en base** — *rien ne s'invente, et aucun `upsert` n'est écrit
+à la main*.
+
+```
+node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON \
+     --import ./scripts/register-calibration-resolver.mjs \
+     scripts/recette/reparation-etats-c4l12-24.mjs --base=sandbox|prod [--repare] [--oui-la-prod]
+```
+
+**Quatre gardes.** `--base` **obligatoire, sans défaut** *(un défaut de paramètre
+est ce qui écrit dans la mauvaise base)* · **constat par défaut**, `--repare`
+pour écrire · écrire en prod exige **`--oui-la-prod` en plus** · et le **registre
+horodaté de l'état AVANT** part sur le disque *(gitignoré — il porte des
+identifiants d'élèves)* **avant** la moindre écriture.
+
+⭐ **La cible se dérive, et elle est resserrée.** Une paire (élève × compétence)
+est *suspecte* si elle porte une mesure et que sa ligne de niveau **manque** ou
+est **plus vieille** que la dernière mesure. ⛔ Mais « plus vieille » ne prouve
+rien seul : **une mesure semée par un décor n'appelle jamais l'écrivain**, son
+retard est légitime, et la réparer fabriquerait une lettre depuis un décor
+*(constaté au bac à sable le 29/08)*. Le discriminant est **la signature du
+défaut** — une charge perdue emporte, pour un même élève, une compétence
+**neuve** *(ligne absente)* **et** une **déjà lettrée** *(ligne périmée)*. On ne
+répare donc que les élèves portant **au moins une ligne absente** ; les autres
+sont **écartés ET NOMMÉS** à la sortie.
+
+**Idempotent** : un second passage rend *« aucune réparation à faire »*.
+**Joué en production le 29/08** — 13 élèves, 26 lettres, 0 erreur.
+
+## `epreuve-reparation-c4l12-25.mjs` — l'épreuve du précédent
+
+⛔ **Bac à sable uniquement**, aucun chemin vers la production. `--seme` /
+`--retire`.
+
+Il existe parce que le script de réparation **sélectionne, journalise et
+contrôle** au bac à sable, mais que **sa boucle d'écriture n'y a rien à faire** :
+aucun élève du bac à sable ne porte la signature du défaut. *Un correctif dont le
+chemin d'écriture n'a jamais tourné n'est pas éprouvé.*
+
+Il pose la signature exacte sur un élève choisi **inerte** *(0 mesure,
+0 escalade, 0 montée — vérifié au semis, et il s'arrête si ce n'est plus vrai)*,
+et **jamais sur l'élève `89662514`**, qui porte le décor d'une autre séance.
+
+⚠️ **Deux choses qu'il FABRIQUE, et qu'il faut savoir** : *(1)* la **compétence
+déjà lettrée** — hors du décor voisin, le bac à sable ne porte aucune ligne avec
+`lettre_initiale` ; *(2)* ses deux mesures sont **`classe` + `sommatif`**, donc
+des **ancres**, comme les treize de la production — sans ancre, une compétence
+sans lettre n'en recevrait aucune et le décor n'éprouverait rien.
+
+⭐ **Le retrait passe par un registre sur le disque**, écrit avant le premier
+geste et rendu **ligne par ligne**, avec comparaison de l'état après. Le registre
+**meurt avec un `--retire` réussi** ; s'il échoue, il reste, et le message le dit.
