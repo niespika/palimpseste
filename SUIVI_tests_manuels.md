@@ -6219,6 +6219,32 @@ Tout ce qui suit est donc la face **professeur**, et **les smokes élève resten
   Synthèse *(la clôture du 14/09 les sautera en `sans_lettre`)*, et leur lettre d'Expression restera
   celle d'avant leur dernière copie. **Condition de reprise : une décision de Louis, puis un
   passage sur les treize.**
+  > ⭐ **LE SCRIPT EST PRÊT — `scripts/recette/reparation-etats-c4l12-24.mjs`, 29/08.** ⛔ **Ce n'est
+  > pas une recette** : il ne sème rien, ne monte aucun décor, et n'a rien à retirer. Il **rejoue la
+  > fonction de production** `ecrireLEtatApresMesure` sur des mesures déjà en base — *rien ne
+  > s'invente*. ⛔ **Aucun `upsert` écrit à la main.**
+  > **Les quatre gardes** : `--base=sandbox|prod` **obligatoire, sans défaut** · **constat par
+  > défaut**, `--repare` pour écrire · écrire en prod exige **`--oui-la-prod` en plus** · et le
+  > **registre horodaté de l'état AVANT** part sur le disque *(gitignoré : il porte des identifiants
+  > d'élèves)* **avant** la moindre écriture.
+  > ⭐⭐ **LA CIBLE SE DÉRIVE, ET ELLE A DÛ ÊTRE RESSERRÉE — le bac à sable l'a montré.** Le premier
+  > prédicat *(« mesurée, et ligne absente OU périmée »)* rendait **6 paires chez un élève du bac à
+  > sable** dont les lignes dataient de la pose des statuts du 23/08, pour des **mesures de décor**
+  > des 26-28/08. ⛔ **Une mesure semée n'appelle jamais l'écrivain : son retard est légitime, et la
+  > réparer fabriquerait une lettre depuis un décor.** ⭐ Le discriminant retenu est **la signature
+  > du défaut** : une charge perdue emporte, pour un même élève, une compétence **neuve** *(ligne
+  > absente)* **et** une **déjà lettrée** *(ligne périmée)*. On ne répare donc que les élèves portant
+  > **au moins une ligne absente** ; les autres sont **écartés et NOMMÉS** à la sortie.
+  > **Constats joués, en lecture seule, sur les deux bases (29/08)** : **bac à sable → 0 à réparer**
+  > *(6 suspectes, toutes écartées, 1 élève de décor)* · **production → 26 à réparer sur 13 élèves,
+  > 0 écartée**, et **chacun des treize porte exactement une `synthese` absente et une `expression`
+  > périmée**. La signature est parfaite.
+  > ⚠️ **CE QUI N'A PAS ÉTÉ EXERCÉ, ET IL FAUT LE DIRE** : le **chemin d'écriture du script**. Le bac
+  > à sable ne porte aucun cas à la signature, donc `--repare` n'y a **rien** à faire — la sélection,
+  > le registre, le constat et le contrôle final y tournent, la boucle d'appel non. *Ce qu'elle
+  > appelle, en revanche, est la fonction de production, couverte par cinq vecteurs purs neufs et
+  > par `routeur-c4l12.mjs` §M sur données réelles.*
+  > ⛔ **Rien n'a été écrit nulle part.** **Condition de reprise : ta décision de le lancer.**
 
 
 ---
