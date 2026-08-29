@@ -7892,7 +7892,7 @@ interruption. Le décor se reconnaît à sa classe, `nom LIKE 'RECETTE-C5L3%'`. 
   n'est coupée**. **(4)** `/eleve/moi/competences` collait « CE QU'ON Y REGARDE » au dernier mot du
   paragraphe — `Balise` rend un `<span>` **inline**, que `space-y-4` ne sépare pas → **enveloppé
   dans un `<p>`**. *Les quatre re-vérifiés à l'écran après correction.*
-- [ ] **C6L2-30 · ⚠️ LE SEUL ÉTAT D'ÉCRAN NON ATTEINT : LA PORTE FERMÉE.** Le `07-` §5 est formel —
+- [x] **C6L2-30 · ⚠️ LE SEUL ÉTAT D'ÉCRAN NON ATTEINT : LA PORTE FERMÉE.** Le `07-` §5 est formel —
   *« aucune recette ne peut prétendre avoir éprouvé un comportement "porte fermée" sans avoir
   éteint l'interrupteur exprès — puis l'avoir remis »*. **La tentative a été faite et REFUSÉE** :
   écrire `scriptorium_params.exercices_actif` est une bascule d'un des six interrupteurs, et elle
@@ -7901,6 +7901,15 @@ interruption. Le décor se reconnaît à sa classe, `nom LIKE 'RECETTE-C5L3%'`. 
   ils le seront. »)*, mais **il n'a jamais été affiché**.
   **Condition de reprise : Louis ferme `exercices_actif` à `/prof/allumage`, regarde
   `/eleve/semaine`, et le rouvre.** *C'est un geste de quelques secondes, et c'est le sien.*
+  > ✅ **SMOKE JOUÉ À L'ÉCRAN LE 29/08, des deux côtés à la fois.**
+  > `exercices_actif` **refermé depuis `/prof/allumage`** *(l'écran passe à « 5 ouverts sur six » et
+  > dit « Refermé. »)*, puis `/eleve/semaine` rechargé en session élève : **« Les exercices ne sont
+  > pas encore ouverts. Ton professeur te préviendra quand ils le seront. »**
+  > ⭐ C'est le vide EXPLIQUÉ, et il ne dit **jamais** le nom d'un interrupteur — les deux règles du
+  > `07-` §5 tenues dans la même phrase. ⛔ Ce n'est pas « tu n'as rien à faire ».
+  > ⭐ **L'interrupteur a été RENDU par le même écran**, et son retour **vérifié PAR REQUÊTE** — les
+  > six à `true`, comme à l'entrée. *« Une recette qui remet un interrupteur en écrivant une
+  > constante ne le remet pas : elle l'impose. »*
 - [x] **C6L2-31 · ⭐⭐ LE SMOKE DE PRODUCTION, APRÈS DÉPLOIEMENT — 28/08.** Le code est poussé
   *(`origin/main` = `bad15b2` ; mes deux commits `1e635c0` et `fdd67a5` y sont)* et le schéma de
   prod portait déjà ses deux colonnes. **Vérifié, en LECTURE SEULE, sur la production :**
@@ -8030,8 +8039,17 @@ interruption. Le décor se reconnaît à sa classe, `nom LIKE 'RECETTE-C5L3%'`. 
   > **Preuves** : `npm test` **1909 / 1909** *(+5 vecteurs, dont celui qui montre le défaut : la
   > frise rend **4** sur deux dépôts doublés, et **2** une fois dédoublonnée)* · `tsc` et `eslint`
   > silencieux · **aucune migration**.
-  > ⚠️ **Reste à voir à l'écran** : un bi-classe réel, en état « Toutes les classes », sur
-  > `/eleve/semaine`. *Deux élèves sont inscrits dans deux classes.*
+  > ✅ **VU À L'ÉCRAN LE 29/08, SESSION ÉLÈVE RÉELLE — et c'est le seul endroit qui pouvait le
+  > montrer.** Élève **Elo**, inscrit en **T5 et Test**. En **T5 seul** : « **1 exercice fait sur
+  > 4** », cinq blocs de compétence, quatre lignes. En **« toutes les classes »** *(l'en-tête le
+  > dit)* : **exactement la même chose** — 1 sur 4, chaque bloc **une seule fois**. *Avant le
+  > correctif : « 2 sur 8 », et tout en double.*
+  > ⭐⭐ **ET LE DÉDOUBLONNAGE N'A RIEN MANGÉ — vérifié, pas supposé.** La classe Test montre un
+  > **cinquième** exercice absent de la semaine ; suivi jusqu'à sa cause, son `assigne_at` vaut
+  > `2026-08-24T00:16 UTC`, soit **dimanche 23 août 20h16 à Toronto** — il appartient donc à la
+  > semaine **du 17 au 23**. ✅ **Vu à l'écran sur cette semaine-là** : « 0 exercice fait sur 1 », et
+  > c'est bien lui. *C'est la règle de fuseau de `C4-L13` qui joue, exactement comme elle doit — un
+  > compte qui paraît manquer n'est pas toujours un compte perdu.*
 - [ ] **C6L2-28 · ⚠️ LE RATTACHEMENT DU GESTE À UNE COMPÉTENCE N'A JAMAIS ÉTÉ VU EN VRAI.** Le code
   lit `routeur_decisions.cible_retenue` puis `exercices.cible_primaire` *(l'ordre du `07-` §1.1)*,
   et **la couture n'a éprouvé que la branche « aucune des deux »** — les seules données qui
