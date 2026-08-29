@@ -483,6 +483,9 @@ export async function chargerLeDeroule(
     const materiau = marquerLeMateriau(materiauBrut, cran?.marquage as string | null, {
       candidats: offre && !offre.empechement ? offre.candidats : [],
       versionCorrigee: mat?.version_corrigee ?? null,
+      // ⭐ RÈGLE (2) du `02-` §5 : ce que la consigne CITE se marque, et cette
+      //    règle passe avant le diff — elle vaut même quand il est vide.
+      consigne: consignes[i] ?? null,
     })
 
     // ⚠️⚠️ UN CRAN QUI DEVAIT MARQUER ET QUI NE MARQUE RIEN SE DIT AU PROFESSEUR.

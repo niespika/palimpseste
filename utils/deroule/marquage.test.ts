@@ -140,7 +140,9 @@ for (const n of [3, 5]) {
     const marques = seg.filter((s) => s.marque).map((s) => s.texte)
     // « celui, et celui-là seul » : UN SEUL passage, jamais deux.
     assert.equal(marques.length, 1)
-    assert.equal(marques[0], 'donc')
+    // ⭐ RÈGLE (1) du `02-` §5 : le passage s'étend aux BORNES DE SA PHRASE.
+    //    Le diff vaut « donc » ; ce que l'élève voit est la phrase entière.
+    assert.equal(marques[0], CONTENU_3)
     assert.equal(seg.map((s) => s.texte).join(''), CONTENU_3)
   })
 }
@@ -151,14 +153,14 @@ test('CRAN 5 — il marque SANS AUCUN DISTRACTEUR : le déclencheur est le CRAN'
   //    marquerait JAMAIS rien à ce cran.
   const seg = marquerLeMateriau(CONTENU_3, regle(5),
     { candidats: [], versionCorrigee: CORRIGE_3 })!
-  assert.deepEqual(seg.filter((s) => s.marque).map((s) => s.texte), ['donc'])
+  assert.deepEqual(seg.filter((s) => s.marque).map((s) => s.texte), [CONTENU_3])
 })
 
 test('CRAN 3 — les candidats NE servent PAS au marquage : ce sont des remplacements', () => {
   // Le cran 3 A des distracteurs, et ce n'est pas eux qu'on marque.
   const seg = marquerLeMateriau(CONTENU_3, regle(3),
     { candidats: ['preuve', 'conclusion'], versionCorrigee: CORRIGE_3 })!
-  assert.deepEqual(seg.filter((s) => s.marque).map((s) => s.texte), ['donc'])
+  assert.deepEqual(seg.filter((s) => s.marque).map((s) => s.texte), [CONTENU_3])
 })
 
 test('CRANS 3 et 5 — ⛔ AUCUN SEGMENT NE PORTE UN MOT DE LA VERSION CORRIGÉE', () => {
@@ -190,10 +192,10 @@ test('CRANS 3 et 5 — un ajout en TÊTE et un en QUEUE se marquent quand même'
   // Le préfixe commun est vide, ou le suffixe : la forme doit tenir aux bords.
   const tete = marquerLeMateriau('Donc la preuve tient.', regle(3),
     { versionCorrigee: 'la preuve tient.' })!
-  assert.deepEqual(tete.filter((s) => s.marque).map((s) => s.texte), ['Donc'])
+  assert.deepEqual(tete.filter((s) => s.marque).map((s) => s.texte), ['Donc la preuve tient.'])
   const queue = marquerLeMateriau('La preuve tient donc bien sûr.', regle(3),
     { versionCorrigee: 'La preuve tient bien sûr.' })!
-  assert.deepEqual(queue.filter((s) => s.marque).map((s) => s.texte), ['donc'])
+  assert.deepEqual(queue.filter((s) => s.marque).map((s) => s.texte), ['La preuve tient donc bien sûr.'])
 })
 
 test('⚠️ LE DIFF EST AU MOT ENTIER — casse et ponctuation COLLÉES élargissent le passage', () => {
@@ -211,11 +213,14 @@ test('⚠️ LE DIFF EST AU MOT ENTIER — casse et ponctuation COLLÉES élargi
   //    la casse ni la ponctuation du bord —, et il n'est pas de ce lot.
   const tete = marquerLeMateriau('Donc la preuve tient.', regle(3),
     { versionCorrigee: 'La preuve tient.' })!
-  assert.deepEqual(tete.filter((s) => s.marque).map((s) => s.texte), ['Donc la'])
+  // ⭐ RÈGLE (1) : le passage s'étend à sa phrase — l'élargissement d'un mot
+  //    que ce test documente reste vrai, il se voit simplement à l'échelle
+  //    de la phrase, qui est ce que l'élève lit.
+  assert.deepEqual(tete.filter((s) => s.marque).map((s) => s.texte), ['Donc la preuve tient.'])
 
   const queue = marquerLeMateriau('La preuve tient donc.', regle(3),
     { versionCorrigee: 'La preuve tient.' })!
-  assert.deepEqual(queue.filter((s) => s.marque).map((s) => s.texte), ['tient donc.'])
+  assert.deepEqual(queue.filter((s) => s.marque).map((s) => s.texte), ['La preuve tient donc.'])
 })
 
 // ── Les crans 4, 7 et 9 — rien. L'y trouver EST le travail. ────────────────
@@ -365,4 +370,64 @@ test('⭐ `segmenterMateriau` PASSE PAR LUI — le comportement de C4-L15 est in
   const parSuites = segmenterMateriau(PROSE, [['garant']])
   assert.equal(parSuites.map((s) => s.texte).join(''), PROSE)
   assert.deepEqual(parSuites.filter((s) => s.marque).map((s) => s.texte), ['garant'])
+})
+
+// ── LES TROIS RÈGLES DU `02-` §5 (29/08) — « le diff dit OÙ, elles disent
+//    JUSQU'OÙ ». Relevées par Louis en relisant le cran 3 : l'écran surlignait
+//    « il », ou « Une », et un mot seul ne montre rien.
+
+test('RÈGLE 1 — le passage s\'étend aux bornes de SA phrase, pas au-delà', () => {
+  const c = 'Cette clarté est une force. Mais elle ne suffit pas : il peut être rigoureux et faux. On le voit ici.'
+  const v = 'Cette clarté est une force. Mais elle ne suffit pas : elle peut être rigoureux et faux. On le voit ici.'
+  const seg = marquerLeMateriau(c, regle(3), { versionCorrigee: v })!
+  const m = seg.filter((s) => s.marque).map((s) => s.texte)
+  assert.equal(m.length, 1, 'un seul passage, jamais deux')
+  assert.equal(m[0], 'Mais elle ne suffit pas : il peut être rigoureux et faux.')
+  assert.ok(!m[0].includes('Cette clarté'), 'la phrase d\'avant reste dehors')
+  assert.ok(!m[0].includes('On le voit'), 'celle d\'après aussi')
+})
+
+test('RÈGLE 3 — un diff au PREMIER MOT d\'une phrase désigne la COUTURE', () => {
+  // ⛔ Elle l'emporte sur la (1) : étendre à la phrase entière montrerait un
+  //    texte JUSTE et cacherait le seul endroit qui cloche.
+  const c = 'La raison ne rencontre aucune limite de principe. Une part de la nature résiste.'
+  const v = 'La raison ne rencontre aucune limite de principe. Pourtant une part de la nature résiste.'
+  const seg = marquerLeMateriau(c, regle(3), { versionCorrigee: v })!
+  assert.deepEqual(seg.filter((s) => s.marque).map((s) => s.texte), ['principe. Une'])
+})
+
+test('RÈGLE 2 — ce que la consigne CITE se marque, et cela passe AVANT le diff', () => {
+  const c = 'La souffrance transforme. Baudelaire place la douleur au centre. Il en fait une méthode.'
+  const seg = marquerLeMateriau(c, regle(3), {
+    versionCorrigee: c, // ⛔ diff VIDE : la correction AJOUTE, elle ne remplace pas
+    consigne: 'Lequel de ces débuts se met devant la phrase qui commence par « Baudelaire place » ?',
+  })!
+  assert.deepEqual(seg.filter((s) => s.marque).map((s) => s.texte),
+    ['Baudelaire place la douleur au centre.'])
+})
+
+test('⛔ RÈGLE 2 — une citation d\'UN SEUL mot ne marque rien : elle désignerait n\'importe quoi', () => {
+  const c = 'La preuve est là. La conclusion tient.'
+  const seg = marquerLeMateriau(c, regle(3), {
+    versionCorrigee: c, consigne: 'Que dit le mot « donc » ici ?',
+  })!
+  assert.deepEqual(seg.filter((s) => s.marque).map((s) => s.texte), [])
+})
+
+test('⛔ RÈGLE 2 — une citation ABSENTE du matériau ne marque rien', () => {
+  const c = 'La preuve est là. La conclusion tient.'
+  const seg = marquerLeMateriau(c, regle(3), {
+    versionCorrigee: c, consigne: 'la phrase qui commence par « Bergson affirme »',
+  })!
+  assert.deepEqual(seg.filter((s) => s.marque).map((s) => s.texte), [])
+})
+
+test('RÈGLES — aux crans 4, 7 et 9 rien ne change : ils ne marquent toujours rien', () => {
+  for (const n of [4, 7, 9]) {
+    const seg = marquerLeMateriau('Une phrase. Une autre.', regle(n), {
+      versionCorrigee: 'Une phrase. Une troisième.',
+      consigne: 'la phrase qui commence par « Une autre »',
+    })!
+    assert.deepEqual(seg.filter((s) => s.marque).map((s) => s.texte), [], `cran ${n}`)
+  }
 })

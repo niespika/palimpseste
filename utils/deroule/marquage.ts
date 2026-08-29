@@ -187,10 +187,12 @@ function mots(x: string): string[] {
  */
 export function motsAMarquer(
   regime: RegimeMarquage | null,
-  { candidats, contenu, versionCorrigee }: {
+  { candidats, contenu, versionCorrigee, consigne }: {
     candidats?: readonly string[] | null
     contenu?: string | null
     versionCorrigee?: string | null
+    /** ⭐ La consigne du CAS — règle (2) du `02-` §5 : ce qu'elle cite se marque. */
+    consigne?: string | null
   },
 ): string[][] {
   const out: string[][] = []
@@ -226,11 +228,113 @@ export function motsAMarquer(
   //    tout, on ne marque pas le premier mot. Et on ne « répare » pas la source
   //    en rendant `version_corrigee` obligatoire — ce serait une règle neuve.
   const a = mots(contenu ?? '')
+  if (!a.length) return out
+
+  // ⭐ RÈGLE (2) — LA CITATION DE LA CONSIGNE PASSE AVANT LE DIFF, et vaut même
+  //    quand il est VIDE. C'est le cas qui restait muet : la correction AJOUTE
+  //    un début au lieu de remplacer, « on ne surligne pas une absence » — mais
+  //    la consigne, elle, NOMME l'endroit.
+  for (const j of citationDeLaConsigne(consigne)) {
+    const i = indexDeLaSuite(a, j)
+    if (i < 0) continue
+    const p = bornesDePhrase(a, i, i + j.length)
+    out.push(a.slice(p.debut, p.fin))
+  }
+  if (out.length) return out
+
   const b = mots(versionCorrigee ?? '')
-  if (!a.length || !b.length) return out
+  if (!b.length) return out
 
   const t = tranchesDuDiff(a, b)
-  if (t) out.push(a.slice(t.debut, t.fin))
+  if (!t) return out
+
+  // ⭐ RÈGLE (3) AVANT LA (1) : un diff qui commence au PREMIER MOT d'une phrase
+  //    désigne la COUTURE, pas la phrase. Étendre aux bornes montrerait un texte
+  //    juste et cacherait le seul endroit qui cloche.
+  const couture = coutureOuNull(a, t.debut)
+  const p = couture ?? bornesDePhrase(a, t.debut, t.fin)
+  out.push(a.slice(p.debut, p.fin))
+  return out
+}
+
+/** L'index du premier mot d'une suite dans une autre, ou −1. Comparaison NUE. */
+function indexDeLaSuite(dans: readonly string[], suite: readonly string[]): number {
+  if (!suite.length || suite.length > dans.length) return -1
+  const nu = (s: string) => s.replace(/^[\u00ab\u201c"'(\u2018]+|[\u00bb\u201d"'),.;:!?\u2026\u2019]+$/gu, '')
+  for (let i = 0; i + suite.length <= dans.length; i++) {
+    let ok = true
+    for (let k = 0; k < suite.length; k++) {
+      if (nu(dans[i + k]) !== nu(suite[k])) { ok = false; break }
+    }
+    if (ok) return i
+  }
+  return -1
+}
+
+/**
+ * ⭐⭐ LES BORNES DE PHRASE — règle (1) du `02-` §5, 29/08.
+ *
+ * « Le diff dit OÙ ; ces trois règles disent JUSQU'OÙ. » La correction ne change
+ * parfois qu'UN mot, et l'écran surlignait « il ». *Un mot seul ne montre rien.*
+ * On étend donc le passage au début de la phrase où il commence et à la fin de
+ * celle où il finit.
+ *
+ * ⚠️ La coupe se fait sur `.` `?` `!` `…` suivis d'un blanc — la même famille de
+ *    fins de phrase que partout ailleurs. Un point d'abréviation ne coupe pas
+ *    puisqu'il n'est pas suivi d'un blanc majuscule ; on ne cherche pas mieux :
+ *    une borne trop large montre une phrase de plus, jamais un texte faux.
+ */
+function bornesDePhrase(mots: readonly string[], debut: number, fin: number):
+{ debut: number; fin: number } {
+  const finit = (m: string) => /[.?!\u2026]["\u00bb\u2019)]?$/u.test(m)
+  let d = debut
+  while (d > 0 && !finit(mots[d - 1])) d--
+  let f = fin
+  while (f < mots.length && !finit(mots[f - 1])) f++
+  return { debut: d, fin: Math.max(f, fin) }
+}
+
+/**
+ * ⭐⭐ LA COUTURE — règle (3) du `02-` §5, 29/08.
+ *
+ * « Un diff qui commence AU PREMIER MOT d'une phrase désigne une COUTURE, pas
+ * une phrase. » Le défaut n'est pas *dans* cette phrase : il est **entre elle et
+ * celle qui précède**. On marque le dernier mot d'avant et le premier d'ici.
+ *
+ * ⛔ **Elle l'emporte sur la règle (1)** : étendre à la phrase entière
+ *    montrerait un texte JUSTE et cacherait le seul endroit qui cloche.
+ * *Éprouvé sur `phrase × jointure_presente` : « Une » devient « principe. Une »,
+ * la formule que Louis a lui-même écrite en relisant le cran 3.*
+ */
+function coutureOuNull(mots: readonly string[], debut: number):
+{ debut: number; fin: number } | null {
+  if (debut === 0) return null
+  const finit = (m: string) => /[.?!\u2026]["\u00bb\u2019)]?$/u.test(m)
+  return finit(mots[debut - 1]) ? { debut: debut - 1, fin: debut + 1 } : null
+}
+
+/**
+ * ⭐⭐ LA PHRASE QUE LA CONSIGNE CITE — règle (2) du `02-` §5, 29/08.
+ *
+ * « Une consigne qui dit “la phrase qui commence par ‘Baudelaire place’” porte
+ * déjà sa cible entre guillemets. » On la retrouve LITTÉRALEMENT dans le
+ * matériau, du même geste que les candidats au cran 1, puis on l'étend aux
+ * bornes de sa phrase.
+ *
+ * ⭐ **Cette règle passe AVANT le diff**, et c'est tout son intérêt : elle vaut
+ *    même quand le diff est VIDE — le cas resté muet, où la correction AJOUTE un
+ *    début au lieu de remplacer. *« On ne surligne pas une absence » ; mais la
+ *    consigne, elle, nomme l'endroit.*
+ * ⚠️ On ne retient qu'une citation d'AU MOINS DEUX MOTS : un fragment d'un mot
+ *    se retrouverait partout et désignerait n'importe quoi.
+ */
+function citationDeLaConsigne(consigne: string | null | undefined): string[][] {
+  const out: string[][] = []
+  if (!consigne) return out
+  for (const m of consigne.matchAll(/[\u00ab\u201c"\u2018\u2019']\s*([^\u00bb\u201d"\u2019']{3,120}?)\s*[\u00bb\u201d"\u2019']/gu)) {
+    const j = mots(m[1] ?? '')
+    if (j.length >= 2) out.push(j)
+  }
   return out
 }
 
@@ -418,11 +522,13 @@ export function segmenterParIntervalles(
 export function marquerLeMateriau(
   contenu: string | null | undefined,
   regle: string | null | undefined,
-  appui: { candidats?: readonly string[] | null; versionCorrigee?: string | null } = {},
+  appui: { candidats?: readonly string[] | null; versionCorrigee?: string | null
+    consigne?: string | null } = {},
 ): SegmentMateriau[] | null {
   if (contenu == null) return null
   const regime = regimeDeMarquage(regle)
   return segmenterMateriau(contenu, motsAMarquer(regime, {
     candidats: appui.candidats, contenu, versionCorrigee: appui.versionCorrigee,
+    consigne: appui.consigne,
   }))
 }

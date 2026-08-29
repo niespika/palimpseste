@@ -65,7 +65,9 @@ test('APERÇU — au cran 1, les QUATRE candidats servis sont mis en évidence',
 for (const cran of [3, 5]) {
   test(`APERÇU — au cran ${cran}, le passage fautif et LUI SEUL`, () => {
     const a = composerApercu(doctrine, instance(cran))!
-    assert.deepEqual(marques(a), ['donc'])
+    // ⭐ RÈGLE (1) du `02-` §5 : le passage s'étend aux bornes de sa phrase.
+    assert.deepEqual(marques(a).length, 1)
+    assert.ok(marques(a)[0].includes('donc'), marques(a)[0])
   })
 }
 
