@@ -953,3 +953,17 @@ après lecture, il reste une version finale à écrire — l'étiquette juste es
   décision. ⛔ **Ni le retrait de la colonne ni celui de son contrôle d'import ne sont un geste de
   lot** : le `07-` §1.1 la déclare, et son sort se tranche à la conception. *La phrase qui dit ce
   qu'elle ne peut pas porter est écrite au `07-` §1.1 depuis le 28/08.*
+
+- ⚠️ **LE `type_pedagogique` D'UNE CLASSE NE SE MODIFIE PAS APRÈS SA CRÉATION** *(constat de Louis,
+  29/08)*. Or c'est lui, et lui seul, qui donne son **parcours** à l'élève — `lireLesInscriptions`
+  le lit sur `classes.type_pedagogique`, « à valeurs fermées, JAMAIS sur `classes.filiere` »
+  (`utils/routeur/donnees.ts`). ⛔ **Une classe créée sans son type est donc définitivement muette
+  pour le routeur** : ses élèves n'ont aucun parcours, `budgetDeLEleve` les refuse en amont avec
+  `ParcoursVide`, et **rien ne leur est jamais servi**. Le seul recours aujourd'hui est de créer une
+  seconde classe et d'y ré-inscrire tout le monde — ce que Louis a dû faire en bac à sable
+  (`THLP` type nul → `THLP2` type `hlp`). ⭐ **Deux réparations possibles, et elles ne s'excluent
+  pas** : rendre le champ modifiable à l'écran de la classe *(le changer rétroactivement change
+  l'éligibilité aux exercices déjà servis — c'est ce qu'il faut arbitrer)*, et **refuser la création
+  d'une classe sans `type_pedagogique`**, qui est le vrai défaut : rien à l'écran ne dit
+  aujourd'hui que ce champ décide de tout.
+
