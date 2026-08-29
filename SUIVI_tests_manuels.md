@@ -7864,7 +7864,29 @@ interruption. Le décor se reconnaît à sa classe, `nom LIKE 'RECETTE-C5L3%'`. 
   bonus servi par le pull** *(le décor d'écran pose des dépôts `clos`)*. **Condition de reprise :
   après C6L3-26, cliquer la ligne « demandé en plus » et vérifier que le temps 1 s'ouvre comme pour
   n'importe quel exercice.**
-- [ ] **C6L3-30 · ⛔⛔ CE QUE LA COUTURE A RÉVÉLÉ, ET QUI N'EST PAS DE CE LOT.**
+- [x] **C6L3-30 · ⛔⛔ CE QUE LA COUTURE A RÉVÉLÉ, ET QUI N'EST PAS DE CE LOT — ✅ FERMÉ LE 28/08,
+  HORS LOT, SUR ARBITRAGE DE LOUIS.** **La réponse est « borner le vivier »** *(l'autre branche —
+  retirer `visibleDansLaClasse` sur les dépôts d'origine `routeur` — est écartée : elle casse
+  « dans les modules on reste PAR CLASSE », `01-` §2, à l'écran de l'élève)*. **Un sixième filtre**,
+  motif **`classe_autre`**, à `utils/moteur/vivier.ts`, **posé après `lieu_classe`** — une passation
+  en classe sort toujours par son vrai motif. ⛔ **Le NULL entre TOUJOURS** : il est le cas ordinaire
+  *(seul `assignerALaClasse` écrit la colonne)*, et l'écarter viderait le vivier en entier — même
+  lecture que `visibleDansLaClasse`, tranchée à C4-L6. **Le contexte reçoit l'UNION des inscriptions
+  actives** : un bi-classe reçoit ce qui est donné à l'une OU à l'autre.
+  ⭐ **La contre-épreuve, sur données réelles et en lecture seule** : le filtre retire **37 couples
+  (élève × instance) sur 7 531 en bac à sable — 0,49 %** — et **ZÉRO en production**, dont les
+  **247** instances de maison servables portent toutes un `classe_id` NULL. *Le défaut n'avait donc
+  encore rien produit : `routeur_decisions` était à 0 en prod, et aucun dépôt invisible n'existait à
+  réparer.* ⚠️ **Ce qui l'armait n'était pas le calendrier mais le GESTE du professeur** — le premier
+  clic sur « Assigner à la classe » d'un exercice de maison.
+  **Preuves** : `npm test` **1893 / 1893** *(+5 vecteurs : l'autre classe, la sienne, le NULL, le
+  bi-classe, et l'ordre des motifs)* · `npx tsc --noEmit` silencieux · `eslint` sur les cinq fichiers
+  touchés, rien. **Aucune migration, aucune ligne au `SUIVI_SQL.md`** — la colonne existe depuis
+  C4-L1. ⚠️ **Et la question de source reste ouverte** : le `07-` §1.1 ne dit toujours pas ce que
+  `classe_id` VEUT DIRE. Le filtre est un arbitrage, et **la portée choisie à l'assignation** est
+  déposée à `IDEES_post_rentree.md` — le filtre est cette idée avec le réglage câblé, et la même
+  ligne lira la colonne le jour où la case existera.
+  *(Énoncé d'origine, pour mémoire :)*
   `constituerLeVivier` **ne filtre pas par `classe_id`**, quand `exercicesMaisonDeLEleve` filtre par
   `visibleDansLaClasse` : le routeur peut assigner à un élève une instance d'une classe **où il
   n'est pas inscrit**, et **le dépôt n'apparaît sur aucun de ses écrans** — tout en comptant au

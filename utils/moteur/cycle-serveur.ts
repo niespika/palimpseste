@@ -485,6 +485,10 @@ export async function composerPourUnEleve(
     coursVus: c.coursVus,
     positionsDeLecture: c.positions,
     instancesDejaDeposees: c.dejaDeposees,
+    // ⭐ L'UNION de ses inscriptions ACTIVES — la même lecture que les parcours
+    //   et les cours vus. Un bi-classe reçoit ce qui est donné à l'une OU à
+    //   l'autre ; l'instance sans classe revient à tout le monde.
+    classesDeLEleve: new Set(c.inscriptions.map((i) => i.classeId)),
   })
 
   // ── PA2 et PA3 — la liste de priorité, construite UNE SEULE FOIS ─────────

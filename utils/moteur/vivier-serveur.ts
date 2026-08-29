@@ -106,6 +106,7 @@ async function lireLesMateriaux(admin: Admin): Promise<{
 
 interface LigneExercice {
   id: string; lieu: string; statut: string; bloque: boolean; cran: number | string | null
+  classe_id: string | null
   genre: string | null; modes_par_competence: Record<string, string[]> | null
   observable_isole_competence: string | null
   materiau_source_texte_id: string | null; materiau_source_sujet_id: string | null
@@ -115,7 +116,8 @@ interface LigneExercice {
 }
 
 const COLONNES_EXERCICE =
-  'id, lieu, statut, bloque, cran, genre, modes_par_competence, observable_isole_competence, '
+  'id, lieu, statut, bloque, cran, classe_id, genre, modes_par_competence, '
+  + 'observable_isole_competence, '
   + 'materiau_source_texte_id, materiau_source_sujet_id, materiau_cible_texte_id, '
   + 'materiau_cible_sujet_id, exercices_types!inner(code, nature, grain, exclusions_parcours)'
 
@@ -179,6 +181,7 @@ export async function lireLesInstances(
       //    il n'y en a aucune — et l'instance sort du vivier en le disant.
       dureeMin: n === null ? null : dureeExercice(d, type.code, n),
       lieu: l.lieu === 'classe' ? 'classe' : 'maison',
+      classeId: l.classe_id,
       statut: l.statut,
       bloque: !!l.bloque,
       genre: l.genre,

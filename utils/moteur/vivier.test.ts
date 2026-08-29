@@ -29,6 +29,7 @@ const materiau = (p: Partial<MateriauRattache> = {}): MateriauRattache => ({
 const instance = (p: Partial<InstanceDuVivier> = {}): InstanceDuVivier => ({
   exerciceId: 'ex-1', objet: 'argument', grain: 'meso', geste: 'produire',
   cranNumero: 6, cranCode: 'production_etayee', dureeMin: 20, lieu: 'maison',
+  classeId: null,
   statut: 'concu', bloque: false, genre: null, exclusionsParcours: [],
   modesParCompetence: { argumentation: ['composer'], expression: ['composer'] },
   couverture: { argumentation: 'exerce', expression: 'exerce' },
@@ -37,7 +38,7 @@ const instance = (p: Partial<InstanceDuVivier> = {}): InstanceDuVivier => ({
 
 const contexte = (p: Partial<ContexteDuVivier> = {}): ContexteDuVivier => ({
   parcours: ['tc'], coursVus: new Set(), positionsDeLecture: new Map(),
-  instancesDejaDeposees: new Set(), ...p,
+  instancesDejaDeposees: new Set(), classesDeLEleve: new Set(['classe-A']), ...p,
 })
 
 // ── FILTRE 1 — le parcours ──────────────────────────────────────────────────
@@ -242,6 +243,39 @@ describe('`01-` §4, couche 4 — le vivier composé, et l\'écart NOMMÉ', () =
   it('⛔ la voie du professeur reste dehors : `lieu = classe` est HORS ROUTAGE', () => {
     const v = constituerLeVivier([instance({ lieu: 'classe' })], contexte())
     assert.equal(v.retenus.length, 0)
+    assert.equal(v.ecartes[0].motif, 'lieu_classe')
+  })
+
+  // ── FILTRE DE CLASSE — `C6L3-30`, arbitrage de Louis du 28/08 ────────────
+
+  it('⛔ une instance donnée à une AUTRE classe reste dehors, et le motif la nomme', () => {
+    const v = constituerLeVivier([instance({ classeId: 'classe-B' })], contexte())
+    assert.equal(v.retenus.length, 0)
+    assert.equal(v.ecartes[0].motif, 'classe_autre')
+    // Le motif est SERVI — le bilan d'un dépôt l'affiche : il doit se lire.
+    assert.match(v.ecartes[0].detail, /n'y est pas inscrit/)
+  })
+
+  it('⭐ mais une instance de SA classe entre', () => {
+    const v = constituerLeVivier([instance({ classeId: 'classe-A' })], contexte())
+    assert.equal(v.retenus.length, 1)
+  })
+
+  it('⭐⭐ et le NULL entre TOUJOURS — « une instance sans classe n\'est pas l\'autre classe »', () => {
+    const v = constituerLeVivier([instance({ classeId: null })], contexte())
+    assert.equal(v.retenus.length, 1)
+    assert.equal(v.ecartes.length, 0)
+  })
+
+  it('⭐ le BI-CLASSE reçoit ce qui est donné à l\'une OU à l\'autre', () => {
+    const ctx = contexte({ classesDeLEleve: new Set(['classe-A', 'classe-B']) })
+    assert.equal(constituerLeVivier([instance({ classeId: 'classe-B' })], ctx).retenus.length, 1)
+    assert.equal(constituerLeVivier([instance({ classeId: 'classe-C' })], ctx).retenus.length, 0)
+  })
+
+  it('⚠️ le filtre de classe ne mord PAS avant `lieu_classe` — une passation en classe\n'
+    + '     estampillée d\'une autre classe sort en `lieu_classe`, qui est son vrai motif', () => {
+    const v = constituerLeVivier([instance({ lieu: 'classe', classeId: 'classe-B' })], contexte())
     assert.equal(v.ecartes[0].motif, 'lieu_classe')
   })
 

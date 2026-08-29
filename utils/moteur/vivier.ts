@@ -84,6 +84,14 @@ export interface InstanceDuVivier {
   /** `07-` §1.1 — « la SEULE valeur que le budget décompte », dérivée par la doctrine. */
   dureeMin: number | null
   lieu: 'maison' | 'classe'
+  /**
+   * `exercices.classe_id` — NULLABLE, et le NULL a un sens. Il est écrit par UN
+   * SEUL geste de production : `assignerALaClasse`
+   * (`app/prof/conception/actions.ts`), « en faire un exercice commun à
+   * toute une classe ». Une instance qui n'est jamais passée par ce bouton n'a
+   * pas de classe — et ce n'est pas « la classe de quelqu'un d'autre ».
+   */
+  classeId: string | null
   statut: string
   bloque: boolean
   /** `exercices.genre` — renseigné pour les TROIS OBJETS TERMINAUX seulement. */
@@ -114,6 +122,12 @@ export interface ContexteDuVivier {
   positionsDeLecture: ReadonlyMap<string, number | null>
   /** Les instances dont il porte DÉJÀ un dépôt — jamais resservies (piège 30). */
   instancesDejaDeposees: ReadonlySet<string>
+  /**
+   * Les classes de ses inscriptions ACTIVES — l'UNION, comme les parcours et
+   * les cours vus : un bi-classe en a deux, et une instance de l'une OU de
+   * l'autre lui revient.
+   */
+  classesDeLEleve: ReadonlySet<string>
 }
 
 /** Pourquoi une instance n'est pas entrée au vivier. « Un vide expliqué. » */
@@ -121,6 +135,7 @@ export type MotifDEcart =
   | 'statut'            // ni `concu` ni `assigne`
   | 'bloquee'
   | 'lieu_classe'       // la voie du professeur : imposé en classe, hors routage
+  | 'classe_autre'      // instance estampillée d'une classe où l'élève n'est pas inscrit
   | 'sans_duree'        // la doctrine ne rend aucune durée pour (objet × cran)
   | 'parcours_genre'
   | 'parcours_exclusion'
@@ -469,6 +484,31 @@ export function constituerLeVivier(
   for (const inst of instances) {
     if (inst.lieu === 'classe') {
       ecarter(inst.exerciceId, 'lieu_classe', 'passation en classe : imposée, hors routage.')
+      continue
+    }
+    // ⭐ LA CLASSE BORNE LE ROUTAGE, COMME ELLE BORNE L'AFFICHAGE.
+    //   « Dans les modules on reste PAR CLASSE » (`01-` §2) : l'écran de l'élève
+    //   écarte déjà l'instance d'une autre classe — `visibleDansLaClasse`
+    //   (`utils/codex-onglets/regles.ts`). La couche 4 ne le faisait pas, et le
+    //   défaut était SILENCIEUX DES DEUX CÔTÉS : le dépôt existait en base,
+    //   l'élève ne le voyait sur AUCUN de ses écrans, et l'assiduité le comptait
+    //   au dénominateur. Trouvé par la couture de `C6-L3` (`C6L3-30`).
+    // ⛔ UNE INSTANCE SANS CLASSE N'EST PAS « L'AUTRE CLASSE », et c'est la
+    //   moitié qui compte : le NULL est le cas ORDINAIRE — il n'est écrit que
+    //   par « en faire un exercice commun à toute une classe » —, et l'écarter
+    //   viderait le vivier en entier. Même lecture que `visibleDansLaClasse`,
+    //   tranchée à C4-L6 : « l'écarter ferait DISPARAÎTRE un exercice que
+    //   l'élève doit faire ».
+    // ⚠️ La source ne dit PAS ce que `classe_id` veut dire (`07-` §1.1 ne le
+    //   déclare que « NULLABLE ») : ce filtre est l'arbitrage de Louis du
+    //   28/08 — l'instance qu'un professeur a donnée à une classe reste à
+    //   cette classe. Le jour où la portée devient un CHOIX à l'assignation,
+    //   c'est cette ligne qui lira la colonne au lieu de la constante
+    //   (`IDEES_post_rentree.md`).
+    if (inst.classeId !== null && !ctx.classesDeLEleve.has(inst.classeId)) {
+      ecarter(inst.exerciceId, 'classe_autre',
+        `instance donnée à la classe ${inst.classeId.slice(0, 8)} : l'élève n'y est pas `
+        + 'inscrit, et son écran ne la lui montrerait pas.')
       continue
     }
     if (!(STATUTS_SERVABLES as readonly string[]).includes(inst.statut)) {

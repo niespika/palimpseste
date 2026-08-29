@@ -967,3 +967,41 @@ après lecture, il reste une version finale à écrire — l'étiquette juste es
   d'une classe sans `type_pedagogique`**, qui est le vrai défaut : rien à l'écran ne dit
   aujourd'hui que ce champ décide de tout.
 
+
+## ⭐ La PORTÉE d'un exercice commun à une classe — la rendre CHOISIE, plutôt que devinée (28/08/2026)
+
+*Déposé à la clôture du correctif `C6L3-30`, sur décision de Louis : « fais (a) tout de suite, pose
+(c) dans les idées ».*
+
+**Ce qui est fait aujourd'hui, et qui est un arbitrage, pas une règle de source.** Depuis le 28/08,
+`constituerLeVivier` écarte une instance dont le `classe_id` désigne une classe où l'élève n'est pas
+inscrit — motif `classe_autre`, `utils/moteur/vivier.ts`. Cela ferme le défaut que la couture de
+`C6-L3` avait trouvé *(le dépôt existait, l'élève ne le voyait sur aucun écran, et l'assiduité le
+comptait au dénominateur)*, **et cela tranche à la place de la source** : ⚠️ **le `07-` §1.1 déclare
+`classe_id` « NULLABLE » et ne dit nulle part ce qu'il VEUT DIRE.** Le filtre pose donc une lecture —
+*l'instance qu'un professeur a donnée à une classe reste à cette classe* — qui est défendable et qui
+n'est écrite nulle part.
+
+**L'idée : la portée devient une DÉCISION, prise au moment où le professeur a l'information.**
+À l'assignation *(`app/prof/conception/[id]/Assignation.tsx`, aujourd'hui trois champs : la classe,
+la fenêtre début, la fin)*, une case de plus — **« cet exercice reste à cette classe »** contre
+**« il peut resservir ailleurs »**. Le vivier lit la case au lieu de deviner.
+
+⭐ **Rien de ce qui est écrit aujourd'hui n'est à défaire** : le filtre posé le 28/08 **est** cette
+idée avec le réglage câblé sur *« reste à cette classe »*. Le jour où la case existe, c'est la même
+ligne de `constituerLeVivier` qui lira la colonne au lieu de la constante — le commentaire du filtre
+le dit sur place.
+
+**Ce que ça coûte** : une colonne *(ou une convention sur `classe_id`)*, une case à l'écran, et la
+ligne du filtre. **Ce que ça rapporte** : la question cesse d'être tranchée par le code, et un
+exercice conçu pour une classe peut resservir à une autre quand c'est ce qu'on veut — mesuré au
+moment du dépôt de l'idée, le vivier de bac à sable y perdait **37 couples (élève × instance) sur
+7 531**, soit **0,49 %**, et la production **zéro** *(ses 247 instances de maison servables portent
+toutes un `classe_id` NULL)*.
+
+⛔ **Ce que l'idée ne touche pas, et il faut le savoir avant de la rouvrir** : le `classe_id` vit sur
+l'**instance**, jamais sur le matériau — `exercices_sujets`, `exercices_textes`,
+`exercices_materiaux` et `exercices_demonstrations` n'en portent aucun. Donner un sujet à une classe
+ne réserve donc rien : en production, **31 sujets portent 251 instances, dont 23 sur le même sujet**.
+Et une passation `lieu = 'classe'` est déjà hors du vivier par le motif `lieu_classe`, avant toute
+question de portée.

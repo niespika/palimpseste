@@ -18,6 +18,7 @@ import type { Competence, Lettre } from '../routeur/types'
 const instance = (p: Partial<InstanceDuVivier> = {}): InstanceDuVivier => ({
   exerciceId: 'ex-1', objet: 'argument', grain: 'meso', geste: 'produire',
   cranNumero: 6, cranCode: 'production_etayee', dureeMin: 20, lieu: 'maison',
+  classeId: null,
   statut: 'concu', bloque: false, genre: null, exclusionsParcours: [],
   modesParCompetence: { argumentation: ['composer'] },
   couverture: { argumentation: 'exerce' },
@@ -26,7 +27,8 @@ const instance = (p: Partial<InstanceDuVivier> = {}): InstanceDuVivier => ({
     statut: 'valide', bloque: false }], ...p,
 })
 const ctxVivier: ContexteDuVivier = { parcours: ['tc'], coursVus: new Set(),
-  positionsDeLecture: new Map(), instancesDejaDeposees: new Set() }
+  positionsDeLecture: new Map(), instancesDejaDeposees: new Set(),
+  classesDeLEleve: new Set(['classe-A']) }
 
 const pose = (exerciceId: string, over: Partial<ExercicePose['candidat']> = {}): ExercicePose => ({
   candidat: { exerciceId, competence: 'argumentation', grain: 'meso', geste: 'produire',
