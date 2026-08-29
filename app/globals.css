@@ -243,6 +243,63 @@ input, textarea, select {
    `attente-fondu`, sinon l'onglet se viderait 140 ms avant que la plume arrive.
    Repos = visible : si les animations ne tournent pas, le libellé reste (le bon
    défaut), cf. la note sur `.attente-differee`. */
+/* --- La plume écrit le mot (écran d'attente) -------------------------------
+   Choix de Louis (29/08) : plutôt qu'un trait, la plume écrit « chargement ».
+   Le mot se dévoile par `clip-path` pendant que le bec avance, sur la MÊME
+   horloge que `plume-glisse`. Italique de Cormorant : la police est déjà
+   chargée par le site (coût nul), et c'est la plus proche d'une main parmi les
+   quatre de la charte.
+   ⚠️ Le bec du masque est au coin BAS-GAUCHE de l'image, donc `bottom: .2em`
+   (la profondeur des jambages) pose la POINTE sur la ligne d'écriture et laisse
+   la plume monter à droite, dégagée du texte. Plus bas, elle mordait la
+   dernière lettre et le mot semblait posé À CÔTÉ d'elle au lieu d'en sortir.
+   ÉTAT DE REPOS (animations gelées) : mot entier, bec au bout. Cf. la note de
+   `.attente-differee` — le repos doit être un état correct. */
+.attente-ecriture {
+  position: relative;
+  display: inline-block;
+  font-size: 27px;
+  line-height: 1.15;
+}
+.attente-mot {
+  display: inline-block;
+  white-space: nowrap;
+  animation:
+    attente-mot-ecrit var(--plume-duree, 1.9s) cubic-bezier(.4, 0, .4, 1) infinite,
+    plume-souffle     var(--plume-duree, 1.9s) linear infinite;
+}
+.attente-bec {
+  position: absolute;
+  left: 100%;                       /* repos : au bout du mot */
+  bottom: .2em;
+  margin-left: -.03em;
+  width: .82em;                     /* = .82 / 1.25, le rapport du dessin */
+  height: 1.25em;
+  background: currentColor;
+  -webkit-mask: url(/plume/detail.png) no-repeat center / contain;
+  mask: url(/plume/detail.png) no-repeat center / contain;
+  animation:
+    attente-bec-glisse var(--plume-duree, 1.9s) cubic-bezier(.4, 0, .4, 1) infinite,
+    plume-souffle      var(--plume-duree, 1.9s) linear infinite;
+}
+@keyframes attente-mot-ecrit {
+  0%   { clip-path: inset(-25% 100% -25% 0); }
+  62%  { clip-path: inset(-25% 0 -25% 0); }
+  88%  { clip-path: inset(-25% 0 -25% 0); }
+  100% { clip-path: inset(-25% 100% -25% 0); }
+}
+@keyframes attente-bec-glisse {
+  0%   { left: 0; }
+  62%  { left: 100%; }
+  88%  { left: 100%; }
+  100% { left: 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .attente-mot { animation: none; clip-path: none; }
+  .attente-bec { animation: none; }   /* retombe sur `left: 100%` */
+  .attente-ecriture { animation: plume-respire 2.4s ease-in-out infinite; }
+}
+
 .libelle-efface { animation: libelle-efface 340ms ease both; }
 @keyframes libelle-efface {
   0%, 41% { opacity: 1; }
