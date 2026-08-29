@@ -6164,6 +6164,31 @@ Tout ce qui suit est donc la face **professeur**, et **les smokes élève resten
   > ⭐ **Le schéma de C4-L1 et de C4-L2 a voyagé avec le dump `--schema-only` du 25/08**, et c'est
   > ce que la colonne « Prod » du `SUIVI_SQL.md` ne dit pas encore.
 
+- [ ] **C4L12-24 · ⛔⛔ `ecrireLEtatApresMesure` PERD TOUT UN LOT DE LETTRES, EN SILENCE — ET LE
+  DÉFAUT EST EN PRODUCTION.** *Trouvé le 29/08 par la séance voisine, au peuplement du profil d'Élo ;
+  **revérifié ici par requête, en lecture seule, avant d'être rangé**.*
+  **Ce qui se passe** : `utils/moteur/etat-serveur.ts:313` envoie `lignesNiveau` en **UN SEUL
+  `upsert`**, et les jeux de clés y sont **hétérogènes** dès qu'un même dépôt touche une compétence
+  **déjà lettrée** et une compétence **neuve** — la ligne neuve porte `lettre_initiale` et
+  `lettre_initiale_at`, l'autre non. La garde lève, **tout le lot est perdu**, et le compte de
+  lettres écrites du bilan ne le dit pas.
+  ⭐⭐ **LA PARADE EXISTE DÉJÀ DANS LE MÊME FICHIER, DEUX FOIS** : `poserLeColdStart` *(l. 458)* et
+  `cloturerLaCalibrationDesEleves` *(l. 573)* groupent leurs lignes **`parForme`** — une clé par
+  forme d'objet — avant d'écrire. **Celle-ci ne le fait pas**, et c'est le seul écart.
+  ⭐ **LA PREUVE, EN PRODUCTION, MESURÉE LE 29/08** : sur 184 mesures, **13 de `synthese` et
+  ZÉRO ligne de niveau `synthese`** ; les trois autres compétences ont leur ligne
+  *(argumentation 53/52, expression 66/52, structure 52/51)*. **13 paires mesurées sans ligne de
+  niveau, toutes en `synthese`** — c'est-à-dire exactement la compétence neuve du lot perdu.
+  ⚠️⚠️ **ET ÇA TRAVERSE LA CLÔTURE QUE LE 28/08 VIENT DE POSER** *(`C6L2-25`)* : la clôture lit
+  `lireLesNiveaux`, qui rend `lettre: null` pour une ligne absente → `mouvement: 'sans_lettre'` →
+  **elle saute**. ⛔ **Les treize élèves n'auront donc jamais de lettre de Synthèse, et la bascule du
+  2026-09-14 passera dessus sans un mot.** *La clôture, elle, n'est pas atteinte par le défaut : elle
+  groupe.*
+  ⛔ **Non corrigé ici** — la séance voisine l'a déposé plutôt que réparé, avec ses requêtes, à
+  `IDEES_post_rentree.md`. **Condition de reprise : le correctif applicatif, qui est de grouper
+  `parForme` comme les deux voisines.** ⚠️ *Le décor d'écran le contourne en écrivant
+  `competences_niveaux` une compétence à la fois ; le défaut applicatif reste entier.*
+
 
 ---
 
@@ -7865,6 +7890,25 @@ interruption. Le décor se reconnaît à sa classe, `nom LIKE 'RECETTE-C5L3%'`. 
   > (élève × compétence)** hors sondes de montée — **153 à une mesure, 14 à deux, UNE à
   > trois**, et **ZÉRO n'atteint la fenêtre de quatre**. *(Le 28/08 au matin : 141 · 14 · 1.)*
   > **La condition tient, et c'est la même qui tient `C4L2-11`, `C4L12-16` et `C4L12-23`.**
+
+- [ ] **C6L2-31 · ⚠️⚠️ EN « TOUTES LES CLASSES », LA SEMAINE COMPTE DOUBLE POUR UN BI-CLASSE.**
+  *Trouvé le 29/08 par la séance voisine, sur le profil d'Élo ; chemin revérifié ici sur pièce.*
+  `app/eleve/semaine/page.tsx:77` appelle **`chargerLaSemaineDeLEleve` UNE FOIS PAR INSCRIPTION**
+  *(`Promise.all(enContexte.map(...))`)*, et les instances de la vague `vgen1` portent
+  **`classe_id = NULL`** — donc `visibleDansLaClasse` les laisse passer **pour chacune**. Un élève
+  bi-classe lit **« 0 exercice fait sur 8 » pour 4 exercices**, et **le bloc des compétences est rendu
+  deux fois**. ⭐ **En classe unique, c'est propre.**
+  ⭐⭐ **ET LE MÊME PIÈGE A DÉJÀ ÉTÉ VU ET FERMÉ À DEUX LIGNES DE LÀ** : le commentaire de la l. 80
+  dit *« LE QUOTA EST UNIFIÉ PAR ÉLÈVE, ET IL SE LIT UNE SEULE FOIS […] le lire dans
+  `chargerLaSemaineDeLEleve` l'aurait compté deux fois »*. **Le quota a été sorti de la boucle ; les
+  exercices et les compétences ne l'ont pas été.**
+  ⚠️ **Ce n'est pas le défaut du `classe_id` du vivier** *(fermé le 28/08)* : là, une instance
+  estampillée partait à la mauvaise classe ; ici, une instance **sans classe** est comptée autant de
+  fois que l'élève a d'inscriptions. **Les deux se rencontrent sur `visibleDansLaClasse`, et le NULL
+  est le cas commun.**
+  **Condition de reprise : le correctif — dédoublonner par `exerciceId` avant de compter, ou sortir
+  la liste de la boucle comme le quota l'a été.** *L'écran est en production, et deux élèves sont
+  inscrits dans deux classes.*
 - [ ] **C6L2-28 · ⚠️ LE RATTACHEMENT DU GESTE À UNE COMPÉTENCE N'A JAMAIS ÉTÉ VU EN VRAI.** Le code
   lit `routeur_decisions.cible_retenue` puis `exercices.cible_primaire` *(l'ordre du `07-` §1.1)*,
   et **la couture n'a éprouvé que la branche « aucune des deux »** — les seules données qui
