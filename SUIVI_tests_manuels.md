@@ -6245,6 +6245,34 @@ Tout ce qui suit est donc la face **professeur**, et **les smokes élève resten
   > appelle, en revanche, est la fonction de production, couverte par cinq vecteurs purs neufs et
   > par `routeur-c4l12.mjs` §M sur données réelles.*
   > ⛔ **Rien n'a été écrit nulle part.** **Condition de reprise : ta décision de le lancer.**
+  > ⭐⭐ **LA BOUCLE D'ÉCRITURE EST ÉPROUVÉE — 29/08, EN BAC À SABLE, PAR L'ÉCHEC PUIS PAR LE
+  > SUCCÈS.** Le décor est au dépôt : `scripts/recette/epreuve-reparation-c4l12-25.mjs`, `--seme` /
+  > `--retire`, **bac à sable uniquement** *(aucun chemin vers la prod)*. Il pose la signature exacte
+  > sur un élève choisi **inerte** *(0 mesure, 0 escalade, 0 montée — vérifié au semis, et le script
+  > s'arrête si ce n'est plus vrai)*, et **jamais sur l'élève `89662514`, qui porte le décor d'une
+  > autre séance**.
+  > ⚠️ **Le décor FABRIQUE la compétence déjà lettrée, et il faut le dire** : hors du décor voisin,
+  > le bac à sable ne porte **aucune** ligne avec `lettre_initiale`. Les deux mesures semées sont
+  > `classe` + `sommatif` — **des ANCRES** —, comme les treize de la production *(vérifié : 13/13
+  > `classe`/`sommatif`)*, sans quoi une compétence sans lettre n'en recevrait aucune et le décor
+  > n'éprouverait rien.
+  > **① PAR L'ÉCHEC** *(une ligne du correctif remise à son état d'avant)* : `traitées=2`,
+  > **`lettres=0`**, les deux paires **toujours fausses**, et le motif nommé —
+  > *« jeux de clés HÉTÉROGÈNES dans un même envoi »*, avec l'attendu et le reçu côte à côte, la
+  > différence étant exactement `lettre_initiale` / `lettre_initiale_at`.
+  > **② PAR LE SUCCÈS** *(correctif restauré)* : `traitées=2`, **`lettres=2`**, 0 erreur, niveaux
+  > **101 → 102**, **ZÉRO paire restante**. La `synthese` naît avec `lettre='B'` **et
+  > `lettre_initiale='B'`** ; l'`expression` garde sa `lettre_initiale='D'` et reçoit son ancre.
+  > **③ IDEMPOTENCE** : un second passage rend *« aucune réparation à faire »* — et **écarte
+  > toujours nommément les 6 paires de l'élève de décor voisin**, ce qui éprouve le tri dans le même
+  > tour.
+  > **④ LA BASE EST RENDUE** : 102 niveaux · 16 mesures · 0 escalade · 0 montée, **exactement l'état
+  > d'entrée**, vérifié par requête après le `--retire`.
+  > ⚠️⚠️ **ET L'ÉPREUVE A DÉMENTI UN DE MES COMMENTAIRES, corrigé dans la foulée** : **ce n'est pas
+  > PostgREST qui refuse, c'est `verifierLesLignesDeNiveau`, la garde de ce dépôt**, et elle lève
+  > **avant** que la base soit sollicitée. ⭐ **Elle a raison de lever** : un `upsert` en lot
+  > **unifie les clés**, donc la `lettre_initiale` de la compétence déjà lettrée serait partie à
+  > **NULL** — et son plafond avec elle. *Ce qu'elle empêche est pire que ce qu'elle coûte.*
 
 
 ---

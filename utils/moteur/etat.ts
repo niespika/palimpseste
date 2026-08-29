@@ -285,12 +285,18 @@ export function ligneDeNiveau(
  * ⛔⛔ GROUPER UNE CHARGE D'`upsert` PAR FORME D'OBJET — et c'est une CONDITION,
  * pas une élégance.
  *
- * PostgREST exige des clés IDENTIQUES sur tous les objets d'un `upsert` en lot :
- * une charge hétérogène est refusée **en entier**. Or `ligneDeNiveau` émet deux
- * paires de clés OPTIONNELLES — `ancre_derniere_*` quand une ancre arrive,
- * `lettre_initiale*` quand la compétence n'en avait pas —, donc jusqu'à QUATRE
- * formes dans un même lot dès qu'un dépôt touche une compétence déjà lettrée et
- * une compétence neuve.
+ * ⚠️ **CE N'EST PAS LA BASE QUI REFUSE, C'EST LA GARDE DE CE DÉPÔT** — et
+ * l'épreuve par l'échec du 29/08 l'a montré : `verifierLesLignesDeNiveau` lève
+ * **avant** que la base soit sollicitée. ⭐ **Et elle a raison de lever, parce que
+ * ce qu'elle empêche est PIRE qu'un refus** : un `upsert` en lot **unifie les
+ * clés**, donc les clés manquantes d'une ligne partiraient à **NULL** — la
+ * `lettre_initiale` d'une compétence déjà lettrée serait EFFACÉE, et son plafond
+ * avec elle. *Le message de la garde le dit mot pour mot.*
+ *
+ * Or `ligneDeNiveau` émet deux paires de clés OPTIONNELLES — `ancre_derniere_*`
+ * quand une ancre arrive, `lettre_initiale*` quand la compétence n'en avait pas
+ * —, donc jusqu'à QUATRE formes dans un même lot dès qu'un dépôt touche une
+ * compétence déjà lettrée et une compétence neuve.
  *
  * ⚠️ **Ce que l'oubli coûte est mesuré, pas supposé** : en production, le
  * 29/08/2026, `ecrireLEtatApresMesure` écrivait en un seul lot et perdait la

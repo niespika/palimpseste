@@ -311,10 +311,12 @@ export async function ecrireLEtatApresMesure(
   // ⛔⛔ ON GROUPE PAR FORME AVANT D'ÉCRIRE, ET CE N'EST PAS UNE PRÉCAUTION.
   //   `ligneDeNiveau` émet DEUX paires de clés OPTIONNELLES — `ancre_derniere_*`
   //   quand une ancre arrive, `lettre_initiale*` quand la compétence n'en avait
-  //   pas — donc jusqu'à QUATRE formes d'objet dans un même lot. PostgREST exige
-  //   des clés identiques sur tout un `upsert` en lot : dès qu'un dépôt touche
-  //   une compétence DÉJÀ LETTRÉE et une compétence NEUVE, la charge est
-  //   hétérogène, la garde lève, et TOUT LE LOT EST PERDU.
+  //   pas — donc jusqu'à QUATRE formes d'objet dans un même lot. Dès qu'un dépôt
+  //   touche une compétence DÉJÀ LETTRÉE et une compétence NEUVE, la charge est
+  //   hétérogène, `verifierLesLignesDeNiveau` LÈVE, et TOUT LE LOT EST PERDU.
+  //   ⭐ La garde a raison de lever : un `upsert` en lot UNIFIE les clés, donc la
+  //   `lettre_initiale` de la déjà-lettrée partirait à NULL — et son plafond avec
+  //   elle. Ce qu'elle empêche est pire que ce qu'elle coûte.
   //
   //   ⚠️ Ce n'était pas une hypothèse : mesuré en PRODUCTION le 29/08 — 13
   //   mesures de `synthese` pour ZÉRO ligne de niveau `synthese`, quand les trois

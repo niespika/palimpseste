@@ -61,3 +61,9 @@ scripts/recette/.routeur-c4l2-decor-registre.json
 # ⭐ L'état AVANT écriture, horodaté, une copie par passage. Il reste LOCAL : il
 #    porte des identifiants d'élèves réels, et un registre n'est pas une source.
 scripts/recette/.reparation-c4l12-25-*.json
+
+# Registre local du décor de l'épreuve C4L12-25
+# (scripts/recette/epreuve-reparation-c4l12-25.mjs). ⛔ Il porte l'état AVANT
+#    d'un élève réel du bac à sable : c'est lui qui rend la base, et il meurt
+#    avec le `--retire` réussi.
+scripts/recette/.epreuve-reparation-c4l12-25.json

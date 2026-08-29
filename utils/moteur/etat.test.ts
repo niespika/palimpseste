@@ -239,7 +239,7 @@ describe('`07-` §1.3 — les deux clés que personne n\'avait écrites', () => 
 
 // ── LA CHARGE D'`upsert`, GROUPÉE PAR FORME — `C4L12-24` ────────────────────
 
-describe('`grouperParForme` — PostgREST refuse une charge hétérogène EN ENTIER', () => {
+describe('`grouperParForme` — la garde LÈVE sur une charge hétérogène, et elle a raison', () => {
   it('une charge homogène ne se coupe pas', () => {
     const a = ligneDeNiveau('E', 'argumentation', 'C', etat({ lettreInitiale: 'C' }), null, 'T')
     const b = ligneDeNiveau('E', 'expression', 'B', etat({ lettreInitiale: 'B' }), null, 'T')
