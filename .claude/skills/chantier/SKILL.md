@@ -23,7 +23,8 @@ les six interrupteurs sont à **ON dans les deux bases**, par **décision écrit
 | prod | `ucmngachkxvvlegntuwh` · **62 élèves**, 4 classes actives, toutes avec `type_pedagogique` |
 | bac à sable | `aoakpxxlyvthzueaywna` |
 | prod, au 29/08 | 184 mesures · 168 lignes de niveau · 86 dépôts · **0 `routeur_decisions`** |
-| `origin/main` | `340abd7` — tout est poussé |
+| `origin/main` | `2363e4b` — tout est poussé *(re-fetché le 29/08 en fin de journée ; le
+  `340abd7` de la première rédaction avait **12 commits de retard** au bout de quelques heures)* |
 
 **Les segments de l'année, lus au calendrier réel de prod** *(32 semaines de cours)* :
 S1 `2026-08-24` *(diagnostic, hors routage)* · **S2 `2026-08-31`** *(calibration, 2 sem.)* ·
@@ -47,16 +48,17 @@ le chapitre **C11b** *(la prod existe depuis le 25/08)*.
 
 ## 2. La file, dans l'ordre
 
-1. **`C6L2-31` — la semaine compte double pour un bi-classe.** `app/eleve/semaine/page.tsx` appelle
-   `chargerLaSemaineDeLEleve` **une fois par inscription**, et une instance à `classe_id = NULL`
-   passe pour chacune : « 0 sur 8 » pour 4 exercices, bloc des compétences rendu deux fois.
-   ⭐ Le quota a déjà été sorti de la boucle pour cette raison — le commentaire de la l. 80 le dit ;
-   les exercices et les compétences ne l'ont pas été. **En production.**
-2. **Les quatre items « avant le Run 1 »** *(voir §4)*.
-3. **Le CRLF des `<textarea>`** — correction d'une ligne, et il fait dériver `texte_extrait`, donc
+⛔ **Cette file s'est périmée en quelques heures la première fois — remesure-la avant de t'y
+fier.** L'item 1 d'origine *(`C6L2-31`)* était **déjà corrigé et poussé** quand la séance suivante
+l'a ouvert : `git fetch` puis `git log <commit du skill>..HEAD` **avant de choisir un item**.
+
+1. **Le CRLF des `<textarea>`** — correction d'une ligne, et il fait dériver `texte_extrait`, donc
    le corps que sert le RAG, à chaque sauvegarde d'un cours.
-4. **Les quatre campagnes de revue** *(§4)*, dans l'ordre **C → B → A → D**.
-5. **La passe du registre des ouverts** — rayer les trois entrées périmées quand la séance voisine
+2. **Les trois items « avant le Run 1 » qui restent** *(voir §5)* — ⛔ **aucun n'est du code** :
+   ce sont un prompt dérivé d'une fiche, une décision de module, et un arbitrage de Louis. Une
+   séance Code ne les joue pas ; **le quatrième, D4, est payé** *(29/08)*.
+3. **Les quatre campagnes de revue** *(§4)*, dans l'ordre **C → B → A → D**.
+4. **La passe du registre des ouverts** — rayer les trois entrées périmées quand la séance voisine
    aura rendu le fichier.
 
 ---
@@ -135,10 +137,19 @@ l'arriéré au lieu de le réduire** : la séance d'instruction de C4-L8 a sorti
 
 ---
 
-## 5. Les quatre items « avant le Run 1 »
+## 5. Les items « avant le Run 1 » — un payé, trois qui ne sont pas du code
 
-`C4L10C-23` **D4** — `pre_p1` de `expression/code.py` et `connaissance/code.py` prend **le TEXTE**,
-pas le contexte : `AttributeError` au premier run, sur les deux · `C4L10A-14` **D2** — le bloc
+✅ ~~`C4L10C-23` **D4**~~ — **PAYÉ LE 29/08.** `pre_p1` des deux modules reçoit désormais le
+contexte, sur le patron que leur propre `code1` portait déjà — **deux lignes chacun**. ⭐ **La
+condition de reprise a été mesurée ouverte, pas supposée** : le dépôt de conception porte **7
+manifestes en tout**, tous du 30-31/07, **tous `module: ABSENT`**, **aucun ne hache un `code.py`** —
+donc aucun run n'est rendu incomparable. ⭐ **Éprouvé par la porte du banc elle-même**
+*(`verifie_slots_p1`, le contrôle au chargement)* : lève sur les modules d'avant, passe sur ceux
+d'après. ⭐ **Le canal a changé, pas le calcul** — sortie identique octet pour octet, `VERSION`
+inchangée. ⛔ *Le dépôt de conception n'a PAS été commité.*
+
+⛔ **Les trois qui restent ne se jouent pas depuis une séance Code** — c'est leur point commun, et
+c'est ce qui les distingue de D4 : · `C4L10A-14` **D2** — le bloc
 `# SORTIE` de P2 de l'Argumentation ne déclare que **2 des 4 tests**, donc deux observables valent
 structurellement 0 et Acquis ne se ferme jamais · `C4L10S-19` — quatre valeurs illisibles du
 squelette Structure ne lèvent **aucune alerte** *(68 cas sur 112)* · `C4L10S-18` — `bloc_relie` :

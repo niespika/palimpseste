@@ -4526,12 +4526,43 @@ COURS.** Voir `C4L10C-9`. Tout le reste du lot est fait, prouvé et vert.
 - [ ] **C4L10C-22 · LE SMOKE PROF ET ÉLÈVE À L'ÉCRAN.** Rien n'a été vu dans un navigateur : tout ce
   que ce lot prouve passe par le test, par la recette et par la base. **Condition de reprise :
   le même smoke que `C4L10E-13`**, dont ce lot ne change ni l'objet ni la condition.
-- [ ] **C4L10C-23 · LA DETTE D4 AVANT LE RUN 1.** `copies-tests/expression/code.py` et
-  `copies-tests/connaissance/code.py` : `pre_p1` prend le TEXTE là où le contrat passe le CONTEXTE.
-  **Le banc lèverait une `AttributeError` au premier passage sur les deux.** ⭐ Le `code1` de la
-  Connaissance porte déjà le patron du repli — la correction est **de deux lignes par module**.
-  **Condition de reprise : la séance de conception qui ouvre le Run 1** de l'une ou l'autre.
-  *Registre des ouverts, DETTES, D4.*
+- [x] **C4L10C-23 · ✅ LA DETTE D4 EST PAYÉE — LES DEUX CROCHETS REÇOIVENT LE CONTEXTE, 29/08.**
+  ⭐ **La condition de reprise a été MESURÉE ouverte, pas supposée.** Elle disait « la séance qui
+  ouvre le Run 1 » : le dépôt de conception porte **7 manifestes en tout**, tous datés des
+  **30-31/07**, **tous avec `module: ABSENT`**, et **aucun ne hache un `code.py`**. L'Expression a
+  3 runs, **tous antérieurs au module** ; la Connaissance en a **0**. ⛔ *C'était la seule chose qui
+  pouvait interdire le geste — le registre le dit : « un module est haché au manifeste, deux runs ne
+  sont comparables que si ce hash coïncide ». **Aucun run n'est rendu incomparable.***
+  ⭐ **Le défaut, reproduit avant d'être corrigé** : `expression.pre_p1({...})` levait
+  `AttributeError: 'dict' object has no attribute 'strip'`, `connaissance.pre_p1({...})`
+  `… no attribute 'split'`.
+  ⭐ **Corrigé sur le patron que le module portait déjà chez lui**, et la correction tient bien dans
+  les **deux lignes** annoncées par lot :
+  `contexte = contexte if isinstance(contexte, dict) else {"copie": contexte or ""}` puis
+  `texte = contexte.get("copie") or ""` — exactement ce que `code1` fait vingt lignes plus bas.
+  ⭐⭐ **ÉPROUVÉ PAR L'ÉCHEC AVANT DE L'ÊTRE PAR LE SUCCÈS, ET PAR LA PORTE DU BANC ELLE-MÊME.**
+  `verifie_slots_p1` *(`_commun/banc.py` l. 399 — le contrôle **AU CHARGEMENT**, l'endroit exact où
+  l'exception serait tombée)* joué côte à côte sur une copie du fichier d'avant et sur celui
+  d'après : **il LÈVE sur les deux modules d'avant, il PASSE sur les deux d'après**, slots servis
+  `['copie', 'pre_releve', 'sujet']` et `['pre_releve', 'production', 'sujet']`.
+  ⭐⭐ **LE CANAL A CHANGÉ, PAS LE CALCUL — et c'est ce qui rend le geste gratuit pour le protocole.**
+  Sortie **identique octet pour octet** sur quatre copies *(deux paragraphes, un seul tenant, vide,
+  accents et guillemets)*, servie **par le contexte comme par le repli en texte nu**. `VERSION` reste
+  donc à **1.1** et **1.3** : `version_calcul` n'avait pas à bouger.
+  ⭐ **Et les deux modules rejoignent leur propre portage** : `prePhaseP1` et `prePhase1` lisent
+  `ctx.contexteExercice.copie` depuis le premier jour — c'est le Python qui démentait le TypeScript.
+  ⚠️ **Contrôles** : `autotest()` des deux modules **0 échec** ; `derive-doctrine.py --verifie` et
+  `derive-instruments.py --verifie` **IDENTIQUE** *(le `CONTRAT-MODULES.md` n'alimente aucune
+  dérivation — vérifié)*. ⛔ **Le dépôt de conception n'est PAS commité** *(règle de la maison)*.
+  ⚠️ *Reste, sans rapport et non touché : la variable `texte` de `code1` de la Connaissance est
+  calculée et jamais lue — code mort, sans effet.*
+  **Marque `[faux]` du `CONTRAT-MODULES.md` §2 ligne 2 amendée, et dette D4 fermée au registre des
+  ouverts *(le compte des dettes passe de 8 à 7)*.**
+  **Énoncé d'origine :** `copies-tests/expression/code.py` et `copies-tests/connaissance/code.py` :
+  `pre_p1` prend le TEXTE là où le contrat passe le CONTEXTE. **Le banc lèverait une
+  `AttributeError` au premier passage sur les deux.** ⭐ Le `code1` de la Connaissance porte déjà le
+  patron du repli — la correction est **de deux lignes par module**. **Condition de reprise : la
+  séance de conception qui ouvre le Run 1** de l'une ou l'autre. *Registre des ouverts, DETTES, D4.*
 - [ ] **C4L10C-24 · ⚠️ `competencesMesurees` NOMME CE QUI EST SOUMIS, PAS CE QUI EST MESURÉ — et ce
   lot est le premier à le rendre visible.** Le bilan d'un dépôt calcule `competencesMesurees` **avant
   les passages** (`competencesFroides.filter(ouvertes.has)`), et `competencesEcartees` ne porte que
