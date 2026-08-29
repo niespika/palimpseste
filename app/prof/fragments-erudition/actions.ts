@@ -9,6 +9,7 @@ import { lancerAnalyse } from '@/utils/analyse'
 import { inscriptionsClasse } from '@/utils/acces'
 import { COOKIE_SEMESTRE_FRAGMENTS, semestreFragmentsActif, type ContexteSemestre } from './contexte-semestre'
 import type { StatutPiste } from '@/types/fragments'
+import { normaliserRetours } from '@/utils/passation/transcription-calcul'
 
 async function verifierProf() {
   const supabase = await createClient()
@@ -72,7 +73,7 @@ export async function sauvegarderTheme(formData: FormData) {
   const inscriptionId = formData.get('inscriptionId') as string
   const semestreId = formData.get('semestreId') as string
   const theme = formData.get('theme') as string
-  const description = (formData.get('description') as string) || null
+  const description = normaliserRetours(String(formData.get('description') ?? '')) || null
 
   if (!semestreId) return { error: 'Semestre manquant' }
 

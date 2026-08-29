@@ -6638,8 +6638,54 @@ elles seraient parties décochées sans lui. *Le décor semé pour l'occasion a 
   ⚠️ **Et c'est le SEUL point où le port et `generateur/verifie-import.py` divergent** : le script
   **refuse** la clé *(`✗ [R02] clé « notions » que le 08- ne déclare pas`)*, le port l'accepte parce
   que le `08-` §2, gelé, la déclare. *Épinglé par un test, porté au registre en dette D7.*
-- ⛔⛔ **Le chemin de confirmation de la garde L2 — ÉPROUVÉ LE 25/08, ET IL EST CASSÉ. Le défaut est
-  PRÉ-EXISTANT, hors périmètre de ce lot, et NON CORRIGÉ.**
+- ✅ **Le chemin de confirmation de la garde L2 — CORRIGÉ LE 29/08, AU CHANTIER, ET LA CONDITION DE
+  REPRISE EST HONORÉE DANS SES DEUX MOITIÉS.**
+  ⭐ **Éprouvé par l'échec avant de l'être par le succès, sur la donnée RÉELLE des deux bases** —
+  script laissé au dépôt : `node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON
+  scripts/recette/crlf-textarea.mjs --epreuve`. Il simule ce que la soumission fait *(LF → CRLF)*,
+  puisque rien en Node ne le fait, et joue l'expression de la garde AVANT et APRÈS :
+  · **un enregistrement SANS changement de texte ne demande plus rien** — la garde se déclenchait à
+  tort **6 fois sur 6** *(5 sandbox, 1 prod)*, elle se déclenche désormais **0 fois sur 6**. Dont
+  « NAture humaine », **110 lignes** : le compte exact du relevé du 25/08 ci-dessous.
+  · **et un changement RÉEL demande toujours confirmation** — contre-épreuve sur les mêmes 6 corps,
+  la garde reste muette **0 fois sur 6**. ⛔ *Sans cette seconde moitié, une garde « corrigée » est
+  simplement morte.*
+  ⭐⭐ **ET CORRIGER CETTE GARDE SEULE AURAIT FABRIQUÉ UN BUG** — c'est le balayage qui l'a vu, pas la
+  note d'origine : `creerContenu` (`actions.ts:736`) écrit `texte_extrait` sans normaliser, tout
+  comme `modifierContenuBiblio`. Aujourd'hui **les deux côtés dérivent ensemble**. Normaliser la
+  seule comparaison aurait rendu **tout cours collé au clavier « différent de lui-même »** à sa
+  première ré-ouverture — et un « oui » du professeur détruit la découpe **et rabat les `vu_at` des
+  élèves**. **Les deux sites sont partis dans le même commit.**
+  ⭐ **Le balayage a couvert le dépôt entier** : 92 `<textarea>` recensés, **53 sites instruits**,
+  **17 exposés** et **36 propres avec leur raison**. ⭐ **Le discriminant n'est pas
+  `<form action={…}>`** — c'est *« la valeur traverse-t-elle un FormData construit DEPUIS le
+  formulaire »*. Un `<textarea>` contrôlé qui part par **argument de fonction** reste en LF : c'est
+  ce qui innocente les sept éditeurs de prompts d'IA de `components/BlocPrompt.tsx`, les formulaires
+  élève d'Aletheia, le chat du Scriptorium et les paramètres du Codex.
+  ⭐ **Onze sites corrigés, six fichiers, tous par `normaliserRetours`** *(qui est déjà le
+  normalisateur partagé du dépôt — six importateurs depuis quatre dossiers ; aucun module neuf
+  n'a été inventé)* : `scriptorium/actions.ts` **736 et 790** · `conception/actions.ts` **76, 84,
+  131, 329, 339** *(et **576** aligné sur le même outil, qui couvre en plus le CR seul)* ·
+  `quazian/actions.ts` **270-271** *(recto/verso partent à l'élève ET au modèle)* ·
+  `fragments-erudition/essai-actions.ts` **43 et 77** · `fragments-erudition/actions.ts` **75** ·
+  `utils/passation/depots.ts` **526 et 559** *(le commentaire et le message du PROF, seuls champs
+  non normalisés d'un écran dont les trois champs de l'ÉLÈVE l'étaient depuis C4-L4)*.
+  ⭐ **Et la donnée a été LUE avant d'être réparée** : **0 `\r`** dans les deux bases, sur toutes les
+  colonnes mesurées. Les corps multi-lignes existent *(33/33 documents en prod)* mais viennent tous
+  d'une extraction de fichier ou du chemin élève. **Le défaut était armé et n'avait pas encore
+  tiré — c'est de la prévention, pas de la réparation.** ⚠️ *Et il fallait le mesurer : la note du
+  26/08 donnait `consigne_instanciee` à 1 CR ; elle est à 0 aujourd'hui, simplement parce que 448
+  de ses 452 lignes sont **mono-ligne** — un `\r` n'apparaît qu'où il y a un saut de ligne.*
+  ⚠️ **Trois non-constats, vérifiés en exécutant plutôt que supposés** : `distracteurs`
+  (`conception/actions.ts:80`) et `notions_libres` (`scriptorium/actions.ts:713`) **tiennent par
+  leur `.trim()`** — le déplacer rouvrirait le défaut ; et `utils/examens/conception.ts` était **déjà
+  propre** *(il passe par `consigneANoter`)*. ⚠️ **Deux sites exposés laissés sciemment** :
+  `ajouterContenu` (**143**) et `modifierContenu` (**629**), dont les composants
+  `FormulaireContenu.tsx` et `LigneContenu.tsx` **ne sont montés nulle part** *(seul le type
+  `ImageItem` est importé)* — le geste est écrit au `IDEES_post_rentree.md` pour qui les remontera.
+  ⚠️ `npm test` **1921/1921**, `tsc --noEmit` **rien**, `eslint` **0 erreur** sur les sept fichiers —
+  ⛔ *et c'est exactement pourquoi ces trois-là ne prouvent rien ici : aucun n'envoie un formulaire.*
+  **Énoncé d'origine :**
   **La garde se déclenche À TORT, à chaque enregistrement d'un cours découpé, même si le texte n'a
   pas bougé.** Cause : **la soumission d'un formulaire HTML normalise les sauts de ligne d'un
   `<textarea>` en CRLF**, quand le texte stocké porte des `\n` — les deux ne sont donc jamais égaux.

@@ -53,8 +53,13 @@ le chapitre **C11b** *(la prod existe depuis le 25/08)*.
 fier.** L'item 1 d'origine *(`C6L2-31`)* était **déjà corrigé et poussé** quand la séance suivante
 l'a ouvert : `git fetch` puis `git log <commit du skill>..HEAD` **avant de choisir un item**.
 
-1. **Le CRLF des `<textarea>`** — correction d'une ligne, et il fait dériver `texte_extrait`, donc
-   le corps que sert le RAG, à chaque sauvegarde d'un cours.
+1. ~~**Le CRLF des `<textarea>`**~~ — ✅ **FERMÉ LE 29/08, et ce n'était PAS « une ligne »** :
+   **11 sites, 6 fichiers**, tous par `normaliserRetours`. ⛔ **Corriger la seule garde annoncée
+   aurait fabriqué un bug** — `creerContenu` écrit le même champ sans normaliser, et les deux côtés
+   dérivaient ENSEMBLE. ⭐ Épreuve sur la donnée réelle : garde déclenchée à tort **6/6 → 0/6**, et
+   contre-épreuve que la garde **parle encore** sur un vrai changement. ⭐ Script au dépôt :
+   `scripts/recette/crlf-textarea.mjs --epreuve`. ⭐ **0 `\r` en base des deux côtés** : c'était de
+   la prévention, pas de la réparation.
 2. **Les trois items « avant le Run 1 » qui restent** *(voir §5)* — ⛔ **aucun n'est du code** :
    ce sont un prompt dérivé d'une fiche, une décision de module, et un arbitrage de Louis. Une
    séance Code ne les joue pas ; **le quatrième, D4, est payé** *(29/08)*.

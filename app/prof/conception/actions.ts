@@ -33,6 +33,7 @@ import {
 } from '@/utils/fabrique/conception'
 import { controleReference } from '@/utils/fabrique/verifie-reference'
 import { referenceValidee } from '@/utils/reference-validee'
+import { normaliserRetours } from '@/utils/passation/transcription-calcul'
 
 /** Une ligne rendue par Supabase — lue par accesseurs, jamais à l'aveugle. */
 type Ligne = Record<string, unknown>
@@ -73,7 +74,7 @@ function lireCas(form: FormData, n: number): Cas[] {
   for (let i = 1; i <= n; i++) {
     const brut = String(form.get(`cas_${i}_distracteurs`) ?? '').trim()
     out.push({
-      consigne: String(form.get(`cas_${i}_consigne`) ?? ''),
+      consigne: normaliserRetours(String(form.get(`cas_${i}_consigne`) ?? '')),
       defaut: (String(form.get(`cas_${i}_defaut`) ?? '').trim() || null),
       // La BANQUE de distracteurs, une par ligne — « 10 à 15 à la conception,
       // et l'instance y tire les trois candidats » (`02-` §5 et §6).
@@ -81,7 +82,7 @@ function lireCas(form: FormData, n: number): Cas[] {
       reponseAttendue: (String(form.get(`cas_${i}_reponse`) ?? '').trim() || null),
       // ⭐ C4-L14 — LE MÊME PATRON À PLAT, PAR CAS, que les quatre autres champs
       //    de l'appui : une entrée `cas_<i>_pourquoi_juste` par cas.
-      pourquoiJuste: (String(form.get(`cas_${i}_pourquoi_juste`) ?? '').trim() || null),
+      pourquoiJuste: (normaliserRetours(String(form.get(`cas_${i}_pourquoi_juste`) ?? '')).trim() || null),
       materiauId: (String(form.get(`cas_${i}_materiau`) ?? '').trim() || null),
     })
   }
@@ -128,7 +129,7 @@ export async function concevoirInstance(
     englobant: lireIntervalle('englobant'),
     observableCode: (String(form.get('observable_code') ?? '').trim() || null),
     observableCompetence: (String(form.get('observable_competence') ?? '').trim() || null),
-    guide: (String(form.get('guide') ?? '').trim() || null),
+    guide: (normaliserRetours(String(form.get('guide') ?? '')).trim() || null),
     cas: lireCas(form, c.geste === 'diagnostiquer' ? 2 : 1),
   }
 
@@ -326,7 +327,7 @@ export async function editerInstance(
   const cas = lireCas(form, n)
   // Sans cas, la consigne se saisit à part : c'est le seul texte que l'examen
   // porte, et il reste « le texte que l'élève lit ».
-  const consigneExamen = String(form.get('consigne') ?? '')
+  const consigneExamen = normaliserRetours(String(form.get('consigne') ?? ''))
   if (examen ? !consigneExamen.trim() : cas.some((c) => !c.consigne.trim())) {
     return { ok: false, message: 'Une consigne est vide : c’est le texte que l’élève lit, '
       + 'il ne s’efface pas par mégarde.' }
@@ -336,7 +337,7 @@ export async function editerInstance(
     consigne_instanciee: examen
       ? consigneExamen
       : (ex.paire_diagnostic ? cas.map((x) => x.consigne) : cas[0].consigne),
-    guide: (String(form.get('guide') ?? '').trim() || null),
+    guide: (normaliserRetours(String(form.get('guide') ?? '')).trim() || null),
     lieu: String(form.get('lieu') ?? 'maison'),
     optin_se_juger: form.get('optin_se_juger') === 'oui',
     optin_confiance_remise: form.get('optin_confiance_remise') === 'oui',
@@ -573,7 +574,7 @@ export async function corrigerReference(
   //    fois (C4-L4, puis la garde de découpe de C4-L16), et `new FormData()` ne
   //    le montre pas : seule une soumission réelle le fait. Ici, un `\r` par
   //    ligne rendrait le JSON stocké différent de celui que le professeur a lu.
-  const brut = String(form.get('contenu') ?? '').replace(/\r\n/g, '\n')
+  const brut = normaliserRetours(String(form.get('contenu') ?? ''))
   let contenu: unknown
   try {
     contenu = JSON.parse(brut)

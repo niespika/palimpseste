@@ -5,6 +5,7 @@ import { revalidatePath } from 'next/cache'
 import { createClient } from '@/utils/supabase/server'
 import { createAdminClient } from '@/utils/supabase/admin'
 import { messageSiBloque } from '@/utils/integrite'
+import { normaliserRetours } from '@/utils/passation/transcription-calcul'
 
 async function verifierProf() {
   const supabase = await createClient()
@@ -40,7 +41,7 @@ export async function creerEssai(data: {
       titre: data.titre,
       date_essai: datesTriees[0],
       duree_minutes: data.duree_minutes,
-      consignes: data.consignes || null,
+      consignes: normaliserRetours(data.consignes ?? '') || null,
       depots_ouverts: false,
       semestre_id: data.semestreId,
     })
@@ -74,7 +75,7 @@ export async function modifierEssai(epreuveId: string, data: {
     .update({
       titre: data.titre,
       duree_minutes: data.duree_minutes,
-      consignes: data.consignes || null,
+      consignes: normaliserRetours(data.consignes ?? '') || null,
     })
     .eq('id', epreuveId)
   if (error) return { error: error.message }

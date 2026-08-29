@@ -523,7 +523,7 @@ export async function ecrireLeCommentaireGeneral(
 ): Promise<Issue> {
   const maintenant = new Date().toISOString()
   const { error } = await admin.from('exercices_depots').update({
-    commentaire_general: commentaire.trim() === '' ? null : commentaire,
+    commentaire_general: commentaire.trim() === '' ? null : normaliserRetours(commentaire),
     corrige_par: profId,
     corrige_at: maintenant,
     updated_at: maintenant,
@@ -556,7 +556,7 @@ export async function poserLeMessageReporte(
 ): Promise<Issue> {
   const { error } = await admin.from('exercices_depots')
     .update({
-      message_lisibilite_reporte: message.trim() === '' ? null : message.trim(),
+      message_lisibilite_reporte: message.trim() === '' ? null : normaliserRetours(message).trim(),
       updated_at: new Date().toISOString(),
     })
     .eq('id', depotId)

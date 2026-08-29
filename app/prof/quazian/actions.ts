@@ -4,6 +4,7 @@ import { revalidatePath } from 'next/cache'
 import { createClient } from '@/utils/supabase/server'
 import { extraireFlashcards, extraireFlashcardsTexte, genererVerso, type FlashcardSuggestion } from '@/utils/extraire-flashcards'
 import { colonneCible, refCible, resoudreCible, type CibleQuazian } from '@/utils/quazian-cibles'
+import { normaliserRetours } from '@/utils/passation/transcription-calcul'
 
 async function verifierProf() {
   const supabase = await createClient()
@@ -267,8 +268,8 @@ export async function ajouterCarteManuellement(formData: FormData) {
     ...refCible(cible),
     type: formData.get('type') as string,
     format: formData.get('format') as string,
-    recto: formData.get('recto') as string,
-    verso: formData.get('verso') as string,
+    recto: normaliserRetours(String(formData.get('recto') ?? '')),
+    verso: normaliserRetours(String(formData.get('verso') ?? '')),
     concept_tag: (formData.get('concept_tag') as string) || '',
     statut: 'valide',
     source: 'prof',

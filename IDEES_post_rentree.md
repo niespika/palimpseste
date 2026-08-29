@@ -649,7 +649,45 @@ toujours.
 
 ---
 
-## ⛔⛔ UN DÉFAUT, PAS UNE IDÉE — le CRLF des `<textarea>` fait mentir la garde de la découpe
+## ✅ ~~UN DÉFAUT, PAS UNE IDÉE — le CRLF des `<textarea>` fait mentir la garde de la découpe~~ — **CORRIGÉ LE 29/08**
+
+> ⭐⭐ **FERMÉ AU CHANTIER LE 29/08, SUR ONZE SITES ET SIX FICHIERS.** Un balayage du dépôt entier —
+> **92 `<textarea>` recensés, 53 sites instruits** — a rendu **17 sites exposés** et **36 propres
+> avec leur raison écrite**.
+>
+> ⭐ **LE DISCRIMINANT, mesuré et non supposé** : ce n'est pas « un `<form action={…}>` », c'est
+> **« la valeur traverse-t-elle un FormData construit DEPUIS le formulaire »**. Un `<textarea>`
+> contrôlé dont la valeur part par **argument de fonction** vers une action serveur n'est **PAS**
+> exposé — elle reste en LF. C'est ce qui innocente les sept éditeurs de prompts d'IA de
+> `components/BlocPrompt.tsx`, les formulaires élève d'Aletheia, le chat du Scriptorium et les
+> paramètres du Codex : **des dizaines de lignes qui auraient toutes porté leur `\r`.**
+>
+> ⛔⛔ **ET LE BALAYAGE A TROUVÉ QUE LA CORRECTION D'UNE LIGNE ANNONCÉE CI-DESSOUS AURAIT FABRIQUÉ UN
+> BUG.** `creerContenu` écrit `texte_extrait` sans normaliser, tout comme `modifierContenuBiblio`.
+> Aujourd'hui les deux côtés dérivent ENSEMBLE. **Ne corriger que la garde aurait rendu tout cours
+> collé au clavier « différent de lui-même » à sa première ré-ouverture** — et un « oui » du
+> professeur détruit la découpe ET rabat les `vu_at` des élèves. **Les deux sites sont partis dans le
+> même commit.**
+>
+> ⭐ **ÉPROUVÉ PAR L'ÉCHEC AVANT DE L'ÊTRE PAR LE SUCCÈS, SUR LA DONNÉE RÉELLE** — script laissé au
+> dépôt, `scripts/recette/crlf-textarea.mjs --epreuve`. Sur les **6 corps multi-lignes réels** des
+> deux bases *(5 sandbox, 1 prod)*, la garde se déclenchait **à tort 6 fois sur 6** ; après, **0 sur
+> 6**. Dont « NAture humaine », **110 lignes** — le compte exact du relevé du 25/08 ci-dessous.
+>
+> ⭐ **ET LA DONNÉE A ÉTÉ LUE AVANT D'ÊTRE RÉPARÉE** : **0 `\r`** dans les deux bases, sur toutes les
+> colonnes mesurées. Les corps multi-lignes existent bien *(33/33 documents en prod)* mais viennent
+> tous d'une extraction de fichier ou du chemin élève, jamais d'une édition au formulaire. **Le
+> défaut était armé et n'avait pas encore tiré : c'est de la prévention, pas de la réparation.**
+>
+> ⚠️ **Deux sites exposés par câblage sont laissés en l'état, sciemment** : `ajouterContenu`
+> (`actions.ts:143`) et `modifierContenu` (`actions.ts:629`) — leurs composants
+> `FormulaireContenu.tsx` et `LigneContenu.tsx` **ne sont montés nulle part** *(seul le type
+> `ImageItem` est importé)*. Le geste, si on les remonte un jour :
+> `normaliserRetours(String(formData.get('texte') ?? ''))`. ⛔ *On ne supprime rien sur ce seul
+> constat — la règle du dépôt.*
+>
+> **Énoncé d'origine :**
+
 
 *Trouvé le **25/08** par la session Code **C4-L16**, en éprouvant la garde que son piège 14 lui
 demandait de vérifier. **Hors périmètre du lot — non corrigé.** Il est ici faute d'un meilleur
@@ -709,7 +747,26 @@ même normalisation s'applique partout où un corps collé est comparé ou hach�
 
 ---
 
-## ⭐ Le CRLF, TROISIÈME morsure — et cette fois il est MESURÉ des deux côtés (smoke C5-L1, 26/08)
+## ✅ ~~Le CRLF, TROISIÈME morsure — MESURÉ des deux côtés (smoke C5-L1, 26/08)~~ — **CORRIGÉ LE 29/08**
+
+> ⭐ **Le fait mesuré ici — « la normalisation vaut AUSSI pour les server actions React » — a servi
+> de discriminant à tout le balayage du 29/08.** Il reste vrai et il est la clé du tri.
+>
+> ✅ **Les sites nommés ci-dessous sont corrigés**, tous par `normaliserRetours` : `lireCas()` pour
+> la `consigne_instanciee` et le `pourquoi_juste` (`actions.ts:76` et `:84`), la consigne d'examen
+> (`:329`), le `guide` **aux deux voies** (`:131` et `:339`).
+>
+> ⚠️ **UNE CORRECTION DE FAIT À CETTE NOTE** : *« `distracteurs: brut.split('\n')` laisse un `\r` en
+> queue de chaque distracteur »* — **ce n'est plus vrai**, et vérifié en exécutant : la ligne porte
+> aujourd'hui `.map((x) => x.trim())`, qui mange la queue. Même chose pour `notions_libres`
+> (`actions.ts:713`), dont le `split(/[\n,;]+/)` laisserait un `\r` si le `trim()` de la ligne 718 ne
+> le retirait pas. ⭐ **Ces deux-là tiennent par leur `trim()` : le déplacer rouvrirait le défaut.**
+>
+> ⭐ **Un site nommé était DÉJÀ propre** : `utils/examens/conception.ts` passe par `consigneANoter`,
+> qui normalise. Les trois écrivains de `consigne_instanciee` sont maintenant alignés.
+>
+> **Énoncé d'origine :**
+
 
 **Le doute que l'entrée ci-dessus laissait est levé, et dans le mauvais sens : la normalisation en
 CRLF a bien lieu sur le chemin des SERVER ACTIONS React.** Mesuré en séance, en tapant vraiment dans

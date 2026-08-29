@@ -27,6 +27,7 @@ import { genererSyntheseClasse, lundiSemaineEcoulee } from '@/utils/scriptorium-
 import { jourDansFuseau } from '@/utils/fuseau'
 import { cleDAppariement } from '@/utils/fabrique/notions'
 import { lireFuseau } from '@/utils/fuseau-serveur'
+import { normaliserRetours } from '@/utils/passation/transcription-calcul'
 
 // ── Import PDF « découpé en semaines » : seuils & garde-fous (SPEC) ──────────
 const IMPORT_MAX_PAGES = 600      // refus au-delà (décision produit)
@@ -733,7 +734,7 @@ export async function creerContenu(formData: FormData): Promise<{ id?: string; a
   const type = (formData.get('type') as string) === 'texte' ? 'texte' : 'cours'
   const titre = (formData.get('titre') as string)?.trim()
   const auteur = (formData.get('auteur') as string)?.trim() || null
-  let texte = (formData.get('texte') as string)?.trim() || null
+  let texte = normaliserRetours(String(formData.get('texte') ?? '')).trim() || null
   const chapitres = (formData.get('chapitres') as string)?.trim() || null
   const legende = (formData.get('legende') as string)?.trim() || null
   const fichier = formData.get('fichier') as File | null
@@ -787,7 +788,7 @@ export async function modifierContenuBiblio(formData: FormData): Promise<{ succe
   const id = formData.get('id') as string
   const titre = (formData.get('titre') as string)?.trim()
   const auteur = (formData.get('auteur') as string)?.trim() || null
-  const texte = (formData.get('texte') as string)?.trim() || null
+  const texte = normaliserRetours(String(formData.get('texte') ?? '')).trim() || null
   const chapitres = (formData.get('chapitres') as string)?.trim() || null
   const force = formData.get('force') === '1'
 
