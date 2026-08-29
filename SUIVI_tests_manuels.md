@@ -2010,12 +2010,25 @@ journal n'est pas cochée, cet écart existe et **aucun contrôle ne le voit**.
   aurait emporté en silence ce que le constat aurait manqué. Après : `to_regprocedure` rend
   **NULL**, **six** `security definer` restantes toutes à `public, pg_temp`, **une seule**
   exécutable par `anon`, **`profiles` intacte (18 profils, 4 policies)**. _(21/08.)_
-- [ ] ⚠️ **SEC-21 · LE SMOKE TEST DU RETRAIT — créer un élève depuis l'écran professeur.**
+- [x] ⚠️ **SEC-21 · LE SMOKE TEST DU RETRAIT — créer un élève depuis l'écran professeur.**
   C'est le **seul** chemin que la suppression pourrait toucher, et **ce n'est pas une requête**
   qui le prouve : il faut créer un compte et constater sa ligne dans `profiles`. ⭐ **C'est le
   chemin de mardi 25** *(création des comptes élèves)*. Retour arrière prêt si besoin :
   `securite_handle_new_user_retrait_rollback.sql` — ⚠️ *qui recrée la fonction **et la referme
   dans la même transaction**, sans quoi elle renaîtrait grantée à `anon`.*
+  > ✅ **JOUÉ — ET À UNE ÉCHELLE QU'UN TEST MANUEL N'AURAIT PAS ATTEINTE.** *Constat de Louis, 29/08 :
+  > « oui ça s'est bien passé ». **Corroboré par requête**, parce qu'un constat se vérifie quand il
+  > peut l'être.*
+  > **En PRODUCTION, 60 profils sur 63 ont été créés APRÈS le retrait de `handle_new_user()`** — du
+  > **2026-08-25 02:11** au **2026-08-26 01:42**, tous en `role = 'eleve'`. ⭐ **C'est exactement « le
+  > chemin de mardi 25 » que cette ligne annonçait**, et il a tenu **soixante fois**.
+  > ⭐ **Ce que ça prouve, et c'est plus que ce qui était demandé** : le chemin de création ne dépend
+  > PAS du déclencheur retiré — `admin.auth.admin.createUser` puis un `insert` explicite dans
+  > `profiles`, avec suppression du compte si le profil échoue *(`app/prof/eleves/actions.ts`)*. La
+  > révocation du 21/08 n'a rien cassé, et **`securite_handle_new_user_retrait_rollback.sql` n'a pas
+  > eu à servir**.
+  > ⚠️ *Le bac à sable, lui, ne le prouve pas : ses 18 profils sont tous antérieurs au 21/08. La
+  > preuve est en production, et c'est là qu'elle compte.*
 
 ### Ce qui reste à jouer — tout ce qui touche la base
 
@@ -3818,10 +3831,12 @@ puis retirées._
   l'opt-out et le vide expliqué ; *(c)* l'écran des compétences — le **renvoi** vers les classes.
   **Condition de reprise : `fabrique_actif` ouvert le temps du smoke, et refermé après.**
 
-- [ ] **C4L11-E · CE QUI N'EST PAS DE MOI, ET QUI RESTE DÛ.** Le **smoke test « créer un élève
+- [x] **C4L11-E · CE QUI N'EST PAS DE MOI, ET QUI RESTE DÛ.** Le **smoke test « créer un élève
   depuis l'écran professeur »**, après le retrait de `handle_new_user()` le 21/08 — *c'est un test
   de recette, pas un correctif*, et il n'a pas été joué à sa place. Rappelé ici pour qu'il ne se
   perde pas : il vit à la section SÉCURITÉ du 21/08.
+  > ✅ **SOLDÉ LE 29/08 — voir `SEC-21`, où la preuve vit.** 60 comptes créés en production après le
+  > retrait, du 25 au 26/08. **Il ne reste rien de ce rappel.**
 
 ---
 
