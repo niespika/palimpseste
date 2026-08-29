@@ -15,7 +15,7 @@ import assert from 'node:assert/strict'
 
 import {
   dimensionsRegardees, forcesDeLaCompetence, lettreVisible, manquesDeLaCompetence,
-  motDeLaProgression, motDuDecompte, phraseDuGeste, progressionALaLecture,
+  listeDesForces, motDeLaProgression, motDuDecompte, phraseDuGeste, progressionALaLecture,
   type DimensionDite, type MesurePourLEleve,
 } from './profil'
 import type { EtatObservable, InstrumentLu } from '../routeur/observables'
@@ -228,5 +228,54 @@ describe('C6-L2 · le geste concret — et ce qu’on en dit quand rien ne le ra
 
   test('⛔ SANS RETOUR PUBLIÉ, l’écran le dit — il ne se tait pas', () => {
     assert.match(phraseDuGeste(null), /pas encore reçu/)
+  })
+})
+
+// ════════════════════════════════════════════════════════════════════════════
+// LA PHRASE DES FORCES — et le défaut de polarité qu'elle a coûté
+// ════════════════════════════════════════════════════════════════════════════
+
+describe('listeDesForces', () => {
+  test('⛔⛔ UN LIBELLÉ QUI NOMME LE DÉFAUT NE DEVIENT PAS SON CONTRAIRE', () => {
+    // Le défaut vu à l'écran le 29/08 : « Tu réussis déjà tes raisons qui
+    // tournent en rond. » L'intitulé doit CADRER la dimension, jamais la
+    // qualifier — sinon le libellé se lit comme un prédicat.
+    const f = listeDesForces(['tes raisons qui tournent en rond'])
+    assert.ok(f)
+    assert.doesNotMatch(f.intitule, /réussis déjà/)
+  })
+
+  test('⛔⛔ L’INTITULÉ FINIT PAR UNE PRÉPOSITION — la puce est un SUJET', () => {
+    // La rechute du 29/08 : passée en liste, l'en-tête était devenue « Ce que tu
+    // as tenu : », un OBJET DIRECT, et la puce y retombait dans la position dont
+    // on venait de la sortir. Le deux-points ne protège rien par lui-même.
+    const f = listeDesForces(['x'])
+    assert.ok(f)
+    assert.match(f.intitule, /\bsur\s*:$/)
+    assert.doesNotMatch(f.intitule, /^Ce que\b/)
+  })
+
+  test('⭐ LE LIBELLÉ SORT VERBATIM — aucune ponctuation ajoutée', () => {
+    // Les libellés portent leur propre ponctuation : `question_propre` finit par
+    // « ? », `apport_decoratif` contient un « : ». En phrase, on leur ajoutait un
+    // point final — « … ou celle du sujet ?. ». Une puce n'ajoute rien.
+    for (const nom of [
+      'tes raisons qui tournent en rond',      // le DÉFAUT
+      'la construction de tes phrases',        // la DIMENSION
+      'recopier, ou reformuler',               // l'ALTERNATIVE
+      'ta problématique, ou celle du sujet ?', // sa propre ponctuation
+      'tes concepts : au travail, ou posés là',
+    ]) {
+      assert.deepEqual(listeDesForces([nom])?.noms, [nom])
+    }
+  })
+
+  test('l’ordre de la fiche est conservé, et rien n’est fusionné', () => {
+    assert.deepEqual(listeDesForces(['a', 'b', 'c'])?.noms, ['a', 'b', 'c'])
+  })
+
+  test('⛔ RIEN À DIRE ⇒ RIEN À AFFICHER — l’appelant ne rend pas un vide', () => {
+    assert.equal(listeDesForces([]), null)
+    assert.equal(listeDesForces(['   ']), null)
   })
 })

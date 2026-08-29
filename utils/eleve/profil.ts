@@ -265,6 +265,83 @@ export function forcesDeLaCompetence(
 }
 
 /**
+ * ⭐⭐ L'AMORCE DE LA PHRASE DES FORCES — et pourquoi ce n'est plus
+ *     « Tu réussis déjà ».
+ *
+ * ⛔ LE DÉFAUT, VU À L'ÉCRAN (décor élève du 29/08) : « **Tu réussis déjà** tes
+ *    raisons qui tournent en rond. » Un `dimension_eleve` nomme une DIMENSION,
+ *    pas un verdict — et la moitié du corpus la nomme PAR SON DÉFAUT. Placé
+ *    après un verbe de réussite, le libellé devient son propre contraire.
+ *    Relevé aussi sur `charniere_formule` *(« les transitions toutes faites »)*,
+ *    `apport_vide` *(« les formules qui ne tiennent rien »)*, `recadrage_verbal`
+ *    *(« les questions de façade »)* et `garant_vague`.
+ *
+ * ⛔⛔ ET LA DIRECTION DE L'OBSERVABLE NE SUFFIT PAS À LES TRIER — c'est la
+ *    fausse piste, et elle coûte cher si on la prend. Les libellés des
+ *    observables `au_plus` / `moins_de` sont de **trois formes mêlées** :
+ *      · le DÉFAUT      — `garant_circulaire` « tes raisons qui tournent en rond »
+ *      · la DIMENSION   — `densite_friction` « la construction de tes phrases »
+ *      · l'ALTERNATIVE  — `copie_verbatim`   « recopier, ou reformuler »
+ *    Un « tu évites déjà » réservé aux négatifs réparerait la première forme et
+ *    CASSERAIT la deuxième *(« tu évites déjà la construction de tes phrases »,
+ *    « tu évites déjà la variété de ton vocabulaire »)*. Il n'existe aucun verbe
+ *    juste pour les trois.
+ *
+ * ⭐ LA PARADE EST DE CADRER, PAS DE QUALIFIER. « Sur X » fait de `X` un SUJET
+ *    et non un prédicat, et redevient donc juste quelle que soit la forme du
+ *    libellé — « tu es au point **sur** tes raisons qui tournent en rond »,
+ *    « **sur** la construction de tes phrases », « **sur** recopier, ou
+ *    reformuler ». Aucun observable n'a besoin d'être classé, et une fiche qui
+ *    reformule sa dimension demain ne rouvre pas le sujet.
+ *
+ * ⛔⛔ ET LA PRÉPOSITION DOIT SURVIVRE AU PASSAGE EN LISTE — c'est l'erreur que
+ *    ce fichier a faite une fois, entre deux corrections du même jour. En
+ *    passant l'énumération en puces, l'intitulé était devenu *« Ce que tu as
+ *    tenu, comme d'habitude : »* — et **« ce que » est un objet direct** : la
+ *    puce retombait dans la position exacte dont on venait de la sortir
+ *    *(« tu as tenu tes raisons qui tournent en rond »)*. Le deux-points ne
+ *    protège rien par lui-même.
+ *    ⭐ **Un intitulé de liste de forces se termine donc par « sur : »**, jamais
+ *       par « Ce que… : ». La règle vaut pour les deux écrans et pour le bilan.
+ *    ⚠️ L'intitulé des MANQUES, lui, n'en a pas besoin : « Ce qui reste à
+ *       travailler : » met la puce en position de SUJET *(« ta problématique
+ *       reste à travailler »)*, et cette position-là est juste pour les trois
+ *       formes. Les deux intitulés n'ont pas la même forme parce qu'ils n'ont
+ *       pas la même syntaxe — pas par négligence.
+ *
+ * ⚠️ Le registre reste celui de `C6-L2` : on nomme ce qui va, jamais ce qui ne
+ *    va pas. « Rien à te reprocher sur… » cadrerait aussi bien et a été écarté
+ *    pour cela.
+ */
+export const INTITULE_DES_FORCES = 'Tu es au point sur :'
+
+/**
+ * Les forces d'une compétence, PRÊTES POUR UNE LISTE — et le seul endroit où
+ * leur intitulé s'écrit.
+ *
+ * ⚠️ Il vivait en DEUX exemplaires — `app/eleve/moi/page.tsx` et
+ *    `app/eleve/semaine/page.tsx` —, chacun avec sa propre jointure, et le
+ *    défaut ci-dessus était donc à corriger deux fois. Un mot que l'élève lit
+ *    n'a qu'un domicile, comme `motDeLaProgression` et `motDuDecompte`.
+ *
+ * ⭐ EN LISTE, PAS EN PHRASE, et ce n'est pas qu'une affaire de longueur : les
+ *    libellés portent LEUR PROPRE PONCTUATION. `question_propre` finit par
+ *    « ? » et `apport_decoratif` contient un « : » — enfilés à la virgule, la
+ *    ponctuation de la liste et celle des libellés ne se distinguaient plus, et
+ *    la phrase se coupait en deux au milieu. La puce rend chaque libellé
+ *    VERBATIM, sans rien lui ajouter.
+ *
+ * @returns `null` quand il n'y a rien à dire — l'appelant n'affiche alors rien.
+ */
+export function listeDesForces(
+  forces: readonly string[],
+): { intitule: string; noms: string[] } | null {
+  const noms = forces.map((f) => f.trim()).filter(Boolean)
+  if (noms.length === 0) return null
+  return { intitule: INTITULE_DES_FORCES, noms }
+}
+
+/**
  * ⛔⛔ CECI NE SE SERT QU'AU BILAN DE FIN (`02-` §6.C), JAMAIS AU RÉCAPITULATIF.
  *    « Le récapitulatif ne nomme AUCUNE faiblesse. Elles viennent au bilan, à la
  *    fin : les nommer d'entrée DONNERAIT À L'ÉLÈVE LA RÉPONSE À LA PHASE

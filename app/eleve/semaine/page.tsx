@@ -8,6 +8,7 @@ import { jourDansFuseau, formatJour } from '@/utils/fuseau'
 import { lundiOnOrBefore, addDaysUTC, toISODate } from '@/utils/calendrier-grille'
 import { chargerLaSemaineDeLEleve } from '@/utils/eleve/semaine-serveur'
 import { offreDEnFairePlus, momentDeLaSemaine } from '@/utils/eleve/semaine'
+import { listeDesForces } from '@/utils/eleve/profil'
 import { lireLeQuotaDuCycle } from '@/utils/moteur/bonus-serveur'
 import OffreDEnFairePlus from './OffreDEnFairePlus'
 import Pastille from '@/components/Pastille'
@@ -235,11 +236,26 @@ export default async function SemaineDeLEleve({
                         déjà ». ⛔ Et AUCUNE faiblesse : elles viennent au bilan,
                         à la fin. Les nommer ici donnerait à l'élève la réponse à
                         la phase « se juger ». */}
-                    {b.forces.length > 0 && (
-                      <p className="text-sm text-encre">
-                        <span className="text-ok">Tu réussis déjà</span> {joindre(b.forces)}.
-                      </p>
-                    )}
+                    {/* ⚠️ La phrase se FABRIQUE dans `profil.ts` — elle vivait ici
+                        ET dans `/eleve/moi`, avec deux jointures distinctes.
+                        Son amorce CADRE la dimension au lieu de la qualifier :
+                        voir `INTITULE_DES_FORCES` et sa démonstration. */}
+                    {(() => {
+                      const f = listeDesForces(b.forces)
+                      return f && (
+                        <div>
+                          <p className="text-sm text-ok">{f.intitule}</p>
+                          <ul className="mt-1 space-y-0.5">
+                            {f.noms.map((d) => (
+                              <li key={d} className="text-sm text-encre flex gap-2">
+                                <span className="text-muet" aria-hidden>·</span>
+                                <span>{d}</span>
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      )
+                    })()}
                     {/* ⭐ « CE QU'IL DOIT SURVEILLER » = les dimensions que la
                         semaine MESURE, en langue élève et SANS VERDICT.
                         ⚠️ EN LISTE, PAS EN PHRASE : une compétence en porte
@@ -296,10 +312,14 @@ export default async function SemaineDeLEleve({
                       {/* ⭐⭐ LES DEUX ÉCARTS QUI INSTRUISENT, EN TÊTE — « c'est
                           là que le bilan apprend quelque chose ; le reste ne fait
                           que confirmer ce qu'il savait déjà ». */}
+                      {/* ⚠️ « SUR » N’EST PAS UN ORNEMENT — c’est lui qui fait du
+                          libellé un SUJET plutôt qu’un prédicat. Sans lui :
+                          « Tu as réussi tes raisons qui tournent en rond ».
+                          Même défaut, même parade que `AMORCE_DES_FORCES`. */}
                       {b.bonneSurprise.length > 0 && (
                         <p className="text-sm text-encre">
-                          <span className="text-ok font-semibold">Tu as réussi</span>{' '}
-                          {joindre(b.bonneSurprise)} — <em>là où tu avais du mal jusqu’ici</em>.
+                          <span className="text-ok font-semibold">Tu y arrives</span>{' '}
+                          sur {joindre(b.bonneSurprise)} — <em>là où tu avais du mal jusqu’ici</em>.
                         </p>
                       )}
                       {b.angleMort.length > 0 && (
@@ -308,16 +328,57 @@ export default async function SemaineDeLEleve({
                           {joindre(b.angleMort)} — <em>c’était pourtant un de tes points forts</em>.
                         </p>
                       )}
-                      {/* Le reste, en second, et plus discret. */}
+                      {/* Le reste, en second, et plus discret.
+                          ⚠️ EN LISTE, comme sa voisine et pour la même raison —
+                          ⛔⛔ ET L'INTITULÉ GARDE SON « SUR » — il avait d'abord
+                          été écrit « Ce que tu as tenu, comme d'habitude : », ce
+                          qui remettait la puce en OBJET DIRECT et ramenait le
+                          défaut qu'on venait de corriger deux blocs plus haut
+                          (« tu as tenu tes raisons qui tournent en rond »).
+                          ⚠️ Le deux-points ne protège rien par lui-même : c'est
+                          la PRÉPOSITION qui fait de la puce un sujet. Voir
+                          `INTITULE_DES_FORCES`. */}
                       {!instruit && b.confirme.length > 0 && (
-                        <p className="text-sm text-encre-douce">
-                          Tu as tenu {joindre(b.confirme)}, comme d’habitude.
-                        </p>
+                        <div>
+                          <p className="text-sm text-encre-douce">
+                            Comme d’habitude, tu as tenu sur :
+                          </p>
+                          <ul className="mt-1 space-y-0.5">
+                            {b.confirme.map((d) => (
+                              <li key={d} className="text-sm text-encre-douce flex gap-2">
+                                <span className="text-muet" aria-hidden>·</span>
+                                <span>{d}</span>
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
                       )}
+                      {/* ⚠️ EN LISTE, PAS EN PHRASE — la MÊME leçon que « on
+                          regarde » deux blocs plus haut, et pour la même raison :
+                          jusqu'à SEPT libellés d'affilée, séparés par des
+                          virgules, se lisaient comme un mur. ⛔ Ici c'était pire,
+                          parce que certains libellés portent LEUR PROPRE
+                          ponctuation : « ta problématique, ta problématique, ou
+                          celle du sujet ?, une problématique faite pour CE
+                          sujet, … » — la virgule de la liste et celle du libellé
+                          ne se distinguaient plus, et le « ? » coupait la phrase
+                          en deux au milieu. ⛔ On n'en retire AUCUN : ce qui
+                          reste à travailler, on le dit en entier.
+                          ⚠️ Le passage en liste retire aussi l'accord
+                          « reste / restent », qui était la seule raison de
+                          compter les éléments à l'affichage. */}
                       {!instruit && b.connu.length > 0 && (
-                        <p className="text-sm text-encre-douce">
-                          {joindre(b.connu)} reste{b.connu.length > 1 ? 'nt' : ''} à travailler.
-                        </p>
+                        <div>
+                          <p className="text-sm text-encre-douce">Ce qui reste à travailler :</p>
+                          <ul className="mt-1 space-y-0.5">
+                            {b.connu.map((d) => (
+                              <li key={d} className="text-sm text-encre-douce flex gap-2">
+                                <span className="text-muet" aria-hidden>·</span>
+                                <span>{d}</span>
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
                       )}
                     </div>
                   )

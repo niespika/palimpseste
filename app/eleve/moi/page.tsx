@@ -7,7 +7,7 @@ import { contexteClasseEleve, VALEUR_TOUTES } from '../contexte-classe'
 import SelecteurClasseEleve from '../SelecteurClasseEleve'
 import { chargerLeProfilDeLEleve } from '@/utils/eleve/profil-serveur'
 import { lireLeChoixDesLettres } from '@/utils/eleve/fiche-serveur'
-import { motDeLaProgression, motDuDecompte, phraseDuGeste } from '@/utils/eleve/profil'
+import { listeDesForces, motDeLaProgression, motDuDecompte, phraseDuGeste } from '@/utils/eleve/profil'
 import BasculeDesLettres from './BasculeDesLettres'
 
 // ============================================================================
@@ -147,15 +147,27 @@ export default async function MoiEleve() {
                     : `${motDuDecompte(c.n)} · ${motDeLaProgression(c.progression)}`}
                 </p>
                 {/* ⭐ « SES FORCES » — des NOMS de dimensions, jamais un taux, et
-                    jamais le `code` d’un observable (RR4). */}
-                {c.forces.length > 0 && (
-                  <p className="text-sm text-encre">
-                    <span className="text-ok">Tu réussis déjà</span>{' '}
-                    {c.forces.length <= 1
-                      ? c.forces[0]
-                      : `${c.forces.slice(0, -1).join(', ')} et ${c.forces[c.forces.length - 1]}`}.
-                  </p>
-                )}
+                    jamais le `code` d’un observable (RR4).
+                    ⚠️ La phrase se FABRIQUE dans `profil.ts` et ne s’écrit plus
+                    ici : elle vivait en double, et son amorce cadre désormais la
+                    dimension au lieu de la qualifier, et l’intitulé finit par « sur : »
+                    pour que la puce reste un SUJET — voir `INTITULE_DES_FORCES`. */}
+                {(() => {
+                  const f = listeDesForces(c.forces)
+                  return f && (
+                    <div>
+                      <p className="text-sm text-ok">{f.intitule}</p>
+                      <ul className="mt-1 space-y-0.5">
+                        {f.noms.map((d) => (
+                          <li key={d} className="text-sm text-encre flex gap-2">
+                            <span className="text-muet" aria-hidden>·</span>
+                            <span>{d}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )
+                })()}
               </div>
             ))}
           </div>
