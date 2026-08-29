@@ -6211,7 +6211,7 @@ Tout ce qui suit est donc la face **professeur**, et **les smokes élève resten
   > `ecrireLEtatApresMesure(admin, eleve, ['expression','synthese'], fuseau)` sur les treize.
   > ⚠️ **C'est une écriture en production**, et elle n'a pas été faite. → **`C4L12-25`.**
 
-- [ ] **C4L12-25 · ⚠️ LA RÉPARATION DES 26 ÉTATS FAUX EN PRODUCTION — non jouée, décision de
+- [x] **C4L12-25 · ✅ LA RÉPARATION DES 26 ÉTATS FAUX EN PRODUCTION — JOUÉE LE 29/08, SUR DÉCISION DE LOUIS.**
   Louis.** Le correctif de `C4L12-24` ferme la fuite ; **les 26 états écrits faux avant lui restent
   faux**. ⭐ **Rien n'est à inventer** : les 13 mesures de `synthese` et celles d'`expression` sont
   en base, et `ecrireLEtatApresMesure` — désormais corrigée — recalcule l'état depuis elles.
@@ -6273,6 +6273,33 @@ Tout ce qui suit est donc la face **professeur**, et **les smokes élève resten
   > **avant** que la base soit sollicitée. ⭐ **Elle a raison de lever** : un `upsert` en lot
   > **unifie les clés**, donc la `lettre_initiale` de la compétence déjà lettrée serait partie à
   > **NULL** — et son plafond avec elle. *Ce qu'elle empêche est pire que ce qu'elle coûte.*
+  > ─────────────────────────────────────────────────────────────────────────────
+  > ✅ **JOUÉE EN PRODUCTION LE 29/08 — 13 ÉLÈVES, 26 LETTRES, 0 ERREUR.**
+  > `--base=prod --repare --oui-la-prod`. **Treize appels, un par élève, chacun portant SES DEUX
+  > compétences dans la même charge** — c'est-à-dire, treize fois, exactement la charge hétérogène
+  > qui échouait. **`traitées=2 lettres=2` sur les treize**, `escalades=0 montées=0`, et
+  > `competences_niveaux` **155 → 168**.
+  > **Le contrôle, refait à part et par requête** *(jamais sur la foi du bilan)* : `synthese`
+  > **13 mesures → 13 lignes** *(elle en avait ZÉRO)* · **0 paire mesurée sans ligne** · **0 paire
+  > périmée** · les **184 mesures inchangées** — rien d'autre n'a été touché.
+  > ⭐ **ET RIEN N'A ÉTÉ INVENTÉ, ÇA SE VÉRIFIE SUR LES LETTRES** : les 13 nouvelles lignes de
+  > `synthese` portent **D×9, E×2, C×2** — exactement la distribution des `lettre_equivalente` de
+  > leurs 13 mesures. Toutes ont leur `lettre_initiale` *(« sa première lettre vient de sa première
+  > ancre »)* et restent en `profil_provisoire`.
+  > ⚠️⚠️ **ET LE DÉFAUT COÛTAIT PLUS QUE TREIZE LIGNES MANQUANTES : QUATRE LETTRES D'EXPRESSION
+  > ÉTAIENT FAUSSES, ET TROP HAUTES D'UN PALIER.** La réparation les a bougées — `5c8bdc20` C→D,
+  > `bf47d5c8` C→D, `ae5b657a` C→D, `0d02c8b3` D→E. *Les neuf autres n'ont bougé que d'horodatage.*
+  > ⛔ **Une charge perdue n'emportait donc pas seulement la compétence NEUVE : elle figeait aussi la
+  > DÉJÀ LETTRÉE, à sa valeur d'avant la copie.**
+  > ⭐ **Aucun élève n'a vu la fausse** : `profil_provisoire` est resté `true` partout, et « sous
+  > `profil_provisoire`, aucune lettre ne s'affiche ». **Le défaut a été réparé avant d'être vu.**
+  > ⭐ **IDEMPOTENCE VÉRIFIÉE EN PROD** : un second passage rend *« AUCUNE paire fausse — rien à
+  > réparer »*.
+  > ⛔ **Le registre de l'état AVANT est sur le disque**, horodaté et gitignoré —
+  > `scripts/recette/.reparation-c4l12-25-prod-2026-08-29T04-38-06-731Z.json`. **Il porte des
+  > identifiants d'élèves réels : il ne se commite pas, et il ne s'efface pas à la légère.**
+  > ⭐ **Et la clôture du 2026-09-14 les prendra** : les treize `synthese` existent désormais, avec
+  > leur lettre et leur `profil_provisoire` — elles ne seront plus sautées en `sans_lettre`.
 
 
 ---
