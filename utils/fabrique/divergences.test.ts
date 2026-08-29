@@ -165,8 +165,12 @@ test('BLOCAGE HÉRITÉ — une décomposition bloquée entraîne le blocage n° 
       materiau_source: { provenance: 'texte_auteur', support: 'extrait', texte: 'txt',
         localisation: [0, 10], englobant: [0, 30] },
       materiau_cible: null, guide: null, bonus: false,
+      // ⚠️ L'ÉTALON EST OBLIGATOIRE AU CRAN 8 DEPUIS LE `02-` 6.0 (§2.2, §2.3.4).
+      //    Sans lui, le contrôle rend un REFUS [R12] et ce test — qui éprouve
+      //    l'héritage d'un BLOCAGE, pas l'appui — échouerait pour une raison
+      //    qui n'est pas la sienne.
       cas: [{ consigne: 'a', materiau: null, defaut: null, distracteurs: null,
-        reponse_attendue: null }],
+        reponse_attendue: 'une production modèle' }],
     }],
   }, doctrine)
   const b = [...new Set(v.blocages.map((x) => x.split(']')[0].replace('[', '')))]
