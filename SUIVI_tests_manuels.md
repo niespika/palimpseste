@@ -1651,7 +1651,7 @@ sont plus les mêmes, et elles ne se lèveront pas ensemble.
   ainsi : « l'absence de réussite n'est pas un défaut […] elle ne s'invente pas ». **Sur une copie
   plancher, le retour est donc structurellement impossible**, et l'élève ne reçoit rien. *La mesure,
   elle, s'écrit quand même : la chaîne dégrade proprement.* **Porté au registre des ouverts.**
-- [ ] **C4L5-1bis · Le RETOUR engendré, relu sur pièce (RR1-RR4, `07-` §4).** ⭐ **SA CONDITION EST
+- [x] **C4L5-1bis · Le RETOUR engendré, relu sur pièce (RR1-RR4, `07-` §4).** ⭐ **SA CONDITION EST
   LEVÉE le 23/08** — « une copie qui porte au moins une réussite au relevé » : le tour de C4-L10 ·
   Argumentation en a servi une, **le retour est sorti**, et son texte intégral est au relevé de cette
   séance. **Ce qui reste est la relecture RR1-RR4 par le professeur** ; automatiquement, seule RR4
@@ -1733,6 +1733,13 @@ sont plus les mêmes, et elles ne se lèveront pas ensemble.
   à personne**. Même nature et même domicile que le `delta` : une case absente du gabarit du `03-`
   §1. **À porter dans la MÊME séance, avant le SEGMENT 2.**
   ⛔ **CE QUI RESTE** : la séance de conception ci-dessus. La relecture RR1-RR4, elle, est **faite**.
+  > ✅ **PASSE DE RÉCONCILIATION DU 28/08 — LE GESTE EST JOUÉ ; CE QUI RESTE EST UNE
+  > DÉCISION, ET UNE DÉCISION N'EST PAS UN RESTE DE RECETTE.** La relecture RR1-RR4 **a été faite
+  > le 23/08 au soir**, à l'outil dédié `scripts/recette/relecture-rr-c4l5.mjs`, **sur les trois
+  > retours en base** : **RR2, RR3 et RR4 vertes**. ⚠️ **Il reste UN point, et il est à Louis** —
+  > l'ouverture *« Tu as eu une intuition juste… »*, à la frontière de RR1, qui autorise la
+  > tentative mais interdit d'inférer une cause dans la tête de l'élève. **Ce point vit au registre
+  > des ouverts**, pas ici ; la ligne de recette, elle, a rendu ce qu'on lui demandait.
 - [x] **C4L5-2 · La latence à PLUSIEURS compétences en parallèle — JOUÉE le 23/08, par C4-L10 ·
   Argumentation.** Sa condition de reprise — **LA DEUXIÈME compétence branchée** — est levée :
   l'Argumentation l'est. **Mesure à DEUX compétences, sur trois tours réels : 47 s, 49 s et 52 s**
@@ -3562,12 +3569,20 @@ CODE ; poser `evaluee` est un geste **du professeur**, à l'écran de C4-L8. **R
 - [ ] **C4L10E-13 · LE SMOKE PROF ET ÉLÈVE À L'ÉCRAN.** Rien n'a été vu dans un navigateur : tout ce
   qui précède est prouvé **par requête et sur pièce**, jamais à l'œil. À voir : la tuile de la
   fabrique qui dit l'Expression ouverte, et l'**encart langue** du déroulé élève (C4L3-21).
-- [ ] **C4L10E-14 · LE RETOUR ENGENDRÉ SUR UNE COPIE QUI PORTE UNE RÉUSSITE.** ⭐ **FAIT le 23/08
+- [x] **C4L10E-14 · LE RETOUR ENGENDRÉ SUR UNE COPIE QUI PORTE UNE RÉUSSITE.** ⭐ **FAIT le 23/08
   par C4-L10 · Argumentation** — le retour est sorti sur une copie qui porte une réussite citable,
   et son texte est au relevé de cette séance ; **il reste la relecture RR1-RR4** *(= C4L5-1bis)*.
   ⚠️ **Condition de reprise nommée** : la règle 2 du gabarit exige de « commencer par une réussite réelle, citée », la
   règle 1 interdit d'en inventer une, et une copie plancher n'en porte aucune — le retour est alors
   **structurellement impossible**, et l'élève ne reçoit rien. *Porté au registre des ouverts.*
+  > ✅ **PASSE DE RÉCONCILIATION DU 28/08 — LE RETOUR EST SORTI, ET LA RELECTURE AUSSI.**
+  > Le geste demandé — un retour engendré sur une copie qui porte une réussite citable — **est fait
+  > depuis le 23/08**, et la relecture RR1-RR4 qui lui restait accrochée l'est aussi *(voir
+  > `C4L5-1bis`)*. ⚠️ **Ce que la « condition de reprise nommée » décrit n'est pas cette
+  > vérification** : c'est le cas de la copie SANS aucune réussite, où le retour est
+  > **structurellement impossible** — la règle 2 en exige une citée, la règle 1 interdit de
+  > l'inventer. **C'est l'item 46 du registre des ouverts, une décision de Louis**, et il y reste
+  > entier.
 - [x] **C4L10E-15 · ⭐ LES AUTRES COMPÉTENCES — DÉPEND D'UNE AUTRE COMPÉTENCE QUE CELLE
   OUVERTE.** ✅ **L'ARGUMENTATION PUIS LA STRUCTURE SONT BRANCHÉES LE 23/08** — elles ne sont plus
   cinq, ni quatre, mais **TROIS**. `connaissance`, `synthese`, `questionnement` sont **dérivées et en
@@ -3771,7 +3786,7 @@ puis retirées._
   **aucun job réclamé** — donc aucune tentative brûlée. ⚠️ *Cela ne coche pas `C4L11-C` : la route a
   été appelée par la recette, pas par le cron de l'hébergeur.* *(`traversee-c4l7.mjs --route`.)*
 
-- [ ] ⚠️ **C4L11-C · LE CRON, VU TOURNER CHEZ L'HÉBERGEUR.** `vercel.json` déclare la tâche à la
+- [x] ⚠️ **C4L11-C · LE CRON, VU TOURNER CHEZ L'HÉBERGEUR.** `vercel.json` déclare la tâche à la
   minute ; **une déclaration n'est pas une exécution**. Rien ne l'a vue partir : les crons ne
   tournent qu'en déploiement, et rien n'est poussé. **Condition de reprise : le premier
   déploiement** — vérifier alors, aux journaux de l'hébergeur, qu'une invocation par minute part et
@@ -3790,6 +3805,11 @@ puis retirées._
   > 0 Error, 0 Fatal**, et aucun 409 — le `console.error` n'a donc jamais tiré. ⚠️ **Honnêteté de la
   > mesure : la fenêtre était « Last 30 minutes »**, soit ~30 invocations. C'est un démenti franc
   > du scénario « 1440 fois par jour », pas une observation au long cours.
+  > ✅ **PASSE DE RÉCONCILIATION DU 28/08 — LA CASE N'AVAIT JAMAIS ÉTÉ COCHÉE.** Le bloc
+  > ci-dessus porte sa propre preuve depuis le 24/08, et le commit qui l'a écrite le dit dans son
+  > titre — `1f96018`, *« Le cron est armé, et vu tourner — `C4L13-13` et `C4L11-C` cochés sur
+  > pièces »*. **`C4L13-13` a bien été cochée ; celle-ci ne l'a pas été.** *Rien de neuf n'a été
+  > constaté : la case rattrape sa preuve.*
 
 - [ ] **C4L11-D · SMOKE TEST PROFESSEUR — les trois écrans touchés.** Aucun n'a été ouvert dans un
   navigateur : *(a)* l'écran de conception, sur une instance **d'examen diagnostique** — l'en-tête
@@ -3918,15 +3938,30 @@ et **cinq vrais appels de modèle**, décor semé puis **retiré** (aucun reste,
   — les chaînes tournent bien en parallèle, et le retour est l'appel commun. ⚠️ **À six compétences,
   l'extrapolation reste à faire** : c'est le même appel de retour, mais six chaînes froides.
 - [x] **C4L10E-16 · La latence à deux compétences — LEVÉE le 23/08** *(= C4L5-2 ci-dessus)*.
-- [ ] **C4L5-1bis · Le RETOUR engendré, relu sur pièce (RR1-RR4) — SA CONDITION EST LEVÉE, sa
+- [x] **C4L5-1bis · Le RETOUR engendré, relu sur pièce (RR1-RR4) — SA CONDITION EST LEVÉE, sa
   lecture reste.** *« Reste à jouer sur une copie qui porte au moins une réussite au relevé — la
   seule condition qui manque »* : **c'est fait le 23/08**, le retour est sorti et son texte intégral
   est au relevé. Ce qui reste est la **relecture RR1-RR4 par le professeur** — automatiquement, seule
   RR4 est contrôlée. ⚠️ **Et la première lecture a déjà trouvé quelque chose** : le retour **invente
   un passé** (« la fois précédente, ces liens étaient presque absents ») alors qu'**aucun état
   antérieur ne lui a été servi**. *Porté au registre des ouverts, item 49.*
-- [ ] **C4L10E-14 · Le retour engendré sur une copie qui porte une réussite — MÊME LEVÉE, même
+  > ✅ **PASSE DE RÉCONCILIATION DU 28/08 — LE GESTE EST JOUÉ ; CE QUI RESTE EST UNE
+  > DÉCISION, ET UNE DÉCISION N'EST PAS UN RESTE DE RECETTE.** La relecture RR1-RR4 **a été faite
+  > le 23/08 au soir**, à l'outil dédié `scripts/recette/relecture-rr-c4l5.mjs`, **sur les trois
+  > retours en base** : **RR2, RR3 et RR4 vertes**. ⚠️ **Il reste UN point, et il est à Louis** —
+  > l'ouverture *« Tu as eu une intuition juste… »*, à la frontière de RR1, qui autorise la
+  > tentative mais interdit d'inférer une cause dans la tête de l'élève. **Ce point vit au registre
+  > des ouverts**, pas ici ; la ligne de recette, elle, a rendu ce qu'on lui demandait.
+- [x] **C4L10E-14 · Le retour engendré sur une copie qui porte une réussite — MÊME LEVÉE, même
   reste** *(voir C4L5-1bis)*.
+  > ✅ **PASSE DE RÉCONCILIATION DU 28/08 — LE RETOUR EST SORTI, ET LA RELECTURE AUSSI.**
+  > Le geste demandé — un retour engendré sur une copie qui porte une réussite citable — **est fait
+  > depuis le 23/08**, et la relecture RR1-RR4 qui lui restait accrochée l'est aussi *(voir
+  > `C4L5-1bis`)*. ⚠️ **Ce que la « condition de reprise nommée » décrit n'est pas cette
+  > vérification** : c'est le cas de la copie SANS aucune réussite, où le retour est
+  > **structurellement impossible** — la règle 2 en exige une citée, la règle 1 interdit de
+  > l'inventer. **C'est l'item 46 du registre des ouverts, une décision de Louis**, et il y reste
+  > entier.
 - [x] **C4L10E-15 · Les compétences qui restent — ELLES NE SONT PLUS CINQ MAIS QUATRE.** `structure`,
   `connaissance`, `synthese`, `questionnement` sont dérivées et en attente de branchement.
   **Condition de reprise inchangée : C4-L10 rejoué pour chacune.** *Les trois obstacles nommés au
@@ -4180,14 +4215,29 @@ de modèle**, décor semé puis **retiré** (aucun reste, vérifié par requête
   empirique de sa seule vraie question ouverte** — *« la pondération cohérence/cohésion … arbitre
   empirique possible : les deltas v1→vf »*. **Elle s'appuie sur une grandeur que rien ne calcule.**
   *Registre des ouverts, item 47, amendé.*
-- [ ] **C4L5-1bis · Le RETOUR relu sur pièce (RR1-RR4) — un deuxième retour est disponible.** La
+- [x] **C4L5-1bis · Le RETOUR relu sur pièce (RR1-RR4) — un deuxième retour est disponible.** La
   condition était levée depuis le 23/08 ; **le tour de la Structure en a engendré un second**, sur
   une copie différente et à trois compétences. Son texte intégral est au relevé. **Ce qui reste est
   toujours la relecture RR1-RR4 par le professeur** — automatiquement, seule RR4 est contrôlée.
   ⭐ **Bonne nouvelle sur l'item 49** : ce retour-ci **n'invente aucun passé** — il ne porte aucune
   comparaison temporelle. *Un cas ne fait pas une garde ; la question reste ouverte.*
-- [ ] **C4L10E-14 · Le retour engendré sur une copie qui porte une réussite — MÊME LEVÉE, même
+  > ✅ **PASSE DE RÉCONCILIATION DU 28/08 — LE GESTE EST JOUÉ ; CE QUI RESTE EST UNE
+  > DÉCISION, ET UNE DÉCISION N'EST PAS UN RESTE DE RECETTE.** La relecture RR1-RR4 **a été faite
+  > le 23/08 au soir**, à l'outil dédié `scripts/recette/relecture-rr-c4l5.mjs`, **sur les trois
+  > retours en base** : **RR2, RR3 et RR4 vertes**. ⚠️ **Il reste UN point, et il est à Louis** —
+  > l'ouverture *« Tu as eu une intuition juste… »*, à la frontière de RR1, qui autorise la
+  > tentative mais interdit d'inférer une cause dans la tête de l'élève. **Ce point vit au registre
+  > des ouverts**, pas ici ; la ligne de recette, elle, a rendu ce qu'on lui demandait.
+- [x] **C4L10E-14 · Le retour engendré sur une copie qui porte une réussite — MÊME LEVÉE, même
   reste** *(voir C4L5-1bis)*.
+  > ✅ **PASSE DE RÉCONCILIATION DU 28/08 — LE RETOUR EST SORTI, ET LA RELECTURE AUSSI.**
+  > Le geste demandé — un retour engendré sur une copie qui porte une réussite citable — **est fait
+  > depuis le 23/08**, et la relecture RR1-RR4 qui lui restait accrochée l'est aussi *(voir
+  > `C4L5-1bis`)*. ⚠️ **Ce que la « condition de reprise nommée » décrit n'est pas cette
+  > vérification** : c'est le cas de la copie SANS aucune réussite, où le retour est
+  > **structurellement impossible** — la règle 2 en exige une citée, la règle 1 interdit de
+  > l'inventer. **C'est l'item 46 du registre des ouverts, une décision de Louis**, et il y reste
+  > entier.
 
 ### Ce qui reste à jouer en recette
 
@@ -4738,7 +4788,7 @@ de Louis.** Tout le reste du lot est fait, prouvé et vert.
   chiffre. ⚠️ Un premier tour du même décor avait mesuré **68 s** avec un appel de plus : la variance
   du fournisseur reste du même ordre que l'effet mesuré. **Condition de reprise : C4-L7**, qui mesure
   le flux de bout en bout.
-- [ ] **C4L10Q-22 · LA RECETTE A ROUGI POUR UNE RAISON QUI N'EN ÉTAIT PAS UNE — et c'est le piège
+- [x] **C4L10Q-22 · LA RECETTE A ROUGI POUR UNE RAISON QUI N'EN ÉTAIT PAS UNE — et c'est le piège
   transverse de `supabase-js`.** Au premier tour, six contrôles rouges disaient « 0 mesure écrite »
   quand la chaîne en avait écrit trois : le `select` demandait `competences_mesures.alertes`, **une
   colonne qui n'existe pas**, et `supabase-js` **ne lève pas** — il rend `{ data: null, error }`, et
@@ -4746,6 +4796,11 @@ de Louis.** Tout le reste du lot est fait, prouvé et vert.
   désormais un `lu()` qui lève sur `error`**, et c'est la parade générale. ⚠️ **Même motif que
   `C4L10C-24`** — « la recette lisait le mauvais champ et rougissait pour rien » : c'est la
   **deuxième fois en deux lots**. **Condition de reprise : aucune — c'est une leçon, pas un reste.**
+  > ✅ **PASSE DE RÉCONCILIATION DU 28/08 — « REPRISE : AUCUNE » — c'est une leçon, et
+  > elle est apprise.** La ligne le dit elle-même. ⭐ **Et elle a servi deux fois depuis** : le
+  > `lu()` qui lève sur `error` est le patron repris par `reception-c5l3.mjs` *(C5-L3, §10-2 : le
+  > même piège a mordu sur `competences_mesures.version`, une colonne qui n'existe pas)* et par le
+  > script de la couture de C6-L3. **Une leçon qui a essaimé n'est plus un reste de recette.**
 
 ---
 
@@ -4988,7 +5043,7 @@ lot est fait, prouvé et vert.
   `document_p2`, et corriger ici ferait diverger le portage du module que le banc validera.
   **Condition de reprise : le pré-vol du Run 1 de la Synthèse**, qui est le moment où le module se
   reprend.
-- [ ] **C4L10SY-16 · ⚠️ `taux_compression` NE SE MESURERA PAS TANT QUE LA CHAÎNE NE PORTERA PAS LE
+- [x] **C4L10SY-16 · ⚠️ `taux_compression` NE SE MESURERA PAS TANT QUE LA CHAÎNE NE PORTERA PAS LE
   MATÉRIAU.** Le pré-relevé du §3 compte *« le nombre de mots de la production **et du matériau** »* ;
   `contexteExercice` ne porte aucun matériau, `taux_compression` sort donc en **`n/a`** avec son alerte
   nommée. ⭐ **Il n'est pas requis** — le §5 l'exclut explicitement des observables requis de
@@ -5000,6 +5055,14 @@ lot est fait, prouvé et vert.
   mesuré **0,58** sur un dépôt réel. ⚠️ **Il reste `n/a` sur le référent COURS**, et c'est normal :
   le §5 l'y déclare sans objet, et un cours n'a pas de texte source. **Condition de reprise :
   aucune.**
+  > ✅ **PASSE DE RÉCONCILIATION DU 28/08 — LE MATÉRIAU DESCEND, ET `taux_compression`
+  > A ÉTÉ MESURÉ.** La condition était *« tant que la chaîne ne portera pas le matériau »* : elle
+  > est tombée le **23/08**, quand `contexte.ts` a joint `exercices_references` et que
+  > `source_contenu_id → scriptorium_contenus.texte_extrait` a fait descendre le matériau
+  > *(`FOURNISSEURS_NATIFS` passe de quatre noms à six — c'est `C4L10SY-14`, cochée)*. ⭐ **Et il
+  > est mesuré, pas déduit** : sur le référent TEXTE, la recette a rendu **`taux_compression =
+  > 0,58`** — l'observable ne sort plus en `n/a`, et le pré-relevé cherche bien ses reprises
+  > littérales.
 - [ ] **C4L10SY-17 · ⚠️ LE RETOUR N'A PAS ÉTÉ INSPECTÉ SUR CE TOUR, et `elagage` est le seul des treize
   codes qui soit un mot français ordinaire.** L'item 37 de la boîte aux lettres demandait ce geste.
   **Fait par l'analyse, pas par l'observation** : `fuitesRR4` *(`utils/chaine/retour.ts`)* cherche
@@ -5007,7 +5070,7 @@ lot est fait, prouvé et vert.
   déclenche rien, un retour qui écrirait « elagage » **ferait refuser tout le retour**. *Le risque est
   réel mais mince.* ⭐ La lecture de `bilan.retourEcrit` est **ajoutée au script de recette** pour le
   prochain tour. **Condition de reprise : le prochain tour de `synthese-c4l10.mjs`, ou C4-L7.**
-- [ ] **C4L10SY-18 · LA LATENCE À DEUX CHAÎNES : 46 s.** À comparer aux **39 s à une**, **47-52 s à
+- [x] **C4L10SY-18 · LA LATENCE À DEUX CHAÎNES : 46 s.** À comparer aux **39 s à une**, **47-52 s à
   deux**, **55 s à trois** *(mesuré deux fois indépendamment)* et **59 s à quatre** *(non comparable)*
   des lots précédents. ⭐ **La mesure tombe dans la fourchette de la Structure et de l'Argumentation au
   même nombre de chaînes**, et la courbe reste plate. ⚠️ La variance du fournisseur reste du même ordre
@@ -5027,6 +5090,11 @@ lot est fait, prouvé et vert.
   tours identiques. **⛔ L'extrapolation à SIX chaînes froides reste à faire** — aucun exercice du
   décor n'en mesure six. **Condition de reprise restante : un dépôt dont l'instance déclare les six
   compétences.** *(`traversee-c4l7.mjs`.)*
+  > ✅ **PASSE DE RÉCONCILIATION DU 28/08 — LA CONDITION EST HONORÉE, ET LE BLOC LE DIT
+  > DÉJÀ.** L'amendement de C4-L7 du 24/08, ci-dessus, porte les cinq tours demandés et le verdict
+  > *« la courbe reste plate »*. **La case n'avait pas suivi.** ⚠️ *Ce qui reste — l'extrapolation
+  > à SIX chaînes — n'a jamais été de cette ligne : il vit à `C4L10C-25`, avec sa propre
+  > condition.*
 - [ ] **C4L10SY-19 · ⚠️ LE MODULE LÈVE SUR DIX-NEUF FORMES QUE P1 OU P2 PEUVENT PRENDRE, et le contrat
   §3 l'interdit.** Mesuré sur les 6 069 cas : un `crible` non-objet ou en texte, une note de
   « limite » qui n'est pas une chaîne, un `correspond_a` non parcourable, un `alignement` en texte,
@@ -5169,9 +5237,14 @@ dans `handoff_en_tete/support.js`, préexistantes et étrangères)*._
   route.** ⭐ **Condition de reprise CORRIGÉE : le premier lot qui touche
   `utils/fabrique/conception.ts`** — c'est la seconde branche de la condition d'origine, et c'est la
   seule des deux qui tienne. *(Voir `C4L7-10`.)*
-- [ ] **C4L14-16 · LA MIGRATION N'EST PAS EN PROD** — la prod n'existe pas encore *(C11b)*. ⚠️ **Et le
+- [x] **C4L14-16 · LA MIGRATION N'EST PAS EN PROD** — la prod n'existe pas encore *(C11b)*. ⚠️ **Et le
   RUNBOOK de C11b n'emporte aucune table de C4** : la colonne naîtra du `--schema-only`, mais **aucune
   ligne** ne suivra. **Condition de reprise : C11b.**
+  > ✅ **PASSE DE RÉCONCILIATION DU 28/08 — C11b A EU LIEU, ET LA COLONNE EST EN PROD.**
+  > La condition était `C11b` ; la production existe depuis le 25/08. **Vérifié par requête, en
+  > lecture seule** : `exercices_cas.pourquoi_juste` répond **200** en production. ⛔ *La réserve
+  > du RUNBOOK — « il n'emporte aucune table de C4 » — ne s'est pas réalisée : la prod est née d'un
+  > dump `--schema-only` de la sandbox, qui portait déjà cette colonne.*
 
 ---
 
@@ -5384,7 +5457,7 @@ manifeste, mission, « fait quand » — sont **identiques au mot près** à ceu
   `C4L5-1bis` depuis leur section d'origine. **Ce qui manquait n'était pas l'unicité, c'était que
   le préfixe dise de quelle section l'entrée VIENT.** *Un identifiant qui ne nomme pas son domicile
   se fait recopier au lieu d'être suivi.*
-- [ ] **C4L7-10 · ⚠️ `derive-doctrine.py --verifie` DIT `SOURCES : DIVERGE` ET `FIXTURE : DIVERGE`,
+- [x] **C4L7-10 · ⚠️ `derive-doctrine.py --verifie` DIT `SOURCES : DIVERGE` ET `FIXTURE : DIVERGE`,
   ET LES DOUZE TABLES SONT POURTANT `IDENTIQUE`.** Réduit à sa cause : la fixture régénérée a été
   comparée **clé par clé** à celle du dépôt — **aucune ligne dérivée ne diffère**, seul le bloc
   `_derivation` bouge, sur **2 empreintes de 15** : `competences/argumentation.md` et
@@ -5394,6 +5467,14 @@ manifeste, mission, « fait quand » — sont **identiques au mot près** à ceu
   `--fixture` ne réécriraient qu'un bloc d'empreintes, et **ce lot ne touche pas la base**.
   **Condition de reprise : la séance de conception qui commitera ces deux fiches**, puis un
   `--fixture` par le lot qui en aura le droit.
+  > ✅ **PASSE DE RÉCONCILIATION DU 28/08 — CONDITION REMPLIE, ET REVÉRIFIÉE.** La condition
+  > nommée était *« la séance de conception qui commitera ces deux fiches »* : elle a eu lieu — le
+  > dépôt `palimpseste-conception` ne porte plus que `INVENTAIRE_Non_Tranches.md` et
+  > `verifie-vocabulaire.py` en travail non commité. ⭐ **Rejoué le 28/08 :
+  > `derive-doctrine.py --verifie` rend `FIXTURE : IDENTIQUE`**, et le commit `7869afd` le dit pour
+  > l'autre moitié : *« `derive-doctrine.py --verifie` rend IDENTIQUE sur les TREIZE verdicts,
+  > **SOURCES COMPRISES** »*, sandbox et prod. `derive-instruments.py --verifie` rend
+  > `INSTRUMENTS : IDENTIQUE (10 fichiers)`.
 
 ### Ce qui reste à jouer en recette — et qui ne m'appartient pas
 
@@ -5891,10 +5972,17 @@ Tout ce qui suit est donc la face **professeur**, et **les smokes élève resten
   > **retirée par décision**. **Dû : une passe de conception** qui l'en retire ou l'y marque
   > abandonnée. *(Le `07-` §1.5, OUVERT À L'IMPLÉMENTATION, porte déjà la fermeture — v2.46.)*
 
-- [ ] **C4L13-18 · LA MIGRATION EN PROD.** ⚠️ **Sans objet pour ce lot — il n'écrit AUCUN SQL.**
+- [x] **C4L13-18 · LA MIGRATION EN PROD.** ⚠️ **Sans objet pour ce lot — il n'écrit AUCUN SQL.**
   Mais `c4_l1_schema.sql` *(la table, ses gardes, sa RLS, sa vue)* et `c4_l2_routeur.sql` *(les
   seuils)* sont **joués en bac à sable seulement**. ⛔ **La collecte ne peut pas démarrer en prod
   tant qu'ils n'y sont pas.** **Condition de reprise : C11b (RUNBOOK).**
+  > ✅ **PASSE DE RÉCONCILIATION DU 28/08 — SANS OBJET, ET LA CONDITION EST TOMBÉE.**
+  > La ligne ne visait aucun SQL de ce lot ; elle attendait que `c4_l1_schema.sql` et
+  > `c4_l2_routeur.sql` soient en prod. **Ils y sont** — vérifié par requête, colonne par colonne,
+  > en lecture seule : `assiduite_hebdo` répond **200** *(et ses trois colonnes de minutes —
+  > `minutes_assignees`, `minutes_budget_plafond`, `minutes_budget_plancher`)*, et **la vue
+  > `assiduite_hebdo_classe` aussi**. La table est à **0 ligne** : le premier comptage réel reste
+  > `C4L13-14`, le lundi 2026-09-07. **La collecte PEUT démarrer en prod.**
 
 ---
 
@@ -6064,11 +6152,17 @@ Tout ce qui suit est donc la face **professeur**, et **les smokes élève resten
   de reprise : la même que `C4L12-16`** — une fenêtre d'évidence remplie, au segment 3, hors
   `profil_provisoire`. *Le code qui les calcule existe déjà et est éprouvé
   (`ilYAProgression`, `compteurN1N2`) : il ne manque que des mesures.*
-- [ ] **C4L12-22 · LA MIGRATION EN PROD.** ⚠️ **Sans objet pour ce lot — il n'écrit AUCUN SQL, et
+- [x] **C4L12-22 · LA MIGRATION EN PROD.** ⚠️ **Sans objet pour ce lot — il n'écrit AUCUN SQL, et
   aucune colonne ne manquait** *(vérifié colonne par colonne : `routeur_decisions.etat_escalade`,
   les trois minutes d'`assiduite_hebdo`, `competences_niveaux.lettre_initiale`,
   `exercices_depots.routeur_decision_id`)*. Mais `c4_l1_schema.sql` et `c4_l2_routeur.sql` sont joués
   **en bac à sable seulement**. ⛔ **Condition de reprise : C11b (RUNBOOK).**
+  > ✅ **PASSE DE RÉCONCILIATION DU 28/08 — SANS OBJET, ET LA CONDITION EST TOMBÉE.**
+  > Vérifié par requête, en lecture seule, sur les quatre objets que la ligne nomme :
+  > `routeur_decisions.etat_escalade` **200** · les trois minutes d'`assiduite_hebdo` **200** ·
+  > `competences_niveaux.lettre_initiale` **200** · `exercices_depots.routeur_decision_id` **200**.
+  > ⭐ **Le schéma de C4-L1 et de C4-L2 a voyagé avec le dump `--schema-only` du 25/08**, et c'est
+  > ce que la colonne « Prod » du `SUIVI_SQL.md` ne dit pas encore.
 
 
 ---
@@ -6204,7 +6298,7 @@ découpage et la charge utile, tels que l'écran les reçoit.
   est C4-L15. ⚠️ Le `01-` §11 la déclare lui-même *« provisoire, révisable selon les types »*.
   **Condition de reprise : le propriétaire du `01-` §11**, à qui appartient de dire si le compteur
   se redéfinit, se stratifie par cran, ou se met à journaliser QUELLE aide.
-- [ ] **C4L15-R4 · LA MIGRATION EN PROD — ⛔ SANS CIBLE, et ⚠️ C11b N'EST DANS AUCUN PLAN.**
+- [x] **C4L15-R4 · LA MIGRATION EN PROD — ⛔ SANS CIBLE, et ⚠️ C11b N'EST DANS AUCUN PLAN.**
   **La base de production n'existe pas.** Le `SUIVI_SQL.md` le pose en tête : *« elle naîtra au
   chantier C11b d'un dump du schéma de la sandbox »* — **il n'y a qu'UNE base en usage**, et c'est
   celle-ci. Ce n'est donc pas une tâche différée : c'est **une tâche sans cible**.
@@ -6229,6 +6323,13 @@ découpage et la charge utile, tels que l'écran les reçoit.
   silence**, exactement comme le cas VIDE que le code sait tenir. ⛔ **Il faudra y rejouer
   `derive-doctrine.py --sql`.**
   **Condition de reprise : C11b — dès que quelqu'un le met à un plan.**
+  > ✅ **PASSE DE RÉCONCILIATION DU 28/08 — C11b A EU LIEU, ET LE CONTENU DÉRIVÉ AUSSI.**
+  > ⭐ **C'est celle des quatre où la réserve comptait le plus** — le relevé prévenait que « la prod
+  > naîtrait avec les deux colonnes et SANS leur contenu, et le marquage y serait muet, en
+  > silence ». **Vérifié par requête, en lecture seule** : `exercices_crans.marquage` et
+  > `.longueur` répondent **200**, la table porte ses **9 lignes**, et **6 d'entre elles portent un
+  > `marquage` non nul**. Le `--sql` que la ligne réclamait a été joué en prod le 28/08
+  > *(`7869afd`, treize verdicts IDENTIQUE)*. **Le marquage n'est pas muet en production.**
 - [x] **C4L15-R5 · ✅ LE DÉCOR EST RETIRÉ — 24/08, la recette close.** Répétition à blanc d'abord
   *(le CORPS seul, règle 6 : 5 instances → 0, 1 matériau → 0, puis `rollback`, et **le décor est
   revenu, vérifié par requête**)*, puis le retrait réel. ⛔ **Ce qui ne devait pas partir est intact,
@@ -7759,6 +7860,11 @@ interruption. Le décor se reconnaît à sa classe, `nom LIKE 'RECETTE-C5L3%'`. 
   son décompte. ⭐ **Ce n'est pas une panne, et c'est le même mur que `C4L12-23`.**
   **Condition de reprise : une quatrième mesure sur une même paire — soit quatre exercices d'une
   même compétence remis et mesurés par un même élève.**
+  > ↻ **PASSE DE RÉCONCILIATION DU 28/08 — RECOMPTÉ, ET LE CHIFFRE A BOUGÉ SANS CHANGER LA
+  > CONCLUSION.** Relevé en production, en lecture seule : **184 mesures**, **168 paires
+  > (élève × compétence)** hors sondes de montée — **153 à une mesure, 14 à deux, UNE à
+  > trois**, et **ZÉRO n'atteint la fenêtre de quatre**. *(Le 28/08 au matin : 141 · 14 · 1.)*
+  > **La condition tient, et c'est la même qui tient `C4L2-11`, `C4L12-16` et `C4L12-23`.**
 - [ ] **C6L2-28 · ⚠️ LE RATTACHEMENT DU GESTE À UNE COMPÉTENCE N'A JAMAIS ÉTÉ VU EN VRAI.** Le code
   lit `routeur_decisions.cible_retenue` puis `exercices.cible_primaire` *(l'ordre du `07-` §1.1)*,
   et **la couture n'a éprouvé que la branche « aucune des deux »** — les seules données qui
