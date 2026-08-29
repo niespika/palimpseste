@@ -4304,7 +4304,26 @@ de modèle**, décor semé puis **retiré** (aucun reste, vérifié par requête
   fabrique, qui doit maintenant dire **trois** compétences ouvertes. **Condition de reprise :
   `fabrique_actif` ouvert le temps du smoke, et refermé après.** *Le même reste que C4L10E-13 et
   C4L10A-13 — il s'accumule, et il se jouera d'un coup.*
-- [ ] **C4L10S-18 · ⚠️⚠️ `bloc_relie` — LE §5 ET LE §4 NE COMPTENT PAS LA MÊME POPULATION.** Le §5
+- [x] **C4L10S-18 · ✅ SANS OBJET SUR LE CORPUS DE PRODUCTION — mesuré le 29/08, l'arbitrage n'a
+  pas à être rendu avant lundi.**
+  ⭐ **Mesuré en REJOUANT le vrai code**, jamais en le réimplémentant :
+  `BRANCHEMENT_STRUCTURE.code1/code2/releve` sur les **52 squelettes réels de la prod**, lus dans
+  `exercices_squelettes` *(script au dépôt : `scripts/recette/structure-population.ts`)*.
+  **`relation_nommee` illisible : 0 sur 109 jointures. Copies où les deux lectures divergent au
+  seuil de 0,5 : 0 sur 52.**
+  ⭐⭐ **Le 68/112 de l'énoncé reste vrai — et il ne vaut que pour le BANC** : l'énoncé le dit
+  lui-même, *« sur les squelettes d'avant la v1.4 »*. Le prompt actuel remplit toujours la relation
+  lisiblement, donc **le cas qui sépare les deux lectures ne se présente jamais en production**.
+  ⚠️ **La question de fond reste ouverte** — deux phrases de la même fiche nomment toujours deux
+  populations — **mais elle ne bloque plus rien** : elle redevient de l'hygiène de source, et cesse
+  d'être « avant le Run 1 ». *Registre des ouverts, item 50, amendé.*
+  ⭐ **Contrôle interne de la rejoue** : le `bloc_relie` écrit en base est égal au §5 recalculé sur
+  les 52 copies, **sans un écart** — c'est ce qui autorise à se fier au reste de la mesure.
+  ⚠️ **Deux fausses pistes traversées avant d'y arriver, et toutes deux corrigées en mesurant** :
+  j'ai d'abord DÉDUIT le tissu total depuis `bloc_relie`, ce qui fabriquait « 0 illisible » par
+  construction quand la valeur était 0 *(37 copies sur 42)* — remplacé par la lecture directe de
+  `code1.mesures.n_tissu` ; et j'ai d'abord deviné le catalogue des rôles au lieu de le recopier.
+  **Énoncé d'origine :** ⚠️⚠️ `bloc_relie` — LE §5 ET LE §4 NE COMPTENT PAS LA MÊME POPULATION. Le §5
   écrit *« proportion **du tissu** dont la relation est nommée »* — le tissu ENTIER, et c'est ce que
   le portage applique. Le champ `sens` du bloc machine l'adosse au **§4, point 4**, qui compare
   `oui > non` et **laisse dehors** toute couture dont la relation est illisible. **Les deux lectures
@@ -4313,7 +4332,41 @@ de modèle**, décor semé puis **retiré** (aucun reste, vérifié par requête
   lecture est commentée et fixée par un test discriminant** — si l'arbitrage tombe dans l'autre sens,
   c'est **une ligne à changer**. **Condition de reprise : une décision de Louis sur la population**
   *(registre des ouverts, item 50)*.
-- [ ] **C4L10S-19 · ⚠️ QUATRE VALEURS ILLISIBLES DU SQUELETTE NE LÈVENT AUCUNE ALERTE.** Le contrat
+- [ ] **C4L10S-19 · ⭐⭐ MESURÉ EN PRODUCTION LE 29/08 — TROIS REPLIS SUR QUATRE SONT MUETS, ET LE
+  QUATRIÈME EST CELUI QUE LE BANC N'AVAIT JAMAIS VU. La CAUSE est corrigée ; l'ALERTE reste due.**
+
+  | repli | banc | production *(52 copies)* |
+  |---|---|---|
+  | (a) `relation_nommee` illisible | 68/112 | **0 / 109** ✅ |
+  | (b) `entre` illisible | 11/112 | **0 / 109** ✅ |
+  | (c) `statut` hors catalogue | jamais vu | **0** ✅ |
+  | (d) **`role` hors catalogue** | **jamais vu** | **⛔ 5 blocs / 161, sur 2 copies** |
+
+  ⭐⭐ **ET LA CAUSE EST NOMMÉE.** Les 5 blocs portent `role: "service"` — une valeur de
+  **`correspondance_annonce`**, jamais un rôle. Ce sont des lignes d'en-tête : *« Nom de l'élève »,
+  « Indication de thème et période », « Indication de site », « Titre de l'essai et rappel du
+  sujet », « identification de l'élève »*. Le code les compte en **blocs de développement**
+  *(`dev = blocs.filter(b => !estService(b))`, `structure.ts:395`)*.
+  ⭐ **COÛT MESURÉ EN REJOUANT, pas estimé** — le même squelette, une fois avec `role: "service"` et
+  une fois avec `role: "intro"` : `bloc_unite` **0,2 → 1** sur une copie, **0,75 → 1** sur l'autre.
+  ⭐ **La LETTRE ne bouge pas** *(D reste D, C reste C)* : `bloc_unite` est un observable de
+  télémétrie, pas de niveau. ⚠️ **Mais c'est la télémétrie qui pilote l'escalade N1/N2** — deux
+  élèves passent pour rater « une idée directrice par bloc » alors qu'ils la tiennent, et **le
+  routeur leur enverra le mauvais travail**.
+  ✅ **LA CAUSE EST CORRIGÉE À LA SOURCE, fiche Structure en 3.4.** La section
+  `# ORTHOGRAPHE DES VALEURS` du prompt P1 listait **à plat les valeurs de TROIS champs différents**
+  — `position_idee`, `role` et `correspondance_annonce` mêlées — sous la consigne « recopie
+  exactement », **et sans même y faire figurer `"intro"` ni `"bilan"`**. Elle est désormais **rangée
+  par champ**, avec l'avertissement qui nomme le piège. `derive-instruments.py --ecris` joué EN
+  DERNIER ; l'artefact dérivé porte la liste rangée et `"version": "3.4"`.
+  ⚠️ **Cause PROBABLE, et je ne la donne pas pour prouvée** : on ne peut pas démontrer ce qui a
+  décidé le modèle sans relancer des appels. Mais la liste était objectivement fautive.
+  ⛔⛔ **CE QUI RESTE DÛ, ET C'EST L'ITEM LUI-MÊME** : la correction rend le défaut moins probable,
+  **elle ne rend pas l'alerte**. Le contrat §3 veut toujours *« une alerte, pas une valeur par
+  défaut »*, et un `role` hors catalogue **retombe toujours en silence sur le développement**.
+  **Condition de reprise inchangée : une décision de MODULE, au chantier de conception** — elle
+  change le calcul, donc c'est un acte de calibration. *Registre des ouverts, item 51, amendé.*
+  **Énoncé d'origine :** ⚠️ QUATRE VALEURS ILLISIBLES DU SQUELETTE NE LÈVENT AUCUNE ALERTE. Le contrat
   §3 veut *« une alerte, pas une valeur par défaut »* ; le module le tient sur onze motifs et le
   manque sur quatre — `relation_nommee` illisible **(68/112)**, `entre` illisible **(11/112)**,
   `statut` et `role` hors catalogue. ⛔ **Ne pas les ajouter au branchement** : ce serait diverger du

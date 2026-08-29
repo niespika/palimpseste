@@ -82,7 +82,7 @@ export const MANIFESTE_INSTRUMENTS = {
       ],
       "ouverte": true,
       "statut": "RELUE ET VALIDÉE",
-      "version": "3.3"
+      "version": "3.4"
     },
     "synthese": {
       "observables_mesure": [
@@ -144,9 +144,9 @@ export const MANIFESTE_INSTRUMENTS = {
       "version": "2.2"
     },
     "competences/structure.md": {
-      "empreinte": "a452377126d4aaabf6a4857a2fa1913724be1eef497abe3abf5d8c6b7b23206a",
+      "empreinte": "6ec4057feef7d1ab91aafb0867bc7bfbada2f86d84a755a913431124f3e3eb9b",
       "statut": "RELUE ET VALIDÉE",
-      "version": "3.3"
+      "version": "3.4"
     },
     "competences/synthese.md": {
       "empreinte": "3b3beeadf8f19e9501ef10613ad0f69ab18c8f7542bedffbc5252d9a0cb97441",

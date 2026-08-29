@@ -159,9 +159,23 @@ c'est ce qui les distingue de D4 :
 
 ✅ ~~`C4L10A-14` **D2**~~ — **PAYÉ LE 29/08, fiche en 4.4.** ⛔⛔ **Et il avait déjà TIRÉ en production** : `garant_ambigu` et `garant_vague` à **0 sur 53 mesures / 53**, 52 élèves, zéro variance. ⚠️⚠️ **C'est Louis qui l'a signalé** — j'avais conclu « aucun run » en ne mesurant que le BANC, pas la PLATEFORME. **Mesurer les deux.** ⭐ Rattrapé sans réparation : fenêtre d'évidence de **4**, une seule mesure par élève, corrigé avant l'ouverture du segment 2. ⭐ Le code n'était pas en cause — **aucun test ne peut vérifier ce qu'un modèle choisit d'émettre**. ⭐ Variante propre (champ `marque`) portée à **2027**.
 
-⛔ **Les deux qui restent, tous deux sur la Structure** : · `C4L10S-19` — quatre valeurs illisibles du
-squelette Structure ne lèvent **aucune alerte** *(68 cas sur 112)* · `C4L10S-18` — `bloc_relie` :
-le §5 et le §4 ne comptent pas la même population.
+⭐⭐ **LES DEUX QUI RESTAIENT ONT ÉTÉ MESURÉS EN PRODUCTION LE 29/08** — en REJOUANT
+`BRANCHEMENT_STRUCTURE.code1/code2` sur les **52 squelettes réels**, jamais en réimplémentant
+*(`scripts/recette/structure-population.ts`)*. **Le banc et la production ne disent pas la même
+chose, et c'est la leçon.**
+
+✅ ~~`C4L10S-18`~~ — **SANS OBJET en production.** `relation_nommee` illisible **0/109** *(banc :
+68/112, mais « sur les squelettes d'avant la v1.4 »)* ; **0 copie sur 52** où les deux lectures
+divergent. L'arbitrage de Louis **ne bloque plus rien** et redevient de l'hygiène de source.
+
+⚠️ `C4L10S-19` — **trois replis muets, et le quatrième est celui que le banc n'avait jamais vu** :
+`role` hors catalogue, **5 blocs / 161, sur 2 copies**. Cause nommée : P1 met `role: "service"`, qui
+est une valeur de `correspondance_annonce` ; des lignes d'en-tête *(« Nom de l'élève », « Titre de
+l'essai »)* sont comptées en **blocs de développement**. `bloc_unite` **0,2 au lieu de 1**. ⭐ **La
+lettre ne bouge pas** — c'est de la télémétrie — **mais la télémétrie pilote l'escalade N1/N2**.
+✅ **La CAUSE est corrigée le 29/08** *(fiche 3.4 : la liste `# ORTHOGRAPHE DES VALEURS` mêlait à
+plat les valeurs de trois champs)*. ⛔ **L'ALERTE reste due** — c'est une décision de MODULE, donc un
+acte de calibration.
 
 ---
 
