@@ -161,3 +161,42 @@ dépôt**. Le script supprime donc, pour chaque dépôt : `competences_mesures`,
 ⭐ **Toute lecture passe par `lu(nom, { data, error })`, qui LÈVE sur `error`** — *« `supabase-js` ne
 lève pas : un `select` d'une colonne absente rend `{data: null, error}`, et `(data ?? []).length`
 rend alors zéro, qui ressemble à une mesure »*. Six contrôles ont déjà rougi pour l'avoir ignoré.
+
+## Le décor d'écran du profil d'Élo — `decor-eleve-elo.mjs`
+
+    node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON \
+         --import ./scripts/register-calibration-resolver.mjs \
+         scripts/recette/decor-eleve-elo.mjs [--seme|--etat|--retire]
+
+⛔ **Ce n'est PAS une recette** : il n'éprouve rien et ne rend aucun verdict. Il
+sème un élève crédible **et s'arrête là**, pour qu'on puisse travailler l'UI
+élève — l'affichage des compétences et la passation des exercices — avec de la
+matière dedans. **Il ne se nettoie pas tout seul : `--retire`.**
+
+Ce qu'il pose sur **Élo** (`test@test.com`), classe **T5** : les deux examens
+diagnostiques menés jusqu'à `retour_publie` *(copies, transcriptions, jobs,
+retours — l'un lu, l'autre non)*, **quatre exercices de la maison dans les
+quatre états** que la liste sait rendre, **13 mesures dont 5 ancres**, et les
+**lettres** *(4 des 6 compétences ; `connaissance` et `questionnement` n'ont
+aucune ancre, donc aucune lettre — c'est la règle du `01-` §9, pas un trou)*.
+
+⭐ **Deux choses qu'il fait et qui valent pour les suivants.**
+**(1) Les observables se DÉRIVENT de l'instrument** : le script n'écrit aucun
+seuil, il lit `instrumentDuRouteur(c)` et fabrique, pour chaque observable, une
+valeur qui réussit ou rate *son* seuil du jour — un changement de fiche ne
+périme pas le décor. **(2) Les dépôts se retrouvent SANS le registre**, alors
+qu'`exercices_depots` n'a aucune colonne texte libre : par le `depot_id` des
+mesures / retours / jobs marqués, **et** par le couple *(Élo × les quatre
+instances)*, qui sont des constantes du fichier — le contrôle d'entrée refusant
+de semer si l'une porte déjà un dépôt d'Élo, le couple est univoque. ⛔ Aucun
+champ porteur de sens n'est détourné en drapeau de provenance.
+
+⚠️ **La seule chose que la marque ne sait pas rendre** : l'**état d'avant** des
+deux examens *(ils préexistent, on les MODIFIE)*. Il ne vit qu'au registre
+`.decor-eleve-elo.json`. Sans lui, `--retire` retire tout le semé, **laisse les
+deux examens décorés**, et imprime la liste exacte des colonnes à remettre.
+
+⚠️ **Il ne touche AUCUN interrupteur** : il les mesure et **refuse** si l'un des
+trois nécessaires *(`exercices_actif`, `passation_classe_actif`,
+`competences_affichage_actif`)* est fermé. Un décor destiné à rester à l'écran
+ne peut pas emprunter une porte : il la rendrait fermée en partant.

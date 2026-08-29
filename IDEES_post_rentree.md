@@ -1005,3 +1005,58 @@ l'**instance**, jamais sur le matériau — `exercices_sujets`, `exercices_texte
 ne réserve donc rien : en production, **31 sujets portent 251 instances, dont 23 sur le même sujet**.
 Et une passation `lieu = 'classe'` est déjà hors du vivier par le motif `lieu_classe`, avant toute
 question de portée.
+
+---
+
+## ⛔⛔ UN DÉFAUT, PAS UNE IDÉE — `ecrireLEtatApresMesure` perd TOUT un lot de lettres, EN SILENCE (29/08/2026)
+
+**Relevé au peuplement du profil d'Élo (décor d'écran, sandbox), et le défaut est EN PRODUCTION.**
+
+`utils/moteur/etat-serveur.ts:310-323` construit **UN SEUL tableau** `lignesNiveau` pour **toutes**
+les compétences qu'un dépôt vient de toucher, puis l'envoie en **un `upsert` en lot**. Or
+`ligneDeNiveau` (`utils/moteur/etat.ts:259-282`) produit des **jeux de clés différents** :
+
+- compétence **sans** lettre → ajoute `lettre_initiale` + `lettre_initiale_at` → **9 clés** ;
+- compétence **avec** lettre → ne les ajoute pas → **7 clés**.
+
+Et `verifierLesLignesDeNiveau` (`etat.ts:224-249`) **LÈVE** sur des clés hétérogènes — à raison :
+*« un `upsert` en lot les unifie, et les manquantes partiraient à NULL »*. Le `catch` de
+`etat-serveur.ts:322` range l'incident dans `bilan.erreurs` et met `lettresEcrites = 0`.
+
+⛔ **Conséquence : dès qu'un même dépôt touche une compétence DÉJÀ LETTRÉE et une compétence NEUVE,
+le lot entier est perdu — les deux écritures, pas seulement la neuve.**
+
+⛔⛔ **ET C'EST SILENCIEUX.** `resumeBilan` (`chaine.ts:1550-1557`) n'incorpore les alertes que via
+`motifDuRetourManquant`, qui ne s'exécute **que si `!b.retourEcrit`** et ne retient que les alertes
+contenant le mot « retour ». L'alerte `« état après mesure : charge de niveaux refusée : … »` ne
+remplit ni l'une ni l'autre condition : le message de job affiche *« … retour écrit, 6 appel(s),
+64 s, 2 écartée(s) … »* et **pas un mot de la perte**.
+
+### La preuve, en PRODUCTION — 13 élèves sur 13
+
+Le 26/08, l'essai diagnostique (3 compétences toutes neuves, clés homogènes) a écrit ses lettres. Le
+27/08, l'explication a mesuré `expression` (**déjà lettrée**) **+** `synthese` (**sans lettre**) :
+
+```sql
+select competence, count(*) from competences_mesures group by 1;
+--  argumentation 53 | expression 66 | structure 52 | synthese 13
+select competence, count(*), count(lettre) from competences_niveaux group by 1;
+--  argumentation 52|52 | expression 52|52 | structure 51|51   ← AUCUNE ligne synthese
+```
+
+**13 mesures de synthèse, 0 ligne de niveau `synthese`** — et le niveau `expression` n'a pas bougé
+non plus : les deux écritures sont parties ensemble, exactement comme la garde le prédit.
+
+### Ce qui le corrigerait
+
+`poserLeColdStart` (`etat-serveur.ts:456-466`) **groupe déjà** ses lignes `parForme` précisément pour
+éviter ça. **`ecrireLEtatApresMesure` ne le fait pas.** Le correctif est le même geste : grouper par
+jeu de clés avant d'envoyer, un `upsert` par groupe.
+
+⚠️ **Et le second défaut est celui qui coûte le plus** : même corrigé, le bilan doit **dire** qu'une
+charge de niveaux a été refusée. Une perte de lettres qui ne remonte nulle part est une perte qu'on
+ne découvre qu'en comptant les lignes, des semaines plus tard.
+
+⛔ **Le décor d'Élo contourne le défaut, il ne le corrige pas** : `scripts/recette/decor-eleve-elo.mjs`
+écrit `competences_niveaux` **une compétence à la fois** et vérifie par requête. Le correctif
+applicatif reste entier.

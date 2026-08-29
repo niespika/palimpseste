@@ -57,6 +57,12 @@ scripts/recette/.traversee-c4l7-registre.json
 # de minutes — 45-60 min est un budget RÉEL — mais par les couples qu'il nomme.
 scripts/recette/.routeur-c4l2-decor-registre.json
 
+# Registre local du décor d'écran d'Élo (scripts/recette/decor-eleve-elo.mjs).
+# Il porte l'ÉTAT D'AVANT des deux examens diagnostiques et des six lignes de
+# niveau — la seule chose que la marque en base ne sait pas reconstituer. C'est
+# un état de machine, pas une source : il ne se partage pas.
+scripts/recette/.decor-eleve-elo.json
+
 # Registres de la réparation C4L12-25 (scripts/recette/reparation-etats-c4l12-24.mjs)
 # ⭐ L'état AVANT écriture, horodaté, une copie par passage. Il reste LOCAL : il
 #    porte des identifiants d'élèves réels, et un registre n'est pas une source.
