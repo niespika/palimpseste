@@ -22,7 +22,7 @@ import {
 import { fournisseurPour, type AppelIA, type UsageIA } from '@/utils/ia-fournisseur'
 import { coutSelonModele, enregistrerCoutApi, normaliserUsage } from '@/utils/cout-api'
 import { sansDelims } from '@/utils/ia-commun'
-import { inscriptionEleveClasse, slugsModulesAccessibles } from '@/utils/acces'
+import { inscriptionEleveClasse, classeAModule } from '@/utils/acces'
 
 export const maxDuration = 60
 
@@ -46,11 +46,24 @@ export async function POST(req: Request): Promise<Response> {
   const reglages = await lireReglagesRag(admin)
   if (!reglages.actif) return Response.json({ error: 'Espace non disponible.' }, { status: 403 })
 
-  const [slugs, inscription] = await Promise.all([
-    slugsModulesAccessibles(supabase, user.id),
+  // ⛔⛔ LA QUESTION EST « CETTE CLASSE A-T-ELLE LE MODULE », PAS « UNE DE MES
+  //    CLASSES L'A-T-ELLE » — C-RLS-7, 29/08. `slugsModulesAccessibles` rend
+  //    l'UNION des modules de toutes les classes de l'élève : un élève
+  //    bi-classe franchissait donc cette garde avec le `classeId` d'une classe
+  //    où le professeur n'a PAS donné Scriptorium.
+  // ⛔ Et ce n'est pas qu'une lecture : passé ce point, la route CRÉE une
+  //    conversation portant ce `classe_id`, consomme le quota du jour, appelle
+  //    le modèle et inscrit un coût attribué à cette classe — le tout par le
+  //    client admin, RLS hors jeu.
+  // ⭐ `classeAModule` existe depuis le 14/08 pour exactement cette question, et
+  //    trois actions professeur l'emploient déjà. **Les deux gardes restent
+  //    distinctes** : « cette classe a-t-elle le module » ET « cet élève y
+  //    est-il inscrit » — `classeAModule` ne répond qu'à la première.
+  const [aLeModule, inscription] = await Promise.all([
+    classeAModule(supabase, classeId, 'scriptorium'),
     inscriptionEleveClasse(supabase, user.id, classeId),
   ])
-  if (!slugs.has('scriptorium') || !inscription) {
+  if (!aLeModule || !inscription) {
     return Response.json({ error: 'Accès refusé pour cette classe.' }, { status: 403 })
   }
 

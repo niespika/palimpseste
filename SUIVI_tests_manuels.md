@@ -8588,7 +8588,24 @@ corrigés le jour même._
   a été retiré (`securite_handle_new_user_retrait.sql`) — combien de comptes auth sans profil ?
   L'affirmation « plus aucun chemin applicatif n'insère » est à confirmer. **Correctif : `and role =
   'eleve'` au `with_check`.**
-- [ ] **C-RLS-7 · Chat du tuteur — le contrôle de module est l'UNION des classes, pas LA classe.**
+- [x] **C-RLS-7 · Chat du tuteur — le contrôle de module est l'UNION des classes, pas LA classe.**
+  ✅ **FERMÉ LE 29/08** — `app/api/scriptorium/chat/route.ts` : `slugsModulesAccessibles(user)` devient
+  `classeAModule(classeId, 'scriptorium')`, l'outil écrit le 14/08 pour cette question exacte et déjà employé par
+  trois actions prof. **Les deux gardes restent distinctes** — « cette classe a-t-elle le module » ET « cet élève y
+  est-il inscrit ». **Aucune migration.**
+  ⭐⭐ **ÉPROUVÉ SUR LA DONNÉE RÉELLE DE PRODUCTION, en lecture seule** — les deux prédicats rejoués sur le seul
+  élève exploitable *(Eléonore Delprat : THLP **a** Scriptorium, « Hors classe » **ne l'a pas**)* :
+  **ancienne garde → PASSAIT · nouvelle → REFUSE**, et l'inscription reste vérifiée, donc c'est bien le premier
+  prédicat qui tranche. *(2 élèves bi-classe en prod ; l'autre a le module dans ses deux classes.)*
+  ⛔ **Le constat sous-décrivait la conséquence : ce n'est pas qu'une lecture.** Passé la garde, la route **crée**
+  une conversation portant ce `classe_id`, **consomme le quota**, **appelle le modèle** et **inscrit un coût**
+  attribué à une classe à qui le prof avait refusé le module — le tout par le client admin, RLS hors jeu.
+  ⚠️ **Ce qui le rendait inerte n'était pas une garde** : **0 parcours assigné** à « Hors classe », donc la route
+  mourait trois lignes plus loin sur un message pédagogique *(409, « aucun parcours daté »)*. **Une inertie qui
+  tient à une configuration de données que deux clics du professeur défont.**
+  ⚠️ **Reste ouvert, distinct et plus large** : la route ne teste jamais `modules.actif`, là où ses deux sœurs
+  Quazian et Codex le font. Éteindre `scriptorium` globalement retirerait la tuile **sans fermer la route** —
+  et `classeAModule` ne le teste pas non plus, donc le manque vaut aussi pour ses trois autres appelants.
   `app/api/scriptorium/chat/route.ts:53` vérifie « une de tes classes a-t-elle Scriptorium ? », pas
   « celle-ci l'a-t-elle ? ». Un élève bi-classe reçoit le corpus d'une classe où Scriptorium n'est
   pas donné. **Ce n'est pas la donnée d'un autre élève** — c'est un cours d'une classe où il est
