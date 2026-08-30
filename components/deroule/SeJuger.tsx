@@ -74,7 +74,18 @@ const COMBIEN: Record<number, string> = {
   1: 'Une question', 2: 'Deux questions', 3: 'Trois questions',
 }
 
-export function SeJuger({ depotId, offre }: { depotId: string; offre: OffreSeJuger }) {
+/**
+ * @param texteRendu ⭐ HANDOFF §5 — la ligne repliée « ▸ Relire ce que tu as
+ *        rendu ». L'écran ne montre plus ni la matière ni le champ, mais l'élève
+ *        doit pouvoir relire CE QU'IL VIENT DE RENDRE pour se juger dessus :
+ *        c'est l'objet même de la phase. ⚠️ En LECTURE SEULE, et replié —
+ *        déplié, il repeuplerait l'écran de ce que 2d range.
+ *        `null` aux crans où l'élève n'a rien rédigé : rien à relire, rien à
+ *        replier.
+ */
+export function SeJuger({
+  depotId, offre, texteRendu = null,
+}: { depotId: string; offre: OffreSeJuger; texteRendu?: string | null }) {
   const router = useRouter()
   const [reponses, setReponses] = useState<Record<string, string>>({})
   const [enCours, setEnCours] = useState(false)
@@ -125,81 +136,119 @@ export function SeJuger({ depotId, offre }: { depotId: string; offre: OffreSeJug
     }
   }
 
+  const combien = COMBIEN[questions.length] ?? `${questions.length} questions`
+
   return (
-    <section
-      aria-labelledby={idTitre}
-      className="rounded-lg border border-bordure bg-surface p-4"
-    >
-      <h2 id={idTitre} className="font-marque text-sm uppercase tracking-wide text-muet-clair">
-        Avant de voir ton retour
-      </h2>
-      <p className="mt-2 text-sm text-encre-douce">
-        {COMBIEN[questions.length] ?? `${questions.length} questions`} sur ce que tu viens de
-        rendre. <strong>Ça ne se note pas</strong> : se tromper en se jugeant ne coûte rien.
-      </p>
-
-      <div className="mt-4 space-y-4">
-        {questions.map((q) => {
-          const clef = cle(q)
-          const choisie = reponses[clef]
-          return (
-            <div
-              key={clef}
-              role="radiogroup"
-              aria-label={q.question}
-              className="rounded border border-bordure bg-parchemin-fonce p-3"
-            >
-              {/* ⚠️ La DIMENSION en langue élève, jamais `observable_code`. */}
-              <p className="font-marque text-xs uppercase tracking-wide text-muet-clair">
-                {q.dimension_eleve}
-              </p>
-              <p className="mt-1 text-base text-encre">{q.question}</p>
-
-              {/* ⚠️ La liste FERMÉE, telle quelle et dans l'ordre reçu. */}
-              <div className="mt-2 flex flex-wrap gap-2">
-                {q.reponses.map((r) => {
-                  const active = choisie === r
-                  return (
-                    <button
-                      key={r}
-                      type="button"
-                      role="radio"
-                      aria-checked={active}
-                      disabled={enCours}
-                      onClick={() => setReponses((v) => ({ ...v, [clef]: r }))}
-                      // ⚠️ 44 px de haut au moins : « l'écran est souvent un
-                      //    téléphone » (`07-` §3).
-                      className={`min-h-[44px] rounded border border-bordure-bouton px-4 py-2
-                                  text-sm ${active
-                        ? 'bg-pigment-teinte font-semibold text-pigment'
-                        : 'text-encre-douce'}`}
-                    >
-                      {r}
-                    </button>
-                  )
-                })}
-              </div>
-            </div>
-          )
-        })}
+    // ⭐ HANDOFF §5 — UNE COLONNE CENTRÉE DE 660 px, et rien autour : ni matière,
+    //    ni champ. C'est le parent qui les range (`ecranDuDeroule === 'se_juger'`).
+    <section aria-labelledby={idTitre} className="mx-auto flex w-full max-w-[660px] flex-col gap-4">
+      <div>
+        <h2 id={idTitre} className="font-titre text-[25px] font-bold leading-tight text-encre
+                                    sm:text-[30px]">
+          Avant de voir ton retour
+        </h2>
+        <p className="mt-2 font-corps text-[16.5px] leading-[1.55] text-encre-douce">
+          {combien} sur ce que tu viens de rendre.{' '}
+          <strong className="text-encre">Ça ne se note pas</strong> : se tromper en se jugeant
+          ne coûte rien.
+        </p>
       </div>
 
-      {/* ⭐ UN SEUL BOUTON ENVOIE TOUT — le geste est un, la phase est une. */}
+      {/* ⭐ Relire, oui — REPLIÉ. `<details>` natif : aucun état client, et le
+          texte reste dans le document, donc trouvable au `Ctrl+F`. */}
+      {texteRendu && texteRendu.trim() !== '' && (
+        <details className="group rounded-xl border border-bordure bg-surface">
+          <summary className="flex min-h-12 cursor-pointer list-none items-center gap-2.5 px-4 py-3">
+            <span aria-hidden className="text-xs text-muet group-open:hidden">▸</span>
+            <span aria-hidden className="hidden text-xs text-muet group-open:inline">▾</span>
+            <span className="font-corps text-[15px] text-encre-douce">
+              Relire ce que tu as rendu
+            </span>
+          </summary>
+          <p className="whitespace-pre-wrap border-t border-bordure px-4 py-3 font-corps
+                        text-[15.5px] leading-[1.7] text-encre-douce">
+            {texteRendu}
+          </p>
+        </details>
+      )}
+
+      {questions.map((q) => {
+        const clef = cle(q)
+        const choisie = reponses[clef]
+        return (
+          <div
+            key={clef}
+            role="radiogroup"
+            aria-label={q.question}
+            className="rounded-xl border border-bordure bg-surface p-4 sm:px-5 sm:py-[17px]"
+          >
+            {/* ⚠️ La DIMENSION en langue élève, jamais `observable_code`. */}
+            <p className="font-marque text-[11px] font-semibold uppercase tracking-[0.11em]
+                          text-muet">
+              {q.dimension_eleve}
+            </p>
+            <p className="mb-3 mt-[7px] font-corps text-[17px] leading-[1.45] text-encre
+                          sm:text-[18px]">
+              {q.question}
+            </p>
+
+            {/* ⚠️ La liste FERMÉE, telle quelle et dans l'ordre reçu.
+                ⭐ À PARTS ÉGALES sur l'ordinateur, EMPILÉES sur le téléphone
+                   (handoff §5) — jamais un enroulement qui couperait la
+                   troisième réponse hors de l'écran. */}
+            <div className="flex flex-col gap-2 sm:flex-row sm:gap-2.5">
+              {q.reponses.map((r) => {
+                const active = choisie === r
+                return (
+                  <button
+                    key={r}
+                    type="button"
+                    role="radio"
+                    aria-checked={active}
+                    disabled={enCours}
+                    onClick={() => setReponses((v) => ({ ...v, [clef]: r }))}
+                    // ⚠️ 48 px de haut : « l'écran est souvent un téléphone »
+                    //    (`07-` §3 ; handoff §5).
+                    className={`min-h-12 flex-1 rounded-[9px] border px-4 py-3.5 font-ui
+                                text-[15px] ${active
+                      ? 'border-pigment/40 bg-pigment-teinte font-semibold text-pigment'
+                      : 'border-bordure-bouton bg-parchemin text-encre-douce'}`}
+                  >
+                    {r}
+                  </button>
+                )
+              })}
+            </div>
+          </div>
+        )
+      })}
+
+      {/* ⭐ UN SEUL BOUTON ENVOIE TOUT — le geste est un, la phase est une.
+          ⚠️ Il reste MONTÉ et VISIBLE quand il est fermé (42 % d'opacité,
+             handoff §5) : un bouton qui apparaîtrait à la troisième réponse
+             cacherait à l'élève ce que l'écran attend de lui. */}
       <button
         type="button"
         onClick={envoyer}
         disabled={enCours || !complet}
-        className="mt-4 min-h-[44px] rounded bg-bouton px-4 py-2 text-sm text-parchemin
-                   disabled:opacity-40"
+        className="min-h-12 rounded-[10px] bg-bouton px-4 py-4 font-ui text-[15px] font-semibold
+                   text-bouton-texte disabled:opacity-[.42]"
       >
         {enCours ? 'Envoi…' : 'Envoyer mes réponses'}
       </button>
       {!complet && (
-        <p className="mt-2 text-xs text-muet">
-          Réponds à chaque question pour pouvoir envoyer.
+        <p className="text-center font-corps text-sm italic text-muet">
+          Réponds {questions.length > 1 ? `aux ${MOTS[questions.length] ?? questions.length} questions` : 'à la question'} pour pouvoir envoyer.
         </p>
       )}
-      {message && <p className="mt-2 text-sm text-retard">{message}</p>}
+      {message && <p className="text-sm text-retard">{message}</p>}
     </section>
   )
 }
+
+/**
+ * Le compte EN TOUTES LETTRES, comme `COMBIEN` — pour la même raison : l'offre
+ * en sert deux ou trois, et « Réponds aux 3 questions » à côté de « Deux
+ * questions » se contredirait à l'œil.
+ */
+const MOTS: Record<number, string> = { 2: 'deux', 3: 'trois' }

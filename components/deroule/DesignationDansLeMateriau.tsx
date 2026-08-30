@@ -39,8 +39,27 @@
 //    matériau vient d'un import de fichier (`08-` §4).
 // ============================================================================
 
+// ⭐ HANDOFF « Codex Exercices (élève) » §4, écran 2c — LA MATIÈRE PORTE LE
+//    GESTE. Le geste se dit EN UNE LIGNE AU-DESSUS DU TEXTE (« glisse sur le
+//    texte pour surligner »), la sélection prend le surlignage DE L'ÉLÈVE
+//    (`MARQUE_ELEVE`, jamais celui du professeur), et une pastille « passage
+//    surligné » dit l'état sous le texte.
+//
+// ⛔⛔ **LE HANDOFF DEMANDE AUSSI UN BOUTON « EFFACER MA SÉLECTION », ET IL N'EST
+//    PAS POSÉ.** Son §1 pose pourtant le périmètre : *« aucune règle de doctrine
+//    ne change »* — or c'en serait une, et elle a été tranchée le 27/08 (voir
+//    l'en-tête ci-dessus) : *« se raviser, c'est re-sélectionner ; dire qu'il n'y
+//    a rien, c'est répondre »*. Un « Effacer » n'a que deux implémentations
+//    possibles, et les deux sont mauvaises :
+//      · il enregistre `null` — c'est-à-dire « rien à surligner », **qui EST une
+//        réponse** : deux boutons pour un seul écrit, et l'élève apprend qu'ils
+//        se valent ;
+//      · il efface SANS enregistrer — l'écran ment alors sur ce que la base
+//        porte, et la zone désignée survit au « Effacer ».
+//    **La pastille d'état, elle, est posée** : c'est la moitié du handoff qui ne
+//    coûte aucune doctrine. À rapporter à Louis.
 import { useCallback, useRef, useState, useTransition } from 'react'
-import { MARQUE } from './TexteBalise'
+import { MARQUE_ELEVE } from './TexteBalise'
 
 /**
  * ⭐ LES BORNES D'UNE SÉLECTION, EN CARACTÈRES DU MATÉRIAU.
@@ -114,52 +133,76 @@ export function DesignationDansLeMateriau({
     : [{ t: contenu, marque: false }]
 
   return (
-    <div className="mt-3">
-      <p
-        ref={boite}
-        onMouseUp={surSelection}
-        onTouchEnd={surSelection}
-        className={`whitespace-pre-wrap font-corps text-sm text-encre${
-          gele ? '' : ' cursor-text'}`}
-      >
-        {segments.map((s, i) => (
-          s.marque
-            ? <strong key={i} className={MARQUE}>{s.t}</strong>
-            : <span key={i}>{s.t}</span>
-        ))}
-      </p>
+    <div>
+      {/* ⭐ LE GESTE SE DIT AU-DESSUS DU TEXTE, en une ligne (handoff §4, 2c) —
+          au doigt comme à la souris, les deux verbes ne sont pas les mêmes. */}
+      {!gele && (
+        <p className="mb-2 font-corps text-sm italic text-muet">
+          <span className="hidden sm:inline">Glisse sur le texte pour surligner.</span>
+          <span className="sm:hidden">
+            Appuie longuement, puis glisse pour surligner. Un seul passage à la fois.
+          </span>
+        </p>
+      )}
+
+      <div className="rounded-[9px] border border-bordure-bouton bg-parchemin-fonce p-3.5">
+        <p
+          ref={boite}
+          onMouseUp={surSelection}
+          onTouchEnd={surSelection}
+          className={`whitespace-pre-wrap font-corps text-[16.5px] leading-[1.68] text-encre${
+            gele ? '' : ' cursor-text'}`}
+        >
+          {segments.map((s, i) => (
+            s.marque
+              ? <strong key={i} className={MARQUE_ELEVE}>{s.t}</strong>
+              : <span key={i}>{s.t}</span>
+          ))}
+        </p>
+      </div>
+
+      {/* ⭐ L'ÉTAT SE LIT SOUS LE TEXTE, en pastille — handoff §4. Il reste
+          affiché APRÈS la remise, gelé : l'élève relit sa correction en voyant
+          ce QU'IL avait désigné. Ce n'est pas une fuite, c'est sa réponse. */}
+      <div className="mt-2.5 flex flex-wrap items-center gap-3">
+        <span
+          aria-live="polite"
+          className={`rounded-full border px-3 py-1.5 font-ui text-xs ${zone
+            ? 'border-pigment/30 bg-pigment-teinte text-pigment'
+            : 'border-bordure bg-surface text-muet'}`}
+        >
+          {enCours ? 'enregistrement…'
+            : zone ? 'passage surligné'
+              : aRepondu ? 'tu as répondu : rien à surligner'
+                : 'rien de surligné pour l’instant'}
+        </span>
+
+        {/* ⛔⛔ UN SEUL BOUTON, DÉLIBÉRÉMENT — voir l'en-tête. « Rien à
+            signaler » EST une réponse, et elle est aussi facile à donner qu'une
+            sélection : le bouton est au même rang visuel, pas en petit dessous. */}
+        {!gele && (
+          <button
+            type="button"
+            onClick={() => poser(null)}
+            disabled={enCours}
+            className="min-h-11 rounded-[9px] border border-bordure-bouton bg-surface px-4 py-2
+                       font-ui text-sm text-encre-douce disabled:opacity-40"
+          >
+            Il n’y a rien à surligner
+          </button>
+        )}
+      </div>
 
       {!gele && (
-        <>
-          {/* ⭐ La rédaction est ARRÊTÉE, mot pour mot — Louis, 27/08. */}
-          <p className="mt-2 text-xs text-encre-douce">
-            Sélectionne dans le texte le passage qui cloche.
-            {' '}Parfois il n’y a rien à surligner — le dire est une réponse.
-            {' '}Et un mot de trop de chaque côté ne coûte rien : ne bloque pas sur la
-            {' '}frontière exacte. Mais ne surligne pas tout, cela ne sert à rien.
-          </p>
-
-          <div className="mt-2 flex flex-wrap items-center gap-3">
-            <button
-              type="button"
-              onClick={() => poser(null)}
-              disabled={enCours}
-              className="min-h-11 rounded border border-bordure-bouton px-4 py-2
-                         text-sm text-encre disabled:opacity-40"
-            >
-              Il n’y a rien à surligner
-            </button>
-            <span className="text-xs text-encre-douce" aria-live="polite">
-              {enCours ? 'enregistrement…'
-                : zone ? 'passage désigné'
-                  : aRepondu ? 'tu as répondu : rien à surligner'
-                    : 'rien de désigné pour l’instant'}
-            </span>
-          </div>
-
-          {refus && <p className="mt-2 text-sm text-retard">{refus}</p>}
-        </>
+        /* ⭐ La rédaction est ARRÊTÉE, mot pour mot — Louis, 27/08. */
+        <p className="mt-2 text-xs text-encre-douce">
+          Parfois il n’y a rien à surligner — le dire est une réponse.
+          {' '}Et un mot de trop de chaque côté ne coûte rien : ne bloque pas sur la
+          {' '}frontière exacte. Mais ne surligne pas tout, cela ne sert à rien.
+        </p>
       )}
+
+      {refus && <p className="mt-2 text-sm text-retard">{refus}</p>}
     </div>
   )
 }

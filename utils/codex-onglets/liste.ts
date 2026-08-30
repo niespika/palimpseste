@@ -40,6 +40,7 @@ import 'server-only'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { lireLaPorte } from '@/utils/deroule/acces'
 import { passationOuverteAEleve } from '@/utils/passation/acces'
+import { cranNumero } from '@/utils/cran'
 import {
   atelierDUneInstanceDeClasse, atelierDUnFormatif, comparerLignes, etatDeLExercice,
   etatDExamenDeClasse, hrefDeLaPassationEleve, hrefDeLaPassationProf, hrefDuDeroule,
@@ -103,6 +104,37 @@ export interface ExerciceMaison {
    *    `C6-L2` a ajoutés ici pour la même raison.
    */
   bonus: boolean
+  /**
+   * ⭐ HANDOFF « Codex Exercices (élève) » §3 — LA LIGNE DE MÉTA DE L'ACCUEIL :
+   *    « compétence · **forme** · durée ». La forme, c'est ceci : un cas, ou
+   *    « deux cas, l'un après l'autre ».
+   *
+   * ⚠️ IL SE LIT SUR `exercices.paire_diagnostic`, DÉJÀ DANS CETTE REQUÊTE —
+   *    aucun aller-retour de plus. C'est la même colonne que
+   *    `utils/deroule/regime.ts` interroge pour compter les cas.
+   */
+  estUnePaire: boolean
+  /**
+   * ⭐ LE NUMÉRO DU CRAN (`utils/cran.ts`), qui n'ouvre qu'UNE chose ici : la
+   *    LECTURE DU RÉGIME. L'accueil doit distinguer « ton retour est arrivé, il
+   *    y a une version finale à rendre » de « ton retour est arrivé, l'exercice
+   *    se clôt dessus » — et cette différence est le `regime_v1vf` du cran
+   *    (`06-` §2), pas un statut de dépôt.
+   * ⚠️ NULL sur un examen diagnostique, qui n'a pas de cran — l'écran se tait
+   *    alors sur la version finale, il ne l'invente pas.
+   */
+  cran: number | null
+  /**
+   * ⚠️ L'IDENTIFIANT DU TYPE D'EXERCICE, ET IL N'OUVRE QU'UNE CHOSE : la DURÉE
+   *    INDICATIVE, qui vit à `exercices_types_crans (type_id, cran)`. Il ne
+   *    s'affiche jamais, et rien d'autre ne doit s'y accrocher — c'est une clé
+   *    de doctrine, pas une donnée d'écran.
+   */
+  typeId: string
+  /** L'instant de la remise de v1 — « rendue lundi », et le pied de l'échéance de vf. */
+  v1RemiseLe: string | null
+  /** L'instant de la remise de la version finale, quand elle a eu lieu. */
+  vfRemiseLe: string | null
 }
 
 /**
@@ -152,8 +184,15 @@ export async function exercicesMaisonDeLEleve(
 
   const { data, error } = await admin
     .from('exercices_depots')
-    .select('id, statut, echeance, assigne_at, routeur_decisions(bonus), '
-      + 'exercices!inner(id, lieu, classe_id, consigne_instanciee, modes_par_competence)')
+    // ⭐ `v1_remis_at`, `vf_remis_at`, `paire_diagnostic` et `cran` s'ajoutent
+    //    au MÊME aller-retour (handoff « Codex Exercices (élève) » §3) : ils
+    //    servent la ligne de méta et la distinction des deux états d'attente.
+    //    ⚠️ Aucune requête de plus ici — « un aller-retour Supabase coûte
+    //       160-332 ms », et cette lecture est aussi celle de la semaine.
+    .select('id, statut, echeance, assigne_at, v1_remis_at, vf_remis_at, '
+      + 'routeur_decisions(bonus), '
+      + 'exercices!inner(id, lieu, classe_id, consigne_instanciee, modes_par_competence, '
+      + 'paire_diagnostic, cran, type_id)')
     .eq('eleve_id', eleveId)
     .neq('statut', 'retire')
     .eq('exercices.lieu', 'maison')
@@ -190,6 +229,14 @@ export async function exercicesMaisonDeLEleve(
         //    et c'est juste. Le `un()` déplie l'embed, que PostgREST rend tantôt
         //    objet tantôt tableau selon la cardinalité qu'il déduit.
         bonus: lig(un(d.routeur_decisions)).bonus === true,
+        estUnePaire: ex.paire_diagnostic === true,
+        // ⛔ PAR LE NUMÉRO, comme partout ailleurs depuis C4-L11 : la colonne a
+        //    porté les deux formes, et `utils/cran.ts` est le SEUL endroit où
+        //    la forme se lit.
+        cran: cranNumero(ex.cran),
+        typeId: txt(ex.type_id),
+        v1RemiseLe: (d.v1_remis_at as string | null) ?? null,
+        vfRemiseLe: (d.vf_remis_at as string | null) ?? null,
       }
     })
     .sort((a, b) => comparerLignes(

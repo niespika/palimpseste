@@ -51,7 +51,7 @@ import { marquerLeMateriau, regimeDeMarquage, type SegmentMateriau } from './mar
 import { attenteDuDepot, type AttenteLisible } from './mesure'
 import { pointsContestes, type PointDuRetour } from './contestation'
 import { gestesRestants, competencesQuiDemandentLaConfiance } from './gestes'
-import type { Atelier } from '../codex-onglets/regles'
+import { titreDeLaConsigne, type Atelier } from '../codex-onglets/regles'
 import type { TexteSupportServi } from '../chaine/contexte'
 import type { ActeContestation, Competence, Grain, Palier, RegimeV1vf, Temps } from './types'
 
@@ -140,6 +140,37 @@ export interface VueDuDeroule {
   depotId: string
   /** Ouvert = `exercices_actif`. Faux, l'écran se ferme poliment. */
   ouvert: boolean
+
+  // ── ⭐ LA BARRE DE CONTENU (handoff « Codex Exercices (élève) » §4) ──
+  // « ← Exercices · titre de l'exercice · durée indicative · échéance ». Trois
+  // champs de PRÉSENTATION, tirés de ce que le chargeur a déjà sous la main :
+  // aucune lecture de plus, aucune règle de plus.
+  /**
+   * La première ligne non vide de la consigne — `titreDeLaConsigne`, la MÊME
+   * fonction que la liste de l'accueil. ⚠️ Deux titres calculés autrement
+   * seraient deux titres qui divergent, et l'élève ne reconnaîtrait pas la ligne
+   * qu'il vient de cliquer.
+   */
+  titre: string
+  /** L'échéance du dépôt (`timestamptz`) — un INSTANT, lu dans le fuseau. */
+  echeance: string | null
+  /** L'instant de la remise de v1 — « v1 rendue mardi » dans la barre. */
+  v1RemiseLe: string | null
+  /**
+   * ⭐⭐ AUX DEUX CRANS GUIDÉS, LA CRÉDENCE **EST** LA RÉPONSE — smoke élève du
+   *    24/08, tranché par Louis : « la réponse c'est la crédence, il n'y a pas
+   *    de retour IA, c'est juste de l'algo ». Le chargeur le calculait déjà pour
+   *    `etapeDeLaPaire` (`surDesCandidats`) sans jamais le rendre.
+   *
+   * ⭐ C'est le drapeau qui commande la MISE EN PAGE : les quatre lectures
+   *    REMPLACENT le champ de rédaction (handoff §4, écran 2b) — avant ce lot,
+   *    l'écran servait les deux, et l'élève voyait un champ de rédaction qu'il
+   *    n'avait pas à remplir.
+   *
+   * ⛔ Il ne dit RIEN de la bonne réponse : c'est une propriété du CRAN, connue
+   *    avant toute saisie. `indexAttendue` reste, lui, hors de tout rendu.
+   */
+  credenceEstLaReponse: boolean
 
   // ── Le régime, et les temps qu'il sert ──
   regime: RegimeV1vf
@@ -643,6 +674,12 @@ export async function chargerLeDeroule(
   const temps = tempsServis(regime)
   return {
     depotId, ouvert: a.ouvert,
+    // ⚠️ La MÊME fonction que la liste de l'accueil (`utils/codex-onglets/regles`) :
+    //    deux titres calculés autrement seraient deux titres qui divergent.
+    titre: titreDeLaConsigne(depot.exercice.consigne_instanciee),
+    echeance: depot.echeance,
+    v1RemiseLe: depot.v1_remis_at,
+    credenceEstLaReponse: surDesCandidats,
     regime, vfRequiseParEscalade, temps,
     tempsCourant: tempsCourantDe(depot, regime, retours, seJuger.servie),
     // ⭐ Le CODE, résolu depuis le numéro par `lireContexte` — jamais la colonne

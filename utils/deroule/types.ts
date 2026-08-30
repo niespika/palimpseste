@@ -16,6 +16,28 @@ export const COMPETENCES = [
 ] as const
 export type Competence = (typeof COMPETENCES)[number]
 
+/**
+ * Le nom d'affichage des six — EN FRANÇAIS LISIBLE, jamais l'identifiant nu.
+ *
+ * ⚠️ NOMMER UNE COMPÉTENCE N'EST PAS MONTRER LA GRILLE. RR4 interdit
+ *    l'OBSERVABLE et son code (`01-` §12) ; la compétence, elle, se dit — les
+ *    trois gestes de la remise la nomment déjà à l'élève (`06-` §3), et
+ *    l'accueil la met en ligne de méta (handoff « Codex Exercices (élève) » §3).
+ *
+ * ⭐ Il vit ICI parce que ce module est PUR : `utils/competences-classe.ts` en
+ *    porte le jumeau, mais il ouvre sur `createAdminClient` et ne peut donc pas
+ *    servir un composant client — c'est ce qui avait fait naître une copie
+ *    privée dans `GestesDeLaRemise`, qui l'importe désormais.
+ */
+export const NOM_COMPETENCE: Record<Competence, string> = {
+  expression: 'Expression',
+  argumentation: 'Argumentation',
+  structure: 'Structure',
+  connaissance: 'Connaissance',
+  synthese: 'Synthèse',
+  questionnement: 'Questionnement',
+}
+
 /** Les cinq paliers (`00-` §3). L'ordre est celui de la progression. */
 export const PALIERS = ['E', 'D', 'C', 'B', 'A'] as const
 export type Palier = (typeof PALIERS)[number]

@@ -77,9 +77,18 @@ const PAS = 1
 /** Le défaut du pourcentage : le milieu, seul défaut qui ne pousse nulle part. */
 const DEFAUT_POURCENTAGE = 50
 
+/**
+ * @param nu handoff « Codex Exercices (élève) » §4, écran 2b — aux deux crans
+ *        guidés, **les quatre lectures REMPLACENT le champ de rédaction** et
+ *        occupent la colonne de droite : la crédence n'y est plus une section
+ *        de plus dans une pile, elle EST le travail. Le parent porte alors le
+ *        cadre et le sur-titre, et ce composant ne rend que son contenu.
+ *        ⚠️ Aux quatre crans qui isolent, l'élève a répondu ailleurs : la
+ *           crédence garde son propre cadre, et `nu` reste faux.
+ */
 export function CredenceSaisie({
-  depotId, cas, offre,
-}: { depotId: string; cas: number; offre: OffreCredence }) {
+  depotId, cas, offre, nu = false,
+}: { depotId: string; cas: number; offre: OffreCredence; nu?: boolean }) {
   const router = useRouter()
 
   // ⚠️ Les jetons partent de ZÉRO, pas de 25 chacun : un défaut déjà valide
@@ -142,21 +151,21 @@ export function CredenceSaisie({
     }
   }
 
-  return (
-    <section className="rounded-lg border border-bordure bg-surface p-4">
-      <h2 className="font-marque text-sm uppercase tracking-wide text-muet-clair">
-        À quel point es-tu sûr ?
-      </h2>
-      {/* Le texte dit ce que le geste MESURE, sans le juger — et il ne promet
-          aucun verdict en retour : l'élève ne saura pas ici s'il avait raison. */}
-      <p className="mt-2 text-sm text-encre-douce">
-        Ça ne compte pas dans ta note — il n’y en a pas. Ce que ça regarde, c’est l’écart entre
-        ce que tu crois savoir et ce que tu sais : réponds comme tu le sens vraiment.
-      </p>
+  // ⭐ LE CANDIDAT LE PLUS CHARGÉ SE DÉTACHE — **effet de la saisie, jamais un
+  //    indice** (handoff §4). Il ne se calcule que sur `jetons`, l'état local :
+  //    rien de `offre.indexAttendue` n'y entre, ni ici ni ailleurs.
+  // ⚠️ Une ÉGALITÉ ne désigne personne : `-1` tant que le maximum est partagé,
+  //    sans quoi l'écran mettrait en avant le premier ex æquo — c'est-à-dire
+  //    l'ordre de service, qui ne veut rien dire.
+  const plusHaut = Math.max(...jetons)
+  const seul = plusHaut > 0 && jetons.filter((j) => j === plusHaut).length === 1
+  const charge = seul ? jetons.indexOf(plusHaut) : -1
 
+  const contenu = (
+    <>
       {repartition ? (
         <>
-          <p className="mt-3 font-corps text-base leading-relaxed text-encre">
+          <p className="font-corps text-base leading-relaxed text-encre">
             Répartis <strong>100 jetons</strong> entre ces quatre réponses. Plus tu en poses sur
             une, plus tu la crois juste. Tu peux tout mettre sur une seule, ou étaler.
           </p>
@@ -164,7 +173,7 @@ export function CredenceSaisie({
           {/* ⚠️ `offre.candidats` DANS L'ORDRE REÇU. Pas de tri, pas de mêlage,
               pas de mise en avant — et surtout rien qui vienne de
               `offre.indexAttendue`, y compris la `key`. */}
-          <div className="mt-3 space-y-2">
+          <div className="mt-3 flex flex-col gap-2.5">
             {offre.candidats.map((candidat, i) => (
               <Curseur
                 key={`${i}-${candidat}`}
@@ -174,6 +183,7 @@ export function CredenceSaisie({
                 plafond={(jetons[i] ?? 0) + Math.max(0, reste)}
                 suffixe=""
                 gele={enCours}
+                retenu={charge === i}
                 surValeur={(v) => poser(i, v)}
               />
             ))}
@@ -182,11 +192,13 @@ export function CredenceSaisie({
           {/* Le total, EN PERMANENCE. Écrit « sur 100 » et non « / 100 » : une
               barre de fraction se lit comme une note, et il n'y a pas de note. */}
           <div
-            className="mt-3 flex items-center justify-between rounded bg-parchemin-fonce
-                       px-3 py-2 text-sm"
+            className="mt-3 flex items-center justify-between rounded-[10px] bg-parchemin-fonce
+                       px-4 py-3"
           >
-            <span className="text-encre-douce">Jetons placés</span>
-            <span className="tabular-nums text-encre">{total} sur {BUDGET}</span>
+            <span className="font-ui text-sm text-encre-douce">Jetons placés</span>
+            <span className="font-ui text-[15px] font-semibold tabular-nums text-encre">
+              {total} sur {BUDGET}
+            </span>
           </div>
           {total !== BUDGET && (
             <p className="mt-2 text-sm text-attention">
@@ -200,7 +212,7 @@ export function CredenceSaisie({
         <>
           {/* ⚠️ AUCUN CANDIDAT N'EST SERVI À CES QUATRE CRANS : l'élève a répondu
               ailleurs, et la crédence porte sur SA propre réponse. */}
-          <p className="mt-3 font-corps text-base leading-relaxed text-encre">
+          <p className="font-corps text-base leading-relaxed text-encre">
             Donne une chance sur 100 à <strong>ta propre réponse</strong>, celle que tu viens
             d’écrire : 0 si tu es certain de t’être trompé, 100 si tu es certain d’avoir juste.
           </p>
@@ -218,19 +230,40 @@ export function CredenceSaisie({
         </>
       )}
 
+      {/* ⭐ UN SEUL BOUTON (handoff §4) : la répartition EST la réponse, il n'y
+          a donc pas deux gestes à distinguer. 48 px au pouce. */}
       <button
         type="button"
         onClick={() => { void envoyer() }}
         disabled={enCours || (repartition && total !== BUDGET)}
-        className="mt-4 min-h-11 rounded bg-bouton px-4 py-2 text-sm text-parchemin
-                   disabled:opacity-40"
+        className="mt-3 min-h-12 w-full rounded-[10px] bg-bouton px-4 py-3 font-ui text-[15px]
+                   font-semibold text-bouton-texte disabled:opacity-40"
       >
-        {enCours ? 'Envoi…' : 'Enregistrer'}
+        {enCours ? 'Envoi…' : repartition ? 'Enregistrer ma réponse' : 'Enregistrer'}
       </button>
+
+      {/* Le texte dit ce que le geste MESURE, sans le juger — et il ne promet
+          aucun verdict en retour : l'élève ne saura pas ici s'il avait raison. */}
+      <p className="mt-2.5 text-center font-corps text-[13.5px] italic leading-relaxed text-muet">
+        Ça ne compte pas dans une note — il n’y en a pas. Ce que ça regarde, c’est l’écart
+        entre ce que tu crois savoir et ce que tu sais : réponds comme tu le sens vraiment.
+      </p>
 
       {/* Le refus vient de l'action : on l'affiche tel quel, on ne le réécrit
           pas — c'est le serveur qui sait pourquoi la saisie n'a pas été prise. */}
       {refus && <p className="mt-2 text-sm text-retard">{refus}</p>}
+    </>
+  )
+
+  if (nu) return <div>{contenu}</div>
+
+  return (
+    <section className="rounded-xl border border-bordure bg-surface p-4">
+      <h2 className="mb-2 font-marque text-[11px] font-semibold uppercase tracking-[0.11em]
+                     text-muet">
+        À quel point es-tu sûr ?
+      </h2>
+      {contenu}
     </section>
   )
 }
@@ -251,7 +284,7 @@ export function CredenceSaisie({
  *    serveur. Deux gardes, parce qu'un flottant qui passe casse la somme à 100.
  */
 function Curseur({
-  id, libelle, valeur, plafond, suffixe, gele, surValeur,
+  id, libelle, valeur, plafond, suffixe, gele, surValeur, retenu = false,
 }: {
   id: string
   libelle: string
@@ -261,23 +294,35 @@ function Curseur({
   suffixe: string
   gele: boolean
   surValeur: (v: number) => void
+  /**
+   * ⭐ La carte porte le plus de jetons — **effet de la saisie, jamais un
+   *    indice** (handoff §4). ⛔ Elle ne se calcule QUE sur ce que l'élève a
+   *    posé : `offre.indexAttendue` n'entre dans aucun rendu, et surtout pas
+   *    dans celui-ci.
+   */
+  retenu?: boolean
 }) {
   const borner = (v: number) => Math.max(0, Math.min(100, Math.round(v)))
   return (
-    <div className="rounded border border-bordure-bouton p-3">
+    <div className={`rounded-[11px] border p-3.5 ${retenu
+      ? 'border-saisie-retenue-bordure bg-saisie-retenue'
+      : 'border-bordure bg-surface'}`}>
       {/* Le libellé EST le nom accessible du curseur : pas d'`aria-label` qui
           l'écraserait, et surtout rien d'autre à dire sur ce candidat. */}
-      <label htmlFor={id} className="block font-corps text-sm leading-relaxed text-encre">
+      <label htmlFor={id} className="block font-corps text-[15.5px] leading-[1.45] text-encre">
         {libelle}
       </label>
-      <div className="mt-2 flex items-center gap-2">
+      <div className="mt-2.5 flex items-center gap-2.5">
+        {/* ⚠️ 48 px au pouce, 44 px au-delà (handoff §7) : « l'écran est souvent
+            un téléphone » (`07-` §3). Un geste raté fausse la déclaration
+            qu'on prétend mesurer. */}
         <button
           type="button"
           onClick={() => surValeur(borner(valeur - PAS))}
           disabled={gele || valeur <= 0}
           aria-label={`Retirer ${PAS} à « ${libelle} »`}
-          className="h-11 w-11 shrink-0 rounded border border-bordure-bouton text-lg
-                     text-encre-douce disabled:opacity-40"
+          className="size-12 shrink-0 rounded-[9px] border border-bordure-bouton bg-surface
+                     text-lg text-muet disabled:opacity-40 sm:size-11"
         >
           −
         </button>
@@ -302,12 +347,13 @@ function Curseur({
           onClick={() => surValeur(borner(valeur + PAS))}
           disabled={gele || valeur >= plafond}
           aria-label={`Ajouter ${PAS} à « ${libelle} »`}
-          className="h-11 w-11 shrink-0 rounded border border-bordure-bouton text-lg
-                     text-encre-douce disabled:opacity-40"
+          className="size-12 shrink-0 rounded-[9px] border border-bordure-bouton bg-surface
+                     text-lg text-muet disabled:opacity-40 sm:size-11"
         >
           +
         </button>
-        <span className="w-14 shrink-0 text-right text-sm tabular-nums text-encre">
+        <span className={`w-9 shrink-0 text-right font-ui text-[15px] font-semibold tabular-nums
+                          ${valeur > 0 ? 'text-encre' : 'text-muet'}`}>
           {valeur}{suffixe}
         </span>
       </div>

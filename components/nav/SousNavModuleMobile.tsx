@@ -36,8 +36,17 @@ interface BarreProps {
 
 function Barre({ mod, onglets, actif, pastille }: BarreProps) {
   const c = mod.couleurs
+  // ⭐ HANDOFF « Codex Exercices (élève) » §8 — LES ONGLETS SONT CENTRÉS SUR
+  //    TÉLÉPHONE. C'est la seule modification que la maquette propose à
+  //    l'en-tête ; tout le reste est repris tel quel.
+  // ⚠️ Le centrage passe par un ENVELOPPE `w-max mx-auto`, jamais par
+  //    `justify-center` sur le conteneur qui défile : avec un débordement, le
+  //    centrage d'un conteneur `overflow-x-auto` rend le DÉBUT de la liste
+  //    inatteignable au doigt — un module à quatre onglets y perdrait son
+  //    premier. Ici, les marges automatiques disparaissent dès que ça déborde.
   return (
-    <nav className="sm:hidden flex gap-1 mb-6 border-b border-bordure overflow-x-auto -mx-4 px-4">
+    <nav className="sm:hidden mb-6 border-b border-bordure overflow-x-auto -mx-4 px-4">
+      <div className="flex gap-1 w-max mx-auto">
       {onglets.map((o) => {
         const est = actif(o)
         const p = pastille?.(o) ?? null
@@ -67,6 +76,7 @@ function Barre({ mod, onglets, actif, pastille }: BarreProps) {
           </Link>
         )
       })}
+      </div>
     </nav>
   )
 }

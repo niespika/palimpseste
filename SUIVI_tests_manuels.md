@@ -8756,3 +8756,99 @@ corrigés le jour même._
 - **`/eleve/integrite`** filtre au `statut='confirme'` et sert la preuve en mode `slim` (jamais les
   photos, le texte, ni un lien `/prof/`). Composant serveur : `eleveId` et `source` ne sont pas
   sérialisés vers le navigateur.
+
+## Handoff design — Codex · onglet Exercices (élève) : le plan de travail (séance du 30/08, ⚠️ **AUCUNE MIGRATION**)
+
+_Source : `design_handoff_codex_exercices_eleve/` (versionné avec le lot). Sept écrans — `1a`
+l'accueil, `2a` rédiger, `2b` choisir, `2c` surligner, `2d` se juger, `2e` le retour d'un texte,
+`2f` le retour d'un choix. **Présentation seulement** : aucune Server Action, aucune migration,
+aucun contrat de données modifié. `VueDuDeroule` et `ExerciceMaison` sont ÉLARGIS (titre, échéance,
+cran, durée) — rien n'est retiré, aucun appelant existant ne change de comportement._
+
+### Ce qui est prouvé, avec sa preuve
+
+_Smoke élève joué le 30/08 en bac à sable, session mintée par `generateLink` (patron de
+`scripts/recette/rls-quazian-c-rls-4.mjs`), sur les quatre dépôts réels du compte de test plus un
+décor marqué. **Décor : `exercices_depots.echeance = 2099-12-31`, balayé PAR LA MARQUE, retour
+vérifié par requête → `0 dépôt marqué, 0 métacognition, 0 retour forgé`.**_
+
+- [x] **HD-1 · Accueil, trois groupes.** « À faire · 2 » (filet de pigment sur la première ligne,
+  méta `Structure, Expression, Questionnement · un cas · environ 35 min`, pastille d'échéance,
+  UNE action) · « En attente de ton retour · 1 » (pastille `attention` « à reprendre » + bouton
+  « Ouvrir ») · « Terminés · 1 » replié. Aucun compteur de progression nulle part.
+- [x] **HD-2 · Jetons.** Mesurés sur l'écran : `--bouton #5f7365` / `--bouton-texte #f0f3ee`
+  (AA à 4,55 ; le pigment plein sur parchemin ne tenait que 4,44), `--filet-servi #c9a96a`,
+  `--surface-retrait #f7f2e8`. La portée est `[data-module="codex"][data-espace="eleve"]` : **le
+  côté professeur n'a pas bougé.**
+- [x] **HD-3 · `2a` rédiger.** Grille mesurée `400px 582px` (proportion du 400/640 de la maquette
+  sur la colonne réelle), champ EB Garamond `17px/28.56px` = 17/1,68, hauteur 428 px, pied
+  « enregistré tout seul · N signes », carte « Avant de rendre » portant les trois gestes ET le
+  bouton `Rendre ma v1` (51 px).
+- [x] **HD-4 · `2b` choisir.** Colonnes égales, **aucun champ de rédaction** (c'était le défaut :
+  l'élève voyait un champ qu'il n'avait pas à remplir), quatre lectures dans l'ordre servi, total
+  « 100 sur 100 », **un seul bouton**. La carte la plus chargée prend `#f4f7f4` — effet de la
+  saisie, `indexAttendue` n'entre dans aucun rendu.
+- [x] **HD-5 · La paire, de bout en bout.** Crédence du cas 1 → correction du cas 1 servie
+  au-dessus de la crédence du cas 2 → crédence du cas 2 → bascule sur `2f`.
+- [x] **HD-6 · `2f` retour d'un choix.** Correction à gauche, consigne + « Ce que tu avais posé »
+  à droite (`acte 20 · commettre 20 · amoral 50 · ordinaire 10`), **barre `--ok #5B6E4A` sur la
+  seule lecture attendue**, les autres en `--muet`. « Cet exercice s'arrête ici. »
+- [x] **HD-7 · `2c` surligner.** Le geste se dit au-dessus du texte, la sélection prend le
+  surlignage de l'ÉLÈVE (pigment + filet 2 px), pastille d'état, et le passage reste **gelé et
+  visible** après la remise. ⚠️ « Effacer ma sélection » **n'est PAS posé** — voir plus bas.
+- [x] **HD-8 · `2e` retour d'un texte.** v1 à gauche en lecture seule, retour à droite (« 3
+  points »), **le renvoi surligne le bon passage** (mesuré : clic sur le point 2 → surlignage
+  exact de « la seconde n'arrête que ceux qui n'ont pas d'argent »), encart de révision pleine
+  largeur, « Reprendre mon texte » → le champ de version finale s'ouvre, le fil passe à « Réviser »,
+  et **les 3 paragraphes de la v1 survivent** (473 signes, 3 blocs).
+- [x] **HD-9 · Les deux surlignages ne se confondent plus.** L'écran sert `attention-teinte` +
+  filet bas ocre ; l'élève sert `pigment-teinte` + filet 2 px. ⭐ **Le cadre décidé le 24/08 —
+  deux candidats voisins qui se lisaient comme un seul bloc gras — est tenu par le FOND et le
+  padding, pas par la bordure** ; vérifié lisible à l'ordinateur ET au téléphone (Louis, 30/08 :
+  « tant que c'est clair sur téléphone et ordi, je suis confortable »).
+- [x] **HD-10 · Téléphone.** Consigne collante dépliable, bascule `Lire`/`Écrire` (48 px) qui
+  masque bien l'autre colonne, bascule `Mon texte`/`Le retour · 3`, bandeau `À rendre` collé,
+  compteur `2 / 6`, onglets du module **centrés** (mesuré aussi sur Aletheia, 3 onglets :
+  `innerW 234` dans `navW 375`, sans débordement).
+
+### ⛔⛔ Deux défauts trouvés PAR LE SMOKE, et par lui seul — `tsc` propre et 1970 tests verts avant
+
+- [x] **HD-D1 · Le retour n'apparaissait nulle part.** `tempsCourantDe` rend « retour » *pendant*
+  l'attente **et** le garde comme état TERMINAL aux régimes sans version finale : le même temps
+  couvre les deux. Un écran piloté par le seul temps servait donc le plan de travail par-dessus un
+  retour **publié**. → `ecranDuDeroule` prend `aUnRetour` (test dédié).
+- [x] **HD-D2 · « Se juger » servi SANS question rendait une page blanche.** `phaseServie` dit
+  oui, l'offre sort vide (la banque ne porte aucune question pour les observables élus), et
+  l'écran étant devenu EXCLUSIF, la garde interne de `SeJuger` (« je ne rends rien ») devenait
+  **une page vide** — contre « jamais un écran muet » (`01-` §12). → `ecranDuDeroule` prend
+  `seJugerAServir`, et la colonne de travail montre la copie rendue.
+  ⭐⭐ **La leçon générale : rendre un écran EXCLUSIF transforme chaque garde interne « je ne
+  rends rien » d'un composant en page blanche. Remonter la garde d'un cran.**
+- [x] **HD-D3 · Crédences mortes après la remise.** Deux formulaires servis au temps « Retour »,
+  dont le bouton était refusé d'avance par `enregistrerLaCredence` (« la crédence se déclare
+  PENDANT l'exercice »). Elles ne se montrent plus qu'en rédaction.
+
+### Ce qui reste à jouer en recette — avec sa condition de reprise NOMMÉE
+
+- [ ] **HD-11 · L'écran `2d` « se juger » avec de VRAIES questions.** ⚠️ **Impossible à jouer
+  aujourd'hui, et ce n'est pas une panne de ce lot** : `exercices_metacognition.questions_servies`
+  est NULL sur **0 dépôt** de la sandbox — mesuré le 30/08, aucune instance n'y sert de question.
+  **Condition de reprise : qu'un dépôt existe avec `questions_servies` non nul** (une instance dont
+  la correspondance porte des questions pour les observables élus). À vérifier alors : titre
+  Cormorant 30, « ▸ Relire ce que tu as rendu », réponses en boutons de 48 px à parts égales
+  (empilées au téléphone), bouton fermé à 42 % d'opacité tant que tout n'est pas répondu.
+- [ ] **HD-12 · Le retour FINAL (`2e`, moment `final`).** Non joué : il demande une version finale
+  remise ET une seconde passe de chaîne. **Condition de reprise : un dépôt en `vf_remis` avec un
+  retour `final` publié** — le décor de `scripts/recette/vf-c4l3.mjs` le produit.
+
+### ⛔ Deux points du handoff DÉLIBÉRÉMENT non posés — tranchés par Louis le 30/08
+
+- **« Effacer ma sélection » (2c)** — ⭐ **la doctrine a raison** (Louis, 30/08). Le §1 du handoff
+  pose « aucune règle de doctrine ne change », or c'en serait une, tranchée le 27/08 : *« se
+  raviser, c'est re-sélectionner ; dire qu'il n'y a rien, c'est répondre »*. Un « Effacer »
+  enregistre `null`, c'est-à-dire « rien à surligner », **qui EST une réponse** ; ou il n'écrit
+  rien, et l'écran ment sur ce que la base porte. La pastille d'état, elle, est posée.
+- **Fil des temps cliquable (§7)** — ⭐ **« si c'est déjà là, pas la peine de rajouter »** (Louis,
+  30/08). Ce qu'un fil cliquable rendrait est déjà sur l'écran courant : les temps passés se
+  replient en une ligne, jamais supprimés. Le fil reste un `nav aria-label` avec l'état de chaque
+  temps en `sr-only`.

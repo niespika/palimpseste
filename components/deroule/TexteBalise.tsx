@@ -107,13 +107,14 @@ export function TexteBrut({ texte, className = '' }: { texte: string; className?
  * les échappe. Le matériau vient d'un import de fichier (`08-` §4).
  */
 export function MateriauMarque(
-  { segments, className = '' }: { segments: readonly SegmentMateriau[]; className?: string },
+  { segments, className = '', marque = MARQUE }:
+  { segments: readonly SegmentMateriau[]; className?: string; marque?: string },
 ) {
   return (
     <p className={`whitespace-pre-wrap ${className}`}>
       {segments.map((s, i) => (
         s.marque
-          ? <strong key={i} className={MARQUE}>{s.texte}</strong>
+          ? <strong key={i} className={marque}>{s.texte}</strong>
           : <span key={i}>{s.texte}</span>
       ))}
     </p>
@@ -126,5 +127,37 @@ export function MateriauMarque(
  * l'élève verra » : deux listes de classes qui divergeraient rendraient cette
  * phrase fausse au premier ajustement.*
  */
-export const MARQUE = 'font-semibold rounded-[0.2em] border border-pigment '
-  + 'bg-pigment-teinte px-[0.18em] box-decoration-clone'
+/**
+ * ⭐⭐ **DEUX SURLIGNAGES, JAMAIS CONFONDUS** — handoff « Codex Exercices
+ * (élève) » §2. Ils désignent des choses de nature opposée :
+ *   · `MARQUE` — **ce que l'ÉCRAN met en évidence** : les quatre candidats du
+ *     cran 1, le passage fautif aux crans 3 et 5, la sélection que le
+ *     professeur a faite dans le texte d'auteur. Fond `--attention-teinte`,
+ *     filet bas `--filet-servi` ;
+ *   · `MARQUE_ELEVE` — **ce que l'ÉLÈVE a désigné** aux crans 4, 7 et 9. Fond
+ *     `--pigment-teinte`, filet bas de 2 px au pigment du module.
+ * *Les rendre pareils ferait croire à l'élève qu'il a surligné ce qu'on lui
+ * avait déjà surligné — et, aux crans où il doit trouver seul, que le travail
+ * est fait.*
+ *
+ * ⭐⭐ **LE CADRE DU 24/08 EST TENU PAR LE FOND, ET IL FAUT QUE ÇA RESTE VRAI.**
+ * La décision de Louis venait d'un défaut vu à l'œil : au cran 1, deux candidats
+ * VOISINS — `donc` et `meilleure` — donnaient deux `<strong>` dans le DOM mais
+ * **se lisaient comme un seul bloc gras**, et l'élève en comptait trois là où la
+ * consigne en promet quatre. Ici, l'espace qui sépare deux marques est un
+ * `<span>` HORS des deux boîtes : il reste SANS FOND, et les deux pastilles se
+ * détachent l'une de l'autre. `box-decoration-clone` referme la boîte de chaque
+ * côté d'un retour à la ligne, au lieu d'un cadre ouvert à cheval sur deux lignes.
+ *
+ * ⚠️ **LE GRAS RESTE, ET IL LE FAUT** : « les mots **en gras** dans le texte »
+ * (cran 1) et « le mot **en gras** » (cran 3) sont écrits dans des consignes
+ * SERVIES À L'ÉLÈVE (`02-` §5). Le retirer ferait mentir la consigne.
+ *
+ * ⭐ Les deux se posent en JETONS (`globals.css`), jamais en hex : elles suivent
+ * donc le monde du module sans une ligne de plus.
+ */
+export const MARQUE = 'font-semibold rounded-[0.2em] bg-attention-teinte '
+  + 'shadow-[inset_0_-1px_0_var(--filet-servi)] px-[0.18em] box-decoration-clone'
+
+export const MARQUE_ELEVE = 'font-semibold rounded-[0.2em] bg-pigment-teinte '
+  + 'shadow-[inset_0_-2px_0_var(--pigment)] px-[0.18em] box-decoration-clone'

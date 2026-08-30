@@ -60,9 +60,28 @@ type PointServi = RetourServi['points'][number]
 type ActeDeContestation = VueDuDeroule['contestations'][number]
 type EncartDeLangue = VueDuDeroule['langue']
 
+/**
+ * @param onRenvoi ⭐ HANDOFF « Codex Exercices (élève) » §6 — « chaque point
+ *        porte un renvoi ▸ voir le passage de mon texte qui surligne le passage
+ *        concerné à gauche ». Le parent tient la colonne de gauche et le
+ *        surlignage ; ce composant ne fait que DÉSIGNER la citation.
+ *        ⚠️ Il n'est offert que sur un ancrage de source `copie` : renvoyer vers
+ *           « le texte dit… » pointerait le texte d'auteur, pas la copie — et
+ *           RR3 sépare précisément les deux (`01-` §12).
+ * @param nu le parent porte déjà le cadre de la colonne (écran 2e) : on ne
+ *        redouble pas la carte.
+ */
 export function RetourSegmente({
-  depotId, retour, vue, titre,
-}: { depotId: string; retour: RetourServi; vue: VueDuDeroule; titre: string }) {
+  depotId, retour, vue, titre, onRenvoi, renvoiActif = null, nu = false,
+}: {
+  depotId: string
+  retour: RetourServi
+  vue: VueDuDeroule
+  titre: string
+  onRenvoi?: (citation: string | null) => void
+  renvoiActif?: string | null
+  nu?: boolean
+}) {
   // ⚠️ Le parent rend CE composant DEUX FOIS — le retour chaud, puis le retour
   //    final. L'encart de langue, lui, est UN relevé, fait sur la v1, « et sa
   //    correction est attendue dans la version finale » (`06-` §2) : il se pose
@@ -70,40 +89,64 @@ export function RetourSegmente({
   //    fois demanderait deux fois la même correction.
   const porteLEncartDeLangue = retour.moment === 'chaud' || vue.retourChaud === null
 
-  return (
-    <div className="space-y-4">
-      <section className="rounded-lg border border-bordure bg-surface p-4">
-        <h2 className="font-marque text-sm uppercase tracking-wide text-muet-clair">{titre}</h2>
-        {retour.publieLe && (
-          <p className="mt-1 text-xs text-muet">Reçu le {quand(retour.publieLe)}.</p>
-        )}
+  const entete = (
+    <div className="flex items-baseline gap-3">
+      <h2 className="font-marque text-[11px] font-semibold uppercase tracking-[0.13em] text-muet">
+        {titre}
+      </h2>
+      {/* ⭐ Le CARDINAL des points — « 3 points ». ⛔ Ce n'est pas une note : il
+          ne se rapporte à aucun total, et le premier point est une RÉUSSITE. */}
+      {retour.points.length > 0 && (
+        <span className="ml-auto font-ui text-xs text-muet">
+          {retour.points.length} point{retour.points.length > 1 ? 's' : ''}
+        </span>
+      )}
+    </div>
+  )
 
-        {/* ⚠️ Dit UNE FOIS, en tête, et redit à chaque contestation : contester
-            n'est pas corriger. C'est la promesse que le module tient vraiment —
-            `contester()` n'écrit que dans `exercices_metacognition`. */}
-        <p className="mt-2 text-sm text-encre-douce">
-          Chaque remarque s’appuie sur un passage précis. Si l’une te semble fausse, dis-le :
-          elle part à ton professeur, et <strong>rien ne change tout seul</strong>.
+  const corps = (
+    <>
+      {retour.publieLe && (
+        <p className="mt-1 text-xs text-muet">Reçu le {quand(retour.publieLe)}.</p>
+      )}
+
+      {/* ⚠️ Dit UNE FOIS, en tête, et redit à chaque contestation : contester
+          n'est pas corriger. C'est la promesse que le module tient vraiment —
+          `contester()` n'écrit que dans `exercices_metacognition`. */}
+      <p className="mt-2 text-sm text-encre-douce">
+        Chaque remarque s’appuie sur un passage précis. Si l’une te semble fausse, dis-le :
+        elle part à ton professeur, et <strong>rien ne change tout seul</strong>.
+      </p>
+
+      {/* ⭐ ON BOUCLE. Le découpage a été fait en amont, par celui qui a écrit
+          le retour — c'est un contrat sur lui, pas sur l'écran (`07-` §1.2). */}
+      {retour.points.length === 0 ? (
+        <p className="mt-3 text-sm italic text-muet">
+          Ce retour ne porte aucune remarque ancrée.
         </p>
+      ) : (
+        <ul className="mt-3 flex flex-col gap-2.5">
+          {retour.points.map((point, i) => (
+            <PointAncre
+              key={point.id}
+              depotId={depotId}
+              point={point}
+              rang={i + 1}
+              contestation={vue.contestations.find((c) => c.point_id === point.id) ?? null}
+              onRenvoi={onRenvoi}
+              renvoiActif={renvoiActif}
+            />
+          ))}
+        </ul>
+      )}
+    </>
+  )
 
-        {/* ⭐ ON BOUCLE. Le découpage a été fait en amont, par celui qui a écrit
-            le retour — c'est un contrat sur lui, pas sur l'écran (`07-` §1.2). */}
-        {retour.points.length === 0 ? (
-          <p className="mt-3 text-sm italic text-muet">
-            Ce retour ne porte aucune remarque ancrée.
-          </p>
-        ) : (
-          <ul className="mt-3 space-y-3">
-            {retour.points.map((point) => (
-              <PointAncre
-                key={point.id}
-                depotId={depotId}
-                point={point}
-                contestation={vue.contestations.find((c) => c.point_id === point.id) ?? null}
-              />
-            ))}
-          </ul>
-        )}
+  return (
+    <div className="flex flex-col gap-4">
+      <section className={nu ? '' : 'rounded-xl border border-bordure bg-surface p-4'}>
+        {entete}
+        {corps}
 
         {/* ⚠️⚠️ LE VERDICT DE CALIBRATION S'AFFICHERAIT ICI — « nous n'avons pas
             vu la même chose », JAMAIS un verdict, et il NOMME LA DIMENSION en
@@ -149,8 +192,15 @@ const quand = (iso: string) =>
 // ── UN POINT ANCRÉ, ET SON GESTE DE DÉSACCORD ───────────────────────────────
 
 function PointAncre({
-  depotId, point, contestation,
-}: { depotId: string; point: PointServi; contestation: ActeDeContestation | null }) {
+  depotId, point, rang, contestation, onRenvoi, renvoiActif,
+}: {
+  depotId: string
+  point: PointServi
+  rang: number
+  contestation: ActeDeContestation | null
+  onRenvoi?: (citation: string | null) => void
+  renvoiActif?: string | null
+}) {
   const router = useRouter()
   const [ouvert, setOuvert] = useState(false)
   const [texte, setTexte] = useState('')
@@ -181,17 +231,25 @@ function PointAncre({
     }
   }
 
+  // ⭐ HANDOFF §6 — LE RENVOI VERS LE PASSAGE DE LA COPIE. ⚠️ Sur un ancrage de
+  //    source `texte` il n'est PAS offert : la colonne de gauche porte la copie
+  //    de l'élève, et RR3 sépare précisément « tu écris » de « le texte dit ».
+  const citation = point.ancrage?.source === 'copie' ? point.ancrage.citation : null
+  const renvoyable = !!onRenvoi && !!citation && citation.trim() !== ''
+  const actif = renvoyable && renvoiActif === citation
+
   return (
-    <li className="rounded border border-bordure p-3">
+    <li className={`rounded-xl border p-4 ${estUneReussite
+      ? 'border-ok/25 bg-ok-teinte'
+      : 'border-bordure bg-surface'}`}>
       {/* La marque de nature — DISCRÈTE, et sans aucun degré : une réussite se
-          distingue d'un point de travail, elle ne se chiffre pas. */}
-      <span
-        className={`inline-block rounded px-2 py-0.5 text-xs ${estUneReussite
-          ? 'bg-ok-teinte text-ok'
-          : 'bg-parchemin-fonce text-muet-clair'}`}
-      >
-        {estUneReussite ? 'Réussi' : 'À travailler'}
-      </span>
+          distingue d'un point de travail, elle ne se chiffre pas.
+          ⭐ Handoff §6 : le premier point (la réussite) porte le fond `ok`, les
+             suivants le fond de carte — c'est la nature qui colore, pas le rang. */}
+      <p className={`font-marque text-[11px] font-semibold uppercase tracking-[0.11em] ${
+        estUneReussite ? 'text-ok' : 'text-muet'}`}>
+        {estUneReussite ? 'Ce que tu as réussi' : `Point ${rang}`}
+      </p>
 
       {/* ⚠️ RR3 — LA CITATION PORTE SA SOURCE, et les deux ne se ressemblent
           pas à l'écran. Une citation vide n'est pas montrée : un chapeau
@@ -201,7 +259,7 @@ function PointAncre({
           className={`mt-2 rounded border-l-2 bg-parchemin-fonce py-2 pl-3 pr-2 ${
             point.ancrage.source === 'copie' ? 'border-liseret' : 'border-bordure-bouton'}`}
         >
-          <p className="text-xs uppercase tracking-wide text-muet-clair">
+          <p className="text-xs uppercase tracking-wide text-muet">
             {point.ancrage.source === 'copie' ? 'Tu écris' : 'Le texte dit'}
           </p>
           <p className="mt-1 font-corps text-sm italic leading-relaxed text-encre">
@@ -210,11 +268,25 @@ function PointAncre({
         </blockquote>
       )}
 
-      <p className="mt-2 font-corps text-base leading-relaxed text-encre">{point.texte}</p>
+      <p className="mt-1.5 font-corps text-base leading-[1.55] text-encre">{point.texte}</p>
+
+      {renvoyable && (
+        <div className="mt-1">
+          <button
+            type="button"
+            aria-pressed={actif}
+            onClick={() => onRenvoi!(actif ? null : citation)}
+            className={`min-h-11 text-left font-ui text-[13px] ${
+              actif ? 'font-semibold text-pigment' : 'text-pigment/80 hover:text-pigment'}`}
+          >
+            {actif ? '▾ masquer le passage' : '▸ voir le passage de mon texte'}
+          </button>
+        </div>
+      )}
 
       {contestation ? (
         <div className="mt-3 rounded border border-bordure-bouton bg-parchemin-fonce p-3">
-          <p className="text-xs uppercase tracking-wide text-muet-clair">
+          <p className="text-xs uppercase tracking-wide text-muet">
             Tu n’étais pas d’accord
           </p>
           <p className="mt-1 text-sm text-encre">{contestation.texte}</p>
@@ -255,8 +327,8 @@ function PointAncre({
               type="button"
               onClick={() => { void envoyer() }}
               disabled={enCours || texte.trim() === ''}
-              className="min-h-[44px] rounded bg-bouton px-4 py-2 text-sm text-parchemin
-                         disabled:opacity-40"
+              className="min-h-[44px] rounded-[9px] bg-bouton px-4 py-2 font-ui text-sm
+                         font-semibold text-bouton-texte disabled:opacity-40"
             >
               {enCours ? 'Envoi…' : 'Envoyer'}
             </button>
@@ -274,8 +346,8 @@ function PointAncre({
         <button
           type="button"
           onClick={() => setOuvert(true)}
-          className="mt-3 min-h-[44px] rounded border border-bordure-bouton px-3 py-1
-                     text-sm text-encre-douce"
+          className="mt-2 block min-h-[44px] rounded-[9px] border border-bordure-bouton
+                     bg-surface px-4 py-2 font-ui text-sm text-encre-douce"
         >
           Je ne suis pas d’accord
         </button>
@@ -314,7 +386,7 @@ function EncartLangue({ langue }: { langue: EncartDeLangue }) {
 
   return (
     <section className="rounded-lg border border-bordure bg-surface p-4">
-      <h3 className="font-marque text-sm uppercase tracking-wide text-muet-clair">
+      <h3 className="font-marque text-sm uppercase tracking-wide text-muet">
         La chasse aux fautes
       </h3>
       <p className="mt-2 text-sm text-encre">{langue.phrase}</p>
@@ -329,7 +401,7 @@ function EncartLangue({ langue }: { langue: EncartDeLangue }) {
         <ul className="mt-3 space-y-1 text-sm text-encre">
           {ancres.map((a, i) => (
             <li key={`${a.ligne}-${i}`}>
-              <span className="text-muet-clair">Ligne {a.ligne} — </span>
+              <span className="text-muet">Ligne {a.ligne} — </span>
               <span className="font-corps italic">« {a.citation} »</span>
             </li>
           ))}
@@ -405,8 +477,8 @@ function ValidationDeLecture({
         type="button"
         onClick={() => { void valider() }}
         disabled={enCours}
-        className="mt-3 min-h-[44px] rounded bg-bouton px-4 py-2 text-sm text-parchemin
-                   disabled:opacity-40"
+        className="mt-3 min-h-[44px] rounded-[9px] bg-bouton px-4 py-2 font-ui text-sm
+                   font-semibold text-bouton-texte disabled:opacity-40"
       >
         {enCours ? '…' : 'J’ai lu mon retour'}
       </button>

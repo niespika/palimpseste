@@ -40,11 +40,19 @@
 //
 // ⚠️ **L'ÉCRAN EST SOUVENT UN TÉLÉPHONE** (`07-` §3) : tout ce qui se touche
 //    tient 44 px de haut. C'est une règle de source, pas du confort.
+//
+// ⭐ **CE COMPOSANT NE PORTE PLUS SON PROPRE CADRE** (handoff « Codex Exercices
+//    (élève) » §4) : les trois gestes vivent DANS la carte « Avant de rendre »,
+//    sous le champ, avec le bouton de remise à droite. Il rend donc du contenu
+//    nu, et c'est `ChampDeRedaction` qui l'encadre.
+//    ⚠️ Ce qui NE change pas : **un geste à la fois**, dans l'ordre que le
+//       serveur donne (`vue.gestesRestants`). Trois panneaux empilés feraient un
+//       formulaire ; un panneau à la fois fait un geste.
 // ============================================================================
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { CONFIANCES, CONDITIONS } from '@/utils/deroule/types'
+import { CONFIANCES, CONDITIONS, NOM_COMPETENCE } from '@/utils/deroule/types'
 import type { Competence, Condition, Confiance } from '@/utils/deroule/types'
 import type { VueDuDeroule } from '@/utils/deroule/vue'
 import { actionConfiance, actionConditions, actionRestitution } from '@/app/deroule/actions'
@@ -57,15 +65,10 @@ import { actionConfiance, actionConditions, actionRestitution } from '@/app/dero
  */
 const RESTITUTION_MAX = 400
 
-/** Les six compétences EN FRANÇAIS LISIBLE — jamais l'identifiant nu (RR4). */
-const NOM_COMPETENCE: Record<Competence, string> = {
-  expression: 'Expression',
-  argumentation: 'Argumentation',
-  structure: 'Structure',
-  connaissance: 'Connaissance',
-  synthese: 'Synthèse',
-  questionnement: 'Questionnement',
-}
+/* ⭐ Les six compétences EN FRANÇAIS LISIBLE — jamais l'identifiant nu (RR4).
+   La copie privée qui vivait ici est partie dans `utils/deroule/types.ts`,
+   module PUR : `utils/competences-classe.ts` en porte le jumeau mais ouvre sur
+   `createAdminClient`, et un composant client ne peut pas l'importer. */
 
 /** Libellés LIBRES ; les clés, elles, sont l'enum stocké. */
 const LIBELLE_CONFIANCE: Record<Confiance, string> = {
@@ -86,9 +89,9 @@ export function GestesDeLaRemise({ vue }: { vue: VueDuDeroule }) {
 
   if (geste === undefined) {
     return (
-      <div className="rounded-lg border border-bordure bg-surface p-4">
-        <p className="text-sm text-encre-douce">Tu peux rendre ta copie.</p>
-      </div>
+      <p className="font-corps text-[15px] text-encre-douce">
+        Tu as fait les trois gestes. <strong>Tu peux rendre ta copie.</strong>
+      </p>
     )
   }
 
@@ -149,10 +152,8 @@ function LaConfiance(
   }
 
   return (
-    <section className="rounded-lg border border-bordure bg-surface p-4">
-      <h2 className="font-marque text-sm uppercase tracking-wide text-muet-clair">
-        Avant de rendre — comment te sens-tu ?
-      </h2>
+    <div>
+      <h3 className="font-corps text-[15px] text-encre">Comment te sens-tu ?</h3>
       <p className="mt-2 text-sm text-encre-douce">
         Une réponse par point de travail. C’est l’affaire de quelques secondes.
       </p>
@@ -178,8 +179,8 @@ function LaConfiance(
 
       <button
         type="button" onClick={envoyer} disabled={enCours || !complet}
-        className="mt-4 min-h-[44px] rounded bg-bouton px-4 py-2 text-sm text-parchemin
-                   disabled:opacity-40"
+        className="mt-3 min-h-[44px] rounded-[9px] bg-bouton px-4 py-2 font-ui text-sm
+                   font-semibold text-bouton-texte disabled:opacity-40"
       >
         {enCours ? 'Envoi…' : 'Continuer'}
       </button>
@@ -187,7 +188,7 @@ function LaConfiance(
           pas lire ici qu'une réponse vaudrait mieux qu'une autre. */}
       <p className="mt-2 text-xs text-muet">Ça ne compte pas dans ton travail.</p>
       {message && <p className="mt-2 text-sm text-retard">{message}</p>}
-    </section>
+    </div>
   )
 }
 
@@ -223,10 +224,10 @@ function LesConditions({ depotId }: { depotId: string }) {
   }
 
   return (
-    <section className="rounded-lg border border-bordure bg-surface p-4">
-      <h2 className="font-marque text-sm uppercase tracking-wide text-muet-clair">
+    <div>
+      <h3 className="font-corps text-[15px] text-encre">
         Dans quelles conditions as-tu travaillé ?
-      </h2>
+      </h3>
       <p className="mt-2 text-sm text-encre-douce">
         Dis-le franchement : personne ne te le reprochera.
       </p>
@@ -241,7 +242,7 @@ function LesConditions({ depotId }: { depotId: string }) {
           dire rendrait l'élève stratégique, et la mesure serait perdue. */}
       <p className="mt-2 text-xs text-muet">Ça ne compte pas dans ton travail.</p>
       {message && <p className="mt-2 text-sm text-retard">{message}</p>}
-    </section>
+    </div>
   )
 }
 
@@ -278,10 +279,8 @@ function LaRestitution({ depotId }: { depotId: string }) {
   }
 
   return (
-    <section className="rounded-lg border border-bordure bg-surface p-4">
-      <h2 className="font-marque text-sm uppercase tracking-wide text-muet-clair">
-        Ta thèse en une phrase ?
-      </h2>
+    <div>
+      <h3 className="font-corps text-[15px] text-encre">Ta thèse en une phrase ?</h3>
       <p className="mt-2 text-sm text-encre-douce">
         Trente secondes, de mémoire, sans relire ta copie.
       </p>
@@ -300,14 +299,14 @@ function LaRestitution({ depotId }: { depotId: string }) {
       <p className="mt-1 text-xs text-muet">{texte.length} / {RESTITUTION_MAX} caractères.</p>
       <button
         type="button" onClick={envoyer} disabled={enCours || texte.trim() === ''}
-        className="mt-3 min-h-[44px] rounded bg-bouton px-4 py-2 text-sm text-parchemin
-                   disabled:opacity-40"
+        className="mt-3 min-h-[44px] rounded-[9px] bg-bouton px-4 py-2 font-ui text-sm
+                   font-semibold text-bouton-texte disabled:opacity-40"
       >
         {enCours ? 'Envoi…' : 'Continuer'}
       </button>
       <p className="mt-2 text-xs text-muet">Ça ne compte pas dans ton travail.</p>
       {message && <p className="mt-2 text-sm text-retard">{message}</p>}
-    </section>
+    </div>
   )
 }
 

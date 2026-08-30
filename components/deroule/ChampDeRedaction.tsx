@@ -56,9 +56,21 @@ import { actionCollageBloque } from '@/app/deroule/actions'
 /** L'intervalle d'enregistrement du brouillon — assez lâche pour ne pas marteler. */
 const AUTO_MS = 15_000
 
+/**
+ * @param avantDeRendre ⭐ HANDOFF « Codex Exercices (élève) » §4 — « sous le
+ *        champ, les trois gestes de la remise, et le bouton "Rendre ma v1" à
+ *        droite ». Le parent y passe `<GestesDeLaRemise>`, qui ne porte plus son
+ *        cadre : les deux tiennent dans UNE carte, au lieu de deux sections
+ *        empilées que l'élève lisait comme deux étapes.
+ *        ⚠️ **L'ÉTAT DU TEXTE NE REMONTE PAS POUR AUTANT.** Le bouton de remise
+ *        reste ici, avec la valeur et la télémétrie — les faire voyager par un
+ *        `<form>` ou par un parent normaliserait la valeur en CRLF, et une copie
+ *        de quatre paragraphes se relirait comme UN SEUL BLOC (piège 24).
+ * @param aide la mention du pied, à gauche du compte de signes.
+ */
 export function ChampDeRedaction({
   depotId, valeurInitiale, lectureSeule, rows = 20,
-  onEnregistrer, onRemettre, libelleRemise,
+  onEnregistrer, onRemettre, libelleRemise, avantDeRendre = null, pied = null,
 }: {
   depotId: string
   valeurInitiale: string
@@ -67,10 +79,16 @@ export function ChampDeRedaction({
   onEnregistrer: (texte: string, t: TelemetrieSaisie) => Promise<void>
   onRemettre: (texte: string, t: TelemetrieSaisie) => Promise<void>
   libelleRemise: string
+  avantDeRendre?: React.ReactNode
+  /** La mention sous le champ, à droite du compte de signes. */
+  pied?: React.ReactNode
 }) {
   const [texte, setTexte] = useState(valeurInitiale)
   const [enCours, setEnCours] = useState(false)
   const [message, setMessage] = useState<string | null>(null)
+  /** ⭐ « brouillon enregistré · 14:02 » — l'heure du DERNIER succès, pas une
+   *     promesse : tant qu'aucun enregistrement n'a abouti, on ne dit rien. */
+  const [enregistreA, setEnregistreA] = useState<string | null>(null)
 
   // La télémétrie s'accumule en `ref` : elle ne doit JAMAIS provoquer un rendu.
   const releve = useRef<TelemetrieSaisie>(nouvelleTelemetrie())
@@ -120,11 +138,14 @@ export function ChampDeRedaction({
       sale.current = false
       const t = releve.current
       releve.current = nouvelleTelemetrie()
-      void onEnregistrer(texte, t).catch(() => {
-        // Best-effort : on rend la télémétrie au relevé pour ne pas la perdre.
-        releve.current = fusionner(releve.current, t)
-        sale.current = true
-      })
+      void onEnregistrer(texte, t)
+        .then(() => setEnregistreA(
+          new Date().toLocaleTimeString('fr-CA', { hour: '2-digit', minute: '2-digit' })))
+        .catch(() => {
+          // Best-effort : on rend la télémétrie au relevé pour ne pas la perdre.
+          releve.current = fusionner(releve.current, t)
+          sale.current = true
+        })
     }, AUTO_MS)
     return () => clearInterval(id)
   }, [texte, lectureSeule, onEnregistrer])
@@ -145,56 +166,102 @@ export function ChampDeRedaction({
   }
 
   return (
-    <section className="rounded-lg border border-bordure bg-surface p-4">
-      <h2 className="font-marque text-sm uppercase tracking-wide text-muet-clair">
-        Ta rédaction
-      </h2>
-      <p className="mt-2 text-sm text-encre-douce">
-        Tu écris au clavier. <strong>Le collage est désactivé</strong> : ce texte doit être le tien.
-      </p>
-
-      <textarea
-        value={texte}
-        onChange={(e) => surSaisie(e.target.value)}
-        readOnly={lectureSeule}
-        rows={rows}
-        // ⚠️ EXPLICITE, et pas laissé au défaut du navigateur : « le correcteur
-        //    orthographique du navigateur RESTE ACTIF » (`06-` §1) est une règle
-        //    de source, et une règle nommée ne se confie pas à un défaut.
-        spellCheck
-        onPaste={refuserLeCollage('raccourci')}
-        onDrop={refuserLeCollage('glisser-deposer')}
-        onDragOver={(e) => e.preventDefault()}
-        onContextMenu={refuserLeCollage('menu-contextuel')}
-        // ⚠️ Le fond passe par `style` : la règle nue de `globals.css` sur
-        //    `input, textarea, select` n'est dans aucune couche Tailwind et
-        //    l'emporte sur une classe `bg-*` (constat de C4-L4, dont le
-        //    `bg-parchemin` est inopérant).
-        style={{ backgroundColor: 'var(--parchemin)' }}
-        className="mt-3 w-full rounded border border-bordure-bouton p-3 font-corps text-base
-                   leading-relaxed text-encre"
-      />
+    <div className="flex flex-col gap-3">
+      {/* ⭐ HANDOFF §4 — LE CHAMP OCCUPE LA COLONNE, PLEINE HAUTEUR : 322 px au
+          minimum sur l'ordinateur, et le texte en EB Garamond 17/1,68. Le cadre
+          est celui d'une page, pas d'un formulaire.
+          ⚠️ C'est un `<textarea>`, ET RIEN D'AUTRE (piège 24) : ni
+             `contenteditable`, ni normalisation à la frappe. */}
+      <div className="rounded-xl border border-bordure-bouton bg-surface p-1
+                      focus-within:border-pigment">
+        <textarea
+          value={texte}
+          onChange={(e) => surSaisie(e.target.value)}
+          readOnly={lectureSeule}
+          rows={rows}
+          // ⚠️ EXPLICITE, et pas laissé au défaut du navigateur : « le correcteur
+          //    orthographique du navigateur RESTE ACTIF » (`06-` §1) est une règle
+          //    de source, et une règle nommée ne se confie pas à un défaut.
+          spellCheck
+          onPaste={refuserLeCollage('raccourci')}
+          onDrop={refuserLeCollage('glisser-deposer')}
+          onDragOver={(e) => e.preventDefault()}
+          onContextMenu={refuserLeCollage('menu-contextuel')}
+          // ⚠️ Le fond passe par `style` : la règle nue de `globals.css` sur
+          //    `input, textarea, select` n'est dans aucune couche Tailwind et
+          //    l'emporte sur une classe `bg-*` (constat de C4-L4, dont le
+          //    `bg-parchemin` est inopérant).
+          style={{ backgroundColor: 'var(--surface)' }}
+          className="min-h-[300px] w-full resize-y rounded-[10px] border-0 px-4 py-3.5
+                     font-corps text-[17px] leading-[1.68] text-encre outline-none
+                     sm:min-h-[322px]"
+        />
+        {/* Le pied du champ : ce que l'écran a fait tout seul, et le poids du
+            texte. ⚠️ Aucun décompte de mots attendus, aucune cible : il n'y en
+            a pas, et en afficher une inventerait une note. */}
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-1 border-t border-bordure
+                        px-4 py-2.5 font-ui text-xs text-muet">
+          <span className="text-encre-douce">
+            {enregistreA ? `brouillon enregistré · ${enregistreA}` : 'enregistré tout seul'}
+          </span>
+          <span className="ml-auto tabular-nums">{signes(texte)} signes</span>
+        </div>
+      </div>
 
       {/* ⭐ « Le champ ENCOURAGE le découpage » : le compteur le dit, il ne le
           corrige pas — aucun ajout automatique de ligne vide, aucun refus. */}
-      <p className="mt-1 text-xs text-muet">
+      <p className="text-xs text-muet">
         {nbBlocs} paragraphe{nbBlocs > 1 ? 's' : ''} — une ligne vide sépare deux paragraphes.
         {nbBlocs <= 1 && texte.trim() !== '' && (
           <span className="text-attention">
             {' '}Pense à aller à la ligne : c’est ce qui donne son architecture à ton devoir.
           </span>
         )}
+        {' '}Tu écris au clavier : <strong>le collage est désactivé</strong>, ce texte doit être
+        le tien.
       </p>
 
       {!lectureSeule && (
-        <button
-          type="button" onClick={remettre} disabled={enCours || texte.trim() === ''}
-          className="mt-3 rounded bg-bouton px-4 py-2 text-sm text-parchemin disabled:opacity-40"
-        >
-          {enCours ? 'Envoi…' : libelleRemise}
-        </button>
+        // ⭐ HANDOFF §4 — UNE SEULE CARTE « Avant de rendre » : les trois gestes
+        //    à gauche, le bouton à droite. Sur téléphone, le bouton passe
+        //    dessous, en pleine largeur.
+        <div className="rounded-xl border border-bordure bg-surface-retrait px-4 py-4">
+          {/* ⚠️ Le sur-titre ne se pose QUE s'il coiffe quelque chose : à la
+              révision il n'y a plus de gestes — ils se font à la v1 (`06-` §3) —
+              et « Avant de rendre » au-dessus d'un seul bouton ne dirait rien. */}
+          {avantDeRendre && (
+            <p className="font-marque text-[11px] font-semibold uppercase tracking-[0.11em]
+                          text-muet">
+              Avant de rendre
+            </p>
+          )}
+          <div className={`flex flex-col gap-4 sm:flex-row sm:items-center sm:gap-5
+                           ${avantDeRendre ? 'mt-2.5' : ''}`}>
+            <div className="min-w-0 flex-1">{avantDeRendre}</div>
+            <button
+              type="button" onClick={remettre} disabled={enCours || texte.trim() === ''}
+              className="min-h-12 shrink-0 rounded-[10px] bg-bouton px-6 py-4 font-ui text-[15px]
+                         font-semibold text-bouton-texte disabled:opacity-40 sm:py-3.5"
+            >
+              {enCours ? 'Envoi…' : libelleRemise}
+            </button>
+          </div>
+        </div>
       )}
-      {message && <p className="mt-2 text-sm text-retard">{message}</p>}
-    </section>
+      {pied && (
+        <p className="text-center font-corps text-[13.5px] italic text-muet">{pied}</p>
+      )}
+      {message && <p className="text-sm text-retard">{message}</p>}
+    </div>
   )
+}
+
+/**
+ * Le poids du texte, EN SIGNES et groupé par milliers — « 1 240 signes ».
+ * ⚠️ **Ce n'est pas une cible.** Aucun minimum, aucun maximum, aucune couleur :
+ *    un compteur qui vire au rouge invente une longueur attendue, et il n'y en a
+ *    pas. Il dit ce qui est écrit, rien de plus.
+ */
+function signes(texte: string): string {
+  return texte.length.toLocaleString('fr-CA')
 }

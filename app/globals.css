@@ -15,6 +15,10 @@
   --parchemin:        #F4EFE6;
   --parchemin-fonce:  #ECE4D6;
   --surface:          #FBF8F1;   /* cartes */
+  /* La surface EN RETRAIT — ce qui est replié, en lecture seule, ou en attente
+     (handoff « Codex Exercices (élève) ») : un cran sous `--surface`, pour que
+     l'œil sache d'un coup ce qui appelle un geste et ce qui n'en appelle pas. */
+  --surface-retrait:  #F7F2E8;
   /* encre */
   --encre:            #221C16;   /* texte principal */
   --encre-douce:      #5A4632;   /* texte secondaire / sépia */
@@ -37,7 +41,30 @@
   --pigment-teinte:   #E8DFCB;
   --fond-module:      #F4EFE6;
   --bouton:           #5A4632;   /* fond bouton = pigment par défaut */
+  --bouton-texte:     #F4EFE6;   /* texte porté par --bouton (= parchemin par défaut) */
   --liseret:          #5A4632;   /* liseré = pigment par défaut */
+
+  /* --- Déroulé élève : LES DEUX SURLIGNAGES, QUI NE SE CONFONDENT JAMAIS ----
+     (handoff « Codex Exercices (élève) », §2). Ils désignent deux choses de
+     nature opposée, et un écran qui les rendrait pareil ferait croire à l'élève
+     qu'il a surligné ce que le professeur avait choisi :
+       · LE PASSAGE SERVI — celui que le professeur a choisi dans le texte
+         d'auteur, ou ce que l'écran met en évidence dans le matériau (les quatre
+         candidats du cran 1, le passage fautif aux crans 3 et 5) : fond
+         `--attention-teinte`, filet bas `--filet-servi` ;
+       · LA SÉLECTION DE L'ÉLÈVE (crans 4, 7 et 9) : fond `--pigment-teinte`,
+         filet bas de 2 px au pigment du module.
+     ⚠️ Le second N'EST PAS un jeton : il se pose en `bg-pigment-teinte` +
+        `shadow-[inset_0_-2px_0_var(--pigment)]`, parce qu'un alias déclaré ici
+        se figerait sur le pigment de `:root` — une valeur personnalisée est
+        substituée là où elle est DÉCLARÉE, pas là où elle est utilisée. */
+  --filet-servi:      #C9A96A;
+
+  /* La carte de crédence qui porte le plus de jetons — EFFET DE LA SAISIE,
+     JAMAIS UN INDICE (`02-` §5 ; handoff §4). Deux teintes quasi neutres, pour
+     qu'elles ne prennent pas parti dans le monde du module. */
+  --saisie-retenue:         #F4F7F4;
+  --saisie-retenue-bordure: #B9C9BE;
 
   /* Scriptorium · onglet « Parcours » — fil des deux familles + boutons estompés.
      L'ocre de famille encadre le monde « Plans d'évaluation » (têtières, eyebrows,
@@ -64,11 +91,22 @@
                               --ocre:#C8993F; --rose:#BE8276; --bouton:#3E6B8E; --liseret:#BE8276; }
 [data-module="scriptorium"] { --pigment:#4A3A28; --pigment-teinte:#E6DDC9; --fond-module:#F0EADE; --bouton:#4A3A28; --liseret:#4A3A28; }
 
+/* ⭐ CODEX · FACE ÉLÈVE — le bouton d'action en vert Codex ESTOMPÉ (handoff
+   « Codex Exercices (élève) », §2, validé) : « les boutons ne sont pas des
+   aplats saturés », c'est la préférence projet déjà écrite plus haut pour les
+   trois boutons de Scriptorium. Le couple #5F7365 / #F0F3EE tient AA (4,55) ;
+   le pigment plein sur parchemin ne le tenait pas (4,44).
+   ⚠️ LA PORTÉE EST L'ESPACE ÉLÈVE, ET C'EST VOULU : « côté professeur : rien »
+      (handoff §8). `app/eleve/modules/codex/layout.tsx` pose `data-espace`. */
+[data-module="codex"][data-espace="eleve"] { --bouton:#5F7365; --bouton-texte:#F0F3EE; }
+
 /* --- Exposition à Tailwind v4 (utilitaires bg-parchemin, text-encre, …) -- */
 @theme inline {
   --color-parchemin:       var(--parchemin);
   --color-parchemin-fonce: var(--parchemin-fonce);
   --color-surface:         var(--surface);
+  --color-surface-retrait: var(--surface-retrait);
+  --color-fond-module:     var(--fond-module);
   --color-encre:           var(--encre);
   --color-encre-douce:     var(--encre-douce);
   --color-muet:            var(--muet);
@@ -90,7 +128,12 @@
   --color-pigment:         var(--pigment);
   --color-pigment-teinte:  var(--pigment-teinte);
   --color-bouton:          var(--bouton);    /* bg-bouton, text-bouton, border-bouton */
+  --color-bouton-texte:    var(--bouton-texte); /* text-bouton-texte SUR bg-bouton */
   --color-liseret:         var(--liseret);   /* border-l-liseret */
+  /* Déroulé élève : le filet du passage SERVI, et la carte de crédence chargée. */
+  --color-filet-servi:              var(--filet-servi);
+  --color-saisie-retenue:           var(--saisie-retenue);
+  --color-saisie-retenue-bordure:   var(--saisie-retenue-bordure);
   /* minium (accent rouge du monde, ex. Aletheia) : text-minium / border-l-minium / bg-minium-teinte */
   --color-minium:          var(--minium);
   --color-minium-teinte:   var(--minium-teinte);

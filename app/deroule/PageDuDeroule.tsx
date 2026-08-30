@@ -29,7 +29,6 @@
 //    le `prefixes[]` de l'onglet Exercices, de chaque côté, qui le range.
 // ============================================================================
 
-import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { garderEleveDeroule } from '@/utils/deroule/acces'
 import { chargerLeDeroule } from '@/utils/deroule/vue'
@@ -54,15 +53,9 @@ export async function PageDuDeroule(
     console.warn(`[deroule] dépôt ${depotId} — ${a}`)
   }
 
-  return (
-    <div>
-      <Link href={`/eleve/modules/${atelier}`}
-        className="text-sm text-muet hover:text-encre-douce">
-        ← Retour
-      </Link>
-      <div className="mt-4">
-        <EcranDeroule vue={vue} />
-      </div>
-    </div>
-  )
+  // ⭐ HANDOFF « Codex Exercices (élève) » §4 — LE LIEN DE RETOUR EST DESCENDU
+  //    DANS LA BARRE DE CONTENU de l'écran, et il nomme sa destination :
+  //    « ← Exercices », l'onglet, plutôt qu'un « ← Retour » flottant que rien ne
+  //    rattachait à la page. L'atelier descend donc jusqu'à l'écran.
+  return <EcranDeroule vue={vue} atelier={atelier} />
 }
