@@ -297,6 +297,15 @@ export async function actionCollageBloque(
   depotId: string, moyen: MoyenDeCollage,
 ): Promise<void> {
   const { admin, userId } = await garderEleve(false)
+  // ⛔ LA GARDE DE PROPRIÉTÉ, QUE SA JUMELLE DU DÉROULÉ PORTAIT DÉJÀ. Sans elle,
+  //    un élève appelait cette action avec le `depotId` d'un AUTRE et lui
+  //    fabriquait une accusation de collage (`journaliser_collage` écrit
+  //    `where id = depotId`, sans filtre). La version `app/deroule/actions.ts`
+  //    lit `lireDepotMaison(admin, depotId, userId)` avant ; ici, `lireDepot`
+  //    porte `eleve_id` et suffit. Éprouvé en base : l'écriture croisée
+  //    réussissait, elle est désormais refusée.
+  const d = await lireDepot(admin, depotId)
+  if (!d || d.eleve_id !== userId) return
   await journaliserCollageBloque(admin, depotId, userId, moyen)
 }
 
@@ -341,6 +350,13 @@ export async function actionCredence(_prec: Reponse | null, form: FormData): Pro
   const { admin, userId, ouvert } = await garderEleve(false)
   if (!ouvert) return echec('La passation en classe n’est pas ouverte.')
   const depotId = String(form.get('depot_id') ?? '')
+  // ⛔ LA GARDE DE PROPRIÉTÉ, AVANT `offreCredence` — pas seulement dans
+  //    `enregistrerCredence` plus bas. Sans elle, `offreCredence` servait, pour
+  //    le `depot_id` d'un AUTRE élève, le CRAN et le GESTE de son instance (ou
+  //    « périmètre illisible », un oracle d'existence). C'est le patron de la
+  //    maison — `lireDepot` + `eleve_id !== userId` — posé au plus tôt.
+  const d = await lireDepot(admin, depotId)
+  if (!d || d.eleve_id !== userId) return echec('Ce dépôt n’est pas le vôtre.')
   const offre = await offreCredence(admin, depotId)
   if (!offre.servie) return echec(`La crédence n’est pas servie ici : ${offre.motif}`)
 

@@ -224,9 +224,16 @@ export async function soumettreQuizz(sessionId: string, quizId: string): Promise
     .update({ submitted_at: maintenant, auto_submitted: false })
     .eq('id', sessionId)
     .eq('eleve_id', userId)
+    // ⛔ LA SESSION DOIT ÊTRE CELLE DU QUIZZ NOTÉ, PAS D'UN AUTRE. Sans ce
+    //    `.eq('quiz_id', quizId)`, un élève appelait `soumettreQuizz(sessionD'unQuizX,
+    //    Y)` : le verrou passait (la session est bien à lui), les questions
+    //    chargées étaient celles de Y, les réponses celles de X — aucune ne
+    //    correspondait, et l'upsert écrasait sa note de Y par un score de
+    //    « tout non répondu ». La note se pose désormais sur le quizz de la session.
+    .eq('quiz_id', quizId)
     .is('submitted_at', null)
     .select('id')
-  if (!verrou || verrou.length === 0) return {} // déjà soumise (ou pas la sienne)
+  if (!verrou || verrou.length === 0) return {} // déjà soumise, pas la sienne, ou pas ce quizz
 
   // Récupérer les questions et leurs bonnes réponses
   const { data: questions } = await supabase

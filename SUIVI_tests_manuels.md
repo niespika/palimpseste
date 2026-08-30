@@ -8433,3 +8433,127 @@ interruption. Le décor se reconnaît à sa classe, `nom LIKE 'RECETTE-C5L3%'`. 
   « Argumentation » seul dans sa carte. ⛔ **Le bilan est de `C6-L2`**, clos, et le prompt
   interdisait d'y toucher. **Déposé à `IDEES_post_rentree.md`. Condition de reprise : n'importe quel
   passage sur l'écran de la semaine avec une copie non encore mesurée.**
+
+---
+
+## Campagne C — RLS et exposition élève (revue par axe, contre le tag `revue-c-rls`, 29/08/2026)
+
+_Revue par EXÉCUTION, jamais par lecture seule. **6 agents, une phase de fan-out, tri fait à la
+main.** Le fait qui commande tout : **25 fichiers du chemin élève sur 81 appellent
+`createAdminClient()`** — le client service-role, qui contourne RLS. Sur ces chemins, la seule
+protection est le filtrage que le code s'impose. La question n'était donc pas « les policies
+sont-elles bonnes » mais « chaque lecture/écriture service-role se borne-t-elle à cet élève ? »._
+
+_**61 constats, 47 déclarés sains avec leur raison, 14 chauds triés.** Chaque défaut retenu a été
+ÉPROUVÉ sur la donnée réelle du bac à sable, dans la peau d'un élève (session mintée par
+`generateLink`, aucun mot de passe) ou en rejouant le vrai code. Trois défauts réels ; trois
+corrigés le jour même._
+
+### ✅ Corrigés le 29/08
+
+- [x] **C-RLS-1 · ⛔⛔ ÉCRITURE CROISÉE — un élève fabrique une accusation de collage sur le dépôt
+  d'un AUTRE.** `app/passation/actions.ts` `actionCollageBloque` appelait
+  `journaliserCollageBloque(admin, depotId, userId)` **sans vérifier la propriété du dépôt** ; la RPC
+  `journaliser_collage` écrit `where id = p_depot_id`, sans filtre (`c4_l4_collage_journal.sql:93`).
+  **Sa jumelle du déroulé (`app/deroule/actions.ts:151`) portait déjà la garde** — `lireDepotMaison`
+  puis `if (!depot) return` —, la passation ne l'avait pas.
+  ⭐ **ÉPROUVÉ EN BASE, PUIS RESTAURÉ** : la RPC appelée avec le `depot_id` d'un autre élève a
+  **ajouté `{moyen:"raccourci", at}` à son `collages_bloques`**, que le professeur lit comme une
+  triche (`utils/passation/vues.ts:122`). État d'avant remis dans le même script *(constat AVANT →
+  écriture → constat APRÈS → restauration → constat final `[]`)*.
+  ⭐ **Correctif** : `const d = await lireDepot(admin, depotId); if (!d || d.eleve_id !== userId)
+  return` — le patron exact de la maison. **Épreuve par l'échec avant le succès** : mon dépôt passe
+  `true → true`, celui d'un autre `true → false`. **Coût : une accusation d'intégrité à charge, au
+  nom d'un tiers.**
+- [x] **C-RLS-2 · ⛔ LECTURE AVANT LA GARDE — `actionCredence` révèle le cran et le geste de
+  l'instance d'un autre élève.** `app/passation/actions.ts` `actionCredence` appelait
+  `offreCredence(admin, depotId)` **avant** toute vérification de propriété ; la garde
+  `d.eleve_id !== eleveId` ne venait que dans `enregistrerCredence`, plus bas. Le `motif` retourné
+  porte le cran et le geste, et distingue un dépôt réel d'un id bidon (« périmètre illisible » —
+  oracle d'existence).
+  ⭐ **ÉPROUVÉ** en rejouant `offreCredence` sur 8 dépôts d'autres élèves : **`servie=true`, forme et
+  cas exposés** à chaque fois ; un id inexistant rend « périmètre illisible ». ⚠️ **Ce qui fuit est
+  une MÉTADONNÉE de l'exercice** — cran, geste, forme —, **jamais la copie, la transcription ou le
+  retour.** Coût réel mais mince ; je ne le gonfle pas.
+  ⭐ **Correctif** : `lireDepot` + `eleve_id !== userId` posé **avant `offreCredence`**.
+- [x] **C-RLS-3 · ⚠️ `soumettreQuizz` note le quizz Y avec la session d'un quizz X.**
+  `app/eleve/modules/quazian/quizz/[quizId]/actions.ts` : le verrou vérifiait que la SESSION est à
+  l'élève (`.eq('eleve_id', userId)`) mais **jamais qu'elle appartient au `quizId` noté**. Un élève
+  pouvait appeler `soumettreQuizz(sessionDUnQuizX, Y)` : questions de Y, réponses de X, aucune ne
+  correspond → note « tout non répondu » qui **écrase** sa note de Y. ⛔ **Non éprouvé en base — il
+  n'y a AUCUN quizz dans les deux bases** *(0 en sandbox, 0 en prod)* ; le défaut est lu, pas tiré.
+  ⭐ **Correctif** : un `.eq('quiz_id', quizId)` de plus au compare-and-set.
+
+### ⚠️ Fuite RÉELLE dans le code mais INERTE aujourd'hui, faute de données — à surveiller
+
+- [ ] **C-RLS-4 · ⛔ QUAZIAN — la bonne réponse est lisible avant de répondre, par DEUX chemins.**
+  *(a)* `initialiserSession` sert `indexCorrecteRandomise` dans la charge RSC de la page pendant la
+  passation ; *(b)* la policy `quazian_questions_eleve_classe` (`lot1_classe_schema.sql:224`) autorise
+  un `select` PostgREST direct de `index_correct` sur tout quizz `lance`/`ferme` de ses classes. **Un
+  élève lit le corrigé complet avant de composer, note 20/20.** ⛔ **INERTE MESURÉ** : **0 quizz** en
+  base *(les 5 `quazian_questions` orphelines n'ont aucun quizz `lance`/`ferme` derrière)*. **Deux
+  correctifs indépendants** : retirer le champ des props servies, ET restreindre la colonne côté
+  policy. **Condition de reprise : avant le premier quizz lancé de l'année.**
+
+### ⚠️ À éprouver — gardes absentes dont le coût ou l'exploitabilité restent à mesurer
+
+- [ ] **C-RLS-5 · `fragments_depots` — l'UPDATE élève est ouvert : il blanchit ses propres marques
+  d'anti-triche.** `c1_rls_eleve.sql:144` pose `using auth.uid()=eleve_id` **sans `with_check` ni
+  restriction de colonnes** — l'élève peut `PATCH` `photos_suspectes=false`, `signal_integrite=null`
+  sur SA ligne. ⚠️ Il ne lit rien d'autrui ; il efface une trace le concernant. **Le report est
+  DOCUMENTÉ dans le SQL** (« Module MASQUÉ »). ⚠️ Fragments est-il masqué en prod ? à mesurer avant
+  de statuer.
+- [ ] **C-RLS-6 · `profiles` — la policy INSERT n'interdit pas `role='prof'`.**
+  `c1_rls_eleve.sql:64` est `with check (auth.uid() = id)` : borne l'identité, jamais la valeur de
+  `role`. Un compte auth **sans ligne `profiles`** pourrait s'insérer `role:'prof'` et entrer dans
+  `/prof`. ⚠️ **Condition d'existence à mesurer** : le trigger `handle_new_user` qui créait la ligne
+  a été retiré (`securite_handle_new_user_retrait.sql`) — combien de comptes auth sans profil ?
+  L'affirmation « plus aucun chemin applicatif n'insère » est à confirmer. **Correctif : `and role =
+  'eleve'` au `with_check`.**
+- [ ] **C-RLS-7 · Chat du tuteur — le contrôle de module est l'UNION des classes, pas LA classe.**
+  `app/api/scriptorium/chat/route.ts:53` vérifie « une de tes classes a-t-elle Scriptorium ? », pas
+  « celle-ci l'a-t-elle ? ». Un élève bi-classe reçoit le corpus d'une classe où Scriptorium n'est
+  pas donné. **Ce n'est pas la donnée d'un autre élève** — c'est un cours d'une classe où il est
+  inscrit. Coût : accès à un module non donné à cette classe. Décision « Accès par classe » à
+  appliquer.
+- [ ] **C-RLS-8 · `garderEleve` authentifie mais ne vérifie pas le rôle.**
+  `utils/passation/garde.ts:52` fait `getUser()` puis passe au client admin sans lire
+  `profiles.role` ; son jumeau `garderEleveDeroule` le fait. ⚠️ **Aucun scénario de fuite
+  aujourd'hui** : toutes les actions du fichier sont ensuite bornées à `userId`. Défaut de
+  confiance-de-rôle qui coûterait dès la première action prenant une autre borne. **Correctif :
+  aligner sur `garderEleveDeroule`.**
+- [ ] **C-RLS-9 · `/eleve/calendrier` — un quizz dont la classe a été effacée n'est écarté par aucun
+  code.** `utils/calendrier-evenements.ts:87` ne borne pas par classe, là où la source Codex du même
+  fichier fail-close (ligne 135). Un `classe_id` passé à NULL (`fix_effacer_classe.sql:92`) ferait
+  apparaître une pastille datée « Quizz » — sans titre — chez un élève d'une autre classe, **si la
+  RLS ne le retient pas**. Coût minuscule (le mot « Quizz » + une date). À éprouver contre la RLS
+  réelle.
+
+### 📋 Dette d'outillage relevée par la campagne — sans laquelle la revue ne se referme pas
+
+- [ ] **C-RLS-10 · La carte des policies ne se dresse PAS depuis le dépôt** : **22 des 89 tables du
+  chemin élève** n'ont aucune déclaration RLS traçable dans les 147 `.sql` (dont les 14 tables de
+  Fragments, `profiles`, les tables de révision Quazian). ⚠️ Les `.sql` disent l'INTENTION, pas
+  l'état. **Ces 22 tables sont celles à mesurer EN PREMIER par une sonde** — aucun document ne s'y
+  substitue.
+- [ ] **C-RLS-11 · `scripts/verif_rls_c1.mjs` éprouve 8 tables sur 89**, et son test d'escalade
+  `profiles` insère un id ALÉATOIRE (≠ `auth.uid()`), donc **rate précisément le cas dangereux** de
+  C-RLS-6. La sonde à écrire doit couvrir les 22 tables non déclarées et refaire le test d'escalade
+  avec le VRAI `auth.uid()`.
+
+### ✅ Vérifiés SAINS et notés pour ne pas les re-soulever
+
+- **La zone des écrans neufs (C6-L2/L3) n'a AUCUN segment de route dynamique** — pas un `[depotId]`,
+  pas un `[id]`. Les seuls `searchParams` (`?cycle`, `?date`, `?vue`) sont des fenêtres temporelles
+  validées par regex, jamais des identifiants d'objet. Le piège IDOR n'a pas de site où se poser.
+- **Le moteur maison (`utils/passation/depots.ts`) porte la garde partout** : `lireDepot` +
+  `if (d.eleve_id !== eleveId) return refus(...)` sur `validerLaTranscription`,
+  `enregistrerLaTranscription`, et les quatre autres. C'est de LÀ que le patron des correctifs 1-2
+  est repris.
+- **`utils/supabase/admin.ts` sans `import 'server-only'` : ZÉRO chemin d'un `'use client'` vers
+  lui**, mesuré sur le graphe d'imports complet. Et la clé n'a pas le préfixe `NEXT_PUBLIC_`, donc
+  elle serait `undefined` dans le navigateur même si un import fuyait. Un `import 'server-only'`
+  reste une ceinture bon marché, mais aucune fuite aujourd'hui.
+- **`/eleve/integrite`** filtre au `statut='confirme'` et sert la preuve en mode `slim` (jamais les
+  photos, le texte, ni un lien `/prof/`). Composant serveur : `eleveId` et `source` ne sont pas
+  sérialisés vers le navigateur.
