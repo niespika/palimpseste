@@ -8486,14 +8486,34 @@ corrigés le jour même._
 
 ### ⚠️ Fuite RÉELLE dans le code mais INERTE aujourd'hui, faute de données — à surveiller
 
-- [ ] **C-RLS-4 · ⛔ QUAZIAN — la bonne réponse est lisible avant de répondre, par DEUX chemins.**
-  *(a)* `initialiserSession` sert `indexCorrecteRandomise` dans la charge RSC de la page pendant la
-  passation ; *(b)* la policy `quazian_questions_eleve_classe` (`lot1_classe_schema.sql:224`) autorise
-  un `select` PostgREST direct de `index_correct` sur tout quizz `lance`/`ferme` de ses classes. **Un
-  élève lit le corrigé complet avant de composer, note 20/20.** ⛔ **INERTE MESURÉ** : **0 quizz** en
-  base *(les 5 `quazian_questions` orphelines n'ont aucun quizz `lance`/`ferme` derrière)*. **Deux
-  correctifs indépendants** : retirer le champ des props servies, ET restreindre la colonne côté
-  policy. **Condition de reprise : avant le premier quizz lancé de l'année.**
+- [x] **C-RLS-4 · ⛔ QUAZIAN — la bonne réponse est lisible avant de répondre, par DEUX chemins.**
+  ✅ **FERMÉ LE 29/08** *(`72561ce` + `c_rls_4_quazian_reponse.sql`, joué **sandbox ET prod**)*.
+  *(a)* `initialiserSession` servait `indexCorrecteRandomise` dans la charge de la passation ;
+  *(b)* les policies de SELECT de `quazian_questions` autorisaient un `select index_correct` PostgREST
+  direct. **Un élève lisait le corrigé complet avant de composer, note 20/20.**
+  ⭐ **ÉPROUVÉ AVANT D'ÊTRE CORRIGÉ**, dans la peau d'un élève réel *(clé anon + JWT)* :
+  `scripts/recette/rls-quazian-c-rls-4.mjs` — **3 FAIL / sortie 1 avant, 4 PASS / sortie 0 après**,
+  les 5 questions rendant leur réponse puis 0 ligne.
+  ⛔⛔ **LA MESURE A TROUVÉ PLUS LARGE QUE LE CONSTAT : il y avait DEUX policies, et la pire ne
+  vérifie pas la classe.** `eleve_read_questions_actifs` ne demande que « le quizz est lancé » ET
+  « je suis un élève » : **n'importe quel élève lisait les réponses de n'importe quel quizz de la
+  plateforme**. Les policies permissives étant **OR'ées**, le contrôle de classe de
+  `quazian_questions_eleve_classe` ne servait à rien — *et n'en retirer qu'une n'aurait rien fermé.*
+  ⛔ **ET LA NOTE D'INERTIE DE CE CONSTAT ÉTAIT FAUSSE POUR LE BAC À SABLE** : les 5
+  `quazian_questions` n'étaient pas orphelines — elles pendent au quizz `ferme` `72fe18d6`, que la
+  policy couvrait. **0 quizz** ne valait que pour la **PRODUCTION** *(re-mesuré le 29/08 : 0 quizz,
+  0 question)*. *Une inertie se mesure base par base.*
+  ⭐ **Pas de `revoke` de colonne** : prof et élève partagent le rôle `authenticated`, et le
+  diagnostic du professeur LIT `index_correct` — un `revoke` l'aurait aveuglé ; et **une policy RLS
+  ne restreint pas les colonnes**. Les deux policies élève sont donc **retirées**, et les trois
+  lectures d'`app/eleve/…/quizz/[quizId]/actions.ts` passent au **client admin derrière
+  `chargerQuizAccessible`, qui vérifie LA CLASSE** — la garde est plus stricte qu'avant.
+  ⭐ Le champ `(a)` **n'était lu nulle part** : son commentaire annonçait « pour le retour
+  post-quizz », mais le retour passe par `chargerRetourQuizz` *(soumis ET quizz fermé)*. Suppression
+  pure, `tsc` propre, `npm test` **1929/1929**.
+  ⚠️ **Reste dû — le smoke élève de la passation** : la lecture serveur est vérifiée *(5 lignes,
+  `id, enonce, options`, sans la réponse)* et les types compilent, mais **personne n'a repassé un
+  quizz dans un navigateur** depuis le changement de client.
 
 ### ⚠️ À éprouver — gardes absentes dont le coût ou l'exploitabilité restent à mesurer
 

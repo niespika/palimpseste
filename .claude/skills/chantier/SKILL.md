@@ -6,15 +6,18 @@ version: 1.0.0
 
 # Le chantier Palimpseste — état, file, protocoles
 
-> ⭐⭐⭐ **CE QUE LOUIS VEUT VOIR RÉGLÉ EN PREMIER — `C-RLS-4`, la fuite Quazian.** Décision de Louis,
-> 29/08 : *« c'est la première chose que je veux voir réglé au prochain `/chantier` ».* Il compte le
-> fermer **dans une session dédiée** — ne pas le jouer sans lui, mais **le lui rappeler d'emblée**.
-> La bonne réponse d'un quizz est lisible **avant de répondre**, par DEUX chemins *(la charge RSC de
-> la page, ET un `select index_correct` PostgREST direct sur tout quizz `lance`/`ferme`)*. **Deux
-> correctifs indépendants** : retirer `index_correct` des props servies *(`app/eleve/modules/quazian/
-> quizz/[quizId]/actions.ts`, `initialiserSession`)*, ET restreindre la colonne côté policy
-> *(`lot1_classe_schema.sql:224`, `quazian_questions_eleve_classe`)*. ⚠️ **Inerte tant qu'il y a 0
-> quizz en base** *(mesuré le 29/08)* — **live au premier quizz `lance`**. Détail : `SUIVI`, `C-RLS-4`.
+> ✅⭐ **`C-RLS-4`, LA FUITE QUAZIAN, EST FERMÉE — 29/08, `72561ce` + `c_rls_4_quazian_reponse.sql`,
+> joué SANDBOX ET PROD.** Elle a été **éprouvée avant d'être corrigée**, dans la peau d'un élève réel :
+> `scripts/recette/rls-quazian-c-rls-4.mjs` passe de **3 FAIL / sortie 1** à **4 PASS / sortie 0**.
+> ⛔⛔ **Et la mesure a trouvé plus large que le constat : il y avait DEUX policies, et la pire ne
+> vérifiait pas la classe** — n'importe quel élève lisait les réponses de n'importe quel quizz de la
+> plateforme ; les policies étant **OR'ées**, *n'en retirer qu'une n'aurait rien fermé*. ⚠️ **Reste dû :
+> le SMOKE ÉLÈVE de la passation** — les trois lectures sont passées au client admin, la lecture serveur
+> est vérifiée et `tsc`/`npm test` sont propres, mais **aucun quizz n'a été repassé dans un navigateur**.
+> **C'est la première chose à faire quand un quizz sera lançable.**
+>
+> ⭐ **CE QUI VIENT ENSUITE** : les **six constats restants de la campagne C** *(§2, item 3)* — aucun
+> n'a d'échéance, et **chacun se MESURE d'abord** ; puis les campagnes **B → A → D** *(§4)*.
 
 ---
 
@@ -50,11 +53,11 @@ S1 `2026-08-24` *(diagnostic, hors routage)* · **S2 `2026-08-31`** *(calibratio
   rattrape un lundi manqué. **Avant ce jour, aucune lettre ne s'affiche à aucun élève.**
 - **avant le Run 1** de chaque compétence — après le premier run, réviser un prompt devient un acte
   de calibration réglé par protocole. Quatre items y sont adossés *(voir §2)*.
-- **avant le PREMIER QUIZZ lancé de l'année** — la fuite Quazian *(`C-RLS-4`, corrigé complet lisible
-  avant de répondre, par la charge RSC ET par PostgREST)* est **réelle dans le code mais INERTE tant
-  qu'il y a 0 quizz en base** *(mesuré le 29/08, sandbox et prod)*. Le jour où un quizz passe à
-  `lance`, elle devient live. **Deux correctifs, tous deux au SUIVI (`C-RLS-4`)** : retirer
-  `index_correct` des props servies, ET restreindre la colonne côté policy.
+- ~~**avant le PREMIER QUIZZ lancé de l'année**~~ — ✅ **LEVÉE le 29/08** : la fuite Quazian
+  *(`C-RLS-4`)* est fermée dans le code **et** dans les deux bases. ⚠️ La note d'inertie du constat
+  d'origine **était fausse pour le bac à sable** *(les 5 questions n'y étaient pas orphelines : elles
+  pendent à un quizz `ferme`, et la sonde a bien lu leurs réponses)* — **0 quizz** ne valait que pour
+  la PROD. *Une inertie se mesure base par base.*
 
 **Les deux registres** : `SUIVI_tests_manuels.md` *(~101 cases décochées ; c'est la boîte aux
 lettres de la recette)* et `INVENTAIRE_Non_Tranches.md` *(dépôt de conception ; 57 items + 9 dettes)*.
@@ -81,7 +84,7 @@ l'a ouvert : `git fetch` puis `git log <commit du skill>..HEAD` **avant de chois
    ce sont un prompt dérivé d'une fiche, une décision de module, et un arbitrage de Louis. Une
    séance Code ne les joue pas ; **le quatrième, D4, est payé** *(29/08)*.
 3. **Les RESTES de la campagne C** *(jouée le 29/08 — voir §4 et la section « Campagne C » du
-   `SUIVI_tests_manuels.md`)*. ⛔ **`C-RLS-4` Quazian a une échéance** *(voir §1)* ; les autres, non.
+   `SUIVI_tests_manuels.md`)*. ✅ **`C-RLS-4` est fermé** *(29/08, les deux bases)* ; **aucun des six restants n'a d'échéance.**
    · **à éprouver** : `C-RLS-5` *(UPDATE `fragments_depots` ouvert → l'élève blanchit ses marques
    d'anti-triche)* · `C-RLS-6` *(policy INSERT `profiles` sans `role='eleve'`)* · `C-RLS-7` *(tuteur :
    module vérifié sur l'UNION des classes, pas LA classe)* · `C-RLS-8` *(`garderEleve` ne lit pas le
@@ -156,7 +159,7 @@ Dans ce dépôt, **tout ce qui a été trouvé de sérieux l'a été en EXÉCUTA
 
 | axe | quoi |
 |---|---|
-| ~~**C · RLS et exposition élève**~~ | ✅ **JOUÉE LE 29/08** *(tag `revue-c-rls`)*. Le fait qui commande : **25 fichiers élève sur 81 utilisent `createAdminClient()`** — RLS contournée, seule protection = le filtrage du code. **61 constats, 47 sains, 14 chauds, 3 défauts réels ÉPROUVÉS, 3 corrigés.** ⛔ La pire est une **ÉCRITURE croisée** — un élève fabrique une accusation de collage sur le dépôt d'un autre *(prouvée en base puis restaurée)*. ⚠️ La fuite Quazian (corrigé complet lisible avant de répondre) est **réelle mais INERTE : 0 quizz en base**. Reste au SUIVI : 6 constats à éprouver + 2 dettes d'outillage *(la sonde ne couvre que 8 tables sur 89)*. |
+| ~~**C · RLS et exposition élève**~~ | ✅ **JOUÉE LE 29/08** *(tag `revue-c-rls`)*. Le fait qui commande : **25 fichiers élève sur 81 utilisent `createAdminClient()`** — RLS contournée, seule protection = le filtrage du code. **61 constats, 47 sains, 14 chauds, 3 défauts réels ÉPROUVÉS, 3 corrigés.** ⛔ La pire est une **ÉCRITURE croisée** — un élève fabrique une accusation de collage sur le dépôt d'un autre *(prouvée en base puis restaurée)*. ✅ **La fuite Quazian est FERMÉE le 29/08** — et sa correction a montré que **le constat sous-estimait le défaut** *(deux policies, dont une SANS contrôle de classe)* et que **son inertie ne valait que pour la prod**. Reste au SUIVI : 6 constats à éprouver + 2 dettes d'outillage *(la sonde ne couvre que 8 tables sur 89)*. |
 | **B · Les gardes de la base** | Sondage en transaction annulée, **sandbox ET prod**. Le **Tas 1** de la dette C4-L8 est entier : **A1** *(le rejeu après rollback rouvre `poser_statut_recette` à `anon`)* · **A3** *(`garde_cas_de_la_paire`, un défaut déjà en base)* · **A4** *(antidatage ET postdatation du statut de recette)* · **C14** *(`4.0`, et `{"cran": true}` lu comme le cran 1)*. ⚠️ `garde_cas_de_la_paire` est `INITIALLY DEFERRED` : sans `set constraints all immediate`, une sonde en rollback **mesure le vide**. |
 | **A · Les ports Python ↔ TypeScript** | La veine la plus riche : **huit écarts de langage** trouvés en six portages, chacun par le portage *suivant*. Un harnais différentiel sur les six branchements + `verifie-import` + `verifie-reference`, plus l'épreuve par mutation là où elle n'a pas été faite *(la Synthèse a eu **11 survivantes sur 59** au premier passage)*. |
 | **D · Les coutures** | ⭐ **Restreint à C4-L1 → C4-L16**, joués avant la convention de couture. C5 et C6 l'ont appliquée et ont leurs scripts au dépôt. |
