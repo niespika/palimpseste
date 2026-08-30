@@ -479,3 +479,16 @@ test('⛔ MARQUER TOUT, C\'EST NE DÉSIGNER RIEN — au cran 1 seulement', () =>
     { versionCorrigee: 'La preuve est là.' })!
   assert.deepEqual(t3.filter((s) => s.marque).map((s) => s.texte), ['La preuve est là donc.'])
 })
+
+test('⛔ RÈGLE 2 — l\'APOSTROPHE ne ferme pas une citation', () => {
+  // Le motif fermait sur `’`, qui est aussi l'apostrophe française : la citation
+  // se coupait au premier mot élidé, et ne marquait plus rien.
+  // ⚠️ Mesuré le 30/08 : cinq consignes tronquées dans la banque.
+  const c = 'Guéhenno écrit ceci. Mais ce n’est pas là que se joue le passage. On le voit après.'
+  const seg = marquerLeMateriau(c, regle(3), {
+    versionCorrigee: c,
+    consigne: 'à la phrase qui commence par « Mais ce n’est pas là que se joue le passage »',
+  })!
+  assert.deepEqual(seg.filter((s) => s.marque).map((s) => s.texte),
+    ['Mais ce n’est pas là que se joue le passage.'])
+})

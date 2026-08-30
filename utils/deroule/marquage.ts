@@ -392,7 +392,13 @@ function coutureOuNull(mots: readonly string[], debut: number):
 function citationDeLaConsigne(consigne: string | null | undefined): string[][] {
   const out: string[][] = []
   if (!consigne) return out
-  for (const m of consigne.matchAll(/[\u00ab\u201c"\u2018\u2019']\s*([^\u00bb\u201d"\u2019']{3,120}?)\s*[\u00bb\u201d"\u2019']/gu)) {
+  // ⛔⛔ NI L'APOSTROPHE NI LE GUILLEMET SIMPLE NE DÉLIMITENT — 30/08. Le motif
+  //    fermait sur `\u2019`, qui est AUSSI l'apostrophe française : « Mais ce
+  //    n\u2019est pas là que se joue le passage » se coupait à « Mais ce n ».
+  //    *Mesuré : cinq consignes tronquées, dont la citation ne marquait plus
+  //    rien.* Les consignes citent en « » — c'est la convention de la maison —,
+  //    et les guillemets droits ou courbes restent admis. Le simple sort.
+  for (const m of consigne.matchAll(/[\u00ab\u201c"]\s*([^\u00bb\u201d"]{3,160}?)\s*[\u00bb\u201d"]/gu)) {
     const j = mots(m[1] ?? '')
     if (j.length >= 2) out.push(j)
   }
