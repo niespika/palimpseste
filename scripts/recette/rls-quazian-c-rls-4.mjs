@@ -77,15 +77,23 @@ const eleve = createClient(URL, ANON, { auth: { autoRefreshToken: false, persist
 //    fois : `auth.admin.generateLink({ type: 'magiclink' })` puis `verifyOtp`
 //    sur le client ANON. La session obtenue est un vrai JWT d'élève — les
 //    lectures qui suivent restent donc bien « dans la peau d'un élève ».
-// ⚠️ POURQUOI IL EXISTE : le 29/08, au milieu du smoke, `signInWithPassword`
-//    s'est mis à rendre « Invalid login credentials » sur un compte intact
-//    (existant, confirmé, non banni) dont le mot de passe n'avait pas bougé —
-//    puis à repasser quelques minutes plus tard. ⛔ **Le message ment sur la
-//    cause** : c'est très probablement la limite de débit de l'auth, que
-//    Supabase rend sous le même « Invalid login credentials » qu'un vrai
-//    refus. *Une recette qui s'arrête sur ce message accuse le mauvais
-//    coupable ;* le repli la fait continuer, et la ligne « session par … »
-//    dit toujours par quelle voie elle est entrée.
+// ⚠️ POURQUOI IL EXISTE : le 29/08, `signInWithPassword` s'est mis à rendre
+//    « Invalid login credentials » par intermittence sur un compte intact.
+// ⛔⛔ LA CAUSE A ÉTÉ TROUVÉE LE 30/08, ET CE N'ÉTAIT NI L'AUTH NI LE COMPTE :
+//    **`zsh` MANGE UNE PARTIE DU MOT DE PASSE quand on source `.env.local`.**
+//    La valeur contient `$^#`, et `zsh` développe cette séquence en sourçant —
+//    `abc$^#def` devient `abc0`. Le mot de passe de 20 octets arrivait donc à
+//    11. `bash` ne le fait pas, et le parseur regex de ce fichier non plus :
+//    l'échec ne survenait QUE dans les scripts chargeant l'environnement par
+//    `set -a && . ./.env.local`. Mesuré : shell 11 octets / node 20, empreintes
+//    différentes, et la connexion ACCEPTE le complet, REFUSE le tronqué.
+//    ⭐ Sur les 12 clés de `.env.local`, **une seule** diverge — les autres
+//    secrets n'ont jamais été affectés. ⭐ Parade : entourer la valeur
+//    d'apostrophes dans `.env.local` (les deux chargeurs rendent alors 20).
+// ⭐ CE REPLI RESTE UTILE POUR AUTANT : il ne dépend d'aucun mot de passe, et
+//    la ligne « session par … » dit toujours par quelle voie la sonde est
+//    entrée. *Un message d'erreur peut mentir sur sa cause — celui-ci a fait
+//    accuser trois coupables innocents avant qu'on mesure.*
 async function sessionEleve() {
   const parMdp = PASSWORD
     ? await eleve.auth.signInWithPassword({ email: EMAIL, password: PASSWORD })
