@@ -6,31 +6,32 @@ version: 1.0.0
 
 # Le chantier Palimpseste — état, file, protocoles
 
-> ✅⭐ **`C-RLS-4`, LA FUITE QUAZIAN, EST FERMÉE — 29/08, `72561ce` + `c_rls_4_quazian_reponse.sql`,
-> joué SANDBOX ET PROD.** Elle a été **éprouvée avant d'être corrigée**, dans la peau d'un élève réel :
-> `scripts/recette/rls-quazian-c-rls-4.mjs` passe de **3 FAIL / sortie 1** à **4 PASS / sortie 0**.
-> ⛔⛔ **Et la mesure a trouvé plus large que le constat : il y avait DEUX policies, et la pire ne
-> vérifiait pas la classe** — n'importe quel élève lisait les réponses de n'importe quel quizz de la
-> plateforme ; les policies étant **OR'ées**, *n'en retirer qu'une n'aurait rien fermé*. ✅ **ET LE SMOKE ÉLÈVE EST JOUÉ** *(29/08,
-> décor `scripts/recette/decor-quizz-lance.mjs`, semé puis retiré, base revenue à l'identique)* : les
-> quatre fonctions à **zéro passage** ont tourné, note posée **14,35/20**, et **79 Ko de page inspectés
-> sans une occurrence** de la bonne réponse. ⛔⛔ **Il a trouvé TROIS défauts qu'aucun test ne voyait**
-> *(`C-RLS-4-bis` au SUIVI)*, dont le pire : **le client jetait le retour de l'action** — le serveur
-> refusait, l'écran affichait « Quizz soumis ! », et l'élève serait parti. **C'est l'argument du smoke,
-> mesuré une fois de plus.**
+> ⭐⭐⭐ **CE QUI COMMANDE MAINTENANT, CE SONT LES DATES — la campagne C est finie.**
+> Nuit du 29 au 30/08 : **cinq constats fermés et poussés** *(`C-RLS-4`, `5`, `6`, `7`, et `C-RLS-12`
+> trouvé hors liste)*, chacun **éprouvé avant d'être corrigé** et **smoké** quand il touchait un
+> chemin élève. Il ne reste de la campagne **aucun item daté** *(§2, item 3)*.
 >
-> ⭐ **CE QUI VIENT ENSUITE** : les **six constats restants de la campagne C** *(§2, item 3)* — aucun
-> n'a d'échéance, et **chacun se MESURE d'abord** ; puis les campagnes **B → A → D** *(§4)*.
+> ⛔⛔ **CE QUI RESTE, EN REVANCHE, NE SE RATTRAPE PAS** *(§1)* : l'ouverture de la semaine Fragments,
+> le segment 2, le comptage d'assiduité du **07/09** et la bascule de `profil_provisoire` du **14/09**.
+> **C'est là qu'une séance doit aller en premier**, pas dans les campagnes de revue.
+>
+> ⭐⭐ **LA LEÇON DE LA NUIT, ET ELLE VAUT POUR TOUTE LA SUITE — un constat SOUS-DÉCRIT presque
+> toujours son défaut.** Quatre fois sur cinq, la mesure a trouvé plus large ou ailleurs :
+> **deux** policies là où le constat en nommait une *(et la seconde ne vérifiait pas la classe)* ·
+> une inertie vraie en prod et **fausse en bac à sable** · un vecteur **à l'INSERT** quand le constat
+> visait l'UPDATE · et **le pire défaut de la nuit n'était dans aucun constat** *(`C-RLS-12`, le
+> re-dépôt Fragments qui détruisait les photos, à 24 h de tirer sur 40 élèves)*.
+> ⭐ **`pg_policies` fait foi, jamais les `.sql` du dépôt. Et une inertie se mesure BASE PAR BASE.**
 
 ---
 
-⛔ **Rien ici ne remplace une vérification.** Cet état est daté du **2026-08-29**. Chaque
+⛔ **Rien ici ne remplace une vérification.** Cet état est daté du **2026-08-30**. Chaque
 chiffre a été mesuré ce jour-là ; il a pu bouger. **Devant une anomalie de données, lire la
 donnée d'abord.**
 
 ---
 
-## 1. L'état, au 2026-08-29
+## 1. L'état, au 2026-08-30
 
 **La plateforme est EN PRODUCTION et elle sert des élèves.** Ce n'est plus « avant la recette » :
 les six interrupteurs sont à **ON dans les deux bases**, par **décision écrite** *(`07-` §5, v2.60,
@@ -40,7 +41,7 @@ les six interrupteurs sont à **ON dans les deux bases**, par **décision écrit
 |---|---|
 | prod | `ucmngachkxvvlegntuwh` · **62 élèves**, 4 classes actives, toutes avec `type_pedagogique` |
 | bac à sable | `aoakpxxlyvthzueaywna` |
-| prod, au 29/08 | 184 mesures · 168 lignes de niveau · 86 dépôts · **0 `routeur_decisions`** |
+| prod, au 30/08 | **187 mesures · 171 lignes de niveau · 86 dépôts · 0 `routeur_decisions`** *(remesuré ; c'était 184/168 le 29/08 — ces chiffres bougent, les relire)* |
 | `origin/main` | ⛔ **aucun numéro ici : il se périme en heures.** `git fetch && git log --oneline -5 origin/main`.
   *Deux mesures le 29/08 : `340abd7` avait **12 commits** de retard le soir même, et le `2363e4b`
   qui l'a remplacé était faux **vingt minutes** plus tard — une séance voisine écrit le même arbre.* |
@@ -49,21 +50,29 @@ les six interrupteurs sont à **ON dans les deux bases**, par **décision écrit
 S1 `2026-08-24` *(diagnostic, hors routage)* · **S2 `2026-08-31`** *(calibration, 2 sem.)* ·
 **S3 `2026-09-14`** *(amorce, 9 sem.)* · S4 `2026-11-23` · S5 `2027-02-08`.
 
-**Trois échéances qui ne se rattrapent pas** :
-- **lundi 2026-09-07** — premier comptage d'assiduité réel *(`C4L13-14`, coût irréversible)* ;
+**LES ÉCHÉANCES — c'est ce qui commande la file** *(état mesuré au 2026-08-30)* :
+- ⛔ **la semaine Fragments** — première `date_limite` au **2026-08-31 03:59 UTC**, et elle est
+  **FERMÉE** *(`ouverte = 0` en prod)*. **L'ouvrir est un geste de Louis**, pas du code. **40 des
+  62 élèves** ont Fragments *(1HLP 24 + THLP 16)*. ⭐ Le re-dépôt destructeur *(`C-RLS-12`)* est
+  corrigé et smoké **avant** cette ouverture — il aurait tiré au premier remplacement.
+- **le segment 2** *(calibration)* s'ouvre le **2026-08-31**. `routeur_decisions` : **0 ligne** en
+  prod au 30/08.
+- **lundi 2026-09-07** — premier comptage d'assiduité réel *(`C4L13-14`, coût irréversible)*.
+  `assiduite_hebdo` : **0 ligne** en prod.
 - **lundi 2026-09-14** — la clôture de la calibration bascule `profil_provisoire`. L'écrivain est
   posé *(28/08)*, il se déclenche **sur l'état** *(segment ≥ 3)* et non sur une date, donc il
-  rattrape un lundi manqué. **Avant ce jour, aucune lettre ne s'affiche à aucun élève.**
+  rattrape un lundi manqué. **Avant ce jour, aucune lettre ne s'affiche à aucun élève** — mesuré :
+  `competences_niveaux` = **171 lignes, 171 en `profil_provisoire`**.
 - **avant le Run 1** de chaque compétence — après le premier run, réviser un prompt devient un acte
-  de calibration réglé par protocole. Quatre items y sont adossés *(voir §2)*.
-- ~~**avant le PREMIER QUIZZ lancé de l'année**~~ — ✅ **LEVÉE le 29/08** : la fuite Quazian
-  *(`C-RLS-4`)* est fermée dans le code **et** dans les deux bases. ⚠️ La note d'inertie du constat
-  d'origine **était fausse pour le bac à sable** *(les 5 questions n'y étaient pas orphelines : elles
-  pendent à un quizz `ferme`, et la sonde a bien lu leurs réponses)* — **0 quizz** ne valait que pour
-  la PROD. *Une inertie se mesure base par base.*
+  de calibration réglé par protocole. ⭐ **Trois des quatre items sont soldés** ; reste
+  `C4L10S-19`, qui est une décision de module *(§5)*.
+- ~~**avant le PREMIER QUIZZ lancé de l'année**~~ — ✅ **LEVÉE le 29/08** *(`C-RLS-4`, code + les
+  deux bases, smoke élève joué)*. ⚠️ La note d'inertie du constat d'origine **était fausse pour le
+  bac à sable** — **0 quizz** ne valait que pour la PROD. *Une inertie se mesure base par base.*
 
-**Les deux registres** : `SUIVI_tests_manuels.md` *(~101 cases décochées ; c'est la boîte aux
-lettres de la recette)* et `INVENTAIRE_Non_Tranches.md` *(dépôt de conception ; 57 items + 9 dettes)*.
+**Les deux registres** : `SUIVI_tests_manuels.md` *(**98** cases décochées au 30/08 ; c'est la boîte
+aux lettres de la recette)* ⚠️ **et ce nombre SURESTIME d'environ un facteur 4** : sur 23 smokes
+réels, **9 ne sont plus dus** — voir l'item 5 du §2 et `INVENTAIRE_Non_Tranches.md` *(dépôt de conception ; 57 items + 9 dettes)*.
 ⚠️ **Trois entrées du registre sont périmées et vérifiées** : item **57** *(la chaîne descend la
 référence depuis le 23/08)*, item **66** *(le marquage existe depuis C4-L15, et il est en prod)*, et
 le chapitre **C11b** *(la prod existe depuis le 25/08)*.
@@ -72,34 +81,34 @@ le chapitre **C11b** *(la prod existe depuis le 25/08)*.
 
 ## 2. La file, dans l'ordre
 
-⛔ **Cette file s'est périmée en quelques heures la première fois — remesure-la avant de t'y
-fier.** L'item 1 d'origine *(`C6L2-31`)* était **déjà corrigé et poussé** quand la séance suivante
-l'a ouvert : `git fetch` puis `git log <commit du skill>..HEAD` **avant de choisir un item**.
+⛔ **Cette file se périme en heures — remesure-la avant de t'y fier.** Le geste : `git fetch`, puis
+`git log <commit du skill>..HEAD`, **avant de choisir un item**. *Deux fois déjà, l'item 1 était
+déjà fermé quand la séance suivante l'a ouvert.*
 
-1. ~~**Le CRLF des `<textarea>`**~~ — ✅ **FERMÉ LE 29/08, et ce n'était PAS « une ligne »** :
-   **11 sites, 6 fichiers**, tous par `normaliserRetours`. ⛔ **Corriger la seule garde annoncée
-   aurait fabriqué un bug** — `creerContenu` écrit le même champ sans normaliser, et les deux côtés
-   dérivaient ENSEMBLE. ⭐ Épreuve sur la donnée réelle : garde déclenchée à tort **6/6 → 0/6**, et
-   contre-épreuve que la garde **parle encore** sur un vrai changement. ⭐ Script au dépôt :
-   `scripts/recette/crlf-textarea.mjs --epreuve`. ⭐ **0 `\r` en base des deux côtés** : c'était de
-   la prévention, pas de la réparation.
-2. **Les trois items « avant le Run 1 » qui restent** *(voir §5)* — ⛔ **aucun n'est du code** :
-   ce sont un prompt dérivé d'une fiche, une décision de module, et un arbitrage de Louis. Une
-   séance Code ne les joue pas ; **le quatrième, D4, est payé** *(29/08)*.
-3. **Les RESTES de la campagne C** *(jouée le 29/08 — voir §4 et la section « Campagne C » du
-   `SUIVI_tests_manuels.md`)*. ✅ **`C-RLS-4` est fermé** *(29/08, les deux bases)* ; **aucun des six restants n'a d'échéance.**
-   · **à éprouver** : `C-RLS-5` *(UPDATE `fragments_depots` ouvert → l'élève blanchit ses marques
-   d'anti-triche)* · `C-RLS-6` *(policy INSERT `profiles` sans `role='eleve'`)* · `C-RLS-7` *(tuteur :
-   module vérifié sur l'UNION des classes, pas LA classe)* · `C-RLS-8` *(`garderEleve` ne lit pas le
-   rôle)* · `C-RLS-9` *(calendrier : quizz à classe effacée non écarté)*. · **dettes d'outillage** :
-   `C-RLS-10` *(22 tables élève sur 89 sans policy traçable)* · `C-RLS-11` *(la sonde n'éprouve que
-   8 tables, et son test d'escalade `profiles` rate le cas dangereux)*. **Chacun se MESURE d'abord :
-   plusieurs sont « garde absente » dont le coût réel reste à établir.**
-4. **Les campagnes de revue B, A, D** *(§4)*, dans l'ordre **B → A → D** *(C est jouée)*.
-5. **La passe du registre des ouverts** — rayer les trois entrées périmées quand la séance voisine
-   aura rendu le fichier.
+⭐ **L'ordre a changé le 30/08 : ce sont les DATES qui commandent, plus les campagnes.**
 
----
+1. ⛔⛔ **CE QUI A UNE ÉCHÉANCE** *(le détail et les chiffres au §1)* — l'ouverture de la semaine
+   Fragments, le segment 2, le **07/09** *(premier comptage d'assiduité, coût irréversible)* et le
+   **14/09** *(bascule de `profil_provisoire` — avant ce jour **aucune lettre ne s'affiche**)*.
+   **Mesurer l'état de chacun AVANT de conclure quoi que ce soit** : `assiduite_hebdo`,
+   `routeur_decisions` et `quazian_quizzes` étaient tous à **0 ligne en prod** au 30/08.
+2. **Les restes de la campagne C — QUATRE entrées, aucune datée** *(§4)*.
+   · **`C-RLS-8`** *(`garderEleve` ne lit pas le rôle)* et **`C-RLS-9`** *(quizz à classe effacée)* :
+     **mesurés INERTES le 29/08, avec leur raison**. ⭐ `C-RLS-9` l'est **structurellement** — la
+     policy n'a aucune branche `classe_id IS NULL` —, donc il ne se réveillera pas.
+   · **`C-RLS-10`** : ⭐ **DÉCLASSÉE** — la RLS est active sur **111/111** tables des deux bases.
+     C'est un manque de **documentation**, pas d'exposition.
+   · **`C-RLS-11`** : **à moitié payée** *(`scripts/recette/epreuve-escalade-profiles.mjs` éprouve
+     l'escalade avec le VRAI `auth.uid()`)*. Reste la sonde élargie — la vraie cible est
+     **39 tables** *(celles portant une policy lisible hors prof)*, pas 8, pas 89.
+3. **`C4L10S-19`**, le dernier « avant le Run 1 » *(§5)* — ⛔ **ce n'est pas du code** : c'est une
+   décision de MODULE, donc un acte de calibration. Les trois autres sont payés ou sans objet.
+4. **Les campagnes de revue B, A, D** *(§4)*, dans l'ordre **B → A → D**.
+5. ⚠️ **La passe des listes-parapluie `C4L7-11` et `C4L7-12`** — ce sont elles qu'on lit quand on
+   demande « quels smokes restent », et elles sont **périmées**. Le 29/08 elles ont été **ANNOTÉES,
+   pas réécrites** : une mesure les donne périmées aux trois quarts, mais à la mesure des CASES les
+   neuf sont encore ouvertes. **Il faut les reprendre jumeau par jumeau**, et c'est le plus gros
+   écart restant entre ce que le dépôt déclare et ce qui est vraiment dû.
 
 ## 3. Les protocoles — ils sont là parce qu'ils ont chacun coûté quelque chose
 
@@ -162,7 +171,7 @@ Dans ce dépôt, **tout ce qui a été trouvé de sérieux l'a été en EXÉCUTA
 
 | axe | quoi |
 |---|---|
-| ~~**C · RLS et exposition élève**~~ | ✅ **JOUÉE LE 29/08** *(tag `revue-c-rls`)*. Le fait qui commande : **25 fichiers élève sur 81 utilisent `createAdminClient()`** — RLS contournée, seule protection = le filtrage du code. **61 constats, 47 sains, 14 chauds, 3 défauts réels ÉPROUVÉS, 3 corrigés.** ⛔ La pire est une **ÉCRITURE croisée** — un élève fabrique une accusation de collage sur le dépôt d'un autre *(prouvée en base puis restaurée)*. ✅ **La fuite Quazian est FERMÉE le 29/08** — et sa correction a montré que **le constat sous-estimait le défaut** *(deux policies, dont une SANS contrôle de classe)* et que **son inertie ne valait que pour la prod**. Reste au SUIVI : 6 constats à éprouver + 2 dettes d'outillage *(la sonde ne couvre que 8 tables sur 89)*. |
+| ~~**C · RLS et exposition élève**~~ | ✅ **JOUÉE, ET SES RESTES AUSSI — clôturée dans la nuit du 29 au 30/08.** Le fait qui commande : **25 fichiers élève sur 81 utilisent `createAdminClient()`** — RLS contournée, seule protection = le filtrage du code. **61 constats, 5 défauts fermés et poussés** *(`C-RLS-4` la bonne réponse d'un quizz · `C-RLS-5` le blanchiment des marques · `C-RLS-6` l'escalade de rôle · `C-RLS-7` le tuteur par classe · et `C-RLS-12`, **trouvé HORS LISTE**, le re-dépôt Fragments qui détruisait les photos)*. ⭐ Chacun **éprouvé avant d'être corrigé**, avec **contre-épreuve** *(rouvrir le défaut, le voir revenir, refermer)*, et **smoké** quand il touchait un chemin élève. ⛔⛔ **CE QUE LA CAMPAGNE APPREND POUR LES SUIVANTES : le constat sous-décrit presque toujours son défaut** — deux policies au lieu d'une, une inertie fausse d'un côté, un vecteur à l'INSERT quand le constat visait l'UPDATE, et le pire défaut absent de la liste. **Ne jamais corriger sur la lettre d'un constat sans remesurer sa prémisse.** Restent 4 entrées, **aucune datée** *(§2 item 2)*. |
 | **B · Les gardes de la base** | Sondage en transaction annulée, **sandbox ET prod**. Le **Tas 1** de la dette C4-L8 est entier : **A1** *(le rejeu après rollback rouvre `poser_statut_recette` à `anon`)* · **A3** *(`garde_cas_de_la_paire`, un défaut déjà en base)* · **A4** *(antidatage ET postdatation du statut de recette)* · **C14** *(`4.0`, et `{"cran": true}` lu comme le cran 1)*. ⚠️ `garde_cas_de_la_paire` est `INITIALLY DEFERRED` : sans `set constraints all immediate`, une sonde en rollback **mesure le vide**. |
 | **A · Les ports Python ↔ TypeScript** | La veine la plus riche : **huit écarts de langage** trouvés en six portages, chacun par le portage *suivant*. Un harnais différentiel sur les six branchements + `verifie-import` + `verifie-reference`, plus l'épreuve par mutation là où elle n'a pas été faite *(la Synthèse a eu **11 survivantes sur 59** au premier passage)*. |
 | **D · Les coutures** | ⭐ **Restreint à C4-L1 → C4-L16**, joués avant la convention de couture. C5 et C6 l'ont appliquée et ont leurs scripts au dépôt. |
