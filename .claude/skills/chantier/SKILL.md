@@ -6,6 +6,18 @@ version: 1.0.0
 
 # Le chantier Palimpseste — état, file, protocoles
 
+> ⭐⭐⭐ **CE QUE LOUIS VEUT VOIR RÉGLÉ EN PREMIER — `C-RLS-4`, la fuite Quazian.** Décision de Louis,
+> 29/08 : *« c'est la première chose que je veux voir réglé au prochain `/chantier` ».* Il compte le
+> fermer **dans une session dédiée** — ne pas le jouer sans lui, mais **le lui rappeler d'emblée**.
+> La bonne réponse d'un quizz est lisible **avant de répondre**, par DEUX chemins *(la charge RSC de
+> la page, ET un `select index_correct` PostgREST direct sur tout quizz `lance`/`ferme`)*. **Deux
+> correctifs indépendants** : retirer `index_correct` des props servies *(`app/eleve/modules/quazian/
+> quizz/[quizId]/actions.ts`, `initialiserSession`)*, ET restreindre la colonne côté policy
+> *(`lot1_classe_schema.sql:224`, `quazian_questions_eleve_classe`)*. ⚠️ **Inerte tant qu'il y a 0
+> quizz en base** *(mesuré le 29/08)* — **live au premier quizz `lance`**. Détail : `SUIVI`, `C-RLS-4`.
+
+---
+
 ⛔ **Rien ici ne remplace une vérification.** Cet état est daté du **2026-08-29**. Chaque
 chiffre a été mesuré ce jour-là ; il a pu bouger. **Devant une anomalie de données, lire la
 donnée d'abord.**
