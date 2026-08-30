@@ -38,6 +38,11 @@ S1 `2026-08-24` *(diagnostic, hors routage)* · **S2 `2026-08-31`** *(calibratio
   rattrape un lundi manqué. **Avant ce jour, aucune lettre ne s'affiche à aucun élève.**
 - **avant le Run 1** de chaque compétence — après le premier run, réviser un prompt devient un acte
   de calibration réglé par protocole. Quatre items y sont adossés *(voir §2)*.
+- **avant le PREMIER QUIZZ lancé de l'année** — la fuite Quazian *(`C-RLS-4`, corrigé complet lisible
+  avant de répondre, par la charge RSC ET par PostgREST)* est **réelle dans le code mais INERTE tant
+  qu'il y a 0 quizz en base** *(mesuré le 29/08, sandbox et prod)*. Le jour où un quizz passe à
+  `lance`, elle devient live. **Deux correctifs, tous deux au SUIVI (`C-RLS-4`)** : retirer
+  `index_correct` des props servies, ET restreindre la colonne côté policy.
 
 **Les deux registres** : `SUIVI_tests_manuels.md` *(~101 cases décochées ; c'est la boîte aux
 lettres de la recette)* et `INVENTAIRE_Non_Tranches.md` *(dépôt de conception ; 57 items + 9 dettes)*.
@@ -63,8 +68,17 @@ l'a ouvert : `git fetch` puis `git log <commit du skill>..HEAD` **avant de chois
 2. **Les trois items « avant le Run 1 » qui restent** *(voir §5)* — ⛔ **aucun n'est du code** :
    ce sont un prompt dérivé d'une fiche, une décision de module, et un arbitrage de Louis. Une
    séance Code ne les joue pas ; **le quatrième, D4, est payé** *(29/08)*.
-3. **Les quatre campagnes de revue** *(§4)*, dans l'ordre **C → B → A → D**.
-4. **La passe du registre des ouverts** — rayer les trois entrées périmées quand la séance voisine
+3. **Les RESTES de la campagne C** *(jouée le 29/08 — voir §4 et la section « Campagne C » du
+   `SUIVI_tests_manuels.md`)*. ⛔ **`C-RLS-4` Quazian a une échéance** *(voir §1)* ; les autres, non.
+   · **à éprouver** : `C-RLS-5` *(UPDATE `fragments_depots` ouvert → l'élève blanchit ses marques
+   d'anti-triche)* · `C-RLS-6` *(policy INSERT `profiles` sans `role='eleve'`)* · `C-RLS-7` *(tuteur :
+   module vérifié sur l'UNION des classes, pas LA classe)* · `C-RLS-8` *(`garderEleve` ne lit pas le
+   rôle)* · `C-RLS-9` *(calendrier : quizz à classe effacée non écarté)*. · **dettes d'outillage** :
+   `C-RLS-10` *(22 tables élève sur 89 sans policy traçable)* · `C-RLS-11` *(la sonde n'éprouve que
+   8 tables, et son test d'escalade `profiles` rate le cas dangereux)*. **Chacun se MESURE d'abord :
+   plusieurs sont « garde absente » dont le coût réel reste à établir.**
+4. **Les campagnes de revue B, A, D** *(§4)*, dans l'ordre **B → A → D** *(C est jouée)*.
+5. **La passe du registre des ouverts** — rayer les trois entrées périmées quand la séance voisine
    aura rendu le fichier.
 
 ---
