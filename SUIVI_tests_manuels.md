@@ -8662,6 +8662,23 @@ corrigés le jour même._
   depuis le 24/08, et **40 des 62 élèves** ont Fragments *(1HLP 24 + THLP 16)*. Il tire au premier
   re-dépôt. ⛔ **Aucune migration** : la policy DELETE prof-only est correcte, c'est le code qui
   l'ignorait.
+  ✅⭐ **SMOKE JOUÉ LE 30/08, AU NAVIGATEUR, par Louis en session élève** *(bac à sable, classe Test,
+  semaine ouverte du 07/09 — **aucun décor n'a été nécessaire**, la configuration existait déjà)*. Relevé
+  par `scripts/recette/etat-fragments.mjs`, qui lit **les deux moitiés de la vérité** *(ce que la base
+  annonce ET ce que le Storage contient — le défaut produisait exactement leur divergence)* :
+  · **départ** : 0 dépôt, 0 fichier · **1er dépôt** : `10b5dc3e`, photo `…1788064032108_1.jpg`, présente
+  · **RE-DÉPÔT** : dépôt **`da7297bc`** — un **identifiant NOUVEAU**, donc l'ancienne ligne a bien été
+  supprimée —, photo `…1788064522049_1.jpg` présente, **et un seul fichier au Storage** : l'ancien retiré
+  APRÈS la ligne, non avant.
+  ⛔ **Sous l'ancien code, le dépôt serait resté `10b5dc3e` et le Storage serait VIDE** — c'est très
+  exactement le couple de signes que le relevé cherche.
+  ⭐ **L'instrument a été éprouvé ROUGE avant d'être cru vert** : un dépôt de contre-épreuve portant une
+  photo jamais téléversée, posé sur une semaine FERMÉE pour ne rien gêner, le fait sortir en **code 1** en
+  nommant le fichier absent ; retiré, il revient au vert et le point de départ est intact.
+  ⚠️ **Ce que le smoke ne couvre pas** : le chemin d'ÉCHEC du nouveau code *(la suppression admin qui
+  raterait, donc le refus propre « rien n'a été modifié »)*. Il demanderait de casser la garde exprès ; ce
+  comportement est éprouvé côté base *(admin+garde → `DELETE 1` · autre `eleve_id` → `DELETE 0`)*, pas par
+  la route.
 
 ### 📋 Dette d'outillage relevée par la campagne — sans laquelle la revue ne se referme pas
 
