@@ -76,6 +76,19 @@ autres états — `notions`, une liste, l'absence — le rendent muet tant que l
 parlé. ⛔ **`composer` est le SEUL mode qui accepte un sujet** ; les autres exigent un
 `texte_auteur`.
 
+### ⭐⭐ OÙ EST LA MATIÈRE — `generateur/revue-2026-08-30/` *(dépôt `palimpseste-conception`)*
+
+**Cinq fichiers, sortis du dossier temporaire de la séance du 30/08 et commités.** Son
+`LISEZ-MOI.md` dit ce que chacun porte et ce qu'il ne faut pas refaire.
+
+| fichier | ce qu'il porte |
+|---|---|
+| ⛔⛔ **`22-refaits-JAMAIS-VERSES.json`** | **22 exercices réécrits le 29/08 et jamais versés** — le seul travail irrécupérable. ⚠️ À relire à la lumière du patron d'aujourd'hui : **le type 1 veut des candidats NEUFS**, pas des fragments. |
+| **`RESTE-A-FAIRE.json`** | les **27 constats non traités** *(nommés, avec cas, épreuve, gravité, réparation proposée)* · les **47 exercices à jumeaux identiques** · ⭐ **les 181 cas DÉJÀ traités, pour ne pas les refaire** |
+| `crible-119-constats.json` | les 119 constats bruts du balayage des 802 cas |
+| `crible-donnees-completes.json` | les mêmes, avec matériau et consigne — pour travailler sans requêter la banque |
+| `reserves-37-apres-reprise.json` | les 37 réserves du contradicteur, avant/après reprise |
+
 ### La file de ce qui reste sur la banque, par urgence décroissante
 
 1. ⛔ **Fabriquer les trois cellules à zéro** *(skill `/banque`)* — argumentation·micro,
