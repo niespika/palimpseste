@@ -187,12 +187,14 @@ function mots(x: string): string[] {
  */
 export function motsAMarquer(
   regime: RegimeMarquage | null,
-  { candidats, contenu, versionCorrigee, consigne }: {
+  { candidats, contenu, versionCorrigee, consigne, observable }: {
     candidats?: readonly string[] | null
     contenu?: string | null
     versionCorrigee?: string | null
     /** ⭐ La consigne du CAS — règle (2) du `02-` §5 : ce qu'elle cite se marque. */
     consigne?: string | null
+    /** ⭐ L'observable ISOLÉ — il porte les deux exceptions à la règle (1). */
+    observable?: string | null
   },
 ): string[][] {
   const out: string[][] = []
@@ -212,7 +214,31 @@ export function motsAMarquer(
     //    qui est la bonne réponse, pas un repli.
     const corps = contenu ?? ''
     const suites = (candidats ?? []).map((c) => mots(c ?? ''))
-    if (suites.length && suites.every((j) => estFragment(corps, j))) out.push(...suites)
+    if (suites.length && suites.every((j) => estFragment(corps, j))) {
+      out.push(...suites)
+      return out
+    }
+    // ⭐⭐ LA RÈGLE (2) VAUT ICI AUSSI, EN REPLI — 29/08, relevé par Louis au
+    //    cran 1 : « je vois des références au matériau dans la consigne et le
+    //    texte qui devrait être en gras ne l'est pas ». Quand les candidats sont
+    //    des REMPLACEMENTS et non des fragments, rien ne se marque — mais si la
+    //    consigne CITE un passage du matériau, elle nomme l'endroit, et c'est
+    //    lui qu'on montre.
+    // ⛔ **Elle ne DÉSIGNE PAS la réponse** : ce qu'elle marque vient de la
+    //    consigne, que l'élève lit de toute façon. La garde « les quatre ou
+    //    aucun » reste entière — elle porte sur les CANDIDATS, pas sur ce
+    //    repère.
+    // ⚠️ Mesuré : 11 cas de cran 1 sur 141 muets. Ce n'est pas le remède du
+    //    cran 1 — 130 consignes DÉSIGNENT le matériau sans le CITER (« À ce
+    //    tournant », « Cette phrase ») —, c'est ce qui est réparable sans
+    //    inventer ce que la consigne montre du doigt.
+    const a0 = mots(corps)
+    for (const j of citationDeLaConsigne(consigne)) {
+      const i = indexDeLaSuite(a0, j)
+      if (i < 0) continue
+      const p0 = bornesDePhrase(a0, i, i + j.length)
+      out.push(a0.slice(p0.debut, p0.fin))
+    }
     return out
   }
 
@@ -248,11 +274,27 @@ export function motsAMarquer(
   const t = tranchesDuDiff(a, b)
   if (!t) return out
 
-  // ⭐ RÈGLE (3) AVANT LA (1) : un diff qui commence au PREMIER MOT d'une phrase
-  //    désigne la COUTURE, pas la phrase. Étendre aux bornes montrerait un texte
-  //    juste et cacherait le seul endroit qui cloche.
-  const couture = coutureOuNull(a, t.debut)
-  const p = couture ?? bornesDePhrase(a, t.debut, t.fin)
+  // ⭐⭐ LES DEUX EXCEPTIONS PASSENT AVANT TOUT, et elles se lisent sur
+  //    l'OBSERVABLE (`02-` 6.2 §5).
+  const obs = observable ?? ''
+  if (OBSERVABLE_SANS_EXTENSION.test(obs)) {
+    // Le mot EST la désignation : on ne l'étend pas.
+    out.push(a.slice(t.debut, t.fin))
+    return out
+  }
+  if (OBSERVABLE_DE_COUTURE.test(obs)) {
+    // La couture, et elle seule — quand elle existe. ⚠️ Si le diff ne commence
+    //    pas à une frontière de phrase, il n'y a pas de couture à montrer : on
+    //    retombe sur la phrase, plutôt que d'inventer un joint.
+    const c = coutureOuNull(a, t.debut)
+    const p2 = c ?? bornesDePhrase(a, t.debut, t.fin)
+    out.push(a.slice(p2.debut, p2.fin))
+    return out
+  }
+  // ⚠️ PARTOUT AILLEURS, LA (1) : le passage s'étend à sa phrase. La règle (3)
+  //    ne se lit PLUS sur la position du diff — elle se lit sur ce que
+  //    l'exercice MESURE, et c'est la branche du dessus.
+  const p = bornesDePhrase(a, t.debut, t.fin)
   out.push(a.slice(p.debut, p.fin))
   return out
 }
@@ -270,6 +312,25 @@ function indexDeLaSuite(dans: readonly string[], suite: readonly string[]): numb
   }
   return -1
 }
+
+/**
+ * ⭐⭐ LES DEUX EXCEPTIONS À LA RÈGLE (1) — `02-` 6.2 §5, 29/08, et elles se
+ * lisent sur L'OBSERVABLE, jamais sur la position du diff.
+ *
+ * ⛔ **`mot_impropre` : le mot NE S'ÉTEND PAS.** Le mot *est* la désignation —
+ *    c'est tout l'exercice, et le §5 le disait déjà (« le mot en gras »,
+ *    décision de Louis du 24/08). *Mesuré : cinq consignes promettaient un gras
+ *    que la règle (1) avait remplacé par la phrase entière.*
+ *
+ * ⛔ **La famille du LIEN : la couture, et elle seule.** C'est le domaine propre
+ *    de la règle (3), et il fallait le NOMMER au lieu de le deviner. *Mesuré :
+ *    la couture se déclenchait sur 57 cas dont 20 n'avaient rien d'un défaut de
+ *    lien — `densite_friction`, `debat_situe`, `enjeu`. Elle les attrapait parce
+ *    que la correction remplace le premier mot d'une phrase, ce qui n'en fait
+ *    pas une couture.*
+ */
+const OBSERVABLE_SANS_EXTENSION = /^mot_impropre$/
+const OBSERVABLE_DE_COUTURE = /^(jointure_|charniere_|attache_|bloc_relie)/
 
 /**
  * ⭐⭐ LES BORNES DE PHRASE — règle (1) du `02-` §5, 29/08.
@@ -519,16 +580,41 @@ export function segmenterParIntervalles(
  * ⛔ **`versionCorrigee` NE RESSORT PAS.** La valeur de retour ne porte que des
  * tranches de `contenu`.
  */
+/**
+ * ⛔⛔ MARQUER TOUT, C'EST NE DÉSIGNER RIEN — garde du 29/08.
+ *
+ * Mesuré au cran 1 : **8 cas** où le passage marqué couvrait le matériau
+ * ENTIER, parce qu'un candidat servi était le matériau lui-même. *Un
+ * surlignage qui prend tout ne dit pas où regarder ; il fatigue l'œil et
+ * n'apprend rien.* On préfère alors ne rien marquer — ce que le `02-` §5
+ * appelle déjà « rien à marquer n'est pas une panne ».
+ *
+ * ⚠️⚠️ ELLE NE VAUT QU'AU RÉGIME `candidats`, et c'est une correction : aux
+ *    crans 3 et 5, un matériau d'UNE SEULE PHRASE est légitimement marqué en
+ *    entier — la règle (1) l'étend à sa phrase, et sa phrase est tout le
+ *    matériau. *Huit tests l'ont dit avant que je m'en avise.* Là-bas, tout
+ *    marquer est la bonne réponse ; ici, c'est un candidat qui recopie le
+ *    matériau.
+ */
+function marqueTout(contenu: string, jetons: readonly string[][]): boolean {
+  const total = mots(contenu).length
+  if (!total) return false
+  const couverts = jetons.reduce((n, j) => n + j.length, 0)
+  return couverts >= total
+}
+
 export function marquerLeMateriau(
   contenu: string | null | undefined,
   regle: string | null | undefined,
   appui: { candidats?: readonly string[] | null; versionCorrigee?: string | null
-    consigne?: string | null } = {},
+    consigne?: string | null; observable?: string | null } = {},
 ): SegmentMateriau[] | null {
   if (contenu == null) return null
   const regime = regimeDeMarquage(regle)
-  return segmenterMateriau(contenu, motsAMarquer(regime, {
+  const jetons = motsAMarquer(regime, {
     candidats: appui.candidats, contenu, versionCorrigee: appui.versionCorrigee,
-    consigne: appui.consigne,
-  }))
+    consigne: appui.consigne, observable: appui.observable,
+  })
+  const efface = regime === 'candidats' && marqueTout(contenu, jetons)
+  return segmenterMateriau(contenu, efface ? [] : jetons)
 }

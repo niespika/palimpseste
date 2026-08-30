@@ -486,6 +486,8 @@ export async function chargerLeDeroule(
       // ⭐ RÈGLE (2) du `02-` §5 : ce que la consigne CITE se marque, et cette
       //    règle passe avant le diff — elle vaut même quand il est vide.
       consigne: consignes[i] ?? null,
+      // ⭐ Les deux exceptions du `02-` 6.2 §5 se lisent sur l'observable.
+      observable: depot.exercice.observable_isole_code,
     })
 
     // ⚠️⚠️ UN CRAN QUI DEVAIT MARQUER ET QUI NE MARQUE RIEN SE DIT AU PROFESSEUR.

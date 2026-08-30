@@ -392,8 +392,32 @@ test('RÈGLE 3 — un diff au PREMIER MOT d\'une phrase désigne la COUTURE', ()
   //    texte JUSTE et cacherait le seul endroit qui cloche.
   const c = 'La raison ne rencontre aucune limite de principe. Une part de la nature résiste.'
   const v = 'La raison ne rencontre aucune limite de principe. Pourtant une part de la nature résiste.'
-  const seg = marquerLeMateriau(c, regle(3), { versionCorrigee: v })!
+  // ⚠️ L'OBSERVABLE COMMANDE — `02-` 6.2 §5, exception (b). Sans lui, la couture
+  //    ne se déclenche pas : elle se lit sur ce que l'exercice MESURE, jamais
+  //    sur la position du diff.
+  const seg = marquerLeMateriau(c, regle(3),
+    { versionCorrigee: v, observable: 'jointure_presente' })!
   assert.deepEqual(seg.filter((s) => s.marque).map((s) => s.texte), ['principe. Une'])
+
+  // ⛔ LE MÊME DIFF, UN AUTRE OBSERVABLE : la phrase, pas la couture. C'est la
+  //    correction du 29/08 — la couture se déclenchait sur 20 cas qui n'avaient
+  //    rien d'un défaut de lien (`densite_friction`, `debat_situe`, `enjeu`).
+  const autre = marquerLeMateriau(c, regle(3),
+    { versionCorrigee: v, observable: 'densite_friction' })!
+  assert.deepEqual(autre.filter((s) => s.marque).map((s) => s.texte),
+    ['Une part de la nature résiste.'])
+})
+
+test('EXCEPTION (a) — `mot_impropre` ne s\'étend PAS : le mot EST la désignation', () => {
+  const c = 'Toute observation passe par un postulat qui oriente ce que l\'on perçoit.'
+  const v = 'Toute observation passe par un cadre qui oriente ce que l\'on perçoit.'
+  const m = marquerLeMateriau(c, regle(3),
+    { versionCorrigee: v, observable: 'mot_impropre' })!
+  assert.deepEqual(m.filter((s) => s.marque).map((s) => s.texte), ['postulat'])
+  // ⚠️ sans l'exception, la règle (1) rendrait la phrase entière — et cinq
+  //    consignes promettant « le mot en gras » montraient alors tout.
+  const sans = marquerLeMateriau(c, regle(3), { versionCorrigee: v })!
+  assert.equal(sans.filter((s) => s.marque)[0].texte, c)
 })
 
 test('RÈGLE 2 — ce que la consigne CITE se marque, et cela passe AVANT le diff', () => {
@@ -430,4 +454,28 @@ test('RÈGLES — aux crans 4, 7 et 9 rien ne change : ils ne marquent toujours 
     })!
     assert.deepEqual(seg.filter((s) => s.marque).map((s) => s.texte), [], `cran ${n}`)
   }
+})
+
+test('RÈGLE 2 EN REPLI — au cran 1, si aucun candidat n\'est un fragment, la consigne prend le relais', () => {
+  const c = 'La preuve est là. Le langage ne dit pas tout. La conclusion tient.'
+  const seg = marquerLeMateriau(c, regle(1), {
+    // ⛔ des REMPLACEMENTS, pas des fragments : la garde « les quatre ou aucun »
+    //    refuse de les marquer, et c'est juste.
+    candidats: ['une autre version', 'une troisième', 'une quatrième'],
+    consigne: 'Que dit la phrase « Le langage ne dit pas tout » ici ?',
+  })!
+  assert.deepEqual(seg.filter((s) => s.marque).map((s) => s.texte),
+    ['Le langage ne dit pas tout.'])
+})
+
+test('⛔ MARQUER TOUT, C\'EST NE DÉSIGNER RIEN — au cran 1 seulement', () => {
+  const c = 'La preuve est là.'
+  // un candidat qui RECOPIE le matériau : tout serait marqué, donc rien ne l'est
+  const seg = marquerLeMateriau(c, regle(1), { candidats: ['La preuve est là.'] })!
+  assert.deepEqual(seg.filter((s) => s.marque).map((s) => s.texte), [])
+  // ⚠️ aux crans 3 et 5, un matériau d'UNE phrase se marque bien en entier :
+  //    la règle (1) l'étend à sa phrase, et sa phrase est tout le matériau.
+  const t3 = marquerLeMateriau('La preuve est là donc.', regle(3),
+    { versionCorrigee: 'La preuve est là.' })!
+  assert.deepEqual(t3.filter((s) => s.marque).map((s) => s.texte), ['La preuve est là donc.'])
 })
