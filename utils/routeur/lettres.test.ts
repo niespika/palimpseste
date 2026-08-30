@@ -300,3 +300,37 @@ test('la dernière ancre se lit — et seules `classe` + `sommatif` en sont', ()
   assert.equal(a?.lettreEquivalente, 'D', 'la synthèse en classe n\'est pas une ancre')
   assert.equal(derniereAncre([m({ lettreEquivalente: 'A' })]), null)
 })
+
+// ════════════════════════════════════════════════════════════════════════════
+// LA MÉDIANE DES MÉDIANES — la règle du bi-classe (décision de Louis, 30/08)
+// ----------------------------------------------------------------------------
+// ⭐ POURQUOI CES TROIS TESTS EXISTENT. Un élève inscrit dans DEUX classes
+//    reçoit, à défaut de mesure propre, la médiane de SA classe — et il en a
+//    deux, qui peuvent différer. `poserLeColdStart` tranche alors par LA MÉDIANE
+//    DES MÉDIANES, en réutilisant `medianeDeClasse` : **aucune convention n'est
+//    inventée là-bas, tout se décide ici.**
+// ⛔ ET LA DONNÉE RÉELLE NE PEUT PAS L'ÉPROUVER : en bac à sable, le seul élève
+//    bi-classe a ses PROPRES mesures, donc ses deux classes s'accordent et la
+//    branche ne tire jamais. *C'est précisément pourquoi elle est épinglée par
+//    un test plutôt que par une recette.*
+// ════════════════════════════════════════════════════════════════════════════
+
+test('médiane des médianes — sur DEUX valeurs, la plus FAIBLE : le côté prudent', () => {
+  assert.equal(medianeDeClasse(['B', 'D']), 'D')
+  assert.equal(medianeDeClasse(['A', 'C']), 'C')
+  assert.equal(medianeDeClasse(['C', 'B']), 'C')
+  assert.equal(medianeDeClasse(['D', 'A']), 'D')
+})
+
+test('médiane des médianes — elle ne dépend PAS de l\'ordre', () => {
+  // ⛔ Sinon ce serait l'ordre d'itération des CLASSES qui déciderait de la
+  //    lettre d'un élève — exactement ce que la règle est là pour empêcher.
+  assert.equal(medianeDeClasse(['B', 'D']), medianeDeClasse(['D', 'B']))
+  assert.equal(medianeDeClasse(['A', 'E']), medianeDeClasse(['E', 'A']))
+})
+
+test('médiane des médianes — deux médianes ÉGALES rendent cette valeur', () => {
+  // Le cas ordinaire : les classes s'accordent, rien n'est arbitré, et le cold
+  // start ne compte alors aucun `medianeDesMedianes`.
+  assert.equal(medianeDeClasse(['C', 'C']), 'C')
+})

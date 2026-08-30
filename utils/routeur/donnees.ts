@@ -286,6 +286,49 @@ export async function lireLaMontee(
  *    pas pour les modules ; ici c'est l'éligibilité aux exercices qui est en jeu,
  *    et le `07-` §1.3 veut « ses classes » au présent. *Signalé au relevé.*
  */
+/**
+ * ⭐ LA MÊME LECTURE, POUR TOUT LE MONDE EN UNE FOIS — 30/08.
+ * `lireLesInscriptions` était appelée **une fois par élève** dans le déclencheur
+ * hebdomadaire : 62 allers-retours séquentiels en production, à 160-332 ms
+ * chacun *(mesuré dans les journaux Vercel)*. Cette variante les ramène à UN.
+ *
+ * ⛔ ELLE NE CHANGE NI LE FILTRAGE NI LA FORME : mêmes colonnes, même
+ *    `statut = 'active'` sur l'inscription ET sur la classe, même repli
+ *    « (classe sans nom) ». Un élève sans inscription active rend un tableau
+ *    vide, comme avant — la clé existe, la liste est vide.
+ *
+ * ⚠️ `lirePagine` et non `select` nu : supabase-js **plafonne à 1000 lignes
+ *    sans rien signaler**, et 62 élèves × leurs classes peuvent en approcher un
+ *    jour. *(Piège transverse du chantier.)*
+ */
+export async function lireLesInscriptionsDesEleves(
+  admin: Admin, eleveIds: readonly string[],
+): Promise<Map<string, InscriptionActive[]>> {
+  const out = new Map<string, InscriptionActive[]>()
+  for (const id of eleveIds) out.set(id, [])
+  if (eleveIds.length === 0) return out
+  type L = {
+    eleve_id: string; classe_id: string
+    classes: { nom: string; type_pedagogique: string | null; statut: string } | null
+  }
+  const lignes = await lirePagine<L>(
+    admin, 'inscriptions',
+    'eleve_id, classe_id, classes!inner(nom, type_pedagogique, statut)',
+    ['eleve_id', 'classe_id'],
+    (q) => (q as unknown as { in: (c: string, v: string[]) => { eq: (c: string, v: string) => unknown } })
+      .in('eleve_id', eleveIds as string[]).eq('statut', 'active'),
+  )
+  for (const l of lignes) {
+    if (l.classes?.statut !== 'active') continue
+    out.get(l.eleve_id)?.push({
+      classeId: l.classe_id,
+      classeNom: l.classes?.nom ?? '(classe sans nom)',
+      typePedagogique: (l.classes?.type_pedagogique as Parcours | null) ?? null,
+    })
+  }
+  return out
+}
+
 export async function lireLesInscriptions(
   admin: Admin, eleveId: string,
 ): Promise<InscriptionActive[]> {

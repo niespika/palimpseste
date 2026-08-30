@@ -378,19 +378,27 @@ export async function ecrireLEtatApresMesure(
 // LE COLD START — la PREMIÈRE lettre (`01-` §4)
 // ════════════════════════════════════════════════════════════════════════════
 
+/** Une candidate de lettre, telle qu'UNE des classes de l'élève la propose. */
+interface CandidateColdStart {
+  lettre: Lettre | null
+  source: string
+  // ⚠️ La valeur de l'ancre est un PALIER, pas une chaîne libre — on garde le
+  //    type d'origine plutôt que de l'élargir, sinon `ligneDeNiveau` le refuse.
+  ancre: { date: string; valeur: Palier } | null
+}
+
 export interface BilanDuColdStart {
   elevesAttendus: number
   lettresPosees: number
   parMediane: number
   sansLettre: number
   /**
-   * ⛔ Les couples `(élève, compétence)` qu'on a REFUSÉ de trancher : un élève
-   * bi-classe sans mesure propre reçoit la médiane de SA classe — et il en a
-   * deux, qui peuvent différer. Aucune source ne dit laquelle l'emporte, donc
-   * rien n'est écrit et la question se voit ici. **Un compte non nul appelle
-   * un arbitrage, pas un correctif.**
+   * ⭐ Les couples `(élève, compétence)` tranchés par LA MÉDIANE DES MÉDIANES :
+   * un élève bi-classe sans mesure propre reçoit la médiane de SA classe, et il
+   * en a plusieurs qui peuvent différer. *(Décision de Louis, 30/08.)* Le compte
+   * est là pour que le cas se VOIE — il n'appelle aucun geste.
    */
-  ambigusBiClasse: number
+  medianeDesMedianes: number
   /** ⛔ Les compétences qu'aucune passation diagnostique ne mesure (§10). */
   horsDiagnostic: string[]
   erreurs: string[]
@@ -415,7 +423,7 @@ export async function poserLeColdStart(
   maintenant: string = new Date().toISOString(),
 ): Promise<BilanDuColdStart> {
   const bilan: BilanDuColdStart = { elevesAttendus: 0, lettresPosees: 0, parMediane: 0,
-    sansLettre: 0, ambigusBiClasse: 0, horsDiagnostic: [], erreurs: [] }
+    sansLettre: 0, medianeDesMedianes: 0, horsDiagnostic: [], erreurs: [] }
 
   const eleves = [...new Set([...elevesParClasse.values()].flat())]
   bilan.elevesAttendus = eleves.length
@@ -457,8 +465,12 @@ export async function poserLeColdStart(
   bilan.horsDiagnostic = COMPETENCES.filter((c) => !mesureesParLaPassation.has(c))
 
   const lignes: LigneDeNiveau[] = []
-  // ⭐ Une entrée par `(eleve_id, competence)` — la clé même de la table.
-  const parCle = new Map<string, { lettre: Lettre | null; source: string; ligne: LigneDeNiveau | null }>()
+  // ⭐ Une entrée par `(eleve_id, competence)` — la clé même de la table —, et
+  //    autant de CANDIDATES que l'élève a de classes.
+  const parCle = new Map<string, {
+    id: string; competence: Competence; niveau: EtatNiveau
+    candidats: CandidateColdStart[]
+  }>()
   for (const [classeId, membres] of elevesParClasse) {
     void classeId
     // La médiane de LA CLASSE de la passation, compétence par compétence.
@@ -489,39 +501,51 @@ export async function poserLeColdStart(
         //    seulement la ligne fautive. *Mesuré le 30/08 en bac à sable :
         //    « ON CONFLICT DO UPDATE command cannot affect row a second time »,
         //    et 0 lettre posée sur 98 attendues.*
+        // ⭐ UNE ENTRÉE PAR `(élève, compétence)`, et un élève bi-classe y dépose
+        //    PLUSIEURS candidates : la boucle englobante est PAR CLASSE, et
+        //    `elevesParClasse` le liste dans chacune des siennes.
         const cle = `${id}|${c}`
-        const deja = parCle.get(cle)
-        if (deja) {
-          // ⭐ LE CAS ORDINAIRE EST UN ACCORD, et il se démontre : quand l'élève
-          //    a SA PROPRE mesure, `premiereLettre` rend `mesures_du_diagnostic`
-          //    — identique dans les deux classes. On garde la première, sans bruit.
-          if (deja.lettre === p.lettre && deja.source === p.source) continue
-          // ⛔ LE DÉSACCORD N'EST PAS UN BUG, C'EST UNE QUESTION DE DOCTRINE :
-          //    à défaut de mesure propre, la lettre vient de la MÉDIANE DE SA
-          //    CLASSE — et un bi-classe en a deux, qui peuvent différer. Aucune
-          //    source ne dit laquelle l'emporte. **On ne tranche donc pas à la
-          //    place de la doctrine, et surtout pas par l'ordre d'itération :**
-          //    on n'écrit rien pour ce couple et on le COMPTE, pour que la
-          //    question se voie au bilan au lieu de se décider en silence.
-          parCle.delete(cle)
-          bilan.ambigusBiClasse += 1
-          continue
-        }
-        if (p.lettre === null) { parCle.set(cle, { lettre: null, source: p.source, ligne: null }); continue }
-        parCle.set(cle, { lettre: p.lettre, source: p.source,
-          ligne: ligneDeNiveau(id, c as Competence, p.lettre, niveau,
-            p.ancre ? { date: jourDansFuseau(p.ancre.date, fuseau), valeur: p.ancre.valeur } : null,
-            maintenant) })
+        const e = parCle.get(cle)
+          ?? { id, competence: c as Competence, niveau, candidats: [] as CandidateColdStart[] }
+        e.candidats.push({ lettre: p.lettre, source: p.source, ancre: p.ancre ?? null })
+        parCle.set(cle, e)
       }
     }
   }
 
-  // ⭐ LES COMPTEURS SE FONT APRÈS LA DÉDUPLICATION, jamais pendant : compter à
-  //    la volée doublait `sansLettre` et `parMediane` pour tout élève bi-classe.
-  for (const v of parCle.values()) {
-    if (v.ligne === null) { bilan.sansLettre += 1; continue }
-    if (v.source === 'mediane_de_classe') bilan.parMediane += 1
-    lignes.push(v.ligne)
+  // ══ LA RÉSOLUTION D'UN ÉLÈVE BI-CLASSE, ET LES COMPTEURS ══════════════════
+  // ⛔⛔ SANS CETTE PASSE, DEUX LIGNES DE MÊME CLÉ PARTAIENT DANS UN MÊME ENVOI
+  //    et `verifierLesLignesDeNiveau` refusait **TOUT LE LOT**, pas la ligne
+  //    fautive. *Mesuré le 30/08 en bac à sable : 0 lettre posée sur 98.*
+  // ⭐ LE CAS ORDINAIRE EST UN ACCORD, et il se démontre : quand l'élève a SA
+  //    PROPRE mesure, `premiereLettre` rend `mesures_du_diagnostic` — la même
+  //    dans toutes ses classes. Rien à arbitrer.
+  // ⭐⭐ QUAND ELLES DIFFÈRENT — c'est-à-dire à défaut de mesure propre, la
+  //    lettre venant alors de la MÉDIANE DE SA CLASSE et un bi-classe en ayant
+  //    deux — on prend **LA MÉDIANE DES MÉDIANES** *(décision de Louis, 30/08)*.
+  //    ⭐ Elle réutilise `medianeDeLaClasse`, donc **aucune convention n'est
+  //    inventée ici** : sur deux valeurs, elle rend la borne INFÉRIEURE des deux
+  //    du milieu (`rangs[Math.floor((n-1)/2)]`), soit **la lettre la plus
+  //    faible** — mesuré : `[B,D] → D`, `[A,C] → C`. Le choix penche donc du
+  //    côté prudent, ce qui est cohérent avec « une descente perdue laisse
+  //    l'élève affiché meilleur qu'il n'est ».
+  // ⭐ ET LES COMPTEURS SE FONT ICI, JAMAIS DANS LA BOUCLE : compter à la volée
+  //    doublait `sansLettre` et `parMediane` pour tout élève bi-classe.
+  for (const e of parCle.values()) {
+    const connues = e.candidats.map((x) => x.lettre).filter((l): l is Lettre => l !== null)
+    if (connues.length === 0) { bilan.sansLettre += 1; continue }
+    const distinctes = new Set(connues)
+    let lettre = connues[0]
+    if (distinctes.size > 1) {
+      lettre = medianeDeLaClasse(connues)
+      bilan.medianeDesMedianes += 1
+    }
+    if (lettre === null) { bilan.sansLettre += 1; continue }
+    if (e.candidats.some((x) => x.source === 'mediane_de_classe')) bilan.parMediane += 1
+    const ancre = e.candidats.find((x) => x.ancre !== null)?.ancre ?? null
+    lignes.push(ligneDeNiveau(e.id, e.competence, lettre, e.niveau,
+      ancre ? { date: jourDansFuseau(ancre.date, fuseau), valeur: ancre.valeur } : null,
+      maintenant))
   }
 
   // ⚠️ Jeux de clés HOMOGÈNES : `lettre_initiale` et l'ancre ne partent pas sur

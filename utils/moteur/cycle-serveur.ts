@@ -30,7 +30,8 @@ import 'server-only'
 import type { createAdminClient } from '@/utils/supabase/admin'
 import { addDaysUTC, lundiOnOrBefore, toISODate } from '@/utils/calendrier-grille'
 import {
-  lireLesDecisions, lireLesEscalades, lireLesInscriptions, lireLesInterrupteurs,
+  lireLesDecisions, lireLesEscalades, lireLesInscriptions, lireLesInscriptionsDesEleves,
+  lireLesInterrupteurs,
   lireLesMesures, lireLesNiveaux, lireLOptOut, lireLeProfil, lirePagine,
 } from '@/utils/routeur/donnees'
 import { budgetDeLEleve } from '@/utils/routeur/budget'
@@ -215,16 +216,21 @@ export async function poserLesSemainesDuRouteur(
   const dejaDeposees = await lireLesInstancesDejaDeposees(admin, eleves)
   bilan.erreurs.push(...dejaDeposees.incidents)
 
+  // ⭐ UNE SEULE LECTURE POUR TOUS — 30/08. C'était `lireLesInscriptions(admin, id)`
+  //    DANS UNE BOUCLE : 62 allers-retours séquentiels en production, à 160-332 ms
+  //    chacun *(mesuré dans les journaux Vercel)*. ⛔ Et le déclencheur était
+  //    déclaré `maxDuration = 60` alors que l'essai en bac à sable en mesure ~92
+  //    pour 62 élèves : la fonction aurait été coupée EN VOL.
+  // ⚠️ L'échec devient global au lieu d'être par élève — c'est le prix, et il est
+  //    juste : une lecture d'inscriptions qui rate n'est pas un incident d'élève,
+  //    c'est une base qui ne répond pas. Le motif le dit désormais ainsi.
   const classesDesEleves = new Map<string, string[]>()
-  const inscriptionsParEleve = new Map<string, Awaited<ReturnType<typeof lireLesInscriptions>>>()
-  for (const id of eleves) {
-    try {
-      const ins = await lireLesInscriptions(admin, id)
-      inscriptionsParEleve.set(id, ins)
-      classesDesEleves.set(id, ins.map((i) => i.classeId))
-    } catch (e) {
-      bilan.erreurs.push(`${id.slice(0, 8)} : inscriptions — ${(e as Error).message}`)
-    }
+  let inscriptionsParEleve = new Map<string, Awaited<ReturnType<typeof lireLesInscriptions>>>()
+  try {
+    inscriptionsParEleve = await lireLesInscriptionsDesEleves(admin, eleves)
+    for (const [id, ins] of inscriptionsParEleve) classesDesEleves.set(id, ins.map((i) => i.classeId))
+  } catch (e) {
+    bilan.erreurs.push(`inscriptions (lecture groupée) — ${(e as Error).message}`)
   }
   const toutesLesClasses = [...new Set([...classesDesEleves.values()].flat())]
   const coursVus = await lireLesCoursVus(admin, toutesLesClasses, aujourdHui)
