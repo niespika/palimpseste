@@ -1,0 +1,935 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<meta name="design_doc_mode" content="canvas">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="anonymous">
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600&amp;family=Cormorant+Garamond:ital,wght@0,500;0,600;0,700;1,500;1,600&amp;family=EB+Garamond:ital,wght@0,400;0,500;0,600;1,400;1,500&amp;family=Alegreya+Sans:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#E7DECF;font-family:'EB Garamond',Georgia,serif;color:#221C16;-webkit-font-smoothing:antialiased}
+::selection{background:#D8C8A8}
+a{color:#2E4A3C;text-decoration:none}
+a:hover{color:#221C16}
+</style>
+</helmet>
+
+<section style="padding:44px 46px 30px;border-bottom:1px solid rgba(60,50,40,.12)">
+  <div style="display:flex;align-items:flex-start;gap:13px;max-width:2600px;margin:0 auto">
+    <span style="font:600 12px 'Alegreya Sans',sans-serif;letter-spacing:.06em;background:#DCE6DF;color:#2E4A3C;padding:5px 12px;border-radius:20px;flex:none;margin-top:2px">Rendu charte · Codex · onglet Exercices (élève)</span>
+    <p style="font:italic 16px/1.55 'Cormorant Garamond',serif;color:#5A4632;margin:0;max-width:104ch">Les sept écrans validés aux wireframes, à l'échelle réelle : <a href="#1a">1a</a> l'accueil, <a href="#2a">2a</a> rédiger, <a href="#2b">2b</a> choisir, <a href="#2c">2c</a> surligner, <a href="#2d">2d</a> se juger, <a href="#2e">2e</a> le retour d'un texte, <a href="#2f">2f</a> le retour d'un choix. Pigment Codex <strong style="font-style:normal;font-weight:600">#2E4A3C</strong>, fond de module <strong style="font-style:normal;font-weight:600">#F0EADE</strong>, liseré bordeaux <strong style="font-style:normal;font-weight:600">#6E2A2C</strong>, action en vert estompé <strong style="font-style:normal;font-weight:600">#5F7365</strong>. Aucune note, aucune lettre, aucun pourcentage de complétion.</p>
+  </div>
+</section>
+
+<!-- ═══════════════════════ 1a — ACCUEIL ═══════════════════════ -->
+<section style="padding:40px 46px 46px;border-bottom:1px solid rgba(60,50,40,.12)">
+  <div id="1a" style="max-width:2600px;margin:0 auto">
+    <div style="display:flex;align-items:baseline;gap:11px;margin:0 0 18px 2px">
+      <span style="font:600 12px 'Alegreya Sans',sans-serif;background:#E6DDC9;color:#4A3A28;padding:4px 11px;border-radius:20px">1a</span>
+      <span style="font:italic 16px 'Cormorant Garamond',serif;color:#6E5A3E">L'accueil de l'onglet — trois groupes, l'échéance sur chaque ligne</span>
+    </div>
+    <div style="display:flex;gap:40px;align-items:flex-start;flex-wrap:wrap">
+
+      <div>
+        <div style="font:700 11px 'Alegreya Sans',sans-serif;letter-spacing:.12em;text-transform:uppercase;color:#8A6F4E;margin:0 0 12px 2px">Ordinateur / tablette · 1040</div>
+        <div style="width:1040px;background:#F0EADE;border:1px solid #DFD4BE;border-radius:14px;overflow:hidden;box-shadow:0 14px 34px rgba(50,40,25,.14)">
+
+          <div style="background:#FBF8F1;border-bottom:1px solid #E4DBC9;padding:14px 26px 15px;display:flex;align-items:center;gap:20px">
+            <div style="display:flex;flex-direction:column;align-items:center;gap:6px;flex:none">
+              <span style="width:46px;height:46px;border-radius:50%;background:#DCE6DF;border:1px solid #CBD8D0;display:inline-flex;align-items:center;justify-content:center;overflow:hidden"><img src="sceaux/codex.png" alt="" style="width:46px;height:46px;object-fit:cover;mix-blend-mode:multiply"></span>
+              <span style="font:600 17px 'Cinzel',serif;letter-spacing:.05em;color:#221C16">Codex</span>
+            </div>
+            <span style="width:1px;align-self:stretch;background:linear-gradient(transparent,rgba(60,50,40,.16),transparent)"></span>
+            <div style="flex:1;min-width:0;display:flex;flex-direction:column;align-items:center;gap:9px">
+              <div style="font:italic 16px 'Cormorant Garamond',serif;color:#6E5A3E">Ce que tu écris <span style="font-style:normal;font-variant:small-caps;letter-spacing:.05em">à la maison</span>, à l'écran.</div>
+              <div style="display:flex;gap:6px">
+                <span style="font:500 14px 'Alegreya Sans',sans-serif;background:#D0DED5;color:#2E4A3C;padding:7px 15px;border-radius:8px">Exercices</span>
+                <span style="font:400 14px 'Alegreya Sans',sans-serif;color:#56685E;padding:7px 15px;border-radius:8px">Examens</span>
+              </div>
+            </div>
+          </div>
+          <div style="height:2px;background:linear-gradient(90deg,rgba(110,42,44,0),rgba(110,42,44,.45),#6E2A2C)"></div>
+
+          <div style="padding:24px 26px 30px;display:flex;flex-direction:column;gap:28px">
+
+            <div style="display:flex;flex-direction:column;gap:11px">
+              <div style="display:flex;align-items:baseline;gap:11px">
+                <span style="font:600 11px 'Cinzel',serif;letter-spacing:.13em;text-transform:uppercase;color:#8A6F4E">À faire · 2</span>
+                <span style="font:italic 14px 'EB Garamond',serif;color:#8A6F4E">le plus proche en premier</span>
+              </div>
+
+              <div style="background:#FBF8F1;border:1px solid #E4DBC9;border-left:3px solid #2E4A3C;border-radius:12px;padding:17px 19px;display:flex;align-items:center;gap:16px;box-shadow:0 1px 2px rgba(60,50,30,.05)">
+                <span style="width:40px;height:40px;border-radius:50%;background:#DCE6DF;border:1px solid #CBD8D0;flex:none"></span>
+                <span style="flex:1;min-width:0">
+                  <span style="display:block;font:600 19px 'EB Garamond',serif;color:#221C16">Explication de texte — Descartes</span>
+                  <span style="display:block;font:500 13px 'Alegreya Sans',sans-serif;color:#8A6F4E;margin-top:3px">Argumentation · un cas · environ 30 min</span>
+                </span>
+                <span style="font:600 12px 'Alegreya Sans',sans-serif;letter-spacing:.03em;background:#EFE4CF;color:#8A5A22;border:1px solid #E0CBA8;border-radius:99px;padding:6px 13px;white-space:nowrap">à rendre mer. 10</span>
+                <span style="font:600 14px 'Alegreya Sans',sans-serif;background:#5F7365;color:#F0F3EE;border-radius:10px;padding:13px 20px;white-space:nowrap">Commencer</span>
+              </div>
+
+              <div style="background:#FBF8F1;border:1px solid #E4DBC9;border-radius:12px;padding:17px 19px;display:flex;align-items:center;gap:16px">
+                <span style="width:40px;height:40px;border-radius:50%;background:#DCE6DF;border:1px solid #CBD8D0;flex:none"></span>
+                <span style="flex:1;min-width:0">
+                  <span style="display:block;font:600 19px 'EB Garamond',serif;color:#221C16">Deux cas — reprise de thèse</span>
+                  <span style="display:block;font:500 13px 'Alegreya Sans',sans-serif;color:#8A6F4E;margin-top:3px">Structure · deux cas, l'un après l'autre · commencé mardi</span>
+                </span>
+                <span style="font:500 12px 'Alegreya Sans',sans-serif;color:#8A6F4E;border:1px solid #E4DBC9;background:#fff;border-radius:99px;padding:6px 13px;white-space:nowrap">à rendre dim. 14</span>
+                <span style="font:600 14px 'Alegreya Sans',sans-serif;background:#FBF8F1;border:1px solid #DFD4BE;color:#4A3A28;border-radius:10px;padding:12px 20px;white-space:nowrap">Reprendre</span>
+              </div>
+            </div>
+
+            <div style="display:flex;flex-direction:column;gap:11px">
+              <div style="display:flex;align-items:baseline;gap:11px">
+                <span style="font:600 11px 'Cinzel',serif;letter-spacing:.13em;text-transform:uppercase;color:#8A6F4E">En attente de ton retour · 2</span>
+                <span style="font:italic 14px 'EB Garamond',serif;color:#8A6F4E">rien à faire pour l'instant</span>
+              </div>
+              <div style="background:#F7F2E8;border:1px solid #E4DBC9;border-radius:12px;padding:14px 18px;display:flex;align-items:center;gap:15px">
+                <span style="width:30px;height:30px;border-radius:50%;background:#DCE6DF;border:1px solid #CBD8D0;flex:none;opacity:.75"></span>
+                <span style="flex:1;min-width:0">
+                  <span style="display:block;font:500 17px 'EB Garamond',serif;color:#5A4632">Synthèse — deux documents</span>
+                  <span style="display:block;font:400 12px 'Alegreya Sans',sans-serif;color:#8A6F4E;margin-top:2px">rendue lundi</span>
+                </span>
+                <span style="font:500 12px 'Alegreya Sans',sans-serif;background:#E6ECF0;color:#3F5F75;border:1px solid #CBDAE3;border-radius:99px;padding:6px 13px">retour en préparation</span>
+              </div>
+              <div style="background:#F7F2E8;border:1px solid #E4DBC9;border-radius:12px;padding:14px 18px;display:flex;align-items:center;gap:15px">
+                <span style="width:30px;height:30px;border-radius:50%;background:#DCE6DF;border:1px solid #CBD8D0;flex:none;opacity:.75"></span>
+                <span style="flex:1;min-width:0">
+                  <span style="display:block;font:500 17px 'EB Garamond',serif;color:#221C16">Explication — extrait 4</span>
+                  <span style="display:block;font:400 12px 'Alegreya Sans',sans-serif;color:#8A6F4E;margin-top:2px">retour reçu · version finale à rendre avant ven. 12</span>
+                </span>
+                <span style="font:600 12px 'Alegreya Sans',sans-serif;letter-spacing:.03em;background:#EFE4CF;color:#8A5A22;border:1px solid #E0CBA8;border-radius:99px;padding:6px 13px">à reprendre</span>
+                <span style="font:600 14px 'Alegreya Sans',sans-serif;background:#FBF8F1;border:1px solid #DFD4BE;color:#4A3A28;border-radius:10px;padding:12px 18px">Ouvrir</span>
+              </div>
+            </div>
+
+            <div style="display:flex;flex-direction:column;gap:11px">
+              <div style="background:#F7F2E8;border:1px solid #E4DBC9;border-radius:12px;padding:14px 18px;display:flex;align-items:center;gap:11px">
+                <span style="color:#8A6F4E;font-size:12px">▸</span>
+                <span style="font-family:'Cormorant Garamond',serif;font-weight:600;font-size:20px;color:#2A2017;flex:1">Terminés · 5</span>
+                <span style="font:italic 14px 'EB Garamond',serif;color:#8A6F4E">tu peux les relire</span>
+              </div>
+              <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px">
+                <div style="background:#FCFAF4;border:1px solid #EBE1CF;border-radius:11px;padding:12px 14px;opacity:.72"><span style="display:block;font:500 15px 'EB Garamond',serif;color:#5A4632">Reprise de synthèse</span><span style="display:block;font:400 11.5px 'Alegreya Sans',sans-serif;color:#8A6F4E;margin-top:2px">1er septembre</span></div>
+                <div style="background:#FCFAF4;border:1px solid #EBE1CF;border-radius:11px;padding:12px 14px;opacity:.72"><span style="display:block;font:500 15px 'EB Garamond',serif;color:#5A4632">Dissertation — plan</span><span style="display:block;font:400 11.5px 'Alegreya Sans',sans-serif;color:#8A6F4E;margin-top:2px">28 août</span></div>
+                <div style="background:#FCFAF4;border:1px solid #EBE1CF;border-radius:11px;padding:12px 14px;opacity:.72"><span style="display:block;font:500 15px 'EB Garamond',serif;color:#5A4632">Deux cas — les causes</span><span style="display:block;font:400 11.5px 'Alegreya Sans',sans-serif;color:#8A6F4E;margin-top:2px">25 août</span></div>
+              </div>
+            </div>
+
+          </div>
+        </div>
+      </div>
+
+      <div>
+        <div style="font:700 11px 'Alegreya Sans',sans-serif;letter-spacing:.12em;text-transform:uppercase;color:#8A6F4E;margin:0 0 12px 2px">Téléphone · 390</div>
+        <div style="width:414px;background:#241C13;border-radius:34px;padding:12px;box-shadow:0 18px 44px rgba(40,30,15,.28)">
+          <div style="border-radius:24px;overflow:hidden;background:#F0EADE">
+            <div style="display:flex;align-items:center;justify-content:space-between;padding:9px 20px 6px;font:600 13px 'Alegreya Sans',sans-serif;color:#221C16;background:#FBF8F1"><span>9:41</span><span style="width:24px;height:12px;border:1px solid #221C16;border-radius:3px;position:relative;display:inline-block"><span style="position:absolute;left:1.5px;top:1.5px;bottom:1.5px;right:7px;background:#221C16;border-radius:1px"></span></span></div>
+            <div style="background:#FBF8F1;border-bottom:1px solid #E4DBC9;padding:10px 18px 12px;display:flex;align-items:center;gap:12px">
+              <span style="width:34px;height:34px;border-radius:50%;background:#DCE6DF;border:1px solid #CBD8D0;flex:none;display:inline-flex;overflow:hidden"><img src="sceaux/codex.png" alt="" style="width:34px;height:34px;object-fit:cover;mix-blend-mode:multiply"></span>
+              <div style="flex:1;min-width:0"><div style="font:600 16px 'Cinzel',serif;letter-spacing:.05em;color:#221C16">Codex</div><div style="font:italic 13px 'Cormorant Garamond',serif;color:#6E5A3E">Ce que tu écris à la maison.</div></div>
+            </div>
+            <div style="height:2px;background:linear-gradient(90deg,rgba(110,42,44,0),rgba(110,42,44,.45),#6E2A2C)"></div>
+            <div style="background:#FBF8F1;border-bottom:1px solid #E4DBC9;padding:0 16px;display:flex;gap:4px;justify-content:center">
+              <span style="font:500 14px 'Alegreya Sans',sans-serif;background:#D0DED5;color:#2E4A3C;padding:0 16px;min-height:44px;display:inline-flex;align-items:center;border-radius:9px 9px 0 0;border-bottom:2px solid #2E4A3C">Exercices</span>
+              <span style="font:400 14px 'Alegreya Sans',sans-serif;color:#56685E;padding:0 16px;min-height:44px;display:inline-flex;align-items:center;border-radius:9px 9px 0 0;border-bottom:2px solid transparent">Examens</span>
+            </div>
+
+            <div style="padding:16px 16px 26px;display:flex;flex-direction:column;gap:22px">
+              <div style="display:flex;flex-direction:column;gap:10px">
+                <span style="font:600 11px 'Cinzel',serif;letter-spacing:.13em;text-transform:uppercase;color:#8A6F4E">À faire · 2</span>
+                <div style="background:#FBF8F1;border:1px solid #E4DBC9;border-left:3px solid #2E4A3C;border-radius:12px;padding:15px 16px;display:flex;flex-direction:column;gap:12px">
+                  <div>
+                    <div style="font:600 18px/1.25 'EB Garamond',serif;color:#221C16">Explication de texte — Descartes</div>
+                    <div style="font:500 12.5px 'Alegreya Sans',sans-serif;color:#8A6F4E;margin-top:4px">Argumentation · un cas · environ 30 min</div>
+                  </div>
+                  <span style="font:600 12px 'Alegreya Sans',sans-serif;background:#EFE4CF;color:#8A5A22;border:1px solid #E0CBA8;border-radius:99px;padding:6px 12px;align-self:flex-start">à rendre mer. 10</span>
+                  <div style="font:600 15px 'Alegreya Sans',sans-serif;background:#5F7365;color:#F0F3EE;border-radius:10px;padding:14px;text-align:center;min-height:48px;box-sizing:border-box">Commencer</div>
+                </div>
+                <div style="background:#FBF8F1;border:1px solid #E4DBC9;border-radius:12px;padding:15px 16px;display:flex;flex-direction:column;gap:12px">
+                  <div>
+                    <div style="font:600 18px/1.25 'EB Garamond',serif;color:#221C16">Deux cas — reprise de thèse</div>
+                    <div style="font:500 12.5px 'Alegreya Sans',sans-serif;color:#8A6F4E;margin-top:4px">Structure · commencé mardi</div>
+                  </div>
+                  <span style="font:500 12px 'Alegreya Sans',sans-serif;color:#8A6F4E;border:1px solid #E4DBC9;background:#fff;border-radius:99px;padding:6px 12px;align-self:flex-start">à rendre dim. 14</span>
+                  <div style="font:600 15px 'Alegreya Sans',sans-serif;background:#FBF8F1;border:1px solid #DFD4BE;color:#4A3A28;border-radius:10px;padding:14px;text-align:center;min-height:48px;box-sizing:border-box">Reprendre</div>
+                </div>
+              </div>
+              <div style="display:flex;flex-direction:column;gap:10px">
+                <span style="font:600 11px 'Cinzel',serif;letter-spacing:.13em;text-transform:uppercase;color:#8A6F4E">En attente de ton retour · 2</span>
+                <div style="background:#F7F2E8;border:1px solid #E4DBC9;border-radius:12px;padding:13px 15px;display:flex;align-items:center;gap:12px;min-height:48px;box-sizing:border-box"><span style="flex:1;min-width:0"><span style="display:block;font:500 16px 'EB Garamond',serif;color:#5A4632">Synthèse — deux documents</span><span style="display:block;font:400 11.5px 'Alegreya Sans',sans-serif;color:#8A6F4E;margin-top:2px">rendue lundi</span></span><span style="font:500 11.5px 'Alegreya Sans',sans-serif;background:#E6ECF0;color:#3F5F75;border:1px solid #CBDAE3;border-radius:99px;padding:5px 11px;white-space:nowrap">en préparation</span></div>
+                <div style="background:#F7F2E8;border:1px solid #E4DBC9;border-radius:12px;padding:13px 15px;display:flex;align-items:center;gap:12px;min-height:48px;box-sizing:border-box"><span style="flex:1;min-width:0"><span style="display:block;font:500 16px 'EB Garamond',serif;color:#221C16">Explication — extrait 4</span><span style="display:block;font:400 11.5px 'Alegreya Sans',sans-serif;color:#8A6F4E;margin-top:2px">à reprendre avant ven. 12</span></span><span style="color:#8A6F4E;font-size:16px">›</span></div>
+              </div>
+              <div style="background:#F7F2E8;border:1px solid #E4DBC9;border-radius:12px;padding:14px 16px;display:flex;align-items:center;gap:10px;min-height:48px;box-sizing:border-box"><span style="color:#8A6F4E;font-size:12px">▸</span><span style="font-family:'Cormorant Garamond',serif;font-weight:600;font-size:19px;color:#2A2017;flex:1">Terminés · 5</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════════ 2a — RÉDIGER ═══════════════════════ -->
+<section style="padding:40px 46px 46px;border-bottom:1px solid rgba(60,50,40,.12)">
+  <div id="2a" style="max-width:2600px;margin:0 auto">
+    <div style="display:flex;align-items:baseline;gap:11px;margin:0 0 18px 2px">
+      <span style="font:600 12px 'Alegreya Sans',sans-serif;background:#E6DDC9;color:#4A3A28;padding:4px 11px;border-radius:20px">2a</span>
+      <span style="font:italic 16px 'Cormorant Garamond',serif;color:#6E5A3E">Exercice à rédiger — l'écriture prend la plus grande part</span>
+    </div>
+    <div style="display:flex;gap:40px;align-items:flex-start;flex-wrap:wrap">
+
+      <div>
+        <div style="font:700 11px 'Alegreya Sans',sans-serif;letter-spacing:.12em;text-transform:uppercase;color:#8A6F4E;margin:0 0 12px 2px">Ordinateur / tablette · 1040</div>
+        <div style="width:1040px;background:#F0EADE;border:1px solid #DFD4BE;border-radius:14px;overflow:hidden;box-shadow:0 14px 34px rgba(50,40,25,.14)">
+
+          <div style="background:#FBF8F1;border-bottom:1px solid #E4DBC9;padding:14px 24px;display:flex;align-items:center;gap:16px">
+            <span style="font:500 13px 'Alegreya Sans',sans-serif;color:#8A6F4E;white-space:nowrap">← Exercices</span>
+            <span style="width:1px;height:20px;background:#E4DBC9"></span>
+            <span style="font-family:'Cormorant Garamond',serif;font-weight:700;font-size:23px;color:#221C16;flex:1;min-width:0">Explication de texte — Descartes</span>
+            <span style="font:italic 14px 'EB Garamond',serif;color:#8A6F4E">environ 30 min</span>
+            <span style="font:600 12px 'Alegreya Sans',sans-serif;background:#EFE4CF;color:#8A5A22;border:1px solid #E0CBA8;border-radius:99px;padding:5px 12px">à rendre mer. 10</span>
+          </div>
+
+          <div style="background:#F7F2E8;border-bottom:1px solid #E4DBC9;padding:10px 24px;display:flex;align-items:center;gap:14px">
+            <div style="display:flex;gap:6px;align-items:center">
+              <span style="font:500 12px 'Alegreya Sans',sans-serif;background:#DCE6DF;color:#2E4A3C;border-radius:8px;padding:6px 11px">✓ Préparer</span>
+              <span style="font:600 12px 'Alegreya Sans',sans-serif;background:#2E4A3C;color:#EFF3EF;border-radius:8px;padding:6px 12px">Écrire</span>
+              <span style="font:400 12px 'Alegreya Sans',sans-serif;color:#8A6F4E;border:1px solid #E4DBC9;border-radius:8px;padding:6px 11px">Se juger</span>
+              <span style="font:400 12px 'Alegreya Sans',sans-serif;color:#8A6F4E;border:1px solid #E4DBC9;border-radius:8px;padding:6px 11px">Retour</span>
+              <span style="font:400 12px 'Alegreya Sans',sans-serif;color:#8A6F4E;border:1px solid #E4DBC9;border-radius:8px;padding:6px 11px">Réviser</span>
+              <span style="font:400 12px 'Alegreya Sans',sans-serif;color:#8A6F4E;border:1px solid #E4DBC9;border-radius:8px;padding:6px 11px">Retour final</span>
+            </div>
+            <span style="margin-left:auto;font:italic 13px 'EB Garamond',serif;color:#5A4632;white-space:nowrap">brouillon enregistré · 14:02</span>
+          </div>
+
+          <div style="display:grid;grid-template-columns:400px 1fr;align-items:stretch">
+            <div style="padding:20px;display:flex;flex-direction:column;gap:12px;border-right:1px solid #E4DBC9;background:#F0EADE">
+              <span style="font:600 11px 'Cinzel',serif;letter-spacing:.13em;text-transform:uppercase;color:#8A6F4E">La matière</span>
+              <div style="background:#FBF8F1;border:1px solid #E4DBC9;border-radius:12px;padding:15px 16px">
+                <div style="font:600 11px 'Cinzel',serif;letter-spacing:.11em;text-transform:uppercase;color:#8A6F4E;margin-bottom:7px">La consigne</div>
+                <p style="font:400 16px/1.5 'EB Garamond',serif;color:#221C16;margin:0">Explique ce que Descartes appelle <strong>« je pense, donc je suis »</strong>, et dis pourquoi il en fait un point de départ.</p>
+              </div>
+              <div style="background:#FBF8F1;border:1px solid #E4DBC9;border-radius:12px;padding:15px 16px">
+                <div style="display:flex;align-items:baseline;gap:8px;margin-bottom:8px"><span style="font:600 11px 'Cinzel',serif;letter-spacing:.11em;text-transform:uppercase;color:#8A6F4E">Le texte</span><span style="font:italic 13px 'EB Garamond',serif;color:#8A6F4E">Discours de la méthode</span></div>
+                <div style="background:#ECE4D6;border:1px solid #DFD4BE;border-radius:9px;padding:13px 14px;max-height:250px;overflow:hidden;position:relative">
+                  <p style="font:400 15.5px/1.62 'EB Garamond',serif;color:#221C16;margin:0">Je m'avisai que, pendant que je voulais ainsi penser que tout était faux, il fallait nécessairement que moi qui le pensais fusse quelque chose. <span style="background:#EFE4CF;box-shadow:inset 0 -1px 0 #C9A96A">Et remarquant que cette vérité, je pense, donc je suis, était si ferme et si assurée, que toutes les plus extravagantes suppositions des sceptiques n'étaient pas capables de l'ébranler, je jugeai que je pouvais la recevoir sans scrupule pour le premier principe de la philosophie que je cherchais.</span> Puis, examinant avec attention ce que j'étais…</p>
+                  <div style="position:absolute;left:0;right:0;bottom:0;height:34px;background:linear-gradient(rgba(236,228,214,0),#ECE4D6)"></div>
+                </div>
+                <div style="font:400 12px 'Alegreya Sans',sans-serif;color:#8A6F4E;margin-top:8px">Le passage surligné est celui que ton professeur a choisi.</div>
+              </div>
+              <div style="background:#F7F2E8;border:1px solid #E4DBC9;border-radius:12px;padding:13px 15px;display:flex;align-items:center;gap:10px;min-height:48px;box-sizing:border-box"><span style="color:#8A6F4E;font-size:12px">▸</span><span style="font:500 15px 'EB Garamond',serif;color:#5A4632;flex:1">De quoi t'aider</span></div>
+              <div style="background:#F7F2E8;border:1px solid #E4DBC9;border-radius:12px;padding:13px 15px;display:flex;align-items:center;gap:10px;min-height:48px;box-sizing:border-box"><span style="color:#8A6F4E;font-size:12px">▸</span><span style="font:500 15px 'EB Garamond',serif;color:#5A4632;flex:1">Ce sur quoi tu butais</span><span style="font:500 11.5px 'Alegreya Sans',sans-serif;color:#8A6F4E;border:1px solid #E4DBC9;background:#fff;border-radius:99px;padding:4px 10px">2 points</span></div>
+            </div>
+
+            <div style="padding:20px 22px;display:flex;flex-direction:column;gap:13px">
+              <div style="display:flex;align-items:baseline;gap:10px">
+                <span style="font:600 11px 'Cinzel',serif;letter-spacing:.13em;text-transform:uppercase;color:#8A6F4E">Ton écriture</span>
+                <span style="margin-left:auto;font:500 12px 'Alegreya Sans',sans-serif;color:#8A6F4E">v1</span>
+              </div>
+              <div style="background:#fff;border:1px solid #DFD4BE;border-radius:12px;padding:18px 20px;min-height:322px;display:flex;flex-direction:column">
+                <p style="font:400 17px/1.68 'EB Garamond',serif;color:#221C16;margin:0 0 14px">Descartes cherche une vérité qui résiste à tout. Il commence par douter de tout ce qu'il croit savoir : ses sens peuvent le tromper, ses raisonnements peuvent être faux, et même le monde autour de lui pourrait n'être qu'un rêve.</p>
+                <p style="font:400 17px/1.68 'EB Garamond',serif;color:#221C16;margin:0">Mais il remarque une chose : pendant qu'il doute, il pense. Et s'il pense, alors il existe au moins comme celui qui pense. C'est pour ça qu'il en fait un point de départ<span style="display:inline-block;width:1.5px;height:19px;background:#2E4A3C;vertical-align:-3px;margin-left:1px"></span></p>
+                <div style="flex:1"></div>
+                <div style="border-top:1px solid #EBE1CF;padding-top:11px;display:flex;align-items:center"><span style="font:400 12px 'Alegreya Sans',sans-serif;color:#5A4632">enregistré tout seul</span><span style="margin-left:auto;font:400 12px 'Alegreya Sans',sans-serif;color:#8A6F4E">1 240 signes</span></div>
+              </div>
+              <div style="background:#F7F2E8;border:1px solid #E4DBC9;border-radius:12px;padding:15px 17px;display:flex;align-items:center;gap:18px">
+                <div style="flex:1;min-width:0">
+                  <div style="font:600 11px 'Cinzel',serif;letter-spacing:.11em;text-transform:uppercase;color:#8A6F4E;margin-bottom:8px">Avant de rendre</div>
+                  <div style="display:flex;flex-direction:column;gap:7px;font:400 15px 'EB Garamond',serif;color:#5A4632"><span>☐ J'ai relu ma réponse en entier.</span><span>☐ J'ai écrit ce texte moi-même.</span><span>☐ Je sais quoi dire si on me demande pourquoi.</span></div>
+                </div>
+                <span style="font:600 15px 'Alegreya Sans',sans-serif;background:#5F7365;color:#F0F3EE;border-radius:10px;padding:15px 22px;white-space:nowrap">Rendre ma v1</span>
+              </div>
+              <div style="font:italic 13.5px 'EB Garamond',serif;color:#8A6F4E;text-align:center">Tu pourras la reprendre après le retour.</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div>
+        <div style="font:700 11px 'Alegreya Sans',sans-serif;letter-spacing:.12em;text-transform:uppercase;color:#8A6F4E;margin:0 0 12px 2px">Téléphone · 390</div>
+        <div style="width:414px;background:#241C13;border-radius:34px;padding:12px;box-shadow:0 18px 44px rgba(40,30,15,.28)">
+          <div style="border-radius:24px;overflow:hidden;background:#F0EADE">
+            <div style="display:flex;align-items:center;justify-content:space-between;padding:9px 20px 6px;font:600 13px 'Alegreya Sans',sans-serif;color:#221C16;background:#FBF8F1"><span>9:41</span><span style="width:24px;height:12px;border:1px solid #221C16;border-radius:3px;position:relative;display:inline-block"><span style="position:absolute;left:1.5px;top:1.5px;bottom:1.5px;right:7px;background:#221C16;border-radius:1px"></span></span></div>
+            <div style="background:#FBF8F1;border-bottom:1px solid #E4DBC9;padding:10px 16px 11px;display:flex;align-items:center;gap:10px">
+              <span style="font:500 14px 'Alegreya Sans',sans-serif;color:#8A6F4E">←</span>
+              <span style="font-family:'Cormorant Garamond',serif;font-weight:700;font-size:18px;color:#221C16;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">Explication — Descartes</span>
+              <span style="font:600 11.5px 'Alegreya Sans',sans-serif;background:#DCE6DF;color:#2E4A3C;border-radius:99px;padding:4px 10px">2 / 6</span>
+            </div>
+            <div style="background:#F7F2E8;border-bottom:1px solid #E4DBC9;padding:11px 16px;display:flex;align-items:center;gap:9px">
+              <span style="color:#8A6F4E;font-size:11px">▾</span>
+              <span style="font:600 11px 'Cinzel',serif;letter-spacing:.11em;text-transform:uppercase;color:#8A6F4E;white-space:nowrap">La consigne</span>
+              <span style="font:400 14px 'EB Garamond',serif;color:#5A4632;flex:1;min-width:0;overflow:hidden;white-space:nowrap;text-overflow:ellipsis">Explique ce que Descartes appelle…</span>
+            </div>
+            <div style="padding:14px 16px 24px;display:flex;flex-direction:column;gap:13px">
+              <div style="display:flex;border:1px solid #DFD4BE;border-radius:10px;overflow:hidden;background:#FBF8F1">
+                <span style="flex:1;text-align:center;font:500 14px 'Alegreya Sans',sans-serif;color:#8A6F4E;padding:13px 0;min-height:48px;box-sizing:border-box">Lire</span>
+                <span style="flex:1;text-align:center;font:600 14px 'Alegreya Sans',sans-serif;background:#5F7365;color:#F0F3EE;padding:13px 0;min-height:48px;box-sizing:border-box">Écrire</span>
+              </div>
+              <div style="background:#fff;border:1px solid #DFD4BE;border-radius:12px;padding:15px 16px;min-height:300px;display:flex;flex-direction:column">
+                <p style="font:400 17px/1.66 'EB Garamond',serif;color:#221C16;margin:0 0 12px">Descartes cherche une vérité qui résiste à tout. Il commence par douter de tout ce qu'il croit savoir : ses sens peuvent le tromper.</p>
+                <p style="font:400 17px/1.66 'EB Garamond',serif;color:#221C16;margin:0">Mais pendant qu'il doute, il pense. Et s'il pense, il existe au moins comme celui qui pense<span style="display:inline-block;width:1.5px;height:19px;background:#2E4A3C;vertical-align:-3px;margin-left:1px"></span></p>
+                <div style="flex:1"></div>
+                <div style="border-top:1px solid #EBE1CF;padding-top:10px;display:flex"><span style="font:400 12px 'Alegreya Sans',sans-serif;color:#5A4632">enregistré</span><span style="margin-left:auto;font:400 12px 'Alegreya Sans',sans-serif;color:#8A6F4E">1 240 signes</span></div>
+              </div>
+              <div style="background:#F7F2E8;border:1px solid #E4DBC9;border-radius:12px;padding:14px 16px">
+                <div style="font:600 11px 'Cinzel',serif;letter-spacing:.11em;text-transform:uppercase;color:#8A6F4E;margin-bottom:9px">Avant de rendre</div>
+                <div style="display:flex;flex-direction:column;gap:10px;font:400 15.5px 'EB Garamond',serif;color:#5A4632"><span>☐ J'ai relu ma réponse.</span><span>☐ J'ai écrit ce texte moi-même.</span><span>☐ Je sais quoi dire si on me demande pourquoi.</span></div>
+              </div>
+              <div style="font:600 15px 'Alegreya Sans',sans-serif;background:#5F7365;color:#F0F3EE;border-radius:10px;padding:15px;text-align:center;min-height:48px;box-sizing:border-box">Rendre ma v1</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+
+<!-- ═══════════════════════ 2b — CHOISIR ═══════════════════════ -->
+<section style="padding:40px 46px 46px;border-bottom:1px solid rgba(60,50,40,.12)">
+  <div id="2b" style="max-width:2600px;margin:0 auto">
+    <div style="display:flex;align-items:baseline;gap:11px;margin:0 0 18px 2px">
+      <span style="font:600 12px 'Alegreya Sans',sans-serif;background:#E6DDC9;color:#4A3A28;padding:4px 11px;border-radius:20px">2b</span>
+      <span style="font:italic 16px 'Cormorant Garamond',serif;color:#6E5A3E">Exercice à choix — les quatre lectures à la place de l'écriture, colonnes égales</span>
+    </div>
+    <div style="display:flex;gap:40px;align-items:flex-start;flex-wrap:wrap">
+
+      <div>
+        <div style="font:700 11px 'Alegreya Sans',sans-serif;letter-spacing:.12em;text-transform:uppercase;color:#8A6F4E;margin:0 0 12px 2px">Ordinateur / tablette · 1040</div>
+        <div style="width:1040px;background:#F0EADE;border:1px solid #DFD4BE;border-radius:14px;overflow:hidden;box-shadow:0 14px 34px rgba(50,40,25,.14)">
+          <div style="background:#FBF8F1;border-bottom:1px solid #E4DBC9;padding:14px 24px;display:flex;align-items:center;gap:16px">
+            <span style="font:500 13px 'Alegreya Sans',sans-serif;color:#8A6F4E;white-space:nowrap">← Exercices</span>
+            <span style="width:1px;height:20px;background:#E4DBC9"></span>
+            <span style="font-family:'Cormorant Garamond',serif;font-weight:700;font-size:23px;color:#221C16;flex:1;min-width:0">Repérer l'erreur — quatre lectures</span>
+            <span style="font:italic 14px 'EB Garamond',serif;color:#8A6F4E">environ 10 min</span>
+            <span style="font:500 12px 'Alegreya Sans',sans-serif;color:#8A6F4E;border:1px solid #E4DBC9;background:#fff;border-radius:99px;padding:5px 12px">à rendre jeu. 11</span>
+          </div>
+          <div style="background:#F7F2E8;border-bottom:1px solid #E4DBC9;padding:10px 24px;display:flex;align-items:center;gap:14px">
+            <div style="display:flex;gap:6px;align-items:center">
+              <span style="font:500 12px 'Alegreya Sans',sans-serif;background:#DCE6DF;color:#2E4A3C;border-radius:8px;padding:6px 11px">✓ Préparer</span>
+              <span style="font:600 12px 'Alegreya Sans',sans-serif;background:#2E4A3C;color:#EFF3EF;border-radius:8px;padding:6px 12px">Répondre</span>
+              <span style="font:400 12px 'Alegreya Sans',sans-serif;color:#8A6F4E;border:1px solid #E4DBC9;border-radius:8px;padding:6px 11px">Se juger</span>
+              <span style="font:400 12px 'Alegreya Sans',sans-serif;color:#8A6F4E;border:1px solid #E4DBC9;border-radius:8px;padding:6px 11px">Retour</span>
+            </div>
+            <span style="margin-left:auto;font:italic 13px 'EB Garamond',serif;color:#8A6F4E">quatre temps pour cet exercice</span>
+          </div>
+
+          <div style="display:grid;grid-template-columns:1fr 1fr;align-items:stretch">
+            <div style="padding:20px;display:flex;flex-direction:column;gap:12px;border-right:1px solid #E4DBC9;background:#F0EADE">
+              <span style="font:600 11px 'Cinzel',serif;letter-spacing:.13em;text-transform:uppercase;color:#8A6F4E">La matière</span>
+              <div style="background:#FBF8F1;border:1px solid #E4DBC9;border-radius:12px;padding:15px 16px">
+                <div style="font:600 11px 'Cinzel',serif;letter-spacing:.11em;text-transform:uppercase;color:#8A6F4E;margin-bottom:7px">La consigne</div>
+                <p style="font:400 16px/1.5 'EB Garamond',serif;color:#221C16;margin:0">Parmi ces quatre lectures du passage, <strong>répartis 100 jetons</strong> selon celle que tu crois juste. Plus tu en poses sur une, plus tu la crois vraie.</p>
+              </div>
+              <div style="background:#FBF8F1;border:1px solid #E4DBC9;border-radius:12px;padding:15px 16px">
+                <div style="font:600 11px 'Cinzel',serif;letter-spacing:.11em;text-transform:uppercase;color:#8A6F4E;margin-bottom:8px">Le passage</div>
+                <div style="background:#ECE4D6;border:1px solid #DFD4BE;border-radius:9px;padding:13px 14px">
+                  <p style="font:400 16px/1.62 'EB Garamond',serif;color:#221C16;margin:0">Et remarquant que cette vérité, je pense, donc je suis, était si ferme et si assurée, que toutes les plus extravagantes suppositions des sceptiques n'étaient pas capables de l'ébranler, je jugeai que je pouvais la recevoir sans scrupule pour le premier principe de la philosophie que je cherchais.</p>
+                </div>
+              </div>
+              <div style="background:#F7F2E8;border:1px solid #E4DBC9;border-radius:12px;padding:13px 15px;display:flex;align-items:center;gap:10px;min-height:48px;box-sizing:border-box"><span style="color:#8A6F4E;font-size:12px">▸</span><span style="font:500 15px 'EB Garamond',serif;color:#5A4632;flex:1">Un exemple, sur un autre sujet</span></div>
+            </div>
+
+            <div style="padding:20px 22px;display:flex;flex-direction:column;gap:11px">
+              <div style="display:flex;align-items:baseline;gap:10px">
+                <span style="font:600 11px 'Cinzel',serif;letter-spacing:.13em;text-transform:uppercase;color:#8A6F4E">Ta réponse</span>
+                <span style="margin-left:auto;font:italic 13px 'EB Garamond',serif;color:#8A6F4E">tu peux tout mettre sur une seule, ou étaler</span>
+              </div>
+
+              <div style="background:#F4F7F4;border:1px solid #B9C9BE;border-radius:11px;padding:13px 14px">
+                <div style="font:400 15.5px/1.45 'EB Garamond',serif;color:#221C16">Lecture A — l'auteur doute de tout, y compris de son propre doute.</div>
+                <div style="display:flex;align-items:center;gap:10px;margin-top:10px">
+                  <span style="width:44px;height:44px;flex:none;border:1px solid #DFD4BE;border-radius:9px;background:#FBF8F1;color:#8A6F4E;font-size:17px;display:inline-flex;align-items:center;justify-content:center">−</span>
+                  <span style="flex:1;height:9px;border-radius:99px;background:#E4DBC9;position:relative;overflow:hidden"><span style="position:absolute;left:0;top:0;bottom:0;width:60%;background:#5F7365;border-radius:99px"></span></span>
+                  <span style="width:44px;height:44px;flex:none;border:1px solid #DFD4BE;border-radius:9px;background:#FBF8F1;color:#8A6F4E;font-size:17px;display:inline-flex;align-items:center;justify-content:center">+</span>
+                  <span style="width:36px;text-align:right;font:600 15px 'Alegreya Sans',sans-serif;color:#221C16">60</span>
+                </div>
+              </div>
+
+              <div style="background:#FBF8F1;border:1px solid #E4DBC9;border-radius:11px;padding:13px 14px">
+                <div style="font:400 15.5px/1.45 'EB Garamond',serif;color:#221C16">Lecture B — penser suffit à prouver qu'on existe.</div>
+                <div style="display:flex;align-items:center;gap:10px;margin-top:10px">
+                  <span style="width:44px;height:44px;flex:none;border:1px solid #DFD4BE;border-radius:9px;background:#fff;color:#8A6F4E;font-size:17px;display:inline-flex;align-items:center;justify-content:center">−</span>
+                  <span style="flex:1;height:9px;border-radius:99px;background:#E4DBC9;position:relative;overflow:hidden"><span style="position:absolute;left:0;top:0;bottom:0;width:30%;background:#5F7365;border-radius:99px"></span></span>
+                  <span style="width:44px;height:44px;flex:none;border:1px solid #DFD4BE;border-radius:9px;background:#fff;color:#8A6F4E;font-size:17px;display:inline-flex;align-items:center;justify-content:center">+</span>
+                  <span style="width:36px;text-align:right;font:600 15px 'Alegreya Sans',sans-serif;color:#221C16">30</span>
+                </div>
+              </div>
+
+              <div style="background:#FBF8F1;border:1px solid #E4DBC9;border-radius:11px;padding:13px 14px">
+                <div style="font:400 15.5px/1.45 'EB Garamond',serif;color:#221C16">Lecture C — le doute est un défaut de méthode, à corriger.</div>
+                <div style="display:flex;align-items:center;gap:10px;margin-top:10px">
+                  <span style="width:44px;height:44px;flex:none;border:1px solid #DFD4BE;border-radius:9px;background:#fff;color:#8A6F4E;font-size:17px;display:inline-flex;align-items:center;justify-content:center">−</span>
+                  <span style="flex:1;height:9px;border-radius:99px;background:#E4DBC9;position:relative;overflow:hidden"><span style="position:absolute;left:0;top:0;bottom:0;width:10%;background:#5F7365;border-radius:99px"></span></span>
+                  <span style="width:44px;height:44px;flex:none;border:1px solid #DFD4BE;border-radius:9px;background:#fff;color:#8A6F4E;font-size:17px;display:inline-flex;align-items:center;justify-content:center">+</span>
+                  <span style="width:36px;text-align:right;font:600 15px 'Alegreya Sans',sans-serif;color:#221C16">10</span>
+                </div>
+              </div>
+
+              <div style="background:#FBF8F1;border:1px solid #E4DBC9;border-radius:11px;padding:13px 14px">
+                <div style="font:400 15.5px/1.45 'EB Garamond',serif;color:#221C16">Lecture D — l'existence se prouve d'abord par les sens.</div>
+                <div style="display:flex;align-items:center;gap:10px;margin-top:10px">
+                  <span style="width:44px;height:44px;flex:none;border:1px solid #DFD4BE;border-radius:9px;background:#fff;color:#8A6F4E;font-size:17px;display:inline-flex;align-items:center;justify-content:center">−</span>
+                  <span style="flex:1;height:9px;border-radius:99px;background:#E4DBC9;position:relative;overflow:hidden"></span>
+                  <span style="width:44px;height:44px;flex:none;border:1px solid #DFD4BE;border-radius:9px;background:#fff;color:#8A6F4E;font-size:17px;display:inline-flex;align-items:center;justify-content:center">+</span>
+                  <span style="width:36px;text-align:right;font:600 15px 'Alegreya Sans',sans-serif;color:#8A6F4E">0</span>
+                </div>
+              </div>
+
+              <div style="background:#ECE4D6;border-radius:10px;padding:12px 15px;display:flex;align-items:center;gap:10px">
+                <span style="font:500 14px 'Alegreya Sans',sans-serif;color:#5A4632">Jetons placés</span>
+                <span style="margin-left:auto;font:600 15px 'Alegreya Sans',sans-serif;color:#221C16;font-variant-numeric:tabular-nums">100 sur 100</span>
+              </div>
+              <div style="font:600 15px 'Alegreya Sans',sans-serif;background:#5F7365;color:#F0F3EE;border-radius:10px;padding:15px;text-align:center;min-height:48px;box-sizing:border-box">Enregistrer ma réponse</div>
+              <div style="font:italic 13.5px/1.5 'EB Garamond',serif;color:#8A6F4E;text-align:center">Ça ne compte pas dans une note — il n'y en a pas. Tu verras la correction juste après.</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div>
+        <div style="font:700 11px 'Alegreya Sans',sans-serif;letter-spacing:.12em;text-transform:uppercase;color:#8A6F4E;margin:0 0 12px 2px">Téléphone · 390</div>
+        <div style="width:414px;background:#241C13;border-radius:34px;padding:12px;box-shadow:0 18px 44px rgba(40,30,15,.28)">
+          <div style="border-radius:24px;overflow:hidden;background:#F0EADE">
+            <div style="display:flex;align-items:center;justify-content:space-between;padding:9px 20px 6px;font:600 13px 'Alegreya Sans',sans-serif;color:#221C16;background:#FBF8F1"><span>9:41</span><span style="width:24px;height:12px;border:1px solid #221C16;border-radius:3px;position:relative;display:inline-block"><span style="position:absolute;left:1.5px;top:1.5px;bottom:1.5px;right:7px;background:#221C16;border-radius:1px"></span></span></div>
+            <div style="background:#FBF8F1;border-bottom:1px solid #E4DBC9;padding:10px 16px 11px;display:flex;align-items:center;gap:10px">
+              <span style="font:500 14px 'Alegreya Sans',sans-serif;color:#8A6F4E">←</span>
+              <span style="font-family:'Cormorant Garamond',serif;font-weight:700;font-size:18px;color:#221C16;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">Repérer l'erreur</span>
+              <span style="font:600 11.5px 'Alegreya Sans',sans-serif;background:#DCE6DF;color:#2E4A3C;border-radius:99px;padding:4px 10px">2 / 4</span>
+            </div>
+            <div style="background:#F7F2E8;border-bottom:1px solid #E4DBC9;padding:11px 16px;display:flex;align-items:center;gap:9px">
+              <span style="color:#8A6F4E;font-size:11px">▾</span>
+              <span style="font:600 11px 'Cinzel',serif;letter-spacing:.11em;text-transform:uppercase;color:#8A6F4E;white-space:nowrap">La consigne</span>
+              <span style="font:400 14px 'EB Garamond',serif;color:#5A4632;flex:1;min-width:0;overflow:hidden;white-space:nowrap;text-overflow:ellipsis">Répartis 100 jetons entre…</span>
+            </div>
+            <div style="padding:14px 16px 24px;display:flex;flex-direction:column;gap:11px">
+              <div style="background:#F7F2E8;border:1px solid #E4DBC9;border-radius:12px;padding:13px 15px;display:flex;align-items:center;gap:10px;min-height:48px;box-sizing:border-box"><span style="color:#8A6F4E;font-size:12px">▸</span><span style="font:500 15px 'EB Garamond',serif;color:#5A4632;flex:1">Le passage</span></div>
+              <span style="font:600 11px 'Cinzel',serif;letter-spacing:.13em;text-transform:uppercase;color:#8A6F4E">Ta réponse</span>
+
+              <div style="background:#F4F7F4;border:1px solid #B9C9BE;border-radius:11px;padding:13px 14px">
+                <div style="font:400 15.5px/1.45 'EB Garamond',serif;color:#221C16">Lecture A — il doute de tout, y compris de son doute.</div>
+                <div style="display:flex;align-items:center;gap:9px;margin-top:11px">
+                  <span style="width:48px;height:48px;flex:none;border:1px solid #DFD4BE;border-radius:9px;background:#FBF8F1;color:#8A6F4E;font-size:18px;display:inline-flex;align-items:center;justify-content:center">−</span>
+                  <span style="flex:1;height:10px;border-radius:99px;background:#E4DBC9;position:relative;overflow:hidden"><span style="position:absolute;left:0;top:0;bottom:0;width:60%;background:#5F7365;border-radius:99px"></span></span>
+                  <span style="width:48px;height:48px;flex:none;border:1px solid #DFD4BE;border-radius:9px;background:#FBF8F1;color:#8A6F4E;font-size:18px;display:inline-flex;align-items:center;justify-content:center">+</span>
+                  <span style="width:34px;text-align:right;font:600 15px 'Alegreya Sans',sans-serif;color:#221C16">60</span>
+                </div>
+              </div>
+              <div style="background:#FBF8F1;border:1px solid #E4DBC9;border-radius:11px;padding:13px 14px">
+                <div style="font:400 15.5px/1.45 'EB Garamond',serif;color:#221C16">Lecture B — penser suffit à prouver qu'on existe.</div>
+                <div style="display:flex;align-items:center;gap:9px;margin-top:11px">
+                  <span style="width:48px;height:48px;flex:none;border:1px solid #DFD4BE;border-radius:9px;background:#fff;color:#8A6F4E;font-size:18px;display:inline-flex;align-items:center;justify-content:center">−</span>
+                  <span style="flex:1;height:10px;border-radius:99px;background:#E4DBC9;position:relative;overflow:hidden"><span style="position:absolute;left:0;top:0;bottom:0;width:30%;background:#5F7365;border-radius:99px"></span></span>
+                  <span style="width:48px;height:48px;flex:none;border:1px solid #DFD4BE;border-radius:9px;background:#fff;color:#8A6F4E;font-size:18px;display:inline-flex;align-items:center;justify-content:center">+</span>
+                  <span style="width:34px;text-align:right;font:600 15px 'Alegreya Sans',sans-serif;color:#221C16">30</span>
+                </div>
+              </div>
+              <div style="background:#FBF8F1;border:1px solid #E4DBC9;border-radius:11px;padding:13px 14px">
+                <div style="font:400 15.5px/1.45 'EB Garamond',serif;color:#221C16">Lecture C — le doute est un défaut de méthode.</div>
+                <div style="display:flex;align-items:center;gap:9px;margin-top:11px">
+                  <span style="width:48px;height:48px;flex:none;border:1px solid #DFD4BE;border-radius:9px;background:#fff;color:#8A6F4E;font-size:18px;display:inline-flex;align-items:center;justify-content:center">−</span>
+                  <span style="flex:1;height:10px;border-radius:99px;background:#E4DBC9;position:relative;overflow:hidden"><span style="position:absolute;left:0;top:0;bottom:0;width:10%;background:#5F7365;border-radius:99px"></span></span>
+                  <span style="width:48px;height:48px;flex:none;border:1px solid #DFD4BE;border-radius:9px;background:#fff;color:#8A6F4E;font-size:18px;display:inline-flex;align-items:center;justify-content:center">+</span>
+                  <span style="width:34px;text-align:right;font:600 15px 'Alegreya Sans',sans-serif;color:#221C16">10</span>
+                </div>
+              </div>
+              <div style="background:#FBF8F1;border:1px solid #E4DBC9;border-radius:11px;padding:13px 14px">
+                <div style="font:400 15.5px/1.45 'EB Garamond',serif;color:#221C16">Lecture D — l'existence se prouve par les sens.</div>
+                <div style="display:flex;align-items:center;gap:9px;margin-top:11px">
+                  <span style="width:48px;height:48px;flex:none;border:1px solid #DFD4BE;border-radius:9px;background:#fff;color:#8A6F4E;font-size:18px;display:inline-flex;align-items:center;justify-content:center">−</span>
+                  <span style="flex:1;height:10px;border-radius:99px;background:#E4DBC9;position:relative;overflow:hidden"></span>
+                  <span style="width:48px;height:48px;flex:none;border:1px solid #DFD4BE;border-radius:9px;background:#fff;color:#8A6F4E;font-size:18px;display:inline-flex;align-items:center;justify-content:center">+</span>
+                  <span style="width:34px;text-align:right;font:600 15px 'Alegreya Sans',sans-serif;color:#8A6F4E">0</span>
+                </div>
+              </div>
+              <div style="background:#ECE4D6;border-radius:10px;padding:12px 15px;display:flex;align-items:center;gap:10px"><span style="font:500 14px 'Alegreya Sans',sans-serif;color:#5A4632">Jetons placés</span><span style="margin-left:auto;font:600 15px 'Alegreya Sans',sans-serif;color:#221C16">100 sur 100</span></div>
+              <div style="font:600 15px 'Alegreya Sans',sans-serif;background:#5F7365;color:#F0F3EE;border-radius:10px;padding:15px;text-align:center;min-height:48px;box-sizing:border-box">Enregistrer ma réponse</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════════ 2c — SURLIGNER ═══════════════════════ -->
+<section style="padding:40px 46px 46px;border-bottom:1px solid rgba(60,50,40,.12)">
+  <div id="2c" style="max-width:2600px;margin:0 auto">
+    <div style="display:flex;align-items:baseline;gap:11px;margin:0 0 18px 2px">
+      <span style="font:600 12px 'Alegreya Sans',sans-serif;background:#E6DDC9;color:#4A3A28;padding:4px 11px;border-radius:20px">2c</span>
+      <span style="font:italic 16px 'Cormorant Garamond',serif;color:#6E5A3E">Exercice à surligner — la matière passe devant, le travail est dedans</span>
+    </div>
+    <div style="display:flex;gap:40px;align-items:flex-start;flex-wrap:wrap">
+
+      <div>
+        <div style="font:700 11px 'Alegreya Sans',sans-serif;letter-spacing:.12em;text-transform:uppercase;color:#8A6F4E;margin:0 0 12px 2px">Ordinateur / tablette · 1040</div>
+        <div style="width:1040px;background:#F0EADE;border:1px solid #DFD4BE;border-radius:14px;overflow:hidden;box-shadow:0 14px 34px rgba(50,40,25,.14)">
+          <div style="background:#FBF8F1;border-bottom:1px solid #E4DBC9;padding:14px 24px;display:flex;align-items:center;gap:16px">
+            <span style="font:500 13px 'Alegreya Sans',sans-serif;color:#8A6F4E;white-space:nowrap">← Exercices</span>
+            <span style="width:1px;height:20px;background:#E4DBC9"></span>
+            <span style="font-family:'Cormorant Garamond',serif;font-weight:700;font-size:23px;color:#221C16;flex:1;min-width:0">Trouver le passage fautif — copie anonyme</span>
+            <span style="font:italic 14px 'EB Garamond',serif;color:#8A6F4E">environ 15 min</span>
+            <span style="font:500 12px 'Alegreya Sans',sans-serif;color:#8A6F4E;border:1px solid #E4DBC9;background:#fff;border-radius:99px;padding:5px 12px">à rendre ven. 12</span>
+          </div>
+          <div style="background:#F7F2E8;border-bottom:1px solid #E4DBC9;padding:10px 24px;display:flex;align-items:center;gap:14px">
+            <div style="display:flex;gap:6px;align-items:center">
+              <span style="font:500 12px 'Alegreya Sans',sans-serif;background:#DCE6DF;color:#2E4A3C;border-radius:8px;padding:6px 11px">✓ Préparer</span>
+              <span style="font:600 12px 'Alegreya Sans',sans-serif;background:#2E4A3C;color:#EFF3EF;border-radius:8px;padding:6px 12px">Surligner et répondre</span>
+              <span style="font:400 12px 'Alegreya Sans',sans-serif;color:#8A6F4E;border:1px solid #E4DBC9;border-radius:8px;padding:6px 11px">Se juger</span>
+              <span style="font:400 12px 'Alegreya Sans',sans-serif;color:#8A6F4E;border:1px solid #E4DBC9;border-radius:8px;padding:6px 11px">Retour</span>
+            </div>
+          </div>
+
+          <div style="display:grid;grid-template-columns:1fr 1fr;align-items:stretch">
+            <div style="padding:20px;display:flex;flex-direction:column;gap:12px;border-right:1px solid #E4DBC9;background:#F0EADE">
+              <div style="display:flex;align-items:center;gap:11px">
+                <span style="font:600 11px 'Cinzel',serif;letter-spacing:.13em;text-transform:uppercase;color:#8A6F4E">La matière</span>
+                <span style="margin-left:auto;font:600 12px 'Alegreya Sans',sans-serif;background:#EFE4CF;color:#8A5A22;border:1px solid #E0CBA8;border-radius:99px;padding:5px 12px">à toi de trouver le passage</span>
+              </div>
+              <div style="background:#FBF8F1;border:1px solid #E4DBC9;border-radius:12px;padding:15px 16px">
+                <div style="font:600 11px 'Cinzel',serif;letter-spacing:.11em;text-transform:uppercase;color:#8A6F4E;margin-bottom:7px">La consigne</div>
+                <p style="font:400 16px/1.5 'EB Garamond',serif;color:#221C16;margin:0">Surligne le passage où le raisonnement se casse, puis dis en quelques lignes ce qui ne va pas.</p>
+              </div>
+              <div style="background:#FBF8F1;border:1px solid #E4DBC9;border-radius:12px;padding:15px 16px">
+                <div style="display:flex;align-items:baseline;gap:8px;margin-bottom:9px">
+                  <span style="font:600 11px 'Cinzel',serif;letter-spacing:.11em;text-transform:uppercase;color:#8A6F4E">La copie</span>
+                  <span style="margin-left:auto;font:italic 13px 'EB Garamond',serif;color:#8A6F4E">glisse sur le texte pour surligner</span>
+                </div>
+                <div style="background:#ECE4D6;border:1px solid #DFD4BE;border-radius:9px;padding:15px 16px">
+                  <p style="font:400 16.5px/1.68 'EB Garamond',serif;color:#221C16;margin:0">L'auteur veut montrer que la liberté n'existe pas. Il rappelle d'abord que tous nos actes ont une cause, et qu'aucun d'eux ne sort de rien. <span style="background:#DCE6DF;box-shadow:inset 0 -2px 0 #2E4A3C">Or si tous nos actes ont une cause, c'est donc que nous ne choisissons jamais rien, et que la liberté est une illusion complète.</span> Il conclut que le sentiment de choisir n'est qu'une habitude que nous prenons pour une preuve.</p>
+                </div>
+                <div style="display:flex;align-items:center;gap:11px;margin-top:11px">
+                  <span style="font:500 12.5px 'Alegreya Sans',sans-serif;background:#DCE6DF;color:#2E4A3C;border:1px solid #CBD8D0;border-radius:99px;padding:5px 12px">passage surligné</span>
+                  <span style="font:500 13px 'Alegreya Sans',sans-serif;background:#FBF8F1;border:1px solid #DFD4BE;color:#5A4632;border-radius:9px;padding:9px 14px">Effacer ma sélection</span>
+                </div>
+              </div>
+            </div>
+
+            <div style="padding:20px;display:flex;flex-direction:column;gap:12px">
+              <span style="font:600 11px 'Cinzel',serif;letter-spacing:.13em;text-transform:uppercase;color:#8A6F4E">Ce que tu en dis</span>
+              <div style="background:#fff;border:1px solid #DFD4BE;border-radius:12px;padding:16px 17px;min-height:230px;display:flex;flex-direction:column">
+                <p style="font:400 16.5px/1.66 'EB Garamond',serif;color:#221C16;margin:0">Le saut est là : d'avoir une cause, on passe à ne rien choisir. Or une cause n'empêche pas de choisir<span style="display:inline-block;width:1.5px;height:18px;background:#2E4A3C;vertical-align:-3px;margin-left:1px"></span></p>
+                <div style="flex:1"></div>
+                <div style="border-top:1px solid #EBE1CF;padding-top:10px;font:400 12px 'Alegreya Sans',sans-serif;color:#8A6F4E">quelques lignes suffisent</div>
+              </div>
+              <div style="background:#F7F2E8;border:1px solid #E4DBC9;border-radius:12px;padding:14px 16px">
+                <div style="font:600 11px 'Cinzel',serif;letter-spacing:.11em;text-transform:uppercase;color:#8A6F4E;margin-bottom:8px">Avant de rendre</div>
+                <div style="display:flex;flex-direction:column;gap:8px;font:400 15px 'EB Garamond',serif;color:#5A4632"><span>☐ J'ai surligné un passage.</span><span>☐ J'ai écrit ce texte moi-même.</span></div>
+              </div>
+              <div style="font:600 15px 'Alegreya Sans',sans-serif;background:#5F7365;color:#F0F3EE;border-radius:10px;padding:15px;text-align:center;min-height:48px;box-sizing:border-box">Rendre ma réponse</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div>
+        <div style="font:700 11px 'Alegreya Sans',sans-serif;letter-spacing:.12em;text-transform:uppercase;color:#8A6F4E;margin:0 0 12px 2px">Téléphone · 390 — vue Lire</div>
+        <div style="width:414px;background:#241C13;border-radius:34px;padding:12px;box-shadow:0 18px 44px rgba(40,30,15,.28)">
+          <div style="border-radius:24px;overflow:hidden;background:#F0EADE">
+            <div style="display:flex;align-items:center;justify-content:space-between;padding:9px 20px 6px;font:600 13px 'Alegreya Sans',sans-serif;color:#221C16;background:#FBF8F1"><span>9:41</span><span style="width:24px;height:12px;border:1px solid #221C16;border-radius:3px;position:relative;display:inline-block"><span style="position:absolute;left:1.5px;top:1.5px;bottom:1.5px;right:7px;background:#221C16;border-radius:1px"></span></span></div>
+            <div style="background:#FBF8F1;border-bottom:1px solid #E4DBC9;padding:10px 16px 11px;display:flex;align-items:center;gap:10px">
+              <span style="font:500 14px 'Alegreya Sans',sans-serif;color:#8A6F4E">←</span>
+              <span style="font-family:'Cormorant Garamond',serif;font-weight:700;font-size:18px;color:#221C16;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">Trouver le passage fautif</span>
+              <span style="font:600 11.5px 'Alegreya Sans',sans-serif;background:#DCE6DF;color:#2E4A3C;border-radius:99px;padding:4px 10px">2 / 4</span>
+            </div>
+            <div style="background:#F7F2E8;border-bottom:1px solid #E4DBC9;padding:11px 16px;display:flex;align-items:center;gap:9px">
+              <span style="color:#8A6F4E;font-size:11px">▾</span>
+              <span style="font:600 11px 'Cinzel',serif;letter-spacing:.11em;text-transform:uppercase;color:#8A6F4E;white-space:nowrap">La consigne</span>
+              <span style="font:400 14px 'EB Garamond',serif;color:#5A4632;flex:1;min-width:0;overflow:hidden;white-space:nowrap;text-overflow:ellipsis">Surligne le passage où…</span>
+            </div>
+            <div style="padding:14px 16px 24px;display:flex;flex-direction:column;gap:13px">
+              <div style="display:flex;border:1px solid #DFD4BE;border-radius:10px;overflow:hidden;background:#FBF8F1">
+                <span style="flex:1;text-align:center;font:600 14px 'Alegreya Sans',sans-serif;background:#5F7365;color:#F0F3EE;padding:13px 0;min-height:48px;box-sizing:border-box">Lire · surligner</span>
+                <span style="flex:1;text-align:center;font:500 14px 'Alegreya Sans',sans-serif;color:#8A6F4E;padding:13px 0;min-height:48px;box-sizing:border-box">Écrire</span>
+              </div>
+              <div style="background:#FBF8F1;border:1px solid #E4DBC9;border-radius:12px;padding:14px 15px">
+                <div style="font:italic 14px/1.45 'EB Garamond',serif;color:#8A6F4E;margin-bottom:10px">Appuie longuement, puis glisse pour surligner. Un seul passage à la fois.</div>
+                <div style="background:#ECE4D6;border:1px solid #DFD4BE;border-radius:9px;padding:14px 15px">
+                  <p style="font:400 16.5px/1.68 'EB Garamond',serif;color:#221C16;margin:0">L'auteur veut montrer que la liberté n'existe pas. Il rappelle que tous nos actes ont une cause. <span style="background:#DCE6DF;box-shadow:inset 0 -2px 0 #2E4A3C">Or si tous nos actes ont une cause, c'est donc que nous ne choisissons jamais rien.</span> Il conclut que le sentiment de choisir n'est qu'une habitude.</p>
+                </div>
+                <div style="display:flex;align-items:center;gap:10px;margin-top:12px">
+                  <span style="font:500 12.5px 'Alegreya Sans',sans-serif;background:#DCE6DF;color:#2E4A3C;border:1px solid #CBD8D0;border-radius:99px;padding:6px 12px">passage surligné</span>
+                  <span style="margin-left:auto;font:500 14px 'Alegreya Sans',sans-serif;background:#FBF8F1;border:1px solid #DFD4BE;color:#5A4632;border-radius:9px;padding:12px 16px;min-height:44px;box-sizing:border-box">Effacer</span>
+                </div>
+              </div>
+              <div style="font:600 15px 'Alegreya Sans',sans-serif;background:#5F7365;color:#F0F3EE;border-radius:10px;padding:15px;text-align:center;min-height:48px;box-sizing:border-box">Passer à ma réponse →</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════════ 2d — SE JUGER ═══════════════════════ -->
+<section style="padding:40px 46px 46px;border-bottom:1px solid rgba(60,50,40,.12)">
+  <div id="2d" style="max-width:2600px;margin:0 auto">
+    <div style="display:flex;align-items:baseline;gap:11px;margin:0 0 18px 2px">
+      <span style="font:600 12px 'Alegreya Sans',sans-serif;background:#E6DDC9;color:#4A3A28;padding:4px 11px;border-radius:20px">2d</span>
+      <span style="font:italic 16px 'Cormorant Garamond',serif;color:#6E5A3E">Se juger — un écran à lui seul, la matière rangée</span>
+    </div>
+    <div style="display:flex;gap:40px;align-items:flex-start;flex-wrap:wrap">
+
+      <div>
+        <div style="font:700 11px 'Alegreya Sans',sans-serif;letter-spacing:.12em;text-transform:uppercase;color:#8A6F4E;margin:0 0 12px 2px">Ordinateur / tablette · 1040</div>
+        <div style="width:1040px;background:#F0EADE;border:1px solid #DFD4BE;border-radius:14px;overflow:hidden;box-shadow:0 14px 34px rgba(50,40,25,.14)">
+          <div style="background:#FBF8F1;border-bottom:1px solid #E4DBC9;padding:14px 24px;display:flex;align-items:center;gap:16px">
+            <span style="font:500 13px 'Alegreya Sans',sans-serif;color:#8A6F4E;white-space:nowrap">← Exercices</span>
+            <span style="width:1px;height:20px;background:#E4DBC9"></span>
+            <span style="font-family:'Cormorant Garamond',serif;font-weight:700;font-size:23px;color:#221C16;flex:1;min-width:0">Explication de texte — Descartes</span>
+            <span style="font:italic 14px 'EB Garamond',serif;color:#8A6F4E">v1 rendue · 14:11</span>
+          </div>
+          <div style="background:#F7F2E8;border-bottom:1px solid #E4DBC9;padding:10px 24px;display:flex;align-items:center;gap:14px">
+            <div style="display:flex;gap:6px;align-items:center">
+              <span style="font:500 12px 'Alegreya Sans',sans-serif;background:#DCE6DF;color:#2E4A3C;border-radius:8px;padding:6px 11px">✓ Préparer</span>
+              <span style="font:500 12px 'Alegreya Sans',sans-serif;background:#DCE6DF;color:#2E4A3C;border-radius:8px;padding:6px 11px">✓ Écrire</span>
+              <span style="font:600 12px 'Alegreya Sans',sans-serif;background:#2E4A3C;color:#EFF3EF;border-radius:8px;padding:6px 12px">Se juger</span>
+              <span style="font:400 12px 'Alegreya Sans',sans-serif;color:#8A6F4E;border:1px solid #E4DBC9;border-radius:8px;padding:6px 11px">Retour</span>
+              <span style="font:400 12px 'Alegreya Sans',sans-serif;color:#8A6F4E;border:1px solid #E4DBC9;border-radius:8px;padding:6px 11px">Réviser</span>
+              <span style="font:400 12px 'Alegreya Sans',sans-serif;color:#8A6F4E;border:1px solid #E4DBC9;border-radius:8px;padding:6px 11px">Retour final</span>
+            </div>
+            <span style="margin-left:auto;font:italic 13px 'EB Garamond',serif;color:#8A6F4E">trois gestes, puis ton retour</span>
+          </div>
+
+          <div style="padding:34px 24px 40px;display:flex;justify-content:center">
+            <div style="width:660px;display:flex;flex-direction:column;gap:15px">
+              <div>
+                <div style="font-family:'Cormorant Garamond',serif;font-weight:700;font-size:30px;line-height:1.2;color:#221C16">Avant de voir ton retour</div>
+                <p style="font:400 16.5px/1.55 'EB Garamond',serif;color:#5A4632;margin:8px 0 0">Trois questions sur ce que tu viens de rendre. <strong style="color:#221C16">Ça ne se note pas</strong> : se tromper en se jugeant ne coûte rien.</p>
+              </div>
+              <div style="background:#FBF8F1;border:1px solid #E4DBC9;border-radius:12px;padding:13px 15px;display:flex;align-items:center;gap:10px;min-height:48px;box-sizing:border-box"><span style="color:#8A6F4E;font-size:12px">▸</span><span style="font:500 15px 'EB Garamond',serif;color:#5A4632;flex:1">Relire ce que tu as rendu</span></div>
+
+              <div style="background:#FBF8F1;border:1px solid #E4DBC9;border-radius:12px;padding:17px 19px">
+                <div style="font:600 11px 'Cinzel',serif;letter-spacing:.11em;text-transform:uppercase;color:#8A6F4E">Reprendre la thèse de l'auteur</div>
+                <p style="font:400 18px/1.45 'EB Garamond',serif;color:#221C16;margin:7px 0 13px">As-tu dit ce que l'auteur soutient, avec tes mots ?</p>
+                <div style="display:flex;gap:9px">
+                  <span style="flex:1;text-align:center;font:500 14.5px 'Alegreya Sans',sans-serif;color:#5A4632;background:#fff;border:1px solid #DFD4BE;border-radius:9px;padding:14px 0;min-height:48px;box-sizing:border-box">Non</span>
+                  <span style="flex:1;text-align:center;font:600 14.5px 'Alegreya Sans',sans-serif;color:#2E4A3C;background:#DCE6DF;border:1px solid #A9BFB0;border-radius:9px;padding:14px 0;min-height:48px;box-sizing:border-box">En partie</span>
+                  <span style="flex:1;text-align:center;font:500 14.5px 'Alegreya Sans',sans-serif;color:#5A4632;background:#fff;border:1px solid #DFD4BE;border-radius:9px;padding:14px 0;min-height:48px;box-sizing:border-box">Oui</span>
+                </div>
+              </div>
+
+              <div style="background:#FBF8F1;border:1px solid #E4DBC9;border-radius:12px;padding:17px 19px">
+                <div style="font:600 11px 'Cinzel',serif;letter-spacing:.11em;text-transform:uppercase;color:#8A6F4E">Appuyer sur le texte</div>
+                <p style="font:400 18px/1.45 'EB Garamond',serif;color:#221C16;margin:7px 0 13px">Chacune de tes affirmations s'appuie-t-elle sur un passage précis ?</p>
+                <div style="display:flex;gap:9px">
+                  <span style="flex:1;text-align:center;font:500 14.5px 'Alegreya Sans',sans-serif;color:#5A4632;background:#fff;border:1px solid #DFD4BE;border-radius:9px;padding:14px 0;min-height:48px;box-sizing:border-box">Non</span>
+                  <span style="flex:1;text-align:center;font:500 14.5px 'Alegreya Sans',sans-serif;color:#5A4632;background:#fff;border:1px solid #DFD4BE;border-radius:9px;padding:14px 0;min-height:48px;box-sizing:border-box">En partie</span>
+                  <span style="flex:1;text-align:center;font:500 14.5px 'Alegreya Sans',sans-serif;color:#5A4632;background:#fff;border:1px solid #DFD4BE;border-radius:9px;padding:14px 0;min-height:48px;box-sizing:border-box">Oui</span>
+                </div>
+              </div>
+
+              <div style="background:#FBF8F1;border:1px solid #E4DBC9;border-radius:12px;padding:17px 19px">
+                <div style="font:600 11px 'Cinzel',serif;letter-spacing:.11em;text-transform:uppercase;color:#8A6F4E">Conduire jusqu'au bout</div>
+                <p style="font:400 18px/1.45 'EB Garamond',serif;color:#221C16;margin:7px 0 13px">Ta dernière phrase répond-elle vraiment à la question posée ?</p>
+                <div style="display:flex;gap:9px">
+                  <span style="flex:1;text-align:center;font:500 14.5px 'Alegreya Sans',sans-serif;color:#5A4632;background:#fff;border:1px solid #DFD4BE;border-radius:9px;padding:14px 0;min-height:48px;box-sizing:border-box">Non</span>
+                  <span style="flex:1;text-align:center;font:500 14.5px 'Alegreya Sans',sans-serif;color:#5A4632;background:#fff;border:1px solid #DFD4BE;border-radius:9px;padding:14px 0;min-height:48px;box-sizing:border-box">En partie</span>
+                  <span style="flex:1;text-align:center;font:500 14.5px 'Alegreya Sans',sans-serif;color:#5A4632;background:#fff;border:1px solid #DFD4BE;border-radius:9px;padding:14px 0;min-height:48px;box-sizing:border-box">Oui</span>
+                </div>
+              </div>
+
+              <div style="font:600 15px 'Alegreya Sans',sans-serif;background:#5F7365;color:#F0F3EE;border-radius:10px;padding:16px;text-align:center;min-height:48px;box-sizing:border-box;opacity:.42">Envoyer mes réponses</div>
+              <div style="font:italic 14px 'EB Garamond',serif;color:#8A6F4E;text-align:center">Réponds aux trois questions pour pouvoir envoyer.</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div>
+        <div style="font:700 11px 'Alegreya Sans',sans-serif;letter-spacing:.12em;text-transform:uppercase;color:#8A6F4E;margin:0 0 12px 2px">Téléphone · 390</div>
+        <div style="width:414px;background:#241C13;border-radius:34px;padding:12px;box-shadow:0 18px 44px rgba(40,30,15,.28)">
+          <div style="border-radius:24px;overflow:hidden;background:#F0EADE">
+            <div style="display:flex;align-items:center;justify-content:space-between;padding:9px 20px 6px;font:600 13px 'Alegreya Sans',sans-serif;color:#221C16;background:#FBF8F1"><span>9:41</span><span style="width:24px;height:12px;border:1px solid #221C16;border-radius:3px;position:relative;display:inline-block"><span style="position:absolute;left:1.5px;top:1.5px;bottom:1.5px;right:7px;background:#221C16;border-radius:1px"></span></span></div>
+            <div style="background:#FBF8F1;border-bottom:1px solid #E4DBC9;padding:10px 16px 11px;display:flex;align-items:center;gap:10px">
+              <span style="font:500 14px 'Alegreya Sans',sans-serif;color:#8A6F4E">←</span>
+              <span style="font-family:'Cormorant Garamond',serif;font-weight:700;font-size:18px;color:#221C16;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">Explication — Descartes</span>
+              <span style="font:600 11.5px 'Alegreya Sans',sans-serif;background:#DCE6DF;color:#2E4A3C;border-radius:99px;padding:4px 10px">3 / 6</span>
+            </div>
+            <div style="padding:18px 16px 26px;display:flex;flex-direction:column;gap:13px">
+              <div>
+                <div style="font-family:'Cormorant Garamond',serif;font-weight:700;font-size:25px;line-height:1.2;color:#221C16">Avant de voir ton retour</div>
+                <p style="font:400 16px/1.5 'EB Garamond',serif;color:#5A4632;margin:7px 0 0">Trois questions. <strong style="color:#221C16">Ça ne se note pas.</strong></p>
+              </div>
+              <div style="background:#FBF8F1;border:1px solid #E4DBC9;border-radius:12px;padding:13px 15px;display:flex;align-items:center;gap:10px;min-height:48px;box-sizing:border-box"><span style="color:#8A6F4E;font-size:12px">▸</span><span style="font:500 15px 'EB Garamond',serif;color:#5A4632;flex:1">Relire ce que tu as rendu</span></div>
+              <div style="background:#FBF8F1;border:1px solid #E4DBC9;border-radius:12px;padding:15px 16px">
+                <div style="font:600 11px 'Cinzel',serif;letter-spacing:.11em;text-transform:uppercase;color:#8A6F4E">Reprendre la thèse</div>
+                <p style="font:400 17px/1.45 'EB Garamond',serif;color:#221C16;margin:7px 0 12px">As-tu dit ce que l'auteur soutient, avec tes mots ?</p>
+                <div style="display:flex;flex-direction:column;gap:8px">
+                  <span style="text-align:center;font:500 15px 'Alegreya Sans',sans-serif;color:#5A4632;background:#fff;border:1px solid #DFD4BE;border-radius:9px;padding:14px 0;min-height:48px;box-sizing:border-box">Non</span>
+                  <span style="text-align:center;font:600 15px 'Alegreya Sans',sans-serif;color:#2E4A3C;background:#DCE6DF;border:1px solid #A9BFB0;border-radius:9px;padding:14px 0;min-height:48px;box-sizing:border-box">En partie</span>
+                  <span style="text-align:center;font:500 15px 'Alegreya Sans',sans-serif;color:#5A4632;background:#fff;border:1px solid #DFD4BE;border-radius:9px;padding:14px 0;min-height:48px;box-sizing:border-box">Oui</span>
+                </div>
+              </div>
+              <div style="background:#FBF8F1;border:1px solid #E4DBC9;border-radius:12px;padding:15px 16px">
+                <div style="font:600 11px 'Cinzel',serif;letter-spacing:.11em;text-transform:uppercase;color:#8A6F4E">Appuyer sur le texte</div>
+                <p style="font:400 17px/1.45 'EB Garamond',serif;color:#221C16;margin:7px 0 12px">Chaque affirmation s'appuie-t-elle sur un passage précis ?</p>
+                <div style="display:flex;flex-direction:column;gap:8px">
+                  <span style="text-align:center;font:500 15px 'Alegreya Sans',sans-serif;color:#5A4632;background:#fff;border:1px solid #DFD4BE;border-radius:9px;padding:14px 0;min-height:48px;box-sizing:border-box">Non</span>
+                  <span style="text-align:center;font:500 15px 'Alegreya Sans',sans-serif;color:#5A4632;background:#fff;border:1px solid #DFD4BE;border-radius:9px;padding:14px 0;min-height:48px;box-sizing:border-box">En partie</span>
+                  <span style="text-align:center;font:500 15px 'Alegreya Sans',sans-serif;color:#5A4632;background:#fff;border:1px solid #DFD4BE;border-radius:9px;padding:14px 0;min-height:48px;box-sizing:border-box">Oui</span>
+                </div>
+              </div>
+              <div style="font:italic 14px 'EB Garamond',serif;color:#8A6F4E;text-align:center">↓ une question encore</div>
+              <div style="font:600 15px 'Alegreya Sans',sans-serif;background:#5F7365;color:#F0F3EE;border-radius:10px;padding:16px;text-align:center;min-height:48px;box-sizing:border-box;opacity:.42">Envoyer mes réponses</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════════ 2e — RETOUR D'UN TEXTE ═══════════════════════ -->
+<section style="padding:40px 46px 46px;border-bottom:1px solid rgba(60,50,40,.12)">
+  <div id="2e" style="max-width:2600px;margin:0 auto">
+    <div style="display:flex;align-items:baseline;gap:11px;margin:0 0 18px 2px">
+      <span style="font:600 12px 'Alegreya Sans',sans-serif;background:#E6DDC9;color:#4A3A28;padding:4px 11px;border-radius:20px">2e</span>
+      <span style="font:italic 16px 'Cormorant Garamond',serif;color:#6E5A3E">Le retour d'un texte produit — côte à côte avec la v1, consigne en bas</span>
+    </div>
+    <div style="display:flex;gap:40px;align-items:flex-start;flex-wrap:wrap">
+
+      <div>
+        <div style="font:700 11px 'Alegreya Sans',sans-serif;letter-spacing:.12em;text-transform:uppercase;color:#8A6F4E;margin:0 0 12px 2px">Ordinateur / tablette · 1040</div>
+        <div style="width:1040px;background:#F0EADE;border:1px solid #DFD4BE;border-radius:14px;overflow:hidden;box-shadow:0 14px 34px rgba(50,40,25,.14)">
+          <div style="background:#FBF8F1;border-bottom:1px solid #E4DBC9;padding:14px 24px;display:flex;align-items:center;gap:16px">
+            <span style="font:500 13px 'Alegreya Sans',sans-serif;color:#8A6F4E;white-space:nowrap">← Exercices</span>
+            <span style="width:1px;height:20px;background:#E4DBC9"></span>
+            <span style="font-family:'Cormorant Garamond',serif;font-weight:700;font-size:23px;color:#221C16;flex:1;min-width:0">Explication de texte — Descartes</span>
+            <span style="font:italic 14px 'EB Garamond',serif;color:#8A6F4E">v1 rendue mardi</span>
+          </div>
+          <div style="background:#F7F2E8;border-bottom:1px solid #E4DBC9;padding:10px 24px;display:flex;align-items:center;gap:14px">
+            <div style="display:flex;gap:6px;align-items:center">
+              <span style="font:500 12px 'Alegreya Sans',sans-serif;background:#DCE6DF;color:#2E4A3C;border-radius:8px;padding:6px 11px">✓ Préparer</span>
+              <span style="font:500 12px 'Alegreya Sans',sans-serif;background:#DCE6DF;color:#2E4A3C;border-radius:8px;padding:6px 11px">✓ Écrire</span>
+              <span style="font:500 12px 'Alegreya Sans',sans-serif;background:#DCE6DF;color:#2E4A3C;border-radius:8px;padding:6px 11px">✓ Se juger</span>
+              <span style="font:600 12px 'Alegreya Sans',sans-serif;background:#2E4A3C;color:#EFF3EF;border-radius:8px;padding:6px 12px">Retour</span>
+              <span style="font:400 12px 'Alegreya Sans',sans-serif;color:#8A6F4E;border:1px solid #E4DBC9;border-radius:8px;padding:6px 11px">Réviser</span>
+              <span style="font:400 12px 'Alegreya Sans',sans-serif;color:#8A6F4E;border:1px solid #E4DBC9;border-radius:8px;padding:6px 11px">Retour final</span>
+            </div>
+            <span style="margin-left:auto;font:600 12px 'Alegreya Sans',sans-serif;background:#EFE4CF;color:#8A5A22;border:1px solid #E0CBA8;border-radius:99px;padding:5px 12px;white-space:nowrap">version finale avant ven. 12</span>
+          </div>
+
+          <div style="display:grid;grid-template-columns:1fr 1fr;align-items:stretch">
+            <div style="padding:20px;display:flex;flex-direction:column;gap:11px;border-right:1px solid #E4DBC9;background:#F0EADE">
+              <div style="display:flex;align-items:baseline;gap:10px">
+                <span style="font:600 11px 'Cinzel',serif;letter-spacing:.13em;text-transform:uppercase;color:#8A6F4E">Ce que tu as écrit</span>
+                <span style="margin-left:auto;font:500 12px 'Alegreya Sans',sans-serif;color:#8A6F4E">v1 · lecture seule</span>
+              </div>
+              <div style="background:#F7F2E8;border:1px solid #E4DBC9;border-radius:12px;padding:18px 19px;min-height:330px">
+                <p style="font:400 16.5px/1.7 'EB Garamond',serif;color:#3A3026;margin:0 0 13px">Descartes cherche une vérité qui résiste à tout. Il commence par douter de tout ce qu'il croit savoir : ses sens peuvent le tromper, ses raisonnements peuvent être faux, et même le monde autour de lui pourrait n'être qu'un rêve.</p>
+                <p style="font:400 16.5px/1.7 'EB Garamond',serif;color:#3A3026;margin:0 0 13px"><span style="background:#EFE4CF;box-shadow:inset 0 -1px 0 #D9BD82">Mais il remarque une chose : pendant qu'il doute, il pense. Et s'il pense, alors il existe.</span> C'est pour ça qu'il en fait un point de départ.</p>
+                <p style="font:400 16.5px/1.7 'EB Garamond',serif;color:#3A3026;margin:0">Descartes construit ensuite tout le reste sur cette première certitude.</p>
+              </div>
+            </div>
+
+            <div style="padding:20px 22px;display:flex;flex-direction:column;gap:11px">
+              <div style="display:flex;align-items:baseline;gap:10px">
+                <span style="font:600 11px 'Cinzel',serif;letter-spacing:.13em;text-transform:uppercase;color:#8A6F4E">Ton retour</span>
+                <span style="margin-left:auto;font:500 12px 'Alegreya Sans',sans-serif;color:#8A6F4E">3 points</span>
+              </div>
+              <div style="background:#E4E8D8;border:1px solid #C2CBB1;border-radius:12px;padding:15px 17px">
+                <div style="font:600 11px 'Cinzel',serif;letter-spacing:.11em;text-transform:uppercase;color:#4E5A3C;margin-bottom:6px">Ce que tu as réussi</div>
+                <p style="font:400 16px/1.55 'EB Garamond',serif;color:#2C3320;margin:0">Ton premier paragraphe dit exactement ce que fait Descartes : douter de tout, et pourquoi. C'est net, et c'est avec tes mots.</p>
+              </div>
+              <div style="background:#FBF8F1;border:1px solid #E4DBC9;border-radius:12px;padding:15px 17px">
+                <div style="font:600 11px 'Cinzel',serif;letter-spacing:.11em;text-transform:uppercase;color:#8A6F4E;margin-bottom:6px">Point 2 · reprendre la thèse</div>
+                <p style="font:400 16px/1.55 'EB Garamond',serif;color:#221C16;margin:0">Tu dis qu'il existe parce qu'il pense, mais tu ne dis pas pourquoi cette vérité-là résiste au doute alors que les autres n'y résistent pas. C'est ce « pourquoi » que le texte demande.</p>
+                <div style="font:500 13px 'Alegreya Sans',sans-serif;color:#2E4A3C;margin-top:9px">▸ voir le passage de mon texte</div>
+              </div>
+              <div style="background:#FBF8F1;border:1px solid #E4DBC9;border-radius:12px;padding:15px 17px">
+                <div style="font:600 11px 'Cinzel',serif;letter-spacing:.11em;text-transform:uppercase;color:#8A6F4E;margin-bottom:6px">Point 3 · appuyer sur le texte</div>
+                <p style="font:400 16px/1.55 'EB Garamond',serif;color:#221C16;margin:0">Ta dernière phrase avance quelque chose que le passage ne dit pas. Appuie-la sur une ligne du texte, ou retire-la.</p>
+                <div style="font:500 13px 'Alegreya Sans',sans-serif;color:#2E4A3C;margin-top:9px">▸ voir le passage de mon texte</div>
+              </div>
+            </div>
+          </div>
+
+          <div style="border-top:1px solid #E4DBC9;background:#FBF8F1;padding:17px 22px;display:flex;flex-direction:column;gap:12px">
+            <div style="background:#F7EFDF;border:1px solid #E0CBA8;border-left:3px solid #9A6A2E;border-radius:12px;padding:16px 18px;display:flex;align-items:center;gap:18px">
+              <div style="flex:1;min-width:0">
+                <div style="font:600 11px 'Cinzel',serif;letter-spacing:.11em;text-transform:uppercase;color:#8A5A22;margin-bottom:6px">Ce que tu as à reprendre — une seule chose</div>
+                <p style="font:400 17px/1.5 'EB Garamond',serif;color:#221C16;margin:0">Reprends ton deuxième paragraphe : dis en une phrase pourquoi ce point de départ ne peut pas être mis en doute.</p>
+              </div>
+              <span style="font:600 15px 'Alegreya Sans',sans-serif;background:#5F7365;color:#F0F3EE;border-radius:10px;padding:15px 22px;white-space:nowrap">Reprendre mon texte</span>
+            </div>
+            <div style="display:flex;gap:11px">
+              <div style="flex:1;background:#F7F2E8;border:1px solid #E4DBC9;border-radius:12px;padding:13px 15px;display:flex;align-items:center;gap:10px;min-height:48px;box-sizing:border-box"><span style="color:#8A6F4E;font-size:12px">▸</span><span style="font:500 15px 'EB Garamond',serif;color:#5A4632">La consigne</span></div>
+              <div style="flex:1;background:#F7F2E8;border:1px solid #E4DBC9;border-radius:12px;padding:13px 15px;display:flex;align-items:center;gap:10px;min-height:48px;box-sizing:border-box"><span style="color:#8A6F4E;font-size:12px">▸</span><span style="font:500 15px 'EB Garamond',serif;color:#5A4632">Le texte de départ · Descartes</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div>
+        <div style="font:700 11px 'Alegreya Sans',sans-serif;letter-spacing:.12em;text-transform:uppercase;color:#8A6F4E;margin:0 0 12px 2px">Téléphone · 390 — le retour</div>
+        <div style="width:414px;background:#241C13;border-radius:34px;padding:12px;box-shadow:0 18px 44px rgba(40,30,15,.28)">
+          <div style="border-radius:24px;overflow:hidden;background:#F0EADE">
+            <div style="display:flex;align-items:center;justify-content:space-between;padding:9px 20px 6px;font:600 13px 'Alegreya Sans',sans-serif;color:#221C16;background:#FBF8F1"><span>9:41</span><span style="width:24px;height:12px;border:1px solid #221C16;border-radius:3px;position:relative;display:inline-block"><span style="position:absolute;left:1.5px;top:1.5px;bottom:1.5px;right:7px;background:#221C16;border-radius:1px"></span></span></div>
+            <div style="background:#FBF8F1;border-bottom:1px solid #E4DBC9;padding:10px 16px 11px;display:flex;align-items:center;gap:10px">
+              <span style="font:500 14px 'Alegreya Sans',sans-serif;color:#8A6F4E">←</span>
+              <span style="font-family:'Cormorant Garamond',serif;font-weight:700;font-size:18px;color:#221C16;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">Explication — Descartes</span>
+              <span style="font:600 11.5px 'Alegreya Sans',sans-serif;background:#DCE6DF;color:#2E4A3C;border-radius:99px;padding:4px 10px">4 / 6</span>
+            </div>
+            <div style="background:#F7EFDF;border-bottom:1px solid #E0CBA8;padding:10px 16px;display:flex;align-items:center;gap:9px">
+              <span style="font:600 11px 'Cinzel',serif;letter-spacing:.11em;text-transform:uppercase;color:#8A5A22">À rendre</span>
+              <span style="font:400 14px 'EB Garamond',serif;color:#5A4632">version finale avant ven. 12</span>
+            </div>
+            <div style="padding:14px 16px 24px;display:flex;flex-direction:column;gap:12px">
+              <div style="display:flex;border:1px solid #DFD4BE;border-radius:10px;overflow:hidden;background:#FBF8F1">
+                <span style="flex:1;text-align:center;font:500 14px 'Alegreya Sans',sans-serif;color:#8A6F4E;padding:13px 0;min-height:48px;box-sizing:border-box">Mon texte</span>
+                <span style="flex:1;text-align:center;font:600 14px 'Alegreya Sans',sans-serif;background:#5F7365;color:#F0F3EE;padding:13px 0;min-height:48px;box-sizing:border-box">Le retour · 3</span>
+              </div>
+              <div style="background:#E4E8D8;border:1px solid #C2CBB1;border-radius:12px;padding:14px 16px">
+                <div style="font:600 11px 'Cinzel',serif;letter-spacing:.11em;text-transform:uppercase;color:#4E5A3C;margin-bottom:6px">Ce que tu as réussi</div>
+                <p style="font:400 16px/1.55 'EB Garamond',serif;color:#2C3320;margin:0">Ton premier paragraphe dit exactement ce que fait Descartes : douter de tout, et pourquoi.</p>
+              </div>
+              <div style="background:#FBF8F1;border:1px solid #E4DBC9;border-radius:12px;padding:14px 16px">
+                <div style="font:600 11px 'Cinzel',serif;letter-spacing:.11em;text-transform:uppercase;color:#8A6F4E;margin-bottom:6px">Point 2 · reprendre la thèse</div>
+                <p style="font:400 16px/1.55 'EB Garamond',serif;color:#221C16;margin:0">Tu dis qu'il existe parce qu'il pense, mais pas pourquoi cette vérité-là résiste au doute.</p>
+                <div style="font:500 13.5px 'Alegreya Sans',sans-serif;color:#2E4A3C;margin-top:10px">▸ voir le passage de mon texte</div>
+              </div>
+              <div style="background:#FBF8F1;border:1px solid #E4DBC9;border-radius:12px;padding:14px 16px">
+                <div style="font:600 11px 'Cinzel',serif;letter-spacing:.11em;text-transform:uppercase;color:#8A6F4E;margin-bottom:6px">Point 3 · appuyer sur le texte</div>
+                <p style="font:400 16px/1.55 'EB Garamond',serif;color:#221C16;margin:0">Ta dernière phrase avance quelque chose que le passage ne dit pas.</p>
+                <div style="font:500 13.5px 'Alegreya Sans',sans-serif;color:#2E4A3C;margin-top:10px">▸ voir le passage de mon texte</div>
+              </div>
+              <div style="background:#F7EFDF;border:1px solid #E0CBA8;border-left:3px solid #9A6A2E;border-radius:12px;padding:15px 16px">
+                <div style="font:600 11px 'Cinzel',serif;letter-spacing:.11em;text-transform:uppercase;color:#8A5A22;margin-bottom:6px">Ce que tu as à reprendre — une seule chose</div>
+                <p style="font:400 16.5px/1.5 'EB Garamond',serif;color:#221C16;margin:0">Reprends ton deuxième paragraphe : dis en une phrase pourquoi ce point de départ ne peut pas être mis en doute.</p>
+              </div>
+              <div style="font:600 15px 'Alegreya Sans',sans-serif;background:#5F7365;color:#F0F3EE;border-radius:10px;padding:15px;text-align:center;min-height:48px;box-sizing:border-box">Reprendre mon texte</div>
+              <div style="background:#F7F2E8;border:1px solid #E4DBC9;border-radius:12px;padding:13px 15px;display:flex;align-items:center;gap:10px;min-height:48px;box-sizing:border-box"><span style="color:#8A6F4E;font-size:12px">▸</span><span style="font:500 15px 'EB Garamond',serif;color:#5A4632;flex:1">La consigne, le texte de départ</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════════ 2f — RETOUR D'UN CHOIX ═══════════════════════ -->
+<section style="padding:40px 46px 70px">
+  <div id="2f" style="max-width:2600px;margin:0 auto">
+    <div style="display:flex;align-items:baseline;gap:11px;margin:0 0 18px 2px">
+      <span style="font:600 12px 'Alegreya Sans',sans-serif;background:#E6DDC9;color:#4A3A28;padding:4px 11px;border-radius:20px">2f</span>
+      <span style="font:italic 16px 'Cormorant Garamond',serif;color:#6E5A3E">Le retour d'un choix — consigne et répartition en haut à droite</span>
+    </div>
+    <div style="display:flex;gap:40px;align-items:flex-start;flex-wrap:wrap">
+
+      <div>
+        <div style="font:700 11px 'Alegreya Sans',sans-serif;letter-spacing:.12em;text-transform:uppercase;color:#8A6F4E;margin:0 0 12px 2px">Ordinateur / tablette · 1040</div>
+        <div style="width:1040px;background:#F0EADE;border:1px solid #DFD4BE;border-radius:14px;overflow:hidden;box-shadow:0 14px 34px rgba(50,40,25,.14)">
+          <div style="background:#FBF8F1;border-bottom:1px solid #E4DBC9;padding:14px 24px;display:flex;align-items:center;gap:16px">
+            <span style="font:500 13px 'Alegreya Sans',sans-serif;color:#8A6F4E;white-space:nowrap">← Exercices</span>
+            <span style="width:1px;height:20px;background:#E4DBC9"></span>
+            <span style="font-family:'Cormorant Garamond',serif;font-weight:700;font-size:23px;color:#221C16;flex:1;min-width:0">Repérer l'erreur — quatre lectures</span>
+            <span style="font:italic 14px 'EB Garamond',serif;color:#8A6F4E">réponse enregistrée · 09:40</span>
+          </div>
+          <div style="background:#F7F2E8;border-bottom:1px solid #E4DBC9;padding:10px 24px;display:flex;align-items:center;gap:14px">
+            <div style="display:flex;gap:6px;align-items:center">
+              <span style="font:500 12px 'Alegreya Sans',sans-serif;background:#DCE6DF;color:#2E4A3C;border-radius:8px;padding:6px 11px">✓ Préparer</span>
+              <span style="font:500 12px 'Alegreya Sans',sans-serif;background:#DCE6DF;color:#2E4A3C;border-radius:8px;padding:6px 11px">✓ Répondre</span>
+              <span style="font:500 12px 'Alegreya Sans',sans-serif;background:#DCE6DF;color:#2E4A3C;border-radius:8px;padding:6px 11px">✓ Se juger</span>
+              <span style="font:600 12px 'Alegreya Sans',sans-serif;background:#2E4A3C;color:#EFF3EF;border-radius:8px;padding:6px 12px">Retour</span>
+            </div>
+          </div>
+
+          <div style="display:grid;grid-template-columns:1fr 380px;align-items:stretch">
+            <div style="padding:20px 22px;display:flex;flex-direction:column;gap:12px">
+              <span style="font:600 11px 'Cinzel',serif;letter-spacing:.13em;text-transform:uppercase;color:#8A6F4E">Ton retour</span>
+              <div style="background:#E4E8D8;border:1px solid #C2CBB1;border-radius:12px;padding:16px 18px">
+                <div style="font:600 11px 'Cinzel',serif;letter-spacing:.11em;text-transform:uppercase;color:#4E5A3C;margin-bottom:7px">Ce qu'il fallait voir</div>
+                <div style="font:600 18px 'EB Garamond',serif;color:#221C16;margin-bottom:7px">Lecture B — penser suffit à prouver qu'on existe.</div>
+                <p style="font:400 16px/1.55 'EB Garamond',serif;color:#2C3320;margin:0">C'est ce que le passage dit, et rien de plus : la pensée en cours suffit à établir l'existence de celui qui pense.</p>
+              </div>
+              <div style="background:#FBF8F1;border:1px solid #E4DBC9;border-radius:12px;padding:16px 18px">
+                <div style="font:600 11px 'Cinzel',serif;letter-spacing:.11em;text-transform:uppercase;color:#8A6F4E;margin-bottom:7px">Pourquoi c'est celle-là</div>
+                <p style="font:400 16px/1.55 'EB Garamond',serif;color:#221C16;margin:0">Descartes ne dit pas que le doute se retourne contre lui-même : il dit que même en doutant de tout, une chose reste debout — le fait de penser. La vérité tient au geste de penser, pas au contenu de ce qui est pensé.</p>
+              </div>
+              <div style="background:#F7F2E8;border:1px solid #E4DBC9;border-radius:12px;padding:16px 18px">
+                <div style="font:600 11px 'Cinzel',serif;letter-spacing:.11em;text-transform:uppercase;color:#8A6F4E;margin-bottom:7px">Ce que tu avais retenu — « Lecture A »</div>
+                <p style="font:400 16px/1.55 'EB Garamond',serif;color:#5A4632;margin:0">Le doute qui doute de lui-même est une idée qui vient plus tard, chez d'autres auteurs. Ici, le doute est un instrument : Descartes s'en sert, il ne le prend pas pour objet.</p>
+              </div>
+              <div style="display:flex;align-items:center;gap:14px;margin-top:2px">
+                <span style="font:italic 15px 'EB Garamond',serif;color:#8A6F4E;flex:1">Cet exercice s'arrête ici — il n'y a pas de version finale à rendre.</span>
+                <span style="font:600 14px 'Alegreya Sans',sans-serif;background:#FBF8F1;border:1px solid #DFD4BE;color:#4A3A28;border-radius:10px;padding:13px 18px;white-space:nowrap">← Retour à mes exercices</span>
+              </div>
+            </div>
+
+            <div style="padding:20px;display:flex;flex-direction:column;gap:12px;border-left:1px solid #E4DBC9;background:#F0EADE">
+              <div style="background:#FBF8F1;border:1px solid #E4DBC9;border-radius:12px;padding:15px 16px">
+                <div style="font:600 11px 'Cinzel',serif;letter-spacing:.11em;text-transform:uppercase;color:#8A6F4E;margin-bottom:7px">La consigne</div>
+                <p style="font:400 16px/1.5 'EB Garamond',serif;color:#221C16;margin:0">Parmi ces quatre lectures du passage, répartis 100 jetons selon celle que tu crois juste.</p>
+              </div>
+              <div style="background:#FBF8F1;border:1px solid #E4DBC9;border-radius:12px;padding:15px 16px">
+                <div style="font:600 11px 'Cinzel',serif;letter-spacing:.11em;text-transform:uppercase;color:#8A6F4E;margin-bottom:11px">Ce que tu avais posé</div>
+                <div style="display:flex;flex-direction:column;gap:10px">
+                  <div style="display:flex;align-items:center;gap:10px"><span style="font:400 15px 'EB Garamond',serif;color:#221C16;flex:1">Lecture A</span><span style="width:108px;height:8px;border-radius:99px;background:#E4DBC9;position:relative;overflow:hidden;flex:none"><span style="position:absolute;left:0;top:0;bottom:0;width:60%;background:#8A6F4E;border-radius:99px"></span></span><span style="width:30px;text-align:right;font:600 14px 'Alegreya Sans',sans-serif;color:#221C16">60</span></div>
+                  <div style="display:flex;align-items:center;gap:10px"><span style="font:400 15px 'EB Garamond',serif;color:#221C16;flex:1">Lecture B</span><span style="width:108px;height:8px;border-radius:99px;background:#E4DBC9;position:relative;overflow:hidden;flex:none"><span style="position:absolute;left:0;top:0;bottom:0;width:30%;background:#5B6E4A;border-radius:99px"></span></span><span style="width:30px;text-align:right;font:600 14px 'Alegreya Sans',sans-serif;color:#221C16">30</span></div>
+                  <div style="display:flex;align-items:center;gap:10px"><span style="font:400 15px 'EB Garamond',serif;color:#221C16;flex:1">Lecture C</span><span style="width:108px;height:8px;border-radius:99px;background:#E4DBC9;position:relative;overflow:hidden;flex:none"><span style="position:absolute;left:0;top:0;bottom:0;width:10%;background:#8A6F4E;border-radius:99px"></span></span><span style="width:30px;text-align:right;font:600 14px 'Alegreya Sans',sans-serif;color:#221C16">10</span></div>
+                  <div style="display:flex;align-items:center;gap:10px"><span style="font:400 15px 'EB Garamond',serif;color:#8A6F4E;flex:1">Lecture D</span><span style="width:108px;height:8px;border-radius:99px;background:#E4DBC9;flex:none"></span><span style="width:30px;text-align:right;font:600 14px 'Alegreya Sans',sans-serif;color:#8A6F4E">0</span></div>
+                </div>
+                <div style="font:italic 13.5px 'EB Garamond',serif;color:#8A6F4E;margin-top:11px">La barre verte marque la lecture qu'il fallait voir.</div>
+              </div>
+              <div style="background:#F7F2E8;border:1px solid #E4DBC9;border-radius:12px;padding:13px 15px;display:flex;align-items:center;gap:10px;min-height:48px;box-sizing:border-box"><span style="color:#8A6F4E;font-size:12px">▸</span><span style="font:500 15px 'EB Garamond',serif;color:#5A4632;flex:1">Le passage</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div>
+        <div style="font:700 11px 'Alegreya Sans',sans-serif;letter-spacing:.12em;text-transform:uppercase;color:#8A6F4E;margin:0 0 12px 2px">Téléphone · 390 — le retour</div>
+        <div style="width:414px;background:#241C13;border-radius:34px;padding:12px;box-shadow:0 18px 44px rgba(40,30,15,.28)">
+          <div style="border-radius:24px;overflow:hidden;background:#F0EADE">
+            <div style="display:flex;align-items:center;justify-content:space-between;padding:9px 20px 6px;font:600 13px 'Alegreya Sans',sans-serif;color:#221C16;background:#FBF8F1"><span>9:41</span><span style="width:24px;height:12px;border:1px solid #221C16;border-radius:3px;position:relative;display:inline-block"><span style="position:absolute;left:1.5px;top:1.5px;bottom:1.5px;right:7px;background:#221C16;border-radius:1px"></span></span></div>
+            <div style="background:#FBF8F1;border-bottom:1px solid #E4DBC9;padding:10px 16px 11px;display:flex;align-items:center;gap:10px">
+              <span style="font:500 14px 'Alegreya Sans',sans-serif;color:#8A6F4E">←</span>
+              <span style="font-family:'Cormorant Garamond',serif;font-weight:700;font-size:18px;color:#221C16;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">Repérer l'erreur</span>
+              <span style="font:600 11.5px 'Alegreya Sans',sans-serif;background:#DCE6DF;color:#2E4A3C;border-radius:99px;padding:4px 10px">4 / 4</span>
+            </div>
+            <div style="background:#F7F2E8;border-bottom:1px solid #E4DBC9;padding:11px 16px;display:flex;align-items:center;gap:9px">
+              <span style="color:#8A6F4E;font-size:11px">▾</span>
+              <span style="font:600 11px 'Cinzel',serif;letter-spacing:.11em;text-transform:uppercase;color:#8A6F4E;white-space:nowrap">La consigne</span>
+              <span style="font:400 14px 'EB Garamond',serif;color:#5A4632;flex:1;min-width:0;overflow:hidden;white-space:nowrap;text-overflow:ellipsis">Répartis 100 jetons entre…</span>
+            </div>
+            <div style="padding:14px 16px 24px;display:flex;flex-direction:column;gap:12px">
+              <div style="background:#E4E8D8;border:1px solid #C2CBB1;border-radius:12px;padding:15px 16px">
+                <div style="font:600 11px 'Cinzel',serif;letter-spacing:.11em;text-transform:uppercase;color:#4E5A3C;margin-bottom:6px">Ce qu'il fallait voir</div>
+                <div style="font:600 17px 'EB Garamond',serif;color:#221C16;margin-bottom:6px">Lecture B — penser suffit à prouver qu'on existe.</div>
+                <p style="font:400 16px/1.55 'EB Garamond',serif;color:#2C3320;margin:0">C'est ce que le passage dit, et rien de plus.</p>
+              </div>
+              <div style="background:#FBF8F1;border:1px solid #E4DBC9;border-radius:12px;padding:15px 16px">
+                <div style="font:600 11px 'Cinzel',serif;letter-spacing:.11em;text-transform:uppercase;color:#8A6F4E;margin-bottom:6px">Pourquoi c'est celle-là</div>
+                <p style="font:400 16px/1.55 'EB Garamond',serif;color:#221C16;margin:0">Même en doutant de tout, une chose reste debout : le fait de penser. La vérité tient au geste de penser, pas à son contenu.</p>
+              </div>
+              <div style="background:#F7F2E8;border:1px solid #E4DBC9;border-radius:12px;padding:15px 16px">
+                <div style="font:600 11px 'Cinzel',serif;letter-spacing:.11em;text-transform:uppercase;color:#8A6F4E;margin-bottom:6px">Ce que tu avais retenu — « Lecture A »</div>
+                <p style="font:400 16px/1.55 'EB Garamond',serif;color:#5A4632;margin:0">Ici, le doute est un instrument : Descartes s'en sert, il ne le prend pas pour objet.</p>
+              </div>
+              <div style="background:#F7F2E8;border:1px solid #E4DBC9;border-radius:12px;padding:13px 15px;display:flex;align-items:center;gap:10px;min-height:48px;box-sizing:border-box"><span style="color:#8A6F4E;font-size:12px">▸</span><span style="font:500 15px 'EB Garamond',serif;color:#5A4632;flex:1">Ce que tu avais posé</span><span style="font:500 11.5px 'Alegreya Sans',sans-serif;color:#8A6F4E;border:1px solid #E4DBC9;background:#fff;border-radius:99px;padding:4px 10px">A 60 · B 30 · C 10</span></div>
+              <div style="font:italic 14.5px 'EB Garamond',serif;color:#8A6F4E;text-align:center">Cet exercice s'arrête ici.</div>
+              <div style="font:600 15px 'Alegreya Sans',sans-serif;background:#FBF8F1;border:1px solid #DFD4BE;color:#4A3A28;border-radius:10px;padding:15px;text-align:center;min-height:48px;box-sizing:border-box">← Retour à mes exercices</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</section>
+</x-dc>
+</body>
+</html>

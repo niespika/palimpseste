@@ -1,0 +1,769 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet data-dc-atomics>
+<meta name="design_doc_mode" content="canvas">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="anonymous">
+<link href="https://fonts.googleapis.com/css2?family=Caveat:wght@500;600&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#f0eee9;font-family:system-ui,sans-serif}
+a{color:#6B5A46}a:hover{color:#4a3a28}
+.dv-turn{padding:44px 48px 34px;border-bottom:1px solid rgba(0,0,0,.08);scroll-margin-top:16px}
+.dv-thd{display:flex;align-items:baseline;gap:10px;margin:0 0 22px;flex-wrap:wrap}
+.dv-tid{font:600 10px ui-monospace,Menlo,monospace;padding:3px 7px;background:#1a1a1a;color:#fff;border-radius:4px;text-decoration:none}
+.dv-tname{font:600 13px/1.2 system-ui,sans-serif;color:#1a1a1a}
+.dv-cap{font:500 15px 'Caveat',cursive;color:#8a6f4e}
+.dv-opts{display:flex;flex-wrap:wrap;gap:38px;align-items:flex-start}
+.dv-opt{flex:none;display:flex;flex-direction:column;gap:10px;scroll-margin-top:16px}
+.dv-oid{font:600 10.5px ui-monospace,Menlo,monospace;padding:3px 7px;background:rgba(0,0,0,.08);color:#1a1a1a;border-radius:5px;text-decoration:none}
+.dv-olabel{display:block;font:400 11.5px/1.45 system-ui,sans-serif;color:rgba(0,0,0,.55);max-width:1080px}
+.dv-olabel .dv-oid{display:inline-block;margin-right:7px;vertical-align:1px}
+.dv-olabel b{font-weight:600;color:rgba(0,0,0,.72)}
+.dv-card{background:#fff;border:1px solid rgba(0,0,0,.1);border-radius:9px;box-shadow:0 1px 3px rgba(0,0,0,.06);overflow:hidden}
+.dv-opt:target .dv-oid{background:#2a78d6;color:#fff}
+.dv-note{margin:2px 0 0;font:500 14.5px/1.5 'Caveat',cursive;color:#8a6f4e;max-width:1020px}
+.dv-row{display:flex;gap:22px;align-items:flex-start;flex-wrap:wrap}
+.dv-scr{font:600 9px system-ui;letter-spacing:.12em;text-transform:uppercase;color:#a49c8e;margin:0 0 6px}
+.dv-next{margin:28px 0 0;font:12px/1.6 system-ui,sans-serif;color:rgba(0,0,0,.5);max-width:900px}
+
+.wf{color:#2f2a23}
+.wf-bar{display:flex;align-items:center;gap:10px;padding:10px 14px;border-bottom:1px solid #e6e1d6;background:#f7f4ee}
+.wf-back{font-size:10.5px;color:#8b8478;white-space:nowrap}
+.wf-h1{font-size:14.5px;font-weight:700;color:#2f2a23}
+.wf-sub{font-size:10.5px;color:#8b8478}
+.wf-eyebrow{font:600 9px system-ui;letter-spacing:.11em;text-transform:uppercase;color:#a49c8e}
+.wf-box{border:1px solid #e2ddd2;border-radius:9px;background:#fff}
+.wf-pane{border:1px solid #e2ddd2;border-radius:9px;background:#fff;padding:13px 14px;display:flex;flex-direction:column;gap:9px}
+.wf-pane.warm{background:#faf9f5}
+.wf-ttl{font-size:12.5px;font-weight:700;color:#2f2a23}
+.wf-txt{font-size:11px;line-height:1.55;color:#6b6459}
+.wf-fold{display:flex;align-items:center;gap:8px;padding:11px 12px;border:1px solid #e2ddd2;border-radius:9px;background:#faf9f5;font-size:11.5px;color:#6b6459;min-height:44px;box-sizing:border-box}
+.wf-fold b{font-weight:600;color:#3f3a32;flex:1;font-size:11.5px}
+.wf-fold i{font-style:normal;color:#a49c8e;font-size:10px}
+.wf-task{display:flex;align-items:center;gap:11px;padding:13px;border:1px solid #e2ddd2;border-radius:9px;background:#fff;min-height:44px;box-sizing:border-box}
+.wf-task b{display:block;font-size:12.5px;font-weight:600;color:#2f2a23}
+.wf-task span.m{display:block;font-size:10px;color:#8b8478;margin-top:3px}
+.wf-p{width:30px;height:30px;border-radius:50%;background:#e3e6da;border:1px solid #cdd3c1;flex:none}
+.wf-due{font-size:9.5px;color:#8b8478;border:1px solid #e2ddd2;border-radius:99px;padding:4px 9px;white-space:nowrap}
+.wf-due.hot{color:#8a5a2e;border-color:#e0cba8;background:#fdf6ea}
+.wf-done{opacity:.6}
+.wf-btn{font-size:11.5px;font-weight:600;padding:10px 14px;border-radius:9px;text-align:center;min-height:44px;display:flex;align-items:center;justify-content:center;gap:6px;box-sizing:border-box;white-space:nowrap}
+.wf-btn.cdx{background:#5F7365;color:#F0F3EE}
+.wf-btn.ghost{background:#fff;border:1px solid #dcd6c9;color:#6b6459}
+.wf-chip{font-size:9.5px;padding:3px 8px;border-radius:99px;border:1px solid #cfc9bd;color:#6b6459;background:#faf9f5;white-space:nowrap}
+.wf-chip.ok{border-color:#c2cbb1;background:#f2f4ec;color:#4e5a3c}
+.wf-chip.att{border-color:#e0cba8;background:#fdf6ea;color:#8a5a2e}
+.wf-chip.wait{border-color:#c8d2da;background:#f0f4f7;color:#43607a}
+.wf-seg{display:flex;border:1px solid #dcd6c9;border-radius:9px;overflow:hidden;background:#fff;font-size:11.5px}
+.wf-seg span{flex:1;text-align:center;padding:11px 10px;color:#8b8478;min-height:44px;box-sizing:border-box;display:flex;align-items:center;justify-content:center}
+.wf-seg span.on{background:#5F7365;color:#F0F3EE;font-weight:600}
+.wf-fil{display:flex;gap:5px;align-items:center;flex-wrap:wrap}
+.wf-fil span{font-size:10px;padding:5px 9px;border-radius:7px;border:1px solid #e2ddd2;color:#a49c8e;background:#fff;white-space:nowrap}
+.wf-fil span.ok{color:#4e5a3c;border-color:#c2cbb1;background:#f2f4ec}
+.wf-fil span.on{background:#2E4A3C;border-color:#2E4A3C;color:#eef2ec;font-weight:600}
+.wf-rail{display:flex;flex-direction:column;gap:2px}
+.wf-rstep{display:flex;gap:9px;align-items:flex-start;padding:8px 9px;border-radius:8px;font-size:11px;color:#8b8478}
+.wf-rstep em{width:9px;height:9px;border-radius:50%;background:#e4dfd4;flex:none;margin-top:3px}
+.wf-rstep.ok em{background:#94a37d}
+.wf-rstep.on{background:#eef1ea;color:#2f2a23;font-weight:600}
+.wf-rstep.on em{background:#2E4A3C}
+.wf-rstep u{text-decoration:none;display:block;font-size:9.5px;font-weight:400;color:#a49c8e;margin-top:2px}
+.wf-ta{border:1px solid #dcd6c9;border-radius:9px;background:#fffdf8;padding:12px;display:flex;flex-direction:column;gap:7px}
+.wf-mat{border:1px solid #e2ddd2;border-radius:8px;background:#f7f4ee;padding:11px;display:flex;flex-direction:column;gap:6px}
+.wf-mark{background:#f3e5c4;box-shadow:inset 0 -1px 0 #d9bd82}
+.wf-sticky{display:flex;align-items:center;gap:9px;padding:10px 13px;border-bottom:1px solid #e6e1d6;background:#fbf9f4;font-size:11px;color:#6b6459;position:relative}
+.wf-sticky b{font-weight:600;color:#3f3a32}
+.wf-pin{position:absolute;right:10px;top:8px;font:600 8px system-ui;letter-spacing:.08em;text-transform:uppercase;color:#b6ac9b}
+.wf-corr{border:1px solid #c2cbb1;border-radius:9px;background:#f2f4ec;padding:13px 14px;display:flex;flex-direction:column;gap:8px}
+.wf-scrollcue{display:flex;align-items:center;gap:6px;font-size:9px;color:#b6ac9b;letter-spacing:.06em;text-transform:uppercase}
+.wf-cand{border:1px solid #dcd6c9;border-radius:8px;background:#fff;padding:10px 11px;display:flex;flex-direction:column;gap:8px}
+.wf-cand.chosen{border-color:#9db1a2;background:#f4f7f4}
+.wf-slider{display:flex;align-items:center;gap:7px}
+.wf-sbtn{width:36px;height:36px;flex:none;border:1px solid #dcd6c9;border-radius:7px;display:flex;align-items:center;justify-content:center;font-size:14px;color:#8b8478;background:#fff}
+.wf-track{flex:1;height:8px;border-radius:99px;background:#e9e4d9;position:relative;overflow:hidden}
+.wf-track i{position:absolute;left:0;top:0;bottom:0;border-radius:99px;background:#94a37d}
+.wf-num{width:38px;flex:none;text-align:right;font-size:11px;color:#3f3a32;font-weight:600}
+.wf-tot{display:flex;align-items:center;gap:8px;background:#f4f2ec;border-radius:8px;padding:9px 11px;font-size:11px;color:#6b6459}
+.wf-selhl{background:#dce7ef;box-shadow:inset 0 -1px 0 #a7c1d3}
+.wf-q{border:1px solid #e2ddd2;border-radius:9px;background:#faf9f5;padding:13px 14px;display:flex;flex-direction:column;gap:9px}
+.wf-opt2{min-height:44px;padding:11px 15px;border:1px solid #dcd6c9;border-radius:8px;font-size:11.5px;color:#6b6459;background:#fff;display:flex;align-items:center;justify-content:center;box-sizing:border-box}
+.wf-opt2.on{background:#dfe6e0;border-color:#8ba392;color:#2E4A3C;font-weight:600}
+.sk{height:7px;border-radius:3px;background:#e4dfd4}
+.sk.d{background:#dcd6c9}
+.sk.w95{width:95%}.sk.w88{width:88%}.sk.w80{width:80%}.sk.w70{width:70%}.sk.w62{width:62%}.sk.w50{width:50%}.sk.w40{width:40%}
+</style>
+</helmet>
+
+<section class="dv-turn" id="t2">
+  <div class="dv-thd"><a class="dv-tid" href="#t2">2</a><span class="dv-tname">Tour 2 — le plan de travail <a class="dv-oid" href="#1b">1b</a> décliné : trois formes d'exercice, « se juger » en écran propre, et les deux retours</span><span class="dv-cap">la colonne qui porte le travail est toujours la plus large</span></div>
+  <div class="dv-opts">
+
+    <!-- ─────────────── 2a — EXERCICE À RÉDIGER ─────────────── -->
+    <div class="dv-opt" id="2a" data-screen-label="2a Exercice a rediger">
+      <div class="dv-olabel"><a class="dv-oid" href="#2a">2a</a><b>Exercice à rédiger</b> — l'écriture prend la plus grande part (640 / 400) : c'est là que se fait le travail. La matière reste entièrement visible à gauche, elle défile seule.</div>
+      <div class="dv-row">
+        <div>
+          <p class="dv-scr">Ordinateur / tablette · 1040</p>
+          <div class="dv-card" style="width:1040px">
+            <div class="wf">
+              <div class="wf-bar"><span class="wf-back">← Exercices</span><span class="wf-h1">Explication de texte — Descartes</span><span class="wf-sub">~30 min · à rendre mer. 10</span></div>
+              <div style="padding:9px 14px;border-bottom:1px solid #eee9de;background:#fbf9f4;display:flex;align-items:center;gap:12px">
+                <div class="wf-fil"><span class="ok">✓ Préparer</span><span class="on">Écrire</span><span>Se juger</span><span>Retour</span><span>Réviser</span><span>Retour final</span></div>
+                <span style="margin-left:auto;font-size:10px;color:#8b8478">brouillon enregistré · 14:02</span>
+              </div>
+              <div style="display:grid;grid-template-columns:400px 1fr;align-items:stretch">
+                <div style="padding:16px;display:flex;flex-direction:column;gap:10px;border-right:1px solid #eee9de;background:#fbfaf7">
+                  <span class="wf-eyebrow">La matière</span>
+                  <div class="wf-pane">
+                    <span class="wf-eyebrow">La consigne</span>
+                    <p class="wf-txt" style="margin:0;color:#3f3a32;font-size:11.5px">Explique ce que Descartes appelle <b>« je pense, donc je suis »</b>, et dis pourquoi il en fait un point de départ.</p>
+                  </div>
+                  <div class="wf-pane">
+                    <span class="wf-eyebrow">Le texte · Discours de la méthode</span>
+                    <div class="wf-mat">
+                      <div class="sk w95"></div><div class="sk w88"></div>
+                      <div class="wf-mark" style="display:flex;flex-direction:column;gap:6px;padding:5px 6px;border-radius:4px"><div class="sk d w95"></div><div class="sk d w70"></div></div>
+                      <div class="sk w95"></div><div class="sk w80"></div><div class="sk w50"></div>
+                      <div class="wf-scrollcue">↕ défile seul</div>
+                    </div>
+                  </div>
+                  <div class="wf-fold"><i>▸</i><b>De quoi t'aider</b></div>
+                  <div class="wf-fold"><i>▸</i><b>Ce sur quoi tu butais</b><span class="wf-chip">2 points</span></div>
+                </div>
+                <div style="padding:16px 18px;display:flex;flex-direction:column;gap:11px">
+                  <div style="display:flex;align-items:baseline;gap:8px"><span class="wf-eyebrow">Ton écriture</span><span style="margin-left:auto;font-size:10px;color:#8b8478">v1</span></div>
+                  <div class="wf-ta" style="min-height:280px">
+                    <div class="sk w95"></div><div class="sk w88"></div><div class="sk w95"></div><div class="sk w80"></div>
+                    <div style="height:8px"></div><div class="sk w95"></div><div class="sk w70"></div><div class="sk w40"></div>
+                    <div style="flex:1"></div>
+                    <div style="display:flex;border-top:1px solid #eee9de;padding-top:9px"><span style="font-size:9.5px;color:#a49c8e">tu écris ici</span><span style="margin-left:auto;font-size:9.5px;color:#a49c8e">1 240 signes</span></div>
+                  </div>
+                  <div class="wf-pane warm" style="flex-direction:row;align-items:center;gap:14px">
+                    <div style="display:flex;flex-direction:column;gap:6px;flex:1"><span class="wf-eyebrow">Avant de rendre</span><div class="wf-txt" style="display:flex;gap:14px;flex-wrap:wrap"><span>☐ J'ai relu</span><span>☐ Écrit par moi</span><span>☐ Je sais dire pourquoi</span></div></div>
+                    <div class="wf-btn cdx" style="width:150px">Rendre ma v1</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div>
+          <p class="dv-scr">Téléphone · 390</p>
+          <div class="dv-card" style="width:390px">
+            <div class="wf">
+              <div class="wf-bar" style="gap:6px"><span class="wf-back">←</span><span class="wf-h1" style="font-size:12.5px;flex:1;min-width:0">Explication — Descartes</span><span class="wf-chip">2/6</span></div>
+              <div class="wf-sticky"><span class="wf-pin">collé en haut</span><i style="font-style:normal;color:#a49c8e;font-size:10px">▾</i><b>La consigne</b><span style="color:#8b8478;flex:1;min-width:0;overflow:hidden;white-space:nowrap;text-overflow:ellipsis">Explique ce que Descartes appelle…</span></div>
+              <div style="padding:12px;display:flex;flex-direction:column;gap:11px">
+                <div class="wf-seg"><span>Lire</span><span class="on">Écrire</span></div>
+                <div class="wf-ta" style="min-height:290px">
+                  <div class="sk w95"></div><div class="sk w88"></div><div class="sk w95"></div><div class="sk w70"></div>
+                  <div style="height:8px"></div><div class="sk w88"></div><div class="sk w50"></div>
+                  <div style="flex:1"></div>
+                  <div style="display:flex;border-top:1px solid #eee9de;padding-top:9px"><span style="font-size:9.5px;color:#a49c8e">brouillon enregistré</span><span style="margin-left:auto;font-size:9.5px;color:#a49c8e">1 240 signes</span></div>
+                </div>
+                <div class="wf-pane warm"><span class="wf-eyebrow">Avant de rendre</span><div class="wf-txt" style="display:flex;flex-direction:column;gap:8px"><span>☐ J'ai relu ma réponse.</span><span>☐ J'ai écrit ce texte moi-même.</span><span>☐ Je sais quoi dire si on me demande pourquoi.</span></div></div>
+                <div class="wf-btn cdx" style="padding:14px">Rendre ma v1</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ─────────────── 2b — EXERCICE À CHOIX ─────────────── -->
+    <div class="dv-opt" id="2b" data-screen-label="2b Exercice a choix multiple">
+      <div class="dv-olabel"><a class="dv-oid" href="#2b">2b</a><b>Exercice à choix</b> — les quatre réponses prennent la place de « ton écriture », à droite, et les deux colonnes sont <b>égales</b> : rien n'est plus lourd d'un côté que de l'autre. La répartition des 100 jetons <b>est</b> la réponse : un seul geste, un seul bouton.</div>
+      <div class="dv-row">
+        <div>
+          <p class="dv-scr">Ordinateur / tablette · 1040</p>
+          <div class="dv-card" style="width:1040px">
+            <div class="wf">
+              <div class="wf-bar"><span class="wf-back">← Exercices</span><span class="wf-h1">Repérer l'erreur — quatre lectures</span><span class="wf-sub">~10 min · à rendre jeu. 11</span></div>
+              <div style="padding:9px 14px;border-bottom:1px solid #eee9de;background:#fbf9f4;display:flex;align-items:center;gap:12px">
+                <div class="wf-fil"><span class="ok">✓ Préparer</span><span class="on">Répondre</span><span>Se juger</span><span>Retour</span></div>
+                <span style="margin-left:auto;font-size:10px;color:#8b8478">4 temps pour cet exercice</span>
+              </div>
+              <div style="display:grid;grid-template-columns:1fr 1fr;align-items:stretch">
+                <div style="padding:16px;display:flex;flex-direction:column;gap:10px;border-right:1px solid #eee9de;background:#fbfaf7">
+                  <span class="wf-eyebrow">La matière</span>
+                  <div class="wf-pane">
+                    <span class="wf-eyebrow">La consigne</span>
+                    <p class="wf-txt" style="margin:0;color:#3f3a32;font-size:11.5px">Parmi ces quatre lectures du passage, <b>répartis 100 jetons</b> selon celle que tu crois juste.</p>
+                  </div>
+                  <div class="wf-pane">
+                    <span class="wf-eyebrow">Le passage</span>
+                    <div class="wf-mat"><div class="sk w95"></div><div class="sk w88"></div><div class="sk w95"></div><div class="sk w62"></div></div>
+                  </div>
+                  <div class="wf-fold"><i>▸</i><b>Un exemple, sur un autre sujet</b></div>
+                </div>
+                <div style="padding:16px 18px;display:flex;flex-direction:column;gap:10px">
+                  <div style="display:flex;align-items:baseline;gap:8px"><span class="wf-eyebrow">Ta réponse</span><span style="margin-left:auto;font-size:10px;color:#8b8478">plus tu poses de jetons, plus tu la crois juste</span></div>
+                  <div class="wf-cand chosen"><span style="font-size:11.5px;color:#2f2a23">Lecture A — <span style="color:#6b6459">l'auteur doute de tout, même de son doute.</span></span><div class="wf-slider"><span class="wf-sbtn">−</span><span class="wf-track"><i style="width:60%"></i></span><span class="wf-sbtn">+</span><span class="wf-num">60</span></div></div>
+                  <div class="wf-cand"><span style="font-size:11.5px;color:#2f2a23">Lecture B — <span style="color:#6b6459">penser suffit à prouver qu'on existe.</span></span><div class="wf-slider"><span class="wf-sbtn">−</span><span class="wf-track"><i style="width:30%"></i></span><span class="wf-sbtn">+</span><span class="wf-num">30</span></div></div>
+                  <div class="wf-cand"><span style="font-size:11.5px;color:#2f2a23">Lecture C — <span style="color:#6b6459">le doute est un défaut de méthode.</span></span><div class="wf-slider"><span class="wf-sbtn">−</span><span class="wf-track"><i style="width:10%"></i></span><span class="wf-sbtn">+</span><span class="wf-num">10</span></div></div>
+                  <div class="wf-cand"><span style="font-size:11.5px;color:#2f2a23">Lecture D — <span style="color:#6b6459">l'existence se prouve par les sens.</span></span><div class="wf-slider"><span class="wf-sbtn">−</span><span class="wf-track"><i style="width:0%"></i></span><span class="wf-sbtn">+</span><span class="wf-num">0</span></div></div>
+                  <div class="wf-tot"><span>Jetons placés</span><span style="margin-left:auto;font-weight:600;color:#3f3a32">100 sur 100</span></div>
+                  <div class="wf-btn cdx" style="padding:13px">Enregistrer ma réponse</div>
+                  <span style="font-size:9.5px;color:#a49c8e;text-align:center">Ça ne se note pas. Tu verras la correction juste après.</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div>
+          <p class="dv-scr">Téléphone · 390</p>
+          <div class="dv-card" style="width:390px">
+            <div class="wf">
+              <div class="wf-bar" style="gap:6px"><span class="wf-back">←</span><span class="wf-h1" style="font-size:12.5px;flex:1;min-width:0">Repérer l'erreur</span><span class="wf-chip">2/4</span></div>
+              <div class="wf-sticky"><span class="wf-pin">collé en haut</span><i style="font-style:normal;color:#a49c8e;font-size:10px">▾</i><b>La consigne</b><span style="color:#8b8478;flex:1;min-width:0;overflow:hidden;white-space:nowrap;text-overflow:ellipsis">Répartis 100 jetons entre…</span></div>
+              <div style="padding:12px;display:flex;flex-direction:column;gap:10px">
+                <div class="wf-fold"><i>▸</i><b>Le passage</b></div>
+                <span class="wf-eyebrow">Ta réponse</span>
+                <div class="wf-cand chosen"><span style="font-size:11.5px;color:#2f2a23">Lecture A — <span style="color:#6b6459">il doute de tout, même de son doute.</span></span><div class="wf-slider"><span class="wf-sbtn" style="width:44px;height:44px">−</span><span class="wf-track"><i style="width:60%"></i></span><span class="wf-sbtn" style="width:44px;height:44px">+</span><span class="wf-num">60</span></div></div>
+                <div class="wf-cand"><span style="font-size:11.5px;color:#2f2a23">Lecture B — <span style="color:#6b6459">penser suffit à prouver qu'on existe.</span></span><div class="wf-slider"><span class="wf-sbtn" style="width:44px;height:44px">−</span><span class="wf-track"><i style="width:30%"></i></span><span class="wf-sbtn" style="width:44px;height:44px">+</span><span class="wf-num">30</span></div></div>
+                <div class="wf-cand"><span style="font-size:11.5px;color:#2f2a23">Lecture C — <span style="color:#6b6459">le doute est un défaut de méthode.</span></span><div class="wf-slider"><span class="wf-sbtn" style="width:44px;height:44px">−</span><span class="wf-track"><i style="width:10%"></i></span><span class="wf-sbtn" style="width:44px;height:44px">+</span><span class="wf-num">10</span></div></div>
+                <div class="wf-cand"><span style="font-size:11.5px;color:#2f2a23">Lecture D — <span style="color:#6b6459">l'existence se prouve par les sens.</span></span><div class="wf-slider"><span class="wf-sbtn" style="width:44px;height:44px">−</span><span class="wf-track"><i style="width:0%"></i></span><span class="wf-sbtn" style="width:44px;height:44px">+</span><span class="wf-num">0</span></div></div>
+                <div class="wf-tot"><span>Jetons placés</span><span style="margin-left:auto;font-weight:600;color:#3f3a32">100 sur 100</span></div>
+                <div class="wf-btn cdx" style="padding:14px">Enregistrer ma réponse</div>
+              </div>
+            </div>
+          </div>
+          <p class="dv-note">Cibles de 44 px sur les boutons de pas ; le curseur fait le gros du trajet.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- ─────────────── 2c — EXERCICE À SURLIGNER ─────────────── -->
+    <div class="dv-opt" id="2c" data-screen-label="2c Exercice a surligner">
+      <div class="dv-olabel"><a class="dv-oid" href="#2c">2c</a><b>Exercice à surligner</b> — ici le travail est <b>dans</b> la matière : elle passe donc devant (640) et l'écriture derrière (380). Le geste se dit en une ligne au-dessus du texte, et ce que l'élève a surligné reste visible après la remise.</div>
+      <div class="dv-row">
+        <div>
+          <p class="dv-scr">Ordinateur / tablette · 1040</p>
+          <div class="dv-card" style="width:1040px">
+            <div class="wf">
+              <div class="wf-bar"><span class="wf-back">← Exercices</span><span class="wf-h1">Trouver le passage fautif — copie anonyme</span><span class="wf-sub">~15 min · à rendre ven. 12</span></div>
+              <div style="padding:9px 14px;border-bottom:1px solid #eee9de;background:#fbf9f4;display:flex;align-items:center;gap:12px">
+                <div class="wf-fil"><span class="ok">✓ Préparer</span><span class="on">Surligner et répondre</span><span>Se juger</span><span>Retour</span></div>
+              </div>
+              <div style="display:grid;grid-template-columns:1fr 380px;align-items:stretch">
+                <div style="padding:16px;display:flex;flex-direction:column;gap:10px;border-right:1px solid #eee9de;background:#fbfaf7">
+                  <div style="display:flex;align-items:center;gap:9px"><span class="wf-eyebrow">La matière</span><span class="wf-chip att" style="margin-left:auto">à toi de trouver le passage</span></div>
+                  <div class="wf-pane">
+                    <span class="wf-eyebrow">La consigne</span>
+                    <p class="wf-txt" style="margin:0;color:#3f3a32;font-size:11.5px">Surligne le passage où le raisonnement se casse, puis dis en quelques lignes ce qui ne va pas.</p>
+                  </div>
+                  <div class="wf-pane" style="gap:8px">
+                    <div style="display:flex;align-items:center;gap:8px"><span class="wf-eyebrow">La copie</span><span style="margin-left:auto;font-size:9.5px;color:#a49c8e">glisse sur le texte pour surligner</span></div>
+                    <div class="wf-mat" style="padding:13px;gap:8px">
+                      <div class="sk w95"></div><div class="sk w88"></div><div class="sk w95"></div>
+                      <div class="wf-selhl" style="display:flex;flex-direction:column;gap:6px;padding:6px 7px;border-radius:4px"><div class="sk d w88"></div><div class="sk d w62"></div></div>
+                      <div class="sk w95"></div><div class="sk w80"></div><div class="sk w88"></div><div class="sk w50"></div>
+                    </div>
+                    <div style="display:flex;align-items:center;gap:9px"><span class="wf-chip" style="border-color:#a7c1d3;background:#eef4f8;color:#3f5f75">passage surligné</span><span class="wf-btn ghost" style="min-height:36px;padding:8px 12px;font-size:11px">Effacer ma sélection</span></div>
+                  </div>
+                </div>
+                <div style="padding:16px;display:flex;flex-direction:column;gap:10px">
+                  <span class="wf-eyebrow">Ce que tu en dis</span>
+                  <div class="wf-ta" style="min-height:200px">
+                    <div class="sk w95"></div><div class="sk w88"></div><div class="sk w70"></div>
+                    <div style="height:8px"></div><div class="sk w88"></div><div class="sk w40"></div>
+                    <div style="flex:1"></div>
+                    <div style="display:flex;border-top:1px solid #eee9de;padding-top:9px"><span style="font-size:9.5px;color:#a49c8e">quelques lignes suffisent</span></div>
+                  </div>
+                  <div class="wf-pane warm"><span class="wf-eyebrow">Avant de rendre</span><div class="wf-txt" style="display:flex;flex-direction:column;gap:7px"><span>☐ J'ai surligné un passage.</span><span>☐ J'ai écrit ce texte moi-même.</span></div></div>
+                  <div class="wf-btn cdx" style="padding:13px">Rendre ma réponse</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div>
+          <p class="dv-scr">Téléphone · 390 — vue Lire (le surlignage)</p>
+          <div class="dv-card" style="width:390px">
+            <div class="wf">
+              <div class="wf-bar" style="gap:6px"><span class="wf-back">←</span><span class="wf-h1" style="font-size:12.5px;flex:1;min-width:0">Trouver le passage fautif</span><span class="wf-chip">2/4</span></div>
+              <div class="wf-sticky"><span class="wf-pin">collé en haut</span><i style="font-style:normal;color:#a49c8e;font-size:10px">▾</i><b>La consigne</b><span style="color:#8b8478;flex:1;min-width:0;overflow:hidden;white-space:nowrap;text-overflow:ellipsis">Surligne le passage où…</span></div>
+              <div style="padding:12px;display:flex;flex-direction:column;gap:11px">
+                <div class="wf-seg"><span class="on">Lire · surligner</span><span>Écrire</span></div>
+                <div class="wf-pane" style="padding:11px;gap:8px">
+                  <span style="font-size:10px;color:#8b8478">Appuie longuement, puis glisse pour surligner. Un seul passage à la fois.</span>
+                  <div class="wf-mat" style="padding:11px;gap:9px">
+                    <div class="sk w95"></div><div class="sk w88"></div>
+                    <div class="wf-selhl" style="display:flex;flex-direction:column;gap:6px;padding:6px 7px;border-radius:4px"><div class="sk d w95"></div><div class="sk d w62"></div></div>
+                    <div class="sk w88"></div><div class="sk w95"></div><div class="sk w50"></div>
+                    <div class="wf-scrollcue">↕ défile</div>
+                  </div>
+                  <div style="display:flex;align-items:center;gap:8px"><span class="wf-chip" style="border-color:#a7c1d3;background:#eef4f8;color:#3f5f75">passage surligné</span><span class="wf-btn ghost" style="min-height:44px;padding:10px 12px;font-size:11px;margin-left:auto">Effacer</span></div>
+                </div>
+                <div class="wf-btn cdx" style="padding:14px">Passer à ma réponse →</div>
+              </div>
+            </div>
+          </div>
+          <p class="dv-note">Sur téléphone, surligner et écrire ne se disputent pas l'écran : on surligne dans <b>Lire</b>, le bouton fait passer à <b>Écrire</b>, et le passage surligné reste rappelé en haut de la vue Écrire.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- ─────────────── 2d — SE JUGER, ÉCRAN PROPRE ─────────────── -->
+    <div class="dv-opt" id="2d" data-screen-label="2d Se juger ecran propre">
+      <div class="dv-olabel"><a class="dv-oid" href="#2d">2d</a><b>« Se juger » devient un écran</b> — la matière et l'écriture sont rangées, il ne reste que deux ou trois questions au doigt. Une colonne centrée à l'ordi, la même chose sur téléphone. Toutes les questions d'un coup, un seul envoi.</div>
+      <div class="dv-row">
+        <div>
+          <p class="dv-scr">Ordinateur / tablette · 1040</p>
+          <div class="dv-card" style="width:1040px">
+            <div class="wf">
+              <div class="wf-bar"><span class="wf-back">← Exercices</span><span class="wf-h1">Explication de texte — Descartes</span><span class="wf-sub">v1 rendue · 14:11</span></div>
+              <div style="padding:9px 14px;border-bottom:1px solid #eee9de;background:#fbf9f4;display:flex;align-items:center;gap:12px">
+                <div class="wf-fil"><span class="ok">✓ Préparer</span><span class="ok">✓ Écrire</span><span class="on">Se juger</span><span>Retour</span><span>Réviser</span><span>Retour final</span></div>
+                <span style="margin-left:auto;font-size:10px;color:#8b8478">trois gestes, puis ton retour</span>
+              </div>
+              <div style="padding:26px 18px 30px;display:flex;justify-content:center;background:#fbfaf7">
+                <div style="width:640px;display:flex;flex-direction:column;gap:13px">
+                  <div>
+                    <div style="font-size:16px;font-weight:700;color:#2f2a23">Avant de voir ton retour</div>
+                    <p class="wf-txt" style="margin:5px 0 0">Trois questions sur ce que tu viens de rendre. <b style="color:#3f3a32">Ça ne se note pas</b> : se tromper en se jugeant ne coûte rien.</p>
+                  </div>
+                  <div class="wf-fold" style="background:#fff"><i>▸</i><b>Relire ce que tu as rendu</b></div>
+                  <div class="wf-q">
+                    <span class="wf-eyebrow">Reprendre la thèse de l'auteur</span>
+                    <span style="font-size:12.5px;color:#2f2a23">As-tu dit ce que l'auteur soutient, avec tes mots ?</span>
+                    <div style="display:flex;gap:8px"><span class="wf-opt2" style="flex:1">Non</span><span class="wf-opt2 on" style="flex:1">En partie</span><span class="wf-opt2" style="flex:1">Oui</span></div>
+                  </div>
+                  <div class="wf-q">
+                    <span class="wf-eyebrow">Appuyer sur le texte</span>
+                    <span style="font-size:12.5px;color:#2f2a23">Chacune de tes affirmations s'appuie-t-elle sur un passage précis ?</span>
+                    <div style="display:flex;gap:8px"><span class="wf-opt2" style="flex:1">Non</span><span class="wf-opt2" style="flex:1">En partie</span><span class="wf-opt2" style="flex:1">Oui</span></div>
+                  </div>
+                  <div class="wf-q">
+                    <span class="wf-eyebrow">Conduire jusqu'au bout</span>
+                    <span style="font-size:12.5px;color:#2f2a23">Ta dernière phrase répond-elle vraiment à la question posée ?</span>
+                    <div style="display:flex;gap:8px"><span class="wf-opt2" style="flex:1">Non</span><span class="wf-opt2" style="flex:1">En partie</span><span class="wf-opt2" style="flex:1">Oui</span></div>
+                  </div>
+                  <div class="wf-btn cdx" style="padding:14px;opacity:.45">Envoyer mes réponses</div>
+                  <span style="font-size:10px;color:#a49c8e;text-align:center">Réponds aux trois pour pouvoir envoyer.</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div>
+          <p class="dv-scr">Téléphone · 390</p>
+          <div class="dv-card" style="width:390px">
+            <div class="wf">
+              <div class="wf-bar" style="gap:6px"><span class="wf-back">←</span><span class="wf-h1" style="font-size:12.5px;flex:1;min-width:0">Explication — Descartes</span><span class="wf-chip">3/6</span></div>
+              <div style="padding:14px 12px 18px;display:flex;flex-direction:column;gap:12px;background:#fbfaf7">
+                <div>
+                  <div style="font-size:14.5px;font-weight:700;color:#2f2a23">Avant de voir ton retour</div>
+                  <p class="wf-txt" style="margin:5px 0 0">Trois questions. <b style="color:#3f3a32">Ça ne se note pas.</b></p>
+                </div>
+                <div class="wf-fold" style="background:#fff"><i>▸</i><b>Relire ce que tu as rendu</b></div>
+                <div class="wf-q">
+                  <span class="wf-eyebrow">Reprendre la thèse</span>
+                  <span style="font-size:12.5px;color:#2f2a23">As-tu dit ce que l'auteur soutient, avec tes mots ?</span>
+                  <div style="display:flex;flex-direction:column;gap:7px"><span class="wf-opt2">Non</span><span class="wf-opt2 on">En partie</span><span class="wf-opt2">Oui</span></div>
+                </div>
+                <div class="wf-q">
+                  <span class="wf-eyebrow">Appuyer sur le texte</span>
+                  <span style="font-size:12.5px;color:#2f2a23">Chaque affirmation s'appuie-t-elle sur un passage ?</span>
+                  <div style="display:flex;flex-direction:column;gap:7px"><span class="wf-opt2">Non</span><span class="wf-opt2">En partie</span><span class="wf-opt2">Oui</span></div>
+                </div>
+                <div style="font-size:10px;color:#a49c8e;text-align:center">↓ une question encore</div>
+                <div class="wf-btn cdx" style="padding:14px;opacity:.45">Envoyer mes réponses</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ─────────────── 2e — RETOUR D'UN TEXTE PRODUIT ─────────────── -->
+    <div class="dv-opt" id="2e" data-screen-label="2e Retour texte produit">
+      <div class="dv-olabel"><a class="dv-oid" href="#2e">2e</a><b>Retour d'un texte produit</b> — le retour et le texte de l'élève sont <b>côte à côte</b>, à parts égales, et rien ne s'intercale entre eux. La consigne et le texte de départ passent <b>en bas</b>, repliés. L'action de révision tient toute la largeur, sous les deux colonnes : une seule chose à faire.</div>
+      <div class="dv-row">
+        <div>
+          <p class="dv-scr">Ordinateur / tablette · 1040</p>
+          <div class="dv-card" style="width:1040px">
+            <div class="wf">
+              <div class="wf-bar"><span class="wf-back">← Exercices</span><span class="wf-h1">Explication de texte — Descartes</span><span class="wf-sub">v1 rendue mardi</span></div>
+              <div style="padding:9px 14px;border-bottom:1px solid #eee9de;background:#fbf9f4;display:flex;align-items:center;gap:12px">
+                <div class="wf-fil"><span class="ok">✓ Préparer</span><span class="ok">✓ Écrire</span><span class="ok">✓ Se juger</span><span class="on">Retour</span><span>Réviser</span><span>Retour final</span></div>
+                <span style="margin-left:auto;font-size:10px;color:#8b8478">version finale à rendre avant ven. 12</span>
+              </div>
+              <div style="display:grid;grid-template-columns:1fr 1fr;align-items:stretch">
+                <div style="padding:16px;display:flex;flex-direction:column;gap:9px;border-right:1px solid #eee9de;background:#fbfaf7">
+                  <div style="display:flex;align-items:baseline;gap:8px"><span class="wf-eyebrow">Ce que tu as écrit</span><span style="margin-left:auto;font-size:10px;color:#8b8478">v1 · lecture seule</span></div>
+                  <div class="wf-ta" style="background:#f8f6f1;min-height:300px;gap:8px">
+                    <div class="sk w95"></div><div class="sk w88"></div><div class="sk w95"></div><div class="sk w70"></div>
+                    <div style="height:8px"></div>
+                    <div class="sk w95"></div><div class="sk w88"></div><div class="sk w62"></div>
+                    <div style="height:8px"></div>
+                    <div class="sk w88"></div><div class="sk w40"></div>
+                  </div>
+                </div>
+                <div style="padding:16px 18px;display:flex;flex-direction:column;gap:10px">
+                  <div style="display:flex;align-items:baseline;gap:8px"><span class="wf-eyebrow">Ton retour</span><span style="margin-left:auto;font-size:10px;color:#8b8478">3 points</span></div>
+                  <div class="wf-corr">
+                    <span class="wf-eyebrow" style="color:#7d8a68">Ce que tu as réussi</span>
+                    <div style="display:flex;flex-direction:column;gap:5px"><div class="sk w95" style="background:#dbe2d1"></div><div class="sk w70" style="background:#dbe2d1"></div></div>
+                  </div>
+                  <div class="wf-pane"><span class="wf-eyebrow">Point 2 · reprendre la thèse</span><div class="sk w95"></div><div class="sk w80"></div><div class="sk w50"></div></div>
+                  <div class="wf-pane"><span class="wf-eyebrow">Point 3 · appuyer sur le texte</span><div class="sk w88"></div><div class="sk w62"></div></div>
+                </div>
+              </div>
+              <div style="padding:14px 18px;border-top:1px solid #eee9de;display:flex;flex-direction:column;gap:11px;background:#fdfcf9">
+                <div class="wf-pane" style="border-color:#e0cba8;background:#fdf6ea;flex-direction:row;align-items:center;gap:16px">
+                  <div style="flex:1;display:flex;flex-direction:column;gap:5px">
+                    <span class="wf-eyebrow" style="color:#8a5a2e">Ce que tu as à reprendre — une seule chose</span>
+                    <p class="wf-txt" style="margin:0;color:#3f3a32">Reprends ton deuxième paragraphe : dis en une phrase pourquoi ce point de départ ne peut pas être mis en doute.</p>
+                  </div>
+                  <div class="wf-btn cdx" style="width:190px">Reprendre mon texte</div>
+                </div>
+                <div style="display:flex;gap:9px"><div class="wf-fold" style="flex:1"><i>▸</i><b>La consigne</b></div><div class="wf-fold" style="flex:1"><i>▸</i><b>Le texte de départ · Descartes</b></div></div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div>
+          <p class="dv-scr">Téléphone · 390 — le retour</p>
+          <div class="dv-card" style="width:390px">
+            <div class="wf">
+              <div class="wf-bar" style="gap:6px"><span class="wf-back">←</span><span class="wf-h1" style="font-size:12.5px;flex:1;min-width:0">Explication — Descartes</span><span class="wf-chip">4/6</span></div>
+              <div class="wf-sticky"><span class="wf-pin">collé en haut</span><b>À rendre</b><span style="color:#8b8478">version finale avant ven. 12</span></div>
+              <div style="padding:12px;display:flex;flex-direction:column;gap:11px">
+                <div class="wf-seg"><span>Mon texte</span><span class="on">Le retour · 3</span></div>
+                <div class="wf-corr"><span class="wf-eyebrow" style="color:#7d8a68">Ce que tu as réussi</span><div style="display:flex;flex-direction:column;gap:5px"><div class="sk w95" style="background:#dbe2d1"></div><div class="sk w62" style="background:#dbe2d1"></div></div></div>
+                <div class="wf-pane"><span class="wf-eyebrow">Point 2 · reprendre la thèse</span><div class="sk w95"></div><div class="sk w80"></div><div class="sk w50"></div><span style="font-size:10px;color:#8b8478;margin-top:2px">▸ voir le passage de mon texte</span></div>
+                <div class="wf-pane"><span class="wf-eyebrow">Point 3 · appuyer sur le texte</span><div class="sk w88"></div><div class="sk w62"></div><span style="font-size:10px;color:#8b8478;margin-top:2px">▸ voir le passage de mon texte</span></div>
+                <div class="wf-pane" style="border-color:#e0cba8;background:#fdf6ea">
+                  <span class="wf-eyebrow" style="color:#8a5a2e">Ce que tu as à reprendre — une seule chose</span>
+                  <p class="wf-txt" style="margin:0;color:#3f3a32">Reprends ton deuxième paragraphe : dis en une phrase pourquoi ce point de départ ne peut pas être mis en doute.</p>
+                </div>
+                <div class="wf-btn cdx" style="padding:14px">Reprendre mon texte</div>
+                <div class="wf-fold"><i>▸</i><b>La consigne, le texte de départ</b></div>
+              </div>
+            </div>
+          </div>
+          <p class="dv-note">Le côte à côte de l'ordi devient une bascule <b>Mon texte / Le retour</b> ; chaque point peut renvoyer au passage concerné plutôt que d'obliger à faire l'aller-retour de tête.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- ─────────────── 2f — RETOUR D'UN CHOIX ─────────────── -->
+    <div class="dv-opt" id="2f" data-screen-label="2f Retour choix multiple">
+      <div class="dv-olabel"><a class="dv-oid" href="#2f">2f</a><b>Retour d'un choix</b> — la correction occupe la grande colonne de gauche ; à droite, en haut, la <b>consigne</b> reste posée avec la répartition que l'élève avait faite. Pas de version finale à ces exercices : l'écran le dit et referme.</div>
+      <div class="dv-row">
+        <div>
+          <p class="dv-scr">Ordinateur / tablette · 1040</p>
+          <div class="dv-card" style="width:1040px">
+            <div class="wf">
+              <div class="wf-bar"><span class="wf-back">← Exercices</span><span class="wf-h1">Repérer l'erreur — quatre lectures</span><span class="wf-sub">réponse enregistrée · 09:40</span></div>
+              <div style="padding:9px 14px;border-bottom:1px solid #eee9de;background:#fbf9f4;display:flex;align-items:center;gap:12px">
+                <div class="wf-fil"><span class="ok">✓ Préparer</span><span class="ok">✓ Répondre</span><span class="ok">✓ Se juger</span><span class="on">Retour</span></div>
+              </div>
+              <div style="display:grid;grid-template-columns:1fr 380px;align-items:stretch">
+                <div style="padding:16px 18px;display:flex;flex-direction:column;gap:11px">
+                  <span class="wf-eyebrow">Ton retour</span>
+                  <div class="wf-corr">
+                    <span class="wf-eyebrow" style="color:#7d8a68">Ce qu'il fallait voir</span>
+                    <span style="font-size:12px;color:#2f2a23;font-weight:600">Lecture B — penser suffit à prouver qu'on existe.</span>
+                    <div style="display:flex;flex-direction:column;gap:5px"><div class="sk w95" style="background:#dbe2d1"></div><div class="sk w80" style="background:#dbe2d1"></div></div>
+                  </div>
+                  <div class="wf-pane"><span class="wf-eyebrow">Pourquoi c'est celle-là</span><div class="sk w95"></div><div class="sk w88"></div><div class="sk w62"></div></div>
+                  <div class="wf-pane" style="border-color:#dcd6c9;background:#fbfaf7"><span class="wf-eyebrow">Ce que tu avais retenu — « Lecture A »</span><div class="sk w95"></div><div class="sk w70"></div></div>
+                  <div style="display:flex;align-items:center;gap:12px;margin-top:2px">
+                    <span style="font-size:11px;color:#8b8478;flex:1">Cet exercice s'arrête ici — il n'y a pas de version finale à rendre.</span>
+                    <div class="wf-btn ghost" style="width:200px">← Retour à mes exercices</div>
+                  </div>
+                </div>
+                <div style="padding:16px;display:flex;flex-direction:column;gap:10px;border-left:1px solid #eee9de;background:#fbfaf7">
+                  <div class="wf-pane">
+                    <span class="wf-eyebrow">La consigne</span>
+                    <p class="wf-txt" style="margin:0;color:#3f3a32;font-size:11.5px">Parmi ces quatre lectures du passage, répartis 100 jetons selon celle que tu crois juste.</p>
+                  </div>
+                  <div class="wf-pane" style="gap:8px">
+                    <span class="wf-eyebrow">Ce que tu avais posé</span>
+                    <div style="display:flex;flex-direction:column;gap:7px">
+                      <div style="display:flex;align-items:center;gap:8px"><span style="font-size:11px;color:#3f3a32;flex:1">Lecture A</span><span class="wf-track" style="width:110px;flex:none"><i style="width:60%"></i></span><span class="wf-num">60</span></div>
+                      <div style="display:flex;align-items:center;gap:8px"><span style="font-size:11px;color:#3f3a32;flex:1">Lecture B</span><span class="wf-track" style="width:110px;flex:none"><i style="width:30%"></i></span><span class="wf-num">30</span></div>
+                      <div style="display:flex;align-items:center;gap:8px"><span style="font-size:11px;color:#3f3a32;flex:1">Lecture C</span><span class="wf-track" style="width:110px;flex:none"><i style="width:10%"></i></span><span class="wf-num">10</span></div>
+                      <div style="display:flex;align-items:center;gap:8px"><span style="font-size:11px;color:#3f3a32;flex:1">Lecture D</span><span class="wf-track" style="width:110px;flex:none"><i style="width:0"></i></span><span class="wf-num">0</span></div>
+                    </div>
+                  </div>
+                  <div class="wf-fold"><i>▸</i><b>Le passage</b></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div>
+          <p class="dv-scr">Téléphone · 390 — le retour</p>
+          <div class="dv-card" style="width:390px">
+            <div class="wf">
+              <div class="wf-bar" style="gap:6px"><span class="wf-back">←</span><span class="wf-h1" style="font-size:12.5px;flex:1;min-width:0">Repérer l'erreur</span><span class="wf-chip">4/4</span></div>
+              <div class="wf-sticky"><i style="font-style:normal;color:#a49c8e;font-size:10px">▾</i><b>La consigne</b><span style="color:#8b8478;flex:1;min-width:0;overflow:hidden;white-space:nowrap;text-overflow:ellipsis">Répartis 100 jetons entre…</span></div>
+              <div style="padding:12px;display:flex;flex-direction:column;gap:11px">
+                <div class="wf-corr">
+                  <span class="wf-eyebrow" style="color:#7d8a68">Ce qu'il fallait voir</span>
+                  <span style="font-size:12px;color:#2f2a23;font-weight:600">Lecture B — penser suffit à prouver qu'on existe.</span>
+                  <div style="display:flex;flex-direction:column;gap:5px"><div class="sk w95" style="background:#dbe2d1"></div><div class="sk w70" style="background:#dbe2d1"></div></div>
+                </div>
+                <div class="wf-pane"><span class="wf-eyebrow">Pourquoi c'est celle-là</span><div class="sk w95"></div><div class="sk w88"></div><div class="sk w50"></div></div>
+                <div class="wf-pane" style="background:#fbfaf7"><span class="wf-eyebrow">Ce que tu avais retenu — « Lecture A »</span><div class="sk w95"></div><div class="sk w62"></div></div>
+                <div class="wf-fold"><i>▸</i><b>Ce que tu avais posé</b><span class="wf-chip">A 60 · B 30 · C 10</span></div>
+                <span style="font-size:10.5px;color:#8b8478;text-align:center">Cet exercice s'arrête ici.</span>
+                <div class="wf-btn ghost" style="padding:14px">← Retour à mes exercices</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+  <p class="dv-next">Trois formes, une règle : <b>la colonne qui porte le travail est la plus large</b> — l'écriture en <a href="#2a">2a</a>, la matière en <a href="#2c">2c</a>, l'égalité en <a href="#2b">2b</a>. « Se juger » <a href="#2d">2d</a> est un écran à lui seul, sans matière ni champ. Les retours <a href="#2e">2e</a> / <a href="#2f">2f</a> diffèrent par ce qu'il faut comparer : son propre texte, ou la bonne réponse. Dis-moi ce qui bouge, et je passe au rendu charte.</p>
+</section>
+
+<section class="dv-turn" id="t1">
+  <div class="dv-thd"><a class="dv-tid" href="#t1">1</a><span class="dv-tname">Tour 1 — Codex · onglet Exercices (élève) : l'accueil, et le plan de travail retenu</span><span class="dv-cap">un écran de travail : une seule chose à faire à la fois, la consigne jamais perdue</span></div>
+  <div class="dv-opts">
+
+    <!-- ─────────────────────────── 1a — ACCUEIL ─────────────────────────── -->
+    <div class="dv-opt" id="1a" data-screen-label="1a Accueil onglet Exercices">
+      <div class="dv-olabel"><a class="dv-oid" href="#1a">1a</a>L'accueil de l'onglet — trois groupes séparés (<b>À faire</b> / <b>En attente de ton retour</b> / <b>Terminés</b>), l'échéance sur chaque ligne, une action par ligne. Pas de compteur de progression, pas d'agrégat : une liste et une porte.</div>
+      <div class="dv-row">
+
+        <div>
+          <p class="dv-scr">Ordinateur / tablette · 1040</p>
+          <div class="dv-card" style="width:1040px">
+            <div class="wf">
+              <div class="wf-bar"><span class="wf-back">← Retour</span><span class="wf-h1">Codex · Exercices</span><span class="wf-sub">Ce que tu écris à la maison, à l'écran.</span></div>
+              <div style="padding:20px;display:flex;flex-direction:column;gap:22px">
+
+                <div style="display:flex;flex-direction:column;gap:9px">
+                  <div style="display:flex;align-items:baseline;gap:9px"><span class="wf-eyebrow">À faire · 2</span><span style="font-size:10.5px;color:#8b8478">le plus proche en premier</span></div>
+                  <div class="wf-task" style="padding:15px;border-color:#cdd3c1;background:#fdfdfa">
+                    <span class="wf-p" style="width:36px;height:36px"></span>
+                    <span style="flex:1;min-width:0"><b style="font-size:13.5px">Explication de texte — Descartes</b><span class="m">Argumentation · un cas · ~30 min</span></span>
+                    <span class="wf-due hot">à rendre mer. 10</span>
+                    <span class="wf-btn cdx">Commencer</span>
+                  </div>
+                  <div class="wf-task" style="padding:15px">
+                    <span class="wf-p" style="width:36px;height:36px"></span>
+                    <span style="flex:1;min-width:0"><b style="font-size:13.5px">Deux cas — reprise de thèse</b><span class="m">Structure · deux cas, l'un après l'autre · commencé mardi</span></span>
+                    <span class="wf-due">à rendre dim. 14</span>
+                    <span class="wf-btn ghost">Reprendre</span>
+                  </div>
+                </div>
+
+                <div style="display:flex;flex-direction:column;gap:9px">
+                  <div style="display:flex;align-items:baseline;gap:9px"><span class="wf-eyebrow">En attente de ton retour · 2</span><span style="font-size:10.5px;color:#8b8478">rien à faire pour l'instant</span></div>
+                  <div class="wf-task" style="background:#fbfaf7">
+                    <span class="wf-p" style="opacity:.7"></span>
+                    <span style="flex:1;min-width:0"><b>Synthèse — deux documents</b><span class="m">rendue lundi</span></span>
+                    <span class="wf-chip wait">retour en préparation</span>
+                  </div>
+                  <div class="wf-task" style="background:#fbfaf7">
+                    <span class="wf-p" style="opacity:.7"></span>
+                    <span style="flex:1;min-width:0"><b>Explication — extrait 4</b><span class="m">retour reçu · version finale à rendre avant ven. 12</span></span>
+                    <span class="wf-due hot">à reprendre</span>
+                    <span class="wf-btn ghost">Ouvrir</span>
+                  </div>
+                </div>
+
+                <div style="display:flex;flex-direction:column;gap:9px">
+                  <div class="wf-fold"><i>▸</i><b>Terminés · 5</b><span style="font-size:10.5px;color:#8b8478">tu peux les relire</span></div>
+                  <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px">
+                    <div class="wf-task wf-done" style="padding:10px"><span class="wf-p" style="width:22px;height:22px"></span><span style="flex:1;min-width:0"><b style="font-size:11.5px">Reprise de synthèse</b><span class="m">1er sept.</span></span></div>
+                    <div class="wf-task wf-done" style="padding:10px"><span class="wf-p" style="width:22px;height:22px"></span><span style="flex:1;min-width:0"><b style="font-size:11.5px">Dissertation — plan</b><span class="m">28 août</span></span></div>
+                    <div class="wf-task wf-done" style="padding:10px"><span class="wf-p" style="width:22px;height:22px"></span><span style="flex:1;min-width:0"><b style="font-size:11.5px">Deux cas — causes</b><span class="m">25 août</span></span></div>
+                  </div>
+                </div>
+
+              </div>
+            </div>
+          </div>
+          <p class="dv-note">Le groupe « en attente » distingue deux choses que la liste actuelle mélange : <b>l'attente</b> (retour en préparation, aucune action) et <b>la reprise due</b> (retour reçu, version finale à rendre).</p>
+        </div>
+
+        <div>
+          <p class="dv-scr">Téléphone · 390</p>
+          <div class="dv-card" style="width:390px">
+            <div class="wf">
+              <div class="wf-bar" style="flex-wrap:wrap;gap:4px"><span class="wf-back">← Retour</span><span class="wf-h1" style="width:100%">Codex · Exercices</span><span class="wf-sub">Ce que tu écris à la maison.</span></div>
+              <div style="padding:14px;display:flex;flex-direction:column;gap:18px">
+                <div style="display:flex;flex-direction:column;gap:8px">
+                  <span class="wf-eyebrow">À faire · 2</span>
+                  <div style="border:1px solid #cdd3c1;border-radius:9px;background:#fdfdfa;padding:13px;display:flex;flex-direction:column;gap:10px">
+                    <div><b style="font-size:13px;color:#2f2a23">Explication de texte — Descartes</b><div style="font-size:10px;color:#8b8478;margin-top:3px">Argumentation · un cas · ~30 min</div></div>
+                    <div style="display:flex;align-items:center;gap:8px"><span class="wf-due hot">à rendre mer. 10</span></div>
+                    <div class="wf-btn cdx">Commencer</div>
+                  </div>
+                  <div style="border:1px solid #e2ddd2;border-radius:9px;padding:13px;display:flex;flex-direction:column;gap:10px">
+                    <div><b style="font-size:13px;color:#2f2a23">Deux cas — reprise de thèse</b><div style="font-size:10px;color:#8b8478;margin-top:3px">Structure · commencé mardi</div></div>
+                    <div><span class="wf-due">à rendre dim. 14</span></div>
+                    <div class="wf-btn ghost">Reprendre</div>
+                  </div>
+                </div>
+                <div style="display:flex;flex-direction:column;gap:8px">
+                  <span class="wf-eyebrow">En attente de ton retour · 2</span>
+                  <div class="wf-task" style="background:#fbfaf7;padding:12px"><span style="flex:1;min-width:0"><b>Synthèse — deux documents</b><span class="m">rendue lundi</span></span><span class="wf-chip wait">en préparation</span></div>
+                  <div class="wf-task" style="background:#fbfaf7;padding:12px"><span style="flex:1;min-width:0"><b>Explication — extrait 4</b><span class="m">à reprendre avant ven. 12</span></span><span style="font-size:12px;color:#8b8478">›</span></div>
+                </div>
+                <div class="wf-fold"><i>▸</i><b>Terminés · 5</b></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- ────────────────── 1b — DÉROULÉ : PLAN DE TRAVAIL 2 COLONNES ────────────────── -->
+    <div class="dv-opt" id="1b" data-screen-label="1b Deroule plan de travail deux colonnes">
+      <div class="dv-olabel"><a class="dv-oid" href="#1b">1b</a>Le déroulé en <b>plan de travail</b> : à gauche la matière (consigne, texte, matériau) qui ne bouge pas, à droite l'écriture. Les temps passés se replient en une ligne. Sur téléphone, les deux colonnes deviennent <b>Lire / Écrire</b>, avec la consigne collée en haut.</div>
+      <div class="dv-row">
+
+        <div>
+          <p class="dv-scr">Ordinateur / tablette · 1040 — temps 2, écrire</p>
+          <div class="dv-card" style="width:1040px">
+            <div class="wf">
+              <div class="wf-bar"><span class="wf-back">← Exercices</span><span class="wf-h1">Explication de texte — Descartes</span><span class="wf-sub">~30 min · à rendre mer. 10</span></div>
+              <div style="padding:9px 14px;border-bottom:1px solid #eee9de;background:#fbf9f4;display:flex;align-items:center;gap:12px">
+                <div class="wf-fil"><span class="ok">✓ Préparer</span><span class="on">Écrire</span><span>Se juger</span><span>Retour</span><span>Réviser</span><span>Retour final</span></div>
+                <span style="margin-left:auto;font-size:10px;color:#8b8478">brouillon enregistré · 14:02</span>
+              </div>
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:0;align-items:stretch">
+
+                <div style="padding:16px;display:flex;flex-direction:column;gap:11px;border-right:1px solid #eee9de;background:#fbfaf7">
+                  <span class="wf-eyebrow">La matière</span>
+                  <div class="wf-pane">
+                    <span class="wf-eyebrow">La consigne</span>
+                    <p class="wf-txt" style="margin:0;color:#3f3a32;font-size:11.5px">Explique ce que Descartes appelle <b>« je pense, donc je suis »</b>, et dis pourquoi il en fait un point de départ.</p>
+                  </div>
+                  <div class="wf-pane">
+                    <span class="wf-eyebrow">Le texte · Descartes, Discours de la méthode</span>
+                    <div class="wf-mat">
+                      <div class="sk w95"></div><div class="sk w88"></div>
+                      <div style="display:flex;flex-direction:column;gap:6px;padding:5px 6px;border-radius:4px" class="wf-mark"><div class="sk d w95"></div><div class="sk d w70"></div></div>
+                      <div class="sk w95"></div><div class="sk w80"></div><div class="sk w62"></div>
+                      <div class="wf-scrollcue" style="margin-top:2px">↕ le texte défile ici seul</div>
+                    </div>
+                    <span style="font-size:9.5px;color:#a49c8e">Le passage surligné est celui que ton professeur a choisi.</span>
+                  </div>
+                  <div class="wf-fold"><i>▸</i><b>De quoi t'aider</b></div>
+                  <div class="wf-fold"><i>▸</i><b>Un exemple, sur un autre sujet</b></div>
+                  <div class="wf-fold"><i>▸</i><b>Ce sur quoi tu butais la dernière fois</b><span class="wf-chip">2 points</span></div>
+                </div>
+
+                <div style="padding:16px;display:flex;flex-direction:column;gap:11px">
+                  <div style="display:flex;align-items:baseline;gap:8px"><span class="wf-eyebrow">Ton écriture</span><span style="margin-left:auto;font-size:10px;color:#8b8478">v1</span></div>
+                  <div class="wf-ta" style="min-height:250px">
+                    <div class="sk w95"></div><div class="sk w88"></div><div class="sk w95"></div><div class="sk w70"></div>
+                    <div style="height:8px"></div>
+                    <div class="sk w95"></div><div class="sk w80"></div><div class="sk w40"></div>
+                    <div style="flex:1"></div>
+                    <div style="display:flex;align-items:center;gap:8px;border-top:1px solid #eee9de;padding-top:9px"><span style="font-size:9.5px;color:#a49c8e">tu écris ici</span><span style="margin-left:auto;font-size:9.5px;color:#a49c8e">1 240 signes</span></div>
+                  </div>
+                  <div class="wf-pane warm">
+                    <span class="wf-eyebrow">Avant de rendre</span>
+                    <div class="wf-txt" style="display:flex;flex-direction:column;gap:7px">
+                      <span>☐ J'ai relu ma réponse en entier.</span>
+                      <span>☐ J'ai écrit ce texte moi-même.</span>
+                      <span>☐ Je sais quoi dire si on me demande pourquoi.</span>
+                    </div>
+                  </div>
+                  <div class="wf-btn cdx" style="padding:13px">Rendre ma v1</div>
+                  <span style="font-size:9.5px;color:#a49c8e;text-align:center">Tu pourras la reprendre après le retour.</span>
+                </div>
+
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div>
+          <p class="dv-scr">Ordinateur / tablette · 1040 — temps 4, le retour arrive</p>
+          <div class="dv-card" style="width:1040px">
+            <div class="wf">
+              <div class="wf-bar"><span class="wf-back">← Exercices</span><span class="wf-h1">Explication de texte — Descartes</span><span class="wf-sub">v1 rendue mardi 14:11</span></div>
+              <div style="padding:9px 14px;border-bottom:1px solid #eee9de;background:#fbf9f4;display:flex;align-items:center;gap:12px">
+                <div class="wf-fil"><span class="ok">✓ Préparer</span><span class="ok">✓ Écrire</span><span class="ok">✓ Se juger</span><span class="on">Retour</span><span>Réviser</span><span>Retour final</span></div>
+                <span style="margin-left:auto;font-size:10px;color:#8b8478">version finale à rendre avant ven. 12</span>
+              </div>
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:0;align-items:stretch">
+                <div style="padding:16px;display:flex;flex-direction:column;gap:9px;border-right:1px solid #eee9de;background:#fbfaf7">
+                  <span class="wf-eyebrow">La matière</span>
+                  <div class="wf-fold"><i>▸</i><b>La consigne</b></div>
+                  <div class="wf-fold"><i>▸</i><b>Le texte · Descartes</b></div>
+                  <div class="wf-fold"><i>▸</i><b>De quoi t'aider</b></div>
+                  <span class="wf-eyebrow" style="margin-top:6px">Ce que tu avais écrit</span>
+                  <div class="wf-ta" style="background:#f8f6f1;min-height:150px"><div class="sk w95"></div><div class="sk w88"></div><div class="sk w95"></div><div class="sk w62"></div><div style="height:6px"></div><div class="sk w80"></div><div class="sk w40"></div><span style="font-size:9.5px;color:#a49c8e;margin-top:4px">v1 · lecture seule</span></div>
+                </div>
+                <div style="padding:16px;display:flex;flex-direction:column;gap:11px">
+                  <span class="wf-eyebrow">Ton retour</span>
+                  <div class="wf-corr">
+                    <span class="wf-eyebrow" style="color:#7d8a68">Ce qu'il fallait voir</span>
+                    <div style="display:flex;flex-direction:column;gap:5px"><div class="sk w95" style="background:#dbe2d1"></div><div class="sk w80" style="background:#dbe2d1"></div></div>
+                  </div>
+                  <div class="wf-pane">
+                    <span class="wf-eyebrow">Point 1 sur 3 · ce que tu as réussi</span>
+                    <div class="sk w88"></div><div class="sk w62"></div>
+                  </div>
+                  <div class="wf-pane">
+                    <span class="wf-eyebrow">Point 2 sur 3</span>
+                    <div class="sk w95"></div><div class="sk w70"></div>
+                  </div>
+                  <div class="wf-pane" style="border-color:#e0cba8;background:#fdf6ea">
+                    <span class="wf-eyebrow" style="color:#8a5a2e">Ce que tu as à reprendre — une seule chose</span>
+                    <p class="wf-txt" style="margin:0;color:#3f3a32">Reprends ton deuxième paragraphe : dis en une phrase pourquoi ce point de départ ne peut pas être mis en doute.</p>
+                  </div>
+                  <div class="wf-btn cdx" style="padding:13px">Reprendre mon texte</div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <p class="dv-note">Le retour ne s'empile pas sous le champ : il <b>prend la colonne de droite</b>, la v1 passe à gauche en lecture seule. L'action de révision est unique et se voit.</p>
+        </div>
+
+        <div>
+          <p class="dv-scr">Téléphone · 390 — vue Écrire</p>
+          <div class="dv-card" style="width:390px">
+            <div class="wf">
+              <div class="wf-bar" style="gap:6px"><span class="wf-back">←</span><span class="wf-h1" style="font-size:12.5px;flex:1;min-width:0">Explication — Descartes</span><span class="wf-chip">2/6</span></div>
+              <div class="wf-sticky"><span class="wf-pin">collé en haut</span><i style="font-style:normal;color:#a49c8e;font-size:10px">▾</i><b>La consigne</b><span style="color:#8b8478;flex:1;min-width:0;overflow:hidden;white-space:nowrap;text-overflow:ellipsis">Explique ce que Descartes appelle…</span></div>
+              <div style="padding:12px;display:flex;flex-direction:column;gap:11px">
+                <div class="wf-seg"><span>Lire</span><span class="on">Écrire</span></div>
+                <div class="wf-ta" style="min-height:300px">
+                  <div class="sk w95"></div><div class="sk w88"></div><div class="sk w95"></div><div class="sk w70"></div>
+                  <div style="height:8px"></div><div class="sk w88"></div><div class="sk w50"></div>
+                  <div style="flex:1"></div>
+                  <div style="display:flex;border-top:1px solid #eee9de;padding-top:9px"><span style="font-size:9.5px;color:#a49c8e">brouillon enregistré</span><span style="margin-left:auto;font-size:9.5px;color:#a49c8e">1 240 signes</span></div>
+                </div>
+                <div class="wf-pane warm">
+                  <span class="wf-eyebrow">Avant de rendre</span>
+                  <div class="wf-txt" style="display:flex;flex-direction:column;gap:8px"><span>☐ J'ai relu ma réponse.</span><span>☐ J'ai écrit ce texte moi-même.</span><span>☐ Je sais quoi dire si on me demande pourquoi.</span></div>
+                </div>
+                <div class="wf-btn cdx" style="padding:14px">Rendre ma v1</div>
+              </div>
+            </div>
+          </div>
+          <p class="dv-note">Un seul basculement, pas d'onglets multiples : <b>Lire</b> (texte + matériau + aides) ou <b>Écrire</b>. La consigne reste lisible en une ligne, dépliable d'un pouce.</p>
+        </div>
+
+      </div>
+    </div>
+
+  </div>
+  <p class="dv-next">Retenu : <a href="#1a">1a</a> pour l'accueil, <a href="#1b">1b</a> (plan de travail) pour le déroulé. Les formes d'exercice, l'écran « se juger » et les retours sont au <a href="#t2">tour 2</a>.</p>
+</section>
+
+</x-dc>
+</body>
+</html>
