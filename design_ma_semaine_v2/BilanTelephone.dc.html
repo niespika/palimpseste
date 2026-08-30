@@ -1,0 +1,118 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="anonymous">
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,600;0,700;1,500&amp;family=EB+Garamond:ital,wght@0,400;0,500;0,600;1,400&amp;family=Alegreya+Sans:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+  <style>
+    body { margin: 0; background: #F4EFE6; font-family: 'EB Garamond', Georgia, serif; color: #221C16; }
+    a { color: #5A4632; text-decoration: none; }
+    a:hover { color: #221C16; }
+    .sur { font: 700 11px 'Alegreya Sans', sans-serif; letter-spacing: .11em; text-transform: uppercase; color: #8A6F4E; }
+    .pas { width: 36px; height: 36px; border-radius: 50%; background: #DCE6DF; display: inline-flex; align-items: center; justify-content: center; overflow: hidden; flex: none; }
+    .pas.s { width: 26px; height: 26px; }
+    .pas img { width: 88%; height: 88%; object-fit: cover; filter: brightness(1.09) contrast(1.04); mix-blend-mode: multiply; }
+    .btn { font: 600 14px 'Alegreya Sans', sans-serif; background: #6B5A46; color: #F1EADD; padding: 12px 22px; border-radius: 10px; white-space: nowrap; display: inline-flex; align-items: center; justify-content: center; min-height: 44px; box-sizing: border-box; }
+    .btn2 { font: 600 14px 'Alegreya Sans', sans-serif; color: #5A4632; background: #FBF8F1; border: 1px solid #D8CCB4; padding: 11px 21px; border-radius: 10px; white-space: nowrap; display: inline-flex; align-items: center; justify-content: center; min-height: 44px; box-sizing: border-box; }
+    .btnOcre { font: 600 14px 'Alegreya Sans', sans-serif; background: #AC8552; color: #FBF5EA; padding: 12px 22px; border-radius: 10px; white-space: nowrap; display: inline-flex; align-items: center; justify-content: center; min-height: 44px; box-sizing: border-box; }
+    .ech { font: 600 12px 'Alegreya Sans', sans-serif; color: #9A6A2E; background: #EFE4CF; border: 1px solid rgba(154,106,46,.32); border-radius: 99px; padding: 5px 12px; white-space: nowrap; }
+    .etat { font: 500 13px 'Alegreya Sans', sans-serif; color: #8A6F4E; }
+    .frise { display: flex; gap: 4px; }
+    .frise i { height: 8px; flex: 1; border-radius: 99px; background: #E4DBC9; display: block; }
+    .frise i.on { background: #737F5E; }
+    .capt { font: italic 15px/1.5 'Cormorant Garamond', serif; color: #5A4632; margin: 0; }
+    .clamp { display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+    .puce { display: flex; gap: 7px; font: 400 14px/1.4 'EB Garamond', serif; color: #5A4632; }
+    .puce b { color: #C9BBA0; font-weight: 400; }
+    .carte { background: #FBF8F1; border: 1px solid #E4DBC9; border-left: 3px solid #5A4632; border-radius: 12px; padding: 16px 18px; display: flex; flex-direction: column; gap: 13px; box-shadow: 0 1px 3px rgba(60,45,25,.05); box-sizing: border-box; }
+    .repli { display: flex; align-items: center; gap: 11px; background: #ECE4D6; border-radius: 11px; padding: 13px 16px; min-height: 48px; box-sizing: border-box; }
+    .repli b { flex: 1; font: 600 15px 'Alegreya Sans', sans-serif; color: #5A4632; }
+    .repli span.n { font: 500 14px 'Alegreya Sans', sans-serif; color: #8A6F4E; }
+    .segOn { flex: 1; text-align: center; font: 600 14px 'Alegreya Sans', sans-serif; background: #6B5A46; color: #F1EADD; padding: 13px 8px; }
+    .segOff { flex: 1; text-align: center; font: 500 14px 'Alegreya Sans', sans-serif; color: #A8906A; background: #ECE4D6; padding: 13px 8px; }
+    .seg { display: flex; border: 1px solid #D8CCB4; border-radius: 11px; overflow: hidden; background: #FBF8F1; }
+    .fait { font: 600 11px 'Alegreya Sans', sans-serif; letter-spacing: .04em; text-transform: uppercase; background: #E4E8D8; color: #5B6E4A; border-radius: 99px; padding: 3px 9px; }
+    .chipOk { display: inline-block; font: 600 11px 'Alegreya Sans', sans-serif; letter-spacing: .05em; text-transform: uppercase; background: #E4E8D8; color: #5B6E4A; border-radius: 99px; padding: 4px 11px; }
+    .chipAtt { display: inline-block; font: 600 11px 'Alegreya Sans', sans-serif; letter-spacing: .05em; text-transform: uppercase; background: #EFE4CF; color: #9A6A2E; border: 1px solid rgba(154,106,46,.32); border-radius: 99px; padding: 4px 11px; }
+    .comp { display: flex; align-items: center; gap: 12px; background: #FBF8F1; border: 1px solid #E4DBC9; border-radius: 12px; padding: 13px 17px; min-height: 48px; box-sizing: border-box; }
+    .comp .nom { flex: 1; font-family: 'Cormorant Garamond', serif; font-weight: 600; font-size: 20px; color: #221C16; }
+    .grise { display: flex; align-items: center; gap: 12px; background: #F7F2E8; border: 1px dashed #D8CCB4; border-radius: 12px; padding: 13px 17px; min-height: 44px; box-sizing: border-box; }
+    .rang { display: flex; align-items: center; gap: 12px; min-height: 52px; padding: 8px 15px; box-sizing: border-box; }
+    .amorce { flex: 1; min-width: 0; font: 400 16px 'EB Garamond', serif; color: #221C16; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .amorce.d { color: #5A4632; }
+    .ouvert { background: #FBF8F1; border: 1px solid #D8CCB4; border-radius: 12px; overflow: hidden; box-shadow: 0 2px 6px rgba(60,45,25,.06); }
+    .ferme { background: #FBF8F1; border: 1px solid #E4DBC9; border-radius: 12px; }
+    .ligneComp { display: flex; align-items: center; gap: 10px; background: #FBF8F1; border: 1px solid #E4DBC9; border-radius: 10px; padding: 10px 13px; min-height: 44px; box-sizing: border-box; }
+    .ligneComp .n { flex: 1; font-family: 'Cormorant Garamond', serif; font-weight: 600; font-size: 18px; color: #221C16; }
+  </style>
+</helmet>
+
+<div style="width: 390px; box-sizing: border-box; background: #F4EFE6;">
+
+  <div style="padding: 14px 16px; border-bottom: 1px solid #E4DBC9;">
+    <span style="font: 600 11px 'Alegreya Sans', sans-serif; letter-spacing: .06em; background: #E8DFCB; color: #5A4632; padding: 4px 10px; border-radius: 20px; display: inline-block; margin-bottom: 7px;">C · téléphone · Bilan</span>
+    <p class="capt" style="font-size: 14px;">Une colonne&nbsp;: le mot des copies non mesurées, puis les six compétences enroulées. La dépliée empile ses deux écarts.</p>
+  </div>
+  <div style="background: #F6F1E5; border-bottom: 1px solid #E4DBC9; padding: 12px 16px;">
+    <div style="font: 400 12px 'Alegreya Sans', sans-serif; color: #8A7355;">‹ Tableau de bord</div>
+    <div style="font-family: 'Cormorant Garamond', serif; font-weight: 600; font-size: 24px; color: #221C16;">Ma semaine</div>
+    <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-top: 10px;">
+      <span style="width: 46px; height: 46px; border: 1px solid #E4DBC9; background: #FBF8F1; border-radius: 10px; display: inline-flex; align-items: center; justify-content: center; font: 500 15px 'Alegreya Sans', sans-serif; color: #5A4632;">◀</span>
+      <span style="font: 600 16px 'EB Garamond', serif; color: #5A4632;">24 → 30 août</span>
+      <span style="width: 46px; height: 46px; border: 1px solid #E4DBC9; background: #FBF8F1; border-radius: 10px; display: inline-flex; align-items: center; justify-content: center; font: 500 15px 'Alegreya Sans', sans-serif; color: #5A4632;">▶</span>
+    </div>
+  </div>
+
+  <div style="padding: 14px 16px 24px; display: flex; flex-direction: column; gap: 14px;">
+
+        <div class="seg"><span class="segOff" style="color: #5A4632; background: #FBF8F1;">Travail</span><span class="segOn">Bilan</span></div>
+
+      <p style="background: #EFE4CF; border: 1px solid rgba(154,106,46,.4); border-radius: 12px; padding: 14px 16px; font: 400 16px/1.45 'EB Garamond', serif; color: #221C16; margin: 0;">Une de tes copies n'a pas encore été corrigée&nbsp;: ce bilan ne la compte pas encore.</p>
+    <p style="font: 400 16px 'EB Garamond', serif; color: #5A4632; margin: 0 0 -4px 2px;">4 compétences mesurées sur 6.</p>
+    <div class="sur" style="margin: 0 0 -4px 2px;">Choisis une compétence</div>
+    <div style="display: flex; flex-direction: column; gap: 8px;">
+      <div class="ouvert">
+        <div style="display: flex; align-items: center; gap: 12px; padding: 12px 16px; background: #ECE4D6; border-bottom: 1px solid #E4DBC9; min-height: 48px; box-sizing: border-box;">
+          <span style="color: #8A6F4E; font-size: 12px;">▾</span>
+          <span style="flex: 1; font-family: 'Cormorant Garamond', serif; font-weight: 700; font-size: 21px; color: #221C16;">Argumentation</span>
+          <span class="chipAtt">à reprendre</span>
+        </div>
+        <div style="padding: 18px; display: flex; flex-direction: column; gap: 18px;">
+          <div>
+            <span class="chipOk">Tu y arrives</span>
+            <p style="font: 400 17px/1.55 'EB Garamond', serif; color: #221C16; margin: 9px 0 0;">sur la reprise de thèse et tes raisons qui tournent en rond — <em style="color: #5A4632;">là où tu avais du mal jusqu'ici</em>.</p>
+          </div>
+          <div style="border-top: 1px solid #E4DBC9; padding-top: 18px;">
+            <span class="chipAtt">À reprendre</span>
+            <p style="font: 400 17px/1.55 'EB Garamond', serif; color: #221C16; margin: 9px 0 0;">l'ancrage des exemples — <em style="color: #5A4632;">c'était pourtant un de tes points forts</em>.</p>
+          </div>
+        </div>
+      </div>
+      <div class="comp"><span style="color: #A8906A; font-size: 12px;">▸</span><span class="nom">Synthèse</span><span class="chipOk">réussi</span></div>
+      <div class="comp"><span style="color: #A8906A; font-size: 12px;">▸</span><span class="nom">Expression</span><span style="font: italic 14px 'EB Garamond', serif; color: #8A6F4E;">comme d'habitude</span></div>
+      <div class="comp"><span style="color: #A8906A; font-size: 12px;">▸</span><span class="nom">Structure</span><span style="font: italic 14px 'EB Garamond', serif; color: #8A6F4E;">comme d'habitude</span></div>
+      <div class="grise"><span style="flex: 1; font-family: 'Cormorant Garamond', serif; font-weight: 500; font-size: 20px; color: #8A6F4E;">Connaissance</span><span style="font: italic 14px 'EB Garamond', serif; color: #A8906A;">non mesurée</span></div>
+      <div class="grise"><span style="flex: 1; font-family: 'Cormorant Garamond', serif; font-weight: 500; font-size: 20px; color: #8A6F4E;">Questionnement</span><span style="font: italic 14px 'EB Garamond', serif; color: #A8906A;">non mesurée</span></div>
+    </div>
+    <div style="display: flex; flex-direction: column; gap: 8px;">
+      <div class="repli"><span style="color: #8A6F4E; font-size: 12px;">▸</span><b>Ta semaine</b><span class="n">5 sur 5</span></div>
+    </div>
+
+    <div style="background: #FBF8F1; border: 1px solid #E4DBC9; border-top: 3px solid #AC8552; border-radius: 12px; padding: 16px 20px;">
+      <div class="sur" style="margin-bottom: 8px;">En faire plus</div>
+      <div style="display: flex; flex-direction: column; gap: 12px; align-items: flex-start;">
+        <p style="font: 400 16px/1.45 'EB Garamond', serif; color: #5A4632; margin: 0; max-width: 62ch;">Tu as fini ta semaine. Si tu veux, tu peux demander un exercice de plus.</p>
+        <span class="btnOcre">Demander un exercice de plus</span>
+      </div>
+    </div>
+  </div>
+</div>
+</x-dc>
+</body>
+</html>

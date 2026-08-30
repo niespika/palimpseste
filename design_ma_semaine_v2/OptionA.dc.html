@@ -1,0 +1,117 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="anonymous">
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,600;0,700;1,500&amp;family=EB+Garamond:ital,wght@0,400;0,500;0,600;1,400&amp;family=Alegreya+Sans:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+  <style>
+    body { margin: 0; background: #F4EFE6; font-family: 'EB Garamond', Georgia, serif; color: #221C16; }
+    a { color: #5A4632; text-decoration: none; }
+    a:hover { color: #221C16; }
+    .sur { font: 700 11px 'Alegreya Sans', sans-serif; letter-spacing: .11em; text-transform: uppercase; color: #8A6F4E; }
+    .pas { width: 40px; height: 40px; border-radius: 50%; background: #DCE6DF; display: inline-flex; align-items: center; justify-content: center; overflow: hidden; flex: none; }
+    .pas.s { width: 28px; height: 28px; }
+    .pas img { width: 88%; height: 88%; object-fit: cover; filter: brightness(1.09) contrast(1.04); mix-blend-mode: multiply; }
+    .btn { font: 600 14px 'Alegreya Sans', sans-serif; background: #6B5A46; color: #F1EADD; padding: 12px 22px; border-radius: 10px; white-space: nowrap; display: inline-block; }
+    .btn2 { font: 600 14px 'Alegreya Sans', sans-serif; color: #5A4632; background: #FBF8F1; border: 1px solid #D8CCB4; padding: 11px 21px; border-radius: 10px; white-space: nowrap; display: inline-block; }
+    .ech { font: 600 12px 'Alegreya Sans', sans-serif; color: #9A6A2E; background: #EFE4CF; border: 1px solid rgba(154,106,46,.32); border-radius: 99px; padding: 5px 12px; white-space: nowrap; }
+    .etat { font: 500 13px 'Alegreya Sans', sans-serif; color: #8A6F4E; }
+    .frise { display: flex; gap: 4px; }
+    .frise i { height: 8px; flex: 1; border-radius: 99px; background: #E4DBC9; display: block; }
+    .frise i.on { background: #737F5E; }
+    .repli { display: flex; align-items: center; gap: 11px; background: #ECE4D6; border-radius: 11px; padding: 13px 16px; min-height: 44px; box-sizing: border-box; }
+    .capt { font: italic 15px/1.5 'Cormorant Garamond', serif; color: #5A4632; margin: 0; }
+  </style>
+</helmet>
+
+<div style="width: 1100px; box-sizing: border-box; background: #F4EFE6;">
+
+  <div style="padding: 18px 30px; border-bottom: 1px solid #E4DBC9; display: flex; align-items: flex-start; gap: 12px;">
+    <span style="font: 600 12px 'Alegreya Sans', sans-serif; letter-spacing: .06em; background: #E8DFCB; color: #5A4632; padding: 5px 12px; border-radius: 20px; flex: none;">A · hiérarchie</span>
+    <p class="capt"><strong style="font-style: normal; font-weight: 600;">Un seul exercice porte le poids ; les autres sont un index.</strong> La consigne fait 129&nbsp;caractères en médiane — on n'en lit qu'une à la fois, et les suivantes ne se distinguent que par leur état et leur échéance. <em>Coût&nbsp;: changer d'exercice demande un clic, et la forme de la semaine se lit sur la frise, plus sur la liste.</em></p>
+  </div>
+
+  <div style="background: #F6F1E5; border-bottom: 1px solid #E4DBC9; padding: 14px 30px; display: flex; align-items: flex-end; justify-content: space-between; gap: 22px;">
+    <div>
+      <div style="font: 400 12px 'Alegreya Sans', sans-serif; color: #8A7355;">‹ Tableau de bord</div>
+      <div style="font-family: 'Cormorant Garamond', serif; font-weight: 600; font-size: 29px; color: #221C16;">Ma semaine</div>
+    </div>
+    <div style="display: flex; align-items: center; gap: 8px; flex: none;">
+      <span style="font: 500 13px 'Alegreya Sans', sans-serif; color: #5A4632; background: #FBF8F1; border: 1px solid #E4DBC9; border-radius: 9px; padding: 9px 13px;">◀ précédente</span>
+      <span style="font: 600 15px 'EB Garamond', serif; color: #5A4632; min-width: 128px; text-align: center;">24 → 30 août</span>
+      <span style="font: 500 13px 'Alegreya Sans', sans-serif; color: #5A4632; background: #FBF8F1; border: 1px solid #E4DBC9; border-radius: 9px; padding: 9px 13px;">suivante ▶</span>
+    </div>
+  </div>
+
+  <div style="padding: 20px 30px 34px; display: flex; flex-direction: column; gap: 20px;">
+
+    <div style="display: flex; align-items: center; gap: 26px;">
+      <div style="display: flex; border: 1px solid #D8CCB4; border-radius: 11px; overflow: hidden; background: #FBF8F1; flex: none; width: 260px;">
+        <span style="flex: 1; text-align: center; font: 600 14px 'Alegreya Sans', sans-serif; background: #6B5A46; color: #F1EADD; padding: 11px 8px;">Travail · 3</span>
+        <span style="flex: 1; text-align: center; font: 500 14px 'Alegreya Sans', sans-serif; color: #A8906A; background: #ECE4D6; padding: 11px 8px;">Bilan</span>
+      </div>
+      <div style="flex: 1; min-width: 0;">
+        <div style="display: flex; align-items: baseline; gap: 12px;">
+          <span style="font-family: 'Cormorant Garamond', serif; font-weight: 700; font-size: 21px; color: #221C16;">1 exercice fait sur 4</span>
+          <span style="font: italic 14px 'EB Garamond', serif; color: #8A6F4E;">ton bilan s'ouvrira quand tu auras fini</span>
+        </div>
+        <div class="frise" style="margin-top: 8px;"><i class="on"></i><i></i><i></i><i></i></div>
+      </div>
+    </div>
+
+    <div>
+      <div class="sur" style="margin: 0 0 10px 2px;">À faire maintenant</div>
+      <div style="background: #FBF8F1; border: 1px solid #E4DBC9; border-left: 3px solid #5A4632; border-radius: 12px; padding: 20px 22px; display: flex; gap: 18px; align-items: flex-start; box-shadow: 0 1px 3px rgba(60,45,25,.06);">
+        <span class="pas"><img src="codex.png" alt=""></span>
+        <div style="flex: 1; min-width: 0;">
+          <p style="font: 400 19px/1.5 'EB Garamond', serif; color: #221C16; margin: 0; max-width: 62ch;">Ici, l'énoncé du sujet est pris tel quel&nbsp;: la partie y répond sans jamais l'interroger. Surligne le mot de l'énoncé qu'il fallait retravailler, et dis ce qu'il pouvait vouloir dire.</p>
+          <div style="display: flex; align-items: center; gap: 12px; margin-top: 14px;">
+            <span class="etat">retour à lire</span>
+            <span class="ech">à rendre dim. 30</span>
+          </div>
+        </div>
+        <span class="btn" style="align-self: center;">Ouvrir</span>
+      </div>
+    </div>
+
+    <div>
+      <div class="sur" style="margin: 0 0 10px 2px;">Ensuite · 2</div>
+      <div style="display: flex; flex-direction: column; gap: 8px;">
+        <div style="background: #FBF8F1; border: 1px solid #E4DBC9; border-radius: 11px; padding: 12px 16px; display: flex; align-items: center; gap: 13px;">
+          <span class="pas s"><img src="codex.png" alt=""></span>
+          <span style="flex: 1; min-width: 0; font: 400 16px 'EB Garamond', serif; color: #5A4632; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">Ce début de devoir annonce un débat sans dire quelle autre solution on pourrait apporter à sa question. Surligne la phrase où…</span>
+          <span class="etat">commencé</span>
+          <span class="ech">dim. 30</span>
+          <span class="btn2">Reprendre</span>
+        </div>
+        <div style="background: #FBF8F1; border: 1px solid #E4DBC9; border-radius: 11px; padding: 12px 16px; display: flex; align-items: center; gap: 13px;">
+          <span class="pas s"><img src="codex.png" alt=""></span>
+          <span style="flex: 1; min-width: 0; font: 400 16px 'EB Garamond', serif; color: #5A4632; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">La question de cette introduction n'est que le sujet retourné. Écris à sa place, en une phrase, une question qui dise autre chose.</span>
+          <span class="etat">commencé</span>
+          <span class="ech">dim. 30</span>
+          <span class="btn2">Reprendre</span>
+        </div>
+      </div>
+    </div>
+
+    <div style="display: flex; flex-direction: column; gap: 8px;">
+      <div class="repli"><span style="color: #8A6F4E; font-size: 12px;">▸</span><span style="flex: 1; font: 600 15px 'Alegreya Sans', sans-serif; color: #5A4632;">Déjà fait</span><span style="font: 500 14px 'Alegreya Sans', sans-serif; color: #8A6F4E;">1</span></div>
+      <div class="repli"><span style="color: #8A6F4E; font-size: 12px;">▸</span><span style="flex: 1; font: 600 15px 'Alegreya Sans', sans-serif; color: #5A4632;">Ce que la semaine travaille</span><span style="font: 500 14px 'Alegreya Sans', sans-serif; color: #8A6F4E;">5 compétences</span></div>
+    </div>
+
+    <div style="background: #FBF8F1; border: 1px solid #E4DBC9; border-top: 3px solid #AC8552; border-radius: 12px; padding: 14px 18px;">
+      <div class="sur" style="margin-bottom: 7px;">En faire plus</div>
+      <p style="font: 400 15px/1.45 'EB Garamond', serif; color: #5A4632; margin: 0;">Quand tu auras fini les exercices de ta semaine, tu pourras en demander un de plus.</p>
+    </div>
+
+  </div>
+</div>
+</x-dc>
+</body>
+</html>
