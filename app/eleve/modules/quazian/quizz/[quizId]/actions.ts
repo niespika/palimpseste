@@ -42,7 +42,13 @@ export interface QuestionPassation {
   enonce: string
   options: string[]      // dans l'ordre randomisé pour cet élève
   optionMapping: number[]  // optionMapping[i] = index dans options originales
-  indexCorrecteRandomise: number  // index dans options randomisées (pour le retour post-quizz)
+  // ⛔⛔ PAS DE BONNE RÉPONSE ICI — C-RLS-4, 29/08. Le champ
+  //    `indexCorrecteRandomise` a vécu là, servi à la PASSATION, donc lisible
+  //    AVANT de répondre : la charge de l'action part au navigateur, où elle
+  //    se lit. *Il n'était consommé nulle part* — son commentaire annonçait
+  //    « pour le retour post-quizz », mais le retour passe par
+  //    `chargerRetourQuizz`, qui a ses propres gardes (soumis ET quizz fermé).
+  //    Le retirer est donc une SUPPRESSION, pas un arbitrage.
 }
 
 export interface DonneesPassation {
@@ -71,9 +77,15 @@ export async function initialiserSession(quizId: string): Promise<DonneesPassati
     .eq('eleve_id', userId)
     .maybeSingle()
 
-  const { data: questions } = await supabase
+  // Lecture serveur (C1 · C-RLS-4) : plus aucune policy de LECTURE élève sur
+  // `quazian_questions` — la ligne entière portait `index_correct`, et une
+  // policy RLS ne restreint pas les colonnes. La garde est le code, et c'est
+  // `chargerQuizAccessible` ci-dessus (la classe de l'élève), plus stricte que
+  // la policy qu'elle remplace : celle-là ne vérifiait pas la classe.
+  // ⛔ NE PAS y ajouter `index_correct` : cette charge part au navigateur.
+  const { data: questions } = await createAdminClient()
     .from('quazian_questions')
-    .select('id, enonce, options, index_correct')
+    .select('id, enonce, options')
     .eq('quiz_id', quizId)
     .order('created_at', { ascending: true })
 
@@ -136,14 +148,12 @@ export async function initialiserSession(quizId: string): Promise<DonneesPassati
     const q = qMap[qId]
     const mapping = ordreOptions[qId] ?? [0, 1, 2, 3]
     const optionsRandomisees = mapping.map((i) => q.options[i])
-    const indexCorrecteRandomise = mapping.indexOf(q.index_correct)
 
     return {
       id: q.id,
       enonce: q.enonce,
       options: optionsRandomisees,
       optionMapping: mapping,
-      indexCorrecteRandomise,
     }
   })
 
@@ -235,8 +245,11 @@ export async function soumettreQuizz(sessionId: string, quizId: string): Promise
     .select('id')
   if (!verrou || verrou.length === 0) return {} // déjà soumise, pas la sienne, ou pas ce quizz
 
-  // Récupérer les questions et leurs bonnes réponses
-  const { data: questions } = await supabase
+  // Récupérer les questions et leurs bonnes réponses.
+  // Lecture serveur (C-RLS-4) : la colonne ne sort pas d'ici — elle entre dans
+  // `calculerScoreBrier` et rien de plus. Gardée par `chargerQuizAccessible`
+  // et par le verrou de session ci-dessus.
+  const { data: questions } = await admin
     .from('quazian_questions')
     .select('id, index_correct')
     .eq('quiz_id', quizId)
@@ -344,7 +357,10 @@ export async function chargerRetourQuizz(quizId: string): Promise<{
   if (!quizz) return { error: 'Quizz introuvable.' }
   if (quizz.statut !== 'ferme') return { error: 'Le quizz n\'est pas encore corrigé.' }
 
-  const { data: questions } = await supabase
+  // Lecture serveur (C-RLS-4). ⭐ ICI la bonne réponse SORT, et c'est voulu :
+  // c'est le retour. Trois gardes la précèdent, toutes au-dessus — session
+  // SOUMISE, quizz FERMÉ, quizz de la classe de l'élève.
+  const { data: questions } = await createAdminClient()
     .from('quazian_questions')
     .select('id, enonce, options, index_correct')
     .eq('quiz_id', quizId)
