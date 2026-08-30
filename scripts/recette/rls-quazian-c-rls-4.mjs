@@ -71,12 +71,44 @@ function dit(verdict, titre, detail) {
 }
 
 const eleve = createClient(URL, ANON, { auth: { autoRefreshToken: false, persistSession: false } })
-const { data: auth, error: errAuth } = await eleve.auth.signInWithPassword({ email: EMAIL, password: PASSWORD })
-if (errAuth || !auth?.user) {
-  console.error(`⛔ connexion élève impossible : ${errAuth?.message ?? 'sans utilisateur'}`)
-  process.exit(2)
+
+// ── Ouvrir une session ÉLÈVE, par le mot de passe ou, à défaut, par un lien ──
+// ⭐ LE REPLI EST LE PATRON DU DÉPÔT, et il est ici VERSIONNÉ pour la première
+//    fois : `auth.admin.generateLink({ type: 'magiclink' })` puis `verifyOtp`
+//    sur le client ANON. La session obtenue est un vrai JWT d'élève — les
+//    lectures qui suivent restent donc bien « dans la peau d'un élève ».
+// ⚠️ POURQUOI IL EXISTE : le 29/08, au milieu du smoke, `signInWithPassword`
+//    s'est mis à rendre « Invalid login credentials » sur un compte intact
+//    (existant, confirmé, non banni) dont le mot de passe n'avait pas bougé —
+//    puis à repasser quelques minutes plus tard. ⛔ **Le message ment sur la
+//    cause** : c'est très probablement la limite de débit de l'auth, que
+//    Supabase rend sous le même « Invalid login credentials » qu'un vrai
+//    refus. *Une recette qui s'arrête sur ce message accuse le mauvais
+//    coupable ;* le repli la fait continuer, et la ligne « session par … »
+//    dit toujours par quelle voie elle est entrée.
+async function sessionEleve() {
+  const parMdp = PASSWORD
+    ? await eleve.auth.signInWithPassword({ email: EMAIL, password: PASSWORD })
+    : { error: { message: 'aucun TEST_ELEVE_PASSWORD' } }
+  if (parMdp.data?.user) return { user: parMdp.data.user, voie: 'mot de passe' }
+
+  const SECRET = process.env.SUPABASE_SERVICE_ROLE_KEY
+  if (!SECRET) throw new Error(`connexion refusée (${parMdp.error?.message}) et pas de clé de service pour le repli.`)
+  const admin = createClient(URL, SECRET, { auth: { autoRefreshToken: false, persistSession: false } })
+  const { data: lien, error: eLien } = await admin.auth.admin.generateLink({ type: 'magiclink', email: EMAIL })
+  if (eLien) throw new Error(`lien — ${eLien.message}`)
+  const { data: ses, error: eOtp } = await eleve.auth.verifyOtp({
+    type: 'magiclink', token_hash: lien.properties.hashed_token,
+  })
+  if (eOtp || !ses?.user) throw new Error(`vérification du lien — ${eOtp?.message ?? 'sans utilisateur'}`)
+  return { user: ses.user, voie: `lien magique (le mot de passe est refusé : ${parMdp.error?.message})` }
 }
-console.log(`\nDans la peau de « ${EMAIL} » (${auth.user.id})\n`)
+
+let auth, voie
+try { ({ user: auth, voie } = await sessionEleve()) }
+catch (e) { console.error(`⛔ ${e.message}`); process.exit(2) }
+auth = { user: auth }
+console.log(`\nDans la peau de « ${EMAIL} » (${auth.user.id}) — session par ${voie}\n`)
 
 // ── De quoi la base dispose-t-elle ? (vu par l'élève lui-même) ──────────────
 const quizz = lecture('quizz visibles', await eleve

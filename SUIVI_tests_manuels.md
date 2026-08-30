@@ -5620,7 +5620,21 @@ manifeste, mission, « fait quand » — sont **identiques au mot près** à ceu
 
 ### Ce qui reste à jouer en recette — et qui ne m'appartient pas
 
-- [ ] **C4L7-11 · LES SMOKES À L'ÉCRAN — UNE SESSION CODE NE SAISIT PAS D'IDENTIFIANTS.** Le
+- [ ] **C4L7-11 · LES SMOKES À L'ÉCRAN — UNE SESSION CODE NE SAISIT PAS D'IDENTIFIANTS.**
+  ⚠️⚠️ **CETTE LISTE EST CE QU'ON LIT QUAND ON DEMANDE « QUELS SMOKES RESTENT » — ET ELLE EST
+  SUSPECTE DEPUIS LE 29/08.** Une passe de mesure la donne périmée aux trois quarts *(elle soutient
+  que plusieurs de ces gestes ont un JUMEAU DÉJÀ COCHÉ ailleurs dans ce fichier, joués le 24/08)*.
+  ⛔ **Je ne l'ai pas réécrite, et voici pourquoi** : à la mesure des CASES, les **neuf** cases
+  nommées ci-dessous sont **toutes encore décochées** — la passe parlait du GESTE joué ailleurs, pas
+  de la case, ce qui est une affirmation plus profonde et qu'il faut vérifier **une par une**.
+  *Rayer neuf lignes sur un compte qu'on n'a pas refait serait pire que la liste périmée.*
+  ⭐ **Ce qui EST mesuré (29/08)** : `C4L14-12` a été requalifiée en CORRECTIF le 24/08 *(sous
+  `C4L7-15`)* et n'est donc plus un smoke ; la prémisse technique de `C4L13-15` est plus faible que
+  son texte *(le motif `export type { X }` n'existe nulle part au dépôt — le vrai motif est que le
+  résolveur de recette ne charge pas `next/cache`)* ; et `C4L14-13` a **perdu sa condition de
+  blocage**, les crans 1 et 3 abondant désormais dans les deux bases.
+  ⚠️ **À faire, et c'est une passe à part** : reprendre les neuf, jumeau par jumeau.
+  Le
   protocole est celui de C4-L6 : la session travaille en requête, **Louis ouvre son propre Chrome**
   pour la face professeur. ⭐ **Le décor est LAISSÉ EN BASE exprès, et le chemin est préparé à
   `C4L4-4`.** Restent : `C4L2-13` *(les quatre écrans du pilotage)* · `C4L3-17` *(le déroulé élève)* ·
@@ -5859,7 +5873,12 @@ Tout ce qui suit est donc la face **professeur**, et **les smokes élève resten
   l'un après l'autre — chacun porte sa propre consigne », et la durée reste, qui vaut pour la paire
   entière. ⭐ **Vérifié à l'écran : plus aucun `["` visible.**
 
-- [ ] **C4L7-12 · RAPPELS — CE QUI EST DÛ ET QUI N'EST PAS DE CE LOT.** `C4L11-C` *(le cron vu
+- [ ] **C4L7-12 · RAPPELS — CE QUI EST DÛ ET QUI N'EST PAS DE CE LOT.**
+  ⚠️ **Mesuré le 29/08, case par case** : sur les quatre rappels ci-dessous, **`C4L11-E` et
+  `C4L14-16` sont déjà COCHÉES**, et `C4L11-C` comme `SEC-21` n'ont **pas d'entrée propre** dans ce
+  fichier — la liste renvoie donc à des identifiants qu'on ne peut pas ouvrir. Seul `C4L14-13`
+  reste une case ouverte, et **sa condition de blocage est tombée** *(les crans 1 et 3 abondent
+  dans les deux bases depuis un import de banque)*. `C4L11-C` *(le cron vu
   tourner chez l'hébergeur — **condition : le premier déploiement**, pas moi ; C4-L7 a appelé la
   route **lui-même**, ce qui coche `C4L11-B` et non `C4L11-C`)* · `C4L11-E` et `SEC-21` *(le smoke
   « créer un élève depuis l'écran professeur », après le retrait de `handle_new_user()` le 21/08 —
@@ -8511,9 +8530,39 @@ corrigés le jour même._
   ⭐ Le champ `(a)` **n'était lu nulle part** : son commentaire annonçait « pour le retour
   post-quizz », mais le retour passe par `chargerRetourQuizz` *(soumis ET quizz fermé)*. Suppression
   pure, `tsc` propre, `npm test` **1929/1929**.
-  ⚠️ **Reste dû — le smoke élève de la passation** : la lecture serveur est vérifiée *(5 lignes,
-  `id, enonce, options`, sans la réponse)* et les types compilent, mais **personne n'a repassé un
-  quizz dans un navigateur** depuis le changement de client.
+  ✅ **LE SMOKE ÉLÈVE EST JOUÉ — 29/08, au navigateur, sur un quizz `lance` de décor**
+  *(`scripts/recette/decor-quizz-lance.mjs`, semé puis retiré, base revenue à l'identique :
+  1 quizz · 5 questions · 1 session · 5 réponses · 1 note)*. Les quatre fonctions à **zéro
+  passage** ont tourné : création de session, `sauvegarderReponse`, `soumettreQuizz`, et le
+  retour. Note posée **14,35/20**, dé-randomisation vérifiée en base *(l'écran montrait C=50,
+  la base porte `p_b=0.5`, l'index d'origine de la bonne réponse)*.
+  ⭐⭐ **ET LA PREUVE DU CHEMIN 1 CESSE D'ÊTRE UN `grep`** : **79 Ko** de page et de scripts
+  inspectés dans le navigateur, **zéro occurrence** de `indexCorrecteRandomise`, `index_correct`
+  ou `indexCorrect`. *La sonde disait « le texte du fichier ne porte plus la colonne » ; le
+  navigateur dit « la charge servie ne la porte pas ».*
+  ⛔⛔ **ET LE SMOKE A TROUVÉ CE QU'AUCUN TEST NE VOYAIT** — voir `C-RLS-4-bis` ci-dessous.
+
+- [x] **C-RLS-4-bis · ⛔ CE QUE LE SMOKE A TROUVÉ — trois défauts que `tsc` et `npm test` ne
+  pouvaient pas voir, tous ANTÉRIEURS au correctif C-RLS-4.** ✅ **Corrigés le 29/08.**
+  **(1) `soumettreQuizz` posait `submitted_at` AVANT de lire les questions.** Une lecture en échec
+  laissait l'élève « soumis », **sans note**, devant un écran de succès — et le compare-and-set
+  `.is('submitted_at', null)` lui interdisait de recommencer. La lecture remonte **avant** le
+  verrou *(aucune course : les questions d'un quizz ne bougent pas ; les réponses, si — leur
+  instantané a besoin du verrou, alors leur échec le RELÂCHE)*. ⭐ **Éprouvé par l'échec** : en
+  retirant ses questions au quizz sous les pieds de l'élève, le serveur refuse et
+  **`submitted_at` reste NULL, aucune note écrite**.
+  **(2) Les trois lectures ne capturaient aucun `{ error }`.** `supabase-js` ne lève pas : un
+  retour vide était **muet**, et « Aucune question trouvée » s'affichait pour ce qui était une
+  panne de lecture. Les deux cas se disent désormais séparément.
+  **(3) ⛔⛔ ET LE CLIENT JETAIT LE RETOUR DE L'ACTION** — `await soumettreQuizz(...)` puis
+  `setSoumis(true)` **sans condition** *(`PassationJetons.tsx`)*. **Mesuré au navigateur : le
+  serveur refusait correctement et l'écran affichait « Quizz soumis ! ».** L'élève serait parti.
+  ⭐ *Une garde serveur qui refuse en silence ne protège que la base.* L'écran porte maintenant le
+  motif du refus et l'élève reste sur son quizz — contre-épreuvé.
+  ⭐ **La garde `length === 0` manquait ici alors qu'elle existe dans `fermerQuizz`** *(contre le
+  `NaN` de `scoreMoyen /= questions.length`)* — **et elle ne POUVAIT pas s'y trouver** tant que la
+  lecture venait après le verrou : il était déjà trop tard pour refuser.
+
 
 ### ⚠️ À éprouver — gardes absentes dont le coût ou l'exploitabilité restent à mesurer
 

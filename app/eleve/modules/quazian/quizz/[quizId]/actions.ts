@@ -83,12 +83,17 @@ export async function initialiserSession(quizId: string): Promise<DonneesPassati
   // `chargerQuizAccessible` ci-dessus (la classe de l'élève), plus stricte que
   // la policy qu'elle remplace : celle-là ne vérifiait pas la classe.
   // ⛔ NE PAS y ajouter `index_correct` : cette charge part au navigateur.
-  const { data: questions } = await createAdminClient()
+  const { data: questions, error: eQuestions } = await createAdminClient()
     .from('quazian_questions')
     .select('id, enonce, options')
     .eq('quiz_id', quizId)
     .order('created_at', { ascending: true })
 
+  // ⚠️ UNE PANNE N'EST PAS UN VIDE. `supabase-js` NE LÈVE PAS : sans ce test,
+  //    une lecture en échec rendait `data: null` et l'élève lisait « Aucune
+  //    question trouvée » — le message d'un quizz mal conçu pour ce qui est une
+  //    panne de lecture. Les deux cas se disent maintenant séparément.
+  if (eQuestions) return { error: `Lecture des questions impossible : ${eQuestions.message}` }
   if (!questions || questions.length === 0) return { error: 'Aucune question trouvée.' }
 
   let sessionId: string
@@ -224,6 +229,27 @@ export async function soumettreQuizz(sessionId: string, quizId: string): Promise
   const quizz = await chargerQuizAccessible(supabase, userId, quizId)
   if (!quizz) return { error: 'Quizz introuvable' }
 
+  // ⛔⛔ LES QUESTIONS SE LISENT AVANT LE VERROU, ET C'EST L'ORDRE QUI COMPTE.
+  //    Elles étaient lues APRÈS : une lecture en échec laissait alors l'élève
+  //    `submitted_at` posé, SANS note, devant un écran de succès — et le
+  //    compare-and-set `.is('submitted_at', null)` lui interdisait de
+  //    recommencer. *On s'arrête avant de figer quoi que ce soit* — c'est la
+  //    doctrine que `fermerQuizz` écrit déjà pour le professeur.
+  // ⭐ Aucune course : les questions d'un quizz ne bougent pas pendant la
+  //    passation, contrairement aux réponses, dont l'instantané a besoin du
+  //    verrou (`sauvegarderReponse` refuse dès que `submitted_at` est posé).
+  const { data: questions, error: eQuestions } = await admin
+    .from('quazian_questions')
+    .select('id, index_correct')
+    .eq('quiz_id', quizId)
+
+  if (eQuestions) return { error: `Lecture des questions impossible : ${eQuestions.message}` }
+  // ⚠️ `length === 0` autant que `null` : `scoreMoyen /= questions.length`
+  //    écrirait un NaN. La garde jumelle existe dans `fermerQuizz`, elle
+  //    manquait ici — et elle ne pouvait pas s'y trouver tant que la lecture
+  //    venait après le verrou, puisqu'il était déjà trop tard pour refuser.
+  if (questions.length === 0) return { error: 'Ce quizz n’a aucune question — rien à noter.' }
+
   // Verrou one-shot : marquer la session soumise SEULEMENT si elle appartient à l'élève et
   // n'est pas déjà soumise (compare-and-set sur submitted_at IS NULL). Empêche un re-scoring
   // après coup (re-soumission pour améliorer son score) et la double soumission.
@@ -245,22 +271,30 @@ export async function soumettreQuizz(sessionId: string, quizId: string): Promise
     .select('id')
   if (!verrou || verrou.length === 0) return {} // déjà soumise, pas la sienne, ou pas ce quizz
 
-  // Récupérer les questions et leurs bonnes réponses.
-  // Lecture serveur (C-RLS-4) : la colonne ne sort pas d'ici — elle entre dans
-  // `calculerScoreBrier` et rien de plus. Gardée par `chargerQuizAccessible`
-  // et par le verrou de session ci-dessus.
-  const { data: questions } = await admin
-    .from('quazian_questions')
-    .select('id, index_correct')
-    .eq('quiz_id', quizId)
-
-  if (!questions) return { error: 'Questions introuvables' }
-
-  // Récupérer les réponses de cette session
-  const { data: reponses } = await supabase
+  // Récupérer les réponses de cette session.
+  // ⛔ CELLE-CI NE PEUT PAS REMONTER AVANT LE VERROU : c'est lui qui fige
+  //    l'instantané — `sauvegarderReponse` n'écrit plus une fois `submitted_at`
+  //    posé. Lire avant, ce serait manquer la dernière réponse de l'élève.
+  // ⭐ Alors son échec RELÂCHE le verrou, plutôt que de noter un élève sur des
+  //    réponses qu'on n'a pas lues : sans ce rattrapage, `repMap` restait vide
+  //    et les six questions étaient notées aux JETONS_NEUTRE, en silence.
+  const { data: reponses, error: eReponses } = await supabase
     .from('quazian_answers')
     .select('question_id, p_a, p_b, p_c, p_d, repondu')
     .eq('session_id', sessionId)
+
+  if (eReponses) {
+    // ⚠️ On ne relâche QUE le verrou qu'on vient de poser : le
+    //    `.eq('submitted_at', maintenant)` garantit qu'aucune autre écriture
+    //    n'est écrasée. Le quizz redevient ouvert — un état réparable.
+    await admin
+      .from('quazian_sessions')
+      .update({ submitted_at: null })
+      .eq('id', sessionId)
+      .eq('eleve_id', userId)
+      .eq('submitted_at', maintenant)
+    return { error: `Lecture des réponses impossible : ${eReponses.message} — ta soumission n’a pas été enregistrée, réessaie.` }
+  }
 
   const repMap: Record<string, typeof reponses extends (infer T)[] | null ? T : never> = {}
   for (const r of reponses ?? []) repMap[r.question_id] = r
@@ -360,16 +394,28 @@ export async function chargerRetourQuizz(quizId: string): Promise<{
   // Lecture serveur (C-RLS-4). ⭐ ICI la bonne réponse SORT, et c'est voulu :
   // c'est le retour. Trois gardes la précèdent, toutes au-dessus — session
   // SOUMISE, quizz FERMÉ, quizz de la classe de l'élève.
-  const { data: questions } = await createAdminClient()
+  const { data: questions, error: eQuestions } = await createAdminClient()
     .from('quazian_questions')
     .select('id, enonce, options, index_correct')
     .eq('quiz_id', quizId)
     .order('created_at', { ascending: true })
 
-  const { data: reponses } = await supabase
+  // ⛔ SANS CE TEST, UN RETOUR VIDE ÉTAIT MUET. `(questions ?? []).map(...)`
+  //    plus bas rendait une liste vide : l'élève voyait son écran de retour
+  //    sans une question, et rien nulle part ne disait pourquoi. Une panne se
+  //    dit ; un quizz sans question, c'est autre chose, et ça ne peut pas
+  //    arriver ici (le quizz est `ferme`, donc il a été passé).
+  if (eQuestions) return { error: `Lecture des questions impossible : ${eQuestions.message}` }
+
+  const { data: reponses, error: eReponses } = await supabase
     .from('quazian_answers')
     .select('question_id, p_a, p_b, p_c, p_d, repondu, score')
     .eq('session_id', session.id)
+
+  // ⚠️ Ici l'échec ne peut rien figer — le retour ne fait que LIRE. Mais un
+  //    retour qui montre « non répondu » partout parce que la lecture a raté
+  //    ment à l'élève sur ce qu'il a fait : on préfère le dire.
+  if (eReponses) return { error: `Lecture de tes réponses impossible : ${eReponses.message}` }
 
   const repMap: Record<string, typeof reponses extends (infer T)[] | null ? T : never> = {}
   for (const r of reponses ?? []) repMap[r.question_id] = r

@@ -11,10 +11,13 @@ version: 1.0.0
 > `scripts/recette/rls-quazian-c-rls-4.mjs` passe de **3 FAIL / sortie 1** à **4 PASS / sortie 0**.
 > ⛔⛔ **Et la mesure a trouvé plus large que le constat : il y avait DEUX policies, et la pire ne
 > vérifiait pas la classe** — n'importe quel élève lisait les réponses de n'importe quel quizz de la
-> plateforme ; les policies étant **OR'ées**, *n'en retirer qu'une n'aurait rien fermé*. ⚠️ **Reste dû :
-> le SMOKE ÉLÈVE de la passation** — les trois lectures sont passées au client admin, la lecture serveur
-> est vérifiée et `tsc`/`npm test` sont propres, mais **aucun quizz n'a été repassé dans un navigateur**.
-> **C'est la première chose à faire quand un quizz sera lançable.**
+> plateforme ; les policies étant **OR'ées**, *n'en retirer qu'une n'aurait rien fermé*. ✅ **ET LE SMOKE ÉLÈVE EST JOUÉ** *(29/08,
+> décor `scripts/recette/decor-quizz-lance.mjs`, semé puis retiré, base revenue à l'identique)* : les
+> quatre fonctions à **zéro passage** ont tourné, note posée **14,35/20**, et **79 Ko de page inspectés
+> sans une occurrence** de la bonne réponse. ⛔⛔ **Il a trouvé TROIS défauts qu'aucun test ne voyait**
+> *(`C-RLS-4-bis` au SUIVI)*, dont le pire : **le client jetait le retour de l'action** — le serveur
+> refusait, l'écran affichait « Quizz soumis ! », et l'élève serait parti. **C'est l'argument du smoke,
+> mesuré une fois de plus.**
 >
 > ⭐ **CE QUI VIENT ENSUITE** : les **six constats restants de la campagne C** *(§2, item 3)* — aucun
 > n'a d'échéance, et **chacun se MESURE d'abord** ; puis les campagnes **B → A → D** *(§4)*.

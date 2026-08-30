@@ -18,6 +18,8 @@ export function PassationJetons({ sessionId, quizId, questions, reponsesInitiale
   const [reponses, setReponses] = useState<Record<string, [number, number, number, number]>>(reponsesInitiales)
   const [pending, setPending] = useState(false)
   const [soumis, setSoumis] = useState(false)
+  // ⚠️ Distinct de `soumis` : une soumission REFUSÉE n'est pas une soumission.
+  const [erreur, setErreur] = useState<string | null>(null)
   const [secondesRestantes, setSecondesRestantes] = useState<number | null>(null)
 
   const question = questions[indexQuestion]
@@ -104,9 +106,18 @@ export function PassationJetons({ sessionId, quizId, questions, reponsesInitiale
     if (peutSoumettre) {
       await sauvegarderReponse(sessionId, question.id, jetonsActuels, question.optionMapping)
     }
-    await soumettreQuizz(sessionId, quizId)
-    setSoumis(true)
+    // ⛔⛔ LE RETOUR DE L'ACTION SE LIT — trouvé au smoke du 29/08, et par lui
+    //    SEUL. Il était jeté : `setSoumis(true)` suivait l'appel sans condition,
+    //    si bien qu'un refus du serveur affichait « Quizz soumis ! ». *Éprouvé en
+    //    retirant ses questions au quizz sous les pieds de l'élève* : le serveur
+    //    refusait bien — `submitted_at` restait NULL, aucune note écrite, l'élève
+    //    pouvait recommencer —, mais l'écran lui disait le contraire et il
+    //    serait parti. **Une garde serveur qui refuse en silence ne protège que
+    //    la base ; l'élève, lui, a besoin qu'on le lui dise.**
+    const retour = await soumettreQuizz(sessionId, quizId)
     setPending(false)
+    if (retour?.error) { setErreur(retour.error); return }
+    setSoumis(true)
   }, [soumis, pending, peutSoumettre, sessionId, question, jetonsActuels, quizId])
 
   // Garder la ref à jour (toujours la dernière closure)
@@ -251,6 +262,18 @@ export function PassationJetons({ sessionId, quizId, questions, reponsesInitiale
           </button>
         )}
       </div>
+      {/* ⛔ Le refus se DIT. Sans cela l'élève lisait « Quizz soumis ! » sur un
+          envoi que le serveur avait refusé, et repartait — sa session restant
+          ouverte, sa note jamais posée. Le ton reste celui d'un contretemps :
+          rien n'est perdu, sa copie est intacte, il peut recommencer. */}
+      {erreur && (
+        <p role="alert" className="mt-4 text-sm text-attention text-center">
+          {erreur}
+          <span className="block text-muet mt-1">
+            Rien n’est perdu — tes réponses sont enregistrées. Réessaie dans un instant.
+          </span>
+        </p>
+      )}
     </div>
   )
 }

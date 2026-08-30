@@ -73,3 +73,7 @@ scripts/recette/.reparation-c4l12-25-*.json
 #    d'un élève réel du bac à sable : c'est lui qui rend la base, et il meurt
 #    avec le `--retire` réussi.
 scripts/recette/.epreuve-reparation-c4l12-25.json
+
+# Registre local du décor de passation Quazian (scripts/recette/decor-quizz-lance.mjs).
+# Il porte des identifiants de quizz et de session de bac à sable.
+scripts/recette/.decor-quizz-lance.json
