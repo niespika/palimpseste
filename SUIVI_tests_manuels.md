@@ -8603,6 +8603,21 @@ corrigés le jour même._
   ⚠️ **Ce qui le rendait inerte n'était pas une garde** : **0 parcours assigné** à « Hors classe », donc la route
   mourait trois lignes plus loin sur un message pédagogique *(409, « aucun parcours daté »)*. **Une inertie qui
   tient à une configuration de données que deux clics du professeur défont.**
+  ✅ **SMOKE JOUÉ LE 30/08, SUR LA ROUTE RÉELLE, avec la session élève de Louis** *(`eleve1@test.com`,
+  bac à sable, serveur de dev)*. **Chemin légitime** *(T5, qui a le module et 2 parcours)* : **`HTTP 200` en
+  4,3 s**, réponse ancrée sur le parcours « Introduction à la philosophie ». **Aucune régression.** Écritures
+  vérifiées par requête : **+1 conversation** portant le **bon `classe_id`**, **+2 messages**, **+1 `api_couts`**
+  — `gemini-3.5-flash-lite`, 1525→98 jetons, **0,0007 USD**, attribué à T5 et au bon élève.
+  **Chemin de refus** *(une classe où il n'est pas inscrit)* : **`HTTP 403`**, message propre, et **rien n'a été
+  écrit ni facturé** — conversations et `api_couts` inchangés : **la garde tire AVANT le modèle**.
+  ⭐ **Contre-épreuve faite en amont, sous la VRAIE RLS et en PRODUCTION** *(identité réelle d'Eléonore, en
+  transaction annulée)* : THLP → `true`, « Hors classe » → `false`, 5 modules lisibles. ⛔ **Ce contrôle-là était
+  indispensable** : `classeAModule` lit `modules` et `classe_modules` **avec le client de l'ÉLÈVE**, alors que ses
+  trois appelants d'origine sont des actions PROF — sans policy de lecture élève, la garde aurait refusé **tout le
+  monde**. Elles existent : « Lecture modules authentifiés » et `classe_modules_eleve_read`.
+  ⚠️ **Non couvert en bac à sable** : le cas du défaut lui-même *(élève inscrit dans une classe SANS le module)* —
+  aucune configuration ne l'offre ici, et elle n'existe **qu'en production**. Elle a été éprouvée en SQL, pas par
+  la route.
   ⚠️ **Reste ouvert, distinct et plus large** : la route ne teste jamais `modules.actif`, là où ses deux sœurs
   Quazian et Codex le font. Éteindre `scriptorium` globalement retirerait la tuile **sans fermer la route** —
   et `classeAModule` ne le teste pas non plus, donc le manque vaut aussi pour ses trois autres appelants.
