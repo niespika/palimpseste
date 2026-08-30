@@ -30,31 +30,37 @@ export default function OffreDEnFairePlus({ invite }: { invite: string }) {
   const [reponse, setReponse] = useState<string | null>(null)
   const [enCours, demarrer] = useTransition()
 
+  // ⚠️ LA CARTE PARLE LA LANGUE DU RAIL, ET C'EST SON SEUL CHANGEMENT. Le filet
+  //    ocre et le bouton `bouton-plan` sont ceux de la maquette et des « boutons
+  //    estompés » de `CLAUDE.md` ; la carte de REFUS, rendue par `page.tsx`,
+  //    porte le même filet — les deux états de l'offre ne peuvent pas se
+  //    présenter autrement l'un que l'autre. ⛔ Le reste — l'action, la garde du
+  //    double clic, la phrase du retour — n'a pas bougé d'une ligne.
   return (
-    <section>
-      <h3 className="font-ui text-xs tracking-[0.1em] text-muet uppercase mb-2">
+    <section className="rounded-xl border border-bordure border-t-[3px] border-t-bouton-plan
+                        bg-surface p-4">
+      <h3 className="mb-2.5 font-ui text-[11px] font-bold uppercase tracking-[0.11em] text-muet">
         En faire plus
       </h3>
-      <div className="bg-surface border border-bordure rounded-xl p-5 space-y-3">
-        <p className="text-sm text-encre">{invite}</p>
-        <button
-          type="button"
-          disabled={enCours}
-          onClick={() => demarrer(async () => {
-            const r = await demanderUnExerciceDePlus()
-            // ⭐ Servi : la page se recharge (l'action `revalidatePath`) et
-            //   l'exercice apparaît dans la liste, avec son atelier et son lien.
-            //   On garde la phrase le temps du rendu, sans jamais annoncer un
-            //   succès que la base n'aurait pas écrit.
-            setReponse(r.phrase)
-          })}
-          className="font-ui text-sm text-encre border border-bordure rounded-full px-4 py-2
-                     hover:bg-parchemin-fonce transition-colors disabled:opacity-50"
-        >
-          {enCours ? 'Un instant…' : 'Demander un exercice de plus'}
-        </button>
-        {reponse && <p className="text-sm text-encre-douce">{reponse}</p>}
-      </div>
+      <p className="font-corps text-[15px] leading-snug text-encre">{invite}</p>
+      <button
+        type="button"
+        disabled={enCours}
+        onClick={() => demarrer(async () => {
+          const r = await demanderUnExerciceDePlus()
+          // ⭐ Servi : la page se recharge (l'action `revalidatePath`) et
+          //   l'exercice apparaît dans la liste, avec son atelier et son lien.
+          //   On garde la phrase le temps du rendu, sans jamais annoncer un
+          //   succès que la base n'aurait pas écrit.
+          setReponse(r.phrase)
+        })}
+        className="mt-3.5 flex min-h-[44px] w-full items-center justify-center rounded-[10px]
+                   bg-bouton-plan px-5 font-ui text-sm font-semibold text-bouton-plan-texte
+                   transition-opacity hover:opacity-90 disabled:opacity-50"
+      >
+        {enCours ? 'Un instant…' : 'Demander un exercice de plus'}
+      </button>
+      {reponse && <p className="mt-2.5 font-corps text-sm text-encre-douce">{reponse}</p>}
     </section>
   )
 }
