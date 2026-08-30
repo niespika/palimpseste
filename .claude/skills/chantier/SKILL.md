@@ -12,7 +12,8 @@ version: 1.0.0
 > chemin élève. Il ne reste de la campagne **aucun item daté** *(§2, item 3)*.
 >
 > ⛔⛔ **CE QUI RESTE, EN REVANCHE, NE SE RATTRAPE PAS** *(§1)* : l'ouverture de la semaine Fragments,
-> le segment 2, le comptage d'assiduité du **07/09** et la bascule de `profil_provisoire` du **14/09**.
+> le segment 2, **le comptage d'assiduité du 31/08** *(et non du 07/09 : le skill s'est trompé d'une
+> semaine — voir §1)* et la bascule de `profil_provisoire` du **14/09**.
 > **C'est là qu'une séance doit aller en premier**, pas dans les campagnes de revue.
 >
 > ⭐⭐ **LA LEÇON DE LA NUIT, ET ELLE VAUT POUR TOUTE LA SUITE — un constat SOUS-DÉCRIT presque
@@ -57,8 +58,19 @@ S1 `2026-08-24` *(diagnostic, hors routage)* · **S2 `2026-08-31`** *(calibratio
   corrigé et smoké **avant** cette ouverture — il aurait tiré au premier remplacement.
 - **le segment 2** *(calibration)* s'ouvre le **2026-08-31**. `routeur_decisions` : **0 ligne** en
   prod au 30/08.
-- **lundi 2026-09-07** — premier comptage d'assiduité réel *(`C4L13-14`, coût irréversible)*.
-  `assiduite_hebdo` : **0 ligne** en prod.
+- ⛔⛔ **lundi 2026-08-31, 09:30 UTC — LE PREMIER COMPTAGE D'ASSIDUITÉ RÉEL, et ce skill a
+  longtemps dit le 07/09 : C'ÉTAIT FAUX D'UNE SEMAINE.** Le cron compte la semaine **ÉCOULÉE** :
+  celui du 31/08 compte le **24/08**, qui est dans le semestre *(vérifié : 0 vacance la couvrant,
+  semestre actif 2026-08-24 → 2027-01-10)*. **Il écrira 62 lignes** — une par élève actif.
+  *Le coût irréversible tombe donc une semaine plus tôt que ce qui était écrit.* `assiduite_hebdo` :
+  **0 ligne** en prod au 30/08. ⭐ **Le geste de vérification, le lundi : recompter `assiduite_hebdo`
+  après 09:30 UTC. S'il reste à 0, le cron a échoué** — et le 0 d'avant ne prouvait rien, la seule
+  semaine écoulée jusque-là *(17/08)* tombant hors semestre.
+- ✅ **L'authentification des crons est PROUVÉE** *(30/08, tableau de bord Vercel)* : `CRON_SECRET`
+  existe, scopée **« Production and Preview »**, les crons sont **Enabled**, et surtout
+  **`/api/chaine` rend `200` toutes les minutes** contre la production — même garde
+  `Authorization: Bearer`, donc la chaîne fonctionne de bout en bout. ⭐ **Ce raccourci évite
+  d'attendre le lundi pour savoir** : le cron d'une minute est le témoin de celui de la semaine.
 - **lundi 2026-09-14** — la clôture de la calibration bascule `profil_provisoire`. L'écrivain est
   posé *(28/08)*, il se déclenche **sur l'état** *(segment ≥ 3)* et non sur une date, donc il
   rattrape un lundi manqué. **Avant ce jour, aucune lettre ne s'affiche à aucun élève** — mesuré :
@@ -88,7 +100,7 @@ déjà fermé quand la séance suivante l'a ouvert.*
 ⭐ **L'ordre a changé le 30/08 : ce sont les DATES qui commandent, plus les campagnes.**
 
 1. ⛔⛔ **CE QUI A UNE ÉCHÉANCE** *(le détail et les chiffres au §1)* — l'ouverture de la semaine
-   Fragments, le segment 2, le **07/09** *(premier comptage d'assiduité, coût irréversible)* et le
+   Fragments, le segment 2, le **31/08** *(premier comptage d'assiduité, coût irréversible — **PAS** le 07/09 : le cron compte la semaine ÉCOULÉE)* et le
    **14/09** *(bascule de `profil_provisoire` — avant ce jour **aucune lettre ne s'affiche**)*.
    **Mesurer l'état de chacun AVANT de conclure quoi que ce soit** : `assiduite_hebdo`,
    `routeur_decisions` et `quazian_quizzes` étaient tous à **0 ligne en prod** au 30/08.
