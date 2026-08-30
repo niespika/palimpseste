@@ -32,6 +32,73 @@ donnée d'abord.**
 
 ---
 
+## 0. ⚠️ LA BANQUE D'EXERCICES — l'urgence du 2026-08-30, et les chiffres à atteindre
+
+⭐⭐ **LE ROUTEUR S'ENCLENCHE LE 2026-08-31 À 9H30.** Ce qu'un élève reçoit dépend
+entièrement de ce que la banque contient. **Lire cette section avant toute autre.**
+
+### Ce qui a été fait le 30/08 — l'état à cette heure
+
+- ⭐ **La production a été VIDÉE de son corpus importé** *(`corpus_purge_exercices_importes.sql`,
+  `DELETE 247`, six drapeaux bons)*. Motif : l'import est **idempotent par `id_import`** et
+  tout y est en `.insert()` — redéposer par-dessus n'aurait **rien** fait. ⚠️ **Restent
+  intacts** : les **4 exercices faits à la main** du diagnostique et leurs **86 dépôts
+  d'élèves**, 187 mesures, 212 matériaux, 91 sujets.
+- ⭐ **La banque porte 186 exercices servables sans cours** *(257 cas)* — les seuls que le
+  routeur peut servir à un élève dont le cours n'a pas déclaré ses notions. Il n'en reste que
+  **2 cas signalés sur 257** *(c'était 60)*.
+- ⚠️ **RIEN N'EST ENCORE IMPORTÉ.** Le dépôt se fait à **`/prof/corpus`**, et c'est un geste
+  de Louis.
+
+### ⛔⛔ LES TROIS CELLULES À ZÉRO — le seul trou qui puisse faire échouer une séance
+
+Les cellules de calibration du routeur *(`GRAIN_DE_CALIBRATION`, `utils/routeur/ciblage.ts`)*,
+mesurées **sur les seuls exercices génériques** :
+
+| compétence | grain | exercices | |
+|---|---|---:|---|
+| argumentation | **micro** | **0** | ⛔ un élève ciblé là ne reçoit RIEN |
+| argumentation | meso | 23 | ✅ |
+| structure | micro | 23 | ✅ |
+| structure | meso | 24 | ✅ |
+| questionnement | **micro** | **0** | ⛔ |
+| questionnement | meso | **6** | ⚠️ mince |
+| expression | meso | 12 | ✅ |
+| **synthese** | **meso** | **0** | ⛔ |
+
+⭐ **La cible de masse** : **62 élèves × 6 à 12 exercices par semaine = 372 à 744 servis**.
+Avec 186, chaque exercice est vu par **deux à quatre élèves dès la première semaine**. Ça
+tient pour un jour, pas pour un mois. ⭐ **Viser 8 exercices minimum par cellule** — c'est le
+seuil sous lequel le tirage se répète.
+
+⚠️ **Un exercice n'est servable sans cours que si son sujet porte `cours: "generique"`.** Les
+autres états — `notions`, une liste, l'absence — le rendent muet tant que le cours n'a pas
+parlé. ⛔ **`composer` est le SEUL mode qui accepte un sujet** ; les autres exigent un
+`texte_auteur`.
+
+### La file de ce qui reste sur la banque, par urgence décroissante
+
+1. ⛔ **Fabriquer les trois cellules à zéro** *(skill `/banque`)* — argumentation·micro,
+   questionnement·micro, synthese·meso ; et porter questionnement·meso de 6 à 8.
+2. **Les 2 cas encore signalés** parmi les 257 génériques.
+3. **Les 22 exercices refaits le 29/08 et JAMAIS VERSÉS** *(chantier « voie 3 », candidats
+   réécrits en fragments)*.
+4. **Les 10 cas** de `mot`·`argument`·`paragraphe`·`phrase` au cran 1 que personne n'a relus.
+5. **Les 47 exercices dont les DEUX JUMEAUX portent la même consigne** — le `02-` §2.3.1 a
+   l'interdit *(54 au départ du chantier, 7 réparés le 30/08)*.
+6. **Les 18 remarques « d'un autre ordre »** et les 3 résidus du crible.
+7. ⚠️ **Un écart doctrinal à trancher par Louis** : **toutes** les consignes de cran 9 du
+   modèle ouvrent sur une affirmation de qualité — « Ce texte est correct », « Cette
+   conclusion est complète » — alors qu'au cran 9 l'élève doit trouver **seul** s'il y a un
+   défaut.
+
+### ⭐ Où vivent les règles, maintenant
+
+**`02-exercices.md` §5, « Les quatre épreuves de relecture » (v6.3)** — et **neuf de leurs
+déclarations sont citées dans `generateur/noyau/doctrine.py`** : en effacer une **arrête le
+générateur**. Le skill `banque` §7 n'en porte que le mode d'emploi. **En cas de désaccord, le
+`02-` fait foi.**
+
 ## 1. L'état, au 2026-08-30
 
 **La plateforme est EN PRODUCTION et elle sert des élèves.** Ce n'est plus « avant la recette » :
