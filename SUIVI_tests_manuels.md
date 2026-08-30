@@ -8566,12 +8566,26 @@ corrigés le jour même._
 
 ### ⚠️ À éprouver — gardes absentes dont le coût ou l'exploitabilité restent à mesurer
 
-- [ ] **C-RLS-5 · `fragments_depots` — l'UPDATE élève est ouvert : il blanchit ses propres marques
-  d'anti-triche.** `c1_rls_eleve.sql:144` pose `using auth.uid()=eleve_id` **sans `with_check` ni
-  restriction de colonnes** — l'élève peut `PATCH` `photos_suspectes=false`, `signal_integrite=null`
-  sur SA ligne. ⚠️ Il ne lit rien d'autrui ; il efface une trace le concernant. **Le report est
-  DOCUMENTÉ dans le SQL** (« Module MASQUÉ »). ⚠️ Fragments est-il masqué en prod ? à mesurer avant
-  de statuer.
+- [x] **C-RLS-5 · `fragments_depots` — l'UPDATE élève est ouvert : il blanchit ses propres marques**
+  ✅ **FERMÉ LE 30/08** *(`c_rls_5_fragments_update.sql`, les deux bases)* — la policy UPDATE est **retirée**.
+  ⭐⭐ **Le geste était GRATUIT** : **31 occurrences** de `from('fragments_depots')`, dont **0 `.update()`**
+  *(1 INSERT élève, 2 DELETE, 28 lectures)* — surface d'attaque morte. **Pas de `revoke` de colonnes** : prof et
+  élève partagent le rôle `authenticated`, un `revoke` aurait aveuglé le professeur.
+  ⭐ **Éprouvé des deux côtés** : blanchiment → **`UPDATE 0`** · lecture de son dépôt → **1 ligne** · policy
+  INSERT intacte. Avant le correctif : `UPDATE 1`, marque effacée.
+  ⛔⛔ **CE QUI RESTE OUVERT, ET C'EST UNE DÉCISION, PAS UN OUBLI** — *décision de Louis, 30/08 :*
+  **« on ne change pas ce qui avait été décidé ; on corrige les bugs, rien de plus. »**
+  · `photos_suspectes` et `photo_prise_at` sont **fournis par le NAVIGATEUR à l'INSERT** *(`actions.ts:152`)* :
+    l'élève peut simplement **ne jamais poser la marque**. Retirer la policy ne ferme pas ça, et ne le prétend pas.
+  · **Le serveur ne peut pas recouper** : l'EXIF est purgé à la compression **« parce que la loi 25 l'exige »**
+    *(`06-` §7 point 4)*. Ce n'est pas un oubli de garde, c'est une contrainte légale.
+  · **L'absence d'EXIF vaut « non suspect »**, et c'est écrit comme une décision de spec *(`imageProcessing.ts:9`)*.
+  · **Le signal ne remonte pas au module d'intégrité** — et l'étendre aux autres modules **entrerait en conflit
+    avec `06-` §6** *(« le faisceau ne regarde que le formatif fait à la maison »)*, or **67 des 86 dépôts photo de
+    production sont ceux de la passation EN CLASSE**, que la doctrine exclut délibérément *(`photos.ts:21-25`)*.
+  ⭐ **Le signal reste donc un GARDE-FOU, pas une preuve** — ce que l'écran déclare déjà : « indicatif, non probant ».
+  ⚠️ **Aletheia n'a AUCUN chemin de photo propre** *(mesuré)* : sa photo emprunte le composant de passation et
+    atterrit dans le bucket `codex`. La symétrie « fragments, codex, aletheia » n'existe pas.
 - [x] **C-RLS-6 · `profiles` — la policy INSERT n'interdit pas `role='prof'`.** ✅ **FERMÉ LE 29/08**
   *(`c_rls_6_profiles_insert.sql`, **les deux bases**)* — la policy est **retirée**, pas amendée.
   ⭐⭐ **Le geste était GRATUIT, et c'est la mesure qui l'a montré** : sur **162 occurrences** de `from('profiles')`,
