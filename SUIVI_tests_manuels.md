@@ -8694,6 +8694,40 @@ corrigés le jour même._
   comportement est éprouvé côté base *(admin+garde → `DELETE 1` · autre `eleve_id` → `DELETE 0`)*, pas par
   la route.
 
+- [x] **DEADLINE-1 · ⛔⛔ LE COLD START ÉTAIT REFUSÉ EN BLOC PAR UN ÉLÈVE BI-CLASSE — et le
+  déclencheur hebdomadaire aurait été COUPÉ à 60 s.** ✅ **Corrigé le 30/08**, trouvé en **faisant
+  tourner le cron en bac à sable** *(`scripts/recette/essai-cron-hebdo.ts`, qui rejoue le lundi
+  `2026-08-31` puisque les deux fonctions prennent `aujourdHui` en paramètre)*.
+  ⛔ **LE DÉFAUT** : la boucle du cold start est **PAR CLASSE**, et `elevesParClasse`
+  *(`cycle-serveur.ts:245-248`)* liste un élève bi-classe **dans chacune des siennes**. Il produisait
+  donc **deux lignes de même `(eleve_id, competence)` dans un même envoi**, et
+  `verifierLesLignesDeNiveau` refusait **TOUT LE LOT** — pas seulement la ligne fautive.
+  **Mesuré : `0` lettre posée sur `98` attendues**, avec
+  *« ON CONFLICT DO UPDATE command cannot affect row a second time »*.
+  ⭐ **LE CORRECTIF NE TRANCHE PAS À LA PLACE DE LA DOCTRINE.** Quand l'élève a **sa propre mesure**,
+  `premiereLettre` rend `mesures_du_diagnostic` — **identique dans les deux classes** : on
+  déduplique sans bruit. Quand il n'en a pas, la lettre vient de la **médiane de SA classe**, et il
+  en a deux qui peuvent différer : **aucune source ne dit laquelle l'emporte**, donc **rien n'est
+  écrit et le couple est COMPTÉ** *(`BilanDuColdStart.ambigusBiClasse`)*. ⚠️ **Un compte non nul
+  appelle un arbitrage de Louis, pas un correctif.**
+  ⭐ Les compteurs `sansLettre` et `parMediane` se font désormais **après** la déduplication —
+  ils doublaient pour tout élève bi-classe.
+  ⭐⭐ **ÉPROUVÉ PAR L'EXÉCUTION, AVANT ET APRÈS** : avant, `0` lettre et le lot refusé ; après,
+  **28 lettres posées, `erreurs: []`**, et **l'élève bi-classe reçoit ses quatre lettres**
+  *(`expression=D · argumentation=C · structure=C · synthese=D`)*. Bac à sable **restauré et
+  vérifié par requête** à chaque passage.
+  ⛔ **ET LE MÊME ESSAI A MESURÉ LE TEMPS** : **25,1 s pour 17 élèves ⇒ ~92 s pour 62**, alors que la
+  route déclarait **`maxDuration = 60`**. **Elle aurait été coupée en vol**, et chaque décision étant
+  sa propre transaction, les écritures déjà faites seraient restées. `maxDuration` passe à **300** —
+  honoré sur cette offre, `/api/chaine` le déclare déjà et Vercel affiche « / 5m » pour elle.
+  ⚠️ **300 achète de la marge, ne règle pas le fond** : ces 92 s sont mesurées avec **0 décision
+  écrite** *(le vivier de prod est vide jusqu'au dépôt de la banque)*. Le vrai correctif reste de
+  **grouper les écritures** — `collecte-serveur` le fait déjà à côté — et de **borner la boucle sur
+  une horloge**, comme `/api/chaine` *(`budgetMs = maxDuration * 1000 - MARGE_MS`)*.
+  ⚠️ **Ce que l'essai dit du vivier, et qui n'est pas un défaut** : même en bac à sable,
+  `cours_par_notions_non_lu` **écrase tout** *(3641 écarts, contre 265 au suivant)*, et chaque élève
+  finit à **45 minutes de manque sur un plancher de 45**.
+
 ### 📋 Dette d'outillage relevée par la campagne — sans laquelle la revue ne se referme pas
 
 - [ ] **C-RLS-10 · La carte des policies ne se dresse PAS depuis le dépôt** : **22 des 89 tables du

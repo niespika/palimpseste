@@ -383,6 +383,14 @@ export interface BilanDuColdStart {
   lettresPosees: number
   parMediane: number
   sansLettre: number
+  /**
+   * ⛔ Les couples `(élève, compétence)` qu'on a REFUSÉ de trancher : un élève
+   * bi-classe sans mesure propre reçoit la médiane de SA classe — et il en a
+   * deux, qui peuvent différer. Aucune source ne dit laquelle l'emporte, donc
+   * rien n'est écrit et la question se voit ici. **Un compte non nul appelle
+   * un arbitrage, pas un correctif.**
+   */
+  ambigusBiClasse: number
   /** ⛔ Les compétences qu'aucune passation diagnostique ne mesure (§10). */
   horsDiagnostic: string[]
   erreurs: string[]
@@ -407,7 +415,7 @@ export async function poserLeColdStart(
   maintenant: string = new Date().toISOString(),
 ): Promise<BilanDuColdStart> {
   const bilan: BilanDuColdStart = { elevesAttendus: 0, lettresPosees: 0, parMediane: 0,
-    sansLettre: 0, horsDiagnostic: [], erreurs: [] }
+    sansLettre: 0, ambigusBiClasse: 0, horsDiagnostic: [], erreurs: [] }
 
   const eleves = [...new Set([...elevesParClasse.values()].flat())]
   bilan.elevesAttendus = eleves.length
@@ -449,6 +457,8 @@ export async function poserLeColdStart(
   bilan.horsDiagnostic = COMPETENCES.filter((c) => !mesureesParLaPassation.has(c))
 
   const lignes: LigneDeNiveau[] = []
+  // ⭐ Une entrée par `(eleve_id, competence)` — la clé même de la table.
+  const parCle = new Map<string, { lettre: Lettre | null; source: string; ligne: LigneDeNiveau | null }>()
   for (const [classeId, membres] of elevesParClasse) {
     void classeId
     // La médiane de LA CLASSE de la passation, compétence par compétence.
@@ -471,13 +481,47 @@ export async function poserLeColdStart(
         const p = premiereLettre(c as Competence,
           (mesuresParEleve.get(id) ?? []).filter((x) => x.competence === c),
           mesureesParLaPassation.has(c), medianes.get(c) ?? null)
-        if (p.lettre === null) { bilan.sansLettre += 1; continue }
-        if (p.source === 'mediane_de_classe') bilan.parMediane += 1
-        lignes.push(ligneDeNiveau(id, c as Competence, p.lettre, niveau,
-          p.ancre ? { date: jourDansFuseau(p.ancre.date, fuseau), valeur: p.ancre.valeur } : null,
-          maintenant))
+        // ⛔⛔ L'ÉLÈVE BI-CLASSE PASSE ICI DEUX FOIS — la boucle englobante est
+        //    PAR CLASSE, et `elevesParClasse` le liste dans chacune des siennes
+        //    (`cycle-serveur.ts`). Sans la clé ci-dessous, on produisait DEUX
+        //    lignes de même `(eleve_id, competence)` dans un même envoi, et
+        //    `verifierLesLignesDeNiveau` refusait alors **TOUT LE LOT** — pas
+        //    seulement la ligne fautive. *Mesuré le 30/08 en bac à sable :
+        //    « ON CONFLICT DO UPDATE command cannot affect row a second time »,
+        //    et 0 lettre posée sur 98 attendues.*
+        const cle = `${id}|${c}`
+        const deja = parCle.get(cle)
+        if (deja) {
+          // ⭐ LE CAS ORDINAIRE EST UN ACCORD, et il se démontre : quand l'élève
+          //    a SA PROPRE mesure, `premiereLettre` rend `mesures_du_diagnostic`
+          //    — identique dans les deux classes. On garde la première, sans bruit.
+          if (deja.lettre === p.lettre && deja.source === p.source) continue
+          // ⛔ LE DÉSACCORD N'EST PAS UN BUG, C'EST UNE QUESTION DE DOCTRINE :
+          //    à défaut de mesure propre, la lettre vient de la MÉDIANE DE SA
+          //    CLASSE — et un bi-classe en a deux, qui peuvent différer. Aucune
+          //    source ne dit laquelle l'emporte. **On ne tranche donc pas à la
+          //    place de la doctrine, et surtout pas par l'ordre d'itération :**
+          //    on n'écrit rien pour ce couple et on le COMPTE, pour que la
+          //    question se voie au bilan au lieu de se décider en silence.
+          parCle.delete(cle)
+          bilan.ambigusBiClasse += 1
+          continue
+        }
+        if (p.lettre === null) { parCle.set(cle, { lettre: null, source: p.source, ligne: null }); continue }
+        parCle.set(cle, { lettre: p.lettre, source: p.source,
+          ligne: ligneDeNiveau(id, c as Competence, p.lettre, niveau,
+            p.ancre ? { date: jourDansFuseau(p.ancre.date, fuseau), valeur: p.ancre.valeur } : null,
+            maintenant) })
       }
     }
+  }
+
+  // ⭐ LES COMPTEURS SE FONT APRÈS LA DÉDUPLICATION, jamais pendant : compter à
+  //    la volée doublait `sansLettre` et `parMediane` pour tout élève bi-classe.
+  for (const v of parCle.values()) {
+    if (v.ligne === null) { bilan.sansLettre += 1; continue }
+    if (v.source === 'mediane_de_classe') bilan.parMediane += 1
+    lignes.push(v.ligne)
   }
 
   // ⚠️ Jeux de clés HOMOGÈNES : `lettre_initiale` et l'ancre ne partent pas sur

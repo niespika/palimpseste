@@ -31,10 +31,27 @@
 //    tourne à `0 9 * * 1` ; on décale de trente minutes pour ne pas mettre deux
 //    déclencheurs hebdomadaires dans la même minute.
 //
-// ⭐ `maxDuration` — la collecte n'appelle AUCUN modèle : elle lit des dépôts et
-//    pose une ligne par élève. 60 s est large pour l'effectif d'un professeur, et
-//    l'offre en donne 300 par défaut — le chiffre dégrade proprement.
-//    ⛔ Le commentaire « 60 s est le plafond du plan Hobby », que porte le cron
+// ⭐ `maxDuration` — 300, et le 60 d'origine était trop court. Le raisonnement
+//    d'alors ne tenait que pour LA COLLECTE : « elle n'appelle aucun modèle, elle
+//    lit des dépôts et pose une ligne par élève ». ⛔⛔ Mais depuis C4-L12, cette
+//    route porte AUSSI le greffon du routeur, et lui est SÉQUENTIEL : une lecture
+//    d'inscriptions par élève, puis une pose par élève, et DANS celle-ci un
+//    `insert` par décision.
+//    ⛔ Mesuré le 30/08 sur la production, dans les journaux Vercel : un
+//    aller-retour Supabase depuis la fonction (`iad1`) coûte **160 à 332 ms**
+//    (`/api/chaine` : 696 ms d'exécution pour trois appels à 332/192/160).
+//    Pour 62 élèves et seulement 4 exercices chacun, on compte ~630 allers-retours
+//    séquentiels, soit **~100 à 126 s** — au-delà des 60 s, donc coupé EN VOL,
+//    et chaque `insert` étant sa propre transaction, **les décisions déjà écrites
+//    restent** : une assignation partielle, sans trace de l'arrêt.
+//    ⭐ 300 est honoré sur cette offre, et ce n'est pas une hypothèse :
+//    `/api/chaine` le déclare et Vercel affiche « / 5m » pour elle.
+//    ⚠️ **CE CHIFFRE ACHÈTE DE LA MARGE, IL NE RÈGLE PAS LE FOND** : à 6-12
+//    exercices par élève, on atteint ~1 600 allers-retours, soit plus de 300 s.
+//    Le vrai correctif est de GROUPER les écritures — ce que `collecte-serveur`
+//    fait déjà deux fichiers plus loin (`upsert(lot)`) — et de borner la boucle
+//    sur une horloge, comme `/api/chaine` (`budgetMs = maxDuration * 1000 - MARGE`).
+//    ⛔ Le commentaire « 60 s est le plafond du plan Hobby », que portait le cron
 //    voisin, EST FAUX et C4-L4 l'a déjà chassé : il n'est pas réintroduit ici.
 // ============================================================================
 
@@ -44,7 +61,7 @@ import { lireFuseau } from '@/utils/fuseau-serveur'
 import { poserLaSemaineDAssiduite } from '@/utils/assiduite/collecte-serveur'
 import { poserLesSemainesDuRouteur } from '@/utils/moteur/cycle-serveur'
 
-export const maxDuration = 60
+export const maxDuration = 300
 
 // ⭐⭐ LE GREFFON DE `C4-L12`, ET L'ORDRE COMPTE — 24/08.
 // `C4-L12` « se greffe sur ce déclencheur » plutôt que d'en ouvrir un second
