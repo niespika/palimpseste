@@ -94,14 +94,47 @@ export async function deposerCompteRendu(formData: FormData) {
     .maybeSingle()
 
   if (depotExistant) {
-    // Supprimer les anciennes photos du stockage
     const anciensChemin = (depotExistant.fragments_photos as { storage_path: string }[])
       .map(p => p.storage_path)
-    if (anciensChemin.length > 0) {
-      await supabase.storage.from('fragments').remove(anciensChemin)
+
+    // ⛔⛔ L'ORDRE EST LE CORRECTIF, ET IL ÉTAIT INVERSÉ — 29/08. Les photos du
+    //    Storage partaient EN PREMIER, puis l'enregistrement était supprimé
+    //    avec le client de l'ÉLÈVE — or la seule policy DELETE de
+    //    `fragments_depots` est `est_prof()`. Résultat mesuré : `DELETE 0`,
+    //    **aucune erreur levée** (`supabase-js` ne lève pas), **et le retour
+    //    n'était pas lu**. La contrainte `UNIQUE (inscription_id, semaine_id)`
+    //    refusait ensuite le nouveau dépôt : l'élève voyait une erreur, son
+    //    ancien dépôt survivait — **et ses photos étaient déjà détruites**, la
+    //    ligne pointant vers des fichiers qui n'existaient plus.
+    // ⭐ On supprime donc D'ABORD ce qui est réversible (la ligne) et
+    //    SEULEMENT ENSUITE ce qui ne l'est pas (les fichiers). *On s'arrête
+    //    avant de figer quoi que ce soit* — la doctrine que `fermerQuizz`
+    //    écrit déjà pour le professeur.
+    // ⭐ Écriture serveur (C1) : le client admin contourne la RLS, alors la
+    //    **garde de propriété est le `.eq('eleve_id', userId)`** — NE PAS le
+    //    retirer, c'est lui qui remplace la policy.
+    // ⚠️ La suppression emporte en cascade `fragments_photos` ET
+    //    `fragments_analyses` : l'analyse de l'ancien dépôt est caduque, c'est
+    //    voulu.
+    const { data: efface, error: eEfface } = await createAdminClient()
+      .from('fragments_depots')
+      .delete()
+      .eq('id', depotExistant.id)
+      .eq('eleve_id', userId)
+      .select('id')
+
+    if (eEfface || !efface || efface.length === 0) {
+      return { error: 'Ton dépôt précédent n’a pas pu être remplacé — rien n’a été modifié, '
+        + 'tes photos sont intactes. Réessaie, et préviens ton professeur si cela se répète.' }
     }
-    // Supprimer l'enregistrement (cascade supprime les photos)
-    await supabase.from('fragments_depots').delete().eq('id', depotExistant.id)
+
+    // Les anciens fichiers ne partent qu'une fois la ligne effectivement effacée.
+    // ⚠️ Son échec laisserait des fichiers orphelins — gênant, jamais destructeur —
+    //    et le dépôt doit aboutir : on le dit au journal, on ne l'interrompt pas.
+    if (anciensChemin.length > 0) {
+      const { error: eStorage } = await supabase.storage.from('fragments').remove(anciensChemin)
+      if (eStorage) console.error(`[fragments] photos orphelines pour ${depotExistant.id} : ${eStorage.message}`)
+    }
   }
 
   // T3 — passe 1 : heuristique stricte sur le commentaire (aveu / section N/A).

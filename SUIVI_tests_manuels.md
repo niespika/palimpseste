@@ -8598,6 +8598,30 @@ corrigés le jour même._
   RLS ne le retient pas**. Coût minuscule (le mot « Quizz » + une date). À éprouver contre la RLS
   réelle.
 
+- [x] **C-RLS-12 · ⛔⛔ FRAGMENTS — UN RE-DÉPÔT DÉTRUISAIT LES PHOTOS DU PRÉCÉDENT, SANS RETOUR
+  POSSIBLE.** ✅ **Corrigé le 29/08.** ⚠️ **Trouvé en mesurant C-RLS-5, et il n'était dans AUCUN des
+  cinq constats de la campagne.**
+  **La chaîne, vérifiée de bout en bout** : `deposerCompteRendu` prend le client **élève**
+  *(`verifierEleve()`)* ; sur un re-dépôt il effaçait **d'abord** les photos du Storage, **puis**
+  supprimait la ligne — or la **seule policy DELETE de `fragments_depots` est `est_prof()`**.
+  Mesuré : **`DELETE 0`, aucune erreur levée** *(supabase-js ne lève pas)*, **et le retour n'était
+  pas lu**. La contrainte `UNIQUE (inscription_id, semaine_id)` refusait alors le nouveau dépôt —
+  cette erreur-là, elle, était lue — donc **l'élève voyait une erreur, son ancien dépôt survivait,
+  et ses photos étaient déjà détruites**, la ligne pointant vers des fichiers absents.
+  ⭐ **Le correctif est l'ORDRE et le CLIENT, pas la cascade** : on supprime d'abord ce qui est
+  **réversible** (la ligne, par le client admin, gardée par `.eq('eleve_id', userId)`), et seulement
+  ensuite ce qui ne l'est pas (les fichiers). *La doctrine que `fermerQuizz` écrit déjà pour le
+  professeur.* Le retour du Storage est capturé : un échec laisse des fichiers orphelins, jamais
+  une destruction, et le dépôt aboutit.
+  ⭐ **ÉPREUVE EN TRANSACTION ANNULÉE, trois temps** : ancien chemin *(rôle `authenticated`, RLS)*
+  **DELETE 0** · nouveau *(admin + garde)* **DELETE 1** · **contre-épreuve** avec un autre
+  `eleve_id` **DELETE 0** — le client admin n'est pas un passe-droit. Retour vérifié PAR REQUÊTE.
+  ⚠️⚠️ **IL N'A JAMAIS TIRÉ, ET IL ÉTAIT À VINGT-QUATRE HEURES DE LE FAIRE** : **0 dépôt en prod**,
+  1 en bac à sable — mais la **première échéance est le `2026-08-31 03:59 UTC`**, semestre actif
+  depuis le 24/08, et **40 des 62 élèves** ont Fragments *(1HLP 24 + THLP 16)*. Il tire au premier
+  re-dépôt. ⛔ **Aucune migration** : la policy DELETE prof-only est correcte, c'est le code qui
+  l'ignorait.
+
 ### 📋 Dette d'outillage relevée par la campagne — sans laquelle la revue ne se referme pas
 
 - [ ] **C-RLS-10 · La carte des policies ne se dresse PAS depuis le dépôt** : **22 des 89 tables du
