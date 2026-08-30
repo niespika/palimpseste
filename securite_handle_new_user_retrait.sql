@@ -48,11 +48,19 @@
 -- grave — ce rollback rouvre une faille et ne doit pas être joué —, mais il
 -- faut le savoir avant de le lancer un jour dans l'urgence. Une note l'y dit.
 --
--- ⚠️ CE QUI N'EST PAS TOUCHÉ : la policy `« Trigger peut créer un profil »` sur
--- `profiles` (INSERT, `with check auth.uid() = id`). Son NOM parle d'un trigger
--- qui n'existe plus, mais **elle sert toujours** — c'est elle qui autorise
--- l'insertion du profil au moment de la création de compte. La renommer serait
--- un geste de confort, à faire sciemment et pas en passant.
+-- ⛔⛔ CE PARAGRAPHE ÉTAIT FAUX — corrigé le 2026-08-29, sans toucher au SQL.
+-- Il disait de la policy `« Trigger peut créer un profil »` (INSERT sur
+-- `profiles`, `with check auth.uid() = id`) qu'« elle sert toujours — c'est
+-- elle qui autorise l'insertion du profil au moment de la création de compte ».
+-- **Mesuré : elle ne servait RIEN.** Sur 162 occurrences de `from('profiles')`
+-- dans le dépôt, les 3 seuls `insert` tournent tous sur `createAdminClient()`,
+-- qui contourne la RLS ; il n'y a aucun `upsert`.
+-- ⛔ Pire, elle ouvrait une ESCALADE DE RÔLE : elle bornait l'identité et jamais
+-- la valeur de `role`, si bien qu'un compte authentifié sans ligne `profiles`
+-- — et depuis CE fichier-ci, tout compte naît ainsi — pouvait s'insérer
+-- `role:'prof'`. Éprouvé, puis fermé par `c_rls_6_profiles_insert.sql` (les
+-- deux bases, 29/08). ⚠️ **Ce paragraphe aurait fait renoncer au correctif** :
+-- c'est pourquoi il est corrigé ici plutôt que laissé à sa date.
 -- ============================================================================
 
 

@@ -8572,7 +8572,16 @@ corrigés le jour même._
   sur SA ligne. ⚠️ Il ne lit rien d'autrui ; il efface une trace le concernant. **Le report est
   DOCUMENTÉ dans le SQL** (« Module MASQUÉ »). ⚠️ Fragments est-il masqué en prod ? à mesurer avant
   de statuer.
-- [ ] **C-RLS-6 · `profiles` — la policy INSERT n'interdit pas `role='prof'`.**
+- [x] **C-RLS-6 · `profiles` — la policy INSERT n'interdit pas `role='prof'`.** ✅ **FERMÉ LE 29/08**
+  *(`c_rls_6_profiles_insert.sql`, **les deux bases**)* — la policy est **retirée**, pas amendée.
+  ⭐⭐ **Le geste était GRATUIT, et c'est la mesure qui l'a montré** : sur **162 occurrences** de `from('profiles')`,
+  exactement **3 insert**, **tous sur `createAdminClient()`**, **0 upsert**. La policy ne servait **aucun** chemin.
+  ⭐⭐ **Cycle de preuve complet sur un compte orphelin réel** *(`scripts/recette/epreuve-escalade-profiles.mjs`)* :
+  refusé (`42501`, 0 profil lu) · rollback joué en bac à sable → **escalade RÉUSSIE, 19 profils lus** · refermé.
+  ⛔ **Le dépôt affirmait le contraire** : `securite_handle_new_user_retrait.sql:51-55` disait la policy nécessaire.
+  ⚠️ **Et la porte d'entrée n'est PAS dans le dépôt** : `disable_signup` est **false en bac à sable**, **true en prod**
+  — un bouton du tableau de bord Supabase, zéro occurrence au dépôt. **Le correctif mure la porte quel qu'en soit
+  l'état**, ce qui est tout son intérêt. ✅ **0 compte orphelin** dans les deux bases au moment du geste.
   `c1_rls_eleve.sql:64` est `with check (auth.uid() = id)` : borne l'identité, jamais la valeur de
   `role`. Un compte auth **sans ligne `profiles`** pourrait s'insérer `role:'prof'` et entrer dans
   `/prof`. ⚠️ **Condition d'existence à mesurer** : le trigger `handle_new_user` qui créait la ligne
