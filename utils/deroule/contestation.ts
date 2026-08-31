@@ -42,7 +42,13 @@ export const CONTESTATION_MAX = 600
 /** Un point du retour, tel que la chaîne l'a écrit (`utils/chaine/types.ts`). */
 export interface PointDuRetour {
   id: string
-  ancrage: { source: 'copie' | 'texte_support'; citation: string }
+  /**
+   * ⚠️ FACULTATIF DEPUIS LE 31/08 — l'élagage (`elaguerLesAncrages`) retire la
+   * citation que le code ne retrouve pas dans la copie, et le point survit sans
+   * elle. Un point sans ancrage n'a rien à contester : `citationAbsente` le dit
+   * en rendant `false`.
+   */
+  ancrage?: { source: 'copie' | 'texte_support'; citation: string }
   texte: string
   competence: string
   nature: 'reussite' | 'point_de_travail'
@@ -61,6 +67,10 @@ export interface PointDuRetour {
  *    texte support de l'autre » (`01-` §12).
  */
 export function citationAbsente(point: PointDuRetour, production: string | null): boolean {
+  // ⚠️ Pas d'ancrage : rien n'a été attribué à l'élève, donc rien n'est absent.
+  //    Sans ce test, un point élagué ferait lever `TypeError` en pleine
+  //    contestation — le type disait « toujours là », la donnée dit le contraire.
+  if (!point.ancrage) return false
   if (point.ancrage.source !== 'copie') return false
   // ⚠️ Production absente : on ne conclut RIEN. Déclarer la citation absente
   //    faute de copie rendrait fondée toute contestation d'un dépôt illisible.
