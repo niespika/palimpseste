@@ -535,6 +535,31 @@ export function controleImport(
   }
 
   // ── Les matériaux ─────────────────────────────────────────────────────────
+  //
+  // ⭐⭐ UN MATÉRIAU SE SERT EN CIBLE OU EN SOURCE (`08-` §4, amendé le 28/08),
+  //    et les deux n'ont pas le même contrat. La CIBLE est le texte truqué que
+  //    l'élève juge ou corrige : elle déclare son observable et son défaut. La
+  //    SOURCE est le CO-TEXTE des crans de production — les deux paragraphes à
+  //    coudre, la thèse à contredire — et **elle ne porte aucun défaut**.
+  // ⭐ Le partage SE DÉRIVE, sans champ neuf : un matériau nommé par le cas
+  //    d'un exercice dont le `materiau_cible` vaut `null` est servi en source.
+  //    Ce sont exactement les trois crans de production (`02-` §2.2).
+  // ⛔⛔ CETTE BRANCHE MANQUAIT AU PORT, ET ELLE FERMAIT LA PORTE. Sur la banque
+  //    réelle, les SEPT co-textes tiraient chacun DEUX refus — « compétence
+  //    inconnue : undefined » et « `defaut` vide » —, soit **14 refus** que
+  //    `generateur/verifie-import.py` ne rend pas. La banque n'a jamais pu
+  //    entrer dans Palimpseste, et rien ne le disait : les deux contrôles ne se
+  //    lisaient pas ensemble. *Mesuré le 31/08 en jouant les deux sur le même
+  //    fichier.* ⚠️ Les fixtures des tests n'ont aucun co-texte : c'est
+  //    pourquoi 1970 tests verts ne l'ont jamais vu.
+  const sources = new Set<string>()
+  for (const e of exercices) {
+    if (!estObjet(e) || e.materiau_cible != null) continue
+    for (const cs of (Array.isArray(e.cas) ? e.cas : [])) {
+      if (estObjet(cs) && typeof cs.materiau === 'string' && cs.materiau) sources.add(cs.materiau)
+    }
+  }
+
   for (const [im, m] of materiaux.entries()) {
     // MAL FORMÉ N'EST PAS ABSENT : le script qui fait foi s'arrête ici,
     // et écarter l'entrée en silence rendait le fichier importable.
@@ -552,13 +577,26 @@ export function controleImport(
     }
     const obs = estObjet(m.observable) ? m.observable : {}
     clesInconnues(v, ou, obs, 'observable')
-    if (!declaree(d.modesAdmis, obs.competence)) {
-      v.refuse(ou, `compétence inconnue : ${JSON.stringify(obs.competence)}`, 5)
-    }
-    // ⚠️ « Le `defaut` d'un matériau n'est pas toujours un défaut : une réussite
-    // calibrée s'injecte de la même façon » (`02-` §2.3.1 a).
-    if (!nonVide(m.defaut)) {
-      v.refuse(ou, '`defaut` vide — un matériau calibré déclare ce qu\'il porte (`02-` §2.3.4)', 3)
+    if (typeof m.id === 'string' && sources.has(m.id)) {
+      // ⛔ LA RÈGLE SYMÉTRIQUE, ET ELLE COMPTE AUTANT : un co-texte qui
+      //    DÉCLARERAIT un défaut ferait travailler l'élève sur une erreur
+      //    qu'on ne lui demande pas de voir, et rien ne le dirait.
+      if (obs.competence || obs.code) {
+        v.refuse(ou, 'servi en SOURCE, il ne déclare aucun `observable` '
+          + "— il ne porte pas de défaut (`08-` §4)", 5)
+      }
+      if (nonVide(m.defaut)) {
+        v.refuse(ou, 'servi en SOURCE, il ne déclare aucun `defaut` (`08-` §4)', 3)
+      }
+    } else {
+      if (!declaree(d.modesAdmis, obs.competence)) {
+        v.refuse(ou, `compétence inconnue : ${JSON.stringify(obs.competence)}`, 5)
+      }
+      // ⚠️ « Le `defaut` d'un matériau n'est pas toujours un défaut : une réussite
+      // calibrée s'injecte de la même façon » (`02-` §2.3.1 a).
+      if (!nonVide(m.defaut)) {
+        v.refuse(ou, '`defaut` vide — un matériau calibré déclare ce qu\'il porte (`02-` §2.3.4)', 3)
+      }
     }
   }
 
@@ -844,12 +882,42 @@ export function controleImport(
         v.refuse(oc, `le cran ${cran} ne sert aucun distracteur`, 12)
       }
 
+      // ⭐⭐ FORMAT 1.4 — LA `reponse_attendue` EXISTE AUX CRANS 7 ET 9, ET SON
+      //    ABSENCE SIGNALE. Le `02-` §2.2 les déclarait `null` ; amendé le
+      //    31/08/2026, ils déclarent `présent` — au cran 7 elle ne borne que
+      //    l'IA, au cran 9 elle EST la correction de la paire.
+      // ⛔ MAIS EN FAIRE UN REFUS CASSERAIT LA COMPATIBILITÉ, et le `08-` §1
+      //    l'interdit à une mineure : « une mineure n'ajoute que des champs
+      //    FACULTATIFS, dont l'absence a toujours un sens défini ; casser la
+      //    compatibilité, c'est incrémenter le majeur ». Un fichier 1.3 porte
+      //    178 exercices sans elle : les refuser rendrait la banque entière
+      //    non importable pour un champ que le format venait d'inventer.
+      // ⭐ MÊME TRAITEMENT QUE `pourquoi_juste` EN 1.2, deux blocs plus bas :
+      //    on signale, on n'a jamais refusé. L'absence a un sens défini — au
+      //    cran 9 la correction se DÉRIVE de la `version_corrigee`
+      //    (`correction.ts`, item 78), et l'écran titre « Ce que tu aurais pu
+      //    écrire » au lieu de « Ce qu'il fallait voir ». Rien ne casse ; on
+      //    sert moins bien, et le signalement dit exactement quoi.
       const r = cs?.reponse_attendue
+      const aLAveugle = c.appui === 'absent' && c.geste !== 'produire'
       if (c.reponseAttendue === 'présent' && !nonVide(r)) {
-        v.refuse(oc, `le cran ${cran} exige une \`reponse_attendue\``, 12)
+        if (aLAveugle) {
+          v.signale(oc, `le cran ${cran} attend une \`reponse_attendue\` depuis le format 1.4`
+            + (cran === 9
+              ? ' — sans elle, la correction de la paire se dérive de la `version_corrigee`,'
+                + ' qui ne porte AUCUNE ZONE : la sélection de l\'élève ne peut pas s\'y comparer'
+              : ' — sans elle, le retour de l\'IA n\'est borné par aucun étalon'))
+        } else {
+          v.refuse(oc, `le cran ${cran} exige une \`reponse_attendue\``, 12)
+        }
       }
+      // ⚠️ Cette branche ne mord plus depuis l'amendement — les NEUF crans
+      //    déclarent `présent`. Gardée pour le jour où la table changerait.
+      //    ⛔ Son message se lisait À L'ENVERS : « ne déclare aucune » veut dire
+      //    « ce cran n'en déclare pas, et tu en as mis une ». Corrigé.
       if (c.reponseAttendue === 'null' && declare(r)) {
-        v.refuse(oc, `le cran ${cran} ne déclare aucune \`reponse_attendue\``, 12)
+        v.refuse(oc, `le cran ${cran} déclare \`reponse_attendue\` à \`null\`, `
+          + 'et ce cas en porte une', 12)
       }
 
       // ⭐ C4-L14 — `pourquoi_juste`, format 1.2. « Là où la réponse attendue est

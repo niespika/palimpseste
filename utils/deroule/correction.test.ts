@@ -213,8 +213,11 @@ test('hors paire — au cran 3 —, la crédence du cas suffit : il n’y a pas 
 
 test('⭐⭐ cran 9 : la correction était VIDE — elle sert la version corrigée', () => {
   // `correctionServieAuCran` la sert à tous les crans de diagnostic, 9 compris,
-  // mais la table des crans y met `reponse_attendue` à `null` (`02-` §2.2).
+  // mais la table des crans y mettait `reponse_attendue` à `null` (`02-` §2.2).
   // L'élève ne voyait donc rien entre les deux cas de la paire.
+  // ⭐ 31/08/2026 — la table y dit `présent`, et son absence est SIGNALÉE à
+  //   l'import, non refusée (`08-` §1). Ce repli reste donc VIVANT, et ce test
+  //   avec lui : 264 cas de la 1.3 n'ont pas de réponse déclarée.
   const c = composerLaCorrection(
     { reponseAttendue: null, pourquoiJuste: null, distracteurs: null,
       versionCorrigee: 'La phrase, réparée.' }, null, false)

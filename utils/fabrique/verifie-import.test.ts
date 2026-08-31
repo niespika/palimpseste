@@ -108,6 +108,29 @@ const banque = () => JSON.parse(JSON.stringify({
 
 type B = Record<string, any>
 const casse = (f: (b: B) => void): B => { const b = banque(); f(b); return b }
+
+// ⭐⭐ `08-` §4 — UN MATÉRIAU SE SERT EN CIBLE OU EN SOURCE, et les deux n'ont
+//    pas le même contrat. La SOURCE est le CO-TEXTE d'un cran de production :
+//    elle ne déclare NI observable NI défaut. Le partage se dérive du
+//    `materiau_cible` de l'exercice, `null` aux trois crans de production.
+// ⛔⛔ CETTE FORME MANQUAIT AUX FIXTURES, et la branche manquait au port : sur
+//    la banque réelle, les sept co-textes tiraient 14 refus que le script qui
+//    fait foi ne rend pas. La banque n'a jamais pu entrer, et 1970 tests verts
+//    ne l'ont pas vu — aucun vecteur ne portait de co-texte. *31/08.*
+const aCoTexte = (b: B) => {
+  const e = b.exercices[0]
+  e.cran = 2                       // production : `materiau_cible` y vaut `null`
+  e.materiau_cible = null
+  e.guide = 'LA CONCLUSION\n« … »\n\nLA PREUVE\n« … »'
+  e.cas = [{ consigne: 'Écris l’argument au complet.', materiau: 'mat-a',
+             defaut: null, distracteurs: null,
+             reponse_attendue: 'un argument modèle, en trois temps' }]
+  const m = b.materiaux[0]         // `mat-a` devient le CO-TEXTE
+  m.observable = null
+  m.defaut = null
+  m.version_corrigee = null
+  b.materiaux = [m]
+}
 const codes = (xs: string[]) => new Set(xs.map((x) => x.split(']')[0].replace('[', '')))
 const aRefus = (v: { refus: string[] }, n: number) =>
   codes(v.refus).has(`R${String(n).padStart(2, '0')}`)
@@ -186,6 +209,13 @@ const REFUS: Array<[string, (b: B) => void, number]> = [
   //    cas, jamais comme dix-neuvième refus.
   ['R12 un `pourquoi_juste` hors des crans 1 et 3', (b) => {
     b.exercices[0].cas[0].pourquoi_juste = "il n'a rien à faire ici"
+  }, 12],
+  // ⭐⭐ FORMAT 1.4 — LE PENDANT DUR DU SIGNALEMENT D'À CÔTÉ. Aux crans où
+  //   l'appui est DONNÉ ou NOMMÉ, la `reponse_attendue` reste EXIGÉE : sans
+  //   ce vecteur, un port qui aurait tout passé en signalement passerait
+  //   les deux vecteurs 1.4 sans rien contrôler.
+  ['R12 1.4 — au cran 4, la `reponse_attendue` reste EXIGÉE', (b) => {
+    for (const cs of b.exercices[0].cas) cs.reponse_attendue = null
   }, 12],
   ['R05 un `cours` mal formé', (b) => { b.sujets[0].cours = ['c-0012', 7] }, 5],
   ["R05 un `cours` qui n'est pas la chaîne réservée", (b) => { b.textes[0].cours = 'toujours' }, 5],
@@ -374,6 +404,28 @@ const SIGNALEMENTS: Array<[string, (b: B) => void, string]> = [
   ['C4-L16 — une notion hors du programme ne se rattachera à aucun cours', (b) => {
     b.sujets[0].forme = 'dissertation_tc'; b.sujets[0].notions = ['la connaissance']
   }, "n'est pas une notion du programme"],
+  // ⭐⭐ FORMAT 1.4 — LA `reponse_attendue` AUX DEUX CRANS À L'AVEUGLE.
+  //   Le `02-` §2.2 les déclarait `null` ; amendé le 31/08/2026. ⛔ Mais en
+  //   faire un REFUS casserait la compatibilité, et le `08-` §1 l'interdit à
+  //   une mineure : « casser la compatibilité, c'est incrémenter le majeur ».
+  //   178 exercices de la 1.3 n'en portent pas.
+  ['1.4 — cran 9 sans `reponse_attendue` : signalé, jamais refusé', (b) => {
+    b.exercices[0].cran = 9
+    for (const cs of b.exercices[0].cas) cs.reponse_attendue = null
+  }, 'attend une `reponse_attendue` depuis le format 1.4'],
+  // ⭐ ET LE SIGNALEMENT DIT POURQUOI ELLE MANQUE, pas seulement qu'elle
+  //   manque : au cran 9 la correction se dérive de la `version_corrigee`,
+  //   qui ne porte AUCUNE ZONE — la sélection de l'élève n'a rien à quoi se
+  //   comparer. C'est le motif de l'amendement, et il doit s'afficher.
+  ['1.4 — et il dit ce que la dérivation ne peut pas donner : la zone', (b) => {
+    b.exercices[0].cran = 9
+    for (const cs of b.exercices[0].cas) cs.reponse_attendue = null
+  }, 'AUCUNE ZONE'],
+  ['1.4 — cran 7 sans `reponse_attendue` : signalé, et l\'IA n\'est pas bornée', (b) => {
+    b.exercices[0].cran = 7
+    b.exercices[0].cas = [b.exercices[0].cas[0]]
+    b.exercices[0].cas[0].reponse_attendue = null
+  }, "n'est borné par aucun étalon"],
 ]
 for (const [nom, f, motif] of SIGNALEMENTS) {
   test(`IMPORT SIGNALEMENT — ${nom}`, () => {
@@ -393,6 +445,25 @@ test('IMPORT — et il ne signale ni candidat muet ni pourquoi manquant', () => 
   const v = controleImport(casse(cran1Complet), doctrine)
   assert.ok(!contient(v.signalements, 'pourquoi'),
     `rien ne devait parler de « pourquoi » — rendus : ${JSON.stringify(v.signalements)}`)
+})
+
+test('⭐⭐ `08-` §4 — un CO-TEXTE de cran de production passe, sans observable ni défaut', () => {
+  const v = controleImport(casse(aCoTexte), doctrine)
+  const sur = (xs: string[]) => xs.filter((x) => x.includes('mat-a'))
+  assert.deepEqual(sur(v.refus), [],
+    `le co-texte est refusé — rendus : ${JSON.stringify(sur(v.refus))}`)
+})
+
+test('⭐ et la règle SYMÉTRIQUE mord : un co-texte qui déclare un défaut est refusé', () => {
+  const v = controleImport(casse((b) => {
+    aCoTexte(b)
+    b.materiaux[0].observable = { code: 'garant_present', competence: 'argumentation' }
+    b.materiaux[0].defaut = 'un défaut qu’on ne demande pas de voir'
+  }), doctrine)
+  assert.ok(v.refus.some((x) => x.includes('servi en SOURCE') && x.includes('observable')),
+    `rien ne refuse l'observable — rendus : ${JSON.stringify(v.refus)}`)
+  assert.ok(v.refus.some((x) => x.includes('servi en SOURCE') && x.includes('defaut')),
+    `rien ne refuse le défaut — rendus : ${JSON.stringify(v.refus)}`)
 })
 
 test('IMPORT — rien n\'est signalé quand tout est rattaché', () => {

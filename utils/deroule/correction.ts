@@ -113,7 +113,11 @@ export interface CorrectionServie {
   /** Le cran sert-il quatre candidats ? Vrai aux crans 1 et 3, faux ailleurs. */
   surDesCandidats: boolean
   /** La réponse a-t-elle été DÉRIVÉE du matériau, faute d'être déclarée ?
-   *  Vrai au cran 9, où la table des crans met `reponse_attendue` à `null`.
+   *  Vrai au cran 9 QUAND AUCUNE N'EST DÉCLARÉE. ⚠️ La table des crans l'y
+   *  mettait à `null` ; depuis l'amendement du `02-` §2.2 du 31/08/2026 elle
+   *  y est `présent`, et son absence est SIGNALÉE à l'import, non refusée
+   *  (`08-` §1, format 1.4). La dérivation reste donc le repli, et le restera
+   *  tant que les 264 cas de la 1.3 n'auront pas la leur.
    *  L'écran s'en sert pour titrer : « Ce que tu aurais pu écrire », et non
    *  « Ce qu'il fallait voir » — ce n'est pas le même objet. */
   derivee: boolean
@@ -162,7 +166,12 @@ export function correctionServieAuCran(
  *
  * ⚠️ Les sept autres crans rendent `null` : aux quatre qui isolent, la
  *    `reponse_attendue` est LA réponse et passe par la correction ; aux deux à
- *    l'aveugle, elle n'existe pas.
+ *    l'aveugle, elle ne se déplie pas ici.
+ * ⭐⭐ 31/08/2026 — ELLE EXISTE MAINTENANT AUX CRANS 7 ET 9, et cette fonction
+ *    NE CHANGE PAS. Au cran 7 elle ne se montre jamais — `regime_v1vf` « pas de
+ *    vf, sauf escalade », `guide` `null` : comme au cran 8, elle ne borne que
+ *    l'IA. Au cran 9 elle se sert, mais comme CORRECTION DE LA PAIRE, par
+ *    `composerLaCorrection` — jamais comme étalon déplié.
  */
 export function etalonServi(
   cran: number | null, vfRemise: boolean, reponseAttendue: unknown,
@@ -214,10 +223,20 @@ export function composerLaCorrection(
 ): CorrectionServie | null {
   // ⭐⭐ ITEM 78 — AU CRAN 9, LA CORRECTION EST DUE ET ELLE ÉTAIT VIDE.
   //    `correctionServieAuCran` la sert à tous les crans de diagnostic, 9
-  //    compris ; mais la table des crans y met `reponse_attendue` à `null`
+  //    compris ; mais la table des crans y mettait `reponse_attendue` à `null`
   //    (`02-` §2.2), si bien que ce module rendait `null` et que l'élève ne
   //    voyait RIEN entre les deux cas de la paire — alors que le `02-` §2.3.1 a
   //    veut que « la correction du premier cas soit servie AVANT le second ».
+  // ⭐⭐ 31/08/2026 — LA TABLE DIT MAINTENANT `présent` AU CRAN 9, et ce module
+  //    n'a rien à y changer : il préfère DÉJÀ la réponse déclarée quand il y en
+  //    a une, et ne dérive qu'à défaut. Ce qui change est le SENS du repli — ce
+  //    n'était pas un manque, c'en est un.
+  // ⛔ ET LA DÉRIVATION NE PEUT PAS TOUT FAIRE : la `version_corrigee` donne le
+  //    texte réparé, JAMAIS LA ZONE que l'élève devait désigner. Aux crans 4, 7
+  //    et 9 il SÉLECTIONNE (`02-` §5) ; sans réponse déclarée qui porte la zone
+  //    entre « », rien ne se compare à sa sélection, et le cas « la zone ne
+  //    touche pas la cible » — qui se tranche SANS appel à l'IA — ne peut pas
+  //    se déclencher. C'est le motif de l'amendement.
   // ⭐ LA RÉPONSE NE S'ÉCRIT PAS, ELLE SE DÉRIVE : elle EST la
   //    `version_corrigee` du matériau (`02-` §2.3.4). L'ajouter en base ferait
   //    un SECOND DOMICILE de ce que le matériau porte déjà, et les deux
