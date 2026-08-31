@@ -1,0 +1,1270 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet data-dc-atomics>
+<meta name="design_doc_mode" content="canvas">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="anonymous">
+<link href="https://fonts.googleapis.com/css2?family=Caveat:wght@500;600&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#f0eee9;font-family:system-ui,sans-serif}
+a{color:#6B5A46}a:hover{color:#4a3a28}
+.dv-turn{padding:44px 48px 34px;border-bottom:1px solid rgba(0,0,0,.08);scroll-margin-top:16px}
+.dv-thd{display:flex;align-items:baseline;gap:10px;margin:0 0 22px;flex-wrap:wrap}
+.dv-tid{font:600 10px ui-monospace,Menlo,monospace;padding:3px 7px;background:#1a1a1a;color:#fff;border-radius:4px;text-decoration:none}
+.dv-tname{font:600 13px/1.2 system-ui,sans-serif;color:#1a1a1a}
+.dv-cap{font:500 15px 'Caveat',cursive;color:#8a6f4e}
+.dv-opts{display:flex;flex-wrap:wrap;gap:44px;align-items:flex-start}
+.dv-opt{flex:none;display:flex;flex-direction:column;gap:10px;scroll-margin-top:16px}
+.dv-oid{font:600 10.5px ui-monospace,Menlo,monospace;padding:3px 7px;background:rgba(0,0,0,.08);color:#1a1a1a;border-radius:5px;text-decoration:none}
+.dv-olabel{display:flex;align-items:baseline;gap:8px;font:400 11.5px/1.35 system-ui,sans-serif;color:rgba(0,0,0,.55);max-width:1100px}
+.dv-card{background:#fff;border:1px solid rgba(0,0,0,.1);border-radius:9px;box-shadow:0 1px 3px rgba(0,0,0,.06);overflow:hidden}
+.dv-opt:target .dv-oid{background:#2a78d6;color:#fff}
+.dv-note{margin:2px 0 0;font:500 14.5px/1.5 'Caveat',cursive;color:#8a6f4e;max-width:1020px}
+.dv-row{display:flex;gap:24px;align-items:flex-start;flex-wrap:wrap}
+.dv-scr{font:600 9px system-ui;letter-spacing:.12em;text-transform:uppercase;color:#a49c8e;margin:0 0 6px}
+.dv-next{margin:30px 0 0;font:12px/1.6 system-ui,sans-serif;color:rgba(0,0,0,.5);max-width:900px}
+
+.wf{color:#2f2a23}
+.wf-bar{display:flex;align-items:baseline;gap:10px;padding:11px 14px;border-bottom:1px solid #e6e1d6;background:#f7f4ee}
+.wf-h1{font-size:15px;font-weight:700}
+.wf-sub{font-size:10.5px;color:#8b8478}
+.wf-eyebrow{font:600 9px system-ui;letter-spacing:.11em;text-transform:uppercase;color:#a49c8e}
+.wf-box{border:1px solid #e2ddd2;border-radius:9px;background:#fff}
+.wf-btn{font-size:12px;font-weight:600;padding:11px 14px;border-radius:9px;text-align:center;min-height:44px;box-sizing:border-box;display:flex;align-items:center;justify-content:center;gap:6px}
+.wf-btn.parc{background:#6B5A46;color:#F1EADD}
+.wf-btn.ghost{background:#fff;border:1px solid #dcd6c9;color:#6b6459}
+.wf-seg{display:flex;border:1px solid #dcd6c9;border-radius:9px;overflow:hidden;background:#fff;font-size:11.5px}
+.wf-seg span{flex:1;text-align:center;padding:9px 10px;color:#8b8478}
+.wf-seg span.on{background:#6B5A46;color:#F1EADD;font-weight:600}
+.wf-chip{font-size:9.5px;padding:3px 8px;border-radius:99px;border:1px solid #cfc9bd;color:#6b6459;background:#faf9f5;white-space:nowrap}
+.wf-chip.ok{border-color:#c2cbb1;background:#f2f4ec;color:#4e5a3c}
+.wf-chip.att{border-color:#e0cba8;background:#fdf6ea;color:#8a5a2e}
+.wf-chip.mut{border-color:#e2ddd2;background:#fff;color:#a49c8e}
+.wf-li{font-size:11px;color:#3f3a32;display:flex;gap:7px;padding:1px 0}
+.wf-li i{color:#a49c8e;font-style:normal}
+.wf-mut{font-size:10.5px;color:#8b8478}
+.wf-it{font-size:10.5px;color:#8b8478;font-style:italic}
+
+/* la carte de compétence — l'unité qui manque à la page d'aujourd'hui */
+.cp{border:1px solid #e2ddd2;border-radius:10px;background:#fff;padding:12px;display:flex;flex-direction:column;gap:7px}
+.cp-hd{display:flex;align-items:baseline;gap:8px}
+.cp-nom{font-size:13px;font-weight:700;color:#2f2a23;flex:1}
+.cp-let{font-size:18px;font-weight:700;color:#6B5A46;line-height:1}
+.cp-slot{font:600 8.5px system-ui;letter-spacing:.09em;text-transform:uppercase;color:#b9b1a2;border:1px dashed #d8d2c5;border-radius:4px;padding:3px 5px;line-height:1}
+.cp-n{display:flex;align-items:center;gap:7px}
+.cp-bars{display:flex;gap:3px;flex:none}
+.cp-bars i{width:11px;height:6px;border-radius:99px;background:#e4dfd4}
+.cp-bars i.on{background:#737F5E}
+.cp-etat{font-size:11px;color:#6b6459}
+.cp-forces{border-top:1px dashed #e6e1d6;padding-top:7px;display:flex;flex-direction:column;gap:3px}
+.cp-flab{font-size:10px;color:#4e5a3c;font-weight:600}
+.cp-vide{font-size:10.5px;color:#a49c8e}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+/* tour 2 — la tuile de compétence, cliquable */
+.tu{border:1px solid #e2ddd2;border-radius:10px;background:#fff;padding:11px 11px 10px;display:flex;flex-direction:column;gap:6px;min-height:78px;box-sizing:border-box}
+.tu-nom{font-size:12.5px;font-weight:700;color:#2f2a23;line-height:1.2}
+.tu-etat{font-size:10.5px;color:#6b6459;margin-top:auto}
+.tu.dim{background:#faf9f5}
+.tu.dim .tu-nom{color:#8b8478}
+.tu.on{border-color:#6B5A46;background:#f7f4ee;box-shadow:0 0 0 1px #6B5A46 inset}
+.tu-go{font-size:11px;color:#a49c8e;align-self:flex-end;margin-top:-16px}
+.tuA{background:#f2f4ec;border-color:#c8d0b7}
+.tuB{background:#fdf6ea;border-color:#e2d2b4}
+/* la table des six */
+.tb{width:100%;border-collapse:collapse;font-size:11.5px}
+.tb th{font:600 9px system-ui;letter-spacing:.11em;text-transform:uppercase;color:#a49c8e;text-align:left;padding:0 10px 6px}
+.tb td{padding:11px 10px;border-top:1px solid #eee9de;vertical-align:middle}
+.tb tr.on td{background:#f7f4ee}
+.tb b{font-size:12.5px}
+/* le dépliant « ce qu'on regarde » */
+.dp{border:1px solid #e2ddd2;border-radius:9px;background:#fff}
+.dp-hd{display:flex;align-items:center;gap:8px;padding:11px 12px;font-size:11.5px;color:#3f3a32;font-weight:600;min-height:44px;box-sizing:border-box}
+.dp-hd u{margin-left:auto;text-decoration:none;color:#a49c8e;font-size:12px}
+.dp-bd{padding:0 12px 12px;display:flex;flex-direction:column;gap:6px;border-top:1px solid #f0ece2;padding-top:10px}
+/* le vrai gabarit téléphone : 390 × 700 de viewport web, barre tactile comprise */
+.ph{width:390px;height:700px;display:flex;flex-direction:column;overflow:hidden;background:#faf9f5}
+.ph-top{flex:none;display:flex;align-items:center;gap:10px;padding:12px 14px 9px;background:#fff;border-bottom:1px solid #e6e1d6}
+.ph-mark{font:600 13px system-ui;letter-spacing:.1em;color:#2f2a23}
+.ph-cls{margin-left:auto;font-size:11px;color:#6b6459;border:1px solid #dcd6c9;border-radius:7px;padding:5px 9px}
+.ph-bd{flex:1;min-height:0;overflow:hidden;display:flex;flex-direction:column}
+.ph-tabs{flex:none;display:flex;background:#fff;border-top:1px solid #e6e1d6;padding-bottom:6px}
+.ph-tabs span{flex:1;min-height:56px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;font:400 9.5px system-ui;color:#a49c8e}
+.ph-tabs span.on{color:#2f2a23;font-weight:500}
+.ph-tabs em{width:17px;height:17px;border:1.5px solid currentColor;border-radius:4px;display:block}
+.ph-tabs span.on em{background:currentColor}
+.ph-tabs em.rd{border-radius:50%}
+.ph-back{font-size:13px;color:#6b6459}
+/* barre latérale des six (tour 3) */
+.sd{border:1px solid #e2ddd2;border-radius:9px;background:#fff;padding:9px 11px;display:flex;flex-direction:column;gap:5px;min-height:44px;box-sizing:border-box}
+.sd b{font-size:12.5px;font-weight:700;color:#2f2a23}
+.sd u{font-size:10px;color:#8b8478;text-decoration:none}
+.sd.on{border-color:#6B5A46;background:#f7f4ee;box-shadow:0 0 0 1px #6B5A46 inset}
+.sd.dim{background:#faf9f5}
+.sd.dim b{color:#8b8478}
+/* l'en-tête desktop réel : Barre 1 (nav + actions) + Barre 2 hors module (marque + devise maison) */
+.hd1{display:flex;align-items:center;gap:14px;padding:11px 28px;background:#FBF8F1;border-bottom:1px solid #E4DBC9}
+.hd1 .nv{flex:1;display:flex;justify-content:center;gap:16px;font-size:12.5px;color:#7A6650}
+.hd1 .nv b{color:#221C16;font-weight:600}
+.hd2{position:relative;display:flex;align-items:center;gap:22px;padding:14px 28px 16px;background:#F8F4EA;border-bottom:2px solid rgba(184,137,59,.32)}
+.hd-med{width:64px;height:64px;border-radius:50%;background:#EDE6D6;border:1px solid #E4DBC9;flex:none}
+.hd-mq{display:flex;flex-direction:column;align-items:center;gap:7px;flex:none}
+.hd-mq span{font:600 23px system-ui;letter-spacing:.05em;color:#221C16}
+.hd-dev{flex:1;text-align:center;font:400 14px system-ui;font-variant:small-caps;letter-spacing:.07em;color:#8A6F4E}
+.hd-fil{width:1px;align-self:stretch;background:linear-gradient(rgba(0,0,0,0),rgba(60,50,40,.16),rgba(0,0,0,0))}
+/* interrupteur « afficher les lettres » */
+.sw{display:inline-flex;align-items:center;gap:6px;font-size:10.5px;color:#8b8478;white-space:nowrap}
+.sw u{width:32px;height:19px;border-radius:99px;background:#e4dfd4;border:1px solid #d9d3c6;position:relative;display:inline-block;text-decoration:none;flex:none}
+.sw u:after{content:"";position:absolute;top:2px;left:2px;width:13px;height:13px;border-radius:50%;background:#fff;box-shadow:0 1px 2px rgba(0,0,0,.2)}
+.sw.on{color:#3f3a32}
+.sw.on u{background:#737F5E;border-color:#66714f}
+.sw.on u:after{left:auto;right:2px}
+.sw.off{color:#b9b1a2}
+.sw.off u{background:#eeeae0;border-color:#e4dfd4}
+.sw.off u:after{background:#f7f5ef;box-shadow:none}
+.grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px}
+
+/* la ligne compacte (option 1c) */
+.rw{display:flex;align-items:center;gap:10px;padding:11px 12px;border:1px solid #e2ddd2;border-radius:9px;background:#fff;min-height:44px;box-sizing:border-box}
+.rw.on{border-color:#6B5A46;background:#f7f4ee}
+.rw b{font-size:12.5px;flex:1}
+.rw .cv{font-size:14px;color:#a49c8e}
+</style>
+</helmet>
+
+<section class="dv-turn" id="t4">
+  <div class="dv-thd"><a class="dv-tid" href="#t4">4</a><span class="dv-tname">Tour 4 — la version retenue : <a class="dv-oid" href="#3b">3b</a> avec une barre latérale de 200 px, et <a class="dv-oid" href="#2a">2a</a> avec l'interrupteur des lettres</span><span class="dv-cap">c'est celle-ci qui part en rendu charte, dis-moi si quelque chose cloche encore</span></div>
+
+  <div class="dv-opts">
+
+    <div class="dv-opt" id="4a" data-screen-label="4a Retenu ordinateur sidebar 200">
+      <div class="dv-olabel"><a class="dv-oid" href="#4a">4a</a><span><b>Ordinateur.</b> Barre latérale ramenée de 240 à 200 px ; les 40 px vont aux deux colonnes. « Ta prochaine étape » en pied de la colonne du travail, l'interrupteur des lettres en pied de barre latérale — au même endroit que sur téléphone.</span></div>
+      <div class="dv-card" style="width:1040px">
+        <div class="wf">
+          <div class="hd1"><span class="nv"><span>Aujourd'hui</span><span>Modules</span><span>Agenda</span><span>Intégrité</span><b>Moi</b></span><span style="display:flex;gap:12px;align-items:center"><span class="wf-chip">1re G2 ▾</span><span style="width:1px;height:18px;background:#E4DBC9"></span><span style="font-size:12.5px;color:#7A6650">Se déconnecter</span></span></div>
+          <div class="hd2"><span class="hd-mq"><span class="hd-med"></span><span>Palimpseste</span></span><span class="hd-fil"></span><span class="hd-dev">Verba Volant, Scripta Manent, Sapientia Permanet</span></div>
+          <div style="padding:18px 20px;display:grid;grid-template-columns:200px 1fr;gap:18px;align-items:start;background:#faf9f5">
+            <div style="display:flex;flex-direction:column;gap:6px">
+              <span class="wf-eyebrow" style="padding:0 2px 2px">Mes six compétences</span>
+              <div class="sd on"><b>Expression</b><span class="cp-bars"><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i></span><u>travaillé 4 fois · en progrès</u></div>
+              <div class="sd"><b>Synthèse</b><span class="cp-bars"><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i></span><u>travaillé 4 fois · sur un palier</u></div>
+              <div class="sd"><b>Questionnement</b><span class="cp-bars"><i class="on"></i><i class="on"></i><i class="on"></i><i></i></span><u>travaillé 3 fois</u></div>
+              <div class="sd"><b>Argumentation</b><span class="cp-bars"><i class="on"></i><i class="on"></i><i></i><i></i></span><u>travaillé 2 fois</u></div>
+              <div class="sd"><b>Structure</b><span class="cp-bars"><i class="on"></i><i></i><i></i><i></i></span><u>travaillé 1 fois</u></div>
+              <div class="sd dim"><b>Connaissance</b><span class="cp-bars"><i></i><i></i><i></i><i></i></span><u>jamais travaillé</u></div>
+              <div style="border-top:1px solid #e6e1d6;margin-top:6px;padding-top:9px;display:flex;flex-direction:column;gap:6px">
+                <span class="sw off"><u></u>Rien à afficher</span>
+                <span class="wf-it">Quatre exercices, et on peut dire où tu vas.</span>
+              </div>
+            </div>
+
+            <div class="wf-box" style="overflow:hidden">
+              <div style="padding:14px 16px;border-bottom:1px solid #eee9de;display:flex;align-items:baseline;gap:12px">
+                <span style="font-size:17px;font-weight:700">Expression</span>
+                <span class="cp-bars" style="transform:scale(1.15)"><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i></span>
+                <span style="font-size:12.5px;font-weight:600;color:#3f3a32">travaillé 4 fois · en progrès</span>
+                <span class="cp-slot" style="margin-left:auto">lettre</span>
+              </div>
+              <div style="display:grid;grid-template-columns:1fr 1fr">
+                <div style="display:flex;flex-direction:column;border-right:1px solid #eee9de">
+                  <div style="padding:14px 16px;display:flex;flex-direction:column;gap:10px;flex:1">
+                    <span class="wf-eyebrow">Ce que ton travail a montré</span>
+                    <div style="display:flex;flex-direction:column;gap:3px">
+                      <span class="cp-flab">Tu es au point sur :</span>
+                      <span class="wf-li"><i>·</i>la construction de tes phrases</span>
+                      <span class="wf-li"><i>·</i>la variété de ton vocabulaire</span>
+                    </div>
+                    <div style="display:flex;flex-direction:column;gap:5px;border-top:1px dashed #e6e1d6;padding-top:10px">
+                      <span class="wf-eyebrow">Les quatre exercices comptés</span>
+                      <span class="wf-li"><i>·</i>Commentaire — Rousseau <span class="wf-mut" style="margin-left:auto">12 sept.</span></span>
+                      <span class="wf-li"><i>·</i>Dissertation blanche <span class="wf-mut" style="margin-left:auto">5 sept.</span></span>
+                      <span class="wf-li"><i>·</i>Explication — extrait 4 <span class="wf-mut" style="margin-left:auto">28 août</span></span>
+                      <span class="wf-li"><i>·</i>Fiche de lecture <span class="wf-mut" style="margin-left:auto">22 août</span></span>
+                    </div>
+                  </div>
+                  <div style="padding:12px 16px 14px;display:flex;flex-direction:column;gap:6px;background:#fdfaf3;border-top:1px solid #e6dcc6">
+                    <span class="wf-eyebrow">Ta prochaine étape</span>
+                    <span class="wf-mut">Le dernier conseil que Calame t'a donné :</span>
+                    <span style="font-size:12.5px;line-height:1.45">Reprends ta deuxième partie et vérifie que chaque paragraphe répond à la question posée.</span>
+                    <span class="wf-btn ghost" style="align-self:flex-start;padding:8px 12px;min-height:0;font-size:11px">Revoir ce retour</span>
+                  </div>
+                </div>
+                <div style="padding:14px 16px;display:flex;flex-direction:column;gap:9px;background:#fcfbf7">
+                  <span class="wf-eyebrow">Ce qu'on regarde dans l'Expression</span>
+                  <span style="font-size:11.5px;line-height:1.6;color:#3f3a32">Le paragraphe de la fiche, servi tel quel : ce que cette compétence regarde dans un devoir, en langue courante. La même pour toute la classe.</span>
+                  <div style="display:flex;flex-direction:column;gap:4px;border-top:1px dashed #e6e1d6;padding-top:9px">
+                    <span class="wf-eyebrow">Les points regardés · tes marques</span>
+                    <span class="wf-li"><i>·</i>la construction de tes phrases <span class="wf-chip ok" style="margin-left:auto">au point</span></span>
+                    <span class="wf-li"><i>·</i>la variété de ton vocabulaire <span class="wf-chip ok" style="margin-left:auto">au point</span></span>
+                    <span class="wf-li"><i>·</i>les répétitions d'un mot à l'autre</span>
+                    <span class="wf-li"><i>·</i>recopier, ou reformuler</span>
+                    <span class="wf-it">Sans marque : pas encore assez d'exercices pour le dire.</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="dv-opt" id="4b" data-screen-label="4b Retenu telephone lettres et deconnexion">
+      <div class="dv-olabel"><a class="dv-oid" href="#4b">4b</a><span><b>Téléphone.</b> Les tuiles de <a href="#2a">2a</a>, l'interrupteur <i>Afficher les lettres</i> à droite de « Mes six compétences », et « Se déconnecter » en bas. Le sélecteur de classe reste dans le bandeau.</span></div>
+      <div class="dv-row">
+        <div>
+          <p class="dv-scr">Téléphone · 390 × 700 — l'état de la rentrée : rien à lever, interrupteur grisé</p>
+          <div class="dv-card" style="width:390px">
+            <div class="wf ph">
+              <div class="ph-top"><span class="ph-mark">PALIMPSESTE</span><span class="ph-cls">1re G2 ▾</span></div>
+              <div class="ph-bd">
+                <div style="padding:13px 14px;display:flex;flex-direction:column;gap:12px;flex:1;min-height:0">
+                  <div class="wf-box" style="padding:10px 12px;display:flex;flex-direction:column;gap:4px;border-color:#dcd0b8;background:#fdfaf3">
+                    <span class="wf-eyebrow">Ta prochaine étape</span>
+                    <span style="font-size:12.5px;line-height:1.45">Reprends ta deuxième partie et vérifie que chaque paragraphe répond à la question posée.</span>
+                    <span class="wf-mut">Le dernier conseil de Calame · <a href="#4b">revoir</a></span>
+                  </div>
+
+                  <div style="display:flex;flex-direction:column;gap:8px">
+                    <div style="display:flex;align-items:center;gap:10px;min-height:32px">
+                      <span class="wf-eyebrow" style="flex:1">Mes six compétences</span>
+                      <span class="sw off"><u></u>Rien à afficher</span>
+                    </div>
+                    <div class="grid2">
+                      <div class="tu tuA"><span class="tu-nom">Expression</span><span class="cp-bars"><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i></span><span class="tu-etat">4 fois · en progrès</span></div>
+                      <div class="tu tuB"><span class="tu-nom">Synthèse</span><span class="cp-bars"><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i></span><span class="tu-etat">4 fois · sur un palier</span></div>
+                      <div class="tu"><span class="tu-nom">Questionnement</span><span class="cp-bars"><i class="on"></i><i class="on"></i><i class="on"></i><i></i></span><span class="tu-etat">3 fois sur 4</span></div>
+                      <div class="tu"><span class="tu-nom">Argumentation</span><span class="cp-bars"><i class="on"></i><i class="on"></i><i></i><i></i></span><span class="tu-etat">2 fois sur 4</span></div>
+                      <div class="tu"><span class="tu-nom">Structure</span><span class="cp-bars"><i class="on"></i><i></i><i></i><i></i></span><span class="tu-etat">1 fois sur 4</span></div>
+                      <div class="tu dim"><span class="tu-nom">Connaissance</span><span class="cp-bars"><i></i><i></i><i></i><i></i></span><span class="tu-etat">jamais travaillé</span></div>
+                    </div>
+                    <span class="wf-it">Il faut quatre exercices sur une compétence pour dire où tu vas.</span>
+                  </div>
+
+                  <div class="wf-btn ghost" style="margin-top:auto">Se déconnecter</div>
+                </div>
+              </div>
+              <div class="ph-tabs"><span><em></em>Aujourd'hui</span><span><em></em>Modules</span><span><em></em>Agenda</span><span><em></em>Intégrité</span><span class="on"><em class="rd"></em>Moi</span></div>
+            </div>
+          </div>
+        </div>
+
+        <div>
+          <p class="dv-scr">Téléphone · 390 × 700 — interrupteur poussé, profil posé</p>
+          <div class="dv-card" style="width:390px">
+            <div class="wf ph">
+              <div class="ph-top"><span class="ph-mark">PALIMPSESTE</span><span class="ph-cls">1re G2 ▾</span></div>
+              <div class="ph-bd">
+                <div style="padding:13px 14px;display:flex;flex-direction:column;gap:12px;flex:1;min-height:0">
+                  <div class="wf-box" style="padding:10px 12px;display:flex;flex-direction:column;gap:4px;border-color:#dcd0b8;background:#fdfaf3">
+                    <span class="wf-eyebrow">Ta prochaine étape</span>
+                    <span style="font-size:12.5px;line-height:1.45">Reprends ta deuxième partie et vérifie que chaque paragraphe répond à la question posée.</span>
+                    <span class="wf-mut">Le dernier conseil de Calame · <a href="#4b">revoir</a></span>
+                  </div>
+
+                  <div style="display:flex;flex-direction:column;gap:8px">
+                    <div style="display:flex;align-items:center;gap:10px;min-height:32px">
+                      <span class="wf-eyebrow" style="flex:1">Mes six compétences</span>
+                      <span class="sw on"><u></u>Afficher les lettres</span>
+                    </div>
+                    <div class="grid2">
+                      <div class="tu tuA"><span class="tu-nom">Expression <span style="float:right;font-size:15px;color:#6B5A46">B</span></span><span class="cp-bars"><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i></span><span class="tu-etat">4 fois · en progrès</span></div>
+                      <div class="tu tuB"><span class="tu-nom">Synthèse <span style="float:right;font-size:15px;color:#6B5A46">C</span></span><span class="cp-bars"><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i></span><span class="tu-etat">4 fois · sur un palier</span></div>
+                      <div class="tu"><span class="tu-nom">Questionnement</span><span class="cp-bars"><i class="on"></i><i class="on"></i><i class="on"></i><i></i></span><span class="tu-etat">3 fois sur 4</span></div>
+                      <div class="tu"><span class="tu-nom">Argumentation</span><span class="cp-bars"><i class="on"></i><i class="on"></i><i></i><i></i></span><span class="tu-etat">2 fois sur 4</span></div>
+                      <div class="tu"><span class="tu-nom">Structure</span><span class="cp-bars"><i class="on"></i><i></i><i></i><i></i></span><span class="tu-etat">1 fois sur 4</span></div>
+                      <div class="tu dim"><span class="tu-nom">Connaissance</span><span class="cp-bars"><i></i><i></i><i></i><i></i></span><span class="tu-etat">jamais travaillé</span></div>
+                    </div>
+                    <span class="wf-it">Une lettre demande quatre exercices ET un profil posé : quatre compétences n'en ont pas encore.</span>
+                  </div>
+
+                  <div class="wf-btn ghost" style="margin-top:auto">Se déconnecter</div>
+                </div>
+              </div>
+              <div class="ph-tabs"><span><em></em>Aujourd'hui</span><span><em></em>Modules</span><span><em></em>Agenda</span><span><em></em>Intégrité</span><span class="on"><em class="rd"></em>Moi</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <p class="dv-note">L'interrupteur reste <b>toujours visible</b>, à la même place. Quand il ne peut rien lever — profil qui se stabilise, ou lettres non ouvertes cette année — il est <b>grisé et porte « Rien à afficher »</b> (écran de gauche, et pied de barre latérale en <a href="#4a">4a</a>) : l'élève voit que la chose existe sans qu'on lui nomme un interrupteur qu'il ne commande pas. Poussé, il ne lève les lettres que là où les trois conditions sont réunies — écran de droite : deux tuiles sur six.</p>
+    </div>
+
+  </div>
+</section>
+
+<section class="dv-turn" id="t3">
+  <div class="dv-thd"><a class="dv-tid" href="#t3">3</a><span class="dv-tname">Tour 3 — ordinateur : barre latérale des six + détail en deux colonnes · téléphone : <a class="dv-oid" href="#2a">2a</a> avec le sélecteur d'affichage</span><span class="dv-cap">trois places possibles pour « ta prochaine étape » — c'est la seule question ouverte</span></div>
+
+  <p class="dv-next" style="margin:0 0 22px">La structure ordinateur est la même dans <a href="#3a">3a</a>, <a href="#3b">3b</a> et <a href="#3c">3c</a> : <b>barre latérale</b> de 240 px avec les six compétences, leur jauge et leur « travaillé N fois » ; à droite, la compétence choisie — son en-tête, puis <b>deux colonnes</b> : <i>ce que ton travail a montré</i> à gauche, <i>ce qu'on regarde dans cette compétence</i> à droite. Le sélecteur de classe n'est plus dans la page : il est dans la Barre 1 de l'en-tête, dessinée ici telle qu'elle est (Barre 1 nav + actions, Barre 2 « hors module » : médaillon, marque, devise de la maison — <code>/eleve/moi</code> n'étant pas un module, la Barre 2 n'a ni sceau ni sous-onglets). Les deux barres coûtent environ 175 px : c'est le budget contre lequel se juge le bandeau de <a href="#3a">3a</a>. Les trois options ne diffèrent que par la place de <b>« ta prochaine étape »</b>.</p>
+
+  <div class="dv-opts">
+
+    <!-- ══════════════════════════ 3a ══════════════════════════ -->
+    <div class="dv-opt" id="3a" data-screen-label="3a Prochaine etape en bandeau haut">
+      <div class="dv-olabel"><a class="dv-oid" href="#3a">3a</a><span><b>En bandeau, tout en haut.</b> Le geste ne dépend d'aucune compétence choisie — aujourd'hui aucun retour n'est rattaché à une compétence —, donc il se lit avant elles, une fois, et ne bouge plus quand on change de compétence.</span></div>
+      <div class="dv-card" style="width:1040px">
+        <div class="wf">
+          <div class="hd1"><span class="nv"><span>Aujourd'hui</span><span>Modules</span><span>Agenda</span><span>Intégrité</span><b>Moi</b></span><span style="display:flex;gap:12px;align-items:center"><span class="wf-chip">1re G2 ▾</span><span style="width:1px;height:18px;background:#E4DBC9"></span><span style="font-size:12.5px;color:#7A6650">Se déconnecter</span></span></div>
+          <div class="hd2"><span class="hd-mq"><span class="hd-med"></span><span>Palimpseste</span></span><span class="hd-fil"></span><span class="hd-dev">Verba Volant, Scripta Manent, Sapientia Permanet</span></div>
+          <div style="padding:18px 20px;display:flex;flex-direction:column;gap:14px;background:#faf9f5">
+
+            <div class="wf-box" style="padding:12px 14px;display:flex;align-items:center;gap:14px;border-color:#dcd0b8;background:#fdfaf3">
+              <span class="wf-eyebrow" style="white-space:nowrap">Ta prochaine étape</span>
+              <span style="font-size:13px;flex:1;line-height:1.45">Reprends ta deuxième partie et vérifie que chaque paragraphe répond à la question posée.</span>
+              <span class="wf-mut" style="white-space:nowrap">le dernier conseil de Calame</span>
+              <span class="wf-chip">Revoir ce retour</span>
+            </div>
+
+            <div style="display:grid;grid-template-columns:240px 1fr;gap:18px;align-items:start">
+              <div style="display:flex;flex-direction:column;gap:6px">
+                <span class="wf-eyebrow" style="padding:0 2px 2px">Mes six compétences</span>
+                <div class="sd on"><b>Expression</b><span class="cp-bars"><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i></span><u>travaillé 4 fois · en progrès</u></div>
+                <div class="sd"><b>Synthèse</b><span class="cp-bars"><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i></span><u>travaillé 4 fois · sur un palier</u></div>
+                <div class="sd"><b>Questionnement</b><span class="cp-bars"><i class="on"></i><i class="on"></i><i class="on"></i><i></i></span><u>travaillé 3 fois</u></div>
+                <div class="sd"><b>Argumentation</b><span class="cp-bars"><i class="on"></i><i class="on"></i><i></i><i></i></span><u>travaillé 2 fois</u></div>
+                <div class="sd"><b>Structure</b><span class="cp-bars"><i class="on"></i><i></i><i></i><i></i></span><u>travaillé 1 fois</u></div>
+                <div class="sd dim"><b>Connaissance</b><span class="cp-bars"><i></i><i></i><i></i><i></i></span><u>jamais travaillé</u></div>
+                <span class="wf-it" style="padding:4px 2px 0">Quatre exercices, et on peut dire où tu vas.</span>
+              </div>
+
+              <div class="wf-box" style="overflow:hidden">
+                <div style="padding:14px 16px;border-bottom:1px solid #eee9de;display:flex;align-items:baseline;gap:12px">
+                  <span style="font-size:17px;font-weight:700">Expression</span>
+                  <span class="cp-bars" style="transform:scale(1.15)"><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i></span>
+                  <span style="font-size:12.5px;font-weight:600;color:#3f3a32">travaillé 4 fois · en progrès</span>
+                  <span class="cp-slot" style="margin-left:auto">lettre</span>
+                </div>
+                <div style="display:grid;grid-template-columns:1fr 1fr">
+                  <div style="padding:14px 16px;display:flex;flex-direction:column;gap:10px;border-right:1px solid #eee9de">
+                    <span class="wf-eyebrow">Ce que ton travail a montré</span>
+                    <div style="display:flex;flex-direction:column;gap:3px">
+                      <span class="cp-flab">Tu es au point sur :</span>
+                      <span class="wf-li"><i>·</i>la construction de tes phrases</span>
+                      <span class="wf-li"><i>·</i>la variété de ton vocabulaire</span>
+                    </div>
+                    <div style="display:flex;flex-direction:column;gap:5px;border-top:1px dashed #e6e1d6;padding-top:10px">
+                      <span class="wf-eyebrow">Les quatre exercices comptés</span>
+                      <span class="wf-li"><i>·</i>Commentaire — Rousseau <span class="wf-mut" style="margin-left:auto">12 sept.</span></span>
+                      <span class="wf-li"><i>·</i>Dissertation blanche <span class="wf-mut" style="margin-left:auto">5 sept.</span></span>
+                      <span class="wf-li"><i>·</i>Explication — extrait 4 <span class="wf-mut" style="margin-left:auto">28 août</span></span>
+                      <span class="wf-li"><i>·</i>Fiche de lecture <span class="wf-mut" style="margin-left:auto">22 août</span></span>
+                    </div>
+                  </div>
+                  <div style="padding:14px 16px;display:flex;flex-direction:column;gap:9px;background:#fcfbf7">
+                    <span class="wf-eyebrow">Ce qu'on regarde dans l'Expression</span>
+                    <span style="font-size:11.5px;line-height:1.6;color:#3f3a32">Le paragraphe de la fiche, servi tel quel : ce que cette compétence regarde dans un devoir, en langue courante. La même pour toute la classe.</span>
+                    <div style="display:flex;flex-direction:column;gap:4px;border-top:1px dashed #e6e1d6;padding-top:9px">
+                      <span class="wf-eyebrow">Les points regardés · tes marques</span>
+                      <span class="wf-li"><i>·</i>la construction de tes phrases <span class="wf-chip ok" style="margin-left:auto">au point</span></span>
+                      <span class="wf-li"><i>·</i>la variété de ton vocabulaire <span class="wf-chip ok" style="margin-left:auto">au point</span></span>
+                      <span class="wf-li"><i>·</i>les répétitions d'un mot à l'autre</span>
+                      <span class="wf-li"><i>·</i>recopier, ou reformuler</span>
+                      <span class="wf-it">Sans marque : pas encore assez d'exercices pour le dire.</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <p class="dv-note">Le geste est la première chose lue, avant même de choisir une compétence. Contrepartie : il occupe la pleine largeur alors qu'il tient en une phrase, et il reste identique quelle que soit la compétence ouverte — un élève peut croire qu'il concerne celle qu'il regarde.</p>
+    </div>
+
+    <!-- ══════════════════════════ 3b ══════════════════════════ -->
+    <div class="dv-opt" id="3b" data-screen-label="3b Prochaine etape en pied de colonne gauche">
+      <div class="dv-olabel"><a class="dv-oid" href="#3b">3b</a><span><b>En pied de la colonne « ce que ton travail a montré ».</b> Le geste est la suite du constat : on lit ce qui a été montré, puis ce qu'il reste à faire. Il vit dans la colonne du travail, à côté de l'explication qui le rend compréhensible.</span></div>
+      <div class="dv-card" style="width:1040px">
+        <div class="wf">
+          <div class="hd1"><span class="nv"><span>Aujourd'hui</span><span>Modules</span><span>Agenda</span><span>Intégrité</span><b>Moi</b></span><span style="display:flex;gap:12px;align-items:center"><span class="wf-chip">1re G2 ▾</span><span style="width:1px;height:18px;background:#E4DBC9"></span><span style="font-size:12.5px;color:#7A6650">Se déconnecter</span></span></div>
+          <div class="hd2"><span class="hd-mq"><span class="hd-med"></span><span>Palimpseste</span></span><span class="hd-fil"></span><span class="hd-dev">Verba Volant, Scripta Manent, Sapientia Permanet</span></div>
+          <div style="padding:18px 20px;display:grid;grid-template-columns:240px 1fr;gap:18px;align-items:start;background:#faf9f5">
+            <div style="display:flex;flex-direction:column;gap:6px">
+              <span class="wf-eyebrow" style="padding:0 2px 2px">Mes six compétences</span>
+              <div class="sd on"><b>Expression</b><span class="cp-bars"><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i></span><u>travaillé 4 fois · en progrès</u></div>
+              <div class="sd"><b>Synthèse</b><span class="cp-bars"><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i></span><u>travaillé 4 fois · sur un palier</u></div>
+              <div class="sd"><b>Questionnement</b><span class="cp-bars"><i class="on"></i><i class="on"></i><i class="on"></i><i></i></span><u>travaillé 3 fois</u></div>
+              <div class="sd"><b>Argumentation</b><span class="cp-bars"><i class="on"></i><i class="on"></i><i></i><i></i></span><u>travaillé 2 fois</u></div>
+              <div class="sd"><b>Structure</b><span class="cp-bars"><i class="on"></i><i></i><i></i><i></i></span><u>travaillé 1 fois</u></div>
+              <div class="sd dim"><b>Connaissance</b><span class="cp-bars"><i></i><i></i><i></i><i></i></span><u>jamais travaillé</u></div>
+              <span class="wf-it" style="padding:4px 2px 0">Quatre exercices, et on peut dire où tu vas.</span>
+            </div>
+
+            <div class="wf-box" style="overflow:hidden">
+              <div style="padding:14px 16px;border-bottom:1px solid #eee9de;display:flex;align-items:baseline;gap:12px">
+                <span style="font-size:17px;font-weight:700">Expression</span>
+                <span class="cp-bars" style="transform:scale(1.15)"><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i></span>
+                <span style="font-size:12.5px;font-weight:600;color:#3f3a32">travaillé 4 fois · en progrès</span>
+                <span class="cp-slot" style="margin-left:auto">lettre</span>
+              </div>
+              <div style="display:grid;grid-template-columns:1fr 1fr">
+                <div style="display:flex;flex-direction:column;border-right:1px solid #eee9de">
+                  <div style="padding:14px 16px;display:flex;flex-direction:column;gap:10px;flex:1">
+                    <span class="wf-eyebrow">Ce que ton travail a montré</span>
+                    <div style="display:flex;flex-direction:column;gap:3px">
+                      <span class="cp-flab">Tu es au point sur :</span>
+                      <span class="wf-li"><i>·</i>la construction de tes phrases</span>
+                      <span class="wf-li"><i>·</i>la variété de ton vocabulaire</span>
+                    </div>
+                    <div style="display:flex;flex-direction:column;gap:5px;border-top:1px dashed #e6e1d6;padding-top:10px">
+                      <span class="wf-eyebrow">Les quatre exercices comptés</span>
+                      <span class="wf-li"><i>·</i>Commentaire — Rousseau <span class="wf-mut" style="margin-left:auto">12 sept.</span></span>
+                      <span class="wf-li"><i>·</i>Dissertation blanche <span class="wf-mut" style="margin-left:auto">5 sept.</span></span>
+                      <span class="wf-li"><i>·</i>Explication — extrait 4 <span class="wf-mut" style="margin-left:auto">28 août</span></span>
+                      <span class="wf-li"><i>·</i>Fiche de lecture <span class="wf-mut" style="margin-left:auto">22 août</span></span>
+                    </div>
+                  </div>
+                  <div style="padding:12px 16px 14px;display:flex;flex-direction:column;gap:6px;background:#fdfaf3;border-top:1px solid #e6dcc6">
+                    <span class="wf-eyebrow">Ta prochaine étape</span>
+                    <span class="wf-mut">Le dernier conseil que Calame t'a donné :</span>
+                    <span style="font-size:12.5px;line-height:1.45">Reprends ta deuxième partie et vérifie que chaque paragraphe répond à la question posée.</span>
+                    <span class="wf-btn ghost" style="align-self:flex-start;padding:8px 12px;min-height:0;font-size:11px">Revoir ce retour</span>
+                  </div>
+                </div>
+                <div style="padding:14px 16px;display:flex;flex-direction:column;gap:9px;background:#fcfbf7">
+                  <span class="wf-eyebrow">Ce qu'on regarde dans l'Expression</span>
+                  <span style="font-size:11.5px;line-height:1.6;color:#3f3a32">Le paragraphe de la fiche, servi tel quel : ce que cette compétence regarde dans un devoir, en langue courante. La même pour toute la classe.</span>
+                  <div style="display:flex;flex-direction:column;gap:4px;border-top:1px dashed #e6e1d6;padding-top:9px">
+                    <span class="wf-eyebrow">Les points regardés · tes marques</span>
+                    <span class="wf-li"><i>·</i>la construction de tes phrases <span class="wf-chip ok" style="margin-left:auto">au point</span></span>
+                    <span class="wf-li"><i>·</i>la variété de ton vocabulaire <span class="wf-chip ok" style="margin-left:auto">au point</span></span>
+                    <span class="wf-li"><i>·</i>les répétitions d'un mot à l'autre</span>
+                    <span class="wf-li"><i>·</i>recopier, ou reformuler</span>
+                    <span class="wf-it">Sans marque : pas encore assez d'exercices pour le dire.</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <p class="dv-note">La lecture est la plus naturelle des trois : constat → geste. Mais le geste est dans le cadre d'une compétence alors qu'il n'y est pas rattaché — il faut que la phrase le dise (« le dernier conseil de Calame », pas « ton geste pour l'Expression »), ce qui est déjà la règle du code.</p>
+    </div>
+
+    <!-- ══════════════════════════ 3c ══════════════════════════ -->
+    <div class="dv-opt" id="3c" data-screen-label="3c Prochaine etape en pied de barre laterale">
+      <div class="dv-olabel"><a class="dv-oid" href="#3c">3c</a><span><b>En pied de la barre latérale.</b> Le geste reste visible quelle que soit la compétence ouverte, sans jamais entrer dans son cadre — il est clairement à côté des six, pas dans l'une d'elles.</span></div>
+      <div class="dv-card" style="width:1040px">
+        <div class="wf">
+          <div class="hd1"><span class="nv"><span>Aujourd'hui</span><span>Modules</span><span>Agenda</span><span>Intégrité</span><b>Moi</b></span><span style="display:flex;gap:12px;align-items:center"><span class="wf-chip">1re G2 ▾</span><span style="width:1px;height:18px;background:#E4DBC9"></span><span style="font-size:12.5px;color:#7A6650">Se déconnecter</span></span></div>
+          <div class="hd2"><span class="hd-mq"><span class="hd-med"></span><span>Palimpseste</span></span><span class="hd-fil"></span><span class="hd-dev">Verba Volant, Scripta Manent, Sapientia Permanet</span></div>
+          <div style="padding:18px 20px;display:grid;grid-template-columns:240px 1fr;gap:18px;align-items:start;background:#faf9f5">
+            <div style="display:flex;flex-direction:column;gap:6px">
+              <span class="wf-eyebrow" style="padding:0 2px 2px">Mes six compétences</span>
+              <div class="sd on"><b>Expression</b><span class="cp-bars"><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i></span><u>travaillé 4 fois · en progrès</u></div>
+              <div class="sd"><b>Synthèse</b><span class="cp-bars"><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i></span><u>travaillé 4 fois · sur un palier</u></div>
+              <div class="sd"><b>Questionnement</b><span class="cp-bars"><i class="on"></i><i class="on"></i><i class="on"></i><i></i></span><u>travaillé 3 fois</u></div>
+              <div class="sd"><b>Argumentation</b><span class="cp-bars"><i class="on"></i><i class="on"></i><i></i><i></i></span><u>travaillé 2 fois</u></div>
+              <div class="sd"><b>Structure</b><span class="cp-bars"><i class="on"></i><i></i><i></i><i></i></span><u>travaillé 1 fois</u></div>
+              <div class="sd dim"><b>Connaissance</b><span class="cp-bars"><i></i><i></i><i></i><i></i></span><u>jamais travaillé</u></div>
+              <div class="wf-box" style="margin-top:8px;padding:12px;display:flex;flex-direction:column;gap:6px;border-color:#dcd0b8;background:#fdfaf3">
+                <span class="wf-eyebrow">Ta prochaine étape</span>
+                <span style="font-size:12px;line-height:1.45">Reprends ta deuxième partie et vérifie que chaque paragraphe répond à la question posée.</span>
+                <span class="wf-mut">Le dernier conseil de Calame · <a href="#3c">revoir</a></span>
+              </div>
+            </div>
+
+            <div class="wf-box" style="overflow:hidden">
+              <div style="padding:14px 16px;border-bottom:1px solid #eee9de;display:flex;align-items:baseline;gap:12px">
+                <span style="font-size:17px;font-weight:700">Expression</span>
+                <span class="cp-bars" style="transform:scale(1.15)"><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i></span>
+                <span style="font-size:12.5px;font-weight:600;color:#3f3a32">travaillé 4 fois · en progrès</span>
+                <span class="cp-slot" style="margin-left:auto">lettre</span>
+              </div>
+              <div style="display:grid;grid-template-columns:1fr 1fr">
+                <div style="padding:14px 16px;display:flex;flex-direction:column;gap:10px;border-right:1px solid #eee9de">
+                  <span class="wf-eyebrow">Ce que ton travail a montré</span>
+                  <div style="display:flex;flex-direction:column;gap:3px">
+                    <span class="cp-flab">Tu es au point sur :</span>
+                    <span class="wf-li"><i>·</i>la construction de tes phrases</span>
+                    <span class="wf-li"><i>·</i>la variété de ton vocabulaire</span>
+                  </div>
+                  <div style="display:flex;flex-direction:column;gap:5px;border-top:1px dashed #e6e1d6;padding-top:10px">
+                    <span class="wf-eyebrow">Les quatre exercices comptés</span>
+                    <span class="wf-li"><i>·</i>Commentaire — Rousseau <span class="wf-mut" style="margin-left:auto">12 sept.</span></span>
+                    <span class="wf-li"><i>·</i>Dissertation blanche <span class="wf-mut" style="margin-left:auto">5 sept.</span></span>
+                    <span class="wf-li"><i>·</i>Explication — extrait 4 <span class="wf-mut" style="margin-left:auto">28 août</span></span>
+                    <span class="wf-li"><i>·</i>Fiche de lecture <span class="wf-mut" style="margin-left:auto">22 août</span></span>
+                  </div>
+                </div>
+                <div style="padding:14px 16px;display:flex;flex-direction:column;gap:9px;background:#fcfbf7">
+                  <span class="wf-eyebrow">Ce qu'on regarde dans l'Expression</span>
+                  <span style="font-size:11.5px;line-height:1.6;color:#3f3a32">Le paragraphe de la fiche, servi tel quel : ce que cette compétence regarde dans un devoir, en langue courante. La même pour toute la classe.</span>
+                  <div style="display:flex;flex-direction:column;gap:4px;border-top:1px dashed #e6e1d6;padding-top:9px">
+                    <span class="wf-eyebrow">Les points regardés · tes marques</span>
+                    <span class="wf-li"><i>·</i>la construction de tes phrases <span class="wf-chip ok" style="margin-left:auto">au point</span></span>
+                    <span class="wf-li"><i>·</i>la variété de ton vocabulaire <span class="wf-chip ok" style="margin-left:auto">au point</span></span>
+                    <span class="wf-li"><i>·</i>les répétitions d'un mot à l'autre</span>
+                    <span class="wf-li"><i>·</i>recopier, ou reformuler</span>
+                    <span class="wf-it">Sans marque : pas encore assez d'exercices pour le dire.</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <p class="dv-note">La place la plus juste au regard des données : le geste n'appartient à aucune des six, et la barre latérale non plus. Contrepartie : la colonne de 240 px le serre, et il se lit après les compétences plutôt qu'avant.</p>
+    </div>
+
+    <!-- ══════════════════════════ 3d ══════════════════════════ -->
+    <div class="dv-opt" id="3d" data-screen-label="3d Telephone 2a avec selecteur d affichage">
+      <div class="dv-olabel"><a class="dv-oid" href="#3d">3d</a><span><b>Téléphone — <a href="#2a">2a</a> + le sélecteur d'affichage sous « ta prochaine étape ».</b> Deux façons de voir les six : en tuiles, ou en liste. Le choix se retient. Plus de sélecteur de classe dans la page — il est dans le bandeau.</span></div>
+      <div class="dv-row">
+        <div>
+          <p class="dv-scr">Téléphone · 390 × 700 — affichage « tuiles »</p>
+          <div class="dv-card" style="width:390px">
+            <div class="wf ph">
+              <div class="ph-top"><span class="ph-mark">PALIMPSESTE</span><span class="ph-cls">1re G2 ▾</span></div>
+              <div class="ph-bd">
+                <div style="padding:13px 14px;display:flex;flex-direction:column;gap:12px;flex:1;min-height:0">
+                  <div class="wf-box" style="padding:10px 12px;display:flex;flex-direction:column;gap:4px;border-color:#dcd0b8;background:#fdfaf3">
+                    <span class="wf-eyebrow">Ta prochaine étape</span>
+                    <span style="font-size:12.5px;line-height:1.45">Reprends ta deuxième partie et vérifie que chaque paragraphe répond à la question posée.</span>
+                    <span class="wf-mut">Le dernier conseil de Calame · <a href="#3d">revoir</a></span>
+                  </div>
+
+                  <div class="wf-seg"><span class="on">Tuiles</span><span>Liste</span></div>
+
+                  <div style="display:flex;flex-direction:column;gap:8px">
+                    <div class="grid2">
+                      <div class="tu tuA"><span class="tu-nom">Expression</span><span class="cp-bars"><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i></span><span class="tu-etat">4 fois · en progrès</span></div>
+                      <div class="tu tuB"><span class="tu-nom">Synthèse</span><span class="cp-bars"><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i></span><span class="tu-etat">4 fois · sur un palier</span></div>
+                      <div class="tu"><span class="tu-nom">Questionnement</span><span class="cp-bars"><i class="on"></i><i class="on"></i><i class="on"></i><i></i></span><span class="tu-etat">3 fois sur 4</span></div>
+                      <div class="tu"><span class="tu-nom">Argumentation</span><span class="cp-bars"><i class="on"></i><i class="on"></i><i></i><i></i></span><span class="tu-etat">2 fois sur 4</span></div>
+                      <div class="tu"><span class="tu-nom">Structure</span><span class="cp-bars"><i class="on"></i><i></i><i></i><i></i></span><span class="tu-etat">1 fois sur 4</span></div>
+                      <div class="tu dim"><span class="tu-nom">Connaissance</span><span class="cp-bars"><i></i><i></i><i></i><i></i></span><span class="tu-etat">jamais travaillé</span></div>
+                    </div>
+                    <span class="wf-it">Il faut quatre exercices sur une compétence pour dire où tu vas.</span>
+                  </div>
+
+                  <div class="wf-box" style="margin-top:auto;padding:11px 12px;display:flex;align-items:center;gap:8px;min-height:44px;box-sizing:border-box"><span style="font-size:11.5px;flex:1">Mon compte</span><span class="wf-mut">lettres, déconnexion</span><span class="wf-mut">›</span></div>
+                </div>
+              </div>
+              <div class="ph-tabs"><span><em></em>Aujourd'hui</span><span><em></em>Modules</span><span><em></em>Agenda</span><span><em></em>Intégrité</span><span class="on"><em class="rd"></em>Moi</span></div>
+            </div>
+          </div>
+        </div>
+
+        <div>
+          <p class="dv-scr">Téléphone · 390 × 700 — affichage « liste »</p>
+          <div class="dv-card" style="width:390px">
+            <div class="wf ph">
+              <div class="ph-top"><span class="ph-mark">PALIMPSESTE</span><span class="ph-cls">1re G2 ▾</span></div>
+              <div class="ph-bd">
+                <div style="padding:13px 14px;display:flex;flex-direction:column;gap:12px;flex:1;min-height:0">
+                  <div class="wf-box" style="padding:10px 12px;display:flex;flex-direction:column;gap:4px;border-color:#dcd0b8;background:#fdfaf3">
+                    <span class="wf-eyebrow">Ta prochaine étape</span>
+                    <span style="font-size:12.5px;line-height:1.45">Reprends ta deuxième partie et vérifie que chaque paragraphe répond à la question posée.</span>
+                    <span class="wf-mut">Le dernier conseil de Calame · <a href="#3d">revoir</a></span>
+                  </div>
+
+                  <div class="wf-seg"><span>Tuiles</span><span class="on">Liste</span></div>
+
+                  <div style="display:flex;flex-direction:column;gap:7px">
+                    <div class="rw"><b>Expression</b><span class="cp-bars"><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i></span><span class="wf-chip ok">en progrès</span></div>
+                    <div class="rw"><b>Synthèse</b><span class="cp-bars"><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i></span><span class="wf-chip att">palier</span></div>
+                    <div class="rw"><b>Questionnement</b><span class="cp-bars"><i class="on"></i><i class="on"></i><i class="on"></i><i></i></span><span class="wf-mut">3 / 4</span></div>
+                    <div class="rw"><b>Argumentation</b><span class="cp-bars"><i class="on"></i><i class="on"></i><i></i><i></i></span><span class="wf-mut">2 / 4</span></div>
+                    <div class="rw"><b>Structure</b><span class="cp-bars"><i class="on"></i><i></i><i></i><i></i></span><span class="wf-mut">1 / 4</span></div>
+                    <div class="rw"><b style="color:#8b8478">Connaissance</b><span class="cp-bars"><i></i><i></i><i></i><i></i></span><span class="wf-mut">jamais</span></div>
+                    <span class="wf-it">Il faut quatre exercices sur une compétence pour dire où tu vas.</span>
+                  </div>
+
+                  <div class="wf-box" style="margin-top:auto;padding:11px 12px;display:flex;align-items:center;gap:8px;min-height:44px;box-sizing:border-box"><span style="font-size:11.5px;flex:1">Mon compte</span><span class="wf-mut">lettres, déconnexion</span><span class="wf-mut">›</span></div>
+                </div>
+              </div>
+              <div class="ph-tabs"><span><em></em>Aujourd'hui</span><span><em></em>Modules</span><span><em></em>Agenda</span><span><em></em>Intégrité</span><span class="on"><em class="rd"></em>Moi</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <p class="dv-note">J'ai lu « affichage des compétences » comme <b>tuiles / liste</b> : même contenu, deux densités, et la liste nomme l'état en toutes lettres là où la tuile le résume. Si tu voulais plutôt un interrupteur <i>masquer / afficher</i> les six, dis-le — c'est un dessin différent.</p>
+    </div>
+
+  </div>
+
+  <p class="dv-next"><b>Ma réponse à ta question :</b> <a href="#3c">3c</a>, le pied de barre latérale. Le geste n'est rattaché à aucune compétence dans les données (aucune cible écrite aujourd'hui), et c'est la seule des trois places qui ne prétend pas le contraire, tout en le gardant visible pendant que l'élève passe d'une compétence à l'autre. <a href="#3b">3b</a> se lit mieux mais met le geste dans un cadre auquel il n'appartient pas ; <a href="#3a">3a</a> est le plus sûr des trois si tu veux qu'il soit lu en premier.</p>
+</section>
+
+<section class="dv-turn" id="t2">
+  <div class="dv-thd"><a class="dv-tid" href="#t2">2</a><span class="dv-tname">Tour 2 — aucun défilement pour voir les six : une <b>vue d'ensemble qui tient dans un écran</b>, puis une fiche par compétence</span><span class="dv-cap">le progrès et « ce qu'on regarde » dans la même fiche — l'un sous l'autre, jamais dans deux pages</span></div>
+
+  <p class="dv-next" style="margin:0 0 22px">Deux niveaux, les mêmes sur téléphone et sur ordinateur. <b>Niveau 1 — les six d'un coup :</b> six tuiles (<a href="#2a">2a</a>) ou six lignes de table (<a href="#2b">2b</a>), toutes de même hauteur, visibles sans faire défiler. <b>Niveau 2 — la fiche d'une compétence :</b> son progrès EN HAUT, et juste dessous <i>ce qu'on regarde dans ta copie</i> — la fiche générique, dépliable, fermée par défaut. L'élève n'a plus à quitter son progrès pour comprendre ce qui le mesure.</p>
+
+  <div class="dv-opts">
+
+    <!-- ══════════════════════════ 2a ══════════════════════════ -->
+    <div class="dv-opt" id="2a" data-screen-label="2a Six tuiles cliquables">
+      <div class="dv-olabel"><a class="dv-oid" href="#2a">2a</a><span><b>Six tuiles cliquables.</b> Grille 2 × 3 sur téléphone, 3 × 2 sur ordinateur. Une tuile = un nom, une jauge de quatre crans, un état en trois mots. Rien d'autre : les forces vivent dans la fiche.</span></div>
+
+      <div class="dv-row">
+        <div>
+          <p class="dv-scr">Téléphone · 390 × 700 — viewport réel, barre tactile comprise · niveau 1</p>
+          <div class="dv-card" style="width:390px">
+            <div class="wf ph">
+              <div class="ph-top"><span class="ph-mark">PALIMPSESTE</span><span class="ph-cls">1re G2 ▾</span></div>
+              <div class="ph-bd">
+                <div style="padding:13px 14px;display:flex;flex-direction:column;gap:13px;flex:1;min-height:0">
+                  <div class="wf-box" style="padding:10px 12px;display:flex;flex-direction:column;gap:4px;border-color:#dcd0b8;background:#fdfaf3">
+                    <span class="wf-eyebrow">Ta prochaine étape</span>
+                    <span style="font-size:12.5px;line-height:1.45">Reprends ta deuxième partie et vérifie que chaque paragraphe répond à la question posée.</span>
+                    <span class="wf-mut">Le dernier conseil de Calame · <a href="#2a">revoir</a></span>
+                  </div>
+
+                  <div style="display:flex;flex-direction:column;gap:8px">
+                    <span class="wf-eyebrow">Mes six compétences · touche pour ouvrir</span>
+                    <div class="grid2">
+                      <div class="tu tuA"><span class="tu-nom">Expression</span><span class="cp-bars"><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i></span><span class="tu-etat">4 fois · en progrès</span></div>
+                      <div class="tu tuB"><span class="tu-nom">Synthèse</span><span class="cp-bars"><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i></span><span class="tu-etat">4 fois · sur un palier</span></div>
+                      <div class="tu"><span class="tu-nom">Questionnement</span><span class="cp-bars"><i class="on"></i><i class="on"></i><i class="on"></i><i></i></span><span class="tu-etat">3 fois sur 4</span></div>
+                      <div class="tu"><span class="tu-nom">Argumentation</span><span class="cp-bars"><i class="on"></i><i class="on"></i><i></i><i></i></span><span class="tu-etat">2 fois sur 4</span></div>
+                      <div class="tu"><span class="tu-nom">Structure</span><span class="cp-bars"><i class="on"></i><i></i><i></i><i></i></span><span class="tu-etat">1 fois sur 4</span></div>
+                      <div class="tu dim"><span class="tu-nom">Connaissance</span><span class="cp-bars"><i></i><i></i><i></i><i></i></span><span class="tu-etat">jamais travaillé</span></div>
+                    </div>
+                    <span class="wf-it">Il faut quatre exercices sur une compétence pour dire où tu vas.</span>
+                  </div>
+
+                  <div class="wf-box" style="margin-top:auto;padding:11px 12px;display:flex;align-items:center;gap:8px;min-height:44px;box-sizing:border-box"><span style="font-size:11.5px;flex:1">Mon compte</span><span class="wf-mut">lettres, classe, déconnexion</span><span class="wf-mut">›</span></div>
+                </div>
+              </div>
+              <div class="ph-tabs"><span><em></em>Aujourd'hui</span><span><em></em>Modules</span><span><em></em>Agenda</span><span><em></em>Intégrité</span><span class="on"><em class="rd"></em>Moi</span></div>
+            </div>
+          </div>
+          <p class="dv-note" style="max-width:390px">Le compte (classe, lettres, déconnexion) passe derrière une ligne : le sélecteur de classe est déjà dans le bandeau du haut, et ces trois réglages n'ont pas à occuper le tiers de l'écran.</p>
+        </div>
+
+        <div>
+          <p class="dv-scr">Téléphone · 390 × 700 — niveau 2, la fiche (dépliant fermé)</p>
+          <div class="dv-card" style="width:390px">
+            <div class="wf ph">
+              <div class="ph-top"><span class="ph-back">←</span><span class="ph-mark" style="letter-spacing:0;font-size:14px">Expression</span><span class="cp-slot" style="margin-left:auto">lettre</span></div>
+              <div class="ph-bd">
+                <div style="padding:13px 14px;display:flex;flex-direction:column;gap:11px">
+                  <div class="wf-box" style="padding:12px;display:flex;flex-direction:column;gap:8px">
+                    <span class="wf-eyebrow">Où j'en suis</span>
+                    <div class="cp-n"><span class="cp-bars" style="transform:scale(1.15);transform-origin:left"><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i></span><span class="cp-etat" style="font-size:12.5px;font-weight:600;margin-left:6px">travaillé 4 fois · en progrès</span></div>
+                    <div style="display:flex;flex-direction:column;gap:3px;border-top:1px dashed #e6e1d6;padding-top:9px">
+                      <span class="cp-flab">Tu es au point sur :</span>
+                      <span class="wf-li"><i>·</i>la construction de tes phrases</span>
+                      <span class="wf-li"><i>·</i>la variété de ton vocabulaire</span>
+                    </div>
+                  </div>
+
+                  <div class="dp">
+                    <div class="dp-hd">Ce qu'on regarde dans ta copie<u>▾</u></div>
+                  </div>
+
+                  <div class="wf-box" style="padding:11px 12px;display:flex;flex-direction:column;gap:5px;border-color:#dcd0b8;background:#fdfaf3">
+                    <span class="wf-eyebrow">Ta prochaine étape</span>
+                    <span style="font-size:12.5px;line-height:1.45">Reprends ta deuxième partie et vérifie que chaque paragraphe répond à la question posée.</span>
+                    <span class="wf-btn ghost" style="align-self:flex-start;padding:8px 12px;min-height:0;font-size:11px">Revoir ce retour</span>
+                  </div>
+
+                  <div style="display:flex;gap:8px">
+                    <div class="wf-btn ghost" style="flex:1;font-size:11px">← Synthèse</div>
+                    <div class="wf-btn ghost" style="flex:1;font-size:11px">Questionnement →</div>
+                  </div>
+                </div>
+              </div>
+              <div class="ph-tabs"><span><em></em>Aujourd'hui</span><span><em></em>Modules</span><span><em></em>Agenda</span><span><em></em>Intégrité</span><span class="on"><em class="rd"></em>Moi</span></div>
+            </div>
+          </div>
+        </div>
+
+        <div>
+          <p class="dv-scr">Téléphone · 390 × 700 — le même écran, dépliant ouvert</p>
+          <div class="dv-card" style="width:390px">
+            <div class="wf ph">
+              <div class="ph-top"><span class="ph-back">←</span><span class="ph-mark" style="letter-spacing:0;font-size:14px">Expression</span><span class="cp-slot" style="margin-left:auto">lettre</span></div>
+              <div class="ph-bd">
+                <div style="padding:13px 14px;display:flex;flex-direction:column;gap:11px">
+                  <div class="wf-box" style="padding:12px;display:flex;flex-direction:column;gap:8px">
+                    <span class="wf-eyebrow">Où j'en suis</span>
+                    <div class="cp-n"><span class="cp-bars" style="transform:scale(1.15);transform-origin:left"><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i></span><span class="cp-etat" style="font-size:12.5px;font-weight:600;margin-left:6px">travaillé 4 fois · en progrès</span></div>
+                    <div style="display:flex;flex-direction:column;gap:3px;border-top:1px dashed #e6e1d6;padding-top:9px">
+                      <span class="cp-flab">Tu es au point sur :</span>
+                      <span class="wf-li"><i>·</i>la construction de tes phrases</span>
+                      <span class="wf-li"><i>·</i>la variété de ton vocabulaire</span>
+                    </div>
+                  </div>
+
+                  <div class="dp">
+                    <div class="dp-hd" style="background:#f7f4ee;border-radius:8px 8px 0 0">Ce qu'on regarde dans ta copie<u>▴</u></div>
+                    <div class="dp-bd">
+                      <span style="font-size:11.5px;line-height:1.55;color:#3f3a32">Le paragraphe de la fiche, servi tel quel : ce que l'Expression regarde dans un devoir, en langue courante.</span>
+                      <span class="wf-eyebrow" style="margin-top:4px">Les points regardés</span>
+                      <span class="wf-li"><i>·</i>la construction de tes phrases <span class="wf-chip ok" style="margin-left:auto">au point</span></span>
+                      <span class="wf-li"><i>·</i>la variété de ton vocabulaire <span class="wf-chip ok" style="margin-left:auto">au point</span></span>
+                      <span class="wf-li"><i>·</i>les répétitions d'un mot à l'autre</span>
+                      <span class="wf-li"><i>·</i>recopier, ou reformuler</span>
+                      <span class="wf-it" style="margin-top:4px">Sans marque : pas encore assez d'exercices pour le dire.</span>
+                    </div>
+                  </div>
+
+                  <div class="wf-box" style="padding:11px 12px;display:flex;flex-direction:column;gap:5px;border-color:#dcd0b8;background:#fdfaf3">
+                    <span class="wf-eyebrow">Ta prochaine étape</span>
+                    <span style="font-size:12.5px;line-height:1.45">Reprends ta deuxième partie et vérifie que chaque paragraphe répond à la question posée.</span>
+                  </div>
+                </div>
+              </div>
+              <div class="ph-tabs"><span><em></em>Aujourd'hui</span><span><em></em>Modules</span><span><em></em>Agenda</span><span><em></em>Intégrité</span><span class="on"><em class="rd"></em>Moi</span></div>
+            </div>
+          </div>
+          <p class="dv-note" style="max-width:390px">Rien ne disparaît quand le dépliant s'ouvre : il pousse la suite, et la fiche défile — c'est le seul écran des deux niveaux où défiler est normal.</p>
+        </div>
+      </div>
+
+      <div class="dv-row" style="margin-top:14px">
+        <div>
+          <p class="dv-scr">Ordinateur · 1040 — les six en haut, la fiche ouverte dessous</p>
+          <div class="dv-card" style="width:1040px">
+            <div class="wf">
+              <div class="wf-bar"><span class="wf-h1">Moi</span><span class="wf-sub">Camille Roussel · 1re G2</span><span style="margin-left:auto;display:flex;gap:10px;align-items:center"><span class="wf-mut">Ma classe · 1re G2</span><span class="wf-chip">Lettres : masquées</span><span class="wf-chip">Se déconnecter</span></span></div>
+              <div style="padding:18px 20px;display:flex;flex-direction:column;gap:16px;background:#faf9f5">
+                <div style="display:flex;flex-direction:column;gap:8px">
+                  <div style="display:flex;align-items:baseline;gap:10px"><span class="wf-eyebrow" style="flex:1">Mes six compétences</span><span class="wf-it">Il faut quatre exercices sur une compétence pour dire où tu vas.</span></div>
+                  <div class="grid3">
+                    <div class="tu tuA on"><span class="tu-nom">Expression</span><span class="cp-bars"><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i></span><span class="tu-etat">travaillé 4 fois · en progrès</span></div>
+                    <div class="tu tuB"><span class="tu-nom">Synthèse</span><span class="cp-bars"><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i></span><span class="tu-etat">travaillé 4 fois · sur un palier</span></div>
+                    <div class="tu"><span class="tu-nom">Questionnement</span><span class="cp-bars"><i class="on"></i><i class="on"></i><i class="on"></i><i></i></span><span class="tu-etat">3 exercices sur 4</span></div>
+                    <div class="tu"><span class="tu-nom">Argumentation</span><span class="cp-bars"><i class="on"></i><i class="on"></i><i></i><i></i></span><span class="tu-etat">2 exercices sur 4</span></div>
+                    <div class="tu"><span class="tu-nom">Structure</span><span class="cp-bars"><i class="on"></i><i></i><i></i><i></i></span><span class="tu-etat">1 exercice sur 4</span></div>
+                    <div class="tu dim"><span class="tu-nom">Connaissance</span><span class="cp-bars"><i></i><i></i><i></i><i></i></span><span class="tu-etat">jamais travaillé</span></div>
+                  </div>
+                </div>
+
+                <div class="wf-box" style="padding:16px;display:grid;grid-template-columns:1fr 1fr;gap:22px;align-items:start">
+                  <div style="display:flex;flex-direction:column;gap:10px">
+                    <div style="display:flex;align-items:baseline;gap:10px"><span style="font-size:16px;font-weight:700;flex:1">Expression</span><span class="cp-slot">lettre</span></div>
+                    <div class="cp-n"><span class="cp-bars" style="transform:scale(1.15);transform-origin:left"><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i></span><span class="cp-etat" style="font-size:12.5px;font-weight:600;margin-left:6px">travaillé 4 fois · en progrès</span></div>
+                    <div style="display:flex;flex-direction:column;gap:3px;border-top:1px dashed #e6e1d6;padding-top:10px">
+                      <span class="cp-flab">Tu es au point sur :</span>
+                      <span class="wf-li"><i>·</i>la construction de tes phrases</span>
+                      <span class="wf-li"><i>·</i>la variété de ton vocabulaire</span>
+                    </div>
+                    <div style="border-top:1px dashed #e6e1d6;padding-top:10px;display:flex;flex-direction:column;gap:6px;background:#fdfaf3;margin:0 -16px -16px;padding:12px 16px 16px;border-radius:0 0 0 8px">
+                      <span class="wf-eyebrow">Ta prochaine étape</span>
+                      <span style="font-size:12px;line-height:1.45">Reprends ta deuxième partie et vérifie que chaque paragraphe répond à la question posée.</span>
+                      <span class="wf-mut">Le dernier conseil de Calame · <a href="#2a">revoir</a></span>
+                    </div>
+                  </div>
+                  <div style="display:flex;flex-direction:column;gap:8px;border-left:1px solid #eee9de;padding-left:22px">
+                    <span class="wf-eyebrow">Ce qu'on regarde dans ta copie</span>
+                    <span style="font-size:11.5px;line-height:1.55;color:#3f3a32">Le paragraphe de la fiche, servi tel quel : ce que l'Expression regarde dans un devoir, en langue courante.</span>
+                    <span class="wf-li" style="margin-top:4px"><i>·</i>la construction de tes phrases <span class="wf-chip ok" style="margin-left:auto">au point</span></span>
+                    <span class="wf-li"><i>·</i>la variété de ton vocabulaire <span class="wf-chip ok" style="margin-left:auto">au point</span></span>
+                    <span class="wf-li"><i>·</i>les répétitions d'un mot à l'autre</span>
+                    <span class="wf-li"><i>·</i>recopier, ou reformuler</span>
+                    <span class="wf-it" style="margin-top:2px">Sans marque : pas encore assez d'exercices pour le dire.</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <p class="dv-note">Sur ordinateur le dépliant n'a pas lieu d'être : les deux colonnes tiennent côte à côte, le progrès à gauche, ce qui le mesure à droite. Sur téléphone, la même fiche empile les deux et referme la seconde.</p>
+    </div>
+
+    <!-- ══════════════════════════ 2b ══════════════════════════ -->
+    <div class="dv-opt" id="2b" data-screen-label="2b Table des six competences">
+      <div class="dv-olabel"><a class="dv-oid" href="#2b">2b</a><span><b>Une table des six.</b> Mêmes deux niveaux, mais la vue d'ensemble est un tableau : trois colonnes lisibles en diagonale — la compétence, combien de fois travaillée, où ça va. Plus compact que les tuiles, et l'ordre de lecture est le même sur les deux écrans.</span></div>
+
+      <div class="dv-row">
+        <div>
+          <p class="dv-scr">Téléphone · 390 × 700 — viewport réel, barre tactile comprise · niveau 1</p>
+          <div class="dv-card" style="width:390px">
+            <div class="wf ph">
+              <div class="ph-top"><span class="ph-mark">PALIMPSESTE</span><span class="ph-cls">1re G2 ▾</span></div>
+              <div class="ph-bd">
+              <div style="padding:13px 14px;display:flex;flex-direction:column;gap:13px;flex:1;min-height:0">
+                <div class="wf-box" style="padding:10px 12px;display:flex;flex-direction:column;gap:4px;border-color:#dcd0b8;background:#fdfaf3">
+                  <span class="wf-eyebrow">Ta prochaine étape</span>
+                  <span style="font-size:12.5px;line-height:1.45">Reprends ta deuxième partie et vérifie que chaque paragraphe répond à la question posée.</span>
+                </div>
+                <div style="display:flex;flex-direction:column;gap:7px">
+                  <span class="wf-eyebrow">Mes six compétences</span>
+                  <div class="wf-box" style="padding:10px 2px 4px">
+                    <table class="tb">
+                      <tr><th style="width:auto">Compétence</th><th style="width:74px">Travaillé</th><th style="width:96px">Où ça va</th></tr>
+                      <tr class="on"><td><b>Expression</b></td><td><span class="cp-bars"><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i></span></td><td><span class="wf-chip ok">en progrès</span></td></tr>
+                      <tr><td><b>Synthèse</b></td><td><span class="cp-bars"><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i></span></td><td><span class="wf-chip att">palier</span></td></tr>
+                      <tr><td><b>Questionnement</b></td><td><span class="cp-bars"><i class="on"></i><i class="on"></i><i class="on"></i><i></i></span></td><td><span class="wf-mut">3 sur 4</span></td></tr>
+                      <tr><td><b>Argumentation</b></td><td><span class="cp-bars"><i class="on"></i><i class="on"></i><i></i><i></i></span></td><td><span class="wf-mut">2 sur 4</span></td></tr>
+                      <tr><td><b>Structure</b></td><td><span class="cp-bars"><i class="on"></i><i></i><i></i><i></i></span></td><td><span class="wf-mut">1 sur 4</span></td></tr>
+                      <tr><td><b style="color:#8b8478">Connaissance</b></td><td><span class="cp-bars"><i></i><i></i><i></i><i></i></span></td><td><span class="wf-mut">jamais</span></td></tr>
+                    </table>
+                  </div>
+                  <span class="wf-it">Quatre exercices sur une compétence, et on peut dire où tu vas. Touche une ligne pour l'ouvrir.</span>
+                </div>
+                <div class="wf-box" style="margin-top:auto;padding:11px 12px;display:flex;align-items:center;gap:8px;min-height:44px;box-sizing:border-box"><span style="font-size:11.5px;flex:1">Mon compte</span><span class="wf-mut">lettres, classe, déconnexion</span><span class="wf-mut">›</span></div>
+              </div>
+              </div>
+              <div class="ph-tabs"><span><em></em>Aujourd'hui</span><span><em></em>Modules</span><span><em></em>Agenda</span><span><em></em>Intégrité</span><span class="on"><em class="rd"></em>Moi</span></div>
+            </div>
+          </div>
+        </div>
+
+        <div>
+          <p class="dv-scr">Téléphone · 390 × 700 — niveau 2, la ligne ouverte en place</p>
+          <div class="dv-card" style="width:390px">
+            <div class="wf ph">
+              <div class="ph-top"><span class="ph-mark">PALIMPSESTE</span><span class="ph-cls">1re G2 ▾</span></div>
+              <div class="ph-bd">
+              <div style="padding:13px 14px;display:flex;flex-direction:column;gap:10px">
+                <span class="wf-eyebrow">Mes six compétences</span>
+                <div class="wf-box" style="padding:10px 2px 0">
+                  <table class="tb">
+                    <tr><th style="width:auto">Compétence</th><th style="width:74px">Travaillé</th><th style="width:96px">Où ça va</th></tr>
+                    <tr class="on"><td><b>Expression</b> <span class="wf-mut">▴</span></td><td><span class="cp-bars"><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i></span></td><td><span class="wf-chip ok">en progrès</span></td></tr>
+                  </table>
+                  <div style="padding:2px 10px 12px;display:flex;flex-direction:column;gap:9px;background:#f7f4ee">
+                    <div style="display:flex;flex-direction:column;gap:3px">
+                      <span class="cp-flab">Tu es au point sur :</span>
+                      <span class="wf-li"><i>·</i>la construction de tes phrases</span>
+                      <span class="wf-li"><i>·</i>la variété de ton vocabulaire</span>
+                    </div>
+                    <div class="dp"><div class="dp-hd">Ce qu'on regarde dans ta copie<u>▾</u></div></div>
+                    <div class="wf-box" style="padding:10px;display:flex;flex-direction:column;gap:4px;border-color:#dcd0b8;background:#fdfaf3">
+                      <span class="wf-eyebrow">Ta prochaine étape</span>
+                      <span style="font-size:12px;line-height:1.45">Reprends ta deuxième partie et vérifie que chaque paragraphe répond à la question posée.</span>
+                    </div>
+                  </div>
+                  <table class="tb">
+                    <tr><td style="width:auto"><b>Synthèse</b></td><td style="width:74px"><span class="cp-bars"><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i></span></td><td style="width:96px"><span class="wf-chip att">palier</span></td></tr>
+                    <tr><td><b>Questionnement</b></td><td><span class="cp-bars"><i class="on"></i><i class="on"></i><i class="on"></i><i></i></span></td><td><span class="wf-mut">3 sur 4</span></td></tr>
+                    <tr><td><b>Argumentation</b></td><td><span class="cp-bars"><i class="on"></i><i class="on"></i><i></i><i></i></span></td><td><span class="wf-mut">2 sur 4</span></td></tr>
+                    <tr><td><b>Structure</b></td><td><span class="cp-bars"><i class="on"></i><i></i><i></i><i></i></span></td><td><span class="wf-mut">1 sur 4</span></td></tr>
+                    <tr><td><b style="color:#8b8478">Connaissance</b></td><td><span class="cp-bars"><i></i><i></i><i></i><i></i></span></td><td><span class="wf-mut">jamais</span></td></tr>
+                  </table>
+                </div>
+                <span class="wf-it">La table ne bouge pas : la ligne ouverte pousse les suivantes, les six restent à leur place.</span>
+              </div>
+              </div>
+              <div class="ph-tabs"><span><em></em>Aujourd'hui</span><span><em></em>Modules</span><span><em></em>Agenda</span><span><em></em>Intégrité</span><span class="on"><em class="rd"></em>Moi</span></div>
+            </div>
+          </div>
+          <p class="dv-note" style="max-width:390px">La ligne ouverte fait dépasser la table : cet écran-là défile, mais les six lignes gardent leur place — la vue d'ensemble ne se perd pas.</p>
+        </div>
+
+        <div>
+          <p class="dv-scr">Ordinateur · 1040 — la table entière, une ligne ouverte</p>
+          <div class="dv-card" style="width:1040px">
+            <div class="wf">
+              <div class="wf-bar"><span class="wf-h1">Moi</span><span class="wf-sub">Camille Roussel · 1re G2</span><span style="margin-left:auto;display:flex;gap:10px;align-items:center"><span class="wf-mut">Ma classe · 1re G2</span><span class="wf-chip">Lettres : masquées</span><span class="wf-chip">Se déconnecter</span></span></div>
+              <div style="padding:18px 20px;display:flex;flex-direction:column;gap:14px;background:#faf9f5">
+                <div class="wf-box" style="padding:11px 14px;display:flex;align-items:center;gap:14px;border-color:#dcd0b8;background:#fdfaf3">
+                  <span class="wf-eyebrow" style="white-space:nowrap">Ta prochaine étape</span>
+                  <span style="font-size:12.5px;flex:1">Reprends ta deuxième partie et vérifie que chaque paragraphe répond à la question posée.</span>
+                  <span class="wf-chip">Revoir ce retour</span>
+                </div>
+                <div class="wf-box" style="padding:12px 6px 6px">
+                  <table class="tb">
+                    <tr><th style="width:190px">Compétence</th><th style="width:120px">Travaillé</th><th style="width:130px">Où ça va</th><th>Tu es au point sur</th><th style="width:210px">Ce qu'on regarde</th></tr>
+                    <tr class="on"><td><b>Expression</b> <span class="wf-mut">▴</span></td><td><span class="cp-bars"><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i></span> <span class="wf-mut">4 fois</span></td><td><span class="wf-chip ok">en progrès</span></td><td><span class="wf-mut">la construction de tes phrases · la variété de ton vocabulaire</span></td><td><span class="wf-mut">4 points regardés</span></td></tr>
+                    <tr><td colspan="5" style="padding:0 10px 14px;border-top:none">
+                      <div style="display:grid;grid-template-columns:1fr 1fr;gap:22px;background:#f7f4ee;border:1px solid #e6e1d6;border-radius:9px;padding:14px">
+                        <div style="display:flex;flex-direction:column;gap:6px">
+                          <span class="wf-eyebrow">Ce que l'Expression regarde dans ta copie</span>
+                          <span style="font-size:11.5px;line-height:1.55;color:#3f3a32">Le paragraphe de la fiche, servi tel quel — la même pour toute la classe.</span>
+                        </div>
+                        <div style="display:flex;flex-direction:column;gap:4px">
+                          <span class="wf-eyebrow">Les points regardés · tes marques</span>
+                          <span class="wf-li"><i>·</i>la construction de tes phrases <span class="wf-chip ok" style="margin-left:auto">au point</span></span>
+                          <span class="wf-li"><i>·</i>la variété de ton vocabulaire <span class="wf-chip ok" style="margin-left:auto">au point</span></span>
+                          <span class="wf-li"><i>·</i>les répétitions d'un mot à l'autre</span>
+                          <span class="wf-li"><i>·</i>recopier, ou reformuler</span>
+                        </div>
+                      </div>
+                    </td></tr>
+                    <tr><td><b>Synthèse</b></td><td><span class="cp-bars"><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i></span> <span class="wf-mut">4 fois</span></td><td><span class="wf-chip att">sur un palier</span></td><td><span class="wf-mut">reprendre l'idée dans tes mots</span></td><td><span class="wf-mut">3 points regardés</span></td></tr>
+                    <tr><td><b>Questionnement</b></td><td><span class="cp-bars"><i class="on"></i><i class="on"></i><i class="on"></i><i></i></span> <span class="wf-mut">3 fois</span></td><td><span class="wf-mut">3 sur 4</span></td><td><span class="wf-mut">—</span></td><td><span class="wf-mut">4 points regardés</span></td></tr>
+                    <tr><td><b>Argumentation</b></td><td><span class="cp-bars"><i class="on"></i><i class="on"></i><i></i><i></i></span> <span class="wf-mut">2 fois</span></td><td><span class="wf-mut">2 sur 4</span></td><td><span class="wf-mut">—</span></td><td><span class="wf-mut">5 points regardés</span></td></tr>
+                    <tr><td><b>Structure</b></td><td><span class="cp-bars"><i class="on"></i><i></i><i></i><i></i></span> <span class="wf-mut">1 fois</span></td><td><span class="wf-mut">1 sur 4</span></td><td><span class="wf-mut">—</span></td><td><span class="wf-mut">4 points regardés</span></td></tr>
+                    <tr><td><b style="color:#8b8478">Connaissance</b></td><td><span class="cp-bars"><i></i><i></i><i></i><i></i></span> <span class="wf-mut">jamais</span></td><td><span class="wf-mut">—</span></td><td><span class="wf-mut">—</span></td><td><span class="wf-mut">3 points regardés</span></td></tr>
+                  </table>
+                </div>
+                <span class="wf-it">Colonne « Tu es au point sur » : vide tant que la fenêtre de quatre n'est pas pleine — c'est un fait, pas un reproche.</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <p class="dv-note">Le tableau montre les six ET leurs forces d'un seul regard sur ordinateur, ce qu'aucune grille de tuiles ne fait. En contrepartie, sur téléphone il faut réduire à trois colonnes, et « en progrès / palier » y devient une pastille plutôt qu'une phrase.</p>
+    </div>
+
+  </div>
+
+  <p class="dv-next"><b>Ce que le tour 2 change par rapport au tour 1 :</b> les six compétences ne défilent plus — elles sont une grille (<a href="#2a">2a</a>) ou une table (<a href="#2b">2b</a>) qui tient dans un écran de téléphone, et le détail devient un second niveau. <b>Et l'explication rejoint le progrès :</b> « ce qu'on regarde dans ta copie » n'est plus une page à part, elle est dans la fiche, juste sous le décompte, dépliable sur téléphone et ouverte sur ordinateur — avec les points regardés marqués « au point » quand ils le sont. La page « Les six compétences, expliquées » reste accessible depuis le compte, mais elle n'est plus le seul endroit où l'élève apprend ce qu'on mesure.</p>
+</section>
+
+<section class="dv-turn" id="t1">
+  <div class="dv-thd"><a class="dv-tid" href="#t1">1</a><span class="dv-tname">Tour 1 — réorganisation de <b>/eleve/moi</b> : trois découpes</span><span class="dv-cap">le problème n'est pas le contenu, c'est qu'une seule colonne porte tout</span></div>
+
+  <p class="dv-next" style="margin:0 0 22px">Ce que la page fait aujourd'hui : une colonne <code>max-w-lg</code> empile <i>Moi</i> → <i>Ma classe</i> → <i>Où j'en suis</i> (six compétences dans un même bloc <code>divide-y</code>, hauteur variable selon les forces) → <i>Ta prochaine étape</i> → <i>Les six compétences expliquées</i> → <i>Déconnexion</i>. Les six compétences se lisent comme un seul pavé, et le geste concret — la seule chose actionnable — arrive après. Les trois options ci-dessous gardent <b>exactement</b> le même contenu et les mêmes règles (aucun taux, aucun seuil, le motif du silence dit une seule fois, la bascule des lettres au même endroit) ; elles ne changent que la découpe.</p>
+
+  <div class="dv-opts">
+
+    <!-- ══════════════════════════ 1a ══════════════════════════ -->
+    <div class="dv-opt" id="1a" data-screen-label="1a Cartes de competence">
+      <div class="dv-olabel"><a class="dv-oid" href="#1a">1a</a><span><b>Une carte par compétence.</b> Chaque compétence devient un objet fermé, bordé, de hauteur libre — les forces ne peuvent plus déborder sur la voisine. La prochaine étape monte en tête (c'est l'action) ; classe, fiches et déconnexion descendent en pied de page.</span></div>
+
+      <div class="dv-row">
+        <div>
+          <p class="dv-scr">Téléphone · 390</p>
+          <div class="dv-card" style="width:390px">
+            <div class="wf">
+              <div class="wf-bar"><span class="wf-h1">Moi</span><span class="wf-sub">Camille Roussel · 1re G2</span></div>
+              <div style="padding:14px;display:flex;flex-direction:column;gap:16px;background:#faf9f5">
+
+                <div class="wf-box" style="padding:12px;display:flex;flex-direction:column;gap:7px;border-color:#dcd0b8;background:#fdfaf3">
+                  <span class="wf-eyebrow">Ta prochaine étape</span>
+                  <span class="wf-mut">Le dernier conseil que Calame t'a donné :</span>
+                  <span style="font-size:12.5px;color:#2f2a23;line-height:1.45">Reprends ta deuxième partie et vérifie que chaque paragraphe répond à la question posée.</span>
+                  <span class="wf-btn ghost" style="align-self:flex-start;padding:8px 12px;min-height:0;font-size:11px">Revoir ce retour</span>
+                </div>
+
+                <div style="display:flex;flex-direction:column;gap:10px">
+                  <div style="display:flex;align-items:center;gap:8px">
+                    <span class="wf-eyebrow" style="flex:1">Où j'en suis · 6 compétences</span>
+                    <span class="wf-chip mut">Lettres : masquées</span>
+                  </div>
+                  <span class="wf-it">Ton profil se stabilise encore : les lettres arriveront quand il sera posé.</span>
+
+                  <div class="cp">
+                    <div class="cp-hd"><span class="cp-nom">Expression</span><span class="cp-slot">lettre</span></div>
+                    <div class="cp-n"><span class="cp-bars"><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i></span><span class="cp-etat">travaillé 4 fois · en progrès</span></div>
+                    <div class="cp-forces"><span class="cp-flab">Tu es au point sur :</span><span class="wf-li"><i>·</i>la construction de tes phrases</span><span class="wf-li"><i>·</i>la variété de ton vocabulaire</span></div>
+                  </div>
+
+                  <div class="cp">
+                    <div class="cp-hd"><span class="cp-nom">Synthèse</span><span class="cp-slot">lettre</span></div>
+                    <div class="cp-n"><span class="cp-bars"><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i></span><span class="cp-etat">travaillé 4 fois · sur un palier</span></div>
+                    <div class="cp-forces"><span class="cp-flab">Tu es au point sur :</span><span class="wf-li"><i>·</i>reprendre l'idée dans tes mots</span></div>
+                  </div>
+
+                  <div class="cp">
+                    <div class="cp-hd"><span class="cp-nom">Questionnement</span></div>
+                    <div class="cp-n"><span class="cp-bars"><i class="on"></i><i class="on"></i><i class="on"></i><i></i></span><span class="cp-etat">travaillé 3 fois</span></div>
+                    <span class="cp-vide">Pas encore assez d'exercices pour dire où tu vas (3 sur 4).</span>
+                  </div>
+
+                  <div class="cp">
+                    <div class="cp-hd"><span class="cp-nom">Argumentation</span></div>
+                    <div class="cp-n"><span class="cp-bars"><i class="on"></i><i class="on"></i><i></i><i></i></span><span class="cp-etat">travaillé 2 fois</span></div>
+                    <span class="cp-vide">Pas encore assez d'exercices pour dire où tu vas (2 sur 4).</span>
+                  </div>
+
+                  <div class="cp">
+                    <div class="cp-hd"><span class="cp-nom">Structure</span></div>
+                    <div class="cp-n"><span class="cp-bars"><i class="on"></i><i></i><i></i><i></i></span><span class="cp-etat">travaillé 1 fois</span></div>
+                    <span class="cp-vide">Pas encore assez d'exercices pour dire où tu vas (1 sur 4).</span>
+                  </div>
+
+                  <div class="cp" style="background:#faf9f5">
+                    <div class="cp-hd"><span class="cp-nom" style="color:#8b8478">Connaissance</span></div>
+                    <div class="cp-n"><span class="cp-bars"><i></i><i></i><i></i><i></i></span><span class="cp-etat">jamais travaillé</span></div>
+                  </div>
+                </div>
+
+                <div style="display:flex;flex-direction:column;gap:8px">
+                  <span class="wf-eyebrow">Comprendre</span>
+                  <div class="wf-box" style="padding:12px"><span style="font-size:12px;font-weight:600">Les six compétences, expliquées</span><br><span class="wf-mut">Ce qu'on regarde dans ton travail — une page par compétence.</span></div>
+                </div>
+
+                <div style="display:flex;flex-direction:column;gap:8px;border-top:1px solid #e6e1d6;padding-top:14px">
+                  <span class="wf-eyebrow">Mon compte</span>
+                  <div class="wf-box" style="padding:11px 12px;display:flex;align-items:center;gap:8px"><span style="font-size:11.5px;flex:1">Ma classe · 1re G2</span><span class="wf-chip">changer</span></div>
+                  <div class="wf-box" style="padding:11px 12px;display:flex;align-items:center;gap:8px"><span style="font-size:11.5px;flex:1">Afficher mes lettres</span><span class="wf-seg" style="width:120px;font-size:10px"><span>oui</span><span class="on">non</span></span></div>
+                  <div class="wf-btn ghost">Se déconnecter</div>
+                </div>
+
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div>
+          <p class="dv-scr">Ordinateur · 1040</p>
+          <div class="dv-card" style="width:1040px">
+            <div class="wf">
+              <div class="wf-bar"><span class="wf-h1">Moi</span><span class="wf-sub">Camille Roussel · 1re G2</span></div>
+              <div style="padding:18px 20px;display:grid;grid-template-columns:1fr 300px;gap:24px;align-items:start;background:#faf9f5">
+                <div style="display:flex;flex-direction:column;gap:12px">
+                  <div style="display:flex;align-items:center;gap:10px">
+                    <span class="wf-eyebrow" style="flex:1">Où j'en suis · 6 compétences</span>
+                    <span class="wf-it">Ton profil se stabilise encore : les lettres arriveront quand il sera posé.</span>
+                  </div>
+                  <div class="grid2">
+                    <div class="cp">
+                      <div class="cp-hd"><span class="cp-nom">Expression</span><span class="cp-slot">lettre</span></div>
+                      <div class="cp-n"><span class="cp-bars"><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i></span><span class="cp-etat">travaillé 4 fois · en progrès</span></div>
+                      <div class="cp-forces"><span class="cp-flab">Tu es au point sur :</span><span class="wf-li"><i>·</i>la construction de tes phrases</span><span class="wf-li"><i>·</i>la variété de ton vocabulaire</span></div>
+                    </div>
+                    <div class="cp">
+                      <div class="cp-hd"><span class="cp-nom">Synthèse</span><span class="cp-slot">lettre</span></div>
+                      <div class="cp-n"><span class="cp-bars"><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i></span><span class="cp-etat">travaillé 4 fois · sur un palier</span></div>
+                      <div class="cp-forces"><span class="cp-flab">Tu es au point sur :</span><span class="wf-li"><i>·</i>reprendre l'idée dans tes mots</span></div>
+                    </div>
+                    <div class="cp">
+                      <div class="cp-hd"><span class="cp-nom">Questionnement</span></div>
+                      <div class="cp-n"><span class="cp-bars"><i class="on"></i><i class="on"></i><i class="on"></i><i></i></span><span class="cp-etat">travaillé 3 fois</span></div>
+                      <span class="cp-vide">Pas encore assez d'exercices pour dire où tu vas (3 sur 4).</span>
+                    </div>
+                    <div class="cp">
+                      <div class="cp-hd"><span class="cp-nom">Argumentation</span></div>
+                      <div class="cp-n"><span class="cp-bars"><i class="on"></i><i class="on"></i><i></i><i></i></span><span class="cp-etat">travaillé 2 fois</span></div>
+                      <span class="cp-vide">Pas encore assez d'exercices pour dire où tu vas (2 sur 4).</span>
+                    </div>
+                    <div class="cp">
+                      <div class="cp-hd"><span class="cp-nom">Structure</span></div>
+                      <div class="cp-n"><span class="cp-bars"><i class="on"></i><i></i><i></i><i></i></span><span class="cp-etat">travaillé 1 fois</span></div>
+                      <span class="cp-vide">Pas encore assez d'exercices pour dire où tu vas (1 sur 4).</span>
+                    </div>
+                    <div class="cp" style="background:#faf9f5">
+                      <div class="cp-hd"><span class="cp-nom" style="color:#8b8478">Connaissance</span></div>
+                      <div class="cp-n"><span class="cp-bars"><i></i><i></i><i></i><i></i></span><span class="cp-etat">jamais travaillé</span></div>
+                    </div>
+                  </div>
+                </div>
+
+                <div style="display:flex;flex-direction:column;gap:12px">
+                  <div class="wf-box" style="padding:12px;display:flex;flex-direction:column;gap:7px;border-color:#dcd0b8;background:#fdfaf3">
+                    <span class="wf-eyebrow">Ta prochaine étape</span>
+                    <span class="wf-mut">Le dernier conseil que Calame t'a donné :</span>
+                    <span style="font-size:12px;line-height:1.45">Reprends ta deuxième partie et vérifie que chaque paragraphe répond à la question posée.</span>
+                    <span class="wf-btn ghost" style="align-self:flex-start;padding:8px 12px;min-height:0;font-size:11px">Revoir ce retour</span>
+                  </div>
+                  <div class="wf-box" style="padding:12px"><span style="font-size:12px;font-weight:600">Les six compétences, expliquées</span><br><span class="wf-mut">Une page par compétence.</span></div>
+                  <div class="wf-box" style="padding:12px;display:flex;flex-direction:column;gap:9px">
+                    <span class="wf-eyebrow">Mon compte</span>
+                    <span style="font-size:11.5px">Ma classe · 1re G2 <a href="#1a">changer</a></span>
+                    <span style="font-size:11.5px;display:flex;align-items:center;gap:8px">Afficher mes lettres <span class="wf-seg" style="width:100px;font-size:10px"><span>oui</span><span class="on">non</span></span></span>
+                    <span class="wf-btn ghost" style="min-height:0;padding:9px">Se déconnecter</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <p class="dv-note">Le plus simple à poser : c'est la page d'aujourd'hui, avec la liste éclatée en cartes et deux blocs déplacés. Sur ordinateur, la grille passe à deux colonnes et le rail droit prend le geste + les réglages.</p>
+    </div>
+
+    <!-- ══════════════════════════ 1b ══════════════════════════ -->
+    <div class="dv-opt" id="1b" data-screen-label="1b Deux groupes mesurees et pas encore">
+      <div class="dv-olabel"><a class="dv-oid" href="#1b">1b</a><span><b>Deux groupes déclarés : « ce qui se dit » et « pas encore assez d'exercices ».</b> Quatre des six compétences ne peuvent rien dire aujourd'hui ; elles occupent pourtant autant de place que les deux qui parlent. On les regroupe en un bloc compact, et le motif est dit une fois pour le groupe.</span></div>
+
+      <div class="dv-row">
+        <div>
+          <p class="dv-scr">Téléphone · 390</p>
+          <div class="dv-card" style="width:390px">
+            <div class="wf">
+              <div class="wf-bar"><span class="wf-h1">Moi</span><span class="wf-sub">Camille Roussel · 1re G2</span></div>
+              <div style="padding:14px;display:flex;flex-direction:column;gap:16px;background:#faf9f5">
+
+                <div class="wf-box" style="padding:12px;display:flex;flex-direction:column;gap:7px;border-color:#dcd0b8;background:#fdfaf3">
+                  <span class="wf-eyebrow">Ta prochaine étape</span>
+                  <span style="font-size:12.5px;line-height:1.45">Reprends ta deuxième partie et vérifie que chaque paragraphe répond à la question posée.</span>
+                  <span class="wf-mut">Le dernier conseil que Calame t'a donné · <a href="#1b">revoir</a></span>
+                </div>
+
+                <div style="display:flex;flex-direction:column;gap:10px">
+                  <span class="wf-eyebrow">Ce que ton travail dit déjà · 2</span>
+                  <div class="cp">
+                    <div class="cp-hd"><span class="cp-nom">Expression</span><span class="wf-chip ok">en progrès</span></div>
+                    <span class="wf-mut">travaillé 4 fois</span>
+                    <div class="cp-forces"><span class="cp-flab">Tu es au point sur :</span><span class="wf-li"><i>·</i>la construction de tes phrases</span><span class="wf-li"><i>·</i>la variété de ton vocabulaire</span></div>
+                  </div>
+                  <div class="cp">
+                    <div class="cp-hd"><span class="cp-nom">Synthèse</span><span class="wf-chip att">sur un palier</span></div>
+                    <span class="wf-mut">travaillé 4 fois</span>
+                    <div class="cp-forces"><span class="cp-flab">Tu es au point sur :</span><span class="wf-li"><i>·</i>reprendre l'idée dans tes mots</span></div>
+                  </div>
+                </div>
+
+                <div style="display:flex;flex-direction:column;gap:8px">
+                  <span class="wf-eyebrow">En chemin · 4</span>
+                  <span class="wf-it">Il faut quatre exercices sur une compétence pour dire où tu vas. Ces quatre-là n'y sont pas encore.</span>
+                  <div class="wf-box" style="padding:4px 12px">
+                    <div class="rw" style="border:none;padding:9px 0;border-bottom:1px solid #f0ece2"><b>Questionnement</b><span class="cp-bars"><i class="on"></i><i class="on"></i><i class="on"></i><i></i></span><span class="wf-mut">3 / 4</span></div>
+                    <div class="rw" style="border:none;padding:9px 0;border-bottom:1px solid #f0ece2"><b>Argumentation</b><span class="cp-bars"><i class="on"></i><i class="on"></i><i></i><i></i></span><span class="wf-mut">2 / 4</span></div>
+                    <div class="rw" style="border:none;padding:9px 0;border-bottom:1px solid #f0ece2"><b>Structure</b><span class="cp-bars"><i class="on"></i><i></i><i></i><i></i></span><span class="wf-mut">1 / 4</span></div>
+                    <div class="rw" style="border:none;padding:9px 0"><b style="color:#8b8478">Connaissance</b><span class="cp-bars"><i></i><i></i><i></i><i></i></span><span class="wf-mut">jamais</span></div>
+                  </div>
+                </div>
+
+                <div class="wf-box" style="padding:12px"><span style="font-size:12px;font-weight:600">Les six compétences, expliquées</span><br><span class="wf-mut">Ce qu'on regarde dans ton travail.</span></div>
+
+                <div style="display:flex;flex-direction:column;gap:8px;border-top:1px solid #e6e1d6;padding-top:14px">
+                  <span class="wf-eyebrow">Mon compte</span>
+                  <div class="wf-box" style="padding:11px 12px;display:flex;align-items:center;gap:8px"><span style="font-size:11.5px;flex:1">Ma classe · 1re G2</span><span class="wf-chip">changer</span></div>
+                  <div class="wf-box" style="padding:11px 12px;display:flex;align-items:center;gap:8px"><span style="font-size:11.5px;flex:1">Afficher mes lettres</span><span class="wf-seg" style="width:120px;font-size:10px"><span>oui</span><span class="on">non</span></span></div>
+                  <div class="wf-btn ghost">Se déconnecter</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div>
+          <p class="dv-scr">Ordinateur · 1040</p>
+          <div class="dv-card" style="width:1040px">
+            <div class="wf">
+              <div class="wf-bar"><span class="wf-h1">Moi</span><span class="wf-sub">Camille Roussel · 1re G2</span></div>
+              <div style="padding:18px 20px;display:grid;grid-template-columns:1fr 300px;gap:24px;align-items:start;background:#faf9f5">
+                <div style="display:flex;flex-direction:column;gap:18px">
+                  <div style="display:flex;flex-direction:column;gap:10px">
+                    <span class="wf-eyebrow">Ce que ton travail dit déjà · 2</span>
+                    <div class="grid2">
+                      <div class="cp">
+                        <div class="cp-hd"><span class="cp-nom">Expression</span><span class="wf-chip ok">en progrès</span></div>
+                        <span class="wf-mut">travaillé 4 fois</span>
+                        <div class="cp-forces"><span class="cp-flab">Tu es au point sur :</span><span class="wf-li"><i>·</i>la construction de tes phrases</span><span class="wf-li"><i>·</i>la variété de ton vocabulaire</span></div>
+                      </div>
+                      <div class="cp">
+                        <div class="cp-hd"><span class="cp-nom">Synthèse</span><span class="wf-chip att">sur un palier</span></div>
+                        <span class="wf-mut">travaillé 4 fois</span>
+                        <div class="cp-forces"><span class="cp-flab">Tu es au point sur :</span><span class="wf-li"><i>·</i>reprendre l'idée dans tes mots</span></div>
+                      </div>
+                    </div>
+                  </div>
+                  <div style="display:flex;flex-direction:column;gap:9px">
+                    <div style="display:flex;align-items:baseline;gap:10px"><span class="wf-eyebrow">En chemin · 4</span><span class="wf-it">Il faut quatre exercices sur une compétence pour dire où tu vas.</span></div>
+                    <div class="grid2">
+                      <div class="rw"><b>Questionnement</b><span class="cp-bars"><i class="on"></i><i class="on"></i><i class="on"></i><i></i></span><span class="wf-mut">3 / 4</span></div>
+                      <div class="rw"><b>Argumentation</b><span class="cp-bars"><i class="on"></i><i class="on"></i><i></i><i></i></span><span class="wf-mut">2 / 4</span></div>
+                      <div class="rw"><b>Structure</b><span class="cp-bars"><i class="on"></i><i></i><i></i><i></i></span><span class="wf-mut">1 / 4</span></div>
+                      <div class="rw"><b style="color:#8b8478">Connaissance</b><span class="cp-bars"><i></i><i></i><i></i><i></i></span><span class="wf-mut">jamais</span></div>
+                    </div>
+                  </div>
+                </div>
+                <div style="display:flex;flex-direction:column;gap:12px">
+                  <div class="wf-box" style="padding:12px;display:flex;flex-direction:column;gap:7px;border-color:#dcd0b8;background:#fdfaf3">
+                    <span class="wf-eyebrow">Ta prochaine étape</span>
+                    <span style="font-size:12px;line-height:1.45">Reprends ta deuxième partie et vérifie que chaque paragraphe répond à la question posée.</span>
+                    <span class="wf-mut">Le dernier conseil que Calame t'a donné · <a href="#1b">revoir</a></span>
+                  </div>
+                  <div class="wf-box" style="padding:12px"><span style="font-size:12px;font-weight:600">Les six compétences, expliquées</span><br><span class="wf-mut">Une page par compétence.</span></div>
+                  <div class="wf-box" style="padding:12px;display:flex;flex-direction:column;gap:9px">
+                    <span class="wf-eyebrow">Mon compte</span>
+                    <span style="font-size:11.5px">Ma classe · 1re G2 <a href="#1b">changer</a></span>
+                    <span style="font-size:11.5px;display:flex;align-items:center;gap:8px">Afficher mes lettres <span class="wf-seg" style="width:100px;font-size:10px"><span>oui</span><span class="on">non</span></span></span>
+                    <span class="wf-btn ghost" style="min-height:0;padding:9px">Se déconnecter</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <p class="dv-note">La découpe la plus honnête pour la rentrée, où presque tout est « pas encore » : la page cesse de répéter six fois la même absence, et les deux compétences qui parlent se voient. Effet de bord à trancher : le groupe change de taille dans l'année, l'élève voit des compétences « monter » d'un bloc à l'autre.</p>
+    </div>
+
+    <!-- ══════════════════════════ 1c ══════════════════════════ -->
+    <div class="dv-opt" id="1c" data-screen-label="1c Sommaire six lignes plus detail">
+      <div class="dv-olabel"><a class="dv-oid" href="#1c">1c</a><span><b>Un sommaire de six lignes égales, un détail à la fois.</b> Les six compétences tiennent dans un écran, toutes à la même hauteur ; on en ouvre une, et son détail (forces, décompte, fiche, dernier retour rattaché) s'affiche dessous — sur ordinateur, à côté.</span></div>
+
+      <div class="dv-row">
+        <div>
+          <p class="dv-scr">Téléphone · 390</p>
+          <div class="dv-card" style="width:390px">
+            <div class="wf">
+              <div class="wf-bar"><span class="wf-h1">Moi</span><span class="wf-sub">Camille Roussel · 1re G2</span></div>
+              <div style="padding:14px;display:flex;flex-direction:column;gap:14px;background:#faf9f5">
+                <div class="wf-box" style="padding:11px 12px;display:flex;flex-direction:column;gap:5px;border-color:#dcd0b8;background:#fdfaf3">
+                  <span class="wf-eyebrow">Ta prochaine étape</span>
+                  <span style="font-size:12.5px;line-height:1.45">Reprends ta deuxième partie et vérifie que chaque paragraphe répond à la question posée.</span>
+                </div>
+
+                <div style="display:flex;flex-direction:column;gap:6px">
+                  <span class="wf-eyebrow">Où j'en suis</span>
+                  <div class="rw on"><b>Expression</b><span class="wf-chip ok">en progrès</span><span class="cv">▾</span></div>
+                  <div style="border:1px solid #6B5A46;border-top:none;border-radius:0 0 9px 9px;background:#fff;margin-top:-8px;padding:12px;display:flex;flex-direction:column;gap:8px">
+                    <div class="cp-n"><span class="cp-bars"><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i></span><span class="cp-etat">travaillé 4 fois</span></div>
+                    <div style="display:flex;flex-direction:column;gap:3px"><span class="cp-flab">Tu es au point sur :</span><span class="wf-li"><i>·</i>la construction de tes phrases</span><span class="wf-li"><i>·</i>la variété de ton vocabulaire</span></div>
+                    <span class="wf-mut" style="border-top:1px dashed #e6e1d6;padding-top:8px">Ce que l'Expression regarde dans ton travail → <a href="#1c">la fiche</a></span>
+                  </div>
+                  <div class="rw"><b>Synthèse</b><span class="wf-chip att">sur un palier</span><span class="cv">▸</span></div>
+                  <div class="rw"><b>Questionnement</b><span class="wf-mut">3 / 4</span><span class="cv">▸</span></div>
+                  <div class="rw"><b>Argumentation</b><span class="wf-mut">2 / 4</span><span class="cv">▸</span></div>
+                  <div class="rw"><b>Structure</b><span class="wf-mut">1 / 4</span><span class="cv">▸</span></div>
+                  <div class="rw"><b style="color:#8b8478">Connaissance</b><span class="wf-mut">jamais</span><span class="cv">▸</span></div>
+                  <span class="wf-it">« 3 / 4 » : le nombre d'exercices qu'il faut sur une compétence pour dire où tu vas.</span>
+                </div>
+
+                <div style="display:flex;flex-direction:column;gap:8px;border-top:1px solid #e6e1d6;padding-top:12px">
+                  <span class="wf-eyebrow">Mon compte</span>
+                  <div class="wf-box" style="padding:11px 12px;display:flex;align-items:center;gap:8px"><span style="font-size:11.5px;flex:1">Ma classe · 1re G2</span><span class="wf-chip">changer</span></div>
+                  <div class="wf-box" style="padding:11px 12px;display:flex;align-items:center;gap:8px"><span style="font-size:11.5px;flex:1">Afficher mes lettres</span><span class="wf-seg" style="width:120px;font-size:10px"><span>oui</span><span class="on">non</span></span></div>
+                  <div class="wf-btn ghost">Se déconnecter</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div>
+          <p class="dv-scr">Ordinateur · 1040 — sommaire à gauche, détail à droite</p>
+          <div class="dv-card" style="width:1040px">
+            <div class="wf">
+              <div class="wf-bar"><span class="wf-h1">Moi</span><span class="wf-sub">Camille Roussel · 1re G2</span></div>
+              <div style="padding:18px 20px;display:grid;grid-template-columns:300px 1fr;gap:24px;align-items:start;background:#faf9f5">
+                <div style="display:flex;flex-direction:column;gap:12px">
+                  <div style="display:flex;flex-direction:column;gap:6px">
+                    <span class="wf-eyebrow">Où j'en suis</span>
+                    <div class="rw on"><b>Expression</b><span class="wf-chip ok">en progrès</span></div>
+                    <div class="rw"><b>Synthèse</b><span class="wf-chip att">palier</span></div>
+                    <div class="rw"><b>Questionnement</b><span class="wf-mut">3 / 4</span></div>
+                    <div class="rw"><b>Argumentation</b><span class="wf-mut">2 / 4</span></div>
+                    <div class="rw"><b>Structure</b><span class="wf-mut">1 / 4</span></div>
+                    <div class="rw"><b style="color:#8b8478">Connaissance</b><span class="wf-mut">jamais</span></div>
+                  </div>
+                  <div class="wf-box" style="padding:12px;display:flex;flex-direction:column;gap:9px">
+                    <span class="wf-eyebrow">Mon compte</span>
+                    <span style="font-size:11.5px">Ma classe · 1re G2 <a href="#1c">changer</a></span>
+                    <span style="font-size:11.5px;display:flex;align-items:center;gap:8px">Lettres <span class="wf-seg" style="width:100px;font-size:10px"><span>oui</span><span class="on">non</span></span></span>
+                    <span class="wf-btn ghost" style="min-height:0;padding:9px">Se déconnecter</span>
+                  </div>
+                </div>
+
+                <div style="display:flex;flex-direction:column;gap:14px">
+                  <div class="wf-box" style="padding:14px;display:flex;flex-direction:column;gap:10px">
+                    <div style="display:flex;align-items:baseline;gap:10px"><span style="font-size:16px;font-weight:700;flex:1">Expression</span><span class="cp-slot">lettre</span></div>
+                    <div class="cp-n"><span class="cp-bars"><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i></span><span class="cp-etat">travaillé 4 fois · en progrès</span></div>
+                    <div style="display:flex;flex-direction:column;gap:3px;border-top:1px dashed #e6e1d6;padding-top:10px"><span class="cp-flab">Tu es au point sur :</span><span class="wf-li"><i>·</i>la construction de tes phrases</span><span class="wf-li"><i>·</i>la variété de ton vocabulaire</span></div>
+                    <div style="border-top:1px dashed #e6e1d6;padding-top:10px;display:flex;flex-direction:column;gap:4px">
+                      <span class="wf-eyebrow">Ce que cette compétence regarde</span>
+                      <span class="wf-mut" style="line-height:1.5">Deux paragraphes de la fiche, servis ici — la fiche complète reste consultable toute l'année.</span>
+                      <span class="wf-mut"><a href="#1c">Lire la fiche Expression</a></span>
+                    </div>
+                  </div>
+                  <div class="wf-box" style="padding:12px;display:flex;flex-direction:column;gap:6px;border-color:#dcd0b8;background:#fdfaf3">
+                    <span class="wf-eyebrow">Ta prochaine étape</span>
+                    <span class="wf-mut">Le dernier conseil que Calame t'a donné :</span>
+                    <span style="font-size:12.5px;line-height:1.45">Reprends ta deuxième partie et vérifie que chaque paragraphe répond à la question posée.</span>
+                    <span class="wf-btn ghost" style="align-self:flex-start;padding:8px 12px;min-height:0;font-size:11px">Revoir ce retour</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <p class="dv-note">Le plus dense, et le seul où les six compétences se voient d'un coup sans défilement. Il fait entrer la fiche générique dans le détail personnel — à vérifier contre la règle « la fiche est générique, le profil est personnel » : ici c'est un extrait + un lien, pas un mélange des sources.</p>
+    </div>
+
+  </div>
+
+  <p class="dv-next"><b>Commun aux trois :</b> le geste concret remonte au-dessus des compétences ; classe, bascule des lettres et déconnexion se regroupent en un pied « Mon compte » (aujourd'hui la classe est en haut et la déconnexion en bas, avec le profil coincé entre les deux) ; le décompte devient une jauge de quatre crans, qui est un nombre réel et non un taux. <b>La lettre :</b> les trois écrans sont dessinés dans l'état de la rentrée — profil provisoire, lettres masquées, donc <b>aucune lettre affichée</b> (<code>lettreVisible()</code> exige les trois conditions réunies). Le cadre pointillé « lettre » marque seulement l'emplacement qu'elle prendra le jour où elles le seront ; il ne s'affiche pas à l'élève. Dis-moi lequel te parle — <a href="#1a">1a</a>, <a href="#1b">1b</a> ou <a href="#1c">1c</a> — et je le passe en rendu charte.</p>
+</section>
+
+</x-dc>
+</body>
+</html>
