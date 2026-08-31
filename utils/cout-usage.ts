@@ -76,6 +76,13 @@ export const TARIFS: Record<string, TarifModele> = {
   'claude-sonnet-4-6':     { entree: 3,    sortie: 15,   cacheLecture: 0.30, cacheEcriture5m: 3.75, cacheEcriture1h: 6 },
   'claude-haiku-4-5':      { entree: 1,    sortie: 5,    cacheLecture: 0.10, cacheEcriture5m: 1.25, cacheEcriture1h: 2 },
   'gemini-3.5-flash-lite': { entree: 0.30, sortie: 2.50, cacheLecture: 0.03, cacheEcriture5m: null, cacheEcriture1h: null },
+  // ⭐ 31/08/2026 — relevé à la page de tarifs OpenAI. Mise en cache AUTOMATIQUE
+  //    au-delà de 1 024 jetons, écriture facturée 1,25× l'entrée (0,25 $/M).
+  //    ⚠️ L'API ne remonte AUCUN compteur d'écriture de cache : les deux champs
+  //    ci-dessous ne seront jamais alimentés, et le coût d'écriture n'apparaîtra
+  //    donc pas au journal. Il se lit à la facture OpenAI, pas ici. *Porté au
+  //    relevé de séance — c'est un trou connu, pas un oubli.*
+  'gpt-5.6-luna':          { entree: 0.20, sortie: 1.20, cacheLecture: 0.02, cacheEcriture5m: 0.25, cacheEcriture1h: 0.25 },
 }
 
 /**

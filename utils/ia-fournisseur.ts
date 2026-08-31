@@ -2,7 +2,7 @@ import 'server-only'
 // Abstraction FOURNISSEUR IA du chat Scriptorium (RAG L5, SPEC §8) : un appel
 // est découpé en { système, préfixe CACHEABLE, suffixe dynamique, historique,
 // message } et chaque adaptateur le mappe vers son SDK. Le modèle est un simple
-// RÉGLAGE (scriptorium_params.rag_modele) : bascule Anthropic ↔ Gemini sans
+// RÉGLAGE (scriptorium_params.rag_modele) : bascule entre fournisseurs sans
 // redéploiement (routage par préfixe d'id — fournisseurPour).
 //  • anthropic : cache_control 1h sur système+préfixe (patron messagesAvecCache
 //    généralisé — l'écriture du 1er message d'une heure est relue par toute la
@@ -10,6 +10,8 @@ import 'server-only'
 //  • gemini : systemInstruction = système ; préfixe en tête du PREMIER tour
 //    (position stable → cache IMPLICITE, aucun code de cache — §6.3) ;
 //    streaming natif. Id de modèle et champs d'usage : cf. SPEC §15.9.
+//  • openai : mise en cache AUTOMATIQUE du préfixe commun (rien à marquer) ;
+//    écrit en `fetch`, sans SDK, et SANS streaming — voir son en-tête.
 
 import Anthropic from '@anthropic-ai/sdk'
 import { GoogleGenAI } from '@google/genai'
@@ -247,9 +249,131 @@ const geminiAdapter: FournisseurIA = {
   },
 }
 
-/** Routage par préfixe d'id de modèle ('claude-…' → Anthropic, 'gemini-…' → Gemini). */
+
+// ── OpenAI ───────────────────────────────────────────────────────────────────
+//
+// ⭐⭐ 31/08/2026 — LE TROISIÈME ADAPTATEUR, ET IL EST ÉCRIT EN `fetch`.
+//
+// ⛔ PAS DE SDK, ET C'EST UN CHOIX MOTIVÉ. Les deux autres adaptateurs passent
+//    par le SDK de leur fournisseur ; celui-ci n'en a pas besoin — la surface
+//    employée est UNE route (`/v1/chat/completions`) et QUATRE champs d'usage.
+//    Ajouter une dépendance le jour de la rentrée, c'est un `package-lock.json`
+//    qui bouge et un déploiement qui reconstruit, pour un adaptateur qui ne sert
+//    encore qu'au BANC. *Le jour où il sert en production, le passage au SDK est
+//    un remplacement local.*
+//
+// ⚠️ LA MISE EN CACHE EST AUTOMATIQUE, et il n'y a RIEN À MARQUER — c'est la
+//    différence de fond avec Anthropic, dont le `cache_control` est explicite.
+//    OpenAI met en cache le PRÉFIXE COMMUN des requêtes au-delà de 1 024 jetons
+//    (famille GPT-5.6 ; 2 048 avant elle). D'où la forme ci-dessous : le
+//    `prefixe` cacheable part EN PREMIER dans le message système, et rien d'autre
+//    n'a à être fait pour que le cache morde.
+//    ⛔ C'est aussi pourquoi il n'y a pas de `cache_control` à poser : en poser
+//       un n'est pas « plus sûr », c'est une erreur d'API.
+
+interface UsageOpenAI {
+  prompt_tokens?: number
+  completion_tokens?: number
+  prompt_tokens_details?: { cached_tokens?: number }
+}
+
+function usageOpenAI(u?: UsageOpenAI | null): UsageIA {
+  if (!u) return { ...USAGE_VIDE }
+  const cacheLecture = u.prompt_tokens_details?.cached_tokens ?? 0
+  return {
+    // ⚠️ `prompt_tokens` INCLUT les jetons servis du cache — patron Gemini, et
+    //    l'inverse d'Anthropic dont `input_tokens` les EXCLUT déjà. Les compter
+    //    deux fois gonflerait la facture d'un tiers, en silence.
+    entree: Math.max(0, (u.prompt_tokens ?? 0) - cacheLecture),
+    sortie: u.completion_tokens ?? 0,
+    cacheLecture,
+    // ⚠️ L'ÉCRITURE DE CACHE N'EST PAS REMONTÉE PAR L'API. Elle est FACTURÉE sur
+    //    la famille GPT-5.6 (1,25× l'entrée), mais aucun champ d'usage ne la
+    //    porte. On rend 0 plutôt qu'une estimation : un coût inventé est pire
+    //    qu'un coût manquant — celui-ci se voit à la facture, l'autre non.
+    //    *Porté au relevé de séance.*
+    cacheEcriture5m: 0,
+    cacheEcriture1h: 0,
+  }
+}
+
+const OPENAI_URL = 'https://api.openai.com/v1/chat/completions'
+
+function messagesOpenAI(appel: AppelIA): Array<{ role: string; content: unknown }> {
+  // ⭐ LE PRÉFIXE CACHEABLE EN TÊTE DU SYSTÈME : c'est LA condition du cache
+  //    automatique, qui travaille sur le préfixe commun des requêtes.
+  const systeme = [appel.prefixe, appel.systeme].filter((t) => t.trim()).join('\n\n')
+  const messages: Array<{ role: string; content: unknown }> = []
+  if (systeme) messages.push({ role: 'system', content: systeme })
+  for (const h of appel.historique) {
+    messages.push({ role: h.role === 'eleve' ? 'user' : 'assistant', content: h.contenu })
+  }
+  const texte = [appel.suffixeDynamique, appel.message].filter((t) => t.trim()).join('\n\n')
+  messages.push({
+    role: 'user',
+    content: appel.images?.length
+      ? [
+          ...appel.images.map((img) => ({
+            type: 'image_url' as const,
+            image_url: { url: `data:${img.mime};base64,${img.base64}` },
+          })),
+          { type: 'text' as const, text: texte },
+        ]
+      : texte,
+  })
+  return messages
+}
+
+const openaiAdapter: FournisseurIA = {
+  repondreEnStream() {
+    // ⛔ NON CONSTRUIT, ET REFUSÉ PLUTÔT QU'INVENTÉ. Le streaming ne sert qu'au
+    //    chat du tuteur (Scriptorium), qui tourne sur Anthropic ou Gemini. Un
+    //    adaptateur à moitié écrit qui rend un flux vide serait pire qu'une
+    //    erreur : le tuteur afficherait une réponse vide sans rien dire.
+    throw new Error(
+      "Le fournisseur OpenAI n'implémente pas `repondreEnStream` : aucun appelant "
+      + "n'en a besoin (le chat du tuteur tourne sur Anthropic ou Gemini). "
+      + "Le construire quand un appelant le demandera, pas avant.")
+  },
+  async repondre(modele, appel) {
+    const cle = process.env.OPENAI_API_KEY
+    if (!cle) {
+      throw new Error(
+        "`OPENAI_API_KEY` est absente de l'environnement. L'adaptateur OpenAI ne "
+        + "peut pas partir — et il vaut mieux le dire ici qu'envoyer un appel qui "
+        + 'reviendra en 401.')
+    }
+    const r = await fetch(OPENAI_URL, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', authorization: `Bearer ${cle}` },
+      body: JSON.stringify({
+        model: modele,
+        messages: messagesOpenAI(appel),
+        max_completion_tokens: appel.maxTokensSortie,
+      }),
+    })
+    if (!r.ok) {
+      const corps = await r.text()
+      throw new Error(`OpenAI ${r.status} : ${corps.slice(0, 300)}`)
+    }
+    const d = await r.json() as {
+      choices?: Array<{ message?: { content?: string }; finish_reason?: string }>
+      usage?: UsageOpenAI
+    }
+    const choix = d.choices?.[0]
+    return {
+      texte: choix?.message?.content ?? '',
+      usage: usageOpenAI(d.usage),
+      // Le témoin de troncature, sous son nom OpenAI.
+      tronquee: choix?.finish_reason === 'length',
+    }
+  },
+}
+
+/** Routage par préfixe d'id de modèle ('claude-…', 'gemini-…', 'gpt-…'). */
 export function fournisseurPour(modele: string): FournisseurIA {
   if (modele.startsWith('claude')) return anthropicAdapter
   if (modele.startsWith('gemini')) return geminiAdapter
-  throw new Error(`Modèle IA inconnu : « ${modele} » (préfixes gérés : claude-, gemini-).`)
+  if (modele.startsWith('gpt')) return openaiAdapter
+  throw new Error(`Modèle IA inconnu : « ${modele} » (préfixes gérés : claude-, gemini-, gpt-).`)
 }
