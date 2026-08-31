@@ -42,7 +42,21 @@ export interface UsageIA {
 
 export interface FournisseurIA {
   repondreEnStream(modele: string, appel: AppelIA): { flux: AsyncIterable<string>; usage: () => Promise<UsageIA> }
-  repondre(modele: string, appel: AppelIA): Promise<{ texte: string; usage: UsageIA }>
+  /**
+   * ⭐ `tronquee` — LE MODÈLE A-T-IL ÉTÉ COUPÉ AU PLAFOND DE SORTIE ?
+   *
+   * ⛔⛔ SANS CE DRAPEAU, UNE TRONCATURE EST INDISCERNABLE D'UNE SORTIE MAL
+   *    FORMÉE, et la différence commande la réparation : une sortie mal formée
+   *    se relance à l'identique, une sortie TRONQUÉE relancée à l'identique
+   *    retombe sur le même plafond, à l'infini.
+   *    *Mesuré en production le 31/08 : sur le dépôt `c1431dc5`, deux appels
+   *    `p1 / structure` à exactement 2 000 jetons, aucun appel `p2`, et la
+   *    compétence `structure` absente des mesures — le job marqué `abouti`.*
+   *
+   * Champ OPTIONNEL : un adaptateur qui ne le sert pas laisse le comportement
+   * d'avant, à l'octet près.
+   */
+  repondre(modele: string, appel: AppelIA): Promise<{ texte: string; usage: UsageIA; tronquee?: boolean }>
 }
 
 const USAGE_VIDE: UsageIA = { entree: 0, sortie: 0, cacheLecture: 0, cacheEcriture5m: 0, cacheEcriture1h: 0 }
@@ -118,7 +132,10 @@ const anthropicAdapter: FournisseurIA = {
     const { system, messages } = messagesAnthropic(appel)
     const r = await client.messages.create({ model: modele, max_tokens: appel.maxTokensSortie, system, messages })
     const texte = r.content[0]?.type === 'text' ? r.content[0].text : ''
-    return { texte, usage: usageAnthropic(r.usage) }
+    // `stop_reason: 'max_tokens'` — le modèle avait encore à dire, le plafond l'a
+    // coupé. C'est le SEUL témoin fiable : une sortie tronquée ressemble en tout
+    // point à une sortie mal formée, et elle ne se répare pas de la même façon.
+    return { texte, usage: usageAnthropic(r.usage), tronquee: r.stop_reason === 'max_tokens' }
   },
 }
 
@@ -219,7 +236,14 @@ const geminiAdapter: FournisseurIA = {
       contents: contenusGemini(appel),
       config: { systemInstruction: appel.systeme, maxOutputTokens: appel.maxTokensSortie },
     })
-    return { texte: r.text ?? '', usage: usageGemini((r as { usageMetadata?: UsageGemini }).usageMetadata) }
+    // Même témoin, sous son nom Gemini : `finishReason: 'MAX_TOKENS'`.
+    const fin = (r as { candidates?: Array<{ finishReason?: string }> })
+      .candidates?.[0]?.finishReason
+    return {
+      texte: r.text ?? '',
+      usage: usageGemini((r as { usageMetadata?: UsageGemini }).usageMetadata),
+      tronquee: fin === 'MAX_TOKENS',
+    }
   },
 }
 

@@ -22,14 +22,24 @@
 //    `CRON_SECRET` n'est pas dans `.env.example` : elle ne vit que dans Vercel,
 //    et le cron l'envoie de lui-même quand elle existe.
 //
-// ⭐ CADENCE — `30 9 * * 1` (`vercel.json`), et le choix se dit.
-//    Le lundi 09:30 UTC, soit 05:30 à Toronto en heure d'été et 04:30 en heure
-//    normale. La borne à ne pas franchir est la fin de la semaine comptée : le
-//    dimanche 23:59:59 à Toronto vaut lundi 04:59:59 UTC (EDT) ou 05:59:59 UTC
-//    (EST) — 09:30 UTC est donc APRÈS la clôture dans les deux régimes, et la
-//    semaine écoulée est pleinement close quand on la compte. ⚠️ Le cron voisin
-//    tourne à `0 9 * * 1` ; on décale de trente minutes pour ne pas mettre deux
-//    déclencheurs hebdomadaires dans la même minute.
+// ⭐ CADENCE — `0 18 * * 1` (`vercel.json`), et le choix se dit.
+//    Le lundi 18:00 UTC, soit **14:00 à Montréal en heure d'été** et 13:00 en
+//    heure normale. La borne à ne pas franchir est la fin de la semaine
+//    comptée : le dimanche 23:59:59 à Montréal vaut lundi 04:59:59 UTC (EDT) ou
+//    05:59:59 UTC (EST) — 18:00 UTC est donc APRÈS la clôture dans les deux
+//    régimes, et la semaine écoulée est pleinement close quand on la compte.
+//    ⚠️ Le cron voisin tourne à `0 9 * * 1` ; les deux déclencheurs hebdomadaires
+//    ne sont jamais dans la même minute.
+//
+//    ⭐ 31/08/2026 — DÉPLACÉ DE `30 9` À `0 18`, décision de Louis. Le motif est
+//    l'heure locale : à 09:30 UTC le routeur posait la semaine à **05:30 du
+//    matin** à Montréal ; les élèves reçoivent désormais leur semaine à 14:00,
+//    dans la journée de classe. La borne de clôture ci-dessus reste tenue, et
+//    elle est la SEULE contrainte de fond sur cette heure.
+//    ⚠️ Vercel lit ces expressions **en UTC**, jamais dans le fuseau du
+//    professeur : au passage à l'heure normale (2026-11-01), `0 18` vaudra
+//    **13:00** à Montréal, pas 14:00. C'est une dérive d'une heure, pas une
+//    panne — la corriger demande de rééditer `vercel.json`, et rien d'autre.
 //
 // ⭐ `maxDuration` — 300, et le 60 d'origine était trop court. Le raisonnement
 //    d'alors ne tenait que pour LA COLLECTE : « elle n'appelle aucun modèle, elle

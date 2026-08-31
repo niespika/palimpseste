@@ -72,6 +72,10 @@ import {
   distributionDuFaisceau, type DepotAuFaisceau, type DistributionFaisceau,
 } from '@/utils/integrite-faisceau'
 import { signalerEnAttenteIA, lireParamsIntegrite, TYPE_FAISCEAU } from '@/utils/integrite'
+// ⭐ LA MÊME FONCTION QUE LE CONTRÔLE DU RETOUR, jamais une seconde comparaison :
+//    elle porte l'aplatissement des apostrophes et des guillemets, et deux
+//    normalisations qui se ressemblent finissent par diverger en silence.
+import { citationsIntrouvables } from '@/utils/chaine/anti-injection'
 import {
   cyclesEcoules, distributionDesContestations, elevesQuiRepetent, fileDExamenHumain,
   lireLesActes, ordonnerLesDrapeaux, type ActeLu, type CycleDuCalendrier, type Drapeau,
@@ -832,6 +836,127 @@ async function drapeauxDuFaisceau(
 }
 
 // ════════════════════════════════════════════════════════════════════════════
+// ⑥ LES CITATIONS COMPOSÉES — un retour servi qui fait dire à l'élève
+//    une phrase qu'il n'a pas écrite.
+// ════════════════════════════════════════════════════════════════════════════
+
+/**
+ * ⭐⭐ LE CANAL QUI MANQUAIT, ET IL NE STOCKE RIEN.
+ *
+ * **Le défaut, mesuré en production le 31/08/2026** — avec la fonction que ce
+ * module appelle, pas avec une comparaison de circonstance. Sur les 67 retours
+ * servis : **56 citations « copie » sur 278 — 20,1 % — étaient introuvables dans
+ * la copie de l'élève**, réparties sur **40 retours sur 67**, dont 26 publiés. Le
+ * contrôle RR3 les VOYAIT : il n'en faisait qu'une alerte, et les alertes
+ * n'arrêtent pas l'écriture. Depuis le 31/08 elles REFUSENT (`retour.ts`,
+ * `RR3-citation`) — mais au troisième rejeu le retour est servi quand même,
+ * pour que l'élève ne soit pas puni d'un défaut du modèle. **Décision de
+ * Louis : à ce moment-là, le professeur doit le voir.** Le voici.
+ *
+ * ⛔ AUCUNE COLONNE, AUCUNE MIGRATION, ET C'EST DÉLIBÉRÉ. Le fait est
+ *    ENTIÈREMENT DÉRIVABLE de ce que la base porte déjà — le retour et la
+ *    production —, et ce module ne fait que cela : « il n'y a rien à recalculer,
+ *    il y a un canal à ouvrir entre un calcul et un écran ». Écrire un drapeau
+ *    en base ferait une TRACE à côté de la CHOSE, qui divergerait le jour où un
+ *    professeur corrigerait le retour.
+ * ⭐ Conséquence heureuse : **les 40 retours DÉJÀ SERVIS remontent**, sans
+ *    qu'on ait à rejouer quoi que ce soit. *Éprouvé sur les données de
+ *    production le 31/08 : 40 drapeaux sur 67 retours, dont 26 publiés.*
+ *
+ * ⚠️ ON CONTRÔLE LA COPIE, ET SEULEMENT ELLE. Un point ancré sur
+ *    `texte_support` ne se contrôle pas ici : le texte d'auteur n'est pas dans
+ *    `exercices_depots`, et un contrôle qui ne peut pas s'exécuter doit se
+ *    taire plutôt que d'accuser (`anti-injection.ts`, même règle).
+ */
+async function drapeauxDeCitationComposee(
+  admin: Admin, eleveIds: string[], nomDe: Map<string, string>, incidents: string[],
+): Promise<Drapeau[]> {
+  if (eleveIds.length === 0) return []
+
+  // Les dépôts de ces élèves, avec leur production. ⚠️ On pagine : supabase-js
+  // plafonne à 1000 lignes SANS RIEN DIRE, et c'est le piège de ce module.
+  const production = new Map<string, { eleveId: string; texte: string | null }>()
+  for (let debut = 0; ; debut += PAGE) {
+    const { data, error } = await admin.from('exercices_depots')
+      .select('id, eleve_id, texte_v1, transcription_v1')
+      .in('eleve_id', eleveIds).order('id', { ascending: true })
+      .range(debut, debut + PAGE - 1)
+    if (error) { incidents.push(`les dépôts pour les citations : ${error.message}`); return [] }
+    const lot = (data ?? []) as Array<{
+      id: string; eleve_id: string; texte_v1: string | null; transcription_v1: string | null
+    }>
+    for (const d of lot) {
+      production.set(d.id, {
+        eleveId: d.eleve_id,
+        // Le texte saisi d'abord, la transcription ensuite — l'ordre de
+        // `contexte.ts:production()`, pour contrôler contre CE QUE LA CHAÎNE A VU.
+        texte: (d.texte_v1?.trim() ? d.texte_v1 : null) ?? d.transcription_v1 ?? null,
+      })
+    }
+    if (lot.length < PAGE) break
+  }
+  if (production.size === 0) return []
+
+  const depotIds = [...production.keys()]
+  const drapeaux: Drapeau[] = []
+  for (let debut = 0; debut < depotIds.length; debut += 200) {
+    const { data, error } = await admin.from('exercices_retours')
+      .select('depot_id, texte, moment, published_at, created_at, texte_edite_par_prof')
+      .in('depot_id', depotIds.slice(debut, debut + 200))
+    if (error) { incidents.push(`les retours pour les citations : ${error.message}`); continue }
+
+    for (const r of (data ?? []) as Array<{
+      depot_id: string; texte: unknown; moment: string
+      published_at: string | null; created_at: string; texte_edite_par_prof: unknown
+    }>) {
+      const prod = production.get(r.depot_id)
+      // ⛔ Sans production, le contrôle n'est pas exécutable : on se tait.
+      if (!prod?.texte || !Array.isArray(r.texte)) continue
+      // ⭐ Un retour que le professeur a DÉJÀ réécrit n'a plus à être signalé :
+      //    il a fait le geste que ce drapeau appelle.
+      if (r.texte_edite_par_prof) continue
+
+      const composees: string[] = []
+      for (const p of r.texte as unknown[]) {
+        if (!p || typeof p !== 'object') continue
+        const anc = (p as Record<string, unknown>).ancrage as
+          { source?: unknown; citation?: unknown } | undefined
+        if (anc?.source !== 'copie') continue
+        const cit = typeof anc.citation === 'string' ? anc.citation : ''
+        if (cit.trim() === '') continue
+        // ⭐ LA MÊME FONCTION QUE LE CONTRÔLE, jamais une seconde comparaison :
+        //    deux normalisations qui se ressemblent finissent par diverger, et
+        //    le désaccord serait invisible — un drapeau qui n'apparaît pas.
+        if (citationsIntrouvables(prod.texte, [cit]).introuvables.length > 0) composees.push(cit)
+      }
+      if (composees.length === 0) continue
+
+      const n = composees.length
+      drapeaux.push({
+        nature: 'citation_composee',
+        eleveId: prod.eleveId,
+        eleveNom: nomDe.get(prod.eleveId) ?? '?',
+        cle: `citation|${r.depot_id}|${r.moment}`,
+        phrase: `${n} citation${n > 1 ? 's' : ''} du retour ${r.moment} `
+          + `${n > 1 ? 'sont introuvables' : 'est introuvable'} dans la copie de l'élève — `
+          + 'le modèle l’a composée. Le retour a été servi quand même, après trois tentatives, '
+          + 'pour ne pas laisser l’élève sans rien : à toi de le corriger ou de le retirer.',
+        detail: [
+          ...composees.map((c) => `« ${c.length > 120 ? `${c.slice(0, 120)}…` : c} »`),
+          r.published_at
+            ? 'Ce retour est PUBLIÉ : l’élève peut déjà l’avoir lu.'
+            : 'Ce retour n’est pas encore publié.',
+        ],
+        at: r.created_at,
+        enTete: false,
+        geste: null,   // le geste vit à l'écran du retour : corriger, ou retirer.
+      })
+    }
+  }
+  return drapeaux
+}
+
+// ════════════════════════════════════════════════════════════════════════════
 // L'ASSEMBLAGE
 // ════════════════════════════════════════════════════════════════════════════
 
@@ -867,12 +992,13 @@ export async function chargerLAttentionDeLaClasse(
 
   const mesures = await lireLesMesuresDeLaClasse(admin, eleveIds, incidents)
 
-  const [ancre, n3, contestations] = await Promise.all([
+  const [ancre, n3, contestations, citations] = await Promise.all([
     drapeauxDeFraicheurDAncre(
       admin, eleveIds, nomDe, mesures, cycles, aujourdHui, fuseau, optOut, incidents),
     drapeauxDeDossierN3(
       admin, eleveIds, nomDe, mesures, cycles, aujourdHui, fuseau, optOut, incidents),
     lireLesContestations(admin, eleveIds, incidents),
+    drapeauxDeCitationComposee(admin, eleveIds, nomDe, incidents),
   ])
   // ⚠️ Le faisceau ÉCRIT (par le canal existant) : il part APRÈS les lectures,
   //    seul, pour que rien ne dépende de l'ordre d'exécution d'un `Promise.all`.
@@ -882,6 +1008,7 @@ export async function chargerLAttentionDeLaClasse(
   const drapeaux = ordonnerLesDrapeaux([
     ...n3.drapeaux,
     ...faisceau.drapeaux,
+    ...citations,
     ...drapeauxDeContestation(contestations, nomDe, reglages.contestations, fuseau),
     ...ancre,
   ])

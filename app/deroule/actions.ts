@@ -21,9 +21,12 @@ import { revalidatePath } from 'next/cache'
 import { garderEleveDeroule } from '@/utils/deroule/acces'
 import { chargerLeDeroule, tagALaRemise, type VueDuDeroule } from '@/utils/deroule/vue'
 import {
-  lireDepotMaison, ouvrirLeDepot, enregistrerLeTexte, remettre,
+  lireDepotMaison, ouvrirLeDepot, enregistrerLeTexte, remettre, cloturerLeCranGuide,
   repondreALaMicroQuestion, compterUneAide, type AideDepliee, type DepotMaison,
 } from '@/utils/deroule/depot'
+import { clotureDue } from '@/utils/deroule/cloture-guidee'
+import { nombreDeCas } from '@/utils/deroule/regime'
+import { poserLAccordDeLaPorte2 } from '@/utils/chaine/monitoring'
 import {
   enregistrerLaConfiance, enregistrerLesConditions, enregistrerLaRestitution,
   enregistrerLaCredence, enregistrerLaDesignation, ouvrirSeJuger, enregistrerSeJuger,
@@ -224,8 +227,54 @@ export async function actionCredence(
   const { valeur, refus: motif } = saisieARegistrer(cas, offre, saisie, new Date().toISOString())
   if (!valeur) return echec(motif ?? 'Saisie refusée.')
   const r = await enregistrerLaCredence(p.admin, p.depot, cas, valeur, new Date().toISOString())
+  if (!r.ok) { rafraichir(); return echec(r.message) }
+
+  // ⭐⭐ LA CLÔTURE DES CRANS GUIDÉS — le geste qui manquait (`cloture-guidee.ts`).
+  //    Aux crans 1 et 3 l'élève ne remet rien : sans ceci, son dépôt restait
+  //    `ouvert` À JAMAIS, comptant au dénominateur de l'assiduité et jamais au
+  //    numérateur. **177 des 576 exercices de la banque sont à ces deux crans.**
+  // ⚠️ APRÈS l'écriture de la crédence, jamais avant : `enregistrerLaCredence`
+  //    REFUSE une saisie sur un dépôt déjà remis. L'ordre inverse fermerait la
+  //    porte à la crédence qui la déclenche.
+  await clore(p.admin, depotId, vue)
   rafraichir()
-  return r.ok ? succes('') : echec(r.message)
+  return succes('')
+}
+
+/**
+ * ⛔ ELLE NE FAIT JAMAIS ÉCHOUER LA SAISIE. La crédence de l'élève est écrite ;
+ *    tout ce qui suit est de la comptabilité, et une comptabilité qui tombe ne
+ *    doit pas lui rendre une erreur sur un geste qui a réussi. On journalise.
+ */
+async function clore(
+  admin: Awaited<ReturnType<typeof garderEleveDeroule>>['admin'],
+  depotId: string,
+  vue: { credenceEstLaReponse: boolean; geste: string | null; v1RemiseLe: string | null },
+): Promise<void> {
+  try {
+    const { data } = await admin.from('exercices_metacognition')
+      .select('credence').eq('depot_id', depotId).maybeSingle()
+    const due = clotureDue({
+      forme: vue.credenceEstLaReponse ? 'choisir' : 'rediger',
+      dejaRemis: vue.v1RemiseLe !== null,
+      credences: data?.credence,
+      nombreDeCas: vue.geste ? nombreDeCas(vue.geste as never) : 1,
+    })
+    if (!due) return
+
+    const c = await cloturerLeCranGuide(admin, depotId, new Date().toISOString())
+    if (!c.ok) { console.error(`[deroule] clôture guidée refusée — ${depotId} : ${c.message}`); return }
+    if (c.valeur?.dejaClos) return   // un autre appel l'a fait : rien à ajouter.
+
+    // ⭐ LA PORTE 2, ET C'EST ICI QU'ELLE EXISTE ENFIN. Elle ne tournait que dans
+    //    la chaîne, et la chaîne exige une production textuelle que ces crans
+    //    n'ont pas. L'accord crédence ↔ réussite se calcule pourtant SANS AUCUN
+    //    APPEL : `jetons` et `index_correct` sont journalisés.
+    const m = await poserLAccordDeLaPorte2(admin, depotId)
+    if (!m.ecrite && m.motif) console.warn(`[deroule] porte 2 non posée — ${depotId} : ${m.motif}`)
+  } catch (e) {
+    console.error(`[deroule] clôture guidée — ${depotId} :`, e)
+  }
 }
 
 // ── La désignation dans le matériau (`02-` §5) ──────────────────────────────

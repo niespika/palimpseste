@@ -26,6 +26,7 @@ import 'server-only'
 // ============================================================================
 
 import { fournisseurPour, type UsageIA } from '@/utils/ia-fournisseur'
+import { PLAFOND_SORTIE_DEFAUT, motifDeTroncature, plafondApresTroncature } from './plafond-sortie'
 import { enregistrerCoutApi, coutSelonModele, normaliserUsage } from '@/utils/cout-api'
 import { validerSortie, direRefus, type Forme } from './schema'
 import type { Phase, Version } from './types'
@@ -101,6 +102,10 @@ export class AppelInterrompu extends Error {
 
 const USAGE_NUL: UsageIA = { entree: 0, sortie: 0, cacheLecture: 0, cacheEcriture5m: 0, cacheEcriture1h: 0 }
 
+// ⭐ La règle du plafond vit dans un module PUR — `plafond-sortie.ts` —, parce
+//    que ce fichier-ci est `server-only` et que rien de ce qu'il contient n'est
+//    éprouvé par `npm test`. Le motif complet est à l'en-tête de ce module.
+
 /**
  * Un appel, et son journal. Rend la valeur VALIDÉE — jamais une sortie brute.
  *
@@ -115,6 +120,28 @@ export async function appeler<T>(d: DemandeAppel): Promise<ResultatAppel<T>> {
   let appels = 0
   let cumul: UsageIA = { ...USAGE_NUL }
 
+  // ⭐⭐ LE PLAFOND DE SORTIE, ET IL SE RELÈVE QUAND LE MODÈLE A ÉTÉ COUPÉ.
+  //
+  // ⛔⛔ CE QUE LE PLAFOND FIGÉ COÛTAIT, MESURÉ EN PRODUCTION LE 31/08.
+  //    `max_tokens` valait 2 000 à l'appel ET à la relance. Quand P1 dépassait,
+  //    la sortie tronquée était rejetée par le schéma, la relance repartait avec
+  //    le MÊME plafond, retombait dessus — et la compétence disparaissait des
+  //    mesures **sans que rien ne le dise**, le job restant `abouti`.
+  //    Sur le dépôt `c1431dc5` : deux appels `p1 / structure` à exactement
+  //    2 000 jetons, zéro appel `p2`, et `structure` absente du retour d'un
+  //    élève qui l'avait pourtant travaillée. Sur `22322ca8`, la même troncature
+  //    est passée de justesse à 1 906 : le défaut est INTERMITTENT, donc il ne
+  //    se voit pas en relisant les journaux d'un bon jour.
+  //
+  // ⭐ LA RÈGLE : une troncature double le plafond pour la relance, jusqu'à
+  //    `PLAFOND_SORTIE_MAX`. On ne part PAS d'emblée au plafond haut — la
+  //    sortie se facture au jeton, et 2 000 suffisent à la quasi-totalité des
+  //    appels (médiane mesurée : 750, p90 : 1 192). *On paie le plafond haut
+  //    seulement là où il est nécessaire, et on ne perd plus rien nulle part.*
+  const plafondInitial = d.maxTokensSortie ?? PLAFOND_SORTIE_DEFAUT
+  let plafond = plafondInitial
+  let derniereTronquee = false
+
   for (let essai = 0; essai <= relancesMax; essai++) {
     const message = essai === 0 ? d.message : `${d.message}\n\n${rappelDeSchema(motifs, d.forme)}`
     let texte: string
@@ -126,11 +153,12 @@ export async function appeler<T>(d: DemandeAppel): Promise<ResultatAppel<T>> {
         suffixeDynamique: '',
         historique: [],
         message,
-        maxTokensSortie: d.maxTokensSortie ?? 2000,
+        maxTokensSortie: plafond,
         images: d.images,
       })
       texte = r.texte
       usage = r.usage
+      derniereTronquee = r.tronquee === true
     } catch (e) {
       // Un appel qui lève A COÛTÉ, et son usage est perdu au transport. On ne
       // peut pas le journaliser (aucun compteur ne revient) — mais on refuse de
@@ -150,6 +178,18 @@ export async function appeler<T>(d: DemandeAppel): Promise<ResultatAppel<T>> {
     const verdict = validerSortie<T>(texte, d.forme)
     if (verdict.ok) return { valeur: verdict.valeur, appels, usage: cumul, modele: d.modele }
     motifs.push(direRefus(verdict.refus))
+
+    // ⭐ La troncature se DIT dans le motif — sans quoi l'alerte du bilan
+    //    annoncerait « sortie non conforme » sur un modèle qui n'avait rien fait
+    //    de mal, et personne ne chercherait du côté du plafond.
+    if (derniereTronquee) {
+      const avant = plafond
+      plafond = plafondApresTroncature(plafond, plafondInitial)
+      motifs.push(motifDeTroncature(avant, plafond))
+      console.error(`[chaine] SORTIE TRONQUÉE — phase=${d.phase} modele=${d.modele} `
+        + `depot=${d.attribution.depotId ?? '?'} competence=${d.attribution.competence ?? '?'} : `
+        + `coupée à ${avant} jetons, relance à ${plafond}.`)
+    }
   }
   throw new SortieNonConforme(motifs, appels)
 }

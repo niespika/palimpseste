@@ -464,13 +464,17 @@ export interface Apercu {
  *  Le tirage réel de la passation est algorithmique et vit au déroulé. */
 function tirerTrois(banque: string[], graine: string): string[] {
   if (banque.length <= 3) return [...banque]
+  // ⛔⛔ `Math.imul`, ET les bits HAUTS — voir `credence.ts:melerAvecGraine`.
+  //    L'aperçu reste DÉTERMINISTE, c'est sa raison d'être ; il cesse seulement
+  //    de tirer toujours les mêmes rangs. *Un aperçu biaisé montrait au
+  //    professeur un tirage que la passation ne produirait jamais.*
   let h = 0
-  for (let i = 0; i < graine.length; i++) h = (h * 31 + graine.charCodeAt(i)) >>> 0
+  for (let i = 0; i < graine.length; i++) h = (Math.imul(h, 31) + graine.charCodeAt(i)) >>> 0
   const restants = [...banque]
   const out: string[] = []
   for (let k = 0; k < 3; k++) {
-    h = (h * 1103515245 + 12345) >>> 0
-    out.push(...restants.splice(h % restants.length, 1))
+    h = (Math.imul(h, 1103515245) + 12345) >>> 0
+    out.push(...restants.splice(Math.floor((h / 4294967296) * restants.length), 1))
   }
   return out
 }

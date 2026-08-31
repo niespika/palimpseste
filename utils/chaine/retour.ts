@@ -493,8 +493,20 @@ export interface ControleRetour {
  * Les refus qui sont des contrats de RÉDACTION, et eux seuls. La liste est
  * fermée et se lit sur le PRÉFIXE du motif, que `controlerRetour` écrit.
  * ⛔ Tout ce qui n'y est pas est bloquant — le défaut est le refus.
+ *
+ * ⭐⭐ `RR3-citation` Y ENTRE LE 31/08/2026 — décision de Louis : *« on refuse,
+ *    on rejoue ; au 3ᵉ essai on envoie un signal au prof, qui peut corriger et
+ *    retirer si besoin. »* Une citation que le modèle a composée REFUSE donc le
+ *    retour et déclenche le rejeu ; si trois tentatives n'en obtiennent pas un
+ *    propre, **l'élève reçoit son retour plutôt que rien**, et le professeur le
+ *    voit — `attention-serveur.ts` recalcule le contrôle sur les retours servis.
+ *
+ * ⛔ IL NE FAUT PAS CONFONDRE LES DEUX RR3. Celui-ci — la citation composée —
+ *    est tolérable au dernier essai. L'autre — `RR3 : …` sans suffixe, une
+ *    phrase DU TEXTE SUPPORT attribuée à l'élève — ne l'est **jamais** : c'est
+ *    une attribution fautive, et le préfixe la tient hors de cette liste.
  */
-const REFUS_DE_FORME = [/^règle 2 : /, /^règle 5 : /]
+const REFUS_DE_FORME = [/^règle 2 : /, /^règle 5 : /, /^RR3-citation : /]
 
 export function refusDeFormeSeulement(refus: readonly string[]): boolean {
   return refus.length > 0 && refus.every((r) => REFUS_DE_FORME.some((m) => m.test(r)))
@@ -640,9 +652,25 @@ export function controlerRR3(
           `RR3 : une citation étiquetée « copie » est une phrase DU TEXTE SUPPORT — `
           + `« ${court(c)} ». Le retour attribuerait à l'élève une phrase de l'auteur.`)
       } else {
-        out.alertes.push(
-          `RR3 : citation « copie » introuvable dans la production — « ${court(c)} » `
-          + '(ni dans le texte support : écart de fidélité, pas une attribution fautive)')
+        // ⛔⛔ 31/08/2026 — CECI ÉTAIT UNE ALERTE, ET C'EST MAINTENANT UN REFUS.
+        //    L'ancienne rédaction disait « écart de fidélité, pas une attribution
+        //    fautive », et le partage était INVERSÉ : la citation qu'on retrouve
+        //    dans le texte d'auteur refusait, celle qu'on ne retrouve NULLE PART
+        //    passait. Or la seconde est pire — c'est une phrase que **personne
+        //    n'a écrite**, servie à l'élève sous « tu écris ».
+        // ⭐ MESURÉ EN PRODUCTION LE 31/08, et c'est ce qui a tranché : sur les
+        //    278 citations « copie » servies, **56 étaient introuvables dans la
+        //    copie — 20,1 %**, réparties sur **40 retours sur 67**. Les alertes
+        //    ne bloquent pas l'écriture : les 43 sont partis, 48 ont été publiés.
+        // ⚠️ LE PRÉFIXE EST UN CONTRAT : `RR3-citation : ` est reconnu par
+        //    `REFUS_DE_FORME`, donc le rejeu retente, et à la TROISIÈME prise le
+        //    retour est servi quand même — l'élève n'est pas puni d'un défaut du
+        //    modèle. Le professeur, lui, le voit : `attention-serveur.ts`
+        //    recalcule le contrôle sur les retours servis et lève un drapeau.
+        out.refus.push(
+          `RR3-citation : citation « copie » introuvable dans la production — « ${court(c)} ». `
+          + "Elle n'est ni dans la copie de l'élève, ni dans le texte support : "
+          + 'le modèle l\'a composée.')
       }
     }
   }

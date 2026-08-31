@@ -170,13 +170,18 @@ function departage(
   }
   // Un tirage semé sur le dépôt : reproductible, et le même au rechargement —
   // servir deux jeux de questions différents mesurerait deux élèves.
+  // ⛔⛔ `Math.imul`, ET les bits HAUTS — voir `credence.ts:melerAvecGraine`, qui
+  //    porte la démonstration. Deux défauts se cumulaient ici : `h * 1103515245`
+  //    dépasse 2⁵³ et perd ses dix bits bas, et `h % pot.length` ne lit QUE ces
+  //    bits-là. À égalité de fragilité, le « tirage journalisé » qui départage
+  //    ne départageait pas : il rendait presque toujours le même rang.
   let h = 0
-  for (let i = 0; i < semence.length; i++) h = (h * 31 + semence.charCodeAt(i)) >>> 0
+  for (let i = 0; i < semence.length; i++) h = (Math.imul(h, 31) + semence.charCodeAt(i)) >>> 0
   const pot = [...exAequo]
   const tires: CandidateQuestion[] = []
   while (tires.length < combien - surs.length && pot.length > 0) {
-    h = (h * 1103515245 + 12345) >>> 0
-    tires.push(...pot.splice(h % pot.length, 1))
+    h = (Math.imul(h, 1103515245) + 12345) >>> 0
+    tires.push(...pot.splice(Math.floor((h / 4294967296) * pot.length), 1))
   }
   return {
     retenues: [...surs, ...tires],

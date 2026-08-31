@@ -37,6 +37,13 @@
 export const NATURES_DRAPEAU = [
   'dossier_n3',
   'faisceau_integrite',
+  // ⭐⭐ 31/08/2026 — LA CINQUIÈME, et c'est l'ajout que l'énuméré annonçait.
+  //    Un retour a été servi en attribuant à l'élève, sous « tu écris », une
+  //    citation qui n'est NI dans sa copie NI dans le texte d'auteur : le modèle
+  //    l'a composée. ⚠️ Elle vient AVANT les contestations, parce qu'elle porte
+  //    la même matière — une citation qui ne tient pas — mais qu'ici c'est la
+  //    PLATEFORME qui a fauté, pas l'élève qui conteste.
+  'citation_composee',
   'contestations_repetees',
   'fraicheur_ancre',
 ] as const
@@ -46,6 +53,7 @@ export type NatureDrapeau = (typeof NATURES_DRAPEAU)[number]
 export const LIBELLE_NATURE: Record<NatureDrapeau, string> = {
   dossier_n3: 'Dossier N3',
   faisceau_integrite: 'Faisceau d’intégrité',
+  citation_composee: 'Citation composée',
   contestations_repetees: 'Contestations répétées',
   fraicheur_ancre: 'Fraîcheur d’ancre',
 }

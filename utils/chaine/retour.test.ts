@@ -261,10 +261,22 @@ test('RR3 — l’apostrophe et les guillemets ne font pas crier faux le contrô
   assert.deepEqual(r.controle.refus, [])
 })
 
-test('RR3 — une citation « copie » introuvable PARTOUT alerte, elle ne refuse pas', () => {
-  // C'est l'écart de reformulation, que la contestation traite déjà
-  // (`citationAbsente`) : le refuser ferait crier faux le contrôle.
-  const flou = {
+/** Un point dont la citation « copie » EST bien dans la copie — le cas sain. */
+const POINT_COPIE_JUSTE = {
+  competence: 'argumentation', nature: 'reussite' as const,
+  ancrage: { source: 'copie' as const, citation: 'il trouve un point fixe' },
+  texte: 'tu nommes ce que le texte cherche',
+}
+
+test('⛔⛔ RR3 — une citation « copie » introuvable PARTOUT REFUSE le retour', () => {
+  // ⭐⭐ CE TEST DISAIT L'INVERSE JUSQU'AU 31/08/2026, et sa justification était
+  //    « c'est l'écart de reformulation, le refuser ferait crier faux ». La
+  //    MESURE l'a démentie : sur les 278 citations « copie » servies en
+  //    production, **56 étaient introuvables dans la copie — 20,1 %**, sur
+  //    **40 retours sur 67**. Ce n'était pas de la reformulation, c'était de la
+  //    composition : le modèle mettait entre guillemets, sous « tu écris », des
+  //    phrases que l'élève n'avait jamais écrites. Décision de Louis : on refuse.
+  const compose = {
     ...OK,
     points: [
       { competence: 'argumentation', nature: 'reussite',
@@ -273,16 +285,42 @@ test('RR3 — une citation « copie » introuvable PARTOUT alerte, elle ne refus
       OK.points[1],
     ],
   }
-  const r = controlerRetour(flou, RR3)
-  assert.deepEqual(r.controle.refus, [])
-  assert.match(r.controle.alertes.join(' '), /introuvable dans la production/)
+  const r = controlerRetour(compose, RR3)
+  assert.match(r.controle.refus.join(' '), /^RR3-citation : /,
+    'le préfixe est un contrat : le rejeu et la tolérance le lisent')
+  assert.match(r.controle.refus.join(' '), /le modèle l'a composée/)
+})
+
+test('⭐ le refus de citation composée est TOLÉRABLE — l’élève n’est pas puni du défaut du modèle', () => {
+  // Décision de Louis, 31/08 : « on refuse, on rejoue ; au 3ᵉ essai on envoie un
+  // signal au prof ». Sans cette tolérance, trois rejeux infructueux laisseraient
+  // l'élève sans AUCUN retour.
+  assert.equal(refusDeFormeSeulement(
+    ['RR3-citation : citation « copie » introuvable dans la production — « x ».']), true)
+})
+
+test('⛔ mais l’attribution fautive, elle, n’est JAMAIS tolérée', () => {
+  // Une phrase DU TEXTE SUPPORT donnée pour celle de l'élève est d'une autre
+  // nature : elle n'a pas le préfixe, donc elle reste bloquante à tous les essais.
+  assert.equal(refusDeFormeSeulement(
+    ['RR3 : une citation étiquetée « copie » est une phrase DU TEXTE SUPPORT — « x ».']), false)
+  // Et un lot mixte ne se tolère pas non plus : il suffit d'un bloquant.
+  assert.equal(refusDeFormeSeulement([
+    'RR3-citation : citation « copie » introuvable dans la production — « x ».',
+    'RR3 : une citation étiquetée « copie » est une phrase DU TEXTE SUPPORT — « y ».',
+  ]), false)
 })
 
 test('RR3 — une citation « texte_support » absente du texte servi ALERTE', () => {
   const hors = {
     ...OK,
     points: [
-      OK.points[0],
+      // ⚠️ On part d'un point SAIN côté copie : la fixture `OK` en portait un
+      //    dont la citation — « parce que la loi le dit » — n'est pas dans
+      //    `COPIE`. Elle alertait ; depuis le 31/08 elle REFUSE, et elle
+      //    masquerait ce que ce test-ci veut isoler. *La fixture portait le
+      //    défaut qu'on vient de fermer.*
+      POINT_COPIE_JUSTE,
       { competence: 'argumentation', nature: 'point_de_travail',
         ancrage: { source: 'texte_support', citation: 'le cogito est un fondement' },
         texte: 'le texte ne dit pas cela' },
@@ -304,7 +342,7 @@ test('⚠️ RR3 — « texte_support » sur un exercice SANS texte d’auteur e
   const inattendu = {
     ...OK,
     points: [
-      OK.points[0],
+      POINT_COPIE_JUSTE,   // ⚠️ même raison qu'au test précédent
       { competence: 'argumentation', nature: 'point_de_travail',
         ancrage: { source: 'texte_support', citation: 'une phrase d’auteur imaginaire' },
         texte: 'le texte dirait ceci' },

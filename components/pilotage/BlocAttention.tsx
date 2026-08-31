@@ -46,10 +46,15 @@ import {
   actionTraiterDossierN3, actionExaminerContestation, actionConfirmerFaisceau,
 } from '@/app/prof/classes/actions'
 
-/** La teinte de chaque nature. Trois natures appellent un geste, une non. */
+/** La teinte de chaque nature. Trois natures appellent un geste, deux non. */
 const TEINTE_NATURE: Record<NatureDrapeau, string> = {
   dossier_n3: 'border-retard/40 bg-retard-teinte',
   faisceau_integrite: 'border-attention/40 bg-attention-teinte',
+  // ⭐ La citation composée porte la teinte du RETARD, comme le dossier N3 :
+  //    c'est la plateforme qui a fauté, et un élève a pu lire une phrase qu'il
+  //    n'a pas écrite. ⚠️ Elle n'a AUCUN geste ici — le professeur corrige ou
+  //    retire le retour à son écran, pas depuis cette liste.
+  citation_composee: 'border-retard/40 bg-retard-teinte',
   contestations_repetees: 'border-attention/40 bg-attention-teinte',
   fraicheur_ancre: 'border-bordure bg-parchemin-fonce',
 }

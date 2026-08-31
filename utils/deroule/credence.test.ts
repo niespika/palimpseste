@@ -64,6 +64,36 @@ test('⭐ LE MÊLAGE : la bonne réponse ne tombe PAS toujours en position 4', (
     'la bonne réponse tombe toujours au même rang : un élève l’apprendrait')
 })
 
+test('⭐⭐ LE MÊLAGE EST UNIFORME — et ce test-ci est celui qui manquait', () => {
+  // ⛔⛔ CE QUI S'EST PASSÉ, ET POURQUOI LE TEST AU-DESSUS NE L'A PAS VU.
+  //    `positions.size > 1` passe avec DEUX rangs sur quatre. Or le défaut réel
+  //    était exactement celui-là : `h * 1103515245` dépassait 2⁵³, le double
+  //    perdait ses bits bas, et `% (i + 1)` ne lisait QUE ces bits. La réponse
+  //    tombait en 2ᵉ ou 3ᵉ position dans 99,8 % des tirages — JAMAIS en 1ʳᵉ ni
+  //    en 4ᵉ. Mesuré sur les 210 cas réels de cran 1 et 3 : 0 · 146 · 64 · 0.
+  //    *Un élève qui posait ses jetons sur B sans lire avait raison deux fois
+  //    sur trois.* Le test passait au vert pendant ce temps.
+  // ⭐ UN TEST DE MÊLAGE SE POSE SUR LA DISTRIBUTION, jamais sur le nombre de
+  //    rangs distincts. La borne est LARGE — on éprouve qu'aucun rang n'est
+  //    ni mort ni dominant, pas que le générateur est cryptographique.
+  const N = 4000
+  const compte = [0, 0, 0, 0]
+  for (let i = 0; i < N; i++) {
+    const o = offreDeCredence('diagnostic_guide', 1, `depot-${i}`, APPUI)
+    compte[o.indexAttendue as number] += 1
+  }
+  const attendu = N / 4
+  for (let rang = 0; rang < 4; rang += 1) {
+    const part = compte[rang] / N
+    assert.ok(part > 0.15 && part < 0.35,
+      `le rang ${rang + 1} sort ${(100 * part).toFixed(1)} % du temps (attendu ~25 %) — `
+      + `répartition ${compte.join(' · ')}. Un rang mort ou dominant est un rang que `
+      + `l'élève apprend : il répond juste sans lire.`)
+    assert.ok(compte[rang] > attendu / 2,
+      `le rang ${rang + 1} est quasi mort (${compte[rang]} sur ${N})`)
+  }
+})
+
 test('le mêlage est STABLE : deux appels sur le même dépôt × cas rendent le MÊME ordre', () => {
   const a = offreDeCredence('diagnostic_guide', 1, 'depot-42', APPUI)
   const b = offreDeCredence('diagnostic_guide', 1, 'depot-42', APPUI)

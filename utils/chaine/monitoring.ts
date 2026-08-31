@@ -30,7 +30,10 @@ import {
   accordCredenceReussite, calibrationDe, competencesQuiComptent, dansLeCatalogue,
   tauxDeLucidite, type AccordPorte2, type Aveu, type Confiance, type Credence, type Supposition,
 } from './monitoring-calcul'
-import type { ContexteDepot } from './contexte'
+// ⭐ `lireContexte` est importé POUR VALEUR — la porte 2 seule (en bas de
+//    fichier) en a besoin, et elle est le seul appelant de ce module qui ne
+//    reçoit pas déjà son contexte de la chaîne.
+import { lireContexte, type ContexteDepot } from './contexte'
 import type { Competence, Palier, SousDimension, Version } from './types'
 
 type Admin = ReturnType<typeof createAdminClient>
@@ -390,4 +393,63 @@ async function auMoinsUnEchec(admin: Admin, depotId: string): Promise<boolean> {
     }
   }
   return false
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+// ⭐⭐ LA PORTE 2, SEULE — pour les crans guidés, qui ne passent par aucune chaîne.
+// ════════════════════════════════════════════════════════════════════════════
+
+/**
+ * ⛔⛔ POURQUOI CETTE PORTE D'ENTRÉE EXISTE, ET CE QU'ELLE RÉPARE.
+ *
+ * `traiterLeMonitoring` ne tourne QU'À L'INTÉRIEUR DE LA CHAÎNE, et la chaîne
+ * exige une production textuelle. Or **aux deux crans guidés il n'y en a
+ * aucune** : l'élève répartit des jetons, sa crédence EST sa réponse, et rien ne
+ * part au modèle. La porte 2 — « l'accord entre la crédence et la réussite » —
+ * n'était donc **jamais calculée là où elle est le plus simple à calculer** :
+ * `jetons` et `index_correct` sont journalisés, la réponse juste est connue, et
+ * aucun appel n'est nécessaire.
+ *
+ * ⭐ ELLE NE DUPLIQUE RIEN. Elle appelle `accordDeLaPorte2` et
+ *    `ecrireMesureMonitoring` — les deux fonctions que la chaîne appelle —, sur
+ *    le même contexte, avec la même sous-dimension et la même source. *Une
+ *    seconde implémentation du même accord aurait fini par diverger de celle du
+ *    Monitoring, et le désaccord aurait été invisible.*
+ *
+ * ⚠️ ELLE EST IDEMPOTENTE PAR LA BASE : `ecrireMesureMonitoring` rend `dejaLa`
+ *    quand une mesure existe pour ce dépôt. Un double clic, une reprise ou un
+ *    second passage n'écrivent pas une seconde mesure.
+ *
+ * ⛔ ET ELLE NE LÈVE JAMAIS. Elle est appelée depuis l'action de crédence, à la
+ *    fin d'un geste d'élève : une mesure de Monitoring qui échoue ne doit pas
+ *    faire échouer la saisie ni la clôture de l'exercice. Elle rend son motif,
+ *    l'appelant le journalise, et l'élève ne voit rien.
+ *
+ * @returns `ecrite` — une mesure a été posée ; `motif` — ce qui l'a empêchée.
+ */
+export async function poserLAccordDeLaPorte2(
+  admin: Admin, depotId: string,
+): Promise<{ ecrite: boolean; motif: string | null }> {
+  try {
+    const ctx = await lireContexte(admin, depotId)
+    const porte2 = await accordDeLaPorte2(admin, ctx)
+    if (!porte2) return { ecrite: false, motif: 'aucune crédence lisible sur ce dépôt' }
+
+    const ecrit = await ecrireMesureMonitoring(
+      admin, ctx, 'calibration_confiance', 'sollicitee', { porte_2: porte2.accords }, [])
+    if (ecrit.ecrite) {
+      await rafraichirNiveauCalibration(admin, ctx.eleveId)
+      return { ecrite: true, motif: null }
+    }
+    return {
+      ecrite: false,
+      motif: ecrit.dejaLa
+        ? 'une mesure de calibration existait déjà pour ce dépôt'
+        : (ecrit.erreur ?? 'mesure non écrite, sans motif'),
+    }
+  } catch (e) {
+    const motif = e instanceof Error ? e.message : String(e)
+    console.error(`[monitoring] porte 2 NON posée — dépôt ${depotId} : ${motif}`)
+    return { ecrite: false, motif }
+  }
 }

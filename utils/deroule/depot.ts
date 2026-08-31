@@ -392,3 +392,40 @@ export async function compterUneAide(
 export function collagesDuDepot(depot: DepotMaison): CollageBloque[] {
   return lireLesCollages(depot.collages_bloques)
 }
+
+/**
+ * ⭐⭐ LA CLÔTURE D'UN CRAN GUIDÉ — le geste qui manquait, et il ne remet rien.
+ *
+ * Aux crans 1 et 3, **l'élève ne remet rien** : sa crédence EST sa réponse,
+ * l'écran ne sert aucun champ de rédaction, et `remettre()` n'est jamais appelé.
+ * Le dépôt restait donc `ouvert` **à jamais** — il entrait au dénominateur de
+ * l'assiduité et jamais au numérateur (`utils/deroule/cloture-guidee.ts` porte
+ * la mesure et le motif complet).
+ *
+ * ⭐ LE STATUT EST `clos`, ET PAS `v1_remis`. Rien ne vient derrière : aucun
+ *    appel de modèle, aucun retour attendu — « le jugement algorithmique […]
+ *    rien ne vient derrière » (`correction.ts`). `clos` compte comme rendu
+ *    (`STATUTS_RENDUS`), dit « terminé » à l'élève, et
+ *    `utils/passation/depots.ts` l'exclut de tout re-traitement. *Poser
+ *    `v1_remis` promettrait un retour qui ne viendra pas, et ferait entrer le
+ *    dépôt dans les files qui cherchent des mesures à faire.*
+ *
+ * ⛔ `v1_remis_at` EST POSÉ QUAND MÊME, et c'est délibéré : c'est l'horodatage
+ *    du travail fait, celui que l'assiduité et les écrans lisent. Le même
+ *    raisonnement qu'au ratissage, deux fonctions plus haut — « l'assiduité doit
+ *    distinguer un rendu qui ne compte pas d'un jamais rendu ».
+ *
+ * ⚠️ IDEMPOTENTE PAR LA BASE, comme `remettre` : le `.is('v1_remis_at', null)`
+ *    est un compare-and-swap. Un double clic sur la dernière crédence n'écrit
+ *    qu'une fois, et le second appel rend `dejaClos`.
+ */
+export async function cloturerLeCranGuide(
+  admin: Admin, depotId: string, maintenant: string,
+): Promise<Issue<{ dejaClos: boolean }>> {
+  const { data, error } = await admin.from('exercices_depots')
+    .update({ statut: 'clos', v1_remis_at: maintenant, updated_at: maintenant })
+    .eq('id', depotId).is('v1_remis_at', null)
+    .select('id')
+  if (error) return refus(`La clôture a échoué : ${error.message}`)
+  return ok({ dejaClos: (data ?? []).length === 0 })
+}
