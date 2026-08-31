@@ -84,6 +84,7 @@ if (BASE === 'prod') {
 }
 process.env.ANTHROPIC_API_KEY = E.ANTHROPIC_API_KEY
 process.env.GEMINI_API_KEY = E.GEMINI_API_KEY
+process.env.OPENAI_API_KEY = E.OPENAI_API_KEY
 
 const admin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY,
