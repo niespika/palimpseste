@@ -15,7 +15,7 @@ import 'server-only'
 // ============================================================================
 
 import { createAdminClient } from '@/utils/supabase/admin'
-import { cranEstUnCode, cranNumero } from '@/utils/cran'
+import { CRANS_A_ETALON, cranEstUnCode, cranNumero } from '@/utils/cran'
 import { lireLesStatutsDeRecette } from '@/utils/statut-recette'
 import { formeDepuisLePlan } from './modele'
 import { bornesLues, servirLeTexteSupport } from '@/utils/lecture/texte-support'
@@ -109,10 +109,22 @@ export interface ContexteDepot {
    *    jamais la seule. » Le jugement reste celui du modèle ; l'étalon lui donne
    *    son repère, il ne le remplace pas. Le prompt le dit en ces termes.
    *
-   * ⚠️ **AUX TROIS CRANS DE PRODUCTION SEULEMENT**, et `null` partout ailleurs.
-   *    Aux quatre crans qui isolent, la `reponse_attendue` est LA réponse — la
-   *    servir ici la ferait lire comme un modèle, et le jugement s'y appuierait
-   *    à faux. C'est le cran qui décide, jamais la présence du champ.
+   * ⚠️ **AUX TROIS CRANS DE PRODUCTION, PLUS LE CRAN 7**, et `null` partout
+   *    ailleurs. Aux quatre crans qui isolent — 1, 3, 4, 5 —, la
+   *    `reponse_attendue` est LA réponse, servie à l'écran comme candidat ou
+   *    comme corrigé : la servir ici la ferait lire comme un modèle, et le
+   *    jugement s'y appuierait à faux. C'est le cran qui décide, jamais la
+   *    présence du champ.
+   * ⭐⭐ **LE CRAN 7 EST ENTRÉ LE 31/08**, avec l'amendement du `02-` §2.2 qui
+   *    l'a fait passer de `null` à `présent`. Il n'isole pas : son appui est
+   *    ABSENT, l'élève ne voit rien, et `etalonServi` ne le déplie jamais. Sa
+   *    réponse attendue n'existe donc QUE pour ce chemin-ci — « borner le
+   *    retour de l'IA, qui sans elle refait son barème à chaque copie ».
+   *    ⛔ Sans cette ligne, les 88 réponses écrites au cran 7 ne parviennent à
+   *    personne : ni à l'élève, ni au modèle. *Mesuré avant de l'écrire.*
+   * ⛔ Le cran 9 reste DEHORS : sa réponse est la correction de la paire,
+   *    servie à l'élève entre les deux cas (`composerLaCorrection`). La donner
+   *    aussi au correcteur la ferait lire comme un modèle de production.
    */
   etalonProduction: string | null
   /**
@@ -643,12 +655,14 @@ async function patronDeProduction(
  *    lire de travers. D'où le filtre en dur sur 2, 6 et 8.
  *
  * ⚠️ Un cran de production ne porte qu'UN cas (`ordre = 1`) : le régime `plein`
- *    n'a pas de paire. On prend le premier et on ne suppose rien de plus.
+ *    n'a pas de paire. Le cran 7 non plus — son geste est `transformer`, et la
+ *    paire n'existe qu'au diagnostic. On prend le premier et on ne suppose
+ *    rien de plus.
  */
 async function etalonDeProduction(
   admin: Admin, exerciceId: string, cran: number | null,
 ): Promise<string | null> {
-  if (cran !== 2 && cran !== 6 && cran !== 8) return null
+  if (cran === null || !CRANS_A_ETALON.has(cran)) return null
   const { data, error } = await admin
     .from('exercices_cas').select('reponse_attendue')
     .eq('exercice_id', exerciceId).order('ordre').limit(1)

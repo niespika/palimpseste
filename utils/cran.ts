@@ -76,3 +76,24 @@ export function cranNumero(brut: unknown): number | null {
 export function cranEstUnCode(brut: unknown): boolean {
   return typeof brut === 'string' && brut.trim() !== '' && cranNumero(brut) === null
 }
+
+/**
+ * ⭐⭐ LES CRANS DONT L'ÉTALON EST SERVI AU CORRECTEUR — et eux seuls.
+ *
+ * · **2, 6, 8** — les trois crans de production. L'étalon y est « une
+ *   production que le professeur tient pour bonne » (`02-` §2.3.4).
+ * · **7** — la transformation à l'aveugle, entrée le **31/08/2026** avec
+ *   l'amendement du `02-` §2.2 qui l'a fait passer de `null` à `présent`.
+ *   ⛔ Sans elle, les 88 réponses écrites à ce cran ne parviennent à personne :
+ *   l'appui y est ABSENT, `etalonServi` ne les déplie jamais, et ce chemin-ci
+ *   est le SEUL qu'elles aient. *Mesuré avant de l'écrire.*
+ *
+ * ⛔ **1, 3, 4, 5 sont dehors** : leur `reponse_attendue` est LA réponse, servie
+ *   à l'écran comme candidat ou comme corrigé. La donner au correcteur la ferait
+ *   lire comme un modèle de production, et le jugement s'y appuierait à faux.
+ * ⛔ **9 est dehors aussi** : sa réponse est la correction de la PAIRE, servie à
+ *   l'élève entre les deux cas (`composerLaCorrection`) — un autre objet.
+ *
+ * Nommée pour n'avoir qu'un domicile, et pour s'éprouver.
+ */
+export const CRANS_A_ETALON: ReadonlySet<number> = new Set([2, 6, 7, 8])
