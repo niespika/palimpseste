@@ -30,7 +30,7 @@ import 'server-only'
 // ============================================================================
 
 import { createAdminClient } from '@/utils/supabase/admin'
-import { citationsIntrouvables } from '../chaine/anti-injection'
+import { citationTient } from '../chaine/citation-verifiee'
 import { refus, ok, type Issue, type DepotMaison } from './depot'
 import type { ActeContestation, RegimeV1vf } from './types'
 
@@ -62,8 +62,17 @@ export interface PointDuRetour {
  */
 export function citationAbsente(point: PointDuRetour, production: string | null): boolean {
   if (point.ancrage.source !== 'copie') return false
-  const { introuvables } = citationsIntrouvables(production, [point.ancrage.citation])
-  return introuvables.length > 0
+  // ⚠️ Production absente : on ne conclut RIEN. Déclarer la citation absente
+  //    faute de copie rendrait fondée toute contestation d'un dépôt illisible.
+  if (production == null || production.trim() === '') return false
+  // ⭐⭐ 31/08 — LA MÊME COMPARAISON QUE LE CONTRÔLE, ÉLISIONS COMPRISES.
+  //    `citationsIntrouvables` seul déclarait absente une citation ÉLIDÉE —
+  //    « une certaine déshumanisation [...] une certaine fermeture d'esprit » —,
+  //    qui est une façon normale de citer trois occurrences d'un même tic.
+  //    Mesuré le 31/08 : 7 des 56 citations que la comparaison stricte rejetait
+  //    étaient de cette forme. Une contestation fondée à tort ouvre une file
+  //    d'examen humain pour rien.
+  return !citationTient(production, point.ancrage.citation)
 }
 
 /**

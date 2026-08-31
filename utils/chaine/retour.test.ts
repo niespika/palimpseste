@@ -227,7 +227,12 @@ test('RR3 — un retour dont chaque citation est DE SON CÔTÉ ne lève rien', (
   assert.deepEqual(r.controle.alertes, [])
 })
 
-test('⭐⭐ RR3 PAR L’ÉCHEC — une phrase de l’AUTEUR étiquetée « copie » est REFUSÉE', () => {
+test('⭐⭐ RR3 PAR L’ÉCHEC — une phrase de l’AUTEUR étiquetée « copie » est ÉCARTÉE', () => {
+  // ⭐⭐ CE TEST EXIGEAIT UN REFUS JUSQU'AU 31/08 À MIDI. Il exige maintenant un
+  //    ÉLAGAGE, et c'est la décision de Louis du même jour : « le modèle ne doit
+  //    pas citer le texte de l'élève ». Refuser rejouait le retour — 40 sur 67 en
+  //    production, la phase à peu près doublée. Écarter donne la MÊME garantie
+  //    (la phrase de Descartes n'atteint pas l'élève) pour zéro appel.
   const faux = {
     ...OK,
     points: [
@@ -235,14 +240,17 @@ test('⭐⭐ RR3 PAR L’ÉCHEC — une phrase de l’AUTEUR étiquetée « copi
         // ⛔ C'est LA FAUTE : cette phrase est de Descartes, pas de l'élève.
         ancrage: { source: 'copie', citation: 'cette vérité est si ferme et si assurée' },
         texte: 'tu écris une formule très ferme' },
-      OK.points[1],
+      POINT_COPIE_JUSTE,
     ],
   }
   const r = controlerRetour(faux, RR3)
-  assert.equal(r.verdict.ok, true, 'la sortie est conforme au SCHÉMA — c’est bien le contrôle qui mord')
-  assert.match(r.controle.refus.join(' '), /RR3 .*phrase DU TEXTE SUPPORT/)
-  // ⛔ Et elle ne glisse PAS jusqu'à l'écran : le refus empêche l'écriture du
-  //    retour, donc sa publication (`utils/chaine/chaine.ts`).
+  assert.equal(r.verdict.ok, true, 'la sortie est conforme au SCHÉMA — c’est le contrôle qui agit')
+  assert.deepEqual(r.controle.refus, [], 'rien n’est refusé : le retour part, amputé de sa citation')
+  // ⛔ LA GARANTIE : la citation n'existe plus dans ce qui sera segmenté.
+  assert.equal(r.verdict.ok && r.verdict.valeur.points[0].ancrage, undefined)
+  assert.equal(r.verdict.ok && r.verdict.valeur.points[0].texte, 'tu écris une formule très ferme',
+    'le point garde son texte — on n’ampute que la citation')
+  assert.match(r.controle.alertes.join(' '), /phrase DU TEXTE SUPPORT/)
 })
 
 test('RR3 — l’apostrophe et les guillemets ne font pas crier faux le contrôle', () => {
@@ -268,27 +276,50 @@ const POINT_COPIE_JUSTE = {
   texte: 'tu nommes ce que le texte cherche',
 }
 
-test('⛔⛔ RR3 — une citation « copie » introuvable PARTOUT REFUSE le retour', () => {
-  // ⭐⭐ CE TEST DISAIT L'INVERSE JUSQU'AU 31/08/2026, et sa justification était
-  //    « c'est l'écart de reformulation, le refuser ferait crier faux ». La
-  //    MESURE l'a démentie : sur les 278 citations « copie » servies en
-  //    production, **56 étaient introuvables dans la copie — 20,1 %**, sur
-  //    **40 retours sur 67**. Ce n'était pas de la reformulation, c'était de la
-  //    composition : le modèle mettait entre guillemets, sous « tu écris », des
-  //    phrases que l'élève n'avait jamais écrites. Décision de Louis : on refuse.
+test('⛔⛔ RR3 — une citation « copie » introuvable PARTOUT est ÉCARTÉE', () => {
+  // ⭐⭐ MESURÉ le 31/08 : sur les 278 citations « copie » servies en production,
+  //    **49 restent introuvables une fois les élisions traitées — 17,6 %**, sur
+  //    **37 retours sur 67**. Ce n'est pas de la reformulation, c'est de la
+  //    composition : des phrases mises entre guillemets sous « tu écris » que
+  //    l'élève n'a jamais écrites.
   const compose = {
     ...OK,
     points: [
       { competence: 'argumentation', nature: 'reussite',
         ancrage: { source: 'copie', citation: 'une phrase que personne n’a écrite' },
         texte: 'tu poses ton propos' },
-      OK.points[1],
+      POINT_COPIE_JUSTE,
     ],
   }
   const r = controlerRetour(compose, RR3)
-  assert.match(r.controle.refus.join(' '), /^RR3-citation : /,
-    'le préfixe est un contrat : le rejeu et la tolérance le lisent')
-  assert.match(r.controle.refus.join(' '), /le modèle l'a composée/)
+  assert.deepEqual(r.controle.refus, [])
+  assert.equal(r.verdict.ok && r.verdict.valeur.points[0].ancrage, undefined,
+    'la citation composée n’atteint pas l’écran')
+  assert.match(r.controle.alertes.join(' '), /introuvable dans la copie/)
+  // ⭐ Le point SAIN garde sa citation intacte : on n'élague pas au hasard.
+  assert.deepEqual(r.verdict.ok && r.verdict.valeur.points[1].ancrage, POINT_COPIE_JUSTE.ancrage)
+})
+
+test('⭐⭐ UNE CITATION ÉLIDÉE N’EST PAS ÉCARTÉE — 7 refus à tort le 31/08', () => {
+  // ⛔ La comparaison verbatim stricte refusait « A [...] B » : trois occurrences
+  //    d'un même tic reliées par des points de suspension. C'est une façon
+  //    normale de citer. Mesuré : 7 des 56 citations rejetées étaient de cette
+  //    forme, sur 3 retours.
+  const elide = {
+    ...OK,
+    points: [
+      { competence: 'argumentation', nature: 'reussite',
+        ancrage: { source: 'copie',
+          citation: 'Descartes commence par douter [...] il trouve un point fixe' },
+        texte: 'tu suis le mouvement du texte' },
+      POINT_COPIE_JUSTE,
+    ],
+  }
+  const r = controlerRetour(elide, RR3)
+  assert.deepEqual(r.controle.refus, [])
+  assert.deepEqual(r.controle.alertes, [], 'aucune alerte : la citation TIENT')
+  assert.equal(r.verdict.ok && r.verdict.valeur.points[0].ancrage?.citation,
+    'Descartes commence par douter [...] il trouve un point fixe')
 })
 
 test('⭐ le refus de citation composée est TOLÉRABLE — l’élève n’est pas puni du défaut du modèle', () => {
@@ -311,15 +342,10 @@ test('⛔ mais l’attribution fautive, elle, n’est JAMAIS tolérée', () => {
   ]), false)
 })
 
-test('RR3 — une citation « texte_support » absente du texte servi ALERTE', () => {
+test('RR3 — une citation « texte_support » absente du texte servi est ÉCARTÉE', () => {
   const hors = {
     ...OK,
     points: [
-      // ⚠️ On part d'un point SAIN côté copie : la fixture `OK` en portait un
-      //    dont la citation — « parce que la loi le dit » — n'est pas dans
-      //    `COPIE`. Elle alertait ; depuis le 31/08 elle REFUSE, et elle
-      //    masquerait ce que ce test-ci veut isoler. *La fixture portait le
-      //    défaut qu'on vient de fermer.*
       POINT_COPIE_JUSTE,
       { competence: 'argumentation', nature: 'point_de_travail',
         ancrage: { source: 'texte_support', citation: 'le cogito est un fondement' },
@@ -328,21 +354,26 @@ test('RR3 — une citation « texte_support » absente du texte servi ALERTE', (
   }
   const r = controlerRetour(hors, RR3)
   assert.deepEqual(r.controle.refus, [])
-  assert.match(r.controle.alertes.join(' '), /« texte_support » introuvable dans le texte servi/)
+  assert.equal(r.verdict.ok && r.verdict.valeur.points[1].ancrage, undefined)
+  assert.match(r.controle.alertes.join(' '), /introuvable dans le texte servi/)
 })
 
-test('⛔ RR3 NE MORD JAMAIS SUR UN EXERCICE D’ÉCRITURE — mais il ne se tait pas', () => {
-  // Sans texte support, aucune citation ne peut être « une phrase de l'auteur ».
+test('⛔ SANS PRODUCTION, RIEN NE SE SERT — le contrôle échoue FERMÉ', () => {
+  // ⚠️ C'est l'inverse du réflexe de `citationsIntrouvables`, qui rend une liste
+  //    vide quand la production manque. Là-bas c'est une alerte qu'on journalise ;
+  //    ici c'est une décision qui atteint l'élève. Rien à comparer ⇒ rien à citer.
   const r = controlerRetour(OK, { ...ATTENDU, production: null, texteSupport: null })
   assert.deepEqual(r.controle.refus, [])
-  assert.match(r.controle.alertes.join(' '), /NON EXÉCUTÉ/)
+  assert.equal(r.verdict.ok && r.verdict.valeur.points[0].ancrage, undefined)
+  assert.equal(r.verdict.ok && r.verdict.valeur.points[1].ancrage, undefined)
+  assert.match(r.controle.alertes.join(' '), /introuvable dans la copie/)
 })
 
-test('⚠️ RR3 — « texte_support » sur un exercice SANS texte d’auteur est signalé', () => {
+test('⚠️ RR3 — « texte_support » sur un exercice SANS texte d’auteur est ÉCARTÉ', () => {
   const inattendu = {
     ...OK,
     points: [
-      POINT_COPIE_JUSTE,   // ⚠️ même raison qu'au test précédent
+      POINT_COPIE_JUSTE,
       { competence: 'argumentation', nature: 'point_de_travail',
         ancrage: { source: 'texte_support', citation: 'une phrase d’auteur imaginaire' },
         texte: 'le texte dirait ceci' },
@@ -350,7 +381,10 @@ test('⚠️ RR3 — « texte_support » sur un exercice SANS texte d’auteur e
   }
   const r = controlerRetour(inattendu, { ...ATTENDU, production: COPIE, texteSupport: null })
   assert.deepEqual(r.controle.refus, [])
-  assert.match(r.controle.alertes.join(' '), /AUCUN texte d'auteur/)
+  assert.equal(r.verdict.ok && r.verdict.valeur.points[1].ancrage, undefined)
+  // ⭐ Le point ancré sur la copie traverse : l'exercice n'a pas de texte
+  //    d'auteur, mais il a bien une copie.
+  assert.deepEqual(r.verdict.ok && r.verdict.valeur.points[0].ancrage, POINT_COPIE_JUSTE.ancrage)
 })
 
 test('⭐ le texte support part au modèle, et il part BALISÉ (défense 1)', () => {
@@ -445,13 +479,37 @@ test('RR3 — la prose du retour RÉEL ne lève rien', () => {
   assert.deepEqual(v.alertes, [])
 })
 
-test('⛔ sans texte support, la prose n’est pas contrôlée — rien à comparer', () => {
+test('⛔⛔ LA PROSE EST CONTRÔLÉE MÊME SANS TEXTE SUPPORT — la porte est tombée', () => {
+  // ⛔ Ce bloc a vécu un mois dans un `if (a.texteSupport != null)`. Mesuré le
+  //    31/08 : **434 des 559 exercices servables n'ont aucun texte d'auteur —
+  //    77,6 %**. Sur les trois quarts de la banque la prose n'était pas regardée,
+  //    et **7 retours sur 67** ne fautaient QUE par elle.
   const point = {
     ancrage: { source: 'copie' as const, citation: 'il trouve un point fixe' },
     texte: 'Tu écris : « une phrase qui n’est nulle part ».',
   }
   const v = controlerRR3([point], { production: COPIE, texteSupport: null })
-  assert.deepEqual(v.refus, [])
+  assert.match(v.refus.join(' '), /^RR3-citation : /,
+    'le préfixe est un contrat : le rejeu et la tolérance le lisent')
+  assert.match(v.refus.join(' '), /des mots qu'il n'a pas écrits/)
+})
+
+test('⭐ la prose qui cite JUSTE ne lève rien, élisions comprises', () => {
+  const sain = {
+    ancrage: { source: 'copie' as const, citation: 'il trouve un point fixe' },
+    texte: 'Tu écris : « Descartes commence par douter [...] il trouve un point fixe ». C’est juste.',
+  }
+  assert.deepEqual(controlerRR3([sain], { production: COPIE, texteSupport: null }).refus, [])
+})
+
+test('⛔ une phrase DU TEXTE SUPPORT dans la prose n’est JAMAIS tolérée', () => {
+  const faux = {
+    ancrage: { source: 'copie' as const, citation: 'il trouve un point fixe' },
+    texte: 'Ta phrase « cette vérité est si ferme » porte tout le poids.',
+  }
+  const v = controlerRR3([faux], { production: COPIE, texteSupport: TEXTE_SUPPORT })
+  assert.match(v.refus.join(' '), /PROSE .*phrase DU TEXTE SUPPORT/)
+  assert.equal(refusDeFormeSeulement(v.refus), false, 'jamais toléré, à aucun essai')
 })
 
 // ============================================================================

@@ -75,7 +75,8 @@ import { signalerEnAttenteIA, lireParamsIntegrite, TYPE_FAISCEAU } from '@/utils
 // ⭐ LA MÊME FONCTION QUE LE CONTRÔLE DU RETOUR, jamais une seconde comparaison :
 //    elle porte l'aplatissement des apostrophes et des guillemets, et deux
 //    normalisations qui se ressemblent finissent par diverger en silence.
-import { citationsIntrouvables } from '@/utils/chaine/anti-injection'
+import { citationTient } from '@/utils/chaine/citation-verifiee'
+import { citationsAttribueesDansLaProse } from '@/utils/chaine/retour'
 import {
   cyclesEcoules, distributionDesContestations, elevesQuiRepetent, fileDExamenHumain,
   lireLesActes, ordonnerLesDrapeaux, type ActeLu, type CycleDuCalendrier, type Drapeau,
@@ -916,18 +917,34 @@ async function drapeauxDeCitationComposee(
       //    il a fait le geste que ce drapeau appelle.
       if (r.texte_edite_par_prof) continue
 
+      // ⚠️ Sans copie, on ne conclut rien — un drapeau levé faute de production
+      //    ferait relire au professeur un retour dont rien ne prouve le défaut.
+      if (!prod.texte || prod.texte.trim() === '') continue
+
       const composees: string[] = []
       for (const p of r.texte as unknown[]) {
         if (!p || typeof p !== 'object') continue
-        const anc = (p as Record<string, unknown>).ancrage as
-          { source?: unknown; citation?: unknown } | undefined
-        if (anc?.source !== 'copie') continue
-        const cit = typeof anc.citation === 'string' ? anc.citation : ''
-        if (cit.trim() === '') continue
-        // ⭐ LA MÊME FONCTION QUE LE CONTRÔLE, jamais une seconde comparaison :
-        //    deux normalisations qui se ressemblent finissent par diverger, et
-        //    le désaccord serait invisible — un drapeau qui n'apparaît pas.
-        if (citationsIntrouvables(prod.texte, [cit]).introuvables.length > 0) composees.push(cit)
+        const point = p as Record<string, unknown>
+
+        // ⭐⭐ 31/08 — DEUX DOMICILES, ET LE SECOND EST LE SEUL QUI VIVE ENCORE.
+        //    L'ANCRAGE : depuis l'élagage (`elaguerLesAncrages`), une citation
+        //    invérifiable n'atteint plus l'écran — ce balayage ne le trouvera
+        //    donc que sur les retours ANTÉRIEURS au 31/08, qui sont en base et
+        //    que le professeur doit voir. On le garde pour eux.
+        const anc = point.ancrage as { source?: unknown; citation?: unknown } | undefined
+        if (anc?.source === 'copie' && typeof anc.citation === 'string'
+            && anc.citation.trim() !== '' && !citationTient(prod.texte, anc.citation)) {
+          composees.push(anc.citation)
+        }
+
+        //    LA PROSE : elle, se refuse et se rejoue — mais la troisième prise
+        //    SERT le retour quand même (`REFUS_DE_FORME`). C'est donc par là
+        //    qu'une attribution fausse peut encore parvenir à l'élève, et c'est
+        //    ce que ce drapeau attrape désormais.
+        const texte = typeof point.texte === 'string' ? point.texte : ''
+        for (const c of citationsAttribueesDansLaProse(texte)) {
+          if (!citationTient(prod.texte, c)) composees.push(c)
+        }
       }
       if (composees.length === 0) continue
 

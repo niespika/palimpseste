@@ -43,7 +43,7 @@ test('cran 1 — LE COMPTE : ni texte, ni citation ; l\'identifiant survit', () 
   assert.equal(vus.length, 3)
   for (const p of vus) {
     assert.equal(p.texte, '', 'aucun texte au cran du compte')
-    assert.equal(p.ancrage.citation, '', 'aucune citation au cran du compte')
+    assert.equal(p.ancrage?.citation, '', 'aucune citation au cran du compte')
     assert.notEqual(p.id, '', 'l\'identifiant stable survit — la contestation s\'y accroche')
   }
 })
@@ -51,13 +51,13 @@ test('cran 1 — LE COMPTE : ni texte, ni citation ; l\'identifiant survit', () 
 test('cran 2 — LES POINTS : le texte, mais AUCUNE citation', () => {
   const vus = auCran(RETOUR, 2)
   assert.equal(vus[0].texte, 'un point de retour')
-  for (const p of vus) assert.equal(p.ancrage.citation, '')
+  for (const p of vus) assert.equal(p.ancrage?.citation, '')
   assert.equal(accompagnementVisible(2), false)
 })
 
 test('cran 3 — LE DÉTAIL : les citations reviennent, et l\'accompagnement avec', () => {
   const vus = auCran(RETOUR, 3)
-  assert.equal(vus[0].ancrage.citation, 'un verbatim de la copie')
+  assert.equal(vus[0].ancrage?.citation, 'un verbatim de la copie')
   assert.equal(accompagnementVisible(3), true)
 })
 
@@ -126,4 +126,19 @@ test('un point AJOUTÉ par le professeur se reconnaît à son préfixe et passe'
 test('retirer un point est licite : l\'édition peut être PLUS COURTE que l\'engendré', () => {
   assert.equal(refuserEdition([point({ id: 'p1' })]), null)
   assert.deepEqual(identifiantsInconnus([point({ id: 'p1' })], RETOUR), [])
+})
+
+test('⭐ 31/08 — un point SANS ancrage traverse les crans sans qu’on lui en fabrique un', () => {
+  // L'élagage (`elaguerLesAncrages`) retire la citation qu'il ne retrouve pas
+  // dans la copie : le point arrive ici sans ancrage. Le masquage ne doit pas
+  // en inventer un — un ancrage sans source ne passerait pas la garde en base.
+  const sansAncrage: PointRetour[] = [
+    { id: 'x:v1:01', texte: 'un point élagué', competence: 'expression', nature: 'reussite' },
+  ]
+  for (const cran of [1, 2, 3] as const) {
+    const vus = auCran(sansAncrage, cran)
+    assert.equal(vus[0].ancrage, undefined, `cran ${cran} : aucun ancrage fabriqué`)
+    assert.equal(vus[0].id, 'x:v1:01')
+  }
+  assert.equal(refuserEdition(sansAncrage), null, "l'édition accepte un point sans ancrage")
 })

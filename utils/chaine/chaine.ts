@@ -75,6 +75,8 @@ export interface BilanDepot {
   mesuresEcrites: number
   mesuresDejaLa: number
   retourEcrit: boolean
+  /** ⭐ Renseigné en RÉPÉTITION À BLANC : le retour qui aurait été écrit. */
+  retourEngendre?: RetourSegmente | null
   monitoring: { mesures: number; motifs: string[] }
   appels: number
   /**
@@ -953,7 +955,14 @@ async function lireSquelette(
 
 // ── Le retour ───────────────────────────────────────────────────────────────
 
-async function engendrerLeRetour(
+/**
+ * ⭐ EXPORTÉ pour la RÉPÉTITION À BLANC (`scripts/recette/retour-a-blanc.mjs`) —
+ *    le pendant exact de `rejouerUneCompetence` pour la chaîne froide. C'est
+ *    la seule façon d'éprouver un changement de GABARIT sur des copies réelles
+ *    sans écrire dans le retour d'un élève. ⛔ Ne pas l'appeler depuis l'app :
+ *    le chemin de production passe par `traiterDepot` ou `rejouerLeRetour`.
+ */
+export async function engendrerLeRetour(
   admin: Admin,
   a: {
     ctx: ContexteDepot; version: Version; modele: string
@@ -975,8 +984,20 @@ async function engendrerLeRetour(
      *    pour un retour qui ne viendrait jamais.
      */
     tolererLaForme?: boolean
+    /**
+     * ⭐ LA RÉPÉTITION À BLANC — même patron que `chaineDUneCompetence`, et pour
+     *    la même raison : **éprouver un changement de gabarit sur des copies
+     *    RÉELLES sans toucher au retour d'un élève**. Rien n'est écrit ; le
+     *    retour engendré est rendu à l'appelant, qui en fait ce qu'il veut.
+     * ⛔ Les appels au modèle, eux, sont bien faits et bien facturés.
+     */
+    sansEcriture?: boolean
   },
-): Promise<{ ecrit: boolean; appels: number; alertes: string[] }> {
+): Promise<{
+  ecrit: boolean; appels: number; alertes: string[]
+  /** Ce qui aurait été écrit — renseigné en répétition à blanc. */
+  retour?: RetourSegmente | null
+}> {
   const { ctx, version, modele, squelettes, cible } = a
   const alertes: string[] = []
   if (!cible) return { ecrit: false, appels: 0, alertes: ['aucune cible : pas de retour'] }
@@ -1139,10 +1160,14 @@ async function engendrerLeRetour(
     }
 
     const segmente = segmenter(verdict.valeur, ctx.depotId, version)
+    if (a.sansEcriture === true) {
+      alertes.push('répétition à blanc : le retour n’a PAS été écrit')
+      return { ecrit: false, appels: r.appels, alertes, retour: segmente }
+    }
     const ecriture = await ecrireRetour(
       admin, ctx.depotId, version, registreServi, segmente, ctx.lieu)
     if (!ecriture.ecrit) alertes.push(`retour NON écrit en base : ${ecriture.erreur}`)
-    return { ecrit: ecriture.ecrit, appels: r.appels, alertes }
+    return { ecrit: ecriture.ecrit, appels: r.appels, alertes, retour: segmente }
   } catch (e) {
     if (e instanceof SortieNonConforme) {
       alertes.push(`retour non conforme après relance : ${e.motifs.join(' | ')}`)
@@ -1307,7 +1332,9 @@ async function lireLeSqueletteComplet(
  */
 export async function rejouerLeRetour(
   admin: Admin, depotId: string,
-  options: { config?: ConfigChaine; registre?: Registre; tolererLaForme?: boolean } = {},
+  options: { config?: ConfigChaine; registre?: Registre; tolererLaForme?: boolean;
+    /** Répétition à blanc : les appels ont lieu, rien n'est écrit. */
+    sansEcriture?: boolean } = {},
 ): Promise<BilanDepot> {
   const debut = Date.now()
   const config = options.config ?? lireConfig()
@@ -1382,6 +1409,7 @@ export async function rejouerLeRetour(
   const r = await engendrerLeRetour(admin, {
     ctx, version: 'v1', modele, squelettes, registre: options.registre ?? null, cible,
     tolererLaForme: options.tolererLaForme === true,
+    sansEcriture: options.sansEcriture === true,
   })
   alertes.push(...r.alertes)
 
@@ -1396,6 +1424,7 @@ export async function rejouerLeRetour(
     mesuresEcrites: 0,
     mesuresDejaLa: mesures.length,
     retourEcrit: r.ecrit,
+    retourEngendre: r.retour ?? null,
     monitoring: { mesures: 0, motifs: ['étape de retour seul : le Monitoring ne se rejoue pas'] },
     appels: r.appels,
     passages: 0,

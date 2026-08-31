@@ -79,13 +79,18 @@ export function sommaireDuRetour(points: readonly PointRetour[]): SommaireDuReto
  */
 export function auCran(points: readonly PointRetour[], cran: CranRevelation): PointRetour[] {
   if (cran <= 0) return []
+  // ⚠️ 31/08 — L'ANCRAGE PEUT MANQUER (`PointRetour.ancrage` est facultatif
+  //    depuis l'élagage des citations invérifiables). Masquer un ancrage ABSENT
+  //    en fabriquerait un, sans source : on le laisse absent.
+  const sansCitation = (p: PointRetour): PointRetour =>
+    p.ancrage ? { ...p, ancrage: { ...p.ancrage, citation: '' } } : p
   if (cran === 1) {
     // Le compte seul : le texte et la citation sont retirés ; l'identifiant, la
     // compétence et la nature restent — c'est ce qu'on compte.
-    return points.map((p) => ({ ...p, texte: '', ancrage: { ...p.ancrage, citation: '' } }))
+    return points.map((p) => ({ ...sansCitation(p), texte: '' }))
   }
   if (cran === 2) {
-    return points.map((p) => ({ ...p, ancrage: { ...p.ancrage, citation: '' } }))
+    return points.map(sansCitation)
   }
   return points.map((p) => ({ ...p }))
 }

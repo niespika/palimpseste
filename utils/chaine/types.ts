@@ -56,8 +56,17 @@ export type Palier = (typeof PALIERS)[number]
 export interface PointRetour {
   /** Stable : c'est sur lui que la contestation s'accroche (§1.2). */
   id: string
-  /** Ce à quoi le point s'ancre — la citation du squelette, et sa source (RR3). */
-  ancrage: { source: 'copie' | 'texte_support'; citation: string }
+  /**
+   * Ce à quoi le point s'ancre — la citation, et sa source (RR3).
+   *
+   * ⚠️⚠️ **FACULTATIF DEPUIS LE 31/08, ET CE N'EST PAS UN DÉTAIL DE TYPAGE.** Le
+   *    code vérifie chaque citation contre la copie et **écarte** celle qu'il
+   *    n'y retrouve pas (`elaguerLesAncrages`) : un point peut donc arriver à
+   *    l'écran avec son texte et sans son bloc de citation. La garde en base l'a
+   *    suivi le même jour (`retour_ancrage_elague.sql`), et `RetourSegmente.tsx`
+   *    le gérait déjà — *« une citation vide n'est pas montrée »*.
+   */
+  ancrage?: { source: 'copie' | 'texte_support'; citation: string }
   texte: string
   /** La compétence dont le point parle — le retour est mono-focal en N1 (`01-` §8.4). */
   competence: Competence | 'monitoring'
