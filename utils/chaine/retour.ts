@@ -154,6 +154,24 @@ export interface CoucheType {
    * plusieurs bonnes formes ». Aux trois crans de production seulement.
    */
   etalonProduction?: string | null
+  /**
+   * ⭐⭐ 31/08/2026 — LE MATÉRIAU TRAVAILLÉ ET L'ATTENDU, par cas.
+   *
+   * ⛔ IL NE SE CONFOND PAS AVEC `etalonProduction`, et les deux peuvent
+   *    coexister sur un même dépôt. L'étalon est **une production MODÈLE** — un
+   *    repère de niveau, aux crans où l'élève PRODUIT (2, 6, 7, 8). Ceci est
+   *    **ce que l'exercice portait** : le texte sur lequel l'élève a travaillé,
+   *    et la réponse que la banque déclare. Deux objets, deux cadrages, deux
+   *    blocs dans le message.
+   *
+   * ⚠️ `null` sur les deux champs d'un cas est NORMAL : un cran de production
+   *    n'a pas de matériau. Les cas entièrement vides ne partent pas.
+   */
+  casServis?: ReadonlyArray<{
+    ordre: number
+    materiau: string | null
+    reponseAttendue: string | null
+  }>
 }
 
 // ── Le plafond de la règle 2 ────────────────────────────────────────────────
@@ -345,6 +363,42 @@ export function assemblerRetour(gabarit: string, e: EntreeRetour): { systeme: st
       + '`"texte_support"` et cite LE TEXTE ; un point qui porte sur ce que\n'
       + "l'élève a écrit s'ancre sur `\"copie\"` et cite ses mots.",
     ))
+  }
+
+  // ⭐⭐ 31/08/2026 — LE MATÉRIAU TRAVAILLÉ ET L'ATTENDU. Décision de Louis :
+  //    « la seule IA qui devrait avoir le matériau et l'attendu de réponse,
+  //    c'est Calame lors du retour chaud. » Le juge P1/P2 n'en reçoit rien : il
+  //    mesure des observables de compétence, pas la justesse de l'exercice.
+  // ⛔ BALISÉ, comme le texte support et pour la même raison : le matériau vient
+  //    d'un IMPORT DE FICHIER (`08-` §4), il ne se colle jamais nu.
+  const casServis = (e.coucheType.casServis ?? [])
+    .filter((c) => c.materiau || c.reponseAttendue)
+  if (casServis.length) {
+    const blocs = casServis.flatMap((c) => [
+      ...(c.materiau
+        ? [{ nom: `le matériau du cas ${c.ordre} — ce que l'élève avait sous les yeux`,
+          contenu: c.materiau }]
+        : []),
+      ...(c.reponseAttendue
+        ? [{ nom: `la réponse attendue du cas ${c.ordre}`, contenu: c.reponseAttendue }]
+        : []),
+    ])
+    morceaux.push(messageAvecMateriau(blocs,
+      "CE QUE L'EXERCICE PORTAIT. Le matériau est le texte SUR LEQUEL l'élève a\n"
+      + "travaillé — ce n'est pas lui qui l'a écrit. La réponse attendue est celle\n"
+      + 'que le professeur a déposée en banque.\n'
+      + '\n'
+      + '⛔ NE LES CITE JAMAIS COMME DES MOTS DE L\'ÉLÈVE : toute citation ancrée\n'
+      + '`"copie"` doit se trouver dans SA production, dans le squelette ci-dessous.\n'
+      + '⛔ NE RECOPIE PAS LA RÉPONSE ATTENDUE, ET NE LA PARAPHRASE PAS. Elle est\n'
+      + "là pour que tu saches CE QUI ÉTAIT DEMANDÉ, donc pour que ton jugement\n"
+      + "porte sur l'écart réel — pas pour être servie à l'élève. À plusieurs\n"
+      + "crans il lui reste une version finale à écrire : lui donner la réponse\n"
+      + 'maintenant lui retirerait son exercice.\n'
+      + '\n'
+      + "Sers-t'en pour ANCRER ce que tu dis dans ce qu'il avait à faire — « le\n"
+      + "passage disait X, tu as écrit Y » — et pour ne plus parler dans le vide\n"
+      + 'quand la consigne dit « ce passage » ou « ce texte ».'))
   }
 
   morceaux.push('SQUELETTE ET VERDICTS — ' + (e.moment === 'v1' ? 'la v1.' : 'la v1, puis la version finale.'))

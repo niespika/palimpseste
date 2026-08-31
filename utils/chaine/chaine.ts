@@ -1027,6 +1027,12 @@ async function engendrerLeRetour(
       consigne: ctx.consigne, grain: ctx.grain, servable: ctx.servable,
       patronProduction: ctx.patronProduction,
       etalonProduction: ctx.etalonProduction,
+      // ⭐⭐ 31/08 — LE MATÉRIAU ET L'ATTENDU, ICI ET NULLE PART AILLEURS.
+      //    « La seule IA qui devrait avoir le matériau et l'attendu de réponse,
+      //    c'est Calame lors du retour chaud » (Louis). Les deux appels froids
+      //    ci-dessus n'en reçoivent rien, et c'est le point : ils mesurent des
+      //    OBSERVABLES, le retour PARLE de l'exercice.
+      casServis: ctx.casPourLeRetour,
     },
     squelettes,
     squelettesVf: a.squelettesVf,

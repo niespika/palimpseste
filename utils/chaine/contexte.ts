@@ -49,6 +49,19 @@ export interface TexteSupportServi {
   reference: string | null
 }
 
+/**
+ * Ce qu'un CAS porte pour le retour chaud — et rien de plus.
+ * ⚠️ Les deux champs sont indépendamment nullables : un cran de production n'a
+ *    pas de matériau, un cas de la 1.3 peut n'avoir pas de réponse déclarée.
+ */
+export interface CasServiAuRetour {
+  ordre: number
+  /** `exercices_materiaux.contenu` — ce que l'élève avait SOUS LES YEUX. */
+  materiau: string | null
+  /** `exercices_cas.reponse_attendue` — la réponse, telle que la banque la porte. */
+  reponseAttendue: string | null
+}
+
 export interface ContexteDepot {
   depotId: string
   eleveId: string
@@ -127,6 +140,32 @@ export interface ContexteDepot {
    *    aussi au correcteur la ferait lire comme un modèle de production.
    */
   etalonProduction: string | null
+  /**
+   * ⭐⭐ 31/08/2026 — LE MATÉRIAU ET L'ATTENDU, POUR LE SEUL RETOUR CHAUD.
+   *    Décision de Louis : *« la seule IA qui devrait avoir le matériau et
+   *    l'attendu de réponse, c'est Calame lors du retour chaud. »*
+   *
+   * ⛔⛔ LE TROU QUE CECI FERME, ET IL A ÉTÉ MESURÉ. `exercices_materiaux`
+   *    n'était lu par AUCUN prompt : ni P1, ni P2, ni le retour. Or les
+   *    consignes de la banque sont DÉICTIQUES — « Réécris **ce passage** sans le
+   *    défaut » (cran 5), « **Ce passage** peut être meilleur » (cran 7),
+   *    « Chaque mot de **ce texte** dit-il ce qu'il doit dire ? » (cran 9). Le
+   *    modèle recevait la consigne et la copie, et « ce passage » ne désignait
+   *    rien. *Mesuré sur `banque.json` : aucun des 576 exercices ne porte de
+   *    référence, donc `reference` et `source` sont absents pour tous — il ne
+   *    restait littéralement que la consigne et la copie.*
+   *
+   * ⛔ ET IL NE VA PAS AU JUGE, C'EST LE POINT. P1 et P2 mesurent des
+   *    OBSERVABLES DE COMPÉTENCE sur la production ; leur donner la réponse les
+   *    ferait juger la justesse de l'exercice, ce qui n'est pas leur objet. Le
+   *    retour, lui, PARLE à l'élève de son texte : c'est là que le matériau
+   *    manque, et nulle part ailleurs.
+   *
+   * ⚠️ ON NE SERT JAMAIS `version_corrigee`. Le matériau servi est le `contenu`
+   *    — ce que l'élève avait sous les yeux. La version corrigée est un autre
+   *    objet, et aux crans 3 et 5 elle EST la réponse.
+   */
+  casPourLeRetour: CasServiAuRetour[]
   /**
    * Ce que la DÉCISION D'ASSIGNATION porte. « Le drapeau [de sonde de montée]
    * vient de la décision d'assignation ; la chaîne LE RECOPIE sur la mesure,
@@ -542,6 +581,7 @@ export async function lireContexte(admin: Admin, depotId: string): Promise<Conte
       ? await patronDeProduction(admin, tousLesModes, cran)
       : null,
     etalonProduction: await etalonDeProduction(admin, exercice.id, cran),
+    casPourLeRetour: await casPourLeRetour(admin, exercice.id),
     decision,
     confianceDeclaree: (depot.confiance_declaree ?? {}) as Record<string, string>,
     estSyntheseEnClasse: typeExercice === 'synthese' && exercice.lieu === 'classe',
@@ -683,4 +723,51 @@ function production(texte: unknown, transcription: unknown): string | null {
   if (t) return t
   const tr = typeof transcription === 'string' && transcription.trim() !== '' ? transcription : null
   return tr
+}
+
+/**
+ * ⭐ LE MATÉRIAU ET L'ATTENDU DE CHAQUE CAS — pour le retour chaud, et lui seul.
+ *
+ * ⚠️ AUCUN FILTRE PAR CRAN, et c'est délibéré. On sert CE QUE LE CAS PORTE : un
+ *    cran de production n'a pas de matériau et rend `null`, un cas sans réponse
+ *    déclarée rend `null`. *Un filtre en dur aurait fabriqué un troisième
+ *    domicile de la table des crans, qui divergerait au premier amendement — et
+ *    le `02-` §2.2 en a reçu un le 31/08 même.*
+ *
+ * ⛔ `version_corrigee` N'EST PAS SÉLECTIONNÉE. Elle est la réponse aux crans 3
+ *    et 5 (`02-` §2.3.4), et ce qu'on sert ici est ce que l'élève AVAIT SOUS LES
+ *    YEUX. Ne pas la lire est plus sûr que la lire et l'écarter.
+ *
+ * ⚠️ Erreur de lecture → tableau VIDE, jamais une exception : le retour se sert
+ *    sans matériau comme il le faisait hier, et la trace le dit. *supabase-js ne
+ *    lève pas ; sans cette branche, une lecture ratée passerait pour un exercice
+ *    sans matériau.*
+ */
+async function casPourLeRetour(
+  admin: Admin, exerciceId: string,
+): Promise<CasServiAuRetour[]> {
+  const { data, error } = await admin
+    .from('exercices_cas')
+    .select('ordre, reponse_attendue, exercices_materiaux(contenu)')
+    .eq('exercice_id', exerciceId).order('ordre')
+  if (error) {
+    console.error(`[chaine] cas du retour illisibles — exercice ${exerciceId} : `
+      + `${error.code} ${error.message}. Le retour se sert sans matériau.`)
+    return []
+  }
+  const texte = (v: unknown): string | null =>
+    (typeof v === 'string' && v.trim() !== '' ? v.trim() : null)
+  return ((data ?? []) as unknown as Array<{
+    ordre: number; reponse_attendue: unknown; exercices_materiaux: unknown
+  }>).map((c) => {
+    // La jointure rend un objet ou un tableau d'un élément selon la forme de la
+    // clé — le patron du dépôt (`vue.ts`, `ratissage-serveur.ts`) lit les deux.
+    const m = Array.isArray(c.exercices_materiaux)
+      ? c.exercices_materiaux[0] : c.exercices_materiaux
+    return {
+      ordre: c.ordre,
+      materiau: texte((m as { contenu?: unknown } | null)?.contenu),
+      reponseAttendue: texte(c.reponse_attendue),
+    }
+  })
 }

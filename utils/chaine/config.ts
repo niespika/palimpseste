@@ -43,7 +43,30 @@ const DEFAUTS: ConfigChaine = {
   // « Construis le partage DÉBRAYABLE : tout-au-fort tant que la contre-épreuve
   //   n'a pas tranché » (piège 11). Le défaut est donc le partage ÉTEINT.
   partageActif: false,
-  plafondMensuelUsd: 25,
+  /**
+   * ⭐⭐ 31/08/2026 — RELEVÉ DE 25 À 150 $, décision de Louis : *« lève le
+   *    plafond pour cette semaine, on verra combien ça me coûte réellement à la
+   *    fin de la semaine 1 »*.
+   *
+   * ⛔ LE MOTIF EST MESURÉ, pas prudentiel. Coût réel d'un dépôt en production :
+   *    **0,126 $ en médiane** (moyenne 0,146, max 0,328), 7 appels par dépôt.
+   *    À 62 élèves × 6 exercices, la semaine coûte **46,86 $** — au-dessus de 25.
+   *    L'ancien plafond coupait donc vers le **198ᵉ dépôt**, soit trois exercices
+   *    par élève, EN MILIEU DE PREMIÈRE SEMAINE. Et la coupure n'est pas douce :
+   *    `couperLaChaine` bascule `chaine_actif` à OFF **pour toute la classe**, et
+   *    l'alerte à 70 % n'est qu'un `console.error` — personne n'est prévenu.
+   *
+   * ⚠️ CE N'EST PAS UN BUDGET, C'EST UNE FENÊTRE DE MESURE. 150 laisse passer un
+   *    mois plein à la cadence haute (62 × 12 ≈ 94 $) tout en gardant une borne
+   *    contre l'emballement. **À revoir à la fin de la semaine 1, sur la dépense
+   *    réelle** — c'est la seule valeur qui vaudra quelque chose.
+   *
+   * ⭐ Et le vrai levier est ailleurs : `partageActif` ci-dessus. Tant qu'il est
+   *    à `false`, TOUT part au modèle fort, exercices compris. Haiku coûte le
+   *    tiers de Sonnet (1/5 contre 3/15 par million) ; le partage est écrit,
+   *    éprouvé, et n'attend que la contre-épreuve du `07-` §6.
+   */
+  plafondMensuelUsd: 150,
   plafondAppelsParDepot: 40,
   latenceCibleMs: 3 * 60 * 1000,
   bailMs: 5 * 60 * 1000,
