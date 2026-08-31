@@ -34,7 +34,7 @@ import {
 import { contester, validerLaLecture, pointsContestes } from '@/utils/deroule/contestation'
 import { mesurerMaintenant, attenteDuDepot } from '@/utils/deroule/mesure'
 import { saisieARegistrer } from '@/utils/deroule/credence'
-import { leRatissageDuDepot } from '@/utils/deroule/ratissage-serveur'
+import { leVerdictDeLaZone } from '@/utils/deroule/ratissage-serveur'
 import { cranNumero } from '@/utils/cran'
 import { signalerEnAttenteIA, TYPE_FAISCEAU } from '@/utils/integrite'
 import { comparerAuSquelette, gardeIndetermine } from '@/utils/deroule/juger'
@@ -469,14 +469,37 @@ export async function actionRemettre(
   //    attente. *Une absence de réponse ne se fait pas juger, elle se constate.*
   // ⚠️ Sur la version finale, la question ne se pose pas : la désignation
   //    appartient à la v1, et `regime_v1vf` ne donne pas de vf à ces crans.
-  const ratissage = version === 'v1'
-    ? await leRatissageDuDepot(p.admin, depotId, p.depot.exercice.id, cranNumero(p.depot.exercice.cran))
+  const verdictZone = version === 'v1'
+    ? await leVerdictDeLaZone(p.admin, depotId, p.depot.exercice.id, cranNumero(p.depot.exercice.cran))
     : null
+  // ⭐⭐ 31/08 — LES DEUX PORTES, ET NON PLUS UNE SEULE. Le cas 0 est le
+  //    ratissage — une NON-RÉPONSE. Le cas 1 est la zone hors cible — une
+  //    réponse FAUSSE. Les deux ferment avant l'IA (`02-` §5, `designation.ts`),
+  //    et ils n'écrivent NI le même statut NI le même signal.
+  const ratissage = verdictZone?.cas === '0' ? verdictZone : null
+  const horsCible = verdictZone?.cas === '1' ? verdictZone : null
 
   const r = await remettre(p.admin, p.depot, version,
-    { texte, tagDuree: tag, telemetrie, ratissage: ratissage !== null },
+    { texte, tagDuree: tag, telemetrie,
+      ratissage: ratissage !== null, zoneHorsCible: horsCible !== null },
     maintenant.toISOString())
   if (!r.ok) return echec(r.message)
+
+  // ⭐ LA ZONE HORS CIBLE — remise, close, et RIEN NE PART AU MODÈLE.
+  //   ⛔ Aucun signalement au professeur : « rien d'autre ne s'ensuit ». Se
+  //      tromper d'endroit n'est pas ratisser, et le `02-` §5 sépare les deux.
+  if (horsCible !== null) {
+    rafraichir()
+    return {
+      ok: true,
+      enAttente: false,
+      // ⚠️ On ne dit NI où était le passage, NI aucun chiffre : le lui dire
+      //    reviendrait à lui donner la réponse après coup, et à lui apprendre
+      //    la barre à contourner. On dit le fait, et ce qu'il peut en faire.
+      message: 'C’est enregistré. Le passage que tu as surligné n’est pas celui qui '
+        + 'pose problème — relis le matériau, la prochaine fois, avant de choisir où pointer.',
+    }
+  }
 
   if (ratissage !== null) {
     // ⭐ LE STATUT PORTE L'ÉTAT, LE SIGNALEMENT PORTE LA CAUSE — et la crédence
@@ -485,7 +508,7 @@ export async function actionRemettre(
     await signalerEnAttenteIA(p.admin, {
       eleveId: p.userId, module: 'exercices', renduRef: depotId,
       type: TYPE_FAISCEAU,
-      motif: `Désignation qui couvre le matériau au cas ${ratissage.cas} : la zone prend `
+      motif: `Désignation qui couvre le matériau au cas ${ratissage.ordre} : la zone prend `
         + `${ratissage.partMateriau} % du texte, soit ${ratissage.foisLaCible} fois le passage `
         + `visé. ${ratissage.credence === null ? 'Aucune crédence déclarée.'
           : `Crédence déclarée : ${ratissage.credence} %.`} `

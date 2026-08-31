@@ -1,6 +1,6 @@
 import 'server-only'
 // ============================================================================
-// ITEM 77 — LA PORTE DU RATISSAGE, CÔTÉ SERVEUR (`02-` §5, v5.9).
+// ITEM 77 — LES DEUX PORTES DE LA ZONE, CÔTÉ SERVEUR (`02-` §5, v5.9).
 // ----------------------------------------------------------------------------
 // ⛔⛔ POURQUOI CE MODULE EXISTE PLUTÔT QU'UN CHAMP DE PLUS SUR LA VUE.
 //    Le verdict d'une zone se calcule contre la CIBLE, et la cible se dérive de
@@ -10,10 +10,28 @@ import 'server-only'
 //    lui suffirait de balayer le matériau pour que l'écran le renseigne.
 //    `VueDuDeroule` est une charge utile CLIENT ; ce calcul n'y entre pas.
 //
-// ⭐ CE QU'IL REND, ET QUAND. Il ne parle que du RATISSAGE — « au moins 70 % du
-//    matériau ET au moins 4 fois la cible » —, le seul verdict que la zone
-//    rende SEULE et le seul qui se lise SANS appeler le modèle. *Les autres cas
-//    attendent le jugement IA, et ils ne sont pas de ce lot.*
+// ⭐⭐ CE QU'IL REND, ET QUAND — ÉLARGI LE 31/08/2026.
+//    Il rendait le seul RATISSAGE. Il rend maintenant **les DEUX cas qui
+//    ferment la porte avant l'IA**, ceux que `verdictDeLaZone` marque
+//    `litLeTexte: false` :
+//      · **cas 0 — le ratissage** : « au moins 70 % du matériau ET au moins
+//        4 fois la cible ». C'est une NON-RÉPONSE : l'exercice est `non_fait`,
+//        et le professeur reçoit un signal ;
+//      · **cas 1 — la zone hors cible** : elle ne touche pas le passage. C'est
+//        une réponse FAUSSE : l'exercice est remis et `clos`, et « rien d'autre
+//        ne s'ensuit » — aucun signalement.
+//
+// ⛔⛔ LE CAS 1 N'AVAIT JAMAIS ÉTÉ BRANCHÉ. `designation.ts` écrit depuis le
+//    28/08 : « FAUX AUX DEUX CAS QUI FERMENT LA PORTE AVANT L'IA ». Cette porte
+//    n'en lisait qu'un — `if (!verdict.nonFait) continue` —, et les six autres
+//    verdicts étaient calculés puis JETÉS. Un élève qui surlignait à côté de la
+//    cible partait quand même au modèle : deux appels payés sur une réponse que
+//    le code savait fausse avant d'appeler. *La doctrine disait deux portes, le
+//    code en avait une.*
+//
+// ⚠️ LES CINQ AUTRES CAS — 2, 2′, 3, 4a, 4b — portent `litLeTexte: true` : la
+//    zone touche la cible, et c'est le TEXTE de l'élève qui tranche. Ils
+//    attendent le jugement IA, et c'est juste.
 //
 // ⚠️ IL EST APPELÉ À LA REMISE, ET AVANT L'ÉCRITURE DU STATUT : la chaîne est
 //    déclenchée juste après, et elle relit le dépôt. Écrire `v1_remis` puis
@@ -28,9 +46,27 @@ import { regimeDeMarquage } from './marquage'
 type Admin = SupabaseClient
 
 /** Ce que le signalement a besoin de dire, et rien de plus. */
-export interface Ratissage {
-  /** Le rang du cas — 1, ou 2 sur le second cas d'une paire. */
-  cas: number
+export interface VerdictServi {
+  /**
+   * ⭐⭐ 31/08/2026 — LE CAS DE LA TABLE, et il n'y en avait qu'un de lu.
+   *
+   * ⛔⛔ CE QUE CE CHAMP RÉPARE. `verdictDeLaZone` rend SEPT cas ; cette porte
+   *    n'en lisait qu'un — `nonFait`, le ratissage. Or `designation.ts` écrit,
+   *    mot pour mot : « FAUX AUX DEUX CAS QUI FERMENT LA PORTE AVANT L'IA […]
+   *    le **cas 1** est une réponse FAUSSE : le jugement se règle sans rien
+   *    lire ». **Le cas 1 ne fermait rien** : un élève qui surlignait à côté de
+   *    la cible partait quand même au modèle, deux appels payés sur une réponse
+   *    que le code savait fausse avant d'appeler. *La doctrine disait deux
+   *    portes, le code en avait une.*
+   *
+   * ⚠️ LES DEUX NE SE CONFONDENT PAS, et c'est écrit à la source : le cas 0 est
+   *    une NON-RÉPONSE — l'exercice est `non_fait` et le professeur reçoit un
+   *    signal ; le cas 1 est une réponse FAUSSE — « rien d'autre ne s'ensuit ».
+   *    *Les confondre punirait l'élève qui s'est simplement trompé d'endroit.*
+   */
+  cas: '0' | '1'
+  /** Le rang du CAS de l'exercice — 1, ou 2 sur le second cas d'une paire. */
+  ordre: number
   /** La part du matériau que la zone prend, en pourcent entier. */
   partMateriau: number
   /** Combien de fois la cible, arrondi au dixième. */
@@ -44,7 +80,7 @@ export interface Ratissage {
 }
 
 /**
- * ⭐ LE PREMIER CAS QUI RATISSE, OU `null`.
+ * ⭐ LE PREMIER CAS QUI FERME LA PORTE — ratissage ou hors-cible —, OU `null`.
  *
  * ⚠️ **Le premier suffit.** Un dépôt dont un seul cas ratisse est un dépôt qui
  * ne compte pas : chercher les deux ne changerait ni le statut, ni le nombre de
@@ -55,9 +91,9 @@ export interface Ratissage {
  * d'intégrité qui casse une remise ferait plus de dégâts que le ratissage
  * qu'elle attrape.*
  */
-export async function leRatissageDuDepot(
+export async function leVerdictDeLaZone(
   admin: Admin, depotId: string, exerciceId: string, cran: number | null,
-): Promise<Ratissage | null> {
+): Promise<VerdictServi | null> {
   if (cran == null) return null
 
   const { data: regleCran } = await admin.from('exercices_crans')
@@ -94,11 +130,15 @@ export async function leRatissageDuDepot(
 
     const zone = [z[0], z[1]] as [number, number]
     const verdict = verdictDeLaZone(contenu, cible, zone)
-    if (!verdict.nonFait) continue
+    // ⭐ LES DEUX CAS QUI FERMENT LA PORTE, et eux seuls. Les cinq autres — 2,
+    //   2′, 3, 4a, 4b — portent `litLeTexte: true` : c'est le texte de l'élève
+    //   qui tranche, et le modèle doit le lire.
+    if (verdict.litLeTexte) continue
 
     const large = zone[1] - zone[0]
     return {
-      cas: c.ordre as number,
+      cas: verdict.cas as '0' | '1',
+      ordre: c.ordre as number,
       partMateriau: Math.round((100 * large) / contenu.length),
       foisLaCible: Math.round((10 * large) / (cible[1] - cible[0])) / 10,
       credence: typeof entree?.pourcentage === 'number' ? entree.pourcentage : null,

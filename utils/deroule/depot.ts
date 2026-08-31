@@ -276,6 +276,20 @@ export async function remettre(
      * au signalement d'intégrité, que l'appelant pose.
      */
     ratissage?: boolean
+    /**
+     * ⭐⭐ 31/08/2026 — LA ZONE NE TOUCHE PAS LA CIBLE (cas 1 du `02-` §5).
+     *
+     * « Le **cas 1** est une réponse FAUSSE : le jugement se règle sans rien
+     * lire, et rien d'autre ne s'ensuit » (`designation.ts`). L'exercice est
+     * donc REMIS et CLOS — pas `non_fait`, qui est la non-réponse du cas 0, et
+     * **pas de signalement au professeur** : se tromper d'endroit n'est pas
+     * ratisser. *Les confondre punirait l'élève qui s'est simplement trompé.*
+     *
+     * ⛔ ET LA CHAÎNE NE PART PAS : deux appels payés sur une réponse que le
+     *    code savait fausse avant d'appeler. C'est la seconde des « deux portes
+     *    qui ferment avant l'IA », et elle n'avait jamais été branchée.
+     */
+    zoneHorsCible?: boolean
   },
   maintenant: string,
 ): Promise<Issue<{ statut: string; blocs: number }>> {
@@ -311,8 +325,17 @@ export async function remettre(
   //    la remise, et elle relit le dépôt : la fenêtre est réelle.*
   // ⛔ Le `v1_remis_at` est POSÉ QUAND MÊME : l'élève a déposé, et l'assiduité
   //    doit distinguer « rendu qui ne compte pas » de « jamais rendu ».
+  // ⭐⭐ 31/08/2026 — TROIS ISSUES EN v1, ET ELLES NE SE CONFONDENT PAS.
+  //    · `non_fait` — le RATISSAGE (cas 0) : « surligner tout n'est pas une
+  //      mauvaise réponse, c'est une absence de réponse » ;
+  //    · `clos` — la zone HORS CIBLE (cas 1) : une réponse FAUSSE, réglée sans
+  //      appeler le modèle. ⛔ `v1_remis` serait un piège : il promet un retour
+  //      que rien ne viendra écrire, et l'écran attendrait sans fin (`06-` §2 —
+  //      « jamais un écran muet »). `clos` dit « terminé », compte comme rendu
+  //      (`STATUTS_RENDUS`), et n'attend rien ;
+  //    · `v1_remis` — le cas normal, la chaîne prend la suite.
   const statut = version === 'v1'
-    ? (a.ratissage ? 'non_fait' : 'v1_remis')
+    ? (a.ratissage ? 'non_fait' : (a.zoneHorsCible ? 'clos' : 'v1_remis'))
     : 'vf_remis'
 
   const maj: Record<string, unknown> = {
