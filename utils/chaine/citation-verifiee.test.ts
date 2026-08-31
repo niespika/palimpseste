@@ -91,3 +91,41 @@ test('un ancrage absent ou vide ne produit aucun motif — il n’y avait rien �
     jugerLAncrage({ source: 'copie', citation: '  ' }, { production: COPIE, texteSupport: null }),
     { ancrage: null, motif: null })
 })
+
+// ============================================================================
+// ⭐⭐ 31/08 — LE CO-TEXTE, LE TROISIÈME TEXTE.
+// ----------------------------------------------------------------------------
+// Aux crans de production (2·6·8) l'exercice DONNE une matière : l'argument à
+// illustrer, les paragraphes à coudre. Ce co-texte est un VRAI, tiré de
+// `banque.json` (`mat-exemple-composer-cotexte`) — pas une invention de test.
+// ⛔ Il n'est PAS une source d'ancrage : `ancrage.source` reste `copie` ou
+//    `texte_support`. Il ne sert qu'à NOMMER la provenance quand une citation
+//    étiquetée « copie » est en réalité l'énoncé qu'on avait donné à l'élève.
+// ============================================================================
+
+const CO_TEXTE = "Se passer de réseaux sociaux n'est pas seulement une affaire de volonté. "
+  + "Quand un groupe entier organise sa vie commune sur une messagerie, celui qui n'y est pas "
+  + 'ne renonce pas à un divertissement : il perd l’information ordinaire que les autres '
+  + 'échangent sans même y penser.'
+
+test('⛔⛔ une citation « copie » qui est en fait L’ÉNONCÉ est écartée, et NOMMÉE', () => {
+  // Le pire des cas : l'élève lirait sa propre consigne sous « tu écris ».
+  const a = { source: 'copie' as const, citation: "il perd l'information ordinaire" }
+  const j = jugerLAncrage(a, { production: COPIE, texteSupport: null, coTexte: CO_TEXTE })
+  assert.equal(j.ancrage, null)
+  assert.match(j.motif ?? '', /DU TEXTE DE DÉPART/)
+})
+
+test('le co-texte ne gêne pas une citation légitime de la copie', () => {
+  const a = { source: 'copie' as const, citation: 'un temps de repos' }
+  const j = jugerLAncrage(a, { production: COPIE, texteSupport: null, coTexte: CO_TEXTE })
+  assert.deepEqual(j.ancrage, a)
+  assert.equal(j.motif, null)
+})
+
+test('sans co-texte, le contrôle se comporte exactement comme avant', () => {
+  const a = { source: 'copie' as const, citation: "il perd l'information ordinaire" }
+  const j = jugerLAncrage(a, { production: COPIE, texteSupport: null })
+  assert.equal(j.ancrage, null)
+  assert.match(j.motif ?? '', /introuvable dans la copie/)
+})

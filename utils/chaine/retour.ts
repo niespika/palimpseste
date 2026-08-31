@@ -276,6 +276,16 @@ export interface EntreeRetour {
    *    exactement ce que l'élève doit lire.*
    */
   texteSupport?: string | null
+  /**
+   * ⭐⭐ 31/08 — LE CO-TEXTE, la matière des crans de PRODUCTION (2·6·8).
+   *
+   * L'argument à illustrer, les deux paragraphes à coudre, la thèse à
+   * contredire. **L'élève l'a sous les yeux** (`EcranDeroule.tsx`) ; Calame ne
+   * l'avait pas, et jugeait donc « as-tu bien illustré ? » sans savoir QUOI.
+   * ⛔ **Ce n'est PAS un texte d'auteur** : il est fabriqué, sans auteur ni
+   *    bornes, et il ne fait de l'exercice ni une lecture ni une explication.
+   */
+  coTexte?: string | null
 }
 
 /** Le message de l'appel chaud. Le gabarit (couche contrat) part en SYSTÈME. */
@@ -363,6 +373,37 @@ export function assemblerRetour(gabarit: string, e: EntreeRetour): { systeme: st
       + "qu'il a manqué, déplacé ou mal rendu. Un tel point s'ancre sur\n"
       + '`"texte_support"` et cite LE TEXTE ; un point qui porte sur ce que\n'
       + "l'élève a écrit s'ancre sur `\"copie\"` et cite ses mots.",
+    ))
+  }
+
+  // ⭐⭐ 31/08/2026 — LE CO-TEXTE, ET IL PASSE PAR LE BALISAGE LUI AUSSI.
+  //
+  // ⛔ **CE QUE CE BLOC RÉPARE.** Aux crans 2·6·8 la consigne DÉSIGNE un texte —
+  //    « voici l'argument à illustrer », « écris la transition entre ces deux
+  //    paragraphes ». L'écran le montre à l'élève depuis le 31/08 ; Calame, elle,
+  //    ne l'a jamais reçu. Elle jugeait donc l'exécution d'une tâche dont elle
+  //    ignorait l'énoncé. Mesuré : **21 exercices de la banque en dépendent**,
+  //    sept à chacun des trois crans de production.
+  //
+  // ⚠️⚠️ **IL N'OUVRE AUCUNE TROISIÈME SOURCE DE CITATION.** `ancrage.source`
+  //    reste `copie | texte_support` — le schéma le dit, la garde en base
+  //    l'impose, et l'écran ne sait afficher que ces deux chapeaux. Le co-texte
+  //    est là pour être COMPRIS, pas cité : le retour parle de ce que l'élève a
+  //    écrit. Attribuer à l'élève une phrase du co-texte est exactement la faute
+  //    que RR3 nomme, et `controlerRR3` la refuse comme celle du texte d'auteur.
+  if (e.coTexte && e.coTexte.trim() !== '') {
+    morceaux.push(messageAvecMateriau(
+      [{ nom: "le texte de départ — la matière que l'exercice a donnée à l'élève",
+         contenu: e.coTexte }],
+      "CE BLOC EST LA MATIÈRE QUE L'EXERCICE A DONNÉE. La consigne la désigne :\n"
+      + "c'est l'argument à illustrer, les paragraphes à coudre, la thèse à\n"
+      + "contredire. L'élève l'avait sous les yeux ; tu l'as maintenant, pour\n"
+      + "juger si ce qu'il a écrit répond bien À CELA.\n"
+      + '\n'
+      + "⛔ CE N'EST NI SA COPIE, NI UN TEXTE D'AUTEUR. N'en cite RIEN : aucune\n"
+      + 'citation ne porte ce bloc pour source. Tu peux y renvoyer en le nommant\n'
+      + "(« l'argument qu'on te donnait »), jamais en le recopiant entre\n"
+      + "guillemets, et JAMAIS sous « tu écris » — ces mots ne sont pas de lui.",
     ))
   }
 
@@ -679,7 +720,7 @@ export function controlerRR3(
     /** ⭐ La prose du point : c'est là que « tu écris : "…" » atteint l'élève. */
     texte?: string
   }>,
-  a: { production: string | null; texteSupport: string | null },
+  a: { production: string | null; texteSupport: string | null; coTexte?: string | null },
 ): ControleRetour {
   const out: ControleRetour = { refus: [], alertes: [], formeSeulement: false }
   const court = (c: string) => (c.length > 60 ? `${c.slice(0, 60)}…` : c)
@@ -698,6 +739,14 @@ export function controlerRR3(
         out.refus.push(
           `RR3 : la PROSE d'un point attribue à l'élève une phrase DU TEXTE SUPPORT — `
           + `« ${court(c)} ».`)
+      } else if (citationTient(a.coTexte, c)) {
+        // ⭐⭐ Même faute, autre provenance : rendre à l'élève, sous « tu écris »,
+        //    l'énoncé même qu'on lui avait donné. Identifiée aussi, donc jamais
+        //    tolérée — c'est le pire des cas, l'élève lirait sa consigne comme
+        //    étant sa réponse.
+        out.refus.push(
+          `RR3 : la PROSE d'un point attribue à l'élève une phrase DU TEXTE DE DÉPART `
+          + `que l'exercice lui avait donnée — « ${court(c)} ».`)
       } else {
         out.refus.push(
           `RR3-citation : la prose attribue à l'élève des mots qu'il n'a pas écrits — `
@@ -750,10 +799,54 @@ export function elaguerLesAncrages<T extends { ancrage?: AncrageBrut | null }>(
   return { points: gardes, motifs }
 }
 
-/** `01-` §12, RR4 — le nom d'un observable dans le texte est une fuite de grille. */
+/**
+ * ⭐⭐⭐ `01-` §12, RR4 — le nom d'un observable dans le texte est une fuite de grille.
+ *
+ * ⛔⛔ **CE CONTRÔLE DÉTRUISAIT DES RETOURS, ET LA MESURE L'A PRIS SUR LE FAIT.**
+ * Il cherchait par SIMPLE SOUS-CHAÎNE, dès quatre caractères. Or **9 des 56
+ * codes d'observables sont des mots français ordinaires** :
+ *
+ *   · `expression`     — `orthographe`, `reussites`
+ *   · `structure`      — `derive`
+ *   · `connaissance`   — `contresens`, `inverifiable`, `mobilisation`
+ *   · `synthese`       — `elagage`
+ *   · `questionnement` — `enjeu`, `recadrage`
+ *
+ * Écrire *« l'enjeu de ta phrase »* suffisait donc à faire refuser le retour —
+ * et **RR4 n'est JAMAIS toléré** (`REFUS_DE_FORME` ne le contient pas), donc
+ * trois tentatives malheureuses laissaient l'élève **sans aucun retour**.
+ * ⭐ **Vu en répétition à blanc le 31/08** : un retour sur trois perdu sur le mot
+ * « enjeu ». Et le piège s'aggravait de ce que le gabarit ENCOURAGE ces mots —
+ * la règle 7 impose « le vocabulaire de la grille ».
+ *
+ * ⚠️⚠️ **POURQUOI LES LIMITES DE MOT NE SUFFISENT PAS.** Elles sauvent les formes
+ *    fléchies — « enjeux », « orthographique », « recadrages » ne sont plus
+ *    touchés — mais pas le mot nu : *« l'enjeu »* reste `enjeu`. **Un mot
+ *    français ordinaire est INDÉCIDABLE dans de la prose française**, et tout
+ *    contrôle qui prétend le trancher coûte des retours.
+ *
+ * ⭐ **D'OÙ LE PARTAGE : on ne REFUSE que ce qui a une FORME DE CODE.** Un code
+ *    portant `_` ou un chiffre — `garant_cite`, `charniere_motivee`, les 47
+ *    autres — ne peut pas sortir d'une plume : c'est une fuite, et elle refuse.
+ *    Un code qui est un mot nu ne peut pas se prouver : il **ALERTE**, le
+ *    professeur le voit, et rien n'est détruit.
+ * ⛔ **La réparation durable n'est pas ici** : elle est de RENOMMER ces neuf
+ *    observables dans les sources, pour qu'ils aient tous une forme de code.
+ */
+const FORME_DE_CODE = /[_0-9]/
+
+function motif(code: string): RegExp {
+  return new RegExp(`\\b${code.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`, 'i')
+}
+
+/** Ce qui REFUSE : un code non ambigu, nommé au mot près. */
 function fuitesRR4(texte: string, codes: readonly string[]): string[] {
-  const bas = texte.toLowerCase()
-  return codes.filter((c) => c.length >= 4 && bas.includes(c.toLowerCase()))
+  return codes.filter((c) => c.length >= 4 && FORME_DE_CODE.test(c) && motif(c).test(texte))
+}
+
+/** Ce qui ALERTE : un code qui est un mot ordinaire — indécidable, jamais bloquant. */
+function motsDeGrilleAmbigus(texte: string, codes: readonly string[]): string[] {
+  return codes.filter((c) => c.length >= 4 && !FORME_DE_CODE.test(c) && motif(c).test(texte))
 }
 
 /**
@@ -787,6 +880,8 @@ export function controlerRetour(
      */
     production?: string | null
     texteSupport?: string | null
+    /** ⭐ La matière donnée aux crans de production — jamais une source d'ancrage. */
+    coTexte?: string | null
   },
 ): { verdict: Verdict<RetourBrut>; controle: ControleRetour } {
   const verdict = valider<RetourBrut>(brut, FORME_RETOUR)
@@ -828,6 +923,13 @@ export function controlerRetour(
   if (fuites.length) {
     controle.refus.push(`RR4 : le texte nomme des observables — ${fuites.join(', ')}`)
   }
+  // ⚠️ Les mots nus ne refusent pas — voir `motsDeGrilleAmbigus` pour le motif.
+  const ambigus = motsDeGrilleAmbigus(texteEntier, attendu.codesObservables)
+  if (ambigus.length) {
+    controle.alertes.push(
+      `RR4 : le texte emploie ${ambigus.map((a) => `« ${a} »`).join(', ')} — c'est aussi le nom `
+      + "d'un observable, mais le mot est ordinaire : indécidable, donc non bloquant.")
+  }
   for (const [motif, quoi] of MOTIFS_NOTE) {
     if (motif.test(texteEntier)) controle.refus.push(`règle 6 : le texte porte ${quoi}`)
   }
@@ -835,6 +937,7 @@ export function controlerRetour(
   const contre = {
     production: attendu.production ?? null,
     texteSupport: attendu.texteSupport ?? null,
+    coTexte: attendu.coTexte ?? null,
   }
 
   // ⭐⭐⭐ RR3 — LA PROSE. Ce qui est enchâssé dans une phrase ne s'élague pas :

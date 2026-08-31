@@ -95,7 +95,7 @@ export interface AncrageJuge {
  */
 export function jugerLAncrage(
   ancrage: AncrageBrut | null | undefined,
-  a: { production: string | null; texteSupport: string | null },
+  a: { production: string | null; texteSupport: string | null; coTexte?: string | null },
 ): AncrageJuge {
   if (!ancrage || typeof ancrage.citation !== 'string' || ancrage.citation.trim() === '') {
     return { ancrage: null, motif: null }
@@ -109,6 +109,19 @@ export function jugerLAncrage(
     return {
       ancrage: null,
       motif: `citation écartée — étiquetée « copie », c'est une phrase DU TEXTE SUPPORT : « ${court} »`,
+    }
+  }
+  // ⭐⭐ 31/08 — LE TROISIÈME TEXTE. Aux crans de production, l'exercice DONNE une
+  //    matière (l'argument à illustrer, les paragraphes à coudre). Une citation
+  //    qu'on y retrouve n'est pas de l'élève : c'est l'énoncé qu'on lui rendrait
+  //    sous « tu écris ». ⚠️ Le co-texte n'est PAS une source d'ancrage — il n'y
+  //    a que `copie` et `texte_support` — donc ce cas n'a qu'un effet : écarter,
+  //    en NOMMANT la vraie provenance pour que le professeur ne cherche pas.
+  if (ancrage.source === 'copie' && citationTient(a.coTexte, ancrage.citation)) {
+    return {
+      ancrage: null,
+      motif: `citation écartée — étiquetée « copie », c'est une phrase DU TEXTE DE DÉPART `
+        + `que l'exercice avait donnée : « ${court} »`,
     }
   }
   return {

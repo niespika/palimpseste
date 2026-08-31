@@ -148,6 +148,44 @@ test('RR4 : un observable nommé dans le texte fait REJETER le retour', () => {
   assert.match(r.controle.refus.join(' '), /RR4 .*garant_cite/)
 })
 
+test('⛔⛔ RR4 NE DÉTRUIT PLUS UN RETOUR SUR UN MOT ORDINAIRE — vu en prod le 31/08', () => {
+  // ⭐ LE CAS RÉEL : une répétition à blanc a perdu un retour entier sur le mot
+  //    « enjeu », qui est AUSSI un code d'observable de `questionnement`. RR4
+  //    n'étant jamais toléré, trois tentatives malheureuses laissaient l'élève
+  //    sans rien. 9 des 56 codes sont dans ce cas.
+  const naturel = {
+    ...OK,
+    points: [{ ...OK.points[0], texte: "l'enjeu de ta phrase reste implicite" }, OK.points[1]],
+  }
+  const r = controlerRetour(naturel, { ...ATTENDU, codesObservables: ['enjeu', 'garant_cite'] })
+  assert.deepEqual(r.controle.refus, [], 'un mot français ordinaire ne détruit plus le retour')
+  assert.match(r.controle.alertes.join(' '), /« enjeu »/, 'mais le professeur le voit')
+})
+
+test('⭐ RR4 REFUSE toujours ce qui a une forme de code', () => {
+  const fuite = {
+    ...OK,
+    points: [{ ...OK.points[0], texte: 'ton garant_cite est absent' }, OK.points[1]],
+  }
+  const r = controlerRetour(fuite, { ...ATTENDU, codesObservables: ['garant_cite'] })
+  assert.match(r.controle.refus.join(' '), /RR4 .*garant_cite/)
+  assert.equal(refusDeFormeSeulement(r.controle.refus), false, 'une fuite de grille ne se tolère jamais')
+})
+
+test('⭐ RR4 travaille AUX LIMITES DE MOT — les formes fléchies ne mordent plus', () => {
+  // « enjeux », « orthographique » : la recherche par sous-chaîne les attrapait.
+  const flechi = {
+    ...OK,
+    points: [{ ...OK.points[0], texte: 'les enjeux et la tournure orthographique' }, OK.points[1]],
+  }
+  const r = controlerRetour(flechi, { ...ATTENDU, codesObservables: ['enjeu', 'orthographe'] })
+  assert.deepEqual(r.controle.refus, [])
+  // ⚠️ On n'exige pas `alertes` vide : sans production, l'élagage écarte les
+  //    ancrages et le dit. On exige que RR4 se taise, et lui seul.
+  assert.equal(r.controle.alertes.some((a) => a.startsWith('RR4')), false,
+    'ni « enjeux » ni « orthographique » ne sont les codes')
+})
+
 test('règle 6 : ni note, ni lettre, ni moyenne', () => {
   const note = { ...OK, action_revision: 'tu es à 12/20, reprends la phrase' }
   assert.match(controlerRetour(note, ATTENDU).controle.refus.join(' '), /règle 6/)
@@ -396,6 +434,24 @@ test('⭐ le texte support part au modèle, et il part BALISÉ (défense 1)', ()
   assert.match(message, /ancrage\.source = "texte_support"/)
 })
 
+test('⭐⭐ LE CO-TEXTE PART À CALAME, BALISÉ, et sans ouvrir de troisième source', () => {
+  const CO = "Voici l'argument : celui qui n'est pas sur la messagerie perd l'information."
+  const { message } = assemblerRetour(GABARIT, { ...ENTREE, coTexte: CO })
+  assert.match(message, /<<<MATERIAU nom="le texte de départ/)
+  assert.match(message, /MATERIAU>>>/)
+  assert.match(message, /perd l'information/)
+  // ⛔ L'interdiction de citer y est explicite — le co-texte n'est pas une source.
+  assert.match(message, /N'en cite RIEN/)
+  assert.match(message, /JAMAIS sous « tu écris »/)
+  // ⚠️ Et il ne se confond pas avec le texte d'auteur : ce message n'en a pas.
+  assert.equal(/le texte support — le texte d'auteur/.test(message), false)
+})
+
+test('⛔ sans co-texte, aucun bloc « texte de départ » n’est annoncé', () => {
+  const { message } = assemblerRetour(GABARIT, ENTREE)
+  assert.equal(/le texte de départ/.test(message), false)
+})
+
 test('⛔ sans texte support, AUCUN bloc de matériau n’est annoncé', () => {
   const { message } = assemblerRetour(GABARIT, ENTREE)
   assert.equal(/<<<MATERIAU/.test(message), false)
@@ -492,6 +548,21 @@ test('⛔⛔ LA PROSE EST CONTRÔLÉE MÊME SANS TEXTE SUPPORT — la porte est 
   assert.match(v.refus.join(' '), /^RR3-citation : /,
     'le préfixe est un contrat : le rejeu et la tolérance le lisent')
   assert.match(v.refus.join(' '), /des mots qu'il n'a pas écrits/)
+})
+
+test('⛔⛔ LA PROSE QUI REND À L’ÉLÈVE L’ÉNONCÉ QU’ON LUI A DONNÉ — jamais toléré', () => {
+  // ⭐⭐ 31/08 — aux crans 2·6·8 l'exercice DONNE une matière, et Calame la reçoit
+  //    désormais (`EntreeRetour.coTexte`). Le risque neuf est qu'elle la lui
+  //    rende sous « tu écris » : l'élève lirait sa consigne comme sa réponse.
+  const CO = "Quand un groupe entier organise sa vie commune sur une messagerie, "
+    + "celui qui n'y est pas ne renonce pas à un divertissement."
+  const faux = {
+    ancrage: { source: 'copie' as const, citation: 'il trouve un point fixe' },
+    texte: 'Tu écris : « celui qui n’y est pas ne renonce pas à un divertissement ».',
+  }
+  const v = controlerRR3([faux], { production: COPIE, texteSupport: null, coTexte: CO })
+  assert.match(v.refus.join(' '), /PROSE .*DU TEXTE DE DÉPART/)
+  assert.equal(refusDeFormeSeulement(v.refus), false, 'identifiée, donc jamais tolérée')
 })
 
 test('⭐ la prose qui cite JUSTE ne lève rien, élisions comprises', () => {

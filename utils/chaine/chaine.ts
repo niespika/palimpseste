@@ -1092,6 +1092,10 @@ export async function engendrerLeRetour(
     //    ⛔ Sans lui, RR3 est intenable : on demandait de citer l'auteur sans
     //    donner l'auteur, et le seul texte sous la main était LA COPIE.
     texteSupport: ctx.texteSupport?.texte ?? null,
+    // ⭐⭐ 31/08 — LA MATIÈRE DES CRANS DE PRODUCTION. L'écran la montre à l'élève
+    //    (`EcranDeroule.tsx`) ; sans cette ligne, Calame jugeait « as-tu bien
+    //    illustré cet argument ? » sans jamais avoir lu l'argument.
+    coTexte: ctx.coTexte,
   })
 
   try {
@@ -1125,6 +1129,7 @@ export async function engendrerLeRetour(
         ? ctx.productionV1
         : [ctx.productionV1, ctx.productionVf].filter(Boolean).join('\n\n') || null,
       texteSupport: ctx.texteSupport?.texte ?? null,
+      coTexte: ctx.coTexte,
     })
     // ⚠️ LES ALERTES SE JOURNALISENT SANS ARRÊTER — c'est ce que leur nom dit,
     //    et elles ne remontaient nulle part avant C5-L2 : le champ existait,
