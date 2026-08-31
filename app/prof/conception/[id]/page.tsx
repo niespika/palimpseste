@@ -99,6 +99,17 @@ export default async function EditionEtApercu({
     sourceTexte = txt(lig(data).enonce) || null
   }
 
+  // ── ⭐⭐ LE CO-TEXTE — et c'est ce lot qui rend cet aperçu HONNÊTE.
+  //    Il s'intitule « ce que l'élève verra » ; sans ce bloc, il montrait le
+  //    sujet et le guide d'un cran de production, et l'élève, lui, n'avait que
+  //    la consigne. Le professeur ne pouvait pas voir le manque.
+  let coTexte: string | null = null
+  if (e.cotexte_materiau_id) {
+    const { data } = await admin.from('exercices_materiaux').select('contenu')
+      .eq('id', e.cotexte_materiau_id).maybeSingle()
+    coTexte = txt(lig(data).contenu) || null
+  }
+
   let cibleTexte: string | null = null
   const cibTexteId = e.materiau_cible_texte_id
   if (cibTexteId) {
@@ -121,6 +132,7 @@ export default async function EditionEtApercu({
     objet, cran,
     materiauSourceTexte: sourceTexte,
     materiauCibleTexte: cibleTexte,
+    coTexte,
     guide: e.guide === null ? null : txt(e.guide),
     cas: casTries.map((cs, i) => ({
       consigne: consignes[i] ?? '',

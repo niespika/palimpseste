@@ -453,6 +453,12 @@ export interface ApercuCas {
 export interface Apercu {
   /** Servi AVANT la v1 — « le guide n'est pas le retour ». */
   guide: string | null
+  /**
+   * ⭐⭐ LE CO-TEXTE des crans de production — la MATIÈRE, servie aux trois.
+   * ⚠️ Ne pas le confondre avec le `guide`, que l'échelle DÉGRADE (complet au
+   *    cran 2, léger au 6, absent au 8) : la matière, elle, ne bouge pas.
+   */
+  coTexte: string | null
   dureeMin: number | null
   regimeV1vf: string
   cas: ApercuCas[]
@@ -483,6 +489,7 @@ export function composerApercu(d: Doctrine, instance: {
   objet: string; cran: number
   materiauSourceTexte: string | null
   materiauCibleTexte: string | null
+  coTexte: string | null
   guide: string | null
   cas: Array<{ consigne: string; distracteurs: string[] | null
     reponseAttendue: string | null; pourquoiJuste?: string | null
@@ -554,6 +561,10 @@ export function composerApercu(d: Doctrine, instance: {
   return {
     guide: c.guide === 'null' || (c.guide === 'léger' && guideDansLaConsigne)
       ? null : instance.guide,
+    // ⛔ AUCUNE CONDITION DE CRAN ICI, et c'est le fond de l'affaire : le guide
+    //    se retire à mesure que l'échelle monte, LA MATIÈRE NON. Au cran 8 il
+    //    ne reste que le co-texte — l'en priver viderait l'exercice.
+    coTexte: instance.coTexte,
     dureeMin: dureeExercice(d, instance.objet, instance.cran),
     regimeV1vf: c.regimeV1vf,
     cas,

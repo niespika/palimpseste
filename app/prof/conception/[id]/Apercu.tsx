@@ -49,6 +49,19 @@ export default function Apercu({ apercu }: { apercu: TypeApercu }) {
         </p>
       </div>
 
+      {/* ⭐⭐ LE CO-TEXTE — LA MATIÈRE DES CRANS DE PRODUCTION.
+          ⛔ Sans lui, cet aperçu montrait le sujet et le guide, et l'élève
+          n'avait que la consigne : l'écran qui existe pour que « le professeur
+          voie ce que l'élève verra » cachait précisément le manque. */}
+      {apercu.coTexte && (
+        <div className="rounded-lg border border-bordure-bouton bg-parchemin-fonce p-3">
+          <p className="font-ui text-xs uppercase tracking-wide text-muet-clair">
+            Le texte de départ
+          </p>
+          <p className="whitespace-pre-wrap font-serif text-sm text-encre">{apercu.coTexte}</p>
+        </div>
+      )}
+
       {/* LE GUIDE, SERVI AVANT LA V1. « Le guide n'est pas le retour. » */}
       {apercu.guide && (
         <div className="rounded-lg border border-info bg-info-teinte p-3">

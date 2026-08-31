@@ -230,6 +230,21 @@ export interface VueDuDeroule {
    *    que l'élève doit lire : ne pas confondre les deux.**
    */
   texteSupport: TexteSupportServi | null
+  /**
+   * ⭐⭐ LE CO-TEXTE — la matière des trois crans de PRODUCTION (2, 6, 8), et le
+   * manque que ce lot ferme.
+   *
+   * Les consignes de ces crans sont DÉICTIQUES : « Voici l'argument à illustrer.
+   * Sa dernière phrase dit qu'il y a là quelque chose "qu'il faut voir" ». Sans
+   * ce champ, l'élève lisait cette phrase et **rien à l'écran n'était cet
+   * argument** — le matériau avait été rangé dans `exercices_cas.materiau_id`,
+   * qui est le slot de la CIBLE, et la base l'avait refusé.
+   *
+   * ⚠️ Il se sert AUX TROIS CRANS, sans dégradé. C'est le GUIDE que l'échelle
+   *    retire (complet au 2, léger au 6, absent au 8) — la MATIÈRE reste : au
+   *    cran 8 il n'y a plus que lui, et l'enlever viderait l'exercice.
+   */
+  coTexte: string | null
   cas: CasServi[]
   /**
    * ⭐ C4-L14 — LA CORRECTION, PAR CAS. Indexée comme `cas` : `corrections[i]`
@@ -731,6 +746,7 @@ export async function chargerLeDeroule(
     //    chaîne et l'écran lisent le même objet : deux lectures auraient fini
     //    par servir au modèle un texte que l'élève n'avait pas eu sous les yeux.
     texteSupport: ctx.texteSupport,
+    coTexte: ctx.coTexte,
     cas, corrections,
 
     dureeIndicativeMin: dureeMin,

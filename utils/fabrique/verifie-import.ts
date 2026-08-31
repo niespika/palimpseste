@@ -835,6 +835,12 @@ export function controleImport(
       if (declare(cs?.materiau)) {
         vises.add(cs.materiau)
         if (!matConnu(cs.materiau)) v.refuse(oc, `matériau inconnu : ${cs.materiau}`, 4)
+        // ⭐ Le cas où le matériau nommé ici est un CO-TEXTE — cran sans cible —
+        //    est déjà tenu plus haut : « un matériau nommé par le cas d'un
+        //    exercice dont le `materiau_cible` vaut `null` est servi en source »,
+        //    et la règle symétrique refuse qu'il déclare un observable ou un
+        //    défaut. ⛔ NE PAS Y AJOUTER UN SECOND VERDICT : le partage se
+        //    DÉRIVE, et deux règles sur le même fait divergeraient.
       } else if (mc && mc.provenance === 'genere') {
         v.refuse(oc, '`materiau_cible` est `genere` mais le cas ne nomme aucun matériau', 4)
       }

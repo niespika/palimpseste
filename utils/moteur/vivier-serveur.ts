@@ -45,12 +45,28 @@ interface LigneTexte {
 interface LigneSujet {
   id: string; cours_etat: string; statut: string; bloque: boolean
 }
+/**
+ * ⭐⭐ Le matériau FABRIQUÉ — il ne porte NI cours NI notions (`08-` §4).
+ * ⚠️ NI `bloque` : contrairement aux textes, aux sujets et aux instances, cette
+ *    table n'a QUE `statut` (`a_valider` · `valide` · `retire`) — vérifié en
+ *    base avant d'écrire, parce que sélectionner une colonne absente fait
+ *    échouer la requête ENTIÈRE et viderait le vivier de tout le monde.
+ */
+interface LigneMateriau {
+  id: string; statut: string
+}
 
 async function lireLesMateriaux(admin: Admin): Promise<{
   textes: Map<string, Omit<MateriauRattache, 'role'>>
   sujets: Map<string, Omit<MateriauRattache, 'role'>>
+  /**
+   * ⭐⭐ Les matériaux FABRIQUÉS, par id — pour le seul co-texte. Ils ne portent
+   * ni `cours_etat` ni rattachement : le `08-` §4 dit ce qu'un matériau ne porte
+   * pas, et le cours en fait partie. On n'en lit donc que l'état PROPRE.
+   */
+  fabriques: Map<string, { id: string; statut: string }>
 }> {
-  const [textes, sujets, texteCours, sujetCours] = await Promise.all([
+  const [textes, sujets, texteCours, sujetCours, fabriques] = await Promise.all([
     lirePagine<LigneTexte>(admin, 'exercices_textes',
       'id, cours_etat, plan_livre_id, plan_semaine, statut, bloque', ['id'], (q) => q),
     lirePagine<LigneSujet>(admin, 'exercices_sujets',
@@ -61,6 +77,8 @@ async function lireLesMateriaux(admin: Admin): Promise<{
     lirePagine<{ sujet_id: string; cours_declare: string; cours_id: string | null }>(
       admin, 'exercices_sujets_cours', 'sujet_id, cours_declare, cours_id',
       ['sujet_id', 'cours_declare'], (q) => q),
+    lirePagine<LigneMateriau>(admin, 'exercices_materiaux',
+      'id, statut', ['id'], (q) => q),
   ])
 
   const rattachements = (lignes: Array<{ cours_id: string | null }>) => ({
@@ -97,7 +115,9 @@ async function lireLesMateriaux(admin: Admin): Promise<{
       statut: s.statut, bloque: s.bloque,
     })
   }
-  return { textes: mTextes, sujets: mSujets }
+  const mFabriques = new Map<string, { id: string; statut: string }>()
+  for (const m of fabriques) mFabriques.set(m.id, { id: m.id, statut: m.statut })
+  return { textes: mTextes, sujets: mSujets, fabriques: mFabriques }
 }
 
 // ════════════════════════════════════════════════════════════════════════════
@@ -111,6 +131,8 @@ interface LigneExercice {
   observable_isole_competence: string | null
   materiau_source_texte_id: string | null; materiau_source_sujet_id: string | null
   materiau_cible_texte_id: string | null; materiau_cible_sujet_id: string | null
+  /** ⭐⭐ Le CO-TEXTE des crans de production, désigné par l'instance. */
+  cotexte_materiau_id: string | null
   exercices_types: { code: string; nature: string; grain: string | null
     exclusions_parcours: string[] | null } | null
 }
@@ -119,7 +141,8 @@ const COLONNES_EXERCICE =
   'id, lieu, statut, bloque, cran, classe_id, genre, modes_par_competence, '
   + 'observable_isole_competence, '
   + 'materiau_source_texte_id, materiau_source_sujet_id, materiau_cible_texte_id, '
-  + 'materiau_cible_sujet_id, exercices_types!inner(code, nature, grain, exclusions_parcours)'
+  + 'materiau_cible_sujet_id, cotexte_materiau_id, '
+  + 'exercices_types!inner(code, nature, grain, exclusions_parcours)'
 
 /**
  * Les instances telles que la couche 4 les regarde. ⚠️ ON LIT TOUT et on laisse
@@ -164,6 +187,20 @@ export async function lireLesInstances(
     ajouter(l.materiau_cible_texte_id, 'texte', 'cible')
     ajouter(l.materiau_cible_sujet_id, 'sujet', 'cible')
 
+    // ⭐⭐ LE CO-TEXTE — À PART, ET PAS DANS `materiauxDeLInstance`. Cette
+    //    liste-là passe au `filtreDuCoursVu`, et un matériau fabriqué ne porte
+    //    aucun rattachement (`08-` §4) : l'y verser le ferait écarter sous un
+    //    motif FAUX. Ce qu'on en garde est son seul état propre.
+    // ⚠️ Un renvoi mort se DIT : sans cet incident, un co-texte introuvable
+    //    passerait pour « cette instance n'en a pas », et l'instance serait
+    //    servie avec une consigne qui désigne un texte absent.
+    let coTexte: InstanceDuVivier['coTexte'] = null
+    if (l.cotexte_materiau_id) {
+      const m = materiaux.fabriques.get(l.cotexte_materiau_id)
+      if (!m) incidents.push(`co-texte ${l.cotexte_materiau_id.slice(0, 8)} introuvable.`)
+      else coTexte = { id: m.id, statut: m.statut }
+    }
+
     const declarees = Object.keys(l.modes_par_competence ?? {})
     const exerce = cran && objet
       ? ((objet.parCran[cran.n]?.couverture as { exerce?: string[] } | undefined)?.exerce ?? [])
@@ -191,6 +228,7 @@ export async function lireLesInstances(
         declarees, (cran?.geste ?? 'produire') as Geste, exerce,
         l.observable_isole_competence),
       materiaux: materiauxDeLInstance,
+      coTexte,
     })
   }
   return { instances, incidents }

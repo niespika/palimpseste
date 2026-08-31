@@ -357,6 +357,14 @@ export async function deposerFichierImport(
 
   // ── 3. Les matériaux ──────────────────────────────────────────────────────
   const idMateriau = new Map<string, string>()
+  /**
+   * ⭐⭐ LES CO-TEXTES, PAR `id_import`. « La matière des crans de production » —
+   * l'argument à illustrer, les deux paragraphes à coudre, la thèse à
+   * contredire. Le rôle sert deux fois plus bas : c'est lui qui envoie le
+   * matériau sur `exercices.cotexte_materiau_id` PLUTÔT QUE sur
+   * `exercices_cas.materiau_id`, qui est le slot de la CIBLE.
+   */
+  const coTextes = new Set<string>()
   const { data: types } = await admin.from('exercices_types').select('id, code')
   const idType = new Map((types ?? []).map((t: any) => [t.code as string, t.id as string]))
   for (const m of (Array.isArray(b.materiaux) ? b.materiaux : [])) {
@@ -365,25 +373,63 @@ export async function deposerFichierImport(
     if (ignore('materiaux', id)) continue
     const st = etat('materiaux', id)
     if (st.refuse) { refuses.materiaux += 1; continue }
+    // ⭐⭐ LE RÔLE SE DÉRIVE, IL NE SE DÉCLARE PAS. Un matériau sans observable
+    //    et sans défaut ne peut pas être un matériau CALIBRÉ : le `08-` §4 dit
+    //    de celui-ci que « c'est LUI qui porte le défaut calibré ». C'est donc
+    //    un co-texte — la matière sur laquelle l'élève s'appuie pour écrire du
+    //    neuf, aux crans où la doctrine ne déclare aucune cible.
+    // ⛔ ET LES CHAMPS PARTENT À `null`, JAMAIS À `''`. C'est `''` que la base a
+    //    refusé le 31/08 — sept co-textes perdus, et vingt et une instances
+    //    entrées avec un cas vide sans que rien ne le dise. La contrainte de
+    //    rôle refuse toujours la chaîne vide, et elle a raison de le faire.
+    const rempli = (x: unknown) => typeof x === 'string' && x.trim() !== ''
+    const coTexte = !rempli(m.observable?.code) && !rempli(m.observable?.competence)
+      && !rempli(m.defaut)
     const { data, error } = await admin.from('exercices_materiaux').insert({
       id_import: id, import_id: importId,
       type_id: idType.get(String(m.objet)), objet_code: String(m.objet ?? ''),
       support: String(m.support ?? ''), contenu: String(m.contenu ?? ''),
-      observable_code: String(m.observable?.code ?? ''),
-      observable_competence: String(m.observable?.competence ?? ''),
-      defaut: String(m.defaut ?? ''),
-      version_corrigee: m.version_corrigee ?? null,
+      role: coTexte ? 'co_texte' : 'cible',
+      observable_code: coTexte ? null : String(m.observable?.code ?? ''),
+      observable_competence: coTexte ? null : String(m.observable?.competence ?? ''),
+      defaut: coTexte ? null : String(m.defaut ?? ''),
+      // « Le même matériau SANS le défaut » : sans défaut, elle n'a pas d'objet.
+      version_corrigee: coTexte ? null : (m.version_corrigee ?? null),
       mode: String(m.mode ?? ''), famille: m.famille ?? null,
       statut: 'a_valider',
     }).select('id').single()
     if (error) { incidents.push(`matériau ${id} : ${error.message}`); continue }
+    if (coTexte) coTextes.add(id)
     idMateriau.set(id, data.id as string)
     entres.materiaux += 1
   }
+  // Les matériaux d'un dépôt antérieur restent visables — et leur RÔLE compte
+  // autant que leur id : c'est lui qui décide, plus bas, de quelle colonne le
+  // renvoi remplit.
+  // ⚠️⚠️ PAGINÉ, ET CONFRONTÉ AU DÉCOMPTE. PostgREST plafonne une lecture à
+  //    1000 lignes SANS LE DIRE (piège 45). La banque en porte 516 aujourd'hui
+  //    et en vise 1 000 à 1 600 : au-delà du plafond, un co-texte d'un dépôt
+  //    antérieur serait absent de `coTextes`, donc pris pour une cible, donc
+  //    écrit dans le slot du cas — **exactement le défaut que ce lot répare**.
   {
-    const { data } = await admin.from('exercices_materiaux').select('id, id_import').not('id_import', 'is', null)
-    for (const r of (data ?? []) as Array<Record<string, any>>) {
-      if (!idMateriau.has(r.id_import)) idMateriau.set(r.id_import, r.id)
+    const PAGE = 1000
+    for (let debut = 0; ; debut += PAGE) {
+      const { data, error } = await admin.from('exercices_materiaux')
+        .select('id, id_import, role').not('id_import', 'is', null)
+        .order('id_import', { ascending: true }).range(debut, debut + PAGE - 1)
+      if (error) {
+        // supabase-js NE LÈVE PAS : sans ce test, une lecture morte passerait
+        // pour « aucun matériau antérieur », et les renvois tomberaient tous.
+        incidents.push('les matériaux déjà en base n\'ont pas pu être relus '
+          + `(${error.message}) — les renvois d'un dépôt antérieur sont à vérifier.`)
+        break
+      }
+      const page = (data ?? []) as Array<Record<string, any>>
+      for (const r of page) {
+        if (!idMateriau.has(r.id_import)) idMateriau.set(r.id_import, r.id)
+        if (r.role === 'co_texte') coTextes.add(r.id_import)
+      }
+      if (page.length < PAGE) break
     }
   }
 
@@ -403,6 +449,40 @@ export async function deposerFichierImport(
       m && m.provenance === (champ === 'texte' ? 'texte_auteur' : 'sujet')
         ? (champ === 'texte' ? idTexte : idSujet).get(String(m[champ])) ?? null
         : null
+
+    // ── ⭐⭐ LE CO-TEXTE — DÉSIGNÉ PAR L'INSTANCE, JAMAIS PAR LE CAS ──────────
+    // `exercices_cas.materiau_id` est le slot de la CIBLE : le `08-` §5.2 ne le
+    // renseigne « QUE quand le `materiau_cible` est `genere` ». Aux crans de
+    // production la doctrine ne déclare aucune cible — le co-texte y a donc son
+    // domicile sur l'instance, et la clé étrangère de la base porte le rôle
+    // avec elle : elle refuse physiquement un matériau calibré.
+    //
+    // ⭐ DEUX ENTRÉES, ET LES DEUX SONT LÉGITIMES. `cotexte` nomme le co-texte
+    //    explicitement ; à défaut, il SE DÉRIVE — « un matériau nommé par le cas
+    //    d'un exercice dont le `materiau_cible` vaut `null` est servi en
+    //    source », règle que `verifie-import.ts` porte déjà et que ses deux
+    //    refus symétriques tiennent. ⛔ On ne signale donc RIEN ici : le format
+    //    n'a pas à changer pour que le co-texte trouve son domicile.
+    const nommeUnCoTexte = (c: any) => c?.materiau && coTextes.has(String(c.materiau))
+    const herite = cas.find(nommeUnCoTexte)
+    const cotexteNomme = e.cotexte ? String(e.cotexte) : (herite ? String(herite.materiau) : null)
+    const cotexteId = cotexteNomme ? (idMateriau.get(cotexteNomme) ?? null) : null
+
+    // ⛔⛔ UN RENVOI MORT NE S'AVALE PLUS. `materiau_id: … ?? null` a laissé
+    //    entrer, le 31/08, vingt et une instances dont le cas nommait un
+    //    matériau que la base avait refusé : elles se sont écrites, le compteur
+    //    s'est incrémenté, elles sont passées à `concu` — donc SERVABLES —, et
+    //    rien n'a dit que l'appui manquait. Le refus n° 4 du contrôle attrape
+    //    le cas où le fichier ne porte pas le matériau ; celui-ci attrape le
+    //    cas où LA BASE N'EN A PAS VOULU, et c'est un autre chemin.
+    const mort = [...cas.map((c) => c?.materiau), cotexteNomme]
+      .filter((x): x is string => typeof x === 'string' && x !== '')
+      .find((x) => !idMateriau.has(x))
+    if (mort) {
+      incidents.push(`exercice ${id} : le matériau « ${mort} » n'est pas en base `
+        + '— l\'instance n\'est PAS entrée, elle aurait servi une consigne sans son appui.')
+      continue
+    }
 
     const { data, error } = await admin.from('exercices').insert({
       id_import: id, import_id: importId,
@@ -431,6 +511,7 @@ export async function deposerFichierImport(
       materiau_cible_sujet_id: renvoi(mc, 'sujet'),
       materiau_cible_localisation: mc?.localisation ?? null,
       materiau_cible_englobant: mc?.englobant ?? null,
+      cotexte_materiau_id: cotexteId,
       observable_isole_code: e.observable_isole?.code ?? null,
       observable_isole_competence: e.observable_isole?.competence ?? null,
       guide: e.guide ?? null,
@@ -444,7 +525,10 @@ export async function deposerFichierImport(
     const { data: casEcrits, error: eCas } = await admin.from('exercices_cas')
       .insert(cas.map((c, i) => ({
         exercice_id: data.id, ordre: i + 1,
-        materiau_id: c?.materiau ? (idMateriau.get(String(c.materiau)) ?? null) : null,
+        // ⛔ UN CO-TEXTE N'ENTRE PAS ICI : ce slot est celui de la CIBLE, et la
+        //    contrainte de base le refuserait. Il est parti sur l'instance.
+        materiau_id: nommeUnCoTexte(c) ? null
+          : (c?.materiau ? (idMateriau.get(String(c.materiau)) ?? null) : null),
         defaut: c?.defaut ?? null,
         distracteurs: c?.distracteurs ?? null,
         reponse_attendue: c?.reponse_attendue ?? null,

@@ -261,6 +261,23 @@ export interface ContexteDepot {
    */
   texteSupport: TexteSupportServi | null
   /**
+   * ⭐⭐ LE CO-TEXTE — la matière des trois crans de PRODUCTION (2, 6, 8).
+   *
+   * L'argument à illustrer, les deux paragraphes à coudre, la thèse à
+   * contredire : ce sur quoi l'élève s'appuie pour écrire du NEUF. Servi entier,
+   * tel qu'il est stocké.
+   *
+   * ⛔ **DISTINCT DU `texteSupport`**, et il faut que les deux le restent : le
+   *    texte d'auteur a une identité, des bornes et une sélection marquée ; le
+   *    co-texte est fabriqué, n'a ni auteur ni localisation, et se sert d'un
+   *    bloc. Les confondre ferait afficher « Le texte · null · null ».
+   *
+   * ⛔ **DISTINCT AUSSI DU MATÉRIAU DES CAS.** Celui-là est la CIBLE — « il le
+   *    modifie, ou il le juge sans rien rédiger de neuf » (`02-` §2.3.3) — et
+   *    aux crans de production la doctrine n'en déclare aucune.
+   */
+  coTexte: string | null
+  /**
    * LE SITE UNIQUE des deux observables de lucidité — « la synthèse en classe »,
    * et pas un autre (`01-` §10 ; `competences/monitoring.md` §4 et §6).
    * Elle se reconnaît à sa ligne de plan : `type_exercice = 'synthese'`, que la
@@ -296,6 +313,8 @@ interface LigneExercice {
   materiau_source_texte_id: string | null
   materiau_source_englobant: unknown
   materiau_source_localisation: unknown
+  /** ⭐⭐ Le CO-TEXTE des crans de production, désigné par l'instance. */
+  cotexte_materiau_id: string | null
 }
 
 export class DepotIllisible extends Error {}
@@ -319,9 +338,17 @@ export async function lireContexte(admin: Admin, depotId: string): Promise<Conte
     //    texte. ⚠️ Elles existent en bac à sable ET en prod — vérifié avant
     //    d'écrire : sélectionner une colonne absente fait échouer la requête
     //    ENTIÈRE (`42703`), donc « exercice introuvable » pour tout le monde.
+    // ⚠️⚠️ `cotexte_materiau_id` NAÎT DE `c4_l8_cotexte_materiau.sql`. La
+    //    migration est ADDITIVE, donc elle passe AVANT ce code, jamais après :
+    //    déployer cette ligne sur une base qui n'a pas la colonne ferait échouer
+    //    la requête ENTIÈRE (`42703`) — « exercice introuvable » POUR TOUT LE
+    //    MONDE, sur tous les exercices, y compris ceux qui n'ont pas de
+    //    co-texte. C'est l'avertissement de C5-L2 juste au-dessus, et il vaut
+    //    exactement de la même façon ici.
     .select('id, type_id, classe_id, lieu, consigne_instanciee, paire_diagnostic, cran, genre, '
       + 'cible_primaire, modes_par_competence, exercice_planifie_id, reference_id, '
-      + 'materiau_source_texte_id, materiau_source_englobant, materiau_source_localisation')
+      + 'materiau_source_texte_id, materiau_source_englobant, materiau_source_localisation, '
+      + 'cotexte_materiau_id')
     .eq('id', depot.exercice_id).maybeSingle()
   if (eEx || !exerciceBrut) throw new DepotIllisible(`exercice de ${depotId} : ${eEx?.message ?? NUL}`)
   const exercice = exerciceBrut as unknown as LigneExercice
@@ -448,6 +475,36 @@ export async function lireContexte(admin: Admin, depotId: string): Promise<Conte
           reference: typeof tx.reference === 'string' ? tx.reference : null,
         }
       }
+    }
+  }
+
+  // ── ⭐⭐ LE CO-TEXTE — LA MATIÈRE DES CRANS DE PRODUCTION ──────────────────
+  //
+  // Aux crans 2, 6 et 8, l'élève écrit du NEUF en s'appuyant sur quelque chose :
+  // l'argument à illustrer, les deux paragraphes à coudre, la thèse à
+  // contredire. Sans lui, la consigne désigne un texte que personne ne montre —
+  // « Voici l'argument à illustrer. Sa dernière phrase dit qu'il y a là quelque
+  // chose "qu'il faut voir" », et rien à l'écran n'est cet argument.
+  //
+  // ⛔ CE N'EST NI UN TEXTE D'AUTEUR NI UN MATÉRIAU DE CAS. Pas d'auteur, pas de
+  //    bornes dans un texte plus grand, pas de défaut calibré : c'est un texte
+  //    fabriqué, servi entier. Il ne passe donc pas par `TexteSupportServi`, qui
+  //    porte une identité et des segments dont il n'a que faire.
+  //
+  // ⚠️ supabase-js NE LÈVE PAS : sans ce test, un co-texte illisible passerait
+  //    pour un exercice qui n'en a pas — et on servirait de nouveau la consigne
+  //    toute seule, ce que ce lot répare.
+  let coTexte: string | null = null
+  if (exercice.cotexte_materiau_id) {
+    const { data: ct, error: eCt } = await admin
+      .from('exercices_materiaux').select('contenu')
+      .eq('id', exercice.cotexte_materiau_id).maybeSingle()
+    if (eCt) {
+      console.error(`[chaine] co-texte illisible (${exercice.cotexte_materiau_id}) — `
+        + `${eCt.code} ${eCt.message}`)
+    } else {
+      const texte = typeof ct?.contenu === 'string' ? ct.contenu : ''
+      coTexte = texte.trim() === '' ? null : texte
     }
   }
 
@@ -591,6 +648,7 @@ export async function lireContexte(admin: Admin, depotId: string): Promise<Conte
     reference,
     materiau,
     texteSupport,
+    coTexte,
   }
 }
 

@@ -31,7 +31,8 @@ const CORRIGE = "La preuve est là, et parce qu'elle l'établit la conclusion ti
 const instance = (cran: number, sur: Record<string, unknown> = {}) => ({
   objet: 'argument', cran,
   materiauSourceTexte: null as string | null,
-  materiauCibleTexte: MATERIAU,
+  materiauCibleTexte: MATERIAU as string | null,
+  coTexte: null as string | null,
   guide: null as string | null,
   cas: [{
     consigne: 'Dis où la raison manque.',
@@ -144,7 +145,7 @@ const GUIDE_6 = 'Conclusion ? Preuve ? Quelle raison fait que cette preuve-là j
 
 const production = (cran: number, consigne: string, guide: string | null) => ({
   objet: 'argument', cran,
-  materiauSourceTexte: null, materiauCibleTexte: null, guide,
+  materiauSourceTexte: null, materiauCibleTexte: null, coTexte: null, guide,
   cas: [{ consigne, distracteurs: null, reponseAttendue: null,
     pourquoiJuste: null, materiauContenu: null, materiauVersionCorrigee: null }],
 })

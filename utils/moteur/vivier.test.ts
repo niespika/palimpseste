@@ -33,6 +33,7 @@ const instance = (p: Partial<InstanceDuVivier> = {}): InstanceDuVivier => ({
   statut: 'concu', bloque: false, genre: null, exclusionsParcours: [],
   modesParCompetence: { argumentation: ['composer'], expression: ['composer'] },
   couverture: { argumentation: 'exerce', expression: 'exerce' },
+  coTexte: null,
   materiaux: [materiau()], ...p,
 })
 
@@ -306,6 +307,35 @@ describe('`01-` §4, couche 4 — le vivier composé, et l\'écart NOMMÉ', () =
     const v = constituerLeVivier(
       [instance({ materiaux: [materiau({ statut: 'a_valider' })] })], contexte())
     assert.equal(v.ecartes[0].motif, 'materiau_non_valide')
+  })
+
+  // ── ⭐⭐ LE CO-TEXTE PASSE LE MÊME CONTRÔLE QUE LES AUTRES MATÉRIAUX ──────
+  //    Il ne peut PAS entrer dans `materiaux` : cette liste passe au filtre du
+  //    cours, et un matériau fabriqué ne porte aucun rattachement (`08-` §4).
+  //    Sans la garde qui lui est propre, un co-texte retiré restait servi.
+  it('⛔ un CO-TEXTE retiré écarte l\'instance — la matière du cran de production', () => {
+    const v = constituerLeVivier(
+      [instance({ coTexte: { id: 'cccccccc-0000-0000-0000-000000000000', statut: 'retire' } })],
+      contexte())
+    assert.equal(v.ecartes[0].motif, 'materiau_non_valide')
+    assert.match(v.ecartes[0].detail, /co-texte/)
+    assert.equal(v.retenus.length, 0)
+  })
+
+  it('⛔ un CO-TEXTE seulement `a_valider` écarte aussi : il n\'est pas encore servable', () => {
+    const v = constituerLeVivier(
+      [instance({ coTexte: { id: 'cccccccc-0000-0000-0000-000000000000', statut: 'a_valider' } })],
+      contexte())
+    assert.equal(v.ecartes[0].motif, 'materiau_non_valide')
+  })
+
+  it('un CO-TEXTE validé laisse passer, et une instance SANS co-texte n\'est pas gênée', () => {
+    const avec = constituerLeVivier(
+      [instance({ coTexte: { id: 'cccccccc-0000-0000-0000-000000000000', statut: 'valide' } })],
+      contexte())
+    assert.equal(avec.ecartes.length, 0)
+    const sans = constituerLeVivier([instance({ coTexte: null })], contexte())
+    assert.equal(sans.ecartes.length, 0)
   })
 
   it('une instance dont toutes les compétences sont `observable_seul` n\'est pas ciblable', () => {

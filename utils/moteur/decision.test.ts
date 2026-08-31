@@ -22,6 +22,7 @@ const instance = (p: Partial<InstanceDuVivier> = {}): InstanceDuVivier => ({
   statut: 'concu', bloque: false, genre: null, exclusionsParcours: [],
   modesParCompetence: { argumentation: ['composer'] },
   couverture: { argumentation: 'exerce' },
+  coTexte: null,
   materiaux: [{ sorte: 'sujet', id: 'm', role: 'source', coursEtat: 'generique',
     coursApparies: [], coursDeclares: 0, planLivreReferenceId: null, planSemaine: null,
     statut: 'valide', bloque: false }], ...p,

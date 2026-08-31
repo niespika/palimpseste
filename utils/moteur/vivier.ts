@@ -103,6 +103,21 @@ export interface InstanceDuVivier {
   /** `02-` §2.3.2 — la couverture par compétence, dérivée du cran et de l'instance. */
   couverture: Record<string, Couverture>
   materiaux: MateriauRattache[]
+  /**
+   * ⭐⭐ LE CO-TEXTE des crans de production — `exercices.cotexte_materiau_id`.
+   *
+   * ⛔ **IL N'ENTRE PAS DANS `materiaux`, ET C'EST VOULU.** Cette liste sert au
+   *    `filtreDuCoursVu`, et « le rattachement se déclare SUR LE MATÉRIAU »
+   *    (`01-` §4) — mais un matériau FABRIQUÉ n'en porte aucun : le `08-` §4
+   *    énumère ce qu'il ne porte pas, et le cours en fait partie. L'y mettre le
+   *    ferait tomber dans la branche `liste` du filtre et ressortir en
+   *    `cours_non_apparie` — un motif FAUX, qui enverrait chercher la réparation
+   *    à l'écran du rattachement, où il n'y a rien à faire.
+   * ⭐ Ce qu'on en contrôle est donc son seul état PROPRE : `statut`.
+   * ⚠️ **PAS de `bloque`** : cette table n'a pas cette colonne, contrairement
+   *    aux textes, aux sujets et aux instances. Vérifié en base.
+   */
+  coTexte: { id: string; statut: string } | null
 }
 
 /** Ce que le vivier sait de l'élève. Tout est déjà lu. */
@@ -542,6 +557,17 @@ export function constituerLeVivier(
       ecarter(inst.exerciceId, 'materiau_non_valide',
         `${invalide.sorte} ${invalide.id.slice(0, 8)} : statut « ${invalide.statut} »`
         + `${invalide.bloque ? ', bloqué' : ''}.`)
+      continue
+    }
+    // ⭐⭐ ET LE CO-TEXTE PASSE LE MÊME CONTRÔLE. Sans cette garde, un co-texte
+    //    RETIRÉ ou BLOQUÉ continuait d'être servi : la liste `materiaux`
+    //    ci-dessus ne connaît que les textes et les sujets, donc aucun matériau
+    //    fabriqué n'y était jamais confronté à son propre statut.
+    // ⚠️ Aux crans de production, le co-texte EST la matière : le servir retiré,
+    //    c'est servir un exercice dont la consigne désigne un texte écarté.
+    if (inst.coTexte && inst.coTexte.statut !== 'valide') {
+      ecarter(inst.exerciceId, 'materiau_non_valide',
+        `co-texte ${inst.coTexte.id.slice(0, 8)} : statut « ${inst.coTexte.statut} ».`)
       continue
     }
 

@@ -468,6 +468,23 @@ function ColonneMatiere({
         </Carte>
       )}
 
+      {/* ── ⭐⭐ LE CO-TEXTE — LA MATIÈRE DES CRANS DE PRODUCTION (2·6·8).
+          Les consignes de ces crans DÉSIGNENT ce texte — « Voici l'argument à
+          illustrer », « Écris la transition entre ces deux paragraphes » : sans
+          ce bloc, l'élève cherchait à l'écran une pièce qui n'y était pas.
+          ⚠️ Il ne porte NI auteur NI sélection : c'est un texte fabriqué, servi
+          entier et tel qu'il est stocké — d'où le `whitespace-pre-wrap` et
+          l'absence d'`appoint`, contrairement au texte d'auteur juste au-dessus. */}
+      {vue.coTexte && (
+        <Carte titre="Le texte de départ">
+          <p className="max-h-[52vh] overflow-y-auto whitespace-pre-wrap rounded-[9px] border
+                        border-bordure-bouton bg-parchemin-fonce p-3.5 font-corps text-[15.5px]
+                        leading-[1.62] text-encre">
+            {vue.coTexte}
+          </p>
+        </Carte>
+      )}
+
       {/* ── LE MATÉRIAU DE CHAQUE CAS, ET CE QUE L'ÉCRAN Y MET EN ÉVIDENCE ── */}
       {vue.cas.map((c) => (
         (vue.estUnePaire || c.materiau?.length) ? (
@@ -883,7 +900,10 @@ function RetourDUnTexte({
  */
 function MatiereRepliee({ vue }: { vue: VueDuDeroule }) {
   const casDesigne = vue.cas.filter((c) => c.materiau?.length)
-  if (!vue.texteSupport && casDesigne.length === 0) return null
+  // ⭐⭐ TROIS SOURCES, PAS DEUX. Le co-texte des crans de production est la
+  //    TROISIÈME, et l'oublier ici rendrait au moment du retour un exercice
+  //    dont la consigne parle d'un argument que l'élève ne peut plus relire.
+  if (!vue.texteSupport && !vue.coTexte && casDesigne.length === 0) return null
 
   const titre = vue.texteSupport
     ? `Le texte de départ${vue.texteSupport.auteur ? ` · ${vue.texteSupport.auteur}` : ''}`
@@ -904,6 +924,11 @@ function MatiereRepliee({ vue }: { vue: VueDuDeroule }) {
             segments={vue.texteSupport.segments}
             className="font-corps text-[15.5px] leading-[1.62] text-encre"
           />
+        )}
+        {vue.coTexte && (
+          <p className="whitespace-pre-wrap font-corps text-[15.5px] leading-[1.62] text-encre">
+            {vue.coTexte}
+          </p>
         )}
         {!vue.texteSupport && casDesigne.map((c) => (
           <div key={c.ordre}>
