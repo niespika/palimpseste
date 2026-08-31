@@ -30,6 +30,8 @@ import { etatCompetence, valeursDesParametres } from '../chaine/instruments'
 import { lireFuseau } from '../fuseau-serveur'
 import type { Mesure } from '../routeur/mesure'
 
+import { lireLaPorteDuSignalement, lireLeSignalementDuDepot,
+  type SignalementDeLEleve } from '@/utils/signalements/serveur'
 import { lireDepotMaison, collagesDuDepot, type DepotMaison } from './depot'
 import { regimeDuDeroule, tempsServis, nombreDeCas, credenceDemandee, etapeDeLaPaire,
   type EscaladePesante, type EtapePaire } from './regime'
@@ -279,6 +281,21 @@ export interface VueDuDeroule {
   // ── Temps 5 et 6 ──
   echeanceVf: { quand: string | null; rognee: boolean; motif: string | null }
   retourFinal: RetourServi | null
+
+  /**
+   * ⭐⭐ « SIGNALER QUE L'EXERCICE A UN PROBLÈME » — demande de Louis, 31/08.
+   *
+   * ⛔ **NE PAS CONFONDRE AVEC LA MÉTACOGNITION.** Cet écran s'interdit de
+   *    « demander à l'élève de signaler ce qu'il n'a pas compris » (`02-` §5) :
+   *    la lucidité est SPONTANÉE et se relève ailleurs. Ici, ce qui est mis en
+   *    cause est **l'exercice**, jamais l'élève — aucun strike, aucun compteur,
+   *    et rien de ce champ ne part au modèle.
+   *
+   * · `ouvert` — l'interrupteur `signalement_exercice_actif`. À OFF, aucune case
+   *   n'apparaît, et l'élève n'apprend pas qu'elle existe ;
+   * · `mien` — son propre signalement, `null` s'il n'en a pas.
+   */
+  signalement: { ouvert: boolean; mien: SignalementDeLEleve | null }
 
   /** Ce que le professeur doit savoir — trace serveur, jamais l'élève. */
   avertissements: string[]
@@ -668,6 +685,19 @@ export async function chargerLeDeroule(
     formulations,
   )
 
+  // ── Hors des six temps : « signaler que l'exercice a un problème » ──
+  // ⭐ Il vit HORS DU FIL, et c'est la règle : l'élève peut le faire « avant le
+  //   passage, ou après » (Louis, 31/08). Un signalement rangé dans un temps
+  //   serait fermé aux deux bouts.
+  // ⚠️ Les deux lectures sont GROUPÉES : à OFF, celle du signalement ne sert à
+  //   rien, mais elle coûte un aller-retour qu'un `if` séquentiel paierait de
+  //   toute façon en latence sur le chemin ouvert.
+  const [porteSignalement, mienSignalement] = await Promise.all([
+    lireLaPorteDuSignalement(admin),
+    lireLeSignalementDuDepot(admin, depotId),
+  ])
+  const signalement = { ouvert: porteSignalement, mien: mienSignalement }
+
   // ── Temps 5 : l'échéance de la version finale ──
   const echeanceVf = await construireLEcheance(depot, a.delaiVfJours, regime)
 
@@ -726,6 +756,8 @@ export async function chargerLeDeroule(
 
     echeanceVf,
     retourFinal: retours.final,
+
+    signalement,
 
     avertissements,
   }

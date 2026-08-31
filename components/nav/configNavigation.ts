@@ -43,6 +43,13 @@ export const NAV_PROF: NavTab[] = [
       //    ici : il vit À LA CONCEPTION D'UN PLAN D'ÉVALUATION, « c'est là que le
       //    professeur voit ce que son calendrier produit » (01- §4, couche 1).
       { label: 'Routeur', href: '/prof/routeur' },
+      // ⭐ Les exercices que les ÉLÈVES signalent comme cassés (31/08). Il est
+      // ici, et juste après le Routeur, parce que c'est là qu'il agit : son
+      // arbitrage retire un dépôt du dénominateur d'assiduité, et sa coche
+      // « dans le pool » sort l'instance du vivier. ⚠️ La CORRECTION de
+      // l'instance, elle, reste à « Conception » — « corriger une instance se
+      // fait à l'écran, et c'est aussi LE SEUL CHEMIN » (`07-` §1.1).
+      { label: 'Signalements', href: '/prof/signalements' },
       { label: 'Calendrier', href: '/prof/calendrier' },
       { label: 'Intégrité', href: '/prof/integrite' },
       // `07-` §5, « L'allumage » — les SIX interrupteurs, et ce que chacun ouvre.

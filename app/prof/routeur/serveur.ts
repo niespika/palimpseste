@@ -23,6 +23,7 @@ import {
   assiduiteDeLEleve, inactiviteDeLaClasse, vueFine, type SeuilsAssiduite,
   type AssiduiteEleve, type SemaineEleve,
 } from '@/utils/routeur/assiduite'
+import { marquesDAssiduite, type MarqueDeSemaine } from '@/utils/signalements/serveur'
 
 type Admin = ReturnType<typeof createAdminClient>
 
@@ -229,6 +230,19 @@ export interface ChargeAssiduite {
     /** La semaine que le tableau détaille. */
     semaineAffichee: string | null
   }>
+  /**
+   * ⭐⭐ « JE VOIS SI L'ÉLÈVE N'A PAS FAIT UN EXERCICE PARCE QU'IL A SIGNALÉ UN
+   *    PROBLÈME » (Louis, 31/08). Par `eleveId|cycleLundi` — la clé
+   *    d'`assiduite_hebdo`, pour que l'écran n'ait rien à rapprocher.
+   *
+   * ⛔ **C'EST UNE MARQUE, PAS UN COMPTE.** Elle EXPLIQUE le chiffre de la
+   *    ligne, elle ne le corrige pas : le dénominateur reste celui de la
+   *    collecte, et l'effet d'un arbitrage passe par le statut du dépôt.
+   */
+  signalements: Record<string, MarqueDeSemaine>
+  /** Le total en attente, tous élèves confondus — le bandeau qui mène à la file. */
+  signalementsEnAttente: number
+
   /** `06-` §5 — « les compteurs démarrent à la rentrée ; LES ÉCRANS PEUVENT ATTENDRE ». */
   collecteVide: boolean
   incidents: string[]
@@ -297,7 +311,16 @@ export async function chargerAssiduite(
     })
   }
 
+  // ⭐ LES MARQUES DE SIGNALEMENT — lues APRÈS les lignes, et sans les toucher.
+  //   ⚠️ Un incident ici ne doit pas vider l'écran d'assiduité : la marque est
+  //      une explication, l'assiduité est la mesure.
+  const marques = await marquesDAssiduite(admin, await lireFuseau())
+  incidents.push(...marques.incidents)
+
   return { seuils, seuilsParDefaut: parDefaut, classes: out,
+    signalements: marques.parCle,
+    signalementsEnAttente: Object.values(marques.parCle)
+      .reduce((n, m) => n + m.enAttente, 0),
     collecteVide: lignes.length === 0, incidents }
 }
 

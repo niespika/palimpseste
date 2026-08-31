@@ -8852,3 +8852,103 @@ vérifié par requête → `0 dépôt marqué, 0 métacognition, 0 retour forgé
   30/08). Ce qu'un fil cliquable rendrait est déjà sur l'écran courant : les temps passés se
   replient en une ligne, jamais supprimés. Le fil reste un `nav aria-label` avec l'état de chaque
   temps en `sr-only`.
+
+## Signalement d'un exercice par l'élève (séance du 31/08, migration `signalement_exercice_eleve.sql`)
+
+**⭐ Demande de Louis, 31/08** : « plusieurs exercices peuvent ne pas être clairs pour les élèves
+ou être un peu mal foutus ». L'élève coche, explique, avant ou après le passage ; le professeur
+reçoit la file au **Pilotage › Signalements**, corrige l'instance ou la sort du pool, et arbitre
+l'effet sur l'assiduité.
+
+**⭐⭐ LES QUATRE ARBITRAGES DE LOUIS (31/08), et ils commandent le reste :**
+① un signalement **ne change rien tout seul** — l'exercice reste au dénominateur jusqu'à l'arbitrage ;
+② **la règle gelée tient** : une semaine déjà comptée ne se recalcule pas, il faut arbitrer avant
+le lundi 18:00 UTC — l'écran affiche le délai ; ③ décocher « dans le pool » emporte **aussi les
+copies en cours** non rendues ; ④ **on ne touche pas aux mesures** de compétence.
+
+**✅ MIGRATION JOUÉE DES DEUX CÔTÉS LE 31/08** — sandbox puis production, six drapeaux de contrôle
+à `t` chaque fois *(dont **zéro policy élève**)*. La prod avant/après : **86 dépôts, 4 instances,
+0 `retire` — inchangés**. ⚠️ **L'interrupteur `signalement_exercice_actif` est à OFF en production** :
+l'ouvrir est un geste de Louis, depuis `/prof/signalements`, et tant qu'il est fermé aucun élève ne
+voit la case.
+
+### Ce qui a été joué EN BAC À SABLE le 31/08 — smoke complet, sessions réelles
+
+Sessions prof **et** élève ouvertes par `generateLink` + `/auth/confirm` *(le repli sans mot de
+passe)*. Décor semé et **retiré par la marque `⟦décor⟧`**, contrôlé par requête
+(`scripts/recette/decor-signalements.mjs`). Les refus, eux, sont éprouvés par
+`scripts/recette/epreuve-signalements.mjs` — **14 verts, 0 rouge**.
+
+- [x] **SIG-1 · La porte commande l'écran de l'élève.** `signalement_exercice_actif` à OFF → **aucune
+  case** en pied du déroulé, l'exercice s'affiche normalement. À ON → la case revient. La bascule
+  se fait **depuis `/prof/signalements`**, jamais depuis `/prof/allumage` *(le `07-` §5 déclare la
+  liste des six CLOSE)*. _(Joué dans les deux sens le 31/08.)_
+- [x] **SIG-2 · L'élève signale, amende, se rétracte.** Cocher → champ ; envoyer vide → refus dit ;
+  envoyer → « C'est signalé » ; modifier → « mis à jour » + `maj_at` ; « Retirer mon signalement »
+  → la ligne part. _(Joué à l'écran, 31/08.)_
+- [x] **SIG-3 · ⭐ Un élève BLOQUÉ en intégrité peut quand même signaler.** Décision assumée :
+  signaler n'est pas rendre, et c'est exactement la situation où il en a le plus besoin.
+  _(Éprouvé le 31/08 : `integrite_bloque = true`, l'amendement passe, `maj_at` posé, élève
+  débloqué ensuite.)_
+- [x] **SIG-4 · La file groupe par EXERCICE.** 8 signalements → 4 lignes, la plus signalée en tête
+  et « 5 élèves · 3 à trancher ». _(Joué le 31/08.)_
+- [x] **SIG-5 · L'arbitrage, dans les DEUX sens.** « L'exercice a un problème » → dépôt `retire`
+  *(mesuré en base)* ; « Pas de problème » → dépôt revenu à `assigne`. Réversible autant de fois
+  qu'on veut. _(Joué le 31/08.)_
+- [x] **SIG-6 · La coche « dans le pool ».** Décocher → `bloque = true`, motif préfixé
+  `[signalement]` dans `blocages`, **et les 10 copies en cours passent à `retire`** — l'écran
+  annonce le compte AVANT le clic. Recocher → `bloque = false`, notre motif retiré, les autres
+  intacts. _(Joué le 31/08, statuts de dépôt restaurés depuis un instantané.)_
+- [x] **SIG-7 · Les refus, éprouvés PAR L'ÉCHEC.** Texte vide · texte > 1500 · rétractation après
+  arbitrage · dépôt `clos` *(et **rien** n'est écrit : un refus n'enregistre pas d'arbitrage)* ·
+  remise au comptage d'un dépôt portant du travail rendu · remise au pool d'une instance bloquée
+  **par la fabrique** *(le motif d'origine est nommé)*. _(14 verts, 0 rouge, 31/08.)_
+- [x] **SIG-8 · L'assiduité.** Bandeau « N exercice(s) signalé(s) sans arbitrage → Voir les
+  signalements — le comptage tombe le lundi à 18:00 UTC », et colonne **Signalés** par élève :
+  `⚑ N` en attente, `✓ N` confirmés, `✓` tranché sans retrait, `—` rien. _(Joué le 31/08 sur
+  `assiduite_hebdo` semé puis retiré.)_
+- [x] **SIG-9 · Les trois tailles d'écran, avec les données réelles.** 1280 *(deux colonnes)*,
+  768 *(empilé, consignes entières)*, 375 *(empilé, `scrollWidth === clientWidth` — aucun
+  débordement)*, côté prof **et** côté élève. _(Capturé le 31/08.)_
+
+### ⚠️ Trois défauts trouvés PAR LE SMOKE, et corrigés — aucun n'était visible à la lecture
+
+1. **La ligne de verdict MENTAIT** quand les deux gestes se croisaient : un signalement « écarté »
+   dont la copie était ensuite emportée par un retrait du pool affichait « l'exercice reste à son
+   comptage » alors que `statut = 'retire'` l'en avait sorti. **Le verdict se lit désormais sur le
+   DÉPÔT**, et signale le désaccord en couleur d'attention.
+2. **« 0 ✓ » dans la colonne Signalés** quand tout était écarté — un zéro qui ne compte rien à côté
+   d'une coche qui n'a rien retiré. Trois états, trois signes.
+3. **Un `identite` destructuré et jamais lu** (lint) — sans conséquence, retiré.
+
+### ⭐ L'écran « en révision » — tranché par Louis le 31/08, et posé
+
+- [x] **SIG-10 · Plus de 404 sur un exercice confirmé.** *« Il ne faut pas un 404, mais juste "cet
+  exercice est en révision par le prof, reviens plus tard" »* (Louis, 31/08). L'écran nomme
+  l'exercice, dit l'état, **rappelle à l'élève ce qu'il avait signalé** et le verdict, et ramène à
+  sa liste. ⛔ **`lireDepotMaison` n'est PAS touchée** — son filtre `retire` est une garde posée
+  exprès, et l'affaiblir rouvrirait un dépôt retiré à l'ÉCRITURE. C'est un **second lecteur, en
+  lecture seule** (`exerciceEnRevision`), qui ne rend qu'un titre et un état.
+  _(Joué le 31/08 en 1280 et 375 — aucun débordement.)_
+- [x] **SIG-10a · Les DEUX chemins vers « en révision ».** (a) l'arbitrage « confirmé » sur le
+  signalement de CET élève → l'écran **plus** son texte **plus** le verdict ; (b) le retrait du
+  pool, quand cet élève n'avait rien signalé → l'écran **seul**. _(Les deux joués le 31/08.)_
+- [x] **SIG-10b · ⛔ NON-RÉGRESSION — les trois autres refus restent des 404.** Le dépôt d'un
+  **autre élève** → 404 *(la garde de propriété tient)*. Un dépôt `retire` **sans aucun lien à un
+  signalement** *(override du Pilotage)* → 404 *(un retrait n'est pas une révision)*.
+  _(Éprouvé par l'échec le 31/08 : signalement supprimé, la page redevient 404 ; remis, elle
+  redevient « en révision ».)_
+- [x] **SIG-11 · Prod.** `signalement_exercice_eleve.sql` jouée le 31/08, `SUIVI_SQL.md` coché,
+  six drapeaux à `t`. **Reste le seul geste de Louis : ouvrir l'interrupteur** depuis
+  `/prof/signalements`.
+
+### ⚠️ Ce que « reviens plus tard » veut dire exactement — et sa limite
+
+L'exercice **ne figure plus dans la liste** de l'onglet Exercices ni dans « Ma semaine » tant qu'il
+est `retire` *(`.neq('statut','retire')`, dans les deux lecteurs, antérieur à ce lot)*. L'écran « en
+révision » se voit donc par le **lien qu'on avait déjà** — rechargement, retour arrière, favori —
+et **pas** depuis la liste. C'est cohérent avec la phrase servie *(« s'il le remet en service, tu le
+retrouveras dans ta liste »)* : quand l'arbitrage repasse à « pas de problème », le dépôt revient à
+`assigne`/`ouvert` et **réapparaît partout, tout seul**. ⛔ **Y faire figurer une ligne « en
+révision » non cliquable serait un item mort dans « À faire »** — non fait, et à demander si Louis
+le veut.

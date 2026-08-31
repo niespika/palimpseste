@@ -33,6 +33,8 @@ import { notFound } from 'next/navigation'
 import { garderEleveDeroule } from '@/utils/deroule/acces'
 import { chargerLeDeroule } from '@/utils/deroule/vue'
 import { EcranDeroule } from '@/components/deroule/EcranDeroule'
+import { ExerciceEnRevision } from '@/components/deroule/ExerciceEnRevision'
+import { exerciceEnRevision } from '@/utils/signalements/serveur'
 import type { Atelier } from '@/utils/codex-onglets/regles'
 
 export async function PageDuDeroule(
@@ -44,7 +46,21 @@ export async function PageDuDeroule(
   //    la maison, `retire`, ou **pas de cet atelier** : « introuvable » ne dit
   //    pas lequel. Le serveur, lui, le dit (`lireDepotMaison`).
   const vue = await chargerLeDeroule(admin, depotId, userId, { ouvert, delaiVfJours, atelier })
-  if (!vue) notFound()
+
+  // ⭐⭐ **UN SEUL DES QUATRE REFUS CESSE D'ÊTRE MUET** (Louis, 31/08) : le dépôt
+  //    RETIRÉ À LA SUITE D'UN SIGNALEMENT. « Il ne faut pas un 404, mais juste
+  //    "cet exercice est en révision par le prof, reviens plus tard". » Les trois
+  //    autres restent indistincts, et c'est voulu : ils parlent d'un dépôt qui
+  //    n'est pas à cet élève, ou qui n'est pas d'ici.
+  // ⛔ `lireDepotMaison` N'EST PAS TOUCHÉE — son filtre `retire` est une garde
+  //    posée exprès (piège 41), et l'affaiblir rouvrirait un dépôt retiré à
+  //    l'ÉCRITURE. Ce chemin-ci est un second lecteur, en lecture seule, qui ne
+  //    rend qu'un titre et un état.
+  if (!vue) {
+    const revision = await exerciceEnRevision(admin, depotId, userId)
+    if (revision) return <ExerciceEnRevision etat={revision} atelier={atelier} />
+    notFound()
+  }
 
   // ⭐ Les avertissements sont pour le PROFESSEUR, pas pour l'élève : une trace
   //    serveur en tient lieu (`07-` §1.1 et §1.2) — « rien ne s'engendre à sa

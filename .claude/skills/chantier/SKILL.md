@@ -34,7 +34,9 @@ donnée d'abord.**
 
 ## 0. ⚠️ LA BANQUE D'EXERCICES — l'urgence du 2026-08-30, et les chiffres à atteindre
 
-⭐⭐ **LE ROUTEUR S'ENCLENCHE LE 2026-08-31 À 9H30.** Ce qu'un élève reçoit dépend
+⭐⭐ **LE ROUTEUR S'ENCLENCHE LE 2026-08-31 À 18:00 UTC** *(et non 9H30 : l'heure a changé
+le 31/08 — `vercel.json`, `0 18 * * 1`, voir §1)*. Le routeur est GREFFÉ sur le déclencheur
+d'assiduité *(`/api/assiduite/hebdo`)* : les deux tombent à la même minute. Ce qu'un élève reçoit dépend
 entièrement de ce que la banque contient. **Lire cette section avant toute autre.**
 
 ### Ce qui a été fait le 30/08 — l'état à cette heure
@@ -138,14 +140,23 @@ S1 `2026-08-24` *(diagnostic, hors routage)* · **S2 `2026-08-31`** *(calibratio
   corrigé et smoké **avant** cette ouverture — il aurait tiré au premier remplacement.
 - **le segment 2** *(calibration)* s'ouvre le **2026-08-31**. `routeur_decisions` : **0 ligne** en
   prod au 30/08.
-- ⛔⛔ **lundi 2026-08-31, 09:30 UTC — LE PREMIER COMPTAGE D'ASSIDUITÉ RÉEL, et ce skill a
-  longtemps dit le 07/09 : C'ÉTAIT FAUX D'UNE SEMAINE.** Le cron compte la semaine **ÉCOULÉE** :
+- ⛔⛔ **lundi 2026-08-31, 18:00 UTC — LE PREMIER COMPTAGE D'ASSIDUITÉ RÉEL.**
+  ⚠️⚠️ **L'HEURE A CHANGÉ LE 31/08, ET CE SKILL A DIT `09:30` : c'est PÉRIMÉ.** `vercel.json`
+  porte **`0 18 * * 1`** — décision de Louis, pour que les élèves reçoivent leur semaine à **14 h à
+  Montréal** et non à 5 h 30 du matin. *(Et ce skill avait AUSSI dit le 07/09, faux d'une semaine :
+  deux erreurs successives sur la même ligne. **`vercel.json` fait foi, jamais ce paragraphe.**)*
+  ⚠️ Vercel lit l'expression **en UTC** : au passage à l'heure normale *(2026-11-01)*, `0 18`
+  vaudra **13:00** à Montréal, pas 14:00 — une dérive d'une heure, pas une panne.
+  Le cron compte la semaine **ÉCOULÉE** :
   celui du 31/08 compte le **24/08**, qui est dans le semestre *(vérifié : 0 vacance la couvrant,
   semestre actif 2026-08-24 → 2027-01-10)*. **Il écrira 62 lignes** — une par élève actif.
   *Le coût irréversible tombe donc une semaine plus tôt que ce qui était écrit.* `assiduite_hebdo` :
   **0 ligne** en prod au 30/08. ⭐ **Le geste de vérification, le lundi : recompter `assiduite_hebdo`
-  après 09:30 UTC. S'il reste à 0, le cron a échoué** — et le 0 d'avant ne prouvait rien, la seule
+  après 18:00 UTC. S'il reste à 0, le cron a échoué** — et le 0 d'avant ne prouvait rien, la seule
   semaine écoulée jusque-là *(17/08)* tombant hors semestre.
+  ⚠️ **La borne de fond n'a pas bougé** : le comptage doit tomber APRÈS la clôture de la semaine
+  comptée *(dimanche 23:59 à Montréal = lundi 04:59 UTC en EDT, 05:59 en EST)*. `0 18` la tient
+  dans les deux régimes.
 - ✅ **L'authentification des crons est PROUVÉE** *(30/08, tableau de bord Vercel)* : `CRON_SECRET`
   existe, scopée **« Production and Preview »**, les crons sont **Enabled**, et surtout
   **`/api/chaine` rend `200` toutes les minutes** contre la production — même garde

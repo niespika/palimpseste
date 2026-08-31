@@ -38,6 +38,22 @@ export default function VueAssiduite({
         </ul>
       )}
 
+      {/* ⭐⭐ « Je vois si l'élève n'a pas fait un exercice parce qu'il a signalé
+          un problème » (Louis, 31/08). Le bandeau ne juge de rien : il MÈNE à la
+          file, où le geste se fait. ⚠️ Il rappelle l'heure du comptage, parce
+          qu'après elle « un chiffre déjà montré au professeur ne bouge plus ». */}
+      {charge.signalementsEnAttente > 0 && (
+        <p className="rounded border border-attention/40 bg-attention-teinte/60 px-4 py-3
+                      font-corps text-sm text-encre">
+          <strong className="font-ui">
+            {charge.signalementsEnAttente} exercice(s) signalé(s) par des élèves, sans arbitrage.
+          </strong>{' '}
+          Tant que vous n’avez pas tranché, ils restent au dénominateur.{' '}
+          <a href="/prof/signalements" className="underline">Voir les signalements</a> — le
+          comptage tombe le lundi à 18:00 UTC.
+        </p>
+      )}
+
       <p className="font-corps text-sm text-encre-douce max-w-3xl">
         Une semaine est <strong>faite</strong> quand l’élève a rendu au moins{' '}
         <strong>{pct(charge.seuils.semaineFaite)}</strong> de ses exercices assignés ; la classe a
@@ -134,13 +150,14 @@ export default function VueAssiduite({
               <p className="font-corps text-sm text-muet">Rien à détailler pour cette semaine.</p>
             ) : (
               <div className="overflow-x-auto">
-                <table className="w-full min-w-[420px] border-collapse font-ui text-sm">
+                <table className="w-full min-w-[520px] border-collapse font-ui text-sm">
                   <thead>
                     <tr className="border-b border-bordure text-left text-xs uppercase
                                    tracking-wide text-muet">
                       <th className="py-2 pr-3 font-normal">Élève</th>
                       <th className="py-2 pr-3 font-normal text-right">Rendus</th>
                       <th className="py-2 pr-3 font-normal text-right">Assignés</th>
+                      <th className="py-2 pr-3 font-normal text-right">Signalés</th>
                       <th className="py-2 font-normal text-right">Complétion</th>
                     </tr>
                   </thead>
@@ -152,6 +169,13 @@ export default function VueAssiduite({
                         </td>
                         <td className="py-2 pr-3 text-right text-encre-douce">{l.termines}</td>
                         <td className="py-2 pr-3 text-right text-encre-douce">{l.assignes}</td>
+                        <td className="py-2 pr-3 text-right">
+                          <MarqueSignalement
+                            m={active.semaineAffichee
+                              ? charge.signalements[`${l.eleveId}|${active.semaineAffichee}`]
+                              : undefined}
+                          />
+                        </td>
                         <td className="py-2 text-right text-encre">
                           {l.completion === null
                             ? <span className="text-muet" title="Aucun exercice assigné : la
@@ -178,6 +202,36 @@ const FOND: Record<'vert' | 'orange' | 'rouge', string> = {
 function Barre({ part, bande }: { part: number; bande: 'vert' | 'orange' | 'rouge' }) {
   if (part <= 0) return null
   return <span className={FOND[bande]} style={{ height: `${part * 100}%` }} />
+}
+
+/**
+ * ⭐ CE QUE CETTE COLONNE DIT, ET CE QU'ELLE NE DIT PAS.
+ *
+ * Elle EXPLIQUE un chiffre : « cet élève n'a pas rendu, et il a dit pourquoi ».
+ * ⛔ Elle ne le CORRIGE pas — le dénominateur reste celui de la collecte, et
+ *    l'effet d'un arbitrage passe par le statut du dépôt (`entreAuDenominateur`).
+ *    Une colonne qui recalculerait ici serait un second domicile pour l'assiduité.
+ *
+ * ⚠️ « — » quand il n'y a rien : un `0` se lit comme une mesure, l'absence non.
+ */
+function MarqueSignalement({ m }: { m?: { enAttente: number; confirmes: number; ecartes: number } }) {
+  if (!m) return <span className="text-muet-clair">—</span>
+  const total = m.enAttente + m.confirmes + m.ecartes
+  if (total === 0) return <span className="text-muet-clair">—</span>
+  // ⚠️ TROIS ÉTATS, TROIS SIGNES — et le troisième manquait. « 0 ✓ » s'affichait
+  //    quand tout était ÉCARTÉ : un zéro qui ne compte rien, à côté d'une coche
+  //    qui n'a rien retiré. Vu à l'écran le 31/08, sur des données réelles.
+  return (
+    <span
+      className={m.enAttente > 0 ? 'text-attention' : 'text-encre-douce'}
+      title={`${m.enAttente} en attente · ${m.confirmes} confirmé(s), sorti(s) du comptage`
+        + ` · ${m.ecartes} écarté(s)`}
+    >
+      {m.enAttente > 0 ? `⚑ ${m.enAttente}`
+        : m.confirmes > 0 ? `✓ ${m.confirmes}`
+          : '✓'}
+    </span>
+  )
 }
 
 function Pastille({ bande }: { bande: 'vert' | 'orange' | 'rouge' }) {

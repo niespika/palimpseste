@@ -43,6 +43,9 @@ import { journaliserCollageBloque } from '@/utils/passation/depots'
 import { estUnMoyen, type MoyenDeCollage } from '@/utils/passation/collage'
 import { messageSiBloque } from '@/utils/integrite'
 import { messageSiRetoursNonLus } from '@/utils/retours-lus'
+import {
+  lireLaPorteDuSignalement, poserLeSignalement, retirerLeSignalement,
+} from '@/utils/signalements/serveur'
 import type { TelemetrieSaisie, Version } from '@/utils/deroule/types'
 
 export interface Reponse { ok: boolean; message: string }
@@ -178,6 +181,54 @@ export async function actionCompterUneAide(depotId: string, aide: string): Promi
   const p = await portier(depotId, false)
   if ('erreur' in p) return
   await compterUneAide(p.admin, p.depot, aide as AideDepliee, new Date().toISOString())
+}
+
+// ── « Signaler que l'exercice a un problème » ───────────────────────────────
+//
+// ⭐⭐ HORS DU FIL DES SIX TEMPS, ET C'EST LA RÈGLE. « Il peut le faire avant le
+//    passage, ou après le passage de l'exercice » (Louis, 31/08) : un geste rangé
+//    dans un temps serait fermé aux deux bouts.
+//
+// ⛔ **`portier(depotId, false)` — LA GARDE D'ÉCRITURE NE JOUE PAS ICI, ET C'EST
+//    DÉLIBÉRÉ.** Les deux gardes transverses bloquent LES RENDUS : le blocage
+//    d'intégrité (« un strike bloque les dépôts au seuil ») et le gate de lecture
+//    (« un retour non lu bloque tous les rendus »). *Or signaler n'est pas
+//    rendre* — c'est dire que l'objet est cassé. Un élève bloqué à qui on
+//    servirait un exercice illisible n'aurait plus aucun moyen de le dire, et
+//    c'est exactement la situation où il en a le plus besoin.
+//    ⚠️ Ce que ça ouvre : un élève bloqué peut écrire un texte que le professeur
+//       lira. Une ligne par dépôt, jamais davantage, et rien ne part au modèle.
+//
+// ⛔ **RIEN DE CE CHAMP N'ATTEINT LA CHAÎNE.** Ce n'est ni une contestation
+//    (`contester`), ni une métacognition, ni une aide comptée : c'est un message
+//    au professeur, et il n'a qu'un seul lecteur.
+
+export async function actionSignalerUnProbleme(
+  depotId: string, texte: string,
+): Promise<Reponse> {
+  const p = await portier(depotId, false)
+  if ('erreur' in p) return p.erreur
+  if (!(await lireLaPorteDuSignalement(p.admin))) {
+    return echec('Le signalement d’un problème n’est pas ouvert.')
+  }
+  const r = await poserLeSignalement(p.admin, {
+    id: p.depot.id, exerciceId: p.depot.exercice_id, eleveId: p.userId,
+  }, texte, new Date().toISOString())
+  if (!r.ok) return echec(r.message)
+  rafraichir()
+  return succes(r.message)
+}
+
+export async function actionRetirerLeSignalement(depotId: string): Promise<Reponse> {
+  const p = await portier(depotId, false)
+  if ('erreur' in p) return p.erreur
+  // ⚠️ La porte NE garde PAS le retrait : si le professeur ferme l'interrupteur
+  //    alors qu'un élève a un signalement en cours, celui-ci doit pouvoir le
+  //    reprendre. Une porte qui enferme est pire qu'une porte fermée.
+  const r = await retirerLeSignalement(p.admin, p.depot.id)
+  if (!r.ok) return echec(r.message)
+  rafraichir()
+  return succes(r.message)
 }
 
 // ── Les trois gestes de la remise, DANS CET ORDRE ───────────────────────────

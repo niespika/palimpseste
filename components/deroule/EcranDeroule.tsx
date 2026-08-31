@@ -45,6 +45,7 @@ import { DesignationDansLeMateriau } from './DesignationDansLeMateriau'
 import { GestesDeLaRemise } from './GestesDeLaRemise'
 import { SeJuger } from './SeJuger'
 import { RetourSegmente } from './RetourSegmente'
+import { SignalerUnProbleme } from './SignalerUnProbleme'
 import type { VueDuDeroule } from '@/utils/deroule/vue'
 import type { TelemetrieSaisie, Temps } from '@/utils/deroule/types'
 import type { Atelier } from '@/utils/codex-onglets/regles'
@@ -150,6 +151,16 @@ export function EcranDeroule(
       )}
 
       {ecran === 'retour_choix' && <RetourDUnChoix vue={vue} atelier={atelier} />}
+
+      {/* ⭐⭐ « SIGNALER QUE L'EXERCICE A UN PROBLÈME » — EN PIED, ET HORS DU FIL.
+          « Il peut le faire avant le passage, ou après le passage » (Louis,
+          31/08) : le bloc ne dépend d'aucun `ecran`, y compris `ferme` — un
+          élève qui découvre un exercice cassé avant l'ouverture doit pouvoir le
+          dire. ⛔ Il ne parle jamais de ce que l'élève a compris (`02-` §5) :
+          c'est l'OBJET qui est mis en cause, pas lui. */}
+      {vue.signalement.ouvert && (
+        <SignalerUnProbleme depotId={vue.depotId} mien={vue.signalement.mien} />
+      )}
     </div>
   )
 }
