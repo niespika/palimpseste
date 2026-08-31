@@ -566,14 +566,37 @@ interface ResultatCompetence {
   alerte: string | null
 }
 
+/**
+ * ⭐⭐ LA CHAÎNE D'UNE COMPÉTENCE — et, depuis le 31/08, en LECTURE SEULE au
+ *    besoin. C'est le point d'entrée du banc de comparaison de modèles.
+ *
+ * ⛔⛔ POURQUOI LE BANC PASSE ICI, ET NE SE RÉÉCRIT PAS À CÔTÉ. Le `07-` §6
+ *    exige, avant d'allumer le partage de modèles, « une contre-épreuve sur
+ *    squelettes gelés, compétence par compétence : même lettre, ou tout passe au
+ *    modèle fort ». Un banc qui refait l'orchestration à côté ne compare pas les
+ *    modèles : il compare DEUX CHAÎNES. *Le dépôt a déjà payé cette leçon —
+ *    « un miroir du code doit copier LE tokeniseur », neuf réparations justes
+ *    refusées sur dix-huit parce que le miroir divergeait de l'original.*
+ *    D'où un drapeau, et non un second chemin.
+ *
+ * @param a.sansEcriture — n'écrit NI squelette, NI delta, NI mesure. Le reste
+ *   est identique à l'octet : mêmes prompts, mêmes crochets, même agrégation,
+ *   même lettre. ⚠️ Les appels de modèle, eux, sont bien passés et **journalisés
+ *   dans `api_couts`** : un banc coûte, et un coût qu'on ne journalise pas est un
+ *   coût qu'on ne verra jamais.
+ *   ⭐ `ecrite` et `dejaLa` rendent alors `false` — rien n'a été écrit, et le
+ *   banc ne doit pas croire le contraire.
+ */
 async function chaineDUneCompetence(
   admin: Admin,
   a: {
     ctx: ContexteDepot; competence: Competence; version: Version; production: string
     modele: string; instrument: InstrumentCompetence; branchement: BranchementCompetence
     aideConsommee: number | null
+    sansEcriture?: boolean
   },
 ): Promise<ResultatCompetence> {
+  const sansEcriture = a.sansEcriture === true
   const { ctx, competence, version, production, modele, instrument, branchement } = a
   const modes = ctx.modesParCompetence[competence] ?? []
   let appels = 0
@@ -706,10 +729,11 @@ async function chaineDUneCompetence(
   //    « deux copies du même chiffre finissent par diverger » (`07-` §1.2).
   //    ⭐ `instrument_version` RESTE, et c'est l'erreur symétrique à ne pas
   //    faire : c'est LE versionnage, « sur la mesure ET sur le squelette ».
-  const echecP1 = await upsertSquelette(admin, ctx.depotId, competence, version, {
-    artefact_extraction: artefactsP1, modele,
-    instrument_version: instrument.version,
-  })
+  const echecP1 = sansEcriture ? null : await upsertSquelette(
+    admin, ctx.depotId, competence, version, {
+      artefact_extraction: artefactsP1, modele,
+      instrument_version: instrument.version,
+    })
   if (echecP1) alertes.push(echecP1)
 
   // ── Temps 3 — P2, observable par observable ───────────────────────────────
@@ -772,10 +796,11 @@ async function chaineDUneCompetence(
   // ⛔ La SECONDE écriture de `prompt_version` — retirée avec la première : une
   //    colonne, DEUX écritures (C4-L11 ; `01-` §11, « rien n'est versionné par
   //    phase »).
-  const echecP2 = await upsertSquelette(admin, ctx.depotId, competence, version, {
-    artefact_jugement: jugement.valeur, modele,
-    instrument_version: instrument.version,
-  })
+  const echecP2 = sansEcriture ? null : await upsertSquelette(
+    admin, ctx.depotId, competence, version, {
+      artefact_jugement: jugement.valeur, modele,
+      instrument_version: instrument.version,
+    })
   if (echecP2) alertes.push(echecP2)
 
   // ── Temps 4 — CODE2. « Du code agrège » : le palier DE LA MESURE. ─────────
@@ -820,7 +845,7 @@ async function chaineDUneCompetence(
       alertes.push('`delta_v1_vf` reste NULL : le branchement de la compétence n\'en déclare '
         + 'pas le calcul — et NULL n\'est pas 0 (01- §11)')
     }
-    await attacherDelta(admin, ctx.depotId, competence, delta)
+    if (!sansEcriture) await attacherDelta(admin, ctx.depotId, competence, delta)
     return { competence, appels, ecrite: false, dejaLa: false,
       lettre_equivalente: lettreEquivalente, squelette,
       alerte: alertes.length ? alertes.join(' · ') : null }
@@ -852,7 +877,9 @@ async function chaineDUneCompetence(
     bonus: ctx.bonus,
     instrument_version: instrument.version,
   }
-  const ecriture = await ecrireMesure(admin, ligne)
+  const ecriture = sansEcriture
+    ? { ecrite: false, dejaLa: false, erreur: null as string | null }
+    : await ecrireMesure(admin, ligne)
   if (ecriture.erreur) alertes.push(`écriture de la mesure : ${ecriture.erreur}`)
   if (ecriture.dejaLa) {
     // Le squelette, lui, vient d'être ÉCRASÉ par l'upsert. Si l'instrument a
@@ -1562,3 +1589,70 @@ function resumeBilan(b: BilanDepot): string {
     //   dépend pas de ce qu'un retour a fait ou non.
     + motifDesEtatsPerdus(b.alertes)
 }
+
+// ════════════════════════════════════════════════════════════════════════════
+// ⭐⭐ LE BANC DE COMPARAISON DES MODÈLES — `07-` §6, la contre-épreuve.
+// ════════════════════════════════════════════════════════════════════════════
+
+/**
+ * ⛔⛔ CE QUE CETTE FONCTION EXISTE POUR RENDRE POSSIBLE, ET POURQUOI ELLE VIT ICI.
+ *
+ * Le `07-` §6 pose que le partage de modèles — Haiku pour la trajectoire, Sonnet
+ * pour les ancres — reste ÉTEINT (`partageActif: false`) « tant que la
+ * contre-épreuve n'a pas tranché », et il en donne le protocole : **une
+ * contre-épreuve sur squelettes gelés, compétence par compétence — même lettre,
+ * ou tout passe au modèle fort.** Cette contre-épreuve n'avait jamais été
+ * construite, et c'est la seule raison pour laquelle TOUT tourne aujourd'hui sur
+ * le modèle fort, exercices de maison compris.
+ *
+ * ⭐ ELLE REJOUE LA VRAIE CHAÎNE, et c'est tout son intérêt. Mêmes prompts,
+ *    mêmes crochets `preP1`/`code1`/`preP2`/`code2`, même agrégation, même
+ *    lettre. Le SEUL paramètre qui change est le modèle. *Un banc qui refait
+ *    l'orchestration à côté comparerait deux chaînes, pas deux modèles.*
+ *
+ * ⛔ ELLE N'ÉCRIT RIEN — ni squelette, ni delta, ni mesure. On peut donc la
+ *    lancer sur la PRODUCTION sans rien y toucher : les copies réelles sont le
+ *    seul corpus qui vaille, et les dupliquer en bac à sable aurait comparé les
+ *    modèles sur des textes que personne n'a écrits.
+ * ⚠️ Les appels, eux, sont RÉELS et journalisés dans `api_couts` — un banc
+ *    coûte, et ce coût doit se voir comme les autres.
+ *
+ * ⚠️ CE QU'ELLE NE FAIT PAS : le Monitoring et le retour chaud. Le comparand du
+ *    §6 est LA LETTRE, que `code2` rend ; y ajouter Calame comparerait des proses
+ *    qu'aucune mesure ne départage.
+ *
+ * @returns `null` quand la compétence est fermée ou le dépôt inexploitable — le
+ *   banc saute, il n'invente pas de lettre.
+ */
+export async function rejouerUneCompetence(
+  admin: Admin,
+  a: {
+    depotId: string; competence: Competence; version: Version; modele: string
+    /** Le contexte, quand l'appelant l'a déjà lu — une lecture par dépôt suffit. */
+    ctx?: ContexteDepot
+  },
+): Promise<{
+  competence: Competence; modele: string; appels: number
+  lettre: string | null; squelette: SqueletteServi | null; alerte: string | null
+} | null> {
+  const ctx = a.ctx ?? await lireContexte(admin, a.depotId)
+  const production = a.version === 'v1' ? ctx.productionV1 : ctx.productionVf
+  if (!production) return null
+
+  const etat = etatCompetence(a.competence)
+  if (!etat.ouverte || !etat.instrument || !etat.branchement) return null
+
+  const r = await chaineDUneCompetence(admin, {
+    ctx, competence: a.competence, version: a.version, production, modele: a.modele,
+    instrument: etat.instrument, branchement: etat.branchement,
+    aideConsommee: null,
+    sansEcriture: true,
+  })
+  return {
+    competence: r.competence, modele: a.modele, appels: r.appels,
+    lettre: r.lettre_equivalente, squelette: r.squelette, alerte: r.alerte,
+  }
+}
+
+/** Le contexte d'un dépôt, pour que le banc ne le relise pas par compétence. */
+export { lireContexte as lireContexteDuDepot }
