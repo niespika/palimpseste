@@ -6,6 +6,7 @@ import 'server-only'
 import { createAdminClient } from '@/utils/supabase/admin'
 import { lireGatePlanActif, plansValidesCourants } from '@/utils/plan-exercices'
 import { resoudreDatesSyntheses, type DemandeSynthese } from '@/utils/plan-synthese'
+import { clesSynthesesOuvertes } from '@/utils/plan-synthese-ouverture'
 
 export interface SyntheseAPreparer {
   exerciceId: string
@@ -28,7 +29,20 @@ export async function chargerSynthesesAPreparer(): Promise<SyntheseAPreparer[]> 
     .eq('type_exercice', 'synthese')
     .eq('statut', 'a_concevoir')
     .is('supprime_at', null)
-  const rows = exos ?? []
+  const toutes = exos ?? []
+  if (toutes.length === 0) return []
+
+  // SOURDINE (01/09) — une synthèse dont le cours a été COUPÉ dans l'instance de sa
+  // classe ne se propose plus à la préparation. Elle n'est pas détruite : rouvrir le
+  // cours la fait revenir ici telle quelle. Le filtre passe AVANT la résolution des
+  // dates : ce qui se tait ne coûte pas une requête.
+  const ouvertes = await clesSynthesesOuvertes(admin, toutes.map((e) => ({
+    cle: e.id as string,
+    parcoursId: e.parcours_id as string,
+    contenuId: e.contenu_id as string,
+    classeId: classeParPlan.get(e.plan_id as string) as string,
+  })))
+  const rows = toutes.filter((e) => ouvertes.has(e.id as string))
   if (rows.length === 0) return []
 
   const classeIds = [...new Set(rows.map((e) => classeParPlan.get(e.plan_id as string)).filter(Boolean))] as string[]

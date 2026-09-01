@@ -29,6 +29,7 @@ import {
   type AssignParcours, type ApercuSemaine,
 } from '@/utils/parcours-apercu'
 import { resoudreDatesSyntheses, type DemandeSynthese } from '@/utils/plan-synthese'
+import { clesSynthesesOuvertes } from '@/utils/plan-synthese-ouverture'
 import { pairesLivresGouvernes, resoudreDatesLivre, seancesDocs } from '@/utils/aletheia-dates'
 
 // ── Types exposés (consommés par l'UI 6d) ─────────────────────────────────────
@@ -327,13 +328,24 @@ async function ajouterExercicesPlan(
 
   // Bras 'parcours' (synthèses) → dates résolues en lot.
   const synthRows = rows.filter((e) => (e.ancrage as string) === 'parcours')
+  // SOURDINE (01/09) — un cours COUPÉ dans l'instance de sa classe disparaît de la
+  // panoptique. La ligne survit en base ; rouvrir le cours la ramène à sa semaine.
+  const synthOuvertes = synthRows.length
+    ? await clesSynthesesOuvertes(admin, synthRows.map((e) => ({
+        cle: e.id as string, parcoursId: e.parcours_id as string, contenuId: e.contenu_id as string, classeId,
+      })))
+    : new Set<string>()
   const datesSynth = synthRows.length
-    ? await resoudreDatesSyntheses(admin, synthRows.map((e): DemandeSynthese => ({
+    ? await resoudreDatesSyntheses(admin, synthRows.filter((e) => synthOuvertes.has(e.id as string)).map((e): DemandeSynthese => ({
         cle: e.id as string, parcoursId: e.parcours_id as string, contenuId: e.contenu_id as string, classeId,
       })))
     : new Map<string, string | null>()
 
   for (const e of rows) {
+    // Une synthèse en sourdine n'a pas de date résolue (elle n'a pas été demandée) :
+    // le `continue` du `dateEffective == null` juste dessous l'écarterait de toute
+    // façon, mais on le dit ici pour que la raison soit lisible à la lecture.
+    if ((e.ancrage as string) === 'parcours' && !synthOuvertes.has(e.id as string)) continue
     const statut = e.statut as 'a_concevoir' | 'concu'
     let dateEffective: string | null
     let source: 'plan' | 'synthese_parcours'

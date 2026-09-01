@@ -11,6 +11,8 @@ import { lireFuseau } from '@/utils/fuseau-serveur'
 import { construireApercuAssign, memoSocleFrise, type AssignParcours, type ApercuSemaine } from '@/utils/parcours-apercu'
 import { densifierDecalages, type Decalages } from '@/utils/frise-enseignement'
 import { semaineCourante } from '@/utils/scriptorium-corpus'
+import { resoudreDatesSyntheses } from '@/utils/plan-synthese'
+import { ouverturesDInstance } from '@/utils/plan-synthese-ouverture'
 import {
   resoudreFrisePourDate, calculerDiffHoraire,
   type ApercuFrise, type HoraireSnapshot, type DiffHoraire,
@@ -27,6 +29,26 @@ export interface ElementInstance {
   aRevoir: boolean               // séance de livre hors de l'étendue réelle (schema-S2)
   ordre: number
   semaineReelle: number          // semaine DB (≠ semaine d'affichage si clampée §4.2) — cible des actions
+}
+
+/**
+ * LA SYNTHÈSE DE FIN D'UN COURS, vue depuis l'instance (01/09). Une par (cours de
+ * l'instance), posée sur sa semaine-cible — le DERNIER créneau du cours, exactement la
+ * règle que `plan-synthese.ts` applique pour la dater.
+ *
+ * ⭐ `ouverte` est une INTENTION, `etat` un FAIT — et les deux se lisent séparément
+ *    parce qu'ils divergent : couper un cours met sa synthèse en sourdine sans la
+ *    détruire, donc `ouverte = false` avec `etat = 'preparee'` est un état normal, et
+ *    c'est lui qui rend « elles reviennent telles quelles » vérifiable à l'écran.
+ */
+export interface SyntheseInstance {
+  contenuId: string
+  contenuTitre: string
+  creneauId: string              // créneau PORTEUR (le dernier du cours) — ancre d'affichage
+  semaineCible: number           // semaine d'AFFICHAGE (clampée comme les éléments, §4.2)
+  ouverte: boolean
+  etat: 'absente' | 'a_preparer' | 'preparee' | 'lancee' | 'annulee'
+  date: string | null            // jour résolu (dernier cours de la semaine), null si non datable
 }
 
 // Un AUTRE parcours de la même classe qui occupe la même semaine d'enseignement.
@@ -51,6 +73,7 @@ export interface SemaineInstance {
   courante: boolean
   occupee: OccupationSemaine[]
   elements: ElementInstance[]
+  syntheses: SyntheseInstance[]  // les cours qui SE TERMINENT cette semaine-là
 }
 
 // Bloc de planification de l'instance : ce que le PARCOURS DE LA CLASSE porte
@@ -73,6 +96,11 @@ export interface InstanceDeClasse {
   datee: boolean                 // false → bandeau « instance non datée : exclue du RAG »
   semaineCourante: number | null
   nonVusPasses: number           // éléments des semaines passées non vus (miroir du « à faire »)
+  // Réglage des synthèses : `false` tant que `synthese_ouverture_par_cours.sql` n'est pas
+  // jouée (lecture en échec ⇒ repli « tout ouvert »). L'écran le DIT au lieu d'afficher
+  // un interrupteur qui refuserait sans raison lisible.
+  syntheseReglable: boolean
+  aPlanEvaluation: boolean       // sans plan, une synthèse n'aurait nulle part où vivre
   planification: PlanificationInstance
   decalages: Decalages
   semaines: SemaineInstance[]
@@ -301,6 +329,97 @@ export async function chargerInstanceDeClasse(pcId: string): Promise<InstanceDeC
     arr.push(e)
     parSemaine.set(e.semaine, arr)
   }
+  // ── LES SYNTHÈSES DE FIN DE COURS (01/09) ─────────────────────────────────
+  //
+  // ⭐ La semaine-cible d'un cours = LE DERNIER de ses créneaux dans CETTE instance.
+  //    C'est mot pour mot la règle de `semainesCiblesInstances` (plan-synthese.ts) : un
+  //    cours étalé sur trois semaines se synthétise après la troisième. On la recopie
+  //    ici plutôt que d'appeler le module — lui part des lignes du PLAN (qui peuvent ne
+  //    pas exister encore), cet écran part des CRÉNEAUX (qui, eux, existent toujours).
+  //    Les deux doivent bouger ensemble ; le lien est dit ici pour qu'on le sache.
+  const coursDeLInstance = new Map<string, { creneauId: string; semaine: number; titre: string }>()
+  for (const cr of creneaux) {
+    if (cr.ref_type !== 'contenu' || !cr.contenu_id) continue
+    const info = contenuMap.get(cr.contenu_id)
+    if (!info || info.supprime || info.type !== 'cours') continue
+    const cur = coursDeLInstance.get(cr.contenu_id)
+    // > et non >= : à semaine égale on garde le premier rencontré, et les créneaux
+    // arrivent déjà triés (semaine, ordre) — le porteur est donc le dernier du cours.
+    if (!cur || cr.semaine > cur.semaine) {
+      coursDeLInstance.set(cr.contenu_id, { creneauId: cr.id, semaine: cr.semaine, titre: info.titre })
+    }
+  }
+
+  const synthesesParSemaine = new Map<number, SyntheseInstance[]>()
+  let syntheseReglable = false
+  let aPlanEvaluation = false
+  if (coursDeLInstance.size > 0) {
+    const coursIds = [...coursDeLInstance.keys()]
+    // Intentions (table neuve, tolérée absente → `null` = migration pas jouée), plans
+    // vivants de la classe, et lignes de synthèse déjà en base : trois lectures
+    // indépendantes, une seule vague.
+    const [ouvertures, plansQ] = await Promise.all([
+      ouverturesDInstance(supabase, pcId),
+      supabase.from('scriptorium_plans_evaluation')
+        .select('id').eq('classe_id', classe.id as string).is('supprime_at', null),
+    ])
+    syntheseReglable = ouvertures != null
+    const planIds = ((plansQ.data ?? []) as { id: string }[]).map(p => p.id)
+    aPlanEvaluation = planIds.length > 0
+
+    // État de chaque synthèse. `supprime_at` N'EST PAS filtré : un tombstone doit
+    // s'afficher comme « annulée », pas comme « absente » — sinon rouvrir promettrait
+    // une création là où `upsertSynthese` fera une résurrection.
+    const { data: exos } = planIds.length
+      ? await supabase.from('scriptorium_exercices_planifies')
+          .select('id, contenu_id, statut, supprime_at, codex_session_id')
+          .in('plan_id', planIds).eq('parcours_id', parc.id as string)
+          .eq('type_exercice', 'synthese').in('contenu_id', coursIds)
+      : { data: [] as Record<string, unknown>[] }
+    const lignes = (exos ?? []) as {
+      id: string; contenu_id: string; statut: string; supprime_at: string | null; codex_session_id: string | null
+    }[]
+    const sessionIds = [...new Set(lignes.map(l => l.codex_session_id).filter((x): x is string => !!x))]
+    const lancees = new Set<string>()
+    if (sessionIds.length > 0) {
+      const { data: cs } = await supabase.from('codex_sessions')
+        .select('id, lance_at').in('id', sessionIds).not('lance_at', 'is', null)
+      for (const c of cs ?? []) lancees.add(c.id as string)
+    }
+    const ligneParCours = new Map(lignes.map(l => [l.contenu_id, l]))
+
+    // Dates : résolues pour TOUS les cours, ouverts ou non — l'écran doit pouvoir
+    // annoncer « si tu ouvres, c'est pour le … ». Coût CONSTANT (plan-synthese.ts).
+    const dates = await resoudreDatesSyntheses(supabase, coursIds.map(id => ({
+      cle: id, parcoursId: parc.id as string, contenuId: id, classeId: classe.id as string,
+    })))
+
+    for (const [contenuId, cours] of coursDeLInstance) {
+      const l = ligneParCours.get(contenuId)
+      const etat: SyntheseInstance['etat'] = !l ? 'absente'
+        : (l.supprime_at != null || l.statut === 'annule') ? 'annulee'
+          : (l.codex_session_id && lancees.has(l.codex_session_id)) ? 'lancee'
+            : l.statut === 'concu' ? 'preparee' : 'a_preparer'
+      // Même clamp de lecture que les éléments (§4.2) : un cours dont le dernier
+      // créneau est au-delà de nb_semaines s'affiche dans la dernière semaine.
+      const semaineCible = Math.min(Math.max(1, cours.semaine), Math.max(1, nbSemaines))
+      const arr = synthesesParSemaine.get(semaineCible) ?? []
+      arr.push({
+        contenuId,
+        contenuTitre: cours.titre,
+        creneauId: cours.creneauId,
+        semaineCible,
+        // Repli « tout ouvert » quand la migration n'est pas jouée : l'écran affiche
+        // alors l'état d'AVANT (création automatique), et le dit.
+        ouverte: ouvertures == null ? true : ouvertures.has(contenuId),
+        etat,
+        date: dates.get(contenuId) ?? null,
+      })
+      synthesesParSemaine.set(semaineCible, arr)
+    }
+    for (const arr of synthesesParSemaine.values()) arr.sort((a, b) => a.contenuTitre.localeCompare(b.contenuTitre))
+  }
+
   const apercuParSemaine = new Map((apercuRes?.apercu ?? []).map(a => [a.semaine, a]))
   const liveParSemaine = new Map((apercuLive?.semaines ?? []).map(a => [a.semaine, a]))
   const dense = densifierDecalages(decalages, Math.max(1, nbSemaines))
@@ -327,6 +446,7 @@ export async function chargerInstanceDeClasse(pcId: string): Promise<InstanceDeC
       peutRapprocher: k > 1 && (dense[k - 1] ?? 0) > (dense[k - 2] ?? 0),
       courante: courante != null && courante === k,
       occupee: cleOccupation ? (occupationParLundi.get(cleOccupation) ?? []) : [],
+      syntheses: synthesesParSemaine.get(k) ?? [],
       elements: els2.map(e => ({
         id: e.id, creneauId: e.creneauId, creneauTitre: e.creneauTitre, refType: e.refType,
         badge: e.badge, titre: e.titre, vuAt: e.vuAt, aRevoir: e.aRevoir, ordre: e.ordre,
@@ -355,6 +475,8 @@ export async function chargerInstanceDeClasse(pcId: string): Promise<InstanceDeC
     datee: apercuRes != null,
     semaineCourante: courante,
     nonVusPasses,
+    syntheseReglable,
+    aPlanEvaluation,
     planification: { dateDebut, apercu: apercuLive, snapshot, diff },
     decalages,
     semaines,

@@ -6,6 +6,7 @@ import { jourDansFuseau } from '@/utils/fuseau'
 import { lireFuseau } from '@/utils/fuseau-serveur'
 import { lireGatePlanActif, plansValidesCourants } from '@/utils/plan-exercices'
 import { resoudreDatesSyntheses } from '@/utils/plan-synthese'
+import { clesSynthesesOuvertes } from '@/utils/plan-synthese-ouverture'
 import { dateEffectiveSemaine, libelleTypeExercice } from '@/utils/plan-cadence'
 import { moduleDuType } from '@/utils/examens/types'
 import { construireApercuAssign, memoSocleFrise, type ApercuSemaine } from '@/utils/parcours-apercu'
@@ -183,7 +184,16 @@ export async function tachesDeriveesDuCalendrier(joursAvant = 10): Promise<Tache
         .eq('ancrage', 'parcours')
         .eq('statut', 'a_concevoir')
         .is('supprime_at', null)
-      const synthRows = synths ?? []
+      // SOURDINE (01/09) — un cours COUPÉ dans l'instance de sa classe n'engendre plus
+      // de tâche. La ligne reste en base : rouvrir le cours la ramène ici telle quelle.
+      const demandesSynth = (synths ?? []).map((s) => ({
+        cle: s.id as string,
+        parcoursId: s.parcours_id as string,
+        contenuId: s.contenu_id as string,
+        classeId: classeParPlan.get(s.plan_id as string) as string,
+      }))
+      const ouvertes = await clesSynthesesOuvertes(admin, demandesSynth)
+      const synthRows = (synths ?? []).filter((s) => ouvertes.has(s.id as string))
       if (synthRows.length > 0) {
         const dates = await resoudreDatesSyntheses(admin, synthRows.map((s) => ({
           cle: s.id as string,

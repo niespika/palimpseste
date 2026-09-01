@@ -18,6 +18,7 @@ import { lireGatePlanActif } from '@/utils/plan-exercices'
 import {
   hookSyntheseAjoutCreneau, hookSyntheseAssignClasse, hookSyntheseRetraitCreneau,
   hookSyntheseRetraitClasse, hookSyntheseSuppressionParcours,
+  ouvrirSyntheseCours, couperSyntheseCours,
 } from '@/utils/plan-synthese-hooks'
 import { lireReglagesRag } from '@/utils/scriptorium-rag'
 import {
@@ -1994,6 +1995,46 @@ export async function decalerSemaineInstance(
   }
   revalidatePath('/prof/scriptorium')
   return { success: true, avis }
+}
+
+/**
+ * OUVRIR / COUPER la synthèse de fin d'un cours, DANS CETTE CLASSE (01/09).
+ *
+ * ⭐ UN SEUL CONTRÔLE POUR DEUX GESTES, et c'est ce qui le rend juste. Avant, une
+ *    synthèse naissait toute seule dès qu'un cours entrait dans le parcours d'une
+ *    classe à plan vivant : le professeur ne pouvait ni s'y opposer, ni choisir son
+ *    moment. « Il me faudrait un bouton pour que je puisse déclencher la création des
+ *    synthèses uniquement quand je veux, et pas de manière automatique à la fin d'un
+ *    cours » (Louis, 01/09). Ouvrir POSE l'intention et fabrique la ligne dans la
+ *    foulée ; couper retire l'intention et met la ligne en SOURDINE.
+ *
+ * ⛔ COUPER NE DÉTRUIT RIEN. La ligne planifiée reste en base avec son statut et sa
+ *    séance Codex : rouvrir la ramène telle quelle. C'est ce qui distingue ce geste de
+ *    « Retirer du plan » (qui, lui, annule).
+ *
+ * ⚠️ Gate du plan d'évaluation OFF → refus explicite plutôt qu'un bouton mort : sans
+ *    plan d'évaluation, une synthèse n'a nulle part où vivre.
+ */
+export async function basculerSyntheseCours(
+  pcId: string, contenuId: string, ouvrir: boolean,
+): Promise<{ success?: boolean; error?: string }> {
+  await verifierProf()
+  if (!RE_UUID.test(pcId) || !RE_UUID.test(contenuId)) return { error: 'Identifiant invalide.' }
+  const admin = createAdminClient()
+  if (!(await lireGatePlanActif(admin))) return { error: 'Le plan d’évaluation est désactivé.' }
+
+  const res = ouvrir
+    ? await ouvrirSyntheseCours(admin, pcId, contenuId)
+    : await couperSyntheseCours(admin, pcId, contenuId)
+  if (res.error) return { error: res.error }
+
+  // Les quatre surfaces qui montrent (ou taisent) une synthèse : l'écran d'instance et
+  // la panoptique du plan vivent sous /prof/scriptorium, le « à préparer » sous
+  // /prof/codex, le à-faire et le calendrier prof sous /prof.
+  revalidatePath('/prof/scriptorium')
+  revalidatePath('/prof/codex')
+  revalidatePath('/prof')
+  return { success: true }
 }
 
 /**

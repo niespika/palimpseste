@@ -2,6 +2,15 @@
 // EXISTANTES. Chaque hook lit le GATE EN PREMIER et sort si OFF (no-op strict : gate OFF
 // = flux parcours byte-identique, zéro écriture). I/O client `admin` (RLS prof-only).
 //
+// ⭐⭐ DEPUIS LE 01/09, LES HOOKS DE CRÉATION NE CRÉENT PLUS D'EUX-MÊMES. Ils demandent
+//    d'abord à `plan-synthese-ouverture.ts` si le professeur a OUVERT la synthèse pour
+//    ce cours DANS CETTE CLASSE, et le défaut est « coupée » : sans un geste explicite,
+//    S3 ne fabrique rien. « Je veux déclencher la création uniquement quand je veux, et
+//    pas de manière automatique à la fin d'un cours » (Louis, 01/09).
+//    ⚠️ LES RETRAITS (S5), EUX, RESTENT INCONDITIONNELS : retirer un cours d'une
+//       instance doit toujours emporter sa synthèse, ouverte ou non — sinon le plan
+//       garderait une ligne dont le cours n'existe plus.
+//
 // Une synthèse = 1 exercice `type='synthese'`, ancrage='parcours', origine='synthese_auto',
 // (plan_id, parcours_id, contenu_id). Unicité vivante par uk_exercices_synthese. Ré-établir
 // la config (réassigner la classe, remettre le cours) RESSUSCITE un tombstone (annulé/
@@ -9,6 +18,7 @@
 
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { lireGatePlanActif } from './plan-exercices'
+import { estSyntheseOuverte, reglerSyntheseOuverte } from './plan-synthese-ouverture'
 
 // Plan VIVANT (brouillon OU valide — S3 crée une ligne dormante dans un brouillon) le plus
 // récent d'une classe (max annee_scolaire), ou null. Aligné sur le « plan courant » des
@@ -166,6 +176,7 @@ async function synthesesVivantes(
  * (RAG L1 : ajouter un créneau au MODÈLE ne redescend pas dans les instances → le
  * hook n'y crée rien ; l'ajout d'un créneau à une INSTANCE — geste L3 — passera par
  * ce même hook et trouvera le cours dans l'instance de sa classe). Gate OFF → no-op.
+ * Cours COUPÉ dans cette instance (le défaut) → no-op pour cette classe seulement.
  */
 export async function hookSyntheseAjoutCreneau(admin: SupabaseClient, parcoursId: string, contenuId: string): Promise<void> {
   if (!(await lireGatePlanActif(admin))) return
@@ -174,6 +185,7 @@ export async function hookSyntheseAjoutCreneau(admin: SupabaseClient, parcoursId
     .from('scriptorium_parcours_classes').select('id, classe_id').eq('parcours_id', parcoursId).eq('statut', 'active')
   for (const a of assigns ?? []) {
     if (!(await instanceContientContenu(admin, a.id as string, contenuId))) continue
+    if (!(await estSyntheseOuverte(admin, a.id as string, contenuId))) continue
     const planId = await planVivantDeClasse(admin, a.classe_id as string)
     if (planId) await upsertSynthese(admin, planId, parcoursId, contenuId)
   }
@@ -194,6 +206,7 @@ export async function hookSyntheseAssignClasse(admin: SupabaseClient, parcoursId
     .from('scriptorium_parcours_classe_creneaux').select('contenu_id').eq('parcours_classe_id', pcId).eq('ref_type', 'contenu')
   const contenuIds = [...new Set((creneaux ?? []).map((c) => c.contenu_id as string).filter(Boolean))]
   for (const contenuId of contenuIds) {
+    if (!(await estSyntheseOuverte(admin, pcId, contenuId))) continue
     if (await estCoursVivant(admin, contenuId)) await upsertSynthese(admin, planId, parcoursId, contenuId)
   }
 }
@@ -220,6 +233,7 @@ export async function hookSyntheseBackfillPlan(admin: SupabaseClient, planId: st
       .eq('parcours_classe_id', a.id as string).eq('ref_type', 'contenu')
     const contenuIds = [...new Set((creneaux ?? []).map((c) => c.contenu_id as string).filter(Boolean))]
     for (const contenuId of contenuIds) {
+      if (!(await estSyntheseOuverte(admin, a.id as string, contenuId))) continue
       if (await estCoursVivant(admin, contenuId)) await upsertSynthese(admin, planId, a.parcours_id as string, contenuId)
     }
   }
@@ -277,4 +291,78 @@ export async function hookSyntheseSuppressionParcours(admin: SupabaseClient, par
   for (const exo of await synthesesVivantes(admin, { parcoursId })) {
     await retirerSynthese(admin, exo, 'annule')
   }
+}
+
+// ── Le geste du professeur : ouvrir / couper la synthèse d'un cours ───────────
+//
+// ⭐ C'EST LE MÊME CONTRÔLE QUI SERT DE BOUTON ET D'INTERRUPTEUR, et ce n'est pas une
+//    économie : ouvrir un cours DIT qu'on veut la synthèse, et la fabrique dans la
+//    foulée ; la couper dit qu'on n'en veut pas, et fait taire celle qui existait. Deux
+//    contrôles séparés auraient permis l'état absurde « ouverte mais inexistante ».
+
+/**
+ * OUVRIR — le cours `contenuId` de l'instance `pcId` se termine par une synthèse.
+ * Pose l'intention PUIS crée la ligne planifiée (ou RESSUSCITE celle qui dormait, avec
+ * sa séance Codex si elle en avait une — `upsertSynthese`). Idempotent.
+ *
+ * ⚠️ L'intention est écrite AVANT la création, et c'est délibéré : si `upsertSynthese`
+ *    échouait, on préfère un cours ouvert sans ligne (que le prochain hook ou un second
+ *    clic rattrapera) à une ligne créée que plus rien ne justifie.
+ */
+export async function ouvrirSyntheseCours(
+  admin: SupabaseClient, pcId: string, contenuId: string,
+): Promise<{ error?: string }> {
+  const { data: pc } = await admin
+    .from('scriptorium_parcours_classes')
+    .select('id, parcours_id, classe_id, statut').eq('id', pcId).maybeSingle()
+  const lien = pc as { parcours_id: string; classe_id: string; statut: string } | null
+  if (!lien) return { error: 'Instance introuvable.' }
+  if (lien.statut !== 'active') return { error: 'Cette classe n’est plus assignée à ce parcours.' }
+  if (!(await estCoursVivant(admin, contenuId))) return { error: 'Seul un cours peut se terminer par une synthèse.' }
+  if (!(await instanceContientContenu(admin, pcId, contenuId))) {
+    return { error: 'Ce cours n’est pas dans le parcours de cette classe.' }
+  }
+  const planId = await planVivantDeClasse(admin, lien.classe_id)
+  if (!planId) {
+    return { error: 'Cette classe n’a pas de plan d’évaluation : la synthèse n’aurait nulle part où vivre.' }
+  }
+  const reglage = await reglerSyntheseOuverte(admin, pcId, contenuId, true)
+  if (reglage.error) return reglage
+  await upsertSynthese(admin, planId, lien.parcours_id, contenuId)
+  return {}
+}
+
+/**
+ * COUPER — le cours ne se termine plus par une synthèse. NE DÉTRUIT RIEN : la ligne
+ * planifiée reste en base avec son statut et sa séance, simplement mise en SOURDINE par
+ * les surfaces. Rouvrir la fait revenir telle quelle (décision PO 01/09).
+ *
+ * ⛔ REFUS SI LA SÉANCE A ÉTÉ LANCÉE. Une synthèse lancée n'est plus une intention,
+ *    c'est un fait : la taire effacerait de l'écran un travail d'élève en cours. Même
+ *    garde que `retirerSynthese` et `retirerExercice`, et sur `lance_at` — l'état
+ *    serveur —, jamais sur un statut snapshotté.
+ */
+export async function couperSyntheseCours(
+  admin: SupabaseClient, pcId: string, contenuId: string,
+): Promise<{ error?: string }> {
+  const { data: pc } = await admin
+    .from('scriptorium_parcours_classes')
+    .select('id, parcours_id, classe_id').eq('id', pcId).maybeSingle()
+  const lien = pc as { parcours_id: string; classe_id: string } | null
+  if (!lien) return { error: 'Instance introuvable.' }
+
+  const { data: plans } = await admin
+    .from('scriptorium_plans_evaluation').select('id').eq('classe_id', lien.classe_id).is('supprime_at', null)
+  const planIds = (plans ?? []).map((p) => p.id as string)
+  if (planIds.length > 0) {
+    for (const exo of await synthesesVivantes(admin, { parcoursId: lien.parcours_id, contenuId, planIds })) {
+      if (!exo.codex_session_id) continue
+      const { data: sess } = await admin
+        .from('codex_sessions').select('lance_at').eq('id', exo.codex_session_id).maybeSingle()
+      if (sess && (sess as { lance_at?: string | null }).lance_at != null) {
+        return { error: 'Cette synthèse a déjà été lancée en classe — elle ne peut plus être coupée.' }
+      }
+    }
+  }
+  return await reglerSyntheseOuverte(admin, pcId, contenuId, false)
 }

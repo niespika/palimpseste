@@ -6,6 +6,7 @@ import { lireFuseau } from '@/utils/fuseau-serveur'
 import { resoudreDatesLivre, pairesLivresGouvernes } from './aletheia-dates'
 import { lireGatePlanActif, plansValidesCourants, lireQuizAnnonceDefaut } from './plan-exercices'
 import { resoudreDatesSyntheses } from './plan-synthese'
+import { clesSynthesesOuvertes } from './plan-synthese-ouverture'
 import { titresCoursParSession } from './codex-titre'
 import { dateEffectiveSemaine, libelleTypeExercice } from './plan-cadence'
 
@@ -289,7 +290,18 @@ export async function assemblerEvenements(opts: {
             const { data: cs } = await admin.from('codex_sessions').select('id, lance_at').in('id', sessionIds).not('lance_at', 'is', null)
             for (const c of cs ?? []) sessionsLancees.add(c.id as string)
           }
-          const restantes = synthRows.filter((s) => !(s.codex_session_id && sessionsLancees.has(s.codex_session_id as string)))
+          const nonLancees = synthRows.filter((s) => !(s.codex_session_id && sessionsLancees.has(s.codex_session_id as string)))
+          // SOURDINE (01/09) — un cours COUPÉ dans l'instance de sa classe ne pose plus
+          // d'événement au calendrier PROF. Le filtre s'applique APRÈS la dédup E3 : une
+          // synthèse déjà LANCÉE n'est de toute façon pas ici (elle vient de la source 3
+          // rétrospective), et elle ne peut pas être coupée — un fait ne se tait pas.
+          const ouvertes = await clesSynthesesOuvertes(admin, nonLancees.map((s) => ({
+            cle: s.id as string,
+            parcoursId: s.parcours_id as string,
+            contenuId: s.contenu_id as string,
+            classeId: classeParPlan.get(s.plan_id as string) as string,
+          })))
+          const restantes = nonLancees.filter((s) => ouvertes.has(s.id as string))
           const dates = await resoudreDatesSyntheses(admin, restantes.map((s) => ({
             cle: s.id as string,
             parcoursId: s.parcours_id as string,

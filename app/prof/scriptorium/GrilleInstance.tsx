@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { Fragment, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import ChampDate from '@/app/prof/calendrier/config/ChampDate'
@@ -8,12 +8,13 @@ import {
   marquerVu, marquerVuJusquA, deplacerElement, reordonnerElements,
   ajouterCreneauInstance, retirerCreneauInstance, reinitialiserInstance,
   planifierInstance, decalerSemaineInstance, publierHoraire, ajusterNbSemainesParcours,
+  basculerSyntheseCours,
   type RefCreneau,
 } from './actions'
 import PickerContenu from './parcours/PickerContenu'
 import ApercuBloc, { fmtJour } from './parcours/ApercuBloc'
 import type { CiblesPicker } from './parcours/donnees'
-import type { InstanceDeClasse, ElementInstance, SemaineInstance } from './instance-serveur'
+import type { InstanceDeClasse, ElementInstance, SemaineInstance, SyntheseInstance } from './instance-serveur'
 
 // GRILLE D'INSTANCE (RAG L3, SPEC §5.3) — le parcours D'UNE CLASSE. Trois choses y
 // vivent, et rien de tout cela ne touche le modèle ni les autres classes :
@@ -22,7 +23,12 @@ import type { InstanceDeClasse, ElementInstance, SemaineInstance } from './insta
 //     depuis le panneau d'assignation du modèle : la grille datée est sous les yeux ;
 //   · les DÉCALAGES — insérer une semaine d'enseignement vide avant une semaine et
 //     toutes les suivantes, ce qui laisse la place à un AUTRE parcours de la classe.
-//     C'est ainsi que deux parcours s'ALTERNENT au lieu de se superposer.
+//     C'est ainsi que deux parcours s'ALTERNENT au lieu de se superposer ;
+//   · la SYNTHÈSE DE FIN DE COURS (01/09) — sous le dernier chapitre de chaque cours,
+//     un interrupteur « ouvrir / couper ». Il a remplacé la création automatique :
+//     « je veux déclencher la création des synthèses uniquement quand je veux, et pas
+//     de manière automatique à la fin d'un cours » (Louis). COUPER NE DÉTRUIT RIEN —
+//     la synthèse préparée passe en sourdine et revient telle quelle si on rouvre.
 // Esthétique provisoire (refonte Design).
 
 export default function GrilleInstance({ instance, cibles }: {
@@ -74,6 +80,23 @@ export default function GrilleInstance({ instance, cibles }: {
     const ids = freres.map(f => f.id)
     ;[ids[idx], ids[cible]] = [ids[cible], ids[idx]]
     void lancer(`ord-${el.id}`, () => reordonnerElements(el.creneauId, el.semaineReelle, ids))
+  }
+
+  // Ouvrir/couper la synthèse d'un cours. Couper une synthèse PRÉPARÉE se confirme :
+  // le mot « couper » ne dit pas de lui-même que la préparation survit, et la question
+  // est le seul endroit où on peut le promettre avant le clic.
+  function basculerSynthese(sy: SyntheseInstance) {
+    if (sy.ouverte && (sy.etat === 'preparee' || sy.etat === 'a_preparer')) {
+      const quoi = sy.etat === 'preparee' ? 'Sa séance Codex déjà préparée' : 'Sa ligne au plan'
+      if (!confirm(
+        `Couper la synthèse de « ${sy.contenuTitre} » pour ${instance.classeNom} ?\n\n` +
+        `${quoi} n'est PAS détruite : elle est mise en sourdine et revient telle quelle si tu rouvres le cours.`,
+      )) return
+    }
+    void lancer(`synth-${sy.contenuId}`, async () => {
+      const res = await basculerSyntheseCours(instance.pcId, sy.contenuId, !sy.ouverte || sy.etat === 'annulee')
+      return { error: res.error }
+    })
   }
 
   function retirerCreneau(el: ElementInstance) {
@@ -137,6 +160,88 @@ export default function GrilleInstance({ instance, cibles }: {
         : 'bg-parchemin-fonce text-encre-douce'
   const badgeLabel = (b: ElementInstance['badge']) =>
     b === 'Section' ? '§' : b === 'Livre' ? '📖' : b
+
+  // LA LIGNE DE SYNTHÈSE, sous le dernier chapitre de son cours. Elle porte DEUX
+  // informations qu'il ne faut pas confondre : l'INTENTION (ouverte/coupée, le liseré et
+  // le bouton) et le FAIT (à préparer / préparée / faite / retirée, le jeton). C'est leur
+  // écart qui rend la sourdine lisible — « coupée » + « en sourdine » dit à la fois que
+  // rien ne s'affichera ailleurs et que rien n'a été détruit.
+  function rendreSynthese(sy: SyntheseInstance) {
+    const fige = sy.etat === 'lancee'
+    const enSourdine = !sy.ouverte && (sy.etat === 'a_preparer' || sy.etat === 'preparee' || sy.etat === 'annulee')
+    const empeche = !instance.syntheseReglable
+      ? 'Migration « synthese_ouverture_par_cours.sql » pas encore jouée sur cette base.'
+      : !instance.aPlanEvaluation
+        ? `${instance.classeNom} n'a pas de plan d'évaluation : la synthèse n'aurait nulle part où vivre.`
+        : null
+    const jeton = fige ? { t: 'faite en classe', c: 'bg-parchemin-fonce text-muet' }
+      : enSourdine ? { t: sy.etat === 'annulee' ? 'retirée, en sourdine' : 'en sourdine', c: 'bg-parchemin-fonce text-muet' }
+        : !sy.ouverte ? null
+          : sy.etat === 'preparee' ? { t: 'préparée', c: 'bg-ok-teinte text-ok' }
+            : sy.etat === 'annulee' ? { t: 'retirée du plan', c: 'bg-retard-teinte text-retard' }
+              : { t: 'à préparer', c: 'bg-attention-teinte text-attention' }
+    // ⚠️ LA LARGEUR PLANCHER DU TITRE EST CE QUI FAIT LE REPLI, et elle est MESURÉE.
+    // Mesuré en prod le 01/09 : un titre de cours fait 31 et 34 caractères, et la ligne
+    // « fin de « Nommer: Esprit, langage et réalité » » demande 237 px. À 375 px, les
+    // parties fixes (jeton d'état + date + bouton) en laissent 297 en tout.
+    // ⛔ Première version, `flex-1 min-w-0` : le titre se laissait écraser à **12 px** —
+    //    rien ne débordait, `tsc` et 2075 tests étaient verts, et la ligne était
+    //    ILLISIBLE au téléphone. `flex-wrap` ne replie rien tant qu'un enfant accepte de
+    //    rétrécir : c'est le `min-w-[12rem]` qui force le jeton et la date à la ligne
+    //    suivante, et rend au titre ses 237 px entiers.
+    // ⭐ Et le RETRAIT lui-même est conditionnel (`ml-2 sm:ml-6`) : les 24 px d'indentation
+    //    qui rendent la ligne « fille » du cours sur un écran large valaient, au
+    //    téléphone, trois caractères du titre. Le retrait de 8 px suffit à la même
+    //    lecture là où la place manque.
+    // (Mesuré à nouveau après correction : 375 → 2 lignes et titre ENTIER ; 768 et 1280 →
+    //  une seule ligne, aucun rognage.)
+    return (
+      <li
+        key={`synth-${sy.contenuId}`}
+        className={`ml-2 sm:ml-6 flex flex-wrap items-center gap-x-2 gap-y-1 rounded border-l-2 pl-2 pr-1.5 py-1 ${
+          sy.ouverte ? 'border-famille-eval' : 'border-bordure'}`}
+      >
+        <span
+          className={`font-ui text-[10px] px-1.5 py-0.5 rounded flex-shrink-0 ${
+            sy.ouverte ? 'bg-famille-eval/15 text-famille-eval' : 'bg-parchemin-fonce text-muet'}`}
+        >
+          Synthèse
+        </span>
+        <span className={`font-corps text-sm flex-1 min-w-[12rem] truncate ${sy.ouverte ? 'text-encre-douce' : 'text-muet'}`}>
+          fin de « {sy.contenuTitre} »
+        </span>
+        {jeton && (
+          <span className={`font-ui text-[10px] px-1.5 py-0.5 rounded flex-shrink-0 ${jeton.c}`}>{jeton.t}</span>
+        )}
+        {sy.date && (
+          <span
+            className="font-ui text-xs text-muet flex-shrink-0"
+            title={sy.ouverte ? undefined : 'Date qu’aurait cette synthèse si tu ouvrais le cours'}
+          >
+            {sy.ouverte ? 'pour le ' : ''}{fmtJour(sy.date)}
+          </span>
+        )}
+        {fige ? (
+          <span className="font-ui text-xs text-muet-clair flex-shrink-0">lancée — ne se coupe plus</span>
+        ) : (
+          <button
+            onClick={() => basculerSynthese(sy)}
+            disabled={occupe || empeche != null}
+            title={empeche ?? (sy.ouverte
+              ? 'Couper : la synthèse ne s\'affichera plus nulle part, mais rien n\'est détruit'
+              : 'Ouvrir : crée la synthèse de fin de ce cours pour cette classe')}
+            className={`font-ui text-xs flex-shrink-0 disabled:opacity-40 ${
+              sy.ouverte && sy.etat !== 'annulee'
+                ? 'text-muet hover:text-retard'
+                : 'text-encre-douce hover:text-encre'}`}
+          >
+            {chargement === `synth-${sy.contenuId}` ? '…'
+              : sy.ouverte ? (sy.etat === 'annulee' ? 'Recréer' : 'Couper') : 'Ouvrir'}
+          </button>
+        )}
+      </li>
+    )
+  }
 
   // Semaines d'enseignement laissées libres AVANT une semaine donnée (différence de
   // décalage avec la semaine précédente) — c'est la place qu'un autre parcours occupe.
@@ -245,6 +350,10 @@ export default function GrilleInstance({ instance, cibles }: {
         {instance.semaines.map((sem, i) => {
           const enCoursSem = instance.semaineCourante != null && sem.semaine <= instance.semaineCourante
           const libres = libresAvant(sem, i)
+          const synthParCreneau = new Map(sem.syntheses.map(sy => [sy.creneauId, sy]))
+          const dernierIdxParCreneau = new Map<string, number>()
+          sem.elements.forEach((e, idx) => dernierIdxParCreneau.set(e.creneauId, idx))
+          const orphelines = sem.syntheses.filter(sy => !dernierIdxParCreneau.has(sy.creneauId))
           return (
             <div key={sem.semaine}>
               {/* Semaines d'enseignement laissées à un AUTRE parcours. */}
@@ -336,14 +445,21 @@ export default function GrilleInstance({ instance, cibles }: {
                   </div>
                 )}
 
-                {sem.elements.length > 0 && (
+                {(sem.elements.length > 0 || sem.syntheses.length > 0) && (
                   <ul className="px-3 pb-2 space-y-1">
-                    {sem.elements.map(el => {
+                    {sem.elements.map((el, idxEl) => {
                       const freres = sem.elements.filter(f => f.creneauId === el.creneauId && f.semaineReelle === el.semaineReelle)
                       const idxFrere = freres.findIndex(f => f.id === el.id)
                       const enCours = enCoursSem && el.vuAt == null
+                      // « Juste à côté du dernier chapitre d'un cours » : la synthèse se
+                      // pose sous le DERNIER élément affiché de son créneau porteur dans
+                      // cette semaine — pas en bas du bloc, où elle perdrait son cours.
+                      const suit = idxEl === dernierIdxParCreneau.get(el.creneauId)
+                        ? synthParCreneau.get(el.creneauId)
+                        : undefined
                       return (
-                        <li key={el.id} className="flex items-center gap-2 rounded px-1.5 py-1 hover:bg-parchemin-fonce/60">
+                        <Fragment key={el.id}>
+                        <li className="flex items-center gap-2 rounded px-1.5 py-1 hover:bg-parchemin-fonce/60">
                           <input
                             type="checkbox"
                             checked={el.vuAt != null}
@@ -401,8 +517,14 @@ export default function GrilleInstance({ instance, cibles }: {
                             ✕
                           </button>
                         </li>
+                        {suit && rendreSynthese(suit)}
+                        </Fragment>
                       )
                     })}
+                    {/* Un cours dont le créneau porteur n'a aucun élément affiché cette
+                        semaine (chapitres tous déplacés ailleurs) : sa synthèse se range
+                        en fin de bloc plutôt que de disparaître. */}
+                    {orphelines.map(rendreSynthese)}
                   </ul>
                 )}
               </div>
