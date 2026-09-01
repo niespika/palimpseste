@@ -8,6 +8,8 @@ import BoutonGenererCartes from '../BoutonGenererCartes'
 import { avancementVuParContenu, colonneCible, resoudreCible } from '@/utils/quazian-cibles'
 import { lignesEtatVu, type CarteAncree } from '@/utils/quazian-visibilite'
 import { classesAvecModule } from '@/utils/acces'
+import { plafondValide } from '@/utils/quazian-quotas'
+import type { Parametres } from '@/utils/quazian-params'
 
 async function actionAjouter(formData: FormData): Promise<void> {
   'use server'
@@ -49,14 +51,16 @@ export default async function CibleCartesPage({
   // n'annonce que les classes AYANT Quazian.
   const admin = createAdminClient()
   const { data: moduleData } = await supabase.from('modules').select('id').eq('slug', 'quazian').maybeSingle()
-  const [{ data: sections }, avancement, classesQuazian] = await Promise.all([
+  const [{ data: sections }, avancement, classesQuazian, { data: reglages }] = await Promise.all([
     cible.bras === 'contenu'
       ? supabase.from('scriptorium_contenu_sections')
           .select('id, ordre, titre').eq('contenu_id', cibleId).order('ordre', { ascending: true })
       : Promise.resolve({ data: [] as Record<string, unknown>[] }),
     cible.bras === 'contenu' ? avancementVuParContenu(admin, [cibleId]) : Promise.resolve(new Map()),
     moduleData ? classesAvecModule(supabase, moduleData.id as string) : Promise.resolve([]),
+    supabase.from('quazian_parametres').select('valeur').eq('cle', 'global').maybeSingle(),
   ])
+  const plafond = plafondValide((reglages?.valeur as Partial<Parametres> | null)?.plafond_cartes)
   const titreSection = new Map((sections ?? []).map(s => [s.id as string, s.titre as string]))
   const nomClasse = new Map(classesQuazian.map(c => [c.id, c.nom]))
 
@@ -135,8 +139,16 @@ export default async function CibleCartesPage({
             : cible.genre === 'texte'
               ? 'Un texte source ne donne qu’1 à 2 cartes — l’essentiel du passage.'
               : titreSection.size > 0
-                ? `Cours découpé en ${titreSection.size} sous-sections : la génération les décortique une par une, et chaque carte apparaîtra au « vu » de SA sous-section.`
-                : 'Un cours se décortique en cartes atomiques. Non découpé, ses cartes apparaissent dès que le cours est entamé.'}
+                ? `Cours découpé en ${titreSection.size} sous-sections : la génération les décortique une par une — chaque carte apparaîtra au « vu » de SA sous-section — et elles se partagent un plafond de ${plafond} cartes pour tout le cours, au prorata de leur longueur.`
+                : `Un cours se décortique en cartes atomiques, ${plafond} au plus. Non découpé, ses cartes apparaissent dès que le cours est entamé.`}
+          {cible.genre !== 'texte' && cible.longueurTexte > 0 && (
+            <>
+              {' '}Un cours court en reçoit moins.{' '}
+              <Link href="/prof/quazian/parametres?vue=generation" className="underline hover:text-encre-douce">
+                Régler le plafond
+              </Link>.
+            </>
+          )}
         </p>
         <BoutonGenererCartes cibleId={cibleId} dejaDesCartes={(toutes ?? []).length > 0} />
       </div>

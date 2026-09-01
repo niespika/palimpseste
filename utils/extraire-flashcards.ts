@@ -18,14 +18,17 @@ export interface FlashcardSuggestion {
 
 export const PROMPT_SYSTEME = `Tu es un assistant spécialisé dans la création de flashcards pour des cours de philosophie au lycée (terminale et première).
 
-RÈGLE ABSOLUE : une carte = une seule chose à récupérer. Principe d'information minimale.
-- Décompose toujours une entité en plusieurs cartes atomiques (ex. « Nietzsche » → dates, courant, œuvre majeure, thèse cardinale = 4 cartes distinctes).
-- JAMAIS de carte contenant une liste ou une énumération. Si tu veux citer plusieurs éléments, fais une carte par élément.
+PLAFOND — RÈGLE ABSOLUE : chaque demande t'indique un nombre MAXIMAL de cartes. Tu ne le dépasses JAMAIS. En rendre moins est toujours permis, et souvent préférable : mieux vaut 6 cartes que l'élève retiendra que 15 qu'il survolera.
+
+TU CHOISIS, TU NE COUVRES PAS TOUT. Le plafond n'est pas un objectif à remplir : c'est une limite. Garde ce qu'un élève DOIT savoir pour composer — la définition d'un concept, la thèse cardinale d'un auteur, une distinction structurante. Écarte les exemples, les transitions, les reformulations, les nuances de second rang, et tout ce qui se déduit d'une carte déjà écrite.
+
+ATOMICITÉ : une carte = une seule chose à récupérer (principe d'information minimale).
+- Jamais de carte contenant une liste ou une énumération. Si plusieurs éléments comptent, garde le plus important — l'atomicité n'autorise PAS à multiplier les cartes au-delà du plafond.
 - Préfère le format "cloze" (texte à trous avec {{…}}) quand c'est naturel.
 - Quatre types possibles : philosophe, concept, mouvement, these.
 - concept_tag : un mot-clé court et précis (ex. "Nietzsche", "volonté de puissance", "nihilisme").
 
-Réponds UNIQUEMENT avec un tableau JSON valide, sans texte autour. Format :
+Réponds UNIQUEMENT avec un tableau JSON valide, sans texte autour, et d'AU PLUS le nombre de cartes demandé. Format :
 [
   {
     "type": "philosophe" | "concept" | "mouvement" | "these",
@@ -58,22 +61,35 @@ Réponds UNIQUEMENT avec un tableau JSON valide (1 ou 2 éléments MAXIMUM), san
   }
 ]`
 
+/**
+ * Cartes d'un COURS (ou d'une sous-section de cours), plafonnées à `max`.
+ *
+ * ⚠️ Le plafond est porté DEUX fois : dans le prompt (le modèle peut choisir) et
+ * dans le code (`slice`, car il déborde). Avant ce garde-fou, la consigne était
+ * « génère toutes les flashcards atomiques pertinentes » et rien ne bornait la
+ * sortie : un cours de sept pages découpé en 12 sous-sections rendait ~150 cartes
+ * à trier à la main. Le calcul de `max` vit dans `utils/quazian-quotas.ts`.
+ */
 export async function extraireFlashcards(
   texte: string,
-  labelUnite: string
+  labelUnite: string,
+  max: number
 ): Promise<FlashcardSuggestion[]> {
+  if (max <= 0) return []
   const client = new Anthropic()
 
   const textreTronque = texte.length > 12000 ? texte.slice(0, 12000) + '\n[texte tronqué]' : texte
 
   const message = await client.messages.create({
     model: MODELE,
-    max_tokens: 4096,
+    // ~120 tokens par carte, avec de la marge : le budget suit le plafond au lieu
+    // d'ouvrir 4096 tokens pour trois cartes.
+    max_tokens: Math.min(4096, 512 + max * 160),
     system: PROMPT_SYSTEME,
     messages: [
       {
         role: 'user',
-        content: `Voici le contenu de l'unité « ${labelUnite} ». Génère toutes les flashcards atomiques pertinentes pour réviser ce cours.\n\n---\n\n${textreTronque}`,
+        content: `Voici le contenu de « ${labelUnite} ». Génère AU PLUS ${max} flashcard${max > 1 ? 's' : ''} — les plus essentielles pour réviser ce cours, pas un décorticage exhaustif. Moins que ${max} est acceptable si le texte ne porte pas davantage d'essentiel.\n\n---\n\n${textreTronque}`,
       },
     ],
   })
@@ -91,7 +107,7 @@ export async function extraireFlashcards(
   if (!match) throw new Error('Réponse IA non parseable')
 
   const cartes: FlashcardSuggestion[] = JSON.parse(match[0])
-  return cartes
+  return cartes.slice(0, max)
 }
 
 // Génère AU PLUS `max` cartes (défaut 2) pour UN texte source. Le plafond est

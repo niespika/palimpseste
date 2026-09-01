@@ -17,7 +17,10 @@ export default function BoutonGenererCartes({ cibleId, dejaDesCartes }: { cibleI
     try {
       const res = await genererCartes(cibleId)
       if ('error' in res && res.error) { setErreur(true); setMessage(res.error); return }
-      setMessage(`+${res.nb} carte${(res.nb ?? 0) > 1 ? 's' : ''} à valider`)
+      const nb = res.nb ?? 0
+      // Dire le plafond quand il a mordu : sinon « +25 » ressemble à un hasard.
+      const atteint = res.plafond != null && nb >= res.plafond
+      setMessage(`+${nb} carte${nb > 1 ? 's' : ''} à valider${atteint ? ` — plafond de ${res.plafond} atteint` : ''}`)
       router.refresh()
     } catch {
       // Fail-visible : une action serveur qui lève rend la main au lieu de figer

@@ -5,6 +5,8 @@ import { createClient } from '@/utils/supabase/server'
 import { extraireFlashcards, extraireFlashcardsTexte, genererVerso, type FlashcardSuggestion } from '@/utils/extraire-flashcards'
 import { colonneCible, refCible, resoudreCible, type CibleQuazian } from '@/utils/quazian-cibles'
 import { normaliserRetours } from '@/utils/passation/transcription-calcul'
+import { plafondValide, quotasDesLots } from '@/utils/quazian-quotas'
+import type { Parametres } from '@/utils/quazian-params'
 
 async function verifierProf() {
   const supabase = await createClient()
@@ -53,6 +55,17 @@ interface LotGeneration {
   texteSource: boolean
   /** Sous-section d'origine — null = grain contenu. */
   sectionId: string | null
+}
+
+/**
+ * Le plafond du prof, lu en base. `quazian_parametres.valeur` est un `jsonb`
+ * partagé avec les paramètres de notation : rien à migrer, la clé manque
+ * simplement dans les lignes écrites avant ce garde-fou.
+ */
+async function plafondDuProf(supabase: Awaited<ReturnType<typeof createClient>>): Promise<number> {
+  const { data } = await supabase
+    .from('quazian_parametres').select('valeur').eq('cle', 'global').maybeSingle()
+  return plafondValide((data?.valeur as Partial<Parametres> | null)?.plafond_cartes)
 }
 
 async function corpusDeLaCible(
@@ -143,15 +156,20 @@ export async function genererCartes(cibleId: string) {
     return { error: `Aucun texte dans « ${cible.label} ». Ajoute son contenu dans le Scriptorium avant de générer.` }
   }
 
+  const plafond = await plafondDuProf(supabase)
+  const quotas = quotasDesLots(lots, plafond)
+
   const ancrage = refCible(cible)
   const cartes: Record<string, unknown>[] = []
   try {
-    for (const lot of lots) {
-      // Un appel par lot : le plafond 1-2 cartes est garanti PAR texte source, et
-      // chaque sous-section est décortiquée pour elle-même.
+    for (const [i, lot] of lots.entries()) {
+      // Un appel par lot, chacun avec SON quota — et pas d'appel du tout quand le
+      // quota est nul (cours découpé en plus de sous-sections que le plafond).
+      const max = quotas[i]
+      if (max <= 0) continue
       const suggestions: FlashcardSuggestion[] = lot.texteSource
-        ? await extraireFlashcardsTexte(lot.texte, lot.label, 2)
-        : await extraireFlashcards(lot.texte, lot.label)
+        ? await extraireFlashcardsTexte(lot.texte, lot.label, max)
+        : await extraireFlashcards(lot.texte, lot.label, max)
       for (const s of suggestions) {
         cartes.push({
           ...ancrage,
@@ -187,7 +205,7 @@ export async function genererCartes(cibleId: string) {
 
   revalidatePath('/prof/quazian')
   revalidatePath(`/prof/quazian/${cibleId}`)
-  return { success: true, nb: cartes.length }
+  return { success: true, nb: cartes.length, plafond }
 }
 
 // ── Vie d'une carte ──────────────────────────────────────────────────────────
