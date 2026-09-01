@@ -9,6 +9,7 @@ import {
   resoudreAncre,
   mapperParcours,
   type SemestreFrise,
+  type Decalages,
 } from '@/utils/frise-enseignement'
 import type { Holiday } from '@/types/calendrier'
 
@@ -62,10 +63,13 @@ export async function construireFrise(dateDebut: string) {
 }
 
 // Aperçu complet : semaine du parcours → date réelle + statut, snap, avis/blocage.
-export async function resoudreFrisePourDate(dateDebut: string, nbSemaines: number): Promise<ApercuFrise> {
+// `decalages` (optionnel) = alternance de ce parcours avec un autre de la classe.
+export async function resoudreFrisePourDate(
+  dateDebut: string, nbSemaines: number, decalages?: Decalages | null,
+): Promise<ApercuFrise> {
   const friseResult = await construireFrise(dateDebut)
   const { ancreIdx, avis: avisAncre } = resoudreAncre(friseResult, dateDebut)
-  const map = mapperParcours(friseResult, ancreIdx, nbSemaines)
+  const map = mapperParcours(friseResult, ancreIdx, nbSemaines, decalages)
 
   const semaines: ApercuSemaine[] = map.map(c =>
     c.statut === 'resolue'
@@ -109,6 +113,7 @@ export interface LigneAssignation {
   classeId: string
   nom: string
   assigned: boolean
+  parcoursClasseId: string | null // id d'assignation — cible du parcours de la classe
   dateDebut: string | null
   apercu: ApercuFrise | null // null si assigné sans date
   snapshot: HoraireSnapshot | null // horaire publié figé (null si jamais publié)
@@ -119,7 +124,7 @@ export interface LigneAssignation {
 function libelleHoraire(s: ApercuSemaine): string {
   return s.statut === 'definie' ? (s.dateReelle ?? '?') : s.statut
 }
-function calculerDiffHoraire(snap: ApercuSemaine[], live: ApercuSemaine[]): DiffHoraire {
+export function calculerDiffHoraire(snap: ApercuSemaine[], live: ApercuSemaine[]): DiffHoraire {
   const snapParSem = new Map(snap.map(s => [s.semaine, s]))
   const liveParSem = new Map(live.map(s => [s.semaine, s]))
   // Union des numéros de semaine → signale aussi les semaines RETIRÉES (parcours
@@ -147,12 +152,22 @@ export async function chargerAssignationsAvecApercu(
   classes: { id: string; nom: string }[],
 ): Promise<LigneAssignation[]> {
   const supabase = await createClient()
-  const [{ data: liens }, { data: snaps }] = await Promise.all([
-    supabase.from('scriptorium_parcours_classes').select('classe_id, date_debut').eq('parcours_id', parcoursId),
+  // `decalages` lu à part et TOLÉRANT (comme les colonnes snapshot) : tant que
+  // parcours_decalages.sql n'est pas joué, la lecture échoue et l'aperçu retombe
+  // sur le mapping consécutif — l'assignation continue de fonctionner.
+  const [{ data: liens }, { data: snaps }, { data: decs }] = await Promise.all([
+    supabase.from('scriptorium_parcours_classes').select('id, classe_id, date_debut').eq('parcours_id', parcoursId),
     supabase.from('scriptorium_parcours_classes').select('classe_id, horaire_snapshot, snapshot_version, snapshot_genere_le').eq('parcours_id', parcoursId),
+    supabase.from('scriptorium_parcours_classes').select('classe_id, decalages').eq('parcours_id', parcoursId),
   ])
   const parClasse = new Map<string, string | null>()
-  for (const l of liens ?? []) parClasse.set(l.classe_id as string, (l.date_debut as string | null) ?? null)
+  const pcIdParClasse = new Map<string, string>()
+  for (const l of liens ?? []) {
+    parClasse.set(l.classe_id as string, (l.date_debut as string | null) ?? null)
+    pcIdParClasse.set(l.classe_id as string, l.id as string)
+  }
+  const decParClasse = new Map<string, Decalages>()
+  for (const d of decs ?? []) decParClasse.set(d.classe_id as string, (d.decalages as Decalages | null) ?? {})
   const snapParClasse = new Map<string, HoraireSnapshot>()
   for (const s of snaps ?? []) {
     if (s.horaire_snapshot) {
@@ -167,9 +182,13 @@ export async function chargerAssignationsAvecApercu(
   return Promise.all(classes.map(async c => {
     const assigned = parClasse.has(c.id)
     const dateDebut = assigned ? (parClasse.get(c.id) ?? null) : null
-    const apercu = dateDebut ? await resoudreFrisePourDate(dateDebut, nbSemaines) : null
+    const apercu = dateDebut ? await resoudreFrisePourDate(dateDebut, nbSemaines, decParClasse.get(c.id)) : null
     const snapshot = snapParClasse.get(c.id) ?? null
     const diff = snapshot && apercu ? calculerDiffHoraire(snapshot.semaines, apercu.semaines) : null
-    return { classeId: c.id, nom: c.nom, assigned, dateDebut, apercu, snapshot, diff }
+    return {
+      classeId: c.id, nom: c.nom, assigned,
+      parcoursClasseId: pcIdParClasse.get(c.id) ?? null,
+      dateDebut, apercu, snapshot, diff,
+    }
   }))
 }

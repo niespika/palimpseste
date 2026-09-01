@@ -3,20 +3,27 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
+import ChampDate from '@/app/prof/calendrier/config/ChampDate'
 import {
   marquerVu, marquerVuJusquA, deplacerElement, reordonnerElements,
   ajouterCreneauInstance, retirerCreneauInstance, reinitialiserInstance,
+  planifierInstance, decalerSemaineInstance, publierHoraire, ajusterNbSemainesParcours,
   type RefCreneau,
 } from './actions'
 import PickerContenu from './parcours/PickerContenu'
+import ApercuBloc, { fmtJour } from './parcours/ApercuBloc'
 import type { CiblesPicker } from './parcours/donnees'
-import type { InstanceDeClasse, ElementInstance } from './instance-serveur'
+import type { InstanceDeClasse, ElementInstance, SemaineInstance } from './instance-serveur'
 
-// GRILLE D'INSTANCE (RAG L3, SPEC §5.3) — le pilotage « vu » d'une classe : une
-// ligne par semaine (datée via l'aperçu, badge courante), les éléments à grain
-// fin avec leur case « vu », les gestes d'ajustement PAR CLASSE (déplacer,
-// réordonner, retirer, ajouter un créneau) et le marquage groupé. Rien ici ne
-// touche le modèle ni les autres classes. Esthétique provisoire (refonte Design).
+// GRILLE D'INSTANCE (RAG L3, SPEC §5.3) — le parcours D'UNE CLASSE. Trois choses y
+// vivent, et rien de tout cela ne touche le modèle ni les autres classes :
+//   · le PILOTAGE « vu » (le clic prof, à grain fin) ;
+//   · la PLANIFICATION — date de début et publication de l'horaire, arrivées ici
+//     depuis le panneau d'assignation du modèle : la grille datée est sous les yeux ;
+//   · les DÉCALAGES — insérer une semaine d'enseignement vide avant une semaine et
+//     toutes les suivantes, ce qui laisse la place à un AUTRE parcours de la classe.
+//     C'est ainsi que deux parcours s'ALTERNENT au lieu de se superposer.
+// Esthétique provisoire (refonte Design).
 
 export default function GrilleInstance({ instance, cibles }: {
   instance: InstanceDeClasse
@@ -25,16 +32,20 @@ export default function GrilleInstance({ instance, cibles }: {
   const router = useRouter()
   const [chargement, setChargement] = useState<string | null>(null) // id du geste en cours
   const [erreur, setErreur] = useState<string | null>(null)
+  const [avis, setAvis] = useState<string | null>(null)
   const [pickerSemaine, setPickerSemaine] = useState<number | null>(null)
 
   const retourClasse = `/prof/scriptorium?vue=classes&classe=${instance.classeId}`
+  const { planification: plan } = instance
 
-  async function lancer(cle: string, fn: () => Promise<{ error?: string }>) {
+  async function lancer(cle: string, fn: () => Promise<{ error?: string; avis?: string }>) {
     setErreur(null)
+    setAvis(null)
     setChargement(cle)
     const res = await fn()
     setChargement(null)
     if (res.error) { setErreur(res.error); return }
+    if (res.avis) setAvis(res.avis)
     router.refresh()
   }
 
@@ -88,6 +99,33 @@ export default function GrilleInstance({ instance, cibles }: {
     })
   }
 
+  // ── Planification ────────────────────────────────────────────────────────
+  function onSubmitDate(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault()
+    const fd = new FormData(e.currentTarget)
+    const date = (fd.get('dateDebut') as string) || null
+    void lancer('date', () => planifierInstance(instance.pcId, date))
+  }
+
+  function publier() {
+    void lancer('publier', () => publierHoraire(instance.pcId))
+  }
+
+  function decaler(semaine: number, delta: 1 | -1) {
+    void lancer(`dec-${semaine}`, () => decalerSemaineInstance(instance.pcId, semaine, delta))
+  }
+
+  function ajouterSemaine() {
+    if (instance.nbClassesDuParcours > 1 && !confirm(
+      `« ${instance.parcoursTitre} » passera à ${instance.nbSemaines + 1} semaines pour ` +
+      `${instance.nbClassesDuParcours} classes (la durée vit sur le modèle, pas sur la classe). Continuer ?`,
+    )) return
+    void lancer('plus-semaine', async () => {
+      const res = await ajusterNbSemainesParcours(instance.parcoursId, 1)
+      return { error: res.error }
+    })
+  }
+
   const ajouterRef = (semaine: number) => async (ref: RefCreneau): Promise<{ error?: string }> => {
     const res = await ajouterCreneauInstance(instance.pcId, semaine, ref)
     return { error: res.error }
@@ -100,6 +138,13 @@ export default function GrilleInstance({ instance, cibles }: {
   const badgeLabel = (b: ElementInstance['badge']) =>
     b === 'Section' ? '§' : b === 'Livre' ? '📖' : b
 
+  // Semaines d'enseignement laissées libres AVANT une semaine donnée (différence de
+  // décalage avec la semaine précédente) — c'est la place qu'un autre parcours occupe.
+  const libresAvant = (sem: SemaineInstance, i: number) =>
+    i === 0 ? 0 : sem.decalage - instance.semaines[i - 1].decalage
+
+  const occupe = chargement != null
+
   return (
     <div className="space-y-4" data-module="scriptorium">
       {/* ── En-tête ─────────────────────────────────────────────────────── */}
@@ -110,10 +155,13 @@ export default function GrilleInstance({ instance, cibles }: {
             Parcours de la classe — {instance.parcoursTitre}
           </h2>
           <p className="font-ui text-xs text-muet">
-            Le « vu » pilote ce que l’espace élève pourra approfondir. Ces réglages ne valent que pour {instance.classeNom}.
+            La date, les décalages et le « vu » ne valent que pour {instance.classeNom}.
           </p>
         </div>
-        <div className="flex items-center gap-3 flex-shrink-0 font-ui text-xs">
+        {/* `flex-wrap`, pas `flex-shrink-0` : à 375 px cette rangée débordait la page
+            de 22 px (mesuré). Elle se replie plutôt que de pousser un ascenseur
+            horizontal sur tout l'écran. */}
+        <div className="flex items-center gap-3 flex-wrap font-ui text-xs">
           {instance.semaineCourante != null && instance.semaineCourante > 0 && (
             <span className="text-muet">semaine courante : <b className="text-encre-douce">{instance.semaineCourante}</b>/{instance.nbSemaines}</span>
           )}
@@ -127,7 +175,7 @@ export default function GrilleInstance({ instance, cibles }: {
           </Link>
           <button
             onClick={reinitialiser}
-            disabled={chargement != null}
+            disabled={occupe}
             className="text-muet hover:text-retard disabled:opacity-50"
             title="Re-matérialiser l'instance depuis le modèle (destructif, double confirmation)"
           >
@@ -136,136 +184,247 @@ export default function GrilleInstance({ instance, cibles }: {
         </div>
       </div>
 
-      {!instance.datee && (
-        <div className="flex items-center gap-2 rounded-lg bg-attention-teinte border border-attention/30 px-3 py-2">
-          <span className="text-attention">⚠</span>
-          <span className="font-corps text-sm text-attention">
-            Instance non datée (ni date de début ni horaire publié) : impossible de résoudre la semaine courante — elle sera <b>exclue du RAG</b>. Pose une date dans l’onglet Parcours.
-          </span>
+      {/* ── Planification : la date vit ICI (elle a quitté le modèle) ────── */}
+      <div className={`rounded-lg border p-3 space-y-2 ${plan.dateDebut ? 'border-bordure bg-surface' : 'border-attention/40 bg-attention-teinte/30'}`}>
+        <div className="flex items-baseline justify-between gap-2 flex-wrap">
+          <span className="font-ui text-[11px] font-bold uppercase tracking-[0.1em] text-encre-douce">Calendrier de la classe</span>
+          {!plan.dateDebut && (
+            <span className="font-corps text-xs text-attention">
+              Sans date : la semaine courante est indéterminée et l’instance est <b>exclue du RAG</b>.
+            </span>
+          )}
         </div>
-      )}
+
+        <form onSubmit={onSubmitDate} className="flex items-end gap-2 flex-wrap">
+          <div className="flex-1 min-w-[190px]">
+            <label className="block font-ui text-[12px] text-muet mb-1">Début pour {instance.classeNom}</label>
+            <ChampDate name="dateDebut" defaultValue={plan.dateDebut ?? ''} ariaLabel={`Date de début du parcours pour ${instance.classeNom}`} />
+          </div>
+          <button
+            type="submit"
+            disabled={occupe}
+            className="font-ui text-[12px] font-semibold bg-bouton-parcours text-bouton-parcours-texte px-3 py-2 rounded-lg hover:opacity-90 disabled:opacity-50"
+          >
+            {chargement === 'date' ? '…' : plan.dateDebut ? 'Re-planifier' : 'Planifier'}
+          </button>
+          {plan.apercu && (
+            <button
+              type="button"
+              onClick={publier}
+              disabled={occupe}
+              className="font-ui text-[12px] font-semibold bg-bouton-parcours text-bouton-parcours-texte px-3 py-2 rounded-lg hover:opacity-90 disabled:opacity-50"
+            >
+              {chargement === 'publier' ? '…' : plan.snapshot ? 'Re-publier l’horaire' : 'Publier l’horaire'}
+            </button>
+          )}
+        </form>
+
+        {plan.apercu && plan.snapshot && (
+          <div className="space-y-1">
+            <p className="text-xs text-muet">
+              Horaire publié{plan.snapshot.genereLe ? ` le ${fmtJour(plan.snapshot.genereLe.slice(0, 10))}` : ''} (v{plan.snapshot.version}).
+            </p>
+            {plan.diff && plan.diff.nbChanges > 0 ? (
+              <p className="text-xs bg-attention-teinte text-attention px-2 py-1 rounded">
+                ⚠ {plan.diff.nbChanges} échéance(s) ont changé depuis la publication (calendrier modifié, ou décalage posé). Re-publie pour figer le nouvel horaire.
+              </p>
+            ) : (
+              <p className="text-xs text-ok">✓ Horaire à jour.</p>
+            )}
+          </div>
+        )}
+
+        {plan.apercu && <ApercuBloc apercu={plan.apercu} />}
+      </div>
 
       {erreur && <p className="text-retard text-sm">⚠ {erreur}</p>}
+      {avis && <p className="text-attention text-sm">{avis}</p>}
 
       {/* ── Semaines ────────────────────────────────────────────────────── */}
       <div className="space-y-2">
-        {instance.semaines.map(sem => {
+        {instance.semaines.map((sem, i) => {
           const enCoursSem = instance.semaineCourante != null && sem.semaine <= instance.semaineCourante
+          const libres = libresAvant(sem, i)
           return (
-            <div
-              key={sem.semaine}
-              className={`rounded-lg border ${sem.courante ? 'border-pigment/60 bg-pigment-teinte/20' : 'border-bordure bg-surface'}`}
-            >
-              <div className="flex items-center gap-2 px-3 py-2 flex-wrap">
-                <span className="font-ui text-sm font-medium text-encre">Semaine {sem.semaine}</span>
-                {sem.libelle && <span className="font-ui text-xs text-muet">— {sem.libelle}</span>}
-                {sem.courante && (
-                  <span className="font-ui text-[10px] uppercase tracking-wide bg-pigment text-surface px-1.5 py-0.5 rounded">courante</span>
-                )}
-                <span className="flex-1" />
-                {sem.elements.some(e => e.vuAt == null) && enCoursSem && (
+            <div key={sem.semaine}>
+              {/* Semaines d'enseignement laissées à un AUTRE parcours. */}
+              {libres > 0 && (
+                <p className="font-ui text-[11px] text-muet px-3 py-1">
+                  ⤶ {libres} semaine{libres > 1 ? 's' : ''} d’enseignement laissée{libres > 1 ? 's' : ''} à un autre parcours
+                </p>
+              )}
+              <div
+                className={`rounded-lg border ${sem.courante ? 'border-pigment/60 bg-pigment-teinte/20' : 'border-bordure bg-surface'}`}
+              >
+                <div className="flex items-center gap-2 px-3 py-2 flex-wrap">
+                  <span className="font-ui text-sm font-medium text-encre">Semaine {sem.semaine}</span>
+                  {sem.libelle && <span className="font-ui text-xs text-muet">— {sem.libelle}</span>}
+                  {sem.lundiApresPublication && (
+                    <span
+                      className="font-ui text-[10px] bg-attention-teinte text-attention px-1.5 py-0.5 rounded"
+                      title="La date ci-contre est celle de l'horaire PUBLIÉ, qui fait toujours foi. Re-publie pour figer la nouvelle."
+                    >
+                      → {fmtJour(sem.lundiApresPublication)} après re-publication
+                    </span>
+                  )}
+                  {sem.courante && (
+                    <span className="font-ui text-[10px] uppercase tracking-wide bg-pigment text-surface px-1.5 py-0.5 rounded">courante</span>
+                  )}
+                  {sem.occupee.map(o => (
+                    <span
+                      key={o.pcId}
+                      className="font-ui text-[10px] bg-attention-teinte text-attention px-1.5 py-0.5 rounded"
+                      title={`« ${o.parcoursTitre} » occupe aussi cette semaine d'enseignement (sa semaine ${o.semaine})`}
+                    >
+                      ⚠ aussi « {o.parcoursTitre} » sem. {o.semaine}
+                    </span>
+                  ))}
+                  <span className="flex-1" />
+
+                  {/* Décalage : le geste d'ALTERNANCE. La semaine 1 se déplace par la date. */}
+                  {sem.semaine > 1 && (
+                    <span className="flex items-center rounded border border-bordure overflow-hidden flex-shrink-0">
+                      <button
+                        onClick={() => decaler(sem.semaine, -1)}
+                        disabled={occupe || !sem.peutRapprocher}
+                        aria-label={`Rapprocher la semaine ${sem.semaine} d'une semaine d'enseignement`}
+                        className="font-ui text-xs text-muet hover:text-encre hover:bg-parchemin-fonce disabled:opacity-30 px-1.5 py-0.5"
+                        title={`Rapprocher la semaine ${sem.semaine} et les suivantes d'une semaine d'enseignement`}
+                      >
+                        −
+                      </button>
+                      <span className="font-ui text-[10px] text-muet-clair px-1 border-x border-bordure select-none">décaler</span>
+                      <button
+                        onClick={() => decaler(sem.semaine, 1)}
+                        disabled={occupe}
+                        aria-label={`Décaler la semaine ${sem.semaine} d'une semaine d'enseignement`}
+                        className="font-ui text-xs text-muet hover:text-encre hover:bg-parchemin-fonce disabled:opacity-30 px-1.5 py-0.5"
+                        title={`Décaler la semaine ${sem.semaine} et les suivantes d'une semaine d'enseignement (laisse la place à un autre parcours)`}
+                      >
+                        +
+                      </button>
+                    </span>
+                  )}
+
+                  {sem.elements.some(e => e.vuAt == null) && enCoursSem && (
+                    <button
+                      onClick={() => vuJusquA(sem.semaine)}
+                      disabled={occupe}
+                      className="font-ui text-xs text-encre-douce hover:text-encre disabled:opacity-50"
+                      title={`Marquer vus tous les éléments jusqu'à la semaine ${sem.semaine} incluse`}
+                    >
+                      ✓ vu jusqu’ici
+                    </button>
+                  )}
                   <button
-                    onClick={() => vuJusquA(sem.semaine)}
-                    disabled={chargement != null}
-                    className="font-ui text-xs text-encre-douce hover:text-encre disabled:opacity-50"
-                    title={`Marquer vus tous les éléments jusqu'à la semaine ${sem.semaine} incluse`}
+                    onClick={() => setPickerSemaine(pickerSemaine === sem.semaine ? null : sem.semaine)}
+                    className="font-ui text-xs text-encre-douce hover:text-encre"
                   >
-                    ✓ vu jusqu’ici
+                    {pickerSemaine === sem.semaine ? 'Fermer' : '+ Ajouter'}
                   </button>
-                )}
-                <button
-                  onClick={() => setPickerSemaine(pickerSemaine === sem.semaine ? null : sem.semaine)}
-                  className="font-ui text-xs text-encre-douce hover:text-encre"
-                >
-                  {pickerSemaine === sem.semaine ? 'Fermer' : '+ Ajouter'}
-                </button>
-              </div>
-
-              {pickerSemaine === sem.semaine && (
-                <div className="px-3 pb-3">
-                  <PickerContenu
-                    parcoursId={instance.parcoursId}
-                    semaine={sem.semaine}
-                    cibles={cibles}
-                    onClose={() => setPickerSemaine(null)}
-                    onAjouter={ajouterRef(sem.semaine)}
-                  />
                 </div>
-              )}
 
-              {sem.elements.length > 0 && (
-                <ul className="px-3 pb-2 space-y-1">
-                  {sem.elements.map(el => {
-                    const freres = sem.elements.filter(f => f.creneauId === el.creneauId && f.semaineReelle === el.semaineReelle)
-                    const idxFrere = freres.findIndex(f => f.id === el.id)
-                    const enCours = enCoursSem && el.vuAt == null
-                    const occupe = chargement != null
-                    return (
-                      <li key={el.id} className="flex items-center gap-2 rounded px-1.5 py-1 hover:bg-parchemin-fonce/60">
-                        <input
-                          type="checkbox"
-                          checked={el.vuAt != null}
-                          onChange={() => basculerVu(el)}
-                          disabled={occupe}
-                          aria-label={`Marquer « ${el.titre} » comme vu`}
-                          className="w-4 h-4 accent-pigment flex-shrink-0 cursor-pointer disabled:opacity-50"
-                        />
-                        <span className={`font-ui text-[10px] px-1.5 py-0.5 rounded flex-shrink-0 ${badgeClasse(el.badge)}`}>
-                          {badgeLabel(el.badge)}
-                        </span>
-                        <span className={`font-corps text-sm min-w-0 truncate ${el.vuAt != null ? 'text-encre' : 'text-encre-douce'}`}>
-                          {el.titre}
-                        </span>
-                        {enCours && (
-                          <span className="font-ui text-[10px] bg-attention-teinte text-attention px-1.5 py-0.5 rounded flex-shrink-0">en cours</span>
-                        )}
-                        {el.aRevoir && (
-                          <span className="font-ui text-[10px] bg-retard-teinte text-retard px-1.5 py-0.5 rounded flex-shrink-0">à revoir</span>
-                        )}
-                        <span className="flex-1" />
-                        {freres.length > 1 && (
-                          <span className="flex gap-0.5 flex-shrink-0">
-                            <button
-                              onClick={() => monterDescendre(el, freres, -1)}
-                              disabled={occupe || idxFrere <= 0}
-                              className="font-ui text-xs text-muet hover:text-encre disabled:opacity-30 px-0.5"
-                              aria-label="Monter"
-                            >↑</button>
-                            <button
-                              onClick={() => monterDescendre(el, freres, 1)}
-                              disabled={occupe || idxFrere >= freres.length - 1}
-                              className="font-ui text-xs text-muet hover:text-encre disabled:opacity-30 px-0.5"
-                              aria-label="Descendre"
-                            >↓</button>
+                {pickerSemaine === sem.semaine && (
+                  <div className="px-3 pb-3">
+                    <PickerContenu
+                      parcoursId={instance.parcoursId}
+                      semaine={sem.semaine}
+                      cibles={cibles}
+                      onClose={() => setPickerSemaine(null)}
+                      onAjouter={ajouterRef(sem.semaine)}
+                    />
+                  </div>
+                )}
+
+                {sem.elements.length > 0 && (
+                  <ul className="px-3 pb-2 space-y-1">
+                    {sem.elements.map(el => {
+                      const freres = sem.elements.filter(f => f.creneauId === el.creneauId && f.semaineReelle === el.semaineReelle)
+                      const idxFrere = freres.findIndex(f => f.id === el.id)
+                      const enCours = enCoursSem && el.vuAt == null
+                      return (
+                        <li key={el.id} className="flex items-center gap-2 rounded px-1.5 py-1 hover:bg-parchemin-fonce/60">
+                          <input
+                            type="checkbox"
+                            checked={el.vuAt != null}
+                            onChange={() => basculerVu(el)}
+                            disabled={occupe}
+                            aria-label={`Marquer « ${el.titre} » comme vu`}
+                            className="w-4 h-4 accent-pigment flex-shrink-0 cursor-pointer disabled:opacity-50"
+                          />
+                          <span className={`font-ui text-[10px] px-1.5 py-0.5 rounded flex-shrink-0 ${badgeClasse(el.badge)}`}>
+                            {badgeLabel(el.badge)}
                           </span>
-                        )}
-                        <select
-                          value={el.semaineReelle}
-                          onChange={e => deplacer(el, Number(e.target.value))}
-                          disabled={occupe}
-                          aria-label="Déplacer vers la semaine"
-                          className="font-ui text-xs border border-bordure rounded px-1 py-0.5 bg-surface text-encre-douce flex-shrink-0 disabled:opacity-50"
-                        >
-                          {Array.from({ length: instance.nbSemaines }, (_, i) => i + 1).map(k => (
-                            <option key={k} value={k}>sem. {k}</option>
-                          ))}
-                        </select>
-                        <button
-                          onClick={() => retirerCreneau(el)}
-                          disabled={occupe}
-                          className="font-ui text-xs text-muet hover:text-retard disabled:opacity-50 flex-shrink-0"
-                          title={`Retirer « ${el.creneauTitre} » (le créneau entier) de l'instance`}
-                        >
-                          ✕
-                        </button>
-                      </li>
-                    )
-                  })}
-                </ul>
-              )}
+                          <span className={`font-corps text-sm min-w-0 truncate ${el.vuAt != null ? 'text-encre' : 'text-encre-douce'}`}>
+                            {el.titre}
+                          </span>
+                          {enCours && (
+                            <span className="font-ui text-[10px] bg-attention-teinte text-attention px-1.5 py-0.5 rounded flex-shrink-0">en cours</span>
+                          )}
+                          {el.aRevoir && (
+                            <span className="font-ui text-[10px] bg-retard-teinte text-retard px-1.5 py-0.5 rounded flex-shrink-0">à revoir</span>
+                          )}
+                          <span className="flex-1" />
+                          {freres.length > 1 && (
+                            <span className="flex gap-0.5 flex-shrink-0">
+                              <button
+                                onClick={() => monterDescendre(el, freres, -1)}
+                                disabled={occupe || idxFrere <= 0}
+                                className="font-ui text-xs text-muet hover:text-encre disabled:opacity-30 px-0.5"
+                                aria-label="Monter"
+                              >↑</button>
+                              <button
+                                onClick={() => monterDescendre(el, freres, 1)}
+                                disabled={occupe || idxFrere >= freres.length - 1}
+                                className="font-ui text-xs text-muet hover:text-encre disabled:opacity-30 px-0.5"
+                                aria-label="Descendre"
+                              >↓</button>
+                            </span>
+                          )}
+                          <select
+                            value={el.semaineReelle}
+                            onChange={e => deplacer(el, Number(e.target.value))}
+                            disabled={occupe}
+                            aria-label="Déplacer vers la semaine"
+                            className="font-ui text-xs border border-bordure rounded px-1 py-0.5 bg-surface text-encre-douce flex-shrink-0 disabled:opacity-50"
+                          >
+                            {Array.from({ length: instance.nbSemaines }, (_, i2) => i2 + 1).map(k => (
+                              <option key={k} value={k}>sem. {k}</option>
+                            ))}
+                          </select>
+                          <button
+                            onClick={() => retirerCreneau(el)}
+                            disabled={occupe}
+                            className="font-ui text-xs text-muet hover:text-retard disabled:opacity-50 flex-shrink-0"
+                            title={`Retirer « ${el.creneauTitre} » (le créneau entier) de l'instance`}
+                          >
+                            ✕
+                          </button>
+                        </li>
+                      )
+                    })}
+                  </ul>
+                )}
+              </div>
             </div>
           )
         })}
+      </div>
+
+      {/* ── Allonger le parcours ────────────────────────────────────────── */}
+      <div className="flex items-center gap-3 flex-wrap border-t border-bordure pt-3">
+        <button
+          onClick={ajouterSemaine}
+          disabled={occupe || instance.nbSemaines >= 52}
+          className="font-ui text-[12px] font-semibold bg-bouton-parcours text-bouton-parcours-texte px-3 py-1.5 rounded-lg hover:opacity-90 disabled:opacity-50"
+        >
+          {chargement === 'plus-semaine' ? '…' : '＋ Ajouter une semaine'}
+        </button>
+        <span className="font-ui text-xs text-muet">
+          {instance.nbClassesDuParcours > 1
+            ? <>La durée vit sur le modèle : le parcours passera à {instance.nbSemaines + 1} semaines pour ses {instance.nbClassesDuParcours} classes.</>
+            : <>Le parcours passera à {instance.nbSemaines + 1} semaines. Pour seulement <i>prendre son temps</i> sur une semaine, décale la suivante d’un cran (+) plutôt que d’en ajouter une.</>}
+        </span>
       </div>
     </div>
   )

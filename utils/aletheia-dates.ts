@@ -220,7 +220,7 @@ async function chargerCreneauxEtAssignations(
   // snapshot n'existent pas (migration parcours_snapshot_horaire.sql non jouée) → repli.
   let assignData: Record<string, unknown>[] = []
   const withSnap = await admin.from('scriptorium_parcours_classes')
-    .select('id, parcours_id, date_debut, statut, horaire_snapshot, snapshot_version, snapshot_genere_le')
+    .select('id, parcours_id, date_debut, statut, horaire_snapshot, snapshot_version, snapshot_genere_le, decalages')
     .eq('classe_id', classeId).eq('statut', 'active')
   if (withSnap.error) {
     const noSnap = await admin.from('scriptorium_parcours_classes')
@@ -261,6 +261,7 @@ async function chargerCreneauxEtAssignations(
       nbSemaines: nbParParcours.get(pid) ?? 0,
       dateDebut: (a.date_debut as string | null) ?? null,
       snapshot: snap && Array.isArray(snap) && snap.length ? snap : null,
+      decalages: (a.decalages as Record<string, number> | null) ?? null,
     })
   }
 

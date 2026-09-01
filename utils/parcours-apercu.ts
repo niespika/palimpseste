@@ -9,7 +9,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 import {
   anneeScolaireDe, friseEnseignementContinue, resoudreAncre, mapperParcours,
-  type SemestreFrise, type FriseResult,
+  type SemestreFrise, type FriseResult, type Decalages,
 } from './frise-enseignement'
 import type { Holiday } from '../types/calendrier'
 
@@ -30,6 +30,10 @@ export interface AssignParcours {
   nbSemaines: number
   dateDebut: string | null
   snapshot: ApercuSemaine[] | null
+  // Décalages de CETTE assignation (alternance de deux parcours dans la classe).
+  // Absent / null = parcours consécutif — et c'est aussi ce que rend le repli des
+  // lecteurs quand la colonne `decalages` n'existe pas encore en base.
+  decalages?: Decalages | null
 }
 
 // Socle de frise d'une AY : les semestres non archivés + leurs vacances, réduits par le
@@ -75,9 +79,11 @@ export function memoSocleFrise(admin: SupabaseClient): (y: number) => Promise<Fr
 }
 
 // PUR — mappe un socle de frise vers l'aperçu d'un parcours démarrant à `dateDebut`.
-export function apercuDepuisSocle(frise: FriseResult, dateDebut: string, nbSemaines: number): ApercuSemaine[] {
+export function apercuDepuisSocle(
+  frise: FriseResult, dateDebut: string, nbSemaines: number, decalages?: Decalages | null,
+): ApercuSemaine[] {
   const { ancreIdx } = resoudreAncre(frise, dateDebut)
-  return mapperParcours(frise, ancreIdx, nbSemaines).map(c =>
+  return mapperParcours(frise, ancreIdx, nbSemaines, decalages).map(c =>
     c.statut === 'resolue'
       ? { semaine: c.k, dateReelle: c.dateDebutLundi, statut: 'definie' as const, semestreNom: c.semestreNom, pedaDansSemestre: c.pedagogicalNumber }
       : { semaine: c.k, dateReelle: null, statut: c.statut, semestreNom: null, pedaDansSemestre: null },
@@ -86,9 +92,11 @@ export function apercuDepuisSocle(frise: FriseResult, dateDebut: string, nbSemai
 
 // Aperçu frise (recalcul) pour une date de début — miroir de resoudreFrisePourDate mais
 // via `admin` (RLS) et ne renvoyant que l'ApercuSemaine[].
-export async function friseApercu(admin: SupabaseClient, dateDebut: string, nbSemaines: number): Promise<ApercuSemaine[]> {
+export async function friseApercu(
+  admin: SupabaseClient, dateDebut: string, nbSemaines: number, decalages?: Decalages | null,
+): Promise<ApercuSemaine[]> {
   const frise = await chargerSocleFrise(admin, anneeScolaireDe(dateDebut))
-  return apercuDepuisSocle(frise, dateDebut, nbSemaines)
+  return apercuDepuisSocle(frise, dateDebut, nbSemaines, decalages)
 }
 
 // Aperçu résolu d'une assignation : SNAPSHOT publié prioritaire, repli FRISE recalculée,
@@ -104,7 +112,7 @@ export async function construireApercuAssign(
   if (a.dateDebut) {
     const y = anneeScolaireDe(a.dateDebut)
     const frise = socleDe ? await socleDe(y) : await chargerSocleFrise(admin, y)
-    return { apercu: apercuDepuisSocle(frise, a.dateDebut, a.nbSemaines), source: 'frise' }
+    return { apercu: apercuDepuisSocle(frise, a.dateDebut, a.nbSemaines, a.decalages), source: 'frise' }
   }
   return null
 }

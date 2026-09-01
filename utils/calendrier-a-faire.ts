@@ -221,8 +221,14 @@ export async function tachesDeriveesDuCalendrier(joursAvant = 10): Promise<Tache
   // (pilotage prof, pas de surface élève) ; tolérant si les tables d'instance
   // n'existent pas encore (migration scriptorium_rag_l1.sql non jouée → data null).
   {
-    const { data: assigns } = await admin.from('scriptorium_parcours_classes')
-      .select('id, parcours_id, classe_id, date_debut, horaire_snapshot').eq('statut', 'active')
+    // Repli si `decalages` n'existe pas encore (migration parcours_decalages.sql
+    // non jouée) : le signal « non vus passés » continue, sur mapping consécutif.
+    const avecDec = await admin.from('scriptorium_parcours_classes')
+      .select('id, parcours_id, classe_id, date_debut, horaire_snapshot, decalages').eq('statut', 'active')
+    const assigns = avecDec.error
+      ? (await admin.from('scriptorium_parcours_classes')
+          .select('id, parcours_id, classe_id, date_debut, horaire_snapshot').eq('statut', 'active')).data
+      : avecDec.data
     const rows = (assigns ?? []) as Record<string, unknown>[]
     if (rows.length > 0) {
       const parcoursIds = [...new Set(rows.map((a) => a.parcours_id as string))]
@@ -244,6 +250,7 @@ export async function tachesDeriveesDuCalendrier(joursAvant = 10): Promise<Tache
           nbSemaines: meta.nb,
           dateDebut: (a.date_debut as string | null) ?? null,
           snapshot: snap && Array.isArray(snap) && snap.length ? snap : null,
+          decalages: (a.decalages as Record<string, number> | null) ?? null,
         }, socleDe)
         const courante = semaineCourante(res?.apercu ?? null, today)
         if (courante == null || courante <= 1) continue // rien de « passé » avant la semaine 2

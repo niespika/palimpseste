@@ -97,7 +97,7 @@ async function chargerParcoursActifsDeClasse(
 ): Promise<Array<{ pcId: string; parcoursId: string; titre: string; assign: AssignParcours }>> {
   let liens: Record<string, unknown>[] = []
   const withSnap = await admin.from('scriptorium_parcours_classes')
-    .select('id, parcours_id, date_debut, horaire_snapshot').eq('classe_id', classeId).eq('statut', 'active')
+    .select('id, parcours_id, date_debut, horaire_snapshot, decalages').eq('classe_id', classeId).eq('statut', 'active')
   if (withSnap.error) {
     const noSnap = await admin.from('scriptorium_parcours_classes')
       .select('id, parcours_id, date_debut').eq('classe_id', classeId).eq('statut', 'active')
@@ -124,6 +124,7 @@ async function chargerParcoursActifsDeClasse(
         parcoursId: pid, nbSemaines: m.nbSemaines,
         dateDebut: (l.date_debut as string | null) ?? null,
         snapshot: snap && Array.isArray(snap) && snap.length ? snap : null,
+        decalages: (l.decalages as Record<string, number> | null) ?? null,
       },
     })
   }

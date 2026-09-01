@@ -37,6 +37,101 @@ export interface FriseResult {
   avisBloquant?: boolean // configuration incohérente (chevauchement) → aperçu bloqué
 }
 
+/**
+ * DÉCALAGES d'une assignation parcours×classe — ce qui permet à DEUX PARCOURS
+ * d'une même classe de s'ALTERNER au lieu de se superposer.
+ *
+ * Par défaut, la semaine k d'un parcours occupe la k-ième semaine d'enseignement
+ * à partir de l'ancre : les semaines d'un parcours sont CONSÉCUTIVES. Un décalage
+ * insère des semaines d'enseignement VIDES (pour ce parcours-là) : la semaine k
+ * saute `d(k)` semaines de plus.
+ *
+ * Représentation (jsonb `scriptorium_parcours_classes.decalages`) : dictionnaire
+ * CLAIRSEMÉ `{ "4": 1, "5": 3 }` — clé = numéro de semaine du parcours, valeur =
+ * décalage CUMULÉ à partir de cette semaine (et non un pas). `{}` = consécutif,
+ * c'est-à-dire le comportement d'avant ce champ. La suite des valeurs est
+ * NON DÉCROISSANTE : deux semaines ne peuvent pas se croiser.
+ *
+ * Exemple du parcours A (5 sem.) alterné avec B (3 sem.) sur 8 semaines
+ * d'enseignement — A occupe 1,2,3,5,8 :  A.decalages = { "4": 1, "5": 3 }.
+ */
+export type Decalages = Record<string, number>
+
+/** Décalages → tableau DENSE d0..d(nb−1) (d[i] = décalage de la semaine i+1).
+ *  Tolérant : ignore les clés non entières, < 2 ou > nb, et les valeurs < 0 ou
+ *  non entières ; force la monotonie (une valeur qui reculerait est relevée). */
+export function densifierDecalages(dec: Decalages | null | undefined, nbSemaines: number): number[] {
+  const n = Math.max(0, Math.floor(nbSemaines))
+  const dense = new Array<number>(n).fill(0)
+  if (!dec || typeof dec !== 'object') return dense
+  const points: { k: number; v: number }[] = []
+  for (const [cle, val] of Object.entries(dec)) {
+    const k = Number(cle)
+    const v = Number(val)
+    if (!Number.isInteger(k) || k < 2 || k > n) continue
+    if (!Number.isInteger(v) || v < 0) continue
+    points.push({ k, v })
+  }
+  points.sort((a, b) => a.k - b.k)
+  let courant = 0
+  let iPoint = 0
+  for (let i = 0; i < n; i++) {
+    const k = i + 1
+    while (iPoint < points.length && points[iPoint].k === k) {
+      courant = Math.max(courant, points[iPoint].v) // monotonie forcée
+      iPoint++
+    }
+    dense[i] = courant
+  }
+  return dense
+}
+
+/** Tableau dense → dictionnaire clairsemé (n'écrit que les RUPTURES). */
+export function clairsemerDecalages(dense: number[]): Decalages {
+  const out: Decalages = {}
+  let precedent = 0
+  for (let i = 0; i < dense.length; i++) {
+    const v = Math.max(0, Math.floor(dense[i]))
+    if (i > 0 && v !== precedent) out[String(i + 1)] = v
+    precedent = v
+  }
+  return out
+}
+
+/** Décalage de la semaine k (1-indexée). 0 si aucun. */
+export function decalageDe(dec: Decalages | null | undefined, k: number, nbSemaines: number): number {
+  const dense = densifierDecalages(dec, nbSemaines)
+  return dense[k - 1] ?? 0
+}
+
+/**
+ * Décale la semaine `k` et TOUTES LES SUIVANTES de `delta` semaines
+ * d'enseignement (delta = +1 : insère une semaine vide avant k ; −1 : la retire).
+ * `refuse` est renseigné quand le geste ferait reculer k sur la semaine k−1
+ * (les semaines d'un parcours restent strictement ordonnées) ou passerait
+ * sous zéro. La semaine 1 ne se décale pas : c'est la date de début qui la porte.
+ */
+export function decalerDepuis(
+  dec: Decalages | null | undefined,
+  k: number,
+  delta: number,
+  nbSemaines: number,
+): { decalages: Decalages; refuse?: string } {
+  const dense = densifierDecalages(dec, nbSemaines)
+  if (!Number.isInteger(k) || k < 2 || k > nbSemaines) {
+    return {
+      decalages: clairsemerDecalages(dense),
+      refuse: 'La semaine 1 se déplace par la date de début, pas par un décalage.',
+    }
+  }
+  const plancher = dense[k - 2] // décalage de la semaine k−1
+  if (dense[k - 1] + delta < plancher) {
+    return { decalages: clairsemerDecalages(dense), refuse: `La semaine ${k} rattraperait la semaine ${k - 1}.` }
+  }
+  for (let i = k - 1; i < dense.length; i++) dense[i] += delta
+  return { decalages: clairsemerDecalages(dense) }
+}
+
 // Résultat du mapping d'une semaine de parcours (k) vers la frise.
 export type CreneauMap =
   | ({ statut: 'resolue'; k: number } & SemaineEnseignement)
@@ -188,11 +283,16 @@ export function resoudreAncre(
  * manquante pour distinguer
  *   'a_definir'       (même AY, semestre à créer — résoluble) de
  *   'non_planifiable' (au-delà de l'AY, frontière août — définitif).
+ *
+ * `decalages` (optionnel) rompt la consécutivité : la semaine k saute `d(k)`
+ * semaines d'enseignement de plus, ce qui laisse la place à un AUTRE parcours de
+ * la même classe. `{}` / omis ⇒ comportement d'origine, à l'identique.
  */
 export function mapperParcours(
   friseResult: FriseResult,
   ancreIdx: number | null,
-  nbSemaines: number
+  nbSemaines: number,
+  decalages?: Decalages | null
 ): CreneauMap[] {
   const { frise } = friseResult
   const out: CreneauMap[] = []
@@ -205,9 +305,10 @@ export function mapperParcours(
   for (const s of frise) parIndex.set(s.indexContinu, s)
   const derniere = frise[frise.length - 1]
   const ayFrise = anneeScolaireDe(frise[0].dateDebutLundi)
+  const dense = densifierDecalages(decalages, nbSemaines)
 
   for (let k = 1; k <= nbSemaines; k++) {
-    const idx = ancreIdx + (k - 1)
+    const idx = ancreIdx + (k - 1) + (dense[k - 1] ?? 0)
     const s = parIndex.get(idx)
     if (s) {
       out.push({ statut: 'resolue', k, ...s })

@@ -13,6 +13,7 @@ import {
   type PlageSection, type AncienElementVu,
 } from '@/utils/scriptorium-sections'
 import { resoudreFrisePourDate } from './parcours/frise-serveur'
+import { decalerDepuis, type Decalages } from '@/utils/frise-enseignement'
 import { lireGatePlanActif } from '@/utils/plan-exercices'
 import {
   hookSyntheseAjoutCreneau, hookSyntheseAssignClasse, hookSyntheseRetraitCreneau,
@@ -1859,6 +1860,182 @@ async function materialiserElementsPourCreneaux(
   return {}
 }
 
+// ── Décalages : ce qui permet à DEUX PARCOURS d'une classe de S'ALTERNER ──────
+// Par défaut les semaines d'un parcours sont consécutives ; un décalage insère des
+// semaines d'enseignement vides pour CE parcours-là, laissant la place à l'autre.
+// Lecture TOLÉRANTE : tant que `parcours_decalages.sql` n'est pas joué, on rend {}
+// et tout se comporte comme avant (mapping consécutif).
+async function lireDecalages(
+  supabase: SupabaseClient, parcoursId: string, classeId: string,
+): Promise<Decalages> {
+  const { data, error } = await supabase
+    .from('scriptorium_parcours_classes').select('decalages')
+    .eq('parcours_id', parcoursId).eq('classe_id', classeId).maybeSingle()
+  if (error) return {}
+  return (data?.decalages as Decalages | null) ?? {}
+}
+
+// Assignation + parcours d'un pcId, avec ses décalages (tolérants). Socle commun des
+// gestes du PARCOURS DE LA CLASSE (planifier, décaler, publier).
+async function lireInstance(supabase: SupabaseClient, pcId: string): Promise<{
+  pc: { id: string; parcoursId: string; classeId: string; dateDebut: string | null }
+  nbSemaines: number
+  decalages: Decalages
+} | { error: string }> {
+  const { data: pc } = await supabase
+    .from('scriptorium_parcours_classes')
+    .select('id, parcours_id, classe_id, date_debut').eq('id', pcId).maybeSingle()
+  if (!pc) return { error: 'Assignation introuvable.' }
+  const { data: parc } = await supabase
+    .from('scriptorium_parcours').select('nb_semaines, supprime_at')
+    .eq('id', pc.parcours_id as string).maybeSingle()
+  if (!parc || parc.supprime_at) return { error: 'Parcours introuvable.' }
+  const { data: dec, error: eDec } = await supabase
+    .from('scriptorium_parcours_classes').select('decalages').eq('id', pcId).maybeSingle()
+  return {
+    pc: {
+      id: pc.id as string,
+      parcoursId: pc.parcours_id as string,
+      classeId: pc.classe_id as string,
+      dateDebut: (pc.date_debut as string | null) ?? null,
+    },
+    nbSemaines: (parc.nb_semaines as number) ?? 0,
+    decalages: eDec ? {} : ((dec?.decalages as Decalages | null) ?? {}),
+  }
+}
+
+// Gardes communes à toute pose de date : une frise incohérente, une date hors
+// semestres ou un débordement hors année scolaire REFUSENT ; un débordement sur un
+// semestre à créer (même AY) passe avec avis. Règle unique — cf. décision 8 du SPEC.
+async function validerFenetre(
+  date: string, nbSemaines: number, decalages: Decalages,
+): Promise<{ avis?: string } | { error: string }> {
+  const ap = await resoudreFrisePourDate(date, nbSemaines, decalages)
+  if (ap.avisBloquant) {
+    return { error: ap.avis ?? 'Configuration des semestres incohérente — corrige-la dans le Calendrier.' }
+  }
+  if (ap.semaines.every(s => s.statut !== 'definie')) {
+    return { error: ap.avis ?? 'Cette date ne tombe dans aucun semestre défini de l’année scolaire.' }
+  }
+  if (ap.nbNonPlanifiable > 0) {
+    return {
+      error: `Ce parcours prolonge au-delà des semestres définis de l’année scolaire (${ap.nbNonPlanifiable} semaine(s) non planifiable(s)). Définis le semestre suivant, raccourcis le parcours, ou retire un décalage.`,
+    }
+  }
+  if (ap.nbADefinir > 0) {
+    return { avis: `${ap.nbADefinir} semaine(s) « à définir » : le parcours déborde sur un semestre non encore créé de l’année scolaire.` }
+  }
+  return {}
+}
+
+/**
+ * Pose (ou retire) la date de début DEPUIS LE PARCOURS DE LA CLASSE. C'est le geste
+ * qui a quitté le panneau d'assignation du modèle : assigner ne demande plus de date,
+ * on la pose ici, là où la grille datée est sous les yeux. `null` dé-planifie.
+ */
+export async function planifierInstance(
+  pcId: string, dateDebut: string | null,
+): Promise<{ success?: boolean; error?: string; avis?: string }> {
+  const { supabase } = await verifierProf()
+  if (!RE_UUID.test(pcId)) return { error: 'Identifiant invalide.' }
+  const inst = await lireInstance(supabase, pcId)
+  if ('error' in inst) return { error: inst.error }
+
+  const date = dateDebut && /^\d{4}-\d{2}-\d{2}$/.test(dateDebut) ? dateDebut : null
+  let avis: string | undefined
+  if (date) {
+    const v = await validerFenetre(date, inst.nbSemaines, inst.decalages)
+    if ('error' in v) return { error: v.error }
+    avis = v.avis
+  }
+
+  const { error } = await supabase.from('scriptorium_parcours_classes')
+    .update({ date_debut: date, updated_at: new Date().toISOString() }).eq('id', pcId)
+  if (error) return { error: error.message }
+  revalidatePath('/prof/scriptorium')
+  return { success: true, avis }
+}
+
+/**
+ * Décale la semaine `semaine` du parcours de la classe ET TOUTES LES SUIVANTES de
+ * `delta` semaines d'enseignement (+1 = insérer une semaine vide avant elle, −1 = la
+ * retirer). C'est LE geste d'alternance : la semaine libérée devient disponible pour
+ * un autre parcours de la même classe. Ne touche ni le modèle ni les autres classes.
+ */
+export async function decalerSemaineInstance(
+  pcId: string, semaine: number, delta: number,
+): Promise<{ success?: boolean; error?: string; avis?: string }> {
+  const { supabase } = await verifierProf()
+  if (!RE_UUID.test(pcId)) return { error: 'Identifiant invalide.' }
+  if (!Number.isInteger(semaine) || semaine < 1) return { error: 'Semaine invalide.' }
+  if (delta !== 1 && delta !== -1) return { error: 'Décalage invalide.' }
+  const inst = await lireInstance(supabase, pcId)
+  if ('error' in inst) return { error: inst.error }
+  if (semaine > inst.nbSemaines) return { error: `Le parcours n'a que ${inst.nbSemaines} semaines.` }
+
+  const { decalages, refuse } = decalerDepuis(inst.decalages, semaine, delta, inst.nbSemaines)
+  if (refuse) return { error: refuse }
+
+  // Un décalage allonge la fenêtre réelle : il peut pousser la fin hors des semestres
+  // définis. Même garde que la pose de date — sinon on planifie dans le vide.
+  let avis: string | undefined
+  if (inst.pc.dateDebut) {
+    const v = await validerFenetre(inst.pc.dateDebut, inst.nbSemaines, decalages)
+    if ('error' in v) return { error: v.error }
+    avis = v.avis
+  }
+
+  const { error } = await supabase.from('scriptorium_parcours_classes')
+    .update({ decalages, updated_at: new Date().toISOString() }).eq('id', pcId)
+  if (error) {
+    return { error: error.message.includes('decalages')
+      ? 'Le décalage des semaines demande la migration `parcours_decalages.sql` (pas encore jouée sur cette base).'
+      : error.message }
+  }
+  revalidatePath('/prof/scriptorium')
+  return { success: true, avis }
+}
+
+/**
+ * Ajoute (delta = +1) ou retire (−1) une semaine au parcours. ⚠️ `nb_semaines` vit sur
+ * le MODÈLE : le geste vaut pour TOUTES les classes qui suivent ce parcours — l'écran
+ * l'annonce (nbClassesDuParcours). Le retrait supprime les créneaux au-delà, comme
+ * `modifierParcours` : il exige donc une confirmation quand il y en a.
+ */
+export async function ajusterNbSemainesParcours(
+  parcoursId: string, delta: number, confirme = false,
+): Promise<{ success?: boolean; nbSemaines?: number; needsConfirm?: boolean; nbCreneauxAuDela?: number; error?: string }> {
+  const { supabase } = await verifierProf()
+  if (!RE_UUID.test(parcoursId)) return { error: 'Identifiant invalide.' }
+  if (delta !== 1 && delta !== -1) return { error: 'Ajustement invalide.' }
+
+  const { data: parc } = await supabase
+    .from('scriptorium_parcours').select('nb_semaines, supprime_at').eq('id', parcoursId).maybeSingle()
+  if (!parc || parc.supprime_at) return { error: 'Parcours introuvable.' }
+  const actuel = (parc.nb_semaines as number) ?? 1
+  const cible = actuel + delta
+  if (cible < 1) return { error: 'Un parcours dure au moins une semaine.' }
+  if (cible > 52) return { error: 'Un parcours ne peut pas dépasser 52 semaines.' }
+
+  if (delta < 0 && !confirme) {
+    const { count } = await supabase
+      .from('scriptorium_parcours_creneaux')
+      .select('id', { count: 'exact', head: true })
+      .eq('parcours_id', parcoursId).gt('semaine', cible)
+    if ((count ?? 0) > 0) return { needsConfirm: true, nbCreneauxAuDela: count ?? 0 }
+  }
+
+  const { error } = await supabase.from('scriptorium_parcours')
+    .update({ nb_semaines: cible, updated_at: new Date().toISOString() }).eq('id', parcoursId)
+  if (error) return { error: error.message }
+  if (delta < 0) {
+    await supabase.from('scriptorium_parcours_creneaux')
+      .delete().eq('parcours_id', parcoursId).gt('semaine', cible)
+  }
+  revalidatePath('/prof/scriptorium')
+  return { success: true, nbSemaines: cible }
+}
+
 // ── Assignation d'un parcours à une classe (+ date de début) — Parcours L5 ────
 // La date de début vit sur scriptorium_parcours_classes (PAR CLASSE). À la pose
 // d'une date, on résout la frise (AY dérivée de la date) : un débordement HORS
@@ -1881,7 +2058,10 @@ export async function assignerParcoursClasse(
 
   let avis: string | undefined
   if (date) {
-    const ap = await resoudreFrisePourDate(date, parc.nb_semaines as number)
+    // Les décalages déjà posés font partie de la fenêtre à valider : sans eux, une
+    // date acceptée ici pourrait pousser les dernières semaines hors année scolaire.
+    const ap = await resoudreFrisePourDate(
+      date, parc.nb_semaines as number, await lireDecalages(supabase, parcoursId, classeId))
     if (ap.avisBloquant) {
       return { bloque: true, error: ap.avis ?? 'Configuration des semestres incohérente — corrige-la dans le Calendrier avant de planifier.' }
     }
@@ -2260,24 +2440,20 @@ export async function retirerCreneauInstance(creneauId: string): Promise<{ error
 // pour signaler les décalages ultérieurs (édition du calendrier). Refuse un horaire
 // incomplet (non planifiable) ou une config semestres incohérente.
 // Nécessite la migration parcours_snapshot_horaire.sql (colonnes horaire_snapshot…).
+// Publie l'horaire d'une instance — DEPUIS LE PARCOURS DE LA CLASSE (l'argument est
+// l'id d'ASSIGNATION, plus le couple parcours×classe : la publication a suivi la date
+// dans son déménagement). Fige l'aperçu recalculé (frise × décalages) en snapshot.
 export async function publierHoraire(
-  parcoursId: string,
-  classeId: string,
+  parcoursClasseId: string,
 ): Promise<{ success?: boolean; error?: string }> {
   const { supabase } = await verifierProf()
-  if (!RE_UUID.test(parcoursId) || !RE_UUID.test(classeId)) return { error: 'Identifiant invalide.' }
+  if (!RE_UUID.test(parcoursClasseId)) return { error: 'Identifiant invalide.' }
 
-  const { data: parc } = await supabase
-    .from('scriptorium_parcours').select('nb_semaines, supprime_at').eq('id', parcoursId).maybeSingle()
-  if (!parc || parc.supprime_at) return { error: 'Parcours introuvable.' }
+  const inst = await lireInstance(supabase, parcoursClasseId)
+  if ('error' in inst) return { error: inst.error }
+  if (!inst.pc.dateDebut) return { error: 'Pose d’abord une date de début.' }
 
-  const { data: lien } = await supabase
-    .from('scriptorium_parcours_classes').select('date_debut')
-    .eq('parcours_id', parcoursId).eq('classe_id', classeId).maybeSingle()
-  if (!lien) return { error: 'Assigne d’abord ce parcours à la classe (et pose une date).' }
-  if (!lien.date_debut) return { error: 'Pose d’abord une date de début.' }
-
-  const ap = await resoudreFrisePourDate(lien.date_debut as string, parc.nb_semaines as number)
+  const ap = await resoudreFrisePourDate(inst.pc.dateDebut, inst.nbSemaines, inst.decalages)
   if (ap.avisBloquant) return { error: 'Configuration des semestres incohérente — corrige-la avant de publier.' }
   if (ap.semaines.every(s => s.statut !== 'definie')) {
     return { error: 'Cette date ne tombe dans aucun semestre défini — impossible de publier un horaire vide.' }
@@ -2287,11 +2463,9 @@ export async function publierHoraire(
   }
 
   // snapshot_version lu À PART (tolérant) : si la migration n'est pas jouée, cette lecture
-  // échoue → version=1, et c'est l'UPDATE ci-dessous qui signalera l'absence de colonnes
-  // (plutôt qu'un faux « pas assigné » si on le lisait avec date_debut).
+  // échoue → version=1, et c'est l'UPDATE ci-dessous qui signalera l'absence de colonnes.
   const { data: snapRow } = await supabase
-    .from('scriptorium_parcours_classes').select('snapshot_version')
-    .eq('parcours_id', parcoursId).eq('classe_id', classeId).maybeSingle()
+    .from('scriptorium_parcours_classes').select('snapshot_version').eq('id', parcoursClasseId).maybeSingle()
   const version = ((snapRow?.snapshot_version as number | null) ?? 0) + 1
   const { error } = await supabase
     .from('scriptorium_parcours_classes')
@@ -2301,7 +2475,7 @@ export async function publierHoraire(
       snapshot_genere_le: new Date().toISOString(),
       updated_at: new Date().toISOString(),
     })
-    .eq('parcours_id', parcoursId).eq('classe_id', classeId)
+    .eq('id', parcoursClasseId)
   if (error) return { error: error.message }
   revalidatePath('/prof/scriptorium')
   return { success: true }

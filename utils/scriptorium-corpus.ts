@@ -312,7 +312,7 @@ export async function chargerMatiereClasse(
   // 1. Assignations ACTIVES de la classe (tolérant si colonnes snapshot absentes).
   let assignData: Record<string, unknown>[] = []
   const withSnap = await admin.from('scriptorium_parcours_classes')
-    .select('id, parcours_id, date_debut, horaire_snapshot')
+    .select('id, parcours_id, date_debut, horaire_snapshot, decalages')
     .eq('classe_id', classeId).eq('statut', 'active')
   if (withSnap.error) {
     const noSnap = await admin.from('scriptorium_parcours_classes')
@@ -341,6 +341,7 @@ export async function chargerMatiereClasse(
       parcoursId: a.parcours_id as string, nbSemaines: meta.nb,
       dateDebut: (a.date_debut as string | null) ?? null,
       snapshot: snap && Array.isArray(snap) && snap.length ? snap : null,
+      decalages: (a.decalages as Record<string, number> | null) ?? null,
     }
     const res = await construireApercuAssign(admin, assign, socleDe)
     const courante = semaineCourante(res?.apercu ?? null, aujourdHui)

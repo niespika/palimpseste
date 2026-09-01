@@ -64,7 +64,7 @@ async function chargerAssignations(
 ): Promise<Map<string, { pcId: string } & Omit<AssignParcours, 'nbSemaines'>>> {
   let rows: Record<string, unknown>[] = []
   const withSnap = await admin.from('scriptorium_parcours_classes')
-    .select('id, parcours_id, classe_id, date_debut, horaire_snapshot')
+    .select('id, parcours_id, classe_id, date_debut, horaire_snapshot, decalages')
     .in('parcours_id', parcoursIds).in('classe_id', classeIds).eq('statut', 'active')
   if (withSnap.error) {
     const noSnap = await admin.from('scriptorium_parcours_classes')
@@ -85,6 +85,7 @@ async function chargerAssignations(
       parcoursId,
       dateDebut: (row.date_debut as string | null) ?? null,
       snapshot: snap && Array.isArray(snap) && snap.length ? snap : null,
+      decalages: (row.decalages as Record<string, number> | null) ?? null,
     })
   }
   return out

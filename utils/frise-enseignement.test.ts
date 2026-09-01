@@ -11,6 +11,9 @@ import {
   friseEnseignementContinue,
   resoudreAncre,
   mapperParcours,
+  densifierDecalages,
+  clairsemerDecalages,
+  decalerDepuis,
   type SemestreFrise,
 } from './frise-enseignement'
 import { calerAnnee } from './calendrier-grille'
@@ -283,4 +286,104 @@ test('année calée : les deux semestres tombent dans la MÊME année scolaire',
   const b = calerAnnee('2026-08-02', '2026-12-16', '2027-06-17')
   assert.equal(anneeScolaireDe(b.s1.start), 2025) // ≠ 2026 → refusé à la saisie
   assert.equal(anneeScolaireDe(b.s2.end), 2026)
+})
+
+
+// ════════════════════════════════════════════════════════════════════════════
+// DÉCALAGES — l'ALTERNANCE de deux parcours dans une même classe.
+// Demande de Louis (01/09) : « je ne peux pas lier 2 parcours pour qu'ils
+// alternent ». Le cas de référence est le sien, mot pour mot :
+//   A (5 sem.) et B (3 sem.) sur 8 semaines d'enseignement —
+//   1:A1 · 2:A2 · 3:A3 · 4:B1 · 5:A4 · 6:B2 · 7:B3 · 8:A5
+// ════════════════════════════════════════════════════════════════════════════
+
+test('densifierDecalages : {} ⇒ que des zéros (= le comportement d’avant)', () => {
+  assert.deepEqual(densifierDecalages({}, 5), [0, 0, 0, 0, 0])
+  assert.deepEqual(densifierDecalages(null, 3), [0, 0, 0])
+  assert.deepEqual(densifierDecalages(undefined, 0), [])
+})
+
+test('densifierDecalages : la valeur est CUMULÉE et se propage aux suivantes', () => {
+  assert.deepEqual(densifierDecalages({ '4': 1, '5': 3 }, 5), [0, 0, 0, 1, 3])
+  assert.deepEqual(densifierDecalages({ '2': 1 }, 3), [0, 1, 1])
+})
+
+test('densifierDecalages : entrées aberrantes ignorées, monotonie forcée', () => {
+  // clé < 2 (la semaine 1 est portée par la date), hors bornes, non entière,
+  // valeur négative ou non entière : toutes écartées sans lever.
+  assert.deepEqual(densifierDecalages({ '1': 5, '9': 2, 'x': 1, '3': -1, '4': 1.5 }, 5), [0, 0, 0, 0, 0])
+  // une valeur qui reculerait est relevée : deux semaines ne se croisent pas.
+  assert.deepEqual(densifierDecalages({ '2': 3, '4': 1 }, 4), [0, 3, 3, 3])
+})
+
+test('clairsemerDecalages : n’écrit que les ruptures, et fait l’aller-retour', () => {
+  assert.deepEqual(clairsemerDecalages([0, 0, 0, 1, 3]), { '4': 1, '5': 3 })
+  assert.deepEqual(clairsemerDecalages([0, 0, 0]), {})
+  const dense = [0, 1, 1, 4]
+  assert.deepEqual(densifierDecalages(clairsemerDecalages(dense), 4), dense)
+})
+
+test('decalerDepuis : +1 pousse la semaine visée ET toutes les suivantes', () => {
+  const { decalages, refuse } = decalerDepuis({}, 4, 1, 5)
+  assert.equal(refuse, undefined)
+  assert.deepEqual(densifierDecalages(decalages, 5), [0, 0, 0, 1, 1])
+})
+
+test('decalerDepuis : −1 rapproche, et refuse de faire rattraper la précédente', () => {
+  const pousse = decalerDepuis({}, 3, 1, 4).decalages
+  assert.deepEqual(densifierDecalages(pousse, 4), [0, 0, 1, 1])
+  const revient = decalerDepuis(pousse, 3, -1, 4)
+  assert.equal(revient.refuse, undefined)
+  assert.deepEqual(densifierDecalages(revient.decalages, 4), [0, 0, 0, 0])
+  // une fois collées, on ne peut plus rapprocher : la semaine 3 rattraperait la 2.
+  const trop = decalerDepuis(revient.decalages, 3, -1, 4)
+  assert.match(trop.refuse ?? '', /rattraperait/)
+  assert.deepEqual(densifierDecalages(trop.decalages, 4), [0, 0, 0, 0])
+})
+
+test('decalerDepuis : la semaine 1 se refuse (elle est portée par la date de début)', () => {
+  const r = decalerDepuis({ '3': 2 }, 1, 1, 4)
+  assert.match(r.refuse ?? '', /date de début/)
+  assert.deepEqual(r.decalages, { '3': 2 }) // rien n'a bougé
+})
+
+test('mapperParcours sans décalages : inchangé (les semaines restent consécutives)', () => {
+  const res = friseEnseignementContinue([S1, S2], holidaysPO)
+  const sansArg = mapperParcours(res, 1, 4)
+  const avecVide = mapperParcours(res, 1, 4, {})
+  assert.deepEqual(avecVide, sansArg)
+})
+
+test('⭐ le cas de Louis : A (5 sem.) et B (3 sem.) alternent sur 8 semaines', () => {
+  const res = friseEnseignementContinue([S1, S2], holidaysPO)
+  const lundi = (idx: number) => semaineParIndex(res, idx).dateDebutLundi
+  // Les 8 premières semaines d'enseignement, prises comme repères.
+  const attenduA = [1, 2, 3, 5, 8].map(lundi) // A occupe les rangs 1,2,3,5,8
+  const attenduB = [4, 6, 7].map(lundi)       // B occupe les rangs 4,6,7
+
+  // A démarre au rang 1 et saute 1 semaine avant sa 4e, 3 en tout avant sa 5e.
+  const a = mapperParcours(res, 1, 5, { '4': 1, '5': 3 })
+  assert.deepEqual(
+    a.map((c) => (c.statut === 'resolue' ? c.dateDebutLundi : c.statut)),
+    attenduA,
+  )
+  // B démarre au rang 4 et saute 1 semaine avant sa 2e (A y reprend la main).
+  const b = mapperParcours(res, 4, 3, { '2': 1 })
+  assert.deepEqual(
+    b.map((c) => (c.statut === 'resolue' ? c.dateDebutLundi : c.statut)),
+    attenduB,
+  )
+  // Et surtout : les deux parcours ne se marchent JAMAIS dessus.
+  assert.equal(new Set([...attenduA, ...attenduB]).size, 8)
+})
+
+test('un décalage peut pousser la fin HORS de la frise — et ça se voit', () => {
+  const res = friseEnseignementContinue([S1], new Map())
+  const dernier = res.frise[res.frise.length - 1].indexContinu
+  // Parcours de 2 semaines ancré à l'avant-dernière : sans décalage il tient.
+  assert.equal(mapperParcours(res, dernier - 1, 2).every((c) => c.statut === 'resolue'), true)
+  // Avec un décalage d'une semaine sur la 2e, elle sort de la frise.
+  const pousse = mapperParcours(res, dernier - 1, 2, { '2': 1 })
+  assert.equal(pousse[0].statut, 'resolue')
+  assert.notEqual(pousse[1].statut, 'resolue')
 })
