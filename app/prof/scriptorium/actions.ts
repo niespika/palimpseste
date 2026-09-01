@@ -1035,8 +1035,10 @@ async function remplacerDecoupe(
 
 /**
  * Sauvegarde la découpe d'un cours (RAG L2). `plages` = {début, fin} de lignes
- * (1-based, incluses) + titre + niveau ; sans chevauchement, trous tolérés
- * (lignes hors section = écartées de la matière) ; vides = effacer la découpe.
+ * (1-based, incluses) + titre + niveau ; un §§ peut être imbriqué dans un §
+ * (le chapitre ne garde alors que ses lignes PROPRES), chevauchement PARTIEL
+ * interdit, trous tolérés (lignes hors section = écartées de la matière) ;
+ * vides = effacer la découpe.
  * Garde TOCTOU : `nbLignesVues` = nombre de lignes du texte servi à l'éditeur.
  * Re-découpe consciente : si des instances référencent ce cours, exiger `force`
  * (le client affiche la confirmation avec `nbInstances`).

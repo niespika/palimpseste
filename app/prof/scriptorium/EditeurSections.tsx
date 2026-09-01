@@ -4,12 +4,14 @@ import { useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { sauvegarderSections } from './actions'
-import { validerPlages, type PlageSection } from '@/utils/scriptorium-sections'
+import { validerPlages, ordonnerPlages, type PlageSection } from '@/utils/scriptorium-sections'
 
 // Éditeur de DÉCOUPE d'un cours en sections (RAG L2) — modèle PLAGES, calqué sur
 // la découpe livre (feedback PO) : chaque section a un TITRE, un NIVEAU
 // (chapitre/sous-chapitre — grain fin pour le « vu » partiel) et une plage de
-// lignes DÉBUT–FIN (saisie numérique OU pose au clic sur la page). Chevauchement
+// lignes DÉBUT–FIN (saisie numérique OU pose au clic sur la page). Un §§ peut
+// vivre DANS un § (chapitre et ses parties, amendement PO 31/08) ; le chapitre ne
+// garde alors que ses lignes PROPRES — le rail les compte. Chevauchement PARTIEL
 // interdit ; lignes hors section tolérées (écartées de la matière — bruit PDF).
 // La page du cours est À GAUCHE, une seule feuille à défilement continu ; le
 // rail d'édition est À DROITE (sticky). Esthétique provisoire (refonte Design à
@@ -71,40 +73,73 @@ export default function EditeurSections({
   }
   const cible = arme ?? prochaineCible(sections)
 
-  // ── Numérotation dans l'ordre du TEXTE (les cartes gardent l'ordre de saisie,
-  // stable pendant l'édition ; l'ordre canonique — celui enregistré — suit début).
-  const rangs = useMemo(() => {
+  // ── Plan : ordre CANONIQUE (un chapitre avant ses sous-chapitres), parenté et
+  // lignes PROPRES — miroir de ce que le serveur écrira (ordonnerPlages puis
+  // decouperPlages). Les cartes du rail gardent l'ordre de saisie ; c'est
+  // l'étiquette (§ 2, §§ 2.1) qui porte la place réelle dans la découpe.
+  const plan = useMemo(() => {
     const completes = sections
-      .map((s, i) => ({ i, debut: s.debut }))
-      .filter((x): x is { i: number; debut: number } => x.debut != null)
-      .sort((a, b) => a.debut - b.debut)
-    const m = new Map<number, number>()
-    completes.forEach((x, k) => m.set(x.i, k + 1))
-    return m
+      .map((s, i) => ({ i, debut: s.debut, fin: s.fin, niveau: s.niveau }))
+      .filter((x): x is { i: number; debut: number; fin: number; niveau: 1 | 2 } =>
+        x.debut != null && x.fin != null && x.debut <= x.fin)
+    const etiquette = new Map<number, string>()
+    const parent = new Map<number, number>()
+    const propres = new Map<number, number>()   // index → lignes que la section garde en propre
+    const profondeur = new Map<number, number>() // ligne → 1 (chapitre) | 2 (sous-chapitre)
+    const sousCompteur = new Map<number, number>()
+    const pile: { i: number; debut: number; fin: number; niveau: 1 | 2 }[] = []
+    let chapitres = 0
+    for (const p of ordonnerPlages(completes)) {
+      while (pile.length && pile[pile.length - 1].fin < p.debut) pile.pop()
+      const englobante = pile.length ? pile[pile.length - 1] : null
+      // Seul cas d'imbrication admis (cf. validerPlages) : §§ entièrement dans un §.
+      const imbrique = !!englobante && p.fin <= englobante.fin && englobante.niveau === 1 && p.niveau === 2
+      propres.set(p.i, p.fin - p.debut + 1)
+      if (imbrique && englobante) {
+        parent.set(p.i, englobante.i)
+        const n = (sousCompteur.get(englobante.i) ?? 0) + 1
+        sousCompteur.set(englobante.i, n)
+        etiquette.set(p.i, `${etiquette.get(englobante.i) ?? '·'}.${n}`)
+        propres.set(englobante.i, (propres.get(englobante.i) ?? 0) - (p.fin - p.debut + 1))
+      } else {
+        chapitres++
+        etiquette.set(p.i, String(chapitres))
+      }
+      for (let l = p.debut; l <= p.fin; l++) {
+        profondeur.set(l, Math.max(profondeur.get(l) ?? 0, imbrique ? 2 : 1))
+      }
+      pile.push(p)
+    }
+    return { etiquette, parent, propres, profondeur }
   }, [sections])
 
-  // ── Marquage des lignes : bornes posées + couverture (trous visibles) ───────
+  // ── Marquage des lignes : bornes posées (la couverture vient du plan) ───────
   const marques = useMemo(() => {
     const debuts = new Map<number, number[]>() // ligne → index de sections
     const fins = new Map<number, number[]>()
-    const couvertes = new Set<number>()
     sections.forEach((s, i) => {
       if (s.debut != null) { const a = debuts.get(s.debut) ?? []; a.push(i); debuts.set(s.debut, a) }
       if (s.fin != null) { const a = fins.get(s.fin) ?? []; a.push(i); fins.set(s.fin, a) }
-      if (s.debut != null && s.fin != null && s.debut <= s.fin) {
-        for (let l = s.debut; l <= s.fin; l++) couvertes.add(l)
-      }
     })
-    return { debuts, fins, couvertes }
+    return { debuts, fins }
   }, [sections])
 
   const horsSection = useMemo(() => {
     let n = 0
     for (let l = 1; l <= lignes.length; l++) {
-      if (!marques.couvertes.has(l) && lignes[l - 1].trim() !== '') n++
+      if (!plan.profondeur.has(l) && lignes[l - 1].trim() !== '') n++
     }
     return n
-  }, [lignes, marques])
+  }, [lignes, plan])
+
+  // Un chapitre que ses sous-chapitres couvrent entièrement n'a plus de matière :
+  // il reste un intitulé (le corpus et Quazian sautent les sections vides).
+  const sansMatiere = useMemo(
+    () => sections
+      .map((s, i) => ({ titre: s.titre.trim() || `section ${plan.etiquette.get(i) ?? i + 1}`, propres: plan.propres.get(i) }))
+      .filter(x => x.propres === 0),
+    [sections, plan],
+  )
 
   // ── Validation (cœur pur partagé avec le serveur) ───────────────────────────
   const incompletes = sections.some(s => s.debut == null || s.fin == null)
@@ -208,8 +243,8 @@ export default function EditeurSections({
   }
 
   const puce = (i: number, niveau: 1 | 2) => {
-    const rang = rangs.get(i)
-    return `${niveau === 2 ? '§§' : '§'}${rang ? ` ${rang}` : ''}`
+    const et = plan.etiquette.get(i)
+    return `${niveau === 2 ? '§§' : '§'}${et ? ` ${et}` : ''}`
   }
 
   return (
@@ -245,7 +280,7 @@ export default function EditeurSections({
 
       <p className="font-ui text-xs text-muet px-1">
         {cible
-          ? <>À placer : <span className="font-medium text-encre-douce">{cible.champ === 'debut' ? 'début' : 'fin'} de la section {rangs.get(cible.index) ?? cible.index + 1}</span> — clique la ligne {cible.champ === 'debut' ? 'où elle commence' : 'où elle finit'} (ou saisis le numéro dans le rail).</>
+          ? <>À placer : <span className="font-medium text-encre-douce">{cible.champ === 'debut' ? 'début' : 'fin'} de la section {plan.etiquette.get(cible.index) ?? cible.index + 1}</span> — clique la ligne {cible.champ === 'debut' ? 'où elle commence' : 'où elle finit'} (ou saisis le numéro dans le rail).</>
           : 'Toutes les bornes sont placées. Clique une borne sur la page pour la reprendre, ou un champ début/fin dans le rail.'}
       </p>
 
@@ -265,7 +300,7 @@ export default function EditeurSections({
                   const ln = idx + 1
                   const debuts = marques.debuts.get(ln)
                   const fins = marques.fins.get(ln)
-                  const couverte = marques.couvertes.has(ln)
+                  const profondeur = plan.profondeur.get(ln) ?? 0
                   const reperes: string[] = []
                   for (const i of debuts ?? []) reperes.push(`▸ ${puce(i, sections[i].niveau)} début`)
                   for (const i of fins ?? []) reperes.push(`${puce(i, sections[i].niveau)} fin ◂`)
@@ -279,11 +314,11 @@ export default function EditeurSections({
                         ? `Placer ${cible.champ === 'debut' ? 'le début' : 'la fin'} de la section à la ligne ${ln}`
                         : `Ligne ${ln}`}
                       className={`group w-full text-left flex gap-3 items-baseline rounded px-1 -mx-1 transition-colors hover:bg-pigment-teinte ${
-                        reperes.length ? 'bg-pigment-teinte/70' : couverte ? 'bg-pigment-teinte/25' : ''
+                        reperes.length ? 'bg-pigment-teinte/70' : profondeur === 2 ? 'bg-pigment-teinte/45' : profondeur === 1 ? 'bg-pigment-teinte/25' : ''
                       }`}
                     >
                       <span className="w-8 shrink-0 text-right font-ui text-[0.7em] text-muet/50 pt-1 select-none">{ln}</span>
-                      <span className={`flex-1 min-w-0 leading-[1.5] ${reperes.length ? 'font-medium text-encre' : couverte ? 'text-encre' : 'text-encre/60'}`}>
+                      <span className={`flex-1 min-w-0 leading-[1.5] ${reperes.length ? 'font-medium text-encre' : profondeur > 0 ? 'text-encre' : 'text-encre/60'}`}>
                         {txt || ' '}
                       </span>
                       {reperes.length > 0 && (
@@ -302,13 +337,14 @@ export default function EditeurSections({
         {/* ── Rail d'édition (DROITE, sticky) ─────────────────────────────── */}
         <div className="lg:w-96 w-full flex-shrink-0 space-y-2 order-1 lg:order-2 lg:sticky lg:top-4 lg:max-h-[calc(100vh-2rem)] lg:overflow-y-auto lg:pr-1">
           {sections.map((s, i) => {
-            const rang = rangs.get(i)
+            const et = plan.etiquette.get(i)
+            const estEnfant = plan.parent.has(i)
             const estCible = cible?.index === i
             return (
-              <div key={i} className={`rounded-lg border bg-surface p-2.5 space-y-2 ${estCible ? 'border-pigment/50' : 'border-bordure'}`}>
+              <div key={i} className={`rounded-lg border bg-surface p-2.5 space-y-2 ${estCible ? 'border-pigment/50' : 'border-bordure'} ${estEnfant ? 'ml-5 border-l-2 border-l-pigment/40' : ''}`}>
                 <div className="flex items-center gap-2">
-                  <span className="font-ui text-[11px] text-muet w-16 flex-shrink-0">
-                    {rang ? `Section ${rang}` : 'À placer'}
+                  <span className="font-ui text-[11px] text-muet w-14 flex-shrink-0">
+                    {et ? `${s.niveau === 2 ? '§§' : '§'} ${et}` : 'À placer'}
                   </span>
                   <input
                     value={s.titre}
@@ -362,6 +398,11 @@ export default function EditeurSections({
                   {s.debut != null && (
                     <button type="button" onClick={() => allerA(s.debut)} className="font-ui text-[11px] text-muet hover:text-encre">
                       voir{s.fin != null ? ` · ${s.fin - s.debut + 1} l.` : ''}
+                      {/* Un chapitre ne sert au tuteur que ses lignes PROPRES : celles
+                          qu'aucun de ses sous-chapitres ne prend. */}
+                      {s.fin != null && plan.propres.get(i) !== s.fin - s.debut + 1
+                        ? ` dont ${plan.propres.get(i)} propre${(plan.propres.get(i) ?? 0) > 1 ? 's' : ''}`
+                        : ''}
                     </button>
                   )}
                 </div>
@@ -376,10 +417,19 @@ export default function EditeurSections({
           >
             + Ajouter une section
           </button>
+          <p className="font-ui text-[11px] text-muet px-1 leading-snug">
+            Un « §§ Sous-chapitre » dont les bornes tiennent dans celles d’un « § Chapitre » s’y imbrique :
+            le chapitre garde alors ses lignes propres (chapeau, chute), ses parties portent le reste.
+          </p>
 
-          {(probleme || horsSection > 0) && (
+          {(probleme || horsSection > 0 || sansMatiere.length > 0) && (
             <div className="space-y-1">
               {probleme && <p className="font-ui text-xs text-retard">⚠ {probleme}</p>}
+              {sansMatiere.map((x, k) => (
+                <p key={k} className="font-ui text-xs text-attention">
+                  ℹ « {x.titre} » n’a aucune ligne propre : ses sous-chapitres portent tout le texte — le chapitre restera un intitulé, sans matière pour le tuteur.
+                </p>
+              ))}
               {horsSection > 0 && (
                 <p className="font-ui text-xs text-attention">
                   ℹ {horsSection} ligne{horsSection > 1 ? 's' : ''} (non vide{horsSection > 1 ? 's' : ''}) hors de toute section — écartée{horsSection > 1 ? 's' : ''} de la matière du cours découpé.

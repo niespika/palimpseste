@@ -1193,3 +1193,20 @@ bouger `version_calcul` sans invalider un corpus.
 
 ⚠️ **Et si la même question se pose ailleurs** : c'est un patron, pas un cas isolé. Tout crible qui
 mélange « requalifier » et « marquer » dans un seul champ de sortie aura le même défaut de nom.
+
+## Scriptorium · Les bornes d'une section sont DÉDUITES, pas stockées (31/08/2026)
+
+`scriptorium_contenu_sections` ne garde que le **texte dérivé** d'une section, jamais sa plage
+(`début`/`fin`). À la ré-édition, `reconstruirePlages` doit donc **retrouver** les bornes en
+cherchant chaque bloc dans le texte — un travail de déduction, avec ses ambiguïtés : deux blocs
+identiques se départagent au « premier trouvé », et depuis l'imbrication (31/08) un `§§` **collé**
+à un `§` se relit comme son enfant, même s'il en était le voisin. *L'ambiguïté est bénigne — les
+deux lectures dérivent exactement la même matière, testé — mais elle existe.*
+
+⭐ **Le geste** : deux colonnes `ligne_debut` / `ligne_fin` (entiers, **nullable** → les découpes
+existantes gardent le repli par recherche), écrites par `remplacerDecoupe`, lues d'abord par
+`reconstruirePlages`. Migration purement **additive**, aucune policy, aucune donnée à convertir
+*(mesuré le 31/08 : 0 section en prod, 2 en bac à sable, toutes `niveau = 1`)*.
+⚠️ **Ordre imposé** : le SQL AVANT le code (les colonnes sont invisibles pour l'application
+déployée ; l'inverse casserait l'enregistrement d'une découpe). Hors périmètre d'un correctif :
+c'est une migration, donc `SUIVI_SQL.md`, sandbox puis prod.

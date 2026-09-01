@@ -169,10 +169,14 @@ export async function chargerInstanceDeClasse(pcId: string): Promise<InstanceDeC
     const contenuTitre = info && !info.supprime ? info.titre : (cr.titre_affiche || 'contenu retiré')
     if (e.ref_type === 'section') {
       const sec = e.section_id ? sectionMap.get(e.section_id) : undefined
+      // Un cours peut être découpé en chapitres ET en sous-chapitres imbriqués
+      // (amendement PO 31/08) : le « §§ » garde la hiérarchie lisible là où le
+      // prof coche « vu », les éléments restant une liste plate dans l'ordre du texte.
+      const marque = sec?.niveau === 2 ? '§§ ' : ''
       return {
         id: e.id, creneauId: cr.id, creneauTitre: contenuTitre, refType: e.ref_type,
         badge: 'Section' as const,
-        titre: `${contenuTitre} — ${sec?.titre ?? 'section retirée'}`,
+        titre: `${contenuTitre} — ${sec ? `${marque}${sec.titre}` : 'section retirée'}`,
         vuAt: e.vu_at, aRevoir: !sec, ordre: e.ordre, semaineReelle: e.semaine, semaine, triCreneau,
       }
     }
