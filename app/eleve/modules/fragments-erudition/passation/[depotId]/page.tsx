@@ -80,7 +80,8 @@ export default async function PassationFragmentsEleve(
   return (
     <main className="mx-auto max-w-2xl p-4">
       {enTete}
-      <EcranEleve vue={vue} />
+      {/* ⭐ Trois étapes, pas quatre : l'essai n'a pas de relecture (`06-` §1). */}
+      <EcranEleve vue={{ ...vue, sansRelecture: true }} />
     </main>
   )
 }

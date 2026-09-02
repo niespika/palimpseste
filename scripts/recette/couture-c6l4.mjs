@@ -70,6 +70,7 @@ const { collecterCheminsInscriptions } = await import(`${RACINE}/utils/effacemen
 const { chargerGrilleCompetences } = await import(`${RACINE}/utils/competences-classe.ts`)
 const { chargerLAttentionDeLaClasse } = await import(`${RACINE}/utils/pilotage/attention-serveur.ts`)
 const { jourDansFuseau } = await import(`${RACINE}/utils/fuseau.ts`)
+const { retoursNonLus } = await import(`${RACINE}/utils/retours-lus.ts`)
 
 const MARQUE = 'COUTURE-C6L4'
 const REGISTRE = '.couture-c6l4.json'
@@ -551,11 +552,18 @@ async function corriger(d, mesure) {
   const listeCodex = await examensEnClasseDeLEleve(admin, COMPTE_DE_TEST, registre.classeId, 'codex')
   dire(!listeCodex.some((x) => x.depotId === d.depotElo), '⛔ et pas sous Codex')
 
+  // ⭐ Le second retour BLOQUE les rendus de Fragments tant qu'il n'est pas lu (Louis, 02/09).
+  const bloquants = await retoursNonLus(admin, COMPTE_DE_TEST)
+  const bloq = bloquants.find((b) => b.module === 'fragments_essai_chaine')
+  dire(!!bloq && bloq.href.includes(d.depotElo), '⭐ `retoursNonLus` porte le retour de la chaîne : un rendu de Fragments serait BLOQUÉ', bloq ? `${bloq.label} → ${bloq.href}` : 'absent')
+
   const retours = await lireLesRetours(admin, d.depotElo)
   const r = retours.find((x) => x.published_at)
   const l = await validerLaLecture(admin, r.id, COMPTE_DE_TEST)
   const rl = lu('retour', await admin.from('exercices_retours').select('lu_at').eq('id', r.id).single())
   dire(l.ok && rl.lu_at != null, 'l’élève valide sa lecture : `lu_at` posé — l’obligation de lecture tient')
+  const apresLecture = await retoursNonLus(admin, COMPTE_DE_TEST)
+  dire(!apresLecture.some((b) => b.module === 'fragments_essai_chaine'), 'lu, il ne bloque plus rien')
 }
 
 // ════════════════════════════════════════════════════════════════════════════

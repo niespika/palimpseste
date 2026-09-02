@@ -55,6 +55,14 @@ export interface VueEleve {
   /** L'élève rédige-t-il au clavier ? — `profiles.mode_saisie_force`, jamais le motif. */
   auClavier: boolean
   photos: Photo[] | null
+  /**
+   * ⭐ C6-L4 — VRAI pour l'essai de Fragments : « manuscrit → photos →
+   *    transcription », TROIS étapes (`06-` §1). L'élève ne se relit jamais, la
+   *    copie a été mesurée telle que la machine l'a lue : l'écran montre cette
+   *    lecture, sans l'inviter à corriger. Posé par la page de Fragments, jamais
+   *    lu en base.
+   */
+  sansRelecture?: boolean
   transcription: string | null
   /**
    * La copie tapée AU CLAVIER par l'élève exempté — `texte_v1`, jamais
@@ -311,6 +319,9 @@ function DepotEtRelecture({ vue }: { vue: VueEleve }) {
     }
   }
 
+  if (vue.sansRelecture && vue.valide) {
+    return <CopieLue vue={vue} texte={transcription} />
+  }
   if (dejaTranscrit || vue.valide) {
     return <Relecture vue={vue} texte={transcription} setTexte={setTranscription} />
   }
@@ -384,6 +395,39 @@ function sommeDe(img: ImageTraitee): string {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * ⭐ C6-L4 — la copie TELLE QUE LA MACHINE L'A LUE, sans invitation à corriger :
+ *    l'essai de Fragments n'a pas d'étape de contrôle (« manuscrit → photos →
+ *    transcription », `06-` §1), et c'est cette lecture qui a été mesurée.
+ *    Ni doutes à trancher, ni bouton : un élève qui « corrigerait » ici
+ *    corrigerait une copie déjà jugée.
+ */
+function CopieLue({ vue, texte }: { vue: VueEleve; texte: string }) {
+  const nbBlocs = blocs(texte).length
+  return (
+    <section className="rounded-lg border border-bordure bg-surface p-4">
+      <h2 className="font-cinzel text-sm uppercase tracking-wide text-muet-clair">
+        Ta copie, telle que la machine l’a lue
+      </h2>
+      <p className="mt-2 text-sm text-encre-douce">
+        Tu n’as rien à corriger : c’est cette lecture qui a été mesurée, telle quelle.
+        {vue.doutes && vue.doutes.length > 0 && (
+          <> La machine a hésité sur {vue.doutes.length} passage{vue.doutes.length > 1 ? 's' : ''} ; ton
+          professeur les voit.</>
+        )}
+      </p>
+      <textarea
+        value={texte} readOnly rows={20}
+        className="mt-3 w-full rounded border border-bordure-bouton bg-parchemin p-3 font-mono text-sm
+                   leading-relaxed text-encre"
+      />
+      <p className="mt-1 text-xs text-muet">
+        {nbBlocs} paragraphe{nbBlocs > 1 ? 's' : ''} — une ligne vide sépare deux paragraphes.
+      </p>
+    </section>
+  )
+}
 
 function Relecture({
   vue, texte, setTexte,

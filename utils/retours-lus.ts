@@ -1,5 +1,6 @@
 import 'server-only'
 import { createAdminClient } from '@/utils/supabase/admin'
+import { hrefDeLaPassationEleve } from '@/utils/codex-onglets/regles'
 import { livresGouvernesPourClasses } from '@/utils/aletheia-dates'
 
 // ════════════════════════════════════════════════════════════════════════════
@@ -37,7 +38,7 @@ import { livresGouvernesPourClasses } from '@/utils/aletheia-dates'
 
 type Admin = ReturnType<typeof createAdminClient>
 
-export type ModuleRetour = 'fragments_ecrit' | 'fragments_essai' | 'codex' | 'aletheia' | 'quazian'
+export type ModuleRetour = 'fragments_ecrit' | 'fragments_essai' | 'fragments_essai_chaine' | 'codex' | 'aletheia' | 'quazian'
 
 export interface RetourNonLu {
   module: ModuleRetour
@@ -100,6 +101,55 @@ async function fragmentsEssaiNonLus(admin: Admin, inscriptionIds: string[]): Pro
     const inscriptionId = ds.find((d) => d.id === data[0].depot_id)?.inscription_id
     const href = `/eleve/modules/fragments-erudition?vue=essai${inscriptionId ? `&inscription=${inscriptionId}` : ''}`
     return [{ module: 'fragments_essai', label: 'Fragments — retour d’essai', href }]
+  } catch {
+    return []
+  }
+}
+
+/**
+ * ⭐ C6-L4 — LE SECOND RETOUR D'UN ESSAI : celui de la chaîne de mesure
+ *    (`exercices_retours`, publié par le professeur sur la page de passation de
+ *    Fragments, lu sur la page de passation de l'élève). Décision de Louis,
+ *    02/09 : « un retour de la chaîne non lu doit bloquer le rendu des
+ *    fragments ». ⚠️ Seulement les ESSAIS DE FRAGMENTS — reconnus par la ligne de
+ *    plan (`essai × fragments`), jamais par une valeur sur le dépôt. Les examens
+ *    diagnostiques de Codex et d'Aletheia restent ce qu'ils étaient : leur
+ *    obligation de lecture n'entre pas dans les gardes de rendu de Fragments.
+ */
+async function fragmentsEssaiChaineNonLus(admin: Admin, eleveId: string, classeIds: string[]): Promise<RetourNonLu[]> {
+  try {
+    if (classeIds.length === 0) return []
+    const { data, error } = await admin
+      .from('exercices_retours')
+      .select('depot_id, exercices_depots!inner(eleve_id, exercices!inner(lieu, classe_id, exercice_planifie_id))')
+      .not('published_at', 'is', null)
+      .is('lu_at', null)
+      .eq('exercices_depots.eleve_id', eleveId)
+      .eq('exercices_depots.exercices.lieu', 'classe')
+    log('fragments essai (chaîne)', error)
+    type L = { depot_id: string; exercices_depots: { exercices: { classe_id: string | null; exercice_planifie_id: string | null } | Array<{ classe_id: string | null; exercice_planifie_id: string | null }> } | Array<{ exercices: unknown }> }
+    const lignes = ((data ?? []) as unknown as L[]).map((r) => {
+      const d = Array.isArray(r.exercices_depots) ? r.exercices_depots[0] : r.exercices_depots
+      const e = d ? (Array.isArray(d.exercices) ? d.exercices[0] : d.exercices) : null
+      return { depotId: r.depot_id, classeId: (e as { classe_id?: string | null } | null)?.classe_id ?? null,
+        planifieId: (e as { exercice_planifie_id?: string | null } | null)?.exercice_planifie_id ?? null }
+    }).filter((l) => l.planifieId && (l.classeId == null || classeIds.includes(l.classeId)))
+    if (lignes.length === 0) return []
+    const { data: plan, error: ePlan } = await admin
+      .from('scriptorium_exercices_planifies')
+      .select('id, type_exercice, module')
+      .in('id', lignes.map((l) => l.planifieId as string))
+    log('fragments essai (chaîne, lignes de plan)', ePlan)
+    const essais = new Set((plan ?? [])
+      .filter((p) => p.type_exercice === 'essai' && p.module === 'fragments')
+      .map((p) => p.id as string))
+    const premier = lignes.find((l) => essais.has(l.planifieId as string))
+    if (!premier) return []
+    return [{
+      module: 'fragments_essai_chaine',
+      label: 'Fragments — retour de la chaîne de mesure sur ton essai',
+      href: hrefDeLaPassationEleve('fragments', premier.depotId),
+    }]
   } catch {
     return []
   }
@@ -256,6 +306,8 @@ export async function retoursNonLus(admin: Admin, eleveId: string): Promise<Reto
   const sources = await Promise.all([
     slugs.has('fragments-erudition') ? fragmentsEcritNonLus(admin, inscriptionIds) : vide(),
     slugs.has('fragments-erudition') ? fragmentsEssaiNonLus(admin, inscriptionIds) : vide(),
+    // C6-L4 — le second retour d'un essai, celui de la chaîne (décision de Louis, 02/09).
+    slugs.has('fragments-erudition') ? fragmentsEssaiChaineNonLus(admin, eleveId, classeIds) : vide(),
     slugs.has('codex') ? codexNonLus(admin, eleveId, classeIds) : vide(),
     slugs.has('aletheia') ? aletheiaNonLus(admin, eleveId, classeIds) : vide(),
     slugs.has('quazian') ? quazianNonLus(admin, eleveId, classeIds) : vide(),
