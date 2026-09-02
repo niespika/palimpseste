@@ -8,7 +8,7 @@ import {
   marquerVu, marquerVuJusquA, deplacerElement, reordonnerElements,
   ajouterCreneauInstance, retirerCreneauInstance, reinitialiserInstance,
   planifierInstance, decalerSemaineInstance, publierHoraire, ajusterNbSemainesParcours,
-  basculerSyntheseCours, recupererCreneauxModele,
+  basculerSyntheseCours, recupererCreneauxModele, reordonnerCreneauxInstance, reglerSuiviModele,
   type RefCreneau,
 } from './actions'
 import PickerContenu from './parcours/PickerContenu'
@@ -33,7 +33,12 @@ import type { InstanceDeClasse, ElementInstance, SemaineInstance, SyntheseInstan
 //     prof y ajoute arrive ici de lui-même ; le panneau « le modèle a N contenus que
 //     cette classe n'a pas » ne liste plus que les ajouts d'AVANT (et ce que la classe a
 //     retiré elle-même), à reprendre d'un clic. « Je sais combien de temps vont durer
-//     mes cours, mais le contenu exact, je ne sais pas » (Louis, 01/09).
+//     mes cours, mais le contenu exact, je ne sais pas » (Louis, 01/09) ;
+//   · les trois compléments du 02/09 soir — l'ORDRE PROPRE des créneaux d'une semaine
+//     (⇈ ⇊ sur le premier élément de chaque créneau ; le modèle respecte ensuite cet
+//     ordre), le jeton « plus au modèle » sur une copie conservée après un retrait du
+//     modèle, et l'INTERRUPTEUR « ne plus suivre le modèle » (rien n'arrive ni ne part
+//     de lui-même ; la reprise reste le chemin manuel).
 // Esthétique provisoire (refonte Design).
 
 export default function GrilleInstance({ instance, cibles }: {
@@ -157,6 +162,26 @@ export default function GrilleInstance({ instance, cibles }: {
   const ajouterRef = (semaine: number) => async (ref: RefCreneau): Promise<{ error?: string }> => {
     const res = await ajouterCreneauInstance(instance.pcId, semaine, ref)
     return { error: res.error }
+  }
+
+  // Suivre / ne plus suivre le modèle : rien n'est détruit, et ça se défait d'un clic.
+  function basculerSuivi() {
+    void lancer('suivi', async () => {
+      const res = await reglerSuiviModele(instance.pcId, !instance.suitModele)
+      return { error: res.error }
+    })
+  }
+
+  // L'ORDRE PROPRE d'une classe : permute deux créneaux qui vivent dans la même semaine
+  // (tous ses éléments suivent, visibles ou déplacés ailleurs). Le modèle respectera cet
+  // ordre : sa propagation ne redescend que là où la classe suivait encore.
+  function monterDescendreCreneau(sem: SemaineInstance, creneauId: string, dir: -1 | 1) {
+    const ids = sem.creneaux.map(c => c.id)
+    const i = ids.indexOf(creneauId)
+    const j = i + dir
+    if (i < 0 || j < 0 || j >= ids.length) return
+    ;[ids[i], ids[j]] = [ids[j], ids[i]]
+    void lancer(`ordc-${creneauId}`, () => reordonnerCreneauxInstance(instance.pcId, sem.semaine, ids))
   }
 
   // Reprendre du modèle ce que cette classe n'a pas (un créneau, ou tous).
@@ -355,12 +380,35 @@ export default function GrilleInstance({ instance, cibles }: {
         {plan.apercu && <ApercuBloc apercu={plan.apercu} />}
       </div>
 
-      {/* ── Ce que le modèle a et que cette classe n'a pas (02/09) ────────── */}
-      {instance.absentsDuModele.length > 0 && (
-        <div className="rounded-lg border border-bordure bg-surface p-3 space-y-2">
-          <div className="flex items-baseline justify-between gap-2 flex-wrap">
-            <span className="font-ui text-[11px] font-bold uppercase tracking-[0.1em] text-encre-douce">
-              Le modèle a {instance.absentsDuModele.length} contenu{instance.absentsDuModele.length > 1 ? 's' : ''} que {instance.classeNom} n’a pas
+      {/* ── Le modèle : le suivre ou non, et ce qu'il a que cette classe n'a pas ── */}
+      <div className="rounded-lg border border-bordure bg-surface p-3 space-y-2">
+        <div className="flex items-baseline justify-between gap-2 flex-wrap">
+          <span className="font-ui text-[11px] font-bold uppercase tracking-[0.1em] text-encre-douce">
+            Le modèle{instance.suitModele ? '' : ` — ${instance.classeNom} ne le suit plus`}
+          </span>
+          <button
+            onClick={basculerSuivi}
+            disabled={occupe || !instance.suiviReglable}
+            className="font-ui text-[12px] font-semibold text-pigment hover:opacity-80 disabled:opacity-50"
+            title={!instance.suiviReglable
+              ? 'Migration « parcours_suivi_du_modele.sql » pas encore jouée sur cette base.'
+              : instance.suitModele
+                ? 'Détacher cette classe du modèle : rien n\'y arrivera ni n\'en partira de lui-même. Ne détruit rien, se défait d\'un clic.'
+                : 'Rattacher cette classe au modèle : ses prochains ajouts, retraits et déplacements redescendront ici. Ce qui manque déjà se reprend ci-dessous.'}
+          >
+            {chargement === 'suivi' ? '…' : instance.suitModele ? 'Ne plus suivre le modèle' : 'Suivre le modèle à nouveau'}
+          </button>
+        </div>
+        <p className="font-ui text-xs text-muet">
+          {instance.suitModele
+            ? <>Ce que tu ajoutes, retires, déplaces ou réordonnes dans le modèle arrive ici de lui-même — sauf ce que {instance.classeNom} a déjà vu, et sauf l’ordre qu’elle a choisi elle-même (⇈ ⇊).</>
+            : <>Rien n’arrive ici ni n’en part de lui-même. Ce que le modèle a et que {instance.classeNom} n’a pas se reprend à la main, ci-dessous.</>}
+        </p>
+        {instance.absentsDuModele.length > 0 && (
+          <div className="flex items-baseline justify-between gap-2 flex-wrap pt-1">
+            <span className="font-ui text-[12px] font-semibold text-encre-douce">
+              Il a {instance.absentsDuModele.length} contenu{instance.absentsDuModele.length > 1 ? 's' : ''} que {instance.classeNom} n’a pas
+              {instance.suitModele ? <span className="font-normal text-muet"> — ajoutés avant qu’il suive ses classes, ou retirés de cette classe</span> : null}
             </span>
             {instance.absentsDuModele.length > 1 && (
               <button
@@ -372,10 +420,8 @@ export default function GrilleInstance({ instance, cibles }: {
               </button>
             )}
           </div>
-          <p className="font-ui text-xs text-muet">
-            Ajoutés au modèle avant qu’il suive ses classes, ou retirés de cette classe. Désormais, ce que
-            tu ajoutes au modèle arrive ici de lui-même.
-          </p>
+        )}
+        {instance.absentsDuModele.length > 0 && (
           <ul className="space-y-1">
             {instance.absentsDuModele.map(a => (
               <li key={a.id} className="flex items-center gap-2 flex-wrap rounded px-1.5 py-1 hover:bg-parchemin-fonce/60">
@@ -398,8 +444,8 @@ export default function GrilleInstance({ instance, cibles }: {
               </li>
             ))}
           </ul>
-        </div>
-      )}
+        )}
+      </div>
 
       {erreur && <p className="text-retard text-sm">⚠ {erreur}</p>}
       {avis && <p className="text-attention text-sm">{avis}</p>}
@@ -412,6 +458,12 @@ export default function GrilleInstance({ instance, cibles }: {
           const synthParCreneau = new Map(sem.syntheses.map(sy => [sy.creneauId, sy]))
           const dernierIdxParCreneau = new Map<string, number>()
           sem.elements.forEach((e, idx) => dernierIdxParCreneau.set(e.creneauId, idx))
+          // Le PREMIER élément affiché de chaque créneau porte les flèches du créneau (⇈ ⇊),
+          // comme il porte déjà le ✕ du créneau entier. Seuls les créneaux qui VIVENT dans
+          // cette semaine se permutent — et seulement s'ils sont au moins deux.
+          const premierIdxParCreneau = new Map<string, number>()
+          sem.elements.forEach((e, idx) => { if (!premierIdxParCreneau.has(e.creneauId)) premierIdxParCreneau.set(e.creneauId, idx) })
+          const rangCreneau = new Map(sem.creneaux.map((c, i) => [c.id, i]))
           const orphelines = sem.syntheses.filter(sy => !dernierIdxParCreneau.has(sy.creneauId))
           return (
             <div key={sem.semaine}>
@@ -540,7 +592,31 @@ export default function GrilleInstance({ instance, cibles }: {
                           {el.aRevoir && (
                             <span className="font-ui text-[10px] bg-retard-teinte text-retard px-1.5 py-0.5 rounded flex-shrink-0">à revoir</span>
                           )}
+                          {el.modeleRetireLe && (
+                            <span
+                              className="font-ui text-[10px] bg-parchemin-fonce text-muet px-1.5 py-0.5 rounded flex-shrink-0"
+                              title={`Le modèle ne porte plus « ${el.creneauTitre} » depuis le ${fmtJour(el.modeleRetireLe.slice(0, 10))} ; ${instance.classeNom} l'a gardé parce qu'elle l'avait déjà vu. Retire-le d'ici (✕) si tu ne veux plus le servir.`}
+                            >
+                              plus au modèle
+                            </span>
+                          )}
                           <span className="flex-1" />
+                          {sem.creneaux.length > 1 && rangCreneau.has(el.creneauId) && idxEl === premierIdxParCreneau.get(el.creneauId) && (
+                            <span className="flex gap-0.5 flex-shrink-0" title={`Ordre de « ${el.creneauTitre} » dans la semaine, pour ${instance.classeNom} seulement`}>
+                              <button
+                                onClick={() => monterDescendreCreneau(sem, el.creneauId, -1)}
+                                disabled={occupe || rangCreneau.get(el.creneauId) === 0}
+                                className="font-ui text-xs text-muet hover:text-encre disabled:opacity-30 px-0.5"
+                                aria-label={`Monter « ${el.creneauTitre} » (le créneau entier) dans la semaine`}
+                              >⇈</button>
+                              <button
+                                onClick={() => monterDescendreCreneau(sem, el.creneauId, 1)}
+                                disabled={occupe || rangCreneau.get(el.creneauId) === sem.creneaux.length - 1}
+                                className="font-ui text-xs text-muet hover:text-encre disabled:opacity-30 px-0.5"
+                                aria-label={`Descendre « ${el.creneauTitre} » (le créneau entier) dans la semaine`}
+                              >⇊</button>
+                            </span>
+                          )}
                           {freres.length > 1 && (
                             <span className="flex gap-0.5 flex-shrink-0">
                               <button

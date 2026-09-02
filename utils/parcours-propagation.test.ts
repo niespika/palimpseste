@@ -3,7 +3,7 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import {
-  partagerCopies, reassignerPositions, memeCible, absentsDuModele,
+  partagerCopies, reassignerPositions, suitLOrdreDuModele, memeCible, absentsDuModele,
   type CopieDeModele, type CibleCreneau,
 } from './parcours-propagation'
 
@@ -65,4 +65,21 @@ test('absentsDuModele : la copie compte, le créneau propre de même cible compt
     { ...cont('c9'), modeleId: null }, // propre sans équivalent au modèle : ignoré
   ]
   assert.deepEqual(absentsDuModele(modele, instance).map(m => m.id), ['m3', 'm4'])
+})
+
+test('suitLOrdreDuModele : suit si les copies reprennent l’ordre du modèle, même avec un propre entre elles ou une copie en moins', () => {
+  assert.equal(suitLOrdreDuModele(
+    [{ modeleId: 'A', ordre: 1 }, { modeleId: 'B', ordre: 2 }, { modeleId: 'C', ordre: 3 }], ['A', 'B', 'C']), true)
+  assert.equal(suitLOrdreDuModele(
+    [{ modeleId: 'A', ordre: 1 }, { modeleId: 'B', ordre: 3 }], ['A', 'B', 'C']), true) // position 2 = un propre
+  assert.equal(suitLOrdreDuModele(
+    [{ modeleId: 'A', ordre: 1 }, { modeleId: 'C', ordre: 2 }], ['A', 'B', 'C']), true) // B retiré par la classe
+  assert.equal(suitLOrdreDuModele([], ['A']), true)
+})
+
+test('suitLOrdreDuModele : une classe qui a réordonné elle-même ne suit plus', () => {
+  assert.equal(suitLOrdreDuModele(
+    [{ modeleId: 'B', ordre: 1 }, { modeleId: 'A', ordre: 2 }], ['A', 'B']), false)
+  assert.equal(suitLOrdreDuModele(
+    [{ modeleId: 'A', ordre: 1 }, { modeleId: 'C', ordre: 2 }, { modeleId: 'B', ordre: 3 }], ['A', 'B', 'C']), false)
 })

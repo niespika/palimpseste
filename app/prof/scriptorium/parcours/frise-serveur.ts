@@ -118,6 +118,7 @@ export interface LigneAssignation {
   apercu: ApercuFrise | null // null si assigné sans date
   snapshot: HoraireSnapshot | null // horaire publié figé (null si jamais publié)
   diff: DiffHoraire | null // écart snapshot ↔ frise recalculée (null sans snapshot)
+  suitModele: boolean // false = cette classe ne suit plus le modèle (lu à part, toléré absent ⇒ true)
 }
 
 // Représentation courte d'une semaine, pour comparer snapshot vs frise recalculée.
@@ -155,11 +156,15 @@ export async function chargerAssignationsAvecApercu(
   // `decalages` lu à part et TOLÉRANT (comme les colonnes snapshot) : tant que
   // parcours_decalages.sql n'est pas joué, la lecture échoue et l'aperçu retombe
   // sur le mapping consécutif — l'assignation continue de fonctionner.
-  const [{ data: liens }, { data: snaps }, { data: decs }] = await Promise.all([
+  const [{ data: liens }, { data: snaps }, { data: decs }, suivQ] = await Promise.all([
     supabase.from('scriptorium_parcours_classes').select('id, classe_id, date_debut').eq('parcours_id', parcoursId),
     supabase.from('scriptorium_parcours_classes').select('classe_id, horaire_snapshot, snapshot_version, snapshot_genere_le').eq('parcours_id', parcoursId),
     supabase.from('scriptorium_parcours_classes').select('classe_id, decalages').eq('parcours_id', parcoursId),
+    supabase.from('scriptorium_parcours_classes').select('classe_id, suit_modele').eq('parcours_id', parcoursId),
   ])
+  // `suit_modele` lu à part et TOLÉRANT (parcours_suivi_du_modele.sql) : absent ⇒ toutes suivent.
+  const suitParClasse = new Map<string, boolean>(
+    suivQ.error ? [] : (suivQ.data ?? []).map(r => [r.classe_id as string, (r.suit_modele as boolean | null) !== false]))
   const parClasse = new Map<string, string | null>()
   const pcIdParClasse = new Map<string, string>()
   for (const l of liens ?? []) {
@@ -189,6 +194,7 @@ export async function chargerAssignationsAvecApercu(
       classeId: c.id, nom: c.nom, assigned,
       parcoursClasseId: pcIdParClasse.get(c.id) ?? null,
       dateDebut, apercu, snapshot, diff,
+      suitModele: suitParClasse.get(c.id) ?? true,
     }
   }))
 }

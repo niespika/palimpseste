@@ -95,7 +95,10 @@ export default function GrilleParcours({
   // pas qu'un retrait ici a aussi retiré le cours de deux classes.
   const [avis, setAvis] = useState<string | null>(null)
   const nbClasses = assignations.filter(a => a.assigned).length
+  const nbDetachees = assignations.filter(a => a.assigned && !a.suitModele).length
   const classes = (n: number) => `${n} classe${n > 1 ? 's' : ''}`
+  // Le bout de phrase qui nomme les classes DÉTACHÉES du modèle, quand un geste en laisse.
+  const horsSuivi = (n?: number) => n ? ` ; ${classes(n)} ne ${n > 1 ? 'suivent' : 'suit'} plus le modèle` : ''
 
   function ouvrirSemaine(s: number) {
     setSemaineOuverte(prev => (prev === s ? null : s))
@@ -117,7 +120,9 @@ export default function GrilleParcours({
     const res = await ajouterCreneau(parcours.id, semaine, ref)
     if (res.error) return { error: res.error }
     if (res.avis) setAvis(res.avis)
-    else if (res.nbClasses) setAvis(`Ajouté au modèle et au parcours de ${classes(res.nbClasses)}.`)
+    else if (res.nbClasses || res.detachees) {
+      setAvis(`Ajouté au modèle${res.nbClasses ? ` et au parcours de ${classes(res.nbClasses)}` : ''}${horsSuivi(res.detachees)}.`)
+    }
     return {}
   }
 
@@ -135,7 +140,8 @@ export default function GrilleParcours({
     if (res.error) { setErreur(res.error); return }
     if (nbClasses > 0) {
       setAvis(`Retiré du modèle${res.retireDe ? ` et de ${classes(res.retireDe)}` : ''}` +
-        `${res.conserveDans ? ` ; conservé dans ${classes(res.conserveDans)} qui l'${res.conserveDans > 1 ? 'ont' : 'a'} déjà vu` : ''}.`)
+        `${res.conserveDans ? ` ; conservé dans ${classes(res.conserveDans)} qui l'${res.conserveDans > 1 ? 'ont' : 'a'} déjà vu` : ''}` +
+        `${horsSuivi(res.detachees)}.`)
     }
     router.refresh()
   }
@@ -149,25 +155,39 @@ export default function GrilleParcours({
     if (res.error) { setErreur(res.error); return }
     if (nbClasses > 0) {
       setAvis(`Déplacé en S${ns}${res.suivi ? ` ; ${classes(res.suivi)} ${res.suivi > 1 ? 'ont' : 'a'} suivi` : ''}` +
-        `${res.conserve ? ` ; ${classes(res.conserve)} le garde${res.conserve > 1 ? 'nt' : ''} en S${c.semaine} (déjà vu)` : ''}.` +
+        `${res.conserve ? ` ; ${classes(res.conserve)} le garde${res.conserve > 1 ? 'nt' : ''} en S${c.semaine} (déjà vu)` : ''}` +
+        `${horsSuivi(res.detachees)}.` +
         `${res.avis ? ` ${res.avis}` : ''}`)
     }
     router.refresh()
   }
 
+  async function reordonner(semaine: number, ids: string[]) {
+    setAvis(null)
+    const ok = await agir(async () => {
+      const res = await reordonnerCreneaux(parcours.id, semaine, ids)
+      if (!res.error && nbClasses > 0) {
+        setAvis(`Réordonné${res.suivi ? ` ; ${classes(res.suivi)} ${res.suivi > 1 ? 'ont' : 'a'} suivi` : ''}` +
+          `${res.conserve ? ` ; ${classes(res.conserve)} garde${res.conserve > 1 ? 'nt' : ''} l'ordre choisi pour elle${res.conserve > 1 ? 's' : ''}` : ''}` +
+          `${horsSuivi(res.detachees)}.`)
+      }
+      return { error: res.error }
+    })
+    return ok
+  }
   async function monter(semaine: number, id: string) {
     const ids = parSemaine(semaine).map(c => c.id)
     const i = ids.indexOf(id)
     if (i <= 0) return
     ;[ids[i - 1], ids[i]] = [ids[i], ids[i - 1]]
-    await agir(() => reordonnerCreneaux(parcours.id, semaine, ids))
+    await reordonner(semaine, ids)
   }
   async function descendre(semaine: number, id: string) {
     const ids = parSemaine(semaine).map(c => c.id)
     const i = ids.indexOf(id)
     if (i < 0 || i >= ids.length - 1) return
     ;[ids[i + 1], ids[i]] = [ids[i], ids[i + 1]]
-    await agir(() => reordonnerCreneaux(parcours.id, semaine, ids))
+    await reordonner(semaine, ids)
   }
 
   async function handleSupprimerParcours() {
@@ -242,7 +262,8 @@ export default function GrilleParcours({
           {!editionEntete && nbClasses > 0 && (
             <p className="font-ui text-[12px] text-muet mb-3">
               Ce modèle sert {classes(nbClasses)} : ce que tu ajoutes, retires ou déplaces ici
-              {nbClasses > 1 ? ' les suit' : ' la suit'}, sauf ce qu’{nbClasses > 1 ? 'une classe' : 'elle'} a déjà vu.
+              {nbClasses > 1 ? ' les suit' : ' la suit'}, sauf ce qu’{nbClasses > 1 ? 'une classe' : 'elle'} a déjà vu
+              {nbDetachees > 0 ? <> — et sauf {classes(nbDetachees)} qui ne {nbDetachees > 1 ? 'suivent' : 'suit'} plus le modèle</> : null}.
             </p>
           )}
           {erreur && !editionEntete && <p className="text-retard text-sm mb-3">{erreur}</p>}

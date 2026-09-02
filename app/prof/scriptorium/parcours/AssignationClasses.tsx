@@ -76,9 +76,17 @@ function LigneRow({ parcoursId, ligne }: { parcoursId: string; ligne: LigneAssig
 
   return (
     <div className="border border-bordure rounded-xl bg-white px-3.5 py-3 space-y-2">
-      <div className="flex items-center gap-2.5">
+      <div className="flex items-center gap-2.5 flex-wrap">
         <span className="text-muet-clair" aria-hidden>▸</span>
         <span className="font-corps text-[16px] font-semibold text-encre flex-1 min-w-0 truncate">{ligne.nom}</span>
+        {!ligne.suitModele && (
+          <span
+            className="font-ui text-[11px] bg-parchemin-fonce text-muet rounded-full px-2.5 py-0.5 flex-none"
+            title="Cette classe ne suit plus le modèle : ce que tu ajoutes, retires ou déplaces ici n'y descend pas. Se règle dans le parcours de la classe."
+          >
+            ne suit plus le modèle
+          </span>
+        )}
         <StatutPill ligne={ligne} />
       </div>
 

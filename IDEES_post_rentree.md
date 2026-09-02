@@ -1211,11 +1211,15 @@ existantes gardent le repli par recherche), écrites par `remplacerDecoupe`, lue
 déployée ; l'inverse casserait l'enregistrement d'une découpe). Hors périmètre d'un correctif :
 c'est une migration, donc `SUIVI_SQL.md`, sandbox puis prod.
 
-## Le modèle de parcours suit ses classes — ce qui reste hors du geste (02/09/2026)
+## Le modèle de parcours suit ses classes — ce qui reste hors du geste (02/09/2026) — ✅ REFERMÉ le soir même
 
 Fait le 02/09 (aucune migration) : un ajout, un retrait ou un déplacement dans le MODÈLE d'un parcours
 redescend dans chaque instance active, sauf sur ce qu'une classe a déjà vu ; la grille d'instance offre
-la reprise des écarts d'avant. Trois choses sont restées de côté, délibérément :
+la reprise des écarts d'avant. Trois choses étaient restées de côté le matin ; **Louis les a demandées
+le soir, et elles sont faites** (`parcours_suivi_du_modele.sql`, deux colonnes ; `SPEC_scriptorium_rag.md`
+§4.1) : l'ordre propre d'une classe (⇈ ⇊, respecté par le modèle via `suitLOrdreDuModele`), le jeton
+« plus au modèle » (`modele_retire_at`), l'interrupteur « ne plus suivre le modèle » (`suit_modele`).
+L'entrée d'origine reste ci-dessous pour mémoire :
 - **Une classe ne sait pas réordonner ses créneaux.** L'ordre intra-semaine d'une instance ne vient que
   du modèle (permutation propagée) ou de la fin de semaine (ajout). Si un prof veut un ordre PAR CLASSE,
   il faudra un geste dans `GrilleInstance` — et alors la propagation de l'ordre devra le respecter

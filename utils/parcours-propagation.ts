@@ -66,6 +66,24 @@ export function reassignerPositions(
     .filter(n => copies.find(c => c.id === n.id)!.ordre !== n.ordre)
 }
 
+/**
+ * Les copies d'une semaine d'instance SUIVENT-ELLES l'ordre du modèle ? Vrai si, lues par
+ * ordre croissant, elles reprennent l'ordre des créneaux du modèle (restreint à celles qui
+ * existent dans la classe). C'est ce qui distingue une classe qui a RÉORDONNÉ elle-même —
+ * son ordre ne suit plus, elle le garde quand le modèle change le sien — d'une classe qui
+ * s'est laissée porter, et qui suit. Aucun marqueur en base : la comparaison avec l'ordre
+ * du modèle AVANT le geste suffit. (Une classe revenue par hasard à l'ordre du modèle suit
+ * de nouveau : c'est cohérent, elle ne s'en distingue plus.)
+ */
+export function suitLOrdreDuModele(
+  copies: { modeleId: string; ordre: number }[],
+  ordreModele: string[],
+): boolean {
+  const rang = new Map(ordreModele.map((id, i) => [id, i]))
+  const rangs = [...copies].sort((a, b) => a.ordre - b.ordre).map(c => rang.get(c.modeleId) ?? -1)
+  return rangs.every((r, i) => i === 0 || r >= rangs[i - 1])
+}
+
 /** La CIBLE d'un créneau (modèle ou instance) : ce qu'il sert, indépendamment de sa place. */
 export interface CibleCreneau {
   refType: string

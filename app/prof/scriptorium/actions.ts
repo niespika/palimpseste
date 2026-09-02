@@ -14,7 +14,9 @@ import {
 } from '@/utils/scriptorium-sections'
 import { resoudreFrisePourDate } from './parcours/frise-serveur'
 import { decalerDepuis, type Decalages } from '@/utils/frise-enseignement'
-import { partagerCopies, reassignerPositions, memeCible, type CopieDeModele } from '@/utils/parcours-propagation'
+import {
+  partagerCopies, reassignerPositions, suitLOrdreDuModele, memeCible, type CopieDeModele,
+} from '@/utils/parcours-propagation'
 import { lireGatePlanActif } from '@/utils/plan-exercices'
 import {
   hookSyntheseAjoutCreneau, hookSyntheseAssignClasse, hookSyntheseRetraitCreneau,
@@ -1593,7 +1595,7 @@ export async function ajouterCreneau(
   parcoursId: string,
   semaine: number,
   ref: RefCreneau,
-): Promise<{ id?: string; nbClasses?: number; avis?: string; error?: string }> {
+): Promise<{ id?: string; nbClasses?: number; detachees?: number; avis?: string; error?: string }> {
   const { supabase } = await verifierProf()
   if (!RE_UUID.test(parcoursId)) return { error: 'Parcours invalide.' }
   if (!Number.isInteger(semaine) || semaine < 1) return { error: 'Semaine invalide.' }
@@ -1626,6 +1628,7 @@ export async function ajouterCreneau(
       return {
         id: (data as CreneauModeleRow).id,
         nbClasses: prop.nbClasses,
+        detachees: prop.detachees,
         avis: prop.echecs.length ? `Ajouté au modèle, mais pas partout : ${prop.echecs.join(' · ')}` : undefined,
       }
     }
@@ -1636,7 +1639,7 @@ export async function ajouterCreneau(
 
 export async function retirerCreneau(
   creneauId: string,
-): Promise<{ success?: boolean; retireDe?: number; conserveDans?: number; error?: string }> {
+): Promise<{ success?: boolean; retireDe?: number; conserveDans?: number; detachees?: number; error?: string }> {
   const { supabase } = await verifierProf()
   if (!RE_UUID.test(creneauId)) return { error: 'Identifiant invalide.' }
   const { data: cr } = await supabase
@@ -1647,7 +1650,7 @@ export async function retirerCreneau(
   const res = await retirerCreneauxModele(supabase, cr.parcours_id as string, [creneauId])
   if (res.error) return { error: res.error }
   revalidatePath('/prof/scriptorium')
-  return { success: true, retireDe: res.retireDe, conserveDans: res.conserveDans }
+  return { success: true, retireDe: res.retireDe, conserveDans: res.conserveDans, detachees: res.detachees }
 }
 
 // Réordonne les créneaux d'une semaine (ordreIds = tous les créneaux de cette
@@ -1658,7 +1661,7 @@ export async function reordonnerCreneaux(
   parcoursId: string,
   semaine: number,
   ordreIds: string[],
-): Promise<{ success?: boolean; error?: string }> {
+): Promise<{ success?: boolean; suivi?: number; conserve?: number; detachees?: number; error?: string }> {
   const { supabase } = await verifierProf()
   if (!RE_UUID.test(parcoursId)) return { error: 'Parcours invalide.' }
   if (!Number.isInteger(semaine) || semaine < 1) return { error: 'Semaine invalide.' }
@@ -1669,13 +1672,16 @@ export async function reordonnerCreneaux(
   // avec un créneau non listé. On refuse une liste périmée/partielle plutôt que de
   // corrompre l'ordre. (Avec l'ensemble complet, négatif→final ne collisionne jamais.)
   const { data: actuels } = await supabase
-    .from('scriptorium_parcours_creneaux').select('id')
+    .from('scriptorium_parcours_creneaux').select('id, ordre')
     .eq('parcours_id', parcoursId).eq('semaine', semaine)
   const idsBase = new Set((actuels ?? []).map(r => r.id as string))
   const idsFournis = new Set(ordreIds)
   if (idsBase.size !== idsFournis.size || [...idsBase].some(id => !idsFournis.has(id))) {
     return { error: 'La liste des créneaux a changé — recharge la page puis réessaie.' }
   }
+  // L'ordre d'AVANT : c'est contre lui qu'on reconnaît une classe qui suivait encore.
+  const ancienOrdre = [...(actuels ?? [])]
+    .sort((a, b) => (a.ordre as number) - (b.ordre as number)).map(r => r.id as string)
 
   for (let i = 0; i < ordreIds.length; i++) {
     const { error } = await supabase.from('scriptorium_parcours_creneaux')
@@ -1688,10 +1694,11 @@ export async function reordonnerCreneaux(
     if (error) return { error: error.message }
   }
   // Le modèle suit ses classes : leurs copies permutent parmi les positions qu'elles
-  // occupent (les créneaux propres à une classe ne bougent pas).
-  await propagerOrdre(supabase, ordreIds)
+  // occupent (les créneaux propres ne bougent pas) — sauf dans une classe qui avait
+  // réordonné elle-même, qui garde son ordre.
+  const prop = await propagerOrdre(supabase, ancienOrdre, ordreIds)
   revalidatePath('/prof/scriptorium')
-  return { success: true }
+  return { success: true, suivi: prop.suivi, conserve: prop.conserve, detachees: prop.detachees }
 }
 
 // Déplace un créneau vers une autre semaine (ajouté en fin de la semaine cible :
@@ -1699,7 +1706,7 @@ export async function reordonnerCreneaux(
 export async function deplacerCreneau(
   creneauId: string,
   nouvelleSemaine: number,
-): Promise<{ success?: boolean; suivi?: number; conserve?: number; avis?: string; error?: string }> {
+): Promise<{ success?: boolean; suivi?: number; conserve?: number; detachees?: number; avis?: string; error?: string }> {
   const { supabase } = await verifierProf()
   if (!RE_UUID.test(creneauId)) return { error: 'Identifiant invalide.' }
   if (!Number.isInteger(nouvelleSemaine) || nouvelleSemaine < 1) return { error: 'Semaine invalide.' }
@@ -1731,10 +1738,10 @@ export async function deplacerCreneau(
         .from('scriptorium_parcours_creneaux').select(COLS_CRENEAU_MODELE).eq('id', creneauId).maybeSingle()
       const prop = m
         ? await propagerDeplacement(supabase, m as CreneauModeleRow, parc.nb_semaines as number)
-        : { suivi: 0, conserve: 0, echecs: 0 }
+        : { suivi: 0, conserve: 0, detachees: 0, echecs: 0 }
       revalidatePath('/prof/scriptorium')
       return {
-        success: true, suivi: prop.suivi, conserve: prop.conserve,
+        success: true, suivi: prop.suivi, conserve: prop.conserve, detachees: prop.detachees,
         avis: prop.echecs ? `${prop.echecs} classe(s) n'ont pas pu suivre le déplacement.` : undefined,
       }
     }
@@ -1898,8 +1905,17 @@ async function materialiserElementsPourCreneaux(
 //      · déplacement → les copies intactes suivent (éléments re-matérialisés) ;
 //      · réordonnancement → les copies permutent parmi leurs positions (l'instance
 //        ne sait pas réordonner ses créneaux : aucun choix de classe à écraser).
-//    Ce que la classe a ajouté elle-même, retiré, ou déplacé élément par élément
-//    n'est jamais touché ; `reinitialiserInstance` reste la remise à zéro.
+//    Ce que la classe a ajouté elle-même, retiré, déplacé élément par élément, ou
+//    RÉORDONNÉ elle-même (reordonnerCreneauxInstance — l'ordre du modèle ne
+//    redescend que là où la classe suivait encore son ordre d'avant, cf.
+//    suitLOrdreDuModele) n'est jamais touché ; `reinitialiserInstance` reste la
+//    remise à zéro.
+// ⭐ DEUX COLONNES, une migration (parcours_suivi_du_modele.sql, 02/09 soir) :
+//    `suit_modele` — l'interrupteur « cette classe ne suit plus le modèle »
+//    (rien n'y arrive ni n'en part de lui-même) ; `modele_retire_at` — la
+//    provenance d'une copie conservée (la FK `set null` la rendait indiscernable
+//    d'un ajout à la main), pour que l'instance dise « plus au modèle ».
+//    Lues À PART et TOLÉRÉES absentes : sans la migration, toutes suivent.
 // ⚠️ Un cours que la classe avait AJOUTÉ À LA MAIN avant qu'il entre au modèle est
 //    RECONNU (même cible) et rattaché, jamais dupliqué — c'est l'état réel de T5.
 // ⚠️ Pas de transaction (supabase-js) : chaque instance est traitée à part, les
@@ -1935,14 +1951,27 @@ const cibleDe = (c: CibleRow) => ({
   livreSemaineDebut: c.livre_semaine_debut, livreSemaineFin: c.livre_semaine_fin,
 })
 
-// Instances ACTIVES d'un parcours — celles qui suivent le modèle.
+// Les assignations qui NE SUIVENT PLUS le modèle, parmi des ids donnés. Lecture
+// tolérante : `parcours_suivi_du_modele.sql` non jouée ⇒ aucune (toutes suivent).
+async function instancesDetachees(supabase: SupabaseClient, pcIds: string[]): Promise<Set<string>> {
+  if (pcIds.length === 0) return new Set()
+  const { data, error } = await supabase
+    .from('scriptorium_parcours_classes').select('id, suit_modele').in('id', pcIds)
+  if (error) return new Set()
+  return new Set((data ?? []).filter(r => r.suit_modele === false).map(r => r.id as string))
+}
+
+// Instances d'un parcours qui SUIVENT le modèle (actives et non détachées), et le
+// nombre de celles qui ne le suivent plus — pour que le geste du modèle le dise.
 async function instancesActives(
   supabase: SupabaseClient, parcoursId: string,
-): Promise<{ pcId: string; classeId: string }[]> {
+): Promise<{ suivent: { pcId: string; classeId: string }[]; detachees: number }> {
   const { data } = await supabase
     .from('scriptorium_parcours_classes').select('id, classe_id')
     .eq('parcours_id', parcoursId).eq('statut', 'active')
-  return (data ?? []).map(r => ({ pcId: r.id as string, classeId: r.classe_id as string }))
+  const toutes = (data ?? []).map(r => ({ pcId: r.id as string, classeId: r.classe_id as string }))
+  const detachees = await instancesDetachees(supabase, toutes.map(t => t.pcId))
+  return { suivent: toutes.filter(t => !detachees.has(t.pcId)), detachees: detachees.size }
 }
 
 // Copie UN créneau du modèle dans UNE instance : en fin de sa semaine (ordre max+1,
@@ -1962,7 +1991,11 @@ async function copierCreneauModele(
   if (jumeau) {
     const { error } = await supabase.from('scriptorium_parcours_classe_creneaux')
       .update({ modele_creneau_id: m.id }).eq('id', jumeau.id)
-    return error ? { error: error.message } : { id: jumeau.id, deja: true }
+    if (error) return { error: error.message }
+    // Le modèle reprend ce contenu : la copie n'est plus « plus au modèle » (tolérant).
+    await supabase.from('scriptorium_parcours_classe_creneaux')
+      .update({ modele_retire_at: null }).eq('id', jumeau.id)
+    return { id: jumeau.id, deja: true }
   }
   const semaine = Math.min(Math.max(1, m.semaine), Math.max(1, nbSemaines))
   const payload = {
@@ -1994,37 +2027,48 @@ async function copierCreneauModele(
 // classes servies et les échecs nommés (l'ajout au modèle, lui, est acquis).
 async function propagerAjout(
   supabase: SupabaseClient, m: CreneauModeleRow, nbSemaines: number,
-): Promise<{ nbClasses: number; echecs: string[] }> {
+): Promise<{ nbClasses: number; detachees: number; echecs: string[] }> {
   let nbClasses = 0
   const rates: { classeId: string; error: string }[] = []
-  for (const inst of await instancesActives(supabase, m.parcours_id)) {
+  const { suivent, detachees } = await instancesActives(supabase, m.parcours_id)
+  for (const inst of suivent) {
     const r = await copierCreneauModele(supabase, inst.pcId, m, nbSemaines)
     if (r.error) rates.push({ classeId: inst.classeId, error: r.error })
     else nbClasses++
   }
-  if (rates.length === 0) return { nbClasses, echecs: [] }
+  if (rates.length === 0) return { nbClasses, detachees, echecs: [] }
   const { data: noms } = await supabase.from('classes').select('id, nom').in('id', rates.map(r => r.classeId))
   const nom = new Map((noms ?? []).map(c => [c.id as string, c.nom as string]))
-  return { nbClasses, echecs: rates.map(r => `${nom.get(r.classeId) ?? 'classe'} — ${r.error}`) }
+  return { nbClasses, detachees, echecs: rates.map(r => `${nom.get(r.classeId) ?? 'classe'} — ${r.error}`) }
 }
 
-// Copies d'instance des créneaux modèle donnés, avec « au moins un élément vu ».
-async function copiesDuModele(supabase: SupabaseClient, modeleIds: string[]): Promise<CopieDeModele[]> {
-  if (modeleIds.length === 0) return []
+// Copies d'instance des créneaux modèle donnés, avec « au moins un élément vu ». Les
+// copies d'une classe qui NE SUIT PLUS le modèle sont écartées (et comptées) : le
+// modèle ne les touche plus.
+async function copiesDuModele(
+  supabase: SupabaseClient, modeleIds: string[],
+): Promise<{ copies: CopieDeModele[]; detachees: number }> {
+  if (modeleIds.length === 0) return { copies: [], detachees: 0 }
   const { data } = await supabase
     .from('scriptorium_parcours_classe_creneaux')
     .select('id, parcours_classe_id, modele_creneau_id, semaine, ordre')
     .in('modele_creneau_id', modeleIds)
-  const rows = (data ?? []) as { id: string; parcours_classe_id: string; modele_creneau_id: string; semaine: number; ordre: number }[]
-  if (rows.length === 0) return []
-  const { data: vus } = await supabase
-    .from('scriptorium_parcours_classe_elements').select('creneau_id')
-    .in('creneau_id', rows.map(r => r.id)).not('vu_at', 'is', null)
+  const toutes = (data ?? []) as { id: string; parcours_classe_id: string; modele_creneau_id: string; semaine: number; ordre: number }[]
+  if (toutes.length === 0) return { copies: [], detachees: 0 }
+  const hors = await instancesDetachees(supabase, [...new Set(toutes.map(r => r.parcours_classe_id))])
+  const rows = toutes.filter(r => !hors.has(r.parcours_classe_id))
+  const { data: vus } = rows.length
+    ? await supabase.from('scriptorium_parcours_classe_elements').select('creneau_id')
+        .in('creneau_id', rows.map(r => r.id)).not('vu_at', 'is', null)
+    : { data: [] as { creneau_id: string }[] }
   const vues = new Set((vus ?? []).map(v => v.creneau_id as string))
-  return rows.map(r => ({
-    id: r.id, pcId: r.parcours_classe_id, modeleId: r.modele_creneau_id,
-    semaine: r.semaine, ordre: r.ordre, vue: vues.has(r.id),
-  }))
+  return {
+    copies: rows.map(r => ({
+      id: r.id, pcId: r.parcours_classe_id, modeleId: r.modele_creneau_id,
+      semaine: r.semaine, ordre: r.ordre, vue: vues.has(r.id),
+    })),
+    detachees: hors.size,
+  }
 }
 
 // RETRAIT de créneaux du modèle. Les copies sont relevées AVANT le DELETE du modèle
@@ -2033,28 +2077,34 @@ async function copiesDuModele(supabase: SupabaseClient, modeleIds: string[]): Pr
 // cours retiré est re-jugée classe par classe (elle ne reste que là où il vit encore).
 async function retirerCreneauxModele(
   supabase: SupabaseClient, parcoursId: string, modeleIds: string[],
-): Promise<{ retireDe: number; conserveDans: number; error?: string }> {
-  if (modeleIds.length === 0) return { retireDe: 0, conserveDans: 0 }
+): Promise<{ retireDe: number; conserveDans: number; detachees: number; error?: string }> {
+  if (modeleIds.length === 0) return { retireDe: 0, conserveDans: 0, detachees: 0 }
   const { data: rows } = await supabase
     .from('scriptorium_parcours_creneaux').select('id, ref_type, contenu_id')
     .in('id', modeleIds).eq('parcours_id', parcoursId)
   const modeles = (rows ?? []) as { id: string; ref_type: string; contenu_id: string | null }[]
-  if (modeles.length === 0) return { retireDe: 0, conserveDans: 0, error: 'Créneau introuvable.' }
-  const { intactes, nbClassesIntactes, nbClassesVues } =
-    partagerCopies(await copiesDuModele(supabase, modeles.map(m => m.id)))
+  if (modeles.length === 0) return { retireDe: 0, conserveDans: 0, detachees: 0, error: 'Créneau introuvable.' }
+  const { copies, detachees } = await copiesDuModele(supabase, modeles.map(m => m.id))
+  const { intactes, vues, nbClassesIntactes, nbClassesVues } = partagerCopies(copies)
 
+  // La PROVENANCE des copies conservées, AVANT que la FK efface le lien : l'instance
+  // dira « plus au modèle ». Tolérant (migration parcours_suivi_du_modele.sql).
+  if (vues.length > 0) {
+    await supabase.from('scriptorium_parcours_classe_creneaux')
+      .update({ modele_retire_at: new Date().toISOString() }).in('id', vues.map(c => c.id))
+  }
   const { error } = await supabase
     .from('scriptorium_parcours_creneaux').delete().in('id', modeles.map(m => m.id))
-  if (error) return { retireDe: 0, conserveDans: nbClassesVues, error: error.message }
+  if (error) return { retireDe: 0, conserveDans: nbClassesVues, detachees, error: error.message }
   if (intactes.length > 0) {
     const { error: eCop } = await supabase
       .from('scriptorium_parcours_classe_creneaux').delete().in('id', intactes.map(c => c.id)) // cascade éléments
-    if (eCop) return { retireDe: 0, conserveDans: nbClassesVues, error: `retiré du modèle, mais pas des classes : ${eCop.message}` }
+    if (eCop) return { retireDe: 0, conserveDans: nbClassesVues, detachees, error: `retiré du modèle, mais pas des classes : ${eCop.message}` }
   }
   const admin = createAdminClient()
   const cours = new Set(modeles.filter(m => m.ref_type === 'contenu' && m.contenu_id).map(m => m.contenu_id as string))
   for (const contenuId of cours) await hookSyntheseRetraitCreneau(admin, parcoursId, contenuId)
-  return { retireDe: nbClassesIntactes, conserveDans: nbClassesVues }
+  return { retireDe: nbClassesIntactes, conserveDans: nbClassesVues, detachees }
 }
 
 // DÉPLACEMENT d'un créneau du modèle : les copies intactes suivent — nouvelle
@@ -2062,8 +2112,9 @@ async function retirerCreneauxModele(
 // (aucun n'est vu, rien n'est perdu) ; les copies vues gardent leur semaine.
 async function propagerDeplacement(
   supabase: SupabaseClient, m: CreneauModeleRow, nbSemaines: number,
-): Promise<{ suivi: number; conserve: number; echecs: number }> {
-  const { intactes, nbClassesVues } = partagerCopies(await copiesDuModele(supabase, [m.id]))
+): Promise<{ suivi: number; conserve: number; detachees: number; echecs: number }> {
+  const { copies, detachees } = await copiesDuModele(supabase, [m.id])
+  const { intactes, nbClassesVues } = partagerCopies(copies)
   const semaine = Math.min(Math.max(1, m.semaine), Math.max(1, nbSemaines))
   let suivi = 0
   let echecs = 0
@@ -2091,33 +2142,43 @@ async function propagerDeplacement(
     if (mat.error) echecs++
     else suivi++
   }
-  return { suivi, conserve: nbClassesVues, echecs }
+  return { suivi, conserve: nbClassesVues, detachees, echecs }
 }
 
-// RÉORDONNANCEMENT d'une semaine du modèle : dans chaque instance, les copies de ces
-// créneaux permutent parmi les positions qu'elles occupent (reassignerPositions).
-// Deux passes négatives/positives — patron reordonnerCreneaux. Meilleur effort : un
-// échec est journalisé, l'ordre du modèle est acquis.
-async function propagerOrdre(supabase: SupabaseClient, ordreIds: string[]): Promise<void> {
+// RÉORDONNANCEMENT d'une semaine du modèle : dans chaque instance qui SUIVAIT ENCORE
+// l'ordre d'avant (suitLOrdreDuModele contre `ancienOrdre`), les copies permutent parmi
+// les positions qu'elles occupent (reassignerPositions) ; une classe qui avait
+// réordonné elle-même garde son ordre. Deux passes négatives/positives — patron
+// reordonnerCreneaux. Meilleur effort : un échec est journalisé, l'ordre du modèle
+// est acquis. Renvoie les comptes en CLASSES (une semaine d'instance par classe).
+async function propagerOrdre(
+  supabase: SupabaseClient, ancienOrdre: string[], nouvelOrdre: string[],
+): Promise<{ suivi: number; conserve: number; detachees: number }> {
+  const { copies, detachees } = await copiesDuModele(supabase, nouvelOrdre)
   const parSemaine = new Map<string, CopieDeModele[]>()
-  for (const c of await copiesDuModele(supabase, ordreIds)) {
+  for (const c of copies) {
     const cle = `${c.pcId}|${c.semaine}`
     parSemaine.set(cle, [...(parSemaine.get(cle) ?? []), c])
   }
+  let suivi = 0
+  let conserve = 0
   for (const groupe of parSemaine.values()) {
-    const changements = reassignerPositions(groupe, ordreIds)
+    if (!suitLOrdreDuModele(groupe, ancienOrdre)) { conserve++; continue }
+    suivi++
+    const changements = reassignerPositions(groupe, nouvelOrdre)
     if (changements.length === 0) continue
     for (let i = 0; i < changements.length; i++) {
       const { error } = await supabase.from('scriptorium_parcours_classe_creneaux')
         .update({ ordre: -(i + 1) }).eq('id', changements[i].id)
-      if (error) { console.error('[scriptorium] propagation de l’ordre (passe 1)', error.message); return }
+      if (error) { console.error('[scriptorium] propagation de l’ordre (passe 1)', error.message); return { suivi, conserve, detachees } }
     }
     for (const ch of changements) {
       const { error } = await supabase.from('scriptorium_parcours_classe_creneaux')
         .update({ ordre: ch.ordre }).eq('id', ch.id)
-      if (error) { console.error('[scriptorium] propagation de l’ordre (passe 2)', error.message); return }
+      if (error) { console.error('[scriptorium] propagation de l’ordre (passe 2)', error.message); return { suivi, conserve, detachees } }
     }
   }
+  return { suivi, conserve, detachees }
 }
 
 // ── Décalages : ce qui permet à DEUX PARCOURS d'une classe de S'ALTERNER ──────
@@ -2488,6 +2549,63 @@ export async function recupererCreneauxModele(
   for (const contenuId of cours) await hookSyntheseAjoutCreneau(admin, inst.pc.parcoursId, contenuId)
   revalidatePath('/prof/scriptorium')
   return echecs.length ? { nb, error: echecs.join(' · ') } : { nb }
+}
+
+/**
+ * RÉORDONNE les créneaux d'une semaine DE L'INSTANCE (02/09 soir) — l'ordre PROPRE d'une
+ * classe. `ordreIds` = tous les créneaux qui VIVENT dans cette semaine (semaine réelle), dans
+ * le nouvel ordre. Deux passes négatives/positives contre l'unicité (assignation, semaine,
+ * ordre) — patron reordonnerCreneaux. Un ordre choisi ici est respecté par le modèle : sa
+ * propagation d'ordre ne redescend que là où la classe suivait encore (suitLOrdreDuModele).
+ */
+export async function reordonnerCreneauxInstance(
+  pcId: string, semaine: number, ordreIds: string[],
+): Promise<{ error?: string }> {
+  const { supabase } = await verifierProf()
+  if (!RE_UUID.test(pcId)) return { error: 'Assignation invalide.' }
+  if (!Number.isInteger(semaine) || semaine < 1) return { error: 'Semaine invalide.' }
+  if (!Array.isArray(ordreIds) || ordreIds.some(id => !RE_UUID.test(id))) return { error: 'Ordre invalide.' }
+
+  const { data: actuels } = await supabase
+    .from('scriptorium_parcours_classe_creneaux').select('id')
+    .eq('parcours_classe_id', pcId).eq('semaine', semaine)
+  const idsBase = new Set((actuels ?? []).map(r => r.id as string))
+  const idsFournis = new Set(ordreIds)
+  if (idsBase.size !== idsFournis.size || [...idsBase].some(id => !idsFournis.has(id))) {
+    return { error: 'La liste des créneaux a changé — recharge la page puis réessaie.' }
+  }
+  for (let i = 0; i < ordreIds.length; i++) {
+    const { error } = await supabase.from('scriptorium_parcours_classe_creneaux')
+      .update({ ordre: -(i + 1) }).eq('id', ordreIds[i]).eq('parcours_classe_id', pcId).eq('semaine', semaine)
+    if (error) return { error: error.message }
+  }
+  for (let i = 0; i < ordreIds.length; i++) {
+    const { error } = await supabase.from('scriptorium_parcours_classe_creneaux')
+      .update({ ordre: i + 1 }).eq('id', ordreIds[i]).eq('parcours_classe_id', pcId).eq('semaine', semaine)
+    if (error) return { error: error.message }
+  }
+  revalidatePath('/prof/scriptorium')
+  return {}
+}
+
+/**
+ * L'INTERRUPTEUR « cette classe suit / ne suit plus le modèle » (02/09 soir). Détacher ne
+ * détruit rien et se défait d'un clic : le modèle cesse d'ajouter, retirer, déplacer et
+ * réordonner dans cette instance ; le panneau de reprise reste le chemin manuel. Rattacher
+ * ne rejoue rien de lui-même — la reprise le fait, à la demande.
+ */
+export async function reglerSuiviModele(pcId: string, suit: boolean): Promise<{ success?: boolean; error?: string }> {
+  const { supabase } = await verifierProf()
+  if (!RE_UUID.test(pcId)) return { error: 'Identifiant invalide.' }
+  const { error } = await supabase.from('scriptorium_parcours_classes')
+    .update({ suit_modele: suit, updated_at: new Date().toISOString() }).eq('id', pcId)
+  if (error) {
+    return { error: error.message.includes('suit_modele')
+      ? 'Ce réglage demande la migration `parcours_suivi_du_modele.sql` (pas encore jouée sur cette base).'
+      : error.message }
+  }
+  revalidatePath('/prof/scriptorium')
+  return { success: true }
 }
 
 // ── Pilotage de l'instance — RAG L3 (grille « vu », SPEC §5.3) ────────────────

@@ -31,6 +31,9 @@ export interface ElementInstance {
   aRevoir: boolean               // séance de livre hors de l'étendue réelle (schema-S2)
   ordre: number
   semaineReelle: number          // semaine DB (≠ semaine d'affichage si clampée §4.2) — cible des actions
+  // Le modèle a retiré ce créneau et la classe l'a gardé (déjà vu) : date du retrait,
+  // null sinon. Sans la migration parcours_suivi_du_modele.sql : toujours null.
+  modeleRetireLe: string | null
 }
 
 /**
@@ -76,6 +79,10 @@ export interface SemaineInstance {
   occupee: OccupationSemaine[]
   elements: ElementInstance[]
   syntheses: SyntheseInstance[]  // les cours qui SE TERMINENT cette semaine-là
+  // Les créneaux qui VIVENT dans cette semaine (semaine réelle), dans leur ordre — ce que
+  // « monter / descendre le créneau » permute (reordonnerCreneauxInstance). Un créneau
+  // clampé (au-delà de nb_semaines) n'y figure pas : il n'a pas de place à permuter.
+  creneaux: { id: string; titre: string; ordre: number }[]
 }
 
 // Bloc de planification de l'instance : ce que le PARCOURS DE LA CLASSE porte
@@ -103,6 +110,10 @@ export interface InstanceDeClasse {
   // un interrupteur qui refuserait sans raison lisible.
   syntheseReglable: boolean
   aPlanEvaluation: boolean       // sans plan, une synthèse n'aurait nulle part où vivre
+  // Cette classe suit-elle le modèle ? (`suit_modele`, lu à part et toléré absent ⇒ true.)
+  // `suiviReglable` = la colonne existe — sinon l'écran dit « migration pas jouée ».
+  suitModele: boolean
+  suiviReglable: boolean
   planification: PlanificationInstance
   decalages: Decalages
   semaines: SemaineInstance[]
@@ -126,18 +137,22 @@ export async function chargerInstanceDeClasse(pcId: string): Promise<InstanceDeC
   // Assignation. Les colonnes ajoutées après coup (snapshot d'horaire, décalages)
   // sont lues À PART et TOLÉRÉES absentes : une migration non jouée fait retomber
   // l'instance sur son comportement d'origine au lieu de vider l'écran.
-  const [base, snapQ, decQ] = await Promise.all([
+  const [base, snapQ, decQ, suivQ] = await Promise.all([
     supabase.from('scriptorium_parcours_classes')
       .select('id, parcours_id, classe_id, date_debut').eq('id', pcId).maybeSingle(),
     supabase.from('scriptorium_parcours_classes')
       .select('horaire_snapshot, snapshot_version, snapshot_genere_le').eq('id', pcId).maybeSingle(),
     supabase.from('scriptorium_parcours_classes')
       .select('decalages').eq('id', pcId).maybeSingle(),
+    supabase.from('scriptorium_parcours_classes')
+      .select('suit_modele').eq('id', pcId).maybeSingle(),
   ])
   const pcRow = (base.data as Record<string, unknown> | null) ?? null
   if (!pcRow) return null
   const snapRow = snapQ.error ? null : (snapQ.data as Record<string, unknown> | null)
   const decalages: Decalages = (decQ.error ? null : (decQ.data?.decalages as Decalages | null)) ?? {}
+  const suiviReglable = !suivQ.error
+  const suitModele = suivQ.error ? true : (suivQ.data?.suit_modele as boolean | null | undefined) !== false
 
   const [{ data: parc }, { data: classe }] = await Promise.all([
     supabase.from('scriptorium_parcours')
@@ -239,6 +254,14 @@ export async function chargerInstanceDeClasse(pcId: string): Promise<InstanceDeC
     livre_semaine_debut: number | null; livre_semaine_fin: number | null; titre_affiche: string | null
     modele_creneau_id: string | null
   }[]
+  // La provenance « plus au modèle », lue À PART et tolérée absente (migration
+  // parcours_suivi_du_modele.sql) : sans elle, aucun jeton.
+  const retireQ = creneaux.length
+    ? await supabase.from('scriptorium_parcours_classe_creneaux')
+        .select('id, modele_retire_at').in('id', creneaux.map(c => c.id))
+    : { data: [] as Record<string, unknown>[], error: null }
+  const retireParCreneau = new Map<string, string | null>(
+    retireQ.error ? [] : (retireQ.data ?? []).map(r => [r.id as string, (r.modele_retire_at as string | null) ?? null]))
 
   // ── Ce que le modèle a et que cette classe n'a pas (02/09) ─────────────────
   // Un créneau propre de même cible (un cours posé à la main dans la classe avant
@@ -300,6 +323,7 @@ export async function chargerInstanceDeClasse(pcId: string): Promise<InstanceDeC
   type ElementResolu = ElementInstance & { semaine: number; triCreneau: [number, number] }
   const resolus: ElementResolu[] = elements.map(e => {
     const cr = creneauParId.get(e.creneau_id)!
+    const modeleRetireLe = retireParCreneau.get(cr.id) ?? null
     // Clamp de lecture (§4.2) : un élément dérivé au-delà de nb_semaines (réduction
     // du parcours après coup) s'affiche dans la dernière semaine ; les actions
     // visent la semaine RÉELLE (semaineReelle).
@@ -315,7 +339,7 @@ export async function chargerInstanceDeClasse(pcId: string): Promise<InstanceDeC
         id: e.id, creneauId: cr.id, creneauTitre: label, refType: e.ref_type,
         badge: 'Livre' as const,
         titre: `${label} — séance ${k}${chap ? `, ${chap}` : ''}`,
-        vuAt: e.vu_at, aRevoir, ordre: e.ordre, semaineReelle: e.semaine, semaine, triCreneau,
+        vuAt: e.vu_at, aRevoir, ordre: e.ordre, semaineReelle: e.semaine, semaine, triCreneau, modeleRetireLe,
       }
     }
     const info = cr.contenu_id ? contenuMap.get(cr.contenu_id) : undefined
@@ -330,14 +354,14 @@ export async function chargerInstanceDeClasse(pcId: string): Promise<InstanceDeC
         id: e.id, creneauId: cr.id, creneauTitre: contenuTitre, refType: e.ref_type,
         badge: 'Section' as const,
         titre: `${contenuTitre} — ${sec ? `${marque}${sec.titre}` : 'section retirée'}`,
-        vuAt: e.vu_at, aRevoir: !sec, ordre: e.ordre, semaineReelle: e.semaine, semaine, triCreneau,
+        vuAt: e.vu_at, aRevoir: !sec, ordre: e.ordre, semaineReelle: e.semaine, semaine, triCreneau, modeleRetireLe,
       }
     }
     return {
       id: e.id, creneauId: cr.id, creneauTitre: contenuTitre, refType: e.ref_type,
       badge: (info?.type === 'texte' ? 'Texte' : 'Cours') as 'Texte' | 'Cours',
       titre: contenuTitre,
-      vuAt: e.vu_at, aRevoir: false, ordre: e.ordre, semaineReelle: e.semaine, semaine, triCreneau,
+      vuAt: e.vu_at, aRevoir: false, ordre: e.ordre, semaineReelle: e.semaine, semaine, triCreneau, modeleRetireLe,
     }
   })
 
@@ -466,10 +490,17 @@ export async function chargerInstanceDeClasse(pcId: string): Promise<InstanceDeC
       courante: courante != null && courante === k,
       occupee: cleOccupation ? (occupationParLundi.get(cleOccupation) ?? []) : [],
       syntheses: synthesesParSemaine.get(k) ?? [],
+      creneaux: creneaux.filter(c => c.semaine === k).map(c => ({
+        id: c.id,
+        ordre: c.ordre,
+        titre: c.ref_type === 'livre'
+          ? ((c.livre_id && livreMap.get(c.livre_id)?.label) || c.titre_affiche || 'livre retiré')
+          : ((c.contenu_id && contenuMap.get(c.contenu_id)?.titre) || c.titre_affiche || 'contenu retiré'),
+      })),
       elements: els2.map(e => ({
         id: e.id, creneauId: e.creneauId, creneauTitre: e.creneauTitre, refType: e.refType,
         badge: e.badge, titre: e.titre, vuAt: e.vuAt, aRevoir: e.aRevoir, ordre: e.ordre,
-        semaineReelle: e.semaineReelle,
+        semaineReelle: e.semaineReelle, modeleRetireLe: e.modeleRetireLe,
       })),
     })
   }
@@ -496,6 +527,8 @@ export async function chargerInstanceDeClasse(pcId: string): Promise<InstanceDeC
     nonVusPasses,
     syntheseReglable,
     aPlanEvaluation,
+    suitModele,
+    suiviReglable,
     planification: { dateDebut, apercu: apercuLive, snapshot, diff },
     decalages,
     semaines,
