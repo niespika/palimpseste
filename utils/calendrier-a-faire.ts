@@ -11,6 +11,7 @@ import { dateEffectiveSemaine, libelleTypeExercice } from '@/utils/plan-cadence'
 import { moduleDuType, estUnModuleExamen } from '@/utils/examens/types'
 import { construireApercuAssign, memoSocleFrise, type ApercuSemaine } from '@/utils/parcours-apercu'
 import { semaineCourante } from '@/utils/scriptorium-corpus'
+import { themeAValider } from '@/utils/fragments-theme'
 
 // Dérivation calendrier → « à faire » (famille 2 de la spec §7) : une échéance
 // proche ENGENDRE une tâche. On n'affiche jamais l'événement nu ici (il est sur
@@ -44,6 +45,39 @@ export async function tachesDeriveesDuCalendrier(joursAvant = 10): Promise<Tache
   const today = jourDansFuseau(new Date(), await lireFuseau())
   const fin = toISODate(addDaysUTC(new Date(today + 'T00:00:00Z'), joursAvant))
   const taches: TacheCalendrier[] = []
+
+  // C8 (Louis, 02/09) — un thème PROPOSÉ par un élève attend d'être relu et validé :
+  // c'est le signal que le professeur reçoit. Échéance = aujourd'hui (rien à
+  // attendre), un item par élève, vers Suivi de sa classe.
+  {
+    const admin = createAdminClient()
+    const { data: themes } = await admin
+      .from('fragments_themes')
+      .select('id, theme, propose_at, valide_at, eleve_id, inscriptions!inner(classe_id, statut, classes(nom)), semesters!inner(is_active)')
+      .not('propose_at', 'is', null)
+      .eq('inscriptions.statut', 'active')
+      .eq('semesters.is_active', true)
+    const aValider = (themes ?? []).filter((t) => themeAValider({
+      theme: t.theme as string | null, propose_at: t.propose_at as string | null, valide_at: t.valide_at as string | null,
+    }))
+    if (aValider.length > 0) {
+      const { data: profils } = await admin.from('profiles').select('id, display_name')
+        .in('id', aValider.map((t) => t.eleve_id as string))
+      const nomDe = new Map((profils ?? []).map((p) => [p.id as string, p.display_name as string]))
+      for (const t of aValider) {
+        const insc = un<{ classe_id: string; classes: { nom: string } | Array<{ nom: string }> }>(t.inscriptions as never)
+        const classeNom = insc ? un<{ nom: string }>(insc.classes)?.nom ?? null : null
+        taches.push({
+          id: `theme-${t.id}`,
+          label: `Valider le thème proposé — ${nomDe.get(t.eleve_id as string) ?? 'un élève'} : « ${String(t.theme ?? '').slice(0, 60)} »`,
+          echeance: today,
+          classeNom,
+          href: `/prof/fragments-erudition/suivi${insc?.classe_id ? `?classe=${insc.classe_id}` : ''}`,
+          ctaLabel: 'Relire →',
+        })
+      }
+    }
+  }
 
   // Essais Fragments proches, dépôts non ouverts → action « ouvrir les dépôts ».
   const { data: eps } = await supabase

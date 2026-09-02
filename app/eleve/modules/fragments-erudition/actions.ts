@@ -9,6 +9,7 @@ import { detecterAveuHeuristique } from '@/utils/detecteur-integrite'
 import { messageSiBloque, signalerStrikeAuto } from '@/utils/integrite'
 import { messageSiRetoursNonLus } from '@/utils/retours-lus'
 import { etatOngletsFragmentsEleve, type EtatOngletsFragments } from '@/utils/fragments-etat-eleve'
+import { themePropose } from '@/utils/fragments-theme'
 
 // Vérifier que l'appelant est bien un élève
 async function verifierEleve() {
@@ -18,6 +19,40 @@ async function verifierEleve() {
   const { data: profile } = await supabase.from('profiles').select('role').eq('id', user.id).single()
   if (profile?.role !== 'eleve') throw new Error('Accès refusé')
   return { supabase, userId: user.id }
+}
+
+// ── C8 — l'élève propose son thème ; le professeur le relit et le valide ─────
+// Demande de Louis (02/09). Écriture par le client admin (aucune policy élève
+// d'écriture sur `fragments_themes` — on n'en ouvre pas), l'inscription vérifiée
+// dans le code, comme le dépôt. `propose_at` porte l'instant ; « à valider » se
+// dérive (`utils/fragments-theme.ts`).
+export async function proposerTheme(formData: FormData) {
+  const { supabase, userId } = await verifierEleve()
+  const inscriptionId = String(formData.get('inscriptionId') ?? '')
+  const semestreId = String(formData.get('semestreId') ?? '')
+  const theme = themePropose(String(formData.get('theme') ?? ''))
+  const description = String(formData.get('description') ?? '').replace(/\r\n/g, '\n').trim().slice(0, 1000) || null
+  if (!theme) return { error: 'Écris ton thème avant de le proposer.' }
+  if (!semestreId) return { error: 'Aucun semestre en cours.' }
+
+  const { data: inscription } = await supabase
+    .from('inscriptions').select('id').eq('id', inscriptionId).eq('eleve_id', userId).eq('statut', 'active').maybeSingle()
+  if (!inscription) return { error: 'Contexte de classe invalide.' }
+  const admin = createAdminClient()
+  const { data: semestre } = await admin.from('semesters').select('id').eq('id', semestreId).eq('is_active', true).maybeSingle()
+  if (!semestre) return { error: 'Ce semestre n’est pas en cours.' }
+
+  const maintenant = new Date().toISOString()
+  const { data: existant } = await admin
+    .from('fragments_themes').select('id').eq('inscription_id', inscriptionId).eq('semestre_id', semestreId).maybeSingle()
+  const { error } = existant
+    ? await admin.from('fragments_themes').update({ theme, description, propose_at: maintenant }).eq('id', existant.id)
+    : await admin.from('fragments_themes').insert({ inscription_id: inscriptionId, semestre_id: semestreId, eleve_id: userId, theme, description, propose_at: maintenant })
+  if (error) return { error: `Le thème n’a pas été enregistré : ${error.message}` }
+  revalidatePath('/eleve/modules/fragments-erudition')
+  revalidatePath('/prof/fragments-erudition/suivi')
+  revalidatePath('/prof')
+  return { success: true }
 }
 
 export async function deposerCompteRendu(formData: FormData) {

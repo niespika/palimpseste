@@ -12,6 +12,8 @@ import AnalysePubliee, { tuilesAnalyseEcrite } from './AnalysePubliee'
 import GraphiqueProgression from '@/components/fragments/GraphiqueProgression'
 import AnalyseOralePubliee from './AnalyseOralePubliee'
 import EssaiDepot from './EssaiDepot'
+import ThemeEleve from './ThemeEleve'
+import { statutDuTheme } from '@/utils/fragments-theme'
 import { tuilesAnalyseEssai } from './EssaiPublie'
 import { signauxDeLancement } from '@/utils/examens/signal'
 import { examensEnClasseDeLEleve } from '@/utils/codex-onglets/liste'
@@ -106,7 +108,7 @@ export default async function PageFragments({ searchParams }: { searchParams: Pr
     .maybeSingle()
   let themeQuery = supabase
     .from('fragments_themes')
-    .select('theme, description, essai_actif')
+    .select('theme, description, essai_actif, propose_at, valide_at')
     .eq('inscription_id', inscriptionId)
   if (semCourant?.id) themeQuery = themeQuery.eq('semestre_id', semCourant.id)
   const { data: theme } = await themeQuery.maybeSingle()
@@ -473,20 +475,15 @@ export default async function PageFragments({ searchParams }: { searchParams: Pr
         <Link href="/eleve" className="text-sm text-muet hover:text-encre-douce">← Retour</Link>
       </div>
 
-      {/* Identité du module portée par la Barre 2 ; on garde le thème de l'élève. */}
-      <div>
-        {theme ? (
-          <div className="bg-parchemin-fonce rounded-xl px-4 py-3">
-            <p className="text-xs text-muet mb-0.5">Ton thème</p>
-            <p className="font-medium text-encre">{theme.theme}</p>
-            {theme.description && <p className="text-sm text-muet mt-1">{theme.description}</p>}
-          </div>
-        ) : (
-          <div className="bg-parchemin-fonce rounded-xl px-4 py-3 border border-bordure">
-            <p className="text-sm text-muet italic">Ton thème sera défini avec ton professeur.</p>
-          </div>
-        )}
-      </div>
+      {/* Identité du module portée par la Barre 2 ; le thème est à l'élève :
+          il l'écrit, le professeur le relit et le valide (C8, Louis 02/09). */}
+      <ThemeEleve
+        inscriptionId={inscriptionId}
+        semestreId={semCourant?.id ?? null}
+        theme={theme?.theme ?? null}
+        description={theme?.description ?? null}
+        statut={statutDuTheme(theme ? { theme: theme.theme, propose_at: (theme as { propose_at?: string | null }).propose_at ?? null, valide_at: (theme as { valide_at?: string | null }).valide_at ?? null } : null)}
+      />
 
       {/* Ton parcours (sections en lettres) + stats + rappel des pistes */}
       {pointsParcours.some(p => p.decouvertes !== null) && (

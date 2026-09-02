@@ -93,18 +93,37 @@ export async function sauvegarderTheme(formData: FormData) {
     .eq('semestre_id', semestreId)
     .maybeSingle()
 
+  // C8 (02/09) — la main du professeur vaut validation : `valide_at` se pose.
+  const valide_at = new Date().toISOString()
   if (existant) {
     await supabase
       .from('fragments_themes')
-      .update({ theme, description })
+      .update({ theme, description, valide_at })
       .eq('id', existant.id)
   } else {
     await supabase
       .from('fragments_themes')
-      .insert({ inscription_id: inscriptionId, semestre_id: semestreId, eleve_id: insc.eleve_id, theme, description })
+      .insert({ inscription_id: inscriptionId, semestre_id: semestreId, eleve_id: insc.eleve_id, theme, description, valide_at })
   }
 
   revalidatePath('/prof/fragments-erudition/suivi')
+  revalidatePath('/prof')
+  return { success: true }
+}
+
+// C8 (02/09) — le professeur a relu le thème proposé par l'élève : il le valide
+// tel quel. Le texte ne bouge pas ; seul `valide_at` se pose.
+export async function validerTheme(inscriptionId: string, semestreId: string) {
+  const supabase = await verifierProf()
+  const { data: existant } = await supabase
+    .from('fragments_themes').select('id, theme').eq('inscription_id', inscriptionId).eq('semestre_id', semestreId).maybeSingle()
+  if (!existant) return { error: 'Aucun thème à valider.' }
+  if (!existant.theme || String(existant.theme).trim() === '') return { error: 'Le thème est vide : rien à valider.' }
+  const { error } = await supabase.from('fragments_themes').update({ valide_at: new Date().toISOString() }).eq('id', existant.id)
+  if (error) return { error: error.message }
+  revalidatePath('/prof/fragments-erudition/suivi')
+  revalidatePath('/eleve/modules/fragments-erudition')
+  revalidatePath('/prof')
   return { success: true }
 }
 

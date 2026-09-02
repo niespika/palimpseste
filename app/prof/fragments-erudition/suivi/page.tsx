@@ -105,7 +105,7 @@ export default async function PageSuivi({ searchParams }: { searchParams: Promis
     const { data: themes } = inscriptionIds.length > 0
       ? await admin
           .from('fragments_themes')
-          .select('inscription_id, theme, description, essai_actif')
+          .select('inscription_id, theme, description, essai_actif, propose_at, valide_at')
           .eq('semestre_id', semestre.id)
           .in('inscription_id', inscriptionIds)
       : { data: [] }
@@ -155,7 +155,7 @@ export default async function PageSuivi({ searchParams }: { searchParams: Promis
         id: p.id as string,
         display_name: p.display_name as string,
         inscriptionId,
-        theme: t ? { theme: t.theme, description: t.description, essai_actif: t.essai_actif } : null,
+        theme: t ? { theme: t.theme, description: t.description, essai_actif: t.essai_actif, propose_at: t.propose_at ?? null, valide_at: t.valide_at ?? null } : null,
         moy: { decouvertes: moyenne(ds), sources: moyenne(ss), reflexions: moyenne(rs) },
         tauxDepot: nbSemaines > 0
           ? Math.round(((depotsComptesParInsc.get(inscriptionId) ?? 0) / nbSemaines) * 100)

@@ -8979,3 +8979,17 @@ le veut.
 - [ ] **La transcription par le cron** (`/api/chaine` à la minute) : la recette a appelé `transcrireMaintenant` ; l'écran élève, lui, ne réclame pas son job — c'est le cron qui le prend. Condition : un dépôt élève au navigateur, en bac à sable, et le job passe `abouti` dans la minute (en local, lancer la route à la main).
 - [ ] **Le re-dépôt payant** (nouvelles photos → nouvelle transcription) prouvé sans appel seulement.
 - [ ] **La page élève de passation AVANT remise** (« Ta copie est déposée : elle est en cours de transcription ») : vue au code, pas au navigateur (la copie de recette était déjà remise au moment du smoke).
+
+## C8 — Le thème est proposé par l'élève, le professeur le valide (demande de Louis, séance du 02/09, migration `c8_theme_propose_par_eleve.sql`)
+
+**Hors C6-L4, à la demande de Louis.** Deux instants sur `fragments_themes` (`propose_at`, `valide_at`), règle pure `utils/fragments-theme.ts` (6 tests), formulaire élève en tête de sa page Fragments, badge « À valider » + bouton « Valider » dans Suivi, tâche « Valider le thème proposé — {élève} » dans le tableau de bord du professeur. La main du professeur (`sauvegarderTheme`) vaut validation.
+
+### Prouvé en séance
+- [x] **L'élève propose** — formulaire rempli et soumis au navigateur (compte de test, classe Test) : « Proposé — en attente de la validation de ton professeur. » ; `propose_at` posé, `valide_at` nul (vérifié par requête).
+- [x] **Le professeur reçoit le signal** — tableau de bord `/prof`, « À préparer » : « Valider le thème proposé — Elo : « Le doute peut-il fonder une connaissance ? » » → Suivi de la classe ; page Suivi : badge « À valider », « Proposé par l'élève — relis-le, puis valide-le tel quel ou modifie-le », bouton « Valider » (vus au navigateur).
+- [x] **Les thèmes déjà posés par le professeur ne deviennent pas « à valider »** (`propose_at` nul) — règle testée, et le constat de pied de la migration le dit (`aucun_theme_a_valider`).
+
+### Reste à jouer
+- [ ] **Le clic « Valider » lui-même** (`validerTheme` → `valide_at`, badge « Validé », l'élève lit « Validé par ton professeur ») : le volet du navigateur s'est figé sur « chargement » (piège connu du volet caché) avant le clic. Condition : un clic de Louis sur Suivi, en bac à sable ou en prod après le SQL.
+- [ ] **La re-proposition après validation** (l'élève modifie → de nouveau « à valider ») : règle testée, non vue à l'écran.
+- [ ] **PROD** : `c8_theme_propose_par_eleve.sql` à jouer par Louis, avant le push, avec `c6_l4_essai_lien_instance.sql`.

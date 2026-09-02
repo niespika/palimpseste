@@ -4,11 +4,16 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { sauvegarderTheme } from '../actions'
 import { toggleEssaiActif } from '../essai-actions'
+import { validerTheme } from '../actions'
+import { statutDuTheme } from '@/utils/fragments-theme'
 
 export interface ThemeEleve {
   theme: string | null
   description: string | null
   essai_actif: boolean | null
+  /** C8 (02/09) — la proposition de l'élève, et la validation du professeur. */
+  propose_at?: string | null
+  valide_at?: string | null
 }
 
 interface Props {
@@ -42,6 +47,19 @@ export default function LigneThemeEleve({ inscriptionId, semestreId, theme }: Pr
       setTimeout(() => setMessage(null), 2000)
       router.refresh()
     }
+  }
+
+  const statut = statutDuTheme(theme ? { theme: theme.theme, propose_at: theme.propose_at ?? null, valide_at: theme.valide_at ?? null } : null)
+  const [chargementValidation, setChargementValidation] = useState(false)
+
+  async function handleValider() {
+    setChargementValidation(true)
+    const r = await validerTheme(inscriptionId, semestreId)
+    setChargementValidation(false)
+    if ('error' in r && r.error) { setMessage(r.error); return }
+    setMessage('Thème validé.')
+    setTimeout(() => setMessage(null), 2000)
+    router.refresh()
   }
 
   async function handleToggleEssai() {
@@ -95,14 +113,35 @@ export default function LigneThemeEleve({ inscriptionId, semestreId, theme }: Pr
       <div className="flex-1 min-w-0">
         {theme?.theme ? (
           <>
-            <p className="text-sm text-encre">{theme.theme}</p>
+            <p className="text-sm text-encre">
+              {statut === 'a_valider' && (
+                <span className="mr-2 text-xs px-1.5 py-0.5 rounded bg-attention-teinte text-attention font-medium align-middle">À valider</span>
+              )}
+              {statut === 'valide' && (
+                <span className="mr-2 text-xs px-1.5 py-0.5 rounded bg-ok-teinte text-ok font-medium align-middle">Validé</span>
+              )}
+              {theme.theme}
+            </p>
             {theme.description && <p className="text-xs text-muet mt-0.5">{theme.description}</p>}
+            {statut === 'a_valider' && (
+              <p className="text-xs text-muet mt-0.5">Proposé par l’élève — relis-le, puis valide-le tel quel ou modifie-le.</p>
+            )}
           </>
         ) : (
-          <p className="text-sm text-muet italic">Thème non défini</p>
+          <p className="text-sm text-muet italic">Thème non défini — l’élève peut le proposer depuis sa page.</p>
         )}
         {message && <p className="text-xs text-ok mt-0.5">{message}</p>}
       </div>
+      {statut === 'a_valider' && (
+        <button
+          onClick={handleValider}
+          disabled={chargementValidation}
+          title="Valider le thème proposé par l’élève"
+          className="text-xs px-2 py-1 rounded-full font-medium bg-bouton text-surface hover:opacity-90 disabled:opacity-50 flex-shrink-0"
+        >
+          {chargementValidation ? '…' : 'Valider'}
+        </button>
+      )}
       <button
         onClick={handleToggleEssai}
         disabled={chargementEssai}
