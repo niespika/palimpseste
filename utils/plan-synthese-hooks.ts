@@ -173,9 +173,9 @@ async function synthesesVivantes(
 /**
  * Après ajout d'un créneau-CONTENU : si c'est un cours vivant, crée la synthèse pour
  * chaque classe assignée ACTIVE à plan vivant DONT L'INSTANCE référence ce cours
- * (RAG L1 : ajouter un créneau au MODÈLE ne redescend pas dans les instances → le
- * hook n'y crée rien ; l'ajout d'un créneau à une INSTANCE — geste L3 — passera par
- * ce même hook et trouvera le cours dans l'instance de sa classe). Gate OFF → no-op.
+ * (depuis le 02/09 le modèle SUIT ses classes : l'ajout au modèle est copié dans chaque
+ * instance AVANT l'appel du hook, qui trouve donc le cours partout où il est arrivé ;
+ * l'ajout direct à une instance — geste L3 — passe par ce même hook). Gate OFF → no-op.
  * Cours COUPÉ dans cette instance (le défaut) → no-op pour cette classe seulement.
  */
 export async function hookSyntheseAjoutCreneau(admin: SupabaseClient, parcoursId: string, contenuId: string): Promise<void> {

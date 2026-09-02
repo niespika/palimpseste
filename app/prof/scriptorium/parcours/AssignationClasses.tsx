@@ -122,7 +122,8 @@ export default function AssignationClasses({ parcoursId, lignes }: { parcoursId:
         <span className="font-ui text-[11px] font-bold uppercase tracking-[0.1em] text-encre-douce">Assigner à une classe</span>
         <p className="font-ui text-[12px] text-muet mt-1">
           Assigner ouvre le parcours à la classe. La <b>date</b>, les <b>décalages</b> et la
-          <b> publication</b> se règlent ensuite dans le parcours de la classe.
+          <b> publication</b> se règlent ensuite dans le parcours de la classe. Ce que tu ajoutes,
+          retires ou déplaces ici, dans le modèle, <b>suit chaque classe</b> — sauf ce qu’elle a déjà vu.
         </p>
       </div>
       {lignes.length === 0 ? (

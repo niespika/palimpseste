@@ -8,7 +8,7 @@ import {
   marquerVu, marquerVuJusquA, deplacerElement, reordonnerElements,
   ajouterCreneauInstance, retirerCreneauInstance, reinitialiserInstance,
   planifierInstance, decalerSemaineInstance, publierHoraire, ajusterNbSemainesParcours,
-  basculerSyntheseCours,
+  basculerSyntheseCours, recupererCreneauxModele,
   type RefCreneau,
 } from './actions'
 import PickerContenu from './parcours/PickerContenu'
@@ -28,7 +28,12 @@ import type { InstanceDeClasse, ElementInstance, SemaineInstance, SyntheseInstan
 //     un interrupteur « ouvrir / couper ». Il a remplacé la création automatique :
 //     « je veux déclencher la création des synthèses uniquement quand je veux, et pas
 //     de manière automatique à la fin d'un cours » (Louis). COUPER NE DÉTRUIT RIEN —
-//     la synthèse préparée passe en sourdine et revient telle quelle si on rouvre.
+//     la synthèse préparée passe en sourdine et revient telle quelle si on rouvre ;
+//   · la REPRISE DU MODÈLE (02/09) — depuis que le modèle suit ses classes, ce que le
+//     prof y ajoute arrive ici de lui-même ; le panneau « le modèle a N contenus que
+//     cette classe n'a pas » ne liste plus que les ajouts d'AVANT (et ce que la classe a
+//     retiré elle-même), à reprendre d'un clic. « Je sais combien de temps vont durer
+//     mes cours, mais le contenu exact, je ne sais pas » (Louis, 01/09).
 // Esthétique provisoire (refonte Design).
 
 export default function GrilleInstance({ instance, cibles }: {
@@ -152,6 +157,14 @@ export default function GrilleInstance({ instance, cibles }: {
   const ajouterRef = (semaine: number) => async (ref: RefCreneau): Promise<{ error?: string }> => {
     const res = await ajouterCreneauInstance(instance.pcId, semaine, ref)
     return { error: res.error }
+  }
+
+  // Reprendre du modèle ce que cette classe n'a pas (un créneau, ou tous).
+  function reprendre(ids: string[]) {
+    void lancer(ids.length === 1 ? `rep-${ids[0]}` : 'rep-tout', async () => {
+      const res = await recupererCreneauxModele(instance.pcId, ids)
+      return { error: res.error }
+    })
   }
 
   const badgeClasse = (b: ElementInstance['badge']) =>
@@ -342,6 +355,52 @@ export default function GrilleInstance({ instance, cibles }: {
         {plan.apercu && <ApercuBloc apercu={plan.apercu} />}
       </div>
 
+      {/* ── Ce que le modèle a et que cette classe n'a pas (02/09) ────────── */}
+      {instance.absentsDuModele.length > 0 && (
+        <div className="rounded-lg border border-bordure bg-surface p-3 space-y-2">
+          <div className="flex items-baseline justify-between gap-2 flex-wrap">
+            <span className="font-ui text-[11px] font-bold uppercase tracking-[0.1em] text-encre-douce">
+              Le modèle a {instance.absentsDuModele.length} contenu{instance.absentsDuModele.length > 1 ? 's' : ''} que {instance.classeNom} n’a pas
+            </span>
+            {instance.absentsDuModele.length > 1 && (
+              <button
+                onClick={() => reprendre(instance.absentsDuModele.map(a => a.id))}
+                disabled={occupe}
+                className="font-ui text-[12px] font-semibold text-pigment hover:opacity-80 disabled:opacity-50"
+              >
+                {chargement === 'rep-tout' ? '…' : `Tout reprendre (${instance.absentsDuModele.length})`}
+              </button>
+            )}
+          </div>
+          <p className="font-ui text-xs text-muet">
+            Ajoutés au modèle avant qu’il suive ses classes, ou retirés de cette classe. Désormais, ce que
+            tu ajoutes au modèle arrive ici de lui-même.
+          </p>
+          <ul className="space-y-1">
+            {instance.absentsDuModele.map(a => (
+              <li key={a.id} className="flex items-center gap-2 flex-wrap rounded px-1.5 py-1 hover:bg-parchemin-fonce/60">
+                <span className="font-ui text-[12px] font-semibold text-muet-clair w-6 flex-none">S{a.semaine}</span>
+                <span className={`font-ui text-[10px] px-1.5 py-0.5 rounded flex-shrink-0 ${badgeClasse(a.badge)}`}>
+                  {badgeLabel(a.badge)}
+                </span>
+                {/* min-w : sans plancher, le titre s'écrase au lieu de replier (cf. la ligne de synthèse). */}
+                <span className="font-corps text-sm text-encre-douce flex-1 min-w-[12rem] truncate">
+                  {a.titre}{a.trancheLabel ? <span className="text-muet-clair"> · {a.trancheLabel}</span> : null}
+                </span>
+                <button
+                  onClick={() => reprendre([a.id])}
+                  disabled={occupe}
+                  className="font-ui text-xs font-semibold text-pigment hover:opacity-80 disabled:opacity-50 flex-shrink-0"
+                  title={`Copier « ${a.titre} » dans le parcours de ${instance.classeNom}, en fin de semaine ${a.semaine}`}
+                >
+                  {chargement === `rep-${a.id}` ? '…' : 'Reprendre ici'}
+                </button>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
       {erreur && <p className="text-retard text-sm">⚠ {erreur}</p>}
       {avis && <p className="text-attention text-sm">{avis}</p>}
 
@@ -427,9 +486,10 @@ export default function GrilleInstance({ instance, cibles }: {
                   )}
                   <button
                     onClick={() => setPickerSemaine(pickerSemaine === sem.semaine ? null : sem.semaine)}
-                    className="font-ui text-xs text-encre-douce hover:text-encre"
+                    className="font-ui text-xs font-semibold text-pigment hover:opacity-80"
+                    title={`Ajouter un texte, un cours ou un livre à la semaine ${sem.semaine}, pour ${instance.classeNom} seulement`}
                   >
-                    {pickerSemaine === sem.semaine ? 'Fermer' : '+ Ajouter'}
+                    {pickerSemaine === sem.semaine ? 'Fermer' : '＋ Ajouter un contenu'}
                   </button>
                 </div>
 

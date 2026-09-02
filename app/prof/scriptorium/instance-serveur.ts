@@ -13,6 +13,8 @@ import { densifierDecalages, type Decalages } from '@/utils/frise-enseignement'
 import { semaineCourante } from '@/utils/scriptorium-corpus'
 import { resoudreDatesSyntheses } from '@/utils/plan-synthese'
 import { ouverturesDInstance } from '@/utils/plan-synthese-ouverture'
+import { absentsDuModele } from '@/utils/parcours-propagation'
+import { chargerParcoursDetail, type CreneauResolu } from './parcours/donnees'
 import {
   resoudreFrisePourDate, calculerDiffHoraire,
   type ApercuFrise, type HoraireSnapshot, type DiffHoraire,
@@ -104,6 +106,10 @@ export interface InstanceDeClasse {
   planification: PlanificationInstance
   decalages: Decalages
   semaines: SemaineInstance[]
+  // Les créneaux du MODÈLE dont cette classe n'a ni copie ni équivalent propre (02/09).
+  // Depuis que le modèle suit ses classes, il ne devrait y rester que les ajouts d'AVANT
+  // et ce que la classe a retiré elle-même ; le panneau de reprise les liste.
+  absentsDuModele: CreneauResolu[]
 }
 
 const MOIS_COURTS = ['janv.', 'févr.', 'mars', 'avr.', 'mai', 'juin', 'juil.', 'août', 'sept.', 'oct.', 'nov.', 'déc.']
@@ -224,14 +230,27 @@ export async function chargerInstanceDeClasse(pcId: string): Promise<InstanceDeC
 
   // Créneaux puis éléments de l'instance (les éléments sont scopés par créneau).
   const { data: crens } = await supabase.from('scriptorium_parcours_classe_creneaux')
-    .select('id, semaine, ordre, ref_type, contenu_id, livre_id, livre_semaine_debut, livre_semaine_fin, titre_affiche')
+    .select('id, semaine, ordre, ref_type, contenu_id, livre_id, livre_semaine_debut, livre_semaine_fin, titre_affiche, modele_creneau_id')
     .eq('parcours_classe_id', pcId)
     .order('semaine', { ascending: true }).order('ordre', { ascending: true })
   const creneaux = (crens ?? []) as {
     id: string; semaine: number; ordre: number; ref_type: 'contenu' | 'livre'
     contenu_id: string | null; livre_id: string | null
     livre_semaine_debut: number | null; livre_semaine_fin: number | null; titre_affiche: string | null
+    modele_creneau_id: string | null
   }[]
+
+  // ── Ce que le modèle a et que cette classe n'a pas (02/09) ─────────────────
+  // Un créneau propre de même cible (un cours posé à la main dans la classe avant
+  // d'entrer au modèle — l'état réel de T5) vaut présence : il n'est pas « absent ».
+  const modele = await chargerParcoursDetail(parc.id as string)
+  const absents = modele
+    ? absentsDuModele(modele.creneaux, creneaux.map(c => ({
+        refType: c.ref_type, contenuId: c.contenu_id, livreId: c.livre_id,
+        livreSemaineDebut: c.livre_semaine_debut, livreSemaineFin: c.livre_semaine_fin,
+        modeleId: c.modele_creneau_id,
+      })))
+    : []
   const { data: els } = creneaux.length
     ? await supabase.from('scriptorium_parcours_classe_elements')
         .select('id, creneau_id, ref_type, section_id, livre_semaine, semaine, ordre, vu_at')
@@ -480,5 +499,6 @@ export async function chargerInstanceDeClasse(pcId: string): Promise<InstanceDeC
     planification: { dateDebut, apercu: apercuLive, snapshot, diff },
     decalages,
     semaines,
+    absentsDuModele: absents,
   }
 }

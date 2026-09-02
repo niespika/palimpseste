@@ -14,6 +14,7 @@ import {
 } from '@/utils/scriptorium-sections'
 import { resoudreFrisePourDate } from './parcours/frise-serveur'
 import { decalerDepuis, type Decalages } from '@/utils/frise-enseignement'
+import { partagerCopies, reassignerPositions, memeCible, type CopieDeModele } from '@/utils/parcours-propagation'
 import { lireGatePlanActif } from '@/utils/plan-exercices'
 import {
   hookSyntheseAjoutCreneau, hookSyntheseAssignClasse, hookSyntheseRetraitCreneau,
@@ -1515,9 +1516,9 @@ export async function modifierParcours(
   if (error) return { error: error.message }
 
   if (n > 0 && force) {
-    const { error: eDel } = await supabase
-      .from('scriptorium_parcours_creneaux').delete().eq('parcours_id', id).gt('semaine', nbSemaines)
-    if (eDel) console.error('[scriptorium] modifierParcours : purge des créneaux au-delà échouée', eDel.message)
+    // Le modèle suit ses classes : les copies intactes des créneaux purgés partent aussi.
+    const res = await retirerCreneauxModele(supabase, id, (auDela ?? []).map(c => c.id as string))
+    if (res.error) console.error('[scriptorium] modifierParcours : purge des créneaux au-delà échouée', res.error)
   }
   revalidatePath('/prof/scriptorium')
   return { success: true }
@@ -1592,7 +1593,7 @@ export async function ajouterCreneau(
   parcoursId: string,
   semaine: number,
   ref: RefCreneau,
-): Promise<{ id?: string; error?: string }> {
+): Promise<{ id?: string; nbClasses?: number; avis?: string; error?: string }> {
   const { supabase } = await verifierProf()
   if (!RE_UUID.test(parcoursId)) return { error: 'Parcours invalide.' }
   if (!Number.isInteger(semaine) || semaine < 1) return { error: 'Semaine invalide.' }
@@ -1613,37 +1614,40 @@ export async function ajouterCreneau(
       .order('ordre', { ascending: false }).limit(1).maybeSingle()
     const ordre = (dernier?.ordre ?? 0) + 1
     const { data, error } = await supabase
-      .from('scriptorium_parcours_creneaux').insert({ ...payload, ordre }).select('id').single()
+      .from('scriptorium_parcours_creneaux').insert({ ...payload, ordre }).select(COLS_CRENEAU_MODELE).single()
     if (!error && data) {
+      // Le modèle suit ses classes : chaque instance active reçoit sa copie AVANT le hook
+      // de synthèse, qui ne crée que là où l'instance contient le cours (et l'a ouvert).
+      const prop = await propagerAjout(supabase, data as CreneauModeleRow, parc.nb_semaines as number)
       // S3 — un créneau-cours crée la synthèse pour chaque classe assignée à plan vivant.
       // Gate OFF → no-op. Les créneaux-livre ne portent pas de synthèse.
       if ('contenuId' in ref) await hookSyntheseAjoutCreneau(createAdminClient(), parcoursId, ref.contenuId)
-      revalidatePath('/prof/scriptorium'); return { id: data.id as string }
+      revalidatePath('/prof/scriptorium')
+      return {
+        id: (data as CreneauModeleRow).id,
+        nbClasses: prop.nbClasses,
+        avis: prop.echecs.length ? `Ajouté au modèle, mais pas partout : ${prop.echecs.join(' · ')}` : undefined,
+      }
     }
     if (error && error.code !== '23505') return { error: error.message } // 23505 = doublon d'ordre → retry
   }
   return { error: 'Conflit d’ordre, réessaie.' }
 }
 
-export async function retirerCreneau(creneauId: string): Promise<{ success?: boolean; error?: string }> {
+export async function retirerCreneau(
+  creneauId: string,
+): Promise<{ success?: boolean; retireDe?: number; conserveDans?: number; error?: string }> {
   const { supabase } = await verifierProf()
   if (!RE_UUID.test(creneauId)) return { error: 'Identifiant invalide.' }
-  // S5 — pré-lecture (gate ON) : capturer le cours du créneau AVANT le DELETE, pour
-  // décider du retrait de sa synthèse une fois le créneau parti.
-  const admin = createAdminClient()
-  const gateOn = await lireGatePlanActif(admin)
-  let coursDuCreneau: { parcoursId: string; contenuId: string } | null = null
-  if (gateOn) {
-    const { data: cr } = await admin
-      .from('scriptorium_parcours_creneaux').select('parcours_id, ref_type, contenu_id').eq('id', creneauId).maybeSingle()
-    const r = cr as { parcours_id?: string; ref_type?: string; contenu_id?: string | null } | null
-    if (r && r.ref_type === 'contenu' && r.contenu_id) coursDuCreneau = { parcoursId: r.parcours_id as string, contenuId: r.contenu_id }
-  }
-  const { error } = await supabase.from('scriptorium_parcours_creneaux').delete().eq('id', creneauId)
-  if (error) return { error: error.message }
-  if (coursDuCreneau) await hookSyntheseRetraitCreneau(admin, coursDuCreneau.parcoursId, coursDuCreneau.contenuId)
+  const { data: cr } = await supabase
+    .from('scriptorium_parcours_creneaux').select('parcours_id').eq('id', creneauId).maybeSingle()
+  if (!cr) return { error: 'Créneau introuvable.' }
+  // Le modèle suit ses classes : les copies intactes partent avec lui, les vues restent ;
+  // la synthèse d'un cours retiré est re-jugée classe par classe (retirerCreneauxModele).
+  const res = await retirerCreneauxModele(supabase, cr.parcours_id as string, [creneauId])
+  if (res.error) return { error: res.error }
   revalidatePath('/prof/scriptorium')
-  return { success: true }
+  return { success: true, retireDe: res.retireDe, conserveDans: res.conserveDans }
 }
 
 // Réordonne les créneaux d'une semaine (ordreIds = tous les créneaux de cette
@@ -1683,6 +1687,9 @@ export async function reordonnerCreneaux(
       .update({ ordre: i + 1 }).eq('id', ordreIds[i]).eq('parcours_id', parcoursId).eq('semaine', semaine)
     if (error) return { error: error.message }
   }
+  // Le modèle suit ses classes : leurs copies permutent parmi les positions qu'elles
+  // occupent (les créneaux propres à une classe ne bougent pas).
+  await propagerOrdre(supabase, ordreIds)
   revalidatePath('/prof/scriptorium')
   return { success: true }
 }
@@ -1692,7 +1699,7 @@ export async function reordonnerCreneaux(
 export async function deplacerCreneau(
   creneauId: string,
   nouvelleSemaine: number,
-): Promise<{ success?: boolean; error?: string }> {
+): Promise<{ success?: boolean; suivi?: number; conserve?: number; avis?: string; error?: string }> {
   const { supabase } = await verifierProf()
   if (!RE_UUID.test(creneauId)) return { error: 'Identifiant invalide.' }
   if (!Number.isInteger(nouvelleSemaine) || nouvelleSemaine < 1) return { error: 'Semaine invalide.' }
@@ -1717,7 +1724,20 @@ export async function deplacerCreneau(
     const ordre = (dernier?.ordre ?? 0) + 1
     const { error } = await supabase.from('scriptorium_parcours_creneaux')
       .update({ semaine: nouvelleSemaine, ordre }).eq('id', creneauId)
-    if (!error) { revalidatePath('/prof/scriptorium'); return { success: true } }
+    if (!error) {
+      // Le modèle suit ses classes : les copies intactes changent de semaine avec lui,
+      // celles qu'une classe a déjà vues gardent la leur.
+      const { data: m } = await supabase
+        .from('scriptorium_parcours_creneaux').select(COLS_CRENEAU_MODELE).eq('id', creneauId).maybeSingle()
+      const prop = m
+        ? await propagerDeplacement(supabase, m as CreneauModeleRow, parc.nb_semaines as number)
+        : { suivi: 0, conserve: 0, echecs: 0 }
+      revalidatePath('/prof/scriptorium')
+      return {
+        success: true, suivi: prop.suivi, conserve: prop.conserve,
+        avis: prop.echecs ? `${prop.echecs} classe(s) n'ont pas pu suivre le déplacement.` : undefined,
+      }
+    }
     if (error.code !== '23505') return { error: error.message }
   }
   return { error: 'Conflit d’ordre, réessaie.' }
@@ -1727,8 +1747,10 @@ export async function deplacerCreneau(
 // L'assignation MATÉRIALISE une instance : copie 1:1 des créneaux du modèle +
 // éclatement en ÉLÉMENTS à grain fin (section de cours / contenu entier / séance
 // de livre) — le « vu » du prof vit sur l'élément. L'instance diverge ensuite
-// librement ; modifier le modèle ne redescend JAMAIS dans les instances
-// existantes (propagation consciente = reinitialiserInstance, destructive).
+// librement pour ce qui lui est PROPRE ; mais depuis le 02/09 LE MODÈLE SUIT SES
+// CLASSES (bloc plus bas) : un ajout, un retrait ou un déplacement au modèle
+// redescend dans chaque instance, sauf sur ce qu'elle a déjà vu.
+// `reinitialiserInstance` reste la remise à zéro destructive.
 
 // Matérialise l'instance d'une assignation depuis le modèle (§4.3). Abstention
 // si l'instance existe déjà (une classe déjà servie n'est jamais re-matérialisée
@@ -1859,6 +1881,243 @@ async function materialiserElementsPourCreneaux(
     if (eEl && eEl.code !== '23505') return { error: eEl.message }
   }
   return {}
+}
+
+// ── LE MODÈLE SUIT SES CLASSES (02/09/2026) ──────────────────────────────────
+// ⭐ POURQUOI. « Je sais combien de temps vont durer mes cours, mais le contenu
+//    exact, je ne sais pas » (Louis, 01/09) : un parcours se remplit au fil de
+//    l'année, APRÈS avoir été assigné. Or l'instance était une photo du modèle
+//    prise à l'assignation — mesuré en prod le 02/09 : « D'où viennent nos
+//    croyances ? », ajouté au modèle la veille, absent du parcours de T5.
+// ⭐ LA RÈGLE (utils/parcours-propagation.ts) : ce que le modèle AJOUTE, RETIRE ou
+//    DÉPLACE, les classes le suivent — SAUF CE QU'UNE CLASSE A DÉJÀ VU. Une copie
+//    sans aucun élément coché « vu » est encore une intention du modèle ; dès
+//    qu'un élément est vu, elle appartient à l'histoire de la classe.
+//      · ajout   → copie en fin de la même semaine de chaque instance active ;
+//      · retrait → les copies intactes partent, les vues restent (le geste le dit) ;
+//      · déplacement → les copies intactes suivent (éléments re-matérialisés) ;
+//      · réordonnancement → les copies permutent parmi leurs positions (l'instance
+//        ne sait pas réordonner ses créneaux : aucun choix de classe à écraser).
+//    Ce que la classe a ajouté elle-même, retiré, ou déplacé élément par élément
+//    n'est jamais touché ; `reinitialiserInstance` reste la remise à zéro.
+// ⚠️ Un cours que la classe avait AJOUTÉ À LA MAIN avant qu'il entre au modèle est
+//    RECONNU (même cible) et rattaché, jamais dupliqué — c'est l'état réel de T5.
+// ⚠️ Pas de transaction (supabase-js) : chaque instance est traitée à part, les
+//    échecs remontent en `avis`, et le panneau « le modèle a N contenus que cette
+//    classe n'a pas » de l'instance offre la reprise (recupererCreneauxModele).
+
+const COLS_CRENEAU_MODELE =
+  'id, parcours_id, semaine, ordre, ref_type, contenu_id, livre_id, livre_semaine_debut, livre_semaine_fin, titre_affiche, note'
+
+interface CreneauModeleRow {
+  id: string
+  parcours_id: string
+  semaine: number
+  ordre: number
+  ref_type: string
+  contenu_id: string | null
+  livre_id: string | null
+  livre_semaine_debut: number | null
+  livre_semaine_fin: number | null
+  titre_affiche: string | null
+  note: string | null
+}
+
+interface CibleRow {
+  ref_type: string
+  contenu_id: string | null
+  livre_id: string | null
+  livre_semaine_debut: number | null
+  livre_semaine_fin: number | null
+}
+const cibleDe = (c: CibleRow) => ({
+  refType: c.ref_type, contenuId: c.contenu_id, livreId: c.livre_id,
+  livreSemaineDebut: c.livre_semaine_debut, livreSemaineFin: c.livre_semaine_fin,
+})
+
+// Instances ACTIVES d'un parcours — celles qui suivent le modèle.
+async function instancesActives(
+  supabase: SupabaseClient, parcoursId: string,
+): Promise<{ pcId: string; classeId: string }[]> {
+  const { data } = await supabase
+    .from('scriptorium_parcours_classes').select('id, classe_id')
+    .eq('parcours_id', parcoursId).eq('statut', 'active')
+  return (data ?? []).map(r => ({ pcId: r.id as string, classeId: r.classe_id as string }))
+}
+
+// Copie UN créneau du modèle dans UNE instance : en fin de sa semaine (ordre max+1,
+// retry 23505 — patron ajouterCreneauInstance), puis ses éléments (§4.3).
+// Idempotent : une copie déjà présente n'est pas refaite ; un créneau PROPRE de même
+// cible est RATTACHÉ (modele_creneau_id) au lieu d'être doublé.
+async function copierCreneauModele(
+  supabase: SupabaseClient, pcId: string, m: CreneauModeleRow, nbSemaines: number,
+): Promise<{ id?: string; deja?: boolean; error?: string }> {
+  const { data: existants } = await supabase
+    .from('scriptorium_parcours_classe_creneaux')
+    .select('id, ref_type, contenu_id, livre_id, livre_semaine_debut, livre_semaine_fin, modele_creneau_id')
+    .eq('parcours_classe_id', pcId)
+  const rows = (existants ?? []) as (CibleRow & { id: string; modele_creneau_id: string | null })[]
+  if (rows.some(r => r.modele_creneau_id === m.id)) return { deja: true }
+  const jumeau = rows.find(r => !r.modele_creneau_id && memeCible(cibleDe(r), cibleDe(m)))
+  if (jumeau) {
+    const { error } = await supabase.from('scriptorium_parcours_classe_creneaux')
+      .update({ modele_creneau_id: m.id }).eq('id', jumeau.id)
+    return error ? { error: error.message } : { id: jumeau.id, deja: true }
+  }
+  const semaine = Math.min(Math.max(1, m.semaine), Math.max(1, nbSemaines))
+  const payload = {
+    parcours_classe_id: pcId, semaine, ref_type: m.ref_type,
+    contenu_id: m.contenu_id, livre_id: m.livre_id,
+    livre_semaine_debut: m.livre_semaine_debut, livre_semaine_fin: m.livre_semaine_fin,
+    titre_affiche: m.titre_affiche, note: m.note, modele_creneau_id: m.id,
+  }
+  for (let essai = 0; essai < 5; essai++) {
+    const { data: dernier } = await supabase
+      .from('scriptorium_parcours_classe_creneaux').select('ordre')
+      .eq('parcours_classe_id', pcId).eq('semaine', semaine)
+      .order('ordre', { ascending: false }).limit(1).maybeSingle()
+    const ordre = (dernier?.ordre ?? 0) + 1
+    const { data, error } = await supabase
+      .from('scriptorium_parcours_classe_creneaux').insert({ ...payload, ordre })
+      .select('id, semaine, ref_type, contenu_id, livre_id, livre_semaine_debut, livre_semaine_fin').single()
+    if (!error && data) {
+      const mat = await materialiserElementsPourCreneaux(supabase, [data as CreneauAMaterialiser], nbSemaines)
+      if (mat.error) return { error: `copié, mais éléments non matérialisés : ${mat.error}` }
+      return { id: data.id as string }
+    }
+    if (error && error.code !== '23505') return { error: error.message }
+  }
+  return { error: 'conflit d’ordre' }
+}
+
+// AJOUT au modèle → chaque instance active reçoit sa copie. Renvoie le nombre de
+// classes servies et les échecs nommés (l'ajout au modèle, lui, est acquis).
+async function propagerAjout(
+  supabase: SupabaseClient, m: CreneauModeleRow, nbSemaines: number,
+): Promise<{ nbClasses: number; echecs: string[] }> {
+  let nbClasses = 0
+  const rates: { classeId: string; error: string }[] = []
+  for (const inst of await instancesActives(supabase, m.parcours_id)) {
+    const r = await copierCreneauModele(supabase, inst.pcId, m, nbSemaines)
+    if (r.error) rates.push({ classeId: inst.classeId, error: r.error })
+    else nbClasses++
+  }
+  if (rates.length === 0) return { nbClasses, echecs: [] }
+  const { data: noms } = await supabase.from('classes').select('id, nom').in('id', rates.map(r => r.classeId))
+  const nom = new Map((noms ?? []).map(c => [c.id as string, c.nom as string]))
+  return { nbClasses, echecs: rates.map(r => `${nom.get(r.classeId) ?? 'classe'} — ${r.error}`) }
+}
+
+// Copies d'instance des créneaux modèle donnés, avec « au moins un élément vu ».
+async function copiesDuModele(supabase: SupabaseClient, modeleIds: string[]): Promise<CopieDeModele[]> {
+  if (modeleIds.length === 0) return []
+  const { data } = await supabase
+    .from('scriptorium_parcours_classe_creneaux')
+    .select('id, parcours_classe_id, modele_creneau_id, semaine, ordre')
+    .in('modele_creneau_id', modeleIds)
+  const rows = (data ?? []) as { id: string; parcours_classe_id: string; modele_creneau_id: string; semaine: number; ordre: number }[]
+  if (rows.length === 0) return []
+  const { data: vus } = await supabase
+    .from('scriptorium_parcours_classe_elements').select('creneau_id')
+    .in('creneau_id', rows.map(r => r.id)).not('vu_at', 'is', null)
+  const vues = new Set((vus ?? []).map(v => v.creneau_id as string))
+  return rows.map(r => ({
+    id: r.id, pcId: r.parcours_classe_id, modeleId: r.modele_creneau_id,
+    semaine: r.semaine, ordre: r.ordre, vue: vues.has(r.id),
+  }))
+}
+
+// RETRAIT de créneaux du modèle. Les copies sont relevées AVANT le DELETE du modèle
+// (la FK met leur modele_creneau_id à null) ; le modèle part d'abord (s'il refuse,
+// rien d'autre ne bouge), puis les copies intactes ; enfin la synthèse de chaque
+// cours retiré est re-jugée classe par classe (elle ne reste que là où il vit encore).
+async function retirerCreneauxModele(
+  supabase: SupabaseClient, parcoursId: string, modeleIds: string[],
+): Promise<{ retireDe: number; conserveDans: number; error?: string }> {
+  if (modeleIds.length === 0) return { retireDe: 0, conserveDans: 0 }
+  const { data: rows } = await supabase
+    .from('scriptorium_parcours_creneaux').select('id, ref_type, contenu_id')
+    .in('id', modeleIds).eq('parcours_id', parcoursId)
+  const modeles = (rows ?? []) as { id: string; ref_type: string; contenu_id: string | null }[]
+  if (modeles.length === 0) return { retireDe: 0, conserveDans: 0, error: 'Créneau introuvable.' }
+  const { intactes, nbClassesIntactes, nbClassesVues } =
+    partagerCopies(await copiesDuModele(supabase, modeles.map(m => m.id)))
+
+  const { error } = await supabase
+    .from('scriptorium_parcours_creneaux').delete().in('id', modeles.map(m => m.id))
+  if (error) return { retireDe: 0, conserveDans: nbClassesVues, error: error.message }
+  if (intactes.length > 0) {
+    const { error: eCop } = await supabase
+      .from('scriptorium_parcours_classe_creneaux').delete().in('id', intactes.map(c => c.id)) // cascade éléments
+    if (eCop) return { retireDe: 0, conserveDans: nbClassesVues, error: `retiré du modèle, mais pas des classes : ${eCop.message}` }
+  }
+  const admin = createAdminClient()
+  const cours = new Set(modeles.filter(m => m.ref_type === 'contenu' && m.contenu_id).map(m => m.contenu_id as string))
+  for (const contenuId of cours) await hookSyntheseRetraitCreneau(admin, parcoursId, contenuId)
+  return { retireDe: nbClassesIntactes, conserveDans: nbClassesVues }
+}
+
+// DÉPLACEMENT d'un créneau du modèle : les copies intactes suivent — nouvelle
+// semaine, en fin de semaine (ordre max+1), éléments refaits pour cette semaine
+// (aucun n'est vu, rien n'est perdu) ; les copies vues gardent leur semaine.
+async function propagerDeplacement(
+  supabase: SupabaseClient, m: CreneauModeleRow, nbSemaines: number,
+): Promise<{ suivi: number; conserve: number; echecs: number }> {
+  const { intactes, nbClassesVues } = partagerCopies(await copiesDuModele(supabase, [m.id]))
+  const semaine = Math.min(Math.max(1, m.semaine), Math.max(1, nbSemaines))
+  let suivi = 0
+  let echecs = 0
+  for (const c of intactes) {
+    if (c.semaine === semaine) { suivi++; continue }
+    let ok = false
+    for (let essai = 0; essai < 5 && !ok; essai++) {
+      const { data: dernier } = await supabase
+        .from('scriptorium_parcours_classe_creneaux').select('ordre')
+        .eq('parcours_classe_id', c.pcId).eq('semaine', semaine)
+        .order('ordre', { ascending: false }).limit(1).maybeSingle()
+      const { error } = await supabase.from('scriptorium_parcours_classe_creneaux')
+        .update({ semaine, ordre: (dernier?.ordre ?? 0) + 1 }).eq('id', c.id)
+      if (!error) ok = true
+      else if (error.code !== '23505') break
+    }
+    if (!ok) { echecs++; continue }
+    const { error: eDel } = await supabase
+      .from('scriptorium_parcours_classe_elements').delete().eq('creneau_id', c.id)
+    if (eDel) { echecs++; continue }
+    const mat = await materialiserElementsPourCreneaux(supabase, [{
+      id: c.id, semaine, ref_type: m.ref_type, contenu_id: m.contenu_id, livre_id: m.livre_id,
+      livre_semaine_debut: m.livre_semaine_debut, livre_semaine_fin: m.livre_semaine_fin,
+    }], nbSemaines)
+    if (mat.error) echecs++
+    else suivi++
+  }
+  return { suivi, conserve: nbClassesVues, echecs }
+}
+
+// RÉORDONNANCEMENT d'une semaine du modèle : dans chaque instance, les copies de ces
+// créneaux permutent parmi les positions qu'elles occupent (reassignerPositions).
+// Deux passes négatives/positives — patron reordonnerCreneaux. Meilleur effort : un
+// échec est journalisé, l'ordre du modèle est acquis.
+async function propagerOrdre(supabase: SupabaseClient, ordreIds: string[]): Promise<void> {
+  const parSemaine = new Map<string, CopieDeModele[]>()
+  for (const c of await copiesDuModele(supabase, ordreIds)) {
+    const cle = `${c.pcId}|${c.semaine}`
+    parSemaine.set(cle, [...(parSemaine.get(cle) ?? []), c])
+  }
+  for (const groupe of parSemaine.values()) {
+    const changements = reassignerPositions(groupe, ordreIds)
+    if (changements.length === 0) continue
+    for (let i = 0; i < changements.length; i++) {
+      const { error } = await supabase.from('scriptorium_parcours_classe_creneaux')
+        .update({ ordre: -(i + 1) }).eq('id', changements[i].id)
+      if (error) { console.error('[scriptorium] propagation de l’ordre (passe 1)', error.message); return }
+    }
+    for (const ch of changements) {
+      const { error } = await supabase.from('scriptorium_parcours_classe_creneaux')
+        .update({ ordre: ch.ordre }).eq('id', ch.id)
+      if (error) { console.error('[scriptorium] propagation de l’ordre (passe 2)', error.message); return }
+    }
+  }
 }
 
 // ── Décalages : ce qui permet à DEUX PARCOURS d'une classe de S'ALTERNER ──────
@@ -2070,8 +2329,11 @@ export async function ajusterNbSemainesParcours(
     .update({ nb_semaines: cible, updated_at: new Date().toISOString() }).eq('id', parcoursId)
   if (error) return { error: error.message }
   if (delta < 0) {
-    await supabase.from('scriptorium_parcours_creneaux')
-      .delete().eq('parcours_id', parcoursId).gt('semaine', cible)
+    const { data: auDela } = await supabase
+      .from('scriptorium_parcours_creneaux').select('id').eq('parcours_id', parcoursId).gt('semaine', cible)
+    // Le modèle suit ses classes : les copies intactes des créneaux purgés partent aussi.
+    const res = await retirerCreneauxModele(supabase, parcoursId, (auDela ?? []).map(c => c.id as string))
+    if (res.error) console.error('[scriptorium] ajusterNbSemainesParcours : purge des créneaux au-delà échouée', res.error)
   }
   revalidatePath('/prof/scriptorium')
   return { success: true, nbSemaines: cible }
@@ -2188,6 +2450,44 @@ export async function reinitialiserInstance(parcoursClasseId: string): Promise<{
   if (mat.error) return { error: mat.error }
   revalidatePath('/prof/scriptorium')
   return { success: true }
+}
+
+/**
+ * REPRISE — copie dans l'instance `pcId` les créneaux du modèle qu'elle n'a pas : ceux
+ * ajoutés au modèle AVANT qu'il suive ses classes (02/09), ou retirés de la classe et
+ * voulus de nouveau. Le panneau de l'instance les liste ; on ne copie que ce qui
+ * appartient bien au modèle de CE parcours. Un créneau propre de même cible est
+ * rattaché plutôt que doublé (copierCreneauModele).
+ */
+export async function recupererCreneauxModele(
+  pcId: string, modeleIds: string[],
+): Promise<{ nb?: number; error?: string }> {
+  const { supabase } = await verifierProf()
+  if (!RE_UUID.test(pcId)) return { error: 'Identifiant invalide.' }
+  if (!Array.isArray(modeleIds) || modeleIds.length === 0 || modeleIds.some(id => !RE_UUID.test(id))) {
+    return { error: 'Sélection invalide.' }
+  }
+  const inst = await lireInstance(supabase, pcId)
+  if ('error' in inst) return { error: inst.error }
+  const { data: rows } = await supabase
+    .from('scriptorium_parcours_creneaux').select(COLS_CRENEAU_MODELE)
+    .in('id', modeleIds).eq('parcours_id', inst.pc.parcoursId)
+    .order('semaine', { ascending: true }).order('ordre', { ascending: true })
+  const modeles = (rows ?? []) as CreneauModeleRow[]
+  if (modeles.length === 0) return { error: 'Ces créneaux n’appartiennent pas au modèle de ce parcours.' }
+  let nb = 0
+  const echecs: string[] = []
+  for (const m of modeles) {
+    const r = await copierCreneauModele(supabase, pcId, m, inst.nbSemaines)
+    if (r.error) echecs.push(`« ${m.titre_affiche ?? '?'} » : ${r.error}`)
+    else nb++
+  }
+  // S3 — la synthèse suit l'instance (le hook lit l'intention ouverte/coupée). Gate OFF → no-op.
+  const admin = createAdminClient()
+  const cours = new Set(modeles.filter(m => m.ref_type === 'contenu' && m.contenu_id).map(m => m.contenu_id as string))
+  for (const contenuId of cours) await hookSyntheseAjoutCreneau(admin, inst.pc.parcoursId, contenuId)
+  revalidatePath('/prof/scriptorium')
+  return echecs.length ? { nb, error: echecs.join(' · ') } : { nb }
 }
 
 // ── Pilotage de l'instance — RAG L3 (grille « vu », SPEC §5.3) ────────────────

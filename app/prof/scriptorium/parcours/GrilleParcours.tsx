@@ -6,9 +6,11 @@ import Link from 'next/link'
 import {
   modifierParcours,
   supprimerParcours,
+  ajouterCreneau,
   retirerCreneau,
   reordonnerCreneaux,
   deplacerCreneau,
+  type RefCreneau,
 } from '../actions'
 import PickerContenu from './PickerContenu'
 import AssignationClasses from './AssignationClasses'
@@ -88,6 +90,12 @@ export default function GrilleParcours({
   const [editionEntete, setEditionEntete] = useState(false)
   const [chargement, setChargement] = useState(false)
   const [erreur, setErreur] = useState<string | null>(null)
+  // Ce que le geste a fait DANS LES CLASSES (02/09) : le modèle suit ses classes, et
+  // l'écran le dit à chaque ajout, retrait ou déplacement — sinon le prof ne saurait
+  // pas qu'un retrait ici a aussi retiré le cours de deux classes.
+  const [avis, setAvis] = useState<string | null>(null)
+  const nbClasses = assignations.filter(a => a.assigned).length
+  const classes = (n: number) => `${n} classe${n > 1 ? 's' : ''}`
 
   function ouvrirSemaine(s: number) {
     setSemaineOuverte(prev => (prev === s ? null : s))
@@ -102,6 +110,49 @@ export default function GrilleParcours({
     if (res?.error) { setErreur(res.error); return false }
     router.refresh()
     return true
+  }
+
+  async function ajouter(semaine: number, ref: RefCreneau): Promise<{ error?: string }> {
+    setAvis(null)
+    const res = await ajouterCreneau(parcours.id, semaine, ref)
+    if (res.error) return { error: res.error }
+    if (res.avis) setAvis(res.avis)
+    else if (res.nbClasses) setAvis(`Ajouté au modèle et au parcours de ${classes(res.nbClasses)}.`)
+    return {}
+  }
+
+  async function retirer(c: CreneauResolu) {
+    if (nbClasses > 0 && !confirm(
+      `Retirer « ${c.titre} » du modèle ?\n\n` +
+      `Il sera aussi retiré des classes qui ne l'ont pas encore vu ; une classe qui l'a déjà vu ` +
+      `(au moins un élément coché) le garde.`,
+    )) return
+    setAvis(null)
+    setErreur(null)
+    setChargement(true)
+    const res = await retirerCreneau(c.id)
+    setChargement(false)
+    if (res.error) { setErreur(res.error); return }
+    if (nbClasses > 0) {
+      setAvis(`Retiré du modèle${res.retireDe ? ` et de ${classes(res.retireDe)}` : ''}` +
+        `${res.conserveDans ? ` ; conservé dans ${classes(res.conserveDans)} qui l'${res.conserveDans > 1 ? 'ont' : 'a'} déjà vu` : ''}.`)
+    }
+    router.refresh()
+  }
+
+  async function deplacer(c: CreneauResolu, ns: number) {
+    setAvis(null)
+    setErreur(null)
+    setChargement(true)
+    const res = await deplacerCreneau(c.id, ns)
+    setChargement(false)
+    if (res.error) { setErreur(res.error); return }
+    if (nbClasses > 0) {
+      setAvis(`Déplacé en S${ns}${res.suivi ? ` ; ${classes(res.suivi)} ${res.suivi > 1 ? 'ont' : 'a'} suivi` : ''}` +
+        `${res.conserve ? ` ; ${classes(res.conserve)} le garde${res.conserve > 1 ? 'nt' : ''} en S${c.semaine} (déjà vu)` : ''}.` +
+        `${res.avis ? ` ${res.avis}` : ''}`)
+    }
+    router.refresh()
   }
 
   async function monter(semaine: number, id: string) {
@@ -188,7 +239,14 @@ export default function GrilleParcours({
             </div>
           )}
 
+          {!editionEntete && nbClasses > 0 && (
+            <p className="font-ui text-[12px] text-muet mb-3">
+              Ce modèle sert {classes(nbClasses)} : ce que tu ajoutes, retires ou déplaces ici
+              {nbClasses > 1 ? ' les suit' : ' la suit'}, sauf ce qu’{nbClasses > 1 ? 'une classe' : 'elle'} a déjà vu.
+            </p>
+          )}
           {erreur && !editionEntete && <p className="text-retard text-sm mb-3">{erreur}</p>}
+          {avis && !editionEntete && <p className="text-ok text-sm mb-3">✓ {avis}</p>}
 
           <div className="flex flex-col gap-2.5">
             {semaines.map(s => {
@@ -245,12 +303,18 @@ export default function GrilleParcours({
                         chargement={chargement}
                         onMonter={() => monter(s, c.id)}
                         onDescendre={() => descendre(s, c.id)}
-                        onDeplacer={(ns) => { void agir(() => deplacerCreneau(c.id, ns)) }}
-                        onRetirer={() => { void agir(() => retirerCreneau(c.id)) }}
+                        onDeplacer={(ns) => { void deplacer(c, ns) }}
+                        onRetirer={() => { void retirer(c) }}
                       />
                     ))}
                     {pickerSemaine === s && (
-                      <PickerContenu parcoursId={parcours.id} semaine={s} cibles={cibles} onClose={() => setPickerSemaine(null)} />
+                      <PickerContenu
+                        parcoursId={parcours.id}
+                        semaine={s}
+                        cibles={cibles}
+                        onClose={() => setPickerSemaine(null)}
+                        onAjouter={ref => ajouter(s, ref)}
+                      />
                     )}
                   </div>
                 </div>

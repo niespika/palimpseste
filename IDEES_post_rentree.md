@@ -7,7 +7,7 @@
 
 - Mode C Aletheia (C2.x, carte-de-parcours Scriptorium)
 - Import PDF lots D/E/F (signets, garde-fous IA, chunking)
-- « Modèle vivant » du plan d'évaluation (propagation modèle→instances)
+- « Modèle vivant » du plan d'évaluation (propagation modèle→instances) — ⭐ *côté PARCOURS, c'est fait le 02/09 (le modèle suit ses classes, cf. `SPEC_scriptorium_rag.md` §4.1) ; le plan d'évaluation, lui, reste une photo.*
 - Moteur adaptatif / Profil élève complet (spec à ouvrir avant les modules analyse/écriture)
 - Recâblage Fragments par classe (D12)
 - Refonte visuelle profonde / design system v2
@@ -1210,3 +1210,21 @@ existantes gardent le repli par recherche), écrites par `remplacerDecoupe`, lue
 ⚠️ **Ordre imposé** : le SQL AVANT le code (les colonnes sont invisibles pour l'application
 déployée ; l'inverse casserait l'enregistrement d'une découpe). Hors périmètre d'un correctif :
 c'est une migration, donc `SUIVI_SQL.md`, sandbox puis prod.
+
+## Le modèle de parcours suit ses classes — ce qui reste hors du geste (02/09/2026)
+
+Fait le 02/09 (aucune migration) : un ajout, un retrait ou un déplacement dans le MODÈLE d'un parcours
+redescend dans chaque instance active, sauf sur ce qu'une classe a déjà vu ; la grille d'instance offre
+la reprise des écarts d'avant. Trois choses sont restées de côté, délibérément :
+- **Une classe ne sait pas réordonner ses créneaux.** L'ordre intra-semaine d'une instance ne vient que
+  du modèle (permutation propagée) ou de la fin de semaine (ajout). Si un prof veut un ordre PAR CLASSE,
+  il faudra un geste dans `GrilleInstance` — et alors la propagation de l'ordre devra le respecter
+  (aujourd'hui elle ne touche que les copies, jamais les créneaux propres).
+- **Rien ne dit, dans l'instance, qu'une copie « vue » n'est plus au modèle.** Après un retrait du
+  modèle, la copie conservée perd son `modele_creneau_id` (FK `set null`) et devient indiscernable d'un
+  créneau ajouté à la main. Un badge « n'est plus au modèle » demanderait de garder la provenance
+  (colonne `modele_retire_at`, ou `on delete` autre que `set null`) — migration.
+- **Pas d'interrupteur « cette classe ne suit plus le modèle ».** La règle est la même pour toutes les
+  instances actives ; seule `statut = 'archivee'` en sort une. Si le besoin vient, c'est une colonne
+  booléenne sur `scriptorium_parcours_classes`, lue par `instancesActives` — migration additive.
+

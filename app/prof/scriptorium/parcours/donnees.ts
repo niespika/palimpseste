@@ -21,6 +21,13 @@ export interface CreneauResolu {
   titre: string
   trancheLabel: string | null // 'entier' | 'tranche S3→S5' (livre uniquement)
   etat: EtatCreneau
+  // La CIBLE brute — ce que le créneau sert. La grille d'instance s'en sert pour
+  // reconnaître, parmi les créneaux propres d'une classe, ceux qui valent un créneau
+  // du modèle (utils/parcours-propagation.ts, absentsDuModele).
+  contenuId: string | null
+  livreId: string | null
+  livreSemaineDebut: number | null
+  livreSemaineFin: number | null
 }
 
 export interface ParcoursDetail {
@@ -114,6 +121,7 @@ export async function chargerParcoursDetail(parcoursId: string): Promise<Parcour
         titre: retire ? (c.titre_affiche || 'contenu retiré') : info!.titre,
         trancheLabel: null,
         etat: retire ? 'contenu_retire' : 'ok',
+        contenuId: c.contenu_id, livreId: null, livreSemaineDebut: null, livreSemaineFin: null,
       }
     }
     const info = c.livre_id ? livreMap.get(c.livre_id) : undefined
@@ -128,6 +136,8 @@ export async function chargerParcoursDetail(parcoursId: string): Promise<Parcour
       titre: retire ? (c.titre_affiche || 'livre retiré') : info!.label,
       trancheLabel: entier ? 'entier' : `tranche S${c.livre_semaine_debut}→S${c.livre_semaine_fin}`,
       etat,
+      contenuId: null, livreId: c.livre_id,
+      livreSemaineDebut: c.livre_semaine_debut, livreSemaineFin: c.livre_semaine_fin,
     }
   })
 
