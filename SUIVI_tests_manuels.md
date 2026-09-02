@@ -8971,7 +8971,7 @@ le veut.
 
 ### Reste à jouer en recette — décoché, avec sa condition de reprise
 
-- [ ] **Rien ne se prouve en production** : 0 essai, 0 thème, 0 élève éligible ; **et la migration `c6_l4_essai_lien_instance.sql` n'y est PAS jouée** (`psql` vers la prod refusé à la session Code) — condition : Louis la joue (corps en répétition à blanc d'abord), puis le code est poussé.
+- [x] **La migration `c6_l4_essai_lien_instance.sql` est jouée en production** (02/09 au soir, sur décision de Louis). Reste vrai : rien ne se prouve en production tant qu'aucun essai n'y est posé.
 - [ ] **Le premier essai réel** est un geste de Louis dans Fragments, à une date qu'il choisit, sur 1HLP ou THLP (qui ont un plan validé 2026). Condition : après le push.
 - [ ] **Le dépôt par le professeur pour un élève** (`creerEssaiProf` → `confirmerUploadEssaiPhotos`) n'a été prouvé que par le même appel (`deposerLaCopieDansLaChaine`), pas au navigateur : le chemin ouvre le seul dépôt de cet élève si les dépôts de la classe sont fermés. Condition : un dépôt prof au navigateur, en bac à sable.
 - [ ] **L'ancre sur un profil provisoire** : Elo ne l'était pas ; les 221 lignes de prod le sont jusqu'au 14/09. Condition : un essai réel avant/après la bascule.
@@ -8990,6 +8990,6 @@ le veut.
 - [x] **Les thèmes déjà posés par le professeur ne deviennent pas « à valider »** (`propose_at` nul) — règle testée, et le constat de pied de la migration le dit (`aucun_theme_a_valider`).
 
 ### Reste à jouer
-- [ ] **Le clic « Valider » lui-même** (`validerTheme` → `valide_at`, badge « Validé », l'élève lit « Validé par ton professeur ») : le volet du navigateur s'est figé sur « chargement » (piège connu du volet caché) avant le clic. Condition : un clic de Louis sur Suivi, en bac à sable ou en prod après le SQL.
+- [x] **Le clic « Valider »** — joué dans un Chrome sans fenêtre piloté par CDP (le volet de la session restait sur « chargement ») : bouton visible, clic, badge « Validé » et message « Thème validé. », `valide_at` posé (vérifié par requête), décor retiré. Le patron : `scripts/recette/…` non versionné — script de séance dans le scratchpad, recette de `reference_smoke_par_cdp_volet_cache`.
 - [ ] **La re-proposition après validation** (l'élève modifie → de nouveau « à valider ») : règle testée, non vue à l'écran.
-- [ ] **PROD** : `c8_theme_propose_par_eleve.sql` à jouer par Louis, avant le push, avec `c6_l4_essai_lien_instance.sql`.
+- [x] **PROD** : `c8_theme_propose_par_eleve.sql` et `c6_l4_essai_lien_instance.sql` **jouées en production le 02/09 au soir**, sur décision de Louis (répétition à blanc sur le corps, puis le fichier, vérifiées en psql et par PostgREST).
