@@ -1240,7 +1240,10 @@ Premier signalement de ratissage reçu en prod le 01/09 (dépôt `a098f1a4…`, 
 `PanneauPreuve` montre le texte saisi et le motif chiffré, mais **ni le matériau, ni la zone posée,
 ni la cible, ni la consigne servie** — tout existe en base (`exercices_materiaux.contenu` +
 `version_corrigee`, `exercices_metacognition.credence[].zone/zone_at`, `consigne_instanciee`).
-Proposition détaillée donnée à Louis le 01/09 (session « signalement d'intégrité »). Mesures pour
+**✅ CONSTRUIT ET POUSSÉ LE 01/09** (`utils/integrite-preuve.ts`, `PanneauPreuve.tsx`,
+`utils/integrite-exercice.ts`) : consigne et matériau tels que servis, zone et passage visé
+superposés, chiffres du geste, chronologie datée, texte de l'élève aligné sur le matériau quand il
+l'a repris. Vérifié au bac à sable en 1 280 et 375 px sur un dépôt réel. Mesures pour
 l'écran : matériau méd. 386 car., p90 879, max 1 849 ; consigne servie aux crans 4/7/9 méd. 249,
 max 533 ; `texte_v1` méd. 299, max 440 ; `restitution_a_chaud` méd. 79, max 169 ; 134 cibles sur
 516 font ≤ 5 caractères, 67 sont des insertions pures (« surligne l'endroit » désigne alors une

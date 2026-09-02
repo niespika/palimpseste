@@ -14,6 +14,7 @@ import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import {
   segmentsDeLaPreuve, partEnPourcent, nombreDeMots, diffDesMots, ecartLisible,
+  diffSiReprise, partReprise, PART_REPRISE_POUR_UN_DIFF,
 } from './integrite-exercice'
 
 const MATERIAU = 'L’ennui est le moment où l’esprit, privé de ce qui l’occupait, se met à chercher '
@@ -76,6 +77,26 @@ test('⭐ le diff rejoue le texte de l’élève EN ENTIER, et « Du coup » res
   assert.ok(ajouts.includes('momnet'))
   assert.ok(parts.some((p) => p.sorte === 'retrait' && p.texte === 'moment'))
   assert.ok(parts.some((p) => p.sorte === 'retrait' && p.texte === 'donc'))
+})
+
+test('⛔ le diff ne se montre que si l’élève a REPRIS le matériau — une réponse libre se lit telle quelle', () => {
+  // Cran 4, recette du 01/09 : l'élève répond, il ne réécrit pas. Quelques mots
+  // communs par hasard (« professeur », « règles ») ne font pas une réécriture.
+  const reponseLibre = 'L\'introduction doit poser le problème. Ici le sujet demande si un robot peut '
+    + 'faire un bon professeur. Il faut d\'abord se demander ce qu\'on attend d\'un professeur, '
+    + 'parce que si on attend seulement qu\'il transmette des connaissances, alors les règles suffisent.'
+  assert.equal(diffSiReprise(MATERIAU, reponseLibre), null)
+  assert.ok(partReprise(MATERIAU, diffDesMots(MATERIAU, reponseLibre)) < PART_REPRISE_POUR_UN_DIFF)
+  // Cran 7 : le texte retapé, fautes et connecteur compris, EST une reprise.
+  const reprise = 'L\'ennui est le momnet ou l\'esprit,prive de ce qui l\'occupait,se met a chercher tout '
+    + 'seul. Un enfant laisse sans ecran finit par inventer une regle, un personnage ,une histoire. '
+    + 'Du coup les pediatres constatent que les enfants tres sollicites dorment plus mal.'
+  assert.notEqual(diffSiReprise(MATERIAU, reprise), null)
+  assert.ok(partReprise(MATERIAU, diffDesMots(MATERIAU, reprise)) >= PART_REPRISE_POUR_UN_DIFF)
+  // Les bords : tout repris, rien repris, référence vide.
+  assert.equal(partReprise('a b c', diffDesMots('a b c', 'a b c')), 1)
+  assert.equal(partReprise('a b c', diffDesMots('a b c', 'x y z')), 0)
+  assert.equal(partReprise('', diffDesMots('', 'x')), 0)
 })
 
 test('deux textes identiques ne font qu’un seul segment égal ; un texte vide ne rend que des retraits', () => {

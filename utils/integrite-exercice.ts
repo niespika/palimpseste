@@ -181,6 +181,42 @@ export function diffDesMots(reference: string, texte: string): PartDeDiff[] {
 }
 
 /**
+ * ⭐ LE DIFF NE SE MONTRE QUE SI L'ÉLÈVE A REPRIS LE MATÉRIAU.
+ *
+ * ⛔ Trouvé à la recette du 01/09, sur un cran 4 : l'élève y RÉPOND en texte
+ *    libre, il ne réécrit pas le matériau — et l'alignement mot à mot semait
+ *    des retraits entre chaque mot commun par hasard (« Ici le sujet demande si
+ *    ~~Dans certains lycées~~ un robot… »). Illisible, et faux : rien n'avait
+ *    été « retiré ». Le diff n'a de sens que pour une RÉÉCRITURE — les crans où
+ *    l'élève transforme le matériau — et c'est la donnée qui le dit, pas le
+ *    numéro du cran : la part des mots du matériau qu'on retrouve, dans
+ *    l'ordre, dans le texte de l'élève.
+ *
+ * Le seuil est une PART, pour tenir à toute longueur ; à la moitié, l'erreur va
+ * dans le sens de la lisibilité — en dessous, on montre le texte tel quel.
+ */
+export const PART_REPRISE_POUR_UN_DIFF = 0.5
+
+/** La part des mots de `reference` que `parts` retrouve — 1 = tout repris, 0 = rien. */
+export function partReprise(reference: string, parts: readonly PartDeDiff[]): number {
+  const total = motsSitues(reference).length
+  if (total === 0) return 0
+  const retires = parts
+    .filter((p) => p.sorte === 'retrait')
+    .reduce((n, p) => n + motsSitues(p.texte).length, 0)
+  return Math.max(0, total - retires) / total
+}
+
+/**
+ * Le diff, ou `null` quand le texte de l'élève ne reprend pas le matériau —
+ * c'est alors un texte à lire tel quel, pas un écart à montrer.
+ */
+export function diffSiReprise(reference: string, texte: string): PartDeDiff[] | null {
+  const parts = diffDesMots(reference, texte)
+  return partReprise(reference, parts) >= PART_REPRISE_POUR_UN_DIFF ? parts : null
+}
+
+/**
  * « Du coup » est UN ajout, pas deux : deux ajouts que seule une espace sépare
  * se soudent, espace comprise. La concaténation ne change pas d'un octet.
  */

@@ -12,7 +12,7 @@ import {
 import type { SelectionVue, PreuveExercice } from './types'
 import { SCEAU_DU_MODULE } from './types'
 import { TexteBalise } from '@/components/deroule/TexteBalise'
-import { segmentsDeLaPreuve, diffDesMots, ecartLisible } from '@/utils/integrite-exercice'
+import { segmentsDeLaPreuve, diffSiReprise, ecartLisible } from '@/utils/integrite-exercice'
 
 // ════════════════════════════════════════════════════════════════════════════
 // Panneau de PREUVE réutilisable : photo déposée + retranscription (passage
@@ -167,10 +167,14 @@ function BlocExercice({ ex, tz }: { ex: PreuveExercice; tz: string }) {
           <ol className="mt-3 ml-1.5 border-l-2 border-puce font-ui text-[13px]">
             {ex.chrono.map((c, i) => {
               const ecart = i > 0 ? ecartLisible(ex.chrono[i - 1].at, c.at) : null
+              // ⚠️ Un dépôt ouvert un jour et remis un autre : l'heure seule mentirait.
+              const jour = (at: string) => formatInstant(at, tz, { day: 'numeric', month: 'short' })
+              const plusieursJours = jour(ex.chrono[0].at) !== jour(ex.chrono[ex.chrono.length - 1].at)
               return (
                 <li key={i} className="relative pl-3.5 py-1 flex flex-wrap items-baseline gap-x-2.5 gap-y-0.5">
                   <span aria-hidden className="absolute -left-[5px] top-[0.65rem] w-2 h-2 rounded-full bg-surface border-2 border-pigment" />
                   <span className="tabular-nums text-encre-douce font-medium shrink-0">
+                    {plusieursJours && <span className="text-muet font-normal">{jour(c.at)} · </span>}
                     {formatInstant(c.at, tz, { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
                   </span>
                   <span className="text-encre">{c.quoi}</span>
@@ -202,9 +206,16 @@ function BlocExercice({ ex, tz }: { ex: PreuveExercice; tz: string }) {
   )
 }
 
-/** Le texte de l'élève, aligné mot à mot sur le matériau : ce qu'il a ajouté ressort. */
-function TexteDiffe({ reference, texte }: { reference: string; texte: string }) {
-  const parts = diffDesMots(reference, texte)
+/**
+ * Le texte de l'élève, aligné mot à mot sur le matériau quand il l'a REPRIS :
+ * ce qu'il a ajouté ressort. Une réponse libre (crans qui diagnostiquent) se
+ * lit telle quelle — `diffSiReprise` rend `null`, et on n'affiche aucun écart.
+ */
+function TexteDiffe({ reference, texte, surligner, source }: {
+  reference: string; texte: string; surligner: string[]; source: 'algo' | 'ia'
+}) {
+  const parts = diffSiReprise(reference, texte)
+  if (parts === null) return <TexteSurligne texte={texte} surligner={surligner} source={source} />
   return (
     <>
       {parts.map((p, i) =>
@@ -334,7 +345,8 @@ export default function PanneauPreuve({
                   <p className="font-ui text-[11px] text-encre-douce">
                     {preuve.saisieClavier ? 'Texte saisi' : 'Retranscription'}
                   </p>
-                  {preuve.exercice?.materiau && preuve.texte && (
+                  {preuve.exercice?.materiau && preuve.texte
+                    && diffSiReprise(preuve.exercice.materiau, preuve.texte) !== null && (
                     <p className="font-ui text-[11px] text-muet flex flex-wrap gap-x-3">
                       <span><ins className="no-underline bg-ok-teinte text-ok font-semibold rounded-[2px] px-0.5">ajouté</ins> au matériau</span>
                       <span><del className="text-retard opacity-80">mot du matériau</del> absent</span>
@@ -346,8 +358,8 @@ export default function PanneauPreuve({
                     <>
                       <p className="font-corps text-[15px] text-encre-douce leading-relaxed whitespace-pre-line">
                         {preuve.exercice?.materiau
-                          /* ⭐ 01/09 — aligné sur le matériau : ce que l'élève a AJOUTÉ ressort. */
-                          ? <TexteDiffe reference={preuve.exercice.materiau} texte={preuve.texte} />
+                          /* ⭐ 01/09 — aligné sur le matériau quand l'élève l'a repris : ce qu'il a AJOUTÉ ressort. */
+                          ? <TexteDiffe reference={preuve.exercice.materiau} texte={preuve.texte} surligner={preuve.surligner} source={s.source} />
                           : <TexteSurligne texte={preuve.texte} surligner={preuve.surligner} source={s.source} />}
                       </p>
                       <p className="font-mono text-[11px] text-muet mt-3">— {preuve.meta.nbCaracteres} caractères utiles —</p>
