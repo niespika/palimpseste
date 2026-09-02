@@ -276,7 +276,9 @@ async function telechargerPages(
   admin: Admin, pages: readonly Photo[],
 ): Promise<Array<{ base64: string; mime: 'image/jpeg' }>> {
   const rendus = await Promise.all(pages.map(async (p) => {
-    const { data, error } = await admin.storage.from(BUCKET).download(p.chemin!)
+    // ⭐ C6-L4 — une page = UN bucket + UN chemin : celles d'un essai de Fragments
+    //    se lisent dans `essais`, sans qu'aucun fichier ait été copié.
+    const { data, error } = await admin.storage.from(p.bucket ?? BUCKET).download(p.chemin!)
     if (error || !data) {
       console.error(`[passation] page ${p.ordre} illisible au stockage (${p.chemin}) — `
         + `${error?.message ?? 'aucune donnée'}`)

@@ -6,6 +6,15 @@ import { createClient } from '@/utils/supabase/server'
 import { createAdminClient } from '@/utils/supabase/admin'
 import { messageSiBloque } from '@/utils/integrite'
 import { normaliserRetours } from '@/utils/passation/transcription-calcul'
+// ⭐ C6-L4 — le branchement de l'essai à la chaîne de mesure : UN module, appelé
+//    là où l'essai s'assigne, s'ouvre, se dépose et se mesure. Fragments ne
+//    change pas ; il APPELLE (`utils/essai/branchement-serveur.ts`).
+import {
+  brancherEssaiClasse, classesSansPlan, debrancherEssaiClasse, declencherLaMesureDeLEssai,
+  deposerLaCopieDansLaChaine, mettreAJourLEssaiBranche, ouvrirLesDepotsDeLEssai,
+  reporterLaDateDeLEssai,
+} from '@/utils/essai/branchement-serveur'
+import { motifSansPlan } from '@/utils/essai/regles'
 
 async function verifierProf() {
   const supabase = await createClient()
@@ -31,6 +40,12 @@ export async function creerEssai(data: {
 
   if (!data.semestreId) return { error: 'Semestre manquant', data: null }
   if (!data.classes.length) return { error: 'Choisis au moins une classe.', data: null }
+
+  // ⛔ C6-L4 — SANS PLAN D'ÉVALUATION VALIDÉ, PAS D'ESSAI (Louis, 02/09) : l'ancre
+  //    est portée par le plan, et la ligne de plan a besoin du sien. Le refus se
+  //    fait AVANT d'écrire quoi que ce soit.
+  const sansPlan = await classesSansPlan(admin, data.classes.map(c => c.classe_id))
+  if (sansPlan.length > 0) return { error: motifSansPlan(sansPlan), data: null }
 
   // date_essai de l'essai = 1ʳᵉ date assignée (legacy / défaut d'affichage).
   const datesTriees = data.classes.map(c => c.date_essai).sort()
@@ -59,6 +74,12 @@ export async function creerEssai(data: {
     })))
   if (errLiens) return { error: errLiens.message, data: null }
 
+  // ⭐ C6-L4 — poser un essai EST le planifier : ligne de plan, instance, dépôts.
+  for (const c of data.classes) {
+    const b = await brancherEssaiClasse(admin, epreuve.id, c.classe_id)
+    if (!b.ok) return { error: `Essai créé, mais non branché à la chaîne de mesure : ${b.message}`, data: { epreuveId: epreuve.id } }
+  }
+
   revalidatePath('/prof/fragments-erudition/evaluations')
   return { data: { epreuveId: epreuve.id }, error: null }
 }
@@ -79,6 +100,9 @@ export async function modifierEssai(epreuveId: string, data: {
     })
     .eq('id', epreuveId)
   if (error) return { error: error.message }
+  // C6-L4 — la consigne de l'instance et le titre de la ligne de plan suivent.
+  const suivi = await mettreAJourLEssaiBranche(admin, epreuveId)
+  if (!suivi.ok) return { error: `Essai modifié, mais la chaîne de mesure n’a pas suivi : ${suivi.message}` }
   revalidatePath('/prof/fragments-erudition/evaluations')
   revalidatePath(`/prof/fragments-erudition/essais/${epreuveId}`)
   return { success: true }
@@ -88,6 +112,9 @@ export async function modifierEssai(epreuveId: string, data: {
 export async function assignerEssaiClasse(epreuveId: string, classeId: string, dateEpreuve: string) {
   await verifierProf()
   const admin = createAdminClient()
+  // ⛔ C6-L4 — sans plan d'évaluation validé, pas d'essai pour cette classe.
+  const sansPlan = await classesSansPlan(admin, [classeId])
+  if (sansPlan.length > 0) return { error: motifSansPlan(sansPlan) }
   const { error } = await admin
     .from('fragments_essais_classes')
     .upsert(
@@ -95,6 +122,14 @@ export async function assignerEssaiClasse(epreuveId: string, classeId: string, d
       { onConflict: 'essai_id,classe_id', ignoreDuplicates: false }
     )
   if (error) return { error: error.message }
+  // ⭐ C6-L4 — poser un essai EST le planifier (idempotent : un lien déjà branché
+  //    ne fait que suivre sa date et accueillir un élève arrivé depuis).
+  const b = await brancherEssaiClasse(admin, epreuveId, classeId)
+  if (!b.ok) return { error: `Essai assigné, mais non branché à la chaîne de mesure : ${b.message}` }
+  if (b.data.dejaBranche) {
+    const r = await reporterLaDateDeLEssai(admin, epreuveId, classeId, dateEpreuve)
+    if (!r.ok) return { error: r.message }
+  }
   revalidatePath('/prof/fragments-erudition/evaluations')
   return { success: true }
 }
@@ -102,6 +137,10 @@ export async function assignerEssaiClasse(epreuveId: string, classeId: string, d
 export async function retirerEssaiClasse(epreuveId: string, classeId: string) {
   await verifierProf()
   const admin = createAdminClient()
+  // ⛔ C6-L4 — la chaîne se défait d'abord, et elle REFUSE si un élève a écrit :
+  //    « rien ne part si un élève a écrit quelque chose » (C4-L9).
+  const d = await debrancherEssaiClasse(admin, epreuveId, classeId)
+  if (!d.ok) return { error: d.message }
   const { error } = await admin
     .from('fragments_essais_classes')
     .delete()
@@ -122,8 +161,27 @@ export async function toggleDepotsClasse(epreuveId: string, classeId: string, ou
     .eq('essai_id', epreuveId)
     .eq('classe_id', classeId)
   if (error) return { error: error.message }
+  // ⭐ C6-L4 — l'ouverture des dépôts EST le lancement de la passation
+  //    (`ouvert_par_prof_at`) : la tuile de l'élève naît de là. Fermer ne
+  //    referme rien dans la chaîne (un dépôt ouvert garde son horodatage).
+  if (ouvert) {
+    const o = await ouvrirLesDepotsDeLEssai(admin, epreuveId, classeId)
+    if (!o.ok) return { error: `Dépôts ouverts, mais la chaîne de mesure n’a pas suivi : ${o.message}` }
+  }
   revalidatePath(`/prof/fragments-erudition/essais/${epreuveId}`)
   return { success: true }
+}
+
+// ⭐ C6-L4 — le clic du professeur : les copies transcrites entrent en file de
+//    mesure (`declencherLeLot`, idempotent). « Le soir même ou un autre jour, il
+//    déclenche l'analyse en lot d'un clic » (`02-` §6.D, étape 12).
+export async function declencherMesureEssai(epreuveId: string, classeId: string) {
+  await verifierProf()
+  const admin = createAdminClient()
+  const r = await declencherLaMesureDeLEssai(admin, epreuveId, classeId)
+  if (!r.ok) return { error: r.message }
+  revalidatePath(`/prof/fragments-erudition/essais/${epreuveId}`)
+  return { success: true, ...r.data }
 }
 
 // ── Upload photos essai (prof dépose pour un élève) ───────────────────────────
@@ -224,6 +282,11 @@ export async function reordonnerPhotosEssai(photos: { id: string; ordre: number 
 
 export async function confirmerUploadEssaiPhotos(essaiId: string) {
   await verifierProf()
+  // ⭐ C6-L4 — la copie entre dans la chaîne de mesure (pages sous la forme
+  //    gardée, transcription en file) AVANT l'analyse propre de Fragments, qui
+  //    ne bouge pas. Un refus se journalise, il ne bloque pas Fragments.
+  const chaine = await deposerLaCopieDansLaChaine(createAdminClient(), essaiId)
+  if (!chaine.ok) console.error(`[essai] copie ${essaiId} non entrée dans la chaîne — ${chaine.message}`)
   after(async () => {
     const { analyserEssai } = await import('@/utils/analyse-essai')
     await analyserEssai(essaiId)
@@ -643,6 +706,10 @@ export async function confirmerDepotEssaiEleve(essaiId: string) {
     .eq('id', essaiId)
     .single()
   if (!essai || essai.eleve_id !== user.id) return { error: 'Accès refusé' }
+
+  // ⭐ C6-L4 — la copie entre dans la chaîne de mesure (voir le jumeau professeur).
+  const chaine = await deposerLaCopieDansLaChaine(admin, essaiId)
+  if (!chaine.ok) console.error(`[essai] copie ${essaiId} non entrée dans la chaîne — ${chaine.message}`)
 
   after(async () => {
     const { analyserEssai } = await import('@/utils/analyse-essai')

@@ -180,11 +180,13 @@ export default function TableauEssai({ epreuve, classeId, eleves, essaiParEleve,
   const router = useRouter()
   const [depotPourEleve, setDepotPourEleve] = useState<string | null>(null)
   const [chargement, setChargement] = useState(false)
+  const [erreurDepots, setErreurDepots] = useState<string | null>(null)
 
   async function handleToggleDepots() {
-    setChargement(true)
-    await toggleDepotsClasse(epreuve.id, classeId, !epreuve.depots_ouverts)
+    setChargement(true); setErreurDepots(null)
+    const r = await toggleDepotsClasse(epreuve.id, classeId, !epreuve.depots_ouverts)
     setChargement(false)
+    if ('error' in r && r.error) setErreurDepots(r.error)
     router.refresh()
   }
 
@@ -222,6 +224,7 @@ export default function TableauEssai({ epreuve, classeId, eleves, essaiParEleve,
           {epreuve.depots_ouverts ? 'Fermer les dépôts' : 'Ouvrir les dépôts'}
         </button>
         <span className="text-sm text-muet">{nbDeposes}/{eleves.length} déposés · {nbPubliees} publiés</span>
+        {erreurDepots && <span className="text-sm text-retard">{erreurDepots}</span>}
         <button
           onClick={() => telechargerCSV(eleves, essaiParEleve, analyseParEssai, epreuve.titre)}
           className="ml-auto text-xs text-encre-douce hover:text-encre px-3 py-1.5 rounded border border-bordure hover:border-encre-douce transition-colors"

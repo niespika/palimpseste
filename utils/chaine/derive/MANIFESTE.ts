@@ -20,7 +20,7 @@ export const MANIFESTE_INSTRUMENTS = {
       ],
       "ouverte": true,
       "statut": "RELUE ET VALIDÉE",
-      "version": "4.4"
+      "version": "4.5"
     },
     "connaissance": {
       "observables_mesure": [
@@ -114,14 +114,14 @@ export const MANIFESTE_INSTRUMENTS = {
   "outil": "scripts/derive-instruments.py 1.0",
   "sources": {
     "07-Implementation.md": {
-      "empreinte": "0b7fc40f8102df57f2f7a20646033b3ae939adac3051ba342e260e904ab433ac",
+      "empreinte": "483f099443bbc7a91bee4f068a65d3a7c48d5c71137fd1686738dc00d79512af",
       "statut": "RELU ET VALIDÉ.",
-      "version": "2.67"
+      "version": "2.69"
     },
     "competences/argumentation.md": {
-      "empreinte": "c7ab3b0fa1cdca02671dd49828bfcbbe42d7a781b98ceb081071c8da85fd2f15",
+      "empreinte": "e333870566274864a9ff99def3f3cdfad150720d702756488c2def05258f8127",
       "statut": "RELUE ET VALIDÉE",
-      "version": "4.4"
+      "version": "4.5"
     },
     "competences/connaissance.md": {
       "empreinte": "bb0854bea4c2152f65dbb536d2790a95960fd3b02a1e722ed571bdc1c897bad1",

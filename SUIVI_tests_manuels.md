@@ -8952,3 +8952,28 @@ retrouveras dans ta liste »)* : quand l'arbitrage repasse à « pas de problèm
 `assigne`/`ouvert` et **réapparaît partout, tout seul**. ⛔ **Y faire figurer une ligne « en
 révision » non cliquable serait un item mort dans « À faire »** — non fait, et à demander si Louis
 le veut.
+
+## C6-L4 — Le branchement de l'essai de Fragments (séance du 02/09, migration `c6_l4_essai_lien_instance.sql`)
+
+**La couture par exécution — `scripts/recette/couture-c6l4.mjs`, bac à sable, classe « Test », compte `test@test.com` :** 63 ✓ / 0 ✗ en `--sans-appel`, **75 ✓ / 0 ✗ avec UNE copie payée** (3 pages du compte de test, transcription 0,105 $, mesure 128 s), décor retiré et vérifié par requête (0 essai, 0 ligne de plan, 0 instance, 0 mesure, 0 fichier dans `essais`, niveaux d'Elo reposés).
+
+### Prouvé en séance, coché avec sa preuve
+
+- [x] **① La reconnaissance** — `brancherEssaiClasse` écrit une ligne de plan `essai × non diag × evaluatif × classe × fragments` (`manuel`, `concu`, lundi de `date_essai`), une instance `examen_diagnostique_essai` `lieu = classe` (trois compétences en `composer`, `genre` ∅, `cible_primaire` ∅), sept dépôts `assigne` `origine = prof`, `assigne_at` = midi UTC du lundi ; le lien `fragments_essais_classes.exercice_id`. `lireContexte` lit `lieu = classe`, `forme = sommatif`, `estUneAncre` vrai ; **le même dépôt sans ligne de plan rend `forme = formatif`** (preuve par la négative). Rebrancher n'écrit rien ; une seconde instance sur la ligne est refusée (23505). Le dépôt d'essai a exactement les colonnes d'un dépôt d'examen.
+- [x] **② La transcription** — `deposerLaCopieDansLaChaine` écrit `photos_v1` sous la forme gardée (ordre, rotation 0, `somme_controle` = taille-empreinte du stockage, `page_manquante` faux, `bucket = essais`), aucun fichier dans `codex`, job `transcription_v1` en file ; `transcrireMaintenant` (payé) rend 12 blocs, 28 doutes, confiance posée, **`v1_remis_at` posé sans geste de l'élève**. Le re-dépôt (sans appel) efface la transcription et remet le job en file ; un re-dépôt après mesure conserve la copie mesurée.
+- [x] **③ La mesure** — `declencherLeLot` : 1 mise en file, 6 sans copie, un second clic 0 doublon ; la chaîne écrit 3 squelettes, **3 mesures `classe × sommatif`** (`composer`, `instrument_version` 3.2/…, `delta_v1_vf` NULL, `classe_id` posé), un retour non publié.
+- [x] **④ L'ancre** — `competences_niveaux.ancre_derniere_date` passe du 28/08 au 02/09 sur les trois compétences ; Elo n'était PAS `profil_provisoire` : la lettre est descendue C → D en Structure et Expression par l'ancre, C → C en Argumentation. La matrice et les drapeaux de C6-L1 se chargent sans incident.
+- [x] **⑤ Le professeur, ⑥ l'élève — dans Fragments** — `chargerVueProf` 7 copies ; `publier()` → `published_at`, statut `retour_publie` ; `chargerVueEleve` retour visible ; l'inventaire de l'élève range l'essai sous `/eleve/modules/fragments-erudition/passation/…?vue=essai` « retour à lire », pas sous Codex ; la tuile du lancement mène dans Fragments ; côté professeur la liste des passations le range sous Fragments. **Smoke au navigateur** (sessions mintées, prof et élève, trois largeurs sans débordement) : page de l'essai avec le bloc « Chaîne de mesure — le second retour », page de passation prof sous Évaluations, page élève sous Essai, **clic « J'ai lu mon retour » → `lu_at` posé (vérifié par requête)**. `fragments_essai_depot_analyses` : 0 → 0.
+- [x] **⑦ Hors routage, assiduité** — `constituerLeVivier` écarte l'instance (`lieu_classe`) ; `comptesDeLaSemaine` : l'essai entre au dénominateur de la semaine de `date_essai` (+1 assigné, +1 terminé une fois rendu) ; un élève absent pèse comme un exercice non rendu. L'effacement collecte les pages dans `essais` et jamais dans `codex`. Le retrait de l'essai est refusé quand un élève a écrit.
+- [x] **Le refus sans plan** — THLP et THLP2 (bac à sable) sont refusées avec le message qui nomme la classe.
+
+### Reste à jouer en recette — décoché, avec sa condition de reprise
+
+- [ ] **Rien ne se prouve en production** : 0 essai, 0 thème, 0 élève éligible ; **et la migration `c6_l4_essai_lien_instance.sql` n'y est PAS jouée** (`psql` vers la prod refusé à la session Code) — condition : Louis la joue (corps en répétition à blanc d'abord), puis le code est poussé.
+- [ ] **Le premier essai réel** est un geste de Louis dans Fragments, à une date qu'il choisit, sur 1HLP ou THLP (qui ont un plan validé 2026). Condition : après le push.
+- [ ] **Le dépôt par le professeur pour un élève** (`creerEssaiProf` → `confirmerUploadEssaiPhotos`) n'a été prouvé que par le même appel (`deposerLaCopieDansLaChaine`), pas au navigateur : le chemin ouvre le seul dépôt de cet élève si les dépôts de la classe sont fermés. Condition : un dépôt prof au navigateur, en bac à sable.
+- [ ] **L'ancre sur un profil provisoire** : Elo ne l'était pas ; les 221 lignes de prod le sont jusqu'au 14/09. Condition : un essai réel avant/après la bascule.
+- [ ] **Le parcours de la mesure** (`hlp`) : la classe « Test » n'a pas de parcours (`classe_id` posé, parcours `indetermine`). Condition : production.
+- [ ] **La transcription par le cron** (`/api/chaine` à la minute) : la recette a appelé `transcrireMaintenant` ; l'écran élève, lui, ne réclame pas son job — c'est le cron qui le prend. Condition : un dépôt élève au navigateur, en bac à sable, et le job passe `abouti` dans la minute (en local, lancer la route à la main).
+- [ ] **Le re-dépôt payant** (nouvelles photos → nouvelle transcription) prouvé sans appel seulement.
+- [ ] **La page élève de passation AVANT remise** (« Ta copie est déposée : elle est en cours de transcription ») : vue au code, pas au navigateur (la copie de recette était déjà remise au moment du smoke).

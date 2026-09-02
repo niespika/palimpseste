@@ -24,20 +24,23 @@ export default function GestionEssaisClasse({ classeId, classeNom, assignees, di
   const [ajout, setAjout] = useState(false)
   const [epreuveId, setEpreuveId] = useState('')
   const [date, setDate] = useState('')
+  const [erreur, setErreur] = useState<string | null>(null)
 
   async function handleAssigner() {
     if (!epreuveId || !date) return
-    setChargement(true)
-    await assignerEssaiClasse(epreuveId, classeId, date)
+    setChargement(true); setErreur(null)
+    const r = await assignerEssaiClasse(epreuveId, classeId, date)
     setChargement(false)
+    if ('error' in r && r.error) { setErreur(r.error); return }
     setAjout(false); setEpreuveId(''); setDate('')
     router.refresh()
   }
 
   async function handleRetirer(id: string) {
-    setChargement(true)
-    await retirerEssaiClasse(id, classeId)
+    setChargement(true); setErreur(null)
+    const r = await retirerEssaiClasse(id, classeId)
     setChargement(false)
+    if ('error' in r && r.error) { setErreur(r.error); return }
     router.refresh()
   }
 
@@ -47,6 +50,8 @@ export default function GestionEssaisClasse({ classeId, classeNom, assignees, di
         <h3 className="font-medium text-encre">{classeNom}</h3>
         <p className="text-xs text-muet mt-0.5">Essais de cette classe · date et ouverture propres</p>
       </div>
+
+      {erreur && <p className="px-5 py-2 text-sm text-retard border-b border-bordure">{erreur}</p>}
 
       {assignees.length === 0 ? (
         <div className="px-5 py-6 text-sm text-muet">Aucun essai assigné à cette classe.</div>

@@ -47,6 +47,9 @@ function rafraichir(): void {
   revalidatePath('/prof/aletheia', 'layout')
   revalidatePath('/eleve/modules/codex', 'layout')
   revalidatePath('/eleve/modules/aletheia', 'layout')
+  // C6-L4 — le même flux dans un troisième module.
+  revalidatePath('/prof/fragments-erudition', 'layout')
+  revalidatePath('/eleve/modules/fragments-erudition', 'layout')
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

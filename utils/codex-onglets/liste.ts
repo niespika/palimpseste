@@ -569,10 +569,11 @@ export async function passationsDeClasse(
       //    l'explication de texte mesure l'Expression EN `composer`, et la règle
       //    des modes l'enverrait dans Codex quand le `06-` §1 la range en
       //    LECTURE. C'est l'ordre exact de `utils/examens/signal.ts`.
-      const parPlan = typeParLigne.get(txt(e.exercice_planifie_id))
-      if (parPlan === 'ecriture') return atelier === 'codex'
-      if (parPlan === 'lecture') return atelier === 'aletheia'
-      return atelierDUnFormatif(e.modes_par_competence) === atelier
+      //    ⭐ C6-L4 — la règle vit désormais en UN endroit (`regles.ts`,
+      //    `atelierDUneInstanceDeClasse`) : `essai` ⇒ Fragments, que l'exemplaire
+      //    en ligne d'ici ignorait — l'essai tombait dans Codex par son mode.
+      const parPlan = typeParLigne.get(txt(e.exercice_planifie_id)) ?? null
+      return atelierDUneInstanceDeClasse(parPlan, e.modes_par_competence) === atelier
     })
     .map((e) => {
       const c = lig(un(e.classes))

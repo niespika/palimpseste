@@ -26,7 +26,8 @@ import 'server-only'
 
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { passationOuverteAEleve } from '@/utils/passation/acces'
-import { moduleDuType, type ModuleExamen } from './types'
+import { moduleDuType, type ModulePassation } from './types'
+import { hrefDeLaPassationEleve } from '@/utils/codex-onglets/regles'
 
 type Admin = SupabaseClient
 type Ligne = Record<string, unknown>
@@ -65,7 +66,7 @@ export interface SignalDeLancement {
  *    passation, elle, reste atteignable par son adresse tant que le dépôt vit.
  */
 export async function signauxDeLancement(
-  admin: Admin, eleveId: string, module: ModuleExamen,
+  admin: Admin, eleveId: string, module: ModulePassation,
 ): Promise<SignalDeLancement[]> {
   // ⭐ LE CÔTÉ ÉLÈVE NAÎT DERRIÈRE SES PORTES, ET IL Y EN A DEUX : `exercices_actif`
   //    — « les élèves peuvent-ils faire des exercices ? » (§1.5, au professeur) —
@@ -115,7 +116,7 @@ export async function signauxDeLancement(
       depotId: txt(d.id),
       titre: premiereLigne(ex.consigne_instanciee),
       ouvertLe: txt(d.ouvert_par_prof_at),
-      href: `/eleve/modules/${m}/passation/${txt(d.id)}`,
+      href: hrefDeLaPassationEleve(m, txt(d.id)),
     })
   }
   return out.sort((a, b) => b.ouvertLe.localeCompare(a.ouvertLe))
@@ -141,9 +142,11 @@ export async function signauxDeLancement(
  */
 function moduleDeLInstance(
   ex: Ligne, moduleParLigne: Map<string, string>,
-): ModuleExamen {
+): ModulePassation {
   const parPlan = moduleParLigne.get(txt(ex.exercice_planifie_id))
-  if (parPlan === 'codex' || parPlan === 'aletheia') return parPlan
+  // ⭐ C6-L4 — `essai` ⇒ FRAGMENTS, par la ligne de plan et par elle seule : la
+  //    règle du mode ci-dessous l'enverrait dans Codex (`composer`), à tort.
+  if (parPlan === 'codex' || parPlan === 'aletheia' || parPlan === 'fragments') return parPlan
   const modes = Object.values((ex.modes_par_competence ?? {}) as Record<string, unknown>)
     .flatMap((v) => (Array.isArray(v) ? v.map(txt) : []))
   return modes.includes('composer') ? 'codex' : 'aletheia'

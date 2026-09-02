@@ -145,6 +145,12 @@ async function cheminsDePassation(
       if (!paires.has(`${d.eleve_id}:${ex?.classe_id}`)) continue
       for (const p of Array.isArray(d.photos_v1) ? d.photos_v1 : []) {
         const chemin = (p as { chemin?: unknown })?.chemin
+        // ⭐ C6-L4 — les pages d'un essai de Fragments portent `bucket = 'essais'` :
+        //    ce sont LES fichiers de Fragments, déjà collectés par
+        //    `fragments_essai_depot_photos` ci-dessus (même inscription). On ne
+        //    les envoie pas au `remove` de `codex`, où ils n'existent pas.
+        const bucket = (p as { bucket?: unknown })?.bucket
+        if (typeof bucket === 'string' && bucket !== 'codex') continue
         if (typeof chemin === 'string' && chemin !== '') chemins.push(chemin)
       }
     }

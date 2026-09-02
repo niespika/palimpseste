@@ -32,7 +32,7 @@ import 'server-only'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { dateEffectiveSemaine } from '@/utils/plan-cadence'
 import {
-  CODE_TYPE, INTITULE, MATIERE, MODES_MESURES, moduleDuType, type ModuleExamen,
+  CODE_TYPE, INTITULE, MATIERE, MODES_MESURES, moduleDuType, estUnModuleExamen, type ModuleExamen,
 } from './types'
 import { consigneANoter, consigneDepuisLeSujet, consigneDepuisLeTexte, enTete } from './consigne'
 import {
@@ -110,7 +110,9 @@ export async function chargerConception(
 
   // `mod` et non `module` : Next.js interdit d'assigner cet identifiant.
   const mod = moduleDuType(txt(l.type_exercice))
-  if (!mod || l.diagnostique !== true) return null
+  // ⚠️ C6-L4 : `essai` mène à Fragments, qui ne se conçoit pas ici — l'essai naît
+  //    dans son module, à l'assignation (`utils/essai/branchement-serveur.ts`).
+  if (!mod || !estUnModuleExamen(mod) || l.diagnostique !== true) return null
 
   const { data: plan } = await admin
     .from('scriptorium_plans_evaluation').select('classe_id').eq('id', txt(l.plan_id)).maybeSingle()

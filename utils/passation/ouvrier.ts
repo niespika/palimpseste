@@ -27,6 +27,7 @@ import { passationOuverteAEleve } from './acces'
 import { transcrire, TranscriptionImpossible } from './transcription'
 import { ETAPE_TRANSCRIPTION } from './depots'
 import type { Photo } from './photos'
+import { sansControleDeLEleve } from '@/utils/essai/regles'
 
 type Admin = SupabaseClient
 
@@ -68,7 +69,7 @@ export async function transcrireDepot(
 
   const { data, error } = await admin.from('exercices_depots')
     .select('id, eleve_id, statut, photos_v1, transcription_v1, v1_remis_at, '
-      + 'ouvert_par_prof_at, exercices!inner(lieu, classe_id)')
+      + 'ouvert_par_prof_at, exercices!inner(lieu, classe_id, exercice_planifie_id)')
     .eq('id', depotId).maybeSingle()
   if (error) throw new Error(`dépôt ${depotId} illisible — ${error.code} ${error.message}`)
   if (!data) throw new DepotSansCopie(`dépôt ${depotId} introuvable.`)
@@ -76,7 +77,8 @@ export async function transcrireDepot(
   const d = data as unknown as {
     id: string; eleve_id: string; statut: string; photos_v1: Photo[] | null
     transcription_v1: string | null; v1_remis_at: string | null; ouvert_par_prof_at: string | null
-    exercices: { lieu: string; classe_id: string | null } | Array<{ lieu: string; classe_id: string | null }>
+    exercices: { lieu: string; classe_id: string | null; exercice_planifie_id: string | null }
+      | Array<{ lieu: string; classe_id: string | null; exercice_planifie_id: string | null }>
   }
   const ex = Array.isArray(d.exercices) ? d.exercices[0] : d.exercices
 
@@ -100,6 +102,15 @@ export async function transcrireDepot(
   const rendu = await transcrire(
     admin, { id: d.id, eleve_id: d.eleve_id, classe_id: ex?.classe_id ?? null }, d.photos_v1)
 
+  // ⭐ C6-L4 — « MANUSCRIT → PHOTOS → TRANSCRIPTION », TROIS ÉTAPES, PAS QUATRE
+  //    (`06-` §1) : l'essai de Fragments n'a pas de contrôle par l'élève, et
+  //    `v1_remis_at` se pose ICI, à l'aboutissement, sans son geste — sinon
+  //    `declencherLeLot` écarterait la copie. Reconnu PAR LA LIGNE DE PLAN
+  //    (`essai × fragments`), jamais par une valeur sur le dépôt.
+  const remiseSansControle = sansControleDeLEleve(
+    await ligneDePlanDeLInstance(admin, ex?.exercice_planifie_id ?? null))
+  const maintenant = new Date().toISOString()
+
   const { error: eEcriture } = await admin.from('exercices_depots').update({
     // ⚠️ TEL QUEL : aucun `trim`, aucune normalisation — « le champ d'édition
     //    préserve le découpage, et il le conserve de bout en bout, de la photo à
@@ -107,7 +118,8 @@ export async function transcrireDepot(
     transcription_v1: rendu.texte,
     confiance_ocr_v1: rendu.confiance,
     transcription_v1_doutes: rendu.doutes.length ? rendu.doutes : null,
-    updated_at: new Date().toISOString(),
+    updated_at: maintenant,
+    ...(remiseSansControle ? { v1_remis_at: maintenant, statut: 'v1_remis' } : {}),
   }).eq('id', depotId)
   if (eEcriture) {
     // supabase-js NE LÈVE PAS : sans ce contrôle, deux appels seraient payés et
@@ -142,6 +154,17 @@ export async function transcrireDepot(
  *    le compare-and-swap de `reclamerJobs` fait qu'un seul des deux appels
  *    obtient le job — l'autre n'a rien à faire et rend `null`.
  */
+/** La ligne de plan de l'instance — `null` quand il n'y en a pas (hors plan). */
+async function ligneDePlanDeLInstance(
+  admin: Admin, planifieId: string | null,
+): Promise<{ type_exercice: string | null; module: string | null } | null> {
+  if (!planifieId) return null
+  const { data } = await admin
+    .from('scriptorium_exercices_planifies').select('type_exercice, module')
+    .eq('id', planifieId).maybeSingle()
+  return (data as { type_exercice: string | null; module: string | null } | null) ?? null
+}
+
 export async function transcrireMaintenant(
   admin: Admin, depotId: string,
 ): Promise<{ bilan: BilanTranscription | null; motif: string | null }> {

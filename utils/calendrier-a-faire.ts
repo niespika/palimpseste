@@ -8,7 +8,7 @@ import { lireGatePlanActif, plansValidesCourants } from '@/utils/plan-exercices'
 import { resoudreDatesSyntheses } from '@/utils/plan-synthese'
 import { clesSynthesesOuvertes } from '@/utils/plan-synthese-ouverture'
 import { dateEffectiveSemaine, libelleTypeExercice } from '@/utils/plan-cadence'
-import { moduleDuType } from '@/utils/examens/types'
+import { moduleDuType, estUnModuleExamen } from '@/utils/examens/types'
 import { construireApercuAssign, memoSocleFrise, type ApercuSemaine } from '@/utils/parcours-apercu'
 import { semaineCourante } from '@/utils/scriptorium-corpus'
 
@@ -106,8 +106,12 @@ export async function tachesDeriveesDuCalendrier(joursAvant = 10): Promise<Tache
         //    ⚠️ La condition lit `diagnostique`, jamais le seul `type_exercice` : une
         //    écriture FORMATIVE (maison) est aussi de type `ecriture`, et elle n'a pas
         //    d'écran — elle reste au renvoi vers la grille.
+        // ⚠️ C6-L4 : `moduleDuType('essai')` rend `fragments`, qui n'a pas d'écran de
+        //    conception — l'essai se conçoit à son assignation, dans Fragments.
+        //    `diagnostique` l'écarte déjà (un essai n'est jamais diagnostique) ;
+        //    `estUnModuleExamen` le dit en clair.
         const moduleExamen = e.diagnostique === true
-          ? moduleDuType(type)
+          ? (() => { const m = moduleDuType(type); return estUnModuleExamen(m) ? m : null })()
           : null
         const href = type === 'quiz'
           ? `/prof/quazian/quizz?exercice=${e.id}`

@@ -231,7 +231,7 @@ export const INSTRUMENT_ARGUMENTATION = {
   },
   "competence": "argumentation",
   "degre_statut": 2,
-  "empreinte_source": "c7ab3b0fa1cdca02671dd49828bfcbbe42d7a781b98ceb081071c8da85fd2f15",
+  "empreinte_source": "e333870566274864a9ff99def3f3cdfad150720d702756488c2def05258f8127",
   "observables_mesure": {
     "garant_ambigu": {
       "famille": "comptage rapporté",
@@ -309,5 +309,5 @@ export const INSTRUMENT_ARGUMENTATION = {
   },
   "source": "competences/argumentation.md",
   "statut": "RELUE ET VALIDÉE",
-  "version": "4.4"
+  "version": "4.5"
 } as const

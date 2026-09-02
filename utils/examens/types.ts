@@ -22,6 +22,22 @@ export const MODULES_EXAMEN = ['codex', 'aletheia'] as const
 export type ModuleExamen = (typeof MODULES_EXAMEN)[number]
 
 /**
+ * ⭐ C6-L4 — LES TROIS MODULES QUI PORTENT UNE PASSATION EN CLASSE. Les deux
+ *    examens diagnostiques, ET l'essai de Fragments : « les devoirs surveillés
+ *    de classe empruntent la même voie » (`07-` §2, C4-L9), et « les sommatifs
+ *    se conçoivent chacun dans son module — Quazian, Codex, Aletheia,
+ *    FRAGMENT » (`01-` §2). Fragments n'est PAS un module d'examen
+ *    diagnostique (pas d'écran de conception, pas de fenêtre) : c'est pourquoi
+ *    `MODULES_EXAMEN` ne bouge pas, et qu'un type de plus le contient.
+ */
+export const MODULES_PASSATION = ['codex', 'aletheia', 'fragments'] as const
+export type ModulePassation = (typeof MODULES_PASSATION)[number]
+
+export function estUnModuleExamen(m: string | null | undefined): m is ModuleExamen {
+  return (MODULES_EXAMEN as readonly string[]).includes(m ?? '')
+}
+
+/**
  * Le code du type, par module.
  *
  * ⚠️ RENOMMÉS PAR C4-L9 (`c4_l9_examens_diagnostiques.sql`) : ils s'appelaient
@@ -47,9 +63,26 @@ export const TYPE_EXERCICE: Record<ModuleExamen, string> = {
   aletheia: 'lecture',
 }
 
-/** Le module d'un `type_exercice`, quand c'en est un des deux. */
-export function moduleDuType(typeExercice: string): ModuleExamen | null {
-  for (const m of MODULES_EXAMEN) if (TYPE_EXERCICE[m] === typeExercice) return m
+/**
+ * ⭐ C6-L4 — le `type_exercice` de la ligne de plan de CHAQUE passation en classe.
+ *    L'essai de Fragments est le onzième couple de la typologie : `essai` × non
+ *    diagnostique × `evaluatif` × `classe` × `fragments` — `evaluatif` par
+ *    construction, donc `forme = sommatif`, donc une ANCRE (`07-` §1.2).
+ */
+export const TYPE_EXERCICE_PASSATION: Record<ModulePassation, string> = {
+  ...TYPE_EXERCICE,
+  fragments: 'essai',
+}
+
+/**
+ * Le module d'un `type_exercice`, quand c'est celui d'une passation en classe.
+ * ⚠️ C6-L4 : `essai` mène désormais à FRAGMENTS. Un appelant qui ne veut que les
+ *    deux examens diagnostiques (conception, calendrier) filtre par
+ *    `estUnModuleExamen` — le module ne se déduit jamais du mode pour un essai
+ *    (la règle du mode l'enverrait dans Codex, à tort).
+ */
+export function moduleDuType(typeExercice: string): ModulePassation | null {
+  for (const m of MODULES_PASSATION) if (TYPE_EXERCICE_PASSATION[m] === typeExercice) return m
   return null
 }
 

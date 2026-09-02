@@ -15,7 +15,7 @@ import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import {
   CODE_TYPE, INTITULE, MATIERE, MODES_MESURES, MODULES_EXAMEN, NOM_MODULE,
-  TYPE_EXERCICE, moduleDuType,
+  TYPE_EXERCICE, moduleDuType, TYPE_EXERCICE_PASSATION, estUnModuleExamen,
 } from './types'
 import {
   consigneANoter, consigneDepuisLeSujet, consigneDepuisLeTexte, enTete,
@@ -98,10 +98,18 @@ test('la typologie du plan mène au module : `ecriture` → Codex, `lecture` →
   assert.equal(moduleDuType('lecture'), 'aletheia')
 })
 
-test('un type d’exercice qui n’est pas un examen diagnostique ne mène à aucun module', () => {
-  for (const t of ['synthese', 'quiz', 'examen_livre', 'bac_blanc', 'fragment', 'essai', '']) {
-    assert.equal(moduleDuType(t), null, `${t} n’est pas un examen diagnostique`)
+test('un type d’exercice qui n’est pas une passation en classe ne mène à aucun module', () => {
+  for (const t of ['synthese', 'quiz', 'examen_livre', 'bac_blanc', 'fragment', '']) {
+    assert.equal(moduleDuType(t), null, `${t} n’est pas une passation en classe`)
   }
+})
+
+test('⭐ C6-L4 — `essai` mène à FRAGMENTS, qui n’est pas un module d’examen diagnostique', () => {
+  assert.equal(moduleDuType('essai'), 'fragments')
+  assert.equal(TYPE_EXERCICE_PASSATION.fragments, 'essai')
+  assert.deepEqual([...MODULES_EXAMEN], ['codex', 'aletheia'], 'la conception ne connaît que deux modules')
+  assert.equal(estUnModuleExamen('fragments'), false)
+  assert.equal(estUnModuleExamen('codex'), true)
 })
 
 test('LE SEUL ÉCART entre les deux écrans : un SUJET dans Codex, un TEXTE dans Aletheia', () => {

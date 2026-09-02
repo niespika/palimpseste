@@ -49,6 +49,14 @@ export interface Photo {
    * pas non plus (elle refuse les clés MAL formées, pas les clés en plus).
    */
   chemin?: string
+  /**
+   * ⭐ C6-L4 — LE BUCKET de la page, quand ce n'est pas celui de la passation
+   *    (`chemins.ts`, `BUCKET`). Les photos d'un essai de Fragments vivent DÉJÀ
+   *    dans `essais` : plutôt que copier un fichier (deux buckets à purger, c'est
+   *    un fichier oublié — `06-` §7), la lecture de la chaîne est bucket-aware.
+   *    Absent = `codex`. Hors des quatre clés gardées, comme `chemin`.
+   */
+  bucket?: string
 }
 
 export const ROTATIONS = [0, 90, 180, 270] as const

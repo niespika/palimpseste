@@ -14,8 +14,24 @@
 /** Le lieu de la passation, et rien d'autre (`07-` §1.1). */
 export type Lieu = 'maison' | 'classe'
 
-/** Les deux ateliers d'écriture / lecture (`01-` §2). */
-export type Atelier = 'codex' | 'aletheia'
+/**
+ * Les deux ateliers d'écriture / lecture (`01-` §2) — et, depuis C6-L4,
+ * FRAGMENTS pour la seule passation en classe qu'il porte : l'essai. Un
+ * formatif ne tombe jamais dans Fragments (`atelierDUnFormatif` ne rend que
+ * les deux premiers) ; seule une instance DE CLASSE dont la ligne de plan est
+ * `essai` y mène (`atelierDUneInstanceDeClasse`).
+ */
+export type Atelier = 'codex' | 'aletheia' | 'fragments'
+
+/**
+ * ⚠️ LE SEGMENT D'URL N'EST PAS LE NOM DU MODULE : Fragments vit sous
+ *    `fragments-erudition`. Une seule table, lue par les trois `href`.
+ */
+export const ROUTE_DE_L_ATELIER: Record<Atelier, string> = {
+  codex: 'codex',
+  aletheia: 'aletheia',
+  fragments: 'fragments-erudition',
+}
 
 /**
  * ⭐ L'ATELIER D'UN EXERCICE FORMATIF SE LIT SUR SON MODE.
@@ -63,7 +79,7 @@ export function atelierDUnFormatif(modesParCompetence: unknown): Atelier {
  *    `prefixes[]`, que ces deux routes allument bien cet onglet-là.
  */
 export function hrefDuDeroule(atelier: Atelier, depotId: string): string {
-  return `/eleve/modules/${atelier}/exercice/${depotId}`
+  return `/eleve/modules/${ROUTE_DE_L_ATELIER[atelier]}/exercice/${depotId}`
 }
 
 /**
@@ -80,7 +96,7 @@ export function hrefDuDeroule(atelier: Atelier, depotId: string): string {
  *    lien dans tout le dépôt, depuis `app/prof/conception/[id]`.
  */
 export function hrefDeLaPassationProf(atelier: Atelier, exerciceId: string): string {
-  return `/prof/${atelier}/passation/${exerciceId}`
+  return `/prof/${ROUTE_DE_L_ATELIER[atelier]}/passation/${exerciceId}`
 }
 
 /**
@@ -102,7 +118,10 @@ export function hrefDeLaPassationProf(atelier: Atelier, exerciceId: string): str
  *    (`/eleve/modules/{codex,aletheia}/passation`). Rien à y ajouter.
  */
 export function hrefDeLaPassationEleve(atelier: Atelier, depotId: string): string {
-  return `/eleve/modules/${atelier}/passation/${depotId}`
+  // ⭐ C6-L4 — la face élève de Fragments pilote ses onglets par `?vue=` : sans
+  //    lui, l'écran de passation allumerait « Écrit » (la vue par défaut).
+  const vue = atelier === 'fragments' ? '?vue=essai' : ''
+  return `/eleve/modules/${ROUTE_DE_L_ATELIER[atelier]}/passation/${depotId}${vue}`
 }
 
 /**
@@ -133,6 +152,9 @@ export function atelierDUneInstanceDeClasse(
 ): Atelier {
   if (typeExerciceDeLaLigne === 'ecriture') return 'codex'
   if (typeExerciceDeLaLigne === 'lecture') return 'aletheia'
+  // ⭐ C6-L4 — l'essai de Fragments : sans cette ligne, la règle du mode
+  //    (`composer`) l'enverrait dans CODEX, à tort.
+  if (typeExerciceDeLaLigne === 'essai') return 'fragments'
   return atelierDUnFormatif(modesParCompetence)
 }
 

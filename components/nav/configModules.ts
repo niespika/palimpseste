@@ -285,7 +285,8 @@ export const MODULES: readonly ModuleConfig[] = [
       {
         href: '/prof/fragments-erudition/evaluations',
         label: 'Évaluations',
-        prefixes: ['/prof/fragments-erudition/essais', '/prof/fragments-erudition/depots'],
+        // C6-L4 — la passation (chaîne de mesure) d'un essai s'y pose aussi.
+        prefixes: ['/prof/fragments-erudition/essais', '/prof/fragments-erudition/depots', '/prof/fragments-erudition/passation'],
       },
       { href: '/prof/fragments-erudition/parametres', label: 'Paramètres' },
     ],

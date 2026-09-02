@@ -13,6 +13,8 @@ import GraphiqueProgression from '@/components/fragments/GraphiqueProgression'
 import AnalyseOralePubliee from './AnalyseOralePubliee'
 import EssaiDepot from './EssaiDepot'
 import { tuilesAnalyseEssai } from './EssaiPublie'
+import { signauxDeLancement } from '@/utils/examens/signal'
+import { examensEnClasseDeLEleve } from '@/utils/codex-onglets/liste'
 import BilanSemestre from './BilanSemestre'
 import ValidationLecture from '@/components/retours/ValidationLecture'
 import { validerLectureRetour, validerLectureRetourEssai } from './actions'
@@ -253,6 +255,17 @@ export default async function PageFragments({ searchParams }: { searchParams: Pr
 
   // ── Essai final ──────────────────────────────────────────────────────────
   const essaiActif = !!(theme as unknown as { essai_actif?: boolean })?.essai_actif
+
+  // C6-L4 — la chaîne de mesure, PAR SON MODULE : le signal du lancement
+  // (`ouvert_par_prof_at`, C4-L9) et l'inventaire des copies passées avec leur
+  // retour (C5-L4). Les deux naissent derrière leurs portes, lues dans ces
+  // fonctions, jamais ici.
+  const [signauxChaine, retoursChaine] = vue === 'essai'
+    ? await Promise.all([
+        signauxDeLancement(admin, user.id, 'fragments'),
+        examensEnClasseDeLEleve(admin, user.id, inscriptionActive.classe_id, 'fragments'),
+      ])
+    : [[], []]
 
   // Essai ouvert aux dépôts pour LA CLASSE de l'élève (date + état propres à
   // la classe, portés par la liaison essai × classe). Le plus récent ouvert.
@@ -649,6 +662,35 @@ export default async function PageFragments({ searchParams }: { searchParams: Pr
       {vue === 'essai' && !essaiActif && (
         <div className="bg-surface border border-bordure rounded-xl p-6 text-center text-sm text-muet">
           Aucun essai n&apos;est prévu pour toi pour l&apos;instant.
+        </div>
+      )}
+
+      {vue === 'essai' && (signauxChaine.length > 0 || retoursChaine.length > 0) && (
+        <div className="space-y-2 mb-4">
+          {signauxChaine.map(s => (
+            <div key={s.depotId} className="bg-ok-teinte border border-ok rounded-xl p-4">
+              <p className="font-medium text-ok text-sm">
+                Essai ouvert par ton professeur — {s.titre}
+              </p>
+              <p className="text-xs text-ok mt-0.5">
+                Ouvert le {formatInstant(s.ouvertLe, tz, { day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' })}.
+                Dépose tes photos ci-dessous : ta copie entre d’elle-même dans la chaîne de mesure.
+              </p>
+            </div>
+          ))}
+          {retoursChaine.map(r => (
+            <Link key={r.depotId} href={r.href}
+              className={`block rounded-xl border p-4 hover:opacity-90 transition-colors ${
+                r.etat.ton === 'a_lire' ? 'bg-attention-teinte border-attention' : 'bg-surface border-bordure'
+              }`}>
+              <p className={`text-sm font-medium ${r.etat.ton === 'a_lire' ? 'text-attention' : 'text-encre'}`}>
+                Chaîne de mesure — {r.titre}
+              </p>
+              <p className="text-xs text-muet mt-0.5">
+                {r.etat.libelle} · ton essai a deux retours : celui de Fragments ci-dessous, et celui-ci (trois compétences).
+              </p>
+            </Link>
+          ))}
         </div>
       )}
 

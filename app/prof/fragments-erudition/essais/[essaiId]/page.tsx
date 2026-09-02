@@ -5,6 +5,8 @@ import { createAdminClient } from '@/utils/supabase/admin'
 import { inscriptionsClasse } from '@/utils/acces'
 import { formatJour } from '@/utils/fuseau'
 import TableauEssai from './TableauEssai'
+import ChaineEssai from './ChaineEssai'
+import { etatDeLaChaineDeLEssai, planValideDeLaClasse } from '@/utils/essai/branchement-serveur'
 
 export default async function PageEssai({
   params,
@@ -142,6 +144,12 @@ export default async function PageEssai({
     depots_ouverts: lien.depots_ouverts,
   }
 
+  // C6-L4 — l'autre retour : l'état de la chaîne de mesure pour cette classe.
+  const [etatChaine, planClasse] = await Promise.all([
+    etatDeLaChaineDeLEssai(admin, essaiId, classe.id),
+    planValideDeLaClasse(admin, classe.id),
+  ])
+
   return (
     <div className="space-y-6">
       <div className="flex items-center gap-2">
@@ -169,6 +177,8 @@ export default async function PageEssai({
           </span>
         </div>
       </div>
+
+      <ChaineEssai epreuveId={epreuve.id} classeId={classe.id} etat={etatChaine} sansPlan={!planClasse} />
 
       <TableauEssai
         epreuve={epreuveDetail}
