@@ -50,8 +50,8 @@ import type { VueDuDeroule } from '@/utils/deroule/vue'
 import type { TelemetrieSaisie, Temps } from '@/utils/deroule/types'
 import type { Atelier } from '@/utils/codex-onglets/regles'
 import {
-  formeDuTravail, ecranDuDeroule, tempsAffiche, libelleDuTemps, etatDuTemps, rangDuTemps,
-  colonnesDuPlan, titreDuTravail, type FormeDuTravail,
+  formeDuTravail, voletInitial, ecranDuDeroule, tempsAffiche, libelleDuTemps, etatDuTemps,
+  rangDuTemps, colonnesDuPlan, titreDuTravail, type FormeDuTravail, type Volet,
 } from '@/utils/deroule/plan-de-travail'
 import { segmentsDuRenvoi } from '@/utils/deroule/renvoi'
 import { lireLaRepartition, rappelDeLaRepartition } from '@/utils/deroule/repartition'
@@ -83,11 +83,20 @@ export function EcranDeroule(
       router.refresh()
     }, [vue, router])
 
+  // ⚠️ La FORME se dérive avant les états d'écran : le volet initial du
+  //    téléphone en dépend (`voletInitial`).
+  const forme = formeDuTravail({
+    credenceEstLaReponse: vue.credenceEstLaReponse,
+    designationDemandee: vue.cas.some((c) => c.designationDemandee),
+  })
+
   // ── L'état d'écran, et rien d'autre ──────────────────────────────────────
   // ⚠️ AUCUN de ces trois états ne décide de ce qui s'enregistre : ils décident
   //    de ce qu'on REGARDE. Le serveur reste seul maître du temps courant.
-  /** Téléphone : `Lire` (la matière) ou `Écrire` (le travail). */
-  const [volet, setVolet] = useState<'lire' | 'ecrire'>('ecrire')
+  /** Téléphone : `Lire` (la matière) ou `Écrire` (le travail). ⭐ 01/09 — il
+   *  s'ouvre sur la MATIÈRE quand le travail est d'y surligner : l'élève
+   *  ouvrait « surligne l'endroit » sur un champ vide, sans le texte. */
+  const [volet, setVolet] = useState<Volet>(() => voletInitial(forme))
   /** La citation du retour que la colonne de gauche met en évidence. */
   const [renvoi, setRenvoi] = useState<string | null>(null)
   /**
@@ -98,10 +107,6 @@ export function EcranDeroule(
    */
   const [reprise, setReprise] = useState((vue.texteVf ?? '') !== '')
 
-  const forme = formeDuTravail({
-    credenceEstLaReponse: vue.credenceEstLaReponse,
-    designationDemandee: vue.cas.some((c) => c.designationDemandee),
-  })
   const ecran = ecranDuDeroule({
     ouvert: vue.ouvert, tempsCourant: vue.tempsCourant, forme, corrections: vue.corrections,
     aUnRetour: vue.retourChaud !== null || vue.retourFinal !== null,
@@ -449,6 +454,19 @@ function ColonneMatiere({
           (`02-` §6 B.1) — et la SÉLECTION du professeur est marquée dedans :
           ⛔ le texte n'est pas retouché d'un octet, la concaténation des
           segments EST la tranche. */}
+      {/* ── ⭐⭐ LE SUJET — 01/09. 452 exercices sur 576 sont bâtis sur un sujet
+          de dissertation et 23 consignes disent « ce sujet » ; l'écran ne le
+          montrait nulle part. Il vient EN PREMIER : c'est de lui que parlent le
+          texte, le matériau et la consigne. Un énoncé, pas un texte — pas de
+          cadre de lecture, pas de défilement. */}
+      {vue.sujet && (
+        <Carte titre="Le sujet">
+          <p className="font-corps text-[16.5px] font-semibold leading-[1.5] text-encre">
+            {vue.sujet}
+          </p>
+        </Carte>
+      )}
+
       {vue.texteSupport && (
         <Carte
           titre="Le texte"

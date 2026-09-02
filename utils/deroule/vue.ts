@@ -36,7 +36,7 @@ import { lireDepotMaison, collagesDuDepot, type DepotMaison } from './depot'
 import { regimeDuDeroule, tempsServis, nombreDeCas, credenceDemandee, etapeDeLaPaire,
   type EscaladePesante, type EtapePaire } from './regime'
 import { rappelDuTemps1, momentDeLaDemonstration, type Rappel } from './rappel'
-import { offreDeCredence, CRANS_GUIDES, type OffreCredence } from './credence'
+import { offreDeCredence, credenceDonneeDe, CRANS_GUIDES, type OffreCredence } from './credence'
 import { composerLaCorrection, correctionDue, correctionServieAuCran, etalonServi,
   type CorrectionServie } from './correction'
 import { phaseServie, candidates, offreSeJugerMaison, verdictDeCalibration,
@@ -238,6 +238,17 @@ export interface VueDuDeroule {
    *    que l'élève doit lire : ne pas confondre les deux.**
    */
   texteSupport: TexteSupportServi | null
+  /**
+   * ⭐⭐ LE SUJET — 01/09. L'énoncé du sujet que l'instance porte en SOURCE
+   * (`materiau_source_sujet_id`, ou à défaut en cible).
+   *
+   * 452 exercices sur 576 sont bâtis sur un sujet de dissertation, 23 consignes
+   * disent « ce sujet », et l'écran ne le montrait NULLE PART : la vue ne lisait
+   * le sujet que pour ses notions, et la chaîne reçoit la consigne à sa place.
+   * *L'élève lisait « défends une réponse possible à ce sujet » au-dessus d'un
+   * champ vide.* Il se sert à tous les crans où l'instance en a un.
+   */
+  sujet: string | null
   /**
    * ⭐⭐ LE CO-TEXTE — la matière des trois crans de PRODUCTION (2, 6, 8), et le
    * manque que ce lot ferme.
@@ -590,7 +601,11 @@ export async function chargerLeDeroule(
       consigne: baliser(consignes[i] ?? consignes[0] ?? ''),
       materiau,
       credence: offre,
-      credenceDonnee: credencesDonnees.find((c) => c.cas === i + 1) ?? null,
+      // ⭐⭐ 01/09 — L'ENTRÉE N'EST UNE CRÉDENCE QUE SI ELLE EN PORTE UNE. Zone
+      //    et crédence se fusionnent dans la même entrée (`gestes.ts`) : lue
+      //    telle quelle, une simple sélection cachait le formulaire de
+      //    pourcentage et rendait la correction due avant la remise.
+      credenceDonnee: credenceDonneeDe(credencesDonnees.find((c) => c.cas === i + 1)),
       // ⭐ ITEM 77 — la désignation. Le drapeau suit LE CRAN, jamais la cible :
       //    voir `CasServi.designationDemandee`.
       designationDemandee: demandeUneDesignation(regimeDeMarquage(
@@ -723,6 +738,7 @@ export async function chargerLeDeroule(
 
   // ── Temps 5 : l'échéance de la version finale ──
   const echeanceVf = await construireLEcheance(depot, a.delaiVfJours, regime)
+  const sujet = await sujetDeLExercice(admin, depot)
 
   const temps = tempsServis(regime)
   return {
@@ -754,6 +770,7 @@ export async function chargerLeDeroule(
     //    chaîne et l'écran lisent le même objet : deux lectures auraient fini
     //    par servir au modèle un texte que l'élève n'avait pas eu sous les yeux.
     texteSupport: ctx.texteSupport,
+    sujet,
     coTexte: ctx.coTexte,
     cas, corrections,
 
@@ -892,6 +909,25 @@ async function coursDeLExercice(admin: Admin, depot: DepotMaison): Promise<strin
     for (const c of data ?? []) out.add(String(c.cours_declare))
   }
   return [...out]
+}
+
+/**
+ * ⭐ L'ÉNONCÉ DU SUJET — 01/09. La source d'abord (c'est elle que la consigne
+ * désigne), la cible à défaut. ⚠️ supabase-js NE LÈVE PAS : un sujet illisible
+ * passe pour un exercice sans sujet, et on le journalise plutôt que de casser
+ * l'écran — l'exercice reste passable sans lui, il l'a toujours été.
+ */
+async function sujetDeLExercice(admin: Admin, depot: DepotMaison): Promise<string | null> {
+  const id = depot.exercice.materiau_source_sujet_id ?? depot.exercice.materiau_cible_sujet_id
+  if (!id) return null
+  const { data, error } = await admin.from('exercices_sujets')
+    .select('enonce').eq('id', id).maybeSingle()
+  if (error) {
+    console.error(`[deroule] sujet illisible (${id}) — ${error.code} ${error.message}`)
+    return null
+  }
+  const enonce = typeof data?.enonce === 'string' ? data.enonce.trim() : ''
+  return enonce === '' ? null : enonce
 }
 
 async function notionsDeLExercice(admin: Admin, depot: DepotMaison): Promise<string[]> {

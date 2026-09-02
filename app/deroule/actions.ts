@@ -18,6 +18,7 @@
 // ============================================================================
 
 import { revalidatePath } from 'next/cache'
+import { after } from 'next/server'
 import { garderEleveDeroule } from '@/utils/deroule/acces'
 import { chargerLeDeroule, tagALaRemise, type VueDuDeroule } from '@/utils/deroule/vue'
 import {
@@ -32,10 +33,11 @@ import {
   enregistrerLaCredence, enregistrerLaDesignation, ouvrirSeJuger, enregistrerSeJuger,
 } from '@/utils/deroule/gestes'
 import { contester, validerLaLecture, pointsContestes } from '@/utils/deroule/contestation'
-import { mesurerMaintenant, attenteDuDepot } from '@/utils/deroule/mesure'
+import { mettreLaMesureEnFile, traiterLaMesureEnFile, attenteDuDepot } from '@/utils/deroule/mesure'
 import { saisieARegistrer } from '@/utils/deroule/credence'
 import { leVerdictDeLaZone } from '@/utils/deroule/ratissage-serveur'
 import { demandeUneConfirmation } from '@/utils/deroule/designation'
+import { lireLeCadreDeLaDesignation } from '@/utils/deroule/designation-serveur'
 import { cranNumero } from '@/utils/cran'
 import { signalerEnAttenteIA, TYPE_FAISCEAU } from '@/utils/integrite'
 import { comparerAuSquelette, gardeIndetermine } from '@/utils/deroule/juger'
@@ -124,7 +126,11 @@ export async function actionOuvrir(depotId: string): Promise<Reponse> {
   const p = await portier(depotId)
   if ('erreur' in p) return p.erreur
   const r = await ouvrirLeDepot(p.admin, p.depot, new Date().toISOString())
-  rafraichir()
+  // ⭐ 01/09 — ON NE REVALIDE QUE SI L'OUVERTURE A ÉCRIT. L'écran appelle cette
+  //    action à CHAQUE montage ; revalider sans condition faisait recharger la
+  //    page entière une seconde fois à chaque visite — ~30 requêtes en série
+  //    pour ne rien changer, sur un dépôt déjà ouvert.
+  if (r.ok && r.valeur?.deja === false) rafraichir()
   return r.ok ? succes('') : echec(r.message)
 }
 
@@ -352,16 +358,17 @@ export async function actionDesignation(
 ): Promise<Reponse> {
   const p = await portier(depotId)
   if ('erreur' in p) return p.erreur
-  const vue = await chargerLeDeroule(p.admin, depotId, p.userId,
-    { ouvert: true, delaiVfJours: p.delaiVfJours })
-  const leCas = vue?.cas.find((c) => c.ordre === cas)
-  if (!leCas?.designationDemandee) {
+  // ⭐⭐ 01/09 — DEUX REQUÊTES, PAS LA VUE ENTIÈRE. On rechargeait ~30 lectures
+  //    en série pour n'en lire que le régime du cran et la longueur du matériau
+  //    (`designation-serveur.ts`).
+  const cadre = await lireLeCadreDeLaDesignation(p.admin, p.depot.exercice, cas)
+  if (!cadre.demandee) {
     return echec('Cet exercice ne demande pas de désigner dans le matériau.')
   }
   // ⚠️ Les bornes doivent tomber DANS le matériau servi : un offset calculé sur
   //    un autre texte ne désigne rien. Le matériau est la concaténation des
   //    segments — « pas un octet retouché » —, donc sa longueur fait foi.
-  const taille = (leCas.materiau ?? []).reduce((n, sg) => n + sg.texte.length, 0)
+  const taille = cadre.taille ?? 0
   if (zone && (zone[0] < 0 || zone[1] > taille)) {
     return echec('La sélection ne tombe pas dans le matériau. Recommence.')
   }
@@ -376,7 +383,13 @@ export async function actionDesignation(
   }
   const r = await enregistrerLaDesignation(p.admin, p.depot, cas, zone,
     new Date().toISOString(), zone !== null && confirmee)
-  rafraichir()
+  // ⛔ PAS DE `rafraichir()` ICI, ET C'EST LE POINT. Revalider la page après
+  //    chaque geste faisait REMONTER le composant de sélection (sa `key` porte
+  //    la zone stockée) : sélection native et poignées perdues, état remis à
+  //    zéro, ~40 requêtes par geste. Le composant tient sa zone ; le prochain
+  //    rendu serveur — crédence, remise, navigation — la relira de la base.
+  //    ⚠️ Depuis le 01/09, la zone ne change plus rien d'autre à la vue : elle
+  //    n'est plus lue comme une crédence (`credenceDonneeDe`).
   return r.ok ? succes('') : echec(r.message)
 }
 
@@ -546,18 +559,33 @@ export async function actionRemettre(
 
   // Le dépôt est écrit : on relit pour que le déclencheur voie l'état à jour
   // (le `aide_consommee` qu'il passe à la chaîne, notamment).
+  // ⭐⭐ 01/09 — LA REMISE RÉPOND AVANT LA CHAÎNE. On met la mesure en file, on
+  //    répond « remis », et le traitement part dans `after()` : après la
+  //    réponse, dans la même fonction. L'élève attendait ~22 s (C4-L4) devant
+  //    « Envoi… » pour lire « remis ». L'écran sonde déjà l'attente toutes les
+  //    5 s (`Attente`) et se rafraîchit quand le retour est publié.
+  // ⚠️ Le cron `/api/chaine` reste le FILET : si la fonction est tuée avant la
+  //    fin, le bail du job expire et il y est repris — rien ne se perd, et rien
+  //    ne se mesure deux fois (clé d'idempotence + bail).
   const frais = await lireDepotMaison(p.admin, depotId, p.userId)
-  const bilan = frais ? await mesurerMaintenant(p.admin, frais, version) : null
+  const file = frais ? await mettreLaMesureEnFile(p.admin, frais.id, version) : null
+  if (frais && file && !file.erreur) {
+    const { admin } = p
+    after(async () => {
+      try {
+        await traiterLaMesureEnFile(admin, frais, version, file.deja)
+      } catch (e) {
+        console.error(`[deroule] mesure après la remise — ${depotId} :`, e)
+      }
+    })
+  }
 
   rafraichir()
-  if (bilan?.bilan) {
-    return { ok: true, message: 'Remis. Ton retour arrive.', enAttente: false }
-  }
   return {
     ok: true,
     enAttente: true,
-    message: bilan?.motif
-      ? `Remis. ${bilan.motif}.`
+    message: file?.erreur
+      ? `Remis. La mesure n’a pas pu être mise en file : ${file.erreur}.`
       : 'Remis. Ton retour est en préparation — l’écran se met à jour tout seul.',
   }
 }

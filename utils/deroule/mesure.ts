@@ -207,17 +207,43 @@ export interface BilanDeclenchement {
  *    seul des deux appels obtient le job, l'autre rend `null` et n'a rien à
  *    faire — ce n'est pas une erreur, et l'écran ne doit pas le dire comme telle.
  */
+/**
+ * ⭐⭐ 01/09 — LE DÉCLENCHEUR EST COUPÉ EN DEUX : METTRE EN FILE, PUIS TRAITER.
+ *
+ * `mesurerMaintenant` faisait les deux dans la même requête, et la remise
+ * attendait donc la chaîne entière — ~22 s par copie (`C4-L4`), bouton
+ * « Envoi… » pendant tout ce temps, pour une réponse qui ne disait que « remis ».
+ * L'action de remise ne fait plus que la première moitié, répond, et confie la
+ * seconde à `after()` (Next) — après la réponse, dans la même fonction. Le cron
+ * `/api/chaine` reste le FILET : un job dont le bail expire y est repris.
+ *
+ * ⚠️ Les deux moitiés restent composées par `mesurerMaintenant`, que les
+ *    scripts de recette appellent tels quels.
+ */
+export async function mettreLaMesureEnFile(
+  admin: Admin, depotId: string, version: Version,
+): Promise<{ deja: boolean; erreur: string | null }> {
+  const { job, deja, erreur } = await mettreEnFile(admin, depotId, etapeDe(version))
+  if (erreur || !job) return { deja: false, erreur: erreur ?? 'aucun job' }
+  return { deja, erreur: null }
+}
+
 export async function mesurerMaintenant(
   admin: Admin, depot: DepotMaison, version: Version,
 ): Promise<BilanDeclenchement> {
-  const etape = etapeDe(version)
-
-  const { job: cree, deja, erreur } = await mettreEnFile(admin, depot.id, etape)
-  if (erreur || !cree) {
+  const file = await mettreLaMesureEnFile(admin, depot.id, version)
+  if (file.erreur) {
     return { dejaEnFile: false, bilan: null, registre: null,
-      motif: `La mesure n’a pas pu être mise en file : ${erreur ?? 'aucun job'}.` }
+      motif: `La mesure n’a pas pu être mise en file : ${file.erreur}.` }
   }
+  return traiterLaMesureEnFile(admin, depot, version, file.deja)
+}
 
+/** La seconde moitié : réclamer le job de CE dépôt et le traiter, à sa fin. */
+export async function traiterLaMesureEnFile(
+  admin: Admin, depot: DepotMaison, version: Version, deja = false,
+): Promise<BilanDeclenchement> {
+  const etape = etapeDe(version)
   const config = lireConfig()
   const jobs = await reclamerJobs(admin, {
     limite: 1, bailMs: config.bailMs, etapes: [etape], depotId: depot.id,

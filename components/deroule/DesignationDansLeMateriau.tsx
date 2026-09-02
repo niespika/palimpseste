@@ -58,9 +58,32 @@
 //        porte, et la zone désignée survit au « Effacer ».
 //    **La pastille d'état, elle, est posée** : c'est la moitié du handoff qui ne
 //    coûte aucune doctrine. À rapporter à Louis.
+//
+// ⭐⭐ 01/09 — DEUX CHEMINS VERS LA MÊME ÉCRITURE, ET UN RETOUR QUAND RIEN NE
+//    PASSE. Avant : la seule capture était le `mouseup`/`touchend` sur le
+//    paragraphe. Au doigt, seule la sélection AU MOMENT DU LEVER était prise —
+//    les poignées natives qu'on ajuste ensuite n'émettent rien sur le `<p>` —,
+//    puis la page se revalidait et REMONTAIT ce composant, poignées perdues.
+//    Une sélection débordant le cadre, ou relâchée hors du texte, était ignorée
+//    EN SILENCE. *« C'est difficile de surligner. »*
+//    Désormais :
+//      · à la souris, le relâchement sur le texte enregistre toujours ;
+//      · un bouton « Garder ce passage » lit la sélection AU MOMENT DU CLIC —
+//        c'est lui qui rend le doigt et le clavier possibles : on sélectionne,
+//        on ajuste, PUIS on garde ;
+//      · quand il n'y a rien à garder, l'écran le DIT (« sélectionne d'abord… »,
+//        « la sélection doit rester dans le texte ») au lieu de se taire ;
+//      · `touchend` ne capture plus : au doigt, l'écriture attend le bouton.
+//    Et l'action serveur ne revalide plus la page : la zone tient ici.
 import { useCallback, useRef, useState, useTransition } from 'react'
 import { MARQUE_ELEVE } from './TexteBalise'
 import { demandeUneConfirmation, PHRASE_SOUS_LE_MATERIAU } from '@/utils/deroule/designation'
+
+/** Ce que la sélection courante donne, lue depuis le conteneur du matériau. */
+type LectureDeSelection =
+  | { etat: 'vide' }
+  | { etat: 'hors' }
+  | { etat: 'bornes'; bornes: [number, number] }
 
 /**
  * ⭐ LES BORNES D'UNE SÉLECTION, EN CARACTÈRES DU MATÉRIAU.
@@ -71,20 +94,22 @@ import { demandeUneConfirmation, PHRASE_SOUS_LE_MATERIAU } from '@/utils/deroule
  * de tous les nœuds qui précèdent — c'est la seule façon d'obtenir un offset
  * qui parle du MATÉRIAU et non du DOM.
  *
- * @returns `null` si la sélection est vide, ou si elle sort du conteneur.
+ * Trois issues, et l'écran les distingue : `vide` (rien de sélectionné),
+ * `hors` (la sélection sort du conteneur — elle a commencé ou fini ailleurs),
+ * `bornes` (une zone dans le matériau).
  */
-function bornesDeLaSelection(conteneur: HTMLElement): [number, number] | null {
+function lireLaSelection(conteneur: HTMLElement): LectureDeSelection {
   const sel = typeof window === 'undefined' ? null : window.getSelection()
-  if (!sel || sel.rangeCount === 0 || sel.isCollapsed) return null
+  if (!sel || sel.rangeCount === 0 || sel.isCollapsed) return { etat: 'vide' }
   const plage = sel.getRangeAt(0)
-  if (!conteneur.contains(plage.commonAncestorContainer)) return null
+  if (!conteneur.contains(plage.commonAncestorContainer)) return { etat: 'hors' }
 
   const avant = plage.cloneRange()
   avant.selectNodeContents(conteneur)
   avant.setEnd(plage.startContainer, plage.startOffset)
   const debut = avant.toString().length
   const fin = debut + plage.toString().length
-  return fin > debut ? [debut, fin] : null
+  return fin > debut ? { etat: 'bornes', bornes: [debut, fin] } : { etat: 'vide' }
 }
 
 export function DesignationDansLeMateriau({
@@ -103,6 +128,8 @@ export function DesignationDansLeMateriau({
   const [zone, setZone] = useState<[number, number] | null>(zoneDonnee)
   const [aRepondu, setARepondu] = useState(repondu)
   const [refus, setRefus] = useState<string | null>(null)
+  /** ⭐ 01/09 — ce que l'écran dit quand un geste n'a rien donné. Jamais un refus : une aide. */
+  const [aide, setAide] = useState<string | null>(null)
   const [enCours, demarrer] = useTransition()
   /**
    * ⭐ 01/09 — LA ZONE QUI ATTEND SA CONFIRMATION. « Tu as surligné presque
@@ -117,29 +144,55 @@ export function DesignationDansLeMateriau({
   // ⚠️ PAS D'EFFET DE SYNCHRONISATION, ET C'EST VOULU. La vue serveur fait foi
   //    au rechargement, mais on ne la recopie pas dans l'état à chaque rendu :
   //    l'appelant monte ce composant avec une `key` tirée de la zone stockée, et
-  //    **c'est la `key` qui réinitialise**. *Un `useEffect` qui appellerait
-  //    `setState` provoquerait des rendus en cascade, et `CredenceSaisie` s'en
-  //    passe déjà — elle n'est simplement montée que tant qu'elle attend.*
+  //    **c'est la `key` qui réinitialise**. Depuis le 01/09 l'action de
+  //    désignation ne revalide plus la page : la clé ne change qu'au prochain
+  //    rendu serveur, et la zone tenue ici EST celle de la base entre-temps.
 
   const poser = useCallback((z: [number, number] | null, confirmee = false) => {
     setRefus(null)
+    setAide(null)
+    // ⚠️ Une pose pendant qu'une autre s'écrit : on attend la première. Deux
+    //    écritures concurrentes laisseraient la DERNIÈRE RÉPONSE décider de
+    //    l'état, et ce n'est pas toujours le dernier geste.
+    if (enCours) return
     demarrer(async () => {
       const r = await enregistrer(z, confirmee)
       if (r.ok) { setZone(z); setARepondu(true); setAConfirmer(null) } else { setRefus(r.message) }
     })
-  }, [enregistrer])
+  }, [enregistrer, enCours])
 
-  const surSelection = useCallback(() => {
-    if (gele || !boite.current) return
-    const b = bornesDeLaSelection(boite.current)
-    if (!b) return
+  /** Garde une zone lue — en passant par la question si elle couvre presque tout. */
+  const garderLesBornes = useCallback((b: [number, number]) => {
     // ⭐ Presque tout le texte : on demande avant d'écrire. La barre est celle du
     //    ratissage, mesurée sur le seul terme que l'écran connaît — la part du
     //    matériau. La cible, elle, ne descend jamais ici.
-    if (demandeUneConfirmation(contenu.length, b)) { setRefus(null); setAConfirmer(b); return }
+    if (demandeUneConfirmation(contenu.length, b)) { setRefus(null); setAide(null); setAConfirmer(b); return }
     setAConfirmer(null)
     poser(b)
-  }, [gele, poser, contenu.length])
+  }, [poser, contenu.length])
+
+  /** Le relâchement de la souris sur le texte : on garde ce qui est sélectionné, sans un mot si rien ne l'est. */
+  const surRelachement = useCallback(() => {
+    if (gele || !boite.current) return
+    const lecture = lireLaSelection(boite.current)
+    if (lecture.etat !== 'bornes') return
+    garderLesBornes(lecture.bornes)
+  }, [gele, garderLesBornes])
+
+  /** ⭐ Le bouton : il lit la sélection AU MOMENT DU CLIC, et il dit quand il n'y a rien. */
+  const garder = useCallback(() => {
+    if (gele || !boite.current) return
+    const lecture = lireLaSelection(boite.current)
+    if (lecture.etat === 'vide') {
+      setAide('Sélectionne d’abord un passage dans le texte, puis garde-le.')
+      return
+    }
+    if (lecture.etat === 'hors') {
+      setAide('La sélection doit rester dans le texte ci-dessus. Recommence en partant d’un mot du texte.')
+      return
+    }
+    garderLesBornes(lecture.bornes)
+  }, [gele, garderLesBornes])
 
   const recommencer = useCallback(() => {
     setAConfirmer(null)
@@ -160,18 +213,22 @@ export function DesignationDansLeMateriau({
           au doigt comme à la souris, les deux verbes ne sont pas les mêmes. */}
       {!gele && (
         <p className="mb-2 font-corps text-sm italic text-muet">
-          <span className="hidden sm:inline">Glisse sur le texte pour surligner.</span>
+          <span className="hidden sm:inline">
+            Glisse sur le texte pour surligner, ou sélectionne puis « Garde ce passage ».
+          </span>
           <span className="sm:hidden">
-            Appuie longuement, puis glisse pour surligner. Un seul passage à la fois.
+            Appuie longuement sur un mot, ajuste les poignées, puis touche « Garde ce passage ».
+            Un seul passage à la fois.
           </span>
         </p>
       )}
 
       <div className="rounded-[9px] border border-bordure-bouton bg-parchemin-fonce p-3.5">
+        {/* ⚠️ `onMouseUp` seulement : au doigt, la capture au lever prenait un
+            mot et perdait les poignées. Le bouton fait le geste au doigt. */}
         <p
           ref={boite}
-          onMouseUp={surSelection}
-          onTouchEnd={surSelection}
+          onMouseUp={surRelachement}
           className={`whitespace-pre-wrap font-corps text-[16.5px] leading-[1.68] text-encre${
             gele ? '' : ' cursor-text'}`}
         >
@@ -233,7 +290,22 @@ export function DesignationDansLeMateriau({
                 : 'rien de surligné pour l’instant'}
         </span>
 
-        {/* ⛔⛔ UN SEUL BOUTON, DÉLIBÉRÉMENT — voir l'en-tête. « Rien à
+        {/* ⭐ 01/09 — LE BOUTON QUI LIT LA SÉLECTION AU CLIC. C'est lui le
+            geste au doigt et au clavier ; à la souris il double le relâchement
+            sans le contredire : même lecture, même écriture. */}
+        {!gele && (
+          <button
+            type="button"
+            onClick={garder}
+            disabled={enCours}
+            className="min-h-11 rounded-[9px] bg-bouton px-4 py-2 font-ui text-sm text-bouton-texte
+                       disabled:opacity-40"
+          >
+            Garde ce passage
+          </button>
+        )}
+
+        {/* ⛔⛔ UN SEUL BOUTON D'ABSENCE, DÉLIBÉRÉMENT — voir l'en-tête. « Rien à
             signaler » EST une réponse, et elle est aussi facile à donner qu'une
             sélection : le bouton est au même rang visuel, pas en petit dessous. */}
         {!gele && (
@@ -248,6 +320,12 @@ export function DesignationDansLeMateriau({
           </button>
         )}
       </div>
+
+      {/* ⭐ 01/09 — quand un geste n'a rien donné, l'écran le dit. `aria-live`
+          pour qu'un lecteur d'écran l'entende aussi. */}
+      {aide && !gele && (
+        <p aria-live="polite" className="mt-2 font-corps text-sm text-encre-douce">{aide}</p>
+      )}
 
       {!gele && (
         /* ⭐ La rédaction est ARRÊTÉE, mot pour mot — Louis, 27/08. Elle vit en

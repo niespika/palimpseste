@@ -158,3 +158,11 @@ test('⛔ le temps AFFICHÉ ne ment jamais dans l’autre sens', () => {
   assert.equal(tempsAffiche('se_juger', 'se_juger', false), 'se_juger')
   assert.equal(tempsAffiche('retour_texte', 'retour_final', false), 'retour_final')
 })
+
+// ── 01/09 — le volet du téléphone suit la forme ──────────────────────────────
+test('le téléphone s’ouvre sur la matière quand il faut y surligner, sur le travail sinon', async () => {
+  const { voletInitial } = await import('./plan-de-travail')
+  assert.equal(voletInitial('surligner'), 'lire')
+  assert.equal(voletInitial('rediger'), 'ecrire')
+  assert.equal(voletInitial('choisir'), 'ecrire')
+})

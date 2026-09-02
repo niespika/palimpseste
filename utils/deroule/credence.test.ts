@@ -238,3 +238,20 @@ test('UNE crédence par diagnostic, DEUX sur une paire ; zéro en production', (
   assert.equal(credencesAttendues('transformation_nommee', 1), 1)
   assert.equal(credencesAttendues('production_autonome', 1), 0)
 })
+
+// ── 01/09 — la zone n'est pas la crédence ────────────────────────────────────
+test('credenceDonneeDe ne rend l’entrée que si elle porte une crédence', async () => {
+  const { credenceDonneeDe } = await import('./credence')
+  // une entrée qui ne porte qu'une DÉSIGNATION : ce n'est pas une crédence
+  assert.equal(credenceDonneeDe({ cas: 1, zone: [3, 12], zone_at: 't', poses: [] }), null)
+  assert.equal(credenceDonneeDe({ cas: 1, zone: null, zone_at: 't' }), null)
+  assert.equal(credenceDonneeDe(null), null)
+  assert.equal(credenceDonneeDe(undefined), null)
+  // les deux formes que `saisieARegistrer` écrit
+  const p = { cas: 1, forme: 'pourcentage', pourcentage: 70, at: 't', zone: [3, 12], zone_at: 't' }
+  assert.equal(credenceDonneeDe(p), p)
+  const r = { cas: 1, forme: 'repartition', jetons: [100, 0, 0, 0], index_correct: 2, at: 't' }
+  assert.equal(credenceDonneeDe(r), r)
+  // ⚠️ un pourcentage de 0 est une crédence donnée — « absent n'est pas zéro », et zéro n'est pas absent
+  assert.notEqual(credenceDonneeDe({ cas: 1, pourcentage: 0, at: 't' }), null)
+})

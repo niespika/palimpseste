@@ -399,6 +399,35 @@ export function saisieARegistrer(
 }
 
 /**
+ * ⭐⭐ LA CRÉDENCE DONNÉE, ET RIEN D'AUTRE — 01/09.
+ *
+ * L'entrée `credence[cas]` de `exercices_metacognition` porte DEUX gestes
+ * séparés depuis la désignation (`02-` §5) : la ZONE que l'élève sélectionne
+ * dans le matériau (`zone`, `zone_at`, `poses`) et la CRÉDENCE qu'il déclare
+ * (`pourcentage`, ou `jetons` + `index_correct`). Ils arrivent dans un ordre
+ * quelconque et se FUSIONNENT dans la même entrée (`gestes.ts`).
+ *
+ * ⛔⛔ **L'EXISTENCE DE L'ENTRÉE NE DIT DONC PAS QUE LA CRÉDENCE EST DONNÉE.**
+ * Lue telle quelle, une simple sélection faisait disparaître le formulaire de
+ * pourcentage (`EcranDeroule`, « `!c.credenceDonnee` ») et rendait la correction
+ * « due » avant la remise (`correction.ts`, `correctionDue`) — sur une paire,
+ * dès le brouillon autosauvé. *L'élève surlignait, et l'écran lui montrait la
+ * réponse.*
+ *
+ * Cette fonction rend l'entrée SEULEMENT si elle porte une crédence, au sens
+ * exact de ce que `saisieARegistrer` écrit — les deux formes que la chaîne lit
+ * (`monitoring.ts:lireCredence`). La zone se lit ailleurs (`lireLaDesignation`,
+ * dans `vue.ts`), sur l'entrée brute.
+ */
+export function credenceDonneeDe(entree: unknown): Record<string, unknown> | null {
+  if (typeof entree !== 'object' || entree === null) return null
+  const e = entree as Record<string, unknown>
+  if (typeof e.pourcentage === 'number') return e
+  if (Array.isArray(e.jetons)) return e
+  return null
+}
+
+/**
  * Combien de crédences ce déroulé attend — « une par diagnostic, DEUX SUR UNE
  * PAIRE » (`07-` §1.2 ; `02-` §2.3.1 a).
  */

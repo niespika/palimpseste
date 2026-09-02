@@ -48,6 +48,24 @@ export function formeDuTravail(
   return 'rediger'
 }
 
+/** Les deux volets du téléphone : la MATIÈRE, ou le TRAVAIL. */
+export type Volet = 'lire' | 'ecrire'
+
+/**
+ * ⭐ LE VOLET SUR LEQUEL LE TÉLÉPHONE S'OUVRE — 01/09.
+ *
+ * Sous `lg`, l'écran ne montre qu'une colonne à la fois, et il s'ouvrait
+ * toujours sur « Écrire ». Or aux crans 4, 7 et 9 le travail COMMENCE dans la
+ * matière : « surligne l'endroit » s'adresse à un texte que l'élève ne voyait
+ * pas — il ouvrait l'exercice sur un champ de réponse vide, sans le passage à
+ * trouver. Le volet suit donc la forme : la matière d'abord quand il faut y
+ * désigner, le travail sinon. ⚠️ Ce n'est que l'état INITIAL ; la bascule reste
+ * à l'élève.
+ */
+export function voletInitial(forme: FormeDuTravail): Volet {
+  return forme === 'surligner' ? 'lire' : 'ecrire'
+}
+
 /**
  * Le libellé du temps 2, qui SUIT LA FORME (handoff §4, écrans 2a/2b/2c).
  * *« Écrire » au-dessus de quatre curseurs de jetons demanderait à l'élève une
