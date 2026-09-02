@@ -1,5 +1,6 @@
 import type { ModuleIntegrite } from '@/utils/integrite'
 import type { ModuleSceau } from '@/components/Pastille'
+import type { Jeton } from '@/utils/deroule/balisage'
 
 // Types de vue partagés par la page Intégrité, le volet (fiche élève) et la modale
 // (dashboard). Module neutre (sans 'server-only') : importable depuis un composant
@@ -31,6 +32,56 @@ export interface Preuve {
   saisieClavier: boolean      // true = module sans photo (Aletheia)
   contexte: string | null     // ex. « dépôt · semaine 24 », « version finale »
   meta: { priseAt: string | null; nbCaracteres: number }
+  /**
+   * ⭐ 01/09/2026 — L'EXERCICE TEL QUE L'ÉLÈVE L'A VU, pour le seul module
+   * `exercices`. Absent (ou `null`) partout ailleurs. Produit par
+   * `utils/integrite-preuve.ts`, rendu par `PanneauPreuve`.
+   */
+  exercice?: PreuveExercice | null
+}
+
+/** Une pose de zone, telle que le journal de l'entrée de crédence la garde. */
+export interface PoseVue { zone: [number, number] | null; at: string; confirmee: boolean }
+
+/** Un instant daté du dépôt — ouverture, poses, conditions, remises. */
+export interface ChronoVue { quoi: string; at: string }
+
+/**
+ * Ce que le panneau montre d'un exercice signalé : la consigne et le matériau
+ * tels que servis, la zone posée, le passage visé et sa marge, le geste en
+ * chiffres, et la chronologie. ⚠️ Tout vient de la base ; rien n'est jugé ici.
+ */
+export interface PreuveExercice {
+  cran: number | null
+  lieu: 'classe' | 'maison' | null
+  /** La consigne DU CAS concerné, balisée comme sur l'écran élève. */
+  consigne: Jeton[]
+  /** La phrase que l'élève lisait sous le matériau. */
+  avertissement: string
+  materiau: string | null
+  zone: [number, number] | null
+  zoneConfirmee: boolean
+  /** L'élève a répondu à la désignation — zone OU « rien à surligner ». */
+  designationDonnee: boolean
+  poses: PoseVue[]
+  /** Le passage visé, dérivé du diff avec la `version_corrigee`. `null` : le défaut est une absence. */
+  cible: [number, number] | null
+  toleree: [number, number] | null
+  /** La part du matériau que la zone prend, en pourcent entier. */
+  partMateriau: number | null
+  /** Combien de fois la cible, arrondi au dixième. */
+  foisLaCible: number | null
+  motsCible: number | null
+  /** La barre du ratissage, telle que `designation.ts` la fixe : part (0-1) et multiple. */
+  barre: { part: number; fois: number }
+  credence: number | null
+  chrono: ChronoVue[]
+  restitution: string | null
+  /** « structure élevée · expression moyenne … », déjà composé. */
+  confiance: string | null
+  conditions: string | null
+  collagesBloques: number
+  dureeTaguee: string | null
 }
 
 export interface SignalementVue {

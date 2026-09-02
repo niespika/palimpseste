@@ -35,6 +35,7 @@ import { contester, validerLaLecture, pointsContestes } from '@/utils/deroule/co
 import { mesurerMaintenant, attenteDuDepot } from '@/utils/deroule/mesure'
 import { saisieARegistrer } from '@/utils/deroule/credence'
 import { leVerdictDeLaZone } from '@/utils/deroule/ratissage-serveur'
+import { demandeUneConfirmation } from '@/utils/deroule/designation'
 import { cranNumero } from '@/utils/cran'
 import { signalerEnAttenteIA, TYPE_FAISCEAU } from '@/utils/integrite'
 import { comparerAuSquelette, gardeIndetermine } from '@/utils/deroule/juger'
@@ -346,6 +347,8 @@ async function clore(
  */
 export async function actionDesignation(
   depotId: string, cas: number, zone: [number, number] | null,
+  /** ⭐ 01/09 — l'élève a répondu « oui » à « tu as surligné presque tout le texte… ». */
+  confirmee = false,
 ): Promise<Reponse> {
   const p = await portier(depotId)
   if ('erreur' in p) return p.erreur
@@ -362,8 +365,17 @@ export async function actionDesignation(
   if (zone && (zone[0] < 0 || zone[1] > taille)) {
     return echec('La sélection ne tombe pas dans le matériau. Recommence.')
   }
+  // ⭐ LA CONFIRMATION EST UNE GARDE, PAS UNE POLITESSE (`designation.ts`,
+  //    `demandeUneConfirmation`) : une zone qui couvre presque tout le texte
+  //    n'entre en base que confirmée — l'écran pose la question, le serveur
+  //    la tient. ⛔ On ne dit ni la part, ni la barre : la lui donner serait lui
+  //    donner ce qu'il faut pour rester juste en dessous.
+  if (zone && !confirmee && demandeUneConfirmation(taille, zone)) {
+    return echec('Tu as surligné presque tout le texte. Confirme que c’est bien ton choix, '
+      + 'ou resserre ta sélection.')
+  }
   const r = await enregistrerLaDesignation(p.admin, p.depot, cas, zone,
-    new Date().toISOString())
+    new Date().toISOString(), zone !== null && confirmee)
   rafraichir()
   return r.ok ? succes('') : echec(r.message)
 }
@@ -512,6 +524,11 @@ export async function actionRemettre(
         + `${ratissage.partMateriau} % du texte, soit ${ratissage.foisLaCible} fois le passage `
         + `visé. ${ratissage.credence === null ? 'Aucune crédence déclarée.'
           : `Crédence déclarée : ${ratissage.credence} %.`} `
+        // ⭐ 01/09 — le professeur sait si le geste était VOULU : depuis la
+        //    question posée à la saisie, une telle zone n'entre que confirmée.
+        + (ratissage.confirmee
+          ? 'L’élève a confirmé son choix à la saisie. '
+          : 'Zone posée sans confirmation (avant que la question soit posée). ')
         + 'Exercice porté à `non_fait` — rien n’a été envoyé au modèle.',
     })
     rafraichir()

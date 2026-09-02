@@ -8,6 +8,7 @@ import assert from 'node:assert/strict'
 import * as telemetrie from './telemetrie'
 import {
   SEUIL_PAUSE_MS, accumuler, aVerser, fusionner, lireTelemetrie, nouvelleTelemetrie,
+  leReleveLePlusAvance,
   signesParMinute, type EvenementDeSaisie,
 } from './telemetrie'
 import type { TelemetrieSaisie } from './types'
@@ -111,6 +112,23 @@ test('une session de plus À CHAQUE REPRISE APRÈS UNE PAUSE FRANCHE, et à elle
 })
 
 // ── La fusion, après un rechargement ───────────────────────────────────────
+
+test('⛔⛔ LA BASE GARDE LE PLUS AVANCÉ — un envoi vide n\'écrase plus un relevé plein (01/09)', () => {
+  // Mesuré en production le 01/09/2026 : 15 dépôts sur 16 à zéro, parce que le
+  // dernier delta — vide — remplaçait le relevé. Compteur par compteur, le plus
+  // grand gagne, et l'absence de relevé rend le neuf tel quel.
+  const plein = { signes_saisis: 339, ms_actifs: 240_000, plus_grand_ajout: 12, sessions: 2 }
+  const vide = nouvelleTelemetrie()
+  assert.deepEqual(leReleveLePlusAvance(plein, vide), plein)
+  assert.deepEqual(leReleveLePlusAvance(undefined, plein), plein)
+  assert.deepEqual(leReleveLePlusAvance(null, vide), vide)
+  // Un cumul plus récent l'emporte partout ; un onglet en retard ne fait reculer aucun compteur.
+  const cumule = { signes_saisis: 400, ms_actifs: 300_000, plus_grand_ajout: 12, sessions: 3 }
+  assert.deepEqual(leReleveLePlusAvance(plein, cumule), cumule)
+  assert.deepEqual(leReleveLePlusAvance(cumule, plein), cumule)
+  // ⚠️ Ce n'est PAS une addition : un envoi rejoué ne compte rien deux fois.
+  assert.notDeepEqual(leReleveLePlusAvance(plein, plein), fusionner(plein, plein))
+})
 
 test('deux relevés s\'ADDITIONNENT — une reprise après rechargement ne repart pas de zéro', () => {
   const f = fusionner(RELEVE, { signes_saisis: 300, ms_actifs: 60_000, plus_grand_ajout: 12, sessions: 1 })
@@ -218,6 +236,8 @@ test('AUCUN VERDICT : la surface du module ne porte ni seuil de suspicion, ni dr
   assert.deepEqual(Object.keys(telemetrie).sort(), [
     'SEUIL_PAUSE_MS', 'VERSIONS_TELEMETREES',
     'aVerser', 'accumuler', 'fusionner', 'lireTelemetrie', 'nouvelleTelemetrie', 'signesParMinute',
+    // 01/09 — ce que la base garde quand le client verse : un choix de relevé, pas un verdict.
+    'leReleveLePlusAvance',
   ].sort(), 'la convergence seule fait un drapeau, par `signalerEnAttenteIA` (`06-` §6)')
 })
 

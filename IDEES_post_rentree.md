@@ -1211,6 +1211,51 @@ existantes gardent le repli par recherche), écrites par `remplacerDecoupe`, lue
 déployée ; l'inverse casserait l'enregistrement d'une découpe). Hors périmètre d'un correctif :
 c'est une migration, donc `SUIVI_SQL.md`, sandbox puis prod.
 
+## ⛔ UN DÉFAUT, PAS UNE IDÉE — la télémétrie de saisie s'ÉCRASE au lieu de se fusionner (01/09/2026)
+
+**Mesuré en prod le 01/09** : sur les 16 dépôts d'exercices qui portent un `texte_v1`, **15 ont
+`saisie_telemetrie.v1.signes_saisis = 0`** — dont un texte de 339 caractères tapé à la main (fautes
+de frappe, accents absents). Les signaux `rythme` et `sessions` du faisceau d'intégrité
+(`utils/integrite-faisceau.ts`) sont donc aveugles aujourd'hui.
+
+**La cause, en deux temps.** Côté client, `ChampDeRedaction.tsx` envoie le relevé à chaque
+enregistrement automatique puis le remet à neuf (`releve.current = nouvelleTelemetrie()`) ; à la
+remise, il n'envoie que ce qui s'est accumulé depuis le dernier autosave — souvent rien. Côté
+serveur, `fusionnerEnBase` (`utils/deroule/depot.ts`) écrit `{ ...courant, [version]: aVerser(neuf) }` :
+il **remplace** le relevé de la version au lieu d'y **ajouter** le courant. Son commentaire dit
+« se FUSIONNE, elle ne s'écrase pas » ; le code fait l'inverse. Le dernier delta gagne, et le
+dernier delta est vide.
+
+**✅ CORRIGÉ LE 01/09 (poussé avec le panneau).** Pas par une addition — elle aurait compté une
+session par enregistrement automatique et deux fois un envoi rejoué — mais par un contrat : **le
+client porte le relevé CUMULÉ** (semé de la base à l'ouverture, jamais remis à zéro), et **la base
+garde compteur par compteur le plus avancé** (`leReleveLePlusAvance`, `telemetrie.ts`). Smoke au
+bac à sable : 43 signes puis rechargement puis 37 signes → base `signes_saisis 80, sessions 2`.
+⚠️ Les relevés déjà en base restent perdus : ne pas les lire comme « zéro signe » — c'est exactement
+le piège « NULL n'est pas zéro » du faisceau.
+
+## Intégrité des exercices — le panneau de preuve ne montre pas l'exercice (01/09/2026)
+
+Premier signalement de ratissage reçu en prod le 01/09 (dépôt `a098f1a4…`, cran 7). Le panneau
+`PanneauPreuve` montre le texte saisi et le motif chiffré, mais **ni le matériau, ni la zone posée,
+ni la cible, ni la consigne servie** — tout existe en base (`exercices_materiaux.contenu` +
+`version_corrigee`, `exercices_metacognition.credence[].zone/zone_at`, `consigne_instanciee`).
+Proposition détaillée donnée à Louis le 01/09 (session « signalement d'intégrité »). Mesures pour
+l'écran : matériau méd. 386 car., p90 879, max 1 849 ; consigne servie aux crans 4/7/9 méd. 249,
+max 533 ; `texte_v1` méd. 299, max 440 ; `restitution_a_chaud` méd. 79, max 169 ; 134 cibles sur
+516 font ≤ 5 caractères, 67 sont des insertions pures (« surligne l'endroit » désigne alors une
+frontière, pas un passage). ⚠️ Aucune page prof n'existe pour un `exercices_depots` : le panneau
+doit se suffire, ou un lot ouvre la route.
+**Décidé par Louis le 01/09** : journaliser chaque pose de zone, pas seulement la dernière (aujourd'hui
+`credence[].zone` + `zone_at` ne gardent que la dernière). Pas de refus client d'une sélection totale :
+dans certains exercices, la zone à surligner EST tout ce qui est proposé — c'est la raison d'être du
+« 4 fois la cible » ; une meilleure règle reste à trouver.
+**Décidé le 01/09, second temps** : pas de refus, une CONFIRMATION côté client quand la sélection couvre
+≥ 70 % du matériau (« Tu as surligné presque tout le texte. C'est bien ce que tu veux désigner ? »),
+neutre, sans dire si c'est juste ; la confirmation se stocke avec la pose et voyage dans le motif du
+signalement. La barre serveur (70 % ET 4×) ne bouge pas. Mesuré : 46 cibles/516 ≥ 70 % du matériau,
+226 ≥ 17,5 % — là où seule la clause « 4× » protège.
+
 ## Le modèle de parcours suit ses classes — ce qui reste hors du geste (02/09/2026) — ✅ REFERMÉ le soir même
 
 Fait le 02/09 (aucune migration) : un ajout, un retrait ou un déplacement dans le MODÈLE d'un parcours

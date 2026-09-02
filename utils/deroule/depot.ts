@@ -36,7 +36,7 @@ import { createAdminClient } from '@/utils/supabase/admin'
 import { atelierDUnFormatif, type Atelier } from '../codex-onglets/regles'
 import { normaliserRetours, blocs } from '../passation/transcription-calcul'
 import { lireLesCollages, type CollageBloque } from '../passation/collage'
-import { lireTelemetrie, aVerser } from './telemetrie'
+import { lireTelemetrie, aVerser, leReleveLePlusAvance } from './telemetrie'
 import type { TelemetrieSaisie, Version } from './types'
 
 type Admin = ReturnType<typeof createAdminClient>
@@ -248,15 +248,22 @@ export async function enregistrerLeTexte(
 }
 
 /**
- * La télémétrie du faisceau se FUSIONNE, elle ne s'écrase pas : une reprise
- * après rechargement ne doit pas repartir de zéro, sinon le nombre de sessions
- * — qui EST l'un des signaux — vaudrait toujours 1.
+ * La télémétrie du faisceau : la base garde, compteur par compteur, LE PLUS
+ * AVANCÉ des deux relevés — le sien et celui que le client verse.
+ *
+ * ⛔⛔ Ce commentaire disait « se FUSIONNE, elle ne s'écrase pas », et le code
+ *    écrasait : `[version]: aVerser(neuf)`, sans jamais lire `courant[version]`.
+ *    Mesuré en production le 01/09/2026 : 15 dépôts sur 16 à zéro. Le contrat
+ *    réparé est écrit sur `leReleveLePlusAvance` (`telemetrie.ts`) : le client
+ *    porte le relevé CUMULÉ, semé de la base à l'ouverture, et la base ne recule
+ *    jamais. ⚠️ L'autre version n'est pas touchée : le delta v1 → vf est
+ *    lui-même un signal.
  */
 function fusionnerEnBase(
   depot: DepotMaison, version: Version, neuf: TelemetrieSaisie,
 ): Record<string, unknown> {
   const courant = lireTelemetrie(depot.saisie_telemetrie)
-  return { ...courant, [version]: aVerser(neuf) }
+  return { ...courant, [version]: aVerser(leReleveLePlusAvance(courant[version], neuf)) }
 }
 
 /**

@@ -284,6 +284,104 @@ export function estUnRatissage(texte: string, cible: Intervalle, zone: Intervall
     && large >= RATISSAGE_FOIS_LA_CIBLE * cibleLarge
 }
 
+// ── LA CONFIRMATION, ET LE JOURNAL DES POSES ────────────────────────────────
+
+/**
+ * ⭐ LA PHRASE QUE L'ÉLÈVE LIT SOUS LE MATÉRIAU — arrêtée mot pour mot (Louis,
+ * 27/08). Elle vit ici, module pur, parce que DEUX écrans la portent : celui de
+ * l'élève (`DesignationDansLeMateriau`) et, depuis le 01/09, le panneau de
+ * preuve du professeur, qui montre « ce que l'élève a vu » — et doit donc citer
+ * la même phrase, jamais une copie qui divergerait.
+ */
+export const PHRASE_SOUS_LE_MATERIAU =
+  'Parfois il n’y a rien à surligner — le dire est une réponse. '
+  + 'Et un mot de trop de chaque côté ne coûte rien : ne bloque pas sur la frontière exacte. '
+  + 'Mais ne surligne pas tout, cela ne sert à rien.'
+
+/**
+ * ⭐ « TU AS SURLIGNÉ PRESQUE TOUT LE TEXTE. C'EST BIEN CE QUE TU VEUX
+ *    DÉSIGNER ? » — décision de Louis, 01/09/2026.
+ *
+ * ⛔⛔ **UNE CONFIRMATION, JAMAIS UN REFUS.** Dans 46 matériaux sur 516
+ *    (mesuré en production le 01/09), la cible couvre elle-même au moins 70 %
+ *    du texte : *la bonne réponse y EST de tout surligner*, et c'est la raison
+ *    d'être du second terme de la barre (« 4 fois la cible »). Un refus client
+ *    accuserait ces élèves-là. La question, elle, ne dit pas si c'est juste :
+ *    elle sépare le geste VOULU du geste ACCIDENTEL — le « tout sélectionner »
+ *    d'un téléphone, ou l'élève qui a lu « réécris le texte » et sélectionne le
+ *    texte à réécrire. *Premier ratissage reçu en production le 01/09 : une
+ *    zone de 0 à 310 sur 310, posée 56 s après l'ouverture, et un texte qui
+ *    ajoutait le connecteur exactement au bon endroit.*
+ *
+ * ⚠️ LA BARRE EST CELLE DU RATISSAGE, ET ELLE SEULE — `RATISSAGE_PART_MATERIAU`.
+ *    La question se pose sans connaître la cible (elle ne descend jamais à
+ *    l'écran), donc sur le seul terme que le client peut mesurer. Une zone qui
+ *    passe cette part sans confirmation est REFUSÉE au serveur, pas seulement à
+ *    l'écran : la confirmation est une garde, pas une politesse.
+ */
+export function demandeUneConfirmation(longueurDuMateriau: number, zone: Intervalle): boolean {
+  const large = zone[1] - zone[0]
+  if (large <= 0 || longueurDuMateriau <= 0) return false
+  return large >= RATISSAGE_PART_MATERIAU * longueurDuMateriau
+}
+
+/**
+ * ⭐ LE JOURNAL DES POSES — chaque zone posée, pas seulement la dernière
+ *    (décision de Louis, 01/09/2026).
+ *
+ * `credence[].zone` et `zone_at` ne gardaient que la dernière pose, et « seule
+ * la dernière zone est gardée » était le manque le plus net du panneau de
+ * preuve : impossible de voir si l'élève avait resserré, hésité, ou posé une
+ * fois et rendu. Le journal vit DANS l'entrée du cas, en `poses` — aucune
+ * migration, le CHECK de la colonne ne porte que sur le type tableau.
+ *
+ * ⚠️ BORNÉ : les vingt dernières poses. Un élève qui ajuste sa sélection au
+ *    doigt en pose une dizaine ; au-delà, c'est l'ancienneté qui sort, jamais
+ *    la dernière.
+ */
+export const POSES_JOURNALISEES_MAX = 20
+
+export interface PoseJournalisee {
+  zone: [number, number] | null
+  at: string
+  confirmee: boolean
+}
+
+/** Relit un journal de poses, en écartant ce qui n'en a pas la forme. */
+export function lireLesPoses(brut: unknown): PoseJournalisee[] {
+  if (!Array.isArray(brut)) return []
+  const out: PoseJournalisee[] = []
+  for (const p of brut) {
+    if (!p || typeof p !== 'object') continue
+    const r = p as Record<string, unknown>
+    if (typeof r.at !== 'string') continue
+    const z = r.zone
+    const zone = Array.isArray(z) && z.length === 2
+      && typeof z[0] === 'number' && typeof z[1] === 'number'
+      ? ([z[0], z[1]] as [number, number]) : null
+    out.push({ zone, at: r.at, confirmee: r.confirmee === true })
+  }
+  return out
+}
+
+/**
+ * Ce qu'une désignation ÉCRIT dans l'entrée du cas : la zone courante, son
+ * heure, sa confirmation, et le journal augmenté d'une pose. Pur : l'entrée
+ * précédente entre en argument, et c'est l'appelant qui fusionne.
+ */
+export function apportDeLaDesignation(
+  ancien: Record<string, unknown>, zone: Intervalle | null, confirmee: boolean, maintenant: string,
+): Record<string, unknown> {
+  const pose: PoseJournalisee = { zone: zone ? [zone[0], zone[1]] : null, at: maintenant, confirmee }
+  const poses = [...lireLesPoses(ancien.poses), pose].slice(-POSES_JOURNALISEES_MAX)
+  return {
+    zone: pose.zone,
+    zone_at: maintenant,
+    zone_confirmee: confirmee,
+    poses,
+  }
+}
+
 /**
  * ⭐ LA CRÉDENCE « HAUTE », AUX TROIS CRANS QUI DÉSIGNENT.
  *

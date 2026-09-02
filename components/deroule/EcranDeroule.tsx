@@ -514,7 +514,7 @@ function ColonneMatiere({
                   contenu={c.materiau.map((sg) => sg.texte).join('')}
                   zoneDonnee={c.zoneDonnee}
                   repondu={c.designationDonnee}
-                  enregistrer={(zone) => actionDesignation(vue.depotId, c.ordre, zone)}
+                  enregistrer={(zone, confirmee) => actionDesignation(vue.depotId, c.ordre, zone, confirmee)}
                   gele={vue.tempsCourant !== 'ecrire' && vue.tempsCourant !== 'preparer'}
                 />
               ) : (
@@ -636,6 +636,7 @@ function ColonneTravail({
         <ChampDeRedaction
           depotId={vue.depotId}
           valeurInitiale={vue.texteV1 ?? ''}
+          telemetrieInitiale={vue.telemetrie.v1 ?? null}
           lectureSeule={false}
           rows={forme === 'surligner' ? 9 : 14}
           onEnregistrer={enregistrer}
@@ -821,6 +822,7 @@ function RetourDUnTexte({
               <ChampDeRedaction
                 depotId={vue.depotId}
                 valeurInitiale={vue.texteVf ?? vue.texteV1 ?? ''}
+                telemetrieInitiale={vue.telemetrie.vf ?? null}
                 lectureSeule={false}
                 rows={14}
                 onEnregistrer={enregistrer}

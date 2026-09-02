@@ -182,6 +182,37 @@ export function fusionner(a: TelemetrieSaisie, b: TelemetrieSaisie): TelemetrieS
 }
 
 /**
+ * ⭐⭐ LE RELEVÉ LE PLUS AVANCÉ — ce que la base GARDE quand le client verse.
+ *
+ * ⛔⛔ **CE QUE ÇA RÉPARE, mesuré en production le 01/09/2026 : 15 dépôts sur
+ * 16 portaient `signes_saisis = 0` sous un texte tapé à la main.** Le client
+ * envoyait un DELTA à chaque enregistrement automatique puis repartait de zéro,
+ * et la base REMPLAÇAIT son relevé par ce delta : le dernier gagnait, et le
+ * dernier — celui de la remise, envoyé après une pause — était vide. Les
+ * signaux `rythme` et `sessions` du faisceau lisaient ce zéro.
+ *
+ * ⭐ LE CONTRAT, DEPUIS LE 01/09 : **le client porte le relevé CUMULÉ de la
+ *    version** — semé du relevé de la base à l'ouverture de la page, jamais
+ *    remis à zéro entre deux envois — et la base garde, compteur par compteur,
+ *    **le plus grand des deux**. Les quatre compteurs sont monotones : un
+ *    relevé cumulé ne peut que croître, donc le plus grand est le plus récent.
+ *    Et un onglet oublié, resté sur une vieille page, ne peut plus RECULER ce
+ *    que l'onglet vivant a compté. *Une addition, elle, aurait compté deux
+ *    fois un envoi rejoué et une session par enregistrement automatique.*
+ */
+export function leReleveLePlusAvance(
+  deja: TelemetrieSaisie | undefined | null, neuf: TelemetrieSaisie,
+): TelemetrieSaisie {
+  if (!deja) return neuf
+  return {
+    signes_saisis: Math.max(deja.signes_saisis, neuf.signes_saisis),
+    ms_actifs: Math.max(deja.ms_actifs, neuf.ms_actifs),
+    plus_grand_ajout: Math.max(deja.plus_grand_ajout, neuf.plus_grand_ajout),
+    sessions: Math.max(deja.sessions, neuf.sessions),
+  }
+}
+
+/**
  * ⭐ LE RYTHME — « neuf cents signes par minute n'est pas tapé par un élève »
  * (`06-` §6).
  *

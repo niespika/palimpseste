@@ -48,6 +48,7 @@ import { echeanceDeLaVersionFinale, finDeSemaineDeTravail } from './echeance'
 import { lireReleveDeLangue, nombreDeFautes, ancrerLigneALigne, phraseDeLaChasse,
   type AncrageFaute } from './langue'
 import { baliser, type Jeton } from './balisage'
+import { lireTelemetrie } from './telemetrie'
 import { demandeUneDesignation } from './designation'
 import { marquerLeMateriau, regimeDeMarquage, type SegmentMateriau } from './marquage'
 import { attenteDuDepot, type AttenteLisible } from './mesure'
@@ -142,6 +143,13 @@ export interface VueDuDeroule {
   depotId: string
   /** Ouvert = `exercices_actif`. Faux, l'écran se ferme poliment. */
   ouvert: boolean
+  /**
+   * ⭐ 01/09 — LE RELEVÉ DE SAISIE DÉJÀ EN BASE, par version. Le champ de
+   * rédaction s'en SÈME à l'ouverture et porte ensuite le relevé cumulé :
+   * c'est le contrat de `leReleveLePlusAvance` (`telemetrie.ts`). Sans cette
+   * semence, chaque rechargement repartait de zéro et la base gardait le vide.
+   */
+  telemetrie: ReturnType<typeof lireTelemetrie>
 
   // ── ⭐ LA BARRE DE CONTENU (handoff « Codex Exercices (élève) » §4) ──
   // « ← Exercices · titre de l'exercice · durée indicative · échéance ». Trois
@@ -754,6 +762,7 @@ export async function chargerLeDeroule(
       && depot.v1_remis_at === null && microQuestionDue(dureeMin, ecouleMs),
     motifDepassement: depot.motif_depassement,
     texteV1: depot.texte_v1, texteVf: depot.texte_vf,
+    telemetrie: lireTelemetrie(depot.saisie_telemetrie),
     collages: collagesDuDepot(depot),
 
     competencesDeLaConfiance,

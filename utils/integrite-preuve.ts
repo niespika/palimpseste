@@ -1,7 +1,13 @@
 import 'server-only'
 import { createAdminClient } from '@/utils/supabase/admin'
 import type { ModuleIntegrite } from '@/utils/integrite'
-import type { Preuve } from '@/components/integrite/types'
+import type { Preuve, PreuveExercice, ChronoVue, PoseVue } from '@/components/integrite/types'
+import {
+  cibleDansLeMateriau, bornesTolerees, lireLesPoses, PHRASE_SOUS_LE_MATERIAU,
+  RATISSAGE_PART_MATERIAU, RATISSAGE_FOIS_LA_CIBLE,
+} from '@/utils/deroule/designation'
+import { baliser } from '@/utils/deroule/balisage'
+import { partEnPourcent, nombreDeMots } from '@/utils/integrite-exercice'
 
 export type { Preuve }
 
@@ -29,6 +35,7 @@ type Admin = ReturnType<typeof createAdminClient>
 const PREUVE_VIDE: Preuve = {
   photos: [], texte: null, surligner: [], lienAnalyse: null,
   saisieClavier: false, contexte: null, meta: { priseAt: null, nbCaracteres: 0 },
+  exercice: null,
 }
 
 // `slim` : ne calcule QUE le contexte (« semaine 24 · version finale »), sans signer
@@ -216,26 +223,49 @@ async function preuveCodex(admin: Admin, renduRef: string, opts?: OptsPreuve): P
  *    sur rien : le motif d'un faisceau ÉNUMÈRE DES SIGNAUX, il ne cite aucune
  *    phrase. C'est voulu — le faisceau n'accuse pas une phrase, il converge.
  */
+/** Une relation embarquée arrive tantôt en objet, tantôt en tableau d'un : on prend l'un. */
+function un<T>(rel: T | T[] | null | undefined): T | null {
+  if (rel == null) return null
+  return Array.isArray(rel) ? (rel[0] ?? null) : rel
+}
+
+interface ExerciceEmbarque {
+  lieu?: string | null
+  cran?: number | null
+  consigne_instanciee?: unknown
+  exercices_cas?: Array<{
+    ordre: number
+    exercices_materiaux: { contenu?: string | null; version_corrigee?: string | null }
+      | Array<{ contenu?: string | null; version_corrigee?: string | null }> | null
+  }> | null
+}
+
 async function preuveExercices(
   admin: Admin, renduRef: string, opts?: OptsPreuve,
 ): Promise<Preuve> {
   // ⛔ Aucun `split(':')` : `rendu_ref` est l'identifiant du dépôt, nu.
   const { data: d } = await admin
     .from('exercices_depots')
-    .select('id, texte_v1, transcription_v1, v1_remis_at, vf_remis_at, exercices(lieu)')
+    // ⚠️ UNE SEULE CHAÎNE LITTÉRALE : supabase-js type la sélection en lisant le
+    //    littéral ; une concaténation lui rend un `string` et tout devient une erreur.
+    .select('id, texte_v1, transcription_v1, ouvert_at, v1_remis_at, vf_remis_at, duree_taguee, restitution_a_chaud, confiance_declaree, conditions_declarees, collages_bloques, exercices(lieu, cran, consigne_instanciee, exercices_cas(ordre, exercices_materiaux(contenu, version_corrigee)))')
     .eq('id', renduRef)
     .maybeSingle()
   if (!d) return { ...PREUVE_VIDE, saisieClavier: true }
 
-  const rel = d.exercices as { lieu?: string | null } | Array<{ lieu?: string | null }> | null
-  const lieu = (Array.isArray(rel) ? rel[0]?.lieu : rel?.lieu) ?? null
+  const ex = un(d.exercices as ExerciceEmbarque | ExerciceEmbarque[] | null)
+  const lieu = ex?.lieu === 'classe' ? 'classe' : ex?.lieu === 'maison' ? 'maison' : null
+  const cran = typeof ex?.cran === 'number' ? ex.cran : null
   const contexte = `exercice ${lieu === 'classe' ? 'en classe' : 'à la maison'}`
+    + (cran !== null ? ` · cran ${cran}` : '')
     + (d.vf_remis_at ? ' · version finale rendue' : '')
   if (opts?.slim) return { ...PREUVE_VIDE, saisieClavier: true, contexte }
 
   // La production de l'élève : ce qu'il a saisi, ou ce que la transcription a lu.
   const texte = ((d.texte_v1 as string | null)?.trim()
     || (d.transcription_v1 as string | null)?.trim() || null)
+
+  const exercice = ex ? await preuveDeLExercice(admin, d as Record<string, unknown>, ex, cran, lieu, opts) : null
 
   return {
     photos: [],
@@ -245,5 +275,121 @@ async function preuveExercices(
     saisieClavier: !!(d.texte_v1 as string | null)?.trim(),
     contexte,
     meta: { priseAt: (d.v1_remis_at as string | null) ?? null, nbCaracteres: nbUtiles(texte) },
+    exercice,
+  }
+}
+
+// ── ⭐ 01/09/2026 — L'EXERCICE TEL QUE L'ÉLÈVE L'A VU ─────────────────────────
+//
+// ⛔⛔ CE QUE ÇA RÉPARE. Le premier ratissage reçu en production disait « la
+//    zone prend 100 % du texte, soit 103,3 fois le passage visé », et le
+//    panneau montrait le texte saisi. Ni le matériau, ni le passage visé, ni la
+//    zone, ni la consigne — tout existait en base, rien n'était chargé. Le
+//    professeur ne pouvait pas séparer une triche d'une consigne mal comprise
+//    ou d'un « tout sélectionner » de téléphone.
+//
+// ⚠️ ON RECONSTRUIT DEPUIS CE QUI A ÉTÉ SERVI, jamais depuis l'aperçu du
+//    professeur : la consigne est la `consigne_instanciee` du cas, balisée
+//    comme sur l'écran élève (`baliser`), et la phrase sous le matériau est
+//    celle du module pur — un seul domicile.
+//
+// ⚠️ LA CIBLE ET SA MARGE SE DÉRIVENT ICI, CÔTÉ SERVEUR, ET VONT AU PROFESSEUR
+//    SEUL. « La version_corrigee EST la réponse aux crans 7 et 9 » : elle ne
+//    descend jamais à l'écran élève, et ce panneau est une page prof.
+
+/** Le cas que le motif nomme (« au cas 2 »), ou le premier. */
+function ordreDuCas(motif: string | null | undefined): number {
+  const m = motif?.match(/au cas (\d+)/)
+  return m ? Number(m[1]) : 1
+}
+
+const NIVEAU_LISIBLE: Record<string, string> = { elevee: 'élevée', moyenne: 'moyenne', faible: 'faible' }
+
+function composerLaConfiance(brut: unknown): string | null {
+  if (!brut || typeof brut !== 'object' || Array.isArray(brut)) return null
+  const parts = Object.entries(brut as Record<string, unknown>)
+    .filter(([, v]) => typeof v === 'string')
+    .map(([k, v]) => `${k.replace(/_/g, ' ')} ${NIVEAU_LISIBLE[v as string] ?? (v as string).replace(/_/g, ' ')}`)
+  return parts.length ? parts.join(' · ') : null
+}
+
+async function preuveDeLExercice(
+  admin: Admin, d: Record<string, unknown>, ex: ExerciceEmbarque,
+  cran: number | null, lieu: 'classe' | 'maison' | null, opts?: OptsPreuve,
+): Promise<PreuveExercice> {
+  const ordre = ordreDuCas(opts?.motif)
+  const cas = Array.isArray(ex.exercices_cas) ? ex.exercices_cas : []
+  const leCas = cas.find((c) => c.ordre === ordre) ?? cas[0] ?? null
+  const mat = leCas ? un(leCas.exercices_materiaux) : null
+  const materiau = mat?.contenu ?? null
+  const cible = materiau ? cibleDansLeMateriau(materiau, mat?.version_corrigee) : null
+  const toleree = materiau && cible ? bornesTolerees(materiau, cible) : null
+
+  const { data: metacog } = await admin
+    .from('exercices_metacognition').select('credence').eq('depot_id', d.id as string).maybeSingle()
+  const entrees = Array.isArray(metacog?.credence)
+    ? (metacog.credence as Array<Record<string, unknown>>) : []
+  const entree = entrees.find((e) => e.cas === (leCas?.ordre ?? ordre)) ?? null
+  const z = entree?.zone
+  const zone = Array.isArray(z) && z.length === 2 && typeof z[0] === 'number' && typeof z[1] === 'number'
+    ? ([z[0], z[1]] as [number, number]) : null
+  const designationDonnee = !!entree && entree.zone_at !== undefined
+  let poses: PoseVue[] = lireLesPoses(entree?.poses)
+  // ⚠️ Journal antérieur au 01/09 : seule la dernière pose existe. On la montre
+  //    comme telle, sans prétendre qu'elle fut la seule.
+  if (poses.length === 0 && designationDonnee && typeof entree?.zone_at === 'string') {
+    poses = [{ zone, at: entree.zone_at, confirmee: entree.zone_confirmee === true }]
+  }
+
+  const brute = ex.consigne_instanciee
+  const consigneTexte = Array.isArray(brute)
+    ? String(brute[(leCas?.ordre ?? 1) - 1] ?? brute[0] ?? '')
+    : String(brute ?? '')
+
+  const chrono: ChronoVue[] = []
+  const ouvertAt = d.ouvert_at as string | null
+  const v1At = d.v1_remis_at as string | null
+  const vfAt = d.vf_remis_at as string | null
+  if (ouvertAt) chrono.push({ quoi: 'Ouverture de l’exercice', at: ouvertAt })
+  for (const p of poses) {
+    chrono.push({
+      quoi: p.zone
+        ? (p.confirmee ? 'Zone posée, confirmée par l’élève' : 'Zone posée dans le matériau')
+        : '« Rien à surligner » — réponse donnée',
+      at: p.at,
+    })
+  }
+  const cond = d.conditions_declarees as { at?: string; valeur?: string } | null
+  if (cond?.at) {
+    chrono.push({ quoi: `Conditions déclarées : « ${(cond.valeur ?? '').replace(/_/g, ' ')} »`, at: cond.at })
+  }
+  if (v1At) chrono.push({ quoi: 'Remise de la v1', at: v1At })
+  if (vfAt) chrono.push({ quoi: 'Remise de la version finale', at: vfAt })
+  chrono.sort((a, b) => Date.parse(a.at) - Date.parse(b.at))
+
+  const large = zone ? zone[1] - zone[0] : null
+  const cibleLarge = cible ? cible[1] - cible[0] : null
+  const collages = d.collages_bloques
+  const cond2 = cond?.valeur ?? null
+
+  return {
+    cran, lieu,
+    consigne: baliser(consigneTexte),
+    avertissement: PHRASE_SOUS_LE_MATERIAU,
+    materiau,
+    zone, zoneConfirmee: entree?.zone_confirmee === true, designationDonnee, poses,
+    cible: cible ? [cible[0], cible[1]] : null,
+    toleree: toleree ? [toleree[0], toleree[1]] : null,
+    partMateriau: zone && materiau ? partEnPourcent(zone, materiau.length) : null,
+    foisLaCible: large !== null && cibleLarge ? Math.round((10 * large) / cibleLarge) / 10 : null,
+    motsCible: cible && materiau ? nombreDeMots(materiau, cible) : null,
+    barre: { part: RATISSAGE_PART_MATERIAU, fois: RATISSAGE_FOIS_LA_CIBLE },
+    credence: typeof entree?.pourcentage === 'number' ? entree.pourcentage : null,
+    chrono,
+    restitution: (d.restitution_a_chaud as string | null)?.trim() || null,
+    confiance: composerLaConfiance(d.confiance_declaree),
+    conditions: cond2 ? cond2.replace(/_/g, ' ') : null,
+    collagesBloques: Array.isArray(collages) ? collages.length : 0,
+    dureeTaguee: (d.duree_taguee as string | null) ?? null,
   }
 }

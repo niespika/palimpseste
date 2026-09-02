@@ -60,6 +60,7 @@
 //    coûte aucune doctrine. À rapporter à Louis.
 import { useCallback, useRef, useState, useTransition } from 'react'
 import { MARQUE_ELEVE } from './TexteBalise'
+import { demandeUneConfirmation, PHRASE_SOUS_LE_MATERIAU } from '@/utils/deroule/designation'
 
 /**
  * ⭐ LES BORNES D'UNE SÉLECTION, EN CARACTÈRES DU MATÉRIAU.
@@ -94,7 +95,8 @@ export function DesignationDansLeMateriau({
   zoneDonnee: [number, number] | null
   /** ⚠️ « Rien à signaler » EST une réponse : ce drapeau la sépare du silence. */
   repondu: boolean
-  enregistrer: (zone: [number, number] | null) => Promise<{ ok: boolean; message: string }>
+  /** `confirmee` : l'élève a répondu « oui » à la question sur une zone qui couvre presque tout. */
+  enregistrer: (zone: [number, number] | null, confirmee?: boolean) => Promise<{ ok: boolean; message: string }>
   gele?: boolean
 }) {
   const boite = useRef<HTMLParagraphElement>(null)
@@ -102,6 +104,15 @@ export function DesignationDansLeMateriau({
   const [aRepondu, setARepondu] = useState(repondu)
   const [refus, setRefus] = useState<string | null>(null)
   const [enCours, demarrer] = useTransition()
+  /**
+   * ⭐ 01/09 — LA ZONE QUI ATTEND SA CONFIRMATION. « Tu as surligné presque
+   *    tout le texte. C'est bien ce que tu veux désigner ? » — une QUESTION,
+   *    jamais un refus : dans 46 matériaux sur 516, la bonne réponse EST de tout
+   *    surligner. La question sépare le geste voulu du « tout sélectionner »
+   *    accidentel d'un téléphone. ⚠️ Rien n'est écrit tant qu'elle attend, et
+   *    le serveur tient la même garde (`actionDesignation`).
+   */
+  const [aConfirmer, setAConfirmer] = useState<[number, number] | null>(null)
 
   // ⚠️ PAS D'EFFET DE SYNCHRONISATION, ET C'EST VOULU. La vue serveur fait foi
   //    au rechargement, mais on ne la recopie pas dans l'état à chaque rendu :
@@ -110,19 +121,30 @@ export function DesignationDansLeMateriau({
   //    `setState` provoquerait des rendus en cascade, et `CredenceSaisie` s'en
   //    passe déjà — elle n'est simplement montée que tant qu'elle attend.*
 
-  const poser = useCallback((z: [number, number] | null) => {
+  const poser = useCallback((z: [number, number] | null, confirmee = false) => {
     setRefus(null)
     demarrer(async () => {
-      const r = await enregistrer(z)
-      if (r.ok) { setZone(z); setARepondu(true) } else { setRefus(r.message) }
+      const r = await enregistrer(z, confirmee)
+      if (r.ok) { setZone(z); setARepondu(true); setAConfirmer(null) } else { setRefus(r.message) }
     })
   }, [enregistrer])
 
   const surSelection = useCallback(() => {
     if (gele || !boite.current) return
     const b = bornesDeLaSelection(boite.current)
-    if (b) poser(b)
-  }, [gele, poser])
+    if (!b) return
+    // ⭐ Presque tout le texte : on demande avant d'écrire. La barre est celle du
+    //    ratissage, mesurée sur le seul terme que l'écran connaît — la part du
+    //    matériau. La cible, elle, ne descend jamais ici.
+    if (demandeUneConfirmation(contenu.length, b)) { setRefus(null); setAConfirmer(b); return }
+    setAConfirmer(null)
+    poser(b)
+  }, [gele, poser, contenu.length])
+
+  const recommencer = useCallback(() => {
+    setAConfirmer(null)
+    if (typeof window !== 'undefined') window.getSelection()?.removeAllRanges()
+  }, [])
 
   // ⭐ Le matériau, découpé par la zone. Trois segments au plus, et leur
   //    concaténation EST le matériau — même promesse que `MateriauMarque`.
@@ -161,6 +183,40 @@ export function DesignationDansLeMateriau({
         </p>
       </div>
 
+      {/* ⭐ 01/09 — LA QUESTION, quand la sélection couvre presque tout le texte.
+          Elle ne dit pas si c'est juste ; elle demande si c'est voulu. « Oui »
+          écrit la zone, confirmée ; « non » n'écrit rien et défait la sélection. */}
+      {aConfirmer && !gele && (
+        <div
+          role="group"
+          aria-label="Confirmer la sélection"
+          className="mt-2.5 rounded-[9px] border border-attention/40 bg-attention-teinte px-3.5 py-3"
+        >
+          <p className="font-corps text-[15px] leading-snug text-encre">
+            Tu as surligné presque tout le texte. C’est bien ce que tu veux désigner ?
+          </p>
+          <div className="mt-2.5 flex flex-wrap gap-2">
+            <button
+              type="button"
+              onClick={() => poser(aConfirmer, true)}
+              disabled={enCours}
+              className="min-h-11 rounded-[9px] bg-bouton px-4 py-2 font-ui text-sm text-bouton-texte disabled:opacity-40"
+            >
+              Oui, c’est mon choix
+            </button>
+            <button
+              type="button"
+              onClick={recommencer}
+              disabled={enCours}
+              className="min-h-11 rounded-[9px] border border-bordure-bouton bg-surface px-4 py-2
+                         font-ui text-sm text-encre-douce disabled:opacity-40"
+            >
+              Non, je recommence
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* ⭐ L'ÉTAT SE LIT SOUS LE TEXTE, en pastille — handoff §4. Il reste
           affiché APRÈS la remise, gelé : l'élève relit sa correction en voyant
           ce QU'IL avait désigné. Ce n'est pas une fuite, c'est sa réponse. */}
@@ -194,12 +250,10 @@ export function DesignationDansLeMateriau({
       </div>
 
       {!gele && (
-        /* ⭐ La rédaction est ARRÊTÉE, mot pour mot — Louis, 27/08. */
-        <p className="mt-2 text-xs text-encre-douce">
-          Parfois il n’y a rien à surligner — le dire est une réponse.
-          {' '}Et un mot de trop de chaque côté ne coûte rien : ne bloque pas sur la
-          {' '}frontière exacte. Mais ne surligne pas tout, cela ne sert à rien.
-        </p>
+        /* ⭐ La rédaction est ARRÊTÉE, mot pour mot — Louis, 27/08. Elle vit en
+           module pur (`designation.ts`) : le panneau de preuve du professeur
+           cite la même phrase. */
+        <p className="mt-2 text-xs text-encre-douce">{PHRASE_SOUS_LE_MATERIAU}</p>
       )}
 
       {refus && <p className="mt-2 text-sm text-retard">{refus}</p>}

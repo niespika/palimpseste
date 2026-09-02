@@ -34,6 +34,7 @@ import { CONFIANCES, CONDITIONS, type Competence, type Condition, type Confiance
   from './types'
 import type { ComparaisonObservable, QuestionServie } from './types'
 import { refus, ok, type Issue, type DepotMaison } from './depot'
+import { apportDeLaDesignation } from './designation'
 
 type Admin = ReturnType<typeof createAdminClient>
 
@@ -198,7 +199,10 @@ export async function enregistrerLaCredence(
  * entre les deux que le Monitoring lit ».
  */
 async function fusionnerDansLaCredence(
-  admin: Admin, depot: DepotMaison, cas: number, apport: Record<string, unknown>,
+  admin: Admin, depot: DepotMaison, cas: number,
+  // ⭐ 01/09 — l'apport peut DÉPENDRE de l'entrée précédente : le journal des
+  //    poses s'y AJOUTE, il ne la remplace pas.
+  apport: Record<string, unknown> | ((ancien: Record<string, unknown>) => Record<string, unknown>),
   maintenant: string, message: (m: string) => string,
 ): Promise<Issue<null>> {
   const { data } = await admin.from('exercices_metacognition')
@@ -208,7 +212,8 @@ async function fusionnerDansLaCredence(
     !!c && typeof c === 'object' && (c as Record<string, unknown>).cas === cas
   const ancien = (courant.find(estCeCas) ?? {}) as Record<string, unknown>
   const autres = courant.filter((c) => !estCeCas(c))
-  const suite = [...autres, { ...ancien, ...apport, cas }].sort(
+  const neuf = typeof apport === 'function' ? apport(ancien) : apport
+  const suite = [...autres, { ...ancien, ...neuf, cas }].sort(
     (a, b) => Number((a as Record<string, unknown>).cas ?? 0)
             - Number((b as Record<string, unknown>).cas ?? 0))
 
@@ -242,6 +247,8 @@ async function fusionnerDansLaCredence(
 export async function enregistrerLaDesignation(
   admin: Admin, depot: DepotMaison, cas: number, zone: readonly [number, number] | null,
   maintenant: string,
+  /** ⭐ 01/09 — l'élève a confirmé une zone qui couvre presque tout le texte. */
+  confirmee = false,
 ): Promise<Issue<null>> {
   if (depot.v1_remis_at) {
     return refus('La désignation se fait pendant l’exercice, avant de remettre.')
@@ -249,9 +256,11 @@ export async function enregistrerLaDesignation(
   if (zone && (!Number.isInteger(zone[0]) || !Number.isInteger(zone[1]) || zone[1] <= zone[0])) {
     return refus('La sélection n’est pas lisible. Recommence, ou dis qu’il n’y a rien à signaler.')
   }
+  // ⭐ Chaque pose entre au JOURNAL de l'entrée (`apportDeLaDesignation`) : la
+  //    zone courante reste lisible où elle l'était, et l'historique s'y ajoute.
   return fusionnerDansLaCredence(admin, depot, cas,
-    { zone: zone ? [zone[0], zone[1]] : null, zone_at: maintenant }, maintenant,
-    (m) => `La désignation n’a pas été enregistrée : ${m}`)
+    (ancien) => apportDeLaDesignation(ancien, zone ? [zone[0], zone[1]] : null, confirmee, maintenant),
+    maintenant, (m) => `La désignation n’a pas été enregistrée : ${m}`)
 }
 
 // ── Le temps 3 — « SE JUGER » ───────────────────────────────────────────────

@@ -26,6 +26,7 @@ import {
   estUnRatissage, credenceEstHaute,
   CIBLE_LONGUE_MOTS, TOLERANCE_CIBLE_LONGUE, CREDENCE_HAUTE_SEUIL,
   RATISSAGE_PART_MATERIAU, RATISSAGE_FOIS_LA_CIBLE,
+  demandeUneConfirmation, lireLesPoses, apportDeLaDesignation, POSES_JOURNALISEES_MAX,
 } from './designation'
 import { regimeDeMarquage } from './marquage'
 
@@ -283,4 +284,72 @@ test('la crédence n’est plus une condition — elle reste lisible pour le mot
   assert.equal(credenceEstHaute(CREDENCE_HAUTE_SEUIL - 1), false)
   assert.equal(credenceEstHaute(null), null, 'pas de crédence donnée : on ne conclut pas')
   assert.equal(credenceEstHaute(undefined), null)
+})
+
+// ── La confirmation, et le journal des poses (01/09/2026) ──────────────────
+
+test('⭐ la question se pose sur LA PART DU RATISSAGE, et sur elle seule — la cible ne descend pas', () => {
+  const L = 310
+  const barre = Math.ceil(RATISSAGE_PART_MATERIAU * L)
+  assert.equal(demandeUneConfirmation(L, [0, L]), true, 'tout le texte')
+  assert.equal(demandeUneConfirmation(L, [0, barre]), true, 'exactement la barre : atteinte')
+  assert.equal(demandeUneConfirmation(L, [0, barre - 1]), false, 'juste en dessous')
+  assert.equal(demandeUneConfirmation(L, [100, 100]), false, 'zone vide')
+  assert.equal(demandeUneConfirmation(0, [0, 0]), false, 'matériau vide')
+})
+
+test('⛔ une CONFIRMATION, jamais un refus : la fonction ne connaît pas la cible', () => {
+  // 46 matériaux sur 516 ont une cible qui couvre ≥ 70 % du texte : y surligner
+  // tout est JUSTE. La question doit donc pouvoir être posée sans accuser —
+  // elle ne prend que la longueur du matériau, et rien sur la cible.
+  assert.equal(demandeUneConfirmation.length, 2)
+})
+
+test('le journal des poses se relit en écartant ce qui n’en a pas la forme', () => {
+  assert.deepEqual(lireLesPoses(undefined), [])
+  assert.deepEqual(lireLesPoses('x'), [])
+  assert.deepEqual(lireLesPoses([
+    { zone: [0, 10], at: 't1', confirmee: true },
+    { zone: null, at: 't2' },
+    { zone: [0, 'a'], at: 't3' },
+    { at: 4 },
+    null,
+  ]), [
+    { zone: [0, 10], at: 't1', confirmee: true },
+    { zone: null, at: 't2', confirmee: false },
+    { zone: null, at: 't3', confirmee: false },
+  ])
+})
+
+test('⭐⭐ chaque pose S’AJOUTE au journal ; la zone courante reste où elle était', () => {
+  const p1 = apportDeLaDesignation({}, [0, 310], true, 't1')
+  assert.deepEqual(p1, {
+    zone: [0, 310], zone_at: 't1', zone_confirmee: true,
+    poses: [{ zone: [0, 310], at: 't1', confirmee: true }],
+  })
+  const p2 = apportDeLaDesignation({ ...p1, pourcentage: 80 }, [174, 182], false, 't2')
+  assert.deepEqual(p2.zone, [174, 182])
+  assert.equal(p2.zone_at, 't2')
+  assert.equal(p2.zone_confirmee, false)
+  assert.deepEqual(p2.poses, [
+    { zone: [0, 310], at: 't1', confirmee: true },
+    { zone: [174, 182], at: 't2', confirmee: false },
+  ])
+  // « Rien à surligner » est une pose comme une autre : elle entre au journal.
+  const p3 = apportDeLaDesignation(p2, null, false, 't3')
+  assert.equal(p3.zone, null)
+  assert.equal((p3.poses as unknown[]).length, 3)
+  // ⚠️ L'apport ne touche pas aux autres clés : c'est l'appelant qui fusionne.
+  assert.equal('pourcentage' in p2, false)
+})
+
+test('le journal est BORNÉ — c’est l’ancienneté qui sort, jamais la dernière pose', () => {
+  let entree: Record<string, unknown> = {}
+  for (let i = 0; i < POSES_JOURNALISEES_MAX + 5; i++) {
+    entree = { ...entree, ...apportDeLaDesignation(entree, [i, i + 1], false, `t${i}`) }
+  }
+  const poses = lireLesPoses(entree.poses)
+  assert.equal(poses.length, POSES_JOURNALISEES_MAX)
+  assert.equal(poses[0].at, 't5')
+  assert.equal(poses[poses.length - 1].at, `t${POSES_JOURNALISEES_MAX + 4}`)
 })

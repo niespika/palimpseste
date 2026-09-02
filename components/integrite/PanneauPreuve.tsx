@@ -9,8 +9,10 @@ import {
   actionConfirmerSignalement, actionEcarterSignalement, actionAcquitterSignalement,
   actionBloquerEleve, actionDebloquerEleve,
 } from '@/app/prof/integrite/actions'
-import type { SelectionVue } from './types'
+import type { SelectionVue, PreuveExercice } from './types'
 import { SCEAU_DU_MODULE } from './types'
+import { TexteBalise } from '@/components/deroule/TexteBalise'
+import { segmentsDeLaPreuve, diffDesMots, ecartLisible } from '@/utils/integrite-exercice'
 
 // ════════════════════════════════════════════════════════════════════════════
 // Panneau de PREUVE réutilisable : photo déposée + retranscription (passage
@@ -60,6 +62,157 @@ function TexteSurligne({ texte, surligner, source }: { texte: string; surligner:
         i % 2 === 1
           ? <mark key={i} className={`${cls} rounded px-1`}>{p}</mark>
           : <span key={i}>{p}</span>,
+      )}
+    </>
+  )
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+// ⭐ 01/09/2026 — L'EXERCICE TEL QUE L'ÉLÈVE L'A VU (module `exercices` seul).
+// Le premier ratissage reçu en production ne montrait au professeur que le
+// texte saisi et un motif chiffré ; ni le matériau, ni le passage visé, ni la
+// zone. Ces trois blocs les posent côte à côte — et ne concluent rien : c'est
+// le professeur qui lit, puis confirme ou écarte.
+// ════════════════════════════════════════════════════════════════════════════
+
+const ETIQUETTE = 'font-ui text-[11px] uppercase tracking-[0.08em] text-muet'
+
+function Chiffre({ dt, dd }: { dt: string; dd: React.ReactNode }) {
+  return (
+    <div className="bg-parchemin border border-bordure rounded-lg px-3 py-2 min-w-0">
+      <dt className="font-ui text-[10px] uppercase tracking-[0.06em] text-muet-clair">{dt}</dt>
+      <dd className="font-ui text-sm text-encre tabular-nums mt-0.5">{dd}</dd>
+    </div>
+  )
+}
+
+/** Le matériau, avec la zone de l'élève et le passage visé superposés. */
+function MateriauDeLaPreuve({ ex }: { ex: PreuveExercice }) {
+  if (!ex.materiau) return null
+  const segments = segmentsDeLaPreuve(ex.materiau, ex.zone, ex.cible, ex.toleree)
+  return (
+    <div className="mt-3">
+      <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 mb-1.5">
+        <p className="font-ui text-[11px] text-encre-douce">Le matériau · {ex.materiau.length} caractères</p>
+        <p className="font-ui text-[11px] text-muet flex flex-wrap gap-x-3 gap-y-1">
+          <span><i aria-hidden className="inline-block w-3 h-3 rounded-sm align-[-2px] mr-1 bg-retard-teinte border border-retard" />zone posée par l’élève</span>
+          <span><i aria-hidden className="inline-block w-3 h-3 rounded-sm align-[-2px] mr-1 bg-attention-teinte border-b-2 border-attention" />passage visé</span>
+          <span><i aria-hidden className="inline-block w-3 h-2 align-[-2px] mr-1 border-b-2 border-dotted border-attention" />marge tolérée</span>
+        </p>
+      </div>
+      <div className="rounded-lg border border-bordure bg-parchemin px-3.5 py-3 max-h-80 overflow-y-auto">
+        <p className="font-corps text-[15px] text-encre leading-relaxed whitespace-pre-wrap">
+          {segments.map((sg, i) => {
+            const cls = [
+              sg.zone ? 'bg-retard-teinte' : '',
+              sg.cible ? 'text-attention font-semibold border-b-2 border-attention' : '',
+              !sg.cible && sg.toleree ? 'border-b-2 border-dotted border-attention' : '',
+            ].filter(Boolean).join(' ')
+            return cls ? <span key={i} className={`${cls} rounded-[2px]`}>{sg.texte}</span> : <span key={i}>{sg.texte}</span>
+          })}
+        </p>
+      </div>
+      {ex.cible === null && (
+        <p className="font-ui text-[11px] text-muet mt-1.5">
+          Aucun passage visé : le défaut de ce cas est une absence, et l’exercice se juge sur le texte libre.
+        </p>
+      )}
+    </div>
+  )
+}
+
+function BlocExercice({ ex, tz }: { ex: PreuveExercice; tz: string }) {
+  const zoneLisible = ex.partMateriau !== null
+    ? `${ex.partMateriau} % du matériau`
+    : ex.designationDonnee ? '« rien à surligner »' : 'aucune zone posée'
+  const cibleLisible = ex.cible && ex.materiau
+    ? `${ex.motsCible ?? '?'} mot${(ex.motsCible ?? 0) > 1 ? 's' : ''} · « ${ex.materiau.slice(ex.cible[0], ex.cible[1]).slice(0, 40)}${ex.cible[1] - ex.cible[0] > 40 ? '…' : ''} »`
+    : 'aucun — le défaut est une absence'
+  const franchie = ex.partMateriau !== null && ex.foisLaCible !== null
+    && ex.partMateriau >= ex.barre.part * 100 && ex.foisLaCible >= ex.barre.fois
+  return (
+    <>
+      {/* 2a — ce que l'élève a vu */}
+      <div>
+        <p className={`${ETIQUETTE} mb-2.5`}>Ce que l’élève a vu</p>
+        <div className="rounded-lg border border-bordure bg-parchemin px-3.5 py-3">
+          <p className="font-ui text-[11px] text-encre-douce mb-1">
+            La consigne{ex.cran !== null && <> · cran {ex.cran}</>}{ex.lieu && <> · {ex.lieu === 'classe' ? 'en classe' : 'à la maison'}</>}
+          </p>
+          <p className="font-corps text-[15px] text-encre leading-relaxed">
+            {ex.consigne.length > 0 ? <TexteBalise jetons={ex.consigne} /> : <span className="text-muet italic">consigne introuvable</span>}
+          </p>
+          <p className="font-ui text-[11px] text-muet italic mt-2">
+            Sous le matériau, il lisait : « {ex.avertissement} »
+          </p>
+        </div>
+        <MateriauDeLaPreuve ex={ex} />
+      </div>
+
+      {/* 2b — le geste */}
+      <div>
+        <p className={`${ETIQUETTE} mb-2.5`}>Le geste</p>
+        <dl className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+          <Chiffre dt="Zone posée" dd={zoneLisible} />
+          <Chiffre dt="Passage visé" dd={cibleLisible} />
+          <Chiffre dt="Rapport" dd={ex.foisLaCible !== null ? `${ex.foisLaCible} fois le passage` : '—'} />
+          <Chiffre
+            dt="La barre"
+            dd={<>{Math.round(ex.barre.part * 100)} % et {ex.barre.fois} fois{franchie && <> · <b className="text-retard">franchie</b></>}</>}
+          />
+          <Chiffre dt="Confirmation" dd={ex.zone ? (ex.zoneConfirmee ? 'confirmée par l’élève' : 'sans confirmation') : '—'} />
+          <Chiffre dt="Crédence" dd={ex.credence !== null ? `${ex.credence} %` : 'non déclarée'} />
+        </dl>
+        {ex.chrono.length > 0 && (
+          <ol className="mt-3 ml-1.5 border-l-2 border-puce font-ui text-[13px]">
+            {ex.chrono.map((c, i) => {
+              const ecart = i > 0 ? ecartLisible(ex.chrono[i - 1].at, c.at) : null
+              return (
+                <li key={i} className="relative pl-3.5 py-1 flex flex-wrap items-baseline gap-x-2.5 gap-y-0.5">
+                  <span aria-hidden className="absolute -left-[5px] top-[0.65rem] w-2 h-2 rounded-full bg-surface border-2 border-pigment" />
+                  <span className="tabular-nums text-encre-douce font-medium shrink-0">
+                    {formatInstant(c.at, tz, { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
+                  </span>
+                  <span className="text-encre">{c.quoi}</span>
+                  {ecart && <span className="text-muet tabular-nums">{ecart}</span>}
+                </li>
+              )
+            })}
+          </ol>
+        )}
+        <p className="font-ui text-[11px] text-muet mt-2 flex flex-wrap gap-x-3 gap-y-0.5">
+          {ex.chrono.length > 1 && ecartLisible(ex.chrono[0].at, ex.chrono[ex.chrono.length - 1].at) && (
+            <span>{ecartLisible(ex.chrono[0].at, ex.chrono[ex.chrono.length - 1].at)!.replace(/^\+/, '')} du premier au dernier instant</span>
+          )}
+          {ex.dureeTaguee && <span>durée taguée « {ex.dureeTaguee} »</span>}
+          {ex.poses.length > 1 && <span>{ex.poses.length} poses de zone</span>}
+        </p>
+      </div>
+
+      {/* 2c — ce que l'élève a déclaré */}
+      {(ex.restitution || ex.confiance || ex.conditions || ex.collagesBloques > 0) && (
+        <dl className="grid grid-cols-[minmax(7rem,9rem)_1fr] gap-x-3 gap-y-1.5 font-ui text-[13px]">
+          {ex.restitution && <><dt className="text-muet-clair uppercase text-[10px] tracking-[0.06em] pt-0.5">Restitution à chaud</dt><dd className="font-corps text-[15px] text-encre-douce italic">« {ex.restitution} »</dd></>}
+          {ex.confiance && <><dt className="text-muet-clair uppercase text-[10px] tracking-[0.06em] pt-0.5">Confiance déclarée</dt><dd className="text-encre">{ex.confiance}</dd></>}
+          {ex.conditions && <><dt className="text-muet-clair uppercase text-[10px] tracking-[0.06em] pt-0.5">Conditions</dt><dd className="text-encre">« {ex.conditions} »</dd></>}
+          {ex.collagesBloques > 0 && <><dt className="text-muet-clair uppercase text-[10px] tracking-[0.06em] pt-0.5">Collages bloqués</dt><dd className="text-retard">{ex.collagesBloques}</dd></>}
+        </dl>
+      )}
+    </>
+  )
+}
+
+/** Le texte de l'élève, aligné mot à mot sur le matériau : ce qu'il a ajouté ressort. */
+function TexteDiffe({ reference, texte }: { reference: string; texte: string }) {
+  const parts = diffDesMots(reference, texte)
+  return (
+    <>
+      {parts.map((p, i) =>
+        p.sorte === 'ajout'
+          ? <ins key={i} className="no-underline bg-ok-teinte text-ok font-semibold rounded-[2px] px-0.5">{p.texte}</ins>
+          : p.sorte === 'retrait'
+            ? <del key={i} className="text-retard opacity-80 mx-0.5">{p.texte}</del>
+            : <span key={i}>{p.texte}</span>,
       )}
     </>
   )
@@ -120,6 +273,9 @@ export default function PanneauPreuve({
       </div>
 
       <div className="px-4 sm:px-5 py-4 space-y-4">
+        {/* 2 bis — l'exercice tel que l'élève l'a vu (module `exercices` seul, 01/09) */}
+        {preuve.exercice && <BlocExercice ex={preuve.exercice} tz={tz} />}
+
         {/* 3 — LA PREUVE */}
         <div>
           <p className="font-ui text-[11px] uppercase tracking-[0.08em] text-muet mb-2.5">La preuve</p>
@@ -174,14 +330,25 @@ export default function PanneauPreuve({
 
               {/* Retranscription */}
               <div>
-                <p className="font-ui text-[11px] text-encre-douce mb-1.5">
-                  {preuve.saisieClavier ? 'Texte saisi' : 'Retranscription'}
-                </p>
+                <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 mb-1.5">
+                  <p className="font-ui text-[11px] text-encre-douce">
+                    {preuve.saisieClavier ? 'Texte saisi' : 'Retranscription'}
+                  </p>
+                  {preuve.exercice?.materiau && preuve.texte && (
+                    <p className="font-ui text-[11px] text-muet flex flex-wrap gap-x-3">
+                      <span><ins className="no-underline bg-ok-teinte text-ok font-semibold rounded-[2px] px-0.5">ajouté</ins> au matériau</span>
+                      <span><del className="text-retard opacity-80">mot du matériau</del> absent</span>
+                    </p>
+                  )}
+                </div>
                 <div className={`rounded-lg border border-bordure bg-parchemin px-3.5 py-3 ${preuve.saisieClavier ? 'min-h-44' : 'h-44 overflow-y-auto'}`}>
                   {preuve.texte ? (
                     <>
                       <p className="font-corps text-[15px] text-encre-douce leading-relaxed whitespace-pre-line">
-                        <TexteSurligne texte={preuve.texte} surligner={preuve.surligner} source={s.source} />
+                        {preuve.exercice?.materiau
+                          /* ⭐ 01/09 — aligné sur le matériau : ce que l'élève a AJOUTÉ ressort. */
+                          ? <TexteDiffe reference={preuve.exercice.materiau} texte={preuve.texte} />
+                          : <TexteSurligne texte={preuve.texte} surligner={preuve.surligner} source={s.source} />}
                       </p>
                       <p className="font-mono text-[11px] text-muet mt-3">— {preuve.meta.nbCaracteres} caractères utiles —</p>
                     </>

@@ -77,6 +77,13 @@ export interface VerdictServi {
    * professeur confirme d'un coup d'œil. `null` = pas encore déclarée.
    */
   credence: number | null
+  /**
+   * ⭐ 01/09/2026 — L'ÉLÈVE A-T-IL CONFIRMÉ SA ZONE À LA SAISIE ? Depuis la
+   * question « tu as surligné presque tout le texte… », une zone qui passe la
+   * part du ratissage n'entre en base que confirmée. `false` ne peut donc venir
+   * que d'une pose antérieure à la question — et le motif le dit.
+   */
+  confirmee: boolean
 }
 
 /**
@@ -142,6 +149,7 @@ export async function leVerdictDeLaZone(
       partMateriau: Math.round((100 * large) / contenu.length),
       foisLaCible: Math.round((10 * large) / (cible[1] - cible[0])) / 10,
       credence: typeof entree?.pourcentage === 'number' ? entree.pourcentage : null,
+      confirmee: entree?.zone_confirmee === true,
     }
   }
   return null

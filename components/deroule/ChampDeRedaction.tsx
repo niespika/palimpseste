@@ -48,7 +48,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { blocs } from '@/utils/passation/transcription-calcul'
 import {
-  nouvelleTelemetrie, accumuler, fusionner, type EvenementDeSaisie,
+  nouvelleTelemetrie, accumuler, type EvenementDeSaisie,
 } from '@/utils/deroule/telemetrie'
 import type { TelemetrieSaisie } from '@/utils/deroule/types'
 import { actionCollageBloque } from '@/app/deroule/actions'
@@ -69,11 +69,18 @@ const AUTO_MS = 15_000
  * @param aide la mention du pied, à gauche du compte de signes.
  */
 export function ChampDeRedaction({
-  depotId, valeurInitiale, lectureSeule, rows = 20,
+  depotId, valeurInitiale, telemetrieInitiale = null, lectureSeule, rows = 20,
   onEnregistrer, onRemettre, libelleRemise, avantDeRendre = null, pied = null,
 }: {
   depotId: string
   valeurInitiale: string
+  /**
+   * ⭐ 01/09 — LE RELEVÉ DÉJÀ EN BASE pour cette version. Le champ s'en sème et
+   * porte ensuite le relevé CUMULÉ ; la base garde le plus avancé des deux
+   * (`leReleveLePlusAvance`). Avant : un delta par envoi, remis à zéro, et la
+   * base écrasée par le dernier — vide dans 15 dépôts sur 16 en production.
+   */
+  telemetrieInitiale?: TelemetrieSaisie | null
   lectureSeule: boolean
   rows?: number
   onEnregistrer: (texte: string, t: TelemetrieSaisie) => Promise<void>
@@ -91,9 +98,17 @@ export function ChampDeRedaction({
   const [enregistreA, setEnregistreA] = useState<string | null>(null)
 
   // La télémétrie s'accumule en `ref` : elle ne doit JAMAIS provoquer un rendu.
-  const releve = useRef<TelemetrieSaisie>(nouvelleTelemetrie())
+  // ⭐ Semée du relevé de la base, et jamais remise à zéro ensuite : chaque envoi
+  //    porte le CUMUL, et la base garde le plus avancé (`leReleveLePlusAvance`).
+  const releve = useRef<TelemetrieSaisie>(telemetrieInitiale ?? nouvelleTelemetrie())
+  // ⚠️ Un relevé semé qui porte déjà des sessions vient d'une page PRÉCÉDENTE :
+  //    la première frappe d'ici est une REPRISE, et elle doit compter une
+  //    session de plus. `instant: 0` dit à `accumuler` que la dernière frappe
+  //    remonte à très loin — l'intervalle passe le seuil de pause, sans ajouter
+  //    une milliseconde de temps actif.
   const dernier = useRef<{ longueur: number; instant: number | null }>(
-    { longueur: valeurInitiale.length, instant: null })
+    { longueur: valeurInitiale.length,
+      instant: telemetrieInitiale && telemetrieInitiale.sessions > 0 ? 0 : null })
   const sale = useRef(false)
 
   const nbBlocs = blocs(texte).length
@@ -136,16 +151,13 @@ export function ChampDeRedaction({
     const id = setInterval(() => {
       if (!sale.current) return
       sale.current = false
-      const t = releve.current
-      releve.current = nouvelleTelemetrie()
-      void onEnregistrer(texte, t)
+      // ⭐ On envoie le CUMUL, sans remettre le relevé à zéro : un envoi perdu
+      //    n'a rien à rattraper, le suivant porte tout. Et un envoi rejoué ne
+      //    compte rien deux fois, la base ne garde que le plus avancé.
+      void onEnregistrer(texte, releve.current)
         .then(() => setEnregistreA(
           new Date().toLocaleTimeString('fr-CA', { hour: '2-digit', minute: '2-digit' })))
-        .catch(() => {
-          // Best-effort : on rend la télémétrie au relevé pour ne pas la perdre.
-          releve.current = fusionner(releve.current, t)
-          sale.current = true
-        })
+        .catch(() => { sale.current = true })
     }, AUTO_MS)
     return () => clearInterval(id)
   }, [texte, lectureSeule, onEnregistrer])
@@ -156,7 +168,6 @@ export function ChampDeRedaction({
     setMessage(null)
     try {
       await onRemettre(texte, releve.current)
-      releve.current = nouvelleTelemetrie()
       sale.current = false
     } catch (e) {
       setMessage(e instanceof Error ? e.message : 'La remise a échoué.')
