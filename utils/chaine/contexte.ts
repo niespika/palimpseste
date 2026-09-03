@@ -94,6 +94,13 @@ export interface ContexteDepot {
   /** La production mesurée : le texte saisi, ou la transcription CORRIGÉE (`02-` §6.D). */
   productionV1: string | null
   productionVf: string | null
+  /**
+   * ⭐ 02/09 — d'où vient la production, et à quel point la machine l'a lue.
+   * `transcrite` : la production EST la transcription (aucun texte saisi) ;
+   * `confiance` : `confiance_ocr_*`, l'accord des deux passes, `null` si une seule.
+   */
+  origineV1: { transcrite: boolean; confiance: number | null }
+  origineVf: { transcrite: boolean; confiance: number | null }
   /** `07-` §1.3 — le seul endroit où la mécanique touche la lettre (piège 53). */
   exceptionOrthographe: boolean
   statutsRecette: Record<Competence, StatutRecette>
@@ -296,6 +303,7 @@ interface LigneDepot {
   id: string; eleve_id: string; exercice_id: string; statut: string
   texte_v1: string | null; transcription_v1: string | null
   texte_vf: string | null; transcription_vf: string | null
+  confiance_ocr_v1: number | null; confiance_ocr_vf: number | null
   confiance_declaree: Record<string, string> | null
   routeur_decision_id: string | null
 }
@@ -323,7 +331,7 @@ export async function lireContexte(admin: Admin, depotId: string): Promise<Conte
   const { data: depotBrut, error: eDepot } = await admin
     .from('exercices_depots')
     .select('id, eleve_id, exercice_id, statut, texte_v1, transcription_v1, texte_vf, '
-      + 'transcription_vf, confiance_declaree, routeur_decision_id')
+      + 'transcription_vf, confiance_ocr_v1, confiance_ocr_vf, confiance_declaree, routeur_decision_id')
     .eq('id', depotId).maybeSingle()
   if (eDepot) throw new DepotIllisible(`dépôt ${depotId} : ${eDepot.code} ${eDepot.message}`)
   if (!depotBrut) throw new DepotIllisible(`dépôt ${depotId} : ${NUL}`)
@@ -630,6 +638,10 @@ export async function lireContexte(admin: Admin, depotId: string): Promise<Conte
     consigne: enTexte(exercice.consigne_instanciee),
     productionV1: production(depot.texte_v1, depot.transcription_v1),
     productionVf: production(depot.texte_vf, depot.transcription_vf),
+    origineV1: { transcrite: production(depot.texte_v1, null) == null && production(null, depot.transcription_v1) != null,
+      confiance: depot.confiance_ocr_v1 },
+    origineVf: { transcrite: production(depot.texte_vf, null) == null && production(null, depot.transcription_vf) != null,
+      confiance: depot.confiance_ocr_vf },
     exceptionOrthographe: !!profil?.exception_orthographe,
     statutsRecette,
     correspondance,

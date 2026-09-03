@@ -33,6 +33,13 @@ export interface ConfigChaine extends ConfigModeles {
   latenceCibleMs: number
   /** Le bail d'un job : au-delà, il est réputé expiré et se reprend (`07-` §1.1). */
   bailMs: number
+  /**
+   * ⭐ 02/09 — sous ce seuil, la chaîne ALERTE : « la mesure et les citations
+   * portent sur une reconstruction de la copie ». Mesuré en production : 7
+   * transcriptions sur 71 sous 0,80, la pire à 0,25 — et la chaîne les jugeait
+   * sans le dire. Ce n'est pas une porte : rien n'est bloqué.
+   */
+  seuilConfianceOcr: number
 }
 
 const DEFAUTS: ConfigChaine = {
@@ -70,6 +77,7 @@ const DEFAUTS: ConfigChaine = {
   plafondAppelsParDepot: 40,
   latenceCibleMs: 3 * 60 * 1000,
   bailMs: 5 * 60 * 1000,
+  seuilConfianceOcr: 0.8,
 }
 
 function nombre(nom: string, defaut: number): number {
@@ -93,6 +101,7 @@ export function lireConfig(): ConfigChaine {
     plafondAppelsParDepot: nombre('CHAINE_PLAFOND_APPELS_PAR_DEPOT', DEFAUTS.plafondAppelsParDepot),
     latenceCibleMs: nombre('CHAINE_LATENCE_CIBLE_MS', DEFAUTS.latenceCibleMs),
     bailMs: nombre('CHAINE_BAIL_MS', DEFAUTS.bailMs),
+    seuilConfianceOcr: nombre('CHAINE_SEUIL_CONFIANCE_OCR', DEFAUTS.seuilConfianceOcr),
   }
 }
 
