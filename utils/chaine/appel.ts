@@ -201,7 +201,9 @@ function rappelDeSchema(motifs: readonly string[], forme: Forme): string {
   //    Elle rappelle donc le format DU PROMPT, sans en réécrire une ligne.
   const consigne = forme.type === 'texte_brut'
     ? 'Réponds de nouveau en suivant EXACTEMENT la section « Format de réponse » ci-dessus.'
-    : 'Rends UNIQUEMENT le JSON demandé, sans texte autour, sans clé supplémentaire.'
+    : forme.type === 'objet_ouvert'
+      ? 'Rends UNIQUEMENT le JSON demandé, sans texte autour, avec TOUTES les clés du format déclaré.'
+      : 'Rends UNIQUEMENT le JSON demandé, sans texte autour, sans clé supplémentaire.'
   return [
     'TA RÉPONSE PRÉCÉDENTE A ÉTÉ REJETÉE — elle ne respecte pas le format demandé :',
     motifs[motifs.length - 1],

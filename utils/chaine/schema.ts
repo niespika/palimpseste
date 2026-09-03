@@ -31,6 +31,16 @@ export type Forme =
    *    entière le jour où une compétence s'ouvre.
    */
   | { type: 'objet_libre' }
+  /**
+   * ⭐ 02/09/2026 — LA FORME QUI MANQUAIT ENTRE LES DEUX. `objet` refuse toute clé
+   * inconnue — et « la garde des clés inconnues REFUSAIT TOUTE SORTIE DE P2 »
+   * le jour où une compétence s'est ouverte ; `objet_libre` n'exige rien — et un
+   * P1 qui rend `{}` passait, puis « aucune unité → Absent » écrivait une lettre.
+   * `objet_ouvert` EXIGE ses champs et TOLÈRE le reste : la forme d'une fiche
+   * fait foi à la fiche, mais son squelette a des clés sans lesquelles rien ne
+   * se lit, et celles-là se réclament — et se relancent.
+   */
+  | { type: 'objet_ouvert'; champs: Record<string, Forme>; optionnels?: readonly string[] }
   | { type: 'ou'; formes: readonly Forme[] }
   /**
    * C4-L4 — une sortie qui n'est PAS du JSON, et qui n'a pas à l'être.
@@ -115,6 +125,21 @@ function valide(v: unknown, forme: Forme, chemin: string, refus: Refus[]): void 
         if (!Object.hasOwn(forme.champs, cle)) {
           refus.push({ chemin: joindre(chemin, cle), motif: 'clé inconnue du schéma' })
         }
+      }
+      return
+    }
+    case 'objet_ouvert': {
+      if (v === null || typeof v !== 'object' || Array.isArray(v)) {
+        refus.push({ chemin, motif: `attendu un objet, reçu ${typeName(v)}` }); return
+      }
+      const obj = v as Record<string, unknown>
+      const optionnels = new Set(forme.optionnels ?? [])
+      for (const [cle, sous] of Object.entries(forme.champs)) {
+        if (!Object.hasOwn(obj, cle) || obj[cle] === undefined) {
+          if (!optionnels.has(cle)) refus.push({ chemin: joindre(chemin, cle), motif: 'champ manquant' })
+          continue
+        }
+        valide(obj[cle], sous, joindre(chemin, cle), refus)
       }
       return
     }

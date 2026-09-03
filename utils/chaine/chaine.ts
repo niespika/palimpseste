@@ -27,6 +27,7 @@ import { lireConfig, type ConfigChaine } from './config'
 import { lireContexte, type ContexteDepot } from './contexte'
 import { appelsDuDepot, controlerLaFacture } from './couts-serveur'
 import { controlerFideliteP1, motifDeFidelite } from './fidelite-p1'
+import { formeMinimale, releveVide } from './formes-minimales'
 import { appelsDeLErreur, depotAAtteintSonPlafond } from './couts'
 import {
   competencesOuvertes, etatCompetence, modeNonCouvert, refusFormeCode2, valeursDesParametres,
@@ -601,7 +602,7 @@ interface ResultatCompetence {
 function preparerLeJugement(
   branchement: BranchementCompetence, instrument: InstrumentCompetence, ctx: ContexteBranchement,
 ): { refus: string; gabaritP2?: undefined; slotDocument?: undefined; slotsPreP2?: undefined }
-  | { refus: null; gabaritP2: string; slotDocument: string; slotsPreP2: Record<string, string> } {
+  | { refus: null; gabaritP2: string; tetePrompt: string; slotDocument: string; slotsPreP2: Record<string, string> } {
   const specP2 = branchement.jugement(ctx)
   const gabaritP2 = instrument.prompts[specP2.tetePrompt]
   if (!gabaritP2) {
@@ -623,7 +624,7 @@ function preparerLeJugement(
     }
     slotsPreP2[nom] = valeur
   }
-  return { refus: null, gabaritP2, slotDocument, slotsPreP2 }
+  return { refus: null, gabaritP2, tetePrompt: specP2.tetePrompt, slotDocument, slotsPreP2 }
 }
 
 async function chaineDUneCompetence(
@@ -755,15 +756,20 @@ async function chaineDUneCompetence(
       prefixeCacheable: tete,
       message: messageDuGabarit(queue, slots, 'Rends le relevé au format déclaré ci-dessus.'),
       // Le relevé d'une fiche a une forme qui FAIT FOI À LA FICHE (`03-` §1) :
-      // on exige un objet, on ne prétend pas en connaître les clés. `champs: {}`
-      // aurait voulu dire « l'objet VIDE, et rien d'autre » — et refusé tout.
-      forme: { type: 'objet_libre' },
+      // on n'en connaît pas toutes les clés. ⭐ 02/09 — mais on en EXIGE celles
+      // sans lesquelles rien ne se lit (`formes-minimales.ts`, `objet_ouvert`) :
+      // `{}` n'est plus une sortie valide qui finit en lettre E.
+      forme: formeMinimale(competence, spec.tetePrompt),
       attribution: { module: MODULE_COUT, eleveId: ctx.eleveId, classeId: ctx.classeId,
         depotId: ctx.depotId, competence, version },
     })
     appels += r.appels
     artefactsP1[spec.cle] = r.valeur
     sorties[spec.tetePrompt.toLowerCase()] = r.valeur
+    // ⚠️ Alerte, pas refus : « aucune unité → Absent » écrit E, et le professeur
+    //    doit savoir si c'est l'élève ou le modèle qui n'a rien fait.
+    const vide = releveVide(competence, spec.tetePrompt, r.valeur, production)
+    if (vide) alertes.push(vide)
   }
   const ctxEnrichi: ContexteBranchement = { ...ctxBranchement, prives, sorties }
 
@@ -811,6 +817,7 @@ async function chaineDUneCompetence(
       alerte: p2.refus }
   }
   const { gabaritP2 } = p2
+  const specP2 = { tetePrompt: p2.tetePrompt }
   const slotsP2: Record<string, string> = {
     [p2.slotDocument]: JSON.stringify(prepare.document_p2, null, 2),
     ...p2.slotsPreP2,
@@ -833,10 +840,11 @@ async function chaineDUneCompetence(
     //    chaîne entière LE JOUR OÙ UNE COMPÉTENCE S'OUVRE. » Ce jour est arrivé.
     //
     //    Le jugement d'une fiche a une forme QUI FAIT FOI À LA FICHE (`03-` §1),
-    //    exactement comme son relevé : on exige un objet, on ne prétend pas en
-    //    connaître les clés. La validation STRICTE du `01-` §12 est intacte —
-    //    elle porte sur la FORME, et le branchement, lui, refuse le fond.
-    forme: { type: 'objet_libre' },
+    //    exactement comme son relevé : on ne prétend pas en connaître toutes les
+    //    clés. ⭐ 02/09 — on EXIGE celles que `code2` lit en premier (`crible`,
+    //    `niveau`…), le reste passe (`objet_ouvert`). Un juge muet — « P2 sans
+    //    crible = acquiescement » en Argumentation — est rejeté et relancé.
+    forme: formeMinimale(competence, specP2.tetePrompt),
     attribution: { module: MODULE_COUT, eleveId: ctx.eleveId, classeId: ctx.classeId,
       depotId: ctx.depotId, competence, version },
   })

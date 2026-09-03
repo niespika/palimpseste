@@ -68,3 +68,29 @@ test('une liste borne son nombre d\'éléments dans les deux sens', () => {
   assert.equal(valider(['a'], f).ok, true)
   assert.equal(valider(['a', 'b', 'c'], f).ok, false)
 })
+
+// ── objet_ouvert — 02/09 : les clés exigées se réclament, le reste passe ──────
+
+const OUVERT: Forme = {
+  type: 'objet_ouvert',
+  champs: { unites: { type: 'liste', de: { type: 'objet_libre' } }, note: { type: 'texte' } },
+  optionnels: ['note'],
+}
+
+test('objet_ouvert : un objet vide est REFUSÉ — c\'est le trou que `objet_libre` laissait', () => {
+  const v = valider({}, OUVERT)
+  assert.equal(v.ok, false)
+  if (!v.ok) assert.deepEqual(v.refus.map((r) => r.chemin), ['unites'])
+})
+
+test('objet_ouvert : les clés inconnues sont tolérées, les clés exigées sont typées', () => {
+  assert.equal(valider({ unites: [], these_generale: 'x', crible: { a: 1 } }, OUVERT).ok, true)
+  const v = valider({ unites: 'pas une liste' }, OUVERT)
+  assert.equal(v.ok, false)
+  if (!v.ok) assert.match(v.refus[0]!.motif, /attendu une liste/)
+})
+
+test('objet_ouvert : une liste ou un nul ne sont pas des objets', () => {
+  assert.equal(valider([], OUVERT).ok, false)
+  assert.equal(valider(null, OUVERT).ok, false)
+})
