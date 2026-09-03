@@ -12,6 +12,12 @@
       "name": "palimpseste-attache",
       "port": 3000,
       "url": "http://localhost:3000"
+    },
+    {
+      "name": "palimpseste-etayage",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["run", "dev", "--", "--port", "3100"],
+      "port": 3100
     }
   ]
 }

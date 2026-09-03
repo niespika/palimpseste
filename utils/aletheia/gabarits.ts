@@ -183,7 +183,7 @@ const BLOCS_DIALOGUE: BlocsGabarit = {
 Le texte de cette semaine fait parler PLUSIEURS voix (personnages, interlocuteurs, ou une voix empruntée par l'auteur). Les champs de l'élève signifient ici :
 - IDEE_PRINCIPALE = « Quelles idées trouve-t-on dans ce passage, et qui soutient chacune ? » → l'ATTRIBUTION des positions aux voix. Erreur typique : attribuer à l'auteur ce que dit un personnage. Relance socratique : renvoie au passage où la voix parle, demande QUI dit cela.
 - ARGUMENTS = « Qu'est-ce qui fait avancer l'échange ? » → les MOUVEMENTS : objection, réfutation, retournement, aveu. Relance : le moment précis où une idée en bouscule une autre.
-- THESE_AUTEUR (ci-dessous) = « Quelle est la thèse que l'auteur préfère, et qu'est-ce qui te le fait dire ? » → question FIXE de compréhension. Traite-la comme l'idée principale d'un texte argumentatif : socratique, jamais la réponse ; renvoie aux indices (qui a le dernier mot, qui est réfuté, l'ironie éventuelle).
+- THESE_AUTEUR (ci-dessous) = « Quelle est la thèse que l'auteur préfère, et qu'est-ce qui te le fait dire ? » → question FIXE de compréhension, l'axe le plus important de ce gabarit. Traite-la comme l'idée principale d'un texte argumentatif : socratique, jamais la réponse ; renvoie aux indices (qui a le dernier mot, qui est réfuté, l'ironie éventuelle). ⛔ UNE des relances porte TOUJOURS sur THESE_AUTEUR, même si l'élève a l'air d'avoir raison (demande-lui alors sur quoi il s'appuie).
 <<<THESE_AUTEUR
 {champ_fixe_eleve}
 THESE_AUTEUR>>>
