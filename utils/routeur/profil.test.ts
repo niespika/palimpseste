@@ -105,9 +105,9 @@ test('la fenêtre d\'évidence garde LES QUATRE DERNIÈRES, dans l\'ordre', () =
 
 test('l\'historique se LIT sur les décisions, dans l\'ordre chronologique', () => {
   const h = historiqueDesCibles([
-    { cibleRetenue: 'structure', cycleLundi: '2026-09-07', createdAt: '2026-09-07T09:00:00Z' },
-    { cibleRetenue: null, cycleLundi: '2026-09-07', createdAt: '2026-09-07T10:00:00Z' },
-    { cibleRetenue: 'expression', cycleLundi: '2026-09-14', createdAt: '2026-09-14T09:00:00Z' },
+    { cibleRetenue: 'structure', cycleLundi: '2026-09-07', createdAt: '2026-09-07T09:00:00Z', bonus: false },
+    { cibleRetenue: null, cycleLundi: '2026-09-07', createdAt: '2026-09-07T10:00:00Z', bonus: false },
+    { cibleRetenue: 'expression', cycleLundi: '2026-09-14', createdAt: '2026-09-14T09:00:00Z', bonus: false },
   ])
   assert.deepEqual(h, ['structure', 'expression'], 'les décisions sans cible ne comptent pas')
 })

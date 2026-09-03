@@ -3,6 +3,7 @@
   "crons": [
     { "path": "/api/scriptorium/synthese-hebdo", "schedule": "0 9 * * 1" },
     { "path": "/api/assiduite/hebdo", "schedule": "0 18 * * 1" },
+    { "path": "/api/assiduite/hebdo", "schedule": "20 18 * * 1" },
     { "path": "/api/chaine", "schedule": "* * * * *" }
   ]
 }

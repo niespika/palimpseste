@@ -83,11 +83,26 @@ export const maxDuration = 300
 // ⛔ Inverser les deux perdrait les minutes en silence : l'`update` du routeur
 //    ne trouverait aucune ligne. ⛔ Et le routeur n'en POSE jamais aucune :
 //    « il remplit la ligne qu'il trouve, il n'en ouvre pas » (`07-` §1.5).
+// ⭐⭐ LA BORNE D'HORLOGE — 02/09/2026, après la coupure du 31/08.
+//    Le passage de 18:00 a servi 59 élèves sur 62 : la fonction a atteint ses
+//    300 s entre deux élèves, Vercel l'a tuée, et RIEN ne l'a dit — ni décision,
+//    ni incident, ni ligne « non servi ». Les trois oubliées étaient les trois
+//    DERNIÈRES de l'ordre de parcours, et l'auraient été chaque lundi.
+//    Désormais le routeur reçoit un budget : `maxDuration` moins une marge, moins
+//    ce que la collecte a déjà coûté. Il s'arrête AVANT la plateforme, rend la
+//    liste des élèves non commencés (`coupure`, `nonServis`), et l'écrit aux
+//    journaux. ⭐ Et le cron passe DEUX FOIS (`vercel.json`) : le second passage
+//    ne sert que ceux que le premier n'a pas atteints — la collecte est
+//    inoffensive au second tour (« elle n'en crée que des manquantes »), et le
+//    routeur saute tout élève qui porte déjà sa semaine (`dejaServis`).
+const MARGE_MS = 20_000
+
 export async function GET(req: Request): Promise<Response> {
   const secret = process.env.CRON_SECRET
   if (!secret || req.headers.get('authorization') !== `Bearer ${secret}`) {
     return Response.json({ error: 'Non autorisé.' }, { status: 401 })
   }
+  const depart = Date.now()
   const admin = createAdminClient()
   const fuseau = await lireFuseau()
   const aujourdHui = jourDansFuseau(new Date().toISOString(), fuseau)
@@ -96,8 +111,19 @@ export async function GET(req: Request): Promise<Response> {
   //    coût est IRRÉVERSIBLE — « une semaine non comptée ne se rattrape pas ».
   let routeur: unknown
   try {
-    routeur = await poserLesSemainesDuRouteur(admin, fuseau, aujourdHui)
+    routeur = await poserLesSemainesDuRouteur(admin, fuseau, aujourdHui, {
+      horloge: { depart, budgetMs: maxDuration * 1000 - MARGE_MS },
+    })
+    // ⭐ LE BILAN SE LIT AUX JOURNAUX, pas seulement dans la réponse que personne
+    //    n'ouvre : un lundi, on cherche « [hebdo] » et on lit servis/nonServis.
+    const b = routeur as { elevesAttendus: number; elevesServis: number; dejaServis: number
+      nonServis: unknown[]; coupure: unknown; dureeMs: number; erreurs: string[] }
+    console.log(`[hebdo] routeur — attendus=${b.elevesAttendus} servis=${b.elevesServis} `
+      + `dejaServis=${b.dejaServis} nonServis=${b.nonServis.length} `
+      + `coupure=${JSON.stringify(b.coupure)} durée=${Math.round(b.dureeMs / 1000)} s `
+      + `erreurs=${b.erreurs.length}`)
   } catch (e) {
+    console.error(`[hebdo] routeur en échec — ${(e as Error).message}`)
     routeur = { erreur: (e as Error).message,
       note: 'le routeur a échoué ; la collecte d\'assiduité, elle, est passée.' }
   }

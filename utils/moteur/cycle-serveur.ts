@@ -64,6 +64,7 @@ import {
 import {
   chargeDeMinutes, grouperParFormeDeCle, minutesAssignees, verifierLaChargeDeMinutes,
 } from './minutes'
+import { enFileBornee, type Horloge } from './cadence'
 
 type Admin = ReturnType<typeof createAdminClient>
 
@@ -119,6 +120,21 @@ export interface BilanDuRouteur {
    * idempotente, et c'est ce qui la rend rejouable.
    */
   cloture: BilanDeLaCloture | null
+  /**
+   * ⭐ Les élèves qui portaient DÉJÀ une semaine sur ce cycle, et qu'on a donc
+   * SAUTÉS. C'est le compteur de l'idempotence de la pose : un second passage
+   * le même lundi (rattrapage, cron rejoué) n'en pose pas une seconde.
+   */
+  dejaServis: number
+  /**
+   * ⛔⛔ LA COUPURE, DITE. `null` quand tout le monde est passé. Sinon : combien
+   * d'élèves l'horloge n'a pas laissé commencer, et après combien de ms. Leurs
+   * identifiants sont dans `nonServis` (motif `horloge : …`). *Mesuré le
+   * 31/08/2026 : 3 élèves sur 62, et rien ne l'avait dit — voir `cadence.ts`.*
+   */
+  coupure: { restants: number; apresMs: number; budgetMs: number } | null
+  /** La durée de la pose (ms), pour que la marge se LISE d'un lundi à l'autre. */
+  dureeMs: number
   erreurs: string[]
 }
 
@@ -132,7 +148,8 @@ function bilanVide(
     elevesAttendus: 0, elevesServis: 0, nonServis: [], sansCibleCiblable: 0, viviersVides: 0,
     exercicesPoses: 0, decisionsEcrites: 0, depotsPoses: 0, sondesPosees: 0,
     ecartsAuPlancher: [], ecartsDuVivier: {}, minutesRemplies: 0, minutesSansLigne: 0,
-    budgetsRefuses: [], coldStart: null, cloture: null, erreurs: [],
+    budgetsRefuses: [], coldStart: null, cloture: null, dejaServis: 0, coupure: null,
+    dureeMs: 0, erreurs: [],
   }
 }
 
@@ -150,6 +167,15 @@ export interface OptionsDuRouteur {
   forcerHorsAllumage?: boolean
   /** L'échéance d'un dépôt posé, en jours. Défaut : la fin de la semaine. */
   joursDEcheance?: number
+  /**
+   * ⭐⭐ LA BORNE D'HORLOGE — `cadence.ts`. La route la calcule depuis son
+   * `maxDuration` et le temps que la collecte a déjà pris ; sans elle (recette,
+   * script), la pose va au bout. ⛔ Sans borne en production, Vercel coupe EN
+   * VOL et sans trace — c'est ce qui est arrivé le 31/08/2026.
+   */
+  horloge?: Horloge
+  /** Combien d'élèves de front. Défaut : 4 — le coût est le réseau, pas le calcul. */
+  concurrence?: number
 }
 
 // ════════════════════════════════════════════════════════════════════════════
@@ -309,48 +335,87 @@ export async function poserLesSemainesDuRouteur(
     }
   }
 
-  // ── ÉLÈVE PAR ÉLÈVE, ET JAMAIS PAR CLASSE ────────────────────────────────
-  // « La voie du professeur assigne à la classe entière, et c'est SA définition. »
-  for (const eleveId of eleves) {
-    try {
-      const pose = await poserLaSemaineDUnEleve(admin, {
-        eleveId, cycleLundi, segment: s.segment, fuseau, maintenant, echeance,
-        decoupe, modesAdmis: doctrine.modesAdmis,
-        instances,
-        positions: positions.parEleve.get(eleveId) ?? new Map(),
-        dejaDeposees: dejaDeposees.parEleve.get(eleveId) ?? new Set(),
-        inscriptions: inscriptionsParEleve.get(eleveId) ?? [],
-        coursVus: unionDesCoursVus(coursVus.parClasse, classesDesEleves.get(eleveId) ?? []),
-      })
-      if (pose.motifNonServi) {
-        bilan.nonServis.push({ eleveId, motif: pose.motifNonServi })
-      } else {
-        bilan.elevesServis += 1
-      }
-      bilan.exercicesPoses += pose.exercicesPoses
-      bilan.decisionsEcrites += pose.decisionsEcrites
-      bilan.depotsPoses += pose.depotsPoses
-      bilan.sondesPosees += pose.sondesPosees
-      if (pose.listeVide) bilan.sansCibleCiblable += 1
-      if (pose.vivierVide) bilan.viviersVides += 1
-      if (pose.ecart) bilan.ecartsAuPlancher.push({ eleveId, ...pose.ecart })
-      for (const e of pose.ecartsDuVivier) {
-        bilan.ecartsDuVivier[e.motif] = (bilan.ecartsDuVivier[e.motif] ?? 0) + 1
-      }
-      bilan.erreurs.push(...pose.erreurs)
-    } catch (e) {
-      // « Une lecture ratée n'est pas une base vide » : on remonte, on ne tait pas.
-      bilan.erreurs.push(`${eleveId.slice(0, 8)} : ${(e as Error).message}`)
-      bilan.nonServis.push({ eleveId, motif: `incident : ${(e as Error).message}` })
-    }
-  }
-
   // ── LES MINUTES DU CYCLE PRÉCÉDENT — sur LA LIGNE QU'ON TROUVE ───────────
+  // ⭐ AVANT LA POSE, depuis le 02/09 — et c'est l'ordre que le `07-` §2 a
+  //    toujours dit : « il remplit les minutes de cette même ligne, PUIS il pose
+  //    la semaine qui commence ». Elles vivaient APRÈS la boucle : une coupure
+  //    d'horloge les aurait perdues en silence, alors qu'elles ne dépendent en
+  //    rien de ce que la boucle pose (cycle précédent, ligne déjà là).
   const m = await remplirLesMinutes(admin, cycleDesMinutes, eleves, inscriptionsParEleve)
   bilan.minutesRemplies = m.remplies
   bilan.minutesSansLigne = m.sansLigne
   bilan.budgetsRefuses = m.budgetsRefuses
   bilan.erreurs.push(...m.erreurs)
+
+  // ── ÉLÈVE PAR ÉLÈVE, ET JAMAIS PAR CLASSE ────────────────────────────────
+  // « La voie du professeur assigne à la classe entière, et c'est SA définition. »
+  // ⭐⭐ EN FILE BORNÉE (`cadence.ts`) : quelques élèves de front, et la file
+  //    s'arrête D'ELLE-MÊME avant que la plateforme ne la coupe — ceux qu'elle
+  //    n'a pas commencés sont rendus, avec leur motif. Une pose commencée va
+  //    toujours jusqu'au bout : on ne coupe jamais entre décision et dépôt.
+  const horloge: Horloge = options.horloge ?? { depart: Date.now(), budgetMs: null }
+  const segment: Segment = s.segment
+  const file = await enFileBornee(eleves,
+    { concurrence: options.concurrence ?? 4, horloge },
+    async (eleveId): Promise<PoseDUnEleve | { incident: string }> => {
+      try {
+        return await poserLaSemaineDUnEleve(admin, {
+          eleveId, cycleLundi, segment, fuseau, maintenant, echeance,
+          decoupe, modesAdmis: doctrine.modesAdmis,
+          instances,
+          positions: positions.parEleve.get(eleveId) ?? new Map(),
+          dejaDeposees: dejaDeposees.parEleve.get(eleveId) ?? new Set(),
+          inscriptions: inscriptionsParEleve.get(eleveId) ?? [],
+          coursVus: unionDesCoursVus(coursVus.parClasse, classesDesEleves.get(eleveId) ?? []),
+        })
+      } catch (e) {
+        // « Une lecture ratée n'est pas une base vide » : on remonte, on ne tait pas.
+        return { incident: (e as Error).message }
+      }
+    })
+  for (const { item: eleveId, resultat: pose } of file.traites) {
+    if ('incident' in pose) {
+      bilan.erreurs.push(`${eleveId.slice(0, 8)} : ${pose.incident}`)
+      bilan.nonServis.push({ eleveId, motif: `incident : ${pose.incident}` })
+      continue
+    }
+    if (pose.dejaServi) {
+      bilan.dejaServis += 1
+      continue
+    }
+    if (pose.motifNonServi) {
+      bilan.nonServis.push({ eleveId, motif: pose.motifNonServi })
+    } else {
+      bilan.elevesServis += 1
+    }
+    bilan.exercicesPoses += pose.exercicesPoses
+    bilan.decisionsEcrites += pose.decisionsEcrites
+    bilan.depotsPoses += pose.depotsPoses
+    bilan.sondesPosees += pose.sondesPosees
+    if (pose.listeVide) bilan.sansCibleCiblable += 1
+    if (pose.vivierVide) bilan.viviersVides += 1
+    if (pose.ecart) bilan.ecartsAuPlancher.push({ eleveId, ...pose.ecart })
+    for (const e of pose.ecartsDuVivier) {
+      bilan.ecartsDuVivier[e.motif] = (bilan.ecartsDuVivier[e.motif] ?? 0) + 1
+    }
+    bilan.erreurs.push(...pose.erreurs)
+  }
+  bilan.dureeMs = file.dureeMs
+  if (file.restants.length > 0) {
+    // ⛔⛔ LA COUPURE SE DIT — dans le bilan ET dans les journaux de la plateforme.
+    //    Ces élèves n'ont pas de semaine ; le second passage du cron les sert
+    //    (`vercel.json`), grâce à la garde `dejaServi` qui saute les autres.
+    bilan.coupure = { restants: file.restants.length, apresMs: file.coupeApresMs ?? 0,
+      budgetMs: horloge.budgetMs ?? 0 }
+    const motif = `horloge : non commencé — la file s'est arrêtée après `
+      + `${Math.round((file.coupeApresMs ?? 0) / 1000)} s sur un budget de `
+      + `${Math.round((horloge.budgetMs ?? 0) / 1000)} s ; le passage suivant le sert.`
+    for (const eleveId of file.restants) bilan.nonServis.push({ eleveId, motif })
+    console.error(`[moteur] POSE COUPÉE PAR L'HORLOGE — cycle=${cycleLundi} `
+      + `servis=${bilan.elevesServis} restants=${file.restants.length} `
+      + `après ${Math.round((file.coupeApresMs ?? 0) / 1000)} s`,
+      { restants: file.restants })
+  }
 
   if (bilan.exercicesPoses === 0 && bilan.motif === null) {
     bilan.motif = bilan.viviersVides === bilan.elevesAttendus
@@ -415,6 +480,8 @@ export interface ContextePose {
 
 interface PoseDUnEleve {
   motifNonServi: string | null
+  /** ⭐ L'élève portait DÉJÀ une semaine sur ce cycle — rien posé, et ce n'est pas un incident. */
+  dejaServi: boolean
   listeVide: boolean
   vivierVide: boolean
   exercicesPoses: number
@@ -465,6 +532,8 @@ export interface CompositionDUnEleve {
   etats: EtatPourCiblage[]
   escalades: Awaited<ReturnType<typeof lireLesEscalades>>
   mesures: Awaited<ReturnType<typeof lireLesMesures>>
+  /** Le journal des décisions de l'élève, tel que lu — la pose y vérifie qu'elle n'a pas déjà eu lieu. */
+  decisions: Awaited<ReturnType<typeof lireLesDecisions>>
   /** Le journal du tirage, à passer tel quel à `lignesDeDecision`. */
   journal: ReturnType<typeof journalDuTirage>
 }
@@ -485,7 +554,7 @@ export async function composerPourUnEleve(
         || `non servi (${budget.motifNonServi ?? 'motif inconnu'}).`,
       vivier: { retenus: [], ecartes: [] },
       listeComplete: [], journalPriorite: null, expressionEnSecondaire: false,
-      paliers: new Map(), etats: [], escalades: new Map(), mesures: [],
+      paliers: new Map(), etats: [], escalades: new Map(), mesures: [], decisions: [],
       journal: journalDuTirage(hasard),
     }
   }
@@ -580,13 +649,14 @@ export async function composerPourUnEleve(
     etats,
     escalades,
     mesures,
+    decisions,
     journal,
   }
 }
 
 async function poserLaSemaineDUnEleve(admin: Admin, c: ContextePose): Promise<PoseDUnEleve> {
   const out: PoseDUnEleve = {
-    motifNonServi: null, listeVide: false, vivierVide: false, exercicesPoses: 0,
+    motifNonServi: null, dejaServi: false, listeVide: false, vivierVide: false, exercicesPoses: 0,
     decisionsEcrites: 0, depotsPoses: 0, sondesPosees: 0, ecart: null, ecartsDuVivier: [],
     erreurs: [],
   }
@@ -597,6 +667,15 @@ async function poserLaSemaineDUnEleve(admin: Admin, c: ContextePose): Promise<Po
   const compo = await composerPourUnEleve(admin, c)
   const { budget, vivier, listeComplete, journalPriorite, expressionEnSecondaire,
     paliers, etats, escalades, mesures, journal } = compo
+  // ⭐⭐ LA GARDE DE L'IDEMPOTENCE — 02/09. Un élève qui porte DÉJÀ une décision
+  //    IMPOSÉE sur ce cycle a eu sa semaine : on ne lui en pose pas une seconde.
+  //    C'est ce qui rend le passage hebdomadaire REJOUABLE — un second cron le
+  //    même lundi ne sert que ceux que le premier n'a pas atteints. ⚠️ Le bonus
+  //    ne compte pas : « en faire plus » n'est pas la semaine.
+  if (compo.decisions.some((d) => d.cycleLundi === c.cycleLundi && !d.bonus)) {
+    out.dejaServi = true
+    return out
+  }
   out.ecartsDuVivier = vivier.ecartes
   out.vivierVide = vivier.retenus.length === 0
   if (compo.motifNonServi || !budget.budget) {
@@ -690,25 +769,51 @@ async function persister(
   const deja = new Set(((existants ?? []) as Array<{ exercice_id: string }>)
     .map((x) => x.exercice_id))
 
-  for (const l of lignes) {
-    const { data, error } = await admin.from('routeur_decisions').insert(l).select('id').single()
-    if (error || !data) {
-      console.error(`[moteur] DÉCISION PERDUE — élève=${l.eleve_id} exercice=${l.exercice_id}`,
-        { code: error?.code, message: error?.message, details: error?.details })
-      erreurs.push(`décision ${l.exercice_id.slice(0, 8)} : ${error?.message ?? 'aucune ligne'}`)
-      continue
+  // ⭐⭐ GROUPÉ — 02/09. C'était un `insert` par décision PUIS un par dépôt :
+  //    16 allers-retours à 160-332 ms pour une semaine de 8 exercices, et c'est ce
+  //    coût, multiplié par 62 élèves, qui a fait dépasser `maxDuration` le 31/08.
+  //    Deux envois désormais : les décisions (dont on relit les `id`), puis les
+  //    dépôts qui les portent. ⚠️ Un envoi groupé est TOUT ou RIEN : s'il est
+  //    refusé, on retombe ligne à ligne, pour que la ligne fautive soit la seule
+  //    perdue — et nommée.
+  const { data: ecrites, error: eDec } = await admin.from('routeur_decisions')
+    .insert(lignes as never[]).select('id, exercice_id')
+  const idParExercice = new Map<string, string>()
+  if (eDec || !ecrites) {
+    console.error(`[moteur] DÉCISIONS GROUPÉES REFUSÉES — élève=${c.eleveId} n=${lignes.length}`,
+      { code: eDec?.code, message: eDec?.message, details: eDec?.details })
+    erreurs.push(`décisions groupées (${lignes.length}) : ${eDec?.message ?? 'aucune ligne'} — reprise ligne à ligne.`)
+    for (const l of lignes) {
+      const { data, error } = await admin.from('routeur_decisions').insert(l).select('id').single()
+      if (error || !data) {
+        console.error(`[moteur] DÉCISION PERDUE — élève=${l.eleve_id} exercice=${l.exercice_id}`,
+          { code: error?.code, message: error?.message, details: error?.details })
+        erreurs.push(`décision ${l.exercice_id.slice(0, 8)} : ${error?.message ?? 'aucune ligne'}`)
+        continue
+      }
+      idParExercice.set(l.exercice_id, (data as { id: string }).id)
     }
-    decisions += 1
+  } else {
+    for (const d of ecrites as Array<{ id: string; exercice_id: string }>) {
+      idParExercice.set(d.exercice_id, d.id)
+    }
+  }
+  decisions = idParExercice.size
+
+  const aDeposer: Array<Record<string, unknown>> = []
+  for (const l of lignes) {
+    const decisionId = idParExercice.get(l.exercice_id)
+    if (!decisionId) continue
     if (deja.has(l.exercice_id)) {
       erreurs.push(`dépôt ${l.exercice_id.slice(0, 8)} : l'élève en porte déjà un — non reposé `
         + '(`assigne_at` ne se réécrit jamais).')
       continue
     }
-    const { error: eD } = await admin.from('exercices_depots').insert({
+    aDeposer.push({
       eleve_id: c.eleveId,
       exercice_id: l.exercice_id,
       origine: 'routeur',
-      routeur_decision_id: (data as { id: string }).id,
+      routeur_decision_id: decisionId,
       // ⭐⭐ `assigne_at` SE POSE, IL NE SE LAISSE PAS AU DÉFAUT — trouvé par la
       //    recette du 24/08, et c'est un vrai défaut. « LE RATTACHEMENT D'UN
       //    DÉPÔT À SA SEMAINE SE DÉRIVE D'`assigne_at`, ET IL N'A PAS DE
@@ -727,12 +832,24 @@ async function persister(
       assigne_at: `${c.cycleLundi}T12:00:00Z`,
       echeance: `${c.echeance}T23:59:59Z`,
     })
-    if (eD) {
-      console.error(`[moteur] DÉPÔT PERDU — élève=${c.eleveId} exercice=${l.exercice_id}`,
-        { code: eD.code, message: eD.message, details: eD.details })
-      erreurs.push(`dépôt ${l.exercice_id.slice(0, 8)} : ${eD.message}`)
-    } else {
-      depots += 1
+  }
+  if (aDeposer.length === 0) return { decisions, depots, erreurs }
+  const { error: eDep } = await admin.from('exercices_depots').insert(aDeposer as never[])
+  if (!eDep) {
+    depots = aDeposer.length
+  } else {
+    console.error(`[moteur] DÉPÔTS GROUPÉS REFUSÉS — élève=${c.eleveId} n=${aDeposer.length}`,
+      { code: eDep.code, message: eDep.message, details: eDep.details })
+    erreurs.push(`dépôts groupés (${aDeposer.length}) : ${eDep.message} — reprise ligne à ligne.`)
+    for (const d of aDeposer) {
+      const { error: eD } = await admin.from('exercices_depots').insert(d as never)
+      if (eD) {
+        console.error(`[moteur] DÉPÔT PERDU — élève=${c.eleveId} exercice=${d.exercice_id}`,
+          { code: eD.code, message: eD.message, details: eD.details })
+        erreurs.push(`dépôt ${String(d.exercice_id).slice(0, 8)} : ${eD.message}`)
+      } else {
+        depots += 1
+      }
     }
   }
   return { decisions, depots, erreurs }

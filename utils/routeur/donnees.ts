@@ -430,8 +430,9 @@ export async function lireLesFiches(admin: Admin): Promise<Map<Competence, strin
 export async function lireLesDecisions(
   admin: Admin, eleveId: string, depuisLundi?: string,
 ): Promise<DecisionLue[]> {
-  const lignes = await lirePagine<{ cible_retenue: string | null; cycle_lundi: string; created_at: string }>(
-    admin, 'routeur_decisions', 'cible_retenue, cycle_lundi, created_at, id',
+  const lignes = await lirePagine<{ cible_retenue: string | null; cycle_lundi: string
+    created_at: string; bonus: boolean | null }>(
+    admin, 'routeur_decisions', 'cible_retenue, cycle_lundi, created_at, bonus, id',
     ['created_at', 'id'],
     (q) => {
       let r = (q as never as { eq: (a: string, b: string) => unknown }).eq('eleve_id', eleveId)
@@ -444,6 +445,7 @@ export async function lireLesDecisions(
     cibleRetenue: (l.cible_retenue as Competence | null) ?? null,
     cycleLundi: l.cycle_lundi,
     createdAt: l.created_at,
+    bonus: l.bonus === true,
   }))
 }
 

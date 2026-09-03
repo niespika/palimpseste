@@ -85,6 +85,8 @@ export interface DecisionLue {
   cibleRetenue: Competence | null
   cycleLundi: string
   createdAt: string
+  /** ⭐ `routeur_decisions.bonus` — « en faire plus » n'est pas la semaine ; la garde d'idempotence l'ignore. */
+  bonus: boolean
 }
 
 export function historiqueDesCibles(decisions: readonly DecisionLue[]): Competence[] {
