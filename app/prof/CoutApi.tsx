@@ -66,7 +66,7 @@ export default async function CoutApi() {
 
   // Sources muettes → total partiel, dit à voix haute plutôt qu'avalé.
   const manquantes: string[] = []
-  if (!fEcrit.ok || !fEssai.ok || !fSynth.ok) manquantes.push('Fragments')
+  if (!fEcrit.ok || !fEssai.ok || !fSynth.ok) manquantes.push('Vestigia')
   if (!codex.ok) manquantes.push('Codex')
   if (journal.error) {
     console.error('[cout-api] lecture illisible — api_couts (journal Quazian/Aletheia/Scriptorium)', {
@@ -77,7 +77,7 @@ export default async function CoutApi() {
   }
 
   const parModule = new Map<string, number>()
-  parModule.set('Fragments', fEcrit.somme + fEssai.somme + fSynth.somme)
+  parModule.set('Vestigia', fEcrit.somme + fEssai.somme + fSynth.somme)
   parModule.set('Codex', codex.somme)
   for (const r of journal.data ?? []) {
     const slug = r.module as string

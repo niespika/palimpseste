@@ -16,7 +16,7 @@ const GABARITS = [
     v: 'hlp', label: 'HLP',
     desc: 'même cycle · fragments & lecture à part',
     cadence: ['ecriture', 'ecriture', 'lecture'] as const,
-    note: 'Fragments et lecture de livre suivent leur propre échéancier.',
+    note: 'Vestigia et lecture de livre suivent leur propre échéancier.',
   },
   {
     v: 'vierge', label: 'Vierge',

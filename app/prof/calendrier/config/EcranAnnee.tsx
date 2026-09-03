@@ -135,7 +135,7 @@ function CarteSemestre({
           modules. Il se dit en clair, à sa place, plutôt qu'en pastille trompeuse. */}
       {s.actif && !enCours && (
         <div className="italic text-[12.5px] text-muet-clair mt-1">
-          Porte le drapeau actif — c’est ce semestre que lisent Fragments et Quazian.
+          Porte le drapeau actif — c’est ce semestre que lisent Vestigia et Quazian.
         </div>
       )}
 
@@ -148,7 +148,7 @@ function CarteSemestre({
           htmlFor={`premsem-${s.id}`}
           className="font-ui text-[12.5px] text-muet"
         >
-          Fragments compte à partir de la semaine
+          Vestigia compte à partir de la semaine
         </label>
         <select
           id={`premsem-${s.id}`}
@@ -180,8 +180,8 @@ function CarteSemestre({
         <div className="flex items-center gap-2.5 flex-wrap mt-2">
           <span className="text-[12.5px] text-attention">
             {s.semainesGenerees === 0
-              ? 'Aucune semaine générée — Fragments n’affichera rien et aucun élève ne pourra déposer.'
-              : `${s.semainesGenerees} semaine${s.semainesGenerees > 1 ? 's' : ''} générée${s.semainesGenerees > 1 ? 's' : ''} sur ${s.totalSemaines} — les semaines de Fragments ne suivent plus le calendrier.`}
+              ? 'Aucune semaine générée — Vestigia n’affichera rien et aucun élève ne pourra déposer.'
+              : `${s.semainesGenerees} semaine${s.semainesGenerees > 1 ? 's' : ''} générée${s.semainesGenerees > 1 ? 's' : ''} sur ${s.totalSemaines} — les semaines de Vestigia ne suivent plus le calendrier.`}
           </span>
           <button
             onClick={onGenerer}
@@ -535,8 +535,8 @@ export default function EcranAnnee({
                   agir(
                     () => poserPremiereSemaineFragments(s.id, n),
                     n === 1
-                      ? `« ${s.name} » : Fragments compte toutes les semaines.`
-                      : `« ${s.name} » : Fragments compte à partir de la semaine ${n}.`,
+                      ? `« ${s.name} » : Vestigia compte toutes les semaines.`
+                      : `« ${s.name} » : Vestigia compte à partir de la semaine ${n}.`,
                   )
                 }
                 onArchiver={() =>
@@ -702,8 +702,8 @@ export default function EcranAnnee({
                     agir(
                       () => poserPremiereSemaineFragments(s.id, n),
                       n === 1
-                        ? `« ${s.name} » : Fragments compte toutes les semaines.`
-                        : `« ${s.name} » : Fragments compte à partir de la semaine ${n}.`,
+                        ? `« ${s.name} » : Vestigia compte toutes les semaines.`
+                        : `« ${s.name} » : Vestigia compte à partir de la semaine ${n}.`,
                     )
                   }
                 />
@@ -800,7 +800,7 @@ export default function EcranAnnee({
           </p>
           <p className="text-muet">
             La suppression est <strong>refusée</strong> dès qu’un des deux semestres est utilisé par
-            Fragments (semaines, thèmes, synthèses, essais) ou par Quazian (quizz, notes de semestre).
+            Vestigia (semaines, thèmes, synthèses, essais) ou par Quazian (quizz, notes de semestre).
           </p>
         </Confirmation>
       )}

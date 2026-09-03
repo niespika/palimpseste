@@ -53,7 +53,10 @@ export default function Pastille({ module, size = 48, className }: Props) {
       }}
     >
       <Image
-        src={`/sceaux/${module}.png`}
+        // 03/09 — le module s'appelle VESTIGIA à l'écran ; le sceau gravé lit encore
+        // « FRAGMENTS », donc ce module seul prend le médaillon recadré (sans mot),
+        // en attendant un sceau à son nouveau nom.
+        src={module === 'fragments' ? '/sceaux/pastille-fragments.png' : `/sceaux/${module}.png`}
         alt=""
         width={inner}
         height={inner}

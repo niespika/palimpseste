@@ -1,5 +1,6 @@
 import { createClient } from '@/utils/supabase/server'
 import Tuile from '@/components/Tuile'
+import { nomDuModule } from '@/utils/nom-module'
 import DetailModule from './DetailModule'
 import type { Module } from '@/types'
 
@@ -45,7 +46,7 @@ export default async function PageModules({ searchParams }: { searchParams: Prom
             return (
               <Tuile
                 key={m.id}
-                nom={m.nom}
+                nom={nomDuModule(m.slug, m.nom)}
                 sousTitre={m.description ?? undefined}
                 couleur={m.actif ? 'vert' : 'neutre'}
                 href={`/prof/modules?module=${m.id}`}
@@ -66,7 +67,7 @@ export default async function PageModules({ searchParams }: { searchParams: Prom
 
       {moduleChoisi && (
         <DetailModule
-          module={{ id: moduleChoisi.id, nom: moduleChoisi.nom, description: moduleChoisi.description, actif: moduleChoisi.actif }}
+          module={{ id: moduleChoisi.id, nom: nomDuModule(moduleChoisi.slug, moduleChoisi.nom), description: moduleChoisi.description, actif: moduleChoisi.actif }}
           classesAvecAcces={(accesParModule.get(moduleChoisi.id) ?? [])
             .map((id) => ({ id, nom: nomClasse.get(id) ?? '?' }))
             .sort((a, b) => a.nom.localeCompare(b.nom))}

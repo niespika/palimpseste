@@ -22,7 +22,7 @@ export default function PorteCopieAnnotee({ actif }: { actif: boolean }) {
               {actif ? 'La copie annotée est ouverte.' : 'La copie annotée est fermée.'}
             </strong>{' '}
             {actif
-              ? 'Sur les pages de passation (Codex, Aletheia, Fragments), la liste devient une liste de noms ; chaque nom ouvre la copie surlignée avec les observables et les verdicts de la chaîne. Les élèves ne la voient pas.'
+              ? 'Sur les pages de passation (Codex, Aletheia, Vestigia), la liste devient une liste de noms ; chaque nom ouvre la copie surlignée avec les observables et les verdicts de la chaîne. Les élèves ne la voient pas.'
               : 'Les pages de passation gardent leur liste d’avant, et les pages de copie disent « à OFF ». Rien ne change pour les élèves.'}
           </p>
           <button type="submit" disabled={enCours}

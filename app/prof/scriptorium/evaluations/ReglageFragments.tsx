@@ -23,7 +23,7 @@ export default function ReglageFragments({ planId, valeur }: { planId: string; v
 
   return (
     <div className="flex items-center gap-2 flex-wrap font-ui text-[12px]">
-      <span className="text-muet">Fragments :</span>
+      <span className="text-muet">Vestigia :</span>
       <select
         value={valeur}
         disabled={busy}

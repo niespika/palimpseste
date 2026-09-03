@@ -3,6 +3,7 @@ import { createClient } from '@/utils/supabase/server'
 import { createAdminClient } from '@/utils/supabase/admin'
 import { lireReglagesRag } from '@/utils/scriptorium-rag'
 import { moduleIdsAccessibles } from '@/utils/acces'
+import { nomDuModule } from '@/utils/nom-module'
 import Tuile from '@/components/Tuile'
 import type { ModuleSceau } from '@/components/Pastille'
 
@@ -59,7 +60,7 @@ export default async function IndexModulesEleve() {
           {modules.map((m) => (
             <Tuile
               key={m.id}
-              nom={m.nom}
+              nom={nomDuModule(m.slug, m.nom)}
               module={SCEAU[m.slug]}
               avecSceau={!!SCEAU[m.slug]}
               sousTitre={m.description ?? undefined}

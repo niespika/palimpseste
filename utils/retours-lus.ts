@@ -73,7 +73,7 @@ async function fragmentsEcritNonLus(admin: Admin, inscriptionIds: string[]): Pro
     if (!data || data.length === 0) return []
     const inscriptionId = ds.find((d) => d.id === data[0].depot_id)?.inscription_id
     const href = `/eleve/modules/fragments-erudition?vue=ecrit${inscriptionId ? `&inscription=${inscriptionId}` : ''}`
-    return [{ module: 'fragments_ecrit', label: 'Fragments — retour écrit', href }]
+    return [{ module: 'fragments_ecrit', label: 'Vestigia — retour écrit', href }]
   } catch {
     return []
   }
@@ -100,7 +100,7 @@ async function fragmentsEssaiNonLus(admin: Admin, inscriptionIds: string[]): Pro
     if (!data || data.length === 0) return []
     const inscriptionId = ds.find((d) => d.id === data[0].depot_id)?.inscription_id
     const href = `/eleve/modules/fragments-erudition?vue=essai${inscriptionId ? `&inscription=${inscriptionId}` : ''}`
-    return [{ module: 'fragments_essai', label: 'Fragments — retour d’essai', href }]
+    return [{ module: 'fragments_essai', label: 'Vestigia — retour d’essai', href }]
   } catch {
     return []
   }
@@ -147,7 +147,7 @@ async function fragmentsEssaiChaineNonLus(admin: Admin, eleveId: string, classeI
     if (!premier) return []
     return [{
       module: 'fragments_essai_chaine',
-      label: 'Fragments — retour de la chaîne de mesure sur ton essai',
+      label: 'Vestigia — retour de la chaîne de mesure sur ton essai',
       href: hrefDeLaPassationEleve('fragments', premier.depotId),
     }]
   } catch {

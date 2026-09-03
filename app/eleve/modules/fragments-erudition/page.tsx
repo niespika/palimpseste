@@ -87,13 +87,13 @@ export default async function PageFragments({ searchParams }: { searchParams: Pr
   const { active, toutes } = await contexteClasseEleve(supabase, user.id)
   const cible = inscriptionParam ? inscriptions.find(i => i.id === inscriptionParam) : undefined
   if (toutes && !cible) {
-    return <ChoixClasseModule inscriptions={inscriptions} nomModule="Fragments d’Érudition" />
+    return <ChoixClasseModule inscriptions={inscriptions} nomModule="Vestigia" />
   }
   const ici = inscriptions.find(i => i.id === active?.id)
   if (!cible && !toutes && !ici) {
     return (
       <ModuleHorsClasse
-        nomModule="Fragments d’Érudition"
+        nomModule="Vestigia"
         classeContexte={active?.classe_nom ?? ''}
         ailleurs={inscriptions.map(i => i.classe_nom)}
       />

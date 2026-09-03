@@ -249,8 +249,8 @@ export const MODULES: readonly ModuleConfig[] = [
     cle: 'fragments',
     prefixeProf: '/prof/fragments-erudition',
     prefixeEleve: '/eleve/modules/fragments-erudition',
-    nom: "Fragments d'Érudition",
-    nomCourt: 'Fragments',
+    // 03/09 — « Vestigia » à l'écran (Louis) ; le slug et la base gardent « fragments ».
+    nom: 'Vestigia',
     couleurs: {
       encre: '#5A6043',
       teinte: '#E2E3D2',

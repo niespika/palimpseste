@@ -45,7 +45,7 @@ export default function FormulaireParametresCodex({
   return (
     <div className="space-y-6">
       <div className="bg-attention-teinte border border-attention rounded-xl px-4 py-3 text-sm text-attention">
-        Prompts de génération des retours IA de Codex (consolidation). Distincts des prompts d&apos;évaluation des Fragments — pas de rubrique d&apos;axes ici.
+        Prompts de génération des retours IA de Codex (consolidation). Distincts des prompts d&apos;évaluation de Vestigia — pas de rubrique d&apos;axes ici.
       </div>
 
       {/* Consignes affichées à l'élève (bulles « comment faire », T6) */}

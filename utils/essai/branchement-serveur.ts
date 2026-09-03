@@ -475,7 +475,7 @@ export async function deposerLaCopieDansLaChaine(
   const file = await mettreLaTranscriptionEnFile(admin, d.id)
   if (!file.ok) return file
   if (!file.data.deja) return ok({ depotId: d.id, pages: pages.length, transcription: 'en_file' })
-  const remis = await remettreEnFile(admin, d.id, 'transcription_v1', 'nouvelles photos déposées dans Fragments')
+  const remis = await remettreEnFile(admin, d.id, 'transcription_v1', 'nouvelles photos déposées dans Vestigia')
   return ok({ depotId: d.id, pages: pages.length, transcription: remis.remis ? 'remise_en_file' : 'deja_en_file' })
 }
 

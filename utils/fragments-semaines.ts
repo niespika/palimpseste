@@ -106,5 +106,5 @@ export function semainesComptees<T extends SemaineComptable>(
 export function mentionPremiereSemaine(premiere: unknown): string | null {
   const n = premiereSemaineComptee(premiere)
   if (n === PREMIERE_SEMAINE_DEFAUT) return null
-  return `Fragments compte à partir de la semaine ${n}`
+  return `Vestigia compte à partir de la semaine ${n}`
 }

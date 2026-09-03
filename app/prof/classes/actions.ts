@@ -206,9 +206,9 @@ export async function apercuRetraitEleve(formData: FormData): Promise<ApercuRetr
   ])
 
   const lignes: string[] = []
-  if (depots > 0) lignes.push(`${pluriel(depots, 'dépôt')} Fragments`)
-  if (essais > 0) lignes.push(`${pluriel(essais, 'essai')} Fragments`)
-  if (oraux > 0) lignes.push(`${pluriel(oraux, 'oral', 'oraux')} Fragments`)
+  if (depots > 0) lignes.push(`${pluriel(depots, 'dépôt')} Vestigia`)
+  if (essais > 0) lignes.push(`${pluriel(essais, 'essai')} Vestigia`)
+  if (oraux > 0) lignes.push(`${pluriel(oraux, 'oral', 'oraux')} Vestigia`)
   if (codex > 0) lignes.push(`${pluriel(codex, 'synthèse')} Codex`)
   if (quizz > 0) lignes.push(`${pluriel(quizz, 'quizz')} Quazian passé${quizz > 1 ? 's' : ''}`)
   if (aletheia > 0) lignes.push(`${pluriel(aletheia, 'séance')} de lecture Aletheia`)

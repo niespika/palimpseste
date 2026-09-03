@@ -61,7 +61,7 @@ export const NAV_PROF: NavTab[] = [
   {
     label: 'Modules',
     items: [
-      { label: 'Fragments', href: '/prof/fragments-erudition' },
+      { label: 'Vestigia', href: '/prof/fragments-erudition' },
       { label: 'Scriptorium', href: '/prof/scriptorium' },
       { label: 'Quazian', href: '/prof/quazian' },
       { label: 'Codex', href: '/prof/codex' },
@@ -95,7 +95,7 @@ export const NAV_ELEVE: NavTab[] = [
   {
     label: 'Modules',
     items: [
-      { label: 'Fragments', href: '/eleve/modules/fragments-erudition' },
+      { label: 'Vestigia', href: '/eleve/modules/fragments-erudition' },
       { label: 'Scriptorium', href: '/eleve/modules/scriptorium' },
       { label: 'Quazian', href: '/eleve/modules/quazian' },
       { label: 'Codex', href: '/eleve/modules/codex' },

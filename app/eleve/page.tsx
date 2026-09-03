@@ -5,6 +5,7 @@ import { moduleIdsDesClasses, slugsModulesParClasse } from '@/utils/acces'
 import { lireReglagesRag } from '@/utils/scriptorium-rag'
 import { contexteClasseEleve } from './contexte-classe'
 import { estSemaineComptee } from '@/utils/fragments-semaines'
+import { nomDuModule } from '@/utils/nom-module'
 import { calculerGrilleSemaines } from '@/utils/calendrier-grille'
 import { jourDansFuseau, formatJour, formatInstant } from '@/utils/fuseau'
 import { lireFuseau } from '@/utils/fuseau-serveur'
@@ -345,7 +346,7 @@ export default async function TableauDeBordEleve() {
     badge: { texte: 'en direct', ton: 'ok', pulse: true }, classe: c.classe,
   })
   for (const f of fragmentTaches.filter((f) => !f.depose)) taches.push({
-    cle: `fragment-${f.inscriptionId}`, module: 'fragments', titre: "Fragments d'érudition", detail: f.texte,
+    cle: `fragment-${f.inscriptionId}`, module: 'fragments', titre: 'Vestigia', detail: f.texte,
     href: `/eleve/modules/fragments-erudition?inscription=${f.inscriptionId}`,
     cta: f.enRetard ? 'Déposer (en retard)' : 'Déposer mon fragment',
     urgence: f.enRetard ? 90 : 70,
@@ -358,7 +359,7 @@ export default async function TableauDeBordEleve() {
   //    est ce sur quoi les fragments s'écrivent, un thème contesté passe avant
   //    le prochain dépôt.
   for (const tc of themesCommentes) taches.push({
-    cle: `theme-commente-${tc.inscriptionId}`, module: 'fragments', titre: 'Ton thème de Fragments',
+    cle: `theme-commente-${tc.inscriptionId}`, module: 'fragments', titre: 'Ton thème de Vestigia',
     detail: `Ton professeur a commenté ton thème : « ${tc.commentaire.replace(/\s+/g, ' ').slice(0, 140)}${tc.commentaire.length > 140 ? '…' : ''} »`,
     href: `/eleve/modules/fragments-erudition?inscription=${tc.inscriptionId}`,
     cta: 'Revoir mon thème', urgence: 85,
@@ -479,7 +480,7 @@ export default async function TableauDeBordEleve() {
   const modulesAvecTache = new Set(taches.map((t) => t.module))
   const mondes = modulesActifs.map((m) => ({
     slug: m.slug,
-    nom: m.nom,
+    nom: nomDuModule(m.slug, m.nom),
     sceau: SCEAU[m.slug] as ModuleSceau | undefined,
     aFaire: SCEAU[m.slug] ? modulesAvecTache.has(SCEAU[m.slug] as Monde) : false,
   }))

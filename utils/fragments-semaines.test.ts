@@ -110,5 +110,5 @@ test('la frontière est le seuil lui-même : >= et non >', () => {
 test('la mention se tait à l’état neutre et parle sinon', () => {
   assert.equal(mentionPremiereSemaine(1), null)
   assert.equal(mentionPremiereSemaine(null), null)
-  assert.equal(mentionPremiereSemaine(3), 'Fragments compte à partir de la semaine 3')
+  assert.equal(mentionPremiereSemaine(3), 'Vestigia compte à partir de la semaine 3')
 })

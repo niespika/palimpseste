@@ -37,7 +37,7 @@ export default function GestionIntegrite({
               bloque » (`06-` §6 ; arbitrage ③ de Louis, 27/08). Un écran qui
               promet un gel sur un signal qui n'en produit aucun ment. */}
           <p className="font-ui text-xs text-muet mt-1 max-w-2xl">
-            Rendus vides, aveux &amp; hors-sujet repérés dans Aletheia · Codex · Fragments —
+            Rendus vides, aveux &amp; hors-sujet repérés dans Aletheia · Codex · Vestigia —
             à <span className="text-encre">{params.seuil} strikes</span>, rendus &amp; révision
             gelés (le quizz reste ouvert).
           </p>

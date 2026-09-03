@@ -442,7 +442,7 @@ export async function supprimerAnnee(
         .select('id', { count: 'exact', head: true })
         .eq('semestre_id', sem.id)
       if ((count ?? 0) > 0) {
-        return { error: `« ${sem.name} » est utilisé par Fragments (semaines, thèmes, synthèses ou essais). Détache-les d’abord — l’année entière est conservée.` }
+        return { error: `« ${sem.name} » est utilisé par Vestigia (semaines, thèmes, synthèses ou essais). Détache-les d’abord — l’année entière est conservée.` }
       }
     }
     // Tables Quazian (FK `semester_id`).

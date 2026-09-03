@@ -55,7 +55,7 @@ export function compteUnStrike(type: string): boolean {
 export const LABEL_MODULE: Record<ModuleIntegrite, string> = {
   aletheia: 'Aletheia',
   codex: 'Codex',
-  fragments: 'Fragments',
+  fragments: 'Vestigia',
   exercices: 'Exercices',
 }
 
