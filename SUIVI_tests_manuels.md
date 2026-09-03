@@ -9007,6 +9007,6 @@ le veut.
 - [x] **Trois tailles** — 1280, 768 et 375 px sur Suivi (ligne d'Elo), le À faire et la page Fragments. ⚠️ Défaut trouvé et corrigé en séance : sur 375 px, les quatre boutons de la ligne de Suivi écrasaient le thème à un mot par ligne (`flex` sans `min-width`, piège déjà payé sur la ligne de synthèse) — le texte garde désormais 14 rem et les boutons passent dessous.
 
 ### Reste à jouer
-- [ ] **PROD** : `c8_theme_commentaire_prof.sql` à jouer par Louis **AVANT le push** — le code neuf nomme les deux colonnes dans ses `select` ; poussé avant le SQL, le thème disparaîtrait de la page élève et de Suivi (PostgREST refuse une colonne inconnue). Le fichier est répété à blanc et joué en bac à sable.
+- [x] **PROD** : `c8_theme_commentaire_prof.sql` jouée le 02/09 tard le soir, sur décision de Louis, AVANT le push (répétition à blanc en prod, puis le fichier ; trois drapeaux à `t`, 2 thèmes intacts). Le premier commentaire réel reste à faire par Louis.
 - [ ] **Un commentaire, puis la validation directe** (le professeur change d'avis sans réponse de l'élève) : règle testée (`valide_at` > `commente_at` ⇒ « validé »), non vue à l'écran.
 - [ ] **Le commentaire sur un thème posé par le professeur lui-même** (`propose_at` nul) : règle testée, non vue à l'écran.
