@@ -10,6 +10,7 @@ import { dansExtrait } from '@/utils/aletheia-extrait'
 import { messageSiBloque, signalerStrikeAuto } from '@/utils/integrite'
 import { messageSiRetoursNonLus } from '@/utils/retours-lus'
 import { detecterRenduVideTexte, detecterAveuHeuristique } from '@/utils/detecteur-integrite'
+import { lireLaPorteEtayage } from '@/utils/aletheia/decoupage-serveur'
 import type { StatutAletheia } from './types'
 
 // Bornes serveur sur le texte élève (anti-coût : tout est injecté dans le prompt IA ;
@@ -103,6 +104,14 @@ export async function soumettreV1(livreId: string, semaine: number, saisie: Sais
   // reçoit un strike + un message « cheeky ».
   const sig = detecterRenduVideTexte([these, args, accord]) ?? detecterAveuHeuristique(`${these}\n${args}\n${accord}`)
 
+  // (E2) La FORME d'étayage de cette séance, décidée par le code depuis les diagnostics
+  // antérieurs (axe arguments, hystérésis) — porte `aletheia_etayage_actif` ouverte
+  // seulement. Porte fermée : la clé n'existe pas dans le payload (comportement d'avant).
+  const etayage = await lireLaPorteEtayage(admin)
+  const forme = etayage && !sig
+    ? (await (await import('@/utils/aletheia/forme-serveur')).deciderFormePourSeance(admin, userId, livreId, semaine)).forme
+    : null
+
   const payload = {
     eleve_id: userId,
     scriptorium_livre_id: livreId,
@@ -116,6 +125,7 @@ export async function soumettreV1(livreId: string, semaine: number, saisie: Sais
     retour_v1_erreur_at: null,
     statut: (sig ? 'DRAFT' : 'V1_SUBMITTED') as StatutAletheia,
     updated_at: new Date().toISOString(),
+    ...(forme ? { forme } : {}),
   }
   // (C1/A3) Chemin update : compare-and-set sur statut='DRAFT' — c'était la seule
   // écriture non-CAS de la machine à états (course double-clic / 2 onglets : double
@@ -142,9 +152,10 @@ export async function soumettreV1(livreId: string, semaine: number, saisie: Sais
     after(async () => {
       const mod = await import('@/utils/aletheia-retours')
       await mod.genererRetourV1(travailId)
-      // Diagnostic AUTOMATIQUE de la SEMAINE 1 uniquement (les suivantes = batch prof).
-      // Froid, indépendant du retour ; alimente la calibration des chapitres suivants.
-      if (semaine === 1) await mod.diagnostiquerTravail(travailId)
+      // Diagnostic AUTOMATIQUE de la SEMAINE 1 (les suivantes = batch prof) — et, porte
+      // `aletheia_etayage_actif` ouverte (E2), de CHAQUE séance : c'est lui qui décide la
+      // forme d'étayage de la séance suivante. Froid, indépendant du retour.
+      if (semaine === 1 || etayage) await mod.diagnostiquerTravail(travailId)
     })
   }
 
@@ -224,8 +235,9 @@ export async function soumettreVf(livreId: string, semaine: number, vf: SaisieVf
     after(async () => {
       const mod = await import('@/utils/aletheia-retours')
       await mod.genererRetourVf(travailId)
-      // Diagnostic AUTOMATIQUE de la SEMAINE 1 (phase VF → delta V1→VF).
-      if (semaine === 1) await mod.diagnostiquerTravail(travailId)
+      // Diagnostic AUTOMATIQUE de la SEMAINE 1 (phase VF → delta V1→VF) — et de CHAQUE
+      // séance porte `aletheia_etayage_actif` ouverte (E2).
+      if (semaine === 1 || await lireLaPorteEtayage(admin)) await mod.diagnostiquerTravail(travailId)
     })
   }
 

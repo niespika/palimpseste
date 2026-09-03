@@ -568,7 +568,7 @@ tolérantes aux anciens retours (clés absentes = comportement actuel).
 |---|---|---|---|
 | **E0** ✅ 03/09 | Mesures préalables § 3.3 et § 4.4 sur le livre de prod, chiffres consignés au § 13 | — | fait : D5 amendé (passage = pivot + 1 phrase de chaque côté, ≥ 10 lignes), barème en phrases, paragraphes optionnels, nettoyage des appels de note ajouté à E1 |
 | **E1** ✅ code 03/09, SQL bac à sable ☑ 03/09, prod ☐ | Découpeur en phrases (`utils/aletheia/decoupage.ts`, 15 tests), masques au lieu de nettoyage, `aletheia_livre_decoupage` + porte `aletheia_etayage_actif` (`aletheia_etayage_l1.sql`, ligne au journal, **non jouée**), génération en ligne à la création du livre et à la re-découpe, empreinte de version (`decoupage-serveur.ts`) | E0 | fait pour le code : 29/29 semaines partitionnantes à l'octet près, 1 078 phrases, 484 + 28 + 33 masques ; recette `scripts/recette/aletheia-decoupage-e1.mjs` (--genere / --etat / --retire) jouée en bac à sable : 4 livres découpés, ≤ 0,4 s chacun ; reste à jouer le SQL en bac à sable puis en prod |
-| **E2** | Diagnostic à chaque séance ; colonne `forme` ; fonction `forme()` avec hystérésis, testée en pur | — | 38 travaux de prod rejoués à blanc : la forme calculée par séance est journalisée et lue par Louis |
+| **E2** ✅ code 03/09, SQL bac à sable ☑ 03/09, prod ☐ | Diagnostic à chaque séance porte ouverte ; colonne `aletheia_travaux.forme` (`aletheia_etayage_l2.sql`) ; `utils/aletheia/forme.ts` (pur, 11 tests) + `forme-serveur.ts` ; la forme s'écrit sur le travail à la soumission V1 | — | fait : 38 travaux de prod rejoués à blanc dans les DEUX variantes d'hystérésis (§ 13.4) — **à lire par Louis, qui tranche D10** |
 | **E3** | Gabarits : colonne, libellés-questions, tournante, `champ_fixe`, prompts V1/VF/diag par gabarit, fiche par gabarit ; 4 fixtures (un chapitre par gabarit) | — | un livre par gabarit passe une séance complète en preview, retours lus par Louis |
 | **E4** | Passages clés dans la fiche : génération par identifiants, rejet par le code, éditeur prof, ré-alignement | E1 | trois semaines du livre de prod ont leurs passages, amendés une fois à la main, rejoués après changement de version |
 | **E5** | Retour V1 : rappel (fiche N−1), relances par identifiant, budget 300 mots, `terme_canonique` ; cases de réponse avant réécriture ; réponses injectées dans l'appel VF | E3, E4 | séance complète D et B en preview, sur les **trois tailles d'écran** avec un vrai retour |
@@ -660,6 +660,27 @@ numéro de section ouvre la semaine 23 (« 19 On ne saurait… »).
    le passage étendu à 400 mots, la pivot à une position non prévisible.
 8. Demi-section à A : section médiane ≈ 1 700 mots, max ≈ 3 200 → demi-section ≈ 850 mots,
    max ≈ 1 600. Tenable.
+
+### 13.4 Rejeu à blanc d'E2 : la forme que le code aurait servie (38 séances, 3 élèves)
+
+`decider()` rejoué sur les diagnostics réels de prod (axe arguments, VF d'abord), forme de
+départ « montre ». Deux variantes d'hystérésis :
+
+| Variante | montre | fenêtre | demi-section | changements de forme sur 38 séances |
+|---|---|---|---|---|
+| **Asymétrique (D10)** : plus d'aide en une séance, moins en deux | 23 | 15 | 0 | **10** |
+| Symétrique : deux séances dans les deux sens | 15 | 23 | 0 | **6** |
+
+Aucun A consécutif chez ces trois élèves : la demi-section n'est jamais servie. L'élève 3
+(19 séances, niveaux VF qui alternent D et C : `D C D C C D C D C C D D C C C D D C C`)
+est le cas qui départage : en asymétrique il change de forme **6 fois**, en symétrique
+**3 fois**, et il reçoit « montre » 13 séances sur 19 contre 7. Or le biais mesuré du
+diagnostic sur cet axe est **−1 (sévère)** : une part de ces D sont des C. La règle
+asymétrique réagit donc au bruit, dans le sens sûr mais au prix d'un va-et-vient.
+**Point à trancher par Louis** : garder D10, passer au symétrique, ou la variante
+intermédiaire « plus d'aide en une séance seulement sur un **E** » (un E est un échec
+réel, un D peut être un C mal lu). Le code porte déjà les deux premières (`OptionsForme`),
+la troisième est trois lignes. Rejeu : `scratchpad/e2_rejeu_prod.mjs [--symetrique]`.
 
 Scripts : `scratchpad/e0_phrases.py`, `e0_paras.py`, `e0_passages.mjs`, résultats
 `e0_passages_resultats.json` (session du 03/09 ; à recopier dans `aletheia_calibration/` si
