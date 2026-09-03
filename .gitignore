@@ -84,3 +84,6 @@ scripts/recette/.essai-cron-hebdo.json
 # Canevas de design : la page publiée est REGÉNÉRÉE (`seed-canvas.mjs`) et
 # embarque l’éditeur — 2,6 Mo. On versionne les sources `.dc.html`, pas elle.
 design_ma_semaine_v2/ma-semaine-organisations.html
+
+# Registre local du décor d'écran Fragments élève (scripts/recette/decor-fragments-eleve.mjs).
+scripts/recette/.decor-fragments-eleve.json

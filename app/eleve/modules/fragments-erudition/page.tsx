@@ -8,13 +8,16 @@ import { contexteClasseEleve } from '../../contexte-classe'
 import ChoixClasseModule from '../../ChoixClasseModule'
 import ModuleHorsClasse from '../../ModuleHorsClasse'
 import FormulaireDepot from './FormulaireDepot'
-import AnalysePubliee, { tuilesAnalyseEcrite } from './AnalysePubliee'
+import AnalysePubliee, { tuilesAnalyseEcrite, SECTIONS_ECRIT } from './AnalysePubliee'
 import GraphiqueProgression from '@/components/fragments/GraphiqueProgression'
 import AnalyseOralePubliee from './AnalyseOralePubliee'
 import EssaiDepot from './EssaiDepot'
 import ThemeEleve from './ThemeEleve'
 import { statutDuTheme } from '@/utils/fragments-theme'
-import { tuilesAnalyseEssai } from './EssaiPublie'
+import EssaiPublie, { tuilesAnalyseEssai } from './EssaiPublie'
+import Pli from './Pli'
+import { carteAFaire, type CarteAFaire } from '@/utils/fragments-a-faire'
+import { noteVersLettre } from '@/utils/notation'
 import { signauxDeLancement } from '@/utils/examens/signal'
 import { examensEnClasseDeLEleve } from '@/utils/codex-onglets/liste'
 import BilanSemestre from './BilanSemestre'
@@ -374,17 +377,6 @@ export default async function PageFragments({ searchParams }: { searchParams: Pr
     (toutesAnalyses ?? []).map(a => [a.depot_id, a])
   )
 
-  // Pistes en attente (toutes analyses)
-  const toutesAnalyseIds = (toutesAnalyses ?? []).map(a => a.id)
-  const { data: pistesEnAttente } = toutesAnalyseIds.length > 0
-    ? await admin
-        .from('fragments_pistes')
-        .select('id, contenu, statut')
-        .in('analyse_id', toutesAnalyseIds)
-        .in('statut', ['proposee', 'partiellement_suivie'])
-        .order('created_at', { ascending: false })
-    : { data: [] }
-
   // Construire les points du graphique élève
   // C8-L4 — idem fiche prof : pas de point pour une semaine de vacances.
   const pointsParcours: PointSemaine[] = (toutesLessemaines ?? []).filter(s => !s.is_vacation).map(s => {
@@ -446,13 +438,6 @@ export default async function PageFragments({ searchParams }: { searchParams: Pr
     return 'Réflexions'
   })() : null
 
-  // Présentations de cet élève
-  const { data: mesPresen } = await admin
-    .from('fragments_presentations')
-    .select('id, semaine_id, statut')
-    .eq('inscription_id', inscriptionId)
-    .eq('statut', 'presente')
-
   // ── Lot 10 : dernier retour écrit, gate de lecture, couleurs des tuiles ────
   const derniereAnalyseEcrite = (analyseActuelle as FragmentAnalyse | null)
     ?? ((depotsPasses.map(d => analyseParDepot[d.id]).find(Boolean) as FragmentAnalyse | undefined) ?? null)
@@ -460,7 +445,6 @@ export default async function PageFragments({ searchParams }: { searchParams: Pr
     ? (pistesActuelles ?? [])
     : (derniereAnalyseEcrite ? (pistesParAnalyse[derniereAnalyseEcrite.id] ?? []) : [])) as FragmentPiste[]
   const gateActif = !!derniereAnalyseEcrite && !(derniereAnalyseEcrite as unknown as { retour_lu_at?: string | null }).retour_lu_at
-  const rappelPistes = pistesDerniere.slice(0, 3)
 
   // Gate de lecture TRANSVERSAL : tout retour non lu (n'importe quel module) bloque
   // le dépôt écrit. Le dépôt d'ESSAI, lui, reste ouvert (travail noté) → non gaté ici.
@@ -469,221 +453,294 @@ export default async function PageFragments({ searchParams }: { searchParams: Pr
 
   const aOral = Object.keys(oralParSemaine).length > 0
 
+
+  // ── Handoff « Fragments élève » (03/09) — ce que l'accueil met en avant ─────
+  // Le thème, puis UNE carte « à faire maintenant » (règle pure, testée), le
+  // parcours sur une ligne, le dernier retour replié s'il est lu, le dépôt,
+  // l'archive en lignes. Les onglets de la Barre 2 portent les quatre brins.
+  const etatTheme = theme ? {
+    theme: theme.theme,
+    propose_at: (theme as { propose_at?: string | null }).propose_at ?? null,
+    valide_at: (theme as { valide_at?: string | null }).valide_at ?? null,
+    commentaire_prof: (theme as { commentaire_prof?: string | null }).commentaire_prof ?? null,
+    commente_at: (theme as { commente_at?: string | null }).commente_at ?? null,
+  } : null
+  const statutTheme = statutDuTheme(etatTheme)
+
+  const carte = vue === 'ecrit' ? carteAFaire({
+    themeStatut: statutTheme,
+    semaine: semaine ? {
+      numero: semaine.numero,
+      reclamee: semaineReclamee,
+      limite: formatDateLimite(semaine.date_limite, tz),
+      echue: new Date(semaine.date_limite) < new Date(),
+    } : null,
+    depose: !!depotActuel,
+    depotEnRetard: !!depotEnRetard,
+    retourDeLaSemaine: !!analyseActuelle,
+    gateActif,
+    // Quand le gate est actif, la carte est déjà « lis ton retour » : les autres
+    // sources sont listées dans le bloc du dépôt, pas ici.
+    retoursAilleurs: gateActif ? [] : retoursALire.map(r => ({ label: r.label, href: r.href })),
+  }) : null
+
+  // Les lettres du parcours : la moyenne de chaque section sur les retours notés.
+  const moyenneSection = (cle: (typeof SECTIONS_ECRIT)[number]['cle']) => analysesAvecNotes.length > 0
+    ? analysesAvecNotes.reduce((s, a) => s + (a[cle] ?? 0), 0) / analysesAvecNotes.length
+    : null
+  const lettresParcours = SECTIONS_ECRIT.map(s => ({ label: s.label, lettre: noteVersLettre(moyenneSection(s.cle)) }))
+
+  // La semaine du dernier retour (celle en cours, ou celle de son dépôt passé).
+  const semaineDuDernierRetour: number | null = analyseActuelle
+    ? semaine?.numero ?? null
+    : ((depotsPasses.find(d => analyseParDepot[d.id]?.id === derniereAnalyseEcrite?.id)?.semaine as unknown as { numero: number | null } | null)?.numero ?? null)
+  const premierePiste = pistesDerniere[0]?.contenu ?? null
+
   return (
     <div className="space-y-6 pb-8">
       <div className="flex items-center gap-2">
         <Link href="/eleve" className="text-sm text-muet hover:text-encre-douce">← Retour</Link>
       </div>
 
-      {/* Identité du module portée par la Barre 2 ; le thème est à l'élève :
-          il l'écrit, le professeur le relit et le valide — ou le commente, et
-          le commentaire ne se montre que tant qu'il attend une réponse (C8, Louis 02/09). */}
-      {(() => {
-        const etat = theme ? {
-          theme: theme.theme,
-          propose_at: (theme as { propose_at?: string | null }).propose_at ?? null,
-          valide_at: (theme as { valide_at?: string | null }).valide_at ?? null,
-          commentaire_prof: (theme as { commentaire_prof?: string | null }).commentaire_prof ?? null,
-          commente_at: (theme as { commente_at?: string | null }).commente_at ?? null,
-        } : null
-        const statut = statutDuTheme(etat)
-        return (
-          <ThemeEleve
-            inscriptionId={inscriptionId}
-            semestreId={semCourant?.id ?? null}
-            theme={theme?.theme ?? null}
-            description={theme?.description ?? null}
-            statut={statut}
-            commentaire={statut === 'commente' ? etat?.commentaire_prof ?? null : null}
-          />
-        )
-      })()}
+      {/* Le thème est le TITRE de la page (l'identité du module est portée par la
+          Barre 2). Il est à l'élève : il l'écrit, le professeur le relit et le
+          valide — ou le commente, et le commentaire ne se montre que tant qu'il
+          attend une réponse (C8, Louis 02/09). */}
+      <ThemeEleve
+        inscriptionId={inscriptionId}
+        semestreId={semCourant?.id ?? null}
+        theme={theme?.theme ?? null}
+        description={theme?.description ?? null}
+        statut={statutTheme}
+        commentaire={statutTheme === 'commente' ? etatTheme?.commentaire_prof ?? null : null}
+      />
 
-      {/* Ton parcours (sections en lettres) + stats + rappel des pistes */}
-      {pointsParcours.some(p => p.decouvertes !== null) && (
-        <div className="space-y-4">
-          <h3 className="text-sm font-medium text-muet uppercase tracking-wide">Ton parcours</h3>
-          <div className="bg-surface border border-bordure rounded-xl p-5">
+      {/* ── À faire maintenant — une seule chose, en tête ── */}
+      {carte && (
+        <section className={`rounded-xl border-[1.5px] bg-surface px-5 py-4 ${BORD_CARTE[carte.ton]}`}>
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between sm:gap-6">
+            <div className="min-w-0">
+              <p className={`font-ui text-[11px] font-bold uppercase tracking-[0.11em] ${TEXTE_CARTE[carte.ton]}`}>▸ À faire maintenant</p>
+              <h3 className="font-titre text-xl sm:text-[22px] font-semibold text-encre leading-snug mt-0.5">{carte.titre}</h3>
+              <p className="font-corps text-sm text-encre-douce mt-1">{carte.texte}</p>
+            </div>
+            {carte.action && (
+              <Link
+                href={carte.action.href}
+                className="inline-flex min-h-[44px] w-full shrink-0 items-center justify-center gap-1.5 rounded-lg bg-bouton px-4 py-2.5 font-ui text-sm font-semibold text-surface hover:opacity-90 sm:w-auto"
+              >
+                {carte.action.libelle} →
+              </Link>
+            )}
+          </div>
+        </section>
+      )}
+
+      {/* ── Ton parcours — une ligne ; le graphe et les trois chiffres derrière « Voir le détail » ── */}
+      {vue === 'ecrit' && pointsParcours.some(p => p.decouvertes !== null) && (
+        <details className="group overflow-hidden rounded-xl border border-bordure bg-surface">
+          <summary className="flex min-h-[48px] cursor-pointer list-none flex-wrap items-center gap-x-4 gap-y-1 px-4 py-2.5
+                              group-open:border-b group-open:border-bordure">
+            <span className="font-ui text-[11px] font-bold uppercase tracking-[0.11em] text-muet">Ton parcours</span>
+            {/* ⚠️ `min-w-[14rem]` : c'est le min-width qui replie la ligne sur téléphone,
+                pas `flex-wrap` (cf. reference_ligne_synthese_min_width). */}
+            <span className="flex min-w-[14rem] flex-1 flex-wrap items-baseline gap-x-3">
+              {lettresParcours.map(l => (
+                <span key={l.label} className="font-corps text-sm text-encre-douce">
+                  {l.label} <span className="font-titre text-lg font-semibold text-encre">{l.lettre ?? '—'}</span>
+                </span>
+              ))}
+            </span>
+            <span className="font-ui text-xs text-encre-douce group-open:hidden">Voir le détail →</span>
+            <span className="hidden font-ui text-xs text-encre-douce group-open:inline">Replier</span>
+          </summary>
+          <div className="space-y-4 p-4">
             <GraphiqueProgression data={pointsParcours} />
-          </div>
-          <div className="grid grid-cols-3 gap-3">
-            <div className="bg-surface border border-bordure rounded-xl p-3 text-center">
-              <p className="text-lg font-serif text-encre">{nbSemainesTotal > 0 ? Math.round((nbDeposesTotal / nbSemainesTotal) * 100) : 0}%</p>
-              <p className="text-xs text-muet mt-0.5">Taux de dépôt</p>
-            </div>
-            {meilleurSection && (
-              <div className="bg-surface border border-bordure rounded-xl p-3 text-center">
-                <p className="text-lg font-serif text-ok">{meilleurSection}</p>
-                <p className="text-xs text-muet mt-0.5">Meilleure section</p>
+            <div className="grid grid-cols-3 gap-2 sm:gap-3">
+              <div className="bg-parchemin-fonce rounded-xl p-2 sm:p-3 text-center">
+                <p className="font-titre text-base sm:text-lg text-encre">{nbSemainesTotal > 0 ? Math.round((nbDeposesTotal / nbSemainesTotal) * 100) : 0}%</p>
+                <p className="font-ui text-xs text-muet mt-0.5">Taux de dépôt</p>
               </div>
-            )}
-            {sectionATravaillerKey && meilleurSection !== sectionATravaillerKey && (
-              <div className="bg-surface border border-bordure rounded-xl p-3 text-center">
-                <p className="text-lg font-serif text-attention">{sectionATravaillerKey}</p>
-                <p className="text-xs text-muet mt-0.5">À travailler</p>
-              </div>
-            )}
-          </div>
-          {rappelPistes.length > 0 && (
-            <div className="bg-surface border border-bordure rounded-xl p-4">
-              <p className="text-xs font-medium text-muet uppercase tracking-wide mb-3">Pistes à suivre (dernier retour)</p>
-              <ul className="space-y-2">
-                {rappelPistes.map(piste => (
-                  <li key={piste.id} className="flex items-start gap-2 text-sm text-encre-douce">
-                    <span className="text-muet mt-0.5 flex-shrink-0">💡</span>{piste.contenu}
-                  </li>
-                ))}
-              </ul>
+              {meilleurSection && (
+                <div className="bg-parchemin-fonce rounded-xl p-2 sm:p-3 text-center">
+                  <p className="font-titre text-base sm:text-lg text-ok">{meilleurSection}</p>
+                  <p className="font-ui text-xs text-muet mt-0.5">Meilleure section</p>
+                </div>
+              )}
+              {sectionATravaillerKey && meilleurSection !== sectionATravaillerKey && (
+                <div className="bg-parchemin-fonce rounded-xl p-2 sm:p-3 text-center">
+                  <p className="font-titre text-base sm:text-lg text-attention">{sectionATravaillerKey}</p>
+                  <p className="font-ui text-xs text-muet mt-0.5">À travailler</p>
+                </div>
+              )}
             </div>
-          )}
-        </div>
+          </div>
+        </details>
       )}
 
-      {/* C8·L3 — les tuiles d'état ont laissé la place aux onglets du module
-          (Écrit · Oral · Essai [· Synthèse]) : la navigation est dans la Barre 2
-          en desktop, dans la sous-nav en mobile, et l'état de chaque volet y est
-          porté par une pastille (cf. utils/fragments-etat-eleve.ts). */}
-
-      {/* Retour du dernier fragment + validation de lecture (vue écrite uniquement) */}
+      {/* ── Le dernier retour : à lire (gate, tout ouvert) ou déjà lu (replié) ── */}
       {vue === 'ecrit' && derniereAnalyseEcrite && (
-        <div className="bg-surface border border-bordure rounded-xl p-4 space-y-4">
-          <p className="text-xs font-medium text-muet uppercase tracking-wide">Ton dernier retour</p>
-          {gateActif && (
-            <p className="text-sm text-attention">Lis ton retour, coche chaque partie, puis valide pour pouvoir déposer ton prochain fragment.</p>
-          )}
-          <ValidationLecture
-            tuiles={tuilesAnalyseEcrite(derniereAnalyseEcrite, pistesDerniere)}
-            dejaLu={!gateActif}
-            marquerAction={validerLectureRetour.bind(null, derniereAnalyseEcrite.id)}
-          />
-        </div>
+        gateActif ? (
+          <section id="retour" className="scroll-mt-24 space-y-4 rounded-xl border border-attention bg-surface p-4">
+            <p className="font-ui text-[11px] font-bold uppercase tracking-[0.11em] text-attention">
+              Ton dernier retour{semaineDuDernierRetour != null && ` · Semaine ${semaineDuDernierRetour}`}
+            </p>
+            <p className="font-corps text-sm text-attention">Lis ton retour, coche chaque partie, puis valide pour pouvoir déposer ton prochain fragment.</p>
+            <ValidationLecture
+              tuiles={tuilesAnalyseEcrite(derniereAnalyseEcrite, pistesDerniere)}
+              dejaLu={false}
+              marquerAction={validerLectureRetour.bind(null, derniereAnalyseEcrite.id)}
+            />
+          </section>
+        ) : (
+          <details id="retour" className="group scroll-mt-24 overflow-hidden rounded-xl border border-bordure bg-surface">
+            <summary className="flex min-h-[48px] cursor-pointer list-none flex-col gap-1.5 px-4 py-3 group-open:border-b group-open:border-bordure">
+              <span className="flex items-center gap-3">
+                <span aria-hidden>💡</span>
+                <span className="min-w-0 flex-1 font-ui text-sm font-medium text-encre-douce">
+                  Ton dernier retour{semaineDuDernierRetour != null && ` · Semaine ${semaineDuDernierRetour}`}
+                </span>
+                <LettresEcrit analyse={derniereAnalyseEcrite} />
+                <span className="shrink-0 font-ui text-xs text-muet group-open:hidden">déplier</span>
+                <span className="hidden shrink-0 font-ui text-xs text-muet group-open:inline">replier</span>
+              </span>
+              {premierePiste && (
+                <span className="line-clamp-2 font-corps text-sm italic text-encre-douce group-open:hidden sm:pl-8">
+                  Piste : « {premierePiste} »
+                </span>
+              )}
+            </summary>
+            <div className="p-4">
+              <AnalysePubliee analyse={derniereAnalyseEcrite} pistes={pistesDerniere} />
+            </div>
+          </details>
+        )
       )}
 
-      {/* ── Détail : Fragments écrits ── */}
+      {/* ── Le dépôt de la semaine (B) ── */}
       {vue === 'ecrit' && (
         semaine ? (
-          <div className="bg-surface border border-bordure rounded-xl overflow-hidden">
-            <div className="px-4 py-4 border-b border-bordure">
-              <div className="flex items-start justify-between gap-2">
-                <div>
-                  <p className="text-xs text-muet mb-0.5">Semaine en cours</p>
-                  <p className="font-medium text-encre">Semaine {semaine.numero}{semaine.titre ? ` — ${semaine.titre}` : ''}</p>
-                  {semaineReclamee ? (
-                    <p className="text-xs text-muet mt-0.5">À rendre avant la fin du {formatDateLimite(semaine.date_limite, tz)}</p>
-                  ) : (
-                    <p className="text-xs text-muet-clair italic mt-0.5">
-                      Pas de fragment réclamé cette semaine — tu peux déposer si tu veux.
-                    </p>
-                  )}
-                </div>
-                {depotActuel ? (
-                  <span className={`flex-shrink-0 text-xs px-2 py-1 rounded-full ${depotEnRetard ? 'bg-retard-teinte text-retard' : 'bg-ok-teinte text-ok'}`}>
-                    {depotEnRetard ? '⚠ En retard' : '✓ Déposé'}
-                  </span>
+          <section id="depot" className="scroll-mt-24 overflow-hidden rounded-xl border border-bordure bg-surface">
+            <div className="flex items-start justify-between gap-3 border-b border-bordure px-4 py-4">
+              <div className="min-w-0">
+                <p className="font-ui text-[11px] font-bold uppercase tracking-[0.11em] text-muet">Semaine en cours</p>
+                <p className="font-titre text-xl font-semibold leading-tight text-encre">Semaine {semaine.numero}{semaine.titre ? ` — ${semaine.titre}` : ''}</p>
+                {semaineReclamee ? (
+                  <p className="font-corps text-sm text-muet mt-0.5">À rendre avant la fin du {formatDateLimite(semaine.date_limite, tz)}</p>
                 ) : (
-                  <span className={`flex-shrink-0 text-xs px-2 py-1 rounded-full ${
-                    semaineReclamee ? 'bg-attention-teinte text-attention' : 'bg-parchemin-fonce text-muet'
-                  }`}>{semaineReclamee ? 'À déposer' : 'Facultatif'}</span>
+                  <p className="font-corps text-sm italic text-muet-clair mt-0.5">
+                    Pas de fragment réclamé cette semaine — tu peux déposer si tu veux.
+                  </p>
                 )}
               </div>
+              {depotActuel ? (
+                <span className={`flex-shrink-0 rounded-full px-2 py-1 font-ui text-xs ${depotEnRetard ? 'bg-retard-teinte text-retard' : 'bg-ok-teinte text-ok'}`}>
+                  {depotEnRetard ? '⚠ En retard' : '✓ Déposé'}
+                </span>
+              ) : (
+                <span className={`flex-shrink-0 rounded-full px-2 py-1 font-ui text-xs ${
+                  semaineReclamee ? 'bg-attention-teinte text-attention' : 'bg-parchemin-fonce text-muet'
+                }`}>{semaineReclamee ? 'À déposer' : 'Facultatif'}</span>
+              )}
             </div>
-            <div className="px-4 py-4 space-y-4">
+            <div className="space-y-4 px-4 py-4">
               {retoursALire.length > 0 ? (
-                <div className="bg-attention-teinte border border-attention rounded-xl px-4 py-3 space-y-2">
-                  <p className="text-sm text-attention font-medium">Dépôt bloqué</p>
-                  <p className="text-xs text-attention">Lis et valide {retoursALire.length > 1 ? 'tes retours en attente' : 'ton retour en attente'} pour pouvoir déposer :</p>
+                <div className="space-y-2 rounded-xl border border-attention bg-attention-teinte px-4 py-3">
+                  <p className="font-ui text-sm font-medium text-attention">Dépôt bloqué</p>
+                  <p className="font-corps text-sm text-attention">Lis et valide {retoursALire.length > 1 ? 'tes retours en attente' : 'ton retour en attente'} pour pouvoir déposer :</p>
                   <ul className="space-y-1">
                     {retoursALire.map((r) => (
                       <li key={r.module}>
-                        <Link href={r.href} className="text-sm text-attention underline underline-offset-2 hover:opacity-80">{r.label} →</Link>
+                        <Link href={r.href} className="font-corps text-sm text-attention underline underline-offset-2 hover:opacity-80">{r.label} →</Link>
                       </li>
                     ))}
                   </ul>
                 </div>
+              ) : depotActuel ? (
+                <>
+                  {!analyseActuelle && (
+                    <div className="rounded-xl border border-bordure bg-parchemin-fonce px-4 py-3">
+                      <p className="font-corps text-sm text-muet">Retour en préparation — ton professeur l&apos;examinera bientôt. Ta fiche reste visible en attendant.</p>
+                    </div>
+                  )}
+                  {/* Déposé : le formulaire de remplacement ne s'impose plus, il se déplie. */}
+                  <Pli titre="Remplacer mon dépôt" aspect="ligne">
+                    <FormulaireDepot semaineId={semaine.id} eleveId={user.id} inscriptionId={inscriptionId} depotExistant seuilHeures={seuilPhotoHeures} />
+                  </Pli>
+                </>
               ) : (
-                <FormulaireDepot semaineId={semaine.id} eleveId={user.id} inscriptionId={inscriptionId} depotExistant={!!depotActuel} seuilHeures={seuilPhotoHeures} />
-              )}
-              {depotActuel && !analyseActuelle && (
-                <div className="bg-parchemin-fonce border border-bordure rounded-xl px-4 py-3">
-                  <p className="text-sm text-muet">Retour en préparation — ton professeur l&apos;examinera bientôt.</p>
-                </div>
+                <FormulaireDepot semaineId={semaine.id} eleveId={user.id} inscriptionId={inscriptionId} depotExistant={false} seuilHeures={seuilPhotoHeures} />
               )}
             </div>
-          </div>
+          </section>
         ) : (
-          <div className="bg-surface border border-bordure rounded-xl p-6 text-center">
-            <p className="text-muet text-sm">Aucune semaine n&apos;est ouverte pour l&apos;instant.<br />Ton professeur en créera une bientôt.</p>
+          <div className="rounded-xl border border-bordure bg-surface p-6 text-center">
+            <p className="font-corps text-sm text-muet">Aucune semaine n&apos;est ouverte pour l&apos;instant.<br />Ton professeur en créera une bientôt.</p>
           </div>
         )
       )}
 
-      {/* Historique écrit */}
+      {/* ── Semaines précédentes (D) — une ligne par dépôt, un seul pli ouvert à la fois ── */}
       {vue === 'ecrit' && depotsPasses.length > 0 && (
-        <div className="space-y-4">
-          <h3 className="text-sm font-medium text-muet uppercase tracking-wide">Semaines précédentes</h3>
+        <section className="space-y-2">
+          <p className="font-ui text-[11px] font-bold uppercase tracking-[0.11em] text-muet px-0.5">Semaines précédentes</p>
           {depotsPasses.map(depot => {
             const analyse = analyseParDepot[depot.id]
             const pistes = analyse ? (pistesParAnalyse[analyse.id] ?? []) : []
-            const semaineTitre = (depot.semaine as unknown as { numero: number; titre: string | null } | null)
-            return (
-              <div key={depot.id} className="bg-surface border border-bordure rounded-xl overflow-hidden">
-                <div className="px-4 py-3 border-b border-bordure flex items-center justify-between">
-                  <p className="font-medium text-encre text-sm">Semaine {semaineTitre?.numero ?? '?'}{semaineTitre?.titre ? ` — ${semaineTitre.titre}` : ''}</p>
-                  {analyse ? (
-                    <span className="text-xs bg-ok-teinte text-ok px-2 py-0.5 rounded-full">Retour disponible</span>
-                  ) : (
-                    <span className="text-xs bg-parchemin-fonce text-muet px-2 py-0.5 rounded-full">Déposé ✓</span>
-                  )}
-                </div>
-                {analyse && (
-                  <div className="px-4 py-4">
-                    <AnalysePubliee analyse={analyse} pistes={pistes as FragmentPiste[]} />
-                  </div>
-                )}
+            const sem = depot.semaine as unknown as { numero: number | null; titre: string | null } | null
+            const titre = `Semaine ${sem?.numero ?? '?'}${sem?.titre ? ` — ${sem.titre}` : ''}`
+            return analyse ? (
+              <Pli key={depot.id} nom="semaines-precedentes" titre={titre} apercu={<LettresEcrit analyse={analyse} />}>
+                <AnalysePubliee analyse={analyse} pistes={pistes as FragmentPiste[]} />
+              </Pli>
+            ) : (
+              <div key={depot.id} className="flex min-h-[44px] items-center gap-3 rounded-xl border border-bordure bg-surface px-4 py-2.5">
+                <span className="min-w-0 flex-1 font-ui text-sm font-medium text-encre-douce">{titre}</span>
+                <span className="rounded-full bg-parchemin-fonce px-2 py-0.5 font-ui text-xs text-muet">Déposé ✓</span>
               </div>
             )
           })}
-        </div>
+        </section>
       )}
 
-      {/* ── Détail : Fragment oral (lecture ; l'oral se fait en classe) ── */}
+      {/* ── Fragment oral (E) — lecture ; l'oral se fait en classe ── */}
       {vue === 'oral' && (
         aOral ? (
           <div className="space-y-4">
             {Object.entries(oralParSemaine).map(([semId, data]) => {
               const num = (toutesLessemaines ?? []).find(s => s.id === semId)?.numero
               return (
-                <div key={semId} className="bg-surface border border-bordure rounded-xl p-4">
-                  <p className="text-xs font-medium text-muet uppercase tracking-wide mb-3">{num ? `Semaine ${num} — ` : ''}ta présentation orale</p>
+                <div key={semId} className="rounded-xl border border-bordure bg-surface p-4">
+                  <p className="font-ui text-[11px] font-bold uppercase tracking-[0.11em] text-muet mb-3">{num ? `Semaine ${num} — ` : ''}ta présentation orale</p>
                   <AnalyseOralePubliee oral={data.oral} analyseOrale={data.analyseOrale} />
                 </div>
               )
             })}
           </div>
         ) : (
-          <div className="bg-surface border border-bordure rounded-xl p-6 text-center text-sm text-muet">
+          <div className="rounded-xl border border-bordure bg-surface p-6 text-center font-corps text-sm text-muet">
             Aucun retour d&apos;oral pour l&apos;instant. L&apos;oral se fait en classe.
           </div>
         )
       )}
 
-      {/* ── Détail : Essai (dépôt si pas encore soumis + retour ; un seul essai) ── */}
+      {/* ── Essai (F) — dépôt si pas encore soumis + retour ; un seul essai ── */}
       {/* L'onglet Essai existe toujours (C8·L3) : sans essai activé pour l'élève,
           il dit ce qu'il en est au lieu de rester vide. */}
       {vue === 'essai' && !essaiActif && (
-        <div className="bg-surface border border-bordure rounded-xl p-6 text-center text-sm text-muet">
+        <div className="rounded-xl border border-bordure bg-surface p-6 text-center font-corps text-sm text-muet">
           Aucun essai n&apos;est prévu pour toi pour l&apos;instant.
         </div>
       )}
 
       {vue === 'essai' && (signauxChaine.length > 0 || retoursChaine.length > 0) && (
-        <div className="space-y-2 mb-4">
+        <div className="mb-4 space-y-2">
           {signauxChaine.map(s => (
-            <div key={s.depotId} className="bg-ok-teinte border border-ok rounded-xl p-4">
-              <p className="font-medium text-ok text-sm">
+            <div key={s.depotId} className="rounded-xl border border-ok bg-ok-teinte p-4">
+              <p className="font-ui text-sm font-medium text-ok">
                 Essai ouvert par ton professeur — {s.titre}
               </p>
-              <p className="text-xs text-ok mt-0.5">
+              <p className="font-corps text-xs text-ok mt-0.5">
                 Ouvert le {formatInstant(s.ouvertLe, tz, { day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' })}.
                 Dépose tes photos ci-dessous : ta copie entre d’elle-même dans la chaîne de mesure.
               </p>
@@ -691,13 +748,13 @@ export default async function PageFragments({ searchParams }: { searchParams: Pr
           ))}
           {retoursChaine.map(r => (
             <Link key={r.depotId} href={r.href}
-              className={`block rounded-xl border p-4 hover:opacity-90 transition-colors ${
+              className={`block rounded-xl border p-4 transition-colors hover:opacity-90 ${
                 r.etat.ton === 'a_lire' ? 'bg-attention-teinte border-attention' : 'bg-surface border-bordure'
               }`}>
-              <p className={`text-sm font-medium ${r.etat.ton === 'a_lire' ? 'text-attention' : 'text-encre'}`}>
+              <p className={`font-ui text-sm font-medium ${r.etat.ton === 'a_lire' ? 'text-attention' : 'text-encre'}`}>
                 Chaîne de mesure — {r.titre}
               </p>
-              <p className="text-xs text-muet mt-0.5">
+              <p className="font-corps text-xs text-muet mt-0.5">
                 {r.etat.libelle} · ton essai a deux retours : celui de Fragments ci-dessous, et celui-ci (trois compétences).
               </p>
             </Link>
@@ -708,33 +765,43 @@ export default async function PageFragments({ searchParams }: { searchParams: Pr
       {vue === 'essai' && essaiActif && (
         <div className="space-y-4">
           {analyseEssaiPubliee && (
-            <div className="bg-surface border border-bordure rounded-xl p-5 space-y-4">
-              <p className="text-xs font-medium text-muet uppercase tracking-wide">Retour de ton professeur</p>
-              <ValidationLecture
-                tuiles={tuilesAnalyseEssai(analyseEssaiPubliee as EssaiDepotAnalyse)}
-                dejaLu={!!(analyseEssaiPubliee as EssaiDepotAnalyse).retour_lu_at}
-                marquerAction={validerLectureRetourEssai.bind(null, (analyseEssaiPubliee as EssaiDepotAnalyse).id)}
-              />
-            </div>
+            (analyseEssaiPubliee as EssaiDepotAnalyse).retour_lu_at ? (
+              <div className="space-y-4 rounded-xl border border-bordure bg-surface p-5">
+                <p className="font-ui text-[11px] font-bold uppercase tracking-[0.11em] text-muet">Retour de ton professeur <span className="text-ok">· lu ✓</span></p>
+                <EssaiPublie analyse={analyseEssaiPubliee as EssaiDepotAnalyse} />
+              </div>
+            ) : (
+              <div className="space-y-4 rounded-xl border border-attention bg-surface p-5">
+                <p className="font-ui text-[11px] font-bold uppercase tracking-[0.11em] text-attention">Retour de ton professeur — à lire</p>
+                <ValidationLecture
+                  tuiles={tuilesAnalyseEssai(analyseEssaiPubliee as EssaiDepotAnalyse)}
+                  dejaLu={false}
+                  marquerAction={validerLectureRetourEssai.bind(null, (analyseEssaiPubliee as EssaiDepotAnalyse).id)}
+                />
+              </div>
+            )
           )}
           {epreuveOuverte && (
-            <div className="bg-surface border border-bordure rounded-xl overflow-hidden">
-              <div className="px-4 py-4 border-b border-bordure">
-                <p className="font-medium text-encre">{epreuveOuverte.titre}</p>
-                <p className="text-xs text-muet mt-0.5">
+            <div className="overflow-hidden rounded-xl border border-bordure bg-surface">
+              <div className="border-b border-bordure px-4 py-4">
+                <p className="font-ui text-[11px] font-bold uppercase tracking-[0.11em] text-muet">Essai</p>
+                <p className="font-titre text-xl font-semibold leading-tight text-encre">{epreuveOuverte.titre}</p>
+                <p className="font-corps text-sm text-muet mt-0.5">
                   {formatJour(epreuveOuverte.date_essai as string, { day: 'numeric', month: 'long', year: 'numeric' })}
                   {' · '}{epreuveOuverte.duree_minutes} min
                 </p>
-                {epreuveOuverte.consignes && <p className="text-sm text-encre-douce mt-2">{epreuveOuverte.consignes}</p>}
+                {epreuveOuverte.consignes && <p className="font-corps text-sm text-encre-douce mt-2 whitespace-pre-wrap">{epreuveOuverte.consignes}</p>}
               </div>
               <div className="px-4 py-4">
                 {essaiEleve && !analyseEssaiEnCours ? (
                   <div className="space-y-3">
                     <div className="flex items-center gap-2">
-                      <span className="text-xs bg-ok-teinte text-ok px-2 py-0.5 rounded-full">Photos déposées</span>
-                      <span className="text-xs text-muet">Ton professeur analysera ton essai bientôt.</span>
+                      <span className="rounded-full bg-ok-teinte px-2 py-0.5 font-ui text-xs text-ok">Photos déposées</span>
+                      <span className="font-corps text-xs text-muet">Ton professeur analysera ton essai bientôt.</span>
                     </div>
-                    <EssaiDepot epreuveId={epreuveOuverte.id} inscriptionId={inscriptionId} essaiExistantId={essaiEleve.id} analyseEnCours={false} />
+                    <Pli titre="Remplacer mon dépôt" aspect="ligne">
+                      <EssaiDepot epreuveId={epreuveOuverte.id} inscriptionId={inscriptionId} essaiExistantId={essaiEleve.id} analyseEnCours={false} />
+                    </Pli>
                   </div>
                 ) : (
                   <EssaiDepot epreuveId={epreuveOuverte.id} inscriptionId={inscriptionId} essaiExistantId={essaiEleve?.id ?? null} analyseEnCours={!!analyseEssaiEnCours} />
@@ -743,20 +810,39 @@ export default async function PageFragments({ searchParams }: { searchParams: Pr
             </div>
           )}
           {!epreuveOuverte && !analyseEssaiPubliee && (
-            <div className="bg-surface border border-bordure rounded-xl p-6 text-center text-sm text-muet">Aucun essai ouvert pour l&apos;instant.</div>
+            <div className="rounded-xl border border-bordure bg-surface p-6 text-center font-corps text-sm text-muet">Aucun essai ouvert pour l&apos;instant.</div>
           )}
         </div>
       )}
 
-      {/* Bilan de semestre (vue dédiée) */}
+      {/* ── Bilan de semestre (G) — le sceau s'y déploie en grand ── */}
       {vue === 'synthese' && synthesePubliee && (
-        <div className="space-y-4">
-          <h3 className="text-sm font-medium text-muet uppercase tracking-wide">Bilan du semestre</h3>
-          <div className="bg-surface border border-bordure rounded-xl p-5">
-            <BilanSemestre synthese={synthesePubliee as FragmentSynthese} />
-          </div>
+        <div className="rounded-xl border border-bordure bg-surface p-5">
+          <BilanSemestre synthese={synthesePubliee as FragmentSynthese} theme={theme?.theme ?? null} />
         </div>
       )}
     </div>
+  )
+}
+
+// Ton de la carte « à faire maintenant » → liseré et sur-label (jetons de la charte).
+const BORD_CARTE: Record<CarteAFaire['ton'], string> = {
+  pigment: 'border-pigment', attention: 'border-attention', retard: 'border-retard', ok: 'border-ok', neutre: 'border-bordure',
+}
+const TEXTE_CARTE: Record<CarteAFaire['ton'], string> = {
+  pigment: 'text-pigment', attention: 'text-attention', retard: 'text-retard', ok: 'text-ok', neutre: 'text-muet',
+}
+
+/** Les trois lettres d'un retour écrit, sur une ligne (résumé d'un pli fermé). */
+function LettresEcrit({ analyse }: { analyse: FragmentAnalyse }) {
+  return (
+    <span className="flex shrink-0 items-center gap-2 font-titre text-base font-semibold text-encre-douce">
+      {SECTIONS_ECRIT.map(s => (
+        <span key={s.cle}>
+          <span className="sr-only">{s.label} </span>
+          {noteVersLettre(analyse[s.cle]) ?? '—'}
+        </span>
+      ))}
+    </span>
   )
 }

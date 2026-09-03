@@ -9,7 +9,10 @@
 import Image from 'next/image'
 import { MODULES, type CleModule } from './configModules'
 
-export default function SceauModule({ cle, size = 64 }: { cle: CleModule; size?: number }) {
+// `anneau` : l'anneau d'or de la Barre 2. Sans lui (handoff Fragments élève,
+// §Le sceau), la pastille est celle des corps de page : disque teinté, sceau
+// recadré, un simple liseré intérieur.
+export default function SceauModule({ cle, size = 64, anneau = true }: { cle: CleModule; size?: number; anneau?: boolean }) {
   const c = MODULES.find((m) => m.cle === cle)!.couleurs
 
   return (
@@ -36,15 +39,17 @@ export default function SceauModule({ cle, size = 64 }: { cle: CleModule; size?:
           }}
         />
       </span>
-      <span
-        aria-hidden
-        className="absolute inset-0 pointer-events-none"
-        style={{
-          borderRadius: '50%',
-          border: '3px solid #B8893B',
-          boxShadow: `0 3px 12px rgba(${c.ombreAnneauRgb},.30)`,
-        }}
-      />
+      {anneau && (
+        <span
+          aria-hidden
+          className="absolute inset-0 pointer-events-none"
+          style={{
+            borderRadius: '50%',
+            border: '3px solid #B8893B',
+            boxShadow: `0 3px 12px rgba(${c.ombreAnneauRgb},.30)`,
+          }}
+        />
+      )}
     </span>
   )
 }
