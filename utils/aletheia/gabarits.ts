@@ -113,13 +113,13 @@ const ANALYTIQUE: DefinitionGabarit = {
   champ2: { question: 'Applique l’analyse de l’auteur à un cas de ton choix.', aide: 'Une œuvre, une situation, une dispute : montre que l’outil s’y applique, ou non.' },
   champFixe: null,
   tournantes: [
-    { cle: 'honnete', question: 'Cet outil te paraît-il honnête ?', aide: 'Ou est-ce un tour de passe-passe ? Dis pourquoi.' },
+    { cle: 'interet', question: 'Penses-tu que les idées que développe l’auteur ont leur intérêt ?', aide: 'Lesquelles, et pourquoi elles valent la peine — ou non.' },
     { cle: 'contre_exemple', question: 'Connais-tu une œuvre ou un cas qui ne rentre pas dans cette définition ?', aide: 'Et ce que ça dit de la définition.' },
     { cle: 'distinction', question: 'Quelle distinction de l’auteur te semble la plus utile ?', aide: 'Et à quoi elle te servirait.' },
   ],
   questions: ARGUMENTATIF.questions,
   vocabulaire: ARGUMENTATIF.vocabulaire,
-  bulles: { relances: 'Pour creuser la notion et ton application', tournante: 'Sur ton jugement' },
+  bulles: { relances: 'Pour creuser la notion et ton application', tournante: 'Sur l’intérêt de ces idées' },
   axes: { axe1: 'Notion saisie', axe2: 'Application au cas choisi' },
   champ2Independant: true,
 }
