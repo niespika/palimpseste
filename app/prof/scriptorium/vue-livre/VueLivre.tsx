@@ -21,8 +21,10 @@ export interface DocSemaine {
 // 3 colonnes (rail des semaines / fiche de la semaine / carte d'architecture).
 // Orchestrateur SERVEUR : sélection lue dans l'URL (?semaine=N), états dérivés ici,
 // toutes les données viennent de page.tsx (aucune requête).
-export default function VueLivre({ livre, classes, classeIds, docs, nbDocsSansSemaine, capstone, reference, semaineParam, modeDecoupe, conflitClasses }: {
+export default function VueLivre({ livre, classes, classeIds, docs, nbDocsSansSemaine, capstone, reference, semaineParam, modeDecoupe, conflitClasses, gabarit }: {
   livre: { id: string; label: string; auteur: string | null; date_debut: string | null; nb_semaines: number | null; signets: Signet[] | null }
+  /** (E3) Gabarit de lecture du livre, quand la porte de l'étayage est ouverte ; sinon absent. */
+  gabarit?: 'argumentatif' | 'dialogue' | 'aphoristique' | 'analytique' | null
   classes: { id: string; nom: string }[]
   classeIds: string[]
   docs: DocSemaine[] // documents du livre AVEC numéro de semaine, triés (semaine, id)
@@ -70,6 +72,7 @@ export default function VueLivre({ livre, classes, classeIds, docs, nbDocsSansSe
           signets={livre.signets}
           semaines={docs.map(d => ({ id: d.id, semaine: d.semaine, titre: d.titre, chapitres: d.chapitres ?? '', texte: d.texte ?? '' }))}
           hrefRetour={hrefFiche}
+          gabarit={gabarit}
         />
       </div>
     )
@@ -146,6 +149,7 @@ export default function VueLivre({ livre, classes, classeIds, docs, nbDocsSansSe
             statutRef={reference?.statut ?? null}
             updatedAtRef={reference?.updated_at ?? null}
             nbFiches={parSemaine.length}
+            gabaritLivre={gabarit}
             contenuVide={contenuVide}
           />
           <ColonneCarte livreId={livre.id} capstone={capstone} liens={liensResolus} semaineSel={semaineSel} hrefBase={hrefBase} />

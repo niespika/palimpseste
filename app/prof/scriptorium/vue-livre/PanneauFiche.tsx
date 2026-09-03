@@ -19,9 +19,11 @@ const BADGE_ETAT: Record<EtatFiche, { texte: string; cls: string }> = {
 // Panneau central : la fiche de la semaine sélectionnée. Remonté à chaque changement
 // de semaine (key={semaineSel} côté parent) → le texte se replie et le brouillon
 // d'édition est jeté, comme demandé par le handoff.
-export default function PanneauFiche({ livreId, semaine, titreDoc, chapitresDoc, texteDoc, chapitre, etat, sousStatut, statutRef, updatedAtRef, nbFiches, contenuVide }: {
+export default function PanneauFiche({ livreId, semaine, titreDoc, chapitresDoc, texteDoc, chapitre, etat, sousStatut, statutRef, updatedAtRef, nbFiches, contenuVide, gabaritLivre }: {
   livreId: string
   semaine: number
+  /** (E3) Gabarit du livre, porte de l'étayage ouverte ; absent ⇒ pas de sélecteur de surcharge. */
+  gabaritLivre?: string | null
   titreDoc: string
   chapitresDoc: string | null
   texteDoc: string | null
@@ -119,7 +121,7 @@ export default function PanneauFiche({ livreId, semaine, titreDoc, chapitresDoc,
           </div>
         ) : edition && draft ? (
           <>
-            <EditeurFicheSemaine draft={draft} setDraft={setDraft} />
+            <EditeurFicheSemaine draft={draft} setDraft={setDraft} gabaritLivre={gabaritLivre ?? undefined} />
             <div className="flex gap-2">
               <button type="button" onClick={enregistrer} disabled={busy} className={BTN_PRIMAIRE}>{busy ? 'Enregistrement…' : 'Enregistrer'}</button>
               <button type="button" onClick={() => setEdition(false)} disabled={busy} className={BTN_DISCRET}>Annuler</button>

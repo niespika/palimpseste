@@ -35,16 +35,20 @@ function Liste({ items }: { items: string[] }) {
 }
 
 // ── Retour V1 — socratique, éléments priorisés et digestes ────────────────────
-export function VueRetourV1({ retour, montrerRemarque = false }: { retour: RetourV1; montrerRemarque?: boolean }) {
+// `titres` (E3) : les titres des deux premières bulles suivent le gabarit de lecture ;
+// absents ⇒ ceux d'avant (argumentatif).
+export function VueRetourV1({ retour, montrerRemarque = false, titres }: {
+  retour: RetourV1; montrerRemarque?: boolean; titres?: { relances: string; tournante: string }
+}) {
   return (
     <div className="space-y-3">
       {retour.relances?.length > 0 && (
-        <Bulle titre="Pour creuser ton idée et tes arguments" accent="violet">
+        <Bulle titre={titres?.relances ?? 'Pour creuser ton idée et tes arguments'} accent="violet">
           <Liste items={retour.relances} />
         </Bulle>
       )}
       {retour.accord && (
-        <Bulle titre="Sur ton accord" accent="sky">
+        <Bulle titre={titres?.tournante ?? 'Sur ton accord'} accent="sky">
           <p className="text-sm text-encre-douce whitespace-pre-wrap">{retour.accord}</p>
         </Bulle>
       )}

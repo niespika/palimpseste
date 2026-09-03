@@ -16,6 +16,7 @@ import { retoursNonLus } from '@/utils/retours-lus'
 import AtelierDeuxColonnes from '@/components/AtelierDeuxColonnes'
 import Pastille from '@/components/Pastille'
 import { StepperNomme } from '@/components/aletheia/Steppers'
+import { contexteGabarit } from '@/utils/aletheia/gabarit-serveur'
 import type { TravailAletheia } from '../../types'
 
 function Bloc({ titre, children }: { titre: string; children: React.ReactNode }) {
@@ -89,7 +90,7 @@ function Repli({ titre, children }: { titre: string; children: React.ReactNode }
 // Revue d'une semaine terminée (DONE) — archive hiérarchisée : synthèse à relire,
 // avant/après, dévoilement, détail replié. Réutilise l'atelier 2 colonnes pour le
 // même langage visuel. Aucune logique d'état : pure lecture du travail clos.
-function RevueDone({ t, evalQuestions }: { t: TravailAletheia; evalQuestions: boolean }) {
+function RevueDone({ t, evalQuestions, titres }: { t: TravailAletheia; evalQuestions: boolean; titres?: { relances: string; tournante: string } }) {
   const rv = t.retour_vf!
   const amont = rv.architecture_amont ?? []
   const aval = rv.architecture_aval_jalons ?? []
@@ -150,7 +151,7 @@ function RevueDone({ t, evalQuestions }: { t: TravailAletheia; evalQuestions: bo
         <p className="font-ui text-xs tracking-[0.1em] text-muet uppercase">Revoir le détail</p>
         {t.retour_v1 && (
           <Repli titre="Ton retour socratique — relances & réponses à tes questions">
-            <VueRetourV1 retour={t.retour_v1} montrerRemarque={evalQuestions} />
+            <VueRetourV1 retour={t.retour_v1} montrerRemarque={evalQuestions} titres={titres} />
           </Repli>
         )}
         <Repli titre="Le retour final complet — nuances, ajouts vérifiés">
@@ -215,6 +216,11 @@ export default async function PageSemaineAletheia({ params }: { params: Promise<
   }
 
   const { evalQuestions, aides } = await lireReglages(admin)
+  // (E3) Le gabarit de lecture de la séance. Porte fermée ⇒ `libelles` n'est PAS passé
+  // aux formulaires : ils rendent les libellés d'avant, à l'octet près.
+  const gab = await contexteGabarit(admin, livreId, semaine, exposees)
+  const libelles = gab.etayage ? gab.libelles : undefined
+  const titresRetour = gab.etayage ? gab.libelles.bulles : undefined
   const travaux = await travauxParSemaine(admin, user.id, livreId)
   const t: TravailAletheia | null = travaux.get(semaine) ?? null
   const statut = t?.statut ?? 'DRAFT'
@@ -276,7 +282,7 @@ export default async function PageSemaineAletheia({ params }: { params: Promise<
           on ne réempile plus les blocs antérieurs (saisie, retour V1, version finale). */}
       {statut === 'DONE' && t?.retour_vf ? (
         // Semaine terminée : archive hiérarchisée (tout reste accessible en dépli).
-        <RevueDone t={t} evalQuestions={evalQuestions} />
+        <RevueDone t={t} evalQuestions={evalQuestions} titres={titresRetour} />
       ) : statut === 'V1_SUBMITTED' ? (
         // Attente du retour socratique (IA en arrière-plan, polling via PollStatut).
         <TuileAttente
@@ -330,7 +336,7 @@ export default async function PageSemaineAletheia({ params }: { params: Promise<
           <AtelierDeuxColonnes
             labelRetour="Ton retour"
             labelFormulaire="Ta version finale"
-            retour={<VueRetourV1 retour={t.retour_v1} montrerRemarque={evalQuestions} />}
+            retour={<VueRetourV1 retour={t.retour_v1} montrerRemarque={evalQuestions} titres={titresRetour} />}
             formulaire={
               <div className="bg-surface border border-bordure rounded-xl p-4 sm:p-5">
                 <FormulaireVf
@@ -339,6 +345,8 @@ export default async function PageSemaineAletheia({ params }: { params: Promise<
                   theseInitial={t?.these_vf ?? t?.these ?? ''}
                   argumentsInitial={t?.arguments_vf ?? t?.arguments ?? ''}
                   accordInitial={t?.accord_vf ?? t?.accord ?? ''}
+                  champFixeInitial={t?.champ_fixe_vf ?? t?.champ_fixe ?? ''}
+                  libelles={libelles}
                 />
               </div>
             }
@@ -361,7 +369,9 @@ export default async function PageSemaineAletheia({ params }: { params: Promise<
               accordInitial={t?.accord ?? ''}
               questionsInitial={(t?.questions ?? []).join('\n')}
               vocabulaireInitial={(t?.vocabulaire ?? []).join('\n')}
+              champFixeInitial={t?.champ_fixe ?? ''}
               aides={aides}
+              libelles={libelles}
             />
           </Bloc>
         </>

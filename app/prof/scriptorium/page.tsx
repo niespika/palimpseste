@@ -428,6 +428,16 @@ export default async function ScriptoriumPage({
     : []
   let capstoneLivre: CapstoneProf | null = null
   let referenceLivre: LivreReferenceProf | null = null
+  // (E3) Gabarit de lecture du livre — porte `aletheia_etayage_actif` ouverte seulement ;
+  // requêtes séparées et tolérantes (colonnes absentes ⇒ porte fermée ⇒ null).
+  let gabaritLivre: 'argumentatif' | 'dialogue' | 'aphoristique' | 'analytique' | null = null
+  if (uniteSelLivre) {
+    const { lireLaPorteEtayage } = await import('@/utils/aletheia/decoupage-serveur')
+    if (await lireLaPorteEtayage(supabase)) {
+      const { gabaritDuLivre } = await import('@/utils/aletheia/gabarit-serveur')
+      gabaritLivre = (await gabaritDuLivre(supabase, uniteSelLivre.id)).gabarit
+    }
+  }
   if (uniteSelLivre) {
     const [{ data: cap }, { data: ref }] = await Promise.all([
       supabase.from('aletheia_capstone').select('statut, contenu, amende_par_prof, updated_at').eq('scriptorium_livre_id', uniteSelLivre.id).maybeSingle(),
@@ -702,6 +712,7 @@ export default async function ScriptoriumPage({
             nbDocsSansSemaine={docsAffiches.filter(d => d.semaine == null).length}
             capstone={capstoneLivre}
             reference={referenceLivre}
+            gabarit={gabaritLivre}
             semaineParam={semaine}
             modeDecoupe={edition === 'decoupe'}
             conflitClasses={conflitClasses}

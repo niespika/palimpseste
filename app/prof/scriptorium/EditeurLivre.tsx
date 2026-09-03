@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { modifierLivreComplet } from './actions'
 import NavigateurDecoupe, { type Semaine } from './NavigateurDecoupe'
 import { reassemblerLivre, paginer, posVersLigneGlobale, ligneGlobaleVersPos, type Signet } from './decoupe-utils'
+import { DEFINITIONS, GABARITS, estGabarit, type Gabarit } from '@/utils/aletheia/gabarits'
 
 export interface SemaineEdit { id: string; semaine: number | null; titre: string; chapitres: string; texte: string }
 
@@ -12,12 +13,15 @@ export interface SemaineEdit { id: string; semaine: number | null; titre: string
 // semaines en un bloc, on pré-place les marqueurs aux bornes existantes et on
 // pré-remplit titres/chapitres, puis on laisse re-découper. Pas d'édition du texte
 // lui-même ; avertissement (dans le navigateur) si des lignes sortent des semaines.
-export default function EditeurLivre({ livreId, titre, auteur, signets, semaines, hrefRetour }: { livreId: string; titre: string; auteur: string | null; signets: Signet[] | null; semaines: SemaineEdit[]; hrefRetour?: string }) {
+// `gabarit` (E3) : le gabarit de lecture du livre, quand la porte de l'étayage est ouverte ;
+// absent ⇒ le sélecteur n'apparaît pas et rien n'est écrit sur la colonne.
+export default function EditeurLivre({ livreId, titre, auteur, signets, semaines, hrefRetour, gabarit }: { livreId: string; titre: string; auteur: string | null; signets: Signet[] | null; semaines: SemaineEdit[]; hrefRetour?: string; gabarit?: Gabarit | null }) {
   const router = useRouter()
   // Avec hrefRetour (vue livre, mode découpe pleine largeur) : l'éditeur démarre
   // ouvert et Annuler / Enregistrer renvoient à la fiche au lieu de replier.
   const [ouvert, setOuvert] = useState(Boolean(hrefRetour))
   const [auteurVal, setAuteurVal] = useState(auteur ?? '')
+  const [gabaritVal, setGabaritVal] = useState<Gabarit>(estGabarit(gabarit) ? gabarit : 'argumentatif')
   const [etat, setEtat] = useState<{ sem: Semaine[]; valide: boolean }>({ sem: [], valide: false })
   const [chargement, setChargement] = useState(false)
   const [erreur, setErreur] = useState<string | null>(null)
@@ -54,7 +58,7 @@ export default function EditeurLivre({ livreId, titre, auteur, signets, semaines
       debutLigne: s.debut ? posVersLigneGlobale(pages, s.debut) : 0,
       finLigne: s.fin ? posVersLigneGlobale(pages, s.fin) : 0,
     }))
-    const res = await modifierLivreComplet(livreId, auteurVal, payload, totalLignes)
+    const res = await modifierLivreComplet(livreId, auteurVal, payload, totalLignes, gabarit != null ? gabaritVal : undefined)
     setChargement(false)
     if (res.error) { setErreur(res.error); return }
     if (hrefRetour) {
@@ -104,6 +108,15 @@ export default function EditeurLivre({ livreId, titre, auteur, signets, semaines
         <label className="block text-xs font-medium text-muet mb-1">Auteur</label>
         <input value={auteurVal} onChange={e => setAuteurVal(e.target.value)} placeholder="Ex. : Nietzsche" className={`${inputCls} sm:max-w-xs`} />
       </div>
+      {gabarit != null && (
+        <div>
+          <label className="block text-xs font-medium text-muet mb-1">Gabarit de lecture</label>
+          <select value={gabaritVal} onChange={e => setGabaritVal(estGabarit(e.target.value) ? e.target.value : 'argumentatif')} className={`${inputCls} sm:max-w-xs`}>
+            {GABARITS.map(g => <option key={g} value={g}>{DEFINITIONS[g].nom}</option>)}
+          </select>
+          <p className="text-xs text-muet mt-1">{DEFINITIONS[gabaritVal].pour}. Décide les questions posées à l’élève et le regard de l’IA ; une séance peut le surcharger dans sa fiche.</p>
+        </div>
+      )}
       <p className="text-xs text-muet">
         Re-découpe : déplace les marqueurs de début/fin. Le texte lui-même n&apos;est pas modifiable ici, et la carte/référence ne sont pas régénérées
         automatiquement (utilise « Régénérer » depuis la page du livre si besoin).

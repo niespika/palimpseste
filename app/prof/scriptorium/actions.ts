@@ -570,8 +570,13 @@ export async function modifierLivreComplet(
   auteur: string,
   semaines: { id: string; titre: string; chapitres: string; debutLigne: number; finLigne: number }[],
   nbLignesAttendu: number,
+  // (E3) Gabarit de lecture du livre ; absent ⇒ inchangé (et rien n'est écrit sur la colonne).
+  gabarit?: string,
 ): Promise<{ success?: boolean; error?: string }> {
   const { supabase } = await verifierProf()
+  if (gabarit !== undefined && !['argumentatif', 'dialogue', 'aphoristique', 'analytique'].includes(gabarit)) {
+    return { error: 'Gabarit de lecture inconnu.' }
+  }
 
   // Réassemblage côté serveur, IDENTIQUE au client. Départage par `id` (uuid) en plus
   // de `semaine` → ordre déterministe même si deux documents partagent un numéro.
@@ -609,7 +614,7 @@ export async function modifierLivreComplet(
 
   const { error: eU } = await supabase
     .from('scriptorium_unites')
-    .update({ auteur: auteur.trim() || null })
+    .update({ auteur: auteur.trim() || null, ...(gabarit !== undefined ? { gabarit_lecture: gabarit } : {}) })
     .eq('id', livreId).eq('type', 'livre')
   if (eU) return { error: eU.message }
 
@@ -1398,6 +1403,8 @@ export async function enregistrerFicheSemaine(livreId: string, chapitre: Referen
     arguments_cles: Array.isArray(chapitre.arguments_cles) ? chapitre.arguments_cles.map(a => (a ?? '').trim()).filter(Boolean) : [],
     concepts_cles: Array.isArray(chapitre.concepts_cles) ? chapitre.concepts_cles.map(a => (a ?? '').trim()).filter(Boolean) : [],
     synthese_modele: (chapitre.synthese_modele ?? '').trim(),
+    // (E3) Surcharge du gabarit par séance : recopiée si valide, sinon absente.
+    ...(['argumentatif', 'dialogue', 'aphoristique', 'analytique'].includes(chapitre.gabarit ?? '') ? { gabarit: chapitre.gabarit } : {}),
   }
 
   const { parseReference } = await import('@/utils/aletheia-retours')

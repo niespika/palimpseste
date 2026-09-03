@@ -2,17 +2,30 @@
 
 import type { ReferenceChapitre } from '@/app/eleve/modules/aletheia/types'
 import { CHAMP, INTITULE, INTITULE_SM } from './ui'
+import { DEFINITIONS, GABARITS, estGabarit } from '@/utils/aletheia/gabarits'
 
 // Édition d'UNE fiche de semaine (ex-EditeurReference réduit à un chapitre) : le
 // panneau parent fusionne le brouillon dans le tableau complet à l'enregistrement.
-export default function EditeurFicheSemaine({ draft, setDraft }: {
+// `gabaritLivre` (E3) : le gabarit du livre, pour afficher la surcharge par séance.
+export default function EditeurFicheSemaine({ draft, setDraft, gabaritLivre }: {
   draft: ReferenceChapitre
   setDraft: (c: ReferenceChapitre) => void
+  gabaritLivre?: string
 }) {
   const maj = (patch: Partial<ReferenceChapitre>) => setDraft({ ...draft, ...patch })
   return (
     <div className="flex flex-col gap-[18px]">
       <p className="font-corps italic text-[13px] text-muet-clair">Le titre de la séance se modifie via « Modifier la découpe » en tête de page.</p>
+      {gabaritLivre && (
+        <div>
+          <label className={`${INTITULE} block mb-1.5`}>Gabarit de lecture de cette séance</label>
+          <select value={draft.gabarit ?? ''} onChange={e => maj({ gabarit: estGabarit(e.target.value) ? e.target.value : undefined })} className={`${CHAMP} sm:max-w-xs`}>
+            <option value="">Celui du livre ({DEFINITIONS[estGabarit(gabaritLivre) ? gabaritLivre : 'argumentatif'].nom})</option>
+            {GABARITS.map(g => <option key={g} value={g}>{DEFINITIONS[g].nom}</option>)}
+          </select>
+          <p className="font-corps italic text-[13px] text-muet-clair mt-1">Change les questions posées à l’élève et le regard de l’IA pour cette séance seulement.</p>
+        </div>
+      )}
       <div>
         <label className={`${INTITULE} block mb-1.5`}>Thèse canonique</label>
         <textarea value={draft.these_canonique} onChange={e => maj({ these_canonique: e.target.value })} rows={3} className={`${CHAMP} resize-y font-corps text-[15px]`} />

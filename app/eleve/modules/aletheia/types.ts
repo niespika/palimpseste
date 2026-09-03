@@ -80,6 +80,11 @@ export interface TravailAletheia {
   devoilement: Devoilement | null
   created_at: string
   updated_at: string
+  // (E2/E3, colonnes additives, absentes tant que les migrations ne sont pas jouées.)
+  forme?: string | null                // forme d'étayage servie (montre | fenetre | demi_section)
+  champ_fixe?: string | null           // question FIXE du gabarit dialogué, V1
+  champ_fixe_vf?: string | null        // la même, VF
+  tournante_cle?: string | null        // clé de la question tournante posée à cette séance
 }
 
 // Capstone : carte d'architecture finale du LIVRE (partagée, canonique).
@@ -117,6 +122,8 @@ export interface ReferenceChapitre {
   // ne porte que le flag global amende_par_prof). ISO 8601.
   genere_le?: string
   amende_le?: string
+  // (E3) Surcharge du gabarit de lecture pour CETTE séance (sinon celui du livre).
+  gabarit?: 'argumentatif' | 'dialogue' | 'aphoristique' | 'analytique'
 }
 export type ReferenceStatut = 'PENDING' | 'READY' | 'ERROR'
 export interface LivreReference {

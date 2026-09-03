@@ -8,6 +8,10 @@ import { coutMessage, enregistrerCoutApi, normaliserUsage } from '@/utils/cout-a
 import { IDENTITE, REGISTRE, sansDelims, injecter, extraireJSON } from '@/utils/ia-commun'
 import { signalDepuisIA } from '@/utils/detecteur-integrite'
 import { signalerEnAttenteIA } from '@/utils/integrite'
+// (E3) Gabarits de lecture : tronc commun + un bloc par gabarit (vide en argumentatif).
+import { assemblerPrompt, blocGabarit, DEFINITIONS, GABARIT_DEFAUT, estGabarit, type Gabarit } from '@/utils/aletheia/gabarits'
+import { gabaritDuLivre, gabaritDeLaFiche } from '@/utils/aletheia/gabarit-serveur'
+import { lireLaPorteEtayage } from '@/utils/aletheia/decoupage-serveur'
 import type {
   RetourV1, RetourVF, AjoutVerifie, DefinitionVocabulaire, Devoilement, Capstone,
   ReferenceChapitre, InventaireDiagnostic, NiveauxDiagnostic,
@@ -27,7 +31,7 @@ export const PROMPT_FEEDBACK_V1_DEFAUT = `${IDENTITE}
 Ton rôle ici : le guide de lecture, généreux mais exigeant. Un élève lit en autonomie un livre exigeant, semaine après semaine. Il vient de remplir CINQ champs sur les chapitres de CETTE semaine : idée principale, arguments, accord, questions, vocabulaire. Ton rôle : l'aider à approfondir sa lecture — sans jamais faire le travail à sa place.
 
 ${REGISTRE}
-
+{bloc_gabarit}
 ## Fiche de lecture canonique de CETTE semaine (repère de correction CONFIDENTIEL — jamais montré ni cité à l'élève)
 {fiche_reference}
 Elle te dit la « bonne lecture » des chapitres de cette semaine SEULEMENT (aucun spoiler de la suite). Sers-t'en UNIQUEMENT pour VISER : repérer plus finement ce que l'élève a saisi, raté ou déformé, et l'orienter par une question vers le bon passage. ⛔ Tu ne la recopies pas, ne l'annonces pas, ne « corriges » pas en la déballant, n'en révèles ni la thèse ni les arguments : la posture reste SOCRATIQUE (l'élève trouve lui-même). Si elle est indisponible ou semble décalée, ignore-la et appuie-toi sur le seul texte de la semaine.
@@ -272,10 +276,15 @@ export async function genererRetourV1(travailId: string): Promise<void> {
     const { data: params } = await admin.from('aletheia_params').select('prompt_feedback_1').eq('id', 1).maybeSingle()
     const questions = (t.questions as string[] | null) ?? []
     const vocabulaire = (t.vocabulaire as string[] | null) ?? []
+    // (E3) Le gabarit de lecture de la séance : bloc de prompt + question fixe + tournante.
+    // Porte fermée ⇒ bloc vide, tournante « accord », champ fixe absent : prompt d'avant.
+    const gab = await gabaritPourPrompt(admin, travailId, t.scriptorium_livre_id as string, t.semaine_index as number, 'v1')
 
-    const prompt = injecter(params?.prompt_feedback_1?.trim() || PROMPT_FEEDBACK_V1_DEFAUT, {
+    const prompt = injecter(assemblerPrompt(params?.prompt_feedback_1?.trim() || PROMPT_FEEDBACK_V1_DEFAUT, gab.bloc), {
       fiche_reference: formaterFicheReference(fiche),   // AVANT texte_unite (préfixe caché)
       texte_unite: texteUnite + CACHE_BREAK,   // césure cache juste après le texte de semaine
+      champ_fixe_eleve: gab.champFixe,
+      question_tournante: gab.questionTournante,
       these_eleve: sansDelims(txt(t.these)),
       arguments_eleve: sansDelims(txt(t.arguments)),
       accord_eleve: sansDelims(txt(t.accord)),
@@ -339,7 +348,7 @@ export const PROMPT_FEEDBACK_VF_DEFAUT = `${IDENTITE}
 Ton rôle ici : le guide de lecture, généreux mais exigeant. Un élève lit un livre exigeant sur {total_semaines} semaines. Il vient de RETRAVAILLER trois champs sur les chapitres de la SEMAINE {semaine_courante_N} : idée principale, arguments, accord — après un premier retour. Tu disposes de TROIS sources : un RÉSUMÉ de l'amont (ce qui précède, déjà lu), le TEXTE INTÉGRAL de la semaine {semaine_courante_N} (ce que tu évalues), et les TITRES SEULS de l'aval (la suite). Tu n'as PAS le contenu de l'aval : tu peux ANNONCER un titre / une question à venir pour donner ENVIE de lire, mais tu ne peux ni ne dois en RÉVÉLER la réponse, la conclusion ou l'argument — l'élève doit les découvrir lui-même.
 
 ${REGISTRE}
-
+{bloc_gabarit}
 ## Amont — ce qui précède (DÉJÀ LU par l'élève ; résumé : thèse, arguments, concepts par chapitre)
 {amont_structure}
 
@@ -577,11 +586,15 @@ export async function genererRetourVf(travailId: string): Promise<void> {
     const overrideVf = params?.prompt_feedback_2?.trim()
     const modeleVf = overrideVf && !overrideVf.includes('{livre_entier}') && overrideVf.includes('{semaine_courante_texte}')
       ? overrideVf : PROMPT_FEEDBACK_VF_DEFAUT
+    // (E3) Bloc du gabarit + question fixe (VF) + tournante figée à la soumission.
+    const gab = await gabaritPourPrompt(admin, travailId, livreId, semaine, 'vf')
 
-    const prompt = injecter(modeleVf, {
+    const prompt = injecter(assemblerPrompt(modeleVf, gab.bloc), {
       amont_structure: amont,
       semaine_courante_texte: semaineCourante,
       aval_titres: avalTitres + CACHE_BREAK,   // césure cache après le contexte livre-niveau
+      champ_fixe_eleve: gab.champFixe,
+      question_tournante: gab.questionTournante,
       these_initiale: sansDelims(txt(t.these)),
       arguments_initiale: sansDelims(txt(t.arguments)),
       accord_initial: sansDelims(txt(t.accord)),
@@ -765,7 +778,7 @@ export async function genererCapstone(livreId: string): Promise<void> {
 // ════════════════════════════════════════════════════════════════════════════
 
 export const PROMPT_REFERENCE_DEFAUT = `Tu établis la FICHE DE LECTURE CANONIQUE d'un livre, chapitre par chapitre. Pour chaque semaine de lecture, tu produis : la THÈSE canonique, les ARGUMENTS CLÉS, les CONCEPTS CLÉS — ce socle sert à diagnostiquer la compréhension des élèves, donc sois rigoureux, fidèle au texte, sans interprétation extérieure — ET une SYNTHÈSE MODÈLE qui, elle, sera lue par l'élève.
-
+{bloc_gabarit}
 ## Chapitres PRÉCÉDENTS du livre — déjà traités, donnés pour CONTINUITÉ (contexte SEUL)
 {amont_continuite}
 ⚠️ Ce bloc te situe dans le fil du livre pour que tes fiches restent COHÉRENTES d'un chapitre à l'autre : mêmes concepts nommés de la même façon, thèses qui se répondent, vocabulaire stable. Tu NE produis AUCUNE fiche pour ces chapitres-là (ils sont déjà fichés) : tu ne fiches QUE les chapitres de « Texte des chapitres à traiter » ci-dessous.
@@ -809,6 +822,8 @@ export const parseReference = (x: unknown): ReferenceChapitre[] =>
           synthese_modele: txt((c as { synthese_modele?: unknown })?.synthese_modele),
           ...(genereLe ? { genere_le: genereLe } : {}),
           ...(amendeLe ? { amende_le: amendeLe } : {}),
+          // (E3) Surcharge du gabarit par séance : recopiée si valide, sinon absente.
+          ...(estGabarit((c as { gabarit?: unknown })?.gabarit) ? { gabarit: (c as { gabarit: Gabarit }).gabarit } : {}),
         }]
       })
     : []
@@ -873,7 +888,14 @@ export async function genererReferenceLivre(livreId: string): Promise<void> {
     for (let i = 0; i < semaines.length; i += SEMAINES_PAR_LOT) lots.push(semaines.slice(i, i + SEMAINES_PAR_LOT))
 
     const { data: params } = await admin.from('aletheia_params').select('prompt_reference').eq('id', 1).maybeSingle()
-    const template = params?.prompt_reference?.trim() || PROMPT_REFERENCE_DEFAUT
+    // (E3) Bloc du gabarit du LIVRE (la fiche se génère par livre ; la surcharge par
+    // séance ne vaut que pour les questions et les retours). Porte fermée ⇒ bloc vide.
+    let blocRef = ''
+    if (await lireLaPorteEtayage(admin)) {
+      const { data: p2 } = await admin.from('aletheia_params').select('blocs_gabarits').eq('id', 1).maybeSingle()
+      blocRef = blocGabarit((await gabaritDuLivre(admin, livreId)).gabarit, 'reference', (p2 as { blocs_gabarits?: unknown } | null)?.blocs_gabarits)
+    }
+    const template = assemblerPrompt(params?.prompt_reference?.trim() || PROMPT_REFERENCE_DEFAUT, blocRef)
     const client = new Anthropic()
 
     // Chaque lot reçoit le texte de SES semaines (à ficher) PLUS, en contexte SEUL, le
@@ -958,6 +980,50 @@ export async function genererReferenceLivre(livreId: string): Promise<void> {
   }
 }
 
+// ── (E3) Le gabarit d'une séance, prêt à injecter dans un prompt ────────────────
+// Porte fermée ⇒ argumentatif : bloc VIDE, question tournante « accord », champ fixe
+// vide — le prompt assemblé est celui d'avant à l'octet près (recette
+// `scripts/recette/aletheia-prompts-identite.mjs`). Porte ouverte ⇒ gabarit du livre,
+// surchargé par la fiche de la séance ; la question tournante est celle FIGÉE sur le
+// travail à la soumission (`tournante_cle`), pas recalculée.
+interface GabaritPrompt {
+  gabarit: Gabarit
+  bloc: string            // v1 ou vf, selon `cle`
+  blocInventaire: string
+  blocNiveau: string
+  champFixe: string       // réponse de l'élève à la question fixe (V1 ou VF selon `cle`)
+  questionTournante: string
+}
+async function gabaritPourPrompt(
+  admin: Admin, travailId: string, livreId: string, semaine: number, cle: 'v1' | 'vf' | 'diag_v1' | 'diag_vf',
+): Promise<GabaritPrompt> {
+  const neutre: GabaritPrompt = {
+    gabarit: GABARIT_DEFAUT, bloc: '', blocInventaire: '', blocNiveau: '', champFixe: '',
+    questionTournante: DEFINITIONS[GABARIT_DEFAUT].tournantes[0].question,
+  }
+  if (!(await lireLaPorteEtayage(admin))) return neutre
+  const [livre, surcharge, travail, params] = await Promise.all([
+    gabaritDuLivre(admin, livreId),
+    gabaritDeLaFiche(admin, livreId, semaine),
+    admin.from('aletheia_travaux').select('champ_fixe, champ_fixe_vf, tournante_cle').eq('id', travailId).maybeSingle(),
+    admin.from('aletheia_params').select('blocs_gabarits').eq('id', 1).maybeSingle(),
+  ])
+  const gabarit = surcharge ?? livre.gabarit
+  const def = DEFINITIONS[gabarit]
+  const row = (travail.data ?? {}) as { champ_fixe?: string | null; champ_fixe_vf?: string | null; tournante_cle?: string | null }
+  const tournante = def.tournantes.find(t => t.cle === row.tournante_cle) ?? def.tournantes[0]
+  const overrides = (params.data as { blocs_gabarits?: unknown } | null)?.blocs_gabarits
+  const vf = cle === 'vf' || cle === 'diag_vf'
+  return {
+    gabarit,
+    bloc: blocGabarit(gabarit, vf ? 'vf' : 'v1', overrides),
+    blocInventaire: blocGabarit(gabarit, 'diag_inventaire', overrides),
+    blocNiveau: blocGabarit(gabarit, 'diag_niveau', overrides),
+    champFixe: sansDelims(txt(vf ? (row.champ_fixe_vf ?? row.champ_fixe) : row.champ_fixe)) || '(rien)',
+    questionTournante: tournante.question,
+  }
+}
+
 async function chargerReferenceChapitre(admin: Admin, livreId: string, semaine: number): Promise<ReferenceChapitre | null> {
   const { data } = await admin.from('aletheia_livre_reference').select('contenu, statut').eq('scriptorium_livre_id', livreId).maybeSingle()
   if (!data || data.statut !== 'READY') return null
@@ -972,7 +1038,7 @@ async function chargerReferenceChapitre(admin: Admin, livreId: string, semaine: 
 // ════════════════════════════════════════════════════════════════════════════
 
 export const PROMPT_DIAG_INVENTAIRE_DEFAUT = `Tu établis un INVENTAIRE FROID de ce qu'un élève a compris d'un chapitre, SANS le juger ni lui donner de niveau. ⚠️ Lis À TRAVERS la prose : juge l'IDÉE saisie, pas la qualité d'écriture. L'élève maîtrise mal la langue ; ne pénalise jamais une compréhension réelle mal exprimée.
-
+{bloc_gabarit}
 ## Texte du chapitre (source de vérité)
 {texte_semaine}
 
@@ -1017,7 +1083,7 @@ Arguments clés : {ref_arguments}
 - C = Partiel correct : le cœur est là, des manques notables.
 - B = Solide : l'essentiel est saisi, quelques nuances manquent.
 - A = Acquis : complet et juste.
-
+{bloc_gabarit}
 ## Ta tâche (deux axes SÉPARÉS)
 - niveau_these : E→A pour la SAISIE DE LA THÈSE. ⚠️ Détermine these_mal_definie depuis la RÉFÉRENCE ci-dessus, PAS depuis l'inventaire : mets-le à true UNIQUEMENT si la référence elle-même indique que le chapitre n'a pas de thèse argumentative nette (ex. « pas de thèse argumentative nette », chapitre descriptif) → alors niveau_these=null. SINON these_mal_definie=false et tu DOIS donner une lettre E→A : E si l'élève n'a exprimé aucune idée juste ou fait un contresens — JAMAIS null sur un chapitre argumentatif.
 - niveau_arguments : E→A pour la RESTITUTION DES ARGUMENTS (capte vs rate/déforme, par rapport à la référence). C'est l'axe le plus robuste.
@@ -1049,12 +1115,15 @@ const parseInventaire = (x: Partial<InventaireDiagnostic> | null | undefined): I
 async function diagnostiquerPhase(
   client: Anthropic, texteSemaine: string, ref: ReferenceChapitre | null, these: string, args: string,
   prompts: { inventaire: string; niveau: string }, eleveId: string,
+  // (E3) Blocs du gabarit (vides en argumentatif) et réponse à la question fixe (dialogué).
+  gab: { blocInventaire: string; blocNiveau: string; champFixe: string } = { blocInventaire: '', blocNiveau: '', champFixe: '' },
 ): Promise<{ inventaire: InventaireDiagnostic; niveaux: NiveauxDiagnostic }> {
   // Phase 1 — inventaire (lit le texte + la prose élève).
-  const pInv = injecter(prompts.inventaire, {
+  const pInv = injecter(assemblerPrompt(prompts.inventaire, gab.blocInventaire), {
     texte_semaine: texteSemaine + CACHE_BREAK,   // césure cache juste après le texte de semaine
     these: sansDelims(these) || '(rien)',
     arguments: sansDelims(args) || '(rien)',
+    champ_fixe_eleve: gab.champFixe,
   })
   const rInv = await client.messages.create({ model: MODELE, max_tokens: 2048, temperature: 0, messages: messagesAvecCache(pInv) })
   await enregistrerCoutApi('aletheia', coutMessage(rInv.usage), {
@@ -1064,7 +1133,7 @@ async function diagnostiquerPhase(
   const inventaire = parseInventaire(JSON.parse(extraireJSON(rInv.content[0]?.type === 'text' ? rInv.content[0].text : '')) as Partial<InventaireDiagnostic>)
 
   // Phase 2 — niveau (depuis l'inventaire SEUL + la référence ; PAS la prose).
-  const pNiv = injecter(prompts.niveau, {
+  const pNiv = injecter(assemblerPrompt(prompts.niveau, gab.blocNiveau), {
     ref_these: ref?.these_canonique || '(référence indisponible — juge depuis l\'inventaire seul)',
     ref_arguments: ref && ref.arguments_cles.length > 0 ? ref.arguments_cles.map(a => `- ${a}`).join('\n') : '(référence indisponible)',
     inventaire: JSON.stringify({
@@ -1124,17 +1193,22 @@ export async function diagnostiquerTravail(travailId: string): Promise<void> {
       niveau: params?.prompt_diag_niveau?.trim() || PROMPT_DIAG_NIVEAU_DEFAUT,
     }
     const client = new Anthropic()
+    // (E3) Gabarit de la séance : blocs de diagnostic + question fixe (V1 et VF distincts).
+    const gabV1 = await gabaritPourPrompt(admin, travailId, livreId, semaine, 'diag_v1')
+    const gabVf = await gabaritPourPrompt(admin, travailId, livreId, semaine, 'diag_vf')
 
     const patch: Record<string, unknown> = { ...base, erreur_at: null, updated_at: new Date().toISOString() }
     if (faireV1) {
-      const r = await diagnostiquerPhase(client, texteSemaine, ref, txt(t.these), txt(t.arguments), prompts, eleveId)
+      const r = await diagnostiquerPhase(client, texteSemaine, ref, txt(t.these), txt(t.arguments), prompts, eleveId,
+        { blocInventaire: gabV1.blocInventaire, blocNiveau: gabV1.blocNiveau, champFixe: gabV1.champFixe })
       patch.inventaire_v1 = r.inventaire
       patch.niveau_these_v1 = r.niveaux.niveau_these
       patch.niveau_arguments_v1 = r.niveaux.niveau_arguments
       patch.these_mal_definie_v1 = r.niveaux.these_mal_definie
     }
     if (faireVf) {
-      const r = await diagnostiquerPhase(client, texteSemaine, ref, txt(t.these_vf), txt(t.arguments_vf), prompts, eleveId)
+      const r = await diagnostiquerPhase(client, texteSemaine, ref, txt(t.these_vf), txt(t.arguments_vf), prompts, eleveId,
+        { blocInventaire: gabVf.blocInventaire, blocNiveau: gabVf.blocNiveau, champFixe: gabVf.champFixe })
       patch.inventaire_vf = r.inventaire
       patch.niveau_these_vf = r.niveaux.niveau_these
       patch.niveau_arguments_vf = r.niveaux.niveau_arguments

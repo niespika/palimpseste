@@ -29,12 +29,16 @@ export interface SaisieV1 {
   accord: string
   questions: string[]
   vocabulaire: string[]
+  /** (E3) Réponse à la question FIXE du gabarit dialogué. Ignorée hors dialogué / porte fermée. */
+  champ_fixe?: string
 }
 
 export interface SaisieVf {
   these_vf: string
   arguments_vf: string
   accord_vf: string
+  /** (E3) La même, version finale. */
+  champ_fixe_vf?: string
 }
 
 async function verifierEleve() {
@@ -104,10 +108,16 @@ export async function soumettreV1(livreId: string, semaine: number, saisie: Sais
   // reçoit un strike + un message « cheeky ».
   const sig = detecterRenduVideTexte([these, args, accord]) ?? detecterAveuHeuristique(`${these}\n${args}\n${accord}`)
 
-  // (E2) La FORME d'étayage de cette séance, décidée par le code depuis les diagnostics
-  // antérieurs (axe arguments, hystérésis) — porte `aletheia_etayage_actif` ouverte
-  // seulement. Porte fermée : la clé n'existe pas dans le payload (comportement d'avant).
-  const etayage = await lireLaPorteEtayage(admin)
+  // (E2/E3) Porte `aletheia_etayage_actif` : la FORME d'étayage (décidée par le code
+  // depuis les diagnostics antérieurs, axe arguments, hystérésis), le GABARIT de lecture
+  // (question fixe du dialogué, clé de la question tournante posée). Porte fermée : aucune
+  // de ces clés n'existe dans le payload (comportement d'avant).
+  const { exposees: exposeesV1 } = await modeExposition(admin, livreId, active.classe_id)
+  const gab = await (await import('@/utils/aletheia/gabarit-serveur')).contexteGabarit(admin, livreId, semaine, exposeesV1)
+  const etayage = gab.etayage
+  const champFixe = (saisie?.champ_fixe ?? '').trim()
+  if (etayage && gab.libelles.champFixe && !champFixe) return { error: 'Dis quelle thèse l’auteur préfère, selon toi.' }
+  if (champFixe.length > MAX_TEXTE) return { error: 'Un de tes champs est trop long (limite ~8000 caractères).' }
   const forme = etayage && !sig
     ? (await (await import('@/utils/aletheia/forme-serveur')).deciderFormePourSeance(admin, userId, livreId, semaine)).forme
     : null
@@ -126,6 +136,8 @@ export async function soumettreV1(livreId: string, semaine: number, saisie: Sais
     statut: (sig ? 'DRAFT' : 'V1_SUBMITTED') as StatutAletheia,
     updated_at: new Date().toISOString(),
     ...(forme ? { forme } : {}),
+    ...(etayage ? { tournante_cle: gab.libelles.tournante.cle } : {}),
+    ...(etayage && gab.libelles.champFixe ? { champ_fixe: champFixe } : {}),
   }
   // (C1/A3) Chemin update : compare-and-set sur statut='DRAFT' — c'était la seule
   // écriture non-CAS de la machine à états (course double-clic / 2 onglets : double
@@ -214,12 +226,19 @@ export async function soumettreVf(livreId: string, semaine: number, vf: SaisieVf
   // RESTE en FEEDBACK1_READY — l'élève doit réécrire pour de vrai. Strike + message.
   const sig = detecterRenduVideTexte([these, args, accord]) ?? detecterAveuHeuristique(`${these}\n${args}\n${accord}`)
 
+  // (E3) Question FIXE du dialogué, version finale — porte ouverte seulement.
+  const gabVf = await (await import('@/utils/aletheia/gabarit-serveur')).contexteGabarit(admin, livreId, semaine, exposees)
+  const champFixeVf = (vf?.champ_fixe_vf ?? '').trim()
+  if (gabVf.etayage && gabVf.libelles.champFixe && !champFixeVf) return { error: 'Réécris ta réponse sur la thèse que l’auteur préfère.' }
+  if (champFixeVf.length > MAX_TEXTE) return { error: 'Un de tes champs est trop long (limite ~8000 caractères).' }
+
   // (C1/A3) `.select().maybeSingle()` : un CAS qui matche 0 ligne était un succès
   // silencieux qui planifiait quand même la génération (double coût IA possible).
   const { data: casVf, error } = await admin.from('aletheia_travaux').update({
     these_vf: these,
     arguments_vf: args,
     accord_vf: accord,
+    ...(gabVf.etayage && gabVf.libelles.champFixe ? { champ_fixe_vf: champFixeVf } : {}),
     retour_vf: null,
     retour_vf_erreur_at: null,
     statut: (sig ? 'FEEDBACK1_READY' : 'VF_SUBMITTED') as StatutAletheia,
