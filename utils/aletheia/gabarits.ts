@@ -114,7 +114,7 @@ const ANALYTIQUE: DefinitionGabarit = {
   champFixe: null,
   tournantes: [
     { cle: 'interet', question: 'Penses-tu que les idées que développe l’auteur ont leur intérêt ?', aide: 'Lesquelles, et pourquoi elles valent la peine — ou non.' },
-    { cle: 'contre_exemple', question: 'Connais-tu une œuvre ou un cas qui ne rentre pas dans cette définition ?', aide: 'Et ce que ça dit de la définition.' },
+    { cle: 'contre_exemple', question: 'Connais-tu une œuvre ou un cas qui ne rentre pas dans les définitions ou les outils que propose l’auteur ?', aide: 'Et ce que ça dit de la définition ou de l’outil.' },
     { cle: 'distinction', question: 'Quelle distinction de l’auteur te semble la plus utile ?', aide: 'Et à quoi elle te servirait.' },
   ],
   questions: ARGUMENTATIF.questions,
