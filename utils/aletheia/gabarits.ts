@@ -73,7 +73,7 @@ const ARGUMENTATIF: DefinitionGabarit = {
 const DIALOGUE: DefinitionGabarit = {
   nom: 'Dialogué',
   pour: 'Le Banquet, l’Apologie, l’Utopie, l’Éloge de la folie, les mythes, le théâtre',
-  champ1: { question: 'Quelles sont les idées que l’on trouve dans ce passage, et qui soutient chacune ?', aide: 'Une ligne par voix : qui dit quoi.' },
+  champ1: { question: 'Dans ce passage, plusieurs personnes parlent. Quelles sont les idées que chacune d’elles soutient ? Une ligne par personnage et par idée.', aide: 'Phèdre : … / Pausanias : … — un personnage et une idée par ligne.' },
   champ2: { question: 'Qu’est-ce qui fait avancer l’échange ? Y a-t-il des objections, des réfutations, des retournements ?', aide: 'Les moments où une idée en bouscule une autre.' },
   champFixe: { question: 'Quelle est la thèse que l’auteur préfère, selon toi ? Qu’est-ce qui te le fait dire ?', aide: 'L’auteur n’est pas forcément celui qui parle le plus. Dis où tu l’entends, lui.' },
   tournantes: [
@@ -182,7 +182,7 @@ const BLOCS_DIALOGUE: BlocsGabarit = {
 ## Gabarit DIALOGUÉ — ce que contiennent les champs (redéfinition, prime sur « Traitement, champ par champ »)
 ⛔ Dans ce que l'élève LIT, ne nomme JAMAIS les balises (IDEE, ARGUMENTS, ACCORD, THESE_AUTEUR, IDEE_VF…) : parle des QUESTIONS qu'on lui a posées (« ta réponse sur les voix », « ta réponse sur ce qui te convainc », « ta réponse sur la thèse de l'auteur »…).
 Le texte de cette semaine fait parler PLUSIEURS voix (personnages, interlocuteurs, ou une voix empruntée par l'auteur). Les champs de l'élève signifient ici :
-- IDEE_PRINCIPALE = « Quelles idées trouve-t-on dans ce passage, et qui soutient chacune ? » → l'ATTRIBUTION des positions aux voix. Erreur typique : attribuer à l'auteur ce que dit un personnage. Relance socratique : renvoie au passage où la voix parle, demande QUI dit cela.
+- IDEE_PRINCIPALE = « Dans ce passage, plusieurs personnes parlent. Quelles sont les idées que chacune d'elles soutient ? Une ligne par personnage et par idée. » → l'ATTRIBUTION des positions aux personnages. Erreur typique : attribuer à l'auteur ce que dit un personnage. Relance socratique : renvoie au passage où la voix parle, demande QUI dit cela.
 - ARGUMENTS = « Qu'est-ce qui fait avancer l'échange ? » → les MOUVEMENTS : objection, réfutation, retournement, aveu. Relance : le moment précis où une idée en bouscule une autre.
 - THESE_AUTEUR (ci-dessous) = « Quelle est la thèse que l'auteur préfère, et qu'est-ce qui te le fait dire ? » → question FIXE de compréhension, l'axe le plus important de ce gabarit. Traite-la comme l'idée principale d'un texte argumentatif : socratique, jamais la réponse ; renvoie aux indices (qui a le dernier mot, qui est réfuté, l'ironie éventuelle). ⛔ UNE des relances porte TOUJOURS sur THESE_AUTEUR, même si l'élève a l'air d'avoir raison (demande-lui alors sur quoi il s'appuie).
 <<<THESE_AUTEUR
@@ -201,7 +201,7 @@ Dans NUANCES ET ERREURS, vérifie d'abord l'ATTRIBUTION (qui dit quoi) et la pos
 `,
   diag_inventaire: `
 ## Gabarit DIALOGUÉ — ce que tu inventories
-Le texte fait parler plusieurs voix. « Idée principale » de l'élève = son ATTRIBUTION des positions (qui soutient quoi) ET sa réponse à « quelle thèse l'auteur préfère-t-il ? » (donnée ci-dessous) ; « Arguments » = les MOUVEMENTS de l'échange qu'il a captés (objections, réfutations, retournements).
+Le texte fait parler plusieurs personnes. « Idée principale » de l'élève = son ATTRIBUTION des idées aux personnages (une ligne par personnage et par idée) ET sa réponse à « quelle thèse l'auteur préfère-t-il ? » (donnée ci-dessous) ; « Arguments » = les MOUVEMENTS de l'échange qu'il a captés (objections, réfutations, retournements).
 <<<THESE_AUTEUR
 {champ_fixe_eleve}
 THESE_AUTEUR>>>
