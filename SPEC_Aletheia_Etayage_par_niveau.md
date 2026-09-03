@@ -587,6 +587,11 @@ tolérantes aux anciens retours (clés absentes = comportement actuel).
 | **E8** | « Je ne sais pas », distracteurs, règles petits malins § 8.2, Quazian lemme, `liseuse_max`, mode C § 8.5 | E3, E5 | les 4 cas réels de la prod (« je sais pas sur quoi commenter », etc.) passent sans strike et avec étayage |
 | **E9** | Allumage : gate ON sur une classe pilote, rejeu du script de mesures du § 0 après quatre séances | tout | les cinq mesures du § 0 ont bougé dans le bon sens, ou le spec est amendé |
 
+**À reprendre APRÈS E9 (Louis, 03/09, vu les captures d'E6)** — l'écran de la liseuse : éviter l'**effet
+d'empilement** (retour, relances, fenêtres, cases les uns sous les autres) ; **séparer les moments** du
+retour (rappel · relances · réponses · réécriture) ; donner à la partie droite l'**effet d'une page** de
+livre. Pas dans le périmètre de l'étayage : on y revient une fois la refonte finie.
+
 Chaque lot : `tsc`, tests, **puis** rendu avec données réelles sur les trois tailles d'écran.
 Aucun lot ne se ferme sur « ça compile ».
 
