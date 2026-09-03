@@ -589,6 +589,42 @@ interface ResultatCompetence {
  *   ⭐ `ecrite` et `dejaLa` rendent alors `false` — rien n'a été écrit, et le
  *   banc ne doit pas croire le contraire.
  */
+/**
+ * Ce que l'étage de jugement exigera — son gabarit, son slot de document, et
+ * les slots que `preP2` sert depuis le contexte de l'exercice. ⭐ PUR, et appelé
+ * DEUX FOIS : avant P1, pour refuser à zéro appel ce que le contexte ne porte
+ * pas ; après Code1, pour servir les valeurs. « Un slot que `pre_p2` sert à
+ * `None` l'arrête aussi : c'est ainsi qu'un module dit "le contexte ne porte pas
+ * ce qu'il me faut" sans jamais lever d'exception ni inventer une valeur. »
+ */
+function preparerLeJugement(
+  branchement: BranchementCompetence, instrument: InstrumentCompetence, ctx: ContexteBranchement,
+): { refus: string; gabaritP2?: undefined; slotDocument?: undefined; slotsPreP2?: undefined }
+  | { refus: null; gabaritP2: string; slotDocument: string; slotsPreP2: Record<string, string> } {
+  const specP2 = branchement.jugement(ctx)
+  const gabaritP2 = instrument.prompts[specP2.tetePrompt]
+  if (!gabaritP2) {
+    return { refus: `prompt de jugement « ${specP2.tetePrompt} » absent de l'instrument dérivé` }
+  }
+  // Le slot du DOCUMENT, plus ce que `preP2` sert — « ce que le CONTEXTE de
+  // l'exercice donne » (`CONTRAT` §2). Le contrôle est le même qu'au chargement ;
+  // ici il porte les VALEURS, et un `null` servi arrête la mesure en le nommant.
+  const { slotDocument, refus } = refusSlotsJugement(
+    gabaritP2, specP2.slotDocument ?? null, specP2.slotsFournis ?? [], [])
+  if (refus.length || !slotDocument) {
+    return { refus: refus.join(' | ') || 'REFUS : le prompt de jugement n\'a pas de slot de document' }
+  }
+  const slotsPreP2: Record<string, string> = {}
+  for (const [nom, valeur] of Object.entries(specP2.preP2 ? specP2.preP2(ctx) : {})) {
+    if (valeur == null) {
+      return { refus: `REFUS : \`preP2\` ne peut pas servir « ${nom} » — le contexte de l'exercice ne `
+        + 'le porte pas (refusé avant tout appel)' }
+    }
+    slotsPreP2[nom] = valeur
+  }
+  return { refus: null, gabaritP2, slotDocument, slotsPreP2 }
+}
+
 async function chaineDUneCompetence(
   admin: Admin,
   a: {
@@ -670,6 +706,24 @@ async function chaineDUneCompetence(
     sorties: {},
   }
 
+  // ── AVANT TOUT APPEL — ce que le juge exigera, vérifié à ZÉRO appel. ──────
+  // ⭐⭐ 02/09/2026 — « `pre_p2` tourne AVANT P1 » (`CONTRAT` §2, `instruments.ts`),
+  //    et la chaîne le faisait tourner APRÈS. Un slot de jugement que le contexte
+  //    ne porte pas — le `corpus_cours` de la Connaissance, qu'aucune source ne
+  //    déclare — refusait donc la mesure EN LA NOMMANT, mais après avoir PAYÉ P1 :
+  //    cinq appels d'extraction en production pour cinq refus certains, avant que
+  //    le statut `differee` ne la sorte de la chaîne. Le refus est le même ; il
+  //    tombe maintenant avant le premier appel, quel que soit le statut de recette.
+  //    ⚠️ Aucun crochet `jugement()` ni `preP2` ne lit `prives` ou `sorties`
+  //    (vérifié sur les six branchements) : le contexte d'avant P1 suffit.
+  {
+    const avant = preparerLeJugement(branchement, instrument, ctxBranchement)
+    if (avant.refus !== null) {
+      return { competence, appels, ecrite: false, dejaLa: false, lettre_equivalente: null, squelette: null,
+        alerte: avant.refus }
+    }
+  }
+
   // ── Temps 1 — P1. Un appel pour cinq compétences, DEUX pour la Synthèse. ──
   const artefactsP1: Record<string, unknown> = {}
   // Le contexte s'ENRICHIT à mesure : les calculs privés des crochets pré-phase,
@@ -739,34 +793,18 @@ async function chaineDUneCompetence(
   if (echecP1) alertes.push(echecP1)
 
   // ── Temps 3 — P2, observable par observable ───────────────────────────────
-  const specP2 = branchement.jugement(ctxEnrichi)
-  const gabaritP2 = instrument.prompts[specP2.tetePrompt]
-  if (!gabaritP2) {
+  // ⭐ Le même contrôle qu'AVANT P1 (`preparerLeJugement`), rejoué sur le contexte
+  //    enrichi : il ne peut plus refuser — ce qu'il refuse a déjà été refusé
+  //    avant le premier appel —, il ne fait que servir les VALEURS.
+  const p2 = preparerLeJugement(branchement, instrument, ctxEnrichi)
+  if (p2.refus !== null) {
     return { competence, appels, ecrite: false, dejaLa: false, lettre_equivalente: null, squelette: null,
-      alerte: `prompt de jugement « ${specP2.tetePrompt} » absent de l'instrument dérivé` }
+      alerte: p2.refus }
   }
-  // Le slot du DOCUMENT, plus ce que `preP2` sert — « ce que le CONTEXTE de
-  // l'exercice donne » (`CONTRAT` §2). Le contrôle est le même qu'au chargement ;
-  // ici il porte les VALEURS, et un `null` servi arrête la mesure en le nommant.
-  const { slotDocument, refus: refusP2 } = refusSlotsJugement(
-    gabaritP2, specP2.slotDocument ?? null, specP2.slotsFournis ?? [], [])
-  if (refusP2.length || !slotDocument) {
-    return { competence, appels, ecrite: false, dejaLa: false, lettre_equivalente: null, squelette: null,
-      alerte: refusP2.join(' | ') || 'REFUS : le prompt de jugement n\'a pas de slot de document' }
-  }
+  const { gabaritP2 } = p2
   const slotsP2: Record<string, string> = {
-    [slotDocument]: JSON.stringify(prepare.document_p2, null, 2),
-  }
-  for (const [nom, valeur] of Object.entries(specP2.preP2 ? specP2.preP2(ctxEnrichi) : {})) {
-    if (valeur == null) {
-      // « Un slot que `pre_p2` sert à `None` l'arrête aussi : c'est ainsi qu'un
-      //   module dit "le contexte ne porte pas ce qu'il me faut" sans jamais
-      //   lever d'exception ni inventer une valeur. »
-      return { competence, appels, ecrite: false, dejaLa: false, lettre_equivalente: null, squelette: null,
-        alerte: `REFUS : \`preP2\` ne peut pas servir « ${nom} » — le contexte de l'exercice ne `
-          + 'le porte pas' }
-    }
-    slotsP2[nom] = valeur
+    [p2.slotDocument]: JSON.stringify(prepare.document_p2, null, 2),
+    ...p2.slotsPreP2,
   }
   const { tete: teteP2, queue: queueP2 } = separerTete(gabaritP2)
   const jugement = await appeler<Record<string, unknown>>({
