@@ -69,7 +69,7 @@ RACINE_DEFAUT = (os.environ.get("PALIMPSESTE_RACINE_CONCEPTION")
 # se relit sur le fichier VIVANT juste avant écriture — c'est un compteur
 # PARTAGÉ entre séances, et il part au journal `doctrine_derivation.outil` :
 # c'est lui qui dit, plus tard, quelle version du dériveur a écrit la base.
-OUTIL = "scripts/derive-doctrine.py 1.3"
+OUTIL = "scripts/derive-doctrine.py 1.4"
 
 # Les six crans qui isolent, dans l'ordre où le `04-` §0 les nomme.
 CRANS_QUI_ISOLENT = (1, 3, 4, 5, 7, 9)
@@ -77,6 +77,11 @@ CRANS_DE_PRODUCTION = (2, 6, 8)
 
 # Les sources dont l'empreinte se conserve — celles que la doctrine lit.
 SOURCES = ("02-exercices.md", "04-Instances_Exercices.md", "06-Palimpseste.md")
+# ⭐ C7-L2 (03/09/2026) — LE GABARIT. Le `09-` porte la grille des problèmes, les
+#    tests du cran 6 et la pièce du cran 2 ; le `10-` §5 porte le marquage par
+#    cran × variante. Lus ici, strictement, jamais recopiés (`10-` §8 ; `07-` C7-L2).
+SOURCES_GABARIT = ("09-Objets.md", "10-Gabarit.md")
+GRAINS_PROBLEME = ("mot", "phrase", "bloc", "couture", "texte")
 SOURCES_INSTANCES = tuple("instances/04-%s.md" % c for c in (
     "expression", "argumentation", "structure",
     "connaissance", "synthese", "questionnement"))
@@ -301,14 +306,195 @@ def charge(racine):
             "`competences/monitoring.md` porte une ligne PRODUCTION — le "
             "Monitoring n'est jamais cible du routeur (`07-` §1.4)")
 
+    # (f) ⭐ C7-L2 — LA GRILLE DU `09-` ET LE MARQUAGE DU `10-` §5.
+    d.problemes, d.tests, d.pieces = lire_le_09(racine, d, SourceMouvante)
+    d.marquage_gabarit = lire_le_10(racine, d, SourceMouvante, _section, _lignes_table, _nu)
+
     d.empreintes = empreintes(racine)
     return d
+
+
+# ---------------------------------------------------------------------------
+# ⭐ C7-L2 — le `09-Objets.md` : les problèmes, les tests, les pièces
+# ---------------------------------------------------------------------------
+# « La forme d'un problème, pour la dérivation — une entrée par problème,
+# toujours les mêmes lignes » (`09-` §0). La lecture est STRICTE : une ligne de
+# tête qui ne se lit pas ARRÊTE, comme une citation qui a bougé arrête le
+# crible. Rien n'est recopié ; ce qui entre en base est ce que le 09 dit.
+
+TETE_PROBLEME = re.compile(
+    r"^- \*\*`([a-z]+)\.([a-z_]+)\.([a-z_]+)`\*\* · \*([^*]+)\*(?: \([^)]*\))? · (.*?) · "
+    r"(local|global) · ([a-z, ]+?)\s*$")
+TETE_TEST = re.compile(r"^- `([a-z]+)(?:\.([a-z_]+))?\.test\.(\d+)` — « (.*) »\s*$")
+TETE_PIECE = re.compile(
+    r"^\*\*La pièce du cran 2\*\* \*\([^)]*\)\* : \*\*([^*]+)\*\*\. "
+    r"Le geste, écrit à la main : « (.*) »")
+COMPETENCES_09 = ("Argumentation", "Connaissance", "Expression", "Questionnement",
+                  "Structure", "Synthèse")
+
+
+class Probleme(object):
+    __slots__ = ("cle", "objet", "genre", "constituant", "variante", "mode",
+                 "observable_texte", "observable_code", "competence", "mode_receptif",
+                 "route", "forme", "grains", "enonce", "exemple", "correction",
+                 "banque", "note", "section")
+
+
+def _observable(cell, comp_map):
+    """La cellule de l'observable : `code` (Compétence[, mode réceptif]) — ou ⚠️."""
+    route = not cell.strip().startswith("⚠️")
+    codes = re.findall(r"`([a-z_]+)`", cell)
+    comp = re.search(r"\((%s)([^)]*)\)" % "|".join(COMPETENCES_09), cell)
+    competence = comp_map[comp.group(1)] if comp else None
+    receptif = comp.group(2).strip(", ") if comp and comp.group(2).strip(", ") else None
+    return (route, codes[0] if (codes and route) else None, competence if route else None,
+            receptif if route else None)
+
+
+def lire_le_09(racine, d, SourceMouvante):
+    texte = io.open(os.path.join(racine, "09-Objets.md"), encoding="utf-8").read()
+    lignes = texte.split("\n")
+    comp_map = {"Argumentation": "argumentation", "Connaissance": "connaissance",
+                "Expression": "expression", "Questionnement": "questionnement",
+                "Structure": "structure", "Synthèse": "synthese"}
+    problemes, tests, pieces = [], [], []
+    objet = genre = None
+    section = None
+    vus = set()
+    i = 0
+    while i < len(lignes):
+        l = lignes[i]
+        m = re.match(r"^## (\d+)\. « [^»]+ » — `([a-z]+)`", l)
+        if m:
+            objet, genre, section = m.group(2), None, m.group(1)
+            if objet not in d.objets:
+                raise SourceMouvante("`09-` : objet inconnu du `02-` §1 en titre de fiche : `%s`" % objet)
+        m = re.match(r"^### (\d+\.\d+) Genre `([a-z_]+)`", l)
+        if m and objet:
+            genre, section = m.group(2), m.group(1)
+            if genre not in d.objets[objet].genres:
+                raise SourceMouvante("`09-` : genre `%s` inconnu de `%s` (`02-` §1.3)" % (genre, objet))
+
+        if l.startswith("- **`") and re.match(r"^- \*\*`[a-z]+\.[a-z_]+\.[a-z_]+`\*\*", l):
+            if objet is None:
+                i += 1
+                continue                       # le gabarit du §0, hors fiche
+            t = TETE_PROBLEME.match(l)
+            if not t:
+                raise SourceMouvante("`09-` : une ligne de problème ne se lit plus — %r" % l[:120])
+            p = Probleme()
+            p.objet, p.constituant, p.variante = t.group(1), t.group(2), t.group(3)
+            p.cle = "%s.%s.%s" % (p.objet, p.constituant, p.variante)
+            if p.objet != objet:
+                raise SourceMouvante("`09-` : la clé `%s` est rangée sous la fiche `%s`" % (p.cle, objet))
+            if p.cle in vus:
+                raise SourceMouvante("`09-` : clé en double : `%s`" % p.cle)
+            vus.add(p.cle)
+            p.genre, p.section = genre, section
+            p.mode = t.group(4).strip()
+            p.observable_texte = t.group(5).strip()
+            p.route, p.observable_code, p.competence, p.mode_receptif = _observable(
+                p.observable_texte, comp_map)
+            p.forme = t.group(6)
+            p.grains = [g.strip() for g in t.group(7).split(",") if g.strip()]
+            for g in p.grains:
+                if g not in GRAINS_PROBLEME:
+                    raise SourceMouvante("`09-` : grain inconnu `%s` sur `%s`" % (g, p.cle))
+            p.enonce = p.exemple = p.correction = p.banque = p.note = None
+            j = i + 1
+            while j < len(lignes) and lignes[j].startswith("  "):
+                x = lignes[j].strip()
+                if x.startswith("«") and p.enonce is None:
+                    mn = re.search(r"» \*\((.*)\)\*\s*$", x)
+                    if mn:
+                        p.note = mn.group(1)
+                        x = x[:x.index("» *(") + 1]
+                    p.enonce = x.strip("« »").strip()
+                elif x.startswith("*Ex.*"):
+                    corps = x[len("*Ex.*"):].strip()
+                    if "*→*" in corps:
+                        p.exemple, p.correction = [y.strip() for y in corps.split("*→*", 1)]
+                    else:
+                        p.exemple = corps
+                elif x.startswith("*→*"):
+                    p.correction = x[len("*→*"):].strip()
+                elif x.startswith("*(banque"):
+                    p.banque = x.strip("*() ").replace("banque : ", "").strip("` ")
+                j += 1
+            if not p.enonce:
+                raise SourceMouvante("`09-` : `%s` n'a pas d'énoncé — « toujours les mêmes lignes » (§0)" % p.cle)
+            problemes.append(p)
+            i = j
+            continue
+
+        m = TETE_TEST.match(l)
+        if m and objet:
+            ob, ge, n, question = m.group(1), m.group(2), int(m.group(3)), m.group(4).strip()
+            if ob != objet or (ge or None) != genre:
+                raise SourceMouvante("`09-` : la clé de test `%s` n'est pas rangée sous sa fiche (%s%s)"
+                                     % (l[2:l.index("`", 3)], objet, "." + genre if genre else ""))
+            cle = "%s.%s.test.%d" % (ob, ge, n) if ge else "%s.test.%d" % (ob, n)
+            if any(t_.cle == cle for t_ in tests):
+                raise SourceMouvante("`09-` : clé de test en double : `%s`" % cle)
+            tt = Probleme()
+            tt.cle, tt.objet, tt.genre, tt.variante, tt.enonce = cle, ob, ge, n, question
+            tests.append(tt)
+
+        m = TETE_PIECE.match(l)
+        if m and objet:
+            pc = Probleme()
+            pc.cle = "%s.%s" % (objet, genre) if genre else objet
+            pc.objet, pc.genre = objet, genre
+            pc.constituant, pc.enonce = m.group(1).strip(), m.group(2).strip()
+            if any(x.cle == pc.cle for x in pieces):
+                raise SourceMouvante("`09-` : deux pièces du cran 2 sous `%s`" % pc.cle)
+            pieces.append(pc)
+        i += 1
+
+    tetes = sum(1 for l in lignes if l.startswith("- **`")
+                and re.match(r"^- \*\*`[a-z]+\.[a-z_]+\.[a-z_]+`\*\*", l)) - 1   # moins le gabarit du §0
+    if tetes != len(problemes):
+        raise SourceMouvante("`09-` : %d lignes de problème, %d lues" % (tetes, len(problemes)))
+    blocs_test = sum(1 for l in lignes if l.startswith("**Le test, posé à l'élève au cran 6**"))
+    fiches = {(t_.objet, t_.genre) for t_ in tests}
+    if blocs_test != len(fiches):
+        raise SourceMouvante("`09-` : %d blocs de test, %d fiches avec des questions lues"
+                             % (blocs_test, len(fiches)))
+    if len(pieces) != blocs_test:
+        raise SourceMouvante("`09-` : %d pièces du cran 2 lues pour %d blocs de test"
+                             % (len(pieces), blocs_test))
+    problemes.sort(key=lambda x: x.cle)
+    tests.sort(key=lambda x: (x.objet, x.genre or "", x.variante))
+    pieces.sort(key=lambda x: x.cle)
+    return problemes, tests, pieces
+
+
+def lire_le_10(racine, d, SourceMouvante, _section, _lignes_table, _nu):
+    """Le marquage par cran × variante — la table du `10-` §5, et rien d'autre."""
+    t10 = io.open(os.path.join(racine, "10-Gabarit.md"), encoding="utf-8").read()
+    bloc = _section(t10, r"^## 5\. Le marquage.*$")
+    out = []
+    for c in _lignes_table(bloc):
+        if len(c) != 3 or not re.fullmatch(r"\d", _nu(c[0])):
+            continue
+        cran = int(_nu(c[0]))
+        variante = _nu(c[1]).strip()
+        variante = "-" if variante in ("—", "-", "") else variante
+        if variante not in ("a", "b", "-"):
+            raise SourceMouvante("`10-` §5 : variante inconnue « %s » au cran %d" % (variante, cran))
+        marquage = _nu(c[2]).strip()
+        out.append((cran, variante, None if marquage.startswith("rien") else marquage))
+    if len(out) != 11:
+        raise SourceMouvante("`10-` §5 : 11 lignes attendues à la table du marquage, %d lues" % len(out))
+    if {c for c, _, _ in out} != set(range(1, 10)):
+        raise SourceMouvante("`10-` §5 : la table du marquage ne couvre pas les neuf crans")
+    return sorted(out)
 
 
 def empreintes(racine):
     """sha256 de chaque source lue — c'est ce qui rend la divergence visible."""
     out = {}
-    for nom in SOURCES + SOURCES_INSTANCES + SOURCES_FICHES:
+    for nom in SOURCES + SOURCES_INSTANCES + SOURCES_FICHES + SOURCES_GABARIT:
         p = os.path.join(racine, nom)
         with io.open(p, "rb") as f:
             out[nom] = hashlib.sha256(f.read()).hexdigest()
@@ -443,6 +629,17 @@ def lignes(d):
             tc.append((code, cran, couv, cible, duree))
     L["exercices_types_crans"] = tc
 
+    # ⭐ C7-L2 — LA GRILLE DU `09-`, LES TESTS, LES PIÈCES, LE MARQUAGE DU GABARIT.
+    L["exercices_problemes"] = [
+        (p.objet, p.genre, p.cle, p.constituant, p.variante, p.mode, p.observable_texte,
+         p.observable_code, p.competence, p.mode_receptif, p.route, p.forme, p.grains,
+         p.enonce, p.exemple, p.correction, p.banque, p.note, p.section)
+        for p in d.problemes]
+    L["exercices_tests"] = [(t.objet, t.genre, t.cle, t.variante, t.enonce) for t in d.tests]
+    L["exercices_pieces"] = [(pc.objet, pc.genre, pc.cle, pc.constituant, pc.enonce)
+                             for pc in d.pieces]
+    L["exercices_marquage_gabarit"] = list(d.marquage_gabarit)
+
     return L
 
 
@@ -489,7 +686,9 @@ def sql_remplissage(d, racine):
               "exercices_consignes_production", "exercices_guides_production",
               "exercices_types_modes_source", "exercices_types_modes",
               "exercices_types_crans", "competences_modes_admis",
-              "exercices_durees", "exercices_crans", "demonstrations_formes"):
+              "exercices_durees", "exercices_crans", "demonstrations_formes",
+              "exercices_problemes", "exercices_tests", "exercices_pieces",
+              "exercices_marquage_gabarit"):
         w("delete from %s;" % t)
     w("")
 
@@ -591,6 +790,35 @@ def sql_remplissage(d, racine):
     w("  join exercices_types t on t.code = v.objet_code;")
     w("")
 
+    w("-- ── ⭐ C7-L2 — la grille des problèmes du `09-` ────────────────────────────")
+    w("insert into exercices_problemes (type_id,objet_code,genre,cle,constituant,"
+      "variante_probleme,mode_probleme,observable_texte,observable_code,"
+      "observable_competence,mode_receptif,observable_route,forme,grains,enonce,"
+      "exemple,correction,banque,note,source_section)")
+    w("select t.id, v.* from (values\n       %s)" % _bloc_values(L["exercices_problemes"]))
+    w("  as v(objet_code, genre, cle, constituant, variante_probleme, mode_probleme,"
+      " observable_texte, observable_code, observable_competence, mode_receptif,"
+      " observable_route, forme, grains, enonce, exemple, correction, banque, note,"
+      " source_section)")
+    w("  join exercices_types t on t.code = v.objet_code;")
+    w("")
+    w("-- ── Les tests du cran 6 — `09-`, une clé par question ────────────────────")
+    w("insert into exercices_tests (type_id,objet_code,genre,cle,n,question)")
+    w("select t.id, v.* from (values\n       %s)" % _bloc_values(L["exercices_tests"]))
+    w("  as v(objet_code, genre, cle, n, question)")
+    w("  join exercices_types t on t.code = v.objet_code;")
+    w("")
+    w("-- ── La pièce du cran 2 et son geste — `09-` ──────────────────────────────")
+    w("insert into exercices_pieces (type_id,objet_code,genre,cle,piece,geste)")
+    w("select t.id, v.* from (values\n       %s)" % _bloc_values(L["exercices_pieces"]))
+    w("  as v(objet_code, genre, cle, piece, geste)")
+    w("  join exercices_types t on t.code = v.objet_code;")
+    w("")
+    w("-- ── Le marquage du gabarit — `10-` §5, cran × variante ──────────────────")
+    w("insert into exercices_marquage_gabarit (cran,variante,marquage) values\n       %s;"
+      % _bloc_values(L["exercices_marquage_gabarit"]))
+    w("")
+
     comptes = {k: len(v) for k, v in sorted(L.items())}
     w("-- ── Le journal de dérivation ─────────────────────────────────────────────")
     w("insert into doctrine_derivation (racine,outil,resume,empreintes,comptes) "
@@ -610,6 +838,10 @@ def sql_remplissage(d, racine):
     w("    ||' consignes_isolees='||(select count(*) from exercices_consignes_isolees)")
     w("    ||' patrons='||(select count(*) from exercices_consignes_production)")
     w("    ||' guides='||(select count(*) from exercices_guides_production)")
+    w("    ||' problemes='||(select count(*) from exercices_problemes)")
+    w("    ||' tests='||(select count(*) from exercices_tests)")
+    w("    ||' pieces='||(select count(*) from exercices_pieces)")
+    w("    ||' marquage_gabarit='||(select count(*) from exercices_marquage_gabarit)")
     w("    ||' objets_avec_crans='||(select count(*) from exercices_types "
       "where coalesce(array_length(crans_admis,1),0) > 0) as constat;")
     return "\n".join(o) + "\n"
@@ -647,6 +879,15 @@ def fixture(d, racine):
                                         "defaut_injecte", "appui", "consigne"),
         "exercices_guides_production": ("objet_code", "genre", "figure",
                                         "guide_cran2", "guide_cran6"),
+        # ⭐ C7-L2
+        "exercices_problemes": ("objet_code", "genre", "cle", "constituant",
+                                "variante_probleme", "mode_probleme", "observable_texte",
+                                "observable_code", "observable_competence", "mode_receptif",
+                                "observable_route", "forme", "grains", "enonce", "exemple",
+                                "correction", "banque", "note", "source_section"),
+        "exercices_tests": ("objet_code", "genre", "cle", "n", "question"),
+        "exercices_pieces": ("objet_code", "genre", "cle", "piece", "geste"),
+        "exercices_marquage_gabarit": ("cran", "variante", "marquage"),
     }
     out = {t: [dict(zip(c, r)) for r in L[t]] for t, c in cols.items()}
     out["exercices_types"] = [
@@ -714,6 +955,8 @@ COMPARAISONS = [
     ("competences_modes_admis", "competence,mode", "text,text"),
     ("exercices_consignes_production", "mode,cran,patron", "text,int,text"),
     ("demonstrations_formes", "forme,grain", "text,text"),
+    # ⭐ C7-L2 — le marquage du gabarit, onze lignes, comparées telles quelles.
+    ("exercices_marquage_gabarit", "cran,variante,marquage", "int,text,text"),
 ]
 
 
@@ -807,6 +1050,22 @@ end as verdict;""" % {"t": table, "c": cols})
             ("t.code||'|'||m.competence||'|'||array_to_string(m.modes,',')",
              [ "%s|%s|%s" % (c, comp, ",".join(ms))
                for (c, comp, ms) in L["exercices_types_modes"] ]),
+        # ⭐ C7-L2 — la grille, les tests et les pièces : concaténation avec `coalesce`.
+        "exercices_problemes":
+            ("cle||'|'||coalesce(genre,'')||'|'||constituant||'|'||mode_probleme||'|'||"
+             "coalesce(observable_code,'')||'|'||coalesce(observable_competence,'')||'|'||"
+             "observable_route::text||'|'||forme||'|'||array_to_string(grains,',')||'|'||enonce"
+             "||'|'||coalesce(exemple,'')||'|'||coalesce(correction,'')",
+             [ "%s|%s|%s|%s|%s|%s|%s|%s|%s|%s|%s|%s" % (
+                 p.cle, p.genre or "", p.constituant, p.mode, p.observable_code or "",
+                 p.competence or "", "true" if p.route else "false", p.forme,
+                 ",".join(p.grains), p.enonce, p.exemple or "", p.correction or "")
+               for p in d.problemes ]),
+        "exercices_tests":
+            ("cle||'|'||question", [ "%s|%s" % (t.cle, t.enonce) for t in d.tests ]),
+        "exercices_pieces":
+            ("cle||'|'||piece||'|'||geste",
+             [ "%s|%s|%s" % (pc.cle, pc.constituant, pc.enonce) for pc in d.pieces ]),
     }
     for table, (expr, valeurs) in gros.items():
         source = table

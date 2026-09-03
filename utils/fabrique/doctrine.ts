@@ -49,7 +49,7 @@ export const FORMAT_IMPORT = 'palimpseste/import-exercices'
  * « le faire passer à 1.3 sans porter ce que la 1.3 ajoute serait mentir sur ce
  * que le port sait faire ». C4-L16 porte ce que la 1.3 ajoute, donc il la bouge.
  */
-export const VERSION_IMPORT = '1.3'
+export const VERSION_IMPORT = '1.5'
 
 export const MODES = ['composer', 'restituer', 'expliquer', 'évaluer', 'interroger'] as const
 export const COMPETENCES = ['expression', 'argumentation', 'structure',
@@ -123,9 +123,54 @@ export interface LignesDoctrine {
     guide_cran2: string | null; guide_cran6: string | null
   }>
   demonstrations_formes: Array<{ forme: string; grain: string }>
+  /**
+   * ⭐ C7-L2 (03/09) — LA GRILLE DU `09-`, LES TESTS DU CRAN 6, LA PIÈCE DU CRAN 2,
+   *    LE MARQUAGE DU `10-` §5. Dérivées par `derive-doctrine.py` 1.4
+   *    (`c7_l2_gabarit_base.sql`). ⚠️ FACULTATIVES : absentes d'une base qui n'a
+   *    pas reçu la migration, vides d'une base qui n'a pas reçu la dérivation.
+   *    Le chargeur les lit avec tolérance et nomme la lacune ; un fichier 1.4
+   *    ne les regarde pas, un fichier 1.5 se voit refuser ses clés — avec le
+   *    motif de la lacune.
+   */
+  exercices_problemes?: Array<{
+    objet_code: string; genre: string | null; cle: string; constituant: string
+    variante_probleme: string; mode_probleme: string; observable_texte: string
+    observable_code: string | null; observable_competence: string | null
+    mode_receptif: string | null; observable_route: boolean; forme: string
+    grains: string[]; enonce: string; exemple: string | null; correction: string | null
+    banque: string | null; note: string | null; source_section: string
+  }>
+  exercices_tests?: Array<{ objet_code: string; genre: string | null; cle: string; n: number; question: string }>
+  exercices_pieces?: Array<{ objet_code: string; genre: string | null; cle: string; piece: string; geste: string }>
+  exercices_marquage_gabarit?: Array<{ cran: number; variante: string; marquage: string | null }>
+  /** Les tables du gabarit que la base n'a pas rendues — pour l'annonce du rapport. */
+  lacunes?: string[]
 }
 
 // ── La doctrine assemblée ───────────────────────────────────────────────────
+
+/** ⭐ C7-L2 — un problème de la grille du `09-`, tel que la fiche le déclare. */
+export interface ProblemeDoctrine {
+  cle: string
+  objet: string
+  genre: string | null
+  constituant: string
+  varianteProbleme: string
+  modeProbleme: string
+  observableCode: string | null
+  observableCompetence: string | null
+  modeReceptif: string | null
+  /** Faux sur les cases ⚠️ du `09-` §14 : « la mesure n'existera pas tant que le routage n'a pas bougé ». */
+  observableRoute: boolean
+  forme: 'local' | 'global'
+  grains: string[]
+  enonce: string
+  exemple: string | null
+  correction: string | null
+}
+
+export interface TestDoctrine { cle: string; objet: string; genre: string | null; n: number; question: string }
+export interface PieceDoctrine { cle: string; objet: string; genre: string | null; piece: string; geste: string }
 
 export interface ObjetDoctrine {
   code: string
@@ -224,6 +269,16 @@ export interface Doctrine {
   }>
   /** L'appariement forme × grain du `06-` §2 — un SIGNALEMENT, jamais un refus. */
   formesDemonstration: Record<string, string>
+  /** ⭐ C7-L2 — indexée par clé `objet.constituant.variante` ; vide sans dérivation. */
+  problemes: Record<string, ProblemeDoctrine>
+  /** Indexés par `objet` ou `objet|genre` — les questions du cran 6, dans l'ordre. */
+  tests: Record<string, TestDoctrine[]>
+  /** Indexées par `objet` ou `objet|genre` — la pièce du cran 2 et son geste. */
+  pieces: Record<string, PieceDoctrine>
+  /** Indexé par `${cran}|${variante}` (`-` sans variante) — `null` : rien n'est marqué. */
+  marquageGabarit: Record<string, string | null>
+  /** Ce que la base n'a pas rendu du gabarit — nommé, jamais tu. */
+  lacunes: string[]
 }
 
 export class DoctrineAbsente extends Error {}
@@ -383,9 +438,39 @@ export function assemblerDoctrine(rows: LignesDoctrine): Doctrine {
   const formesDemonstration: Record<string, string> = {}
   for (const f of rows.demonstrations_formes) formesDemonstration[f.forme] = f.grain
 
+  // ⭐ C7-L2 — la grille, les tests, les pièces, le marquage du gabarit. Absents
+  //    ou vides, la doctrine se lit comme avant ; `lacunes` dit ce qui manque.
+  const problemes: Record<string, ProblemeDoctrine> = {}
+  for (const p of rows.exercices_problemes ?? []) {
+    problemes[p.cle] = {
+      cle: p.cle, objet: p.objet_code, genre: p.genre ?? null, constituant: p.constituant,
+      varianteProbleme: p.variante_probleme, modeProbleme: p.mode_probleme,
+      observableCode: p.observable_code ?? null, observableCompetence: p.observable_competence ?? null,
+      modeReceptif: p.mode_receptif ?? null, observableRoute: p.observable_route !== false,
+      forme: (p.forme === 'global' ? 'global' : 'local'), grains: p.grains ?? [],
+      enonce: p.enonce, exemple: p.exemple ?? null, correction: p.correction ?? null,
+    }
+  }
+  const tests: Record<string, TestDoctrine[]> = {}
+  for (const t of rows.exercices_tests ?? []) {
+    const cle = t.genre ? `${t.objet_code}|${t.genre}` : t.objet_code
+    ;(tests[cle] ??= []).push({ cle: t.cle, objet: t.objet_code, genre: t.genre ?? null, n: t.n, question: t.question })
+  }
+  for (const l of Object.values(tests)) l.sort((a, b) => a.n - b.n)
+  const pieces: Record<string, PieceDoctrine> = {}
+  for (const pc of rows.exercices_pieces ?? []) {
+    const cle = pc.genre ? `${pc.objet_code}|${pc.genre}` : pc.objet_code
+    pieces[cle] = { cle: pc.cle, objet: pc.objet_code, genre: pc.genre ?? null, piece: pc.piece, geste: pc.geste }
+  }
+  const marquageGabarit: Record<string, string | null> = {}
+  for (const m of rows.exercices_marquage_gabarit ?? []) {
+    marquageGabarit[`${entier(m.cran)}|${m.variante}`] = m.marquage ?? null
+  }
+
   return {
     objets, crans, modesAdmis, durees, routes, consignesIsolees, observables,
     consignesProduction, guidesProduction, formesDemonstration,
+    problemes, tests, pieces, marquageGabarit, lacunes: [...(rows.lacunes ?? [])],
   }
 }
 
@@ -581,6 +666,30 @@ export async function chargerLignesDepuisBase(admin: ClientLecture): Promise<Lig
     table('exercices_guides_production', 'objet_code,genre,figure,guide_cran2,guide_cran6', ['type_id', 'genre']),
     table('demonstrations_formes', 'forme,grain', ['forme']),
   ])
+  // ⭐ C7-L2 — LES QUATRE TABLES DU GABARIT, LUES AVEC TOLÉRANCE. Une base qui
+  //    n'a pas reçu `c7_l2_gabarit_base.sql` ne les a pas : la lecture rend alors
+  //    une liste vide ET NOMME LA LACUNE, au lieu de faire tomber la doctrine
+  //    entière — un fichier 1.4 s'importe comme avant, un fichier 1.5 se voit
+  //    refuser ses clés avec le motif. ⚠️ La troncature reste refusée : une table
+  //    présente se lit en entier ou pas du tout.
+  const lacunes: string[] = []
+  const tolerante = async <T,>(nom: string, cols: string, cle: string[]): Promise<T[]> => {
+    try {
+      return await lireTable(admin, nom, cols, cle) as T[]
+    } catch (e) {
+      if (e instanceof DoctrineTronquee) throw e
+      lacunes.push(nom)
+      return []
+    }
+  }
+  const [problemes, tests, pieces, marquage] = await Promise.all([
+    tolerante<LignesDoctrine['exercices_problemes']>('exercices_problemes',
+      'objet_code,genre,cle,constituant,variante_probleme,mode_probleme,observable_texte,observable_code,observable_competence,mode_receptif,observable_route,forme,grains,enonce,exemple,correction,banque,note,source_section',
+      ['cle']),
+    tolerante<LignesDoctrine['exercices_tests']>('exercices_tests', 'objet_code,genre,cle,n,question', ['cle']),
+    tolerante<LignesDoctrine['exercices_pieces']>('exercices_pieces', 'objet_code,genre,cle,piece,geste', ['cle']),
+    tolerante<LignesDoctrine['exercices_marquage_gabarit']>('exercices_marquage_gabarit', 'cran,variante,marquage', ['cran', 'variante']),
+  ])
   const code = (r: Record<string, unknown>) =>
     (r.exercices_types as { code: string } | null)?.code ?? ''
   return {
@@ -610,6 +719,11 @@ export async function chargerLignesDepuisBase(admin: ClientLecture): Promise<Lig
     exercices_consignes_production: patrons,
     exercices_guides_production: guides,
     demonstrations_formes: formes,
+    exercices_problemes: (problemes ?? []) as never,
+    exercices_tests: (tests ?? []) as never,
+    exercices_pieces: (pieces ?? []) as never,
+    exercices_marquage_gabarit: (marquage ?? []) as never,
+    lacunes,
   }
 }
 

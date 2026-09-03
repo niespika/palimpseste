@@ -434,6 +434,26 @@ export async function deposerFichierImport(
   }
 
   // ── 4. Les exercices ──────────────────────────────────────────────────────
+  // ⭐ C7-L2 — FORMAT 1.5 : la variante, la clé du problème, le constituant et
+  //    les pièces entrent en base ; l'observable isolé SE DÉRIVE de la clé quand
+  //    le fichier ne le déclare pas. La grille se lit ici même, avec tolérance —
+  //    absente, on écrit ce que le fichier dit, et le contrôle a déjà refusé.
+  // ⚠️ Un fichier d'avant le 1.5 n'écrit AUCUNE de ces colonnes : sur une base
+  //    qui n'a pas reçu `c7_l2_gabarit_base.sql`, il entre comme hier.
+  const gabarit = Number(String(b.version ?? '').split('.')[1] ?? 0) >= 5
+  const grille = new Map<string, { code: string | null; competence: string | null }>()
+  if (gabarit) {
+    const { data: pb } = await admin.from('exercices_problemes')
+      .select('cle, observable_code, observable_competence')
+    for (const r of (pb ?? []) as Array<Record<string, any>>) {
+      grille.set(String(r.cle), { code: r.observable_code ?? null, competence: r.observable_competence ?? null })
+    }
+  }
+  const observableDerive = (e: any): { code: string | null; competence: string | null } => {
+    const cle = Array.isArray(e.cas) ? e.cas[0]?.probleme : undefined
+    return (gabarit && typeof cle === 'string' && grille.get(cle)) || { code: null, competence: null }
+  }
+
   for (const e of (Array.isArray(b.exercices) ? b.exercices : [])) {
     if (!e || typeof e !== 'object') continue
     const id = String(e.id ?? '')
@@ -512,8 +532,9 @@ export async function deposerFichierImport(
       materiau_cible_localisation: mc?.localisation ?? null,
       materiau_cible_englobant: mc?.englobant ?? null,
       cotexte_materiau_id: cotexteId,
-      observable_isole_code: e.observable_isole?.code ?? null,
-      observable_isole_competence: e.observable_isole?.competence ?? null,
+      observable_isole_code: e.observable_isole?.code ?? observableDerive(e).code,
+      observable_isole_competence: e.observable_isole?.competence ?? observableDerive(e).competence,
+      ...(gabarit ? { variante: e.variante === 'a' || e.variante === 'b' ? e.variante : null } : {}),
       guide: e.guide ?? null,
       reference_id: null,
       bloque: st.bloque, blocages: st.blocages, signalements: st.signalements,
@@ -538,6 +559,12 @@ export async function deposerFichierImport(
         //    qu'aucun retour IA ne vient derrière. Le contrôle l'a déjà borné au
         //    cran (refus n° 12) ; ici on ne fait que l'écrire.
         pourquoi_juste: c?.pourquoi_juste ?? null,
+        // ⭐ C7-L2 — la clé, le constituant et les pièces (format 1.5 seulement).
+        ...(gabarit ? {
+          probleme: typeof c?.probleme === 'string' ? c.probleme : null,
+          constituant: typeof c?.constituant === 'string' ? c.constituant : null,
+          pieces: Array.isArray(c?.pieces) ? c.pieces : null,
+        } : {}),
       }))).select('ordre')
     // ⚠️ UNE INSTANCE SANS SON APPUI N'EST PAS « ENTRÉE ». Comptée comme telle,
     //   elle passait en file, se validait, et son écran d'édition — qui rend un

@@ -71,18 +71,22 @@ const CLES: Record<string, ReadonlySet<string>> = {
   materiau: new Set(['id', 'objet', 'support', 'contenu', 'observable', 'defaut',
     'version_corrigee', 'mode', 'famille']),
   observable: new Set(['code', 'competence']),
+  // ⭐ C7-L2 — `variante` entre au jeu de clés de l'exercice (format 1.5, `08-` §5 amendé).
   exercice: new Set(['id', 'objet', 'cran', 'genre', 'lieu', 'modes',
-    'observable_isole', 'materiau_source', 'materiau_cible', 'guide', 'cas', 'bonus']),
+    'observable_isole', 'materiau_source', 'materiau_cible', 'guide', 'cas', 'bonus', 'variante']),
   materiau_ref: new Set(['provenance', 'support', 'texte', 'sujet', 'localisation', 'englobant']),
   // ⭐ C4-L14 — `pourquoi_juste` entre au jeu de clés du `cas` (format 1.2).
   //    Sans lui, une clé de plus valait refus n° 2 PAR CAS, donc sur tout
   //    exercice neuf : le port refusait le format que le générateur produit.
+  // ⭐ C7-L2 — `probleme`, `constituant` et `pieces` entrent au cas (format 1.5).
   cas: new Set(['consigne', 'materiau', 'defaut', 'distracteurs', 'reponse_attendue',
-    'pourquoi_juste']),
+    'pourquoi_juste', 'probleme', 'constituant', 'pieces']),
   // ⚠️ La forme du distracteur était DÉJÀ portée ici avant que le `08-` §5.2 la
   //    déclare — « cette forme était appliquée par le contrôle machine sans
   //    qu'aucun document la déclare ; ce paragraphe paie la dette ».
   distracteur: new Set(['texte', 'pourquoi_faux']),
+  /** ⭐ C7-L2 — une pièce du cran 2 : son nom et son texte (`08-` §5 amendé). */
+  piece: new Set(['nom', 'texte']),
 }
 
 export interface VerdictEntree {
@@ -295,6 +299,38 @@ function modeExercice(modes: Record<string, unknown> | undefined): string {
   return receptifs.size === 1 ? String([...receptifs][0]) : 'composer'
 }
 
+// ── ⭐ C7-L2 — la grille du `09-`, au contrôle ───────────────────────────────
+
+/** L'observable que la clé du problème dérive — `null` si la clé est inconnue ou non routée. */
+function observableDeLaCle(d: Doctrine, cle: unknown): { code: string; competence: string } | null {
+  const p = dans(d.problemes, cle)
+  if (!p || !p.observableRoute || !p.observableCode || !p.observableCompetence) return null
+  return { code: p.observableCode, competence: p.observableCompetence }
+}
+
+/**
+ * LA PORTABILITÉ (`09-` §0) : « les clés des objets contenus valent partout — un
+ * mot impropre se relève dans une objection avec la clé de `mot`, une phrase qui
+ * tombe de nulle part avec celle de `phrase`, une couture avec celle de
+ * `transition` ». Un problème vaut donc pour son objet, ou pour un objet qui le
+ * contient à un grain plus large.
+ * ⚠️ ARBITRAGE DE CE LOT : les objets contenus sont `mot`, `phrase`, `transition`
+ *    et `paragraphe`, et « plus large » se lit sur le grain de l'objet (`02-`
+ *    §0) — le mot sous la phrase, les deux sous le méso, le méso sous le macro.
+ */
+const CONTENUS = new Set(['mot', 'phrase', 'transition', 'paragraphe'])
+function rangDuGrain(d: Doctrine, objet: string): number {
+  const o = d.objets[objet]
+  if (!o) return -1
+  if (o.grain === 'micro') return objet === 'mot' ? 0 : 1
+  return o.grain === 'meso' ? 2 : 3
+}
+function objetAdmisPourLeProbleme(d: Doctrine, objet: string, objetProbleme: string): boolean {
+  if (objet === objetProbleme) return true
+  if (!CONTENUS.has(objetProbleme)) return false
+  return rangDuGrain(d, objetProbleme) < rangDuGrain(d, objet)
+}
+
 /**
  * Le contrôle d'un fichier d'import.
  *
@@ -323,6 +359,17 @@ export function controleImport(
     v.refuse('fichier', `version majeure inconnue : ${JSON.stringify(b.version)}`, 1)
     return rendre(v, ignores, true)
   }
+  // ⭐ C7-L2 — LE FORMAT 1.5 SE LIT À LA MINEURE. « Un fichier au format 1.4 reste
+  //    lisible ; un fichier 1.5 porte en plus » (`08-` §5 amendé) : les refus du
+  //    gabarit ne mordent que sur un fichier qui SE DÉCLARE 1.5 — sans quoi ils
+  //    casseraient la banque du 31/08, ce que le `08-` §1 interdit à une mineure.
+  const mineure = Number(String(b.version ?? '').split('.')[1] ?? 0)
+  const gabarit = Number.isFinite(mineure) && mineure >= 5
+  if (gabarit && d.lacunes.length) {
+    v.annonces.push(`format 1.5 : la base n'a pas rendu ${d.lacunes.join(', ')} — `
+      + 'jouer `c7_l2_gabarit_base.sql` puis `derive-doctrine.py --sql` ; toute clé de problème sera refusée')
+  }
+
   // REFUS n° 2 — « à la racine, c'est LE FICHIER qui ne passe pas ».
   const avantRacine = v.refus.length
   clesInconnues(v, 'fichier', b, 'racine')
@@ -649,6 +696,22 @@ export function controleImport(
       v.refuse(ou, `\`genre\` non nul sur \`${objet}\`, qui n'en porte pas`, 7)
     }
 
+    // ⭐ C7-L2 — LA VARIANTE SUIT LE CRAN (format 1.5 ; `08-` §5 et §7.4 amendés) :
+    //    « a » ou « b » aux crans 1 et 4, rien ailleurs. Sur un fichier d'avant
+    //    le 1.5, une variante déclarée se signale et s'ignore.
+    const variante = e.variante
+    if (gabarit) {
+      if (cran === 1 || cran === 4) {
+        if (variante !== 'a' && variante !== 'b') {
+          v.refuse(ou, `le cran ${cran} exige une \`variante\` « a » ou « b » (format 1.5, \`10-\` §2)`, 12)
+        }
+      } else if (declare(variante)) {
+        v.refuse(ou, `le cran ${cran} n'a pas de variante — elle n'existe qu'aux crans 1 et 4`, 12)
+      }
+    } else if (declare(variante)) {
+      v.signale(ou, '`variante` ignorée : le fichier n\'est pas au format 1.5')
+    }
+
     // Les deux matériaux (`08-` §5.1).
     // ⚠️ MAL FORMÉ N'EST PAS ABSENT. Le script qui fait foi s'ARRÊTE sur un
     // matériau écrit en chaîne ; le coercer à `null` ferait taire le refus
@@ -766,7 +829,18 @@ export function controleImport(
     }
 
     // REFUS n° 15 et BLOCAGE n° 3 — l'observable isolé.
-    const obs = e.observable_isole
+    // ⭐ C7-L2 — au format 1.5, « l'observable isolé SE DÉRIVE de la clé et n'a plus
+    //    à être déclaré à part » (`08-` §5 amendé) : la clé du premier cas le donne.
+    //    Déclaré en plus, il doit dire la même chose — sinon on le signale.
+    const obsDeclare = e.observable_isole
+    const obsDerive = gabarit && c.isole
+      ? observableDeLaCle(d, Array.isArray(e.cas) ? e.cas[0]?.probleme : undefined) : null
+    if (gabarit && estObjet(obsDeclare) && obsDerive
+        && (obsDeclare.code !== obsDerive.code || obsDeclare.competence !== obsDerive.competence)) {
+      v.signale(ou, `\`observable_isole\` déclaré (\`${obsDeclare.code}\`) diffère de celui que la `
+        + `clé du problème dérive (\`${obsDerive.code}\`) — c'est la clé qui fait foi`)
+    }
+    const obs = declare(obsDeclare) ? obsDeclare : obsDerive
     if (c.isole) {
       if (!declare(obs)) {
         v.refuse(ou, `le cran ${cran} isole : \`observable_isole\` est exigé`, 15)
@@ -795,7 +869,11 @@ export function controleImport(
 
     // REFUS n° 12 — le guide suit le cran.
     if (c.guide === 'null' && declare(e.guide)) v.refuse(ou, `le cran ${cran} ne sert aucun guide`, 12)
-    if ((c.guide === 'complet' || c.guide === 'léger') && !nonVide(e.guide)) {
+    // ⭐ C7-L2 — au format 1.5, « `guide` disparaît au cran 2 » (les pièces sont
+    //    servies à sa place) et « au cran 6, `null` : l'appui est le test de la
+    //    fiche » (`08-` §5 amendé) — l'exigence du guide ne vaut plus là.
+    if ((c.guide === 'complet' || c.guide === 'léger') && !nonVide(e.guide)
+        && !(gabarit && (cran === 2 || cran === 6))) {
       v.refuse(ou, `le cran ${cran} exige un guide ${c.guide}`, 12)
     }
     // SIGNALEMENT — « une consigne qui nomme un observable à un cran de
@@ -831,7 +909,9 @@ export function controleImport(
     cas.forEach((cs: any, i: number) => {
       const oc = `${ou} — cas ${i + 1}`
       clesInconnues(v, oc, cs, 'cas')
-      if (!nonVide(cs?.consigne)) v.refuse(oc, '`consigne` vide', 3)
+      // ⭐ C7-L2 — « la consigne ne se déclare plus au cas dès le format 1.5 : elle
+      //    se dérive du cran, de la variante et de la clé » (`08-` §5 amendé).
+      if (!gabarit && !nonVide(cs?.consigne)) v.refuse(oc, '`consigne` vide', 3)
       if (declare(cs?.materiau)) {
         vises.add(cs.materiau)
         if (!matConnu(cs.materiau)) v.refuse(oc, `matériau inconnu : ${cs.materiau}`, 4)
@@ -869,19 +949,23 @@ export function controleImport(
           // ⚠️ LE SIGNALEMENT DU COMPTE DE BANQUE, JUSTE AU-DESSUS, RESTE : le
           //    nôtre S'AJOUTE, il ne le remplace pas — l'un parle de la taille de
           //    la banque, l'autre de ce que ses entrées disent.
-          let muets = 0
-          for (const dd of dis) {
-            if (!estObjet(dd)) continue
-            clesInconnues(v, oc, dd, 'distracteur')
-            if (!nonVide(dd.pourquoi_faux)) muets += 1
-          }
-          // ⚠️ UNE SEULE LIGNE, AGRÉGÉE, QUI EN DONNE LE COMPTE (`08-` §7.3,
-          //    le patron des entrées sans rattachement au cours) : quinze
-          //    candidats muets ne font pas quinze signalements, ils font UN
-          //    SEUL défaut de conception.
-          if (muets) {
-            v.signale(oc, `${muets} distracteur(s) sans \`pourquoi_faux\` — ils s'afficheront `
-              + 'sans que rien ne dise à l\'élève en quoi ils rataient')
+          // ⭐ C7-L2 — au format 1.5, `pourquoi_faux` DISPARAÎT (« il se dérive de
+          //    l'énoncé », `08-` §5 amendé) : le compte des muets n'a plus d'objet.
+          if (!gabarit) {
+            let muets = 0
+            for (const dd of dis) {
+              if (!estObjet(dd)) continue
+              clesInconnues(v, oc, dd, 'distracteur')
+              if (!nonVide(dd.pourquoi_faux)) muets += 1
+            }
+            // ⚠️ UNE SEULE LIGNE, AGRÉGÉE, QUI EN DONNE LE COMPTE (`08-` §7.3,
+            //    le patron des entrées sans rattachement au cours) : quinze
+            //    candidats muets ne font pas quinze signalements, ils font UN
+            //    SEUL défaut de conception.
+            if (muets) {
+              v.signale(oc, `${muets} distracteur(s) sans \`pourquoi_faux\` — ils s'afficheront `
+                + 'sans que rien ne dise à l\'élève en quoi ils rataient')
+            }
           }
         }
       } else if (declare(dis)) {
@@ -924,6 +1008,90 @@ export function controleImport(
       if (c.reponseAttendue === 'null' && declare(r)) {
         v.refuse(oc, `le cran ${cran} déclare \`reponse_attendue\` à \`null\`, `
           + 'et ce cas en porte une', 12)
+      }
+
+      // ── ⭐ C7-L2 — LE FORMAT 1.5, AU CAS (`08-` §5 et §7.4 amendés le 03/09) ──
+      if (gabarit) {
+        // La clé du problème, aux six crans qui isolent — et la portabilité.
+        const cle = cs?.probleme
+        if (c.isole) {
+          if (!nonVide(cle)) {
+            v.refuse(oc, `le cran ${cran} exige un \`probleme\` — la clé de la grille du \`09-\``, 12)
+          } else if (!declaree(d.problemes, cle)) {
+            v.refuse(oc, `\`probleme\` inconnu de la grille du \`09-\` : ${JSON.stringify(cle)}`
+              + (d.lacunes.length ? ' — la grille n\'est pas en base' : ''), 15)
+          } else {
+            const pb = d.problemes[cle]!
+            if (!objetAdmisPourLeProbleme(d, objet, pb.objet)) {
+              v.refuse(oc, `\`probleme\` \`${cle}\` porte sur \`${pb.objet}\`, qui n'est ni \`${objet}\` `
+                + 'ni un objet contenu à un grain plus fin (`09-` §0)', 15)
+            }
+            if (!pb.observableRoute) {
+              v.signale(oc, `\`probleme\` \`${cle}\` n'a pas d'observable routé — la mesure `
+                + 'n\'existera pas tant que le routage n\'a pas bougé (`09-` §14)')
+            }
+          }
+        } else if (declare(cle)) {
+          v.refuse(oc, `le cran ${cran} n'isole rien : \`probleme\` doit être nul`, 12)
+        }
+        // Au 1(a) les candidats sont des CLÉS ; au 1(b) des devoirs d'élève (`materiaux[]`).
+        if (cran === 1 && Array.isArray(dis)) {
+          for (const dd of dis) {
+            if (variante === 'a') {
+              if (typeof dd !== 'string' || !declaree(d.problemes, dd)) {
+                v.refuse(oc, 'au 1(a), un distracteur est une clé de la grille du `09-` — reçu '
+                  + JSON.stringify(dd).slice(0, 60), 13)
+              } else if (!objetAdmisPourLeProbleme(d, objet, d.problemes[dd]!.objet)) {
+                v.refuse(oc, `au 1(a), le candidat \`${dd}\` ne vaut pas pour \`${objet}\``, 13)
+              }
+            } else if (variante === 'b') {
+              if (typeof dd !== 'string' || !matConnu(dd)) {
+                v.refuse(oc, 'au 1(b), un distracteur est l\'`id` d\'un devoir d\'élève de '
+                  + '`materiaux[]` — reçu ' + JSON.stringify(dd).slice(0, 60), 13)
+              }
+            }
+          }
+        }
+        // Le cran 2 : le constituant écrit, et les pièces servies ; le guide disparaît.
+        if (cran === 2) {
+          if (!nonVide(cs?.constituant)) {
+            v.refuse(oc, 'le cran 2 exige un `constituant` — la pièce que l\'élève écrit (`10-` §2 bis)', 12)
+          }
+          const pieces = cs?.pieces
+          if (!Array.isArray(pieces) || pieces.length === 0) {
+            v.refuse(oc, 'le cran 2 exige des `pieces` — les constituants servis, chacun avec son '
+              + 'nom et son texte', 12)
+          } else {
+            for (const pc of pieces) {
+              if (!estObjet(pc) || !nonVide(pc.nom) || !nonVide(pc.texte)) {
+                v.refuse(oc, 'une pièce porte un `nom` et un `texte`', 12)
+              } else {
+                clesInconnues(v, oc, pc, 'piece')
+              }
+            }
+          }
+          if (declare(e.guide)) {
+            v.refuse(ou, 'au cran 2 le `guide` disparaît : les pièces sont servies à sa place', 12)
+          }
+        } else if (declare(cs?.constituant) || declare(cs?.pieces)) {
+          v.refuse(oc, '`constituant` et `pieces` ne valent qu\'au cran 2', 12)
+        }
+        if (cran === 6 && declare(e.guide)) {
+          v.refuse(ou, 'au cran 6 le `guide` est nul : l\'appui est le test de la fiche, posé par '
+            + 'l\'écran (`09-`)', 12)
+        }
+        // « `reponse_attendue` : jamais `null` — à tous les crans, c'est ce qu'on
+        //   tient pour vrai, et le juge la reçoit. » Là où la 1.4 signalait, la 1.5 refuse.
+        if (!nonVide(r) && aLAveugle) {
+          v.refuse(oc, `la \`reponse_attendue\` n'est jamais nulle au format 1.5 — au cran ${cran} `
+            + 'elle est ce qu\'on tient pour vrai, et le juge la reçoit', 12)
+        }
+        if (nonVide(cs?.consigne)) {
+          v.signale(oc, 'la `consigne` se dérive au format 1.5 — celle du fichier est admise, '
+            + 'et l\'écran du gabarit ne la lit pas')
+        }
+      } else if (declare(cs?.probleme) || declare(cs?.constituant) || declare(cs?.pieces)) {
+        v.signale(oc, '`probleme`, `constituant` ou `pieces` ignorés : le fichier n\'est pas au format 1.5')
       }
 
       // ⭐ C4-L14 — `pourquoi_juste`, format 1.2. « Là où la réponse attendue est
