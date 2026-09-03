@@ -601,6 +601,7 @@ Aucun lot ne se ferme sur « ça compile ».
 | D13 | Séance 1 : forme **`montre` pour tout le monde**, aucun diagnostic encore. |
 | D14 | Surlignage : **au second échec, la pivot est montrée** (§ 7.3). |
 | D15 | Distracteurs du « je ne sais pas » : **générés avec la fiche, amendables** par le prof (§ 8.1). |
+| **D17** | **Hystérésis (amende D10)** : plus d'aide en une séance **seulement sur un E** ; tout autre changement de forme exige deux séances d'accord. *(Louis, 03/09 : « un D peut être un D mal lu ».)* Rejeu des 38 travaux : 15 montre / 23 fenêtre, **6 changements** (contre 10 en asymétrie totale). `OptionsForme.asymetrie = 'sur_E'` par défaut. |
 | D16 | Prompts par gabarit : **un tronc commun + un bloc par gabarit**. `aletheia_params` porte le tronc (V1, VF, diag inventaire, diag niveau) et un jsonb `blocs_gabarits` à quatre entrées ; l'injection se fait sur un placeholder `{bloc_gabarit}` du tronc. |
 
 ## 13. Résultats du lot E0 (03/09) — mesures sur le livre de prod
@@ -677,10 +678,11 @@ est le cas qui départage : en asymétrique il change de forme **6 fois**, en sy
 **3 fois**, et il reçoit « montre » 13 séances sur 19 contre 7. Or le biais mesuré du
 diagnostic sur cet axe est **−1 (sévère)** : une part de ces D sont des C. La règle
 asymétrique réagit donc au bruit, dans le sens sûr mais au prix d'un va-et-vient.
-**Point à trancher par Louis** : garder D10, passer au symétrique, ou la variante
-intermédiaire « plus d'aide en une séance seulement sur un **E** » (un E est un échec
-réel, un D peut être un C mal lu). Le code porte déjà les deux premières (`OptionsForme`),
-la troisième est trois lignes. Rejeu : `scratchpad/e2_rejeu_prod.mjs [--symetrique]`.
+**Tranché par Louis (D17)** : la variante intermédiaire, « plus d'aide en une séance seulement
+sur un **E** ». Sur ces 38 séances elle donne le même résultat que le symétrique (aucun E
+n'y suit deux C) : 15 montre / 23 fenêtre, 6 changements. Les trois variantes restent dans
+le code (`OptionsForme.asymetrie`) et dans le rejeu : `scratchpad/e2_rejeu_prod.mjs
+[--toujours | --jamais]`.
 
 Scripts : `scratchpad/e0_phrases.py`, `e0_paras.py`, `e0_passages.mjs`, résultats
 `e0_passages_resultats.json` (session du 03/09 ; à recopier dans `aletheia_calibration/` si

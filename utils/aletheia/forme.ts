@@ -8,9 +8,11 @@
 //
 // ⭐ L'AXE ARGUMENTS SEUL. C'est l'axe le plus robuste du diagnostic, et son biais
 //    mesuré (−1, sévère) pousse vers PLUS d'aide, jamais moins (D10).
-// ⭐ ASYMÉTRIE VOULUE. Retirer de l'aide exige deux séances d'accord ; en donner
-//    davantage n'en exige qu'une : un E isolé après deux C ramène à « montre »
-//    tout de suite.
+// ⭐ ASYMÉTRIE, MAIS SUR UN E SEULEMENT (D17, Louis, 03/09 : « un D peut être un D
+//    mal lu »). Retirer de l'aide exige deux séances d'accord ; en donner davantage
+//    n'en exige qu'une, mais seulement sur un E — un échec réel. Un D isolé, que le
+//    biais sévère du diagnostic peut avoir lu à la place d'un C, attend la séance
+//    suivante comme tout le monde. Mesuré au rejeu des 38 travaux de prod (§ 13.4).
 // ⭐ SÉANCE 1 : « montre » pour tout le monde — aucun diagnostic encore (D13).
 // ============================================================================
 
@@ -51,11 +53,12 @@ export function niveauRetenu(d: NiveauSeance): number | null {
 
 export interface OptionsForme {
   /**
-   * `true` (D10, défaut) : plus d'aide en UNE séance, moins d'aide en DEUX.
-   * `false` : deux séances dans les deux sens. Variante mesurée au rejeu E2 (§ 13.4 du
-   * spec) pour que Louis choisisse sur des chiffres, pas par principe.
+   * `'sur_E'` (D17, défaut) : plus d'aide en UNE séance seulement sur un E ; tout le
+   * reste en DEUX. `'toujours'` (l'ancien D10) : plus d'aide en une séance dès que la
+   * cible baisse. `'jamais'` : deux séances dans les deux sens. Les trois variantes
+   * sont mesurées au rejeu E2 (§ 13.4 du spec).
    */
-  asymetrique: boolean
+  asymetrie: 'sur_E' | 'toujours' | 'jamais'
 }
 
 /**
@@ -64,7 +67,7 @@ export interface OptionsForme {
  * @param formeCourante forme servie à la séance précédente (`aletheia_travaux.forme`), ou null
  */
 export function decider(
-  anterieurs: readonly NiveauSeance[], formeCourante: Forme | null, options: OptionsForme = { asymetrique: true },
+  anterieurs: readonly NiveauSeance[], formeCourante: Forme | null, options: OptionsForme = { asymetrie: 'sur_E' },
 ): DecisionForme {
   const parSemaine = new Map<number, number>()
   for (const d of [...anterieurs].sort((a, b) => a.semaine - b.semaine)) {
@@ -83,11 +86,13 @@ export function decider(
   if (cible === courante) {
     return { forme: courante, motif: `séance ${dernier.semaine} à ${lettre(dernier.niveau)} : ${courante} confirmée`, niveaux }
   }
-  if (options.asymetrique && RANG[cible] < RANG[courante]) {
+  const baisse = RANG[cible] < RANG[courante]
+  const toutDeSuite = options.asymetrie === 'toujours' || (options.asymetrie === 'sur_E' && dernier.niveau === 0)
+  if (baisse && toutDeSuite) {
     return { forme: cible, motif: `séance ${dernier.semaine} à ${lettre(dernier.niveau)} : plus d'aide tout de suite, ${courante} → ${cible}`, niveaux }
   }
-  // Changer de forme (moins d'aide ; ou dans les deux sens en mode symétrique) : il faut
-  // deux séances consécutives d'accord sur la même cible.
+  // Changer de forme (moins d'aide ; ou plus d'aide sans E) : il faut deux séances
+  // consécutives d'accord sur la même cible.
   const avant = niveaux[niveaux.length - 2]
   if (avant && cibleDuNiveau(avant.niveau) === cible) {
     return { forme: cible, motif: `séances ${avant.semaine} et ${dernier.semaine} à ${lettre(avant.niveau)}/${lettre(dernier.niveau)} : ${courante} → ${cible}`, niveaux }

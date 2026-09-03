@@ -31,10 +31,14 @@ test('deux séances consécutives à C sortent de montre vers fenêtre ; une seu
   assert.equal(decider([s(1, 1), s(2, 2)], 'montre').forme, 'montre')
 })
 
-test('un E isolé après deux C ramène à montre tout de suite (asymétrie)', () => {
-  const d = decider([s(1, 2), s(2, 2), s(3, 0)], 'fenetre')
-  assert.equal(d.forme, 'montre')
-  assert.match(d.motif, /plus d'aide tout de suite/)
+test('un E isolé après deux C ramène à montre tout de suite ; un D isolé attend la séance suivante (D17)', () => {
+  const e = decider([s(1, 2), s(2, 2), s(3, 0)], 'fenetre')
+  assert.equal(e.forme, 'montre')
+  assert.match(e.motif, /plus d'aide tout de suite/)
+  const d = decider([s(1, 2), s(2, 2), s(3, 1)], 'fenetre')
+  assert.equal(d.forme, 'fenetre')
+  assert.match(d.motif, /une seule séance/)
+  assert.equal(decider([s(1, 2), s(2, 2), s(3, 1), s(4, 1)], 'fenetre').forme, 'montre')
 })
 
 test('de fenêtre à demi-section : deux A consécutifs ; un A puis un B reste en fenêtre', () => {
@@ -65,10 +69,13 @@ test('niveaux hors bornes ou décimaux sont ramenés à 0…4', () => {
   assert.equal(niveauRetenu(s(1, 2.6)), 3)
 })
 
-test('variante symétrique : un D isolé après deux C ne ramène PAS à montre ; deux D le font', () => {
-  const sym = { asymetrique: false }
-  assert.equal(decider([s(1, 2), s(2, 2), s(3, 1)], 'fenetre', sym).forme, 'fenetre')
-  assert.equal(decider([s(1, 2), s(2, 2), s(3, 1), s(4, 1)], 'fenetre', sym).forme, 'montre')
-  // Le défaut reste asymétrique (D10).
-  assert.equal(decider([s(1, 2), s(2, 2), s(3, 1)], 'fenetre').forme, 'montre')
+test('les trois variantes d’asymétrie : jamais / sur_E (défaut) / toujours', () => {
+  const apresD = [s(1, 2), s(2, 2), s(3, 1)]
+  const apresE = [s(1, 2), s(2, 2), s(3, 0)]
+  assert.equal(decider(apresD, 'fenetre', { asymetrie: 'jamais' }).forme, 'fenetre')
+  assert.equal(decider(apresE, 'fenetre', { asymetrie: 'jamais' }).forme, 'fenetre')
+  assert.equal(decider(apresD, 'fenetre', { asymetrie: 'sur_E' }).forme, 'fenetre')
+  assert.equal(decider(apresE, 'fenetre', { asymetrie: 'sur_E' }).forme, 'montre')
+  assert.equal(decider(apresD, 'fenetre', { asymetrie: 'toujours' }).forme, 'montre')
+  assert.equal(decider(apresE, 'fenetre', { asymetrie: 'toujours' }).forme, 'montre')
 })
