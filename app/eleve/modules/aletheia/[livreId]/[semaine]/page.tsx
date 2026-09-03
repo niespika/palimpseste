@@ -10,6 +10,7 @@ import FormulaireV1 from '../../FormulaireV1'
 import FormulaireVf from '../../FormulaireVf'
 import PollStatut from '../../PollStatut'
 import { VueRetourV1, VueRetourVF, bullesVF, type Accent } from '@/components/aletheia/VueRetours'
+import { NuanceAgie, PairesAgies, SyntheseAgie } from '@/components/aletheia/RetourFinalAgi'
 import ValidationLecture from '@/components/retours/ValidationLecture'
 import BanniereRetoursNonLus from '@/components/retours/BanniereRetoursNonLus'
 import { retoursNonLus } from '@/utils/retours-lus'
@@ -238,6 +239,10 @@ export default async function PageSemaineAletheia({ params }: { params: Promise<
     ? await (await import('@/utils/aletheia/fenetre-serveur')).preparerFenetres(admin, t.id, livreId, semaine, t.forme, t.retour_v1?.relances_detail)
     : []
   const surlignagesInitiaux = Object.fromEntries((t?.reponses_relances ?? []).map(r => [r.relance, { verdict_code: r.verdict_code, essais: r.essais, surlignage: r.surlignage }]))
+  // (E7) Le retour final AGI : préparé côté serveur quand le retour VF porte les sorties E7.
+  const retourFinal = gab.etayage && statut === 'FEEDBACK2_READY' && t?.retour_vf && (t.retour_vf.nuances_detail?.length || t.retour_vf.synthese_couverture?.length)
+    ? await (await import('@/utils/aletheia/retour-vf-serveur')).preparerRetourFinal(admin, t, livreId, semaine, t.retour_vf.synthese_modele)
+    : null
   // Date de clôture : retour_vf_lu_at (posé exactement à FEEDBACK2_READY→DONE),
   // repli sur updated_at par robustesse.
   const dateFin = fmtJourMois(t?.retour_vf_lu_at ?? t?.updated_at)
@@ -323,10 +328,29 @@ export default async function PageSemaineAletheia({ params }: { params: Promise<
               architecture: 'green',  // border-l-ok (vert)
               synthese: 'minium',     // border-l-minium (rouge) + bouton
             }
+            // (E7) Porte ouverte : la nuance prioritaire pointe le texte, l'architecture est en
+            // paires, la synthèse se surligne — les tuiles de base gardent leur contenu sinon.
+            const agi = (id: string, node: React.ReactNode): React.ReactNode => {
+              if (!retourFinal) return node
+              if (id === 'nuances' && retourFinal.nuance) return <NuanceAgie livreId={livreId} semaine={semaine} nuance={retourFinal.nuance} forme={retourFinal.forme} />
+              if (id === 'architecture' && retourFinal.paires.length) return (
+                <>
+                  <PairesAgies livreId={livreId} semaine={semaine} paires={retourFinal.paires} />
+                  {(t.retour_vf!.architecture_aval_jalons?.length ?? 0) > 0 && (
+                    <div className="mt-3 pt-3 border-t border-bordure">
+                      <p className="text-xs font-medium text-encre-douce mb-1">Jalons à venir</p>
+                      <ul className="list-disc list-inside space-y-1 text-sm text-encre-douce">{t.retour_vf!.architecture_aval_jalons.map((x, i) => <li key={i}>{x}</li>)}</ul>
+                    </div>
+                  )}
+                </>
+              )
+              if (id === 'synthese' && retourFinal.synthese) return <SyntheseAgie livreId={livreId} semaine={semaine} phrases={retourFinal.synthese.phrases} comparaison={retourFinal.synthese.comparaison} />
+              return node
+            }
             const tuiles = bullesVF(t.retour_vf!)
               .slice()
               .sort((a, b) => ORDRE.indexOf(a.id as typeof ORDRE[number]) - ORDRE.indexOf(b.id as typeof ORDRE[number]))
-              .map((b) => ({ id: b.id, titre: b.titre, node: b.node, accent: ACCENT_PARTIE[b.id] }))
+              .map((b) => ({ id: b.id, titre: b.id === 'synthese' && retourFinal?.synthese ? 'Synthèse modèle — à comparer à ta version' : b.titre, node: agi(b.id, b.node), accent: ACCENT_PARTIE[b.id] }))
             return (
               <ValidationLecture
                 sequentiel

@@ -18,7 +18,8 @@ import type { RelanceDetail } from './retour-v1'
 
 export interface FenetreServie extends FenetreRelance { relance: number; passage: string; libelle: string | null }
 
-async function contexteSeance(admin: SupabaseClient, livreId: string, semaine: number) {
+/** La découpe, le texte et les passages clés d'une séance (découpe régénérée si périmée). */
+export async function contexteSeance(admin: SupabaseClient, livreId: string, semaine: number) {
   let dec = await chargerDecoupeLivre(admin, livreId)
   if (!dec || dec.perimee) { await genererDecoupeLivre(admin, livreId); dec = await chargerDecoupeLivre(admin, livreId) }
   const d = dec?.semaines.find(s => s.semaine === semaine) ?? null

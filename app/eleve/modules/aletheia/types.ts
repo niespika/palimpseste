@@ -53,6 +53,10 @@ export interface RetourVF {
   nuances_et_erreurs: string[]
   architecture_amont: string[]
   architecture_aval_jalons: string[]
+  // (E7, porte ouverte) Le retour final AGI : nuances par passage, paires amont, couverture de la synthèse.
+  nuances_detail?: import('@/utils/aletheia/retour-vf').NuanceDetail[]
+  amont_paires?: import('@/utils/aletheia/retour-vf').PaireAmont[]
+  synthese_couverture?: import('@/utils/aletheia/retour-vf').CouvertureSynthese[]
 }
 
 // Extrait persisté du retour VF (mémoire + continuité des retours suivants).
@@ -94,6 +98,9 @@ export interface TravailAletheia {
   rappel?: string | null               // (E5) rappel d'ouverture
   // (E5/E6) réponses aux relances avant la réécriture ; le surlignage et son verdict (E6) s'y ajoutent.
   reponses_relances?: { relance: number; texte: string; surlignage?: string[]; verdict_code?: string; essais?: number }[] | null
+  // (E7) gestes sur le retour final et comparaison de la synthèse (colonnes additives).
+  retour_vf_agi?: import('@/utils/aletheia/retour-vf').GestesRetourFinal | null
+  comparaison_synthese?: import('@/utils/aletheia/retour-vf').ComparaisonSynthese | null
 }
 
 // Capstone : carte d'architecture finale du LIVRE (partagée, canonique).

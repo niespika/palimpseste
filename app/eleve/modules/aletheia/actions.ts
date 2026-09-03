@@ -440,3 +440,84 @@ export async function verifierSurlignage(livreId: string, semaine: number, relan
   const merite = r.verdict === 'juste' || essais >= ESSAIS_MAX
   return { success: true, verdict: r.verdict, message: r.message, essais, ...(merite ? { pivot: r.pivot } : {}) }
 }
+
+// ── (E7) Le retour final AGI — trois gestes de l'élève à FEEDBACK2_READY ──────────────
+// Chaque geste est jugé ICI ; la pivot et l'extrait amont ne partent qu'une fois mérités.
+async function travailPourRetourFinal(livreId: string, semaine: number) {
+  const { supabase, userId } = await verifierEleve()
+  const admin = createAdminClient()
+  if (!(await lireLaPorteEtayage(admin))) return { error: 'Cette étape n’est pas ouverte.' as const }
+  const { resolue: active } = await resoudreInscriptionLivre(admin, supabase, userId, livreId)
+  if (!active) return { error: 'Ce livre ne t\'est pas accessible.' as const }
+  const { exposees } = await modeExposition(admin, livreId, active.classe_id)
+  if (!dansExtrait(exposees, semaine)) return { error: 'Cette séance ne fait pas partie de ton parcours.' as const }
+  const { data: row } = await admin
+    .from('aletheia_travaux')
+    .select('id, statut, retour_vf, retour_vf_agi, comparaison_synthese')
+    .eq('eleve_id', userId).eq('scriptorium_livre_id', livreId).eq('semaine_index', semaine)
+    .maybeSingle()
+  if (!row || row.statut !== 'FEEDBACK2_READY') return { error: 'Ce geste n’est pas disponible à cette étape.' as const }
+  return { admin, userId, row }
+}
+
+/** Surligner la phrase qui tranche la nuance prioritaire (formes fenetre / demi_section). */
+export async function verifierSurlignageNuance(livreId: string, semaine: number, selection: string[]) {
+  const r = await travailPourRetourFinal(livreId, semaine)
+  if ('error' in r) return { error: r.error }
+  const { admin, userId, row } = r
+  const nuances = (row.retour_vf as { nuances_detail?: { passage?: string | null }[] } | null)?.nuances_detail ?? []
+  const passageId = nuances[0]?.passage
+  if (!passageId) return { error: 'Cette nuance ne désigne aucun passage.' }
+  const ids = (Array.isArray(selection) ? selection : []).filter((x): x is string => typeof x === 'string').slice(0, 40)
+  const { jugerSurlignage } = await import('@/utils/aletheia/fenetre-serveur')
+  const j = await jugerSurlignage(admin, livreId, semaine, passageId, ids)
+  if (!j) return { error: 'Passage introuvable dans le texte de la séance.' }
+  type Gestes = { nuance?: { surlignage: string[]; verdict_code: string; essais: number }; amont?: unknown[] }
+  const gestes = ((row.retour_vf_agi as Gestes | null) ?? {})
+  const essais = (gestes.nuance?.essais ?? 0) + 1
+  const maj: Gestes = { ...gestes, nuance: { surlignage: ids, verdict_code: j.verdict, essais } }
+  const { error } = await admin.from('aletheia_travaux').update({ retour_vf_agi: maj, updated_at: new Date().toISOString() })
+    .eq('id', row.id).eq('eleve_id', userId).eq('statut', 'FEEDBACK2_READY')
+  if (error) return { error: error.message }
+  const { ESSAIS_MAX } = await import('@/utils/aletheia/fenetre')
+  const merite = j.verdict === 'juste' || essais >= ESSAIS_MAX
+  return { success: true, verdict: j.verdict, message: j.message, essais, ...(merite ? { pivot: j.pivot } : {}) }
+}
+
+/** Choisir, parmi des libellés, le passage amont qui répond au passage courant (C et au-dessus). */
+export async function choisirPassageAmont(livreId: string, semaine: number, index: number, choix: string) {
+  const r = await travailPourRetourFinal(livreId, semaine)
+  if ('error' in r) return { error: r.error }
+  const { admin, userId, row } = r
+  const paires = (row.retour_vf as { amont_paires?: { passage_amont: string }[] } | null)?.amont_paires ?? []
+  const paire = Number.isInteger(index) ? paires[index] : undefined
+  if (!paire || typeof choix !== 'string') return { error: 'Ce lien n’existe pas.' }
+  type Gestes = { nuance?: unknown; amont?: { index: number; choix: string; juste: boolean }[] }
+  const gestes = ((row.retour_vf_agi as Gestes | null) ?? {})
+  if ((gestes.amont ?? []).some(g => g.index === index)) return { error: 'Tu as déjà choisi pour ce lien.' }
+  const juste = choix === paire.passage_amont
+  const maj: Gestes = { ...gestes, amont: [...(gestes.amont ?? []), { index, choix, juste }] }
+  const { error } = await admin.from('aletheia_travaux').update({ retour_vf_agi: maj, updated_at: new Date().toISOString() })
+    .eq('id', row.id).eq('eleve_id', userId).eq('statut', 'FEEDBACK2_READY')
+  if (error) return { error: error.message }
+  const { extraitAmont } = await import('@/utils/aletheia/retour-vf-serveur')
+  const amont = await extraitAmont(admin, livreId, paire.passage_amont)
+  return { success: true, juste, amont }
+}
+
+/** Comparer le surlignage de l'élève sur la synthèse modèle à la couverture jugée (D8). */
+export async function comparerSyntheseAction(livreId: string, semaine: number, selection: string[]) {
+  const r = await travailPourRetourFinal(livreId, semaine)
+  if ('error' in r) return { error: r.error }
+  const { admin, userId, row } = r
+  const couverture = (row.retour_vf as { synthese_couverture?: { id: string; etat: 'present' | 'partiel' | 'absent' }[] } | null)?.synthese_couverture ?? []
+  if (!couverture.length) return { error: 'Cette synthèse n’a pas été jugée.' }
+  if (row.comparaison_synthese) return { error: 'Tu as déjà comparé cette synthèse.' }
+  const ids = (Array.isArray(selection) ? selection : []).filter((x): x is string => typeof x === 'string').slice(0, 60)
+  const { comparerSynthese } = await import('@/utils/aletheia/retour-vf')
+  const c = { ...comparerSynthese(couverture, ids), at: new Date().toISOString() }
+  const { error } = await admin.from('aletheia_travaux').update({ comparaison_synthese: c, updated_at: new Date().toISOString() })
+    .eq('id', row.id).eq('eleve_id', userId).eq('statut', 'FEEDBACK2_READY')
+  if (error) return { error: error.message }
+  return { success: true, comparaison: c }
+}
