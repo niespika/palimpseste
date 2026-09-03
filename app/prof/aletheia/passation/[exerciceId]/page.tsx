@@ -35,6 +35,7 @@ import { notFound } from 'next/navigation'
 import { garderProf } from '@/utils/passation/garde'
 import { chargerVueProf } from '@/utils/passation/vues'
 import { EcranProf } from '@/components/passation/EcranProf'
+import { lireLaPorteCopieAnnotee } from '@/utils/copie/porte'
 import { chargerEntretienDeConception } from '@/utils/examens/entretien-serveur'
 import EntretienConception from '@/components/passation/EntretienConception'
 
@@ -44,6 +45,8 @@ export default async function PassationAletheiaProf(
   const { exerciceId } = await params
   const { admin, actif } = await garderProf()
   const vue = await chargerVueProf(admin, exerciceId, actif)
+  // La copie annotée (03/09) : à ON, la liste devient une liste de noms.
+  const copieAnnotee = await lireLaPorteCopieAnnotee(admin)
   if (!vue) notFound()
   const entretien = await chargerEntretienDeConception(admin, exerciceId, vue.copies)
   return (
@@ -52,7 +55,7 @@ export default async function PassationAletheiaProf(
       <p className="mt-1 text-sm text-muet">Aletheia — la lecture diagnostique</p>
       <div className="mt-6">
         <EntretienConception exerciceId={exerciceId} entretien={entretien} />
-        <EcranProf vue={vue} />
+        <EcranProf vue={vue} baseCopie={copieAnnotee ? '/prof/aletheia/copie' : undefined} />
       </div>
     </div>
   )

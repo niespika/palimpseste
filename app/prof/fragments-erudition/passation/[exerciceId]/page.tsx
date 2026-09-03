@@ -19,6 +19,7 @@ import Link from 'next/link'
 import { garderProf } from '@/utils/passation/garde'
 import { chargerVueProf } from '@/utils/passation/vues'
 import { EcranProf } from '@/components/passation/EcranProf'
+import { lireLaPorteCopieAnnotee } from '@/utils/copie/porte'
 import { essaiDeLInstance } from '@/utils/essai/branchement-serveur'
 import { formatJour } from '@/utils/fuseau'
 
@@ -30,6 +31,8 @@ export default async function PassationFragmentsProf(
   const essai = await essaiDeLInstance(admin, exerciceId)
   if (!essai) notFound()
   const vue = await chargerVueProf(admin, exerciceId, actif)
+  // La copie annotée (03/09) : à ON, la liste devient une liste de noms.
+  const copieAnnotee = await lireLaPorteCopieAnnotee(admin)
   if (!vue) notFound()
   const retourEssai = `/prof/fragments-erudition/essais/${essai.essaiId}?classe=${essai.classeId}`
   return (
@@ -48,7 +51,7 @@ export default async function PassationFragmentsProf(
         pour l’élève ; elle porte son profil de compétences, pas sa note.
       </div>
       <div className="mt-6">
-        <EcranProf vue={vue} />
+        <EcranProf vue={vue} baseCopie={copieAnnotee ? '/prof/fragments-erudition/copie' : undefined} />
       </div>
     </main>
   )

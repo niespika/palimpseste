@@ -199,7 +199,7 @@ async function lireLesNoms(admin: Admin, eleveIds: readonly string[]): Promise<M
 }
 
 /** La consigne, quelle que soit sa forme physique — le §1.1 la laisse libre. */
-function enTexte(v: unknown): string {
+export function enTexte(v: unknown): string {
   if (typeof v === 'string') return v
   if (Array.isArray(v)) {
     // Une paire de diagnostic en déclare DEUX, dans l'ordre (`02-` §2.3.1 a).

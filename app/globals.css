@@ -60,6 +60,18 @@
         substituée là où elle est DÉCLARÉE, pas là où elle est utilisée. */
   --filet-servi:      #C9A96A;
 
+  /* --- La copie annotée (professeur) : UNE TEINTE PAR COMPÉTENCE --------------
+     Six surlignages qui se croisent sur la même copie (mesuré le 03/09 : 16 %
+     des surlignages en chevauchent un d'une autre compétence). La teinte est le
+     fond du surlignage et de la carte ; la couleur pleine est le numéro et le
+     filet. Le retour de la machine, lui, prend le pigment du module. */
+  --comp-expression:          #8C6A2E;  --comp-expression-teinte:      #F1E4C3;
+  --comp-argumentation:       #7A3A3A;  --comp-argumentation-teinte:   #EFD8D3;
+  --comp-structure:           #33567A;  --comp-structure-teinte:       #D8E2EE;
+  --comp-connaissance:        #4F6B3E;  --comp-connaissance-teinte:    #DEE7D2;
+  --comp-synthese:            #5E4A7A;  --comp-synthese-teinte:        #E3DCEE;
+  --comp-questionnement:      #2F6B6A;  --comp-questionnement-teinte:  #D3E6E3;
+
   /* La carte de crédence qui porte le plus de jetons — EFFET DE LA SAISIE,
      JAMAIS UN INDICE (`02-` §5 ; handoff §4). Deux teintes quasi neutres, pour
      qu'elles ne prennent pas parti dans le monde du module. */
@@ -123,6 +135,18 @@
   --color-info:             var(--info);
   --color-info-teinte:      var(--info-teinte);
   --color-vert-bouteille:   var(--vert-bouteille);
+  --color-comp-expression:            var(--comp-expression);
+  --color-comp-expression-teinte:     var(--comp-expression-teinte);
+  --color-comp-argumentation:         var(--comp-argumentation);
+  --color-comp-argumentation-teinte:  var(--comp-argumentation-teinte);
+  --color-comp-structure:             var(--comp-structure);
+  --color-comp-structure-teinte:      var(--comp-structure-teinte);
+  --color-comp-connaissance:          var(--comp-connaissance);
+  --color-comp-connaissance-teinte:   var(--comp-connaissance-teinte);
+  --color-comp-synthese:              var(--comp-synthese);
+  --color-comp-synthese-teinte:       var(--comp-synthese-teinte);
+  --color-comp-questionnement:        var(--comp-questionnement);
+  --color-comp-questionnement-teinte: var(--comp-questionnement-teinte);
   --color-rouge-bordeaux:   var(--rouge-bordeaux);
   /* pigment dynamique : utilisable en bg-pigment / text-pigment / border-pigment */
   --color-pigment:         var(--pigment);

@@ -22,6 +22,7 @@
 // ============================================================================
 
 import { useState, useActionState } from 'react'
+import Link from 'next/link'
 import {
   actionLeverLesDrapeaux, actionOuvrirLesDepots, actionDeclencherLeLot,
   actionEditerLeRetour, actionCommentaireGeneral, actionMessageReporte,
@@ -93,7 +94,12 @@ export interface VueProf {
   actif: boolean
 }
 
-export function EcranProf({ vue }: { vue: VueProf }) {
+/**
+ * @param baseCopie — posé par la page quand `copie_annotee_actif` est ON : la
+ *   liste devient une liste de NOMS, et chaque nom ouvre la page de la copie
+ *   annotée (`<baseCopie>/<depotId>`). Absent : l'écran d'avant, inchangé.
+ */
+export function EcranProf({ vue, baseCopie }: { vue: VueProf; baseCopie?: string }) {
   const [selection, setSelection] = useState<Set<string>>(new Set())
 
   function basculer(id: string) {
@@ -130,6 +136,7 @@ export function EcranProf({ vue }: { vue: VueProf }) {
       <Lot vue={vue} />
       <Correction
         vue={vue} selection={selection} basculer={basculer} toutPrendre={toutPrendre}
+        baseCopie={baseCopie}
       />
     </div>
   )
@@ -318,12 +325,13 @@ function EtatDeLaFile({ vue }: { vue: VueProf }) {
 // ─────────────────────────────────────────────────────────────────────────────
 
 function Correction({
-  vue, selection, basculer, toutPrendre,
+  vue, selection, basculer, toutPrendre, baseCopie,
 }: {
   vue: VueProf
   selection: Set<string>
   basculer: (id: string) => void
   toutPrendre: (p: boolean) => void
+  baseCopie?: string
 }) {
   const [etatV, actionV, enCoursV] = useActionState(actionValiderLesCorrections, null as Reponse | null)
   const [etatP, actionP, enCoursP] = useActionState(actionPublier, null as Reponse | null)
@@ -375,10 +383,12 @@ function Correction({
         <p key={i} className={`mt-2 text-sm ${e!.ok ? 'text-ok' : 'text-retard'}`}>{e!.message}</p>
       ))}
 
-      <ul className="mt-4 space-y-4">
-        {vue.copies.map((c) => (
-          <Copie key={c.depotId} copie={c}
-            prise={selection.has(c.depotId)} basculer={() => basculer(c.depotId)} />
+      <ul className={baseCopie ? 'mt-4 divide-y divide-bordure' : 'mt-4 space-y-4'}>
+        {vue.copies.map((c) => (baseCopie
+          ? <Nom key={c.depotId} copie={c} lien={`${baseCopie}/${c.depotId}`}
+              prise={selection.has(c.depotId)} basculer={() => basculer(c.depotId)} />
+          : <Copie key={c.depotId} copie={c}
+              prise={selection.has(c.depotId)} basculer={() => basculer(c.depotId)} />
         ))}
       </ul>
       {vue.copies.length === 0 && (
@@ -388,6 +398,42 @@ function Correction({
         </p>
       )}
     </section>
+  )
+}
+
+/**
+ * LA LIGNE D'UN NOM — quand la copie annotée est ouverte. Le nom est le lien ;
+ * la copie brute, le retour dépliant et les champs vivent sur la page de la
+ * copie. Restent ici : la case (les trois boutons de masse), l'état, la file.
+ */
+function Nom({
+  copie, lien, prise, basculer,
+}: { copie: LigneCopie; lien: string; prise: boolean; basculer: () => void }) {
+  const points = copie.retour?.points ?? []
+  const sommaire = sommaireDuRetour(points)
+  return (
+    <li className="flex flex-wrap items-center gap-x-3 gap-y-1 py-2">
+      <input type="checkbox" checked={prise} onChange={basculer} aria-label={`Sélectionner ${copie.eleve}`} />
+      <Link href={lien} className="font-cinzel text-encre underline decoration-bordure-bouton underline-offset-4 hover:decoration-liseret">
+        {copie.eleve}
+      </Link>
+      <Etat copie={copie} />
+      <span className="text-xs text-muet">
+        {copie.copie ? `${copie.nbBlocs} ¶` : 'sans copie'}
+        {copie.doutes > 0 ? ` · ${copie.doutes} doute(s)` : ''}
+        {copie.collages.length > 0 ? ` · ${copie.collages.length} collage(s) bloqué(s)` : ''}
+      </span>
+      {copie.retour && (
+        <span className="text-xs text-encre-douce">
+          {sommaire.total} point(s)
+          {copie.retour.publieLe ? ' · publié' : ' · non publié'}
+          {copie.retour.luLe ? ' · lu' : ''}
+          {copie.retour.edite ? ' · modifié' : ''}
+        </span>
+      )}
+      {copie.commentaire && <span className="text-xs text-muet" title={copie.commentaire}>· commenté</span>}
+      <div className="ml-auto text-xs"><TraitementDeLaCopie copie={copie} /></div>
+    </li>
   )
 }
 
@@ -505,7 +551,7 @@ function Copie({
         </div>
       ) : null}
 
-      <CommentaireEtMessage copie={copie} />
+      <CommentaireEtMessage depotId={copie.depotId} commentaire={copie.commentaire} messageReporte={copie.messageReporte} />
     </li>
   )
 }
@@ -662,18 +708,25 @@ function EditionDuRetour({ retourId, points }: { retourId: string; points: Point
   )
 }
 
-function CommentaireEtMessage({ copie }: { copie: LigneCopie }) {
+/**
+ * Les deux champs du professeur — partagés avec la page de la copie annotée
+ * (`components/copie/EcranCopieAnnotee.tsx`), qui les rend au même endroit de
+ * la base (`exercices_depots.commentaire_general`, `message_lisibilite_reporte`).
+ */
+export function CommentaireEtMessage({ depotId, commentaire, messageReporte }: {
+  depotId: string; commentaire: string | null; messageReporte: string | null
+}) {
   const [etatC, actionC, enCoursC] = useActionState(actionCommentaireGeneral, null as Reponse | null)
   const [etatM, actionM, enCoursM] = useActionState(actionMessageReporte, null as Reponse | null)
   return (
     <div className="mt-3 grid gap-3 md:grid-cols-2">
       {/* ÉTAPE 15 — le commentaire général, APRÈS lecture. AUCUNE NOTE. */}
       <form action={actionC}>
-        <input type="hidden" name="depot_id" value={copie.depotId} />
+        <input type="hidden" name="depot_id" value={depotId} />
         <label className="block text-xs uppercase tracking-wide text-muet-clair">
           Commentaire général
         </label>
-        <textarea name="commentaire" defaultValue={copie.commentaire ?? ''} rows={3}
+        <textarea name="commentaire" defaultValue={commentaire ?? ''} rows={3}
           className="mt-1 w-full rounded border border-bordure-bouton bg-parchemin p-2 text-sm text-encre" />
         <button type="submit" disabled={enCoursC}
           className="mt-1 rounded border border-bordure-bouton px-3 py-1 text-xs text-encre-douce">
@@ -685,11 +738,11 @@ function CommentaireEtMessage({ copie }: { copie: LigneCopie }) {
       {/* `06-` §1, règle 3 — « exercice à refaire lisiblement » n'existe pas :
           c'est un message REPORTÉ, affiché à la passation suivante. */}
       <form action={actionM}>
-        <input type="hidden" name="depot_id" value={copie.depotId} />
+        <input type="hidden" name="depot_id" value={depotId} />
         <label className="block text-xs uppercase tracking-wide text-muet-clair">
           Message de lisibilité, reporté à la prochaine passation
         </label>
-        <textarea name="message" defaultValue={copie.messageReporte ?? ''} rows={3}
+        <textarea name="message" defaultValue={messageReporte ?? ''} rows={3}
           placeholder="La prochaine fois, il faudra faire mieux."
           className="mt-1 w-full rounded border border-bordure-bouton bg-parchemin p-2 text-sm text-encre" />
         <button type="submit" disabled={enCoursM}
