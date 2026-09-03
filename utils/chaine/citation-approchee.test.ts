@@ -110,3 +110,16 @@ test('il échoue fermé : source vide, citation vide', () => {
   assert.equal((retrouverCitation('', 'quelque chose') as { echec: string }).echec, 'source_vide')
   assert.equal((retrouverCitation(COPIE, '  ') as { echec: string }).echec, 'trop_court')
 })
+
+test('⭐ la ponctuation qui suit le dernier mot est gardée si la citation en portait une, jamais un guillemet', () => {
+  const copie = 'Il dit : « la mort n\'est rien. » Puis il ajoute : elle n\'est rien pour nous, vraiment !'
+  const avec = retrouverCitation(copie, 'La mort nest rien.')
+  assert.ok(!('echec' in avec))
+  assert.equal(avec.citationReelle, "la mort n'est rien.")
+  const sans = retrouverCitation(copie, 'La mort nest rien')
+  assert.ok(!('echec' in sans))
+  assert.equal(sans.citationReelle, "la mort n'est rien")
+  const excl = retrouverCitation(copie, 'elle nest rien pour nous, vraiment !')
+  assert.ok(!('echec' in excl))
+  assert.equal(excl.citationReelle, "elle n'est rien pour nous, vraiment !")
+})

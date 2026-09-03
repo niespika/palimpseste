@@ -139,8 +139,8 @@ test('⭐⭐ une citation à un détail près est RÉPARÉE — la citation serv
   const a = { source: 'copie' as const, citation: "Tout d'abord, les vacances sont un temps de repos." }
   const j = jugerLAncrage(a, { production: COPIE, texteSupport: null })
   assert.ok(j.ancrage)
-  // ⚠️ La ponctuation finale tombe avec le pliage : les bornes s'arrêtent au dernier mot.
-  assert.equal(j.ancrage!.citation, 'Tout dabord, les vacances sont un temps de repos')
+  // ⭐ La citation du modèle finissait par un point : la copie en porte un, on le garde.
+  assert.equal(j.ancrage!.citation, 'Tout dabord, les vacances sont un temps de repos.')
   assert.equal(j.ancrage!.source, 'copie')
   assert.match(j.motif ?? '', /^citation réparée \(normalisation\) : /)
 })
@@ -148,7 +148,7 @@ test('⭐⭐ une citation à un détail près est RÉPARÉE — la citation serv
 test('une citation où le modèle a changé UN mot est réparée par l\'approché, et le motif porte le score', () => {
   const a = { source: 'copie' as const, citation: "Ensuite, travailler durant l'été permet de gagner un peu d'argent de poche." }
   const j = jugerLAncrage(a, { production: COPIE, texteSupport: null })
-  assert.equal(j.ancrage!.citation, "Ensuite, travailler pendant l'été permet de gagner un peu d'argent de poche")
+  assert.equal(j.ancrage!.citation, "Ensuite, travailler pendant l'été permet de gagner un peu d'argent de poche.")
   assert.match(j.motif ?? '', /réparée \(approché 0\.9\d\)/)
 })
 

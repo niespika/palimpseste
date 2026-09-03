@@ -209,6 +209,27 @@ export type MotifDEchec = 'source_vide' | 'trop_court' | 'introuvable' | 'ambigu
 
 export interface Echec { echec: MotifDEchec; detail: string }
 
+/**
+ * ⭐ 02/09 — LA PONCTUATION QUI SUIT LE DERNIER MOT. Le pliage fort découpe du
+ * premier au dernier MOT : « un temps de repos. » redevenait « un temps de
+ * repos ». Si la citation du modèle se terminait par une ponctuation, on étend
+ * la borne sur celle que la copie porte juste après — sans blanc entre les deux,
+ * et jamais un guillemet fermant, qui n'appartient pas à la phrase.
+ */
+const PONCTUATION_FINALE = /[.,;:!?…]/
+function etendreALaPonctuation(source: string, fin: number, morceau: string): number {
+  const dernier = morceau.trim().slice(-1)
+  if (!PONCTUATION_FINALE.test(dernier)) return fin
+  // « vraiment ! » : la typographie française met un blanc avant « ! », « ? »,
+  // « ; », « : » — on le traverse, mais seulement s'il mène à une ponctuation.
+  let g = fin
+  while (g < source.length && /\s/.test(source[g]!)) g++
+  if (g >= source.length || !PONCTUATION_FINALE.test(source[g]!)) return fin
+  let f = g
+  while (f < source.length && PONCTUATION_FINALE.test(source[f]!)) f++
+  return f
+}
+
 /** Les bornes d'un morceau qui tient au sens du retour, remontées par l'un des deux aplatisseurs. */
 function bornesExactes(source: string, morceau: string, fort: Plat): [number, number] | null {
   // L'aplatisseur de l'écran d'abord : il garde la ponctuation, donc les bornes
@@ -239,7 +260,7 @@ export function retrouverMorceau(source: string, morceau: string, fort: Plat): M
   const k = fort.texte.indexOf(cible)
   if (k >= 0) {
     const debut = fort.debuts[k]!
-    const fin = fort.fins[k + cible.length - 1]!
+    const fin = etendreALaPonctuation(source, fort.fins[k + cible.length - 1]!, morceau)
     return { debut, fin, texteReel: source.slice(debut, fin), score: 1, methode: 'normalise' }
   }
   // Étage 2 bis — sans les apostrophes : « Tout dabord » / « Tout d'abord ».
@@ -248,7 +269,7 @@ export function retrouverMorceau(source: string, morceau: string, fort: Plat): M
   const k2 = cibleSansApo ? sansApo.texte.indexOf(cibleSansApo) : -1
   if (k2 >= 0) {
     const debut = sansApo.debuts[k2]!
-    const fin = sansApo.fins[k2 + cibleSansApo.length - 1]!
+    const fin = etendreALaPonctuation(source, sansApo.fins[k2 + cibleSansApo.length - 1]!, morceau)
     return { debut, fin, texteReel: source.slice(debut, fin), score: 1, methode: 'normalise' }
   }
   // Étage 3 — approché, au mot.
@@ -286,7 +307,7 @@ export function retrouverMorceau(source: string, morceau: string, fort: Plat): M
     return { echec: 'negation', detail: 'une négation d\'un seul côté — la réparation changerait le sens' }
   }
   const debut = fenetre[0]!.debut
-  const fin = fenetre[fenetre.length - 1]!.fin
+  const fin = etendreALaPonctuation(source, fenetre[fenetre.length - 1]!.fin, morceau)
   return { debut, fin, texteReel: source.slice(debut, fin), score: meilleur.score, methode: 'approche' }
 }
 
