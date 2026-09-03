@@ -180,6 +180,7 @@ const VIDE: BlocsGabarit = { v1: '', vf: '', diag_inventaire: '', diag_niveau: '
 const BLOCS_DIALOGUE: BlocsGabarit = {
   v1: `
 ## Gabarit DIALOGUÉ — ce que contiennent les champs (redéfinition, prime sur « Traitement, champ par champ »)
+⛔ Dans ce que l'élève LIT, ne nomme JAMAIS les balises (IDEE, ARGUMENTS, ACCORD, THESE_AUTEUR, IDEE_VF…) : parle des QUESTIONS qu'on lui a posées (« ta réponse sur les voix », « ta réponse sur ce qui te convainc », « ta réponse sur la thèse de l'auteur »…).
 Le texte de cette semaine fait parler PLUSIEURS voix (personnages, interlocuteurs, ou une voix empruntée par l'auteur). Les champs de l'élève signifient ici :
 - IDEE_PRINCIPALE = « Quelles idées trouve-t-on dans ce passage, et qui soutient chacune ? » → l'ATTRIBUTION des positions aux voix. Erreur typique : attribuer à l'auteur ce que dit un personnage. Relance socratique : renvoie au passage où la voix parle, demande QUI dit cela.
 - ARGUMENTS = « Qu'est-ce qui fait avancer l'échange ? » → les MOUVEMENTS : objection, réfutation, retournement, aveu. Relance : le moment précis où une idée en bouscule une autre.
@@ -191,6 +192,7 @@ THESE_AUTEUR>>>
 `,
   vf: `
 ## Gabarit DIALOGUÉ — ce que contiennent les champs
+⛔ Dans ce que l'élève LIT, ne nomme JAMAIS les balises (IDEE, ARGUMENTS, ACCORD, THESE_AUTEUR, IDEE_VF…) : parle des QUESTIONS qu'on lui a posées (« ta réponse sur les voix », « ta réponse sur ce qui te convainc », « ta réponse sur la thèse de l'auteur »…).
 IDEE = attribution des positions aux voix ; ARGUMENTS = mouvements de l'échange ; ACCORD = « {question_tournante} ». La version finale de la question fixe « quelle thèse l'auteur préfère-t-il ? » est ici :
 <<<THESE_AUTEUR_VF
 {champ_fixe_eleve}
@@ -220,6 +222,7 @@ Le texte fait parler plusieurs voix. these_canonique = la position de l'AUTEUR (
 const BLOCS_APHORISTIQUE: BlocsGabarit = {
   v1: `
 ## Gabarit APHORISTIQUE — ce que contiennent les champs (redéfinition, prime sur « Traitement, champ par champ »)
+⛔ Dans ce que l'élève LIT, ne nomme JAMAIS les balises (IDEE, ARGUMENTS, ACCORD, THESE_AUTEUR, IDEE_VF…) : parle des QUESTIONS qu'on lui a posées (« ta réponse sur les voix », « ta réponse sur ce qui te convainc », « ta réponse sur la thèse de l'auteur »…).
 Le texte est fait de fragments (aphorismes, essais digressifs) : on ne demande PAS « l'idée du chapitre ». Les champs de l'élève signifient ici :
 - IDEE_PRINCIPALE = « Quel passage as-tu choisi ? Recopie-le. » → le FRAGMENT retenu par l'élève. Tout ton retour travaille sur CE fragment (localise-le dans le texte de la semaine ; s'il n'y est pas mot pour mot — autre traduction — retrouve-le par le sens).
 - ARGUMENTS = « Que veut-il dire, selon toi ? » → la THÈSE IMPLICITE que l'élève reconstruit. Relance socratique : renvoie à un mot, une image, une phrase du fragment qui contredit ou précise sa lecture ; jamais la thèse elle-même.
@@ -227,6 +230,7 @@ Le texte est fait de fragments (aphorismes, essais digressifs) : on ne demande P
 `,
   vf: `
 ## Gabarit APHORISTIQUE — ce que contiennent les champs
+⛔ Dans ce que l'élève LIT, ne nomme JAMAIS les balises (IDEE, ARGUMENTS, ACCORD, THESE_AUTEUR, IDEE_VF…) : parle des QUESTIONS qu'on lui a posées (« ta réponse sur les voix », « ta réponse sur ce qui te convainc », « ta réponse sur la thèse de l'auteur »…).
 IDEE = le fragment choisi (recopié) ; ARGUMENTS = la thèse implicite reconstruite par l'élève ; ACCORD = « {question_tournante} ». La SYNTHÈSE MODÈLE porte sur les fragments de la semaine ; les NUANCES portent sur la lecture du fragment CHOISI d'abord.
 `,
   diag_inventaire: `
@@ -249,6 +253,7 @@ Le texte est fait de fragments numérotés ou d'essais digressifs. these_canoniq
 const BLOCS_ANALYTIQUE: BlocsGabarit = {
   v1: `
 ## Gabarit ANALYTIQUE — ce que contiennent les champs (redéfinition, prime sur « Traitement, champ par champ »)
+⛔ Dans ce que l'élève LIT, ne nomme JAMAIS les balises (IDEE, ARGUMENTS, ACCORD, THESE_AUTEUR, IDEE_VF…) : parle des QUESTIONS qu'on lui a posées (« ta réponse sur les voix », « ta réponse sur ce qui te convainc », « ta réponse sur la thèse de l'auteur »…).
 Le texte DÉFINIT une notion ou DÉCRIT un outil (une définition, des critères, un mécanisme, des espèces). Idée et argument ne sont PAS distingués ici. Les champs de l'élève signifient :
 - IDEE_PRINCIPALE = « Que dit l'auteur de la notion ou de l'outil que ce passage décrit ? » → la NOTION saisie : définition, critères, mécanisme. Relance socratique : renvoie au passage où un critère manque ou est déformé.
 - ARGUMENTS = « Applique l'analyse de l'auteur à un cas de ton choix. » → l'APPLICATION de l'élève. Ne juge pas le cas choisi : vérifie que l'outil y est appliqué comme l'auteur le définit. Relance : le critère que l'application oublie ou tord.
@@ -256,6 +261,7 @@ Le texte DÉFINIT une notion ou DÉCRIT un outil (une définition, des critères
 `,
   vf: `
 ## Gabarit ANALYTIQUE — ce que contiennent les champs
+⛔ Dans ce que l'élève LIT, ne nomme JAMAIS les balises (IDEE, ARGUMENTS, ACCORD, THESE_AUTEUR, IDEE_VF…) : parle des QUESTIONS qu'on lui a posées (« ta réponse sur les voix », « ta réponse sur ce qui te convainc », « ta réponse sur la thèse de l'auteur »…).
 IDEE = la notion saisie (définition, critères, mécanisme) ; ARGUMENTS = l'application à un cas choisi par l'élève ; ACCORD = « {question_tournante} ». Dans NUANCES ET ERREURS : d'abord les critères de la notion manquants ou déformés, puis l'application (l'outil est-il appliqué comme l'auteur le définit ?).
 `,
   diag_inventaire: `
