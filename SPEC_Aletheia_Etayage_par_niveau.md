@@ -184,13 +184,15 @@ décident si les appels de note doivent être nettoyés à l'extraction.
   "semaine": 12, "titre": "…",
   "gabarit": "argumentatif",              // NOUVEAU — surcharge optionnelle du gabarit du livre
   "these_canonique": "…", "arguments_cles": ["…"], "concepts_cles": ["…"], "synthese_modele": "…",
-  "passages_cles": [                       // NOUVEAU — 2 à 4 par semaine
+  "passages_cles": [                       // NOUVEAU — 2 à 4 par semaine (E4, `utils/aletheia/passages.ts`)
     { "id": "k12-1",
       "role": "these",                     // these | argument:2 | concept:socratisme_esthetique | reponse
-      "para_debut": "p12-03", "para_fin": "p12-03",
+      "phrase_debut": "s12-029", "phrase_fin": "s12-036",   // bloc CONTIGU de 2 à 12 phrases (les paragraphes sont optionnels, § 3.2)
       "pivots": [["s12-031"], ["s12-034", "s12-035"]],   // alternatives recevables ; chaque alternative = 1-2 phrases contiguës
-      "libelle": "la règle du socratisme esthétique",     // ce que l'élève cherche, en clair
-      "decoupage_version": "…" }
+      "pivots_texte": ["…", "…"],          // le texte RENDU de chaque alternative, pour le ré-alignement (§ 4.3)
+      "libelle": "la phrase où l'auteur formule la règle",  // ce que l'élève cherche : le LIEU, jamais la réponse
+      "decoupage_version": "…",
+      "revoir": false }                    // posé par le ré-alignement quand une pivot n'est pas retrouvée
   ],
   "synthese_phrases": [ { "id": "y12-1", "texte": "…" } ]   // NOUVEAU — la synthèse modèle numérotée (§ 6.5)
 }
@@ -226,9 +228,16 @@ entières**, ses pivots comme une surbrillance plus foncée. Ajouter, supprimer,
 alternative. `amende_le` par semaine, comme aujourd'hui ; une régénération IA reprend la
 main avec confirmation.
 
-Après un changement de version du texte (§ 3.2), l'éditeur propose un **ré-alignement** :
-chaque pivot est recherchée mot pour mot dans la nouvelle version ; retrouvée → réalignée ;
-sinon → marquée « à revoir ». Le prof valide.
+Après un changement de version du texte (§ 3.2), l'éditeur propose un **ré-alignement**
+(bouton « ⇄ Ré-aligner sur le texte », visible dès qu'un passage porte une autre version) :
+chaque pivot est recherchée mot pour mot (texte rendu, masques omis) dans la nouvelle
+version ; retrouvée → ré-alignée, les bornes du passage recalées à la même distance ;
+sinon → marquée « à revoir ». Le prof valide. **Éprouvé (E4, 03/09)** : deux phrases
+ajoutées en tête de la semaine 18 du livre de prod en bac à sable → 12 passages recalés
+de +2 phrases, 0 à revoir ; texte remis → 12 recalés, 0 à revoir. La première épreuve
+avait laissé un passage « à revoir » : le numéro de section poussé au milieu du texte
+n'était plus masqué et entrait dans la pivot — le masque vaut maintenant pour tout
+numéro seul sur sa ligne (32 sur le livre, contre 28 en tête).
 
 ### 4.4 Mesure préalable obligatoire
 
@@ -571,7 +580,7 @@ tolérantes aux anciens retours (clés absentes = comportement actuel).
 | **E1** ✅ code 03/09, SQL bac à sable ☑ 03/09, prod ☐ | Découpeur en phrases (`utils/aletheia/decoupage.ts`, 15 tests), masques au lieu de nettoyage, `aletheia_livre_decoupage` + porte `aletheia_etayage_actif` (`aletheia_etayage_l1.sql`, ligne au journal, **non jouée**), génération en ligne à la création du livre et à la re-découpe, empreinte de version (`decoupage-serveur.ts`) | E0 | fait pour le code : 29/29 semaines partitionnantes à l'octet près, 1 078 phrases, 484 + 28 + 33 masques ; recette `scripts/recette/aletheia-decoupage-e1.mjs` (--genere / --etat / --retire) jouée en bac à sable : 4 livres découpés, ≤ 0,4 s chacun ; reste à jouer le SQL en bac à sable puis en prod |
 | **E2** ✅ code 03/09, SQL bac à sable ☑ 03/09, prod ☐ | Diagnostic à chaque séance porte ouverte ; colonne `aletheia_travaux.forme` (`aletheia_etayage_l2.sql`) ; `utils/aletheia/forme.ts` (pur, 11 tests) + `forme-serveur.ts` ; la forme s'écrit sur le travail à la soumission V1 | — | fait : 38 travaux de prod rejoués à blanc dans les DEUX variantes d'hystérésis (§ 13.4) — **à lire par Louis, qui tranche D10** |
 | **E3** ✅ code 03/09 (E3a), SQL bac à sable ☑ 03/09, prod ☐, recette écrans 03/09 (E3b) | Gabarits : `gabarits.ts` (4 gabarits en questions, cycle fixe, blocs de prompt), `gabarit-serveur.ts`, colonnes `gabarit_lecture` / `cycle_tournante` / `champ_fixe` / `champ_fixe_vf` / `tournante_cle` / `blocs_gabarits` (`aletheia_etayage_l3.sql`), placeholders `{bloc_gabarit}` dans les 5 prompts, formulaires et page élève, sélecteur dans l'éditeur du livre, surcharge par séance dans la fiche ; identité porte fermée prouvée par `scripts/recette/aletheia-prompts-identite.mjs` | — | fait : trois livres semés en bac à sable (`scripts/recette/aletheia-livres-e3.mjs`, textes Wikisource libres de droits — Le Banquet trad. Cousin / dialogué, Maximes et intermèdes trad. Albert / aphoristique, Poétique trad. Ruelle / analytique), fiches générées par gabarit (positions par voix, thèse implicite par fragment, critères) ; le Banquet a passé une séance COMPLÈTE (V1 → retour socratique aux bulles du gabarit → VF à quatre champs → retour final, diagnostic V1 et VF, `tournante_cle` et `forme` écrits) via un Chrome sans fenêtre (`scratchpad/smoke_e3.mjs`, captures 1280 / 768 / 375) ; les formulaires des deux autres livres rendus aux trois tailles. **À lire par Louis** : les retours (captures et base). Reste : l'éditeur prof des blocs de prompt (`blocs_gabarits`) n'a pas d'écran (lu par le code, éditable en base) ; le cycle tournant par défaut de l'analytique commence par « honnête » (pensé pour Schopenhauer) : pour la Poétique, régler `cycle_tournante` du livre |
-| **E4** | Passages clés dans la fiche : génération par identifiants, rejet par le code, éditeur prof, ré-alignement | E1 | trois semaines du livre de prod ont leurs passages, amendés une fois à la main, rejoués après changement de version |
+| **E4** ✅ code 03/09, aucun SQL, recette bac à sable 03/09 | `utils/aletheia/passages.ts` (pur, 7 tests : vérification, ré-alignement, normalisation), `passages-serveur.ts` (un appel par semaine en parallèle, fusion dans la fiche), actions `genererPassagesCles` / `realignerPassagesCles`, composant `PassagesCles` (lecture : passage rendu, pivots surlignées, périmé / à revoir ; édition : bornes par phrases entières, alternatives de pivots, libellé), `passages_cles` porté par `parseReference` et normalisé à l'enregistrement de la fiche | E1 | fait pour la génération et le ré-alignement (semaines 2, 18, 23 du livre de prod en bac à sable : 12 passages, 0 rejet, ~6 s/semaine ; épreuve de version aller-retour 12/0) ; **l'amendement à la main passe par l'éditeur de fiche, que je n'ai PAS pu ouvrir** (aucun compte prof de test en bac à sable) — à faire par Louis sur le serveur de la branche ; le prompt `prompt_passages` est lu dans `aletheia_params` mais n'a ni colonne ni écran (défaut du code) |
 | **E5** | Retour V1 : rappel (fiche N−1), relances par identifiant, budget 300 mots, `terme_canonique` ; cases de réponse avant réécriture ; réponses injectées dans l'appel VF | E3, E4 | séance complète D et B en preview, sur les **trois tailles d'écran** avec un vrai retour |
 | **E6** | Formes `montre` / `fenetre` / `demi_section`, liseuse, surlignage, barème § 7.3 (tests purs), libellés § 6.3 | E2, E5 | idem, plus 20 surlignages de test contre le barème |
 | **E7** | Retour final agi : nuance prioritaire, flèche (couches de la copie annotée), paires de passages amont, choix amont à C+, comparaison synthèse par surlignage | E5, E6 | idem, sur 375 px d'abord |

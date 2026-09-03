@@ -77,14 +77,16 @@ const ABREVIATIONS = new Set([
 const APPEL_NOTE = /(?<=[\p{L}»"”’)\]])( ?)(\d{1,2})(?=[ \t]*(?:[.,;:!?…»"”)\]–—-]|\n|$))/gu
 
 /**
- * Un numéro de section SEUL sur la première ligne : « 19\nOn ne saurait… » — le
- * titre de section que l'extraction PDF laisse en tête. Sur le livre de prod,
- * 28 semaines sur 29 commencent ainsi (E0 ne l'avait compté qu'une fois : sa
- * mesure exigeait une espace). ⚠️ Un numéro SUIVI de texte sur la même ligne
- * (« 1. Les Lumières, c'est… », les paragraphes numérotés de Kant) n'est PAS un
- * artefact : il reste, et il se rattache à sa phrase (cf. `decouperEnPhrases`).
+ * Un numéro de section SEUL sur sa ligne : « 19\nOn ne saurait… » — le titre de
+ * section que l'extraction PDF laisse en tête (28 semaines sur 29 du livre de prod ;
+ * E0 ne l'avait compté qu'une fois : sa mesure exigeait une espace). Cherché sur
+ * TOUTES les lignes, pas seulement la première : l'épreuve de version d'E4 a montré
+ * qu'un numéro poussé au milieu du texte par un ajout en tête devenait « 14 Représen-
+ * tons-nous… » dans la pivot, et cassait le ré-alignement au retour. ⚠️ Un numéro
+ * SUIVI de texte sur la même ligne (« 1. Les Lumières, c'est… », les paragraphes
+ * numérotés de Kant) n'est PAS un artefact : il reste, rattaché à sa phrase.
  */
-const NUMERO_SECTION = /^\s*(\d{1,3})[ \t]*\n\s*/u
+const NUMERO_SECTION = /^[ \t]*(\d{1,3})[ \t]*\n/gmu
 
 /**
  * Césure de fin de ligne : « con-\ntemplation ». On ne masque QUE le retour à la
@@ -96,10 +98,10 @@ const CESURE = /(?<=\p{Ll})-(\n)(?=\p{Ll})/gu
 
 export function repererMasques(texte: string): Masque[] {
   const out: Masque[] = []
-  const tete = NUMERO_SECTION.exec(texte)
-  if (tete) {
-    // Du nombre jusqu'au début du texte qui suit (retour à la ligne et blancs compris).
-    out.push({ bornes: [tete[0].indexOf(tete[1]), tete[0].length], type: 'numero_section' })
+  for (const m of texte.matchAll(NUMERO_SECTION)) {
+    // Du nombre jusqu'à la fin de sa ligne (retour à la ligne compris).
+    const debut = m.index + m[0].indexOf(m[1])
+    out.push({ bornes: [debut, m.index + m[0].length], type: 'numero_section' })
   }
   for (const m of texte.matchAll(APPEL_NOTE)) {
     // On masque l'espace qui précède le nombre (s'il y en a une) et le nombre.

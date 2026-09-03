@@ -8,6 +8,7 @@ import type { EtatFiche } from './utils'
 import { useArtefactsLivre } from './ArtefactsLivreProvider'
 import BoutonRegenererFiches from './BoutonRegenererFiches'
 import EditeurFicheSemaine from './EditeurFicheSemaine'
+import PassagesCles from './PassagesCles'
 import { BADGE, BTN_DISCRET, BTN_PRIMAIRE, BTN_SECONDAIRE, BTN_SECONDAIRE_SM, INTITULE, INTITULE_SM } from './ui'
 
 const BADGE_ETAT: Record<EtatFiche, { texte: string; cls: string }> = {
@@ -19,11 +20,13 @@ const BADGE_ETAT: Record<EtatFiche, { texte: string; cls: string }> = {
 // Panneau central : la fiche de la semaine sélectionnée. Remonté à chaque changement
 // de semaine (key={semaineSel} côté parent) → le texte se replie et le brouillon
 // d'édition est jeté, comme demandé par le handoff.
-export default function PanneauFiche({ livreId, semaine, titreDoc, chapitresDoc, texteDoc, chapitre, etat, sousStatut, statutRef, updatedAtRef, nbFiches, contenuVide, gabaritLivre }: {
+export default function PanneauFiche({ livreId, semaine, titreDoc, chapitresDoc, texteDoc, chapitre, etat, sousStatut, statutRef, updatedAtRef, nbFiches, contenuVide, gabaritLivre, versionDecoupe }: {
   livreId: string
   semaine: number
-  /** (E3) Gabarit du livre, porte de l'étayage ouverte ; absent ⇒ pas de sélecteur de surcharge. */
+  /** (E3) Gabarit du livre, porte de l'étayage ouverte ; absent ⇒ pas de sélecteur de surcharge ni de passages clés. */
   gabaritLivre?: string | null
+  /** (E4) Empreinte de la découpe à jour en base ; null ⇒ passages périmés. */
+  versionDecoupe?: string | null
   titreDoc: string
   chapitresDoc: string | null
   texteDoc: string | null
@@ -121,7 +124,7 @@ export default function PanneauFiche({ livreId, semaine, titreDoc, chapitresDoc,
           </div>
         ) : edition && draft ? (
           <>
-            <EditeurFicheSemaine draft={draft} setDraft={setDraft} gabaritLivre={gabaritLivre ?? undefined} />
+            <EditeurFicheSemaine draft={draft} setDraft={setDraft} gabaritLivre={gabaritLivre ?? undefined} livreId={livreId} texteDoc={texteDoc} versionDecoupe={versionDecoupe ?? null} />
             <div className="flex gap-2">
               <button type="button" onClick={enregistrer} disabled={busy} className={BTN_PRIMAIRE}>{busy ? 'Enregistrement…' : 'Enregistrer'}</button>
               <button type="button" onClick={() => setEdition(false)} disabled={busy} className={BTN_DISCRET}>Annuler</button>
@@ -178,6 +181,14 @@ export default function PanneauFiche({ livreId, semaine, titreDoc, chapitresDoc,
                 <div className={`${INTITULE_SM} text-info mb-1.5`}>👁 Synthèse modèle — vue par l’élève</div>
                 <p className="font-corps text-base leading-[1.6] text-encre">{chapitre.synthese_modele}</p>
               </div>
+            )}
+            {/* (E4) Passages clés — porte de l'étayage ouverte seulement (gabaritLivre présent). */}
+            {gabaritLivre && (
+              <PassagesCles
+                livreId={livreId} semaine={semaine} texte={texteDoc}
+                passages={chapitre.passages_cles ?? []} versionDecoupe={versionDecoupe ?? null}
+                mode="lecture" peutGenerer
+              />
             )}
           </>
         )}

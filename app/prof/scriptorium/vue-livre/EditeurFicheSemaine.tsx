@@ -3,14 +3,19 @@
 import type { ReferenceChapitre } from '@/app/eleve/modules/aletheia/types'
 import { CHAMP, INTITULE, INTITULE_SM } from './ui'
 import { DEFINITIONS, GABARITS, estGabarit } from '@/utils/aletheia/gabarits'
+import PassagesCles from './PassagesCles'
 
 // Édition d'UNE fiche de semaine (ex-EditeurReference réduit à un chapitre) : le
 // panneau parent fusionne le brouillon dans le tableau complet à l'enregistrement.
 // `gabaritLivre` (E3) : le gabarit du livre, pour afficher la surcharge par séance.
-export default function EditeurFicheSemaine({ draft, setDraft, gabaritLivre }: {
+export default function EditeurFicheSemaine({ draft, setDraft, gabaritLivre, livreId, texteDoc, versionDecoupe }: {
   draft: ReferenceChapitre
   setDraft: (c: ReferenceChapitre) => void
   gabaritLivre?: string
+  /** (E4) Pour l'éditeur des passages clés (porte ouverte seulement). */
+  livreId?: string
+  texteDoc?: string | null
+  versionDecoupe?: string | null
 }) {
   const maj = (patch: Partial<ReferenceChapitre>) => setDraft({ ...draft, ...patch })
   return (
@@ -58,6 +63,13 @@ export default function EditeurFicheSemaine({ draft, setDraft, gabaritLivre }: {
         <label className={`${INTITULE_SM} text-info block mb-1.5`}>👁 Synthèse modèle — vue par l’élève (registre élève, tutoiement)</label>
         <textarea value={draft.synthese_modele} onChange={e => maj({ synthese_modele: e.target.value })} rows={4} className={`${CHAMP} resize-y font-corps text-[15px]`} />
       </div>
+      {gabaritLivre && livreId && (
+        <PassagesCles
+          livreId={livreId} semaine={draft.semaine} texte={texteDoc ?? null}
+          passages={draft.passages_cles ?? []} versionDecoupe={versionDecoupe ?? null}
+          mode="edition" onChange={p => maj({ passages_cles: p })}
+        />
+      )}
     </div>
   )
 }

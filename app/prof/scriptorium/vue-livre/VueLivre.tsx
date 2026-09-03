@@ -21,10 +21,12 @@ export interface DocSemaine {
 // 3 colonnes (rail des semaines / fiche de la semaine / carte d'architecture).
 // Orchestrateur SERVEUR : sélection lue dans l'URL (?semaine=N), états dérivés ici,
 // toutes les données viennent de page.tsx (aucune requête).
-export default function VueLivre({ livre, classes, classeIds, docs, nbDocsSansSemaine, capstone, reference, semaineParam, modeDecoupe, conflitClasses, gabarit }: {
+export default function VueLivre({ livre, classes, classeIds, docs, nbDocsSansSemaine, capstone, reference, semaineParam, modeDecoupe, conflitClasses, gabarit, versionDecoupe }: {
   livre: { id: string; label: string; auteur: string | null; date_debut: string | null; nb_semaines: number | null; signets: Signet[] | null }
   /** (E3) Gabarit de lecture du livre, quand la porte de l'étayage est ouverte ; sinon absent. */
   gabarit?: 'argumentatif' | 'dialogue' | 'aphoristique' | 'analytique' | null
+  /** (E4) Empreinte de la découpe en base, à jour ; null si absente ou périmée. */
+  versionDecoupe?: string | null
   classes: { id: string; nom: string }[]
   classeIds: string[]
   docs: DocSemaine[] // documents du livre AVEC numéro de semaine, triés (semaine, id)
@@ -150,6 +152,7 @@ export default function VueLivre({ livre, classes, classeIds, docs, nbDocsSansSe
             updatedAtRef={reference?.updated_at ?? null}
             nbFiches={parSemaine.length}
             gabaritLivre={gabarit}
+            versionDecoupe={versionDecoupe ?? null}
             contenuVide={contenuVide}
           />
           <ColonneCarte livreId={livre.id} capstone={capstone} liens={liensResolus} semaineSel={semaineSel} hrefBase={hrefBase} />

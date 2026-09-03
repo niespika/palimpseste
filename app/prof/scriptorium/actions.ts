@@ -1325,6 +1325,36 @@ export async function regenererCarteLivre(livreId: string, force = false): Promi
   return { success: true }
 }
 
+// (E4) Passages clés — génération IA par semaine (toutes si `semaines` absent), en LIGNE
+// (un appel par semaine en parallèle, ~6 s) ; porte `aletheia_etayage_actif` requise.
+export async function genererPassagesCles(livreId: string, semaines?: number[]): Promise<{ success?: boolean; resume?: string; error?: string }> {
+  await verifierProf()
+  const admin = createAdminClient()
+  const { lireLaPorteEtayage } = await import('@/utils/aletheia/decoupage-serveur')
+  if (!(await lireLaPorteEtayage(admin))) return { error: 'L’étayage par niveau est à OFF : les passages clés ne se génèrent pas.' }
+  const { genererPassagesLivre } = await import('@/utils/aletheia/passages-serveur')
+  const r = await genererPassagesLivre(admin, livreId, semaines)
+  if (!r.ok) return { error: r.message }
+  revalidatePath('/prof/scriptorium')
+  const resume = r.resultats.map(x => `S${x.semaine} : ${x.erreur ? 'échec (' + x.erreur + ')' : `${x.passages} passage(s)${x.rejets.length ? `, ${x.rejets.length} rejeté(s)` : ''}`}`).join(' · ')
+  return { success: true, resume }
+}
+
+// (E4) Ré-alignement des passages sur le texte COURANT (après une re-découpe ou un
+// changement de texte) : les pivots sont cherchées mot pour mot, les introuvables
+// passent « à revoir ».
+export async function realignerPassagesCles(livreId: string): Promise<{ success?: boolean; resume?: string; error?: string }> {
+  await verifierProf()
+  const admin = createAdminClient()
+  const { lireLaPorteEtayage } = await import('@/utils/aletheia/decoupage-serveur')
+  if (!(await lireLaPorteEtayage(admin))) return { error: 'L’étayage par niveau est à OFF.' }
+  const { realignerPassagesLivre } = await import('@/utils/aletheia/passages-serveur')
+  const r = await realignerPassagesLivre(admin, livreId)
+  if (!r.ok) return { error: r.message }
+  revalidatePath('/prof/scriptorium')
+  return { success: true, resume: `${r.realignes} passage(s) ré-aligné(s), ${r.aRevoir} à revoir` }
+}
+
 // Régénération IA de la RÉFÉRENCE seule. Confirmation si elle a été amendée à la main.
 export async function regenererReferenceLivre(livreId: string, force = false): Promise<{ success?: boolean; needsConfirm?: boolean; error?: string }> {
   await verifierProf()
@@ -1406,6 +1436,22 @@ export async function enregistrerFicheSemaine(livreId: string, chapitre: Referen
     // (E3) Surcharge du gabarit par séance : recopiée si valide, sinon absente.
     ...(['argumentatif', 'dialogue', 'aphoristique', 'analytique'].includes(chapitre.gabarit ?? '') ? { gabarit: chapitre.gabarit } : {}),
   }
+  // (E4) Passages clés édités à la main : normalisés contre la découpe COURANTE du texte
+  // de la séance (ids existants, bornes ordonnées, pivots dans le passage) ; les
+  // irrécupérables tombent. Absents ⇒ clé absente (on ne réécrit pas un vide).
+  {
+    const { parsePassages, normaliserPassage } = await import('@/utils/aletheia/passages')
+    const { construireDecoupeSemaine } = await import('@/utils/aletheia/decoupage')
+    const bruts = parsePassages(chapitre.passages_cles)
+    if (bruts.length > 0) {
+      const { data: doc } = await admin.from('scriptorium_documents').select('texte_extrait')
+        .eq('unite_id', livreId).eq('semaine', chapitre.semaine).order('created_at', { ascending: true }).limit(1).maybeSingle()
+      const texte = (doc?.texte_extrait as string | null) ?? ''
+      const d = construireDecoupeSemaine(chapitre.semaine, texte)
+      const propres = bruts.map(p => normaliserPassage(p, d, texte)).filter((p): p is NonNullable<typeof p> => !!p)
+      if (propres.length > 0) (propre as ReferenceChapitre).passages_cles = propres.map((p, i) => ({ ...p, id: `k${chapitre.semaine}-${i + 1}` }))
+    }
+  }
 
   const { parseReference } = await import('@/utils/aletheia-retours')
   let base = parseReference(existant?.contenu)
@@ -1421,6 +1467,9 @@ export async function enregistrerFicheSemaine(livreId: string, chapitre: Referen
     (c.arguments_cles ?? []).map(a => (a ?? '').trim()).filter(Boolean),
     (c.concepts_cles ?? []).map(a => (a ?? '').trim()).filter(Boolean),
     (c.synthese_modele ?? '').trim(),
+    c.gabarit ?? null,
+    // (E4) Les passages comptent comme une édition (libellé, bornes, pivots).
+    (c.passages_cles ?? []).map(p => [p.role, (p.libelle ?? '').trim(), p.phrase_debut, p.phrase_fin, p.pivots]),
   ])
 
   const idx = base.findIndex(c => c.semaine === propre.semaine)

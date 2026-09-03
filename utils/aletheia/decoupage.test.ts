@@ -70,6 +70,12 @@ test('numéro de section en tête suivi d’un retour à la ligne (le cas réel 
   assert.equal(rendreTranche(t, [0, t.length], m), 'On ne saurait caractériser cette culture. Suite.')
   // Un nombre en tête suivi d’une minuscule n’est pas un numéro de section.
   assert.equal(repererMasques('19 ans plus tard.').length, 0)
+  // Un numéro seul sur sa ligne AU MILIEU du texte est masqué aussi (épreuve de version E4).
+  const u = 'Ajout en tête. Encore.\n14\nReprésentons-nous cet œil.'
+  const mu = repererMasques(u)
+  assert.equal(mu.length, 1)
+  assert.equal(u.slice(...mu[0].bornes), '14\n')
+  assert.equal(rendreTranche(u, [0, u.length], mu), 'Ajout en tête. Encore. Représentons-nous cet œil.')
 })
 
 test('paragraphes numérotés (Kant) : « 1. Les Lumières… » n’est pas une phrase à lui seul, et n’est pas masqué', () => {

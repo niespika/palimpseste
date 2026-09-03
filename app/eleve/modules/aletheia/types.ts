@@ -124,6 +124,8 @@ export interface ReferenceChapitre {
   amende_le?: string
   // (E3) Surcharge du gabarit de lecture pour CETTE séance (sinon celui du livre).
   gabarit?: 'argumentatif' | 'dialogue' | 'aphoristique' | 'analytique'
+  // (E4) Passages clés : blocs de phrases de la découpe avec leurs pivots (utils/aletheia/passages.ts).
+  passages_cles?: import('@/utils/aletheia/passages').PassageCle[]
 }
 export type ReferenceStatut = 'PENDING' | 'READY' | 'ERROR'
 export interface LivreReference {

@@ -11,6 +11,7 @@ import { signalerEnAttenteIA } from '@/utils/integrite'
 // (E3) Gabarits de lecture : tronc commun + un bloc par gabarit (vide en argumentatif).
 import { assemblerPrompt, blocGabarit, DEFINITIONS, GABARIT_DEFAUT, estGabarit, type Gabarit } from '@/utils/aletheia/gabarits'
 import { gabaritDuLivre, gabaritDeLaFiche } from '@/utils/aletheia/gabarit-serveur'
+import { parsePassages } from '@/utils/aletheia/passages'
 import { lireLaPorteEtayage } from '@/utils/aletheia/decoupage-serveur'
 import type {
   RetourV1, RetourVF, AjoutVerifie, DefinitionVocabulaire, Devoilement, Capstone,
@@ -824,6 +825,8 @@ export const parseReference = (x: unknown): ReferenceChapitre[] =>
           ...(amendeLe ? { amende_le: amendeLe } : {}),
           // (E3) Surcharge du gabarit par séance : recopiée si valide, sinon absente.
           ...(estGabarit((c as { gabarit?: unknown })?.gabarit) ? { gabarit: (c as { gabarit: Gabarit }).gabarit } : {}),
+          // (E4) Passages clés : forme tolérante, absents si vides.
+          ...(parsePassages((c as { passages_cles?: unknown })?.passages_cles).length > 0 ? { passages_cles: parsePassages((c as { passages_cles?: unknown })?.passages_cles) } : {}),
         }]
       })
     : []
