@@ -431,6 +431,7 @@ export default async function ScriptoriumPage({
   // (E3) Gabarit de lecture du livre — porte `aletheia_etayage_actif` ouverte seulement ;
   // requêtes séparées et tolérantes (colonnes absentes ⇒ porte fermée ⇒ null).
   let gabaritLivre: 'argumentatif' | 'dialogue' | 'aphoristique' | 'analytique' | null = null
+  let liseuseMaxLivre: 'fenetre' | 'demi_section' | null = null
   // (E4) Empreinte de la découpe en base (null ⇒ absente) : les passages clés d'une autre
   // version sont « périmés » à l'écran.
   let versionDecoupe: string | null = null
@@ -438,7 +439,9 @@ export default async function ScriptoriumPage({
     const { lireLaPorteEtayage, chargerDecoupeLivre } = await import('@/utils/aletheia/decoupage-serveur')
     if (await lireLaPorteEtayage(supabase)) {
       const { gabaritDuLivre } = await import('@/utils/aletheia/gabarit-serveur')
-      gabaritLivre = (await gabaritDuLivre(supabase, uniteSelLivre.id)).gabarit
+      const gl = await gabaritDuLivre(supabase, uniteSelLivre.id)
+      gabaritLivre = gl.gabarit
+      liseuseMaxLivre = gl.liseuseMax
       const dec = await chargerDecoupeLivre(supabase, uniteSelLivre.id)
       versionDecoupe = dec && !dec.perimee ? dec.version : null
     }
@@ -718,6 +721,7 @@ export default async function ScriptoriumPage({
             capstone={capstoneLivre}
             reference={referenceLivre}
             gabarit={gabaritLivre}
+            liseuseMax={liseuseMaxLivre}
             versionDecoupe={versionDecoupe}
             semaineParam={semaine}
             modeDecoupe={edition === 'decoupe'}

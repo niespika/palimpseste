@@ -225,6 +225,17 @@ export default async function PageSemaineAletheia({ params }: { params: Promise<
   const titresRetour = gab.etayage ? gab.libelles.bulles : undefined
   // (E5) Rappel d'ouverture à partir de la deuxième séance exposée, porte ouverte.
   const avecRappel = gab.etayage && rangDeSeance(exposees, semaine) > 0
+  // (E8) « Je ne sais pas » aux deux premières questions, porte ouverte ; les propositions de
+  // la première viennent de la fiche (thèse en registre élève + deux distracteurs), mélangées
+  // par élève et par séance.
+  let propositions: string[] = []
+  if (gab.etayage) {
+    const { data: refE8 } = await admin.from('aletheia_livre_reference').select('contenu, statut').eq('scriptorium_livre_id', livreId).maybeSingle()
+    const fE8 = refE8?.statut === 'READY' && Array.isArray(refE8.contenu) ? (refE8.contenu as { semaine?: unknown; these_eleve?: unknown; distracteurs?: unknown }[]).find(c => Number(c?.semaine) === semaine) : null
+    const { propositionsChamp1 } = await import('@/utils/aletheia/integrite')
+    const { hasard } = await import('@/utils/aletheia/fenetre')
+    propositions = propositionsChamp1(typeof fE8?.these_eleve === 'string' ? fE8.these_eleve : '', Array.isArray(fE8?.distracteurs) ? fE8.distracteurs.filter((d): d is string => typeof d === 'string') : [], hasard(`${user.id}:${livreId}:${semaine}`))
+  }
   const travaux = await travauxParSemaine(admin, user.id, livreId)
   const t: TravailAletheia | null = travaux.get(semaine) ?? null
   const statut = t?.statut ?? 'DRAFT'
@@ -241,7 +252,7 @@ export default async function PageSemaineAletheia({ params }: { params: Promise<
   const surlignagesInitiaux = Object.fromEntries((t?.reponses_relances ?? []).map(r => [r.relance, { verdict_code: r.verdict_code, essais: r.essais, surlignage: r.surlignage }]))
   // (E7) Le retour final AGI : préparé côté serveur quand le retour VF porte les sorties E7.
   const retourFinal = gab.etayage && statut === 'FEEDBACK2_READY' && t?.retour_vf && (t.retour_vf.nuances_detail?.length || t.retour_vf.synthese_couverture?.length)
-    ? await (await import('@/utils/aletheia/retour-vf-serveur')).preparerRetourFinal(admin, t, livreId, semaine, t.retour_vf.synthese_modele)
+    ? await (await import('@/utils/aletheia/retour-vf-serveur')).preparerRetourFinal(admin, t, livreId, semaine, t.retour_vf.synthese_modele, exposees)
     : null
   // Date de clôture : retour_vf_lu_at (posé exactement à FEEDBACK2_READY→DONE),
   // repli sur updated_at par robustesse.
@@ -436,6 +447,8 @@ export default async function PageSemaineAletheia({ params }: { params: Promise<
               libelles={libelles}
               avecRappel={avecRappel}
               rappelInitial={t?.rappel ?? ''}
+              jeNeSaisPas={gab.etayage}
+              propositions={propositions}
             />
           </Bloc>
         </>

@@ -14,17 +14,22 @@ import type { SupabaseClient } from '@supabase/supabase-js'
 import { GABARIT_DEFAUT, estGabarit, libellesSeance, type Gabarit, type LibellesSeance } from './gabarits'
 import { lireLaPorteEtayage } from './decoupage-serveur'
 
-export interface GabaritLivre { gabarit: Gabarit; cycle: string[] | null }
+/** (E8) `liseuseMax` : le plafond de la liseuse pour ce livre ('fenetre' sur une traduction protégée) ; défaut demi_section. */
+export interface GabaritLivre { gabarit: Gabarit; cycle: string[] | null; liseuseMax: 'fenetre' | 'demi_section' }
 
 export async function gabaritDuLivre(admin: SupabaseClient, livreId: string): Promise<GabaritLivre> {
   const { data, error } = await admin
     .from('scriptorium_unites').select('gabarit_lecture, cycle_tournante').eq('id', livreId).maybeSingle()
-  if (error || !data) return { gabarit: GABARIT_DEFAUT, cycle: null }
+  if (error || !data) return { gabarit: GABARIT_DEFAUT, cycle: null, liseuseMax: 'demi_section' }
   const g = (data as { gabarit_lecture?: unknown }).gabarit_lecture
   const c = (data as { cycle_tournante?: unknown }).cycle_tournante
+  // (E8) Requête SÉPARÉE et tolérante : colonne absente (migration E8 non jouée) ⇒ défaut.
+  const { data: l8 } = await admin.from('scriptorium_unites').select('liseuse_max').eq('id', livreId).maybeSingle()
+  const lm = (l8 as { liseuse_max?: unknown } | null)?.liseuse_max
   return {
     gabarit: estGabarit(g) ? g : GABARIT_DEFAUT,
     cycle: Array.isArray(c) ? c.filter((x): x is string => typeof x === 'string') : null,
+    liseuseMax: lm === 'fenetre' ? 'fenetre' : 'demi_section',
   }
 }
 

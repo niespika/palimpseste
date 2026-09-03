@@ -142,6 +142,9 @@ export interface ReferenceChapitre {
   gabarit?: 'argumentatif' | 'dialogue' | 'aphoristique' | 'analytique'
   // (E4) Passages clés : blocs de phrases de la découpe avec leurs pivots (utils/aletheia/passages.ts).
   passages_cles?: import('@/utils/aletheia/passages').PassageCle[]
+  // (E8) La thèse en registre élève et deux distracteurs, pour le « je ne sais pas » de l'emplacement 1.
+  these_eleve?: string
+  distracteurs?: string[]
 }
 export type ReferenceStatut = 'PENDING' | 'READY' | 'ERROR'
 export interface LivreReference {

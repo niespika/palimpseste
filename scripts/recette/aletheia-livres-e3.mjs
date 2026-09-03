@@ -99,7 +99,10 @@ if (geste === '--seme') {
 if (geste === '--fiches') {
   const { genererDecoupeLivre } = await import('@/utils/aletheia/decoupage-serveur')
   const { genererReferenceLivre } = await import('@/utils/aletheia-retours')
-  for (const l of await semes()) {
+  // (E8) `--seulement <fragment de label>` : ne régénère que ce livre (les autres gardent
+  // leurs fiches, leurs passages clés et leurs amendements).
+  const iS = process.argv.indexOf('--seulement'), seulement = iS >= 0 ? process.argv[iS + 1] : null
+  for (const l of (await semes()).filter(l => !seulement || l.label.includes(seulement))) {
     const d = await genererDecoupeLivre(admin, l.id)
     console.log(`${d.ok ? '✔' : '✖'} découpe ${l.label} : ${d.ok ? `${d.nbPhrases} phrases, ${d.nbMasques} masques` : d.message}`)
     await admin.from('aletheia_livre_reference').upsert(
@@ -110,7 +113,7 @@ if (geste === '--fiches') {
     const { data: ref } = await admin.from('aletheia_livre_reference').select('statut, contenu').eq('scriptorium_livre_id', l.id).maybeSingle()
     const fiches = Array.isArray(ref?.contenu) ? ref.contenu : []
     console.log(`  fiche ${l.label} : ${ref?.statut} — ${fiches.length} semaine(s), ${((Date.now() - t0) / 1000).toFixed(1)} s`)
-    for (const f of fiches) console.log(`    sem ${f.semaine} — thèse : ${String(f.these_canonique).slice(0, 110)}… | args : ${(f.arguments_cles ?? []).length}`)
+    for (const f of fiches) console.log(`    sem ${f.semaine} — thèse : ${String(f.these_canonique).slice(0, 110)}… | args : ${(f.arguments_cles ?? []).length}${f.these_eleve ? `\n      (E8) élève : ${f.these_eleve}\n      distracteurs : ${(f.distracteurs ?? []).join(' || ')}` : ''}`)
   }
   process.exit(0)
 }

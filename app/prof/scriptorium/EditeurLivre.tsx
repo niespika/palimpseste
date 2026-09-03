@@ -15,13 +15,14 @@ export interface SemaineEdit { id: string; semaine: number | null; titre: string
 // lui-même ; avertissement (dans le navigateur) si des lignes sortent des semaines.
 // `gabarit` (E3) : le gabarit de lecture du livre, quand la porte de l'étayage est ouverte ;
 // absent ⇒ le sélecteur n'apparaît pas et rien n'est écrit sur la colonne.
-export default function EditeurLivre({ livreId, titre, auteur, signets, semaines, hrefRetour, gabarit }: { livreId: string; titre: string; auteur: string | null; signets: Signet[] | null; semaines: SemaineEdit[]; hrefRetour?: string; gabarit?: Gabarit | null }) {
+export default function EditeurLivre({ livreId, titre, auteur, signets, semaines, hrefRetour, gabarit, liseuseMax }: { livreId: string; titre: string; auteur: string | null; signets: Signet[] | null; semaines: SemaineEdit[]; hrefRetour?: string; gabarit?: Gabarit | null; liseuseMax?: 'fenetre' | 'demi_section' | null }) {
   const router = useRouter()
   // Avec hrefRetour (vue livre, mode découpe pleine largeur) : l'éditeur démarre
   // ouvert et Annuler / Enregistrer renvoient à la fiche au lieu de replier.
   const [ouvert, setOuvert] = useState(Boolean(hrefRetour))
   const [auteurVal, setAuteurVal] = useState(auteur ?? '')
   const [gabaritVal, setGabaritVal] = useState<Gabarit>(estGabarit(gabarit) ? gabarit : 'argumentatif')
+  const [liseuseVal, setLiseuseVal] = useState<'fenetre' | 'demi_section'>(liseuseMax === 'fenetre' ? 'fenetre' : 'demi_section')
   const [etat, setEtat] = useState<{ sem: Semaine[]; valide: boolean }>({ sem: [], valide: false })
   const [chargement, setChargement] = useState(false)
   const [erreur, setErreur] = useState<string | null>(null)
@@ -58,7 +59,7 @@ export default function EditeurLivre({ livreId, titre, auteur, signets, semaines
       debutLigne: s.debut ? posVersLigneGlobale(pages, s.debut) : 0,
       finLigne: s.fin ? posVersLigneGlobale(pages, s.fin) : 0,
     }))
-    const res = await modifierLivreComplet(livreId, auteurVal, payload, totalLignes, gabarit != null ? gabaritVal : undefined)
+    const res = await modifierLivreComplet(livreId, auteurVal, payload, totalLignes, gabarit != null ? gabaritVal : undefined, gabarit != null ? liseuseVal : undefined)
     setChargement(false)
     if (res.error) { setErreur(res.error); return }
     if (hrefRetour) {
@@ -115,6 +116,12 @@ export default function EditeurLivre({ livreId, titre, auteur, signets, semaines
             {GABARITS.map(g => <option key={g} value={g}>{DEFINITIONS[g].nom}</option>)}
           </select>
           <p className="text-xs text-muet mt-1">{DEFINITIONS[gabaritVal].pour}. Décide les questions posées à l’élève et le regard de l’IA ; une séance peut le surcharger dans sa fiche.</p>
+          <label className="block text-xs font-medium text-muet mb-1 mt-3">Liseuse intégrée — au plus</label>
+          <select value={liseuseVal} onChange={e => setLiseuseVal(e.target.value === 'fenetre' ? 'fenetre' : 'demi_section')} className={`${inputCls} sm:max-w-xs`}>
+            <option value="demi_section">La moitié d’une séance (défaut)</option>
+            <option value="fenetre">Une fenêtre de 400 mots seulement</option>
+          </select>
+          <p className="text-xs text-muet mt-1">Sur une traduction encore protégée, borne la liseuse à la fenêtre : la demi-séance n’est jamais servie, même à un élève avancé.</p>
         </div>
       )}
       <p className="text-xs text-muet">

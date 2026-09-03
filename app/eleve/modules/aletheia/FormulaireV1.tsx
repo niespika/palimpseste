@@ -25,6 +25,13 @@ interface Props {
   /** (E5) Rappel d'ouverture demandé (porte ouverte, à partir de la deuxième séance exposée). */
   avecRappel?: boolean
   rappelInitial?: string
+  /**
+   * (E8) « Je ne sais pas » recevable aux deux premières questions (porte ouverte). Pour la
+   * première, les trois propositions (la thèse en registre élève + deux distracteurs, déjà
+   * mélangées) ; sans propositions, seule la ligne de blocage est demandée.
+   */
+  jeNeSaisPas?: boolean
+  propositions?: string[]
 }
 
 const champClasse =
@@ -44,7 +51,7 @@ function Etiquette({ titre, detail }: { titre: string; detail?: string }) {
 export default function FormulaireV1({
   livreId, semaine,
   theseInitial = '', argumentsInitial = '', accordInitial = '', questionsInitial = '', vocabulaireInitial = '', champFixeInitial = '',
-  aides = AIDES_V1_DEFAUT, libelles, avecRappel = false, rappelInitial = '',
+  aides = AIDES_V1_DEFAUT, libelles, avecRappel = false, rappelInitial = '', jeNeSaisPas = false, propositions = [],
 }: Props) {
   const router = useRouter()
   const [rappel, setRappel] = useState(rappelInitial)
@@ -57,6 +64,14 @@ export default function FormulaireV1({
   const [chargement, setChargement] = useState(false)
   const [erreur, setErreur] = useState<string | null>(null)
   const [avertissement, setAvertissement] = useState<string | null>(null)
+  // (E8) Un « je ne sais pas » par emplacement : ouvert ou non, et ce qu'il dit.
+  const [jnsp1, setJnsp1] = useState(false)
+  const [jnsp2, setJnsp2] = useState(false)
+  const [blocage1, setBlocage1] = useState('')
+  const [choix1, setChoix1] = useState('')
+  const [pourquoi1, setPourquoi1] = useState('')
+  const [blocage2, setBlocage2] = useState('')
+  const [phrase2, setPhrase2] = useState('')
 
   const g = libelles
   const avecFixe = !!g?.champFixe
@@ -66,8 +81,12 @@ export default function FormulaireV1({
     setErreur(null)
     const qs = questions.split('\n').map(q => q.trim()).filter(Boolean)
     const voc = vocabulaire.split('\n').map(v => v.trim()).filter(Boolean)
-    if (!these.trim()) { setErreur(g ? 'Réponds à la première question.' : 'Écris l’idée principale du chapitre.'); return }
-    if (!args.trim()) { setErreur(g ? 'Réponds à la deuxième question.' : 'Indique les arguments avancés par l’auteur.'); return }
+    if (jnsp1 && !blocage1.trim()) { setErreur('Dis en une ligne ce qui te bloque sur la première question.'); return }
+    if (jnsp1 && propositions.length > 0 && !choix1) { setErreur('Choisis une des propositions, même sans certitude.'); return }
+    if (jnsp2 && !blocage2.trim()) { setErreur('Dis en une ligne ce qui te bloque sur la deuxième question.'); return }
+    if (jnsp1 && jnsp2 && !accord.trim()) { setErreur('Au moins une réponse à toi : réponds à la question suivante.'); return }
+    if (!jnsp1 && !these.trim()) { setErreur(g ? 'Réponds à la première question.' : 'Écris l’idée principale du chapitre.'); return }
+    if (!jnsp2 && !args.trim()) { setErreur(g ? 'Réponds à la deuxième question.' : 'Indique les arguments avancés par l’auteur.'); return }
     if (avecFixe && !champFixe.trim()) { setErreur('Dis quelle thèse l’auteur préfère, selon toi.'); return }
     if (!accord.trim()) { setErreur(g ? `Réponds à la question « ${g.tournante.question} »` : 'Dis si tu es d’accord ou non, et pourquoi.'); return }
     if (qs.length === 0) { setErreur('Pose au moins une question (une par ligne).'); return }
@@ -77,6 +96,10 @@ export default function FormulaireV1({
         these, arguments: args, accord, questions: qs, vocabulaire: voc,
         ...(avecFixe ? { champ_fixe: champFixe } : {}),
         ...(avecRappel ? { rappel } : {}),
+        ...(jnsp1 || jnsp2 ? { jnsp: {
+          ...(jnsp1 ? { champ1: { blocage: blocage1, choix: choix1, pourquoi: pourquoi1 } } : {}),
+          ...(jnsp2 ? { champ2: { blocage: blocage2, phrase: phrase2 } } : {}),
+        } } : {}),
       })
       if (res?.error) { setErreur(res.error); return }
       // Rendu accepté mais signalé « petit malin » : on montre le message avant de continuer.
@@ -117,15 +140,51 @@ export default function FormulaireV1({
       )}
       <div>
         {g ? <Etiquette titre={g.champ1.question} /> : <Etiquette titre="Idée principale" detail="— ce que dit le chapitre, selon toi" />}
-        <textarea value={these} onChange={e => setThese(e.target.value)} rows={3}
-          placeholder={g ? g.champ1.aide : aides.these}
-          className={champClasse} />
+        {jnsp1 ? (
+          <div className="bg-parchemin-fonce/60 border border-bordure rounded-lg p-3 space-y-2" data-jnsp="1">
+            <label className="block text-xs text-encre-douce">Dis en une ligne ce qui te bloque.</label>
+            <input value={blocage1} onChange={e => setBlocage1(e.target.value)} placeholder="Ex. : je ne vois pas où l’auteur dit ce qu’il pense" className={champClasse} />
+            {propositions.length > 0 && (
+              <div className="space-y-1.5">
+                <p className="text-xs text-encre-douce">Laquelle de ces trois phrases te semble dire l’idée du passage ? Choisis, même sans certitude.</p>
+                {propositions.map((p, i) => (
+                  <label key={i} className={`flex gap-2 items-start text-sm rounded-lg border px-2.5 py-1.5 cursor-pointer ${choix1 === p ? 'border-pigment bg-pigment-teinte' : 'border-bordure bg-surface'}`}>
+                    <input type="radio" name="proposition1" checked={choix1 === p} onChange={() => setChoix1(p)} className="mt-1 accent-bouton" />
+                    <span className="text-encre">{p}</span>
+                  </label>
+                ))}
+                <input value={pourquoi1} onChange={e => setPourquoi1(e.target.value)} placeholder="Pourquoi celle-là ? Une ligne." className={champClasse} />
+              </div>
+            )}
+            <button type="button" onClick={() => setJnsp1(false)} className="text-xs text-muet underline hover:text-encre">Finalement, je réponds moi-même</button>
+          </div>
+        ) : (
+          <textarea value={these} onChange={e => setThese(e.target.value)} rows={3}
+            placeholder={g ? g.champ1.aide : aides.these}
+            className={champClasse} />
+        )}
+        {jeNeSaisPas && !jnsp1 && (
+          <button type="button" onClick={() => setJnsp1(true)} className="mt-1 text-xs text-muet underline hover:text-encre">Je ne sais pas</button>
+        )}
       </div>
       <div>
         {g ? <Etiquette titre={g.champ2.question} /> : <Etiquette titre="Arguments" detail="— les raisons que l’auteur avance pour la soutenir" />}
-        <textarea value={args} onChange={e => setArgs(e.target.value)} rows={4}
-          placeholder={g ? g.champ2.aide : aides.arguments}
-          className={champClasse} />
+        {jnsp2 ? (
+          <div className="bg-parchemin-fonce/60 border border-bordure rounded-lg p-3 space-y-2" data-jnsp="2">
+            <label className="block text-xs text-encre-douce">Dis en une ligne ce qui te bloque.</label>
+            <input value={blocage2} onChange={e => setBlocage2(e.target.value)} placeholder="Ex. : je ne vois pas ce qui est un argument et ce qui est un exemple" className={champClasse} />
+            <label className="block text-xs text-encre-douce">Recopie la phrase du passage qui t’a le plus arrêté, même sans la comprendre.</label>
+            <textarea value={phrase2} onChange={e => setPhrase2(e.target.value)} rows={2} placeholder="La phrase, telle qu’elle est dans ton livre." className={champClasse} />
+            <button type="button" onClick={() => setJnsp2(false)} className="text-xs text-muet underline hover:text-encre">Finalement, je réponds moi-même</button>
+          </div>
+        ) : (
+          <textarea value={args} onChange={e => setArgs(e.target.value)} rows={4}
+            placeholder={g ? g.champ2.aide : aides.arguments}
+            className={champClasse} />
+        )}
+        {jeNeSaisPas && !jnsp2 && (
+          <button type="button" onClick={() => setJnsp2(true)} className="mt-1 text-xs text-muet underline hover:text-encre">Je ne sais pas</button>
+        )}
       </div>
       {g?.champFixe && (
         <div>

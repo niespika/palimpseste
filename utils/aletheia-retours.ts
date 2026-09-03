@@ -311,7 +311,11 @@ export async function genererRetourV1(travailId: string): Promise<void> {
     // texte) et le rappel jugé contre la fiche N−1. Porte fermée : blocs vides, prompt d'avant.
     const etayageV1 = await lireLaPorteEtayage(admin)
     const passagesCles = etayageV1 ? (fiche?.passages_cles ?? []) : []
-    const ficheN1 = etayageV1 && rappelEleve ? await chargerReferenceChapitre(admin, t.scriptorium_livre_id as string, (t.semaine_index as number) - 1) : null
+    // (E8, § 8.5) Mode C : la fiche du rappel est celle de la séance EXPOSÉE précédente.
+    const semainePrec = etayageV1 && rappelEleve
+      ? (await import('@/utils/aletheia/exposition-serveur')).seanceExposeePrecedente(await (await import('@/utils/aletheia/exposition-serveur')).exposeesPourEleve(admin, t.eleve_id as string, t.scriptorium_livre_id as string), t.semaine_index as number)
+      : null
+    const ficheN1 = semainePrec != null ? await chargerReferenceChapitre(admin, t.scriptorium_livre_id as string, semainePrec) : null
     const blocs = {
       bloc_passages: etayageV1 ? blocPassages(passagesCles.map(p => ({ id: p.id, libelle: p.libelle, role: p.role })), maxRelances) : '',
       bloc_rappel: etayageV1 ? blocRappel(ficheN1 ? { these_canonique: ficheN1.these_canonique, synthese_modele: ficheN1.synthese_modele } : null, rappelEleve) : '',
@@ -636,7 +640,9 @@ export async function genererRetourVf(travailId: string): Promise<void> {
     const ficheE7 = await chargerReferenceChapitre(admin, t.scriptorium_livre_id as string, t.semaine_index as number)
     const courants = parsePassages(ficheE7?.passages_cles)
     const { passagesAmont } = await import('@/utils/aletheia/retour-vf-serveur')
-    const amontRefs = await passagesAmont(admin, t.scriptorium_livre_id as string, t.semaine_index as number)
+    const { exposeesPourEleve } = await import('@/utils/aletheia/exposition-serveur')
+    // (E8, § 8.5) Mode C : l'amont proposé ne prend que les séances exposées.
+    const amontRefs = await passagesAmont(admin, t.scriptorium_livre_id as string, t.semaine_index as number, await exposeesPourEleve(admin, t.eleve_id as string, t.scriptorium_livre_id as string))
     const synthPhrases = phrasesSynthese(t.semaine_index as number, ficheE7?.synthese_modele ?? '')
     idsCourants = new Set(courants.map(p => p.id)); idsAmont = new Set(amontRefs.map(p => p.id)); idsSynthese = synthPhrases.map(p => p.id)
     blocPassagesVfTexte = blocPassagesVf(courants.map(p => ({ id: p.id, libelle: p.libelle, role: p.role })), amontRefs, synthPhrases)
@@ -884,7 +890,7 @@ export const PROMPT_REFERENCE_DEFAUT = `Tu établis la FICHE DE LECTURE CANONIQU
 - arguments_cles : 2 à 5 arguments/mouvements RÉELS de l'auteur dans ce chapitre (les jalons qu'un bon lecteur doit capter).
 - concepts_cles : 3 à 6 notions clés réellement mobilisées dans le chapitre, chacune sous la forme « terme (glose courte) ».
 - synthese_modele : ⛔ SEUL champ destiné à être lu PAR L'ÉLÈVE. Registre élève, TUTOIEMENT. ≤ ~200 mots : la « bonne synthèse » des chapitres de cette semaine, lisible d'un seul trait. Phrases COURTES, mots SIMPLES, tout terme difficile explicité entre parenthèses ; la nuance reste là, mais accessible. Ancrage STRICT à cette semaine, pas de renvoi à la suite du livre.
-
+{bloc_propositions}
 ## Format de réponse — UNIQUEMENT un objet JSON valide, sans texte autour :
 (le titre de chaque semaine vient du découpage, ne le produis pas)
 {
@@ -893,6 +899,11 @@ export const PROMPT_REFERENCE_DEFAUT = `Tu établis la FICHE DE LECTURE CANONIQU
 
 // Exporté : la page Scriptorium normalise le jsonb brut avec, pour que les références
 // générées AVANT l'ajout de concepts_cles/synthese_modele aient toujours la bonne forme.
+// (E8) Le bloc ajouté au prompt de référence porte ouverte : ajoute deux clés par semaine.
+export const BLOC_PROPOSITIONS = `- these_eleve : la thèse canonique REFORMULÉE en registre élève (tutoiement inutile : une affirmation simple, ≤ 25 mots), telle qu'un bon élève la dirait.
+- distracteurs : DEUX affirmations plausibles mais FAUSSES ou à côté (≤ 25 mots chacune, même registre, même longueur que these_eleve), tirées d'une lecture voisine ou d'un argument pris pour la thèse — un élève qui n'a pas compris doit pouvoir les croire ; un élève qui a lu doit pouvoir les écarter.
+  (Ajoute ces deux clés à chaque entrée du JSON : "these_eleve": "...", "distracteurs": ["...", "..."].)`
+
 export const parseReference = (x: unknown): ReferenceChapitre[] =>
   Array.isArray(x)
     ? x.flatMap(c => {
@@ -915,6 +926,9 @@ export const parseReference = (x: unknown): ReferenceChapitre[] =>
           ...(estGabarit((c as { gabarit?: unknown })?.gabarit) ? { gabarit: (c as { gabarit: Gabarit }).gabarit } : {}),
           // (E4) Passages clés : forme tolérante, absents si vides.
           ...(parsePassages((c as { passages_cles?: unknown })?.passages_cles).length > 0 ? { passages_cles: parsePassages((c as { passages_cles?: unknown })?.passages_cles) } : {}),
+          // (E8) Thèse en registre élève + distracteurs : absents si vides.
+          ...(txt((c as { these_eleve?: unknown })?.these_eleve) ? { these_eleve: txt((c as { these_eleve?: unknown })?.these_eleve) } : {}),
+          ...(enListe((c as { distracteurs?: unknown })?.distracteurs).length > 0 ? { distracteurs: enListe((c as { distracteurs?: unknown })?.distracteurs).slice(0, 2) } : {}),
         }]
       })
     : []
@@ -986,7 +1000,10 @@ export async function genererReferenceLivre(livreId: string): Promise<void> {
       const { data: p2 } = await admin.from('aletheia_params').select('blocs_gabarits').eq('id', 1).maybeSingle()
       blocRef = blocGabarit((await gabaritDuLivre(admin, livreId)).gabarit, 'reference', (p2 as { blocs_gabarits?: unknown } | null)?.blocs_gabarits)
     }
-    const template = assemblerPrompt(params?.prompt_reference?.trim() || PROMPT_REFERENCE_DEFAUT, blocRef)
+    // (E8) Porte ouverte : la thèse en registre élève et deux distracteurs par semaine,
+    // pour l'étayage « je ne sais pas » de l'emplacement 1 (§ 8.1) — amendables dans la fiche.
+    const blocPropositions = blocRef !== '' || (await lireLaPorteEtayage(admin)) ? BLOC_PROPOSITIONS : ''
+    const template = assemblerBlocs(assemblerPrompt(params?.prompt_reference?.trim() || PROMPT_REFERENCE_DEFAUT, blocRef), { bloc_propositions: blocPropositions })
     const client = new Anthropic()
 
     // Chaque lot reçoit le texte de SES semaines (à ficher) PLUS, en contexte SEUL, le

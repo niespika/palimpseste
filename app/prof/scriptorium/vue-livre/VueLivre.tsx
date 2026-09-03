@@ -21,10 +21,11 @@ export interface DocSemaine {
 // 3 colonnes (rail des semaines / fiche de la semaine / carte d'architecture).
 // Orchestrateur SERVEUR : sélection lue dans l'URL (?semaine=N), états dérivés ici,
 // toutes les données viennent de page.tsx (aucune requête).
-export default function VueLivre({ livre, classes, classeIds, docs, nbDocsSansSemaine, capstone, reference, semaineParam, modeDecoupe, conflitClasses, gabarit, versionDecoupe }: {
+export default function VueLivre({ livre, classes, classeIds, docs, nbDocsSansSemaine, capstone, reference, semaineParam, modeDecoupe, conflitClasses, gabarit, liseuseMax, versionDecoupe }: {
   livre: { id: string; label: string; auteur: string | null; date_debut: string | null; nb_semaines: number | null; signets: Signet[] | null }
   /** (E3) Gabarit de lecture du livre, quand la porte de l'étayage est ouverte ; sinon absent. */
   gabarit?: 'argumentatif' | 'dialogue' | 'aphoristique' | 'analytique' | null
+  liseuseMax?: 'fenetre' | 'demi_section' | null
   /** (E4) Empreinte de la découpe en base, à jour ; null si absente ou périmée. */
   versionDecoupe?: string | null
   classes: { id: string; nom: string }[]
@@ -75,6 +76,7 @@ export default function VueLivre({ livre, classes, classeIds, docs, nbDocsSansSe
           semaines={docs.map(d => ({ id: d.id, semaine: d.semaine, titre: d.titre, chapitres: d.chapitres ?? '', texte: d.texte ?? '' }))}
           hrefRetour={hrefFiche}
           gabarit={gabarit}
+          liseuseMax={liseuseMax}
         />
       </div>
     )

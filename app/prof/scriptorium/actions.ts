@@ -572,11 +572,14 @@ export async function modifierLivreComplet(
   nbLignesAttendu: number,
   // (E3) Gabarit de lecture du livre ; absent ⇒ inchangé (et rien n'est écrit sur la colonne).
   gabarit?: string,
+  // (E8) Plafond de la liseuse ('fenetre' | 'demi_section') ; absent ⇒ inchangé.
+  liseuseMax?: string,
 ): Promise<{ success?: boolean; error?: string }> {
   const { supabase } = await verifierProf()
   if (gabarit !== undefined && !['argumentatif', 'dialogue', 'aphoristique', 'analytique'].includes(gabarit)) {
     return { error: 'Gabarit de lecture inconnu.' }
   }
+  if (liseuseMax !== undefined && !['fenetre', 'demi_section'].includes(liseuseMax)) return { error: 'Plafond de liseuse inconnu.' }
 
   // Réassemblage côté serveur, IDENTIQUE au client. Départage par `id` (uuid) en plus
   // de `semaine` → ordre déterministe même si deux documents partagent un numéro.
@@ -614,7 +617,7 @@ export async function modifierLivreComplet(
 
   const { error: eU } = await supabase
     .from('scriptorium_unites')
-    .update({ auteur: auteur.trim() || null, ...(gabarit !== undefined ? { gabarit_lecture: gabarit } : {}) })
+    .update({ auteur: auteur.trim() || null, ...(gabarit !== undefined ? { gabarit_lecture: gabarit } : {}), ...(liseuseMax !== undefined ? { liseuse_max: liseuseMax === 'demi_section' ? null : liseuseMax } : {}) })
     .eq('id', livreId).eq('type', 'livre')
   if (eU) return { error: eU.message }
 
@@ -1435,6 +1438,9 @@ export async function enregistrerFicheSemaine(livreId: string, chapitre: Referen
     synthese_modele: (chapitre.synthese_modele ?? '').trim(),
     // (E3) Surcharge du gabarit par séance : recopiée si valide, sinon absente.
     ...(['argumentatif', 'dialogue', 'aphoristique', 'analytique'].includes(chapitre.gabarit ?? '') ? { gabarit: chapitre.gabarit } : {}),
+    // (E8) Thèse en registre élève + distracteurs (deux au plus), amendables ; absents si vides.
+    ...((chapitre.these_eleve ?? '').trim() ? { these_eleve: (chapitre.these_eleve ?? '').trim() } : {}),
+    ...((chapitre.distracteurs ?? []).map(d => (d ?? '').trim()).filter(Boolean).length > 0 ? { distracteurs: (chapitre.distracteurs ?? []).map(d => (d ?? '').trim()).filter(Boolean).slice(0, 2) } : {}),
   }
   // (E4) Passages clés édités à la main : normalisés contre la découpe COURANTE du texte
   // de la séance (ids existants, bornes ordonnées, pivots dans le passage) ; les
@@ -1470,6 +1476,9 @@ export async function enregistrerFicheSemaine(livreId: string, chapitre: Referen
     c.gabarit ?? null,
     // (E4) Les passages comptent comme une édition (libellé, bornes, pivots).
     (c.passages_cles ?? []).map(p => [p.role, (p.libelle ?? '').trim(), p.phrase_debut, p.phrase_fin, p.pivots]),
+    // (E8) Les propositions comptent comme une édition.
+    (c.these_eleve ?? '').trim(),
+    (c.distracteurs ?? []).map(d => (d ?? '').trim()).filter(Boolean),
   ])
 
   const idx = base.findIndex(c => c.semaine === propre.semaine)

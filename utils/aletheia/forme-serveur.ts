@@ -41,5 +41,9 @@ export async function deciderFormePourSeance(
     const f = (prec as { forme?: string } | null)?.forme
     if (f && FORMES.has(f as Forme)) courante = f as Forme
   }
-  return decider(anterieurs, courante)
+  const d = decider(anterieurs, courante)
+  // (E8, § 8.4) Le plafond de la liseuse du livre : 'fenetre' ⇒ jamais la demi-section.
+  const { data: l8 } = await admin.from('scriptorium_unites').select('liseuse_max').eq('id', livreId).maybeSingle()
+  if ((l8 as { liseuse_max?: unknown } | null)?.liseuse_max === 'fenetre' && d.forme === 'demi_section') return { ...d, forme: 'fenetre' }
+  return d
 }

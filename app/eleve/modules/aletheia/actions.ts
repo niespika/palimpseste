@@ -34,6 +34,8 @@ export interface SaisieV1 {
   champ_fixe?: string
   /** (E5) Rappel d'ouverture : « sans relire, quelle était l'idée de la séance dernière ? ». Ignoré porte fermée / première séance. */
   rappel?: string
+  // (E8) « Je ne sais pas » par emplacement : le serveur compose le texte stocké (utils/aletheia/integrite.ts).
+  jnsp?: { champ1?: import('@/utils/aletheia/integrite').JeNeSaisPas; champ2?: import('@/utils/aletheia/integrite').JeNeSaisPas }
 }
 
 export interface SaisieVf {
@@ -70,11 +72,27 @@ export async function soumettreV1(livreId: string, semaine: number, saisie: Sais
   // quel module, n'est pas lu et validé.
   const gateLecture = await messageSiRetoursNonLus(createAdminClient(), userId)
   if (gateLecture) return { error: gateLecture }
-  const these = (saisie?.these ?? '').trim()
-  const args = (saisie?.arguments ?? '').trim()
+  let these = (saisie?.these ?? '').trim()
+  let args = (saisie?.arguments ?? '').trim()
   const accord = (saisie?.accord ?? '').trim()
   const questions = (saisie?.questions ?? []).map(q => q.trim()).filter(Boolean)
   const vocabulaire = (saisie?.vocabulaire ?? []).map(v => v.trim()).filter(Boolean)
+  // (E8, porte ouverte) « Je ne sais pas » recevable aux emplacements 1 et 2 : la ligne de
+  // blocage est exigée, elle devient une question ; le texte stocké est composé ici.
+  const jnsp = saisie?.jnsp
+  if (jnsp?.champ1 || jnsp?.champ2) {
+    if (!(await lireLaPorteEtayage(createAdminClient()))) return { error: 'Cette option n’est pas ouverte.' }
+    const { texteJeNeSaisPas, questionDeBlocage } = await import('@/utils/aletheia/integrite')
+    for (const [cle, j] of [['champ1', jnsp.champ1], ['champ2', jnsp.champ2]] as const) {
+      if (!j) continue
+      const blocage = (j.blocage ?? '').trim().slice(0, MAX_QUESTION)
+      if (!blocage) return { error: cle === 'champ1' ? 'Dis en une ligne ce qui te bloque sur la première question.' : 'Dis en une ligne ce qui te bloque sur la deuxième question.' }
+      const propre = { blocage, choix: (j.choix ?? '').trim().slice(0, MAX_TEXTE), pourquoi: (j.pourquoi ?? '').trim().slice(0, MAX_TEXTE), phrase: (j.phrase ?? '').trim().slice(0, MAX_TEXTE) }
+      if (cle === 'champ1') these = texteJeNeSaisPas(propre); else args = texteJeNeSaisPas(propre)
+      const q = questionDeBlocage(blocage)
+      if (q && !questions.includes(q) && questions.length < MAX_QUESTIONS) questions.push(q)
+    }
+  }
 
   if (!these) return { error: 'Écris l’idée principale du chapitre.' }
   if (!args) return { error: 'Indique les arguments avancés par l’auteur.' }
@@ -109,8 +127,6 @@ export async function soumettreV1(livreId: string, semaine: number, saisie: Sais
   // quoi que ce soit. Si flagué : on N'APPELLE PAS l'IA (aucun retour généré, aucun
   // coût) et le rendu RESTE en DRAFT — l'élève doit refaire un vrai travail. Il
   // reçoit un strike + un message « cheeky ».
-  const sig = detecterRenduVideTexte([these, args, accord]) ?? detecterAveuHeuristique(`${these}\n${args}\n${accord}`)
-
   // (E2/E3) Porte `aletheia_etayage_actif` : la FORME d'étayage (décidée par le code
   // depuis les diagnostics antérieurs, axe arguments, hystérésis), le GABARIT de lecture
   // (question fixe du dialogué, clé de la question tournante posée). Porte fermée : aucune
@@ -118,6 +134,11 @@ export async function soumettreV1(livreId: string, semaine: number, saisie: Sais
   const { exposees: exposeesV1 } = await modeExposition(admin, livreId, active.classe_id)
   const gab = await (await import('@/utils/aletheia/gabarit-serveur')).contexteGabarit(admin, livreId, semaine, exposeesV1)
   const etayage = gab.etayage
+  // (E8) Porte ouverte : plus de strike sur un champ court — seulement les trois
+  // emplacements sans matière, ou un aveu de non-lecture (§ 8.2). Porte fermée : d'avant.
+  const sig = etayage
+    ? (await import('@/utils/aletheia/integrite')).signalRendu([these, args, accord], true)
+    : detecterRenduVideTexte([these, args, accord]) ?? detecterAveuHeuristique(`${these}\n${args}\n${accord}`)
   const champFixe = (saisie?.champ_fixe ?? '').trim()
   if (etayage && gab.libelles.champFixe && !champFixe) return { error: 'Dis quelle thèse l’auteur préfère, selon toi.' }
   if (champFixe.length > MAX_TEXTE) return { error: 'Un de tes champs est trop long (limite ~8000 caractères).' }
@@ -229,10 +250,12 @@ export async function soumettreVf(livreId: string, semaine: number, vf: SaisieVf
   // Détection « petit malin » sur la VF (ref distincte de la V1 : autre rendu), AVANT
   // de planifier l'IA. Si flagué : pas d'IA (aucun retour final généré) et le rendu
   // RESTE en FEEDBACK1_READY — l'élève doit réécrire pour de vrai. Strike + message.
-  const sig = detecterRenduVideTexte([these, args, accord]) ?? detecterAveuHeuristique(`${these}\n${args}\n${accord}`)
-
   // (E3) Question FIXE du dialogué, version finale — porte ouverte seulement.
   const gabVf = await (await import('@/utils/aletheia/gabarit-serveur')).contexteGabarit(admin, livreId, semaine, exposees)
+  // (E8) Même règle qu'en V1 : porte ouverte, le strike ne frappe plus un champ court.
+  const sig = gabVf.etayage
+    ? (await import('@/utils/aletheia/integrite')).signalRendu([these, args, accord], true)
+    : detecterRenduVideTexte([these, args, accord]) ?? detecterAveuHeuristique(`${these}\n${args}\n${accord}`)
   const champFixeVf = (vf?.champ_fixe_vf ?? '').trim()
   if (gabVf.etayage && gabVf.libelles.champFixe && !champFixeVf) return { error: 'Réécris ta réponse sur la thèse que l’auteur préfère.' }
   if (champFixeVf.length > MAX_TEXTE) return { error: 'Un de tes champs est trop long (limite ~8000 caractères).' }

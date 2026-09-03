@@ -63,6 +63,17 @@ export default function EditeurFicheSemaine({ draft, setDraft, gabaritLivre, liv
         <label className={`${INTITULE_SM} text-info block mb-1.5`}>👁 Synthèse modèle — vue par l’élève (registre élève, tutoiement)</label>
         <textarea value={draft.synthese_modele} onChange={e => maj({ synthese_modele: e.target.value })} rows={4} className={`${CHAMP} resize-y font-corps text-[15px]`} />
       </div>
+      {gabaritLivre && (
+        <div className="bg-parchemin border border-bordure rounded-[9px] px-[17px] py-3.5 space-y-2">
+          <label className={`${INTITULE_SM} block`}>« Je ne sais pas » — les trois propositions de la première question (E8)</label>
+          <p className="text-xs text-muet">La thèse dite comme un élève, et deux affirmations plausibles mais fausses. L’élève qui ne sait pas choisit, puis dit pourquoi.</p>
+          <input value={draft.these_eleve ?? ''} onChange={e => maj({ these_eleve: e.target.value })} placeholder="La thèse, en registre élève (≤ 25 mots)" className={CHAMP} />
+          {[0, 1].map(i => (
+            <input key={i} value={(draft.distracteurs ?? [])[i] ?? ''} onChange={e => { const d = [...(draft.distracteurs ?? ['', ''])]; while (d.length < 2) d.push(''); d[i] = e.target.value; maj({ distracteurs: d }) }}
+              placeholder={`Distracteur ${i + 1} — plausible mais faux`} className={CHAMP} />
+          ))}
+        </div>
+      )}
       {gabaritLivre && livreId && (
         <PassagesCles
           livreId={livreId} semaine={draft.semaine} texte={texteDoc ?? null}

@@ -52,14 +52,15 @@ const formeValide = (f: unknown): Forme => (f === 'fenetre' || f === 'demi_secti
 const semaineDe = (id: string) => Number(/^k(\d+)-/.exec(id)?.[1] ?? NaN)
 
 /** Tous les passages clés des semaines < N, avec leur semaine (depuis la fiche READY). */
-export async function passagesAmont(admin: SupabaseClient, livreId: string, semaine: number): Promise<PassageAmontRef[]> {
+export async function passagesAmont(admin: SupabaseClient, livreId: string, semaine: number, exposees?: readonly number[] | null): Promise<PassageAmontRef[]> {
+  const visibles = exposees && exposees.length ? new Set(exposees) : null
   const { data: ref } = await admin.from('aletheia_livre_reference').select('contenu, statut').eq('scriptorium_livre_id', livreId).maybeSingle()
   if (ref?.statut !== 'READY' || !Array.isArray(ref.contenu)) return []
   const { parsePassages } = await import('./passages')
   const out: PassageAmontRef[] = []
   for (const c of ref.contenu as { semaine?: unknown; passages_cles?: unknown }[]) {
     const s = Number(c?.semaine)
-    if (!Number.isInteger(s) || s >= semaine) continue
+    if (!Number.isInteger(s) || s >= semaine || (visibles && !visibles.has(s))) continue
     for (const p of parsePassages(c?.passages_cles)) out.push({ id: p.id, semaine: s, libelle: p.libelle })
   }
   return out.sort((a, b) => a.semaine - b.semaine || a.id.localeCompare(b.id))
@@ -79,7 +80,7 @@ async function extrait(admin: SupabaseClient, livreId: string, id: string, cache
 export async function preparerRetourFinal(
   admin: SupabaseClient,
   t: { id: string; forme?: unknown; retour_vf: { nuances_detail?: NuanceDetail[]; amont_paires?: PaireAmont[] } | null; retour_vf_agi?: GestesRetourFinal | null; comparaison_synthese?: ComparaisonSynthese | null },
-  livreId: string, semaine: number, syntheseModele: string,
+  livreId: string, semaine: number, syntheseModele: string, exposees?: readonly number[] | null,
 ): Promise<RetourFinalPrepare> {
   const forme = formeValide(t.forme)
   const gestes = t.retour_vf_agi ?? {}
@@ -106,7 +107,7 @@ export async function preparerRetourFinal(
 
   // ── Les paires amont ──
   const paires: PairePreparee[] = []
-  const tousAmont = await passagesAmont(admin, livreId, semaine)
+  const tousAmont = await passagesAmont(admin, livreId, semaine, exposees)
   const choix = new Map((gestes.amont ?? []).map(g => [g.index, g]))
   for (const [index, pr] of (t.retour_vf?.amont_paires ?? []).entries()) {
     const courant = await extrait(admin, livreId, pr.passage_courant, cache)
