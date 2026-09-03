@@ -6,6 +6,7 @@ import FormulaireParametresScriptorium from './FormulaireParametresScriptorium'
 import FormulaireReglagesRag from './FormulaireReglagesRag'
 import PromptTuteurSections from './PromptTuteurSections'
 import PorteCopieAnnotee from './PorteCopieAnnotee'
+import PorteJugeDocuments from './PorteJugeDocuments'
 
 // Onglet « Paramètres » de Scriptorium : réglages du Scriptorium ÉLÈVE (RAG L5 —
 // gate, modèles, quota, prompt de synthèse), prompt du TUTEUR par sections (L9)
@@ -30,6 +31,8 @@ export default async function SectionParametresScriptorium() {
       {/* La copie annotée (03/09) — l'interrupteur vit ici, sur `scriptorium_params`,
           comme `rag_actif`. Colonne absente (`select('*')` tolérant) ⇒ fermé. */}
       <PorteCopieAnnotee actif={!!p.copie_annotee_actif} />
+      {/* C7-L1 (03/09) — le juge reçoit les documents. Même domicile, même tolérance. */}
+      <PorteJugeDocuments actif={!!p.juge_documents_actif} />
       <FormulaireReglagesRag
         initial={{
           actif: !!p.rag_actif,
