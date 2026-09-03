@@ -129,3 +129,46 @@ test('sans co-texte, le contrôle se comporte exactement comme avant', () => {
   assert.equal(j.ancrage, null)
   assert.match(j.motif ?? '', /introuvable dans la copie/)
 })
+
+// ============================================================================
+// ⭐⭐ 02/09 — LA RÉPARATION : le code sert le texte de l'ÉLÈVE, pas celui du modèle.
+// ============================================================================
+
+test('⭐⭐ une citation à un détail près est RÉPARÉE — la citation servie est celle de la copie', () => {
+  // « Tout dabord » : l'élève n'a pas mis d'apostrophe, le modèle l'a « corrigé ».
+  const a = { source: 'copie' as const, citation: "Tout d'abord, les vacances sont un temps de repos." }
+  const j = jugerLAncrage(a, { production: COPIE, texteSupport: null })
+  assert.ok(j.ancrage)
+  // ⚠️ La ponctuation finale tombe avec le pliage : les bornes s'arrêtent au dernier mot.
+  assert.equal(j.ancrage!.citation, 'Tout dabord, les vacances sont un temps de repos')
+  assert.equal(j.ancrage!.source, 'copie')
+  assert.match(j.motif ?? '', /^citation réparée \(normalisation\) : /)
+})
+
+test('une citation où le modèle a changé UN mot est réparée par l\'approché, et le motif porte le score', () => {
+  const a = { source: 'copie' as const, citation: "Ensuite, travailler durant l'été permet de gagner un peu d'argent de poche." }
+  const j = jugerLAncrage(a, { production: COPIE, texteSupport: null })
+  assert.equal(j.ancrage!.citation, "Ensuite, travailler pendant l'été permet de gagner un peu d'argent de poche")
+  assert.match(j.motif ?? '', /réparée \(approché 0\.9\d\)/)
+})
+
+test('une citation qui ne diffère que par la casse tient à l\'étage exact : elle est servie telle quelle', () => {
+  const a = { source: 'copie' as const, citation: 'LES VACANCES SONT UN TEMPS DE REPOS' }
+  const j = jugerLAncrage(a, { production: COPIE, texteSupport: null })
+  assert.deepEqual(j.ancrage, a)
+  assert.equal(j.motif, null)
+})
+
+test('⛔ la réparation ne touche pas à RR3 : une phrase du texte support reste écartée et nommée', () => {
+  const a = { source: 'copie' as const, citation: 'car ce qui est dissous est sans sensation' }
+  const j = jugerLAncrage(a, { production: COPIE, texteSupport: TEXTE_SUPPORT })
+  assert.equal(j.ancrage, null)
+  assert.match(j.motif ?? '', /phrase DU TEXTE SUPPORT/)
+})
+
+test('⛔ une citation composée reste écartée, et le motif dit pourquoi quand il le sait', () => {
+  const a = { source: 'copie' as const, citation: 'les vacances servent à se reposer et à gagner de l\'argent' }
+  const j = jugerLAncrage(a, { production: COPIE, texteSupport: null })
+  assert.equal(j.ancrage, null)
+  assert.match(j.motif ?? '', /citation écartée — introuvable dans la copie/)
+})

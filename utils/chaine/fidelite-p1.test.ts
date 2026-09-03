@@ -56,11 +56,21 @@ test('⭐ la fidélité se juge avec le tokeniseur du retour : blanc avant virgu
   ] } }
   const r = controlerFideliteP1('structure', art, COPIE)
   // ⚠️ « vivre , » : l'aplatissement ne retire pas le blanc avant la virgule —
-  //    c'est une infidélité au sens du retour, qui l'élaguerait aussi. Le
-  //    contrôle et l'élagage disent la même chose, et c'est ce qu'on veut.
+  //    ce n'est pas verbatim, mais c'est la phrase de l'élève à un détail près :
+  //    RÉPARABLE, et le retour la répare. Une réparable ne fait pas d'alerte.
   assert.equal(r.controlees, 3)
-  assert.deepEqual(r.infideles.map((c) => c.ou), ['p1.blocs[0].idee_directrice_citee'])
-  assert.match(r.alerte ?? '', /^FIDÉLITÉ P1 1\/3 : /)
+  assert.deepEqual(r.infideles, [])
+  assert.deepEqual(r.reparables.map((c) => c.ou), ['p1.blocs[0].idee_directrice_citee'])
+  assert.equal(r.alerte, null)
+})
+
+test('une citation réellement infidèle alerte, et l\'alerte compte les réparables à part', () => {
+  const art = { p1: { blocs: [
+    { idee_directrice_citee: "nous faisaient vivre, qui nous faisaient réagir" },
+    { idee_directrice_citee: 'la mort supprime ce qui nous fait vibrer et nous anime' },
+  ] } }
+  const r = controlerFideliteP1('structure', art, COPIE)
+  assert.match(r.alerte ?? '', /^FIDÉLITÉ P1 1\/2 : .* ; 1 réparable\(s\) à un détail près/)
 })
 
 test('une élision est légitime, une reformulation ne l\'est pas', () => {

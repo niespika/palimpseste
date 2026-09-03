@@ -38,21 +38,8 @@
  * jamais la même citation »*. Ce module ne fait que DÉCOUPER avant de l'appeler.
  */
 import { citationsIntrouvables } from './anti-injection'
-
-/**
- * Les marques d'élision qu'un modèle emploie, dans les trois formes qu'on a vues
- * en production : `…`, `...`, et l'une ou l'autre entre crochets.
- */
-const ELISION = /\s*(?:\[\s*(?:…|\.\.\.)\s*\]|…|\.\.\.)\s*/
-
-/**
- * ⚠️ **LE PLANCHER D'UN MORCEAU, ET POURQUOI IL EXISTE.** Sous quatre
- * caractères, un morceau ne prouve plus rien : « et », « la », « il » se
- * retrouvent dans n'importe quelle copie, et les exiger reviendrait à tout
- * laisser passer. Quatre est le même plancher que celui du repérage des
- * citations dans la prose (`CITE`, `retour.ts`) — un seul chiffre, un seul sens.
- */
-const PLANCHER = 4
+import { morceauxControlables, retrouverCitation } from './citation-approchee'
+export { morceauxControlables } from './citation-approchee'
 
 /**
  * La citation tient-elle contre cette source ?
@@ -71,16 +58,6 @@ export function citationTient(source: string | null | undefined, citation: strin
   return citationsIntrouvables(source, morceaux).introuvables.length === 0
 }
 
-/**
- * Les morceaux d'une citation qu'on peut exiger de la source : découpés sur
- * l'élision, chacun au-dessus du plancher. ⭐ Partagé avec le contrôle de
- * fidélité de P1 (`fidelite-p1.ts`) — *on n'écrit pas un second découpage*.
- * Une liste vide dit « rien de contrôlable », et chaque appelant décide ce
- * qu'il en fait : ici un refus, là-bas une citation qu'on ne compte pas.
- */
-export function morceauxControlables(citation: string): string[] {
-  return citation.split(ELISION).map((m) => m.trim()).filter((m) => m.length >= PLANCHER)
-}
 
 export interface AncrageBrut {
   source: 'copie' | 'texte_support'
@@ -135,9 +112,25 @@ export function jugerLAncrage(
         + `que l'exercice avait donnée : « ${court} »`,
     }
   }
+  // ⭐⭐ 02/09 — LA RÉPARATION. Ce qui n'est pas verbatim mais EST la phrase de
+  //    l'élève à un détail près (accent, blanc d'OCR, faute corrigée en passant)
+  //    se retrouve dans sa copie, et c'est SON texte qu'on sert — jamais celui du
+  //    modèle. Mesuré : 30 des 49 citations élaguées avant ce jour l'étaient
+  //    pour un détail. Ce qui reste introuvable, ambigu ou à négation changée
+  //    s'écarte comme avant, en le disant.
+  const r = retrouverCitation(contre, ancrage.citation)
+  if (!('echec' in r) && r.methode !== 'exact') {
+    const reel = r.citationReelle.length > 60 ? `${r.citationReelle.slice(0, 60)}…` : r.citationReelle
+    return {
+      ancrage: { source: ancrage.source, citation: r.citationReelle },
+      motif: `citation réparée (${r.methode === 'normalise' ? 'normalisation' : `approché ${r.score.toFixed(2)}`}) : `
+        + `« ${court} » → « ${reel} »`,
+    }
+  }
+  const detail = 'echec' in r && (r.echec === 'ambigu' || r.echec === 'negation') ? ` (${r.detail})` : ''
   return {
     ancrage: null,
     motif: `citation écartée — introuvable dans ${
-      ancrage.source === 'copie' ? 'la copie' : 'le texte servi'} : « ${court} »`,
+      ancrage.source === 'copie' ? 'la copie' : 'le texte servi'} : « ${court} »${detail}`,
   }
 }

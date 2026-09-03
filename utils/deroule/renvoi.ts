@@ -32,63 +32,7 @@
 // ============================================================================
 
 import { segmenterParIntervalles, type SegmentMateriau } from './marquage'
-
-/** Les apostrophes se ramènent à une seule forme — 1 caractère pour 1. */
-const APOSTROPHES = /[‘’ʼ]/
-/** Les guillemets TOMBENT, droits comme français — 1 caractère pour 1 blanc. */
-const GUILLEMETS = /[“”«»"]/
-
-interface Plat {
-  /** Le texte aplati, prêt pour `indexOf`. */
-  texte: string
-  /** Pour chaque caractère aplati, l'offset de DÉBUT dans le texte d'origine. */
-  debuts: number[]
-  /** Pour chaque caractère aplati, l'offset de FIN (exclu) dans l'origine. */
-  fins: number[]
-}
-
-/**
- * Aplatit en gardant la trace des positions.
- *
- * ⚠️ **UNE SUITE DE BLANCS DEVIENT UN SEUL ESPACE**, dont l'intervalle d'origine
- *    couvre TOUTE la suite : sans quoi une citation à cheval sur un retour à la
- *    ligne se surlignerait en laissant le saut dehors, et le cadre s'ouvrirait.
- *
- * ⚠️ **LA MINUSCULE SE PREND CARACTÈRE PAR CARACTÈRE, ET ON REFUSE CELLES QUI
- *    CHANGENT DE LONGUEUR** (İ → i̇ en fait deux) : garder l'original coûte au
- *    plus une non-correspondance, quand la table des positions fausse coûterait
- *    un surlignage décalé sur tout ce qui suit.
- */
-function aplatirIndexable(source: string): Plat {
-  const texte: string[] = []
-  const debuts: number[] = []
-  const fins: number[] = []
-  let i = 0
-  while (i < source.length) {
-    const c = source[i]!
-    if (/\s/.test(c)) {
-      let j = i
-      while (j < source.length && /\s/.test(source[j]!)) j++
-      texte.push(' ')
-      debuts.push(i)
-      fins.push(j)
-      i = j
-      continue
-    }
-    const remplace = APOSTROPHES.test(c) ? "'" : GUILLEMETS.test(c) ? ' ' : c
-    const bas = remplace.toLowerCase()
-    texte.push(bas.length === 1 ? bas : remplace)
-    debuts.push(i)
-    fins.push(i + 1)
-    i++
-  }
-  return { texte: texte.join(''), debuts, fins }
-}
-
-/** La citation, aplatie de la même façon — sans table : on ne remonte pas dedans. */
-function aplatirCitation(citation: string): string {
-  return aplatirIndexable(citation).texte.trim()
-}
+import { retrouverCitation } from '../chaine/citation-approchee'
 
 /**
  * ⭐ LES BORNES DE LA CITATION DANS LE TEXTE — `[début, fin[`, en caractères du
@@ -103,21 +47,29 @@ function aplatirCitation(citation: string): string {
 export function intervalleDeLaCitation(
   texte: string | null | undefined, citation: string | null | undefined,
 ): [number, number] | null {
-  if (!texte || !citation || citation.trim() === '') return null
+  const bornes = intervallesDeLaCitation(texte, citation)
+  if (!bornes.length) return null
+  return [bornes[0]![0], bornes[bornes.length - 1]![1]]
+}
 
-  // Le cas nominal, et de loin le plus fréquent : le verbatim est exact.
+/**
+ * ⭐⭐ 02/09 — LES BORNES, MORCEAU PAR MORCEAU, PAR LE REPÉRAGE DE LA CHAÎNE.
+ *    Une citation élidée (« A [...] B ») rend deux intervalles, et l'écran
+ *    surligne les deux sans le passage sauté. Une citation à un détail près
+ *    (accent, blanc d'OCR) se retrouve par `citation-approchee.ts` — le même
+ *    code qui l'a réparée avant qu'elle ne soit servie, donc l'écran et la
+ *    chaîne ne divergent pas. Ce qui reste introuvable rend `[]` : rien n'est
+ *    surligné, et c'est voulu — « surligner à côté serait pire ».
+ */
+export function intervallesDeLaCitation(
+  texte: string | null | undefined, citation: string | null | undefined,
+): Array<[number, number]> {
+  if (!texte || !citation || citation.trim() === '') return []
   const exact = texte.indexOf(citation)
-  if (exact >= 0) return [exact, exact + citation.length]
-
-  const cible = aplatirCitation(citation)
-  if (cible === '') return null
-  const plat = aplatirIndexable(texte)
-  const k = plat.texte.indexOf(cible)
-  if (k < 0) return null
-  const debut = plat.debuts[k]
-  const fin = plat.fins[k + cible.length - 1]
-  if (debut === undefined || fin === undefined || fin <= debut) return null
-  return [debut, fin]
+  if (exact >= 0) return [[exact, exact + citation.length]]
+  const r = retrouverCitation(texte, citation)
+  if ('echec' in r) return []
+  return r.intervalles.filter(([d, f]) => f > d)
 }
 
 /**
@@ -132,6 +84,5 @@ export function segmentsDuRenvoi(
   texte: string | null | undefined, citation: string | null | undefined,
 ): SegmentMateriau[] {
   if (!texte) return []
-  const bornes = intervalleDeLaCitation(texte, citation)
-  return segmenterParIntervalles(texte, bornes ? [bornes] : [])
+  return segmenterParIntervalles(texte, intervallesDeLaCitation(texte, citation))
 }

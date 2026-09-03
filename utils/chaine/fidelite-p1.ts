@@ -23,7 +23,8 @@
  * avec son repère. Le repère n'est pas de l'élève.
  */
 import type { Competence } from './types'
-import { citationTient, morceauxControlables } from './citation-verifiee'
+import { morceauxControlables } from './citation-verifiee'
+import { retrouverCitation } from './citation-approchee'
 
 /**
  * Les chemins des champs que le PROMPT P1 de chaque fiche déclare verbatim
@@ -112,6 +113,8 @@ export interface FideliteP1 {
   controlees: number
   /** Trop courtes pour prouver quoi que ce soit — ni fidèles, ni infidèles. */
   nonControlables: number
+  /** Pas verbatim, mais retrouvées à un détail près (`citation-approchee.ts`) : le retour les répare. */
+  reparables: CitationP1[]
   infideles: CitationP1[]
   /** La ligne du bilan, `null` s'il n'y a rien à dire. */
   alerte: string | null
@@ -124,7 +127,7 @@ export function controlerFideliteP1(
   competence: Competence, artefacts: unknown, production: string | null | undefined,
 ): FideliteP1 {
   const citations = citationsDeP1(competence, artefacts)
-  const vide: FideliteP1 = { total: citations.length, controlees: 0, nonControlables: 0, infideles: [], alerte: null }
+  const vide: FideliteP1 = { total: citations.length, controlees: 0, nonControlables: 0, reparables: [], infideles: [], alerte: null }
   if (!citations.length) return vide
   if (production == null || production.trim() === '') {
     // « Un module qui n'a pas la production sous la main le déclare : il rend une
@@ -134,20 +137,25 @@ export function controlerFideliteP1(
   }
   let controlees = 0
   let nonControlables = 0
+  const reparables: CitationP1[] = []
   const infideles: CitationP1[] = []
   for (const c of citations) {
     if (morceauxControlables(c.citation).length === 0) { nonControlables += 1; continue }
     controlees += 1
-    if (!citationTient(production, c.citation)) infideles.push(c)
+    const r = retrouverCitation(production, c.citation)
+    if ('echec' in r) infideles.push(c)
+    else if (r.methode !== 'exact') reparables.push(c)
   }
-  if (!infideles.length) return { total: citations.length, controlees, nonControlables, infideles, alerte: null }
+  const base = { total: citations.length, controlees, nonControlables, reparables, infideles }
+  if (!infideles.length) return { ...base, alerte: null }
   const exemples = infideles.slice(0, 3)
     .map((c) => `${c.ou} « ${c.citation.length > 60 ? `${c.citation.slice(0, 60)}…` : c.citation} »`)
     .join(' · ')
   return {
-    total: citations.length, controlees, nonControlables, infideles,
+    ...base,
     alerte: `${PREFIXE_FIDELITE_P1} ${infideles.length}/${controlees} : citation(s) introuvable(s) dans `
-      + `la copie — ${exemples}${infideles.length > 3 ? ` · +${infideles.length - 3}` : ''} `
+      + `la copie — ${exemples}${infideles.length > 3 ? ` · +${infideles.length - 3}` : ''}`
+      + `${reparables.length ? ` ; ${reparables.length} réparable(s) à un détail près` : ''} `
       + '(alerte seule — rien retiré, rien ajouté au document de P2)',
   }
 }

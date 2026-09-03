@@ -175,7 +175,8 @@ function arrondi(x: number): number {
   return Math.max(0, Math.min(1, Math.round(x * 1000) / 1000))
 }
 
-function distanceSeule(A: readonly string[], B: readonly string[]): number {
+/** La distance de Levenshtein AU MOT — partagée avec `chaine/citation-approchee.ts`. */
+export function distanceSeule(A: readonly string[], B: readonly string[]): number {
   let prec = Array.from({ length: B.length + 1 }, (_, j) => j)
   for (let i = 1; i <= A.length; i++) {
     const cour = new Array<number>(B.length + 1)
