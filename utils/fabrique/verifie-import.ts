@@ -1048,6 +1048,8 @@ export function controleImport(
               if (typeof dd !== 'string' || !matConnu(dd)) {
                 v.refuse(oc, 'au 1(b), un distracteur est l\'`id` d\'un devoir d\'élève de '
                   + '`materiaux[]` — reçu ' + JSON.stringify(dd).slice(0, 60), 13)
+              } else {
+                vises.add(dd)      // un témoin est VISÉ par le 1(b)
               }
             }
           }
@@ -1108,7 +1110,8 @@ export function controleImport(
       //    réponse attendue et le guide hors de leurs crans. Pas un dix-neuvième.
       const pj = cs?.pourquoi_juste
       if (c.distracteurs === 'présent') {
-        if (!nonVide(pj)) {
+        // ⭐ C7-L2 — au format 1.5, le pourquoi se dérive de l'énoncé de la clé.
+        if (!gabarit && !nonVide(pj)) {
           v.signale(oc, 'aucun `pourquoi_juste` — la correction servie avant le cas suivant '
             + 'ne pourra montrer que la réponse, pas pourquoi elle est la bonne')
         }
@@ -1184,7 +1187,7 @@ export function controleImport(
   }
 
   // ── ⭐ C4-L15 — LA LONGUEUR DU MATÉRIAU SUIT LE CRAN (`02-` §2.3.3) ───────
-  signaleLesMateriauxTropLongs(v, d, materiaux, exercices)
+  signaleLesMateriauxTropLongs(v, d, materiaux, exercices, gabarit)
 
   return rendre(v, ignores, racineRefusee)
 }
@@ -1226,7 +1229,7 @@ export function controleImport(
  * en dette ». **La source de ce contrôle est le `02-` §2.3.3.**
  */
 function signaleLesMateriauxTropLongs(
-  v: Verdict, d: Doctrine, materiaux: any[], exercices: any[],
+  v: Verdict, d: Doctrine, materiaux: any[], exercices: any[], gabarit = false,
 ): void {
   /** Au-delà, le matériau servi EST le matériau entier. */
   const ENTIER = 0.90
@@ -1267,7 +1270,9 @@ function signaleLesMateriauxTropLongs(
   for (const e of exercices) {
     if (!estObjet(e)) continue
     const part = fractionDuCran(e.cran)
-    if (!part) continue
+    // ⭐ C7-L2 — le gabarit sert CINQ phrases partout (`10-` §8) : la fraction du
+    //    `02-` §2.3.3 ne s'applique pas à un fichier 1.5.
+    if (!part || gabarit) continue
     v.entree = `exercices|${e.id}`
     // ⚠️ PAS DE COERCION MUETTE : on n'itère que sur un vrai tableau. Un
     //    `cas` malformé a déjà son refus ailleurs — ici, on ne mesure rien.

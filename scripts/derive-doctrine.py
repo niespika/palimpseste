@@ -81,7 +81,6 @@ SOURCES = ("02-exercices.md", "04-Instances_Exercices.md", "06-Palimpseste.md")
 #    tests du cran 6 et la pièce du cran 2 ; le `10-` §5 porte le marquage par
 #    cran × variante. Lus ici, strictement, jamais recopiés (`10-` §8 ; `07-` C7-L2).
 SOURCES_GABARIT = ("09-Objets.md", "10-Gabarit.md")
-GRAINS_PROBLEME = ("mot", "phrase", "bloc", "couture", "texte")
 SOURCES_INSTANCES = tuple("instances/04-%s.md" % c for c in (
     "expression", "argumentation", "structure",
     "connaissance", "synthese", "questionnement"))
@@ -110,6 +109,7 @@ def charge(racine):
     sys.path.insert(0, os.path.join(racine, "generateur"))
     from noyau.doctrine import (Doctrine, SourceMouvante,  # noqa: E402
                                 _lignes_table, _nu, _section, _valeurs, MODES)
+    from noyau.grille import lire_le_09, lire_le_10  # noqa: E402
 
     d = Doctrine.charge(racine)
     t02 = io.open(os.path.join(racine, "02-exercices.md"), encoding="utf-8").read()
@@ -315,182 +315,9 @@ def charge(racine):
 
 
 # ---------------------------------------------------------------------------
-# ⭐ C7-L2 — le `09-Objets.md` : les problèmes, les tests, les pièces
+# ⭐ C7-L2 — le `09-Objets.md` et le `10-` §5 se lisent dans `generateur/noyau/grille.py`
+# (dépôt de conception) : UN SEUL domicile, que la fabrique du gabarit lit aussi.
 # ---------------------------------------------------------------------------
-# « La forme d'un problème, pour la dérivation — une entrée par problème,
-# toujours les mêmes lignes » (`09-` §0). La lecture est STRICTE : une ligne de
-# tête qui ne se lit pas ARRÊTE, comme une citation qui a bougé arrête le
-# crible. Rien n'est recopié ; ce qui entre en base est ce que le 09 dit.
-
-TETE_PROBLEME = re.compile(
-    r"^- \*\*`([a-z]+)\.([a-z_]+)\.([a-z_]+)`\*\* · \*([^*]+)\*(?: \([^)]*\))? · (.*?) · "
-    r"(local|global) · ([a-z, ]+?)\s*$")
-TETE_TEST = re.compile(r"^- `([a-z]+)(?:\.([a-z_]+))?\.test\.(\d+)` — « (.*) »\s*$")
-TETE_PIECE = re.compile(
-    r"^\*\*La pièce du cran 2\*\* \*\([^)]*\)\* : \*\*([^*]+)\*\*\. "
-    r"Le geste, écrit à la main : « (.*) »")
-COMPETENCES_09 = ("Argumentation", "Connaissance", "Expression", "Questionnement",
-                  "Structure", "Synthèse")
-
-
-class Probleme(object):
-    __slots__ = ("cle", "objet", "genre", "constituant", "variante", "mode",
-                 "observable_texte", "observable_code", "competence", "mode_receptif",
-                 "route", "forme", "grains", "enonce", "exemple", "correction",
-                 "banque", "note", "section")
-
-
-def _observable(cell, comp_map):
-    """La cellule de l'observable : `code` (Compétence[, mode réceptif]) — ou ⚠️."""
-    route = not cell.strip().startswith("⚠️")
-    codes = re.findall(r"`([a-z_]+)`", cell)
-    comp = re.search(r"\((%s)([^)]*)\)" % "|".join(COMPETENCES_09), cell)
-    competence = comp_map[comp.group(1)] if comp else None
-    receptif = comp.group(2).strip(", ") if comp and comp.group(2).strip(", ") else None
-    return (route, codes[0] if (codes and route) else None, competence if route else None,
-            receptif if route else None)
-
-
-def lire_le_09(racine, d, SourceMouvante):
-    texte = io.open(os.path.join(racine, "09-Objets.md"), encoding="utf-8").read()
-    lignes = texte.split("\n")
-    comp_map = {"Argumentation": "argumentation", "Connaissance": "connaissance",
-                "Expression": "expression", "Questionnement": "questionnement",
-                "Structure": "structure", "Synthèse": "synthese"}
-    problemes, tests, pieces = [], [], []
-    objet = genre = None
-    section = None
-    vus = set()
-    i = 0
-    while i < len(lignes):
-        l = lignes[i]
-        m = re.match(r"^## (\d+)\. « [^»]+ » — `([a-z]+)`", l)
-        if m:
-            objet, genre, section = m.group(2), None, m.group(1)
-            if objet not in d.objets:
-                raise SourceMouvante("`09-` : objet inconnu du `02-` §1 en titre de fiche : `%s`" % objet)
-        m = re.match(r"^### (\d+\.\d+) Genre `([a-z_]+)`", l)
-        if m and objet:
-            genre, section = m.group(2), m.group(1)
-            if genre not in d.objets[objet].genres:
-                raise SourceMouvante("`09-` : genre `%s` inconnu de `%s` (`02-` §1.3)" % (genre, objet))
-
-        if l.startswith("- **`") and re.match(r"^- \*\*`[a-z]+\.[a-z_]+\.[a-z_]+`\*\*", l):
-            if objet is None:
-                i += 1
-                continue                       # le gabarit du §0, hors fiche
-            t = TETE_PROBLEME.match(l)
-            if not t:
-                raise SourceMouvante("`09-` : une ligne de problème ne se lit plus — %r" % l[:120])
-            p = Probleme()
-            p.objet, p.constituant, p.variante = t.group(1), t.group(2), t.group(3)
-            p.cle = "%s.%s.%s" % (p.objet, p.constituant, p.variante)
-            if p.objet != objet:
-                raise SourceMouvante("`09-` : la clé `%s` est rangée sous la fiche `%s`" % (p.cle, objet))
-            if p.cle in vus:
-                raise SourceMouvante("`09-` : clé en double : `%s`" % p.cle)
-            vus.add(p.cle)
-            p.genre, p.section = genre, section
-            p.mode = t.group(4).strip()
-            p.observable_texte = t.group(5).strip()
-            p.route, p.observable_code, p.competence, p.mode_receptif = _observable(
-                p.observable_texte, comp_map)
-            p.forme = t.group(6)
-            p.grains = [g.strip() for g in t.group(7).split(",") if g.strip()]
-            for g in p.grains:
-                if g not in GRAINS_PROBLEME:
-                    raise SourceMouvante("`09-` : grain inconnu `%s` sur `%s`" % (g, p.cle))
-            p.enonce = p.exemple = p.correction = p.banque = p.note = None
-            j = i + 1
-            while j < len(lignes) and lignes[j].startswith("  "):
-                x = lignes[j].strip()
-                if x.startswith("«") and p.enonce is None:
-                    mn = re.search(r"» \*\((.*)\)\*\s*$", x)
-                    if mn:
-                        p.note = mn.group(1)
-                        x = x[:x.index("» *(") + 1]
-                    p.enonce = x.strip("« »").strip()
-                elif x.startswith("*Ex.*"):
-                    corps = x[len("*Ex.*"):].strip()
-                    if "*→*" in corps:
-                        p.exemple, p.correction = [y.strip() for y in corps.split("*→*", 1)]
-                    else:
-                        p.exemple = corps
-                elif x.startswith("*→*"):
-                    p.correction = x[len("*→*"):].strip()
-                elif x.startswith("*(banque"):
-                    p.banque = x.strip("*() ").replace("banque : ", "").strip("` ")
-                j += 1
-            if not p.enonce:
-                raise SourceMouvante("`09-` : `%s` n'a pas d'énoncé — « toujours les mêmes lignes » (§0)" % p.cle)
-            problemes.append(p)
-            i = j
-            continue
-
-        m = TETE_TEST.match(l)
-        if m and objet:
-            ob, ge, n, question = m.group(1), m.group(2), int(m.group(3)), m.group(4).strip()
-            if ob != objet or (ge or None) != genre:
-                raise SourceMouvante("`09-` : la clé de test `%s` n'est pas rangée sous sa fiche (%s%s)"
-                                     % (l[2:l.index("`", 3)], objet, "." + genre if genre else ""))
-            cle = "%s.%s.test.%d" % (ob, ge, n) if ge else "%s.test.%d" % (ob, n)
-            if any(t_.cle == cle for t_ in tests):
-                raise SourceMouvante("`09-` : clé de test en double : `%s`" % cle)
-            tt = Probleme()
-            tt.cle, tt.objet, tt.genre, tt.variante, tt.enonce = cle, ob, ge, n, question
-            tests.append(tt)
-
-        m = TETE_PIECE.match(l)
-        if m and objet:
-            pc = Probleme()
-            pc.cle = "%s.%s" % (objet, genre) if genre else objet
-            pc.objet, pc.genre = objet, genre
-            pc.constituant, pc.enonce = m.group(1).strip(), m.group(2).strip()
-            if any(x.cle == pc.cle for x in pieces):
-                raise SourceMouvante("`09-` : deux pièces du cran 2 sous `%s`" % pc.cle)
-            pieces.append(pc)
-        i += 1
-
-    tetes = sum(1 for l in lignes if l.startswith("- **`")
-                and re.match(r"^- \*\*`[a-z]+\.[a-z_]+\.[a-z_]+`\*\*", l)) - 1   # moins le gabarit du §0
-    if tetes != len(problemes):
-        raise SourceMouvante("`09-` : %d lignes de problème, %d lues" % (tetes, len(problemes)))
-    blocs_test = sum(1 for l in lignes if l.startswith("**Le test, posé à l'élève au cran 6**"))
-    fiches = {(t_.objet, t_.genre) for t_ in tests}
-    if blocs_test != len(fiches):
-        raise SourceMouvante("`09-` : %d blocs de test, %d fiches avec des questions lues"
-                             % (blocs_test, len(fiches)))
-    if len(pieces) != blocs_test:
-        raise SourceMouvante("`09-` : %d pièces du cran 2 lues pour %d blocs de test"
-                             % (len(pieces), blocs_test))
-    problemes.sort(key=lambda x: x.cle)
-    tests.sort(key=lambda x: (x.objet, x.genre or "", x.variante))
-    pieces.sort(key=lambda x: x.cle)
-    return problemes, tests, pieces
-
-
-def lire_le_10(racine, d, SourceMouvante, _section, _lignes_table, _nu):
-    """Le marquage par cran × variante — la table du `10-` §5, et rien d'autre."""
-    t10 = io.open(os.path.join(racine, "10-Gabarit.md"), encoding="utf-8").read()
-    bloc = _section(t10, r"^## 5\. Le marquage.*$")
-    out = []
-    for c in _lignes_table(bloc):
-        if len(c) != 3 or not re.fullmatch(r"\d", _nu(c[0])):
-            continue
-        cran = int(_nu(c[0]))
-        variante = _nu(c[1]).strip()
-        variante = "-" if variante in ("—", "-", "") else variante
-        if variante not in ("a", "b", "-"):
-            raise SourceMouvante("`10-` §5 : variante inconnue « %s » au cran %d" % (variante, cran))
-        marquage = _nu(c[2]).strip()
-        out.append((cran, variante, None if marquage.startswith("rien") else marquage))
-    if len(out) != 11:
-        raise SourceMouvante("`10-` §5 : 11 lignes attendues à la table du marquage, %d lues" % len(out))
-    if {c for c, _, _ in out} != set(range(1, 10)):
-        raise SourceMouvante("`10-` §5 : la table du marquage ne couvre pas les neuf crans")
-    return sorted(out)
-
-
 def empreintes(racine):
     """sha256 de chaque source lue — c'est ce qui rend la divergence visible."""
     out = {}

@@ -91,9 +91,10 @@ test('la clé du problème : exigée où le cran isole, connue de la grille, por
 
 test('un observable déclaré qui diffère de celui de la clé se SIGNALE, et la clé fait foi', () => {
   const v = controleImport(casse((b) => {
-    b.exercices[0].observable_isole = { code: 'un_autre', competence: 'argumentation' }
+    b.exercices[0].observable_isole = { code: P2.observableCode, competence: P2.observableCompetence }
   }), doctrine)
   assert.ok(contient(v.signalements, 'diffère de celui que la clé'))
+  assert.equal(aRefus(v, 15), false, v.refus.join('\n'))
 })
 
 test('au 1(a) les distracteurs sont des clés ; au 1(b) des devoirs d’élève', () => {
