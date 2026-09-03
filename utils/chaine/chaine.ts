@@ -26,6 +26,7 @@ import { chaineActive } from './acces'
 import { lireConfig, type ConfigChaine } from './config'
 import { lireContexte, type ContexteDepot } from './contexte'
 import { appelsDuDepot, controlerLaFacture } from './couts-serveur'
+import { controlerFideliteP1, motifDeFidelite } from './fidelite-p1'
 import { appelsDeLErreur, depotAAtteintSonPlafond } from './couts'
 import {
   competencesOuvertes, etatCompetence, modeNonCouvert, refusFormeCode2, valeursDesParametres,
@@ -765,6 +766,14 @@ async function chaineDUneCompetence(
     sorties[spec.tetePrompt.toLowerCase()] = r.valeur
   }
   const ctxEnrichi: ContexteBranchement = { ...ctxBranchement, prives, sorties }
+
+  // ── LA FIDÉLITÉ DE P1, contrôlée AVANT que le juge ne lise le relevé ───────
+  // ⭐⭐ 02/09/2026 — « toute citation verbatim rendue par P1 se contrôle contre
+  //    la production » (`CONTRAT` §3) : quatre branchements sur six n'en avaient
+  //    aucun, et P2 ne voit jamais la copie. Alerte seule, sur la PRODUCTION
+  //    BRUTE (la copie préparée porte des repères qui ne sont pas de l'élève).
+  const fidelite = controlerFideliteP1(competence, artefactsP1, production)
+  if (fidelite.alerte) alertes.push(fidelite.alerte)
 
   // ── Temps 2 — CODE1. Il ne journalise rien : ce n'est pas un appel. ────────
   const prepare = branchement.code1(artefactsP1, ctxEnrichi)
@@ -1660,6 +1669,9 @@ function resumeBilan(b: BilanDepot): string {
     // ⛔ SANS CONDITION, et c'est tout le correctif : une perte d'écriture ne
     //   dépend pas de ce qu'un retour a fait ou non.
     + motifDesEtatsPerdus(b.alertes)
+    // ⭐ 02/09 — l'abrégé de la fidélité de P1, seul domicile persisté de cette
+    //    trace : le professeur lit « fidélité P1 — argumentation 3/12 ».
+    + motifDeFidelite(b.alertes)
 }
 
 // ════════════════════════════════════════════════════════════════════════════

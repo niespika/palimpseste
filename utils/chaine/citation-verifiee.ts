@@ -66,9 +66,20 @@ const PLANCHER = 4
  */
 export function citationTient(source: string | null | undefined, citation: string): boolean {
   if (source == null || source.trim() === '') return false
-  const morceaux = citation.split(ELISION).map((m) => m.trim()).filter((m) => m.length >= PLANCHER)
+  const morceaux = morceauxControlables(citation)
   if (morceaux.length === 0) return false
   return citationsIntrouvables(source, morceaux).introuvables.length === 0
+}
+
+/**
+ * Les morceaux d'une citation qu'on peut exiger de la source : découpés sur
+ * l'élision, chacun au-dessus du plancher. ⭐ Partagé avec le contrôle de
+ * fidélité de P1 (`fidelite-p1.ts`) — *on n'écrit pas un second découpage*.
+ * Une liste vide dit « rien de contrôlable », et chaque appelant décide ce
+ * qu'il en fait : ici un refus, là-bas une citation qu'on ne compte pas.
+ */
+export function morceauxControlables(citation: string): string[] {
+  return citation.split(ELISION).map((m) => m.trim()).filter((m) => m.length >= PLANCHER)
 }
 
 export interface AncrageBrut {
