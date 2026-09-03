@@ -10,6 +10,7 @@ import { inscriptionsClasse } from '@/utils/acces'
 import { COOKIE_SEMESTRE_FRAGMENTS, semestreFragmentsActif, type ContexteSemestre } from './contexte-semestre'
 import type { StatutPiste } from '@/types/fragments'
 import { normaliserRetours } from '@/utils/passation/transcription-calcul'
+import { commentaireProf } from '@/utils/fragments-theme'
 
 async function verifierProf() {
   const supabase = await createClient()
@@ -123,6 +124,32 @@ export async function validerTheme(inscriptionId: string, semestreId: string) {
   if (error) return { error: error.message }
   revalidatePath('/prof/fragments-erudition/suivi')
   revalidatePath('/eleve/modules/fragments-erudition')
+  revalidatePath('/eleve') // la validation éteint aussi un commentaire en attente (tâche élève)
+  revalidatePath('/prof')
+  return { success: true }
+}
+
+// C8 (02/09, le soir) — « ni valider, ni modifier » : le professeur COMMENTE le
+// thème, et l'élève reçoit ce commentaire dans son « à faire ». Le texte du
+// thème ne bouge pas, `valide_at` non plus ; seuls `commentaire_prof` et
+// `commente_at` se posent. Le commentaire s'éteint de lui-même quand l'élève
+// re-propose ou quand le professeur valide (`commentaireEnAttente`).
+export async function commenterTheme(inscriptionId: string, semestreId: string, brut: string) {
+  const supabase = await verifierProf()
+  const commentaire = commentaireProf(brut)
+  if (!commentaire) return { error: 'Écris ton commentaire avant de l’envoyer.' }
+  const { data: existant } = await supabase
+    .from('fragments_themes').select('id, theme').eq('inscription_id', inscriptionId).eq('semestre_id', semestreId).maybeSingle()
+  if (!existant) return { error: 'Aucun thème à commenter.' }
+  if (!existant.theme || String(existant.theme).trim() === '') return { error: 'Le thème est vide : rien à commenter.' }
+  const { error } = await supabase
+    .from('fragments_themes')
+    .update({ commentaire_prof: commentaire, commente_at: new Date().toISOString() })
+    .eq('id', existant.id)
+  if (error) return { error: error.message }
+  revalidatePath('/prof/fragments-erudition/suivi')
+  revalidatePath('/eleve/modules/fragments-erudition')
+  revalidatePath('/eleve')
   revalidatePath('/prof')
   return { success: true }
 }

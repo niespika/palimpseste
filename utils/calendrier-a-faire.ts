@@ -11,7 +11,7 @@ import { dateEffectiveSemaine, libelleTypeExercice } from '@/utils/plan-cadence'
 import { moduleDuType, estUnModuleExamen } from '@/utils/examens/types'
 import { construireApercuAssign, memoSocleFrise, type ApercuSemaine } from '@/utils/parcours-apercu'
 import { semaineCourante } from '@/utils/scriptorium-corpus'
-import { themeAValider } from '@/utils/fragments-theme'
+import { statutDuTheme } from '@/utils/fragments-theme'
 
 // Dérivation calendrier → « à faire » (famille 2 de la spec §7) : une échéance
 // proche ENGENDRE une tâche. On n'affiche jamais l'événement nu ici (il est sur
@@ -49,17 +49,21 @@ export async function tachesDeriveesDuCalendrier(joursAvant = 10): Promise<Tache
   // C8 (Louis, 02/09) — un thème PROPOSÉ par un élève attend d'être relu et validé :
   // c'est le signal que le professeur reçoit. Échéance = aujourd'hui (rien à
   // attendre), un item par élève, vers Suivi de sa classe.
+  // ⚠️ Un thème que le professeur a COMMENTÉ n'est plus à lui : la balle est
+  //    chez l'élève (statut `commente`), il sort de cette liste jusqu'à la
+  //    prochaine proposition.
   {
     const admin = createAdminClient()
     const { data: themes } = await admin
       .from('fragments_themes')
-      .select('id, theme, propose_at, valide_at, eleve_id, inscriptions!inner(classe_id, statut, classes(nom)), semesters!inner(is_active)')
+      .select('id, theme, propose_at, valide_at, commentaire_prof, commente_at, eleve_id, inscriptions!inner(classe_id, statut, classes(nom)), semesters!inner(is_active)')
       .not('propose_at', 'is', null)
       .eq('inscriptions.statut', 'active')
       .eq('semesters.is_active', true)
-    const aValider = (themes ?? []).filter((t) => themeAValider({
+    const aValider = (themes ?? []).filter((t) => statutDuTheme({
       theme: t.theme as string | null, propose_at: t.propose_at as string | null, valide_at: t.valide_at as string | null,
-    }))
+      commentaire_prof: t.commentaire_prof as string | null, commente_at: t.commente_at as string | null,
+    }) === 'a_valider')
     if (aValider.length > 0) {
       const { data: profils } = await admin.from('profiles').select('id, display_name')
         .in('id', aValider.map((t) => t.eleve_id as string))

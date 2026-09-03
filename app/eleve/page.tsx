@@ -14,6 +14,7 @@ import { retoursDExamenALire } from '@/utils/codex-onglets/liste'
 import { signalDeLaSemaine } from '@/utils/eleve/semaine-serveur'
 import { signalDuPush } from '@/utils/eleve/bonus-serveur'
 import { fichesDejaServies } from '@/utils/eleve/fiche-serveur'
+import { statutDuTheme } from '@/utils/fragments-theme'
 import { lundiOnOrBefore, toISODate } from '@/utils/calendrier-grille'
 import Pastille, { type ModuleSceau } from '@/components/Pastille'
 
@@ -95,6 +96,9 @@ export default async function TableauDeBordEleve() {
   // dans l'état « Toutes », d'où une tâche par classe.
   interface FragmentTache { texte: string; depose: boolean; enRetard: boolean; pistes: string[]; classe: string; inscriptionId: string }
   const fragmentTaches: FragmentTache[] = []
+  // C8 (Louis, 02/09 le soir) — le professeur a COMMENTÉ le thème de l'élève :
+  // le commentaire vient ici, comme une tâche, tant que l'élève n'a pas re-proposé.
+  const themesCommentes: { inscriptionId: string; classe: string; commentaire: string }[] = []
   let cartesDues = 0
   const codexEnCours: { id: string; classe: string }[] = []
   const quizzEnCours: { id: string; classe: string }[] = []
@@ -142,6 +146,26 @@ export default async function TableauDeBordEleve() {
             ? `Semaine ${semaine.numero} — à déposer avant ${limite}`
             : `Semaine ${semaine.numero} — dépôt libre, rien n’est réclamé`
         fragmentTaches.push({ texte, depose: !!depot, enRetard, pistes: [], classe: insc.classe_nom, inscriptionId: insc.id })
+      }
+      // Le thème du semestre courant, et son commentaire s'il attend une réponse.
+      // Indépendant de la semaine ouverte : un commentaire se lit même sans dépôt dû.
+      if (semActif?.id && aModule(insc.classe_id, 'fragments-erudition')) {
+        const { data: t } = await supabase
+          .from('fragments_themes')
+          .select('theme, propose_at, valide_at, commentaire_prof, commente_at')
+          .eq('inscription_id', insc.id)
+          .eq('semestre_id', semActif.id)
+          .maybeSingle()
+        const etat = t ? {
+          theme: t.theme as string | null,
+          propose_at: (t.propose_at as string | null) ?? null,
+          valide_at: (t.valide_at as string | null) ?? null,
+          commentaire_prof: (t.commentaire_prof as string | null) ?? null,
+          commente_at: (t.commente_at as string | null) ?? null,
+        } : null
+        if (etat && statutDuTheme(etat) === 'commente') {
+          themesCommentes.push({ inscriptionId: insc.id, classe: insc.classe_nom, commentaire: etat.commentaire_prof as string })
+        }
       }
 
       if (aModule(insc.classe_id, 'codex')) {
@@ -327,6 +351,18 @@ export default async function TableauDeBordEleve() {
     urgence: f.enRetard ? 90 : 70,
     badge: f.enRetard ? { texte: 'en retard', ton: 'retard' } : { texte: 'à rendre', ton: 'attention' },
     pistes: f.pistes, classe: f.classe,
+  })
+  // C8 — le commentaire du professeur sur le thème : une réponse est attendue.
+  // ⚠️ Urgence 85 : SOUS un fragment en retard (90) et le retour d'examen à lire
+  //    (92), mais AU-DESSUS de la semaine (75) et du fragment dû (70) — le thème
+  //    est ce sur quoi les fragments s'écrivent, un thème contesté passe avant
+  //    le prochain dépôt.
+  for (const tc of themesCommentes) taches.push({
+    cle: `theme-commente-${tc.inscriptionId}`, module: 'fragments', titre: 'Ton thème de Fragments',
+    detail: `Ton professeur a commenté ton thème : « ${tc.commentaire.replace(/\s+/g, ' ').slice(0, 140)}${tc.commentaire.length > 140 ? '…' : ''} »`,
+    href: `/eleve/modules/fragments-erudition?inscription=${tc.inscriptionId}`,
+    cta: 'Revoir mon thème', urgence: 85,
+    badge: { texte: 'commentaire', ton: 'attention' }, classe: tc.classe,
   })
   for (const e of examensALire) {
     // Accès & classes · L1 — on ne dérive AUCUNE tâche d'un module hors

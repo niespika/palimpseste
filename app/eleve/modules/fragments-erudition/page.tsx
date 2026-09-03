@@ -108,7 +108,7 @@ export default async function PageFragments({ searchParams }: { searchParams: Pr
     .maybeSingle()
   let themeQuery = supabase
     .from('fragments_themes')
-    .select('theme, description, essai_actif, propose_at, valide_at')
+    .select('theme, description, essai_actif, propose_at, valide_at, commentaire_prof, commente_at')
     .eq('inscription_id', inscriptionId)
   if (semCourant?.id) themeQuery = themeQuery.eq('semestre_id', semCourant.id)
   const { data: theme } = await themeQuery.maybeSingle()
@@ -476,14 +476,28 @@ export default async function PageFragments({ searchParams }: { searchParams: Pr
       </div>
 
       {/* Identité du module portée par la Barre 2 ; le thème est à l'élève :
-          il l'écrit, le professeur le relit et le valide (C8, Louis 02/09). */}
-      <ThemeEleve
-        inscriptionId={inscriptionId}
-        semestreId={semCourant?.id ?? null}
-        theme={theme?.theme ?? null}
-        description={theme?.description ?? null}
-        statut={statutDuTheme(theme ? { theme: theme.theme, propose_at: (theme as { propose_at?: string | null }).propose_at ?? null, valide_at: (theme as { valide_at?: string | null }).valide_at ?? null } : null)}
-      />
+          il l'écrit, le professeur le relit et le valide — ou le commente, et
+          le commentaire ne se montre que tant qu'il attend une réponse (C8, Louis 02/09). */}
+      {(() => {
+        const etat = theme ? {
+          theme: theme.theme,
+          propose_at: (theme as { propose_at?: string | null }).propose_at ?? null,
+          valide_at: (theme as { valide_at?: string | null }).valide_at ?? null,
+          commentaire_prof: (theme as { commentaire_prof?: string | null }).commentaire_prof ?? null,
+          commente_at: (theme as { commente_at?: string | null }).commente_at ?? null,
+        } : null
+        const statut = statutDuTheme(etat)
+        return (
+          <ThemeEleve
+            inscriptionId={inscriptionId}
+            semestreId={semCourant?.id ?? null}
+            theme={theme?.theme ?? null}
+            description={theme?.description ?? null}
+            statut={statut}
+            commentaire={statut === 'commente' ? etat?.commentaire_prof ?? null : null}
+          />
+        )
+      })()}
 
       {/* Ton parcours (sections en lettres) + stats + rappel des pistes */}
       {pointsParcours.some(p => p.decouvertes !== null) && (

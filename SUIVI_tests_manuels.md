@@ -8993,3 +8993,20 @@ le veut.
 - [x] **Le clic « Valider »** — joué dans un Chrome sans fenêtre piloté par CDP (le volet de la session restait sur « chargement ») : bouton visible, clic, badge « Validé » et message « Thème validé. », `valide_at` posé (vérifié par requête), décor retiré. Le patron : `scripts/recette/…` non versionné — script de séance dans le scratchpad, recette de `reference_smoke_par_cdp_volet_cache`.
 - [ ] **La re-proposition après validation** (l'élève modifie → de nouveau « à valider ») : règle testée, non vue à l'écran.
 - [x] **PROD** : `c8_theme_propose_par_eleve.sql` et `c6_l4_essai_lien_instance.sql` **jouées en production le 02/09 au soir**, sur décision de Louis (répétition à blanc sur le corps, puis le fichier, vérifiées en psql et par PostgREST).
+
+## C8 — Le professeur COMMENTE le thème, « ni valider, ni modifier » (demande de Louis, 02/09 le soir, migration `c8_theme_commentaire_prof.sql`)
+
+**Dans la foulée du thème proposé par l'élève.** Deux colonnes sur `fragments_themes` (`commentaire_prof`, `commente_at`), un état « commenté » dans la règle pure `utils/fragments-theme.ts` (13 tests) : le commentaire compte tant que l'élève n'a pas re-proposé ET que le professeur n'a pas validé depuis — il s'éteint de lui-même. Suivi : bouton « Commenter » (puis « Recommenter »), badge « Commenté », le commentaire rappelé sous le thème, et « Ton commentaire précédent » quand l'élève a répondu. Élève : le commentaire encadré sous son thème, bouton « Proposer mon thème à nouveau », et une tâche « Ton thème de Fragments » (urgence 85) dans le « À faire » de son tableau de bord. Le « À préparer » du professeur ne liste plus un thème commenté (la balle est chez l'élève).
+
+### Prouvé en séance (Chrome sans fenêtre, CDP, liens magiques ; bac à sable, Elo × classe Test)
+- [x] **Le professeur commente** — Suivi, ligne d'Elo « À valider » → « Commenter » → texte → « Envoyer le commentaire » : badge « Commenté », « Ton commentaire, en attente de la réponse de l'élève : … », l'invite « relis-le » disparue ; `commente_at` et `commentaire_prof` posés (vérifié par requête).
+- [x] **Le tableau de bord du professeur** ne porte plus « Valider le thème proposé — Elo » tant que le thème est commenté.
+- [x] **Le À faire de l'élève** — `/eleve`, contexte de classe Test : tuile « Ton thème de Fragments · commentaire · Ton professeur a commenté ton thème : « … » · Revoir mon thème », en tête (au-dessus des flashcards et de la lecture). ⚠️ En contexte T5 (l'autre classe d'Elo), la tuile n'apparaît pas : c'est la règle du contexte de classe, le thème est celui de l'inscription Test.
+- [x] **La page Fragments de l'élève** — le commentaire encadré sous le thème, le libellé « lis-le, puis propose ton thème à nouveau », le bouton ; le commentaire reste visible pendant la réécriture ; après « Proposer ce nouveau thème » : « Proposé — en attente… », commentaire éteint, tuile partie du À faire.
+- [x] **Retour au professeur** — ligne d'Elo de nouveau « À valider », « Ton commentaire précédent : … » en sourdine, et la tâche « Valider le thème proposé — Elo » revenue dans « À préparer ».
+- [x] **Trois tailles** — 1280, 768 et 375 px sur Suivi (ligne d'Elo), le À faire et la page Fragments. ⚠️ Défaut trouvé et corrigé en séance : sur 375 px, les quatre boutons de la ligne de Suivi écrasaient le thème à un mot par ligne (`flex` sans `min-width`, piège déjà payé sur la ligne de synthèse) — le texte garde désormais 14 rem et les boutons passent dessous.
+
+### Reste à jouer
+- [ ] **PROD** : `c8_theme_commentaire_prof.sql` à jouer par Louis **AVANT le push** — le code neuf nomme les deux colonnes dans ses `select` ; poussé avant le SQL, le thème disparaîtrait de la page élève et de Suivi (PostgREST refuse une colonne inconnue). Le fichier est répété à blanc et joué en bac à sable.
+- [ ] **Un commentaire, puis la validation directe** (le professeur change d'avis sans réponse de l'élève) : règle testée (`valide_at` > `commente_at` ⇒ « validé »), non vue à l'écran.
+- [ ] **Le commentaire sur un thème posé par le professeur lui-même** (`propose_at` nul) : règle testée, non vue à l'écran.

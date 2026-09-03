@@ -4,6 +4,9 @@
 // ----------------------------------------------------------------------------
 // Demande de Louis (02/09). L'état se lit par `statutDuTheme` (règle pure),
 // l'écriture passe par `proposerTheme` (action serveur, inscription vérifiée).
+// Le soir même : le professeur peut aussi COMMENTER (« ni valider, ni
+// modifier ») — le commentaire arrive ici, sous le thème, et dans le « à faire »
+// du tableau de bord ; il ne se montre que tant qu'il attend une réponse.
 // ============================================================================
 
 import { useState } from 'react'
@@ -17,9 +20,20 @@ interface Props {
   theme: string | null
   description: string | null
   statut: StatutDuTheme
+  /** Le commentaire du professeur, seulement s'il attend une réponse (statut `commente`). */
+  commentaire?: string | null
 }
 
-export default function ThemeEleve({ inscriptionId, semestreId, theme, description, statut }: Props) {
+function Commentaire({ texte }: { texte: string }) {
+  return (
+    <div className="bg-attention-teinte border-l-4 border-attention rounded px-3 py-2">
+      <p className="text-xs text-attention font-medium mb-0.5">Commentaire de ton professeur</p>
+      <p className="text-sm text-encre whitespace-pre-line">{texte}</p>
+    </div>
+  )
+}
+
+export default function ThemeEleve({ inscriptionId, semestreId, theme, description, statut, commentaire = null }: Props) {
   const router = useRouter()
   const [edition, setEdition] = useState(statut === 'vide')
   const [chargement, setChargement] = useState(false)
@@ -39,13 +53,14 @@ export default function ThemeEleve({ inscriptionId, semestreId, theme, descripti
     router.refresh()
   }
 
-  const couleur = statut === 'a_valider' ? 'text-attention' : statut === 'valide' ? 'text-ok' : 'text-muet'
+  const couleur = statut === 'a_valider' || statut === 'commente' ? 'text-attention' : statut === 'valide' ? 'text-ok' : 'text-muet'
 
   if (edition) {
     return (
       <form onSubmit={handleSubmit} className="bg-parchemin-fonce rounded-xl px-4 py-3 space-y-2 border border-bordure">
         <p className="text-xs text-muet">Ton thème</p>
-        <p className="text-sm text-encre-douce">{libelleEleve('vide')}</p>
+        {commentaire && <Commentaire texte={commentaire} />}
+        <p className="text-sm text-encre-douce">{libelleEleve(commentaire ? 'commente' : 'vide')}</p>
         <input
           name="theme" required maxLength={300} defaultValue={theme ?? ''}
           className="w-full px-2 py-1.5 border border-bordure rounded text-sm focus:outline-none focus:ring-2 focus:ring-pigment text-encre bg-surface"
@@ -72,7 +87,7 @@ export default function ThemeEleve({ inscriptionId, semestreId, theme, descripti
   }
 
   return (
-    <div className="bg-parchemin-fonce rounded-xl px-4 py-3">
+    <div className="bg-parchemin-fonce rounded-xl px-4 py-3 space-y-2">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <p className="text-xs text-muet mb-0.5">Ton thème</p>
@@ -85,6 +100,15 @@ export default function ThemeEleve({ inscriptionId, semestreId, theme, descripti
           Modifier
         </button>
       </div>
+      {commentaire && (
+        <>
+          <Commentaire texte={commentaire} />
+          <button type="button" onClick={() => setEdition(true)}
+            className="bg-bouton text-surface px-3 py-1 rounded text-sm hover:opacity-90">
+            Proposer mon thème à nouveau
+          </button>
+        </>
+      )}
     </div>
   )
 }

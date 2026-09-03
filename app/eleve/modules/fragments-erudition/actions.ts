@@ -50,6 +50,7 @@ export async function proposerTheme(formData: FormData) {
     : await admin.from('fragments_themes').insert({ inscription_id: inscriptionId, semestre_id: semestreId, eleve_id: userId, theme, description, propose_at: maintenant })
   if (error) return { error: `Le thème n’a pas été enregistré : ${error.message}` }
   revalidatePath('/eleve/modules/fragments-erudition')
+  revalidatePath('/eleve') // une nouvelle proposition éteint le commentaire du professeur (tâche « à faire »)
   revalidatePath('/prof/fragments-erudition/suivi')
   revalidatePath('/prof')
   return { success: true }
