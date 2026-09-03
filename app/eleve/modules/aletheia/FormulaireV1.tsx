@@ -22,6 +22,9 @@ interface Props {
    * d'avant, à l'octet près (porte fermée, ou page qui ne les passe pas).
    */
   libelles?: LibellesSeance
+  /** (E5) Rappel d'ouverture demandé (porte ouverte, à partir de la deuxième séance exposée). */
+  avecRappel?: boolean
+  rappelInitial?: string
 }
 
 const champClasse =
@@ -41,9 +44,10 @@ function Etiquette({ titre, detail }: { titre: string; detail?: string }) {
 export default function FormulaireV1({
   livreId, semaine,
   theseInitial = '', argumentsInitial = '', accordInitial = '', questionsInitial = '', vocabulaireInitial = '', champFixeInitial = '',
-  aides = AIDES_V1_DEFAUT, libelles,
+  aides = AIDES_V1_DEFAUT, libelles, avecRappel = false, rappelInitial = '',
 }: Props) {
   const router = useRouter()
+  const [rappel, setRappel] = useState(rappelInitial)
   const [these, setThese] = useState(theseInitial)
   const [args, setArgs] = useState(argumentsInitial)
   const [accord, setAccord] = useState(accordInitial)
@@ -72,6 +76,7 @@ export default function FormulaireV1({
       const res = await soumettreV1(livreId, semaine, {
         these, arguments: args, accord, questions: qs, vocabulaire: voc,
         ...(avecFixe ? { champ_fixe: champFixe } : {}),
+        ...(avecRappel ? { rappel } : {}),
       })
       if (res?.error) { setErreur(res.error); return }
       // Rendu accepté mais signalé « petit malin » : on montre le message avant de continuer.
@@ -102,6 +107,14 @@ export default function FormulaireV1({
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
+      {avecRappel && (
+        <div className="bg-parchemin-fonce/60 border border-bordure rounded-xl p-3">
+          <Etiquette titre="Avant de commencer : sans relire, quelle était l’idée de la séance dernière ?" />
+          <textarea value={rappel} onChange={e => setRappel(e.target.value)} rows={2}
+            placeholder="Trois lignes, de mémoire. Tu sauras au retour si tu l’avais."
+            className={champClasse} />
+        </div>
+      )}
       <div>
         {g ? <Etiquette titre={g.champ1.question} /> : <Etiquette titre="Idée principale" detail="— ce que dit le chapitre, selon toi" />}
         <textarea value={these} onChange={e => setThese(e.target.value)} rows={3}

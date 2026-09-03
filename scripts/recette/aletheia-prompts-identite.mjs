@@ -3,6 +3,7 @@
 // sont IDENTIQUES À L'OCTET PRÈS à ceux d'avant E3 (fixture prise le 03/09 avant la
 // première retouche). C'est la garantie « porte fermée ⇒ rien ne change ».
 //   node --import ./scripts/register-calibration-resolver.mjs scripts/recette/aletheia-prompts-identite.mjs
+// E5 : les placeholders {bloc_passages} / {bloc_rappel} / {bloc_reponses} sont vidés de même.
 // (Pas un test `npm test` : aletheia-retours.ts importe `server-only` et des alias `@/`
 //  que le résolveur des tests ne connaît pas ; le résolveur de calibration, si.)
 // ============================================================================
@@ -21,7 +22,7 @@ const apres = {
 }
 let ko = 0
 for (const [cle, texte] of Object.entries(apres)) {
-  const assemble = assemblerPrompt(texte, '')
+  const assemble = assemblerPrompt(texte, '').split('{bloc_passages}').join('').split('{bloc_rappel}').join('').split('{bloc_reponses}').join('')
   const ok = assemble === avant[cle]
   if (!ok) {
     ko++

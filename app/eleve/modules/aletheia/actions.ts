@@ -11,6 +11,7 @@ import { messageSiBloque, signalerStrikeAuto } from '@/utils/integrite'
 import { messageSiRetoursNonLus } from '@/utils/retours-lus'
 import { detecterRenduVideTexte, detecterAveuHeuristique } from '@/utils/detecteur-integrite'
 import { lireLaPorteEtayage } from '@/utils/aletheia/decoupage-serveur'
+import { rangDeSeance } from '@/utils/aletheia/gabarit-serveur'
 import type { StatutAletheia } from './types'
 
 // Bornes serveur sur le texte élève (anti-coût : tout est injecté dans le prompt IA ;
@@ -31,6 +32,8 @@ export interface SaisieV1 {
   vocabulaire: string[]
   /** (E3) Réponse à la question FIXE du gabarit dialogué. Ignorée hors dialogué / porte fermée. */
   champ_fixe?: string
+  /** (E5) Rappel d'ouverture : « sans relire, quelle était l'idée de la séance dernière ? ». Ignoré porte fermée / première séance. */
+  rappel?: string
 }
 
 export interface SaisieVf {
@@ -138,6 +141,8 @@ export async function soumettreV1(livreId: string, semaine: number, saisie: Sais
     ...(forme ? { forme } : {}),
     ...(etayage ? { tournante_cle: gab.libelles.tournante.cle } : {}),
     ...(etayage && gab.libelles.champFixe ? { champ_fixe: champFixe } : {}),
+    // (E5) Le rappel n'existe qu'à partir de la deuxième séance exposée ; vide toléré.
+    ...(etayage && rangDeSeance(exposeesV1, semaine) > 0 ? { rappel: (saisie?.rappel ?? '').trim().slice(0, MAX_TEXTE) || null } : {}),
   }
   // (C1/A3) Chemin update : compare-and-set sur statut='DRAFT' — c'était la seule
   // écriture non-CAS de la machine à états (course double-clic / 2 onglets : double
@@ -348,6 +353,43 @@ export async function relancerRetour(livreId: string, semaine: number) {
     else await mod.genererRetourVf(travailId)
   })
 
+  revalider(livreId, semaine)
+  return { success: true }
+}
+
+// (E5) FEEDBACK1_READY : l'élève RÉPOND aux relances AVANT de réécrire. Une réponse par
+// relance, stockée sur le travail (`reponses_relances`), injectée dans l'appel VF. Porte
+// ouverte seulement ; le statut ne bouge pas. Compare-and-set sur FEEDBACK1_READY.
+export async function repondreRelances(livreId: string, semaine: number, reponses: string[]) {
+  const { supabase, userId } = await verifierEleve()
+  const admin = createAdminClient()
+  if (!(await lireLaPorteEtayage(admin))) return { error: 'Cette étape n’est pas ouverte.' }
+  const { resolue: active } = await resoudreInscriptionLivre(admin, supabase, userId, livreId)
+  if (!active) return { error: 'Ce livre ne t\'est pas accessible.' }
+  const { exposees } = await modeExposition(admin, livreId, active.classe_id)
+  if (!dansExtrait(exposees, semaine)) return { error: 'Cette séance ne fait pas partie de ton parcours.' }
+
+  const { data: row } = await admin
+    .from('aletheia_travaux')
+    .select('id, statut, retour_v1')
+    .eq('eleve_id', userId).eq('scriptorium_livre_id', livreId).eq('semaine_index', semaine)
+    .maybeSingle()
+  if (!row) return { error: 'Commence par soumettre ton travail.' }
+  if (row.statut !== 'FEEDBACK1_READY') return { error: 'Les réponses aux relances ne sont pas disponibles à cette étape.' }
+  const relances = ((row.retour_v1 as { relances?: unknown } | null)?.relances ?? []) as unknown[]
+  const textes = (Array.isArray(reponses) ? reponses : []).map(r => (typeof r === 'string' ? r.trim() : ''))
+  if (relances.length === 0) return { error: 'Aucune relance à laquelle répondre.' }
+  for (let i = 0; i < relances.length; i++) {
+    if (!textes[i]) return { error: `Réponds à la relance ${i + 1} avant de passer à la réécriture.` }
+    if (textes[i].length > MAX_TEXTE) return { error: 'Une de tes réponses est trop longue (limite ~8000 caractères).' }
+  }
+  const reponses_relances = relances.map((_, i) => ({ relance: i, texte: textes[i] }))
+  const { data: cas, error } = await admin.from('aletheia_travaux')
+    .update({ reponses_relances, updated_at: new Date().toISOString() })
+    .eq('id', row.id).eq('eleve_id', userId).eq('statut', 'FEEDBACK1_READY')
+    .select('id').maybeSingle()
+  if (error) return { error: error.message }
+  if (!cas) return { error: 'Les réponses aux relances ne sont pas disponibles à cette étape.' }
   revalider(livreId, semaine)
   return { success: true }
 }

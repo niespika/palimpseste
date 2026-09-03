@@ -40,11 +40,24 @@ function Liste({ items }: { items: string[] }) {
 export function VueRetourV1({ retour, montrerRemarque = false, titres }: {
   retour: RetourV1; montrerRemarque?: boolean; titres?: { relances: string; tournante: string }
 }) {
+  const rappel = retour.rappel
+  const detail = retour.relances_detail
   return (
     <div className="space-y-3">
+      {rappel && (
+        <Bulle titre={rappel.verdict === 'juste' ? 'Ton rappel de la séance dernière : juste' : rappel.verdict === 'partiel' ? 'Ton rappel de la séance dernière : en partie' : 'Ton rappel de la séance dernière : à côté'} accent={rappel.verdict === 'juste' ? 'green' : 'amber'}>
+          <p className="text-sm text-encre-douce whitespace-pre-wrap">{rappel.phrase}</p>
+        </Bulle>
+      )}
       {retour.relances?.length > 0 && (
         <Bulle titre={titres?.relances ?? 'Pour creuser ton idée et tes arguments'} accent="violet">
-          <Liste items={retour.relances} />
+          {detail && detail.length === retour.relances.length ? (
+            <ul className="list-disc list-inside space-y-1.5 text-sm text-encre-douce">
+              {detail.map((d, i) => (
+                <li key={i}>{d.question}{d.libelle && <span className="block ml-5 text-xs text-muet">À chercher : {d.libelle}</span>}</li>
+              ))}
+            </ul>
+          ) : <Liste items={retour.relances} />}
         </Bulle>
       )}
       {retour.accord && (

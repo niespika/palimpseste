@@ -27,7 +27,7 @@ export function estGabarit(x: unknown): x is Gabarit {
 export interface Champ { question: string; aide: string }
 
 /** Une question tournante : sa clé (stable, pour le cycle) et son texte. */
-export interface Tournante { cle: string; question: string; aide: string }
+export interface Tournante { cle: string; question: string; aide: string; /** Titre de la bulle du retour pour cette question ; absent ⇒ celui du gabarit. */ bulle?: string }
 
 export interface DefinitionGabarit {
   nom: string
@@ -59,9 +59,9 @@ const ARGUMENTATIF: DefinitionGabarit = {
   champFixe: null,
   tournantes: [
     { cle: 'accord', question: 'Es-tu d’accord avec ce que dit l’auteur ?', aide: 'Une fois l’idée comprise : qu’en penses-tu, et pour quelles raisons ?' },
-    { cle: 'objection', question: 'Quelle objection lui adresserais-tu ?', aide: 'Un point où tu résisterais à l’auteur, et pourquoi.' },
-    { cle: 'destinataire', question: 'À qui parle-t-il, et que veut-il qu’on fasse ?', aide: 'Le lecteur qu’il vise, et ce qu’il attend de lui.' },
-    { cle: 'exemple', question: 'Donne un exemple qui illustre ou contredit son idée.', aide: 'Un cas concret, tiré de ta vie ou de tes lectures.' },
+    { cle: 'objection', question: 'Quelle objection lui adresserais-tu ?', aide: 'Un point où tu résisterais à l’auteur, et pourquoi.', bulle: 'Sur ton objection' },
+    { cle: 'destinataire', question: 'À qui parle-t-il, et que veut-il qu’on fasse ?', aide: 'Le lecteur qu’il vise, et ce qu’il attend de lui.', bulle: 'Sur le destinataire' },
+    { cle: 'exemple', question: 'Donne un exemple qui illustre ou contredit son idée.', aide: 'Un cas concret, tiré de ta vie ou de tes lectures.', bulle: 'Sur ton exemple' },
   ],
   questions: { question: 'As-tu des questions à lui poser ?', aide: 'Une question par ligne…\nEx. : Pourquoi Nietzsche oppose-t-il Apollon et Dionysos ?' },
   vocabulaire: { question: 'Quels mots n’as-tu pas compris ?', aide: 'Un mot par ligne…\nIls deviendront des cartes à réviser dans Quazian.' },
@@ -78,8 +78,8 @@ const DIALOGUE: DefinitionGabarit = {
   champFixe: { question: 'Quelle est la thèse que l’auteur préfère, selon toi ? Qu’est-ce qui te le fait dire ?', aide: 'L’auteur n’est pas forcément celui qui parle le plus. Dis où tu l’entends, lui.' },
   tournantes: [
     { cle: 'convainc', question: 'Quelle idée du texte te convainc ?', aide: 'Celle que tu défendrais, et pourquoi.' },
-    { cle: 'faible', question: 'Laquelle te paraît la plus faible ?', aide: 'Celle qui te résiste, et ce qui lui manque.' },
-    { cle: 'hesitation', question: 'Où hésites-tu sur ce que l’auteur pense vraiment ?', aide: 'Un passage où tu ne sais pas s’il parle sérieusement.' },
+    { cle: 'faible', question: 'Laquelle te paraît la plus faible ?', aide: 'Celle qui te résiste, et ce qui lui manque.', bulle: 'Sur l’idée la plus faible' },
+    { cle: 'hesitation', question: 'Où hésites-tu sur ce que l’auteur pense vraiment ?', aide: 'Un passage où tu ne sais pas s’il parle sérieusement.', bulle: 'Sur ton hésitation' },
   ],
   questions: ARGUMENTATIF.questions,
   vocabulaire: ARGUMENTATIF.vocabulaire,
@@ -96,8 +96,8 @@ const APHORISTIQUE: DefinitionGabarit = {
   champFixe: null,
   tournantes: [
     { cle: 'obscur', question: 'Quel passage n’arrives-tu vraiment pas à comprendre, et d’après toi pourquoi t’échappe-t-il ?', aide: 'Recopie-le, et dis ce qui bloque : un mot, une image, le lien avec le reste.' },
-    { cle: 'fil', question: 'Quel fil vois-tu entre ce passage et un autre de la séance ?', aide: 'Deux fragments qui se répondent, et ce qui les relie.' },
-    { cle: 'accord', question: 'Es-tu d’accord avec lui ?', aide: 'Et pour quelles raisons.' },
+    { cle: 'fil', question: 'Quel fil vois-tu entre ce passage et un autre de la séance ?', aide: 'Deux fragments qui se répondent, et ce qui les relie.', bulle: 'Sur le fil que tu vois' },
+    { cle: 'accord', question: 'Es-tu d’accord avec lui ?', aide: 'Et pour quelles raisons.', bulle: 'Sur ton accord' },
   ],
   questions: ARGUMENTATIF.questions,
   vocabulaire: ARGUMENTATIF.vocabulaire,
@@ -114,8 +114,8 @@ const ANALYTIQUE: DefinitionGabarit = {
   champFixe: null,
   tournantes: [
     { cle: 'interet', question: 'Penses-tu que les idées que développe l’auteur ont leur intérêt ?', aide: 'Lesquelles, et pourquoi elles valent la peine — ou non.' },
-    { cle: 'contre_exemple', question: 'Connais-tu une œuvre ou un cas qui ne rentre pas dans les définitions ou les outils que propose l’auteur ?', aide: 'Et ce que ça dit de la définition ou de l’outil.' },
-    { cle: 'distinction', question: 'Quelle distinction de l’auteur te semble la plus utile ?', aide: 'Et à quoi elle te servirait.' },
+    { cle: 'contre_exemple', question: 'Connais-tu une œuvre ou un cas qui ne rentre pas dans les définitions ou les outils que propose l’auteur ?', aide: 'Et ce que ça dit de la définition ou de l’outil.', bulle: 'Sur ton contre-exemple' },
+    { cle: 'distinction', question: 'Quelle distinction de l’auteur te semble la plus utile ?', aide: 'Et à quoi elle te servirait.', bulle: 'Sur la distinction que tu retiens' },
   ],
   questions: ARGUMENTATIF.questions,
   vocabulaire: ARGUMENTATIF.vocabulaire,
@@ -158,10 +158,13 @@ export interface LibellesSeance {
 
 export function libellesSeance(gabarit: Gabarit, cycle: readonly string[] | null | undefined, rang: number): LibellesSeance {
   const def = DEFINITIONS[gabarit]
+  const tournante = questionTournante(gabarit, cycle, rang)
   return {
     gabarit, champ1: def.champ1, champ2: def.champ2, champFixe: def.champFixe,
-    tournante: questionTournante(gabarit, cycle, rang),
-    questions: def.questions, vocabulaire: def.vocabulaire, bulles: def.bulles,
+    tournante,
+    questions: def.questions, vocabulaire: def.vocabulaire,
+    // La bulle du retour suit la question POSÉE (E5 : « Sur ce qui te convainc » coiffait une réponse sur l'idée la plus faible).
+    bulles: { relances: def.bulles.relances, tournante: tournante.bulle ?? def.bulles.tournante },
   }
 }
 

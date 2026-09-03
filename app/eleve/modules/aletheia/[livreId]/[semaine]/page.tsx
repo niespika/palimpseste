@@ -16,7 +16,8 @@ import { retoursNonLus } from '@/utils/retours-lus'
 import AtelierDeuxColonnes from '@/components/AtelierDeuxColonnes'
 import Pastille from '@/components/Pastille'
 import { StepperNomme } from '@/components/aletheia/Steppers'
-import { contexteGabarit } from '@/utils/aletheia/gabarit-serveur'
+import { contexteGabarit, rangDeSeance } from '@/utils/aletheia/gabarit-serveur'
+import ReponsesRelances from '../../ReponsesRelances'
 import type { TravailAletheia } from '../../types'
 
 function Bloc({ titre, children }: { titre: string; children: React.ReactNode }) {
@@ -221,9 +222,17 @@ export default async function PageSemaineAletheia({ params }: { params: Promise<
   const gab = await contexteGabarit(admin, livreId, semaine, exposees)
   const libelles = gab.etayage ? gab.libelles : undefined
   const titresRetour = gab.etayage ? gab.libelles.bulles : undefined
+  // (E5) Rappel d'ouverture à partir de la deuxième séance exposée, porte ouverte.
+  const avecRappel = gab.etayage && rangDeSeance(exposees, semaine) > 0
   const travaux = await travauxParSemaine(admin, user.id, livreId)
   const t: TravailAletheia | null = travaux.get(semaine) ?? null
   const statut = t?.statut ?? 'DRAFT'
+  // (E5) Les relances attendent une réponse avant la réécriture, porte ouverte : tant
+  // que `reponses_relances` ne couvre pas toutes les relances, l'atelier de réécriture
+  // est remplacé par les cases de réponse.
+  const relancesV1 = t?.retour_v1?.relances ?? []
+  const reponsesRelances = (t?.reponses_relances ?? []).filter(r => typeof r?.texte === 'string' && r.texte.trim())
+  const doitRepondre = gab.etayage && statut === 'FEEDBACK1_READY' && relancesV1.length > 0 && reponsesRelances.length < relancesV1.length
   // Date de clôture : retour_vf_lu_at (posé exactement à FEEDBACK2_READY→DONE),
   // repli sur updated_at par robustesse.
   const dateFin = fmtJourMois(t?.retour_vf_lu_at ?? t?.updated_at)
@@ -325,6 +334,18 @@ export default async function PageSemaineAletheia({ params }: { params: Promise<
             )
           })()}
         </Bloc>
+      ) : statut === 'FEEDBACK1_READY' && t?.retour_v1 && doitRepondre ? (
+        // (E5) Répondre aux relances AVANT de réécrire : retour à gauche, cases à droite.
+        <AtelierDeuxColonnes
+          labelRetour="Ton retour"
+          labelFormulaire="Tes réponses aux relances"
+          retour={<VueRetourV1 retour={t.retour_v1} montrerRemarque={evalQuestions} titres={titresRetour} />}
+          formulaire={
+            <div className="bg-surface border border-bordure rounded-xl p-4 sm:p-5">
+              <ReponsesRelances livreId={livreId} semaine={semaine} relances={relancesV1} detail={t.retour_v1.relances_detail} />
+            </div>
+          }
+        />
       ) : statut === 'FEEDBACK1_READY' && t?.retour_v1 ? (
         // Réécriture — atelier 2 colonnes SEUL : le retour reste sous les yeux.
         <>
@@ -336,7 +357,19 @@ export default async function PageSemaineAletheia({ params }: { params: Promise<
           <AtelierDeuxColonnes
             labelRetour="Ton retour"
             labelFormulaire="Ta version finale"
-            retour={<VueRetourV1 retour={t.retour_v1} montrerRemarque={evalQuestions} titres={titresRetour} />}
+            retour={
+              <div className="space-y-3">
+                <VueRetourV1 retour={t.retour_v1} montrerRemarque={evalQuestions} titres={titresRetour} />
+                {reponsesRelances.length > 0 && (
+                  <section className="bg-surface border border-bordure border-l-4 border-l-pigment rounded-xl p-4">
+                    <h4 className="text-sm font-medium text-encre mb-2">Ce que tu as répondu aux relances</h4>
+                    <ul className="space-y-1.5 text-sm text-encre-douce">
+                      {reponsesRelances.map((r, i) => <li key={i}><span className="text-muet">{r.relance + 1}.</span> {r.texte}</li>)}
+                    </ul>
+                  </section>
+                )}
+              </div>
+            }
             formulaire={
               <div className="bg-surface border border-bordure rounded-xl p-4 sm:p-5">
                 <FormulaireVf
@@ -372,6 +405,8 @@ export default async function PageSemaineAletheia({ params }: { params: Promise<
               champFixeInitial={t?.champ_fixe ?? ''}
               aides={aides}
               libelles={libelles}
+              avecRappel={avecRappel}
+              rappelInitial={t?.rappel ?? ''}
             />
           </Bloc>
         </>

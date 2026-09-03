@@ -13,6 +13,8 @@ export type StatutAletheia =
 export interface DefinitionVocabulaire {
   terme: string
   definition: string
+  // (E5) Lemme rendu par le modèle, pour la déduplication des cartes (porte ouverte).
+  terme_canonique?: string
 }
 
 // Sortie du retour V1 — socratique, par section (SPEC §2.1). Un seul appel IA,
@@ -21,6 +23,10 @@ export interface RetourV1 {
   // Thèse + Arguments : relances socratiques (questions renvoyant à un passage),
   // priorisées et plafonnées (ergonomie ado). On ne corrige pas, on questionne.
   relances: string[]
+  // (E5, porte ouverte) Les mêmes relances avec le passage clé désigné et ce que l'élève cherche.
+  relances_detail?: import('@/utils/aletheia/retour-v1').RelanceDetail[]
+  // (E5, porte ouverte) Le rappel d'ouverture jugé contre la fiche de la séance précédente.
+  rappel?: import('@/utils/aletheia/retour-v1').RappelJuge | null
   // Accord : révélateur de compréhension — vérifie la lecture puis pousse à
   // nuancer/justifier. Pas de recherche d'objection. Court.
   accord: string | null
@@ -85,6 +91,8 @@ export interface TravailAletheia {
   champ_fixe?: string | null           // question FIXE du gabarit dialogué, V1
   champ_fixe_vf?: string | null        // la même, VF
   tournante_cle?: string | null        // clé de la question tournante posée à cette séance
+  rappel?: string | null               // (E5) rappel d'ouverture
+  reponses_relances?: { relance: number; texte: string }[] | null   // (E5) réponses aux relances, avant la réécriture
 }
 
 // Capstone : carte d'architecture finale du LIVRE (partagée, canonique).
