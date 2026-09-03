@@ -5,7 +5,8 @@ import { createClient } from '@/utils/supabase/server'
 import { createAdminClient } from '@/utils/supabase/admin'
 import { collecterCheminsInscriptions, retirerFichiers } from '@/utils/effacement'
 import {
-  prendreLeDossierN3, examinerLaContestation, confirmerLeFaisceau, type Issue,
+  prendreLeDossierN3, examinerLaContestation, confirmerLeFaisceau, ecarterLesCitationsComposees,
+  type Issue, type RefRetour,
 } from '@/utils/pilotage/gestes-serveur'
 
 async function verifierProf() {
@@ -366,4 +367,23 @@ export async function actionConfirmerFaisceau(
   // L'atelier d'intégrité montre la même ligne : il doit la voir partir aussi.
   revalidatePath('/prof/integrite')
   return r
+}
+
+/**
+ * ⭐ « J'AI VU, J'EFFACE » — sur une citation composée, ou sur TOUTES celles de
+ *    la page. Chaque `ref` a la forme `depotId|moment`, celle que le drapeau
+ *    porte dans `geste.ref`. ⚠️ Rien d'autre ne passe : pas de texte libre.
+ */
+export async function actionEcarterCitationsComposees(
+  classeId: string, refs: string[],
+): Promise<Issue> {
+  await verifierProfEtRendreLId()
+  const cibles: RefRetour[] = []
+  for (const ref of refs) {
+    const [depotId, moment] = ref.split('|')
+    if (depotId && (moment === 'chaud' || moment === 'final')) cibles.push({ depotId, moment })
+  }
+  const r = await ecarterLesCitationsComposees(createAdminClient(), cibles)
+  if (r.ok && r.effaces > 0) revalider(classeId)
+  return { ok: r.ok, message: r.message }
 }

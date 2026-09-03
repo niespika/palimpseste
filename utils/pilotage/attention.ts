@@ -60,8 +60,14 @@ export const LIBELLE_NATURE: Record<NatureDrapeau, string> = {
 
 /** Le geste que le professeur peut faire sur un drapeau — quand il y en a un. */
 export interface GesteDrapeau {
-  /** L'action serveur qui l'exécute. */
-  action: 'traiter_n3' | 'traiter_contestation' | 'confirmer_faisceau'
+  /**
+   * L'action serveur qui l'exécute.
+   * ⭐ 02/09 — `ecarter_citation` : « j'ai vu, j'efface » sur une citation
+   *    composée. Le seul geste de la liste qui ne marque pas un TRAITEMENT mais
+   *    un EFFACEMENT — demandé quand l'OCR d'une copie a rendu des citations
+   *    « introuvables » qui étaient bien dans la copie.
+   */
+  action: 'traiter_n3' | 'traiter_contestation' | 'confirmer_faisceau' | 'ecarter_citation'
   /** Ce qu'elle vise, sous la forme que l'action sait lire. */
   ref: string
   /** Le mot du bouton. */

@@ -44,6 +44,7 @@ import { PHRASE_SIGNAL, type DistributionFaisceau } from '@/utils/integrite-fais
 //    donc PAS descendre des fermetures `'use server'` en props.
 import {
   actionTraiterDossierN3, actionExaminerContestation, actionConfirmerFaisceau,
+  actionEcarterCitationsComposees,
 } from '@/app/prof/classes/actions'
 
 /** La teinte de chaque nature. Trois natures appellent un geste, deux non. */
@@ -52,8 +53,9 @@ const TEINTE_NATURE: Record<NatureDrapeau, string> = {
   faisceau_integrite: 'border-attention/40 bg-attention-teinte',
   // ⭐ La citation composée porte la teinte du RETARD, comme le dossier N3 :
   //    c'est la plateforme qui a fauté, et un élève a pu lire une phrase qu'il
-  //    n'a pas écrite. ⚠️ Elle n'a AUCUN geste ici — le professeur corrige ou
-  //    retire le retour à son écran, pas depuis cette liste.
+  //    n'a pas écrite. ⚠️ Corriger ou retirer le retour se fait à son écran, pas
+  //    depuis cette liste ; ici, le seul geste est « Effacer » le signal (02/09 :
+  //    l'OCR avait mal lu des copies, et 19 signaux n'avaient rien à corriger).
   citation_composee: 'border-retard/40 bg-retard-teinte',
   contestations_repetees: 'border-attention/40 bg-attention-teinte',
   fraicheur_ancre: 'border-bordure bg-parchemin-fonce',
@@ -72,7 +74,9 @@ function LigneDrapeau({ d, classeId }: { d: Drapeau; classeId: string }) {
         ? await actionTraiterDossierN3(classeId, a, b, c)
         : d.geste!.action === 'traiter_contestation'
           ? await actionExaminerContestation(classeId, a, b)
-          : await actionConfirmerFaisceau(classeId, d.geste!.ref)
+          : d.geste!.action === 'ecarter_citation'
+            ? await actionEcarterCitationsComposees(classeId, [d.geste!.ref])
+            : await actionConfirmerFaisceau(classeId, d.geste!.ref)
       setRetour(r.message)
     })
   }
@@ -130,6 +134,40 @@ function LigneDrapeau({ d, classeId }: { d: Drapeau; classeId: string }) {
   )
 }
 
+/**
+ * ⭐ « TOUT EFFACER » — les citations composées d'un coup. Sur T5, le 02/09, la
+ *    page en portait 19 : un bouton par ligne ne suffit pas quand la cause est
+ *    une transcription de copies fausse pour toute la classe. ⛔ Il n'efface
+ *    QUE cette nature : un dossier N3 ou un faisceau ne s'effacent pas en lot.
+ */
+function ToutEffacerLesCitations({ classeId, refs }: { classeId: string; refs: string[] }) {
+  const [enCours, demarrer] = useTransition()
+  const [retour, setRetour] = useState<string | null>(null)
+  if (refs.length < 2) return null
+  return (
+    <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg border
+                    border-dashed border-bordure px-3 py-2">
+      <p className="font-corps text-xs text-encre-douce min-w-0">
+        {refs.length} signaux de citation composée. Si la copie a été mal transcrite, ils n’ont
+        rien à corriger.
+      </p>
+      <button
+        type="button"
+        disabled={enCours || retour !== null}
+        onClick={() => demarrer(async () => {
+          const r = await actionEcarterCitationsComposees(classeId, refs)
+          setRetour(r.message)
+        })}
+        className="font-ui text-sm px-3 py-1.5 rounded-lg border border-bordure bg-surface
+                   text-encre hover:bg-parchemin-fonce disabled:opacity-50 shrink-0"
+      >
+        {enCours ? '…' : `Effacer les ${refs.length} signaux`}
+      </button>
+      {retour && <p className="font-ui text-xs text-ok basis-full">{retour}</p>}
+    </div>
+  )
+}
+
 export default function BlocAttention({
   classeId, drapeaux, distribution, distributionFaisceau, reglages, cyclesConnus, incidents,
   regarde,
@@ -162,6 +200,11 @@ export default function BlocAttention({
           {regarde.depotsMaison} dépôt{regarde.depotsMaison > 1 ? 's' : ''} maison au faisceau
         </p>
       </div>
+
+      <ToutEffacerLesCitations
+        classeId={classeId}
+        refs={drapeaux.filter((d) => d.geste?.action === 'ecarter_citation').map((d) => d.geste!.ref)}
+      />
 
       {drapeaux.length > 0 ? (
         <ul className="space-y-2">

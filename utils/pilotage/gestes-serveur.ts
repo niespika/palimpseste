@@ -125,3 +125,55 @@ export async function confirmerLeFaisceau(
   await confirmerSignalement(admin, signalementId, acteurId)
   return { ok: true, message: 'Faisceau confirmé. Aucun strike n’a été compté, rien n’est bloqué.' }
 }
+
+/** Ce qu'un drapeau « citation composée » désigne : un retour, par dépôt × moment. */
+export interface RefRetour { depotId: string; moment: string }
+
+/**
+ * ⭐ « J'AI VU, J'EFFACE » — LE QUATRIÈME GESTE, demandé par Louis le 02/09.
+ *
+ * Le drapeau « citation composée » se DÉRIVE à la lecture (`attention-serveur.ts`)
+ * et n'avait aucun geste : « le geste vit à l'écran du retour : corriger, ou
+ * retirer ». Mais quand l'OCR a mal lu la copie, les citations « introuvables »
+ * y sont bel et bien, et il n'y a rien à corriger — seulement un signal à faire
+ * partir. C'est ce que cette écriture marque : `citation_composee_ecartee_at`
+ * sur le retour. ⛔ Elle ne touche ni le texte du retour, ni sa publication,
+ *    ni la mesure : le retour reste ce qu'il est, il ne remonte plus.
+ *
+ * ⭐ UNE LISTE, PAS UN SEUL : le bouton « Tout effacer » de la page passe les
+ *    19 drapeaux d'un coup, et une écriture par moment suffit (`.in()` sur les
+ *    dépôts). Idempotent par compare-and-set (`.is(…, null)`) : le premier
+ *    geste date, les suivants ne réécrivent rien.
+ * ⚠️ La colonne peut manquer (migration pas encore jouée) : `supabase-js` ne
+ *    lève pas, on lit `error` et on le dit.
+ */
+export async function ecarterLesCitationsComposees(
+  admin: Admin, refs: readonly RefRetour[], maintenant = new Date().toISOString(),
+): Promise<Issue & { effaces: number }> {
+  if (refs.length === 0) return { ok: true, effaces: 0, message: 'Rien à effacer.' }
+  const parMoment = new Map<string, string[]>()
+  for (const r of refs) parMoment.set(r.moment, [...(parMoment.get(r.moment) ?? []), r.depotId])
+  let effaces = 0
+  for (const [moment, depotIds] of parMoment) {
+    const { data, error } = await admin
+      .from('exercices_retours')
+      .update({ citation_composee_ecartee_at: maintenant, updated_at: maintenant })
+      .eq('moment', moment)
+      .in('depot_id', depotIds)
+      .is('citation_composee_ecartee_at', null)
+      .select('id')
+    if (error) {
+      return { ok: false, effaces, message: `Le signal n’a pas été effacé : ${error.message}` }
+    }
+    effaces += data?.length ?? 0
+  }
+  if (effaces === 0) {
+    return { ok: true, effaces, message: 'Ce signal était déjà effacé — rien n’a été réécrit.' }
+  }
+  return {
+    ok: true, effaces,
+    message: effaces === 1
+      ? 'Signal effacé. Le retour, lui, n’a pas bougé.'
+      : `${effaces} signaux effacés. Les retours, eux, n’ont pas bougé.`,
+  }
+}

@@ -854,12 +854,21 @@ async function drapeauxDuFaisceau(
  * pour que l'élève ne soit pas puni d'un défaut du modèle. **Décision de
  * Louis : à ce moment-là, le professeur doit le voir.** Le voici.
  *
- * ⛔ AUCUNE COLONNE, AUCUNE MIGRATION, ET C'EST DÉLIBÉRÉ. Le fait est
+ * ⛔ LE DRAPEAU N'A AUCUNE COLONNE, ET C'EST DÉLIBÉRÉ. Le fait est
  *    ENTIÈREMENT DÉRIVABLE de ce que la base porte déjà — le retour et la
  *    production —, et ce module ne fait que cela : « il n'y a rien à recalculer,
  *    il y a un canal à ouvrir entre un calcul et un écran ». Écrire un drapeau
  *    en base ferait une TRACE à côté de la CHOSE, qui divergerait le jour où un
  *    professeur corrigerait le retour.
+ * ⭐ 02/09 — LE GESTE, LUI, A UNE COLONNE : `citation_composee_ecartee_at` sur
+ *    le retour (`citation_composee_ecartee.sql`). Louis : « l'OCR de copies de
+ *    mes élèves n'était pas fiable […] ils sont toujours là, mais je ne peux pas
+ *    les effacer ». Quand la transcription a mal lu la copie, la citation
+ *    « introuvable » y est pourtant : il n'y a rien à corriger, seulement un
+ *    signal à effacer. La colonne marque QU'UN HUMAIN A REGARDÉ — comme
+ *    `dossier_n3_traite_at` —, et le calcul, lui, ne change pas d'un mot.
+ *    ⚠️ Elle se lit par une requête SÉPARÉE et TOLÉRANTE : absente (migration
+ *       pas encore jouée), rien n'est écarté et l'écran porte un incident.
  * ⭐ Conséquence heureuse : **les 40 retours DÉJÀ SERVIS remontent**, sans
  *    qu'on ait à rejouer quoi que ce soit. *Éprouvé sur les données de
  *    production le 31/08 : 40 drapeaux sur 67 retours, dont 26 publiés.*
@@ -899,6 +908,24 @@ async function drapeauxDeCitationComposee(
   if (production.size === 0) return []
 
   const depotIds = [...production.keys()]
+
+  // ⭐ Les retours dont le professeur a EFFACÉ le drapeau — lecture séparée,
+  //    pour que la colonne manquante ne fasse pas tomber les 19 drapeaux avec.
+  const ecartes = new Set<string>()
+  for (let debut = 0; debut < depotIds.length; debut += 200) {
+    const { data, error } = await admin.from('exercices_retours')
+      .select('depot_id, moment')
+      .in('depot_id', depotIds.slice(debut, debut + 200))
+      .not('citation_composee_ecartee_at', 'is', null)
+    if (error) {
+      incidents.push(`les signaux effacés (citations composées) : ${error.message}`)
+      break
+    }
+    for (const r of (data ?? []) as Array<{ depot_id: string; moment: string }>) {
+      ecartes.add(`${r.depot_id}|${r.moment}`)
+    }
+  }
+
   const drapeaux: Drapeau[] = []
   for (let debut = 0; debut < depotIds.length; debut += 200) {
     const { data, error } = await admin.from('exercices_retours')
@@ -916,6 +943,8 @@ async function drapeauxDeCitationComposee(
       // ⭐ Un retour que le professeur a DÉJÀ réécrit n'a plus à être signalé :
       //    il a fait le geste que ce drapeau appelle.
       if (r.texte_edite_par_prof) continue
+      // ⭐ Et un signal qu'il a EFFACÉ ne se relève pas.
+      if (ecartes.has(`${r.depot_id}|${r.moment}`)) continue
 
       // ⚠️ Sans copie, on ne conclut rien — un drapeau levé faute de production
       //    ferait relire au professeur un retour dont rien ne prouve le défaut.
@@ -955,9 +984,11 @@ async function drapeauxDeCitationComposee(
         eleveNom: nomDe.get(prod.eleveId) ?? '?',
         cle: `citation|${r.depot_id}|${r.moment}`,
         phrase: `${n} citation${n > 1 ? 's' : ''} du retour ${r.moment} `
-          + `${n > 1 ? 'sont introuvables' : 'est introuvable'} dans la copie de l'élève — `
-          + 'le modèle l’a composée. Le retour a été servi quand même, après trois tentatives, '
-          + 'pour ne pas laisser l’élève sans rien : à toi de le corriger ou de le retirer.',
+          + `${n > 1 ? 'sont introuvables' : 'est introuvable'} dans la copie de l'élève `
+          + `telle que la plateforme l’a lue — le modèle ${n > 1 ? 'les a composées' : 'l’a composée'}, `
+          + 'ou la transcription de la copie est fausse. '
+          + 'Le retour a été servi quand même : à toi de le corriger, de le retirer — '
+          + 'ou d’effacer ce signal s’il n’a pas lieu d’être.',
         detail: [
           ...composees.map((c) => `« ${c.length > 120 ? `${c.slice(0, 120)}…` : c} »`),
           r.published_at
@@ -966,7 +997,8 @@ async function drapeauxDeCitationComposee(
         ],
         at: r.created_at,
         enTete: false,
-        geste: null,   // le geste vit à l'écran du retour : corriger, ou retirer.
+        // Corriger ou retirer vit à l'écran du retour ; EFFACER le signal vit ici.
+        geste: { action: 'ecarter_citation', ref: `${r.depot_id}|${r.moment}`, mot: 'Effacer' },
       })
     }
   }
