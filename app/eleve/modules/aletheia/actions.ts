@@ -383,7 +383,11 @@ export async function repondreRelances(livreId: string, semaine: number, reponse
     if (!textes[i]) return { error: `Réponds à la relance ${i + 1} avant de passer à la réécriture.` }
     if (textes[i].length > MAX_TEXTE) return { error: 'Une de tes réponses est trop longue (limite ~8000 caractères).' }
   }
-  const reponses_relances = relances.map((_, i) => ({ relance: i, texte: textes[i] }))
+  // (E6) On CONSERVE ce que le surlignage a déjà posé sur chaque entrée (surlignage, verdict, essais).
+  type Entree = { relance: number; texte?: string; surlignage?: string[]; verdict_code?: string; essais?: number }
+  const { data: rowE6 } = await admin.from('aletheia_travaux').select('reponses_relances').eq('id', row.id).maybeSingle()
+  const existantes = (Array.isArray(rowE6?.reponses_relances) ? rowE6!.reponses_relances : []) as Entree[]
+  const reponses_relances = relances.map((_, i) => ({ ...(existantes.find(e => e.relance === i) ?? {}), relance: i, texte: textes[i] }))
   const { data: cas, error } = await admin.from('aletheia_travaux')
     .update({ reponses_relances, updated_at: new Date().toISOString() })
     .eq('id', row.id).eq('eleve_id', userId).eq('statut', 'FEEDBACK1_READY')
@@ -392,4 +396,47 @@ export async function repondreRelances(livreId: string, semaine: number, reponse
   if (!cas) return { error: 'Les réponses aux relances ne sont pas disponibles à cette étape.' }
   revalider(livreId, semaine)
   return { success: true }
+}
+
+// (E6) FEEDBACK1_READY : l'élève SURLIGNE la phrase qui répond à une relance (formes
+// `fenetre` / `demi_section`). Le barème est calculé ICI, jamais dans le navigateur ; la
+// pivot n'est rendue qu'une fois méritée (juste) ou au second échec (D14). L'essai est
+// journalisé sur `reponses_relances[i]` (surlignage, verdict_code, essais).
+export async function verifierSurlignage(livreId: string, semaine: number, relance: number, selection: string[]) {
+  const { supabase, userId } = await verifierEleve()
+  const admin = createAdminClient()
+  if (!(await lireLaPorteEtayage(admin))) return { error: 'Cette étape n’est pas ouverte.' }
+  const { resolue: active } = await resoudreInscriptionLivre(admin, supabase, userId, livreId)
+  if (!active) return { error: 'Ce livre ne t\'est pas accessible.' }
+  const { exposees } = await modeExposition(admin, livreId, active.classe_id)
+  if (!dansExtrait(exposees, semaine)) return { error: 'Cette séance ne fait pas partie de ton parcours.' }
+
+  const { data: row } = await admin
+    .from('aletheia_travaux')
+    .select('id, statut, retour_v1, reponses_relances')
+    .eq('eleve_id', userId).eq('scriptorium_livre_id', livreId).eq('semaine_index', semaine)
+    .maybeSingle()
+  if (!row || row.statut !== 'FEEDBACK1_READY') return { error: 'Le surlignage n’est pas disponible à cette étape.' }
+  const detail = ((row.retour_v1 as { relances_detail?: { passage?: string | null }[] } | null)?.relances_detail ?? [])
+  const passageId = detail[relance]?.passage
+  if (!Number.isInteger(relance) || !passageId) return { error: 'Cette relance ne désigne aucun passage.' }
+  const ids = (Array.isArray(selection) ? selection : []).filter((x): x is string => typeof x === 'string').slice(0, 40)
+
+  const { jugerSurlignage } = await import('@/utils/aletheia/fenetre-serveur')
+  const r = await jugerSurlignage(admin, livreId, semaine, passageId, ids)
+  if (!r) return { error: 'Passage introuvable dans le texte de la séance.' }
+
+  type Entree = { relance: number; texte?: string; surlignage?: string[]; verdict_code?: string; essais?: number }
+  const existantes = (Array.isArray(row.reponses_relances) ? row.reponses_relances : []) as Entree[]
+  const courante = existantes.find(e => e.relance === relance) ?? { relance, texte: '' }
+  const essais = (courante.essais ?? 0) + 1
+  const maj: Entree = { ...courante, surlignage: ids, verdict_code: r.verdict, essais }
+  const nouvelles = [...existantes.filter(e => e.relance !== relance), maj].sort((a, b) => a.relance - b.relance)
+  const { error } = await admin.from('aletheia_travaux')
+    .update({ reponses_relances: nouvelles, updated_at: new Date().toISOString() })
+    .eq('id', row.id).eq('eleve_id', userId).eq('statut', 'FEEDBACK1_READY')
+  if (error) return { error: error.message }
+  const { ESSAIS_MAX } = await import('@/utils/aletheia/fenetre')
+  const merite = r.verdict === 'juste' || essais >= ESSAIS_MAX
+  return { success: true, verdict: r.verdict, message: r.message, essais, ...(merite ? { pivot: r.pivot } : {}) }
 }

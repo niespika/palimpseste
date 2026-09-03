@@ -12,7 +12,7 @@ import { signalerEnAttenteIA } from '@/utils/integrite'
 import { assemblerPrompt, blocGabarit, DEFINITIONS, GABARIT_DEFAUT, estGabarit, type Gabarit } from '@/utils/aletheia/gabarits'
 import { gabaritDuLivre, gabaritDeLaFiche } from '@/utils/aletheia/gabarit-serveur'
 import { parsePassages } from '@/utils/aletheia/passages'
-import { blocPassages, blocRappel, lireRelances, lireRappel, motsDuRetour, assemblerBlocs, memeLemme, lemmeDeCarte, BUDGET_MOTS_RETOUR_V1 } from '@/utils/aletheia/retour-v1'
+import { blocPassages, blocRappel, lireRelances, lireRappel, motsDuRetour, assemblerBlocs, memeLemme, lemmeDeCarte, BUDGET_MOTS_RETOUR_V1, MAX_RELANCES_MONTRE } from '@/utils/aletheia/retour-v1'
 import { lireLaPorteEtayage } from '@/utils/aletheia/decoupage-serveur'
 import type {
   RetourV1, RetourVF, AjoutVerifie, DefinitionVocabulaire, Devoilement, Capstone,
@@ -283,8 +283,11 @@ export async function genererRetourV1(travailId: string): Promise<void> {
     .single()
   if (!t || t.statut !== 'V1_SUBMITTED') return
   // (E5) Le rappel d'ouverture, par une requête SÉPARÉE et tolérante (colonne absente ⇒ null).
-  const { data: tE5 } = await admin.from('aletheia_travaux').select('rappel').eq('id', travailId).maybeSingle()
+  const { data: tE5 } = await admin.from('aletheia_travaux').select('rappel, forme').eq('id', travailId).maybeSingle()
   const rappelEleve = txt((tE5 as { rappel?: unknown } | null)?.rappel)
+  // (E5/E6) Forme d'étayage servie : « montre » (E/D) ⇒ deux relances au plus (Louis, 03/09).
+  const formeServie = txt((tE5 as { forme?: unknown } | null)?.forme)
+  const maxRelances = formeServie === 'montre' ? MAX_RELANCES_MONTRE : 4
 
   try {
     const texteUnite = await assemblerAncrageSemaine(admin, t.scriptorium_livre_id as string, t.semaine_index as number)
@@ -309,7 +312,7 @@ export async function genererRetourV1(travailId: string): Promise<void> {
     const passagesCles = etayageV1 ? (fiche?.passages_cles ?? []) : []
     const ficheN1 = etayageV1 && rappelEleve ? await chargerReferenceChapitre(admin, t.scriptorium_livre_id as string, (t.semaine_index as number) - 1) : null
     const blocs = {
-      bloc_passages: etayageV1 ? blocPassages(passagesCles.map(p => ({ id: p.id, libelle: p.libelle, role: p.role }))) : '',
+      bloc_passages: etayageV1 ? blocPassages(passagesCles.map(p => ({ id: p.id, libelle: p.libelle, role: p.role })), maxRelances) : '',
       bloc_rappel: etayageV1 ? blocRappel(ficheN1 ? { these_canonique: ficheN1.these_canonique, synthese_modele: ficheN1.synthese_modele } : null, rappelEleve) : '',
     }
     const idsPassages = new Set(passagesCles.map(p => p.id))
@@ -345,7 +348,11 @@ export async function genererRetourV1(travailId: string): Promise<void> {
 
     // (E5) Les relances peuvent être des chaînes (d'avant) ou des objets qui désignent un
     // passage ; on garde les deux formes. Le rappel jugé s'ajoute en tête du retour.
-    const rel = lireRelances(parsed.relances, idsPassages)
+    const relBrut = lireRelances(parsed.relances, idsPassages)
+    // Plafond STRUCTUREL aux formes E/D : on garde les premières (le modèle les priorise), on ne tronque aucun texte.
+    const rel = etayageV1 && relBrut.relances.length > maxRelances
+      ? { relances: relBrut.relances.slice(0, maxRelances), detail: relBrut.detail.slice(0, maxRelances) }
+      : relBrut
     const rappelJuge = etayageV1 ? lireRappel((parsed as { rappel?: unknown }).rappel) : null
     const retourV1: RetourV1 = {
       relances: rel.relances,

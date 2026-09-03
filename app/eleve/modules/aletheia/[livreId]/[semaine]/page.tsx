@@ -233,6 +233,11 @@ export default async function PageSemaineAletheia({ params }: { params: Promise<
   const relancesV1 = t?.retour_v1?.relances ?? []
   const reponsesRelances = (t?.reponses_relances ?? []).filter(r => typeof r?.texte === 'string' && r.texte.trim())
   const doitRepondre = gab.etayage && statut === 'FEEDBACK1_READY' && relancesV1.length > 0 && reponsesRelances.length < relancesV1.length
+  // (E6) Les fenêtres des relances qui désignent un passage, selon la forme servie à cette séance.
+  const fenetres = doitRepondre && t
+    ? await (await import('@/utils/aletheia/fenetre-serveur')).preparerFenetres(admin, t.id, livreId, semaine, t.forme, t.retour_v1?.relances_detail)
+    : []
+  const surlignagesInitiaux = Object.fromEntries((t?.reponses_relances ?? []).map(r => [r.relance, { verdict_code: r.verdict_code, essais: r.essais, surlignage: r.surlignage }]))
   // Date de clôture : retour_vf_lu_at (posé exactement à FEEDBACK2_READY→DONE),
   // repli sur updated_at par robustesse.
   const dateFin = fmtJourMois(t?.retour_vf_lu_at ?? t?.updated_at)
@@ -342,7 +347,7 @@ export default async function PageSemaineAletheia({ params }: { params: Promise<
           retour={<VueRetourV1 retour={t.retour_v1} montrerRemarque={evalQuestions} titres={titresRetour} />}
           formulaire={
             <div className="bg-surface border border-bordure rounded-xl p-4 sm:p-5">
-              <ReponsesRelances livreId={livreId} semaine={semaine} relances={relancesV1} detail={t.retour_v1.relances_detail} />
+              <ReponsesRelances livreId={livreId} semaine={semaine} relances={relancesV1} detail={t.retour_v1.relances_detail} fenetres={fenetres} surlignagesInitiaux={surlignagesInitiaux} />
             </div>
           }
         />

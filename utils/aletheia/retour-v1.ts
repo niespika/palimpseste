@@ -53,7 +53,10 @@ Juge le rappel contre CETTE fiche seulement, jamais contre la suite du livre, en
 `
 }
 
-export function blocPassages(passages: readonly { id: string; libelle: string; role: string }[]): string {
+/** (Louis, 03/09) Aux formes E/D (« montre »), DEUX relances au plus : c'est pour ces lecteurs que le volume compte. */
+export const MAX_RELANCES_MONTRE = 2
+
+export function blocPassages(passages: readonly { id: string; libelle: string; role: string }[], maxRelances = 4): string {
   const liste = passages.length
     ? passages.map(p => `- ${p.id} (${p.role}) : ${p.libelle}`).join('\n')
     : '(aucun passage clé pour cette semaine : "passage" = null partout)'
@@ -61,7 +64,7 @@ export function blocPassages(passages: readonly { id: string; libelle: string; r
 ## Passages clés de la semaine (E5 — identifiants à DÉSIGNER, jamais à recopier)
 ${liste}
 Chaque relance sur l'idée principale et les arguments DÉSIGNE le passage qu'elle vise : rends chaque entrée de "relances" comme un objet { "question": "…", "passage": "<identifiant ci-dessus ou null>", "libelle_a_trouver": "ce que l'élève doit chercher, ≤ 12 mots, le LIEU jamais la réponse" }. Un identifiant inconnu vaut null. Tu ne recopies AUCUN extrait : l'écran montrera ou fera chercher le passage à la place.
-⛔ BUDGET : ${BUDGET_MOTS_RETOUR_V1} mots AU TOTAL pour relances + accord + réponses + définitions (les passages ne comptent pas) — c'est une limite DURE, pas une indication : au-delà, l'élève ne lit plus. Pour y tenir : chaque relance ≤ 45 mots (une seule question, pas deux), l'accord ≤ 60 mots, chaque réponse à une question ≤ 50 mots, chaque définition ≤ 25 mots ; deux relances valent mieux que trois. Compte avant de rendre.
+⛔ BUDGET : ${BUDGET_MOTS_RETOUR_V1} mots AU TOTAL pour relances + accord + réponses + définitions (les passages ne comptent pas) — c'est une limite DURE, pas une indication : au-delà, l'élève ne lit plus. Pour y tenir : chaque relance ≤ 45 mots (une seule question, pas deux), l'accord ≤ 60 mots, chaque réponse à une question ≤ 50 mots, chaque définition ≤ 25 mots ; ${maxRelances} relances AU MAXIMUM${maxRelances <= 2 ? ' (ce lecteur a besoin de peu et de précis : les deux plus utiles, pas une de plus)' : ', deux valent mieux que trois'}. Compte avant de rendre.
 Pour chaque mot de vocabulaire, ajoute "terme_canonique" : le lemme (masculin singulier, sans article, minuscules), ex. « apolliniennes » → "apollinien".
 `
 }

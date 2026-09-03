@@ -92,7 +92,8 @@ export interface TravailAletheia {
   champ_fixe_vf?: string | null        // la même, VF
   tournante_cle?: string | null        // clé de la question tournante posée à cette séance
   rappel?: string | null               // (E5) rappel d'ouverture
-  reponses_relances?: { relance: number; texte: string }[] | null   // (E5) réponses aux relances, avant la réécriture
+  // (E5/E6) réponses aux relances avant la réécriture ; le surlignage et son verdict (E6) s'y ajoutent.
+  reponses_relances?: { relance: number; texte: string; surlignage?: string[]; verdict_code?: string; essais?: number }[] | null
 }
 
 // Capstone : carte d'architecture finale du LIVRE (partagée, canonique).
