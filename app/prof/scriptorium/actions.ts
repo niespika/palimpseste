@@ -622,6 +622,11 @@ export async function modifierLivreComplet(
     if (error) return { error: error.message }
   }
 
+  // (E1) Les textes de semaine viennent de changer : la découpe en phrases est
+  // régénérée (porte ouverte seulement). Carte et référence, elles, restent à la
+  // demande, comme avant.
+  await genererDecoupeSiPorteOuverte(createAdminClient(), livreId)
+
   revalidatePath('/prof/scriptorium')
   return { success: true }
 }
@@ -1282,10 +1287,26 @@ async function lancerGenerationReference(admin: Admin, livreId: string): Promise
   after(async () => { const mod = await import('@/utils/aletheia-retours'); await mod.genererReferenceLivre(livreId) })
 }
 
-// Création du livre : génère carte ET référence (en arrière-plan).
+// Création du livre : génère carte ET référence (en arrière-plan), et la DÉCOUPE en
+// phrases (E1, en ligne : aucune IA, quelques millisecondes) derrière la porte
+// `aletheia_etayage_actif`. Porte fermée ⇒ comportement d'avant à l'octet près.
 async function lancerGenerationArtefactsLivre(admin: Admin, livreId: string): Promise<void> {
   await lancerGenerationCapstone(admin, livreId)
   await lancerGenerationReference(admin, livreId)
+  await genererDecoupeSiPorteOuverte(admin, livreId)
+}
+
+// La découpe (E1) ne bloque jamais l'action qui l'appelle : porte fermée ⇒ rien ;
+// échec ⇒ journal serveur, la carte et la référence suivent leur cours.
+async function genererDecoupeSiPorteOuverte(admin: Admin, livreId: string): Promise<void> {
+  try {
+    const mod = await import('@/utils/aletheia/decoupage-serveur')
+    if (!(await mod.lireLaPorteEtayage(admin))) return
+    const r = await mod.genererDecoupeLivre(admin, livreId)
+    if (!r.ok) console.error('[aletheia] découpe du livre :', r.message)
+  } catch (e) {
+    console.error('[aletheia] découpe du livre (non bloquant) :', e)
+  }
 }
 
 // Régénération IA de la CARTE seule. Confirmation si elle a été amendée à la main.
