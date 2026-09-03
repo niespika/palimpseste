@@ -28,7 +28,6 @@ import { lireContexte, type ContexteDepot } from './contexte'
 import { appelsDuDepot, controlerLaFacture } from './couts-serveur'
 import { controlerFideliteP1, motifDeFidelite } from './fidelite-p1'
 import { formeMinimale, releveVide } from './formes-minimales'
-import { alerteTranscriptionIncertaine, motifDeTranscription } from './transcription-incertaine'
 import { appelsDeLErreur, depotAAtteintSonPlafond } from './couts'
 import {
   competencesOuvertes, etatCompetence, modeNonCouvert, refusFormeCode2, valeursDesParametres,
@@ -175,11 +174,6 @@ export async function traiterDepot(
     throw new DepotInexploitable(`le dépôt ${depotId} n'a pas de production en ${version}.`)
   }
   // La copie est neutralisée à l'assemblage ; ici, on rend le fait VISIBLE.
-  // ⭐ 02/09 — la copie est-elle une reconstruction, et à quel point ? Alerte seule.
-  const ocr = alerteTranscriptionIncertaine({
-    version, origine: version === 'v1' ? ctx.origineV1 : ctx.origineVf, seuil: config.seuilConfianceOcr,
-  })
-  if (ocr) alertes.push(ocr)
   if (tentativeDeSortieDeBloc(production)) {
     const trace = `[chaine] tentative de sortie de bloc dans la copie — dépôt ${depotId}, `
       + `élève ${ctx.eleveId}, version ${version}. La copie est neutralisée avant tout appel `
@@ -1686,7 +1680,6 @@ function resumeBilan(b: BilanDepot): string {
     // ⭐ 02/09 — l'abrégé de la fidélité de P1, seul domicile persisté de cette
     //    trace : le professeur lit « fidélité P1 — argumentation 3/12 ».
     + motifDeFidelite(b.alertes)
-    + motifDeTranscription(b.alertes)
 }
 
 // ════════════════════════════════════════════════════════════════════════════
