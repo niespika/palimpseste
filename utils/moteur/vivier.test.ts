@@ -403,3 +403,47 @@ describe('`01-` §5, phase C — les substrats de la semaine', () => {
     assert.equal(s[0].sondesDeja, 0)
   })
 })
+
+// ── ⭐ C7-L5 — LA PORTE DU REGISTRE, en dernier filtre ────────────────────────
+
+describe('C7-L5 — la porte des crans par objet (`10-` §7)', () => {
+  const porteArgument = (ouverts: number[], sondes: number[] = [], methode = false) => ({
+    actif: true,
+    de: (objet: string) => ({ objet, ouverts: objet === 'argument' ? ouverts : [1, 2, 3], sondes, methode }),
+  })
+  const cran1 = instance({ exerciceId: 'arg-1', cranNumero: 1, cranCode: 'diagnostic_guide', geste: 'diagnostiquer',
+    couverture: { argumentation: 'isole' } })
+  const cran4 = instance({ exerciceId: 'arg-4', cranNumero: 4, cranCode: 'diagnostic_nomme', geste: 'diagnostiquer',
+    couverture: { argumentation: 'isole' } })
+
+  it('porte inactive ou absente : la couche 4 sert comme hier', () => {
+    const sans = constituerLeVivier([cran1, cran4], contexte())
+    assert.deepEqual(sans.retenus.map((r) => r.instance.exerciceId), ['arg-1', 'arg-4'])
+    assert.ok(sans.retenus.every((r) => r.porte === null))
+    const inactive = constituerLeVivier([cran1, cran4], contexte({ porte: { actif: false, de: () => ({ objet: 'argument', ouverts: [], sondes: [], methode: false }) } }))
+    assert.equal(inactive.retenus.length, 2)
+  })
+
+  it('le cran 4 ne se sert qu’une fois le cran 1 réussi deux fois — sinon il est écarté, motif dit', () => {
+    const ferme = constituerLeVivier([cran1, cran4], contexte({ porte: porteArgument([1, 2, 3]) }))
+    assert.deepEqual(ferme.retenus.map((r) => r.instance.exerciceId), ['arg-1'])
+    assert.equal(ferme.retenus[0]!.porte, 'ouvert')
+    assert.deepEqual(ferme.ecartes.map((e) => [e.exerciceId, e.motif]), [['arg-4', 'porte_registre']])
+    assert.match(ferme.ecartes[0]!.detail, /cran 4 fermé sur « argument »/)
+    const ouvert = constituerLeVivier([cran1, cran4], contexte({ porte: porteArgument([1, 2, 3, 4]) }))
+    assert.deepEqual(ouvert.retenus.map((r) => [r.instance.exerciceId, r.porte]), [['arg-1', 'ouvert'], ['arg-4', 'ouvert']])
+  })
+
+  it('deux échecs de suite au cran 1 : le 4 se sert en SONDE de montée', () => {
+    const v = constituerLeVivier([cran1, cran4], contexte({ porte: porteArgument([1, 2, 3], [4]) }))
+    assert.deepEqual(v.retenus.map((r) => [r.instance.exerciceId, r.porte]), [['arg-1', 'ouvert'], ['arg-4', 'sonde']])
+  })
+
+  it('la semaine de méthode sert 1, 3 et 4 — et pas la production', () => {
+    const cran2 = instance({ exerciceId: 'arg-2', cranNumero: 2, cranCode: 'production_guidee' })
+    const v = constituerLeVivier([cran1, cran4, cran2], contexte({ porte: porteArgument([1, 2, 3], [], true) }))
+    assert.deepEqual(v.retenus.map((r) => [r.instance.exerciceId, r.porte]), [['arg-1', 'methode'], ['arg-4', 'methode']])
+    assert.deepEqual(v.ecartes.map((e) => e.exerciceId), ['arg-2'])
+    assert.match(v.ecartes[0]!.detail, /semaine de méthode/)
+  })
+})

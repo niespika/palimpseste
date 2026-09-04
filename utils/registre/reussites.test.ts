@@ -67,12 +67,13 @@ test('« deux et deux » : deux réussites en dessous débloquent, le bas des é
   ])
   assert.deepEqual(cransDebloques(deux, 'argument'), [1, 2, 3, 4])
   assert.deepEqual(cransDebloques(deux, 'exemple'), [1, 2, 3])
-  // Les variantes d'un même cran comptent ensemble.
+  // Les variantes d'un même cran comptent ensemble — et deux réussites au 4
+  // ouvrent le 9 ET tiennent le 4 pour acquis (C7-L5 : les sondes réussies).
   const ab = deriverLeRegistre([
     depot({ cran: 4, variante: 'a', verdicts: { v1: verdict(true) } }),
     depot({ cran: 4, variante: 'b', zones: [{ cas: 1, verdict: 'juste' }] }),
   ])
-  assert.deepEqual(cransDebloques(ab, 'argument'), [1, 2, 3, 9])
+  assert.deepEqual(cransDebloques(ab, 'argument'), [1, 2, 3, 4, 9])
 })
 
 test('deux échecs DE SUITE au même cran disent où l’élève stagne — un succès entre deux remet à zéro', () => {

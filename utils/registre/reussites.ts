@@ -140,7 +140,11 @@ export function cransDebloques(registre: readonly LigneRegistre[], objet: string
   for (const echelle of ECHELLES) {
     out.push(echelle[0])
     for (let i = 1; i < echelle.length; i++) {
-      if (reussitesAuCran(registre, objet, echelle[i - 1]!) >= REUSSITES_POUR_DEBLOQUER) out.push(echelle[i]!)
+      // ⭐ C7-L5 — un cran s'ouvre aussi par SES PROPRES deux réussites : ce sont
+      //    les sondes de montée réussies (`10-` §7, décision 14) — « le cran d'en
+      //    dessous est tenu pour acquis et la porte s'ouvre ».
+      if (reussitesAuCran(registre, objet, echelle[i - 1]!) >= REUSSITES_POUR_DEBLOQUER
+        || reussitesAuCran(registre, objet, echelle[i]!) >= REUSSITES_POUR_DEBLOQUER) out.push(echelle[i]!)
     }
   }
   return out.sort((a, b) => a - b)
