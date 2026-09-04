@@ -182,6 +182,16 @@ export default function PanneauFiche({ livreId, semaine, titreDoc, chapitresDoc,
                 <p className="font-corps text-base leading-[1.6] text-encre">{chapitre.synthese_modele}</p>
               </div>
             )}
+            {/* (E8) Les trois propositions du « je ne sais pas » de la première question — lecture. */}
+            {gabaritLivre && (chapitre.these_eleve || (chapitre.distracteurs ?? []).length > 0) && (
+              <div className="bg-parchemin border border-bordure rounded-[9px] px-[17px] py-3.5">
+                <div className={`${INTITULE_SM} mb-1.5`}>« Je ne sais pas » — les trois propositions de la première question</div>
+                <ul className="space-y-1 text-sm text-encre">
+                  {chapitre.these_eleve && <li><span className="text-ok mr-1.5" aria-hidden>✓</span>{chapitre.these_eleve} <span className="text-xs text-muet">— la thèse, en registre élève</span></li>}
+                  {(chapitre.distracteurs ?? []).map((d, i) => <li key={i}><span className="text-muet mr-1.5" aria-hidden>✕</span>{d} <span className="text-xs text-muet">— distracteur</span></li>)}
+                </ul>
+              </div>
+            )}
             {/* (E4) Passages clés — porte de l'étayage ouverte seulement (gabaritLivre présent). */}
             {gabaritLivre && (
               <PassagesCles
