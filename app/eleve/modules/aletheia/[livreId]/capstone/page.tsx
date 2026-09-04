@@ -1,3 +1,4 @@
+import { phraseDuLienCarte } from '@/utils/aletheia/liens'
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/utils/supabase/server'
@@ -98,12 +99,7 @@ export default async function PageCapstone({ params }: { params: Promise<{ livre
           <h3 className="font-titre text-xl text-encre mb-3">Comment les chapitres s&apos;enchaînent</h3>
           <ul className="space-y-2">
             {liens.map((l, i) => (
-              <li key={i} className="text-sm text-encre-douce">
-                <span className="font-medium text-encre">{l.de}</span>
-                <span className="text-muet"> → </span>
-                <span className="font-medium text-encre">{l.vers}</span>
-                <span className="text-encre-douce"> : {l.relation}</span>
-              </li>
+              <li key={i} className="font-corps text-[15px] leading-relaxed text-encre">{phraseDuLienCarte(l.de, l.vers, l.relation)}</li>
             ))}
           </ul>
         </section>

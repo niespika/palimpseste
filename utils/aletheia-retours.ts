@@ -783,7 +783,7 @@ ${REGISTRE}
 Produis la carte d'architecture du livre :
 - fil_conducteur : un COURT texte (quelques phrases) qui dit le mouvement d'ensemble et le fil directeur du livre.
 - noeuds : les chapitres/sections comme nœuds, chacun avec son idée maîtresse en UNE phrase.
-- liens : les liens argumentatifs entre chapitres (arêtes) : de quel nœud, vers quel nœud, et la nature du lien (« prépare », « répond à », « renverse », « approfondit »…).
+- liens : les liens argumentatifs entre chapitres (arêtes) : de quel nœud, vers quel nœud, et la RELATION écrite en UNE PHRASE COMPLÈTE, lisible seule par l'élève, qui commence par « La séance N … la séance M : … » (prépare, répond à, renverse, approfondit…) — ≤ 25 mots, jamais un verbe nu.
 
 ## Contraintes
 - ⛔ ≤ ~300 mots AU TOTAL : ça doit tenir sur un écran et être facile à lire. La lisibilité PRIME sur l'exhaustivité.
@@ -794,7 +794,7 @@ Produis la carte d'architecture du livre :
 {
   "fil_conducteur": "...",
   "noeuds": [ { "chapitre": "...", "idee": "..." } ],
-  "liens": [ { "de": "...", "vers": "...", "relation": "..." } ]
+  "liens": [ { "de": "...", "vers": "...", "relation": "La séance N prépare la séance M : …" } ]
 }`
 
 // ── Génération du capstone CANONIQUE (une fois par livre, partagé) ────────────

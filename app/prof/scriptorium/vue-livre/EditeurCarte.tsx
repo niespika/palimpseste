@@ -34,7 +34,7 @@ export default function EditeurCarte({ draft, setDraft }: { draft: Capstone; set
             <div key={i} className="flex gap-1.5">
               <input value={l.de} placeholder="De" onChange={e => setDraft({ ...draft, liens: draft.liens.map((x, j) => j === i ? { ...x, de: e.target.value } : x) })} className={`${CHAMP} w-1/4`} />
               <input value={l.vers} placeholder="Vers" onChange={e => setDraft({ ...draft, liens: draft.liens.map((x, j) => j === i ? { ...x, vers: e.target.value } : x) })} className={`${CHAMP} w-1/4`} />
-              <input value={l.relation} placeholder="Relation (prépare, renverse…)" onChange={e => setDraft({ ...draft, liens: draft.liens.map((x, j) => j === i ? { ...x, relation: e.target.value } : x) })} className={CHAMP} />
+              <input value={l.relation} placeholder="Une phrase : « La séance 1 prépare la séance 2 : … »" onChange={e => setDraft({ ...draft, liens: draft.liens.map((x, j) => j === i ? { ...x, relation: e.target.value } : x) })} className={CHAMP} />
               <button type="button" onClick={() => setDraft({ ...draft, liens: draft.liens.filter((_, j) => j !== i) })} className="text-muet hover:text-retard px-1">✕</button>
             </div>
           ))}

@@ -1,5 +1,6 @@
 'use client'
 
+import { phraseDuLienCarte } from '@/utils/aletheia/liens'
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { regenererCarteLivre, enregistrerCarteLivre } from '../actions'
@@ -120,7 +121,7 @@ export default function ColonneCarte({ livreId, capstone, liens, semaineSel, hre
                     if (!resolu) {
                       return (
                         <p key={i} className="px-[9px] py-1 font-ui text-[12.5px] leading-[1.4] text-muet">
-                          <span className="font-semibold">{l.brutDe} → {l.brutVers}</span> · {l.relation}
+                          {phraseDuLienCarte(l.brutDe, l.brutVers, l.relation)}
                         </p>
                       )
                     }
@@ -130,7 +131,7 @@ export default function ColonneCarte({ livreId, capstone, liens, semaineSel, hre
                         className={`text-left px-[9px] py-1 rounded-md font-ui text-[12.5px] leading-[1.4] transition-colors ${
                           touche ? 'bg-pigment-teinte text-pigment' : 'text-encre-douce hover:bg-parchemin'
                         }`}>
-                        <span className={`tracking-[.02em] ${touche ? 'font-bold' : 'font-semibold'}`}>S{l.de} → S{l.vers}</span> · {l.relation}
+                        {phraseDuLienCarte(l.de, l.vers, l.relation)}
                       </button>
                     )
                   })}
