@@ -10,6 +10,8 @@ import FormulaireV1Classique from '../../FormulaireV1Classique'
 import FormulaireV1Fil from '../../FormulaireV1Fil'
 import FormulaireVf from '../../FormulaireVfClassique'
 import FormulaireVfFil from '../../FormulaireVfFil'
+import Presentation from '../../Presentation'
+import OuvertureSeance from '../../OuvertureSeance'
 import PollStatut from '../../PollStatut'
 import { VueRetourV1, VueRetourVF, bullesVF, type Accent } from '@/components/aletheia/VueRetours'
 import { NuanceAgie, PairesAgies, SyntheseAgie } from '@/components/aletheia/RetourFinalAgi'
@@ -192,8 +194,9 @@ function RevueDone({ t, evalQuestions, titres }: { t: TravailAletheia; evalQuest
   )
 }
 
-export default async function PageSemaineAletheia({ params }: { params: Promise<{ livreId: string; semaine: string }> }) {
+export default async function PageSemaineAletheia({ params, searchParams }: { params: Promise<{ livreId: string; semaine: string }>; searchParams?: Promise<{ presentation?: string }> }) {
   const { livreId, semaine: semaineStr } = await params
+  const sp = (await searchParams) ?? {}
   const semaine = Number(semaineStr)
   if (!Number.isInteger(semaine) || semaine < 1) notFound()
 
@@ -266,6 +269,23 @@ export default async function PageSemaineAletheia({ params }: { params: Promise<
   const travaux = await travauxParSemaine(admin, user.id, livreId)
   const t: TravailAletheia | null = travaux.get(semaine) ?? null
   const statut = t?.statut ?? 'DRAFT'
+  // (Refonte 04/09) La présentation du module, une fois (ou sur demande), et le temps réel d'une séance.
+  const { presentationVue, tempsMedianSeance } = await import('@/utils/aletheia/seance-serveur')
+  const rejouerPresentation = sp.presentation === '1'
+  const voirPresentation = gab.etayage && (rejouerPresentation || !(await presentationVue(admin, user.id)))
+  const tempsSeance = voirPresentation ? await tempsMedianSeance(admin, livreId, active.classe_id) : null
+  if (voirPresentation && tempsSeance) {
+    return (
+      <div className="space-y-5 pb-8">
+        <Link href="/eleve/modules/aletheia" className="text-sm text-muet hover:text-encre-douce">← Planning</Link>
+        <h2 className="font-titre text-2xl text-encre leading-tight">Séance {numeroSeance} — {titreAffiche}</h2>
+        <section className="bg-surface border border-bordure rounded-xl p-4 sm:p-5">
+          <Presentation temps={tempsSeance} dejaVue={rejouerPresentation} numeroSeance={numeroSeance} />
+        </section>
+        {rejouerPresentation && <Link href={`/eleve/modules/aletheia/${livreId}/${semaine}`} className="block text-center text-sm text-muet hover:text-encre-douce">Retour à la séance</Link>}
+      </div>
+    )
+  }
   // (E5) Les relances attendent une réponse avant la réécriture, porte ouverte : tant
   // que `reponses_relances` ne couvre pas toutes les relances, l'atelier de réécriture
   // est remplacé par les cases de réponse.
@@ -303,7 +323,11 @@ export default async function PageSemaineAletheia({ params }: { params: Promise<
   return (
     <div className="space-y-5 pb-8">
       <PollStatut actif={enAttenteRetour1 || enAttenteRetour2} livreId={livreId} semaine={semaine} />
-      <Link href="/eleve/modules/aletheia" className="text-sm text-muet hover:text-encre-douce">← Planning</Link>
+      {gab.etayage && statut === 'DRAFT' && <OuvertureSeance livreId={livreId} semaine={semaine} />}
+      <div className="flex items-center justify-between gap-3">
+        <Link href="/eleve/modules/aletheia" className="text-sm text-muet hover:text-encre-douce">← Planning</Link>
+        {gab.etayage && <Link href={`/eleve/modules/aletheia/${livreId}/${semaine}?presentation=1`} className="text-xs text-muet hover:text-encre-douce underline">Revoir la présentation</Link>}
+      </div>
 
       <div>
         <div className="flex items-center gap-4">

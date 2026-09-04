@@ -432,6 +432,7 @@ export default async function ScriptoriumPage({
   // requêtes séparées et tolérantes (colonnes absentes ⇒ porte fermée ⇒ null).
   let gabaritLivre: 'argumentatif' | 'dialogue' | 'aphoristique' | 'analytique' | null = null
   let liseuseMaxLivre: 'fenetre' | 'demi_section' | null = null
+  let tempsSeanceLivre: { medianeMinutes: number | null; n: number } | null = null
   // (E4) Empreinte de la découpe en base (null ⇒ absente) : les passages clés d'une autre
   // version sont « périmés » à l'écran.
   let versionDecoupe: string | null = null
@@ -442,6 +443,7 @@ export default async function ScriptoriumPage({
       const gl = await gabaritDuLivre(supabase, uniteSelLivre.id)
       gabaritLivre = gl.gabarit
       liseuseMaxLivre = gl.liseuseMax
+      tempsSeanceLivre = await (await import('@/utils/aletheia/seance-serveur')).tempsMedianSeance(supabase, uniteSelLivre.id)
       const dec = await chargerDecoupeLivre(supabase, uniteSelLivre.id)
       versionDecoupe = dec && !dec.perimee ? dec.version : null
     }
@@ -722,6 +724,7 @@ export default async function ScriptoriumPage({
             reference={referenceLivre}
             gabarit={gabaritLivre}
             liseuseMax={liseuseMaxLivre}
+            tempsSeance={tempsSeanceLivre}
             versionDecoupe={versionDecoupe}
             semaineParam={semaine}
             modeDecoupe={edition === 'decoupe'}

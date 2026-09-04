@@ -544,3 +544,27 @@ export async function comparerSyntheseAction(livreId: string, semaine: number, s
   if (error) return { error: error.message }
   return { success: true, comparaison: c }
 }
+
+// ── (Refonte 04/09) L'ouverture d'une séance et la présentation du module ────────────────
+/** Pose l'heure de première ouverture (porte ouverte) ; silencieux, idempotent. */
+export async function ouvrirSeanceAction(livreId: string, semaine: number) {
+  const { supabase, userId } = await verifierEleve()
+  const admin = createAdminClient()
+  if (!(await lireLaPorteEtayage(admin))) return { success: true }
+  const { resolue: active } = await resoudreInscriptionLivre(admin, supabase, userId, livreId)
+  if (!active) return { error: 'Ce livre ne t\'est pas accessible.' }
+  if (!(await semaineLivre(admin, livreId, semaine))) return { error: 'Séance introuvable.' }
+  const { ouvrirSeance } = await import('@/utils/aletheia/seance-serveur')
+  await ouvrirSeance(admin, userId, livreId, semaine)
+  return { success: true }
+}
+
+/** La présentation du module a été lue jusqu'au bout : on ne la remontre plus (jusqu'à la version suivante). */
+export async function marquerPresentationVueAction() {
+  const { userId } = await verifierEleve()
+  const admin = createAdminClient()
+  const { marquerPresentationVue } = await import('@/utils/aletheia/seance-serveur')
+  const r = await marquerPresentationVue(admin, userId)
+  if (!r.ok) return { error: r.message ?? 'Erreur' }
+  return { success: true }
+}

@@ -6,7 +6,7 @@ import { BTN_DANGER, BTN_SECONDAIRE, INTITULE } from './ui'
 
 // Entête de la page livre : fil de retour, surtitre, titre + auteur, sous-ligne
 // (séances · classes) et les trois actions book-level à droite.
-export default function EnteteLivre({ livre, classes, classeIds, nbSemaines, nbFiches, contenuVide, hrefDecoupe }: {
+export default function EnteteLivre({ livre, classes, classeIds, nbSemaines, nbFiches, contenuVide, hrefDecoupe, tempsSeance }: {
   livre: { id: string; label: string; auteur: string | null; date_debut: string | null }
   classes: { id: string; nom: string }[]
   classeIds: string[]
@@ -14,6 +14,8 @@ export default function EnteteLivre({ livre, classes, classeIds, nbSemaines, nbF
   nbFiches: number
   contenuVide: boolean
   hrefDecoupe: string
+  /** (Refonte 04/09) Le temps réel d'une séance, ouverture → clôture, médiane sur ce livre ; null porte fermée. */
+  tempsSeance?: { medianeMinutes: number | null; n: number } | null
 }) {
   return (
     <div>
@@ -32,6 +34,9 @@ export default function EnteteLivre({ livre, classes, classeIds, nbSemaines, nbF
           <div className="flex items-center gap-2.5 mt-2 flex-wrap">
             <span className="font-ui text-[13.5px] text-muet">
               {nbSemaines} séance{nbSemaines > 1 ? 's' : ''}
+              {tempsSeance && (tempsSeance.medianeMinutes != null
+                ? ` · une séance prend ≈ ${tempsSeance.medianeMinutes} min (médiane sur ${tempsSeance.n})`
+                : ` · temps d’une séance : pas encore mesuré${tempsSeance.n ? ` (${tempsSeance.n} close${tempsSeance.n > 1 ? 's' : ''}, il en faut 3)` : ''}`)}
               {' · classes'}
             </span>
             <EditeurClassesLivre uniteId={livre.id} classes={classes} assignedClasseIds={classeIds} />
