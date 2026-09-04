@@ -69,7 +69,7 @@ RACINE_DEFAUT = (os.environ.get("PALIMPSESTE_RACINE_CONCEPTION")
 # se relit sur le fichier VIVANT juste avant écriture — c'est un compteur
 # PARTAGÉ entre séances, et il part au journal `doctrine_derivation.outil` :
 # c'est lui qui dit, plus tard, quelle version du dériveur a écrit la base.
-OUTIL = "scripts/derive-doctrine.py 1.3"
+OUTIL = "scripts/derive-doctrine.py 1.4"
 
 # Les six crans qui isolent, dans l'ordre où le `04-` §0 les nomme.
 CRANS_QUI_ISOLENT = (1, 3, 4, 5, 7, 9)
@@ -77,6 +77,10 @@ CRANS_DE_PRODUCTION = (2, 6, 8)
 
 # Les sources dont l'empreinte se conserve — celles que la doctrine lit.
 SOURCES = ("02-exercices.md", "04-Instances_Exercices.md", "06-Palimpseste.md")
+# ⭐ C7-L2 (03/09/2026) — LE GABARIT. Le `09-` porte la grille des problèmes, les
+#    tests du cran 6 et la pièce du cran 2 ; le `10-` §5 porte le marquage par
+#    cran × variante. Lus ici, strictement, jamais recopiés (`10-` §8 ; `07-` C7-L2).
+SOURCES_GABARIT = ("09-Objets.md", "10-Gabarit.md")
 SOURCES_INSTANCES = tuple("instances/04-%s.md" % c for c in (
     "expression", "argumentation", "structure",
     "connaissance", "synthese", "questionnement"))
@@ -105,6 +109,7 @@ def charge(racine):
     sys.path.insert(0, os.path.join(racine, "generateur"))
     from noyau.doctrine import (Doctrine, SourceMouvante,  # noqa: E402
                                 _lignes_table, _nu, _section, _valeurs, MODES)
+    from noyau.grille import lire_le_09, lire_le_10  # noqa: E402
 
     d = Doctrine.charge(racine)
     t02 = io.open(os.path.join(racine, "02-exercices.md"), encoding="utf-8").read()
@@ -301,14 +306,22 @@ def charge(racine):
             "`competences/monitoring.md` porte une ligne PRODUCTION — le "
             "Monitoring n'est jamais cible du routeur (`07-` §1.4)")
 
+    # (f) ⭐ C7-L2 — LA GRILLE DU `09-` ET LE MARQUAGE DU `10-` §5.
+    d.problemes, d.tests, d.pieces = lire_le_09(racine, d, SourceMouvante)
+    d.marquage_gabarit = lire_le_10(racine, d, SourceMouvante, _section, _lignes_table, _nu)
+
     d.empreintes = empreintes(racine)
     return d
 
 
+# ---------------------------------------------------------------------------
+# ⭐ C7-L2 — le `09-Objets.md` et le `10-` §5 se lisent dans `generateur/noyau/grille.py`
+# (dépôt de conception) : UN SEUL domicile, que la fabrique du gabarit lit aussi.
+# ---------------------------------------------------------------------------
 def empreintes(racine):
     """sha256 de chaque source lue — c'est ce qui rend la divergence visible."""
     out = {}
-    for nom in SOURCES + SOURCES_INSTANCES + SOURCES_FICHES:
+    for nom in SOURCES + SOURCES_INSTANCES + SOURCES_FICHES + SOURCES_GABARIT:
         p = os.path.join(racine, nom)
         with io.open(p, "rb") as f:
             out[nom] = hashlib.sha256(f.read()).hexdigest()
@@ -443,6 +456,17 @@ def lignes(d):
             tc.append((code, cran, couv, cible, duree))
     L["exercices_types_crans"] = tc
 
+    # ⭐ C7-L2 — LA GRILLE DU `09-`, LES TESTS, LES PIÈCES, LE MARQUAGE DU GABARIT.
+    L["exercices_problemes"] = [
+        (p.objet, p.genre, p.cle, p.constituant, p.variante, p.mode, p.observable_texte,
+         p.observable_code, p.competence, p.mode_receptif, p.route, p.forme, p.grains,
+         p.enonce, p.exemple, p.correction, p.banque, p.note, p.section)
+        for p in d.problemes]
+    L["exercices_tests"] = [(t.objet, t.genre, t.cle, t.variante, t.enonce) for t in d.tests]
+    L["exercices_pieces"] = [(pc.objet, pc.genre, pc.cle, pc.constituant, pc.enonce)
+                             for pc in d.pieces]
+    L["exercices_marquage_gabarit"] = list(d.marquage_gabarit)
+
     return L
 
 
@@ -489,7 +513,9 @@ def sql_remplissage(d, racine):
               "exercices_consignes_production", "exercices_guides_production",
               "exercices_types_modes_source", "exercices_types_modes",
               "exercices_types_crans", "competences_modes_admis",
-              "exercices_durees", "exercices_crans", "demonstrations_formes"):
+              "exercices_durees", "exercices_crans", "demonstrations_formes",
+              "exercices_problemes", "exercices_tests", "exercices_pieces",
+              "exercices_marquage_gabarit"):
         w("delete from %s;" % t)
     w("")
 
@@ -591,6 +617,35 @@ def sql_remplissage(d, racine):
     w("  join exercices_types t on t.code = v.objet_code;")
     w("")
 
+    w("-- ── ⭐ C7-L2 — la grille des problèmes du `09-` ────────────────────────────")
+    w("insert into exercices_problemes (type_id,objet_code,genre,cle,constituant,"
+      "variante_probleme,mode_probleme,observable_texte,observable_code,"
+      "observable_competence,mode_receptif,observable_route,forme,grains,enonce,"
+      "exemple,correction,banque,note,source_section)")
+    w("select t.id, v.* from (values\n       %s)" % _bloc_values(L["exercices_problemes"]))
+    w("  as v(objet_code, genre, cle, constituant, variante_probleme, mode_probleme,"
+      " observable_texte, observable_code, observable_competence, mode_receptif,"
+      " observable_route, forme, grains, enonce, exemple, correction, banque, note,"
+      " source_section)")
+    w("  join exercices_types t on t.code = v.objet_code;")
+    w("")
+    w("-- ── Les tests du cran 6 — `09-`, une clé par question ────────────────────")
+    w("insert into exercices_tests (type_id,objet_code,genre,cle,n,question)")
+    w("select t.id, v.* from (values\n       %s)" % _bloc_values(L["exercices_tests"]))
+    w("  as v(objet_code, genre, cle, n, question)")
+    w("  join exercices_types t on t.code = v.objet_code;")
+    w("")
+    w("-- ── La pièce du cran 2 et son geste — `09-` ──────────────────────────────")
+    w("insert into exercices_pieces (type_id,objet_code,genre,cle,piece,geste)")
+    w("select t.id, v.* from (values\n       %s)" % _bloc_values(L["exercices_pieces"]))
+    w("  as v(objet_code, genre, cle, piece, geste)")
+    w("  join exercices_types t on t.code = v.objet_code;")
+    w("")
+    w("-- ── Le marquage du gabarit — `10-` §5, cran × variante ──────────────────")
+    w("insert into exercices_marquage_gabarit (cran,variante,marquage) values\n       %s;"
+      % _bloc_values(L["exercices_marquage_gabarit"]))
+    w("")
+
     comptes = {k: len(v) for k, v in sorted(L.items())}
     w("-- ── Le journal de dérivation ─────────────────────────────────────────────")
     w("insert into doctrine_derivation (racine,outil,resume,empreintes,comptes) "
@@ -610,6 +665,10 @@ def sql_remplissage(d, racine):
     w("    ||' consignes_isolees='||(select count(*) from exercices_consignes_isolees)")
     w("    ||' patrons='||(select count(*) from exercices_consignes_production)")
     w("    ||' guides='||(select count(*) from exercices_guides_production)")
+    w("    ||' problemes='||(select count(*) from exercices_problemes)")
+    w("    ||' tests='||(select count(*) from exercices_tests)")
+    w("    ||' pieces='||(select count(*) from exercices_pieces)")
+    w("    ||' marquage_gabarit='||(select count(*) from exercices_marquage_gabarit)")
     w("    ||' objets_avec_crans='||(select count(*) from exercices_types "
       "where coalesce(array_length(crans_admis,1),0) > 0) as constat;")
     return "\n".join(o) + "\n"
@@ -647,6 +706,15 @@ def fixture(d, racine):
                                         "defaut_injecte", "appui", "consigne"),
         "exercices_guides_production": ("objet_code", "genre", "figure",
                                         "guide_cran2", "guide_cran6"),
+        # ⭐ C7-L2
+        "exercices_problemes": ("objet_code", "genre", "cle", "constituant",
+                                "variante_probleme", "mode_probleme", "observable_texte",
+                                "observable_code", "observable_competence", "mode_receptif",
+                                "observable_route", "forme", "grains", "enonce", "exemple",
+                                "correction", "banque", "note", "source_section"),
+        "exercices_tests": ("objet_code", "genre", "cle", "n", "question"),
+        "exercices_pieces": ("objet_code", "genre", "cle", "piece", "geste"),
+        "exercices_marquage_gabarit": ("cran", "variante", "marquage"),
     }
     out = {t: [dict(zip(c, r)) for r in L[t]] for t, c in cols.items()}
     out["exercices_types"] = [
@@ -714,6 +782,8 @@ COMPARAISONS = [
     ("competences_modes_admis", "competence,mode", "text,text"),
     ("exercices_consignes_production", "mode,cran,patron", "text,int,text"),
     ("demonstrations_formes", "forme,grain", "text,text"),
+    # ⭐ C7-L2 — le marquage du gabarit, onze lignes, comparées telles quelles.
+    ("exercices_marquage_gabarit", "cran,variante,marquage", "int,text,text"),
 ]
 
 
@@ -807,6 +877,22 @@ end as verdict;""" % {"t": table, "c": cols})
             ("t.code||'|'||m.competence||'|'||array_to_string(m.modes,',')",
              [ "%s|%s|%s" % (c, comp, ",".join(ms))
                for (c, comp, ms) in L["exercices_types_modes"] ]),
+        # ⭐ C7-L2 — la grille, les tests et les pièces : concaténation avec `coalesce`.
+        "exercices_problemes":
+            ("cle||'|'||coalesce(genre,'')||'|'||constituant||'|'||mode_probleme||'|'||"
+             "coalesce(observable_code,'')||'|'||coalesce(observable_competence,'')||'|'||"
+             "observable_route::text||'|'||forme||'|'||array_to_string(grains,',')||'|'||enonce"
+             "||'|'||coalesce(exemple,'')||'|'||coalesce(correction,'')",
+             [ "%s|%s|%s|%s|%s|%s|%s|%s|%s|%s|%s|%s" % (
+                 p.cle, p.genre or "", p.constituant, p.mode, p.observable_code or "",
+                 p.competence or "", "true" if p.route else "false", p.forme,
+                 ",".join(p.grains), p.enonce, p.exemple or "", p.correction or "")
+               for p in d.problemes ]),
+        "exercices_tests":
+            ("cle||'|'||question", [ "%s|%s" % (t.cle, t.enonce) for t in d.tests ]),
+        "exercices_pieces":
+            ("cle||'|'||piece||'|'||geste",
+             [ "%s|%s|%s" % (pc.cle, pc.constituant, pc.enonce) for pc in d.pieces ]),
     }
     for table, (expr, valeurs) in gros.items():
         source = table

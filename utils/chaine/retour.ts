@@ -23,6 +23,7 @@
 // ============================================================================
 
 import { messageAvecMateriau } from './anti-injection'
+import type { ChoixServiAuJuge, VerdictCran, ZoneServieAuJuge } from './juge-cran'
 import { citationTient, jugerLAncrage, type AncrageBrut } from './citation-verifiee'
 import { valider, type Forme, type Verdict } from './schema'
 import {
@@ -172,6 +173,12 @@ export interface CoucheType {
     ordre: number
     materiau: string | null
     reponseAttendue: string | null
+    /** C7-L1 — servis SEULEMENT la porte ouverte (`documentsAuJuge`). */
+    versionCorrigee?: string | null
+    defaut?: string | null
+    passageFautif?: string | null
+    zone?: ZoneServieAuJuge | null
+    choix?: ChoixServiAuJuge | null
   }>
 }
 
@@ -286,6 +293,15 @@ export interface EntreeRetour {
    *    bornes, et il ne fait de l'exercice ni une lecture ni une explication.
    */
   coTexte?: string | null
+  /**
+   * ⭐⭐ C7-L1 (03/09) — LA PORTE « le juge reçoit les documents ». Ouverte, le
+   *    message porte en plus CE QU'ON TIENT POUR VRAI (l'énoncé du problème, le
+   *    passage qui le porte, la version corrigée), CE QUE L'ÉLÈVE A FAIT (sa
+   *    zone, son candidat) et LE VERDICT DU JUGE DU CRAN. Fermée, le message est
+   *    celui d'hier, à l'octet — c'est ce que le test prouve.
+   */
+  documentsAuJuge?: boolean
+  verdictCran?: VerdictCran | null
 }
 
 /** Le message de l'appel chaud. Le gabarit (couche contrat) part en SYSTÈME. */
@@ -441,6 +457,51 @@ export function assemblerRetour(gabarit: string, e: EntreeRetour): { systeme: st
       + "Sers-t'en pour ANCRER ce que tu dis dans ce qu'il avait à faire — « le\n"
       + "passage disait X, tu as écrit Y » — et pour ne plus parler dans le vide\n"
       + 'quand la consigne dit « ce passage » ou « ce texte ».'))
+  }
+
+  // ⭐⭐ C7-L1 (03/09) — CE QU'ON TIENT POUR VRAI, ET LE VERDICT DU JUGE DU CRAN,
+  //    la porte ouverte seulement. « À tous les crans, le juge reçoit ce qu'on
+  //    tient pour vrai » (`02-` §2.3.4 amendé ; `10-` §6, décision 16), et le
+  //    retour « cite le passage » (`07-` §2, C7-L1, « fait quand »).
+  // ⛔ BALISÉ comme le reste, et pour la même raison. La version corrigée EST la
+  //    réponse aux crans 3 et 5 : la phrase qui suit est écrite POUR ÊTRE LUE PAR
+  //    LE MODÈLE, comme celle de l'étalon.
+  if (e.documentsAuJuge) {
+    const blocs = (e.coucheType.casServis ?? []).flatMap((c) => [
+      ...(c.defaut ? [{ nom: `l'énoncé du problème du cas ${c.ordre} — ce qu'on tient pour vrai`, contenu: c.defaut }] : []),
+      ...(c.passageFautif ? [{ nom: `le passage du cas ${c.ordre} qui porte le problème`, contenu: c.passageFautif }] : []),
+      ...(c.versionCorrigee ? [{ nom: `la version corrigée du cas ${c.ordre} — une bonne forme parmi d'autres`, contenu: c.versionCorrigee }] : []),
+      ...(c.zone ? [{ nom: `la zone que l'élève a désignée au cas ${c.ordre}`,
+        contenu: c.zone.rienASignaler
+          ? "L'élève a dit : rien à signaler."
+          : `${c.zone.texte ?? '(zone vide)'}${c.zone.verdict ? ` — la porte de zone dit : ${c.zone.verdict}` : ''}` }] : []),
+      ...(c.choix?.candidat ? [{ nom: `le candidat que l'élève a choisi au cas ${c.ordre}`,
+        contenu: `${c.choix.candidat}${c.choix.bonCandidat ? `\n(le bon candidat : ${c.choix.bonCandidat})` : ''}` }] : []),
+    ])
+    if (blocs.length) {
+      morceaux.push(messageAvecMateriau(blocs,
+        "CE QU'ON TIENT POUR VRAI, ET CE QUE L'ÉLÈVE A FAIT. L'énoncé dit le problème\n"
+        + "que le devoir d'élève porte ; la version corrigée en montre UNE bonne forme,\n"
+        + 'jamais la seule ; la zone et le candidat sont sa réponse.\n'
+        + '\n'
+        + '⛔ NE RECOPIE NI NE PARAPHRASE LA VERSION CORRIGÉE : à plusieurs crans il lui\n'
+        + "reste une version finale à écrire, et elle EST la réponse. Sers-t'en pour\n"
+        + 'juger si SON passage a encore le problème, et pour nommer ce problème avec\n'
+        + "les mots de l'énoncé — jamais pour lui dicter la phrase."))
+    }
+    if (e.verdictCran) {
+      const v = e.verdictCran
+      morceaux.push([
+        'LE VERDICT DU JUGE DU CRAN — il a lu les mêmes documents, et il a tranché :',
+        `${v.reussi ? 'RÉUSSI' : 'RATÉ'} — ${v.motif}`,
+        v.probleme_vu ? `Le problème qu'il voit : ${v.probleme_vu}` : "Il ne voit plus de problème.",
+        v.passage ? `Le passage de la copie qui le porte : « ${v.passage} »` : '',
+        '',
+        'Ton retour DIT ce verdict — réussi ou raté, et pourquoi — avec les mots de',
+        "l'élève, et il CITE ce passage (règle 3) quand il y en a un : c'est la citation",
+        'ancrée « copie » de ton point principal. Tu ne rejuges pas ; tu expliques.',
+      ].filter(Boolean).join('\n'))
+    }
   }
 
   morceaux.push('SQUELETTE ET VERDICTS — ' + (e.moment === 'v1' ? 'la v1.' : 'la v1, puis la version finale.'))

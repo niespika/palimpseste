@@ -32,6 +32,8 @@
 // ============================================================================
 
 import { ciblesPossibles, type Candidat, type ExercicePose } from '../routeur/semaine'
+import { motifDeFermeture, statutDeService, type PorteDUnObjet, type StatutDeService }
+  from '../registre/porte'
 import type { Competence, Couverture, Geste, Grain, Parcours } from '../routeur/types'
 
 // ════════════════════════════════════════════════════════════════════════════
@@ -143,6 +145,12 @@ export interface ContexteDuVivier {
    * l'autre lui revient.
    */
   classesDeLEleve: ReadonlySet<string>
+  /**
+   * ⭐ C7-L5 — LA PORTE DES CRANS PAR OBJET (`10-` §7 ; `01-` v5.8 §3) : « la
+   *    distribution par palier choisit PARMI les crans débloqués, elle ne
+   *    débloque rien ». Absente ou inactive ⇒ la couche 4 sert comme hier.
+   */
+  porte?: { actif: boolean; de: (objet: string) => PorteDUnObjet } | null
 }
 
 /** Pourquoi une instance n'est pas entrée au vivier. « Un vide expliqué. » */
@@ -163,6 +171,9 @@ export type MotifDEcart =
   | 'cours_par_notions_non_lu'
   | 'non_spoiler'
   | 'materiau_non_valide'
+  // ⭐ C7-L5 — la porte du registre (`10-` §7) : le cran n'est pas ouvert sur cet
+  //   objet, ou la semaine de méthode ne le sert pas. Derrière `gabarit_actif`.
+  | 'porte_registre'
   | 'deja_deposee'
   | 'aucune_competence_ciblable'
 
@@ -464,6 +475,13 @@ export interface InstanceRetenue {
   plafondCibles: number
   /** Les compétences en `observable_seul` — matériau de mesure, jamais cible. */
   observableSeul: Competence[]
+  /**
+   * ⭐ C7-L5 — ce que la porte a dit de cette instance : `sonde` = servie comme
+   *    sonde de montée (l'élève stagne au cran d'en dessous, M-e s'applique) ;
+   *    `methode` = la semaine de méthode de l'objet ; `ouvert` = le registre
+   *    l'ouvre ; `null` = porte inactive.
+   */
+  porte: StatutDeService | null
 }
 
 export interface Vivier {
@@ -585,8 +603,20 @@ export function constituerLeVivier(
         + 'jamais d\'entraînement.')
       continue
     }
+    // ── ⭐ C7-L5 — LA PORTE DU REGISTRE, en dernier : elle choisit parmi ce que
+    //    les autres filtres laissent, et ne rouvre rien. ──────────────────────
+    let porte: StatutDeService | null = null
+    if (ctx.porte?.actif) {
+      const p = ctx.porte.de(inst.objet)
+      porte = statutDeService(p, inst.cranNumero)
+      if (porte === 'ferme') {
+        ecarter(inst.exerciceId, 'porte_registre',
+          motifDeFermeture(p, [], inst.cranNumero ?? 0))
+        continue
+      }
+    }
     retenus.push({ instance: inst, borne: s.borne, ciblables, plafondCibles: plafond,
-      observableSeul })
+      observableSeul, porte })
   }
   return { retenus, ecartes }
 }

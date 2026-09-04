@@ -21,6 +21,9 @@ import { formeDepuisLePlan } from './modele'
 import { bornesLues, servirLeTexteSupport } from '@/utils/lecture/texte-support'
 import type { SegmentMateriau } from '@/utils/deroule/marquage'
 import { enTexte } from './consigne'
+import { cibleDansLeMateriau, verdictDeLaZone } from '@/utils/deroule/designation'
+import { lireLaPorteJugeDocuments } from '@/utils/juge/porte'
+import type { ChoixServiAuJuge, ZoneServieAuJuge } from './juge-cran'
 import type { Competence, Forme, Grain, Lieu, StatutRecette } from './types'
 import { COMPETENCES } from './types'
 
@@ -60,6 +63,25 @@ export interface CasServiAuRetour {
   materiau: string | null
   /** `exercices_cas.reponse_attendue` — la réponse, telle que la banque la porte. */
   reponseAttendue: string | null
+  /**
+   * ⭐⭐ C7-L1 (03/09) — CE QU'ON TIENT POUR VRAI, ET CE QUE L'ÉLÈVE A FAIT.
+   *    « À tous les crans, le juge reçoit ce qu'on tient pour vrai — la
+   *    réponse, la version corrigée, la pièce, l'étalon » (`02-` §2.3.4 amendé,
+   *    `10-` §6, décision 16). Les cinq champs ci-dessous sont LUS toujours et
+   *    SERVIS seulement la porte ouverte (`jugeDocumentsActif`) : au juge du
+   *    cran, et au retour. Porte fermée, le message du retour est celui d'hier.
+   * ⚠️ `version_corrigee` EST la réponse aux crans 3 et 5 : elle ne part jamais
+   *    à l'écran par ce chemin, et Calame a la consigne de ne pas la recopier.
+   */
+  versionCorrigee: string | null
+  /** `exercices_cas.defaut` — l'énoncé du problème. */
+  defaut: string | null
+  /** La CIBLE en texte : le passage que le diff désigne (`cibleDansLeMateriau`). */
+  passageFautif: string | null
+  /** La zone que l'élève a désignée (`exercices_metacognition.credence`), et son verdict de zone. */
+  zone: ZoneServieAuJuge | null
+  /** Au cran 4 : le candidat le plus chargé en jetons, et le bon (`index_correct`). */
+  choix: ChoixServiAuJuge | null
 }
 
 export interface ContexteDepot {
@@ -166,6 +188,13 @@ export interface ContexteDepot {
    *    objet, et aux crans 3 et 5 elle EST la réponse.
    */
   casPourLeRetour: CasServiAuRetour[]
+  /**
+   * ⭐⭐ C7-L1 — L'INTERRUPTEUR « le juge reçoit les documents »
+   *    (`scriptorium_params.juge_documents_actif`, lu à chaque dépôt, tolérant :
+   *    absent ⇒ OFF). Ouvert : le juge du cran tranche aux crans 4·5·7·9 et le
+   *    retour reçoit les documents et le verdict. Fermé : rien ne change.
+   */
+  jugeDocumentsActif: boolean
   /**
    * Ce que la DÉCISION D'ASSIGNATION porte. « Le drapeau [de sonde de montée]
    * vient de la décision d'assignation ; la chaîne LE RECOPIE sur la mesure,
@@ -638,7 +667,8 @@ export async function lireContexte(admin: Admin, depotId: string): Promise<Conte
       ? await patronDeProduction(admin, tousLesModes, cran)
       : null,
     etalonProduction: await etalonDeProduction(admin, exercice.id, cran),
-    casPourLeRetour: await casPourLeRetour(admin, exercice.id),
+    casPourLeRetour: await casPourLeRetour(admin, exercice.id, depot.id),
+    jugeDocumentsActif: await lireLaPorteJugeDocuments(admin as never),
     decision,
     confianceDeclaree: (depot.confiance_declaree ?? {}) as Record<string, string>,
     estSyntheseEnClasse: typeExercice === 'synthese' && exercice.lieu === 'classe',
@@ -784,7 +814,8 @@ function production(texte: unknown, transcription: unknown): string | null {
 }
 
 /**
- * ⭐ LE MATÉRIAU ET L'ATTENDU DE CHAQUE CAS — pour le retour chaud, et lui seul.
+ * ⭐ LE MATÉRIAU ET L'ATTENDU DE CHAQUE CAS — pour le retour chaud, et pour le
+ *    juge du cran.
  *
  * ⚠️ AUCUN FILTRE PAR CRAN, et c'est délibéré. On sert CE QUE LE CAS PORTE : un
  *    cran de production n'a pas de matériau et rend `null`, un cas sans réponse
@@ -792,9 +823,17 @@ function production(texte: unknown, transcription: unknown): string | null {
  *    domicile de la table des crans, qui divergerait au premier amendement — et
  *    le `02-` §2.2 en a reçu un le 31/08 même.*
  *
- * ⛔ `version_corrigee` N'EST PAS SÉLECTIONNÉE. Elle est la réponse aux crans 3
- *    et 5 (`02-` §2.3.4), et ce qu'on sert ici est ce que l'élève AVAIT SOUS LES
- *    YEUX. Ne pas la lire est plus sûr que la lire et l'écarter.
+ * ⭐⭐ C7-L1 (03/09) — `version_corrigee`, `defaut`, la cible, la zone et le
+ *    choix DESCENDENT ICI. La décision du 31/08 (« ne pas la lire est plus sûr
+ *    que la lire et l'écarter ») est levée par la décision 16 du `10-` : « à
+ *    tous les crans, le juge reçoit ce qu'on tient pour vrai ». Ce qui protège
+ *    l'élève n'est plus l'absence de lecture, c'est la PORTE : rien de ceci ne
+ *    part à un prompt tant que `jugeDocumentsActif` est faux, et Calame reçoit
+ *    la consigne de ne pas recopier.
+ * ⚠️ La zone se lit sur la CRÉDENCE du dépôt (`exercices_metacognition`), par
+ *    cas — là où `enregistrerLaDesignation` l'écrit (`gestes.ts`) : `zone`,
+ *    `zone_at`, et pour le cran 4 `jetons` / `index_correct` / `candidats`. Une
+ *    lecture ratée rend une zone `null`, jamais une exception.
  *
  * ⚠️ Erreur de lecture → tableau VIDE, jamais une exception : le retour se sert
  *    sans matériau comme il le faisait hier, et la trace le dit. *supabase-js ne
@@ -802,30 +841,99 @@ function production(texte: unknown, transcription: unknown): string | null {
  *    sans matériau.*
  */
 async function casPourLeRetour(
-  admin: Admin, exerciceId: string,
+  admin: Admin, exerciceId: string, depotId: string,
 ): Promise<CasServiAuRetour[]> {
   const { data, error } = await admin
     .from('exercices_cas')
-    .select('ordre, reponse_attendue, exercices_materiaux(contenu)')
+    .select('ordre, reponse_attendue, defaut, exercices_materiaux(contenu, version_corrigee)')
     .eq('exercice_id', exerciceId).order('ordre')
   if (error) {
     console.error(`[chaine] cas du retour illisibles — exercice ${exerciceId} : `
       + `${error.code} ${error.message}. Le retour se sert sans matériau.`)
     return []
   }
+  const credence = await credenceDuDepot(admin, depotId)
   const texte = (v: unknown): string | null =>
     (typeof v === 'string' && v.trim() !== '' ? v.trim() : null)
   return ((data ?? []) as unknown as Array<{
-    ordre: number; reponse_attendue: unknown; exercices_materiaux: unknown
+    ordre: number; reponse_attendue: unknown; defaut: unknown; exercices_materiaux: unknown
   }>).map((c) => {
     // La jointure rend un objet ou un tableau d'un élément selon la forme de la
     // clé — le patron du dépôt (`vue.ts`, `ratissage-serveur.ts`) lit les deux.
-    const m = Array.isArray(c.exercices_materiaux)
-      ? c.exercices_materiaux[0] : c.exercices_materiaux
+    const m = (Array.isArray(c.exercices_materiaux)
+      ? c.exercices_materiaux[0] : c.exercices_materiaux) as
+      { contenu?: unknown; version_corrigee?: unknown } | null
+    const contenu = texte(m?.contenu)
+    const versionCorrigee = texte(m?.version_corrigee)
+    const brut = contenu ?? ''
+    const cible = cibleDansLeMateriau(brut, versionCorrigee)
+    const entree = credence.find((e) => e.cas === c.ordre) ?? null
     return {
       ordre: c.ordre,
-      materiau: texte((m as { contenu?: unknown } | null)?.contenu),
+      materiau: contenu,
       reponseAttendue: texte(c.reponse_attendue),
+      versionCorrigee,
+      defaut: texte(c.defaut),
+      passageFautif: cible ? brut.slice(cible[0], cible[1]) : null,
+      zone: zoneServie(brut, cible, entree),
+      choix: choixServi(entree),
     }
   })
+}
+
+interface EntreeCredence {
+  cas: number
+  zone: readonly [number, number] | null
+  zoneAt: string | null
+  jetons: number[] | null
+  indexCorrect: number | null
+  candidats: string[] | null
+}
+
+/** La crédence du dépôt, entrée par cas — `[]` sur toute erreur. */
+async function credenceDuDepot(admin: Admin, depotId: string): Promise<EntreeCredence[]> {
+  const { data, error } = await admin
+    .from('exercices_metacognition').select('credence').eq('depot_id', depotId).maybeSingle()
+  if (error || !Array.isArray(data?.credence)) return []
+  const out: EntreeCredence[] = []
+  for (const e of data.credence as unknown[]) {
+    if (!e || typeof e !== 'object') continue
+    const o = e as Record<string, unknown>
+    if (typeof o.cas !== 'number') continue
+    const z = o.zone
+    out.push({
+      cas: o.cas,
+      zone: Array.isArray(z) && z.length === 2 && typeof z[0] === 'number' && typeof z[1] === 'number'
+        ? [z[0], z[1]] : null,
+      zoneAt: typeof o.zone_at === 'string' ? o.zone_at : null,
+      jetons: Array.isArray(o.jetons) ? o.jetons.map((x) => (typeof x === 'number' ? x : 0)) : null,
+      indexCorrect: typeof o.index_correct === 'number' ? o.index_correct : null,
+      candidats: Array.isArray(o.candidats) ? o.candidats.map(String) : null,
+    })
+  }
+  return out
+}
+
+/** La zone désignée, telle que le juge la lit — `null` tant que l'élève n'a rien saisi. */
+function zoneServie(
+  contenu: string, cible: readonly [number, number] | null, e: EntreeCredence | null,
+): ZoneServieAuJuge | null {
+  if (!e || e.zoneAt === null) return null
+  if (e.zone === null) return { texte: null, rienASignaler: true, verdict: null, cas: null }
+  const [d, f] = [Math.max(0, e.zone[0]), Math.min(contenu.length, e.zone[1])]
+  const v = cible && contenu ? verdictDeLaZone(contenu, cible, [d, f]) : null
+  return { texte: contenu.slice(d, f) || null, rienASignaler: false,
+    verdict: v?.verdict ?? null, cas: v?.cas ?? null }
+}
+
+/** Au cran 4 : le candidat le plus chargé — une égalité ne désigne personne (C4-L14). */
+function choixServi(e: EntreeCredence | null): ChoixServiAuJuge | null {
+  if (!e || !e.jetons || !e.candidats || e.jetons.length !== e.candidats.length) return null
+  const max = Math.max(...e.jetons)
+  const gagnants = e.jetons.filter((x) => x === max)
+  const i = gagnants.length === 1 ? e.jetons.indexOf(max) : -1
+  return {
+    candidat: i >= 0 ? (e.candidats[i] ?? null) : null,
+    bonCandidat: e.indexCorrect !== null ? (e.candidats[e.indexCorrect] ?? null) : null,
+  }
 }

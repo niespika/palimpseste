@@ -1,4 +1,5 @@
 import 'server-only'
+import { lireLaPorteDesCrans } from '@/utils/registre/porte-serveur'
 // ============================================================================
 // C4 · L12 — L'ORCHESTRATEUR PAR ÉLÈVE, ET LA PERSISTANCE DE LA DÉCISION.
 // ----------------------------------------------------------------------------
@@ -605,11 +606,14 @@ export async function composerPourUnEleve(
   }
 
   // ── LE VIVIER — le premier geste, et il commande les trois autres ─────────
+  // ⭐ C7-L5 — LA PORTE DES CRANS, lue une fois, derrière `gabarit_actif`.
+  const porte = await lireLaPorteDesCrans(admin, c.eleveId, c.cycleLundi)
   const vivier = constituerLeVivier(c.instances, {
     parcours: budget.parcours,
     coursVus: c.coursVus,
     positionsDeLecture: c.positions,
     instancesDejaDeposees: c.dejaDeposees,
+    porte,
     // ⭐ L'UNION de ses inscriptions ACTIVES — la même lecture que les parcours
     //   et les cours vus. Un bi-classe reçoit ce qui est donné à l'une OU à
     //   l'autre ; l'instance sans classe revient à tout le monde.

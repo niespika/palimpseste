@@ -312,6 +312,22 @@ export interface ContexteDeDecision {
  *    par `routeur_decision_id` », et que l'historique des cibles se compte EN
  *    EXERCICES.
  */
+/**
+ * ⭐ C7-L5 — LA SONDE DE MONTÉE DÉCLENCHÉE PAR LE REGISTRE (`10-` §7, décision
+ *    14 ; `01-` §8.8 amendé) : « rien de neuf dans la mécanique, seul le
+ *    déclencheur s'ajoute ». Elle est marquée `sonde_montee` comme les autres —
+ *    M-e : neutre pour la fenêtre d'acquisition et la stagnation.
+ */
+function avecLaSondeDuRegistre(
+  sondes: SondeRetenue[], porte: string | null, exerciceId: string, cible: Competence,
+): SondeRetenue[] {
+  if (porte !== 'sonde' || sondes.some((s) => s.sonde_montee)) return sondes
+  return [...sondes, {
+    competence: cible, motif: 'sonde_montee_registre', priorite: null, sonde_montee: true,
+    exercice_id: exerciceId,
+  }]
+}
+
 export function lignesDeDecision(
   poses: readonly ExercicePose[],
   sondes: readonly SondePosee[],
@@ -337,10 +353,13 @@ export function lignesDeDecision(
         // tirage qui a choisi ; l'ensemble des ex æquo est dans `tirage_aleatoire`.
         tirage_a_la_pose: p.tirage,
         tour_de_pb5: p.tour,
+        // ⭐ C7-L5 — ce que la porte du registre a dit de cette instance.
+        porte_registre: r?.porte ?? null,
       },
-      sondes_retenues: sondesDeLExercicePose(
+      sondes_retenues: avecLaSondeDuRegistre(sondesDeLExercicePose(
         p.candidat.exerciceId, p.candidat.competence, p.candidat.cran,
-        ctx.paliers.get(p.candidat.competence) ?? null, sondes),
+        ctx.paliers.get(p.candidat.competence) ?? null, sondes), r?.porte ?? null,
+      p.candidat.exerciceId, p.candidat.competence),
       propositions_iso_duree: offre.offerte ? offre.propositions : null,
       // ⛔ « La place qu'y prend la préférence recueillie n'est pas tranchée, et
       //    ce lot se construit sans elle » (`01-` §5, « Non tranché »).

@@ -54,6 +54,7 @@ import {
   rangDuTemps, colonnesDuPlan, titreDuTravail, type FormeDuTravail, type Volet,
 } from '@/utils/deroule/plan-de-travail'
 import { segmentsDuRenvoi } from '@/utils/deroule/renvoi'
+import { momentDeLaPaire, casDuMoment, versionDuCas, type MomentDeLaPaire } from '@/utils/deroule/paire'
 import { lireLaRepartition, rappelDeLaRepartition } from '@/utils/deroule/repartition'
 import {
   actionOuvrir, actionEnregistrerBrouillon, actionRemettre, actionMicroQuestion,
@@ -71,17 +72,46 @@ export function EcranDeroule(
   // L'ouverture est idempotente côté serveur : `ouvert_at` ne se réécrit jamais.
   useEffect(() => { void actionOuvrir(vue.depotId) }, [vue.depotId])
 
+  // ── ⭐⭐ 04/09 — UNE PAIRE, UN CAS À LA FOIS (`utils/deroule/paire.ts`) ─────
+  //    « Il faut un cas par écran » (Louis). Le moment se lit sur l'étape du
+  //    serveur ; « passer au second cas » est le geste de l'élève, tenu ici.
+  const [passeAuSecond, setPasseAuSecond] = useState(false)
+  const moment: MomentDeLaPaire | null = vue.estUnePaire
+    ? momentDeLaPaire(vue.etapePaire, passeAuSecond) : null
+  const casAffiche: 1 | 2 | null = moment ? casDuMoment(moment) : null
+  /** Le texte de chaque cas est-il ENREGISTRÉ ? La crédence d'un cas se déclare après. */
+  const [texteSauve, setTexteSauve] = useState<Record<number, boolean>>(() => ({
+    1: (vue.texteV1 ?? '').trim() !== '', 2: (vue.texteVf ?? '').trim() !== '',
+  }))
+
   const enregistrer = useCallback(
     async (texte: string, t: TelemetrieSaisie) => {
-      await actionEnregistrerBrouillon(vue.depotId, versionEnCours(vue), texte, t)
-    }, [vue])
+      const version = versionEnCours(vue, casAffiche)
+      const r = await actionEnregistrerBrouillon(vue.depotId, version, texte, t)
+      if (r.ok && casAffiche !== null) {
+        setTexteSauve((s) => ({ ...s, [casAffiche]: texte.trim() !== '' }))
+      }
+    }, [vue, casAffiche])
 
   const remettre = useCallback(
     async (texte: string, t: TelemetrieSaisie) => {
-      const r = await actionRemettre(vue.depotId, versionEnCours(vue), texte, t)
+      // ⭐⭐ SUR UNE PAIRE, LA REMISE SE FAIT AU SECOND CAS : sa réponse va en
+      //    `texte_vf` — « la réponse au second cas » (regime.ts) — et la remise
+      //    scelle la v1, celle du premier cas, telle qu'elle a été écrite.
+      //    ⚠️ La chaîne mesure la v1 comme hier ; le second cas est désormais
+      //    ÉCRIT (il ne l'était jamais : 0 `texte_vf` sur 28 paires en prod).
+      if (vue.estUnePaire && casAffiche === 2 && vue.tempsCourant !== 'reviser') {
+        const b = await actionEnregistrerBrouillon(vue.depotId, 'vf', texte, t)
+        if (!b.ok) throw new Error(b.message)
+        const r = await actionRemettre(vue.depotId, 'v1', vue.texteV1 ?? '', null)
+        if (!r.ok) throw new Error(r.message)
+        router.refresh()
+        return
+      }
+      const r = await actionRemettre(vue.depotId, versionEnCours(vue, casAffiche), texte, t)
       if (!r.ok) throw new Error(r.message)
       router.refresh()
-    }, [vue, router])
+    }, [vue, router, casAffiche])
 
   // ⚠️ La FORME se dérive avant les états d'écran : le volet initial du
   //    téléphone en dépend (`voletInitial`).
@@ -115,6 +145,22 @@ export function EcranDeroule(
     seJugerAServir: vue.seJuger.servie && (vue.seJuger.offre?.questions.length ?? 0) > 0,
   })
 
+  // ⭐ C7-L3 — PORTE FERMÉE sur un exercice au format 1.5 : l'écran ne compose
+  //    pas ce qu'il ne sait pas servir (les candidats du 1 seraient des clés et
+  //    des identifiants). Il le dit, et n'enregistre rien.
+  if (vue.gabarit.exercice15 && !vue.gabarit.actif) {
+    return (
+      <div className="mx-auto max-w-2xl px-4 py-10">
+        <Carte titre="Cet exercice n’est pas encore ouvert">
+          <p className="font-corps text-[15px] leading-relaxed text-encre-douce">
+            Il attend une console que ton professeur n’a pas encore ouverte. Reviens quand il
+            l’aura fait : rien n’est perdu, et rien ne t’est demandé d’ici là.
+          </p>
+        </Carte>
+      </div>
+    )
+  }
+
   return (
     <div className="-mx-4 overflow-hidden border-y border-bordure bg-fond-module
                     sm:mx-0 sm:rounded-2xl sm:border">
@@ -136,6 +182,8 @@ export function EcranDeroule(
         <PlanDeTravail
           vue={vue} forme={forme} volet={volet} setVolet={setVolet}
           enregistrer={enregistrer} remettre={remettre}
+          moment={moment} casAffiche={casAffiche} texteSauve={texteSauve}
+          passerAuSecond={() => setPasseAuSecond(true)}
         />
       )}
 
@@ -170,8 +218,9 @@ export function EcranDeroule(
   )
 }
 
-function versionEnCours(vue: VueDuDeroule): 'v1' | 'vf' {
-  return vue.tempsCourant === 'reviser' ? 'vf' : 'v1'
+function versionEnCours(vue: VueDuDeroule, casAffiche: 1 | 2 | null): 'v1' | 'vf' {
+  if (vue.tempsCourant === 'reviser') return 'vf'
+  return versionDuCas(vue.estUnePaire, casAffiche)
 }
 
 const quand = (iso: string) =>
@@ -316,7 +365,7 @@ function PastilleDeTemps(
 // ── Écrans 2a / 2b / 2c — LE PLAN DE TRAVAIL ────────────────────────────────
 
 function PlanDeTravail({
-  vue, forme, volet, setVolet, enregistrer, remettre,
+  vue, forme, volet, setVolet, enregistrer, remettre, moment, casAffiche, texteSauve, passerAuSecond,
 }: {
   vue: VueDuDeroule
   forme: FormeDuTravail
@@ -324,10 +373,14 @@ function PlanDeTravail({
   setVolet: (v: 'lire' | 'ecrire') => void
   enregistrer: (texte: string, t: TelemetrieSaisie) => Promise<void>
   remettre: (texte: string, t: TelemetrieSaisie) => Promise<void>
+  moment: MomentDeLaPaire | null
+  casAffiche: 1 | 2 | null
+  texteSauve: Record<number, boolean>
+  passerAuSecond: () => void
 }) {
   return (
     <div>
-      <ConsigneCollante vue={vue} />
+      <ConsigneCollante vue={vue} casAffiche={casAffiche} />
 
       {/* ⭐ LA BASCULE DU TÉLÉPHONE (handoff §4) — 48 px, deux moitiés égales.
           Sur un exercice à surligner, on surligne dans `Lire` et le bouton du
@@ -352,7 +405,7 @@ function PlanDeTravail({
       </div>
 
       <div className={`lg:grid lg:items-stretch ${colonnesDuPlan(forme)}`}>
-        <ColonneMatiere vue={vue} forme={forme} cache={volet !== 'lire'}>
+        <ColonneMatiere vue={vue} forme={forme} cache={volet !== 'lire'} moment={moment} casAffiche={casAffiche}>
           {/* ⭐ Sur un exercice à surligner, le pont vers la réponse est DANS la
               vue `Lire` : le passage désigné vient d'être posé, et l'élève passe
               à ce qu'il en dit sans chercher la bascule du haut. */}
@@ -370,6 +423,7 @@ function PlanDeTravail({
         <ColonneTravail
           vue={vue} forme={forme} cache={volet !== 'ecrire'}
           enregistrer={enregistrer} remettre={remettre}
+          moment={moment} casAffiche={casAffiche} texteSauve={texteSauve} passerAuSecond={passerAuSecond}
         />
       </div>
     </div>
@@ -384,7 +438,11 @@ function PlanDeTravail({
  * ⚠️ `<details>` natif, donc sans état client ni hydratation, et le texte reste
  *    dans le document.
  */
-function ConsigneCollante({ vue }: { vue: VueDuDeroule }) {
+function ConsigneCollante({ vue, casAffiche }: { vue: VueDuDeroule; casAffiche: 1 | 2 | null }) {
+  // ⭐ 04/09 — sur une paire, la consigne collée est celle du CAS MONTRÉ.
+  const jetons = casAffiche !== null
+    ? (vue.cas.find((c) => c.ordre === casAffiche)?.consigne ?? vue.consigne)
+    : vue.consigne
   return (
     <details className="group sticky top-0 z-10 border-b border-bordure bg-surface-retrait
                         lg:hidden">
@@ -397,11 +455,11 @@ function ConsigneCollante({ vue }: { vue: VueDuDeroule }) {
         </span>
         <span className="min-w-0 flex-1 truncate font-corps text-sm text-encre-douce
                          group-open:hidden">
-          <TexteBalise jetons={vue.consigne} />
+          <TexteBalise jetons={jetons} />
         </span>
       </summary>
       <p className="px-4 pb-3 font-corps text-[15px] leading-relaxed text-encre">
-        <TexteBalise jetons={vue.consigne} />
+        <TexteBalise jetons={jetons} />
       </p>
     </details>
   )
@@ -410,16 +468,21 @@ function ConsigneCollante({ vue }: { vue: VueDuDeroule }) {
 // ── La colonne de gauche : LA MATIÈRE ───────────────────────────────────────
 
 function ColonneMatiere({
-  vue, forme, cache, children,
+  vue, forme, cache, children, moment = null, casAffiche = null,
 }: {
   vue: VueDuDeroule; forme: FormeDuTravail; cache: boolean; children?: React.ReactNode
+  moment?: MomentDeLaPaire | null; casAffiche?: 1 | 2 | null
 }) {
+  // ⭐⭐ 04/09 — UN CAS À LA FOIS : la colonne ne montre que le cas du moment.
+  const casMontres = vue.cas.filter((c) => casAffiche === null || c.ordre === casAffiche)
   return (
     <div className={`flex flex-col gap-3 border-bordure bg-fond-module p-4 sm:p-5
                      lg:border-r ${cache ? 'hidden lg:flex' : ''}`}>
       <div className="flex items-center gap-3">
+        {/* ⭐⭐ C7-L3 — DEUX ESPACES (`10-` §3, décision 15) : le cadre « Les
+            documents », à sections nommées, et l'exercice. Le titre suit. */}
         <h2 className="font-marque text-[11px] font-semibold uppercase tracking-[0.13em] text-muet">
-          La matière
+          {vue.gabarit.actif ? 'Les documents' : 'La matière'}
         </h2>
         {/* ⛔ Aux crans 4, 7 et 9, l'écran DIT que le passage est à trouver — il
             ne le montre pas : « l'y trouver EST le travail » (`02-` §5). */}
@@ -435,19 +498,23 @@ function ColonneMatiere({
       {/* ⚠️ SUR UNE PAIRE, PAS DE CONSIGNE EN EN-TÊTE — trouvé au smoke élève du
           24/08. « Pour une paire il y a DEUX consignes, une pour chaque
           exercice » (Louis) : chaque cas porte déjà la sienne, plus bas. */}
-      <Carte titre={vue.estUnePaire ? 'Deux cas, l’un après l’autre' : 'La consigne'}>
-        {vue.estUnePaire ? (
-          <p className="font-corps text-base leading-relaxed text-encre">
-            Tu traites le premier cas, tu reçois sa correction, puis tu passes au second.
-            {' '}<strong>Chacun porte sa propre consigne.</strong>
-          </p>
-        ) : (
-          /* ⭐ Le balisage SE REND : « le gras est du SENS » (piège 36). */
-          <p className="font-corps text-base leading-[1.5] text-encre">
-            <TexteBalise jetons={vue.consigne} />
-          </p>
-        )}
-      </Carte>
+      {/* ⭐ 04/09 — l'annonce des deux cas ne se dit qu'au PREMIER : au second,
+          le titre du cas suffit, et l'écran ne répète pas ce qui est fait. */}
+      {(!vue.estUnePaire || moment === 'cas_1') && (
+        <Carte titre={vue.estUnePaire ? 'Deux cas, l’un après l’autre' : 'La consigne'}>
+          {vue.estUnePaire ? (
+            <p className="font-corps text-base leading-relaxed text-encre">
+              Tu traites le premier cas, tu reçois sa correction, puis tu passes au second.
+              {' '}<strong>Chacun porte sa propre consigne.</strong>
+            </p>
+          ) : (
+            /* ⭐ Le balisage SE REND : « le gras est du SENS » (piège 36). */
+            <p className="font-corps text-base leading-[1.5] text-encre">
+              <TexteBalise jetons={vue.consigne} />
+            </p>
+          )}
+        </Carte>
+      )}
 
       {/* ── ⭐⭐ C5-L2 — LE TEXTE D'AUTEUR, QUAND L'EXERCICE EN PORTE UN.
           ⭐ Ce qui s'affiche est l'ENGLOBANT — « l'étendue réellement lue »
@@ -459,7 +526,15 @@ function ColonneMatiere({
           montrait nulle part. Il vient EN PREMIER : c'est de lui que parlent le
           texte, le matériau et la consigne. Un énoncé, pas un texte — pas de
           cadre de lecture, pas de défilement. */}
-      {vue.sujet && (
+      {/* ⭐ C7-L3 — au 1(b), AUCUN DOCUMENT : les quatre devoirs sont l'exercice
+          (`10-` §3). Le cadre le dit, au lieu de s'ouvrir vide. */}
+      {vue.gabarit.sansDocuments && (
+        <p className="font-corps text-[15px] leading-relaxed text-encre-douce">
+          Aucun document pour cet exercice : les quatre devoirs d’élève sont dans l’exercice,
+          à droite.
+        </p>
+      )}
+      {vue.sujet && !vue.gabarit.sansDocuments && (
         <Carte titre="Le sujet">
           <p className="font-corps text-[16.5px] font-semibold leading-[1.5] text-encre">
             {vue.sujet}
@@ -469,7 +544,7 @@ function ColonneMatiere({
 
       {vue.texteSupport && (
         <Carte
-          titre="Le texte"
+          titre={vue.gabarit.actif ? "Le texte d'auteur" : 'Le texte'}
           appoint={[vue.texteSupport.auteur, vue.texteSupport.titre, vue.texteSupport.reference]
             .filter(Boolean).join(' · ') || undefined}
         >
@@ -494,7 +569,7 @@ function ColonneMatiere({
           entier et tel qu'il est stocké — d'où le `whitespace-pre-wrap` et
           l'absence d'`appoint`, contrairement au texte d'auteur juste au-dessus. */}
       {vue.coTexte && (
-        <Carte titre="Le texte de départ">
+        <Carte titre={vue.gabarit.actif ? 'Le matériel' : 'Le texte de départ'}>
           <p className="max-h-[52vh] overflow-y-auto whitespace-pre-wrap rounded-[9px] border
                         border-bordure-bouton bg-parchemin-fonce p-3.5 font-corps text-[15.5px]
                         leading-[1.62] text-encre">
@@ -503,14 +578,20 @@ function ColonneMatiere({
         </Carte>
       )}
 
-      {/* ── LE MATÉRIAU DE CHAQUE CAS, ET CE QUE L'ÉCRAN Y MET EN ÉVIDENCE ── */}
-      {vue.cas.map((c) => (
+      {/* ── LE MATÉRIAU DU CAS MONTRÉ, ET CE QUE L'ÉCRAN Y MET EN ÉVIDENCE ── */}
+      {casMontres.map((c) => (
         (vue.estUnePaire || c.materiau?.length) ? (
           <Carte
             key={c.ordre}
-            titre={vue.estUnePaire
-              ? (c.ordre === 1 ? 'Premier cas' : 'Un cas neuf, de la même famille')
-              : (forme === 'surligner' ? 'La copie' : 'Le passage')}
+            titre={vue.gabarit.actif
+              ? (vue.gabarit.sansDocuments
+                ? (c.ordre === 1 ? 'Premier cas' : 'Second cas, de la même famille')
+                : vue.estUnePaire
+                  ? `Le devoir d'élève — ${c.ordre === 1 ? 'premier cas' : 'second cas, de la même famille'}`
+                  : "Le devoir d'élève")
+              : (vue.estUnePaire
+                ? (c.ordre === 1 ? 'Premier cas' : 'Un cas neuf, de la même famille')
+                : (forme === 'surligner' ? 'La copie' : 'Le passage'))}
           >
             {vue.estUnePaire && (
               <p className="mb-3 font-corps text-base leading-[1.5] text-encre">
@@ -583,15 +664,63 @@ function ColonneMatiere({
 // ── La colonne de droite : LE TRAVAIL ───────────────────────────────────────
 
 function ColonneTravail({
-  vue, forme, cache, enregistrer, remettre,
+  vue, forme, cache, enregistrer, remettre, moment, casAffiche, texteSauve, passerAuSecond,
 }: {
   vue: VueDuDeroule
   forme: FormeDuTravail
   cache: boolean
   enregistrer: (texte: string, t: TelemetrieSaisie) => Promise<void>
   remettre: (texte: string, t: TelemetrieSaisie) => Promise<void>
+  moment: MomentDeLaPaire | null
+  casAffiche: 1 | 2 | null
+  texteSauve: Record<number, boolean>
+  passerAuSecond: () => void
 }) {
   const enRedactionV1 = vue.tempsCourant === 'ecrire' || vue.tempsCourant === 'preparer'
+  const casMontres = vue.cas.filter((c) => casAffiche === null || c.ordre === casAffiche)
+  const casCourant = casMontres[0] ?? null
+
+  // ── ⭐⭐ 04/09 — LE MOMENT DE LA CORRECTION DU PREMIER CAS, SEUL À L'ÉCRAN.
+  //    « La correction du premier cas est servie AVANT le second » (`02-`
+  //    §2.3.1 a) : elle a son écran, et le second cas s'ouvre d'un geste.
+  if (moment === 'correction_1') {
+    const c1 = vue.corrections[0] ?? null
+    return (
+      <div className={`flex flex-col gap-4 p-4 sm:p-5 ${cache ? 'hidden lg:flex' : ''}`}>
+        <h2 className="font-marque text-[11px] font-semibold uppercase tracking-[0.13em] text-muet">
+          La correction du premier cas
+        </h2>
+        {c1 ? <Correction correction={c1} /> : (
+          <p className="font-corps text-[15px] italic text-muet">
+            Rien à corriger sur ce cas : passe au second.
+          </p>
+        )}
+        <button
+          type="button" onClick={passerAuSecond}
+          className="min-h-12 self-start rounded-[10px] bg-bouton px-6 py-3.5 font-ui text-[15px]
+                     font-semibold text-bouton-texte"
+        >
+          Passer au second cas →
+        </button>
+      </div>
+    )
+  }
+
+  // La crédence du cas montré — celle que l'élève n'a pas encore donnée.
+  const credenceASaisir = enRedactionV1 && casCourant?.credence && !casCourant.credence.empechement
+    && !casCourant.credenceDonnee ? casCourant : null
+  // Sur une rédaction, la crédence porte sur « ta propre réponse, celle que tu
+  // viens d'écrire » : elle vient APRÈS le champ, et sur une paire seulement
+  // une fois le texte enregistré — sans quoi l'étape ne peut pas avancer.
+  const credenceApresLeChamp = forme !== 'choisir' && credenceASaisir
+    && (!vue.estUnePaire || texteSauve[credenceASaisir.ordre]) ? (
+      <CredenceSaisie
+        key={credenceASaisir.ordre} depotId={vue.depotId} cas={credenceASaisir.ordre}
+        offre={credenceASaisir.credence!} nu={false} />
+    ) : null
+  // ⭐ Sur une paire, le premier cas ne se REND pas : il se déclare, puis on
+  //    passe au second ; et le second ne se rend qu'une fois sa crédence donnée.
+  const sansRemise = vue.estUnePaire && (casAffiche === 1 || (casAffiche === 2 && !casCourant?.credenceDonnee))
 
   return (
     <div className={`flex flex-col gap-3 p-4 sm:p-5 ${cache ? 'hidden lg:flex' : ''}`}>
@@ -612,13 +741,47 @@ function ColonneTravail({
       {/* ⭐ Sur un exercice à surligner, le passage désigné est RAPPELÉ en haut
           de la vue `Écrire` (handoff §4) : l'élève écrit ce qu'il en dit sans
           rebasculer pour se relire. */}
-      {forme === 'surligner' && <RappelDuPassage vue={vue} />}
+      {forme === 'surligner' && <RappelDuPassage vue={vue} casAffiche={casAffiche} />}
 
       <Attente vue={vue} />
 
-      {/* ⭐⭐ LA CORRECTION — servie APRÈS la crédence DE CE CAS, et pour LES
-          DEUX cas de la paire : le second est celui du transfert. */}
-      {vue.corrections.map((correction, i) => (
+      {/* ⭐ 04/09 — FINI SANS RETOUR : l'écran le dit, au lieu d'un fil à « Retour »
+          au-dessus de rien. Ni chiffre ni emplacement du passage (`02-` §5). */}
+      {vue.fin === 'hors_cible' && (
+        <Encart ton="attention">
+          <p className="text-sm text-encre">
+            <strong>Cet exercice est terminé.</strong> Le passage que tu avais surligné n’est pas
+            celui qui posait problème : la correction est là, et il n’y a pas de retour à attendre.
+            La prochaine fois, relis le document avant de choisir où pointer.
+          </p>
+        </Encart>
+      )}
+      {vue.fin === 'non_fait' && (
+        <Encart ton="attention">
+          <p className="text-sm text-encre">
+            <strong>Cet exercice ne compte pas.</strong> Surligner presque tout le texte, ce n’est
+            pas répondre — ton professeur est prévenu, et il n’y a pas de retour à attendre.
+          </p>
+        </Encart>
+      )}
+
+      {/* ⭐⭐ LA CORRECTION — servie APRÈS la crédence DE CE CAS.
+          ⭐ 04/09 — sur une paire, au second cas, la correction du premier se
+          REPLIE (elle a eu son écran), et celle du second n'apparaît qu'une fois
+          la copie rendue : servie pendant qu'on écrit encore, elle donnerait la
+          réponse (au cran 9, c'est la version corrigée). */}
+      {vue.estUnePaire ? (
+        <>
+          {casAffiche === 2 && vue.corrections[0] && (
+            <Depliable titre="La correction du premier cas" depotId={vue.depotId} aide={null}>
+              <Correction correction={vue.corrections[0]} />
+            </Depliable>
+          )}
+          {casAffiche === 2 && !enRedactionV1 && vue.corrections[1] && (
+            <Correction correction={vue.corrections[1]} />
+          )}
+        </>
+      ) : vue.corrections.map((correction, i) => (
         correction ? <Correction key={i} correction={correction} /> : null
       ))}
 
@@ -632,13 +795,11 @@ function ColonneTravail({
           raison »). *L'écran promettait un geste que le serveur refusait.*
           ⚠️ Aux crans guidés `v1_remis_at` n'est JAMAIS posé — la crédence EST
           la réponse —, donc `enRedactionV1` y reste vrai et rien ne disparaît. */}
-      {enRedactionV1 && vue.cas.map((c) => (
-        c.credence && !c.credence.empechement && !c.credenceDonnee
-          ? <CredenceSaisie
-            key={c.ordre} depotId={vue.depotId} cas={c.ordre} offre={c.credence}
-            nu={forme === 'choisir'} />
-          : null
-      ))}
+      {forme === 'choisir' && credenceASaisir?.credence && (
+        <CredenceSaisie
+          key={credenceASaisir.ordre} depotId={vue.depotId} cas={credenceASaisir.ordre}
+          offre={credenceASaisir.credence} nu />
+      )}
 
       {/* La micro-question de dépassement. ⚠️ JAMAIS notée, jamais renvoyée
           comme jugement, et `motif_depassement` reste NULL si on n'y répond
@@ -652,18 +813,32 @@ function ColonneTravail({
           remplir, à côté des quatre lectures qui portaient sa réponse. */}
       {forme !== 'choisir' && enRedactionV1 && (
         <ChampDeRedaction
+          /* ⭐ 04/09 — sur une paire, le champ CHANGE avec le cas : `key` le remonte. */
+          key={casAffiche ?? 'seul'}
           depotId={vue.depotId}
-          valeurInitiale={vue.texteV1 ?? ''}
-          telemetrieInitiale={vue.telemetrie.v1 ?? null}
+          valeurInitiale={(casAffiche === 2 ? vue.texteVf : vue.texteV1) ?? ''}
+          telemetrieInitiale={(casAffiche === 2 ? vue.telemetrie.vf : vue.telemetrie.v1) ?? null}
           lectureSeule={false}
           rows={forme === 'surligner' ? 9 : 14}
           onEnregistrer={enregistrer}
           onRemettre={remettre}
-          libelleRemise={forme === 'surligner' ? 'Rendre ma réponse' : 'Rendre ma v1'}
+          libelleRemise={vue.estUnePaire ? 'Rendre mes deux réponses'
+            : forme === 'surligner' ? 'Rendre ma réponse' : 'Rendre ma v1'}
           /* ⭐ LES TROIS GESTES DE LA REMISE, DANS CET ORDRE (`06-` §3), et
              AVANT tout envoi à l'IA — dans la carte « Avant de rendre ». */
           avantDeRendre={<GestesDeLaRemise vue={vue} />}
-          pied={vue.regime === 'plein' ? 'Tu pourras la reprendre après le retour.' : null}
+          /* ⭐ 04/09 — la crédence se déclare APRÈS avoir écrit, AVANT de rendre. */
+          avantLaRemise={credenceApresLeChamp}
+          sansRemise={sansRemise}
+          pied={vue.estUnePaire
+            ? (casAffiche === 1
+              ? (texteSauve[1] ? 'Déclare ta chance d’avoir juste : tu passeras ensuite au second cas.'
+                : 'Écris ta réponse à ce premier cas ; le champ s’enregistre tout seul.')
+              : (!casCourant?.credenceDonnee
+                ? (texteSauve[2] ? 'Déclare ta chance d’avoir juste, puis tu pourras rendre.'
+                  : 'Écris ta réponse à ce second cas ; le champ s’enregistre tout seul.')
+                : null))
+            : (vue.regime === 'plein' ? 'Tu pourras la reprendre après le retour.' : null)}
         />
       )}
 
@@ -675,16 +850,21 @@ function ColonneTravail({
           ⚠️ Elle ne s'affiche PAS pendant la rédaction — le champ la porte déjà
              —, ni aux crans guidés, où l'élève ne rédige rien. */}
       {!enRedactionV1 && forme !== 'choisir' && (vue.texteV1 ?? '').trim() !== '' && (
-        <div>
-          <p className="mb-2 font-ui text-xs text-muet">
-            {vue.estUnePaire ? 'Premier cas' : 'Ta v1'} · lecture seule
-          </p>
-          <TexteBrut
-            texte={vue.texteV1 ?? ''}
-            className="rounded-xl border border-bordure bg-surface-retrait p-4 font-corps
-                       text-[16.5px] leading-[1.7] text-encre-douce"
-          />
-        </div>
+        /* ⭐ 04/09 — sur une paire, LES DEUX réponses : la seconde vit en `texte_vf`. */
+        (vue.estUnePaire
+          ? [{ libelle: 'Premier cas', texte: vue.texteV1 ?? '' },
+            { libelle: 'Second cas', texte: vue.texteVf ?? '' }].filter((c) => c.texte.trim() !== '')
+          : [{ libelle: 'Ta v1', texte: vue.texteV1 ?? '' }]
+        ).map((c) => (
+          <div key={c.libelle}>
+            <p className="mb-2 font-ui text-xs text-muet">{c.libelle} · lecture seule</p>
+            <TexteBrut
+              texte={c.texte}
+              className="rounded-xl border border-bordure bg-surface-retrait p-4 font-corps
+                         text-[16.5px] leading-[1.7] text-encre-douce"
+            />
+          </div>
+        ))
       )}
 
       <Etalon vue={vue} />
@@ -693,8 +873,9 @@ function ColonneTravail({
 }
 
 /** Le rappel du passage désigné, en tête de la vue `Écrire` du téléphone. */
-function RappelDuPassage({ vue }: { vue: VueDuDeroule }) {
-  const cas = vue.cas.find((c) => c.designationDemandee && c.zoneDonnee)
+function RappelDuPassage({ vue, casAffiche }: { vue: VueDuDeroule; casAffiche: 1 | 2 | null }) {
+  const cas = vue.cas.find((c) => c.designationDemandee && c.zoneDonnee
+    && (casAffiche === null || c.ordre === casAffiche))
   if (!cas?.zoneDonnee || !cas.materiau) return null
   const contenu = cas.materiau.map((sg) => sg.texte).join('')
   const extrait = contenu.slice(cas.zoneDonnee[0], cas.zoneDonnee[1])
@@ -1039,9 +1220,20 @@ function RetourDUnChoix({ vue, atelier }: { vue: VueDuDeroule; atelier: Atelier 
       {/* ── LA CORRECTION ─────────────────────────────────────────────── */}
       <div className="order-2 flex flex-col gap-3 p-4 sm:p-5 lg:order-1">
         <h2 className="font-marque text-[11px] font-semibold uppercase tracking-[0.13em] text-muet">
-          Ton retour
+          {vue.estUnePaire ? 'Ton retour — second cas' : 'Ton retour'}
         </h2>
-        {vue.corrections.map((correction, i) => (
+        {/* ⭐ 04/09 — sur une paire, le retour est celui du SECOND cas ; celui du
+            premier a eu son écran et se replie ici. */}
+        {vue.estUnePaire ? (
+          <>
+            {vue.corrections[1] && <Correction correction={vue.corrections[1]} />}
+            {vue.corrections[0] && (
+              <Depliable titre="La correction du premier cas" depotId={vue.depotId} aide={null}>
+                <Correction correction={vue.corrections[0]} />
+              </Depliable>
+            )}
+          </>
+        ) : vue.corrections.map((correction, i) => (
           correction ? <Correction key={i} correction={correction} /> : null
         ))}
 
@@ -1069,9 +1261,11 @@ function RetourDUnChoix({ vue, atelier }: { vue: VueDuDeroule; atelier: Atelier 
       {/* ── LA CONSIGNE, ET CE QUE L'ÉLÈVE AVAIT POSÉ ─────────────────── */}
       <div className="order-1 flex flex-col gap-3 border-bordure bg-fond-module p-4 sm:p-5
                       lg:order-2 lg:border-l">
-        <Carte titre="La consigne">
+        <Carte titre={vue.estUnePaire ? 'La consigne du second cas' : 'La consigne'}>
           <p className="font-corps text-base leading-[1.5] text-encre">
-            <TexteBalise jetons={vue.consigne} />
+            {/* ⭐ 04/09 — sur une paire, la consigne montrée est celle du DERNIER cas,
+                comme la répartition posée juste dessous. */}
+            <TexteBalise jetons={vue.estUnePaire && dernier ? dernier.consigne : vue.consigne} />
           </p>
         </Carte>
 
@@ -1264,6 +1458,14 @@ function Etalon({ vue }: { vue: VueDuDeroule }) {
 function Attente({ vue }: { vue: VueDuDeroule }) {
   const router = useRouter()
   const [etat, setEtat] = useState(vue.attente)
+
+  // ⭐⭐ 04/09 — L'ÉTAT SUIT LA VUE. Ce composant est monté AVANT la remise, avec
+  //    une attente à « rien en cours » ; la remise rafraîchit la vue, mais un
+  //    `useState` ne relit pas sa valeur initiale : l'encart « ton retour est en
+  //    préparation » ne venait jamais, le sondage ne partait pas, et l'écran
+  //    restait muet jusqu'à un rechargement à la main. Vu au parcours du 04/09
+  //    en bac à sable, sur la remise d'un cran 5.
+  useEffect(() => { setEtat(vue.attente) }, [vue.attente])
 
   useEffect(() => {
     if (!etat.enCours) return

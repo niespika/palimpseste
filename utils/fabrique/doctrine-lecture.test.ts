@@ -29,13 +29,15 @@ import {
 
 // ── La doublure ─────────────────────────────────────────────────────────────
 
-/** Les douze tables que la lecture demande, dans l'ordre où elle les appelle. */
+/** Les douze tables que la lecture demande, dans l'ordre où elle les appelle —
+ *  ⭐ C7-L2 : plus les QUATRE du gabarit, lues avec tolérance par le même chemin. */
 const TABLES = [
   'exercices_types', 'exercices_types_modes', 'exercices_types_modes_source',
   'exercices_types_crans', 'exercices_crans', 'exercices_durees',
   'competences_modes_admis', 'exercices_routes', 'exercices_consignes_isolees',
   'exercices_consignes_production', 'exercices_guides_production',
   'demonstrations_formes',
+  'exercices_problemes', 'exercices_tests', 'exercices_pieces', 'exercices_marquage_gabarit',
 ] as const
 
 interface Appel { table: string; tri: string[]; de: number; a: number }
@@ -158,7 +160,7 @@ test('la pagination NE SAUTE ET NE RÉPÈTE aucune ligne — le contenu, pas le 
   assert.deepEqual(vues, [...Array(3264).keys()])
 })
 
-test('les ONZE autres tables tiennent en une page — le coût de la boucle y est nul', async () => {
+test('les QUINZE autres tables tiennent en une page — le coût de la boucle y est nul', async () => {
   const journal: Appel[] = []
   await chargerLignesDepuisBase(doublure(lignesDe(3264), { journal }) as never)
   for (const t of TABLES) {
@@ -168,7 +170,7 @@ test('les ONZE autres tables tiennent en une page — le coût de la boucle y es
   }
 })
 
-test('LES DOUZE TABLES passent par le même chemin, et TOUTES sont ordonnées', async () => {
+test('LES SEIZE TABLES passent par le même chemin, et TOUTES sont ordonnées', async () => {
   const journal: Appel[] = []
   await chargerLignesDepuisBase(doublure(lignesDe(3264), { journal }) as never)
   assert.deepEqual([...new Set(journal.map((a) => a.table))].sort(), [...TABLES].sort())

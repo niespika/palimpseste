@@ -40,6 +40,8 @@ import {
 } from './slots'
 import { modeleDeLaChaine } from './modele'
 import { messageAvecMateriau, tentativeDeSortieDeBloc } from './anti-injection'
+import { JUGE_AUX_CRANS, type VerdictCran } from './juge-cran'
+import { jugerLeCran, lireLesVerdictsDuDepot } from './juge-cran-serveur'
 import { appliquerObservablesMesure } from './observables'
 import {
   attacherDelta, ecrireMesure, entreesDesRegles, fenetreDEvidence,
@@ -207,6 +209,16 @@ export async function traiterDepot(
   // étages interdit (`01-` §11 et §12).
   const squelettes: SqueletteServi[] = []
 
+  // ── ⭐⭐ C7-L1 — LE JUGE DU CRAN, EN PARALLÈLE des chaînes de compétence ───
+  // « Le juge reçoit le texte, et ce qu'on tient pour vrai » (`10-` §6 ; `07-`
+  // §2, C7-L1). Un QUATRIÈME appel, aux crans 4·5·7·9, la porte ouverte : il
+  // tranche la tâche du cran, écrit son verdict sur le dépôt, et Calame le
+  // reçoit. Il part maintenant pour ne rien ajouter à la latence ; on l'attend
+  // avant le retour. `jugerLeCran` ne lève jamais.
+  const jugement = ctx.jugeDocumentsActif && ctx.cran != null && JUGE_AUX_CRANS.has(ctx.cran)
+    ? jugerLeCran(admin, { ctx, version, modele, production })
+    : null
+
   // ── Temps 1 à 4, par compétence, LES CHAÎNES EN PARALLÈLE ─────────────────
   // ⚠️ `allSettled`, jamais `all` : avec `all`, une compétence qui lève emporte
   //    le RÉSULTAT des autres — dont les mesures sont pourtant déjà écrites et
@@ -268,6 +280,16 @@ export async function traiterDepot(
   })
   appels += monitoring.appels
 
+  // ── Le verdict du juge du cran, s'il a été demandé ────────────────────────
+  let verdictCran: VerdictCran | null = null
+  if (jugement) {
+    const j = await jugement
+    appels += j.appels
+    alertes.push(...j.alertes)
+    verdictCran = j.verdict
+    if (!j.verdict) alertes.push('juge du cran : aucun verdict — le retour se sert sans lui')
+  }
+
   // ── Le retour — chaud en v1, final en vf ──────────────────────────────────
   let retourEcrit = false
   if (squelettes.length) {
@@ -289,6 +311,7 @@ export async function traiterDepot(
       squelettes: version === 'vf' ? (squelettesV1 ?? []) : squelettes,
       squelettesVf: version === 'vf' ? squelettes : undefined,
       registre: options.registre ?? null, cible,
+      verdictCran,
     })
     appels += r.appels
     retourEcrit = r.ecrit
@@ -1047,6 +1070,8 @@ export async function engendrerLeRetour(
      * ⛔ Les appels au modèle, eux, sont bien faits et bien facturés.
      */
     sansEcriture?: boolean
+    /** C7-L1 — le verdict du juge du cran, quand la porte est ouverte et qu'il a tranché. */
+    verdictCran?: VerdictCran | null
   },
 ): Promise<{
   ecrit: boolean; appels: number; alertes: string[]
@@ -1151,6 +1176,10 @@ export async function engendrerLeRetour(
     //    (`EcranDeroule.tsx`) ; sans cette ligne, Calame jugeait « as-tu bien
     //    illustré cet argument ? » sans jamais avoir lu l'argument.
     coTexte: ctx.coTexte,
+    // ⭐⭐ C7-L1 — la porte, et le verdict. Porte fermée, `assemblerRetour` rend
+    //    le message d'hier à l'octet ; le verdict n'existe alors pas.
+    documentsAuJuge: ctx.jugeDocumentsActif,
+    verdictCran: ctx.jugeDocumentsActif ? (a.verdictCran ?? null) : null,
   })
 
   try {
@@ -1466,10 +1495,14 @@ export async function rejouerLeRetour(
   const coexistence = alerteDeCoexistence(ctx)
   if (coexistence) alertes.push(coexistence)
 
+  // C7-L1 — le rejeu du seul retour ne rejuge pas : il relit le verdict écrit
+  // sur le dépôt, s'il y en a un pour cette version.
+  const verdictsStockes = ctx.jugeDocumentsActif ? await lireLesVerdictsDuDepot(admin, depotId) : {}
   const r = await engendrerLeRetour(admin, {
     ctx, version: 'v1', modele, squelettes, registre: options.registre ?? null, cible,
     tolererLaForme: options.tolererLaForme === true,
     sansEcriture: options.sansEcriture === true,
+    verdictCran: verdictsStockes.v1 ?? null,
   })
   alertes.push(...r.alertes)
 
