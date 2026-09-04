@@ -109,7 +109,7 @@ def charge(racine):
     sys.path.insert(0, os.path.join(racine, "generateur"))
     from noyau.doctrine import (Doctrine, SourceMouvante,  # noqa: E402
                                 _lignes_table, _nu, _section, _valeurs, MODES)
-    from noyau.grille import lire_le_09, lire_le_10  # noqa: E402
+    from noyau.grille import lire_le_09, lire_le_10, lire_les_fiches  # noqa: E402
 
     d = Doctrine.charge(racine)
     t02 = io.open(os.path.join(racine, "02-exercices.md"), encoding="utf-8").read()
@@ -309,6 +309,8 @@ def charge(racine):
     # (f) ⭐ C7-L2 — LA GRILLE DU `09-` ET LE MARQUAGE DU `10-` §5.
     d.problemes, d.tests, d.pieces = lire_le_09(racine, d, SourceMouvante)
     d.marquage_gabarit = lire_le_10(racine, d, SourceMouvante, _section, _lignes_table, _nu)
+    # ⭐ C7-L5 — les fiches des objets (la tête de chaque fiche du `09-`), pour la semaine de méthode.
+    d.fiches = lire_les_fiches(racine, d, SourceMouvante)
 
     d.empreintes = empreintes(racine)
     return d
@@ -466,6 +468,12 @@ def lignes(d):
     L["exercices_pieces"] = [(pc.objet, pc.genre, pc.cle, pc.constituant, pc.enonce)
                              for pc in d.pieces]
     L["exercices_marquage_gabarit"] = list(d.marquage_gabarit)
+    # ⭐ C7-L5 — une ligne par objet ou (objet, genre) ; les constituants en JSON.
+    L["exercices_fiches_objets"] = [
+        (f.objet, f.genre, f.objet + ("." + f.genre if f.genre else ""), f.libelle, f.definition,
+         json.dumps(f.constituants, ensure_ascii=False), f.joint, f.test, f.dit_a_leleve,
+         f.exemplaire, "true" if f.exemplaire_brouillon else "false", f.contre_exemple)
+        for f in d.fiches]
 
     return L
 
@@ -515,7 +523,7 @@ def sql_remplissage(d, racine):
               "exercices_types_crans", "competences_modes_admis",
               "exercices_durees", "exercices_crans", "demonstrations_formes",
               "exercices_problemes", "exercices_tests", "exercices_pieces",
-              "exercices_marquage_gabarit"):
+              "exercices_marquage_gabarit", "exercices_fiches_objets"):
         w("delete from %s;" % t)
     w("")
 
@@ -645,6 +653,16 @@ def sql_remplissage(d, racine):
     w("insert into exercices_marquage_gabarit (cran,variante,marquage) values\n       %s;"
       % _bloc_values(L["exercices_marquage_gabarit"]))
     w("")
+    w("-- ── Les fiches des objets — `09-`, la tête de chaque fiche (C7-L5) ────────")
+    w("insert into exercices_fiches_objets (type_id,objet_code,genre,cle,libelle,definition,"
+      "constituants,joint,test,dit_a_leleve,exemplaire,exemplaire_brouillon,contre_exemple)")
+    w("select t.id, v.objet_code, v.genre, v.cle, v.libelle, v.definition, v.constituants::jsonb,"
+      " v.joint, v.test, v.dit_a_leleve, v.exemplaire, v.exemplaire_brouillon::boolean, v.contre_exemple")
+    w("  from (values\n       %s)" % _bloc_values(L["exercices_fiches_objets"]))
+    w("  as v(objet_code, genre, cle, libelle, definition, constituants, joint, test, dit_a_leleve,"
+      " exemplaire, exemplaire_brouillon, contre_exemple)")
+    w("  join exercices_types t on t.code = v.objet_code;")
+    w("")
 
     comptes = {k: len(v) for k, v in sorted(L.items())}
     w("-- ── Le journal de dérivation ─────────────────────────────────────────────")
@@ -669,6 +687,7 @@ def sql_remplissage(d, racine):
     w("    ||' tests='||(select count(*) from exercices_tests)")
     w("    ||' pieces='||(select count(*) from exercices_pieces)")
     w("    ||' marquage_gabarit='||(select count(*) from exercices_marquage_gabarit)")
+    w("    ||' fiches_objets='||(select count(*) from exercices_fiches_objets)")
     w("    ||' objets_avec_crans='||(select count(*) from exercices_types "
       "where coalesce(array_length(crans_admis,1),0) > 0) as constat;")
     return "\n".join(o) + "\n"
@@ -715,8 +734,16 @@ def fixture(d, racine):
         "exercices_tests": ("objet_code", "genre", "cle", "n", "question"),
         "exercices_pieces": ("objet_code", "genre", "cle", "piece", "geste"),
         "exercices_marquage_gabarit": ("cran", "variante", "marquage"),
+        # ⭐ C7-L5
+        "exercices_fiches_objets": ("objet_code", "genre", "cle", "libelle", "definition",
+                                    "constituants", "joint", "test", "dit_a_leleve", "exemplaire",
+                                    "exemplaire_brouillon", "contre_exemple"),
     }
     out = {t: [dict(zip(c, r)) for r in L[t]] for t, c in cols.items()}
+    # la fixture porte le booléen et le JSON en clair, comme la base les rend
+    for r in out["exercices_fiches_objets"]:
+        r["exemplaire_brouillon"] = r["exemplaire_brouillon"] == "true"
+        r["constituants"] = json.loads(r["constituants"])
     out["exercices_types"] = [
         {"code": code, "nature": o.nature, "grain": o.grain, "libelle": o.libelle,
          "supports_source": o.support_source, "genres_admis": o.genres,
@@ -893,6 +920,12 @@ end as verdict;""" % {"t": table, "c": cols})
         "exercices_pieces":
             ("cle||'|'||piece||'|'||geste",
              [ "%s|%s|%s" % (pc.cle, pc.constituant, pc.enonce) for pc in d.pieces ]),
+        # ⭐ C7-L5 — la fiche entière, champ par champ, dans l'ordre de la table.
+        "exercices_fiches_objets":
+            ("cle||'|'||coalesce(definition,'')||'|'||coalesce(exemplaire,'')||'|'||coalesce(contre_exemple,'')||'|'||jsonb_array_length(constituants)",
+             [ "%s|%s|%s|%s|%d" % (f.objet + ("." + f.genre if f.genre else ""), f.definition or "",
+                                     f.exemplaire or "", f.contre_exemple or "", len(f.constituants))
+               for f in d.fiches ]),
     }
     for table, (expr, valeurs) in gros.items():
         source = table

@@ -101,6 +101,8 @@ test('au 1(a) les distracteurs sont des clés ; au 1(b) des devoirs d’élève'
   const un = (variante: 'a' | 'b', dis: unknown[]) => casse((b) => {
     const e = b.exercices[0]; e.cran = 1; e.variante = variante
     for (const c of e.cas) { c.distracteurs = dis; c.pourquoi_juste = 'parce que' }
+    // ⭐ 04/09 : le second cas d'un 1(a) est un 1(b) — ses candidats sont des devoirs.
+    if (variante === 'a' && e.cas.length > 1) e.cas[1].distracteurs = ['mat-a', 'mat-b', 'mat-b']
   })
   const clesOk = controleImport(un('a', [P2.cle, P_MOT.cle, P.cle]), doctrine)
   assert.equal(aRefus(clesOk, 13), false, clesOk.refus.join('\n'))

@@ -142,6 +142,12 @@ export interface LignesDoctrine {
   }>
   exercices_tests?: Array<{ objet_code: string; genre: string | null; cle: string; n: number; question: string }>
   exercices_pieces?: Array<{ objet_code: string; genre: string | null; cle: string; piece: string; geste: string }>
+  /** ⭐ C7-L5 — les fiches des objets (`09-`, la tête de chaque fiche), pour la semaine de méthode. */
+  exercices_fiches_objets?: Array<{
+    objet_code: string; genre: string | null; cle: string; libelle: string; definition: string | null
+    constituants: unknown; joint: string | null; test: string | null; dit_a_leleve: string | null
+    exemplaire: string | null; exemplaire_brouillon: boolean | null; contre_exemple: string | null
+  }>
   exercices_marquage_gabarit?: Array<{ cran: number; variante: string; marquage: string | null }>
   /** Les tables du gabarit que la base n'a pas rendues — pour l'annonce du rapport. */
   lacunes?: string[]
@@ -171,6 +177,14 @@ export interface ProblemeDoctrine {
 
 export interface TestDoctrine { cle: string; objet: string; genre: string | null; n: number; question: string }
 export interface PieceDoctrine { cle: string; objet: string; genre: string | null; piece: string; geste: string }
+/** ⭐ C7-L5 — la fiche d'un objet, telle que le `09-` la dit en tête de fiche. */
+export interface FicheObjetDoctrine {
+  cle: string; objet: string; genre: string | null; libelle: string
+  definition: string | null
+  constituants: Array<{ n: number; nom: string; facultatif: boolean; question: string }>
+  joint: string | null; test: string | null; ditALEleve: string | null
+  exemplaire: string | null; exemplaireBrouillon: boolean; contreExemple: string | null
+}
 
 export interface ObjetDoctrine {
   code: string
@@ -275,6 +289,8 @@ export interface Doctrine {
   tests: Record<string, TestDoctrine[]>
   /** Indexées par `objet` ou `objet|genre` — la pièce du cran 2 et son geste. */
   pieces: Record<string, PieceDoctrine>
+  /** ⭐ C7-L5 — par clé `objet` ou `objet.genre`. */
+  fiches: Record<string, FicheObjetDoctrine>
   /** Indexé par `${cran}|${variante}` (`-` sans variante) — `null` : rien n'est marqué. */
   marquageGabarit: Record<string, string | null>
   /** Ce que la base n'a pas rendu du gabarit — nommé, jamais tu. */
@@ -457,6 +473,21 @@ export function assemblerDoctrine(rows: LignesDoctrine): Doctrine {
     ;(tests[cle] ??= []).push({ cle: t.cle, objet: t.objet_code, genre: t.genre ?? null, n: t.n, question: t.question })
   }
   for (const l of Object.values(tests)) l.sort((a, b) => a.n - b.n)
+  const fiches: Record<string, FicheObjetDoctrine> = {}
+  for (const f of rows.exercices_fiches_objets ?? []) {
+    const brut = typeof f.constituants === 'string' ? JSON.parse(f.constituants) : f.constituants
+    const constituants = Array.isArray(brut) ? brut.map((c) => ({
+      n: Number((c as { n?: unknown }).n ?? 0), nom: String((c as { nom?: unknown }).nom ?? ''),
+      facultatif: (c as { facultatif?: unknown }).facultatif === true,
+      question: String((c as { question?: unknown }).question ?? ''),
+    })) : []
+    fiches[f.cle] = {
+      cle: f.cle, objet: f.objet_code, genre: f.genre ?? null, libelle: f.libelle,
+      definition: f.definition ?? null, constituants, joint: f.joint ?? null, test: f.test ?? null,
+      ditALEleve: f.dit_a_leleve ?? null, exemplaire: f.exemplaire ?? null,
+      exemplaireBrouillon: f.exemplaire_brouillon === true, contreExemple: f.contre_exemple ?? null,
+    }
+  }
   const pieces: Record<string, PieceDoctrine> = {}
   for (const pc of rows.exercices_pieces ?? []) {
     const cle = pc.genre ? `${pc.objet_code}|${pc.genre}` : pc.objet_code
@@ -470,7 +501,7 @@ export function assemblerDoctrine(rows: LignesDoctrine): Doctrine {
   return {
     objets, crans, modesAdmis, durees, routes, consignesIsolees, observables,
     consignesProduction, guidesProduction, formesDemonstration,
-    problemes, tests, pieces, marquageGabarit, lacunes: [...(rows.lacunes ?? [])],
+    problemes, tests, pieces, fiches, marquageGabarit, lacunes: [...(rows.lacunes ?? [])],
   }
 }
 
@@ -682,12 +713,14 @@ export async function chargerLignesDepuisBase(admin: ClientLecture): Promise<Lig
       return []
     }
   }
-  const [problemes, tests, pieces, marquage] = await Promise.all([
+  const [problemes, tests, pieces, fiches, marquage] = await Promise.all([
     tolerante<LignesDoctrine['exercices_problemes']>('exercices_problemes',
       'objet_code,genre,cle,constituant,variante_probleme,mode_probleme,observable_texte,observable_code,observable_competence,mode_receptif,observable_route,forme,grains,enonce,exemple,correction,banque,note,source_section',
       ['cle']),
     tolerante<LignesDoctrine['exercices_tests']>('exercices_tests', 'objet_code,genre,cle,n,question', ['cle']),
     tolerante<LignesDoctrine['exercices_pieces']>('exercices_pieces', 'objet_code,genre,cle,piece,geste', ['cle']),
+    tolerante<LignesDoctrine['exercices_fiches_objets']>('exercices_fiches_objets',
+      'objet_code,genre,cle,libelle,definition,constituants,joint,test,dit_a_leleve,exemplaire,exemplaire_brouillon,contre_exemple', ['cle']),
     tolerante<LignesDoctrine['exercices_marquage_gabarit']>('exercices_marquage_gabarit', 'cran,variante,marquage', ['cran', 'variante']),
   ])
   const code = (r: Record<string, unknown>) =>
@@ -722,6 +755,7 @@ export async function chargerLignesDepuisBase(admin: ClientLecture): Promise<Lig
     exercices_problemes: (problemes ?? []) as never,
     exercices_tests: (tests ?? []) as never,
     exercices_pieces: (pieces ?? []) as never,
+    exercices_fiches_objets: (fiches ?? []) as never,
     exercices_marquage_gabarit: (marquage ?? []) as never,
     lacunes,
   }

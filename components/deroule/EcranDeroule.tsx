@@ -475,6 +475,8 @@ function ColonneMatiere({
 }) {
   // ⭐⭐ 04/09 — UN CAS À LA FOIS : la colonne ne montre que le cas du moment.
   const casMontres = vue.cas.filter((c) => casAffiche === null || c.ordre === casAffiche)
+  // ⭐ 04/09 — « aucun document » se lit sur le CAS montré : le second cas d'un 1(a) est un 1(b).
+  const sansDocuments = casMontres.length > 0 && casMontres.every((c) => c.sansDocuments)
   return (
     <div className={`flex flex-col gap-3 border-bordure bg-fond-module p-4 sm:p-5
                      lg:border-r ${cache ? 'hidden lg:flex' : ''}`}>
@@ -498,6 +500,18 @@ function ColonneMatiere({
       {/* ⚠️ SUR UNE PAIRE, PAS DE CONSIGNE EN EN-TÊTE — trouvé au smoke élève du
           24/08. « Pour une paire il y a DEUX consignes, une pour chaque
           exercice » (Louis) : chaque cas porte déjà la sienne, plus bas. */}
+      {/* ⭐ C7-L5 — LA FICHE DE L'OBJET, en tête des documents. Ouverte d'elle-même
+          en semaine de méthode (« la fiche présentée, puis les exercices », `10-`
+          §7) ; repliable ensuite, sans compter comme une aide (`aide={null}`). */}
+      {vue.fiche && (!vue.estUnePaire || moment === 'cas_1') && (
+        <Depliable
+          titre={`${vue.fiche.libelle} — ce que c’est`} depotId={vue.depotId} aide={null}
+          ouvertParDefaut={vue.fiche.methode}
+        >
+          <FicheDeLObjet fiche={vue.fiche} />
+        </Depliable>
+      )}
+
       {/* ⭐ 04/09 — l'annonce des deux cas ne se dit qu'au PREMIER : au second,
           le titre du cas suffit, et l'écran ne répète pas ce qui est fait. */}
       {(!vue.estUnePaire || moment === 'cas_1') && (
@@ -528,13 +542,13 @@ function ColonneMatiere({
           cadre de lecture, pas de défilement. */}
       {/* ⭐ C7-L3 — au 1(b), AUCUN DOCUMENT : les quatre devoirs sont l'exercice
           (`10-` §3). Le cadre le dit, au lieu de s'ouvrir vide. */}
-      {vue.gabarit.sansDocuments && (
+      {sansDocuments && (
         <p className="font-corps text-[15px] leading-relaxed text-encre-douce">
           Aucun document pour cet exercice : les quatre devoirs d’élève sont dans l’exercice,
           à droite.
         </p>
       )}
-      {vue.sujet && !vue.gabarit.sansDocuments && (
+      {vue.sujet && !sansDocuments && (
         <Carte titre="Le sujet">
           <p className="font-corps text-[16.5px] font-semibold leading-[1.5] text-encre">
             {vue.sujet}
@@ -584,7 +598,7 @@ function ColonneMatiere({
           <Carte
             key={c.ordre}
             titre={vue.gabarit.actif
-              ? (vue.gabarit.sansDocuments
+              ? (c.sansDocuments
                 ? (c.ordre === 1 ? 'Premier cas' : 'Second cas, de la même famille')
                 : vue.estUnePaire
                   ? `Le devoir d'élève — ${c.ordre === 1 ? 'premier cas' : 'second cas, de la même famille'}`
@@ -868,6 +882,74 @@ function ColonneTravail({
       )}
 
       <Etalon vue={vue} />
+    </div>
+  )
+}
+
+/**
+ * ⭐ C7-L5 — LA FICHE DE L'OBJET : ce que c'est, les constituants et leurs
+ *    questions, ce que la fiche dit à l'élève, l'exemplaire, le contre-exemple.
+ *    Tout vient du `09-` dérivé ; rien n'est réécrit ici.
+ */
+/**
+ * Le gras et l'italique du `09-`, RENDUS — sans `dangerouslySetInnerHTML` : des
+ * segments, comme `TexteBalise`. Seuls `**gras**` et `*italique*` sont lus.
+ */
+function RenduLeger({ texte }: { texte: string }) {
+  const morceaux = texte.split(/(\*\*[^*]+\*\*|\*[^*\n]+\*)/g).filter((m) => m !== '')
+  return (
+    <>
+      {morceaux.map((m, i) => m.startsWith('**') && m.endsWith('**') && m.length > 4
+        ? <strong key={i}>{m.slice(2, -2)}</strong>
+        : m.startsWith('*') && m.endsWith('*') && m.length > 2
+          ? <em key={i}>{m.slice(1, -1)}</em>
+          : <span key={i}>{m}</span>)}
+    </>
+  )
+}
+
+function FicheDeLObjet({ fiche }: { fiche: NonNullable<VueDuDeroule['fiche']> }) {
+  return (
+    <div className="flex flex-col gap-3 font-corps text-[15.5px] leading-[1.55] text-encre">
+      {fiche.definition && <p><RenduLeger texte={fiche.definition} /></p>}
+      {fiche.constituants.length > 0 && (
+        <div>
+          <p className="font-marque text-[11px] font-semibold uppercase tracking-[0.11em] text-muet">
+            Ce qui le compose, dans l’ordre
+          </p>
+          <ol className="mt-1.5 flex list-decimal flex-col gap-1.5 pl-5">
+            {fiche.constituants.map((c) => (
+              <li key={c.n}>
+                <strong>{c.nom}</strong>{c.facultatif ? ' (facultatif)' : ''}
+                {c.question && <span className="text-encre-douce"> — <RenduLeger texte={c.question} /></span>}
+              </li>
+            ))}
+          </ol>
+        </div>
+      )}
+      {fiche.ditALEleve && (
+        <p className="rounded-[9px] border border-pigment/30 bg-pigment-teinte px-3.5 py-2.5 font-semibold">
+          <RenduLeger texte={fiche.ditALEleve} />
+        </p>
+      )}
+      {fiche.test && (
+        <div>
+          <p className="font-marque text-[11px] font-semibold uppercase tracking-[0.11em] text-muet">Le test</p>
+          <p className="mt-1"><RenduLeger texte={fiche.test} /></p>
+        </div>
+      )}
+      {fiche.exemplaire && (
+        <div>
+          <p className="font-marque text-[11px] font-semibold uppercase tracking-[0.11em] text-muet">Un exemplaire</p>
+          <p className="mt-1 rounded-[9px] border border-bordure-bouton bg-parchemin-fonce p-3"><RenduLeger texte={fiche.exemplaire} /></p>
+        </div>
+      )}
+      {fiche.contreExemple && (
+        <div>
+          <p className="font-marque text-[11px] font-semibold uppercase tracking-[0.11em] text-muet">Un contre-exemple</p>
+          <p className="mt-1 rounded-[9px] border border-bordure-bouton bg-parchemin-fonce p-3"><RenduLeger texte={fiche.contreExemple} /></p>
+        </div>
+      )}
     </div>
   )
 }

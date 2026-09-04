@@ -20,6 +20,8 @@ const PORT = 9337
 const arg = (n) => { const i = process.argv.indexOf(n); return i > 0 ? process.argv[i + 1] : null }
 const LARGEURS = (arg('--largeurs') ?? '1280,768,375').split(',').map(Number)
 const SEULEMENT = arg('--seulement')
+/** ⭐ `--ouvre <texte>` : avant la capture, cliquer le bouton dont le texte contient <texte> (un dépliable, par exemple). */
+const OUVRE = arg('--ouvre')
 const { data: { users } } = await admin.auth.admin.listUsers({ perPage: 200 })
 const u = users.find((x) => x.email === env.TEST_ELEVE_EMAIL)
 const { data: depots } = await admin.from('exercices_depots')
@@ -72,8 +74,9 @@ try {
       await ch; await dors(2200)
       // Ouvrir l'exercice si le bouton d'ouverture est là (temps 0), puis attendre.
       await cdp.evalue(`(async () => { const b = [...document.querySelectorAll('button')].find(x => /commencer|ouvrir/i.test(x.textContent)); if (b) { b.click(); await new Promise(r => setTimeout(r, 1800)) } return true })()`)
+      if (OUVRE) await cdp.evalue(`(async () => { const b = [...document.querySelectorAll('button')].find(x => x.textContent.includes(${JSON.stringify(OUVRE)})); if (b) { b.click(); await new Promise(r => setTimeout(r, 600)) } return !!b })()`)
       const shot = await cdp.envoie('Page.captureScreenshot', { format: 'png', captureBeyondViewport: true })
-      const nom = `${SORTIE}/${d.nom}-${largeur}.png`
+      const nom = `${SORTIE}/${d.nom}${OUVRE ? '-ouvert' : ''}-${largeur}.png`
       fs.writeFileSync(nom, Buffer.from(shot.data, 'base64'))
       const txt = await cdp.evalue(`(document.body.innerText || '').slice(0, 400).replace(/\\n+/g, ' ')`)
       console.log(`  ${d.nom} @${largeur} → ${nom} · ${txt.slice(0, 120)}`)

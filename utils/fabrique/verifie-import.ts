@@ -1035,16 +1035,19 @@ export function controleImport(
           v.refuse(oc, `le cran ${cran} n'isole rien : \`probleme\` doit être nul`, 12)
         }
         // Au 1(a) les candidats sont des CLÉS ; au 1(b) des devoirs d'élève (`materiaux[]`).
+        // ⭐ 04/09 (`10-` §4 v0.8) : LE SECOND CAS D'UNE PAIRE EST TOUJOURS (b) — au 1(a),
+        //    le cas 1 porte des clés, le cas 2 des devoirs témoins.
+        const varianteDuCas = cran === 1 && i === 1 && variante ? 'b' : variante
         if (cran === 1 && Array.isArray(dis)) {
           for (const dd of dis) {
-            if (variante === 'a') {
+            if (varianteDuCas === 'a') {
               if (typeof dd !== 'string' || !declaree(d.problemes, dd)) {
                 v.refuse(oc, 'au 1(a), un distracteur est une clé de la grille du `09-` — reçu '
                   + JSON.stringify(dd).slice(0, 60), 13)
               } else if (!objetAdmisPourLeProbleme(d, objet, d.problemes[dd]!.objet)) {
                 v.refuse(oc, `au 1(a), le candidat \`${dd}\` ne vaut pas pour \`${objet}\``, 13)
               }
-            } else if (variante === 'b') {
+            } else if (varianteDuCas === 'b') {
               if (typeof dd !== 'string' || !matConnu(dd)) {
                 v.refuse(oc, 'au 1(b), un distracteur est l\'`id` d\'un devoir d\'élève de '
                   + '`materiaux[]` — reçu ' + JSON.stringify(dd).slice(0, 60), 13)

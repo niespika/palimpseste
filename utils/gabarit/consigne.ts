@@ -76,6 +76,18 @@ export function consigneDuGabarit(e: EntreeConsigne): string | null {
 }
 
 /** Les crans où le gabarit met en gras le passage — `10-` §5, table du marquage. */
+/**
+ * ⭐ 04/09 (`10-` §4 v0.8, Louis) — LE SECOND CAS D'UNE PAIRE EST TOUJOURS (b) :
+ *    un 1(a) est suivi d'un 1(b), un 4(a) d'un 4(b). La variante de l'exercice est
+ *    celle de son premier cas ; celle du second se DÉRIVE, et ne s'écrit pas.
+ *    « Sinon l'élève comprend au bout de trois exercices qu'il doit répondre la
+ *    même chose au second cas qu'au premier. »
+ */
+export function varianteDuCas(cran: number | null, variante: Variante, ordre: number): Variante {
+  if ((cran === 1 || cran === 4) && ordre === 2 && variante !== null) return 'b'
+  return variante
+}
+
 export function marqueLePassage(cran: number, variante: Variante): boolean {
   return (cran === 1 && variante !== 'b') || cran === 3 || (cran === 4 && variante !== 'b') || cran === 5
 }

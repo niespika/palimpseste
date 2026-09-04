@@ -26,8 +26,10 @@ export interface GabaritDuDepot {
   clesParCas: Map<number, string>
   /** L'énoncé de chaque clé lue — la clé du cas, et les candidats du 1(a). */
   enonces: Map<string, string>
-  /** La phrase du 10- §5 pour ce cran × variante, `null` = rien à marquer. */
+  /** La phrase du 10- §5 pour ce cran × variante (celle du premier cas), `null` = rien à marquer. */
   marquage: string | null
+  /** ⭐ 04/09 — la phrase par VARIANTE : le second cas d'une paire est (b). */
+  marquageDe: (variante: Variante) => string | null
   /** Les témoins du 1(b), par `id_import` : le texte et son pourquoi. */
   temoins: Map<string, { texte: string; pourquoi: string | null }>
   /** Ce que la base n'a pas rendu — pour le professeur, jamais l'élève. */
@@ -36,7 +38,7 @@ export interface GabaritDuDepot {
 
 const VIDE = (exercice15 = false): GabaritDuDepot => ({
   actif: false, exercice15, variante: null, clesParCas: new Map(), enonces: new Map(),
-  marquage: null, temoins: new Map(), incidents: [],
+  marquage: null, marquageDe: () => null, temoins: new Map(), incidents: [],
 })
 
 export async function lireLeGabaritDuDepot(
@@ -76,18 +78,24 @@ export async function lireLeGabaritDuDepot(
     for (const k of cles) if (!enonces.has(k)) incidents.push(`gabarit : la clé « ${k} » n'est pas dans la grille dérivée`)
   }
 
-  // Le marquage, par cran × variante — la table du 10- §5.
-  let marquage: string | null = null
+  // Le marquage, par cran × variante — la table du 10- §5, TOUTES les variantes
+  // du cran : le second cas d'une paire lit celle du (b).
+  const marquages = new Map<string, string | null>()
   if (cran != null) {
-    const { data: m, error: eM } = await admin.from('exercices_marquage_gabarit')
-      .select('marquage').eq('cran', cran).eq('variante', variante ?? '-').maybeSingle()
+    const { data: ms, error: eM } = await admin.from('exercices_marquage_gabarit')
+      .select('variante, marquage').eq('cran', cran)
     if (eM) incidents.push(`gabarit : le marquage du 10- §5 est illisible (${eM.code})`)
-    marquage = typeof m?.marquage === 'string' ? m.marquage : null
+    for (const m of (ms ?? []) as Array<{ variante: string; marquage: string | null }>) {
+      marquages.set(m.variante, typeof m.marquage === 'string' ? m.marquage : null)
+    }
   }
+  const marquageDe = (v: Variante): string | null => marquages.get(v ?? '-') ?? null
+  const marquage = marquageDe(variante)
 
   // Les témoins du 1(b) — par `id_import`.
   const temoins = new Map<string, { texte: string; pourquoi: string | null }>()
-  if (cran === 1 && variante === 'b') {
+  // ⭐ 04/09 — les témoins servent au 1(b) ET au second cas d'un 1(a).
+  if (cran === 1) {
     const ids = new Set<string>()
     for (const c of cas) for (const d of (Array.isArray(c.distracteurs) ? c.distracteurs : [])) {
       if (typeof d === 'string') ids.add(d)
@@ -101,5 +109,5 @@ export async function lireLeGabaritDuDepot(
       }
     }
   }
-  return { actif: true, exercice15: true, variante, clesParCas, enonces, marquage, temoins, incidents }
+  return { actif: true, exercice15: true, variante, clesParCas, enonces, marquage, marquageDe, temoins, incidents }
 }

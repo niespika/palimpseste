@@ -51,7 +51,7 @@ import { baliser, type Jeton } from './balisage'
 import { lireLeGabaritDuDepot, type GabaritDuDepot } from '@/utils/gabarit/lecture'
 import { appuiDu1a, appuiDu1b } from '@/utils/gabarit/candidats'
 import {
-  consigneDuGabarit, demandeUneDesignationAuGabarit, sansDocuments, type Variante,
+  consigneDuGabarit, demandeUneDesignationAuGabarit, sansDocuments, varianteDuCas, type Variante,
 } from '@/utils/gabarit/consigne'
 import { pointDInsertion } from './marquage'
 import { lireTelemetrie } from './telemetrie'
@@ -102,6 +102,8 @@ export interface CasServi {
    * seule forme de la page, que le défaut est une absence.
    */
   designationDemandee: boolean
+  /** ⭐ C7-L3 — au 1(b), aucun document : les quatre devoirs sont l'exercice. Par CAS depuis le 04/09. */
+  sansDocuments: boolean
   /**
    * La zone déjà sélectionnée — `[début, fin[` en caractères du matériau. ⚠️
    * **`null` est ambigu et il ne faut pas le lire seul** : c'est « rien à
@@ -348,6 +350,20 @@ export interface VueDuDeroule {
    */
   gabarit: { actif: boolean; exercice15: boolean; variante: Variante; sansDocuments: boolean }
   /**
+   * ⭐ C7-L5 — LA FICHE DE L'OBJET (`09-`, dérivée dans `exercices_fiches_objets`) :
+   *    ce que c'est, les constituants et leurs questions, ce que la fiche dit à
+   *    l'élève, l'exemplaire, le contre-exemple. `methode` : l'exercice a été posé
+   *    en SEMAINE DE MÉTHODE (`routeur_decisions.alternatives_ecartees.porte_registre`)
+   *    — la fiche s'ouvre d'elle-même ; sinon elle reste repliable. `null` hors
+   *    gabarit, ou sans fiche.
+   */
+  fiche: {
+    libelle: string; definition: string | null
+    constituants: Array<{ n: number; nom: string; facultatif: boolean; question: string }>
+    test: string | null; ditALEleve: string | null; exemplaire: string | null; contreExemple: string | null
+    methode: boolean
+  } | null
+  /**
    * ⭐ 04/09 — L'EXERCICE S'EST FINI SANS RETOUR, et l'écran doit le dire :
    *    `hors_cible` — la zone surlignée ne touchait pas le passage visé, la copie
    *    est close sans appel au modèle (`02-` §5, cas 1) ; `non_fait` — le
@@ -562,6 +578,9 @@ export async function chargerLeDeroule(
     avertissements.push('exercice au format 1.5 servi à `gabarit_actif` OFF : l\'écran dit '
       + "qu'il attend le gabarit, il ne compose pas un exercice qu'il ne sait pas servir")
   }
+  // ── ⭐ C7-L5 — LA FICHE DE L'OBJET, pour la semaine de méthode ─────────────
+  const fiche = gabarit.actif ? await lireLaFicheDeLObjet(admin, depot, avertissements) : null
+
   const enonceDuCas = (ordre: number): string | null => {
     const cle = gabarit.clesParCas.get(ordre)
     return cle ? (gabarit.enonces.get(cle) ?? null) : null
@@ -587,9 +606,11 @@ export async function chargerLeDeroule(
       distracteurs: brut?.distracteurs, reponseAttendue: brut?.reponse_attendue ?? null,
       pourquoiJuste: brut?.pourquoi_juste ?? null,
     }
+    // ⭐ 04/09 — la variante DU CAS : le second cas d'une paire est toujours (b).
+    const vCas = varianteDuCas(ctx.cran, gabarit.variante, i + 1)
     if (gabarit.actif && ctx.cran === 1) {
       const cle = gabarit.clesParCas.get(i + 1) ?? ''
-      const traduit = gabarit.variante === 'b'
+      const traduit = vCas === 'b'
         ? appuiDu1b(Array.isArray(brut?.distracteurs) ? brut!.distracteurs as unknown[] : [],
           gabarit.temoins, materiauBrut, enonceDuCas(i + 1))
         : appuiDu1a(Array.isArray(brut?.distracteurs) ? brut!.distracteurs as unknown[] : [],
@@ -604,7 +625,7 @@ export async function chargerLeDeroule(
     const insertion = !!(mat?.version_corrigee && materiauBrut
       && pointDInsertion(materiauBrut, mat.version_corrigee))
     const consigneDerivee = gabarit.actif && ctx.cran != null
-      ? consigneDuGabarit({ cran: ctx.cran, variante: gabarit.variante, enonce: enonceDuCas(i + 1), insertion })
+      ? consigneDuGabarit({ cran: ctx.cran, variante: vCas, enonce: enonceDuCas(i + 1), insertion })
       : null
     consignesGabarit.push(consigneDerivee ?? '')
 
@@ -632,8 +653,9 @@ export async function chargerLeDeroule(
     //    (cran × variante), et au 1(b) le devoir ne s'affiche pas : il est parmi
     //    les quatre candidats. Les candidats du 1(a) sont des ÉNONCÉS — jamais
     //    des fragments du matériau —, ils ne se marquent donc pas.
-    const regleDeMarquage = gabarit.actif ? gabarit.marquage : (cran?.marquage as string | null)
-    const materiau = gabarit.actif && ctx.cran != null && sansDocuments(ctx.cran, gabarit.variante)
+    const regleDeMarquage = gabarit.actif ? gabarit.marquageDe(vCas) : (cran?.marquage as string | null)
+    const casSansDocuments = gabarit.actif && ctx.cran != null && sansDocuments(ctx.cran, vCas)
+    const materiau = casSansDocuments
       ? null
       : marquerLeMateriau(materiauBrut, regleDeMarquage, {
         candidats: offre && !offre.empechement && !gabarit.actif ? offre.candidats : [],
@@ -681,8 +703,9 @@ export async function chargerLeDeroule(
       credenceDonnee: credenceDonneeDe(credencesDonnees.find((c) => c.cas === i + 1)),
       // ⭐ ITEM 77 — la désignation. Le drapeau suit LE CRAN, jamais la cible :
       //    voir `CasServi.designationDemandee`.
+      sansDocuments: casSansDocuments,
       designationDemandee: gabarit.actif && ctx.cran != null
-        ? demandeUneDesignationAuGabarit(ctx.cran, gabarit.variante)
+        ? demandeUneDesignationAuGabarit(ctx.cran, vCas)
         : demandeUneDesignation(regimeDeMarquage(cran?.marquage as string | null)),
       ...lireLaDesignation(credencesDonnees.find((c) => c.cas === i + 1)),
     })
@@ -745,7 +768,7 @@ export async function chargerLeDeroule(
     if (gabarit.actif && ctx.cran === 1) {
       const cle = gabarit.clesParCas.get(c.ordre) ?? ''
       const matC = Array.isArray(brut.exercices_materiaux) ? brut.exercices_materiaux[0] : brut.exercices_materiaux
-      const traduit = gabarit.variante === 'b'
+      const traduit = varianteDuCas(ctx.cran, gabarit.variante, c.ordre) === 'b'
         ? appuiDu1b(Array.isArray(brut.distracteurs) ? brut.distracteurs as unknown[] : [],
           gabarit.temoins, matC?.contenu ?? null, enonceDuCas(c.ordre))
         : appuiDu1a(Array.isArray(brut.distracteurs) ? brut.distracteurs as unknown[] : [],
@@ -863,6 +886,7 @@ export async function chargerLeDeroule(
     sujet,
     coTexte: ctx.coTexte,
     cas, corrections,
+    fiche,
     gabarit: { actif: gabarit.actif, exercice15: gabarit.exercice15, variante: gabarit.variante,
       sansDocuments: gabarit.actif && ctx.cran != null && sansDocuments(ctx.cran, gabarit.variante) },
 
@@ -1181,6 +1205,44 @@ async function construireLEcheance(
     v1RemiseA: v1, delaiJours, finDeSemaine: finDeSemaineDeTravail(v1, fuseau),
   })
   return { quand: e.echeance.toISOString(), rognee: e.rognee, motif: e.motif }
+}
+
+/**
+ * ⭐ C7-L5 — la fiche de l'objet de l'exercice, TOLÉRANTE : par `type_id` et, si
+ * l'instance porte un genre, la fiche de ce genre d'abord. `methode` se lit sur la
+ * décision du routeur qui a posé le dépôt ; sans décision (un dépôt du
+ * professeur, un décor), la fiche reste repliée.
+ */
+async function lireLaFicheDeLObjet(
+  admin: Admin, depot: DepotMaison, avertissements: string[],
+): Promise<VueDuDeroule['fiche']> {
+  const { data, error } = await admin.from('exercices_fiches_objets')
+    .select('genre, libelle, definition, constituants, test, dit_a_leleve, exemplaire, contre_exemple')
+    .eq('type_id', depot.exercice.type_id)
+  if (error) { avertissements.push(`fiche de l'objet illisible (${error.code}) : non servie`); return null }
+  const lignes = (data ?? []) as Array<{
+    genre: string | null; libelle: string; definition: string | null; constituants: unknown
+    test: string | null; dit_a_leleve: string | null; exemplaire: string | null; contre_exemple: string | null
+  }>
+  const f = lignes.find((l) => l.genre === (depot.exercice.genre ?? null)) ?? lignes.find((l) => l.genre === null) ?? lignes[0]
+  if (!f) return null
+  let methode = false
+  if (depot.routeur_decision_id) {
+    const { data: d } = await admin.from('routeur_decisions')
+      .select('alternatives_ecartees').eq('id', depot.routeur_decision_id).maybeSingle()
+    const alt = (d as { alternatives_ecartees?: { porte_registre?: unknown } } | null)?.alternatives_ecartees
+    methode = alt?.porte_registre === 'methode'
+  }
+  const brut = typeof f.constituants === 'string' ? JSON.parse(f.constituants) : f.constituants
+  const constituants = Array.isArray(brut) ? brut.map((c) => ({
+    n: Number((c as { n?: unknown }).n ?? 0), nom: String((c as { nom?: unknown }).nom ?? ''),
+    facultatif: (c as { facultatif?: unknown }).facultatif === true,
+    question: String((c as { question?: unknown }).question ?? ''),
+  })) : []
+  return {
+    libelle: f.libelle, definition: f.definition, constituants, test: f.test,
+    ditALEleve: f.dit_a_leleve, exemplaire: f.exemplaire, contreExemple: f.contre_exemple, methode,
+  }
 }
 
 /**

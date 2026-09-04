@@ -47,15 +47,21 @@ export async function lireLaPorteDesCrans(
   const { registre, incidents: inc } = await lireLeRegistreDesReussites(admin, eleveId)
   incidents.push(...inc)
 
-  // Les objets déjà servis avant ce cycle — tout dépôt, quel que soit son statut.
+  // Les objets déjà servis avant ce cycle — ⭐ Louis, 04/09 : SUR LES SEULS
+  //    EXERCICES DU GABARIT (un cas à `probleme`). L'ancienne banque ne compte
+  //    pas : chaque élève vit sa semaine de méthode avec les exercices neufs,
+  //    même s'il a déjà vu l'objet sous l'ancien régime.
   const dejaServis = new Set<string>()
   const { data: depots, error: eD } = await admin.from('exercices_depots')
-    .select('assigne_at, exercices(exercices_types(code))')
+    .select('assigne_at, exercices(exercices_types(code), exercices_cas(probleme))')
     .eq('eleve_id', eleveId).lt('assigne_at', `${cycleLundi}T00:00:00Z`)
   if (eD) incidents.push(`objets déjà servis illisibles (${eD.code}) : tous les objets passent en semaine de méthode`)
   const un = <T,>(x: unknown): T | null => (Array.isArray(x) ? (x[0] ?? null) : (x as T | null))
   for (const d of (depots ?? []) as unknown as Array<{ exercices: unknown }>) {
-    const code = un<{ code: string }>(un<{ exercices_types: unknown }>(d.exercices)?.exercices_types)?.code
+    const ex = un<{ exercices_types: unknown; exercices_cas: unknown }>(d.exercices)
+    const cas = Array.isArray(ex?.exercices_cas) ? ex!.exercices_cas as Array<{ probleme?: unknown }> : []
+    if (!cas.some((c) => typeof c?.probleme === 'string' && c.probleme)) continue
+    const code = un<{ code: string }>(ex?.exercices_types)?.code
     if (code) dejaServis.add(code)
   }
 
