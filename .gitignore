@@ -87,3 +87,6 @@ design_ma_semaine_v2/ma-semaine-organisations.html
 
 # Registre local du décor d'écran Fragments élève (scripts/recette/decor-fragments-eleve.mjs).
 scripts/recette/.decor-fragments-eleve.json
+
+# captures des smokes CDP (Aletheia)
+scripts/recette/captures/
