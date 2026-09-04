@@ -114,9 +114,9 @@ export const MANIFESTE_INSTRUMENTS = {
   "outil": "scripts/derive-instruments.py 1.0",
   "sources": {
     "07-Implementation.md": {
-      "empreinte": "d2b1bd905de5ee94da8f863a12e3a2e32aca747ea226ed23102dc81be71aa480",
+      "empreinte": "ef0087cffdabbdedc5eb2dc287e13322722698d28c411e5b394b1b16175dd900",
       "statut": "RELU ET VALIDÉ.",
-      "version": "2.73"
+      "version": "2.74"
     },
     "competences/argumentation.md": {
       "empreinte": "e333870566274864a9ff99def3f3cdfad150720d702756488c2def05258f8127",

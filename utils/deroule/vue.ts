@@ -48,6 +48,12 @@ import { echeanceDeLaVersionFinale, finDeSemaineDeTravail } from './echeance'
 import { lireReleveDeLangue, nombreDeFautes, ancrerLigneALigne, phraseDeLaChasse,
   type AncrageFaute } from './langue'
 import { baliser, type Jeton } from './balisage'
+import { lireLeGabaritDuDepot, type GabaritDuDepot } from '@/utils/gabarit/lecture'
+import { appuiDu1a, appuiDu1b } from '@/utils/gabarit/candidats'
+import {
+  consigneDuGabarit, demandeUneDesignationAuGabarit, sansDocuments, type Variante,
+} from '@/utils/gabarit/consigne'
+import { pointDInsertion } from './marquage'
 import { lireTelemetrie } from './telemetrie'
 import { demandeUneDesignation } from './designation'
 import { marquerLeMateriau, regimeDeMarquage, type SegmentMateriau } from './marquage'
@@ -331,6 +337,16 @@ export interface VueDuDeroule {
    */
   signalement: { ouvert: boolean; mien: SignalementDeLEleve | null }
 
+  /**
+   * ⭐⭐ C7-L3 — LE GABARIT (`10-Gabarit.md` §2, §3, §5), derrière `gabarit_actif`.
+   *    `actif` : la porte est ouverte ET l'exercice est au format 1.5 — alors
+   *    l'écran a deux espaces, « Les documents » à sections nommées et
+   *    l'exercice, les consignes se dérivent, et les candidats sont des énoncés
+   *    (1(a)) ou des devoirs (1(b)). `exercice15` sans `actif` : la porte est
+   *    fermée sur un exercice qui l'attend — l'écran le dit, il ne sert pas un
+   *    exercice qu'il ne sait pas composer.
+   */
+  gabarit: { actif: boolean; exercice15: boolean; variante: Variante; sansDocuments: boolean }
   /** Ce que le professeur doit savoir — trace serveur, jamais l'élève. */
   avertissements: string[]
 }
@@ -530,6 +546,20 @@ export async function chargerLeDeroule(
   const credencesDonnees = Array.isArray(metacog?.credence)
     ? (metacog.credence as Array<Record<string, unknown>>) : []
 
+  // ── ⭐⭐ C7-L3 — LE GABARIT, LU AVEC TOLÉRANCE ─────────────────────────────
+  const gabarit: GabaritDuDepot = await lireLeGabaritDuDepot(admin, depot.exercice_id, ctx.cran,
+    casBruts.map((c) => ({ ordre: c.ordre, distracteurs: c.distracteurs })))
+  avertissements.push(...gabarit.incidents)
+  if (gabarit.exercice15 && !gabarit.actif) {
+    avertissements.push('exercice au format 1.5 servi à `gabarit_actif` OFF : l\'écran dit '
+      + "qu'il attend le gabarit, il ne compose pas un exercice qu'il ne sait pas servir")
+  }
+  const enonceDuCas = (ordre: number): string | null => {
+    const cle = gabarit.clesParCas.get(ordre)
+    return cle ? (gabarit.enonces.get(cle) ?? null) : null
+  }
+  const consignesGabarit: string[] = []
+
   const cas: CasServi[] = []
   for (let i = 0; i < Math.max(1, nbCas); i++) {
     const brut = casBruts.find((c) => c.ordre === i + 1)
@@ -542,9 +572,37 @@ export async function chargerLeDeroule(
     //    la doctrine de la crédence se dit en codes. Le CODE se lit sur
     //    `ctx.cranCode`, résolu depuis le numéro — jamais sur la colonne brute,
     //    qui portait tantôt l'un tantôt l'autre (C4-L11).
+    // ⭐⭐ C7-L3 — AU GABARIT, L'APPUI SE TRADUIT : les clés du 1(a) deviennent
+    //    des énoncés, les `id` du 1(b) des devoirs témoins ; la bonne réponse
+    //    du 1(b) est le devoir fautif du cas. Ailleurs, l'appui est celui du cas.
+    let appui: { distracteurs: unknown; reponseAttendue: string | null; pourquoiJuste: string | null } = {
+      distracteurs: brut?.distracteurs, reponseAttendue: brut?.reponse_attendue ?? null,
+      pourquoiJuste: brut?.pourquoi_juste ?? null,
+    }
+    if (gabarit.actif && ctx.cran === 1) {
+      const cle = gabarit.clesParCas.get(i + 1) ?? ''
+      const traduit = gabarit.variante === 'b'
+        ? appuiDu1b(Array.isArray(brut?.distracteurs) ? brut!.distracteurs as unknown[] : [],
+          gabarit.temoins, materiauBrut, enonceDuCas(i + 1))
+        : appuiDu1a(Array.isArray(brut?.distracteurs) ? brut!.distracteurs as unknown[] : [],
+          gabarit.enonces, cle)
+      for (const m of traduit.manquants) {
+        avertissements.push(`gabarit, cas ${i + 1} : candidat « ${m} » introuvable — il ne se sert pas`)
+      }
+      appui = { distracteurs: traduit.distracteurs, reponseAttendue: traduit.reponseAttendue,
+        pourquoiJuste: traduit.pourquoiJuste }
+    }
+    // La consigne du gabarit se DÉRIVE (`10-` §3) ; l'insertion se lit sur le diff.
+    const insertion = !!(mat?.version_corrigee && materiauBrut
+      && pointDInsertion(materiauBrut, mat.version_corrigee))
+    const consigneDerivee = gabarit.actif && ctx.cran != null
+      ? consigneDuGabarit({ cran: ctx.cran, variante: gabarit.variante, enonce: enonceDuCas(i + 1), insertion })
+      : null
+    consignesGabarit.push(consigneDerivee ?? '')
+
     const offre = geste && credenceDemandee(geste as never) && ctx.cranCode
       ? offreDeCredence(ctx.cranCode as never, i + 1, depotId, {
-        distracteurs: brut?.distracteurs, reponseAttendue: brut?.reponse_attendue ?? null,
+        distracteurs: appui.distracteurs, reponseAttendue: appui.reponseAttendue,
       })
       : null
     if (offre?.empechement) avertissements.push(offre.empechement)
@@ -562,15 +620,22 @@ export async function chargerLeDeroule(
     // ⚠️ Là où l'offre ne se compose pas (`empechement` non nul, ou cran sans
     //    crédence), il n'y a pas de « candidats servis » : on ne marque rien, et
     //    on ne devine pas.
-    const materiau = marquerLeMateriau(materiauBrut, cran?.marquage as string | null, {
-      candidats: offre && !offre.empechement ? offre.candidats : [],
-      versionCorrigee: mat?.version_corrigee ?? null,
-      // ⭐ RÈGLE (2) du `02-` §5 : ce que la consigne CITE se marque, et cette
-      //    règle passe avant le diff — elle vaut même quand il est vide.
-      consigne: consignes[i] ?? null,
-      // ⭐ Les deux exceptions du `02-` 6.2 §5 se lisent sur l'observable.
-      observable: depot.exercice.observable_isole_code,
-    })
+    // ⭐ C7-L3 — au gabarit, la règle de marquage vient de la table du `10-` §5
+    //    (cran × variante), et au 1(b) le devoir ne s'affiche pas : il est parmi
+    //    les quatre candidats. Les candidats du 1(a) sont des ÉNONCÉS — jamais
+    //    des fragments du matériau —, ils ne se marquent donc pas.
+    const regleDeMarquage = gabarit.actif ? gabarit.marquage : (cran?.marquage as string | null)
+    const materiau = gabarit.actif && ctx.cran != null && sansDocuments(ctx.cran, gabarit.variante)
+      ? null
+      : marquerLeMateriau(materiauBrut, regleDeMarquage, {
+        candidats: offre && !offre.empechement && !gabarit.actif ? offre.candidats : [],
+        versionCorrigee: mat?.version_corrigee ?? null,
+        // ⭐ RÈGLE (2) du `02-` §5 : ce que la consigne CITE se marque, et cette
+        //    règle passe avant le diff — elle vaut même quand il est vide.
+        consigne: gabarit.actif ? null : (consignes[i] ?? null),
+        // ⭐ Les deux exceptions du `02-` 6.2 §5 se lisent sur l'observable.
+        observable: depot.exercice.observable_isole_code,
+      })
 
     // ⚠️⚠️ UN CRAN QUI DEVAIT MARQUER ET QUI NE MARQUE RIEN SE DIT AU PROFESSEUR.
     //    Trouvé au smoke du 24/08, sur une instance RÉELLE de cran 3 : le
@@ -585,7 +650,7 @@ export async function chargerLeDeroule(
     // ⚠️ Trace SERVEUR, jamais l'élève — le même canal que l'empêchement de
     //    crédence juste au-dessus.
     if (materiau && materiau.length > 0 && !materiau.some((sg) => sg.marque)
-        && (cran?.marquage ?? '') !== '' && !/^rien/i.test(String(cran?.marquage))) {
+        && (regleDeMarquage ?? '') !== '' && !/^rien/i.test(String(regleDeMarquage))) {
       avertissements.push(
         `cas ${i + 1} : le \`02-\` §5 demande au cran ${ctx.cran} de mettre en évidence `
         + `« ${String(cran?.marquage).slice(0, 60)}… », et RIEN n'a été trouvé dans le matériau. `
@@ -598,7 +663,7 @@ export async function chargerLeDeroule(
 
     cas.push({
       ordre: i + 1,
-      consigne: baliser(consignes[i] ?? consignes[0] ?? ''),
+      consigne: baliser(consigneDerivee ?? consignes[i] ?? consignes[0] ?? ''),
       materiau,
       credence: offre,
       // ⭐⭐ 01/09 — L'ENTRÉE N'EST UNE CRÉDENCE QUE SI ELLE EN PORTE UNE. Zone
@@ -608,8 +673,9 @@ export async function chargerLeDeroule(
       credenceDonnee: credenceDonneeDe(credencesDonnees.find((c) => c.cas === i + 1)),
       // ⭐ ITEM 77 — la désignation. Le drapeau suit LE CRAN, jamais la cible :
       //    voir `CasServi.designationDemandee`.
-      designationDemandee: demandeUneDesignation(regimeDeMarquage(
-        cran?.marquage as string | null)),
+      designationDemandee: gabarit.actif && ctx.cran != null
+        ? demandeUneDesignationAuGabarit(ctx.cran, gabarit.variante)
+        : demandeUneDesignation(regimeDeMarquage(cran?.marquage as string | null)),
       ...lireLaDesignation(credencesDonnees.find((c) => c.cas === i + 1)),
     })
   }
@@ -666,6 +732,21 @@ export async function chargerLeDeroule(
       ? brut.exercices_materiaux[0] : brut.exercices_materiaux
     const versionCorrigee = ctx.cranCode === 'diagnostic_fin'
       ? (mat?.version_corrigee ?? null) : null
+    // ⭐ C7-L3 — au 1(a) et au 1(b), la correction se compose sur l'appui TRADUIT :
+    //    ce que l'élève a lu, jamais une clé ni un `id`.
+    if (gabarit.actif && ctx.cran === 1) {
+      const cle = gabarit.clesParCas.get(c.ordre) ?? ''
+      const matC = Array.isArray(brut.exercices_materiaux) ? brut.exercices_materiaux[0] : brut.exercices_materiaux
+      const traduit = gabarit.variante === 'b'
+        ? appuiDu1b(Array.isArray(brut.distracteurs) ? brut.distracteurs as unknown[] : [],
+          gabarit.temoins, matC?.contenu ?? null, enonceDuCas(c.ordre))
+        : appuiDu1a(Array.isArray(brut.distracteurs) ? brut.distracteurs as unknown[] : [],
+          gabarit.enonces, cle)
+      return composerLaCorrection(
+        { reponseAttendue: traduit.reponseAttendue, pourquoiJuste: traduit.pourquoiJuste,
+          distracteurs: traduit.distracteurs, versionCorrigee: null },
+        c.credenceDonnee, surDesCandidats)
+    }
     return composerLaCorrection(
       { reponseAttendue: brut.reponse_attendue, pourquoiJuste: brut.pourquoi_juste,
         distracteurs: brut.distracteurs, versionCorrigee },
@@ -756,7 +837,8 @@ export async function chargerLeDeroule(
     grain: ctx.grain, cranCode: ctx.cranCode, geste,
     estUnePaire, etapePaire: etape,
 
-    consigne: baliser(ctx.consigne),
+    // ⭐ C7-L3 — au gabarit, la consigne de l'exercice est celle du premier cas, dérivée.
+    consigne: baliser(gabarit.actif && consignesGabarit[0] ? consignesGabarit[0] : ctx.consigne),
     rappel,
     demonstration,
     demonstrationAvantLaTentative: momentDeLaDemonstration(foisCiblee) === 'avant',
@@ -773,6 +855,8 @@ export async function chargerLeDeroule(
     sujet,
     coTexte: ctx.coTexte,
     cas, corrections,
+    gabarit: { actif: gabarit.actif, exercice15: gabarit.exercice15, variante: gabarit.variante,
+      sansDocuments: gabarit.actif && ctx.cran != null && sansDocuments(ctx.cran, gabarit.variante) },
 
     dureeIndicativeMin: dureeMin,
     microQuestionDue: dureeMin !== null && ecouleMs !== null

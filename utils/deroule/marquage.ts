@@ -111,7 +111,34 @@ export function regimeDeMarquage(regle: string | null | undefined): RegimeMarqua
   if (/^rien/i.test(r)) return 'rien'
   if (/candidats servis/i.test(r)) return 'candidats'
   if (/version_corrigee/i.test(r)) return 'passage_fautif'
+  // C7-L3 — la table du `10-` §5 (`exercices_marquage_gabarit`) dit « le passage
+  //    qui porte le problème » : c'est le même régime, dérivé du diff.
+  if (/passage qui porte le probl/i.test(r)) return 'passage_fautif'
   return null
+}
+
+/**
+ * C7-L3 — LE POINT D'INSERTION (`10-` §5, décision 4). Là où la version
+ * corrigée AJOUTE au lieu de remplacer, le diff est vide ; on marque « le
+ * dernier mot avant et le premier après » l'endroit où elle insère — la même
+ * couture que la règle (3), qu'il soit entre deux phrases ou à la fin.
+ * `null` quand ce n'est pas une insertion (les deux textes ne partagent pas
+ * un préfixe ET un suffixe qui couvrent le contenu entier).
+ */
+export function pointDInsertion(
+  contenu: string | null | undefined, versionCorrigee: string | null | undefined,
+): [number, number] | null {
+  const a = mots(contenu ?? '')
+  const b = mots(versionCorrigee ?? '')
+  if (!a.length || b.length <= a.length) return null
+  let d = 0
+  while (d < a.length && a[d] === b[d]) d++
+  let f = 0
+  while (f < a.length - d && a[a.length - 1 - f] === b[b.length - 1 - f]) f++
+  if (d + f < a.length) return null           // un remplacement, pas une insertion
+  const avant = Math.max(0, d - 1)
+  const apres = Math.min(a.length - 1, d)
+  return [avant, apres + 1]
 }
 
 /**
@@ -272,7 +299,12 @@ export function motsAMarquer(
   if (!b.length) return out
 
   const t = tranchesDuDiff(a, b)
-  if (!t) return out
+  if (!t) {
+    // C7-L3 — le diff vide d'une INSERTION marque le point d'insertion.
+    const pi = pointDInsertion(contenu, versionCorrigee)
+    if (pi) out.push(a.slice(pi[0], pi[1]))
+    return out
+  }
 
   // ⭐⭐ LES DEUX EXCEPTIONS PASSENT AVANT TOUT, et elles se lisent sur
   //    l'OBSERVABLE (`02-` 6.2 §5).

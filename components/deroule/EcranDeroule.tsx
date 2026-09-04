@@ -115,6 +115,22 @@ export function EcranDeroule(
     seJugerAServir: vue.seJuger.servie && (vue.seJuger.offre?.questions.length ?? 0) > 0,
   })
 
+  // ⭐ C7-L3 — PORTE FERMÉE sur un exercice au format 1.5 : l'écran ne compose
+  //    pas ce qu'il ne sait pas servir (les candidats du 1 seraient des clés et
+  //    des identifiants). Il le dit, et n'enregistre rien.
+  if (vue.gabarit.exercice15 && !vue.gabarit.actif) {
+    return (
+      <div className="mx-auto max-w-2xl px-4 py-10">
+        <Carte titre="Cet exercice n’est pas encore ouvert">
+          <p className="font-corps text-[15px] leading-relaxed text-encre-douce">
+            Il attend une console que ton professeur n’a pas encore ouverte. Reviens quand il
+            l’aura fait : rien n’est perdu, et rien ne t’est demandé d’ici là.
+          </p>
+        </Carte>
+      </div>
+    )
+  }
+
   return (
     <div className="-mx-4 overflow-hidden border-y border-bordure bg-fond-module
                     sm:mx-0 sm:rounded-2xl sm:border">
@@ -418,8 +434,10 @@ function ColonneMatiere({
     <div className={`flex flex-col gap-3 border-bordure bg-fond-module p-4 sm:p-5
                      lg:border-r ${cache ? 'hidden lg:flex' : ''}`}>
       <div className="flex items-center gap-3">
+        {/* ⭐⭐ C7-L3 — DEUX ESPACES (`10-` §3, décision 15) : le cadre « Les
+            documents », à sections nommées, et l'exercice. Le titre suit. */}
         <h2 className="font-marque text-[11px] font-semibold uppercase tracking-[0.13em] text-muet">
-          La matière
+          {vue.gabarit.actif ? 'Les documents' : 'La matière'}
         </h2>
         {/* ⛔ Aux crans 4, 7 et 9, l'écran DIT que le passage est à trouver — il
             ne le montre pas : « l'y trouver EST le travail » (`02-` §5). */}
@@ -459,7 +477,15 @@ function ColonneMatiere({
           montrait nulle part. Il vient EN PREMIER : c'est de lui que parlent le
           texte, le matériau et la consigne. Un énoncé, pas un texte — pas de
           cadre de lecture, pas de défilement. */}
-      {vue.sujet && (
+      {/* ⭐ C7-L3 — au 1(b), AUCUN DOCUMENT : les quatre devoirs sont l'exercice
+          (`10-` §3). Le cadre le dit, au lieu de s'ouvrir vide. */}
+      {vue.gabarit.sansDocuments && (
+        <p className="font-corps text-[15px] leading-relaxed text-encre-douce">
+          Aucun document pour cet exercice : les quatre devoirs d’élève sont dans l’exercice,
+          à droite.
+        </p>
+      )}
+      {vue.sujet && !vue.gabarit.sansDocuments && (
         <Carte titre="Le sujet">
           <p className="font-corps text-[16.5px] font-semibold leading-[1.5] text-encre">
             {vue.sujet}
@@ -469,7 +495,7 @@ function ColonneMatiere({
 
       {vue.texteSupport && (
         <Carte
-          titre="Le texte"
+          titre={vue.gabarit.actif ? "Le texte d'auteur" : 'Le texte'}
           appoint={[vue.texteSupport.auteur, vue.texteSupport.titre, vue.texteSupport.reference]
             .filter(Boolean).join(' · ') || undefined}
         >
@@ -494,7 +520,7 @@ function ColonneMatiere({
           entier et tel qu'il est stocké — d'où le `whitespace-pre-wrap` et
           l'absence d'`appoint`, contrairement au texte d'auteur juste au-dessus. */}
       {vue.coTexte && (
-        <Carte titre="Le texte de départ">
+        <Carte titre={vue.gabarit.actif ? 'Le matériel' : 'Le texte de départ'}>
           <p className="max-h-[52vh] overflow-y-auto whitespace-pre-wrap rounded-[9px] border
                         border-bordure-bouton bg-parchemin-fonce p-3.5 font-corps text-[15.5px]
                         leading-[1.62] text-encre">
@@ -508,9 +534,15 @@ function ColonneMatiere({
         (vue.estUnePaire || c.materiau?.length) ? (
           <Carte
             key={c.ordre}
-            titre={vue.estUnePaire
-              ? (c.ordre === 1 ? 'Premier cas' : 'Un cas neuf, de la même famille')
-              : (forme === 'surligner' ? 'La copie' : 'Le passage')}
+            titre={vue.gabarit.actif
+              ? (vue.gabarit.sansDocuments
+                ? (c.ordre === 1 ? 'Premier cas' : 'Second cas, de la même famille')
+                : vue.estUnePaire
+                  ? `Le devoir d'élève — ${c.ordre === 1 ? 'premier cas' : 'second cas, de la même famille'}`
+                  : "Le devoir d'élève")
+              : (vue.estUnePaire
+                ? (c.ordre === 1 ? 'Premier cas' : 'Un cas neuf, de la même famille')
+                : (forme === 'surligner' ? 'La copie' : 'Le passage'))}
           >
             {vue.estUnePaire && (
               <p className="mb-3 font-corps text-base leading-[1.5] text-encre">
