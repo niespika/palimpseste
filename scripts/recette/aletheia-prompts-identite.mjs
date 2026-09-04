@@ -22,7 +22,7 @@ const apres = {
 }
 let ko = 0
 for (const [cle, texte] of Object.entries(apres)) {
-  const assemble = assemblerPrompt(texte, '').split('{bloc_passages}').join('').split('{bloc_rappel}').join('').split('{bloc_reponses}').join('').split('{bloc_passages_vf}').join('').split('{bloc_propositions}').join('')
+  const assemble = assemblerPrompt(texte, '').split('{bloc_passages}').join('').split('{bloc_rappel}').join('').split('{bloc_reponses}').join('').split('{bloc_passages_vf}').join('').split('{bloc_propositions}').join('').split('{bloc_format_vf}').join('')
   const ok = assemble === avant[cle]
   if (!ok) {
     ko++

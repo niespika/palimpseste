@@ -105,6 +105,18 @@ export function blocPassagesVf(
   return l.join('\n')
 }
 
+/**
+ * Le bloc `{bloc_format_vf}` : les clés E7 DANS le squelette JSON de la réponse (mesuré : un
+ * retour sur trois oubliait `nuances_detail` quand la tâche n'était décrite que plus haut).
+ */
+export function blocFormatVf(courants: boolean, amont: boolean, synthese: boolean): string {
+  const l: string[] = []
+  if (courants) l.push('  "nuances_detail": [ { "extrait_eleve": "phrase de la version finale, mot pour mot", "passage": "k…-… ou null", "verdict": "confirme | infirme | precise", "note": "≤ 40 mots", "priorite": 1 } ],')
+  if (courants && amont) l.push('  "architecture_amont_paires": [ { "passage_courant": "k…-…", "passage_amont": "k…-…", "relation": "≤ 12 mots" } ],')
+  if (synthese) l.push('  "synthese_couverture": [ { "id": "y…-…", "etat": "present | partiel | absent" } ],')
+  return l.length ? '\n' + l.join('\n') : ''
+}
+
 // ── Lecture tolérante des sorties ────────────────────────────────────────────
 
 const txt = (x: unknown) => (typeof x === 'string' ? x.trim() : '')

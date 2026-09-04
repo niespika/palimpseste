@@ -10,7 +10,7 @@ import { signalDepuisIA } from '@/utils/detecteur-integrite'
 import { signalerEnAttenteIA } from '@/utils/integrite'
 // (E3) Gabarits de lecture : tronc commun + un bloc par gabarit (vide en argumentatif).
 import { assemblerPrompt, blocGabarit, DEFINITIONS, GABARIT_DEFAUT, estGabarit, type Gabarit } from '@/utils/aletheia/gabarits'
-import { blocPassagesVf, lireNuances, lirePaires, lireCouverture, phrasesSynthese, motsNuance, NOTE_NUANCE_MOTS } from '@/utils/aletheia/retour-vf'
+import { blocPassagesVf, blocFormatVf, lireNuances, lirePaires, lireCouverture, phrasesSynthese, motsNuance, NOTE_NUANCE_MOTS } from '@/utils/aletheia/retour-vf'
 import { gabaritDuLivre, gabaritDeLaFiche } from '@/utils/aletheia/gabarit-serveur'
 import { parsePassages } from '@/utils/aletheia/passages'
 import { blocPassages, blocRappel, lireRelances, lireRappel, motsDuRetour, assemblerBlocs, memeLemme, lemmeDeCarte, BUDGET_MOTS_RETOUR_V1, MAX_RELANCES_MONTRE } from '@/utils/aletheia/retour-v1'
@@ -466,7 +466,7 @@ Repère UNIQUEMENT les cas FLAGRANTS où le rendu ne montre AUCUN travail réel 
   "ajouts_verifies": [ { "extrait": "passage ajouté, recopié de la version finale", "ancre": true, "note": "courte note" } ],
   "nuances_et_erreurs": ["..."],
   "architecture_amont": ["..."],
-  "architecture_aval_jalons": ["..."],
+  "architecture_aval_jalons": ["..."],{bloc_format_vf}
   "signal_integrite": { "type": "aucun | hors_sujet | aveu_non_travail", "motif": "phrase courte (ou vide si aucun)" }
 }`
 
@@ -674,7 +674,7 @@ export async function genererRetourVf(travailId: string): Promise<void> {
     // (E3) Bloc du gabarit + question fixe (VF) + tournante figée à la soumission.
     const gab = await gabaritPourPrompt(admin, travailId, livreId, semaine, 'vf')
 
-    const prompt = injecter(assemblerBlocs(assemblerPrompt(modeleVf, gab.bloc), { bloc_reponses: blocReponses, bloc_passages_vf: blocPassagesVfTexte }), {
+    const prompt = injecter(assemblerBlocs(assemblerPrompt(modeleVf, gab.bloc), { bloc_reponses: blocReponses, bloc_passages_vf: blocPassagesVfTexte, bloc_format_vf: blocFormatVf(idsCourants.size > 0, idsAmont.size > 0, idsSynthese.length > 0) }), {
       amont_structure: amont,
       semaine_courante_texte: semaineCourante,
       aval_titres: avalTitres + CACHE_BREAK,   // césure cache après le contexte livre-niveau
