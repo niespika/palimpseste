@@ -714,3 +714,21 @@ verbatim **3** (la mesure d'E0 comptait les apostrophes, § 0). Diagnostic : 38,
 après quatre séances ; le bac à sable de recette (49 travaux, 6 élèves, 5 livres) sert de témoin de
 forme : 4 formes servies, 2 rappels jugés, 4 relances avec passage sur 103, 6 réponses, 2 surlignages,
 1 nuance surlignée, 3 choix amont (1 juste), 1 synthèse comparée (3 manques repérés, 1 échappé), 1 « je ne sais pas ».
+
+---
+
+## 14. Campagne de smoke du 04/09 (bac à sable, branche `feat/aletheia-etayage`, Chrome sans fenêtre)
+
+| Parcours | Résultat |
+|---|---|
+| **Porte FERMÉE** — Poétique séance 2, V1 complète | formulaire d'avant (« Idée principale », « Arguments », « Ton accord », pas de « Je ne sais pas », pas de rappel) ; en base `forme`, `tournante_cle`, `champ_fixe`, `rappel` NULL ; `retour_v1` sans `relances_detail` ni `rappel` ; retour affiché. Non-régression tenue |
+| **Poétique séance 1** (analytique, « je ne sais pas » aux deux emplacements) | 0 strike, forme `montre`, 2 relances qui partent du choix ; réponses aux relances → réécriture → retour final (pas de nuance pointée : ce livre n'a PAS de passages clés — dégradé propre, synthèse comparée 3/4) → clôture, `DONE` + `retour_vf_lu_at` |
+| **Par-delà séance 1** (aphoristique, forme `montre`) | V1 5 champs, 2 relances avec passage, réponses, VF, retour final : **aucune `nuances_detail` malgré 4 passages** (1 cas sur 3 — lecture rendue tolérante aux variantes de clé + journal du brut, à surveiller), synthèse comparée 2/3, clôture |
+| **Par-delà séance 2** (forme `montre`, avec amont) | rappel jugé **juste**, tournante `fil` (cycle), 2 relances avec passage, VF, retour final : nuance prioritaire `k2-2` avec pivot + flèche, **3 paires amont révélées** (forme montre), synthèse comparée 3/4, clôture. ⚠️ retour V1 à **342 mots** pour 300 (2 relances) |
+| **Banquet séance 3** (dialogué, forme `fenetre`, E6-E7) | surlignage des relances (faux → bonne ; deux faux → pivot), VF, retour final agi (surlignage de la nuance, 3 choix amont, synthèse), clôture forcée en base pour la recette |
+
+Non couverts : les écrans prof (aucun compte prof de test au bac à sable — l'éditeur de fiche
+avec propositions et passages, le sélecteur de liseuse, l'interrupteur de Paramètres), le mode C
+(aucun parcours en extrait au bac à sable), la forme `demi_section` en séance réelle (rendue
+seulement en capture), les cartes Quazian sur les nouveaux livres.
+

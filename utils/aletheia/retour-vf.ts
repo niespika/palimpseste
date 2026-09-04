@@ -115,7 +115,8 @@ export function lireNuances(x: unknown, idsCourants: ReadonlySet<string>): Nuanc
   for (const n of x as unknown[]) {
     if (!n || typeof n !== 'object') continue
     const o = n as Record<string, unknown>
-    const extrait = txt(o.extrait_eleve)
+    // Tolérance aux variantes de clé que le modèle produit parfois (mesuré : un retour sur trois sans `extrait_eleve`).
+    const extrait = txt(o.extrait_eleve) || txt(o.extrait) || txt(o.phrase_eleve) || txt(o.citation_eleve) || txt(o.texte_eleve)
     if (!extrait) continue
     const p = txt(o.passage)
     const verdict = o.verdict === 'infirme' || o.verdict === 'precise' ? o.verdict : 'confirme'

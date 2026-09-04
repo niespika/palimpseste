@@ -725,6 +725,9 @@ export async function genererRetourVf(travailId: string): Promise<void> {
       const m = motsNuance(retourVf.nuances_detail[0])
       if (m > NOTE_NUANCE_MOTS) console.warn(`[aletheia] note de la nuance prioritaire longue (${m} mots pour ${NOTE_NUANCE_MOTS}), travail ${travailId}`)
       if (retourVf.nuances_detail.length && !retourVf.nuances_detail[0].passage) console.warn(`[aletheia] aucune nuance ne désigne un passage, travail ${travailId}`)
+      // Diagnostic : le modèle a rendu quelque chose que la lecture a rejeté en bloc → on journalise la forme brute.
+      if (retourVf.nuances_detail.length === 0 && idsCourants.size > 0) console.warn(`[aletheia] nuances_detail vide (passages connus : ${idsCourants.size}) — brut : ${JSON.stringify(brut.nuances_detail ?? null).slice(0, 400)}, travail ${travailId}`)
+      if (retourVf.synthese_couverture.length && !Array.isArray(brut.synthese_couverture)) console.warn(`[aletheia] synthese_couverture absente de la sortie du modèle, travail ${travailId}`)
     }
 
     // Lot B — cohérence : la synthèse modèle VUE PAR L'ÉLÈVE provient de la FICHE de
