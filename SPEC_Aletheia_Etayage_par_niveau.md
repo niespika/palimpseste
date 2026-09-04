@@ -727,8 +727,16 @@ forme : 4 formes servies, 2 rappels jugés, 4 relances avec passage sur 103, 6 r
 | **Par-delà séance 2** (forme `montre`, avec amont) | rappel jugé **juste**, tournante `fil` (cycle), 2 relances avec passage, VF, retour final : nuance prioritaire `k2-2` avec pivot + flèche, **3 paires amont révélées** (forme montre), synthèse comparée 3/4, clôture. ⚠️ retour V1 à **342 mots** pour 300 (2 relances) |
 | **Banquet séance 3** (dialogué, forme `fenetre`, E6-E7) | surlignage des relances (faux → bonne ; deux faux → pivot), VF, retour final agi (surlignage de la nuance, 3 choix amont, synthèse), clôture forcée en base pour la recette |
 
-Non couverts : les écrans prof (aucun compte prof de test au bac à sable — l'éditeur de fiche
-avec propositions et passages, le sélecteur de liseuse, l'interrupteur de Paramètres), le mode C
-(aucun parcours en extrait au bac à sable), la forme `demi_section` en séance réelle (rendue
-seulement en capture), les cartes Quazian sur les nouveaux livres.
+**Écrans prof (04/09, compte de Louis, volet du navigateur puis Chrome sans fenêtre par lien
+magique — `scratchpad/smoke_prof.mjs`)** : liste des livres ; vue Livre de Par-delà (fiche en
+lecture avec passages et, depuis `53a0207`, les trois propositions du « je ne sais pas ») ; éditeur
+de fiche : distracteur amendé et enregistré (fiche « amendée à la main », valeur en base, 4 passages
+intacts) ; éditeur du livre : « Liseuse intégrée » → fenêtre, Enregistrer ⇒ `liseuse_max = fenetre`
+en base, puis retour au défaut ⇒ NULL ; Paramètres : l'interrupteur ferme (base `false`, texte
+« fermé ») et rouvre (base `true`). ⚠️ Un volet de navigateur CACHÉ ne s'hydrate jamais : les boutons
+React y restent inertes, seules les formulaires à action serveur répondraient — d'où le Chrome sans
+fenêtre.
+
+Non couverts : le mode C (aucun parcours en extrait au bac à sable), la forme `demi_section` en
+séance réelle (rendue seulement en capture), les cartes Quazian sur les nouveaux livres.
 
