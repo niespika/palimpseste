@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { createContext, useContext, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { ACCENT, type Accent } from '@/components/aletheia/VueRetours'
 
@@ -22,7 +22,18 @@ export interface TuileRetour {
   titre: string
   node: React.ReactNode
   accent?: Accent
+  /**
+   * (Aletheia, refonte 04/09) Le contenu porte sa propre barre du bas et appelle lui-même
+   * `marquerLue` / `valider` par `useContexteLecture()` : la case « J'ai lu cette partie » et le
+   * bouton de clôture ne sont pas rendus pour cette tuile. Mode séquentiel seulement.
+   */
+  barreIntegree?: boolean
 }
+
+/** Ce qu'une tuile à barre intégrée peut faire : passer à la partie suivante, ou clore. */
+export interface ContexteLecture { marquerLue: () => void; valider: () => void; estDerniere: boolean; pending: boolean; erreur: string | null }
+const Contexte = createContext<ContexteLecture | null>(null)
+export function useContexteLecture(): ContexteLecture | null { return useContext(Contexte) }
 
 interface Props {
   tuiles: TuileRetour[]
@@ -153,6 +164,8 @@ export default function ValidationLecture({ tuiles, dejaLu, marquerAction, label
 
           // Partie courante (i === index).
           const estDerniere = i === total - 1
+          const integree = !!tuile.barreIntegree
+          const contexte: ContexteLecture = { marquerLue: () => setIndex(index + 1), valider: () => { void valider() }, estDerniere, pending, erreur }
           const accentBord = ACCENT[tuile.accent ?? 'stone']
           const accentTexte = ACCENT_TEXTE[tuile.accent ?? 'stone']
           const restant = total - index - 1
@@ -163,10 +176,10 @@ export default function ValidationLecture({ tuiles, dejaLu, marquerAction, label
                   <p className={`font-ui text-xs tracking-[0.1em] uppercase ${accentTexte}`}>
                     Partie {i + 1} · {tuile.titre}
                   </p>
-                  <div>{tuile.node}</div>
+                  <Contexte.Provider value={contexte}><div>{tuile.node}</div></Contexte.Provider>
                 </div>
 
-                {estDerniere ? (
+                {integree ? null : estDerniere ? (
                   <div className="px-4 pb-4 pt-1 space-y-2">
                     <button
                       onClick={valider}

@@ -1,7 +1,7 @@
 // Tests de garde du retour final agi (E7). Exécution : `npm test`.
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { phrasesSynthese, blocPassagesVf, lireNuances, lirePaires, lireCouverture, comparerSynthese, optionsAmont } from './retour-vf'
+import { phrasesSynthese, blocPassagesVf, lireNuances, lirePaires, lireCouverture, comparerSynthese, optionsAmont, phraseDuLien } from './retour-vf'
 
 const SYN = 'Platon montre que l’amour désire ce qu’il n’a pas. Diotime en fait une montée vers le Beau. Alcibiade incarne l’échec de cette montée.'
 
@@ -49,7 +49,7 @@ test('paires : identifiants connus des deux côtés, sans doublon, relation born
     { passage_courant: 'k7-1', passage_amont: 'k2-1', relation: 'pas courant' },
   ], new Set(['k3-1', 'k3-2']), new Set(['k2-1']))
   assert.equal(p.length, 1)
-  assert.equal(p[0].relation.split(' ').length, 14)
+  assert.equal(p[0].relation.split(' ').length, 16)   // une phrase complète tient en 30 mots au plus
 })
 
 test('couverture : phrase non jugée = présente ; comparaison par surlignage', () => {
@@ -76,4 +76,11 @@ test('options amont : la bonne est dedans, au plus quatre, ordre du livre, déte
   assert.deepEqual(o.map(p => p.semaine), [...o.map(p => p.semaine)].sort((a, b) => a - b))
   assert.deepEqual(optionsAmont(tous[4], tous, 17), o)
   assert.deepEqual(optionsAmont(tous[0], [tous[0]], 3).map(p => p.id), ['k1-1'])
+})
+
+test('le lien amont devient une phrase lisible seule', () => {
+  assert.equal(phraseDuLien('reprend : le moi déforme l’autre comme il déforme le souvenir', 1), 'Cette phrase reprend une idée déjà lue à la séance 1 : le moi déforme l’autre comme il déforme le souvenir.')
+  assert.equal(phraseDuLien('précise : connaître transforme le connaissant', null), 'Cette phrase précise une idée déjà lue : connaître transforme le connaissant.')
+  assert.equal(phraseDuLien('Cette phrase répond à ce que la séance 1 disait de la morale', 1), 'Cette phrase répond à ce que la séance 1 disait de la morale.')
+  assert.equal(phraseDuLien('', 1), '')
 })

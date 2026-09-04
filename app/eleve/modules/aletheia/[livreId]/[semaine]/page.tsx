@@ -131,6 +131,26 @@ function RevueDone({ t, evalQuestions, titres }: { t: TravailAletheia; evalQuest
         </div>
       )}
 
+      {/* (Refonte 04/09) Ce que l'élève a fait de ses mains dans cette séance. */}
+      {(() => {
+        const l: string[] = []
+        const rappel = t.retour_v1?.rappel
+        if (rappel) l.push(`Rappel de la séance précédente : ${rappel.verdict === 'juste' ? 'juste' : rappel.verdict === 'partiel' ? 'en partie' : 'à côté'}.`)
+        const surl = (t.reponses_relances ?? []).filter(r => r.verdict_code)
+        for (const r of surl) l.push(`Relance ${r.relance + 1} : ${r.verdict_code === 'juste' ? `la phrase trouvée${(r.essais ?? 1) <= 1 ? ' du premier coup' : ''}` : 'la phrase t’a échappé, elle t’a été montrée'}.`)
+        const g = t.retour_vf_agi
+        if (g?.nuance) l.push(`La phrase qui tranche la nuance : ${g.nuance.verdict_code === 'juste' ? 'trouvée' : 'montrée'}${(g.nuance.essais ?? 1) > 1 ? ` (${g.nuance.essais} essais)` : ''}.`)
+        if (g?.amont?.length) l.push(`Liens avec ce que tu avais déjà lu : ${g.amont.filter(a => a.juste).length} sur ${g.amont.length} retrouvés.`)
+        const c = t.comparaison_synthese
+        if (c) l.push(`La synthèse : ${c.reperes.length} manque${c.reperes.length > 1 ? 's' : ''} de ta version repéré${c.reperes.length > 1 ? 's' : ''} sur ${c.reperes.length + c.manques.length}.`)
+        return l.length > 0 ? (
+          <section className="bg-surface border border-bordure border-l-4 border-l-ok rounded-xl p-4 sm:p-5">
+            <p className="font-ui text-xs tracking-[0.1em] text-ok uppercase mb-2">Ce que tu as trouvé toi-même</p>
+            <ul className="space-y-1 font-corps text-[15px] leading-relaxed text-encre">{l.map((x, i) => <li key={i}>✓ {x}</li>)}</ul>
+          </section>
+        ) : null
+      })()}
+
       {/* 3. Ce que cette semaine t'a dévoilé — le fil entre les semaines. */}
       {(amont.length > 0 || aval.length > 0) && (
         <section className="bg-surface border border-bordure border-l-4 border-l-liseret rounded-xl p-4 sm:p-5 space-y-3">
@@ -351,24 +371,18 @@ export default async function PageSemaineAletheia({ params }: { params: Promise<
             const agi = (id: string, node: React.ReactNode): React.ReactNode => {
               if (!retourFinal) return node
               if (id === 'nuances' && retourFinal.nuance) return <NuanceAgie livreId={livreId} semaine={semaine} nuance={retourFinal.nuance} forme={retourFinal.forme} />
-              if (id === 'architecture' && retourFinal.paires.length) return (
-                <>
-                  <PairesAgies livreId={livreId} semaine={semaine} paires={retourFinal.paires} />
-                  {(t.retour_vf!.architecture_aval_jalons?.length ?? 0) > 0 && (
-                    <div className="mt-3 pt-3 border-t border-bordure">
-                      <p className="text-xs font-medium text-encre-douce mb-1">Jalons à venir</p>
-                      <ul className="list-disc list-inside space-y-1 text-sm text-encre-douce">{t.retour_vf!.architecture_aval_jalons.map((x, i) => <li key={i}>{x}</li>)}</ul>
-                    </div>
-                  )}
-                </>
-              )
+              if (id === 'architecture' && retourFinal.paires.length) return <PairesAgies livreId={livreId} semaine={semaine} paires={retourFinal.paires} jalons={t.retour_vf!.architecture_aval_jalons ?? []} />
               if (id === 'synthese' && retourFinal.synthese) return <SyntheseAgie livreId={livreId} semaine={semaine} phrases={retourFinal.synthese.phrases} comparaison={retourFinal.synthese.comparaison} />
               return node
             }
             const tuiles = bullesVF(t.retour_vf!)
               .slice()
               .sort((a, b) => ORDRE.indexOf(a.id as typeof ORDRE[number]) - ORDRE.indexOf(b.id as typeof ORDRE[number]))
-              .map((b) => ({ id: b.id, titre: b.id === 'synthese' && retourFinal?.synthese ? 'Synthèse modèle — à comparer à ta version' : b.titre, node: agi(b.id, b.node), accent: ACCENT_PARTIE[b.id] }))
+              .map((b) => ({
+                id: b.id, titre: b.id === 'synthese' && retourFinal?.synthese ? 'Synthèse modèle — à comparer à ta version' : b.titre, node: agi(b.id, b.node), accent: ACCENT_PARTIE[b.id],
+                // (Refonte 04/09) Les parties agies portent leur propre barre du bas.
+                barreIntegree: !!retourFinal && ((b.id === 'nuances' && !!retourFinal.nuance) || (b.id === 'architecture' && retourFinal.paires.length > 0) || (b.id === 'synthese' && !!retourFinal.synthese)),
+              }))
             return (
               <ValidationLecture
                 sequentiel

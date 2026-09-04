@@ -95,7 +95,7 @@ export function blocPassagesVf(
   l.push(`Tâches SUPPLÉMENTAIRES, à ajouter au même objet JSON :`)
   if (courants.length) {
     l.push(`6. NUANCES DÉTAILLÉES (nuances_detail) : pour CHAQUE point de nuances_et_erreurs, un objet { "extrait_eleve": la phrase de la version FINALE concernée, recopiée MOT POUR MOT (sans balise), "passage": l'identifiant du passage clé de CETTE semaine qui tranche (ou null si aucun), "verdict": "confirme" (le texte confirme ce que dit l'élève) | "infirme" (le texte dit le contraire) | "precise" (le texte ajoute ce qui manque), "note": ≤ ${NOTE_NUANCE_MOTS} mots, la marche suivante, "priorite": 1, 2, 3… }. UNE SEULE nuance de priorité 1 : la plus utile à l'élève, qui désigne un passage.`)
-    if (amont.length) l.push(`7. ARCHITECTURE EN PAIRES (architecture_amont_paires) : chaque lien de architecture_amont devient { "passage_courant": identifiant de CETTE semaine, "passage_amont": identifiant d'une semaine PRÉCÉDENTE, "relation": ≤ 12 mots (« reprend », « répond à », « contredit »…) }. Seulement des liens réels ; liste vide sinon.`)
+    if (amont.length) l.push(`7. ARCHITECTURE EN PAIRES (architecture_amont_paires) : chaque lien de architecture_amont devient { "passage_courant": identifiant de CETTE semaine, "passage_amont": identifiant d'une semaine PRÉCÉDENTE, "relation": UNE PHRASE COMPLÈTE, lisible seule par l'élève, qui commence par « Cette phrase … » et dit ce que le passage courant fait de l'idée déjà lue (la reprend, la précise, y répond, la contredit) — ≤ 25 mots }. Seulement des liens réels ; liste vide sinon.`)
   }
   if (synthese.length) {
     l.push(`${courants.length ? (amont.length ? 8 : 7) : 6}. COUVERTURE DE LA SYNTHÈSE (synthese_couverture) : pour CHAQUE phrase [y…] de la synthèse modèle, { "id": "y…", "etat": "present" (la version FINALE de l'élève le dit) | "partiel" (en partie, ou de travers) | "absent" (elle ne le dit pas) }.`)
@@ -153,7 +153,7 @@ export function lirePaires(x: unknown, idsCourants: ReadonlySet<string>, idsAmon
     const c = txt(o.passage_courant), a = txt(o.passage_amont)
     if (!idsCourants.has(c) || !idsAmont.has(a) || vues.has(`${c}>${a}`)) continue
     vues.add(`${c}>${a}`)
-    out.push({ passage_courant: c, passage_amont: a, relation: txt(o.relation).split(/\s+/).slice(0, 14).join(' ') })
+    out.push({ passage_courant: c, passage_amont: a, relation: txt(o.relation).split(/\s+/).slice(0, 30).join(' ') })
   }
   return out
 }
@@ -187,6 +187,27 @@ export function comparerSynthese(couverture: readonly CouvertureSynthese[], sele
   else message = `Tu as repéré ${reperes.length} des ${absentes.length} manques ; ${manques.length === 1 ? 'celui-ci t’a échappé' : 'ceux-ci t’ont échappé'}.`
   if (deja_la.length) message += deja_la.length === 1 ? ' Celle que tu as surlignée en plus, tu l’avais déjà.' : ` Les ${deja_la.length} autres, tu les avais déjà.`
   return { surlignage: [...sel], reperes, manques, deja_la, message }
+}
+
+/**
+ * Le lien amont en PHRASE lisible seule (demande de Louis, 04/09). Le modèle rend désormais une
+ * phrase complète ; les anciens retours (« reprend : … ») sont recomposés ici.
+ */
+export function phraseDuLien(relation: string, semaineAmont: number | null): string {
+  const r = (relation ?? '').trim()
+  if (!r) return ''
+  if (/^cette phrase/i.test(r)) return /[.!?]$/.test(r) ? r : `${r}.`
+  const m = /^([^:]{2,30}?)\s*:\s*(.+)$/.exec(r)
+  const ou = semaineAmont != null ? ` à la séance ${semaineAmont}` : ''
+  if (!m) return `Cette phrase fait écho à une idée déjà lue${ou} : ${r}.`
+  const verbe = m[1].trim().toLowerCase(), reste = m[2].trim().replace(/[.]$/, '')
+  const tete = /reprend/.test(verbe) ? `Cette phrase reprend une idée déjà lue${ou}`
+    : /précis|precis/.test(verbe) ? `Cette phrase précise une idée déjà lue${ou}`
+    : /répond|repond/.test(verbe) ? `Cette phrase répond à une idée déjà lue${ou}`
+    : /contredi/.test(verbe) ? `Cette phrase contredit une idée déjà lue${ou}`
+    : /prolonge|développe|developpe/.test(verbe) ? `Cette phrase prolonge une idée déjà lue${ou}`
+    : `Cette phrase fait écho à une idée déjà lue${ou} (${verbe})`
+  return `${tete} : ${reste}.`
 }
 
 /** Mots de la nuance prioritaire (extrait exclu : il est de l'élève) + sa note. */
