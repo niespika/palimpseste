@@ -6,8 +6,10 @@ import { resoudreInscriptionLivre, semaineLivre, travauxParSemaine, peutAccederS
 import { resoudreDateSeance, formatEcheanceFr, modeExposition } from '@/utils/aletheia-dates'
 import { dansExtrait, numeroAffiche, titreSeanceAffiche } from '@/utils/aletheia-extrait'
 import { validerLectureRetourVf } from '../../actions'
-import FormulaireV1 from '../../FormulaireV1'
-import FormulaireVf from '../../FormulaireVf'
+import FormulaireV1Classique from '../../FormulaireV1Classique'
+import FormulaireV1Fil from '../../FormulaireV1Fil'
+import FormulaireVf from '../../FormulaireVfClassique'
+import FormulaireVfFil from '../../FormulaireVfFil'
 import PollStatut from '../../PollStatut'
 import { VueRetourV1, VueRetourVF, bullesVF, type Accent } from '@/components/aletheia/VueRetours'
 import { NuanceAgie, PairesAgies, SyntheseAgie } from '@/components/aletheia/RetourFinalAgi'
@@ -18,7 +20,7 @@ import AtelierDeuxColonnes from '@/components/AtelierDeuxColonnes'
 import Pastille from '@/components/Pastille'
 import { StepperNomme } from '@/components/aletheia/Steppers'
 import { contexteGabarit, rangDeSeance } from '@/utils/aletheia/gabarit-serveur'
-import ReponsesRelances from '../../ReponsesRelances'
+import ReponsesRelancesFil from '../../ReponsesRelancesFil'
 import type { TravailAletheia } from '../../types'
 
 function Bloc({ titre, children }: { titre: string; children: React.ReactNode }) {
@@ -229,12 +231,17 @@ export default async function PageSemaineAletheia({ params }: { params: Promise<
   // la première viennent de la fiche (thèse en registre élève + deux distracteurs), mélangées
   // par élève et par séance.
   let propositions: string[] = []
+  // (Refonte 04/09) Le rôle de chaque passage clé de la séance : la réécriture met en regard de
+  // chaque champ la seule relance qui le concerne.
+  let rolesPassages: Record<string, string> = {}
   if (gab.etayage) {
     const { data: refE8 } = await admin.from('aletheia_livre_reference').select('contenu, statut').eq('scriptorium_livre_id', livreId).maybeSingle()
-    const fE8 = refE8?.statut === 'READY' && Array.isArray(refE8.contenu) ? (refE8.contenu as { semaine?: unknown; these_eleve?: unknown; distracteurs?: unknown }[]).find(c => Number(c?.semaine) === semaine) : null
+    const fE8 = refE8?.statut === 'READY' && Array.isArray(refE8.contenu) ? (refE8.contenu as { semaine?: unknown; these_eleve?: unknown; distracteurs?: unknown; passages_cles?: unknown }[]).find(c => Number(c?.semaine) === semaine) : null
     const { propositionsChamp1 } = await import('@/utils/aletheia/integrite')
     const { hasard } = await import('@/utils/aletheia/fenetre')
+    const { parsePassages } = await import('@/utils/aletheia/passages')
     propositions = propositionsChamp1(typeof fE8?.these_eleve === 'string' ? fE8.these_eleve : '', Array.isArray(fE8?.distracteurs) ? fE8.distracteurs.filter((d): d is string => typeof d === 'string') : [], hasard(`${user.id}:${livreId}:${semaine}`))
+    rolesPassages = Object.fromEntries(parsePassages(fE8?.passages_cles).map(p => [p.id, p.role]))
   }
   const travaux = await travauxParSemaine(admin, user.id, livreId)
   const t: TravailAletheia | null = travaux.get(semaine) ?? null
@@ -375,17 +382,10 @@ export default async function PageSemaineAletheia({ params }: { params: Promise<
           })()}
         </Bloc>
       ) : statut === 'FEEDBACK1_READY' && t?.retour_v1 && doitRepondre ? (
-        // (E5) Répondre aux relances AVANT de réécrire : retour à gauche, cases à droite.
-        <AtelierDeuxColonnes
-          labelRetour="Ton retour"
-          labelFormulaire="Tes réponses aux relances"
-          retour={<VueRetourV1 retour={t.retour_v1} montrerRemarque={evalQuestions} titres={titresRetour} />}
-          formulaire={
-            <div className="bg-surface border border-bordure rounded-xl p-4 sm:p-5">
-              <ReponsesRelances livreId={livreId} semaine={semaine} relances={relancesV1} detail={t.retour_v1.relances_detail} fenetres={fenetres} surlignagesInitiaux={surlignagesInitiaux} />
-            </div>
-          }
-        />
+        // (Refonte 04/09) Le retour se lit en fil d'écrans, et l'élève répond aux relances au fil.
+        <section className="bg-surface border border-bordure rounded-xl p-4 sm:p-5">
+          <ReponsesRelancesFil livreId={livreId} semaine={semaine} numeroSeance={numeroSeance} retour={t.retour_v1} questionsEleve={t.questions ?? []} rappelEleve={t.rappel ?? null} titres={titresRetour} fenetres={fenetres} surlignagesInitiaux={surlignagesInitiaux} />
+        </section>
       ) : statut === 'FEEDBACK1_READY' && t?.retour_v1 ? (
         // Réécriture — atelier 2 colonnes SEUL : le retour reste sous les yeux.
         <>
@@ -394,6 +394,17 @@ export default async function PageSemaineAletheia({ params }: { params: Promise<
               La préparation de ton retour n&apos;a pas abouti. Renvoie ta version finale ci-dessous ; si le problème persiste, préviens ton professeur.
             </div>
           )}
+          {libelles ? (
+            // (Refonte 04/09) Un champ par écran, la relance qui le concerne en regard.
+            <section className="bg-surface border border-bordure rounded-xl p-4 sm:p-5">
+              <FormulaireVfFil
+                livreId={livreId} semaine={semaine} numeroSeance={numeroSeance} libelles={libelles} retour={t.retour_v1}
+                reponses={reponsesRelances.map(r => ({ relance: r.relance, texte: r.texte }))} rolesPassages={rolesPassages}
+                v1={{ these: t.these ?? '', arguments: t.arguments ?? '', accord: t.accord ?? '', champ_fixe: t.champ_fixe ?? '' }}
+                initial={{ these: t.these_vf ?? t.these ?? '', arguments: t.arguments_vf ?? t.arguments ?? '', accord: t.accord_vf ?? t.accord ?? '', champ_fixe: t.champ_fixe_vf ?? t.champ_fixe ?? '' }}
+              />
+            </section>
+          ) : (
           <AtelierDeuxColonnes
             labelRetour="Ton retour"
             labelFormulaire="Ta version finale"
@@ -419,11 +430,11 @@ export default async function PageSemaineAletheia({ params }: { params: Promise<
                   argumentsInitial={t?.arguments_vf ?? t?.arguments ?? ''}
                   accordInitial={t?.accord_vf ?? t?.accord ?? ''}
                   champFixeInitial={t?.champ_fixe_vf ?? t?.champ_fixe ?? ''}
-                  libelles={libelles}
                 />
               </div>
             }
           />
+          )}
         </>
       ) : (
         // DRAFT (+ échec retour 1) — saisie initiale 5 champs.
@@ -433,24 +444,40 @@ export default async function PageSemaineAletheia({ params }: { params: Promise<
               La préparation de ton retour n&apos;a pas abouti. Renvoie ton travail ci-dessous ; si le problème persiste, préviens ton professeur.
             </div>
           )}
-          <Bloc titre="1. Ta lecture de la séance">
-            <FormulaireV1
-              livreId={livreId}
-              semaine={semaine}
-              theseInitial={t?.these ?? ''}
-              argumentsInitial={t?.arguments ?? ''}
-              accordInitial={t?.accord ?? ''}
-              questionsInitial={(t?.questions ?? []).join('\n')}
-              vocabulaireInitial={(t?.vocabulaire ?? []).join('\n')}
-              champFixeInitial={t?.champ_fixe ?? ''}
-              aides={aides}
-              libelles={libelles}
-              avecRappel={avecRappel}
-              rappelInitial={t?.rappel ?? ''}
-              jeNeSaisPas={gab.etayage}
-              propositions={propositions}
-            />
-          </Bloc>
+          {libelles ? (
+            // Porte ouverte (refonte 04/09) : un écran par question, le fil d'écrans.
+            <section className="bg-surface border border-bordure rounded-xl p-4 sm:p-5">
+              <FormulaireV1Fil
+                livreId={livreId}
+                semaine={semaine}
+                libelles={libelles}
+                numeroSeance={numeroSeance}
+                theseInitial={t?.these ?? ''}
+                argumentsInitial={t?.arguments ?? ''}
+                accordInitial={t?.accord ?? ''}
+                questionsInitial={(t?.questions ?? []).join('\n')}
+                vocabulaireInitial={(t?.vocabulaire ?? []).join('\n')}
+                champFixeInitial={t?.champ_fixe ?? ''}
+                avecRappel={avecRappel}
+                rappelInitial={t?.rappel ?? ''}
+                propositions={propositions}
+              />
+            </section>
+          ) : (
+            <Bloc titre="1. Ta lecture de la séance">
+              <FormulaireV1Classique
+                livreId={livreId}
+                semaine={semaine}
+                theseInitial={t?.these ?? ''}
+                argumentsInitial={t?.arguments ?? ''}
+                accordInitial={t?.accord ?? ''}
+                questionsInitial={(t?.questions ?? []).join('\n')}
+                vocabulaireInitial={(t?.vocabulaire ?? []).join('\n')}
+                champFixeInitial={t?.champ_fixe ?? ''}
+                aides={aides}
+              />
+            </Bloc>
+          )}
         </>
       )}
     </div>

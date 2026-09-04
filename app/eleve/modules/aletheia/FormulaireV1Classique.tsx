@@ -48,7 +48,7 @@ function Etiquette({ titre, detail }: { titre: string; detail?: string }) {
 // Saisie V1 — 5 champs (SPEC §1) : idée principale, arguments, accord, questions, vocabulaire.
 // Avec `libelles` (E3), les cinq emplacements portent les questions du gabarit, plus la
 // question FIXE du dialogué ; les colonnes de base gardent leurs noms.
-export default function FormulaireV1({
+export default function FormulaireV1Classique({
   livreId, semaine,
   theseInitial = '', argumentsInitial = '', accordInitial = '', questionsInitial = '', vocabulaireInitial = '', champFixeInitial = '',
   aides = AIDES_V1_DEFAUT, libelles, avecRappel = false, rappelInitial = '', jeNeSaisPas = false, propositions = [],

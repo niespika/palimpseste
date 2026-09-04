@@ -22,7 +22,7 @@ const champClasse =
 // Réécriture (VF) — 3 champs retravaillés (SPEC §1) : idée principale, arguments,
 // accord (+ la question fixe du dialogué, E3). Les questions et le vocabulaire ne se
 // réécrivent pas. Pré-rempli avec la V1.
-export default function FormulaireVf({ livreId, semaine, theseInitial = '', argumentsInitial = '', accordInitial = '', champFixeInitial = '', libelles }: Props) {
+export default function FormulaireVfClassique({ livreId, semaine, theseInitial = '', argumentsInitial = '', accordInitial = '', champFixeInitial = '', libelles }: Props) {
   const router = useRouter()
   const [these, setThese] = useState(theseInitial)
   const [args, setArgs] = useState(argumentsInitial)
