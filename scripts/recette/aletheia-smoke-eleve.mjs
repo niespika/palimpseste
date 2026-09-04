@@ -83,6 +83,9 @@ if (MODE === 'ecran') {
 }
 
 if (MODE === 'viewport') {
+  // --ecran N : avancer de N écrans (Suivant / Chercher / Répondre…) avant de capturer.
+  for (let n = 0; n < Number(arg('--ecran', '0')); n++) { console.log('   →', await bouton('/^(Suivant|Répondre|Chercher|Lire le passage|Ta réponse →)/')); await dodo(800) }
+  console.log('écran :', await titre())
   await metrics(375, 812, true); await dodo(600)
   await evalJs('window.scrollTo(0, 0)'); await dodo(300); await vue('375-haut')
   await evalJs('window.scrollTo(0, 420)'); await dodo(500); await vue('375-defile')
