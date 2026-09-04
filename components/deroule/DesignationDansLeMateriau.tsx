@@ -75,7 +75,22 @@
 //        « la sélection doit rester dans le texte ») au lieu de se taire ;
 //      · `touchend` ne capture plus : au doigt, l'écriture attend le bouton.
 //    Et l'action serveur ne revalide plus la page : la zone tient ici.
-import { useCallback, useRef, useState, useTransition } from 'react'
+//
+// ⭐⭐ 04/09 — LE BOUTON NE LISAIT LA SÉLECTION QU'AU CLIC, ET SUR UN iPHONE ELLE
+//    N'Y EST PLUS. Deux signalements d'élèves (03 et 04/09) : « à chaque fois que
+//    je garde pour surligner, ça ne le fait pas ». Mesuré en production : un
+//    dépôt ouvert quatre minutes, zéro pose écrite, et 9 dépôts sur 47 aux crans
+//    4·7·9 sans aucune désignation. Rejoué en bac à sable : sur iOS Safari, un
+//    tap hors de la sélection l'EFFACE avant tout `click` — le bouton lisait
+//    alors « rien » et répondait « sélectionne d'abord… » à un élève qui venait
+//    de le faire. (Le smoke du 01/09 posait la sélection par script et cliquait
+//    dans un Chrome sans fenêtre, où elle survit au clic : il ne pouvait pas
+//    le voir.)
+//    Désormais l'écran ÉCOUTE `selectionchange` et RETIENT la dernière sélection
+//    faite dans le texte : le bouton garde celle-là quand la sélection vivante a
+//    disparu. Ce qui est retenu se LIT sous le texte (« Ta sélection : “…” »), pour
+//    que l'élève sache, poignées disparues, que son geste a été vu.
+import { useCallback, useEffect, useRef, useState, useTransition } from 'react'
 import { MARQUE_ELEVE } from './TexteBalise'
 import { demandeUneConfirmation, PHRASE_SOUS_LE_MATERIAU } from '@/utils/deroule/designation'
 
@@ -140,6 +155,35 @@ export function DesignationDansLeMateriau({
    *    le serveur tient la même garde (`actionDesignation`).
    */
   const [aConfirmer, setAConfirmer] = useState<[number, number] | null>(null)
+  /**
+   * ⭐ 04/09 — LA DERNIÈRE SÉLECTION FAITE DANS LE TEXTE, retenue par
+   *    `selectionchange`. Elle survit au tap qui l'efface sur iOS, et c'est elle
+   *    que « Garde ce passage » garde quand la sélection vivante est vide. Le
+   *    `ref` sert au clic (jamais en retard d'un rendu), l'état sert à l'écran.
+   */
+  const retenue = useRef<[number, number] | null>(null)
+  const [retenueAffichee, setRetenueAffichee] = useState<[number, number] | null>(null)
+
+  useEffect(() => {
+    if (gele || typeof document === 'undefined') return
+    const ecoute = () => {
+      if (!boite.current) return
+      const lecture = lireLaSelection(boite.current)
+      if (lecture.etat !== 'bornes') return       // vide ou ailleurs : on garde ce qu'on a
+      const b = lecture.bornes
+      const r = retenue.current
+      if (r && r[0] === b[0] && r[1] === b[1]) return
+      retenue.current = b
+      setRetenueAffichee(b)
+    }
+    document.addEventListener('selectionchange', ecoute)
+    return () => document.removeEventListener('selectionchange', ecoute)
+  }, [gele])
+
+  const oublierLaRetenue = useCallback(() => {
+    retenue.current = null
+    setRetenueAffichee(null)
+  }, [])
 
   // ⚠️ PAS D'EFFET DE SYNCHRONISATION, ET C'EST VOULU. La vue serveur fait foi
   //    au rechargement, mais on ne la recopie pas dans l'état à chaque rendu :
@@ -157,9 +201,15 @@ export function DesignationDansLeMateriau({
     if (enCours) return
     demarrer(async () => {
       const r = await enregistrer(z, confirmee)
-      if (r.ok) { setZone(z); setARepondu(true); setAConfirmer(null) } else { setRefus(r.message) }
+      if (r.ok) {
+        setZone(z); setARepondu(true); setAConfirmer(null)
+        oublierLaRetenue()
+        // La zone est maintenant PEINTE dans le texte : la sélection vivante
+        // ne dirait plus rien de plus, et elle cache la marque sur ordinateur.
+        if (typeof window !== 'undefined') window.getSelection()?.removeAllRanges()
+      } else { setRefus(r.message) }
     })
-  }, [enregistrer, enCours])
+  }, [enregistrer, enCours, oublierLaRetenue])
 
   /** Garde une zone lue — en passant par la question si elle couvre presque tout. */
   const garderLesBornes = useCallback((b: [number, number]) => {
@@ -183,21 +233,34 @@ export function DesignationDansLeMateriau({
   const garder = useCallback(() => {
     if (gele || !boite.current) return
     const lecture = lireLaSelection(boite.current)
-    if (lecture.etat === 'vide') {
-      setAide('Sélectionne d’abord un passage dans le texte, puis garde-le.')
-      return
-    }
+    if (lecture.etat === 'bornes') { garderLesBornes(lecture.bornes); return }
+    // ⭐ 04/09 — la sélection vivante a disparu (le tap l'a effacée) : on garde
+    //    la dernière faite dans le texte, celle que l'écran affiche.
+    if (retenue.current) { garderLesBornes(retenue.current); return }
     if (lecture.etat === 'hors') {
       setAide('La sélection doit rester dans le texte ci-dessus. Recommence en partant d’un mot du texte.')
       return
     }
-    garderLesBornes(lecture.bornes)
+    setAide('Sélectionne d’abord un passage dans le texte, puis garde-le.')
   }, [gele, garderLesBornes])
 
   const recommencer = useCallback(() => {
     setAConfirmer(null)
+    oublierLaRetenue()
     if (typeof window !== 'undefined') window.getSelection()?.removeAllRanges()
-  }, [])
+  }, [oublierLaRetenue])
+
+  /** « Il n'y a rien à surligner » : une réponse, qui efface aussi ce qui était retenu. */
+  const rienASurligner = useCallback(() => {
+    oublierLaRetenue()
+    poser(null)
+  }, [oublierLaRetenue, poser])
+
+  // Ce que l'écran dit de la sélection retenue — seulement si elle diffère de
+  // la zone déjà gardée (sinon la pastille « passage surligné » suffit).
+  const retenueAMontrer = retenueAffichee && !(zone && zone[0] === retenueAffichee[0] && zone[1] === retenueAffichee[1])
+    ? retenueAffichee : null
+  const extraitRetenu = retenueAMontrer ? contenu.slice(retenueAMontrer[0], retenueAMontrer[1]).trim() : ''
 
   // ⭐ Le matériau, découpé par la zone. Trois segments au plus, et leur
   //    concaténation EST le matériau — même promesse que `MateriauMarque`.
@@ -214,11 +277,13 @@ export function DesignationDansLeMateriau({
       {!gele && (
         <p className="mb-2 font-corps text-sm italic text-muet">
           <span className="hidden sm:inline">
-            Glisse sur le texte pour surligner, ou sélectionne puis « Garde ce passage ».
+            Glisse sur le texte pour surligner, ou sélectionne puis « Garde ce passage ». Un seul
+            passage à la fois : pour deux endroits, surligne d’un seul trait du premier au second.
           </span>
           <span className="sm:hidden">
             Appuie longuement sur un mot, ajuste les poignées, puis touche « Garde ce passage ».
-            Un seul passage à la fois.
+            Un seul passage à la fois : si la consigne parle de deux endroits, surligne d’un seul
+            trait du premier au second.
           </span>
         </p>
       )}
@@ -274,6 +339,21 @@ export function DesignationDansLeMateriau({
         </div>
       )}
 
+      {/* ⭐ 04/09 — CE QUI EST RETENU SE LIT, poignées disparues ou non : l'élève
+          sait que son geste a été vu, et ce que « Garde ce passage » gardera. */}
+      {retenueAMontrer && !gele && !aConfirmer && (
+        <p aria-live="polite" className="mt-2.5 font-corps text-[15px] leading-snug text-encre">
+          <span className="font-marque text-[11px] font-semibold uppercase tracking-[0.11em] text-pigment">
+            Ta sélection
+          </span>
+          {' '}
+          <span className="italic text-encre-douce">
+            « {extraitRetenu.length > 90 ? `${extraitRetenu.slice(0, 90)}…` : extraitRetenu} »
+          </span>
+          {' '}— touche « Garde ce passage » pour la garder.
+        </p>
+      )}
+
       {/* ⭐ L'ÉTAT SE LIT SOUS LE TEXTE, en pastille — handoff §4. Il reste
           affiché APRÈS la remise, gelé : l'élève relit sa correction en voyant
           ce QU'IL avait désigné. Ce n'est pas une fuite, c'est sa réponse. */}
@@ -311,7 +391,7 @@ export function DesignationDansLeMateriau({
         {!gele && (
           <button
             type="button"
-            onClick={() => poser(null)}
+            onClick={rienASurligner}
             disabled={enCours}
             className="min-h-11 rounded-[9px] border border-bordure-bouton bg-surface px-4 py-2
                        font-ui text-sm text-encre-douce disabled:opacity-40"

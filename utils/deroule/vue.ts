@@ -347,6 +347,14 @@ export interface VueDuDeroule {
    *    exercice qu'il ne sait pas composer.
    */
   gabarit: { actif: boolean; exercice15: boolean; variante: Variante; sansDocuments: boolean }
+  /**
+   * ⭐ 04/09 — L'EXERCICE S'EST FINI SANS RETOUR, et l'écran doit le dire :
+   *    `hors_cible` — la zone surlignée ne touchait pas le passage visé, la copie
+   *    est close sans appel au modèle (`02-` §5, cas 1) ; `non_fait` — le
+   *    ratissage (cas 0). `null` sinon. Vu au parcours du 04/09 : un fil à
+   *    « Retour », aucun retour, aucun mot — « jamais un écran muet ».
+   */
+  fin: 'hors_cible' | 'non_fait' | null
   /** Ce que le professeur doit savoir — trace serveur, jamais l'élève. */
   avertissements: string[]
 }
@@ -885,6 +893,9 @@ export async function chargerLeDeroule(
 
     signalement,
 
+    fin: !retours.chaud && depot.v1_remis_at
+      ? (depot.statut === 'non_fait' ? 'non_fait' : depot.statut === 'clos' ? 'hors_cible' : null)
+      : null,
     avertissements,
   }
 }

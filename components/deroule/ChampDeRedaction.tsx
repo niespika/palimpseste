@@ -71,6 +71,7 @@ const AUTO_MS = 15_000
 export function ChampDeRedaction({
   depotId, valeurInitiale, telemetrieInitiale = null, lectureSeule, rows = 20,
   onEnregistrer, onRemettre, libelleRemise, avantDeRendre = null, pied = null,
+  sansRemise = false, avantLaRemise = null,
 }: {
   depotId: string
   valeurInitiale: string
@@ -89,6 +90,19 @@ export function ChampDeRedaction({
   avantDeRendre?: React.ReactNode
   /** La mention sous le champ, à droite du compte de signes. */
   pied?: React.ReactNode
+  /**
+   * ⭐ 04/09 — SUR UNE PAIRE, LE PREMIER CAS NE SE REND PAS : il se déclare (la
+   *    crédence), puis on passe au second, et la remise vient à la fin. Le champ
+   *    enregistre tout seul ; la carte « Avant de rendre » n'a pas lieu d'être.
+   */
+  sansRemise?: boolean
+  /**
+   * ⭐ 04/09 — CE QUI SE FAIT ENTRE ÉCRIRE ET RENDRE : la crédence, « une chance
+   *    sur 100 à ta propre réponse, celle que tu viens d'écrire » — elle se
+   *    déclare APRÈS le texte, et AVANT la remise. Un créneau, pour que l'ordre
+   *    de l'écran soit l'ordre du geste.
+   */
+  avantLaRemise?: React.ReactNode
 }) {
   const [texte, setTexte] = useState(valeurInitiale)
   const [enCours, setEnCours] = useState(false)
@@ -232,7 +246,9 @@ export function ChampDeRedaction({
         le tien.
       </p>
 
-      {!lectureSeule && (
+      {avantLaRemise}
+
+      {!lectureSeule && !sansRemise && (
         // ⭐ HANDOFF §4 — UNE SEULE CARTE « Avant de rendre » : les trois gestes
         //    à gauche, le bouton à droite. Sur téléphone, le bouton passe
         //    dessous, en pleine largeur.
@@ -246,13 +262,19 @@ export function ChampDeRedaction({
               Avant de rendre
             </p>
           )}
-          <div className={`flex flex-col gap-4 sm:flex-row sm:items-center sm:gap-5
-                           ${avantDeRendre ? 'mt-2.5' : ''}`}>
-            <div className="min-w-0 flex-1">{avantDeRendre}</div>
+          {/* ⭐ 04/09 — LES GESTES PRENNENT TOUTE LA LARGEUR, le bouton vient
+              DESSOUS. En ligne, le bouton (180 px) laissait ~190 px aux trois
+              gestes : quinze boutons de confiance s'empilaient un par ligne.
+              *« Éviter l'effet d'empilement »* — le bouton ne s'aligne à droite
+              que quand il est seul. */}
+          <div className={`flex flex-col gap-4 ${avantDeRendre ? 'mt-2.5' : 'sm:flex-row sm:items-center sm:gap-5'}`}>
+            {avantDeRendre && <div className="min-w-0">{avantDeRendre}</div>}
+            {!avantDeRendre && <div className="min-w-0 flex-1" />}
             <button
               type="button" onClick={remettre} disabled={enCours || texte.trim() === ''}
-              className="min-h-12 shrink-0 rounded-[10px] bg-bouton px-6 py-4 font-ui text-[15px]
-                         font-semibold text-bouton-texte disabled:opacity-40 sm:py-3.5"
+              className={`min-h-12 shrink-0 rounded-[10px] bg-bouton px-6 py-4 font-ui text-[15px]
+                         font-semibold text-bouton-texte disabled:opacity-40 sm:py-3.5
+                         ${avantDeRendre ? 'sm:self-end' : ''}`}
             >
               {enCours ? 'Envoi…' : libelleRemise}
             </button>
