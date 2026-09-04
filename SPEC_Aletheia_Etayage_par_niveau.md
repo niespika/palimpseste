@@ -591,7 +591,9 @@ tolérantes aux anciens retours (clés absentes = comportement actuel).
 **À reprendre APRÈS E9 (Louis, 03/09, vu les captures d'E6)** — l'écran de la liseuse : éviter l'**effet
 d'empilement** (retour, relances, fenêtres, cases les uns sous les autres) ; **séparer les moments** du
 retour (rappel · relances · réponses · réécriture) ; donner à la partie droite l'**effet d'une page** de
-livre. Pas dans le périmètre de l'étayage : on y revient une fois la refonte finie.
+livre. **Élargi le 04/09 à TOUS les écrans élève de cette partie** (élégant · lisible ordinateur et
+téléphone · un écran = une tâche · compréhensible sans explication) — **avant tout passage en
+production**. Brief pour Design : `design_brief_aletheia_etayage/BRIEF_Design_Aletheia_etayage.md`.
 
 Chaque lot : `tsc`, tests, **puis** rendu avec données réelles sur les trois tailles d'écran.
 Aucun lot ne se ferme sur « ça compile ».
