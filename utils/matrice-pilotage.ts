@@ -12,6 +12,14 @@ import {
   estRendu,
 } from '@/app/prof/aletheia/donnees'
 import type { TravailAletheia, DiagnosticTravail } from '@/app/eleve/modules/aletheia/types'
+import { statutDuTheme, type StatutDuTheme } from '@/utils/fragments-theme'
+import { perimetreVuClasses } from '@/utils/quazian-cibles'
+import { carteVisible, perimetreVide, type CarteAncree } from '@/utils/quazian-visibilite'
+import { lireLaPorte } from '@/utils/deroule/acces'
+import { lundiDuCycle } from '@/utils/deroule/echeance'
+import { toISODate } from '@/utils/calendrier-grille'
+import { visibleDansLaClasse } from '@/utils/codex-onglets/regles'
+import { FUSEAU_DEFAUT } from '@/utils/fuseau'
 
 // ----------------------------------------------------------------------------
 // Matrice « Pilotage Classe » — élèves × modules. Agrégation PAR CLASSE de l'état
@@ -27,7 +35,9 @@ import type { TravailAletheia, DiagnosticTravail } from '@/app/eleve/modules/ale
 export const MODULES_PILOTAGE: { slug: string; sceau: ModuleSceau; nom: string }[] = [
   { slug: 'quazian', sceau: 'quazian', nom: 'Quazian' },
   { slug: 'aletheia', sceau: 'aletheia', nom: 'Aletheia' },
-  { slug: 'fragments-erudition', sceau: 'fragments', nom: 'Fragments' },
+  // ⭐ « Vestigia » est le nom d'écran du module depuis le 03/09 (`utils/nom-module.ts`) ;
+  //    le slug, le sceau et les tables `fragments_*` ne bougent pas.
+  { slug: 'fragments-erudition', sceau: 'fragments', nom: 'Vestigia' },
   { slug: 'codex', sceau: 'codex', nom: 'Codex' },
   { slug: 'scriptorium', sceau: 'scriptorium', nom: 'Scriptorium' },
 ]
@@ -41,6 +51,11 @@ export type KindCellule = 'action' | 'encours' | 'ok' | 'neutre' | 'absent'
 export interface Cellule {
   kind: KindCellule
   label: string
+  /**
+   * Une seconde ligne, discrète, sous le libellé : le total du paquet Quazian,
+   * l'état du thème Vestigia. Facultative — la plupart des cellules n'en ont pas.
+   */
+  detail?: string
 }
 
 export interface ColonneModule {
@@ -74,18 +89,57 @@ const CELLULE_NEUTRE: Cellule = { kind: 'neutre', label: '—' }
 
 // ── Constructeurs de cellule par module ─────────────────────────────────────
 
-function celluleFragments(f: FragInsc | undefined): Cellule {
-  if (!f || f.nbSemainesPassees === 0) return CELLULE_NEUTRE
-  if (f.nbManquants > 0) {
-    return { kind: 'action', label: `${f.nbDeposes}/${f.nbSemainesPassees} · ${f.nbManquants} à faire` }
-  }
-  return { kind: 'ok', label: `${f.nbDeposes}/${f.nbSemainesPassees} · à jour` }
+// Ce que la cellule Vestigia dit du THÈME du semestre (règle : `utils/fragments-theme.ts`).
+// Mesuré en prod le 05/09 sur la classe regardée : 2 thèmes sur 24 inscrits, tous deux validés.
+const LIBELLE_THEME: Record<StatutDuTheme, string> = {
+  vide: 'sans thème',
+  a_valider: 'thème à valider',
+  valide: 'thème validé',
+  pose_par_le_prof: 'thème défini',
+  commente: 'thème commenté',
 }
 
-function celluleQuazian(due: number): Cellule {
-  if (due <= 0) return { kind: 'ok', label: 'à jour' }
-  if (due >= SEUIL_REVISION_MATRICE) return { kind: 'action', label: `${due} à réviser` }
-  return { kind: 'encours', label: `${due} à réviser` }
+function celluleFragments(f: FragInsc | undefined): Cellule {
+  const theme = f?.theme ?? 'vide'
+  const detail = LIBELLE_THEME[theme]
+  // Aucune semaine échue : la cellule ne porte que le thème — et « à valider »
+  // est un geste du professeur, donc une action, comme « à valider » en Codex.
+  if (!f || f.nbSemainesPassees === 0) {
+    if (theme === 'a_valider') return { kind: 'action', label: detail }
+    if (theme === 'valide' || theme === 'pose_par_le_prof') return { kind: 'ok', label: detail }
+    return { kind: 'neutre', label: detail }
+  }
+  if (f.nbManquants > 0) {
+    return { kind: 'action', label: `${f.nbDeposes}/${f.nbSemainesPassees} · ${f.nbManquants} à faire`, detail }
+  }
+  if (theme === 'a_valider') return { kind: 'action', label: detail, detail: `${f.nbDeposes}/${f.nbSemainesPassees} déposés` }
+  return { kind: 'ok', label: `${f.nbDeposes}/${f.nbSemainesPassees} · à jour`, detail }
+}
+
+function celluleQuazian(q: QuazianEleve | undefined): Cellule {
+  const due = q?.due ?? 0
+  // « vues / total » : les cartes que l'élève a déjà rencontrées (un état FSRS
+  // existe) sur les cartes que sa classe lui ouvre. Mesuré en prod le 05/09 :
+  // 5 élèves sur 24 ont des états, 13 chacun, pour 94 cartes partagées valides.
+  const detail = q && q.total > 0 ? `${q.vues}/${q.total} cartes vues` : undefined
+  if (!q || q.total === 0) return CELLULE_NEUTRE
+  // Jamais ouvert : « à jour » mentirait (0 due parce que 0 vue). Vu en bac à
+  // sable le 05/09 : 6 élèves sur 7 auraient lu « à jour · 0/63 cartes vues ».
+  if (q.vues === 0) return { kind: 'neutre', label: `0/${q.total} cartes vues` }
+  if (due <= 0) return { kind: 'ok', label: 'à jour', detail }
+  if (due >= SEUIL_REVISION_MATRICE) return { kind: 'action', label: `${due} à réviser`, detail }
+  return { kind: 'encours', label: `${due} à réviser`, detail }
+}
+
+// Scriptorium : les exercices MAISON de la semaine en cours (cycle lundi → dimanche
+// dans le fuseau de l'école, rattachés par `assigne_at` comme la frise de l'élève).
+// Mesuré en prod le 05/09 : 8 à 12 dépôts par élève, assignés le 31/08, 23 servis sur 24.
+function celluleScriptorium(s: ScriptoriumEleve | undefined): Cellule {
+  if (!s || s.total === 0) return CELLULE_NEUTRE
+  const label = `${s.faits}/${s.total} faits`
+  if (s.faits >= s.total) return { kind: 'ok', label }
+  if (s.faits === 0) return { kind: 'action', label }
+  return { kind: 'encours', label }
 }
 
 function celluleAletheia(a: AletheiaEleve | undefined): Cellule {
@@ -104,9 +158,17 @@ function celluleCodex(c: CodexInsc | undefined): Cellule {
 }
 
 // ── Types internes d'agrégat ────────────────────────────────────────────────
-interface FragInsc { nbSemainesPassees: number; nbDeposes: number; nbManquants: number; moyenne: number | null }
+interface FragInsc {
+  nbSemainesPassees: number; nbDeposes: number; nbManquants: number; moyenne: number | null
+  /** L'état du thème du semestre courant (C8) — `vide` quand aucune ligne n'existe. */
+  theme: StatutDuTheme
+}
 interface AletheiaEleve { done: number; total: number; diagAFaire: boolean }
 interface CodexInsc { nbTotal: number; nbAValider: number; nbEnCours: number }
+/** `due` = cartes en retard de révision ; `vues` = cartes ayant un état FSRS ; `total` = paquet ouvert à l'élève. */
+interface QuazianEleve { due: number; vues: number; total: number }
+/** Exercices maison de la semaine en cours : `faits` = rendus (V1 partie, ou plus) ; `total` = imposés (hors bonus). */
+interface ScriptoriumEleve { faits: number; total: number }
 
 // ── Agrégats par module (uniquement si le module est accessible à la classe) ──
 
@@ -157,6 +219,26 @@ async function aggregerFragments(
     if (d != null && s != null && r != null) noteParDepot.set(a.depot_id as string, (d + s + r) / 3)
   }
 
+  // C8 — le thème du semestre, une ligne par inscription (`fragments_themes`),
+  // lu avec la même règle que l'écran élève et la page Suivi (`statutDuTheme`).
+  // ⚠️ Sans semestre actif, aucune ligne ne se lit : le thème reste `vide`.
+  const themeParInsc = new Map<string, StatutDuTheme>()
+  if (semestreCourant) {
+    const { data: themes } = await admin
+      .from('fragments_themes')
+      .select('inscription_id, theme, propose_at, valide_at, commentaire_prof, commente_at')
+      .in('inscription_id', inscIds).eq('semestre_id', semestreCourant.id)
+    for (const t of themes ?? []) {
+      themeParInsc.set(t.inscription_id as string, statutDuTheme({
+        theme: t.theme as string | null,
+        propose_at: t.propose_at as string | null,
+        valide_at: t.valide_at as string | null,
+        commentaire_prof: t.commentaire_prof as string | null,
+        commente_at: t.commente_at as string | null,
+      }))
+    }
+  }
+
   for (const i of inscriptions) {
     const ds = depotsParInsc.get(i.id) ?? []
     const semainesDeposees = new Set(ds.filter((d) => idsPassees.has(d.semaine_id)).map((d) => d.semaine_id))
@@ -164,21 +246,126 @@ async function aggregerFragments(
     const nbManquants = Math.max(0, nbSemainesPassees - nbDeposes)
     const notes = ds.map((d) => noteParDepot.get(d.id)).filter((n): n is number => n != null)
     const moyenne = notes.length > 0 ? notes.reduce((x, y) => x + y, 0) / notes.length : null
-    out.set(i.id, { nbSemainesPassees, nbDeposes, nbManquants, moyenne })
+    out.set(i.id, { nbSemainesPassees, nbDeposes, nbManquants, moyenne, theme: themeParInsc.get(i.id) ?? 'vide' })
   }
   return out
 }
 
-async function aggregerQuazian(admin: SupabaseClient, eleveIds: string[]): Promise<Map<string, number>> {
-  const out = new Map<string, number>()
+/**
+ * Le PAQUET d'un élève de cette classe : les cartes partagées que le « vu » de la
+ * classe lui ouvre (`utils/quazian-visibilite.ts`, la même règle que la file de
+ * révision de l'élève, bras contenu ET bras hérité) + ses cartes personnelles.
+ * Le périmètre est celui de LA classe regardée — « dans les modules on reste par
+ * classe » — donc un bi-classe peut voir ici moins que dans sa file.
+ */
+async function paquetQuazian(
+  admin: SupabaseClient, classeId: string, eleveIds: string[],
+): Promise<{ partagees: number; persoParEleve: Map<string, number> }> {
+  const perimetre = { ...perimetreVide(), ...(await perimetreVuClasses(admin, [classeId])) }
+  // Bras hérité — publications d'unités et tuples (unité, semaine) de la classe.
+  // Aucune unité en base au 05/09, mais la règle les lit encore : on la copie.
+  const { data: publis } = await admin
+    .from('quazian_publications').select('scriptorium_unite_id')
+    .eq('flashcards_visibles', true).not('scriptorium_unite_id', 'is', null)
+  perimetre.unitesPubliees = (publis ?? [])
+    .map((p) => p.scriptorium_unite_id as string | null).filter((v): v is string => !!v)
+  if (perimetre.unitesPubliees.length > 0) {
+    const { data: liens } = await admin
+      .from('scriptorium_document_classes').select('document_id').eq('classe_id', classeId)
+    const docIds = [...new Set((liens ?? []).map((l) => l.document_id as string))]
+    if (docIds.length > 0) {
+      const { data: documents } = await admin
+        .from('scriptorium_documents').select('unite_id, semaine').in('id', docIds).not('semaine', 'is', null)
+      for (const d of documents ?? []) perimetre.tuplesVisibles.add(`${d.unite_id}:${d.semaine}`)
+    }
+  }
+
+  const select = 'id, eleve_id, contenu_id, section_id, scriptorium_unite_id, semaine'
+  // ⚠️ Même repli que `lireCartes` (module Quazian élève) : si `section_id` n'existe
+  //    pas encore, on relit sans elle plutôt que de rendre zéro carte.
+  type Carte = CarteAncree & { eleve_id: string | null }
+  const lire = async (s: string): Promise<Carte[] | null> => {
+    const { data, error } = await admin.from('quazian_flashcards').select(s).eq('statut', 'valide')
+    return error ? null : ((data ?? []) as unknown as Carte[])
+  }
+  const cartes = (await lire(select)) ?? (await lire(select.replace('section_id, ', ''))) ?? []
+  let partagees = 0
+  const persoParEleve = new Map<string, number>()
+  const eleves = new Set(eleveIds)
+  for (const c of cartes) {
+    if (c.eleve_id == null) { if (carteVisible(c, perimetre)) partagees++; continue }
+    if (eleves.has(c.eleve_id)) persoParEleve.set(c.eleve_id, (persoParEleve.get(c.eleve_id) ?? 0) + 1)
+  }
+  return { partagees, persoParEleve }
+}
+
+async function aggregerQuazian(
+  admin: SupabaseClient, classeId: string, eleveIds: string[],
+): Promise<Map<string, QuazianEleve>> {
+  const out = new Map<string, QuazianEleve>()
   if (eleveIds.length === 0) return out
   const maintenant = new Date()
-  const { data: cs } = await admin
-    .from('quazian_card_states').select('eleve_id, due').in('eleve_id', eleveIds)
+  const [{ data: cs }, paquet] = await Promise.all([
+    admin.from('quazian_card_states').select('eleve_id, due').in('eleve_id', eleveIds),
+    paquetQuazian(admin, classeId, eleveIds),
+  ])
+  for (const e of eleveIds) {
+    out.set(e, { due: 0, vues: 0, total: paquet.partagees + (paquet.persoParEleve.get(e) ?? 0) })
+  }
   for (const c of cs ?? []) {
-    if (c.due && new Date(c.due as string) < maintenant) {
-      out.set(c.eleve_id as string, (out.get(c.eleve_id as string) ?? 0) + 1)
-    }
+    const e = out.get(c.eleve_id as string)
+    if (!e) continue
+    // Un état existe dès la première rencontre de la carte : c'est « vue ».
+    e.vues++
+    if (c.due && new Date(c.due as string) < maintenant) e.due++
+  }
+  return out
+}
+
+/**
+ * Scriptorium — la semaine en cours de chaque élève, vue du professeur.
+ * Le même ensemble que la frise de « Ma semaine » (`utils/eleve/semaine-serveur.ts`) :
+ * dépôts MAISON non retirés, rattachés au cycle par `assigne_at` dans le fuseau de
+ * l'école, bornés à la classe regardée, bonus comptés À PART (ici : pas comptés).
+ * ⚠️ « Fait » diverge volontairement de la frise de l'élève : pour le professeur,
+ *    un exercice RENDU est fait, même si le retour n'est pas encore lu ; et un
+ *    exercice `non_fait` ou `abandonne` reste au dénominateur sans monter au
+ *    numérateur. UNE requête pour toute la classe (225 lignes mesurées le 05/09).
+ */
+const STATUTS_RENDUS = new Set(['v1_remis', 'retour_publie', 'vf_remis', 'clos'])
+async function aggregerScriptorium(
+  admin: SupabaseClient, classeId: string, eleveIds: string[], fuseau: string,
+): Promise<Map<string, ScriptoriumEleve>> {
+  const out = new Map<string, ScriptoriumEleve>()
+  if (eleveIds.length === 0) return out
+  // ⛔ La porte se lit ICI, comme partout : porte fermée, cellule neutre.
+  if (!(await lireLaPorte(admin)).exercicesActifs) return out
+
+  const cycleLundi = toISODate(lundiDuCycle(new Date(), fuseau))
+  // Borne large (le lundi moins un jour, en UTC) puis filtre exact au fuseau : un
+  // `assigne_at` du dimanche soir à Paris est un lundi en UTC, et inversement.
+  const borne = new Date(`${cycleLundi}T00:00:00Z`)
+  borne.setUTCDate(borne.getUTCDate() - 1)
+  const { data, error } = await admin
+    .from('exercices_depots')
+    .select('eleve_id, statut, assigne_at, routeur_decisions(bonus), exercices!inner(lieu, classe_id)')
+    .in('eleve_id', eleveIds).neq('statut', 'retire').eq('exercices.lieu', 'maison')
+    .gte('assigne_at', borne.toISOString())
+  if (error) {
+    console.error(`[matrice-pilotage] exercices maison illisibles — ${error.code} ${error.message}`)
+    return out
+  }
+  for (const e of eleveIds) out.set(e, { faits: 0, total: 0 })
+  for (const d of data ?? []) {
+    if (!d.assigne_at || toISODate(lundiDuCycle(new Date(d.assigne_at as string), fuseau)) !== cycleLundi) continue
+    const ex = (Array.isArray(d.exercices) ? d.exercices[0] : d.exercices) as { classe_id: string | null } | null
+    if (!visibleDansLaClasse(ex?.classe_id ?? null, classeId)) continue
+    const rd = (Array.isArray(d.routeur_decisions) ? d.routeur_decisions[0] : d.routeur_decisions) as { bonus?: boolean } | null
+    if (rd?.bonus === true) continue
+    const s = out.get(d.eleve_id as string)
+    if (!s) continue
+    s.total++
+    if (STATUTS_RENDUS.has(d.statut as string)) s.faits++
   }
   return out
 }
@@ -262,6 +449,8 @@ async function aggregerCodex(
 export async function chargerMatricePilotage(
   admin: SupabaseClient,
   classeId: string,
+  /** Le fuseau de l'école — la semaine Scriptorium se coupe au lundi DANS ce fuseau. */
+  fuseau: string = FUSEAU_DEFAUT,
 ): Promise<MatricePilotage> {
   // 1. Inscriptions + noms.
   const inscriptions = await inscriptionsClasse(admin, classeId)
@@ -289,11 +478,12 @@ export async function chargerMatricePilotage(
   const aAcces = (slug: string) => slugsAccessibles.has(slug)
 
   // 3. Agrégats par module (en parallèle ; seuls les modules accessibles requêtent).
-  const [frag, quazian, aletheia, codex] = await Promise.all([
+  const [frag, quazian, aletheia, codex, scriptorium] = await Promise.all([
     aAcces('fragments-erudition') ? aggregerFragments(admin, inscriptions) : Promise.resolve(new Map<string, FragInsc>()),
-    aAcces('quazian') ? aggregerQuazian(admin, eleveIds) : Promise.resolve(new Map<string, number>()),
+    aAcces('quazian') ? aggregerQuazian(admin, classeId, eleveIds) : Promise.resolve(new Map<string, QuazianEleve>()),
     aAcces('aletheia') ? aggregerAletheia(admin, classeId, eleveIds) : Promise.resolve(new Map<string, AletheiaEleve>()),
     aAcces('codex') ? aggregerCodex(admin, classeId, eleveIds) : Promise.resolve(new Map<string, CodexInsc>()),
+    aAcces('scriptorium') ? aggregerScriptorium(admin, classeId, eleveIds, fuseau) : Promise.resolve(new Map<string, ScriptoriumEleve>()),
   ])
 
   // 4. Lignes + « à risque » (seuils/motifs santé sur les nombres calculés ici).
@@ -307,7 +497,7 @@ export async function chargerMatricePilotage(
       nbManquants: f?.nbManquants ?? 0,
       nbEnRetard: 0,
       moyenne: f?.moyenne ?? null,
-      backlogRevision: quazian.get(eId) ?? 0,
+      backlogRevision: quazian.get(eId)?.due ?? 0,
       enDifficulte: false,
       raisons: [],
     }
@@ -318,10 +508,10 @@ export async function chargerMatricePilotage(
       if (!col.accessible) { cellules[col.slug] = CELLULE_ABSENTE; continue }
       switch (col.slug) {
         case 'fragments-erudition': cellules[col.slug] = celluleFragments(f); break
-        case 'quazian': cellules[col.slug] = celluleQuazian(quazian.get(eId) ?? 0); break
+        case 'quazian': cellules[col.slug] = celluleQuazian(quazian.get(eId)); break
         case 'aletheia': cellules[col.slug] = celluleAletheia(aletheia.get(eId)); break
         case 'codex': cellules[col.slug] = celluleCodex(codex.get(eId)); break
-        // Scriptorium : pas de statut élève défini pour l'instant.
+        case 'scriptorium': cellules[col.slug] = celluleScriptorium(scriptorium.get(eId)); break
         default: cellules[col.slug] = CELLULE_NEUTRE
       }
     }
