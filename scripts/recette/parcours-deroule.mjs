@@ -86,7 +86,7 @@ async function lire() {
     const boutons = [...document.querySelectorAll('button')].filter((b) => !b.disabled && b.offsetParent !== null).map((b) => b.textContent.trim())
     const ta = [...document.querySelectorAll('textarea')].filter((x) => x.offsetParent !== null && !x.readOnly).map((x) => ({ rows: x.rows, vide: x.value.trim() === '' }))
     const ranges = [...document.querySelectorAll('input[type=range]')].filter((x) => x.offsetParent !== null).length
-    const geste = /Ta thèse en une phrase/i.test(t) ? 'restitution' : /Comment te sens-tu/i.test(t) ? 'confiance' : /Dans quelles conditions as-tu travaillé/i.test(t) ? 'conditions' : null
+    const geste = /Ta thèse en une phrase/i.test(t) ? 'restitution' : /degré de confiance/i.test(t) ? 'confiance' : /Dans quelles conditions as-tu travaillé/i.test(t) ? 'conditions' : null
     return { boutons, textareas: ta, ranges, geste,
       enregistrer: boutons.includes('Enregistrer'),
       rendre: boutons.find((b) => /^Rendre/.test(b)) ?? null,
@@ -117,6 +117,9 @@ async function pagesDuRetour(prefixe) {
   let p = 1
   await capture(`${prefixe}-point-${p}`)
   for (let k = 0; k < 12; k++) {
+    // ⭐ 05/09 — la case « J'ai lu ce point » ouvre « Point suivant » : on la coche AVANT de lire les boutons.
+    await cdp.evalue(`(() => { const c = [...document.querySelectorAll('input[type=checkbox]')].find((x) => x.offsetParent !== null && !x.checked); if (c) c.click(); return !!c })()`)
+    await dors(300)
     const e = await lire()
     if (!e.suivant) break
     const fin = /^Pour finir/.test(e.suivant)

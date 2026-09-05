@@ -33,8 +33,8 @@ import type { Mesure } from '../routeur/mesure'
 import { lireLaPorteDuSignalement, lireLeSignalementDuDepot,
   type SignalementDeLEleve } from '@/utils/signalements/serveur'
 import { lireDepotMaison, collagesDuDepot, type DepotMaison } from './depot'
-import { regimeDuDeroule, tempsServis, nombreDeCas, credenceDemandee, etapeDeLaPaire,
-  type EscaladePesante, type EtapePaire } from './regime'
+import { regimeDuDeroule, tempsServis, nombreDeCas, credenceDemandee, restitutionDemandee,
+  etapeDeLaPaire, type EscaladePesante, type EtapePaire } from './regime'
 import { rappelDuTemps1, momentDeLaDemonstration, type Rappel } from './rappel'
 import { offreDeCredence, credenceDonneeDe, CRANS_GUIDES, type OffreCredence } from './credence'
 import { composerLaCorrection, correctionDue, correctionServieAuCran, etalonServi,
@@ -373,6 +373,23 @@ export interface VueDuDeroule {
   fin: 'hors_cible' | 'non_fait' | null
   /** Ce que le professeur doit savoir — trace serveur, jamais l'élève. */
   avertissements: string[]
+}
+
+/**
+ * ⭐ 05/09 — LA COMPÉTENCE QUE L'EXERCICE VISE : la cible retenue par le routeur,
+ *    sinon la cible primaire de l'exercice — et seulement si la chaîne la mesure.
+ *    Vide quand ni l'une ni l'autre n'est là : le geste de confiance ne se
+ *    présente pas, plutôt que de demander un jugement sur cinq compétences
+ *    dont quatre ne sont pas en jeu.
+ */
+function competencesVisees(
+  ctx: ContexteDepot, depot: DepotMaison, mesurees: readonly Competence[],
+): Competence[] {
+  // ⚠️ Les exercices du gabarit n'ont pas de `cible_primaire` : leur compétence
+  //    visée est celle de l'observable qu'ils ISOLENT (`observable_isole_competence`).
+  const cible = (ctx.decision?.cibleRetenue ?? ctx.ciblePrimaire
+    ?? depot.exercice.observable_isole_competence ?? null) as Competence | null
+  return cible !== null && mesurees.includes(cible) ? [cible] : []
 }
 
 /**
@@ -809,7 +826,16 @@ export async function chargerLeDeroule(
 
   // ── La remise ──
   const { mesurees } = competencesDeLExercice(ctx)
-  const competencesDeLaConfiance = competencesQuiDemandentLaConfiance(mesurees, ctx.statutsRecette)
+  // ⭐ 05/09 — LA CONFIANCE SE DEMANDE SUR LA COMPÉTENCE VISÉE, pas sur toutes
+  //    celles que la chaîne mesure (Louis, sur la galerie : « calibrer le
+  //    jugement en fonction de ce que le routeur vise comme compétence dans cet
+  //    exercice »). Visée : la cible retenue par la décision, sinon la cible
+  //    primaire de l'exercice, sinon la compétence de l'observable isolé.
+  //    ⚠️ Les cibles SECONDAIRES du `01-` §1 n'ont pas de domicile en base — la
+  //    décision ne porte que la cible retenue et les sondes — : une seule
+  //    compétence, donc, tant qu'elles n'en ont pas.
+  const competencesDeLaConfiance = competencesQuiDemandentLaConfiance(
+    competencesVisees(ctx, depot, mesurees), ctx.statutsRecette)
 
   // ── Temps 3 : « se juger » ──
   const seJuger = await construireSeJuger(admin, depot, ctx, geste, mesurees)
@@ -899,7 +925,9 @@ export async function chargerLeDeroule(
     collages: collagesDuDepot(depot),
 
     competencesDeLaConfiance,
-    gestesRestants: gestesRestants(depot, competencesDeLaConfiance.length > 0),
+    gestesRestants: gestesRestants(depot, competencesDeLaConfiance.length > 0,
+      // ⚠️ Sans geste lisible (doctrine absente), on exige comme hier.
+      geste ? restitutionDemandee(geste as never) : true),
     confianceDeclaree: depot.confiance_declaree,
     conditionsDeclarees: depot.conditions_declarees,
     restitutionAChaud: depot.restitution_a_chaud,

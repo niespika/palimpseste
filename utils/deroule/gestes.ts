@@ -151,11 +151,13 @@ export async function enregistrerLaRestitution(
 /** L'ordre des trois gestes, et ce qui reste à faire (`06-` §3). */
 export function gestesRestants(
   depot: DepotMaison, confianceDemandee: boolean,
+  /** ⭐ 05/09 — vrai au seul geste PRODUIRE (`regime.ts`, `restitutionDemandee`). */
+  restitutionDemandee = true,
 ): Array<'confiance' | 'conditions' | 'restitution'> {
   const restants: Array<'confiance' | 'conditions' | 'restitution'> = []
   if (confianceDemandee && !depot.confiance_declaree) restants.push('confiance')
   if (!depot.conditions_declarees) restants.push('conditions')
-  if (!depot.restitution_a_chaud) restants.push('restitution')
+  if (restitutionDemandee && !depot.restitution_a_chaud) restants.push('restitution')
   return restants
 }
 

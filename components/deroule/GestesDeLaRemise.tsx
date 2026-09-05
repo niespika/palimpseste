@@ -149,9 +149,18 @@ function LaConfiance(
 
   return (
     <div>
-      <h3 className="font-titre text-[22px] font-semibold leading-tight text-encre">Comment te sens-tu ?</h3>
+      {/* ⭐ 05/09 — LA QUESTION, RÉCRITE PAR LOUIS ; et elle ne porte que sur la
+          compétence que l'exercice VISE (`vue.competencesDeLaConfiance`), plus
+          sur toutes celles que la chaîne mesure. */}
+      <h3 className="font-titre text-[22px] font-semibold leading-tight text-encre">
+        {competences.length > 1
+          ? 'Pour chacune des compétences suivantes, quel degré de confiance as-tu dans ton travail ?'
+          : 'Quel degré de confiance as-tu dans ton travail ?'}
+      </h3>
       <p className="mt-2 text-sm text-encre-douce">
-        Une réponse par point de travail. C’est l’affaire de quelques secondes.
+        {competences.length > 1
+          ? 'Une réponse par compétence visée. C’est l’affaire de quelques secondes.'
+          : 'C’est l’affaire de quelques secondes.'}
       </p>
 
       <div className="mt-3 space-y-4">

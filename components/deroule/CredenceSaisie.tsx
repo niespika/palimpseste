@@ -165,9 +165,12 @@ export function CredenceSaisie({
     <>
       {repartition ? (
         <>
+          {/* ⭐ 05/09 — « Il n'y a pas de crédence pour les crans 1 ? » (Louis) : si,
+              les jetons SONT la crédence — et l'écran le dit désormais. */}
           <p className="font-corps text-base leading-relaxed text-encre">
-            Répartis <strong>100 jetons</strong> entre ces quatre réponses. Plus tu en poses sur
-            une, plus tu la crois juste. Tu peux tout mettre sur une seule, ou étaler.
+            Répartis <strong>100 jetons</strong> entre ces quatre réponses : c’est ta crédence.
+            Plus tu en poses sur une, plus tu la crois juste. Tu peux tout mettre sur une
+            seule, ou étaler.
           </p>
 
           {/* ⚠️ `offre.candidats` DANS L'ORDRE REÇU. Pas de tri, pas de mêlage,
@@ -212,9 +215,11 @@ export function CredenceSaisie({
         <>
           {/* ⚠️ AUCUN CANDIDAT N'EST SERVI À CES QUATRE CRANS : l'élève a répondu
               ailleurs, et la crédence porte sur SA propre réponse. */}
+          {/* ⭐ 05/09 — la consigne, récrite par Louis sur la galerie. */}
           <p className="font-corps text-base leading-relaxed text-encre">
-            Donne une chance sur 100 à <strong>ta propre réponse</strong>, celle que tu viens
-            d’écrire : 0 si tu es certain de t’être trompé, 100 si tu es certain d’avoir juste.
+            Quelle crédence accordes-tu à <strong>ta propre réponse</strong> ? Quelle est la
+            probabilité que tu aies raison ? 0 si tu es certain de t’être trompé, 100 si tu es
+            certain d’avoir juste.
           </p>
           <div className="mt-3">
             <Curseur
@@ -261,7 +266,7 @@ export function CredenceSaisie({
     <section className="rounded-xl border border-bordure bg-surface p-4">
       <h2 className="mb-2 font-marque text-[11px] font-semibold uppercase tracking-[0.11em]
                      text-muet">
-        À quel point es-tu sûr ?
+        Ta crédence
       </h2>
       {contenu}
     </section>

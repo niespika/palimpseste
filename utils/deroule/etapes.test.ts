@@ -13,7 +13,7 @@ import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import {
   etapeDuTravail, etapesServies, rangDeLEtape, gestesServis, titreDeLEtape,
-  libelleDuVoletDeTravail, type EtatDuTravail,
+  libelleDuVoletDeTravail, tempsDeLaPage, type EtatDuTravail,
 } from './etapes'
 
 const base: EtatDuTravail = {
@@ -93,15 +93,29 @@ test('la suite servie, et le rang qu’on y lit', () => {
   assert.deepEqual(vf.map((s) => s.etape), ['ecrire', 'rendre'])
 })
 
-test('les gestes servis : la confiance seulement quand une compétence la demande', () => {
-  assert.deepEqual(gestesServis({ confianceDemandee: true }), ['confiance', 'conditions', 'restitution'])
-  assert.deepEqual(gestesServis({ confianceDemandee: false }), ['conditions', 'restitution'])
+test('les gestes servis : la confiance quand une compétence la demande, la restitution au seul produire', () => {
+  assert.deepEqual(gestesServis({ confianceDemandee: true, restitutionDemandee: true }),
+    ['confiance', 'conditions', 'restitution'])
+  assert.deepEqual(gestesServis({ confianceDemandee: false, restitutionDemandee: true }),
+    ['conditions', 'restitution'])
+  assert.deepEqual(gestesServis({ confianceDemandee: true, restitutionDemandee: false }),
+    ['confiance', 'conditions'])
+})
+
+test('les gestes et la remise se lisent « Se juger » au fil ; les autres pages laissent le serveur dire', () => {
+  assert.equal(tempsDeLaPage('confiance'), 'se_juger')
+  assert.equal(tempsDeLaPage('conditions'), 'se_juger')
+  assert.equal(tempsDeLaPage('restitution'), 'se_juger')
+  assert.equal(tempsDeLaPage('rendre'), 'se_juger')
+  assert.equal(tempsDeLaPage('ecrire'), null)
+  assert.equal(tempsDeLaPage('credence'), null)
+  assert.equal(tempsDeLaPage('apres'), null)
 })
 
 test('les libellés suivent la page', () => {
   assert.equal(titreDeLEtape('ecrire', 'rediger'), 'Ton écriture')
   assert.equal(titreDeLEtape('ecrire', 'surligner'), 'Ce que tu en dis')
-  assert.equal(titreDeLEtape('credence', 'rediger'), 'À quel point es-tu sûr ?')
+  assert.equal(titreDeLEtape('credence', 'rediger'), 'Ta crédence')
   assert.equal(titreDeLEtape('conditions', 'rediger'), 'Avant de rendre')
   assert.equal(libelleDuVoletDeTravail('credence'), 'Crédence')
   assert.equal(libelleDuVoletDeTravail('restitution'), 'Rendre')

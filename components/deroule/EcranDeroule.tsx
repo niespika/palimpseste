@@ -48,7 +48,7 @@
 //    s'enregistre n'a changé : mêmes actions, mêmes moments.
 // ============================================================================
 
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { TexteBalise, TexteBrut, MateriauMarque, MARQUE_ELEVE } from './TexteBalise'
@@ -68,11 +68,11 @@ import {
 } from '@/utils/deroule/plan-de-travail'
 import {
   etapeDuTravail, etapesServies, rangDeLEtape, gestesServis, titreDeLEtape,
-  libelleDuVoletDeTravail, type EtapeDuTravail,
+  libelleDuVoletDeTravail, tempsDeLaPage, type EtapeDuTravail,
 } from '@/utils/deroule/etapes'
 import { segmentsDuRenvoi } from '@/utils/deroule/renvoi'
 import { momentDeLaPaire, casDuMoment, versionDuCas, type MomentDeLaPaire } from '@/utils/deroule/paire'
-import { lireLaRepartition, rappelDeLaRepartition } from '@/utils/deroule/repartition'
+import { lireLaRepartition } from '@/utils/deroule/repartition'
 import {
   actionOuvrir, actionEnregistrerBrouillon, actionRemettre, actionMicroQuestion,
   actionCompterUneAide, actionEtatDeLAttente, actionDesignation,
@@ -158,7 +158,11 @@ export function EcranDeroule(
   const suite = etapesServies({
     estUnePaire: vue.estUnePaire, credenceEstLaReponse: vue.credenceEstLaReponse,
     credenceDemandee: vue.cas.some((c) => c.credence !== null && !c.credence.empechement),
-    gestes: gestesServis({ confianceDemandee: vue.competencesDeLaConfiance.length > 0 }),
+    gestes: gestesServis({
+      confianceDemandee: vue.competencesDeLaConfiance.length > 0,
+      // ⚠️ Ce que la vue sert, ou a déjà reçu : la restitution n'est due qu'au produire.
+      restitutionDemandee: vue.gestesRestants.includes('restitution') || vue.restitutionAChaud !== null,
+    }),
     versionFinale: false,
   })
   const rang = rangDeLEtape(suite, etape, casAffiche)
@@ -185,8 +189,8 @@ export function EcranDeroule(
    *    `etatDuChamp` —, ou, si le champ n'a pas été touché sur cette page, avec
    *    ce que la vue a lu en base : même texte, même relevé.
    */
-  const remettre = useCallback(
-    async () => {
+  async function remettre() {
+    {
       const version = versionEnCours(vue, casAffiche)
       const cle = cleDuChamp(vue.estUnePaire, version, casAffiche)
       const etat: EtatDuChamp = etatDuChamp.current[cle] ?? {
@@ -209,7 +213,8 @@ export function EcranDeroule(
       const r = await actionRemettre(vue.depotId, version, etat.texte, etat.t)
       if (!r.ok) throw new Error(r.message)
       router.refresh()
-    }, [vue, router, casAffiche])
+    }
+  }
 
   // ── L'état d'écran, et rien d'autre ──────────────────────────────────────
   // ⚠️ AUCUN de ces états ne décide de ce qui s'enregistre : ils décident de ce
@@ -235,6 +240,8 @@ export function EcranDeroule(
     //    « se juger » est exclusif — il rendrait une page blanche.
     seJugerAServir: vue.seJuger.servie && (vue.seJuger.offre?.questions.length ?? 0) > 0,
   })
+  // ⭐ 05/09 — les gestes et la remise se lisent « Se juger » au fil (Louis).
+  const tempsPage = ecran === 'travail' ? tempsDeLaPage(etape) : null
 
   const tournerLaPage = (finie: boolean) =>
     setRedactionFinie((s) => ({ ...s, [cleCourante]: finie }))
@@ -260,9 +267,9 @@ export function EcranDeroule(
                     sm:mx-0 sm:rounded-2xl sm:border">
       <BarreDeContenu
         vue={vue} atelier={atelier} ecran={ecran} reprise={reprise}
-        rangDeLaPage={ecran === 'travail' ? rang : null}
+        rangDeLaPage={ecran === 'travail' ? rang : null} tempsPage={tempsPage}
       />
-      <FilDesTemps vue={vue} forme={forme} ecran={ecran} reprise={reprise} />
+      <FilDesTemps vue={vue} forme={forme} ecran={ecran} reprise={reprise} tempsPage={tempsPage} />
 
       {ecran === 'ferme' && (
         <div className="p-5">
@@ -348,17 +355,20 @@ const jourCourt = (iso: string) =>
  *    — « Exercices », l'onglet — au lieu d'un « Retour » qui ne dit pas où.
  */
 function BarreDeContenu({
-  vue, atelier, ecran, reprise, rangDeLaPage,
+  vue, atelier, ecran, reprise, rangDeLaPage, tempsPage,
 }: {
   vue: VueDuDeroule; atelier: Atelier
   ecran: ReturnType<typeof ecranDuDeroule>; reprise: boolean
   /** ⭐ 04/09 (soir) — le rang de la PAGE de travail (« 3 / 7 »), quand il y en a une. */
   rangDeLaPage: { rang: number; total: number } | null
+  /** ⭐ 05/09 — le temps que la page fait lire (« Se juger » pendant les gestes). */
+  tempsPage: Temps | null
 }) {
   // ⭐ Le compteur du téléphone dit la page — l'étape fine — quand la colonne de
   //    travail en tourne une ; sinon le temps du fil, comme avant. Un seul
   //    compteur par écran : celui de la colonne ne s'affiche qu'à partir de `lg`.
-  const rang = rangDeLaPage ?? rangDuTemps(tempsAffiche(ecran, vue.tempsCourant, reprise), vue.temps)
+  const rang = rangDeLaPage
+    ?? rangDuTemps(tempsPage ?? tempsAffiche(ecran, vue.tempsCourant, reprise), vue.temps)
   return (
     <div className="flex items-center gap-3 border-b border-bordure bg-surface px-4 py-3
                     sm:gap-4 sm:px-6">
@@ -427,12 +437,15 @@ function PastilleEcheance({ iso, className = '' }: { iso: string; className?: st
  *    qui ne peut plus rien enregistrer. **À rapporter à Louis.**
  */
 function FilDesTemps({
-  vue, forme, ecran, reprise,
+  vue, forme, ecran, reprise, tempsPage,
 }: {
   vue: VueDuDeroule; forme: FormeDuTravail
   ecran: ReturnType<typeof ecranDuDeroule>; reprise: boolean
+  /** ⭐ 05/09 — « on est toujours dans Se juger » (Louis) : les gestes et la
+   *  remise se lisent au temps 3, quoi que dise `tempsCourant`. Présentation. */
+  tempsPage: Temps | null
 }) {
-  const courant = tempsAffiche(ecran, vue.tempsCourant, reprise)
+  const courant = tempsPage ?? tempsAffiche(ecran, vue.tempsCourant, reprise)
   return (
     <nav
       aria-label="Les temps de l’exercice"
@@ -826,6 +839,16 @@ function ColonneMatiere({
         </Depliable>
       )}
 
+      {/* ⭐ 05/09 — « Il faut voir où c'est le plus judicieux de mettre la correction
+          du cas précédent » (Louis). Elle est une RÉFÉRENCE, pas une tâche : elle
+          vit avec les documents du second cas, repliée, et plus en tête de la
+          colonne de travail. */}
+      {vue.estUnePaire && casAffiche === 2 && vue.corrections[0] && (
+        <Depliable titre="La correction du premier cas" depotId={vue.depotId} aide={null}>
+          <Correction correction={vue.corrections[0]} reponse={reponseDeLEleve(vue, 1)} />
+        </Depliable>
+      )}
+
       {children}
     </div>
   )
@@ -871,11 +894,16 @@ function ColonneTravail({
       <div className={cadre}>
         <EnTeteDePage titre={titreDeLEtape(etape, forme)} rang={rang} />
         <div key="correction" className="page-tourne flex flex-col gap-4">
-          {c1 ? <Correction correction={c1} /> : (
+          {/* ⭐ 05/09 — « l'élève voit sa réponse, pourquoi c'est bon ou pas, et la
+              bonne réponse expliquée » (Louis) : la correction PART de ce qu'il a
+              choisi ou écrit. Sur une rédaction, c'est une comparaison — le
+              jugement du texte appartient à la chaîne, à la remise. */}
+          {c1 ? <Correction correction={c1} reponse={reponseDeLEleve(vue, 1)} /> : (
             <p className="font-corps text-[15px] italic text-muet">
               Rien à corriger sur ce cas : passe au second.
             </p>
           )}
+          <JetonsPoses vue={vue} ordre={1} />
           <button
             type="button" onClick={passerAuSecond}
             className="min-h-12 self-start rounded-[10px] bg-bouton px-6 py-3.5 font-ui text-[15px]
@@ -919,20 +947,29 @@ function ColonneTravail({
             celle du second n'apparaît qu'une fois la copie rendue. */}
         {vue.estUnePaire ? (
           <>
-            {vue.corrections[1] && <Correction correction={vue.corrections[1]} />}
+            {vue.corrections[1] && (
+              <Correction correction={vue.corrections[1]} reponse={reponseDeLEleve(vue, 2)} />
+            )}
             {vue.corrections[0] && (
               <Depliable titre="La correction du premier cas" depotId={vue.depotId} aide={null}>
-                <Correction correction={vue.corrections[0]} />
+                <Correction correction={vue.corrections[0]} reponse={reponseDeLEleve(vue, 1)} />
               </Depliable>
             )}
           </>
         ) : vue.corrections.map((correction, i) => (
-          correction ? <Correction key={i} correction={correction} /> : null
+          correction
+            ? <Correction key={i} correction={correction} reponse={reponseDeLEleve(vue, i === 0 ? 1 : 2)} />
+            : null
         ))}
 
         {/* ⭐ CE QUI A ÉTÉ RENDU, EN LECTURE SEULE — « jamais un écran muet »
-            (`01-` §12). ⭐ 04/09 — sur une paire, LES DEUX réponses. */}
-        {forme !== 'choisir' && (vue.texteV1 ?? '').trim() !== '' && (
+            (`01-` §12). ⭐ 04/09 — sur une paire, LES DEUX réponses.
+            ⭐ 05/09 — PAS PENDANT L'ATTENTE : « sur cet écran d'attente, on voit
+            déjà la réponse » (Louis) — l'encart suffit ; la copie revient quand
+            il n'y a plus rien à attendre, et seulement si aucune correction ne
+            la montre déjà (« Ta réponse »). */}
+        {forme !== 'choisir' && !vue.attente.enCours && !vue.corrections.some((c) => c !== null)
+          && (vue.texteV1 ?? '').trim() !== '' && (
           (vue.estUnePaire
             ? [{ libelle: 'Premier cas', texte: vue.texteV1 ?? '' },
               { libelle: 'Second cas', texte: vue.texteVf ?? '' }].filter((c) => c.texte.trim() !== '')
@@ -961,13 +998,6 @@ function ColonneTravail({
           titre={titreDeLEtape(etape, forme)} rang={rang}
           appoint="tu peux tout mettre sur une seule, ou étaler"
         />
-        {/* ⭐ 04/09 — au second cas, la correction du premier se REPLIE : elle a
-            eu son écran. */}
-        {vue.estUnePaire && casAffiche === 2 && vue.corrections[0] && (
-          <Depliable titre="La correction du premier cas" depotId={vue.depotId} aide={null}>
-            <Correction correction={vue.corrections[0]} />
-          </Depliable>
-        )}
         {/* ⭐ La crédence REMPLACE le champ (handoff §4, écran 2b) : elle est la
             réponse, et elle prend la colonne.
             ⚠️ Aux crans guidés `v1_remis_at` n'est JAMAIS posé — la crédence EST
@@ -993,22 +1023,16 @@ function ColonneTravail({
   /** Le texte se modifie encore tant que la crédence n'est pas donnée (ou qu'aucune n'est demandée). */
   const modifiable = !casCourant?.credenceDonnee
   const phraseDeSuite = credenceASaisir
-    ? 'Ensuite : ta chance d’avoir juste, puis tu pourras rendre.'
+    ? (vue.estUnePaire && casAffiche === 1
+      ? 'Ensuite : ta crédence, puis la correction de ce premier cas.'
+      : 'Ensuite : ta crédence, puis tu pourras rendre.')
     : vue.estUnePaire && casAffiche === 1
       ? 'Ensuite : la correction de ce premier cas.'
-      : 'Ensuite : trois gestes rapides, puis tu pourras rendre.'
+      : 'Ensuite : quelques questions rapides, puis tu pourras rendre.'
 
   return (
     <div className={cadre}>
       <EnTeteDePage titre={titreDeLEtape(etape, forme)} rang={rang} />
-
-      {/* ⭐ 04/09 — au second cas d'une paire, la correction du premier se REPLIE
-          en tête : elle a eu son écran. */}
-      {vue.estUnePaire && casAffiche === 2 && vue.corrections[0] && surLaPageDuChamp && (
-        <Depliable titre="La correction du premier cas" depotId={vue.depotId} aide={null}>
-          <Correction correction={vue.corrections[0]} />
-        </Depliable>
-      )}
 
       {/* ── PAGE « ÉCRIRE » — le champ reste monté (caché) sur les pages suivantes ── */}
       <div className={surLaPageDuChamp ? 'page-tourne flex flex-col gap-3' : 'hidden'}>
@@ -1645,29 +1669,40 @@ function EncartDeRevision(
  */
 function RetourDUnChoix({ vue, atelier }: { vue: VueDuDeroule; atelier: Atelier }) {
   const dernier = vue.cas[vue.cas.length - 1]
-  const lectures = lireLaRepartition(dernier?.credenceDonnee)
+  const ordreDuDernier: 1 | 2 = dernier?.ordre === 2 ? 2 : 1
 
   return (
     <div className="lg:grid lg:grid-cols-[minmax(0,1fr)_380px] lg:items-stretch">
-      {/* ── LA CORRECTION ─────────────────────────────────────────────── */}
+      {/* ── LA CORRECTION — la MÊME présentation qu'à la correction du premier cas
+          (Louis, 05/09 : « ça devrait être la même chose aux deux cas, et le
+          retour du premier cas est mieux ») : ta réponse, bonne ou pas, pourquoi ;
+          la bonne réponse expliquée ; tes jetons repliés dessous. ──────────── */}
       <div className="order-2 flex flex-col gap-3 p-4 sm:p-5 lg:order-1">
         <h2 className="font-marque text-[11px] font-semibold uppercase tracking-[0.13em] text-muet">
           {vue.estUnePaire ? 'Ton retour — second cas' : 'Ton retour'}
         </h2>
-        {/* ⭐ 04/09 — sur une paire, le retour est celui du SECOND cas ; celui du
-            premier a eu son écran et se replie ici. */}
         {vue.estUnePaire ? (
           <>
-            {vue.corrections[1] && <Correction correction={vue.corrections[1]} />}
+            {vue.corrections[1] && (
+              <Correction correction={vue.corrections[1]} reponse={reponseDeLEleve(vue, 2)} />
+            )}
+            <JetonsPoses vue={vue} ordre={2} />
             {vue.corrections[0] && (
               <Depliable titre="La correction du premier cas" depotId={vue.depotId} aide={null}>
-                <Correction correction={vue.corrections[0]} />
+                <Correction correction={vue.corrections[0]} reponse={reponseDeLEleve(vue, 1)} />
               </Depliable>
             )}
           </>
-        ) : vue.corrections.map((correction, i) => (
-          correction ? <Correction key={i} correction={correction} /> : null
-        ))}
+        ) : (
+          <>
+            {vue.corrections.map((correction, i) => (
+              correction
+                ? <Correction key={i} correction={correction} reponse={reponseDeLEleve(vue, i === 0 ? 1 : 2)} />
+                : null
+            ))}
+            <JetonsPoses vue={vue} ordre={ordreDuDernier} />
+          </>
+        )}
 
         <div className="mt-1 flex flex-col gap-3.5 sm:flex-row sm:items-center">
           {/* ⚠️ La phrase ne se dit QUE si le régime ne sert pas de version
@@ -1690,18 +1725,15 @@ function RetourDUnChoix({ vue, atelier }: { vue: VueDuDeroule; atelier: Atelier 
         </div>
       </div>
 
-      {/* ── LA CONSIGNE, ET CE QUE L'ÉLÈVE AVAIT POSÉ ─────────────────── */}
+      {/* ── LA CONSIGNE ET LE PASSAGE, en référence ──────────────────────── */}
       <div className="order-1 flex flex-col gap-3 border-bordure bg-fond-module p-4 sm:p-5
                       lg:order-2 lg:border-l">
         <Carte titre={vue.estUnePaire ? 'La consigne du second cas' : 'La consigne'}>
           <p className="font-corps text-base leading-[1.5] text-encre">
-            {/* ⭐ 04/09 — sur une paire, la consigne montrée est celle du DERNIER cas,
-                comme la répartition posée juste dessous. */}
+            {/* ⭐ 04/09 — sur une paire, la consigne montrée est celle du DERNIER cas. */}
             <TexteBalise jetons={vue.estUnePaire && dernier ? dernier.consigne : vue.consigne} />
           </p>
         </Carte>
-
-        {lectures && <CeQueTuAvaisPose lectures={lectures} />}
 
         {dernier?.materiau && dernier.materiau.length > 0 && (
           <details className="group rounded-xl border border-bordure bg-surface-retrait">
@@ -1724,127 +1756,185 @@ function RetourDUnChoix({ vue, atelier }: { vue: VueDuDeroule; atelier: Atelier 
 }
 
 /**
- * ⭐ « Ce que tu avais posé » — les quatre lectures, DANS L'ORDRE SERVI, avec
- *    les jetons. La bonne lecture est marquée **APRÈS COUP** par une barre `ok` ;
- *    les autres restent `muet` (handoff §6, validé).
- *
+ * ⭐ 05/09 — « Tes jetons, réponse par réponse » : les quatre lectures DANS
+ *    L'ORDRE SERVI, chacune avec ses jetons DESSOUS — « les pourcentages à
+ *    droite des textes… on perd trop d'espace » (Louis). La bonne lecture est
+ *    marquée après coup par une barre `ok` ; repliée, parce que la correction
+ *    dit déjà l'essentiel.
  * ⛔ Tout vient de l'ENTRÉE DÉJÀ ÉCRITE (`lireLaRepartition`) : `indexAttendue`
- *    ne traverse jamais l'écran de saisie, et il n'y a rien à fuiter tant que le
- *    geste n'a pas eu lieu.
+ *    ne traverse jamais l'écran de saisie.
  */
-function CeQueTuAvaisPose(
-  { lectures }: { lectures: NonNullable<ReturnType<typeof lireLaRepartition>> },
-) {
+function JetonsPoses({ vue, ordre }: { vue: VueDuDeroule; ordre: 1 | 2 }) {
+  const cas = vue.cas.find((c) => c.ordre === ordre)
+  const lectures = cas ? lireLaRepartition(cas.credenceDonnee) : null
+  if (!lectures) return null
   return (
-    <>
-      {/* Sur téléphone, le rappel tient sur une ligne et le détail se déplie. */}
-      <details className="group rounded-xl border border-bordure bg-surface-retrait lg:hidden">
-        <summary className="flex min-h-12 cursor-pointer list-none items-center gap-2.5 px-4 py-3">
-          <span aria-hidden className="text-xs text-muet group-open:hidden">▸</span>
-          <span aria-hidden className="hidden text-xs text-muet group-open:inline">▾</span>
-          <span className="flex-1 font-corps text-[15px] text-encre-douce">
-            Ce que tu avais posé
-          </span>
-          <span className="rounded-full border border-bordure bg-surface px-2.5 py-1 font-ui
-                           text-[11.5px] text-muet group-open:hidden">
-            {rappelDeLaRepartition(lectures)}
-          </span>
-        </summary>
-        <div className="border-t border-bordure px-4 py-3">
-          <BarresPosees lectures={lectures} />
-        </div>
-      </details>
-
-      <div className="hidden lg:block">
-        <Carte titre="Ce que tu avais posé">
-          <BarresPosees lectures={lectures} />
-          {lectures.some((l) => l.attendue) && (
-            <p className="mt-3 font-corps text-[13.5px] italic text-muet">
-              La barre verte marque la lecture qu’il fallait voir.
+    <Depliable titre="Tes jetons, réponse par réponse" depotId={vue.depotId} aide={null}>
+      <ul className="flex flex-col gap-3.5">
+        {lectures.map((l, i) => (
+          <li key={`${i}-${l.candidat}`}>
+            <p className={`font-corps text-[15px] leading-[1.45] ${
+              l.jetons > 0 ? 'text-encre' : 'text-muet'}`}>
+              {l.candidat}
             </p>
-          )}
-        </Carte>
-      </div>
-    </>
-  )
-}
-
-function BarresPosees(
-  { lectures }: { lectures: NonNullable<ReturnType<typeof lireLaRepartition>> },
-) {
-  return (
-    <ul className="flex flex-col gap-2.5">
-      {lectures.map((l, i) => (
-        <li key={`${i}-${l.candidat}`} className="flex items-center gap-2.5">
-          <span className={`min-w-0 flex-1 font-corps text-[15px] ${
-            l.jetons > 0 ? 'text-encre' : 'text-muet'}`}>
-            {l.candidat}
-          </span>
-          <span
-            aria-hidden
-            className="h-2 w-[108px] shrink-0 overflow-hidden rounded-full bg-bordure"
-          >
-            <span
-              className={`block h-full rounded-full ${l.attendue ? 'bg-ok' : 'bg-muet'}`}
-              style={{ width: `${Math.max(0, Math.min(100, l.jetons))}%` }}
-            />
-          </span>
-          <span className={`w-8 shrink-0 text-right font-ui text-sm font-semibold tabular-nums ${
-            l.jetons > 0 ? 'text-encre' : 'text-muet'}`}>
-            {l.jetons}
-          </span>
-        </li>
-      ))}
-    </ul>
+            <div className="mt-1.5 flex items-center gap-2.5">
+              <span aria-hidden className="h-2 w-[140px] shrink-0 overflow-hidden rounded-full bg-bordure">
+                <span
+                  className={`block h-full rounded-full ${l.attendue ? 'bg-ok' : 'bg-muet'}`}
+                  style={{ width: `${Math.max(0, Math.min(100, l.jetons))}%` }}
+                />
+              </span>
+              <span className={`font-ui text-sm font-semibold tabular-nums ${
+                l.jetons > 0 ? 'text-encre' : 'text-muet'}`}>
+                {l.jetons} jeton{l.jetons > 1 ? 's' : ''}
+              </span>
+              {l.attendue && <span className="font-ui text-xs text-ok">— la bonne</span>}
+            </div>
+          </li>
+        ))}
+      </ul>
+    </Depliable>
   )
 }
 
 // ── La correction, commune aux deux écrans qui la servent ───────────────────
 
-function Correction(
-  { correction }: { correction: NonNullable<VueDuDeroule['corrections'][number]> },
-) {
+/**
+ * ⭐ 05/09 — CE QUE L'ÉLÈVE A RÉPONDU, lu sur ce qui est ÉCRIT : aux crans à
+ *    candidats, la lecture la plus chargée (et si c'est la bonne — l'entrée porte
+ *    `index_correct`, écrit APRÈS la saisie) ; ailleurs, son texte et le passage
+ *    qu'il a surligné. `egalite` quand aucune lecture ne se détache.
+ */
+type ReponseDeLEleve =
+  | { forme: 'candidat'; candidat: string; jetons: number; juste: boolean }
+  | { forme: 'egalite' }
+  | { forme: 'texte'; texte: string; zone: string | null }
+
+function reponseDeLEleve(vue: VueDuDeroule, ordre: 1 | 2): ReponseDeLEleve | null {
+  const cas = vue.cas.find((c) => c.ordre === ordre)
+  if (!cas) return null
+  if (vue.credenceEstLaReponse) {
+    const lectures = lireLaRepartition(cas.credenceDonnee)
+    if (!lectures) return null
+    const plusHaut = Math.max(...lectures.map((l) => l.jetons))
+    const tetes = lectures.filter((l) => l.jetons === plusHaut)
+    if (plusHaut <= 0 || tetes.length !== 1) return { forme: 'egalite' }
+    return { forme: 'candidat', candidat: tetes[0].candidat, jetons: plusHaut, juste: tetes[0].attendue }
+  }
+  const texte = (ordre === 2 ? vue.texteVf : vue.texteV1) ?? ''
+  const contenu = (cas.materiau ?? []).map((sg) => sg.texte).join('')
+  const zone = cas.zoneDonnee ? contenu.slice(cas.zoneDonnee[0], cas.zoneDonnee[1]) : null
+  if (texte.trim() === '' && !zone) return null
+  return { forme: 'texte', texte, zone: zone && zone.trim() !== '' ? zone : null }
+}
+
+const SUR_TITRE = 'font-marque text-[11px] font-semibold uppercase tracking-[0.11em]'
+
+/**
+ * ⭐ 05/09 — LA CORRECTION PART DE LA RÉPONSE DE L'ÉLÈVE (Louis, sur la galerie) :
+ *    « il voit sa réponse, pourquoi c'est une bonne réponse si c'est la bonne, et
+ *    pourquoi c'est une mauvaise réponse si c'est une mauvaise ; et si c'est une
+ *    mauvaise réponse, il voit aussi la bonne réponse et son explication. »
+ *      · aux crans à candidats, le jugement est algorithmique : sa lecture, le
+ *        verdict, la réfutation ; puis la bonne lecture et son pourquoi ;
+ *      · sur une rédaction, il n'y a pas de verdict avant la chaîne : sa réponse
+ *        et ce qu'on tient pour vrai se lisent CÔTE À CÔTE, avec le pourquoi —
+ *        « on prend le temps d'expliquer, toujours ».
+ * ⚠️ La réfutation ne vaut que pour le candidat le plus chargé (jamais des
+ *    trois) : c'est ce que la vue sert, et ce que cette page montre.
+ */
+function Correction({
+  correction, reponse = null,
+}: {
+  correction: NonNullable<VueDuDeroule['corrections'][number]>
+  reponse?: ReponseDeLEleve | null
+}) {
+  const juste = reponse?.forme === 'candidat' ? reponse.juste : null
+  const refutation = correction.refutation
+    && reponse?.forme === 'candidat' && !reponse.juste
+    && correction.refutation.candidat === reponse.candidat
+    ? correction.refutation.pourquoiFaux : null
+
   return (
     <div className="flex flex-col gap-3">
-      <div className="rounded-xl border border-ok/25 bg-ok-teinte p-4 sm:px-[18px]">
-        <p className="font-marque text-[11px] font-semibold uppercase tracking-[0.11em] text-ok">
-          Ce qu’il fallait voir
+      {reponse?.forme === 'candidat' && (
+        <div className={`rounded-xl border p-4 sm:px-[18px] ${juste
+          ? 'border-ok/25 bg-ok-teinte' : 'border-attention/35 bg-attention-teinte'}`}>
+          <p className={`${SUR_TITRE} ${juste ? 'text-ok' : 'text-attention'}`}>
+            Ta réponse · {reponse.jetons} jetons sur 100
+          </p>
+          <TexteBrut texte={reponse.candidat}
+            className="mt-1.5 font-corps text-[16px] leading-[1.45] text-encre" />
+          <p className={`mt-2 font-corps text-[15.5px] font-semibold ${juste ? 'text-ok' : 'text-attention'}`}>
+            {juste ? 'C’est la bonne réponse.' : 'Ce n’est pas la bonne réponse.'}
+          </p>
+          {refutation && (
+            <TexteBrut texte={refutation}
+              className="mt-1.5 font-corps text-base leading-[1.55] text-encre" />
+          )}
+        </div>
+      )}
+
+      {/* ⭐ L'ÉGALITÉ SE DIT, elle ne se tait pas : « servir la réfutation d'un
+          candidat que l'élève n'a pas choisi est pire que n'en servir aucune ». */}
+      {reponse?.forme === 'egalite' && (
+        <p className="font-corps text-[15px] leading-relaxed text-encre-douce">
+          Tu avais réparti tes jetons à égalité : aucune réponse n’était celle que tu tenais le
+          plus pour vraie. Voici celle qu’il fallait voir.
         </p>
-        <TexteBrut texte={correction.reponse}
-          className="mt-1.5 font-corps text-[17px] font-semibold leading-[1.45] text-encre" />
-      </div>
+      )}
+
+      {reponse?.forme === 'texte' && (
+        <div className="rounded-xl border border-bordure bg-surface-retrait p-4 sm:px-[18px]">
+          <p className={`${SUR_TITRE} text-muet`}>Ta réponse</p>
+          {reponse.zone && (
+            <p className="mt-1.5 font-corps text-[15px] italic leading-[1.5] text-encre-douce">
+              Le passage que tu as surligné : « {reponse.zone} »
+            </p>
+          )}
+          {reponse.texte.trim() !== '' && (
+            <TexteBrut texte={reponse.texte}
+              className="mt-1.5 font-corps text-[16px] leading-[1.55] text-encre" />
+          )}
+        </div>
+      )}
+
+      {/* Ce qu'on tient pour vrai — sauf quand la réponse de l'élève l'EST déjà. */}
+      {juste !== true && (
+        <div className="rounded-xl border border-ok/25 bg-ok-teinte p-4 sm:px-[18px]">
+          <p className={`${SUR_TITRE} text-ok`}>
+            {reponse?.forme === 'texte' ? 'Ce qu’il fallait voir — compare avec ta réponse'
+              : 'Ce qu’il fallait voir'}
+          </p>
+          <TexteBrut texte={correction.reponse}
+            className="mt-1.5 font-corps text-[17px] font-semibold leading-[1.45] text-encre" />
+        </div>
+      )}
 
       {/* ⭐ LE POURQUOI. Aux crans à candidats la réponse ci-dessus est un
           CANDIDAT NU : elle ne peut rien dire d'elle-même. */}
       {correction.pourquoiJuste && (
         <div className="rounded-xl border border-bordure bg-surface p-4 sm:px-[18px]">
-          <p className="font-marque text-[11px] font-semibold uppercase tracking-[0.11em]
-                        text-muet">
-            Pourquoi c’est celle-là
+          <p className={`${SUR_TITRE} text-muet`}>
+            {juste ? 'Pourquoi c’est la bonne' : 'Pourquoi c’est celle-là'}
           </p>
           <TexteBrut texte={correction.pourquoiJuste}
             className="mt-1.5 font-corps text-base leading-[1.55] text-encre" />
         </div>
       )}
 
-      {/* ⚠️ LA RÉFUTATION DU SEUL CANDIDAT LE PLUS CHARGÉ — jamais des trois :
-          la rétroaction élaborée surcharge l'élève à faible bagage et devient
-          redondante pour l'avancé. */}
-      {correction.refutation && (
+      {/* Sans réponse lisible (une entrée d'avant le 05/09, ou vide) : la
+          réfutation et l'égalité se disent comme hier. */}
+      {!reponse && correction.refutation && (
         <div className="rounded-xl border border-bordure bg-surface-retrait p-4 sm:px-[18px]">
-          <p className="font-marque text-[11px] font-semibold uppercase tracking-[0.11em]
-                        text-muet">
+          <p className={`${SUR_TITRE} text-muet`}>
             Ce que tu avais retenu — « {correction.refutation.candidat} »
           </p>
           <TexteBrut texte={correction.refutation.pourquoiFaux}
             className="mt-1.5 font-corps text-base leading-[1.55] text-encre-douce" />
         </div>
       )}
-
-      {/* ⭐ L'ÉGALITÉ SE DIT, elle ne se tait pas : « servir la réfutation d'un
-          candidat que l'élève n'a pas choisi est pire que n'en servir aucune ».
-          L'absence est honnête. */}
-      {correction.silence === 'egalite' && (
+      {!reponse && correction.silence === 'egalite' && (
         <p className="font-ui text-xs text-encre-douce">
           Tu avais réparti tes jetons à égalité : aucun candidat n’était celui que tu tenais le
           plus pour vrai. Rien n’est donc repris ici en particulier.

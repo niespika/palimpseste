@@ -21,6 +21,7 @@
 // ============================================================================
 
 import type { MomentDeLaPaire } from './paire'
+import type { Temps } from './types'
 
 export type GesteDeLaRemise = 'confiance' | 'conditions' | 'restitution'
 
@@ -141,9 +142,25 @@ export function rangDeLEtape(
  * est déjà déclaré ; il ne sert qu'au COMPTEUR, jamais à décider quel geste
  * vient — c'est `vue.gestesRestants[0]` qui le dit.
  */
-export function gestesServis(a: { confianceDemandee: boolean }): GesteDeLaRemise[] {
-  return a.confianceDemandee
-    ? ['confiance', 'conditions', 'restitution'] : ['conditions', 'restitution']
+export function gestesServis(
+  a: { confianceDemandee: boolean; restitutionDemandee: boolean },
+): GesteDeLaRemise[] {
+  return [
+    ...(a.confianceDemandee ? ['confiance' as const] : []),
+    'conditions' as const,
+    ...(a.restitutionDemandee ? ['restitution' as const] : []),
+  ]
+}
+
+/**
+ * ⭐ 05/09 — LE TEMPS DU FIL QUE LA PAGE FAIT LIRE (Louis : « on est toujours
+ *    dans Se juger ») : les gestes de la remise et la remise elle-même sont le
+ *    temps « Se juger » ; les autres pages laissent le fil au temps du serveur.
+ * ⛔ De la PRÉSENTATION, comme `tempsAffiche` : rien ne s'y décide.
+ */
+export function tempsDeLaPage(etape: EtapeDuTravail): Temps | null {
+  return etape === 'confiance' || etape === 'conditions' || etape === 'restitution'
+    || etape === 'rendre' ? 'se_juger' : null
 }
 
 /** Le titre de la page, en Cinzel au-dessus de la colonne. */
@@ -151,7 +168,7 @@ export function titreDeLEtape(etape: EtapeDuTravail, forme: 'rediger' | 'choisir
   switch (etape) {
     case 'ecrire': return forme === 'surligner' ? 'Ce que tu en dis' : 'Ton écriture'
     case 'repondre': return 'Ta réponse'
-    case 'credence': return 'À quel point es-tu sûr ?'
+    case 'credence': return 'Ta crédence'
     case 'confiance': case 'conditions': case 'restitution': return 'Avant de rendre'
     case 'rendre': return 'Rendre'
     case 'correction': return 'La correction du premier cas'

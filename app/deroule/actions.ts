@@ -506,7 +506,11 @@ export async function actionRemettre(
 
   const r = await remettre(p.admin, p.depot, version,
     { texte, tagDuree: tag, telemetrie,
-      ratissage: ratissage !== null, zoneHorsCible: horsCible !== null },
+      ratissage: ratissage !== null, zoneHorsCible: horsCible !== null,
+      // ⭐ 05/09 — « Ta thèse en une phrase ? » ne se demande qu'où l'élève
+      //    produit une thèse : la garde suit ce que la vue a servi.
+      restitutionDemandee: vue.gestesRestants.includes('restitution')
+        || vue.restitutionAChaud !== null || vue.geste === 'produire' },
     maintenant.toISOString())
   if (!r.ok) return echec(r.message)
 

@@ -103,6 +103,14 @@ export function RetourSegmente({
 
   // ── LA PAGE COURANTE : un point, ou « pour finir » ──────────────────────
   const [page, setPage] = useState(0)
+  /**
+   * ⭐ 05/09 — « Il faut qu'il y ait toujours une case à cocher pour que l'élève
+   *    signale qu'il a lu le retour » (Louis) : une case par point, qui ouvre
+   *    « Point suivant » ; et, à la fin, le bouton qui valide pour de bon.
+   * ⚠️ Les cases ne s'écrivent nulle part : c'est la validation de lecture qui
+   *    s'enregistre (`lu_le`). Recharger la page les décoche.
+   */
+  const [pointsLus, setPointsLus] = useState<ReadonlySet<string>>(() => new Set())
   const nbPoints = retour.points.length
   const derniere = nbPoints // l'index de la page « pour finir »
   const pageCourante = parPages ? Math.min(page, derniere) : -1
@@ -192,6 +200,20 @@ export function RetourSegmente({
                   renvoiActif={renvoiActif}
                 />
               </ul>
+              <label className="mt-3 flex min-h-11 cursor-pointer items-center gap-2.5 font-ui
+                                text-[15px] text-encre">
+                <input
+                  type="checkbox" checked={pointsLus.has(point.id)}
+                  onChange={(e) => setPointsLus((prec) => {
+                    const suivant = new Set(prec)
+                    if (e.target.checked) suivant.add(point.id); else suivant.delete(point.id)
+                    return suivant
+                  })}
+                  style={{ accentColor: 'var(--bouton)' }}
+                  className="size-5 shrink-0"
+                />
+                J’ai lu ce point
+              </label>
             </div>
           ) : (
             <div key="fin" className="page-tourne">
@@ -217,8 +239,9 @@ export function RetourSegmente({
             {pageCourante < derniere && (
               <button
                 type="button" onClick={() => tourner(pageCourante + 1)}
+                disabled={point !== null && !pointsLus.has(point.id)}
                 className="min-h-11 rounded-[9px] bg-bouton px-5 py-2 font-ui text-sm font-semibold
-                           text-bouton-texte"
+                           text-bouton-texte disabled:opacity-40"
               >
                 {pageCourante + 1 < nbPoints ? 'Point suivant →' : 'Pour finir →'}
               </button>

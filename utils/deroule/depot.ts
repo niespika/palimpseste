@@ -297,6 +297,12 @@ export async function remettre(
      *    qui ferment avant l'IA », et elle n'avait jamais été branchée.
      */
     zoneHorsCible?: boolean
+    /**
+     * ⭐ 05/09 — LA RESTITUTION À CHAUD N'EST EXIGÉE QU'AU GESTE PRODUIRE
+     *    (`regime.ts`, `restitutionDemandee`) : ailleurs l'élève ne produit
+     *    aucune thèse. Absent, on l'exige — la garde d'hier.
+     */
+    restitutionDemandee?: boolean
   },
   maintenant: string,
 ): Promise<Issue<{ statut: string; blocs: number }>> {
@@ -310,7 +316,7 @@ export async function remettre(
     //    restitution à chaud, en particulier, se place « AVANT TOUT ENVOI À
     //    L'IA » — un jugement porté après le retour ne mesure plus l'élève, il
     //    mesure le retour.
-    if (!depot.restitution_a_chaud) {
+    if (a.restitutionDemandee !== false && !depot.restitution_a_chaud) {
       return refus('La restitution à chaud se fait avant la remise — c’est elle qui doit '
         + 'partir avant tout envoi à l’IA.')
     }

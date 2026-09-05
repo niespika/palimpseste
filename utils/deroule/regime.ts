@@ -132,6 +132,18 @@ export function credenceDemandee(geste: Geste): boolean {
 }
 
 /**
+ * ⭐ 05/09/2026 — LA RESTITUTION À CHAUD NE SE DEMANDE QU'OÙ L'ÉLÈVE PRODUIT UNE
+ *    THÈSE (Louis, sur la galerie des écrans : « l'élève ne produit aucune
+ *    thèse » aux crans de diagnostic et de transformation). « Ta thèse en une
+ *    phrase ? » n'a d'objet qu'aux crans 2, 6 et 8 — le geste PRODUIRE. Le
+ *    `06-` §3 disait trois gestes à toute remise ; c'est l'amendement, et il
+ *    vaut pour la garde de la remise (`depot.ts`) comme pour l'écran.
+ */
+export function restitutionDemandee(geste: Geste): boolean {
+  return geste === 'produire'
+}
+
+/**
  * LES SIX TEMPS, et ceux que le régime sert.
  *
  * « À la maison, les six temps sont ceux du régime PLEIN — les trois crans de
