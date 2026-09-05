@@ -43,9 +43,20 @@
 //    **Sans cette collecte, des signaux du faisceau n'existent pas.** Tous
 //    tagués, aucun bloquant, jamais un verdict — rien ici ne juge, rien ne
 //    bloque, et l'élève n'en voit rien.
+//
+// ⭐⭐ 04/09 (soir) — « UN ÉCRAN, UNE TÂCHE » (Louis) : **CE CHAMP NE PORTE PLUS
+//    LA REMISE.** Il portait, sous le texte, la crédence puis la carte « Avant
+//    de rendre » avec les trois gestes et le bouton — trois tâches sur un écran.
+//    Il ne rend plus que le champ et **un bouton « Enregistrer »**, qui ne fait
+//    rien de plus que l'enregistrement automatique *« mais ça rassure les
+//    élèves »*, et qui TOURNE LA PAGE (`apresEnregistrement`). La remise vit
+//    sur sa propre page, chez le parent, qui reçoit l'état du champ par
+//    `onEtat` — **une chaîne JavaScript dans un état React, jamais un `<form>`**
+//    : aucune normalisation n'a lieu sur ce chemin, et la valeur qui part à la
+//    remise est, à l'octet, celle du dernier enregistrement.
 // ============================================================================
 
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useImperativeHandle, useRef, useState, type Ref } from 'react'
 import { blocs } from '@/utils/passation/transcription-calcul'
 import {
   nouvelleTelemetrie, accumuler, type EvenementDeSaisie,
@@ -57,21 +68,29 @@ import { actionCollageBloque } from '@/app/deroule/actions'
 const AUTO_MS = 15_000
 
 /**
- * @param avantDeRendre ⭐ HANDOFF « Codex Exercices (élève) » §4 — « sous le
- *        champ, les trois gestes de la remise, et le bouton "Rendre ma v1" à
- *        droite ». Le parent y passe `<GestesDeLaRemise>`, qui ne porte plus son
- *        cadre : les deux tiennent dans UNE carte, au lieu de deux sections
- *        empilées que l'élève lisait comme deux étapes.
- *        ⚠️ **L'ÉTAT DU TEXTE NE REMONTE PAS POUR AUTANT.** Le bouton de remise
- *        reste ici, avec la valeur et la télémétrie — les faire voyager par un
- *        `<form>` ou par un parent normaliserait la valeur en CRLF, et une copie
- *        de quatre paragraphes se relirait comme UN SEUL BLOC (piège 24).
- * @param aide la mention du pied, à gauche du compte de signes.
+ * Ce que le parent peut demander au champ : enregistrer MAINTENANT. C'est le
+ * geste de la bascule « Crédence » du téléphone, qui tourne la page sans passer
+ * par le bouton. @returns vrai si l'enregistrement a abouti (ou n'avait rien à
+ * enregistrer).
+ */
+export interface PoigneeDuChamp {
+  enregistrer: () => Promise<boolean>
+}
+
+/**
+ * @param apresEnregistrement ⭐ 04/09 — la page tourne. Appelé après un
+ *        enregistrement RÉUSSI par le bouton (jamais par l'automatique) : le
+ *        parent montre alors la tâche suivante — la crédence, ou les gestes.
+ * @param onEtat l'état courant du champ — texte et relevé —, à chaque frappe et
+ *        au montage. Le parent le garde pour la remise, qui se fait sur sa
+ *        propre page. ⚠️ Jamais mis dans un état React du parent : c'est une
+ *        `ref`, pour que la frappe ne provoque aucun rendu au-dessus.
+ * @param suite la phrase sous le bouton — ce qui vient après « Enregistrer ».
+ * @param pied la mention du pied, centrée, en italique.
  */
 export function ChampDeRedaction({
   depotId, valeurInitiale, telemetrieInitiale = null, lectureSeule, rows = 20,
-  onEnregistrer, onRemettre, libelleRemise, avantDeRendre = null, pied = null,
-  sansRemise = false, avantLaRemise = null,
+  onEnregistrer, apresEnregistrement, onEtat, suite = null, pied = null, ref,
 }: {
   depotId: string
   valeurInitiale: string
@@ -85,24 +104,11 @@ export function ChampDeRedaction({
   lectureSeule: boolean
   rows?: number
   onEnregistrer: (texte: string, t: TelemetrieSaisie) => Promise<void>
-  onRemettre: (texte: string, t: TelemetrieSaisie) => Promise<void>
-  libelleRemise: string
-  avantDeRendre?: React.ReactNode
-  /** La mention sous le champ, à droite du compte de signes. */
+  apresEnregistrement?: () => void
+  onEtat?: (texte: string, t: TelemetrieSaisie) => void
+  suite?: React.ReactNode
   pied?: React.ReactNode
-  /**
-   * ⭐ 04/09 — SUR UNE PAIRE, LE PREMIER CAS NE SE REND PAS : il se déclare (la
-   *    crédence), puis on passe au second, et la remise vient à la fin. Le champ
-   *    enregistre tout seul ; la carte « Avant de rendre » n'a pas lieu d'être.
-   */
-  sansRemise?: boolean
-  /**
-   * ⭐ 04/09 — CE QUI SE FAIT ENTRE ÉCRIRE ET RENDRE : la crédence, « une chance
-   *    sur 100 à ta propre réponse, celle que tu viens d'écrire » — elle se
-   *    déclare APRÈS le texte, et AVANT la remise. Un créneau, pour que l'ordre
-   *    de l'écran soit l'ordre du geste.
-   */
-  avantLaRemise?: React.ReactNode
+  ref?: Ref<PoigneeDuChamp>
 }) {
   const [texte, setTexte] = useState(valeurInitiale)
   const [enCours, setEnCours] = useState(false)
@@ -124,8 +130,16 @@ export function ChampDeRedaction({
     { longueur: valeurInitiale.length,
       instant: telemetrieInitiale && telemetrieInitiale.sessions > 0 ? 0 : null })
   const sale = useRef(false)
+  /** Le texte courant, lisible hors rendu — pour l'enregistrement à la demande. */
+  const courant = useRef(valeurInitiale)
 
   const nbBlocs = blocs(texte).length
+
+  // L'état initial monte au parent une fois : la remise d'un texte déjà en
+  // base, sans une frappe de plus, doit partir avec son relevé.
+  useEffect(() => { onEtat?.(valeurInitiale, releve.current) },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [])
 
   /**
    * ⚠️ `preventDefault` D'ABORD, journalisation ENSUITE — et jamais l'inverse :
@@ -154,8 +168,13 @@ export function ChampDeRedaction({
     releve.current = accumuler(releve.current, evenement)
     dernier.current = { longueur: v.length, instant }
     sale.current = true
+    courant.current = v
     setTexte(v)
+    onEtat?.(v, releve.current)
   }
+
+  const marquerEnregistre = useCallback(() => setEnregistreA(
+    new Date().toLocaleTimeString('fr-CA', { hour: '2-digit', minute: '2-digit' })), [])
 
   // L'enregistrement automatique. ⚠️ Il n'envoie QUE si quelque chose a bougé —
   // une écriture inutile est une écriture qui peut échouer, et supabase-js ne
@@ -169,25 +188,40 @@ export function ChampDeRedaction({
       //    n'a rien à rattraper, le suivant porte tout. Et un envoi rejoué ne
       //    compte rien deux fois, la base ne garde que le plus avancé.
       void onEnregistrer(texte, releve.current)
-        .then(() => setEnregistreA(
-          new Date().toLocaleTimeString('fr-CA', { hour: '2-digit', minute: '2-digit' })))
+        .then(marquerEnregistre)
         .catch(() => { sale.current = true })
     }, AUTO_MS)
     return () => clearInterval(id)
-  }, [texte, lectureSeule, onEnregistrer])
+  }, [texte, lectureSeule, onEnregistrer, marquerEnregistre])
 
-  async function remettre() {
-    if (enCours) return
+  /**
+   * ⭐ « ENREGISTRER » — le geste explicite. Il fait ce que l'automatique fait,
+   *    tout de suite, et le dit. ⚠️ Un texte vide ne s'enregistre pas par ce
+   *    bouton (il est désactivé) : la page suivante suppose qu'il y a un texte.
+   */
+  const enregistrerMaintenant = useCallback(async (): Promise<boolean> => {
+    if (enCours) return false
+    if (courant.current.trim() === '') return false
     setEnCours(true)
     setMessage(null)
     try {
-      await onRemettre(texte, releve.current)
+      await onEnregistrer(courant.current, releve.current)
       sale.current = false
+      marquerEnregistre()
+      return true
     } catch (e) {
-      setMessage(e instanceof Error ? e.message : 'La remise a échoué.')
+      setMessage(e instanceof Error ? e.message : 'L’enregistrement a échoué.')
+      return false
     } finally {
       setEnCours(false)
     }
+  }, [enCours, onEnregistrer, marquerEnregistre])
+
+  useImperativeHandle(ref, () => ({ enregistrer: enregistrerMaintenant }), [enregistrerMaintenant])
+
+  async function surLeBouton() {
+    const ok = await enregistrerMaintenant()
+    if (ok) apresEnregistrement?.()
   }
 
   return (
@@ -246,39 +280,22 @@ export function ChampDeRedaction({
         le tien.
       </p>
 
-      {avantLaRemise}
-
-      {!lectureSeule && !sansRemise && (
-        // ⭐ HANDOFF §4 — UNE SEULE CARTE « Avant de rendre » : les trois gestes
-        //    à gauche, le bouton à droite. Sur téléphone, le bouton passe
-        //    dessous, en pleine largeur.
-        <div className="rounded-xl border border-bordure bg-surface-retrait px-4 py-4">
-          {/* ⚠️ Le sur-titre ne se pose QUE s'il coiffe quelque chose : à la
-              révision il n'y a plus de gestes — ils se font à la v1 (`06-` §3) —
-              et « Avant de rendre » au-dessus d'un seul bouton ne dirait rien. */}
-          {avantDeRendre && (
-            <p className="font-marque text-[11px] font-semibold uppercase tracking-[0.11em]
-                          text-muet">
-              Avant de rendre
-            </p>
+      {/* ⭐ 04/09 — LE BOUTON « ENREGISTRER », seul geste de cette page. Il ne fait
+          rien de plus que l'automatique, il le fait tout de suite, et la page
+          tourne. Sur téléphone, pleine largeur, 48 px au pouce. */}
+      {!lectureSeule && (
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-4">
+          <button
+            type="button" onClick={() => { void surLeBouton() }}
+            disabled={enCours || texte.trim() === ''}
+            className="min-h-12 shrink-0 rounded-[10px] bg-bouton px-6 py-3.5 font-ui text-[15px]
+                       font-semibold text-bouton-texte disabled:opacity-40"
+          >
+            {enCours ? 'Enregistrement…' : 'Enregistrer'}
+          </button>
+          {suite && (
+            <p className="font-corps text-[14px] italic leading-snug text-muet">{suite}</p>
           )}
-          {/* ⭐ 04/09 — LES GESTES PRENNENT TOUTE LA LARGEUR, le bouton vient
-              DESSOUS. En ligne, le bouton (180 px) laissait ~190 px aux trois
-              gestes : quinze boutons de confiance s'empilaient un par ligne.
-              *« Éviter l'effet d'empilement »* — le bouton ne s'aligne à droite
-              que quand il est seul. */}
-          <div className={`flex flex-col gap-4 ${avantDeRendre ? 'mt-2.5' : 'sm:flex-row sm:items-center sm:gap-5'}`}>
-            {avantDeRendre && <div className="min-w-0">{avantDeRendre}</div>}
-            {!avantDeRendre && <div className="min-w-0 flex-1" />}
-            <button
-              type="button" onClick={remettre} disabled={enCours || texte.trim() === ''}
-              className={`min-h-12 shrink-0 rounded-[10px] bg-bouton px-6 py-4 font-ui text-[15px]
-                         font-semibold text-bouton-texte disabled:opacity-40 sm:py-3.5
-                         ${avantDeRendre ? 'sm:self-end' : ''}`}
-            >
-              {enCours ? 'Envoi…' : libelleRemise}
-            </button>
-          </div>
         </div>
       )}
       {pied && (

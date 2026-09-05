@@ -33,13 +33,26 @@
 //    dépliable au pouce — elle reste lisible pendant toute la rédaction.
 //    *« L'écran est souvent un téléphone » (`07-` §3) n'est pas une note de
 //    confort : c'est l'écran principal de l'élève.*
+//
+// ⭐⭐ **04/09 (soir) — « UN ÉCRAN, UNE TÂCHE » (Louis, dix commentaires sur la
+//    galerie des écrans).** La colonne de droite est désormais **UNE PAGE QUI
+//    TOURNE** : le champ et son bouton « Enregistrer », OU la crédence, OU un
+//    geste de la remise, OU le bouton de remise, OU un point du retour — jamais
+//    deux ensemble. La page courante se lit dans `utils/deroule/etapes.ts`
+//    (module PUR) ; le seul état d'écran qui la fait tourner est
+//    `redactionFinie` — l'élève a enregistré et passé la main —, et il ne
+//    s'écrit nulle part (recharger revient au champ tant que la crédence n'est
+//    pas donnée ; une fois donnée, le texte est gelé et la page est celle des
+//    gestes). Sur téléphone, la bascule a **trois entrées — Lire · Écrire ·
+//    Crédence —** tant que ces trois-là coexistent. ⛔ Rien de ce qui
+//    s'enregistre n'a changé : mêmes actions, mêmes moments.
 // ============================================================================
 
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { TexteBalise, TexteBrut, MateriauMarque, MARQUE_ELEVE } from './TexteBalise'
-import { ChampDeRedaction } from './ChampDeRedaction'
+import { ChampDeRedaction, type PoigneeDuChamp } from './ChampDeRedaction'
 import { CredenceSaisie } from './CredenceSaisie'
 import { DesignationDansLeMateriau } from './DesignationDansLeMateriau'
 import { GestesDeLaRemise } from './GestesDeLaRemise'
@@ -51,8 +64,12 @@ import type { TelemetrieSaisie, Temps } from '@/utils/deroule/types'
 import type { Atelier } from '@/utils/codex-onglets/regles'
 import {
   formeDuTravail, voletInitial, ecranDuDeroule, tempsAffiche, libelleDuTemps, etatDuTemps,
-  rangDuTemps, colonnesDuPlan, titreDuTravail, type FormeDuTravail, type Volet,
+  rangDuTemps, colonnesDuPlan, type FormeDuTravail, type Volet,
 } from '@/utils/deroule/plan-de-travail'
+import {
+  etapeDuTravail, etapesServies, rangDeLEtape, gestesServis, titreDeLEtape,
+  libelleDuVoletDeTravail, type EtapeDuTravail,
+} from '@/utils/deroule/etapes'
 import { segmentsDuRenvoi } from '@/utils/deroule/renvoi'
 import { momentDeLaPaire, casDuMoment, versionDuCas, type MomentDeLaPaire } from '@/utils/deroule/paire'
 import { lireLaRepartition, rappelDeLaRepartition } from '@/utils/deroule/repartition'
@@ -63,6 +80,9 @@ import {
 
 /** Le sondage de l'attente — « jamais un écran muet » (`01-` §12). */
 const SONDAGE_MS = 5_000
+
+/** Ce que le champ porte à l'instant — pour la remise, qui se fait sur sa propre page. */
+type EtatDuChamp = { texte: string; t: TelemetrieSaisie | null }
 
 export function EcranDeroule(
   { vue, atelier = 'codex' }: { vue: VueDuDeroule; atelier?: Atelier },
@@ -84,34 +104,31 @@ export function EcranDeroule(
     1: (vue.texteV1 ?? '').trim() !== '', 2: (vue.texteVf ?? '').trim() !== '',
   }))
 
-  const enregistrer = useCallback(
-    async (texte: string, t: TelemetrieSaisie) => {
-      const version = versionEnCours(vue, casAffiche)
-      const r = await actionEnregistrerBrouillon(vue.depotId, version, texte, t)
-      if (r.ok && casAffiche !== null) {
-        setTexteSauve((s) => ({ ...s, [casAffiche]: texte.trim() !== '' }))
-      }
-    }, [vue, casAffiche])
-
-  const remettre = useCallback(
-    async (texte: string, t: TelemetrieSaisie) => {
-      // ⭐⭐ SUR UNE PAIRE, LA REMISE SE FAIT AU SECOND CAS : sa réponse va en
-      //    `texte_vf` — « la réponse au second cas » (regime.ts) — et la remise
-      //    scelle la v1, celle du premier cas, telle qu'elle a été écrite.
-      //    ⚠️ La chaîne mesure la v1 comme hier ; le second cas est désormais
-      //    ÉCRIT (il ne l'était jamais : 0 `texte_vf` sur 28 paires en prod).
-      if (vue.estUnePaire && casAffiche === 2 && vue.tempsCourant !== 'reviser') {
-        const b = await actionEnregistrerBrouillon(vue.depotId, 'vf', texte, t)
-        if (!b.ok) throw new Error(b.message)
-        const r = await actionRemettre(vue.depotId, 'v1', vue.texteV1 ?? '', null)
-        if (!r.ok) throw new Error(r.message)
-        router.refresh()
-        return
-      }
-      const r = await actionRemettre(vue.depotId, versionEnCours(vue, casAffiche), texte, t)
-      if (!r.ok) throw new Error(r.message)
-      router.refresh()
-    }, [vue, router, casAffiche])
+  // ── ⭐⭐ 04/09 (soir) — LA PAGE QUI TOURNE ────────────────────────────────
+  //    `redactionFinie` : l'élève a cliqué « Enregistrer » (ou basculé sur la
+  //    crédence) et passé la main. Par cas (une paire en a deux), et pour la
+  //    version finale. ⚠️ ÉTAT D'ÉCRAN, pas une donnée : au rechargement, une
+  //    crédence déjà donnée vaut « fini » — le texte est gelé —, sinon on
+  //    revient au champ.
+  const [redactionFinie, setRedactionFinie] = useState<Record<string, boolean>>(() => ({
+    1: vue.cas.find((c) => c.ordre === 1)?.credenceDonnee != null,
+    2: vue.cas.find((c) => c.ordre === 2)?.credenceDonnee != null,
+    vf: false,
+  }))
+  /** Le champ a-t-il du texte ? — pour que la bascule « Crédence » du téléphone ne mène pas au vide. */
+  const [aDuTexte, setADuTexte] = useState<Record<string, boolean>>(() => ({
+    1: (vue.texteV1 ?? '').trim() !== '', 2: (vue.texteVf ?? '').trim() !== '',
+    vf: (vue.texteVf ?? vue.texteV1 ?? '').trim() !== '',
+  }))
+  /**
+   * ⭐ L'ÉTAT DU CHAMP, POUR LA REMISE — une `ref`, jamais un état : la frappe ne
+   *    provoque aucun rendu ici. Ce qui part à la remise est la chaîne que le
+   *    champ porte, à l'octet, comme quand le bouton vivait dans le champ
+   *    (piège 24 : pas de `<form>`, aucune normalisation sur ce chemin).
+   */
+  const etatDuChamp = useRef<Record<string, EtatDuChamp>>({})
+  /** La poignée du champ courant — pour enregistrer à la demande (bascule « Crédence »). */
+  const champ = useRef<PoigneeDuChamp | null>(null)
 
   // ⚠️ La FORME se dérive avant les états d'écran : le volet initial du
   //    téléphone en dépend (`voletInitial`).
@@ -120,9 +137,83 @@ export function EcranDeroule(
     designationDemandee: vue.cas.some((c) => c.designationDemandee),
   })
 
+  // ── ⭐⭐ LA PAGE DE LA COLONNE DE TRAVAIL (`utils/deroule/etapes.ts`) ──────
+  const enRedactionV1 = vue.tempsCourant === 'ecrire' || vue.tempsCourant === 'preparer'
+  const casCourant = vue.cas.find((c) => casAffiche === null || c.ordre === casAffiche) ?? null
+  const credenceASaisir = !!casCourant?.credence && !casCourant.credence.empechement
+    && casCourant.credenceDonnee == null
+  const cleCourante = cleDuChamp(vue.estUnePaire, versionEnCours(vue, casAffiche), casAffiche)
+  const etape: EtapeDuTravail = etapeDuTravail({
+    moment,
+    credenceEstLaReponse: vue.credenceEstLaReponse,
+    enRedaction: enRedactionV1,
+    credenceASaisir,
+    gesteRestant: vue.gestesRestants[0] ?? null,
+    // ⭐ Sur une paire, le premier cas ne se REND pas : il se déclare, puis on
+    //    passe au second ; et le second ne se rend qu'une fois sa crédence donnée.
+    sansRemise: vue.estUnePaire
+      && (casAffiche === 1 || (casAffiche === 2 && casCourant?.credenceDonnee == null)),
+    redactionFinie: redactionFinie[cleCourante] ?? false,
+  })
+  const suite = etapesServies({
+    estUnePaire: vue.estUnePaire, credenceEstLaReponse: vue.credenceEstLaReponse,
+    credenceDemandee: vue.cas.some((c) => c.credence !== null && !c.credence.empechement),
+    gestes: gestesServis({ confianceDemandee: vue.competencesDeLaConfiance.length > 0 }),
+    versionFinale: false,
+  })
+  const rang = rangDeLEtape(suite, etape, casAffiche)
+
+  // ⚠️ Pas de `useCallback` ici : le compilateur React mémoïse lui-même, et il
+  //    refusait de préserver une mémoïsation manuelle sur ces deux fonctions.
+  async function enregistrer(texte: string, t: TelemetrieSaisie) {
+    const version = versionEnCours(vue, casAffiche)
+    const r = await actionEnregistrerBrouillon(vue.depotId, version, texte, t)
+    if (!r.ok) throw new Error(r.message)
+    if (casAffiche !== null) {
+      setTexteSauve((s) => ({ ...s, [casAffiche]: texte.trim() !== '' }))
+    }
+  }
+
+  function surEtatDuChamp(texte: string, t: TelemetrieSaisie) {
+    etatDuChamp.current[cleCourante] = { texte, t }
+    const plein = texte.trim() !== ''
+    setADuTexte((s) => (s[cleCourante] === plein ? s : { ...s, [cleCourante]: plein }))
+  }
+
+  /**
+   * ⭐⭐ LA REMISE, SUR SA PROPRE PAGE. Elle part avec ce que le champ porte —
+   *    `etatDuChamp` —, ou, si le champ n'a pas été touché sur cette page, avec
+   *    ce que la vue a lu en base : même texte, même relevé.
+   */
+  const remettre = useCallback(
+    async () => {
+      const version = versionEnCours(vue, casAffiche)
+      const cle = cleDuChamp(vue.estUnePaire, version, casAffiche)
+      const etat: EtatDuChamp = etatDuChamp.current[cle] ?? {
+        texte: (version === 'vf' || casAffiche === 2 ? vue.texteVf : vue.texteV1) ?? '',
+        t: (version === 'vf' || casAffiche === 2 ? vue.telemetrie.vf : vue.telemetrie.v1) ?? null,
+      }
+      // ⭐⭐ SUR UNE PAIRE, LA REMISE SE FAIT AU SECOND CAS : sa réponse va en
+      //    `texte_vf` — « la réponse au second cas » (regime.ts) — et la remise
+      //    scelle la v1, celle du premier cas, telle qu'elle a été écrite.
+      //    ⚠️ La chaîne mesure la v1 comme hier ; le second cas est désormais
+      //    ÉCRIT (il ne l'était jamais : 0 `texte_vf` sur 28 paires en prod).
+      if (vue.estUnePaire && casAffiche === 2 && vue.tempsCourant !== 'reviser') {
+        const b = await actionEnregistrerBrouillon(vue.depotId, 'vf', etat.texte, etat.t)
+        if (!b.ok) throw new Error(b.message)
+        const r = await actionRemettre(vue.depotId, 'v1', vue.texteV1 ?? '', null)
+        if (!r.ok) throw new Error(r.message)
+        router.refresh()
+        return
+      }
+      const r = await actionRemettre(vue.depotId, version, etat.texte, etat.t)
+      if (!r.ok) throw new Error(r.message)
+      router.refresh()
+    }, [vue, router, casAffiche])
+
   // ── L'état d'écran, et rien d'autre ──────────────────────────────────────
-  // ⚠️ AUCUN de ces trois états ne décide de ce qui s'enregistre : ils décident
-  //    de ce qu'on REGARDE. Le serveur reste seul maître du temps courant.
+  // ⚠️ AUCUN de ces états ne décide de ce qui s'enregistre : ils décident de ce
+  //    qu'on REGARDE. Le serveur reste seul maître du temps courant.
   /** Téléphone : `Lire` (la matière) ou `Écrire` (le travail). ⭐ 01/09 — il
    *  s'ouvre sur la MATIÈRE quand le travail est d'y surligner : l'élève
    *  ouvrait « surligne l'endroit » sur un champ vide, sans le texte. */
@@ -145,6 +236,9 @@ export function EcranDeroule(
     seJugerAServir: vue.seJuger.servie && (vue.seJuger.offre?.questions.length ?? 0) > 0,
   })
 
+  const tournerLaPage = (finie: boolean) =>
+    setRedactionFinie((s) => ({ ...s, [cleCourante]: finie }))
+
   // ⭐ C7-L3 — PORTE FERMÉE sur un exercice au format 1.5 : l'écran ne compose
   //    pas ce qu'il ne sait pas servir (les candidats du 1 seraient des clés et
   //    des identifiants). Il le dit, et n'enregistre rien.
@@ -164,7 +258,10 @@ export function EcranDeroule(
   return (
     <div className="-mx-4 overflow-hidden border-y border-bordure bg-fond-module
                     sm:mx-0 sm:rounded-2xl sm:border">
-      <BarreDeContenu vue={vue} atelier={atelier} ecran={ecran} reprise={reprise} />
+      <BarreDeContenu
+        vue={vue} atelier={atelier} ecran={ecran} reprise={reprise}
+        rangDeLaPage={ecran === 'travail' ? rang : null}
+      />
       <FilDesTemps vue={vue} forme={forme} ecran={ecran} reprise={reprise} />
 
       {ecran === 'ferme' && (
@@ -181,9 +278,13 @@ export function EcranDeroule(
       {ecran === 'travail' && (
         <PlanDeTravail
           vue={vue} forme={forme} volet={volet} setVolet={setVolet}
-          enregistrer={enregistrer} remettre={remettre}
+          enregistrer={enregistrer} remettre={remettre} surEtatDuChamp={surEtatDuChamp}
+          champ={champ}
           moment={moment} casAffiche={casAffiche} texteSauve={texteSauve}
           passerAuSecond={() => setPasseAuSecond(true)}
+          etape={etape} rang={rang} credenceASaisir={credenceASaisir}
+          aDuTexte={aDuTexte[cleCourante] ?? false}
+          tournerLaPage={tournerLaPage}
         />
       )}
 
@@ -199,7 +300,9 @@ export function EcranDeroule(
       {ecran === 'retour_texte' && (
         <RetourDUnTexte
           vue={vue} renvoi={renvoi} setRenvoi={setRenvoi} reprise={reprise} setReprise={setReprise}
-          enregistrer={enregistrer} remettre={remettre}
+          enregistrer={enregistrer} remettre={remettre} surEtatDuChamp={surEtatDuChamp}
+          redactionFinie={redactionFinie.vf ?? false}
+          tournerLaPage={(finie) => setRedactionFinie((s) => ({ ...s, vf: finie }))}
         />
       )}
 
@@ -223,6 +326,11 @@ function versionEnCours(vue: VueDuDeroule, casAffiche: 1 | 2 | null): 'v1' | 'vf
   return versionDuCas(vue.estUnePaire, casAffiche)
 }
 
+/** La clé sous laquelle l'écran tient l'état d'un champ : le cas (1 ou 2), ou la version finale. */
+function cleDuChamp(estUnePaire: boolean, version: 'v1' | 'vf', cas: 1 | 2 | null): string {
+  return version === 'vf' && !estUnePaire ? 'vf' : String(cas ?? 1)
+}
+
 const quand = (iso: string) =>
   new Date(iso).toLocaleDateString('fr-CA', { weekday: 'long', day: 'numeric', month: 'long' })
 
@@ -240,12 +348,17 @@ const jourCourt = (iso: string) =>
  *    — « Exercices », l'onglet — au lieu d'un « Retour » qui ne dit pas où.
  */
 function BarreDeContenu({
-  vue, atelier, ecran, reprise,
+  vue, atelier, ecran, reprise, rangDeLaPage,
 }: {
   vue: VueDuDeroule; atelier: Atelier
   ecran: ReturnType<typeof ecranDuDeroule>; reprise: boolean
+  /** ⭐ 04/09 (soir) — le rang de la PAGE de travail (« 3 / 7 »), quand il y en a une. */
+  rangDeLaPage: { rang: number; total: number } | null
 }) {
-  const rang = rangDuTemps(tempsAffiche(ecran, vue.tempsCourant, reprise), vue.temps)
+  // ⭐ Le compteur du téléphone dit la page — l'étape fine — quand la colonne de
+  //    travail en tourne une ; sinon le temps du fil, comme avant. Un seul
+  //    compteur par écran : celui de la colonne ne s'affiche qu'à partir de `lg`.
+  const rang = rangDeLaPage ?? rangDuTemps(tempsAffiche(ecran, vue.tempsCourant, reprise), vue.temps)
   return (
     <div className="flex items-center gap-3 border-b border-bordure bg-surface px-4 py-3
                     sm:gap-4 sm:px-6">
@@ -364,52 +477,99 @@ function PastilleDeTemps(
 
 // ── Écrans 2a / 2b / 2c — LE PLAN DE TRAVAIL ────────────────────────────────
 
-function PlanDeTravail({
-  vue, forme, volet, setVolet, enregistrer, remettre, moment, casAffiche, texteSauve, passerAuSecond,
-}: {
-  vue: VueDuDeroule
-  forme: FormeDuTravail
-  volet: 'lire' | 'ecrire'
-  setVolet: (v: 'lire' | 'ecrire') => void
+/** Ce que les pages de la colonne de travail reçoivent de l'écran. */
+type PagesDuTravail = {
   enregistrer: (texte: string, t: TelemetrieSaisie) => Promise<void>
-  remettre: (texte: string, t: TelemetrieSaisie) => Promise<void>
+  remettre: () => Promise<void>
+  surEtatDuChamp: (texte: string, t: TelemetrieSaisie) => void
+  champ: React.MutableRefObject<PoigneeDuChamp | null>
   moment: MomentDeLaPaire | null
   casAffiche: 1 | 2 | null
   texteSauve: Record<number, boolean>
   passerAuSecond: () => void
-}) {
+  etape: EtapeDuTravail
+  rang: { rang: number; total: number } | null
+  credenceASaisir: boolean
+  aDuTexte: boolean
+  tournerLaPage: (finie: boolean) => void
+}
+
+function PlanDeTravail({
+  vue, forme, volet, setVolet, ...pages
+}: {
+  vue: VueDuDeroule
+  forme: FormeDuTravail
+  volet: Volet
+  setVolet: (v: Volet) => void
+} & PagesDuTravail) {
+  const { etape, credenceASaisir, aDuTexte, tournerLaPage, champ } = pages
+
+  // ⭐⭐ 04/09 (soir) — LA BASCULE DU TÉLÉPHONE A TROIS ENTRÉES — Lire · Écrire ·
+  //    Crédence — « quand ces trois-là coexistent » : on écrit, et une crédence
+  //    est à déclarer. Sinon deux, et la seconde suit la page (« Rendre » pour
+  //    les gestes et la remise, « La correction » entre les deux cas).
+  const troisEntrees = credenceASaisir && (etape === 'ecrire' || etape === 'credence')
+  type Entree = 'lire' | 'ecrire' | 'credence'
+  const entrees: Array<[Entree, string]> = [
+    ['lire', forme === 'surligner' ? 'Lire · surligner' : 'Lire'],
+    ['ecrire', troisEntrees ? 'Écrire' : libelleDuVoletDeTravail(etape)],
+    ...(troisEntrees ? [['credence', 'Crédence'] as [Entree, string]] : []),
+  ]
+  const active: Entree = volet === 'lire' ? 'lire' : (etape === 'credence' ? 'credence' : 'ecrire')
+
+  async function basculer(v: Entree) {
+    if (v === 'lire') { setVolet('lire'); return }
+    setVolet('ecrire')
+    if (!troisEntrees) return
+    if (v === 'ecrire') { tournerLaPage(false); return }
+    // « Crédence » depuis le champ : on enregistre d'abord — c'est le geste du
+    // bouton, sans le bouton —, et la page tourne si l'enregistrement a abouti.
+    if (etape === 'ecrire') {
+      const ok = await champ.current?.enregistrer()
+      if (ok) tournerLaPage(true)
+    }
+  }
+
   return (
     <div>
-      <ConsigneCollante vue={vue} casAffiche={casAffiche} />
+      <ConsigneCollante vue={vue} casAffiche={pages.casAffiche} />
 
-      {/* ⭐ LA BASCULE DU TÉLÉPHONE (handoff §4) — 48 px, deux moitiés égales.
-          Sur un exercice à surligner, on surligne dans `Lire` et le bouton du
-          bas fait passer à `Écrire`. */}
+      {/* ⭐ LA BASCULE DU TÉLÉPHONE (handoff §4) — 48 px, deux ou trois parts
+          égales. Sur un exercice à surligner, on surligne dans `Lire` et le
+          bouton du bas fait passer à `Écrire`. */}
       <div className="px-4 pt-3.5 lg:hidden">
-        <div className="flex overflow-hidden rounded-[10px] border border-bordure-bouton
-                        bg-surface">
-          {([
-            ['lire', forme === 'surligner' ? 'Lire · surligner' : 'Lire'],
-            ['ecrire', forme === 'choisir' ? 'Répondre' : 'Écrire'],
-          ] as const).map(([v, libelle]) => (
-            <button
-              key={v} type="button" onClick={() => setVolet(v)} aria-pressed={volet === v}
-              className={`min-h-12 flex-1 px-3 font-ui text-sm ${volet === v
-                ? 'bg-bouton font-semibold text-bouton-texte'
-                : 'text-muet'}`}
-            >
-              {libelle}
-            </button>
-          ))}
+        <div
+          role="group" aria-label="Lire ou travailler"
+          className="flex overflow-hidden rounded-[10px] border border-bordure-bouton bg-surface"
+        >
+          {entrees.map(([v, libelle]) => {
+            // La crédence ne se déclare que sur un texte : sans texte, l'entrée
+            // se voit mais ne mène nulle part — et elle le dit à l'œil.
+            const inerte = v === 'credence' && etape === 'ecrire' && !aDuTexte
+            return (
+              <button
+                key={v} type="button" onClick={() => { void basculer(v) }}
+                aria-pressed={active === v} disabled={inerte}
+                className={`min-h-12 flex-1 px-2 font-ui text-sm ${active === v
+                  ? 'bg-bouton font-semibold text-bouton-texte'
+                  : 'text-muet disabled:opacity-40'}`}
+              >
+                {libelle}
+              </button>
+            )
+          })}
         </div>
       </div>
 
       <div className={`lg:grid lg:items-stretch ${colonnesDuPlan(forme)}`}>
-        <ColonneMatiere vue={vue} forme={forme} cache={volet !== 'lire'} moment={moment} casAffiche={casAffiche}>
+        <ColonneMatiere
+          vue={vue} forme={forme} cache={volet !== 'lire'} moment={pages.moment}
+          casAffiche={pages.casAffiche}
+        >
           {/* ⭐ Sur un exercice à surligner, le pont vers la réponse est DANS la
               vue `Lire` : le passage désigné vient d'être posé, et l'élève passe
               à ce qu'il en dit sans chercher la bascule du haut. */}
-          {forme === 'surligner' && (
+          {forme === 'surligner' && etape === 'ecrire' && (
             <button
               type="button" onClick={() => setVolet('ecrire')}
               className="min-h-12 rounded-[10px] bg-bouton px-4 py-3.5 font-ui text-[15px]
@@ -420,11 +580,7 @@ function PlanDeTravail({
           )}
         </ColonneMatiere>
 
-        <ColonneTravail
-          vue={vue} forme={forme} cache={volet !== 'ecrire'}
-          enregistrer={enregistrer} remettre={remettre}
-          moment={moment} casAffiche={casAffiche} texteSauve={texteSauve} passerAuSecond={passerAuSecond}
-        />
+        <ColonneTravail vue={vue} forme={forme} cache={volet !== 'ecrire'} {...pages} />
       </div>
     </div>
   )
@@ -675,213 +831,373 @@ function ColonneMatiere({
   )
 }
 
-// ── La colonne de droite : LE TRAVAIL ───────────────────────────────────────
+// ── La colonne de droite : LE TRAVAIL — UNE PAGE QUI TOURNE ─────────────────
 
+/**
+ * ⭐⭐ 04/09 (soir) — « UN ÉCRAN, UNE TÂCHE ». La colonne rend LA page de
+ *    l'étape courante (`utils/deroule/etapes.ts`), et rien d'autre :
+ *      · `ecrire`     — le champ et « Enregistrer » ;
+ *      · `credence`   — « À quel point es-tu sûr ? », seule ;
+ *      · un geste     — « Comment te sens-tu ? », les conditions, la thèse ;
+ *      · `rendre`     — le bouton ;
+ *      · `correction` — la correction du premier cas, et « Passer au second » ;
+ *      · `repondre`   — les quatre lectures (crans 1 et 3) ;
+ *      · `apres`      — la copie est rendue : l'attente, ce qui a été rendu.
+ *
+ * ⚠️ **LE CHAMP RESTE MONTÉ, CACHÉ, sur les pages qui suivent l'écriture** du
+ *    même cas : son enregistrement automatique continue, son état ne se perd
+ *    pas, et « Revenir à mon texte » le retrouve tel quel. Il n'est démonté
+ *    qu'au changement de cas (`key`) ou après la remise.
+ */
 function ColonneTravail({
-  vue, forme, cache, enregistrer, remettre, moment, casAffiche, texteSauve, passerAuSecond,
+  vue, forme, cache, enregistrer, remettre, surEtatDuChamp, champ, casAffiche, texteSauve,
+  passerAuSecond, etape, rang, credenceASaisir, tournerLaPage,
 }: {
   vue: VueDuDeroule
   forme: FormeDuTravail
   cache: boolean
-  enregistrer: (texte: string, t: TelemetrieSaisie) => Promise<void>
-  remettre: (texte: string, t: TelemetrieSaisie) => Promise<void>
-  moment: MomentDeLaPaire | null
-  casAffiche: 1 | 2 | null
-  texteSauve: Record<number, boolean>
-  passerAuSecond: () => void
-}) {
+} & PagesDuTravail) {
   const enRedactionV1 = vue.tempsCourant === 'ecrire' || vue.tempsCourant === 'preparer'
   const casMontres = vue.cas.filter((c) => casAffiche === null || c.ordre === casAffiche)
   const casCourant = casMontres[0] ?? null
+  const cadre = `flex flex-col gap-3 p-4 sm:p-5 ${cache ? 'hidden lg:flex' : ''}`
 
   // ── ⭐⭐ 04/09 — LE MOMENT DE LA CORRECTION DU PREMIER CAS, SEUL À L'ÉCRAN.
   //    « La correction du premier cas est servie AVANT le second » (`02-`
   //    §2.3.1 a) : elle a son écran, et le second cas s'ouvre d'un geste.
-  if (moment === 'correction_1') {
+  if (etape === 'correction') {
     const c1 = vue.corrections[0] ?? null
     return (
-      <div className={`flex flex-col gap-4 p-4 sm:p-5 ${cache ? 'hidden lg:flex' : ''}`}>
-        <h2 className="font-marque text-[11px] font-semibold uppercase tracking-[0.13em] text-muet">
-          La correction du premier cas
-        </h2>
-        {c1 ? <Correction correction={c1} /> : (
-          <p className="font-corps text-[15px] italic text-muet">
-            Rien à corriger sur ce cas : passe au second.
-          </p>
-        )}
-        <button
-          type="button" onClick={passerAuSecond}
-          className="min-h-12 self-start rounded-[10px] bg-bouton px-6 py-3.5 font-ui text-[15px]
-                     font-semibold text-bouton-texte"
-        >
-          Passer au second cas →
-        </button>
+      <div className={cadre}>
+        <EnTeteDePage titre={titreDeLEtape(etape, forme)} rang={rang} />
+        <div key="correction" className="page-tourne flex flex-col gap-4">
+          {c1 ? <Correction correction={c1} /> : (
+            <p className="font-corps text-[15px] italic text-muet">
+              Rien à corriger sur ce cas : passe au second.
+            </p>
+          )}
+          <button
+            type="button" onClick={passerAuSecond}
+            className="min-h-12 self-start rounded-[10px] bg-bouton px-6 py-3.5 font-ui text-[15px]
+                       font-semibold text-bouton-texte"
+          >
+            Passer au second cas →
+          </button>
+        </div>
       </div>
     )
   }
 
-  // La crédence du cas montré — celle que l'élève n'a pas encore donnée.
-  const credenceASaisir = enRedactionV1 && casCourant?.credence && !casCourant.credence.empechement
-    && !casCourant.credenceDonnee ? casCourant : null
-  // Sur une rédaction, la crédence porte sur « ta propre réponse, celle que tu
-  // viens d'écrire » : elle vient APRÈS le champ, et sur une paire seulement
-  // une fois le texte enregistré — sans quoi l'étape ne peut pas avancer.
-  const credenceApresLeChamp = forme !== 'choisir' && credenceASaisir
-    && (!vue.estUnePaire || texteSauve[credenceASaisir.ordre]) ? (
-      <CredenceSaisie
-        key={credenceASaisir.ordre} depotId={vue.depotId} cas={credenceASaisir.ordre}
-        offre={credenceASaisir.credence!} nu={false} />
-    ) : null
-  // ⭐ Sur une paire, le premier cas ne se REND pas : il se déclare, puis on
-  //    passe au second ; et le second ne se rend qu'une fois sa crédence donnée.
-  const sansRemise = vue.estUnePaire && (casAffiche === 1 || (casAffiche === 2 && !casCourant?.credenceDonnee))
+  // ── APRÈS LA REMISE : l'attente, puis ce qui a été rendu, en lecture seule ──
+  if (etape === 'apres') {
+    return (
+      <div className={cadre}>
+        <EnTeteDePage titre={titreDeLEtape(etape, forme)} rang={null} />
+        <Attente vue={vue} />
+
+        {/* ⭐ 04/09 — FINI SANS RETOUR : l'écran le dit, au lieu d'un fil à « Retour »
+            au-dessus de rien. Ni chiffre ni emplacement du passage (`02-` §5). */}
+        {vue.fin === 'hors_cible' && (
+          <Encart ton="attention">
+            <p className="text-sm text-encre">
+              <strong>Cet exercice est terminé.</strong> Le passage que tu avais surligné n’est pas
+              celui qui posait problème : la correction est là, et il n’y a pas de retour à attendre.
+              La prochaine fois, relis le document avant de choisir où pointer.
+            </p>
+          </Encart>
+        )}
+        {vue.fin === 'non_fait' && (
+          <Encart ton="attention">
+            <p className="text-sm text-encre">
+              <strong>Cet exercice ne compte pas.</strong> Surligner presque tout le texte, ce n’est
+              pas répondre — ton professeur est prévenu, et il n’y a pas de retour à attendre.
+            </p>
+          </Encart>
+        )}
+
+        {/* ⭐⭐ LA CORRECTION — servie APRÈS la crédence DE CE CAS ; sur une paire,
+            celle du second n'apparaît qu'une fois la copie rendue. */}
+        {vue.estUnePaire ? (
+          <>
+            {vue.corrections[1] && <Correction correction={vue.corrections[1]} />}
+            {vue.corrections[0] && (
+              <Depliable titre="La correction du premier cas" depotId={vue.depotId} aide={null}>
+                <Correction correction={vue.corrections[0]} />
+              </Depliable>
+            )}
+          </>
+        ) : vue.corrections.map((correction, i) => (
+          correction ? <Correction key={i} correction={correction} /> : null
+        ))}
+
+        {/* ⭐ CE QUI A ÉTÉ RENDU, EN LECTURE SEULE — « jamais un écran muet »
+            (`01-` §12). ⭐ 04/09 — sur une paire, LES DEUX réponses. */}
+        {forme !== 'choisir' && (vue.texteV1 ?? '').trim() !== '' && (
+          (vue.estUnePaire
+            ? [{ libelle: 'Premier cas', texte: vue.texteV1 ?? '' },
+              { libelle: 'Second cas', texte: vue.texteVf ?? '' }].filter((c) => c.texte.trim() !== '')
+            : [{ libelle: 'Ta v1', texte: vue.texteV1 ?? '' }]
+          ).map((c) => (
+            <div key={c.libelle}>
+              <p className="mb-2 font-ui text-xs text-muet">{c.libelle} · lecture seule</p>
+              <TexteBrut
+                texte={c.texte}
+                className="rounded-xl border border-bordure bg-surface-retrait p-4 font-corps
+                           text-[16.5px] leading-[1.7] text-encre-douce"
+              />
+            </div>
+          ))
+        )}
+        <Etalon vue={vue} />
+      </div>
+    )
+  }
+
+  // ── LES QUATRE LECTURES (crans 1 et 3) : la crédence EST la réponse ────────
+  if (etape === 'repondre') {
+    return (
+      <div className={cadre}>
+        <EnTeteDePage
+          titre={titreDeLEtape(etape, forme)} rang={rang}
+          appoint="tu peux tout mettre sur une seule, ou étaler"
+        />
+        {/* ⭐ 04/09 — au second cas, la correction du premier se REPLIE : elle a
+            eu son écran. */}
+        {vue.estUnePaire && casAffiche === 2 && vue.corrections[0] && (
+          <Depliable titre="La correction du premier cas" depotId={vue.depotId} aide={null}>
+            <Correction correction={vue.corrections[0]} />
+          </Depliable>
+        )}
+        {/* ⭐ La crédence REMPLACE le champ (handoff §4, écran 2b) : elle est la
+            réponse, et elle prend la colonne.
+            ⚠️ Aux crans guidés `v1_remis_at` n'est JAMAIS posé — la crédence EST
+            la réponse —, donc `enRedactionV1` y reste vrai et rien ne disparaît. */}
+        {credenceASaisir && casCourant?.credence && (
+          <div key={casCourant.ordre} className="page-tourne">
+            <CredenceSaisie
+              depotId={vue.depotId} cas={casCourant.ordre} offre={casCourant.credence} nu />
+          </div>
+        )}
+        {enRedactionV1 && vue.microQuestionDue && !vue.motifDepassement && (
+          <MicroQuestion depotId={vue.depotId} />
+        )}
+        <Etalon vue={vue} />
+      </div>
+    )
+  }
+
+  // ── LES PAGES DE LA RÉDACTION : écrire → crédence → gestes → rendre ────────
+  const versionDuChamp = casAffiche === 2 ? 'vf' : 'v1'
+  const cleDuCas = casAffiche ?? 'seul'
+  const surLaPageDuChamp = etape === 'ecrire'
+  /** Le texte se modifie encore tant que la crédence n'est pas donnée (ou qu'aucune n'est demandée). */
+  const modifiable = !casCourant?.credenceDonnee
+  const phraseDeSuite = credenceASaisir
+    ? 'Ensuite : ta chance d’avoir juste, puis tu pourras rendre.'
+    : vue.estUnePaire && casAffiche === 1
+      ? 'Ensuite : la correction de ce premier cas.'
+      : 'Ensuite : trois gestes rapides, puis tu pourras rendre.'
 
   return (
-    <div className={`flex flex-col gap-3 p-4 sm:p-5 ${cache ? 'hidden lg:flex' : ''}`}>
-      <div className="flex items-baseline gap-3">
-        <h2 className="font-marque text-[11px] font-semibold uppercase tracking-[0.13em] text-muet">
-          {titreDuTravail(forme)}
-        </h2>
-        {forme === 'rediger' && enRedactionV1 && (
-          <span className="ml-auto font-ui text-xs text-muet">v1</span>
-        )}
-        {forme === 'choisir' && (
-          <span className="ml-auto font-corps text-[13px] italic text-muet">
-            tu peux tout mettre sur une seule, ou étaler
-          </span>
-        )}
-      </div>
+    <div className={cadre}>
+      <EnTeteDePage titre={titreDeLEtape(etape, forme)} rang={rang} />
 
-      {/* ⭐ Sur un exercice à surligner, le passage désigné est RAPPELÉ en haut
-          de la vue `Écrire` (handoff §4) : l'élève écrit ce qu'il en dit sans
-          rebasculer pour se relire. */}
-      {forme === 'surligner' && <RappelDuPassage vue={vue} casAffiche={casAffiche} />}
-
-      <Attente vue={vue} />
-
-      {/* ⭐ 04/09 — FINI SANS RETOUR : l'écran le dit, au lieu d'un fil à « Retour »
-          au-dessus de rien. Ni chiffre ni emplacement du passage (`02-` §5). */}
-      {vue.fin === 'hors_cible' && (
-        <Encart ton="attention">
-          <p className="text-sm text-encre">
-            <strong>Cet exercice est terminé.</strong> Le passage que tu avais surligné n’est pas
-            celui qui posait problème : la correction est là, et il n’y a pas de retour à attendre.
-            La prochaine fois, relis le document avant de choisir où pointer.
-          </p>
-        </Encart>
-      )}
-      {vue.fin === 'non_fait' && (
-        <Encart ton="attention">
-          <p className="text-sm text-encre">
-            <strong>Cet exercice ne compte pas.</strong> Surligner presque tout le texte, ce n’est
-            pas répondre — ton professeur est prévenu, et il n’y a pas de retour à attendre.
-          </p>
-        </Encart>
+      {/* ⭐ 04/09 — au second cas d'une paire, la correction du premier se REPLIE
+          en tête : elle a eu son écran. */}
+      {vue.estUnePaire && casAffiche === 2 && vue.corrections[0] && surLaPageDuChamp && (
+        <Depliable titre="La correction du premier cas" depotId={vue.depotId} aide={null}>
+          <Correction correction={vue.corrections[0]} />
+        </Depliable>
       )}
 
-      {/* ⭐⭐ LA CORRECTION — servie APRÈS la crédence DE CE CAS.
-          ⭐ 04/09 — sur une paire, au second cas, la correction du premier se
-          REPLIE (elle a eu son écran), et celle du second n'apparaît qu'une fois
-          la copie rendue : servie pendant qu'on écrit encore, elle donnerait la
-          réponse (au cran 9, c'est la version corrigée). */}
-      {vue.estUnePaire ? (
-        <>
-          {casAffiche === 2 && vue.corrections[0] && (
-            <Depliable titre="La correction du premier cas" depotId={vue.depotId} aide={null}>
-              <Correction correction={vue.corrections[0]} />
-            </Depliable>
-          )}
-          {casAffiche === 2 && !enRedactionV1 && vue.corrections[1] && (
-            <Correction correction={vue.corrections[1]} />
-          )}
-        </>
-      ) : vue.corrections.map((correction, i) => (
-        correction ? <Correction key={i} correction={correction} /> : null
-      ))}
+      {/* ── PAGE « ÉCRIRE » — le champ reste monté (caché) sur les pages suivantes ── */}
+      <div className={surLaPageDuChamp ? 'page-tourne flex flex-col gap-3' : 'hidden'}>
+        {/* ⭐ Sur un exercice à surligner, le passage désigné est RAPPELÉ en haut
+            de la vue `Écrire` (handoff §4) : l'élève écrit ce qu'il en dit sans
+            rebasculer pour se relire. */}
+        {forme === 'surligner' && <RappelDuPassage vue={vue} casAffiche={casAffiche} />}
 
-      {/* ⭐ La crédence. Aux deux crans guidés elle REMPLACE le champ (handoff
-          §4, écran 2b) : elle est la réponse, et elle prend la colonne.
-          ⛔⛔ **ELLE NE SE PRÉSENTE PLUS APRÈS LA REMISE** — défaut vu au smoke
-          du 30/08 : sur un cran par paires déjà rendu, l'écran servait DEUX
-          formulaires de crédence au temps « Retour », et leur bouton était mort
-          d'avance — `enregistrerLaCredence` refuse dès que `v1_remis_at` existe
-          (« la crédence se déclare PENDANT l'exercice, avant de savoir si tu as
-          raison »). *L'écran promettait un geste que le serveur refusait.*
-          ⚠️ Aux crans guidés `v1_remis_at` n'est JAMAIS posé — la crédence EST
-          la réponse —, donc `enRedactionV1` y reste vrai et rien ne disparaît. */}
-      {forme === 'choisir' && credenceASaisir?.credence && (
-        <CredenceSaisie
-          key={credenceASaisir.ordre} depotId={vue.depotId} cas={credenceASaisir.ordre}
-          offre={credenceASaisir.credence} nu />
-      )}
+        {/* La micro-question de dépassement. ⚠️ JAMAIS notée, jamais renvoyée
+            comme jugement, et `motif_depassement` reste NULL si on n'y répond
+            pas (`02-` §2.4 ; `07-` §1.1). Elle se pose PENDANT l'écriture, et
+            nulle part ailleurs : c'est la seule chose qui s'ajoute à cette page. */}
+        {vue.microQuestionDue && !vue.motifDepassement && <MicroQuestion depotId={vue.depotId} />}
 
-      {/* La micro-question de dépassement. ⚠️ JAMAIS notée, jamais renvoyée
-          comme jugement, et `motif_depassement` reste NULL si on n'y répond
-          pas (`02-` §2.4 ; `07-` §1.1). */}
-      {enRedactionV1 && vue.microQuestionDue && !vue.motifDepassement && (
-        <MicroQuestion depotId={vue.depotId} />
-      )}
-
-      {/* ⛔ AUCUN CHAMP DE RÉDACTION AUX CRANS GUIDÉS — c'était le défaut que le
-          handoff §4 ferme : l'élève y voyait un champ qu'il n'avait pas à
-          remplir, à côté des quatre lectures qui portaient sa réponse. */}
-      {forme !== 'choisir' && enRedactionV1 && (
         <ChampDeRedaction
           /* ⭐ 04/09 — sur une paire, le champ CHANGE avec le cas : `key` le remonte. */
-          key={casAffiche ?? 'seul'}
+          key={cleDuCas}
+          ref={champ}
           depotId={vue.depotId}
-          valeurInitiale={(casAffiche === 2 ? vue.texteVf : vue.texteV1) ?? ''}
-          telemetrieInitiale={(casAffiche === 2 ? vue.telemetrie.vf : vue.telemetrie.v1) ?? null}
-          lectureSeule={false}
+          valeurInitiale={(versionDuChamp === 'vf' ? vue.texteVf : vue.texteV1) ?? ''}
+          telemetrieInitiale={(versionDuChamp === 'vf' ? vue.telemetrie.vf : vue.telemetrie.v1) ?? null}
+          lectureSeule={!modifiable}
           rows={forme === 'surligner' ? 9 : 14}
           onEnregistrer={enregistrer}
-          onRemettre={remettre}
-          libelleRemise={vue.estUnePaire ? 'Rendre mes deux réponses'
+          onEtat={surEtatDuChamp}
+          apresEnregistrement={() => tournerLaPage(true)}
+          suite={phraseDeSuite}
+        />
+      </div>
+
+      {/* ── PAGE « CRÉDENCE » — seule, avec son bouton « Enregistrer » ─────── */}
+      {etape === 'credence' && casCourant?.credence && (
+        <div key={`credence-${casCourant.ordre}`} className="page-tourne flex flex-col gap-3">
+          {/* Sur une paire, la crédence porte sur le texte ENREGISTRÉ : sans
+              enregistrement, l'étape serveur ne peut pas avancer. Le bouton
+              « Enregistrer » du champ y a veillé ; on le redit ici sans le cacher. */}
+          {vue.estUnePaire && !texteSauve[casCourant.ordre] ? (
+            <Encart ton="attention">
+              <p className="text-sm text-encre">
+                Ta réponse n’est pas encore enregistrée : reviens à ton texte et enregistre-le.
+              </p>
+            </Encart>
+          ) : (
+            <CredenceSaisie
+              depotId={vue.depotId} cas={casCourant.ordre} offre={casCourant.credence} nu />
+          )}
+          <RetourAuTexte onClick={() => tournerLaPage(false)} />
+        </div>
+      )}
+
+      {/* ── LES TROIS GESTES, UN PAR PAGE (`06-` §3 : avant tout envoi à l'IA) ── */}
+      {(etape === 'confiance' || etape === 'conditions' || etape === 'restitution') && (
+        <div key={etape} className="page-tourne flex flex-col gap-3">
+          <GestesDeLaRemise vue={vue} />
+          {modifiable && <RetourAuTexte onClick={() => tournerLaPage(false)} libelle="Modifier mon texte" />}
+        </div>
+      )}
+
+      {/* ── PAGE « RENDRE » — le bouton, et rien d'autre à faire ───────────── */}
+      {etape === 'rendre' && (
+        <PageDeRemise
+          key="rendre"
+          libelle={vue.estUnePaire ? 'Rendre mes deux réponses'
             : forme === 'surligner' ? 'Rendre ma réponse' : 'Rendre ma v1'}
-          /* ⭐ LES TROIS GESTES DE LA REMISE, DANS CET ORDRE (`06-` §3), et
-             AVANT tout envoi à l'IA — dans la carte « Avant de rendre ». */
-          avantDeRendre={<GestesDeLaRemise vue={vue} />}
-          /* ⭐ 04/09 — la crédence se déclare APRÈS avoir écrit, AVANT de rendre. */
-          avantLaRemise={credenceApresLeChamp}
-          sansRemise={sansRemise}
-          pied={vue.estUnePaire
-            ? (casAffiche === 1
-              ? (texteSauve[1] ? 'Déclare ta chance d’avoir juste : tu passeras ensuite au second cas.'
-                : 'Écris ta réponse à ce premier cas ; le champ s’enregistre tout seul.')
-              : (!casCourant?.credenceDonnee
-                ? (texteSauve[2] ? 'Déclare ta chance d’avoir juste, puis tu pourras rendre.'
-                  : 'Écris ta réponse à ce second cas ; le champ s’enregistre tout seul.')
-                : null))
-            : (vue.regime === 'plein' ? 'Tu pourras la reprendre après le retour.' : null)}
+          phrase={vue.gestesRestants.length === 0 && vue.competencesDeLaConfiance.length + 2 > 0
+            ? 'Les gestes sont faits. Il ne reste qu’à rendre : ta copie partira à la lecture, et ton retour se préparera.'
+            : 'Il ne reste qu’à rendre : ta copie partira à la lecture, et ton retour se préparera.'}
+          textes={vue.estUnePaire
+            ? [{ libelle: 'Premier cas', texte: vue.texteV1 ?? '' },
+              { libelle: 'Second cas', texte: vue.texteVf ?? '' }]
+            : [{ libelle: 'Ta réponse', texte: vue.texteV1 ?? '' }]}
+          depotId={vue.depotId}
+          remettre={remettre}
+          modifier={modifiable ? () => tournerLaPage(false) : null}
+          pied={vue.regime === 'plein' ? 'Tu pourras la reprendre après le retour.' : null}
         />
       )}
+    </div>
+  )
+}
 
-      {/* ⭐ CE QUI A ÉTÉ RENDU, EN LECTURE SEULE — « jamais un écran muet »
-          (`01-` §12). La copie est partie, le champ a disparu, et tant que le
-          retour n'est pas là il ne reste RIEN à faire : la colonne de travail
-          se retrouvait alors vide sous son sur-titre. *Trouvé au smoke du
-          30/08, sur un « se juger » servi sans question.*
-          ⚠️ Elle ne s'affiche PAS pendant la rédaction — le champ la porte déjà
-             —, ni aux crans guidés, où l'élève ne rédige rien. */}
-      {!enRedactionV1 && forme !== 'choisir' && (vue.texteV1 ?? '').trim() !== '' && (
-        /* ⭐ 04/09 — sur une paire, LES DEUX réponses : la seconde vit en `texte_vf`. */
-        (vue.estUnePaire
-          ? [{ libelle: 'Premier cas', texte: vue.texteV1 ?? '' },
-            { libelle: 'Second cas', texte: vue.texteVf ?? '' }].filter((c) => c.texte.trim() !== '')
-          : [{ libelle: 'Ta v1', texte: vue.texteV1 ?? '' }]
-        ).map((c) => (
-          <div key={c.libelle}>
-            <p className="mb-2 font-ui text-xs text-muet">{c.libelle} · lecture seule</p>
-            <TexteBrut
-              texte={c.texte}
-              className="rounded-xl border border-bordure bg-surface-retrait p-4 font-corps
-                         text-[16.5px] leading-[1.7] text-encre-douce"
-            />
-          </div>
-        ))
+/** Le sur-titre de la page, et son rang dans la suite — « 3 / 7 ». */
+function EnTeteDePage(
+  { titre, rang, appoint }:
+  { titre: string; rang: { rang: number; total: number } | null; appoint?: string },
+) {
+  return (
+    <div className="flex items-baseline gap-3">
+      <h2 className="font-marque text-[11px] font-semibold uppercase tracking-[0.13em] text-muet">
+        {titre}
+      </h2>
+      {appoint && (
+        <span className="min-w-0 truncate font-corps text-[13px] italic text-muet">{appoint}</span>
       )}
+      {/* ⚠️ À partir de `lg` seulement : sous `lg`, c'est la barre de contenu qui
+          porte ce rang (`BarreDeContenu`), et un écran n'a qu'un compteur. */}
+      {rang && rang.total > 1 && (
+        <span className="ml-auto hidden shrink-0 rounded-full bg-pigment-teinte px-2.5 py-1 font-ui
+                         text-[11.5px] font-semibold tabular-nums text-pigment lg:inline">
+          {rang.rang} / {rang.total}
+        </span>
+      )}
+    </div>
+  )
+}
 
-      <Etalon vue={vue} />
+/** « ← Revenir à mon texte » — le seul chemin arrière, tant que le texte se modifie encore. */
+function RetourAuTexte({ onClick, libelle = 'Revenir à mon texte' }: { onClick: () => void; libelle?: string }) {
+  return (
+    <button
+      type="button" onClick={onClick}
+      className="min-h-11 self-start font-ui text-[13px] text-pigment/80 hover:text-pigment"
+    >
+      ← {libelle}
+    </button>
+  )
+}
+
+/**
+ * ⭐ LA PAGE DE LA REMISE — « Rendre : le bouton, et rien d'autre à faire ».
+ *    Ce qui va partir se relit, replié ; le bouton est seul en pleine largeur.
+ * ⚠️ Le texte part de l'état du champ (`remettre` le tient), pas de ce que cette
+ *    page affiche : elle ne fait que montrer.
+ */
+function PageDeRemise({
+  libelle, phrase, textes, depotId, remettre, modifier, pied,
+}: {
+  libelle: string
+  phrase: string
+  textes: Array<{ libelle: string; texte: string }>
+  depotId: string
+  remettre: () => Promise<void>
+  modifier: (() => void) | null
+  pied: string | null
+}) {
+  const [enCours, setEnCours] = useState(false)
+  const [message, setMessage] = useState<string | null>(null)
+  const pleins = textes.filter((t) => t.texte.trim() !== '')
+
+  async function rendre() {
+    if (enCours) return
+    setEnCours(true)
+    setMessage(null)
+    try {
+      await remettre()
+    } catch (e) {
+      setMessage(e instanceof Error ? e.message : 'La remise a échoué.')
+      setEnCours(false)
+    }
+  }
+
+  return (
+    <div className="page-tourne flex flex-col gap-4">
+      <p className="font-titre text-[22px] font-semibold leading-tight text-encre">Tout est prêt.</p>
+      <p className="font-corps text-[16px] leading-relaxed text-encre-douce">{phrase}</p>
+      {pleins.length > 0 && (
+        <Depliable
+          titre={pleins.length > 1 ? 'Relire mes réponses' : 'Relire ma réponse'}
+          depotId={depotId} aide={null}
+        >
+          <div className="flex flex-col gap-3">
+            {pleins.map((t) => (
+              <div key={t.libelle}>
+                {pleins.length > 1 && (
+                  <p className="mb-1.5 font-marque text-[11px] font-semibold uppercase
+                                tracking-[0.11em] text-muet">
+                    {t.libelle}
+                  </p>
+                )}
+                <TexteBrut
+                  texte={t.texte}
+                  className="font-corps text-[15.5px] leading-[1.65] text-encre"
+                />
+              </div>
+            ))}
+          </div>
+        </Depliable>
+      )}
+      <button
+        type="button" onClick={() => { void rendre() }} disabled={enCours || pleins.length === 0}
+        className="min-h-12 w-full rounded-[10px] bg-bouton px-6 py-4 font-ui text-[15px]
+                   font-semibold text-bouton-texte disabled:opacity-40 sm:w-auto sm:self-start
+                   sm:py-3.5"
+      >
+        {enCours ? 'Envoi…' : libelle}
+      </button>
+      {pied && <p className="font-corps text-[13.5px] italic text-muet">{pied}</p>}
+      {modifier && <RetourAuTexte onClick={modifier} libelle="Modifier mon texte" />}
+      {message && <p className="text-sm text-retard">{message}</p>}
     </div>
   )
 }
@@ -979,10 +1295,16 @@ function RappelDuPassage({ vue, casAffiche }: { vue: VueDuDeroule; casAffiche: 1
 /**
  * ⭐ « Ce qu'il faut comparer, c'est SON TEXTE et CE QU'ON LUI EN DIT »
  *    (handoff §6) : colonnes égales, et **rien ne s'intercale entre les deux**.
- *    L'unique action de révision passe SOUS les deux colonnes, pleine largeur.
+ *
+ * ⭐⭐ 04/09 (soir) — « CHAQUE POINT DOIT AVOIR SON ÉCRAN » (Louis). La colonne
+ *    de droite tourne les pages du retour : un point par page, puis « pour
+ *    finir » — la prochaine fois, la langue, la validation de lecture, et, au
+ *    régime plein, ce qu'il y a à reprendre. La version finale a ses deux pages
+ *    à elle : écrire, rendre.
  */
 function RetourDUnTexte({
-  vue, renvoi, setRenvoi, reprise, setReprise, enregistrer, remettre,
+  vue, renvoi, setRenvoi, reprise, setReprise, enregistrer, remettre, surEtatDuChamp,
+  redactionFinie, tournerLaPage,
 }: {
   vue: VueDuDeroule
   renvoi: string | null
@@ -990,12 +1312,19 @@ function RetourDUnTexte({
   reprise: boolean
   setReprise: (v: boolean) => void
   enregistrer: (texte: string, t: TelemetrieSaisie) => Promise<void>
-  remettre: (texte: string, t: TelemetrieSaisie) => Promise<void>
+  remettre: () => Promise<void>
+  surEtatDuChamp: (texte: string, t: TelemetrieSaisie) => void
+  redactionFinie: boolean
+  tournerLaPage: (finie: boolean) => void
 }) {
   const [ongletMobile, setOngletMobile] = useState<'texte' | 'retour'>('retour')
   const enRevision = vue.tempsCourant === 'reviser'
-  const retours = [vue.retourFinal, vue.retourChaud].filter((r) => r !== null)
-  const nbPoints = retours.reduce((n, r) => n + r.points.length, 0)
+  // ⚠️ Le retour qui se lit est LE PLUS RÉCENT ; l'autre, s'il existe, se replie
+  //    sur la dernière page — deux retours empilés feraient deux fois la pile.
+  const recent = vue.retourFinal ?? vue.retourChaud
+  const ancien = vue.retourFinal ? vue.retourChaud : null
+  const nbPoints = recent?.points.length ?? 0
+  const enVersionFinale = reprise && enRevision
 
   /**
    * ⚠️⚠️ **SUR UNE PAIRE, `texteVf` N'EST PAS UNE VERSION FINALE** : c'est la
@@ -1010,6 +1339,12 @@ function RetourDUnTexte({
       .filter((c) => c.texte.trim() !== '')
     : [{ libelle: null,
       texte: (vue.tempsCourant === 'retour_final' ? vue.texteVf ?? vue.texteV1 : vue.texteV1) ?? '' }]
+
+  const suiteVf = etapesServies({
+    estUnePaire: false, credenceEstLaReponse: false, credenceDemandee: false, gestes: [],
+    versionFinale: true,
+  })
+  const etapeVf: 'ecrire' | 'rendre' = redactionFinie ? 'rendre' : 'ecrire'
 
   return (
     <div>
@@ -1028,11 +1363,15 @@ function RetourDUnTexte({
         </div>
       )}
 
-      {/* Bascule du téléphone — « Mon texte » / « Le retour · 3 ». */}
+      {/* Bascule du téléphone — « Mon texte » / « Le retour · 3 » (ou « Ma version finale »). */}
       <div className="px-4 pt-3.5 lg:hidden">
-        <div className="flex overflow-hidden rounded-[10px] border border-bordure-bouton bg-surface">
+        <div
+          role="group" aria-label="Mon texte ou le retour"
+          className="flex overflow-hidden rounded-[10px] border border-bordure-bouton bg-surface"
+        >
           {([['texte', 'Mon texte'],
-            ['retour', nbPoints > 0 ? `Le retour · ${nbPoints}` : 'Le retour']] as const)
+            ['retour', enVersionFinale ? 'Ma version finale'
+              : nbPoints > 0 ? `Le retour · ${nbPoints}` : 'Le retour']] as const)
             .map(([v, libelle]) => (
               <button
                 key={v} type="button" onClick={() => setOngletMobile(v)}
@@ -1086,64 +1425,75 @@ function RetourDUnTexte({
           ))}
         </div>
 
-        {/* ── LE RETOUR, OU LA VERSION FINALE EN COURS ──────────────────── */}
+        {/* ── LE RETOUR, PAGE PAR PAGE — OU LA VERSION FINALE EN COURS ──── */}
         <div className={`flex flex-col gap-4 p-4 sm:p-5
                          ${ongletMobile === 'retour' ? '' : 'hidden lg:flex'}`}>
-          {reprise && enRevision ? (
+          {enVersionFinale ? (
             <>
-              <div className="flex items-baseline gap-3">
-                <h2 className="font-marque text-[11px] font-semibold uppercase
-                               tracking-[0.13em] text-muet">
-                  Ta version finale
-                </h2>
+              <EnTeteDePage titre="Ta version finale" rang={rangDeLEtape(suiteVf, etapeVf, null)} />
+              <div className={etapeVf === 'ecrire' ? 'page-tourne flex flex-col gap-3' : 'hidden'}>
+                {vue.retourChaud?.actionRevision && (
+                  <EncartDeRevision vue={vue}>{vue.retourChaud.actionRevision}</EncartDeRevision>
+                )}
+                <ChampDeRedaction
+                  depotId={vue.depotId}
+                  valeurInitiale={vue.texteVf ?? vue.texteV1 ?? ''}
+                  telemetrieInitiale={vue.telemetrie.vf ?? null}
+                  lectureSeule={false}
+                  rows={14}
+                  onEnregistrer={enregistrer}
+                  onEtat={surEtatDuChamp}
+                  apresEnregistrement={() => tournerLaPage(true)}
+                  suite="Ensuite : rendre ta version finale."
+                />
               </div>
-              {vue.retourChaud?.actionRevision && (
-                <EncartDeRevision vue={vue}>{vue.retourChaud.actionRevision}</EncartDeRevision>
+              {etapeVf === 'rendre' && (
+                <PageDeRemise
+                  key="rendre-vf"
+                  libelle="Rendre ma version finale"
+                  phrase="Il ne reste qu’à rendre : ta version finale partira à la lecture, et ton retour final se préparera."
+                  textes={[{ libelle: 'Ta version finale', texte: vue.texteVf ?? vue.texteV1 ?? '' }]}
+                  depotId={vue.depotId}
+                  remettre={remettre}
+                  modifier={() => tournerLaPage(false)}
+                  pied={null}
+                />
               )}
-              <ChampDeRedaction
-                depotId={vue.depotId}
-                valeurInitiale={vue.texteVf ?? vue.texteV1 ?? ''}
-                telemetrieInitiale={vue.telemetrie.vf ?? null}
-                lectureSeule={false}
-                rows={14}
-                onEnregistrer={enregistrer}
-                onRemettre={remettre}
-                libelleRemise="Rendre ma version finale"
-              />
             </>
-          ) : (
-            retours.map((r) => (
-              <RetourSegmente
-                key={r.moment}
-                depotId={vue.depotId} retour={r} vue={vue} nu
-                titre={r.moment === 'final' ? 'Ce qui a bougé' : 'Ton retour'}
-                onRenvoi={setRenvoi}
-                renvoiActif={renvoi}
-              />
-            ))
-          )}
+          ) : recent ? (
+            <RetourSegmente
+              key={recent.moment}
+              depotId={vue.depotId} retour={recent} vue={vue} nu parPages
+              titre={recent.moment === 'final' ? 'Ce qui a bougé' : 'Ton retour'}
+              onRenvoi={setRenvoi}
+              renvoiActif={renvoi}
+              /* ⭐ Au régime plein, ce qu'il y a à reprendre vient SUR LA DERNIÈRE
+                 PAGE, une fois la lecture validée : une seule chose à faire. */
+              apresLecture={!reprise && enRevision ? (
+                vue.retourChaud?.actionRevision ? (
+                  <EncartDeRevision vue={vue} action={() => setReprise(true)}>
+                    {vue.retourChaud.actionRevision}
+                  </EncartDeRevision>
+                ) : (
+                  <button
+                    type="button" onClick={() => setReprise(true)}
+                    className="min-h-12 self-start rounded-[10px] bg-bouton px-6 py-3.5 font-ui
+                               text-[15px] font-semibold text-bouton-texte"
+                  >
+                    Reprendre mon texte
+                  </button>
+                )
+              ) : null}
+              ancien={ancien ? (
+                <Depliable titre="Ton premier retour" depotId={vue.depotId} aide={null}>
+                  <RetourSegmente
+                    depotId={vue.depotId} retour={ancien} vue={vue} nu titre="Ton premier retour" />
+                </Depliable>
+              ) : null}
+            />
+          ) : null}
         </div>
       </div>
-
-      {/* ── SOUS LES DEUX COLONNES, PLEINE LARGEUR : L'UNIQUE ACTION ────── */}
-      {!reprise && enRevision && (
-        <div className="flex flex-col gap-3 border-t border-bordure bg-surface px-4 py-4 sm:px-6">
-          {vue.retourChaud?.actionRevision && (
-            <EncartDeRevision vue={vue} action={() => setReprise(true)}>
-              {vue.retourChaud.actionRevision}
-            </EncartDeRevision>
-          )}
-          {!vue.retourChaud?.actionRevision && (
-            <button
-              type="button" onClick={() => setReprise(true)}
-              className="min-h-12 self-start rounded-[10px] bg-bouton px-6 py-3.5 font-ui
-                         text-[15px] font-semibold text-bouton-texte"
-            >
-              Reprendre mon texte
-            </button>
-          )}
-        </div>
-      )}
 
       {/* ── EN BAS, REPLIÉS CÔTE À CÔTE : la consigne et le texte de départ ─ */}
       <div className="flex flex-col gap-2.5 border-t border-bordure bg-surface px-4 pb-5 pt-4

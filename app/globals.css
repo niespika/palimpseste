@@ -375,3 +375,17 @@ input, textarea, select {
   0%, 41% { opacity: 1; }
   100%    { opacity: 0; }
 }
+
+/* --- La page qui tourne (déroulé élève, 04/09) --------------------------
+   « Un écran, une tâche » : la colonne de travail change de page — le champ,
+   la crédence, un geste, la remise, un point du retour. Un souffle de 220 ms,
+   pour que l'œil voie que la page a changé sans qu'elle saute. Mouvement
+   réduit : la page apparaît, simplement. */
+.page-tourne { animation: page-tourne 220ms ease-out both; }
+@keyframes page-tourne {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .page-tourne { animation: none; }
+}

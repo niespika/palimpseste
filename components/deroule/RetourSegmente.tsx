@@ -72,7 +72,8 @@ type EncartDeLangue = VueDuDeroule['langue']
  *        redouble pas la carte.
  */
 export function RetourSegmente({
-  depotId, retour, vue, titre, onRenvoi, renvoiActif = null, nu = false,
+  depotId, retour, vue, titre, onRenvoi, renvoiActif = null, nu = false, parPages = false,
+  apresLecture = null, ancien = null,
 }: {
   depotId: string
   retour: RetourServi
@@ -81,22 +82,50 @@ export function RetourSegmente({
   onRenvoi?: (citation: string | null) => void
   renvoiActif?: string | null
   nu?: boolean
+  /**
+   * ⭐⭐ 04/09 (soir) — « CHAQUE POINT DOIT AVOIR SON ÉCRAN » (Louis). Un point
+   *    par page, puis « pour finir » : la prochaine fois, la langue, la
+   *    validation de lecture. Trois points empilés sous un titre se lisaient
+   *    comme un bulletin ; un point à la fois se lit comme une remarque.
+   */
+  parPages?: boolean
+  /** Ce qui vient sur la dernière page, UNE FOIS LA LECTURE VALIDÉE (la révision, au régime plein). */
+  apresLecture?: React.ReactNode
+  /** Le retour précédent, replié sur la dernière page (le chaud, quand le final est là). */
+  ancien?: React.ReactNode
 }) {
-  // ⚠️ Le parent rend CE composant DEUX FOIS — le retour chaud, puis le retour
-  //    final. L'encart de langue, lui, est UN relevé, fait sur la v1, « et sa
-  //    correction est attendue dans la version finale » (`06-` §2) : il se pose
-  //    donc sur le retour CHAUD, celui qui précède la révision. Le porter deux
-  //    fois demanderait deux fois la même correction.
+  // ⚠️ Le parent peut rendre CE composant deux fois — le retour chaud, puis le
+  //    retour final. L'encart de langue, lui, est UN relevé, fait sur la v1,
+  //    « et sa correction est attendue dans la version finale » (`06-` §2) : il
+  //    se pose donc sur le retour CHAUD, celui qui précède la révision. Le
+  //    porter deux fois demanderait deux fois la même correction.
   const porteLEncartDeLangue = retour.moment === 'chaud' || vue.retourChaud === null
+
+  // ── LA PAGE COURANTE : un point, ou « pour finir » ──────────────────────
+  const [page, setPage] = useState(0)
+  const nbPoints = retour.points.length
+  const derniere = nbPoints // l'index de la page « pour finir »
+  const pageCourante = parPages ? Math.min(page, derniere) : -1
+  function tourner(vers: number) {
+    setPage(Math.max(0, Math.min(derniere, vers)))
+    // Le renvoi vers la copie appartient au point qu'on quitte.
+    onRenvoi?.(null)
+  }
 
   const entete = (
     <div className="flex items-baseline gap-3">
       <h2 className="font-marque text-[11px] font-semibold uppercase tracking-[0.13em] text-muet">
         {titre}
       </h2>
-      {/* ⭐ Le CARDINAL des points — « 3 points ». ⛔ Ce n'est pas une note : il
-          ne se rapporte à aucun total, et le premier point est une RÉUSSITE. */}
-      {retour.points.length > 0 && (
+      {/* ⭐ Le CARDINAL des points — « 3 points », ou, page par page, « point 2
+          sur 3 ». ⛔ Ce n'est pas une note : il ne se rapporte à aucun total,
+          et le premier point est une RÉUSSITE. */}
+      {parPages ? (
+        <span className="ml-auto shrink-0 rounded-full bg-pigment-teinte px-2.5 py-1 font-ui
+                         text-[11.5px] font-semibold tabular-nums text-pigment">
+          {pageCourante < nbPoints ? `point ${pageCourante + 1} sur ${nbPoints}` : 'pour finir'}
+        </span>
+      ) : retour.points.length > 0 && (
         <span className="ml-auto font-ui text-xs text-muet">
           {retour.points.length} point{retour.points.length > 1 ? 's' : ''}
         </span>
@@ -104,19 +133,117 @@ export function RetourSegmente({
     </div>
   )
 
+  const avertissement = (
+    // ⚠️ Dit UNE FOIS, en tête, et redit à chaque contestation : contester
+    //    n'est pas corriger. C'est la promesse que le module tient vraiment —
+    //    `contester()` n'écrit que dans `exercices_metacognition`.
+    <p className="mt-2 text-sm text-encre-douce">
+      Chaque remarque s’appuie sur un passage précis. Si l’une te semble fausse, dis-le :
+      elle part à ton professeur, et <strong>rien ne change tout seul</strong>.
+    </p>
+  )
+
+  /* ⭐ LE PONT — la quatrième chose que le retour final doit dire :
+     « la prochaine fois, X » (`06-` §2). Les trois autres — ce qui s'est
+     amélioré, ce qui n'a pas bougé, le delta — sont DANS LES POINTS, que
+     le modèle y écrit. Le pont, lui, a son champ : il se rend À LA FIN,
+     EN ÉVIDENCE. */
+  const pont = retour.feedForward && (
+    <div className="mt-4 rounded border border-bordure bg-pigment-teinte p-3">
+      <p className="font-marque text-xs uppercase tracking-wide text-pigment">
+        La prochaine fois
+      </p>
+      <p className="mt-1 font-corps text-base leading-relaxed text-encre">
+        {retour.feedForward}
+      </p>
+    </div>
+  )
+
+  /* ⚠️⚠️ LE VERDICT DE CALIBRATION S'AFFICHERAIT ICI — « nous n'avons pas
+     vu la même chose », JAMAIS un verdict, et il NOMME LA DIMENSION en
+     langage pédagogique, jamais l'observable ni la grille (`06-` §2 ; la
+     fiche §4 ; RR4). **Il n'est pas rendu, faute de quoi le porter.**
+     `utils/deroule/juger.ts:verdictDeCalibration()` le calcule déjà, et
+     rend exactement `{ lignes, phrase }` — mais `chargerLeDeroule` ne
+     l'appelle jamais et `VueDuDeroule` n'a AUCUN champ pour lui.
+     **On n'invente pas le champ ici** : le manque est rapporté au fil
+     principal, qui l'ajoutera à `utils/deroule/vue.ts`. Le jour où il
+     arrive, il se rend entre les points et le pont, et nulle part
+     ailleurs — le verdict appartient au retour. */
+
+  if (parPages) {
+    const point = pageCourante < nbPoints ? retour.points[pageCourante] : null
+    const bouton = 'min-h-11 rounded-[9px] border border-bordure-bouton bg-surface px-4 py-2 '
+      + 'font-ui text-sm text-encre-douce disabled:opacity-40'
+    return (
+      <div className="flex flex-col gap-4">
+        <section className={nu ? '' : 'rounded-xl border border-bordure bg-surface p-4'}>
+          {entete}
+          {point ? (
+            <div key={point.id} className="page-tourne">
+              {pageCourante === 0 && avertissement}
+              <ul className="mt-3 flex flex-col gap-2.5">
+                <PointAncre
+                  depotId={depotId}
+                  point={point}
+                  rang={pageCourante + 1}
+                  contestation={vue.contestations.find((c) => c.point_id === point.id) ?? null}
+                  onRenvoi={onRenvoi}
+                  renvoiActif={renvoiActif}
+                />
+              </ul>
+            </div>
+          ) : (
+            <div key="fin" className="page-tourne">
+              {retour.publieLe && (
+                <p className="mt-1 text-xs text-muet">Reçu le {quand(retour.publieLe)}.</p>
+              )}
+              {nbPoints === 0 && (
+                <p className="mt-3 text-sm italic text-muet">
+                  Ce retour ne porte aucune remarque ancrée.
+                </p>
+              )}
+              {pont}
+            </div>
+          )}
+          {/* La navigation, sous le point : précédent, suivant. Sur la dernière
+              page, il n'y a plus que le chemin arrière. */}
+          <div className="mt-4 flex flex-wrap items-center gap-2">
+            {pageCourante > 0 && (
+              <button type="button" onClick={() => tourner(pageCourante - 1)} className={bouton}>
+                ← Précédent
+              </button>
+            )}
+            {pageCourante < derniere && (
+              <button
+                type="button" onClick={() => tourner(pageCourante + 1)}
+                className="min-h-11 rounded-[9px] bg-bouton px-5 py-2 font-ui text-sm font-semibold
+                           text-bouton-texte"
+              >
+                {pageCourante + 1 < nbPoints ? 'Point suivant →' : 'Pour finir →'}
+              </button>
+            )}
+          </div>
+        </section>
+
+        {pageCourante === derniere && (
+          <>
+            {porteLEncartDeLangue && <EncartLangue langue={vue.langue} />}
+            <ValidationDeLecture depotId={depotId} retour={retour} />
+            {retour.luLe && apresLecture}
+            {ancien}
+          </>
+        )}
+      </div>
+    )
+  }
+
   const corps = (
     <>
       {retour.publieLe && (
         <p className="mt-1 text-xs text-muet">Reçu le {quand(retour.publieLe)}.</p>
       )}
-
-      {/* ⚠️ Dit UNE FOIS, en tête, et redit à chaque contestation : contester
-          n'est pas corriger. C'est la promesse que le module tient vraiment —
-          `contester()` n'écrit que dans `exercices_metacognition`. */}
-      <p className="mt-2 text-sm text-encre-douce">
-        Chaque remarque s’appuie sur un passage précis. Si l’une te semble fausse, dis-le :
-        elle part à ton professeur, et <strong>rien ne change tout seul</strong>.
-      </p>
+      {avertissement}
 
       {/* ⭐ ON BOUCLE. Le découpage a été fait en amont, par celui qui a écrit
           le retour — c'est un contrat sur lui, pas sur l'écran (`07-` §1.2). */}
@@ -147,34 +274,7 @@ export function RetourSegmente({
       <section className={nu ? '' : 'rounded-xl border border-bordure bg-surface p-4'}>
         {entete}
         {corps}
-
-        {/* ⚠️⚠️ LE VERDICT DE CALIBRATION S'AFFICHERAIT ICI — « nous n'avons pas
-            vu la même chose », JAMAIS un verdict, et il NOMME LA DIMENSION en
-            langage pédagogique, jamais l'observable ni la grille (`06-` §2 ; la
-            fiche §4 ; RR4). **Il n'est pas rendu, faute de quoi le porter.**
-            `utils/deroule/juger.ts:verdictDeCalibration()` le calcule déjà, et
-            rend exactement `{ lignes, phrase }` — mais `chargerLeDeroule` ne
-            l'appelle jamais et `VueDuDeroule` n'a AUCUN champ pour lui.
-            **On n'invente pas le champ ici** : le manque est rapporté au fil
-            principal, qui l'ajoutera à `utils/deroule/vue.ts`. Le jour où il
-            arrive, il se rend entre les points et le pont, et nulle part
-            ailleurs — le verdict appartient au retour. */}
-
-        {/* ⭐ LE PONT — la quatrième chose que le retour final doit dire :
-            « la prochaine fois, X » (`06-` §2). Les trois autres — ce qui s'est
-            amélioré, ce qui n'a pas bougé, le delta — sont DANS LES POINTS, que
-            le modèle y écrit. Le pont, lui, a son champ : il se rend À LA FIN,
-            EN ÉVIDENCE. */}
-        {retour.feedForward && (
-          <div className="mt-4 rounded border border-bordure bg-pigment-teinte p-3">
-            <p className="font-marque text-xs uppercase tracking-wide text-pigment">
-              La prochaine fois
-            </p>
-            <p className="mt-1 font-corps text-base leading-relaxed text-encre">
-              {retour.feedForward}
-            </p>
-          </div>
-        )}
+        {pont}
       </section>
 
       {porteLEncartDeLangue && <EncartLangue langue={vue.langue} />}
@@ -490,3 +590,4 @@ function ValidationDeLecture({
     </div>
   )
 }
+

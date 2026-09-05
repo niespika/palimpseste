@@ -1,0 +1,109 @@
+// ============================================================================
+// « UN ÉCRAN, UNE TÂCHE ». Ce que ce test GARDE :
+//   · ⭐ que la page suit l'ordre du geste — écrire, crédence, gestes, rendre —
+//     et que deux tâches ne se lèvent jamais ensemble ;
+//   · ⭐ que la correction du premier cas passe devant tout, et qu'après la
+//     remise il n'y a plus de page à tourner ;
+//   · ⚠️ que le drapeau d'écran (`redactionFinie`) ne fait tourner la page
+//     QU'ENTRE écrire et la suite — il ne ressuscite pas une crédence donnée ;
+//   · ⚠️ que le compteur compte la suite SERVIE, et se tait après la remise.
+// ============================================================================
+
+import { test } from 'node:test'
+import assert from 'node:assert/strict'
+import {
+  etapeDuTravail, etapesServies, rangDeLEtape, gestesServis, titreDeLEtape,
+  libelleDuVoletDeTravail, type EtatDuTravail,
+} from './etapes'
+
+const base: EtatDuTravail = {
+  moment: null, credenceEstLaReponse: false, enRedaction: true, credenceASaisir: true,
+  gesteRestant: 'confiance', sansRemise: false, redactionFinie: false,
+}
+
+test('la page suit l’ordre du geste, une tâche à la fois', () => {
+  assert.equal(etapeDuTravail(base), 'ecrire')
+  assert.equal(etapeDuTravail({ ...base, redactionFinie: true }), 'credence')
+  assert.equal(etapeDuTravail({ ...base, redactionFinie: true, credenceASaisir: false }), 'confiance')
+  assert.equal(etapeDuTravail(
+    { ...base, redactionFinie: true, credenceASaisir: false, gesteRestant: 'restitution' }), 'restitution')
+  assert.equal(etapeDuTravail(
+    { ...base, redactionFinie: true, credenceASaisir: false, gesteRestant: null }), 'rendre')
+})
+
+test('la correction du premier cas passe devant tout ; après la remise, plus de page', () => {
+  assert.equal(etapeDuTravail({ ...base, moment: 'correction_1', redactionFinie: true }), 'correction')
+  assert.equal(etapeDuTravail({ ...base, moment: 'correction_1', enRedaction: false }), 'correction')
+  assert.equal(etapeDuTravail({ ...base, enRedaction: false }), 'apres')
+  assert.equal(etapeDuTravail({ ...base, enRedaction: false, redactionFinie: true }), 'apres')
+})
+
+test('aux crans à candidats, la page est « répondre » tant qu’on écrit', () => {
+  assert.equal(etapeDuTravail({ ...base, credenceEstLaReponse: true }), 'repondre')
+  assert.equal(etapeDuTravail({ ...base, credenceEstLaReponse: true, redactionFinie: true }), 'repondre')
+})
+
+test('sur une paire, le premier cas ne se rend pas : crédence donnée, on attend le serveur', () => {
+  // Le cas 1, texte enregistré : la crédence.
+  assert.equal(etapeDuTravail({ ...base, moment: 'cas_1', sansRemise: true, redactionFinie: true }), 'credence')
+  // La crédence prise, l'étape serveur n'a pas encore tourné : on reste sur le champ.
+  assert.equal(etapeDuTravail(
+    { ...base, moment: 'cas_1', sansRemise: true, redactionFinie: true, credenceASaisir: false }), 'ecrire')
+  // Le second cas, crédence donnée : la remise commence.
+  assert.equal(etapeDuTravail(
+    { ...base, moment: 'fin', sansRemise: false, redactionFinie: true, credenceASaisir: false }), 'confiance')
+})
+
+test('la suite servie, et le rang qu’on y lit', () => {
+  const seule = etapesServies({
+    estUnePaire: false, credenceEstLaReponse: false, credenceDemandee: true,
+    gestes: ['confiance', 'conditions', 'restitution'], versionFinale: false,
+  })
+  assert.deepEqual(seule.map((s) => s.etape),
+    ['ecrire', 'credence', 'confiance', 'conditions', 'restitution', 'rendre'])
+  assert.deepEqual(rangDeLEtape(seule, 'credence', null), { rang: 2, total: 6 })
+  assert.deepEqual(rangDeLEtape(seule, 'rendre', null), { rang: 6, total: 6 })
+  assert.equal(rangDeLEtape(seule, 'apres', null), null)
+
+  const paire = etapesServies({
+    estUnePaire: true, credenceEstLaReponse: false, credenceDemandee: true,
+    gestes: ['conditions', 'restitution'], versionFinale: false,
+  })
+  assert.deepEqual(paire.map((s) => `${s.etape}${s.cas ?? ''}`),
+    ['ecrire1', 'credence1', 'correction1', 'ecrire2', 'credence2', 'conditions', 'restitution', 'rendre'])
+  assert.deepEqual(rangDeLEtape(paire, 'ecrire', 2), { rang: 4, total: 8 })
+  assert.deepEqual(rangDeLEtape(paire, 'correction', 1), { rang: 3, total: 8 })
+
+  const sansCredence = etapesServies({
+    estUnePaire: false, credenceEstLaReponse: false, credenceDemandee: false,
+    gestes: ['confiance', 'conditions', 'restitution'], versionFinale: false,
+  })
+  assert.deepEqual(sansCredence.map((s) => s.etape),
+    ['ecrire', 'confiance', 'conditions', 'restitution', 'rendre'])
+
+  const candidats = etapesServies({
+    estUnePaire: true, credenceEstLaReponse: true, credenceDemandee: true, gestes: [], versionFinale: false,
+  })
+  assert.deepEqual(candidats.map((s) => `${s.etape}${s.cas ?? ''}`), ['repondre1', 'correction1', 'repondre2'])
+
+  const vf = etapesServies({
+    estUnePaire: false, credenceEstLaReponse: false, credenceDemandee: true,
+    gestes: ['conditions'], versionFinale: true,
+  })
+  assert.deepEqual(vf.map((s) => s.etape), ['ecrire', 'rendre'])
+})
+
+test('les gestes servis : la confiance seulement quand une compétence la demande', () => {
+  assert.deepEqual(gestesServis({ confianceDemandee: true }), ['confiance', 'conditions', 'restitution'])
+  assert.deepEqual(gestesServis({ confianceDemandee: false }), ['conditions', 'restitution'])
+})
+
+test('les libellés suivent la page', () => {
+  assert.equal(titreDeLEtape('ecrire', 'rediger'), 'Ton écriture')
+  assert.equal(titreDeLEtape('ecrire', 'surligner'), 'Ce que tu en dis')
+  assert.equal(titreDeLEtape('credence', 'rediger'), 'À quel point es-tu sûr ?')
+  assert.equal(titreDeLEtape('conditions', 'rediger'), 'Avant de rendre')
+  assert.equal(libelleDuVoletDeTravail('credence'), 'Crédence')
+  assert.equal(libelleDuVoletDeTravail('restitution'), 'Rendre')
+  assert.equal(libelleDuVoletDeTravail('correction'), 'La correction')
+})

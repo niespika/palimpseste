@@ -87,13 +87,9 @@ export function GestesDeLaRemise({ vue }: { vue: VueDuDeroule }) {
   // `gestesRestants` est déjà dans l'ordre de la doctrine : on prend le premier.
   const geste = vue.gestesRestants[0]
 
-  if (geste === undefined) {
-    return (
-      <p className="font-corps text-[15px] text-encre-douce">
-        Tu as fait les trois gestes. <strong>Tu peux rendre ta copie.</strong>
-      </p>
-    )
-  }
+  // ⭐ 04/09 (soir) — plus de geste à faire : c'est la PAGE DE REMISE qui le dit
+  //    (« un écran, une tâche » — le bouton de remise a sa page, chez le parent).
+  if (geste === undefined) return null
 
   if (geste === 'confiance') {
     // ⚠️ AUCUNE compétence évaluée → LE GESTE NE SE PRÉSENTE PAS, et ce n'est
@@ -153,7 +149,7 @@ function LaConfiance(
 
   return (
     <div>
-      <h3 className="font-corps text-[15px] text-encre">Comment te sens-tu ?</h3>
+      <h3 className="font-titre text-[22px] font-semibold leading-tight text-encre">Comment te sens-tu ?</h3>
       <p className="mt-2 text-sm text-encre-douce">
         Une réponse par point de travail. C’est l’affaire de quelques secondes.
       </p>
@@ -225,7 +221,7 @@ function LesConditions({ depotId }: { depotId: string }) {
 
   return (
     <div>
-      <h3 className="font-corps text-[15px] text-encre">
+      <h3 className="font-titre text-[22px] font-semibold leading-tight text-encre">
         Dans quelles conditions as-tu travaillé ?
       </h3>
       <p className="mt-2 text-sm text-encre-douce">
@@ -280,7 +276,7 @@ function LaRestitution({ depotId }: { depotId: string }) {
 
   return (
     <div>
-      <h3 className="font-corps text-[15px] text-encre">Ta thèse en une phrase ?</h3>
+      <h3 className="font-titre text-[22px] font-semibold leading-tight text-encre">Ta thèse en une phrase ?</h3>
       <p className="mt-2 text-sm text-encre-douce">
         Trente secondes, de mémoire, sans relire ta copie.
       </p>
