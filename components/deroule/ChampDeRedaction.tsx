@@ -54,9 +54,16 @@
 //    `onEtat` — **une chaîne JavaScript dans un état React, jamais un `<form>`**
 //    : aucune normalisation n'a lieu sur ce chemin, et la valeur qui part à la
 //    remise est, à l'octet, celle du dernier enregistrement.
+//
+// ⭐ 06/09 — LE MODE « TROU » (le cran 2 est un texte à trou, `10-` v0.9) : le
+//    même `<textarea>`, avec la même instrumentation, mais POSÉ DANS LE FIL
+//    D'UN TEXTE — le parent lui passe une `enveloppe` (`TexteATrou`) qui rend
+//    les morceaux du devoir autour de lui. Il s'élargit avec la frappe, puis
+//    prend la ligne et grandit en hauteur ; il ne dit que « Écris ici ». ⛔ Ce
+//    n'est toujours pas un `contenteditable` : le piège 24 tient au cran 2 aussi.
 // ============================================================================
 
-import { useCallback, useEffect, useImperativeHandle, useRef, useState, type Ref } from 'react'
+import { useCallback, useEffect, useImperativeHandle, useLayoutEffect, useRef, useState, type Ref } from 'react'
 import { blocs } from '@/utils/passation/transcription-calcul'
 import {
   nouvelleTelemetrie, accumuler, type EvenementDeSaisie,
@@ -91,6 +98,7 @@ export interface PoigneeDuChamp {
 export function ChampDeRedaction({
   depotId, valeurInitiale, telemetrieInitiale = null, lectureSeule, rows = 20,
   onEnregistrer, apresEnregistrement, onEtat, suite = null, pied = null, ref,
+  forme = 'page', enveloppe,
 }: {
   depotId: string
   valeurInitiale: string
@@ -109,6 +117,10 @@ export function ChampDeRedaction({
   suite?: React.ReactNode
   pied?: React.ReactNode
   ref?: Ref<PoigneeDuChamp>
+  /** ⭐ 06/09 — `trou` : le champ est UN TROU dans un texte (cran 2) ; `page` : la page d'écriture d'hier. */
+  forme?: 'page' | 'trou'
+  /** En mode `trou`, ce qui entoure le champ — les morceaux du devoir (`TexteATrou`). */
+  enveloppe?: (champ: React.ReactNode) => React.ReactNode
 }) {
   const [texte, setTexte] = useState(valeurInitiale)
   const [enCours, setEnCours] = useState(false)
@@ -134,6 +146,27 @@ export function ChampDeRedaction({
   const courant = useRef(valeurInitiale)
 
   const nbBlocs = blocs(texte).length
+  const enTrou = forme === 'trou'
+
+  // ── ⭐ Le trou s'élargit avec la frappe — un miroir mesure le texte ──────
+  //    Largeur : celle du texte (ou de « Écris ici »), bornée à la ligne ;
+  //    passée la ligne, le champ la prend entière et grandit en hauteur.
+  //    ⚠️ `useLayoutEffect` : avant la peinture, pour ne pas voir le champ
+  //    sauter. Rien de tout cela ne touche à la VALEUR — seulement au style.
+  const zone = useRef<HTMLTextAreaElement>(null)
+  const miroir = useRef<HTMLSpanElement>(null)
+  useLayoutEffect(() => {
+    if (!enTrou) return
+    const t = zone.current, m = miroir.current
+    if (!t || !m) return
+    const conteneur = t.parentElement?.clientWidth ?? 0
+    m.textContent = texte === '' ? 'Écris ici' : texte
+    const voulue = m.offsetWidth + 28
+    const largeur = conteneur > 0 ? Math.min(voulue, conteneur) : voulue
+    t.style.width = `${largeur}px`
+    t.style.height = 'auto'
+    t.style.height = `${t.scrollHeight}px`
+  }, [texte, enTrou])
 
   // L'état initial monte au parent une fois : la remise d'un texte déjà en
   // base, sans une frappe de plus, doit partir avec son relevé.
@@ -224,6 +257,73 @@ export function ChampDeRedaction({
     if (ok) apresEnregistrement?.()
   }
 
+  const champ = (
+    <textarea
+      ref={zone}
+      value={texte}
+      onChange={(e) => surSaisie(e.target.value)}
+      readOnly={lectureSeule}
+      rows={enTrou ? 1 : rows}
+      placeholder={enTrou ? 'Écris ici' : undefined}
+      aria-label={enTrou ? 'Écris ici' : undefined}
+      // ⚠️ EXPLICITE, et pas laissé au défaut du navigateur : « le correcteur
+      //    orthographique du navigateur RESTE ACTIF » (`06-` §1) est une règle
+      //    de source, et une règle nommée ne se confie pas à un défaut.
+      spellCheck
+      onPaste={refuserLeCollage('raccourci')}
+      onDrop={refuserLeCollage('glisser-deposer')}
+      onDragOver={(e) => e.preventDefault()}
+      onContextMenu={refuserLeCollage('menu-contextuel')}
+      // ⚠️ Le fond passe par `style` : la règle nue de `globals.css` sur
+      //    `input, textarea, select` n'est dans aucune couche Tailwind et
+      //    l'emporte sur une classe `bg-*` (constat de C4-L4, dont le
+      //    `bg-parchemin` est inopérant).
+      style={{ backgroundColor: enTrou ? 'var(--pigment-teinte)' : 'var(--surface)' }}
+      className={enTrou
+        // ⭐ Le trou : dans le fil, un cadre vert en pointillés, « Écris ici » et rien d'autre.
+        ? `inline-block max-w-full resize-none overflow-hidden rounded-[6px] border-2 border-dashed
+           border-pigment/60 px-2 py-0.5 align-baseline font-corps text-[16.5px] leading-[1.6]
+           text-encre outline-none placeholder:italic placeholder:text-pigment focus:border-solid
+           focus:border-pigment`
+        : `min-h-[300px] w-full resize-y rounded-[10px] border-0 px-4 py-3.5
+           font-corps text-[17px] leading-[1.68] text-encre outline-none
+           sm:min-h-[322px]`}
+    />
+  )
+
+  if (enTrou) {
+    return (
+      <div className="flex flex-col gap-3">
+        {/* Le miroir de mesure — jamais visible, jamais lu. */}
+        <span ref={miroir} aria-hidden
+              className="pointer-events-none fixed -left-[9999px] top-0 whitespace-pre font-corps text-[16.5px]" />
+        {enveloppe ? enveloppe(champ) : champ}
+        <p className="text-xs text-muet">
+          <span className="text-encre-douce">
+            {enregistreA ? `brouillon enregistré · ${enregistreA}` : 'enregistré tout seul'}
+          </span>
+          {' · '}<span className="tabular-nums">{signes(texte)} signes</span>
+          {' · '}Tu écris au clavier : <strong>le collage est désactivé</strong>, ce texte doit être le tien.
+        </p>
+        {!lectureSeule && (
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-4">
+            <button
+              type="button" onClick={() => { void surLeBouton() }}
+              disabled={enCours || texte.trim() === ''}
+              className="min-h-12 shrink-0 rounded-[10px] bg-bouton px-6 py-3.5 font-ui text-[15px]
+                         font-semibold text-bouton-texte disabled:opacity-40"
+            >
+              {enCours ? 'Enregistrement…' : 'Enregistrer'}
+            </button>
+            {suite && <p className="font-corps text-[14px] italic leading-snug text-muet">{suite}</p>}
+          </div>
+        )}
+        {pied && <p className="text-center font-corps text-[13.5px] italic text-muet">{pied}</p>}
+        {message && <p className="text-sm text-retard">{message}</p>}
+      </div>
+    )
+  }
+
   return (
     <div className="flex flex-col gap-3">
       {/* ⭐ HANDOFF §4 — LE CHAMP OCCUPE LA COLONNE, PLEINE HAUTEUR : 322 px au
@@ -233,28 +333,7 @@ export function ChampDeRedaction({
              `contenteditable`, ni normalisation à la frappe. */}
       <div className="rounded-xl border border-bordure-bouton bg-surface p-1
                       focus-within:border-pigment">
-        <textarea
-          value={texte}
-          onChange={(e) => surSaisie(e.target.value)}
-          readOnly={lectureSeule}
-          rows={rows}
-          // ⚠️ EXPLICITE, et pas laissé au défaut du navigateur : « le correcteur
-          //    orthographique du navigateur RESTE ACTIF » (`06-` §1) est une règle
-          //    de source, et une règle nommée ne se confie pas à un défaut.
-          spellCheck
-          onPaste={refuserLeCollage('raccourci')}
-          onDrop={refuserLeCollage('glisser-deposer')}
-          onDragOver={(e) => e.preventDefault()}
-          onContextMenu={refuserLeCollage('menu-contextuel')}
-          // ⚠️ Le fond passe par `style` : la règle nue de `globals.css` sur
-          //    `input, textarea, select` n'est dans aucune couche Tailwind et
-          //    l'emporte sur une classe `bg-*` (constat de C4-L4, dont le
-          //    `bg-parchemin` est inopérant).
-          style={{ backgroundColor: 'var(--surface)' }}
-          className="min-h-[300px] w-full resize-y rounded-[10px] border-0 px-4 py-3.5
-                     font-corps text-[17px] leading-[1.68] text-encre outline-none
-                     sm:min-h-[322px]"
-        />
+        {champ}
         {/* Le pied du champ : ce que l'écran a fait tout seul, et le poids du
             texte. ⚠️ Aucun décompte de mots attendus, aucune cible : il n'y en
             a pas, et en afficher une inventerait une note. */}

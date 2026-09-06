@@ -912,7 +912,15 @@ export async function chargerLeDeroule(
     v1RemiseLe: depot.v1_remis_at,
     credenceEstLaReponse: surDesCandidats,
     regime, vfRequiseParEscalade, temps,
-    tempsCourant: tempsCourantDe(depot, regime, retours, seJuger.servie),
+    // ⛔ 06/09 — « SE JUGER » N'EST DÛ QUE S'IL Y A DES QUESTIONS. Trouvé au smoke
+    //    du cran 2 : sur un exercice du gabarit (ni cible, ni observable isolé),
+    //    l'offre est SERVIE mais VIDE ; l'écran la saute (`plan-de-travail.ts`,
+    //    `seJugerAServir`) mais le temps courant restait sur `se_juger`
+    //    (`juger_fin_at` jamais posé) — et la révision ne s'ouvrait JAMAIS :
+    //    « Reprendre mon texte » n'apparaissait pas, la version finale était
+    //    perdue. La même règle des deux côtés.
+    tempsCourant: tempsCourantDe(depot, regime, retours,
+      seJuger.servie && (seJuger.offre?.questions.length ?? 0) > 0),
     // ⭐ Le CODE, résolu depuis le numéro par `lireContexte` — jamais la colonne
     //    brute, qui portait tantôt le code tantôt le numéro (C4-L11).
     grain: ctx.grain, cranCode: ctx.cranCode, geste,

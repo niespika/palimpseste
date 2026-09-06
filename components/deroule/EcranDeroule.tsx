@@ -58,7 +58,7 @@ import { DesignationDansLeMateriau } from './DesignationDansLeMateriau'
 import { GestesDeLaRemise } from './GestesDeLaRemise'
 import { SeJuger } from './SeJuger'
 import { RetourSegmente } from './RetourSegmente'
-import { LesPieces } from './LesPieces'
+import { TexteATrou } from './TexteATrou'
 import { SignalerUnProbleme } from './SignalerUnProbleme'
 import type { VueDuDeroule } from '@/utils/deroule/vue'
 import type { TelemetrieSaisie, Temps } from '@/utils/deroule/types'
@@ -762,16 +762,10 @@ function ColonneMatiere({
         </Carte>
       )}
 
-      {/* ── ⭐ 06/09 — LES PIÈCES DU CRAN 2 (`10-` §2 bis.1, §3 : la section
-          « les pièces » du cadre « Les documents »). Chaque pièce à sa place et
-          sous son nom — les mots de la consigne, jamais ceux de la fiche —, et
-          la place vide de celle que l'élève écrit, nommée par la demande du
-          geste. La règle (la place, la demande) est pure : `utils/gabarit/pieces.ts`. */}
-      {casMontres.map((c) => c.pieces && (
-        <Carte key={`pieces-${c.ordre}`} titre="Les pièces">
-          <LesPieces pieces={c.pieces} />
-        </Carte>
-      ))}
+      {/* ⭐ 06/09 — AU CRAN 2, LES MORCEAUX DU DEVOIR NE SONT PAS ICI : le texte à
+          trou vit sur la page « Écrire », et le trou est le champ (`TexteATrou`).
+          Décision de Louis sur la maquette : « les pièces n'ont pas besoin
+          d'apparaître dans la barre latérale ». */}
 
       {/* ── LE MATÉRIAU DU CAS MONTRÉ, ET CE QUE L'ÉCRAN Y MET EN ÉVIDENCE ── */}
       {casMontres.map((c) => (
@@ -1059,6 +1053,12 @@ function ColonneTravail({
             nulle part ailleurs : c'est la seule chose qui s'ajoute à cette page. */}
         {vue.microQuestionDue && !vue.motifDepassement && <MicroQuestion depotId={vue.depotId} />}
 
+        {/* ⭐ 06/09 — LE CRAN 2 EST UN TEXTE À TROU : la demande du geste en une
+            ligne, puis le devoir dans le fil, et le trou est le champ lui-même
+            (`forme="trou"`, enveloppé par `TexteATrou`). Ailleurs, la page d'hier. */}
+        {casCourant?.pieces?.demande && (
+          <p className="font-corps text-[15.5px] leading-snug text-encre-douce">{casCourant.pieces.demande}</p>
+        )}
         <ChampDeRedaction
           /* ⭐ 04/09 — sur une paire, le champ CHANGE avec le cas : `key` le remonte. */
           key={cleDuCas}
@@ -1072,6 +1072,10 @@ function ColonneTravail({
           onEtat={surEtatDuChamp}
           apresEnregistrement={() => tournerLaPage(true)}
           suite={phraseDeSuite}
+          forme={casCourant?.pieces ? 'trou' : 'page'}
+          enveloppe={casCourant?.pieces
+            ? (champ) => <TexteATrou pieces={casCourant.pieces!}>{champ}</TexteATrou>
+            : undefined}
         />
       </div>
 
@@ -1481,6 +1485,12 @@ function RetourDUnTexte({
                   onEtat={surEtatDuChamp}
                   apresEnregistrement={() => tournerLaPage(true)}
                   suite="Ensuite : rendre ta version finale."
+                  /* ⭐ 06/09 — au cran 2, la version finale se récrit DANS LE TROU,
+                     le devoir autour : le même texte à trou qu'à la v1. */
+                  forme={vue.cas[0]?.pieces ? 'trou' : 'page'}
+                  enveloppe={vue.cas[0]?.pieces
+                    ? (champ) => <TexteATrou pieces={vue.cas[0]!.pieces!}>{champ}</TexteATrou>
+                    : undefined}
                 />
               </div>
               {etapeVf === 'rendre' && (

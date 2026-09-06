@@ -31,7 +31,7 @@ const DOSSIER = args.filter((a) => !a.startsWith('--'))[1] ?? `/tmp/smoke-cran2-
 const arg = (nom, defaut) => { const i = args.indexOf(nom); return i > 0 ? Number(args[i + 1]) : defaut }
 const PORT = arg('--port', 9349)
 const MARQUE = '2026-09-06T02:02:02.202Z'          // la marque du décor, EN BASE — `--retire` la retrouve
-const BASE = 'http://localhost:3000'
+const BASE = `http://localhost:${arg('--port-app', 3000)}`
 const TAILLES = [1280, 768, 375]
 const dors = (ms) => new Promise((r) => setTimeout(r, ms))
 
@@ -69,7 +69,7 @@ const c1 = cas?.[0]
 if (!c1?.constituant || !Array.isArray(c1.pieces) || !c1.pieces.length) throw new Error('le cas ne porte ni constituant ni pièces : pas un cran 2 du gabarit')
 const { data: type } = await admin.from('exercices_types').select('code').eq('id', ex.type_id).maybeSingle()
 const objet = type?.code ?? 'defaut'
-console.log(`exercice ${souche} (${ex.id}) · objet ${objet} · statut ${ex.statut} · constituant « ${c1.constituant} » · ${c1.pieces.length} pièces (${c1.pieces.map((p) => p.texte.length).join('/')} car.) · attendue ${c1.reponse_attendue?.length ?? 0} car.`)
+console.log(`exercice ${souche} (${ex.id}) · objet ${objet} · statut ${ex.statut} · constituant « ${c1.constituant} » · ${c1.pieces.length} pièces (${c1.pieces.map((p) => p.texte === null ? 'TROU' : p.texte.length).join('/')} car.) · attendue ${c1.reponse_attendue?.length ?? 0} car.`)
 
 let { data: deja } = await admin.from('exercices_depots').select('id').eq('eleve_id', u.id).eq('exercice_id', ex.id).eq('assigne_at', MARQUE)
 let depot = deja?.[0]
@@ -129,16 +129,19 @@ async function lire() {
   return cdp.evalue(`(() => {
     const t = document.body.innerText
     const boutons = [...document.querySelectorAll('button')].filter((b) => !b.disabled && b.offsetParent !== null).map((b) => b.textContent.trim())
-    const ta = [...document.querySelectorAll('textarea')].filter((x) => x.offsetParent !== null && !x.readOnly).map((x) => ({ rows: x.rows, vide: x.value.trim() === '' }))
+    const ta = [...document.querySelectorAll('textarea')].filter((x) => x.offsetParent !== null && !x.readOnly).map((x) => ({ rows: x.rows, vide: x.value.trim() === '', trou: x.placeholder === 'Écris ici' }))
     const geste = /Ta thèse en une phrase/i.test(t) ? 'restitution' : /degré de confiance/i.test(t) ? 'confiance' : /Dans quelles conditions as-tu travaillé/i.test(t) ? 'conditions' : null
     return { boutons, textareas: ta, geste,
-      pieces: /LES PIÈCES/i.test(t), placeVide: /Ta pièce/i.test(t), guide: /De quoi t.aider/i.test(t),
-      consigne2: /chacune à sa place/i.test(t), ilManque: /il manque/i.test(t),
+      // ⭐ le texte à trou : le champ « Écris ici » posé dans le fil, la légende « ce bloc = telle chose ».
+      trou: !!document.querySelector('textarea[placeholder="Écris ici"]'),
+      legende: /c’est ce que tu écris/i.test(t), guide: /De quoi t.aider/i.test(t),
+      consigne2: /le texte à compléter/i.test(t), ilManque: /il manque/i.test(t),
+      piecesDansLesDocuments: /LES PIÈCES|Le texte à compléter/.test([...document.querySelectorAll('h3')].map((h) => h.textContent).join('|')),
       enregistrer: boutons.includes('Enregistrer'),
       rendre: boutons.find((b) => /^Rendre/.test(b)) ?? null,
       suivant: boutons.find((b) => /^(Point suivant|Pour finir)/.test(b)) ?? null,
       lu: boutons.find((b) => /^J’ai lu mon retour/.test(b)) ?? null,
-      reprendre: boutons.find((b) => /^Reprendre mon texte/.test(b)) ?? null,
+      reprendre: boutons.find((b) => /^(Reprendre mon texte|Reprendre ma|Écrire ma version finale|Commencer ma version finale)/.test(b)) ?? null,
       versionFinale: /version finale/i.test(t), preparation: /retour est en préparation/i.test(t),
       retour: /Ce qui a bougé|Retour à mes exercices|Ce que tu as écrit|point \\d+ sur \\d+|pour finir/i.test(t) && !/retour est en préparation/i.test(t),
       etalon: /Un exemple de ce qui était attendu/i.test(t),
@@ -176,22 +179,50 @@ try {
   await ch; await dors(2500)
   console.log('→', await cdp.evalue('location.pathname'))
 
-  // ── L'écran d'ouverture : les pièces, la place vide, la consigne du 2, pas de guide ──
   let e = await lire()
   if (e.pasEncoreOuvert) throw new Error('porte fermée : l\'écran dit « pas encore ouvert »')
-  constat(e.pieces, 'la section « Les pièces » est servie')
-  constat(e.placeVide, 'la place vide « Ta pièce » est nommée')
-  constat(e.consigne2, 'la consigne du cran 2 (« chacune à sa place ») est celle du 10- §3')
+  if (args.includes('--reprise')) {
+    // ⭐ La version finale seule, sur un dépôt dont le retour est lu.
+    console.log('  boutons visibles :', JSON.stringify(e.boutons))
+    if (e.lu) { await clique(e.lu); e = await attendQue((x) => !x.lu); console.log('  après validation :', JSON.stringify(e.boutons)) }
+    // Le retour se relit page par page ; « Reprendre mon texte » n'est qu'à la dernière.
+    if (!e.reprendre) { await pagesDuRetour('retour-relu'); e = await lire(); console.log('  en fin de retour :', JSON.stringify(e.boutons)) }
+    if (e.lu) { await clique(e.lu); e = await attendQue((x) => !x.lu) }
+    if (!e.reprendre) throw new Error('pas de bouton pour reprendre le texte — boutons : ' + JSON.stringify(e.boutons))
+    await clique(e.reprendre); await dors(800); await capture('vf-ecrire')
+    const i = (await lire()).textareas.findIndex((x) => x.trou || x.rows >= 9)
+    if (i < 0) throw new Error('pas de champ pour la version finale')
+    await tape(i, VF(PIECES[objet] ?? PIECES.defaut)); await dors(300); await capture('vf-ecrite')
+    await clique('Enregistrer'); await dors(800); await capture('vf-rendre')
+    const r = (await lire()).rendre; if (!r) throw new Error('pas de bouton Rendre — boutons : ' + JSON.stringify((await lire()).boutons))
+    await clique(r); await attendQue((x) => x.preparation || x.retour, 60); await capture('vf-rendue')
+    let ok = false
+    for (let k = 0; k < 40 && !ok; k++) { await dors(5000); const x = await lire(); if (x.retour && !x.preparation) ok = true }
+    if (ok) await pagesDuRetour('retour-final')
+    const e3 = await lire()
+    constat(e3.etalon, 'l\'étalon « Un exemple de ce qui était attendu » est servi après la vf')
+    await capture('etalon')
+    const { data: d2 } = await admin.from('exercices_depots').select('verdicts_cran, texte_vf').eq('id', depot.id).maybeSingle()
+    console.log('  texte_vf :', JSON.stringify(d2?.texte_vf).slice(0, 120))
+    const vf = d2?.verdicts_cran?.vf ?? null
+    constat(!!vf, `verdict du juge (vf) : ${vf ? `${vf.reussi ? 'RÉUSSI' : 'RATÉ'} — ${vf.motif}` : 'absent'}`)
+    throw Object.assign(new Error('fin de la reprise'), { fin: true })
+  }
+  // ── L'écran d'ouverture : les pièces, la place vide, la consigne du 2, pas de guide ──
+  constat(e.trou, 'le trou « Écris ici » est un champ posé dans le fil du texte')
+  constat(e.legende, 'la légende nomme les moments et le trou')
+  constat(!e.piecesDansLesDocuments, 'les morceaux ne sont pas dans « Les documents »')
+  constat(e.consigne2, 'la consigne du cran 2 (« le texte à compléter ») est celle du 10- v0.9 §3')
   constat(!e.ilManque, 'le mot « il manque » n\'apparaît nulle part')
   constat(!e.guide, 'le guide « De quoi t\'aider » ne se sert pas')
   await capture('ouvert-documents', { lire: true })
   await capture('ouvert-ecrire')
 
   // ── Écrire la pièce, enregistrer, les gestes, rendre ──
-  const idx = e.textareas.findIndex((x) => x.rows >= 9)
-  if (idx < 0) throw new Error('pas de champ de rédaction')
+  const idx = e.textareas.findIndex((x) => x.trou)
+  if (idx < 0) throw new Error('pas de champ « Écris ici »')
   await tape(idx, PIECES[objet] ?? PIECES.defaut); await dors(400); await capture('piece-ecrite')
-  await clique('Enregistrer'); await attendQue((x) => !x.textareas.some((y) => y.rows >= 9))
+  await clique('Enregistrer'); await attendQue((x) => !x.textareas.some((y) => y.trou))
   for (let pas = 0; pas < 8; pas++) {
     e = await lire()
     if (e.geste) {
@@ -231,7 +262,7 @@ try {
     await clique(e.lu); await attendQue((x) => !x.lu); const e2 = await lire()
     if (e2.reprendre) {
       await clique(e2.reprendre); await dors(600)
-      const i = (await lire()).textareas.findIndex((x) => x.rows >= 9)
+      const i = (await lire()).textareas.findIndex((x) => x.trou || x.rows >= 9)
       await tape(i < 0 ? 0 : i, VF(PIECES[objet] ?? PIECES.defaut)); await dors(300)
       await clique('Enregistrer'); await dors(600); await capture('vf-rendre')
       const r = (await lire()).rendre; if (r) { await clique(r); await attendQue((x) => x.preparation || x.retour, 60) }
@@ -246,6 +277,8 @@ try {
       constat(!!vf, `verdict du juge (vf) : ${vf ? `${vf.reussi ? 'RÉUSSI' : 'RATÉ'} — ${vf.motif}` : 'absent'}`)
     }
   } else constat(false, 'pas de version finale offerte (régime ?)')
+} catch (e) {
+  if (!(e && e.fin)) throw e
 } finally {
   chrome.kill()
   console.log('\nCONSTATS\n' + constats.join('\n'))
