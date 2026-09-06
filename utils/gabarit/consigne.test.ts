@@ -52,13 +52,13 @@ test('le cran 2 : « Lis les documents ci-joints : le sujet, et le texte à comp
 })
 
 test('le plan (le trou est un ordre) : « les thèses des parties, dans le désordre », puis le geste validé par Louis le 06/09', () => {
-  const attendu = "Lis les documents ci-joints : le sujet, et les thèses des parties, dans le désordre. " + GESTE_DU_PLAN
+  const attendu = "Lis les documents ci-joints : le sujet, et les thèses des parties, qui sont dans le désordre. " + GESTE_DU_PLAN
   // La base porte encore l'ancien geste « Voici les thèses… » : la phrase validée sert.
-  assert.equal(consigneDuCran2("Voici les thèses des parties, dans le désordre. Mets-les dans l'ordre.", 'ordre'), attendu)
+  assert.equal(consigneDuCran2("Voici les thèses des parties, qui sont dans le désordre. Mets-les dans l'ordre.", 'ordre'), attendu)
   assert.equal(consigneDuCran2(null, 'ordre'), attendu)
   // Le jour où la base porte un geste « Complète … », il prend le dessus.
   assert.equal(consigneDuCran2('Complète le plan autrement.', 'ordre'),
-    "Lis les documents ci-joints : le sujet, et les thèses des parties, dans le désordre. Complète le plan autrement.")
+    "Lis les documents ci-joints : le sujet, et les thèses des parties, qui sont dans le désordre. Complète le plan autrement.")
   assert.equal(consigneDuGabarit({ cran: 2, variante: null, enonce: null, insertion: false, geste: null, forme: 'ordre' }), attendu)
   assert.match(GESTE_DU_PLAN, /« car », le « mais » ou le « donc »/)
 })

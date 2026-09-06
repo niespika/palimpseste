@@ -62,7 +62,7 @@ export function consigneDuCran2(geste: string | null | undefined, forme: 'trou' 
   let g = (geste ?? '').trim()
   if (forme === 'ordre') {
     if (!/^Complète/i.test(g)) g = GESTE_DU_PLAN
-    return `Lis les documents ci-joints : le sujet, et les thèses des parties, dans le désordre. ${g}`
+    return `Lis les documents ci-joints : le sujet, et les thèses des parties, qui sont dans le désordre. ${g}`
   }
   if (g === '') return null
   // ⭐ 06/09 (nuit) — « le cran 2 est un texte à trou » : le texte à compléter, puis le geste « Complète … » tel quel.
