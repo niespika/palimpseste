@@ -261,12 +261,18 @@ export async function chargerFileRevision(): Promise<CarteRevision[]> {
     }
   }
 
-  // Mélanger légèrement (nouvelles d'abord, puis dues)
+  // Les DUES d'abord, les plus anciennes en tête, puis les neuves. Une carte due
+  // est un souvenir qui s'efface : la faire attendre derrière un paquet de cartes
+  // neuves, c'est le perdre. Une carte neuve, elle, ne coûte rien à attendre.
+  // Jusqu'au 05/09 c'était l'inverse (neuves d'abord) : un cours qui livrait 30
+  // cartes gelait toutes les révisions dues derrière le plafond.
+  const dues = file
+    .filter((c) => c.card_state_id !== null)
+    .sort((a, b) => a.due.localeCompare(b.due))
   const nouvelles = file.filter((c) => c.card_state_id === null)
-  const dues = file.filter((c) => c.card_state_id !== null)
 
   // Plafond de session — LE nombre que `chargerStatsRevision` doit annoncer.
-  return [...nouvelles, ...dues].slice(0, PLAFOND_SESSION)
+  return [...dues, ...nouvelles].slice(0, PLAFOND_SESSION)
 }
 
 export interface CarteConsultation {
