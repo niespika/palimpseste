@@ -89,6 +89,8 @@ export interface CasPourLeJuge {
   choix: ChoixServiAuJuge | null
   /** ⭐ Cran 2 du gabarit — les pièces ; `null` partout ailleurs. */
   piece?: PieceServieAuJuge | null
+  /** ⭐ Cran 5 du gabarit — ce qui entoure le passage réécrit, pour le devoir réassemblé. */
+  reassemble?: { avant: string; apres: string } | null
 }
 
 export interface EntreeJuge {
@@ -203,8 +205,9 @@ export function questionDuCran(cran: number, piece?: PieceServieAuJuge | null): 
       "bien le problème énoncé. « probleme_vu » : le problème que l'élève a nommé, tel que tu le comprends.",
     ].join('\n')
     case 5: return [
-      "L'élève devait RÉÉCRIRE le passage sans le problème.",
-      "RÉUSSI si le passage réécrit n'a plus ce problème et n'en a pas introduit un autre du même ordre.",
+      "L'élève devait RÉÉCRIRE le passage sans le problème — et lui seul : le reste du devoir lui était donné.",
+      "RÉUSSI si le passage réécrit n'a plus ce problème et n'en a pas introduit un autre du même ordre ;",
+      "quand le devoir réassemblé est joint, lis-y si le passage tient avec ce qui l'entoure.",
       "« probleme_present » : vrai si la copie porte encore un problème. « probleme_vu » : lequel.",
     ].join('\n')
     case 7: return [
@@ -274,6 +277,11 @@ export function assemblerLeJuge(e: EntreeJuge): {
       ...bloc(`le devoir d'élève${n} — le texte sur lequel l'exercice portait`, c.materiau),
       ...bloc(`l'énoncé du problème${n} — ce qu'on tient pour vrai`, c.defaut),
       ...bloc(`le passage qui porte le problème${n}`, c.passageFautif),
+      // ⭐ 06/09 — au cran 5 en texte à trou, le devoir RÉASSEMBLÉ, le passage réécrit à sa place.
+      ...(c.reassemble
+        ? bloc(`le devoir réassemblé${n} — le passage réécrit par l'élève à sa place, entre crochets`,
+          [c.reassemble.avant, `[${e.production.trim()}]`, c.reassemble.apres].filter((x) => x.trim() !== '').join(' '))
+        : []),
       ...bloc(`la version corrigée${n} — une bonne forme parmi d'autres`, c.versionCorrigee),
       ...bloc(`la réponse attendue${n}`, c.reponseAttendue),
       ...(c.zone ? bloc(`la zone que l'élève a désignée${n}`, zoneEnTexte(c.zone)) : []),

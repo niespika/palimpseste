@@ -25,7 +25,8 @@ import { cibleDansLeMateriau, verdictDeLaZone } from '@/utils/deroule/designatio
 import { lireLaPorteJugeDocuments } from '@/utils/juge/porte'
 import type { ChoixServiAuJuge, PieceServieAuJuge, ZoneServieAuJuge } from './juge-cran'
 import { lireLeCran2 } from '@/utils/gabarit/lecture'
-import { formeDuTrou, separerLeTrou } from '@/utils/gabarit/pieces'
+import { formeDuTrou, morceauxDuPassage, separerLeTrou } from '@/utils/gabarit/pieces'
+import { marquerLeMateriau, pointDInsertion } from '@/utils/deroule/marquage'
 import type { Competence, Forme, Grain, Lieu, StatutRecette } from './types'
 import { COMPETENCES } from './types'
 
@@ -80,6 +81,12 @@ export interface CasServiAuRetour {
   defaut: string | null
   /** La CIBLE en texte : le passage que le diff désigne (`cibleDansLeMateriau`). */
   passageFautif: string | null
+  /**
+   * ⭐ 06/09 — AU CRAN 5 DU GABARIT (`10-` §2 bis.6) : ce qui précède et ce qui suit
+   *    le passage réécrit, pour que le juge lise le devoir RÉASSEMBLÉ. Dérivé des
+   *    segments marqués, comme le trou de l'écran. `null` ailleurs.
+   */
+  reassemble: { avant: string; apres: string } | null
   /**
    * ⭐ 06/09 — AU CRAN 2 DU GABARIT : les pièces servies, la place vide, le geste,
    *    le test et les observables du constituant (`lireLeCran2`). `null` partout
@@ -677,8 +684,10 @@ export async function lireContexte(admin: Admin, depotId: string): Promise<Conte
       : null,
     etalonProduction: await etalonDeProduction(admin, exercice.id, cran),
     // ⭐ 06/09 — au cran 2 du gabarit, chaque cas porte ses pièces (juge, retour).
-    casPourLeRetour: await avecLesPieces(admin, await casPourLeRetour(admin, exercice.id, depot.id),
-      { exerciceId: exercice.id, typeId: exercice.type_id, objet: type.code, genre: exercice.genre ?? null, cran }),
+    casPourLeRetour: await avecLeReassemblage(admin,
+      await avecLesPieces(admin, await casPourLeRetour(admin, exercice.id, depot.id),
+        { exerciceId: exercice.id, typeId: exercice.type_id, objet: type.code, genre: exercice.genre ?? null, cran }),
+      { cran, exerciceId: exercice.id }),
     jugeDocumentsActif: await lireLaPorteJugeDocuments(admin as never),
     decision,
     confianceDeclaree: (depot.confiance_declaree ?? {}) as Record<string, string>,
@@ -889,7 +898,39 @@ async function casPourLeRetour(
       zone: zoneServie(brut, cible, entree),
       choix: choixServi(entree),
       piece: null,
+      reassemble: null,
     }
+  })
+}
+
+/**
+ * ⭐ 06/09 — LE CRAN 5 EN TEXTE À TROU : le juge reçoit le devoir réassemblé, le
+ *    passage réécrit à sa place (`10-` §2 bis.6). Les bornes sont celles du
+ *    MARQUAGE (la règle du `10-` §5, « le passage qui porte le problème »), les
+ *    mêmes que l'écran : un seul domicile. Porte fermée ou hors gabarit, rien.
+ */
+async function avecLeReassemblage(
+  admin: Admin, cas: CasServiAuRetour[], a: { cran: number | null; exerciceId: string },
+): Promise<CasServiAuRetour[]> {
+  if (a.cran !== 5) return cas
+  const { data, error } = await admin.from('exercices_cas')
+    .select('ordre, probleme, exercices_materiaux(contenu, version_corrigee)').eq('exercice_id', a.exerciceId)
+  if (error) return cas
+  const lignes = (data ?? []) as unknown as Array<{ ordre: number; probleme: unknown; exercices_materiaux: unknown }>
+  if (!lignes.some((l) => typeof l.probleme === 'string' && l.probleme)) return cas   // pas du gabarit
+  return cas.map((c) => {
+    const l = lignes.find((x) => x.ordre === c.ordre)
+    const m = (Array.isArray(l?.exercices_materiaux) ? l!.exercices_materiaux[0] : l?.exercices_materiaux) as
+      { contenu?: unknown; version_corrigee?: unknown } | null
+    const contenu = typeof m?.contenu === 'string' ? m.contenu : null
+    const corrigee = typeof m?.version_corrigee === 'string' ? m.version_corrigee : null
+    if (!contenu || !corrigee) return c
+    const segments = marquerLeMateriau(contenu, 'le passage qui porte le problème', { versionCorrigee: corrigee })
+    const p = segments ? morceauxDuPassage(segments, !!pointDInsertion(contenu, corrigee)) : null
+    if (!p) return c
+    const avant = p.pieces.slice(0, p.place).map((x) => x.texte).join(' ')
+    const apres = p.pieces.slice(p.place).map((x) => x.texte).join(' ')
+    return { ...c, reassemble: { avant, apres } }
   })
 }
 

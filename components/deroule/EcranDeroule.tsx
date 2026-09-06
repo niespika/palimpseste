@@ -769,8 +769,11 @@ function ColonneMatiere({
           d'apparaître dans la barre latérale ». */}
 
       {/* ── LE MATÉRIAU DU CAS MONTRÉ, ET CE QUE L'ÉCRAN Y MET EN ÉVIDENCE ── */}
+      {/* ⭐ 06/09 — au cran 5 du gabarit, le devoir EST le texte à trou de la colonne
+          de travail : il quitte « Les documents », sinon il serait servi deux fois
+          (`10-` §2 bis.6, validé par Louis). */}
       {casMontres.map((c) => (
-        (vue.estUnePaire || c.materiau?.length) ? (
+        (vue.estUnePaire || c.materiau?.length) && !c.pieces ? (
           <Carte
             key={c.ordre}
             titre={vue.gabarit.actif

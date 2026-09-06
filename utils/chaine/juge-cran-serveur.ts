@@ -39,6 +39,7 @@ export function entreeDuContexte(ctx: ContexteDepot, version: Version, productio
       ordre: c.ordre, materiau: c.materiau, versionCorrigee: c.versionCorrigee, defaut: c.defaut,
       reponseAttendue: c.reponseAttendue, passageFautif: c.passageFautif, zone: c.zone, choix: c.choix,
       piece: c.piece ?? null,
+      reassemble: c.reassemble ?? null,
     })),
     texteSupport: ctx.texteSupport?.texte ?? null,
   }

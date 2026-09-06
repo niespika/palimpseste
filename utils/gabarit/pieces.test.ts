@@ -4,7 +4,7 @@ import assert from 'node:assert/strict'
 import {
   assemblerLObjet, composerLesPieces, constituantDeLaGrille, demandeDuGeste, lireLesPieces,
   nomDuConstituant, observablesDuConstituant, placeDeLaPieceVide, separerLeTrou,
-  composerLePlan, formeDuTrou, lireLePlan,
+  composerLePlan, formeDuTrou, lireLePlan, morceauxDuPassage, TROU_DU_CRAN_5,
 } from './pieces'
 
 // Les pièces réelles de `ex-gab-transition-annonce-vide-c2` (gabarit-c2.json, 06/09) —
@@ -152,4 +152,40 @@ test('le plan assemblé : une phrase par partie, le mot qui lie en tête, majusc
   assert.equal(lireLePlan('', THESES), null)
   assert.equal(lireLePlan('Un texte libre sans les thèses.', THESES), null)
   assert.equal(lireLePlan(composerLePlan(THESES, etat), []), null)
+})
+
+// ── ⭐ 06/09 — le cran 5 en texte à trou : le passage marqué devient le trou ──
+
+test('au cran 5, le passage marqué devient le trou ; avant et après sont les deux morceaux', () => {
+  const seg = [
+    { texte: "L'homme est libre. ", marque: false },
+    { texte: 'Donc il est responsable.', marque: true },
+    { texte: ' Voilà pourquoi on le juge.', marque: false },
+  ]
+  const p = morceauxDuPassage(seg, false)!
+  assert.deepEqual(p.pieces.map((x) => x.texte), ["L'homme est libre.", 'Voilà pourquoi on le juge.'])
+  assert.deepEqual(p.pieces.map((x) => x.nom), [TROU_DU_CRAN_5.avant, TROU_DU_CRAN_5.apres])
+  assert.equal(p.place, 1)
+  assert.equal(p.trou, TROU_DU_CRAN_5.passage)
+  assert.equal(p.forme, 'trou')
+  assert.equal(p.demande, null)
+  // Le passage en tête : un seul morceau, après ; le trou en place 0.
+  const tete = morceauxDuPassage([{ texte: 'Donc il est responsable.', marque: true }, { texte: ' La suite.', marque: false }], false)!
+  assert.deepEqual([tete.place, tete.pieces.length], [0, 1])
+  // Rien de marqué : pas de trou, l'écran d'hier.
+  assert.equal(morceauxDuPassage([{ texte: 'Rien.', marque: false }], false), null)
+})
+
+test('sur une INSERTION, le trou se glisse entre les deux mots marqués — rien n’est retiré', () => {
+  const seg = [
+    { texte: "L'homme est ", marque: false },
+    { texte: 'libre. Donc', marque: true },          // « dernier mot avant, premier après »
+    { texte: ' il est responsable.', marque: false },
+  ]
+  const p = morceauxDuPassage(seg, true)!
+  assert.deepEqual(p.pieces.map((x) => x.texte), ["L'homme est libre.", 'Donc il est responsable.'])
+  assert.equal(p.place, 1)
+  assert.equal(p.trou, TROU_DU_CRAN_5.insertion)
+  // Recollés, les deux morceaux redonnent le devoir entier.
+  assert.equal(p.pieces.map((x) => x.texte).join(' '), "L'homme est libre. Donc il est responsable.")
 })

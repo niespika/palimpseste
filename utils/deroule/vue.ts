@@ -49,7 +49,7 @@ import { lireReleveDeLangue, nombreDeFautes, ancrerLigneALigne, phraseDeLaChasse
   type AncrageFaute } from './langue'
 import { baliser, type Jeton } from './balisage'
 import { lireLeGabaritDuDepot, lireLeCran2, type GabaritDuDepot } from '@/utils/gabarit/lecture'
-import { composerLesPieces, formeDuTrou, type PiecesServies } from '@/utils/gabarit/pieces'
+import { composerLesPieces, formeDuTrou, morceauxDuPassage, type PiecesServies } from '@/utils/gabarit/pieces'
 import { appuiDu1a, appuiDu1b } from '@/utils/gabarit/candidats'
 import {
   consigneDuGabarit, demandeUneDesignationAuGabarit, sansDocuments, varianteDuCas, type Variante,
@@ -751,10 +751,13 @@ export async function chargerLeDeroule(
         ? demandeUneDesignationAuGabarit(ctx.cran, vCas)
         : demandeUneDesignation(regimeDeMarquage(cran?.marquage as string | null)),
       ...lireLaDesignation(credencesDonnees.find((c) => c.cas === i + 1)),
-      // ⭐ 06/09 — les pièces du cran 2, composées par la règle pure.
+      // ⭐ 06/09 — les pièces du cran 2, composées par la règle pure ; et, au
+      //    CRAN 5 du gabarit, le passage marqué devient le trou (`10-` v0.12
+      //    §2 bis.6, validé par Louis) — dérivé des segments marqués, un seul
+      //    domicile pour les bornes.
       pieces: cran2?.parCas.get(i + 1)
         ? composerLesPieces(ctx.objet, cran2.parCas.get(i + 1)!, cran2.geste)
-        : null,
+        : (gabarit.actif && ctx.cran === 5 && materiau ? morceauxDuPassage(materiau, insertion) : null),
     })
   }
 

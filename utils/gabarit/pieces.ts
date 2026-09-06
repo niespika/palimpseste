@@ -310,3 +310,55 @@ export function observablesDuConstituant(
   }
   return out
 }
+
+// ── ⭐ Le cran 5 en texte à trou (`10-` v0.12 §2 bis.6, validé par Louis le 06/09) ──
+
+/** Ce que le texte à trou du cran 5 dit du trou, en mots d'élève. */
+export const TROU_DU_CRAN_5 = {
+  passage: 'le passage à réécrire, sans ce problème',
+  insertion: 'ce qui manque à cet endroit',
+  avant: 'le devoir, avant le passage',
+  apres: 'le devoir, après le passage',
+} as const
+
+/**
+ * ⭐ LE TROU DU CRAN 5 — dérivé des segments que l'écran MARQUE déjà en gras
+ *    (`marquerLeMateriau`, la règle du `10-` §5 : le passage étendu aux bornes
+ *    de sa phrase) : un seul domicile pour les bornes, celui du marquage. Le
+ *    passage marqué devient le trou ; ce qui le précède et ce qui le suit sont
+ *    les deux morceaux servis. ⚠️ Sur une INSERTION, le marquage n'est pas un
+ *    passage à retirer mais « le dernier mot avant et le premier après » : le
+ *    trou se glisse entre les deux, à la première espace de la zone marquée, et
+ *    rien n'est retiré. `null` quand rien n'est marqué : pas de trou à servir,
+ *    l'écran reste celui d'hier.
+ */
+export function morceauxDuPassage(
+  segments: ReadonlyArray<{ texte: string; marque: boolean }>, insertion: boolean,
+): PiecesServies | null {
+  const contenu = segments.map((s) => s.texte).join('')
+  let debut = -1, fin = -1, curseur = 0
+  for (const s of segments) {
+    if (s.marque) { if (debut < 0) debut = curseur; fin = curseur + s.texte.length }
+    curseur += s.texte.length
+  }
+  if (debut < 0) return null
+  let avant: string, apres: string
+  if (insertion) {
+    const zone = contenu.slice(debut, fin)
+    const m = /\s+/.exec(zone)
+    const coupe = m ? debut + m.index + m[0].length : fin
+    avant = contenu.slice(0, coupe)
+    apres = contenu.slice(coupe)
+  } else {
+    avant = contenu.slice(0, debut)
+    apres = contenu.slice(fin)
+  }
+  const pieces: Piece[] = []
+  if (avant.trim() !== '') pieces.push({ nom: TROU_DU_CRAN_5.avant, texte: avant.trim() })
+  const place = pieces.length
+  if (apres.trim() !== '') pieces.push({ nom: TROU_DU_CRAN_5.apres, texte: apres.trim() })
+  return {
+    constituant: 'le passage', demande: null, place, pieces,
+    trou: insertion ? TROU_DU_CRAN_5.insertion : TROU_DU_CRAN_5.passage, forme: 'trou',
+  }
+}

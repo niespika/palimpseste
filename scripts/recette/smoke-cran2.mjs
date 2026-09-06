@@ -30,6 +30,7 @@ const CLE = args.find((a) => !a.startsWith('--')) ?? 'argument.garant.connecteur
 const DOSSIER = args.filter((a) => !a.startsWith('--'))[1] ?? `/tmp/smoke-cran2-${CLE.replace(/\./g, '-')}`
 const arg = (nom, defaut) => { const i = args.indexOf(nom); return i > 0 ? Number(args[i + 1]) : defaut }
 const PORT = arg('--port', 9349)
+const CRAN = arg('--cran', 2)                     // ⭐ 06/09 — le cran 5 en texte à trou se smoke ici aussi
 const MARQUE = '2026-09-06T02:02:02.202Z'          // la marque du décor, EN BASE — `--retire` la retrouve
 const BASE = `http://localhost:${arg('--port-app', 3000)}`
 const TAILLES = [1280, 768, 375]
@@ -37,7 +38,9 @@ const dors = (ms) => new Promise((r) => setTimeout(r, ms))
 
 /** Les pièces que le smoke écrit — une PIÈCE, pas l'objet ; par objet, sur le sujet réel affiché. */
 const PIECES = {
-  argument: "Ce qui prend le regard prend l'attention : un élève qui regarde son écran n'écoute plus, et une classe qui n'écoute plus n'apprend plus.",
+  argument: CRAN === 5
+    ? "Cette distraction fait perdre aux élèves une partie des explications : ce qui prend le regard prend l'attention, et un élève qui n'écoute plus n'apprend plus."
+    : "Ce qui prend le regard prend l'attention : un élève qui regarde son écran n'écoute plus, et une classe qui n'écoute plus n'apprend plus.",
   transition: "Mais cet effort ne dit rien encore de la somme qu'on lui verse : on peut mériter une récompense sans que son montant soit juste.",
   plan: 'D\'abord, les réseaux sociaux sont utiles pour communiquer et s\'informer. Mais ils créent aussi une dépendance et réduisent les relations directes. Donc s\'en passer ferait gagner en autonomie et en tranquillité.',
   defaut: "Voici la pièce qui tient les autres ensemble : ce que les pièces servies ne disent pas encore, et sans quoi elles ne tiennent pas.",
@@ -96,13 +99,16 @@ if (args.includes('--decor-plan')) {
     console.log('exercice de décor créé :', neuf.id)
   } else console.log('exercice de décor déjà là :', deja.id)
 }
-const souche = args.includes('--decor-plan') ? DECOR_PLAN : `ex-gab-${CLE.replace(/\./g, '-')}-c2`
+const souche = args.includes('--decor-plan') ? DECOR_PLAN : `ex-gab-${CLE.replace(/\./g, '-')}-c${CRAN}`
 const { data: exs } = await admin.from('exercices').select('id, id_import, cran, type_id, genre, statut').eq('id_import', souche)
 const ex = exs?.[0]
 if (!ex) throw new Error(`aucun exercice ${souche} en bac à sable — la banque gabarit-c2.json n'est pas déposée`)
-const { data: cas } = await admin.from('exercices_cas').select('ordre, constituant, pieces, reponse_attendue').eq('exercice_id', ex.id).order('ordre')
+const { data: cas } = await admin.from('exercices_cas').select('ordre, constituant, pieces, reponse_attendue, probleme').eq('exercice_id', ex.id).order('ordre')
 const c1 = cas?.[0]
-if (!c1?.constituant || !Array.isArray(c1.pieces) || !c1.pieces.length) throw new Error('le cas ne porte ni constituant ni pièces : pas un cran 2 du gabarit')
+if (CRAN === 2 && (!c1?.constituant || !Array.isArray(c1.pieces) || !c1.pieces.length)) throw new Error('le cas ne porte ni constituant ni pièces : pas un cran 2 du gabarit')
+if (CRAN === 5 && !c1?.probleme) throw new Error('le cas ne porte pas de clé de problème : pas un cran 5 du gabarit')
+if (!c1) throw new Error('aucun cas')
+c1.constituant ??= 'le passage'; c1.pieces ??= []
 const { data: type } = await admin.from('exercices_types').select('code').eq('id', ex.type_id).maybeSingle()
 const objet = type?.code ?? 'defaut'
 console.log(`exercice ${souche} (${ex.id}) · objet ${objet} · statut ${ex.statut} · constituant « ${c1.constituant} » · ${c1.pieces.length} pièces (${c1.pieces.map((p) => p.texte === null ? 'TROU' : p.texte.length).join('/')} car.) · attendue ${c1.reponse_attendue?.length ?? 0} car.`)
@@ -257,7 +263,8 @@ try {
   constat(e.trou, 'le trou « Écris ici » est un champ posé dans le fil du texte')
   constat(e.legende, 'la légende nomme les moments et le trou')
   constat(!e.piecesDansLesDocuments, 'les morceaux ne sont pas dans « Les documents »')
-  constat(e.consigne2, 'la consigne du cran 2 (« le texte à compléter ») est celle du 10- v0.9 §3')
+  if (CRAN === 2) constat(e.consigne2, 'la consigne du cran 2 (« le texte à compléter ») est celle du 10- v0.9 §3')
+  else constat(!/Le devoir d'élève/.test(await cdp.evalue("[...document.querySelectorAll('h3')].map((h) => h.textContent).join('|')")), 'le devoir d\'élève n\'est plus dans « Les documents » (il est le texte à trou)')
   constat(!e.ilManque, 'le mot « il manque » n\'apparaît nulle part')
   constat(!e.guide, 'le guide « De quoi t\'aider » ne se sert pas')
   await capture('ouvert-documents', { lire: true })
