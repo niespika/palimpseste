@@ -7,7 +7,9 @@
 // ⭐ 06/09 — LES ARBITRAGES DE LOUIS SUR LA MAQUETTE INTERACTIVE : le texte est
 //    DANS LE FIL — les morceaux se suivent sans saut de ligne, le trou est
 //    entre eux, et c'est le champ lui-même ; dans le cadre vert il n'y a que
-//    « Écris ici » ; les morceaux servis sont encadrés d'une autre couleur ;
+//    « Écris ici » ; les morceaux servis sont encadrés d'une autre couleur — la
+//    teinte info, bleu-gris clair (« tout est en brun, il faudrait que ce soit
+//    plus clair », Louis) ;
 //    les noms des moments ne sont pas en gras dans le texte (« ça ne marche pas
 //    au fil du texte ») mais dans une LÉGENDE sous le texte — « ce bloc = telle
 //    chose », pour que le texte coule et qu'on comprenne que chaque moment
@@ -39,9 +41,9 @@ export function TexteATrou({ pieces, children }: { pieces: PiecesServies; childr
       // ⚠️ Pas de `box-decoration-break: clone` : il encadrait CHAQUE LIGNE d'un
       //    morceau à part, et le texte se lisait haché (smoke du 06/09). Le cadre
       //    est continu : il s'ouvre au premier mot, se ferme au dernier.
-      className="rounded-[5px] border border-attention/35 bg-attention-teinte px-1.5 py-0.5"
+      className="rounded-[5px] border border-info/30 bg-info-teinte px-1.5 py-0.5"
     >
-      <sup className="mr-1 select-none font-ui text-[11px] text-attention" aria-hidden>{REPERES[i] ?? '·'}</sup>
+      <sup className="mr-1 select-none font-ui text-[11px] text-info" aria-hidden>{REPERES[i] ?? '·'}</sup>
       {p.texte}
     </span>
   )
@@ -63,7 +65,7 @@ export function TexteATrou({ pieces, children }: { pieces: PiecesServies; childr
       <dl className="grid grid-cols-[auto_1fr] gap-x-2.5 gap-y-1 font-corps text-[14px] leading-snug text-encre-douce">
         {pieces.pieces.map((p, i) => (
           <div key={`l${i}`} className="contents">
-            <dt className="select-none font-ui text-[13px] text-attention" aria-hidden>{REPERES[i] ?? '·'}</dt>
+            <dt className="select-none font-ui text-[13px] text-info" aria-hidden>{REPERES[i] ?? '·'}</dt>
             <dd className="m-0">{p.nom}</dd>
           </div>
         ))}

@@ -276,11 +276,13 @@ try {
       await cdp.envoie('Input.insertText', { text: mots[i] }); await dors(150)
     }
     await dors(300); await capture('plan-ordonne')
+    if (args.includes('--jusqua-piece')) throw Object.assign(new Error('fin : jusqu\'à la pièce'), { fin: true })
     await clique('Enregistrer'); await attendQue((x) => !x.plan)
   } else {
     const idx = e.textareas.findIndex((x) => x.trou)
     if (idx < 0) throw new Error('pas de champ « Écris ici »')
     await tape(idx, PIECES[objet] ?? PIECES.defaut); await dors(400); await capture('piece-ecrite')
+    if (args.includes('--jusqua-piece')) throw Object.assign(new Error('fin : jusqu\'à la pièce'), { fin: true })
     await clique('Enregistrer'); await attendQue((x) => !x.textareas.some((y) => y.trou))
   }
   for (let pas = 0; pas < 8; pas++) {

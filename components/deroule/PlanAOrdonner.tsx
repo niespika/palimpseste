@@ -168,7 +168,7 @@ export function PlanAOrdonner({
                                focus:border-solid focus:border-pigment"
                   />
                 )}
-                <span className="rounded-[5px] border border-attention/35 bg-attention-teinte px-1.5 py-0.5">
+                <span className="rounded-[5px] border border-info/30 bg-info-teinte px-1.5 py-0.5">
                   {these.texte}
                 </span>
               </p>
@@ -196,7 +196,7 @@ export function PlanAOrdonner({
       {/* La légende — « ce bloc = telle chose » (Louis, 06/09). */}
       <dl className="grid grid-cols-[auto_1fr] gap-x-2.5 gap-y-1 font-corps text-[14px] leading-snug text-encre-douce">
         <div className="contents">
-          <dt className="select-none font-ui text-[13px] text-attention" aria-hidden>▮</dt>
+          <dt className="select-none font-ui text-[13px] text-info" aria-hidden>▮</dt>
           <dd className="m-0">{theses[0]?.nom ?? 'une thèse'} — les flèches changent l’ordre.</dd>
         </div>
         <div className="contents">
