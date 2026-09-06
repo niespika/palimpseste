@@ -358,3 +358,19 @@ test('« Le canal bouché » : Expression D, Quest. D, Argu C, Struct C — tron
   assert.equal(regimeR1('C', false, 0, 3).actif, false)
   assert.equal(regimeR1('B', false, 0, 3).secondaireSurProduire, false)
 })
+
+// ── ⭐ C7-L7 (Louis, 06/09 nuit) — sous le gabarit, R2 sert tout le trio ──────
+
+test('⭐ C7-L7 — `trioEntier` : après la plus faible, le reste du trio, par retard puis ordre de levier', () => {
+  const etats = [et('argumentation', { lettre: 'D', signal: 'D', valeurNonPlafonnee: 'D' }), et('structure', { lettre: 'D', signal: 'C', valeurNonPlafonnee: 'C' }),
+    et('questionnement', { signal: 'E', valeurNonPlafonnee: 'E' }), et('expression', { lettre: 'B', signal: 'B', valeurNonPlafonnee: 'B' })]
+  const sans = listeDePriorite(etats, ctx({ segment: 3 })).liste.filter((e) => e.regle === 'R2').map((e) => e.competence)
+  assert.deepEqual(sans, ['argumentation'], 'hier : une seule cible R2')
+  const { liste, journal } = listeDePriorite(etats, ctx({ segment: 3, trioEntier: true }))
+  // Le Questionnement n'est pas entré (Argumentation et Structure sous C) : le trio se réduit à deux.
+  assert.deepEqual(liste.filter((e) => e.regle === 'R2').map((e) => e.competence), ['argumentation', 'structure'])
+  assert.deepEqual((journal.R2 as { trioEntier: string[] }).trioEntier, ['structure'])
+  assert.match(liste[1]!.motif, /trio entier sous le gabarit/)
+  // Chaque entrée garde sa bande de crans.
+  assert.ok(liste.every((e) => e.crans && e.crans.length > 0))
+})

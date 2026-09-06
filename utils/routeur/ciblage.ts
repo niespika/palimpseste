@@ -475,6 +475,34 @@ export interface ContextePriorite {
   K: number
   tirer: () => number
   nombreDeMesures: (c: Competence) => number
+  /**
+   * ⭐ C7-L7 (Louis, 06/09 nuit) — SOUS LE GABARIT, R2 SERT TOUT LE TRIO : la plus
+   *    faible d'abord, puis les autres membres éligibles, par retard puis par
+   *    l'ordre de levier. Sans quoi un objet OUVERT d'une compétence du trio non
+   *    élue ce cycle n'a aucune compétence par où entrer à la pose (règle 2 du
+   *    `01-` v5.11 §4 : « un exercice par objet ouvert et par cycle »). Absent :
+   *    la liste d'hier, à l'octet — une seule cible R2.
+   */
+  trioEntier?: boolean
+}
+
+/**
+ * ⭐ C7-L7 — les autres membres du trio, après la cible de R2 : ceux que R0 et le
+ *    seuil du Questionnement laissent, du plus en retard au moins en retard, puis
+ *    dans l'ordre de levier. `[]` sans cible.
+ */
+export function trioApresLaCible(etats: readonly EtatPourCiblage[], cible: Competence | null): Competence[] {
+  if (!cible) return []
+  let candidates = etats.filter((e) => TRIO.includes(e.competence) && e.competence !== cible)
+  if (!questionnementEstEntre(etats)) candidates = candidates.filter((e) => e.competence !== 'questionnement')
+  const ordre = ordreDeLevier(etats)
+  const retard = (e: EtatPourCiblage): number => {
+    const v = e.signal ?? e.valeurNonPlafonnee
+    return v === null ? Number.POSITIVE_INFINITY : rangPalier(v)
+  }
+  const rang = (c: Competence) => { const i = ordre.indexOf(c); return i < 0 ? 99 : i }
+  return [...candidates].sort((a, b) => retard(a) - retard(b) || rang(a.competence) - rang(b.competence))
+    .map((e) => e.competence)
 }
 
 /**
@@ -535,6 +563,15 @@ export function listeDePriorite(
   journal.R2 = r2
   if (r2.cible && !liste.some((x) => x.competence === r2.cible)) {
     liste.push({ competence: r2.cible, regle: 'R2', motif: r2.motif })
+  }
+  // ⭐ C7-L7 — sous le gabarit, le reste du trio suit la cible, dans l'ordre du retard.
+  if (ctx.trioEntier) {
+    const reste = trioApresLaCible(pool, r2.cible)
+    journal.R2 = { ...r2, trioEntier: reste }
+    for (const c of reste) {
+      if (liste.some((x) => x.competence === c)) continue
+      liste.push({ competence: c, regle: 'R2', motif: 'trio entier sous le gabarit : après la plus faible, par retard puis ordre de levier.' })
+    }
   }
 
   // R5 — la dette de couverture. Elle INSCRIT, elle n'élit pas.

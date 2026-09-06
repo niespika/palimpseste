@@ -1,7 +1,7 @@
 // C7-L7 — l'état d'un objet par élève : DÉRIVÉ, jamais stocké (`01-` v5.11 §4, couche 3).
 import { describe, it } from 'node:test'
 import assert from 'node:assert/strict'
-import { auDessusDuPalier, bandeDuPalier, etatDeLObjet, numeroDuCran } from './objet'
+import { auDessusDuPalier, bandeDuPalier, etatDeLObjet, numeroDuCran, prerequisDeLaBande } from './objet'
 import type { LigneRegistre } from './reussites'
 
 const ligne = (cran: number, reussites: Array<[string, string]>, objet = 'argument'): LigneRegistre => ({
@@ -75,7 +75,8 @@ describe('les trois états — en méthode, ouvert, tenu', () => {
     const c = etatDeLObjet([], 'argument', true, 'C', [1, 3, 4, 5, 7, 9])
     assert.deepEqual(c.bande, [4, 5, 7])
     assert.deepEqual(c.cransAbsents, [6])
-    assert.equal(c.cranAServir, 4)
+    // ⭐ Q2 : le registre exige le 1 avant le 4 — le cran à servir est sous la bande.
+    assert.equal(c.cranAServir, 1)
   })
 
   it('⚠️ le palier qui indexe est celui de la COMPÉTENCE CIBLE : tenu à B, ouvert à D sur le même objet (piège 5)', () => {
@@ -94,5 +95,26 @@ describe('les trois états — en méthode, ouvert, tenu', () => {
   it('le registre d\'un autre objet ne compte pas', () => {
     const v = etatDeLObjet([tenu(1, 'exemple'), tenu(2, 'exemple')], 'argument', true, 'D', TOUS)
     assert.deepEqual(v.tenus, [])
+  })
+})
+
+describe('⭐ Q2 (lecture de la séance, à confirmer) — le cran d\'en dessous que le registre exige, sous la bande', () => {
+  it('à C, la bande est 4·5·7 (sans 6) et ses prérequis 1·3 : rien de tenu ⇒ le 1 est à servir, sous la bande', () => {
+    const v = etatDeLObjet([], 'argument', true, 'C', [1, 3, 4, 5, 7, 9])
+    assert.deepEqual(v.bande, [4, 5, 7])
+    assert.deepEqual(v.prerequis, [1, 3])
+    assert.equal(v.cranAServir, 1)
+    assert.match(v.motif, /sous la bande, exigé par le registre/)
+    // Le 1 tenu ⇒ le 3 ; le 1 et le 3 tenus ⇒ le 4 (la bande).
+    assert.equal(etatDeLObjet([tenu(1)], 'argument', true, 'C', [1, 3, 4, 5, 7, 9]).cranAServir, 3)
+    assert.equal(etatDeLObjet([tenu(1), tenu(3)], 'argument', true, 'C', [1, 3, 4, 5, 7, 9]).cranAServir, 4)
+    // « Tenu » se compte toujours sur la bande seule.
+    assert.equal(etatDeLObjet([tenu(4), tenu(5), tenu(7)], 'argument', true, 'C', [1, 3, 4, 5, 7, 9]).etat, 'tenu')
+  })
+
+  it('à E-D, la bande commence en bas des échelles : aucun prérequis', () => {
+    assert.deepEqual(etatDeLObjet([], 'argument', true, 'D', TOUS).prerequis, [])
+    assert.deepEqual(prerequisDeLaBande([7, 8], [1, 2, 3, 4, 5, 6, 7, 8, 9]), [2, 3, 5, 6])
+    assert.deepEqual(prerequisDeLaBande([7, 8], [3, 5, 7, 8]), [3, 5])
   })
 })

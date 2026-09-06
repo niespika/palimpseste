@@ -668,6 +668,8 @@ export async function composerPourUnEleve(
     K: KdeR5(exercicesParCycle(decisions, vivier.retenus, budget.budget.plafond), evaluees),
     tirer: journal.tirerUnNombre('R3'),
     nombreDeMesures,
+    // ⭐ C7-L7 (Louis, 06/09 nuit) — sous le gabarit, R2 sert tout le trio.
+    trioEntier: porte.actif,
   })
   const listeComplete: EntreeDePriorite[] = [...liste]
   const pa3 = secondeInscriptionPA3(liste, etats)
@@ -784,7 +786,9 @@ async function poserLaSemaineDUnEleve(admin: Admin, c: ContextePose): Promise<Po
   //    à côté : UNE SEULE phase B, pour la semaine comme pour le pull (piège 10).
   const semaine = poserLaSemaine(listeComplete, budget.budget,
     (comp, dejaPoses) => candidatsPour(retenus, comp, dejaPoses, expressionEnSecondaire, compo.objets),
-    journal.tirer<string>('phase_b'))
+    journal.tirer<string>('phase_b'), undefined,
+    // ⭐ C7-L7 (Louis, 06/09 nuit) — sous le gabarit, PB2 lit l'OBSERVABLE, plus la compétence.
+    { pb2: compo.objets ? 'observable' : 'competence' })
   out.exercicesPoses = semaine.exercices.length
   // Les objets que la règle a écartés, comptés au bilan comme les écarts du vivier.
   for (const e of compo.objets?.journal.ecartes.values() ?? []) {

@@ -340,8 +340,13 @@ export function ordonnerParObjet(
         .map((x) => x.score).sort(cmp)
       const cleIdx = cles.findIndex((s) => cmp(s, k.score) === 0)
       const rang = groupe + (indexDe.get(o) ?? 0) * 10_000 + k.sous * 100 + Math.max(0, cleIdx)
+      // ⭐ Le cran est-il SOUS la bande, exigé par le registre — la séquence de
+      //    méthode, ou le cran d'en dessous d'une échelle ? La bande dure le laisse alors.
+      const cran = k.r.instance.cranNumero ?? 0
+      const rattrapage = k.r.porte === 'methode'
+        || vieDeLObjet(ctx, o, competence).prerequis.includes(cran)
       ctx.journal.elections.set(k.c.exerciceId, k.election)
-      out.push({ ...k.c, ordre: { rang, objet: o, motif: k.election.motif } })
+      out.push({ ...k.c, ordre: { rang, objet: o, motif: k.election.motif, rattrapage } })
     }
   }
   return out
@@ -391,6 +396,7 @@ export function journalDeLObjet(
     palier: vie?.palier ?? ctx.paliers.get(competence) ?? null,
     bande: vie?.bande ?? null,
     crans_absents: vie?.cransAbsents ?? null,
+    prerequis: vie?.prerequis ?? null,
     cran_a_servir: vie?.cranAServir ?? null,
     semaine_1: ctx.semaine1,
     observable: election

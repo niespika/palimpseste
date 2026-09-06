@@ -193,6 +193,7 @@ function posesDeLaSemaine(
     // ⭐ C7-L7 — l'OBJET du déjà-posé, lui, se lit : « un exercice par objet
     //    ouvert et par cycle » vaut pour le pull (piège 12), et PB3 compare l'objet.
     candidat.ordre = { rang: 0, objet: inst.objet, motif: 'déjà posé cette semaine' }
+    candidat.observable = inst.observable?.code ?? null
     out.push({ candidat, regle: 'R1', departageParPB3: false, tirage: false, tour: d.tour })
   }
   return out
@@ -366,6 +367,7 @@ export async function servirUnExerciceDePlus(
       compo.expressionEnSecondaire, compo.objets),
     compo.journal.tirer<string>('phase_b'),
     { dejaPoses, maxAPoser: 1 },
+    { pb2: compo.objets ? 'observable' : 'competence' },
   )
   const elu = passe.posesDeCettePasse[0]
   // ⚠️ Le quota n'est pas épuisé et pourtant rien ne tient : c'est un troisième

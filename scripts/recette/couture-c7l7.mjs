@@ -191,7 +191,7 @@ function coutureTrois(gab, doctrine) {
   const ctx = contexteDesObjets({ registre, dejaServis: new Set(['argument']), paliers, cransParObjet, observables: new Map(), mesuresParCode: new Map(), plafond: 60, situation: 'tc_seul' })
   const ordonnes = ordonnerParObjet(candidatsPour(vO.retenus, 'argumentation', []), vO.retenus, 'argumentation', [], ctx).sort((p, q) => p.ordre.rang - q.ordre.rang)
   const semaine = poserLaSemaine([{ competence: 'argumentation', regle: 'R2', motif: '' }], { plancher: 45, plafond: 60, optionnel: 30 },
-    (comp, poses) => candidatsPour(vO.retenus, comp, poses, false, ctx))
+    (comp, poses) => candidatsPour(vO.retenus, comp, poses, false, ctx), undefined, undefined, { pb2: 'observable' })
   const posesArg = semaine.exercices.map((e) => vO.retenus.find((r) => r.instance.exerciceId === e.candidat.exerciceId))
   console.log(`b) ouvert : ${enQuarantaine.length} instance(s) du devoir servi écartée(s) \`devoir_en_quarantaine\` · candidats ordonnés ${ordonnes.length} (crans ${[...new Set(ordonnes.map((c) => c.cran))].join(',')}) `
     + `· la phase B pose ${semaine.exercices.length} exercice(s) sur « argument » — cran ${posesArg.map((r) => r?.instance.cranNumero).join(',')}, devoir ${posesArg.map((r) => (r?.devoir.ids[0] ?? '?').slice(0, 8)).join(',')} ≠ ${String(devoirServi).slice(0, 8)} ? ${posesArg.every((r) => !r?.devoir.ids.includes(devoirServi))}`)
@@ -206,7 +206,7 @@ function coutureTrois(gab, doctrine) {
 // ── LES DÉCISIONS EN BASE, LUES PAR REQUÊTE ──────────────────────────────────
 async function decisionsDuCycle(eleveId, cycle) {
   const { data, error } = await admin.from('routeur_decisions')
-    .select('id, cycle_lundi, cible_retenue, regle_declenchee, bonus, degrade, alternatives_ecartees, sondes_retenues, exercices(cran, id_import, exercices_types(code), exercices_cas(materiau_id, probleme))')
+    .select('id, exercice_id, cycle_lundi, cible_retenue, regle_declenchee, bonus, degrade, alternatives_ecartees, sondes_retenues, exercices(id, cran, id_import, exercices_types(code), exercices_cas(materiau_id, probleme))')
     .eq('eleve_id', eleveId).eq('cycle_lundi', cycle).order('created_at', { ascending: true }).order('id', { ascending: true })
   if (error) throw new Error(error.message)
   return data ?? []
@@ -242,7 +242,10 @@ async function essai() {
   // LE DÉCOR, ET IL SE DIT : D en Argumentation et en Structure (la séquence E-D,
   // et la bande 1·2·3·4·5 — voir la question ouverte sur le palier C au relevé),
   // et les instances 1.5 passées `concu` (le geste de `passer-concu.mjs`).
-  for (const comp of ['argumentation', 'structure']) {
+  // ⭐ Les LETTRES restent celles de l'élève (C en Argumentation et en Structure) : c'est le palier C
+  //    qui éprouve la lecture de Q2 — le cran d'en dessous exigé par le registre. `--lettres-d` remet
+  //    le décor D des deux premiers essais.
+  if (a('lettres-d')) for (const comp of ['argumentation', 'structure']) {
     const n = niveaux.find((x) => x.competence === comp)
     if (n && n.lettre !== 'D' && n.lettre !== 'E') {
       lu(`lettre ${comp}`, await admin.from('competences_niveaux').update({ lettre: 'D' }).eq('eleve_id', eleveId).eq('competence', comp).select('competence'))
@@ -308,7 +311,7 @@ async function essai() {
   const retenus = retenusPourLaPose(compo).retenus
   if (compo.objets) compo.objets.plafond = 20
   const s20 = poserLaSemaine(compo.listeComplete, { ...compo.budget.budget, plafond: 20 },
-    (comp, poses) => candidatsPour(retenus, comp, poses, compo.expressionEnSecondaire, compo.objets), compo.journal.tirer('phase_b'))
+    (comp, poses) => candidatsPour(retenus, comp, poses, compo.expressionEnSecondaire, compo.objets), compo.journal.tirer('phase_b'), undefined, { pb2: 'observable' })
   const horsBudget = [...(compo.objets?.journal.ecartes.values() ?? [])].filter((e) => e.motif === 'objet_entree_hors_budget')
   console.log(`posés ${s20.exercices.length} (${s20.exercices.map((e) => `${retenus.find((r) => r.instance.exerciceId === e.candidat.exerciceId)?.instance.objet}/${e.candidat.cran}`).join(', ')}) · arrêt : ${s20.journal.motifArret}`)
   console.log(`objets neufs hors budget : ${horsBudget.map((e) => `${e.objet} — ${e.detail}`).join(' | ') || 'aucun'}`)
@@ -403,7 +406,7 @@ async function essai() {
     for (let i = 0; i < 4; i++) {
       if (compoP.objets) compoP.objets.plafond = minutesSemaine + restant
       const passe = poserLaSemaine(compoP.listeComplete, { ...compoP.budget.budget, plafond: minutesSemaine + restant },
-        (comp, p) => candidatsPour(retenusP, comp, p, compoP.expressionEnSecondaire, compoP.objets), compoP.journal.tirer('phase_b'), { dejaPoses: poses, maxAPoser: 1 })
+        (comp, p) => candidatsPour(retenusP, comp, p, compoP.expressionEnSecondaire, compoP.objets), compoP.journal.tirer('phase_b'), { dejaPoses: poses, maxAPoser: 1 }, { pb2: 'observable' })
       const elu = passe.posesDeCettePasse[0]
       if (!elu) { console.log(`pull ${i + 1} : rien ne tient — ${passe.journal.motifArret} · écarts par objet : ${[...(compoP.objets?.journal.ecartes.values() ?? [])].map((e) => `${e.objet} ${e.motif}`).join(', ') || 'aucun'}`); break }
       const r = retenusP.find((x) => x.instance.exerciceId === elu.candidat.exerciceId)

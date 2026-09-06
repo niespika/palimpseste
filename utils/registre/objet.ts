@@ -33,7 +33,27 @@
 // ============================================================================
 import { BANDES_CRANS } from '../routeur/config'
 import { CRANS, type Lettre, type Palier } from '../routeur/types'
-import { cranTenu, reussitesCompteesAuCran, REUSSITES_POUR_DEBLOQUER, type LigneRegistre } from './reussites'
+import { cranTenu, ECHELLES, reussitesCompteesAuCran, REUSSITES_POUR_DEBLOQUER, type LigneRegistre } from './reussites'
+
+/**
+ * ⭐ C7-L7 (lecture de la séance, à confirmer — relevé, Q2) — LES CRANS QUE LE
+ *    REGISTRE EXIGE SOUS LA BANDE : pour chaque cran de la bande, les crans d'en
+ *    dessous de son échelle (`1 → 4 → 9`, `3 → 5 → 7`, `2 → 6 → 8`), parmi ceux
+ *    que la banque porte. Un élève à C ne peut tenir le 4 qu'après deux réussites
+ *    au 1 : « la hiérarchie des crans n'a de sens que si on la respecte » (`10-`
+ *    §7) — le 1 est donc à servir, même s'il « ne sort pas d'E-D » (`01-` §4).
+ */
+export function prerequisDeLaBande(bande: readonly number[], cransDisponibles: readonly number[]): number[] {
+  const out = new Set<number>()
+  for (const c of bande) {
+    for (const e of ECHELLES) {
+      const i = e.indexOf(c)
+      if (i < 0) continue
+      for (let j = 0; j < i; j++) if (cransDisponibles.includes(e[j]!) && !bande.includes(e[j]!)) out.add(e[j]!)
+    }
+  }
+  return [...out].sort((a, b) => a - b)
+}
 
 export type EtatDeLObjet = 'methode' | 'ouvert' | 'tenu'
 
@@ -70,9 +90,11 @@ export interface VieDeLObjet {
   bande: number[]
   /** Les crans de la bande que le palier porte et que la banque n'a PAS (piège 4). */
   cransAbsents: number[]
+  /** ⭐ Les crans SOUS la bande que le registre exige pour la tenir (`prerequisDeLaBande`). */
+  prerequis: number[]
   tenus: number[]
   nonTenus: number[]
-  /** Le cran non tenu le plus bas de la bande — `null` quand l'objet est tenu, ou la bande vide. */
+  /** Le cran non tenu le plus bas — de la bande, ou de ses prérequis — ; `null` quand l'objet est tenu, ou la bande vide. */
   cranAServir: number | null
   /** En clair, pour le journal. */
   motif: string
@@ -93,25 +115,28 @@ export function etatDeLObjet(
   const pleine = bandeDuPalier(palier)
   const bande = pleine.filter((c) => cransDisponibles.includes(c))
   const cransAbsents = pleine.filter((c) => !cransDisponibles.includes(c))
+  const prerequis = prerequisDeLaBande(bande, cransDisponibles)
   const absents = cransAbsents.length ? ` (bande réduite : crans ${cransAbsents.join('·')} absents de la banque)` : ''
   if (!dejaServi) {
-    return { objet, etat: 'methode', palier, bande, cransAbsents, tenus: [], nonTenus: bande,
+    return { objet, etat: 'methode', palier, bande, cransAbsents, prerequis, tenus: [], nonTenus: bande,
       cranAServir: null,
       motif: `« ${objet} » jamais servi sous le gabarit : semaine de méthode${absents}.` }
   }
   const tenus = bande.filter((c) => cranTenu(registre, objet, c))
   const nonTenus = bande.filter((c) => !tenus.includes(c))
   if (bande.length > 0 && nonTenus.length === 0) {
-    return { objet, etat: 'tenu', palier, bande, cransAbsents, tenus, nonTenus, cranAServir: null,
+    return { objet, etat: 'tenu', palier, bande, cransAbsents, prerequis, tenus, nonTenus, cranAServir: null,
       motif: `« ${objet} » tenu au palier ${palier ?? 'E'} : les crans ${bande.join('·')} sont tenus par `
         + `« deux et deux » — il sort du centre et ne revient qu'en sonde${absents}.` }
   }
-  const cranAServir = nonTenus[0] ?? null
+  // Le cran non tenu le plus bas — la bande ET ce que le registre exige en dessous.
+  const cranAServir = [...prerequis.filter((c) => !cranTenu(registre, objet, c)), ...nonTenus].sort((a, b) => a - b)[0] ?? null
   const compte = cranAServir === null ? '' : ` ; le ${cranAServir} compte ${reussitesCompteesAuCran(registre, objet, cranAServir)} `
     + `réussite(s) sur ${REUSSITES_POUR_DEBLOQUER} attendues`
-  return { objet, etat: 'ouvert', palier, bande, cransAbsents, tenus, nonTenus, cranAServir,
+  const sous = cranAServir !== null && prerequis.includes(cranAServir) ? ` — sous la bande, exigé par le registre` : ''
+  return { objet, etat: 'ouvert', palier, bande, cransAbsents, prerequis, tenus, nonTenus, cranAServir,
     motif: bande.length === 0
       ? `« ${objet} » ouvert au palier ${palier ?? 'E'}, mais la bande est vide${absents}.`
-      : `« ${objet} » ouvert au palier ${palier ?? 'E'} : cran non tenu le plus bas ${cranAServir}`
+      : `« ${objet} » ouvert au palier ${palier ?? 'E'} : cran non tenu le plus bas ${cranAServir}${sous}`
         + `${tenus.length ? ` (tenus : ${tenus.join('·')})` : ''}${compte}${absents}.` }
 }

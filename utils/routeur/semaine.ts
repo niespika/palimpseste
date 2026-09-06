@@ -84,7 +84,24 @@ export interface Candidat {
    *    ⛔ Absent, la phase B est celle d'hier, à l'octet : PB1 sur le grain,
    *    PB3 sur le cran, le mode et le grain, puis le tirage.
    */
-  ordre?: { rang: number; objet: string; motif: string }
+  ordre?: {
+    rang: number; objet: string; motif: string
+    /**
+     * ⭐ C7-L7 — le cran est SOUS la bande du palier de la cible, et le registre
+     *    l'exige (le cran d'en dessous d'une échelle, ou la séquence de méthode) :
+     *    la bande dure (`entree.crans`) ne l'écarte pas. Lecture de la séance,
+     *    à confirmer par Louis (relevé, Q2) : « la hiérarchie des crans n'a de
+     *    sens que si on la respecte » (`10-` §7).
+     */
+    rattrapage?: boolean
+  }
+  /** ⭐ C7-L7 — l'observable de la clé (`code`) : ce que PB2 compare sous le gabarit. */
+  observable?: string | null
+}
+
+/** ⭐ C7-L7 — sur quoi PB2 lit « la même » : la compétence (hier), ou l'observable (Louis, 06/09 nuit, sous le gabarit). */
+export interface OptionsDePose {
+  pb2?: 'competence' | 'observable'
 }
 
 export interface ExercicePose {
@@ -214,7 +231,17 @@ export function poserLaSemaine(
    *   hebdomadaire, qui ne le passe pas.
    */
   reprise?: RepriseDeLaPose,
+  /**
+   * ⭐ C7-L7 — `pb2: 'observable'` (Louis, 06/09 nuit) : « la règle valait quand on
+   *   mesurait des compétences au complet ; là on regarde des observables — jamais
+   *   deux fois de suite le MÊME OBSERVABLE ; l'esprit de PB2, c'est l'interleaving ».
+   *   La permutation à la couture ne joue plus sur la compétence ; un candidat qui
+   *   redonnerait l'observable du précédent est écarté ; un candidat SANS observable
+   *   (banque 1.4) reste sous la règle d'hier. Défaut `'competence'` : à l'octet.
+   */
+  options: OptionsDePose = {},
 ): SemainePosee {
+  const pb2Observable = options.pb2 === 'observable'
   // ⭐ Les déjà-posés entrent AVANT la boucle : PB2 voit la dernière compétence
   //   servie, PB3 compare au dernier exercice réel, et PB6 borne sur le total.
   const exercices: ExercicePose[] = reprise ? [...reprise.dejaPoses] : []
@@ -259,8 +286,9 @@ export function poserLaSemaine(
     let entree = liste[i]
 
     // PB2 — jamais deux fois de suite la même compétence. À la couture comme ailleurs.
-    const derniere = exercices[exercices.length - 1]?.candidat.competence
-    if (derniere === entree.competence && liste.length > 1) {
+    const dernier = exercices[exercices.length - 1]?.candidat
+    const derniere = dernier?.competence
+    if (!pb2Observable && derniere === entree.competence && liste.length > 1) {
       const suivante = liste[(i + 1) % liste.length]
       if (suivante.competence !== entree.competence) {
         entree = suivante
@@ -268,10 +296,15 @@ export function poserLaSemaine(
         i += 1 // on a consommé la suivante ; le tour reprendra à celle qu'on saute
       }
     }
+    // ⭐ C7-L7 — sous le gabarit, « la même » est l'OBSERVABLE : deux candidats qui
+    //    portent un observable se comparent dessus ; sans observable, la compétence.
+    const memeChose = (c: Candidat) => pb2Observable && dernier && dernier.observable && c.observable
+      ? c.observable === dernier.observable
+      : c.competence === derniere
 
     const candidats = candidatsPour(entree.competence, exercices)
-      // PB2, encore : un candidat qui redonnerait la même compétence de suite est écarté.
-      .filter((c) => c.competence !== derniere || liste.length === 1)
+      // PB2, encore : un candidat qui redonnerait la même chose de suite est écarté.
+      .filter((c) => !dernier || !memeChose(c) || liste.length === 1)
       // ⭐ LES BORNES DE L'ENTRÉE — le grain de calibration (`01-` §6, segment 2)
       //   et la bande de crans du palier de la cible (`01-` §4, couche 3, la part
       //   DURE : « tout cran absent d'une ligne vaut 0 % »). Elles se lisent SUR
@@ -280,7 +313,9 @@ export function poserLaSemaine(
       // ⚠️ Absentes, elles ne bornent rien — hors calibration, le grain relève des
       //    proportions du §7, qui sont une préférence et jamais un filtre.
       .filter((c) => !entree.grains || entree.grains.includes(c.grain))
-      .filter((c) => !entree.crans || entree.crans.includes(c.cran))
+      // ⭐ C7-L7 — sous le gabarit, le cran que le REGISTRE exige sous la bande passe
+      //    (`ordre.rattrapage`) : la porte du registre est l'ordre dur, la bande indexe.
+      .filter((c) => !entree.crans || entree.crans.includes(c.cran) || c.ordre?.rattrapage === true)
       // PB6 — il doit TENIR SOUS LE PLAFOND.
       .filter((c) => minutes + c.dureeMin <= budget.plafond)
 

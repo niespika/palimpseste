@@ -295,3 +295,42 @@ describe('⛔ porte fermée : `candidatsPour` et la phase B servent comme hier, 
     assert.equal(semaine.exercices[0]!.tirage, false)
   })
 })
+
+describe('⭐ Louis, 06/09 nuit — PB2 lit l\'OBSERVABLE sous le gabarit ; le cran sous la bande que le registre exige passe', () => {
+  const liste = [{ competence: 'argumentation' as const, regle: 'R2' as const, motif: '', crans: ['diagnostic_nomme', 'transformation_nommee', 'production_etayee', 'transformation_aveugle', 'production_autonome'] }]
+
+  it('deux exercices de suite de la même compétence passent quand leurs observables diffèrent ; le même observable, non', () => {
+    const vivier = [
+      retenue(instance({ objet: 'argument', cran: 1, exerciceId: 'a', observable: { code: 'garant_present', competence: 'argumentation' } })),
+      retenue(instance({ objet: 'objection', cran: 1, exerciceId: 'b', observable: { code: 'objection_traitee', competence: 'argumentation' } })),
+      retenue(instance({ objet: 'exemple', cran: 1, exerciceId: 'c', observable: { code: 'garant_present', competence: 'argumentation' } })),
+    ]
+    const c = ctx({ dejaServis: new Set(['argument', 'objection', 'exemple']), paliers: new Map<Competence, Lettre>([['argumentation', 'D']]) })
+    const deux = [{ competence: 'argumentation' as const, regle: 'R2' as const, motif: '' }, { competence: 'structure' as const, regle: 'R5' as const, motif: '' }]
+    const s = poserLaSemaine(deux, { plancher: 5, plafond: 60, optionnel: 0 },
+      (comp, poses) => candidatsPour(vivier, comp, poses, false, c), (ex) => ex[0]!, undefined, { pb2: 'observable' })
+    const codes = s.exercices.map((e) => e.candidat.observable)
+    assert.equal(s.exercices.length, 3)
+    for (let i = 1; i < codes.length; i++) assert.notEqual(codes[i], codes[i - 1], 'jamais deux fois de suite le même observable')
+    // Hier, à l'octet : la même compétence deux fois de suite est interdite.
+    const hier = poserLaSemaine(deux, { plancher: 5, plafond: 60, optionnel: 0 }, (comp, poses) => candidatsPour(vivier, comp, poses, false, c), (ex) => ex[0]!)
+    assert.equal(hier.exercices.length, 1, 'sans l\'option, PB2 sur la compétence bloque le second')
+  })
+
+  it('à C, le cran 1 exigé par le registre passe la bande dure (`rattrapage`) ; sans `ordre`, il ne passe pas', () => {
+    const vivier = [retenue(instance({ objet: 'argument', cran: 1, exerciceId: 'a' }))]
+    const c = ctx({ dejaServis: new Set(['argument']), paliers: new Map<Competence, Lettre>([['argumentation', 'C']]),
+      cransParObjet: new Map([['argument', [1, 3, 4, 5, 7, 9]]]) })
+    const avec = poserLaSemaine(liste, { plancher: 5, plafond: 60, optionnel: 0 }, (comp, poses) => candidatsPour(vivier, comp, poses, false, c), (ex) => ex[0]!, undefined, { pb2: 'observable' })
+    assert.equal(avec.exercices.length, 1)
+    assert.equal(avec.exercices[0]!.candidat.ordre?.rattrapage, true)
+    assert.match(avec.exercices[0]!.candidat.ordre!.motif, /NON ACQUIS|acquis/)
+    const sans = poserLaSemaine(liste, { plancher: 5, plafond: 60, optionnel: 0 }, (comp, poses) => candidatsPour(vivier, comp, poses, false), (ex) => ex[0]!)
+    assert.equal(sans.exercices.length, 0, 'porte fermée : la bande dure de C écarte le 1, comme hier')
+    // Et la méthode C-B (1 → 3 → 2) passe aussi, marquée rattrapage.
+    const meth = methodeDe('objection', [1, 3, 2]).map((r) => ({ ...r, methode: { ...r.methode!, sequence: [1, 3, 2] } }))
+    const cm = ctx({ paliers: new Map<Competence, Lettre>([['argumentation', 'C']]) })
+    const o = ordonnerParObjet(candidatsPour(meth, 'argumentation', []), meth, 'argumentation', [], cm)
+    assert.ok(o.length === 3 && o.every((x) => x.ordre!.rattrapage === true))
+  })
+})

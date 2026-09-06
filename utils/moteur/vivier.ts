@@ -960,6 +960,8 @@ export function candidatsPour(
       mode: (r.instance.modesParCompetence[competence] ?? [])[0] ?? '',
       dureeMin: r.instance.dureeMin as number,
       ciblesSecondaires: secondaires,
+      // ⭐ C7-L7 — l'observable de la clé, ce que PB2 compare sous le gabarit.
+      observable: r.instance.observable?.code ?? null,
     })
   }
   return objets ? ordonnerParObjet(out, vivier, competence, dejaPoses, objets) : out
