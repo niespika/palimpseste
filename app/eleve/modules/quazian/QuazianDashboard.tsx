@@ -1,6 +1,7 @@
 'use client'
 
 import { useMemo, useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { SessionRevision } from './SessionRevision'
 import { ConsultationCartes } from './ConsultationCartes'
 import Tuile from '@/components/Tuile'
@@ -44,6 +45,7 @@ interface TuileCours {
 // transverse — c'est elle qui décide quoi montrer aujourd'hui, pas le cours —
 // et chaque carte continue d'afficher le sien pendant la session.
 export function QuazianDashboard({ stats, file, toutesCartes, coursOuvert }: Props) {
+  const router = useRouter()
   const [mode, setMode] = useState<'accueil' | 'revision'>('accueil')
   const [nbRevues, setNbRevues] = useState<number | null>(null)
 
@@ -61,9 +63,15 @@ export function QuazianDashboard({ stats, file, toutesCartes, coursOuvert }: Pro
     return [...m.values()].sort((a, b) => a.label.localeCompare(b.label))
   }, [toutesCartes])
 
+  // Fin de séance : les compteurs, la file et les tuiles sont des props calculées
+  // au rendu serveur — sans rafraîchir, l'accueil réaffichait les chiffres d'AVANT
+  // la séance et « Réviser mes 30 cartes » resservait LES MÊMES trente cartes
+  // (vu au smoke élève du 05/09 : 63 mûres annoncées après 30 notes). Le
+  // `refresh` recharge les props serveur sans toucher à l'état client.
   function handleTermine(nb: number) {
     setNbRevues(nb)
     setMode('accueil')
+    router.refresh()
   }
 
   if (coursOuvert) {
