@@ -56,6 +56,23 @@ export interface PiecesServies {
    *    (« car », « mais », « donc »). Sa production est le plan assemblé.
    */
   forme: 'trou' | 'ordre'
+  /**
+   * ⭐ 06/09 — D'OÙ VIENNENT LES MORCEAUX. `pieces` : de la banque (cran 2) — le
+   *    devoir n'est pas dans « Les documents », le texte à trou EST le document.
+   *    `passage` : du devoir marqué (cran 5, une TRANSFORMATION) — le devoir reste
+   *    dans « Les documents » avec son passage en gras, et le texte à trou de la
+   *    colonne de travail le redonne avec le champ à la place du gras (Louis, 06/09).
+   */
+  origine: 'pieces' | 'passage'
+}
+
+/**
+ * ⭐ LA RÈGLE DE L'AUTRE SÉANCE (06/09, `08-` v1.10 §5) : « un morceau nommé
+ *    "le devoir" est du texte courant : ni légende, ni surlignage, ni titre.
+ *    Seuls les morceaux nommés par leur fonction en ont. »
+ */
+export function estDuTexteCourant(nom: string): boolean {
+  return nom.trim().toLowerCase() === 'le devoir'
 }
 
 /** Les objets dont le trou est un ordre — le plan (`10-` v0.9 ; `09-` §7 : « l'ordre, écrit »). */
@@ -152,7 +169,7 @@ export function composerLesPieces(
   objet: string, cas: { constituant: string; pieces: readonly Morceau[] }, geste: string | null,
 ): PiecesServies {
   const { pieces, place, trou } = separerLeTrou(objet, cas.pieces)
-  return { constituant: cas.constituant, demande: demandeDuGeste(geste), place, pieces, trou, forme: formeDuTrou(objet) }
+  return { constituant: cas.constituant, demande: demandeDuGeste(geste), place, pieces, trou, forme: formeDuTrou(objet), origine: 'pieces' }
 }
 
 // ── Le plan : l'ordre et les mots qui lient ─────────────────────────────────
@@ -317,8 +334,8 @@ export function observablesDuConstituant(
 export const TROU_DU_CRAN_5 = {
   passage: 'le passage à réécrire, sans ce problème',
   insertion: 'ce qui manque à cet endroit',
-  avant: 'le devoir, avant le passage',
-  apres: 'le devoir, après le passage',
+  /** Ce qui entoure le passage est LE DEVOIR — du texte courant, sans fonction (règle du `08-` v1.10 §5). */
+  devoir: 'le devoir',
 } as const
 
 /**
@@ -354,11 +371,11 @@ export function morceauxDuPassage(
     apres = contenu.slice(fin)
   }
   const pieces: Piece[] = []
-  if (avant.trim() !== '') pieces.push({ nom: TROU_DU_CRAN_5.avant, texte: avant.trim() })
+  if (avant.trim() !== '') pieces.push({ nom: TROU_DU_CRAN_5.devoir, texte: avant.trim() })
   const place = pieces.length
-  if (apres.trim() !== '') pieces.push({ nom: TROU_DU_CRAN_5.apres, texte: apres.trim() })
+  if (apres.trim() !== '') pieces.push({ nom: TROU_DU_CRAN_5.devoir, texte: apres.trim() })
   return {
     constituant: 'le passage', demande: null, place, pieces,
-    trou: insertion ? TROU_DU_CRAN_5.insertion : TROU_DU_CRAN_5.passage, forme: 'trou',
+    trou: insertion ? TROU_DU_CRAN_5.insertion : TROU_DU_CRAN_5.passage, forme: 'trou', origine: 'passage',
   }
 }

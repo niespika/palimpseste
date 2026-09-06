@@ -4,7 +4,7 @@ import assert from 'node:assert/strict'
 import {
   assemblerLObjet, composerLesPieces, constituantDeLaGrille, demandeDuGeste, lireLesPieces,
   nomDuConstituant, observablesDuConstituant, placeDeLaPieceVide, separerLeTrou,
-  composerLePlan, formeDuTrou, lireLePlan, morceauxDuPassage, TROU_DU_CRAN_5,
+  composerLePlan, estDuTexteCourant, formeDuTrou, lireLePlan, morceauxDuPassage, TROU_DU_CRAN_5,
 } from './pieces'
 
 // Les pièces réelles de `ex-gab-transition-annonce-vide-c2` (gabarit-c2.json, 06/09) —
@@ -164,11 +164,16 @@ test('au cran 5, le passage marqué devient le trou ; avant et après sont les d
   ]
   const p = morceauxDuPassage(seg, false)!
   assert.deepEqual(p.pieces.map((x) => x.texte), ["L'homme est libre.", 'Voilà pourquoi on le juge.'])
-  assert.deepEqual(p.pieces.map((x) => x.nom), [TROU_DU_CRAN_5.avant, TROU_DU_CRAN_5.apres])
+  // Ce qui entoure le passage est « le devoir » : du texte courant, sans fonction (règle du 08- v1.10 §5).
+  assert.deepEqual(p.pieces.map((x) => x.nom), ['le devoir', 'le devoir'])
+  assert.equal(p.pieces.every((x) => estDuTexteCourant(x.nom)), true)
   assert.equal(p.place, 1)
   assert.equal(p.trou, TROU_DU_CRAN_5.passage)
   assert.equal(p.forme, 'trou')
+  assert.equal(p.origine, 'passage')
   assert.equal(p.demande, null)
+  assert.equal(estDuTexteCourant("ce que l'argument conclut"), false)
+  assert.equal(estDuTexteCourant(' Le devoir '), true)
   // Le passage en tête : un seul morceau, après ; le trou en place 0.
   const tete = morceauxDuPassage([{ texte: 'Donc il est responsable.', marque: true }, { texte: ' La suite.', marque: false }], false)!
   assert.deepEqual([tete.place, tete.pieces.length], [0, 1])

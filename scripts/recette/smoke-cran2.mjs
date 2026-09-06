@@ -271,7 +271,7 @@ try {
   constat(e.legende, 'la légende nomme les moments et le trou')
   constat(!e.piecesDansLesDocuments, 'les morceaux ne sont pas dans « Les documents »')
   if (CRAN === 2) constat(e.consigne2, 'la consigne du cran 2 (« le texte à compléter ») est celle du 10- v0.9 §3')
-  else constat(!/Le devoir d'élève/.test(await cdp.evalue("[...document.querySelectorAll('h3')].map((h) => h.textContent).join('|')")), 'le devoir d\'élève n\'est plus dans « Les documents » (il est le texte à trou)')
+  else constat(/Le devoir d'élève/.test(await cdp.evalue("[...document.querySelectorAll('h3')].map((h) => h.textContent).join('|')")), 'le devoir d\'élève reste dans « Les documents », passage en gras (une transformation)')
   constat(!e.ilManque, 'le mot « il manque » n\'apparaît nulle part')
   constat(!e.guide, 'le guide « De quoi t\'aider » ne se sert pas')
   await capture('ouvert-documents', { lire: true })

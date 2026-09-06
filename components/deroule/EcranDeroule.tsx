@@ -769,11 +769,13 @@ function ColonneMatiere({
           d'apparaître dans la barre latérale ». */}
 
       {/* ── LE MATÉRIAU DU CAS MONTRÉ, ET CE QUE L'ÉCRAN Y MET EN ÉVIDENCE ── */}
-      {/* ⭐ 06/09 — au cran 5 du gabarit, le devoir EST le texte à trou de la colonne
-          de travail : il quitte « Les documents », sinon il serait servi deux fois
-          (`10-` §2 bis.6, validé par Louis). */}
+      {/* ⭐ 06/09 — quand le texte à trou vient de la BANQUE (cran 2), il est le
+          document : le devoir n'a rien à faire ici. Au cran 5 — une TRANSFORMATION —
+          le devoir RESTE dans « Les documents », son passage en gras, et le texte à
+          trou de la colonne de travail le redonne avec le champ à la place du gras
+          (Louis, 06/09 : « un mix entre le cran 2 et les crans 3-4 »). */}
       {casMontres.map((c) => (
-        (vue.estUnePaire || c.materiau?.length) && !c.pieces ? (
+        (vue.estUnePaire || c.materiau?.length) && c.pieces?.origine !== 'pieces' ? (
           <Carte
             key={c.ordre}
             titre={vue.gabarit.actif

@@ -26,7 +26,7 @@
 //    conclut »), jamais ceux de la fiche (`09-` §0) ; le mot « manque » n'y est
 //    pas : la consigne dit « Complète … » (`10-` §3).
 // ============================================================================
-import type { PiecesServies } from '@/utils/gabarit/pieces'
+import { estDuTexteCourant, type PiecesServies } from '@/utils/gabarit/pieces'
 
 /** Les repères de la légende — un par morceau servi, dans l'ordre du texte. */
 const REPERES = ['①', '②', '③', '④', '⑤', '⑥', '⑦', '⑧']
@@ -50,15 +50,23 @@ export function TexteATrou({ pieces, children }: { pieces: PiecesServies; childr
   const place = Math.max(0, Math.min(pieces.place, pieces.pieces.length))
   const avant = pieces.pieces.slice(0, place)
   const apres = pieces.pieces.slice(place)
-  const morceau = (p: { nom: string; texte: string }, i: number) => (
+  // ⭐ 06/09 — LA RÈGLE DU `08-` v1.10 §5 : « un morceau nommé "le devoir" est du
+  //    texte courant : ni légende, ni surlignage, ni titre. Seuls les morceaux
+  //    nommés par leur fonction en ont. » Les repères ① ② … ne comptent que les
+  //    morceaux à fonction, dans l'ordre du texte.
+  const fonctions = pieces.pieces.filter((p) => !estDuTexteCourant(p.nom))
+  const rang = (p: { nom: string; texte: string }) => fonctions.indexOf(p)
+  const morceau = (p: { nom: string; texte: string }, _i: number) => estDuTexteCourant(p.nom) ? (
+    <span key={`c-${p.texte.slice(0, 24)}`} className="text-encre">{p.texte}</span>
+  ) : (
     <span
-      key={`${i}-${p.nom}`}
+      key={`${rang(p)}-${p.nom}`}
       // ⚠️ Pas de `box-decoration-break: clone` : il encadrait CHAQUE LIGNE d'un
       //    morceau à part, et le texte se lisait haché (smoke du 06/09). Le cadre
       //    est continu : il s'ouvre au premier mot, se ferme au dernier.
-      className={`rounded-[5px] border px-1.5 py-0.5 ${teinteDuMoment(i).fond}`}
+      className={`rounded-[5px] border px-1.5 py-0.5 ${teinteDuMoment(rang(p)).fond}`}
     >
-      <sup className={`mr-1 select-none font-ui text-[11px] ${teinteDuMoment(i).trait}`} aria-hidden>{REPERES[i] ?? '·'}</sup>
+      <sup className={`mr-1 select-none font-ui text-[11px] ${teinteDuMoment(rang(p)).trait}`} aria-hidden>{REPERES[rang(p)] ?? '·'}</sup>
       {p.texte}
     </span>
   )
@@ -78,7 +86,7 @@ export function TexteATrou({ pieces, children }: { pieces: PiecesServies; childr
           renvoient aux morceaux ; la dernière ligne nomme le trou, en mots
           d'élève, et dit que c'est lui qu'on écrit. */}
       <dl className="grid grid-cols-[auto_1fr] gap-x-2.5 gap-y-1 font-corps text-[14px] leading-snug text-encre-douce">
-        {pieces.pieces.map((p, i) => (
+        {fonctions.map((p, i) => (
           <div key={`l${i}`} className="contents">
             <dt className={`flex select-none items-center gap-1 font-ui text-[13px] ${teinteDuMoment(i).trait}`} aria-hidden>
               <span className={`inline-block size-3 rounded-[3px] border ${teinteDuMoment(i).puce}`} />
