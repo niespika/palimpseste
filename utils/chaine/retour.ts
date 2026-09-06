@@ -305,6 +305,17 @@ export interface EntreeRetour {
    */
   documentsAuJuge?: boolean
   verdictCran?: VerdictCran | null
+  /**
+   * ⭐⭐ C7-L8 — L'OBSERVABLE QUE LA CLÉ ISOLE, quand `chaine_cle_actif` est ouvert
+   *    et que l'exercice isole avec une clé. Le message porte alors LA BORNE EN
+   *    CLAIR — « ton retour ne parle QUE de lui » —, à tous les crans qui isolent,
+   *    avec le NOM de l'observable (la fiche, pas le code — RR4) ; et au cran 2,
+   *    cette borne REMPLACE celle de la séance des écrans (une seule porte pour
+   *    « le retour ne parle que de l'observable de la clé », pas deux sur la même
+   *    phrase — arbitrage de fabrication, piège 3). `null` : le message d'hier
+   *    à l'octet, borne du cran 2 comprise sous `juge_documents_actif`.
+   */
+  observableIsole?: { code: string; nom: string; dimension: string | null; competence: string; cle: string } | null
 }
 
 /** Le message de l'appel chaud. Le gabarit (couche contrat) part en SYSTÈME. */
@@ -524,15 +535,20 @@ export function assemblerRetour(gabarit: string, e: EntreeRetour): { systeme: st
           : "CE CRAN EST UN CRAN 2 : L'ÉLÈVE N'A ÉCRIT QU'UNE PIÈCE DE L'OBJET — "
             + `${pieces[0]!.piece.constituant} — à sa place entre les pièces servies. Les pièces servies\n`
             + "ne sont PAS de lui : n'en cite rien, ne les juge pas, elles font foi.",
-        '',
-        '⛔ CE CRAN ISOLE. Ton retour ne parle QUE de ce que sa pièce engage — '
-        + (observables.length
-          ? `les observables du constituant, et eux seuls : ${observables.map((o) => o.code).join(', ')}.`
-          : 'les observables de ce constituant, et eux seuls.'),
-        "Les autres observables de la compétence n'ont pas d'objet sur une pièce seule :",
-        'tu ne les nommes pas, tu ne les comptes ni en réussite ni en point de travail.',
-        'Tu juges UNE chose : sa pièce fait-elle son travail avec les pièces servies —',
-        'le test de la fiche, sur ce seul constituant.',
+        // ⭐ C7-L8 — avec l'observable de la clé, la borne en clair est celle du lot
+        //    (ci-dessous, à tous les crans qui isolent) : pas deux portes sur la
+        //    même phrase. Sans lui, la borne de la séance des écrans, à l'octet.
+        ...(e.observableIsole ? [] : [
+          '',
+          '⛔ CE CRAN ISOLE. Ton retour ne parle QUE de ce que sa pièce engage — '
+          + (observables.length
+            ? `les observables du constituant, et eux seuls : ${observables.map((o) => o.code).join(', ')}.`
+            : 'les observables de ce constituant, et eux seuls.'),
+          "Les autres observables de la compétence n'ont pas d'objet sur une pièce seule :",
+          'tu ne les nommes pas, tu ne les comptes ni en réussite ni en point de travail.',
+          'Tu juges UNE chose : sa pièce fait-elle son travail avec les pièces servies —',
+          'le test de la fiche, sur ce seul constituant.',
+        ]),
       ].join('\n')))
     }
     if (e.verdictCran) {
@@ -548,6 +564,28 @@ export function assemblerRetour(gabarit: string, e: EntreeRetour): { systeme: st
         'ancrée « copie » de ton point principal. Tu ne rejuges pas ; tu expliques.',
       ].filter(Boolean).join('\n'))
     }
+  }
+
+  // ⭐⭐ C7-L8 — LA BORNE EN CLAIR, à tous les crans qui isolent avec une clé :
+  //    « un exercice isole UN observable, celui de sa clé » (`01-` §4, l'amendement
+  //    du 06/09 ; `02-` §2.2 : « la pièce écrite n'engage que les observables
+  //    rattachés à son constituant, et le retour ne parle que d'eux » ; `10-`
+  //    §2 bis.1). Mesuré le 06/09 : la borne du cran 2 seule ne suffisait pas —
+  //    Calame recevait les squelettes de TOUTES les compétences et parlait de
+  //    Structure sur une pièce seule. Ici il ne reçoit plus que le squelette de
+  //    la compétence de la clé (`engendrerLeRetour`), et on le lui DIT.
+  //    Le plafond de la règle 2 reste : UN observable, deux ou trois choses à en dire.
+  if (e.observableIsole) {
+    const o = e.observableIsole
+    morceaux.push([
+      `⛔ CET EXERCICE ISOLE UN SEUL OBSERVABLE — « ${o.nom} » (${o.competence})`
+      + (o.dimension && o.dimension !== o.nom ? `, ce que l'élève entend comme « ${o.dimension} »` : '') + '.',
+      "Ton retour ne parle QUE de lui : c'est la seule chose que l'exercice engage, et la seule que la mesure garde.",
+      "Les autres observables de cette compétence n'ont pas d'objet ici : tu ne les nommes pas, tu ne les comptes",
+      'ni en réussite ni en point de travail — même si le squelette en dit quelque chose. Aucune autre compétence',
+      "n'est en jeu. Tu peux en dire deux ou trois choses (le plafond de la règle 2 reste) ; tu ne juges qu'UNE chose.",
+      'RR4 : tu le désignes par sa dimension, en langue élève — jamais par son code.',
+    ].join('\n'))
   }
 
   morceaux.push('SQUELETTE ET VERDICTS — ' + (e.moment === 'v1' ? 'la v1.' : 'la v1, puis la version finale.'))
@@ -894,7 +932,12 @@ export function controlerRR3(
  */
 export function elaguerLesAncrages<T extends { ancrage?: AncrageBrut | null }>(
   points: readonly T[],
-  a: { production: string | null; texteSupport: string | null },
+  a: {
+    production: string | null; texteSupport: string | null
+    /** ⭐ C7-L8, pièce (4) — le matériau des cas et le passage à corriger (voir `jugerLAncrage`). */
+    materiaux?: readonly string[] | null
+    passagesACorriger?: readonly string[] | null
+  },
 ): { points: T[]; motifs: string[] } {
   const motifs: string[] = []
   const gardes = points.map((p) => {
@@ -989,6 +1032,14 @@ export function controlerRetour(
     texteSupport?: string | null
     /** ⭐ La matière donnée aux crans de production — jamais une source d'ancrage. */
     coTexte?: string | null
+    /**
+     * ⭐⭐ C7-L8, pièce (4) — le matériau des cas (le devoir d'élève servi) et le
+     *    passage à corriger : une citation « copie » qu'on retrouve dans le
+     *    matériau hors du passage est RECOPIÉE, elle s'élague. Absents (porte
+     *    fermée) : l'élagage d'hier à l'octet.
+     */
+    materiaux?: readonly string[] | null
+    passagesACorriger?: readonly string[] | null
   },
 ): { verdict: Verdict<RetourBrut>; controle: ControleRetour } {
   const verdict = valider<RetourBrut>(brut, FORME_RETOUR)
@@ -1045,6 +1096,13 @@ export function controlerRetour(
     production: attendu.production ?? null,
     texteSupport: attendu.texteSupport ?? null,
     coTexte: attendu.coTexte ?? null,
+    // ⭐ C7-L8 — la prose (RR3) ne les lit PAS : « n'ajoute pas un refus matériau
+    //    à RR3 » (piège 24). Seul l'élagage de l'ancrage les reçoit.
+  }
+  const contreLAncrage = {
+    ...contre,
+    materiaux: attendu.materiaux ?? null,
+    passagesACorriger: attendu.passagesACorriger ?? null,
   }
 
   // ⭐⭐⭐ RR3 — LA PROSE. Ce qui est enchâssé dans une phrase ne s'élague pas :
@@ -1064,7 +1122,7 @@ export function controlerRetour(
   //    premier appel l'élaguait, et les treize suivants recevaient un retour que
   //    le SCHÉMA rejetait. *En production le même geste aurait élagué un objet
   //    encore utilisé par l'appelant.* On rend une valeur NEUVE.
-  const elague = elaguerLesAncrages(r.points, contre)
+  const elague = elaguerLesAncrages(r.points, contreLAncrage)
   controle.alertes.push(...elague.motifs)
 
   controle.formeSeulement = refusDeFormeSeulement(controle.refus)

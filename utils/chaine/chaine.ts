@@ -43,6 +43,8 @@ import { messageAvecMateriau, tentativeDeSortieDeBloc } from './anti-injection'
 import { JUGE_AUX_CRANS, type VerdictCran } from './juge-cran'
 import { jugerLeCran, lireLesVerdictsDuDepot } from './juge-cran-serveur'
 import { appliquerObservablesMesure } from './observables'
+import { alerteDeLaCle, cibleAvecLaCle, competencesFroidesDe, nomDeLObservable, observableDeLaCle,
+  passagesACorriger, restreindreLesObservables, signalDeRecopie, type ObservableDeLaCle } from './cle'
 import {
   attacherDelta, ecrireMesure, entreesDesRegles, fenetreDEvidence,
   type LigneMesure,
@@ -185,10 +187,17 @@ export async function traiterDepot(
     alertes.push('tentative de sortie de bloc dans la copie — neutralisée avant appel')
   }
 
+  // ⭐⭐ C7-L8 — LA CLÉ, ET LA PORTE. Sur un exercice qui isole avec une clé, porte
+  //    ouverte, la cible EST la compétence de l'observable de la clé (la décision
+  //    qui dirait autre chose est signalée, la clé l'emporte — piège 10), et elle
+  //    n'est jamais « indéterminée » (piège 27 : c'est le motif 1 de C9-L3, fermé
+  //    pour le gabarit). Porte fermée ou sans clé : `null`, et tout est d'hier.
+  const observableCle = observableDeLaCleServie(ctx, alertes)
   // « La vf ne rejoue les appels froids que pour LA SEULE COMPÉTENCE VISÉE PAR
   //   LE RETOUR » (piège 16 ; `01-` §11).
-  const cible = cibleDuRetour(ctx, mesurees)
-  if (cibleIndeterminee(ctx, mesurees)) {
+  const { cible, alerte: alerteCible } = cibleAvecLaCle(observableCle, cibleDuRetour(ctx, mesurees), ctx.decision)
+  if (alerteCible) alertes.push(alerteCible)
+  if (!observableCle && cibleIndeterminee(ctx, mesurees)) {
     alertes.push(
       'cible du retour INDÉTERMINÉE : ni décision de routeur ni `cible_primaire`, et '
       + `${mesurees.length} compétences mesurées — « ${cible} » sert par convention `
@@ -197,7 +206,22 @@ export async function traiterDepot(
   }
   const coexistence = alerteDeCoexistence(ctx)
   if (coexistence) alertes.push(coexistence)
-  const competencesFroides = version === 'v1' ? mesurees : (cible ? [cible] : [])
+  // ⭐⭐ C7-L8 — `competencesFroides`, C'EST LA LIGNE (piège 10). Sans observable de
+  //    clé : `v1 ? mesurees : [cible]`, à l'octet. Avec : la seule compétence de
+  //    l'observable de la clé — les autres, sondes de la décision comprises, sont
+  //    ÉCARTÉES AVEC UN MOTIF SERVI (`motifDesEcartees`), jamais en silence.
+  const froides = competencesFroidesDe({
+    version, mesurees, cible, observable: observableCle, sondes: ctx.decision?.sondes ?? [],
+  })
+  ecartees.push(...froides.ecartees)
+  alertes.push(...froides.alertes)
+  const competencesFroides = froides.froides
+  // ⭐ C7-L8, pièce (1) — LE SIGNAL : une v1 qui reproduit le devoir, aux crans
+  //    3·5·7. Un signal, jamais un refus ; le seuil se lit sur corpus.
+  if (ctx.chaineCleActif && version === 'v1') {
+    const recopie = signalDeRecopie(production, ctx.cran, ctx.casPourLeRetour)
+    if (recopie) alertes.push(recopie)
+  }
 
   let appels = 0
   let mesuresEcrites = 0
@@ -236,6 +260,7 @@ export async function traiterDepot(
       ctx, competence: c, version, production, modele,
       instrument: etat.instrument, branchement: etat.branchement,
       aideConsommee: options.aideConsommee ?? null,
+      observableDeLaCle: observableCle,
     })
   }))
   const resultats: Array<ResultatCompetence | { competence: Competence; ecartee: string; appels: number }> = []
@@ -312,6 +337,7 @@ export async function traiterDepot(
       squelettesVf: version === 'vf' ? squelettes : undefined,
       registre: options.registre ?? null, cible,
       verdictCran,
+      observableDeLaCle: observableCle,
     })
     appels += r.appels
     retourEcrit = r.ecrit
@@ -384,6 +410,29 @@ export async function traiterDepot(
 }
 
 // ── Qui l'exercice mesure, et qui la chaîne écarte ──────────────────────────
+
+/**
+ * ⭐⭐ C7-L8 — L'OBSERVABLE DE LA CLÉ, tel que la chaîne peut le SERVIR : la porte
+ *    ouverte, une clé lue, un observable routé, ET un code que l'instrument de
+ *    sa compétence déclare. Chaque manque se DIT (alerte), et rend `null` — la
+ *    chaîne d'hier. « Ne plante pas, n'invente pas un observable » (piège 4).
+ * ⚠️ Un code hors de l'instrument (0 sur 328 au 07/09, mais une vague peut en
+ *    verser) : on ne restreint rien, on mesure comme hier, et on le dit.
+ */
+function observableDeLaCleServie(ctx: ContexteDepot, alertes: string[]): ObservableDeLaCle | null {
+  if (!ctx.chaineCleActif) return null
+  const alerteCle = alerteDeLaCle(ctx.cle)
+  if (alerteCle) alertes.push(alerteCle)
+  const o = observableDeLaCle(ctx)
+  if (!o) return null
+  const etat = etatCompetence(o.competence)
+  if (etat.instrument && !(o.code in etat.instrument.observables_mesure)) {
+    alertes.push(`clé « ${o.cle} » : observable « ${o.code} » hors de l'instrument de ${o.competence} `
+      + '(`observables_mesure`) — la chaîne mesure comme hier, le retour n\'est pas borné (C7-L8)')
+    return null
+  }
+  return o
+}
 
 /**
  * « La mesure tourne ? `evaluee` : oui · `mesuree_silencieusement` : OUI, on
@@ -657,6 +706,8 @@ async function chaineDUneCompetence(
     modele: string; instrument: InstrumentCompetence; branchement: BranchementCompetence
     aideConsommee: number | null
     sansEcriture?: boolean
+    /** ⭐ C7-L8 — l'observable de la clé : la mesure ne GARDE que lui (forme (a), piège 11). */
+    observableDeLaCle?: ObservableDeLaCle | null
   },
 ): Promise<ResultatCompetence> {
   const sansEcriture = a.sansEcriture === true
@@ -906,9 +957,26 @@ async function chaineDUneCompetence(
 
   const { releve, alertes: alertesReleve } = branchement.releve(agrege, ctxEnrichi)
   alertes.push(...alertesReleve)
-  const { observables, alertes: alertesObs } =
+  const { observables: observablesEntiers, alertes: alertesObs } =
     appliquerObservablesMesure(instrument.observables_mesure, releve)
   alertes.push(...alertesObs.map((x) => `${x.observable} : ${x.motif}`))
+  // ⭐⭐ C7-L8, pièce (2) forme (a) — Louis, 06/09 au soir : « la mesure NE GARDE que
+  //    l'observable de la clé ». Les autres codes passent à `n/a` — « `n/a` n'est
+  //    jamais 0 » : ils sortent du dénominateur de la fenêtre d'évidence, de
+  //    l'escalade et de la lettre. P1 et P2 ne changent pas (décision du 31/08) ;
+  //    ce que (a) coûte encore par rapport à (b) — un P2 qui juge des observables
+  //    qu'on jette — est dit au relevé. Sans observable de clé : la mesure d'hier.
+  let observables = observablesEntiers
+  if (a.observableDeLaCle && a.observableDeLaCle.competence === competence) {
+    const r = restreindreLesObservables(observablesEntiers, a.observableDeLaCle.code)
+    observables = r.observables
+    if (r.horsInstrument) {
+      alertes.push(`observable de la clé « ${a.observableDeLaCle.code} » absent de la mesure — rien restreint (C7-L8)`)
+    } else if (r.retires.length) {
+      alertes.push(`mesure restreinte à l'observable de la clé « ${a.observableDeLaCle.code} » : `
+        + `${r.retires.join(', ')} → n/a (C7-L8)`)
+    }
+  }
   const lettreEquivalente = branchement.lettre(agrege, ctxEnrichi)
 
   const squelette: SqueletteServi = { competence, extraction: artefactsP1, jugement: jugement.valeur }
@@ -1072,15 +1140,42 @@ export async function engendrerLeRetour(
     sansEcriture?: boolean
     /** C7-L1 — le verdict du juge du cran, quand la porte est ouverte et qu'il a tranché. */
     verdictCran?: VerdictCran | null
+    /**
+     * ⭐⭐ C7-L8 — l'observable de la clé, quand la porte est ouverte et que l'exercice
+     *    isole avec une clé : le retour ne reçoit que le squelette de SA compétence
+     *    et la borne en clair. ⚠️ Le filtre vit ICI, au même endroit pour la
+     *    mesure et pour le REJEU (piège 13) : un dépôt mesuré sous l'ancien
+     *    régime porte les squelettes de toutes les compétences, et son retour
+     *    rejoué doit être borné comme un retour neuf.
+     */
+    observableDeLaCle?: ObservableDeLaCle | null
   },
 ): Promise<{
   ecrit: boolean; appels: number; alertes: string[]
   /** Ce qui aurait été écrit — renseigné en répétition à blanc. */
   retour?: RetourSegmente | null
 }> {
-  const { ctx, version, modele, squelettes, cible } = a
+  const { ctx, version, modele, cible } = a
   const alertes: string[] = []
   if (!cible) return { ecrit: false, appels: 0, alertes: ['aucune cible : pas de retour'] }
+
+  // ⭐⭐ C7-L8 — LE RETOUR NE PARLE QUE DE L'OBSERVABLE DE LA CLÉ, PAR CE QU'IL
+  //    REÇOIT (piège 12) : seul le squelette de la compétence de la clé lui
+  //    arrive — à la mesure comme au rejeu. Sans observable de clé : tout, d'hier.
+  const o = a.observableDeLaCle ?? null
+  const squelettes = o ? a.squelettes.filter((s) => s.competence === o.competence) : a.squelettes
+  const squelettesVf = a.squelettesVf && o ? a.squelettesVf.filter((s) => s.competence === o.competence) : a.squelettesVf
+  if (o) {
+    const ecartes = a.squelettes.filter((s) => s.competence !== o.competence).map((s) => s.competence)
+    if (ecartes.length) {
+      alertes.push(`retour borné à ${o.competence} (observable « ${o.code} », clé « ${o.cle} ») : `
+        + `${ecartes.length} squelette(s) écarté(s) du retour — ${ecartes.join(', ')} (C7-L8)`)
+    }
+    if (!(squelettesVf ?? squelettes).length) {
+      return { ecrit: false, appels: 0, alertes: [...alertes,
+        `aucun squelette de ${o.competence} : rien à dire sur l'observable de la clé, pas de retour (C7-L8)`] }
+    }
+  }
 
   // « Le REGISTRE t'est donné, tu ne l'élis pas — l'élection est une sortie de
   //   couche 3, à C4-L2. Son PREMIER SIGNAL te concerne dès maintenant : hors
@@ -1100,15 +1195,21 @@ export async function engendrerLeRetour(
   // Les compétences ADMISES au retour sont celles de la version COURANTE, jamais
   // celles de la v1 relue : en vf, un squelette v1 manquant vidait la liste et
   // faisait refuser chaque point du retour, en accusant le modèle.
-  const servies = a.squelettesVf ?? squelettes
+  const servies = squelettesVf ?? squelettes
   // « Une SONDE est silencieuse : elle ne produit AUCUN RETOUR » (`01-` §1, principe 4).
   const sondes = sondesDeLExercice(ctx)
   const competencesAdmises = servies.map((s) => s.competence).filter((c) => !sondes.has(c))
+  // ⚠️ C7-L8 — la liste que RR4 surveille reste ENTIÈRE (tous les codes de la
+  //    compétence servie) : la réduire au seul code de la clé relâcherait RR4
+  //    sur les autres codes — écart assumé au piège 12, dit au relevé.
   const codesObservables = servies.flatMap((s) => {
     const e = etatCompetence(s.competence)
     return e.instrument ? Object.keys(e.instrument.observables_mesure) : []
   })
-  if (sondes.size) {
+  // ⚠️ C7-L8 — sur un exercice qui isole avec une clé, les sondes ne sont plus
+  //    mesurées (piège 14) : l'alerte d'hier n'a plus d'objet, on ne la laisse
+  //    pas mentir — le motif est déjà servi par `competencesFroidesDe`.
+  if (sondes.size && !o) {
     alertes.push(`${sondes.size} compétence(s) sondée(s) écartée(s) du retour — une sonde est silencieuse`)
   }
   if (!competencesAdmises.length) {
@@ -1163,7 +1264,7 @@ export async function engendrerLeRetour(
       casServis: ctx.casPourLeRetour,
     },
     squelettes,
-    squelettesVf: a.squelettesVf,
+    squelettesVf,
     retourV1: version === 'vf' ? await lireRetourV1(admin, ctx.depotId) : null,
     etatAnterieur,
     // ⭐⭐ C5-L2 — LE TEXTE D'AUTEUR ARRIVE ENFIN AU MODÈLE. Il est lu par
@@ -1180,6 +1281,11 @@ export async function engendrerLeRetour(
     //    le message d'hier à l'octet ; le verdict n'existe alors pas.
     documentsAuJuge: ctx.jugeDocumentsActif,
     verdictCran: ctx.jugeDocumentsActif ? (a.verdictCran ?? null) : null,
+    // ⭐⭐ C7-L8 — LA BORNE EN CLAIR, à tous les crans qui isolent avec une clé,
+    //    avec le NOM de l'observable (la fiche, pas le code — RR4). Porte fermée :
+    //    `null`, et le message est celui d'hier à l'octet.
+    observableIsole: o ? { ...nomDeLObservable(o, ctx.servable, ctx.correspondance),
+      code: o.code, competence: o.competence, cle: o.cle } : null,
   })
 
   try {
@@ -1214,6 +1320,13 @@ export async function engendrerLeRetour(
         : [ctx.productionV1, ctx.productionVf].filter(Boolean).join('\n\n') || null,
       texteSupport: ctx.texteSupport?.texte ?? null,
       coTexte: ctx.coTexte,
+      // ⭐⭐ C7-L8, pièce (4) — une citation présente dans le MATÉRIAU du cas ET
+      //    dans la copie s'écarte, SAUF sur le passage à corriger. Porte fermée :
+      //    rien de plus, l'élagage d'hier à l'octet.
+      ...(ctx.chaineCleActif ? {
+        materiaux: ctx.casPourLeRetour.map((c) => c.materiau).filter((m): m is string => !!m),
+        passagesACorriger: passagesACorriger(ctx.casPourLeRetour),
+      } : {}),
     })
     // ⚠️ LES ALERTES SE JOURNALISENT SANS ARRÊTER — c'est ce que leur nom dit,
     //    et elles ne remontaient nulle part avant C5-L2 : le champ existait,
@@ -1487,8 +1600,11 @@ export async function rejouerLeRetour(
   }
 
   const mesurees = squelettes.map((s) => s.competence)
-  const cible = cibleDuRetour(ctx, mesurees)
-  if (cibleIndeterminee(ctx, mesurees)) {
+  // ⭐⭐ C7-L8 — la même clé, la même cible qu'à la mesure (piège 13).
+  const observableCle = observableDeLaCleServie(ctx, alertes)
+  const { cible, alerte: alerteCible } = cibleAvecLaCle(observableCle, cibleDuRetour(ctx, mesurees), ctx.decision)
+  if (alerteCible) alertes.push(alerteCible)
+  if (!observableCle && cibleIndeterminee(ctx, mesurees)) {
     alertes.push('cible du retour INDÉTERMINÉE : ni décision de routeur ni `cible_primaire` — '
       + `« ${cible} » sert par convention (ordre alphabétique), pas par intention.`)
   }
@@ -1503,6 +1619,7 @@ export async function rejouerLeRetour(
     tolererLaForme: options.tolererLaForme === true,
     sansEcriture: options.sansEcriture === true,
     verdictCran: verdictsStockes.v1 ?? null,
+    observableDeLaCle: observableCle,
   })
   alertes.push(...r.alertes)
 

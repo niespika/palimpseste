@@ -25,6 +25,7 @@ import 'server-only'
 import { createAdminClient } from '@/utils/supabase/admin'
 import { lireContexte, DepotIllisible, type ContexteDepot } from '../chaine/contexte'
 import { competencesDeLExercice } from '../chaine/chaine'
+import { mettreEnTete, observableDeLaCle } from '../chaine/cle'
 import { fenetreDEvidence } from '../chaine/mesures'
 import { etatCompetence, valeursDesParametres } from '../chaine/instruments'
 import { lireFuseau } from '../fuseau-serveur'
@@ -1164,7 +1165,15 @@ async function construireSeJuger(
   // ⚠️ Les compétences seulement SONDÉES sont écartées : « une sonde est
   //    silencieuse, elle ne produit aucun retour » (la fiche §4).
   const sondes = new Set(ctx.decision?.sondes ?? [])
-  const cibles = mesurees.filter((c) => !sondes.has(c))
+  // ⭐⭐ C7-L8, pièce (3) — Louis, 06/09 au soir : sur un exercice qui isole avec
+  //    une clé, le « se juger » porte UNIQUEMENT sur la compétence de l'observable
+  //    servi — jamais une autre, même testée par l'objet —, et cet observable
+  //    passe EN TÊTE. Aux crans 6 et 8 (sans clé), la couverture d'aujourd'hui :
+  //    plusieurs compétences. Porte fermée : `null`, et l'ordre d'hier à l'octet.
+  //    ⚠️ Mesuré le 06/09 (dépôt `b41a1257`, argument, cran 2) : trois questions
+  //    servies, dont DEUX de Structure sur une pièce seule — c'est ce que (3) corrige.
+  const cle = observableDeLaCle(ctx)
+  const cibles = (cle ? mesurees.filter((c) => c === cle.competence) : mesurees).filter((c) => !sondes.has(c))
 
   const { servie, motif } = phaseServie(
     (geste ?? 'produire') as never, ctx.grain, cibles, ctx.statutsRecette)
@@ -1175,7 +1184,15 @@ async function construireSeJuger(
   // Ce que l'exercice TESTE : la couverture, moins ce qui n'est qu'observable.
   const couverture: CouvertureTestee[] = evaluees.map((c) => ({
     competence: c,
-    observables: ctx.servable.filter((s) => s.competence === c).map((s) => s.observable_nom),
+    // ⭐ 06/09 — le CODE, pas le nom : la banque de questions s'apparie par `competence|observable_code`.
+    //    (Recopié de `main`, commit `bdcae6e`, à l'identique — C7-L8, 07/09.)
+    // ⭐ C7-L8 — avec une clé, l'observable de la clé est de la couverture, quoi que
+    //    la couche type déclare ; le reste de sa compétence suit.
+    observables: [
+      ...(cle && c === cle.competence ? [cle.code] : []),
+      ...ctx.servable.filter((s) => s.competence === c && !(cle && s.observable_code === cle.code))
+        .map((s) => s.observable_code),
+    ],
   }))
 
   const fenetres: Record<string, Mesure[]> = {}
@@ -1194,7 +1211,8 @@ async function construireSeJuger(
     .in('competence', evaluees).order('ordre')
 
   const offre = offreSeJugerMaison(
-    candidates(couverture, fenetres, instruments as never),
+    // ⭐ C7-L8 — la fragilité puis le tirage ordonnent le reste ; la clé passe devant.
+    mettreEnTete(candidates(couverture, fenetres, instruments as never), cle ? { competence: cle.competence, code: cle.code } : null),
     (banque ?? []) as never,
     depot.id,
   )

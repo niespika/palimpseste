@@ -23,6 +23,8 @@ import type { SegmentMateriau } from '@/utils/deroule/marquage'
 import { enTexte } from './consigne'
 import { cibleDansLeMateriau, verdictDeLaZone } from '@/utils/deroule/designation'
 import { lireLaPorteJugeDocuments } from '@/utils/juge/porte'
+import { lireLaPorteChaineCle } from './porte-cle'
+import type { CleDuCas } from './cle'
 import type { ChoixServiAuJuge, PieceServieAuJuge, ZoneServieAuJuge } from './juge-cran'
 import { lireLeCran2 } from '@/utils/gabarit/lecture'
 import { formeDuTrou, morceauxDuPassage, separerLeTrou } from '@/utils/gabarit/pieces'
@@ -81,6 +83,17 @@ export interface CasServiAuRetour {
   defaut: string | null
   /** La CIBLE en texte : le passage que le diff désigne (`cibleDansLeMateriau`). */
   passageFautif: string | null
+  /** ⭐ C7-L8 — `exercices_cas.probleme` : la CLÉ du gabarit (`objet.constituant.variante`), `null` sur la banque 1.4. */
+  probleme: string | null
+  /**
+   * ⭐ C7-L8 — LE PASSAGE À CORRIGER, tel que le MARQUAGE l'étend (`10-` §5 : le
+   *    passage fautif étendu aux bornes de sa phrase — `marquerLeMateriau`, le
+   *    même domicile que l'écran et que le trou du cran 5). `null` sans diff.
+   *    Une citation qui y tient n'est pas écartée par la pièce (4) du lot :
+   *    aux crans 3·5·7 la copie EST une réécriture du passage, et citer les
+   *    mots que l'élève en a gardés est légitime.
+   */
+  passageMarque: string | null
   /**
    * ⭐ 06/09 — AU CRAN 5 DU GABARIT (`10-` §2 bis.6) : ce qui précède et ce qui suit
    *    le passage réécrit, pour que le juge lise le devoir RÉASSEMBLÉ. Dérivé des
@@ -137,8 +150,16 @@ export interface ContexteDepot {
   statutsRecette: Record<Competence, StatutRecette>
   /** La couche compétence, lue en base (`competences_correspondance`). */
   correspondance: Record<string, Array<{ observable_code: string; dimension_eleve: string }>>
-  /** La couche type — « Ce qui est servable ici », lue de la doctrine dérivée. */
-  servable: Array<{ competence: string; observable_nom: string }>
+  /**
+   * La couche type — « Ce qui est servable ici », lue de la doctrine dérivée.
+   * ⭐ 06/09/2026 — `observable_code` s'ajoute au nom : le « se juger » apparie ses
+   *    questions par `competence|observable_code` (`competences_correspondance`), et
+   *    il recevait le NOM (« L'attache ») là où il lui fallait le CODE
+   *    (`attache_presente`) — aucune question ne s'appariait.
+   *    *(Recopié de `main`, commit `bdcae6e`, à l'identique — la fusion de `main`
+   *    dans la branche n'avait pas eu lieu à l'heure de C7-L8, 07/09.)*
+   */
+  servable: Array<{ competence: string; observable_nom: string; observable_code: string }>
   /**
    * Aux TROIS CRANS DE PRODUCTION (2, 6, 8), `exercices_routes` ne porte rien —
    * « les trois crans de production, QUE LES TABLES NE PEUVENT PAS PORTER »
@@ -211,6 +232,24 @@ export interface ContexteDepot {
    *    retour reçoit les documents et le verdict. Fermé : rien ne change.
    */
   jugeDocumentsActif: boolean
+  /**
+   * ⭐⭐ C7-L8 — L'INTERRUPTEUR « la chaîne à l'heure de la clé »
+   *    (`scriptorium_params.chaine_cle_actif`, lu UNE FOIS par dépôt, tolérant :
+   *    absent ⇒ OFF — `porte-cle.ts`). Ouvert : sur un exercice qui isole avec
+   *    une clé, la chaîne ne mesure que l'observable de la clé, le retour ne
+   *    parle que de lui, le « se juger » l'interroge en tête, une citation
+   *    recopiée du devoir s'écarte, une v1 qui reproduit le devoir se signale.
+   *    Fermé : rien ne change, à l'octet. ⛔ Un lot lit LE SIEN.
+   */
+  chaineCleActif: boolean
+  /**
+   * ⭐ C7-L8 — LA CLÉ DU CAS (`exercices_cas.probleme`, la première non nulle
+   *    des cas) et son observable, lus dans la doctrine DÉRIVÉE
+   *    (`exercices_problemes`). `null` sans clé — la banque 1.4, les crans de
+   *    production. ⚠️ Domicile de l'observable : la clé du cas, présente sur tout
+   *    exercice 1.5, décision ou pas — jamais le journal de C7-L7 (piège 9).
+   */
+  cle: CleDuCas | null
   /**
    * Ce que la DÉCISION D'ASSIGNATION porte. « Le drapeau [de sonde de montée]
    * vient de la décision d'assignation ; la chaîne LE RECOPIE sur la mesure,
@@ -569,12 +608,12 @@ export async function lireContexte(admin: Admin, depotId: string): Promise<Conte
   let servable: ContexteDepot['servable'] = []
   if (cran != null && tousLesModes.length) {
     const { data: routes } = await admin
-      .from('exercices_routes').select('competence, observable_nom')
+      .from('exercices_routes').select('competence, observable_nom, observable_code')
       .eq('objet_code', type.code).eq('cran', cran).in('mode', tousLesModes)
     const vus = new Set<string>()
-    servable = ((routes ?? []) as unknown as Array<{ competence: string; observable_nom: string }>)
+    servable = ((routes ?? []) as unknown as Array<{ competence: string; observable_nom: string; observable_code: string }>)
       .filter((r) => {
-        const c = `${r.competence}|${r.observable_nom}`
+        const c = `${r.competence}|${r.observable_code}`
         if (vus.has(c)) return false
         vus.add(c)
         return true
@@ -642,6 +681,12 @@ export async function lireContexte(admin: Admin, depotId: string): Promise<Conte
     }
   }
 
+  // ⭐ 06/09 — au cran 2 du gabarit, chaque cas porte ses pièces ; au 5, le devoir réassemblé.
+  const cas = await avecLeReassemblage(admin,
+    await avecLesPieces(admin, await casPourLeRetour(admin, exercice.id, depot.id),
+      { exerciceId: exercice.id, typeId: exercice.type_id, objet: type.code, genre: exercice.genre ?? null, cran }),
+    { cran, exerciceId: exercice.id })
+
   return {
     depotId,
     eleveId: depot.eleve_id,
@@ -684,11 +729,11 @@ export async function lireContexte(admin: Admin, depotId: string): Promise<Conte
       : null,
     etalonProduction: await etalonDeProduction(admin, exercice.id, cran),
     // ⭐ 06/09 — au cran 2 du gabarit, chaque cas porte ses pièces (juge, retour).
-    casPourLeRetour: await avecLeReassemblage(admin,
-      await avecLesPieces(admin, await casPourLeRetour(admin, exercice.id, depot.id),
-        { exerciceId: exercice.id, typeId: exercice.type_id, objet: type.code, genre: exercice.genre ?? null, cran }),
-      { cran, exerciceId: exercice.id }),
+    casPourLeRetour: cas,
     jugeDocumentsActif: await lireLaPorteJugeDocuments(admin as never),
+    // ⭐⭐ C7-L8 — la porte du lot, lue UNE fois ; et la clé du cas.
+    chaineCleActif: await lireLaPorteChaineCle(admin as never),
+    cle: await cleDuCas(admin, cas),
     decision,
     confianceDeclaree: (depot.confiance_declaree ?? {}) as Record<string, string>,
     estSyntheseEnClasse: typeExercice === 'synthese' && exercice.lieu === 'classe',
@@ -749,7 +794,7 @@ export async function lireStatutsRecette(
 async function couvertureDuCran(
   admin: Admin, typeId: string, cran: number, modes: readonly string[],
   competences: readonly string[],
-): Promise<Array<{ competence: string; observable_nom: string }>> {
+): Promise<Array<{ competence: string; observable_nom: string; observable_code: string }>> {
   const { data, error } = await admin
     .from('exercices_types_crans').select('couverture_observables')
     // ⚠️ Le numéro, jamais `String(cran)` : `exercices_types_crans.cran` était
@@ -761,18 +806,19 @@ async function couvertureDuCran(
     return []
   }
   const brut = (data as unknown as { couverture_observables: unknown } | null)?.couverture_observables as
-    { observables?: Array<{ nom?: string; mode?: string; competence?: string }> } | null
+    { observables?: Array<{ nom?: string; code?: string; mode?: string; competence?: string }> } | null
   const liste = Array.isArray(brut?.observables) ? brut!.observables! : []
   const vus = new Set<string>()
-  const out: Array<{ competence: string; observable_nom: string }> = []
+  const out: Array<{ competence: string; observable_nom: string; observable_code: string }> = []
   for (const o of liste) {
-    if (!o?.competence || !o?.nom) continue
+    if (!o?.competence || !(o?.code || o?.nom)) continue
     if (competences.length && !competences.includes(o.competence)) continue
     if (modes.length && o.mode && !modes.includes(o.mode)) continue
-    const cle = `${o.competence}|${o.nom}`
+    const code = o.code ?? o.nom!
+    const cle = `${o.competence}|${code}`
     if (vus.has(cle)) continue
     vus.add(cle)
-    out.push({ competence: o.competence, observable_nom: o.nom })
+    out.push({ competence: o.competence, observable_nom: o.nom ?? code, observable_code: code })
   }
   return out
 }
@@ -865,7 +911,8 @@ async function casPourLeRetour(
 ): Promise<CasServiAuRetour[]> {
   const { data, error } = await admin
     .from('exercices_cas')
-    .select('ordre, reponse_attendue, defaut, exercices_materiaux(contenu, version_corrigee)')
+    // ⭐ C7-L8 — `probleme` s'ajoute : la clé du gabarit, `null` sur la banque 1.4.
+    .select('ordre, reponse_attendue, defaut, probleme, exercices_materiaux(contenu, version_corrigee)')
     .eq('exercice_id', exerciceId).order('ordre')
   if (error) {
     console.error(`[chaine] cas du retour illisibles — exercice ${exerciceId} : `
@@ -876,7 +923,7 @@ async function casPourLeRetour(
   const texte = (v: unknown): string | null =>
     (typeof v === 'string' && v.trim() !== '' ? v.trim() : null)
   return ((data ?? []) as unknown as Array<{
-    ordre: number; reponse_attendue: unknown; defaut: unknown; exercices_materiaux: unknown
+    ordre: number; reponse_attendue: unknown; defaut: unknown; probleme: unknown; exercices_materiaux: unknown
   }>).map((c) => {
     // La jointure rend un objet ou un tableau d'un élément selon la forme de la
     // clé — le patron du dépôt (`vue.ts`, `ratissage-serveur.ts`) lit les deux.
@@ -895,12 +942,64 @@ async function casPourLeRetour(
       versionCorrigee,
       defaut: texte(c.defaut),
       passageFautif: cible ? brut.slice(cible[0], cible[1]) : null,
+      probleme: texte(c.probleme),
+      passageMarque: passageMarqueDe(brut, versionCorrigee),
       zone: zoneServie(brut, cible, entree),
       choix: choixServi(entree),
       piece: null,
       reassemble: null,
     }
   })
+}
+
+/**
+ * ⭐ C7-L8 — LE PASSAGE À CORRIGER, ÉTENDU PAR LES RÈGLES DU MARQUAGE — la règle
+ *    du `10-` §5 (« le passage qui porte le problème », étendu aux bornes de sa
+ *    phrase), la même que l'écran (`marquerLeMateriau`) et que le trou du cran 5
+ *    (`avecLeReassemblage`) : UN SEUL DOMICILE pour les bornes. Les segments
+ *    marqués, joints. `null` sans diff ou sans version corrigée.
+ * ⛔ Aucun diff recalculé ici.
+ */
+function passageMarqueDe(contenu: string, versionCorrigee: string | null): string | null {
+  if (!contenu || !versionCorrigee) return null
+  const segments = marquerLeMateriau(contenu, 'le passage qui porte le problème', { versionCorrigee })
+  if (!segments) return null
+  const marques = segments.filter((s) => s.marque).map((s) => s.texte.trim()).filter(Boolean)
+  return marques.length ? marques.join(' ') : null
+}
+
+/**
+ * ⭐⭐ C7-L8 — LA CLÉ DU CAS → L'OBSERVABLE, par la doctrine DÉRIVÉE
+ *    (`exercices_problemes.observable_code` / `observable_competence` /
+ *    `observable_route` — ce que `doctrine.problemes[cle]` lit, sur UNE ligne,
+ *    sans charger les dix-sept tables à chaque dépôt).
+ * ⚠️ `supabase-js` ne lève pas : une lecture ratée rend `lecture: 'illisible'`,
+ *    et « une lecture ratée n'est JAMAIS "isole avec une clé" — dans le doute,
+ *    on mesure large » (piège 28). `null` sans clé : la banque 1.4.
+ * ⚠️ 19 clés sur 205 n'ont AUCUN observable (`observable_route = false`) —
+ *    aucune instance 1.5 n'en porte au 07/09, mais une vague peut en verser :
+ *    `sans_observable`, et l'alerte le dit (`alerteDeLaCle`).
+ */
+async function cleDuCas(admin: Admin, cas: readonly CasServiAuRetour[]): Promise<CleDuCas | null> {
+  const cle = cas.map((c) => c.probleme).find((p): p is string => !!p) ?? null
+  if (!cle) return null
+  const { data, error } = await admin.from('exercices_problemes')
+    .select('observable_code, observable_competence, observable_route').eq('cle', cle).maybeSingle()
+  if (error) {
+    console.error(`[chaine] clé « ${cle} » illisible — ${error.code} ${error.message}. La chaîne mesure large.`)
+    return { cle, observableCode: null, observableCompetence: null, observableRoute: false, lecture: 'illisible' }
+  }
+  const d = data as unknown as {
+    observable_code: string | null; observable_competence: string | null; observable_route: boolean | null
+  } | null
+  if (!d) return { cle, observableCode: null, observableCompetence: null, observableRoute: false, lecture: 'absente_de_la_doctrine' }
+  const route = d.observable_route !== false
+  const competence = (COMPETENCES as readonly string[]).includes(String(d.observable_competence ?? ''))
+    ? d.observable_competence as Competence : null
+  if (!route || !d.observable_code) {
+    return { cle, observableCode: d.observable_code ?? null, observableCompetence: competence, observableRoute: route, lecture: 'sans_observable' }
+  }
+  return { cle, observableCode: d.observable_code, observableCompetence: competence, observableRoute: true, lecture: 'ok' }
 }
 
 /**

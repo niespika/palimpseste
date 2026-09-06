@@ -83,7 +83,22 @@ export interface AncrageJuge {
  */
 export function jugerLAncrage(
   ancrage: AncrageBrut | null | undefined,
-  a: { production: string | null; texteSupport: string | null; coTexte?: string | null },
+  a: {
+    production: string | null; texteSupport: string | null; coTexte?: string | null
+    /**
+     * ⭐⭐ C7-L8, pièce (4) — LE MATÉRIAU DU CAS : le devoir d'élève servi
+     *    (`casPourLeRetour[].materiau`, tous les cas). Une citation « copie »
+     *    présente dans la copie ET dans le matériau est une phrase du devoir que
+     *    l'élève a RECOPIÉE (27 sur 118 en prod, 06/09) : elle s'écarte comme
+     *    l'introuvable — le point garde son texte, il perd son bloc —, SAUF si
+     *    elle tient dans le passage à corriger (`passagesACorriger`) : aux crans
+     *    3·5·7 la copie EST une réécriture du passage, et citer les mots que
+     *    l'élève en a gardés est légitime. ⛔ Écarter, jamais refuser.
+     *    Absents (porte fermée) : rien de plus, le jugement d'hier à l'octet.
+     */
+    materiaux?: readonly string[] | null
+    passagesACorriger?: readonly string[] | null
+  },
 ): AncrageJuge {
   if (!ancrage || typeof ancrage.citation !== 'string' || ancrage.citation.trim() === '') {
     return { ancrage: null, motif: null }
@@ -91,7 +106,23 @@ export function jugerLAncrage(
   const court = ancrage.citation.length > 60 ? `${ancrage.citation.slice(0, 60)}…` : ancrage.citation
   const contre = ancrage.source === 'copie' ? a.production : a.texteSupport
 
-  if (citationTient(contre, ancrage.citation)) return { ancrage, motif: null }
+  // ⭐ C7-L8 — recopiée du devoir : dans le matériau, et hors du passage à corriger.
+  //    Un seul tokeniseur, `citationTient`, appelé une fois de plus (piège 23).
+  const recopieeDuDevoir = (citation: string): boolean =>
+    ancrage.source === 'copie'
+    && (a.materiaux ?? []).some((m) => citationTient(m, citation))
+    && !(a.passagesACorriger ?? []).some((p) => citationTient(p, citation))
+
+  if (citationTient(contre, ancrage.citation)) {
+    if (recopieeDuDevoir(ancrage.citation)) {
+      return {
+        ancrage: null,
+        motif: `citation écartée — recopiée du devoir : dans la copie ET dans le matériau, hors du `
+          + `passage à corriger : « ${court} » (C7-L8)`,
+      }
+    }
+    return { ancrage, motif: null }
+  }
 
   if (ancrage.source === 'copie' && citationTient(a.texteSupport, ancrage.citation)) {
     return {
@@ -121,6 +152,14 @@ export function jugerLAncrage(
   const r = retrouverCitation(contre, ancrage.citation)
   if (!('echec' in r) && r.methode !== 'exact') {
     const reel = r.citationReelle.length > 60 ? `${r.citationReelle.slice(0, 60)}…` : r.citationReelle
+    // ⭐ C7-L8 — une citation réparée se confronte au devoir comme une exacte.
+    if (recopieeDuDevoir(r.citationReelle)) {
+      return {
+        ancrage: null,
+        motif: `citation écartée — réparée en « ${reel} », mais recopiée du devoir (dans le matériau, `
+          + `hors du passage à corriger) (C7-L8)`,
+      }
+    }
     return {
       ancrage: { source: ancrage.source, citation: r.citationReelle },
       motif: `citation réparée (${r.methode === 'normalise' ? 'normalisation' : `approché ${r.score.toFixed(2)}`}) : `
